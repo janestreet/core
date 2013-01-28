@@ -467,6 +467,41 @@ module Tree0 = struct
           end
       in
       loop t1 t2
+    ;;
+
+    let fold tree ~init ~f =
+      let rec loop acc = function
+        | End -> acc
+        | More (key, data, tree, enum) ->
+          let acc = f ~key ~data acc in
+          loop acc (cons tree enum)
+      in
+      loop init tree
+    ;;
+
+    let symmetric_diff t1 t2 ~compare_key ~data_equal =
+      let rec loop t1 t2 acc =
+        match t1, t2 with
+        | End, End -> acc
+        | End, _   -> fold t2 ~init:acc ~f:(fun ~key ~data acc -> (key, `Right data)::acc)
+        | _  , End -> fold t1 ~init:acc ~f:(fun ~key ~data acc -> (key, `Left data)::acc)
+        | More (k1, v1, tree1, enum1), More (k2, v2, tree2, enum2) ->
+          let compare_result = compare_key k1 k2 in
+          if compare_result = 0 then begin
+            let acc = if data_equal v1 v2 then acc else (k1, `Unequal (v1, v2)) :: acc in
+            if Pervasives.(==) tree1 tree2
+            then loop enum1 enum2 acc
+            else loop (cons tree1 enum1) (cons tree2 enum2) acc
+          end else if compare_result < 0 then begin
+            let acc = (k1, `Left v1) :: acc in
+            loop (cons tree1 enum1) t2 acc
+          end else begin
+            let acc = (k2, `Right v2) :: acc in
+            loop t1 (cons tree2 enum2) acc
+          end
+      in
+      loop (of_tree t1) (of_tree t2) []
+    ;;
   end
 
   let compare compare_key compare_data t1 t2 =
@@ -480,6 +515,8 @@ module Tree0 = struct
   let iter2 t1 t2 ~f ~compare_key =
     Enum.iter2 compare_key (Enum.of_tree t1) (Enum.of_tree t2) ~f
   ;;
+
+  let symmetric_diff = Enum.symmetric_diff
 
   let rec length = function
     | Empty -> 0
@@ -682,6 +719,9 @@ module Accessors = struct
   let keys t = Tree0.keys t.tree
   let data t = Tree0.data t.tree
   let to_alist t = Tree0.to_alist t.tree
+  let symmetric_diff t1 t2 ~data_equal =
+    Tree0.symmetric_diff t1.tree t2.tree ~compare_key:(compare_key t1) ~data_equal
+  ;;
   let merge t1 t2 ~f =
     like t1 (Tree0.merge t1.tree t2.tree ~f ~compare_key:(compare_key t1));
   ;;
@@ -865,6 +905,9 @@ module Make_tree (Key : Comparator.S1) = struct
   let keys t = Tree0.keys t
   let data t = Tree0.data t
   let to_alist t = Tree0.to_alist t
+  let symmetric_diff t1 t2 ~data_equal =
+    Tree0.symmetric_diff t1 t2 ~compare_key:comparator.Comparator.compare ~data_equal
+  ;;
   let merge t1 t2 ~f =
     Tree0.merge t1 t2 ~f ~compare_key:comparator.Comparator.compare;
   ;;
@@ -1072,6 +1115,9 @@ module Tree = struct
   let keys t = Tree0.keys t
   let data t = Tree0.data t
   let to_alist t = Tree0.to_alist t
+  let symmetric_diff ~comparator t1 t2 ~data_equal =
+    Tree0.symmetric_diff t1 t2 ~compare_key:comparator.Comparator.compare ~data_equal
+  ;;
   let merge ~comparator t1 t2 ~f =
     Tree0.merge t1 t2 ~f ~compare_key:comparator.Comparator.compare;
   ;;

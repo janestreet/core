@@ -171,6 +171,16 @@ module type Accessors = sig
        -> ('k, 'v3, 'comparator) t
     ) options
 
+  (** [symmetric_diff t1 t2 ~data_equal] returns a list of changes between t1 and t2. It
+      is intended to be efficient in the case where t1 and t2 share a large amount of
+      structure. *)
+  val symmetric_diff
+    :  ('k, 'comparator,
+        ('k, 'v, 'comparator) t
+          -> ('k, 'v, 'comparator) t
+          -> data_equal:('v -> 'v -> bool)
+          -> ('k key * [`Left of 'v | `Right of 'v |  `Unequal of 'v * 'v]) list) options
+
   (** [min_elt map] @return Some [(key, data)] pair corresponding to the minimum key in
       [map], None if empty. *)
   val min_elt     : ('k, 'v, _) t -> ('k key * 'v) option

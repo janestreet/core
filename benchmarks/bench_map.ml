@@ -66,6 +66,32 @@ let merge_test do_merge =
         | `Both (a, b) -> Some (a + b)))
 ;;
 
+let gen_diff_test m ~number_of_diff ~diff =
+  let gen_pair i = sprintf "%6d" i, sprintf "%6d" (i+1) in
+  let map1 = String.Map.of_alist_exn (List.init m ~f:gen_pair) in
+  let map2 =
+    let gen_pair i = gen_pair (i * 16856431 mod m) in
+    List.fold (List.init number_of_diff ~f:gen_pair)
+      ~init:map1 ~f:(fun acc (key, data) -> Map.add acc ~key ~data)
+  in
+  fun () ->
+    let (_ : _ list) = diff map1 map2 ~data_equal:String.equal in
+    ()
+;;
+
+let diff_by_iter2 map1 map2 ~data_equal =
+  let results = ref [] in
+  Map.iter2 map1 map2 ~f:(fun ~key ~data ->
+    match data with
+    | `Left _ -> results := (key, None) :: !results
+    | `Right v -> results := (key, Some v) :: !results
+    | `Both (v1, v2) ->
+      if not (data_equal v1 v2) then
+        results := (key, Some v2) :: !results
+  );
+  !results
+;;
+
 let () =
   Bench.bench [
     Test.create ~name:"Map.of_alist_exn" of_alist_exn;
@@ -77,5 +103,17 @@ let () =
     Test.create ~name:"Map.remove" remove;
     Test.create ~name:"Map.merge (new)" (merge_test Map.merge);
     Test.create ~name:"Map.merge (old)" (merge_test old_map_merge);
+    Test.create ~name:"Map.symmetric_diff-10"
+      (gen_diff_test 100_000 ~number_of_diff:10 ~diff:Map.symmetric_diff);
+    Test.create ~name:"Map.symmetric_diff-100"
+      (gen_diff_test 100_000 ~number_of_diff:100 ~diff:Map.symmetric_diff);
+    Test.create ~name:"Map.symmetric_diff-1000"
+      (gen_diff_test 100_000 ~number_of_diff:1000 ~diff:Map.symmetric_diff);
+    Test.create ~name:"Map.symmetric_diff_by_iter2-10"
+      (gen_diff_test 100_000 ~number_of_diff:10 ~diff:diff_by_iter2);
+    Test.create ~name:"Map.symmetric_diff_by_iter2-100"
+      (gen_diff_test 100_000 ~number_of_diff:100 ~diff:diff_by_iter2);
+    Test.create ~name:"Map.symmetric_diff_by_iter2-1000"
+      (gen_diff_test 100_000 ~number_of_diff:1000 ~diff:diff_by_iter2)
   ]
 ;;

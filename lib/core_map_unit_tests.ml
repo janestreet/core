@@ -60,6 +60,7 @@ module Unit_tests
     let compare_direct       = simplify_accessor compare_direct
     let equal                = simplify_accessor equal
     let iter2                = simplify_accessor iter2
+    let symmetric_diff       = simplify_accessor symmetric_diff
     let merge                = simplify_accessor merge
     let fold_range_inclusive = simplify_accessor fold_range_inclusive
     let range_to_alist       = simplify_accessor range_to_alist
@@ -67,15 +68,15 @@ module Unit_tests
     let next_key             = simplify_accessor next_key
     let rank                 = simplify_accessor rank
 
-    let empty ()        = simplify_creator empty
-    let singleton       = simplify_creator singleton
+    let empty ()                  = simplify_creator empty
+    let singleton                 = simplify_creator singleton
     let of_sorted_array_unchecked = simplify_creator of_sorted_array_unchecked
-    let of_sorted_array = simplify_creator of_sorted_array
-    let of_alist        = simplify_creator of_alist
-    let of_alist_exn    = simplify_creator of_alist_exn
-    let of_alist_multi  = simplify_creator of_alist_multi
-    let of_alist_fold   = simplify_creator of_alist_fold
-    let of_tree         = simplify_creator of_tree
+    let of_sorted_array           = simplify_creator of_sorted_array
+    let of_alist                  = simplify_creator of_alist
+    let of_alist_exn              = simplify_creator of_alist_exn
+    let of_alist_multi            = simplify_creator of_alist_multi
+    let of_alist_fold             = simplify_creator of_alist_fold
+    let of_tree                   = simplify_creator of_tree
   end
 
   type ('a, 'b, 'c) t = Unit_test_follows
@@ -268,13 +269,14 @@ module Unit_tests
   ;;
 
   let of_sorted_array _ = assert false
-  let of_sorted_array_unchecked _ = assert false
 
   (* test detection of invalid input *)
   TEST = Map.of_sorted_array [|Key.of_int 0, 0; Key.of_int 0, 0|] |! Result.is_error
   TEST = Map.of_sorted_array [|Key.of_int 1, 0
                          ; Key.of_int 0, 0
                          ; Key.of_int 1, 0|] |! Result.is_error
+
+  let of_sorted_array_unchecked _ = assert false
 
   (* test it gets same result as [Map.of_alist] *)
   TEST =
@@ -475,6 +477,61 @@ module Unit_tests
     assert (alist_equal map_alist base_alist);
     assert (alist_equal (List.zip_exn map_keys map_data) base_alist);
     true
+  ;;
+
+  let symmetric_diff _ = assert false
+
+  TEST =
+    let m1 = random_map Key.samples in
+    Map.symmetric_diff m1 m1 ~data_equal:(=) = []
+  ;;
+
+  TEST =
+    let key = Key.of_int 7 in
+    let m1 = Map.empty () in
+    let m1 = Map.add m1 ~key:(Key.of_int 1) ~data:1 in
+    (* data must be out of the range of random_map to be a good test *)
+    let m2 = Map.add m1 ~key:key ~data:2_000 in
+    Map.symmetric_diff m1 m2 ~data_equal:(=) = [(key, `Right 2_000)]
+  ;;
+
+  TEST =
+    let m1 = random_map Key.samples in
+    let m2 =
+      List.fold (Map.to_alist m1) ~init:(Map.empty ()) ~f:(fun m (k,d) ->
+        Map.add m ~key:k ~data:d)
+    in
+    Map.symmetric_diff m1 m2 ~data_equal:(=) = []
+  ;;
+
+
+  TEST =
+    let key = Key.of_int 20 in
+    let m1 = random_map Key.samples in
+    (* data must be out of the range of random_map to be a good test *)
+    let m2 = Map.add m1 ~key:key ~data:2_000 in
+    Map.symmetric_diff m1 m2 ~data_equal:(=) = [(key, `Right 2_000)]
+  ;;
+
+  TEST =
+    let key = Key.of_int 5 in
+    let m1 = random_map Key.samples in
+    let m2 = Map.remove m1 key in
+    Map.symmetric_diff m1 m2 ~data_equal:(=) = [(key, `Left (Map.find_exn m1 key))]
+  ;;
+
+  TEST =
+    let key = Key.of_int 7 in
+    let m1 = random_map Key.samples in
+    let m2 =
+      Map.change m1 key (function
+        | None -> assert false
+        | Some v ->
+          assert (v <> 2_000);
+          Some 2_000)
+    in
+    Map.symmetric_diff m1 m2 ~data_equal:(=) =
+        [(key, `Unequal (Map.find_exn m1 key, 2000))]
   ;;
 
   let merge _ = assert false

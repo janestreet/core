@@ -90,3 +90,9 @@ TEST = execution_mode () =
              Core_string.is_suffix argv.(0) ~suffix:".native"
           then `Native else `Bytecode)
 
+
+(* returns size, in bits, of an [int] type in C *)
+external c_int_size : unit -> int = "c_int_size" "noalloc"
+
+TEST = let size = c_int_size () in size >= 16 && size <= Sys.word_size
+

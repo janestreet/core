@@ -527,7 +527,7 @@ module Stable = struct
         time ~y:1985 ~m:Month.Jun ~d:5 (Ofday.create ~hr:5 ~min:25 ()),
         "(1985-06-05 05:25:00.000000-04:00)",
         "\000\000\000\108\039\004\189\065";
-      ] @ if Int.(Sys.word_size < 64) then [] else [
+      ] @ if Int.(Sys.c_int_size () < 64) then [] else [
         time ~y:2222 ~m:Month.Nov ~d:22 (Ofday.create ~hr:17 ~min:17 ~sec:17 ()),
         "(2222-11-22 17:17:17.000000-05:00)",
         "\000\000\208\230\204\186\253\065";

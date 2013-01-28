@@ -126,3 +126,7 @@ val ocaml_version : string;;
     or to bytecode. *)
 val execution_mode : unit -> [ `Bytecode | `Native ]
 
+(** [c_int_size] returns the number of bits in a C [int]. Note that this can be
+    different from [word_size]. For example, Linux x86-64 should have
+    [word_size = 64], but [c_int_size () = 32] *)
+external c_int_size : unit -> int = "c_int_size" "noalloc"

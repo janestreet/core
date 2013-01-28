@@ -247,7 +247,6 @@ val allocated_bytes : unit -> float
 val add_finalizer     : 'a Heap_block.t -> ('a Heap_block.t -> unit) -> unit
 val add_finalizer_exn : 'a -> ('a -> unit) -> unit
 
-
 val finalise_release : unit -> unit;;
 (** A finalisation function may call [finalise_release] to tell the
     GC that it can launch the next finalisation function without waiting

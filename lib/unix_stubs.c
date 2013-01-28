@@ -889,7 +889,9 @@ static inline int resource_val(value v_resource)
     case 4 : resource = RLIMIT_NOFILE; break;
     case 5 : resource = RLIMIT_STACK; break;
     case 6 : resource = RLIMIT_AS; break;
+#ifdef RLIMIT_NICE
     case 7 : resource = RLIMIT_NICE; break;
+#endif
     default :
       /* impossible */
       caml_failwith("resource_val: unknown sum tag");
