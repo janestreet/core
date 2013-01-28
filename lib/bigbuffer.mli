@@ -124,6 +124,5 @@ module Format : sig
 end
 
 module Printf : sig
-  open Printf
   val bprintf : t -> ('a, unit, string, unit) format4 -> 'a
 end

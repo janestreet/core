@@ -1,4 +1,3 @@
-open T
 open Core_set_intf
 
 type ('elt, 'comparator) t

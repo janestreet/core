@@ -1,6 +1,6 @@
 INCLUDE "config.mlh"
 
-open Result.Export
+open Std_internal
 
 include Mutex0
 

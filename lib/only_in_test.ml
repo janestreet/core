@@ -1,5 +1,3 @@
-open Std_internal
-
 type 'a t = 'a Lazy.t
 
 let of_thunk f = lazy (f ())

@@ -56,7 +56,7 @@ let string_rexists s ~f ~from:n =
   in
   loop n
 
-let rec skip_end_slashes s ~from =
+let skip_end_slashes s ~from =
   match string_rexists s ~from ~f:(fun c -> c <> '/') with
   | Some v -> `Ends_at v
   | None   -> `All_slashes

@@ -31,8 +31,6 @@ let create maxsize =
   }
 ;;
 
-let id () = Thread.id (Thread.self ())
-
 let wrap q run =
   Mutex.lock q.mutex;
   protect ~f:run ~finally:q.finally

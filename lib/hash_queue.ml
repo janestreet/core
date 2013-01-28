@@ -101,7 +101,6 @@ module Make (Key : Key) : S with module Key = Key = struct
     end
     include T
 
-    let equal (t : 'a t) t' = t == t'
     let key t = t.key
     let value t = t.value
   end

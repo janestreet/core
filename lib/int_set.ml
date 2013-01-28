@@ -1,5 +1,3 @@
-
-
 open Std_internal
 
 module Range : sig
@@ -10,16 +8,6 @@ module Range : sig
   val make : int -> int -> t
 
   val to_string : t -> string
-
-  (** [compare s t] returns:
-      `Mergeable : [s] and [t] have a intersection,
-                   or they are adjacent: ex. [10..12] and [13..15]
-      `Lt_and_not_adjacent : if [s] is less than [t] but not adjacent
-      `Gt_and_not_adjacent : if [s] is greater than [t] but not adjacent
-  *)
-  val compare : t -> t -> [ `Lt_and_not_adjacent
-                          | `Gt_and_not_adjacent
-                          | `Mergeable ]
 
   (** [merge s t] merges mergeable ranges *)
   val merge : t -> t -> [ `Ok of t

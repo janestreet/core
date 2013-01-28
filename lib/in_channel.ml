@@ -8,8 +8,6 @@ let length = Pervasives.LargeFile.in_channel_length
 
 let stdin = Pervasives.stdin
 
-type 'a with_create_args = ?binary:bool -> 'a
-
 let create ?(binary = true) file =
   let flags = [Open_rdonly] in
   let flags = if binary then Open_binary :: flags else flags in

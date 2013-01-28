@@ -515,9 +515,6 @@ end)
 
 TEST_MODULE "Map.Poly" = Unit_tests (Key_poly) (struct
   include Map.Poly
-
-  type ('a, 'b, 'c) tree = ('a, 'b, 'c) Map.tree
-
   let simplify_creator = Fn.id
 end)
 

@@ -1,6 +1,3 @@
-
-open Sexplib
-
 module List = Core_list
 
 exception Attempt_to_mutate_list_during_iteration
@@ -67,11 +64,9 @@ module Elt : sig
   val create : 'a -> 'a t
   val value : 'a t -> 'a
   val unlink : 'a t -> unit
-  val split_or_splice_after : 'a t -> 'a t -> unit
   val split_or_splice_before : 'a t -> 'a t -> unit
   val insert_after : 'a t -> 'a -> 'a t
   val insert_before : 'a t -> 'a -> 'a t
-  val unlink_after : 'a t -> 'a t
   val unlink_before : 'a t -> 'a t
   val next : 'a t -> 'a t
   val prev : 'a t -> 'a t
@@ -181,8 +176,6 @@ type 'a t = 'a Elt.t option ref
 
 let create (type a) () : a t = ref None
 
-let is_empty t = Option.is_none !t
-
 let equal (t : _ t) t' = phys_equal t t'
 
 let of_list = function
@@ -206,7 +199,7 @@ let fold_elt t ~init ~f =
 
 open With_return
 
-let find_elt (type a) t ~f =
+let find_elt t ~f =
   with_return (fun r ->
     fold_elt t ~init:() ~f:(fun () elt ->
       if f (Elt.value elt) then r.return (Some elt));
@@ -217,8 +210,6 @@ include Container.Make (struct
   type 'a t = 'a t_
   let fold t ~init ~f = fold_elt t ~init ~f:(fun acc elt -> f acc (Elt.value elt))
 end)
-
-let fold_left t ~init ~f = fold t ~init ~f
 
 let fold_right t ~init ~f =
   match !t with

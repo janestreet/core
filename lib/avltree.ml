@@ -4,10 +4,7 @@ module Int = struct
   type t = int
 
   let max (x : t) y = if x > y then x else y
-  let min (x : t) y = if x < y then x else y
 end
-
-open Sexplib.Std
 
 let phys_equal = (==)
 
@@ -126,9 +123,11 @@ let update_height n =
     if new_height <> old_height then Update.node_height n new_height
   | _ -> assert false
 
+(*
 let balanceable = function
   | Empty | Leaf _ -> true
   | Node(l, _, _, _, r) -> abs (height l - height r) <= 3
+*)
 
 (* @pre: left and right subtrees are balanced
    @pre: tree is balanceable

@@ -12,7 +12,7 @@ module T = struct
 end
 
 include T
-type outer = t with bin_io,sexp (* alias for use by sub-modules *)
+type outer = t with bin_io (* alias for use by sub-modules *)
 
 let to_float x = x
 let of_float x = x
@@ -60,8 +60,6 @@ let to_int64 f =
 *)
 let float_round_lb = max (float_of_int min_int) (-1.0 *. 2.0 ** 62.0 +. 257.)
 let float_round_ub = min (float_of_int max_int) (2.0 ** 62.0 -. 257.)
-let int_round_lb = int_of_float float_round_lb
-let int_round_ub = int_of_float float_round_ub
 
 let iround_towards_zero_exn x =
   if is_nan x then

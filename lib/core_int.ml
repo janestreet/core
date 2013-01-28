@@ -10,7 +10,6 @@ module T = struct
      is only slightly faster, so we've decided to stick with
      Pervasives.compare *)
   let compare (x : t) y = compare x y
-  let equal (x : t) y = x = y
   let hash (x : t) = Hashtbl.hash x
 
   let of_string s =

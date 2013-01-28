@@ -9,6 +9,8 @@ module List = Core_list
 
 open No_polymorphic_compare
 
+let _ = compare  (* Prevent unused open warning *)
+
 let (= ) (x : int) y = Polymorphic_compare.(= ) x y
 let (<>) (x : int) y = Polymorphic_compare.(<>) x y
 let (< ) (x : int) y = Polymorphic_compare.(< ) x y
@@ -119,7 +121,7 @@ module Tree = struct
     add ~key ~data t ~compare_key
   ;;
 
-  let rec find_exn t x ~compare_key =
+  let find_exn t x ~compare_key =
     match find t x ~compare_key with
     | Some data -> data
     | None ->
@@ -138,7 +140,7 @@ module Tree = struct
   exception Map_min_elt_exn_of_empty_map with sexp
   exception Map_max_elt_exn_of_empty_map with sexp
 
-  let rec min_elt_exn t =
+  let min_elt_exn t =
     match min_elt t with
     | None -> raise Map_min_elt_exn_of_empty_map
     | Some v -> v
@@ -150,7 +152,7 @@ module Tree = struct
     | Node (_, k, d, Empty, _) -> Some (k, d)
     | Node (_, _, _, r, _) -> max_elt r
   ;;
-  let rec max_elt_exn t =
+  let max_elt_exn t =
     match max_elt t with
     | None -> raise Map_max_elt_exn_of_empty_map
     | Some v -> v
@@ -387,7 +389,6 @@ module Tree = struct
   ;;
 
   let keys t = fold_right ~f:(fun ~key ~data:_ list -> key::list) t ~init:[]
-  let has_key = mem
   let data t = fold_right ~f:(fun ~key:_ ~data list -> data::list) t ~init:[]
 
   let of_alist alist ~compare_key =

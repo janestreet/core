@@ -12,7 +12,7 @@ sig
 end
 
 module type S = sig
-  type contents
+  type contents with sexp, bin_io
   type t
   include Sexpable with type t := t
   include Binable with type t := t

@@ -1,4 +1,3 @@
-open Core_hashtbl_intf
 open T
 
 module Hashtbl = Core_hashtbl

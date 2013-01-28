@@ -36,7 +36,7 @@ let finalise f x =
 ;;
 
 module Stat = struct
-  type pretty_float = float with bin_io, sexp
+  type pretty_float = float with bin_io, of_sexp
   let sexp_of_pretty_float f = Sexp.Atom (sprintf "%.2e" f)
 
   type t = Caml.Gc.stat = {

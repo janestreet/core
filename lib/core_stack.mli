@@ -7,7 +7,6 @@
       [push] takes the stack argument first.
       [length] is O(1)
 *)
-open Sexplib
 
 exception Empty
 

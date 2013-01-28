@@ -14,7 +14,9 @@ module T : sig
     | Base of 'a
   with bin_io
 
+(*
   val invariant : 'a t -> unit
+*)
 
   val true_   : 'a t
   val false_  : 'a t
@@ -29,7 +31,7 @@ module T : sig
   (* for tests *)
   val a : int t
   val b : int t
-  val c : int t
+(*   val c : int t *)
 
 end = struct
 
@@ -43,6 +45,7 @@ end = struct
     | Base of 'a
   with bin_io
 
+(*
   let invariant =
     let subterms = function
       | True | False | Base _      -> []
@@ -56,6 +59,7 @@ end = struct
     in
     fun t ->
       List.iter ~f:no_constants (subterms t)
+*)
 
   let is_constant = function
     | True -> Some true
@@ -67,6 +71,9 @@ end = struct
   let base v = Base v
 
   let (a, b, c) = (base 1, base 2, base 3) (* for tests *)
+
+  (* Avoid triggering warning for unused bindings due to preprocessing *)
+  let _ = a, b, c
 
   let not_ = function
     | True -> False
@@ -323,7 +330,7 @@ let sexp_of_t sexp_of_value t =
   in
   aux t
 
-let rec t_of_sexp base_of_sexp sexp =
+let t_of_sexp base_of_sexp sexp =
   let base sexp = base (base_of_sexp sexp) in
   let rec aux sexp =
     match sexp with
@@ -356,7 +363,7 @@ TEST_MODULE "laws" = struct
 
   type 'a base_fun = base -> 'a
 
-  let sexp_of_base_fun sexp_of_a f =
+  let sexp_of_base_fun sexp_of_a (f : 'a base_fun) =
     Sexp.List [
       Sexp.Atom "function";
       Sexp.List [Sexp.Atom "A"; Sexp.Atom "->"; sexp_of_a (f A)];

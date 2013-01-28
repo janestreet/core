@@ -27,9 +27,6 @@
 #include "ocaml_utils.h"
 #include "unix_utils.h"
 
-#define DIR_Val(v) *((DIR **) &Field(v, 0))
-#define UNIX_BUFFER_SIZE 16384
-
 #include <sys/sendfile.h>
 
 CAMLprim value

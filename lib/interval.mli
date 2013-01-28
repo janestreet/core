@@ -1,5 +1,3 @@
-open Std_internal
-
 (** Module for simple closed intervals over arbitrary types that are ordered
     correctly using polymorphic compare. *)
 

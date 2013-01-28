@@ -50,8 +50,6 @@ module Make (M : Basic) : S with type 'a t := 'a M.t = struct
   let return = M.return
 
   module Monad_infix = struct
-    type 'a t = 'a M.t
-
     let (>>=) = bind
 
     let (>>|) t f = t >>= fun a -> return (f a)

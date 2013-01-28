@@ -17,7 +17,7 @@ module T : sig
   val end_of_day : t
 
   (* [invariant t] checks the invariants on t and returns t if it passes *)
-  val invariant : t -> t
+  (* val invariant : t -> t *)
 end = struct
   (* Number of seconds since midnight. *)
   include Float
@@ -71,8 +71,6 @@ let create ?hr ?min ?sec ?ms ?us () =
   T.of_span_since_start_of_day (Span.create ?hr ?min ?sec ?ms ?us ())
 
 let to_parts t = Span.to_parts (T.to_span_since_start_of_day t)
-
-let of_sec = T.of_sec
 
 let to_string_gen ~drop_ms ~drop_us ~trim x =
   assert (if drop_ms then drop_us else true);
@@ -171,10 +169,6 @@ let of_string_iso8601_extended ?pos ?len str =
       (String.sub str ~pos ~len) (Exn.to_string exn) ()
 ;;
 
-let of_int_sec s = of_sec (float s)
-let of_int_ms ms = of_sec ((float ms) /. 1000.)
-let of_sec_ms sec ms = of_sec ((float sec) +. (float ms) /. 1000.)
-
 let small_diff =
   let hour = 3600. in
   (fun ofday1 ofday2 ->
@@ -196,7 +190,7 @@ include T
 
 let to_string t = to_string_gen ~drop_ms:false ~drop_us:false ~trim:false t
 
-let pp ppf t = Format.fprintf ppf "%s" (to_string t)
+let pp ppf t = Format.pp_print_string ppf (to_string t)
 let () = Pretty_printer.register "Core.Ofday.pp"
 
 let of_string s =

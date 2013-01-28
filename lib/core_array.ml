@@ -6,14 +6,11 @@ let invalid_argf = Core_printf.invalid_argf
 
 type 'a t = 'a array with sexp, bin_io
 
-let max_length = Caml.Sys.max_array_length
-
 (* Standard functions *)
 let append = Array.append
 let blit = Array.blit
 let concat = Array.concat
 let copy = Array.copy
-let create_matrix = Array.create_matrix
 let fill = Array.fill
 let fold_right = Array.fold_right
 let init = Array.init

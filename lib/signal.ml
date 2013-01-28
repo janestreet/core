@@ -169,8 +169,6 @@ let send_exn t pid_spec =
 type behavior = [ `Default | `Ignore | `Handle of t -> unit ]
 
 module Behavior = struct
-  type t = behavior
-
   let of_caml = function
     | Sys.Signal_default -> `Default
     | Sys.Signal_ignore -> `Ignore

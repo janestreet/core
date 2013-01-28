@@ -8,7 +8,6 @@ module T = struct
   type t = char with bin_io, sexp
 
   let compare = Char.compare
-  let equal (x: t) y = x = y
   let hash = Hashtbl.hash
 end
 

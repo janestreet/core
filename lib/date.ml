@@ -152,10 +152,9 @@ let of_string s =
 module Sexpable = struct
 
   module Old_date = struct
-    type t = { y: int; m: int; d: int; } with sexp
+    type t = { y: int; m: int; d: int; } with of_sexp
 
     let to_date t = T.create_exn ~y:t.y ~m:(Month.of_int_exn t.m) ~d:t.d
-    let of_date t = { y = t.T.y; m = Month.to_int t.T.m; d = t.T.d; }
   end
 
   let t_of_sexp = function
@@ -198,7 +197,7 @@ include (Hashable.Make_binable (struct
   let hash (t : t) = Hashtbl.hash t
 end) : Hashable.S_binable with type t := t)
 
-let pp ppf date = Format.fprintf ppf "%s" (to_string date)
+let pp ppf date = Format.pp_print_string ppf (to_string date)
 let () = Pretty_printer.register "Core.Date.pp"
 
 let day t = t.d

@@ -16,7 +16,7 @@ module Result = struct
 end
 
 (* using (=) instead of compare would be a minor bug since nan <> nan. *)
-let default_equal x y = (compare x y = 0)
+let _default_equal x y = (compare x y = 0)
 
 let unit f =
   let l = Lazy.lazy_from_fun f in

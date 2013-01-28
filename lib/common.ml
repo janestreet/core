@@ -1,7 +1,4 @@
-open StdLabels
-open MoreLabels
 open Sexplib.Conv
-open Bin_prot.Std
 
 let seek_out = `Deprecated_use_out_channel
 let pos_out = `Deprecated_use_out_channel
@@ -71,7 +68,6 @@ include struct
   open Core_printf
   let failwithf = failwithf
   let invalid_argf = invalid_argf
-  let ksprintf = ksprintf
 end
 
 let sexp_underscore = Sexp.Atom "_"

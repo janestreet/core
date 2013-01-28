@@ -1,5 +1,3 @@
-type t = int
-
 (* Needed to avoid circular references *)
 
 module P = Pervasives

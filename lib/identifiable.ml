@@ -15,7 +15,6 @@ end) = struct
   module T' = struct
     include T
     include (Binable.Of_stringable (T) : Binable.S with type t := t)
-    let equal t t' = Core_string.equal (T.to_string t) (T.to_string t')
     let hash t = Core_string.hash (T.to_string t)
     let compare t t' = Core_string.compare (T.to_string t) (T.to_string t')
   end

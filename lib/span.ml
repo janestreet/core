@@ -142,7 +142,6 @@ let (/) t f = T.of_float ((t : T.t :> float) /. f)
 let (//) (f:T.t) (t:T.t) = (f :> float) /. (t :> float)
 
 let to_ns x        = x // T.Constant.nanosecond
-let to_us x        = x // T.Constant.microsecond
 let to_ms x        = x // T.Constant.millisecond
 let to_us x        = x // T.Constant.microsecond
 let to_sec (x:T.t) = (x :> float)
@@ -152,7 +151,6 @@ let to_day x       = x // T.Constant.day
 
 let ( ** ) f (t:T.t) = T.of_float (f *. (t :> float))
 let of_ns x        = x ** T.Constant.nanosecond
-let of_us x        = x ** T.Constant.microsecond
 let of_ms x        = x ** T.Constant.millisecond
 let of_us x        = x ** T.Constant.microsecond
 let of_sec x       = T.of_float x
@@ -253,5 +251,5 @@ let to_string (t:T.t) =
 
 let sexp_of_t t = Sexp.Atom (to_string t)
 
-let pp ppf t = Format.fprintf ppf "%s" (to_string t)
+let pp ppf t = Format.pp_print_string ppf (to_string t)
 let () = Pretty_printer.register "Core.Span.pp"

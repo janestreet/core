@@ -1,4 +1,4 @@
-type t = exn with sexp_of
+type t = exn
 
 (** Raised when finalization after an exception failed, too.
     The first exception argument is the one raised by the initial

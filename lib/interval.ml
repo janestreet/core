@@ -31,6 +31,7 @@ module type Bound = sig
 end
 
 module Raw_make (T : Bound) = struct
+  let _ = T.( <> )  (* Prevent unused value warnings *)
 
   module T = struct
     include T

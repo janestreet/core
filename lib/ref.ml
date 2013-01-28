@@ -1,5 +1,3 @@
-open Std_internal
-
 type 'a t = 'a ref = { mutable contents : 'a }
 
 let sexp_of_t sexp_of_a t = sexp_of_a !t

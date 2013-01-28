@@ -8,8 +8,6 @@ open Bin_prot.Std
 open Result.Export
 open Staged
 
-let phys_equal = Caml.(==)
-
 let invalid_argf = Core_printf.invalid_argf
 
 let failwiths = Error.failwiths
@@ -38,7 +36,6 @@ let escaped = String.escaped
 let fill = String.fill
 let index_exn = String.index
 let index_from_exn = String.index_from
-let length = String.length
 let lowercase = String.lowercase
 let make = String.make
 let rindex_exn = String.rindex
@@ -434,7 +431,7 @@ include Comparable.Map_and_set_binable (T)
 
 (* for interactive top-levels -- modules deriving from String should have String's pretty
    printer. *)
-let pp ppf s = Format.fprintf ppf "%s" s
+let pp = Format.pp_print_string
 
 (* fast version, if we ever need it:
   let concat_array ~sep ar =
@@ -765,7 +762,7 @@ module Escaping = struct
         List.map escapeworthy_map ~f:fst |! Array.of_list
       in
       try
-        for i = 0 to n - 1 do
+        for _i = 0 to n - 1 do
           let str =
             List.init (Random.int 50) ~f:(fun _ ->
               let p = Random.int 100 in

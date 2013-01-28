@@ -259,7 +259,7 @@ TEST_UNIT =
         let am_holding_lock = ref false in
         let one_thread () =
           Thread.create (fun () ->
-            for i = 1 to num_iterations do
+            for _i = 1 to num_iterations do
               lock_exn l;
               if !am_holding_lock then failwith "lock multiply acquired";
               am_holding_lock := true;

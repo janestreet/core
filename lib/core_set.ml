@@ -17,13 +17,14 @@
 (* Sets over ordered types *)
 
 open Sexplib
-open T
 open Core_set_intf
 
 module Array = Core_array
 module List = Core_list
 
 open No_polymorphic_compare
+
+let _ = compare  (* Prevent unused open warning *)
 
 let (= ) (x : int) y = Polymorphic_compare.(= ) x y
 let (<>) (x : int) y = Polymorphic_compare.(<>) x y
@@ -167,7 +168,7 @@ module Tree = struct
   exception Set_min_elt_exn_of_empty_set with sexp
   exception Set_max_elt_exn_of_empty_set with sexp
 
-  let rec min_elt_exn t =
+  let min_elt_exn t =
     match min_elt t with
     | None -> raise Set_min_elt_exn_of_empty_set
     | Some v -> v
@@ -200,7 +201,7 @@ module Tree = struct
     | Node(_, _, r, _, _) -> max_elt r
   ;;
 
-  let rec max_elt_exn t =
+  let max_elt_exn t =
     match max_elt t with
     | None -> raise Set_max_elt_exn_of_empty_set
     | Some v -> v
@@ -307,7 +308,7 @@ module Tree = struct
       else bal l v (remove_index r (i - l_size - 1) ~compare_elt)
   ;;
 
-  let rec union s1 s2 ~compare_elt =
+  let union s1 s2 ~compare_elt =
     let rec union s1 s2 =
       match s1, s2 with
       | Empty, t | t, Empty -> t
@@ -609,8 +610,6 @@ module Tree = struct
       end
   ;;
 
-  let setify l ~compare_elt = to_list (of_list l ~compare_elt)
-
   let stable_dedup_list xs ~compare_elt =
     let rec loop xs leftovers already_seen =
       match xs with
@@ -802,7 +801,6 @@ module Poly = struct
   include Creators (Elt)
 
   type 'a t = ('a, Elt.comparator) set
-  type 'a elt = 'a
 
   include Accessors
 

@@ -1,4 +1,3 @@
-open Common
 open Std_internal
 module Unix = Core_unix
 
@@ -86,7 +85,7 @@ module Epoch_cache = struct
     day_start : float;
     day_end   : float;
     date      : Date.t
-  } with sexp
+  }
 end
 
 let of_epoch_internal zone time (* shifted epoch for the time zone for conversion *) =
@@ -397,7 +396,7 @@ let sexp_of_t t =
       raise (Bug "Time.sexp_of_t: unexpected None")
 ;;
 
-let pp ppf t = Format.fprintf ppf "%s" (to_string t)
+let pp ppf t = Format.pp_print_string ppf (to_string t)
 let () = Pretty_printer.register "Core.Time.pp"
 
 let to_localized_string time zone =

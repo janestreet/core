@@ -51,6 +51,8 @@ val and_     : 'a t list -> 'a t (* convenience function: iterated [andalso] *)
 val or_      : 'a t list -> 'a t (* convenience function: iterated [orelse] *)
 val if_      : 'a t -> 'a t -> 'a t -> 'a t (* [if_ if then else] *)
 
+val is_constant : 'a t -> bool option
+
 (** The following two functions are useful when one wants to pretend
     that ['a t] has constructors And and Or of type ['a t list -> 'a t].
     The pattern of use is

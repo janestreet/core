@@ -114,7 +114,7 @@ let map_entries t ~f = fold t ~init:[] ~f:(fun ~key ~data ac -> f ~key ~data :: 
 
 let to_alist t = map_entries t ~f:(fun ~key ~data -> (key, data))
 
-type ('key, 'data) repr = ('key * 'data) list with sexp
+type ('key, 'data) repr = ('key * 'data) list with sexp_of
 
 let sexp_of_t sexp_of_key sexp_of_data t =
   sexp_of_repr sexp_of_key sexp_of_data (to_alist t)

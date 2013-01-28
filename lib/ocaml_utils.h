@@ -10,8 +10,8 @@
 #include <caml/bigarray.h>
 #include <caml/callback.h>
 #include <caml/custom.h>
+#include <caml/unixsupport.h>
 
-#define Nothing ((value) 0)
 #define XSTR(S) STR(S)
 #define STR(S) #S
 
@@ -21,10 +21,6 @@
 
 /* defined in ocaml_utils_stubs.c */
 extern int strcmp_not_a_macro(const char*, const char*);
-
-extern void unix_error (int errcode, char *cmdname, value arg) Noreturn;
-extern value unix_error_of_code(int errcode);
-extern void uerror (char *cmdname, value arg) Noreturn;
 
 extern value getsockopt_int(int *tcpopt, value sock, int level, value option);
 

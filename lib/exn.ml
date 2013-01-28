@@ -1,7 +1,6 @@
 module Sexp = Sexplib.Sexp
 module Conv = Sexplib.Conv
 open Sexplib.Std
-open Bin_prot.Std
 
 let sexp_of_exn = Conv.sexp_of_exn
 let sexp_of_exn_opt = Conv.sexp_of_exn_opt
@@ -73,7 +72,7 @@ let protect ~f ~finally = protectx ~f () ~finally
 let pp ppf t =
   match sexp_of_exn_opt t with
   | Some sexp -> Sexp.pp_hum ppf sexp
-  | None -> Format.fprintf ppf "%s" (Printexc.to_string t)
+  | None -> Format.pp_print_string ppf (Printexc.to_string t)
 
 let backtrace = Printexc.get_backtrace
 

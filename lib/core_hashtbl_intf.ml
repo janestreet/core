@@ -1,5 +1,4 @@
 open Sexplib
-open T
 
 module type Key = sig
   type t with sexp
@@ -135,9 +134,14 @@ module type Accessors = sig
       such binding exists *)
   val find : ('a, 'b) t -> 'a key -> 'b option
 
+  (** [find_default t k ~default] returns the current binding of k in t, or
+      [default ()] if no such binding exists.*)
+  val find_default : ('a, 'b) t -> 'a key -> default : (unit -> 'b) -> 'b
+
   (** [find_exn t k] returns the current binding of k in t, or raises Not_found
       if no such binding exists.*)
   val find_exn : ('a, 'b) t -> 'a key -> 'b
+
   (** [iter_vals t ~f] is like iter, except it only supplies the value to f,
       not the key. *)
   val iter_vals : (_, 'b) t -> f:('b -> unit) -> unit

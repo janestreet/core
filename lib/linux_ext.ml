@@ -1,4 +1,3 @@
-open Unix
 open Std_internal
 
 module Sysinfo0 = struct
@@ -42,6 +41,8 @@ type tcp_bool_option = TCP_CORK with sexp, bin_io
 INCLUDE "config.mlh"
 IFDEF LINUX_EXT THEN
 
+type file_descr = Core_unix.File_descr.t
+
 external sendfile :
   sock : file_descr -> fd : file_descr -> pos : int -> len : int -> int
     = "linux_sendfile_stub"
@@ -51,7 +52,7 @@ let sendfile ?(pos = 0) ?len ~fd sock =
   let len =
     match len with
     | Some len -> len
-    | None -> (fstat fd).st_size - pos
+    | None -> (Unix.fstat fd).Unix.st_size - pos
   in
   sendfile ~sock ~fd ~pos ~len
 
@@ -201,6 +202,12 @@ module Clock = struct
   let get_thread_clock  = Ok get_thread_clock
 
 end
+
+(* Avoid unused variable warnings. *)
+let _ =
+  Clock_unimplemented.(
+    get, get_time, set_time, get_resolution, get_process_clock, get_thread_clock)
+
 ELSE
 module Clock = Clock_unimplemented
 ENDIF
@@ -214,8 +221,8 @@ external pr_get_name : unit -> string = "linux_pr_get_name"
 let file_descr_realpath fd =
   Core_filename.realpath ("/proc/self/fd/" ^ Core_unix.File_descr.to_string fd)
 
-let out_channel_realpath oc = file_descr_realpath (descr_of_out_channel oc)
-let in_channel_realpath ic = file_descr_realpath (descr_of_in_channel ic)
+let out_channel_realpath oc = file_descr_realpath (Unix.descr_of_out_channel oc)
+let in_channel_realpath ic = file_descr_realpath (Unix.descr_of_in_channel ic)
 
 external raw_sched_setaffinity :
   pid : int -> cpuset : int list -> unit = "linux_sched_setaffinity"

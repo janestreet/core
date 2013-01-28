@@ -147,7 +147,7 @@ let ensure_available t len =
   end;
 ;;
 
-let feed_gen (type a) buf_length (blit_buf_to_bigstring : (_, _) Bigstring.blit)
+let feed_gen buf_length (blit_buf_to_bigstring : (_, _) Bigstring.blit)
     ?pos ?len t buf =
   if !debug then invariant t;
   match t.state with

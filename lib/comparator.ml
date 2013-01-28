@@ -53,8 +53,6 @@ module S_to_S1 (S : S) = struct
   type comparator = S.comparator
   open S
   let comparator = comparator
-  let compare = compare
-  let sexp_of_t = sexp_of_t
 end
 
 module Make1 (M : sig

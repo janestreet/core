@@ -28,8 +28,6 @@ module Digest = struct
 
     type t = string
   end)
-
-  let sexp_of_t t = Sexp.Atom (Digest.to_hex t)
 end
 
 module Regime = struct
@@ -37,7 +35,7 @@ module Regime = struct
     utc_off : float;
     is_dst  : bool;
     abbrv   : string;
-  } with sexp_of, bin_io
+  } with bin_io
 end
 
 (* holds information about when leap seconds should be applied - unused
@@ -46,7 +44,7 @@ module Leap_second = struct
   type t = {
     time    : float;
     seconds : float;
-  } with sexp_of, bin_io
+  } with bin_io
 end
 
 module Transition = struct
@@ -54,7 +52,7 @@ module Transition = struct
     start_time : float;
     end_time   : float; (* non-inclusive *)
     regime     : Regime.t
-  } with sexp_of, bin_io
+  } with bin_io
 end
 
 type t = {
@@ -65,7 +63,7 @@ type t = {
   likely_transitions      : Transition.t array;
   default_local_time_type : Regime.t;
   leap_seconds            : Leap_second.t list;
-} with sexp_of
+}
 
 module Zone_file : sig
   val input_tz_file : zonename:string -> filename:string -> t
@@ -331,19 +329,15 @@ end = struct
 end
 
 module Zone_cache : sig
-  type z
-
   val initialized_zones : unit -> (string * t) list
   val fill              : unit -> unit
   val find_or_load      : string -> t option
-  val to_alist          : unit -> (string * t) list
 end = struct
   type z = {
     mutable full : bool;
     basedir      : string;
     table        : t String.Table.t
   }
-  type t = z
 
   let the_one_and_only =
     {
@@ -408,12 +402,6 @@ end = struct
   ;;
 
   let find zone = Hashtbl.find the_one_and_only.table zone
-
-  let find_exn zone =
-    match find zone with
-    | None      -> raise (Unknown_zone zone)
-    | Some data -> data
-  ;;
 
   let find_or_load zonename =
     match find zonename with
@@ -649,6 +637,6 @@ let digest zone = zone.file_digest
 
 let name zone = zone.name
 
-let pp ppf t = Format.fprintf ppf "%s" (name t)
+let pp ppf t = Format.pp_print_string ppf (name t)
 let () = Pretty_printer.register "Core.Zone.pp"
 

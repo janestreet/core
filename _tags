@@ -355,5 +355,7 @@
 "lib/bigstring_marshal.ml" : mlh, pkg_camlp4.macro
 "lib/core_int63.ml"        : mlh, pkg_camlp4.macro
 "lib/core_mutex.ml"        : mlh, pkg_camlp4.macro
+"lib/core_unix.mli"        : mlh, pkg_camlp4.macro
 "lib/core_unix.ml"         : mlh, pkg_camlp4.macro
 "lib/linux_ext.ml"         : mlh, pkg_camlp4.macro
+<top/core_install_printers.ml> : I(+compiler-libs)

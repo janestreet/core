@@ -1,10 +1,9 @@
 INCLUDE "config.mlh"
-open Printf
+
+open Std_internal
 open Unix
 open Bigarray
-open Common
 open Sexplib.Std
-open Result.Export
 
 module Z : sig
   type t = (char, int8_unsigned_elt, c_layout) Array1.t
@@ -44,12 +43,6 @@ let check_args ~loc ~pos ~len (bstr : t) =
   let bstr_len = length bstr in
   if bstr_len < pos + len then
     invalid_arg (sprintf "Bigstring.%s: length(bstr) < pos + len" loc)
-
-let get_opt_pos ~loc ~var = function
-  | None -> 0
-  | Some pos ->
-      if pos < 0 then invalid_arg (sprintf "Bigstring.%s: %s < 0" loc var);
-      pos
 
 let get_opt_len bstr ~pos = function
   | Some len -> len

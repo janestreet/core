@@ -136,9 +136,6 @@ val partition_tf : 'a t -> f:('a -> bool) -> 'a t * 'a t
 
 val partitioni_tf : 'a t -> f:(int -> 'a -> bool) -> 'a t * 'a t
 
-(** Array lengths [l] satisfy [0 <= l < max_length]. *)
-val max_length : int
-
 val cartesian_product : 'a t -> 'b t -> ('a * 'b) t
 
 (** [normalize array index] returns a new index into the array such that if index is less

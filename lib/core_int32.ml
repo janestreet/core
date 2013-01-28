@@ -5,7 +5,6 @@ open Int32
 module T = struct
   type t = int32 with sexp, bin_io
   let compare (x : t) y = compare x y
-  let equal (x : t) y = x = y
   let hash (x : t) = Hashtbl.hash x
 
   let to_string = to_string

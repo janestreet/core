@@ -1,5 +1,3 @@
-open Sexplib
-
 module List = Core_list
 module type Key = Comparator.Pre
 module type Key_binable = Comparator.Pre_binable

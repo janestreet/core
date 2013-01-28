@@ -10,8 +10,6 @@
 
     All operations are amortized O(1) with a small constant. *)
 
-open Std_internal
-
 type 'a t
 
 include Sexpable.S1 with type 'a t := 'a t

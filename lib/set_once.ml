@@ -1,5 +1,4 @@
 open Sexplib.Std
-open Bin_prot.Std
 open Result
 
 exception Already_set with sexp

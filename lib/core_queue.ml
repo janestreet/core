@@ -7,8 +7,6 @@ module Array = Core_array
 module List = Core_list
 module Queue = Caml.Queue
 
-exception Empty = Queue.Empty
-
 type 'a t = 'a Queue.t
 
 let create = Queue.create

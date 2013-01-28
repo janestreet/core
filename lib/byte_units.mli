@@ -2,6 +2,7 @@
 
 module Measure : sig
   type t = [ `Bytes | `Kilobytes | `Megabytes | `Gigabytes | `Words ]
+  with sexp, bin_io
 end
 
 type t with bin_io, sexp

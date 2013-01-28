@@ -73,6 +73,11 @@ EOF
 gcc "$SRC" -o "$PGM" "$@"
 rm "$SRC"
 "$PGM" > "$OUT"
+
+if [[ $(ocamlc -version) > "4" ]]; then
+  echo "DEFINE OCAML_4" >>"$OUT"
+fi
+
 rm "$PGM"
 mv "$OUT" "$ML_OUTFILE"
 cat "$ML_OUTFILE" \

@@ -1,7 +1,6 @@
 (* A mutable set of elements *)
 
 open Hash_set_intf
-open T
 
 type 'a t with sexp_of
 (* We use [with sexp_of] but not [with sexp] because we want people to be explicit

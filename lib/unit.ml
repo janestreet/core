@@ -6,7 +6,6 @@ module T = struct
 
   let compare _ _ = 0
   let hash _ = 0
-  let equal _ _ = true
 end
 
 include T

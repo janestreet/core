@@ -81,4 +81,4 @@ let laws_exn name iter gen func =
   | Some _ -> failwith (Printf.sprintf "law %s failed" name)
 
 let repeat times test gen =
-  for i = 1 to times do test (gen()) done
+  for _i = 1 to times do test (gen()) done

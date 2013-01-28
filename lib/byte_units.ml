@@ -1,7 +1,5 @@
 (* Conversions between units of measure based on bytes. *)
 
-open Sexplib.Std
-open Bin_prot.Std
 open Std_internal
 
 let bytes_per_word =
@@ -24,13 +22,13 @@ module External = struct
     | `Gigabytes of float
     | `Words of float
     ]
-  with bin_io, sexp
+  with sexp
 end
 
 module Measure = struct
 
   type t = [ `Bytes | `Kilobytes | `Megabytes | `Gigabytes | `Words ]
-  with bin_io
+  with sexp, bin_io
 
   let bytes = function
     | `Bytes -> 1.
@@ -151,7 +149,6 @@ module T = struct
 
   let compare t1 t2 = Float.compare (bytes t1) (bytes t2)
 
-  let equal t1 t2 = bytes t1 = bytes t2
   let hash = Hashtbl.hash
 end
 

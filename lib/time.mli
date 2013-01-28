@@ -2,7 +2,6 @@
     convenience functions for accessing them.
 *)
 
-open Common
 open Std_internal
 
 (** A discrete point in time in the universe; not a time in some timezone. *)

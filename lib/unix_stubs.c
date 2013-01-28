@@ -549,7 +549,6 @@ CAMLprim value unix_mknod_stub(
 
 /* I/O functions */
 
-#define DIR_Val(v) *((DIR **) &Field(v, 0))
 typedef struct dirent directory_entry;
 
 CAMLprim value unix_sync(value v_unit)

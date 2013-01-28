@@ -46,11 +46,6 @@ val input_line : ?fix_win_eol:bool -> t -> string option
 val fold_lines :
   ?fix_win_eol:bool -> t -> init:'a -> f:('a -> string -> 'a) -> 'a
 
-(** [input_lines ?fix_win_eol t] returns the list of lines read from [t] using
-    [input_line].
-*)
-val input_lines : ?fix_win_eol:bool -> t -> string list
-
 (** Completely reads an input channel and returns the results as a list of
     strings. Each line in one string. *)
 val input_lines : ?fix_win_eol:bool -> t -> string list

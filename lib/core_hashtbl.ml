@@ -388,20 +388,6 @@ let create_mapped ?growth_allowed ?size ~hashable ~get_key ~get_data rows =
   | keys -> `Duplicate_keys (List.dedup ~compare:hashable.Hashable.compare keys)
 ;;
 
-let create_mapped_exn ?growth_allowed ?size ~hashable ~get_key ~get_data rows =
-  let size = match size with Some s -> s | None -> List.length rows in
-  let res = create ?growth_allowed ~size ~hashable () in
-  List.iter rows ~f:(fun r ->
-    let key = get_key r in
-    let data = get_data r in
-    if mem res key then
-      let sexp_of_key = hashable.Hashable.sexp_of_t in
-      failwiths "Hashtbl.create_mapped_exn: duplicate key" key <:sexp_of< key >>
-    else
-      replace res ~key ~data);
-  res
-;;
-
 let create_mapped_multi ?growth_allowed ?size ~hashable ~get_key ~get_data rows =
   let size = match size with Some s -> s | None -> List.length rows in
   let res = create ?growth_allowed ~size ~hashable () in
@@ -559,6 +545,7 @@ module Accessors = struct
   let partitioni_tf   = partitioni_tf
   let find_or_add     = find_or_add
   let find            = find
+  let find_default    = find_default
   let find_exn        = find_exn
   let iter_vals       = iter_vals
   let to_alist        = to_alist
@@ -569,7 +556,6 @@ module Accessors = struct
   let filter_inplace  = filter_inplace
   let filteri_inplace = filteri_inplace
   let equal           = equal
-  let add_to_groups   = add_to_groups
   let incr            = incr
   let sexp_of_key     = sexp_of_key
 end
@@ -686,7 +672,7 @@ module Make (Key : Key) = struct
     }
   ;;
 
-  type key = Key.t with sexp_of
+  type key = Key.t
   type ('a, 'b) hashtbl = ('a, 'b) t
   type 'a t = (key, 'a) hashtbl
   type 'a key_ = key

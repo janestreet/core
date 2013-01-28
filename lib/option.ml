@@ -1,5 +1,4 @@
 open Sexplib.Std
-open Bin_prot.Std
 
 type 'a t = 'a option with sexp
 
@@ -154,5 +153,4 @@ include (Monad.Make (struct
     match o with
     | None -> None
     | Some x -> f x
-  let failwith e = failwith e
 end) : Monad.S with type 'a t := 'a option)

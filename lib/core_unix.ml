@@ -335,16 +335,6 @@ external initgroups : string -> int -> unit = "unix_initgroups"
 (** Globbing and shell word expansion *)
 
 module Fnmatch_flags = struct
-  type flag = [
-    | `No_escape
-    | `Pathname
-    | `Period
-    | `File_name
-    | `Leading_dir
-    | `Casefold
-  ]
-  with sexp
-
   let flag_to_internal = function
     | `No_escape -> 0
     | `Pathname -> 1
@@ -354,7 +344,7 @@ module Fnmatch_flags = struct
     | `Casefold -> 5
   ;;
 
-  type t = int32 with sexp
+  type t = int32
 
   external internal_make : int array -> t = "unix_fnmatch_make_flags"
 
@@ -371,15 +361,13 @@ external fnmatch :
 let fnmatch ?flags ~pat fname = fnmatch (Fnmatch_flags.make flags) ~pat fname
 
 module Wordexp_flags = struct
-  type flag = [ `No_cmd | `Show_err | `Undef ] with sexp
-
   let flag_to_internal = function
     | `No_cmd -> 0
     | `Show_err -> 1
     | `Undef -> 2
   ;;
 
-  type t = int32 with sexp
+  type t = int32
 
   external internal_make : int array -> t = "unix_wordexp_make_flags"
 
@@ -427,7 +415,7 @@ module Scheduler = struct
     type t = [ `Fifo | `Round_robin | `Other ] with sexp
 
     module Ordered = struct
-      type t = Fifo | Round_robin | Other with sexp
+      type t = Fifo | Round_robin | Other
       let create = function
         | `Fifo -> Fifo
         | `Round_robin -> Round_robin
@@ -570,7 +558,7 @@ type process_status = Unix.process_status =
 | WEXITED of int
 | WSIGNALED of int
 | WSTOPPED of int
-with sexp
+with sexp_of
 
 module Exit = struct
   type error = [ `Exit_non_zero of int ] with sexp
@@ -790,6 +778,27 @@ let stdin = Unix.stdin
 let stdout = Unix.stdout
 let stderr = Unix.stderr
 
+IFDEF OCAML_4 THEN
+
+type open_flag =
+Unix.open_flag =
+| O_RDONLY
+| O_WRONLY
+| O_RDWR
+| O_NONBLOCK
+| O_APPEND
+| O_CREAT
+| O_TRUNC
+| O_EXCL
+| O_NOCTTY
+| O_DSYNC
+| O_SYNC
+| O_RSYNC
+| O_SHARE_DELETE
+with sexp
+
+ELSE
+
 type open_flag =
 Unix.open_flag =
 | O_RDONLY
@@ -805,6 +814,8 @@ Unix.open_flag =
 | O_SYNC
 | O_RSYNC
 with sexp
+
+ENDIF (* OCAML_4 *)
 
 type file_perm = int with of_sexp
 
@@ -907,8 +918,6 @@ module Native_file = struct
       (fun () -> [fd_r fd; len_r len])
   ;;
 end
-
-open LargeFile
 
 type lock_command =
   Unix.lock_command =
@@ -1015,7 +1024,7 @@ type access_permission = Unix.access_permission =
   | W_OK
   | X_OK
   | F_OK
-with sexp
+with sexp_of
 
 let chmod filename ~perm =
   improve (fun () -> Unix.chmod filename ~perm)
@@ -1165,7 +1174,7 @@ external create_process :
 type env = [
   | `Replace of (string * string) list
   | `Extend of (string * string) list
-] with sexp
+] with sexp_of
 
 let create_process_env ?working_dir ~prog ~args ~env () =
   let module Map = Core_map in
@@ -1442,7 +1451,7 @@ end
 
 (* The standard getlogin function goes through utmp which is unreliable,
    see the BUGS section of getlogin(3) *)
-let getlogin_orig = Unix.getlogin
+let _getlogin_orig = Unix.getlogin
 let getlogin () = (Unix.getpwuid (getuid ())).Unix.pw_name
 
 module Protocol_family = struct
@@ -1453,12 +1462,6 @@ module Protocol_family = struct
     | Unix.PF_UNIX -> `Unix
     | Unix.PF_INET -> `Inet
     | Unix.PF_INET6 -> `Inet6
-  ;;
-
-  let to_unix = function
-    | `Unix -> Unix.PF_UNIX
-    | `Inet -> Unix.PF_INET
-    | `Inet6 -> Unix.PF_INET6
   ;;
 end
 
@@ -1725,7 +1728,7 @@ with sexp
 
 type socket_optint_option = Unix.socket_optint_option =
   | SO_LINGER
-with sexp
+with sexp_of
 
 type socket_float_option = Unix.socket_float_option =
   | SO_RCVTIMEO
@@ -1866,7 +1869,7 @@ module Terminal_io = struct
     mutable c_vstart : char;
     mutable c_vstop : char;
   }
-  with sexp
+  with sexp_of
 
   let tcgetattr = unary_fd Unix.tcgetattr
 
@@ -1874,7 +1877,7 @@ module Terminal_io = struct
     | TCSANOW
     | TCSADRAIN
     | TCSAFLUSH
-  with sexp
+  with sexp_of
 
   let tcsetattr t fd ~mode =
     improve (fun () -> Unix.tcsetattr fd ~mode t)

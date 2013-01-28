@@ -10,9 +10,11 @@ type t =
     init : Bigstring.t;
   }
 
+(*
 let invariant t =
   assert (t.len == Bigstring.length t.bstr);
 ;;
+*)
 
 let create n =
   let n = max 1 n in

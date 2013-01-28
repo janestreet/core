@@ -11,7 +11,8 @@ open Std_internal
 
 exception Empty with sexp
 
-type 'a t = { inlist : 'a list; outlist : 'a list; length : int } with bin_io, sexp
+type 'a t = { inlist : 'a list; outlist : 'a list; length : int }
+with bin_io, of_sexp
 
 let test_invariants queue =
   let n_out = List.length queue.outlist in

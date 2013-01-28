@@ -158,14 +158,14 @@ let add_random_localtime_tests () =
         then
           true
         else
-          failwithf "%s" (Sexp.to_string (Localtime_test_data.sexp_of_t test_data)) ());
+          failwith (Sexp.to_string (Localtime_test_data.sexp_of_t test_data)) ());
       "ofday" @?
         (if Localtime_test_data.(
           test_data.localtime_ofday_string = test_data.our_ofday_string)
         then
           true
         else
-          failwithf "%s" (Sexp.to_string (Localtime_test_data.sexp_of_t test_data)) ())))
+          failwith (Sexp.to_string (Localtime_test_data.sexp_of_t test_data)) ())))
 ;;
 
 let add_roundtrip_conversion_tests () =

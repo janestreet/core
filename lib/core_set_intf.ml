@@ -1,5 +1,3 @@
-open Sexplib
-
 module type Elt = Comparator.Pre
 module type Elt_binable = Comparator.Pre_binable
 

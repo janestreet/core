@@ -225,8 +225,6 @@ let unordered_append l1 l2 =
   | [], l | l, [] -> l
   | _             -> List.rev_append l1 l2
 
-let iter = List.iter
-
 let rev_map t ~f = List.rev_map t ~f
 
 exception Length_mismatch of string * int * int with sexp
@@ -374,6 +372,7 @@ TEST_UNIT =
 (* Rebind [@] so that uses below get our tail-recursive version rather than
    Pervasive's nontail version. *)
 let (@) = append
+let _ = (@)  (* To satisfy warnings if [@] is not used *)
 
 let map_slow l ~f = List.rev (List.rev_map ~f l)
 
@@ -460,10 +459,6 @@ TEST = fold_right ~f:(fun _ _ -> ()) [] ~init:() = ()
 TEST_UNIT =
   let long = Test_values.long1 () in
   ignore (fold_right ~f:(fun e acc -> e :: acc) long ~init:[])
-
-let fold_right2_exn l1 l2 ~f ~init =
-  fold2_exn (List.rev l1) (List.rev l2) ~init ~f:(fun a b c -> f b c a)
-;;
 
 let unzip list =
   let rec loop list l1 l2 =
@@ -806,8 +801,6 @@ let sub l ~pos ~len =
     )
 ;;
 
-let normalize a i =
-  Ordered_collection_common.normalize ~length_fun:length a i
 let slice a start stop =
   Ordered_collection_common.slice ~length_fun:length ~sub_fun:sub
     a start stop

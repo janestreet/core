@@ -42,7 +42,7 @@ end
 
 let of_int_style = Int_conversions.sexp_of_int_style
 
-type 'a no_raise = 'a with bin_io, sexp
+type 'a no_raise = 'a with bin_io, of_sexp
 
 let sexp_of_no_raise sexp_of_a a =
   try sexp_of_a a
