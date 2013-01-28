@@ -54,6 +54,8 @@ val clear : 'a t -> unit
     and do so after [fold_elt] returns. *)
 val fold_elt : 'a t -> init:'b -> f:('b -> 'a Elt.t -> 'b) -> 'b
 
+val iter_elt : 'a t -> f:('a Elt.t -> unit) -> unit
+
 (** [find_elt t ~f] looks at elements in the bag one-by-one until it finds one
     [elt] such that [f (Elt.value elt)], in which case it returns [Some elt].
     If there is no element satisfying [f], then [find_elt] returns [None]. *)

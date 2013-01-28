@@ -77,6 +77,8 @@ val remove_last : 'a t -> 'a option
     and do so after [fold_elt] returns. *)
 val fold_elt : 'a t -> init:'b -> f:('b -> 'a Elt.t -> 'b) -> 'b
 
+val iter_elt : 'a t -> f:('a Elt.t -> unit) -> unit
+
 val fold_right : 'a t -> init:'b -> f:('a -> 'b -> 'b) -> 'b
 
 (** [find_elt t ~f] finds the first element in [t] that satisfies [f], by testing each of

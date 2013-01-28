@@ -41,8 +41,9 @@ val month : t -> Month.t
 val year : t -> int
 
 (* added to Date in Core.Std to handle the circular dependancy between Time and Date *)
-(* val today : unit -> t                   (* based on local timezone *) *)
-(* val of_time : Time.t -> t               (* based on local timezone *) *)
+(* val today : unit -> t                    (* based on local timezone *) *)
+(* val of_time : Time.t -> t                (* based on local timezone *) *)
+(* val format  : Date.t -> string -> string (* based on local timezone *) *)
 
 val day_of_week : t -> Weekday.t
 

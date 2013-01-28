@@ -66,6 +66,7 @@ let tests () = OUnit.TestList [
     Date.ounit_tests ();
     Dequeue.ounit_tests ();
     Doubly_linked.ounit_tests ();
+    Equal.ounit_tests ();
     Error.ounit_tests ();
     Exn.ounit_tests ();
     Float.ounit_tests ();
@@ -94,6 +95,7 @@ let tests () = OUnit.TestList [
     Int_intf.ounit_tests ();
     Int_replace_polymorphic_compare.ounit_tests ();
     Int_set.ounit_tests ();
+    Invariant.ounit_tests ();
     Linux_ext.ounit_tests ();
     Lock_file.ounit_tests ();
     Make_substring.ounit_tests ();
@@ -108,6 +110,7 @@ let tests () = OUnit.TestList [
     Only_in_test.ounit_tests ();
     Option.ounit_tests ();
     Ordered_collection_common.ounit_tests ();
+    Ordering.ounit_tests ();
     Or_error.ounit_tests ();
     Out_channel.ounit_tests ();
     Pid.ounit_tests ();

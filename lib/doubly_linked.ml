@@ -196,6 +196,21 @@ let fold_elt t ~init ~f =
         if phys_equal next first then acc else loop acc next
       in
       loop init first)
+;;
+
+let iter_elt t ~f = fold_elt t ~init:() ~f:(fun () elt -> f elt)
+
+TEST_UNIT =
+  List.iter
+    [ [];
+      [ 1 ];
+      [ 2; 3 ];
+    ]
+    ~f:(fun l ->
+      let sum = ref 0 in
+      iter_elt (of_list l) ~f:(fun elt -> sum := !sum + Elt.value elt);
+      assert (!sum = List.fold l ~init:0 ~f:(+)))
+;;
 
 open With_return
 

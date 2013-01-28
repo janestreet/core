@@ -41,6 +41,8 @@ module Stack = Core_stack
 module Sys = Core_sys
 module Char = Core_char
 
+module Ordering = Ordering
+
 module Bool = Bool
 module Int = Core_int
 include Int.Infix
@@ -111,4 +113,4 @@ let lazy_t_of_sexp = Lazy.t_of_sexp
 let sexp_of_lazy_t = Lazy.sexp_of_t
 
 
-
+include Ordering.Export
