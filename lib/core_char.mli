@@ -3,6 +3,7 @@
 (** An alias for the type of characters. *)
 type t = char with bin_io, sexp
 
+include Stringable.S with type t := t
 include Comparable.S with type t := t
 include Hashable.S with type t := t
 
@@ -28,8 +29,6 @@ val lowercase : t -> t
 
 (** Convert the given character to its equivalent uppercase character. *)
 val uppercase : t -> t
-
-val to_string : t -> string
 
 (** '0' - '9' *)
 val is_digit : t -> bool

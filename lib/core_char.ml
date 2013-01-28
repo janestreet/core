@@ -59,6 +59,12 @@ let is_alphanum t = is_alpha t || is_digit t
 
 let to_string t = String.make 1 t
 
+let of_string s =
+  match String.length s with
+  | 1 -> String.get s 0
+  | _ -> failwithf "Char.of_string: %S" s ()
+;;
+
 let get_digit_unsafe t = to_int t - to_int '0'
 
 let get_digit_exn t =

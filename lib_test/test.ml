@@ -41,6 +41,7 @@ let all () =
          Interval_test.test;
          Int_conversions_test.test;
          Hash_heap_test.test;
+         Core_char_test.test;
          Core_int_test.test;
          Core_array_test.test;
          Core_filename_test.test;
