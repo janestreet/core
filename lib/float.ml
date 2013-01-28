@@ -74,51 +74,18 @@ let to_int64 f =
    in case someone uses them with <= or >=.
 *)
 let float_round_lb = max (of_int min_int) (-1.0 *. 2.0 ** 62.0 +. 257.)
-let float_round_ub = min (of_int max_int) (2.0 ** 62.0 -. 257.)
-
-let round x = floor (x +. 0.5)
-
-let iround_towards_zero_exn x =
-  if is_nan x then
-    invalid_arg "Float.iround_towards_zero_exn: Unable to handle NaN"
-  else
-    begin
-      if float_round_lb < x && x < float_round_ub then truncate x
-      else invalid_argf "Float.iround_towards_zero_exn: argument out of bounds (%f)" x ()
-    end
-
-let iround_down_exn x =
-  if is_nan x then
-    invalid_arg "Float.iround_down_exn: Unable to handle NaN"
-  else
-    begin
-      if float_round_lb < x && x < float_round_ub then to_int (floor x)
-      else invalid_argf "Float.iround_down_exn: argument out of bounds (%f)" x ()
-    end
-
-let iround_up_exn x =
-  if is_nan x then
-    invalid_arg "Float.iround_up_exn: Unable to handle NaN"
-  else
-    begin
-      if float_round_lb < x && x < float_round_ub then to_int (ceil x)
-      else invalid_argf "Float.iround_up_exn: argument out of bounds (%f)" x ()
-    end
-
-let iround_nearest_exn x =
-  if is_nan x then
-    invalid_arg "Float.iround_nearest_exn: Unable to handle NaN"
-  else begin
-    if float_round_lb < x && x < float_round_ub then to_int (round x)
-    else invalid_argf "Float.iround_nearest_exn: argument out of bounds (%f)" x ()
-  end
+let float_round_ub = min (of_int max_int) (        2.0 ** 62.0 -. 257.)
 
 let iround_exn ?(dir=`Nearest) t =
-  match dir with
-  | `Zero    -> iround_towards_zero_exn t
-  | `Nearest -> iround_nearest_exn t
-  | `Up      -> iround_up_exn t
-  | `Down    -> iround_down_exn t
+  if is_nan t
+  then invalid_arg "Float.iround_exn: Unable to handle NaN"
+  else if t <= float_round_lb || t >= float_round_ub
+  then invalid_argf "Float.iround_exn: argument out of bounds (%f)" t ()
+  else match dir with
+  | `Zero    -> truncate t
+  | `Nearest -> to_int (floor (t +. 0.5))
+  | `Up      -> to_int (ceil  t)
+  | `Down    -> to_int (floor t)
 
 let iround ?(dir=`Nearest) t =
   try Some (iround_exn ~dir t)
@@ -176,23 +143,34 @@ end
 let modf = Parts.modf
 
 let round_down = floor
-TEST = round_down 3.6 = 3. && round_down (-3.6) = -4.
+TEST =
+  round_down      3.6  =  3.
+  && round_down (-3.6) = -4.
 
 let round_up = ceil
-TEST = round_up 3.6 = 4. && round_up (-3.6) = -3.
+TEST =
+  round_up      3.6  =  4.
+  && round_up (-3.6) = -3.
 
-let round_towards_zero t = if t >= 0. then round_down t else round_up t
-TEST = round_towards_zero 3.6 = 3. && round_towards_zero (-3.6) = -3.
+let round_towards_zero t =
+  if t >= 0.
+  then round_down t
+  else round_up   t
+TEST =
+  round_towards_zero      3.6  =  3.
+  && round_towards_zero (-3.6) = -3.
 
-let round_nearest t = round t
-TEST = round_nearest 3.6 = 4. && round_nearest (-3.6) = -4.
+let round_nearest t = floor (t +. 0.5)
+TEST =
+  round_nearest      3.6  =  4.
+  && round_nearest (-3.6) = -4.
 
 let round ?(dir=`Nearest) t =
   match dir with
-  | `Nearest -> floor (t +. 0.5)
-  | `Down -> round_down t
-  | `Up -> round_up t
-  | `Zero -> round_towards_zero t
+  | `Nearest -> round_nearest      t
+  | `Down    -> round_down         t
+  | `Up      -> round_up           t
+  | `Zero    -> round_towards_zero t
 
 let mod_float = Pervasives.mod_float
 

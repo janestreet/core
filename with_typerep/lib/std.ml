@@ -45,7 +45,7 @@ module type With_typerep_and_typestruct = sig
   include Typestructable.S0 with type t := t
 end
 
-module Test : sig
+module Extending_with_typerep_test : sig
 
   (* entry point of tests *)
   val run :
@@ -57,20 +57,20 @@ module Test : sig
 
   (* Checks that the [Binable] and [Sexpable] implementations generated from the typerep
      are equivalent with the auto-generated ones. *)
-  (*val run_with_typerep :
+  val run_with_typerep :
     (module With_bin_io_and_sexp with type t = 'a)
     -> (module Typerepable.S0 with type t = 'a)
     -> 'a list
-    -> unit*)
+    -> unit
 
   (* Checks that the [Binable] and [Sexpable] implementations generated from the
      typestruct are equivalent with the auto-generated ones. *)
-  (*val run_with_typestruct :
+  val run_with_typestruct :
     skip_sexp_str:bool
     -> (module With_bin_io_and_sexp with type t = 'a)
     -> (module Typestructable.S0 with type t = 'a)
     -> 'a list
-    -> unit*)
+    -> unit
 end = struct
 
   let run_with_typerep (type a) camlp4 rep (items : a list) =
@@ -88,15 +88,52 @@ end = struct
     (* Check that the binary encodings are identical. *)
     List.iter items
       ~f:(fun item ->
-        let bin_from_m = Binable.to_string binable_m item in
         let bin_from_p = Binable.to_string binable_p item in
+        let bin_from_m =
+          try Binable.to_string binable_m item
+          with e ->
+            Printf.printf "exn while bin_io rep serializing (1) using %s\nbuffer:%S\n%s\n%!"
+              (Sexp.to_string_hum (Type_struct.sexp_of_typerep R.typerep_of_t))
+              bin_from_p
+              (Exn.to_string e);
+            raise e
+        in
         assert (String.equal bin_from_p bin_from_m);
         let str = bin_from_m in (* they are the same *)
         (* deserialize and reserialize again *)
-        let item_m = Binable.of_string binable_m str in
         let item_p = Binable.of_string binable_p str in
-        let bin_from_m = Binable.to_string binable_m item_m in
+        let item_m =
+          try Binable.of_string binable_m str
+          with e ->
+            Printf.printf "exn while bin_io rep unserializing using %s\nbuffer:%S\n%s\n%!"
+              (Sexp.to_string_hum (Type_struct.sexp_of_typerep R.typerep_of_t))
+              str
+              (Exn.to_string e);
+            raise e
+        in
         let bin_from_p = Binable.to_string binable_p item_p in
+        let bin_from_m =
+          try Binable.to_string binable_m item_m
+          with e ->
+            Printf.printf "exn while bin_io rep serializing (2) using %s\nbuffer:%S\n%s\n%!"
+              (Sexp.to_string_hum (Type_struct.sexp_of_typerep R.typerep_of_t))
+              bin_from_p
+              (Exn.to_string e);
+            raise e
+        in
+        (* and recheck *)
+        assert (String.equal bin_from_p bin_from_m);
+        (* inverting the values *)
+        let bin_from_p = Binable.to_string binable_p item_m in
+        let bin_from_m =
+          try Binable.to_string binable_m item_p
+          with e ->
+            Printf.printf "exn while bin_io rep serializing (3) using %s\nbuffer:%S\n%s\n%!"
+              (Sexp.to_string_hum (Type_struct.sexp_of_typerep R.typerep_of_t))
+              bin_from_p
+              (Exn.to_string e);
+            raise e
+        in
         (* and recheck *)
         assert (String.equal bin_from_p bin_from_m);
       );
@@ -127,8 +164,24 @@ end = struct
     List.iter items
       ~f:(fun item ->
         let bin_from_p = Binable.to_string binable_p item in
-        let item_m = Binable.of_string binable_m bin_from_p in
-        let bin_from_m = Binable.to_string binable_m item_m in
+        let item_m =
+          try Binable.of_string binable_m bin_from_p
+          with e ->
+            Printf.printf "exn while bin_io struct unserializing using %s\nbuffer:%S\n%s\n%!"
+              (Sexp.to_string_hum (Type_struct.sexp_of_t R.typestruct_of_t))
+              bin_from_p
+              (Exn.to_string e);
+            raise e
+        in
+        let bin_from_m =
+          try Binable.to_string binable_m item_m
+          with e ->
+            Printf.printf "exn while bin_io struct serializing using %s\nbuffer:%S\n%s\n%!"
+              (Sexp.to_string_hum (Type_struct.sexp_of_t R.typestruct_of_t))
+              bin_from_p
+              (Exn.to_string e);
+            raise e
+        in
         assert (String.equal bin_from_p bin_from_m);
 
         if skip_sexp_str then () else begin
@@ -157,6 +210,8 @@ end = struct
     run_with_typestruct ~skip_sexp_str camlp4 str items;
   ;;
 end
+
+module Test = Extending_with_typerep_test
 
 
 module Month = struct

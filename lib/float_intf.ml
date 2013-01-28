@@ -38,8 +38,8 @@ module type S = sig
   val of_int64 : int64 -> t
   val to_int64 : t -> int64
 
-  (* [round] rounds a float to a float.  [iround{,_exn}] rounds a float to an int.  Both
-     round according to a direction [dir], with default [dir] being [`Nearest].
+  (* [round] rounds a float to an integer float.  [iround{,_exn}] rounds a float to an
+     int.  Both round according to a direction [dir], with default [dir] being [`Nearest].
 
      | `Down    | rounds toward Float.neg_infinity |
      | `Up      | rounds toward Float.infinity     |

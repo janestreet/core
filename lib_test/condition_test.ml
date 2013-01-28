@@ -8,7 +8,7 @@
 open Core.Std
 open OUnit
 
-let run () =
+let rec run ~num_retries =
   let v_mtx = Mutex.create ()
   and cnd_v_is_true = Condition.create ()
   and v = ref false in
@@ -39,17 +39,35 @@ let run () =
   (* Now we have a thread that sets the condition so we expect to not timeout.
   *)
   begin
-    let timedout = wait_for_v 0.5 in
-    assert (not timedout);
-    assert !v
+    let rec wait ~num_wait_retries =
+      if num_wait_retries = 0 then
+        failwithf "condition_test repeatedly failed %d times" num_wait_retries ()
+      else
+        let timed_out = wait_for_v 0.5 in
+        match !v, timed_out with
+        | true, false ->
+          (* The expected case.  Yay. *)
+          ()
+        | false, false ->
+          (* Should be impossible to get here, since [v_setter] set [v] before signaling. *)
+          assert false
+        | false, true ->
+          (* We timed out.  Maybe machine is loaded.  Try again. *)
+          wait ~num_wait_retries:(num_wait_retries - 1)
+        | true, true ->
+          (* We timed out and the variable was set.  Could happen due to a race.  Try the
+             whole experiment again.  *)
+          run ~num_retries:(num_retries - 1)
+    in
+    wait ~num_wait_retries:10
   end
-
+;;
 
 
 let test = "Condition_test" >::: [
   "test" >:: (fun () ->
-    "1" @? (try run (); true with e ->
-              eprintf "in cond\
+    "1" @? (try run ~num_retries:5; true with e ->
+      eprintf "in cond\
  ition test:%s\n%!" (Exn.to_string e);
-              false));
+      false));
 ]

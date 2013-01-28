@@ -27,6 +27,7 @@ val create_exn : 'a -> 'a t
 (** [value t] returns the value that is physically equal to [t] *)
 val value : 'a t -> 'a
 
-(** [bytes t] returns the number of bytes on the heap taken by [t], including the
-    header. *)
+(** [bytes t] returns the number of bytes on the heap taken by heap block [t], including
+    the header.  This is just the space for the single block, not anything it points
+    to. *)
 val bytes : _ t -> int

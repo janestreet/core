@@ -48,3 +48,45 @@ module Serializable_of_typestructable(T : Typestructable.S0) : sig
   val t_of_bigstring : Bigstring.t -> t
   val bigstring_of_t : t -> Bigstring.t
 end
+
+module type With_bin_io_and_sexp = sig
+  type t
+
+  include Binable.S with type t := t
+  include Sexpable.S with type t := t
+end
+
+module type With_typerep_and_typestruct = sig
+  type t
+
+  include Typerepable.S0 with type t := t
+  include Typestructable.S0 with type t := t
+end
+
+module Extending_with_typerep_test : sig
+
+  (* entry point of tests *)
+  val run :
+    ?skip_sexp_str:bool
+    -> (module With_bin_io_and_sexp with type t = 'a)
+    -> (module With_typerep_and_typestruct with type t = 'a)
+    -> 'a list
+    -> unit
+
+  (* Checks that the [Binable] and [Sexpable] implementations generated from the typerep
+     are equivalent with the auto-generated ones. *)
+  val run_with_typerep :
+    (module With_bin_io_and_sexp with type t = 'a)
+    -> (module Typerepable.S0 with type t = 'a)
+    -> 'a list
+    -> unit
+
+  (* Checks that the [Binable] and [Sexpable] implementations generated from the
+     typestruct are equivalent with the auto-generated ones. *)
+  val run_with_typestruct :
+    skip_sexp_str:bool
+    -> (module With_bin_io_and_sexp with type t = 'a)
+    -> (module Typestructable.S0 with type t = 'a)
+    -> 'a list
+    -> unit
+end
