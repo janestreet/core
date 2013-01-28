@@ -346,17 +346,20 @@ let slow_append l1 l2 = List.rev_append (List.rev l1) l2
    doesn't require stack space.
 *)
 let rec count_append l1 l2 count =
-  match l1 with
-  | []               ->                         l2
-  | [x1]             -> x1                   :: l2
-  | [x1; x2]         -> x1 :: x2             :: l2
-  | [x1; x2; x3]     -> x1 :: x2 :: x3       :: l2
-  | [x1; x2; x3; x4] -> x1 :: x2 :: x3 :: x4 :: l2
-  | x1 :: x2 :: x3 :: x4 :: x5 :: tl ->
-    x1 :: x2 :: x3 :: x4 :: x5 ::
-      (if count > 1000
-       then slow_append tl l2
-       else count_append tl l2 (count + 1))
+  match l2 with
+  | [] -> l1
+  | _ ->
+    match l1 with
+    | []               ->                         l2
+    | [x1]             -> x1                   :: l2
+    | [x1; x2]         -> x1 :: x2             :: l2
+    | [x1; x2; x3]     -> x1 :: x2 :: x3       :: l2
+    | [x1; x2; x3; x4] -> x1 :: x2 :: x3 :: x4 :: l2
+    | x1 :: x2 :: x3 :: x4 :: x5 :: tl ->
+      x1 :: x2 :: x3 :: x4 :: x5 ::
+        (if count > 1000
+         then slow_append tl l2
+         else count_append tl l2 (count + 1))
 
 let append l1 l2 = count_append l1 l2 0
 
@@ -368,11 +371,6 @@ TEST = append [1;2] [3] = [1;2;3]
 TEST_UNIT =
   let long = Test_values.long1 () in
   ignore (append long long:int list)
-
-(* Rebind [@] so that uses below get our tail-recursive version rather than
-   Pervasive's nontail version. *)
-let (@) = append
-let _ = (@)  (* To satisfy warnings if [@] is not used *)
 
 let map_slow l ~f = List.rev (List.rev_map ~f l)
 
@@ -667,13 +665,14 @@ TEST = find_a_dup [3;5;4;6;12] = None
 TEST = find_a_dup [3;5;4;5;12] = Some 5
 TEST = find_a_dup [3;5;12;5;12] = Some 5
 TEST = find_a_dup [(0,1);(2,2);(0,2);(4,1)] = None
-TEST = Option.is_some
-      (find_a_dup [(0,1);(2,2);(0,2);(4,1)]
-         ~compare:(fun (_,a) (_,b) -> Pervasives.compare a b))
+TEST = (find_a_dup [(0,1);(2,2);(0,2);(4,1)]
+          ~compare:(fun (_,a) (_,b) -> Pervasives.compare a b)) <> None
 TEST = let dup = find_a_dup [(0,1);(2,2);(0,2);(4,1)]
          ~compare:(fun (a,_) (b,_) -> Pervasives.compare a b)
        in
-       Option.map dup ~f:fst = Some 0
+       match dup with
+       | Some (0, _) -> true
+       | _ -> false
 
 
 type sexp_thunk = unit -> Sexplib.Sexp.t
@@ -681,9 +680,10 @@ let sexp_of_sexp_thunk x = x ()
 exception Duplicate_found of sexp_thunk * string with sexp
 
 let exn_if_dup ?compare ?(context="exn_if_dup") t ~to_sexp =
-  Option.iter (find_a_dup ?compare t) ~f:(fun dup ->
+  match find_a_dup ?compare t with
+  | None -> ()
+  | Some dup ->
     raise (Duplicate_found ((fun () -> to_sexp dup),context))
-  )
 
 let count t ~f = Container.fold_count fold t ~f
 
@@ -765,14 +765,16 @@ module Assoc = struct
   let equal x y = compare x y = 0
 
   let find t ?(equal=equal) key =
-    Option.map (find t ~f:(fun (key', _) -> equal key key')) ~f:snd
+    match find t ~f:(fun (key', _) -> equal key key') with
+    | None -> None
+    | Some x -> Some (snd x)
 
   let find_exn t ?(equal=equal) key =
     match find t key ~equal with
     | None -> raise Not_found
     | Some value -> value
 
-  let mem t ?(equal=equal) key = Option.is_some (find t ~equal key)
+  let mem t ?(equal=equal) key = (find t ~equal key) <> None
 
   let remove t ?(equal=equal) key =
     filter t ~f:(fun (key', _) -> not (equal key key'))
@@ -861,7 +863,7 @@ TEST = concat
   [[1;2;3;4];[5;6;7];[8;9;10];[];[11;12]]
   = [1;2;3;4;5;6;7;8;9;10;11;12]
 
-let concat_no_order l = fold l ~init:[] ~f:rev_append
+let concat_no_order l = fold l ~init:[] ~f:(fun acc l -> rev_append l acc)
 
 let cons x l = x :: l
 

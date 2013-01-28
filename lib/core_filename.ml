@@ -152,9 +152,35 @@ let temp_file ?perm ?in_dir prefix suffix =
 let root = "/"
 
 let split_extension fn =
-  match String.rsplit2 ~on:'.' fn with
-  | None -> (fn, None)
-  | Some (base_fn, ext) -> (base_fn, Some ext)
+  let dir, fn =
+    match String.rsplit2 ~on:'/' fn with
+    | None -> (None, fn)
+    | Some (path, fn) -> (Some path, fn)
+  in
+  let fn, ext =
+    match String.rsplit2 ~on:'.' fn with
+    | None -> (fn, None)
+    | Some (base_fn, ext) -> (base_fn, Some ext)
+  in
+  let fn =
+    match dir with
+    | None -> fn
+    | Some dir -> dir ^ "/" ^ fn
+  in
+  (fn, ext)
+
+TEST = split_extension "/foo/my_file"       = ("/foo/my_file", None)
+TEST = split_extension "/foo/my_file.txt"   = ("/foo/my_file", Some "txt")
+TEST = split_extension "/foo/my_file.1.txt" = ("/foo/my_file.1", Some "txt")
+TEST = split_extension "/home/c.falls/my_file"       = ("/home/c.falls/my_file", None)
+TEST = split_extension "/home/c.falls/my_file.txt"   = ("/home/c.falls/my_file", Some "txt")
+TEST = split_extension "/home/c.falls/my_file.1.txt" = ("/home/c.falls/my_file.1", Some "txt")
+TEST = split_extension "my_file"       = ("my_file", None)
+TEST = split_extension "my_file.txt"   = ("my_file", Some "txt")
+TEST = split_extension "my_file.1.txt" = ("my_file.1", Some "txt")
+TEST = split_extension "/my_file"       = ("/my_file", None)
+TEST = split_extension "/my_file.txt"   = ("/my_file", Some "txt")
+TEST = split_extension "/my_file.1.txt" = ("/my_file.1", Some "txt")
 
 let parts filename =
   let rec loop acc filename =
@@ -176,4 +202,3 @@ TEST = parts "foo" = ["."; "foo"]
 TEST = parts "./foo" = ["."; "foo"]
 TEST = parts "./foo/" = ["."; "foo"]
 TEST = parts "./foo/." = ["."; "foo"; "."]
-

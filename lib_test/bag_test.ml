@@ -53,7 +53,7 @@ let test =
               Bag.invariant b;
             done;
             assert (Bag.length b = n);
-            for i = 1 to n do
+            for _i = 1 to n do
               Bag.invariant b;
               match Bag.remove_one b with
               | None -> assert false

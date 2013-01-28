@@ -89,7 +89,7 @@ let inchan_test ~n test orig =
   let (fname,outc) = Filename.open_temp_file "bigstring_test" ".txt" in
   protect ~f:(fun () ->
     really_output outc orig;
-    close_out outc;
+    Out_channel.close outc;
     let inc = open_in fname in
     test ~n orig inc)
     ~finally:(fun () -> Unix.unlink fname)
@@ -146,7 +146,7 @@ let output_input_test ?(runs = 2) ~n fdpair bs =
   fdpair_test ~n fdpair
     (fun bs fd ->
       if !oc = stdout then oc := Unix.out_channel_of_descr fd;
-      for i = 1 to runs do
+      for _i = 1 to runs do
         Bigstring.really_output !oc bs
       done;
       flush !oc
@@ -154,7 +154,7 @@ let output_input_test ?(runs = 2) ~n fdpair bs =
     (fun ~n bs fd ->
       if !ic = stdin then ic := Unix.in_channel_of_descr fd;
       let bs' = Bigstring.create (Bigstring.length bs) in
-      for i = 1 to runs do
+      for _i = 1 to runs do
         Bigstring.really_input !ic bs'
       done;
       (sprintf "output/input %s: %s,%s" n (repr bs) (repr bs')) @? (bs = bs'))

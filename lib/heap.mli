@@ -9,10 +9,10 @@ exception Empty
 
 
 (** Type of heaps *)
-type 'el t
+type 'el t with sexp_of
 
 (** Type of heap elements (they can be efficiently removed) *)
-type 'el heap_el
+type 'el heap_el with sexp_of
 
 (** {6 Functions on heap elements} *)
 
@@ -23,6 +23,10 @@ val heap_el_is_valid : 'el heap_el -> bool
 (** [heap_el_get_el heap_el] @return the element associated with the heap
     element. *)
 val heap_el_get_el : 'el heap_el -> 'el
+
+(** [heap_el_get_heap_exn heap_el] @return the heap that contains the element
+    @raise Failure if the element is not contained by some heap *)
+val heap_el_get_heap_exn : 'el heap_el -> 'el t
 
 (** {6 Information on heap values} *)
 

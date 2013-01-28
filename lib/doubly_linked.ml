@@ -211,6 +211,8 @@ include Container.Make (struct
   let fold t ~init ~f = fold_elt t ~init ~f:(fun acc elt -> f acc (Elt.value elt))
 end)
 
+let is_empty t = Option.is_none !t (* more efficient than what Container.Make returns *)
+
 let fold_right t ~init ~f =
   match !t with
   | None -> init

@@ -323,7 +323,7 @@ module T : X.Basic = struct
 
   let create ?(params = X.default_params) hashable =
     let size = Int.min (Int.max 1 params.X.initial_size) Sys.max_array_length in
-    { table = Array.create size Avltree.empty;
+    { table = Array.create ~len:size Avltree.empty;
       array_length = size;
       length = 0;
       params = params;

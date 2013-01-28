@@ -8,7 +8,6 @@ let test =
         let module Hq_arg = struct
           include String
           let hash (x : t) = Hashtbl.hash x
-          let equal (x : t) (y : t) = x = y
           let sexp_of_t = Sexplib.Conv.sexp_of_string
           let t_of_sexp = Sexplib.Conv.string_of_sexp
         end in

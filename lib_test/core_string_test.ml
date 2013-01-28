@@ -1,6 +1,5 @@
 open Core.Std
 open OUnit;;
-open Quickcheck
 module S = String
 
 let str1 = "1234567890"

@@ -1,28 +1,37 @@
 
 open Int_replace_polymorphic_compare
+open Sexplib.Conv
 module OldArray = Caml.Array
 module Array = Res.Array
+
+type 'a array = 'a Array.t
+
+let sexp_of_array sexp_of_a array = <:sexp_of< a list >> (Array.to_list array)
 
 let def_gfactor, def_sfactor, def_min_size = Res.DefStrat.default
 
 exception Empty with sexp
 
 type 'el t =
-  {
-    ar : 'el heap_el Array.t;
-    cmp : 'el -> 'el -> int
+  { ar : 'el heap_el array;
+    cmp : 'el -> 'el -> int;
   }
-
 and 'el heap_el =
-  {
-    mutable heap : 'el t;
+  { mutable heap : 'el t sexp_opaque;
     mutable pos : int;
     mutable el : 'el;
   }
+with sexp_of
 
 let heap_el_is_valid h_el = h_el.pos >= 0
 
 let heap_el_get_el h_el = h_el.el
+
+let heap_el_get_heap_exn h_el =
+  if not (heap_el_is_valid h_el) then
+    failwith "Heap.heap_el_get_heap: heap element not in any heap";
+  h_el.heap
+;;
 
 let length h = Array.length h.ar
 let is_empty h = length h = 0

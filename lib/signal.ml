@@ -1,5 +1,6 @@
 open Sexplib.Std
 
+module Binable = Binable0
 module Int = Core_int
 module List = Core_list
 module Hashtbl = Core_hashtbl
@@ -7,12 +8,11 @@ module String = Core_string
 
 let failwithf = Core_printf.failwithf
 
-type t = int
-
 include (Int : sig
+  type t = int with bin_io
+
   include Comparable.S with type t := t
-  include Hashable.S with type t := t
-  include Sexpable.S with type t := t
+  include Hashable  .S with type t := t
 end)
 
 external ml_caml_to_nonportable_signal_number : int -> int =
@@ -69,35 +69,35 @@ exception Invalid_signal_mnemonic_or_number of string with sexp
 let to_string, of_string, default_sys_behavior =
   let known =
     [
-      ("abrt", abrt, `Dump_core);
-      ("alrm", alrm, `Terminate);
-      ("chld", chld, `Ignore);
-      ("cont", cont, `Continue);
-      ("fpe", fpe, `Dump_core);
-      ("hup", hup, `Terminate);
-      ("ill", ill, `Dump_core);
-      ("int", int, `Terminate);
-      ("kill", kill, `Terminate);
-      ("pipe", pipe, `Terminate);
-      ("prof", prof, `Terminate);
-      ("quit", quit, `Dump_core);
-      ("segv", segv, `Dump_core);
-      ("stop", stop, `Stop);
-      ("term", term, `Terminate);
-      ("tstp", tstp, `Stop);
-      ("ttin", ttin, `Stop);
-      ("ttou", ttou, `Stop);
-      ("usr1", usr1, `Terminate);
-      ("usr2", usr2, `Terminate);
-      ("vtalrm", vtalrm, `Terminate);
-      ("<zero>", zero, `Ignore);
+      ("sigabrt", abrt, `Dump_core);
+      ("sigalrm", alrm, `Terminate);
+      ("sigchld", chld, `Ignore);
+      ("sigcont", cont, `Continue);
+      ("sigfpe", fpe, `Dump_core);
+      ("sighup", hup, `Terminate);
+      ("sigill", ill, `Dump_core);
+      ("sigint", int, `Terminate);
+      ("sigkill", kill, `Terminate);
+      ("sigpipe", pipe, `Terminate);
+      ("sigprof", prof, `Terminate);
+      ("sigquit", quit, `Dump_core);
+      ("sigsegv", segv, `Dump_core);
+      ("sigstop", stop, `Stop);
+      ("sigterm", term, `Terminate);
+      ("sigtstp", tstp, `Stop);
+      ("sigttin", ttin, `Stop);
+      ("sigttou", ttou, `Stop);
+      ("sigusr1", usr1, `Terminate);
+      ("sigusr2", usr2, `Terminate);
+      ("sigvtalrm", vtalrm, `Terminate);
+      ("sigzero", zero, `Ignore);
     ]
   in
   let str_tbl = Int.Table.create ~size:1 () in
   let int_tbl = Core_string.Table.create ~size:1 () in
   let behavior_tbl = Int.Table.create ~size:1 () in
   List.iter known ~f:(fun (name, s, behavior) ->
-    Hashtbl.replace str_tbl ~key:s ~data:("sig" ^ name);
+    Hashtbl.replace str_tbl ~key:s ~data:name;
     Hashtbl.replace int_tbl ~key:name ~data:s;
     Hashtbl.replace behavior_tbl ~key:s ~data:behavior);
   (* For unknown signal numbers, [to_string] returns a meaningful
@@ -169,6 +169,7 @@ let send_exn t pid_spec =
 type behavior = [ `Default | `Ignore | `Handle of t -> unit ]
 
 module Behavior = struct
+
   let of_caml = function
     | Sys.Signal_default -> `Default
     | Sys.Signal_ignore -> `Ignore

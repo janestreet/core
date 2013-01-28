@@ -1,28 +1,51 @@
 open Sexplib.Conv
 
-let seek_out = `Deprecated_use_out_channel
-let pos_out = `Deprecated_use_out_channel
-let out_channel_length = `Deprecated_use_out_channel
-let seek_in = `Deprecated_use_in_channel
-let pos_in = `Deprecated_use_in_channel
-let in_channel_length = `Deprecated_use_in_channel
-let modf = `Deprecated_use_float_modf
-let truncate = `Deprecated_use_float_iround_towards_zero
+let seek_out _ _ = `Deprecated_use_out_channel
+let pos_out _ = `Deprecated_use_out_channel
+let out_channel_length _ = `Deprecated_use_out_channel
+let seek_in _ _ = `Deprecated_use_in_channel
+let pos_in _ = `Deprecated_use_in_channel
+let in_channel_length _ = `Deprecated_use_in_channel
+let modf _ = `Deprecated_use_float_modf
+let truncate _ = `Deprecated_use_float_iround_towards_zero
 
-let read_wrap ?binary:_ ~f:_ _ = `Deprecated_use_In_channel_with_file
-let write_wrap ?binary:_ ~f:_ _ = `Deprecated_use_Out_channel_with_file
+let ( & ) _ _ = `Deprecated_use_two_ampersands
 
-let write_lines _ _ = `Deprecated_use_Out_channel_write_lines
-let read_lines _ = `Deprecated_use_In_channel_read_lines
-let input_lines ?fix_win_eol:_ _ = `Deprecated_use_In_channel_input_lines
+(* let ( or ) =  `Deprecated_use_pipe_pipe *)
 
-let close_in = In_channel.close
-let close_out = Out_channel.close
+let max_int =  `Deprecated_use_int_module
+let min_int =  `Deprecated_use_int_module
 
-type read_only with bin_io
-type immutable  = private read_only with bin_io
-type read_write = private read_only with bin_io
-type write_only with bin_io
+let ceil _            = `Deprecated_use__Float__round_up
+let floor _           = `Deprecated_use__Float__round_down
+let abs_float _       = `Deprecated_use_float_module
+let mod_float _       = `Deprecated_use_float_module
+let frexp _ _         = `Deprecated_use_float_module
+let ldexp _ _         = `Deprecated_use_float_module
+let float_of_int _    = `Deprecated_use_float_module
+let max_float         = `Deprecated_use_float_module
+let min_float         = `Deprecated_use_float_module
+let epsilon_float     = `Deprecated_use_float_module
+let classify_float _  = `Deprecated_use_float_module
+let string_of_float _ = `Deprecated_use_float_module
+let float_of_string _ = `Deprecated_use_float_module
+let infinity          = `Deprecated_use_float_module
+let neg_infinity      = `Deprecated_use_float_module
+let int_of_float _    = `Deprecated_use_float_module
+
+type fpclass =        [`Deprecated_use_float_module ]
+
+let close_in _ = `Deprecated_use_in_channel
+let close_out _ = `Deprecated_use_out_channel
+
+type read_only with bin_io, compare
+include (struct
+  type immutable  = read_only with bin_io, compare
+  type read_write = read_only with bin_io, compare
+end : sig
+  type immutable  = private read_only with bin_io, compare
+  type read_write = private read_only with bin_io, compare
+end)
 
 (* These are to work around a bug in pa_sexp where sexp_of_immutable would assert false
    rather than give a clear error message. *)
@@ -32,10 +55,8 @@ let sexp_of_read_only _ = failwith "attempt to convert abstract type read_only"
 let read_only_of_sexp = sexp_of_read_only
 let sexp_of_read_write _ = failwith "attempt to convert abstract type read_write"
 let read_write_of_sexp = sexp_of_read_write
-let sexp_of_write_only _ = failwith "attempt to convert abstract type write_only"
-let write_only_of_sexp = sexp_of_write_only
 
-type never_returns
+type never_returns = Common0.never_returns
 let never_returns (_ : never_returns) = assert false
 
 exception Finally = Exn.Finally
@@ -71,16 +92,7 @@ include struct
 end
 
 let sexp_underscore = Sexp.Atom "_"
-let sexp_of_a  _ = sexp_underscore
-let sexp_of_a1 _ = sexp_underscore
-let sexp_of_a2 _ = sexp_underscore
-let sexp_of_a3 _ = sexp_underscore
-let sexp_of_a4 _ = sexp_underscore
-let sexp_of_a5 _ = sexp_underscore
-let sexp_of_b  _ = sexp_underscore
-let sexp_of_c  _ = sexp_underscore
-let sexp_of_d  _ = sexp_underscore
-let sexp_of_e  _ = sexp_underscore
+let sexp_of___ _ = sexp_underscore
 
 (* module With_return only exists to avoid circular dependencies *)
 include With_return
@@ -138,3 +150,7 @@ exception Unimplemented of string with sexp
 let unimplemented = Or_error.unimplemented
 
 exception Bug of string with sexp
+
+exception C_malloc_exn of int * int (* errno, size *)
+let () =
+  Callback.register_exception "C_malloc_exn" (C_malloc_exn (0, 0));

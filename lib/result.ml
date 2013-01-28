@@ -1,8 +1,27 @@
-type ('a, 'b) t =
-(* Note: There are C stubs that create Result.t's, so avoid re-ordering the variants. *)
-| Ok of 'a
-| Error of 'b
-with sexp, bin_io
+module Stable = struct
+  module V1 = struct
+    type ('a, 'b) t =
+    | Ok of 'a
+    | Error of 'b
+    with sexp, bin_io, compare
+  end
+
+  module V1_stable_unit_test = struct
+    open Sexplib.Std
+    open Bin_prot.Std
+
+    type t = (string, int) V1.t with sexp, bin_io, compare
+
+    let equal = (=)
+
+    let tests =
+      [ V1.Ok "foo", "(Ok foo)",  "\000\003foo"
+      ; V1.Error 7,  "(Error 7)", "\001\007"
+      ]
+  end
+end
+
+include Stable.V1
 
 type ('a, 'b) _t = ('a, 'b) t
 

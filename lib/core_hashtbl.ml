@@ -3,6 +3,8 @@ open Sexplib.Conv
 open Core_hashtbl_intf
 open With_return
 
+module Binable = Binable0
+
 let failwiths = Error.failwiths
 
 module Hashable = Core_hashtbl_intf.Hashable
@@ -24,6 +26,10 @@ module Array = Core_array
 
 let phys_equal = (==)
 
+(* IF THIS REPRESENTATION EVER CHANGES, ENSURE THAT EITHER
+    (1) all values serialize the same way in both representations, or
+    (2) you add a new Hashtbl version to stable.ml
+*)
 type ('k, 'v) t =
   { mutable table : ('k, 'v) Avltree.t array;
     mutable length : int;
@@ -41,9 +47,9 @@ module type S_binable = S_binable with type ('a, 'b) hashtbl = ('a, 'b) t
 let sexp_of_key t = t.hashable.Hashable.sexp_of_t
 let compare_key t = t.hashable.Hashable.compare
 
-let create ?(growth_allowed=true) ?(size = 128) ~hashable () =
+let create ?(growth_allowed = true) ?(size = 128) ~hashable () =
   let size = Int.min (Int.max 1 size) Sys.max_array_length in
-  { table = Array.create size Avltree.empty;
+  { table = Array.create ~len:size Avltree.empty;
     length = 0;
     growth_allowed = growth_allowed;
     hashable;
@@ -98,7 +104,7 @@ let add_worker added replace t ~key ~data =
 
 let maybe_resize_table t =
   let len = Array.length t.table in
-  let should_grow = t.length >= len * 2 in
+  let should_grow = t.length > len in
   if should_grow && t.growth_allowed then begin
     let new_array_length = Int.min (len * 2) Sys.max_array_length in
     if new_array_length > len then begin
@@ -239,10 +245,10 @@ let find_exn t id =
     raise Not_found
 ;;
 
-let find_default t key ~default =
+(*let find_default t key ~default =
   match find t key with
   | None -> default ()
-  | Some a -> a
+  | Some a -> a*)
 
 let existsi t ~f =
   with_return (fun r ->
@@ -356,7 +362,7 @@ let change t id f =
 let incr ?(by = 1) t key =
   change t key
     (function
-      | None -> Some 1
+      | None -> Some by
       | Some i -> Some (i + by))
 
 let add_multi t ~key ~data =
@@ -387,6 +393,20 @@ let create_mapped ?growth_allowed ?size ~hashable ~get_key ~get_data rows =
   | [] -> `Ok res
   | keys -> `Duplicate_keys (List.dedup ~compare:hashable.Hashable.compare keys)
 ;;
+
+(*let create_mapped_exn ?growth_allowed ?size ~hashable ~get_key ~get_data rows =
+  let size = match size with Some s -> s | None -> List.length rows in
+  let res = create ?growth_allowed ~size ~hashable () in
+  List.iter rows ~f:(fun r ->
+    let key = get_key r in
+    let data = get_data r in
+    if mem res key then
+      let sexp_of_key = hashable.Hashable.sexp_of_t in
+      failwiths "Hashtbl.create_mapped_exn: duplicate key" key <:sexp_of< key >>
+    else
+      replace res ~key ~data);
+  res
+;;*)
 
 let create_mapped_multi ?growth_allowed ?size ~hashable ~get_key ~get_data rows =
   let size = match size with Some s -> s | None -> List.length rows in
@@ -545,7 +565,6 @@ module Accessors = struct
   let partitioni_tf   = partitioni_tf
   let find_or_add     = find_or_add
   let find            = find
-  let find_default    = find_default
   let find_exn        = find_exn
   let iter_vals       = iter_vals
   let to_alist        = to_alist
@@ -561,6 +580,7 @@ module Accessors = struct
 end
 
 module type Key = Key
+module type Key_binable = Key_binable
 
 module Creators (Key : sig
   type 'a t
@@ -690,10 +710,8 @@ module Make (Key : Key) = struct
 
 end
 
-module Make_binable (Key : sig
-  include Key
-  include Binable.S with type t := t
-end) = struct
+module Make_binable (Key : Key_binable) = struct
+
   include Make (Key)
 
   include Bin_prot.Utils.Make_iterable_binable1 (struct

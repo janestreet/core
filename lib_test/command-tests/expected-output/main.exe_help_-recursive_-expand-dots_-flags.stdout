@@ -1,0 +1,31 @@
+this command does stuff
+
+  main.exe SUBCOMMAND
+
+=== subcommands and flags ===
+
+  adverb                       this command does more stuff
+  adverb drolly                this command does stuff here
+  adverb drolly -fondue        make sure fondue is doing the same stuff
+  adverb drolly -gilt NAME     which gilt should do the stuff
+  adverb nemeses               display internal values
+  adverb opposable
+  adverb opposable -fondue     make sure fondue is doing the same stuff
+  adverb opposable -gilt NAME  which gilt should do the stuff
+  jab                          this command does stuff here
+  jab -fondue                  make sure fondue is doing the same stuff
+  jab -gilt NAME               which gilt should do the stuff
+  mixture                      this command does stuff here
+  mixture -fondue              make sure fondue is doing the same stuff
+  mixture -gilt NAME           which gilt should do the stuff
+  moonshot                     this command does stuff here
+  moonshot -fondue             make sure fondue is doing the same stuff
+  moonshot -gilt NAME          which gilt should do the stuff
+  version                      print version information
+  version -build-info          print build info for this build
+  version -version             print the version of this build
+  help                         explain a given subcommand (perhaps recursively)
+  help -expand-dots            expand subcommands in recursive help
+  help -flags                  show flags as well in recursive help
+  help -recursive              show subcommands of subcommands, etc.
+

@@ -29,7 +29,7 @@ module T = struct
   }
 
 
-  let mk_array size = Array.init size ~f:(fun _ -> Array.create 1 None)
+  let mk_array size = Array.init size ~f:(fun _ -> Array.create ~len:1 None)
     
   let create ?(params = X.default_params) hashable =
     let s = Int.min (Int.max 1 params.X.initial_size) Sys.max_array_length in
@@ -104,7 +104,7 @@ module T = struct
 
   let clear t =
     for i = 0 to t.array_length do
-      t.table.(i) <- Array.create 3 None
+      t.table.(i) <- Array.create ~len:3 None
     done
 
   let find_bucket t key =

@@ -1,12 +1,12 @@
 (* Core_unix wraps the standard unix functions with an exception handler that inserts an
    informative string in the third field of Unix_error.  The problem with the standard
    Unix_error that gets raised is that it doesn't include information about the arguments
-   to the function that failed.
-*)
+   to the function that failed. *)
 INCLUDE "config.mlh"
 
 open Std_internal
 
+module Binable = Binable0
 module Unix = Caml.UnixLabels
 
 open Sexplib.Conv
@@ -16,14 +16,16 @@ module File_descr = struct
     type t = Unix.file_descr
     external to_int : t -> int = "%identity"
     external of_int : int -> t = "%identity"
+    let of_string string = of_int (Int.of_string string)
     let to_string t = Int.to_string (to_int t)
     let sexp_of_t t = Int.sexp_of_t (to_int t)
-    let t_of_sexp _ = failwith "File_descr.t_of_sexp"
+    let t_of_sexp sexp = of_int (Int.t_of_sexp sexp)
     let hash t = Int.hash (to_int t)
     let compare t1 t2 = Int.compare (to_int t1) (to_int t2)
   end
   include M
-  include (Hashable.Make (M) : Hashable.S with type t := t)
+  include (Hashable.Make (M))
+  include (Binable.Of_stringable (M))
 end
 
 let sprintf = Printf.sprintf
@@ -335,6 +337,16 @@ external initgroups : string -> int -> unit = "unix_initgroups"
 (** Globbing and shell word expansion *)
 
 module Fnmatch_flags = struct
+  type _flag = [
+    | `No_escape
+    | `Pathname
+    | `Period
+    | `File_name
+    | `Leading_dir
+    | `Casefold
+  ]
+  with sexp
+
   let flag_to_internal = function
     | `No_escape -> 0
     | `Pathname -> 1
@@ -344,7 +356,7 @@ module Fnmatch_flags = struct
     | `Casefold -> 5
   ;;
 
-  type t = int32
+  type t = int32 with sexp
 
   external internal_make : int array -> t = "unix_fnmatch_make_flags"
 
@@ -361,13 +373,15 @@ external fnmatch :
 let fnmatch ?flags ~pat fname = fnmatch (Fnmatch_flags.make flags) ~pat fname
 
 module Wordexp_flags = struct
+  type _flag = [ `No_cmd | `Show_err | `Undef ] with sexp
+
   let flag_to_internal = function
     | `No_cmd -> 0
     | `Show_err -> 1
     | `Undef -> 2
   ;;
 
-  type t = int32
+  type t = int32 with sexp
 
   external internal_make : int array -> t = "unix_wordexp_make_flags"
 
@@ -415,7 +429,7 @@ module Scheduler = struct
     type t = [ `Fifo | `Round_robin | `Other ] with sexp
 
     module Ordered = struct
-      type t = Fifo | Round_robin | Other
+      type t = Fifo | Round_robin | Other with sexp
       let create = function
         | `Fifo -> Fifo
         | `Round_robin -> Round_robin
@@ -459,7 +473,6 @@ module Mman = struct
   let munlockall = unix_munlockall ;;
 end ;;
 
-
 let failwithf = Core_printf.failwithf
 
 let atom x = Sexp.Atom x
@@ -479,7 +492,10 @@ let rec retry_until_no_eintr f =
   with Unix.Unix_error (Unix.EINTR, _, _) ->
     retry_until_no_eintr f
 
-let improve ?(restart=false) f make_arg_sexps =
+(* This wrapper improves the content of the Unix_error exception raised by the standard
+   library (by including a sexp of the function arguments), and it optionally restarts
+   syscalls on EINTR. *)
+let improve ?(restart = false) f make_arg_sexps =
   try
     if restart then retry_until_no_eintr f else f ()
   with
@@ -558,7 +574,7 @@ type process_status = Unix.process_status =
 | WEXITED of int
 | WSIGNALED of int
 | WSTOPPED of int
-with sexp_of
+with sexp
 
 module Exit = struct
   type error = [ `Exit_non_zero of int ] with sexp
@@ -683,17 +699,7 @@ type wait_flag =
   Unix.wait_flag =
 | WNOHANG
 | WUNTRACED
-with sexp_of
-
-let waitpid ?(restart = true) ~mode pid =
-  improve ~restart
-    (fun () ->
-       let x, ps = Unix.waitpid ~mode pid in
-       (x, Exit_or_signal_or_stop.of_unix ps))
-    (fun () ->
-      [("mode", sexp_of_list sexp_of_wait_flag mode);
-       ("pid", Int.sexp_of_t pid)])
-;;
+with sexp
 
 type wait_on =
   [ `Any
@@ -704,13 +710,14 @@ type wait_on =
 with sexp
 
 type mode = wait_flag list with sexp_of
+type _t = mode
 
 type waitpid_result = (Pid.t * Exit_or_signal_or_stop.t) option with sexp_of
 
 let wait_gen
     ~mode
     (type a) (f : waitpid_result -> a option)
-    ?restart
+    ~restart
     wait_on : a =
   let pid =
     match wait_on with
@@ -719,7 +726,15 @@ let wait_gen
     | `My_group -> 0
     | `Pid pid -> Pid.to_int pid
   in
-  let (pid, status) = waitpid ?restart ~mode pid in
+  let (pid, status) =
+    improve ~restart
+      (fun () ->
+        let x, ps = Unix.waitpid ~mode pid in
+        (x, Exit_or_signal_or_stop.of_unix ps))
+      (fun () ->
+        [("mode", sexp_of_list sexp_of_wait_flag mode);
+         ("pid", Int.sexp_of_t pid)])
+  in
   let waitpid_result =
     if pid = 0 then
       None
@@ -736,26 +751,45 @@ let wait_gen
       (<:sexp_of< int * mode * waitpid_result >>)
 ;;
 
-let wait =
-  wait_gen ~mode:[] (function
+let wait ?(restart=true) pid =
+  let f = function
     | Some ((_, (Ok _ | Error #Exit_or_signal.error)) as x) -> Some x
-    | _ -> None)
+    | _ -> None
+  in
+  wait_gen ~restart ~mode:[] f pid
 ;;
 
-let wait_nohang =
-  wait_gen ~mode:[WNOHANG] (function
+let wait_nohang pid =
+  let f = function
     | None | Some ((_, (Ok _ | Error #Exit_or_signal.error))) as x -> Some x
-    | _ -> None)
-    ~restart:true
+    | _ -> None
+  in
+  wait_gen ~mode:[WNOHANG] ~restart:true f pid
 ;;
 
-let wait_untraced = wait_gen ~mode:[WUNTRACED] Fn.id
+let wait_untraced ?(restart=true) pid =
+  wait_gen ~restart ~mode:[WUNTRACED] Fn.id pid
 
-let wait_nohang_untraced = wait_gen ~mode:[WNOHANG; WUNTRACED] Option.some ~restart:true
+let wait_nohang_untraced pid =
+  wait_gen ~mode:[WNOHANG; WUNTRACED] Option.some ~restart:true pid
+
+let waitpid pid =
+  let (pid', exit_or_signal) = wait (`Pid pid) in
+  assert (pid = pid');
+  exit_or_signal;
+;;
+
+let waitpid_exn pid =
+  let exit_or_signal = waitpid pid in
+  if Result.is_error exit_or_signal then
+    failwiths "child process didn't exit with status zero"
+      (`Child_pid pid, exit_or_signal)
+      (<:sexp_of< [ `Child_pid of Pid.t ] * Exit_or_signal.t >>)
+;;
 
 let system s =
   improve (fun () -> Exit_or_signal.of_unix (Unix.system s))
-          (fun () -> [("command", atom s)])
+    (fun () -> [("command", atom s)])
 ;;
 
 let getpid () = Pid.of_int (Unix.getpid ())
@@ -766,7 +800,7 @@ let getppid () =
   | x -> Some (Pid.of_int x)
 
 let getppid_exn () =
-  Option.value_exn_message "You don't have a parent process"
+  Option.value_exn ~message:"You don't have a parent process"
     (getppid ())
 
 let nice i =
@@ -1018,13 +1052,14 @@ let link ?(force = false) ~target ~link_name () =
       end;
       Unix.link ~src:target ~dst:link_name)
     (fun () -> [("target", atom target); ("link_name", atom link_name)])
+;;
 
 type access_permission = Unix.access_permission =
   | R_OK
   | W_OK
   | X_OK
   | F_OK
-with sexp_of
+with sexp
 
 let chmod filename ~perm =
   improve (fun () -> Unix.chmod filename ~perm)
@@ -1128,21 +1163,6 @@ let closedir = (* Non-intr *)
   unary_dir_handle (fun dh ->
     try Unix.closedir dh with | Invalid_argument _ -> ())
 
-let fold_dir ~init:acc ~f directory =
-  let dir = opendir ~restart:true directory in
-  let rec aux acc =
-    let entry = try Some (readdir dir) with End_of_file -> None in
-    match entry with
-    | Some entry -> aux (f acc entry)
-    | None -> acc
-  in
-  let acc = aux acc in
-  Unix.closedir dir;
-  acc
-
-let ls_dir directory =
-  fold_dir ~init:[] ~f:(fun acc d -> d :: acc) directory
-
 let pipe = Unix.pipe
 
 let mkfifo name ~perm =
@@ -1174,7 +1194,8 @@ external create_process :
 type env = [
   | `Replace of (string * string) list
   | `Extend of (string * string) list
-] with sexp_of
+] with sexp
+type _ignore = env
 
 let create_process_env ?working_dir ~prog ~args ~env () =
   let module Map = Core_map in
@@ -1276,8 +1297,8 @@ let pause = Unix.pause
 
 type process_times =
   Unix.process_times = {
-  tms_utime : float;
-  tms_stime : float;
+  tms_utime  : float;
+  tms_stime  : float;
   tms_cutime : float;
   tms_cstime : float;
 }
@@ -1285,14 +1306,14 @@ with sexp
 
 type tm =
   Unix.tm = {
-  tm_sec : int;
-  tm_min : int;
-  tm_hour : int;
-  tm_mday : int;
-  tm_mon : int;
-  tm_year : int;
-  tm_wday : int;
-  tm_yday : int;
+  tm_sec   : int;
+  tm_min   : int;
+  tm_hour  : int;
+  tm_mday  : int;
+  tm_mon   : int;
+  tm_year  : int;
+  tm_wday  : int;
+  tm_yday  : int;
   tm_isdst : bool;
 } with sexp
 
@@ -1300,15 +1321,43 @@ let time = Unix.time
 let gettimeofday = Unix.gettimeofday
 
 external localtime : float -> Unix.tm = "core_localtime"
-external gmtime : float -> Unix.tm = "core_gmtime"
-external timegm : Unix.tm -> float = "core_timegm" (* the inverse of gmtime *)
+external gmtime    : float -> Unix.tm = "core_gmtime"
+external timegm    : Unix.tm -> float = "core_timegm" (* the inverse of gmtime *)
 
 let mktime = Unix.mktime
-let alarm = Unix.alarm
-let sleep = Unix.sleep
-let times = Unix.times
+let alarm  = Unix.alarm
+let sleep  = Unix.sleep
+let times  = Unix.times
 let utimes = Unix.utimes
+
 external strftime : tm -> string -> string = "unix_strftime"
+
+external strptime : fmt:string -> string -> Unix.tm = "unix_strptime"
+TEST =
+  let res = strptime ~fmt:"%Y-%m-%d %H:%M:%S" "2012-05-23 10:14:23" in
+  let res =
+    (* fill in optional fields if they are missing *)
+    let tm_wday = if res.Unix.tm_wday = 0 then 3   else res.Unix.tm_wday in
+    let tm_yday = if res.Unix.tm_yday = 0 then 143 else res.Unix.tm_yday in
+    { res with Unix. tm_wday; tm_yday }
+  in
+  res = {Unix.
+    tm_sec   = 23;
+    tm_min   = 14;
+    tm_hour  = 10;
+    tm_mday  = 23;
+    tm_mon   = 4;
+    tm_year  = 2012 - 1900;
+    tm_wday  = 3;
+    tm_yday  = 143;
+    tm_isdst = false; }
+
+TEST =
+  try
+    ignore (strptime ~fmt:"%Y-%m-%d" "2012-05-");
+    false
+  with
+  | _ -> true
 
 type interval_timer = Unix.interval_timer =
   | ITIMER_REAL
@@ -1468,12 +1517,24 @@ end
 let gethostname = Unix.gethostname
 
 module Inet_addr0 = struct
-  type t = Unix.inet_addr
+  module T = struct
+    type t = Unix.inet_addr
 
-  let of_string = Unix.inet_addr_of_string
-  let to_string = Unix.string_of_inet_addr
+    let of_string = Unix.inet_addr_of_string
+    let to_string = Unix.string_of_inet_addr
 
-  let sexp_of_t t = Sexp.Atom (to_string t)
+    (* Unix.inet_addr is represented as either a "struct in_addr"
+       or a "struct in6_addr" stuffed into an O'Caml string, so
+       polymorphic compare will work *)
+    let compare = Pervasives.compare
+
+    let sexp_of_t t = Sexp.Atom (to_string t)
+    let t_of_sexp = function
+      | Sexp.Atom s -> of_string s
+      | Sexp.List _ as sexp -> of_sexp_error "Inet_addr0.t_of_sexp: atom expected" sexp
+  end
+  include T
+  include Comparable.Make(T)
 end
 
 module Host = struct
@@ -1504,6 +1565,12 @@ module Host = struct
   let (getbyaddr, getbyaddr_exn) =
     make_by (fun addr -> of_unix (Unix.gethostbyaddr addr)) (fun a -> Getbyaddr a)
   ;;
+
+  let have_address_in_common h1 h2 =
+    let addrs1 = Inet_addr0.Set.of_array h1.addresses in
+    let addrs2 = Inet_addr0.Set.of_array h2.addresses in
+    not (Inet_addr0.Set.is_empty (Inet_addr0.Set.inter addrs1 addrs2))
+  ;;
 end
 
 module Inet_addr = struct
@@ -1523,7 +1590,7 @@ module Inet_addr = struct
         | `Unix -> assert false  (* impossible *)
         | `Inet | `Inet6 ->
           let addrs = host.Host.addresses in
-          if Array.length addrs > 0 then addrs.(0)
+          if Int.(>) (Array.length addrs) 0 then addrs.(0)
           else raise (Get_inet_addr (name, "empty addrs"))
   ;;
 
@@ -1638,7 +1705,14 @@ let socket_or_pair f ~domain ~kind ~protocol =
 let socket = socket_or_pair Unix.socket
 let socketpair = socket_or_pair Unix.socketpair
 
-let accept = unary_fd Unix.accept
+let accept fd =
+  let fd, addr = unary_fd Unix.accept fd in
+  let addr =
+    match addr with
+    | ADDR_UNIX _ -> ADDR_UNIX ""
+    | ADDR_INET _ -> addr
+  in
+  fd, addr
 
 let bind fd ~addr =
   improve (fun () -> Unix.bind fd ~addr)
@@ -1728,7 +1802,7 @@ with sexp
 
 type socket_optint_option = Unix.socket_optint_option =
   | SO_LINGER
-with sexp_of
+with sexp
 
 type socket_float_option = Unix.socket_float_option =
   | SO_RCVTIMEO
@@ -1869,7 +1943,7 @@ module Terminal_io = struct
     mutable c_vstart : char;
     mutable c_vstop : char;
   }
-  with sexp_of
+  with sexp
 
   let tcgetattr = unary_fd Unix.tcgetattr
 
@@ -1877,7 +1951,7 @@ module Terminal_io = struct
     | TCSANOW
     | TCSADRAIN
     | TCSAFLUSH
-  with sexp_of
+  with sexp
 
   let tcsetattr t fd ~mode =
     improve (fun () -> Unix.tcsetattr fd ~mode t)

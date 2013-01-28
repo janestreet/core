@@ -10,11 +10,9 @@
       [transfer]'s arguments are labeled.
 *)
 
-type 'a t
+type 'a t with bin_io, sexp
 
-include Binable  .S1 with type 'a t := 'a t
 include Container.S1 with type 'a t := 'a t
-include Sexpable .S1 with type 'a t := 'a t
 
 (** [create ()] returns an empty queue. *)
 val create : unit -> 'a t
@@ -66,5 +64,7 @@ val of_array : 'a array -> 'a t
 val fold : 'a t -> init:'b -> f:('b -> 'a -> 'b) -> 'b
 
 val to_list : 'a t -> 'a list
+
+val to_array : 'a t -> 'a array
 
 val singleton : 'a -> 'a t

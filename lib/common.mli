@@ -1,7 +1,6 @@
 (** Basic types and definitions required throughout the system. *)
 open Sexplib
 
-
 (* pzimmer: use Bug when the condition is checkable but requires you to look further
    away *)
 exception Bug of string
@@ -11,7 +10,6 @@ exception Bug of string
     function, the second exception the one raised by the finalizer. *)
 exception Finally of exn * exn
 
-exception Unimplemented of string
 val unimplemented : string -> _ Or_error.t
 
 (* The sexps of this type only have 12 digits after the decimal. Therefore they're less
@@ -25,17 +23,16 @@ type passfail = Pass | Fail of string
     types expose the subtyping. Users would say "(db :> read_only Db.t)" to cast. The
     difference between read-only and immutable is that someone else can change a read-only
     object, while immutable never changes. *)
-type read_only                      with sexp, bin_io
-type immutable  = private read_only with sexp, bin_io
-type read_write = private read_only with sexp, bin_io
-type write_only                     with sexp, bin_io
+type read_only                      with sexp, bin_io, compare
+type immutable  = private read_only with sexp, bin_io, compare
+type read_write = private read_only with sexp, bin_io, compare
 
 (** [never_returns] should be used as the return type of functions that don't return and
  * might block forever, rather than ['a] or [_].  This forces callers of such functions to
  * have a call to [never_returns] at the call site, which makes it clear to readers what's
  * going on. We do not intend to use this type for functions such as [failwithf] that
  * always raise an exception. *)
-type never_returns
+type never_returns = Common0.never_returns
 val never_returns : never_returns -> _
 
 (** {6 Error handling} *)
@@ -44,12 +41,6 @@ val protect  : f:(unit -> 'a)       -> finally:(unit -> unit) -> 'a
 val protectx : f:('b   -> 'a) -> 'b -> finally:('b   -> unit) -> 'a
 
 (** {6 Input Output}*)
-
-val read_wrap : ?binary:_ -> f:_ -> _ -> [`Deprecated_use_In_channel_with_file]
-val write_wrap : ?binary:_ -> f:_ -> _ -> [`Deprecated_use_Out_channel_with_file]
-val write_lines : _ -> _ -> [`Deprecated_use_Out_channel_write_lines]
-val input_lines : ?fix_win_eol:_ -> _ -> [`Deprecated_use_In_channel_input_lines]
-val read_lines : _ -> [`Deprecated_use_In_channel_read_lines]
 
 (**{6 triple handling }*)
 val fst3 : ('a * _  * _ ) -> 'a
@@ -83,31 +74,14 @@ val failwiths    :  string -> 'a -> ('a -> Sexp.t) -> _
 val failwithf    : ('r, unit, string, unit -> _) format4 -> 'r
 val invalid_argf : ('r, unit, string, unit -> _) format4 -> 'r
 
+(* [sexp_of___] ignores its argument and returns [Sexp.Atom "_"].  It is useful when one
+   has a polymorphic type ['a t] with a sexp converter [val sexp_of_t : ('a -> Sexp.t) ->
+   'a t -> Sexp.t], and one wants to convert a value of type ['a t] to a sexp, yet one
+   doesn't have a sexp_converter for ['a] handy.  These functions allow one to use
+   [<:sexp_of< __ t >>] to get a sexp converter for ['a t].  For example:
 
-(* The following [sexp_of_X] functions ignore their argument and return [Sexp.Atom "_"].
-   They are useful when one has a polymorphic type ['a t] with a sexp converter [val
-   sexp_of_t : ('a -> Sexp.t) -> 'a t -> Sexp.t], and one wants to convert a value of type
-   ['a t] to a sexp, yet one doesn't have a sexp_converter for ['a] handy.  These
-   functions allow one to use [<:sexp_of< a t >>] to get a sexp converter for ['a t].  For
-   example:
-
-   let f a_t = ... (<:sexp_of< a t >> a_t) ...
-
-   It is useful to have a variety of such functions for situations when one needs to
-   choose an abstract type name other than [a], possibly because there are multiple
-   abstract types around simultaneously.  For example:
-
-   let f a_t b_t = ... (<:sexp_of< a t * b t >> (a_t, b_t)) ... *)
-val sexp_of_a  : _ -> Sexp.t
-val sexp_of_a1 : _ -> Sexp.t
-val sexp_of_a2 : _ -> Sexp.t
-val sexp_of_a3 : _ -> Sexp.t
-val sexp_of_a4 : _ -> Sexp.t
-val sexp_of_a5 : _ -> Sexp.t
-val sexp_of_b  : _ -> Sexp.t
-val sexp_of_c  : _ -> Sexp.t
-val sexp_of_d  : _ -> Sexp.t
-val sexp_of_e  : _ -> Sexp.t
+   let f a_t = ... (<:sexp_of< __ t >> a_t) ... *)
+val sexp_of___ : _ -> Sexp.t
 
 (* [with_return f] allows for something like the return statement in C within [f].  There
    are three ways [f] can terminate:
@@ -159,26 +133,53 @@ val equal : 'a -> 'a -> bool
    like char, int, float, ...
 *)
 val phys_equal : 'a -> 'a -> bool
-val (==) : 'a -> 'a -> [ `Consider_using_phys_equal ]
-val (!=) : 'a -> 'a -> [ `Consider_using_phys_equal ]
+val (==) : [ `Consider_using_phys_equal ] -> [ `Consider_using_phys_equal ] -> [ `Consider_using_phys_equal ]
+val (!=) : [ `Consider_using_phys_equal ] -> [ `Consider_using_phys_equal ] -> [ `Consider_using_phys_equal ]
 
 val force : 'a Lazy.t -> 'a
 
 (* override Pervasives methods that need LargeFile support *)
-val seek_out : [ `Deprecated_use_out_channel ]
-val pos_out : [ `Deprecated_use_out_channel ]
-val out_channel_length : [ `Deprecated_use_out_channel ]
-val seek_in : [ `Deprecated_use_in_channel ]
-val pos_in : [ `Deprecated_use_in_channel ]
-val in_channel_length : [ `Deprecated_use_in_channel ]
-val modf : [ `Deprecated_use_float_modf ]
-val truncate : [ `Deprecated_use_float_iround_towards_zero ]
+val seek_out : [ `Deprecated_use_out_channel ] -> [ `Deprecated_use_out_channel ] -> [ `Deprecated_use_out_channel ]
+val pos_out : [ `Deprecated_use_out_channel ] -> [ `Deprecated_use_out_channel ]
+val out_channel_length : [ `Deprecated_use_out_channel ] -> [ `Deprecated_use_out_channel ]
+val seek_in : [ `Deprecated_use_in_channel ] -> [ `Deprecated_use_in_channel ] -> [ `Deprecated_use_in_channel ]
+val pos_in : [ `Deprecated_use_in_channel ] -> [ `Deprecated_use_in_channel ]
+val in_channel_length : [ `Deprecated_use_in_channel ] -> [ `Deprecated_use_in_channel ]
+val modf : [ `Deprecated_use_float_modf ] -> [ `Deprecated_use_float_modf ]
+val truncate : [ `Deprecated_use_float_iround_towards_zero ] -> [ `Deprecated_use_float_iround_towards_zero ]
 
 (** we have our own version of these two, the INRIA version doesn't release the runtime
     lock.  *)
-val close_in : In_channel.t -> unit
-val close_out : out_channel -> unit
+val close_in : [ `Deprecated_use_in_channel ] -> [ `Deprecated_use_in_channel ]
+val close_out : [ `Deprecated_use_out_channel ] -> [ `Deprecated_use_out_channel ]
 
 val stage   : 'a -> 'a Staged.t
 val unstage : 'a Staged.t -> 'a
+
+(* Raised if malloc in C bindings fail (errno * size). *)
+exception C_malloc_exn of int * int
+
+(* Newly deprecated on 2012-04-03 *)
+val ( & )  : [ `Deprecated_use_two_ampersands ] -> [ `Deprecated_use_two_ampersands ] -> [ `Deprecated_use_two_ampersands ]
+(* val ( or ) : [ `Deprecated_use_pipe_pipe ] *)
+val max_int : [ `Deprecated_use_int_module ]
+val min_int : [ `Deprecated_use_int_module ]
+
+val ceil            : [ `Deprecated_use__Float__round_up ] -> [ `Deprecated_use__Float__round_up ]
+val floor           : [ `Deprecated_use__Float__round_down ] -> [ `Deprecated_use__Float__round_down ]
+val abs_float       : [ `Deprecated_use_float_module ] -> [ `Deprecated_use_float_module ]
+val mod_float       : [ `Deprecated_use_float_module ] -> [ `Deprecated_use_float_module ]
+val frexp           : [ `Deprecated_use_float_module ] -> [ `Deprecated_use_float_module ] -> [ `Deprecated_use_float_module ]
+val ldexp           : [ `Deprecated_use_float_module ] -> [ `Deprecated_use_float_module ] -> [ `Deprecated_use_float_module ]
+val float_of_int    : [ `Deprecated_use_float_module ] -> [ `Deprecated_use_float_module ]
+val max_float       : [ `Deprecated_use_float_module ]
+val min_float       : [ `Deprecated_use_float_module ]
+val epsilon_float   : [ `Deprecated_use_float_module ]
+val classify_float  : [ `Deprecated_use_float_module ] -> [ `Deprecated_use_float_module ]
+val string_of_float : [ `Deprecated_use_float_module ] -> [ `Deprecated_use_float_module ]
+val float_of_string : [ `Deprecated_use_float_module ] -> [ `Deprecated_use_float_module ]
+val infinity        : [ `Deprecated_use_float_module ]
+val neg_infinity    : [ `Deprecated_use_float_module ]
+val int_of_float    : [ `Deprecated_use_float_module ] -> [ `Deprecated_use_float_module ]
+type fpclass = [ `Deprecated_use_float_module ]
 

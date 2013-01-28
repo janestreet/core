@@ -11,7 +11,8 @@ let read_finaliser_queue, write_finaliser_queue =
 ;;
 
 let maybe_start_finaliser_thread =
-  let mutex = Core_mutex.create () in
+  let module M = Nano_mutex in
+  let mutex = M.create () in
   let started = ref false in
   let start_finaliser_thread () =
     ignore (Thread.create (fun () -> Fn.forever (fun () ->
@@ -21,14 +22,14 @@ let maybe_start_finaliser_thread =
   in
   (fun () ->
     if not !started then (* performance hack! *)
-      Core_mutex.critical_section mutex ~f:(fun () ->
+      M.critical_section mutex ~f:(fun () ->
         if not !started then
           (started := true; start_finaliser_thread ())))
 ;;
 
 (* Ocaml permits finalisers to be run in any thread and at any time after the object
- * becomes unreachable -- they are essentially concurrent.  This changes forces all
- * finaliser code to run sequentially and in a fixed thread. *)
+   becomes unreachable -- they are essentially concurrent.  This changes forces all
+   finaliser code to run sequentially and in a fixed thread. *)
 let finalise f x =
   maybe_start_finaliser_thread ();
   let finaliser v = write_finaliser_queue (fun () -> f v) in
@@ -36,7 +37,7 @@ let finalise f x =
 ;;
 
 module Stat = struct
-  type pretty_float = float with bin_io, of_sexp
+  type pretty_float = float with bin_io, sexp
   let sexp_of_pretty_float f = Sexp.Atom (sprintf "%.2e" f)
 
   type t = Caml.Gc.stat = {
@@ -56,7 +57,7 @@ module Stat = struct
     compactions : int;
     top_heap_words : int;
     stack_size : int
-  } with bin_io, sexp
+  } with bin_io, sexp, fields
 end
 
 module Control = struct
@@ -82,7 +83,7 @@ module Control = struct
     mutable max_overhead : int; (* Heap compaction is triggered when the estimated amount of "wasted" memory is more than max_overhead percent of the amount of live data. If max_overhead is set to 0, heap compaction is triggered at the end of each major GC cycle (this setting is intended for testing purposes only). If max_overhead >= 1000000, compaction is never triggered. Default: 500. *)
     mutable stack_limit : int; (* The maximum size of the stack (in words). This is only relevant to the byte-code runtime, as the native code runtime uses the operating system's stack. Default: 256k. *)
     mutable allocation_policy : int; (** The policy used for allocating in the heap.  Possible values are 0 and 1.  0 is the next-fit policy, which is quite fast but can result in fragmentation.  1 is the first-fit policy, which can be slower in some cases but can be better for programs with fragmentation problems.  Default: 0. *)
-  } with bin_io, sexp
+  } with bin_io, sexp, fields
 end
 
 let tune__field logger ?(fmt = ("%d" : (_, _, _) format)) name arg current =

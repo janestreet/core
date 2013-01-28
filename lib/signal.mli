@@ -1,8 +1,7 @@
-type t
+type t with bin_io, sexp
 
 include Comparable.S with type t := t
 include Hashable.S with type t := t
-include Sexpable.S with type t := t
 include Stringable.S with type t := t
 
 val equal : t -> t -> bool

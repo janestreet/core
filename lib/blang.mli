@@ -1,3 +1,4 @@
+
 (** Simple boolean language: propositional logic *)
 
 (** Blang provides infrastructure for writing simple boolean DSLs.
@@ -27,7 +28,6 @@
 
           (and FOO (and BAR (and BAZ QUX)))
 *)
-
 open Std_internal
 
 type 'a t = private
@@ -38,20 +38,23 @@ type 'a t = private
   | Not of 'a t
   | If of 'a t * 'a t * 'a t
   | Base of 'a
+with bin_io, compare, sexp
+(** Note that the sexps are not directly inferred from the type above -- there are lots of
+    fancy shortcuts.  Also, the sexps for ['a] must not look anything like blang sexps.
+    Otherwise [t_of_sexp] will fail. *)
 
 (* smart constructors that simplify away constants whenever possible *)
 val base     : 'a -> 'a t
 val true_    : _ t
 val false_   : _ t
-val constant : bool -> _ t
+val constant : bool -> _ t (* [function true -> true_ | false -> false_] *)
 val not_     : 'a t -> 'a t
-val andalso  : 'a t -> 'a t -> 'a t
-val orelse   : 'a t -> 'a t -> 'a t
-val and_     : 'a t list -> 'a t (* convenience function: iterated [andalso] *)
-val or_      : 'a t list -> 'a t (* convenience function: iterated [orelse] *)
+val and_     : 'a t list -> 'a t (* convenience function: n-ary [And] *)
+val or_      : 'a t list -> 'a t (* convenience function: n-ary [Or] *)
 val if_      : 'a t -> 'a t -> 'a t -> 'a t (* [if_ if then else] *)
 
-val is_constant : 'a t -> bool option
+(* [constant_value t = Some b] iff [t = constant b] *)
+val constant_value : 'a t -> bool option
 
 (** The following two functions are useful when one wants to pretend
     that ['a t] has constructors And and Or of type ['a t list -> 'a t].
@@ -89,19 +92,13 @@ val gather_conjuncts : 'a t -> 'a t list
 *)
 val gather_disjuncts : 'a t -> 'a t list
 
-(** Note that the sexps are not directly inferred from the type above --
-    there are lots of fancy shortcuts.  Also, the sexps for ['a] must not
-    look anything like blang sexps.  Otherwise [t_of_sexp] will fail. *)
-include Sexpable.S1 with type 'a t := 'a t
-include Binable.S1 with type 'a t := 'a t
 include Container.S1 with type 'a t := 'a t
 
 (** [Blang.t] sports a substitution monad:
     {ul {- [return v] is [Base v] (think of [v] as a variable) }
         {- [bind t f] replaces every [Base v] in [t] with [f v]
            (think of [v] as a variable and [f] as specifying the term to
-           substitute for each variable) } }
-*)
+           substitute for each variable) } } *)
 include Monad with type 'a t := 'a t
 
 (** [values t] forms the list containing every [v]
@@ -132,3 +129,18 @@ val eval : 'a t -> ('a -> bool) -> bool
 *)
 val specialize : 'a t -> ('a -> [`Known of bool | `Unknown]) -> 'a t
 
+val invariant : 'a t -> unit
+
+module Stable : sig
+  module V1 : sig
+    type 'a t = private
+    | True
+    | False
+    | And of 'a t * 'a t
+    | Or of 'a t * 'a t
+    | Not of 'a t
+    | If of 'a t * 'a t * 'a t
+    | Base of 'a
+    with sexp, bin_io, compare
+  end with type 'a t = private 'a t
+end

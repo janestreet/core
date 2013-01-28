@@ -1,5 +1,9 @@
 open Std_internal
 
+open Unique_id_intf
+
+module type Id = Id
+
 (* Only "make" can cause a context-switch that might lead to a race.
    Thus we have to check whether the contents of the cell remained
    unchanged across this call.  The subsequent comparison, dereferencing

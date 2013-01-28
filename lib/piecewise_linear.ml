@@ -1,18 +1,14 @@
 open Std_internal
 
 module type Key = sig
-  type t
+  type t with bin_io, sexp
   include Floatable with type t := t
-  include Sexpable with type t := t
-  include Binable with type t := t
 end
 
 module type S = sig
   type key
 
-  type t
-  include Sexpable with type t := t
-  include Binable with type t := t
+  type t with bin_io, sexp
 
   val create : (key * float) list -> (t, string) Result.t
   val get : t -> key -> float

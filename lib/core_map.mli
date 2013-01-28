@@ -24,6 +24,18 @@
     [Creators].  The code in this mli instantiates those signatures to specify the
     operations in [Map], [Map.Poly], and [Key.Map].
 
+    Parallel to the three kinds of map modules, there are also tree modules [Map.Tree],
+    [Map.Poly.Tree], and [Key.Map.Tree].  A tree is a bare representation of a map,
+    without the comparator.  Thus tree operations need to obtain the comparator from
+    somewhere.  For [Map.Poly.Tree] and [Key.Map.Tree], the comparator is implicit in the
+    module name.  For [Map.Tree], the comparator must be passed to each operation.  The
+    main advantages of trees over maps are slightly improved space usage (there is no
+    outer container holding the comparator) and the ability to marshal trees, because a
+    tree doesn't contain a closure, unlike a map.  The main disadvantages of using trees
+    are needing to be more explicit about the comparator, and the possibility of
+    accidental use of polymorphic equality on a tree (for which maps dynamically detect
+    failure due to the presence of a closure in the data structure).
+
     For a detailed explanation of the interface design, read on.
 
     An instance of the map type is determined by the types of the map's keys and values,
@@ -109,29 +121,28 @@
     [Key.compare] for [Key.Map].  However, for [Map], there is no unambiguous comparison
     function.  So, the creation functions in [Map] require one to be passed in.  In order
     to make all three creation functions instances of the same generic type, [Creators]
-    uses a generic [create_options] type to factor out the difference.  So, in [Creators]
+    uses a generic [options] type to factor out the difference.  So, in [Creators]
     we have
 
     | type ('k, 'v, 'comparator) t
     | type 'k key
-    | type ('a, 'comparator, 'z) create_options
+    | type ('a, 'comparator, 'z) options
     | val of_alist
     |   : ('k,
     |      'comparator,
     |      ('k key * 'v) list -> [ `Ok of ('k, 'v, 'comparator) t
     |                            | `Duplicate_key of 'k key
     |                            ]
-    |     ) create_options
+    |     ) options
 
-    And then in [Map.Poly] and [Key.Map] we instantiate [create_options] with
-    [create_options_without_comparator], while in [Map] we instantiate it with
-    [create_options_with_comparator], which are defined as:
+    And then in [Map.Poly] and [Key.Map] we instantiate [options] with
+    [without_comparator], while in [Map] we instantiate it with [with_comparator], which
+    are defined as:
 
-    | type ('a, 'comparator, 'z) create_options_without_comparator = 'z
+    | type ('a, 'comparator, 'z) without_comparator = 'z
     |
-    | type ('a, 'comparator, 'z) create_options_with_comparator =
-    |   comparator:('a, 'comparator) Comparator.t
-    |   -> 'z
+    | type ('a, 'comparator, 'z) with_comparator =
+    |   comparator:('a, 'comparator) Comparator.t -> 'z
 
     For example, this makes the type of the three [of_alist] functions as follows:
 
@@ -152,57 +163,66 @@
 open Core_map_intf
 
 type ('key, +'value, 'comparator) t
-type ('key, 'value, 'comparator) tree
+type ('a, 'b, 'c) t_ = ('a, 'b, 'c) t
+type ('key, +'value, 'comparator) tree
 type 'a key = 'a
-
-type ('a, 'b, 'c) create_options = ('a, 'b, 'c) create_options_with_comparator
+type ('a, 'b, 'c) options = ('a, 'b, 'c) with_comparator
 
 include Creators
-  with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
+  with type ('a, 'b, 'c) t    := ('a, 'b, 'c) t
   with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
   with type 'a key := 'a key
-  with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) create_options
+  with type ('a, 'b, 'c) options := ('a, 'b, 'c) with_comparator
 
 include Accessors
-  with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
+  with type ('a, 'b, 'c) t    := ('a, 'b, 'c) t
   with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
   with type 'a key := 'a key
+  with type ('a, 'b, 'c) options := ('a, 'b, 'c) without_comparator
+
+val comparator : ('a, _, 'comparator) t -> ('a, 'comparator) Comparator.t
 
 module Poly : sig
   type ('a, 'b, 'c) map = ('a, 'b, 'c) t
-  type ('a, 'b) t = ('a, 'b, Comparator.Poly.comparator) map with bin_io, sexp
+  type ('a, +'b, 'c) tree
+  type ('a, 'b) t = ('a, 'b, Comparator.Poly.comparator) map with bin_io, sexp, compare
   type ('a, 'b, 'c) t_ = ('a, 'b) t
   type 'a key = 'a
-  type ('a, 'b, 'c) create_options = ('a, 'b, 'c) create_options_without_comparator
+  type ('a, 'b, 'c) options = ('a, 'b, 'c) without_comparator
 
-  include Creators
+  include Creators_and_accessors
     with type ('a, 'b, 'c) t := ('a, 'b, 'c) t_
     with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
     with type 'a key := 'a key
-    with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) create_options
+    with type ('a, 'b, 'c) options := ('a, 'b, 'c) without_comparator
 
   (* [empty] has the same spec in [Creators], but adding it here prevents a type-checker
      issue with nongeneralizable type variables. *)
   val empty : (_, _) t
 
-  include Accessors
-    with type ('a, 'b, 'c) t := ('a, 'b, 'c) t_
-    with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
-    with type 'a key := 'a key
+  module Tree : sig
+    type ('k, +'v) t = ('k, 'v, Comparator.Poly.comparator) tree with sexp
+
+    include Creators_and_accessors
+      with type ('a, 'b, 'c) t := ('a, 'b, 'c) tree
+      with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
+      with type 'a key := 'a key
+      with type ('a, 'b, 'c) options := ('a, 'b, 'c) without_comparator
+  end
 end
-  with type ('a, 'b, 'c) map := ('a, 'b, 'c) t
+  with type ('a, 'b, 'c) tree = ('a, 'b, 'c) tree
 
 module type Key = Key
 
 module type Key_binable = Key_binable
 
 module type S = S
-   with type ('a, 'b, 'c) map := ('a, 'b, 'c) t
-   with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
+  with type ('a, 'b, 'c) map  = ('a, 'b, 'c) t
+  with type ('a, 'b, 'c) tree = ('a, 'b, 'c) tree
 
 module type S_binable = S_binable
-   with type ('a, 'b, 'c) map := ('a, 'b, 'c) t
-   with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
+  with type ('a, 'b, 'c) map  = ('a, 'b, 'c) t
+  with type ('a, 'b, 'c) tree = ('a, 'b, 'c) tree
 
 module Make (Key : Key) : S with type Key.t = Key.t
 
@@ -216,3 +236,13 @@ module Make_binable_using_comparator (Key : Comparator.S_binable)
   : S_binable
       with type Key.t = Key.t
       with type Key.comparator = Key.comparator
+
+module Tree : sig
+  type ('k, 'v, 'comparator) t = ('k, 'v, 'comparator) tree with sexp_of
+
+  include Creators_and_accessors
+    with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
+    with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
+    with type 'a key := 'a key
+    with type ('a, 'b, 'c) options := ('a, 'b, 'c) with_comparator
+end

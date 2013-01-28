@@ -1,14 +1,12 @@
 open Std_internal
 
 (* Represented as a number of seconds since midnight *)
-type t = private float
+type t = private float with bin_io, sexp
 
-include Binable with type t := t
 include Comparable_binable with type t := t
 include Floatable with type t := t
 include Hashable_binable with type t := t
 include Robustly_comparable with type t := t
-include Sexpable with type t := t
 include Stringable with type t := t
 
 val create : ?hr:int -> ?min:int -> ?sec:int -> ?ms:int -> ?us:int -> unit -> t
@@ -56,3 +54,12 @@ val of_string_iso8601_extended : ?pos:int -> ?len:int -> string -> t
 
 (** with milliseconds *)
 val to_millisec_string : t -> string
+
+(* [invariant t] checks the invariants on t and returns t if it passes *)
+val invariant : t -> t
+
+module Stable : sig
+  module V1 : sig
+    type t with bin_io, sexp
+  end with type t = t
+end

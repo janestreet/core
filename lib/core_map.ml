@@ -7,17 +7,13 @@ let failwiths = Error.failwiths
 
 module List = Core_list
 
-open No_polymorphic_compare
+open Int_replace_polymorphic_compare
 
-let _ = compare  (* Prevent unused open warning *)
-
-let (= ) (x : int) y = Polymorphic_compare.(= ) x y
-let (<>) (x : int) y = Polymorphic_compare.(<>) x y
-let (< ) (x : int) y = Polymorphic_compare.(< ) x y
-let (> ) (x : int) y = Polymorphic_compare.(> ) x y
-let (>=) (x : int) y = Polymorphic_compare.(>=) x y
-
-module Tree = struct
+module Tree0 = struct
+  (* IF THIS REPRESENTATION EVER CHANGES, ENSURE THAT EITHER
+      (1) all values serialize the same way in both representations, or
+      (2) you add a new Map version to stable.ml
+  *)
   type ('k, 'v) t =
   | Empty
   | Leaf of 'k * 'v
@@ -74,11 +70,7 @@ module Tree = struct
             create (create l x d rll) rlv rld (create rlr rv rd rr)
         end
     end
-    (* Inline expansion of [create] to save extracting the heights again. *)
-    else if hl = 0 && hr = 0 then
-        Leaf(x, d)
-      else
-        Node(l, x, d, r, (if hl >= hr then hl + 1 else hr + 1))
+    else create l x d r
   ;;
 
   let empty = Empty
@@ -338,36 +330,41 @@ module Tree = struct
       | Node(l, v, d, r, _) -> cons l (More(v, d, r, e))
     ;;
 
-    let rec compare cmp t1 t2 ~compare_key =
-      match t1, t2 with
-      | (End, End) -> 0
-      | (End, _)  -> -1
-      | (_, End) -> 1
-      | (More (v1, d1, r1, e1), More (v2, d2, r2, e2)) ->
-        let c = compare_key v1 v2 in
-        if c <> 0 then c else
-          let c = cmp d1 d2 in
-          if c <> 0 then c else compare cmp (cons r1 e1) (cons r2 e2) ~compare_key
+    let compare compare_key compare_data t1 t2 =
+      let rec loop t1 t2 =
+        match t1, t2 with
+        | (End, End) -> 0
+        | (End, _)  -> -1
+        | (_, End) -> 1
+        | (More (v1, d1, r1, e1), More (v2, d2, r2, e2)) ->
+          let c = compare_key v1 v2 in
+          if c <> 0 then c else
+            let c = compare_data d1 d2 in
+            if c <> 0 then c else loop (cons r1 e1) (cons r2 e2)
+      in
+      loop t1 t2
     ;;
 
-    let rec equal cmp t1 t2 ~compare_key =
-      match t1, t2 with
-      | (End, End) -> true
-      | (End, _)  -> false
-      | (_, End) -> false
-      | (More (v1, d1, r1, e1), More (v2, d2, r2, e2)) ->
-        compare_key v1 v2 = 0
-        && cmp d1 d2
-        && equal cmp (cons r1 e1) (cons r2 e2) ~compare_key
+    let equal compare_key data_equal t1 t2 =
+      let rec loop t1 t2 =
+        match t1, t2 with
+        | (End, End) -> true
+        | (End, _) | (_, End) -> false
+        | (More (v1, d1, r1, e1), More (v2, d2, r2, e2)) ->
+          compare_key v1 v2 = 0
+          && data_equal d1 d2
+          && loop (cons r1 e1) (cons r2 e2)
+      in
+      loop t1 t2
     ;;
   end
 
-  let compare cmp t1 t2 ~compare_key =
-    Enum.compare cmp (Enum.cons t1 Enum.End) (Enum.cons t2 Enum.End) ~compare_key
+  let compare compare_key compare_data t1 t2 =
+    Enum.compare compare_key compare_data (Enum.cons t1 Enum.End) (Enum.cons t2 Enum.End)
   ;;
 
-  let equal cmp t1 t2 ~compare_key =
-    Enum.equal cmp (Enum.cons t1 Enum.End) (Enum.cons t2 Enum.End) ~compare_key
+  let equal compare_key compare_data t1 t2 =
+    Enum.equal compare_key compare_data (Enum.cons t1 Enum.End) (Enum.cons t2 Enum.End)
   ;;
 
   let rec length = function
@@ -427,22 +424,37 @@ module Tree = struct
     fold_right t ~init:[] ~f:(fun ~key ~data x -> (key,data)::x)
   ;;
 
-  let merge t1 t2 ~f ~compare_key =
-    let all_keys =
-      Core_list.dedup ~compare:compare_key (Core_list.append (keys t1) (keys t2))
-    in
-    List.fold ~init:empty all_keys
-      ~f:(fun t key ->
-        let z =
-          match find t1 key ~compare_key, find t2 key ~compare_key with
-          | None, None -> assert false
-          | None, Some v2 -> `Right v2
-          | Some v1, None -> `Left v1
-          | Some v1, Some v2 -> `Both (v1, v2)
-        in
-        match f ~key z with
+  let merge =
+    let merge_rest kvs ~init ~f ~compare_key ~wrap =
+      Core_list.fold kvs ~init ~f:(fun t (key, data) ->
+        match f ~key (wrap data) with
         | None -> t
-        | Some data -> add ~key ~data t ~compare_key)
+        | Some data -> add t ~key ~data ~compare_key)
+    in
+    fun t1 t2 ~f ~compare_key ->
+    let rec loop xs ys t =
+      match xs, ys with
+      | [], [] -> t
+      | xs, [] -> merge_rest xs ~wrap:(fun x -> `Left  x) ~init:t ~f ~compare_key
+      | [], ys -> merge_rest ys ~wrap:(fun y -> `Right y) ~init:t ~f ~compare_key
+      | (x_key, x_data) :: xs', (y_key, y_data) :: ys' ->
+        let c = compare_key x_key y_key in
+        let next_xs, next_ys, key, f_input =
+          if c = 0 then
+            xs', ys', x_key, (`Both (x_data, y_data))
+          else if c < 0 then
+            xs', ys, x_key, (`Left x_data)
+          else
+            xs, ys', y_key, (`Right y_data)
+        in
+        let next_t =
+          match f ~key f_input with
+          | None -> t
+          | Some data -> add t ~key ~data ~compare_key
+        in
+        loop next_xs next_ys next_t
+    in
+    loop (to_alist t1) (to_alist t2) empty
   ;;
 
   let rec next_key t k ~compare_key =
@@ -505,106 +517,115 @@ module Tree = struct
   ;;
 end
 
+(* IF THIS REPRESENTATION EVER CHANGES, ENSURE THAT EITHER
+    (1) all values serialize the same way in both representations, or
+    (2) you add a new Map version to stable.ml
+*)
 type ('k, 'v, 'comparator) t =
-  { tree : ('k, 'v) Tree.t;
+  { tree : ('k, 'v) Tree0.t;
     comparator : ('k, 'comparator) Comparator.t;
   }
 
-type ('k, 'v, 'comparator) tree = ('k, 'v) Tree.t
+let comparator t = t.comparator
+
+type ('a, 'b, 'c) t_ = ('a, 'b, 'c) t
+
+type ('k, 'v, 'comparator) tree = ('k, 'v) Tree0.t
 
 let compare_key t = t.comparator.Comparator.compare
-
-type ('a, 'b, 'c) map = ('a, 'b, 'c) t
-
 
 let like { tree = _; comparator } tree = { tree; comparator }
 
 module Accessors = struct
   let to_tree t = t.tree
-  let is_empty t = Tree.is_empty t.tree
-  let length t = Tree.length t.tree
-  let add t ~key ~data = like t (Tree.add t.tree ~key ~data ~compare_key:(compare_key t))
+  let is_empty t = Tree0.is_empty t.tree
+  let length t = Tree0.length t.tree
+  let add t ~key ~data = like t (Tree0.add t.tree ~key ~data ~compare_key:(compare_key t))
   let add_multi t ~key ~data =
-    like t (Tree.add_multi t.tree ~key ~data ~compare_key:(compare_key t))
+    like t (Tree0.add_multi t.tree ~key ~data ~compare_key:(compare_key t))
   ;;
-  let change t key f = like t (Tree.change t.tree key f ~compare_key:(compare_key t))
-  let find_exn t key = Tree.find_exn t.tree key ~compare_key:(compare_key t)
-  let find t key = Tree.find t.tree key ~compare_key:(compare_key t)
-  let remove t key = like t (Tree.remove t.tree key ~compare_key:(compare_key t))
-  let mem t key = Tree.mem t.tree key ~compare_key:(compare_key t)
-  let iter t ~f = Tree.iter t.tree ~f
-  let map t ~f = like t (Tree.map t.tree ~f)
-  let mapi t ~f = like t (Tree.mapi t.tree ~f)
-  let fold t ~init ~f = Tree.fold t.tree ~f ~init
-  let fold_right t ~init ~f = Tree.fold_right t.tree ~f ~init
-  let filter t ~f = like t (Tree.filter t.tree ~f ~compare_key:(compare_key t))
-  let filter_map t ~f = like t (Tree.filter_map t.tree ~f ~compare_key:(compare_key t))
-  let filter_mapi t ~f = like t (Tree.filter_mapi t.tree ~f ~compare_key:(compare_key t))
-  let compare f t1 t2 = Tree.compare f t1.tree t2.tree ~compare_key:(compare_key t1)
-  let equal f t1 t2 = Tree.equal f t1.tree t2.tree ~compare_key:(compare_key t1)
-  let keys t = Tree.keys t.tree
-  let data t = Tree.data t.tree
-  let to_alist t = Tree.to_alist t.tree
+  let change t key f = like t (Tree0.change t.tree key f ~compare_key:(compare_key t))
+  let find_exn t key = Tree0.find_exn t.tree key ~compare_key:(compare_key t)
+  let find t key = Tree0.find t.tree key ~compare_key:(compare_key t)
+  let remove t key = like t (Tree0.remove t.tree key ~compare_key:(compare_key t))
+  let mem t key = Tree0.mem t.tree key ~compare_key:(compare_key t)
+  let iter t ~f = Tree0.iter t.tree ~f
+  let map t ~f = like t (Tree0.map t.tree ~f)
+  let mapi t ~f = like t (Tree0.mapi t.tree ~f)
+  let fold t ~init ~f = Tree0.fold t.tree ~f ~init
+  let fold_right t ~init ~f = Tree0.fold_right t.tree ~f ~init
+  let filter t ~f = like t (Tree0.filter t.tree ~f ~compare_key:(compare_key t))
+  let filter_map t ~f = like t (Tree0.filter_map t.tree ~f ~compare_key:(compare_key t))
+  let filter_mapi t ~f = like t (Tree0.filter_mapi t.tree ~f ~compare_key:(compare_key t))
+  let compare_direct compare_data t1 t2 =
+    Tree0.compare (compare_key t1) compare_data t1.tree t2.tree
+  ;;
+  let equal compare_data t1 t2 =
+    Tree0.equal (compare_key t1) compare_data t1.tree t2.tree
+  ;;
+  let keys t = Tree0.keys t.tree
+  let data t = Tree0.data t.tree
+  let to_alist t = Tree0.to_alist t.tree
   let merge t1 t2 ~f =
-    like t1 (Tree.merge t1.tree t2.tree ~f ~compare_key:(compare_key t1));
+    like t1 (Tree0.merge t1.tree t2.tree ~f ~compare_key:(compare_key t1));
   ;;
-  let min_elt t = Tree.min_elt t.tree
-  let min_elt_exn t = Tree.min_elt_exn t.tree
-  let max_elt t = Tree.max_elt t.tree
-  let max_elt_exn t = Tree.max_elt_exn t.tree
-  let for_all t ~f = Tree.for_all t.tree ~f
-  let exists t ~f = Tree.exists t.tree ~f
+  let min_elt t = Tree0.min_elt t.tree
+  let min_elt_exn t = Tree0.min_elt_exn t.tree
+  let max_elt t = Tree0.max_elt t.tree
+  let max_elt_exn t = Tree0.max_elt_exn t.tree
+  let for_all t ~f = Tree0.for_all t.tree ~f
+  let exists t ~f = Tree0.exists t.tree ~f
   let fold_range_inclusive t ~min ~max ~init ~f =
-    Tree.fold_range_inclusive t.tree ~min ~max ~init ~f ~compare_key:(compare_key t)
+    Tree0.fold_range_inclusive t.tree ~min ~max ~init ~f ~compare_key:(compare_key t)
   ;;
   let range_to_alist t ~min ~max =
-    Tree.range_to_alist t.tree ~min ~max ~compare_key:(compare_key t)
+    Tree0.range_to_alist t.tree ~min ~max ~compare_key:(compare_key t)
   ;;
-  let prev_key t key = Tree.prev_key t.tree key ~compare_key:(compare_key t)
-  let next_key t key = Tree.next_key t.tree key ~compare_key:(compare_key t)
-  let rank t key = Tree.rank t.tree key ~compare_key:(compare_key t)
-  let sexp_of_t sexp_of_k sexp_of_v t = Tree.sexp_of_t sexp_of_k sexp_of_v t.tree
+  let prev_key t key = Tree0.prev_key t.tree key ~compare_key:(compare_key t)
+  let next_key t key = Tree0.next_key t.tree key ~compare_key:(compare_key t)
+  let rank t key = Tree0.rank t.tree key ~compare_key:(compare_key t)
+  let sexp_of_t sexp_of_k sexp_of_v t = Tree0.sexp_of_t sexp_of_k sexp_of_v t.tree
 end
 
-type ('a, 'b, 'c) create_options = ('a, 'b, 'c) create_options_with_comparator
+type ('a, 'b, 'c) options = ('a, 'b, 'c) with_comparator
 
 let of_tree ~comparator tree = { tree; comparator }
 
-let empty ~comparator = { tree = Tree.empty; comparator }
+let empty ~comparator = { tree = Tree0.empty; comparator }
 
-let singleton ~comparator k v = { comparator; tree = Tree.singleton k v }
+let singleton ~comparator k v = { comparator; tree = Tree0.singleton k v }
 
 let of_alist ~comparator alist =
-  match Tree.of_alist alist ~compare_key:comparator.Comparator.compare with
+  match Tree0.of_alist alist ~compare_key:comparator.Comparator.compare with
   | `Ok tree -> `Ok { comparator; tree }
   | `Duplicate_key _ as z -> z
 ;;
 
 let of_alist_exn ~comparator alist =
-  { comparator; tree = Tree.of_alist_exn alist ~comparator }
+  { comparator; tree = Tree0.of_alist_exn alist ~comparator }
 ;;
 
 let of_alist_multi ~comparator alist =
   { comparator;
-    tree = Tree.of_alist_multi alist ~compare_key:comparator.Comparator.compare;
+    tree = Tree0.of_alist_multi alist ~compare_key:comparator.Comparator.compare;
   }
 ;;
 
 let of_alist_fold ~comparator alist ~init ~f =
   { comparator;
-    tree = Tree.of_alist_fold alist ~init ~f ~compare_key:comparator.Comparator.compare;
+    tree = Tree0.of_alist_fold alist ~init ~f ~compare_key:comparator.Comparator.compare;
   }
 ;;
 
 let t_of_sexp ~comparator k_of_sexp v_of_sexp sexp =
-  { comparator; tree = Tree.t_of_sexp k_of_sexp v_of_sexp sexp ~comparator }
+  { comparator; tree = Tree0.t_of_sexp k_of_sexp v_of_sexp sexp ~comparator }
 ;;
 
 module Creators (Key : Comparator.S1) : sig
 
   type ('a, 'b, 'c) t_ = ('a Key.t, 'b, Key.comparator) t
-  type ('a, 'b, 'c) tree = ('a, 'b) Tree.t
-  type ('a, 'b, 'c) create_options = ('a, 'b, 'c) create_options_without_comparator
+  type ('a, 'b, 'c) tree = ('a, 'b) Tree0.t
+  type ('a, 'b, 'c) options = ('a, 'b, 'c) without_comparator
 
   val t_of_sexp : (Sexp.t -> 'a Key.t) -> (Sexp.t -> 'b) -> Sexp.t -> ('a, 'b, _) t_
 
@@ -612,19 +633,19 @@ module Creators (Key : Comparator.S1) : sig
     with type ('a, 'b, 'c) t := ('a, 'b, 'c) t_
     with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
     with type 'a key := 'a Key.t
-    with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) create_options
+    with type ('a, 'b, 'c) options := ('a, 'b, 'c) options
 
 end = struct
 
-  type ('a, 'b, 'c) create_options = ('a, 'b, 'c) create_options_without_comparator
+  type ('a, 'b, 'c) options = ('a, 'b, 'c) without_comparator
 
   let comparator = Key.comparator
 
   type ('a, 'b, 'c) t_ = ('a Key.t, 'b, Key.comparator) t
 
-  type ('a, 'b, 'c) tree = ('a, 'b) Tree.t
+  type ('a, 'b, 'c) tree = ('a, 'b) Tree0.t
 
-  let empty = { tree = Tree.empty; comparator }
+  let empty = { tree = Tree0.empty; comparator }
 
   let of_tree tree = of_tree ~comparator tree
 
@@ -646,15 +667,102 @@ type 'a key = 'a
 
 include Accessors
 
-module Poly_creators = Creators (Comparator.Poly)
+module Make_tree (Key : Comparator.S1) = struct
+  let comparator = Key.comparator
+
+  let empty = Tree0.empty
+  let of_tree tree = tree
+  let singleton k v = Tree0.singleton k v
+  let of_alist alist =
+    Tree0.of_alist alist ~compare_key:comparator.Comparator.compare
+  ;;
+  let of_alist_exn alist = Tree0.of_alist_exn alist ~comparator
+  let of_alist_multi alist =
+    Tree0.of_alist_multi alist ~compare_key:comparator.Comparator.compare
+  ;;
+  let of_alist_fold alist ~init ~f =
+    Tree0.of_alist_fold alist ~init ~f ~compare_key:comparator.Comparator.compare
+  ;;
+
+  let to_tree t = t
+  let is_empty t = Tree0.is_empty t
+  let length t = Tree0.length t
+  let add t ~key ~data =
+    Tree0.add t ~key ~data ~compare_key:comparator.Comparator.compare
+  let add_multi t ~key ~data =
+    Tree0.add_multi t ~key ~data ~compare_key:comparator.Comparator.compare
+  ;;
+  let change t key f =
+    Tree0.change t key f ~compare_key:comparator.Comparator.compare
+  ;;
+  let find_exn t key =
+    Tree0.find_exn t key ~compare_key:comparator.Comparator.compare
+  ;;
+  let find t key =
+    Tree0.find t key ~compare_key:comparator.Comparator.compare
+  ;;
+  let remove t key =
+    Tree0.remove t key ~compare_key:comparator.Comparator.compare
+  ;;
+  let mem t key = Tree0.mem t key ~compare_key:comparator.Comparator.compare
+  let iter t ~f = Tree0.iter t ~f
+  let map  t ~f = Tree0.map  t ~f
+  let mapi t ~f = Tree0.mapi t ~f
+  let fold       t ~init ~f = Tree0.fold       t ~f ~init
+  let fold_right t ~init ~f = Tree0.fold_right t ~f ~init
+  let filter t ~f =
+    Tree0.filter t ~f ~compare_key:comparator.Comparator.compare
+  ;;
+  let filter_map t ~f =
+    Tree0.filter_map t ~f ~compare_key:comparator.Comparator.compare
+  ;;
+  let filter_mapi t ~f =
+    Tree0.filter_mapi t ~f ~compare_key:comparator.Comparator.compare
+  ;;
+  let compare_direct compare_data t1 t2 =
+    Tree0.compare comparator.Comparator.compare compare_data t1 t2
+  ;;
+  let equal compare_data t1 t2 =
+    Tree0.equal comparator.Comparator.compare compare_data t1 t2
+  ;;
+  let keys t = Tree0.keys t
+  let data t = Tree0.data t
+  let to_alist t = Tree0.to_alist t
+  let merge t1 t2 ~f =
+    Tree0.merge t1 t2 ~f ~compare_key:comparator.Comparator.compare;
+  ;;
+  let min_elt     t = Tree0.min_elt     t
+  let min_elt_exn t = Tree0.min_elt_exn t
+  let max_elt     t = Tree0.max_elt     t
+  let max_elt_exn t = Tree0.max_elt_exn t
+  let for_all t ~f = Tree0.for_all t ~f
+  let exists  t ~f = Tree0.exists  t ~f
+  let fold_range_inclusive t ~min ~max ~init ~f =
+    Tree0.fold_range_inclusive t ~min ~max ~init ~f
+      ~compare_key:comparator.Comparator.compare
+  ;;
+  let range_to_alist t ~min ~max =
+    Tree0.range_to_alist t ~min ~max ~compare_key:comparator.Comparator.compare
+  ;;
+  let prev_key t key =
+    Tree0.prev_key t key ~compare_key:comparator.Comparator.compare
+  ;;
+  let next_key t key =
+    Tree0.next_key t key ~compare_key:comparator.Comparator.compare
+  ;;
+  let rank t key = Tree0.rank t key ~compare_key:comparator.Comparator.compare
+end
 
 module Poly = struct
-  include Poly_creators
+  include Creators (Comparator.Poly)
 
+  type ('a, 'b, 'c) map = ('a, 'b, 'c) t
   type ('k, 'v) t = ('k, 'v, Comparator.Poly.comparator) map
   type 'a key = 'a
 
   include Accessors
+
+  let compare _ cmpv t1 t2 = compare_direct cmpv t1 t2
 
   let sexp_of_t = sexp_of_t
 
@@ -662,6 +770,7 @@ module Poly = struct
     type ('a, 'b) acc = ('a , 'b) t
     type ('a, 'b) t = ('a, 'b) acc
     type ('a, 'b) el = 'a * 'b with bin_io
+    let _ = bin_el
     let module_name = Some "Core.Core_map"
     let length = length
     let iter t ~f = iter t ~f:(fun ~key ~data -> f (key, data))
@@ -674,24 +783,33 @@ module Poly = struct
     let finish t = t
   end)
 
+  module Tree = struct
+    include Make_tree (Comparator.Poly)
+    type ('k, +'v) t = ('k, 'v, Comparator.Poly.comparator) tree
+
+    let sexp_of_t sexp_of_k sexp_of_v t = Tree0.sexp_of_t sexp_of_k sexp_of_v t
+    let t_of_sexp k_of_sexp v_of_sexp sexp =
+      Tree0.t_of_sexp k_of_sexp v_of_sexp ~comparator:Comparator.Poly.comparator sexp
+  end
 end
 
 module type Key = Key
 module type Key_binable = Key_binable
 
 module type S = S
-   with type ('a, 'b, 'c) map := ('a, 'b, 'c) t
-   with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
+  with type ('a, 'b, 'c) map  = ('a, 'b, 'c) t
+  with type ('a, 'b, 'c) tree = ('a, 'b, 'c) tree
 
 module type S_binable = S_binable
-   with type ('a, 'b, 'c) map := ('a, 'b, 'c) t
-   with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
+  with type ('a, 'b, 'c) map  = ('a, 'b, 'c) t
+  with type ('a, 'b, 'c) tree = ('a, 'b, 'c) tree
 
 module Make_using_comparator (Key : Comparator.S) = struct
 
   module Key = Key
 
-  include Creators (Comparator.S_to_S1 (Key))
+  module Key_S1 = Comparator.S_to_S1 (Key)
+  include Creators (Key_S1)
 
   type key = Key.t
   type ('a, 'b, 'c) map = ('a, 'b, 'c) t
@@ -700,9 +818,21 @@ module Make_using_comparator (Key : Comparator.S) = struct
 
   include Accessors
 
+  let compare cmpv t1 t2 = compare_direct cmpv t1 t2
+
   let sexp_of_t sexp_of_v t = sexp_of_t Key.sexp_of_t sexp_of_v t
 
   let t_of_sexp v_of_sexp sexp = t_of_sexp Key.t_of_sexp v_of_sexp sexp
+
+  module Tree = struct
+    include Make_tree (Key_S1)
+    type +'v t = (Key.t, 'v, Key.comparator) tree
+    type ('k, +'v, 'c) t_ = 'v t
+
+    let sexp_of_t sexp_of_v t = Tree0.sexp_of_t Key.sexp_of_t sexp_of_v t
+    let t_of_sexp v_of_sexp sexp =
+      Tree0.t_of_sexp Key.t_of_sexp v_of_sexp ~comparator:Key.comparator sexp
+  end
 
 end
 
@@ -716,6 +846,7 @@ module Make_binable_using_comparator (Key' : Comparator.S_binable) = struct
     type 'v acc = 'v t
     type 'v t = 'v acc
     type 'v el = Key'.t * 'v with bin_io
+    let _ = bin_el
     let module_name = Some "Core.Core_map"
     let length = length
     let iter t ~f = iter t ~f:(fun ~key ~data -> f (key, data))
@@ -732,3 +863,90 @@ end
 
 module Make_binable (Key : Comparator.Pre_binable) =
   Make_binable_using_comparator (Comparator.Make_binable (Key))
+
+module Tree = struct
+  type ('k, 'v, 'comparator) t = ('k, 'v, 'comparator) tree
+
+  let empty ~comparator:_ = Tree0.empty
+  let of_tree ~comparator:_ tree = tree
+  let singleton ~comparator:_ k v = Tree0.singleton k v
+  let of_alist ~comparator alist =
+    Tree0.of_alist alist ~compare_key:comparator.Comparator.compare
+  ;;
+  let of_alist_exn ~comparator alist = Tree0.of_alist_exn alist ~comparator
+  let of_alist_multi ~comparator alist =
+    Tree0.of_alist_multi alist ~compare_key:comparator.Comparator.compare
+  ;;
+  let of_alist_fold ~comparator alist ~init ~f =
+    Tree0.of_alist_fold alist ~init ~f ~compare_key:comparator.Comparator.compare
+  ;;
+
+  let to_tree t = t
+  let is_empty t = Tree0.is_empty t
+  let length t = Tree0.length t
+  let add ~comparator t ~key ~data =
+    Tree0.add t ~key ~data ~compare_key:comparator.Comparator.compare
+  let add_multi ~comparator t ~key ~data =
+    Tree0.add_multi t ~key ~data ~compare_key:comparator.Comparator.compare
+  ;;
+  let change ~comparator t key f =
+    Tree0.change t key f ~compare_key:comparator.Comparator.compare
+  ;;
+  let find_exn ~comparator t key =
+    Tree0.find_exn t key ~compare_key:comparator.Comparator.compare
+  ;;
+  let find ~comparator t key =
+    Tree0.find t key ~compare_key:comparator.Comparator.compare
+  ;;
+  let remove ~comparator t key =
+    Tree0.remove t key ~compare_key:comparator.Comparator.compare
+  ;;
+  let mem ~comparator t key = Tree0.mem t key ~compare_key:comparator.Comparator.compare
+  let iter t ~f = Tree0.iter t ~f
+  let map  t ~f = Tree0.map  t ~f
+  let mapi t ~f = Tree0.mapi t ~f
+  let fold       t ~init ~f = Tree0.fold       t ~f ~init
+  let fold_right t ~init ~f = Tree0.fold_right t ~f ~init
+  let filter ~comparator t ~f =
+    Tree0.filter t ~f ~compare_key:comparator.Comparator.compare
+  ;;
+  let filter_map ~comparator t ~f =
+    Tree0.filter_map t ~f ~compare_key:comparator.Comparator.compare
+  ;;
+  let filter_mapi ~comparator t ~f =
+    Tree0.filter_mapi t ~f ~compare_key:comparator.Comparator.compare
+  ;;
+  let compare_direct ~comparator compare_data t1 t2 =
+    Tree0.compare comparator.Comparator.compare compare_data t1 t2
+  ;;
+  let equal ~comparator compare_data t1 t2 =
+    Tree0.equal comparator.Comparator.compare compare_data t1 t2
+  ;;
+  let keys t = Tree0.keys t
+  let data t = Tree0.data t
+  let to_alist t = Tree0.to_alist t
+  let merge ~comparator t1 t2 ~f =
+    Tree0.merge t1 t2 ~f ~compare_key:comparator.Comparator.compare;
+  ;;
+  let min_elt     t = Tree0.min_elt     t
+  let min_elt_exn t = Tree0.min_elt_exn t
+  let max_elt     t = Tree0.max_elt     t
+  let max_elt_exn t = Tree0.max_elt_exn t
+  let for_all t ~f = Tree0.for_all t ~f
+  let exists  t ~f = Tree0.exists  t ~f
+  let fold_range_inclusive ~comparator t ~min ~max ~init ~f =
+    Tree0.fold_range_inclusive t ~min ~max ~init ~f
+      ~compare_key:comparator.Comparator.compare
+  ;;
+  let range_to_alist ~comparator t ~min ~max =
+    Tree0.range_to_alist t ~min ~max ~compare_key:comparator.Comparator.compare
+  ;;
+  let prev_key ~comparator t key =
+    Tree0.prev_key t key ~compare_key:comparator.Comparator.compare
+  ;;
+  let next_key ~comparator t key =
+    Tree0.next_key t key ~compare_key:comparator.Comparator.compare
+  ;;
+  let rank ~comparator t key = Tree0.rank t key ~compare_key:comparator.Comparator.compare
+  let sexp_of_t sexp_of_k sexp_of_v _ t = Tree0.sexp_of_t sexp_of_k sexp_of_v t
+end

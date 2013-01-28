@@ -1,3 +1,5 @@
+module Binable = Binable0
+
 module type Accessors = sig
   include Container.Generic
 

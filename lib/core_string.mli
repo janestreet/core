@@ -1,14 +1,12 @@
 (** An extension of the standard StringLabels. If you open Core.Std, you'll get
     these in the String module. *)
 
-type t = string
+type t = string with bin_io, sexp
 
-include Binable.S with type t := t
 include Comparable.S_binable with type t := t
-include Container.S0 with type t := t with type elt = char
-include Hashable.S_binable with type t := t
-include Sexpable.S with type t := t
-include Stringable.S with type t := t
+include Container .S0        with type t := t with type elt = char
+include Hashable  .S_binable with type t := t
+include Stringable.S         with type t := t
 
 (** Maximum length of a string. *)
 val max_length : int
@@ -124,20 +122,20 @@ val rfindi : ?pos : int -> t -> f:(int -> char -> bool) -> int option
 (* Warning: the following strip functions have copy-on-write semantics (i.e. they may
    return the same string passed in) *)
 
-(** [lstrip s] returns a string with consecutive white space (tabs,
-    spaces, newlines, and carriage returns) stripped from the beginning of
-    [s]. *)
-val lstrip : t -> t
+(** [lstrip ?drop s] returns a string with consecutive chars satisfying [drop] (by default
+    white space, e.g. tabs, spaces, newlines, and carriage returns) stripped from the
+    beginning of [s]. *)
+val lstrip : ?drop:(char -> bool) -> t -> t
 
-(** [rstrip s] returns a string with consecutive white space (tabs,
-    spaces, newlines, and carriage returns) stripped from the end of
-    [s]. *)
-val rstrip : t -> t
+(** [rstrip ?drop s] returns a string with consecutive chars satisfying [drop] (by default
+    white space, e.g. tabs, spaces, newlines, and carriage returns) stripped from the end
+    of [s]. *)
+val rstrip : ?drop:(char -> bool) -> t -> t
 
-(** [strip s] returns a string with consecutive white space (tabs,
-    spaces, newlines, and carriage returns) stripped from the beginning
-    and end of [s]. *)
-val strip : t -> t
+(** [strip ?drop s] returns a string with consecutive chars satisfying [drop] (by default
+    white space, e.g. tabs, spaces, newlines, and carriage returns) stripped from the
+    begining and end of [s]. *)
+val strip : ?drop:(char -> bool) -> t -> t
 
 (** [map f s] applies [f] to each character in [s], and returns the
     resulting string. *)

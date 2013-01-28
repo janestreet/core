@@ -1,9 +1,7 @@
 
-type t
+type t with bin_io, sexp
 
-include Binable.S with type t := t
 include Hashable.S with type t := t
-include Sexpable.S with type t := t
 include Comparable.S with type t := t
 
 (** [of_string s] accepts three-character abbreviations with any capitalization
@@ -44,3 +42,9 @@ val shift : t -> int -> t
 
 (** [is_sun_or_sat] returns true if t is Sunday or Saturday *)
 val is_sun_or_sat : t -> bool
+
+module Stable : sig
+  module V1 : sig
+    type t with bin_io, sexp, compare
+  end with type t = t
+end

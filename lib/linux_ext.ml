@@ -1,5 +1,8 @@
 open Std_internal
 
+module Field = Core_field
+module File_descr = Core_unix.File_descr
+
 module Sysinfo0 = struct
   type t =
     { uptime : Span.t;
@@ -20,12 +23,47 @@ module Sysinfo0 = struct
   with bin_io, sexp
 end
 
-module Clock0 = struct
+(* If you update this type, you also must update linux_tcpopt_bool, in the C stubs. (And
+   do make sure you get the order correct) *)
+type tcp_bool_option = TCP_CORK with sexp, bin_io
+
+INCLUDE "config.mlh"
+
+IFDEF POSIX_TIMERS THEN
+module Clock = struct
   type t
+
+  (* These functions should be in Unix, but due to the dependency on Time,
+     this is not possible (cyclic dependency). *)
+  external get_time : t -> float = "unix_clock_gettime"
+  let get_time t = Span.of_float (get_time t)
+
+  external set_time : t -> float -> unit = "unix_clock_settime"
+  let set_time t s = set_time t (Span.to_float s)
+
+  external get_resolution : t -> float = "unix_clock_getres"
+  let get_resolution t = Span.of_float (get_resolution t)
+
+  external get : Thread.t -> t = "unix_pthread_getcpuclockid"
+
+  external get_process_clock : unit -> t = "unix_clock_process_cputime_id_stub"
+
+  external get_thread_clock : unit -> t = "unix_clock_thread_cputime_id_stub"
+
+  let get               = Ok get
+  let get_time          = Ok get_time
+  let set_time          = Ok set_time
+  let get_resolution    = Ok get_resolution
+  let get_process_clock = Ok get_process_clock
+  let get_thread_clock  = Ok get_thread_clock
+
 end
 
-module Clock_unimplemented = struct
-  include Clock0
+ELSE
+
+module Clock = struct
+  type t
+
   let get               = unimplemented "Linux_ext.Clock.get"
   let get_time          = unimplemented "Linux_ext.Clock.get_time"
   let set_time          = unimplemented "Linux_ext.Clock.set_time"
@@ -34,11 +72,78 @@ module Clock_unimplemented = struct
   let get_thread_clock  = unimplemented "Linux_ext.Clock.get_thread_clock"
 end
 
-(* If you update this type, you also must update linux_tcpopt_bool, in the C stubs. (And
-   do make sure you get the order correct) *)
-type tcp_bool_option = TCP_CORK with sexp, bin_io
+ENDIF
 
-INCLUDE "config.mlh"
+module Epoll_flags(Flag_values : sig
+  val in_     : int
+  val out     : int
+  (* val rdhup   : int *)
+  val pri     : int
+  val err     : int
+  val hup     : int
+  val et      : int
+  val oneshot : int
+end) = struct
+  (* We use [Int63] rather than [Int] just so we have the same number of bits on
+     32-bit and 64-bit machines.  We don't think it actually matters, since none of
+     the flags use past 31 bits.  But there would be little advantage to using [Int],
+     so we decided to go for the easy consistency guarantee. *)
+  include Core_int63
+
+  (* Cache values *)
+  let none    = zero
+  let in_     = of_int Flag_values.in_
+  let out     = of_int Flag_values.out
+    (* let rdhup   = of_int Flag_values.rdhup *)
+  let pri     = of_int Flag_values.pri
+  let err     = of_int Flag_values.err
+  let hup     = of_int Flag_values.hup
+  let et      = of_int Flag_values.et
+  let oneshot = of_int Flag_values.oneshot
+
+  let (+) = bit_or
+  let (-) a b = bit_and a (bit_not b)
+
+  let flag_and = bit_and
+  let flag_not = bit_not
+
+  let do_intersect t flag = bit_and t flag = flag
+  let are_disjoint t flag = bit_and t flag = zero
+
+  let sexp_of_t =
+    let known =
+      List.rev
+        [ in_, "in";
+          out, "out";
+            (* rdhup, "rdhup"; *)
+          pri, "pri";
+          err, "err";
+          hup, "hup";
+          et, "et";
+          oneshot, "oneshot";
+        ]
+    in
+    fun t ->
+      let leftover, flag_names =
+        List.fold known ~init:(t, []) ~f:(fun (t, flag_names) (flag, flag_name) ->
+          if do_intersect t flag then
+            (flag_and t (flag_not flag), flag_name :: flag_names)
+          else
+            (t, flag_names))
+      in
+      if leftover = zero then
+        <:sexp_of< string list >> flag_names
+      else
+        <:sexp_of< string list * [ `unrecognized_bits of string ] >>
+          (flag_names,
+           `unrecognized_bits (match to_int leftover with
+           | None -> to_string leftover
+           | Some i -> sprintf "0x%x" i))
+  ;;
+
+end
+
+
 IFDEF LINUX_EXT THEN
 
 type file_descr = Core_unix.File_descr.t
@@ -173,45 +278,6 @@ let sendmsg_nonblocking_no_sigpipe sock ?count iovecs =
   in
   unsafe_sendmsg_nonblocking_no_sigpipe sock iovecs count
 
-IFDEF POSIX_TIMERS THEN
-module Clock = struct
-  include Clock0
-
-  (* These functions should be in Unix, but due to the dependency on Time,
-     this is not possible (cyclic dependency). *)
-  external get_time : t -> float = "unix_clock_gettime"
-  let get_time t = Span.of_float (get_time t)
-
-  external set_time : t -> float -> unit = "unix_clock_settime"
-  let set_time t s = set_time t (Span.to_float s)
-
-  external get_resolution : t -> float = "unix_clock_getres"
-  let get_resolution t = Span.of_float (get_resolution t)
-
-  external get : Thread.t -> t = "unix_pthread_getcpuclockid"
-
-  external get_process_clock : unit -> t = "unix_clock_process_cputime_id_stub"
-
-  external get_thread_clock : unit -> t = "unix_clock_thread_cputime_id_stub"
-
-  let get               = Ok get
-  let get_time          = Ok get_time
-  let set_time          = Ok set_time
-  let get_resolution    = Ok get_resolution
-  let get_process_clock = Ok get_process_clock
-  let get_thread_clock  = Ok get_thread_clock
-
-end
-
-(* Avoid unused variable warnings. *)
-let _ =
-  Clock_unimplemented.(
-    get, get_time, set_time, get_resolution, get_process_clock, get_thread_clock)
-
-ELSE
-module Clock = Clock_unimplemented
-ENDIF
-
 external pr_set_pdeathsig : Signal.t -> unit = "linux_pr_set_pdeathsig_stub"
 external pr_get_pdeathsig : unit -> Signal.t = "linux_pr_get_pdeathsig_stub"
 
@@ -219,7 +285,7 @@ external pr_set_name_first16 : string -> unit = "linux_pr_set_name"
 external pr_get_name : unit -> string = "linux_pr_get_name"
 
 let file_descr_realpath fd =
-  Core_filename.realpath ("/proc/self/fd/" ^ Core_unix.File_descr.to_string fd)
+  Core_filename.realpath ("/proc/self/fd/" ^ File_descr.to_string fd)
 
 let out_channel_realpath oc = file_descr_realpath (Unix.descr_of_out_channel oc)
 let in_channel_realpath ic = file_descr_realpath (Unix.descr_of_in_channel ic)
@@ -240,37 +306,315 @@ let sched_setaffinity_this_thread ~cpuset =
 
 let cores =
   Memo.unit (fun () ->
-    Exn.protectx
-      (open_in "/proc/cpuinfo")
-      ~finally:close_in_noerr
-      ~f:(fun ic ->
-        let rec loop count =
-          let line =
-            try Some (input_line ic) with
-            | End_of_file -> None
-          in
-          match line with
-          | None -> count
-          | Some line ->
-              match Core_string.lsplit2 ~on:':' line with
-              | None -> loop count
-              | Some (label, _) ->
-                  if Core_string.(=) (Core_string.rstrip label) "processor" then
-                    loop (count + 1)
-                  else
-                    loop count
-        in
-        let num_cores = loop 0 in
-        if num_cores > 0 then num_cores
-        else failwith "failed to parse /proc/cpuinfo"
-      )
-  )
-;;
+    let num_cores =
+      In_channel.with_file "/proc/cpuinfo" ~f:In_channel.input_lines
+      |! List.fold_left ~init:0 ~f:(fun count line ->
+        count +
+          (match Core_string.lsplit2 ~on:':' line with
+          | None -> 0
+          | Some (label, _) ->
+            if Core_string.(=) (Core_string.rstrip label) "processor" then 1
+            else 0))
+    in
+    if num_cores > 0 then num_cores
+    else failwith "Linux_ext.cores: failed to parse /proc/cpuinfo")
+
+TEST = cores () > 0
+TEST = cores () < 100000 (* 99,999 cores ought to be enough for anybody *)
 
 external get_terminal_size : unit -> int * int = "linux_get_terminal_size"
 
 external get_ipv4_address_for_interface : string -> string =
   "linux_get_ipv4_address_for_interface" ;;
+
+module Epoll = struct
+
+  external flag_epollin      : unit -> int  = "linux_epoll_EPOLLIN_flag" "noalloc"
+  external flag_epollout     : unit -> int  = "linux_epoll_EPOLLOUT_flag" "noalloc"
+  (* external flag_epollrdhup   : unit -> int  = "linux_epoll_EPOLLRDHUP_flag" "noalloc" *)
+  external flag_epollpri     : unit -> int  = "linux_epoll_EPOLLPRI_flag" "noalloc"
+  external flag_epollerr     : unit -> int  = "linux_epoll_EPOLLERR_flag" "noalloc"
+  external flag_epollhup     : unit -> int  = "linux_epoll_EPOLLHUP_flag" "noalloc"
+  external flag_epollet      : unit -> int  = "linux_epoll_EPOLLET_flag" "noalloc"
+  external flag_epolloneshot : unit -> int  = "linux_epoll_EPOLLONESHOT_flag" "noalloc"
+
+  module Flags = Epoll_flags(struct
+    let in_     = flag_epollin ()
+    let out     = flag_epollout ()
+    (* let rdhup   = flag_epollrdhup () *)
+    let pri     = flag_epollpri ()
+    let err     = flag_epollerr ()
+    let hup     = flag_epollhup ()
+    let et      = flag_epollet ()
+    let oneshot = flag_epolloneshot ()
+  end)
+
+  external sizeof_epoll_event : unit -> int   = "linux_sizeof_epoll_event" "noalloc"
+
+  external epoll_create : int -> File_descr.t = "linux_epoll_create"
+
+  (* Some justification for the below interface: Unlike select() and poll(), epoll() fills
+     in an array of ready events, analogous to a read() call where you pass in a buffer to
+     be filled.
+
+     Since this is at the core of the I/O loop, we'd like to avoid reallocating that
+     buffer on every call to poll.  We're allocating the array on the ocaml side (as a
+     Bigstring), then iterating through it in-place, reducing allocation, copies, and any
+     intermediate lists.  For very high message rates and many fds this could be a very
+     beneficial. *)
+  type ready_events = Bigstring.t
+
+  external epoll_readyfd
+    : ready_events -> int -> File_descr.t = "linux_epoll_readyfd" "noalloc"
+
+  external epoll_readyflags
+    : ready_events -> int -> Flags.t = "linux_epoll_readyflags" "noalloc"
+
+  external epoll_ctl_add
+    : File_descr.t -> File_descr.t -> Flags.t -> unit
+      = "linux_epoll_ctl_add"
+
+  external epoll_ctl_mod
+    : File_descr.t -> File_descr.t -> Flags.t -> unit
+      = "linux_epoll_ctl_mod"
+
+  external epoll_ctl_del
+    : File_descr.t -> File_descr.t -> unit
+      = "linux_epoll_ctl_del"
+
+  module Table = Bounded_int_table
+
+  module T = struct
+    type 'a t =
+      { epollfd : File_descr.t;
+        (* [flags_by_fd] has one entry for each file-descr in the epoll set, and stores
+           the epoll flags that the kernel's epoll set currently has for that
+           file-descr.  Keeping our own representation of the kernel data structure is
+           useful for debugging, since the information appears in a human-readable way
+           in [sexp_of_t]'s output.  It also allows us to hide the distinction between
+           [epoll_ctl_add] and [epoll_ctl_mod], since we know which to use based on
+           whether the file descriptor is already being watched. *)
+        flags_by_fd : (File_descr.t, Flags.t) Table.t;
+        max_ready_events : int;
+        (* [num_ready_events] holds the number of ready events in [ready_events], as
+           determined by the last call to [wait]. *)
+        mutable num_ready_events : int;
+        ready_events : 'a;
+      }
+    with fields, sexp_of
+  end
+
+  open T
+
+  type in_use = ready_events T.t
+
+  module Pretty = struct
+    type ready_event =
+      { file_descr : File_descr.t;
+        flags : Flags.t;
+      }
+    with sexp_of
+
+    type ready_events = ready_event array with sexp_of
+
+    type t = ready_events T.t with sexp_of
+  end
+
+  let to_pretty t =
+    { t with
+      ready_events =
+        Array.init t.num_ready_events ~f:(fun i ->
+          { Pretty.
+            file_descr = epoll_readyfd t.ready_events i;
+            flags = epoll_readyflags t.ready_events i;
+          });
+    }
+  ;;
+
+  let sexp_of_in_use t = Pretty.sexp_of_t (to_pretty t)
+
+  type t = [ `Closed | `In_use of in_use ] ref with sexp_of
+
+  let close t =
+    match !t with
+    | `Closed -> ()
+    | `In_use { epollfd; _ } ->
+      t := `Closed;
+      Unix.close epollfd;
+  ;;
+
+  let invariant t : unit =
+    match !t with
+    | `Closed -> ()
+    | `In_use t ->
+      try
+        let check f field = f (Field.get field t) in
+        Fields.iter
+          ~epollfd:ignore
+          ~flags_by_fd:(check Table.invariant)
+          ~max_ready_events:(check (fun max_ready_events -> assert (max_ready_events > 0)))
+          ~num_ready_events:(check (fun num_ready -> assert (num_ready >= 0)))
+          ~ready_events:ignore
+      with exn ->
+        failwiths "Epoll.invariant failed" (exn, t) <:sexp_of< exn * in_use >>
+  ;;
+
+  let create ~num_file_descrs ~max_ready_events =
+    if max_ready_events < 0 then
+      failwiths "Epoll.create got nonpositive max_ready_events" max_ready_events
+        (<:sexp_of< int >>);
+    ref (`In_use
+            { epollfd = epoll_create max_ready_events;
+              flags_by_fd =
+                Table.create
+                  ~num_keys:num_file_descrs
+                  ~key_to_int:File_descr.to_int
+                  ~sexp_of_key:File_descr.sexp_of_t
+                  ();
+              max_ready_events;
+              num_ready_events = 0;
+              ready_events = Bigstring.create (sizeof_epoll_event () * max_ready_events);
+            })
+  ;;
+
+  let use t ~f =
+    match !t with
+    | `Closed -> failwith "attempt to use closed epoll set"
+    | `In_use r -> f r
+  ;;
+
+  let find t file_descr = use t ~f:(fun t -> Table.find t.flags_by_fd file_descr)
+
+  let find_exn t file_descr = use t ~f:(fun t -> Table.find_exn t.flags_by_fd file_descr)
+
+  let iter t ~f =
+    use t ~f:(fun t ->
+      Table.iter t.flags_by_fd ~f:(fun ~key:file_descr ~data:flags ->
+        f file_descr flags))
+  ;;
+
+  let set t fd flags =
+    use t ~f:(fun t ->
+      let already_present = Table.mem t.flags_by_fd fd in
+      Table.set t.flags_by_fd ~key:fd ~data:flags;
+      if already_present
+      then epoll_ctl_mod t.epollfd fd flags
+      else epoll_ctl_add t.epollfd fd flags);
+  ;;
+
+  let remove t fd =
+    use t ~f:(fun t ->
+      if Table.mem t.flags_by_fd fd then epoll_ctl_del t.epollfd fd;
+      Table.remove t.flags_by_fd fd)
+  ;;
+
+  external epoll_wait : File_descr.t -> ready_events -> int -> int = "linux_epoll_wait"
+
+  let wait t ~timeout =
+    use t ~f:(fun t ->
+      (* We round up to ensure that we are guaranteed that the timeout has passed when we
+         wake up.  If we rounded down, then when the user requests a positive
+         sub-millisecond timeout, we would use a timout of zero, and return immediately.
+         This caused async to spin, repeatedly requesting slightly smaller timeouts. *)
+      let millis = Float.iround_up_exn (Span.to_ms timeout) in
+      (* We clear [num_ready_events] because [epoll_wait] will invalidate [ready_events],
+         and we don't want another thread to observe [t] and see junk. *)
+      t.num_ready_events <- 0;
+      t.num_ready_events <- epoll_wait t.epollfd t.ready_events millis;
+      if t.num_ready_events = 0 then `Timeout else `Ok)
+  ;;
+
+  let fold_ready t ~init ~f =
+    use t ~f:(fun t ->
+      let ac = ref init in
+      for i = 0 to t.num_ready_events - 1 do
+        ac := f !ac (epoll_readyfd t.ready_events i) (epoll_readyflags t.ready_events i)
+      done;
+      !ac)
+  ;;
+
+  let iter_ready t ~f = fold_ready t ~init:() ~f:(fun () fd flags -> f fd flags)
+
+(* external epoll_pwait
+ *   : File_descr.t -> Events_buffer.raw -> int -> int list -> int
+ *   = "linux_epoll_pwait"
+ *
+ * let pwait t ~timeout sigs =
+ *   let millis = Float.iround_towards_zero_exn ( Span.to_ms timeout ) in
+ *   let num_ready = epoll_pwait t.epollfd t.events millis sigs in
+ *   if num_ready = 0 then `Timeout
+ *   else `Ok { Ready_fds.num_ready ; events = t.events }
+ * ;; *)
+
+  let create = Ok create
+end
+
+
+(* Epoll unit test included here for some example usage. Creates 2 sockets,
+   adds them to an epoll set, sends data to one of them and calls Epoll.wait.
+   The test passes if the resulting Ready_fds set has 1 ready fd, matching
+   the one we sent to, with read, !write, and !error. *)
+TEST_MODULE = struct
+
+  module Unix = Core_unix
+  module Flags = Epoll.Flags
+
+  let udp_listener ~port =
+    let sock = Unix.socket ~domain:Unix.PF_INET ~kind:Unix.SOCK_DGRAM ~protocol:0 in
+    let iaddr = Unix.ADDR_INET (Unix.Inet_addr.localhost, port) in
+    Unix.setsockopt sock Unix.SO_REUSEADDR true;
+    Unix.bind sock ~addr:iaddr;
+    sock
+  ;;
+
+  let send s buf ~port =
+    let addr = Unix.ADDR_INET (Unix.Inet_addr.localhost, port) in
+    let len  = String.length buf in
+    Unix.sendto s ~buf ~pos:0 ~len ~mode:[] ~addr
+  ;;
+
+  let create () =
+    (Or_error.ok_exn Epoll.create) ~num_file_descrs:1024 ~max_ready_events:256
+
+  TEST_UNIT "epoll errors" =
+    let t = create () in
+    let tmp = "temporary-file-for-testing-epoll" in
+    let fd = Unix.openfile tmp ~mode:[Unix.O_CREAT; Unix.O_WRONLY] in
+    (* Epoll does not support ordinary files, and so should fail if you ask it to watch
+       one. *)
+    assert (Result.is_error (Result.try_with (fun () -> Epoll.set t fd Flags.none)));
+    Unix.close fd;
+    Unix.unlink tmp;
+    Epoll.close t;
+  ;;
+
+  TEST_UNIT "epoll test" =
+    let timeout = Span.of_sec 0.1 in
+    let epset = create () in
+    let sock1 = udp_listener ~port:7070 in
+    let sock2 = udp_listener ~port:7071 in
+    Epoll.set epset sock1 Flags.in_;
+    Epoll.set epset sock2 Flags.in_;
+    let _sent = send sock2 "TEST" ~port:7070 in
+    begin match Epoll.wait epset ~timeout with
+    | `Timeout -> assert false
+    | `Ok ->
+      let ready =
+        Epoll.fold_ready epset ~init:[] ~f:(fun ac fd flags ->
+          if flags = Flags.in_ then fd :: ac else ac)
+      in
+      (* Explanation of the test:
+         1) I create two udp sockets, sock1 listening on 7070 and sock2, on 7071
+         2) These two sockets are both added to epoll for read notification
+         3) I send a packet, _using_ sock2 to sock1 (who is listening on 7070)
+         4) epoll_wait should return, with [ sock1 ] ready to be read.
+      *)
+      assert (ready = [ sock1 ])
+    end;
+    Epoll.close epset;
+  ;;
+end
+
 
 let cores                          = Ok cores
 let file_descr_realpath            = Ok file_descr_realpath
@@ -300,8 +644,6 @@ module Sysinfo = struct
   let sysinfo = unimplemented "Linux_ext.Sysinfo.sysinfo"
 end
 
-module Clock = Clock_unimplemented
-
 let cores                          = unimplemented "Linux_ext.cores"
 let file_descr_realpath            = unimplemented "Linux_ext.file_descr_realpath"
 let get_ipv4_address_for_interface = unimplemented "Linux_ext.get_ipv4_address_for_interface"
@@ -321,5 +663,34 @@ let send_nonblocking_no_sigpipe    = unimplemented "Linux_ext.send_nonblocking_n
 let sendfile                       = unimplemented "Linux_ext.sendfile"
 let sendmsg_nonblocking_no_sigpipe = unimplemented "Linux_ext.sendmsg_nonblocking_no_sigpipe"
 let settcpopt_bool                 = unimplemented "Linux_ext.settcpopt_bool"
+
+module Epoll = struct
+  module Flags = Epoll_flags(struct
+    let in_     = 1 lsl 0
+    let out     = 1 lsl 1
+    (* let rdhup   = 1 lsl 2 *)
+    let pri     = 1 lsl 3
+    let err     = 1 lsl 4
+    let hup     = 1 lsl 5
+    let et      = 1 lsl 6
+    let oneshot = 1 lsl 7
+  end)
+
+  type t = [ `Epoll_is_not_implemented ] with sexp_of
+  let create = unimplemented "Linux_ext.Epoll.create"
+
+  let invariant _               = assert false
+
+  let find _ _                  = assert false
+  let find_exn _ _              = assert false
+  let set _ _ _                 = assert false
+  let remove _ _                = assert false
+  let iter _ ~f:_               = assert false
+  let wait _ ~timeout:_         = assert false
+  let iter_ready _ ~f:_         = assert false
+  let fold_ready _ ~init:_ ~f:_ = assert false
+
+  (* let pwait _ ~timeout:_ _      = assert false *)
+end
 
 ENDIF

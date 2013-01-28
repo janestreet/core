@@ -61,14 +61,13 @@ module T3 = struct
 end
 
 module type Comparable_sexpable = sig
-  include Comparable.S
-  include Sexpable.S with type t := t
+  type t with sexp
+  include Comparable.S with type t := t
 end
 
 module type Hashable_sexpable = sig
-  type t
+  type t with sexp
   include Hashable.S with type t := t
-  include Sexpable.S with type t := t
 end
 
 module Sexpable (S1 : Sexpable.S) (S2 : Sexpable.S) = struct

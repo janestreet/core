@@ -15,15 +15,22 @@ module Result = struct
 
 end
 
-(* using (=) instead of compare would be a minor bug since nan <> nan. *)
-let _default_equal x y = (compare x y = 0)
-
 let unit f =
   let l = Lazy.lazy_from_fun f in
   (fun () -> Lazy.force l)
 
-let unbounded f =
-  let cache = Hashtbl.Poly.create () ~size:0 in
+let unbounded (type a) ?hashable f =
+  let cache =
+    let module A =
+      Hashable.Make (struct
+        type t = a
+        let {Hashtbl.Hashable.hash; compare; sexp_of_t} =
+          Option.value ~default:Hashtbl.Hashable.poly hashable
+        let t_of_sexp _ = assert false (* ditto the comment below in [lru] *)
+      end)
+    in
+    A.Table.create () ~size:0
+  in
   (fun arg ->
     Result.return begin
       Hashtbl.find_or_add cache arg
@@ -31,27 +38,17 @@ let unbounded f =
     end)
 
 (* the same but with a bound on cache size *)
-let lru (type a) ~max_cache_size f =
+let lru (type a) ?hashable ~max_cache_size f =
   let max_cache_size = Int.max 1 max_cache_size in
   let module Cache =
     Hash_queue.Make (struct
       type t = a
-      let compare = Pervasives.compare
-      let hash = Hashtbl.hash
-      (* these [assert false]s are unreachable because
-          1. the only use of these sexp conversions in [Hash_queue.Make] is
-             to define sexp conversions on various exceptions.
-          2. the only exception raising functions returned by this functor
-             application are called in contexts where they will not raise
-             exceptions.
-             * remove_exn raises if the key is missing from the hash
-               queue, but we only call it after just having checked that
-               it is not missing.
-             * enqueue_exn raises if the key is already present in the
-               hash queue, but we only call it after either checking that
-               the key is not present or removing it if it was present. *)
+      let {Hashtbl.Hashable.hash; compare; sexp_of_t} =
+        Option.value ~default:Hashtbl.Hashable.poly hashable
+      (* this [assert false] is unreachable because the only use of [t_of_sexp] by
+         [Hash_queue.Make] is to define [t_of_sexp] on the returned hash queue type,
+         and we never call that function. *)
       let t_of_sexp _ = assert false
-      let sexp_of_t _ = assert false
     end)
   in
   let cache = Cache.create () in
@@ -71,10 +68,10 @@ let lru (type a) ~max_cache_size f =
         result
     end)
 
-let general ?cache_size_bound f =
+let general ?hashable ?cache_size_bound f =
   match cache_size_bound with
-  | None -> unbounded f
-  | Some n -> lru ~max_cache_size:n f
+  | None -> unbounded ?hashable f
+  | Some n -> lru ?hashable ~max_cache_size:n f
 
 TEST_MODULE "lru" = struct
   let count = ref 0  (* number of times f underlying function is run *)

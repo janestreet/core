@@ -1,6 +1,6 @@
 open Sexplib
 
-type 'a z = 
+type 'a z =
 | Forced
 | Not_forced of (unit -> 'a)
 
@@ -14,7 +14,7 @@ let force t =
   match !t with
   | Forced -> failwith "Force_once.force"
   | Not_forced f -> t := Forced; f()
-      
+
 let sexp_of_t _ t =
   match !t with
   | Forced -> Sexp.Atom "<Forced>"

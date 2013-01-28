@@ -6,20 +6,19 @@ open Bigarray
 
 (** Type of bigstrings *)
 type t = (char, int8_unsigned_elt, c_layout) Array1.t
-
-include Sexpable.S with type t := t
-include Binable.S with type t := t
+with bin_io, sexp
 
 (** Type of I/O errors *)
 exception IOError of
   int *  (** Number of bytes successfully read/written before error *)
   exn  (** The occurred exception (e.g. Unix_error, End_of_file) *)
 
-
 (** {6 Creation and string conversion} *)
 
 val create : int -> t
-(** [create length] @return a new bigstring having [length]. *)
+(** [create length] @return a new bigstring having [length].
+    Content is undefined.
+  *)
 
 (** [init n ~f] creates a bigstring [t] of length [n], with [t.{i} = f i] *)
 val init : int -> f:(int -> char) -> t
@@ -87,6 +86,9 @@ val sub_shared : ?pos : int -> ?len : int -> t -> t
 
 (** [get t pos] returns the character at [pos] *)
 val get : t -> int -> char
+
+(** [set t pos] sets the character at [pos] *)
+val set : t -> int -> char -> unit
 
 external is_mmapped : t -> bool = "bigstring_is_mmapped_stub" "noalloc"
 (** [is_mmapped bstr] @return whether the bigstring [bstr] is
@@ -402,6 +404,7 @@ val map_file : shared : bool -> file_descr -> int -> t
 (** {6 Unsafe functions} *)
 
 
+
 external unsafe_blit :
   src : t -> src_pos : int -> dst : t -> dst_pos : int -> len : int -> unit
   = "bigstring_blit_stub"
@@ -521,21 +524,86 @@ val find :
 
 (** {6 Destruction} *)
 
+(** [unsafe_destroy bstr] destroys the bigstring by deallocating its associated data or,
+    if memory-mapped, unmapping the corresponding file, and setting all dimensions to
+    zero.  This effectively frees the associated memory or address-space resources
+    instantaneously.  This feature helps working around a bug in the current OCaml
+    runtime, which does not correctly estimate how aggressively to reclaim such resources.
+
+    This operation is safe unless you have passed the bigstring to another thread that is
+    performing operations on it at the same time.  Access to the bigstring after this
+    operation will yield array bounds exceptions.
+
+    @raise Failure if the bigstring has already been deallocated (or deemed "external",
+    which is treated equivalently), or if it has proxies, i.e. other bigstrings referring
+    to the same data. *)
 external unsafe_destroy : t -> unit = "bigstring_destroy_stub"
-(** [unsafe_destroy bstr] destroys the bigstring by deallocating its
-    associated data or, if memory-mapped, unmapping the corresponding
-    file, and setting all dimensions to zero.  This effectively frees
-    the associated memory or address-space resources instantaneously.
-    This feature helps working around a bug in the current OCaml runtime,
-    which does not correctly estimate how aggressively to reclaim such
-    resources.
 
-    This operation is safe unless you have passed the bigstring to
-    another thread that is performing operations on it at the same time.
-    Access to the bigstring after this operation will yield array bounds
-    exceptions.
+(* Accessors for parsing binary values, analogous to binary_packing.  These are in
+   Bigstring rather than a separate module because:
 
-    @raise Failure if the bigstring has already been deallocated (or
-    deemed "external", which is treated equivalently), or if it has
-    proxies, i.e. other bigstrings referring to the same data.
-*)
+   1) Existing binary_packing requires copies and does not work with bigstrings
+   2) The accessors rely on the implementation of bigstring, and hence should
+   changeshould the implementation of bigstring move away from Bigarray.
+   3) Bigstring already has some external C functions, so it didn't require many
+   changes to the OMakefile ^_^.
+
+   In a departure from Binary_packing, the naming conventions are chosen to be close to
+   C99 stdint types, as it's a more standard description and it is somewhat useful in
+   making compact macros for the implementations.  The accessor names contain endian-ness
+   to allow for branch-free implementations
+
+   <accessor>  ::= <unsafe><operation><type><endian><int>
+   <unsafe>    ::= unsafe_ | ''
+   <operation> ::= get_ | set_
+   <type>      ::= int16 | uint16 | int32 | int64
+   <endian>    ::= _le | _be | ''
+   <int>       ::= _int | ''
+
+   The "unsafe_" prefix indicates that these functions do no bounds checking.  Performance
+   testing demonstrated that the bounds check was 2-3 times slower due to the fact that
+   Bigstring.length is a C call, and not even a noalloc one.  In practice, message parsers
+   can check the size of an outer message once, and use the unsafe accessors for
+   individual fields, so many bounds checks can end up being redundant as well. The
+   situation could be improved by having bigarray cache the length/dimensions.  *)
+
+
+(* 16 bit methods *)
+val unsafe_get_int16_le     : t -> pos:int -> int
+val unsafe_get_int16_be     : t -> pos:int -> int
+val unsafe_set_int16_le     : t -> pos:int -> int -> unit
+val unsafe_set_int16_be     : t -> pos:int -> int -> unit
+
+val unsafe_get_uint16_le    : t -> pos:int -> int
+val unsafe_get_uint16_be    : t -> pos:int -> int
+val unsafe_set_uint16_le    : t -> pos:int -> int -> unit
+val unsafe_set_uint16_be    : t -> pos:int -> int -> unit
+
+(* 32 bit methods *)
+val unsafe_get_int32_le     : t -> pos:int -> int
+val unsafe_get_int32_be     : t -> pos:int -> int
+val unsafe_set_int32_le     : t -> pos:int -> int -> unit
+val unsafe_set_int32_be     : t -> pos:int -> int -> unit
+
+(* Similar to the usage in binary_packing, the below methods are treating the value being
+   read (or written), as an ocaml immediate integer, as such it is actually 63 bits. If
+   the user is confident that the range of values used in practice will not require 64 bit
+   precision (i.e. Less than Max_Long), then we can avoid allocation and use an
+   immediate.  If the user is wrong, an exception will be thrown (for get). *)
+val unsafe_get_int64_le_exn : t -> pos:int -> int
+val unsafe_get_int64_be_exn : t -> pos:int -> int
+val unsafe_set_int64_le     : t -> pos:int -> int -> unit
+val unsafe_set_int64_be     : t -> pos:int -> int -> unit
+
+(* 32 bit methods w/ full precision *)
+val unsafe_get_int32_t_le : t -> pos:int -> Int32.t
+val unsafe_get_int32_t_be : t -> pos:int -> Int32.t
+val unsafe_set_int32_t_le : t -> pos:int -> Int32.t -> unit
+val unsafe_set_int32_t_be : t -> pos:int -> Int32.t -> unit
+
+(* 64 bit methods w/ full precision *)
+val unsafe_get_int64_t_le : t -> pos:int -> Int64.t
+val unsafe_get_int64_t_be : t -> pos:int -> Int64.t
+val unsafe_set_int64_t_le : t -> pos:int -> Int64.t -> unit
+val unsafe_set_int64_t_be : t -> pos:int -> Int64.t -> unit
+

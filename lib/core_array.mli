@@ -1,8 +1,6 @@
-type 'a t = 'a array
+type 'a t = 'a array with bin_io, sexp
 
-include Binable.S1 with type 'a t := 'a t
 include Container.S1 with type 'a t := 'a t
-include Sexpable.S1 with type 'a t := 'a t
 
 (** Maximum length of a normal array.  The maximum length of a float array is
     [max_length/2] on 32-bit machines and [max_length] on 64-bit machines. *)
@@ -17,7 +15,6 @@ val max_length : int
    if [n] is outside the range 0 to [(Array.length a - 1)]. *)
 external get : 'a t -> int -> 'a = "%array_safe_get"
 
-
 (** [Array.set a n x] modifies array [a] in place, replacing
    element number [n] with [x].
    You can also write [a.(n) <- x] instead of [Array.set a n x].
@@ -25,7 +22,6 @@ external get : 'a t -> int -> 'a = "%array_safe_get"
    Raise [Invalid_argument "index out of bounds"]
    if [n] is outside the range 0 to [Array.length a - 1]. *)
 external set : 'a t -> int -> 'a -> unit = "%array_safe_set"
-
 
 (** Unsafe version of [get].  Can cause arbitrary behavior when used to for an
     out-of-bounds array access *)
@@ -35,10 +31,9 @@ external unsafe_get : 'a t -> int -> 'a = "%array_unsafe_get"
     out-of-bounds array access *)
 external unsafe_set : 'a t -> int -> 'a -> unit = "%array_unsafe_set"
 
-
-(** [create n x] creates an array of length [n] with the value [x] populated in each
+(** [create ~len x] creates an array of length [len] with the value [x] populated in each
     element *)
-val create : int -> 'a -> 'a t
+val create : len:int -> 'a -> 'a t
 
 (** [init n ~f] creates an array of length [n] where the [i]th element is initialized with
     [f i] (starting at zero) *)
@@ -119,7 +114,9 @@ val foldi : 'a t -> init:'b -> f:(int -> 'b -> 'a -> 'b) -> 'b
 (** [Array.fold_right f a ~init] computes
    [f a.(0) (f a.(1) ( ... (f a.(n-1) init) ...))],
    where [n] is the length of the array [a]. *)
-val fold_right : f:('b -> 'a -> 'a) -> 'b t -> init:'a -> 'a
+val fold_right : 'a t -> f:('a -> 'b -> 'b) -> init:'b -> 'b
+
+(* All sorting is in increasing order by default. *)
 
 (* constant heap space, slow *)
 val sort : cmp:('a -> 'a -> int) -> 'a t -> unit
@@ -143,10 +140,11 @@ val cartesian_product : 'a t -> 'b t -> ('a * 'b) t
     returns the last element of the array. *)
 val normalize : 'a t -> int -> int
 
-(** [slice array start stop] returns a fresh array including elements [array.(start)] through
-    [array.(stop-1)] with the small tweak that the start and stop positions are normalized
-    and a stop index of 0 means the same thing a stop index of [Array.length array].  In
-    summary, it's like the slicing in Python or Matlab. *)
+(** [slice array start stop] returns a fresh array including elements [array.(start)]
+    through [array.(stop-1)] with the small tweak that the start and stop positions are
+    normalized and a stop index of 0 means the same thing a stop index of [Array.length
+    array].  In summary, it's mostly like the slicing in Python or Matlab.  One difference
+    is that a stop value of 0 here is like not specifying a stop value in Python. *)
 val slice : 'a t -> int -> int -> 'a t
 
 (** Array access with [normalize]d index. *)
@@ -166,11 +164,10 @@ val filter_map : 'a t -> f:('a -> 'b option) -> 'b t
 (** Same as [filter_map] but uses {!Array.mapi}. *)
 val filter_mapi : 'a t -> f:(int -> 'a -> 'b option) -> 'b t
 
-
 (* Functions with 2 suffix raise an exception if the lengths aren't the same. *)
-val iter2 : 'a t -> 'b t -> f:('a -> 'b -> unit) -> unit
+val iter2_exn : 'a t -> 'b t -> f:('a -> 'b -> unit) -> unit
 
-val map2 : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
+val map2_exn : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
 
 val fold2_exn :
  'a t
@@ -180,7 +177,7 @@ val fold2_exn :
   -> 'c
 
 (** [for_all2 t1 t2 ~f] fails if [length t1 <> length t2]. *)
-val for_all2 : 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool
+val for_all2_exn : 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool
 
 (** [filter ~f array] removes the elements for which [f] returns false.  *)
 val filter : f:('a -> bool) -> 'a t -> 'a t
@@ -196,6 +193,9 @@ val rev_inplace : 'a t -> unit
 
 (** [of_list_rev l] converts from list then reverses in place *)
 val of_list_rev : 'a list -> 'a t
+
+(** [of_list_map l] converts from list via [f] *)
+val of_list_map : 'a list -> f:('a -> 'b) -> 'b t
 
 (** [of_list_rev_map l] converts from list via [f] then reverses in place *)
 val of_list_rev_map : 'a list -> f:('a -> 'b) -> 'b t

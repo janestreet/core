@@ -36,6 +36,7 @@ module Replace_polymorphic_compare = struct
   let ( > ) (x : t) y = x > y
   let ( < ) (x : t) y = x < y
   let ( <> ) (x : t) y = x != y
+  let between t ~low ~high = low <= t && t <= high
 end
 
 include Replace_polymorphic_compare
@@ -45,6 +46,3 @@ include Replace_polymorphic_compare
 include Hashable.Make (T)
 
 include Comparable.Map_and_set_binable (T)
-
-module True_  = (val Default.create true  : Default.S with type real = t)
-module False_ = (val Default.create false : Default.S with type real = t)

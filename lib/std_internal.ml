@@ -48,35 +48,46 @@ module Int32 = Core_int32
 module Int64 = Core_int64
 module Nativeint = Core_nativeint
 
+module Lazy = Core_lazy
+
 (* handy shortcuts *)
 include Common
 
 include (Float : Interfaces.Robustly_comparable with type t := float)
 include String.Infix
-let int_of_float = Float.to_int
-(* Float.ceil and floor are excluded because we haven't changed them from the default *)
 let round = Float.round
 include Interfaces
 module Sexp = Core_sexp
-include Core_sexp.Sexp_option
-include Core_sexp.Sexp_list
-include Core_sexp.Sexp_array
-include Core_sexp.Sexp_opaque
-include Sexplib.Conv
+include (Sexplib.Conv : module type of Sexplib.Conv
+  (* hide the special sexp type constructors so we can define them below
+     with bin_io and friends. *)
+  with type 'a sexp_option := 'a option
+  with type 'a sexp_list   := 'a list
+  with type 'a sexp_array  := 'a array
+  with type 'a sexp_opaque := 'a Sexplib.Conv.sexp_opaque)
 include Printf
 include Scanf
 include Bin_prot.Std
 
+(* The below declarations define converters for the special type constructors recognized
+   by pa-sexp.  E.g. this allows the following to work:
+
+   type t = { foo : int sexp_option } with bin_io, sexp, compare
+*)
+type 'a sexp_option = 'a option with bin_io, compare
+type 'a sexp_list   = 'a list   with bin_io, compare
+type 'a sexp_array  = 'a array  with bin_io, compare
+type 'a sexp_opaque = 'a        with bin_io, compare
+
 include Result.Export
 
-(* These are no shorter than the Sweeksified versions, but are required if we want to use
-   the type [list] instead of [List.t] and still have [with sexp] work. *)
+(* With the following aliases, we are just making extra sure that the toplevel sexp
+   converters line up with the ones in our modules. *)
 
 let sexp_of_array = Array.sexp_of_t
 let array_of_sexp = Array.t_of_sexp
 let sexp_of_bool = Bool.sexp_of_t
 let bool_of_sexp = Bool.t_of_sexp
-
 let sexp_of_char = Char.sexp_of_t
 let char_of_sexp = Char.t_of_sexp
 let sexp_of_exn = Exn.sexp_of_t
@@ -96,5 +107,8 @@ let sexp_of_option = Option.sexp_of_t
 let option_of_sexp = Option.t_of_sexp
 let sexp_of_string = String.sexp_of_t
 let string_of_sexp = String.t_of_sexp
+let lazy_t_of_sexp = Lazy.t_of_sexp
+let sexp_of_lazy_t = Lazy.sexp_of_t
 
-let (!!) = Default.override
+
+

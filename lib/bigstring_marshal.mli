@@ -81,9 +81,12 @@ val skip : ?pos : int -> t -> int
     @param flags default = []
     @param buf default = determined dynamically
 *)
-val marshal_to_fd :
-  ?buf : t -> ?flags : Marshal.extern_flags list ->
-  Unix.file_descr -> 'a -> unit
+val marshal_to_fd
+  :  ?buf : t
+  -> ?flags : Marshal.extern_flags list
+  -> Unix.file_descr
+  -> 'a
+  -> unit
 
 (** [marshal_to_sock_no_sigpipe ?buf sock v] same as {!marshal_to_fd}, but
     writes to sockets only and uses {!Bigstring.really_send_no_sigpipe}

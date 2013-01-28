@@ -12,7 +12,7 @@ let blit = Array.blit
 let concat = Array.concat
 let copy = Array.copy
 let fill = Array.fill
-let fold_right = Array.fold_right
+let fold_right t ~f ~init = Array.fold_right ~f t ~init (* permute params in signature *)
 let init = Array.init
 let iteri = Array.iteri
 let make_matrix = Array.make_matrix
@@ -28,10 +28,10 @@ let to_list = Array.to_list
 
 external create : int -> 'a -> 'a array = "caml_make_vect"
 
-let create i x =
-  try create i x
+let create ~len x =
+  try create len x
   with Invalid_argument _ ->
-    invalid_argf "Array.create %d: invalid length" i ()
+    invalid_argf "Array.create ~len:%d: invalid length" len ()
 ;;
 
 external get : 'a array -> int -> 'a = "%array_safe_get"
@@ -132,8 +132,8 @@ let rec list_length accu = function
 let of_list_map xs ~f =
   match xs with
   | [] -> [||]
-  | hd::tl as l ->
-      let a = create (list_length 0 l) (f hd) in
+  | hd::tl ->
+      let a = create ~len:(list_length 1 tl) (f hd) in
       let rec fill i = function
         | [] -> a
         | hd::tl -> unsafe_set a i (f hd); fill (i+1) tl in
@@ -162,7 +162,7 @@ let filter_opt t =
   match !first_some with
   | None -> [||]
   | Some el ->
-    let result = create !res_size el in
+    let result = create ~len:!res_size el in
     let pos = ref 0 in
     for i = 0 to n - 1 do
       begin match t.(i) with
@@ -185,13 +185,13 @@ let filter_map t ~f = filter_opt (map t ~f)
 (** Same as {!filter_map} but uses {!Array.mapi}. *)
 let filter_mapi t ~f = filter_opt (mapi t ~f)
 
-let iter2 t1 t2 ~f =
-  if length t1 <> length t2 then invalid_arg "Array.iter2";
+let iter2_exn t1 t2 ~f =
+  if length t1 <> length t2 then invalid_arg "Array.iter2_exn";
   iteri t1 ~f:(fun i x1 -> f x1 t2.(i))
 
-let map2 t1 t2 ~f =
+let map2_exn t1 t2 ~f =
   let len = length t1 in
-  if length t2 <> len then invalid_arg "Array.map2";
+  if length t2 <> len then invalid_arg "Array.map2_exn";
   init len ~f:(fun i -> f t1.(i) t2.(i))
 
 let fold2_exn t1 t2 ~init ~f =
@@ -229,9 +229,9 @@ let for_all t ~f =
   in
   loop (length t - 1)
 
-let for_all2 t1 t2 ~f =
+let for_all2_exn t1 t2 ~f =
   let len = length t1 in
-  if length t2 <> len then invalid_arg "Array.for_all2";
+  if length t2 <> len then invalid_arg "Array.for_all2_exn";
   let rec loop i =
     if i < 0
     then true
@@ -241,7 +241,7 @@ let for_all2 t1 t2 ~f =
   in
   loop (len - 1)
 
-let equal t1 t2 ~equal = length t1 = length t2 && for_all2 t1 t2 ~f:equal
+let equal t1 t2 ~equal = length t1 = length t2 && for_all2_exn t1 t2 ~f:equal
 
 TEST = equal [||] [||] ~equal:(=)
 TEST = equal [| 1 |] [| 1 |] ~equal:(=)
@@ -315,15 +315,15 @@ let permute = Array_permute.permute
 
 let combine t1 t2 =
   if length t1 <> length t2 then failwith "Array.combine"
-  else map2 t1 t2 ~f:(fun x1 x2 -> x1, x2)
+  else map2_exn t1 t2 ~f:(fun x1 x2 -> x1, x2)
 
 let split t =
   let n = length t in
   if n = 0 then [||], [||]
   else
     let x, y = t.(0) in
-    let res1 = create n x in
-    let res2 = create n y in
+    let res1 = create ~len:n x in
+    let res2 = create ~len:n y in
     for i = 1 to n - 1 do
       let x, y = t.(i) in
       res1.(i) <- x;
@@ -361,7 +361,7 @@ let cartesian_product t1 t2 =
   else
     let n1 = length t1 in
     let n2 = length t2 in
-    let t = create (n1 * n2) (t1.(0), t2.(0)) in
+    let t = create ~len:(n1 * n2) (t1.(0), t2.(0)) in
     let r = ref 0 in
     for i1 = 0 to n1 - 1 do
       for i2 = 0 to n2 - 1 do

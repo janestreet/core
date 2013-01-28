@@ -41,13 +41,23 @@ end
    other floats.
 *)
 module T : sig
-  include Constrained_float.S
+  type t = private float with bin_io
+
+  include Comparable.S_common with type t := t
+  include Hashable_binable    with type t := t
+  include Robustly_comparable with type t := t
+  include Stringable          with type t := t
+  include Floatable           with type t := t
+
   val add : t -> Span.t -> t
   val sub : t -> Span.t -> t
   val diff : t -> t -> Span.t
   val abs_diff : t -> t -> Span.t
   val now : unit -> t
 end = struct
+  (* IF THIS REPRESENTATION EVER CHANGES, ENSURE THAT EITHER
+      (1) all values serialize the same way in both representations, or
+      (2) you add a new Time version to stable.ml *)
   include Float
   let diff t1 t2 = Span.of_sec (t1 - t2)
 

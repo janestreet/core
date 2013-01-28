@@ -1,23 +1,103 @@
 
 open Std_internal
 
-type 'a interval = Interval of 'a * 'a | Empty with bin_io, of_sexp
+include Int_replace_polymorphic_compare
 
-let interval_of_sexp a_of_sexp sexp =
-  try interval_of_sexp a_of_sexp sexp   (* for backwards compatibility *)
-  with _exn ->
-    match sexp with
-    | Sexp.List [] -> Empty
-    | Sexp.List [ lb; ub ] ->
-        Interval (a_of_sexp lb, a_of_sexp ub)
-    | Sexp.Atom _ | Sexp.List _ ->
-        of_sexp_error "Interval.t_of_sexp: expected pair or empty list" sexp
+module Stable = struct
+  module V1 = struct
+    (* THIS TYPE AND ITS SERIALIZATIONS SHOULD NEVER BE CHANGED - SEE stable.mli FOR MORE
+       DETAILS *)
+    module T = struct
+      type 'a t =
+      | Interval of 'a * 'a
+      | Empty
+      with bin_io, of_sexp, variants, compare
 
-let sexp_of_interval sexp_of_a t =
-  match t with
-  | Empty -> Sexp.List []
-  | Interval (lb, ub) ->
-      Sexp.List [ sexp_of_a lb; sexp_of_a ub ]
+      type 'a interval = 'a t with bin_io, of_sexp
+
+      let interval_of_sexp a_of_sexp sexp =
+        try interval_of_sexp a_of_sexp sexp   (* for backwards compatibility *)
+        with _exn ->
+          match sexp with
+          | Sexp.List [] -> Empty
+          | Sexp.List [ lb; ub ] ->
+            Interval (a_of_sexp lb, a_of_sexp ub)
+          | Sexp.Atom _ | Sexp.List _ ->
+            of_sexp_error "Interval.t_of_sexp: expected pair or empty list" sexp
+
+      let sexp_of_interval sexp_of_a t =
+        match t with
+        | Empty -> Sexp.List []
+        | Interval (lb, ub) ->
+          Sexp.List [ sexp_of_a lb; sexp_of_a ub ]
+    end
+
+    open T
+
+    module Float = struct
+      type t = float interval with sexp, bin_io
+    end
+
+    module Int = struct
+      type t = int interval with sexp, bin_io
+    end
+
+    module Ofday = struct
+      type t = Ofday.Stable.V1.t interval with sexp, bin_io
+    end
+  end
+
+  let make_tests_v1 ~non_empty =
+    let module V = Variantslib.Variant in
+    let c f tests variant = (f variant) @ tests in
+    V1.T.Variants.fold
+      ~init:[]
+      ~interval:(c (fun interval ->
+        assert (interval.V.rank = 0);
+        List.map non_empty ~f:(fun ((lbound, ubound), sexp, bin_io) ->
+          interval.V.constructor lbound ubound, sexp, bin_io)))
+      ~empty:(c (fun empty ->
+        assert (empty.V.rank = 1);
+        [ empty.V.constructor, "()", "\001" ]))
+
+  TEST_MODULE "Interval.V1.Float" = Stable_unit_test.Make(struct
+    include V1.Float
+    let equal x1 x2 = (V1.T.compare Float.compare x1 x2) = 0
+
+    module V = V1.T.Variants
+    let tests = make_tests_v1
+      ~non_empty:
+      [ (1.5, 120.), "(1.5 120)",
+        "\000\000\000\000\000\000\000\248?\000\000\000\000\000\000^@"
+      ]
+  end)
+
+  TEST_MODULE "Interval.V1.Int" = Stable_unit_test.Make(struct
+    include V1.Int
+    let equal x1 x2 = (V1.T.compare Int.compare x1 x2) = 0
+
+    module V = V1.T.Variants
+    let tests = make_tests_v1
+      ~non_empty: [ (-5, 789), "(-5 789)", "\000\255\251\254\021\003" ]
+  end)
+
+  TEST_MODULE "Interval.V1.Ofday" = Stable_unit_test.Make(struct
+    include V1.Ofday
+    let equal x1 x2 = (V1.T.compare Ofday.compare x1 x2) = 0
+
+    module V = V1.T.Variants
+    let tests =
+      let t1 = Ofday.create ~hr:7 ~min:30 ~sec:7 ~ms:12 ~us:5 () in
+      let t2 = Ofday.create ~hr:9 ~min:45 ~sec:8 ~ms:0 ~us:1 () in
+      make_tests_v1
+        ~non_empty:
+        [ (t1, t2) , "(07:30:07.012005 09:45:08.000001)",
+          "\000\153\158\176\196\192_\218@\223\024\002\000\128$\225@"
+        ]
+  end)
+end
+
+open Stable.V1.T
 
 module type Bound = sig
   type 'a bound
@@ -89,7 +169,7 @@ module Raw_make (T : Bound) = struct
           then `Above
           else `Within
 
-    let contains i x = compare_value i x = `Within
+    let contains i x = Pervasives.(=) (compare_value i x) `Within
 
     let bound i x = match i with
       | Empty -> None
@@ -157,8 +237,7 @@ module Raw_make (T : Bound) = struct
       (* requires sorted list of intervals *)
       let rec is_partition a = function
         | [] -> true
-        | b :: tl ->
-            ubound_exn a = lbound_exn b && is_partition b tl
+        | b :: tl -> T.(=) (ubound_exn a) (lbound_exn b) && is_partition b tl
       in
       match intervals with
       | [] -> true
@@ -229,16 +308,14 @@ module Raw_make (T : Bound) = struct
 
 end
 
-
-module T = struct
-  type 'a bound = 'a
-  type 'a t = 'a interval
-  include Pervasives
-end
-
 type 'a t = 'a interval with bin_io, sexp
+type 'a bound_ = 'a
 
-module C = Raw_make (T)
+module C = Raw_make (struct
+  type 'a bound = 'a
+  include Pervasives
+end)
+
 include C.Interval
 
 let t_of_sexp a_of_sexp s =
@@ -250,36 +327,28 @@ let t_of_sexp a_of_sexp s =
 
 module Set = struct
   type 'a t = 'a interval list with bin_io, sexp
-  module T = struct
-    type 'a i = 'a interval
-    type 'a t = 'a interval list
-    type 'a interval = 'a i
-    type 'a bound = 'a
-  end
   include C.Set
 end
 
-module Make(M : sig
-  type t
+module Make (Bound : sig
+  type t with bin_io, sexp
   include Comparable.S with type t := t
-  include Sexpable.S with type t := t
-  include Binable.S with type t := t
 end) = struct
 
-  type t = M.t interval with bin_io, sexp
+  type t = Bound.t interval with bin_io, sexp
+  type 'a t_ = t
   type interval = t with bin_io, sexp
-  type bound = M.t
-  type 'a poly_t = t with bin_io, sexp
+  type bound = Bound.t
+  type 'a bound_ = bound
 
-  module T = struct
-    type 'a bound = M.t
-    type 'a t = interval
-    let compare = M.compare
-    include (M:Comparable.Infix with type t := M.t)
-  end
+  module C = Raw_make (struct
+    type 'a bound = Bound.t
+    let compare = Bound.compare
+    include (Bound : Comparable.Infix with type t := Bound.t)
+  end)
 
-  module C = Raw_make(T)
   include C.Interval
+
   let to_poly (t : t) = t
 
   let t_of_sexp s =
@@ -293,44 +362,43 @@ end) = struct
 
   module Set = struct
     type t = interval list with sexp, bin_io
-    type 'a poly_t = t with sexp, bin_io
-    module T = struct
-      type i = interval
-      type 'a t = interval list
-      type 'a interval = i
-      type 'a bound = M.t
-    end
+    type 'a t_ = t
     include C.Set
     let to_poly (t : t) = t
   end
 
 end
 
-module type S = Interval_intf.S
 module type S1 = Interval_intf.S1
 
-module Float = Make(Float)
-module Int = Make(Core_int)
+module type S = Interval_intf.S
+  with type 'a poly_t := 'a t
+  with type 'a poly_set := 'a Set.t
+
+module Float = Make (Float   )
+module Int   = Make (Core_int)
+module Ofday = Make (Ofday   )
 module Time = struct
   include Make(Time)
 
   let create_ending_after ?(zone = Zone.machine_zone ()) (open_ofday, close_ofday) ~now =
     let close_time =
-      Time.ofday_occurrence now zone close_ofday `right_after
+      Time.occurrence `First_after_or_at now ~zone ~ofday:close_ofday
     in
     let open_time =
-      Time.ofday_occurrence close_time zone open_ofday `right_before
+      Time.occurrence `Last_before_or_at close_time ~zone ~ofday:open_ofday
     in
     create open_time close_time
 
   let create_ending_before ?(zone = Zone.machine_zone ())
       (open_ofday, close_ofday) ~ubound =
     let close_time =
-      Time.ofday_occurrence ubound zone close_ofday `right_before
+      Time.occurrence `Last_before_or_at ubound ~zone ~ofday:close_ofday
     in
     let open_time =
-      Time.ofday_occurrence close_time zone open_ofday `right_before
+      Time.occurrence `Last_before_or_at close_time ~zone ~ofday:open_ofday
     in
     create open_time close_time
 
 end
+

@@ -123,11 +123,9 @@ let update_height n =
     if new_height <> old_height then Update.node_height n new_height
   | _ -> assert false
 
-(*
-let balanceable = function
+(*let balanceable = function
   | Empty | Leaf _ -> true
-  | Node(l, _, _, _, r) -> abs (height l - height r) <= 3
-*)
+  | Node(l, _, _, _, r) -> abs (height l - height r) <= 3*)
 
 (* @pre: left and right subtrees are balanced
    @pre: tree is balanceable
@@ -272,7 +270,8 @@ let add =
           set_right t (add right replace added compare k v);
       t
   in
-  fun ?(replace=true) t ~compare ~added ~key ~data ->
+  fun ?(replace = true) t ~compare ~added ~key ~data ->
+    let replace = (replace :> bool) in
     let t = add t replace added compare key data in
     if !added then balance t else t
 ;;

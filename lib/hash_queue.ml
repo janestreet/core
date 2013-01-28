@@ -54,10 +54,13 @@ module type S = sig
 
   val enqueue_exn : 'a t -> Key.t -> 'a -> unit
 
+  (** [first t] returns the front element of the queue, without removing it. *)
+  val first : 'a t -> 'a option
+
   (** [keys t] returns the keys in the order of the queue. *)
   val keys : 'a t -> Key.t list
 
-    (** [dequeue t] returns the front element of the queue. *)
+  (** [dequeue t] returns the front element of the queue. *)
   val dequeue : 'a t -> 'a option
 
   val dequeue_exn : 'a t -> 'a
@@ -230,6 +233,12 @@ module Make (Key : Key) : S with module Key = Key = struct
     match dequeue_with_key t with
     | None -> None
     | Some (_, v) -> Some v
+  ;;
+
+  let first t =
+    match Doubly_linked.first t.queue with
+    | None -> None
+    | Some kv -> Some kv.value
   ;;
 
   exception Dequeue_empty with sexp

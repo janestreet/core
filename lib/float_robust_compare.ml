@@ -3,7 +3,7 @@
 
 
 module type S = sig
-  (* note: this is not the same as epsilon_float, rather it is intended to
+  (* note: this is not the same as Float.epsilon_float, rather it is intended to
      be a tolerance on human-entered floats *)
   val epsilon : float
   include Robustly_comparable.S with type t := float

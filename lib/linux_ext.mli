@@ -1,3 +1,5 @@
+open Core_unix
+
 (** Interface to Linux-specific system calls *)
 
 (** {2 sysinfo} *)
@@ -47,8 +49,8 @@ end
 val sendfile
   : (?pos : int
      -> ?len : int
-     -> fd : Core_unix.File_descr.t
-     -> Core_unix.File_descr.t
+     -> fd : File_descr.t
+     -> File_descr.t
      -> int) Or_error.t
 
 (** {2 Non-portable TCP-functionality} *)
@@ -57,12 +59,12 @@ type tcp_bool_option = TCP_CORK with sexp, bin_io
 
 (** [gettcpopt_bool sock opt] @return the current value of the boolean
     TCP socket option [opt] for socket [sock]. *)
-val gettcpopt_bool : (Core_unix.File_descr.t -> tcp_bool_option -> bool) Or_error.t
+val gettcpopt_bool : (File_descr.t -> tcp_bool_option -> bool) Or_error.t
 
 (** [settcpopt_bool sock opt v] sets the current value of the boolean
     TCP socket option [opt] for socket [sock] to value [v]. *)
 val settcpopt_bool
-  : (Core_unix.File_descr.t -> tcp_bool_option -> bool -> unit) Or_error.t
+  : (File_descr.t -> tcp_bool_option -> bool -> unit) Or_error.t
 
 (** [send_nonblocking_no_sigpipe sock ?pos ?len buf] tries to do a
     nonblocking send on socket [sock] given buffer [buf], offset [pos]
@@ -77,7 +79,7 @@ val settcpopt_bool
     @raise Unix_error on Unix-errors.
 *)
 val send_nonblocking_no_sigpipe
-  : (Core_unix.File_descr.t
+  : (File_descr.t
      -> ?pos : int
      -> ?len : int
      -> string
@@ -95,7 +97,7 @@ val send_nonblocking_no_sigpipe
     @raise Unix_error on Unix-errors.
 *)
 val send_no_sigpipe
-  : (Core_unix.File_descr.t -> ?pos : int -> ?len : int -> string -> int) Or_error.t
+  : (File_descr.t -> ?pos : int -> ?len : int -> string -> int) Or_error.t
 
 (** [sendmsg_nonblocking_no_sigpipe sock ?count iovecs] tries to do
     a nonblocking send on socket [sock] using [count] I/O-vectors
@@ -107,9 +109,9 @@ val send_no_sigpipe
     @raise Unix_error on Unix-errors.
 *)
 val sendmsg_nonblocking_no_sigpipe
-  : (Core_unix.File_descr.t
+  : (File_descr.t
      -> ?count : int
-     -> string Core_unix.IOVec.t array
+     -> string IOVec.t array
      -> int option) Or_error.t
 
 (** {2 Clock functions} *)
@@ -140,7 +142,7 @@ end
 (** [pr_set_pdeathsig s] sets the signal [s] to be sent to the executing
     process when its parent dies.  NOTE: the parent may have died
     before or while executing this system call.  To make sure that you
-    do not miss this event, you should call {!Core_unix.getppid} to get
+    do not miss this event, you should call {!getppid} to get
     the parent process id after this system call.  If the parent has
     died, the returned parent PID will be 1, i.e. the init process will
     have adopted the child.  You should then either send the signal to
@@ -170,7 +172,7 @@ val pr_get_name : (unit -> string) Or_error.t
 
     @raise Unix_error on errors.
 *)
-val file_descr_realpath : (Core_unix.File_descr.t -> string) Or_error.t
+val file_descr_realpath : (File_descr.t -> string) Or_error.t
 
 (** [out_channel_realpath oc] @return the canonicalized absolute
     pathname of the file associated with output channel [oc].
@@ -213,4 +215,102 @@ val gettid : (unit -> int) Or_error.t
 (* [get_ipv4_address_for_interface "eth0"] returns the IP address
    assigned to eth0, or throws an exception if no IP address
    is configured. *)
-val get_ipv4_address_for_interface : (string -> string) Or_error.t ;;
+val get_ipv4_address_for_interface : (string -> string) Or_error.t
+
+(** epoll() - a linux I/O multiplexer of the same family as select() or poll().  Its main
+    differences are support for Edge or Level triggered notifications (We're using
+    Level-triggered to emulate select) and much better scaling with the number of file
+    descriptors.
+
+    See the man pages for a full description of the epoll facility. *)
+module Epoll : sig
+
+  module Flags : sig
+    (** An [Epoll.Flags.t] is an immutable set of flags for which one can register
+        interest for a file descriptor.  It is implemented as a bitmask, and so all
+        operations (+, -, etc.) are constant time with no allocation.
+
+        [sexp_of_t] produces a human-readable list of bits, e.g. "(in out)". *)
+    type t with sexp_of
+
+    include Interfaces.Intable with type t := t
+
+    val equal : t -> t -> bool
+
+    (* The names of the flags match the man pages.  E.g. [in_] = "EPOLLIN", [out] =
+       "EPOLLOUT", etc. *)
+    val none    : t (* Associated fd is readable                      *)
+    val in_     : t (* Associated fd is readable                      *)
+    val out     : t (* Associated fd is writable                      *)
+    (* val rdhup   : t (\* Event flag For detecting tcp half-close        *\) *)
+    val pri     : t (* Urgent data available                          *)
+    val err     : t (* Error condition (always on, no need to set it) *)
+    val hup     : t (* Hang up happened (always on)                   *)
+    val et      : t (* Edge Triggered behavior (see man page)         *)
+    val oneshot : t (* one-shot behavior for the associated fd        *)
+
+    val (+) : t -> t -> t
+    val (-) : t -> t -> t
+
+    val flag_and : t -> t -> t
+    val flag_not : t -> t
+
+    (** The handling of sets of bit flags here is indeed a departure from the typical
+        convention of lists of variants, but has some advantages and is likely to
+        be used in the future. Please consider carrying these set testing names
+        through if you adopt this bit flag style.
+     *)
+    val do_intersect : t -> t -> bool
+    val are_disjoint : t -> t -> bool
+  end
+
+  (** An [Epoll.t] maintains a map from [File_descr.t] to [Flags.t], where the domain is
+      the set of file descriptors that one is interested in, and the flags associated with
+      each file descriptor specify the types of events one is interested in being notified
+      about for that file descriptor.  Our implementation maintains a user-level table
+      equivalent to the kernel epoll set, so that [sexp_of_t] produces useful
+      human-readable information, and so that we can present our standard table
+      interface.
+
+      An [Epoll.t] also has a buffer that is used to store the set of ready fds returned
+      by calling [wait]. *)
+  type t with sexp_of
+
+  val invariant : t -> unit
+
+  (** [create ~num_file_descrs] creates a new epoll set able to watch file descriptors in
+      \[0, num_file_descrs).  Additionally, the set allocates space for reading the ready
+      events when [wait] returns, allowing for up to [max_ready_events] to be returned in
+      a single call to [wait]. *)
+  val create  : (num_file_descrs:int -> max_ready_events:int -> t) Or_error.t
+
+  (** map operations *)
+  val find     : t -> File_descr.t -> Flags.t option
+  val find_exn : t -> File_descr.t -> Flags.t
+  val set      : t -> File_descr.t -> Flags.t -> unit
+  val remove   : t -> File_descr.t -> unit
+  val iter     : t -> f:(File_descr.t -> Flags.t -> unit) -> unit
+
+  (** [wait t ~timeout] blocks until at least one file descriptor in [t] is ready for one
+      of the events it is being watched for, or [timeout] passes.  [wait] side effects [t]
+      by storing the ready set in it.  One can subsequently access the ready set by
+      calling [iter_ready] or [fold_ready].
+
+      The [timeout] has a granularity of one millisecond.  [wait] rounds up the [timeout]
+      to the next millisecond.  E.g. a [timeout] of one microsecond will be rounded up
+      to one millisecond.
+
+      Note that this method should not be considered thread safe.  There is mutable state
+      in t that will be changed by invocations to wait that cannot be prevented by mutexes
+      around [wait]. *)
+  val wait : t -> timeout:Span.t -> [ `Ok | `Timeout ]
+
+  (** [iter_ready] and [fold_ready] iterate over the ready set computed by the last
+      call to [wait]. *)
+  val iter_ready : t -> f:(File_descr.t -> Flags.t -> unit) -> unit
+  val fold_ready : t -> init:'a -> f:('a -> File_descr.t -> Flags.t -> 'a) -> 'a
+
+  (* pwait -> with the specified sigmask, analogous to pselect *)
+  (* val pwait   : t -> timeout:Span.t -> int list -> [ `Ok of Ready_fds.t | `Timeout ] *)
+end
+

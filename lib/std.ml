@@ -19,7 +19,6 @@ module Time = struct
 
     let of_time time = Time.to_local_date time
     let today () = of_time (Time.now ())
-    let yesterday () = Date.add_days (today ()) (-1)
     let format date pat =
       let time = Time.of_local_date_ofday date Ofday.start_of_day in
       Time.format time pat
@@ -34,7 +33,7 @@ include Time.Date.Export
 (* Can't go in Common for circular-reference reasons *)
 let sec = Time.Span.of_sec
 
-module Agnostic_mutex = Agnostic_mutex
+module Command = Command
 module Commutative_group = Commutative_group
 module Arg = Core_arg
 module Backtrace = Backtrace
@@ -43,16 +42,7 @@ module Bigbuffer = Bigbuffer
 module Bigstring = Bigstring
 module Bigsubstring = Bigsubstring
 module Bin_prot = Core_bin_prot
-
-module Binable = struct
-  include Binable
-
-  (* [of_string] and [to_string] can't go in binable.ml due to a cyclic dependency. *)
-  let of_string m string = of_bigstring m (Bigstring.of_string string)
-
-  let to_string m t = Bigstring.to_string (to_bigstring m t)
-end
-
+module Binable = Binable
 module Linux_ext = Linux_ext
 module Bigstring_marshal = Bigstring_marshal
 module Binary_packing = Binary_packing
@@ -62,12 +52,12 @@ module Bucket = Bucket
 module Byte_units = Byte_units
 module Caml = Caml
 module Comparable = Comparable
+module Comparator = Comparator
 module Condition = Core_condition
 module Container = Container
 module Crc = Crc
 module Date = Time.Date
 module Daemon = Daemon
-module Default = Default
 module Dequeue = Dequeue
 module Doubly_linked = Doubly_linked
 module Error = Error
@@ -88,8 +78,10 @@ module Heap = Heap
 module Host_and_port = Host_and_port
 module Identifiable = Identifiable
 module In_channel = In_channel
+module Info = Info
 module Int63 = Core_int63
 module Int_intf = Int_intf
+module Int_replace_polymorphic_compare = Int_replace_polymorphic_compare
 module Int_set = Int_set
 module Interfaces = Interfaces
 module Interval = Interval
@@ -101,7 +93,6 @@ module Month = Month
 module Mutex = Core_mutex
 module Nano_mutex = Nano_mutex
 module No_polymorphic_compare = No_polymorphic_compare
-module Ofday = Time.Ofday
 module Only_in_test = Only_in_test
 module Option = Option
 module Or_error = Or_error
@@ -119,6 +110,7 @@ module Set_once = Set_once
 module Sexpable = Sexpable
 module Sexp_maybe = Core_sexp.Sexp_maybe
 module Signal = Signal
+module Source_code_position = Source_code_position
 module Space_safe_tuple2 = Space_safe_tuple.T2
 module Space_safe_tuple3 = Space_safe_tuple.T3
 module Squeue = Squeue
@@ -134,19 +126,21 @@ module Tuple = Tuple
 module Tuple2 = Tuple.T2
 module Tuple3 = Tuple.T3
 module Union_find = Union_find
-module Unique_id : Unique_id_intf.S = Unique_id
-module Unique_id_intf = Unique_id_intf
+module Unique_id = Unique_id
 module Unit = Unit
 module Univ = Univ
+module Univ_map = Univ_map
 module Unix = Core_unix
 module Unpack_buffer = Unpack_buffer
+INCLUDE "version_defaults.mlh"
+IFDEF BUILD_VERSION_UTIL THEN
+  module Version_util = Version_util
+ENDIF
 module Weekday = Weekday
 module Word_size = Word_size
 module Zone = Zone
 
-module type Unique_id = Unique_id_intf.Id
+module type Unique_id = Unique_id.Id
 
 include T
-
-
 

@@ -25,8 +25,8 @@ include T
 
 let num_bits = Word_size.num_bits Word_size.word_size - 1
 
-let of_float = int_of_float
-let to_float = float_of_int
+let of_float = Float.to_int
+let to_float = Float.of_int
 
 module Replace_polymorphic_compare = struct
   let min (x : t) y = if x < y then x else y
@@ -37,10 +37,11 @@ module Replace_polymorphic_compare = struct
   let equal (x : t) y = x = y
   let ( >= ) (x : t) y = x >= y
   let ( <= ) (x : t) y = x <= y
-  let ( = ) (x : t) y = x = y
-  let ( > ) (x : t) y = x > y
-  let ( < ) (x : t) y = x < y
+  let ( =  ) (x : t) y = x =  y
+  let ( >  ) (x : t) y = x >  y
+  let ( <  ) (x : t) y = x <  y
   let ( <> ) (x : t) y = x <> y
+  let between t ~low ~high = low <= t && t <= high
 end
 
 include Replace_polymorphic_compare
@@ -60,8 +61,8 @@ let to_int_exn = to_int
 let of_int i = i
 let of_int_exn = of_int
 
-let max_value = max_int
-let min_value = min_int
+let max_value = Pervasives.max_int
+let min_value = Pervasives.min_int
 
 module Conv = Int_conversions
 let of_int32 = Conv.int32_to_int
@@ -109,6 +110,9 @@ end
 
 let neg x = -x
 
+TEST = (neg 5 + 5 = 0)
+
+(* note that rem is not same as % *)
 let rem a b = a mod b
 let incr = Pervasives.incr
 let decr = Pervasives.decr

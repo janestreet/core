@@ -36,7 +36,9 @@ val create
 
 (** Standard hashtbl functions. *)
 val data : (_, 'data) t -> 'data list
-val find : ('key, 'data) t -> 'key -> 'data option
+val find     : ('key, 'data) t -> 'key -> 'data option
+val find_exn : ('key, 'data) t -> 'key -> 'data
+val find_or_add : ('key, 'data) t -> 'key -> default:(unit -> 'data) -> 'data
 val fold
   :  ('key, 'data) t
   -> init:'accum
@@ -49,7 +51,7 @@ val length : (_, _) t -> int
 val mem : ('key, _) t -> 'key -> bool
 val remove : ('key, _) t -> 'key -> unit
 val set     : ('a, 'b) t -> key:'a -> data:'b -> unit
-val add     : ('a, 'b) t -> key:'a -> data:'b -> [ `Ok | `Duplicate ]
+val add     : ('a, 'b) t -> key:'a -> data:'b -> [ `Ok | `Duplicate of 'b ]
 val add_exn : ('a, 'b) t -> key:'a -> data:'b -> unit
 val to_alist : ('key, 'data) t -> ('key * 'data) list
 

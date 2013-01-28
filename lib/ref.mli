@@ -1,7 +1,5 @@
 type 'a t = 'a ref = { mutable contents : 'a }
-
-include Binable.S1 with type   'a t := 'a t
-include Sexpable.S1 with type  'a t := 'a t
+with bin_io, sexp
 
 include Container.S1 with type 'a t := 'a t
 

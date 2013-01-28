@@ -74,7 +74,7 @@ gcc "$SRC" -o "$PGM" "$@"
 rm "$SRC"
 "$PGM" > "$OUT"
 
-if [[ $(ocamlc -version) > "4" ]]; then
+if [[ $(ocamlc -version) > "4" || $(ocamlc -version) = "4.00.0+rc1" ]]; then
   echo "DEFINE OCAML_4" >>"$OUT"
 fi
 

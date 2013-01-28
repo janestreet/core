@@ -35,7 +35,9 @@ type 'a t =
   { mutable front : 'a queue_end;
     mutable back : 'a queue_end;
     mutable length : int;
-  } with fields
+  }
+
+let length t = t.length
 
 let to_list t = queue_end_to_list t.front
 

@@ -2,8 +2,8 @@ The repository contains 3rd-party code in the following locations and
 under the following licenses:
 
 - type_conv, sexplib and bin_prot: based on Tywith, by Martin
-  Sandin.  License can be found in base/sexplib/LICENSE.Tywith,
-  base/type_conv/LICENSE.Tywith, and base/bin_prot/LICENSE.Tywith.
+  Sandin.  License can be found in base/sexplib/LICENSE-Tywith.txt,
+  base/type_conv/LICENSE-Tywith.txt, and base/bin_prot/LICENSE-Tywith.txt.
 
 - Core's implementation of union-find: based on an implementation by
   Henry Matthew Fluet, Suresh Jagannathan, and Stephen Weeks. License

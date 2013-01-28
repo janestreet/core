@@ -66,16 +66,12 @@ module Foil : S = struct
 
   and 'a elt = { value : 'a; mutable root : 'a t }
 
-  type 'a doubly_linked = 'a t
-
   module Elt = struct
     type 'a t = 'a elt
     let equal (t1 : _ t) t2 = phys_equal t1 t2
     let value t = t.value
     let sexp_of_t sexp_of_a t = sexp_of_a t.value
   end
-
-  type 'a container = 'a t
 
   let to_list t = List.map ~f:Elt.value t.elts
 
@@ -246,7 +242,6 @@ module Both : S = struct
   module M : sig
     type ('a1, 'a2) m
     val ( *@ ) : ('a1 -> 'b1, 'a2 -> 'b2) m -> ('a1, 'a2) m -> ('b1, 'b2) m
-    val forget : ('a -> 'b) -> ('a, _) m -> ('b, 'b) m
     val pure : 'a -> ('a, 'a) m
     val pair : 'a -> 'b -> ('a, 'b) m
     val opt_obs : ('a option, 'b option) m -> ('a, 'b) m option (* observe option *)
@@ -261,7 +256,6 @@ module Both : S = struct
         | Error e -> Error e
         | Ok x -> try Ok (f x) with e -> Error e
     let ( *@ ) (f, g) (x, y) = (app f x, app g y)
-    let forget f (x, _) = let y = app (Ok f) x in (y, y)
     let pair x y = (Ok x, Ok y)
     let pure x = pair x x
     let force = function
@@ -307,7 +301,6 @@ module Both : S = struct
   let t_of_sexp a_of_sexp s =
     pair Hero.t_of_sexp Foil.t_of_sexp *@ pure a_of_sexp *@ pure s
 
-  type 'a container = 'a t
   let exists t ~f = obs (pair (Hero.exists ~f) (Foil.exists ~f) *@ t)
   let mem ?equal t a =
     obs (pair (fun h -> Hero.mem ?equal h a) (fun f -> Foil.mem ?equal f a) *@ t)
@@ -634,7 +627,6 @@ module Make_test (X : S) = struct
           );
         "counterexample2" >::
           (fun () ->
-            let open Help in
             let l = of_list [1] in
             let e = insert_first l 3 in
             invariant l;

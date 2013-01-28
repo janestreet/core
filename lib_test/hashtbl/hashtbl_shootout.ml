@@ -63,7 +63,7 @@ module Strings = struct
   }
 
   let create () =
-    let t = Array.create 1_000_000 "" in
+    let t = Array.create ~len:1_000_000 "" in
     (* This will always generate the same sequence of strings. This
        is important because we want test results to be reproducable *)
     let s = Random.make [|5|] in

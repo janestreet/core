@@ -39,8 +39,6 @@ let sexp_of_key t =
   | None -> fun key -> Int.sexp_of_t (t.key_to_int key)
 ;;
 
-let to_sexp_ignore_data t = sexp_of_t (sexp_of_key t) (fun _ -> Sexp.Atom "_") t
-
 let invariant t =
   try
     let num_keys = t.num_keys in
@@ -70,7 +68,8 @@ let invariant t =
     assert (t.length = Array.length entries);
     assert (Array.equal entries entries' ~equal:phys_equal)
   with exn ->
-    failwiths "invariant failed" (exn, to_sexp_ignore_data t) (<:sexp_of< exn * Sexp.t >>)
+    let sexp_of_key = sexp_of_key t in
+    failwiths "invariant failed" (exn, t) (<:sexp_of< exn * (key, __) t >>)
 ;;
 
 let debug = ref false
@@ -85,8 +84,8 @@ let create ?sexp_of_key ~num_keys ~key_to_int () =
       sexp_of_key;
       key_to_int;
       length = 0;
-      entries_by_key  = Array.create num_keys None;
-      defined_entries = Array.create num_keys None;
+      entries_by_key  = Array.create ~len:num_keys None;
+      defined_entries = Array.create ~len:num_keys None;
     }
   in
   check_invariant t;
@@ -114,7 +113,7 @@ let map_entries t ~f = fold t ~init:[] ~f:(fun ~key ~data ac -> f ~key ~data :: 
 
 let to_alist t = map_entries t ~f:(fun ~key ~data -> (key, data))
 
-type ('key, 'data) repr = ('key * 'data) list with sexp_of
+type ('key, 'data) repr = ('key * 'data) list with sexp
 
 let sexp_of_t sexp_of_key sexp_of_data t =
   sexp_of_repr sexp_of_key sexp_of_data (to_alist t)
@@ -136,6 +135,15 @@ let entry_opt t key =
 
 let find t key = Option.map (entry_opt t key) ~f:Entry.data
 
+let find_exn t key =
+  match entry_opt t key with
+  | Some entry -> Entry.data entry
+  | None ->
+    let sexp_of_key = sexp_of_key t in
+    failwiths "Bounded_int_table.find_exn got unknown key" (key, t)
+      (<:sexp_of< key * (key, __) t >>)
+;;
+
 let mem t key = is_some (entry_opt t key)
 
 let add_assuming_not_there t ~key ~data =
@@ -145,6 +153,15 @@ let add_assuming_not_there t ~key ~data =
   t.defined_entries.(defined_entries_index) <- entry_opt;
   t.length <- t.length + 1;
   check_invariant t;
+;;
+
+let find_or_add t key ~default =
+  match entry_opt t key with
+  | Some e -> Entry.data e
+  | None ->
+    let data = default () in
+    add_assuming_not_there t ~key ~data;
+    data
 ;;
 
 let set t ~key ~data =
@@ -157,14 +174,14 @@ let set t ~key ~data =
 
 let add t ~key ~data =
   match entry_opt t key with
-  | Some _ -> `Duplicate
+  | Some entry -> `Duplicate entry.Entry.data
   | None -> add_assuming_not_there t ~key ~data; `Ok
 ;;
 
 let add_exn t ~key ~data =
   match add t ~key ~data with
   | `Ok -> ()
-  | `Duplicate ->
+  | `Duplicate _ ->
     let sexp_of_key = sexp_of_key t in
     failwiths "Bounded_int_table.add_exn of key whose index is already present"
       (key, t.key_to_int key) <:sexp_of< key * int >>

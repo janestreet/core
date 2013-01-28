@@ -94,10 +94,6 @@ let (int64_to_nativeint, int64_to_nativeint_exn) =
 ;;
 let nativeint_to_int64 = Int64.of_nativeint
 
-(**
-   Takes an int represented as a string ((-|+)?[0-9]+) and puts delimiter
-   every 3 digits starting from the right.
-*)
 let insert_delimiter input ~delimiter =
   let chars_per_delimiter = 3 in
   let input_length = String.length input in

@@ -1,0 +1,12 @@
+explain a given subcommand (perhaps recursively)
+
+  main.exe help [SUBCOMMAND]
+
+=== flags ===
+
+  -expand-dots  expand subcommands in recursive help
+  -flags        show flags as well in recursive help
+  -recursive    show subcommands of subcommands, etc.
+  -help         print this help text and exit
+                (alias: -?)
+

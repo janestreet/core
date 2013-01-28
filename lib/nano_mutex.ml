@@ -14,11 +14,11 @@ module Blocker : sig
 
   val save_unused : t -> unit
 end = struct
-  (* Our use of mutexes is always via [Mutex.critical_section], so that we always
-     lock them and unlock them from a single thread.  So, we use [Core_mutex], which is
+  (* Our use of mutexes is always via [Mutex.critical_section], so that we always lock
+     them and unlock them from a single thread.  So, we use [Mutex0], which is
      error-checking mutexes, which will catch any use that is not what we expect. *)
-  module Condition = Core_condition
-  module Mutex = Core_mutex
+  module Condition = Condition
+  module Mutex = Mutex0
 
   type t =
     { mutex : Mutex.t sexp_opaque;
@@ -187,7 +187,11 @@ let rec lock t =
      The recursive call to [lock] will not spin.  It happens either because we just lost
      the race with an unlocker, in which case the subsequent [lock] will succeed, or
      we actually had to block because someone is holding the lock.  The latter is the
-     overwhelmingly common case. *)
+     overwhelmingly common case.
+
+     Other threads can change [t.id_of_thread_holding_lock] concurrently with this code.
+     However, no other thread can set it to our [current_thread_id], since threads only
+     ever set [t.id_of_thread_holding_lock] to their current thread id, or clear it. *)
   let current_thread_id = current_thread_id () in
   (* BEGIN ATOMIC *)
   if t.id_of_thread_holding_lock = bogus_thread_id then begin
@@ -195,10 +199,6 @@ let rec lock t =
     (* END ATOMIC *)
     Result.ok_unit
   end
-  (* The outcome of the next conditional is independent of whether
-     [t.id_of_thread_holding_lock] has changed between when we tested it above and when we
-     test it in the next line.  That this is so follows from the fact that no other thread
-     can unlock the [Nano_mutex] on our behalf. *)
   else if current_thread_id = t.id_of_thread_holding_lock then
     Error (recursive_lock_error t)
   else begin
@@ -208,6 +208,12 @@ let rec lock t =
 ;;
 
 let lock_exn t = ok_exn (lock t)
+
+type message =
+  { current_thread_id : int;
+    mutex : t;
+  }
+with sexp_of
 
 let unlock t =
   let current_thread_id = current_thread_id () in
@@ -223,10 +229,10 @@ let unlock t =
       Result.ok_unit;
     end else
       Error (Error.create "attempt to unlock mutex held by another thread"
-             (current_thread_id, t) <:sexp_of< int * t >>)
+               { current_thread_id; mutex = t } <:sexp_of< message >>)
   end else
     Error (Error.create "attempt to unlock an unlocked mutex"
-           (current_thread_id, t) <:sexp_of< int * t >>);
+             { current_thread_id; mutex = t } <:sexp_of< message >>)
 ;;
 
 let unlock_exn t = ok_exn (unlock t)
@@ -248,10 +254,10 @@ TEST_UNIT =
 TEST_UNIT =
   List.iter
     [
-      (   2, 100, Span.zero);
-      (  10, 100, Span.zero);
-      (  10, 100, Span.millisecond);
-      ( 100,  10, Span.millisecond);
+      (   2, 100, 0.);
+      (  10, 100, 0.);
+      (  10, 100, 0.001);
+      ( 100,  10, 0.001);
     ]
     ~f:(fun (num_threads, num_iterations, pause_for) ->
       try
@@ -263,7 +269,7 @@ TEST_UNIT =
               lock_exn l;
               if !am_holding_lock then failwith "lock multiply acquired";
               am_holding_lock := true;
-              Time.pause pause_for;
+              ignore (Core_unix.nanosleep pause_for : float);
               am_holding_lock := false;
               unlock_exn l;
             done) ()
@@ -274,5 +280,5 @@ TEST_UNIT =
       | exn ->
         failwiths "test failed"
           (num_threads, num_iterations, pause_for, exn)
-          <:sexp_of< int * int * Span.t * exn >>)
+          (<:sexp_of< int * int * float * exn >>))
 ;;

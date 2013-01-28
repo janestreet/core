@@ -1,13 +1,11 @@
 open Interfaces
 
 module type S = sig
-  type t
+  type t with bin_io, sexp
 
-  include Binable              with type t := t
   include Comparable.S_binable with type t := t
   include Floatable            with type t := t
   include Hashable.S_binable   with type t := t
-  include Sexpable             with type t := t
   include Stringable           with type t := t
   include Intable              with type t := t
 

@@ -1,14 +1,13 @@
 INCLUDE "config.mlh"
-
 open Std_internal
 open Unix
 open Bigarray
 open Sexplib.Std
 
+module Binable = Binable0
+
 module Z : sig
-  type t = (char, int8_unsigned_elt, c_layout) Array1.t
-  include Sexpable.S with type t := t
-  include Binable.S with type t := t
+  type t = (char, int8_unsigned_elt, c_layout) Array1.t with bin_io, sexp
 end = struct
   include Bin_prot.Std
   include Sexplib.Conv
@@ -113,6 +112,8 @@ let sub ?(pos = 0) ?len bstr =
 ;;
 
 let get bstr pos = Array1.get bstr pos
+
+let set bstr pos c = Array1.set bstr pos c
 
 external unsafe_blit_string_bigstring :
   src : string -> src_pos : int -> dst : t -> dst_pos : int -> len : int -> unit
@@ -391,3 +392,235 @@ let find ?(pos = 0) ?len chr bstr =
 external unsafe_destroy : t -> unit = "bigstring_destroy_stub"
 
 (* vim: set filetype=ocaml : *)
+
+(* Binary-packing like accessors *)
+
+external unsafe_read_int16            : t -> pos:int -> int
+  = "unsafe_read_int16_t"       "noalloc"
+external unsafe_read_int16_swap       : t -> pos:int -> int
+  = "unsafe_read_int16_t_swap"  "noalloc"
+external unsafe_read_uint16           : t -> pos:int -> int
+  = "unsafe_read_uint16_t"      "noalloc"
+external unsafe_read_uint16_swap      : t -> pos:int -> int
+  = "unsafe_read_uint16_t_swap" "noalloc"
+
+external unsafe_write_int16           : t -> pos:int -> int -> unit
+  = "unsafe_write_int16_t"       "noalloc"
+external unsafe_write_int16_swap      : t -> pos:int -> int -> unit
+  = "unsafe_write_int16_t_swap"  "noalloc"
+external unsafe_write_uint16          : t -> pos:int -> int -> unit
+  = "unsafe_write_uint16_t"      "noalloc"
+external unsafe_write_uint16_swap     : t -> pos:int -> int -> unit
+  = "unsafe_write_uint16_t_swap" "noalloc"
+
+external unsafe_read_int32_int        : t -> pos:int -> int
+  = "unsafe_read_int32_t"         "noalloc"
+external unsafe_read_int32_int_swap   : t -> pos:int -> int
+  = "unsafe_read_int32_t_swap"    "noalloc"
+
+external unsafe_write_int32_int       : t -> pos:int -> int -> unit
+  = "unsafe_write_int32_t"        "noalloc"
+external unsafe_write_int32_int_swap  : t -> pos:int -> int -> unit
+  = "unsafe_write_int32_t_swap"   "noalloc"
+
+external unsafe_read_int32            : t -> pos:int -> Int32.t
+  = "unsafe_read_int32"
+external unsafe_read_int32_swap       : t -> pos:int -> Int32.t
+  = "unsafe_read_int32_swap"
+external unsafe_write_int32           : t -> pos:int -> Int32.t -> unit
+  = "unsafe_write_int32"       "noalloc"
+external unsafe_write_int32_swap      : t -> pos:int -> Int32.t -> unit
+  = "unsafe_write_int32_swap"  "noalloc"
+
+(* [unsafe_read_int64_int] and [unsafe_read_int64_int_swap] may raise exceptions on
+   both 32-bit and 64-bit platforms.  As such, they cannot be marked [noalloc].
+*)
+external unsafe_read_int64_int        : t -> pos:int -> int
+  = "unsafe_read_int64_t"
+external unsafe_read_int64_int_swap   : t -> pos:int -> int
+  = "unsafe_read_int64_t_swap"
+
+external unsafe_write_int64_int       : t -> pos:int -> int -> unit
+  = "unsafe_write_int64_t"      "noalloc"
+external unsafe_write_int64_int_swap  : t -> pos:int -> int -> unit
+  = "unsafe_write_int64_t_swap" "noalloc"
+
+external unsafe_read_int64            : t -> pos:int -> Int64.t
+  = "unsafe_read_int64"
+external unsafe_read_int64_swap       : t -> pos:int -> Int64.t
+  = "unsafe_read_int64_swap"
+external unsafe_write_int64           : t -> pos:int -> Int64.t -> unit
+  = "unsafe_write_int64"
+external unsafe_write_int64_swap      : t -> pos:int -> Int64.t -> unit
+  = "unsafe_write_int64_swap"
+
+
+IFDEF ARCH_BIG_ENDIAN THEN
+let unsafe_get_int16_be  = unsafe_read_int16
+let unsafe_get_int16_le  = unsafe_read_int16_swap
+let unsafe_get_uint16_be = unsafe_read_uint16
+let unsafe_get_uint16_le = unsafe_read_uint16_swap
+
+let unsafe_set_int16_be  = unsafe_write_int16
+let unsafe_set_int16_le  = unsafe_write_int16_swap
+let unsafe_set_uint16_be = unsafe_write_uint16
+let unsafe_set_uint16_le = unsafe_write_uint16_swap
+
+let unsafe_get_int32_t_be  = unsafe_read_int32
+let unsafe_get_int32_t_le  = unsafe_read_int32_swap
+let unsafe_set_int32_t_be  = unsafe_write_int32
+let unsafe_set_int32_t_le  = unsafe_write_int32_swap
+
+let unsafe_get_int32_be  = unsafe_read_int32_int
+let unsafe_get_int32_le  = unsafe_read_int32_int_swap
+let unsafe_set_int32_be  = unsafe_write_int32_int
+let unsafe_set_int32_le  = unsafe_write_int32_int_swap
+
+let unsafe_get_int64_be_exn = unsafe_read_int64_int
+let unsafe_get_int64_le_exn = unsafe_read_int64_int_swap
+let unsafe_set_int64_be  = unsafe_write_int64_int
+let unsafe_set_int64_le  = unsafe_write_int64_int_swap
+
+let unsafe_get_int64_t_be  = unsafe_read_int64
+let unsafe_get_int64_t_le  = unsafe_read_int64_swap
+let unsafe_set_int64_t_be  = unsafe_write_int64
+let unsafe_set_int64_t_le  = unsafe_write_int64_swap
+ELSE
+let unsafe_get_int16_be  = unsafe_read_int16_swap
+let unsafe_get_int16_le  = unsafe_read_int16
+let unsafe_get_uint16_be = unsafe_read_uint16_swap
+let unsafe_get_uint16_le = unsafe_read_uint16
+
+let unsafe_set_int16_be  = unsafe_write_int16_swap
+let unsafe_set_int16_le  = unsafe_write_int16
+let unsafe_set_uint16_be = unsafe_write_uint16_swap
+let unsafe_set_uint16_le = unsafe_write_uint16
+
+let unsafe_get_int32_be  = unsafe_read_int32_int_swap
+let unsafe_get_int32_le  = unsafe_read_int32_int
+let unsafe_set_int32_be  = unsafe_write_int32_int_swap
+let unsafe_set_int32_le  = unsafe_write_int32_int
+
+let unsafe_get_int32_t_be  = unsafe_read_int32_swap
+let unsafe_get_int32_t_le  = unsafe_read_int32
+let unsafe_set_int32_t_be  = unsafe_write_int32_swap
+let unsafe_set_int32_t_le  = unsafe_write_int32
+
+let unsafe_get_int64_be_exn  = unsafe_read_int64_int_swap
+let unsafe_get_int64_le_exn  = unsafe_read_int64_int
+let unsafe_set_int64_be  = unsafe_write_int64_int_swap
+let unsafe_set_int64_le  = unsafe_write_int64_int
+
+let unsafe_get_int64_t_be  = unsafe_read_int64_swap
+let unsafe_get_int64_t_le  = unsafe_read_int64
+let unsafe_set_int64_t_be  = unsafe_write_int64_swap
+let unsafe_set_int64_t_le  = unsafe_write_int64
+ENDIF
+
+TEST_MODULE "binary accessors" = struct
+
+  let buf = create 256
+
+  let test_accessor ~buf ~fget ~fset vals =
+    Core_list.for_all vals ~f:(fun x -> fset buf ~pos:0 x; x = fget buf ~pos:0)
+  ;;
+
+  TEST = test_accessor ~buf
+    ~fget:unsafe_get_int16_le
+    ~fset:unsafe_set_int16_le
+    [-32768; -1; 0; 1; 32767]
+
+  TEST = test_accessor ~buf
+    ~fget:unsafe_get_uint16_le
+    ~fset:unsafe_set_uint16_le
+    [0; 1; 65535]
+
+  TEST = test_accessor ~buf
+    ~fget:unsafe_get_int16_be
+    ~fset:unsafe_set_int16_be
+    [-32768; -1; 0; 1; 32767]
+
+  TEST = test_accessor ~buf
+    ~fget:unsafe_get_uint16_be
+    ~fset:unsafe_set_uint16_be
+    [0; 1; 65535]
+
+IFDEF ARCH_SIXTYFOUR THEN
+
+  TEST = test_accessor ~buf
+    ~fget:unsafe_get_int32_le
+    ~fset:unsafe_set_int32_le
+    [Int64.to_int_exn (-2147483648L); -1; 0; 1; Int64.to_int_exn 2147483647L]
+
+  TEST = test_accessor ~buf
+    ~fget:unsafe_get_int32_be
+    ~fset:unsafe_set_int32_be
+    [Int64.to_int_exn (-2147483648L); -1; 0; 1; Int64.to_int_exn 2147483647L]
+
+  TEST = test_accessor ~buf
+    ~fget:unsafe_get_int64_le_exn
+    ~fset:unsafe_set_int64_le
+    [Int64.to_int_exn (-2147483648L); -1; 0; 1; Int64.to_int_exn 2147483647L]
+
+  TEST = test_accessor ~buf
+    ~fget:unsafe_get_int64_be_exn
+    ~fset:unsafe_set_int64_be
+    [Int64.to_int_exn (-0x4000_0000_0000_0000L);
+     Int64.to_int_exn (-2147483648L); -1; 0; 1; Int64.to_int_exn 2147483647L;
+     Int64.to_int_exn 0x3fff_ffff_ffff_ffffL]
+
+ENDIF (* ARCH_SIXTYFOUR *)
+
+  TEST = test_accessor ~buf
+    ~fget:unsafe_get_int64_t_le
+    ~fset:unsafe_set_int64_t_le
+    [-0x8000_0000_0000_0000L;
+     -0x789A_BCDE_F012_3456L;
+     -0xFFL;
+     Int64.minus_one;
+     Int64.zero;
+     Int64.one;
+     0x789A_BCDE_F012_3456L;
+     0x7FFF_FFFF_FFFF_FFFFL]
+
+  TEST = test_accessor ~buf
+    ~fget:unsafe_get_int64_t_be
+    ~fset:unsafe_set_int64_t_be
+    [-0x8000_0000_0000_0000L;
+     -0x789A_BCDE_F012_3456L;
+     -0xFFL;
+     Int64.minus_one;
+     Int64.zero;
+     Int64.one;
+     0x789A_BCDE_F012_3456L;
+     0x7FFF_FFFF_FFFF_FFFFL]
+
+  TEST = test_accessor ~buf
+    ~fget:unsafe_get_int64_t_be
+    ~fset:unsafe_set_int64_t_be
+    [-0x8000_0000_0000_0000L;
+     -0x789A_BCDE_F012_3456L;
+     -0xFFL;
+     Int64.minus_one;
+     Int64.zero;
+     Int64.one;
+     0x789A_BCDE_F012_3456L;
+     0x7FFF_FFFF_FFFF_FFFFL]
+
+  (* Test 63/64-bit precision boundary.
+
+     Seen on a data stream the constant 0x4000_0000_0000_0000 is supposed to
+     represent a 64-bit positive integer (2^62).
+
+     Whilst this bit pattern does fit inside an OCaml value of type [int] on a
+     64-bit machine, it is the representation of a negative number (the most negative
+     number representable in type [int]), and in particular is not the representation
+     of 2^62.  It is thus suitable for this test.
+  *)
+  TEST = let too_big = 0x4000_0000_0000_0000L in
+    unsafe_set_int64_t_le buf ~pos:0 too_big;
+    try
+      let _too_small = unsafe_get_int64_le_exn buf ~pos:0 in false
+    with _ -> true
+end
+

@@ -3,7 +3,7 @@
 OASISFormat:  0.3
 OCamlVersion: >= 3.12.1
 Name:         core
-Version:      108.00.02
+Version:      108.07.00
 Synopsis:     Jane Street Capital's standard library overlay
 Authors:      Jane street capital
 Copyrights:   (C) 2008-2012 Jane Street Capital LLC
@@ -26,14 +26,14 @@ Flag "posix-timers"
 
 PostConfCommand: lib/discover.sh lib/config.mlh lib/config.h
 
-PreDistCleanCommand: $rm lib/config.mlh lib/config.h
+PreDistCleanCommand: $rm lib/version_defaults.mlh lib/config.mlh lib/config.h
 
 Library core
   Path:               lib
   FindlibName:        core
   Pack:               true
-  Modules:            Agnostic_mutex,Array_permute,Avltree,Backtrace,Bag,Bigbuffer,Bigstring,Bigstring_marshal,Bigsubstring,Binable,Binary_packing,Blang,Bool,Bounded_int_table,Bucket,Byte_units,Caml,Common,Commutative_group,Comparable,Comparator,Constrained_float,Container,Core_arg,Core_array,Core_bin_prot,Core_char,Core_condition,Core_field,Core_filename,Core_gc,Core_hashtbl,Core_hashtbl_intf,Core_int,Core_int32,Core_int63,Core_int64,Core_list,Core_map,Core_map_intf,Core_map_unit_tests,Core_mutex,Core_nativeint,Core_printexc,Core_printf,Core_queue,Core_random,Core_set,Core_set_intf,Core_sexp,Core_stack,Core_string,Core_sys,Core_thread,Core_unix,Crc,Daemon,Date,Default,Dequeue,Doubly_linked,Error,Exn,Float,Floatable,Float_intf,Float_robust_compare,Fn,Force_once,Fqueue,Hashable,Hash_heap,Hash_queue,Hash_set,Hash_set_intf,Heap,Host_and_port,Identifiable,In_channel,Intable,Int_conversions,Interfaces,Interval,Interval_intf,Int_intf,Int_replace_polymorphic_compare,Int_set,Linux_ext,Lock_file,Make_substring,Memo,Monad,Month,Mutex0,Nano_mutex,No_polymorphic_compare,Ofday,Only_in_test,Option,Ordered_collection_common,Or_error,Out_channel,Pid,Piecewise_linear,Polymorphic_compare,Polymorphic_compare_intf,Pretty_printer,Quickcheck,Ref,Result,Robustly_comparable,Set_once,Sexpable,Signal,Space_safe_tuple,Span,Squeue,Staged,Std,Std_internal,Stringable,String_id,Substring,Substring_intf,Sys_open_patch,T,Thread_safe_queue,Time,Time_internal,Timer,Tuple,Union_find,Unique_id,Unique_id_intf,Unit,Univ,Unpack_buffer,Weekday,With_return,Word_size,Zone
-  CSources:           backtrace_stubs.c,bigstring_marshal_stubs.c,bigstring_stubs.c,includes.h,jane_common.h,linux_ext_stubs.c,misc.c,ocaml_utils.h,ocaml_utils_macros.h,ocaml_utils_stubs.c,open_stubs.c,signal_stubs.c,socketaddr.h,unix_stubs.c,unix_utils.h,config.h
+  Modules:            Array_permute,Avltree,Backtrace,Bag,Bigbuffer,Bigstring,Bigstring_marshal,Bigsubstring,Binable,Binable0,Binary_packing,Blang,Bool,Bounded_int_table,Bucket,Byte_units,Caml,Command,Common,Common0,Commutative_group,Comparable,Comparator,Constrained_float,Container,Core_arg,Core_array,Core_bin_prot,Core_char,Core_condition,Core_field,Core_filename,Core_gc,Core_hashtbl,Core_hashtbl_intf,Core_int,Core_int32,Core_int63,Core_int64,Core_lazy,Core_list,Core_map,Core_map_intf,Core_map_unit_tests,Core_mutex,Core_nativeint,Core_printexc,Core_printf,Core_queue,Core_random,Core_set,Core_set_intf,Core_set_unit_tests,Core_sexp,Core_stack,Core_string,Core_sys,Core_thread,Core_unix,Crc,Daemon,Date,Dequeue,Doubly_linked,Error,Exn,Float,Floatable,Float_intf,Float_robust_compare,Fn,Force_once,Fqueue,Hashable,Hash_heap,Hash_queue,Hash_set,Hash_set_intf,Heap,Host_and_port,Identifiable,In_channel,Info,Inline_tests,Intable,Int_conversions,Interfaces,Interval,Interval_intf,Int_intf,Int_replace_polymorphic_compare,Int_set,Linux_ext,Lock_file,Make_substring,Memo,Monad,Month,Mutex0,Nano_mutex,No_polymorphic_compare,Ofday,Ofday_unit_tests_v1,Only_in_test,Option,Ordered_collection_common,Or_error,Out_channel,Pid,Piecewise_linear,Polymorphic_compare,Polymorphic_compare_intf,Pretty_printer,Quickcheck,Ref,Result,Robustly_comparable,Set_once,Sexpable,Signal,Source_code_position,Space_safe_tuple,Span,Squeue,Stable,Stable_containers,Stable_internal,Stable_unit_test,Stable_unit_test_intf,Staged,Std,Std_internal,Stringable,String_id,Substring,Substring_intf,Sys_open_patch,T,Thread_safe_queue,Time,Time_internal,Timer,Tuple,Union_find,Unique_id,Unique_id_intf,Unit,Univ,Univ_map,Unpack_buffer,Weekday,With_return,Word_size,Zone
+  CSources:           backtrace_stubs.c,bigstring_marshal_stubs.c,bigstring_stubs.c,crc_stubs.c,includes.h,jane_common.h,linux_ext_stubs.c,misc.c,ocaml_utils.h,ocaml_utils_macros.h,ocaml_utils_stubs.c,open_stubs.c,signal_stubs.c,socketaddr.h,unix_stubs.c,unix_utils.h,config.h
   BuildDepends:       variantslib,
                       variantslib.syntax,
                       sexplib.syntax,
@@ -43,6 +43,7 @@ Library core
                       bin_prot,
                       bin_prot.syntax,
                       bigarray,
+                      comparelib.syntax,
                       pa_ounit,
                       pa_pipebang,
                       res,
@@ -63,7 +64,7 @@ Executable test_runner
   MainIs:             test_runner.ml
   Build$:            flag(tests)
   Custom:             true
-#  CompiledObject:     best
+  CompiledObject:     best
   Install:            false
   BuildDepends:       core,oUnit (>= 1.0.2)
 

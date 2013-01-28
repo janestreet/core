@@ -1,6 +1,6 @@
 open Std_internal
 
-type t = private float                  (* number of seconds *)
+type t = private float with bin_io, sexp (* number of seconds *)
 
 (* Parts represents the individual parts of a Span as if it were written out (it is the
    counterpart to create).  For example, (sec 90.) is represented by {Parts.hr = 0;
@@ -17,12 +17,10 @@ module Parts : sig
     with sexp
 end
 
-include Binable with type t := t
 include Comparable_binable with type t := t
 include Floatable with type t := t
 include Hashable_binable with type t := t
 include Robustly_comparable with type t := t
-include Sexpable with type t := t
 
 (* String converters and sexp converters allow for specifying of time spans in various
    units after a leading float (e.g. 45s, 3h, or 1d):
@@ -115,3 +113,9 @@ val to_short_string : t -> string
 (** [randomize t ~percent] returns a span +/- percent * original span.  Percent must be
     between 0 and 1, and must be positive. *)
 val randomize : t -> percent:float -> t
+
+module Stable : sig
+  module V1 : sig
+    type t with sexp, bin_io, compare
+  end with type t = t
+end

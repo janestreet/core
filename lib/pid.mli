@@ -1,11 +1,9 @@
 (* Process ID. *)
 
-type t
+type t with bin_io, sexp
 
-include Binable   .S with type t := t
 include Comparable.S with type t := t
 include Hashable  .S with type t := t
-include Sexpable  .S with type t := t
 include Stringable.S with type t := t
 
 val of_int : int -> t

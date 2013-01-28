@@ -14,3 +14,7 @@ include Comparable.Make_binable (T)
 include Hashable.Make_binable (T)
 
 let pp ppf () = Format.fprintf ppf "()"
+
+module type S = sig end
+
+type m = (module S)

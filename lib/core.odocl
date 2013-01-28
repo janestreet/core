@@ -1,6 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 1a21590fa693c57ae3c09a76001600cd)
-Agnostic_mutex
+# DO NOT EDIT (digest: 41b3db21759042422d7dcb0c504797c1)
 Array_permute
 Avltree
 Backtrace
@@ -10,6 +9,7 @@ Bigstring
 Bigstring_marshal
 Bigsubstring
 Binable
+Binable0
 Binary_packing
 Blang
 Bool
@@ -17,7 +17,9 @@ Bounded_int_table
 Bucket
 Byte_units
 Caml
+Command
 Common
+Common0
 Commutative_group
 Comparable
 Comparator
@@ -37,6 +39,7 @@ Core_int
 Core_int32
 Core_int63
 Core_int64
+Core_lazy
 Core_list
 Core_map
 Core_map_intf
@@ -49,6 +52,7 @@ Core_queue
 Core_random
 Core_set
 Core_set_intf
+Core_set_unit_tests
 Core_sexp
 Core_stack
 Core_string
@@ -58,7 +62,6 @@ Core_unix
 Crc
 Daemon
 Date
-Default
 Dequeue
 Doubly_linked
 Error
@@ -79,6 +82,8 @@ Heap
 Host_and_port
 Identifiable
 In_channel
+Info
+Inline_tests
 Intable
 Int_conversions
 Interfaces
@@ -97,6 +102,7 @@ Mutex0
 Nano_mutex
 No_polymorphic_compare
 Ofday
+Ofday_unit_tests_v1
 Only_in_test
 Option
 Ordered_collection_common
@@ -114,9 +120,15 @@ Robustly_comparable
 Set_once
 Sexpable
 Signal
+Source_code_position
 Space_safe_tuple
 Span
 Squeue
+Stable
+Stable_containers
+Stable_internal
+Stable_unit_test
+Stable_unit_test_intf
 Staged
 Std
 Std_internal
@@ -136,6 +148,7 @@ Unique_id
 Unique_id_intf
 Unit
 Univ
+Univ_map
 Unpack_buffer
 Weekday
 With_return

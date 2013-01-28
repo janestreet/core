@@ -1,6 +1,5 @@
 open OUnit;;
 open Core.Std
-open Array
 
 let rec forever f =
   f ();

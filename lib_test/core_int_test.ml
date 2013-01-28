@@ -29,7 +29,7 @@ let test =
              List.init ~f:(fun _ -> rand ()) 10_000
            |! List.for_all ~f:esc_test
            );
-           "max_int" @? esc_test max_int;
-           "min_int" @? esc_test min_int
+           "max_int" @? esc_test Int.max_value;
+           "min_int" @? esc_test Int.min_value
         )
     ]

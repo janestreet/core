@@ -66,6 +66,7 @@ let protectx ~f x ~(finally : _ -> unit) =
   in
   finally x;
   res
+;;
 
 let protect ~f ~finally = protectx ~f () ~finally
 
@@ -76,20 +77,18 @@ let pp ppf t =
 
 let backtrace = Printexc.get_backtrace
 
-let handle_uncaught_with_exit_function ~exit f =
+let handle_uncaught_aux ~exit f =
   try f ()
   with exc ->
     let bt = backtrace () in
-    Format.eprintf "@[<2>Uncaught exception:@\n@\n@[%a@]@]@.%!" pp exc;
+    Format.eprintf "@[<2>Uncaught exception:@\n@\n@[%a@]@]@\n@.%!" pp exc;
     if Printexc.backtrace_status () then prerr_string bt;
     exit 1
 
+let handle_uncaught_and_exit f = handle_uncaught_aux f ~exit
+
 let handle_uncaught ~exit:must_exit f =
-  handle_uncaught_with_exit_function f ~exit:(
-    if must_exit
-    then exit
-    else ignore
-  )
+  handle_uncaught_aux f ~exit:(if must_exit then exit else ignore)
 
 let reraise_uncaught str func =
   try func () with
@@ -99,5 +98,7 @@ let () = Pretty_printer.register "Core.Exn.pp"
 
 let () =
   Printexc.register_printer (fun exc ->
-    Option.map (sexp_of_exn_opt exc) ~f:(fun sexp ->
-      Sexp.to_string_hum ~indent:2 sexp))
+    match sexp_of_exn_opt exc with
+    | None -> None
+    | Some sexp ->
+      Some (Sexp.to_string_hum ~indent:2 sexp))

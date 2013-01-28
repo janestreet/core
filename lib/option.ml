@@ -37,16 +37,24 @@ let value t ~default =
   | Some x -> x
 ;;
 
-let value_exn t =
+let value_exn ?here ?error ?message t =
   match t with
   | Some x -> x
-  | None -> failwith "Option.value_exn None"
-;;
-
-let value_exn_message message t =
-  match t with
-  | Some x -> x
-  | None -> failwith message
+  | None ->
+    let error =
+      match here, error, message with
+      | None  , None  , None   -> Error.of_string "Option.value_exn None"
+      | None  , None  , Some m -> Error.of_string m
+      | None  , Some e, None   -> e
+      | None  , Some e, Some m -> Error.tag e m
+      | Some p, None  , None   ->
+        Error.create "Option.value_exn" p <:sexp_of< Source_code_position.t >>
+      | Some p, None  , Some m -> Error.create m p <:sexp_of< Source_code_position.t >>
+      | Some p, Some e, _      ->
+        Error.create (value message ~default:"") (e, p)
+          (<:sexp_of< Error.t * Source_code_position.t >>)
+    in
+    Error.raise error
 ;;
 
 let to_array t =

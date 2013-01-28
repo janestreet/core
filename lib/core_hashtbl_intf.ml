@@ -1,5 +1,7 @@
 open Sexplib
 
+module Binable = Binable0
+
 module type Key = sig
   type t with sexp
 
@@ -8,6 +10,11 @@ module type Key = sig
   (** Values returned by [hash] must be non-negative.  An exception will be raised in the
       case that [hash] returns a negative value. *)
   val hash : t -> int
+end
+
+module type Key_binable = sig
+  type t with bin_io
+  include Key with type t := t
 end
 
 module Hashable = struct
@@ -134,10 +141,6 @@ module type Accessors = sig
       such binding exists *)
   val find : ('a, 'b) t -> 'a key -> 'b option
 
-  (** [find_default t k ~default] returns the current binding of k in t, or
-      [default ()] if no such binding exists.*)
-  val find_default : ('a, 'b) t -> 'a key -> default : (unit -> 'b) -> 'b
-
   (** [find_exn t k] returns the current binding of k in t, or raises Not_found
       if no such binding exists.*)
   val find_exn : ('a, 'b) t -> 'a key -> 'b
@@ -197,12 +200,12 @@ module type Accessors = sig
 end
 
 type ('key, 'z) create_options_without_hashable =
-  ?growth_allowed:bool
+  ?growth_allowed:bool (* defaults to true *)
   -> ?size:int (* initial size -- default 128 *)
   -> 'z
 
 type ('key, 'z) create_options_with_hashable =
-  ?growth_allowed:bool
+  ?growth_allowed:bool (* defaults to true *)
   -> ?size:int (* initial size -- default 128 *)
   -> hashable:'key Hashable.t
   -> 'z

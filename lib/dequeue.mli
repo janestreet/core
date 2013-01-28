@@ -10,14 +10,16 @@
 
     All operations are amortized O(1) with a small constant. *)
 
-type 'a t
-
-include Sexpable.S1 with type 'a t := 'a t
-include Binable.S1 with type 'a t := 'a t
+type 'a t with bin_io, sexp
 
 (* if never_shrink is true, the physical array will never shrink; only expand *)
 (* a dummy element is required to satisfy the type-checker and will never be returned *)
-val create : ?never_shrink:bool -> ?initial_index:int -> dummy:'a -> unit -> 'a t
+val create
+  :  ?never_shrink:bool (* defaults to false *)
+  -> ?initial_index:int
+  -> dummy:'a
+  -> unit
+  -> 'a t
 
 (* number of elements in the dequeue, i.e. back_index - front_index + 1 *)
 val length : 'a t -> int
@@ -47,7 +49,7 @@ val iteri : f:(int -> 'a -> unit) -> 'a t -> unit
 (* same as iteri but don't pass the index *)
 val iter : f:('a -> unit) -> 'a t -> unit
 
-(* fold across the index element pairs of the dequeue *)
+(* fold across the index-element pairs of the dequeue *)
 val foldi : f:('a -> int -> 'b -> 'a) -> init:'a -> 'b t -> 'a
 
 (* fold across just the elements of the dequeue *)
@@ -58,6 +60,9 @@ val push_front : 'a t -> 'a -> unit
 
 (* increases back_index by one, and places the new element at the new back_index *)
 val push_back : 'a t -> 'a -> unit
+
+(** [clear t] removes all elements from [t]. *)
+val clear : _ t -> unit
 
 (* drop functions raise Invalid_argument if asked to drop more than Dequeue.length
    elements *)
@@ -74,8 +79,8 @@ val take_front_exn : 'a t -> 'a
 val take_back_exn : 'a t -> 'a
 
 (* drops index j iff j < i *)
-val drop_indices_less_than_exn : 'a t -> int -> unit
+val drop_indices_less_than_exn : _ t -> int -> unit
 (* drops index j iff j > i *)
-val drop_indices_greater_than_exn : 'a t -> int -> unit
+val drop_indices_greater_than_exn : _ t -> int -> unit
 
-val invariant : 'a t -> unit
+val invariant : _ t -> unit

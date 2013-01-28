@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 763bf8517305b2c76d6227ba82b6cba8)
+# DO NOT EDIT (digest: 4c976b1ef7333ab2ab8626e5a09ba767)
 # Ignore VCS directories, you can use the same kind of rule outside 
 # OASIS_START/STOP if you want to exclude directories that contains 
 # useless stuff for the build process
@@ -15,7 +15,6 @@
 "_darcs": not_hygienic
 # Library core
 "lib/core.cmxs": use_core
-"lib/agnostic_mutex.cmx": for-pack(Core)
 "lib/array_permute.cmx": for-pack(Core)
 "lib/avltree.cmx": for-pack(Core)
 "lib/backtrace.cmx": for-pack(Core)
@@ -25,6 +24,7 @@
 "lib/bigstring_marshal.cmx": for-pack(Core)
 "lib/bigsubstring.cmx": for-pack(Core)
 "lib/binable.cmx": for-pack(Core)
+"lib/binable0.cmx": for-pack(Core)
 "lib/binary_packing.cmx": for-pack(Core)
 "lib/blang.cmx": for-pack(Core)
 "lib/bool.cmx": for-pack(Core)
@@ -32,7 +32,9 @@
 "lib/bucket.cmx": for-pack(Core)
 "lib/byte_units.cmx": for-pack(Core)
 "lib/caml.cmx": for-pack(Core)
+"lib/command.cmx": for-pack(Core)
 "lib/common.cmx": for-pack(Core)
+"lib/common0.cmx": for-pack(Core)
 "lib/commutative_group.cmx": for-pack(Core)
 "lib/comparable.cmx": for-pack(Core)
 "lib/comparator.cmx": for-pack(Core)
@@ -52,6 +54,7 @@
 "lib/core_int32.cmx": for-pack(Core)
 "lib/core_int63.cmx": for-pack(Core)
 "lib/core_int64.cmx": for-pack(Core)
+"lib/core_lazy.cmx": for-pack(Core)
 "lib/core_list.cmx": for-pack(Core)
 "lib/core_map.cmx": for-pack(Core)
 "lib/core_map_intf.cmx": for-pack(Core)
@@ -64,6 +67,7 @@
 "lib/core_random.cmx": for-pack(Core)
 "lib/core_set.cmx": for-pack(Core)
 "lib/core_set_intf.cmx": for-pack(Core)
+"lib/core_set_unit_tests.cmx": for-pack(Core)
 "lib/core_sexp.cmx": for-pack(Core)
 "lib/core_stack.cmx": for-pack(Core)
 "lib/core_string.cmx": for-pack(Core)
@@ -73,7 +77,6 @@
 "lib/crc.cmx": for-pack(Core)
 "lib/daemon.cmx": for-pack(Core)
 "lib/date.cmx": for-pack(Core)
-"lib/default.cmx": for-pack(Core)
 "lib/dequeue.cmx": for-pack(Core)
 "lib/doubly_linked.cmx": for-pack(Core)
 "lib/error.cmx": for-pack(Core)
@@ -94,6 +97,8 @@
 "lib/host_and_port.cmx": for-pack(Core)
 "lib/identifiable.cmx": for-pack(Core)
 "lib/in_channel.cmx": for-pack(Core)
+"lib/info.cmx": for-pack(Core)
+"lib/inline_tests.cmx": for-pack(Core)
 "lib/intable.cmx": for-pack(Core)
 "lib/int_conversions.cmx": for-pack(Core)
 "lib/interfaces.cmx": for-pack(Core)
@@ -112,6 +117,7 @@
 "lib/nano_mutex.cmx": for-pack(Core)
 "lib/no_polymorphic_compare.cmx": for-pack(Core)
 "lib/ofday.cmx": for-pack(Core)
+"lib/ofday_unit_tests_v1.cmx": for-pack(Core)
 "lib/only_in_test.cmx": for-pack(Core)
 "lib/option.cmx": for-pack(Core)
 "lib/ordered_collection_common.cmx": for-pack(Core)
@@ -129,9 +135,15 @@
 "lib/set_once.cmx": for-pack(Core)
 "lib/sexpable.cmx": for-pack(Core)
 "lib/signal.cmx": for-pack(Core)
+"lib/source_code_position.cmx": for-pack(Core)
 "lib/space_safe_tuple.cmx": for-pack(Core)
 "lib/span.cmx": for-pack(Core)
 "lib/squeue.cmx": for-pack(Core)
+"lib/stable.cmx": for-pack(Core)
+"lib/stable_containers.cmx": for-pack(Core)
+"lib/stable_internal.cmx": for-pack(Core)
+"lib/stable_unit_test.cmx": for-pack(Core)
+"lib/stable_unit_test_intf.cmx": for-pack(Core)
 "lib/staged.cmx": for-pack(Core)
 "lib/std.cmx": for-pack(Core)
 "lib/std_internal.cmx": for-pack(Core)
@@ -151,6 +163,7 @@
 "lib/unique_id_intf.cmx": for-pack(Core)
 "lib/unit.cmx": for-pack(Core)
 "lib/univ.cmx": for-pack(Core)
+"lib/univ_map.cmx": for-pack(Core)
 "lib/unpack_buffer.cmx": for-pack(Core)
 "lib/weekday.cmx": for-pack(Core)
 "lib/with_return.cmx": for-pack(Core)
@@ -166,6 +179,7 @@
 <lib/*.ml{,i}>: pkg_bin_prot
 <lib/*.ml{,i}>: pkg_bin_prot.syntax
 <lib/*.ml{,i}>: pkg_bigarray
+<lib/*.ml{,i}>: pkg_comparelib.syntax
 <lib/*.ml{,i}>: pkg_pa_ounit
 <lib/*.ml{,i}>: pkg_pa_pipebang
 <lib/*.ml{,i}>: pkg_res
@@ -180,6 +194,7 @@
 "lib/backtrace_stubs.c": pkg_bin_prot
 "lib/backtrace_stubs.c": pkg_bin_prot.syntax
 "lib/backtrace_stubs.c": pkg_bigarray
+"lib/backtrace_stubs.c": pkg_comparelib.syntax
 "lib/backtrace_stubs.c": pkg_pa_ounit
 "lib/backtrace_stubs.c": pkg_pa_pipebang
 "lib/backtrace_stubs.c": pkg_res
@@ -194,6 +209,7 @@
 "lib/bigstring_marshal_stubs.c": pkg_bin_prot
 "lib/bigstring_marshal_stubs.c": pkg_bin_prot.syntax
 "lib/bigstring_marshal_stubs.c": pkg_bigarray
+"lib/bigstring_marshal_stubs.c": pkg_comparelib.syntax
 "lib/bigstring_marshal_stubs.c": pkg_pa_ounit
 "lib/bigstring_marshal_stubs.c": pkg_pa_pipebang
 "lib/bigstring_marshal_stubs.c": pkg_res
@@ -208,11 +224,27 @@
 "lib/bigstring_stubs.c": pkg_bin_prot
 "lib/bigstring_stubs.c": pkg_bin_prot.syntax
 "lib/bigstring_stubs.c": pkg_bigarray
+"lib/bigstring_stubs.c": pkg_comparelib.syntax
 "lib/bigstring_stubs.c": pkg_pa_ounit
 "lib/bigstring_stubs.c": pkg_pa_pipebang
 "lib/bigstring_stubs.c": pkg_res
 "lib/bigstring_stubs.c": pkg_unix
 "lib/bigstring_stubs.c": pkg_threads
+"lib/crc_stubs.c": pkg_variantslib
+"lib/crc_stubs.c": pkg_variantslib.syntax
+"lib/crc_stubs.c": pkg_sexplib.syntax
+"lib/crc_stubs.c": pkg_sexplib
+"lib/crc_stubs.c": pkg_fieldslib.syntax
+"lib/crc_stubs.c": pkg_fieldslib
+"lib/crc_stubs.c": pkg_bin_prot
+"lib/crc_stubs.c": pkg_bin_prot.syntax
+"lib/crc_stubs.c": pkg_bigarray
+"lib/crc_stubs.c": pkg_comparelib.syntax
+"lib/crc_stubs.c": pkg_pa_ounit
+"lib/crc_stubs.c": pkg_pa_pipebang
+"lib/crc_stubs.c": pkg_res
+"lib/crc_stubs.c": pkg_unix
+"lib/crc_stubs.c": pkg_threads
 "lib/linux_ext_stubs.c": pkg_variantslib
 "lib/linux_ext_stubs.c": pkg_variantslib.syntax
 "lib/linux_ext_stubs.c": pkg_sexplib.syntax
@@ -222,6 +254,7 @@
 "lib/linux_ext_stubs.c": pkg_bin_prot
 "lib/linux_ext_stubs.c": pkg_bin_prot.syntax
 "lib/linux_ext_stubs.c": pkg_bigarray
+"lib/linux_ext_stubs.c": pkg_comparelib.syntax
 "lib/linux_ext_stubs.c": pkg_pa_ounit
 "lib/linux_ext_stubs.c": pkg_pa_pipebang
 "lib/linux_ext_stubs.c": pkg_res
@@ -236,6 +269,7 @@
 "lib/misc.c": pkg_bin_prot
 "lib/misc.c": pkg_bin_prot.syntax
 "lib/misc.c": pkg_bigarray
+"lib/misc.c": pkg_comparelib.syntax
 "lib/misc.c": pkg_pa_ounit
 "lib/misc.c": pkg_pa_pipebang
 "lib/misc.c": pkg_res
@@ -250,6 +284,7 @@
 "lib/ocaml_utils_stubs.c": pkg_bin_prot
 "lib/ocaml_utils_stubs.c": pkg_bin_prot.syntax
 "lib/ocaml_utils_stubs.c": pkg_bigarray
+"lib/ocaml_utils_stubs.c": pkg_comparelib.syntax
 "lib/ocaml_utils_stubs.c": pkg_pa_ounit
 "lib/ocaml_utils_stubs.c": pkg_pa_pipebang
 "lib/ocaml_utils_stubs.c": pkg_res
@@ -264,6 +299,7 @@
 "lib/open_stubs.c": pkg_bin_prot
 "lib/open_stubs.c": pkg_bin_prot.syntax
 "lib/open_stubs.c": pkg_bigarray
+"lib/open_stubs.c": pkg_comparelib.syntax
 "lib/open_stubs.c": pkg_pa_ounit
 "lib/open_stubs.c": pkg_pa_pipebang
 "lib/open_stubs.c": pkg_res
@@ -278,6 +314,7 @@
 "lib/signal_stubs.c": pkg_bin_prot
 "lib/signal_stubs.c": pkg_bin_prot.syntax
 "lib/signal_stubs.c": pkg_bigarray
+"lib/signal_stubs.c": pkg_comparelib.syntax
 "lib/signal_stubs.c": pkg_pa_ounit
 "lib/signal_stubs.c": pkg_pa_pipebang
 "lib/signal_stubs.c": pkg_res
@@ -292,6 +329,7 @@
 "lib/unix_stubs.c": pkg_bin_prot
 "lib/unix_stubs.c": pkg_bin_prot.syntax
 "lib/unix_stubs.c": pkg_bigarray
+"lib/unix_stubs.c": pkg_comparelib.syntax
 "lib/unix_stubs.c": pkg_pa_ounit
 "lib/unix_stubs.c": pkg_pa_pipebang
 "lib/unix_stubs.c": pkg_res
@@ -309,28 +347,30 @@
 <top/*.ml{,i}>: pkg_bin_prot
 <top/*.ml{,i}>: pkg_bin_prot.syntax
 <top/*.ml{,i}>: pkg_bigarray
+<top/*.ml{,i}>: pkg_comparelib.syntax
 <top/*.ml{,i}>: pkg_pa_ounit
 <top/*.ml{,i}>: pkg_pa_pipebang
 <top/*.ml{,i}>: pkg_res
 <top/*.ml{,i}>: pkg_unix
 <top/*.ml{,i}>: pkg_threads
 # Executable test_runner
-"lib_test/test_runner.byte": use_core
-"lib_test/test_runner.byte": pkg_oUnit
-"lib_test/test_runner.byte": pkg_variantslib
-"lib_test/test_runner.byte": pkg_variantslib.syntax
-"lib_test/test_runner.byte": pkg_sexplib.syntax
-"lib_test/test_runner.byte": pkg_sexplib
-"lib_test/test_runner.byte": pkg_fieldslib.syntax
-"lib_test/test_runner.byte": pkg_fieldslib
-"lib_test/test_runner.byte": pkg_bin_prot
-"lib_test/test_runner.byte": pkg_bin_prot.syntax
-"lib_test/test_runner.byte": pkg_bigarray
-"lib_test/test_runner.byte": pkg_pa_ounit
-"lib_test/test_runner.byte": pkg_pa_pipebang
-"lib_test/test_runner.byte": pkg_res
-"lib_test/test_runner.byte": pkg_unix
-"lib_test/test_runner.byte": pkg_threads
+<lib_test/test_runner.{native,byte}>: use_core
+<lib_test/test_runner.{native,byte}>: pkg_oUnit
+<lib_test/test_runner.{native,byte}>: pkg_variantslib
+<lib_test/test_runner.{native,byte}>: pkg_variantslib.syntax
+<lib_test/test_runner.{native,byte}>: pkg_sexplib.syntax
+<lib_test/test_runner.{native,byte}>: pkg_sexplib
+<lib_test/test_runner.{native,byte}>: pkg_fieldslib.syntax
+<lib_test/test_runner.{native,byte}>: pkg_fieldslib
+<lib_test/test_runner.{native,byte}>: pkg_bin_prot
+<lib_test/test_runner.{native,byte}>: pkg_bin_prot.syntax
+<lib_test/test_runner.{native,byte}>: pkg_bigarray
+<lib_test/test_runner.{native,byte}>: pkg_comparelib.syntax
+<lib_test/test_runner.{native,byte}>: pkg_pa_ounit
+<lib_test/test_runner.{native,byte}>: pkg_pa_pipebang
+<lib_test/test_runner.{native,byte}>: pkg_res
+<lib_test/test_runner.{native,byte}>: pkg_unix
+<lib_test/test_runner.{native,byte}>: pkg_threads
 <lib_test/*.ml{,i}>: use_core
 <lib_test/*.ml{,i}>: pkg_oUnit
 <lib_test/*.ml{,i}>: pkg_variantslib
@@ -342,20 +382,24 @@
 <lib_test/*.ml{,i}>: pkg_bin_prot
 <lib_test/*.ml{,i}>: pkg_bin_prot.syntax
 <lib_test/*.ml{,i}>: pkg_bigarray
+<lib_test/*.ml{,i}>: pkg_comparelib.syntax
 <lib_test/*.ml{,i}>: pkg_pa_ounit
 <lib_test/*.ml{,i}>: pkg_pa_pipebang
 <lib_test/*.ml{,i}>: pkg_res
 <lib_test/*.ml{,i}>: pkg_unix
 <lib_test/*.ml{,i}>: pkg_threads
-"lib_test/test_runner.byte": custom
+<lib_test/test_runner.{native,byte}>: custom
 # OASIS_STOP
 <lib{,_test}/*.ml{,i}>     : syntax_camlp4o
 "lib/backtrace.ml"         : mlh, pkg_camlp4.macro
 "lib/bigstring.ml"         : mlh, pkg_camlp4.macro
 "lib/bigstring_marshal.ml" : mlh, pkg_camlp4.macro
+"lib/binary_packing.ml"    : mlh, pkg_camlp4.macro
+"lib/command.ml"           : mlh, pkg_camlp4.macro
 "lib/core_int63.ml"        : mlh, pkg_camlp4.macro
 "lib/core_mutex.ml"        : mlh, pkg_camlp4.macro
 "lib/core_unix.mli"        : mlh, pkg_camlp4.macro
 "lib/core_unix.ml"         : mlh, pkg_camlp4.macro
 "lib/linux_ext.ml"         : mlh, pkg_camlp4.macro
+"lib/std.ml"               : mlh, pkg_camlp4.macro
 <top/core_install_printers.ml> : I(+compiler-libs)

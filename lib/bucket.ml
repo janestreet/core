@@ -2,9 +2,7 @@ open Std_internal
 
 module type Contents =
 sig
-  type t
-  include Sexpable with type t := t
-  include Binable with type t := t
+  type t with bin_io, sexp
   include Comparable with type t := t
   val zero : t
   val (+) : t -> t -> t
@@ -12,10 +10,8 @@ sig
 end
 
 module type S = sig
-  type contents with sexp, bin_io
-  type t
-  include Sexpable with type t := t
-  include Binable with type t := t
+  type contents
+  type t with bin_io, sexp
 
   (* Fails if init_level is not within bounds [zero;size]. *)
   val create : size:contents -> init_level:contents -> t

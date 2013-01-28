@@ -56,4 +56,5 @@ let all () =
          Int_set_test.test;
          Core_float_test.test;
          Core_unix_test.test;
+         Union_find_test.test;
        ])

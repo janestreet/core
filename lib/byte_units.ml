@@ -23,6 +23,7 @@ module External = struct
     | `Words of float
     ]
   with sexp
+  type _ignore = t
 end
 
 module Measure = struct

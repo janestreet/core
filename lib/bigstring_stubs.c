@@ -5,9 +5,19 @@
 #include <errno.h>
 #include <netinet/in.h>
 #include <assert.h>
+#include <stdint.h>
 
 #ifdef __GLIBC__
 #include <malloc.h>
+#endif
+
+#ifdef __APPLE__
+#include <libkern/OSByteOrder.h>
+#define bswap_16 OSSwapInt16
+#define bswap_32 OSSwapInt32
+#define bswap_64 OSSwapInt64
+#else
+#include <byteswap.h>
 #endif
 
 #include "ocaml_utils.h"
@@ -696,3 +706,101 @@ CAMLprim value bigstring_destroy_stub(value v_bstr)
   for (i = 0; i < b->num_dims; ++i) b->dim[i] = 0;
   return Val_unit;
 }
+
+/* Accessors for int{16|32|64} types */
+
+#define unsafe_stdint_get(TYPE,SWAP,TOVAL) \
+  CAMLprim value unsafe_read_##TYPE(value v_a, value v_i) {                 \
+    TYPE n;                                                                 \
+    char *bstr = get_bstr(v_a, v_i);                                        \
+    memcpy( &n, bstr, sizeof(TYPE) );                                       \
+    return TOVAL( n );                                                      \
+  }                                                                         \
+                                                                            \
+  CAMLprim value unsafe_read_##TYPE##_swap(value v_a, value v_i) {          \
+    TYPE n;                                                                 \
+    char *bstr = get_bstr(v_a, v_i);                                        \
+    memcpy( &n, bstr, sizeof(TYPE) );                                       \
+    return TOVAL( (TYPE) SWAP( n ) );                                       \
+  }                                                                         \
+
+#define unsafe_stdint_set(TYPE,SWAP,FROMVAL) \
+  CAMLprim value unsafe_write_##TYPE(value v_a, value v_i, value v_x) {     \
+    char *bstr = get_bstr(v_a, v_i);                                        \
+    TYPE n = (TYPE) FROMVAL(v_x);                                           \
+    memcpy( bstr, &n, sizeof(TYPE) );                                       \
+    return Val_unit;                                                        \
+  }                                                                         \
+                                                                            \
+  CAMLprim value unsafe_write_##TYPE##_swap(value v_a, value v_i, value v_x) {\
+    char *bstr = get_bstr(v_a, v_i);                                        \
+    TYPE n = (TYPE) SWAP(FROMVAL(v_x));                                     \
+    memcpy( bstr, &n, sizeof(TYPE) );                                       \
+    return Val_unit;                                                        \
+  }                                                                         \
+
+unsafe_stdint_get(int16_t,  bswap_16, Val_int)
+unsafe_stdint_set(int16_t,  bswap_16, Int_val)
+unsafe_stdint_get(uint16_t, bswap_16, Val_int)
+unsafe_stdint_set(uint16_t, bswap_16, Int_val)
+
+/* Methods for full precision 32 and 64 bit types */
+/* These may involve ocaml allocation/blocks      */
+unsafe_stdint_set(int32,  bswap_32, Int32_val)
+unsafe_stdint_get(int32,  bswap_32, caml_copy_int32)
+unsafe_stdint_set(int64,  bswap_64, Int64_val)
+unsafe_stdint_get(int64,  bswap_64, caml_copy_int64)
+
+/* No concerns over precision with set methods coming from ocaml */
+unsafe_stdint_set(int32_t,  bswap_32, Long_val)
+unsafe_stdint_set(int64_t,  bswap_64, Long_val)
+
+#ifdef ARCH_SIXTYFOUR
+/* No potential for precision problems with 63-bit ints */
+unsafe_stdint_get(int32_t,  bswap_32, Val_long)
+
+#else
+CAMLprim value unsafe_read_int32_t(value v_a, value v_i) {
+  int32_t result;
+  char *bstr = get_bstr(v_a, v_i);
+  memcpy( &result, bstr, sizeof(int32_t) );
+  if ( result > Max_long || result < Min_long )
+      caml_failwith("unsafe_read_int32_t: value cannot be represented unboxed!");
+
+  return Val_int( result );
+}
+
+CAMLprim value unsafe_read_int32_t_swap(value v_a, value v_i) {
+  int32_t result;
+  char *bstr = get_bstr(v_a, v_i);
+  memcpy( &result, bstr, sizeof(int32_t) );
+  result = bswap_32( result );
+  if ( result > Max_long || result < Min_long )
+      caml_failwith("unsafe_read_int32_t: value cannot be represented unboxed!");
+
+  return Val_int( result );
+}
+#endif
+
+CAMLprim value unsafe_read_int64_t(value v_a, value v_i) {
+  int64_t result;
+  char *bstr = get_bstr(v_a, v_i);
+  memcpy( &result, bstr, sizeof(int64_t) );
+  if ( result > Max_long || result < Min_long )
+      caml_failwith("unsafe_read_int64_t: value cannot be represented unboxed!");
+
+  return Val_long( result );
+}
+
+
+CAMLprim value unsafe_read_int64_t_swap(value v_a, value v_i) {
+  int64_t result;
+  char *bstr = get_bstr(v_a, v_i);
+  memcpy( &result, bstr, sizeof(int64_t) );
+  result = bswap_64( result );
+  if ( result > Max_long || result < Min_long )
+      caml_failwith("unsafe_read_int64_t: value cannot be represented unboxed!");
+
+  return Val_long( result );
+}
+

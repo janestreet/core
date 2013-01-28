@@ -1,0 +1,25 @@
+this command does more stuff
+
+  main.exe adverb SUBCOMMAND
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque et
+ante a nibh scelerisque ultrices. Fusce consectetur dictum ante quis
+commodo. Aenean fringilla lacus eget magna interdum sit amet fringilla
+eros eleifend. Proin auctor lectus quis ipsum varius tempor. Proin
+fermentum luctus ipsum, in eleifend ipsum euismod in. Lorem ipsum
+dolor sit amet, consectetur adipiscing elit. Suspendisse tempor neque
+cursus ante cursus imperdiet. Quisque convallis dolor a nisl aliquam
+nec sagittis lectus adipiscing. Quisque mattis vehicula metus vel
+ultrices. Pellentesque vel erat a lacus volutpat mollis eget tristique
+mi. Nulla auctor tristique condimentum. Fusce lobortis elementum
+feugiat. Cras quam nibh, laoreet lacinia rhoncus vel, fringilla eget
+erat. Vestibulum in feugiat metus.
+
+=== subcommands ===
+
+  drolly     this command does stuff here
+  nemeses    display internal values
+  opposable
+  help       explain a given subcommand (perhaps recursively)
+
+missing subcommand for command main.exe adverb

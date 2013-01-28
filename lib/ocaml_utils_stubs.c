@@ -10,6 +10,7 @@ int strcmp_not_a_macro(const char* s1, const char* s2)
 }
 
 #include <assert.h>
+#include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
 #include "ocaml_utils.h"
@@ -43,22 +44,18 @@ value* named_value_exn(const char* n)
   return v;
 }
 
-#ifndef raise_out_of_memory
-
-void raise_out_of_memory(void)
-{
-  value* out_of_memory;
-  out_of_memory = named_value_exn("Out_of_memory");
-  assert(out_of_memory != NULL);  /* [named_value_exn] should ensure this. */
-  caml_raise_constant(*out_of_memory);
-}
-
-#endif
-
 void* malloc_exn(size_t size)
 {
-  void* ptr = malloc(size);
-  if (ptr == NULL) raise_out_of_memory();
+  void* ptr;
+  value* malloc_exn;
+
+  ptr = malloc(size);
+  if (ptr == NULL)
+  {
+    malloc_exn = named_value_exn("C_malloc_exn");
+    assert(malloc_exn != NULL); /* [named_value_exn] should ensure this. */
+    raise_with_two_args(*malloc_exn, Val_int(errno), Val_int(size));
+  }
   return ptr;
 }
 

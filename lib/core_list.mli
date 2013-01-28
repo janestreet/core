@@ -358,7 +358,6 @@ module Infix : sig
   val ( @ ) : 'a t -> 'a t -> 'a t
 end
 
-
 (** [transpose m] transposes the rows and columns of the matrix [m],
     considered as either a row of column lists or (dually) a column of row lists.
 
@@ -366,8 +365,9 @@ end
 
     transpose [[1;2;3];[4;5;6]] = [[1;4];[2;5];[3;6]]
 
-    On rectangular matrices, [transpose] is an involution
-    (i.e., [transpose (transpose m) = m]).
+    On non-empty rectangular matrices, [transpose] is an involution
+    (i.e., [transpose (transpose m) = m]).  Transpose returns None when called
+    on lists of lists with non-uniform lengths.
 **)
 val transpose : 'a t t -> 'a t t option
 

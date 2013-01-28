@@ -1,0 +1,16 @@
+this command does stuff
+
+  main.exe SUBCOMMAND
+
+=== subcommands ===
+
+  adverb       this command does more stuff
+  . drolly     this command does stuff here
+  . nemeses    display internal values
+  . opposable
+  jab          this command does stuff here
+  mixture      this command does stuff here
+  moonshot     this command does stuff here
+  version      print version information
+  help         explain a given subcommand (perhaps recursively)
+

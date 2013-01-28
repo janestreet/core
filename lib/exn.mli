@@ -1,4 +1,6 @@
-type t = exn
+open Common0
+
+type t = exn with sexp_of
 
 (** Raised when finalization after an exception failed, too.
     The first exception argument is the one raised by the initial
@@ -35,14 +37,15 @@ val protect : f:(unit -> 'a) -> finally:(unit -> unit) -> 'a
 
 val pp : Format.formatter -> t -> unit
 
-(** [handle_uncaught ~exit f] catches an exception escaping [f] and
-    prints an error message to stderr.  Exits with return code 1 if
-    [exit] is [true].  Otherwise returns unit.
+(** [handle_uncaught ~exit f] catches an exception escaping [f] and prints an error
+    message to stderr.  Exits with return code 1 if [exit] is [true].  Otherwise returns
+    unit.
 *)
-val handle_uncaught : exit : bool -> (unit -> unit) -> unit
+val handle_uncaught : exit:bool -> (unit -> unit) -> unit
 
-(* The same as [handle_uncaught], but an exit function is specified.  *)
-val handle_uncaught_with_exit_function : exit:(int -> unit) -> (unit -> unit) -> unit
+(** behaves as [handle_uncaught ~exit:true] and also has a more precise
+    type in this case *)
+val handle_uncaught_and_exit : (unit -> never_returns) -> never_returns
 
 (* Traces exceptions passing through.  Useful because in practice backtraces still don't
    seem to work.

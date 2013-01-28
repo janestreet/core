@@ -1,11 +1,9 @@
 (** Character operations. *)
 
 (** An alias for the type of characters. *)
-type t = char
+type t = char with bin_io, sexp
 
 include Comparable.S with type t := t
-include Sexpable.S with type t := t
-include Binable.S with type t := t
 include Hashable.S with type t := t
 
 (** Return the ASCII code of the argument. *)

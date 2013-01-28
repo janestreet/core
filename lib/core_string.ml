@@ -108,6 +108,20 @@ let slice t start stop =
   Ordered_collection_common.slice ~length_fun:String.length ~sub_fun:String.sub
     t start stop
 
+
+(*TEST = slice "hey" 0 0 = ""*) (* This is what I would expect *)
+TEST = slice "hey" 0 0 = "hey" (* But this is what we get! *)
+
+TEST = slice "hey" 0 1 = "h"
+TEST = slice "hey" 0 2 = "he"
+TEST = slice "hey" 0 3 = "hey"
+TEST = slice "hey" 1 1 = ""
+TEST = slice "hey" 1 2 = "e"
+TEST = slice "hey" 1 3 = "ey"
+TEST = slice "hey" 2 2 = ""
+TEST = slice "hey" 2 3 = "y"
+TEST = slice "hey" 3 3 = ""
+
 let nget x i =
   x.[normalize x i]
 let nset x i v =
@@ -274,10 +288,10 @@ TEST = rfindi ~pos:2 "bob" ~f:(fun _ c -> 'b' = c) = Some 2
 TEST = rfindi ~pos:1 "bob" ~f:(fun _ c -> 'b' = c) = Some 0
 TEST = rfindi "bob" ~f:(fun _ c -> 'x' = c) = None
 
-let last_non_whitespace t = rfindi t ~f:(fun _ c -> not (Char.is_whitespace c))
+let last_non_drop ~drop t = rfindi t ~f:(fun _ c -> not (drop c))
 
-let rstrip t =
-  match last_non_whitespace t with
+let rstrip ?(drop=Char.is_whitespace) t =
+  match last_non_drop t ~drop with
   | None -> ""
   | Some i ->
     if i = length t - 1
@@ -285,10 +299,10 @@ let rstrip t =
     else prefix t (i + 1)
 ;;
 
-let first_non_whitespace t = lfindi t ~f:(fun _ c -> not (Char.is_whitespace c))
+let first_non_drop ~drop t = lfindi t ~f:(fun _ c -> not (drop c))
 
-let lstrip t =
-  match first_non_whitespace t with
+let lstrip ?(drop=Char.is_whitespace) t =
+  match first_non_drop t ~drop with
   | None -> ""
   | Some 0 -> t
   | Some n -> drop_prefix t n
@@ -297,16 +311,16 @@ let lstrip t =
 (* [strip t] could be implemented as [lstrip (rstrip t)].  The implementation
    below saves (at least) a factor of two allocation, by only allocating the
    final result.  This also saves some amount of time. *)
-let strip t =
+let strip ?(drop=Char.is_whitespace) t =
   let length = length t in
   if length = 0
     || not (Char.is_whitespace t.[0] || Char.is_whitespace t.[length - 1])
   then t
   else
-    match first_non_whitespace t with
+    match first_non_drop t ~drop with
     | None -> ""
     | Some first ->
-        match last_non_whitespace t with
+        match last_non_drop t ~drop with
         | None -> assert false
         | Some last -> sub t ~pos:first ~len:(last - first + 1)
 ;;
@@ -1053,6 +1067,7 @@ module Replace_polymorphic_compare = struct
   let ( > ) x y = (x : t) > y
   let ( < ) x y = (x : t) < y
   let ( <> ) x y = (x : t) <> y
+  let between t ~low ~high = low <= t && t <= high
 end
 
 include Replace_polymorphic_compare

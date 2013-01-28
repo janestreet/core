@@ -47,7 +47,7 @@ let test =
       "iter" >:: (fun () ->
         let t = make () in
         "match" @?
-          (Set.compare (Set.Poly.of_list s)
+          (Set.compare_direct (Set.Poly.of_list s)
               (let s = ref Set.Poly.empty in
                Hash_heap.iter t ~f:(fun ~key ~data ->
                  s := Set.add !s key;
@@ -71,5 +71,18 @@ let test =
         let t = make () in
         let t' = Hash_heap.copy t in
         "phys_equal" @? (not (phys_equal t t'));
+        let top_key, top_value = Hash_heap.top_with_key_exn t in
+        "consistency" @? phys_equal top_value (Hash_heap.find_exn t top_key);
+        let top_key', top_value' = Hash_heap.top_with_key_exn t' in
+        "consistency'" @? phys_equal top_value' (Hash_heap.find_exn t' top_key');
+        "phys_equal top_value" @? (phys_equal top_value top_value');
         ignore (Hash_heap.pop t');
-        "top" @? (Hash_heap.top t <> Hash_heap.top t')) ]
+        "top" @? (Hash_heap.top t <> Hash_heap.top t');
+        "length" @? (Hash_heap.length t' = Hash_heap.length t - 1);
+        ignore (Hash_heap.pop t);
+        let top_key, _top_value = Hash_heap.top_with_key_exn t in
+        let top_key', _top_value' = Hash_heap.top_with_key_exn t' in
+        Hash_heap.remove t top_key;
+        Hash_heap.remove t' top_key';
+        "final length" @? (Hash_heap.length t' = Hash_heap.length t));
+    ]

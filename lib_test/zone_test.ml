@@ -57,7 +57,7 @@ let zone_tests = ref []
 let add name test = zone_tests := (name >:: test) :: !zone_tests
 
 let add_random_string_round_trip_tests () =
-  for i = 1 to 100 do
+  for _i = 1 to 100 do
     let s1 = random_time_str () in
     let pos_neg = if Random.bool () then "+" else "-" in
     let distance = Int.to_string (Random.int 10 + 1) in
@@ -107,7 +107,7 @@ let add_roundtrip_conversion_test (zone_name,(zone:Zone.t)) =
           sprintf "unix_time: %0.20f\n" unix_time;
           sprintf "our_time: %0.20f\n" (Time.to_float time);
           sprintf "date, ofday: %s, %s\n"
-            (Date.to_string zone_date) (Ofday.to_string zone_ofday);
+            (Date.to_string zone_date) (Time.Ofday.to_string zone_ofday);
           sprintf "round_trip: %0.20f\n" (Time.to_float round_trip_time)
         ])
       end))
@@ -147,7 +147,7 @@ let add_random_localtime_tests () =
           zone_name;
           unix_time;
           our_date_string  = Date.to_string our_date;
-          our_ofday_string = Ofday.to_string our_ofday;
+          our_ofday_string = Time.Ofday.to_string our_ofday;
           localtime_date_string;
           localtime_ofday_string;
         }
@@ -158,14 +158,14 @@ let add_random_localtime_tests () =
         then
           true
         else
-          failwith (Sexp.to_string (Localtime_test_data.sexp_of_t test_data)) ());
+          failwith (Sexp.to_string (Localtime_test_data.sexp_of_t test_data)));
       "ofday" @?
         (if Localtime_test_data.(
           test_data.localtime_ofday_string = test_data.our_ofday_string)
         then
           true
         else
-          failwith (Sexp.to_string (Localtime_test_data.sexp_of_t test_data)) ())))
+          failwith (Sexp.to_string (Localtime_test_data.sexp_of_t test_data)))))
 ;;
 
 let add_roundtrip_conversion_tests () =

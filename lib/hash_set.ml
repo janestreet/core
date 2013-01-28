@@ -6,8 +6,14 @@ open With_return
 open Result.Export
 open Hash_set_intf
 
+module Binable = Binable0
+
 module Hashable = Hashtbl.Hashable
 
+(* IF THIS REPRESENTATION EVER CHANGES, ENSURE THAT EITHER
+    (1) all values serialize the same way in both representations, or
+    (2) you add a new Hash_set version to stable.ml
+*)
 type 'a t = ('a, unit) Hashtbl.t
 type 'a hash_set = 'a t
 type 'a elt = 'a
@@ -170,7 +176,8 @@ module Poly = struct
 
 end
 
-module type Elt = Hashtbl.Key
+module type Elt         = Hashtbl.Key
+module type Elt_binable = Hashtbl.Key_binable
 
 module Make (Elt : Elt) = struct
 
@@ -189,16 +196,14 @@ module Make (Elt : Elt) = struct
 
 end
 
-module Make_binable (Elt : sig
-  include Elt
-  include Binable.S with type t := t
-end) = struct
+module Make_binable (Elt : Elt_binable) = struct
 
   include Make (Elt)
 
   include Bin_prot.Utils.Make_iterable_binable (struct
     type t = elt hash_set
     type el = Elt.t with bin_io
+    let _ = bin_el
     type acc = t
     let module_name = Some "Core.Hash_set"
     let length = length

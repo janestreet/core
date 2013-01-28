@@ -75,8 +75,7 @@ module Stat : sig
     stack_size : int
     (** Current size of the stack, in words. *)
   }
-  include Binable.S with type t := t
-  include Sexpable.S with type t := t
+  with bin_io, sexp, fields
 end
 
 type stat = Stat.t
@@ -145,8 +144,7 @@ module Control : sig
         can be better for programs with fragmentation problems.
         Default: 0. *)
   }
-  include Binable.S with type t := t
-  include Sexpable.S with type t := t
+  with bin_io, sexp, fields
 end
 
 type control = Control.t

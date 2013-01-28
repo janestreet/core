@@ -4,6 +4,7 @@ open Sexplib.Conv
 open Common
 
 module Array = Core_array
+module Binable = Binable0
 module List = Core_list
 module Queue = Caml.Queue
 
@@ -32,6 +33,8 @@ let length = Queue.length
 let iter t ~f = Queue.iter f t
 
 let fold t ~init ~f = Queue.fold f init t
+
+let to_list t = List.rev (fold t ~init:[] ~f:(fun acc elem -> elem::acc))
 
 let count t ~f = Container.fold_count fold t ~f
 
@@ -64,8 +67,6 @@ let filter_inplace q ~f =
   transfer ~src:q ~dst:q';
   iter q' ~f:(fun x -> if f x then enqueue q x)
 
-let to_list t = List.rev (fold t ~init:[] ~f:(fun acc elem -> elem::acc))
-
 let of_list list =
   let t = create () in
   List.iter list ~f:(fun x -> enqueue t x);
@@ -81,7 +82,7 @@ let to_array t =
   match length t with
   | 0 -> [||]
   | len ->
-    let arr = Array.create len (peek_exn t) in
+    let arr = Array.create ~len (peek_exn t) in
     let i = ref 0 in
     iter t ~f:(fun v ->
       arr.(!i) <- v;
@@ -115,10 +116,6 @@ let partial_iter t ~f =
 
 let t_of_sexp a_of_sexp sexp = of_list (list_of_sexp a_of_sexp sexp)
 let sexp_of_t sexp_of_a t = sexp_of_list sexp_of_a (to_list t)
-
-let fold t ~init ~f = Queue.fold f init t
-
-let to_list t = List.rev (fold t ~init:[] ~f:(fun l x -> x::l))
 
 let singleton a =
   let t = create () in

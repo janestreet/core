@@ -144,7 +144,6 @@
   The existence of both cases make a strong argument for serializing all times in UTC,
   which doesn't suffer from these issues.
 *)
-
 open Std_internal
 
 exception Unknown_zone of string
@@ -153,21 +152,14 @@ exception Invalid_file_format of string
 (* bin_io and sexp representations of Zone.t are the name of the zone, and not the full
    data that is read from disk when Zone.find is called.  The full Zone.t is reconstructed
    on the receiving/reading side by reloading the zone file from disk.  Any zone name that
-   is accepted by find is acceptable in the bin_io and sexp representations. *)
-type t
-include Sexpable   with type t := t
-include Binable    with type t := t
+   is accepted by [find] is acceptable in the bin_io and sexp representations. *)
+type t with bin_io, sexp
+
 include Stringable with type t := t
 
 (* User friendly functions *)
 
-(** [find name] looks up a [t] by its name and returns it.  [find] and [find_exn] also
-    support the following zone aliases:
-    - "hkg" -> Asia/Hong_Kong
-    - "lon" -> Europe/London
-    - "ldn" -> Europe/London
-    - "nyc" -> America/New_York
-    - "tyo" -> Asia/Tokyo *)
+(** [find name] looks up a [t] by its name and returns it.  *)
 val find : string -> t option
 
 (** [find_office office] a more type-safe interface for pulling timezones related to
@@ -181,7 +173,7 @@ val find_exn : string -> t
 
     The first call to machine_zone is cached, so there is no need to cache it locally.
     The cache can be bypassed and refreshed by setting ~refresh to true. *)
-val machine_zone : ?refresh:bool -> unit -> t
+val machine_zone : ?refresh:bool (* defaults to false *) -> unit -> t
 
 (** [of_utc_offset offset] returns a timezone with a static UTC offset (given in
     hours). *)
@@ -226,3 +218,8 @@ val shift_epoch_time : t -> [`Local | `UTC] -> float -> float
 
 val pp : Format.formatter -> t -> unit
 
+module Stable : sig
+  module V1 : sig
+    type t with sexp, bin_io
+  end with type t = t
+end

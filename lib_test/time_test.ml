@@ -17,7 +17,7 @@ let convtest ?tol f1 f2 =
     | None -> Float.epsilon
     | Some pct -> x *. pct
   in
-  abs_float (f1 (f2 x) -. x) <= tol
+  Float.abs (f1 (f2 x) -. x) <= tol
 
 let mintime_str = "0000-01-01 00:00:00.000000"
 let maxtime_str = "3000-01-01 00:00:00.000000"
@@ -31,7 +31,7 @@ let reasonable_time time =              (* between about 1970 and 2070 *)
 let similar_time time time' =
   let time = Time.to_float time in
   let time' = Time.to_float time' in
-  abs_float (time -. time') < 0.01
+  Float.abs (time -. time') < 0.01
 
 let test_list = ref []
 let add name test = test_list := (name >:: test) :: !test_list
@@ -72,7 +72,7 @@ let () =
          the same, so this uses a specific Random.State to generate a repeatable
          series of random times to test *)
       let rand_state = Random.State.make [| 1; 2; 3; 4; 5; 6; 7 |] in
-      for i = 0 to 100_000 do
+      for _i = 0 to 100_000 do
         let secs = Random.State.int rand_state 86_400_000 in
         let ofday = Ofday.of_span_since_start_of_day (Time.Span.of_ms (float secs)) in
         let ofday_string = Ofday.to_string ofday in
@@ -93,7 +93,7 @@ let () =
     (fun () ->
       let start =
         Time.of_local_date_ofday
-          (Date.create_exn ~y:1999 ~m:Month.jan ~d:1)
+          (Date.create_exn ~y:1999 ~m:Month.Jan ~d:1)
           Ofday.start_of_day
       in
       let day = Span.of_day 1. in
@@ -108,6 +108,90 @@ let () =
             date_string (Date.to_string date') ();
       done)
 
+module Old_date_impl = struct
+  let of_tm tm =
+    Date.create_exn
+      ~y:(tm.Unix.tm_year + 1900)
+      ~m:(Month.of_int_exn (tm.Unix.tm_mon + 1))
+      ~d:tm.Unix.tm_mday
+  ;;
+
+  let to_tm t =
+    { Unix.
+        tm_sec = 0;
+        tm_min = 0;
+        tm_hour = 12;
+        tm_mday = t.d;
+        tm_mon = Month.to_int t.m - 1;
+        tm_year = t.y - 1900;
+        tm_wday = 0;
+        tm_yday = 0;
+        tm_isdst = false;
+    }
+  ;;
+
+  let to_time_internal t =
+    let tm_date = to_tm t in
+    let time = fst (Unix.mktime tm_date) in
+    Time.of_float time
+  ;;
+
+  let of_time_internal time = of_tm (Unix.localtime (Float.round_down (Time.to_float time)))
+
+  let add_days t n =
+    let time = to_time_internal t in
+    of_time_internal (Time.add time (Span.of_day (Float.of_int n)))
+  ;;
+
+  let day_of_week t =
+    let uday = to_tm t in
+    let sec, _ = Unix.mktime uday in
+    let unix_wday = (Unix.localtime sec).Unix.tm_wday in
+    Weekday.of_int_exn unix_wday
+  ;;
+
+  let exhaustive_date_range =
+    if Sys.word_size < 64 then
+      Date.create_exn ~y:1970 ~m:Month.Jan ~d:1, 365 * 68
+    else
+      Date.create_exn ~y:1900 ~m:Month.Jan ~d:1, 365 * 100
+
+  let exhaustive_day_of_week_test () =
+    let start_date, ndays = exhaustive_date_range in
+    let rec loop n current_date =
+      if n = ndays then true
+      else begin
+        let old_method = day_of_week current_date in
+        let new_method = Date.day_of_week current_date in
+        if Weekday.(=) new_method old_method
+        then loop (n + 1) (Date.add_days current_date 1)
+        else false
+      end
+    in
+    loop 1 start_date
+  ;;
+
+  let exhaustive_add_days_test () =
+    let start_date, ndays = exhaustive_date_range in
+    let rec loop n current_date =
+      if n = ndays then true
+      else begin
+        let old_method = add_days current_date 1 in
+        let new_method = Date.add_days current_date 1 in
+        if (Date.(=) old_method new_method)
+        then loop (n + 1) new_method
+        else false
+      end
+    in
+    loop 1 start_date;
+  ;;
+end
+
+let () =
+  add "day_of_week"
+    (fun () ->
+      "exhaustive" @? Old_date_impl.exhaustive_day_of_week_test ())
+
 let () =
   add "add_days"
     (fun () ->
@@ -116,7 +200,8 @@ let () =
       "two" @? (Date.add_days (Date.of_string "2008-11-02") 2 =
         Date.of_string "2008-11-04");
       "leap" @? (Date.add_days (Date.of_string "2000-02-28") 1 =
-        Date.of_string "2000-02-29")
+        Date.of_string "2000-02-29");
+      "exhaustive" @? Old_date_impl.exhaustive_add_days_test ()
     )
 
 let () =
@@ -131,7 +216,7 @@ let () =
       "december" @? (Date.add_months (Date.of_string "2009-02-28") 10 =
         Date.of_string "2009-12-28");
       "neg" @? (Date.add_months (Date.of_string "2009-01-30") (-11) =
-        Date.of_string "2008-02-29")
+        Date.of_string "2008-02-29");
     )
 
 let () =
@@ -184,7 +269,7 @@ let () =
     );
   add "span_conv"
     (fun () ->
-      for i = 1 to 100 do
+      for _i = 1 to 100 do
         "sec" @? convtest Time.Span.to_sec sec;
         "ms" @? convtest Time.Span.to_ms Span.of_ms;
         "min" @? convtest (fun x -> Time.Span.to_sec x /. 60.) Span.of_min;
@@ -197,7 +282,7 @@ let () =
     );
   add "date"
     (fun () ->
-      let d = Date.create_exn ~y:2004 ~m:Month.apr ~d:15 in
+      let d = Date.create_exn ~y:2004 ~m:Month.Apr ~d:15 in
       "conv1" @? (Date.to_string d = "2004-04-15");
       "conv2" @? (d = Date.of_string "2004-04-15");
       "conv3" @? (d = Date.of_string "20040415");
@@ -283,7 +368,7 @@ let () =
     );
   add "ofday_small_diff"
     (fun () ->
-      let same x y = abs_float (x -. y) < sqrt epsilon_float in
+      let same x y = Float.abs (x -. y) < sqrt Float.epsilon_float in
       let check (s1,s2,d) =
         let t1 = Time.Ofday.of_string s1 in
         let t2 = Time.Ofday.of_string s2 in
@@ -295,7 +380,7 @@ let () =
          "08:59:54.000", "10:00:01.555", (-7.555);
          "12:48:55.787", "17:48:55.000", 0.787;
         ]);
-  add "ofday_occurrence_right_side"
+  add "occurrence_right_side"
     (fun () ->
       let times = [
         "00:00:00";
@@ -307,34 +392,34 @@ let () =
         "18:30:30";
         "23:59:59";
       ] in
-      let now = Time.now () in
-      let now_f = Time.to_float now in
+      let now    = Time.now () in
+      let now_f  = Time.to_float now in
       let utimes = Time.to_local_ofday now :: List.map times ~f:(Time.Ofday.of_string) in
       let after_times =
         List.map utimes ~f:(fun ut ->
-          Time.ofday_occurrence now (Zone.machine_zone ()) ut `right_after)
+          Time.occurrence `First_after_or_at now ~zone:(Zone.machine_zone ()) ~ofday:ut)
       in
       let before_times =
         List.map utimes ~f:(fun ut ->
-          Time.ofday_occurrence now (Zone.machine_zone ()) ut `right_before)
+          Time.occurrence `Last_before_or_at now ~zone:(Zone.machine_zone ()) ~ofday:ut)
       in
       "right-side-after" @? List.for_all after_times
-        ~f:(fun t -> Time.to_float t > now_f);
+        ~f:(fun t -> Time.to_float t >= now_f);
       "right-side-before" @? List.for_all before_times
-        ~f:(fun t -> Time.to_float t < now_f);
+        ~f:(fun t -> Time.to_float t <= now_f);
     );
-  add "ofday_occurrence_distance"
+  add "occurrence_distance"
     (fun () ->
       let now = Time.of_string "2007-05-04 13:00:00.000" in
       let after_times = [
-        ("13:00:00.000", "2007-05-05 13:00:00.000");
+        ("13:00:00.000", "2007-05-04 13:00:00.000");
         ("13:00:00.001", "2007-05-04 13:00:00.001");
         ("11:59:59.999", "2007-05-05 11:59:59.999");
         ("00:00:00.000", "2007-05-05 00:00:00.000");
         ("12:59:59.000", "2007-05-05 12:59:59.000");
       ] in
       let before_times = [
-        ("13:00:00.000", "2007-05-03 13:00:00.000");
+        ("13:00:00.000", "2007-05-04 13:00:00.000");
         ("13:00:00.001", "2007-05-03 13:00:00.001");
         ("11:59:59.999", "2007-05-04 11:59:59.999");
         ("00:00:00.000", "2007-05-04 00:00:00.000");
@@ -344,7 +429,7 @@ let () =
         let od         = Time.Ofday.of_string od_s in
         let prediction = Time.of_string prediction_s in
         let real       =
-          Time.ofday_occurrence now (Zone.machine_zone ()) od `right_after
+          Time.occurrence `First_after_or_at now ~zone:(Zone.machine_zone ()) ~ofday:od
         in
         ("right-distance - " ^ od_s ^ "," ^ prediction_s) @?
           if Time.Span.to_ms (Time.diff prediction real) = 0. then true
@@ -354,7 +439,7 @@ let () =
         let od         = Time.Ofday.of_string od_s in
         let prediction = Time.of_string prediction_s in
         let real       =
-          Time.ofday_occurrence now (Zone.machine_zone ()) od `right_before
+          Time.occurrence `Last_before_or_at now ~zone:(Zone.machine_zone ()) ~ofday:od
         in
         ("right-distance - " ^ od_s ^ "," ^ prediction_s) @?
           if Time.Span.to_ms (Time.diff prediction real) = 0. then true
@@ -363,10 +448,10 @@ let () =
     );
   add "diff"
     (fun () ->
-      let d1 = Date.create_exn ~y:2000 ~m:Month.jan ~d:1 in
-      let d2 = Date.create_exn ~y:2000 ~m:Month.jan ~d:2 in
-      let d3 = Date.create_exn ~y:2000 ~m:Month.feb ~d:28 in
-      let d4 = Date.create_exn ~y:2000 ~m:Month.mar ~d:1 in
+      let d1 = Date.create_exn ~y:2000 ~m:Month.Jan ~d:1 in
+      let d2 = Date.create_exn ~y:2000 ~m:Month.Jan ~d:2 in
+      let d3 = Date.create_exn ~y:2000 ~m:Month.Feb ~d:28 in
+      let d4 = Date.create_exn ~y:2000 ~m:Month.Mar ~d:1 in
       "normal-diff" @? (Date.diff d2 d1 = 1);
       "leap-diff" @? (Date.diff d4 d3 = 2)
       )

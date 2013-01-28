@@ -19,7 +19,7 @@ let iround_nearest_test x =
   match y with
   | None -> true
   | Some y ->
-    let y = float_of_int y in
+    let y = Float.of_int y in
     -0.5 < y -. x && y -. x <= 0.5
 
 (* iround_down:
@@ -33,7 +33,7 @@ let iround_down_test x =
   match y with
   | None -> true
   | Some y ->
-    let y = float_of_int y in
+    let y = Float.of_int y in
     0. <= x -. y && x -. y < 1.
 
 (* iround_up:
@@ -47,7 +47,7 @@ let iround_up_test x =
   match y with
   | None -> true
   | Some y ->
-    let y = float_of_int y in
+    let y = Float.of_int y in
     0. <= y -. x && y -. x < 1.
 
 (* iround_towards_zero:
@@ -62,7 +62,7 @@ let iround_towards_zero_test x =
   | None -> true
   | Some y ->
     let x = Float.abs x in
-    let y = Float.abs (float_of_int y) in
+    let y = Float.abs (Float.of_int y) in
     0. <= x -. y && x -. y < 1.
 
 let special_values_test () =
@@ -110,7 +110,7 @@ let absirand () =
   in
   (* we only go to 2. ** 52. -. 1. since our various round functions lose precision after
      this and our tests may (and do) fail when precision is lost *)
-  aux 0 (int_of_float (2. ** 52. -. 1.))
+  aux 0 (Float.to_int (2. ** 52. -. 1.))
 
 let frand () =
   let x = (float (absirand ())) +. Random.float 1.0 in
@@ -125,8 +125,8 @@ let test =
     [ "to_string_hum" >::
         (fun () ->
           "random iround_nearest" @? (randoms |! List.for_all ~f:iround_nearest_test);
-          "max_int iround_nearest" @? iround_nearest_test (float_of_int max_int);
-          "min_int iround_nearest" @? iround_nearest_test (float_of_int min_int);
+          "max_int iround_nearest" @? iround_nearest_test (Float.of_int Int.max_value);
+          "min_int iround_nearest" @? iround_nearest_test (Float.of_int Int.min_value);
           "random round" @? (randoms |! List.for_all ~f:round_test);
           "random iround_towards_zero_exn" @?
             (randoms |! List.for_all ~f:iround_towards_zero_test);

@@ -23,20 +23,21 @@ let check_threads () =
   end;
 ;;
 
-type do_redirect =
-[ `Dev_null
-| `File_append of string
-| `File_truncate of string
-]
+module Fd_redirection = struct
+  type do_redirect =
+  [ `Dev_null
+  | `File_append of string
+  | `File_truncate of string
+  ]
 
-type redirect_fds =
-[ `Do_not_redirect | do_redirect ]
+  type t = [ `Do_not_redirect | do_redirect ]
+end
 ;;
 
-let dup_null ~skip_regular_files ~mode ~src ~dst =
+let redirect_fd ~skip_regular_files ~mode ~src ~dst =
   match src with
   | `Do_not_redirect -> ()
-  | #do_redirect as src ->
+  | #Fd_redirection.do_redirect as src ->
     let is_regular () =
       try (Unix.fstat dst).Unix.st_kind = Unix.S_REG
       with Unix.Unix_error (Unix.EBADF, _, _) -> false
@@ -44,12 +45,12 @@ let dup_null ~skip_regular_files ~mode ~src ~dst =
     let should_skip = skip_regular_files && is_regular () in
     if not should_skip then begin
       let src = match src with
-        | `Dev_null -> Unix.openfile "/dev/null" ~mode:[mode] ~perm:0o777
-        | `File_append file -> Unix.openfile file ~mode:[mode; Unix.O_CREAT] ~perm:0o777
+        | `Dev_null ->
+          Unix.openfile "/dev/null" ~mode:[mode] ~perm:0o777
+        | `File_append file ->
+          Unix.openfile file ~mode:[mode; Unix.O_CREAT; Unix.O_APPEND] ~perm:0o777
         | `File_truncate file ->
-          let fd = Unix.openfile file ~mode:[mode; Unix.O_CREAT] ~perm:0o777 in
-          Unix.ftruncate fd ~len:Int64.zero;
-          fd
+          Unix.openfile file ~mode:[mode; Unix.O_CREAT; Unix.O_TRUNC] ~perm:0o777
       in
       Unix.dup2 ~src ~dst;
       Unix.close src;
@@ -57,10 +58,9 @@ let dup_null ~skip_regular_files ~mode ~src ~dst =
 ;;
 
 let redirect_stdio_fds ~skip_regular_files ~stdout ~stderr =
-
-  dup_null ~skip_regular_files ~mode:Unix.O_RDONLY ~src:`Dev_null ~dst:Unix.stdin;
-  dup_null ~skip_regular_files ~mode:Unix.O_WRONLY ~src:stdout ~dst:Unix.stdout;
-  dup_null ~skip_regular_files ~mode:Unix.O_WRONLY ~src:stderr ~dst:Unix.stderr;
+  redirect_fd ~skip_regular_files ~mode:Unix.O_RDONLY ~src:`Dev_null ~dst:Unix.stdin;
+  redirect_fd ~skip_regular_files ~mode:Unix.O_WRONLY ~src:stdout ~dst:Unix.stdout;
+  redirect_fd ~skip_regular_files ~mode:Unix.O_WRONLY ~src:stderr ~dst:Unix.stderr;
 ;;
 
 let daemonize ?(redirect_stdout=`Dev_null) ?(redirect_stderr=`Dev_null)
@@ -104,7 +104,7 @@ let daemonize_wait ?(redirect_stdout=`Dev_null) ?(redirect_stderr=`Dev_null)
       Unix.close read_end;
       Unix.chdir cd;
       ignore (Unix.umask umask_value);
-      (fun () ->
+      Staged.stage (fun () ->
         redirect_stdio_fds ~skip_regular_files:true
           ~stdout:redirect_stdout ~stderr:redirect_stderr;
         let old_sigpipe_behavior = Signal.signal Signal.pipe `Ignore in

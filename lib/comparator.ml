@@ -4,7 +4,6 @@ type ('a, 'unique_id) t =
   { compare : 'a -> 'a -> int;
     sexp_of_t : 'a -> Sexp.t;
   }
-with fields
 
 type ('a, 'unique_id) t_ = ('a, 'unique_id) t
 

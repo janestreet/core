@@ -23,6 +23,8 @@ module Constr = struct
     end
     in
     M.z
+
+  let name t = t.name
 end
 
 let constr_name t = t.constr_name

@@ -3,7 +3,11 @@ type t = out_channel
 val stdout : t
 val stderr : t
 
-type 'a with_create_args = ?binary:bool -> ?append:bool -> ?perm:int -> 'a
+type 'a with_create_args =
+  ?binary:bool (* defaults to true *)
+  -> ?append:bool (* defaults to false *)
+  -> ?perm:int
+  -> 'a
 
 val create : (string -> t) with_create_args
 val with_file : (string -> f:(t -> 'a) -> 'a) with_create_args
@@ -14,9 +18,6 @@ val with_file : (string -> f:(t -> 'a) -> 'a) with_create_args
    system call on the underlying file descriptor fails (i.e. returns -1), which would
    happen if the underlying file descriptor was closed. *)
 val close : t -> unit
-
-(* [close_noerr] flushes and closes [t] and never raises an exception. *)
-val close_noerr : t -> unit
 
 val set_binary_mode : t -> bool -> unit
 

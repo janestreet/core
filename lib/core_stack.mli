@@ -10,10 +10,8 @@
 
 exception Empty
 
-type 'a t
+type 'a t with bin_io, sexp
 
-include Binable.S1 with type 'a t := 'a t
-include Sexpable.S1 with type 'a t := 'a t
 include Container.S1 with type 'a t := 'a t
   (** [to_list] and [to_array] returns the elements in order from the top of
       the stack to the bottom. *)

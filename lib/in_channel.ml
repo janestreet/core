@@ -15,10 +15,8 @@ let create ?(binary = true) file =
 ;;
 
 external close : t -> unit = "fixed_close_channel";;
-let close_noerr t = try close t with _ -> ()
 
-let with_file ?(binary = true) file ~f =
-  Exn.protectx (create ~binary file) ~f ~finally:close
+let with_file ?binary file ~f = Exn.protectx (create ?binary file) ~f ~finally:close
 
 let may_eof f = try Some (f ()) with End_of_file -> None
 
@@ -48,7 +46,7 @@ let input_all t =
   Buffer.contents buffer;
 ;;
 
-let input_line ?(fix_win_eol=true) t =
+let input_line ?(fix_win_eol = true) t =
   match may_eof (fun () -> Pervasives.input_line t) with
   | None -> None
   | Some line ->

@@ -1,5 +1,6 @@
 open T
 
+module Binable = Binable0
 module Hashtbl = Core_hashtbl
 
 module type S = sig
@@ -38,10 +39,7 @@ module type S_binable = sig
   module Hash_heap  : Hash_heap .S         with type Key.t = t
 end
 
-module Make_binable (T : sig
-  include Hashtbl.Key
-  include Binable.S with type t := t
-end) : S_binable with type t := T.t = struct
+module Make_binable (T : Hashtbl.Key_binable) : S_binable with type t := T.t = struct
   module Hashable = T
   module Table      = Hashtbl   .Make_binable (T)
   module Hash_set   = Hash_set  .Make_binable (T)

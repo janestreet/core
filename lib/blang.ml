@@ -1,9 +1,18 @@
+
 open Std_internal
 
+(* the module [T] serves to enforce the invariant that all Blang.t values are in a
+   normal form whereby boolean constants True and False only appear as the topmost
+   constructor -- in any other position they are simplified away using laws of
+   boolean algebra.
+
+   Note: this file deviates from the usual pattern of modules with Stable interfaces in
+   that the Stable sub-module is not the first thing to be defined in the module.  The
+   reason for this deviation is so that one can convince oneself of the aforementioned
+   invariant after reading only this small amount of code.  After defining T we then
+   immediately define its Stable interface.
+*)
 module T : sig
-  (* this module serves to enforce the invariant that True and False
-     may only appear as the topmost constructor.  In any other position
-     they are simplified away *)
   type 'a t = private
     | True
     | False
@@ -12,11 +21,9 @@ module T : sig
     | Not of 'a t
     | If of 'a t * 'a t * 'a t
     | Base of 'a
-  with bin_io
+  with bin_io, compare
 
-(*
   val invariant : 'a t -> unit
-*)
 
   val true_   : 'a t
   val false_  : 'a t
@@ -25,13 +32,6 @@ module T : sig
   val orelse  : 'a t -> 'a t -> 'a t
   val if_     : 'a t -> 'a t -> 'a t -> 'a t
   val base    : 'a -> 'a t
-
-  val is_constant : 'a t -> bool option
-
-  (* for tests *)
-  val a : int t
-  val b : int t
-(*   val c : int t *)
 
 end = struct
 
@@ -43,9 +43,8 @@ end = struct
     | Not of 'a t
     | If of 'a t * 'a t * 'a t
     | Base of 'a
-  with bin_io
+  with bin_io, compare
 
-(*
   let invariant =
     let subterms = function
       | True | False | Base _      -> []
@@ -53,35 +52,21 @@ end = struct
       | And (t1, t2) | Or (t1, t2) -> [t1; t2]
       | If (t1, t2, t3)            -> [t1; t2; t3]
     in
-    let rec no_constants = function
+    let rec contains_no_constants = function
       | True | False -> assert false
-      | t -> List.iter ~f:no_constants (subterms t)
+      | t -> List.iter ~f:contains_no_constants (subterms t)
     in
     fun t ->
-      List.iter ~f:no_constants (subterms t)
-*)
-
-  let is_constant = function
-    | True -> Some true
-    | False -> Some false
-    | _ -> None
+      List.iter ~f:contains_no_constants (subterms t)
 
   let true_ = True
   let false_ = False
   let base v = Base v
 
-  let (a, b, c) = (base 1, base 2, base 3) (* for tests *)
-
-  (* Avoid triggering warning for unused bindings due to preprocessing *)
-  let _ = a, b, c
-
   let not_ = function
     | True -> False
     | False -> True
     | t -> Not t
-
-  TEST = not_ True = False
-  TEST = not_ False = True
 
   let andalso t1 t2 =
     match (t1, t2) with
@@ -89,21 +74,11 @@ end = struct
     | (other, True) | (True, other) -> other
     | _ -> And (t1, t2)
 
-  TEST = andalso True b = b
-  TEST = andalso a True = a
-  TEST = andalso False b = False
-  TEST = andalso a False = False
-
   let orelse t1 t2 =
     match (t1, t2) with
     | (_, True) | (True, _) -> True
     | (other, False) | (False, other) -> other
     | _ -> Or (t1, t2)
-
-  TEST = orelse False b = b
-  TEST = orelse a False = a
-  TEST = orelse True b  = True
-  TEST = orelse a True  = True
 
   let if_ a b c =
     match a with
@@ -117,62 +92,227 @@ end = struct
       | (False, _) -> andalso (Not a) c
       | _ -> If (a, b, c)
 
-  TEST = if_ True b c = b
-  TEST = if_ False b c = c
-  TEST = if_ a True c = orelse a c
-  TEST = if_ a b False = andalso a b
-  TEST = if_ a b True = if_ (not_ a) True b  (* b/c (if a b c) = (if (not a) c b) *)
-  TEST = if_ a b True = orelse (not_ a) b
-  TEST = if_ a False c = if_ (not_ a) c False  (* b/c (if a b c) = (if (not a) c b) *)
-  TEST = if_ a False c = andalso (not_ a) c
-
 end
 include T
 
-let and_ ts =
-  let rec loop acc = function
-    | [] -> acc
-    | False :: _ -> false_
-    | t :: ts -> loop (andalso acc t) ts
-  in
-  loop true_ ts
+module Stable = struct
+  module V1 : sig
+    (* THIS TYPE AND ITS SERIALIZATIONS SHOULD NEVER BE CHANGED - PLEASE SPEAK WITH
+       ANOTHER DEVELOPER IF YOU NEED MORE DETAIL *)
+    type 'a t = 'a T.t = private
+    | True
+    | False
+    | And of 'a t * 'a t
+    | Or of 'a t * 'a t
+    | Not of 'a t
+    | If of 'a t * 'a t * 'a t
+    | Base of 'a
+    with bin_io, compare, sexp
 
-TEST = let (a, b, c) = (base 1, base 2, base 3) in
-       and_ [a; b; c] = andalso (andalso a b) c
+    (* the remainder of this signature consists of functions used in the definitions
+       of sexp conversions that are also useful more generally *)
 
-let or_ ts =
-  let rec loop acc = function
-    | [] -> acc
-    | True :: _ -> true_
-    | t :: ts -> loop (orelse acc t) ts
-  in
-  loop false_ ts
+    val and_ : 'a t list -> 'a t
+    val or_  : 'a t list -> 'a t
 
-TEST = let (a, b, c) = (base 1, base 2, base 3) in
-       or_ [a; b; c] = orelse (orelse a b) c
+    val gather_conjuncts : 'a t -> 'a t list
+    val gather_disjuncts : 'a t -> 'a t list
 
-TEST_MODULE "blang-list-and-or" = struct
+  end = struct
 
-  let test_and ts = (and_ ts = List.fold ts ~init:true_ ~f:andalso)
-  let test_or  ts = (or_  ts = List.fold ts ~init:false_ ~f:orelse)
+    type 'a t = 'a T.t = private
+    | True
+    | False
+    | And of 'a t * 'a t
+    | Or of 'a t * 'a t
+    | Not of 'a t
+    | If of 'a t * 'a t * 'a t
+    | Base of 'a
 
-  TEST = test_or []
-  TEST = test_or [a]
-  TEST = test_or [true_]
-  TEST = test_or [false_]
-  TEST = test_or [a; true_; b]
-  TEST = test_or [a; false_; b]
+    include (T : sig type 'a t with bin_io, compare end with type 'a t := 'a t)
 
-  TEST = test_and []
-  TEST = test_and [a]
-  TEST = test_and [true_]
-  TEST = test_and [false_]
-  TEST = test_and [a; true_; b]
-  TEST = test_and [a; false_; b]
+    type sexp = Sexp.t = Atom of string | List of sexp list (* cheap import *)
+
+    (* flatten out nested and's *)
+    let gather_conjuncts t =
+      let rec loop acc = function
+        | True         :: ts -> loop acc ts
+        | And (t1, t2) :: ts -> loop acc (t1 :: t2 :: ts)
+        | t            :: ts -> loop (t :: acc) ts
+        | []                 -> List.rev acc
+      in
+      loop [] [t]
+
+    (* flatten out nested or's *)
+    let gather_disjuncts t =
+      let rec loop acc = function
+        | False       :: ts -> loop acc ts
+        | Or (t1, t2) :: ts -> loop acc (t1 :: t2 :: ts)
+        | t           :: ts -> loop (t :: acc) ts
+        | []                -> List.rev acc
+      in
+      loop [] [t]
+
+    let and_ ts =
+      let rec loop acc = function
+        | [] -> acc
+        | False :: _ -> false_ (* short circuit evaluation *)
+        | t :: ts -> loop (andalso acc t) ts
+      in
+      loop true_ ts
+
+    let or_ ts =
+      let rec loop acc = function
+        | [] -> acc
+        | True :: _ -> true_ (* short circuit evaluation *)
+        | t :: ts -> loop (orelse acc t) ts
+      in
+      loop false_ ts
+
+    let unary name args sexp =
+      match args with
+      | [x] -> x
+      | _ ->
+        let n = List.length args in
+        of_sexp_error (sprintf "%s expects one argument, %d found" name n) sexp
+
+    let ternary name args sexp =
+      match args with
+      | [x; y; z] -> (x, y, z)
+      | _ ->
+        let n = List.length args in
+        of_sexp_error (sprintf "%s expects three arguments, %d found" name n) sexp
+
+    let sexp_of_t sexp_of_value t =
+      let rec aux t =
+        match t with
+        | Base x          -> sexp_of_value x
+        | True            -> Atom "true"
+        | False           -> Atom "false"
+        | Not t           -> List [Atom "not"; aux t]
+        | If (t1, t2, t3) -> List [Atom "if"; aux t1; aux t2; aux t3]
+        | And _ as t ->
+          let ts = gather_conjuncts t in List (Atom "and" :: List.map ~f:aux ts)
+        | Or _ as t ->
+          let ts = gather_disjuncts t in List (Atom "or" :: List.map ~f:aux ts)
+      in
+      aux t
+
+    let t_of_sexp base_of_sexp sexp =
+      let base sexp = base (base_of_sexp sexp) in
+      let rec aux sexp =
+        match sexp with
+        | Atom kw ->
+          begin
+            match String.lowercase kw with
+            | "true"  -> true_
+            | "false" -> false_
+            | _       -> base sexp
+          end
+        | List (Atom kw :: args) ->
+          begin
+            match String.lowercase kw with
+            | "and" -> and_ (List.map ~f:aux args)
+            | "or"  -> or_  (List.map ~f:aux args)
+            | "not" -> not_ (aux (unary "not" args sexp))
+            | "if"  ->
+              let (x, y, z) = ternary "if" args sexp in
+              if_ (aux x) (aux y) (aux z)
+            | _ -> base sexp
+          end
+        | _ -> base sexp
+      in
+      aux sexp
+  end
+
+  TEST_MODULE "Blang.V1" = Stable_unit_test.Make (struct
+    type t = string V1.t with sexp, bin_io
+
+    open V1
+
+    let equal = Pervasives.(=)
+
+    let test_blang =
+      (if_ (base "foo")
+         (not_ (or_  [(base "bara"); (base "barb")]))
+         (not_ (and_ [(base "baza"); (base "bazb")])))
+
+    let test_sexp = "(if foo (not (or bara barb)) (not (and baza bazb)))"
+    let test_bin =
+      "\005\006\003foo\
+        \004\003\006\004bara\006\004barb\
+        \004\002\006\004baza\006\004bazb"
+
+    let tests =
+      [ test_blang, test_sexp, test_bin
+      ; true_, "true", "\000"
+      ; false_, "false", "\001"
+      ]
+  end)
+end
+
+include (Stable.V1 : module type of Stable.V1 with type 'a t := private 'a t)
+
+TEST_MODULE "auto-simplification" = struct
+
+  let (a, b, c) = (base 1, base 2, base 3)
+
+  let (=) a b = invariant a; invariant b; Pervasives.(=) a b
+
+  TEST = not_ true_ = false_
+  TEST = not_ false_ = true_
+
+  TEST = andalso true_ b = b
+  TEST = andalso a true_ = a
+  TEST = andalso false_ b = false_
+  TEST = andalso a false_ = false_
+
+  TEST = orelse false_ b = b
+  TEST = orelse a false_ = a
+  TEST = orelse true_ b  = true_
+  TEST = orelse a true_  = true_
+
+  TEST = if_ true_ b c = b
+  TEST = if_ false_ b c = c
+  TEST = if_ a true_ c = orelse a c
+  TEST = if_ a b false_ = andalso a b
+  TEST = if_ a b true_ = if_ (not_ a) true_ b  (* b/c (if a b c) = (if (not a) c b) *)
+  TEST = if_ a b true_ = orelse (not_ a) b
+  TEST = if_ a false_ c = if_ (not_ a) c false_  (* b/c (if a b c) = (if (not a) c b) *)
+  TEST = if_ a false_ c = andalso (not_ a) c
+
+  TEST_MODULE "n-ary-and-or" = struct
+
+    TEST = and_ [a; b; c] = andalso (andalso a b) c
+    TEST = or_ [a; b; c]  = orelse (orelse a b) c
+
+    let test_and ts = (and_ ts = List.fold ts ~init:true_ ~f:andalso)
+    let test_or  ts = (or_  ts = List.fold ts ~init:false_ ~f:orelse)
+
+    TEST = test_or []
+    TEST = test_or [a]
+    TEST = test_or [true_]
+    TEST = test_or [false_]
+    TEST = test_or [a; true_; b]
+    TEST = test_or [a; false_; b]
+
+    TEST = test_and []
+    TEST = test_and [a]
+    TEST = test_and [true_]
+    TEST = test_and [false_]
+    TEST = test_and [a; true_; b]
+    TEST = test_and [a; false_; b]
+
+  end
 
 end
 
 let constant b = if b then true_ else false_
+
+let constant_value = function
+  | True -> Some true
+  | False -> Some false
+  | _ -> None
 
 (* [values t] lists the base predicates in [t] from left to right *)
 let values t =
@@ -198,16 +338,6 @@ TEST = [1; 2; 3; 4; 5; 6; 7] =
       not_ (base 7);
     ])
 
-(* flatten out nested and's (used in sexp-converter) *)
-let gather_conjuncts t =
-  let rec loop acc = function
-    | True         :: ts -> loop acc ts
-    | And (t1, t2) :: ts -> loop acc (t1 :: t2 :: ts)
-    | t            :: ts -> loop (t :: acc) ts
-    | []                 -> List.rev acc
-  in
-  loop [] [t]
-
 TEST = gather_conjuncts (base 1) = [base 1]
 TEST = gather_conjuncts (and_ []) = []
 TEST = gather_conjuncts (and_ [base 1]) = [base 1]
@@ -221,16 +351,6 @@ TEST =
     ])
   =
     [base 1; base 2; base 3; or_ [base 4; base 5]; base 6; base 7]
-
-(* flatten out nested or's (used in sexp-converter) *)
-let gather_disjuncts t =
-  let rec loop acc = function
-    | False       :: ts -> loop acc ts
-    | Or (t1, t2) :: ts -> loop acc (t1 :: t2 :: ts)
-    | t           :: ts -> loop (t :: acc) ts
-    | []                -> List.rev acc
-  in
-  loop [] [t]
 
 TEST = gather_disjuncts (base 1) = [base 1]
 TEST = gather_disjuncts (or_ []) = []
@@ -297,66 +417,6 @@ let specialize t f =
     | `Known c -> constant c
     | `Unknown -> base v)
 
-(* syntax *)
-
-type sexp = Sexp.t = Atom of string | List of sexp list (* cheap import *)
-
-let unary name args sexp =
-  match args with
-  | [x] -> x
-  | _ ->
-    let n = List.length args in
-    of_sexp_error (sprintf "%s expects one argument, %d found" name n) sexp
-
-let ternary name args sexp =
-  match args with
-  | [x; y; z] -> (x, y, z)
-  | _ ->
-    let n = List.length args in
-    of_sexp_error (sprintf "%s expects three arguments, %d found" name n) sexp
-
-let sexp_of_t sexp_of_value t =
-  let rec aux t =
-    match t with
-    | Base x          -> sexp_of_value x
-    | True            -> Atom "true"
-    | False           -> Atom "false"
-    | Not t           -> List [Atom "not"; aux t]
-    | If (t1, t2, t3) -> List [Atom "if"; aux t1; aux t2; aux t3]
-    | And _ as t ->
-      let ts = gather_conjuncts t in List (Atom "and" :: List.map ~f:aux ts)
-    | Or _ as t ->
-      let ts = gather_disjuncts t in List (Atom "or" :: List.map ~f:aux ts)
-  in
-  aux t
-
-let t_of_sexp base_of_sexp sexp =
-  let base sexp = base (base_of_sexp sexp) in
-  let rec aux sexp =
-    match sexp with
-    | Atom kw ->
-      begin
-        match String.lowercase kw with
-        | "true"  -> true_
-        | "false" -> false_
-        | _       -> base sexp
-      end
-    | List (Atom kw :: args) ->
-      begin
-        match String.lowercase kw with
-        | "and" -> and_ (List.map ~f:aux args)
-        | "or"  -> or_  (List.map ~f:aux args)
-        | "not" -> not_ (aux (unary "not" args sexp))
-        | "if"  ->
-          let (x, y, z) = ternary "if" args sexp in
-          if_ (aux x) (aux y) (aux z)
-        | _ -> base sexp
-      end
-    | _ -> base sexp
-  in
-  aux sexp
-
-
 TEST_MODULE "laws" = struct
 
   type base = A | B | C with sexp_of
@@ -373,12 +433,14 @@ TEST_MODULE "laws" = struct
 
   module Gen = struct
 
-    (* we generate all our random stuff based *)
-    let prng = Random.State.make
-      (String.to_list "31bb128c352e2569228fbacc590e937a29a8bb8f\
-                       c4bfe7126504ce3dc400be7f401fa6f5be5dba38"
-       |! Array.of_list
-       |! Array.map ~f:Char.to_int)
+    (* all random values are generated from a fixed PRNG seed so that
+       unit tests are deterministic *)
+    let prng =
+      Random.State.make
+        (String.to_list "31bb128c352e2569228fbacc590e937a29a8bb8f\
+                         c4bfe7126504ce3dc400be7f401fa6f5be5dba38"
+          |! Array.of_list
+          |! Array.map ~f:Char.to_int)
 
     let bool () = Random.State.bool prng
 

@@ -6,6 +6,8 @@ module type S_common = sig
   val ascending : t -> t -> int
   val descending : t -> t -> int
 
+  val between : t -> low:t -> high:t -> bool
+
   module Replace_polymorphic_compare : Polymorphic_compare with type t := t
 
   type comparator
@@ -59,6 +61,7 @@ module Poly (T : sig type t with sexp end) : S with type t := T.t = struct
   let ascending = compare
   let descending x y = compare y x
   module C = (Comparator.Make (Replace_polymorphic_compare) : Comparator.S with type t = t)
+  let between t ~low ~high = low <= t && t <= high
   type 'a t_ = T.t
   include (C : Comparator.S1 with type 'a t := 'a t_ with type comparator = C.comparator)
   module Map = Core_map.Make_using_comparator (C)
@@ -85,11 +88,11 @@ end) = struct
   include Replace_polymorphic_compare
   let ascending = compare
   let descending t t' = compare t' t
+  let between t ~low ~high = low <= t && t <= high
 end
 
 module Make (T : sig
-  type t
-  include Sexpable.S with type t := t
+  type t with sexp
   val compare : t -> t -> int
 end) : S with type t := T.t = struct
   module C = Comparator.Make (T)

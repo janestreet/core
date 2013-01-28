@@ -5,8 +5,10 @@
 #include <string.h>
 #include <pthread.h>
 /* Darwin needs this to be included before if.h*/
-#ifdef __APPLE__
+#if defined(__APPLE__)
 #define _POSIX_SOURCE
+#include <sys/socket.h>
+#elif defined(__FreeBSD__)
 #include <sys/socket.h>
 #endif
 #include <sys/uio.h>
@@ -35,6 +37,12 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <math.h>
+
+#if defined(__FreeBSD__)
+#define stat64 stat
+#define lstat64 lstat
+#define fstat64 fstat
+#endif
 
 #include "ocaml_utils.h"
 #include "config.h"
@@ -239,9 +247,13 @@ CAMLprim value ml_create_process(value v_working_dir, value v_prog, value v_args
     /* We are going to replace stdin, stdout, and stderr for this child
        process so we close the existing descriptors now.  They may be
        closed already so we ignore EBADF from close. */
-    if (safe_close_idem(0) == -1
-        || safe_close_idem(1) == -1
-        || safe_close_idem(2) == -1) {
+    /* We don't have to do this ([dup2] closes the newfd if it is open
+       before splatting the oldfd on it), but maybe we get a more
+       informative error message if there is a problem closing a descriptor
+       rather than with the dup operation itself. */
+    if (safe_close_idem(STDIN_FILENO) == -1
+        || safe_close_idem(STDOUT_FILENO) == -1
+        || safe_close_idem(STDERR_FILENO) == -1) {
       report_error(temp_stderr,
                    "could not close standard descriptors in child process");
       exit(254);
@@ -260,9 +272,9 @@ CAMLprim value ml_create_process(value v_working_dir, value v_prog, value v_args
 
     /* We must dup2 after closing the pfds, because the latter might
        have been standard descriptors. */
-    if (dup2(temp_stdin, 0 /* stdin */) == -1
-        || dup2(temp_stdout, 1 /* stdout */) == -1
-        || dup2(temp_stderr, 2 /* stderr */) == -1) {
+    if (dup2(temp_stdin, STDIN_FILENO) == -1
+        || dup2(temp_stdout, STDOUT_FILENO) == -1
+        || dup2(temp_stderr, STDERR_FILENO) == -1) {
       report_error(temp_stderr, "could not dup2 fds in child process");
       exit(254);
     }
@@ -277,12 +289,12 @@ CAMLprim value ml_create_process(value v_working_dir, value v_prog, value v_args
     if (Is_block(v_working_dir))
       working_dir = String_val(Field(v_working_dir, 0));
     if (working_dir && chdir(working_dir) == -1) {
-      report_error(2 /* stderr */, "chdir failed in child process");
+      report_error(STDERR_FILENO, "chdir failed in child process");
       exit(254);
     }
 
     if ((search_path ? execvp : execv)(prog, args) == -1) {
-      report_error(2 /* stderr */, "execvp/execv failed in child process");
+      report_error(STDERR_FILENO, "execvp/execv failed in child process");
       exit(254);
     }
   }
@@ -780,41 +792,10 @@ CAMLprim value unix_pselect_stub(
 }
 
 
-/* Unfortunately, it is currently not possible to
-   extract the POSIX thread id given the OCaml-thread id due to lack of
-   support for this feature in the OCaml-runtime.  The below function
-   clearly does not do what is intended in the general case, but will
-   probably usually do the right thing.
-
-   mshinwell: I'll see about trying to fix the runtime.
-*/
-static inline pthread_t pthread_t_val(value __unused v_tid)
-{
-  return pthread_self();
-}
-
 /* Clock functions */
 
 #ifdef JSC_POSIX_TIMERS
 #define clockid_t_val(v_cl) ((clockid_t) Nativeint_val(v_cl))
-
-CAMLprim value unix_pthread_getcpuclockid(value v_tid)
-{
-  clockid_t c;
-  if (pthread_getcpuclockid(pthread_t_val(v_tid), &c))
-    uerror("pthread_getcpuclockid", Nothing);
-  return caml_copy_nativeint(c);
-}
-
-CAMLprim value unix_clock_process_cputime_id_stub(value __unused v_unit)
-{
-  return caml_copy_nativeint(CLOCK_PROCESS_CPUTIME_ID);
-}
-
-CAMLprim value unix_clock_thread_cputime_id_stub(value __unused v_unit)
-{
-  return caml_copy_nativeint(CLOCK_THREAD_CPUTIME_ID);
-}
 
 CAMLprim value unix_clock_gettime(value v_cl)
 {
@@ -842,6 +823,48 @@ CAMLprim value unix_clock_getres(value v_cl)
     uerror("clock_getres", Nothing);
   return caml_copy_double((double) ts.tv_sec + (double) ts.tv_nsec / 1e9);
 }
+
+/* Unfortunately, it is currently not possible to
+   extract the POSIX thread id given the OCaml-thread id due to lack of
+   support for this feature in the OCaml-runtime.  The below function
+   clearly does not do what is intended in the general case, but will
+   probably usually do the right thing.
+
+   mshinwell: I'll see about trying to fix the runtime.
+*/
+static inline pthread_t pthread_t_val(value __unused v_tid)
+{
+  return pthread_self();
+}
+
+CAMLprim value unix_pthread_getcpuclockid(value v_tid)
+{
+  clockid_t c;
+  if (pthread_getcpuclockid(pthread_t_val(v_tid), &c))
+    uerror("pthread_getcpuclockid", Nothing);
+  return caml_copy_nativeint(c);
+}
+
+#if defined(CLOCK_PROCESS_CPUTIME_ID)
+#define CLOCK CLOCK_PROCESS_CPUTIME_ID
+#elif defined(CLOCK_PROF)
+#define CLOCK CLOCK_PROF
+#else
+#define CLOCK CLOCK_REALTIME
+#endif
+
+CAMLprim value unix_clock_process_cputime_id_stub(value __unused v_unit)
+{
+  return caml_copy_nativeint(CLOCK);
+}
+
+CAMLprim value unix_clock_thread_cputime_id_stub(value __unused v_unit)
+{
+  return caml_copy_nativeint(CLOCK);
+}
+
+#undef CLOCK
+
 #else
 #warning "posix timers not present; clock functions undefined"
 #endif
@@ -1109,7 +1132,7 @@ CAMLprim value unix_create_error_checking_mutex(value __unused v_unit)
   return v_res;
 }
 #else
-#warn "XOPEN_UNIX not defined or = 0; unix_create_error_checking_mutex not available"
+#warning "XOPEN_UNIX not defined or = 0; unix_create_error_checking_mutex not available"
 #endif
 
 /* Pathname resolution */
@@ -1441,6 +1464,42 @@ CAMLprim value unix_munlockall()
   return Val_unit;
 }
 
+static value alloc_tm(struct tm *tm)
+{
+  value res;
+  res = caml_alloc_small(9, 0);
+  Field(res,0) = Val_int(tm->tm_sec);
+  Field(res,1) = Val_int(tm->tm_min);
+  Field(res,2) = Val_int(tm->tm_hour);
+  Field(res,3) = Val_int(tm->tm_mday);
+  Field(res,4) = Val_int(tm->tm_mon);
+  Field(res,5) = Val_int(tm->tm_year);
+  Field(res,6) = Val_int(tm->tm_wday);
+  Field(res,7) = Val_int(tm->tm_yday);
+  Field(res,8) = tm->tm_isdst ? Val_true : Val_false;
+  return res;
+}
+
+CAMLprim value unix_strptime(value v_fmt, value v_s)
+{
+  CAMLparam2(v_s, v_fmt);
+
+  struct tm tm;
+  tm.tm_sec  = 0;
+  tm.tm_min  = 0;
+  tm.tm_hour = 0;
+  tm.tm_mday = 0;
+  tm.tm_mon  = 0;
+  tm.tm_year = 0;
+  tm.tm_wday = 0;
+  tm.tm_yday = 0;
+  tm.tm_isdst = 0;
+
+  if (strptime(String_val(v_s), String_val(v_fmt), &tm) == NULL)
+    caml_failwith("unix_strptime: match failed");
+
+  CAMLreturn(alloc_tm(&tm));
+}
 
 CAMLprim value unix_strftime(value v_tm, value v_fmt)
 {

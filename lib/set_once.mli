@@ -4,9 +4,7 @@
 
 exception Already_set
 
-type 'a t
-
-include Sexpable.S1 with type 'a t := 'a t
+type 'a t with sexp
 
 val create : unit -> 'a t
 

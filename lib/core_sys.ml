@@ -10,7 +10,7 @@ let getenv_exn var =
       "Sys.getenv_exn: environment variable %s is not set" var ()
 
 
-let stat_check_exn f ?(follow_symlinks=true) path =
+let stat_check_exn f ?(follow_symlinks = true) path =
   let rec loop () =
     try
       f (if follow_symlinks then
@@ -69,3 +69,7 @@ let command_exn string =
   let status = command string in
   if status <> 0 then raise (Command_failed_with_status (status, string))
 ;;
+
+let fold_dir ~init ~f directory = Core_array.fold (readdir directory) ~f ~init
+
+let ls_dir directory = Core_array.to_list (readdir directory)

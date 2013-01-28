@@ -157,15 +157,19 @@ let feed_gen buf_length (blit_buf_to_bigstring : (_, _) Bigstring.blit)
       Ordered_collection_common.get_pos_len_exn ?pos ?len ~length:(buf_length buf)
     in
     ensure_available t src_len;
-    blit_buf_to_bigstring ~src:buf ~src_pos ~src_len ~dst:t.buf ~dst_pos:(t.pos + t.len) ();
+    blit_buf_to_bigstring
+      ~src:buf ~src_pos ~src_len
+      ~dst:t.buf ~dst_pos:(t.pos + t.len) ();
     t.len <- t.len + src_len;
     Ok ();
 ;;
 
-let feed ?pos ?len t buf = feed_gen Bigstring.length Bigstring.blit ?pos ?len t buf
+let feed ?pos ?len t buf =
+  feed_gen Bigstring.length Bigstring.blit                  ?pos ?len t buf
+;;
 
 let feed_string ?pos ?len t buf =
-  feed_gen String .length Bigstring.blit_string_bigstring ?pos ?len t buf
+  feed_gen    String.length Bigstring.blit_string_bigstring ?pos ?len t buf
 ;;
 
 let unpack t =

@@ -1,11 +1,13 @@
 (** Floating-point representation and utilities. *)
 
+module Binable = Binable0
+
 module type S = sig
   type t
   type outer = t
+  with bin_io, sexp
 
-  include Sexpable.S with type t := t
-  include Binable.S with type t := t
+
   include Floatable.S with type t := t
   include Stringable.S with type t := t
   include Hashable.S_binable with type t := t
@@ -14,10 +16,19 @@ module type S = sig
   (* The results of robust comparisons on [nan] should be considered undefined. *)
   include Robustly_comparable.S with type t := t
 
-  val max_value : t                   (* infinity *)
-  val min_value : t                   (* neg_infinity *)
+  val nan : t
+
+  val infinity : t
+  val neg_infinity : t
+
+  val max_value : t                   (* Float.infinity *)
+  val min_value : t                   (* Float.neg_infinity *)
   val zero : t
-  val epsilon : t         (* WARNING: This is not [epsilon_float].  See Robust_compare. *)
+  val epsilon : t   (* WARNING: This is not [Float.epsilon_float].  See Robust_compare. *)
+
+  (* The difference between 1.0 and the smallest exactly representable floating-point
+     number greater than 1.0. *)
+  val epsilon_float : t
 
   val max_finite_value : t
   val min_positive_value : t
@@ -34,10 +45,10 @@ module type S = sig
   val iround_towards_zero_exn : t -> int           (* closer to 0 *)
   (** iround_towards_zero returns None if iround_towards_zero_exn raises an exception *)
   val iround_towards_zero : t -> int option        (* closer to 0 *)
-  (* iround_down[_exn] rounds towards neg_infinity *)
+  (* iround_down[_exn] rounds towards Float.neg_infinity *)
   val iround_down_exn : t -> int
   val iround_down : t -> int option
-  (* iround_up[_exn] rounds toward infinity *)
+  (* iround_up[_exn] rounds toward Float.infinity *)
   val iround_up_exn : t -> int
   val iround_up : t -> int option
   (** iround_nearest_exn raises Invalid_argument in the same cases as
@@ -62,7 +73,7 @@ module type S = sig
 
   val is_nan : t -> bool
 
-  (** includes positive and negative infinity *)
+  (** includes positive and negative Float.infinity *)
   val is_inf : t -> bool
 
   (** min and max that return the other value if one of the values is a [nan]. Returns
@@ -100,6 +111,18 @@ module type S = sig
   val scale : t -> t -> t
   val abs : t -> t
 
+  (** Pretty print float, for example [to_string_hum ~decimals:3 1234.1999 = "1,234.200"]
+      [to_string_hum ~decimals:3 ~strip_zero:true 1234.1999 = "1,234.2" ]. By default
+      [decimals] is 3 and [strip_zero] is false *)
+  val to_string_hum : ?decimals:int -> ?strip_zero:bool -> float -> string
+
+  (* [ldexp x n] returns x *. 2 ** n *)
+  val ldexp : t -> int -> t
+  (* [frexp f] returns the pair of the significant and the exponent of f. When f is zero,
+     the significant x and the exponent n of f are equal to zero. When f is non-zero, they
+     are defined by f = x *. 2 ** n and 0.5 <= x < 1.0. *)
+  val frexp : t -> t * int
+
   module Class : sig
     type t =
     | Infinite
@@ -107,9 +130,8 @@ module type S = sig
     | Normal
     | Subnormal
     | Zero
+    with bin_io, sexp
 
-    include Binable.S with type t := t
-    include Sexpable.S with type t := t
     include Stringable.S with type t := t
   end
 
@@ -117,7 +139,7 @@ module type S = sig
      in floating point such that [classify f = Normal && f >. 0.] does *not* hold, and
      likewise for strictly negative numbers.  Here is the number line:
 
-           ...  normals | -ve subnormals | (-/+) zero | +ve subnormals | normals  ...
+     ...  normals | -ve subnormals | (-/+) zero | +ve subnormals | normals  ...
   *)
   val classify : t -> Class.t
 
@@ -129,9 +151,7 @@ module type S = sig
 
   (* S-expressions contain at most 8 significant digits. *)
   module Terse : sig
-    type t = outer
-    include Binable.S with type t := t
-    include Sexpable.S with type t := t
+    type t = outer with bin_io, sexp
     include Stringable.S with type t := t
   end
 end

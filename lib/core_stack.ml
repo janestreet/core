@@ -79,3 +79,91 @@ let until_empty t f =
   loop ()
 ;;
 
+TEST_MODULE = struct
+  let empty = create ()
+
+  TEST = is_empty empty
+
+  TEST = length empty = 0
+
+  TEST =
+    try ignore (top_exn empty); false
+    with _ -> true
+  ;;
+
+  TEST =
+    try ignore (pop_exn empty); false
+    with _ -> true
+  ;;
+
+  TEST = pop empty = None
+  TEST = top empty = None
+
+  let t =
+    let t = create () in
+    push t 0;
+    push t 1;
+    push t 2;
+    t
+  ;;
+
+  TEST = not (is_empty t)
+  TEST = length t = 3
+  TEST = top t = Some 2
+  TEST = top_exn t = 2
+
+  let t' = copy t
+
+  TEST = pop_exn t' = 2
+  TEST = pop_exn t' = 1
+  TEST = pop_exn t' = 0
+
+  TEST = length t' = 0
+  TEST = is_empty t'
+
+  let t' = copy t
+
+  TEST = pop t' = Some 2
+  TEST = pop t' = Some 1
+  TEST = pop t' = Some 0
+
+  TEST = length t' = 0
+  TEST = is_empty t'
+
+  (* test that t was not modified by pops applied to copies *)
+  TEST = length t = 3
+  TEST = top_exn t = 2
+
+  TEST =
+    let n = ref 0 in
+    iter t ~f:(fun x -> n := !n + x);
+    !n = 3
+  ;;
+
+  TEST = fold t ~init:0 ~f:(+) = 3
+  TEST = count t ~f:(fun x -> x > 1) = 1
+  TEST = mem t 0
+  TEST = not (mem t 5)
+  TEST = for_all t ~f:(fun x -> x >= 0)
+  TEST = not (for_all t ~f:(fun x -> x > 0))
+  TEST = find t ~f:(fun x -> x < 2) = Some 1
+  TEST = find t ~f:(fun x -> x < 0) = None
+  TEST = find_map t ~f:(fun x -> if x < 2 then Some (x + 5) else None) = Some 6
+  TEST = find_map t ~f:(fun x -> if x < 0 then Some (x + 5) else None) = None
+  TEST = to_list t = [2; 1; 0]
+  TEST = to_array t = [|2; 1; 0|]
+
+  TEST = length t = 3
+  TEST = top_exn t = 2
+
+  let t' = copy t
+
+  TEST =
+    let n = ref 0 in
+    until_empty t' (fun x -> n := !n + x);
+    !n = 3
+  ;;
+
+  TEST = is_empty t'
+  TEST = length t' = 0
+end

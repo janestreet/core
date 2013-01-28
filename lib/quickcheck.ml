@@ -1,11 +1,8 @@
-
 open Std_internal
 
 
 let rec foldn ~f ~init:acc i =
   if i = 0 then acc else foldn ~f ~init:(f acc i) (i-1)
-
-let sum_int = List.fold ~f:(+) ~init:0
 
 type 'a gen = unit -> 'a
 
@@ -29,7 +26,7 @@ let nng () =
  *   min_int <= result <= max_int
  *)
 let uig =
-  let bound = Int64.(+) 1L (Int64.of_int max_int) in
+  let bound = Int64.(+) 1L (Int64.of_int Int.max_value) in
   fun () ->
     let r = Int64.to_int_exn (Random.int64 bound) in
     if Random.bool () then r else -r - 1
@@ -50,21 +47,7 @@ let sg ?(char_gen = cg) ?(size_gen = nng) () =
   done;
   s
 
-let oneof xs =
-  List.nth_exn xs (Random.int (List.length xs))
-
 let always x () = x
-
-let frequency xs =
-  let sums = sum_int (List.map ~f:fst xs) in
-  let i = Random.int sums in
-  let rec aux acc = function
-    | ((x,g)::xs) -> if i < acc+x then g else aux (acc+x) xs
-    | _ -> failwith "frequency"
-  in
-  aux 0 xs
-
-let frequencyl l = frequency (List.map ~f:(fun (i,e) -> (i,always e)) l)
 
 let rec laws iter gen func =
   if iter <= 0 then None

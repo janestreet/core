@@ -1,10 +1,10 @@
 open OUnit;;
 open Core.Std
 
-let test = 
+let test =
   "interval" >:::
-    [ "is_empty_or_singleton" >:: 
-        (fun () -> 
+    [ "is_empty_or_singleton" >::
+        (fun () ->
           let t x = Interval.is_empty_or_singleton x in
           let i = Interval.create in
           "singleton1" @? t (i 0 0);
@@ -14,8 +14,8 @@ let test =
           "nonempty" @? not (t (i 0 1));
         );
 
-      "are_disjoint_as_open_intervals" >:: 
-        (fun () -> 
+      "are_disjoint_as_open_intervals" >::
+        (fun () ->
           let t x = Interval.are_disjoint_as_open_intervals x in
           let i = Interval.create in
           "touching" @? t [i 3 4; i 4 5];
@@ -39,5 +39,18 @@ let test =
           "contains_set 4" @? (S.contains_set ~container:s2 ~contained:s3);
         );
 
+      "half_open_intervals_are_a_partition" >::
+        (fun () ->
+          "are_a_partition" @? Interval.half_open_intervals_are_a_partition [
+            Interval.create 0 2;
+            Interval.create 2 4;
+            Interval.create 4 8;
+          ];
+          "not_a_partition" @? not (Interval.half_open_intervals_are_a_partition [
+            Interval.create 0 2;
+            Interval.create 2 4;
+            Interval.create 5 8;
+          ]);
+        );
     ]
 

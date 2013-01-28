@@ -5,12 +5,13 @@ open Common
 
 (** File descriptor. *)
 module File_descr : sig
-  type t = Caml.Unix.file_descr
-  include Hashable.S with type t := t
-  include Sexpable.S with type t := t
-  val to_int : t -> int
+  type t = Caml.Unix.file_descr with bin_io, sexp
+
+  include Hashable  .S with type t := t
+  include Stringable.S with type t := t
+
   val of_int : int -> t
-  val to_string : t -> string
+  val to_int : t -> int
 end
 
 (** {6 Error report} *)
@@ -178,44 +179,29 @@ end
 (** [exec ~prog ~args ?search_path ?env] execs [prog] with [args].  If [use_path = true]
     (the default) and [prog] doesn't contain a slash, then [exec] searches the PATH
     environment variable for [prog].  If [env] is supplied, it is used as the environment
-    when [prog] is executed. *)
-val exec :
-  prog:string
+    when [prog] is executed.
+
+    The first element in args should be the program itself; the correct way to call [exec]
+    is:
+
+      exec ~prog ~args:[ prog; arg1; arg2; ...] () *)
+val exec
+  :  prog:string
   -> args:string list
-  -> ?use_path:bool
+  -> ?use_path:bool (* defaults to true *)
   -> ?env:string list
   -> unit
   -> never_returns
 
 (** [fork_exec ~prog ~args ?use_path ?env ()] forks and execs [prog] with [args] in the
-    child process, returning the child pid to the parent.
- *)
-val fork_exec :
-  prog:string
+    child process, returning the child pid to the parent. *)
+val fork_exec
+  :  prog:string
   -> args:string list
-  -> ?use_path:bool
+  -> ?use_path:bool (* defaults to true *)
   -> ?env:string list
   -> unit
   -> Pid.t
-
-(** [execv prog args] execute the program in file [prog], with
-   the arguments [args], and the current process environment.
-   These [execv*] functions never return: on success, the current
-   program is replaced by the new one;
-   on failure, a {!UnixLabels.Unix_error} exception is raised. *)
-val execv : prog:string -> args:string array -> _
-
-(** Same as {!UnixLabels.execv}, except that the third argument provides the
-   environment to the program executed. *)
-val execve : prog:string -> args:string array -> env:string array -> _
-
-(** Same as {!UnixLabels.execv} respectively, except that
-   the program is searched in the path. *)
-val execvp : prog:string -> args:string array -> _
-
-(** Same as {!UnixLabels.execve} respectively, except that
-   the program is searched in the path. *)
-val execvpe : prog:string -> args:string array -> env:string array -> _
 
 (** [fork ()] forks a new process.  The return value indicates whether we are continuing
     in the child or the parent, and if the parent, includes the child's process id. *)
@@ -240,16 +226,27 @@ type wait_on =
   ]
 with sexp
 
-val wait                 : ?restart:bool -> wait_on ->  Pid.t * Exit_or_signal.t
-val wait_nohang          :                  wait_on -> (Pid.t * Exit_or_signal .t       ) option
-val wait_untraced        : ?restart:bool -> wait_on ->  Pid.t * Exit_or_signal_or_stop.t
-val wait_nohang_untraced :                  wait_on -> (Pid.t * Exit_or_signal_or_stop.t) option
+
+val wait
+  : ?restart:bool (* defaults to true *) -> wait_on ->  Pid.t * Exit_or_signal.t
+val wait_nohang
+  :                                         wait_on -> (Pid.t * Exit_or_signal .t       ) option
+val wait_untraced
+  : ?restart:bool (* defaults to true *) -> wait_on ->  Pid.t * Exit_or_signal_or_stop.t
+val wait_nohang_untraced
+  :                                         wait_on -> (Pid.t * Exit_or_signal_or_stop.t) option
+
+(** [waitpid pid] waits for child process [pid] to terminate, and returns its exit status.
+    [waitpid_exn] is like [waitpid], except it only returns if the child exits with status
+    zero, and raises if the child terminates in any other way. *)
+val waitpid : Pid.t -> Exit_or_signal.t
+val waitpid_exn : Pid.t -> unit
 
 (** Execute the given command, wait until it terminates, and return
-   its termination status. The string is interpreted by the shell
-   [/bin/sh] and therefore can contain redirections, quotes, variables,
-   etc. The result [WEXITED 127] indicates that the shell couldn't
-   be executed. *)
+    its termination status. The string is interpreted by the shell
+    [/bin/sh] and therefore can contain redirections, quotes, variables,
+    etc. The result [WEXITED 127] indicates that the shell couldn't
+    be executed. *)
 val system : string -> Exit_or_signal.t
 
 (** Return the pid of the process. *)
@@ -285,6 +282,7 @@ val stderr : File_descr.t
 IFDEF OCAML_4 THEN
 
 (** The flags to {!UnixLabels.openfile}. *)
+
 type open_flag =
   Unix.open_flag =
       O_RDONLY        (** Open for reading *)
@@ -332,7 +330,7 @@ type file_perm = int with sexp
 val openfile : ?perm:file_perm -> mode:open_flag list -> string -> File_descr.t
 
 (** Close a file descriptor. *)
-val close : ?restart:bool -> File_descr.t -> unit
+val close : ?restart:bool (* defaults to false *) -> File_descr.t -> unit
 
 (** [with_file file ~mode ~perm ~f] opens [file], and applies [f] to the resulting file
     descriptor.  When [f] finishes (or raises), [with_file] closes the descriptor and
@@ -347,7 +345,13 @@ val with_file
 (** [read fd buff ofs len] reads [len] characters from descriptor
     [fd], storing them in string [buff], starting at position [ofs]
     in string [buff]. Return the number of characters actually read. *)
-val read : ?restart:bool -> ?pos:int -> ?len:int -> File_descr.t -> buf:string -> int
+val read
+  :  ?restart:bool (* defaults to false *)
+  -> ?pos:int
+  -> ?len:int
+  -> File_descr.t
+  -> buf:string
+  -> int
 
 (** [write fd buff ofs len] writes [len] characters to descriptor
     [fd], taking them from string [buff], starting at position [ofs]
@@ -365,9 +369,13 @@ val write : ?pos:int -> ?len:int -> File_descr.t -> buf:string -> int
 
 (** Same as [write] but ensures that all errors are reported and
    that no character has ever been written when an error is reported. *)
-val single_write :
-  ?restart:bool -> ?pos:int -> ?len:int -> File_descr.t -> buf:string -> int
-
+val single_write
+  :  ?restart:bool (* defaults to false *)
+  -> ?pos:int
+  -> ?len:int
+  -> File_descr.t
+  -> buf:string
+  -> int
 
 (** {6 Interfacing with the standard input/output library} *)
 
@@ -542,13 +550,13 @@ val rename : src:string -> dst:string -> unit
 (** [link ?force ~target ~link_name ()] creates a hard link named [link_name]
     to the file named [target].  If [force] is true, an existing entry in
     place of [link_name] will be unlinked.  This unlinking may raise a Unix
-    error, e.g. if the entry is a directory.
-
-    @param force default = [false]
-*)
-val link :
-  ?force : bool -> target : string -> link_name : string -> unit -> unit
-
+    error, e.g. if the entry is a directory. *)
+val link
+  :  ?force:bool (* defaults to false *)
+  -> target : string
+  -> link_name : string
+  -> unit
+  -> unit
 
 (** {6 File permissions and ownership} *)
 
@@ -636,7 +644,7 @@ val chroot : string -> unit
 type dir_handle = Unix.dir_handle
 
 (** Open a descriptor on a directory *)
-val opendir : ?restart:bool -> string -> dir_handle
+val opendir : ?restart:bool (* defaults to false *) -> string -> dir_handle
 
 (** Return the next entry in a directory.
    @raise End_of_file when the end of the directory has been reached. *)
@@ -648,15 +656,7 @@ val rewinddir : dir_handle -> unit
 (** Close a directory descriptor. *)
 val closedir : dir_handle -> unit
 
-(*
-  open a directory, iter readdir, and close it.
-  raises the same exception than opendir and closedir.
-*)
-val fold_dir : init:'acc -> f:('acc -> string -> 'acc) -> string -> 'acc
-val ls_dir : string -> string list
-
 (** {6 Pipes and redirections} *)
-
 
 (** Create a pipe. The first component of the result is opened
    for reading, that's the exit to the pipe. The second component is
@@ -694,8 +694,8 @@ val create_process : prog : string -> args : string list -> Process_info.t
     parameter that extends, or replaces the current environment.  No effort is made to
     ensure that the keys passed in as env are unique, so if an environment variable is set
     twice the second version will override the first. *)
-val create_process_env :
-  ?working_dir : string
+val create_process_env
+  :  ?working_dir : string
   -> prog : string
   -> args : string list
   -> env : [ `Replace of (string * string) list
@@ -793,8 +793,8 @@ end
 
 (** Setting restart to true means that we want select to restart automatically
     on EINTR (instead of propagating the exception)... *)
-val select:
-  ?restart : bool
+val select
+  :  ?restart:bool (* defaults to false *)
   -> read:File_descr.t list
   -> write:File_descr.t list
   -> except:File_descr.t list
@@ -859,6 +859,10 @@ val mktime : tm -> float * tm
 (** Convert a date and time, specified by the [tm] argument, into a formatted string.
     See 'man strftime' for format options. *)
 val strftime : tm -> string -> string
+
+(** Given a format string, convert a corresponding string to a date and time
+    See 'man strptime' for format options. *)
+val strptime : fmt:string -> string -> Unix.tm 
 
 (** Schedule a [SIGALRM] signal after the given number of seconds. *)
 val alarm : int -> int
@@ -1007,6 +1011,8 @@ end
 
 module Inet_addr : sig
   type t = Unix.inet_addr with bin_io, sexp
+
+  include Comparable.S with type t := t
 
   (** Conversion from the printable representation of an Internet address to its internal
       representation.  The argument string consists of 4 numbers separated by periods
@@ -1261,7 +1267,9 @@ module Host : sig
   (** Find an entry in [hosts] with the given address. *)
   val getbyaddr : Inet_addr.t -> t option
   val getbyaddr_exn : Inet_addr.t -> t
-end
+
+  val have_address_in_common : t -> t -> bool
+ end
 
 module Protocol : sig
   (** Structure of entries in the [protocols] database. *)

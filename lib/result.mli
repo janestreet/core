@@ -1,21 +1,22 @@
 (** [Result] is often used to handle error messages. *)
 
 (** ['a] is a function's expected return type, and ['b] is often an error message string.
-  {[let ric_of_ticker = function
-      | "IBM" -> Ok "IBM.N"
-      | "MSFT" -> Ok "MSFT.OQ"
-      | "AA" -> Ok "AA.N"
-      | "CSCO" -> Ok "CSCO.OQ"
-      | _ as ticker -> Error (sprintf "can't find ric of %s" ticker) ]}
+    {[let ric_of_ticker = function
+    | "IBM" -> Ok "IBM.N"
+    | "MSFT" -> Ok "MSFT.OQ"
+    | "AA" -> Ok "AA.N"
+    | "CSCO" -> Ok "CSCO.OQ"
+    | _ as ticker -> Error (sprintf "can't find ric of %s" ticker) ]}
     The return type of ric_of_ticker could be [string option], but [(string, string)
     Result.t] gives more control over the error message. *)
 type ('ok, 'err) t =
   | Ok of 'ok
   | Error of 'err
+with bin_io, sexp, compare
 
-include Sexpable.S2 with type ('a,'err) t := ('a,'err) t
-include Binable .S2 with type ('a,'err) t := ('a,'err) t
-include Monad   .S2 with type ('a,'err) t := ('a,'err) t
+include Monad.S2 with type ('a,'err) t := ('a,'err) t
+
+val compare : ('a -> 'a -> int) -> ('b -> 'b -> int) -> ('a, 'b) t -> ('a, 'b) t -> int
 
 val fail : 'err -> (_, 'err) t
 
@@ -73,4 +74,14 @@ module Export : sig
     ('ok, 'err) t =
   | Ok of 'ok
   | Error of 'err
+end
+
+module Stable : sig
+  module V1 : sig
+    type ('a, 'b) t with sexp, bin_io, compare
+  end with type ('a, 'b) t = ('a, 'b) t
+
+  (* We export the unit test arg rather than instantiate the functor inside result.ml in
+     order to avoid circular dependancies.  The functor is instantiated in stable.ml. *)
+  module V1_stable_unit_test : Stable_unit_test_intf.Arg
 end

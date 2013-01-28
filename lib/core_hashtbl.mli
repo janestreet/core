@@ -109,13 +109,11 @@ module Poly : sig
 
 end with type ('a, 'b) t = ('a, 'b) t
 
-module type Key = Key
+module type Key         = Key
+module type Key_binable = Key_binable
+
 module type S         = S         with type ('a, 'b) hashtbl = ('a, 'b) t
 module type S_binable = S_binable with type ('a, 'b) hashtbl = ('a, 'b) t
 
-module Make (Key : Key) : S with type key = Key.t
-
-module Make_binable (Key : sig
-  include Key
-  include Binable.S with type t := t
-end) : S_binable with type key = Key.t
+module Make         (Key : Key        ) : S         with type key = Key.t
+module Make_binable (Key : Key_binable) : S_binable with type key = Key.t

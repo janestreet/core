@@ -12,7 +12,7 @@ open Std_internal
 exception Empty with sexp
 
 type 'a t = { inlist : 'a list; outlist : 'a list; length : int }
-with bin_io, of_sexp
+with bin_io, sexp
 
 let test_invariants queue =
   let n_out = List.length queue.outlist in
@@ -75,6 +75,8 @@ let dequeue queue = try Some (dequeue_exn queue) with Empty -> None
 let discard_exn queue = snd (dequeue_exn queue)
 
 let to_list queue = List.append queue.outlist (List.rev queue.inlist)
+
+let compare cmpa t1 t2 = List.compare ~cmp:cmpa (to_list t1) (to_list t2)
 
 let sexp_of_t sexp_of_a q = Sexplib.Conv.sexp_of_list sexp_of_a (to_list q)
 

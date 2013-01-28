@@ -19,6 +19,8 @@
 #include <termios.h>
 #include <sys/ioctl.h>
 #include <sys/syscall.h>
+#include <sys/sendfile.h>
+#include <sys/epoll.h>
 #include <arpa/inet.h>
 #include <assert.h>
 
@@ -26,8 +28,6 @@
 
 #include "ocaml_utils.h"
 #include "unix_utils.h"
-
-#include <sys/sendfile.h>
 
 CAMLprim value
 linux_sendfile_stub(value v_sock, value v_fd, value v_pos, value v_len)
@@ -305,5 +305,148 @@ CAMLprim value linux_get_ipv4_address_for_interface(value v_interface)
   uerror(error, Nothing);
   assert(0);  /* [uerror] should never return. */
 }
- 
+
+
+/** Core epoll methods **/
+
+#define EPOLL_FLAG(FLAG) \
+  CAMLprim value linux_epoll_##FLAG##_flag(value __unused v_unit) { return Val_long(FLAG); }
+
+EPOLL_FLAG(EPOLLIN)
+EPOLL_FLAG(EPOLLOUT)
+/* 2012-05-22 sweeks: EPOLLRDHUP was unavailable on some of our machines, so I
+   commented it out until we need it. */
+/* EPOLL_FLAG(EPOLLRDHUP) */
+EPOLL_FLAG(EPOLLPRI)
+EPOLL_FLAG(EPOLLERR)
+EPOLL_FLAG(EPOLLHUP)
+EPOLL_FLAG(EPOLLET)
+EPOLL_FLAG(EPOLLONESHOT)
+
+CAMLprim value linux_sizeof_epoll_event(value __unused v_unit)
+{
+  return Val_long(sizeof(struct epoll_event));
+}
+
+/*
+ * Don't think too hard about the parameter here, the man pages for epoll indicate
+ * that the size parameter is ignored for current implementations of epoll.
+ */
+CAMLprim value linux_epoll_create(value v_size)
+{
+  int retcode;
+
+  retcode = epoll_create(Long_val(v_size));
+  if (retcode == -1) uerror("epoll_create", Nothing);
+
+  return Val_long(retcode);
+}
+
+static value linux_epoll_ctl(value v_epfd, value v_fd, value v_flags, int operation)
+{
+  struct epoll_event evt;
+
+  evt.events = Long_val(v_flags);
+  evt.data.fd = Long_val(v_fd);
+
+  if (epoll_ctl(Long_val(v_epfd), operation, Long_val(v_fd), &evt) == -1)
+    uerror("epoll_ctl", Nothing);
+
+  return Val_unit;
+}
+
+/*
+ * Add and modify seem somewhat duplicative, I'm unsure the result of
+ * adding an fd to a set a second time to change the event flags. Use
+ * mod()...
+ */
+CAMLprim value linux_epoll_ctl_add(value v_epfd, value v_fd, value v_flags)
+{
+  return linux_epoll_ctl(v_epfd, v_fd, v_flags, EPOLL_CTL_ADD);
+}
+
+CAMLprim value linux_epoll_ctl_mod(value v_epfd, value v_fd, value v_flags)
+{
+  return linux_epoll_ctl(v_epfd, v_fd, v_flags, EPOLL_CTL_MOD);
+}
+
+/*
+ * Some implementations ignore errors in delete, as they occur commonly when
+ * an fd is closed prior to the del() call. close() removes an fd from an
+ * epoll set automatically, so the del() call will fail.
+ */
+CAMLprim value linux_epoll_ctl_del(value v_epfd, value v_fd)
+{
+  if (epoll_ctl(Long_val(v_epfd), EPOLL_CTL_DEL, Long_val(v_fd), NULL) == -1)
+    uerror("epoll_ctl", Nothing);
+
+  return Val_unit;
+}
+
+CAMLprim value linux_epoll_wait(value v_epfd, value v_array, value v_timeout)
+{
+  struct epoll_event * evt;
+  int retcode, maxevents;
+  int timeout = Long_val(v_timeout);
+
+  /* [CAMLparam1] is needed here to ensure that the bigstring does not get finalized
+     during the period when we release the Caml lock, below.
+  */
+  CAMLparam1(v_array);
+
+  evt = (struct epoll_event *) Caml_ba_data_val(v_array);
+  maxevents = Caml_ba_array_val(v_array)->dim[0] / sizeof(struct epoll_event);
+
+  /*
+   * timeout, in milliseconds returns immediately if 0 is given, waits
+   * forever with -1.
+   */
+  if (timeout == 0)
+  {
+    /* returns immediately, skip enter()/leave() pair */
+    retcode = epoll_wait(Long_val(v_epfd), evt, maxevents, timeout);
+  }
+  else
+  {
+    caml_enter_blocking_section();
+    retcode = epoll_wait(Long_val(v_epfd), evt, maxevents, timeout);
+    caml_leave_blocking_section();
+  }
+
+  if (retcode == -1) uerror("epoll_wait", Nothing);
+
+  CAMLreturn(Val_long(retcode));
+}
+
+/* 2012-05-22 sweeks: epoll_pwait was unavailable on some of our machines, so I
+   commented it out until we need it.
+
+   mshinwell has not fully read this yet.
+
+   bnigito: epoll_pwait, and associated signal masks is a possible routine we may expose
+   in the future. Since it's not available on some centos versions (and we do not currently
+   utilize the pselect analog) I've removed the premature references to it.
+*/
+
+/** Accessors for the resulting ready events array. Might want to do this as a pair. */
+
+static inline struct epoll_event * get_epoll_event(value v_array, value v_index)
+{
+  int i = Long_val(v_index);
+  struct epoll_event * events = (struct epoll_event *) Caml_ba_data_val(v_array);
+  return &events[i];
+}
+
+CAMLprim value linux_epoll_readyfd(value v_array, value v_index)
+{
+  struct epoll_event * event = get_epoll_event(v_array, v_index);
+  return Val_long( event->data.fd );
+}
+
+CAMLprim value linux_epoll_readyflags(value v_array, value v_index)
+{
+  struct epoll_event * event = get_epoll_event(v_array, v_index);
+  return Val_long( event->events );
+}
+
 #endif /* JSC_LINUX_EXT */

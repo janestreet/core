@@ -19,23 +19,23 @@ val executable_name : string
 
    [`Unknown] is returned for files for which we cannot successfully determine
    whether they are on the system or not (e.g. files in directories to which we
-   do not have read permission).
-
-   [?follow_symlinks] defaults to [true]
-*)
-val file_exists : ?follow_symlinks:bool -> string ->  [ `Yes | `No | `Unknown ]
+   do not have read permission). *)
+val file_exists
+  : ?follow_symlinks:bool (* defaults to true *) -> string ->  [ `Yes | `No | `Unknown ]
 
 (** Same as [file_exists] but blows up on [`Unknown] *)
-val file_exists_exn : ?follow_symlinks:bool -> string -> bool
+val file_exists_exn
+  : ?follow_symlinks:bool (* defaults to true *) -> string -> bool
 
 (** Returns [`Yes] if the file exists and is a directory*)
-val is_directory : ?follow_symlinks:bool -> string -> [ `Yes | `No | `Unknown ]
+val is_directory
+  : ?follow_symlinks:bool (* defaults to true *) -> string -> [ `Yes | `No | `Unknown ]
 
 (** Returns [`Yes] if the file exists and is a regular file *)
-val is_file : ?follow_symlinks:bool -> string      -> [ `Yes | `No | `Unknown ]
-
-val is_directory_exn : ?follow_symlinks:bool -> string -> bool
-val is_file_exn : ?follow_symlinks:bool -> string      -> bool
+val is_file
+  : ?follow_symlinks:bool (* defaults to true *) -> string -> [ `Yes | `No | `Unknown ]
+val is_directory_exn : ?follow_symlinks:bool (* defaults to true *) -> string -> bool
+val is_file_exn      : ?follow_symlinks:bool (* defaults to true *) -> string -> bool
 
 (** Remove the given file name from the file system. *)
 val remove : string -> unit
@@ -69,6 +69,19 @@ val getcwd : unit -> string
     resulting array will appear in any specific order; they are not, in
     particular, guaranteed to appear in alphabetical order. *)
 val readdir : string -> string array
+
+(*
+  Call [readdir], and fold over the elements of the array.
+  @raise Sys_error _ if readdir fails.
+  As with [readdir], ["."] and [".."] are not returned
+  raises the same exception than opendir and closedir.
+*)
+val fold_dir : init:'acc -> f:('acc -> string -> 'acc) -> string -> 'acc
+
+(**
+   Same as readder, but return a list rather than an array.
+*)
+val ls_dir : string -> string list
 
 (** This reference is initially set to [false] in standalone programs and to
     [true] if the code is being executed under the interactive toplevel system

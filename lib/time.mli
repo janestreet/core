@@ -1,11 +1,10 @@
 (** Our time module.  This module wraps up unix times, including various
     convenience functions for accessing them.
 *)
-
 open Std_internal
 
 (** A discrete point in time in the universe; not a time in some timezone. *)
-type t = Time_internal.T.t
+type t = Time_internal.T.t with bin_io, sexp
 
 
 (** If this is ever called then all future calls to to_string and sexp_of_t will produce a
@@ -34,10 +33,8 @@ val current_string_and_sexp_format : unit -> [
 include Hashable_binable with type t := t
 include Comparable_binable with type t := t
 include Robustly_comparable with type t := t
-include Sexpable with type t := t
-include Binable with type t := t
 include Stringable with type t := t
-include Floatable with type t := t (* seconds since the epoch *)
+include Floatable with type t := t
 
 (** {5 values} *)
 
@@ -82,8 +79,8 @@ val to_local_date_ofday : t -> Date.t * Ofday.t
 val to_local_date       : t -> Date.t
 val to_local_ofday      : t -> Ofday.t
 
-val convert :
-  from_tz:Zone.t
+val convert
+  :  from_tz:Zone.t
   -> to_tz:Zone.t
   -> Date.t
   -> Ofday.t
@@ -139,6 +136,8 @@ val to_string_abs :
 
 val of_string_abs : string -> t
 
+val t_of_sexp_abs : Sexp.t -> t
+
 val pp : Format.formatter -> t -> unit
 
 (** {6 Miscellaneous} *)
@@ -156,11 +155,19 @@ val interruptible_pause : Span.t -> [`Ok | `Remaining of Span.t]
 (** [pause_forever] sleeps indefinitely. *)
 val pause_forever : unit -> never_returns
 
-(** [ofday_occurrence ofday side now] returns a Time.t that is the occurrence of ofday (in
-    the given zone) which is the latest occurrence before now or the earliest occurrence
-    after now, according to side.  NOTE: This function is a little bit wrong near daylight
-    savings time *)
-val ofday_occurrence : t -> Zone.t -> Ofday.t -> [ `right_after | `right_before ] -> t
+(** [occurrence side time ~ofday ~zone] returns a [Time.t] that is the occurrence of ofday
+    (in the given [zone]) that is the latest occurrence (<=) [time] or the earliest
+    occurrence (>=) [time], according to [side].
+
+    NOTE: If the given time converted to wall clock time in the given zone is equal to
+    ofday then the t returned will be equal to the t given.
+*)
+val occurrence
+  :  [ `First_after_or_at | `Last_before_or_at ]
+  -> t
+  -> ofday:Ofday.t
+  -> zone:Zone.t
+  -> t
 
 (** [format t fmt] formats the given time according to fmt, which follows the formatting
     rules given in 'man strftime'.  The time is output in the local timezone. *)
@@ -169,4 +176,16 @@ val format : t -> string -> string
 (** [to_epoch t] returns the number of seconds since Jan 1, 1970 00:00:00 in UTC *)
 val to_epoch : t -> float
 
+(* [next_multiple ~base ~after ~interval] returns the smallest [time] of the form:
 
+   time = base + k * interval
+
+   where [k >= 0] and [time > after].  It is an error if [interval <= 0].
+*)
+val next_multiple : base:t -> after:t -> interval:Span.t -> t
+
+module Stable : sig
+  module V1 : sig
+    type t with bin_io, sexp, compare
+  end with type t = t
+end

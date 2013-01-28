@@ -1,3 +1,4 @@
+
 (* A nano-mutex is a lightweight mutex that can be used only within a single OCaml
    runtime.
 
@@ -24,8 +25,6 @@
    |     Caml.Mutex lock/unlock |    49 ns |    0 ns |         0 |
    |          Core.Mutex create |   698 ns |    0 ns |         3 |
    |     Core.Mutex lock/unlock |    49 ns |    0 ns |         0 |
-   |      Agnostic_mutex create |   534 ns |    0 ns |        10 |
-   | Agnostic_mutex lock/unlock |   188 ns |    0 ns |        16 |
    |          Nano_mutex create |    10 ns |    0 ns |         4 |
    |     Nano_mutex lock/unlock |    28 ns |    0 ns |         0 |
    |-------------------------------------------------------------|
@@ -40,20 +39,16 @@
    * unlocking an unlocked mutex
    * unlocking a mutex held by another thread
 
-   For those design choices, Nano_mutex is most similar in semantics to Agnostic_mutex.
    Here is a table comparing how the various mutexes behave:
 
-   |--------------------+------------+------------+----------------+------------|
-   |                    | Caml.Mutex | Core.Mutex | Agnostic_mutex | Nano_mutex |
-   |--------------------+------------+------------+----------------+------------|
-   | recursive lock     | undefined  | error      | deadlock       | error      |
-   | unlocking unlocked | undefined  | error      | error          | error      |
-   | t1:lock  t2:unlock | undefined  | error      | ok             | error/ok   |
-   |--------------------+------------+------------+----------------+------------|
-
-   [Nano_mutex.unlock] fails if another thread holds the lock; however, one can supply
-   [~allow_from_any_thread:true] to allow unlocking a lock held by another thread, like
-   [Agnostic_mutex]. *)
+   |--------------------+------------+------------+------------+
+   |                    | Caml.Mutex | Core.Mutex | Nano_mutex |
+   |--------------------+------------+------------+------------+
+   | recursive lock     | undefined  | error      | error      |
+   | unlocking unlocked | undefined  | error      | error      |
+   | t1:lock  t2:unlock | undefined  | error      | error      |
+   |--------------------+------------+------------+------------+
+*)
 
 type t with sexp_of
 

@@ -5,9 +5,8 @@ type t = private {
   m: Month.t;
   d: int;
 }
+with bin_io, sexp
 
-include Sexpable with type t := t
-include Binable with type t := t
 include Hashable_binable with type t := t
 (** converts a string to a date, in formats:
  * m/d/y
@@ -43,7 +42,6 @@ val year : t -> int
 
 (* added to Date in Core.Std to handle the circular dependancy between Time and Date *)
 (* val today : unit -> t                   (* based on local timezone *) *)
-(* val yesterday : unit -> t               (* based on local timezone *) *)
 (* val of_time : Time.t -> t               (* based on local timezone *) *)
 
 val day_of_week : t -> Weekday.t
@@ -67,7 +65,11 @@ val diff : t -> t -> int
 
 (** [add_weekdays t 0] returns the next weekday if [t] is a weekend and [t] otherwise.
     Unlike add_days this is done by looping over the count of days to be added (forward or
-    backwards based on the sign), and is O(n) in the number of days to add.  *)
+    backwards based on the sign), and is O(n) in the number of days to add.
+    Beware, [add_weekdays sat 1] or [add_weekdays sun 1] both return the next [tue],
+    not the next [mon]. You may want to use [following_weekday] if you want the next
+    following weekday, [following_weekday (fri|sat|sun)] would all return the next [mon].
+*)
 val add_weekdays : t -> int -> t
 
 (** [add_business_days t ~is_holiday n] returns a business day even when
@@ -85,6 +87,15 @@ val weekdays_between : min:t -> max:t -> t list
 
 val previous_weekday : t -> t
 
+val following_weekday : t -> t
+
 module Export : sig
   type _date = t = private { y: int; m: Month.t; d: int; }
 end
+
+module Stable : sig
+  module V1 : sig
+    type t with sexp, bin_io, compare
+  end with type t = t
+end
+

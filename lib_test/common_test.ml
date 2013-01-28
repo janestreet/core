@@ -25,19 +25,18 @@ let test =
 
       "nan" >::
         (fun () ->
-          let nan = 0. /. 0. in
-          "fmin1" @? (Float.is_nan (Float.min 1. nan));
-          "fmin2" @? (Float.is_nan (Float.min nan 0.));
-          "fmin3" @? (Float.is_nan (Float.min nan nan));
-          "fmax1" @? (Float.is_nan (Float.max 1. nan));
-          "fmax2" @? (Float.is_nan (Float.max nan 0.));
-          "fmax3" @? (Float.is_nan (Float.max nan nan));
-          "fmin_inan1" @? (1. = (Float.min_inan 1. nan));
-          "fmin_inan2" @? (0. = (Float.min_inan nan 0.));
-          "fmin_inan3" @? (Float.is_nan (Float.min_inan nan nan));
-          "fmax_inan1" @? (1. = (Float.max_inan 1. nan));
-          "fmax_inan2" @? (0. = (Float.max_inan nan 0.));
-          "fmax_inan3" @? (Float.is_nan (Float.max_inan nan nan));
+          "fmin1" @? (Float.is_nan (Float.min 1. Float.nan));
+          "fmin2" @? (Float.is_nan (Float.min Float.nan 0.));
+          "fmin3" @? (Float.is_nan (Float.min Float.nan Float.nan));
+          "fmax1" @? (Float.is_nan (Float.max 1. Float.nan));
+          "fmax2" @? (Float.is_nan (Float.max Float.nan 0.));
+          "fmax3" @? (Float.is_nan (Float.max Float.nan Float.nan));
+          "fmin_inan1" @? (1. = (Float.min_inan 1. Float.nan));
+          "fmin_inan2" @? (0. = (Float.min_inan Float.nan 0.));
+          "fmin_inan3" @? (Float.is_nan (Float.min_inan Float.nan Float.nan));
+          "fmax_inan1" @? (1. = (Float.max_inan 1. Float.nan));
+          "fmax_inan2" @? (0. = (Float.max_inan Float.nan 0.));
+          "fmax_inan3" @? (Float.is_nan (Float.max_inan Float.nan Float.nan));
         );
 
       "round" >::

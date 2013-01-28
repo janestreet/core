@@ -23,8 +23,8 @@ let lock fd =
 
 let create
     ?(message = Pid.to_string (Unix.getpid ()))
-    ?(close_on_exec=true)
-    ?(unlink_on_exit=false)
+    ?(close_on_exec = true)
+    ?(unlink_on_exit = false)
     path =
   let message = sprintf "%s\n" message in
   let fd = Unix.openfile path ~mode:[Unix.O_WRONLY; Unix.O_CREAT] ~perm:0o664 in
@@ -71,31 +71,36 @@ let is_locked path =
   | e -> raise e
 
 module Nfs = struct
-  let lock_path base_path = base_path ^ ".nfs_lock"
-  let msg_path base_path = (lock_path base_path) ^ ".msg"
+  let lock_path path = path ^ ".nfs_lock"
 
+  let unlock path =
+    try
+      Unix.unlink (lock_path path);
+    with
+    | e -> failwithf "Lock_file.Nfs.unlock '%s' failed: %s" path (Exn.to_string e) ()
+  ;;
+
+  (* See mli for more information on the algorithm we use for locking over NFS.  Ensure
+     that you understand it before you make any changes here. *)
   let create ?message path =
+    let fd = Unix.openfile path ~mode:[Unix.O_WRONLY; Unix.O_CREAT] in
     let got_lock =
       try
         Unix.link ~target:path ~link_name:(lock_path path) ();
+        Unix.ftruncate fd ~len:0L;
+        let message =
+          match message with
+          | None -> Unix.gethostname () ^ ":" ^ Pid.to_string (Unix.getpid ())
+          | Some m -> m
+        in
+        fprintf (Unix.out_channel_of_descr fd) "%s\n%!" message;
         true
       with
       | _ -> false
     in
-    if not got_lock then false
-    else begin
-      let message =
-        match message with
-        | None -> Unix.gethostname () ^ ":" ^ Pid.to_string (Unix.getpid ())
-        | Some m -> m
-      in
-      let fd =
-        Unix.openfile (msg_path path)
-          ~mode:[Unix.O_RDWR; Unix.O_CREAT; Unix.O_TRUNC] ~perm:0o664
-      in
-      fprintf (Unix.out_channel_of_descr fd) "%s\n%!" message;
-      true
-    end
+    Unix.close fd;
+    if got_lock then at_exit (fun () -> try unlock path with _ -> ());
+    got_lock
   ;;
 
   let create_exn ?message path =
@@ -114,17 +119,18 @@ module Nfs = struct
     loop ()
   ;;
 
-  let unlock path =
-    try
-      let delete_path = (lock_path path) ^ ".deleteme" in
-      Unix.unlink (msg_path path);
-      Unix.rename ~src:(lock_path path) ~dst:delete_path;
-      Unix.unlink delete_path;
-    with
-    | e -> failwithf "Lock_file.Nfs.unlock '%s' failed: %s" path (Exn.to_string e) ()
-  ;;
-
   let critical_section ?message path ~f =
     create_exn ?message path;
     Exn.protect ~f ~finally:(fun () -> unlock path)
+  ;;
+
+  let get_hostname_and_pid path =
+    let fd = Unix.openfile path ~mode:[Unix.O_RDONLY] in
+    (* presumed to be plenty big to hold a hostname and pid *)
+    let buf = String.create 2048 in
+    let len = Unix.read fd ~buf in
+    match String.rsplit2 ~on:':' (String.strip (String.sub buf ~pos:0 ~len)) with
+    | None                -> None
+    | Some (hostname,pid) -> Some (hostname, Int.of_string pid)
+  ;;
 end

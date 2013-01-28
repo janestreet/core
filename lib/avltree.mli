@@ -1,6 +1,4 @@
-(** estokes:
-
-    This module implements a very low level interface to a mutable AVL tree. It is not
+(** This module implements a very low level interface to a mutable AVL tree. It is not
     intended to be used directly by casual users. It is used for implementing other data
     structures. The interface is somewhat ugly, and it's that way for a reason. The goal
     of this module is minimum memory overhead, and maximum performance.
@@ -58,7 +56,7 @@ val invariant : ('k, 'v) t -> compare:('k -> 'k -> int) -> unit
     overwrite any existing mapping for [key]. If [replace] is false, and there is an
     existing mapping for key then add has no effect. *)
 val add
-  :  ?replace:bool
+  :  ?replace:bool (* defaults to true *)
   -> ('k, 'v) t
   -> compare:('k -> 'k -> int)
   -> added:bool ref

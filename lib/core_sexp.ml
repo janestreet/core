@@ -4,45 +4,65 @@ open Bin_prot.Std
 
 include Sexp
 
+exception Of_sexp_error = Sexplib.Conv.Of_sexp_error
+
 include (struct
-  type t = Sexp.t = Atom of string | List of t list with bin_io
-end : Interfaces.Binable with type t := t)
+  type t = Sexp.t = Atom of string | List of t list with bin_io, compare
+end : sig
+  include Interfaces.Binable with type t := t
+  val compare : t -> t -> int
+end)
 
 module Sexp_option = struct
-  type 'a sexp_option = 'a option with bin_io
+  type 'a t = 'a option with bin_io, compare
 end
 
 module Sexp_list = struct
-  type 'a sexp_list = 'a list with bin_io
+  type 'a t = 'a list with bin_io, compare
 end
 
 module Sexp_array = struct
-  type 'a sexp_array = 'a array with bin_io
+  type 'a t = 'a array with bin_io, compare
 end
 
 module Sexp_opaque = struct
-  type 'a sexp_opaque = 'a with bin_io
+  type 'a t = 'a with bin_io, compare
 end
 
 module Sexp_maybe = struct
 
-  type sexp = t with bin_io             (* avoid recursive type *)
-  type 'a t = ('a, sexp) Result.t with bin_io
+  type sexp = t with bin_io, compare             (* avoid recursive type *)
+
+  (* to satisfy pa_compare *)
+  module Error = struct
+    include Error
+    include Comparable.Poly (Error)
+  end
+
+  type 'a t = ('a, sexp * Error.t) Result.t with bin_io, compare
 
   let sexp_of_t sexp_of_a t =
     match t with
     | Result.Ok a -> sexp_of_a a
-    | Result.Error sexp -> sexp
+    | Result.Error (sexp, err) ->
+      Sexp.List [
+        Sexp.Atom "sexp_parse_error";
+        sexp;
+        Error.sexp_of_t err;
+      ]
 
   let t_of_sexp a_of_sexp sexp =
-    try Result.Ok (a_of_sexp sexp)
-    with exn -> Result.Error (Exn.sexp_of_t exn)
+    match sexp with
+    | Sexp.List [ Sexp.Atom "sexp_parse_error"; sexp; _ ]
+    | sexp ->
+      try Result.Ok (a_of_sexp sexp)
+      with exn -> Result.Error (sexp, Error.of_exn exn)
 
 end
 
 let of_int_style = Int_conversions.sexp_of_int_style
 
-type 'a no_raise = 'a with bin_io, of_sexp
+type 'a no_raise = 'a with bin_io, sexp
 
 let sexp_of_no_raise sexp_of_a a =
   try sexp_of_a a

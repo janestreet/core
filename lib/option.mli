@@ -47,14 +47,15 @@ val apply : 'a -> f:('a -> 'b) t -> 'b t
 *)
 val value : 'a t -> default:'a -> 'a
 
-(** [value_exn (Some x)] = [x].
-    [value_exn None] raises an exception. *)
-val value_exn : 'a t -> 'a
-
-(** [value_exn_message message (Some x)] = [x].
-    [value_exn_message message None] raises exception Failure with
-    string [message]. *)
-val value_exn_message : string -> 'a t -> 'a
+(** [value_exn (Some x)] = [x].  [value_exn None] raises an error whose contents contain
+    the supplied [~here], [~error], and [message], or a default message if none are
+    supplied. *)
+val value_exn
+  :  ?here:Source_code_position.t
+  -> ?error:Error.t
+  -> ?message:string
+  -> 'a t
+  -> 'a
 
 val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
 

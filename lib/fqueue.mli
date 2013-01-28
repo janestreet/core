@@ -5,7 +5,7 @@
 
 exception Empty
 
-type 'a t with bin_io, sexp
+type 'a t with bin_io, sexp, compare
 
 (** test via asserts whether invariants hold *)
 val test_invariants : 'a t -> unit

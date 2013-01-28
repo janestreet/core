@@ -1,88 +1,195 @@
-module Hashtbl = Core_hashtbl
-module Array = Core_array
-module Int = Core_int
-module List = Core_list
-module Sexp = Core_sexp
-module String = Core_string
+module Stable = struct
+  module V1 = struct
+    type t =
+    | Jan
+    | Feb
+    | Mar
+    | Apr
+    | May
+    | Jun
+    | Jul
+    | Aug
+    | Sep
+    | Oct
+    | Nov
+    | Dec
+    with sexp, compare, variants
 
-let failwithf = Core_printf.failwithf
+    let failwithf = Core_printf.failwithf
+
+    let of_int_exn i : t =
+      match i with
+      | 1  -> Jan
+      | 2  -> Feb
+      | 3  -> Mar
+      | 4  -> Apr
+      | 5  -> May
+      | 6  -> Jun
+      | 7  -> Jul
+      | 8  -> Aug
+      | 9  -> Sep
+      | 10 -> Oct
+      | 11 -> Nov
+      | 12 -> Dec
+      | _  -> failwithf "Month.of_int_exn %d" i ()
+
+    let of_int i =
+      try
+        Some (of_int_exn i)
+      with
+      | _ -> None
+
+    let to_int (t:t) =
+      match t with
+      | Jan -> 1
+      | Feb -> 2
+      | Mar -> 3
+      | Apr -> 4
+      | May -> 5
+      | Jun -> 6
+      | Jul -> 7
+      | Aug -> 8
+      | Sep -> 9
+      | Oct -> 10
+      | Nov -> 11
+      | Dec -> 12
+
+    include Bin_prot.Utils.Make_binable (struct
+      module Binable = Core_int
+
+      let to_binable t = to_int t - 1
+      let of_binable i = of_int_exn (i + 1)
+
+      type z = t
+      type t = z
+    end)
+  end
+
+  TEST_MODULE "Month.V1" = Stable_unit_test.Make(struct
+    include V1
+    let equal t1 t2 = Core_int.(=) 0 (compare t1 t2)
+    let tests =
+      let module V = Variantslib.Variant in
+      let c rank sexp bin_io tests variant =
+        assert (variant.V.rank = rank);
+        (variant.V.constructor, sexp, bin_io) :: tests
+      in
+      Variants.fold ~init:[]
+        ~jan:(c 0 "Jan" "\000")
+        ~feb:(c 1 "Feb" "\001")
+        ~mar:(c 2 "Mar" "\002")
+        ~apr:(c 3 "Apr" "\003")
+        ~may:(c 4 "May" "\004")
+        ~jun:(c 5 "Jun" "\005")
+        ~jul:(c 6 "Jul" "\006")
+        ~aug:(c 7 "Aug" "\007")
+        ~sep:(c 8 "Sep" "\008")
+        ~oct:(c 9 "Oct" "\009")
+        ~nov:(c 10 "Nov" "\010")
+        ~dec:(c 11 "Dec" "\011")
+  end)
+end
+
+module Hashtbl = Core_hashtbl
+module Array   = Core_array
+module Int     = Core_int
+module List    = Core_list
+module Sexp    = Core_sexp
+module String  = Core_string
 
 let num_months = 12
 
-type t = int
+module T = struct
+  include Stable.V1
 
-let invariant t =
-  assert (0 <= t && t < num_months);
+  let all = [
+    Jan
+    ; Feb
+    ; Mar
+    ; Apr
+    ; May
+    ; Jun
+    ; Jul
+    ; Aug
+    ; Sep
+    ; Oct
+    ; Nov
+    ; Dec ]
+
+  TEST = List.length all = num_months
+
+  TEST =
+    List.fold (List.tl_exn all) ~init:Jan ~f:(fun last cur ->
+      assert (compare last cur = (-1));
+      cur)
+  = Dec
+
+
+  let hash = to_int
+end
+include T
+
+include (Hashable.Make_binable (struct
+  include T
+end) : Hashable.S_binable with type t := t)
+
+include Comparable.Make_binable (struct
+  include T
+
+  (* In 108.06a and earlier, months in sexps of Maps and Sets were ints.  Here we override
+     [T.sexp_of_t], which uses the symbolic form, to produce the int form.  We also
+     override [t_of_sexp] to accept either form.  Someday, once we think most programs are
+     at or beyond 108.06a, and hence accept either form, we will eliminate the override of
+     [sexp_of_t] so that months in Maps and Sets are represented by the symbolic form.
+     Then, someday after that, once we believe most programs are beyond that point, we
+     will eliminate the override of [t_of_sexp], so that months in sexps of Maps and Sets
+     are required to use the symbolic format. *)
+  let sexp_of_t t = Int.sexp_of_t (to_int t - 1)
+
+  let t_of_sexp sexp =
+    match Option.try_with (fun () -> Int.t_of_sexp sexp) with
+    | Some i -> of_int_exn (i + 1)
+    | None -> T.t_of_sexp sexp
+  ;;
+end)
+
+(* Replace the overriden sexp converters from [Comparable.Make_binable] with the ordinary
+   symbolic converters. *)
+let sexp_of_t = T.sexp_of_t
+let t_of_sexp = T.t_of_sexp
+
+TEST = Pervasives.(=) (Set.sexp_of_t (Set.of_list [Jan])) Sexp.(List [Atom "0"])
+TEST = Set.equal (Set.of_list [Jan]) (Set.t_of_sexp Sexp.(List [Atom "0"]))
+TEST = Set.equal (Set.of_list [Jan]) (Set.t_of_sexp Sexp.(List [Atom "Jan"]))
+TEST = Pervasives.(=) (sexp_of_t Jan) (Sexp.Atom "Jan")
+TEST = Jan = t_of_sexp (Sexp.Atom "Jan")
+TEST = Option.is_none (Option.try_with (fun () -> t_of_sexp (Sexp.Atom "0")))
+
+let shift t i = of_int_exn (1 + (Int.Infix.( % ) (to_int t - 1 + i) num_months))
+TEST = shift Jan 12 = Jan
+TEST = shift Jan (-12) = Jan
+TEST = shift Jan 16 = May
+TEST = shift Jan (-16) = Sep
+TEST = shift Sep 1 = Oct
+TEST = shift Sep (-1) = Aug
+
+let all_strings = lazy
+  (Array.of_list
+     (List.map all ~f:(fun variant ->
+       Sexp.to_string (sexp_of_t variant))))
 ;;
 
-let is_valid_month i = 1 <= i && i <= num_months
-
-let of_int i =
-  if is_valid_month i then Some (i - 1)
-  else None
+let to_string (t:t) =
+  let all_strings = Lazy.force all_strings in
+  all_strings.(to_int t - 1)
 ;;
-
-let of_int_exn i =
-  if is_valid_month i then i - 1
-  else failwithf "Month.of_int_exn %d" i ()
-;;
-
-let to_int t = t + 1
-
-let shift t i = Int.Infix.( % ) (t + i) num_months
-
-let jan = 0
-let feb = 1
-let mar = 2
-let apr = 3
-let may = 4
-let jun = 5
-let jul = 6
-let aug = 7
-let sep = 8
-let oct = 9
-let nov = 10
-let dec = 11
-
-let all = List.init num_months ~f:Fn.id
-
-type variant = [ `Jan | `Feb | `Mar | `Apr | `May | `Jun
-               | `Jul | `Aug | `Sep | `Oct | `Nov | `Dec ]
-with sexp_of
-
-let create = function
-  | `Jan -> jan
-  | `Feb -> feb
-  | `Mar -> mar
-  | `Apr -> apr
-  | `May -> may
-  | `Jun -> jun
-  | `Jul -> jul
-  | `Aug -> aug
-  | `Sep -> sep
-  | `Oct -> oct
-  | `Nov -> nov
-  | `Dec -> dec
-;;
-
-let all_variants =
-  [| `Jan; `Feb; `Mar; `Apr; `May; `Jun; `Jul; `Aug; `Sep; `Oct; `Nov; `Dec |]
-;;
-
-let all_strings =
-  Array.map all_variants ~f:(fun variant ->
-    Sexp.to_string (sexp_of_variant variant))
-;;
-
-let get t = all_variants.(t)
-
-let to_string t = all_strings.(t)
 
 let of_string =
   let table = lazy (
     let module T = String.Table in
     let table = T.create ~size:num_months () in
-    Array.iteri all_strings ~f:(fun t s ->
+    Array.iteri (Lazy.force all_strings) ~f:(fun i s ->
+      let t = of_int_exn (i + 1) in
       Hashtbl.replace table ~key:s ~data:t;
       Hashtbl.replace table ~key:(String.lowercase s) ~data:t;
       Hashtbl.replace table ~key:(String.uppercase s) ~data:t);
@@ -94,14 +201,6 @@ let of_string =
     | None   -> failwithf "Invalid month: %s" str ()
 ;;
 
-include (Sexpable.Of_stringable (struct
-  type t = int
-  let of_string = of_string
-  let to_string = to_string
-end) : Sexpable.S with type t := t)
-
-include (Int : sig
-  include Binable.S with type t := t
-  include Comparable.S with type t := t
-  include Hashable.S with type t := t
-end)
+module Export = struct
+  type month = t = Jan | Feb | Mar | Apr | May | Jun | Jul | Aug | Sep | Oct | Nov | Dec
+end

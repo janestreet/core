@@ -21,13 +21,14 @@ type 'a t = {
   dummy: 'a;
 } with bin_io, sexp
 
-let create ?(never_shrink=false) ?(initial_index=0) ~dummy () = {
-  data = Array.create (1 lsl 3) dummy;  (* (1 lsl 3) = 8, must be power of 2! *)
-  min_index = initial_index;
-  length = 0;
-  never_shrink = never_shrink;
-  dummy = dummy;
-}
+let create ?(never_shrink = false) ?(initial_index=0) ~dummy () =
+  { data = Array.create ~len:(1 lsl 3) dummy;  (* (1 lsl 3) = 8, must be power of 2! *)
+    min_index = initial_index;
+    length = 0;
+    never_shrink;
+    dummy;
+  }
+;;
 
 let length buf = buf.length
 
@@ -55,7 +56,7 @@ let check_index fname buf i =
         fname i (front_index buf) (back_index buf))
 
 let get_exn buf i =
-  check_index "get" buf i;
+  check_index "get_exn" buf i;
   buf.data.(fast_mod i (Array.length buf.data))
 
 let get_front_exn buf =
@@ -68,7 +69,7 @@ let get_front buf = try Some (get_front_exn buf) with _ -> None
 let get_back  buf = try Some (get_back_exn  buf) with _ -> None
 
 let set_exn buf i v =
-  check_index "set" buf i;
+  check_index "set_exn" buf i;
   buf.data.(fast_mod i (Array.length buf.data)) <- v
 
 let iteri ~f buf =
@@ -87,12 +88,11 @@ let fold ~f ~init buf = foldi ~f:(fun acc _ a -> f acc a) ~init buf
 
 let copy_data buf new_plength =         (* plength = physical array length *)
   let old_plength = Array.length buf.data in
-  (* these invariants are maintained -- let's make them explicit *)
   assert (new_plength >= buf.length);
   assert (fast_double new_plength = old_plength ||
           fast_double old_plength = new_plength);
   assert (fast_is_power_2 old_plength && fast_is_power_2 new_plength);
-  let newdata = Array.create new_plength buf.dummy in
+  let newdata = Array.create ~len:new_plength buf.dummy in
   let src_min_pindex = fast_mod buf.min_index old_plength in
   let dst_min_pindex = fast_mod buf.min_index new_plength in
   let first_copy_length =
@@ -143,14 +143,21 @@ let push_back buf v =
   buf.length <- buf.length + 1;
   set_exn buf (back_index buf) v
 
+let set_dummy_in_range buf ~min_index ~max_index =
+  for i=min_index to max_index do
+    set_exn buf i buf.dummy
+  done
+
 let drop_front_exn ?(n=1) buf =
-  if n > buf.length || n < 0 then invalid_arg "Dequeue.drop_front";
+  if n > buf.length || n < 0 then invalid_arg "Dequeue.drop_front_exn";
+  set_dummy_in_range buf ~min_index:buf.min_index ~max_index:(buf.min_index + n - 1);
   buf.min_index <- buf.min_index + n;
   buf.length <- buf.length - n;
   maybe_shrink buf
 
 let drop_back_exn ?(n=1) buf =
-  if n > buf.length || n < 0 then invalid_arg "Dequeue.drop_back";
+  if n > buf.length || n < 0 then invalid_arg "Dequeue.drop_back_exn";
+  set_dummy_in_range buf ~min_index:(back_index buf - n + 1) ~max_index:(back_index buf);
   buf.length <- buf.length - n;
   maybe_shrink buf
 
@@ -169,3 +176,6 @@ let drop_indices_less_than_exn buf i =
 
 let drop_indices_greater_than_exn buf i =
   drop_back_exn ~n:(back_index buf - i) buf
+
+let clear t = drop_front_exn t ~n:(length t)
+

@@ -56,12 +56,6 @@ module Make (Key : Key) : S with module Key = Key = struct
       tbl = Table.create ~size:initial_tbl_size ();
     }
 
-  let copy t =
-    {
-      heap = Heap.copy t.heap;
-      tbl = Hashtbl.copy t.tbl;
-    }
-
   let push t ~key ~data =
     match Hashtbl.find t.tbl key with
     | Some _ -> `Key_already_present
@@ -160,6 +154,18 @@ module Make (Key : Key) : S with module Key = Key = struct
 
   let iter t ~f = Heap.iter t.heap ~f:(fun (k, v) -> f ~key:k ~data:v)
   let iter_vals t ~f = Heap.iter t.heap ~f:(fun (_k, v) -> f v)
+
+  let copy t =
+    (* Construct a new copy by constructing an empty hash heap pushing each
+       element onto the new hash heap. Copying the heap and tbl fields
+       individually would be incorrect because the heap elements in tbl would
+       belong to the wrong heap. *)
+    let result = {
+      heap = Heap.create (Heap.get_cmp t.heap);
+      tbl = Table.create ();
+    } in
+    iter t ~f:(fun ~key ~data -> push_exn result ~key ~data);
+    result
 
   let length t =
     assert (Hashtbl.length t.tbl = Heap.length t.heap);
