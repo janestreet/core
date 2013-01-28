@@ -1,0 +1,2 @@
+DEFINE DEFAULT_VERSION = "No version info."
+DEFINE DEFAULT_BUILDINFO = "No build info."
