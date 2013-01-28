@@ -102,7 +102,7 @@ end
 module type S2 = sig
   include Infix2
 
-  module Monad_infix : Infix2 with type ('a, 'd) t = ('a, 'd) t
+  module Monad_infix : Infix2 with type ('a, 'd) t := ('a, 'd) t
 
   val bind : ('a, 'd) t -> ('a -> ('b, 'd) t) -> ('b, 'd) t
 
@@ -136,7 +136,6 @@ struct
   end
   module Monad_infix = struct
     open X.Monad_infix
-    type ('a, 'd) t = 'a X.t
     let (>>=) = (>>=)
     let (>>|) = (>>|)
   end
@@ -149,7 +148,6 @@ module Make2 (M : Basic2) : S2 with type ('a, 'd) t := ('a, 'd) M.t = struct
   let return = M.return
 
   module Monad_infix = struct
-    type ('a,'d) t = ('a,'d) M.t
 
     let (>>=) = bind
 

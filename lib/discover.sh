@@ -43,12 +43,10 @@ cat > "$SRC" <<EOF
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/socket.h>
-#include <sys/resource.h>
 # $LINENO "$(basename "${BASH_SOURCE[0]}")"
 int main () {
   $(cpp_test LINUX_EXT    "defined(LINUX_EXT)")
   $(cpp_test POSIX_TIMERS "defined(POSIX_TIMERS)")
-  $(cpp_test RLIMIT_NICE  "defined(RLIMIT_NICE)")
   $(if [[ ${WORD_SIZE} = 64 ]]; then
        echo 'printf ("DEFINE ARCH_SIXTYFOUR\n");';
     fi)
@@ -83,15 +81,6 @@ esac
 
 rm "$PGM"
 mv "$OUT" "$ML_OUTFILE"
-
-sentinel="CORE_$(basename "$C_OUTFILE" | tr a-z. A-Z_)"
-cat >"$C_OUTFILE" <<EOF
-#ifndef $sentinel
-#define $sentinel
-
-$(cat "$ML_OUTFILE" \
+cat "$ML_OUTFILE" \
     | sed -e 's|^DEFINE *|#define JSC_|' \
-    | sed -e 's|\(#define JSC_[^ ]*\) *=|\1 |')
-
-#endif /* $sentinel */
-EOF
+    | sed -e 's|\(#define JSC_[^ ]*\) *=|\1 |' > "$C_OUTFILE"

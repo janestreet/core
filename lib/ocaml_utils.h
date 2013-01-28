@@ -1,7 +1,6 @@
 #ifndef OCAML_UTILS_H
 #define OCAML_UTILS_H
 
-#include "config.h"
 #include "jane_common.h"
 
 #include <caml/alloc.h>
@@ -15,15 +14,6 @@
 
 #define XSTR(S) STR(S)
 #define STR(S) #S
-
-#ifdef JSC_ARCH_SIXTYFOUR
-#  define caml_alloc_int63(v) Val_long(v)
-#  define Int63_val(v) Long_val(v)
-#else
-#  define caml_alloc_int63(v) caml_copy_int64(v)
-#  define Int63_val(v) Int64_val(v)
-#endif
-
 
 /* [strcmp] is defined as a macro in our current compilation environment.  We use
    [strcmp_not_a_macro] instead so that the text of this macro does not overflow the

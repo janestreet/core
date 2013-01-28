@@ -3,7 +3,7 @@
 OASISFormat:  0.3
 OCamlVersion: >= 3.12.1
 Name:         core
-Version:      108.08.00
+Version:      108.09.00
 Synopsis:     Jane Street Capital's standard library overlay
 Authors:      Jane street capital
 Copyrights:   (C) 2008-2012 Jane Street Capital LLC
@@ -18,15 +18,16 @@ XStdFilesREADME: false
 
 Flag linux
   Description: Enable linux specific extensions
-  Default$:   false   # actually, the default is detected
+  Default$:   flag(linux_possible)
 
 Flag "posix-timers"
   Description: Enable POSIX timers
-  Default$:   false   # actually, the default is detected
+  Default$:   flag(posix_timers_possible)
 
+PreConfCommand: lib/detect.sh
 PostConfCommand: lib/discover.sh lib/config.mlh lib/config.h
 
-PreDistCleanCommand: $rm lib/version_defaults.mlh lib/config.mlh lib/config.h
+PreDistCleanCommand: $rm lib/config.mlh lib/config.h
 
 Library core
   Path:               lib

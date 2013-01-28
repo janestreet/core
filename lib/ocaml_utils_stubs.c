@@ -117,9 +117,3 @@ CAMLprim value not_executing_bytecode (value _v1, value _v2, value _v3,
   return Val_false;
 }
 
-CAMLprim value c_int_size (value _unit)
-{
-  ((void)_unit);
-  return Val_int(sizeof(int) * 8);
-}
-

@@ -1679,16 +1679,16 @@ module RLimit : sig
     max : limit;  (* hard limit (ceiling for soft limit) *)
   } with sexp
 
-  type resource with sexp
-
-  val core_file_size       : resource
-  val cpu_seconds          : resource
-  val data_segment         : resource
-  val file_size            : resource
-  val num_file_descriptors : resource
-  val stack                : resource
-  val virtual_memory       : resource
-  val nice                 : resource Or_error.t
+  type resource = [
+    | `Core_file_size
+    | `Cpu_seconds
+    | `Data_segment
+    | `File_size
+    | `Num_file_descriptors
+    | `Stack
+    | `Virtual_memory
+    | `Nice
+  ] with sexp
 
   (* See man pages for "getrlimit" and "setrlimit" for details. *)
   val get : resource -> t

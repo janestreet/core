@@ -151,7 +151,7 @@ module Old_date_impl = struct
   ;;
 
   let exhaustive_date_range =
-    if Sys.c_int_size () < 64 then
+    if Sys.word_size < 64 then
       Date.create_exn ~y:1970 ~m:Month.Jan ~d:1, 365 * 68
     else
       Date.create_exn ~y:1900 ~m:Month.Jan ~d:1, 365 * 100

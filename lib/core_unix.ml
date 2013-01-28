@@ -137,7 +137,18 @@ module RLimit = struct
   type limit = Limit of int64 | Infinity with sexp
   type t = { cur : limit; max : limit } with sexp
 
-  type resource =
+  type resource = [
+    | `Core_file_size
+    | `Cpu_seconds
+    | `Data_segment
+    | `File_size
+    | `Num_file_descriptors
+    | `Stack
+    | `Virtual_memory
+    | `Nice
+  ] with sexp
+
+  type resource_param =
     | Core_file_size
     | Cpu_seconds
     | Data_segment
@@ -146,32 +157,29 @@ module RLimit = struct
     | Stack
     | Virtual_memory
     | Nice
-  with sexp ;;
+  ;;
 
-  let core_file_size       = Core_file_size
-  let cpu_seconds          = Cpu_seconds
-  let data_segment         = Data_segment
-  let file_size            = File_size
-  let num_file_descriptors = Num_file_descriptors
-  let stack                = Stack
-  let virtual_memory       = Virtual_memory
-  let nice                 =
-    IFDEF RLIMIT_NICE THEN
-      Ok Nice
-    ELSE
-      unimplemented "RLIMIT_NICE is not supported on this system"
-    ENDIF
+  let resource_param_of_resource = function
+    | `Core_file_size -> Core_file_size
+    | `Cpu_seconds -> Cpu_seconds
+    | `Data_segment -> Data_segment
+    | `File_size -> File_size
+    | `Num_file_descriptors -> Num_file_descriptors
+    | `Stack -> Stack
+    | `Virtual_memory -> Virtual_memory
+    | `Nice -> Nice
+  ;;
 
-  external get : resource -> t = "unix_getrlimit"
-  external set : resource -> t -> unit = "unix_setrlimit"
+  external get : resource_param -> t = "unix_getrlimit"
+  external set : resource_param -> t -> unit = "unix_setrlimit"
 
   let get resource =
-    improve (fun () -> get resource)
+    improve (fun () -> get (resource_param_of_resource resource))
       (fun () -> [("resource", sexp_of_resource resource)])
   ;;
 
   let set resource t =
-    improve (fun () -> set resource t)
+    improve (fun () -> set (resource_param_of_resource resource) t)
       (fun () ->  [("resource", sexp_of_resource resource);
                    ("limit", sexp_of_t t);
                   ])

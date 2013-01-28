@@ -82,7 +82,6 @@
 
 5  List of modules
 *=*=*=*=*=*=*=*=*=*=*=
-  CRv2 rdouglass: TODO any release now...
 
 6  An acknowledgement
 *=*=*=*=*=*=*=*=*=*=*=
