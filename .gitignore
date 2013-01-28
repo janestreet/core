@@ -83,6 +83,8 @@ bisect-1.1/Makefile.config
 .\#*
 /_build
 /core.docdir
+/experimental/lib/config.h
+/experimental/lib/config.mlh
 /lib/config.h
 /lib/config.mlh
 /lib/version.mlh
