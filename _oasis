@@ -3,7 +3,7 @@
 OASISFormat:  0.3
 OCamlVersion: >= 3.12.1
 Name:         core
-Version:      109.04.00
+Version:      109.05.00
 Synopsis:     Jane Street Capital's standard library overlay
 Authors:      Jane street capital
 Copyrights:   (C) 2008-2012 Jane Street Capital LLC

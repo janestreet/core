@@ -354,9 +354,16 @@ static value core_stat_aux_64(struct stat64 *buf)
   CAMLparam0();
   CAMLlocal5(atime, mtime, ctime, offset, v);
 
-  atime = caml_copy_double((double) buf->st_atime);
-  mtime = caml_copy_double((double) buf->st_mtime);
-  ctime = caml_copy_double((double) buf->st_ctime);
+  #if defined _BSD_SOURCE || defined _SVID_SOURCE 
+    atime = caml_copy_double((double) buf->st_atime + (buf->st_atim.tv_nsec / 1000000000.0f));
+    mtime = caml_copy_double((double) buf->st_mtime + (buf->st_mtim.tv_nsec / 1000000000.0f));
+    ctime = caml_copy_double((double) buf->st_ctime + (buf->st_ctim.tv_nsec / 1000000000.0f));
+  #else
+    atime = caml_copy_double((double) buf->st_atime + (buf->st_atimensec / 1000000000.0f));
+    mtime = caml_copy_double((double) buf->st_mtime + (buf->st_mtimensec / 1000000000.0f));
+    ctime = caml_copy_double((double) buf->st_ctime + (buf->st_ctimensec / 1000000000.0f));
+  #endif
+
   offset = Val_file_offset(buf->st_size);
   v = caml_alloc_small(12, 0);
   Field (v, 0) = Val_int (buf->st_dev);

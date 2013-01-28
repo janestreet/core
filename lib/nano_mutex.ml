@@ -82,9 +82,14 @@ with fields, sexp_of
 let invariant t =
   try
     assert (t.num_using_blocker >= 0);
-    assert ((t.num_using_blocker = 0) = Option.is_none t.blocker)
-  with
-  | exn -> failwiths "invariant failed" (exn, t) <:sexp_of< exn * t >>
+    (* It is the case that if [t.num_using_blocker = 0] then [Option.is_none t.blocker],
+       however the converse does not necessarily hold.  The code in [with_blocker] doesn't
+       take care to atomically increment [t.num_using_blocker] and set [t.blocker] to
+       [Some].  It could, but doing so is not necessary for the correctness of of
+       [with_blocker], which only relies on test-and-set of [t.blocker] to make sure
+       there is an agreed-upon winner in the race to create a blocker. *)
+    if t.num_using_blocker = 0 then assert (Option.is_none t.blocker);
+  with exn -> failwiths "invariant failed" (exn, t) <:sexp_of< exn * t >>
 ;;
 
 let equal (t : t) t' = phys_equal t t'
@@ -143,7 +148,6 @@ let with_blocker t f =
         (* We need the following test-and-set to be atomic so that there is a definitive
            winner in a race between multiple calls to [with_blocker], so that everybody
            agrees what the underlying [blocker] is. *)
-
         (* BEGIN ATOMIC *)
         match t.blocker with
         | Some blocker -> blocker
