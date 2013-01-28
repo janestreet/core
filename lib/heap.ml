@@ -194,19 +194,21 @@ let top { ar; cmp=_ } =
   if Array.length ar = 0 then None
   else Some (get_el ar 0)
 
-let iter t ~f =
+let iter_el t ~f =
   let ar = t.ar in
   let rec loop i =
     if i < Array.length ar then begin
       let el = ar.(i) in
       if el.pos >= 0 then begin
-        f el.el;
+        f el;
         loop (i + 1);
       end
     end
   in
   loop 0
 ;;
+
+let iter t ~f = iter_el t ~f:(fun el -> f el.el)
 
 let pop_heap_el_exn ({ ar; cmp=_ } as h) =
   let len = Array.length ar in

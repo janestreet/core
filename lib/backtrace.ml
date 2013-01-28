@@ -25,3 +25,11 @@ let get = Ok backtrace_get
 ELSE
 let get = unimplemented "Backtrace.get"
 ENDIF
+
+TEST_UNIT =
+  match get with
+  | Error _ -> ()
+  | Ok get ->
+    let s = get () in
+    assert (String.length s > 0);
+;;

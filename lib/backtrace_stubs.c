@@ -52,6 +52,8 @@ extern void caml_init_frame_descriptors(void) __attribute__((weak));
 extern char * caml_top_of_stack __attribute__((weak));
 extern char * caml_bottom_of_stack __attribute__((weak));
 extern uintnat caml_last_return_address __attribute__((weak));
+extern char caml_system__code_begin __attribute__((weak));
+extern char caml_system__code_end __attribute__((weak));
 extern value * caml_gc_regs;
 
 /* These next two lines are the x86-64 specific part. */
@@ -185,6 +187,12 @@ backtrace_dump(extensible_buffer* buf)
       li.loc_startchr = 0;
       li.loc_endchr = 0;
       /* Find the descriptor corresponding to the return address */
+      if ((char*) retaddr >= &caml_system__code_begin
+            && (char*) retaddr <= &caml_system__code_end) {
+        extensible_buffer_sprintf(buf,
+          "sp %p            : Caml startup code\n", sp);
+          return;
+      }
       h = Hash_retaddr(retaddr);
       while(!stop) {
         d = caml_frame_descriptors[h];

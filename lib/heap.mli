@@ -94,7 +94,8 @@ val top_heap_el_exn : 'el t -> 'el heap_el
 
 (** [iter heap ~f] iterate over [heap] with function [f].  The elements
     are passed in an unspecified order. *)
-val iter : 'a t -> f:('a -> unit) -> unit
+val iter_el : 'a t -> f:('a heap_el -> unit) -> unit
+val iter    : 'a t -> f:('a         -> unit) -> unit
 
 (** {6 Destructive heap accessors} *)
 
