@@ -34,7 +34,7 @@ echo "#endif"
 }
 
 WORD_SIZE="$(ocaml <( echo "print_int Sys.word_size;;"))"
-SRC="$(mktemp "./discover_src.XXXXXXX.c")"
+SRC="$(x=$(mktemp "./discover_src.XXXXXXX") && mv "$x"{,.c} && echo "$x".c)"
 PGM="$(mktemp "./discover.XXXXXXX")"
 OUT="$(mktemp "./discover.out.XXXXXXX")"
 
