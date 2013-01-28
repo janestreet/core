@@ -33,10 +33,6 @@ val sub : t -> Span.t -> t option
     the same day *)
 val diff : t -> t -> Span.t
 
-(** since midnight *)
-val to_sec : t -> float
-val of_sec : float -> t
-
 val pp : Format.formatter -> t -> unit
 
 (* Returns the time-span separating the two of-days, ignoring the hour information, and
@@ -54,9 +50,6 @@ val of_string_iso8601_extended : ?pos:int -> ?len:int -> string -> t
 
 (** with milliseconds *)
 val to_millisec_string : t -> string
-
-(* [invariant t] checks the invariants on t and returns t if it passes *)
-val invariant : t -> t
 
 module Stable : sig
   module V1 : sig

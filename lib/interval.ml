@@ -1,7 +1,8 @@
 
 open Std_internal
 
-include Int_replace_polymorphic_compare
+open Int_replace_polymorphic_compare
+let _ = (=)    (* turns off the unused open warning *)
 
 module Stable = struct
   module V1 = struct
@@ -111,10 +112,10 @@ module type Bound = sig
 end
 
 module Raw_make (T : Bound) = struct
-  let _ = T.( <> )  (* Prevent unused value warnings *)
 
   module T = struct
     include T
+    let _ = ( <> )  (* Prevent unused value warning for "<>" *)
     let max x y = if T.(>=) x y then x else y
     let min x y = if T.(<=) x y then x else y
   end
@@ -189,9 +190,11 @@ module Raw_make (T : Bound) = struct
     let is_subset i1 ~of_:i2 =
       is_superset i2 ~of_:i1
 
-    let map ~f = function
+    let map t ~f =
+      match t with
       | Empty -> Empty
       | Interval (l,u) -> empty_cvt (Interval (f l, f u))
+    ;;
 
     let interval_compare t1 t2 =
       match t1, t2 with

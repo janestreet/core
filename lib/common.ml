@@ -31,6 +31,7 @@ let string_of_float _ = `Deprecated_use_float_module
 let float_of_string _ = `Deprecated_use_float_module
 let infinity          = `Deprecated_use_float_module
 let neg_infinity      = `Deprecated_use_float_module
+let nan               = `Deprecated_use_float_module
 let int_of_float _    = `Deprecated_use_float_module
 
 type fpclass =        [`Deprecated_use_float_module ]
@@ -56,8 +57,7 @@ let read_only_of_sexp = sexp_of_read_only
 let sexp_of_read_write _ = failwith "attempt to convert abstract type read_write"
 let read_write_of_sexp = sexp_of_read_write
 
-type never_returns = Common0.never_returns
-let never_returns (_ : never_returns) = assert false
+include Never_returns
 
 exception Finally = Exn.Finally
 

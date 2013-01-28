@@ -9,12 +9,12 @@ module Int63 = Core_int63
 module Stable = struct
   module V1 = struct
     module T : sig
-      type t = private { y: int; m: Month.t; d: int; }
+      type t = private { y: int; m: Month.Stable.V1.t; d: int; }
       with bin_io
 
-      val create_exn : y:int -> m:Month.t -> d:int -> t
+      val create_exn : y:int -> m:Month.Stable.V1.t -> d:int -> t
     end = struct
-      type t = { y: int; m: Month.t; d: int; } with bin_io
+      type t = { y: int; m: Month.Stable.V1.t; d: int; } with bin_io
 
       let is_leap_year year =
         (year mod 4 = 0 && not (year mod 100 = 0))

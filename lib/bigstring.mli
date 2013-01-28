@@ -15,8 +15,12 @@ exception IOError of
 
 (** {6 Creation and string conversion} *)
 
-val create : int -> t
-(** [create length] @return a new bigstring having [length].
+val create : ?max_mem_waiting_gc:Byte_units.t -> int -> t
+(** [create length]
+    @param max_mem_waiting_gc default = 256 M in OCaml <= 3.12, 1 G otherwise. As
+    the total allocation of calls to [create] approach [max_mem_waiting_gc],
+    the pressure in the garbage collector to be more agressive will increase.
+    @return a new bigstring having [length].
     Content is undefined.
   *)
 
@@ -404,17 +408,18 @@ val map_file : shared : bool -> file_descr -> int -> t
 (** {6 Unsafe functions} *)
 
 
-
 external unsafe_blit :
   src : t -> src_pos : int -> dst : t -> dst_pos : int -> len : int -> unit
   = "bigstring_blit_stub"
 (** [unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len] similar to
     {!Bigstring.blit}, but does not perform any bounds checks.  Will crash
-    on bounds errors! *)
+    on bounds errors!  Owing to special handling for very large copies,
+    [bigstring_blit_stub] may call Caml runtime functions, and hence
+    cannot be flagged as noalloc. *)
 
 external unsafe_blit_string_bigstring :
   src : string -> src_pos : int -> dst : t -> dst_pos : int -> len : int -> unit
-  = "bigstring_blit_string_bigstring_stub" "noalloc"
+    = "bigstring_blit_string_bigstring_stub" "noalloc"
 (** [unsafe_blit_string_bigstring ~src ~src_pos ~dst ~dst_pos ~len]
     similar to {!Bigstring.blit_string_bigstring}, but does not perform
     any bounds checks.  Will crash on bounds errors! *)

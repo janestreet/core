@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 41b3db21759042422d7dcb0c504797c1)
+# DO NOT EDIT (digest: 98398916d95a071932a22c595194c48d)
 Array_permute
 Avltree
 Backtrace
@@ -59,6 +59,7 @@ Core_string
 Core_sys
 Core_thread
 Core_unix
+Core_weak
 Crc
 Daemon
 Date
@@ -79,6 +80,7 @@ Hash_queue
 Hash_set
 Hash_set_intf
 Heap
+Heap_block
 Host_and_port
 Identifiable
 In_channel
@@ -100,9 +102,9 @@ Monad
 Month
 Mutex0
 Nano_mutex
+Never_returns
 No_polymorphic_compare
 Ofday
-Ofday_unit_tests_v1
 Only_in_test
 Option
 Ordered_collection_common

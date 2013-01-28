@@ -1,10 +1,3 @@
-(* This module collects various Stable sub-modules from Core.  A Stable module is one that
-   defines types for which it is guaranteed that the serializations will never change,
-   so they can be safely used in protocols.  Within each Stable module there are one or
-   more sub-modules of the form Vn where n is a version number.  If it is necessary to
-   make changes that would change the serialization, a new Vn module will be minted to
-   reflect this change. *)
-
 module Unit_test = Stable_unit_test.Make
 
 (* miscellaneous unit tests that can't be put in their respective .mls due to circular

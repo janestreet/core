@@ -44,7 +44,7 @@ end
 
 type t = Range.t list
 
-(* invariant : the elements of [t] must be discrete (not mergeable) each other and sorted
+(* invariant : the elements of [t] must be pairwise discrete (not mergeable) and sorted
    in DECREASING order. *)
 
 let empty = []

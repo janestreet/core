@@ -11,9 +11,9 @@ let die fmt = Printf.ksprintf (fun msg () -> raise (Failed_to_parse_command_line
 
 let help_screen_compare a b =
   match (a, b) with
-  | (_, "-help")       -> -1 | ("-help",       _) -> 1
-  | (_, "-version")    -> -1 | ("-version",    _) -> 1
-  | (_, "-build-info") -> -1 | ("-build-info", _) -> 1
+  | (_, "[-help]")       -> -1 | ("[-help]",       _) -> 1
+  | (_, "[-version]")    -> -1 | ("[-version]",    _) -> 1
+  | (_, "[-build-info]") -> -1 | ("[-build-info]", _) -> 1
   | (_, "help")        -> -1 | ("help",        _) -> 1
   | (_, "version")     -> -1 | ("version",     _) -> 1
   | _ -> String.compare a b
@@ -186,6 +186,17 @@ module Arg_type = struct
       let args = [ "bash"; "-c"; "compgen -f $0"; part ] in
       never_returns (Unix.exec ~prog ~args ()))
 
+  let of_map ?key map =
+    create ?key
+      ~complete:(fun _ ~part:prefix ->
+        List.filter_map (Map.to_alist map) ~f:(fun (name, _) ->
+          if String.is_prefix name ~prefix then Some name else None))
+      (fun arg ->
+        match Map.find map arg with
+        | Some v -> v
+        | None ->
+          failwithf "valid arguments: {%s}" (String.concat ~sep:"," (Map.keys map)) ())
+
 end
 
 module Flag = struct
@@ -200,33 +211,38 @@ module Flag = struct
     aliases : string list;
     action : action;
     doc : string;
-    check_available_if_required : unit -> unit;
+    check_available : [`Optional | `Required of (unit -> unit)];
   }
+
+  let wrap_if_optional t x =
+    match t.check_available with
+    | `Optional -> sprintf "[%s]" x
+    | `Required _ -> x
 
   module Deprecated = struct
     (* flag help in the format of the old command. used for injection *)
-    let help { name; doc; aliases; _ }  =
+    let help ({name; doc; aliases; _ } as t)  =
       if String.is_prefix doc ~prefix:" " then
         (name, String.lstrip doc)
-        :: List.map aliases ~f:(fun x ->
-          (x, sprintf "same as \"%s\"" name))
+          :: List.map aliases ~f:(fun x -> (x, sprintf "same as \"%s\"" name))
       else
         let (arg, doc) =
           match String.lsplit2 doc ~on:' ' with
           | None -> (doc, "")
           | Some pair -> pair
         in
-        (name ^ " " ^ arg, String.lstrip doc)
-        :: List.map aliases ~f:(fun x ->
-            (x ^ " " ^ arg, sprintf "same as \"%s\"" name))
+        (wrap_if_optional t (name ^ " " ^ arg), String.lstrip doc)
+          :: List.map aliases ~f:(fun x ->
+              (wrap_if_optional t (x ^ " " ^ arg), sprintf "same as \"%s\"" name))
   end
 
-  let align { name; doc; aliases; _ } =
+  let align ({name; doc; aliases; _} as t) =
     let (name, doc) =
       match String.lsplit2 doc ~on:' ' with
       | None | Some ("", _) -> (name, String.strip doc)
       | Some (arg, doc) -> (name ^ " " ^ arg, doc)
     in
+    let name = wrap_if_optional t name in
     { Format.name; doc; aliases}
 
   module Spec = struct
@@ -234,12 +250,13 @@ module Flag = struct
     type 'a state = {
       action : action;
       read : unit -> 'a;
+      optional : bool;
     }
 
     type 'a t = string -> 'a state
 
-    let arg_flag name arg_type read write =
-      { read = read;
+    let arg_flag name arg_type read write ~optional =
+      { read; optional;
         action =
           let update arg env =
             match arg_type.Arg_type.parse arg with
@@ -259,7 +276,7 @@ module Flag = struct
       | None -> v := Some arg
       | Some _ -> die "flag %s passed more than once" name ()
 
-    let required_value ?default arg_type name =
+    let required_value ?default arg_type name ~optional =
       let v = ref None in
       let read () =
         match !v with
@@ -270,19 +287,19 @@ module Flag = struct
           | None -> die "missing required flag: %s" name ()
       in
       let write arg = write_option name v arg in
-      arg_flag name arg_type read write
+      arg_flag name arg_type read write ~optional
 
     let required arg_type name =
-      required_value arg_type name
+      required_value arg_type name ~optional:false
 
     let optional_with_default default arg_type name =
-      required_value ~default arg_type name
+      required_value ~default arg_type name ~optional:true
 
     let optional arg_type name =
       let v = ref None in
       let read () = !v in
       let write arg = write_option name v arg in
-      arg_flag name arg_type read write
+      arg_flag name arg_type read write ~optional:true
 
     let no_arg_general ~key_value ~deprecated_hook name =
       let v = ref false in
@@ -312,7 +329,7 @@ module Flag = struct
             env
           )
       in
-      { read; action = No_arg action }
+      { read; action = No_arg action; optional = true }
 
     let no_arg name = no_arg_general name ~key_value:None ~deprecated_hook:None
 
@@ -323,7 +340,7 @@ module Flag = struct
       let v = ref [] in
       let read () = List.rev !v in
       let write arg = v := arg :: !v in
-      arg_flag name arg_type read write
+      arg_flag name arg_type read write ~optional:true
 
     let escape_general ~deprecated_hook _name =
       let cell = ref None in
@@ -338,10 +355,11 @@ module Flag = struct
             action x
           )
       in
-      { action = Rest action; read }
+      { action = Rest action; read; optional = true }
 
     let no_arg_abort ~exit name = {
       action = No_arg (fun _ -> never_returns (exit ()));
+      optional = true;
       read = (fun () ->
         failwithf "BUG! somehow no_arg_abort flag %s is being read" name ());
     }
@@ -683,7 +701,7 @@ module Base = struct
     summary : string;
     readme : (unit -> string) option;
     flags : Flag.t String.Map.t;
-    anons : Env.t -> (unit -> unit) Anon.Parser.t;
+    anons : Env.t -> ([`Parse_args] -> [`Run_main] -> unit) Anon.Parser.t;
     usage : Anon.Grammar.t;
   }
 
@@ -727,7 +745,9 @@ module Base = struct
     let rec loop env anons = function
       | Nil ->
         List.iter (String.Map.data t.flags) ~f:(fun flag ->
-          flag.Flag.check_available_if_required ());
+          match flag.Flag.check_available with
+          | `Optional -> ()
+          | `Required check -> check ());
         Anon.Parser.final_value anons
       | Cons (arg, args) ->
         if String.is_prefix arg ~prefix:"-" then begin
@@ -767,15 +787,18 @@ module Base = struct
         end else
           never_returns (Anon.Parser.complete anons env ~part);
     in
-    match (Result.try_with (fun () -> loop env (t.anons env) args)) with
-    | Ok thunk -> thunk ()
+    match Result.try_with (fun () -> loop env (t.anons env) args `Parse_args) with
+    | Ok thunk -> thunk `Run_main
     | Error exn ->
-      print_endline (Lazy.force help_text);
       match exn with
+      | Failed_to_parse_command_line _ when args_ends_in_complete args ->
+        exit 0
       | Failed_to_parse_command_line msg ->
+        print_endline (Lazy.force help_text);
         prerr_endline msg;
         exit 1
       | _ ->
+        print_endline (Lazy.force help_text);
         raise exn
 
   module Spec = struct
@@ -900,11 +923,13 @@ module Base = struct
         let normalize flag = normalize Key_type.Flag flag in
         let name = normalize name in
         let aliases = List.map ~f:normalize aliases in
-        let { read; action } = mode name in
-        let check_available_if_required () = ignore (read ()) in
+        let {read; action; optional} = mode name in
+        let check_available =
+          if optional then `Optional else `Required (fun () -> ignore (read ()))
+        in
         { param =
           { f = (fun _env -> return (fun k -> k (read ())));
-            flags = [{ Flag.name; aliases; doc; action; check_available_if_required }];
+            flags = [{ Flag.name; aliases; doc; action; check_available }];
             usage = Anon.Grammar.zero; } }
     end
 
@@ -961,7 +986,7 @@ module Bailout_dump_flag = struct
         { Flag.
           name;
           aliases;
-          check_available_if_required = Fn.id;
+          check_available = `Optional;
           action = Flag.No_arg
             (fun env ->
               print_endline (text env);
@@ -973,10 +998,14 @@ module Bailout_dump_flag = struct
     { base with Base.flags }
 end
 
-let basic ~summary ?readme { Base.Spec.usage; flags; f } main =
+let basic ~summary ?readme {Base.Spec.usage; flags; f} main =
   let anons env =
     let open Anon.Parser.For_opening in
-    f env >>= fun k -> return (fun () -> k main)
+    f env
+    >>= fun k ->
+    return (fun `Parse_args ->
+      let thunk = k main in
+      fun `Run_main -> thunk ())
   in
   let flags =
     match
@@ -1016,7 +1045,7 @@ let help_subcommand ~summary ~readme =
       +> env
       +> anon (maybe ("SUBCOMMAND" %: string))
     )
-    (fun recursive show_flags expand_dots path (env : Env.t) cmd_opt ->
+    (fun recursive show_flags expand_dots path (env : Env.t) cmd_opt () ->
       let subs : t String.Map.t =
         match Env.find env subs_key with
         | Some subs -> subs
@@ -1056,7 +1085,7 @@ let help_subcommand ~summary ~readme =
           | Base base ->
             if show_flags then begin
               Base.formatted_flags base
-              |! List.filter ~f:(fun fmt -> fmt.Format.name <> "-help")
+              |! List.filter ~f:(fun fmt -> fmt.Format.name <> "[-help]")
               |! List.fold ~init:acc ~f:(fun acc fmt ->
                   let rpath = Path.add rpath ~subcommand:fmt.Format.name in
                   let fmt = { fmt with Format.name = string_of_path rpath } in
@@ -1113,18 +1142,25 @@ module Version_info = struct
         +> flag "-build-info" no_arg ~doc:" print build info for this build"
       )
       (fun version_flag build_info_flag ->
-        begin match
-            if build_info_flag
-            then `Build_info
-            else if version_flag
-            then `Version
-            else begin
+        begin
+          let what_to_print =
+            if build_info_flag then `Build_info
+            else if version_flag then `Version else begin
               eprintf "(no option given - printing version)\n%!";
               `Version
             end
-          with
-          | `Version    -> print_endline version
-          | `Build_info -> print_endline build_info
+          in
+          match what_to_print with
+          | `Version    ->
+            (* [version] was space delimited at some point and newline delimited
+               at another.  We always print one (repo, revision) pair per line
+               and ensure sorted order *)
+            String.split version ~on:' '
+            |! List.concat_map ~f:(String.split ~on:'\n')
+            |! List.sort ~cmp:String.compare
+            |! List.iter ~f:print_endline
+          | `Build_info ->
+            print_endline build_info
         end;
         exit 0)
 
@@ -1210,9 +1246,11 @@ let rec dispatch t env ~path ~args =
   | Group { summary; readme; subcommands = subs } ->
     let env = Env.set env subs_key subs in
     let die_showing_help msg =
-      let subs = String.Map.map subs ~f:get_summary in
-      eprintf "%s\n%!" (group_help ~path ~summary ~readme subs);
-      die "%s" msg ()
+      if not (args_ends_in_complete args) then begin
+        let subs = String.Map.map subs ~f:get_summary in
+        eprintf "%s\n%!" (group_help ~path ~summary ~readme subs);
+        die "%s" msg ()
+      end
     in
     match args with
     | Nil ->
@@ -1240,17 +1278,16 @@ let rec dispatch t env ~path ~args =
 let run ?version ?build_info ?argv t =
   let t = Version_info.add t ?version ?build_info in
   let t = add_help_subcommands t in
+  let args =
+    match argv with
+    | Some x -> args_of_list x
+    | None -> get_args ()
+  in
   try
-    let args =
-      match argv with
-      | Some x -> args_of_list x
-      | None -> get_args ()
-    in
     dispatch t Env.empty ~path:Path.root ~args
   with
   | Failed_to_parse_command_line msg ->
-    prerr_endline msg;
-    exit 1
+    if args_ends_in_complete args then exit 0 else begin prerr_endline msg; exit 1 end
 
 module Spec = struct
   include Base.Spec

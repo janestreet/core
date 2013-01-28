@@ -276,6 +276,21 @@ let add =
     if !added then balance t else t
 ;;
 
+let rec first t =
+  match t with
+  | Empty -> None
+  | Leaf (k, v)
+  | Node (Empty, k, v, _, _) -> Some (k, v)
+  | Node (l, _, _, _, _) -> first l
+;;
+
+let rec last t =
+  match t with
+  | Empty -> None
+  | Leaf (k, v)
+  | Node (_, k, v, _, Empty) -> Some (k, v)
+  | Node (_, _, _, _, r) -> last r
+;;
 
 
 let rec find t ~compare k =

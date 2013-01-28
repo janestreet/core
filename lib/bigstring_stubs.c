@@ -49,6 +49,34 @@ CAMLprim value bigstring_init_stub(value __unused v_unit)
   return Val_unit;
 }
 
+CAMLexport value
+bigstring_alloc (value v_gc_max_unused, value v_size)
+{
+  intnat size = Long_val (v_size);
+  void * data = NULL;
+  int flags = CAML_BA_UINT8 | CAML_BA_C_LAYOUT | CAML_BA_MANAGED;
+  intnat gc_max_unused = Long_val(v_gc_max_unused);
+  intnat dims[1];
+  dims[0] = size;
+
+  if (gc_max_unused >= 0) {
+    data = (void *) malloc(sizeof(char) * size);
+    if (NULL == data) caml_raise_out_of_memory ();
+    /* caml_adjust_gc_speed is also called by caml_ba_alloc below, but it will have
+    * numerator 0 when data != NULL. Effectively, that call will have no effect if this
+    * call is made. */
+    caml_adjust_gc_speed(size, gc_max_unused);
+  }
+
+  return caml_ba_alloc (flags, 1, data, dims);
+}
+
+/* Bigstring.length */
+CAMLprim value bigstring_length (value vb)
+{
+  struct caml_ba_array * b = Caml_ba_array_val(vb);
+  return Val_long(b->dim[0]);
+}
 
 /* Blitting */
 
@@ -803,4 +831,3 @@ CAMLprim value unsafe_read_int64_t_swap(value v_a, value v_i) {
 
   return Val_long( result );
 }
-

@@ -12,6 +12,7 @@ module type S = sig
 
   val create : (key * float) list -> (t, string) Result.t
   val get : t -> key -> float
+  val to_knots : t -> (key * float) list
 end
 
 module Make (Key : Key) = struct
@@ -35,6 +36,9 @@ module Make (Key : Key) = struct
 
   type knots = (Key.t * float) list with sexp
 
+  let to_knots t =
+    List.map t ~f:(fun (x, y) -> (Key.of_float x, y))
+
   let t_of_sexp sexp =
     let knots = knots_of_sexp sexp in
     match create knots with
@@ -42,8 +46,7 @@ module Make (Key : Key) = struct
     | Ok t -> t
 
   let sexp_of_t t =
-    let knots = List.map t ~f:(fun (x, y) -> (Key.of_float x, y)) in
-    sexp_of_knots knots
+    sexp_of_knots (to_knots t)
 
   let linear x (x1, y1) (x2, y2) =
     let weight = (x -. x1) /. (x2 -. x1) in (* note: numerically unstable if x2=.x1 *)
@@ -67,5 +70,7 @@ module Make (Key : Key) = struct
 end
 
 module Time = Make (Time)
+module Ofday = Make (Ofday)
+module Span = Make (Span)
 module Float = Make (Float)
 module Int = Make (Int)

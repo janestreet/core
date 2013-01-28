@@ -9,7 +9,8 @@ module type S = sig
   include Stringable           with type t := t
   include Intable              with type t := t
 
-  val to_string_hum : t -> string
+  (* [delimiter] is underscore by default *)
+  val to_string_hum : ?delimiter:char -> t -> string
 
   val num_bits : int
 

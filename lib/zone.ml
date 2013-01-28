@@ -12,6 +12,14 @@ open Std_internal
 module Hashtbl = Core_hashtbl
 module Unix = Core_unix
 
+let likely_machine_zones = ref [
+  "America/New_York";
+  "Europe/London";
+  "Asia/Hong_Kong";
+  "America/Chicago"
+]
+
+
 exception Unknown_zone of string with sexp
 exception Invalid_file_format of string with sexp
 module Stable = struct
@@ -63,13 +71,16 @@ module Stable = struct
        (2) you add a new Time.Zone version to stable.ml *)
     type t = {
       name                    : string;
-      file_digest             : Digest.t option;
+      file_info               : (Digest.t * int64) option;
       transitions             : Transition.t array;
       (* transitions close to the current time *)
       likely_transitions      : Transition.t array;
       default_local_time_type : Regime.t;
       leap_seconds            : Leap_second.t list;
     } with sexp_of
+
+    let digest zone    = Option.map zone.file_info ~f:fst
+    let file_size zone = Option.map zone.file_info ~f:snd
 
     module Zone_file : sig
       val input_tz_file : zonename:string -> filename:string -> t
@@ -248,10 +259,10 @@ module Stable = struct
           | None -> regimes.(0)
           | Some ltt -> ltt
         in
-        (fun name digest ->
+        (fun name file_info ->
           {
             name                    = name;
-            file_digest             = Some digest;
+            file_info               = Some file_info;
             transitions             = transitions;
             likely_transitions      = likely_transitions;
             default_local_time_type = default_local_time_type;
@@ -326,7 +337,9 @@ module Stable = struct
               | `V2 ->
                 input_tz_file_v2 ic
             in
-            let r = make_zone zonename (Digest.file filename) in
+            let file_digest = Digest.file filename in
+            let file_size   = (Core_unix.stat filename).Core_unix.st_size in
+            let r = make_zone zonename (file_digest, file_size) in
             r)
         with
         | Invalid_file_format reason ->
@@ -335,9 +348,10 @@ module Stable = struct
     end
 
     module Zone_cache : sig
-      val initialized_zones : unit -> (string * t) list
-      val fill              : unit -> unit
-      val find_or_load      : string -> t option
+      val initialized_zones     : unit -> (string * t) list
+      val fill                  : unit -> unit
+      val find_or_load          : string -> t option
+      val find_or_load_matching : t -> t option
     end = struct
       type z = {
         mutable full : bool;
@@ -351,60 +365,6 @@ module Stable = struct
           basedir = "/usr/share/zoneinfo/";
           table   = String.Table.create ();
         }
-      ;;
-
-      let fill () =
-        (* GMT based timezones in Etc in the posix timezone system are very deceptive
-           and basically shouldn't be used, so we never load them.  The other two are
-           duplicates of other zone files. *)
-        let skip_prefixes =
-          [
-            "Etc/GMT";
-            "right/";
-            "posix/";
-          ]
-        in
-        if not the_one_and_only.full then begin
-          the_one_and_only.full <- true;
-          let maxdepth = 10 in
-          let traverse ~maxdepth dir =
-            let rec dfs dir depth =
-              if depth < 1 then []
-              else
-                begin
-                  let entries = Array.to_list (Sys.readdir dir) in
-                  List.fold entries ~init:[] ~f:(fun acc fn ->
-                    let fn = dir ^ "/" ^ fn in
-                    if Sys.is_directory fn = `Yes then
-                      List.rev_append (dfs fn (depth - 1)) acc
-                    else (fn :: acc)
-                  )
-                end
-            in
-            dfs dir maxdepth
-          in
-          let zonefiles = traverse ~maxdepth the_one_and_only.basedir in
-          let pos = (String.length the_one_and_only.basedir) + 1 in
-          List.iter zonefiles ~f:(fun filename ->
-            try
-              let len = (String.length filename) - pos in
-              let zonename = String.sub filename ~pos ~len in
-              if
-                not (List.exists skip_prefixes
-                       ~f:(fun prefix -> String.is_prefix ~prefix zonename))
-              then
-                Hashtbl.replace
-                  the_one_and_only.table ~key:zonename ~data:(Zone_file.input_tz_file
-                                                                ~zonename ~filename);
-            with
-            | _e -> ());
-        end
-      ;;
-
-      let to_alist () = Hashtbl.to_alist the_one_and_only.table
-
-      let initialized_zones t =
-        List.sort ~cmp:(fun a b -> ascending (fst a) (fst b)) (to_alist t)
       ;;
 
       let find zone = Hashtbl.find the_one_and_only.table zone
@@ -424,21 +384,84 @@ module Stable = struct
             | _ -> None
           end
       ;;
+
+      let traverse basedir ~f =
+        let skip_prefixes =
+          [
+            "Etc/GMT";
+            "right/";
+            "posix/";
+          ]
+        in
+        let maxdepth    = 10 in
+        let basedir_len = String.length basedir + 1 in
+        let rec dfs dir depth =
+          if depth < 1 then ()
+          else
+            begin
+              Array.iter (Sys.readdir dir) ~f:(fun fn ->
+                let full_fn     = dir ^ "/" ^ fn in
+                let relative_fn = String.drop_prefix full_fn basedir_len in
+                if Sys.is_directory fn = `Yes then begin
+                  if not (List.exists skip_prefixes ~f:(fun prefix ->
+                      String.is_prefix ~prefix relative_fn)) then
+                    dfs fn (depth - 1)
+                end else
+                  f relative_fn
+              )
+            end
+          in
+          dfs basedir maxdepth
+      ;;
+
+      let fill () =
+        if not the_one_and_only.full then begin
+          traverse the_one_and_only.basedir ~f:(fun zone_name ->
+            ignore (find_or_load zone_name));
+          the_one_and_only.full <- true;
+        end
+      ;;
+
+      let to_alist () = Hashtbl.to_alist the_one_and_only.table
+
+      let initialized_zones t =
+        List.sort ~cmp:(fun a b -> ascending (fst a) (fst b)) (to_alist t)
+      ;;
+
+      let find_or_load_matching t1 =
+        With_return.with_return (fun r ->
+          let return_if_matches zone_name =
+            let filename =
+              String.concat ~sep:"/" [the_one_and_only.basedir; zone_name]
+            in
+            let matches =
+              try
+                file_size t1 = Some (Core_unix.stat filename).Core_unix.st_size
+                && digest t1 = Option.(join (map (find_or_load zone_name) ~f:digest))
+              with
+              | _ -> false
+            in
+            if matches then r.With_return.return (find_or_load zone_name) else ();
+          in
+          List.iter !likely_machine_zones ~f:return_if_matches;
+          traverse the_one_and_only.basedir ~f:return_if_matches;
+          None)
+      ;;
     end
 
     let init () = Zone_cache.fill ()
 
     let initialized_zones () = Zone_cache.initialized_zones ()
 
-    let of_utc_offset offset =
+    let of_utc_offset ~hours:offset =
       assert (offset >= -24 && offset <= 24);
       let name =
         if offset = 0 then "UTC"
         else sprintf "UTC%s%d" (if offset < 0 then "-" else "+") (abs offset) in
       {
-        name = name;
-        file_digest = None;
-        transitions = [||];
+        name               = name;
+        file_info          = None;
+        transitions        = [||];
         likely_transitions = [||];
         default_local_time_type = {Regime.
                                    utc_off = Float.of_int (offset * 60 * 60);
@@ -449,7 +472,7 @@ module Stable = struct
       }
     ;;
 
-    let to_utc_offset t =
+    let default_utc_offset_deprecated t =
       let ltt = t.default_local_time_type in
       Int.of_float ltt.Regime.utc_off
     ;;
@@ -464,8 +487,8 @@ module Stable = struct
 
     let find zone =
       let zone =
-        (* The offices should be considered legacy/deprecated aliases.  Other aliases are for
-           convenience. *)
+        (* The offices should be considered legacy/deprecated aliases.  Other aliases are
+           for convenience. *)
         match zone with
         | "utc"         -> "UTC"
         | "gmt"         -> "GMT"
@@ -494,9 +517,10 @@ module Stable = struct
       | Sexp.Atom name ->
         begin
           try
-            (* This special handling is needed because the offset directionality of the zone
-               files in /usr/share/zoneinfo for GMT<offset> files is the reverse of what is
-               generall expected.  That is, GMT+5 is what most people would call GMT-5. *)
+            (* This special handling is needed because the offset directionality of the
+               zone files in /usr/share/zoneinfo for GMT<offset> files is the reverse of
+               what is generally expected.  That is, GMT+5 is what most people would call
+               GMT-5. *)
             if
               String.is_prefix name ~prefix:"GMT-"
               || String.is_prefix name ~prefix:"GMT+"
@@ -516,7 +540,7 @@ module Stable = struct
                   | '+' -> base
                   | _   -> assert false
               in
-              of_utc_offset offset
+              of_utc_offset ~hours:offset
             end
             else find_exn name
           with exc ->
@@ -526,7 +550,11 @@ module Stable = struct
       | _ -> of_sexp_error "Time.Zone.t_of_sexp: expected atom" sexp
     ;;
 
-    let sexp_of_t t = Sexp.Atom t.name
+    let sexp_of_t t =
+      if t.name = "/etc/localtime" then
+        failwith "the Zone.t returned from Zone.machine_zone cannot be serialized";
+      Sexp.Atom t.name
+    ;;
 
     include (Bin_prot.Utils.Make_binable (struct
       type t' = t
@@ -535,7 +563,11 @@ module Stable = struct
         type t = string with bin_io
       end
 
-      let to_binable t = t.name
+      let to_binable t =
+        if t.name = "/etc/localtime" then
+          failwith "the Zone.t returned from Zone.machine_zone cannot be serialized";
+        t.name
+
       let of_binable s = t_of_sexp (Sexp.Atom s)
     end) : Binable.S with type t := t)
   end
@@ -558,7 +590,7 @@ include Stable.V1
 
 include Sexpable.To_stringable (Stable.V1)
 
-let utc = of_utc_offset 0
+let utc = of_utc_offset ~hours:0
 
 (* This is intended to be thread safe at the expense of possibly doing more work than
    strictly necessary *)
@@ -574,7 +606,12 @@ let machine_zone =
         | Some zone_name ->
           find_exn zone_name
         | None ->
-          Zone_file.input_tz_file ~zonename:"/etc/localtime" ~filename:"/etc/localtime"
+          let localtime_t =
+            Zone_file.input_tz_file ~zonename:"/etc/localtime" ~filename:"/etc/localtime"
+          in
+          match Zone_cache.find_or_load_matching localtime_t with
+          | Some t -> t
+          | None   -> localtime_t
       in
       zone := Some t;
       t)
@@ -660,8 +697,6 @@ let shift_epoch_time zone repr_type epoch =
 let abbreviation zone time =
   (find_local_regime zone `UTC time).Regime.abbrv
 ;;
-
-let digest zone = zone.file_digest
 
 let name zone = zone.name
 

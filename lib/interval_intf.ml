@@ -5,7 +5,10 @@ module type Gen = sig
   (** Module for simple closed intervals over arbitrary types that are ordered correctly
       using polymorphic compare. *)
 
+  (** [create l u] returns the interval with lower bound [l] and upper bound [u], unless
+      [l > u], in which case [create] returns the empty interval. *)
   val create : 'a bound -> 'a bound -> 'a t
+
   val empty : 'a t
 
   val intersect : 'a t -> 'a t -> 'a t
@@ -31,8 +34,13 @@ module type Gen = sig
   val compare_value : 'a t -> 'a bound ->
     [ `Below | `Within | `Above | `Interval_is_empty ]
 
-  (** [bound i x] bounds the value x to the interval i.  It returns None if the
-      interval is empty and Some x' otherwise, where x' is the bounded value. *)
+  (** [bound t x] returns [None] iff [is_empty t].  If [bounds t = Some (a, b)], then
+      [bound] returns [Some y] where [y] is the element of [t] closest to [x].  I.e.:
+
+      |  y = a  if x < a
+      |  y = x  if a <= x <= b
+      |  y = b  if x > b
+  *)
   val bound : 'a t -> 'a bound -> 'a bound option
 
   (** [is_superset i1 of_:i2] is whether i1 contains i2.  The empty interval is
@@ -40,7 +48,10 @@ module type Gen = sig
   val is_superset : 'a t -> of_:'a t -> bool
   val is_subset : 'a t -> of_:'a t -> bool
 
-  val map : f : ('a bound -> 'b bound) -> 'a t -> 'b t
+  (** [map t ~f] returns [create (f l) (f u)] if [bounds t = Some (l, u)], and [empty] if
+      [t] is empty.  Note that if [f l > f u], the result of [map] is [empty], by the
+      definition of [create]. *)
+  val map : 'a t -> f:('a bound -> 'b bound) -> 'b t
 
   (** Returns true iff a given set of intervals are disjoint *)
   val are_disjoint : 'a t list -> bool

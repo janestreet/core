@@ -30,11 +30,17 @@ let maybe_start_finaliser_thread =
 (* Ocaml permits finalisers to be run in any thread and at any time after the object
    becomes unreachable -- they are essentially concurrent.  This changes forces all
    finaliser code to run sequentially and in a fixed thread. *)
-let finalise f x =
+let add_finalizer x f =
   maybe_start_finaliser_thread ();
   let finaliser v = write_finaliser_queue (fun () -> f v) in
-  Caml.Gc.finalise finaliser x
+  Caml.Gc.finalise finaliser x;
 ;;
+
+(* [add_finalizer_exn] is the same as [add_finalizer].  However, their types in
+   core_gc.mli are different, and the type of [add_finalizer] guarantees that it always
+   receives a heap block, which ensures that it will not raise, while [add_finalizer_exn]
+   accepts any type, and so may raise. *)
+let add_finalizer_exn = add_finalizer
 
 module Stat = struct
   type pretty_float = float with bin_io, sexp

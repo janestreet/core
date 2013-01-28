@@ -1,4 +1,5 @@
 INCLUDE "config.mlh"
+
 open Std_internal
 open Unix
 open Bigarray
@@ -24,8 +25,39 @@ let () =
   Callback.register_exception "Bigstring.IOError" (IOError (0, Exit));
   init ()
 
-let create n = Array1.create Bigarray.char c_layout n
-let length (bstr : t) = Array1.dim bstr
+external aux_create: max_mem_waiting_gc:int -> size:int -> t = "bigstring_alloc"
+
+let create ?max_mem_waiting_gc size =
+  let max_mem_waiting_gc =
+    match max_mem_waiting_gc with
+    | None -> ~-1
+    | Some v -> Float.to_int (Byte_units.bytes v)
+  in
+  aux_create ~max_mem_waiting_gc ~size
+
+TEST "create with different max_mem_waiting_gc" =
+  Core_gc.full_major ();
+  let count_gc_cycles mem_units =
+    let cycles = ref 0 in
+    let alarm = Core_gc.create_alarm (fun () -> incr cycles) in
+    let large_int = 10_000 in
+    let max_mem_waiting_gc = Byte_units.create mem_units 256. in
+    for _i = 0 to large_int do
+      let (_ : t) = create ~max_mem_waiting_gc large_int in
+      ()
+    done;
+    Core_gc.delete_alarm alarm;
+    !cycles
+  in
+  let large_max_mem = count_gc_cycles `Megabytes in
+  let small_max_mem = count_gc_cycles `Bytes in
+  (* We don't care if it's twice as many, we are only testing that there are less cycles
+  involved *)
+  (2 * large_max_mem) < small_max_mem
+
+
+external length : t -> int = "bigstring_length" "noalloc"
+
 external is_mmapped : t -> bool = "bigstring_is_mmapped_stub" "noalloc"
 
 let init n ~f =
@@ -544,6 +576,7 @@ TEST_MODULE "binary accessors" = struct
     ~fget:unsafe_get_uint16_be
     ~fset:unsafe_set_uint16_be
     [0; 1; 65535]
+
 
 IFDEF ARCH_SIXTYFOUR THEN
 

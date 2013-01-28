@@ -172,12 +172,27 @@ val find_exn : string -> t
     it is set.  If "TZ" is not set it reads /etc/localtime directly.
 
     The first call to machine_zone is cached, so there is no need to cache it locally.
-    The cache can be bypassed and refreshed by setting ~refresh to true. *)
+    The cache can be bypassed and refreshed by setting ~refresh to true.
+
+    Note that this function can throw an exception if the TZ time variable is
+    misconfigured or if the appropriate timezone files can't be found because of the way
+    the box is configured.  We don't put an _exn on this function because that
+    misconfiguration is quite rare.
+*)
 val machine_zone : ?refresh:bool (* defaults to false *) -> unit -> t
+
+(** [likely_machine_zones] is a list of zone names that will be searched first when trying
+    to determine the machine zone of a box.  Setting this to a likely set of zones for
+    your application will speed the very first call to machine_zone *)
+val likely_machine_zones : string list ref
 
 (** [of_utc_offset offset] returns a timezone with a static UTC offset (given in
     hours). *)
-val of_utc_offset : int -> t
+val of_utc_offset : hours:int -> t
+
+(** [default_utc_offset] returns the UTC offset of default regime for timezone [t] in 
+    seconds.  Note: the default utc offset may not reflect the current utc offset. *)
+val default_utc_offset_deprecated : t -> int
 
 (** [utc] the UTC time zone.  Included for convenience *)
 val utc : t
@@ -200,9 +215,6 @@ val init : unit -> unit
 
 (** [digest t] return the MD5 digest of the file the t was created from (if any) *)
 val digest : t -> string option
-
-(** [to_utc_offset] returns the UTC offset of timezone [t], in seconds *)
-val to_utc_offset : t -> int
 
 (** [initialized_zones ()] returns a sorted list of time zone names that have been loaded
     from disk thus far. *)

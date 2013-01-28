@@ -11,6 +11,42 @@ module Unix = Caml.UnixLabels
 
 open Sexplib.Conv
 
+let failwithf = Core_printf.failwithf
+
+let atom x = Sexp.Atom x
+let list x = Sexp.List x
+
+let record l =
+  list (List.map l ~f:(fun (name, value) -> list [atom name; value]))
+;;
+
+(* No need to include a counter here. It just doesn't make sense to think we are
+going to be receiving a steady stream of interrupts.
+   Glibc's macro doesn't have a counter either.
+*)
+let rec retry_until_no_eintr f =
+  try
+    f ()
+  with Unix.Unix_error (Unix.EINTR, _, _) ->
+    retry_until_no_eintr f
+
+(* This wrapper improves the content of the Unix_error exception raised by the standard
+   library (by including a sexp of the function arguments), and it optionally restarts
+   syscalls on EINTR. *)
+let improve ?(restart = false) f make_arg_sexps =
+  try
+    if restart then retry_until_no_eintr f else f ()
+  with
+  | Unix.Unix_error (e, s, _) ->
+    let buf = Buffer.create 100 in
+    let fmt = Format.formatter_of_buffer buf in
+    Format.pp_set_margin fmt 10000;
+    Sexp.pp_hum fmt (record (make_arg_sexps ()));
+    Format.pp_print_flush fmt ();
+    let arg_str = Buffer.contents buf in
+    raise (Unix.Unix_error (e, s, arg_str))
+;;
+
 module File_descr = struct
   module M = struct
     type t = Unix.file_descr
@@ -101,17 +137,7 @@ module RLimit = struct
   type limit = Limit of int64 | Infinity with sexp
   type t = { cur : limit; max : limit } with sexp
 
-  type resource = [
-    | `Core_file_size
-    | `Cpu_seconds
-    | `Data_segment
-    | `File_size
-    | `Num_file_descriptors
-    | `Stack
-    | `Virtual_memory
-  ] with sexp
-
-  type resource_param =
+  type resource =
     | Core_file_size
     | Cpu_seconds
     | Data_segment
@@ -119,23 +145,37 @@ module RLimit = struct
     | Num_file_descriptors
     | Stack
     | Virtual_memory
+    | Nice
+  with sexp ;;
+
+  let core_file_size       = Core_file_size
+  let cpu_seconds          = Cpu_seconds
+  let data_segment         = Data_segment
+  let file_size            = File_size
+  let num_file_descriptors = Num_file_descriptors
+  let stack                = Stack
+  let virtual_memory       = Virtual_memory
+  let nice                 =
+    IFDEF RLIMIT_NICE THEN
+      Ok Nice
+    ELSE
+      unimplemented "RLIMIT_NICE is not supported on this system"
+    ENDIF
+
+  external get : resource -> t = "unix_getrlimit"
+  external set : resource -> t -> unit = "unix_setrlimit"
+
+  let get resource =
+    improve (fun () -> get resource)
+      (fun () -> [("resource", sexp_of_resource resource)])
   ;;
 
-  let resource_param_of_resource = function
-    | `Core_file_size -> Core_file_size
-    | `Cpu_seconds -> Cpu_seconds
-    | `Data_segment -> Data_segment
-    | `File_size -> File_size
-    | `Num_file_descriptors -> Num_file_descriptors
-    | `Stack -> Stack
-    | `Virtual_memory -> Virtual_memory
+  let set resource t =
+    improve (fun () -> set resource t)
+      (fun () ->  [("resource", sexp_of_resource resource);
+                   ("limit", sexp_of_t t);
+                  ])
   ;;
-
-  external get : resource_param -> t = "unix_getrlimit"
-  external set : resource_param -> t -> unit = "unix_setrlimit"
-
-  let get resource = get (resource_param_of_resource resource);;
-  let set resource t = set (resource_param_of_resource resource) t;;
 end
 
 
@@ -334,6 +374,8 @@ external abort : unit -> 'a = "unix_abort" "noalloc"
 
 external initgroups : string -> int -> unit = "unix_initgroups"
 
+external getgrouplist : string -> int -> int array = "unix_getgrouplist"
+
 (** Globbing and shell word expansion *)
 
 module Fnmatch_flags = struct
@@ -473,42 +515,6 @@ module Mman = struct
   let munlockall = unix_munlockall ;;
 end ;;
 
-let failwithf = Core_printf.failwithf
-
-let atom x = Sexp.Atom x
-let list x = Sexp.List x
-
-let record l =
-  list (List.map l ~f:(fun (name, value) -> list [atom name; value]))
-;;
-
-(* No need to include a counter here. It just doesn't make sense to think we are
-going to be receiving a steady stream of interrupts.
-   Glibc's macro doesn't have a counter either.
-*)
-let rec retry_until_no_eintr f =
-  try
-    f ()
-  with Unix.Unix_error (Unix.EINTR, _, _) ->
-    retry_until_no_eintr f
-
-(* This wrapper improves the content of the Unix_error exception raised by the standard
-   library (by including a sexp of the function arguments), and it optionally restarts
-   syscalls on EINTR. *)
-let improve ?(restart = false) f make_arg_sexps =
-  try
-    if restart then retry_until_no_eintr f else f ()
-  with
-  | Unix.Unix_error (e, s, _) ->
-    let buf = Buffer.create 100 in
-    let fmt = Format.formatter_of_buffer buf in
-    Format.pp_set_margin fmt 10000;
-    Sexp.pp_hum fmt (record (make_arg_sexps ()));
-    Format.pp_print_flush fmt ();
-    let arg_str = Buffer.contents buf in
-    raise (Unix.Unix_error (e, s, arg_str))
-;;
-
 let dirname_r filename = ("dirname", atom filename)
 let filename_r filename = ("filename", atom filename)
 let file_perm_r perm = ("perm", atom (Printf.sprintf "0o%o" perm))
@@ -555,6 +561,15 @@ external unix_error : int -> string -> string -> _ = "unix_error_stub"
 let error_message = Unix.error_message
 let handle_unix_error f = Unix.handle_unix_error f ()
 let environment = Unix.environment
+
+module Error = struct
+  type t = error
+
+  let of_system_int int =
+    try unix_error int "" ""
+    with Unix_error (t, _, _) -> t
+  ;;
+end
 
 let putenv ~key ~data =
   improve (fun () -> Unix.putenv key data)
@@ -1282,15 +1297,26 @@ module Select_fds = struct
   let empty = { read = []; write = []; except = [] }
 end
 
+type select_timeout = [ `Never | `Immediately | `After of float (* seconds *) ]
+with sexp_of
+
 let select ?restart ~read ~write ~except ~timeout () =
   improve ?restart (fun () ->
+    let timeout =
+      match timeout with
+      | `Never -> -1.
+      | `Immediately -> 0.
+      | `After seconds ->
+        if seconds < 0. then raise (Unix_error (EINVAL, "negative timeout", ""));
+        seconds
+    in
     let read, write, except = Unix.select ~read ~write ~except ~timeout in
     { Select_fds.read = read; write = write; except = except })
     (fun () ->
       [("read", sexp_of_list File_descr.sexp_of_t read);
        ("write", sexp_of_list File_descr.sexp_of_t write);
        ("except", sexp_of_list File_descr.sexp_of_t except);
-       ("timeout", sexp_of_float timeout)])
+       ("timeout", <:sexp_of< select_timeout >> timeout)])
 ;;
 
 let pause = Unix.pause

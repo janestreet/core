@@ -17,6 +17,7 @@
 
 open Sexplib
 open Core_set_intf
+open With_return
 
 module Array = Core_array
 module List = Core_list
@@ -54,6 +55,33 @@ module Tree0 = struct
     | Node(_, _, _, _, s) -> s
   ;;
 
+  let invariants t ~compare_elt =
+    let rec loop lower upper t =
+      let in_range v =
+        (match lower with
+        | None -> true
+        | Some lower -> compare_elt lower v < 0
+        )
+        && (match upper with
+        | None -> true
+        | Some upper -> compare_elt v upper < 0
+        )
+      in
+      match t with
+      | Empty -> true
+      | Leaf v -> in_range v
+      | Node (l, v, r, h, n) ->
+        let hl = height l and hr = height r in
+        abs (hl - hr) <= 2
+        && h = (max hl hr) + 1
+        && n = length l + length r + 1
+        && in_range v
+        && loop lower (Some v) l
+        && loop (Some v) upper r
+    in
+    loop None None t
+  ;;
+
   let is_empty = function Empty -> true | Leaf _ | Node _ -> false
 
   (* Creates a new node with left son l, value v and right son r.
@@ -72,6 +100,53 @@ module Tree0 = struct
       let sr = match r with Empty -> 0 | Leaf _ -> 1 | Node(_,_,_,_,s) -> s in
       Node (l, v, r, h, sl + sr + 1)
     end
+
+  let of_sorted_array_unchecked array ~compare_elt =
+    let array_length = Array.length array in
+    let arr =
+      (* We don't check if the array is sorted or keys are duplicated, because that
+         checking is slower than the whole [of_sorted_array] function *)
+      if array_length < 2 || compare_elt array.(0) array.(1) < 0
+      then (fun i -> array.(i))
+      else (fun i -> array.(array_length - 1 - i))
+    in
+    let rec loop i j =
+      match j - i with
+      | x when x < 0 -> assert false
+      | 0 -> Empty
+      | 1 -> Leaf (arr i)
+      | 2 ->
+        Node (Leaf (arr i), arr (i + 1), Empty, 2, 2)
+      | 3 ->
+        Node (Leaf (arr i), arr (i + 1), Leaf (arr (i + 2)), 2, 3)
+      | n ->
+        let left_length = n / 2 in
+        let left_i, left_j = i, i + left_length in
+        let right_i, right_j = i + left_length + 1, j in
+        create (loop left_i left_j) (arr (i + left_length)) (loop right_i right_j)
+    in
+    loop 0 (Array.length array)
+  ;;
+
+  let of_sorted_array array ~compare_elt =
+    match array with
+    | [||] | [|_|] -> Result.Ok (of_sorted_array_unchecked array ~compare_elt)
+    | _ ->
+      with_return (fun r ->
+        let increasing =
+          match compare_elt array.(0) array.(1) with
+          | 0 -> r.return (Or_error.error_string "of_sorted_array: duplicated elements")
+          | i -> i < 0
+        in
+        for i = 1 to Array.length array - 2 do
+          match compare_elt array.(i) array.(i+1) with
+          | 0 -> r.return (Or_error.error_string "of_sorted_array: duplicated elements")
+          | i ->
+            if Pervasives.(<>) (i < 0) increasing then
+              r.return (Or_error.error_string "of_sorted_array: elements are not ordered")
+        done;
+        Result.Ok (of_sorted_array_unchecked array ~compare_elt)
+      )
 
   (* Same as create, but performs one step of rebalancing if necessary.
      Assumes l and r balanced and | height l - height r | <= 3.
@@ -407,11 +482,42 @@ module Tree0 = struct
     ;;
 
     let of_set s = cons s End
+
+    let rec iter ~f = function
+      | End -> ()
+      | More (a, tree, enum) ->
+        f a;
+        iter (cons tree enum) ~f
+    ;;
+
+    let iter2 compare_elt t1 t2 ~f =
+      let rec loop t1 t2 =
+        match t1, t2 with
+        | End, End -> ()
+        | End, _ -> iter t2 ~f:(fun a -> f (`Right a))
+        | _, End -> iter t1 ~f:(fun a -> f (`Left a))
+        | More (a1, tree1, enum1), More (a2, tree2, enum2) ->
+          let compare_result = compare_elt a1 a2 in
+          if compare_result = 0 then begin
+            f (`Both (a1, a2));
+            loop (cons tree1 enum1) (cons tree2 enum2)
+          end else if compare_result < 0 then begin
+            f (`Left a1);
+            loop (cons tree1 enum1) t2
+          end else begin
+            f (`Right a2);
+            loop t1 (cons tree2 enum2)
+          end
+      in
+      loop t1 t2
   end
 
   let compare compare_elt s1 s2 =
     Enum.compare compare_elt (Enum.of_set s1) (Enum.of_set s2)
   ;;
+
+  let iter2 s1 s2 ~compare_elt =
+    Enum.iter2 compare_elt (Enum.of_set s1) (Enum.of_set s2)
 
   let equal s1 s2 ~compare_elt = compare compare_elt s1 s2 = 0
 
@@ -694,6 +800,7 @@ let compare_elt t = t.comparator.Comparator.compare
 
 module Accessors = struct
   let to_tree t = t.tree
+  let invariants  t = Tree0.invariants  t.tree ~compare_elt:(compare_elt t)
   let length      t = Tree0.length      t.tree
   let is_empty    t = Tree0.is_empty    t.tree
   let elements    t = Tree0.elements    t.tree
@@ -709,6 +816,7 @@ module Accessors = struct
   let fold_until t ~init ~f = Tree0.fold_until t.tree ~init ~f
   let fold_right t ~init ~f = Tree0.fold_right t.tree ~init ~f
   let iter     t ~f = Tree0.iter     t.tree ~f
+  let iter2  a b ~f = Tree0.iter2 a.tree b.tree ~f ~compare_elt:(compare_elt a)
   let exists   t ~f = Tree0.exists   t.tree ~f
   let for_all  t ~f = Tree0.for_all  t.tree ~f
   let count    t ~f = Tree0.count    t.tree ~f
@@ -751,6 +859,17 @@ let singleton ~comparator e = { comparator; tree = Tree0.singleton e }
 
 let union_list ~comparator l =
   of_tree ~comparator (Tree0.union_list ~comparator ~to_tree l)
+;;
+
+let of_sorted_array_unchecked ~comparator array =
+  let tree = Tree0.of_sorted_array_unchecked array ~compare_elt:comparator.Comparator.compare in
+  { comparator; tree }
+;;
+
+let of_sorted_array ~comparator array =
+  Or_error.Monad_infix.(
+    Tree0.of_sorted_array array ~compare_elt:comparator.Comparator.compare
+    >>| fun tree -> { comparator; tree })
 ;;
 
 let of_list ~comparator l =
@@ -810,6 +929,10 @@ end = struct
 
   let of_tree tree = of_tree ~comparator tree
 
+  let of_sorted_array_unchecked array = of_sorted_array_unchecked ~comparator array
+
+  let of_sorted_array array = of_sorted_array ~comparator array
+
   let empty = { comparator; tree = Tree0.empty }
 
   let singleton e = singleton ~comparator e
@@ -838,6 +961,7 @@ module Make_tree (Elt : Comparator.S1) = struct
   let empty = Tree0.empty
   let singleton e = Tree0.singleton e
 
+  let invariants  t = Tree0.invariants  t ~compare_elt
   let length      t = Tree0.length      t
   let is_empty    t = Tree0.is_empty    t
   let elements    t = Tree0.elements    t
@@ -851,6 +975,7 @@ module Make_tree (Elt : Comparator.S1) = struct
   let to_array    t = Tree0.to_array    t
 
   let iter     t ~f = Tree0.iter     t ~f
+  let iter2  a b ~f = Tree0.iter2  a b ~f ~compare_elt
   let exists   t ~f = Tree0.exists   t ~f
   let for_all  t ~f = Tree0.for_all  t ~f
   let count    t ~f = Tree0.count    t ~f
@@ -880,6 +1005,8 @@ module Make_tree (Elt : Comparator.S1) = struct
 
   let of_list  l = Tree0.of_list  l ~compare_elt
   let of_array a = Tree0.of_array a ~compare_elt
+  let of_sorted_array_unchecked a = Tree0.of_sorted_array_unchecked a ~compare_elt
+  let of_sorted_array a = Tree0.of_sorted_array a ~compare_elt
 
   let union_list l         = Tree0.union_list l ~comparator ~to_tree:Fn.id
   let stable_dedup_list xs = Tree0.stable_dedup_list xs ~compare_elt
@@ -1030,6 +1157,7 @@ module Tree = struct
   let singleton ~comparator:_ e =     Tree0.singleton e
 
   let length      t = Tree0.length      t
+  let invariants ~comparator t = Tree0.invariants  t ~compare_elt:(ce comparator)
   let is_empty    t = Tree0.is_empty    t
   let elements    t = Tree0.elements    t
   let min_elt     t = Tree0.min_elt     t
@@ -1058,6 +1186,8 @@ module Tree = struct
   let filter_map   ~comparator t ~f = Tree0.filter_map   t ~f ~compare_elt:(ce comparator)
   let partition_tf ~comparator t ~f = Tree0.partition_tf t ~f ~compare_elt:(ce comparator)
 
+  let iter2      ~comparator a b ~f = Tree0.iter2  a b ~f ~compare_elt:(ce comparator)
+
   let mem    ~comparator t a = Tree0.mem    t a ~compare_elt:(ce comparator)
   let add    ~comparator t a = Tree0.add    t a ~compare_elt:(ce comparator)
   let remove ~comparator t a = Tree0.remove t a ~compare_elt:(ce comparator)
@@ -1071,6 +1201,10 @@ module Tree = struct
 
   let of_list  ~comparator l = Tree0.of_list  l ~compare_elt:(ce comparator)
   let of_array ~comparator a = Tree0.of_array a ~compare_elt:(ce comparator)
+  let of_sorted_array_unchecked ~comparator a =
+    Tree0.of_sorted_array_unchecked a ~compare_elt:(ce comparator)
+  let of_sorted_array ~comparator a =
+    Tree0.of_sorted_array a ~compare_elt:(ce comparator)
 
   let union_list ~comparator l = Tree0.union_list l ~to_tree:Fn.id ~comparator
   let stable_dedup_list ~comparator xs =

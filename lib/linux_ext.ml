@@ -2,6 +2,7 @@ open Std_internal
 
 module Field = Core_field
 module File_descr = Core_unix.File_descr
+module Int63 = Core_int63
 
 module Sysinfo0 = struct
   type t =
@@ -74,32 +75,22 @@ end
 
 ENDIF
 
-module Epoll_flags(Flag_values : sig
-  val in_     : int
-  val out     : int
-  (* val rdhup   : int *)
-  val pri     : int
-  val err     : int
-  val hup     : int
-  val et      : int
-  val oneshot : int
-end) = struct
-  (* We use [Int63] rather than [Int] just so we have the same number of bits on
-     32-bit and 64-bit machines.  We don't think it actually matters, since none of
-     the flags use past 31 bits.  But there would be little advantage to using [Int],
-     so we decided to go for the easy consistency guarantee. *)
-  include Core_int63
 
-  (* Cache values *)
+module Epoll_flags(Flag_values : sig
+  val in_     : Int63.t
+  val out     : Int63.t
+  (* val rdhup   : Int63.t *)
+  val pri     : Int63.t
+  val err     : Int63.t
+  val hup     : Int63.t
+  val et      : Int63.t
+  val oneshot : Int63.t
+end) = struct
+  (* We use [Int63] rather than [Int] because these flags use 32 bits. *)
+  include Int63
+
   let none    = zero
-  let in_     = of_int Flag_values.in_
-  let out     = of_int Flag_values.out
-    (* let rdhup   = of_int Flag_values.rdhup *)
-  let pri     = of_int Flag_values.pri
-  let err     = of_int Flag_values.err
-  let hup     = of_int Flag_values.hup
-  let et      = of_int Flag_values.et
-  let oneshot = of_int Flag_values.oneshot
+  include Flag_values
 
   let (+) = bit_or
   let (-) a b = bit_and a (bit_not b)
@@ -143,6 +134,26 @@ end) = struct
 
 end
 
+module Priority : sig
+  type t with sexp
+
+  val equal : t -> t -> bool
+  val of_int : int -> t
+  val to_int : t -> int
+  val incr : t -> t
+  val decr : t -> t
+end = struct
+  type t = int with sexp
+
+  let of_int t = t
+  let to_int t = t
+
+  let incr t = t - 1
+
+  let decr t = t + 1
+
+  let equal (t : t) t' = t = t'
+end
 
 IFDEF LINUX_EXT THEN
 
@@ -300,6 +311,10 @@ let sched_setaffinity ?pid ~cpuset () =
 
 external gettid : unit -> int = "linux_ext_gettid"
 
+external setpriority : Priority.t -> unit = "linux_setpriority"
+
+external getpriority : unit -> Priority.t = "linux_getpriority"
+
 let sched_setaffinity_this_thread ~cpuset =
   sched_setaffinity ~pid:(Pid.of_int (gettid ())) ~cpuset ()
 ;;
@@ -329,14 +344,14 @@ external get_ipv4_address_for_interface : string -> string =
 
 module Epoll = struct
 
-  external flag_epollin      : unit -> int  = "linux_epoll_EPOLLIN_flag" "noalloc"
-  external flag_epollout     : unit -> int  = "linux_epoll_EPOLLOUT_flag" "noalloc"
-  (* external flag_epollrdhup   : unit -> int  = "linux_epoll_EPOLLRDHUP_flag" "noalloc" *)
-  external flag_epollpri     : unit -> int  = "linux_epoll_EPOLLPRI_flag" "noalloc"
-  external flag_epollerr     : unit -> int  = "linux_epoll_EPOLLERR_flag" "noalloc"
-  external flag_epollhup     : unit -> int  = "linux_epoll_EPOLLHUP_flag" "noalloc"
-  external flag_epollet      : unit -> int  = "linux_epoll_EPOLLET_flag" "noalloc"
-  external flag_epolloneshot : unit -> int  = "linux_epoll_EPOLLONESHOT_flag" "noalloc"
+  external flag_epollin      : unit -> Int63.t  = "linux_epoll_EPOLLIN_flag"
+  external flag_epollout     : unit -> Int63.t  = "linux_epoll_EPOLLOUT_flag"
+  (* external flag_epollrdhup   : unit -> Int63.t  = "linux_epoll_EPOLLRDHUP_flag" *)
+  external flag_epollpri     : unit -> Int63.t  = "linux_epoll_EPOLLPRI_flag"
+  external flag_epollerr     : unit -> Int63.t  = "linux_epoll_EPOLLERR_flag"
+  external flag_epollhup     : unit -> Int63.t  = "linux_epoll_EPOLLHUP_flag"
+  external flag_epollet      : unit -> Int63.t  = "linux_epoll_EPOLLET_flag"
+  external flag_epolloneshot : unit -> Int63.t  = "linux_epoll_EPOLLONESHOT_flag"
 
   module Flags = Epoll_flags(struct
     let in_     = flag_epollin ()
@@ -367,8 +382,13 @@ module Epoll = struct
   external epoll_readyfd
     : ready_events -> int -> File_descr.t = "linux_epoll_readyfd" "noalloc"
 
+IFDEF ARCH_SIXTYFOUR THEN
   external epoll_readyflags
     : ready_events -> int -> Flags.t = "linux_epoll_readyflags" "noalloc"
+ELSE
+  external epoll_readyflags
+    : ready_events -> int -> Flags.t = "linux_epoll_readyflags"
+ENDIF
 
   external epoll_ctl_add
     : File_descr.t -> File_descr.t -> Flags.t -> unit
@@ -511,16 +531,29 @@ module Epoll = struct
   external epoll_wait : File_descr.t -> ready_events -> int -> int = "linux_epoll_wait"
 
   let wait t ~timeout =
+    let timeout =
+      (* From the epoll man page:
+
+         | Specifying a timeout of -1 makes epoll_wait() wait indefinitely, while
+         | specifying a timeout equal to zero makes epoll_wait() to return immediately
+         | even if no events are available (return code equal to zero). *)
+      match timeout with
+      | `Never -> -1
+      | `Immediately -> 0
+      | `After span ->
+        if Span.(<) span Span.zero then
+          raise (Unix.Unix_error (Unix.EINVAL, "negative timeout", Span.to_string span));
+        (* We round up to ensure that we are guaranteed that the timeout has passed when
+           we wake up.  If we rounded down, then when the user requests a positive
+           sub-millisecond timeout, we would use a timout of zero, and return immediately.
+           This caused async to spin, repeatedly requesting slightly smaller timeouts. *)
+        Float.iround_up_exn (Span.to_ms span)
+    in
     use t ~f:(fun t ->
-      (* We round up to ensure that we are guaranteed that the timeout has passed when we
-         wake up.  If we rounded down, then when the user requests a positive
-         sub-millisecond timeout, we would use a timout of zero, and return immediately.
-         This caused async to spin, repeatedly requesting slightly smaller timeouts. *)
-      let millis = Float.iround_up_exn (Span.to_ms timeout) in
       (* We clear [num_ready_events] because [epoll_wait] will invalidate [ready_events],
          and we don't want another thread to observe [t] and see junk. *)
       t.num_ready_events <- 0;
-      t.num_ready_events <- epoll_wait t.epollfd t.ready_events millis;
+      t.num_ready_events <- epoll_wait t.epollfd t.ready_events timeout;
       if t.num_ready_events = 0 then `Timeout else `Ok)
   ;;
 
@@ -573,30 +606,28 @@ TEST_MODULE = struct
     Unix.sendto s ~buf ~pos:0 ~len ~mode:[] ~addr
   ;;
 
-  let create () =
-    (Or_error.ok_exn Epoll.create) ~num_file_descrs:1024 ~max_ready_events:256
+  let with_epoll ~f =
+    protectx ~finally:Epoll.close ~f
+      ((Or_error.ok_exn Epoll.create) ~num_file_descrs:1024 ~max_ready_events:256)
 
-  TEST_UNIT "epoll errors" =
-    let t = create () in
+  TEST_UNIT "epoll errors" = with_epoll ~f:(fun t ->
     let tmp = "temporary-file-for-testing-epoll" in
     let fd = Unix.openfile tmp ~mode:[Unix.O_CREAT; Unix.O_WRONLY] in
     (* Epoll does not support ordinary files, and so should fail if you ask it to watch
        one. *)
     assert (Result.is_error (Result.try_with (fun () -> Epoll.set t fd Flags.none)));
     Unix.close fd;
-    Unix.unlink tmp;
-    Epoll.close t;
+    Unix.unlink tmp)
   ;;
 
-  TEST_UNIT "epoll test" =
+  TEST_UNIT "epoll test" = with_epoll ~f:(fun epset ->
     let timeout = Span.of_sec 0.1 in
-    let epset = create () in
     let sock1 = udp_listener ~port:7070 in
     let sock2 = udp_listener ~port:7071 in
     Epoll.set epset sock1 Flags.in_;
     Epoll.set epset sock2 Flags.in_;
     let _sent = send sock2 "TEST" ~port:7070 in
-    begin match Epoll.wait epset ~timeout with
+    begin match Epoll.wait epset ~timeout:(`After timeout) with
     | `Timeout -> assert false
     | `Ok ->
       let ready =
@@ -609,9 +640,11 @@ TEST_MODULE = struct
          3) I send a packet, _using_ sock2 to sock1 (who is listening on 7070)
          4) epoll_wait should return, with [ sock1 ] ready to be read.
       *)
-      assert (ready = [ sock1 ])
-    end;
-    Epoll.close epset;
+      match ready with
+      | [ sock ] when sock = sock1 -> ()
+      | [_] -> failwith  "wrong socket is ready"
+      | xs  -> failwithf "%d sockets are ready" (List.length xs) ()
+    end)
   ;;
 end
 
@@ -622,6 +655,8 @@ let get_ipv4_address_for_interface = Ok get_ipv4_address_for_interface
 let get_terminal_size              = Ok get_terminal_size
 let gettcpopt_bool                 = Ok gettcpopt_bool
 let gettid                         = Ok gettid
+let setpriority                    = Ok setpriority
+let getpriority                    = Ok getpriority
 let in_channel_realpath            = Ok in_channel_realpath
 let out_channel_realpath           = Ok out_channel_realpath
 let pr_get_name                    = Ok pr_get_name
@@ -650,6 +685,8 @@ let get_ipv4_address_for_interface = unimplemented "Linux_ext.get_ipv4_address_f
 let get_terminal_size              = unimplemented "Linux_ext.get_terminal_size"
 let gettcpopt_bool                 = unimplemented "Linux_ext.gettcpopt_bool"
 let gettid                         = unimplemented "Linux_ext.gettid"
+let setpriority                    = unimplemented "Linux_ext.setpriority"
+let getpriority                    = unimplemented "Linux_ext.getpriority"
 let in_channel_realpath            = unimplemented "Linux_ext.in_channel_realpath"
 let out_channel_realpath           = unimplemented "Linux_ext.out_channel_realpath"
 let pr_get_name                    = unimplemented "Linux_ext.pr_get_name"
@@ -666,14 +703,14 @@ let settcpopt_bool                 = unimplemented "Linux_ext.settcpopt_bool"
 
 module Epoll = struct
   module Flags = Epoll_flags(struct
-    let in_     = 1 lsl 0
-    let out     = 1 lsl 1
-    (* let rdhup   = 1 lsl 2 *)
-    let pri     = 1 lsl 3
-    let err     = 1 lsl 4
-    let hup     = 1 lsl 5
-    let et      = 1 lsl 6
-    let oneshot = 1 lsl 7
+    let in_     = Int63.of_int (1 lsl 0)
+    let out     = Int63.of_int (1 lsl 1)
+    (* let rdhup   = Int63.of_int (1 lsl 2) *)
+    let pri     = Int63.of_int (1 lsl 3)
+    let err     = Int63.of_int (1 lsl 4)
+    let hup     = Int63.of_int (1 lsl 5)
+    let et      = Int63.of_int (1 lsl 6)
+    let oneshot = Int63.of_int (1 lsl 7)
   end)
 
   type t = [ `Epoll_is_not_implemented ] with sexp_of

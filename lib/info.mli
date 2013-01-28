@@ -19,7 +19,10 @@
     Info.create "price too big" (price, [`Max max_price])
       (<:sexp_of< float * [`Max of float] >>)
     ]}
+
+    Note that an [Info.t] can be created from any arbritrary sexp with [Info.t_of_sexp].
 *)
+
 open Sexplib
 
 type t with bin_io, sexp

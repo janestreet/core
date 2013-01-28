@@ -95,29 +95,36 @@ module type S = sig
   end
   val modf : t -> Parts.t
 
-  (** [mod_float x y] returns a result with the same sign as [x].  It returns [nan] if [y] is
-     [0].  It is basically
-     [let mod_float x y = x -. float(truncate(x/.y)) *. y]
-     not
-     [let mod_float x y = x -. floor(x/.y) *. y]
-     and therefore resembles [mod] on integers more than [%].
+  (** [mod_float x y] returns a result with the same sign as [x].  It returns [nan] if [y]
+      is [0].  It is basically
+      [let mod_float x y = x -. float(truncate(x/.y)) *. y]
+      not
+      [let mod_float x y = x -. floor(x/.y) *. y]
+      and therefore resembles [mod] on integers more than [%].
   *)
   val mod_float : t -> t -> t
 
-  (* mostly for modules that inherit from t, since the infix operators are more convenient *)
+  (* mostly for modules that inherit from t, since the infix operators are more
+     convenient *)
   val add : t -> t -> t
   val sub : t -> t -> t
   val neg : t -> t
   val scale : t -> t -> t
   val abs : t -> t
 
-  (** Pretty print float, for example [to_string_hum ~decimals:3 1234.1999 = "1,234.200"]
-      [to_string_hum ~decimals:3 ~strip_zero:true 1234.1999 = "1,234.2" ]. By default
-      [decimals] is 3 and [strip_zero] is false *)
-  val to_string_hum : ?decimals:int -> ?strip_zero:bool -> float -> string
+  (** Pretty print float, for example [to_string_hum ~decimals:3 1234.1999 = "1_234.200"]
+      [to_string_hum ~decimals:3 ~strip_zero:true 1234.1999 = "1_234.2" ]. No delimiters
+      are inserted to the right of the decimal. *)
+  val to_string_hum
+    :  ?delimiter:char  (* defaults to '_' *)
+    -> ?decimals:int    (* defaults to 3 *)
+    -> ?strip_zero:bool (* defaults to false *)
+    -> float
+    -> string
 
   (* [ldexp x n] returns x *. 2 ** n *)
   val ldexp : t -> int -> t
+
   (* [frexp f] returns the pair of the significant and the exponent of f. When f is zero,
      the significant x and the exponent n of f are equal to zero. When f is non-zero, they
      are defined by f = x *. 2 ** n and 0.5 <= x < 1.0. *)
@@ -135,13 +142,20 @@ module type S = sig
     include Stringable.S with type t := t
   end
 
-  (* Don't forget about subnormals: there exist strictly positive numbers representable
-     in floating point such that [classify f = Normal && f >. 0.] does *not* hold, and
-     likewise for strictly negative numbers.  Here is the number line:
-
-     ...  normals | -ve subnormals | (-/+) zero | +ve subnormals | normals  ...
+  (* return the Class.t.  Excluding nan the floating-point "number line" looks like:
+       t                Class.t    example
+     ^ neg_infinity     Infinite   neg_infinity
+     | neg normals      Normal     -3.14
+     | neg subnormals   Subnormal  -.2. ** -1023.
+     | (-/+) zero       Zero       0.
+     | pos subnormals   Subnormal  2. ** -1023.
+     | pos normals      Normal     3.14
+     v infinity         Infinite   infinity
   *)
   val classify : t -> Class.t
+
+  (* [is_finite t] returns [true] iff [classify t] is in [Normal; Subnormal; Zero;]. *)
+  val is_finite : t -> bool
 
   module Sign : sig
     type t = Neg | Zero | Pos with sexp

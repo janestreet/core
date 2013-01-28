@@ -21,6 +21,7 @@
 #include <sys/syscall.h>
 #include <sys/sendfile.h>
 #include <sys/epoll.h>
+#include <sys/resource.h>
 #include <arpa/inet.h>
 #include <assert.h>
 
@@ -213,6 +214,41 @@ CAMLprim value linux_ext_gettid(value v_unit __unused)
   return Val_int(syscall(SYS_gettid));
 }
 
+CAMLprim value linux_setpriority(value v_priority)
+{
+  int tid;
+
+  assert(!Is_block(v_priority));
+
+  tid = syscall(SYS_gettid);
+  if (setpriority(PRIO_PROCESS, tid, Long_val(v_priority)) == -1)
+    uerror("setpriority", Nothing);
+
+  return Val_unit;
+}
+
+CAMLprim value linux_getpriority(value v_unit)
+{
+  int tid;
+  int old_errno;
+  int priority;
+
+  assert(v_unit == Val_unit);
+
+  tid = syscall(SYS_gettid);
+
+  old_errno = errno;
+  errno = 0;
+  priority = getpriority(PRIO_PROCESS, tid);
+  if (errno != 0) {
+    errno = old_errno;
+    uerror("getpriority", Nothing);
+  }
+  errno = old_errno;
+
+  return Val_long(priority);
+}
+
 static int close_durably(int fd)
 {
   int ret;
@@ -310,7 +346,7 @@ CAMLprim value linux_get_ipv4_address_for_interface(value v_interface)
 /** Core epoll methods **/
 
 #define EPOLL_FLAG(FLAG) \
-  CAMLprim value linux_epoll_##FLAG##_flag(value __unused v_unit) { return Val_long(FLAG); }
+  CAMLprim value linux_epoll_##FLAG##_flag(value __unused v_unit) { return caml_alloc_int63(FLAG); }
 
 EPOLL_FLAG(EPOLLIN)
 EPOLL_FLAG(EPOLLOUT)
@@ -346,7 +382,7 @@ static value linux_epoll_ctl(value v_epfd, value v_fd, value v_flags, int operat
 {
   struct epoll_event evt;
 
-  evt.events = Long_val(v_flags);
+  evt.events = Int63_val(v_flags);
   evt.data.fd = Long_val(v_fd);
 
   if (epoll_ctl(Long_val(v_epfd), operation, Long_val(v_fd), &evt) == -1)
@@ -446,7 +482,7 @@ CAMLprim value linux_epoll_readyfd(value v_array, value v_index)
 CAMLprim value linux_epoll_readyflags(value v_array, value v_index)
 {
   struct epoll_event * event = get_epoll_event(v_array, v_index);
-  return Val_long( event->events );
+  return caml_alloc_int63( event->events );
 }
 
 #endif /* JSC_LINUX_EXT */

@@ -8,7 +8,7 @@ INCLUDE "config.mlh"
 
 IFDEF ARCH_SIXTYFOUR THEN
 let   signed_max = Int32.to_int Int32.max_int
-let unsigned_max = Int64.to_int 0x1_0000_0000L
+let unsigned_max = Int64.to_int 0xffff_ffffL
 ENDIF
 
 type endian = [ `Big_endian | `Little_endian ]
@@ -319,10 +319,10 @@ exception Pack_signed_32_argument_out_of_range of int with sexp
 let check_signed_32_in_range n =
   IFDEF ARCH_SIXTYFOUR THEN
     if n > signed_max || n < -(signed_max + 1) then
-      raise (Pack_unsigned_32_argument_out_of_range n)
+      raise (Pack_signed_32_argument_out_of_range n)
   ELSE
     if false then
-      raise (Pack_unsigned_32_argument_out_of_range n)
+      raise (Pack_signed_32_argument_out_of_range n)
   ENDIF
 
 exception Pack_signed_32_argument_out_of_range of int with sexp
@@ -406,17 +406,17 @@ let unpack_signed_32_int ~byte_order ~buf ~pos =
 
 let unpack_signed_32_int_big_endian ~buf ~pos =
   let n = unpack_unsigned_32_int_big_endian ~buf ~pos in
-  if n > signed_max then n - unsigned_max else n
+  if n > signed_max then n - (unsigned_max + 1) else n
 ;;
 
 let unpack_signed_32_int_little_endian ~buf ~pos =
   let n = unpack_unsigned_32_int_little_endian ~buf ~pos in
-  if n > signed_max then n - unsigned_max else n
+  if n > signed_max then n - (unsigned_max + 1) else n
 ;;
 
 TEST_MODULE "inline_unsigned_32_int" = Make_inline_tests (struct
   let ns = [0x3f20_3040; 0x7f20_3040;
-            signed_max; signed_max + 1; unsigned_max - 1; 0]
+            signed_max; signed_max + 1; unsigned_max; 0]
   let num_bytes = 4
   let signed = false
   type t = int
@@ -469,9 +469,11 @@ let pack_signed_64 ~byte_order ~buf ~pos v =
 ;;
 
 let pack_signed_64_big_endian ~buf ~pos v =
+  (* Safely set the first and last bytes, so that we verify the string bounds. *)
   buf.[pos] <-
     Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 56)));
   buf.[pos + 7] <- Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL v));
+  (* Now we can use [unsafe_set] for the intermediate bytes. *)
   Caml.String.unsafe_set buf (pos + 1)
     (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 48))));
   Caml.String.unsafe_set buf (pos + 2)
@@ -487,9 +489,11 @@ let pack_signed_64_big_endian ~buf ~pos v =
 ;;
 
 let pack_signed_64_little_endian ~buf ~pos v =
+  (* Safely set the first and last bytes, so that we verify the string bounds. *)
   buf.[pos] <- Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL v));
   buf.[pos + 7] <-
     Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 56)));
+  (* Now we can use [unsafe_set] for the intermediate bytes. *)
   Caml.String.unsafe_set buf (pos + 1)
     (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 8))));
   Caml.String.unsafe_set buf (pos + 2)
@@ -522,6 +526,7 @@ let unpack_signed_64 ~byte_order ~buf ~pos =
 ;;
 
 let unpack_signed_64_big_endian ~buf ~pos =
+  (* Do bounds checking only on the first and last bytes *)
   let b1 = Char.code buf.[pos]
   and b8 = Char.code buf.[pos + 7] in
 
@@ -551,6 +556,7 @@ let unpack_signed_64_big_endian ~buf ~pos =
 ;;
 
 let unpack_signed_64_little_endian ~buf ~pos =
+  (* Do bounds checking only on the first and last bytes *)
   let b1 = Char.code buf.[pos]
   and b8 = Char.code buf.[pos + 7] in
 
@@ -646,10 +652,14 @@ let unpack_padded_fixed_string ?(padding='\x00') ~buf ~pos ~len () =
   String.sub buf ~pos ~len:(data_end - pos)
 ;;
 
+exception Pack_padded_fixed_string_argument_too_long of
+    [`s of string] * [`longer_than] * [`len of int] with sexp
+;;
+
 let pack_padded_fixed_string ?(padding='\x00') ~buf ~pos ~len s =
   let slen = String.length s in
   if slen > len then
-    raise (Invalid_argument (sprintf "pack_padded_fixed_string: too large: \"%s\"" s))
+    raise (Pack_padded_fixed_string_argument_too_long (`s s, `longer_than, `len len))
   else begin
     String.blit ~src:s ~dst:buf ~src_pos:0 ~dst_pos:pos ~len:slen;
     if slen < len then begin

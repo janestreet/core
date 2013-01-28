@@ -17,6 +17,12 @@ module type Accessors = sig
   type 'a key
   type ('a, 'comparator, 'z) options
 
+  (** Test if invariants of internal AVL search tree hold. *)
+  val invariants :
+    ('k, 'comparator,
+     ('k, 'v, 'comparator) t -> bool
+    ) options
+
   (** Test whether a map is empty or not. *)
   val is_empty : (_, _, _) t -> bool
 
@@ -70,6 +76,19 @@ module type Accessors = sig
 
   (** iterator for map *)
   val iter : ('k, 'v, _) t -> f:(key:'k key -> data:'v -> unit) -> unit
+
+  (** Iterate two maps side by side. Complexity of this function is O(M+N). If two inputs
+      are [(0, a); (1, a)] and [(1, b); (2, b)], [f] will be called with
+      [(0, `Left a); (1, `Both (a, b)); (2, `Right b)] *)
+  val iter2
+    : ('k, 'comparator,
+       ('k, 'v1, 'comparator) t
+       -> ('k, 'v2, 'comparator) t
+       -> f:(key:'k key
+             -> data:[ `Left of 'v1 | `Right of 'v2 | `Both of 'v1 * 'v2 ]
+             -> unit)
+       -> unit
+    ) options
 
   (** returns new map with bound values replaced by f applied to the bound values *)
   val map : ('k, 'v1, 'comparator) t -> f:('v1 -> 'v2) -> ('k, 'v2, 'comparator) t
@@ -218,6 +237,19 @@ module type Creators = sig
 
   (** map with one key, data pair *)
   val singleton: ('k, 'comparator, 'k key -> 'v -> ('k, 'v, 'comparator) t) options
+
+  (** creates map from sorted array of key-data pairs. The input array must be sorted,
+      as given by the relevant comparator (either in ascending or descending order),
+      and must not contain any duplicate keys.
+      If either of these conditions do not hold, an error is returned.
+  *)
+  val of_sorted_array:
+    ('k, 'comparator, ('k key * 'v) array -> ('k, 'v, 'comparator) t Or_error.t) options
+
+  (** Like [of_sorted_array] except behavior is undefined when an [Error] would have been
+      returned. *)
+  val of_sorted_array_unchecked:
+    ('k, 'comparator, ('k key * 'v) array -> ('k, 'v, 'comparator) t) options
 
   (** creates map from association list with unique keys *)
   val of_alist:

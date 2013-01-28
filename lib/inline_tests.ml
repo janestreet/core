@@ -60,6 +60,7 @@ let tests () = OUnit.TestList [
     Core_sys.ounit_tests ();
     Core_thread.ounit_tests ();
     Core_unix.ounit_tests ();
+    Core_weak.ounit_tests ();
     Crc.ounit_tests ();
     Daemon.ounit_tests ();
     Date.ounit_tests ();
@@ -80,6 +81,7 @@ let tests () = OUnit.TestList [
     Hash_set.ounit_tests ();
     Hash_set_intf.ounit_tests ();
     Heap.ounit_tests ();
+    Heap_block.ounit_tests ();
     Host_and_port.ounit_tests ();
     Identifiable.ounit_tests ();
     In_channel.ounit_tests ();
@@ -100,9 +102,9 @@ let tests () = OUnit.TestList [
     Month.ounit_tests ();
     Mutex0.ounit_tests ();
     Nano_mutex.ounit_tests ();
+    Never_returns.ounit_tests ();
     No_polymorphic_compare.ounit_tests ();
     Ofday.ounit_tests ();
-    Ofday_unit_tests_v1.ounit_tests ();
     Only_in_test.ounit_tests ();
     Option.ounit_tests ();
     Ordered_collection_common.ounit_tests ();

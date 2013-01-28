@@ -194,10 +194,10 @@ val rev_inplace : 'a t -> unit
 (** [of_list_rev l] converts from list then reverses in place *)
 val of_list_rev : 'a list -> 'a t
 
-(** [of_list_map l] converts from list via [f] *)
+(** [of_list_map l ~f] is the same as [of_list (List.map l ~f)] *)
 val of_list_map : 'a list -> f:('a -> 'b) -> 'b t
 
-(** [of_list_rev_map l] converts from list via [f] then reverses in place *)
+(** [of_list_rev_map l ~f] is the same as [rev_inplace (of_list_map l ~f)] *)
 val of_list_rev_map : 'a list -> f:('a -> 'b) -> 'b t
 
 (** [replace t i ~f] = [t.(i) <- f (t.(i))]. *)
@@ -218,8 +218,9 @@ val findi : 'a t -> f:(int -> 'a -> bool) -> (int * 'a) option
     true.  It raises [Not_found] if there is no such element. *)
 val findi_exn : 'a t -> f:(int -> 'a -> bool) -> int * 'a
 
-(** [reduce f [a1; ...; an]] is [f (... (f (f a1 a2) a3) ...) an]. *)
-val reduce : 'a t -> f:('a -> 'a -> 'a) -> 'a option
+(** [reduce f [a1; ...; an]] is [Some (f (... (f (f a1 a2) a3) ...) an)].
+    Returns [None] on the empty array. *)
+val reduce     : 'a t -> f:('a -> 'a -> 'a) -> 'a option
 val reduce_exn : 'a t -> f:('a -> 'a -> 'a) -> 'a
 
 (** [permute ?random_state t] randomly permutes [t] in place.

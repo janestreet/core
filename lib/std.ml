@@ -75,6 +75,7 @@ module Hash_heap = Hash_heap
 module Hash_set = Hash_set
 module Hashable = Hashable
 module Heap = Heap
+module Heap_block = Heap_block
 module Host_and_port = Host_and_port
 module Identifiable = Identifiable
 module In_channel = In_channel
@@ -136,6 +137,7 @@ INCLUDE "version_defaults.mlh"
 IFDEF BUILD_VERSION_UTIL THEN
   module Version_util = Version_util
 ENDIF
+module Weak = Core_weak
 module Weekday = Weekday
 module Word_size = Word_size
 module Zone = Zone
@@ -144,3 +146,4 @@ module type Unique_id = Unique_id.Id
 
 include T
 
+let _squelch_unused_module_warning_ = ()

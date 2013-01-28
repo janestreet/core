@@ -18,11 +18,17 @@ module type Accessors = sig
      explanation. *)
   type ('a, 'comparator, 'z) options
 
+  (** Test if invariants of internal AVL search tree hold. *)
+  val invariants
+    : ('a, 'comparator,
+       ('a, 'comparator) t -> bool
+    ) options
+
   (* override [Container]'s [mem] *)
   val mem : ('a, 'comparator, ('a, 'comparator) t -> 'a elt -> bool) options
   val add
     : ('a, 'comparator,
-     ('a, 'comparator) t -> 'a elt -> ('a, 'comparator) t
+       ('a, 'comparator) t -> 'a elt -> ('a, 'comparator) t
     ) options
   val remove
     : ('a, 'comparator,
@@ -63,6 +69,18 @@ module type Accessors = sig
     -> init:'b
     -> f:('a elt -> 'b -> 'b)
     -> 'b
+
+  (* Iterate two sets side by side.  Complexity is O(M+N) where M and N are the sizes of
+     the two input sets.  As an example, with the inputs [0; 1] and [1; 2], [f] will be
+     called with [`Left 0]; [`Both (1, 1)]; and [`Right 2].
+  *)
+  val iter2
+    :  ('a, 'comparator,
+        ('a, 'comparator) t
+        -> ('a, 'comparator) t
+        -> f:([`Left of 'a elt | `Right of 'a elt | `Both of 'a elt * 'a elt] -> unit)
+        -> unit
+    ) options
   val filter
     :  ('a, 'comparator,
         ('a, 'comparator) t -> f:('a elt -> bool) -> ('a, 'comparator) t
@@ -151,6 +169,17 @@ module type Creators = sig
   (* The list or array need not be sorted *)
   val of_list  : ('a, 'comparator, 'a elt list  -> ('a, 'comparator) t) options
   val of_array : ('a, 'comparator, 'a elt array -> ('a, 'comparator) t) options
+
+  (** Create set from sorted array. The input must be sorted (either in ascending
+      or descending order as given by the comparator) and contain no duplicates,
+      otherwise the result is an error. The complexity of this function is O(N). *)
+  val of_sorted_array :
+    ('a, 'comparator, 'a elt array -> ('a, 'comparator) t Or_error.t) options
+
+  (** Similar to [of_sorted_arary] without checking the input array. *)
+  val of_sorted_array_unchecked :
+    ('a, 'comparator, 'a elt array -> ('a, 'comparator) t) options
+
   (* [stable_dedup_list] is here rather than in the List module because the implementation
      relies crucially on sets, and because doing so allows one to avoid uses of
      polymorphic comparison by instantiating the functor at a different implementation of

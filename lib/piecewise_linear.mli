@@ -15,10 +15,13 @@ module type S = sig
 
   val create : (key * float) list -> (t, string) Result.t
   val get : t -> key -> float
+  val to_knots : t -> (key * float) list
 end
 
 module Make (Key : Key) : S with type key = Key.t
 
 module Time : S with type key = Time.t
+module Ofday : S with type key = Ofday.t
+module Span : S with type key = Span.t
 module Float : S with type key = float
 module Int : S with type key = int

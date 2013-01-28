@@ -882,6 +882,9 @@ static inline int resource_val(value v_resource)
     case 4 : resource = RLIMIT_NOFILE; break;
     case 5 : resource = RLIMIT_STACK; break;
     case 6 : resource = RLIMIT_AS; break;
+#ifdef RLIMIT_NICE
+    case 7 : resource = RLIMIT_NICE; break;
+#endif
     default :
       /* impossible */
       caml_failwith("resource_val: unknown sum tag");
@@ -1242,6 +1245,32 @@ CAMLprim value unix_initgroups(value v_user, value v_group)
   return Val_unit;
 }
 
+CAMLprim value unix_getgrouplist(value v_user, value v_group)
+{
+  int n;
+  int ngroups = NGROUPS_MAX;
+  gid_t groups[NGROUPS_MAX];
+  value ret;
+  char *c_user;
+
+  assert(Is_block(v_user) && Tag_val(v_user) == String_tag);
+  assert(!Is_block(v_group));
+
+  c_user = strdup(String_val(v_user));
+
+  caml_enter_blocking_section();
+    n = getgrouplist(c_user, Long_val(v_group), groups, &ngroups);
+    free(c_user);
+  caml_leave_blocking_section();
+
+  if (n == -1) uerror ("getgrouplist", Nothing);
+
+  ret = caml_alloc_small(n, 0);
+  for (n = n - 1; n >= 0; n--)
+    Field(ret, n) = Val_long(groups[n]);
+
+  return ret;
+}
 
 /* Globbing and shell string expansion */
 

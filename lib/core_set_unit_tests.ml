@@ -48,12 +48,16 @@ module Unit_tests
     let equal          = simplify_accessor equal
     let inter          = simplify_accessor inter
     let subset         = simplify_accessor subset
+    let iter2          = simplify_accessor iter2
+    let invariants     = simplify_accessor invariants
     let to_list    = to_list
     let to_array   = to_array
 
     let empty ()       = simplify_creator empty
     let singleton      = simplify_creator singleton
     let of_list        = simplify_creator of_list
+    let of_sorted_array = simplify_creator of_sorted_array
+    let of_sorted_array_unchecked = simplify_creator of_sorted_array_unchecked
     (* let of_tree        = simplify_creator of_tree *)
   end
 
@@ -65,6 +69,9 @@ module Unit_tests
 
   module Elt = struct
     open Elt
+    let of_int = of_int
+    let to_int = to_int
+
     module T = struct
       type t = int Elt.t with sexp
       let compare t t' = Pervasives.compare (to_int t) (to_int t')
@@ -135,6 +142,63 @@ module Unit_tests
   TEST =
     let a = Set.to_array set_nonempty in
     List.equal (Array.to_list a) (Set.to_list set_nonempty) ~equal:Elt.equal
+  ;;
+
+  let of_sorted_array _ = assert false
+  let of_sorted_array_unchecked _ = assert false
+
+  TEST = Set.of_sorted_array [||] |! Result.is_ok
+  TEST = Set.of_sorted_array [|Elt.of_int 0|] |! Result.is_ok
+  TEST = Set.of_sorted_array [|Elt.of_int 0; Elt.of_int 0|] |! Result.is_error
+  TEST = Set.of_sorted_array [|Elt.of_int 1
+                             ; Elt.of_int 0
+                             ; Elt.of_int 1|] |! Result.is_error
+
+  TEST =
+    let list = List.init 100 ~f:Elt.of_int in
+    let array = Array.of_list list in
+    let rev_array = Array.of_list (List.rev list) in
+    Set.equal (Set.of_list list) (Set.of_sorted_array_unchecked array)
+    && Set.equal (Set.of_list list) (Set.of_sorted_array_unchecked rev_array)
+  ;;
+
+  let invariants _        = assert false
+
+  TEST_UNIT =
+    for n = 0 to 100 do
+      let list = List.init n ~f:Elt.of_int in
+      assert (List.permute list |! Set.of_list |! Set.invariants);
+      assert (Array.of_list list |! Set.of_sorted_array_unchecked |! Set.invariants);
+      assert (List.rev list |! Array.of_list |! Set.of_sorted_array_unchecked |! Set.invariants);
+    done
+  ;;
+
+  let iter2 _ = assert false
+
+  TEST_UNIT =
+    let test l1 l2 expected =
+      let result = ref [] in
+      let set_of_list l = Set.of_list (List.map l ~f:Elt.of_int) in
+      Set.iter2 (set_of_list l1) (set_of_list l2) ~f:(fun a -> result := a :: !result);
+      let result =
+        List.rev_map !result ~f:(function
+        | `Left a -> `Left (Elt.to_int a)
+        | `Right a -> `Right (Elt.to_int a)
+        | `Both (a, b) -> `Both (Elt.to_int a, Elt.to_int b)
+        )
+      in
+      assert (result = expected)
+    in
+    test [] [] [];
+    test [0] [] [`Left 0];
+    test [] [0] [`Right 0];
+    test
+      [0; 1; 3; 4]
+      [3; 4; 5; 6]
+      [`Left 0; `Left 1;
+       `Both (3, 3); `Both (4, 4);
+       `Right 5; `Right 6
+      ];
   ;;
 
 

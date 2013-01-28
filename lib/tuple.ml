@@ -25,6 +25,8 @@ module T2 = struct
       | i -> i
   ;;
 
+  let equal ~eq1 ~eq2 (x, y) (x', y') = eq1 x x' && eq2 y y'
+
   let swap (a, b) = (b, a)
 end
 
@@ -57,6 +59,8 @@ module T3 = struct
         if c2 <> 0 then c2 else
           cmp3 z z'
   ;;
+
+  let equal ~eq1 ~eq2 ~eq3 (x, y, z) (x', y', z') = eq1 x x' && eq2 y y' && eq3 z z'
 
 end
 

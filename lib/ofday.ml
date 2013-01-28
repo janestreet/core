@@ -16,15 +16,10 @@ module Stable = struct
       val add : t -> Span.t -> t option
       val sub : t -> Span.t -> t option
       val diff : t -> t -> Span.t
-      val of_sec : float -> t
-      val to_sec : t -> float
       val of_span_since_start_of_day : Span.t -> t
       val to_span_since_start_of_day : t -> Span.t
       val start_of_day : t
       val end_of_day : t
-
-      (* [invariant t] checks the invariants on t and returns t if it passes *)
-      val invariant : t -> t
     end = struct
       (* Number of seconds since midnight. *)
       include Float
@@ -43,25 +38,18 @@ module Stable = struct
         let t = to_span_since_start_of_day t in
         Span.(<=) Span.zero t && Span.(<=) t Span.day
 
-      let invariant t =
-        if not (is_valid t) then
-          invalid_argf "Ofday out of range: %f" t ()
-        else
-          t
-      ;;
-
-      let to_sec = ident
-
-      let of_sec s =
+      let of_span_since_start_of_day span =
         let module C = Float.Class in
+        let s = Span.to_sec span in
         match Float.classify s with
-        | C.Infinite -> invalid_arg "Ofday.of_sec: infinite value"
-        | C.Nan      -> invalid_arg "Ofday.of_sec: NaN value"
+        | C.Infinite -> invalid_arg "Ofday.of_span_since_start_of_day: infinite value"
+        | C.Nan      -> invalid_arg "Ofday.of_span_since_start_of_day: NaN value"
         | C.Normal | C.Subnormal | C.Zero ->
-          invariant s;
+          if not (is_valid s) then
+            invalid_argf "Ofday out of range: %f" s ()
+          else
+            s
       ;;
-
-      let of_span_since_start_of_day span = of_sec (Span.to_sec span)
 
       let start_of_day = 0.
       let end_of_day = of_span_since_start_of_day Span.day
@@ -183,8 +171,8 @@ module Stable = struct
     let small_diff =
       let hour = 3600. in
       (fun ofday1 ofday2 ->
-        let ofday1 = T.to_sec ofday1 in
-        let ofday2 = T.to_sec ofday2 in
+        let ofday1 = Span.to_sec (T.to_span_since_start_of_day ofday1) in
+        let ofday2 = Span.to_sec (T.to_span_since_start_of_day ofday2) in
         let diff   = ofday1 -. ofday2 in
         (*  d1 is in (-hour; hour) *)
         let d1 = Float.mod_float diff hour in
@@ -245,14 +233,6 @@ module Stable = struct
 
     let of_float f = T.of_span_since_start_of_day (Span.of_sec f)
   end
-
-  TEST_MODULE "Ofday.Stable.V1" = Stable_unit_test.Make (struct
-    include V1
-    let equal x1 x2 = Span.(<) (Span.abs (diff x1 x2)) (Span.of_ns 1.)
-    let tests =
-      let create ~hr ~min ~sec ~ms ~us = create ~hr ~min ~sec ~ms ~us () in
-      Ofday_unit_tests_v1.unit_tests ~create
-  end)
 end
 
 include Stable.V1

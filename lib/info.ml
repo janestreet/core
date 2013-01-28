@@ -180,6 +180,7 @@ TEST_MODULE "Info" = struct
   TEST = round (tag (of_string "hello") "tag")
   TEST = round (tag_arg (of_string "hello") "tag" 13 <:sexp_of< int >>)
   TEST = round (of_list [ of_string "hello"; of_string "goodbye" ])
+  TEST = round (t_of_sexp (Sexp.of_string "((random sexp 1)(b 2)((c (1 2 3))))"))
 end
 
 (* yminsky: benchmarks

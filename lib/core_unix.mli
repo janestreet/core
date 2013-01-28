@@ -96,6 +96,10 @@ type error =
     | EUNKNOWNERR of int  (** Unknown error *)
 with sexp
 
+module Error : sig
+  type t = error
+  val of_system_int : int -> t
+end
 
 (** Raised by the system calls below when an error is encountered.
    The first component is the error code; the second component
@@ -264,7 +268,6 @@ val getppid_exn : unit -> Pid.t
    ``nice'' value. (Higher values of the ``nice'' value mean
    lower priorities.) Return the new nice value. *)
 val nice : int -> int
-
 
 (** {6 Basic file input/output} *)
 
@@ -791,6 +794,9 @@ module Select_fds : sig
   val empty : t
 end
 
+type select_timeout = [ `Never | `Immediately | `After of float (* seconds *) ]
+with sexp_of
+
 (** Setting restart to true means that we want select to restart automatically
     on EINTR (instead of propagating the exception)... *)
 val select
@@ -798,7 +804,7 @@ val select
   -> read:File_descr.t list
   -> write:File_descr.t list
   -> except:File_descr.t list
-  -> timeout:float
+  -> timeout:select_timeout
   -> unit
   -> Select_fds.t
 
@@ -862,7 +868,7 @@ val strftime : tm -> string -> string
 
 (** Given a format string, convert a corresponding string to a date and time
     See 'man strptime' for format options. *)
-val strptime : fmt:string -> string -> Unix.tm 
+val strptime : fmt:string -> string -> Unix.tm
 
 (** Schedule a [SIGALRM] signal after the given number of seconds. *)
 val alarm : int -> int
@@ -945,10 +951,6 @@ val getegid : unit -> int
 
 (** Set the real group id and effective group id for the process. *)
 val setgid : int -> unit
-
-(** Return the list of groups to which the user executing the process
-   belongs. *)
-val getgroups : unit -> int array
 
 (** Structure of entries in the [passwd] database *)
 module Passwd : sig
@@ -1677,15 +1679,16 @@ module RLimit : sig
     max : limit;  (* hard limit (ceiling for soft limit) *)
   } with sexp
 
-  type resource = [
-    | `Core_file_size
-    | `Cpu_seconds
-    | `Data_segment
-    | `File_size
-    | `Num_file_descriptors
-    | `Stack
-    | `Virtual_memory
-  ] with sexp
+  type resource with sexp
+
+  val core_file_size       : resource
+  val cpu_seconds          : resource
+  val data_segment         : resource
+  val file_size            : resource
+  val num_file_descriptors : resource
+  val stack                : resource
+  val virtual_memory       : resource
+  val nice                 : resource Or_error.t
 
   (* See man pages for "getrlimit" and "setrlimit" for details. *)
   val get : resource -> t
@@ -1772,6 +1775,13 @@ external abort : unit -> _ = "unix_abort" "noalloc"
 
 external initgroups : string -> int -> unit = "unix_initgroups"
 
+(** [getgrouplist user group] returns the list of groups to which [user] belongs.
+    See 'man getgrouplist'. *)
+val getgrouplist : string -> int -> int array
+
+(** Return the list of groups to which the user executing the process belongs. *)
+val getgroups : unit -> int array
+
 (** {2 Globbing and shell expansion} *)
 
 (* no system calls involved *)
@@ -1831,7 +1841,12 @@ module Scheduler : sig
     type t = [ `Fifo | `Round_robin | `Other ] with sexp
   end
 
-  (* See [man sched_setscheduler]. *)
+  (* See [man sched_setscheduler].
+
+     The [priority] supplied here is *not* the nice value of a process.  It is the
+     "static" priority (1 .. 99) used in conjunction with real-time processes.  If you
+     want to set the nice value of a normal process, use [Linux_ext.setpriority]
+     or [Core_unix.nice]. *)
   val set : pid:Pid.t option -> policy : Policy.t -> priority : int -> unit
 end
 

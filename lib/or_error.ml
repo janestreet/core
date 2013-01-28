@@ -33,18 +33,29 @@ let error_string message = Error (Error.of_string message)
 
 let unimplemented s = error "unimplemented" s <:sexp_of< string >>
 
-let all_ok l =
+let combine_errors l =
   let ok, errs = List.partition_map l ~f:Result.ok_fst in
   match errs with
   | [] -> Ok ok
   | _ -> Error (Error.of_list errs)
-;;
 
 TEST_UNIT =
   for i = 0 to 10; do
-    assert (all_ok (List.init i ~f:(fun _ -> Ok ()))
+    assert (combine_errors (List.init i ~f:(fun _ -> Ok ()))
             = Ok (List.init i ~f:(fun _ -> ())));
   done
-TEST = Result.is_error (all_ok [ error_string "" ])
-TEST = Result.is_error (all_ok [ Ok (); error_string "" ])
+TEST = Result.is_error (combine_errors [ error_string "" ])
+TEST = Result.is_error (combine_errors [ Ok (); error_string "" ])
+
+
+let combine_errors_unit l = Result.map (combine_errors l) ~f:(fun (_ : unit list) -> ())
+
+TEST = combine_errors_unit [Ok (); Ok ()] = Ok ()
+TEST = combine_errors_unit [] = Ok ()
+TEST =
+  let a = Error.of_string "a" and b = Error.of_string "b" in
+  match combine_errors_unit [Ok (); Error a; Ok (); Error b] with
+  | Ok _ -> false
+  | Error e -> Error.to_string_hum e = Error.to_string_hum (Error.of_list [a;b])
+
 

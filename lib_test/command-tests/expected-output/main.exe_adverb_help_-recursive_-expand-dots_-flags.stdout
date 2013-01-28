@@ -17,15 +17,15 @@ erat. Vestibulum in feugiat metus.
 
 === subcommands and flags ===
 
-  drolly                this command does stuff here
-  drolly -fondue        make sure fondue is doing the same stuff
-  drolly -gilt NAME     which gilt should do the stuff
-  nemeses               display internal values
+  drolly                  this command does stuff here
+  drolly [-fondue]        make sure fondue is doing the same stuff
+  drolly [-gilt NAME]     which gilt should do the stuff
+  nemeses                 display internal values
   opposable
-  opposable -fondue     make sure fondue is doing the same stuff
-  opposable -gilt NAME  which gilt should do the stuff
-  help                  explain a given subcommand (perhaps recursively)
-  help -expand-dots     expand subcommands in recursive help
-  help -flags           show flags as well in recursive help
-  help -recursive       show subcommands of subcommands, etc.
+  opposable [-fondue]     make sure fondue is doing the same stuff
+  opposable [-gilt NAME]  which gilt should do the stuff
+  help                    explain a given subcommand (perhaps recursively)
+  help [-expand-dots]     expand subcommands in recursive help
+  help [-flags]           show flags as well in recursive help
+  help [-recursive]       show subcommands of subcommands, etc.
 

@@ -180,6 +180,8 @@ module Spec : sig
       -> ?key:'a Univ_map.Multi.Key.t
       -> (string -> 'a)
       -> 'a t
+
+    val of_map : ?key:'a Univ_map.Multi.Key.t -> 'a String.Map.t -> 'a t
   end
 
   val string    : string Arg_type.t
@@ -297,7 +299,7 @@ type t (** commands which can be combined into a hierarchy of subcommands *)
 val basic
   :  summary:string
   -> ?readme:(unit -> string)
-  -> ('main, unit) Spec.t
+  -> ('main, unit -> unit) Spec.t
   -> 'main
   -> t
 

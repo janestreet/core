@@ -4,10 +4,16 @@ module T2 : sig
   val create : 'a -> 'b -> ('a, 'b) t
   val curry :  (('a, 'b) t -> 'c) -> 'a -> 'b -> 'c
   val uncurry : ('a -> 'b -> 'c) -> ('a, 'b) t -> 'c
-  val compare : cmp1: ('a -> 'a -> int) -> cmp2:('b -> 'b -> int)
+  val compare
+    :  cmp1:('a -> 'a -> int)
+    -> cmp2:('b -> 'b -> int)
     -> ('a, 'b) t
     -> ('a, 'b) t
     -> int
+  val equal
+    :  eq1:('a -> 'a -> bool)
+    -> eq2:('b -> 'b -> bool)
+    -> ('a, 'b) t -> ('a, 'b) t -> bool
 
   external get1 : ('a, _) t -> 'a = "%field0"
   external get2 : (_, 'a) t -> 'a = "%field1"
@@ -23,8 +29,13 @@ module T3 : sig
   val create : 'a -> 'b -> 'c -> ('a, 'b, 'c) t
   val curry :  (('a, 'b, 'c) t -> 'd) -> 'a -> 'b -> 'c -> 'd
   val uncurry : ('a -> 'b -> 'c -> 'd) -> ('a, 'b, 'c) t -> 'd
-  val compare :
-    cmp1:('a -> 'a -> int)
+  val equal
+    :  eq1:('a -> 'a -> bool)
+    -> eq2:('b -> 'b -> bool)
+    -> eq3:('c -> 'c -> bool)
+    -> ('a, 'b, 'c) t -> ('a, 'b, 'c) t -> bool
+  val compare
+    :  cmp1:('a -> 'a -> int)
     -> cmp2:('b -> 'b -> int)
     -> cmp3:('c -> 'c -> int)
     -> ('a, 'b, 'c) t -> ('a, 'b, 'c) t -> int

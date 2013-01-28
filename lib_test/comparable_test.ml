@@ -94,9 +94,9 @@ module Span =
 module Ofday =
   F (struct
     include Time.Ofday
-    let one = of_sec 1.
-    let two = of_sec 2.
-    let three = of_sec 3.
+    let one   = of_span_since_start_of_day (Time.Span.of_sec 1.)
+    let two   = of_span_since_start_of_day (Time.Span.of_sec 2.)
+    let three = of_span_since_start_of_day (Time.Span.of_sec 3.)
   end)
 
 module Date =

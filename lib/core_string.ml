@@ -8,6 +8,8 @@ open Bin_prot.Std
 open Result.Export
 open Staged
 
+let phys_equal = (==)
+
 let invalid_argf = Core_printf.invalid_argf
 
 let failwiths = Error.failwiths
@@ -389,6 +391,65 @@ let concat_array ?sep ar = concat ?sep (Array.to_list ar)
 
 let concat_map ?sep s ~f = concat_array ?sep (Array.map (to_array s) ~f)
 
+(* [filter t f] is implemented by the following algorithm.
+
+   Let [n = length t].
+
+   1. Find the lowest [i] such that [not (f t.[i])].
+
+   2. If there is no such [i], then return [t].
+
+   3. If there is such an [i], allocate a string, [out], to hold the result.  [out] has
+   length [n - 1], which is the maximum possible output size given that there is at least
+   one character not satisfying [f].
+
+   4. Copy characters at indices 0 ... [i - 1] from [t] to [out].
+
+   5. Walk through characters at indices [i+1] ... [n-1] of [t], copying those that
+   satisfy [f] from [t] to [out].
+
+   6. If we completely filled [out], then return it.  If not, return the prefix of [out]
+   that we did fill in.
+
+   This algorithm has the property that it doesn't allocate a new string if there's
+   nothing to filter, which is a common case. *)
+let filter t ~f =
+  let n = length t in
+  let i = ref 0 in
+  while !i < n && f t.[!i]; do
+    incr i
+  done;
+  if !i = n then
+    t
+  else begin
+    let out = make (n - 1) ' ' in
+    blit ~src:t ~src_pos:0 ~dst:out ~dst_pos:0 ~len:!i;
+    let out_pos = ref !i in
+    incr i;
+    while !i < n; do
+      let c = t.[!i] in
+      if f c then (out.[!out_pos] <- c; incr out_pos);
+      incr i
+    done;
+    if !out_pos = n - 1 then
+      out
+    else
+      sub out ~pos:0 ~len:!out_pos
+  end
+;;
+
+TEST = filter "hello" ~f:(fun c -> c <> 'h') = "ello"
+TEST = filter "hello" ~f:(fun c -> c <> 'l') = "heo"
+TEST = filter "hello" ~f:(fun _ -> false) = ""
+TEST = filter "hello" ~f:(fun _ -> true) = "hello"
+TEST = let s = "hello" in (filter s ~f:(fun _ -> true)) == s
+TEST_UNIT =
+  let s = "abc" in
+  let r = ref 0 in
+  assert (phys_equal s (filter s ~f:(fun _ -> incr r; true)));
+  assert (!r = String.length s);
+;;
+
 let chop_prefix s ~prefix =
   if is_prefix s ~prefix then
     Some (drop_prefix s (String.length prefix))
@@ -399,8 +460,8 @@ let chop_prefix_exn s ~prefix =
   match chop_prefix s ~prefix with
   | Some str -> str
   | None ->
-      raise (Invalid_argument
-               (Printf.sprintf "Core_string.chop_prefix_exn %S %S" s prefix))
+    raise (Invalid_argument
+             (Printf.sprintf "Core_string.chop_prefix_exn %S %S" s prefix))
 
 let chop_suffix s ~suffix =
   if is_suffix s ~suffix then
@@ -412,8 +473,8 @@ let chop_suffix_exn s ~suffix =
   match chop_suffix s ~suffix with
   | Some str -> str
   | None ->
-      raise (Invalid_argument
-               (Printf.sprintf "Core_string.chop_suffix_exn %S %S" s suffix))
+    raise (Invalid_argument
+             (Printf.sprintf "Core_string.chop_suffix_exn %S %S" s suffix))
 
 (* The following function returns exactly the same results as the standard hash function
    on strings (it performs exactly the same computation), but it is faster on short

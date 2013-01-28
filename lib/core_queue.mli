@@ -49,6 +49,7 @@ val transfer : src:'a t -> dst:'a t -> unit
     order as the elements of [list] (i.e. the first element of [t] is the first
     element of the list). *)
 val of_list : 'a list -> 'a t
+val to_list : 'a t -> 'a list
 
 (** [partial_iter t ~f] iterates through t until f returns `Stop *)
 val partial_iter : 'a t -> f:('a -> [`Continue | `Stop]) -> unit
@@ -60,11 +61,8 @@ val concat_map : 'a t -> f:('a -> 'b list) -> 'b t
 val filter_map : 'a t -> f:('a -> 'b option) -> 'b t
 
 val of_array : 'a array -> 'a t
+val to_array : 'a t -> 'a array
 
 val fold : 'a t -> init:'b -> f:('b -> 'a -> 'b) -> 'b
-
-val to_list : 'a t -> 'a list
-
-val to_array : 'a t -> 'a array
 
 val singleton : 'a -> 'a t

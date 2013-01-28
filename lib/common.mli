@@ -28,11 +28,11 @@ type immutable  = private read_only with sexp, bin_io, compare
 type read_write = private read_only with sexp, bin_io, compare
 
 (** [never_returns] should be used as the return type of functions that don't return and
- * might block forever, rather than ['a] or [_].  This forces callers of such functions to
- * have a call to [never_returns] at the call site, which makes it clear to readers what's
- * going on. We do not intend to use this type for functions such as [failwithf] that
- * always raise an exception. *)
-type never_returns = Common0.never_returns
+    might block forever, rather than ['a] or [_].  This forces callers of such functions
+    to have a call to [never_returns] at the call site, which makes it clear to readers
+    what's going on. We do not intend to use this type for functions such as [failwithf]
+    that always raise an exception. *)
+type never_returns = Never_returns.never_returns
 val never_returns : never_returns -> _
 
 (** {6 Error handling} *)
@@ -180,6 +180,7 @@ val string_of_float : [ `Deprecated_use_float_module ] -> [ `Deprecated_use_floa
 val float_of_string : [ `Deprecated_use_float_module ] -> [ `Deprecated_use_float_module ]
 val infinity        : [ `Deprecated_use_float_module ]
 val neg_infinity    : [ `Deprecated_use_float_module ]
+val nan             : [ `Deprecated_use_float_module ]
 val int_of_float    : [ `Deprecated_use_float_module ] -> [ `Deprecated_use_float_module ]
 type fpclass = [ `Deprecated_use_float_module ]
 

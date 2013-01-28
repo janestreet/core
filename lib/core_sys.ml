@@ -73,3 +73,26 @@ let command_exn string =
 let fold_dir ~init ~f directory = Core_array.fold (readdir directory) ~f ~init
 
 let ls_dir directory = Core_array.to_list (readdir directory)
+
+(* This function takes six units to cause ocaml to call a different
+   function when executing bytecode:
+   http://caml.inria.fr/pub/docs/manual-ocaml/manual033.html#19.1.2
+*)
+external executing_bytecode
+  : unit -> unit -> unit -> unit -> unit -> unit -> bool
+  = "executing_bytecode" "not_executing_bytecode" "noalloc"
+
+let execution_mode () =
+  if executing_bytecode () () () () () () then `Bytecode else `Native
+
+TEST = execution_mode () =
+         (if Core_string.is_suffix argv.(0) ~suffix:".exe" ||
+             Core_string.is_suffix argv.(0) ~suffix:".native"
+          then `Native else `Bytecode)
+
+
+(* returns size, in bits, of an [int] type in C *)
+external c_int_size : unit -> int = "c_int_size" "noalloc"
+
+TEST = let size = c_int_size () in size >= 16 && size <= Sys.word_size
+

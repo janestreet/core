@@ -1,3 +1,4 @@
+
 type 'a int_spec = {
   name : string;
   num_bits : int;
@@ -26,7 +27,7 @@ let convert a b a_to_b b_to_a =
           "conversion from %s to %s failed: %s is out of range"
           a_name b_name (a_to_string i) ()
     in
-    convert, convert_exn
+    (convert, convert_exn)
 ;;
 
 let compare_int (x : int) y = compare x y
@@ -125,24 +126,37 @@ let insert_delimiter input ~delimiter =
   end
 ;;
 
-(**
-   Takes an int represented as a string ((-|+)?[0-9]+) and puts underscores
-   every 3 digits starting from the right.
-*)
-let insert_underscores input =
-  insert_delimiter input ~delimiter:'_'
-;;
+let insert_underscores input = insert_delimiter input ~delimiter:'_'
 
-let sexp_of_int_style : [ `Underscores | `No_underscores ] ref =
-  ref `No_underscores
-;;
+TEST_MODULE "pretty" = struct
+
+  let check input output =
+    Core_list.for_all [""; "+"; "-"] ~f:(fun prefix ->
+      let input  = prefix ^ input  in
+      let output = prefix ^ output in
+      output = insert_underscores input)
+
+  TEST = check          "1"             "1"
+  TEST = check         "12"            "12"
+  TEST = check        "123"           "123"
+  TEST = check       "1234"         "1_234"
+  TEST = check      "12345"        "12_345"
+  TEST = check     "123456"       "123_456"
+  TEST = check    "1234567"     "1_234_567"
+  TEST = check   "12345678"    "12_345_678"
+  TEST = check  "123456789"   "123_456_789"
+  TEST = check "1234567890" "1_234_567_890"
+
+end
+
+let sexp_of_int_style : [ `Underscores | `No_underscores ] ref = ref `No_underscores
 
 module Make (I : sig
   type t
   val to_string : t -> string
 end) = struct
 
-  let to_string_hum t = insert_underscores (I.to_string t)
+  let to_string_hum ?(delimiter='_') t = insert_delimiter (I.to_string t) ~delimiter
 
   let sexp_of_t t =
     let s = I.to_string t in

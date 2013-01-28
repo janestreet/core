@@ -1,4 +1,4 @@
-open Common0
+open Never_returns
 
 type t = exn with sexp_of
 

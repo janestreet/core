@@ -131,6 +131,10 @@ module Nfs = struct
     let len = Unix.read fd ~buf in
     match String.rsplit2 ~on:':' (String.strip (String.sub buf ~pos:0 ~len)) with
     | None                -> None
-    | Some (hostname,pid) -> Some (hostname, Int.of_string pid)
+    | Some (hostname,pid) ->
+      try
+        Some (hostname, Int.of_string pid)
+      with
+      | _ -> None
   ;;
 end

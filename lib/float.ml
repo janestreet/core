@@ -4,6 +4,8 @@ module Sexp = Sexplib.Sexp
 module String = Core_string
 open Core_printf
 
+let failwiths = Error.failwiths
+
 module T = struct
   type t = float with sexp, bin_io
   let compare (x : t) y = compare x y
@@ -214,7 +216,13 @@ let classify t =
   | P.FP_nan       -> C.Nan
 ;;
 
-let to_string_hum ?(decimals=3) ?(strip_zero=false) f =
+let is_finite t =
+  let module C = Class in
+  match classify t with
+  | C.Normal | C.Subnormal | C.Zero -> true
+  | C.Infinite | C.Nan -> false
+
+let to_string_hum ?(delimiter='_') ?(decimals=3) ?(strip_zero=false) f =
   if decimals < 0 then
     invalid_argf "to_string_hum: invalid argument ~decimals=%d" decimals ();
   match classify f with
@@ -227,9 +235,9 @@ let to_string_hum ?(decimals=3) ?(strip_zero=false) f =
     match String.lsplit2 sprintf_result ~on:'.' with
     | None ->
       assert (decimals = 0);
-      Int_conversions.insert_delimiter sprintf_result ~delimiter:','
+      Int_conversions.insert_delimiter sprintf_result ~delimiter
     | Some (left, right) ->
-      let left = Int_conversions.insert_delimiter left ~delimiter:',' in
+      let left = Int_conversions.insert_delimiter left ~delimiter in
       let right =
         if strip_zero
         then String.rstrip right ~drop:(fun c -> c = '0')
@@ -241,25 +249,40 @@ let to_string_hum ?(decimals=3) ?(strip_zero=false) f =
 ;;
 
 TEST_MODULE = struct
-  let test ~decimals f s s_strip_zero =
-    (to_string_hum ~decimals ~strip_zero:false f = s)
-    && (to_string_hum ~decimals ~strip_zero:true f = s_strip_zero)
+  let test ?delimiter ~decimals f s s_strip_zero =
+    let s' = to_string_hum ?delimiter ~decimals ~strip_zero:false f in
+    if s' <> s then
+      failwiths "to_string_hum ~strip_zero:false"
+        (`input f, `decimals decimals, `got s', `expected s)
+        (<:sexp_of< ([ `input of float ]
+                     * [ `decimals of int ]
+                     * [ `got of string ]
+                     * [ `expected of string ]) >>);
+    let s_strip_zero' = to_string_hum ?delimiter ~decimals ~strip_zero:true f in
+    if s_strip_zero' <> s_strip_zero then
+      failwiths "to_string_hum ~strip_zero:true"
+        (`input f, `decimals decimals, `got s_strip_zero, `expected s_strip_zero')
+        (<:sexp_of< ([ `input of float ]
+                     * [ `decimals of int ]
+                     * [ `got of string ]
+                     * [ `expected of string ]) >>);
   ;;
 
-  TEST = test ~decimals:3 0.99999 "1.000" "1"
-  TEST = test ~decimals:3 0.00001 "0.000" "0"
-  TEST = test ~decimals:3 ~-.12345.1 "-12,345.100" "-12,345.1"
-  TEST = test ~decimals:0 0.99999 "1" "1"
-  TEST = test ~decimals:0 0.00001 "0" "0"
-  TEST = test ~decimals:0 ~-.12345.1 "-12,345" "-12,345"
-  TEST = test ~decimals:0 (5.0 /. 0.0) "inf" "inf"
-  TEST = test ~decimals:0 (-5.0 /. 0.0) "-inf" "-inf"
-  TEST = test ~decimals:0 (0.0 /. 0.0) "nan" "nan"
-  TEST = test ~decimals:2 (5.0 /. 0.0) "inf" "inf"
-  TEST = test ~decimals:2 (-5.0 /. 0.0) "-inf" "-inf"
-  TEST = test ~decimals:2 (0.0 /. 0.0) "nan" "nan"
-  TEST = test ~decimals:5 (10_000.0 /. 3.0) "3,333.33333" "3,333.33333"
-  TEST = test ~decimals:2 ~-.0.00001 "-0.00" "-0"
+  TEST_UNIT = test ~decimals:3 0.99999 "1.000" "1"
+  TEST_UNIT = test ~decimals:3 0.00001 "0.000" "0"
+  TEST_UNIT = test ~decimals:3 ~-.12345.1 "-12_345.100" "-12_345.1"
+  TEST_UNIT = test ~delimiter:',' ~decimals:3 ~-.12345.1 "-12,345.100" "-12,345.1"
+  TEST_UNIT = test ~decimals:0 0.99999 "1" "1"
+  TEST_UNIT = test ~decimals:0 0.00001 "0" "0"
+  TEST_UNIT = test ~decimals:0 ~-.12345.1 "-12_345" "-12_345"
+  TEST_UNIT = test ~decimals:0 (5.0 /. 0.0) "inf" "inf"
+  TEST_UNIT = test ~decimals:0 (-5.0 /. 0.0) "-inf" "-inf"
+  TEST_UNIT = test ~decimals:0 (0.0 /. 0.0) "nan" "nan"
+  TEST_UNIT = test ~decimals:2 (5.0 /. 0.0) "inf" "inf"
+  TEST_UNIT = test ~decimals:2 (-5.0 /. 0.0) "-inf" "-inf"
+  TEST_UNIT = test ~decimals:2 (0.0 /. 0.0) "nan" "nan"
+  TEST_UNIT = test ~decimals:5 (10_000.0 /. 3.0) "3_333.33333" "3_333.33333"
+  TEST_UNIT = test ~decimals:2 ~-.0.00001 "-0.00" "-0"
 
   let rand_test n =
     let go () =

@@ -10,7 +10,7 @@ open Sexplib
 
 type 'a t = ('a, Error.t) Result.t with bin_io, sexp
 
-include Monad   .S  with type 'a t := 'a t
+include Monad.S  with type 'a t := 'a t
 
 (** [try_with f] catches exceptions thrown by [f] and returns them in the Result.t as an
     Error.t.  [try_with_join] is like [try_with], except that [f] can throw exceptions or
@@ -39,4 +39,14 @@ val error_string : string -> _ t
 (** [unimplemented name] returns a standard error value for an unimplemented value. *)
 val unimplemented : string -> _ t
 
-val all_ok : 'a t list -> 'a list t
+(** [combine_errors ts] returns [Ok] if every element in [ts] is [Ok], else it returns
+    [Error] with all the errors in [ts].  More precisely:
+
+    | combine_errors [Ok a1; ...; Ok an] = Ok [a1; ...; an]
+    | combine_errors [...; Error e1; ...; Error en; ...]
+    |   = Error (Error.of_list [e1; ...; en]) *)
+val combine_errors : 'a t list -> 'a list t
+
+(** [combine_errors_unit] returns [Ok] if every element in [ts] is [Ok ()], else it
+    returns [Error] with all the errors in [ts], like [combine_errors]. *)
+val combine_errors_unit : unit t list -> unit t

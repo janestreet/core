@@ -51,6 +51,7 @@ module Unit_tests
     let change               = simplify_accessor change
     let find                 = simplify_accessor find
     let find_exn             = simplify_accessor find_exn
+    let invariants           = simplify_accessor invariants
     let remove               = simplify_accessor remove
     let mem                  = simplify_accessor mem
     let filter               = simplify_accessor filter
@@ -58,6 +59,7 @@ module Unit_tests
     let filter_mapi          = simplify_accessor filter_mapi
     let compare_direct       = simplify_accessor compare_direct
     let equal                = simplify_accessor equal
+    let iter2                = simplify_accessor iter2
     let merge                = simplify_accessor merge
     let fold_range_inclusive = simplify_accessor fold_range_inclusive
     let range_to_alist       = simplify_accessor range_to_alist
@@ -65,13 +67,15 @@ module Unit_tests
     let next_key             = simplify_accessor next_key
     let rank                 = simplify_accessor rank
 
-    let empty ()       = simplify_creator empty
-    let singleton      = simplify_creator singleton
-    let of_alist       = simplify_creator of_alist
-    let of_alist_exn   = simplify_creator of_alist_exn
-    let of_alist_multi = simplify_creator of_alist_multi
-    let of_alist_fold  = simplify_creator of_alist_fold
-    let of_tree        = simplify_creator of_tree
+    let empty ()        = simplify_creator empty
+    let singleton       = simplify_creator singleton
+    let of_sorted_array_unchecked = simplify_creator of_sorted_array_unchecked
+    let of_sorted_array = simplify_creator of_sorted_array
+    let of_alist        = simplify_creator of_alist
+    let of_alist_exn    = simplify_creator of_alist_exn
+    let of_alist_multi  = simplify_creator of_alist_multi
+    let of_alist_fold   = simplify_creator of_alist_fold
+    let of_tree         = simplify_creator of_tree
   end
 
   type ('a, 'b, 'c) t = Unit_test_follows
@@ -81,6 +85,9 @@ module Unit_tests
 
   module Key = struct
     open Key
+    let of_int = of_int
+    let to_int = to_int
+
     module T = struct
       type t = int Key.t with sexp
       let compare t t' = Pervasives.compare (to_int t) (to_int t')
@@ -218,6 +225,37 @@ module Unit_tests
       ~prev_core_map:(Map.empty ()) ~core_map:(Map.empty ())
   ;;
 
+  let iter2 _ = assert false
+
+  TEST_UNIT =
+    let test l1 l2 expected =
+      let map_of_alist l =
+        Map.of_alist_exn (List.map l ~f:(fun (k, v) -> Key.of_int k, v))
+      in
+      let result = ref [] in
+      Map.iter2 (map_of_alist l1) (map_of_alist l2)
+        ~f:(fun ~key ~data -> result := (key, data) :: !result);
+      let result =
+        List.rev_map !result ~f:(fun (k, v) -> Key.to_int k, v)
+      in
+      assert (result = expected)
+    in
+    test [] [] [];
+    test [0, 10] [] [0, `Left 10];
+    test [] [0, 10] [0, `Right 10];
+    test [0, 10] [0, 11] [0, `Both (10, 11)];
+    test
+      [0, 10; 3, 13; 4, 14; 6, 16]
+      [1, 11; 3, 13; 4, 14; 5, 15]
+      [ 0, `Left 10
+      ; 1, `Right 11
+      ; 3, `Both (13, 13)
+      ; 4, `Both (14, 14)
+      ; 5, `Right 15
+      ; 6, `Left 16
+      ];
+  ;;
+
   let empty = Unit_test_follows
 
   TEST = equal_maps ~caml_map:Caml_map.empty (Map.empty ())
@@ -227,6 +265,42 @@ module Unit_tests
   TEST =
     equal_maps
       ~caml_map:(Caml_map.add Key.sample 0 Caml_map.empty) (Map.singleton Key.sample 0)
+  ;;
+
+  let of_sorted_array _ = assert false
+  let of_sorted_array_unchecked _ = assert false
+
+  (* test detection of invalid input *)
+  TEST = Map.of_sorted_array [|Key.of_int 0, 0; Key.of_int 0, 0|] |! Result.is_error
+  TEST = Map.of_sorted_array [|Key.of_int 1, 0
+                         ; Key.of_int 0, 0
+                         ; Key.of_int 1, 0|] |! Result.is_error
+
+  (* test it gets same result as [Map.of_alist] *)
+  TEST =
+    let alist =
+      List.sort (random_alist Key.samples) ~cmp:(fun (k1, _) (k2, _) -> Key.compare k1 k2)
+    in
+    let array = Array.of_list alist in
+    let array_rev = Array.of_list (List.rev alist) in
+    let map_of_alist = Map.of_alist_exn alist in
+    let map_of_array = Map.of_sorted_array_unchecked array in
+    let map_of_rev_array = Map.of_sorted_array_unchecked array_rev in
+    let map_equal = Map.equal Int.equal in
+    map_equal map_of_alist map_of_array &&
+      map_equal map_of_alist map_of_rev_array
+  ;;
+
+  let invariants _ = assert false
+
+  (* Test constructed AVL tree is valid *)
+  TEST_UNIT =
+    for n = 0 to 100 do
+      let alist = List.init n ~f:(fun i -> Key.of_int i, i) in
+      assert (List.permute alist |! Map.of_alist_exn |! Map.invariants);
+      assert (Array.of_list alist |! Map.of_sorted_array_unchecked |! Map.invariants);
+      assert (List.rev alist |! Array.of_list |! Map.of_sorted_array_unchecked |! Map.invariants);
+    done
   ;;
 
   let of_alist _ = assert false
@@ -544,7 +618,6 @@ module Unit_tests
 
   TEST = Map.prev_key (Map.empty ()) Key.sample = None
   TEST = Map.next_key (Map.empty ()) Key.sample = None
-
 end
 
 module Key_int = struct

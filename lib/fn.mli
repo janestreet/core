@@ -19,6 +19,9 @@ val non : ('a -> bool) -> 'a -> bool
     exception. This function is useful for read_line loops, etc. *)
 val forever : (unit -> unit) -> exn
 
+(** [apply_n_times ~n f x] is the [n]-fold application of [f] to [x]. *)
+val apply_n_times : n:int -> ('a -> 'a) -> ('a -> 'a)
+
 (** The identity function*)
 external id : 'a -> 'a = "%identity"
 

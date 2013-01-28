@@ -56,15 +56,14 @@ val next : 'a t -> 'a Elt.t -> 'a Elt.t option
 val prev : 'a t -> 'a Elt.t -> 'a Elt.t option
 
 (** constant-time insertion of a new element.  It is an error to call [insert_before t e
-    a] or [insert_after t e a] if [e] is not an element in [t], and will break
-    invariants. *)
+    a] or [insert_after t e a] if [e] is not an element in [t]. *)
 val insert_before : 'a t -> 'a Elt.t -> 'a -> 'a Elt.t
 val insert_after : 'a t -> 'a Elt.t -> 'a -> 'a Elt.t
 val insert_first : 'a t -> 'a -> 'a Elt.t
 val insert_last : 'a t -> 'a -> 'a Elt.t
 
 (** constant-time removal of an element.  It is an error to call [remove t e] when [e] is
-    not in [t], and will break [invariant]. *)
+    not in [t]. *)
 val remove : 'a t -> 'a Elt.t -> unit
 val remove_first : 'a t -> 'a option
 val remove_last : 'a t -> 'a option

@@ -17,6 +17,6 @@ erat. Vestibulum in feugiat metus.
 
 === flags ===
 
-  -help  print this help text and exit
-         (alias: -?)
+  [-help]  print this help text and exit
+           (alias: -?)
 

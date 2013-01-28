@@ -212,6 +212,26 @@ val get_terminal_size : (unit -> int * int) Or_error.t
 (* Get the thread ID of the current thread (see gettid(2)). *)
 val gettid : (unit -> int) Or_error.t
 
+module Priority : sig
+  (* [Priority.t] is what is usually referred to as the "nice" value of a process.  It is
+     also known as the "dynamic" priority.  It is used with normal (as opposed to
+     real-time) processes that have static priority zero.  See [Unix.Scheduler.set] for
+     setting the static priority. *)
+  type t with sexp
+
+  val equal : t -> t -> bool
+  val of_int : int -> t
+  val to_int : t -> int
+  val incr : t -> t
+  val decr : t -> t
+end
+
+(** Set the calling thread's priority in the linux scheduler *)
+val setpriority : (Priority.t -> unit) Or_error.t
+
+(** Get the calling thread's priority in the linux scheduler *)
+val getpriority : (unit -> Priority.t) Or_error.t
+
 (* [get_ipv4_address_for_interface "eth0"] returns the IP address
    assigned to eth0, or throws an exception if no IP address
    is configured. *)
@@ -303,7 +323,10 @@ module Epoll : sig
       Note that this method should not be considered thread safe.  There is mutable state
       in t that will be changed by invocations to wait that cannot be prevented by mutexes
       around [wait]. *)
-  val wait : t -> timeout:Span.t -> [ `Ok | `Timeout ]
+  val wait
+    :  t
+    -> timeout:[ `Never | `Immediately | `After of Span.t ]
+    -> [ `Ok | `Timeout ]
 
   (** [iter_ready] and [fold_ready] iterate over the ready set computed by the last
       call to [wait]. *)

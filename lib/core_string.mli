@@ -152,6 +152,9 @@ val foldi : t -> init : 'a -> f : (int -> 'a -> char -> 'a) -> 'a
     characters. *)
 val concat_map : ?sep:t -> t -> f : (char -> t) -> t
 
+(** [filter s ~f:predicate] discards characters not satisfying [predicate] *)
+val filter : t -> f : (char -> bool) -> t
+
 (** [tr target replacement s] replaces every instance of [target] in [s] with
     [replacement]. *)
 val tr : target : char -> replacement : char -> t -> t

@@ -64,6 +64,10 @@ val add
   -> data:'v
   -> ('k, 'v) t
 
+(* Returns the first (leftmost) or last (rightmost) element in the tree *)
+val first : ('k, 'v) t -> ('k * 'v) option
+val last  : ('k, 'v) t -> ('k * 'v) option
+
 (** if the specified key exists in the tree, return the corresponding value.
     O(log(N)) time and O(1) space. *)
 val find : ('k, 'v) t -> compare:('k -> 'k -> int) -> 'k -> 'v option

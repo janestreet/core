@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 4c976b1ef7333ab2ab8626e5a09ba767)
+# DO NOT EDIT (digest: d103423bef130d5650be9dfd2370eb4a)
 # Ignore VCS directories, you can use the same kind of rule outside 
 # OASIS_START/STOP if you want to exclude directories that contains 
 # useless stuff for the build process
@@ -74,6 +74,7 @@
 "lib/core_sys.cmx": for-pack(Core)
 "lib/core_thread.cmx": for-pack(Core)
 "lib/core_unix.cmx": for-pack(Core)
+"lib/core_weak.cmx": for-pack(Core)
 "lib/crc.cmx": for-pack(Core)
 "lib/daemon.cmx": for-pack(Core)
 "lib/date.cmx": for-pack(Core)
@@ -94,6 +95,7 @@
 "lib/hash_set.cmx": for-pack(Core)
 "lib/hash_set_intf.cmx": for-pack(Core)
 "lib/heap.cmx": for-pack(Core)
+"lib/heap_block.cmx": for-pack(Core)
 "lib/host_and_port.cmx": for-pack(Core)
 "lib/identifiable.cmx": for-pack(Core)
 "lib/in_channel.cmx": for-pack(Core)
@@ -115,9 +117,9 @@
 "lib/month.cmx": for-pack(Core)
 "lib/mutex0.cmx": for-pack(Core)
 "lib/nano_mutex.cmx": for-pack(Core)
+"lib/never_returns.cmx": for-pack(Core)
 "lib/no_polymorphic_compare.cmx": for-pack(Core)
 "lib/ofday.cmx": for-pack(Core)
-"lib/ofday_unit_tests_v1.cmx": for-pack(Core)
 "lib/only_in_test.cmx": for-pack(Core)
 "lib/option.cmx": for-pack(Core)
 "lib/ordered_collection_common.cmx": for-pack(Core)
@@ -245,6 +247,21 @@
 "lib/crc_stubs.c": pkg_res
 "lib/crc_stubs.c": pkg_unix
 "lib/crc_stubs.c": pkg_threads
+"lib/heap_block_stubs.c": pkg_variantslib
+"lib/heap_block_stubs.c": pkg_variantslib.syntax
+"lib/heap_block_stubs.c": pkg_sexplib.syntax
+"lib/heap_block_stubs.c": pkg_sexplib
+"lib/heap_block_stubs.c": pkg_fieldslib.syntax
+"lib/heap_block_stubs.c": pkg_fieldslib
+"lib/heap_block_stubs.c": pkg_bin_prot
+"lib/heap_block_stubs.c": pkg_bin_prot.syntax
+"lib/heap_block_stubs.c": pkg_bigarray
+"lib/heap_block_stubs.c": pkg_comparelib.syntax
+"lib/heap_block_stubs.c": pkg_pa_ounit
+"lib/heap_block_stubs.c": pkg_pa_pipebang
+"lib/heap_block_stubs.c": pkg_res
+"lib/heap_block_stubs.c": pkg_unix
+"lib/heap_block_stubs.c": pkg_threads
 "lib/linux_ext_stubs.c": pkg_variantslib
 "lib/linux_ext_stubs.c": pkg_variantslib.syntax
 "lib/linux_ext_stubs.c": pkg_sexplib.syntax

@@ -1,7 +1,7 @@
 include Make_substring.F (struct
   type t = Bigstring.t
 
-  let create = Bigstring.create
+  let create = Bigstring.create ?max_mem_waiting_gc:None
   let length = Bigstring.length
   module Blit = Make_substring.Blit
   let blit = Blit.bigstring_bigstring

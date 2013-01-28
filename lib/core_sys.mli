@@ -121,3 +121,12 @@ val catch_break : bool -> unit
     [patchlevel] are integers, and [additional-info] is an arbitrary string. The
     [[.patchlevel]] and [[+additional-info]] parts may be absent. *)
 val ocaml_version : string;;
+
+(** [execution_mode] tests whether the code being executed was compiled natively
+    or to bytecode. *)
+val execution_mode : unit -> [ `Bytecode | `Native ]
+
+(** [c_int_size] returns the number of bits in a C [int]. Note that this can be
+    different from [word_size]. For example, a 32-bit operating system installed
+    on a 64-bit machine may have [word_size = 64], but [c_int_size () = 32] *)
+external c_int_size : unit -> int = "c_int_size" "noalloc"

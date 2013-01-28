@@ -6,11 +6,12 @@ module Command = Core.Std.Command
 
 include struct
   open Async.Std
-  let uses_async =
-    Command.Spec.step (fun finished ->
+  let uses_async : (unit -> int Deferred.t, unit -> unit) Command.Spec.t =
+    Command.Spec.step (fun finished () ->
       printf "uses_async\n%!";
-      upon finished Shutdown.shutdown;
-      never_returns (Scheduler.go ()))
+      upon (finished ()) Shutdown.shutdown;
+      let () = never_returns (Scheduler.go ()) in
+      ())
 end
 
 let flag_prompt_if_missing name of_string ~doc =
@@ -54,7 +55,7 @@ module Sing = struct
         +> anon ("FOO" %: string)
         +> anon (sequence ("BAR" %: string))
       )
-      (fun ~slow loudness date notes song _ _ ->
+      (fun ~slow loudness date notes song _ _ () ->
         (* ... your code here... *)
         print_endline (if slow then "slow" else "fast");
         printf "loudness = %s\n"
@@ -82,7 +83,7 @@ module Hg_log = struct
         empty
         +> revision_flag
         +> flag "-print" no_arg ~doc:" display all changes (not just a summary)")
-      (fun revision print ->
+      (fun revision print () ->
         (* ... your code here ... *)
         ignore (revision, print)
       )
@@ -92,7 +93,7 @@ module Hg_cat = struct
   let command =
     Command.basic ~summary:"cat a file from hg history"
       Command.Spec.(empty +> revision_flag +> anon ("FILE" %: string))
-      (fun revision file ->
+      (fun revision file () ->
         (* ... your code here ... *)
         ignore (revision, file)
       )
@@ -103,7 +104,7 @@ module Cat = struct
   let command =
     Command.basic ~summary:"example async command: cat a file to stdout"
       Command.Spec.(empty +> anon ("FILE" %: string) ++ uses_async)
-      (fun path ->
+      (fun path () ->
         Reader.with_file path ~f:(fun r ->
           Pipe.iter_without_pushback (Reader.pipe r) ~f:(fun chunk ->
             Writer.write (Lazy.force Writer.stdout) chunk))
@@ -120,7 +121,7 @@ module Prompting = struct
         +> flag "-rev" (required string) ~doc:" print stuff"
         +> flag_prompt_if_missing "id" Fn.id ~doc:" whatever"
       )
-      (fun revision id ->
+      (fun revision id () ->
         (* ... your code here ... *)
         print_endline "MAIN STARTED";
         printf "revision = %s\n%!" revision;
@@ -148,7 +149,7 @@ module Fields = struct
           ~foo:(fields_flag (required int)    ~doc:"N foo factor")
           ~bar:(fields_flag (optional string) ~doc:"B error bar (optional)")
           ~baz:(fields_flag (listed float)    ~doc:"X whatever (listed)"))
-      (fun foo bar baz ->
+      (fun foo bar baz () ->
         main {foo; bar; baz})
 
 end
@@ -168,7 +169,7 @@ module Complex_anons = struct
               ("F" %: string)
               (sequence ("G" %: string))))))
       )
-      (fun a b rest ->
+      (fun a b rest () ->
         (* ... your code here... *)
         printf "A = %s\n" a;
         printf "B = %s\n" b;
@@ -197,7 +198,7 @@ module Goodies = struct
         +> flag "t" (optional string) ~doc:""
         +> flag "-fail" no_arg ~doc:" die, die, die!"
       )
-      (fun help path args _ _ ->
+      (fun help path args _ _ () ->
         print_endline "PATH:";
         List.iter path ~f:(fun x -> print_endline ("  " ^ x));
         print_endline "ARGS:";
@@ -216,7 +217,7 @@ module Long_flag_description = struct
           adipiscing elit. Vivamus fermentum condimentum eros, sit amet
           pulvinar dui ultrices in."
       )
-      ignore
+      (fun _ () -> ())
 end
 
 let command =
@@ -239,5 +240,5 @@ let command =
     ("long-flag-description", Long_flag_description.command);
   ]
 
-let () = Command.run command
+let () = Exn.handle_uncaught ~exit:true (fun () -> Command.run command)
 
