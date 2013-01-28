@@ -181,7 +181,7 @@ let add t handler ?randomize ?interval span =
   check_span "add" span;
   add_abs t handler ?randomize ?interval time
 
-let remove { timer; t_event_opt; _ } =
+let remove { timer; t_event_opt; time=_; interval=_; handler=_ } =
   match t_event_opt with
   | Some t_event ->
       wrap_update timer ~f:(fun () ->
@@ -190,8 +190,8 @@ let remove { timer; t_event_opt; _ } =
         if Heap.heap_el_is_valid t_event then Heap.remove t_event)
   | None -> assert false  (* impossible *)
 
-let reschedule ({ timer; _ } as ev) ?randomize ?interval span =
-  match ev.t_event_opt with
+let reschedule ({ timer; t_event_opt; time=_; interval=_; handler=_; } as ev) ?randomize ?interval span =
+  match t_event_opt with
   | Some t_event ->
       let loc = "reschedule" in
       check_span loc span;

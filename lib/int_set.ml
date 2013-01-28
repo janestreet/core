@@ -75,9 +75,9 @@ let ranges t = List.map t ~f:(fun { Range.lo; hi } -> lo, hi)
 let max t =
   match t with
   | [] -> None
-  | { Range.hi; _ } :: _ -> Some hi
+  | { Range.hi; lo=_ } :: _ -> Some hi
 
 let min t =
   match List.last t with
   | None -> None
-  | Some { Range.lo; _ } -> Some lo
+  | Some { Range.lo; hi=_ } -> Some lo

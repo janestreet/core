@@ -154,6 +154,45 @@ module Fields = struct
 
 end
 
+module Fields_with_default = struct
+
+  type t = {
+    foo : int;
+    bar : string option;
+    baz : float list;
+  } with fields, sexp
+
+  let default = {
+    foo = 1;
+    bar = None;
+    baz = [];
+  }
+
+  let main t () =
+    (* ... your code here ... *)
+    print_endline (Sexp.to_string_hum (sexp_of_t t))
+
+  let fields_flag spec ~doc acc field =
+    let name = Fieldslib.Field.name field in
+    let name = String.tr ~target:'_' ~replacement:'-' name in
+    let f main (record:t) value =
+      main (Fieldslib.Field.fset field record value)
+    in
+    let open Command.Spec in
+    step f ++ acc +> flag ("-" ^ name) spec ~doc
+
+  let command =
+    Command.basic ~summary:"example using fieldslib"
+      Command.Spec.(
+        Fields.fold
+          ~init:(empty +> const default)
+          ~foo:(fields_flag (required int)    ~doc:"N foo factor")
+          ~bar:(fields_flag (optional string) ~doc:"B error bar (optional)")
+          ~baz:(fields_flag (listed float)    ~doc:"X whatever (listed)"))
+      main
+
+end
+
 module Complex_anons = struct
   let command =
     Command.basic ~summary:"command with complex anonymous argument structure"
@@ -232,6 +271,7 @@ let command =
     ("cat", Cat.command);
     ("prompting", Prompting.command);
     ("fields", Fields.command);
+    ("fields-with-default", Fields_with_default.command);
     ("complex-anons", Complex_anons.command);
     ("sub",
       Command.group ~summary:"a subcommand" [

@@ -7,7 +7,7 @@ open Sexplib
     serializing the argument to the variant.  Both the name and the sexp-converter are
     used for display purposes only. *)
 module Constr : sig
-  type 'a t
+  type 'a t with sexp_of
 
   (** [create name to_sexp]
       if the type ['a] doesn't support sexp conversion, then a good practice

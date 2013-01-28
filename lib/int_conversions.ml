@@ -12,13 +12,13 @@ let convert a b a_to_b b_to_a =
   if a.num_bits <= b.num_bits then
     ((fun i -> Some (a_to_b i)), a_to_b)
   else
-    let { min = b_min; max = b_max; name = b_name; _ } = b in
+    let { min = b_min; max = b_max; name = b_name; num_bits=_; to_string=_; compare=_ } = b in
     let min = b_to_a b_min in
     let max = b_to_a b_max in
     let compare = a.compare in
     let is_in_range i = compare min i <= 0 && compare i max <= 0 in
     let convert i = if is_in_range i then Some (a_to_b i) else None in
-    let { name = a_name; to_string = a_to_string; _ } = a in
+    let { name = a_name; to_string = a_to_string; num_bits=_; max=_; min=_; compare=_ } = a in
     let convert_exn i =
       if is_in_range i then
         a_to_b i

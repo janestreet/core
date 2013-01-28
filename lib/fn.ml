@@ -14,7 +14,7 @@ let forever f =
 
 external id : 'a -> 'a = "%identity"
 
-let ( |! ) x f = f x
+external ( |! ) : 'a -> ( 'a -> 'b) -> 'b = "%revapply"
 
 (* The typical use case for these functions is to pass in functional arguments and get
    functions as a result. For this reason, we tell the compiler where to insert

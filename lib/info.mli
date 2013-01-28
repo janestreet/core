@@ -40,7 +40,7 @@ val of_thunk : (unit -> string) -> t
 (** For [create msg z sexp_of_z], be careful to use only immutable values for z, or be
     aware that [z] will be lazily converted to a sexp at a later point in time, which will
     pick up the then-current state of [z]. *)
-val create : ?here:Source_code_position.t -> string -> 'a -> ('a -> Sexp.t) -> t
+val create : ?here:Source_code_position0.t -> string -> 'a -> ('a -> Sexp.t) -> t
 
 (* Add a string to the front. *)
 val tag : t -> string -> t

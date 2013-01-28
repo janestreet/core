@@ -10,7 +10,7 @@ module Uid = Unique_id.Int63 (struct end) (* uniqueness of ids is required *)
 
 module Key = struct
 
-  type 'a t = Uid.t * 'a Univ.Constr.t
+  type 'a t = Uid.t * 'a Univ.Constr.t with sexp_of
 
   let create name sexp_of_a = (Uid.create (), Univ.Constr.create name sexp_of_a)
 
@@ -144,7 +144,7 @@ module With_default = struct
 
   let find t {Key.key; default} = Option.value ~default (find t key)
 
-  let set t {Key.key; _} v = set t key v
+  let set t {Key.key; default=_ } v = set t key v
 
   let change t k update = set t k (update (find t k))
 
@@ -171,11 +171,11 @@ module With_fold = struct
       {f; key = With_default.Key.create ~default:init name sexp_of}
   end
 
-  let find t {Key.key; _} = With_default.find t key
+  let find t {Key.key; f=_ } = With_default.find t key
 
-  let set t {Key.key; _} v = With_default.set t key v
+  let set t {Key.key; f=_ } v = With_default.set t key v
 
-  let change t {Key.key; _} update = With_default.change t key update
+  let change t {Key.key; f=_ } update = With_default.change t key update
 
   let add t {Key.key; f} v = With_default.change t key (fun acc -> f acc v)
 

@@ -38,38 +38,32 @@ module type S = sig
   val of_int64 : int64 -> t
   val to_int64 : t -> int64
 
-  (** iround_towards_zero_exn raises Invalid_argument when either trying to handle nan or
-      trying to handle a float outside the range (-. 2. ** 52., 2. ** 52.)
-      (since floats have 52 significant bits) or outside the range
-      (float min_int, float max_int) *)
-  val iround_towards_zero_exn : t -> int           (* closer to 0 *)
-  (** iround_towards_zero returns None if iround_towards_zero_exn raises an exception *)
-  val iround_towards_zero : t -> int option        (* closer to 0 *)
-  (* iround_down[_exn] rounds towards Float.neg_infinity *)
-  val iround_down_exn : t -> int
-  val iround_down : t -> int option
-  (* iround_up[_exn] rounds toward Float.infinity *)
-  val iround_up_exn : t -> int
-  val iround_up : t -> int option
-  (** iround_nearest_exn raises Invalid_argument in the same cases as
-      iround_towards_zero_exn *)
-  val iround_nearest_exn : t -> int
-  (** iround_nearest returns None if iround_nearest_exn raises an exception *)
-  (** [iround_nearest t] rounds t to the nearest int.  Returns None when t is too large to
-      round to an int. *)
-  val iround_nearest : t -> int option
+  (* [round] rounds a float to a float.  [iround{,_exn}] rounds a float to an int.  Both
+     round according to a direction [dir], with default [dir] being [`Nearest].
 
-  (* Caveat: If the absolute value of the input float is very large, then it could be that
-     |round_down x - round_up x| > 1. *)
-  (* round_down ..., [-2.,-1.) to -2., [-1.,0.) to -1., [0.,1.) to 0., [1.,2.) to 1.,...*)
-  val round_down : t -> t
-  (* round_down ..., (-2.,-1.] to -1., (-1.,0.] to -0., (0.,1.] to 1., (1.,2.] to 2.,...*)
-  val round_up  : t -> t
-  (* round_towards_zero ..., (-2.,-1.] to -1., (-1.,1.) to 0., [1.,2.) to 1.,...*)
-  val round_towards_zero : t -> t
-  (* round_nearest ...,[-1.5,-0.5) to -1., [-0.5,0.5) to 0., [0.5,1.5) to 1.,...*)
-  val round_nearest : t -> t
-  val round : t -> t (* same as [round_nearest] *)
+     | `Down    | rounds toward Float.neg_infinity |
+     | `Up      | rounds toward Float.infinity     |
+     | `Nearest | rounds to the nearest int        |
+     | `Zero    | rounds toward zero               |
+
+     iround[_exn] raises Invalid_argument when either trying to handle nan or trying to
+     handle a float outside the range (-. 2. ** 52., 2. ** 52.) (since floats have 52
+     significant bits) or outside the range (float min_int, float_max_int)
+
+     Caveat: If the absolute value of the input float is very large, then it could be that
+     |round ~dir:`Down x - round ~dir:`Up x| > 1.
+
+     Here are some examples for [round] for each of the directions.
+
+     | `Down    | [-2.,-1.)   to -2. | [-1.,0.)   to -1. | [0.,1.) to 0., [1.,2.) to 1. |
+     | `Up      | (-2.,-1.]   to -1. | (-1.,0.]   to -0. | (0.,1.] to 1., (1.,2.] to 2. |
+     | `Zero    | (-2.,-1.]   to -1. | (-1.,1.)   to 0.  | [1.,2.) to 1.                |
+     | `Nearest | [-1.5,-0.5) to -1. | [-0.5,0.5) to 0.  | [0.5,1.5) to 1.              |
+  *)
+  val round      : ?dir:[`Zero|`Nearest|`Up|`Down] -> t -> t
+  val iround     : ?dir:[`Zero|`Nearest|`Up|`Down] -> t -> int option
+  val iround_exn : ?dir:[`Zero|`Nearest|`Up|`Down] -> t -> int
+
 
   val is_nan : t -> bool
 

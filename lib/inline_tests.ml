@@ -123,6 +123,7 @@ let tests () = OUnit.TestList [
     Sexpable.ounit_tests ();
     Signal.ounit_tests ();
     Source_code_position.ounit_tests ();
+    Source_code_position0.ounit_tests ();
     Space_safe_tuple.ounit_tests ();
     Span.ounit_tests ();
     Squeue.ounit_tests ();

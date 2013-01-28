@@ -7,7 +7,7 @@ module Span = Time.Span
 
 let teq t1 t2 =
   if Sys.word_size = 64 then
-    Float.iround_towards_zero (Time.to_float t1 *. 1000.) = Float.iround_towards_zero (Time.to_float t2 *. 1000.)
+    Float.iround ~dir:`Zero (Time.to_float t1 *. 1000.) = Float.iround ~dir:`Zero (Time.to_float t2 *. 1000.)
   else
     true (* milliseconds since 1970 too large for truncate *)
 let speq s1 s2 = round (Time.Span.to_ms s1) = round (Time.Span.to_ms s2)
@@ -46,9 +46,9 @@ let () = add "t"
       let time3 = Time.of_string s3 in
       let now1 = Time.now () in
       let now2 = Time.now () in
-      "diff1" @? (Float.iround_nearest_exn (Time.Span.to_sec (Time.diff time2 time1)) = 15);
-      "diff1'" @? (Float.iround_nearest_exn (Time.Span.to_ms (Time.diff time2 time1)) = 15 * 1000);
-      "diff2" @? (Float.iround_nearest_exn (Time.Span.to_ms (Time.diff time3 time2)) = 232);
+      "diff1" @? (Float.iround_exn ~dir:`Nearest (Time.Span.to_sec (Time.diff time2 time1)) = 15);
+      "diff1'" @? (Float.iround_exn ~dir:`Nearest (Time.Span.to_ms (Time.diff time2 time1)) = 15 * 1000);
+      "diff2" @? (Float.iround_exn ~dir:`Nearest (Time.Span.to_ms (Time.diff time3 time2)) = 232);
       "conv1" @? (Time.to_string time1 = s1 ^ ":00.000000");
       "conv2" @? (Time.to_string time2 = s2 ^ ".000000");
       "conv3" @? (Time.to_string time3 = s3 ^ "000");
@@ -136,7 +136,7 @@ module Old_date_impl = struct
     Time.of_float time
   ;;
 
-  let of_time_internal time = of_tm (Unix.localtime (Float.round_down (Time.to_float time)))
+  let of_time_internal time = of_tm (Unix.localtime (Float.round ~dir:`Down (Time.to_float time)))
 
   let add_days t n =
     let time = to_time_internal t in

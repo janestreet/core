@@ -76,6 +76,8 @@ let to_int64 f =
 let float_round_lb = max (of_int min_int) (-1.0 *. 2.0 ** 62.0 +. 257.)
 let float_round_ub = min (of_int max_int) (2.0 ** 62.0 -. 257.)
 
+let round x = floor (x +. 0.5)
+
 let iround_towards_zero_exn x =
   if is_nan x then
     invalid_arg "Float.iround_towards_zero_exn: Unable to handle NaN"
@@ -84,12 +86,6 @@ let iround_towards_zero_exn x =
       if float_round_lb < x && x < float_round_ub then truncate x
       else invalid_argf "Float.iround_towards_zero_exn: argument out of bounds (%f)" x ()
     end
-
-let iround_towards_zero x =
-  try Some (iround_towards_zero_exn x)
-  with _ -> None
-
-let round x = floor (x +. 0.5)
 
 let iround_down_exn x =
   if is_nan x then
@@ -100,10 +96,6 @@ let iround_down_exn x =
       else invalid_argf "Float.iround_down_exn: argument out of bounds (%f)" x ()
     end
 
-let iround_down x =
-  try Some (iround_down_exn x)
-  with _ -> None
-
 let iround_up_exn x =
   if is_nan x then
     invalid_arg "Float.iround_up_exn: Unable to handle NaN"
@@ -113,29 +105,34 @@ let iround_up_exn x =
       else invalid_argf "Float.iround_up_exn: argument out of bounds (%f)" x ()
     end
 
-let iround_up x =
-  try Some (iround_up_exn x)
+let iround_nearest_exn x =
+  if is_nan x then
+    invalid_arg "Float.iround_nearest_exn: Unable to handle NaN"
+  else begin
+    if float_round_lb < x && x < float_round_ub then to_int (round x)
+    else invalid_argf "Float.iround_nearest_exn: argument out of bounds (%f)" x ()
+  end
+
+let iround_exn ?(dir=`Nearest) t =
+  match dir with
+  | `Zero    -> iround_towards_zero_exn t
+  | `Nearest -> iround_nearest_exn t
+  | `Up      -> iround_up_exn t
+  | `Down    -> iround_down_exn t
+
+let iround ?(dir=`Nearest) t =
+  try Some (iround_exn ~dir t)
   with _ -> None
 
-let iround_nearest x =
-  if float_round_lb < x && x < float_round_ub then
-    Some (to_int (round x))
-  else None (* float too big to round reliably to int *)
+TEST = iround_exn ~dir:`Nearest 3.4 = 3
+TEST = iround_exn ~dir:`Nearest 3.6 = 4
+TEST = iround_exn ~dir:`Nearest (-3.4) = (-3)
+TEST = iround_exn ~dir:`Nearest (-3.6) = (-4)
 
-TEST = iround_nearest 3.4 = Some 3
-TEST = iround_nearest 3.6 = Some 4
-TEST = iround_nearest (-3.4) = Some (-3)
-TEST = iround_nearest (-3.6) = Some (-4)
-
-let iround_nearest_exn x =
-  match iround_nearest x with
-  | None -> invalid_argf "Float.iround_nearest_exn: argument out of bounds (%f)" x ()
-  | Some n -> n
-
-TEST = iround_nearest_exn 3.4 = 3
-TEST = iround_nearest_exn 3.6 = 4
-TEST = iround_nearest_exn (-3.4) = (-3)
-TEST = iround_nearest_exn (-3.6) = (-4)
+TEST = iround ~dir:`Nearest 3.4 = Some 3
+TEST = iround ~dir:`Nearest 3.6 = Some 4
+TEST = iround ~dir:`Nearest (-3.4) = Some (-3)
+TEST = iround ~dir:`Nearest (-3.6) = Some (-4)
 
 let is_inf x = (Pervasives.classify_float x = Pervasives.FP_infinite);;
 
@@ -189,6 +186,13 @@ TEST = round_towards_zero 3.6 = 3. && round_towards_zero (-3.6) = -3.
 
 let round_nearest t = round t
 TEST = round_nearest 3.6 = 4. && round_nearest (-3.6) = -4.
+
+let round ?(dir=`Nearest) t =
+  match dir with
+  | `Nearest -> floor (t +. 0.5)
+  | `Down -> round_down t
+  | `Up -> round_up t
+  | `Zero -> round_towards_zero t
 
 let mod_float = Pervasives.mod_float
 

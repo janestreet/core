@@ -467,7 +467,7 @@ module Stable = struct
         let next =
           add base
             (Span.scale interval
-               (Float.round_down (Span.(//) base_to_after interval)))
+               (Float.round ~dir:`Down (Span.(//) base_to_after interval)))
         in
         if next > after
         then next

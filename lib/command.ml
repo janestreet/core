@@ -34,7 +34,7 @@ end = struct
   }
 
   let sort ts =
-    List.sort ts ~cmp:(fun { name = a; _ } { name = b; _ } -> help_screen_compare a b)
+    List.sort ts ~cmp:(fun { name = a; doc=_; aliases=_ } { name = b; doc=_; aliases=_ } -> help_screen_compare a b)
 
   let word_wrap text width =
     let chunks = String.split text ~on:'\n' in
@@ -221,7 +221,7 @@ module Flag = struct
 
   module Deprecated = struct
     (* flag help in the format of the old command. used for injection *)
-    let help ({name; doc; aliases; _ } as t)  =
+    let help ({name; doc; aliases; action=_; check_available=_ } as t)  =
       if String.is_prefix doc ~prefix:" " then
         (name, String.lstrip doc)
           :: List.map aliases ~f:(fun x -> (x, sprintf "same as \"%s\"" name))
@@ -236,7 +236,7 @@ module Flag = struct
               (wrap_if_optional t (x ^ " " ^ arg), sprintf "same as \"%s\"" name))
   end
 
-  let align ({name; doc; aliases; _} as t) =
+  let align ({name; doc; aliases; action=_; check_available=_ } as t) =
     let (name, doc) =
       match String.lsplit2 doc ~on:' ' with
       | None | Some ("", _) -> (name, String.strip doc)
@@ -688,7 +688,7 @@ let lookup_expand_with_aliases map prefix key_type =
   let map =
     String.Map.of_alist
       (List.concat_map (String.Map.data map) ~f:(fun flag ->
-        let { Flag.name; aliases; _ } = flag in
+        let { Flag.name; aliases; action=_; doc=_; check_available=_ } = flag in
         (name, flag) :: List.map aliases ~f:(fun alias -> (alias, flag))))
   in
   match map with
@@ -752,7 +752,7 @@ module Base = struct
       | Cons (arg, args) ->
         if String.is_prefix arg ~prefix:"-" then begin
           let flag = arg in
-          let (flag, { Flag.action; _ }) =
+          let (flag, { Flag.action; name=_; aliases=_; doc=_; check_available=_ }) =
             match lookup_expand_with_aliases t.flags flag Key_type.Flag with
             | Error msg -> die "%s" msg ()
             | Ok x -> x
@@ -954,7 +954,7 @@ and group = {
 
 let get_summary = function
   | Base base -> Base.summary base
-  | Group { summary; _ } -> summary
+  | Group { summary; readme=_; subcommands=_ } -> summary
 
 let group_help ~path ~summary ~readme subs =
   unparagraphs (List.filter_opt [
@@ -1016,7 +1016,7 @@ let basic ~summary ?readme {Base.Spec.usage; flags; f} main =
       begin (* check for alias collision, too *)
         match
           String.Map.of_alist
-            (List.concat_map flags ~f:(fun { Flag.name; Flag.aliases; _ } ->
+            (List.concat_map flags ~f:(fun { Flag.name; Flag.aliases; action=_; doc=_; check_available=_ } ->
               (name, ()) :: List.map aliases ~f:(fun alias -> (alias, ()))))
         with
         | `Duplicate_key x -> failwithf "multiple flags or aliases named %s" x ()
@@ -1081,7 +1081,7 @@ let help_subcommand ~summary ~readme =
           else acc)
       and
         gather rpath acc = function
-          | Group { subcommands; _ } -> gather_group rpath acc subcommands
+          | Group { subcommands; summary=_; readme=_ } -> gather_group rpath acc subcommands
           | Base base ->
             if show_flags then begin
               Base.formatted_flags base
@@ -1321,7 +1321,7 @@ module Deprecated = struct
                 (Base.Deprecated.flags_help ~display_help_flags:false base))
         else
           [base_help]
-      | Group { summary; subcommands; _ } ->
+      | Group { summary; subcommands; readme=_ } ->
         (s ^ cmd, summary)
         :: begin
           String.Map.to_alist subcommands

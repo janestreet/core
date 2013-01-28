@@ -16,6 +16,10 @@ let create_exn v =
 
 let value t = t
 
+let bytes_per_word = Word_size.(num_bits word_size) / 8
+
+let bytes (type a) (t : a t) = (Obj.size (Obj.repr (t : a t)) + 1) * bytes_per_word
+
 TEST_UNIT =
   assert (create 13 = None);
   begin match Sys.execution_mode () with

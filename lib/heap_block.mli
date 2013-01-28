@@ -26,3 +26,7 @@ val create_exn : 'a -> 'a t
 
 (** [value t] returns the value that is physically equal to [t] *)
 val value : 'a t -> 'a
+
+(** [bytes t] returns the number of bytes on the heap taken by [t], including the
+    header. *)
+val bytes : _ t -> int

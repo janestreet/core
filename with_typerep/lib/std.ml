@@ -57,20 +57,20 @@ module Test : sig
 
   (* Checks that the [Binable] and [Sexpable] implementations generated from the typerep
      are equivalent with the auto-generated ones. *)
-  val run_with_typerep :
+  (*val run_with_typerep :
     (module With_bin_io_and_sexp with type t = 'a)
     -> (module Typerepable.S0 with type t = 'a)
     -> 'a list
-    -> unit
+    -> unit*)
 
   (* Checks that the [Binable] and [Sexpable] implementations generated from the
      typestruct are equivalent with the auto-generated ones. *)
-  val run_with_typestruct :
+  (*val run_with_typestruct :
     skip_sexp_str:bool
     -> (module With_bin_io_and_sexp with type t = 'a)
     -> (module Typestructable.S0 with type t = 'a)
     -> 'a list
-    -> unit
+    -> unit*)
 end = struct
 
   let run_with_typerep (type a) camlp4 rep (items : a list) =
@@ -188,6 +188,7 @@ module Month = struct
   TEST_UNIT =
     let months =
       (* Nobody likes Oct. *)
+      (* Especially after hurricane Sandy hit. Nice bit of premonition by ascvortov *)
       [ Month.Jan; Feb; Mar; Apr; May; Jun; Jul; Aug; Sep; Nov; Dec ]
     in
     Test.run

@@ -1,11 +1,17 @@
 open Interfaces
 open Sexplib
 
-include Sexpable   with type t := Sexp.t
-include Stringable with type t := Sexp.t
-include Binable0.S with type t := Sexp.t
+type t = Sexp.t = Atom of string | List of t list
+with bin_io, sexp
 
-include Sexp_intf.S
+module O : sig
+  type sexp = Sexp.t = Atom of string | List of t list
+end
+
+include Comparable with type t := t
+include Stringable with type t := t
+
+include Sexp_intf.S with type t := t
 
 exception Of_sexp_error of exn * t
 

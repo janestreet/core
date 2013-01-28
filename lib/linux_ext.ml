@@ -464,7 +464,7 @@ module Epoll = struct
   let close t =
     match !t with
     | `Closed -> ()
-    | `In_use { epollfd; _ } ->
+    | `In_use { epollfd; flags_by_fd=_; max_ready_events=_; num_ready_events=_; ready_events=_ } ->
       t := `Closed;
       Unix.close epollfd;
   ;;
@@ -553,7 +553,7 @@ module Epoll = struct
            we wake up.  If we rounded down, then when the user requests a positive
            sub-millisecond timeout, we would use a timout of zero, and return immediately.
            This caused async to spin, repeatedly requesting slightly smaller timeouts. *)
-        Float.iround_up_exn (Span.to_ms span)
+        Float.iround_exn ~dir:`Up (Span.to_ms span)
     in
     use t ~f:(fun t ->
       (* We clear [num_ready_events] because [epoll_wait] will invalidate [ready_events],
@@ -579,7 +579,7 @@ module Epoll = struct
  *   = "linux_epoll_pwait"
  *
  * let pwait t ~timeout sigs =
- *   let millis = Float.iround_towards_zero_exn ( Span.to_ms timeout ) in
+ *   let millis = Float.iround_exn ~dir:`Zero ( Span.to_ms timeout ) in
  *   let num_ready = epoll_pwait t.epollfd t.events millis sigs in
  *   if num_ready = 0 then `Timeout
  *   else `Ok { Ready_fds.num_ready ; events = t.events }

@@ -7,7 +7,7 @@ val empty : t
 val is_empty : t -> bool
 
 module Key : sig
-  type 'a t
+  type 'a t with sexp_of
   (** [create name to_sexp] generates a fresh key.
       Note: If type ['a] doesn't support sexp conversion, then a good
             practice is to use [sexp_of_opaque] as the converter. *)

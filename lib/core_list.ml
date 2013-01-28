@@ -265,6 +265,8 @@ let for_all2_exn l1 l2 ~f =
   List.for_all2 l1 l2 ~f;
 ;;
 
+TEST = for_all2_exn [] [] ~f:(fun _ _ -> assert false)
+
 let exists2_exn l1 l2 ~f =
   check_length2 "exists2_exn" l1 l2;
   List.exists2 l1 l2 ~f;

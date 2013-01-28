@@ -72,7 +72,7 @@ module Stable = struct
           | Float.Sign.Neg -> Float.neg t
           | Float.Sign.Pos | Float.Sign.Zero -> t
         in
-        let t   = Float.iround_nearest_exn t in
+        let t   = Float.iround_exn ~dir:`Nearest t in
         let sec = t / 1_000_000 in
         let min = sec / 60 in
         let sec = sec mod 60 in
@@ -99,12 +99,12 @@ module Stable = struct
           | Float.Sign.Pos | Float.Sign.Zero -> t
         in
         let parts  = Float.modf t in
-        let intval = Float.iround_down_exn (Float.Parts.integral parts) in
+        let intval = Float.iround_exn ~dir:`Down (Float.Parts.integral parts) in
         let min    = intval / 60 in
         let sec    = intval mod 60 in
         let hr     = min / 60 in
         let min    = min mod 60 in
-        let us     = Float.iround_nearest_exn (Float.Parts.fractional parts *. 1.E6) in
+        let us     = Float.iround_exn ~dir:`Nearest (Float.Parts.fractional parts *. 1.E6) in
         let ms     = us / 1_000 in
         let us     = us mod 1_000 in
         {Parts.

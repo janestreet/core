@@ -1,7 +1,7 @@
 (** various combinators for functions *)
 
 (** A 'pipe' operator. *)
-val ( |! ) : 'a -> ( 'a -> 'b) -> 'b
+external ( |! ) : 'a -> ( 'a -> 'b) -> 'b = "%revapply"
 
 (** produces a function that just returns its first argument *)
 val const : 'a -> _ -> 'a

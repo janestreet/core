@@ -315,8 +315,7 @@ let lstrip ?(drop=Char.is_whitespace) t =
    final result.  This also saves some amount of time. *)
 let strip ?(drop=Char.is_whitespace) t =
   let length = length t in
-  if length = 0
-    || not (Char.is_whitespace t.[0] || Char.is_whitespace t.[length - 1])
+  if length = 0 || not (drop t.[0] || drop t.[length - 1])
   then t
   else
     match first_non_drop t ~drop with
@@ -326,6 +325,10 @@ let strip ?(drop=Char.is_whitespace) t =
         | None -> assert false
         | Some last -> sub t ~pos:first ~len:(last - first + 1)
 ;;
+
+TEST = strip " foo bar \n" = "foo bar"
+TEST = strip ~drop:(fun c -> c = '"') "\" foo bar " = " foo bar "
+TEST = strip ~drop:(fun c -> c = '"') " \" foo bar " = " \" foo bar "
 
 let mapi t ~f =
   let l = String.length t in

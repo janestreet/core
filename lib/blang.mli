@@ -49,8 +49,8 @@ val true_    : _ t
 val false_   : _ t
 val constant : bool -> _ t (* [function true -> true_ | false -> false_] *)
 val not_     : 'a t -> 'a t
-val and_     : 'a t list -> 'a t (* convenience function: n-ary [And] *)
-val or_      : 'a t list -> 'a t (* convenience function: n-ary [Or] *)
+val and_     : 'a t list -> 'a t (* n-ary [And] *)
+val or_      : 'a t list -> 'a t (* n-ary [Or] *)
 val if_      : 'a t -> 'a t -> 'a t -> 'a t (* [if_ if then else] *)
 
 (* [constant_value t = Some b] iff [t = constant b] *)

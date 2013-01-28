@@ -6,12 +6,22 @@ include Sexp
 
 exception Of_sexp_error = Sexplib.Conv.Of_sexp_error
 
-include (struct
-  type t = Sexp.t = Atom of string | List of t list with bin_io, compare
-end : sig
-  include Interfaces.Binable with type t := t
+module O = struct
+  type sexp = Sexp.t = Atom of string | List of t list
+end
+
+module T : sig
+  include Interfaces.Sexpable with type t := Sexp.t
+  include Interfaces.Binable  with type t := Sexp.t
   val compare : t -> t -> int
-end)
+end = struct
+  type t = Sexp.t = Atom of string | List of t list with bin_io, compare
+
+  let sexp_of_t t = t
+  let t_of_sexp t = t
+end
+
+include T
 
 module Sexp_option = struct
   type 'a t = 'a option with bin_io, compare
@@ -70,3 +80,8 @@ let sexp_of_no_raise sexp_of_a a =
     try List [ Atom "failure building sexp"; sexp_of_exn exn ]
     with _ -> Atom "could not build sexp for exn raised when building sexp for value"
 ;;
+
+include Comparable.Make (struct
+  type t = Sexp.t
+  include T
+end)

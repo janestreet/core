@@ -13,9 +13,9 @@ let round_test x =
   let y = Float.round x in
   -0.5 < y -. x && y -. x <= 0.5
 
-(* Float.iround_nearest built so this should always be true *)
+(* Float.iround ~dir:`Nearest built so this should always be true *)
 let iround_nearest_test x =
-  let y = Float.iround_nearest x in
+  let y = Float.iround ~dir:`Nearest x in
   match y with
   | None -> true
   | Some y ->
@@ -29,7 +29,7 @@ let iround_nearest_test x =
    so x -. iround_down x should be in [0,1)
 *)
 let iround_down_test x =
-  let y = Float.iround_down x in
+  let y = Float.iround ~dir:`Down x in
   match y with
   | None -> true
   | Some y ->
@@ -43,7 +43,7 @@ let iround_down_test x =
    so iround_up x -. x should be in [0,1)
 *)
 let iround_up_test x =
-  let y = Float.iround_up x in
+  let y = Float.iround ~dir:`Up x in
   match y with
   | None -> true
   | Some y ->
@@ -57,7 +57,7 @@ let iround_up_test x =
    so abs x -. abs (iround_towards_zero x) should be in [0,1)
 *)
 let iround_towards_zero_test x =
-  let y = Float.iround_towards_zero x in
+  let y = Float.iround ~dir:`Zero x in
   match y with
   | None -> true
   | Some y ->
@@ -74,30 +74,30 @@ let special_values_test () =
   Float.round 0.5 = 1. &&
   Float.round 1.49999 = 1. &&
   Float.round 1.5 = 2. &&
-  Float.iround_up_exn (-.2.) = -2 &&
-  Float.iround_up_exn (-.1.9999) = -1 &&
-  Float.iround_up_exn (-.1.) = -1 &&
-  Float.iround_up_exn (-.0.9999) = 0 &&
-  Float.iround_up_exn 0. = 0 &&
-  Float.iround_up_exn 0.00001 = 1 &&
-  Float.iround_up_exn 1. = 1 &&
-  Float.iround_up_exn 1.00001 = 2 &&
-  Float.iround_down_exn (-.1.00001) = -2 &&
-  Float.iround_down_exn (-.1.) = -1 &&
-  Float.iround_down_exn (-.0.00001) = -1 &&
-  Float.iround_down_exn 0. = 0 &&
-  Float.iround_down_exn 0.99999 = 0 &&
-  Float.iround_down_exn 1. = 1 &&
-  Float.iround_down_exn 1.99999 = 1 &&
-  Float.iround_down_exn 2. = 2 &&
-  Float.iround_towards_zero_exn (-.2.) = -2 &&
-  Float.iround_towards_zero_exn (-.1.99999) = -1 &&
-  Float.iround_towards_zero_exn (-.1.) = -1 &&
-  Float.iround_towards_zero_exn (-.0.99999) = 0 &&
-  Float.iround_towards_zero_exn 0.99999 = 0 &&
-  Float.iround_towards_zero_exn 1. = 1 &&
-  Float.iround_towards_zero_exn 1.99999 = 1 &&
-  Float.iround_towards_zero_exn 2. = 2
+  Float.iround_exn ~dir:`Up (-.2.) = -2 &&
+  Float.iround_exn ~dir:`Up (-.1.9999) = -1 &&
+  Float.iround_exn ~dir:`Up (-.1.) = -1 &&
+  Float.iround_exn ~dir:`Up (-.0.9999) = 0 &&
+  Float.iround_exn ~dir:`Up 0. = 0 &&
+  Float.iround_exn ~dir:`Up 0.00001 = 1 &&
+  Float.iround_exn ~dir:`Up 1. = 1 &&
+  Float.iround_exn ~dir:`Up 1.00001 = 2 &&
+  Float.iround_exn ~dir:`Down (-.1.00001) = -2 &&
+  Float.iround_exn ~dir:`Down (-.1.) = -1 &&
+  Float.iround_exn ~dir:`Down (-.0.00001) = -1 &&
+  Float.iround_exn ~dir:`Down 0. = 0 &&
+  Float.iround_exn ~dir:`Down 0.99999 = 0 &&
+  Float.iround_exn ~dir:`Down 1. = 1 &&
+  Float.iround_exn ~dir:`Down 1.99999 = 1 &&
+  Float.iround_exn ~dir:`Down 2. = 2 &&
+  Float.iround_exn ~dir:`Zero (-.2.) = -2 &&
+  Float.iround_exn ~dir:`Zero (-.1.99999) = -1 &&
+  Float.iround_exn ~dir:`Zero (-.1.) = -1 &&
+  Float.iround_exn ~dir:`Zero (-.0.99999) = 0 &&
+  Float.iround_exn ~dir:`Zero 0.99999 = 0 &&
+  Float.iround_exn ~dir:`Zero 1. = 1 &&
+  Float.iround_exn ~dir:`Zero 1.99999 = 1 &&
+  Float.iround_exn ~dir:`Zero 2. = 2
 
 (* code for generating random floats on which to test functions *)
 let absirand () =

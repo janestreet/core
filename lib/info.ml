@@ -27,7 +27,7 @@ module Message = struct
   | Could_not_construct of Sexp.t
   | String of string
   | Sexp of Sexp.t
-  | Tag_sexp of string * Sexp.t * Source_code_position.t option
+  | Tag_sexp of string * Sexp.t * Source_code_position0.t option
   | Tag_t of string * t
   | Tag_arg of string * Sexp.t * t
   | Of_list of int option * t list
@@ -77,7 +77,7 @@ module Message = struct
              :: sexp
              :: (match here with
              | None -> []
-             | Some here -> [ Source_code_position.to_sexp_hum here ]))
+             | Some here -> [ Source_code_position0.to_sexp_hum here ]))
       :: ac
     | Tag_t (tag, t) -> List (Atom tag :: to_sexps_hum t []) :: ac
     | Tag_arg (tag, sexp, t) -> List (Atom tag :: sexp :: to_sexps_hum t []) :: ac

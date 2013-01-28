@@ -48,11 +48,11 @@ let value_exn ?here ?error ?message t =
       | None  , Some e, None   -> e
       | None  , Some e, Some m -> Error.tag e m
       | Some p, None  , None   ->
-        Error.create "Option.value_exn" p <:sexp_of< Source_code_position.t >>
-      | Some p, None  , Some m -> Error.create m p <:sexp_of< Source_code_position.t >>
+        Error.create "Option.value_exn" p <:sexp_of< Source_code_position0.t >>
+      | Some p, None  , Some m -> Error.create m p <:sexp_of< Source_code_position0.t >>
       | Some p, Some e, _      ->
         Error.create (value message ~default:"") (e, p)
-          (<:sexp_of< Error.t * Source_code_position.t >>)
+          (<:sexp_of< Error.t * Source_code_position0.t >>)
     in
     Error.raise error
 ;;

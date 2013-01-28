@@ -24,7 +24,7 @@ type ('key, 'data) t =
     (* The number of entries in the table, not the length of the arrays below. *)
     mutable length : int;
     (* (key, data) is in the table
-       iff [entries_by_key.(key_to_index key) = { key; data ; _ }] *)
+       iff [entries_by_key.(key_to_index key) = { key; data }] *)
     entries_by_key : ('key, 'data) Entry.t option array;
     (* The first [length] elements of [defined_entries] hold the data in the table.
        This is an optimization for fold, to keep us from wasting iterations when

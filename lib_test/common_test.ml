@@ -41,10 +41,10 @@ let test =
 
       "round" >::
         (fun () ->
-          "zero" @? (Float.iround_nearest_exn 0.2 = 0);
-          "negative zero" @? (Float.iround_nearest_exn (-0.2) = 0);
-          "positive" @? (Float.iround_nearest_exn 3.4 = 3);
-          "negative" @? (Float.iround_nearest_exn (-3.4) = -3);
+          "zero" @? (Float.iround_exn ~dir:`Nearest 0.2 = 0);
+          "negative zero" @? (Float.iround_exn ~dir:`Nearest (-0.2) = 0);
+          "positive" @? (Float.iround_exn ~dir:`Nearest 3.4 = 3);
+          "negative" @? (Float.iround_exn ~dir:`Nearest (-3.4) = -3);
         );
 
     ]

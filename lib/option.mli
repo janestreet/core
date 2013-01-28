@@ -51,7 +51,7 @@ val value : 'a t -> default:'a -> 'a
     the supplied [~here], [~error], and [message], or a default message if none are
     supplied. *)
 val value_exn
-  :  ?here:Source_code_position.t
+  :  ?here:Source_code_position0.t
   -> ?error:Error.t
   -> ?message:string
   -> 'a t

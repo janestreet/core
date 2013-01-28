@@ -1,4 +1,5 @@
 open Sexplib
+open Sexplib.Conv
 
 type t = {
   exn : exn;                    (* where we stash the raw value *)
@@ -13,6 +14,7 @@ module Constr = struct
     to_sexp : 'a -> Sexp.t;
     name : string;
   }
+  with sexp_of
 
   let create (type a) name to_sexp =
     let module M = struct
