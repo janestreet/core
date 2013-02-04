@@ -1,4 +1,4 @@
-open Typerep.Std
+open Typereplib.Std
 
 (* adding with_typerep to some stable types *)
 include module type of Core.Std
@@ -37,7 +37,6 @@ module Time : sig
 end
 
 (* additional functor *)
-open Typestruct.Std
 module Serializable_of_typestructable(T : Typestructable.S0) : sig
   type t
   include Typestructable.S0 with type t := T.t

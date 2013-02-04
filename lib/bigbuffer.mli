@@ -1,20 +1,16 @@
-(* Bigbuffer
+(** Extensible string buffers based on Bigstrings.
 
-    NOTE: implementation uses Bigstrings instead of strings.
-    This removes the 16MB limit on buffer size, and improves
-    I/O-performance when reading/writing from/to channels.
-*)
+   This module implements string buffers that automatically expand as necessary.  It
+   provides accumulative concatenation of strings in quasi-linear time (instead of
+   quadratic time when strings are concatenated pairwise).
 
-(** Extensible string buffers.
-
-   This module implements string buffers that automatically expand
-   as necessary.  It provides accumulative concatenation of strings
-   in quasi-linear time (instead of quadratic time when strings are
-   concatenated pairwise).
+   This implementation uses Bigstrings instead of strings.  This removes the 16MB limit on
+   buffer size, and improves I/O-performance when reading/writing from/to channels.
 *)
 
 type t
 (** The abstract type of buffers. *)
+
 val create : int -> t
 (** [create n] returns a fresh buffer, initially empty.
    The [n] parameter is the initial size of the internal string

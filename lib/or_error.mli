@@ -36,6 +36,11 @@ val error        : string -> 'a -> ('a -> Sexp.t) -> _ t
 (** [error_string message] is [Error (Error.of_string message)] *)
 val error_string : string -> _ t
 
+(** [tag t string] is [Result.map_error t ~f:(fun e -> Error.tag e string)].
+    [tag_arg] is similar. *)
+val tag : 'a t -> string -> 'a t
+val tag_arg : 'a t -> string -> 'b -> ('b -> Sexp.t) -> 'a t
+
 (** [unimplemented name] returns a standard error value for an unimplemented value. *)
 val unimplemented : string -> _ t
 

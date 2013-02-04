@@ -1143,15 +1143,7 @@ module Version_info = struct
       )
       (fun version_flag build_info_flag ->
         begin
-          let what_to_print =
-            if build_info_flag then `Build_info
-            else if version_flag then `Version else begin
-              eprintf "(no option given - printing version)\n%!";
-              `Version
-            end
-          in
-          match what_to_print with
-          | `Version    ->
+          let print_version () =
             (* [version] was space delimited at some point and newline delimited
                at another.  We always print one (repo, revision) pair per line
                and ensure sorted order *)
@@ -1159,8 +1151,11 @@ module Version_info = struct
             |! List.concat_map ~f:(String.split ~on:'\n')
             |! List.sort ~cmp:String.compare
             |! List.iter ~f:print_endline
-          | `Build_info ->
-            print_endline build_info
+          in
+          let print_build_info () = print_endline build_info in
+          if build_info_flag then print_build_info ()
+          else if version_flag then print_version ()
+          else (print_build_info (); print_version ())
         end;
         exit 0)
 

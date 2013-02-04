@@ -1,3 +1,5 @@
+(** String type based on [Bigarray], for use in I/O and C-bindings *)
+
 
 open Unix
 open Bigarray
@@ -611,4 +613,3 @@ val unsafe_get_int64_t_le : t -> pos:int -> Int64.t
 val unsafe_get_int64_t_be : t -> pos:int -> Int64.t
 val unsafe_set_int64_t_le : t -> pos:int -> Int64.t -> unit
 val unsafe_set_int64_t_be : t -> pos:int -> Int64.t -> unit
-

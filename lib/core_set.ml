@@ -760,7 +760,7 @@ module Tree0 = struct
 
   let t_of_sexp a_of_sexp sexp ~compare_elt =
     match sexp with
-    | Type.List lst ->
+    | Sexp.List lst ->
       let elt_lst = List.map lst ~f:a_of_sexp in
       let set = of_list elt_lst ~compare_elt in
       if length set = List.length lst then
@@ -776,7 +776,7 @@ module Tree0 = struct
   ;;
 
   let sexp_of_t sexp_of_a t =
-    Type.List (fold_right t ~init:[] ~f:(fun el acc -> sexp_of_a el :: acc))
+    Sexp.List (fold_right t ~init:[] ~f:(fun el acc -> sexp_of_a el :: acc))
   ;;
 end
 

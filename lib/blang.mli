@@ -1,5 +1,5 @@
 
-(** Simple boolean language: propositional logic *)
+(** A simple boolean domain-specific language *)
 
 (** Blang provides infrastructure for writing simple boolean DSLs.
     All expressions in a Blang language evaluate to a bool.  The language
@@ -12,9 +12,11 @@
        language has elements FOO, BAR, etc., then you could write
        the following Blang s-expressions:
 
+       {v
           FOO
           (and FOO BAR)
           (if FOO BAR BAZ)
+       v}
 
        and so on.  Note that this gets in the way of using the blang
        "keywords" in your value language.
@@ -22,11 +24,11 @@
     2. And and Or take a variable number of arguments, so that one can
        (and probably should) write
 
-          (and FOO BAR BAZ QUX)
+       {v (and FOO BAR BAZ QUX) v}
 
        instead of
 
-          (and FOO (and BAR (and BAZ QUX)))
+       {v (and FOO (and BAR (and BAZ QUX))) v}
 *)
 open Std_internal
 

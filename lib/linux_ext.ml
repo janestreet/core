@@ -75,8 +75,9 @@ end
 
 ENDIF
 
+(* We use [Int63] rather than [Int] because these flags use 32 bits. *)
 
-module Epoll_flags(Flag_values : sig
+module Epoll_flags (Flag_values : sig
   val in_     : Int63.t
   val out     : Int63.t
   (* val rdhup   : Int63.t *)
@@ -86,51 +87,23 @@ module Epoll_flags(Flag_values : sig
   val et      : Int63.t
   val oneshot : Int63.t
 end) = struct
-  (* We use [Int63] rather than [Int] because these flags use 32 bits. *)
-  include Int63
+  let none = Int63.zero
 
-  let none    = zero
   include Flag_values
 
-  let (+) = bit_or
-  let (-) a b = bit_and a (bit_not b)
-
-  let flag_and = bit_and
-  let flag_not = bit_not
-
-  let do_intersect t flag = bit_and t flag = flag
-  let are_disjoint t flag = bit_and t flag = zero
-
-  let sexp_of_t =
+  include Flags.Make (struct
     let known =
-      List.rev
-        [ in_, "in";
-          out, "out";
-            (* rdhup, "rdhup"; *)
-          pri, "pri";
-          err, "err";
-          hup, "hup";
-          et, "et";
-          oneshot, "oneshot";
-        ]
-    in
-    fun t ->
-      let leftover, flag_names =
-        List.fold known ~init:(t, []) ~f:(fun (t, flag_names) (flag, flag_name) ->
-          if do_intersect t flag then
-            (flag_and t (flag_not flag), flag_name :: flag_names)
-          else
-            (t, flag_names))
-      in
-      if leftover = zero then
-        <:sexp_of< string list >> flag_names
-      else
-        <:sexp_of< string list * [ `unrecognized_bits of string ] >>
-          (flag_names,
-           `unrecognized_bits (match to_int leftover with
-           | None -> to_string leftover
-           | Some i -> sprintf "0x%x" i))
-  ;;
+      [ in_, "in";
+        out, "out";
+        (* rdhup, "rdhup"; *)
+        pri, "pri";
+        err, "err";
+        hup, "hup";
+        et, "et";
+        oneshot, "oneshot";
+      ]
+    ;;
+  end)
 
 end
 
@@ -353,7 +326,7 @@ module Epoll = struct
   external flag_epollet      : unit -> Int63.t  = "linux_epoll_EPOLLET_flag"
   external flag_epolloneshot : unit -> Int63.t  = "linux_epoll_EPOLLONESHOT_flag"
 
-  module Flags = Epoll_flags(struct
+  module Flags = Epoll_flags (struct
     let in_     = flag_epollin ()
     let out     = flag_epollout ()
     (* let rdhup   = flag_epollrdhup () *)
@@ -702,7 +675,7 @@ let sendmsg_nonblocking_no_sigpipe = unimplemented "Linux_ext.sendmsg_nonblockin
 let settcpopt_bool                 = unimplemented "Linux_ext.settcpopt_bool"
 
 module Epoll = struct
-  module Flags = Epoll_flags(struct
+  module Flags = Epoll_flags (struct
     let in_     = Int63.of_int (1 lsl 0)
     let out     = Int63.of_int (1 lsl 1)
     (* let rdhup   = Int63.of_int (1 lsl 2) *)

@@ -1,3 +1,4 @@
+
 open Sexplib
 
 module type S = sig
@@ -16,7 +17,23 @@ module type S3 = sig
   type ('a, 'b, 'c) t with sexp
 end
 
-module Of_stringable (M : Stringable.S) : S with type t := M.t = struct
+(* for when you want the sexp representation of one type to be the same as that for some
+   other isomorphic type *)
+module Of_sexpable
+  (S : S)
+  (M : sig
+    type t
+    val to_sexpable : t -> S.t
+    val of_sexpable : S.t -> t
+  end)
+  : S with type t := M.t =
+struct
+  let t_of_sexp s = M.of_sexpable (S.t_of_sexp s)
+  let sexp_of_t t = S.sexp_of_t (M.to_sexpable t)
+end
+
+module Of_stringable (M : Stringable.S) : S with type t := M.t =
+struct
   let t_of_sexp sexp =
     match sexp with
     | Sexp.Atom s -> M.of_string s
@@ -27,7 +44,8 @@ module Of_stringable (M : Stringable.S) : S with type t := M.t = struct
   let sexp_of_t t = Sexp.Atom (M.to_string t)
 end
 
-module To_stringable (M : S) : Stringable.S with type t := M.t = struct
+module To_stringable (M : S) : Stringable.S with type t := M.t =
+struct
   let of_string x = Conv.of_string__of__of_sexp M.t_of_sexp x
   let to_string x = Conv.string_of__of__sexp_of M.sexp_of_t x
 end

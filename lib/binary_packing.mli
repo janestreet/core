@@ -1,4 +1,4 @@
-(* Packs and unpacks various types of integers into and from strings.
+(** Packs and unpacks various types of integers into and from strings.
 
    Functions ending in _int should not be used on 32 bit programs because native ocaml
    ints will not be big enough.
@@ -18,9 +18,10 @@ val   pack_signed_8      :                      buf:string -> pos:int -> int -> 
 val unpack_unsigned_8    :                      buf:string -> pos:int -> int
 val   pack_unsigned_8    :                      buf:string -> pos:int -> int -> unit
 
-(* The functions ending with [_big_endian] or [_little_endian] are faster
-   than the ones with explicit [byte_order] argument:
+(** The functions ending with [_big_endian] or [_little_endian] are faster than the ones
+   with explicit [byte_order] argument:
 
+ {v
                                 Name | Run time | S. dev. | Warnings
   ---------------------------------- | -------- | ------- | --------
         pack_signed_16_little_endian |     4 ns |    0 ns |
@@ -33,6 +34,8 @@ val   pack_unsigned_8    :                      buf:string -> pos:int -> int -> 
                 unpack_signed_64_int |    21 ns |    0 ns |        M
         pack_signed_64_little_endian |     8 ns |    0 ns |
       unpack_signed_64_little_endian |     9 ns |    0 ns |        M
+
+ v}
 *)
 val unpack_signed_16     : byte_order:endian -> buf:string -> pos:int -> int
 val   pack_signed_16     : byte_order:endian -> buf:string -> pos:int -> int -> unit

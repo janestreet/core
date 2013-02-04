@@ -86,7 +86,7 @@ let setup_standard_build_flags () =
 
     (* enable warnings; make sure the '@' character isn't in the beginning;
        ms-dos interprets that character specially *)
-    flag ["compile"; "ocaml"] (S [A "-w"; A "A@Aemr-28"; A "-strict-sequence" ])
+    flag ["compile"; "ocaml"] (S [A "-w"; A "Aemr-28"; A "-strict-sequence" ])
 ;;
 
 let dispatch = function

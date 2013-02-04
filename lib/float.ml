@@ -91,6 +91,15 @@ let iround ?(dir=`Nearest) t =
   try Some (iround_exn ~dir t)
   with _ -> None
 
+let iround_nearest          = iround     ~dir:`Nearest
+let iround_up               = iround     ~dir:`Up
+let iround_down             = iround     ~dir:`Down
+let iround_towards_zero     = iround     ~dir:`Zero
+let iround_nearest_exn      = iround_exn ~dir:`Nearest
+let iround_up_exn           = iround_exn ~dir:`Up
+let iround_down_exn         = iround_exn ~dir:`Down
+let iround_towards_zero_exn = iround_exn ~dir:`Zero
+
 TEST = iround_exn ~dir:`Nearest 3.4 = 3
 TEST = iround_exn ~dir:`Nearest 3.6 = 4
 TEST = iround_exn ~dir:`Nearest (-3.4) = (-3)

@@ -358,6 +358,10 @@ static value core_stat_aux_64(struct stat64 *buf)
     atime = caml_copy_double((double) buf->st_atime + (buf->st_atim.tv_nsec / 1000000000.0f));
     mtime = caml_copy_double((double) buf->st_mtime + (buf->st_mtim.tv_nsec / 1000000000.0f));
     ctime = caml_copy_double((double) buf->st_ctime + (buf->st_ctim.tv_nsec / 1000000000.0f));
+  #elif defined __APPLE__
+    atime = caml_copy_double((double) buf->st_atime + (buf->st_atimespec.tv_nsec / 1000000000.0f));
+    mtime = caml_copy_double((double) buf->st_mtime + (buf->st_mtimespec.tv_nsec / 1000000000.0f));
+    ctime = caml_copy_double((double) buf->st_ctime + (buf->st_ctimespec.tv_nsec / 1000000000.0f));
   #else
     atime = caml_copy_double((double) buf->st_atime + (buf->st_atimensec / 1000000000.0f));
     mtime = caml_copy_double((double) buf->st_mtime + (buf->st_mtimensec / 1000000000.0f));

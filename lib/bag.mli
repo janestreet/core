@@ -1,11 +1,13 @@
-(** A bag is a data structure like a set, except that:
+(** Imperative set-like data structure.
+
+    Primary differences from a simple set:
 
     - It doesn't require anything (hashable, comparable) of elements in the bag.
     - Duplicates are allowed.
     - Addition and removal are constant time.
 
-    It is an error to modify a bag (add, remove, remove_one, ...) during iteration (fold,
-    iter, ...).  *)
+    It is an error to modify a bag ([add], [remove], [remove_one], ...) during iteration
+    ([fold], [iter], ...).  *)
 open Std_internal
 
 module Elt : sig

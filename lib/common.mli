@@ -32,7 +32,7 @@ type read_write = private read_only with sexp, bin_io, compare
     to have a call to [never_returns] at the call site, which makes it clear to readers
     what's going on. We do not intend to use this type for functions such as [failwithf]
     that always raise an exception. *)
-type never_returns = Never_returns.never_returns
+type never_returns = Never_returns.never_returns with sexp_of
 val never_returns : never_returns -> _
 
 (** {6 Error handling} *)

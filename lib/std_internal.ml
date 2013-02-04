@@ -63,6 +63,7 @@ module Sexp = Core_sexp
 include (Sexplib.Conv : module type of Sexplib.Conv
   (* hide the special sexp type constructors so we can define them below
      with bin_io and friends. *)
+  with type sexp_bool      := bool
   with type 'a sexp_option := 'a option
   with type 'a sexp_list   := 'a list
   with type 'a sexp_array  := 'a array
@@ -76,6 +77,7 @@ include Bin_prot.Std
 
    type t = { foo : int sexp_option } with bin_io, sexp, compare
 *)
+type sexp_bool      = bool      with bin_io, compare
 type 'a sexp_option = 'a option with bin_io, compare
 type 'a sexp_list   = 'a list   with bin_io, compare
 type 'a sexp_array  = 'a array  with bin_io, compare

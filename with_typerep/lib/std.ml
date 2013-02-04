@@ -1,8 +1,4 @@
-open Typerep.Std
-open Typestruct.Std
-
-module Type = Typerep.Type
-include Typerep.Type.Std
+open Typereplib.Std
 
 include (Core.Std : module type of Core.Std
   with module Month   := Core.Std.Month
@@ -13,11 +9,11 @@ include (Core.Std : module type of Core.Std
 open Core.Std
 
 module Serializable_of_typestructable(T : Typestructable.S0) = struct
-  type t = Untyped.t
+  type t = Tagged.t
   include (T : Typestructable.S0 with type t := T.t)
-  module B = Binrep.Untyped.Make_binable(T)
+  module B = Binrep.Tagged.Make_binable(T)
   include B
-  include Sexprep.Untyped.Make_sexpable(T)
+  include Sexprep.Tagged.Make_sexpable(T)
   let binable_b =
     let module B' = struct
       type nonrec t = t
@@ -238,7 +234,7 @@ module Month = struct
       end
       include Typestructable.Of_typerepable(T)
     end
-    let () = Customrep.register0 (module V1 : Typestruct.Customrep_intf.S0)
+    let () = Customrep.register0 (module V1 : Customrep_intf.S0)
   end
   TEST_UNIT =
     let months =
@@ -264,7 +260,7 @@ module Date = struct
       end
       include Typestructable.Of_typerepable(T)
     end
-    let () = Customrep.register0 (module V1 : Typestruct.Customrep_intf.S0)
+    let () = Customrep.register0 (module V1 : Customrep_intf.S0)
   end
   TEST_UNIT =
     let dates =
@@ -289,7 +285,7 @@ module Time = struct
       end
       include Typestructable.Of_typerepable(T)
     end
-    let () = Customrep.register0 (module V1 : Typestruct.Customrep_intf.S0)
+    let () = Customrep.register0 (module V1 : Customrep_intf.S0)
   end
   TEST_UNIT =
     let times =

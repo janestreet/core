@@ -697,13 +697,15 @@ val create_process : prog : string -> args : string list -> Process_info.t
     parameter that extends, or replaces the current environment.  No effort is made to
     ensure that the keys passed in as env are unique, so if an environment variable is set
     twice the second version will override the first. *)
+type env = [ `Replace of (string * string) list
+           | `Extend of (string * string) list
+           ]
+with sexp
 val create_process_env
   :  ?working_dir : string
   -> prog : string
   -> args : string list
-  -> env : [ `Replace of (string * string) list
-           | `Extend of (string * string) list
-           ]
+  -> env : env
   -> unit
   -> Process_info.t
 

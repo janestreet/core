@@ -20,7 +20,6 @@ let tests () = OUnit.TestList [
     Caml.ounit_tests ();
     Command.ounit_tests ();
     Common.ounit_tests ();
-    Common0.ounit_tests ();
     Commutative_group.ounit_tests ();
     Comparable.ounit_tests ();
     Comparator.ounit_tests ();
@@ -69,6 +68,8 @@ let tests () = OUnit.TestList [
     Equal.ounit_tests ();
     Error.ounit_tests ();
     Exn.ounit_tests ();
+    Flags.ounit_tests ();
+    Flags_intf.ounit_tests ();
     Float.ounit_tests ();
     Floatable.ounit_tests ();
     Float_intf.ounit_tests ();
@@ -149,6 +150,7 @@ let tests () = OUnit.TestList [
     Time_internal.ounit_tests ();
     Timer.ounit_tests ();
     Tuple.ounit_tests ();
+    Type_equal.ounit_tests ();
     Union_find.ounit_tests ();
     Unique_id.ounit_tests ();
     Unique_id_intf.ounit_tests ();
@@ -156,6 +158,7 @@ let tests () = OUnit.TestList [
     Univ.ounit_tests ();
     Univ_map.ounit_tests ();
     Unpack_buffer.ounit_tests ();
+    Uuid.ounit_tests ();
     Weekday.ounit_tests ();
     With_return.ounit_tests ();
     Word_size.ounit_tests ();

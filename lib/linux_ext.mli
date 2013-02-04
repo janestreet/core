@@ -253,9 +253,7 @@ module Epoll : sig
         [sexp_of_t] produces a human-readable list of bits, e.g. "(in out)". *)
     type t with sexp_of
 
-    include Interfaces.Intable with type t := t
-
-    val equal : t -> t -> bool
+    include Flags.S with type t := t
 
     (* The names of the flags match the man pages.  E.g. [in_] = "EPOLLIN", [out] =
        "EPOLLOUT", etc. *)
@@ -268,20 +266,6 @@ module Epoll : sig
     val hup     : t (* Hang up happened (always on)                   *)
     val et      : t (* Edge Triggered behavior (see man page)         *)
     val oneshot : t (* one-shot behavior for the associated fd        *)
-
-    val (+) : t -> t -> t
-    val (-) : t -> t -> t
-
-    val flag_and : t -> t -> t
-    val flag_not : t -> t
-
-    (** The handling of sets of bit flags here is indeed a departure from the typical
-        convention of lists of variants, but has some advantages and is likely to
-        be used in the future. Please consider carrying these set testing names
-        through if you adopt this bit flag style.
-     *)
-    val do_intersect : t -> t -> bool
-    val are_disjoint : t -> t -> bool
   end
 
   (** An [Epoll.t] maintains a map from [File_descr.t] to [Flags.t], where the domain is

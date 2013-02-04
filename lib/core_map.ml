@@ -663,8 +663,8 @@ module Tree0 = struct
   ;;
 
   let sexp_of_t sexp_of_key sexp_of_value t =
-    let f ~key ~data acc = Type.List [sexp_of_key key; sexp_of_value data] :: acc in
-    Type.List (fold_right ~f t ~init:[])
+    let f ~key ~data acc = Sexp.List [sexp_of_key key; sexp_of_value data] :: acc in
+    Sexp.List (fold_right ~f t ~init:[])
   ;;
 end
 

@@ -10,14 +10,24 @@ else
     linux_possible=false
 fi
 
-if [[ $(getconf _POSIX_TIMERS) -ge 200112 ]]; then
-    posix_timers_possible=true
-else
-    posix_timers_possible=false
-fi
+ptimer=$(getconf _POSIX_TIMERS)
+case $ptimer in
+    undefined)
+        posix_timers_possible=false
+        ;;
+    *)
+        if [[ $ptimer -ge 200111 ]]; then
+            posix_timers_possible=true
+        else
+            posix_timers_possible=false
+        fi
+        ;;
+esac
 
 if [[ -e setup.data ]]; then
-    sed -i '/^\(linux\|posix_timers\)_possible=/d' setup.data
+    sed '/^\(linux\|posix_timers\)_possible=/d' setup.data > setup.data.new
+    rm -f setup.data
+    mv setup.data.new setup.data
 fi
 
 cat >> setup.data <<EOF

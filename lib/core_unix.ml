@@ -1218,11 +1218,11 @@ external create_process :
   Process_info.t
   = "ml_create_process"
 
-type env = [
-  | `Replace of (string * string) list
+type env =
+  [ `Replace of (string * string) list
   | `Extend of (string * string) list
-] with sexp
-type _ignore = env
+  ]
+with sexp
 
 let create_process_env ?working_dir ~prog ~args ~env () =
   let module Map = Core_map in

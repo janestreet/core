@@ -128,6 +128,7 @@ module Timer = Timer
 module Tuple = Tuple
 module Tuple2 = Tuple.T2
 module Tuple3 = Tuple.T3
+module Type_equal = Type_equal
 module Union_find = Union_find
 module Unique_id = Unique_id
 module Unit = Unit
@@ -135,6 +136,7 @@ module Univ = Univ
 module Univ_map = Univ_map
 module Unix = Core_unix
 module Unpack_buffer = Unpack_buffer
+module Uuid = Uuid
 INCLUDE "version_defaults.mlh"
 IFDEF BUILD_VERSION_UTIL THEN
   module Version_util = Version_util

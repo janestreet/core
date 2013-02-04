@@ -13,5 +13,5 @@ end
     used for modules where to_string is a cheap operation or where performance is not
     critical.
 *)
-module Of_stringable (T : Stringable.S) : S with type t = T.t
-module Of_sexpable (T : Sexpable.S) : S with type t = T.t
+module Of_stringable (T : Stringable.S) : S with type t := T.t
+module Of_sexpable (T : Sexpable.S) : S with type t := T.t

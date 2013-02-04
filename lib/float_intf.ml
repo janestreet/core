@@ -59,10 +59,30 @@ module type S = sig
      | `Up      | (-2.,-1.]   to -1. | (-1.,0.]   to -0. | (0.,1.] to 1., (1.,2.] to 2. |
      | `Zero    | (-2.,-1.]   to -1. | (-1.,1.)   to 0.  | [1.,2.) to 1.                |
      | `Nearest | [-1.5,-0.5) to -1. | [-0.5,0.5) to 0.  | [0.5,1.5) to 1.              |
-  *)
+
+     For convenience, versions of these functions with the [dir] argument hard-coded are
+     provided. *)
   val round      : ?dir:[`Zero|`Nearest|`Up|`Down] -> t -> t
   val iround     : ?dir:[`Zero|`Nearest|`Up|`Down] -> t -> int option
   val iround_exn : ?dir:[`Zero|`Nearest|`Up|`Down] -> t -> int
+
+  (* See [round] for a description of these functions. *)
+  val round_towards_zero : t -> t
+  val round_down         : t -> t
+  val round_up           : t -> t
+  val round_nearest      : t -> t
+
+  (* See [round] for a description of these functions. *)
+  val iround_towards_zero : t -> int option
+  val iround_down         : t -> int option
+  val iround_up           : t -> int option
+  val iround_nearest      : t -> int option
+
+  (* See [round] for a description of these functions. *)
+  val iround_towards_zero_exn : t -> int
+  val iround_down_exn         : t -> int
+  val iround_up_exn           : t -> int
+  val iround_nearest_exn      : t -> int
 
 
   val is_nan : t -> bool
