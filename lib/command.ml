@@ -197,6 +197,11 @@ module Arg_type = struct
         | None ->
           failwithf "valid arguments: {%s}" (String.concat ~sep:"," (Map.keys map)) ())
 
+  let of_alist_exn ?key alist =
+    match String.Map.of_alist alist with
+    | `Ok map -> of_map ?key map
+    | `Duplicate_key key ->
+      failwithf "Command.Spec.Arg_type.of_alist_exn: duplicate key %s" key ()
 end
 
 module Flag = struct
@@ -1344,4 +1349,3 @@ module Deprecated = struct
   let version = DEFAULT_VERSION
   let build_info = DEFAULT_BUILDINFO
 end
-

@@ -1,5 +1,7 @@
-(* An [Unpack_buffer.t] is a buffer to which one can [feed] strings, and then [unpack] from
-   the buffer to produce a queue of values. *)
+(** A buffer for incremental decoding of an input stream.
+
+    An [Unpack_buffer.t] is a buffer to which one can [feed] strings, and then [unpack]
+    from the buffer to produce a queue of values. *)
 open Std_internal
 
 module Unpack_one : sig

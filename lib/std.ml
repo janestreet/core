@@ -83,7 +83,6 @@ module In_channel = In_channel
 module Info = Info
 module Int63 = Core_int63
 module Int_intf = Int_intf
-module Int_replace_polymorphic_compare = Int_replace_polymorphic_compare
 module Int_set = Int_set
 module Interfaces = Interfaces
 module Interval = Interval
@@ -151,3 +150,5 @@ module type Unique_id = Unique_id.Id
 include T
 
 let _squelch_unused_module_warning_ = ()
+
+

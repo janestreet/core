@@ -1,4 +1,6 @@
-(** The purpose of [Type_equal] is to represent type equalities that the type checker
+(** For representing type equalities otherwise not known by the type-checker.
+
+    The purpose of [Type_equal] is to represent type equalities that the type checker
     otherwise would not know, perhaps because the type equality depends on dynamic data,
     or perhaps because the type system isn't powerful enough.
 
@@ -30,7 +32,7 @@
 *)
 
 type (_, _) t = T : ('a, 'a) t
-type ('a, 'b) equal = ('a, 'b) t (* just an alias, needed when [t] gets shadowed below *)
+type ('a, 'b) equal = ('a, 'b) t (** just an alias, needed when [t] gets shadowed below *)
 
 (** [refl], [sym], and [trans] construct proofs that type equality is reflexive,
     symmetric, and transitive. *)

@@ -2,7 +2,7 @@
     constructors with arguments of arbitrary type. *)
 open Sexplib
 
-(** The Constr.t represents a single constructor in the extensible variant type.  On
+(** A [Constr.t] represents a single constructor in the extensible variant type.  On
     creation, one must provide a name for the constructor and a sexp-converter for
     serializing the argument to the variant.  Both the name and the sexp-converter are
     used for display purposes only. *)
@@ -15,15 +15,22 @@ module Constr : sig
   val create : string -> ('a -> Sexp.t) -> 'a t
 
   val name : _ t -> string
+  val hash : _ t -> int
 end
 
 type t with sexp_of
 
 val constr_name : t -> string
 
-(** [create var arg] creates a new [t] from a constr and the argument to the constr. *)
 val create : 'a Constr.t -> 'a -> t
 
-(** [match_ t constr] does a single constr match on a [t] for a given constructor.  If the
-    match succeeds, then the argument of the constructor is returned (as an option). *)
-val match_ : t -> 'a Constr.t -> 'a option
+(** [does_match t constr] returns [true] iff [t] was created by [create constr v]. *)
+val does_match : t -> _ Constr.t -> bool
+
+(** [match_ t constr] returns [Some v] if [t] was created by [create constr v], and
+    returns [None] otherwise.
+
+    [match_exn t constr] returns [v] if [t] was created by [create constr v], and raises
+    otherwise. *)
+val match_    : t -> 'a Constr.t -> 'a option
+val match_exn : t -> 'a Constr.t -> 'a

@@ -12,7 +12,7 @@
     let f x = try List.Assoc.find x data with Not_found -> "zero";; ]}
     In this case using an exception is shorter, but in nontrivial code options
     are easier to understand. *)
-type 'a t = 'a option with sexp
+type 'a t = 'a option with bin_io, sexp
 
 include Container.S1 with type 'a t := 'a t
 

@@ -425,7 +425,7 @@ module Stable = struct
       let to_alist () = Hashtbl.to_alist the_one_and_only.table
 
       let initialized_zones t =
-        List.sort ~cmp:(fun a b -> ascending (fst a) (fst b)) (to_alist t)
+        List.sort ~cmp:(fun a b -> String.ascending (fst a) (fst b)) (to_alist t)
       ;;
 
       let find_or_load_matching t1 =
@@ -702,4 +702,3 @@ let name zone = zone.name
 
 let pp ppf t = Format.pp_print_string ppf (name t)
 let () = Pretty_printer.register "Core.Zone.pp"
-

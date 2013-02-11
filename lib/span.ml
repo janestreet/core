@@ -34,6 +34,9 @@ module Stable = struct
       include Like_a_float
 
       module Constant : sig
+        val nanoseconds_per_second : float
+        val microseconds_per_second : float
+        val milliseconds_per_second : float
         val nanosecond : t
         val microsecond : t
         val millisecond : t
@@ -54,10 +57,13 @@ module Stable = struct
          makes their usage within this module safer.  Constant is included at the very
          bottom to re-export these constants in a more convenient way *)
       module Constant = struct
+        let nanoseconds_per_second = 1E9
+        let microseconds_per_second = 1E6
+        let milliseconds_per_second = 1E3
         (* spans are stored as a float in seconds *)
-        let nanosecond  = of_float 1E-9
-        let microsecond = of_float 1E-6
-        let millisecond = of_float 1E-3
+        let nanosecond  = of_float (1. /. nanoseconds_per_second)
+        let microsecond = of_float (1. /. microseconds_per_second)
+        let millisecond = of_float (1. /. milliseconds_per_second)
         let second      = of_float 1.
         let minute      = of_float 60.
         let hour        = of_float (60. *. 60.)
@@ -146,18 +152,20 @@ module Stable = struct
     let (/) t f = T.of_float ((t : T.t :> float) /. f)
     let (//) (f:T.t) (t:T.t) = (f :> float) /. (t :> float)
 
-    let to_ns x        = x // T.Constant.nanosecond
-    let to_us x        = x // T.Constant.microsecond
-    let to_ms x        = x // T.Constant.millisecond
+    (* Multiplying by 1E3 is more accurate than division by 1E-3 *)
+    let to_ns (x:T.t)  = (x :> float) *. T.Constant.nanoseconds_per_second
+    let to_us (x:T.t)  = (x :> float) *. T.Constant.microseconds_per_second
+    let to_ms (x:T.t)  = (x :> float) *. T.Constant.milliseconds_per_second
     let to_sec (x:T.t) = (x :> float)
     let to_min x       = x // T.Constant.minute
     let to_hr x        = x // T.Constant.hour
     let to_day x       = x // T.Constant.day
 
     let ( ** ) f (t:T.t) = T.of_float (f *. (t :> float))
-    let of_ns x        = x ** T.Constant.nanosecond
-    let of_us x        = x ** T.Constant.microsecond
-    let of_ms x        = x ** T.Constant.millisecond
+    (* Division by 1E3 is more accurate than multiplying by 1E-3 *)
+    let of_ns x        = T.of_float (x /. T.Constant.nanoseconds_per_second)
+    let of_us x        = T.of_float (x /. T.Constant.microseconds_per_second)
+    let of_ms x        = T.of_float (x /. T.Constant.milliseconds_per_second)
     let of_sec x       = T.of_float x
     let of_int_sec x   = T.of_float (Float.of_int x)
     let of_min x       = x ** T.Constant.minute

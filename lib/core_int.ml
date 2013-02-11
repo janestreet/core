@@ -42,6 +42,7 @@ module Replace_polymorphic_compare = struct
   let ( <  ) (x : t) y = x <  y
   let ( <> ) (x : t) y = x <> y
   let between t ~low ~high = low <= t && t <= high
+  let _squelch_unused_module_warning_ = ()
 end
 
 include Replace_polymorphic_compare
@@ -124,3 +125,6 @@ let bit_not a = lnot a
 let bit_or a b = a lor b
 let bit_and a b = a land b
 let bit_xor a b = a lxor b
+
+include Int_math
+

@@ -47,8 +47,13 @@ module type S_binable = S_binable with type ('a, 'b) hashtbl = ('a, 'b) t
 let sexp_of_key t = t.hashable.Hashable.sexp_of_t
 let compare_key t = t.hashable.Hashable.compare
 
+(** Internally use a maximum size that is a power of 2. Reverses the above to find the
+    floor power of 2 below the system max array length *)
+let max_table_length = Int_math.floor_pow2 Sys.max_array_length ;;
+
 let create ?(growth_allowed = true) ?(size = 128) ~hashable () =
-  let size = Int.min (Int.max 1 size) Sys.max_array_length in
+  let size = Int.min (Int.max 1 size) max_table_length in
+  let size = Int_math.ceil_pow2 size in
   { table = Array.create ~len:size Avltree.empty;
     length = 0;
     growth_allowed = growth_allowed;
@@ -56,12 +61,21 @@ let create ?(growth_allowed = true) ?(size = 128) ~hashable () =
   }
 ;;
 
+(** Supplemental hash. This may not be necessary, it is intended as a defense against poor
+    hash functions, for which the power of 2 sized table will be especially sensitive.
+    With some testing we may choose to add it, but this table is designed to be robust to
+    collisions, and in most of my testing this degrades performance. *)
+let _supplemental_hash h =
+  let h = h lxor ((h lsr 20) lxor (h lsr 12)) in
+  h lxor (h lsr 7) lxor (h lsr 4)
+;;
+
 exception Hash_value_must_be_non_negative with sexp
 
 let slot t key =
   let hash = t.hashable.Hashable.hash key in
-  if hash < 0 then raise Hash_value_must_be_non_negative;
-  hash mod Array.length t.table
+  (* this is always non-negative because we do [land] with non-negative number *)
+  hash land ((Array.length t.table) - 1)
 ;;
 
 let add_worker added replace t ~key ~data =
@@ -106,7 +120,7 @@ let maybe_resize_table t =
   let len = Array.length t.table in
   let should_grow = t.length > len in
   if should_grow && t.growth_allowed then begin
-    let new_array_length = Int.min (len * 2) Sys.max_array_length in
+    let new_array_length = Int.min (len * 2) max_table_length in
     if new_array_length > len then begin
       let new_table =
         Array.init new_array_length ~f:(fun _ -> Avltree.empty)

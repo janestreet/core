@@ -1,7 +1,7 @@
 
 open Std_internal
 
-open Int_replace_polymorphic_compare
+open Int.Replace_polymorphic_compare
 let _ = (=)    (* turns off the unused open warning *)
 
 module Stable = struct

@@ -1,4 +1,13 @@
-(** universal/heterogeneous maps *)
+(** Universal/heterogeneous maps.
+
+    These maps are useful for storing values of arbitrary type in a single map.  In order
+    to recover a value, it must be looked up with exactly the [Key.t] it was stored in.
+    In other words, given different [Key.t]'s from the same [string], one will not be able
+    to recover the key stored in the other one.
+
+    This is similar to [Univ] in spirit, and is indeed built on top of [Univ].
+*)
+
 open Std_internal
 
 type t with sexp_of
@@ -26,7 +35,7 @@ val add_exn : t -> 'a Key.t -> 'a -> t
 val change     : t -> 'a Key.t -> ('a option -> 'a option) -> t
 val change_exn : t -> 'a Key.t -> ('a        -> 'a       ) -> t
 
-(* keys with associated default values, so that [find] is no longer partial *)
+(** keys with associated default values, so that [find] is no longer partial *)
 module With_default : sig
   module Key : sig
     type 'a t
@@ -37,7 +46,7 @@ module With_default : sig
   val change : t -> 'a Key.t -> ('a -> 'a) -> t
 end
 
-(* keys that map to an accumulator value with an associated fold operation *)
+(** keys that map to an accumulator value with an associated fold operation *)
 module With_fold : sig
   module Key : sig
     type ('a, 'b) t
@@ -49,7 +58,7 @@ module With_fold : sig
   val change : t -> ('a, 'b) Key.t -> ('b -> 'b) -> t (* accumulator update *)
 end
 
-(* list-accumulating keys with a default value of the empty list *)
+(** list-accumulating keys with a default value of the empty list *)
 module Multi : sig
   module Key : sig
     type 'a t
@@ -60,4 +69,3 @@ module Multi : sig
   val add    : t -> 'a Key.t -> 'a -> t
   val change : t -> 'a Key.t -> ('a list -> 'a list) -> t
 end
-

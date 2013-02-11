@@ -185,7 +185,7 @@ val iteri : 'a t ->  f:(int -> 'a -> unit) -> unit
     element as the first argument to the folded function.  Tail-recursive. *)
 val foldi : 'a t -> f:(int -> 'b -> 'a -> 'b) -> init:'b -> 'b
 
-(** [reduce f [a1; ...; an]] is [f (... (f (f a1 a2) a3) ...) an].
+(** [reduce_exn f [a1; ...; an]] is [f (... (f (f a1 a2) a3) ...) an].
     It fails on the empty list.  Tail recursive. *)
 val reduce_exn : 'a t -> f:('a -> 'a -> 'a) -> 'a
 val reduce : 'a t -> f:('a -> 'a -> 'a) -> 'a option

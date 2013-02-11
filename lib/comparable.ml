@@ -3,12 +3,19 @@ module type Polymorphic_compare = Polymorphic_compare_intf.S
 
 module type S_common = sig
   include Polymorphic_compare
+  (** [ascending] is identical to [compare]. [descending x y = ascending y x].  These are
+      intended to be mnemonic when used like [List.sort ~cmp:ascending] and [List.sort
+      ~cmp:descending], since they cause the list to be sorted in ascending or descending
+      order, respectively. *)
   val ascending : t -> t -> int
   val descending : t -> t -> int
 
   val between : t -> low:t -> high:t -> bool
 
-  module Replace_polymorphic_compare : Polymorphic_compare with type t := t
+  module Replace_polymorphic_compare : sig
+    include Polymorphic_compare with type t := t
+    val _squelch_unused_module_warning_ : unit
+  end
 
   type comparator
   val comparator : (t, comparator) Comparator.t
@@ -56,6 +63,7 @@ module Poly (T : sig type t with sexp end) : S with type t := T.t = struct
   module Replace_polymorphic_compare = struct
     type t = T.t with sexp
     include Polymorphic_compare
+    let _squelch_unused_module_warning_ = ()
   end
   include Replace_polymorphic_compare
   let ascending = compare
@@ -74,18 +82,22 @@ module Make_common (T : sig
 end) = struct
   type t = T.t
   module Replace_polymorphic_compare = struct
-    let compare = T.compare
-    let (>) a b = compare a b > 0
-    let (<) a b = compare a b < 0
-    let (>=) a b = compare a b >= 0
-    let (<=) a b = compare a b <= 0
-    let (=) a b = compare a b = 0
-    let (<>) a b = compare a b <> 0
-    let equal = (=)
-    let min t t' = if t <= t' then t else t'
-    let max t t' = if t >= t' then t else t'
+    module Without_squelch = struct
+      let compare = T.compare
+      let (>) a b = compare a b > 0
+      let (<) a b = compare a b < 0
+      let (>=) a b = compare a b >= 0
+      let (<=) a b = compare a b <= 0
+      let (=) a b = compare a b = 0
+      let (<>) a b = compare a b <> 0
+      let equal = (=)
+      let min t t' = if t <= t' then t else t'
+      let max t t' = if t >= t' then t else t'
+    end
+    include Without_squelch
+    let _squelch_unused_module_warning_ = ()
   end
-  include Replace_polymorphic_compare
+  include Replace_polymorphic_compare.Without_squelch
   let ascending = compare
   let descending t t' = compare t' t
   let between t ~low ~high = low <= t && t <= high

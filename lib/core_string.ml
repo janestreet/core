@@ -1132,6 +1132,7 @@ module Replace_polymorphic_compare = struct
   let ( < ) x y = (x : t) < y
   let ( <> ) x y = (x : t) <> y
   let between t ~low ~high = low <= t && t <= high
+  let _squelch_unused_module_warning_ = ()
 end
 
 include Replace_polymorphic_compare

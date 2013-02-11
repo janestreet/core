@@ -1,3 +1,6 @@
+(** Functors and signatures for dealing with modules for tuples.  *)
+
+(** Signature for a 2-tuple module *)
 module T2 : sig
   type ('a, 'b) t = 'a * 'b with sexp
 
@@ -23,6 +26,7 @@ module T2 : sig
   val swap : ('a, 'b) t -> ('b, 'a) t
 end
 
+(** Signature for a 3-tuple module *)
 module T3 : sig
   type ('a, 'b, 'c) t = 'a * 'b * 'c with sexp
 
@@ -47,12 +51,14 @@ module T3 : sig
   val map3 : f:('c -> 'd) -> ('a, 'b, 'c) t -> ('a, 'b, 'd) t
 end
 
-(* These functors allow users to write:
+(** These functors allow users to write:
+  {[
    module Foo = struct
      include Tuple.Make       (String) (Int)
      include Tuple.Comparable (String) (Int)
      include Tuple.Hashable   (String) (Int)
    end
+  ]}
 *)
 
 module Make (T1 : sig type t end) (T2 : sig type t end) : sig type t = T1.t * T2.t end
