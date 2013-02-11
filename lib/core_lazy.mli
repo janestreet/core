@@ -22,7 +22,7 @@
    Without the [-rectypes] option, such ill-founded recursive definitions
    are rejected by the type-checker.
 *)
-type 'a t = 'a lazy_t with bin_io, sexp
+type 'a t = 'a lazy_t with bin_io, compare, sexp
 
 exception Undefined
 
@@ -52,5 +52,3 @@ val lazy_from_val : 'a -> 'a t
 (** [lazy_is_val x] returns [true] if [x] has already been forced and
     did not raise an exception. *)
 val lazy_is_val : 'a t -> bool
-
-

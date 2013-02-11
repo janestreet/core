@@ -1,10 +1,17 @@
-(** This module gives access to the same build information as returned by [$0 version
-    -build-info] or [$0 -build-info]. *)
+(** Gives access to information about the build environment.
 
-val build_info : string
+    This module gives access to the same version and build information as returned by
+    [$0 version (-build-info | -version)] or [$0 (-build-info | -version)].
+*)
+
+open Std_internal
+
 val version : string
 val version_list : string list
 val arg_spec : (string * Core_arg.spec * string) list
+
+val build_info : string
+val build_info_as_sexp : Sexp.t
 
 val username           : string
 val hostname           : string

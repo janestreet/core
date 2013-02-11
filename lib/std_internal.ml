@@ -59,60 +59,117 @@ include (Float : Interfaces.Robustly_comparable with type t := float)
 include String.Infix
 let round = Float.round
 include Interfaces
+
 module Sexp = Core_sexp
-include (Sexplib.Conv : module type of Sexplib.Conv
-  (* hide the special sexp type constructors so we can define them below
-     with bin_io and friends. *)
-  with type sexp_bool      := bool
-  with type 'a sexp_option := 'a option
-  with type 'a sexp_list   := 'a list
-  with type 'a sexp_array  := 'a array
-  with type 'a sexp_opaque := 'a Sexplib.Conv.sexp_opaque)
-include Printf
-include Scanf
-include Bin_prot.Std
 
-(* The below declarations define converters for the special type constructors recognized
-   by pa-sexp.  E.g. this allows the following to work:
+include (Sexplib.Conv : sig
 
-   type t = { foo : int sexp_option } with bin_io, sexp, compare
-*)
-type sexp_bool      = bool      with bin_io, compare
-type 'a sexp_option = 'a option with bin_io, compare
-type 'a sexp_list   = 'a list   with bin_io, compare
-type 'a sexp_array  = 'a array  with bin_io, compare
-type 'a sexp_opaque = 'a        with bin_io, compare
+  type bigstring = Sexplib.Conv.bigstring with sexp
+  type mat = Sexplib.Conv.mat with sexp
+  type vec = Sexplib.Conv.vec with sexp
+
+  val sexp_of_opaque : _ -> Sexp.t
+  val opaque_of_sexp : Sexp.t -> _
+
+  val sexp_of_pair : ('a -> Sexp.t) -> ('b -> Sexp.t) -> 'a * 'b -> Sexp.t
+  val pair_of_sexp:  (Sexp.t -> 'a) -> (Sexp.t -> 'b) -> Sexp.t -> 'a * 'b
+
+  exception Of_sexp_error of exn * Sexp.t
+  val of_sexp_error : string -> Sexp.t -> _
+  val of_sexp_error_exn : exn -> Sexp.t -> _
+
+end)
+
+let printf   = Printf.printf
+let bprintf  = Printf.bprintf
+let eprintf  = Printf.eprintf
+let fprintf  = Printf.fprintf
+let sprintf  = Printf.sprintf
+let ksprintf = Printf.ksprintf
 
 include Result.Export
 
 (* With the following aliases, we are just making extra sure that the toplevel sexp
    converters line up with the ones in our modules. *)
 
-let sexp_of_array = Array.sexp_of_t
-let array_of_sexp = Array.t_of_sexp
-let sexp_of_bool = Bool.sexp_of_t
-let bool_of_sexp = Bool.t_of_sexp
-let sexp_of_char = Char.sexp_of_t
-let char_of_sexp = Char.t_of_sexp
-let sexp_of_exn = Exn.sexp_of_t
-let sexp_of_float = Float.sexp_of_t
-let float_of_sexp = Float.t_of_sexp
-let sexp_of_int = Int.sexp_of_t
-let int_of_sexp = Int.t_of_sexp
-let sexp_of_int32 = Int32.sexp_of_t
-let int32_of_sexp = Int32.t_of_sexp
-let sexp_of_int64 = Int64.sexp_of_t
-let int64_of_sexp = Int64.t_of_sexp
-let sexp_of_list = List.sexp_of_t
-let list_of_sexp = List.t_of_sexp
-let sexp_of_nativeint = Nativeint.sexp_of_t
-let nativeint_of_sexp = Nativeint.t_of_sexp
-let sexp_of_option = Option.sexp_of_t
-let option_of_sexp = Option.t_of_sexp
-let sexp_of_string = String.sexp_of_t
-let string_of_sexp = String.t_of_sexp
-let lazy_t_of_sexp = Lazy.t_of_sexp
-let sexp_of_lazy_t = Lazy.sexp_of_t
 
+
+
+
+include (struct
+  type 'a array  = 'a Array.    t with bin_io,          sexp
+  type bool      = Bool.        t with bin_io, compare, sexp
+  type char      = Char.        t with bin_io, compare, sexp
+  type float     = Float.       t with bin_io, compare, sexp
+  type int       = Int.         t with bin_io, compare, sexp
+  type int32     = Int32.       t with bin_io, compare, sexp
+  type int64     = Int64.       t with bin_io, compare, sexp
+  type 'a lazy_t = 'a Core_lazy.t with bin_io, compare, sexp
+  type 'a list   = 'a List.     t with bin_io,          sexp
+  type nativeint = Nativeint.   t with bin_io, compare, sexp
+  type 'a option = 'a Option.   t with bin_io,          sexp
+  type string    = String.      t with bin_io, compare, sexp
+  type 'a ref    = 'a Ref.      t with bin_io,          sexp
+  type unit      = Unit.        t with bin_io, compare, sexp
+end : sig
+  type 'a array  with bin_io,          sexp
+  type bool      with bin_io, compare, sexp
+  type char      with bin_io, compare, sexp
+  type float     with bin_io, compare, sexp
+  type int       with bin_io, compare, sexp
+  type int32     with bin_io, compare, sexp
+  type int64     with bin_io, compare, sexp
+  type 'a lazy_t with bin_io,          sexp
+  type 'a list   with bin_io,          sexp
+  type nativeint with bin_io, compare, sexp
+  type 'a option with bin_io,          sexp
+  type string    with bin_io, compare, sexp
+  type 'a ref    with bin_io,          sexp
+  type unit      with bin_io, compare, sexp
+end
+  with type 'a array  := 'a array
+  with type bool      := bool
+  with type char      := char
+  with type float     := float
+  with type int       := int
+  with type int32     := int32
+  with type int64     := int64
+  with type 'a list   := 'a list
+  with type nativeint := nativeint
+  with type 'a option := 'a option
+  with type string    := string
+  with type 'a lazy_t := 'a lazy_t
+  with type 'a ref    := 'a ref
+  with type unit      := unit
+)
+
+let sexp_of_exn = Exn.sexp_of_t
+
+
+(* The below declarations define converters for the special types recognized by pa-sexp.
+   E.g. this allows the following to work:
+
+   type t = { foo : int sexp_option } with bin_io, sexp, compare
+
+   [sexp_array], [sexp_bool], [sexp_list], and [sexp_option] allow a record field to be
+   absent when converting from a sexp, and if absent, the field will take a default value
+   of the appropriate type:
+
+   {v
+     sexp_array   [||]
+     sexp_bool    false
+     sexp_list    []
+     sexp_option  None
+   v}
+
+   [sexp_opaque] causes the conversion to sexp to produce the atom {v <opaque> v}.
+
+   For more documentation, see sexplib/README.md.
+*)
+type 'a sexp_array  = 'a array  with bin_io, compare
+type sexp_bool      = bool      with bin_io, compare
+type 'a sexp_list   = 'a list   with bin_io, compare
+type 'a sexp_option = 'a option with bin_io, compare
+type 'a sexp_opaque = 'a        with bin_io, compare
 
 include Ordering.Export

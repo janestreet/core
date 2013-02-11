@@ -1,10 +1,13 @@
+(** Functors for creating modules that mint unique identifiers. *)
+
 open Std_internal
 open Unique_id_intf
 
 module type Id = Id
 
-(* An abstract unique identifier based on ordinary OCaml integers. Be careful, this may
-   easily overflow on 32bit platforms! Int63 is a safer choice for portability.
+
+(** An abstract unique identifier based on ordinary OCaml integers. Be careful, this may
+    easily overflow on 32bit platforms! Int63 is a safer choice for portability.
 
    [Int] is useful when one is passing unique ids to C and needs a guarantee as to their
    representation. [Int] is always represented as an integer, while [Int63] is either an

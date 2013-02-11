@@ -181,7 +181,11 @@ module Spec : sig
       -> (string -> 'a)
       -> 'a t
 
+    (** an auto-completing Arg_type over a finite set of values *)
     val of_map : ?key:'a Univ_map.Multi.Key.t -> 'a String.Map.t -> 'a t
+
+    (** convenience wrapper for [of_map].  Raises on duplicate keys *)
+    val of_alist_exn : ?key:'a Univ_map.Multi.Key.t -> (string * 'a) list -> 'a t
   end
 
   val string    : string Arg_type.t
@@ -349,4 +353,3 @@ module Deprecated : sig
   val version : string
   val build_info : string
 end
-

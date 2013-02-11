@@ -1,3 +1,4 @@
+(** For representing a day of the week. *)
 
 type t with bin_io, sexp
 
@@ -48,3 +49,4 @@ module Stable : sig
     type t with bin_io, sexp, compare
   end with type t = t
 end
+

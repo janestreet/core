@@ -1,6 +1,7 @@
 open Sexplib.Std
+open Bin_prot.Std
 
-type 'a t = 'a option with sexp
+type 'a t = 'a option with bin_io, sexp
 
 let is_none = function None -> true | _ -> false
 

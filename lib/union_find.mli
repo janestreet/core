@@ -1,4 +1,4 @@
-(** Disjoint-sets.
+(** Imperative data structure for representing disjoint sets.
 
     Union find is used to implement an equivalence relation on objects, where
     the equivalence relation can dynamically be coarsened by "union"ing two
@@ -8,7 +8,7 @@
 
     @see <en.wikipedia.org/wiki/Disjoint-set_data_structure> wikipedia.
 
-    This implementation is in no way thread-safe.
+    This implementation is not thread-safe.
 *)
 
 (** [type 'a t] is the type of objects, where each object is part of an
@@ -31,5 +31,5 @@ val same_class : 'a t -> 'a t -> bool
 (** [union t1 t2] makes the class of [t1] and the class of [t2] be the same (if they are
     already equal, then nothing changes).  The value of the combined class is the value of
     [t1] or [t2]; it is unspecified which.  After [union t1 t2], it will always be the
-    case that [equals t1 t2]. *)
+    case that [same_class t1 t2]. *)
 val union: 'a t -> 'a t -> unit

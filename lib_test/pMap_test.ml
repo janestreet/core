@@ -70,7 +70,8 @@ let test =
           "2" @?
             (match Map.of_alist a_dup with `Ok _ -> false | `Duplicate_key x -> x = "b");
           "3" @?
-            (Map.to_alist (Map.of_alist_exn a) = List.sort ~cmp:ascending a);
+            (Map.to_alist (Map.of_alist_exn a)
+             = List.sort ~cmp:Polymorphic_compare.ascending a);
           (try ignore (Map.of_alist_exn a_dup); assert false with _ -> ())
         );
       "for_all/exists" >:: (fun () ->

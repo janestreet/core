@@ -10,19 +10,41 @@ exception Bug of string
     function, the second exception the one raised by the finalizer. *)
 exception Finally of exn * exn
 
+(** For marking a given value as unimplemented.  Typically combined with conditional
+    compilation, where on some platforms the function is defined normally, and on some
+    platforms it is defined as unimplemented.  The supplied string should be the name of
+    the function that is unimplemented. *)
 val unimplemented : string -> _ Or_error.t
 
-(* The sexps of this type only have 12 digits after the decimal. Therefore they're less
-   annoying to look at than the sexps of floats. The input sexps disallow nan and inf. *)
+(** The [decimal] type alias provides more readable serializations to s-expressions, at
+    the cost of lower precision.  For example:
+
+    {[
+    # sexp_of_decimal 3.000000000001;;
+    - : Sexp.t = 3
+    # sexp_of_float 3.000000000001;;
+    - : Sexp.t = 3.0000000000010000889
+    ]}
+
+    Also, the decimal sexp-converter will fail when provided with [nan] or [infinity].
+
+    {[
+    # float_of_sexp (Sexp.Atom "nan");;
+    - : float = nan
+    # decimal_of_sexp (Sexp.Atom "nan");;
+    Exception:
+    (Sexplib.Conv.Of_sexp_error (Failure common.ml.Decimal_nan_or_inf) nan).
+    ]}
+*)
 type decimal = float with bin_io, sexp
 
 type passfail = Pass | Fail of string
 
-(** Handy types for marking things read-only and read-write. One should not expose
-    functions for converting between read_only/immutable/read_write because the private
-    types expose the subtyping. Users would say "(db :> read_only Db.t)" to cast. The
-    difference between read-only and immutable is that someone else can change a read-only
-    object, while immutable never changes. *)
+(** Types for use as markers in phantom types.  One should not expose functions for
+    converting between read_only/immutable/read_write because the private types expose the
+    subtyping. Users would say "(db :> read_only Db.t)" to cast.  The difference between
+    read-only and immutable is that someone else can change a read-only object, while
+    immutable never changes. *)
 type read_only                      with sexp, bin_io, compare
 type immutable  = private read_only with sexp, bin_io, compare
 type read_write = private read_only with sexp, bin_io, compare
@@ -61,11 +83,6 @@ val ident : 'a -> 'a
 val const : 'a -> _ -> 'a
 val (==>) : bool -> bool -> bool
 
-(** A comparator that returns results in ascending order. *)
-external ascending : 'a -> 'a -> int = "%compare"
-(** A comparator that returns results in descending order. *)
-val descending : 'a -> 'a -> int
-
 (** same as [Filename.concat]*)
 val (^/) : string -> string -> string
 
@@ -74,16 +91,13 @@ val failwiths    :  string -> 'a -> ('a -> Sexp.t) -> _
 val failwithf    : ('r, unit, string, unit -> _) format4 -> 'r
 val invalid_argf : ('r, unit, string, unit -> _) format4 -> 'r
 
-(* [sexp_of___] ignores its argument and returns [Sexp.Atom "_"].  It is useful when one
-   has a polymorphic type ['a t] with a sexp converter [val sexp_of_t : ('a -> Sexp.t) ->
-   'a t -> Sexp.t], and one wants to convert a value of type ['a t] to a sexp, yet one
-   doesn't have a sexp_converter for ['a] handy.  These functions allow one to use
-   [<:sexp_of< __ t >>] to get a sexp converter for ['a t].  For example:
+(** [Or_error.ok_exn] *)
+val ok_exn : 'a Or_error.t -> 'a
 
-   let f a_t = ... (<:sexp_of< __ t >> a_t) ... *)
-val sexp_of___ : _ -> Sexp.t
+(** [Or_error.error] *)
+val error : string -> 'a -> ('a -> Sexp.t) -> _ Or_error.t
 
-(* [with_return f] allows for something like the return statement in C within [f].  There
+(** [with_return f] allows for something like the return statement in C within [f].  There
    are three ways [f] can terminate:
 
    1. If [f] calls [r.return x], then [x] is returned by [with_return].
@@ -94,9 +108,10 @@ val sexp_of___ : _ -> Sexp.t
 
    {[
    let find l ~f =
-   with_return (fun r ->
-   List.iter l ~f:(fun x -> if f x then r.return (Some x));
-   None)
+     with_return (fun r ->
+        List.iter l ~f:(fun x -> if f x then r.return (Some x));
+        None
+      )
    ]}
 
    It is only because of a deficiency of ML types that [with_return] doesn't have type:
@@ -105,8 +120,11 @@ val sexp_of___ : _ -> Sexp.t
 
    but we can slightly increase the scope of 'b, without changing the meaning of the type
    and then we get
+
+   {[
    type 'a return = { return : 'b . 'a -> b }
    val with_return : ('a return -> 'a) -> 'a
+   ]}
 
    But the actual reason we chose to use a record type with polymorphic field is that
    otherwise we would have to clobber the namespace of functions with [return] and that is
@@ -121,22 +139,29 @@ type 'a return = private {
 
 val with_return : ('a return -> 'a) -> 'a
 
-(** toplevel binding for polymorphic equality (=).  Named for easy use in
-    labelled arguments (one can do [f x y ~equal]).
-*)
-val equal : 'a -> 'a -> bool
-
-(* We disable [==] and [!=] and replace them with the longer and more mnemonic
-   [phys_equal] because they too easily lead to mistakes (for example
-   they don't even work right on Int64 or Float).  One can usually use the
-   [equal] function for a specific type, or use (=) or (<>) for built in types
-   like char, int, float, ...
+(** We disable [==] and [!=] and replace them with the longer and more mnemonic
+    [phys_equal] because they too easily lead to mistakes (for example they don't even
+    work right on Int64 or Float).  One can usually use the [equal] function for a
+    specific type, or use (=) or (<>) for built in types like char, int, float,
 *)
 val phys_equal : 'a -> 'a -> bool
 val (==) : [ `Consider_using_phys_equal ] -> [ `Consider_using_phys_equal ] -> [ `Consider_using_phys_equal ]
 val (!=) : [ `Consider_using_phys_equal ] -> [ `Consider_using_phys_equal ] -> [ `Consider_using_phys_equal ]
 
 val force : 'a Lazy.t -> 'a
+
+(** See {! module : Staged } for documentation *)
+val stage   : 'a -> 'a Staged.t
+val unstage : 'a Staged.t -> 'a
+
+(** Raised if malloc in C bindings fail (errno * size). *)
+exception C_malloc_exn of int * int
+
+(** {6 Deprecated operations}
+
+  The following section contains definitions that hide operations from the standard
+  library that are considered problematic or confusing, or simply redundant.
+*)
 
 (* override Pervasives methods that need LargeFile support *)
 val seek_out : [ `Deprecated_use_out_channel ] -> [ `Deprecated_use_out_channel ] -> [ `Deprecated_use_out_channel ]
@@ -153,13 +178,6 @@ val truncate : [ `Deprecated_use_float_iround_towards_zero ] -> [ `Deprecated_us
 val close_in : [ `Deprecated_use_in_channel ] -> [ `Deprecated_use_in_channel ]
 val close_out : [ `Deprecated_use_out_channel ] -> [ `Deprecated_use_out_channel ]
 
-val stage   : 'a -> 'a Staged.t
-val unstage : 'a Staged.t -> 'a
-
-(* Raised if malloc in C bindings fail (errno * size). *)
-exception C_malloc_exn of int * int
-
-(* Newly deprecated on 2012-04-03 *)
 val ( & )  : [ `Deprecated_use_two_ampersands ] -> [ `Deprecated_use_two_ampersands ] -> [ `Deprecated_use_two_ampersands ]
 (* val ( or ) : [ `Deprecated_use_pipe_pipe ] *)
 val max_int : [ `Deprecated_use_int_module ]

@@ -1,11 +1,8 @@
-(** Our time module.  This module wraps up unix times, including various
-    convenience functions for accessing them.
-*)
+(** A module for representing absolute points in time, independent of time zone. *)
 open Std_internal
 
-(** A discrete point in time in the universe; not a time in some timezone. *)
+(** A fully qualified point in time, independent of timezone. *)
 type t = Time_internal.T.t with bin_io, sexp
-
 
 (** If this is ever called then all future calls to to_string and sexp_of_t will produce a
     new format sexp/string that includes enough offset information to reproduce the

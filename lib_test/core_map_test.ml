@@ -70,9 +70,9 @@ let test =
           "2" @?
             (match StringMap.of_alist a_dup with `Ok _ -> false | `Duplicate_key x -> x = "b");
           "3" @?
-            ((List.sort ~cmp:ascending
+            ((List.sort ~cmp:Polymorphic_compare.ascending
                 (StringMap.to_alist (StringMap.of_alist_exn a)))
-              = List.sort ~cmp:ascending a);
+              = List.sort ~cmp:Polymorphic_compare.ascending a);
           try ignore (StringMap.of_alist_exn a_dup); assert false with _ -> ()
         );
       "for_all/exists" >:: (fun () ->

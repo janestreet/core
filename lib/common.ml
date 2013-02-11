@@ -78,10 +78,10 @@ let fst3 (x,_,_) = x
 let snd3 (_,y,_) = y
 let trd3 (_,_,z) = z
 
-external ascending : 'a -> 'a -> int = "%compare"
-let descending x y = compare y x
-
 open Sexplib
+
+let ok_exn = Or_error.ok_exn
+let error = Or_error.error
 
 let failwiths = Error.failwiths
 
@@ -91,13 +91,8 @@ include struct
   let invalid_argf = invalid_argf
 end
 
-let sexp_underscore = Sexp.Atom "_"
-let sexp_of___ _ = sexp_underscore
-
 (* module With_return only exists to avoid circular dependencies *)
 include With_return
-
-let equal = Caml.(=)
 
 let phys_equal = Caml.(==)
 let (==) _ _ = `Consider_using_phys_equal
@@ -146,7 +141,6 @@ type decimal = Decimal.t with sexp, bin_io
 
 type passfail = Pass | Fail of string
 
-exception Unimplemented of string with sexp
 let unimplemented = Or_error.unimplemented
 
 exception Bug of string with sexp
