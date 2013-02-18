@@ -35,8 +35,7 @@ TEST_MODULE "int_math" = struct
   let is_pow2 v = (v land (v-1)) = 0 ;;
 
   let test_cases () =
-    let cases = [ 0xAA; 0xAA_AA; 0xAA_AA_AA; 0xAA_AA_AA_AA;
-      0x80; 0x80_08; 0x80_00_08; 0x80_00_00_08; ]
+    let cases = [ 0xAA; 0xAA_AA; 0xAA_AA_AA; 0x80; 0x80_08; 0x80_00_08; ]
     in
     if Sys.word_size = 64 then (* create some >32 bit values... *)
       let added_cases = Core_list.map cases ~f:(fun x -> x lsl 16) in
