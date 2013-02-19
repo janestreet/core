@@ -7,17 +7,23 @@
 #include <assert.h>
 #include <stdint.h>
 
-#ifdef __GLIBC__
-#include <malloc.h>
-#endif
-
 #ifdef __APPLE__
 #include <libkern/OSByteOrder.h>
 #define bswap_16 OSSwapInt16
 #define bswap_32 OSSwapInt32
 #define bswap_64 OSSwapInt64
-#else
+#elif __GLIBC__
 #include <byteswap.h>
+#include <malloc.h>
+#else
+#include <sys/types.h>
+#include <sys/endian.h>
+#define __BYTE_ORDER    _BYTE_ORDER
+#define __LITTLE_ENDIAN _LITTLE_ENDIAN
+#define __BIG_ENDIAN    _BIG_ENDIAN
+#define bswap_16 bswap16
+#define bswap_32 bswap32
+#define bswap_64 bswap64
 #endif
 
 #include "ocaml_utils.h"
