@@ -7,3 +7,5 @@ include Info
 let raise t = raise (to_exn t)
 
 let failwiths message a sexp_of_a = raise (create message a sexp_of_a)
+
+let () = Pretty_printer.register "Core.Error.pp"

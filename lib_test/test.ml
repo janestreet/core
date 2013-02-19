@@ -21,7 +21,6 @@ let all () =
   flatten
     (TestList
        [
-         Core.Inline_tests.tests ();
          Avltree_test.test;
          Bag_test.test;
          Bigbuffer_test.test;

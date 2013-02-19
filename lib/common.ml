@@ -65,6 +65,7 @@ let protectx = Exn.protectx
 let protect = Exn.protect
 
 let (|!) = Fn.(|!)
+let (|>) = Fn.(|>)
 let ident = Fn.id
 let const = Fn.const
 let (==>) a b = (not a) || b

@@ -62,21 +62,24 @@ val constant_value : 'a t -> bool option
     that ['a t] has constructors And and Or of type ['a t list -> 'a t].
     The pattern of use is
 
-        match t with
-        | ...
-        | And (_, _) as t -> let ts = gather_conjuncts t in ...
-        | Or (_, _) as t -> let ts = gather_disjuncts t in ...
-        | ...
+    {[
+      match t with
+      | ...
+      | And (_, _) as t -> let ts = gather_conjuncts t in ...
+      | Or (_, _) as t -> let ts = gather_disjuncts t in ...
+      | ...
+    ]}
 
     or, in case you also want to handle True (resp. False) as a special
     case of conjunction (disjunction)
 
-        match t with
-        | ...
-        | True | And (_, _) as t -> let ts = gather_conjuncts t in ...
-        | False | Or (_, _) as t -> let ts = gather_disjuncts t in ...
-        | ...
-
+    {[
+      match t with
+      | ...
+      | True | And (_, _) as t -> let ts = gather_conjuncts t in ...
+      | False | Or (_, _) as t -> let ts = gather_disjuncts t in ...
+      | ...
+    ]}
 *)
 (** [gather_conjuncts t] gathers up all toplevel conjuncts in [t].  For example,
     {ul {- [gather_conjuncts (and_ ts) = ts] }
@@ -115,19 +118,22 @@ val eval : 'a t -> ('a -> bool) -> bool
     perhaps-incomplete assignment [f] of the values of base propositions.
     The following laws (at least partially) characterize its behavior.
 
-    * specialize t (fun _ -> `Unknown) = t
+    - [specialize t (fun _ -> `Unknown) = t]
 
-    * specialize t (fun x -> `Known (f x)) = constant (eval t f)
+    - [specialize t (fun x -> `Known (f x)) = constant (eval t f)]
 
-    * List.forall (values (specialize t g)) ~f:(fun x -> g x = `Unknown)
+    - [List.forall (values (specialize t g)) ~f:(fun x -> g x = `Unknown)]
 
-    * if
+    - {[
+        if
+
         List.forall (values t) ~f:(fun x ->
           match g x with
           | `Known b -> b = f x
           | `Unknown -> true)
       then
         eval t f = eval (specialize t g) f
+    ]}
 *)
 val specialize : 'a t -> ('a -> [`Known of bool | `Unknown]) -> 'a t
 

@@ -77,8 +77,9 @@ val uw : 'a option -> 'a
 val is_none : 'a option -> bool
 val is_some : 'a option -> bool
 
-(** {6 Functions from function.ml} *)
+(** {6 Functions from fn.ml} *)
 val (|!) : 'a -> ('a -> 'b) -> 'b
+val (|>) : 'a -> ('a -> 'b) -> 'b
 val ident : 'a -> 'a
 val const : 'a -> _ -> 'a
 val (==>) : bool -> bool -> bool

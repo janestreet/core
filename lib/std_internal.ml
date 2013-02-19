@@ -19,17 +19,20 @@ module List = struct
       would hide a heavyweight functor instantiation at each call). *)
   let stable_dedup = Set.Poly.stable_dedup_list
 
-  let stable_dedup_involving_an_application_of_the_set_functor (type _t) ~compare =
+  (* This function is staged to indicate that real work (the functor application) takes
+     place after a partial application. *)
+  let stable_dedup_staged (type a) ~(compare : a -> a -> int)
+      : (a list -> a list) Staged.t =
     let module Set =
-          Set.Make (struct
-            type t = _t
-            let compare = compare
-            (* [stable_dedup_list] never calls these *)
-            let t_of_sexp _ = assert false
-            let sexp_of_t _ = assert false
-          end)
+      Set.Make (struct
+        type t = a
+        let compare = compare
+        (* [stable_dedup_list] never calls these *)
+        let t_of_sexp _ = assert false
+        let sexp_of_t _ = assert false
+      end)
     in
-    Set.stable_dedup_list
+    Staged.stage Set.stable_dedup_list
   ;;
 
 end

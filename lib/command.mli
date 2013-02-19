@@ -46,14 +46,18 @@ module Spec : sig
       main function from type ['main_in] to ['main_out], typically by supplying some
       arguments.  E.g. a value of type [Spec.t] might have type:
 
-      |  (arg1 -> ... -> argN -> 'r, 'r) Spec.t
+     {[
+       (arg1 -> ... -> argN -> 'r, 'r) Spec.t
+     ]}
 
       Such a value can transform a main function of type [arg1 -> ... -> argN -> 'r] by
       supplying it argument values of type [arg1], ..., [argn], leaving a main function
       whose type is ['r].  In the end, [Command.basic] takes a completed spec where ['r =
       unit], and hence whose type looks like:
 
-      |  (arg1 -> ... -> argN -> unit, unit) Spec.t
+      {[
+        (arg1 -> ... -> argN -> unit, unit) Spec.t
+     ]}
 
       A value of this type can fully apply a main function of type [arg1 -> ... -> argN
       -> unit] to all its arguments.
@@ -61,19 +65,25 @@ module Spec : sig
       The view of [('main_in, main_out) Spec.t] as a function from ['main_in] to
       ['main_out] is directly reflected by the [step] function, whose type is:
 
-      |  val step : ('m1 -> 'm2) -> ('m1, 'm2) t
+      {[
+        val step : ('m1 -> 'm2) -> ('m1, 'm2) t
+     ]}
   *)
 
   (** [spec1 ++ spec2 ++ ... ++ specN] composes spec1 through specN.
 
       For example, if [spec_a] and [spec_b] have types:
 
-      |  spec_a: (a1 -> ... -> aN -> 'ra, 'ra) Spec.t
-      |  spec_b: (b1 -> ... -> bM -> 'rb, 'rb) Spec.t
+      {[
+        spec_a: (a1 -> ... -> aN -> 'ra, 'ra) Spec.t
+        spec_b: (b1 -> ... -> bM -> 'rb, 'rb) Spec.t
+      ]}
 
       then [spec_a ++ spec_b] has the following type:
 
-      |  (a1 -> ... -> aN -> b1 -> ... -> bM -> 'rb, 'rb) Spec.t
+      {[
+        (a1 -> ... -> aN -> b1 -> ... -> bM -> 'rb, 'rb) Spec.t
+      ]}
 
       So, [spec_a ++ spec_b] transforms a main function it by first supplying [spec_a]'s
       arguments of type [a1], ..., [aN], and then supplying [spec_b]'s arguments of type
@@ -82,16 +92,22 @@ module Spec : sig
       One can understand [++] as function composition by thinking of the type of specs
       as concrete function types, representing the transformation of a main function:
 
-      |  spec_a: \/ra. (a1 -> ... -> aN -> 'ra) -> 'ra
-      |  spec_b: \/rb. (b1 -> ... -> bM -> 'rb) -> 'rb
+      {[
+        spec_a: \/ra. (a1 -> ... -> aN -> 'ra) -> 'ra
+        spec_b: \/rb. (b1 -> ... -> bM -> 'rb) -> 'rb
+      ]}
 
       Under this interpretation, the composition of [spec_a] and [spec_b] has type:
 
-      |  [spec_a ++ spec_b]: \/rc. (a1 -> ... -> aN -> b1 -> ... -> bM -> 'rc) -> 'rc
+      {[
+        spec_a ++ spec_b : \/rc. (a1 -> ... -> aN -> b1 -> ... -> bM -> 'rc) -> 'rc
+      ]}
 
       And the implementation is just function composition:
 
-      |  sa ++ sb = fun main -> sb (sa main)
+      {[
+        sa ++ sb = fun main -> sb (sa main)
+      ]}
   *)
 
   (** the empty command-line spec *)
@@ -126,17 +142,23 @@ module Spec : sig
 
       A use of [step] might look something like:
 
-      |  step (fun main -> let ... in main x1 ... xN) : (arg1 -> ... -> argN -> 'r, 'r) t
+      {[
+        step (fun main -> let ... in main x1 ... xN) : (arg1 -> ... -> argN -> 'r, 'r) t
+      ]}
 
       Thus, [step] allows one to write arbitrary code to decide how to transform a main
       function.  As a simple example:
 
-      |  step (fun main -> main 13.) : (float -> 'r, 'r) t
+      {[
+        step (fun main -> main 13.) : (float -> 'r, 'r) t
+      ]}
 
       This spec is identical to [const 13.]; it transforms a main function by supplying
       it with a single float argument, [13.].  As another example:
 
-      |  step (fun m v -> m ~foo:v) : (foo:'foo -> 'r, 'foo -> 'r) t
+      {[
+        step (fun m v -> m ~foo:v) : (foo:'foo -> 'r, 'foo -> 'r) t
+      ]}
 
       This spec transforms a main function that requires a labeled argument into
       a main function that requires the argument unlabeled, making it easily composable
@@ -271,19 +293,25 @@ module Spec : sig
   (** [t2], [t3], and [t4] each concatenate multiple anonymous argument
       specs into a single one. The purpose of these combinators is to allow
       for optional sequences of anonymous arguments.  Consider a command with
-      usage
+      usage:
 
+      {v
         main.exe FOO [BAR BAZ]
+       v}
 
       where the second and third anonymous arguments must either both
-      be there or both not be there.  This can be expressed as
+      be there or both not be there.  This can be expressed as:
 
-        [t2 ("FOO" %: foo) (maybe (t2 ("BAR" %: bar) ("BAZ" %: baz)))]
+      {[
+        t2 ("FOO" %: foo) (maybe (t2 ("BAR" %: bar) ("BAZ" %: baz)))]
+       ]}
 
       Sequences of 5 or more anonymous arguments can be built up using
-      nested tuples
+      nested tuples:
 
+      {[
         maybe (t3 a b (t3 c d e))
+      ]}
   *)
 
   val t2 : 'a anons -> 'b anons -> ('a * 'b) anons
@@ -320,8 +348,8 @@ val group : summary:string -> ?readme:(unit -> string) -> (string * t) list -> t
 (** run a command against [Sys.argv] *)
 val run : ?version:string -> ?build_info:string -> ?argv:string list -> t -> unit
 
-(** [Deprecated] should be used only by Core_extended.Deprecated_command.
-    At some point it will go away. *)
+(** [Deprecated] should be used only by [Core_extended.Deprecated_command].  At some point
+    it will go away. *)
 module Deprecated : sig
   module Spec : sig
     val no_arg : hook:(unit -> unit) -> bool Spec.flag

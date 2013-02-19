@@ -15,6 +15,10 @@ let forever f =
 external id : 'a -> 'a = "%identity"
 
 external ( |! ) : 'a -> ( 'a -> 'b) -> 'b = "%revapply"
+external ( |> ) : 'a -> ( 'a -> 'b) -> 'b = "%revapply"
+
+TEST = 1 |> fun x -> x = 1
+TEST = 1 |> fun x -> x + 1 |> fun y -> y = 2
 
 (* The typical use case for these functions is to pass in functional arguments and get
    functions as a result. For this reason, we tell the compiler where to insert

@@ -9,6 +9,6 @@ use Core is to start your file with:
   
 In the case of bugs, feature requests and similar, you can contact us
 at <opensource@janestreet.com>.  You can find all of Jane Street's
-open-source libraries on github <https://github.com/janestreet> and
+open-source libraries on github <https://github.com/jane-street> and
 on bitbucket <https://bitbucket.org/janestreet>.
 

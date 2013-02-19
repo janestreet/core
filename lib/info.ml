@@ -183,6 +183,9 @@ TEST_MODULE "Info" = struct
   TEST = round (t_of_sexp (Sexp.of_string "((random sexp 1)(b 2)((c (1 2 3))))"))
 end
 
+let pp ppf t = Format.pp_print_string ppf (to_string_hum t)
+let () = Pretty_printer.register "Core.Info.pp"
+
 (* yminsky: benchmarks
 
    open Core.Std

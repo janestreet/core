@@ -1,6 +1,6 @@
 open Std_internal
 
-module Make (T : Stable_unit_test_intf.Arg) : Stable_unit_test_intf.S = struct
+module Make (T : Stable_unit_test_intf.Arg) = struct
   TEST_UNIT "sexp" =
     List.iter T.tests
       ~f:(fun (t, sexp_as_string, _) ->

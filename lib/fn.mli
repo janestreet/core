@@ -1,7 +1,10 @@
 (** various combinators for functions *)
 
-(** A 'pipe' operator. *)
+(** A 'pipe' operator. Deprecated. *)
 external ( |! ) : 'a -> ( 'a -> 'b) -> 'b = "%revapply"
+
+(** A pipe operator, equivalent to |!, but this notation is more broadly accepted *)
+external ( |> ) : 'a -> ( 'a -> 'b) -> 'b = "%revapply"
 
 (** produces a function that just returns its first argument *)
 val const : 'a -> _ -> 'a

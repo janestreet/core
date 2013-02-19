@@ -30017,13 +30017,14 @@ let unit_tests ~create =
     "\165\247\141\175\083\056\216\064"
   ]
 
-let test =
-  let module T = Core.Stable_unit_test.Make(struct
-    include Core.Stable.Ofday.V1
-    let equal x1 x2 = Time.Span.(abs (Time.Ofday.diff x1 x2) < (of_ns 1.))
-    let tests =
-      let create ~hr ~min ~sec ~ms ~us = Time.Ofday.create ~hr ~min ~sec ~ms ~us () in
-      unit_tests ~create
-  end)
-  in
-  T.ounit_tests
+let test () =
+  Pa_ounit_lib.Runtime.collect (fun () ->
+    let module T = Core.Stable_unit_test.Make(struct
+      include Core.Stable.Ofday.V1
+      let equal x1 x2 = Time.Span.(abs (Time.Ofday.diff x1 x2) < (of_ns 1.))
+      let tests =
+        let create ~hr ~min ~sec ~ms ~us = Time.Ofday.create ~hr ~min ~sec ~ms ~us () in
+        unit_tests ~create
+    end) in
+    ()
+  )

@@ -1,5 +1,8 @@
 (* An interface for creating unit tests to check stability of sexp and bin-io
-   serializations *)
+   serializations
+
+   vgatien-baron: Unfortunately, moving this module type to Stable_unit_tests creates
+   circular dependencies. *)
 
 module type Arg = sig
   type t with sexp, bin_io
@@ -10,6 +13,3 @@ module type Arg = sig
   val tests : (t * string * string) list
 end
 
-module type S = sig
-  val ounit_tests : unit -> OUnit.test
-end

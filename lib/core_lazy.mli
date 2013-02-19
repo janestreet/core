@@ -24,6 +24,8 @@
 *)
 type 'a t = 'a lazy_t with bin_io, compare, sexp
 
+include Monad.S with type 'a t := 'a t
+
 exception Undefined
 
 (** [force x] forces the suspension [x] and returns its result.

@@ -55,3 +55,5 @@ val of_list : ?trunc_after:int -> t list -> t
    here because they refer to the underlying representation. *)
 val of_exn : ?backtrace:[ `Get | `This of string ] -> exn -> t
 val to_exn : t -> exn
+
+val pp : Format.formatter -> t -> unit
