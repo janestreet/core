@@ -38,10 +38,14 @@
 #include <sys/mman.h>
 #include <math.h>
 
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__NetBSD__)
 #define stat64 stat
 #define lstat64 lstat
 #define fstat64 fstat
+#endif
+
+#if defined(__NetBSD__)
+#define FNM_FILE_NAME FNM_PATHNAME
 #endif
 
 #include "ocaml_utils.h"
