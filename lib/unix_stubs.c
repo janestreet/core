@@ -853,6 +853,7 @@ static inline pthread_t pthread_t_val(value __unused v_tid)
   return pthread_self();
 }
 
+#if defined(JSC_THREAD_CPUTIME)
 CAMLprim value unix_pthread_getcpuclockid(value v_tid)
 {
   clockid_t c;
@@ -860,6 +861,7 @@ CAMLprim value unix_pthread_getcpuclockid(value v_tid)
     uerror("pthread_getcpuclockid", Nothing);
   return caml_copy_nativeint(c);
 }
+#endif
 
 #if defined(CLOCK_PROCESS_CPUTIME_ID)
 #define CLOCK CLOCK_PROCESS_CPUTIME_ID

@@ -67,6 +67,9 @@ int main () {
   $(cpp_test FDATASYNC \
      "defined(_POSIX_SYNCHRONIZED_IO) && _POSIX_SYNCHRONIZED_IO > 0")
 
+  $(cpp_test THREAD_CPUTIME \
+	  "defined(_POSIX_THREAD_CPUTIME)")
+
   return 0;
 }
 EOF
