@@ -19,8 +19,12 @@ let sexp_of_t t =
 
 INCLUDE "config.mlh"
 IFDEF ARCH_x86_64 THEN
+IFDEF LINUX_EXT THEN
 external backtrace_get : unit -> string = "backtrace_get"
 let get = Ok backtrace_get
+ELSE
+let get = unimplemented "Backtrace.get"
+ENDIF
 ELSE
 let get = unimplemented "Backtrace.get"
 ENDIF
