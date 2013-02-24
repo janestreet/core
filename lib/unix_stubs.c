@@ -46,6 +46,7 @@
 
 #if defined(__NetBSD__)
 #define FNM_FILE_NAME FNM_PATHNAME
+#define _XOPEN_UNIX 1
 #endif
 
 #include "ocaml_utils.h"
