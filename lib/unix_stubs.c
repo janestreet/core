@@ -38,10 +38,15 @@
 #include <sys/mman.h>
 #include <math.h>
 
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__NetBSD__)
 #define stat64 stat
 #define lstat64 lstat
 #define fstat64 fstat
+#endif
+
+#if defined(__NetBSD__)
+#define FNM_FILE_NAME FNM_PATHNAME
+#define _XOPEN_UNIX 1
 #endif
 
 #include "ocaml_utils.h"
@@ -848,6 +853,7 @@ static inline pthread_t pthread_t_val(value __unused v_tid)
   return pthread_self();
 }
 
+#if defined(JSC_THREAD_CPUTIME)
 CAMLprim value unix_pthread_getcpuclockid(value v_tid)
 {
   clockid_t c;
@@ -855,6 +861,7 @@ CAMLprim value unix_pthread_getcpuclockid(value v_tid)
     uerror("pthread_getcpuclockid", Nothing);
   return caml_copy_nativeint(c);
 }
+#endif
 
 #if defined(CLOCK_PROCESS_CPUTIME_ID)
 #define CLOCK CLOCK_PROCESS_CPUTIME_ID
