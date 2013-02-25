@@ -145,6 +145,10 @@ module type Accessors = sig
       if no such binding exists.*)
   val find_exn : ('a, 'b) t -> 'a key -> 'b
 
+  (** [find_and_remove t k] returns Some (the current binding) of k in t and removes
+      it, or None is no such binding exists *)
+  val find_and_remove : ('a, 'b) t -> 'a key -> 'b option
+
   (** [iter_vals t ~f] is like iter, except it only supplies the value to f,
       not the key. *)
   val iter_vals : (_, 'b) t -> f:('b -> unit) -> unit

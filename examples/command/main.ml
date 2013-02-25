@@ -114,7 +114,7 @@ end
 
 module Prompting = struct
   let command =
-    Command.basic ~summary:"command demonstrting prompt-if-missing flags"
+    Command.basic ~summary:"command demonstrating prompt-if-missing flags"
       Command.Spec.(
         (* flags *)
         empty

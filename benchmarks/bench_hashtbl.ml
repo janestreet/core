@@ -3,71 +3,84 @@ open Core.Std
 module Bench = Core_extended.Bench
 module Test = Bench.Test
 
-let gen_test_int tbl n =
-  for i = 0 to n - 1 do
-    Hashtbl.replace tbl ~key:i ~data:i
-  done
+module My_hashtbl = struct
+  type ('k, 'v) t =
+    { hash : ('k -> int)
+    ; array : 'v option Array.t
+    }
 
-let int_table n = (); fun () ->
-  gen_test_int (Int.Table.create ~size:(2*n) ()) n
+  let create ~size ~hash =
+    let hash k = hash k mod size in
+    { hash
+    ; array = Array.create ~len:size None
+    }
 
-let make_int1_table n = ();
-  let module I = Hashable.Make(Int) in
-  fun () -> gen_test_int (I.Table.create ~size:(2*n) ()) n
+  let replace t ~key ~data =
+    t.array.(t.hash key) <- Some data
 
-let make_int2_table n = ();
-  let module I = Hashable.Make(struct
-    include Int
-    let hash = Hashtbl.hash
-  end)
+  let find t key = t.array.(t.hash key)
+end
+
+module My_hashable = struct
+  module Make(M:Hashtbl.Key) = struct
+    module Table = struct
+      include My_hashtbl
+
+      let create ?(size=128) () =
+        create ~size ~hash:M.hash
+    end
+  end
+end
+
+module Hashtbl_ = My_hashtbl
+module Hashable_ = My_hashable
+
+let gen_test_int_replace_and_find n tbl =
+  let replace () =
+    for i = 0 to n - 1 do
+      Hashtbl.replace tbl ~key:i ~data:i
+    done
   in
-  fun () -> gen_test_int (I.Table.create ~size:(2*n) ()) n
-
-let poly_int_table n = (); fun () ->
-  gen_test_int (Hashtbl.Poly.create ~size:(2*n) ()) n
-
-let strings = Array.init 1_000_000 ~f:(fun i -> sprintf "%8d" i)
-
-let gen_test_string tbl n =
-  for i = 0 to n - 1 do
-    Hashtbl.replace tbl ~key:strings.(i) ~data:i
-  done
-
-let string_table n = (); fun () ->
-  gen_test_string (String.Table.create ~size:(2*n) ()) n
-
-let poly_string_table n = (); fun () ->
-  gen_test_string (Hashtbl.Poly.create ~size:(2*n) ()) n
-
-let hashtbl_hash n = (); fun () ->
-  for i = 0 to n - 1 do
-    let (_ : int) = Hashtbl.hash i in ()
-  done
-
-external hash_param : int -> int -> 'a -> int = "caml_hash_univ_param" "noalloc"
-
-let inlined_hash n = (); fun () ->
-  for i = 0 to n - 1 do
-    let (_ : int) = hash_param 10 100 i in ()
-  done
-
-let not_inlined_hash n = (); fun () ->
-  let hash = if Time.now () > Time.now () then Hashtbl.hash else Hashtbl.hash in
-  for i = 0 to n - 1 do
-    let (_ : int) = hash i in ()
-  done
+  let find () =
+    for i = 0 to n - 1 do
+      let (_ : int option) = Hashtbl.find tbl i in ()
+    done
+  in
+  replace, find
 
 let () =
   let n = 1_000_000 in
+  let int_tbl_replace1, int_tbl_find1 =
+    let module I = Hashable.Make(struct
+      include Int
+      let hash x = Caml.Hashtbl.hash x
+    end)
+    in
+    gen_test_int_replace_and_find n (I.Table.create ~size:(2*n) ())
+  in
+  let int_tbl_replace2, int_tbl_find2 =
+    let module I = Hashable.Make(struct
+      include Int
+      let hash x = Core.Core_hashtbl_intf.Hashable.hash x
+    end)
+    in
+    gen_test_int_replace_and_find n (I.Table.create ~size:(2*n) ())
+  in
+  let caml_hashtbl_hash () =
+    for i = 0 to n - 1 do
+      let (_ : int) = Caml.Hashtbl.hash i in ()
+    done
+  in
+  let jst_hashtbl_hash () =
+    for i = 0 to n - 1 do
+      let (_ : int) = Core.Core_hashtbl_intf.Hashable.hash i in ()
+    done
+  in
   Bench.bench
-    [ Test.create ~name:"Int"               (int_table n)
-    ; Test.create ~name:"Make-Int1"         (make_int1_table n)
-    ; Test.create ~name:"Make-Int2"         (make_int2_table n)
-    ; Test.create ~name:"Poly-Int"          (poly_int_table n)
-    ; Test.create ~name:"String"            (string_table n)
-    ; Test.create ~name:"Poly-String"       (poly_string_table n)
-
-    ; Test.create ~name:"hashtbl_hash"      (hashtbl_hash n)
-    ; Test.create ~name:"hash_param"        (inlined_hash n)
-    ; Test.create ~name:"not_inlined_hash"  (not_inlined_hash n)
+    [ Test.create ~name:"Int-replace1"              int_tbl_replace1
+    ; Test.create ~name:"Int-replace2"              int_tbl_replace2
+    ; Test.create ~name:"Int-find1"                 int_tbl_find1
+    ; Test.create ~name:"Int-find2"                 int_tbl_find2
+    ; Test.create ~name:"Caml-hashtbl-hash"         caml_hashtbl_hash
+    ; Test.create ~name:"Jst-hashtbl-hash"          jst_hashtbl_hash
     ]

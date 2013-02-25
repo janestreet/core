@@ -368,6 +368,13 @@ let find_or_add t id ~default =
     replace t ~key:id ~data:default;
     default
 
+(* Some hashtbl implementations may be able to perform this more efficiently than two
+   separate lookups *)
+let find_and_remove t id =
+  let result = find t id in
+  if Option.is_some result then remove t id;
+  result
+
 let change t id f =
   match f (find t id) with
   | None -> remove t id
@@ -580,6 +587,7 @@ module Accessors = struct
   let find_or_add     = find_or_add
   let find            = find
   let find_exn        = find_exn
+  let find_and_remove = find_and_remove
   let iter_vals       = iter_vals
   let to_alist        = to_alist
   let merge           = merge

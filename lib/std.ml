@@ -85,6 +85,7 @@ module Int63 = Core_int63
 module Int_intf = Int_intf
 module Int_set = Int_set
 module Interfaces = Interfaces
+module Interned_string = Interned_string
 module Interval = Interval
 module Invariant = Invariant
 module Field = Core_field
