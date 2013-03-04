@@ -700,5 +700,8 @@ let abbreviation zone time =
 
 let name zone = zone.name
 
-let pp ppf t = Format.pp_print_string ppf (name t)
-let () = Pretty_printer.register "Core.Zone.pp"
+include Pretty_printer.Register (struct
+  type nonrec t = t
+  let to_string = name
+  let module_name = "Core.Zone"
+end)

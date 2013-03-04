@@ -831,18 +831,39 @@ TEST = split_n [1;2;3;4;5;6] (-5) = ([],[1;2;3;4;5;6])
 let take t n = fst (split_n t n)
 let drop t n = snd (split_n t n)
 
-let rec drop_while t ~f =
-  match t with
-  | h :: t when f h -> drop_while t ~f
-  | _ -> t
-
-let take_while t ~f =
+let split_while xs ~f =
   let rec loop acc = function
     | hd :: tl when f hd -> loop (hd :: acc) tl
-    | _ -> rev acc
+    | t -> (rev acc, t)
   in
-  loop [] t
+  loop [] xs
 ;;
+
+let take_while t ~f = fst (split_while t ~f)
+let drop_while t ~f = snd (split_while t ~f)
+
+TEST_MODULE "{take,drop,split}_while" = struct
+
+  let pred = function
+    | '0' .. '9' -> true
+    | _ -> false
+
+  let test xs prefix suffix =
+    let (prefix1, suffix1) = split_while ~f:pred xs in
+    let prefix2 = take_while xs ~f:pred in
+    let suffix2 = drop_while xs ~f:pred in
+    xs = prefix @ suffix
+    && prefix = prefix1 && prefix = prefix2
+    && suffix = suffix1 && suffix = suffix2
+
+  TEST = test ['1';'2';'3';'a';'b';'c'] ['1';'2';'3'] ['a';'b';'c']
+  TEST = test ['1';'2';    'a';'b';'c'] ['1';'2'    ] ['a';'b';'c']
+  TEST = test ['1';        'a';'b';'c'] ['1'        ] ['a';'b';'c']
+  TEST = test [            'a';'b';'c'] [           ] ['a';'b';'c']
+  TEST = test ['1';'2';'3'            ] ['1';'2';'3'] [           ]
+  TEST = test [                       ] [           ] [           ]
+
+end
 
 let cartesian_product list1 list2 =
   if list2 = [] then [] else
@@ -857,6 +878,7 @@ let cartesian_product list1 list2 =
     List.rev (loop list1 list2 [])
 
 let concat l = fold_right l ~init:[] ~f:append
+
 TEST = concat [] = []
 TEST = concat [[]] = []
 TEST = concat [[3]] = [3]
@@ -982,3 +1004,13 @@ TEST_MODULE "transpose" = struct
   TEST = transpose [[1;2];[3]] = None
 
 end
+
+let intersperse t ~sep =
+  match t with
+  | [] -> []
+  | x :: xs -> x :: fold_right xs ~init:[] ~f:(fun y acc -> sep :: y :: acc)
+
+TEST = intersperse [1;2;3] ~sep:0 = [1;0;2;0;3]
+TEST = intersperse [1;2]   ~sep:0 = [1;0;2]
+TEST = intersperse [1]     ~sep:0 = [1]
+TEST = intersperse []      ~sep:0 = []

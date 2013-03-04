@@ -76,10 +76,22 @@ let discard_exn queue = snd (dequeue_exn queue)
 
 let to_list queue = List.append queue.outlist (List.rev queue.inlist)
 
+let of_list lst = List.fold lst ~init:empty ~f:enqueue
+
 let compare cmpa t1 t2 = List.compare ~cmp:cmpa (to_list t1) (to_list t2)
 
 let sexp_of_t sexp_of_a q = Sexplib.Conv.sexp_of_list sexp_of_a (to_list q)
+let t_of_sexp a_of_sexp sexp = of_list (Sexplib.Conv.list_of_sexp a_of_sexp sexp)
+
+TEST = List.equal [1;2;3] (to_list (of_list [1;2;3])) ~equal:Int.equal
+TEST =
+  List.equal
+    [1;2;3]
+    (to_list (t_of_sexp Int.t_of_sexp (sexp_of_t Int.sexp_of_t (of_list [1;2;3]))))
+    ~equal:Int.equal
 
 let length queue = queue.length
 
 let is_empty queue = queue.length = 0
+
+

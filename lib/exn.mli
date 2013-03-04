@@ -2,6 +2,8 @@ open Never_returns
 
 type t = exn with sexp_of
 
+include Pretty_printer.S with type t := t
+
 (** Raised when finalization after an exception failed, too.
     The first exception argument is the one raised by the initial
     function, the second exception the one raised by the finalizer. *)
@@ -34,8 +36,6 @@ val sexp_of_t : t -> Sexplib.Sexp.t
 val protectx : f:('a -> 'b) -> 'a -> finally:('a -> unit) -> 'b
 
 val protect : f:(unit -> 'a) -> finally:(unit -> unit) -> 'a
-
-val pp : Format.formatter -> t -> unit
 
 (** [handle_uncaught ~exit f] catches an exception escaping [f] and prints an error
     message to stderr.  Exits with return code 1 if [exit] is [true].  Otherwise returns

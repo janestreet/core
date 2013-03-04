@@ -13,7 +13,11 @@ include Sexpable.To_stringable (T)
 include Comparable.Make_binable (T)
 include Hashable.Make_binable (T)
 
-let pp ppf () = Format.fprintf ppf "()"
+include Pretty_printer.Register (struct
+  type nonrec t = t
+  let to_string = to_string
+  let module_name = "Core.Unit"
+end)
 
 module type S = sig end
 

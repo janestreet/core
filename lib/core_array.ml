@@ -2,6 +2,8 @@ module Array = StdLabels.Array
 open Sexplib.Std
 open Bin_prot.Std
 
+module List = Core_list
+
 let invalid_argf = Core_printf.invalid_argf
 
 type 'a t = 'a array with sexp, bin_io
@@ -117,9 +119,28 @@ let rev_inplace t =
 ;;
 
 let of_list_rev l =
-  let t = of_list l in
-  rev_inplace t;
-  t
+  match l with
+  | [] -> [||]
+  | a :: l ->
+    let len = 1 + List.length l in
+    let t = create ~len a in
+    let r = ref l in
+    (* We start at [len - 2] because we already put [a] at [t.(len - 1)]. *)
+    for i = len - 2 downto 0 do
+      match !r with
+      | [] -> assert false
+      | a :: l -> t.(i) <- a; r := l
+    done;
+    t
+;;
+
+TEST_UNIT =
+  for i = 0 to 5 do
+    let l1 = List.init i ~f:Fn.id in
+    let l2 = List.rev (to_list (of_list_rev l1)) in
+    assert (l1 = l2);
+  done;
+;;
 
 (* [list_length] and [of_list_rev_map] are based on functions from the
    OCaml distribution. *)
@@ -371,4 +392,3 @@ let cartesian_product t1 t2 =
     done;
     t
 ;;
-

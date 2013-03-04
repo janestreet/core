@@ -16,6 +16,7 @@ include Hashable_binable with type t := t
   * YYYYMMDD *)
 include Stringable with type t := t
 include Comparable_binable with type t := t
+include Pretty_printer.S with type t := t
 
 (** [create_exn ~y ~m ~d] creates the date specified in the arguments.  Arguments are
     validated, and are not normalized in any way.  So, days must be within the limits for
@@ -33,8 +34,6 @@ val of_string_iso8601_basic : string -> pos:int -> t (* YYYYMMDD *)
 val to_string_iso8601_basic : t -> string            (* YYYYMMDD *)
 
 val to_string_american : t -> string              (* MM/DD/YYYY *)
-
-val pp : Format.formatter -> t -> unit
 
 val day : t -> int
 val month : t -> Month.t
@@ -99,4 +98,3 @@ module Stable : sig
     type t with sexp, bin_io, compare
   end with type t = t
 end
-

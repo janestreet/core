@@ -11,8 +11,9 @@ open Std_internal
     zone name that is accepted by [find] is acceptable in the bin_io and sexp
     representations. *)
 type t with bin_io, sexp
-include Stringable with type t := t
 
+include Pretty_printer.S with type t := t
+include Stringable       with type t := t
 
 (** [find name] looks up a [t] by its name and returns it.  *)
 val find : string -> t option
@@ -83,8 +84,6 @@ val initialized_zones : unit -> (string * t) list
     and is not intended to be called by most client code.  Use the high level functions
     provided in Time instead. *)
 val shift_epoch_time : t -> [`Local | `UTC] -> float -> float
-
-val pp : Format.formatter -> t -> unit
 
 exception Unknown_zone of string
 exception Invalid_file_format of string

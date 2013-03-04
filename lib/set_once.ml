@@ -1,9 +1,10 @@
+open Bin_prot.Std
 open Sexplib.Std
 open Result
 
 exception Already_set with sexp
 
-type 'a t = 'a option ref with sexp
+type 'a t = 'a option ref with bin_io, sexp
 
 let create () = ref None
 

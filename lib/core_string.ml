@@ -1136,4 +1136,3 @@ module Replace_polymorphic_compare = struct
 end
 
 include Replace_polymorphic_compare
-

@@ -4,7 +4,7 @@
 
 exception Already_set
 
-type 'a t with sexp
+type 'a t with bin_io, sexp
 
 val create : unit -> 'a t
 

@@ -38,10 +38,14 @@
 #include <sys/mman.h>
 #include <math.h>
 
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__NetBSD__)
 #define stat64 stat
 #define lstat64 lstat
 #define fstat64 fstat
+#endif
+
+#if defined(__NetBSD__)
+#define FNM_FILE_NAME FNM_PATHNAME
 #endif
 
 #include "ocaml_utils.h"
@@ -848,6 +852,7 @@ static inline pthread_t pthread_t_val(value __unused v_tid)
   return pthread_self();
 }
 
+#if defined(JSC_THREAD_CPUTIME)
 CAMLprim value unix_pthread_getcpuclockid(value v_tid)
 {
   clockid_t c;
@@ -855,6 +860,7 @@ CAMLprim value unix_pthread_getcpuclockid(value v_tid)
     uerror("pthread_getcpuclockid", Nothing);
   return caml_copy_nativeint(c);
 }
+#endif
 
 #if defined(CLOCK_PROCESS_CPUTIME_ID)
 #define CLOCK CLOCK_PROCESS_CPUTIME_ID
@@ -1128,7 +1134,7 @@ static struct custom_operations caml_mutex_ops = {
 
 };
 
-#if defined(_XOPEN_UNIX) && (_XOPEN_UNIX > 0)
+#if defined(_POSIX_THREADS) && _POSIX_THREADS >= 200112L
 CAMLprim value unix_create_error_checking_mutex(value __unused v_unit)
 {
   pthread_mutex_t *mtx;
@@ -1146,7 +1152,7 @@ CAMLprim value unix_create_error_checking_mutex(value __unused v_unit)
   return v_res;
 }
 #else
-#warning "XOPEN_UNIX not defined or = 0; unix_create_error_checking_mutex not available"
+#warning "_POSIX_THREADS not defined or < 200112; unix_create_error_checking_mutex not available"
 #endif
 
 /* Pathname resolution */

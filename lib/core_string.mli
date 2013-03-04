@@ -6,6 +6,7 @@ type t = string with bin_io, sexp
 include Comparable.S_binable with type t := t
 include Container .S0        with type t := t with type elt = char
 include Hashable  .S_binable with type t := t
+include Pretty_printer.S     with type t := t
 include Stringable.S         with type t := t
 
 (** Maximum length of a string. *)
@@ -197,9 +198,6 @@ val hash : t -> int
 
 (** fast equality function on strings, doesn't use compare_val *)
 val equal : t -> t -> bool
-
-(** This has to be public for interactive top-levels. *)
-val pp : Format.formatter -> t -> unit
 
 (** [is_empty s] returns [true] iff [s] is empty (i.e. its length is 0). *)
 val is_empty : t -> bool

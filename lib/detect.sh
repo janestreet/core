@@ -25,8 +25,7 @@ case $ptimer in
 esac
 
 if [[ -e setup.data ]]; then
-    sed '/^\(linux\|posix_timers\)_possible=/d' setup.data > setup.data.tmp
-    mv setup.data.tmp setup.data
+    sed -i '/^\(linux\|posix_timers\)_possible=/d' setup.data
 fi
 
 cat >> setup.data <<EOF

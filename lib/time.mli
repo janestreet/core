@@ -27,11 +27,12 @@ val current_string_and_sexp_format : unit -> [
   | `Write_new_read_only_new
 ]
 
-include Hashable_binable with type t := t
-include Comparable_binable with type t := t
+include Hashable_binable    with type t := t
+include Comparable_binable  with type t := t
 include Robustly_comparable with type t := t
-include Stringable with type t := t
-include Floatable with type t := t
+include Stringable          with type t := t
+include Floatable           with type t := t
+include Pretty_printer.S    with type t := t
 
 (** {5 values} *)
 
@@ -134,8 +135,6 @@ val to_string_abs :
 val of_string_abs : string -> t
 
 val t_of_sexp_abs : Sexp.t -> t
-
-val pp : Format.formatter -> t -> unit
 
 (** {6 Miscellaneous} *)
 

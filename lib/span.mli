@@ -17,9 +17,10 @@ module Parts : sig
     with sexp
 end
 
-include Comparable_binable with type t := t
-include Floatable with type t := t
-include Hashable_binable with type t := t
+include Comparable_binable  with type t := t
+include Floatable           with type t := t
+include Hashable_binable    with type t := t
+include Pretty_printer.S    with type t := t
 include Robustly_comparable with type t := t
 
 (* String converters and sexp converters allow for specifying of time spans in various
@@ -93,8 +94,6 @@ val neg   : t -> t (** negation *)
 val scale : t -> float -> t
 val (/)   : t -> float -> t
 val (//)  : t -> t -> float
-
-val pp : Format.formatter -> t -> unit
 
 (** [to_short_string t] pretty-prints approximate time span using no more than
     five characters if the span is positive, and six if the span is negative.

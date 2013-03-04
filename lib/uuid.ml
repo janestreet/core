@@ -50,7 +50,7 @@ module Base = struct
 end
 
 module T = struct
-  type t = string with sexp, bin_io
+  type t = string with bin_io
 
   let create () =
     let digest = Digest.to_hex (Digest.string (Base.to_string (Base.create ()))) in
@@ -88,10 +88,17 @@ module T = struct
       end
     | _ -> failwithf "%s: not a valid UUID" s ()
   ;;
+
 end
 
 include T
-include Identifiable.Of_stringable(T)
+
+include Identifiable.Make (struct
+  include T
+  include Sexpable.Of_stringable (T)
+  let compare t1 t2 = String.compare t1 t2
+  let hash t = String.hash t
+end)
 
 module Test = struct
   let test_size = 100_000
@@ -129,4 +136,3 @@ module Test = struct
   TEST = no_collisions (generate test_size)
   TEST = thread_test ()
 end
-

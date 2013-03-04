@@ -220,8 +220,11 @@ include (Hashable.Make_binable (struct
   let hash (t : t) = Hashtbl.hash t
 end) : Hashable.S_binable with type t := t)
 
-let pp ppf date = Format.pp_print_string ppf (to_string date)
-let () = Pretty_printer.register "Core.Date.pp"
+include Pretty_printer.Register (struct
+  type nonrec t = t
+  let module_name = "Core.Date"
+  let to_string = to_string
+end)
 
 let day t = t.d
 let month t = t.m

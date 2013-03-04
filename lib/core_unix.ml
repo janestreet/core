@@ -1154,7 +1154,9 @@ let mkdir_p ?perm dirname =
     try
       mkdir ?perm dir
     with
-    | Unix_error (EEXIST, _, _) -> ()
+    (* [mkdir] on MacOSX returns [EISDIR] instead of [EEXIST] if the directory already
+       exists. *)
+    | Unix_error ((EEXIST | EISDIR), _, _) -> ()
     | e -> raise e
   in
   let init,dirs =

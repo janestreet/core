@@ -189,8 +189,11 @@ module Stable = struct
 
     let to_string t = to_string_gen ~drop_ms:false ~drop_us:false ~trim:false t
 
-    let pp ppf t = Format.pp_print_string ppf (to_string t)
-    let () = Pretty_printer.register "Core.Ofday.pp"
+    include Pretty_printer.Register (struct
+      type nonrec t = t
+      let to_string = to_string
+      let module_name = "Core.Ofday"
+    end)
 
     let of_string s =
       try

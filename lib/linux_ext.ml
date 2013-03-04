@@ -45,13 +45,17 @@ module Clock = struct
   external get_resolution : t -> float = "unix_clock_getres"
   let get_resolution t = Span.of_float (get_resolution t)
 
-  external get : Thread.t -> t = "unix_pthread_getcpuclockid"
-
   external get_process_clock : unit -> t = "unix_clock_process_cputime_id_stub"
 
   external get_thread_clock : unit -> t = "unix_clock_thread_cputime_id_stub"
 
+  IFDEF THREAD_CPUTIME THEN
+  external get : Thread.t -> t = "unix_pthread_getcpuclockid"
+
   let get               = Ok get
+  ELSE
+  let get               = unimplemented "Linux_ext.Clock.get"
+  ENDIF
   let get_time          = Ok get_time
   let set_time          = Ok set_time
   let get_resolution    = Ok get_resolution

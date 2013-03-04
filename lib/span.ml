@@ -286,8 +286,11 @@ module Stable = struct
 end
 include Stable.V1
 
-let pp ppf t = Format.pp_print_string ppf (to_string t)
-let () = Pretty_printer.register "Core.Span.pp"
+include Pretty_printer.Register (struct
+  type nonrec t = t
+  let to_string = to_string
+  let module_name = "Core.Span"
+end)
 
 module C = struct
   type t = T.t with bin_io
@@ -331,4 +334,3 @@ TEST =
   Set.equal (Set.of_list [hour])
     (Set.t_of_sexp (Sexp.List [sexp_of_t hour]))
 ;;
-

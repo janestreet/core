@@ -3,11 +3,12 @@ open Std_internal
 (* Represented as a number of seconds since midnight *)
 type t = private float with bin_io, sexp
 
-include Comparable_binable with type t := t
-include Floatable with type t := t
-include Hashable_binable with type t := t
+include Comparable_binable  with type t := t
+include Floatable           with type t := t
+include Hashable_binable    with type t := t
+include Pretty_printer.S    with type t := t
 include Robustly_comparable with type t := t
-include Stringable with type t := t
+include Stringable          with type t := t
 
 val create : ?hr:int -> ?min:int -> ?sec:int -> ?ms:int -> ?us:int -> unit -> t
 
@@ -32,8 +33,6 @@ val sub : t -> Span.t -> t option
 (** [diff t1 t2] returns the difference in time between two ofdays, as if they occurred on
     the same day *)
 val diff : t -> t -> Span.t
-
-val pp : Format.formatter -> t -> unit
 
 (* Returns the time-span separating the two of-days, ignoring the hour information, and
    assuming that the of-days represent times that are within a half-hour of each other.

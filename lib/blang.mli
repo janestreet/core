@@ -126,14 +126,13 @@ val eval : 'a t -> ('a -> bool) -> bool
 
     - {[
         if
-
-        List.forall (values t) ~f:(fun x ->
-          match g x with
-          | `Known b -> b = f x
-          | `Unknown -> true)
-      then
-        eval t f = eval (specialize t g) f
-    ]}
+          List.forall (values t) ~f:(fun x ->
+            match g x with
+            | `Known b -> b = f x
+            | `Unknown -> true)
+        then
+          eval t f = eval (specialize t g) f
+      ]}
 *)
 val specialize : 'a t -> ('a -> [`Known of bool | `Unknown]) -> 'a t
 

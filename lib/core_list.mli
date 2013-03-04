@@ -324,6 +324,9 @@ val take_while : 'a t -> f : ('a -> bool) -> 'a t
 (** [drop_while l ~f] drops the longest prefix of [l] for which [f] is [true]. *)
 val drop_while : 'a t -> f : ('a -> bool) -> 'a t
 
+(** [split_while xs ~f = (take_while xs ~f, drop_while xs ~f)] *)
+val split_while : 'a t -> f : ('a -> bool) -> 'a t * 'a t
+
 (** Concatenate a list of lists.  The elements of the argument are all concatenated
     together (in the same order) to give the result.  Tail recursive over outer and inner
     lists. *)
@@ -376,3 +379,6 @@ val transpose : 'a t t -> 'a t t option
 **)
 val transpose_exn : 'a t t -> 'a t t
 
+(** [intersperse xs ~sep] places [sep] between adjacent elements of [xs].
+    e.g. [intersperse [1;2;3] ~sep:0 = [1;0;2;0;3]] *)
+val intersperse : 'a list -> sep:'a -> 'a list

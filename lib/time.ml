@@ -437,8 +437,11 @@ module Stable = struct
         (Set.t_of_sexp (Sexp.List [sexp_of_t epoch]))
     ;;
 
-    let pp ppf t = Format.pp_print_string ppf (to_string t)
-    let () = Pretty_printer.register "Core.Time.pp"
+    include Pretty_printer.Register (struct
+      type nonrec t = t
+      let to_string = to_string
+      let module_name = "Core.Time"
+    end)
 
     let to_localized_string time zone =
       let date,ofday = to_date_ofday time zone in

@@ -70,10 +70,15 @@ let protectx ~f x ~(finally : _ -> unit) =
 
 let protect ~f ~finally = protectx ~f () ~finally
 
-let pp ppf t =
-  match sexp_of_exn_opt t with
-  | Some sexp -> Sexp.pp_hum ppf sexp
-  | None -> Format.pp_print_string ppf (Printexc.to_string t)
+include Pretty_printer.Register_pp (struct
+  type t = exn
+  let pp ppf t =
+    match sexp_of_exn_opt t with
+    | Some sexp -> Sexp.pp_hum ppf sexp
+    | None -> Format.pp_print_string ppf (Printexc.to_string t)
+  ;;
+  let module_name = "Core.Exn"
+end)
 
 let backtrace = Printexc.get_backtrace
 
@@ -93,8 +98,6 @@ let handle_uncaught ~exit:must_exit f =
 let reraise_uncaught str func =
   try func () with
   | exn -> raise (Reraised (str, exn))
-
-let () = Pretty_printer.register "Core.Exn.pp"
 
 let () =
   Printexc.register_printer (fun exc ->
