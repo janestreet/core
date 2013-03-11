@@ -938,6 +938,34 @@ module Base = struct
             usage = Anon.Grammar.zero; } }
     end
 
+    let flags_of_args_exn args =
+      List.fold args ~init:empty ~f:(fun acc (name, spec, doc) ->
+        let gen f flag_type = step (fun m x -> f x; m) +> flag name flag_type ~doc in
+        let call f arg_type = gen (fun x -> Option.iter x ~f) (optional arg_type) in
+        let set r arg_type = call (fun x -> r := x) arg_type in
+        let set_bool r b = gen (fun passed -> if passed then r := b) no_arg in
+        acc ++ begin
+          match spec with
+          | Arg.Unit f -> gen (fun passed -> if passed then f ()) no_arg
+          | Arg.Set   r -> set_bool r true
+          | Arg.Clear r -> set_bool r false
+          | Arg.String     f -> call f string
+          | Arg.Set_string r -> set  r string
+          | Arg.Int        f -> call f int
+          | Arg.Set_int    r -> set  r int
+          | Arg.Float      f -> call f float
+          | Arg.Set_float  r -> set  r float
+          | Arg.Bool       f -> call f bool
+          | Arg.Symbol (syms, f) ->
+            let arg_type =
+              Arg_type.of_alist_exn (List.map syms ~f:(fun sym -> (sym, sym)))
+            in
+            call f arg_type
+          | Arg.Rest f -> gen (fun x -> Option.iter x ~f:(List.iter ~f)) escape
+          | Arg.Tuple _ ->
+            failwith "Arg.Tuple is not supported by Command.Spec.flags_of_args_exn"
+        end)
+
     module Deprecated = struct
       include Flag.Spec.Deprecated
       include Anon.Spec.Deprecated
@@ -1348,4 +1376,25 @@ module Deprecated = struct
 
   let version = DEFAULT_VERSION
   let build_info = DEFAULT_BUILDINFO
+end
+
+(* testing claims made in the mli about order of evaluation and [flags_of_args_exn] *)
+TEST_MODULE "Command.Spec.flags_of_args_exn" = struct
+
+  let args q = [
+    ( "flag1", Core_arg.Unit (fun () -> Queue.enqueue q 1), "enqueue 1");
+    ( "flag2", Core_arg.Unit (fun () -> Queue.enqueue q 2), "enqueue 2");
+    ( "flag3", Core_arg.Unit (fun () -> Queue.enqueue q 3), "enqueue 3");
+  ]
+
+  let parse argv =
+    let q = Queue.create () in
+    let command = basic ~summary:"" (Spec.flags_of_args_exn (args q)) Fn.id in
+    run ~argv command;
+    Queue.to_list q
+
+  TEST = parse ["foo.exe";"-flag1";"-flag2";"-flag3"] = [1;2;3]
+  TEST = parse ["foo.exe";"-flag2";"-flag3";"-flag1"] = [1;2;3]
+  TEST = parse ["foo.exe";"-flag3";"-flag2";"-flag1"] = [1;2;3]
+
 end

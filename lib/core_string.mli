@@ -3,11 +3,8 @@
 
 type t = string with bin_io, sexp
 
-include Comparable.S_binable with type t := t
-include Container .S0        with type t := t with type elt = char
-include Hashable  .S_binable with type t := t
-include Pretty_printer.S     with type t := t
-include Stringable.S         with type t := t
+include Identifiable.S  with type t := t
+include Container   .S0 with type t := t with type elt = char
 
 (** Maximum length of a string. *)
 val max_length : int

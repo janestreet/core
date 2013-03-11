@@ -54,6 +54,7 @@ let () =
     ]
 
 let to_string exc = Sexp.to_string_hum ~indent:2 (sexp_of_exn exc)
+let to_string_mach exc = Sexp.to_string_mach (sexp_of_exn exc)
 
 let sexp_of_t = sexp_of_exn
 

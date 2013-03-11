@@ -128,3 +128,8 @@ let bit_xor a b = a lxor b
 
 include Int_math
 
+include Pretty_printer.Register (struct
+  type nonrec t = t
+  let to_string = to_string
+  let module_name = "Core.Int"
+end)

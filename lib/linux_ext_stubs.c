@@ -342,6 +342,34 @@ CAMLprim value linux_get_ipv4_address_for_interface(value v_interface)
   assert(0);  /* [uerror] should never return. */
 }
 
+/*
+ * This linux specific socket option is in use for applications that require it
+ * for security reasons. Taking a string argument, it does not fit the sockopt stubs used
+ * for other socket options.
+ */
+CAMLprim value linux_bind_to_interface(value v_fd, value v_ifname)
+{
+  int ret, fd, ifname_len;
+  char *ifname;
+
+  assert(!Is_block(v_fd));
+  assert(Is_block(v_ifname) && Tag_val(v_ifname) == String_tag);
+
+  fd = Int_val(v_fd);
+  ifname = String_val(v_ifname);
+
+  ifname_len = caml_string_length(v_ifname) + 1;
+  if (ifname_len > IFNAMSIZ) {
+    caml_failwith("linux_bind_to_interface: ifname string too long");
+  }
+
+  ret = setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, (void*)ifname, ifname_len);
+  if (ret < 0) {
+    uerror("bind_to_interface", Nothing);
+  }
+
+  return Val_unit;
+}
 
 /** Core epoll methods **/
 

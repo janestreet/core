@@ -74,3 +74,9 @@ val until_empty : 'a t -> ('a -> unit) -> unit
 val transfer : src:'a t -> dst:'a t -> unit
 
 val of_list : 'a list -> 'a t
+
+(** [unchecked_iter t ~f] behaves like [iter t ~f] except that [f] is allowed to modify
+    [t].  Elements added by [f] may or may not be visited, elements removed by [f] that
+    have not been visited will not be visited.  It is an (undetected) error to delete the
+    current element. *)
+val unchecked_iter : 'a t -> f:('a -> unit) -> unit

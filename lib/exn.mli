@@ -23,7 +23,8 @@ val reraise : t -> string -> _
 *)
 val reraisef : t -> ('a, unit, string, unit -> _) format4 -> 'a
 
-val to_string : t -> string
+val to_string      : t -> string (* human-readable, multi-lines *)
+val to_string_mach : t -> string (* machine format, single-line *)
 
 (* Uses a global table of sexp converters.  To register a converter for a new exception,
    add "with sexp" to its definition. If no suitable converter is found, the standard

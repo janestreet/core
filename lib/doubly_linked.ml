@@ -226,6 +226,35 @@ include Container.Make (struct
   let fold t ~init ~f = fold_elt t ~init ~f:(fun acc elt -> f acc (Elt.value elt))
 end)
 
+(* this function is lambda lifted for performance, to make direct recursive calls instead
+   of calls through its closure. It also avoids the initial closure allocation. *)
+let rec iter_loop first f elt =
+  f (Elt.value elt);
+  let next = Elt.next elt in
+  if not (phys_equal next first) then iter_loop first f next
+
+(* more efficient than the one from container *)
+let iter t ~f =
+  match !t with
+  | None -> ()
+  | Some first ->
+    Header.with_iteration (Elt.header first) (fun () ->
+      iter_loop first f first
+    )
+
+let unchecked_iter t ~f =
+  match !t with
+  | None -> ()
+  | Some first ->
+    let rec loop t f elt =
+      f (Elt.value elt);
+      let next = Elt.next elt in
+      match !t with (* the first element of the bag may have been changed by [f] *)
+      | None -> ()
+      | Some first -> if not (phys_equal first next) then loop t f next
+    in
+    loop t f first
+
 let is_empty t = Option.is_none !t (* more efficient than what Container.Make returns *)
 
 let fold_right t ~init ~f =
@@ -282,10 +311,10 @@ let filter_inplace t ~f =
       match !t with
       | None -> ()
       | Some head ->
-          if Elt.equal head elt then begin
-            let next_elt = Elt.next elt in
-            t := if Elt.equal head next_elt then None else Some next_elt
-          end
+        if Elt.equal head elt then begin
+          let next_elt = Elt.next elt in
+          t := if Elt.equal head next_elt then None else Some next_elt
+        end
     end;
     Elt.unlink elt)
 
@@ -357,9 +386,9 @@ let insert_before t elt v =
       t := Some new_elt;
       new_elt
     end else if Header.equal (Elt.header first) (Elt.header elt) then
-      Elt.insert_before elt v
-    else
-      raise Elt_does_not_belong_to_list
+        Elt.insert_before elt v
+      else
+        raise Elt_does_not_belong_to_list
 
 let insert_empty t v =
   let new_elt = Elt.create v in
@@ -417,14 +446,40 @@ TEST =
     Elt_does_not_belong_to_list -> true
 
 TEST =
-  let t1 = create () in
-  let t2 = create () in
-  let elt = insert_first t1 14 in
-  let _   = insert_first t2 13 in
-  try
-    remove t2 elt; false
-  with
-    Elt_does_not_belong_to_list -> true
+      let t1 = create () in
+      let t2 = create () in
+      let elt = insert_first t1 14 in
+      let _   = insert_first t2 13 in
+      try
+        remove t2 elt; false
+      with
+        Elt_does_not_belong_to_list -> true
+
+TEST_MODULE "unchecked_iter" = struct
+  let b = of_list [0; 1; 2; 3; 4]
+  let element b n =
+    Option.value_exn (find_elt b ~f:(fun value -> value = n))
+  let remove b n =
+    remove b (element b n)
+  let insert_after b n_find n_add =
+    ignore (insert_after b (element b n_find) n_add)
+  let to_list f =
+    let r = ref [] in
+    let b = copy b in
+    unchecked_iter b ~f:(fun n ->
+      r := n :: !r;
+      f b n;
+    );
+    List.rev !r
+  TEST = to_list (fun _ _ -> ()) = [0; 1; 2; 3; 4]
+  TEST = to_list (fun b x -> if x = 0 then remove b 1) = [0; 2; 3; 4]
+  TEST = to_list (fun b x -> if x = 1 then remove b 0) = [0; 1; 2; 3; 4]
+  TEST = to_list (fun b x -> if x = 2 then remove b 1) = [0; 1; 2; 3; 4]
+  TEST = to_list (fun b x -> if x = 2 then begin remove b 4; remove b 3; end) = [0; 1; 2]
+  TEST = to_list (fun b x -> if x = 2 then insert_after b 1 5) = [0; 1; 2; 3; 4]
+  TEST = to_list (fun b x -> if x = 2 then insert_after b 2 5) = [0; 1; 2; 5; 3; 4]
+  TEST = to_list (fun b x -> if x = 2 then insert_after b 3 5) = [0; 1; 2; 3; 5; 4]
+end
 
 let invariant t =
   match !t with

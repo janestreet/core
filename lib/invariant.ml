@@ -2,13 +2,17 @@
     consistent interface to invariant-style functions.  There is a signature ([S], [S1],
     [S2], [S3]) for each arity of type.  Usage looks like:
 
+    {[
       type t
       include Invariant.S with type t := t
+    ]}
 
     or
 
+    {[
       type 'a t
       include Invariant.S1 with type 'a t := 'a t
+    ]}
 *)
 
 type 'a t = 'a -> unit

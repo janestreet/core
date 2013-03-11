@@ -237,6 +237,17 @@ val getpriority : (unit -> Priority.t) Or_error.t
    is configured. *)
 val get_ipv4_address_for_interface : (string -> string) Or_error.t
 
+(* [bind_to_interface fd (`Interface_name "eth0")] restricts packets from being
+   received/sent on the given file descriptor [fd] on any interface other than "eth0".
+   Use [bind_to_interface fd `Any] to allow traffic on any interface.  The bindings are
+   not cumulative, you may only select one interface, or any.
+
+   Not to be confused with a traditional bsd sockets api "bind()" call, this linux
+   specific sockopt is being used for applications on multihomed machines with specific
+   security concerns. *)
+val bind_to_interface
+  : (File_descr.t -> [ `Any | `Interface_name of string ] -> unit) Or_error.t
+
 (** epoll() - a linux I/O multiplexer of the same family as select() or poll().  Its main
     differences are support for Edge or Level triggered notifications (We're using
     Level-triggered to emulate select) and much better scaling with the number of file
@@ -320,4 +331,3 @@ module Epoll : sig
   (* pwait -> with the specified sigmask, analogous to pselect *)
   (* val pwait   : t -> timeout:Span.t -> int list -> [ `Ok of Ready_fds.t | `Timeout ] *)
 end
-

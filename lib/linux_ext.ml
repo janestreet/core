@@ -319,6 +319,21 @@ external get_terminal_size : unit -> int * int = "linux_get_terminal_size"
 external get_ipv4_address_for_interface : string -> string =
   "linux_get_ipv4_address_for_interface" ;;
 
+
+(* The C-stub is a simple pass-through of the linux SO_BINDTODEVICE semantics, wherein an
+   empty string removes any binding *)
+external bind_to_interface' : File_descr.t -> string -> unit =
+  "linux_bind_to_interface" ;;
+
+let bind_to_interface fd ifname =
+  let name =
+    match ifname with
+    | `Interface_name name -> name
+    | `Any -> ""
+  in
+  bind_to_interface' fd name
+;;
+
 module Epoll = struct
 
   external flag_epollin      : unit -> Int63.t  = "linux_epoll_EPOLLIN_flag"
@@ -629,6 +644,7 @@ end
 let cores                          = Ok cores
 let file_descr_realpath            = Ok file_descr_realpath
 let get_ipv4_address_for_interface = Ok get_ipv4_address_for_interface
+let bind_to_interface              = Ok bind_to_interface
 let get_terminal_size              = Ok get_terminal_size
 let gettcpopt_bool                 = Ok gettcpopt_bool
 let gettid                         = Ok gettid
@@ -659,6 +675,7 @@ end
 let cores                          = unimplemented "Linux_ext.cores"
 let file_descr_realpath            = unimplemented "Linux_ext.file_descr_realpath"
 let get_ipv4_address_for_interface = unimplemented "Linux_ext.get_ipv4_address_for_interface"
+let bind_to_interface              = unimplemented "Linux_ext.bind_to_interface"
 let get_terminal_size              = unimplemented "Linux_ext.get_terminal_size"
 let gettcpopt_bool                 = unimplemented "Linux_ext.gettcpopt_bool"
 let gettid                         = unimplemented "Linux_ext.gettid"

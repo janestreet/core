@@ -266,6 +266,16 @@ module Spec : sig
       arguments as the value of the flag. *)
   val escape : string list option flag
 
+  (** [flags_of_args_exn args] creates a spec from [Arg.t]s, for compatibility with
+      ocaml's base libraries.  Fails if it encounters an arg that cannot be converted.
+
+      NOTE: There is a difference in side effect ordering between [Arg] and [Command].  In
+      the [Arg] module, flag handling functions embedded in [Arg.t] values will be run in
+      the order that flags are passed on the command line.  In the [Command] module, using
+      [flags_of_args_exn flags], they are evaluated in the order that the [Arg.t] values
+      appear in [flags].  *)
+  val flags_of_args_exn : Core_arg.t list -> ('a, 'a) t
+
   (** {1 anonymous argument specifications} *)
 
   type 'a anons (** a specification of some number of anonymous arguments *)

@@ -114,8 +114,6 @@ module Sexpable = Sexpable
 module Sexp_maybe = Core_sexp.Sexp_maybe
 module Signal = Signal
 module Source_code_position = Source_code_position
-module Space_safe_tuple2 = Space_safe_tuple.T2
-module Space_safe_tuple3 = Space_safe_tuple.T3
 module Squeue = Squeue
 module Staged = Staged
 module Stringable = Stringable
@@ -151,5 +149,3 @@ module type Unique_id = Unique_id.Id
 include T
 
 let _squelch_unused_module_warning_ = ()
-
-

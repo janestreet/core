@@ -2,10 +2,7 @@
 
 (** An alias for the type of characters. *)
 type t = char with bin_io, sexp
-
-include Stringable.S with type t := t
-include Comparable.S with type t := t
-include Hashable.S with type t := t
+include Identifiable.S with type t := t
 
 (** Return the ASCII code of the argument. *)
 val to_int : t -> int

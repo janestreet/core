@@ -87,3 +87,9 @@ let to_nativeint = Conv.int32_to_nativeint
 let to_nativeint_exn = to_nativeint
 
 include Conv.Make (T)
+
+include Pretty_printer.Register (struct
+  type nonrec t = t
+  let to_string = to_string
+  let module_name = "Core.Int32"
+end)

@@ -102,3 +102,11 @@ val transfer : src:'a t -> dst:'a t -> unit
 
 (** [filter_inplace t ~f] removes all elements of [t] that don't satisfy [f]. *)
 val filter_inplace : 'a t -> f:('a -> bool) -> unit
+
+(** [unchecked_iter t ~f] behaves like [iter t ~f] except that [f] is allowed to modify
+    [t].  Adding or removing elements before the element currently being visited has no
+    effect on the traversal.  Elements added after the element currently being visited
+    will be traversed.  Elements deleted after the element currently being visited will
+    not be traversed.  Deleting the element currently visited is an error that is not
+    detected (presumably leading to an infinite loop) . *)
+val unchecked_iter : 'a t -> f:('a -> unit) -> unit

@@ -2,13 +2,17 @@
     consistent interface to [equal] functions.  There is a signature ([S], [S1], [S2],
     [S3]) for each arity of type.  Usage looks like:
 
+    {[
       type t
       include Equal.S with type t := t
+    ]}
 
     or
 
+    {[
       type 'a t
       include Equal.S1 with type 'a t := 'a t
+    ]}
 *)
 
 type 'a t = 'a -> 'a -> bool

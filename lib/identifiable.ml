@@ -20,7 +20,7 @@ end) = struct
   include T
   include (Comparable.Make_binable (T) : Comparable.S_binable with type t := t)
   include (Hashable  .Make_binable (T) : Hashable  .S_binable with type t := t)
-  let pp formatter t = Core_string.pp formatter (T.to_string t)
+  let pp formatter t = Format.pp_print_string formatter (T.to_string t)
 end
 
 (* The unit test below checks that for a call to [Identifiable.Make], the functions in the
