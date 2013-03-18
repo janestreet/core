@@ -14,6 +14,7 @@ module Date          = Date          .Stable
 module Host_and_port = Host_and_port .Stable
 module Interval      = Interval      .Stable
 module Month         = Month         .Stable
+module Nothing       = Nothing       .Stable
 module Ofday         = Ofday         .Stable
 module Result        = Result        .Stable
 module Span          = Span          .Stable

@@ -233,6 +233,21 @@ val really_input : in_channel -> ?pos : int -> ?len : int -> t -> unit
     @param len default = [length bstr - pos]
 *)
 
+val pread_assume_fd_is_nonblocking :
+  file_descr -> offset : int -> ?pos : int -> ?len : int -> t -> int
+(** [pread_assume_fd_is_nonblocking fd ~offset ?pos ?len bstr] reads up to [len] bytes
+    from file descriptor [fd] at offset [offset], and writes them to bigstring [bstr]
+    starting at position [pos].  The fd must be capable of seeking, and the current file
+    offset used for a regular [read()] is unchanged. Please see 'man pread' for more
+    information. @return the number of bytes actually read.
+
+    @raise Invalid_argument if the designated range is out of bounds.
+    @raise IOError in the case of input errors, or on EOF.
+
+    @param pos default = 0
+    @param len default = [length bstr - pos]
+*)
+
 
 (** {6 Output functions} *)
 
@@ -298,6 +313,21 @@ val write : file_descr -> ?pos : int -> ?len : int -> t -> int
 
     @raise Unix_error in the case of output errors.
     @raise Invalid_argument if the designated range is out of bounds.
+
+    @param pos default = 0
+    @param len default = [length bstr - pos]
+*)
+
+val pwrite_assume_fd_is_nonblocking :
+  file_descr -> offset : int -> ?pos : int -> ?len : int -> t -> int
+(** [pwrite_assume_fd_is_nonblocking fd ~offset ?pos ?len bstr] writes up to [len] bytes
+    of bigstring [bstr] starting at position [pos] to file descriptor [fd] at position
+    [offset].  The fd must be capable of seeking, and the current file offset used for
+    non-positional [read()]/[write()] calls is unchanged.  @return the number of bytes
+    written.
+
+    @raise Invalid_argument if the designated range is out of bounds.
+    @raise IOError in the case of input errors, or on EOF.
 
     @param pos default = 0
     @param len default = [length bstr - pos]
@@ -613,3 +643,5 @@ val unsafe_get_int64_t_le : t -> pos:int -> Int64.t
 val unsafe_get_int64_t_be : t -> pos:int -> Int64.t
 val unsafe_set_int64_t_le : t -> pos:int -> Int64.t -> unit
 val unsafe_set_int64_t_be : t -> pos:int -> Int64.t -> unit
+
+

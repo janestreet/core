@@ -673,8 +673,10 @@ end
     (2) you add a new Map version to stable.ml
 *)
 type ('k, 'v, 'comparator) t =
-  { tree : ('k, 'v) Tree0.t;
+  { (* [comparator] is the first field so that polymorphic comparisons fail on a map due
+       to the functional value in the comparator. *)
     comparator : ('k, 'comparator) Comparator.t;
+    tree : ('k, 'v) Tree0.t;
   }
 
 let comparator t = t.comparator

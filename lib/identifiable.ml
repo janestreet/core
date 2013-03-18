@@ -14,13 +14,14 @@ end
 
 module Make (T : sig
   type t with bin_io, compare, sexp
-  val hash : t -> int
   include Stringable.S with type t := t
+  val hash : t -> int
+  val module_name : string
 end) = struct
   include T
   include (Comparable.Make_binable (T) : Comparable.S_binable with type t := t)
   include (Hashable  .Make_binable (T) : Hashable  .S_binable with type t := t)
-  let pp formatter t = Format.pp_print_string formatter (T.to_string t)
+  include Pretty_printer.Register (T)
 end
 
 (* The unit test below checks that for a call to [Identifiable.Make], the functions in the
@@ -62,6 +63,8 @@ TEST_MODULE = struct
   end
 
   module T = struct
+
+    let module_name = "Core.Identifiable.T"
 
     type t = A | B with bin_io, compare, sexp
 

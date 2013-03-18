@@ -1,22 +1,12 @@
 open Std
 open Stable_internal
 
-(* These tests are brittle, in that they rely on the order in which pairs are serialized,
-   which can certainly change with implementations. It was decided it would be left this
-   way to encourage implementors to consider backwards compatibility.
-
-   I adjusted all sizes to either be the defaults or a power of 2, so that some hashtbl
-   features could be rolled back without adjusting this test.
-
-   The alternate tests for ocaml 3 vs. 4 (due to the poly hash function change) have been
-   removed, as we are committed to ocaml 4 at this point. *)
-
 module Hashtbl = struct
   module V1 (Elt : Hashtbl.Key_binable) : sig
     type 'a t = (Elt.t, 'a) Hashtbl.t with sexp, bin_io
   end = Hashtbl.Make_binable (Elt)
 
-  TEST_MODULE "Hashtbl.V1" = Stable_unit_test.Make (struct
+  TEST_MODULE "Hashtbl.V1" = Stable_unit_test.Make_unordered_container (struct
     module Table = V1 (Int)
     type t = string Table.t with sexp, bin_io
 
@@ -27,16 +17,20 @@ module Hashtbl = struct
 
     let single_table = Int.Table.of_alist_exn [ 0, "foo" ]
 
+    module Test = Stable_unit_test_intf.Unordered_container_test
+
     let tests =
-      (* The first test is dependent on the implementation of ocaml's hash function, the
-         initial size of the table being greater than any of the ints placed in it, and
-         some implementation details of Hashtbl.sexp_of_t.  Hence, this test might fail if
-         some of those implementation details change, even though the serialization would
-         still be recognized. *)
-      [ triple_table, "((1 foo) (3 baz) (2 bar))",
-          "\003\002\003bar\003\003baz\001\003foo";
-        Int.Table.create (), "()", "\000";
-        single_table, "((0 foo))", "\001\000\003foo";
+      [ triple_table, {Test.
+          sexps = ["(1 foo)"; "(2 bar)"; "(3 baz)"];
+          bin_io_header = "\003";
+          bin_io_elements = ["\001\003foo"; "\002\003bar"; "\003\003baz"];
+        };
+        Int.Table.create (), {Test.
+          sexps = []; bin_io_header = "\000"; bin_io_elements = [];
+        };
+        single_table, {Test.
+          sexps = ["(0 foo)"]; bin_io_header = "\001"; bin_io_elements = ["\000\003foo"];
+        };
       ]
   end)
 end
@@ -46,7 +40,7 @@ module Hash_set = struct
     type t = Elt.t Hash_set.t with sexp, bin_io
   end = Hash_set.Make_binable (Elt)
 
-  TEST_MODULE "Hash_set.V1" = Stable_unit_test.Make (struct
+  TEST_MODULE "Hash_set.V1" = Stable_unit_test.Make_unordered_container (struct
     include V1 (Int)
 
     let equal = Hash_set.equal
@@ -57,12 +51,20 @@ module Hash_set = struct
 
     let single_set = Int.Hash_set.of_list [0]
 
+    module Test = Stable_unit_test_intf.Unordered_container_test
+
     let tests =
-      (* See comment in Hashtbl.V1's test module. *)
-      [ ten_set, "(1 5 4 3 6 0 9 7 8 2)",
-          "\n\002\b\007\t\000\006\003\004\005\001";
-        Int.Hash_set.create (), "()", "\000";
-        single_set, "(0)", "\001\000";
+      [ ten_set, {Test.
+          sexps = List.init 10 ~f:Int.to_string;
+          bin_io_header = "\010";
+          bin_io_elements = List.init 10 ~f:(fun n -> Char.to_string (Char.of_int_exn n));
+        };
+        Int.Hash_set.create (), {Test.
+          sexps = []; bin_io_header = "\000"; bin_io_elements = [];
+        };
+        single_set, {Test.
+          sexps = ["0"]; bin_io_header = "\001"; bin_io_elements = ["\000"];
+        };
       ]
   end)
 end

@@ -1,5 +1,8 @@
 #define _FILE_OFFSET_BITS 64
 
+/* For pread/pwrite */
+#define _XOPEN_SOURCE 500
+
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
@@ -232,6 +235,17 @@ CAMLprim value bigstring_read_assume_fd_is_nonblocking_stub(
   return Val_long(n_read);
 }
 
+CAMLprim value bigstring_pread_assume_fd_is_nonblocking_stub(
+    value v_fd, value v_offset, value v_pos, value v_len, value v_bstr)
+{
+  char *bstr = get_bstr(v_bstr, v_pos);
+  size_t len = Long_val(v_len);
+  ssize_t n_read;
+
+  n_read = pread(Int_val(v_fd), bstr, len, Long_val(v_offset));
+  if (n_read == -1) uerror("bigstring_pread_assume_fd_is_nonblocking_stub", Nothing);
+  return Val_long(n_read);
+}
 
 /* Input of bigstrings from sockets */
 
@@ -554,6 +568,18 @@ CAMLprim value bigstring_write_stub(
   caml_leave_blocking_section();
   if (written == -1) uerror("write", Nothing);
   CAMLreturn(Val_long(written));
+}
+
+CAMLprim value bigstring_pwrite_assume_fd_is_nonblocking_stub(
+  value v_fd, value v_offset, value v_pos, value v_len, value v_bstr)
+{
+  char *bstr = get_bstr(v_bstr, v_pos);
+  size_t len = Long_val(v_len);
+  ssize_t written;
+
+  written = pwrite(Int_val(v_fd), bstr, len, Long_val(v_offset));
+  if (written == -1) uerror("bigstring_pwrite_assume_fd_is_nonblocking_stub", Nothing);
+  return Val_long(written);
 }
 
 CAMLprim value bigstring_write_assume_fd_is_nonblocking_stub(

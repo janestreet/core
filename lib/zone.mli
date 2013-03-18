@@ -10,10 +10,9 @@ open Std_internal
     reconstructed on the receiving/reading side by reloading the zone file from disk.  Any
     zone name that is accepted by [find] is acceptable in the bin_io and sexp
     representations. *)
-type t with bin_io, sexp
+type t
 
-include Pretty_printer.S with type t := t
-include Stringable       with type t := t
+include Identifiable.S with type t := t
 
 (** [find name] looks up a [t] by its name and returns it.  *)
 val find : string -> t option

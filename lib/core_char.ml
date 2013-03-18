@@ -18,7 +18,10 @@ module T = struct
     | _ -> failwithf "Char.of_string: %S" s ()
 end
 include T
-include Identifiable.Make(T)
+include Identifiable.Make (struct
+  include T
+  let module_name = "Core.Char"
+end)
 
 let to_int = Char.code
 

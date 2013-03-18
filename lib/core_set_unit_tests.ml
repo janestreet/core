@@ -34,6 +34,8 @@ module Unit_tests
       with type ('a, 'b, 'c) options := ('a, 'b, 'c) access_options
 
     val simplify_accessor : (int, Int.comparator, 'c) access_options -> 'c
+
+    val kind : [ `Set | `Tree ]
   end)
 
   : Creators_and_accessors = struct
@@ -201,6 +203,18 @@ module Unit_tests
       ];
   ;;
 
+  (* Ensure polymorphic equality raises for sets. *)
+  TEST_UNIT =
+    match Set.kind with
+    | `Tree -> ()
+    | `Set ->
+      let ts = [ Set.empty (); Set.of_list [ Elt.of_int 13 ] ] in
+      List.iter ts ~f:(fun t1 ->
+        List.iter ts ~f:(fun t2 ->
+          assert (Result.is_error (Result.try_with (fun () ->
+            Polymorphic_compare.equal t1 t2)))));
+  ;;
+
 
   let to_tree _           = assert false
   let remove_index _      = assert false
@@ -281,6 +295,7 @@ TEST_MODULE "Set" = Unit_tests (Elt_poly) (struct
   type ('a, 'b) set = ('a, 'b) t
   include Create_options_with_comparator
   include Access_options_without_comparator
+  let kind = `Set
 end)
 
 TEST_MODULE "Set.Poly" = Unit_tests (Elt_poly) (struct
@@ -288,12 +303,14 @@ TEST_MODULE "Set.Poly" = Unit_tests (Elt_poly) (struct
   type ('a, 'b) set = 'a t
   include Create_options_without_comparator
   include Access_options_without_comparator
+  let kind = `Set
 end)
 
 TEST_MODULE "Int.Set" = Unit_tests (Elt_int) (struct
   include Int.Set
   include Create_options_without_comparator
   include Access_options_without_comparator
+  let kind = `Set
 end)
 
 TEST_MODULE "Set.Tree" = Unit_tests (Elt_poly) (struct
@@ -301,6 +318,7 @@ TEST_MODULE "Set.Tree" = Unit_tests (Elt_poly) (struct
   type ('a, 'b) t_   = ('a, 'b) t
   include Create_options_with_comparator
   include Access_options_with_comparator
+  let kind = `Tree
 end)
 
 TEST_MODULE "Set.Poly.Tree" = Unit_tests (Elt_poly) (struct
@@ -308,6 +326,7 @@ TEST_MODULE "Set.Poly.Tree" = Unit_tests (Elt_poly) (struct
   type ('a, 'b) set = 'a Set.Poly.Tree.t
   include Create_options_without_comparator
   include Access_options_without_comparator
+  let kind = `Tree
 end)
 
 TEST_MODULE "Int.Set.Tree" = Unit_tests (Elt_int) (struct
@@ -316,4 +335,5 @@ TEST_MODULE "Int.Set.Tree" = Unit_tests (Elt_int) (struct
   type ('a, 'b) tree = ('a, 'b) Int.Set.tree
   include Create_options_without_comparator
   include Access_options_without_comparator
+  let kind = `Tree
 end)

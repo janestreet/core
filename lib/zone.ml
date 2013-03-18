@@ -700,8 +700,16 @@ let abbreviation zone time =
 
 let name zone = zone.name
 
-include Pretty_printer.Register (struct
-  type nonrec t = t
-  let to_string = name
+include Identifiable.Make (struct
   let module_name = "Core.Zone"
+
+  include Stable.V1
+
+  let of_string     = of_string
+  let to_string     = to_string
+  (* The correctness of these relies on not exposing raw loading/creation functions to the
+     outside world that would allow the construction of two Zone's with the same name and
+     different transitions. *)
+  let hash t        = String.hash (to_string t)
+  let compare t1 t2 = String.compare (to_string t1) (to_string t2)
 end)

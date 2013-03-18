@@ -96,6 +96,7 @@ module Month = Month
 module Mutex = Core_mutex
 module Nano_mutex = Nano_mutex
 module No_polymorphic_compare = No_polymorphic_compare
+module Nothing = Nothing
 module Only_in_test = Only_in_test
 module Option = Option
 module Or_error = Or_error

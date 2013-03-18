@@ -40,6 +40,8 @@ module Unit_tests
       with type ('a, 'b, 'c) options := ('a, 'b, 'c) access_options
 
     val simplify_accessor : (int, Int.comparator, 'c) access_options -> 'c
+
+    val kind : [ `Map | `Tree ]
   end)
   (* The result signature doesn't actually mean anything -- the values are required so
      that implementors are reminded to add a unit test for each one. *)
@@ -675,6 +677,18 @@ module Unit_tests
 
   TEST = Map.prev_key (Map.empty ()) Key.sample = None
   TEST = Map.next_key (Map.empty ()) Key.sample = None
+
+  (* Ensure polymorphic equality raises for maps. *)
+  TEST_UNIT =
+    match Map.kind with
+    | `Tree -> ()
+    | `Map ->
+      let ts = [ Map.empty ();  Map.of_alist_exn [ Key.sample, 13 ] ] in
+      List.iter ts ~f:(fun t1 ->
+        List.iter ts ~f:(fun t2 ->
+          assert (Result.is_error (Result.try_with (fun () ->
+            Polymorphic_compare.equal t1 t2)))));
+  ;;
 end
 
 module Key_int = struct
@@ -713,18 +727,21 @@ TEST_MODULE "Map" = Unit_tests (Key_poly) (struct
   include Map
   include Create_options_with_comparator
   include Access_options_without_comparator
+  let kind = `Map
 end)
 
 TEST_MODULE "Map.Poly" = Unit_tests (Key_poly) (struct
   include Map.Poly
   include Create_options_without_comparator
   include Access_options_without_comparator
+  let kind = `Map
 end)
 
 TEST_MODULE "Int.Map" = Unit_tests (Key_int) (struct
   include Int.Map
   include Create_options_without_comparator
   include Access_options_without_comparator
+  let kind = `Map
 end)
 
 TEST_MODULE "Map.Tree" = Unit_tests (Key_poly) (struct
@@ -733,6 +750,7 @@ TEST_MODULE "Map.Tree" = Unit_tests (Key_poly) (struct
   type ('a, 'b, 'c) tree = ('a, 'b, 'c) Map.tree
   include Create_options_with_comparator
   include Access_options_with_comparator
+  let kind = `Tree
 end)
 
 TEST_MODULE "Map.Poly.Tree" = Unit_tests (Key_poly) (struct
@@ -741,6 +759,7 @@ TEST_MODULE "Map.Poly.Tree" = Unit_tests (Key_poly) (struct
   type ('a, 'b, 'c) tree = ('a, 'b, 'c) Map.Poly.tree
   include Create_options_without_comparator
   include Access_options_without_comparator
+  let kind = `Tree
 end)
 
 TEST_MODULE "Int.Map.Tree" = Unit_tests (Key_int) (struct
@@ -748,4 +767,5 @@ TEST_MODULE "Int.Map.Tree" = Unit_tests (Key_int) (struct
   type ('a, 'b, 'c) tree = ('a, 'b, 'c) Int.Map.tree
   include Create_options_without_comparator
   include Access_options_without_comparator
+  let kind = `Tree
 end)

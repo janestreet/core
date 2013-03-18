@@ -122,7 +122,10 @@ val handle_unix_error : (unit -> 'a) -> 'a
     case [f ()] is run again until it raises a different error or returns a value. *)
 val retry_until_no_eintr : (unit -> 'a) -> 'a
 
-(** {6 Access to the process environment} *)
+(** {6 Access to the process environment}
+
+    If you're looking for [getenv], that's in the Sys module.
+*)
 
 (** Return the process environment, as an array of strings
     with the format ``variable=value''. *)

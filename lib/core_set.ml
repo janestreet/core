@@ -784,8 +784,10 @@ end
     (1) all values serialize the same way in both representations, or
     (2) you add a new Set version to stable.ml *)
 type ('a, 'comparator) t =
-  { tree : 'a Tree0.t;
+  { (* [comparator] is the first field so that polymorphic comparisons fail on a map due
+       to the functional value in the comparator. *)
     comparator : ('a, 'comparator) Comparator.t;
+    tree : 'a Tree0.t;
   }
 
 let comparator t = t.comparator

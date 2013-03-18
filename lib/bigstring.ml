@@ -205,6 +205,16 @@ let read ?min_len fd ?(pos = 0) ?len bstr =
   let min_len = check_min_len ~loc ~len min_len in
   unsafe_read ~min_len fd ~pos ~len bstr
 
+external unsafe_pread_assume_fd_is_nonblocking_stub :
+  file_descr -> offset : int -> pos : int -> len : int -> t -> int
+  = "bigstring_pread_assume_fd_is_nonblocking_stub"
+
+let pread_assume_fd_is_nonblocking fd ~offset ?(pos = 0) ?len bstr =
+  let len = get_opt_len bstr ~pos len in
+  let loc = "pread" in
+  check_args ~loc ~pos ~len bstr;
+  unsafe_pread_assume_fd_is_nonblocking_stub fd ~offset ~pos ~len bstr
+
 let really_read fd ?(pos = 0) ?len bstr =
   let len = get_opt_len bstr ~pos len in
   ignore (read ~min_len:len fd ~pos ~len bstr)
@@ -279,6 +289,16 @@ let really_write fd ?(pos = 0) ?len bstr =
   let len = get_opt_len bstr ~pos len in
   check_args ~loc:"really_write" ~pos ~len bstr;
   unsafe_really_write fd ~pos ~len bstr
+
+external unsafe_pwrite_assume_fd_is_nonblocking :
+  file_descr -> offset : int -> pos : int -> len : int -> t -> int
+  = "bigstring_pwrite_assume_fd_is_nonblocking_stub"
+
+let pwrite_assume_fd_is_nonblocking fd ~offset ?(pos = 0) ?len bstr =
+  let len = get_opt_len bstr ~pos len in
+  let loc = "pwrite" in
+  check_args ~loc ~pos ~len bstr;
+  unsafe_pwrite_assume_fd_is_nonblocking fd ~offset ~pos ~len bstr
 
 IFDEF MSG_NOSIGNAL THEN
 external unsafe_really_send_no_sigpipe :

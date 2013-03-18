@@ -103,6 +103,7 @@ let () =
     Test.create ~name:"Map.remove" remove;
     Test.create ~name:"Map.merge (new)" (merge_test Map.merge);
     Test.create ~name:"Map.merge (old)" (merge_test old_map_merge);
+
     Test.create ~name:"Map.symmetric_diff-10"
       (gen_diff_test 100_000 ~number_of_diff:10 ~diff:Map.symmetric_diff);
     Test.create ~name:"Map.symmetric_diff-100"

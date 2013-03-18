@@ -10,8 +10,9 @@ end
 
 module Make (M : sig
   type t with bin_io, compare, sexp
-  val hash : t -> int
   include Stringable.S with type t := t
+  val hash : t -> int
+  val module_name : string  (* for registering the pretty printer *)
 end) : S with type t := M.t
 
 
