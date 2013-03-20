@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 3b95e216a7f6bd39124f934715b369c9)
+# DO NOT EDIT (digest: dcf072b2f88e5c2277987c6f36f598d9)
 # Ignore VCS directories, you can use the same kind of rule outside 
 # OASIS_START/STOP if you want to exclude directories that contains 
 # useless stuff for the build process
@@ -180,6 +180,11 @@
 "lib/with_return.cmx": for-pack(Core)
 "lib/word_size.cmx": for-pack(Core)
 "lib/zone.cmx": for-pack(Core)
+<lib/core.{cma,cmxa}>: oasis_library_core_cclib
+"lib/libcore_stubs.lib": oasis_library_core_cclib
+"lib/dllcore_stubs.dll": oasis_library_core_cclib
+"lib/libcore_stubs.a": oasis_library_core_cclib
+"lib/dllcore_stubs.so": oasis_library_core_cclib
 <lib/core.{cma,cmxa}>: use_libcore_stubs
 <lib/*.ml{,i}>: pkg_variantslib
 <lib/*.ml{,i}>: pkg_variantslib.syntax

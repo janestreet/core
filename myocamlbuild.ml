@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: 7a182bb721a62ab55b022947ad606faf) *)
+(* DO NOT EDIT (digest: b18c852ba528469dfd85a59733ca5b00) *)
 module OASISGettext = struct
 (* # 21 "/mnt/local/sda1/jdimino/dot-opam/4.01.0dev+short-paths/build/oasis.0.3.0/src/oasis/OASISGettext.ml" *)
 
@@ -492,14 +492,26 @@ let package_default =
                "lib/config.h"
             ])
        ];
-     flags = [];
+     flags =
+       [
+          (["oasis_library_core_cclib"; "link"],
+            [
+               (OASISExpr.EBool true, S []);
+               (OASISExpr.EFlag "rt", S [A "-cclib"; A "-lrt"])
+            ]);
+          (["oasis_library_core_cclib"; "ocamlmklib"; "c"],
+            [
+               (OASISExpr.EBool true, S []);
+               (OASISExpr.EFlag "rt", S [A "-lrt"])
+            ])
+       ];
      includes = [("top", ["lib"]); ("lib_test", ["lib"])];
      }
   ;;
 
 let dispatch_default = MyOCamlbuildBase.dispatch_default package_default;;
 
-# 503 "myocamlbuild.ml"
+# 515 "myocamlbuild.ml"
 (* OASIS_STOP *)
 
 let dispatch = function
@@ -512,13 +524,6 @@ let dispatch = function
     flag ["mlh"; "ocaml"; "ocamldep"] (S[A"-ppopt"; A"-Ilib/"]);
     flag ["mlh"; "ocaml"; "compile"]  (S[A"-ppopt"; A"-Ilib/"]);
     flag ["mlh"; "ocaml"; "doc"]      (S[A"-ppopt"; A"-Ilib/"]);
-
-    let env = BaseEnvLight.load () in
-    let rt_possible = BaseEnvLight.var_get "rt_possible" env = "true" in
-    if rt_possible then begin
-      flag ["ocamlmklib"; "c"]                      (S[A"-lrt"]);
-      flag ["use_libcore_stubs"; "link"] (S[A"-cclib"; A"-lrt"])
-    end
   | _ ->
     ()
 

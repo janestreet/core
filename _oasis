@@ -24,6 +24,10 @@ Flag "posix-timers"
   Description: Enable POSIX timers
   Default$:    flag(posix_timers_possible)
 
+Flag "rt"
+  Description: Linux RT Library
+  Default$:    flag(rt_possible)
+
 PreConfCommand:  config/detect.sh
 PostConfCommand: config/discover.sh $ocamlc lib/config.mlh lib/config.h
 
@@ -244,6 +248,8 @@ Library core
                       res,
                       unix,
                       threads
+  if flag(rt)
+    CCLib: -lrt
 
 Library core_top
   Path:               top
