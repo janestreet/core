@@ -1040,7 +1040,7 @@ module Poly = struct
     type 'a el = 'a with bin_io
     let _ = bin_el
 
-    let module_name = Some "Core.Set"
+    let module_name = Some "Core.Std.Set"
     let length = length
     let iter t ~f = iter ~f:(fun key -> f key) t
     let init _n = empty
@@ -1130,7 +1130,7 @@ module Make_binable_using_comparator (Elt' : Comparator.S_binable) = struct
     type el = Elt'.t with bin_io
     let _ = bin_el
 
-    let module_name = Some "Core.Set"
+    let module_name = Some "Core.Std.Set"
     let length = length
     let iter t ~f = iter ~f:(fun key -> f key) t
     let init _n = empty

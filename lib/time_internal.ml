@@ -59,6 +59,11 @@ end = struct
       (1) all values serialize the same way in both representations, or
       (2) you add a new Time version to stable.ml *)
   include Float
+
+  (* due to precision limitations in float we can't expect better than microsecond
+     precision *)
+  include Float_robust_compare.Make(struct let epsilon = 1E-6 end)
+
   let diff t1 t2 = Span.of_sec (t1 - t2)
 
   let abs_diff t1 t2 = Span.abs (diff t1 t2)
@@ -66,10 +71,6 @@ end = struct
   let sub t span = t -. (Span.to_sec span)
   let now () = Unix.gettimeofday ()
 end
-
-(* due to precision limitations in float we can't expect better than microsecond
-    precision *)
-include Float_robust_compare.Make(struct let epsilon = 1E-6 end)
 
 let float_of_hh_mm_ss hh mm ss =
   if hh < 0 then

@@ -440,7 +440,7 @@ module Stable = struct
     include Pretty_printer.Register (struct
       type nonrec t = t
       let to_string = to_string
-      let module_name = "Core.Time"
+      let module_name = "Core.Std.Time"
     end)
 
     let to_localized_string time zone =
@@ -554,12 +554,23 @@ module Stable = struct
 
     (* test that t_of_sexp accepts sexps qualified with time zones in two formats *)
     TEST_UNIT =
-      ignore (V1.t_of_sexp (Sexp.of_string "(2012-04-09 12:00:00.000000-04:00:00)"))
+          ignore (V1.t_of_sexp (Sexp.of_string "(2012-04-09 12:00:00.000000-04:00:00)"))
 
     TEST_UNIT =
-      ignore
-        (V1.t_of_sexp (Sexp.of_string "(2012-04-09 12:00:00.000000 America/New_York)"))
+          ignore
+            (V1.t_of_sexp (Sexp.of_string "(2012-04-09 12:00:00.000000 America/New_York)"))
   end
 end
 
 include Stable.V1
+
+TEST_MODULE "Time robustly compare" = struct
+  TEST = of_float 0.0 =. of_float 0.000_000_99
+  TEST = of_float 0.0 <. of_float 0.000_001_1
+
+  TEST_UNIT =
+    for i = 0 to 100 do
+      let time = of_float (Float.of_int i /. 17.) in
+      assert ((=.) time (sexp_of_t time |! t_of_sexp))
+    done
+end

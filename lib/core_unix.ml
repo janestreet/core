@@ -6,6 +6,7 @@ INCLUDE "config.mlh"
 
 open Std_internal
 
+module Int63 = Core_int63
 module Binable = Binable0
 module Unix = Caml.UnixLabels
 
@@ -1143,6 +1144,162 @@ let set_nonblock = unary_fd Unix.set_nonblock
 let clear_nonblock = unary_fd Unix.clear_nonblock
 let set_close_on_exec = unary_fd Unix.set_close_on_exec
 let clear_close_on_exec = unary_fd Unix.clear_close_on_exec
+
+module Open_flags = struct
+  external append    : unit -> Int63.t = "unix_O_APPEND"
+  external async     : unit -> Int63.t = "unix_O_ASYNC"
+  external cloexec   : unit -> Int63.t = "unix_O_CLOEXEC"
+  external creat     : unit -> Int63.t = "unix_O_CREAT"
+  external direct    : unit -> Int63.t = "unix_O_DIRECT"
+  external directory : unit -> Int63.t = "unix_O_DIRECTORY"
+  external dsync     : unit -> Int63.t = "unix_O_DSYNC"
+  external excl      : unit -> Int63.t = "unix_O_EXCL"
+  external noatime   : unit -> Int63.t = "unix_O_NOATIME"
+  external noctty    : unit -> Int63.t = "unix_O_NOCTTY"
+  external nofollow  : unit -> Int63.t = "unix_O_NOFOLLOW"
+  external nonblock  : unit -> Int63.t = "unix_O_NONBLOCK"
+  external rdonly    : unit -> Int63.t = "unix_O_RDONLY"
+  external rdwr      : unit -> Int63.t = "unix_O_RDWR"
+  external rsync     : unit -> Int63.t = "unix_O_RSYNC"
+  external sync      : unit -> Int63.t = "unix_O_SYNC"
+  external trunc     : unit -> Int63.t = "unix_O_TRUNC"
+  external wronly    : unit -> Int63.t = "unix_O_WRONLY"
+
+  let append    = append    ()
+  let async     = async     ()
+  let cloexec   = cloexec   ()
+  let creat     = creat     ()
+  let direct    = direct    ()
+  let directory = directory ()
+  let dsync     = dsync     ()
+  let excl      = excl      ()
+  let noatime   = noatime   ()
+  let noctty    = noctty    ()
+  let nofollow  = nofollow  ()
+  let nonblock  = nonblock  ()
+  let rdonly    = rdonly    ()
+  let rdwr      = rdwr      ()
+  let rsync     = rsync     ()
+  let sync      = sync      ()
+  let trunc     = trunc     ()
+  let wronly    = wronly    ()
+
+  let known =
+    [
+      append,    "append";
+      async,     "async";
+      cloexec,   "cloexec";
+      creat,     "creat";
+      direct,    "direct";
+      directory, "directory";
+      dsync,     "dsync";
+      excl,      "excl";
+      noatime,   "noatime";
+      noctty,    "noctty";
+      nofollow,  "nofollow";
+      nonblock,  "nonblock";
+      rsync,     "rsync";
+      sync,      "sync";
+      trunc,     "trunc";
+
+    (* We handle the access modes separately from the standard [Flags.sexp_of_t],
+       because they are multibit and include the [rdonly] flag, which is zero, which
+       [Flags] doesn't allow. *)
+
+    ]
+  ;;
+
+  let access_modes =
+    [ rdonly,    "rdonly";
+      rdwr,      "rdwr";
+      wronly,    "wronly";
+    ]
+  ;;
+
+  include Flags.Make (struct
+    let allow_intersecting = true
+    let should_print_error = true
+    let known = known
+  end)
+
+  (* The lower two bits of the open flags are used to specify the access mode:
+     rdonly, wronly, rdwr.  So, we have some code to treat those two bits together rather
+     than as two separate bit flags. *)
+
+  let access_mode t = Int63.bit_and t (Int63.of_int 3)
+
+  let can_read t = access_mode t = rdonly || access_mode t = rdwr
+
+  TEST = can_read rdonly
+  TEST = can_read rdwr
+  TEST = not (can_read wronly)
+
+  let can_write t = access_mode t = wronly || access_mode t = rdwr
+
+  TEST = can_write wronly
+  TEST = can_write rdwr
+  TEST = not (can_write rdonly)
+
+  let sexp_of_t t =
+    let a = access_mode t in
+    let t, prefix =
+      match List.find access_modes ~f:(fun (a', _) -> a = a') with
+      | None -> t, []
+      | Some (_, name) -> t - a, [Sexp.Atom name]
+    in
+    let rest =
+      match sexp_of_t t with
+      | Sexp.Atom _ as s -> [s]
+      | Sexp.List l -> l
+    in
+    Sexp.List (prefix @ rest)
+  ;;
+
+  let check t string =
+    let sexp1 = sexp_of_t t in
+    let sexp2 = Sexp.of_string string in
+    if not (sexp1 = sexp2) then
+      failwiths "unequal sexps" (sexp1, sexp2) <:sexp_of< Sexp.t * Sexp.t >>;
+  ;;
+
+  TEST_UNIT = check rdonly            "(rdonly)"
+  TEST_UNIT = check wronly            "(wronly)"
+  TEST_UNIT = check rdwr              "(rdwr)"
+  TEST_UNIT = check append            "(rdonly append)"
+  TEST_UNIT = check (wronly + append) "(wronly append)"
+end
+
+let fcntl_getfl, fcntl_setfl =
+  let module M = struct
+    external unix_fcntl : Unix.file_descr -> Int63.t -> Int63.t -> Int63.t = "unix_fcntl"
+    external getfl : unit -> Int63.t = "unix_F_GETFL"
+    external setfl : unit -> Int63.t = "unix_F_SETFL"
+    let getfl = getfl ()
+    let setfl = setfl ()
+  end in
+  let open M in
+  let fcntl_getfl fd = unix_fcntl fd getfl Int63.zero in
+  let fcntl_setfl fd flags =
+    let result = unix_fcntl fd setfl flags in
+    (* [unix_fcntl] raised if there was an error, so if we're here, it must have returned
+       zero. *)
+    assert (result = Int63.zero);
+  in
+  fcntl_getfl, fcntl_setfl
+;;
+
+TEST_UNIT =
+  let test = "unix_test_file" in
+  let rm_test () = try unlink test with _ -> () in
+  rm_test ();
+  let fd = openfile test ~mode:[O_CREAT; O_WRONLY] in
+  let flags = fcntl_getfl fd in
+  assert (Open_flags.do_intersect flags Open_flags.wronly);
+  assert (Open_flags.are_disjoint flags Open_flags.append);
+  fcntl_setfl fd (Open_flags.(+) flags Open_flags.append);
+  assert (Open_flags.do_intersect (fcntl_getfl fd) Open_flags.append);
+  rm_test ();
+;;
 
 let mkdir ?(perm=0o777) dirname =
   improve (fun () -> Unix.mkdir dirname ~perm)

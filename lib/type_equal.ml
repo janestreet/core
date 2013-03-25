@@ -71,8 +71,8 @@ end = struct
   let same (type a) (type b) (a : a t) (b : b t) = phys_equal a (Obj.magic b : a t)
 
   (* The use of [Obj.magic] does not directly create any issues with using the type
-     equality proof at runtime since all ocurrences of [T] at runtime are the same anyway.
-     That just leaves the question of type safety.  The claim is that if two type
+     equality proof at runtime since all occurrences of [T] at runtime are the same
+     anyway.  That just leaves the question of type safety.  The claim is that if two type
      identities are physically equal then their type parameters are the same.
 
      Type identities are boxed.  [create] is the only way to create a new type identity

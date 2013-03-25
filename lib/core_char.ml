@@ -20,7 +20,7 @@ end
 include T
 include Identifiable.Make (struct
   include T
-  let module_name = "Core.Char"
+  let module_name = "Core.Std.Char"
 end)
 
 let to_int = Char.code

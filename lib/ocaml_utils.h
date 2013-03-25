@@ -24,6 +24,10 @@
 #  define Int63_val(v) Int64_val(v)
 #endif
 
+typedef int64 int63;
+
+#define DEFINE_INT63_CONSTANT(name,z) \
+  CAMLprim value name(value __unused v_unit) { return caml_alloc_int63(z); }
 
 /* [strcmp] is defined as a macro in our current compilation environment.  We use
    [strcmp_not_a_macro] instead so that the text of this macro does not overflow the

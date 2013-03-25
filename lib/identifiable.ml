@@ -64,7 +64,7 @@ TEST_MODULE = struct
 
   module T = struct
 
-    let module_name = "Core.Identifiable.T"
+    let module_name = "Core.Std.Identifiable.T"
 
     type t = A | B with bin_io, compare, sexp
 

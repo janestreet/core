@@ -16,25 +16,34 @@ module Make (M : Make_arg) = struct
   let do_intersect t1 t2 = bit_and t1 t2 <> zero
   let are_disjoint t1 t2 = bit_and t1 t2 =  zero
 
+  let error message a sexp_of_a =
+    let e = Error.create message a sexp_of_a in
+    if M.should_print_error then
+      eprintf "%s\n%!" (Sexp.to_string_hum (Error.sexp_of_t e));
+    Error.raise e;
+  ;;
+
   let () =
-    let rec dup_check l ac =
-      match l with
-      | [] -> ac
-      | (flag, name) :: l ->
-        let bad = List.filter l ~f:(fun (flag', _) -> do_intersect flag flag') in
-        let ac = if List.is_empty bad then ac else (flag, name, bad) :: ac in
-        dup_check l ac
-    in
-    let bad = dup_check M.known [] in
-    if not (List.is_empty bad) then
-      failwiths "Flags.Make got intersecting flags" bad
-        (<:sexp_of< (t * string * (t * string) list) list >>);
+    if not M.allow_intersecting then begin
+      let rec check l ac =
+        match l with
+        | [] -> ac
+        | (flag, name) :: l ->
+          let bad = List.filter l ~f:(fun (flag', _) -> do_intersect flag flag') in
+          let ac = if List.is_empty bad then ac else (flag, name, bad) :: ac in
+          check l ac
+      in
+      let bad = check M.known [] in
+      if not (List.is_empty bad) then
+        error "Flags.Make got intersecting flags" bad
+          (<:sexp_of< (t * string * (t * string) list) list >>);
+    end;
   ;;
 
   let () =
     let bad = List.filter M.known ~f:(fun (flag, _) -> flag = zero) in
     if not (List.is_empty bad) then
-      failwiths "Flag.Make got flags with no bits set" bad
+      error "Flag.Make got flags with no bits set" bad
         (<:sexp_of< (t * string) list >>)
   ;;
 
@@ -63,6 +72,8 @@ TEST =
     (Result.try_with (fun () ->
       let module M =
             Make (struct
+              let allow_intersecting = false
+              let should_print_error = true
               let known = [ Int63.of_int 0x1, "";
                             Int63.of_int 0x0, "";
                           ]
@@ -77,6 +88,8 @@ TEST =
     (Result.try_with (fun () ->
       let module M =
             Make (struct
+              let allow_intersecting = false
+              let should_print_error = true
               let known = [ Int63.of_int 0x1, "";
                             Int63.of_int 0x1, "";
                           ]
@@ -91,6 +104,8 @@ TEST_MODULE = struct
   let c = Int63.of_int 0xC
 
   include Make (struct
+    let allow_intersecting = false
+    let should_print_error = true
     let known =
       [ a, "a";
         b, "b";

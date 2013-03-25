@@ -688,7 +688,7 @@ module Poly = struct
     type ('a, 'b) el = 'a * 'b with bin_io
     type ('a, 'b) acc = ('a, 'b) t
 
-    let module_name = Some "Core_hashtbl"
+    let module_name = Some "Core.Std.Hashtbl"
     let length = length
     let iter t ~f = iter t ~f:(fun ~key ~data -> f (key, data))
     let init size = create ~size ()
@@ -741,7 +741,7 @@ module Make_binable (Key : Key_binable) = struct
     type 'a t = 'a acc
     type 'a el = Key.t * 'a with bin_io
 
-    let module_name = Some "Core_hashtbl"
+    let module_name = Some "Core.Std.Hashtbl"
     let length = length
     let iter t ~f = iter t ~f:(fun ~key ~data -> f (key, data))
     let init size = create ~size ()

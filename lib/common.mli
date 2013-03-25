@@ -36,7 +36,7 @@ val unimplemented : string -> _ Or_error.t
     (Sexplib.Conv.Of_sexp_error (Failure common.ml.Decimal_nan_or_inf) nan).
     ]}
 *)
-type decimal = float with bin_io, sexp
+type decimal = float with bin_io, sexp, compare
 
 type passfail = Pass | Fail of string
 

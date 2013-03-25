@@ -137,6 +137,60 @@ module Clock : sig
   val get_thread_clock : (unit -> t) Or_error.t
 end
 
+(** {2 Timerfd functions} *)
+
+module Timerfd : sig
+  (** Clock used to mark the progress of a timer. *)
+  module Clock : sig
+    type t with bin_io, compare, sexp
+
+    (** Settable system-wide clock. *)
+    val realtime : t
+
+    (** Nonsettable clock.  It is not affected by manual changes to the system time. *)
+    val monotonic : t
+  end
+
+  module Flags : sig
+    type t with sexp_of
+
+    include Flags.S with type t := t
+
+    val nonblock : t (** [TFD_NONBLOCK] *)
+    val cloexec  : t (** [TFD_CLOEXEC]  *)
+  end
+
+  type t = private File_descr.t with bin_io, compare, sexp
+
+  (** [create ?flags clock] creates a new timer file descriptor.  With Linux 2.6.26 or
+      earlier [flags] must be empty. *)
+  val create : (?flags:Flags.t -> Clock.t -> t) Or_error.t
+
+  (** [set t when] sets [t] to fire once, at the time specified by [when]. *)
+  val set : t -> [ `At of Time.t | `After of Span.t ] -> unit
+
+  (** [set_repeating ?initial t interval] sets [t] to fire every [interval] starting at
+      [when]. *)
+  val set_repeating
+    :  ?initial:[ `At of Time.t | `After of Span.t ] (** default is [`After interval] *)
+    -> t
+    -> Span.t
+    -> unit
+
+  (** [clear t] causes [t] to not fire any more. *)
+  val clear : t -> unit
+
+  type repeat = { fire_after : Span.t; interval : Span.t }
+
+  (** [get t] returns the current state of the timer [t]. *)
+  val get
+    :  t
+    -> [ `Not_armed
+       | `Fire_after of Span.t
+       | `Repeat of repeat
+       ]
+end
+
 (** {2 Parent death notifications} *)
 
 (** [pr_set_pdeathsig s] sets the signal [s] to be sent to the executing

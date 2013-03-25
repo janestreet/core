@@ -86,6 +86,56 @@ static void report_error(int fd, const char* str)
 /* Note: the ARG_MAX defined in sys/limits.h can be huge */
 #define ML_ARG_MAX (4096 + 1)
 
+#define UNIX_INT63_CONST(CONST) DEFINE_INT63_CONSTANT(unix_##CONST,CONST)
+
+UNIX_INT63_CONST(F_GETFL)
+UNIX_INT63_CONST(F_SETFL)
+
+UNIX_INT63_CONST(O_APPEND)
+UNIX_INT63_CONST(O_ASYNC)
+#ifndef O_CLOEXEC
+#define O_CLOEXEC 0
+#endif
+UNIX_INT63_CONST(O_CLOEXEC)
+UNIX_INT63_CONST(O_CREAT)
+#ifndef O_DIRECT
+#define O_DIRECT 0
+#endif
+UNIX_INT63_CONST(O_DIRECT)
+#ifndef O_DIRECTORY
+#define O_DIRECTORY 0
+#endif
+UNIX_INT63_CONST(O_DIRECTORY)
+UNIX_INT63_CONST(O_DSYNC)
+UNIX_INT63_CONST(O_EXCL)
+#ifndef O_NOATIME
+#define O_NOATIME 0
+#endif
+UNIX_INT63_CONST(O_NOATIME)
+UNIX_INT63_CONST(O_NOCTTY)
+UNIX_INT63_CONST(O_NOFOLLOW)
+UNIX_INT63_CONST(O_NONBLOCK)
+UNIX_INT63_CONST(O_RDONLY)
+UNIX_INT63_CONST(O_RDWR)
+#ifndef O_RSYNC
+#define O_RSYNC 0
+#endif
+UNIX_INT63_CONST(O_RSYNC)
+UNIX_INT63_CONST(O_SYNC)
+UNIX_INT63_CONST(O_TRUNC)
+UNIX_INT63_CONST(O_WRONLY)
+
+CAMLprim value unix_fcntl (value fd, value v_cmd, value v_arg) {
+  int63 result;
+  int cmd  = Int63_val(v_cmd); /* extract before blocking section */
+  long arg = Int63_val(v_arg); /* extract before blocking section */
+  caml_enter_blocking_section();
+  result = fcntl(Int_val(fd), cmd, arg);
+  caml_leave_blocking_section();
+  if (result == -1) uerror("unix_fcntl", Nothing);
+  return caml_alloc_int63(result);
+}
+
 void close_on_exec(int fd)
 {
   int flags;

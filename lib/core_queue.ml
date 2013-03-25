@@ -129,7 +129,7 @@ include Bin_prot.Utils.Make_iterable_binable1 (struct
   type 'a el = 'a
   type 'a acc = 'a t
 
-  let module_name = Some "Queue"
+  let module_name = Some "Core.Std.Queue"
 
   let length = length
 

@@ -373,8 +373,7 @@ CAMLprim value linux_bind_to_interface(value v_fd, value v_ifname)
 
 /** Core epoll methods **/
 
-#define EPOLL_FLAG(FLAG) \
-  CAMLprim value linux_epoll_##FLAG##_flag(value __unused v_unit) { return caml_alloc_int63(FLAG); }
+#define EPOLL_FLAG(FLAG) DEFINE_INT63_CONSTANT (linux_epoll_##FLAG##_flag, FLAG)
 
 EPOLL_FLAG(EPOLLIN)
 EPOLL_FLAG(EPOLLOUT)
@@ -512,5 +511,87 @@ CAMLprim value linux_epoll_readyflags(value v_array, value v_index)
   struct epoll_event * event = get_epoll_event(v_array, v_index);
   return caml_alloc_int63( event->events );
 }
+
+#ifdef JSC_TIMERFD
+
+/** timerfd bindings **/
+
+#include <sys/timerfd.h>
+
+/* These values are from timerfd.h. They are not defined in Linux
+   2.6.26 or earlier. */
+#if !defined(TFD_NONBLOCK)
+#  define TFD_NONBLOCK 04000
+#endif
+#if !defined(TFD_CLOEXEC)
+#  define TFD_CLOEXEC 02000000
+#endif
+
+#define TIMERFD_INT63(X)                                  \
+  CAMLprim value linux_timerfd_##X(value __unused v_unit) \
+  { return caml_alloc_int63(X); }
+
+TIMERFD_INT63(TFD_NONBLOCK)
+TIMERFD_INT63(TFD_CLOEXEC)
+TIMERFD_INT63(CLOCK_REALTIME)
+TIMERFD_INT63(CLOCK_MONOTONIC)
+
+CAMLprim value linux_timerfd_create(value v_clock_id, value v_flags)
+{
+  int retcode;
+
+  retcode = timerfd_create(Int63_val(v_clock_id), Int63_val(v_flags));
+
+  if (retcode == -1) uerror("timerfd_create", Nothing);
+
+  return Val_int(retcode);
+}
+
+static inline void set_timespec(struct timespec *ts, value v)
+{
+  double d = Double_val(v);
+  ts->tv_sec = (time_t) d;
+  ts->tv_nsec = (long) ((d - ts->tv_sec) * 1e9);
+}
+
+CAMLprim value linux_timerfd_settime(value v_fd, value v_absolute,
+                                     value v_initial, value v_interval)
+{
+  int retcode;
+  struct itimerspec old, new;
+
+  set_timespec(&new.it_value, v_initial);
+  set_timespec(&new.it_interval, v_interval);
+
+  retcode = timerfd_settime(Int_val(v_fd),
+                            Bool_val(v_absolute) ? TFD_TIMER_ABSTIME : 0,
+                            &new, &old);
+
+  if (retcode == -1) uerror("timerfd_settime", Nothing);
+
+  return Val_unit;
+}
+
+static value alloc_spec(struct itimerspec *spec)
+{
+  value v_spec = caml_alloc_small(2 * Double_wosize, Double_array_tag);
+  Double_field(v_spec, 0) = spec->it_value.tv_sec + spec->it_value.tv_nsec / 1e9;
+  Double_field(v_spec, 1) = spec->it_interval.tv_sec + spec->it_interval.tv_nsec / 1e9;
+  return v_spec;
+}
+
+CAMLprim value linux_timerfd_gettime(value v_fd)
+{
+  int retcode;
+  struct itimerspec cur;
+
+  retcode = timerfd_gettime(Int_val(v_fd), &cur);
+
+  if (retcode == -1) uerror("timerfd_gettime", Nothing);
+
+  return alloc_spec(&cur);
+}
+
+#endif /* JSC_TIMERFD */
 
 #endif /* JSC_LINUX_EXT */

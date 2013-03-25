@@ -20,7 +20,7 @@ end
 include T
 include Identifiable.Make (struct
   include T
-  let module_name = "Core.Nothing"
+  let module_name = "Core.Std.Nothing"
 end)
 
 let unreachable_code (_ : t) =

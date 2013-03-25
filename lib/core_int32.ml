@@ -91,5 +91,5 @@ include Conv.Make (T)
 include Pretty_printer.Register (struct
   type nonrec t = t
   let to_string = to_string
-  let module_name = "Core.Int32"
+  let module_name = "Core.Std.Int32"
 end)

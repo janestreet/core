@@ -16,7 +16,7 @@ include Hashable.Make_binable (T)
 include Pretty_printer.Register (struct
   type nonrec t = t
   let to_string = to_string
-  let module_name = "Core.Unit"
+  let module_name = "Core.Std.Unit"
 end)
 
 module type S = sig end

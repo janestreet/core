@@ -79,6 +79,155 @@ end
 
 ENDIF
 
+IFDEF TIMERFD THEN
+
+module Timerfd = struct
+  module Clock : sig
+    type t with bin_io, compare, sexp
+    val realtime : t
+    val monotonic : t
+  end = struct
+    type t = Int63.t with bin_io, compare, sexp
+
+    external realtime : unit -> Int63.t = "linux_timerfd_CLOCK_REALTIME"
+    let realtime = realtime ()
+
+    external monotonic : unit -> Int63.t = "linux_timerfd_CLOCK_MONOTONIC"
+    let monotonic = monotonic ()
+  end
+
+  module Flags = struct
+    external nonblock : unit -> Int63.t = "linux_timerfd_TFD_NONBLOCK"
+    let nonblock = nonblock ()
+
+    external cloexec  : unit -> Int63.t = "linux_timerfd_TFD_CLOEXEC"
+    let cloexec = cloexec ()
+
+    include Flags.Make (struct
+      let allow_intersecting = false
+      let should_print_error = true
+
+      let known =
+        List.rev
+          [ nonblock, "nonblock";
+            cloexec,  "cloexec";
+          ]
+    end)
+  end
+
+  type t = File_descr.t with bin_io, compare, sexp
+
+  external timerfd_create : Clock.t -> Flags.t -> int = "linux_timerfd_create"
+
+  let create ?(flags = Flags.empty) clock =
+    File_descr.of_int (timerfd_create clock flags);
+  ;;
+
+  let create = Ok create
+
+  external timerfd_settime : t -> bool -> float -> float -> unit = "linux_timerfd_settime"
+
+  let settime ~initial ~interval t =
+    let absolute, initial =
+      match initial with
+      | `At t    -> (true,  Time.to_float t)
+      | `After s -> (false, Span.to_sec s)
+    in
+    let interval = Span.to_sec interval in
+    timerfd_settime t absolute initial interval;
+  ;;
+
+  let set t when_ = settime t ~initial:when_ ~interval:Span.zero
+
+  let set_repeating ?initial  t interval =
+    settime t ~initial:(Option.value initial ~default:(`After interval)) ~interval
+  ;;
+
+  let clear t = settime t ~initial:(`After Span.zero) ~interval:Span.zero
+
+  module Spec = struct
+    type t =
+      { fire_after : float;
+        interval : float;
+      }
+  end
+
+  type repeat = { fire_after : Span.t; interval : Span.t }
+
+  external timerfd_gettime : t -> Spec.t = "linux_timerfd_gettime"
+
+  let get t =
+    let { Spec. fire_after; interval } = timerfd_gettime t in
+    let fire_after = Span.of_sec fire_after in
+    let interval = Span.of_sec interval in
+    if Span.equal interval Span.zero then
+      if Span.equal fire_after Span.zero
+      then `Not_armed
+      else `Fire_after fire_after
+    else
+      `Repeat { fire_after; interval }
+  ;;
+
+  TEST_MODULE "Linux_ext.Timerfd" = struct
+    let create = ok_exn create
+
+    TEST_UNIT =
+      let t = create Clock.realtime in
+      assert (get t = `Not_armed);
+      set t (`After Span.minute);
+      assert (match get t with
+      | `Fire_after span -> Span.(<=) span Span.minute
+      | _ -> false);
+      let span = Span.scale Span.minute 2. in
+      set_repeating t ~initial:(`After Span.minute) span;
+      assert (match get t with
+      | `Repeat { fire_after; interval } ->
+        Span.(<=) fire_after Span.minute && Span.equal interval span
+      | _ ->
+        false);
+    ;;
+  end
+end
+
+ELSE
+
+module Timerfd = struct
+  module Clock = struct
+    type t = unit with bin_io, compare, sexp
+    let realtime = ()
+    let monotonic = ()
+  end
+
+  module Flags = struct
+    let nonblock = Int63.of_int 0o4000
+    let cloexec  = Int63.of_int 0o2000000
+
+    include Flags.Make (struct
+      let allow_intersecting = false
+      let should_print_error = true
+
+      let known =
+        List.rev
+          [ nonblock, "nonblock";
+            cloexec,  "cloexec";
+          ]
+    end)
+  end
+
+  type t = File_descr.t with bin_io, compare, sexp
+
+  type repeat = { fire_after : Span.t; interval : Span.t }
+
+  let create = unimplemented "Linux_ext.Timerfd.create"
+
+  let set _                      _ = assert false
+  let set_repeating ?initial:_ _ _ = assert false
+  let clear                      _ = assert false
+  let get                        _ = assert false
+end
+
+ENDIF
+
 (* We use [Int63] rather than [Int] because these flags use 32 bits. *)
 
 module Epoll_flags (Flag_values : sig
@@ -96,6 +245,8 @@ end) = struct
   include Flag_values
 
   include Flags.Make (struct
+    let allow_intersecting = false
+    let should_print_error = true
     let known =
       [ in_, "in";
         out, "out";

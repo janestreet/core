@@ -335,6 +335,55 @@ type file_perm = int with sexp
     permissions 0o644. *)
 val openfile : ?perm:file_perm -> mode:open_flag list -> string -> File_descr.t
 
+module Open_flags : sig
+  (** [Open_flags.t] represents the flags associated with a file descriptor in the
+      open-file-descriptor table.  It deals with the same thing as OCaml's [open_flag]
+      type; however, it uses Core's [Flags] approach and the underlying integer bitmask
+      representation, and so interoperates more smoothly with C. *)
+  type t with sexp_of
+
+  include Flags.S with type t := t
+
+  (** access mode.
+
+      These three flags are not individual bits like flags usually are.  The access mode
+      is represented by the lower two bits of the [Open_flags.t].  A particular
+      [Open_flags.t] should include exactly one access mode.  Combining different
+      [Open_flags.t]'s using flags operations (e.g [+]) is only sensible if they have the
+      same access mode. *)
+  val rdonly   : t
+  val wronly   : t
+  val rdwr     : t
+
+  (** creation *)
+  val creat    : t
+  val excl     : t
+  val noctty   : t
+  val trunc    : t
+
+  val append   : t
+  val nonblock : t
+
+  val dsync    : t
+  val sync     : t
+  val rsync    : t
+
+  (** [can_read t] iff [t] has [rdonly] or [rdwr] *)
+  val can_read  : t -> bool
+
+  (** [can_read t] iff [t] has [wronly] or [rdwr] *)
+  val can_write : t -> bool
+end
+
+(** [fcntl_getfl fd] gets the current flags for [fd] from the open-file-descriptor table
+    via the system call [fcntl(fd, F_GETFL)].  See "man fcntl". *)
+val fcntl_getfl : File_descr.t -> Open_flags.t
+
+(** [fcntl_setfl fd flags] sets the flags for [fd] in the open-file-descriptor table via
+    the system call [fcntl(fd, F_SETFL, flags)].  See "man fcntl".  As per the Linux man
+    page, on Linux this only allows [append] and [nonblock] to be set. *)
+val fcntl_setfl : File_descr.t -> Open_flags.t -> unit
+
 (** Close a file descriptor. *)
 val close : ?restart:bool (* defaults to false *) -> File_descr.t -> unit
 

@@ -107,7 +107,7 @@ exception Decimal_nan_or_inf with sexp
 module Decimal = struct
   module T = struct
     module Binable = Float
-    type t = float
+    type t = float with compare
     let verify t =
       match Pervasives.classify_float t with
       | FP_normal
@@ -138,7 +138,7 @@ end
 let stage = Staged.stage
 let unstage = Staged.unstage
 
-type decimal = Decimal.t with sexp, bin_io
+type decimal = Decimal.t with sexp, bin_io, compare
 
 type passfail = Pass | Fail of string
 

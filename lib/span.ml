@@ -289,7 +289,7 @@ include Stable.V1
 include Pretty_printer.Register (struct
   type nonrec t = t
   let to_string = to_string
-  let module_name = "Core.Span"
+  let module_name = "Core.Std.Span"
 end)
 
 module C = struct
