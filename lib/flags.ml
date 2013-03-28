@@ -39,14 +39,14 @@ module Make (M : Make_arg) = struct
           (<:sexp_of< (t * string * (t * string) list) list >>);
     end;
   ;;
-
+(*
   let () =
     let bad = List.filter M.known ~f:(fun (flag, _) -> flag = zero) in
     if not (List.is_empty bad) then
       error "Flag.Make got flags with no bits set" bad
         (<:sexp_of< (t * string) list >>)
   ;;
-
+*)
   let sexp_of_t =
     (* We reverse [known] so that the fold below accumulates from right to left, giving a
        final list with elements in the same order as [known]. *)
