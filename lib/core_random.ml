@@ -8,7 +8,17 @@
    and use [Obj.magic] to get access to the underlying implementation. *)
 open Random
 
-external random_seed: unit -> int = "caml_sys_random_seed";;
+external random_seed: unit -> int array = "caml_sys_random_seed";;
+
+TEST_UNIT =
+  (* test that the return type of "caml_sys_random_seed" is what we expect *)
+  let obj = Obj.repr (random_seed ()) in
+  assert (Obj.is_block obj);
+  assert (Obj.tag obj = Obj.tag (Obj.repr [| 13 |]));
+  for i = 0 to Obj.size obj - 1 do
+    assert (Obj.is_int (Obj.field obj i));
+  done;
+;;
 
 module State = struct
   include State
@@ -50,8 +60,8 @@ let float scale = State.float default scale
 let bool () = State.bool default
 
 let full_init seed = State.full_init default seed
-let init seed = State.full_init default [| seed |]
-let self_init () = init (random_seed())
+let init seed = full_init [| seed |]
+let self_init () = full_init (random_seed ())
 
 let get_state () = `Consider_using_Random_State_default
 let set_state s = State.assign default s

@@ -28,7 +28,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <fnmatch.h>
-#include <wordexp.h>
 #include <stdio.h>
 #include <assert.h>
 #include <time.h>
@@ -50,6 +49,10 @@
 
 #include "ocaml_utils.h"
 #include "config.h"
+
+#if defined(JSC_WORDEXP)
+#include <wordexp.h>
+#endif
 
 CAMLprim value unix_error_stub(value v_errcode, value v_cmdname, value cmd_arg)
 {
@@ -106,6 +109,9 @@ UNIX_INT63_CONST(O_DIRECT)
 #define O_DIRECTORY 0
 #endif
 UNIX_INT63_CONST(O_DIRECTORY)
+#ifndef O_DSYNC
+#define O_DSYNC 0
+#endif
 UNIX_INT63_CONST(O_DSYNC)
 UNIX_INT63_CONST(O_EXCL)
 #ifndef O_NOATIME
@@ -1370,6 +1376,8 @@ CAMLprim value unix_fnmatch(value v_flags, value v_glob, value v_str)
   }
 }
 
+#if defined(JSC_WORDEXP)
+
 CAMLprim value unix_wordexp_make_flags(value v_flags)
 {
   int flags = 0, i = Wosize_val(v_flags);
@@ -1415,6 +1423,7 @@ CAMLprim value unix_wordexp(value v_flags, value v_str)
   }
 }
 
+#endif /* defined(JSC_WORDEXP) */
 
 /* System information */
 

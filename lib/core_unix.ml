@@ -427,6 +427,8 @@ external fnmatch :
 
 let fnmatch ?flags ~pat fname = fnmatch (Fnmatch_flags.make flags) ~pat fname
 
+IFDEF WORDEXP THEN
+
 module Wordexp_flags = struct
   type _flag = [ `No_cmd | `Show_err | `Undef ] with sexp
 
@@ -448,7 +450,13 @@ end
 
 external wordexp : Wordexp_flags.t -> string -> string array = "unix_wordexp"
 
-let wordexp ?flags str = wordexp (Wordexp_flags.make flags) str
+let wordexp = Ok (fun ?flags str -> wordexp (Wordexp_flags.make flags) str)
+
+ELSE
+
+let wordexp = unimplemented "Unix.wordexp"
+
+ENDIF
 
 (* System information *)
 
@@ -1800,6 +1808,168 @@ module Inet_addr = struct
   let bind_any_inet6 = Unix.inet6_addr_any
   let localhost       = Unix.inet_addr_loopback
   let localhost_inet6 = Unix.inet6_addr_loopback
+
+  let inet4_addr_of_int32 l =
+    let lower_24 = Int32.(to_int_exn (bit_and l (of_int_exn 0xFF_FFFF))) in
+    let upper_8  = Int32.(to_int_exn (shift_right_logical l 24)) in
+    of_string (sprintf "%d.%d.%d.%d"
+                 (upper_8         land 0xFF)
+                 (lower_24 lsr 16 land 0xFF)
+                 (lower_24 lsr  8 land 0xFF)
+                 (lower_24        land 0xFF))
+
+  let inet4_addr_to_int32_exn addr =
+    let addr_s = to_string addr in
+    match
+      String.split ~on:'.' addr_s |! List.map ~f:(fun s ->
+        let i = ((Int.of_string s) : int) in
+        if Int.( < ) i 0 || Int.( > ) i 255 then
+          failwithf "%d is not a valid IPv4 octet (in %s)" i addr_s ();
+        i)
+    with
+    | [a;b;c;d] ->
+      let lower_24 = Int32.of_int_exn ((b lsl 16) lor (c lsl 8) lor d)
+      and upper_8  = Int32.(shift_left (of_int_exn a) 24)in
+      Int32.bit_or upper_8 lower_24
+    | _ -> failwithf "'%s' is not a valid IPv4 address" addr_s ()
+
+  (* Can we convert ip addr to an int? *)
+  let test_inet4_addr_to_int32 str num =
+    let inet = of_string str in
+    Int32.( = ) (inet4_addr_to_int32_exn inet) num
+
+  TEST = test_inet4_addr_to_int32 "0.0.0.1"                  1l
+  TEST = test_inet4_addr_to_int32 "1.0.0.0"          0x1000000l
+  TEST = test_inet4_addr_to_int32 "255.255.255.255" 0xffffffffl
+  TEST = test_inet4_addr_to_int32 "172.25.42.1"     0xac192a01l
+  TEST = test_inet4_addr_to_int32 "4.2.2.1"          0x4020201l
+  TEST = test_inet4_addr_to_int32 "8.8.8.8"          0x8080808l
+  TEST = test_inet4_addr_to_int32 "173.194.73.103"  0xadc24967l
+  TEST = test_inet4_addr_to_int32 "98.139.183.24"   0x628bb718l
+
+  (* And from an int to a string? *)
+  let test_inet4_addr_of_int32 num str =
+    let inet = of_string str in
+    inet4_addr_of_int32 num = inet
+
+  TEST = test_inet4_addr_of_int32 0xffffffffl "255.255.255.255"
+  TEST = test_inet4_addr_of_int32          0l "0.0.0.0"
+  TEST = test_inet4_addr_of_int32 0x628bb718l "98.139.183.24"
+  TEST = test_inet4_addr_of_int32 0xadc24967l "173.194.73.103"
+
+  (* And round trip for kicks *)
+  TEST_UNIT =
+    let inet  = of_string "4.2.2.1" in
+    let inet' = inet4_addr_of_int32 (inet4_addr_to_int32_exn inet) in
+    if inet <> inet' then
+      failwithf "round-tripping %s produced %s"
+        (to_string inet) (to_string inet') ()
+end
+
+(** IPv6 addresses are not supported.
+    The RFC regarding how to properly format an IPv6 string is...painful.
+
+    Note the 0010 and 0000:
+    # "2a03:2880:0010:1f03:face:b00c:0000:0025" |! Unix.Inet_addr.of_string |!
+      Unix.Inet_addr.to_string ;;
+      - : string = "2a03:2880:10:1f03:face:b00c:0:25"
+*)
+module Cidr = struct
+  type t =
+    {
+      address : int32; (* IPv4 only *)
+      bits    : int;
+    }
+  with sexp, fields, bin_io
+
+  let of_string s =
+    match String.split ~on:'/' s with
+    | [s_inet_address ; s_bits] ->
+      let address =
+        Inet_addr.of_string s_inet_address
+        |! Inet_addr.inet4_addr_to_int32_exn
+      in
+      let bits = Int.of_string s_bits in
+      if bits < 0 || bits > 32 then
+        failwithf "%d is an invalid number of mask bits (0 <= bits <= 32)" bits ();
+      { address; bits }
+    | _ -> failwithf "Couldn't parse '%s' into a CIDR address/bits pair" s ()
+  let to_string t =
+    let addr = Inet_addr.inet4_addr_of_int32 t.address in
+    sprintf "%s/%d" (Inet_addr.to_string addr) t.bits
+
+  (* Serialize to/of "a.b.c.d/x" instead of "((address abcd)(bits x))". *)
+  let t_of_sexp sexp =
+    Sexp.to_string sexp |! of_string
+  let sexp_of_t t =
+    to_string t |! Sexp.of_string
+
+  let does_match t address =
+    let cidr_to_block c =
+      let baseip = c.address in
+      let shift = 32 - c.bits in
+      Int32.(shift_left (shift_right_logical baseip shift) shift)
+    in
+    match
+      Option.try_with (fun () ->
+        Inet_addr.inet4_addr_to_int32_exn address)
+    with
+    | None -> false (* maybe they tried to use IPv6 *)
+    | Some address -> Int32.equal (cidr_to_block t) (cidr_to_block {t with address})
+
+  (* This exists mostly to simplify the tests below. *)
+  let match_strings c a =
+    let c = of_string c in
+    let a = Inet_addr.of_string a in
+    does_match c a
+
+  let of_string_ok s =
+    try ignore (of_string s : t); true
+    with _e -> false
+
+  let of_string_err = Fn.compose not of_string_ok
+
+  (* Can we parse some random correct netmasks? *)
+  TEST = of_string_ok "10.0.0.0/8"
+  TEST = of_string_ok "172.16.0.0/12"
+  TEST = of_string_ok "192.168.0.0/16"
+  TEST = of_string_ok "192.168.13.0/24"
+  TEST = of_string_ok "172.25.42.0/18"
+
+  (* Do we properly fail on some nonsense? *)
+  TEST = of_string_err "172.25.42.0"
+  TEST = of_string_err "172.25.42.0/35"
+  TEST = of_string_err "172.25.42.0/sandwich"
+  TEST = of_string_err "sandwich/sandwich"
+  TEST = of_string_err "sandwich/39"
+  TEST = of_string_err "sandwich/16"
+  TEST = of_string_err "sandwich"
+  TEST = of_string_err "172.52.43/16"
+  TEST = of_string_err "172.52.493/16"
+
+  (* Basic match tests *)
+  TEST = match_strings "10.0.0.0/8" "9.255.255.255" = false
+  TEST = match_strings "10.0.0.0/8" "10.0.0.1" = true
+  TEST = match_strings "10.0.0.0/8" "10.34.67.1" = true
+  TEST = match_strings "10.0.0.0/8" "10.255.255.255" = true
+  TEST = match_strings "10.0.0.0/8" "11.0.0.1" = false
+
+  TEST = match_strings "172.16.0.0/12" "172.15.255.255" = false
+  TEST = match_strings "172.16.0.0/12" "172.16.0.0" = true
+  TEST = match_strings "172.16.0.0/12" "172.31.255.254" = true
+
+  TEST = match_strings "172.25.42.0/24" "172.25.42.1" = true
+  TEST = match_strings "172.25.42.0/24" "172.25.42.255" = true
+  TEST = match_strings "172.25.42.0/24" "172.25.42.0" = true
+
+  TEST = match_strings "172.25.42.0/16" "172.25.0.1" = true
+  TEST = match_strings "172.25.42.0/16" "172.25.255.254" = true
+  TEST = match_strings "172.25.42.0/16" "172.25.42.1" = true
+  TEST = match_strings "172.25.42.0/16" "172.25.105.237" = true
+
+  (* And some that should fail *)
+  TEST = match_strings "172.25.42.0/24" "172.26.42.47" = false
+  TEST = match_strings "172.25.42.0/24" "172.26.42.208" = false
 end
 
 module Protocol = struct

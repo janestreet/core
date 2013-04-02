@@ -55,7 +55,7 @@
     module Key = struct
       module T = struct
         type t = String.t * Int63.t with sexp
-        let equal = (=)
+        let compare = compare
         let hash = Hashtbl.hash
       end
       include T

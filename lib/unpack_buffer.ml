@@ -68,6 +68,23 @@ module Unpack_one = struct
             end
         end)
   ;;
+
+  type partial_sexp = (Bigstring.t, Sexp.t) Sexp.parse_fun sexp_opaque with sexp_of
+
+  let sexp =
+    let module Parse_pos = Sexp.Parse_pos in
+    let partial_unpack_init ~pos ~len buf =
+      Sexp.parse_bigstring buf ~len ~parse_pos:(Parse_pos.create ~buf_pos:pos ())
+    in
+    create
+      (fun ?(partial_unpack = partial_unpack_init) buf ~pos ~len ->
+        try
+          begin match partial_unpack ~pos ~len buf with
+          | Sexp.Cont (_state, k) -> `Not_enough_data (k, len)
+          | Sexp.Done (sexp, parse_pos) -> `Ok (sexp, parse_pos.Parse_pos.buf_pos - pos)
+          end
+        with exn -> `Invalid_data (Error.of_exn exn))
+  ;;
 end
 
 type ('a, 'b) alive =
@@ -128,7 +145,7 @@ let is_empty t =
   | Alive t -> Ok (is_none t.partial_unpack && t.len = 0)
 ;;
 
-let is_empty_exn t = Or_error.ok_exn (is_empty t)
+let is_empty_exn t = ok_exn (is_empty t)
 
 let is_available t len =
   let input_start = t.pos + t.len in
@@ -203,11 +220,16 @@ let unpack t =
           match unpack_result with
           | `Invalid_data e -> error (Error.tag e "invalid data")
           | `Ok (one, num_bytes) ->
-            (* Unpacking a value must have consumed at least one byte, and cannot have
-               consumed more bytes than were available. *)
-            if num_bytes <= 0 || num_bytes > t.len then
+            (* In order to get a value we either need to consume some bytes or have
+               partially unpacked data, otherwise it is a bug in [unpack_one].  The case
+               of [num_bytes = 0] comes up when parsing sexp atoms where we don't know
+               where atom ends until we hit parenthesis, e.g. "abc(". *)
+            if num_bytes < 0 || num_bytes > t.len then
               error (Error.create "unpack consumed invalid amount" num_bytes
                        (<:sexp_of< int >>))
+            else if num_bytes = 0 && Option.is_none t.partial_unpack then
+              error (Error.of_string "\
+unpack returned a value but consumed 0 bytes without partially unpacked data")
             else begin
               consume ~num_bytes;
               t.partial_unpack <- None;
@@ -239,21 +261,21 @@ let unpack t =
 
 TEST_MODULE "unpack-buffer" = struct
 
-  let test () =
-    debug := true;
-    for value_size = 1 to 5 do
-      let unpack_one =
-        Unpack_one.create
-          (fun ?partial_unpack:_ buf ~pos ~len ->
-            if len < value_size then
-              `Not_enough_data ((), 0)
-            else
-              `Ok (Bigstring.sub buf ~pos ~len:value_size, value_size))
-      in
-      let input_size = value_size * 10 in
-      let input = Bigstring.init input_size ~f:(fun i -> Char.of_int_exn (i land 0xFF)) in
-      for chunk_size = 1 to input_size do
-        let t = create unpack_one in
+  module type Value = sig
+    type t with sexp_of
+    include Equal.S with type t := t
+    val pack : t list -> string
+    type partial_unpack with sexp_of
+    val unpack_one : (t, partial_unpack) Unpack_one.t
+  end
+
+  let test (type value) (v : (module Value with type t = value)) values =
+    let module V = (val v) in
+    let input = Bigstring.of_string (V.pack values) in
+    let input_size = Bigstring.length input in
+    for chunk_size = 1 to input_size do
+      let t = create V.unpack_one in
+      try
         assert (is_empty_exn t);
         let output = Queue.create () in
         let rec loop pos =
@@ -261,19 +283,126 @@ TEST_MODULE "unpack-buffer" = struct
             let len = min chunk_size (input_size - pos) in
             assert (feed t input ~pos ~len = Ok ());
             assert (not (is_empty_exn t));
-            let unpack_result = Or_error.ok_exn (unpack t) in
+            let unpack_result = ok_exn (unpack t) in
             Queue.transfer ~src:unpack_result ~dst:output;
             loop (pos + len);
           end
         in
         loop 0;
         assert (is_empty_exn t);
-        assert (Bigstring.to_string input
-                = String.concat (List.map (Queue.to_list output) ~f:Bigstring.to_string));
-      done
-    done
+        let output = Queue.to_list output in
+        if not (List.equal ~equal:V.equal values output) then
+          failwiths "mismatch" (values, output) <:sexp_of< V.t list * V.t list >>;
+      with exn ->
+        failwiths "failure"
+          (exn, `chunk_size chunk_size, `input input, values, t)
+          (<:sexp_of< (exn
+                       * [ `chunk_size of int ]
+                       * [ `input of Bigstring.t ]
+                       * V.t list
+                       * (V.t, V.partial_unpack) t )>>);
+    done;
   ;;
 
-  TEST = test (); true
+  TEST_UNIT =
+    debug := true;
+    for value_size = 1 to 5 do
+      let module Value = struct
+        let pack ts = String.concat ts
+        type partial_unpack = unit with sexp_of
+        let unpack_one =
+          Unpack_one.create
+            (fun ?partial_unpack:_ buf ~pos ~len ->
+              if len < value_size then
+                `Not_enough_data ((), 0)
+              else
+                let string = String.create value_size in
+                Bigstring.blit_bigstring_string ~src:buf ~src_pos:pos ~src_len:value_size
+                  ~dst:string ();
+                `Ok (string, value_size))
+        include String
+      end in
+      let values =
+        List.init 10 ~f:(fun i ->
+          String.init value_size ~f:(fun j ->
+            Char.of_int_exn ((i * value_size + j) land 0xFF)))
+      in
+      test (module Value) values
+    done;
+  ;;
+
+  (* [Unpack_one.sexp] *)
+  TEST_UNIT =
+    let module Value = struct
+      let pack ts = String.concat ~sep:" " (List.map ts ~f:Sexp.to_string)
+      type partial_unpack = Unpack_one.partial_sexp with sexp_of
+      let unpack_one = Unpack_one.sexp
+      include Sexp
+    end in
+    let sexps =
+      Sexp.(
+        let e = Atom "" in
+        let a = Atom "a" in
+        let abc = Atom "abc" in
+        [ e; a; abc
+        ; List []
+        ; List [ a ]
+        ; List [ e; a ]
+        ; List [ List [] ]
+        ; List [ List []
+               ; List [ a ]
+               ; List [ a; abc ]
+               ]])
+    in
+    let test sexps = test (module Value) sexps in
+    let terminator = Sexp.List [] in (* used to ensure unparsing succeeds *)
+    List.iter sexps ~f:(fun sexp ->
+      test [ sexp; terminator ];
+      test [ sexp; sexp; terminator ]);
+    test sexps;
+  ;;
+
+  (* [Unpack_one.sexp] *)
+  TEST_UNIT =
+    debug := true;
+    (* Error case. *)
+    begin
+      match Unpack_one.sexp ~pos:0 ~len:1 (Bigstring.of_string ")") with
+      | `Invalid_data _ -> ()
+      | `Ok _
+      | `Not_enough_data _ -> assert false
+    end;
+    (* Simple, case where we parse a complete sexp in one pass:
+       - starts in the middle of the buffer
+       - doesn't consume the whole buffer *)
+    begin
+      match Unpack_one.sexp ~pos:1 ~len:9 (Bigstring.of_string ")(foo)(x y") with
+      | `Ok (Sexp.List [Sexp.Atom "foo"], 5) -> ()
+      | `Ok result ->
+        Error.raise
+          (Error.create "Unexpected result" result <:sexp_of<Sexp.t * int>>)
+      | `Not_enough_data _
+      | `Invalid_data _ -> assert false
+    end;
+    (* Partial sexp case, requries two passes to parse the sexp. *)
+    begin
+      match Unpack_one.sexp ~pos:6 ~len:4 (Bigstring.of_string ")(foo)(x y") with
+      | `Not_enough_data (k, 4) ->
+        begin
+          match
+            Unpack_one.sexp ~partial_unpack:k ~pos:0 ~len:3 (Bigstring.of_string " z)")
+          with
+          | `Ok (Sexp.List [Sexp.Atom "x"; Sexp.Atom "y"; Sexp.Atom "z"], 3) -> ()
+          | `Ok _
+          | `Not_enough_data _
+          | `Invalid_data _ -> assert false
+        end
+      | `Not_enough_data (_, n) -> failwithf "Consumed %d bytes" n ()
+      | `Ok result ->
+        Error.raise
+          (Error.create "Unexpected result" result <:sexp_of<Sexp.t * int>>)
+      | `Invalid_data error -> Error.raise error
+    end
+  ;;
 
 end

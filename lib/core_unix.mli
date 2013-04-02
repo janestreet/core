@@ -1092,6 +1092,29 @@ module Inet_addr : sig
   (** Special addresses representing the host machine. *)
   val localhost       : t (* [127.0.0.1] *)
   val localhost_inet6 : t (* ([::1]) *)
+
+  (** Some things (like the kernel) report addresses as hex or decimal strings.
+      Provide conversion functions. *)
+  val inet4_addr_of_int32     : Int32.t -> t
+
+  (** [inet4_addr_to_int32_exn t = 0l] when [t = Inet_addr.of_string ("0.0.0.0")].
+      An exception is raised if [t] is a not an IPv4 address. *)
+  val inet4_addr_to_int32_exn : t -> Int32.t
+end
+
+(** A representation of CIDR netmasks (e.g. "192.168.0.0/24") and functions to match if a
+    given address is inside the range or not.  Only IPv4 addresses are supported. *)
+module Cidr : sig
+
+  type t with sexp, bin_io
+
+  (** [of_string] Generates a Cidr.t based on a string like ["10.0.0.0/8"].  Addresses are
+      not expanded, i.e. ["10/8"] is invalid. *)
+  include Stringable.S with type t := t
+
+  (** Is the given address inside the given Cidr.t?  Note that the broadcast and network
+      addresses are considered valid so [does_match 10.0.0.0/8 10.0.0.0] is true. *)
+  val does_match : t -> Inet_addr.t -> bool
 end
 
 (** {6 Sockets} *)
@@ -1850,7 +1873,7 @@ val fnmatch :
 
 (* See man page for wordexp. *)
 val wordexp :
-  ?flags : [ `No_cmd | `Show_err | `Undef ] list -> string -> string array
+  (?flags : [ `No_cmd | `Show_err | `Undef ] list -> string -> string array) Or_error.t
 
 (** {2 System information} *)
 

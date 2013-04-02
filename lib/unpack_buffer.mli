@@ -10,11 +10,16 @@ module Unpack_one : sig
       starting at [pos], and not using more than [len] characters.  [unpack_one] must
       returns one the following:
 
-      `Ok (value, n) -- unpacking succeeded and consumed [n] bytes
-      `Not_enough_data (p, n) -- unpacking encountered a valid proper prefix of a packed
-      value, and consumed [n] bytes (0 <= n <= len).  [p] is a "partial unpack" that can
-      be supplied to a future call to [unpack_one] to continue unpacking
-      `Invalid_data -- unpacking encountered an invalidly packed value
+      - [`Ok (value, n)] -- unpacking succeeded and consumed [n] bytes, where [0 <= n <=
+      len].  It is possible to have [n = 0], e.g. for sexp unpacking, which can only tell
+      it has reached the end of an atom when it encounters the following punctuation
+      character, which if it is left paren, is the start of the following sexp.
+
+      - [`Not_enough_data (p, n)] -- unpacking encountered a valid proper prefix of a
+      packed value, and consumed [n] bytes, where [0 <= n <= len].  [p] is a "partial
+      unpack" that can be supplied to a future call to [unpack_one] to continue unpacking.
+
+      - [`Invalid_data] -- unpacking encountered an invalidly packed value.
 
       A naive [unpack_one] that only succeeds on a fully packed value could lead to
       quadratic behavior if a packed value's bytes are input using a linear number of
@@ -22,8 +27,8 @@ module Unpack_one : sig
 
   type ('value, 'partial_unpack) t =
     ?partial_unpack:'partial_unpack
-    -> ?pos:int
-    -> ?len:int
+    -> ?pos:int  (* default is [0] *)
+    -> ?len:int  (* default is [Bigstring.len bigstring - pos] *)
     -> Bigstring.t
     -> [ `Ok of 'value * int
        | `Not_enough_data of 'partial_unpack * int
@@ -38,6 +43,13 @@ module Unpack_one : sig
       trivial to know if enough data is available in the buffer, so there is no need to
       represent partially unpacked values, and hence ['partial_unpack = unit]. *)
   val create_bin_prot : 'a Bin_prot.Type_class.reader -> ('a, unit) t
+
+  (** Beware that when unpacking sexps, one cannot tell if one is at the end of an atom
+      until one hits punctuation.  So, one should always feed a space (" ") to a sexp
+      unpack buffer after feeding a batch of complete sexps, to ensure that the final sexp
+      is unpacked. *)
+  type partial_sexp
+  val sexp : (Sexp.t, partial_sexp) t
 end
 
 (* Note that [t] doesn't expose its type ['partial_unpack].  It is only here to allow the

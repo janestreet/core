@@ -30,6 +30,7 @@ if [ ! -e $MAKEFILE_CONFIG ]; then
 fi
 
 ARCH=`cat $MAKEFILE_CONFIG | grep '^ARCH=' | cut -d= -f2`
+WORDEXP=`{ echo '#include <wordexp.h>' | cpp &> /dev/null && echo yes; } || echo no`
 
 SRC=config/test.c
 OUT=config/test.out
@@ -38,6 +39,10 @@ trap "rm -f $OUT" EXIT
 $OCAMLC -ccopt -E $OCAML_CFLAGS -c $SRC | grep '^"OUT:[^"]*"$' | sed 's/"OUT:\([^"]*\)"/\1/' | tee > $OUT
 
 echo "DEFINE ARCH_$ARCH" >> $OUT
+
+if [ "$WORDEXP" = yes ]; then
+    echo "DEFINE WORDEXP" >> $OUT
+fi
 
 case "`ocamlc -version`" in
     4*)
