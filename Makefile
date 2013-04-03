@@ -1,7 +1,7 @@
 # Generic Makefile for oasis project
 
 # Set to setup.exe for the release
-SETUP := setup-dev.exe
+SETUP := setup.exe
 
 # Default rule
 default: build
