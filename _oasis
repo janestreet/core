@@ -249,6 +249,8 @@ Library core
                       res,
                       unix,
                       threads
+  XMETAExtraLines:    archive(byte, toploop) += "core_top.cma"
+                      archive(native, toploop) += "core_top.cmxa"
   if flag(rt)
     CCLib: -lrt
 
