@@ -73,7 +73,7 @@ TEST =
       let module M =
             Make (struct
               let allow_intersecting = false
-              let should_print_error = true
+              let should_print_error = false
               let known = [ Int63.of_int 0x1, "";
                             Int63.of_int 0x0, "";
                           ]
@@ -89,7 +89,7 @@ TEST =
       let module M =
             Make (struct
               let allow_intersecting = false
-              let should_print_error = true
+              let should_print_error = false
               let known = [ Int63.of_int 0x1, "";
                             Int63.of_int 0x1, "";
                           ]

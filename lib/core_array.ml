@@ -6,29 +6,343 @@ module List = Core_list
 
 let invalid_argf = Core_printf.invalid_argf
 
-type 'a t = 'a array with sexp, bin_io
-
+type 'a t   = 'a array with sexp, bin_io
 type 'a sub = 'a t -> pos:int -> len:int -> 'a t
 
+(* This module implements a new in-place, constant heap sorting algorithm to replace the
+   one used by the standard libraries.  It's only purpose is to be faster (hopefully
+   strictly faster) than the base sort and stable_sort.
+
+   At a high level the algorithm is:
+    - pick two pivot points by:
+      - pick 5 arbitrary elements from the array
+      - sort them within the array
+      - take the elements on either side of the middle element of the sort as the pivots
+    - sort the array with:
+      - all elements less than pivot1 to the left (range 1)
+      - all elements >= pivot1 and <= pivot2 in the middle (range 2)
+      - all elements > pivot2 to the right (range 3)
+    - if pivot1 and pivot2 are equal, then the middle range is sorted, so ignore it
+    - recurse into range 1, 2 (if pivot1 and pivot2 are unequal), and 3
+    - during recursion there are two inflection points:
+      - if the size of the current range is small, use insertion sort to sort it
+      - if the stack depth is large, sort the range with heap-sort to avoid n^2 worst-case
+        behavior
+
+   See the following for more information:
+    - "Dual-Pivot Quicksort" by Vladimir Yaroslavskiy.
+      Available at http://iaroslavski.narod.ru/quicksort/DualPivotQuicksort.pdf
+    - "Quicksort is Optimal" by Sedgewick and Bentley.
+      Slides at http://www.cs.princeton.edu/~rs/talks/QuicksortIsOptimal.pdf
+    - http://www.sorting-algorithms.com/quick-sort-3-way
+
+*)
+
+module Sort = struct
+  (* For the sake of speed we could use unsafe get/set throughout, but speed tests don't
+     show a significant improvement. *)
+  let get = Array.get
+  let set = Array.set
+
+  let swap arr i j =
+    let tmp = get arr i in
+    set arr i (get arr j);
+    set arr j tmp
+  ;;
+
+  module type Sort = sig
+    val sort
+      :  'a t
+      -> cmp:('a -> 'a -> int)
+      -> unit
+
+    val sort_range
+      :  'a t
+      -> cmp:('a -> 'a -> int)
+      -> left:int (* leftmost index of sub-array to sort *)
+      -> right:int (* rightmost index of sub-array to sort *)
+      -> unit
+  end
+
+  (* http://en.wikipedia.org/wiki/Insertion_sort *)
+  module Insertion_sort : Sort = struct
+    let insertion_sort arr ~cmp ~left ~right =
+      let insert pos v =
+        (* loop invariants:
+           1.  the subarray arr[left .. i-1] is sorted
+           2.  the subarray arr[i+1 .. pos] is sorted and contains only elements > v
+           3.  arr[i] may be thought of as containing v
+        *)
+        let rec loop i =
+          let i_next = i - 1 in
+          if i_next >= left && cmp (get arr i_next) v > 0 then begin
+            set arr i (get arr i_next);
+            loop i_next
+          end else
+            i
+        in
+        let final_pos = loop pos in
+        set arr final_pos v
+      in
+      (* loop invariant:
+         arr is sorted from left to i-1, inclusive
+      *)
+      for i = left + 1 to right do
+        insert i (get arr i)
+      done
+    ;;
+
+    let sort_range    = insertion_sort
+    let sort arr ~cmp = sort_range arr ~cmp ~left:0 ~right:(Array.length arr - 1)
+  end
+
+  (* http://en.wikipedia.org/wiki/Heapsort *)
+  module Heap_sort : Sort = struct
+    (* loop invariant:
+       root's children are both either roots of max-heaps or > right
+    *)
+    let rec heapify arr ~cmp root ~left ~right =
+      let relative_root = root - left in
+      let left_child    = (2 * relative_root) + left + 1 in
+      let right_child   = (2 * relative_root) + left + 2 in
+      let largest =
+        if left_child <= right && cmp (get arr left_child) (get arr root) > 0
+        then left_child
+        else root
+      in
+      let largest =
+        if right_child <= right && cmp (get arr right_child) (get arr largest) > 0
+        then right_child
+        else largest
+      in
+      if largest <> root then begin
+        swap arr root largest;
+        heapify arr ~cmp largest ~left ~right
+      end;
+    ;;
+
+    let build_heap arr ~cmp ~left ~right =
+      (* Elements in the second half of the array are already heaps of size 1.  We move
+         through the first half of the array from back to front examining the element at
+         hand, and the left and right children, fixing the heap property as we go. *)
+      for i = (left + right) / 2 downto left do
+        heapify arr ~cmp i ~left ~right;
+      done;
+    ;;
+
+    let heap_sort arr ~cmp ~left ~right =
+      build_heap arr ~cmp ~left ~right;
+      (* loop invariants:
+         1.  the subarray arr[left ... i] is a max-heap H
+         2.  the subarray arr[i+1 ... right] is sorted (call it S)
+         3.  every element of H is less than every element of S
+      *)
+      for i = right downto left + 1 do
+        swap arr left i;
+        heapify arr ~cmp left ~left ~right:(i - 1);
+      done;
+    ;;
+
+    let sort_range    = heap_sort
+    let sort arr ~cmp = sort_range arr ~cmp ~left:0 ~right:(Array.length arr - 1)
+  end
+
+  (* http://en.wikipedia.org/wiki/Introsort *)
+  module Intro_sort : Sort = struct
+
+    let five_element_sort arr ~cmp m1 m2 m3 m4 m5 =
+      let compare_and_swap i j =
+        if cmp (get arr i) (get arr j) > 0 then swap arr i j
+      in
+      (* optimal 5-element sorting network *)
+      compare_and_swap m1 m2;  (* 1--o-----o-----o--------------1 *)
+      compare_and_swap m4 m5;  (*    |     |     |                *)
+      compare_and_swap m1 m3;  (* 2--o-----|--o--|-----o--o-----2 *)
+      compare_and_swap m2 m3;  (*          |  |  |     |  |       *)
+      compare_and_swap m1 m4;  (* 3--------o--o--|--o--|--o-----3 *)
+      compare_and_swap m3 m4;  (*                |  |  |          *)
+      compare_and_swap m2 m5;  (* 4-----o--------o--o--|-----o--4 *)
+      compare_and_swap m2 m3;  (*       |              |     |    *)
+      compare_and_swap m4 m5;  (* 5-----o--------------o-----o--5 *)
+    ;;
+
+    TEST_MODULE = struct
+      (* run [five_element_sort] on all permutations of an array of five elements *)
+
+      let rec sprinkle x xs =
+        (x :: xs) :: begin
+          match xs with
+          | [] -> []
+          | x' :: xs' ->
+            List.map (sprinkle x xs') ~f:(fun sprinkled -> x' :: sprinkled)
+        end
+
+      let rec permutations = function
+        | [] -> [[]]
+        | x :: xs ->
+          List.concat_map (permutations xs) ~f:(fun perms -> sprinkle x perms)
+
+      let int_cmp (i1 : int) (i2 : int) = compare i1 i2
+      let list_cmp l1 l2 = List.compare l1 l2 ~cmp:int_cmp
+
+      let all_perms = permutations [1;2;3;4;5]
+      TEST = List.length all_perms = 120
+      TEST = not (List.contains_dup ~compare:list_cmp all_perms)
+
+      TEST =
+        List.for_all all_perms ~f:(fun l ->
+          let arr = Array.of_list l in
+          five_element_sort arr ~cmp:int_cmp 0 1 2 3 4;
+          arr = [|1;2;3;4;5|])
+    end
+
+    (* choose pivots for the array by sorting 5 elements and examining the center three
+        elements.  The goal is to choose two pivots that will either:
+        - break the range up into 3 even partitions
+        or
+        - eliminate a commonly appearing element by sorting it into the center partition
+          by itself
+        To this end we look at the center 3 elements of the 5 and return pairs of equal
+        elements or the widest range *)
+    let choose_pivots arr ~cmp ~left ~right =
+      let sixth = (right - left) / 6 in
+      let m1 = left + sixth in
+      let m2 = m1 + sixth in
+      let m3 = m2 + sixth in
+      let m4 = m3 + sixth in
+      let m5 = m4 + sixth in
+      five_element_sort arr ~cmp m1 m2 m3 m4 m5;
+      let m2_val = get arr m2 in
+      let m3_val = get arr m3 in
+      let m4_val = get arr m4 in
+      if cmp m2_val m3_val = 0      then (m2_val, m3_val, true)
+      else if cmp m3_val m4_val = 0 then (m3_val, m4_val, true)
+      else                               (m2_val, m4_val, false)
+    ;;
+
+    let dual_pivot_partition arr ~cmp ~left ~right =
+      let pivot1, pivot2, pivots_equal = choose_pivots arr ~cmp ~left ~right in
+      (* loop invariants:
+         1.  left <= l < r <= right
+         2.  l <= p <= r
+         3.  l <= x < p     implies arr[x] >= pivot1
+                                and arr[x] <= pivot2
+         4.  left <= x < l  implies arr[x] < pivot1
+         5.  r < x <= right implies arr[x] > pivot2
+      *)
+      let rec loop l p r =
+        let pv = get arr p in
+        if cmp pv pivot1 < 0 then begin
+          swap arr p l;
+          cont (l + 1) (p + 1) r
+        end else if cmp pv pivot2 > 0 then begin
+          (* loop invariants:  same as those of the outer loop *)
+          let rec scan_backwards r =
+            if r > p && cmp (get arr r) pivot2 > 0
+            then scan_backwards (r - 1)
+            else r
+          in
+          let r = scan_backwards r in
+          swap arr r p;
+          cont l p (r - 1)
+        end else
+          cont l (p + 1) r
+      and cont l p r =
+        if p > r then (l, r) else loop l p r
+      in
+      let (l, r) = cont left left right in
+      (l, r, pivots_equal)
+    ;;
+
+    let rec intro_sort arr ~max_depth ~cmp ~left ~right =
+      let len = right - left + 1 in
+      (* This takes care of some edge cases, such as left > right or very short arrays,
+         since Insertion_sort.sort handles these cases properly.  Thus we don't need to
+         make sure that left and right are valid in recursive calls. *)
+      if len <= 32 then begin
+        Insertion_sort.sort_range arr ~cmp ~left ~right
+      end else if max_depth < 0 then begin
+        Heap_sort.sort_range arr ~cmp ~left ~right;
+      end else begin
+        let max_depth = max_depth - 1 in
+        let (l, r, middle_sorted) = dual_pivot_partition arr ~cmp ~left ~right in
+        intro_sort arr ~max_depth ~cmp ~left ~right:(l - 1);
+        if not middle_sorted then intro_sort arr ~max_depth ~cmp ~left:l ~right:r;
+        intro_sort arr ~max_depth ~cmp ~left:(r + 1) ~right;
+      end
+    ;;
+
+    let log10_of_3 = log10 3.
+
+    let log3 x = log10 x /. log10_of_3
+
+    let intro_sort arr ~cmp ~left ~right =
+      let len = right - left + 1 in
+      let heap_sort_switch_depth =
+        (* with perfect 3-way partitioning, this is the recursion depth *)
+        int_of_float (log3 (float_of_int len))
+      in
+      intro_sort arr ~max_depth:heap_sort_switch_depth ~cmp ~left ~right;
+    ;;
+
+    let sort_range    = intro_sort
+    let sort arr ~cmp = sort_range arr ~cmp ~left:0 ~right:(Array.length arr - 1)
+
+  end
+
+  module Test (M : Sort) = struct
+
+    TEST_MODULE = struct
+      let random_data ~length ~range =
+        let arr = Array.create length 0 in
+        for i = 0 to length - 1 do
+          arr.(i) <- Random.int range;
+        done;
+        arr
+      ;;
+
+      let assert_sorted arr =
+        M.sort arr ~cmp:compare;
+        let len = Array.length arr in
+        let rec loop i prev =
+          if i = len then true
+          else if arr.(i) < prev then false
+          else loop (i + 1) arr.(i)
+        in
+        loop 0 (-1)
+      ;;
+
+      TEST = assert_sorted (random_data ~length:0 ~range:100)
+      TEST = assert_sorted (random_data ~length:1 ~range:100)
+      TEST = assert_sorted (random_data ~length:100 ~range:1_000)
+      TEST = assert_sorted (random_data ~length:1_000 ~range:1)
+      TEST = assert_sorted (random_data ~length:1_000 ~range:10)
+      TEST = assert_sorted (random_data ~length:1_000 ~range:1_000_000)
+    end
+  end
+
+  module Insertion_test = Test (Insertion_sort)
+  module Heap_test = Test (Heap_sort)
+  module Intro_test = Test (Intro_sort)
+end
+
 (* Standard functions *)
-let append = Array.append
-let blit = Array.blit
-let concat = Array.concat
-let copy = Array.copy
-let fill = Array.fill
+let append                = Array.append
+let blit                  = Array.blit
+let concat                = Array.concat
+let copy                  = Array.copy
+let fill                  = Array.fill
 let fold_right t ~f ~init = Array.fold_right ~f t ~init (* permute params in signature *)
-let init = Array.init
-let iteri = Array.iteri
-let make_matrix = Array.make_matrix
-let map = Array.map
-let mapi = Array.mapi
-let of_list = Array.of_list
-(* Note that Ocaml's stable_sort and fast_sort are the same. Regular sort is unstable and
-   slower, but uses constant heap space. *)
-let sort = Array.sort
-let stable_sort = Array.stable_sort
-let sub = Array.sub
-let to_list = Array.to_list
+let init                  = Array.init
+let iteri                 = Array.iteri
+let make_matrix           = Array.make_matrix
+let map                   = Array.map
+let mapi                  = Array.mapi
+let of_list               = Array.of_list
+let sort                  = Sort.Intro_sort.sort
+let stable_sort t ~cmp    = Array.stable_sort t ~cmp
+let sub                   = Array.sub
+let to_list               = Array.to_list
 
 external create : int -> 'a -> 'a array = "caml_make_vect"
 
@@ -371,7 +685,7 @@ let partition_tf t ~f =
 let last t = t.(length t - 1)
 
 module Infix = struct
-  let ( <|> ) t (start,stop) = slice t start stop
+  let ( <|> ) t (start, stop) = slice t start stop
 end
 
 (* We use [init 0] rather than [||] because all [||] are physically equal, and

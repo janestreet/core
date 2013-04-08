@@ -1824,9 +1824,9 @@ external sysconf : sysconf -> int64 = "unix_sysconf"
 
 (** {2 Temporary file and directory creation} *)
 
-(** [mkstemp prefix] creates and opens a unique temporary file with
-    [prefix], automatically appending a suffix of six random characters
-    to make the name unique.
+(** [mkstemp prefix] creates and opens a unique temporary file with [prefix],
+    automatically appending a suffix of six random characters to make the name unique.
+    Unlike C's [mkstemp], [prefix] should not include six X's at the end.
 
     @raise Unix_error on errors.
 *)

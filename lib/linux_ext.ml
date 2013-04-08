@@ -191,7 +191,6 @@ end
 
 ELSE
 
-
 module Timerfd = struct
   module Clock = struct
     type t = unit with bin_io, compare, sexp
