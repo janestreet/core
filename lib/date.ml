@@ -400,6 +400,42 @@ let rec following_weekday t =
     following_weekday following_day
 ;;
 
+let first_strictly_after t ~on:dow =
+  let dow     = Weekday.to_int dow in
+  let tplus1  = add_days t 1 in
+  let cur     = Weekday.to_int (day_of_week tplus1) in
+  let diff    = (dow + 7 - cur) mod 7 in
+  add_days tplus1 diff
+;;
+
+TEST_MODULE "first_strictly_after" = struct
+  let mon1 = create_exn ~y:2013 ~m:Month.Apr ~d:1
+  let tue1 = create_exn ~y:2013 ~m:Month.Apr ~d:2
+  let wed1 = create_exn ~y:2013 ~m:Month.Apr ~d:3
+  let thu1 = create_exn ~y:2013 ~m:Month.Apr ~d:4
+  let fri1 = create_exn ~y:2013 ~m:Month.Apr ~d:5
+  let sat1 = create_exn ~y:2013 ~m:Month.Apr ~d:6
+  let sun1 = create_exn ~y:2013 ~m:Month.Apr ~d:7
+  let mon2 = create_exn ~y:2013 ~m:Month.Apr ~d:8
+  let tue2 = create_exn ~y:2013 ~m:Month.Apr ~d:9
+
+  TEST = equal (first_strictly_after tue1 ~on:Weekday.mon) mon2
+  TEST = equal (first_strictly_after tue1 ~on:Weekday.tue) tue2
+  TEST = equal (first_strictly_after tue1 ~on:Weekday.wed) wed1
+  TEST = equal (first_strictly_after tue1 ~on:Weekday.thu) thu1
+  TEST = equal (first_strictly_after tue1 ~on:Weekday.fri) fri1
+  TEST = equal (first_strictly_after tue1 ~on:Weekday.sat) sat1
+  TEST = equal (first_strictly_after tue1 ~on:Weekday.sun) sun1
+  TEST = equal (first_strictly_after mon1 ~on:Weekday.mon) mon2
+  TEST = equal (first_strictly_after mon1 ~on:Weekday.tue) tue1
+  TEST = equal (first_strictly_after mon1 ~on:Weekday.wed) wed1
+  TEST = equal (first_strictly_after mon1 ~on:Weekday.thu) thu1
+  TEST = equal (first_strictly_after mon1 ~on:Weekday.fri) fri1
+  TEST = equal (first_strictly_after mon1 ~on:Weekday.sat) sat1
+  TEST = equal (first_strictly_after mon1 ~on:Weekday.sun) sun1
+end
+
+
 module Export = struct
   type _date = t = private { y: int; m: Month.t; d: int; }
 end

@@ -31,6 +31,8 @@
     principle, not pass around values of type [Type_equal.t] at run time.
 *)
 
+open T
+
 type (_, _) t = T : ('a, 'a) t
 type ('a, 'b) equal = ('a, 'b) t (** just an alias, needed when [t] gets shadowed below *)
 
@@ -65,6 +67,19 @@ val trans : ('a, 'b) t -> ('b, 'c) t -> ('a, 'c) t
 
     this would give a type error. *)
 val conv : ('a, 'b) t -> 'a -> 'b
+
+(** It is always safe to conclude that if type [a] equals [b], then for any type ['a t],
+    type [a t] equals [b t].  The OCaml type checker uses this fact when it can.  However,
+    sometimes, e.g. when using [conv], one needs to explicitly use this fact to construct
+    an appropriate [Type_equal.t].  The [Lift*] functors do this. *)
+
+module Lift (X : T1) : sig
+  val lift : ('a, 'b) t -> ('a X.t, 'b X.t) t
+end
+
+module Lift2 (X : T2) : sig
+  val lift : ('a1, 'b1) t -> ('a2, 'b2) t -> (('a1, 'a2) X.t, ('b1, 'b2) X.t) t
+end
 
 (** [tuple2] and [detuple2] convert between equality on a 2-tuple and its components. *)
 val detuple2 : ('a1 * 'a2, 'b1 * 'b2) t -> ('a1, 'b1) t * ('a2, 'b2) t

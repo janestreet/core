@@ -135,6 +135,7 @@ module Univ = Univ
 module Univ_map = Univ_map
 module Unix = Core_unix
 module Unpack_buffer = Unpack_buffer
+module User_and_group = User_and_group
 module Uuid = Uuid
 INCLUDE "version_defaults.mlh"
 IFDEF BUILD_VERSION_UTIL THEN

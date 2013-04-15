@@ -219,6 +219,10 @@ val groupi : 'a t -> break:(int -> 'a -> 'a -> bool) -> 'a t t
 val last : 'a t -> 'a option
 val last_exn : 'a t -> 'a
 
+(** [remove_consecutive_duplicates]. The same list with consecutive duplicates removed.
+    The relative order of the other elements is unaffected. *)
+val remove_consecutive_duplicates : 'a t -> equal:('a -> 'a -> bool) -> 'a t
+
 (** [dedup] (de-duplicate).  The same list with duplicates removed, but the
     order is not guaranteed. *)
 val dedup : ?compare:('a -> 'a -> int) -> 'a t -> 'a t
