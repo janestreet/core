@@ -32,53 +32,6 @@ module Stable = struct
        (2) you add a new Time version to stable.ml *)
     include Time_internal
 
-    let string_and_sexp_format : [
-    | `Old
-    | `Force_old
-    | `Write_new_read_both
-    | `Write_new_read_only_new
-    ] ref = ref `Old
-
-    let current_string_and_sexp_format () =
-      match !string_and_sexp_format with
-      | `Old | `Force_old -> `Old
-      | _ as format -> format
-    ;;
-
-    let modify_string_and_sexp_format =
-      let module Mutex = Nano_mutex in
-      let string_and_sexp_format_mutex = Mutex.create () in
-      (fun f ->
-        Mutex.critical_section string_and_sexp_format_mutex
-          ~f:(fun () ->
-            string_and_sexp_format := f !string_and_sexp_format))
-    ;;
-
-    let write_new_string_and_sexp_formats__read_both () =
-      modify_string_and_sexp_format (function
-      | `Force_old ->
-        failwith "write_new_string_and_sexp_formats__read_both called after \
-        forbid_new_string_and_sexp_formats"
-      | _ -> `Write_new_read_both)
-    ;;
-
-    let write_new_string_and_sexp_formats__read_only_new () =
-      modify_string_and_sexp_format (function
-      | `Force_old ->
-        failwith "write_new_string_and_sexp_formats__read_only_new called after \
-        forbid_new_string_and_sexp_formats"
-      | _ -> `Write_new_read_only_new)
-    ;;
-
-    let forbid_new_string_and_sexp_formats () =
-      modify_string_and_sexp_format (function
-      | `Old | `Force_old -> `Force_old
-      | _ ->
-        failwith "use_new_string_and_sexp_formats called before \
-        forbid_new_string_and_sexp_formats"
-      )
-    ;;
-
     let to_epoch t = T.to_float t
 
     module Epoch_cache = struct
@@ -299,12 +252,7 @@ module Stable = struct
       String.concat [Date.to_string date; " "; Ofday.to_string sec]
     ;;
 
-    let to_string t =
-      match !string_and_sexp_format with
-      | `Write_new_read_both
-      | `Write_new_read_only_new -> to_string_abs t
-      | `Old | `Force_old -> to_string_deprecated t
-    ;;
+    let to_string t = to_string_abs t
 
     exception Time_of_string of string * Exn.t with sexp
     exception Time_string_not_absolute of string with sexp
@@ -359,14 +307,7 @@ module Stable = struct
     ;;
 
     let of_string_abs s = of_string_gen ~require_absolute:true s
-    let of_string s =
-      let require_absolute =
-        match !string_and_sexp_format with
-        | `Write_new_read_only_new                 -> true
-        | `Old | `Force_old | `Write_new_read_both -> false
-      in
-      of_string_gen s ~require_absolute
-    ;;
+    let of_string s     = of_string_gen ~require_absolute:false s
 
     let t_of_sexp_gen sexp of_string =
       try

@@ -1873,7 +1873,7 @@ val fnmatch :
 
 (* See man page for wordexp. *)
 val wordexp :
-  (?flags : [ `No_cmd | `Show_err | `Undef ] list -> string -> string array) Or_error.t
+  ?flags : [ `No_cmd | `Show_err | `Undef ] list -> string -> string array
 
 (** {2 System information} *)
 

@@ -38,30 +38,30 @@ let add name test = test_list := (name >:: test) :: !test_list
 
 let () = add "t"
   (fun () ->
-      let s1 = "2005-05-25 12:46" in
-      let s2 = "2005-05-25 12:46:15" in
-      let s3 = "2005-05-25 12:46:15.232" in
+      let s1 = "2005-05-25 12:46-4:00" in
+      let s2 = "2005-05-25 12:46:15-4:00" in
+      let s3 = "2005-05-25 12:46:15.232-4:00" in
+      let s4 = "2005-05-25 12:46:15.232338-4:00" in
       let time1 = Time.of_string s1 in
       let time2 = Time.of_string s2 in
       let time3 = Time.of_string s3 in
+      let time4 = Time.of_string s4 in
       let now1 = Time.now () in
       let now2 = Time.now () in
-      "diff1" @? (Float.iround_exn ~dir:`Nearest (Time.Span.to_sec (Time.diff time2 time1)) = 15);
+      "diff1"  @? (Float.iround_exn ~dir:`Nearest (Time.Span.to_sec (Time.diff time2 time1)) = 15);
       "diff1'" @? (Float.iround_exn ~dir:`Nearest (Time.Span.to_ms (Time.diff time2 time1)) = 15 * 1000);
-      "diff2" @? (Float.iround_exn ~dir:`Nearest (Time.Span.to_ms (Time.diff time3 time2)) = 232);
-      "conv1" @? (Time.to_string time1 = s1 ^ ":00.000000");
-      "conv2" @? (Time.to_string time2 = s2 ^ ".000000");
-      "conv3" @? (Time.to_string time3 = s3 ^ "000");
-      "ord" @? (now2 >= now1);
-      "sexp1" @? (Time.t_of_sexp (Time.sexp_of_t time1) = time1);
-      "sexp2" @? (Time.t_of_sexp (Time.sexp_of_t time2) = time2);
-      "sexp3" @? (Time.t_of_sexp (Time.sexp_of_t time3) = time3);
+      "diff2"  @? (Float.iround_exn ~dir:`Nearest (Time.Span.to_ms (Time.diff time3 time2)) = 232);
+      "diff3"  @? (Float.iround_exn ~dir:`Nearest (Time.Span.to_us (Time.diff time4 time3)) = 338);
+      "ord"    @? (now2 >= now1);
+      "sexp1"  @? (Time.t_of_sexp (Time.sexp_of_t time1) = time1);
+      "sexp2"  @? (Time.t_of_sexp (Time.sexp_of_t time2) = time2);
+      "sexp3"  @? (Time.t_of_sexp (Time.sexp_of_t time3) = time3);
       let date, ofday = Time.to_local_date_ofday time3 in
-      "date" @? (date = Date.of_string "2005-05-25");
-      "ofday" @? (Ofday.(=.) ofday (Time.Ofday.of_string "12:46:15.232"));
+      "date"   @? (date = Date.of_string "2005-05-25");
+      "ofday"  @? (Ofday.(=.) ofday (Time.Ofday.of_string "12:46:15.232"));
       "ofday1" @? (Time.Ofday.of_string "09:13" = Time.Ofday.of_string "0913");
-      "add1" @? teq (Time.add time1 (sec 15.)) time2;
-      "add2" @? teq (Time.add time2 (Time.Span.of_ms 232.)) time3;
+      "add1"   @? teq (Time.add time1 (sec 15.)) time2;
+      "add2"   @? teq (Time.add time2 (Time.Span.of_ms 232.)) time3;
     )
 
 let () =
@@ -293,10 +293,11 @@ let () =
     );
   add "norollover"
     (fun () ->
-      let t1 = Time.of_string "2005-05-25 12:46:59.900" in
-      let t2 = Time.add t1 (Time.Span.of_ms 99.9) in
+      let zone = Zone.machine_zone () in
+      let t1   = Time.of_localized_string zone "2005-05-25 12:46:59.900" in
+      let t2   = Time.add t1 (Time.Span.of_ms 99.9) in
       (* within 1 mic *)
-      "60secspr" @? ((Time.to_string t2) = "2005-05-25 12:46:59.999900");
+      "60secspr" @? ((Time.to_localized_string t2 zone) = "2005-05-25 12:46:59.999900");
     );
   add "to_string,of_string"
     (fun () ->
@@ -315,15 +316,17 @@ let () =
     );
   add "to_string,of_string2"
     (fun () ->
-      let s = "2005-06-01 10:15:08.047123" in
+      let zone = Zone.find_exn "America/New_York" in
+      let s = "2005-06-01 10:15:08.047123-04:00" in
       let t = Time.of_string s in
-      "foo" @? (Time.to_string t = s)
+      "foo" @? (Time.to_string_abs t ~zone = s)
     );
   add "to_string,of_string3"
     (fun () ->
-      let s = "2006-06-16 04:37:07.082945" in
+      let zone = Zone.find_exn "America/New_York" in
+      let s = "2006-06-16 04:37:07.082945-04:00" in
       let t = Time.of_string s in
-      "foo" @? (Time.to_string t = s)
+      "foo" @? (Time.to_string_abs t ~zone = s)
     );
   add "to_filename_string,of_filename_string"
     (fun () ->
@@ -355,16 +358,18 @@ let () =
     );
   add "daylight_saving_time"
     (fun () ->
-      let s = "2006-04-02 23:00:00.000000" in
+      let zone = Zone.find_exn "America/New_York" in
+      let s = "2006-04-02 23:00:00.000000-04:00" in
       let time = Time.of_string s in
-      "dst" @? (Time.to_string time = s)
+      "dst" @? (Time.to_string_abs ~zone time = s)
     );
   add "weird_date_in_time"
     (fun () ->
-      let t1 = Time.of_string "01 JAN 2008 10:37:22.551" in
-      "rnse1" @? (Time.to_string t1 = "2008-01-01 10:37:22.551000");
-      let t2 = Time.of_string "01 FEB 2008 17:38:44.031" in
-      "rnse2" @? (Time.to_string t2 = "2008-02-01 17:38:44.031000")
+      let zone = Zone.find_exn "America/New_York" in
+      let t1 = Time.of_string "01 JAN 2008 10:37:22.551-05:00" in
+      "rnse1" @? (Time.to_string_abs t1 ~zone = "2008-01-01 10:37:22.551000-05:00");
+      let t2 = Time.of_string "01 FEB 2008 17:38:44.031-05:00" in
+      "rnse2" @? (Time.to_string_abs t2 ~zone = "2008-02-01 17:38:44.031000-05:00")
     );
   add "ofday_small_diff"
     (fun () ->

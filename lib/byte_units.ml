@@ -13,7 +13,7 @@ let kbyte = 1024.
 let mbyte = kbyte *. kbyte
 let gbyte = kbyte *. mbyte
 
-(* External.t - used just for custom sexp convertors *)
+(* External.t - used just for custom sexp converters *)
 module External = struct
   type t =
     [

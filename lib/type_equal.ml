@@ -14,6 +14,16 @@ let trans (type a) (type b) (type c) (T : (a, b) t) (T : (b, c) t) = (T : (a, c)
 
 let conv (type a) (type b) (T : (a, b) t) (a : a) = (a : b)
 
+module Lift (X : sig type 'a t end) = struct
+  let lift (type a) (type b) (T : (a, b) t) = (T : (a X.t, b X.t) t)
+end
+
+module Lift2 (X : sig type ('a1, 'a2) t end) = struct
+  let lift (type a1) (type b1) (type a2) (type b2) (T : (a1, b1) t) (T : (a2, b2) t) =
+    (T : ((a1, a2) X.t, (b1, b2) X.t) t)
+  ;;
+end
+
 let detuple2 (type a1) (type a2) (type b1) (type b2)
     (T : (a1 * a2, b1 * b2) t) : (a1, b1) t * (a2, b2) t =
   T, T
@@ -118,30 +128,44 @@ end = struct
 end
 
 (* This test shows that we need [conv] even though [Type_equal.T] is exposed. *)
-TEST_UNIT =
-  let id = Id.create ~name:"int" in
-  let module A : sig
+TEST_MODULE = struct
+  let id = Id.create ~name:"int"
+
+  module A : sig
     type t
     val id : t Id.t
   end = struct
     type t = int
     let id = id
-  end in
-  let module B : sig
+  end
+
+  module B : sig
     type t
     val id : t Id.t
   end = struct
     type t = int
     let id = id
-  end in
+  end
+
   let _a_to_b (a : A.t) =
     let eq = Id.same_witness_exn A.id B.id in
     (conv eq a : B.t)
-  in
+  ;;
+
   (* the following is rejected by the compiler *)
   (* let _a_to_b (a : A.t) =
    *   let T = Id.same_witness_exn A.id B.id in
    *   (a : B.t)
-   * in *)
-  ()
-;;
+   *)
+
+  module C = struct
+    type 'a t
+  end
+
+  module Liftc = Lift (C)
+
+  let _ac_to_bc (ac : A.t C.t) =
+    let eq = Liftc.lift (Id.same_witness_exn A.id B.id) in
+    (conv eq ac : B.t C.t)
+  ;;
+end

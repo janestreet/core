@@ -89,6 +89,12 @@ val previous_weekday : t -> t
 
 val following_weekday : t -> t
 
+(** [first_strictly_after t ~on:day_of_week] returns the first occurrence of [day_of_week]
+    strictly after [t]. *)
+val first_strictly_after : t -> on:Weekday.t -> t
+
+
+
 module Export : sig
   type _date = t = private { y: int; m: Month.t; d: int; }
 end

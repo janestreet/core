@@ -4,35 +4,17 @@ open Std_internal
 (** A fully qualified point in time, independent of timezone. *)
 type t = Time_internal.T.t with bin_io, sexp
 
-(** If this is ever called then all future calls to to_string and sexp_of_t will produce a
-    new format sexp/string that includes enough offset information to reproduce the
-    correct Time.t when of_string/t_of_sexp is called, even if they are called on a
-    machine with a different timezone than the writing machine.  This should never be
-    called in a library, and should only be called in application code. *)
-val write_new_string_and_sexp_formats__read_both : unit -> unit
-
-(** This does the same as [write_new_string_and_sexp_formats__read_both] and additionally
-    [of_string] and [t_of_sexp] will not accept formats without a timezone. *)
-val write_new_string_and_sexp_formats__read_only_new : unit -> unit
-
-(** If this is called it asserts that use_new_string_and_sexp_formats has not been called,
-    and will cause use_new_string_and_sexp_formats to throw an exception if it is called
-    later *)
-val forbid_new_string_and_sexp_formats : unit -> unit
-
-val current_string_and_sexp_format : unit -> [
-  | `Old
-  | `Force_old
-  | `Write_new_read_both
-  | `Write_new_read_only_new
-]
-
 include Hashable_binable    with type t := t
 include Comparable_binable  with type t := t
 include Robustly_comparable with type t := t
-include Stringable          with type t := t
 include Floatable           with type t := t
 include Pretty_printer.S    with type t := t
+
+(** The [{to,of}_string] functions in [Time] will produce times with time zone
+    indications, but are generous in what they will read in.  String/Sexp.t
+    representations without time zone indications are assumed to be in the machine's local
+    zone. *)
+include Stringable          with type t := t
 
 (** {5 values} *)
 
@@ -127,13 +109,17 @@ val to_string_deprecated : t -> string
     The string will display the date and of-day of [zone] together with [zone] as an
     offset from UTC.  The [zone] argument defaults to the machine's timezone.
 *)
-val to_string_abs :
-  ?zone:Zone.t
+val to_string_abs
+  :  ?zone:Zone.t
   -> t
   -> string
 
+(** [of_string_abs s] is like [of_string], but demands that [s] indicate the timezone the
+    time is expressed in. *)
 val of_string_abs : string -> t
 
+(** [t_of_sexp_abs sexp] as [t_of_sexp], but demands that [sexp] indicate the timezone the
+    time is expressed in. *)
 val t_of_sexp_abs : Sexp.t -> t
 
 (** {6 Miscellaneous} *)

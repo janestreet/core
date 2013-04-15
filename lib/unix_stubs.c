@@ -28,6 +28,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <fnmatch.h>
+#include <wordexp.h>
 #include <stdio.h>
 #include <assert.h>
 #include <time.h>
@@ -47,12 +48,12 @@
 #define FNM_FILE_NAME FNM_PATHNAME
 #endif
 
+#if defined(__NetBSD__)
+#define FNM_FILE_NAME FNM_PATHNAME
+#endif
+
 #include "ocaml_utils.h"
 #include "config.h"
-
-#if defined(JSC_WORDEXP)
-#include <wordexp.h>
-#endif
 
 CAMLprim value unix_error_stub(value v_errcode, value v_cmdname, value cmd_arg)
 {
@@ -1376,8 +1377,6 @@ CAMLprim value unix_fnmatch(value v_flags, value v_glob, value v_str)
   }
 }
 
-#if defined(JSC_WORDEXP)
-
 CAMLprim value unix_wordexp_make_flags(value v_flags)
 {
   int flags = 0, i = Wosize_val(v_flags);
@@ -1423,7 +1422,6 @@ CAMLprim value unix_wordexp(value v_flags, value v_str)
   }
 }
 
-#endif /* defined(JSC_WORDEXP) */
 
 /* System information */
 

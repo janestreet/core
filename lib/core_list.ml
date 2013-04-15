@@ -338,13 +338,13 @@ let slow_append l1 l2 = List.rev_append (List.rev l1) l2
    basically two optimizations in play: loop unrolling, and dynamic switching between
    stack and heap allocation.
 
-   The loop-unrolling is straight-forward, we just unroll 5 levels of the loop.  This
-   makes each iteration faster, and also reduces the number of stack frames consumed per
-   list element.
+   The loop-unrolling is straightforward, we just unroll 5 levels of the loop.  This makes
+   each iteration faster, and also reduces the number of stack frames consumed per list
+   element.
 
    The dynamic switching is done by counting the number of stack frames, and then
    switching to the "slow" implementation when we exceed a given limit.  This means that
-   short lists use the fast stack-allocation method, and long-lists use a slower one that
+   short lists use the fast stack-allocation method, and long lists use a slower one that
    doesn't require stack space.
 *)
 let rec count_append l1 l2 count =
@@ -623,21 +623,35 @@ let rec last list = match list with
   | [] -> None
 
 (* returns list without adjacent duplicates *)
-let dedup_without_sorting ?(compare=Pervasives.compare) list =
+let remove_consecutive_duplicates list ~equal =
   let rec loop list accum = match list with
     | [] -> accum
     | hd :: [] -> hd :: accum
     | hd1 :: hd2 :: tl ->
-        if compare hd1 hd2 = 0
+        if equal hd1 hd2
         then loop (hd2 :: tl) accum
         else loop (hd2 :: tl) (hd1 :: accum)
   in
-  loop list []
+  rev (loop list [])
+
+TEST = remove_consecutive_duplicates ~equal:Pervasives.(=) [] = []
+TEST = remove_consecutive_duplicates ~equal:Pervasives.(=) [5;5;5;5;5] = [5]
+TEST = remove_consecutive_duplicates ~equal:Pervasives.(=) [5;6;5;6;5;6] = [5;6;5;6;5;6]
+TEST = remove_consecutive_duplicates ~equal:Pervasives.(=) [5;5;6;6;5;5;8;8] = [5;6;5;8]
+TEST = length (remove_consecutive_duplicates [(0,1);(0,2);(2,2);(4,1)]
+  ~equal:(fun (a,_) (b,_) -> Pervasives.(=) a b)) = 3
+TEST = length (remove_consecutive_duplicates [(0,1);(2,2);(0,2);(4,1)]
+  ~equal:(fun (a,_) (b,_) -> Pervasives.(=) a b)) = 4
+TEST = length (remove_consecutive_duplicates [(0,1);(2,1);(0,2);(4,2)]
+  ~equal:(fun (_,a) (_,b) -> Pervasives.(=) a b)) = 2
+TEST = length (remove_consecutive_duplicates [(0,1);(2,2);(0,2);(4,1)]
+  ~equal:(fun (_,a) (_,b) -> Pervasives.(=) a b)) = 3
 
 (** returns sorted version of list with duplicates removed *)
 let dedup ?(compare=Pervasives.compare) list =
-  let sorted = List.sort ~cmp:(fun x y -> compare y x) list in
-  dedup_without_sorting ~compare sorted
+  let equal x x' = compare x x' = 0 in
+  let sorted = List.sort ~cmp:compare list in
+  remove_consecutive_duplicates ~equal sorted
 
 TEST = dedup [] = []
 TEST = dedup [5;5;5;5;5] = [5]

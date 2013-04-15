@@ -19,7 +19,7 @@ let create ?(binary = true) ?(append = false) ?(perm = 0o666) file =
   let flags = [Open_wronly; Open_creat] in
   let flags = (if binary then Open_binary else Open_text) :: flags in
   let flags = (if append then Open_append else Open_trunc) :: flags in
-  Sys_open_patch.open_out_gen flags perm file
+  open_out_gen flags perm file
 ;;
 
 let set_binary_mode = Pervasives.set_binary_mode_out

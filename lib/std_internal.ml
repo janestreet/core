@@ -55,6 +55,8 @@ module Nativeint = Core_nativeint
 
 module Lazy = Core_lazy
 
+module Ref = Ref
+
 (* handy shortcuts *)
 include Common
 
@@ -71,6 +73,9 @@ include (Sexplib.Conv : sig
   type mat = Sexplib.Conv.mat with sexp
   type vec = Sexplib.Conv.vec with sexp
 
+  (* [sexp_of_opaque] and [opaque_of_sexp] are used by the code generated from
+     [with sexp], [<:sexp_of< >>], and [<:of_sexp< >>].  The type [_ sexp_opaque] expands
+     to uses of [sexp_of_opaque] and [opaque_of_sexp]. *)
   val sexp_of_opaque : _ -> Sexp.t
   val opaque_of_sexp : Sexp.t -> _
 

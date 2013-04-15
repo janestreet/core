@@ -1,13 +1,15 @@
-(* The [Backtrace] module deals with two different kinds of backtraces:
+(** Dealing with stack backtraces.
 
-   1. snapshots of the stack obtained on demand ([Backtrace.get])
-   2. the stack frames unwound when an exception is raised ([Backtrace.Exn])
+    The [Backtrace] module deals with two different kinds of backtraces:
+
+    1. snapshots of the stack obtained on demand ([Backtrace.get])
+    2. the stack frames unwound when an exception is raised ([Backtrace.Exn])
 *)
 
-(* A [Backtrace.t] is a snapshot of the stack obtained by calling [Backtrace.get].  It is
-   represented as a string with newlines separating the frames.  [sexp_of_t] splits the
-   string at newlines and removes some of the cruft, leaving a human-friendly list of
-   frames, but [to_string] does not. *)
+(** A [Backtrace.t] is a snapshot of the stack obtained by calling [Backtrace.get].  It is
+    represented as a string with newlines separating the frames.  [sexp_of_t] splits the
+    string at newlines and removes some of the cruft, leaving a human-friendly list of
+    frames, but [to_string] does not. *)
 type t with sexp_of
 
 val get : (unit -> t) Or_error.t

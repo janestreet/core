@@ -427,8 +427,6 @@ external fnmatch :
 
 let fnmatch ?flags ~pat fname = fnmatch (Fnmatch_flags.make flags) ~pat fname
 
-IFDEF WORDEXP THEN
-
 module Wordexp_flags = struct
   type _flag = [ `No_cmd | `Show_err | `Undef ] with sexp
 
@@ -450,13 +448,7 @@ end
 
 external wordexp : Wordexp_flags.t -> string -> string array = "unix_wordexp"
 
-let wordexp = Ok (fun ?flags str -> wordexp (Wordexp_flags.make flags) str)
-
-ELSE
-
-let wordexp = unimplemented "Unix.wordexp"
-
-ENDIF
+let wordexp ?flags str = wordexp (Wordexp_flags.make flags) str
 
 (* System information *)
 

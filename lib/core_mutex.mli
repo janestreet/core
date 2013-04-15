@@ -10,13 +10,10 @@ val equal : t -> t -> bool
 *)
 val lock : t -> unit
 
-(** [try_lock mtx] like [lock], but returns immediately with [false]
-    if the mutex is already being held by another thread, or acquires
-    the mutex and returns [true] otherwise.
-
-    @raise Unix_error if [try_lock] attempts to acquire [mtx] recursively.
-*)
-val try_lock : t -> bool
+(** [try_lock] is like [lock], but always returns immediately.  If the calling thread or
+    another one already has the mutex it returns [`Already_held_by_me_or_other], otherwise
+    it locks it and returns [`Acquired]. *)
+val try_lock : t -> [ `Already_held_by_me_or_other | `Acquired ]
 
 (** [timedlock mtx timeout] like [lock], but takes a [timeout] parameter.
     @return [true] if the mutex was acquired, or [false] when [timeout]
@@ -32,8 +29,6 @@ val timedlock : (t -> Time.t -> bool) Or_error.t
     mutex or a mutex held by another thread.
 *)
 val unlock : t -> unit
-
-val am_holding_mutex : t -> bool
 
 (* [critical_section t ~f] locks [t], runs [f], unlocks [t], and returns the result of
    [f] (or raises if [f] raised). *)
