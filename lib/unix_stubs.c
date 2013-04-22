@@ -28,7 +28,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <fnmatch.h>
-#include <wordexp.h>
 #include <stdio.h>
 #include <assert.h>
 #include <time.h>
@@ -48,12 +47,12 @@
 #define FNM_FILE_NAME FNM_PATHNAME
 #endif
 
-#if defined(__NetBSD__)
-#define FNM_FILE_NAME FNM_PATHNAME
-#endif
-
 #include "ocaml_utils.h"
 #include "config.h"
+
+#if defined(JSC_WORDEXP)
+#include <wordexp.h>
+#endif
 
 CAMLprim value unix_error_stub(value v_errcode, value v_cmdname, value cmd_arg)
 {
@@ -1356,7 +1355,7 @@ CAMLprim value unix_fnmatch_make_flags(value v_flags)
       case 0 : flags |= FNM_NOESCAPE; break;
       case 1 : flags |= FNM_PATHNAME; break;
       case 2 : flags |= FNM_PERIOD; break;
-      case 3 : flags |= FNM_FILE_NAME; break;
+      case 3 : flags |= FNM_PATHNAME; break;
       case 4 : flags |= FNM_LEADING_DIR; break;
       default : flags |= FNM_CASEFOLD; break;
     }
@@ -1376,6 +1375,8 @@ CAMLprim value unix_fnmatch(value v_flags, value v_glob, value v_str)
     default : caml_failwith("fnmatch");
   }
 }
+
+#if defined(JSC_WORDEXP)
 
 CAMLprim value unix_wordexp_make_flags(value v_flags)
 {
@@ -1422,6 +1423,7 @@ CAMLprim value unix_wordexp(value v_flags, value v_str)
   }
 }
 
+#endif /* defined(JSC_WORDEXP) */
 
 /* System information */
 
@@ -1496,6 +1498,50 @@ CAMLprim value unix_if_indextoname(value v_index)
 MK_MCAST(join, ADD)
 MK_MCAST(leave, DROP)
 
+/* Similar to it's use in linux_ext, these are unfortunately not exported presently. It seems we
+   should either get the functions exported, or have all portable ip level options (such as
+   IP_ADD_MEMBERSHIP, IP_DROP_MEMBERSHIP, IP_MULTICAST_TTL, IP_MULTICAST_LOOP, and
+   IP_MULTICAST_IF) added to the stdlib. */
+enum option_type {
+  TYPE_BOOL = 0,
+  TYPE_INT = 1,
+  TYPE_LINGER = 2,
+  TYPE_TIMEVAL = 3,
+  TYPE_UNIX_ERROR = 4
+};
+
+extern value unix_getsockopt_aux(
+  char *name,
+  enum option_type ty, int level, int option,
+  value v_socket);
+extern value unix_setsockopt_aux(
+  char *name,
+  enum option_type ty, int level, int option,
+  value v_socket, value v_status);
+
+CAMLprim value unix_mcast_get_ttl(value v_socket)
+{
+  return
+    unix_getsockopt_aux("getsockopt", TYPE_INT, IPPROTO_IP, IP_MULTICAST_TTL, v_socket);
+}
+
+CAMLprim value unix_mcast_set_ttl(value v_socket, value v_ttl)
+{
+  return
+    unix_setsockopt_aux( "setsockopt", TYPE_INT, IPPROTO_IP, IP_MULTICAST_TTL, v_socket, v_ttl);
+}
+
+CAMLprim value unix_mcast_get_loop(value v_socket)
+{
+  return
+    unix_getsockopt_aux("getsockopt", TYPE_BOOL, IPPROTO_IP, IP_MULTICAST_LOOP, v_socket);
+}
+
+CAMLprim value unix_mcast_set_loop(value v_socket, value v_loop)
+{
+  return
+    unix_setsockopt_aux( "setsockopt", TYPE_BOOL, IPPROTO_IP, IP_MULTICAST_LOOP, v_socket, v_loop);
+}
 
 /* Scheduling */
 

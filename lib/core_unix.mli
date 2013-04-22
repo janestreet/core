@@ -1873,7 +1873,7 @@ val fnmatch :
 
 (* See man page for wordexp. *)
 val wordexp :
-  ?flags : [ `No_cmd | `Show_err | `Undef ] list -> string -> string array
+  (?flags : [ `No_cmd | `Show_err | `Undef ] list -> string -> string array) Or_error.t
 
 (** {2 System information} *)
 
@@ -1895,23 +1895,46 @@ val uname : unit -> Utsname.t
 (* [if_indextoname ifindex] If [ifindex] is an interface index, then
    the function returns the interface name.  Otherwise, it raises
    [Unix_error]. *)
-external if_indextoname : int -> string = "unix_if_indextoname"
+val if_indextoname : int -> string
 
 (** [mcast_join ?ifname sock addr] join a multicast group at [addr]
     with socket [sock], optionally using network interface [ifname].
 
     @param ifname default = any interface
 *)
-external mcast_join :
-  ?ifname : string -> File_descr.t -> sockaddr -> unit = "unix_mcast_join"
+val mcast_join : ?ifname : string -> File_descr.t -> sockaddr -> unit
 
 (** [mcast_leave ?ifname sock addr] leaves a multicast group at [addr]
     with socket [sock], optionally using network interface [ifname].
 
     @param ifname default = any interface
 *)
-external mcast_leave :
-  ?ifname : string -> File_descr.t -> sockaddr -> unit = "unix_mcast_leave"
+val mcast_leave : ?ifname : string -> File_descr.t -> sockaddr -> unit
+
+(** CR-someday bnigito: I am open to suggestions as to how to better integrate these IP
+    level options into the other get/set sockopt routines. It would seem we would need to
+    change the ocaml unix lib to integrate them into that framework (and indeed to
+    normalize them with join and leave we would need to add something like
+    "(get/set)sockopt_group" or some such.
+
+    sweeks: Perhaps we should copy the approach used in [Async.Socket.Opt]. *)
+
+(** [get_mcast_ttl sock] reads the time-to-live value of outgoing multicast packets for
+    socket [sock]. *)
+val get_mcast_ttl : File_descr.t -> int
+
+(** [set_mcast_ttl sock ttl] sets the time-to-live value of outgoing multicast packets for
+    socket [sock] to [ttl]. *)
+val set_mcast_ttl : File_descr.t -> int -> unit
+
+(** [get_mcast_loop sock] reads the boolean argument that determines whether sent
+    multicast packets are looped back to local sockets. *)
+val get_mcast_loop : File_descr.t -> bool
+
+(** [set_mcast_loop sock loop] sets the boolean argument that determines whether sent
+    multicast packets are looped back to local sockets. *)
+val set_mcast_loop : File_descr.t -> bool -> unit
+
 
 module Scheduler : sig
   module Policy : sig

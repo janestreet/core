@@ -427,6 +427,8 @@ external fnmatch :
 
 let fnmatch ?flags ~pat fname = fnmatch (Fnmatch_flags.make flags) ~pat fname
 
+IFDEF WORDEXP THEN
+
 module Wordexp_flags = struct
   type _flag = [ `No_cmd | `Show_err | `Undef ] with sexp
 
@@ -448,7 +450,13 @@ end
 
 external wordexp : Wordexp_flags.t -> string -> string array = "unix_wordexp"
 
-let wordexp ?flags str = wordexp (Wordexp_flags.make flags) str
+let wordexp = Ok (fun ?flags str -> wordexp (Wordexp_flags.make flags) str)
+
+ELSE
+
+let wordexp = unimplemented "Unix.wordexp"
+
+ENDIF
 
 (* System information *)
 
@@ -478,6 +486,15 @@ external mcast_leave :
   ?ifname : string -> File_descr.t -> Unix.sockaddr -> unit
   = "unix_mcast_leave"
 ;;
+
+external get_mcast_ttl : File_descr.t -> int = "unix_mcast_get_ttl"
+
+external set_mcast_ttl : File_descr.t -> int -> unit = "unix_mcast_set_ttl"
+
+external get_mcast_loop : File_descr.t -> bool = "unix_mcast_get_loop"
+
+external set_mcast_loop : File_descr.t -> bool -> unit = "unix_mcast_set_loop"
+
 
 module Scheduler = struct
   module Policy = struct
