@@ -11,7 +11,7 @@ let stdin = Pervasives.stdin
 let create ?(binary = true) file =
   let flags = [Open_rdonly] in
   let flags = if binary then Open_binary :: flags else flags in
-  Sys_open_patch.open_in_gen flags 0o000 file
+  open_in_gen flags 0o000 file
 ;;
 
 external close : t -> unit = "fixed_close_channel";;

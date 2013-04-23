@@ -60,6 +60,7 @@ module Date = Time.Date
 module Daemon = Daemon
 module Dequeue = Dequeue
 module Doubly_linked = Doubly_linked
+module Process_env = Process_env
 module Error = Error
 module Equal = Equal
 module Exn = Exn

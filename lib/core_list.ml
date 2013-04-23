@@ -338,13 +338,13 @@ let slow_append l1 l2 = List.rev_append (List.rev l1) l2
    basically two optimizations in play: loop unrolling, and dynamic switching between
    stack and heap allocation.
 
-   The loop-unrolling is straight-forward, we just unroll 5 levels of the loop.  This
-   makes each iteration faster, and also reduces the number of stack frames consumed per
-   list element.
+   The loop-unrolling is straightforward, we just unroll 5 levels of the loop.  This makes
+   each iteration faster, and also reduces the number of stack frames consumed per list
+   element.
 
    The dynamic switching is done by counting the number of stack frames, and then
    switching to the "slow" implementation when we exceed a given limit.  This means that
-   short lists use the fast stack-allocation method, and long-lists use a slower one that
+   short lists use the fast stack-allocation method, and long lists use a slower one that
    doesn't require stack space.
 *)
 let rec count_append l1 l2 count =

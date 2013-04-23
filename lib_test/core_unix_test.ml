@@ -18,4 +18,17 @@ let test =
       (fun () ->
         "stat-large" @? with_large_file (fun fn -> stat fn);
         "lstat-large" @? with_large_file (fun fn -> lstat fn));
+
+      "mcast_sockopts" >::
+        (fun () ->
+          let sock = Unix.socket ~domain:Unix.PF_INET ~kind:Unix.SOCK_DGRAM ~protocol:0 in
+          Unix.set_mcast_ttl sock 2;
+          assert ((Unix.get_mcast_ttl sock) = 2);
+          Unix.set_mcast_ttl sock 4;
+          assert ((Unix.get_mcast_ttl sock) = 4);
+          Unix.set_mcast_loop sock true;
+          assert (Unix.get_mcast_loop sock);
+          Unix.set_mcast_loop sock false;
+          assert (not (Unix.get_mcast_loop sock));
+          Unix.close sock);
     ]

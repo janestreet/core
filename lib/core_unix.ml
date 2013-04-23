@@ -487,6 +487,15 @@ external mcast_leave :
   = "unix_mcast_leave"
 ;;
 
+external get_mcast_ttl : File_descr.t -> int = "unix_mcast_get_ttl"
+
+external set_mcast_ttl : File_descr.t -> int -> unit = "unix_mcast_set_ttl"
+
+external get_mcast_loop : File_descr.t -> bool = "unix_mcast_get_loop"
+
+external set_mcast_loop : File_descr.t -> bool -> unit = "unix_mcast_set_loop"
+
+
 module Scheduler = struct
   module Policy = struct
     type t = [ `Fifo | `Round_robin | `Other ] with sexp

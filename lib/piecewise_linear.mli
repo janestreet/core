@@ -2,26 +2,22 @@ open Std_internal
 
 (** piece-wise linear interpolation from float-like types to float *)
 
-(* todo: add to_float/of_float for y values for more generality? *)
+open Piecewise_linear_intf
 
-module type Key = sig
-  type t with bin_io, sexp
-  include Floatable with type t := t
-end
+module type S = S
+module type S_invertible = S_invertible
 
-module type S = sig
-  type key
-  type t with bin_io, sexp
+module Make (Key : Key) (Value : Value) : S
+  with type key = Key.t
+  with type value = Value.t
 
-  val create : (key * float) list -> (t, string) Result.t
-  val get : t -> key -> float
-  val to_knots : t -> (key * float) list
-end
+module Make_invertible (Key : Key) (Value : Value) : S_invertible
+  with type key = Key.t
+  with type value = Value.t
 
-module Make (Key : Key) : S with type key = Key.t
+module Time  : S with type key = Time.t  with type value = float
+module Ofday : S with type key = Ofday.t with type value = float
+module Span  : S with type key = Span.t  with type value = float
+module Float : S with type key = float   with type value = float
+module Int   : S with type key = int     with type value = float
 
-module Time : S with type key = Time.t
-module Ofday : S with type key = Ofday.t
-module Span : S with type key = Span.t
-module Float : S with type key = float
-module Int : S with type key = int

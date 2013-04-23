@@ -79,7 +79,7 @@ val readdir : string -> string array
 val fold_dir : init:'acc -> f:('acc -> string -> 'acc) -> string -> 'acc
 
 (**
-   Same as readder, but return a list rather than an array.
+   Same as [readdir], but return a list rather than an array.
 *)
 val ls_dir : string -> string list
 

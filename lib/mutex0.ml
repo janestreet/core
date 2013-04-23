@@ -36,11 +36,8 @@ let update_broadcast mtx cnd ~f =
     Condition.broadcast cnd;
     res)
 
-let am_holding_mutex mtx =
-  match
-    try if try_lock mtx then `Free else `Held_by_other
-    with _ -> `Held_by_me
-  with
-  | `Free -> unlock mtx; false
-  | `Held_by_me -> true
-  | `Held_by_other -> false
+let try_lock m =
+  if try_lock m then
+    `Acquired
+  else
+    `Already_held_by_me_or_other
