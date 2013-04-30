@@ -11,7 +11,7 @@ module Stable = struct
   module V1 = struct
     (* IF THIS REPRESENTATION EVER CHANGES, ENSURE THAT EITHER
        (1) all values serialize the same way in both representations, or
-       (2) you add a new Weekday version to stable.ml *)
+       (2) you add a new Day_of_week version to stable.ml *)
     type t = int
 
     let invariant t =
@@ -29,7 +29,7 @@ module Stable = struct
       if 0 <= i && i < num_days then
         i
       else
-        failwithf "Weekday.of_int_exn %d" i ()
+        failwithf "Day_of_week.of_int_exn %d" i ()
     ;;
 
     let to_int t = t
@@ -110,7 +110,7 @@ module Stable = struct
     end)
   end
 
-  TEST_MODULE "Weekday.V1" = Stable_unit_test.Make (struct
+  TEST_MODULE "Day_of_week.V1" = Stable_unit_test.Make (struct
     include V1
 
     let equal = equal

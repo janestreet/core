@@ -181,3 +181,53 @@ type 'a sexp_option = 'a option with bin_io, compare
 type 'a sexp_opaque = 'a        with bin_io, compare
 
 include Ordering.Export
+
+(* The code below checks that the signatures in core_map.mli and core_set.mli are
+   consistent with the generic map and set signatures defined in core_map_intf.ml
+   and core_set_intf.ml. *)
+
+let module M : sig
+  open Core_set_intf
+
+  module Tree : sig
+    type ('a, 'b) t
+
+    include Creators_and_accessors2_with_comparator
+      with type ('a, 'b) set  := ('a, 'b) t
+      with type ('a, 'b) t    := ('a, 'b) t
+      with type ('a, 'b) tree := ('a, 'b) t
+  end
+
+  type ('a, 'b) t
+
+  include Accessors2
+    with type ('a, 'b) t    := ('a, 'b) t
+    with type ('a, 'b) tree := ('a, 'b) Tree.t
+
+  include Creators2_with_comparator
+    with type ('a, 'b) set  := ('a, 'b) t
+    with type ('a, 'b) t    := ('a, 'b) t
+    with type ('a, 'b) tree := ('a, 'b) Tree.t
+end = Set in ()
+
+let module M : sig
+  open Core_map_intf
+
+  module Tree : sig
+    type ('a, 'b, 'c) t
+
+    include Creators_and_accessors3_with_comparator
+      with type ('a, 'b, 'c) t    := ('a, 'b, 'c) t
+      with type ('a, 'b, 'c) tree := ('a, 'b, 'c) t
+  end
+
+  type ('a, 'b, 'c) t
+
+  include Accessors3
+    with type ('a, 'b, 'c) t    := ('a, 'b, 'c) t
+    with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
+
+  include Creators3_with_comparator
+    with type ('a, 'b, 'c) t    := ('a, 'b, 'c) t
+    with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
+end = Map in ()

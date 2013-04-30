@@ -21,7 +21,7 @@ module Span           = Span          .Stable
 module String_id      = String_id     .Stable
 module Time           = Time          .Stable
 module User_and_group = User_and_group.Stable
-module Weekday        = Weekday       .Stable
+module Day_of_week        = Day_of_week       .Stable
 module Zone           = Zone          .Stable
 
 

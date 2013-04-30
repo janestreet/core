@@ -5,6 +5,10 @@
     * It uses labelled arguments.
     * It returns an option rather than raising End_of_file. *)
 
+(* Note: an in_channel is a custom block with a finalizer, and so is allocated directly
+   to the major heap. Creating a lot of in_channels can result in many major collections
+   and poor performance. *)
+
 type t = in_channel
 
 val stdin : t

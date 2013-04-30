@@ -121,20 +121,29 @@ module Stable = struct
       Span.of_sec (utc_epoch -. epoch)
     ;;
 
-    let to_string_abs ?(zone=Zone.machine_zone ()) time =
-      let date, ofday  = to_date_ofday time zone in
+    let offset_string time ~zone =
       let utc_offset   = utc_offset time ~zone in
       let is_utc       = Span.(=) utc_offset Span.zero in
-      String.concat ~sep:"" (
-        Date.to_string date
-        :: " "
-         :: Ofday.to_string ofday
-         :: (if is_utc then ["Z"]
-           else [
-             (if Span.(<) utc_offset Span.zero then "-" else "+");
-             Ofday.to_string_trimmed
-               (Ofday.of_span_since_start_of_day (Span.abs utc_offset))
-           ]))
+      if is_utc
+      then "Z"
+      else
+        String.concat
+          [ (if Span.(<) utc_offset Span.zero then "-" else "+");
+            Ofday.to_string_trimmed
+              (Ofday.of_span_since_start_of_day (Span.abs utc_offset));
+          ]
+    ;;
+
+    let to_string_abs_parts ?(zone=Zone.machine_zone ()) time =
+      let date, ofday   = to_date_ofday time zone in
+      let offset_string = offset_string time ~zone in
+      [ Date.to_string date;
+        String.concat ~sep:"" [ Ofday.to_string ofday; offset_string ]
+      ]
+    ;;
+
+    let to_string_abs ?zone time =
+      String.concat ~sep:" " (to_string_abs_parts ?zone time)
     ;;
 
     let to_string_trimmed t =
@@ -328,11 +337,7 @@ module Stable = struct
     let t_of_sexp_abs sexp = t_of_sexp_gen sexp of_string_abs
 
     let sexp_of_t t =
-      match String.lsplit2 (to_string t) ~on:' ' with
-      | Some (date,ofday) ->
-        Sexp.List [Sexp.Atom date; Sexp.Atom ofday]
-      | None ->
-        raise (Bug "Time.sexp_of_t: unexpected None")
+      Sexp.List (List.map (to_string_abs_parts t) ~f:(fun s -> Sexp.Atom s))
     ;;
 
     module C = struct
@@ -344,14 +349,13 @@ module Stable = struct
 
       let comparator = T.comparator
 
-      (* In 108.06a and earlier, times in sexps of Maps and Sets were floats.  Here we
-         define [sexp_of_t] to produce the float form.  We also override [t_of_sexp] to
-         accept either the float or the date-ofday form.  Someday, once we think most
-         programs are at or beyond 108.06a, and hence accept either form, we will change
-         [sexp_of_t] here so that times in Maps and Sets are represented by the date-ofday
-         form.  Then, someday after that, once we believe most programs are beyond that
-         point, we will change [t_of_sexp] to only accept the date-ofday form. *)
-      let sexp_of_t t = Float.sexp_of_t (T.to_float t)
+      (* In 108.06a and earlier, times in sexps of Maps and Sets were raw floats.  From
+         108.07 through 109.13, the output format remained raw as before, but both the raw
+         and pretty format were accepted as input.  From 109.14 on, the output format was
+         changed from raw to pretty, while continuing to accept both formats.  Once we
+         believe most programs are beyond 109.14, we will switch the input format to no
+         longer accept raw. *)
+      let sexp_of_t = sexp_of_t
 
       let t_of_sexp sexp =
         match Option.try_with (fun () -> T.of_float (Float.t_of_sexp sexp)) with
@@ -364,18 +368,8 @@ module Stable = struct
     module Set = Core_set.Make_binable_using_comparator (C)
 
     TEST =
-      Pervasives.(=) (Set.sexp_of_t (Set.of_list [epoch]))
-        (Sexp.List [Float.sexp_of_t (to_float epoch)])
-    ;;
-
-    TEST =
       Set.equal (Set.of_list [epoch])
         (Set.t_of_sexp (Sexp.List [Float.sexp_of_t (to_float epoch)]))
-    ;;
-
-    TEST =
-      Set.equal (Set.of_list [epoch])
-        (Set.t_of_sexp (Sexp.List [sexp_of_t epoch]))
     ;;
 
     include Pretty_printer.Register (struct

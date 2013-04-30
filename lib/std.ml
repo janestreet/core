@@ -143,7 +143,7 @@ IFDEF BUILD_VERSION_UTIL THEN
   module Version_util = Version_util
 ENDIF
 module Weak = Core_weak
-module Weekday = Weekday
+module Day_of_week = Day_of_week
 module Word_size = Word_size
 module Zone = Zone
 
@@ -152,3 +152,32 @@ module type Unique_id = Unique_id.Id
 include T
 
 let _squelch_unused_module_warning_ = ()
+
+(* These checks are outside modules rather than in them because we want to check a
+   property of the module as it is exported in Core.Std, and so we need to feed the entire
+   module to the functor. *)
+TEST_MODULE = struct
+
+  module Check = Comparable.Check_sexp_conversion
+
+  include Check (struct
+    include Time
+    let examples = [ epoch ]
+  end)
+
+  include Check (struct
+    include Time.Ofday
+    let examples = [ start_of_day ]
+  end)
+
+  include Check (struct
+    include Time.Span
+    let examples = [ of_sec 13. ]
+  end)
+
+  include Check (struct
+    include Month
+    let examples = all
+  end)
+
+end

@@ -857,8 +857,6 @@ let stdin = Unix.stdin
 let stdout = Unix.stdout
 let stderr = Unix.stderr
 
-IFDEF OCAML_4 THEN
-
 type open_flag =
 Unix.open_flag =
 | O_RDONLY
@@ -875,26 +873,6 @@ Unix.open_flag =
 | O_RSYNC
 | O_SHARE_DELETE
 with sexp
-
-ELSE
-
-type open_flag =
-Unix.open_flag =
-| O_RDONLY
-| O_WRONLY
-| O_RDWR
-| O_NONBLOCK
-| O_APPEND
-| O_CREAT
-| O_TRUNC
-| O_EXCL
-| O_NOCTTY
-| O_DSYNC
-| O_SYNC
-| O_RSYNC
-with sexp
-
-ENDIF (* OCAML_4 *)
 
 type file_perm = int with of_sexp
 
@@ -1086,6 +1064,7 @@ let src_dst f ~src ~dst =
 ;;
 
 let unlink = unary_filename Unix.unlink
+
 let rename = src_dst Unix.rename
 
 let link ?(force = false) ~target ~link_name () =
@@ -1148,6 +1127,18 @@ let access filename perm =
 ;;
 
 let access_exn filename perm = Result.ok_exn (access filename perm)
+
+external remove : string -> unit = "core_unix_remove"
+let remove = unary_filename remove
+
+TEST =
+  let dir = Core_filename.temp_dir "remove_test" "" in
+  let file = dir ^/ "test" in
+  Out_channel.write_all (dir ^ "/test") ~data:"testing Core.Unix.remove";
+  remove file;
+  remove dir;
+  Result.is_error (access file [`Exists])
+  && Result.is_error (access dir [`Exists])
 
 let dup = unary_fd Unix.dup
 

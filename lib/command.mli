@@ -355,8 +355,31 @@ val basic
 *)
 val group : summary:string -> ?readme:(unit -> string) -> (string * t) list -> t
 
-(** run a command against [Sys.argv] *)
-val run : ?version:string -> ?build_info:string -> ?argv:string list -> t -> unit
+(** Run a command against [Sys.argv], or [argv] if it is specified.
+
+    [extend] can be used to add extra command line arguments to basic subcommands of the
+    command.  [extend] will be passed the (fully expanded) path to a command, and its
+    output will be appended to the list of arguments being processed.  For example,
+    suppose a program like this is compiled into [exe]:
+
+      {[
+        let bar = Command.basic ...
+        let foo = Command.group ~summary:... ["bar", bar]
+        let main = Command.group ~summary:... ["foo", foo]
+        Command.run ~extend:(fun _ -> ["-baz"]) main
+      ]}
+
+    Then if a user ran [exe f b], [extend] would be passed [["foo"; "bar"]] and ["-baz"]
+    would be appended to the command line for processing by [bar].  This can be used to
+    add a default flags section to a user config file.
+*)
+val run
+  :  ?version:string
+  -> ?build_info:string
+  -> ?argv:string list
+  -> ?extend:(string list -> string list)
+  -> t
+  -> unit
 
 (** [Deprecated] should be used only by [Core_extended.Deprecated_command].  At some point
     it will go away. *)

@@ -896,8 +896,6 @@ let filter_map ~comparator t ~f =
   }
 ;;
 
-type 'a elt = 'a
-
 include Accessors
 
 let compare _ _ t1 t2 = compare_direct t1 t2
@@ -910,12 +908,12 @@ module Creators (Elt : Comparator.S1) : sig
 
   val t_of_sexp : (Sexp.t -> 'a Elt.t) -> Sexp.t -> ('a, 'comparator) t_
 
-  include Creators
-    with type ('a, 'b) t := ('a, 'b) t_
-    with type ('a, 'b) set := ('a, 'b) set
-    with type ('a, 'b) tree := ('a, 'b) tree
-    with type 'a elt := 'a elt_
-    with type ('a, 'b, 'c) options := ('a, 'b, 'c) without_comparator
+  include Creators_generic
+    with type ('a, 'b) t           := ('a, 'b) t_
+    with type ('a, 'b) set         := ('a, 'b) set
+    with type ('a, 'b) tree        := ('a, 'b) tree
+    with type 'a elt               := 'a elt_
+    with type ('a, 'b, 'c) options := ('a, 'b, 'c) Without_comparator.t
 
 end = struct
 
@@ -1057,8 +1055,6 @@ module Poly = struct
     include Make_tree (Comparator.Poly)
 
     type 'elt t = ('elt, Comparator.Poly.comparator) tree
-    type ('a, 'comparator) tree = 'a Tree0.t
-    type ('a, 'b) t_ = 'a t
 
     let sexp_of_t sexp_of_elt t = Tree0.sexp_of_t sexp_of_elt t
 
@@ -1076,13 +1072,13 @@ module Poly = struct
   end
 end
 
-module type S = S
-  with type ('a, 'b) set  = ('a, 'b) t
-  with type ('a, 'b) tree = ('a, 'b) tree
+module type S = S0
+  with type ('a, 'b) set  := ('a, 'b) t
+  with type ('a, 'b) tree := ('a, 'b) tree
 
-module type S_binable = S_binable
-  with type ('a, 'b) set  = ('a, 'b) t
-  with type ('a, 'b) tree = ('a, 'b) tree
+module type S_binable = S0_binable
+  with type ('a, 'b) set  := ('a, 'b) t
+  with type ('a, 'b) tree := ('a, 'b) tree
 
 module Make_using_comparator (Elt : Comparator.S) = struct
 
@@ -1106,7 +1102,6 @@ module Make_using_comparator (Elt : Comparator.S) = struct
     include Make_tree (Elt_S1)
 
     type t = (Elt.t, Elt.comparator) tree
-    type ('a, 'b) t_ = t
 
     let compare t1 t2 = compare_direct t1 t2
 
@@ -1150,8 +1145,6 @@ module Make_binable (Elt : Comparator.Pre_binable) =
 
 module Tree = struct
   type ('a, 'comparator) t = ('a, 'comparator) tree
-  type ('a, 'comparator) set = ('a, 'comparator) t
-  type ('a, 'comparator) tree = ('a, 'comparator) t
 
   let ce comparator = comparator.Comparator.compare
 

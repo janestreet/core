@@ -11,26 +11,26 @@ module Unit_tests
   end)
   (Set : sig
     type ('a, 'b) t_
-    type ('a, 'b) tree
     type ('a, 'b) set
+    type ('a, 'b) tree
 
     type ('a, 'b, 'c) create_options
 
-    include Creators
-      with type ('a, 'b) t    := ('a, 'b) t_
-      with type ('a, 'b) set  := ('a, 'b) set
-      with type ('a, 'b) tree := ('a, 'b) tree
-      with type 'a elt := 'a Elt.t
+    include Creators_generic
+      with type ('a, 'b) t           := ('a, 'b) t_
+      with type ('a, 'b) set         := ('a, 'b) set
+      with type ('a, 'b) tree        := ('a, 'b) tree
+      with type 'a elt               := 'a Elt.t
       with type ('a, 'b, 'c) options := ('a, 'b, 'c) create_options
 
     val simplify_creator : (int, Int.comparator, 'c) create_options -> 'c
 
     type ('a, 'b, 'c) access_options
 
-    include Accessors
-      with type ('a, 'b) t    := ('a, 'b) t_
-      with type ('a, 'b) tree := ('a, 'b) tree
-      with type 'a elt := 'a Elt.t
+    include Accessors_generic
+      with type ('a, 'b) t           := ('a, 'b) t_
+      with type ('a, 'b) tree        := ('a, 'b) tree
+      with type 'a elt               := 'a Elt.t
       with type ('a, 'b, 'c) options := ('a, 'b, 'c) access_options
 
     val simplify_accessor : (int, Int.comparator, 'c) access_options -> 'c
@@ -38,7 +38,7 @@ module Unit_tests
     val kind : [ `Set | `Tree ]
   end)
 
-  : Creators_and_accessors = struct
+  : Creators_and_accessors_generic = struct
 
   module Set = struct
     include Set
@@ -67,7 +67,7 @@ module Unit_tests
   type ('a, 'b) tree = ('a, 'b) t
   type ('a, 'b) set = ('a, 'b) t
   type 'a elt
-  type ('a, 'b, 'c) options = ('a, 'b, 'c) without_comparator
+  type ('a, 'b, 'c) options = ('a, 'b, 'c) Without_comparator.t
 
   module Elt = struct
     open Elt
@@ -270,29 +270,30 @@ module Elt_poly = struct
 end
 
 module Create_options_with_comparator = struct
-  type ('a, 'b, 'c) create_options = ('a, 'b, 'c) with_comparator
+  type ('a, 'b, 'c) create_options = ('a, 'b, 'c) With_comparator.t
   let simplify_creator f = f ~comparator:Core_int.comparator
 end
 
 module Create_options_without_comparator = struct
-  type ('a, 'b, 'c) create_options = ('a, 'b, 'c) without_comparator
+  type ('a, 'b, 'c) create_options = ('a, 'b, 'c) Without_comparator.t
   let simplify_creator  = Fn.id
 end
 
 module Access_options_without_comparator = struct
-  type ('a, 'b, 'c) access_options = ('a, 'b, 'c) without_comparator
+  type ('a, 'b, 'c) access_options = ('a, 'b, 'c) Without_comparator.t
   let simplify_accessor = Fn.id
 end
 
 module Access_options_with_comparator = struct
-  type ('a, 'b, 'c) access_options = ('a, 'b, 'c) with_comparator
+  type ('a, 'b, 'c) access_options = ('a, 'b, 'c) With_comparator.t
   let simplify_accessor f = f ~comparator:Core_int.comparator
 end
 
 TEST_MODULE "Set" = Unit_tests (Elt_poly) (struct
   include Set
-  type ('a, 'b) t_  = ('a, 'b) t
-  type ('a, 'b) set = ('a, 'b) t
+  type ('a, 'b) t_   = ('a, 'b) t
+  type ('a, 'b) set  = ('a, 'b) t
+  type ('a, 'b) tree = ('a, 'b) Tree.t
   include Create_options_with_comparator
   include Access_options_without_comparator
   let kind = `Set
@@ -300,7 +301,9 @@ end)
 
 TEST_MODULE "Set.Poly" = Unit_tests (Elt_poly) (struct
   include Set.Poly
-  type ('a, 'b) set = 'a t
+  type ('a, 'b) set  = ('a, 'b) Set.t
+  type ('a, 'b) t_   = 'a t
+  type ('a, 'b) tree = 'a Tree.t
   include Create_options_without_comparator
   include Access_options_without_comparator
   let kind = `Set
@@ -308,6 +311,9 @@ end)
 
 TEST_MODULE "Int.Set" = Unit_tests (Elt_int) (struct
   include Int.Set
+  type ('a, 'b) set  = ('a, 'b) Set.t
+  type ('a, 'b) t_   = t
+  type ('a, 'b) tree = Tree.t
   include Create_options_without_comparator
   include Access_options_without_comparator
   let kind = `Set
@@ -315,7 +321,9 @@ end)
 
 TEST_MODULE "Set.Tree" = Unit_tests (Elt_poly) (struct
   include Set.Tree
+  type ('a, 'b) set  = ('a, 'b) Set.Tree.t
   type ('a, 'b) t_   = ('a, 'b) t
+  type ('a, 'b) tree = ('a, 'b) t
   include Create_options_with_comparator
   include Access_options_with_comparator
   let kind = `Tree
@@ -323,7 +331,9 @@ end)
 
 TEST_MODULE "Set.Poly.Tree" = Unit_tests (Elt_poly) (struct
   include Set.Poly.Tree
-  type ('a, 'b) set = 'a Set.Poly.Tree.t
+  type ('a, 'b) set  = 'a Set.Poly.Tree.t
+  type ('a, 'b) t_   = 'a t
+  type ('a, 'b) tree = 'a t
   include Create_options_without_comparator
   include Access_options_without_comparator
   let kind = `Tree
@@ -331,8 +341,9 @@ end)
 
 TEST_MODULE "Int.Set.Tree" = Unit_tests (Elt_int) (struct
   include Int.Set.Tree
-  type ('a, 'b) set  = ('a, 'b) Int.Set.tree
-  type ('a, 'b) tree = ('a, 'b) Int.Set.tree
+  type ('a, 'b) set  = ('a, 'b) Set.Tree.t
+  type ('a, 'b) t_   = t
+  type ('a, 'b) tree = t
   include Create_options_without_comparator
   include Access_options_without_comparator
   let kind = `Tree

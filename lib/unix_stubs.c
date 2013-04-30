@@ -1726,3 +1726,21 @@ CAMLprim value unix_nanosleep(value v_seconds)
   else
     caml_failwith("unix_nanosleep: impossible return value from nanosleep(2)");
 }
+
+CAMLprim value core_unix_remove(value v_path)
+{
+  CAMLparam1(v_path);
+  int retval;
+  char *path = core_copy_to_c_string(v_path);
+
+  caml_enter_blocking_section();
+  retval = remove(path);
+  caml_stat_free(path);
+  caml_leave_blocking_section();
+
+  if (retval)
+    uerror("remove", v_path);
+
+  CAMLreturn(Val_unit);
+}
+

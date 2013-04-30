@@ -136,16 +136,12 @@ end) : Hashable.S_binable with type t := t)
 include Comparable.Make_binable (struct
   include T
 
-  (* In 108.06a and earlier, months in sexps of Maps and Sets were ints.  Here we override
-     [T.sexp_of_t], which uses the symbolic form, to produce the int form.  We also
-     override [t_of_sexp] to accept either form.  Someday, once we think most programs are
-     at or beyond 108.06a, and hence accept either form, we will eliminate the override of
-     [sexp_of_t] so that months in Maps and Sets are represented by the symbolic form.
-     Then, someday after that, once we believe most programs are beyond that point, we
-     will eliminate the override of [t_of_sexp], so that months in sexps of Maps and Sets
-     are required to use the symbolic format. *)
-  let sexp_of_t t = Int.sexp_of_t (to_int t - 1)
-
+  (* In 108.06a and earlier, months in sexps of Maps and Sets were raw ints.  From 108.07
+     through 109.13, the output format remained raw as before, but both the raw and
+     pretty format were accepted as input.  From 109.14 on, the output format was
+     changed from raw to pretty, while continuing to accept both formats.  Once we believe
+     most programs are beyond 109.14, we will switch the input format to no longer accept
+     raw. *)
   let t_of_sexp sexp =
     match Option.try_with (fun () -> Int.t_of_sexp sexp) with
     | Some i -> of_int_exn (i + 1)
@@ -158,9 +154,7 @@ end)
 let sexp_of_t = T.sexp_of_t
 let t_of_sexp = T.t_of_sexp
 
-TEST = Pervasives.(=) (Set.sexp_of_t (Set.of_list [Jan])) Sexp.(List [Atom "0"])
 TEST = Set.equal (Set.of_list [Jan]) (Set.t_of_sexp Sexp.(List [Atom "0"]))
-TEST = Set.equal (Set.of_list [Jan]) (Set.t_of_sexp Sexp.(List [Atom "Jan"]))
 TEST = Pervasives.(=) (sexp_of_t Jan) (Sexp.Atom "Jan")
 TEST = Jan = t_of_sexp (Sexp.Atom "Jan")
 TEST = Option.is_none (Option.try_with (fun () -> t_of_sexp (Sexp.Atom "0")))

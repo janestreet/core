@@ -321,11 +321,11 @@ let day_of_week  =
   (fun t ->
     let m = Month.to_int t.m in
     let y = if Int.(<) m 3 then t.y - 1 else t.y in
-    Weekday.of_int_exn ((y + y / 4 - y / 100 + y / 400 + table.(m - 1) + t.d) % 7))
+    Day_of_week.of_int_exn ((y + y / 4 - y / 100 + y / 400 + table.(m - 1) + t.d) % 7))
 ;;
 
 let is_weekend t =
-  Weekday.is_sun_or_sat (day_of_week t)
+  Day_of_week.is_sun_or_sat (day_of_week t)
 ;;
 
 let is_weekday t = not (is_weekend t)
@@ -370,10 +370,10 @@ let weekdays_between ~min ~max =
       let first_weekday = day_of_week first_date in
       let date_and_weekdays =
         List.mapi all_dates
-          ~f:(fun i date -> date,Weekday.shift first_weekday i) in
+          ~f:(fun i date -> date,Day_of_week.shift first_weekday i) in
       List.filter_map date_and_weekdays
         ~f:(fun (date,weekday) ->
-          if Weekday.is_sun_or_sat weekday
+          if Day_of_week.is_sun_or_sat weekday
           then None
           else Some date)
     )
@@ -401,9 +401,9 @@ let rec following_weekday t =
 ;;
 
 let first_strictly_after t ~on:dow =
-  let dow     = Weekday.to_int dow in
+  let dow     = Day_of_week.to_int dow in
   let tplus1  = add_days t 1 in
-  let cur     = Weekday.to_int (day_of_week tplus1) in
+  let cur     = Day_of_week.to_int (day_of_week tplus1) in
   let diff    = (dow + 7 - cur) mod 7 in
   add_days tplus1 diff
 ;;
@@ -419,20 +419,20 @@ TEST_MODULE "first_strictly_after" = struct
   let mon2 = create_exn ~y:2013 ~m:Month.Apr ~d:8
   let tue2 = create_exn ~y:2013 ~m:Month.Apr ~d:9
 
-  TEST = equal (first_strictly_after tue1 ~on:Weekday.mon) mon2
-  TEST = equal (first_strictly_after tue1 ~on:Weekday.tue) tue2
-  TEST = equal (first_strictly_after tue1 ~on:Weekday.wed) wed1
-  TEST = equal (first_strictly_after tue1 ~on:Weekday.thu) thu1
-  TEST = equal (first_strictly_after tue1 ~on:Weekday.fri) fri1
-  TEST = equal (first_strictly_after tue1 ~on:Weekday.sat) sat1
-  TEST = equal (first_strictly_after tue1 ~on:Weekday.sun) sun1
-  TEST = equal (first_strictly_after mon1 ~on:Weekday.mon) mon2
-  TEST = equal (first_strictly_after mon1 ~on:Weekday.tue) tue1
-  TEST = equal (first_strictly_after mon1 ~on:Weekday.wed) wed1
-  TEST = equal (first_strictly_after mon1 ~on:Weekday.thu) thu1
-  TEST = equal (first_strictly_after mon1 ~on:Weekday.fri) fri1
-  TEST = equal (first_strictly_after mon1 ~on:Weekday.sat) sat1
-  TEST = equal (first_strictly_after mon1 ~on:Weekday.sun) sun1
+  TEST = equal (first_strictly_after tue1 ~on:Day_of_week.mon) mon2
+  TEST = equal (first_strictly_after tue1 ~on:Day_of_week.tue) tue2
+  TEST = equal (first_strictly_after tue1 ~on:Day_of_week.wed) wed1
+  TEST = equal (first_strictly_after tue1 ~on:Day_of_week.thu) thu1
+  TEST = equal (first_strictly_after tue1 ~on:Day_of_week.fri) fri1
+  TEST = equal (first_strictly_after tue1 ~on:Day_of_week.sat) sat1
+  TEST = equal (first_strictly_after tue1 ~on:Day_of_week.sun) sun1
+  TEST = equal (first_strictly_after mon1 ~on:Day_of_week.mon) mon2
+  TEST = equal (first_strictly_after mon1 ~on:Day_of_week.tue) tue1
+  TEST = equal (first_strictly_after mon1 ~on:Day_of_week.wed) wed1
+  TEST = equal (first_strictly_after mon1 ~on:Day_of_week.thu) thu1
+  TEST = equal (first_strictly_after mon1 ~on:Day_of_week.fri) fri1
+  TEST = equal (first_strictly_after mon1 ~on:Day_of_week.sat) sat1
+  TEST = equal (first_strictly_after mon1 ~on:Day_of_week.sun) sun1
 end
 
 

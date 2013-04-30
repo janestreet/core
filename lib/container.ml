@@ -134,6 +134,22 @@ module type S1_phantom = sig
   val to_array : ('a, _) t -> 'a array
 end
 
+module type S1_phantom_invariant = sig
+  type ('a, 'phantom) t
+  val mem : ?equal:('a -> 'a -> bool) -> ('a, _) t -> 'a -> bool
+  val length   : ('a, _) t -> int
+  val is_empty : ('a, _) t -> bool
+  val iter     : ('a, _) t -> f:('a -> unit) -> unit
+  val fold     : ('a, _) t -> init:'accum -> f:('accum -> 'a -> 'accum) -> 'accum
+  val exists   : ('a, _) t -> f:('a -> bool) -> bool
+  val for_all  : ('a, _) t -> f:('a -> bool) -> bool
+  val count    : ('a, _) t -> f:('a -> bool) -> int
+  val find     : ('a, _) t -> f:('a -> bool) -> 'a option
+  val find_map : ('a, _) t -> f:('a -> 'b option) -> 'b option
+  val to_list  : ('a, _) t -> 'a list
+  val to_array : ('a, _) t -> 'a array
+end
+
 module type Generic = sig
   type 'a t
   type 'a elt
@@ -188,5 +204,8 @@ module Check_S1 (M : S1) =
 type phantom
 
 module Check_S1_phantom (M : S1_phantom) =
+  Check (struct type 'a t = ('a, phantom) M.t end) (struct type 'a t = 'a end) (M)
+
+module Check_S1_phantom_invariant (M : S1_phantom_invariant) =
   Check (struct type 'a t = ('a, phantom) M.t end) (struct type 'a t = 'a end) (M)
 

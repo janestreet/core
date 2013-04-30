@@ -38,14 +38,14 @@ function version-cmd {
   foo="$1"
 
   set -e
-  diff <(./$foo.exe version -version) <(sort $(hg root)/hg_version.out)
+  diff <(./$foo version -version) <(sort $(hg root)/hg_version.out)
   # add a trailing newline to build_info.sexp
-  diff <(./$foo.exe version -build-info) <(sed -e '$a\' $foo.build_info.sexp)
+  diff <(./$foo version -build-info) <(sed -e '$a\' $foo.build_info.sexp)
 }
 
 group-cmd './main.exe' jab adverb
 group-cmd './main.exe adverb' nemeses
-version-cmd 'main'
+version-cmd 'main.exe'
 run ./main.exe jab -help
 
 diff -r $out $std

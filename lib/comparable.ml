@@ -1,3 +1,7 @@
+open Sexplib.Conv
+module Sexp = Sexplib.Sexp
+module List = ListLabels
+
 module type Infix = Polymorphic_compare_intf.Infix
 module type Polymorphic_compare = Polymorphic_compare_intf.S
 
@@ -148,6 +152,31 @@ module Inherit
     end)
 
   end
+
+module Check_sexp_conversion (M : sig
+  type t with sexp_of
+  include S with type t := t
+  val examples : t list
+end) : sig end = struct
+  open M
+
+  (* Check that conversion of a map or set to a sexp uses the same sexp conversion as
+     the underlying element. *)
+  TEST_UNIT =
+    (* These tests all use single element sets and maps, and so do not depend on the
+       order in which elements appear in sexps. *)
+    List.iter examples ~f:(fun t ->
+      let set = Set.of_list [ t ] in
+      let set_sexp = Sexp.List [ sexp_of_t t ] in
+      assert (Pervasives.(=) set_sexp (<:sexp_of< Set.t >> set));
+      assert (Set.equal set (Set.t_of_sexp set_sexp));
+      let map = Map.of_alist_exn [ t, () ] in
+      let map_sexp = Sexp.List [ Sexp.List [ sexp_of_t t; Sexp.List [] ]] in
+      assert (Pervasives.(=) map_sexp (<:sexp_of< unit Map.t >> map));
+      assert (Map.equal (fun () () -> true)
+                map (Map.t_of_sexp <:of_sexp< unit >> map_sexp)));
+  ;;
+end
 
 (* compare [x] and [y] lexicographically using functions in the list [cmps] *)
 let lexicographic cmps x y =

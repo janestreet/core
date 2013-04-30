@@ -44,7 +44,7 @@ val year : t -> int
 (* val of_time : Time.t -> t                (* based on local timezone *) *)
 (* val format  : Date.t -> string -> string (* based on local timezone *) *)
 
-val day_of_week : t -> Weekday.t
+val day_of_week : t -> Day_of_week.t
 
 val is_weekend : t -> bool
 val is_weekday : t -> bool
@@ -91,7 +91,7 @@ val following_weekday : t -> t
 
 (** [first_strictly_after t ~on:day_of_week] returns the first occurrence of [day_of_week]
     strictly after [t]. *)
-val first_strictly_after : t -> on:Weekday.t -> t
+val first_strictly_after : t -> on:Day_of_week.t -> t
 
 
 

@@ -285,8 +285,6 @@ val stdout : File_descr.t
 (** File descriptor for standard standard error. *)
 val stderr : File_descr.t
 
-IFDEF OCAML_4 THEN
-
 (** The flags to {!UnixLabels.openfile}. *)
 
 type open_flag =
@@ -305,27 +303,6 @@ type open_flag =
     | O_RSYNC         (** Reads complete as writes (depending on O_SYNC/O_DSYNC) *)
     | O_SHARE_DELETE  (** Windows only: allow the file to be deleted while still open *)
 with sexp
-
-ELSE
-
-(** The flags to {!UnixLabels.openfile}. *)
-type open_flag =
-  Unix.open_flag =
-      O_RDONLY        (** Open for reading *)
-    | O_WRONLY        (** Open for writing *)
-    | O_RDWR          (** Open for reading and writing *)
-    | O_NONBLOCK      (** Open in non-blocking mode *)
-    | O_APPEND        (** Open for append *)
-    | O_CREAT         (** Create if nonexistent *)
-    | O_TRUNC         (** Truncate to 0 length if existing *)
-    | O_EXCL          (** Fail if existing *)
-    | O_NOCTTY        (** Don't make this dev a controlling tty *)
-    | O_DSYNC         (** Writes complete as `Synchronised I/O data integrity completion' *)
-    | O_SYNC          (** Writes complete as `Synchronised I/O file integrity completion' *)
-    | O_RSYNC         (** Reads complete as writes (depending on O_SYNC/O_DSYNC) *)
-with sexp
-
-ENDIF (* OCAML_4 *)
 
 (** The type of file access rights. *)
 type file_perm = int with sexp
@@ -598,6 +575,9 @@ val isatty : File_descr.t -> bool
 
 (** Removes the named file *)
 val unlink : string -> unit
+
+(** Removes the named file or directory *)
+val remove : string -> unit
 
 (** [rename old new] changes the name of a file from [old] to [new]. *)
 val rename : src:string -> dst:string -> unit
@@ -1960,5 +1940,6 @@ module Mman : sig
   (* Unlock previously locked pages. See [man munlockall]. *)
   val munlockall : unit -> unit
 end
+
 
 (* vim: set filetype=ocaml : *)

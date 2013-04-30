@@ -334,7 +334,7 @@ let to_list t = t
 
 let slow_append l1 l2 = List.rev_append (List.rev l1) l2
 
-(* There are a few optimized list operations, here, including append and map.  There are
+(* There are a few optimized list operations here, including append and map.  There are
    basically two optimizations in play: loop unrolling, and dynamic switching between
    stack and heap allocation.
 

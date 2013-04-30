@@ -147,7 +147,7 @@ module Old_date_impl = struct
     let uday = to_tm t in
     let sec, _ = Unix.mktime uday in
     let unix_wday = (Unix.localtime sec).Unix.tm_wday in
-    Weekday.of_int_exn unix_wday
+    Day_of_week.of_int_exn unix_wday
   ;;
 
   let exhaustive_date_range =
@@ -163,7 +163,7 @@ module Old_date_impl = struct
       else begin
         let old_method = day_of_week current_date in
         let new_method = Date.day_of_week current_date in
-        if Weekday.(=) new_method old_method
+        if Day_of_week.(=) new_method old_method
         then loop (n + 1) (Date.add_days current_date 1)
         else false
       end

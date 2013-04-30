@@ -301,14 +301,13 @@ module C = struct
 
   let comparator = T.comparator
 
-  (* In 108.06a and earlier, spans in sexps of Maps and Sets were floats.  Here we define
-     [sexp_of_t] to produce the float form.  We also override [t_of_sexp] to accept either
-     the float or the human-readable form.  Someday, once we think most programs are at or
-     beyond 108.06a, and hence accept either form, we will change [sexp_of_t] here so that
-     spans in Maps and Sets are represented by the human-readable form.  Then, someday
-     after that, once we believe most programs are beyond that point, we will change
-     [t_of_sexp] to only accept the human-readable form. *)
-  let sexp_of_t t = Float.sexp_of_t (T.to_float t)
+  (* In 108.06a and earlier, spans in sexps of Maps and Sets were raw floats.  From 108.07
+     through 109.13, the output format remained raw as before, but both the raw and pretty
+     format were accepted as input.  From 109.14 on, the output format was changed from
+     raw to pretty, while continuing to accept both formats.  Once we believe most
+     programs are beyond 109.14, we will switch the input format to no longer accept
+     raw. *)
+  let sexp_of_t = sexp_of_t
 
   let t_of_sexp sexp =
     match Option.try_with (fun () -> T.of_float (Float.t_of_sexp sexp)) with
@@ -321,16 +320,6 @@ module Map = Core_map.Make_binable_using_comparator (C)
 module Set = Core_set.Make_binable_using_comparator (C)
 
 TEST =
-  Pervasives.(=) (Set.sexp_of_t (Set.of_list [hour]))
-    (Sexp.List [Float.sexp_of_t (to_float hour)])
-;;
-
-TEST =
   Set.equal (Set.of_list [hour])
     (Set.t_of_sexp (Sexp.List [Float.sexp_of_t (to_float hour)]))
-;;
-
-TEST =
-  Set.equal (Set.of_list [hour])
-    (Set.t_of_sexp (Sexp.List [sexp_of_t hour]))
 ;;
