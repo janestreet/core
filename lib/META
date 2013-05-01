@@ -1,0 +1,25 @@
+# OASIS_START
+# DO NOT EDIT (digest: 3ba1dee9678261c56dafeaa4e3d7d34e)
+version = "109.21.00"
+description = "Jane Street Capital's standard library overlay"
+requires =
+"bin_prot variantslib sexplib fieldslib bigarray pa_ounit res unix threads"
+archive(byte) = "core.cma"
+archive(byte, plugin) = "core.cma"
+archive(native) = "core.cmxa"
+archive(native, plugin) = "core.cmxs"
+archive(byte, toploop) += "core_top.cma"
+archive(native, toploop) += "core_top.cmxa"
+exists_if = "core.cma"
+package "top" (
+ version = "109.21.00"
+ description = "Toplevel printers for Core"
+ requires = "core"
+ archive(byte) = "core_top.cma"
+ archive(byte, plugin) = "core_top.cma"
+ archive(native) = "core_top.cmxa"
+ archive(native, plugin) = "core_top.cmxs"
+ exists_if = "core_top.cma"
+)
+# OASIS_STOP
+
