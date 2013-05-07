@@ -11,10 +11,16 @@ module type S = sig
   include Floatable.S with type t := t
   include Stringable.S with type t := t
   include Hashable.S_binable with type t := t
-  (* [max] and [min] will return nan if either argument is nan *)
+  (** [max] and [min] will return nan if either argument is nan.
+
+      The [validate_*] functions always fail if class is [Nan] or [Infinite]. *)
   include Comparable.S_binable with type t := t
-  (* The results of robust comparisons on [nan] should be considered undefined. *)
+  include Comparable.With_zero with type t := t
+  (** The results of robust comparisons on [nan] should be considered undefined. *)
   include Robustly_comparable.S with type t := t
+
+  (** [validate_ordinary] fails if class is [Nan] or [Infinite]. *)
+  val validate_ordinary : t Validate.check
 
   val nan : t
 
@@ -182,4 +188,5 @@ module type S = sig
     type t = outer with bin_io, sexp
     include Stringable.S with type t := t
   end
+
 end

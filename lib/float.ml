@@ -1,8 +1,11 @@
 open Sexplib.Std
 open Bin_prot.Std
+open Result.Export
 module Sexp = Sexplib.Sexp
 module String = Core_string
 open Core_printf
+
+type 'a bound = 'a Comparable.bound = Incl of 'a | Excl of 'a | Unbounded
 
 let failwiths = Error.failwiths
 
@@ -341,3 +344,62 @@ module Terse = struct
   let sexp_of_t x = Sexp.Atom (to_string x)
   let of_string x = of_string x
 end
+
+let validate_ordinary t =
+  Validate.of_error_opt (
+    let module C = Class in
+    match classify t with
+    | C.Normal | C.Subnormal | C.Zero -> None
+    | C.Infinite -> Some "value is infinite"
+    | C.Nan -> Some "value is NaN")
+;;
+
+module V = struct
+  module ZZ = Comparable.Validate (T)
+
+  let validate_bound ~min ~max t =
+    Validate.first_failure (validate_ordinary t) (ZZ.validate_bound t ~min ~max)
+  ;;
+
+  let validate_lbound ~min t =
+    Validate.first_failure (validate_ordinary t) (ZZ.validate_lbound t ~min)
+  ;;
+
+  let validate_ubound ~max t =
+    Validate.first_failure (validate_ordinary t) (ZZ.validate_ubound t ~max)
+  ;;
+end
+
+include V
+
+include Comparable.With_zero (struct
+  include T
+  let zero = zero
+  include V
+end)
+
+TEST_MODULE = struct
+  let check v expect =
+    match Validate.result v, expect with
+    | Ok (), `Ok | Error _, `Error -> ()
+    | r, expect ->
+      failwiths "mismatch" (r, expect)
+        <:sexp_of< unit Or_error.t * [ `Ok | `Error ] >>
+  ;;
+
+  TEST_UNIT = check (validate_lbound ~min:(Incl 0.) nan)          `Error
+  TEST_UNIT = check (validate_lbound ~min:(Incl 0.) infinity)     `Error
+  TEST_UNIT = check (validate_lbound ~min:(Incl 0.) neg_infinity) `Error
+  TEST_UNIT = check (validate_lbound ~min:(Incl 0.) (-1.))        `Error
+  TEST_UNIT = check (validate_lbound ~min:(Incl 0.) 0.)           `Ok
+  TEST_UNIT = check (validate_lbound ~min:(Incl 0.) 1.)           `Ok
+
+  TEST_UNIT = check (validate_ubound ~max:(Incl 0.) nan)          `Error
+  TEST_UNIT = check (validate_ubound ~max:(Incl 0.) infinity)     `Error
+  TEST_UNIT = check (validate_ubound ~max:(Incl 0.) neg_infinity) `Error
+  TEST_UNIT = check (validate_ubound ~max:(Incl 0.) (-1.))        `Ok
+  TEST_UNIT = check (validate_ubound ~max:(Incl 0.) 0.)           `Ok
+  TEST_UNIT = check (validate_ubound ~max:(Incl 0.) 1.)           `Error
+end
+
+

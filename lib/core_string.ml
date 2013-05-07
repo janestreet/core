@@ -506,6 +506,7 @@ include (Hashable.Make_binable (struct
 end) : Hashable.S_binable with type t := t)
 
 include Comparable.Map_and_set_binable (T)
+include Comparable.Validate (T)
 
 (* for interactive top-levels -- modules deriving from String should have String's pretty
    printer. *)

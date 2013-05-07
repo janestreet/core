@@ -251,6 +251,8 @@ val data : (_, 'v, _) t -> 'v list
 (** creates association list from map.  No guarantee about order. *)
 val to_alist : ('k, 'v, _) t -> ('k * 'v) list
 
+val validate : name:('k -> string) -> 'v Validate.check -> ('k, 'v, _) t Validate.check
+
 (** {6 Additional operations on maps} *)
 
 (** merges two maps *)

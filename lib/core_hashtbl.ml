@@ -463,6 +463,8 @@ let of_alist_multi ?growth_allowed ?size ~hashable lst =
 
 let to_alist t = fold ~f:(fun ~key ~data list -> (key, data)::list) ~init:[] t
 
+let validate ~name f t = Validate.alist ~name f (to_alist t)
+
 let keys t = fold t ~init:[] ~f:(fun ~key ~data:_ acc -> key :: acc)
 
 let data t = fold ~f:(fun ~key:_ ~data list -> data::list) ~init:[] t
@@ -590,6 +592,7 @@ module Accessors = struct
   let find_and_remove = find_and_remove
   let iter_vals       = iter_vals
   let to_alist        = to_alist
+  let validate        = validate
   let merge           = merge
   let merge_into      = merge_into
   let keys            = keys

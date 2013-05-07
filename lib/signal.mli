@@ -81,6 +81,10 @@ val send_i : t -> pid_spec -> unit
  *)
 val send_exn : t -> pid_spec -> unit
 
+(** [can_send_to pid] returns true if [pid] is running and the current process has
+    permission to send it signals. *)
+val can_send_to : Pid.t -> bool
+
 type sigprocmask_command = [ `Set | `Block | `Unblock ]
 
 (** [sigprocmask cmd sigs] changes the set of blocked signals.

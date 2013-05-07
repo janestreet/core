@@ -54,6 +54,11 @@ let zero = 0
 let one = 1
 let minus_one = -1
 
+include Comparable.Validate_with_zero (struct
+  include T
+  let zero = zero
+end)
+
 let pred i = i - 1
 let succ i = i + 1
 

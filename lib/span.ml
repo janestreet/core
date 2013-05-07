@@ -16,11 +16,12 @@ module Stable = struct
 
     module type Like_a_float = sig
       type t = private float with bin_io
-      include Comparable.S_common with type t := t
-      include Hashable_binable    with type t := t
-      include Robustly_comparable with type t := t
-      include Stringable          with type t := t
-      include Floatable           with type t := t
+      include Comparable.S_common  with type t := t
+      include Comparable.With_zero with type t := t
+      include Hashable_binable     with type t := t
+      include Robustly_comparable  with type t := t
+      include Stringable           with type t := t
+      include Floatable            with type t := t
       val (+)     : t -> t -> t
       val (-)     : t -> t -> t
       val zero    : t

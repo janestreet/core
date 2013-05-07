@@ -14,9 +14,9 @@ include Hashable_binable with type t := t
   * DD MMM YYYY
   * DDMMMYYYY
   * YYYYMMDD *)
-include Stringable with type t := t
+include Stringable         with type t := t
 include Comparable_binable with type t := t
-include Pretty_printer.S with type t := t
+include Pretty_printer.S   with type t := t
 
 (** [create_exn ~y ~m ~d] creates the date specified in the arguments.  Arguments are
     validated, and are not normalized in any way.  So, days must be within the limits for

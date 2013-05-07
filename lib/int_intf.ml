@@ -3,9 +3,10 @@ open Interfaces
 module type S = sig
   type t with bin_io, sexp
 
-  include Floatable    with type t := t
-  include Intable      with type t := t
-  include Identifiable with type t := t
+  include Floatable            with type t := t
+  include Intable              with type t := t
+  include Identifiable         with type t := t
+  include Comparable.With_zero with type t := t
 
   (* [delimiter] is underscore by default *)
   val to_string_hum : ?delimiter:char -> t -> string

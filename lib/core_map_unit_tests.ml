@@ -678,6 +678,31 @@ module Unit_tests
   TEST = Map.prev_key (Map.empty ()) Key.sample = None
   TEST = Map.next_key (Map.empty ()) Key.sample = None
 
+  let validate ~name:_ _ = assert false
+
+  TEST_UNIT =
+    let validate expect map =
+      expect
+        (Validate.result
+           (Map.validate
+              ~name:(fun key -> Sexp.to_string (<:sexp_of< Key.t >> key))
+              (Validate.of_error
+                 (fun i ->
+                   if i mod 2 = 0 then
+                     Ok ()
+                   else
+                     error "must be even" i <:sexp_of< int >>))
+              map))
+    in
+    let is_ok = Result.is_ok in
+    let is_error = Result.is_error in
+    assert (validate is_ok    (Map.empty ()));
+    assert (validate is_ok    (Map.of_alist_exn [ Key.of_int 0, 0                  ]));
+    assert (validate is_error (Map.of_alist_exn [ Key.of_int 0, 1                  ]));
+    assert (validate is_ok    (Map.of_alist_exn [ Key.of_int 0, 0; Key.of_int 1, 0 ]));
+    assert (validate is_error (Map.of_alist_exn [ Key.of_int 0, 0; Key.of_int 1, 1 ]));
+  ;;
+
   (* Ensure polymorphic equality raises for maps. *)
   TEST_UNIT =
     match Map.kind with

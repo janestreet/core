@@ -89,7 +89,6 @@ module Interfaces = Interfaces
 module Interned_string = Interned_string
 module Interval = Interval
 module Invariant = Invariant
-module Field = Core_field
 module Lock_file = Lock_file
 module Memo = Memo
 module Monad = Monad
@@ -138,6 +137,7 @@ module Unix = Core_unix
 module Unpack_buffer = Unpack_buffer
 module User_and_group = User_and_group
 module Uuid = Uuid
+module Validate = Validate
 INCLUDE "version_defaults.mlh"
 IFDEF BUILD_VERSION_UTIL THEN
   module Version_util = Version_util
@@ -150,6 +150,8 @@ module Zone = Zone
 module type Unique_id = Unique_id.Id
 
 include T
+
+type 'a _bound = 'a Comparable.bound = Incl of 'a | Excl of 'a | Unbounded
 
 let _squelch_unused_module_warning_ = ()
 

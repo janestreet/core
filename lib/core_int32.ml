@@ -38,6 +38,11 @@ let compare = compare
 let to_float = to_float
 let of_float = of_float
 
+include Comparable.Validate_with_zero (struct
+  include T
+  let zero = zero
+end)
+
 module Replace_polymorphic_compare = struct
   let compare = compare
   let ascending = compare

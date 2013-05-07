@@ -8,11 +8,12 @@ module Stable = struct
   module V1 = struct
     module T : sig
       type t = private float with bin_io
-      include Comparable.S_common with type t := t
-      include Hashable_binable    with type t := t
-      include Robustly_comparable with type t := t
-      include Stringable          with type t := t
-      include Floatable           with type t := t
+      include Comparable.S_common  with type t := t
+      include Comparable.With_zero with type t := t
+      include Hashable_binable     with type t := t
+      include Robustly_comparable  with type t := t
+      include Stringable           with type t := t
+      include Floatable            with type t := t
       val add : t -> Span.t -> t option
       val sub : t -> Span.t -> t option
       val diff : t -> t -> Span.t

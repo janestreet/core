@@ -193,7 +193,7 @@ end
 
   It's worth noting that under this system there is no place on the system to go to get
   the name of the file you are using (/etc/localtime may not be a link, and may just be a
-  copy, or it's own database not represented in /usr/share/zoneinfo).  Additionally, the
+  copy, or its own database not represented in /usr/share/zoneinfo).  Additionally, the
   names of the files in the system zoneinfo database follow an internal standard, and
   there is no established standard for naming timezones.  So even if you were using one of
   these files, and you did know its name, you cannot assume that that name matches any

@@ -336,9 +336,11 @@ module Stable = struct
     let t_of_sexp     sexp = t_of_sexp_gen sexp of_string
     let t_of_sexp_abs sexp = t_of_sexp_gen sexp of_string_abs
 
-    let sexp_of_t t =
-      Sexp.List (List.map (to_string_abs_parts t) ~f:(fun s -> Sexp.Atom s))
+    let sexp_of_t_with_zone ?zone t =
+      Sexp.List (List.map (to_string_abs_parts ?zone t) ~f:(fun s -> Sexp.Atom s))
     ;;
+
+    let sexp_of_t t = sexp_of_t_with_zone t
 
     module C = struct
       type t = T.t with bin_io
@@ -453,47 +455,35 @@ module Stable = struct
   end
 
   TEST_MODULE "Time.V1" = struct
-    open V1
-
-    let tests =
-      let time ~y ~m ~d ofday =
-        of_date_ofday (Zone.find_office `nyc) (Date.create_exn ~y ~m ~d) ofday
-      in
-      [ time ~y:2012 ~m:Month.Apr ~d:9 (Ofday.create ~hr:12 ()),
-        "(2012-04-09 12:00:00.000000-04:00)",
-        "\000\000\000\224\193\224\211\065";
-        time ~y:1985 ~m:Month.Jun ~d:5 (Ofday.create ~hr:5 ~min:25 ()),
-        "(1985-06-05 05:25:00.000000-04:00)",
-        "\000\000\000\108\039\004\189\065";
-      ] @ if Int.(Sys.c_int_size () < 64) then [] else [
-        time ~y:2222 ~m:Month.Nov ~d:22 (Ofday.create ~hr:17 ~min:17 ~sec:17 ()),
-        "(2222-11-22 17:17:17.000000-05:00)",
-        "\000\000\208\230\204\186\253\065";
-      ]
-
     TEST_MODULE "Time.V1 functor application" = Stable_unit_test.Make (struct
       include V1
-      (* for testing purposes *)
-      let sexp_of_t_with_zone ?zone t =
-        match String.lsplit2 ~on:' ' (to_string_abs ?zone t) with
-        | Some (date,ofday) ->
-          Sexp.List [Sexp.Atom date; Sexp.Atom ofday]
-        | None ->
-          failwith "Time.sexp_of_t: unexpected None"
-
       let zone = Zone.find_office `nyc
       let sexp_of_t t = sexp_of_t_with_zone ~zone t
-      let equal = equal
-      let tests = tests
+
+      let tests =
+        let time ~y ~m ~d ofday =
+          of_date_ofday zone (Date.create_exn ~y ~m ~d) ofday
+        in
+        [ time ~y:2012 ~m:Month.Apr ~d:9 (Ofday.create ~hr:12 ()),
+          "(2012-04-09 12:00:00.000000-04:00)",
+          "\000\000\000\224\193\224\211\065";
+          time ~y:1985 ~m:Month.Jun ~d:5 (Ofday.create ~hr:5 ~min:25 ()),
+          "(1985-06-05 05:25:00.000000-04:00)",
+          "\000\000\000\108\039\004\189\065";
+        ] @ if Int.(Sys.c_int_size () < 64) then [] else [
+          time ~y:2222 ~m:Month.Nov ~d:22 (Ofday.create ~hr:17 ~min:17 ~sec:17 ()),
+          "(2222-11-22 17:17:17.000000-05:00)",
+          "\000\000\208\230\204\186\253\065";
+        ]
     end)
 
     (* test that t_of_sexp accepts sexps qualified with time zones in two formats *)
     TEST_UNIT =
-          ignore (V1.t_of_sexp (Sexp.of_string "(2012-04-09 12:00:00.000000-04:00:00)"))
+      ignore (V1.t_of_sexp (Sexp.of_string "(2012-04-09 12:00:00.000000-04:00:00)"))
 
     TEST_UNIT =
-          ignore
-            (V1.t_of_sexp (Sexp.of_string "(2012-04-09 12:00:00.000000 America/New_York)"))
+      ignore
+        (V1.t_of_sexp (Sexp.of_string "(2012-04-09 12:00:00.000000 America/New_York)"))
   end
 end
 

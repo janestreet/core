@@ -140,8 +140,6 @@ let unstage = Staged.unstage
 
 type decimal = Decimal.t with sexp, bin_io, compare
 
-type passfail = Pass | Fail of string
-
 let unimplemented = Or_error.unimplemented
 
 exception Bug of string with sexp

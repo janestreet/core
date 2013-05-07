@@ -3,12 +3,13 @@ open Std_internal
 (* Represented as a number of seconds since midnight *)
 type t = private float with bin_io, sexp
 
-include Comparable_binable  with type t := t
-include Floatable           with type t := t
-include Hashable_binable    with type t := t
-include Pretty_printer.S    with type t := t
-include Robustly_comparable with type t := t
-include Stringable          with type t := t
+include Comparable_binable   with type t := t
+include Comparable.With_zero with type t := t
+include Floatable            with type t := t
+include Hashable_binable     with type t := t
+include Pretty_printer.S     with type t := t
+include Robustly_comparable  with type t := t
+include Stringable           with type t := t
 
 val create : ?hr:int -> ?min:int -> ?sec:int -> ?ms:int -> ?us:int -> unit -> t
 

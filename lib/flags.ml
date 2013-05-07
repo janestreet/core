@@ -39,14 +39,7 @@ module Make (M : Make_arg) = struct
           (<:sexp_of< (t * string * (t * string) list) list >>);
     end;
   ;;
-(*
-  let () =
-    let bad = List.filter M.known ~f:(fun (flag, _) -> flag = zero) in
-    if not (List.is_empty bad) then
-      error "Flag.Make got flags with no bits set" bad
-        (<:sexp_of< (t * string) list >>)
-  ;;
-*)
+
   let sexp_of_t =
     (* We reverse [known] so that the fold below accumulates from right to left, giving a
        final list with elements in the same order as [known]. *)
@@ -65,22 +58,6 @@ module Make (M : Make_arg) = struct
           (flag_names, `unrecognized_bits (sprintf "0x%Lx" (to_int64 leftover)))
   ;;
 end
-
-(* Check that a zero flag leads to an error. *)
-TEST =
-  Result.is_error
-    (Result.try_with (fun () ->
-      let module M =
-            Make (struct
-              let allow_intersecting = false
-              let should_print_error = false
-              let known = [ Int63.of_int 0x1, "";
-                            Int63.of_int 0x0, "";
-                          ]
-            end)
-      in
-      ()))
-;;
 
 (* Check that conflicting flags leads to an error. *)
 TEST =

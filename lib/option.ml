@@ -163,3 +163,10 @@ include (Monad.Make (struct
     | None -> None
     | Some x -> f x
 end) : Monad.S with type 'a t := 'a option)
+
+let validate ~none ~some t =
+  let module V = Validate in
+  match t with
+  | None   -> V.name "none" (V.protect none ())
+  | Some x -> V.name "some" (V.protect some x )
+;;

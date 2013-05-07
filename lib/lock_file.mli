@@ -66,8 +66,10 @@ module Nfs : sig
       link to [path].nfs_lock.  The contents of path will be replaced with [message],
       which will be the caller's hostname:pid by default.
 
-      Efforts will be made to release this lock when the calling program exits.  But there
-      is no guarantee that this will occur under some types of program crash *)
+      Efforts will be made to release this lock when the calling program exits. But there
+      is no guarantee that this will occur under some types of program crash. If the
+      program crashes without removing the lock file an attempt will be made to clean up
+      on restart by checking the hostname and pid stored in the lockfile. *)
   val create : ?message : string -> string -> bool
 
   (** [create_exn ?message path] like create, but throws an exception when it fails to
@@ -85,6 +87,6 @@ module Nfs : sig
 
   (** [get_hostname_and_pid path] reads the lock file at [path] and returns the hostname
       and path in the file if it can be parsed. *)
-  val get_hostname_and_pid : string -> (string * int) option
+  val get_hostname_and_pid : string -> (string * Pid.t) option
 end
 

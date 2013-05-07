@@ -205,3 +205,13 @@ let sigprocmask mode sigs =
 
 let sigpending = Unix.sigpending
 let sigsuspend = Unix.sigsuspend
+
+let can_send_to pid =
+  try
+    send_exn zero (`Pid pid);
+    true
+  with
+  | _ -> false
+;;
+
+

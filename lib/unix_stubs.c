@@ -45,6 +45,7 @@
 
 #include "ocaml_utils.h"
 #include "config.h"
+#include "timespec.h"
 
 #if defined(JSC_WORDEXP)
 #include <wordexp.h>
@@ -835,8 +836,7 @@ CAMLprim value unix_pselect_stub(
 
     if (tm < 0.0) tsp = (struct timespec *) NULL;
     else {
-      ts.tv_sec = (int) tm;
-      ts.tv_nsec = (int) (1e9 * (tm - ts.tv_sec));
+      ts = timespec_of_double(tm);
       tsp = &ts;
     }
 
@@ -869,15 +869,12 @@ CAMLprim value unix_clock_gettime(value v_cl)
   struct timespec ts;
   if (clock_gettime(clockid_t_val(v_cl), &ts))
     uerror("clock_gettime", Nothing);
-  return caml_copy_double((double) ts.tv_sec + (double) ts.tv_nsec / 1e9);
+  return caml_copy_double(timespec_to_double(ts));
 }
 
 CAMLprim value unix_clock_settime(value v_cl, value v_t)
 {
-  double t = Double_val(v_t);
-  struct timespec ts;
-  ts.tv_sec = t;
-  ts.tv_nsec = (t - ts.tv_sec) * 1e9;
+  struct timespec ts = timespec_of_double(Double_val(v_t));
   if (clock_settime(clockid_t_val(v_cl), &ts))
     uerror("clock_settime", Nothing);
   return Val_unit;
@@ -888,7 +885,7 @@ CAMLprim value unix_clock_getres(value v_cl)
   struct timespec ts;
   if (clock_getres(clockid_t_val(v_cl), &ts))
     uerror("clock_getres", Nothing);
-  return caml_copy_double((double) ts.tv_sec + (double) ts.tv_nsec / 1e9);
+  return caml_copy_double(timespec_to_double(ts));
 }
 
 /* Unfortunately, it is currently not possible to
@@ -1123,10 +1120,7 @@ CAMLprim value unix_mutex_timedlock(value v_mtx, value v_timeo)
   pthread_mutex_t *mtx = Mutex_val(v_mtx);
   ret = pthread_mutex_trylock(mtx);
   if (ret == EBUSY) {
-    double timeo = Double_val(v_timeo);
-    struct timespec ts;
-    ts.tv_sec = timeo;
-    ts.tv_nsec = (timeo - ts.tv_sec) * 1e9;
+    struct timespec ts = timespec_of_double(Double_val(v_timeo));
     Begin_roots1(v_mtx);
     caml_enter_blocking_section();
       ret = pthread_mutex_timedlock(mtx, &ts);
@@ -1147,10 +1141,7 @@ CAMLprim value unix_condition_timedwait(value v_cnd, value v_mtx, value v_timeo)
     int ret;
     pthread_cond_t *cnd = Condition_val(v_cnd);
     pthread_mutex_t *mtx = Mutex_val(v_mtx);
-    double timeo = Double_val(v_timeo);
-    struct timespec ts;
-    ts.tv_sec = timeo;
-    ts.tv_nsec = (timeo - ts.tv_sec) * 1e9;
+    struct timespec ts = timespec_of_double(Double_val(v_timeo));
     caml_enter_blocking_section();
       ret = pthread_cond_timedwait(cnd, mtx, &ts);
     caml_leave_blocking_section();
@@ -1689,22 +1680,6 @@ CAMLprim value unix_strftime(value v_tm, value v_fmt)
   return v_str;
 }
 
-
-static struct timespec timespec_of_double(double seconds)
-{
-  struct timespec ts;
-
-  ts.tv_sec = (time_t) floor(seconds);
-  ts.tv_nsec = (long) (1e9 * (seconds - ts.tv_sec));
-
-  return ts;
-}
-
-static double double_of_timespec(struct timespec ts)
-{
-  return (double) ts.tv_sec + ((double) ts.tv_nsec / 1e9);
-}
-
 CAMLprim value unix_nanosleep(value v_seconds)
 {
   struct timespec req = timespec_of_double(Double_val(v_seconds));
@@ -1719,7 +1694,7 @@ CAMLprim value unix_nanosleep(value v_seconds)
     return caml_copy_double(0.0);
   else if (retval == -1) {
     if (errno == EINTR)
-      return caml_copy_double(double_of_timespec(rem));
+      return caml_copy_double(timespec_to_double(rem));
     else
       uerror("nanosleep", Nothing);
   }

@@ -138,6 +138,11 @@ module type Accessors_generic = sig
 
   val to_alist : ('k, 'v, _) t -> ('k key * 'v) list
 
+  val validate
+    :  name:('k key -> string)
+    -> 'v Validate.check
+    -> ('k, 'v, _) t Validate.check
+
   val merge
     : ('k, 'cmp,
        ('k, 'v1, 'cmp) t
@@ -230,6 +235,7 @@ module type Accessors1 = sig
   val keys           : _ t -> key list
   val data           : 'a t -> 'a list
   val to_alist       : 'a t -> (key * 'a) list
+  val validate       : name:(key -> string) -> 'a Validate.check -> 'a t Validate.check
   val merge
     :  'a t
     -> 'b t
@@ -291,6 +297,8 @@ module type Accessors2 = sig
   val keys           : ('a, _) t -> 'a list
   val data           : (_, 'b) t -> 'b list
   val to_alist       : ('a, 'b) t -> ('a * 'b) list
+  val validate
+    : name:('a -> string) -> 'b Validate.check -> ('a, 'b) t Validate.check
   val merge
     :  ('a, 'b) t
     -> ('a, 'c) t
@@ -348,6 +356,8 @@ module type Accessors3 = sig
   val keys           : ('a, _, _) t -> 'a list
   val data           : (_, 'b, _) t -> 'b list
   val to_alist       : ('a, 'b, _) t -> ('a * 'b) list
+  val validate
+    : name:('a -> string) -> 'b Validate.check -> ('a, 'b, _) t Validate.check
   val merge
     :  ('a, 'b, 'cmp) t -> ('a, 'c, 'cmp) t
     -> f:(key:'a -> [ `Left of 'b | `Right of 'c | `Both of 'b * 'c ] -> 'd option)
@@ -435,6 +445,8 @@ module type Accessors3_with_comparator = sig
   val keys           : ('a,  _, _) t -> 'a list
   val data           : (_ , 'b, _) t -> 'b list
   val to_alist       : ('a, 'b, _) t -> ('a * 'b) list
+  val validate
+    : name:('a -> string) -> 'b Validate.check -> ('a, 'b, _) t Validate.check
   val merge
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a, 'b, 'cmp) t

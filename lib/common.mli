@@ -38,8 +38,6 @@ val unimplemented : string -> _ Or_error.t
 *)
 type decimal = float with bin_io, sexp, compare
 
-type passfail = Pass | Fail of string
-
 (** Types for use as markers in phantom types.  One should not expose functions for
     converting between read_only/immutable/read_write because the private types expose the
     subtyping. Users would say "(db :> read_only Db.t)" to cast.  The difference between
