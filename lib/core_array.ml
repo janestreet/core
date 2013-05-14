@@ -54,11 +54,6 @@ module Sort = struct
     val sort
       :  'a t
       -> cmp:('a -> 'a -> int)
-      -> unit
-
-    val sort_range
-      :  'a t
-      -> cmp:('a -> 'a -> int)
       -> left:int (* leftmost index of sub-array to sort *)
       -> right:int (* rightmost index of sub-array to sort *)
       -> unit
@@ -66,7 +61,7 @@ module Sort = struct
 
   (* http://en.wikipedia.org/wiki/Insertion_sort *)
   module Insertion_sort : Sort = struct
-    let insertion_sort arr ~cmp ~left ~right =
+    let sort arr ~cmp ~left ~right =
       let insert pos v =
         (* loop invariants:
            1.  the subarray arr[left .. i-1] is sorted
@@ -91,9 +86,6 @@ module Sort = struct
         insert i (get arr i)
       done
     ;;
-
-    let sort_range    = insertion_sort
-    let sort arr ~cmp = sort_range arr ~cmp ~left:0 ~right:(Array.length arr - 1)
   end
 
   (* http://en.wikipedia.org/wiki/Heapsort *)
@@ -130,7 +122,7 @@ module Sort = struct
       done;
     ;;
 
-    let heap_sort arr ~cmp ~left ~right =
+    let sort arr ~cmp ~left ~right =
       build_heap arr ~cmp ~left ~right;
       (* loop invariants:
          1.  the subarray arr[left ... i] is a max-heap H
@@ -142,9 +134,6 @@ module Sort = struct
         heapify arr ~cmp left ~left ~right:(i - 1);
       done;
     ;;
-
-    let sort_range    = heap_sort
-    let sort arr ~cmp = sort_range arr ~cmp ~left:0 ~right:(Array.length arr - 1)
   end
 
   (* http://en.wikipedia.org/wiki/Introsort *)
@@ -260,9 +249,9 @@ module Sort = struct
          since Insertion_sort.sort handles these cases properly.  Thus we don't need to
          make sure that left and right are valid in recursive calls. *)
       if len <= 32 then begin
-        Insertion_sort.sort_range arr ~cmp ~left ~right
+        Insertion_sort.sort arr ~cmp ~left ~right
       end else if max_depth < 0 then begin
-        Heap_sort.sort_range arr ~cmp ~left ~right;
+        Heap_sort.sort arr ~cmp ~left ~right;
       end else begin
         let max_depth = max_depth - 1 in
         let (l, r, middle_sorted) = dual_pivot_partition arr ~cmp ~left ~right in
@@ -276,7 +265,7 @@ module Sort = struct
 
     let log3 x = log10 x /. log10_of_3
 
-    let intro_sort arr ~cmp ~left ~right =
+    let sort arr ~cmp ~left ~right =
       let len = right - left + 1 in
       let heap_sort_switch_depth =
         (* with perfect 3-way partitioning, this is the recursion depth *)
@@ -284,10 +273,6 @@ module Sort = struct
       in
       intro_sort arr ~max_depth:heap_sort_switch_depth ~cmp ~left ~right;
     ;;
-
-    let sort_range    = intro_sort
-    let sort arr ~cmp = sort_range arr ~cmp ~left:0 ~right:(Array.length arr - 1)
-
   end
 
   module Test (M : Sort) = struct
@@ -302,7 +287,7 @@ module Sort = struct
       ;;
 
       let assert_sorted arr =
-        M.sort arr ~cmp:compare;
+        M.sort arr ~left:0 ~right:(Array.length arr - 1) ~cmp:compare;
         let len = Array.length arr in
         let rec loop i prev =
           if i = len then true
@@ -326,6 +311,12 @@ module Sort = struct
   module Intro_test = Test (Intro_sort)
 end
 
+let sort ?pos ?len arr ~cmp =
+  let pos, len =
+    Ordered_collection_common.get_pos_len_exn ?pos ?len ~length:(Array.length arr)
+  in
+  Sort.Intro_sort.sort arr ~cmp ~left:pos ~right:(pos + len - 1)
+
 (* Standard functions *)
 let append                = Array.append
 let blit                  = Array.blit
@@ -339,7 +330,6 @@ let make_matrix           = Array.make_matrix
 let map                   = Array.map
 let mapi                  = Array.mapi
 let of_list               = Array.of_list
-let sort                  = Sort.Intro_sort.sort
 let stable_sort t ~cmp    = Array.stable_sort t ~cmp
 let sub                   = Array.sub
 let to_list               = Array.to_list

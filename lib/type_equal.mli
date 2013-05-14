@@ -162,6 +162,12 @@ module Composition_preserves_injectivity (M1 : Injective) (M2 : Injective)
 module Id : sig
   type 'a t with sexp_of
 
+  (** Every [Id.t] contains a unique id that is distinct from the [Uid.t] in any other
+      [Id.t]. *)
+  module Uid : Unique_id_intf.Id
+
+  val uid : _ t -> Uid.t
+
   (** [create ~name] defines a new type identity.  Two calls to [create] will result in
       two distinct identifiers, even for the same arguments with the same type. *)
   val create : name:string -> _ t

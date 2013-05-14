@@ -1,7 +1,7 @@
 module Sexp = Sexplib.Sexp
 open Sexplib.Std
 
-let phys_equal = (==)
+let failwiths = Error.failwiths
 
 type (_, _) t = T : ('a, 'a) t
 type ('a, 'b) equal = ('a, 'b) t
@@ -55,8 +55,11 @@ module Id : sig
      the module. *)
   type 'a t with sexp_of
 
+  module Uid : Unique_id_intf.Id
+
   val create : name:string -> _ t
 
+  val uid  : _ t -> Uid.t
   val hash : _ t -> int
   val name : _ t -> string
 
@@ -76,40 +79,34 @@ end = struct
 
   let hash t = Uid.to_int_exn t.uid
 
-  (* Both arguments are boxed, because records are not immediate values.  [Obj.magic] is
-     safe here because [phys_equal] only inspects the addresses of boxed arguments. *)
-  let same (type a) (type b) (a : a t) (b : b t) = phys_equal a (Obj.magic b : a t)
+  let same t1 t2 = Uid.equal t1.uid t2.uid
 
   (* The use of [Obj.magic] does not directly create any issues with using the type
      equality proof at runtime since all occurrences of [T] at runtime are the same
      anyway.  That just leaves the question of type safety.  The claim is that if two type
-     identities are physically equal then their type parameters are the same.
+     identities are the [same] then their type parameters are the same.
 
-     Type identities are boxed.  [create] is the only way to create a new type identity
-     and always creates a new block.  This ensures that two type identities will be
-     physically equal iff they were created by the same call to [create].
+     [create] is the only way to create a new type identity and always creates a new
+     [uid].  This ensures that two type identities will be the [same] iff they were
+     created by the same call to [create].  The type parameter for a type identity is
+     invariant, so type identities are subject to the value restriction.  Therefore, the
+     result of [create] can't be unified with more than one type parameter.
 
-     The type parameter for a type identity is invariant, so type identities are subject
-     to the value restriction.  Therefore, the result of [create] can't be unified with
-     more than one type parameter.
-
-     Because [create] creates type identities that can be instantiated to no more than one
-     type parameter and two different invocations of [create] can't create type identities
-     that are physically equal, physical equality is sufficient to prove that two type
-     identities' type parameters are, in fact, the same.  Therefore, it is safe to create
-     a proof of type equality between the two type parameters using [Obj.magic] when the
-     type identities are physically equal. *)
+     Thus, if [same (ta : a t) (tb : b t)], then [a = b].  Therefore, it is safe to create
+     a proof of type equality between [a] and [b] using [Obj.magic]. *)
   let same_witness (type a) (type b) (a : a t) (b : b t) =
     if same a b
     then Result.Ok (Obj.magic (refl : (a, a) equal) : (a, b) equal)
-    else Or_error.error_string "Type_equal.Id.same got different ids"
+    else Or_error.error "Type_equal.Id.same got different ids" (a, b)
+           <:sexp_of< _ t * _ t >>
   ;;
 
   (* The proof for [same_witness] also applied to [same_witness_exn]. *)
   let same_witness_exn (type a) (type b) (a : a t) (b : b t) =
     if same a b
     then (Obj.magic (refl : (a, a) equal) : (a, b) equal)
-    else failwith "Type_equal.Id.same_exn got different ids"
+    else failwiths "Type_equal.Id.same_exn got different ids" (a, b)
+           <:sexp_of< _ t * _ t >>
   ;;
 
   TEST_MODULE = struct

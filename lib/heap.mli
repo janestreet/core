@@ -7,9 +7,10 @@ exception Empty
 
 (** {6 Types} *)
 
-
 (** Type of heaps *)
 type 'el t with sexp_of
+
+include Container.S1 with type 'el t := 'el t
 
 (** Type of heap elements (they can be efficiently removed) *)
 type 'el heap_el with sexp_of
@@ -29,13 +30,6 @@ val heap_el_get_el : 'el heap_el -> 'el
 val heap_el_get_heap_exn : 'el heap_el -> 'el t
 
 (** {6 Information on heap values} *)
-
-(** [length heap] @return the length (number of elements) of [heap]. *)
-val length : 'el t -> int
-
-(** [is_empty heap] @return [true] iff [heap] does not contain any
-    elements. *)
-val is_empty : 'el t -> bool
 
 (** [get_cmp heap] @return the ordering function used by [heap]. *)
 val get_cmp : 'el t -> ('el -> 'el -> int)
@@ -92,10 +86,13 @@ val top_heap_el : 'el t -> 'el heap_el option
     without changing it.  @raise Empty if [heap] is empty. *)
 val top_heap_el_exn : 'el t -> 'el heap_el
 
-(** [iter heap ~f] iterate over [heap] with function [f].  The elements
+(** [fold_el heap ~f] fold over [heap] with function [f].  The elements
+    are passed in an unspecified order. *)
+val fold_el : 'a t -> init:'b -> f:('b -> 'a heap_el -> 'b) -> 'b
+
+(** [iter_el heap ~f] iterate over [heap] with function [f].  The elements
     are passed in an unspecified order. *)
 val iter_el : 'a t -> f:('a heap_el -> unit) -> unit
-val iter    : 'a t -> f:('a         -> unit) -> unit
 
 (** {6 Destructive heap accessors} *)
 

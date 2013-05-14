@@ -2,10 +2,19 @@ open Std_internal
 
 include Flags_intf
 
+let create ~bit:n =
+  if n < 0 || n > 62 then
+    failwiths "Flags.create got invalid ~bit (must be between 0 and 62)"
+      n <:sexp_of< int >>;
+  Int63.shift_left Int63.one n
+;;
+
 module Make (M : Make_arg) = struct
   include Int63
 
   let empty = zero
+
+  let is_empty t = t = empty
 
   let (+) a b = bit_or a b
   let (-) a b = bit_and a (bit_not b)
@@ -79,6 +88,19 @@ TEST_MODULE = struct
   let a = Int63.of_int 0x1
   let b = Int63.of_int 0x2
   let c = Int63.of_int 0xC
+
+  let does_fail f = Result.is_error (Result.try_with f)
+
+  TEST_UNIT =
+    List.iter [ -1; 63 ] ~f:(fun bit ->
+      assert (does_fail (fun () -> create ~bit)))
+  ;;
+
+  TEST_UNIT =
+    assert (create ~bit:0 = Int63.of_int 0x1);
+    assert (create ~bit:1 = Int63.of_int 0x2);
+    assert (create ~bit:62 = Int63.of_int 0x4000_0000_0000_0000);
+  ;;
 
   include Make (struct
     let allow_intersecting = false

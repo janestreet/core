@@ -137,8 +137,11 @@ val fold_right : 'a t -> f:('a -> 'b -> 'b) -> init:'b -> 'b
 
 (* All sorting is in increasing order by default. *)
 
-(* [sort] uses constant heap space. [stable_sort] uses linear heap space. *)
-val sort        : 'a t -> cmp:('a -> 'a -> int) -> unit
+(* [sort] uses constant heap space. [stable_sort] uses linear heap space.
+
+   To sort only part of the array, specify [pos] to be the index to start sorting from
+   and [len] indicating how many elements to sort. *)
+val sort        : ?pos:int -> ?len:int -> 'a t -> cmp:('a -> 'a -> int) -> unit
 val stable_sort : 'a t -> cmp:('a -> 'a -> int) -> unit
 
 val is_sorted : 'a t -> cmp:('a -> 'a -> int) -> bool

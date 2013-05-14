@@ -27,6 +27,7 @@ module type S = sig
   val intersect : t -> t -> t   (* bitwise and *)
   val complement : t -> t       (* bitwise not *)
 
+  val is_empty     : t -> bool
   val do_intersect : t -> t -> bool
   val are_disjoint : t -> t -> bool
 end
@@ -60,6 +61,14 @@ end
 module type Flags = sig
   module type Make_arg = Make_arg
   module type S = S
+
+  (** [create ~bit:n] creates a flag with the [n]th bit set.  [n] must be between 0 and
+      62.
+
+      Typically a flag has one bit set; [create] is useful in exactly those cases.  For
+      flags with multiple bits one can either define the Int63.t directly or create it in
+      terms of simpler flags, using [+] and [-]. *)
+  val create : bit:int -> Int63.t
 
   (** [Flags.Make] builds a new flags module.  If there is an error in the [known] flags,
       it behaves as per [on_error].

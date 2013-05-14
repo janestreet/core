@@ -33,6 +33,41 @@ let heap_el_get_heap_exn h_el =
   h_el.heap
 ;;
 
+let fold_el t ~init ~f =
+  let ar = t.ar in
+  let rec loop acc i =
+    if i < Array.length ar then begin
+      let el = ar.(i) in
+      if heap_el_is_valid el then
+        loop (f acc el) (i + 1)
+      else acc
+    end
+    else acc
+  in
+  loop init 0
+;;
+
+let fold t ~init ~f =
+  fold_el t ~init ~f:(fun acc x -> f acc x.el)
+
+let iter_el t ~f =
+  fold_el t ~init:() ~f:(fun () x -> f x)
+
+let iter t ~f =
+  fold_el t ~init:() ~f:(fun () x -> f x.el)
+
+module C = Container.Make (struct
+  type nonrec 'a t = 'a t
+  let fold = fold
+end)
+let exists   = C.exists
+let for_all  = C.for_all
+let count    = C.count
+let find     = C.find
+let find_map = C.find_map
+let to_list  = C.to_list
+let to_array = C.to_array
+
 let length h = Array.length h.ar
 let is_empty h = length h = 0
 let get_cmp h = h.cmp
@@ -194,22 +229,6 @@ let top { ar; cmp=_ } =
   if Array.length ar = 0 then None
   else Some (get_el ar 0)
 
-let iter_el t ~f =
-  let ar = t.ar in
-  let rec loop i =
-    if i < Array.length ar then begin
-      let el = ar.(i) in
-      if el.pos >= 0 then begin
-        f el;
-        loop (i + 1);
-      end
-    end
-  in
-  loop 0
-;;
-
-let iter t ~f = iter_el t ~f:(fun el -> f el.el)
-
 let pop_heap_el_exn ({ ar; cmp=_ } as h) =
   let len = Array.length ar in
   if len = 0 then raise Empty;
@@ -325,3 +344,29 @@ let check_heap_property { ar = ar; cmp = cmp } =
     done;
     true
   with Exit -> false
+
+TEST_UNIT =
+  let int_compare = <:compare< int >> in
+  let heap = of_array int_compare [|5;99;1;7|] in
+  remove (find_heap_el_exn heap 99);
+  ignore (push heap 3 : int heap_el);
+  assert (check_heap_property heap);
+  let accum_positions_and_items ~fold_el =
+    fold_el heap ~init:([], []) ~f:(fun (positions, items) heap_el ->
+      assert (heap_el_is_valid heap_el);
+      assert (Pervasives.( == ) heap (heap_el_get_heap_exn heap_el));
+      heap_el.pos :: positions,
+      heap_el.el  :: items)
+  in
+  let poor_mans_fold ~iter_el t ~init ~f =
+    let acc = ref init in
+    iter_el t ~f:(fun x -> acc := f !acc x);
+    !acc
+  in
+  let positions,  items  = accum_positions_and_items ~fold_el in
+  let positions', items' = accum_positions_and_items ~fold_el:(poor_mans_fold ~iter_el) in
+  assert (Pervasives.( = ) (positions, items) (positions', items'));
+  assert (Pervasives.( = ) [0;1;2;3] (List.sort int_compare positions));
+  assert (Pervasives.( = ) [1;3;5;7] (List.sort int_compare items))
+
+

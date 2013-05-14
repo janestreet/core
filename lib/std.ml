@@ -64,6 +64,7 @@ module Process_env = Process_env
 module Error = Error
 module Equal = Equal
 module Exn = Exn
+module Flags = Flags
 module Float = Float
 module Float_intf = Float_intf
 module Force_once = Force_once
