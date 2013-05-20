@@ -99,7 +99,7 @@ TEST_MODULE = struct
   TEST_UNIT =
     assert (create ~bit:0 = Int63.of_int 0x1);
     assert (create ~bit:1 = Int63.of_int 0x2);
-    assert (create ~bit:62 = Int63.of_int 0x4000_0000_0000_0000);
+    assert (create ~bit:62 = Int63.of_int64_exn 0x4000_0000_0000_0000L);
   ;;
 
   include Make (struct
