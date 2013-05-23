@@ -12,6 +12,9 @@
     | Key.Map  | maps with a fixed key type that use [Key.compare] to order keys |
     v}
 
+    Where [Key] is any module defining values that can be used as keys of a map, like
+    [Int], [String], ...
+
     One should use [Map] for functions that access existing maps, like [find], [mem],
     [add], [fold], [iter], and [to_alist].  For functions that create maps, like [empty],
     [singleton], and [of_alist], one should strive to use the corresponding [Key.Map]

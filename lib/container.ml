@@ -14,6 +14,26 @@ end
 
 let fold_count fold t ~f = fold t ~init:0 ~f:(fun n a -> if f a then n + 1 else n)
 
+(** The idiom for using [Container.Make] is to bind the resulting module and to explicitly
+    import each of the functions that one wants:
+
+    {[
+      module C = Container.Make (struct ... end)
+      let count    = C.count
+      let exists   = C.exists
+      let find     = C.find
+      ...
+    ]}
+
+    This is preferable to:
+
+    {[
+      include Container.Make (struct ... end)
+    ]}
+
+    because the [include] makes it to easy to shadow specialized implementations of
+    container functions ([length] being a common one).
+*)
 module Make (T : T) = struct
   open T
 

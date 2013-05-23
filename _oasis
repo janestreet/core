@@ -2,7 +2,7 @@ OASISFormat:      0.3
 OCamlVersion:     >= 4.00.1
 FindlibVersion:   >= 1.3.2
 Name:             core
-Version:          109.23.00
+Version:          109.24.00
 Synopsis:         Jane Street Capital's standard library overlay
 Authors:          Jane Street Capital LLC <opensource@janestreet.com>
 Copyrights:       (C) 2008-2013 Jane Street Capital LLC <opensource@janestreet.com>
@@ -140,6 +140,10 @@ Library core
                       Int_replace_polymorphic_compare,
                       Int_set,
                       Invariant,
+                      Iobuf,
+                      Iobuf_debug,
+                      Iobuf_intf,
+                      Iobuf_tests,
                       Linux_ext,
                       Lock_file,
                       Make_substring,
@@ -206,6 +210,8 @@ Library core
                       User_and_group,
                       Uuid,
                       Validate,
+                      Validated,
+                      Validated_intf,
                       With_return,
                       Word_size,
                       Zone
@@ -216,12 +222,15 @@ Library core
                       crc_stubs.c,
                       heap_block_stubs.c,
                       includes.h,
+                      iobuf_stubs.c,
                       jane_common.h,
                       linux_ext_stubs.c,
                       misc.c,
                       ocaml_utils.h,
                       ocaml_utils_macros.h,
                       ocaml_utils_stubs.c,
+                      recvmmsg.c,
+                      recvmmsg.h,                      
                       signal_stubs.c,
                       socketaddr.h,
                       timespec.c,

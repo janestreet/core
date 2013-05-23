@@ -366,7 +366,7 @@ TEST =
   =
     [base 1; base 2; base 3; and_ [base 4; base 5]; base 6; base 7]
 
-include Container.Make (struct
+module C = Container.Make (struct
   type 'a t = 'a T.t
   let fold t ~init ~f =
     let rec loop acc t pending =
@@ -382,6 +382,19 @@ include Container.Make (struct
     in
     loop init t []
 end)
+
+let count    = C.count
+let exists   = C.exists
+let find     = C.find
+let find_map = C.find_map
+let fold     = C.fold
+let for_all  = C.for_all
+let is_empty = C.is_empty
+let iter     = C.iter
+let length   = C.length
+let mem      = C.mem
+let to_array = C.to_array
+let to_list  = C.to_list
 
 include (Monad.Make (struct
   type 'a t = 'a T.t

@@ -293,7 +293,7 @@ val send_nonblocking_no_sigpipe :
 
 val sendto_nonblocking_no_sigpipe :
   (file_descr -> ?pos : int -> ?len : int -> t ->
-    sockaddr -> int option) Or_error.t
+   sockaddr -> int option) Or_error.t
 (** [sendto_nonblocking_no_sigpipe sock ?pos ?len bstr sockaddr] tries
     to send [len] bytes in bigstring [bstr] starting at position [pos]
     to socket [sock] using address [addr].  @return [Some bytes_written],
@@ -371,9 +371,39 @@ val writev_assume_fd_is_nonblocking :
     @param count default = [Array.length iovecs]
 *)
 
+val recvmmsg_assume_fd_is_nonblocking :
+  (file_descr
+   -> ?count : int
+   -> ?srcs : sockaddr array
+   -> t Core_unix.IOVec.t array
+   -> lens : int array
+   -> int) Or_error.t
+(** [recvmmsg_assume_fd_is_nonblocking fd iovecs ~count ~lens] receives up to [count]
+    messages into [iovecs] from file descriptor [fd] without yielding to other OCaml
+    threads.  If [~count] is supplied, it must be that [0 <= count <= Array.length
+    iovecs].  If [~srcs] is supplied, save the source addresses for corresponding recieved
+    messages there.  If supplied, [Array.length srcs] must be [>= count].  Save the
+    lengths of the received messages in [lens].  It is required that [Array.length lens >=
+    count].
+
+    If an IOVec isn't long enough for its corresponding message, excess bytes may be
+    discarded, depending on the type of socket the message is received from.  While the
+    [recvmmsg] system call itself does return details of such truncation, etc., those
+    details are not (yet) passed through this interface.
+
+    @see "recvmmsg(2)" re. the underlying system call.
+
+    @return the number of messages actually read.
+
+    @raise Unix_error in the case of output errors.
+    @raise Invalid_argument if the designated range is out of bounds.
+
+    @param count default = [Array.length iovecs]
+*)
+
 val sendmsg_nonblocking_no_sigpipe :
   (file_descr -> ?count : int ->
-    t Core_unix.IOVec.t array -> int option) Or_error.t
+   t Core_unix.IOVec.t array -> int option) Or_error.t
 (** [sendmsg_nonblocking_no_sigpipe sock ?count iovecs] sends
     [count] [iovecs] of bigstrings to socket [sock].  @return [Some
     bytes_written], or [None] if the operation would have blocked.
@@ -451,7 +481,7 @@ external unsafe_blit :
 
 external unsafe_blit_string_bigstring :
   src : string -> src_pos : int -> dst : t -> dst_pos : int -> len : int -> unit
-    = "bigstring_blit_string_bigstring_stub" "noalloc"
+  = "bigstring_blit_string_bigstring_stub" "noalloc"
 (** [unsafe_blit_string_bigstring ~src ~src_pos ~dst ~dst_pos ~len]
     similar to {!Bigstring.blit_string_bigstring}, but does not perform
     any bounds checks.  Will crash on bounds errors! *)
@@ -605,6 +635,12 @@ external unsafe_destroy : t -> unit = "bigstring_destroy_stub"
    situation could be improved by having bigarray cache the length/dimensions.  *)
 
 
+
+val unsafe_get_int8         : t -> pos:int -> int
+val unsafe_set_int8         : t -> pos:int -> int -> unit
+val unsafe_get_uint8        : t -> pos:int -> int
+val unsafe_set_uint8        : t -> pos:int -> int -> unit
+
 (* 16 bit methods *)
 val unsafe_get_int16_le     : t -> pos:int -> int
 val unsafe_get_int16_be     : t -> pos:int -> int
@@ -621,6 +657,11 @@ val unsafe_get_int32_le     : t -> pos:int -> int
 val unsafe_get_int32_be     : t -> pos:int -> int
 val unsafe_set_int32_le     : t -> pos:int -> int -> unit
 val unsafe_set_int32_be     : t -> pos:int -> int -> unit
+
+val unsafe_get_uint32_le    : t -> pos:int -> int
+val unsafe_get_uint32_be    : t -> pos:int -> int
+val unsafe_set_uint32_le    : t -> pos:int -> int -> unit
+val unsafe_set_uint32_be    : t -> pos:int -> int -> unit
 
 (* Similar to the usage in binary_packing, the below methods are treating the value being
    read (or written), as an ocaml immediate integer, as such it is actually 63 bits. If
@@ -643,5 +684,10 @@ val unsafe_get_int64_t_le : t -> pos:int -> Int64.t
 val unsafe_get_int64_t_be : t -> pos:int -> Int64.t
 val unsafe_set_int64_t_le : t -> pos:int -> Int64.t -> unit
 val unsafe_set_int64_t_be : t -> pos:int -> Int64.t -> unit
+
+(* similar to [Binary_packing.unpack_padded_fixed_string] and
+   [.pack_padded_fixed_string]. *)
+val get_padded_fixed_string : padding:char -> t -> pos:int -> len:int -> unit -> string
+val set_padded_fixed_string : padding:char -> t -> pos:int -> len:int -> string -> unit
 
 

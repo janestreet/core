@@ -33,6 +33,9 @@ let create ?max_mem_waiting_gc size =
     | None -> ~-1
     | Some v -> Float.to_int (Byte_units.bytes v)
   in
+  (* vgatien-baron: aux_create ~size:(-1) throws Out of memory, which could be quite
+     confusing during debugging. *)
+  if size < 0 then invalid_argf "create: size = %d < 0" size ();
   aux_create ~max_mem_waiting_gc ~size
 
 TEST "create with different max_mem_waiting_gc" =
@@ -396,6 +399,78 @@ let writev_assume_fd_is_nonblocking fd ?count iovecs =
   unsafe_writev_assume_fd_is_nonblocking fd iovecs count
 ;;
 
+IFDEF RECVMMSG THEN
+
+external unsafe_recvmmsg_assume_fd_is_nonblocking :
+  file_descr
+  -> t Core_unix.IOVec.t array
+  -> int
+  -> sockaddr array option
+  -> int array
+  -> int
+  = "bigstring_recvmmsg_assume_fd_is_nonblocking_stub"
+
+let recvmmsg_assume_fd_is_nonblocking fd ?count ?srcs iovecs ~lens =
+  let loc = "recvmmsg_assume_fd_is_nonblocking" in
+  let count = get_iovec_count loc iovecs count in
+  begin match srcs with
+  | None -> ()
+  | Some a -> if count > Array.length a then invalid_arg (loc ^ ": count > n_srcs")
+  end;
+  if count > Array.length lens then invalid_arg (loc ^ ": count > n_lens");
+  unsafe_recvmmsg_assume_fd_is_nonblocking fd iovecs count srcs lens
+;;
+
+TEST_MODULE "recvmmsg smoke" = struct
+  module IOVec = Core_unix.IOVec
+  module Inet_addr = Core_unix.Inet_addr
+
+  let count = 10
+  let fd = socket PF_INET SOCK_DGRAM 0
+  let () = bind fd (ADDR_INET (Inet_addr.bind_any, 0))
+  let iovecs = Array.init count ~f:(fun _ -> IOVec.of_bigstring (create 1500))
+  let srcs = Array.create ~len:count (ADDR_INET (Inet_addr.bind_any, 0))
+  let lens = Array.create ~len:count 0
+  let short_srcs = Array.create ~len:(count - 1) (ADDR_INET (Inet_addr.bind_any, 0))
+  let () = set_nonblock fd
+
+  TEST =
+    try recvmmsg_assume_fd_is_nonblocking fd iovecs ~count ~srcs ~lens = 0
+    with Unix_error _ -> true | _ -> false
+  TEST =
+    try recvmmsg_assume_fd_is_nonblocking fd iovecs ~lens = 0
+    with Unix_error _ -> true | _ -> false
+  TEST =
+    try recvmmsg_assume_fd_is_nonblocking fd iovecs ~count:(count / 2) ~srcs ~lens = 0
+    with Unix_error _ -> true | _ -> false
+  TEST =
+    try recvmmsg_assume_fd_is_nonblocking fd iovecs ~count:0 ~srcs ~lens = 0
+    with Unix_error _ -> true | _ -> false
+  TEST =
+    try
+      ignore (recvmmsg_assume_fd_is_nonblocking fd iovecs ~count:(count + 1) ~lens);
+      false
+    with Unix_error _ -> false | _ -> true
+  TEST =
+    try
+      ignore (recvmmsg_assume_fd_is_nonblocking fd iovecs ~srcs:short_srcs ~lens);
+      false
+    with Unix_error _ -> false | _ -> true
+end
+;;
+
+let recvmmsg_assume_fd_is_nonblocking =
+  Ok recvmmsg_assume_fd_is_nonblocking
+;;
+
+ELSE                                    (* NDEF RECVMMSG *)
+
+let recvmmsg_assume_fd_is_nonblocking =
+  unimplemented "Bigstring.recvmmsg_assume_fd_is_nonblocking"
+;;
+
+ENDIF                                   (* RECVMMSG *)
+
 (* Memory mapping *)
 
 let map_file ~shared fd n = Array1.map_file fd Bigarray.char c_layout shared n
@@ -569,6 +644,32 @@ let unsafe_set_int64_t_be  = unsafe_write_int64_swap
 let unsafe_set_int64_t_le  = unsafe_write_int64
 ENDIF
 
+let unsafe_set_uint8 t ~pos n =
+  Array1.unsafe_set t pos (Char.unsafe_of_int n)
+let unsafe_set_int8 t ~pos n =
+  (* in all the set functions where there are these tests, it looks like the test could be
+     removed, since they are only changing the values of the bytes that are not written. *)
+  let n = if n < 0 then n + 256 else n in
+  Array1.unsafe_set t pos (Char.unsafe_of_int n)
+let unsafe_get_uint8 t ~pos =
+  Char.to_int (Array1.unsafe_get t pos)
+let unsafe_get_int8 t ~pos =
+  let n = Char.to_int (Array1.unsafe_get t pos) in
+  if n >= 128 then n - 256 else n
+
+let unsafe_set_uint32_le t ~pos n =
+  let n = if n >= 1 lsl 31 then n - 1 lsl 32 else n in
+  unsafe_set_int32_le t ~pos n
+let unsafe_set_uint32_be t ~pos n =
+  let n = if n >= 1 lsl 31 then n - 1 lsl 32 else n in
+  unsafe_set_int32_be t ~pos n
+let unsafe_get_uint32_le t ~pos =
+  let n = unsafe_get_int32_le t ~pos in
+  if n < 0 then n + 1 lsl 32 else n
+let unsafe_get_uint32_be t ~pos =
+  let n = unsafe_get_int32_be t ~pos in
+  if n < 0 then n + 1 lsl 32 else n
+
 TEST_MODULE "binary accessors" = struct
 
   let buf = create 256
@@ -677,4 +778,22 @@ ENDIF (* ARCH_SIXTYFOUR *)
     with _ -> true
 end
 
+let rec last_nonmatch_plus_one ~buf ~min_pos ~pos ~char =
+  let pos' = pos - 1 in
+  if pos' >= min_pos && Char.(=) (get buf pos') char then
+    last_nonmatch_plus_one ~buf ~min_pos ~pos:pos' ~char
+  else
+    pos
 
+let get_padded_fixed_string ~padding t ~pos ~len () =
+  let data_end = last_nonmatch_plus_one ~buf:t ~min_pos:pos ~pos:(pos + len) ~char:padding in
+  to_string t ~pos ~len:(data_end - pos)
+
+let set_padded_fixed_string ~padding t ~pos ~len value =
+  let slen = String.length value in
+  if slen > len then
+    failwithf "Bigstring.set_padded_fixed_string: %S is longer than %d" value len ();
+  blit_string_bigstring ~src:value ~dst:t ~src_pos:0 ~dst_pos:pos ~src_len:slen ();
+  for i = pos + slen to pos + len - 1; do
+    set t i padding
+  done

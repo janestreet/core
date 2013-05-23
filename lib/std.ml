@@ -90,6 +90,7 @@ module Interfaces = Interfaces
 module Interned_string = Interned_string
 module Interval = Interval
 module Invariant = Invariant
+module Iobuf = Iobuf
 module Lock_file = Lock_file
 module Memo = Memo
 module Monad = Monad
@@ -139,6 +140,7 @@ module Unpack_buffer = Unpack_buffer
 module User_and_group = User_and_group
 module Uuid = Uuid
 module Validate = Validate
+module Validated = Validated
 INCLUDE "version_defaults.mlh"
 IFDEF BUILD_VERSION_UTIL THEN
   module Version_util = Version_util
@@ -149,6 +151,7 @@ module Word_size = Word_size
 module Zone = Zone
 
 module type Unique_id = Unique_id.Id
+module type Validated = Validated.Validated
 
 include T
 

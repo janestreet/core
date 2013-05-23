@@ -1,6 +1,6 @@
 open Core.Std
 
-module Bench = Core_extended.Bench
+module Bench = Core_extended.Deprecated_bench
 module Test = Bench.Test
 
 module My_hashtbl = struct

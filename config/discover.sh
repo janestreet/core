@@ -49,6 +49,11 @@ case "`ocamlc -version`" in
         echo "DEFINE OCAML_4" >> $OUT
 esac
 
+# The recvmmsg system call was added in Linux 2.6.32
+if gcc config/test_recvmmsg.c -o /dev/null; then
+    echo "DEFINE RECVMMSG" >> $OUT;
+fi
+
 mv "$OUT" "$ML_OUTFILE"
 
 

@@ -82,6 +82,6 @@ module Stable : sig
   end with type ('a, 'b) t = ('a, 'b) t
 
   (* We export the unit test arg rather than instantiate the functor inside result.ml in
-     order to avoid circular dependancies.  The functor is instantiated in stable.ml. *)
+     order to avoid circular dependencies.  The functor is instantiated in stable.ml. *)
   module V1_stable_unit_test : Stable_unit_test_intf.Arg
 end

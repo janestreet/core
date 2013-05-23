@@ -220,11 +220,20 @@ let find_elt t ~f =
       if f (Elt.value elt) then r.return (Some elt));
     None)
 
-include Container.Make (struct
+module C = Container.Make (struct
   type 'a t_ = 'a t
   type 'a t = 'a t_
   let fold t ~init ~f = fold_elt t ~init ~f:(fun acc elt -> f acc (Elt.value elt))
 end)
+
+let count    = C.count
+let exists   = C.exists
+let find     = C.find
+let find_map = C.find_map
+let fold     = C.fold
+let for_all  = C.for_all
+let mem      = C.mem
+let to_array = C.to_array
 
 (* this function is lambda lifted for performance, to make direct recursive calls instead
    of calls through its closure. It also avoids the initial closure allocation. *)

@@ -178,6 +178,13 @@ static inline int safe_close_idem(int fd)
   return (ret == -1 && errno == EBADF) ? 0 : ret;
 }
 
+/* This function is defined in stubs for the Unix module of the
+   standard OCaml distribution.  It allocates a NULL-terminated array
+   of strings and fill it will strings contained in the string array
+   [arg].  Pointers stored in the result points directly inside the
+   OCaml heap. */
+extern char **cstringvect(value arg);
+
 /* Given v_prog, an O'Caml string value specifying a program name,
    v_args, an O'Caml array specifying program arguments (not
    including the program name), and v_search_path, an O'Caml boolean
@@ -216,7 +223,6 @@ CAMLprim value ml_create_process(value v_working_dir, value v_prog, value v_args
      too big for stack allocations anyway. */
   char *args[ML_ARG_MAX];
   int n_args = Wosize_val(v_args);
-  int n_env  = Wosize_val(v_env);
 
   char *working_dir = NULL;
 
@@ -340,8 +346,9 @@ CAMLprim value ml_create_process(value v_working_dir, value v_prog, value v_args
     safe_close(temp_stdout);
     safe_close(temp_stderr);
 
-    environ = NULL;
-    while (n_env) putenv(String_val(Field(v_env, --n_env)));
+    /* We don't bother saving/restoring the environment or freeing the
+       new one since we exit the process in case of error. */
+    environ = cstringvect(v_env);
 
     if (Is_block(v_working_dir))
       working_dir = String_val(Field(v_working_dir, 0));

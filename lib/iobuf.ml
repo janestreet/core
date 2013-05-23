@@ -1,0 +1,817 @@
+open Std_internal
+
+module T = struct
+  type t =
+    (* WHEN YOU CHANGE THIS, CHANGE iobuf_fields IN iobuf_stubs.c AS WELL!!! *)
+    { buf : Bigstring.t sexp_opaque;
+      (* The data in [buf] is at indices [lo], [lo+1], ... [hi-1]. *)
+      mutable lo_min : int;
+      mutable lo     : int;
+      mutable hi     : int;
+      mutable hi_max : int;
+    } with fields, sexp_of
+end
+open T
+type (+'read_write, +'seek) t = T.t with sexp_of
+type no_seek with sexp_of                (* like [read_only] *)
+type seek = private no_seek with sexp_of (* like [read_write] *)
+
+let length t = t.hi - t.lo
+
+let is_empty t = length t = 0
+
+let rewind t = t.lo <- t.lo_min
+
+let reset t =
+  t.lo <- t.lo_min;
+  t.hi <- t.hi_max
+;;
+
+let flip t =
+  t.hi <- t.lo;
+  t.lo <- t.lo_min;
+;;
+
+let capacity t = t.hi_max - t.lo_min
+
+let fail t message a sexp_of_a =
+  (* Immediately convert the iobuf to sexp.  Otherwise, the iobuf could be modified before
+     conversion and printing.  Since we plan to use iobufs for pooled network buffers in
+     practice, this could be very confusing when debugging production systems. *)
+  failwiths message (a, <:sexp_of< (_, _) t >> t)
+    (Tuple.T2.sexp_of_t sexp_of_a ident)
+
+let invariant _ _ t =
+  try
+    Fields.Direct.iter t
+      ~buf:(fun _ _ _ -> ())
+      ~lo_min:(fun _ _ lo_min ->
+        assert (lo_min >= 0);
+        assert (lo_min = t.hi_max - capacity t))
+      ~hi_max:(fun _ _ hi_max ->
+        assert (hi_max >= t.lo);
+        assert (hi_max = t.lo_min + capacity t))
+      ~lo:(fun _ _ lo ->
+        assert (lo >= t.lo_min);
+        assert (lo <= t.hi))
+      ~hi:(fun _ _ hi ->
+        assert (hi >= t.lo);
+        assert (hi <= t.hi_max))
+  with e -> fail t "Iobuf.invariant failed" e <:sexp_of< exn >>
+;;
+
+(* pszilagyi: Passing the names of functions is redundant with the stack backtrace and
+   wreaks havoc with inlining. *)
+
+(* We want [check_range] inlined, so we don't want a string constant in there. *)
+let bad_range ~pos ~len t =
+  fail t "Iobuf got invalid range" (`pos pos, `len len)
+    <:sexp_of< [ `pos of int ] * [ `len of int ] >>;
+;;
+
+let check_range t ~pos ~len =
+  if pos < 0 || len < 0 || len > length t - pos then
+    bad_range ~pos ~len t;
+;;
+
+let of_bigstring ?pos ?len buf =
+  let str_len = Bigstring.length buf in
+  let pos =
+    match pos with
+    | None -> 0
+    | Some pos ->
+      if pos < 0 || pos > str_len then
+        failwiths "Iobuf.of_bigstring got invalid pos" (pos, `str_len str_len)
+          (<:sexp_of< int * [ `str_len of int ]>>);
+      pos
+  in
+  let len =
+    match len with
+    | None -> str_len - pos
+    | Some len ->
+      let max_len = str_len - pos in
+      if len < 0 || len > max_len then
+        failwiths "Iobuf.of_bigstring got invalid len" (len, `max_len max_len)
+          (<:sexp_of< int * [ `max_len of int ] >>);
+      len
+  in
+  let lo = pos in
+  let hi = pos + len in
+  { buf; lo_min = lo; lo; hi; hi_max = hi }
+;;
+
+let sub ?(pos = 0) ?len t =
+  let len =
+    match len with
+    | None -> length t - pos
+    | Some len -> len
+  in
+  check_range t ~pos ~len;
+  let lo = t.lo + pos in
+  let hi = lo + len in
+  { buf = t.buf;
+    lo_min = lo;
+    lo;
+    hi;
+    hi_max = hi;
+  }
+;;
+
+let narrow t = t.lo_min <- t.lo; t.hi_max <- t.hi; ;;
+
+let resize t ~len =
+  if len < 0 then bad_range t ~len ~pos:0;
+  let hi = t.lo + len in
+  if hi > t.hi_max then bad_range t ~len ~pos:0;
+  t.hi <- hi;
+;;
+
+let create ~len =
+  if len < 0 then
+    failwiths "Iobuf.create got negative len" len <:sexp_of< int >>;
+  of_bigstring (Bigstring.create len);
+;;
+
+let to_string ?len t =
+  let len =
+    match len with
+    | Some len -> check_range t ~pos:0 ~len; len
+    | None -> length t
+  in
+  Bigstring.to_string t.buf ~pos:t.lo ~len
+
+let of_string s = of_bigstring (Bigstring.of_string s)
+
+(* We used to do it like {v
+
+let unsafe_with_range t ~pos f =
+  f t.buf ~pos:(t.lo + pos);
+;;
+
+let with_range t ~pos ~len f =
+  check_range t ~pos ~len;
+  unsafe_with_range t ~pos f;
+;;
+
+let inc_lo t amount = t.lo <- t.lo + amount
+
+(** [unsafe_with_advance] and [unsafe_with_range] forego range checks for code that does
+    macro range checks, like we want to do in [Parachute_fix.Std.Protocol].
+    Esp. [Consume.Unsafe.int32_le] for unrolled character scanning. *)
+let unsafe_with_advance t ~len f =
+  let result = unsafe_with_range t ~pos:0 f in
+  inc_lo t len;
+  result;
+;;
+
+let with_advance t ~len f =
+  check_range t ~pos:0 ~len;
+  unsafe_with_advance t ~len f;
+;;
+
+(* pulled out and type-constrained for inlining *)
+let ignore_range (_ : Bigstring.t) ~pos:(_ : int) = ()
+
+let advance t len = with_advance t ~len ignore_range
+
+   v} but higher order functions don't get inlined, even in simple uses like advance.
+   Therefor, we stick to first order. *)
+
+let unsafe_buf_pos t ~pos = t.lo + pos
+let buf_pos t ~pos ~len = check_range t ~pos ~len; unsafe_buf_pos t ~pos
+
+let unsafe_advance t n = t.lo <- t.lo + n
+let advance t len = check_range t ~len ~pos:0; unsafe_advance t len
+
+(* This is from /janelibs/ocaml-4.00.1+jane1+with-fp/lib/ocaml/bigarray.mli per jdimino
+   via bnigito.  It's an unsafe, inline-able version of Bigstring.get. *)
+external bigstring_unsafe_get : Bigstring.t -> pos:int -> char
+  = "%caml_ba_unsafe_ref_1"
+external bigstring_unsafe_set : Bigstring.t -> pos:int -> char -> unit
+  = "%caml_ba_unsafe_set_1"
+(* Note that we can get buf.{pos} inlined by ensuring that it's monomorphically typed,
+   but, we can't always get the containing function inlined. *)
+(* Similarly, we need the following intermediate functions for the primitives to be
+   inlined into.  (Not intuitive, but apparently necessary.) *)
+let bigstring_unsafe_get b ~pos   = bigstring_unsafe_get b ~pos
+let bigstring_unsafe_set b ~pos c = bigstring_unsafe_set b ~pos c
+
+module Snapshot = struct
+  let stale t iobuf =
+    fail iobuf "Iobuf.Snapshot.restore got stale snapshot" t <:sexp_of< int >>
+
+  type t = int with sexp_of             (* lo *)
+
+  let restore t iobuf =
+    if t < iobuf.lo_min || t > iobuf.hi then stale t iobuf;
+    iobuf.lo <- t;
+  ;;
+end
+
+let snapshot t =
+  t.lo
+;;
+
+let consume_into_string ?(pos = 0) ?len t dst =
+  let len = match len with Some l -> l | None -> String.length dst - pos in
+  Bigstring.blit_bigstring_string ~src:t.buf ~src_pos:(buf_pos t ~pos:0 ~len)
+    ~src_len:len ~dst ~dst_pos:pos ();
+  unsafe_advance t len
+;;
+
+let consume_into_bigstring ?(pos = 0) ?len t dst =
+  let len = match len with Some l -> l | None -> Bigstring.length dst - pos in
+  Bigstring.blit ~src:t.buf ~src_pos:(buf_pos t ~pos:0 ~len)
+    ~src_len:len ~dst ~dst_pos:pos ();
+  unsafe_advance t len
+;;
+
+let self_transfer t = fail t "Iobuf.self-transfer" () <:sexp_of< unit >>
+let transfer ?len ~src ~dst =
+  let len = match len with None -> min (length src) (length dst) | Some l -> l in
+  if phys_equal src dst then self_transfer src;
+  Bigstring.blit
+    ~src:src.buf ~src_pos:(buf_pos src ~pos:0 ~len) ~src_len:len
+    ~dst:dst.buf ~dst_pos:(buf_pos dst ~pos:0 ~len) ();
+  unsafe_advance src len;
+  unsafe_advance dst len
+;;
+
+let memmove t ~src_pos ~dst_pos ~len =
+  Bigstring.blit
+    ~src:t.buf ~src_pos:(buf_pos t ~pos:src_pos ~len) ~src_len:len
+    ~dst:t.buf ~dst_pos:(buf_pos t ~pos:dst_pos ~len) ()
+;;
+
+let compact t =
+  let src_len = t.hi - t.lo in
+  Bigstring.blit ~src:t.buf ~src_pos:t.lo ~src_len ~dst:t.buf ~dst_pos:t.lo_min ();
+  t.lo <- t.lo_min + src_len;
+  t.hi <- t.hi_max;
+;;
+
+(* Sys.word_size is determined only at runtime, but we need it to be a compile-time
+   constant to generate good code for Consume.int8, etc. *)
+let word_size = 64
+TEST = Sys.word_size = word_size
+
+module Consume = struct
+  type nonrec ('a, 'd, 'w) t = ('d, seek) t -> 'a
+
+  (* pszilagyi: This polymorphic helper does get inlined. *)
+  let unsafe_adv t n x = unsafe_advance t n; x
+  let pos t len = buf_pos t ~pos:0 ~len
+
+  let padded_fixed_string ~padding ~len t =
+    unsafe_adv t len
+      (Bigstring.get_padded_fixed_string t.buf ~pos:(pos t len) ~padding ~len ())
+  ;;
+
+  let string ?(str_pos = 0) ?len t =
+    let len = match len with None -> length t | Some l -> l in
+    let dst = String.create (len + str_pos) in
+    consume_into_string t dst ~len ~pos:str_pos;
+    dst
+  ;;
+
+  let bigstring ?(str_pos = 0) ?len t =
+    let len = match len with None -> length t | Some l -> l in
+    let dst = Bigstring.create (len + str_pos) in
+    consume_into_bigstring t dst ~len ~pos:str_pos;
+    dst
+  ;;
+
+  open Bigstring
+
+  let len = 1
+  let char        t = unsafe_adv t len (bigstring_unsafe_get    t.buf ~pos:(pos t len))
+  (* int8 accessors are slow C calls.  Use the fast char primitive. *)
+  let uint8       t = Char.to_int (char t)
+  let  int8       t = (uint8 t lsl (word_size - 9)) asr (word_size - 9)
+  let len = 2
+  let  int16_be   t = unsafe_adv t len (unsafe_get_int16_be     t.buf ~pos:(pos t len))
+  let  int16_le   t = unsafe_adv t len (unsafe_get_int16_le     t.buf ~pos:(pos t len))
+  let uint16_be   t = unsafe_adv t len (unsafe_get_uint16_be    t.buf ~pos:(pos t len))
+  let uint16_le   t = unsafe_adv t len (unsafe_get_uint16_le    t.buf ~pos:(pos t len))
+  let len = 4
+  let  int32_be   t = unsafe_adv t len (unsafe_get_int32_be     t.buf ~pos:(pos t len))
+  let  int32_le   t = unsafe_adv t len (unsafe_get_int32_le     t.buf ~pos:(pos t len))
+  let uint32_be   t = unsafe_adv t len (unsafe_get_uint32_be    t.buf ~pos:(pos t len))
+  let uint32_le   t = unsafe_adv t len (unsafe_get_uint32_le    t.buf ~pos:(pos t len))
+  let len = 8
+  let  int64_be   t = unsafe_adv t len (unsafe_get_int64_be_exn t.buf ~pos:(pos t len))
+  let  int64_le   t = unsafe_adv t len (unsafe_get_int64_le_exn t.buf ~pos:(pos t len))
+  let  int64_t_be t = unsafe_adv t len (unsafe_get_int64_t_be   t.buf ~pos:(pos t len))
+  let  int64_t_le t = unsafe_adv t len (unsafe_get_int64_t_le   t.buf ~pos:(pos t len))
+end
+
+module Fill = struct
+  type nonrec ('a, 'd, 'w) t = (read_write, seek) t -> 'a -> unit
+
+  let pos t len = buf_pos t ~pos:0 ~len
+  let unsafe_adv t n = unsafe_advance t n
+
+  let padded_fixed_string ~padding ~len t src =
+    Bigstring.set_padded_fixed_string ~padding ~len t.buf ~pos:(pos t len) src;
+    unsafe_adv t len
+  ;;
+
+  let string ?str_pos:(src_pos = 0) ?len t src =
+    let len = match len with Some l -> l | None -> String.length src - src_pos in
+    Bigstring.blit_string_bigstring ~src ~src_pos ~src_len:len
+      ~dst:t.buf ~dst_pos:(pos t len) ();
+    unsafe_adv t len
+  ;;
+
+  let bigstring ?str_pos:(src_pos = 0) ?len t src =
+    let len = match len with Some l -> l | None -> Bigstring.length src - src_pos in
+    Bigstring.blit ~src ~src_pos ~src_len:len ~dst:t.buf ~dst_pos:(pos t len) ();
+    unsafe_adv t len
+  ;;
+
+  open Bigstring
+
+  let len = 1
+  let char        t c = bigstring_unsafe_set  t.buf c ~pos:(pos t len); unsafe_adv t len
+  (* int8 accessors are slow C calls.  Use the fast char primitive. *)
+  let uint8       t i = char t (Char.unsafe_of_int i)
+  let  int8       t i = char t (Char.unsafe_of_int i)
+  let len = 2
+  let  int16_be   t i = unsafe_set_int16_be   t.buf i ~pos:(pos t len); unsafe_adv t len
+  let  int16_le   t i = unsafe_set_int16_le   t.buf i ~pos:(pos t len); unsafe_adv t len
+  let uint16_be   t i = unsafe_set_uint16_be  t.buf i ~pos:(pos t len); unsafe_adv t len
+  let uint16_le   t i = unsafe_set_uint16_le  t.buf i ~pos:(pos t len); unsafe_adv t len
+  let len = 4
+  let  int32_be   t i = unsafe_set_int32_be   t.buf i ~pos:(pos t len); unsafe_adv t len
+  let  int32_le   t i = unsafe_set_int32_le   t.buf i ~pos:(pos t len); unsafe_adv t len
+  let uint32_be   t i = unsafe_set_uint32_be  t.buf i ~pos:(pos t len); unsafe_adv t len
+  let uint32_le   t i = unsafe_set_uint32_le  t.buf i ~pos:(pos t len); unsafe_adv t len
+  let len = 8
+  let  int64_be   t i = unsafe_set_int64_be   t.buf i ~pos:(pos t len); unsafe_adv t len
+  let  int64_le   t i = unsafe_set_int64_le   t.buf i ~pos:(pos t len); unsafe_adv t len
+  let  int64_t_be t i = unsafe_set_int64_t_be t.buf i ~pos:(pos t len); unsafe_adv t len
+  let  int64_t_le t i = unsafe_set_int64_t_le t.buf i ~pos:(pos t len); unsafe_adv t len
+end
+
+module Peek = struct
+  type nonrec ('a, 'd, 'w) t = ('d, 'w) t -> pos:int -> 'a
+
+  let padded_fixed_string ~padding ~len t ~pos =
+    Bigstring.get_padded_fixed_string t.buf ~padding ~len ~pos:(buf_pos t ~len ~pos) ()
+  ;;
+
+  let string ?str_pos:(dst_pos = 0) ?len t ~pos =
+    let len = match len with None -> length t - pos | Some l -> l in
+    let dst = String.create (len + dst_pos) in
+    Bigstring.blit_bigstring_string ~src:t.buf ~src_pos:(buf_pos t ~len ~pos)
+      ~src_len:len ~dst ~dst_pos ();
+    dst
+  ;;
+
+  let bigstring ?str_pos:(dst_pos = 0) ?len t ~pos =
+    let len = match len with None -> length t - pos | Some l -> l in
+    let dst = Bigstring.create (len + dst_pos) in
+    Bigstring.blit ~src:t.buf ~src_pos:(buf_pos t ~len ~pos)
+      ~src_len:len ~dst ~dst_pos ();
+    dst
+  ;;
+
+  open Bigstring
+
+  let len = 1
+  let char        t ~pos = bigstring_unsafe_get    t.buf ~pos:(buf_pos t ~len ~pos)
+  (* int8 accessors are slow C calls.  Use the fast char primitive. *)
+  let uint8       t ~pos = Char.to_int (char t ~pos)
+  let  int8       t ~pos = (uint8 t ~pos lsl (word_size - 9)) asr (word_size - 9)
+  let len = 2
+  let  int16_be   t ~pos = unsafe_get_int16_be     t.buf ~pos:(buf_pos t ~len ~pos)
+  let  int16_le   t ~pos = unsafe_get_int16_le     t.buf ~pos:(buf_pos t ~len ~pos)
+  let uint16_be   t ~pos = unsafe_get_uint16_be    t.buf ~pos:(buf_pos t ~len ~pos)
+  let uint16_le   t ~pos = unsafe_get_uint16_le    t.buf ~pos:(buf_pos t ~len ~pos)
+  let len = 4
+  let  int32_be   t ~pos = unsafe_get_int32_be     t.buf ~pos:(buf_pos t ~len ~pos)
+  let  int32_le   t ~pos = unsafe_get_int32_le     t.buf ~pos:(buf_pos t ~len ~pos)
+  let uint32_be   t ~pos = unsafe_get_uint32_be    t.buf ~pos:(buf_pos t ~len ~pos)
+  let uint32_le   t ~pos = unsafe_get_uint32_le    t.buf ~pos:(buf_pos t ~len ~pos)
+  let len = 8
+  let  int64_be   t ~pos = unsafe_get_int64_be_exn t.buf ~pos:(buf_pos t ~len ~pos)
+  let  int64_le   t ~pos = unsafe_get_int64_le_exn t.buf ~pos:(buf_pos t ~len ~pos)
+  let  int64_t_be t ~pos = unsafe_get_int64_t_be   t.buf ~pos:(buf_pos t ~len ~pos)
+  let  int64_t_le t ~pos = unsafe_get_int64_t_le   t.buf ~pos:(buf_pos t ~len ~pos)
+end
+
+module Poke = struct
+  type nonrec ('a, 'd, 'w) t = (read_write, 'w) t -> pos:int -> 'a -> unit
+
+  let padded_fixed_string ~padding ~len t ~pos src =
+    Bigstring.set_padded_fixed_string ~padding ~len t.buf ~pos:(buf_pos t ~len ~pos)
+      src
+  ;;
+
+  let string ?str_pos:(src_pos = 0) ?len t ~pos src =
+    let len = match len with None -> String.length src - src_pos | Some l -> l in
+    Bigstring.blit_string_bigstring ~src ~src_pos ~src_len:len
+      ~dst:t.buf ~dst_pos:(buf_pos t ~len ~pos) ()
+  ;;
+
+  let bigstring ?str_pos:(src_pos = 0) ?len t ~pos src =
+    let len = match len with None -> Bigstring.length src - src_pos | Some l -> l in
+    Bigstring.blit ~src ~src_pos ~src_len:len ~dst:t.buf ~dst_pos:(buf_pos t ~len ~pos) ()
+  ;;
+
+  open Bigstring
+
+  let len = 1
+  let char        t ~pos c = bigstring_unsafe_set  t.buf ~pos:(buf_pos t ~len ~pos) c
+  (* int8 accessors are slow C calls.  Use the fast char primitive. *)
+  let uint8       t ~pos i = char t ~pos (Char.unsafe_of_int i)
+  let  int8       t ~pos i = char t ~pos (Char.unsafe_of_int i)
+  let len = 2
+  let  int16_be   t ~pos i = unsafe_set_int16_be   t.buf ~pos:(buf_pos t ~len ~pos) i
+  let  int16_le   t ~pos i = unsafe_set_int16_le   t.buf ~pos:(buf_pos t ~len ~pos) i
+  let uint16_be   t ~pos i = unsafe_set_uint16_be  t.buf ~pos:(buf_pos t ~len ~pos) i
+  let uint16_le   t ~pos i = unsafe_set_uint16_le  t.buf ~pos:(buf_pos t ~len ~pos) i
+  let len = 4
+  let  int32_be   t ~pos i = unsafe_set_int32_be   t.buf ~pos:(buf_pos t ~len ~pos) i
+  let  int32_le   t ~pos i = unsafe_set_int32_le   t.buf ~pos:(buf_pos t ~len ~pos) i
+  let uint32_be   t ~pos i = unsafe_set_uint32_be  t.buf ~pos:(buf_pos t ~len ~pos) i
+  let uint32_le   t ~pos i = unsafe_set_uint32_le  t.buf ~pos:(buf_pos t ~len ~pos) i
+  let len = 8
+  let  int64_be   t ~pos i = unsafe_set_int64_be   t.buf ~pos:(buf_pos t ~len ~pos) i
+  let  int64_le   t ~pos i = unsafe_set_int64_le   t.buf ~pos:(buf_pos t ~len ~pos) i
+  let  int64_t_be t ~pos i = unsafe_set_int64_t_be t.buf ~pos:(buf_pos t ~len ~pos) i
+  let  int64_t_le t ~pos i = unsafe_set_int64_t_le t.buf ~pos:(buf_pos t ~len ~pos) i
+end
+
+let bin_prot_length_prefix_bytes = 4
+
+let consume_bin_prot t bin_prot_reader =
+  let result =
+    if length t < bin_prot_length_prefix_bytes then
+      error "Iobuf.consume_bin_prot not enough data to read length" t
+        (<:sexp_of< (_, _) t >>)
+    else begin
+      let mark = t.lo in
+      let v_len = Consume.int32_be t in
+      if v_len > length t then begin
+        t.lo <- mark;
+        error "Iobuf.consume_bin_prot not enough data to read value" (v_len, t)
+          (<:sexp_of< int * (_, _) t >>);
+      end else begin
+        let pos_ref = ref t.lo in
+        let v = bin_prot_reader.Bin_prot.Type_class.read t.buf ~pos_ref in
+        if !pos_ref - t.lo <> v_len then
+          fail t "Iobuf.consume_bin_prot bug"
+            (`amount_read (!pos_ref - t.lo), `expected_to_read v_len)
+            (<:sexp_of<  [ `amount_read of int ]
+                       * [ `expected_to_read of int ] >>);
+        unsafe_advance t v_len;
+        Ok v
+      end
+    end
+  in
+  result;
+;;
+
+let fill_bin_prot t writer v =
+  let v_len = writer.Bin_prot.Type_class.size v in
+  let need = v_len + bin_prot_length_prefix_bytes in
+  let result =
+    if need > length t then
+      error "Iobuf.fill_bin_prot not enough space" (need, t)
+        (<:sexp_of< int * (_, _) t >>)
+    else begin
+      Fill.int32_be t v_len;
+      let pos = writer.Bin_prot.Type_class.write t.buf ~pos:t.lo v in
+      if pos - t.lo <> v_len then
+        fail t "Iobuf.fill_bin_prot bug"
+          (`amount_written (pos - t.lo), `expected_to_write v_len)
+          (<:sexp_of<  [ `amount_written of int ]
+                     * [ `expected_to_write of int ] >>);
+      unsafe_advance t v_len;
+      Ok ();
+    end
+  in
+  result;
+;;
+
+module Unix = Core_unix
+module File_descr = Unix.File_descr
+
+let read_assume_fd_is_nonblocking t fd =
+  let nread =
+    Bigstring.read_assume_fd_is_nonblocking fd t.buf ~pos:t.lo ~len:(length t)
+  in
+  unsafe_advance t nread;
+  nread
+;;
+
+let pread_assume_fd_is_nonblocking t fd ~offset =
+  let nread =
+    Bigstring.pread_assume_fd_is_nonblocking fd ~offset t.buf ~pos:t.lo ~len:(length t)
+  in
+  unsafe_advance t nread;
+  nread
+;;
+
+let recvfrom_assume_fd_is_nonblocking t fd =
+  let nread, sockaddr =
+    Bigstring.recvfrom_assume_fd_is_nonblocking fd t.buf ~pos:t.lo ~len:(length t)
+  in
+  unsafe_advance t nread;
+  nread, sockaddr
+;;
+
+(* recvmmsg based on bigstring.ml *)
+INCLUDE "config.mlh"
+
+IFDEF RECVMMSG THEN
+
+external unsafe_recvmmsg_assume_fd_is_nonblocking :
+  (File_descr.t
+   -> (read_write, seek) t array
+   -> int
+   -> Unix.sockaddr array option
+   -> int)
+  = "iobuf_recvmmsg_assume_fd_is_nonblocking_stub"
+
+let recvmmsg_assume_fd_is_nonblocking fd ?count ?srcs ts =
+  let loc = "Iobuf.recvmmsg_assume_fd_is_nonblocking" in
+  let count = Option.value count ~default:(Array.length ts) in
+  if count < 0 then invalid_arg (loc ^ ": count < 0");
+  if count > Array.length ts then invalid_arg (loc ^ ": count > n_iobufs");
+  begin match srcs with
+  | None -> ()
+  | Some a -> if count > Array.length a then invalid_arg (loc ^ ": count > n_srcs")
+  end;
+  unsafe_recvmmsg_assume_fd_is_nonblocking fd ts count srcs
+;;
+
+let recvmmsg_assume_fd_is_nonblocking =
+  Ok recvmmsg_assume_fd_is_nonblocking
+;;
+
+ELSE                                    (* NDEF RECVMMSG *)
+
+let recvmmsg_assume_fd_is_nonblocking =
+  unimplemented "Iobuf.recvmmsg_assume_fd_is_nonblocking"
+;;
+
+ENDIF                                   (* RECVMMSG *)
+
+(* This function and the one below have a 'fun () ->' in front of them because of the
+   following shortcoming in the typer:
+
+   # match () with () -> fun x -> x;;
+   - : '_a -> '_a = <fun>
+
+   Without the unit, in iobuf_debug.ml, we would try to wrap these functions by doing
+   matches like:
+
+   let send_nonblocking_no_sigpipe =
+     match send_nonblocking_no_sigpipe with
+     | Ok f -> Ok (fun t fd -> ... f t fd ...)
+     | Error _ as e -> e
+
+   but the typing problem shown above would prevent the generalization of the phantom
+   types variables in the iobuf types. *)
+let send_nonblocking_no_sigpipe () =
+  Or_error.map Bigstring.send_nonblocking_no_sigpipe ~f:(fun send ->
+    fun t fd ->
+      let nwritten_opt = send fd t.buf ~pos:t.lo ~len:(length t) in
+      begin match nwritten_opt with
+      | None -> ()
+      | Some nwritten -> unsafe_advance t nwritten
+      end;
+      nwritten_opt)
+;;
+
+let sendto_nonblocking_no_sigpipe () =
+  Or_error.map Bigstring.sendto_nonblocking_no_sigpipe ~f:(fun sendto ->
+    fun t fd sockaddr ->
+      let nwritten_opt = sendto fd t.buf ~pos:t.lo ~len:(length t) sockaddr in
+      begin match nwritten_opt with
+      | None -> ()
+      | Some nwritten -> unsafe_advance t nwritten
+      end;
+      nwritten_opt)
+;;
+
+let write_assume_fd_is_nonblocking t fd =
+  let nwritten =
+    Bigstring.write_assume_fd_is_nonblocking fd t.buf ~pos:t.lo ~len:(length t)
+  in
+  unsafe_advance t nwritten;
+  nwritten
+;;
+
+let pwrite_assume_fd_is_nonblocking t fd ~offset =
+  let nwritten =
+    Bigstring.pwrite_assume_fd_is_nonblocking fd ~offset t.buf ~pos:t.lo ~len:(length t)
+  in
+  unsafe_advance t nwritten;
+  nwritten
+;;
+
+module Unsafe = struct
+  module Consume = struct
+    type ('a, 'd, 'w) t = ('a, 'd, 'w) Consume.t
+
+    (* copy of Consume with pos replaced by an unsafe version *)
+
+    (* pszilagyi: This polymorphic helper does get inlined. *)
+    let unsafe_adv t n x = unsafe_advance t n; x
+    let pos t _len = unsafe_buf_pos t ~pos:0
+
+    let padded_fixed_string ~padding ~len t =
+      unsafe_adv t len
+        (Bigstring.get_padded_fixed_string t.buf ~pos:(pos t len) ~padding ~len ())
+    ;;
+
+    let string ?(str_pos = 0) ?len t =
+      let len = match len with None -> length t | Some l -> l in
+      let dst = String.create (len + str_pos) in
+      consume_into_string t dst ~len ~pos:str_pos;
+      dst
+    ;;
+
+    let bigstring ?(str_pos = 0) ?len t =
+      let len = match len with None -> length t | Some l -> l in
+      let dst = Bigstring.create (len + str_pos) in
+      consume_into_bigstring t dst ~len ~pos:str_pos;
+      dst
+    ;;
+
+    open Bigstring
+
+    let len = 1
+    let char        t = unsafe_adv t len (bigstring_unsafe_get    t.buf ~pos:(pos t len))
+    (* int8 accessors are slow C calls.  Use the fast char primitive. *)
+    let uint8       t = Char.to_int (char t)
+    let  int8       t = (uint8 t lsl (word_size - 9)) asr (word_size - 9)
+    let len = 2
+    let  int16_be   t = unsafe_adv t len (unsafe_get_int16_be     t.buf ~pos:(pos t len))
+    let  int16_le   t = unsafe_adv t len (unsafe_get_int16_le     t.buf ~pos:(pos t len))
+    let uint16_be   t = unsafe_adv t len (unsafe_get_uint16_be    t.buf ~pos:(pos t len))
+    let uint16_le   t = unsafe_adv t len (unsafe_get_uint16_le    t.buf ~pos:(pos t len))
+    let len = 4
+    let  int32_be   t = unsafe_adv t len (unsafe_get_int32_be     t.buf ~pos:(pos t len))
+    let  int32_le   t = unsafe_adv t len (unsafe_get_int32_le     t.buf ~pos:(pos t len))
+    let uint32_be   t = unsafe_adv t len (unsafe_get_uint32_be    t.buf ~pos:(pos t len))
+    let uint32_le   t = unsafe_adv t len (unsafe_get_uint32_le    t.buf ~pos:(pos t len))
+    let len = 8
+    let  int64_be   t = unsafe_adv t len (unsafe_get_int64_be_exn t.buf ~pos:(pos t len))
+    let  int64_le   t = unsafe_adv t len (unsafe_get_int64_le_exn t.buf ~pos:(pos t len))
+    let  int64_t_be t = unsafe_adv t len (unsafe_get_int64_t_be   t.buf ~pos:(pos t len))
+    let  int64_t_le t = unsafe_adv t len (unsafe_get_int64_t_le   t.buf ~pos:(pos t len))
+  end
+
+  module Fill = struct
+    type ('a, 'd, 'w) t = ('a, 'd, 'w) Fill.t
+
+    (* copy with unsafe pos *)
+
+    let pos t _len = unsafe_buf_pos t ~pos:0
+    let unsafe_adv t n = unsafe_advance t n
+
+    let padded_fixed_string ~padding ~len t src =
+      Bigstring.set_padded_fixed_string ~padding ~len t.buf ~pos:(pos t len) src;
+      unsafe_adv t len
+    ;;
+
+    let string ?str_pos:(src_pos = 0) ?len t src =
+      let len = match len with Some l -> l | None -> String.length src - src_pos in
+      Bigstring.blit_string_bigstring ~src ~src_pos ~src_len:len
+        ~dst:t.buf ~dst_pos:(pos t len) ();
+      unsafe_adv t len
+    ;;
+
+    let bigstring ?str_pos:(src_pos = 0) ?len t src =
+      let len = match len with Some l -> l | None -> Bigstring.length src - src_pos in
+      Bigstring.blit ~src ~src_pos ~src_len:len ~dst:t.buf ~dst_pos:(pos t len) ();
+      unsafe_adv t len
+    ;;
+
+    open Bigstring
+
+    let len = 1
+    let char        t c = bigstring_unsafe_set  t.buf c ~pos:(pos t len); unsafe_adv t len
+    (* int8 accessors are slow C calls.  Use the fast char primitive. *)
+    let uint8       t i = char t (Char.unsafe_of_int i)
+    let  int8       t i = char t (Char.unsafe_of_int i)
+    let len = 2
+    let  int16_be   t i = unsafe_set_int16_be   t.buf i ~pos:(pos t len); unsafe_adv t len
+    let  int16_le   t i = unsafe_set_int16_le   t.buf i ~pos:(pos t len); unsafe_adv t len
+    let uint16_be   t i = unsafe_set_uint16_be  t.buf i ~pos:(pos t len); unsafe_adv t len
+    let uint16_le   t i = unsafe_set_uint16_le  t.buf i ~pos:(pos t len); unsafe_adv t len
+    let len = 4
+    let  int32_be   t i = unsafe_set_int32_be   t.buf i ~pos:(pos t len); unsafe_adv t len
+    let  int32_le   t i = unsafe_set_int32_le   t.buf i ~pos:(pos t len); unsafe_adv t len
+    let uint32_be   t i = unsafe_set_uint32_be  t.buf i ~pos:(pos t len); unsafe_adv t len
+    let uint32_le   t i = unsafe_set_uint32_le  t.buf i ~pos:(pos t len); unsafe_adv t len
+    let len = 8
+    let  int64_be   t i = unsafe_set_int64_be   t.buf i ~pos:(pos t len); unsafe_adv t len
+    let  int64_le   t i = unsafe_set_int64_le   t.buf i ~pos:(pos t len); unsafe_adv t len
+    let  int64_t_be t i = unsafe_set_int64_t_be t.buf i ~pos:(pos t len); unsafe_adv t len
+    let  int64_t_le t i = unsafe_set_int64_t_le t.buf i ~pos:(pos t len); unsafe_adv t len
+  end
+
+  module Peek = struct
+    type ('a, 'd, 'w) t = ('a, 'd, 'w) Peek.t
+
+    (* copy with unsafe buf_pos *)
+
+    let buf_pos t ~len:_ ~pos = unsafe_buf_pos t ~pos
+
+    let padded_fixed_string ~padding ~len t ~pos =
+      Bigstring.get_padded_fixed_string t.buf ~padding ~len ~pos:(buf_pos t ~len ~pos) ()
+    ;;
+
+    let string ?str_pos:(dst_pos = 0) ?len t ~pos =
+      let len = match len with None -> length t - pos | Some l -> l in
+      let dst = String.create (len + dst_pos) in
+      Bigstring.blit_bigstring_string ~src:t.buf ~src_pos:(buf_pos t ~len ~pos)
+        ~src_len:len ~dst ~dst_pos ();
+      dst
+    ;;
+
+    let bigstring ?str_pos:(dst_pos = 0) ?len t ~pos =
+      let len = match len with None -> length t - pos | Some l -> l in
+      let dst = Bigstring.create (len + dst_pos) in
+      Bigstring.blit ~src:t.buf ~src_pos:(buf_pos t ~len ~pos)
+        ~src_len:len ~dst ~dst_pos ();
+      dst
+    ;;
+
+    open Bigstring
+
+    let len = 1
+    let char        t ~pos = bigstring_unsafe_get    t.buf ~pos:(buf_pos t ~len ~pos)
+    (* int8 accessors are slow C calls.  Use the fast char primitive. *)
+    let uint8       t ~pos = Char.to_int (char t ~pos)
+    let  int8       t ~pos = (uint8 t ~pos lsl (word_size - 9)) asr (word_size - 9)
+    let len = 2
+    let  int16_be   t ~pos = unsafe_get_int16_be     t.buf ~pos:(buf_pos t ~len ~pos)
+    let  int16_le   t ~pos = unsafe_get_int16_le     t.buf ~pos:(buf_pos t ~len ~pos)
+    let uint16_be   t ~pos = unsafe_get_uint16_be    t.buf ~pos:(buf_pos t ~len ~pos)
+    let uint16_le   t ~pos = unsafe_get_uint16_le    t.buf ~pos:(buf_pos t ~len ~pos)
+    let len = 4
+    let  int32_be   t ~pos = unsafe_get_int32_be     t.buf ~pos:(buf_pos t ~len ~pos)
+    let  int32_le   t ~pos = unsafe_get_int32_le     t.buf ~pos:(buf_pos t ~len ~pos)
+    let uint32_be   t ~pos = unsafe_get_uint32_be    t.buf ~pos:(buf_pos t ~len ~pos)
+    let uint32_le   t ~pos = unsafe_get_uint32_le    t.buf ~pos:(buf_pos t ~len ~pos)
+    let len = 8
+    let  int64_be   t ~pos = unsafe_get_int64_be_exn t.buf ~pos:(buf_pos t ~len ~pos)
+    let  int64_le   t ~pos = unsafe_get_int64_le_exn t.buf ~pos:(buf_pos t ~len ~pos)
+    let  int64_t_be t ~pos = unsafe_get_int64_t_be   t.buf ~pos:(buf_pos t ~len ~pos)
+    let  int64_t_le t ~pos = unsafe_get_int64_t_le   t.buf ~pos:(buf_pos t ~len ~pos)
+  end
+
+  module Poke = struct
+    type ('a, 'd, 'w) t = ('a, 'd, 'w) Poke.t
+
+    (* copy with unsafe buf_pos *)
+
+    let buf_pos t ~pos ~len:_ = unsafe_buf_pos t ~pos
+
+    let padded_fixed_string ~padding ~len t ~pos src =
+      Bigstring.set_padded_fixed_string ~padding ~len t.buf ~pos:(buf_pos t ~len ~pos)
+        src
+    ;;
+
+    let string ?str_pos:(src_pos = 0) ?len t ~pos src =
+      let len = match len with None -> String.length src - src_pos | Some l -> l in
+      Bigstring.blit_string_bigstring ~src ~src_pos ~src_len:len
+        ~dst:t.buf ~dst_pos:(buf_pos t ~len ~pos) ()
+    ;;
+
+    let bigstring ?str_pos:(src_pos = 0) ?len t ~pos src =
+      let len = match len with None -> Bigstring.length src - src_pos | Some l -> l in
+      Bigstring.blit ~src ~src_pos ~src_len:len ~dst:t.buf ~dst_pos:(buf_pos t ~len ~pos)
+        ()
+    ;;
+
+    open Bigstring
+
+    let len = 1
+    let char        t ~pos c = bigstring_unsafe_set  t.buf ~pos:(buf_pos t ~len ~pos) c
+    (* int8 accessors are slow C calls.  Use the fast char primitive. *)
+    let uint8       t ~pos i = char t ~pos (Char.unsafe_of_int i)
+    let  int8       t ~pos i = char t ~pos (Char.unsafe_of_int i)
+    let len = 2
+    let  int16_be   t ~pos i = unsafe_set_int16_be   t.buf ~pos:(buf_pos t ~len ~pos) i
+    let  int16_le   t ~pos i = unsafe_set_int16_le   t.buf ~pos:(buf_pos t ~len ~pos) i
+    let uint16_be   t ~pos i = unsafe_set_uint16_be  t.buf ~pos:(buf_pos t ~len ~pos) i
+    let uint16_le   t ~pos i = unsafe_set_uint16_le  t.buf ~pos:(buf_pos t ~len ~pos) i
+    let len = 4
+    let  int32_be   t ~pos i = unsafe_set_int32_be   t.buf ~pos:(buf_pos t ~len ~pos) i
+    let  int32_le   t ~pos i = unsafe_set_int32_le   t.buf ~pos:(buf_pos t ~len ~pos) i
+    let uint32_be   t ~pos i = unsafe_set_uint32_be  t.buf ~pos:(buf_pos t ~len ~pos) i
+    let uint32_le   t ~pos i = unsafe_set_uint32_le  t.buf ~pos:(buf_pos t ~len ~pos) i
+    let len = 8
+    let  int64_be   t ~pos i = unsafe_set_int64_be   t.buf ~pos:(buf_pos t ~len ~pos) i
+    let  int64_le   t ~pos i = unsafe_set_int64_le   t.buf ~pos:(buf_pos t ~len ~pos) i
+    let  int64_t_be t ~pos i = unsafe_set_int64_t_be t.buf ~pos:(buf_pos t ~len ~pos) i
+    let  int64_t_le t ~pos i = unsafe_set_int64_t_le t.buf ~pos:(buf_pos t ~len ~pos) i
+  end
+end
