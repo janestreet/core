@@ -5,7 +5,7 @@
     even if they mount the same directory).
 *)
 
-open Std_internal
+open Core_kernel.Std
 
 (** [create ?close_on_exec ?message path] tries to create a file at [path] containing the
     text [message], which defaults to the pid of the locking process.  It returns true on
@@ -63,8 +63,8 @@ val is_locked : string -> bool
 *)
 module Nfs : sig
   (** [lock ?message path] tries to create and lock the file at [path] by creating a hard
-      link to [path].nfs_lock.  The contents of path will be replaced with [message],
-      which will be the caller's hostname:pid by default.
+      link to [path].nfs_lock.  The contents of path will be replaced with a sexp
+      containing the caller's hostname and pid, and the optional [message].
 
       Efforts will be made to release this lock when the calling program exits. But there
       is no guarantee that this will occur under some types of program crash. If the
@@ -86,7 +86,10 @@ module Nfs : sig
   val critical_section : ?message : string -> string -> f : (unit -> 'a) -> 'a
 
   (** [get_hostname_and_pid path] reads the lock file at [path] and returns the hostname
-      and path in the file if it can be parsed. *)
+      and path in the file.  Returns [None] if the file cannot be read. *)
   val get_hostname_and_pid : string -> (string * Pid.t) option
-end
 
+  (** [get_message path] reads the lock file at [path] and returns the message in the
+      file.  Returns [None] if the file cannot be read. *)
+  val get_message : string -> string option
+end

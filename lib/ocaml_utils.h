@@ -1,8 +1,8 @@
 #ifndef OCAML_UTILS_H
 #define OCAML_UTILS_H
 
-#include "config.h"
-#include "jane_common.h"
+#include <core_config.h>
+#include <jane_common.h>
 
 #include <caml/alloc.h>
 #include <caml/memory.h>

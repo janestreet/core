@@ -1,6 +1,5 @@
-module String = Core_string
-module List = Core_list
-open Core_printf
+open Core_kernel.Std
+open Printf
 
 include struct
   open Caml.Filename
@@ -146,7 +145,7 @@ let open_temp_file ?(perm=0o600) ?in_dir prefix suffix =
 
 let temp_file ?perm ?in_dir prefix suffix =
   let (name, oc) = open_temp_file ?perm ?in_dir prefix suffix in
-  close_out oc;
+  Out_channel.close oc;
   name
 
 let root = "/"

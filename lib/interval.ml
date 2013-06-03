@@ -1,5 +1,5 @@
 
-open Std_internal
+open Core_kernel.Std
 
 open Int.Replace_polymorphic_compare
 let _ = (=)    (* turns off the unused open warning *)
@@ -61,7 +61,7 @@ module Stable = struct
         assert (empty.V.rank = 1);
         [ empty.V.constructor, "()", "\001" ]))
 
-  TEST_MODULE "Interval.V1.Float" = Stable_unit_test.Make(struct
+  TEST_MODULE "Interval.V1.Float" = Core_kernel.Stable_unit_test.Make(struct
     include V1.Float
     let equal x1 x2 = (V1.T.compare Float.compare x1 x2) = 0
 
@@ -73,7 +73,7 @@ module Stable = struct
       ]
   end)
 
-  TEST_MODULE "Interval.V1.Int" = Stable_unit_test.Make(struct
+  TEST_MODULE "Interval.V1.Int" = Core_kernel.Stable_unit_test.Make(struct
     include V1.Int
     let equal x1 x2 = (V1.T.compare Int.compare x1 x2) = 0
 
@@ -82,7 +82,7 @@ module Stable = struct
       ~non_empty: [ (-5, 789), "(-5 789)", "\000\255\251\254\021\003" ]
   end)
 
-  TEST_MODULE "Interval.V1.Ofday" = Stable_unit_test.Make(struct
+  TEST_MODULE "Interval.V1.Ofday" = Core_kernel.Stable_unit_test.Make(struct
     include V1.Ofday
     let equal x1 x2 = (V1.T.compare Ofday.compare x1 x2) = 0
 
@@ -203,7 +203,7 @@ module Raw_make (T : Bound) = struct
       | Interval _, Empty -> 1
       | Interval (l1,u1), Interval (l2,u2) ->
           let c = T.compare l1 l2 in
-          if Core_int.(<>) c 0 then c else T.compare u1 u2
+          if Int.(<>) c 0 then c else T.compare u1 u2
     ;;
 
     let are_disjoint_gen ~are_disjoint intervals =
@@ -357,8 +357,8 @@ end) = struct
   let t_of_sexp s =
     let t = t_of_sexp s in
     if is_malformed t then
-      Common.failwithf "Interval.Make.t_of_sexp error: malformed input %s"
-        (Core_sexp.to_string s) ()
+      failwithf "Interval.Make.t_of_sexp error: malformed input %s"
+        (Sexp.to_string s) ()
     else
       t
   ;;
@@ -378,9 +378,9 @@ module type S = Interval_intf.S
   with type 'a poly_t := 'a t
   with type 'a poly_set := 'a Set.t
 
-module Float = Make (Float   )
-module Int   = Make (Core_int)
-module Ofday = Make (Ofday   )
+module Float = Make (Float)
+module Int   = Make (Int  )
+module Ofday = Make (Ofday)
 module Time = struct
   include Make(Time)
 

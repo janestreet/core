@@ -7,7 +7,7 @@
    with hexadecimal digits x.
 *)
 
-open Std_internal
+open Core_kernel.Std
 module Unix = Core_unix
 
 (* The base module is responsible for generating unique string identifiers.  It should be

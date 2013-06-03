@@ -2,6 +2,8 @@
     properly under windows.
 *)
 
+open Core_kernel.Std
+
 (**  The path of the root.*)
 val root : string
 

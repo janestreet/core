@@ -1,4 +1,4 @@
-#include "config.h"
+#include <core_config.h>
 #ifdef JSC_LINUX_EXT
 #define _FILE_OFFSET_BITS 64
 #define _GNU_SOURCE
@@ -27,8 +27,8 @@
 
 #include <sys/sysinfo.h>
 
-#include "ocaml_utils.h"
-#include "unix_utils.h"
+#include <ocaml_utils.h>
+#include <unix_utils.h>
 
 CAMLprim value
 linux_sendfile_stub(value v_sock, value v_fd, value v_pos, value v_len)

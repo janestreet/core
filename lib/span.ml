@@ -1,4 +1,4 @@
-open Std_internal
+open Core_kernel.Std
 
 module Stable = struct
   module V1 = struct
@@ -148,7 +148,7 @@ module Stable = struct
 
     (* due to precision limitations in float we can't expect better than microsecond
        precision *)
-    include Float_robust_compare.Make(struct let epsilon = 1E-6 end)
+    include Core_kernel.Float_robust_compare.Make(struct let epsilon = 1E-6 end)
 
     let (/) t f = T.of_float ((t : T.t :> float) /. f)
     let (//) (f:T.t) (t:T.t) = (f :> float) /. (t :> float)
@@ -272,7 +272,7 @@ module Stable = struct
     let sexp_of_t t = Sexp.Atom (to_string t)
   end
 
-  TEST_MODULE "Span.V1" = Stable_unit_test.Make (struct
+  TEST_MODULE "Span.V1" = Core_kernel.Stable_unit_test.Make (struct
     include V1
 
     let equal t1 t2 = Int.(=) 0 (compare t1 t2)
@@ -317,8 +317,8 @@ module C = struct
   ;;
 end
 
-module Map = Core_map.Make_binable_using_comparator (C)
-module Set = Core_set.Make_binable_using_comparator (C)
+module Map = Map.Make_binable_using_comparator (C)
+module Set = Set.Make_binable_using_comparator (C)
 
 TEST =
   Set.equal (Set.of_list [hour])

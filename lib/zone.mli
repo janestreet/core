@@ -1,5 +1,5 @@
 (** Time-zone handling. *)
-open Std_internal
+open Core_kernel.Std
 
 (** {1 User-friendly interface} *)
 

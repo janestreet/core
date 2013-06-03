@@ -1,4 +1,4 @@
-open Std_internal
+open Core_kernel.Std
 
 type t = private float with bin_io, sexp (* number of seconds *)
 

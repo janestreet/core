@@ -9,6 +9,8 @@
     This interface is thread-safe.
 *)
 
+open Core_kernel.Std
+
 
 
 (** Type of timers *)

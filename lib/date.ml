@@ -1,7 +1,6 @@
-open Std_internal
+open Core_kernel.Std
 open Time_internal.Helpers
 module Time  = Time_internal.T
-module Int63 = Core_int63
 
 (* Create a local private date type to ensure that all dates are created via
    Date.create_exn.
@@ -196,7 +195,7 @@ module Stable = struct
     end)
   end
 
-  TEST_MODULE "Date.V1" = Stable_unit_test.Make (struct
+  TEST_MODULE "Date.V1" = Core_kernel.Stable_unit_test.Make (struct
     include V1
 
     let equal = (=)

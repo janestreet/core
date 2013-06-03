@@ -1,8 +1,8 @@
-INCLUDE "config.mlh"
+INCLUDE "core_config.mlh"
 
 IFDEF MUTEX_TIMED_LOCK THEN
 
-open Std_internal
+open Core_kernel.Std
 
 include Mutex0
 

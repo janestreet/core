@@ -1,4 +1,4 @@
-open Std_internal
+open Core_kernel.Std
 
 (* Represented as a number of seconds since midnight *)
 type t = private float with bin_io, sexp

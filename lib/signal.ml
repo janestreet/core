@@ -1,12 +1,6 @@
-open Sexplib.Std
+open Core_kernel.Std
 
-module Binable = Binable0
-module Int = Core_int
-module List = Core_list
-module Hashtbl = Core_hashtbl
-module String = Core_string
-
-let failwithf = Core_printf.failwithf
+let failwithf = Printf.failwithf
 
 include (Int : sig
   type t = int with bin_io
@@ -94,7 +88,7 @@ let to_string, of_string, default_sys_behavior =
     ]
   in
   let str_tbl = Int.Table.create ~size:1 () in
-  let int_tbl = Core_string.Table.create ~size:1 () in
+  let int_tbl = String.Table.create ~size:1 () in
   let behavior_tbl = Int.Table.create ~size:1 () in
   List.iter known ~f:(fun (name, s, behavior) ->
     Hashtbl.replace str_tbl ~key:s ~data:name;
@@ -109,12 +103,12 @@ let to_string, of_string, default_sys_behavior =
     | Some string -> string
   in
   let of_string s =
-    let s = Core_string.lowercase (Core_string.strip s) in
+    let s = String.lowercase (String.strip s) in
     match Hashtbl.find int_tbl s with
     | Some sn -> sn
     | None ->
-      if Core_string.is_prefix s ~prefix:"<unknown signal " then
-        try Int.of_string (Core_string.slice s 16 ~-1)
+      if String.is_prefix s ~prefix:"<unknown signal " then
+        try Int.of_string (String.slice s 16 ~-1)
         with _ -> raise (Invalid_signal_mnemonic_or_number s)
       else raise (Invalid_signal_mnemonic_or_number s)
   in

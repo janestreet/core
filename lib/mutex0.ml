@@ -1,3 +1,5 @@
+open Core_kernel.Std
+
 (* Error-checking mutexes. *)
 
 include Mutex

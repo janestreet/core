@@ -1,4 +1,4 @@
-open Std_internal
+open Core_kernel.Std
 
 module Sexp = Sexplib.Sexp
 
@@ -17,7 +17,7 @@ let sexp_of_t t =
   Sexp.List (List.drop l 2)
 ;;
 
-INCLUDE "config.mlh"
+INCLUDE "core_config.mlh"
 IFDEF ARCH_x86_64 THEN
 IFDEF LINUX_EXT THEN
 external backtrace_get : unit -> string = "backtrace_get"

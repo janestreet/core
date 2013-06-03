@@ -1,6 +1,6 @@
 (** Thread-safe queue module, using locks. *)
 
-open Std_internal
+open Core_kernel.Std
 
 type 'a t with sexp_of
 

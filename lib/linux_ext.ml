@@ -1,8 +1,6 @@
-open Std_internal
+open Core_kernel.Std
 
-module Field = Core_field
 module File_descr = Core_unix.File_descr
-module Int63 = Core_int63
 
 module Sysinfo0 = struct
   type t =
@@ -28,7 +26,7 @@ end
    do make sure you get the order correct) *)
 type tcp_bool_option = TCP_CORK with sexp, bin_io
 
-INCLUDE "config.mlh"
+INCLUDE "core_config.mlh"
 
 IFDEF POSIX_TIMERS THEN
 module Clock = struct
@@ -453,10 +451,10 @@ let cores =
       In_channel.with_file "/proc/cpuinfo" ~f:In_channel.input_lines
       |! List.fold_left ~init:0 ~f:(fun count line ->
         count +
-          (match Core_string.lsplit2 ~on:':' line with
+          (match String.lsplit2 ~on:':' line with
           | None -> 0
           | Some (label, _) ->
-            if Core_string.(=) (Core_string.rstrip label) "processor" then 1
+            if String.(=) (String.rstrip label) "processor" then 1
             else 0))
     in
     if num_cores > 0 then num_cores

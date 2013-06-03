@@ -1,4 +1,4 @@
-open Std_internal
+open Core_kernel.Std
 
 (** piece-wise linear interpolation from float-like types to float *)
 

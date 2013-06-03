@@ -1,5 +1,5 @@
 (** A module for representing absolute points in time, independent of time zone. *)
-open Std_internal
+open Core_kernel.Std
 
 (** A fully qualified point in time, independent of timezone. *)
 type t = Time_internal.T.t with bin_io, sexp

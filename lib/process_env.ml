@@ -1,10 +1,10 @@
-open Std_internal
+open Core_kernel.Std
 
 module Unix = Core_unix
 
 let parse_ssh_client () =
   let var = "SSH_CLIENT" in
-  match Sys.getenv var with
+  match Core_sys.getenv var with
   | None -> Ok `Nowhere
   | Some s ->
     match String.split ~on:' ' s with

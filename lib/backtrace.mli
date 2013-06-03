@@ -6,6 +6,8 @@
     2. the stack frames unwound when an exception is raised ([Backtrace.Exn])
 *)
 
+open Core_kernel.Std
+
 (** A [Backtrace.t] is a snapshot of the stack obtained by calling [Backtrace.get].  It is
     represented as a string with newlines separating the frames.  [sexp_of_t] splits the
     string at newlines and removes some of the cruft, leaving a human-friendly list of

@@ -1,4 +1,4 @@
-open Std_internal
+open Core_kernel.Std
 
 module Unix = Core_unix
 
@@ -1256,7 +1256,7 @@ end
 (* clear the setting of environment variable associated with command-line
    completion so that subprocesses don't see them. *)
 let getenv_and_clear var =
-  let value = Sys.getenv var in
+  let value = Core_sys.getenv var in
   if Option.is_some value then Unix.unsetenv var;
   value
 
@@ -1420,9 +1420,9 @@ end
 TEST_MODULE "Command.Spec.flags_of_args_exn" = struct
 
   let args q = [
-    ( "flag1", Core_arg.Unit (fun () -> Queue.enqueue q 1), "enqueue 1");
-    ( "flag2", Core_arg.Unit (fun () -> Queue.enqueue q 2), "enqueue 2");
-    ( "flag3", Core_arg.Unit (fun () -> Queue.enqueue q 3), "enqueue 3");
+    ( "flag1", Arg.Unit (fun () -> Queue.enqueue q 1), "enqueue 1");
+    ( "flag2", Arg.Unit (fun () -> Queue.enqueue q 2), "enqueue 2");
+    ( "flag3", Arg.Unit (fun () -> Queue.enqueue q 3), "enqueue 3");
   ]
 
   let parse argv =

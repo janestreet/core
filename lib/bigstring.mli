@@ -1,124 +1,14 @@
 (** String type based on [Bigarray], for use in I/O and C-bindings *)
 
-
+open Core_kernel.Std
 open Unix
-open Bigarray
 
-(** {6 Types and exceptions} *)
-
-(** Type of bigstrings *)
-type t = (char, int8_unsigned_elt, c_layout) Array1.t
-with bin_io, sexp
+include module type of Core_kernel.Std.Bigstring with type t = Core_kernel.Std.Bigstring.t
 
 (** Type of I/O errors *)
 exception IOError of
   int *  (** Number of bytes successfully read/written before error *)
   exn  (** The occurred exception (e.g. Unix_error, End_of_file) *)
-
-(** {6 Creation and string conversion} *)
-
-val create : ?max_mem_waiting_gc:Byte_units.t -> int -> t
-(** [create length]
-    @param max_mem_waiting_gc default = 256 M in OCaml <= 3.12, 1 G otherwise. As
-    the total allocation of calls to [create] approach [max_mem_waiting_gc],
-    the pressure in the garbage collector to be more agressive will increase.
-    @return a new bigstring having [length].
-    Content is undefined.
-  *)
-
-(** [init n ~f] creates a bigstring [t] of length [n], with [t.{i} = f i] *)
-val init : int -> f:(int -> char) -> t
-
-val of_string : ?pos : int -> ?len : int -> string -> t
-(** [of_string ?pos ?len str] @return a new bigstring that is equivalent
-    to the substring of length [len] in [str] starting at position [pos].
-
-    @param pos default = 0
-    @param len default = [String.length str - pos]
-*)
-
-val to_string : ?pos : int -> ?len : int -> t -> string
-(** [to_string ?pos ?len bstr] @return a new string that is equivalent
-    to the substring of length [len] in [bstr] starting at position [pos].
-
-    @param pos default = 0
-    @param len default = [length bstr - pos]
-
-    @raise Invalid_argument if the string would exceed runtime limits.
-*)
-
-
-(** {6 Checking} *)
-
-val check_args : loc : string -> pos : int -> len : int -> t -> unit
-(** [check_args ~loc ~pos ~len bstr] checks the position and length
-    arguments [pos] and [len] for bigstrings [bstr].  @raise
-    Invalid_argument if these arguments are illegal for the given
-    bigstring using [loc] to indicate the calling context. *)
-
-val get_opt_len : t -> pos : int -> int option -> int
-(** [get_opt_len bstr ~pos opt_len] @return the length of a subbigstring
-    in [bstr] starting at position [pos] and given optional length
-    [opt_len].  This function does not check the validity of its
-    arguments.  Use {!check_args} for that purpose. *)
-
-
-(** {6 Accessors} *)
-
-val length : t -> int
-(** [length bstr] @return the length of bigstring [bstr]. *)
-
-val sub : ?pos : int -> ?len : int -> t -> t
-(** [sub ?pos ?len bstr] @return the sub-bigstring in [bstr] that starts at
-    position [pos] and has length [len].  The sub-bigstring is a unique copy
-    of the memory region, i.e. modifying it will not modify the original
-    bigstring.  Note that this is different than the behavior of the
-    standard OCaml Array1.sub, which shares the memory.
-
-    @param pos default = 0
-    @param len default = [Bigstring.length bstr - pos]
-*)
-
-val sub_shared : ?pos : int -> ?len : int -> t -> t
-(** [sub_shared ?pos ?len bstr] @return the sub-bigstring in [bstr]
-    that starts at position [pos] and has length [len].  The sub-bigstring
-    shares the same memory region, i.e. modifying it will modify the
-    original bigstring.  Holding on to the sub-bigstring will also keep
-    the (usually bigger) original one around.
-
-    @param pos default = 0
-    @param len default = [Bigstring.length bstr - pos]
-*)
-
-(** [get t pos] returns the character at [pos] *)
-val get : t -> int -> char
-
-(** [set t pos] sets the character at [pos] *)
-val set : t -> int -> char -> unit
-
-external is_mmapped : t -> bool = "bigstring_is_mmapped_stub" "noalloc"
-(** [is_mmapped bstr] @return whether the bigstring [bstr] is
-    memory-mapped. *)
-
-(** {6 Blitting} *)
-
-(** [blit ~src ?src_pos ?src_len ~dst ?dst_pos ()] blits [src_len] characters
-    from [src] starting at position [src_pos] to [dst] at position [dst_pos].
-
-    @raise Invalid_argument if the designated ranges are out of bounds.
-*)
-type ('src, 'dst) blit
-  =  src : 'src
-  -> ?src_pos : int
-  -> ?src_len : int
-  -> dst : 'dst
-  -> ?dst_pos : int
-  -> unit
-  -> unit
-
-val blit                  : (t     , t     ) blit
-val blit_string_bigstring : (string, t     ) blit
-val blit_bigstring_string : (t     , string) blit
 
 (** {6 Input functions} *)
 
@@ -196,6 +86,21 @@ val read_assume_fd_is_nonblocking :
     @param len default = [length bstr - pos]
 *)
 
+val pread_assume_fd_is_nonblocking :
+  file_descr -> offset : int -> ?pos : int -> ?len : int -> t -> int
+(** [pread_assume_fd_is_nonblocking fd ~offset ?pos ?len bstr] reads up to [len] bytes
+    from file descriptor [fd] at offset [offset], and writes them to bigstring [bstr]
+    starting at position [pos].  The fd must be capable of seeking, and the current file
+    offset used for a regular [read()] is unchanged. Please see 'man pread' for more
+    information. @return the number of bytes actually read.
+
+    @raise Invalid_argument if the designated range is out of bounds.
+    @raise IOError in the case of input errors, or on EOF.
+
+    @param pos default = 0
+    @param len default = [length bstr - pos]
+*)
+
 val input : ?min_len : int -> in_channel -> ?pos : int -> ?len : int -> t -> int
 (** [input ?min_len ic ?pos ?len bstr] tries to read [len] bytes
     (guarantees to read at least [min_len] bytes (must be greater than
@@ -232,22 +137,6 @@ val really_input : in_channel -> ?pos : int -> ?len : int -> t -> unit
     @param pos default = 0
     @param len default = [length bstr - pos]
 *)
-
-val pread_assume_fd_is_nonblocking :
-  file_descr -> offset : int -> ?pos : int -> ?len : int -> t -> int
-(** [pread_assume_fd_is_nonblocking fd ~offset ?pos ?len bstr] reads up to [len] bytes
-    from file descriptor [fd] at offset [offset], and writes them to bigstring [bstr]
-    starting at position [pos].  The fd must be capable of seeking, and the current file
-    offset used for a regular [read()] is unchanged. Please see 'man pread' for more
-    information. @return the number of bytes actually read.
-
-    @raise Invalid_argument if the designated range is out of bounds.
-    @raise IOError in the case of input errors, or on EOF.
-
-    @param pos default = 0
-    @param len default = [length bstr - pos]
-*)
-
 
 (** {6 Output functions} *)
 
@@ -458,40 +347,7 @@ val really_output :
     @param len default = [length bstr - pos]
 *)
 
-
-(** {6 Memory mapping} *)
-
-val map_file : shared : bool -> file_descr -> int -> t
-(** [map_file shared fd n] memory-maps [n] characters of the data
-    associated with descriptor [fd] to a bigstring.  Iff [shared] is
-    [true], all changes to the bigstring will be reflected in the file. *)
-
-
 (** {6 Unsafe functions} *)
-
-
-external unsafe_blit :
-  src : t -> src_pos : int -> dst : t -> dst_pos : int -> len : int -> unit
-  = "bigstring_blit_stub"
-(** [unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len] similar to
-    {!Bigstring.blit}, but does not perform any bounds checks.  Will crash
-    on bounds errors!  Owing to special handling for very large copies,
-    [bigstring_blit_stub] may call Caml runtime functions, and hence
-    cannot be flagged as noalloc. *)
-
-external unsafe_blit_string_bigstring :
-  src : string -> src_pos : int -> dst : t -> dst_pos : int -> len : int -> unit
-  = "bigstring_blit_string_bigstring_stub" "noalloc"
-(** [unsafe_blit_string_bigstring ~src ~src_pos ~dst ~dst_pos ~len]
-    similar to {!Bigstring.blit_string_bigstring}, but does not perform
-    any bounds checks.  Will crash on bounds errors! *)
-
-external unsafe_blit_bigstring_string :
-  src : t -> src_pos : int -> dst : string -> dst_pos : int -> len : int -> unit
-  = "bigstring_blit_bigstring_string_stub" "noalloc"
-(** [unsafe_blit_bigstring_string ~src ~src_pos ~dst ~dst_pos ~len]
-    similar to {!Bigstring.blit_bigstring_string}, but does not perform
-    any bounds checks.  Will crash on bounds errors! *)
 
 external unsafe_read_assume_fd_is_nonblocking :
   file_descr -> pos : int -> len : int -> t -> int
@@ -528,20 +384,12 @@ external unsafe_really_recv :
     {!Bigstring.really_recv}, but does not perform any
     bounds checks.  Will crash on bounds errors! *)
 
-external unsafe_input :
-  min_len : int -> in_channel -> pos : int -> len : int -> t -> int
-  = "bigstring_input_stub"
-(** [unsafe_input ~min_len ic ~pos ~len bstr] similar to
-    {!Bigstring.input}, but does not perform any bounds checks.
-    Will crash on bounds errors! *)
-
 external unsafe_really_write :
   file_descr -> pos : int -> len : int -> t -> unit
   = "bigstring_really_write_stub"
 (** [unsafe_really_write fd ~pos ~len bstr] similar to
     {!Bigstring.write}, but does not perform any bounds checks.
     Will crash on bounds errors! *)
-
 
 (** [unsafe_really_send_no_sigpipe sock ~pos ~len bstr]
     similar to {!Bigstring.send}, but does not perform any
@@ -554,13 +402,6 @@ val unsafe_really_send_no_sigpipe
     bounds checks.  Will crash on bounds errors! *)
 val unsafe_send_nonblocking_no_sigpipe
   : (file_descr -> pos : int -> len : int -> t -> int option) Or_error.t
-
-external unsafe_output :
-  min_len : int -> out_channel -> pos : int -> len : int -> t -> int
-  = "bigstring_output_stub"
-(** [unsafe_output ~min_len oc ~pos ~len bstr] similar to
-    {!Bigstring.output}, but does not perform any bounds checks.
-    Will crash on bounds errors! *)
 
 external unsafe_writev :
   file_descr -> t Core_unix.IOVec.t array -> int -> int
@@ -575,119 +416,16 @@ external unsafe_writev :
 val unsafe_sendmsg_nonblocking_no_sigpipe
   : (file_descr -> t Core_unix.IOVec.t array -> int -> int option) Or_error.t
 
-(** {6 Search} *)
+external unsafe_input :
+  min_len : int -> in_channel -> pos : int -> len : int -> t -> int
+  = "bigstring_input_stub"
+(** [unsafe_input ~min_len ic ~pos ~len bstr] similar to
+    {!Bigstring.input}, but does not perform any bounds checks.
+    Will crash on bounds errors! *)
 
-(** [find ?pos ?len char t] returns [Some i] for the smallest [i >= pos] such that
-    [t.{i} = char], or [None] if there is no such [i].
-
-    @param pos default = 0
-    @param len default = [length bstr - pos] *)
-val find :
-  ?pos : int
-  -> ?len : int
-  -> char
-  -> t
-  -> int option
-
-(** {6 Destruction} *)
-
-(** [unsafe_destroy bstr] destroys the bigstring by deallocating its associated data or,
-    if memory-mapped, unmapping the corresponding file, and setting all dimensions to
-    zero.  This effectively frees the associated memory or address-space resources
-    instantaneously.  This feature helps working around a bug in the current OCaml
-    runtime, which does not correctly estimate how aggressively to reclaim such resources.
-
-    This operation is safe unless you have passed the bigstring to another thread that is
-    performing operations on it at the same time.  Access to the bigstring after this
-    operation will yield array bounds exceptions.
-
-    @raise Failure if the bigstring has already been deallocated (or deemed "external",
-    which is treated equivalently), or if it has proxies, i.e. other bigstrings referring
-    to the same data. *)
-external unsafe_destroy : t -> unit = "bigstring_destroy_stub"
-
-(* Accessors for parsing binary values, analogous to binary_packing.  These are in
-   Bigstring rather than a separate module because:
-
-   1) Existing binary_packing requires copies and does not work with bigstrings
-   2) The accessors rely on the implementation of bigstring, and hence should
-   changeshould the implementation of bigstring move away from Bigarray.
-   3) Bigstring already has some external C functions, so it didn't require many
-   changes to the OMakefile ^_^.
-
-   In a departure from Binary_packing, the naming conventions are chosen to be close to
-   C99 stdint types, as it's a more standard description and it is somewhat useful in
-   making compact macros for the implementations.  The accessor names contain endian-ness
-   to allow for branch-free implementations
-
-   <accessor>  ::= <unsafe><operation><type><endian><int>
-   <unsafe>    ::= unsafe_ | ''
-   <operation> ::= get_ | set_
-   <type>      ::= int16 | uint16 | int32 | int64
-   <endian>    ::= _le | _be | ''
-   <int>       ::= _int | ''
-
-   The "unsafe_" prefix indicates that these functions do no bounds checking.  Performance
-   testing demonstrated that the bounds check was 2-3 times slower due to the fact that
-   Bigstring.length is a C call, and not even a noalloc one.  In practice, message parsers
-   can check the size of an outer message once, and use the unsafe accessors for
-   individual fields, so many bounds checks can end up being redundant as well. The
-   situation could be improved by having bigarray cache the length/dimensions.  *)
-
-
-
-val unsafe_get_int8         : t -> pos:int -> int
-val unsafe_set_int8         : t -> pos:int -> int -> unit
-val unsafe_get_uint8        : t -> pos:int -> int
-val unsafe_set_uint8        : t -> pos:int -> int -> unit
-
-(* 16 bit methods *)
-val unsafe_get_int16_le     : t -> pos:int -> int
-val unsafe_get_int16_be     : t -> pos:int -> int
-val unsafe_set_int16_le     : t -> pos:int -> int -> unit
-val unsafe_set_int16_be     : t -> pos:int -> int -> unit
-
-val unsafe_get_uint16_le    : t -> pos:int -> int
-val unsafe_get_uint16_be    : t -> pos:int -> int
-val unsafe_set_uint16_le    : t -> pos:int -> int -> unit
-val unsafe_set_uint16_be    : t -> pos:int -> int -> unit
-
-(* 32 bit methods *)
-val unsafe_get_int32_le     : t -> pos:int -> int
-val unsafe_get_int32_be     : t -> pos:int -> int
-val unsafe_set_int32_le     : t -> pos:int -> int -> unit
-val unsafe_set_int32_be     : t -> pos:int -> int -> unit
-
-val unsafe_get_uint32_le    : t -> pos:int -> int
-val unsafe_get_uint32_be    : t -> pos:int -> int
-val unsafe_set_uint32_le    : t -> pos:int -> int -> unit
-val unsafe_set_uint32_be    : t -> pos:int -> int -> unit
-
-(* Similar to the usage in binary_packing, the below methods are treating the value being
-   read (or written), as an ocaml immediate integer, as such it is actually 63 bits. If
-   the user is confident that the range of values used in practice will not require 64 bit
-   precision (i.e. Less than Max_Long), then we can avoid allocation and use an
-   immediate.  If the user is wrong, an exception will be thrown (for get). *)
-val unsafe_get_int64_le_exn : t -> pos:int -> int
-val unsafe_get_int64_be_exn : t -> pos:int -> int
-val unsafe_set_int64_le     : t -> pos:int -> int -> unit
-val unsafe_set_int64_be     : t -> pos:int -> int -> unit
-
-(* 32 bit methods w/ full precision *)
-val unsafe_get_int32_t_le : t -> pos:int -> Int32.t
-val unsafe_get_int32_t_be : t -> pos:int -> Int32.t
-val unsafe_set_int32_t_le : t -> pos:int -> Int32.t -> unit
-val unsafe_set_int32_t_be : t -> pos:int -> Int32.t -> unit
-
-(* 64 bit methods w/ full precision *)
-val unsafe_get_int64_t_le : t -> pos:int -> Int64.t
-val unsafe_get_int64_t_be : t -> pos:int -> Int64.t
-val unsafe_set_int64_t_le : t -> pos:int -> Int64.t -> unit
-val unsafe_set_int64_t_be : t -> pos:int -> Int64.t -> unit
-
-(* similar to [Binary_packing.unpack_padded_fixed_string] and
-   [.pack_padded_fixed_string]. *)
-val get_padded_fixed_string : padding:char -> t -> pos:int -> len:int -> unit -> string
-val set_padded_fixed_string : padding:char -> t -> pos:int -> len:int -> string -> unit
-
-
+external unsafe_output :
+  min_len : int -> out_channel -> pos : int -> len : int -> t -> int
+  = "bigstring_output_stub"
+(** [unsafe_output ~min_len oc ~pos ~len bstr] similar to
+    {!Bigstring.output}, but does not perform any bounds checks.
+    Will crash on bounds errors! *)

@@ -3,14 +3,14 @@
 
 let dispatch = function
   | After_rules ->
-    pflag ["compile"; "ocaml"] "I" (fun x -> S [A "-I"; A x]);
-
     dep  ["ocaml"; "ocamldep"; "mlh"] ["lib/version_defaults.mlh";
-                                       "lib/config.mlh"];
+                                       "lib/core_config.mlh"];
 
     flag ["mlh"; "ocaml"; "ocamldep"] (S[A"-ppopt"; A"-Ilib/"]);
     flag ["mlh"; "ocaml"; "compile"]  (S[A"-ppopt"; A"-Ilib/"]);
     flag ["mlh"; "ocaml"; "doc"]      (S[A"-ppopt"; A"-Ilib/"]);
+
+    flag ["c"; "compile"] & S[A"-I"; A"lib"; A"-package"; A"core_kernel"];
   | _ ->
     ()
 

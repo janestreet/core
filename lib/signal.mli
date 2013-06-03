@@ -1,3 +1,5 @@
+open Core_kernel.Std
+
 type t with bin_io, sexp
 
 include Comparable.S with type t := t

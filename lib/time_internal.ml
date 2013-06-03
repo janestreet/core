@@ -1,4 +1,4 @@
-open Std_internal
+open Core_kernel.Std
 
 module Helpers = struct
   (* These specialzed string converters are about 20 times faster than using sprintf.
@@ -62,7 +62,7 @@ end = struct
 
   (* due to precision limitations in float we can't expect better than microsecond
      precision *)
-  include Float_robust_compare.Make(struct let epsilon = 1E-6 end)
+  include Core_kernel.Float_robust_compare.Make(struct let epsilon = 1E-6 end)
 
   let diff t1 t2 = Span.of_sec (t1 - t2)
 

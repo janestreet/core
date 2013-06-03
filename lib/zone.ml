@@ -8,9 +8,7 @@
    local time.
 *)
 
-open Std_internal
-module Hashtbl = Core_hashtbl
-module Unix = Core_unix
+open Core_kernel.Std
 
 let likely_machine_zones = ref [
   "America/New_York";
@@ -100,19 +98,19 @@ module Stable = struct
       ;;
 
       let input_long_long_as_float ic =
-        let int63_of_char chr = Core_int63.of_int_exn (int_of_char chr) in
-        let shift c bits = Core_int63.shift_left (int63_of_char c) bits in
+        let int63_of_char chr = Int63.of_int_exn (int_of_char chr) in
+        let shift c bits = Int63.shift_left (int63_of_char c) bits in
         let long_long = String.create 8 in
         really_input ic long_long 0 8;
         let result =                           shift long_long.[0] 56 in
-        let result = Core_int63.bit_or result (shift long_long.[1] 48) in
-        let result = Core_int63.bit_or result (shift long_long.[2] 40) in
-        let result = Core_int63.bit_or result (shift long_long.[3] 32) in
-        let result = Core_int63.bit_or result (shift long_long.[4] 24) in
-        let result = Core_int63.bit_or result (shift long_long.[5] 16) in
-        let result = Core_int63.bit_or result (shift long_long.[6] 8) in
-        let result = Core_int63.bit_or result (int63_of_char long_long.[7]) in
-        Core_int63.to_float result
+        let result = Int63.bit_or result (shift long_long.[1] 48) in
+        let result = Int63.bit_or result (shift long_long.[2] 40) in
+        let result = Int63.bit_or result (shift long_long.[3] 32) in
+        let result = Int63.bit_or result (shift long_long.[4] 24) in
+        let result = Int63.bit_or result (shift long_long.[5] 16) in
+        let result = Int63.bit_or result (shift long_long.[6] 8) in
+        let result = Int63.bit_or result (int63_of_char long_long.[7]) in
+        Int63.to_float result
       ;;
 
       let input_long_as_int ic =
@@ -402,7 +400,7 @@ module Stable = struct
               Array.iter (Sys.readdir dir) ~f:(fun fn ->
                 let full_fn     = dir ^ "/" ^ fn in
                 let relative_fn = String.drop_prefix full_fn basedir_len in
-                if Sys.is_directory fn = `Yes then begin
+                if Core_sys.is_directory fn = `Yes then begin
                   if not (List.exists skip_prefixes ~f:(fun prefix ->
                       String.is_prefix ~prefix relative_fn)) then
                     dfs fn (depth - 1)
@@ -429,7 +427,7 @@ module Stable = struct
       ;;
 
       let find_or_load_matching t1 =
-        With_return.with_return (fun r ->
+        Core_kernel.With_return.with_return (fun r ->
           let return_if_matches zone_name =
             let filename =
               String.concat ~sep:"/" [the_one_and_only.basedir; zone_name]
@@ -441,7 +439,7 @@ module Stable = struct
               with
               | _ -> false
             in
-            if matches then r.With_return.return (find_or_load zone_name) else ();
+            if matches then r.Core_kernel.With_return.return (find_or_load zone_name) else ();
           in
           List.iter !likely_machine_zones ~f:return_if_matches;
           traverse the_one_and_only.basedir ~f:return_if_matches;
@@ -572,7 +570,7 @@ module Stable = struct
     end) : Binable.S with type t := t)
   end
 
-  TEST_MODULE "Zone.V1" = Stable_unit_test.Make (struct
+  TEST_MODULE "Zone.V1" = Core_kernel.Stable_unit_test.Make (struct
     include V1
 
     let equal z1 z2 = z1.name = z2.name

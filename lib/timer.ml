@@ -1,4 +1,4 @@
-open Std_internal
+open Core_kernel.Std
 
 module Mutex = Mutex0
 

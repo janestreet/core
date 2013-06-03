@@ -1,11 +1,11 @@
 (* This file is a modified version of unixLabels.mli from the OCaml distribution. *)
-INCLUDE "config.mlh"
+INCLUDE "core_config.mlh"
 
-open Common
+open Core_kernel.Std
 
 (** File descriptor. *)
 module File_descr : sig
-  type t = Caml.Unix.file_descr with bin_io, sexp
+  type t = Unix.file_descr with bin_io, sexp
 
   include Hashable  .S with type t := t
   include Stringable.S with type t := t
@@ -165,7 +165,7 @@ module Exit_or_signal : sig
 
   (** [of_unix] assumes that any signal numbers in the incoming value are O'Caml internal
       signal numbers. *)
-  val of_unix : Caml.Unix.process_status -> t
+  val of_unix : Unix.process_status -> t
 
   val to_string_hum : t -> string
 end
@@ -178,7 +178,7 @@ module Exit_or_signal_or_stop : sig
 
   (** [of_unix] assumes that any signal numbers in the incoming value are O'Caml internal
       signal numbers. *)
-  val of_unix : Caml.Unix.process_status -> t
+  val of_unix : Unix.process_status -> t
 
   val to_string_hum : t -> string
 end
@@ -549,7 +549,7 @@ with sexp
  * calling lockf successfully on the same file.  Due to a limitation in the current
  * implementation the length will be converted to a native int, potentially throwing an
  * exception if it is too large. *)
-val lockf : File_descr.t -> mode:lock_command -> len:Core_int64.t -> unit
+val lockf : File_descr.t -> mode:lock_command -> len:Int64.t -> unit
 
 module Flock_command : sig
   type t

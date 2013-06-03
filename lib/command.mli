@@ -1,6 +1,6 @@
 (** purely functional command line parsing *)
 
-open Std_internal
+open Core_kernel.Std
 
 (** composable command-line specifications *)
 module Spec : sig
@@ -274,7 +274,7 @@ module Spec : sig
       the order that flags are passed on the command line.  In the [Command] module, using
       [flags_of_args_exn flags], they are evaluated in the order that the [Arg.t] values
       appear in [flags].  *)
-  val flags_of_args_exn : Core_arg.t list -> ('a, 'a) t
+  val flags_of_args_exn : Arg.t list -> ('a, 'a) t
 
   (** {1 anonymous argument specifications} *)
 

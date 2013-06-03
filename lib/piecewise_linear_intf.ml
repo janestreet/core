@@ -1,4 +1,4 @@
-open Std_internal
+open Core_kernel.Std
 
 module type Key = sig
   type t with bin_io, sexp

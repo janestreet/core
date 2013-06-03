@@ -2,7 +2,7 @@ OASISFormat:      0.3
 OCamlVersion:     >= 4.00.1
 FindlibVersion:   >= 1.3.2
 Name:             core
-Version:          109.24.00
+Version:          109.27.00
 Synopsis:         Jane Street Capital's standard library overlay
 Authors:          Jane Street Capital LLC <opensource@janestreet.com>
 Copyrights:       (C) 2008-2013 Jane Street Capital LLC <opensource@janestreet.com>
@@ -32,9 +32,9 @@ Flag "rt"
   Default$:    flag(rt_possible)
 
 PreConfCommand:  config/detect.sh
-PostConfCommand: config/discover.sh $ocamlc lib/config.mlh lib/config.h
+PostConfCommand: config/discover.sh $ocamlc lib/core_config.mlh lib/core_config.h
 
-PreDistCleanCommand: $rm lib/config.mlh lib/config.h
+PreDistCleanCommand: $rm lib/core_config.mlh lib/core_config.h
 
 Library core
   Path:               lib
@@ -45,6 +45,7 @@ Library core
                       Backtrace,
                       Bag,
                       Bigbuffer,
+                      Bigbuffer_internal,
                       Bigstring,
                       Bigstring_marshal,
                       Bigsubstring,
@@ -188,6 +189,8 @@ Library core
                       Stable_unit_test_intf,
                       Staged,
                       Std,
+                      Std_common,
+                      Std_kernel,
                       Std_internal,
                       Stringable,
                       String_id,
@@ -210,43 +213,39 @@ Library core
                       User_and_group,
                       Uuid,
                       Validate,
-                      Validated,
-                      Validated_intf,
                       With_return,
                       Word_size,
                       Zone
   CSources:           backtrace_stubs.c,
-                      bigstring_marshal_stubs.c,
                       bigstring_stubs.c,
-                      core_array_stubs.c,
                       crc_stubs.c,
-                      heap_block_stubs.c,
                       includes.h,
                       iobuf_stubs.c,
                       jane_common.h,
                       linux_ext_stubs.c,
-                      misc.c,
                       ocaml_utils.h,
                       ocaml_utils_macros.h,
                       ocaml_utils_stubs.c,
                       recvmmsg.c,
-                      recvmmsg.h,                      
+                      recvmmsg.h,
                       signal_stubs.c,
                       socketaddr.h,
                       timespec.c,
                       timespec.h,
+                      time_stubs.c,
                       unix_stubs.c,
                       unix_utils.h,
-                      config.h
+                      core_config.h
   BuildDepends:       bigarray,
                       bin_prot (>= 109.15.00),
                       bin_prot.syntax,
-                      comparelib.syntax (>= 109.15.00),
+                      comparelib.syntax (>= 109.27.00),
+                      core_kernel (>= 109.27.00),
                       fieldslib (>= 109.20.00),
                       fieldslib.syntax,
                       herelib (>= 109.15.00),
                       herelib.syntax,
-                      pa_ounit (>= 109.18.00),
+                      pa_ounit (>= 109.27.00),
                       pa_ounit.syntax,
                       pa_pipebang (>= 109.15.00),
                       res,
@@ -257,6 +256,7 @@ Library core
                       variantslib.syntax,
                       threads
   XMETARequires:      bin_prot,
+                      core_kernel,
                       variantslib,
                       sexplib,
                       fieldslib,
@@ -277,7 +277,7 @@ Library core_top
   Modules:            Core_install_printers
   XMETARequires:      core
   XMETADescription:   Toplevel printers for Core
-  BuildDepends:       core
+  BuildDepends:       core,compiler-libs
 
 Executable test_runner
   Path:               lib_test

@@ -1,5 +1,7 @@
 (** Lightweight threads. *)
 
+open Core_kernel.Std
+
 (** The type of thread handles. *)
 type t
 

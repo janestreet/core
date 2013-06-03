@@ -1,4 +1,4 @@
-open Std_internal
+open Core_kernel.Std
 module Unix = Core_unix
 
 module Thread = Core_thread
@@ -118,10 +118,15 @@ let daemonize_wait ?(redirect_stdout=`Dev_null) ?(redirect_stderr=`Dev_null)
       Unix.close write_end;
       let rec loop () =
         let wait_result, process_status =
-          Caml.UnixLabels.waitpid ~mode:[Caml.UnixLabels.WNOHANG] pid in
+          UnixLabels.waitpid ~mode:[UnixLabels.WNOHANG] pid in
         if wait_result = 0 then begin
-          match Caml.Unix.select [read_end] [] [] 0.1 with
-          | [read_end], [], [] ->
+          match
+            Unix.select ~read:[read_end] ~write:[] ~except:[] ~timeout:(`After 0.1) ()
+          with
+          | { Unix.Select_fds.
+              read = [read_end];
+              write = [];
+              except = [] } ->
             (* If the child process exits before detaching and the middle process
                happens to be in this call to select, the pipe will be closed and select
                will return a ready file descriptor, but with zero bytes to read.
@@ -132,16 +137,16 @@ let daemonize_wait ?(redirect_stdout=`Dev_null) ?(redirect_stderr=`Dev_null)
               exit 0
             else
               loop ()
-          | _, _, _ -> loop ()
+          | _ -> loop ()
         end else
           match process_status with
-          | Caml.Unix.WEXITED i | Caml.Unix.WSIGNALED i -> exit i
-          | Caml.Unix.WSTOPPED i -> fail_wstopped ~pid ~i
+          | UnixLabels.WEXITED i | UnixLabels.WSIGNALED i -> exit i
+          | UnixLabels.WSTOPPED i -> fail_wstopped ~pid ~i
       in loop ()
     end
   | `In_the_parent pid ->
     let pid = Pid.to_int pid in
-    match snd (Caml.UnixLabels.waitpid ~mode:[] pid) with
-    | Caml.Unix.WEXITED i | Caml.Unix.WSIGNALED i -> exit i
-    | Caml.Unix.WSTOPPED i -> fail_wstopped ~pid ~i
+    match snd (UnixLabels.waitpid ~mode:[] pid) with
+    | UnixLabels.WEXITED i | UnixLabels.WSIGNALED i -> exit i
+    | UnixLabels.WSTOPPED i -> fail_wstopped ~pid ~i
 ;;

@@ -2,17 +2,17 @@
    informative string in the third field of Unix_error.  The problem with the standard
    Unix_error that gets raised is that it doesn't include information about the arguments
    to the function that failed. *)
-INCLUDE "config.mlh"
+INCLUDE "core_config.mlh"
 
-open Std_internal
+open Core_kernel.Std
 
-module Int63 = Core_int63
-module Binable = Binable0
-module Unix = Caml.UnixLabels
+module Unix = UnixLabels
 
 open Sexplib.Conv
 
-let failwithf = Core_printf.failwithf
+let ( ^/ ) = Core_filename.concat
+
+let failwithf = Printf.failwithf
 
 let atom x = Sexp.Atom x
 let list x = Sexp.List x
@@ -883,7 +883,7 @@ let is_rw_open_flag = function O_RDONLY | O_WRONLY | O_RDWR -> true | _ -> false
 
 let openfile ?(perm = 0o644) ~mode filename =
   let mode_sexp () = sexp_of_list sexp_of_open_flag mode in
-  if not (Core_list.exists mode ~f:is_rw_open_flag) then
+  if not (List.exists mode ~f:is_rw_open_flag) then
     failwithf "Unix.openfile: no read or write flag specified in mode: %s"
       (Sexp.to_string (mode_sexp ())) ()
   else
@@ -901,7 +901,7 @@ let with_file ?perm file ~mode ~f = with_close (openfile file ~mode ?perm) ~f
 
 let read_write f ?restart ?pos ?len fd ~buf =
   let pos, len =
-    Ordered_collection_common.get_pos_len_exn ?pos ?len ~length:(String.length buf)
+    Core_kernel.Ordered_collection_common.get_pos_len_exn ?pos ?len ~length:(String.length buf)
   in
   improve ?restart (fun () -> f fd ~buf ~pos ~len)
     (fun () -> [fd_r fd; ("pos", Int.sexp_of_t pos); len_r len])
@@ -988,7 +988,7 @@ with sexp
 
 let lockf fd ~mode ~len =
   let len =
-    try Core_int64.to_int_exn len with _ ->
+    try Int64.to_int_exn len with _ ->
       failwith "~len passed to Unix.lockf too large to fit in native int"
   in
   improve (fun () -> Unix.lockf fd ~mode ~len)
@@ -1392,7 +1392,6 @@ type env =
 with sexp
 
 let create_process_env ?working_dir ~prog ~args ~env () =
-  let module Map = Core_map in
   let env_map =
     let current, env =
       match env with

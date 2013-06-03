@@ -1,7 +1,7 @@
 (** Module for simple closed intervals over arbitrary types that are ordered
     correctly using polymorphic compare. *)
 
-open Std_internal
+open Core_kernel.Std
 open Interval_intf
 
 module type S1 = S1
@@ -20,7 +20,7 @@ end)
   : S with type bound = Bound.t
 
 module Float : S with type bound = Float.t
-module Int   : S with type bound = Core_int.t
+module Int   : S with type bound = Int.t
 
 module Time : sig
   include S with type bound = Time.t

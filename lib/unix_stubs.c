@@ -43,8 +43,8 @@
 #define fstat64 fstat
 #endif
 
-#include "ocaml_utils.h"
-#include "config.h"
+#include <ocaml_utils.h>
+#include <core_config.h>
 #include "timespec.h"
 
 #if defined(JSC_WORDEXP)

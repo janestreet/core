@@ -1,4 +1,4 @@
-open Std_internal
+open Core_kernel.Std
 
 let ok_exn = Or_error.ok_exn
 

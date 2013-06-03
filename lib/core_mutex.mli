@@ -1,3 +1,5 @@
+open Core_kernel.Std
+
 type t = Mutex.t
 
 val create : unit -> t

@@ -1,9 +1,8 @@
-module List = Core_list
-module String = Core_string
+open Core_kernel.Std
 
 let threads_have_been_created = ref false
 
-include Caml.Thread
+include Thread
 
 let create f arg =
   threads_have_been_created := true;

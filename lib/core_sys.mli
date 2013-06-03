@@ -1,5 +1,7 @@
 (** System interface. *)
 
+open Core_kernel.Std
+
 (** The command line arguments given to the process.  The first element is the
     command name used to invoke the program.  The following elements are the
     command-line arguments given to the program. *)

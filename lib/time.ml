@@ -1,4 +1,4 @@
-open Std_internal
+open Core_kernel.Std
 module Unix = Core_unix
 
 module Stable = struct
@@ -366,8 +366,8 @@ module Stable = struct
       ;;
     end
 
-    module Map = Core_map.Make_binable_using_comparator (C)
-    module Set = Core_set.Make_binable_using_comparator (C)
+    module Map = Map.Make_binable_using_comparator (C)
+    module Set = Set.Make_binable_using_comparator (C)
 
     TEST =
       Set.equal (Set.of_list [epoch])
@@ -455,7 +455,7 @@ module Stable = struct
   end
 
   TEST_MODULE "Time.V1" = struct
-    TEST_MODULE "Time.V1 functor application" = Stable_unit_test.Make (struct
+    TEST_MODULE "Time.V1 functor application" = Core_kernel.Stable_unit_test.Make (struct
       include V1
       let zone = Zone.find_office `nyc
       let sexp_of_t t = sexp_of_t_with_zone ~zone t
@@ -470,7 +470,7 @@ module Stable = struct
           time ~y:1985 ~m:Month.Jun ~d:5 (Ofday.create ~hr:5 ~min:25 ()),
           "(1985-06-05 05:25:00.000000-04:00)",
           "\000\000\000\108\039\004\189\065";
-        ] @ if Int.(Sys.c_int_size () < 64) then [] else [
+        ] @ if Int.(Core_sys.c_int_size () < 64) then [] else [
           time ~y:2222 ~m:Month.Nov ~d:22 (Ofday.create ~hr:17 ~min:17 ~sec:17 ()),
           "(2222-11-22 17:17:17.000000-05:00)",
           "\000\000\208\230\204\186\253\065";

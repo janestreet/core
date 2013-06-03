@@ -1,4 +1,4 @@
-open Std_internal
+open Core_kernel.Std
 
 module Stable = struct
   module V1 = struct

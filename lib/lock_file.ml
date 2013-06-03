@@ -1,4 +1,4 @@
-open Std_internal
+open Core_kernel.Std
 open Int.Replace_polymorphic_compare let _ = _squelch_unused_module_warning_
 module Unix = Core_unix
 
@@ -74,39 +74,47 @@ let is_locked path =
   | e -> raise e
 
 module Nfs = struct
+  module Info = struct
+    type t = {
+      host    : string;
+      pid     : Pid.t;
+      message : string
+    } with sexp
+  end
+
   let lock_path path = path ^ ".nfs_lock"
 
-  let get_hostname_and_pid path =
-    let fd = Unix.openfile path ~mode:[Unix.O_RDONLY] in
-    (* presumed to be plenty big to hold a hostname and pid *)
-    let buf = String.create 2048 in
-    let len = Unix.read fd ~buf in
-    match String.rsplit2 ~on:':' (String.strip (String.sub buf ~pos:0 ~len)) with
-    | None                -> None
-    | Some (hostname, pid) ->
-      try
-        Some (hostname, Pid.of_string pid)
-      with
-      | _ -> None
+  let get_info path =
+    try
+      let contents = In_channel.read_all path in
+      Some (Info.t_of_sexp (Sexp.of_string (String.strip contents)))
+    with
+    | _ -> None
   ;;
+
+  let get_hostname_and_pid path =
+    Option.map (get_info path) ~f:(fun info -> (info.Info.host, info.Info.pid))
+  ;;
+
+  let get_message path = Option.map (get_info path) ~f:(fun info -> info.Info.message)
 
   (** [unlock_safely path] unlocks [path] if [path] was locked from the same
       host and the pid in the file is not in the list of running processes. *)
   let unlock_safely path =
     (* Make sure error messages contain a reference to "lock.nfs_lock", which is the
        actually important file. *)
-    let path = lock_path path in
+    let lock_path = lock_path path in
     let error s =
       failwithf
-        "Lock_file.Nfs.unlock_safely: unable to unlock %s: %s" path s ()
+        "Lock_file.Nfs.unlock_safely: unable to unlock %s: %s" lock_path s ()
     in
-    match Sys.file_exists ~follow_symlinks:false path with
-    | `Unknown -> error "unable to read path"
+    match Core_sys.file_exists ~follow_symlinks:false lock_path with
+    | `Unknown -> error (sprintf "unable to read %s" lock_path)
     | `No      -> ()
     | `Yes     ->
-      match get_hostname_and_pid path with
+      match get_hostname_and_pid lock_path with
       | None -> error "lock file doesn't contain hostname and pid"
-      | Some (locking_hostname, pid) ->
+      | Some (locking_hostname, locking_pid) ->
         let my_pid      = Unix.getpid () in
         let my_hostname = Unix.gethostname () in
         if String.(<>) my_hostname locking_hostname then
@@ -118,35 +126,44 @@ module Nfs = struct
              process is not owned by the user running this code we should fail to unlock
              either earlier (unable to read the file) or later (unable to remove the
              file). *)
-          if Pid.(<>) pid my_pid && Signal.can_send_to pid then
+          if Pid.(<>) locking_pid my_pid && Signal.can_send_to locking_pid then
             error (sprintf "locking process (pid %i) still running on %s"
-              (Pid.to_int pid) locking_hostname)
+              (Pid.to_int locking_pid) locking_hostname)
           else
-            try Unix.unlink path with | e -> error (Exn.to_string e)
+            try
+              Unix.unlink path;
+              Unix.unlink lock_path
+            with | e -> error (Exn.to_string e)
   ;;
 
   (* See mli for more information on the algorithm we use for locking over NFS.  Ensure
      that you understand it before you make any changes here. *)
-  let create ?message path =
-    unlock_safely path;
-    let fd = Unix.openfile path ~mode:[Unix.O_WRONLY; Unix.O_CREAT] in
-    let got_lock =
-      try
-        Unix.link ~target:path ~link_name:(lock_path path) ();
-        Unix.ftruncate fd ~len:0L;
-        let message =
-          match message with
-          | None -> Unix.gethostname () ^ ":" ^ Pid.to_string (Unix.getpid ())
-          | Some m -> m
-        in
-        fprintf (Unix.out_channel_of_descr fd) "%s\n%!" message;
-        true
-      with
-      | _ -> false
-    in
-    Unix.close fd;
-    if got_lock then at_exit (fun () -> try unlock_safely path with _ -> ());
-    got_lock
+  let create ?(message = "") path =
+    try
+      unlock_safely path;
+      let fd = Unix.openfile path ~mode:[Unix.O_WRONLY; Unix.O_CREAT] in
+      let got_lock =
+        try
+          Unix.link ~target:path ~link_name:(lock_path path) ();
+          Unix.ftruncate fd ~len:0L;
+          let info =
+            { Info.
+              host = Unix.gethostname ();
+              pid  = Unix.getpid ();
+              message
+            }
+          in
+          fprintf (Unix.out_channel_of_descr fd) "%s\n%!"
+            (Sexp.to_string_hum (Info.sexp_of_t info));
+          true
+        with
+        | _ -> false
+      in
+      Unix.close fd;
+      if got_lock then at_exit (fun () -> try unlock_safely path with _ -> ());
+      got_lock
+    with
+    | _ -> false
   ;;
 
   let create_exn ?message path =

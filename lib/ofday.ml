@@ -1,4 +1,4 @@
-open Std_internal
+open Core_kernel.Std
 open Time_internal.Helpers
 
 (* Create an abstract type for Ofday to prevent us from confusing it with
@@ -30,7 +30,7 @@ module Stable = struct
 
       (* due to precision limitations in float we can't expect better than microsecond
          precision *)
-      include Float_robust_compare.Make (struct let epsilon = 1E-6 end)
+      include Core_kernel.Float_robust_compare.Make (struct let epsilon = 1E-6 end)
 
       let to_span_since_start_of_day t = Span.of_sec t
 
@@ -114,7 +114,7 @@ module Stable = struct
     let of_string_iso8601_extended ?pos ?len str =
       let (pos, len) =
         match
-          (Ordered_collection_common.get_pos_len ?pos ?len ~length:(String.length str))
+          (Core_kernel.Ordered_collection_common.get_pos_len ?pos ?len ~length:(String.length str))
         with
         | Result.Ok z    -> z
         | Result.Error s -> failwithf "Ofday.of_string_iso8601_extended: %s" s ()
@@ -265,8 +265,8 @@ module C = struct
   ;;
 end
 
-module Map = Core_map.Make_binable_using_comparator (C)
-module Set = Core_set.Make_binable_using_comparator (C)
+module Map = Map.Make_binable_using_comparator (C)
+module Set = Set.Make_binable_using_comparator (C)
 
 TEST =
   Set.equal (Set.of_list [start_of_day])

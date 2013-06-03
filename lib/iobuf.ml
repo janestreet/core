@@ -190,7 +190,7 @@ external bigstring_unsafe_get : Bigstring.t -> pos:int -> char
 external bigstring_unsafe_set : Bigstring.t -> pos:int -> char -> unit
   = "%caml_ba_unsafe_set_1"
 (* Note that we can get buf.{pos} inlined by ensuring that it's monomorphically typed,
-   but, we can't always get the containing function inlined. *)
+   but we can't always get the containing function inlined. *)
 (* Similarly, we need the following intermediate functions for the primitives to be
    inlined into.  (Not intuitive, but apparently necessary.) *)
 let bigstring_unsafe_get b ~pos   = bigstring_unsafe_get b ~pos
@@ -523,7 +523,7 @@ let recvfrom_assume_fd_is_nonblocking t fd =
 ;;
 
 (* recvmmsg based on bigstring.ml *)
-INCLUDE "config.mlh"
+INCLUDE "core_config.mlh"
 
 IFDEF RECVMMSG THEN
 

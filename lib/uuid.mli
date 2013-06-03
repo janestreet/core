@@ -2,7 +2,7 @@
     specification.  Identifier generation is thread safe, and fast.
 *)
 
-open Std_internal
+open Core_kernel.Std
 
 type t with sexp
 

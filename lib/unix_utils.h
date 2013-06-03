@@ -4,7 +4,7 @@
 #define _GNU_SOURCE
 
 #include <sys/uio.h>
-#include "ocaml_utils.h"
+#include <ocaml_utils.h>
 
 /* Utility definitions */
 
@@ -29,7 +29,6 @@ static inline struct iovec * copy_iovecs(size_t *total_len, value v_iovecs, int 
   return iovecs;
 }
 
-/* I/O transaction size after which to release the OCaml-lock */
-#define THREAD_IO_CUTOFF 65536
+#include <core_params.h>
 
 #endif /* UNIX_UTILS_H */

@@ -3,7 +3,7 @@
    Much of this module is taken from the OCaml source.
 */
 
-#include "config.h"
+#include <core_config.h>
 #if (defined JSC_LINUX_EXT && defined JSC_ARCH_x86_64)
 
 #include <caml/memory.h>
