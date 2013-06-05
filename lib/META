@@ -1,0 +1,7 @@
+# OASIS_START
+# OASIS_STOP
+package "syntax" (
+ version = "109.27.00"
+ description = "Metapackage for syntax extensions of the Core suite"
+ requires = "sexplib.syntax fieldslib.syntax variantslib.syntax comparelib.syntax bin_prot.syntax custom_printf.syntax pa_pipebang herelib.syntax"
+)
