@@ -352,6 +352,7 @@ module Test (Iobuf : sig
         t_pos_1 buf 4 int32_le 0x01020304 "A\004\003\002\001FGHIJ" sexp_of_int;
         t_pos_1 buf 4 int32_be (-0x01020305) "A\254\253\252\251FGHIJ" sexp_of_int;
         t_pos_1 buf 4 int32_le (-0x05060709) "A\247\248\249\250FGHIJ" sexp_of_int;
+IFDEF ARCH_SIXTYFOUR THEN
         t_pos_1 buf 4 uint32_be 0xF6F5F4F3 "A\246\245\244\243FGHIJ" sexp_of_int;
         t_pos_1 buf 4 uint32_le 0xFBFAF9F8 "A\248\249\250\251FGHIJ" sexp_of_int;
         t_pos_1 buf 8 int64_be 0x0102030405060708 "A\001\002\003\004\005\006\007\008J"
@@ -362,6 +363,7 @@ module Test (Iobuf : sig
           "A\254\253\252\251\250\249\248\247J" sexp_of_int;
         t_pos_1 buf 8 int64_le (-0x0102030405060709)
           "A\247\248\249\250\251\252\253\254J" sexp_of_int;
+ENDIF;
         t_pos_1 buf 8 int64_t_be 1L "A\000\000\000\000\000\000\000\001J" sexp_of_int64;
         t_pos_1 buf 8 int64_t_le 1L "A\001\000\000\000\000\000\000\000J" sexp_of_int64;
         t_pos_1 buf 8 int64_t_be 0x8000000000000000L
