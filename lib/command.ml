@@ -1203,7 +1203,6 @@ let group ~summary ?readme alist =
 
 INCLUDE "version_defaults.mlh"
 module Version_info = struct
-
   let command ~version ~build_info =
     basic ~summary:"print version information"
       Base.Spec.(

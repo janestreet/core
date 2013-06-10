@@ -56,6 +56,7 @@ module Signal = Signal
 module Squeue = Squeue
 module Sys = Core_sys
 module Thread = Core_thread
+module Timing_wheel = Timing_wheel
 module Timer = Timer
 module Unix = Core_unix
 module User_and_group = User_and_group
