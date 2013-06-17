@@ -107,9 +107,9 @@ let daemonize_wait ?(redirect_stdout=`Dev_null) ?(redirect_stderr=`Dev_null)
       Staged.stage (fun () ->
         redirect_stdio_fds ~skip_regular_files:true
           ~stdout:redirect_stdout ~stderr:redirect_stderr;
-        let old_sigpipe_behavior = Signal.signal Signal.pipe `Ignore in
+        let old_sigpipe_behavior = Signal.Expert.signal Signal.pipe `Ignore in
         (try ignore (Unix.write write_end ~buf ~pos:0 ~len : int) with _ -> ());
-        Signal.set Signal.pipe old_sigpipe_behavior;
+        Signal.Expert.set Signal.pipe old_sigpipe_behavior;
         Unix.close write_end
       )
     | `In_the_parent pid ->

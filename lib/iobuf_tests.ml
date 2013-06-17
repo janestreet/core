@@ -1,3 +1,5 @@
+INCLUDE "core_config.mlh"
+
 open Std_internal
 
 module Unix = Core_unix
@@ -353,15 +355,18 @@ module Test (Iobuf : sig
         t_pos_1 buf 4 int32_be (-0x01020305) "A\254\253\252\251FGHIJ" sexp_of_int;
         t_pos_1 buf 4 int32_le (-0x05060709) "A\247\248\249\250FGHIJ" sexp_of_int;
 IFDEF ARCH_SIXTYFOUR THEN
-        t_pos_1 buf 4 uint32_be 0xF6F5F4F3 "A\246\245\244\243FGHIJ" sexp_of_int;
-        t_pos_1 buf 4 uint32_le 0xFBFAF9F8 "A\248\249\250\251FGHIJ" sexp_of_int;
-        t_pos_1 buf 8 int64_be 0x0102030405060708 "A\001\002\003\004\005\006\007\008J"
+        (* [big] creates an integer constant that is not representable on 32bits
+           systems. *)
+        let big a b c d = (a lsl 48) lor (b lsl 32) lor (c lsl 16) lor d in
+        t_pos_1 buf 4 uint32_be (big 0 0 0xF6F5 0xF4F3) "A\246\245\244\243FGHIJ" sexp_of_int;
+        t_pos_1 buf 4 uint32_le (big 0 0 0xFBFA 0xF9F8) "A\248\249\250\251FGHIJ" sexp_of_int;
+        t_pos_1 buf 8 int64_be (big 0x0102 0x0304 0x0506 0x0708) "A\001\002\003\004\005\006\007\008J"
           sexp_of_int;
-        t_pos_1 buf 8 int64_le 0x090a0b0c0d0e0f10 "A\016\015\014\013\012\011\010\009J"
+        t_pos_1 buf 8 int64_le (big 0x090a 0x0b0c 0x0d0e 0x0f10) "A\016\015\014\013\012\011\010\009J"
           sexp_of_int;
-        t_pos_1 buf 8 int64_be (-0x0102030405060709)
+        t_pos_1 buf 8 int64_be (-(big 0x0102 0x0304 0x0506 0x0709))
           "A\254\253\252\251\250\249\248\247J" sexp_of_int;
-        t_pos_1 buf 8 int64_le (-0x0102030405060709)
+        t_pos_1 buf 8 int64_le (-(big 0x0102 0x0304 0x0506 0x0709))
           "A\247\248\249\250\251\252\253\254J" sexp_of_int;
 ENDIF;
         t_pos_1 buf 8 int64_t_be 1L "A\000\000\000\000\000\000\000\001J" sexp_of_int64;
@@ -872,7 +877,7 @@ ENDIF;
             | _ -> failwithf "Unknown int size %d" int_size ()
           in
           set_int bstr ~pos:0 len;
-          blit_string_bigstring ~src:s ~dst:bstr ~dst_pos:int_size ();
+          Bigstring.From_string.blito ~src:s ~dst:bstr ~dst_pos:int_size ();
           really_write fd ~len:(len + int_size) bstr
         else
           let fill_int =

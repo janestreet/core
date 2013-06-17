@@ -1,8 +1,9 @@
 (** A collection of iobuf access functions.  This abstracts over [Iobuf.Consume],
     [Iobuf.Fill], [Iobuf.Peek], and [Iobuf.Poke]. *)
 module type Accessors = sig
-  type ('a, 'd, 'w) t  (** [('d, 'w) Iobuf.t] accessor function manipulating ['a],
-                           either writing it to the iobuf or reading it from the iobuf. *)
+  (** [('d, 'w) Iobuf.t] accessor function manipulating ['a], either writing it to the
+      iobuf or reading it from the iobuf. *)
+  type ('a, 'd, 'w) t
 
   val char                :                             (char       , 'd, 'w) t
   val  int8               :                             (int        , 'd, 'w) t

@@ -47,8 +47,6 @@ include Timing_wheel_intf
 
 let sexp_of_t_style : [ `Pretty | `Internal ] ref = ref `Pretty
 
-module Pool = Pool.Obj_array
-
 module Pointer = Pool.Pointer
 
 module Level_bits = struct

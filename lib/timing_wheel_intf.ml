@@ -216,6 +216,7 @@ module type S = sig
       occurs in [t], it is guaranteed that: [next - alarm_precision t <= min < next]. *)
   val next_alarm_fires_at : _ t -> Time.t option
 
+
   (** At the heart of a timing wheel is a priority queue in which the keys are
       non-negative integers corresponding to the intervals of time.  The priority queue is
       unlike a typical priority queue in that rather than having a "delete min" operation,

@@ -23,7 +23,7 @@ let bs_of_s = Bigstring.of_string
 let repr bs =
   if Bigstring.length bs > 30 then
     let s = String.create 30 in
-    Bigstring.blit_bigstring_string ~src:bs ~src_len:30 ~dst:s ();
+    Bigstring.To_string.blito ~src:bs ~src_len:30 ~dst:s ();
     sprintf "<bs:%d:%s>" (Bigstring.length bs) s
   else
     sprintf "<bs:%s>" (Bigstring.to_string bs)
@@ -47,7 +47,7 @@ let blit_test ~n ~src_pos ~dst_pos ~len (s1,s2) =
     try
     let bs1 = Bigstring.of_string s1 in
     let bs2 = Bigstring.of_string s2 in
-      Bigstring.blit ~src:bs1 ~src_pos ~src_len:len ~dst:bs2 ~dst_pos ();
+      Bigstring.blito ~src:bs1 ~src_pos ~src_len:len ~dst:bs2 ~dst_pos ();
     `Success (Bigstring.to_string bs2)
     with
       e -> `Failure (Exn.to_string e)
@@ -69,9 +69,9 @@ let blit_test ~n ~src_pos ~dst_pos ~len (s1,s2) =
 let simple_conversion_test ~n s =
   let len = String.length s in
   let bs = Bigstring.create len in
-  Bigstring.blit_string_bigstring ~src:s ~dst:bs ();
+  Bigstring.From_string.blito ~src:s ~dst:bs ();
   let s' = String.create len in
-  Bigstring.blit_bigstring_string ~src:bs ~dst:s' ();
+  Bigstring.To_string.blito ~src:bs ~dst:s' ();
   (sprintf "%s: %s" n s) @? (s' = s)
 ;;
 
@@ -243,7 +243,7 @@ let test =
        "sub" >::
          (fun () ->
            let original = Bigstring.of_string "catfish" in
-           match Bigstring.to_string (Bigstring.sub ~pos:3 original) with
+           match Bigstring.to_string (Bigstring.subo ~pos:3 original) with
            | "fish" -> ()
            | other -> failwithf "Expected fish, got: %s" other ());
 

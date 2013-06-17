@@ -30,7 +30,7 @@ let test =
           "contents" @? (Bigbuffer.contents buf = str ^ str);
           "big_contents" @?
             (Bigstring.to_string (Bigbuffer.big_contents buf) = str ^ str );
-          "sub" @? (Bigbuffer.sub buf 5 5 = "fdsxy");
+          "sub" @? (Bigbuffer.sub buf ~pos:5 ~len:5 = "fdsxy");
           io_test ~n:"" buf
         );
 

@@ -104,7 +104,7 @@ module Timerfd = struct
     include Flags.Make (struct
       let allow_intersecting = false
       let should_print_error = true
-
+      let remove_zero_flags = false
       let known =
         List.rev
           [ nonblock, "nonblock";
@@ -117,11 +117,25 @@ module Timerfd = struct
 
   external timerfd_create : Clock.t -> Flags.t -> int = "linux_timerfd_create"
 
-  let create ?(flags = Flags.empty) clock =
-    File_descr.of_int (timerfd_create clock flags);
+  (* At Jane Street, we link with [--wrap timerfd_create] so that we can use
+     our own wrapper around [timerfd_create].  This allows us to compile an executable on
+     a machine that has timerfd (e.g. CentOS 6) but then run the executable on a machine
+     that does not (e.g. CentOS 5), but that has our wrapper library.  We set up our
+     wrapper so that when running on a machine that doesn't have it, [timerfd_create]
+     raises ENOSYS. *)
+  let create =
+    let create ?(flags = Flags.empty) clock =
+      File_descr.of_int (timerfd_create clock flags)
+    in
+    match Result.try_with (fun () -> create Clock.realtime) with
+    | Ok t -> (Unix.close t; Ok create)
+    | Error (Unix.Unix_error (Unix.ENOSYS, _, _)) ->
+      unimplemented "Linux_ext.Timerfd.create"
+    | Error _ ->
+      (* [timerfd_create] is implemented but fails with the arguments we used above.
+         [create] might still be usable with different arguments, so we expose it here. *)
+      Ok create
   ;;
-
-  let create = Ok create
 
   external timerfd_settime : t -> bool -> float -> float -> unit = "linux_timerfd_settime"
 
@@ -167,22 +181,24 @@ module Timerfd = struct
   ;;
 
   TEST_MODULE "Linux_ext.Timerfd" = struct
-    let create = ok_exn create
 
     TEST_UNIT =
-      let t = create Clock.realtime in
-      assert (get t = `Not_armed);
-      set t (`After Span.minute);
-      assert (match get t with
-      | `Fire_after span -> Span.(<=) span Span.minute
-      | _ -> false);
-      let span = Span.scale Span.minute 2. in
-      set_repeating t ~initial:(`After Span.minute) span;
-      assert (match get t with
-      | `Repeat { fire_after; interval } ->
-        Span.(<=) fire_after Span.minute && Span.equal interval span
-      | _ ->
-        false);
+      match create with
+      | Error _ -> ()
+      | Ok create ->
+        let t = create Clock.realtime in
+        assert (get t = `Not_armed);
+        set t (`After Span.minute);
+        assert (match get t with
+                | `Fire_after span -> Span.(<=) span Span.minute
+                | _ -> false);
+        let span = Span.scale Span.minute 2. in
+        set_repeating t ~initial:(`After Span.minute) span;
+        assert (match get t with
+                | `Repeat { fire_after; interval } ->
+                  Span.(<=) fire_after Span.minute && Span.equal interval span
+                | _ ->
+                  false);
     ;;
   end
 end
@@ -203,6 +219,7 @@ module Timerfd = struct
     include Flags.Make (struct
       let allow_intersecting = false
       let should_print_error = true
+      let remove_zero_flags = false
 
       let known =
         List.rev
@@ -245,6 +262,7 @@ end) = struct
   include Flags.Make (struct
     let allow_intersecting = false
     let should_print_error = true
+    let remove_zero_flags = false
     let known =
       [ in_, "in";
         out, "out";

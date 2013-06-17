@@ -1228,6 +1228,8 @@ module Open_flags = struct
     let allow_intersecting = true
     let should_print_error = true
     let known = known
+    let remove_zero_flags = true
+    (* remove non existing flags, like cloexec on centos5 *)
   end)
 
   (* The lower two bits of the open flags are used to specify the access mode:

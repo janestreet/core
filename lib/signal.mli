@@ -35,31 +35,10 @@ type sys_behavior = [
 ]
 with sexp
 
-type behavior = [
-| `Default
-| `Ignore
-| `Handle of t -> unit
-]
-
 (** [default_sys_behavior t]
     Query the default system behavior for a signal.
 *)
 val default_sys_behavior : t -> sys_behavior
-
-(** [signal t]
-    Set the behavior of the system on receipt of a given signal.  The
-   first argument is the signal number.  Return the behavior
-   previously associated with the signal. If the signal number is
-   invalid (or not available on your system), an [Invalid_argument]
-   exception is raised. *)
-val signal : t -> behavior -> behavior
-
-
-(** [set t b] is [ignore (signal t b)] *)
-val set : t -> behavior -> unit
-
-(** [handle t f] is [set t (`Handle f)]. *)
-val handle : t -> (t -> unit) -> unit
 
 (** [handle_default t] is [set t `Default]. *)
 val handle_default : t -> unit
@@ -137,3 +116,37 @@ val vtalrm : t  (** [Terminate]  Timeout in virtual time                        
 val zero   : t  (** [Ignore]     No-op; can be used to test whether the target
                                  process exists and the current process has
                                  permission to signal it                        *)
+
+(** The [Expert] module contains functions that novice users should avoid, due to their
+    complexity.
+
+    An OCaml signal handler can run at any time, which introduces all the semantic
+    complexities of multithreading.  It is much easier to use async signal handling, see
+    {!Async_unix.Signal}, which does not involve multithreading, and runs user code as
+    ordinary async jobs.  Also, beware that there can only be a single OCaml signal
+    handler for any signal, so handling a signal with a [Core] signal handler will
+    interfere if async is attempting to handle the same signal.
+
+    If you do use [Core] signal handlers, you should strive to make the signal handler
+    perform a simple idempotent action, like setting a ref. *)
+module Expert : sig
+
+  type behavior =
+    [ `Default
+    | `Ignore
+    | `Handle of t -> unit
+    ]
+
+  (** [signal t] sets the behavior of the system on receipt of signal [t] and returns the
+      behavior previously associated with [t].  If [t] is not available on your system,
+      [signal] raises. *)
+  val signal : t -> behavior -> behavior
+
+
+  (** [set t b] is [ignore (signal t b)] *)
+  val set : t -> behavior -> unit
+
+  (** [handle t f] is [set t (`Handle f)]. *)
+  val handle : t -> (t -> unit) -> unit
+
+end

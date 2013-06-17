@@ -214,15 +214,15 @@ let snapshot t =
 
 let consume_into_string ?(pos = 0) ?len t dst =
   let len = match len with Some l -> l | None -> String.length dst - pos in
-  Bigstring.blit_bigstring_string ~src:t.buf ~src_pos:(buf_pos t ~pos:0 ~len)
-    ~src_len:len ~dst ~dst_pos:pos ();
+  Bigstring.To_string.blit ~src:t.buf ~src_pos:(buf_pos t ~pos:0 ~len)
+    ~len ~dst ~dst_pos:pos;
   unsafe_advance t len
 ;;
 
 let consume_into_bigstring ?(pos = 0) ?len t dst =
   let len = match len with Some l -> l | None -> Bigstring.length dst - pos in
   Bigstring.blit ~src:t.buf ~src_pos:(buf_pos t ~pos:0 ~len)
-    ~src_len:len ~dst ~dst_pos:pos ();
+    ~len ~dst ~dst_pos:pos;
   unsafe_advance t len
 ;;
 
@@ -231,21 +231,21 @@ let transfer ?len ~src ~dst =
   let len = match len with None -> min (length src) (length dst) | Some l -> l in
   if phys_equal src dst then self_transfer src;
   Bigstring.blit
-    ~src:src.buf ~src_pos:(buf_pos src ~pos:0 ~len) ~src_len:len
-    ~dst:dst.buf ~dst_pos:(buf_pos dst ~pos:0 ~len) ();
+    ~src:src.buf ~src_pos:(buf_pos src ~pos:0 ~len) ~len
+    ~dst:dst.buf ~dst_pos:(buf_pos dst ~pos:0 ~len);
   unsafe_advance src len;
   unsafe_advance dst len
 ;;
 
 let memmove t ~src_pos ~dst_pos ~len =
   Bigstring.blit
-    ~src:t.buf ~src_pos:(buf_pos t ~pos:src_pos ~len) ~src_len:len
-    ~dst:t.buf ~dst_pos:(buf_pos t ~pos:dst_pos ~len) ()
+    ~src:t.buf ~src_pos:(buf_pos t ~pos:src_pos ~len) ~len
+    ~dst:t.buf ~dst_pos:(buf_pos t ~pos:dst_pos ~len)
 ;;
 
 let compact t =
   let src_len = t.hi - t.lo in
-  Bigstring.blit ~src:t.buf ~src_pos:t.lo ~src_len ~dst:t.buf ~dst_pos:t.lo_min ();
+  Bigstring.blit ~src:t.buf ~src_pos:t.lo ~len:src_len ~dst:t.buf ~dst_pos:t.lo_min;
   t.lo <- t.lo_min + src_len;
   t.hi <- t.hi_max;
 ;;
@@ -318,14 +318,14 @@ module Fill = struct
 
   let string ?str_pos:(src_pos = 0) ?len t src =
     let len = match len with Some l -> l | None -> String.length src - src_pos in
-    Bigstring.blit_string_bigstring ~src ~src_pos ~src_len:len
-      ~dst:t.buf ~dst_pos:(pos t len) ();
+    Bigstring.From_string.blit ~src ~src_pos ~len
+      ~dst:t.buf ~dst_pos:(pos t len);
     unsafe_adv t len
   ;;
 
   let bigstring ?str_pos:(src_pos = 0) ?len t src =
     let len = match len with Some l -> l | None -> Bigstring.length src - src_pos in
-    Bigstring.blit ~src ~src_pos ~src_len:len ~dst:t.buf ~dst_pos:(pos t len) ();
+    Bigstring.blit ~src ~src_pos ~len ~dst:t.buf ~dst_pos:(pos t len);
     unsafe_adv t len
   ;;
 
@@ -363,8 +363,8 @@ module Peek = struct
   let string ?str_pos:(dst_pos = 0) ?len t ~pos =
     let len = match len with None -> length t - pos | Some l -> l in
     let dst = String.create (len + dst_pos) in
-    Bigstring.blit_bigstring_string ~src:t.buf ~src_pos:(buf_pos t ~len ~pos)
-      ~src_len:len ~dst ~dst_pos ();
+    Bigstring.To_string.blit ~src:t.buf ~src_pos:(buf_pos t ~len ~pos)
+      ~len ~dst ~dst_pos;
     dst
   ;;
 
@@ -372,7 +372,7 @@ module Peek = struct
     let len = match len with None -> length t - pos | Some l -> l in
     let dst = Bigstring.create (len + dst_pos) in
     Bigstring.blit ~src:t.buf ~src_pos:(buf_pos t ~len ~pos)
-      ~src_len:len ~dst ~dst_pos ();
+      ~len ~dst ~dst_pos;
     dst
   ;;
 
@@ -410,13 +410,13 @@ module Poke = struct
 
   let string ?str_pos:(src_pos = 0) ?len t ~pos src =
     let len = match len with None -> String.length src - src_pos | Some l -> l in
-    Bigstring.blit_string_bigstring ~src ~src_pos ~src_len:len
-      ~dst:t.buf ~dst_pos:(buf_pos t ~len ~pos) ()
+    Bigstring.From_string.blit ~src ~src_pos ~len
+      ~dst:t.buf ~dst_pos:(buf_pos t ~len ~pos)
   ;;
 
   let bigstring ?str_pos:(src_pos = 0) ?len t ~pos src =
     let len = match len with None -> Bigstring.length src - src_pos | Some l -> l in
-    Bigstring.blit ~src ~src_pos ~src_len:len ~dst:t.buf ~dst_pos:(buf_pos t ~len ~pos) ()
+    Bigstring.blit ~src ~src_pos ~len ~dst:t.buf ~dst_pos:(buf_pos t ~len ~pos)
   ;;
 
   open Bigstring
@@ -548,7 +548,20 @@ let recvmmsg_assume_fd_is_nonblocking fd ?count ?srcs ts =
 ;;
 
 let recvmmsg_assume_fd_is_nonblocking =
-  Ok recvmmsg_assume_fd_is_nonblocking
+  (* At Jane Street, we link with [--wrap recvmmsg] so that we can use our own wrapper
+     around [recvmmsg].  This allows us to compile an executable on a machine that has
+     recvmmsg (e.g., CentOS 6) but then run the executable on a machine that does not
+     (e.g., CentOS 5), but that has our wrapper library.  We set up our wrapper so that
+     when running on a machine that doesn't have it, [recvmmsg] always returns -1 and sets
+     errno to ENOSYS. *)
+  let ok = Ok recvmmsg_assume_fd_is_nonblocking in
+  try
+    assert (recvmmsg_assume_fd_is_nonblocking (File_descr.of_int (-1)) [||] = 0);
+    ok                                  (* maybe it will ignore the bogus sockfd *)
+  with
+  | Unix.Unix_error (Unix.ENOSYS, _, _) ->
+    unimplemented "Iobuf.recvmmsg_assume_fd_is_nonblocking"
+  | _ -> ok
 ;;
 
 ELSE                                    (* NDEF RECVMMSG *)
@@ -681,14 +694,14 @@ module Unsafe = struct
 
     let string ?str_pos:(src_pos = 0) ?len t src =
       let len = match len with Some l -> l | None -> String.length src - src_pos in
-      Bigstring.blit_string_bigstring ~src ~src_pos ~src_len:len
-        ~dst:t.buf ~dst_pos:(pos t len) ();
+      Bigstring.From_string.blit ~src ~src_pos ~len
+        ~dst:t.buf ~dst_pos:(pos t len);
       unsafe_adv t len
     ;;
 
     let bigstring ?str_pos:(src_pos = 0) ?len t src =
       let len = match len with Some l -> l | None -> Bigstring.length src - src_pos in
-      Bigstring.blit ~src ~src_pos ~src_len:len ~dst:t.buf ~dst_pos:(pos t len) ();
+      Bigstring.blit ~src ~src_pos ~len ~dst:t.buf ~dst_pos:(pos t len);
       unsafe_adv t len
     ;;
 
@@ -730,8 +743,8 @@ module Unsafe = struct
     let string ?str_pos:(dst_pos = 0) ?len t ~pos =
       let len = match len with None -> length t - pos | Some l -> l in
       let dst = String.create (len + dst_pos) in
-      Bigstring.blit_bigstring_string ~src:t.buf ~src_pos:(buf_pos t ~len ~pos)
-        ~src_len:len ~dst ~dst_pos ();
+      Bigstring.To_string.blit ~src:t.buf ~src_pos:(buf_pos t ~len ~pos)
+        ~len ~dst ~dst_pos;
       dst
     ;;
 
@@ -739,7 +752,7 @@ module Unsafe = struct
       let len = match len with None -> length t - pos | Some l -> l in
       let dst = Bigstring.create (len + dst_pos) in
       Bigstring.blit ~src:t.buf ~src_pos:(buf_pos t ~len ~pos)
-        ~src_len:len ~dst ~dst_pos ();
+        ~len ~dst ~dst_pos;
       dst
     ;;
 
@@ -781,14 +794,13 @@ module Unsafe = struct
 
     let string ?str_pos:(src_pos = 0) ?len t ~pos src =
       let len = match len with None -> String.length src - src_pos | Some l -> l in
-      Bigstring.blit_string_bigstring ~src ~src_pos ~src_len:len
-        ~dst:t.buf ~dst_pos:(buf_pos t ~len ~pos) ()
+      Bigstring.From_string.blit ~src ~src_pos ~len
+        ~dst:t.buf ~dst_pos:(buf_pos t ~len ~pos)
     ;;
 
     let bigstring ?str_pos:(src_pos = 0) ?len t ~pos src =
       let len = match len with None -> Bigstring.length src - src_pos | Some l -> l in
-      Bigstring.blit ~src ~src_pos ~src_len:len ~dst:t.buf ~dst_pos:(buf_pos t ~len ~pos)
-        ()
+      Bigstring.blit ~src ~src_pos ~len ~dst:t.buf ~dst_pos:(buf_pos t ~len ~pos)
     ;;
 
     open Bigstring

@@ -160,30 +160,37 @@ let send_exn t pid_spec =
         (pid_spec_to_string pid_spec) ()
 ;;
 
-type behavior = [ `Default | `Ignore | `Handle of t -> unit ]
+module Expert = struct
 
-module Behavior = struct
+  type behavior = [ `Default | `Ignore | `Handle of t -> unit ]
 
-  let of_caml = function
-    | Sys.Signal_default -> `Default
-    | Sys.Signal_ignore -> `Ignore
-    | Sys.Signal_handle f -> `Handle f
+  module Behavior = struct
 
-  let to_caml = function
-    | `Default -> Sys.Signal_default
-    | `Ignore -> Sys.Signal_ignore
-    | `Handle f -> Sys.Signal_handle f
+    let of_caml = function
+      | Sys.Signal_default -> `Default
+      | Sys.Signal_ignore -> `Ignore
+      | Sys.Signal_handle f -> `Handle f
+
+    let to_caml = function
+      | `Default -> Sys.Signal_default
+      | `Ignore -> Sys.Signal_ignore
+      | `Handle f -> Sys.Signal_handle f
+  end
+
+  let signal t behavior =
+    Behavior.of_caml (Sys.signal t (Behavior.to_caml behavior))
+  ;;
+
+  let set t behavior = ignore (signal t behavior)
+
+  let handle t f = set t (`Handle f)
+
 end
 
-let signal t behavior =
-  Behavior.of_caml (Sys.signal t (Behavior.to_caml behavior))
-;;
+open Expert
 
-let set t behavior = ignore (signal t behavior)
-
-let handle t f = set t (`Handle f)
 let handle_default t = set t `Default
-let ignore t = set t `Ignore
+let ignore         t = set t `Ignore
 
 type sigprocmask_command = [ `Set | `Block | `Unblock ]
 

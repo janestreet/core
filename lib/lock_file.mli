@@ -63,7 +63,7 @@ val is_locked : string -> bool
 *)
 module Nfs : sig
   (** [lock ?message path] tries to create and lock the file at [path] by creating a hard
-      link to [path].nfs_lock.  The contents of path will be replaced with a sexp
+      link to [path].nfs_lock.  The contents of [path] will be replaced with a sexp
       containing the caller's hostname and pid, and the optional [message].
 
       Efforts will be made to release this lock when the calling program exits. But there
