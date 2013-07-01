@@ -26,8 +26,9 @@ module Test (Iobuf : sig
   open Iobuf
 
   type nonrec ('d, 'w) t = ('d, 'w) t with sexp_of
+  type nonrec    seek =    seek with sexp_of
   type nonrec no_seek = no_seek with sexp_of
-  type nonrec seek = seek with sexp_of
+  module type Bound = Bound
 
   let strings = [ ""; "a"; "hello"; "\000"; "\000\000\000"; "\000hello" ]
 
@@ -104,8 +105,11 @@ module Test (Iobuf : sig
       ignore (create ~len:(-1) : (_, _) t))))
   ;;
 
-  module type Accessors = sig include module type of Unsafe val is_safe : bool end
-  module Accessors (Accessors : Accessors) = struct
+  module Accessors (Accessors : sig
+                      include module type of Unsafe
+                      val is_safe : bool
+                    end) =
+  struct
     open Accessors
 
     (* [window] *)
@@ -163,18 +167,15 @@ module Test (Iobuf : sig
       done;
     ;;
 
-    module Snapshot = struct
-      open Snapshot
+    module Lo_bound = struct
+      type t = Lo_bound.t
 
-      type nonrec t = t
+      let sexp_of_t = Lo_bound.sexp_of_t
 
-      let sexp_of_t = sexp_of_t
-
-      let restore = restore
-
-      TEST_UNIT =
+      let window, restore = Lo_bound.(window, restore)
+      TEST =
         let iobuf = create ~len:2 in
-        let snapshot = snapshot iobuf in
+        let snapshot = window iobuf in
         assert (length iobuf = 2);
         advance iobuf 1;
         assert (length iobuf = 1);
@@ -190,14 +191,91 @@ module Test (Iobuf : sig
         narrow iobuf;
         assert (capacity iobuf = 1);
         assert (length iobuf = 1);
-        assert (is_error (try_with (fun () -> restore snapshot iobuf)));
-      ;;
+        is_error (try_with (fun () -> restore snapshot iobuf))
+
+      let limit = Lo_bound.limit
+      TEST =
+        let buf = of_string "123abcDEF" in
+        advance buf 3;
+        let lo_min = limit buf in
+        resize buf ~len:3;
+        restore lo_min buf;
+        String.equal "123abc" (to_string buf)
     end
 
-    let snapshot = snapshot
+    module Hi_bound = struct
+      type t = Hi_bound.t
+
+      let sexp_of_t = Hi_bound.sexp_of_t
+
+      let window, restore = Hi_bound.(window, restore)
+      TEST =
+        let iobuf = create ~len:2 in
+        let snapshot = window iobuf in
+        assert (length iobuf = 2);
+        resize iobuf ~len:1;
+        assert (length iobuf = 1);
+        restore snapshot iobuf;
+        assert (length iobuf = 2);
+        (* the same snapshot can be reused *)
+        resize iobuf ~len:1;
+        assert (length iobuf = 1);
+        restore snapshot iobuf;
+        assert (length iobuf = 2);
+        (* but can fail in combination with narrow *)
+        resize iobuf ~len:1;
+        narrow iobuf;
+        assert (capacity iobuf = 1);
+        assert (length iobuf = 1);
+        is_error (try_with (fun () -> restore snapshot iobuf))
+
+      let limit = Hi_bound.limit
+      TEST =
+        let buf = of_string "123abcDEF" in
+        resize buf ~len:3;
+        let hi_max = limit buf in
+        advance buf 3;
+        restore hi_max buf;
+        String.equal "abcDEF" (to_string buf)
+    end
+
     let rewind = rewind
     let reset = reset
-    let flip = flip
+    let flip_lo = flip_lo
+    let bounded_flip_lo = bounded_flip_lo
+    TEST =
+      let buf = of_string "123abcDEF" in
+      Iobuf.advance buf 3;
+      let lo = Lo_bound.window buf in
+      Iobuf.advance buf 3;
+      bounded_flip_lo buf lo;
+      String.equal "abc" (Iobuf.to_string buf)
+    ;;
+    let flip_hi = flip_hi
+    TEST =
+      let buf = of_string "123abcDEF" in
+      Iobuf.resize buf ~len:3;
+      Iobuf.flip_hi buf;
+      String.equal "abcDEF" (Iobuf.to_string buf)
+    ;;
+    TEST =
+      let buf = of_string "123abcDEF" in
+      Iobuf.resize buf ~len:6;
+      Iobuf.narrow buf;
+      Iobuf.resize buf ~len:3;
+      Iobuf.flip_hi buf;
+      String.equal "abc" (Iobuf.to_string buf)
+    ;;
+    let bounded_flip_hi = bounded_flip_hi
+    TEST =
+      let buf = of_string "123abcDEF" in
+      let hi = Hi_bound.window buf in
+      Iobuf.advance buf 3;
+      Iobuf.resize buf ~len:3;
+      bounded_flip_hi buf hi;
+      String.equal "DEF" (Iobuf.to_string buf)
+    ;;
+
     let compact = compact
     let sub = sub
     let narrow = narrow
@@ -220,6 +298,19 @@ module Test (Iobuf : sig
       reset buf;
       assert (capacity buf = 1);
       length buf = 1
+    ;;
+    let bounded_compact = bounded_compact
+    TEST =
+      let buf = of_string "123abcDEFghiJKL" in
+      advance buf 3;
+      let lo = Lo_bound.window buf in
+      Iobuf.resize buf ~len:9;
+      let hi = Hi_bound.window buf in
+      advance buf 6;
+      bounded_compact buf lo hi;
+      assert (String.equal "DEFghi" (Iobuf.to_string buf));
+      Iobuf.reset buf;
+      String.equal "123ghiDEFghiJKL" (Iobuf.to_string buf)
     ;;
     let resize = resize
 
@@ -289,7 +380,7 @@ module Test (Iobuf : sig
       List.iter strings
         ~f:(fun s ->
           assert (is_ok (fill_bin_prot t String.bin_writer_t s));
-          flip t;
+          flip_lo t;
           let s' = ok_exn (consume_bin_prot t String.bin_reader_t) in
           reset t;
           assert (String.equal s s'));
@@ -515,9 +606,9 @@ ENDIF;
       with _ ->
         let dst = create ~len:5 in
         Fill.string src str;
-        flip src;
+        flip_lo src;
         transfer ~src ~dst ~len;
-        flip dst;
+        flip_lo dst;
         String.equal str (Consume.string dst)
     ;;
 
@@ -638,14 +729,14 @@ ENDIF;
       let t2 = create ~len:100 in
       let s = "585038473775210758" in
       Fill.string t1 s;
-      flip t1;
+      flip_lo t1;
       assert (String.equal s (Consume.string t1));
       assert (is_empty t1);
       reset t1;
       Fill.string t1 s;
-      flip t1;
+      flip_lo t1;
       transfer ~src:t1 ~dst:t2 ~len:(length t1);
-      flip t2;
+      flip_lo t2;
       assert (String.equal s (Consume.string t2));
       assert (is_empty t2);
     ;;
@@ -855,7 +946,7 @@ ENDIF;
       Fill.int16_le t 1234;
       Fill.int32_le t 345678;
       Fill.char t 'x';
-      flip t;
+      flip_lo t;
       assert (length t = 8);
       assert (Consume.int8 t = 12);
       assert (Consume.int16_le t = 1234);
@@ -896,7 +987,7 @@ ENDIF;
           in
           fill_int t len;
           Fill.string t s;
-          flip t;
+          flip_lo t;
           let n = length t in
           let m = write_assume_fd_is_nonblocking t fd in
           assert (m = n);                   (* no short writes *)
@@ -942,7 +1033,7 @@ ENDIF;
       in
       let rec loop_file () =
         if read_assume_fd_is_nonblocking t fd > 0 then begin
-          flip t;
+          flip_lo t;
           drain_messages ();
           compact t;
           loop_file ();

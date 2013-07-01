@@ -13,8 +13,48 @@ module T = struct
 end
 open T
 type (+'read_write, +'seek) t = T.t with sexp_of
-type no_seek with sexp_of                (* like [read_only] *)
-type seek = private no_seek with sexp_of (* like [read_write] *)
+type    seek = Iobuf_intf.   seek with sexp_of
+type no_seek = Iobuf_intf.no_seek with sexp_of
+module type Bound = Iobuf_intf.Bound with type ('d, 'w) iobuf := ('d, 'w) t
+
+let fail t message a sexp_of_a =
+  (* Immediately convert the iobuf to sexp.  Otherwise, the iobuf could be modified before
+     conversion and printing.  Since we plan to use iobufs for pooled network buffers in
+     practice, this could be very confusing when debugging production systems. *)
+  failwiths message (a, <:sexp_of< (_, _) t >> t)
+    (Tuple.T2.sexp_of_t sexp_of_a ident)
+
+module Lo_bound = struct
+  let stale t iobuf =
+    fail iobuf "Iobuf.Lo_bound.restore got stale snapshot" t <:sexp_of< int >>
+
+  type t = int with sexp_of (* lo *)
+
+  let window t = t.lo
+
+  let restore t iobuf =
+    if t < iobuf.lo_min || t > iobuf.hi then stale t iobuf;
+    iobuf.lo <- t;
+  ;;
+
+  let limit t = t.lo_min
+end
+
+module Hi_bound = struct
+  let stale t iobuf =
+    fail iobuf "Iobuf.Hi_bound.restore got stale snapshot" t <:sexp_of< int >>
+
+  type t = int with sexp_of (* hi *)
+
+  let window t = t.hi
+
+  let restore t iobuf =
+    if t > iobuf.hi_max || t < iobuf.lo then stale t iobuf;
+    iobuf.hi <- t;
+  ;;
+
+  let limit t = t.hi_max
+end
 
 let length t = t.hi - t.lo
 
@@ -27,19 +67,31 @@ let reset t =
   t.hi <- t.hi_max
 ;;
 
-let flip t =
+let flip_lo t =
   t.hi <- t.lo;
   t.lo <- t.lo_min;
 ;;
+let bounded_flip_lo_stale t lo_min =
+  fail t "Iobuf.bounded_flip_lo got stale snapshot" lo_min <:sexp_of< Lo_bound.t >>
+;;
+let bounded_flip_lo t lo_min =
+  if lo_min < t.lo_min || lo_min > t.lo then bounded_flip_lo_stale t lo_min
+  else (t.hi <- t.lo; t.lo <- lo_min)
+;;
+
+let flip_hi t =
+  t.lo <- t.hi;
+  t.hi <- t.hi_max;
+;;
+let bounded_flip_hi_stale t hi_max =
+  fail t "Iobuf.bounded_flip_hi got stale snapshot" hi_max <:sexp_of< Hi_bound.t >>
+;;
+let bounded_flip_hi t hi_max =
+  if hi_max > t.hi_max || hi_max < t.hi then bounded_flip_hi_stale t hi_max
+  else (t.lo <- t.hi; t.hi <- hi_max)
+;;
 
 let capacity t = t.hi_max - t.lo_min
-
-let fail t message a sexp_of_a =
-  (* Immediately convert the iobuf to sexp.  Otherwise, the iobuf could be modified before
-     conversion and printing.  Since we plan to use iobufs for pooled network buffers in
-     practice, this could be very confusing when debugging production systems. *)
-  failwiths message (a, <:sexp_of< (_, _) t >> t)
-    (Tuple.T2.sexp_of_t sexp_of_a ident)
 
 let invariant _ _ t =
   try
@@ -196,22 +248,6 @@ external bigstring_unsafe_set : Bigstring.t -> pos:int -> char -> unit
 let bigstring_unsafe_get b ~pos   = bigstring_unsafe_get b ~pos
 let bigstring_unsafe_set b ~pos c = bigstring_unsafe_set b ~pos c
 
-module Snapshot = struct
-  let stale t iobuf =
-    fail iobuf "Iobuf.Snapshot.restore got stale snapshot" t <:sexp_of< int >>
-
-  type t = int with sexp_of             (* lo *)
-
-  let restore t iobuf =
-    if t < iobuf.lo_min || t > iobuf.hi then stale t iobuf;
-    iobuf.lo <- t;
-  ;;
-end
-
-let snapshot t =
-  t.lo
-;;
-
 let consume_into_string ?(pos = 0) ?len t dst =
   let len = match len with Some l -> l | None -> String.length dst - pos in
   Bigstring.To_string.blit ~src:t.buf ~src_pos:(buf_pos t ~pos:0 ~len)
@@ -244,11 +280,24 @@ let memmove t ~src_pos ~dst_pos ~len =
 ;;
 
 let compact t =
-  let src_len = t.hi - t.lo in
-  Bigstring.blit ~src:t.buf ~src_pos:t.lo ~len:src_len ~dst:t.buf ~dst_pos:t.lo_min;
-  t.lo <- t.lo_min + src_len;
+  let len = t.hi - t.lo in
+  Bigstring.blit ~src:t.buf ~src_pos:t.lo ~len ~dst:t.buf ~dst_pos:t.lo_min;
+  t.lo <- t.lo_min + len;
   t.hi <- t.hi_max;
 ;;
+let bounded_compact_stale t lo_min hi_max =
+  fail t "Iobuf.bounded_compact got stale snapshot" (lo_min, hi_max)
+    <:sexp_of< Lo_bound.t * Hi_bound.t >>
+;;
+let bounded_compact t lo_min hi_max =
+  let len = t.hi - t.lo in
+  if hi_max > t.hi_max || hi_max < lo_min + len || lo_min < t.lo_min
+  then
+    bounded_compact_stale t lo_min hi_max
+  else
+    (Bigstring.blit ~src:t.buf ~src_pos:t.lo ~len ~dst:t.buf ~dst_pos:lo_min;
+     t.lo <- lo_min + len;
+     t.hi <- hi_max)
 
 (* Sys.word_size is determined only at runtime, but we need it to be a compile-time
    constant to generate good code for Consume.int8, etc. *)
@@ -495,8 +544,7 @@ let fill_bin_prot t writer v =
   result;
 ;;
 
-module Unix = Core_unix
-module File_descr = Unix.File_descr
+module File_descr = Iobuf_intf.Unix.File_descr
 
 let read_assume_fd_is_nonblocking t fd =
   let nread =

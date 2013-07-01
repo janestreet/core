@@ -18,8 +18,9 @@ module Make (M : sig end) = struct
   open Iobuf
 
   type nonrec ('d, 'w) t = ('d, 'w) t with sexp_of
+  type nonrec    seek =    seek with sexp_of
   type nonrec no_seek = no_seek with sexp_of
-  type nonrec seek = seek with sexp_of
+  module type Bound = Bound
 
   let invariant = invariant
 
@@ -69,18 +70,23 @@ module Make (M : sig end) = struct
     debug "is_empty" [t] t <:sexp_of< (_, _) t >> sexp_of_bool (fun () -> is_empty t)
   ;;
 
-  module Snapshot = struct
+  module Bound (Bound : Bound) (Name : sig val name : string end) = struct
+    type t = Bound.t with sexp_of
+
+    let window iobuf =
+      debug (Name.name ^ ".window")
+        [iobuf] () sexp_of_unit Bound.sexp_of_t (fun () -> Bound.window iobuf)
+
     let restore t iobuf =
-      debug "Snapshot.restore" [iobuf] t Snapshot.sexp_of_t sexp_of_unit (fun () ->
-        Snapshot.restore t iobuf)
+      debug (Name.name ^ ".restore")
+        [iobuf] t Bound.sexp_of_t sexp_of_unit (fun () -> Bound.restore t iobuf)
 
-    type t = Snapshot.t with sexp_of
+    let limit iobuf =
+      debug (Name.name ^ ".limit")
+        [iobuf] () sexp_of_unit Bound.sexp_of_t (fun () -> Bound.limit iobuf)
   end
-
-  let snapshot t =
-    debug "snapshot" [t] t <:sexp_of< (_, _) t >> <:sexp_of< Snapshot.t >> (fun () ->
-      snapshot t)
-  ;;
+  module Lo_bound = Bound (Lo_bound) (struct let name = "Lo_bound" end)
+  module Hi_bound = Bound (Hi_bound) (struct let name = "Hi_bound" end)
 
   let rewind t =
     debug "rewind" [t] t <:sexp_of< (_, _) t >> sexp_of_unit (fun () -> rewind t)
@@ -89,12 +95,29 @@ module Make (M : sig end) = struct
     debug "reset" [t] t <:sexp_of< (_, _) t >> sexp_of_unit (fun () -> reset t)
   ;;
 
-  let flip t =
-    debug "flip" [t] t <:sexp_of< (_, _) t >> sexp_of_unit (fun () -> flip t)
+  let flip_lo t =
+    debug "flip_lo" [t] t <:sexp_of< (_, _) t >> sexp_of_unit (fun () -> flip_lo t)
+  ;;
+  let bounded_flip_lo t lo_min =
+    debug "bounded_flip_lo" [t] lo_min Lo_bound.sexp_of_t sexp_of_unit (fun () ->
+      bounded_flip_lo t lo_min)
   ;;
   let compact t =
     debug "compact" [t] t <:sexp_of< (_, _) t >> sexp_of_unit (fun () -> compact t)
   ;;
+  let bounded_compact t lo_min hi_max =
+    debug "bounded_compact" [t] (lo_min, hi_max)
+      <:sexp_of< Lo_bound.t * Hi_bound.t >>
+      sexp_of_unit
+      (fun () -> bounded_compact t lo_min hi_max)
+  let flip_hi t =
+    debug "flip_hi" [t] () <:sexp_of< unit >> sexp_of_unit (fun () -> flip_hi t)
+  ;;
+  let bounded_flip_hi t hi_max =
+    debug "bounded_flip_hi" [t] hi_max Hi_bound.sexp_of_t sexp_of_unit (fun () ->
+      bounded_flip_hi t hi_max)
+  ;;
+
   let sub ?pos ?len t =
     debug "sub" [t] (`pos pos, `len len)
       <:sexp_of< [ `pos of int option ] * [ `len of int option ] >>
@@ -141,7 +164,7 @@ module Make (M : sig end) = struct
 
   module Consume = struct
     let d name f sexp_of_result t =
-      debug ("Consume." ^ name) [t] t <:sexp_of< (_, seek) t >> sexp_of_result (fun () ->
+      debug ("Consume." ^ name) [t] t <:sexp_of< (_, _) t >> sexp_of_result (fun () ->
         f t)
     ;;
 

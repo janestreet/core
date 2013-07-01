@@ -1,3 +1,8 @@
+(** [no_seek] and [seek] are defined and used in a similar manner to [read_only] and
+    [read_write]. *)
+type no_seek                with sexp_of  (** like [read_only] *)
+type seek = private no_seek with sexp_of  (** like [read_write] *)
+
 (** A collection of iobuf access functions.  This abstracts over [Iobuf.Consume],
     [Iobuf.Fill], [Iobuf.Peek], and [Iobuf.Poke]. *)
 module type Accessors = sig
@@ -23,6 +28,20 @@ module type Accessors = sig
   val padded_fixed_string : padding:char ->  len:int -> (   string  , 'd, 'w) t
   val              string : ?str_pos:int -> ?len:int -> (   string  , 'd, 'w) t
   val           bigstring : ?str_pos:int -> ?len:int -> (Bigstring.t, 'd, 'w) t
+end
+
+(** An iobuf window bound, either upper or lower.  You can't see its int value, but you
+    can save and restore it. *)
+module type Bound = sig
+  type ('d, 'w) iobuf
+
+  (* Expose [t = private int] only if a [t] is stored in a mutable data structure
+     somewhere and leads to a measurable [caml_modify] performance problem. *)
+  type t with sexp_of
+
+  val window : (_, _) iobuf -> t
+  val limit  : (_, _) iobuf -> t
+  val restore : t -> (_, seek) iobuf -> unit
 end
 
 (* For use in iobuf.mli -- can't be added to Std_internal due to dependencies *)

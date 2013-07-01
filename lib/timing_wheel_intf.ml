@@ -85,8 +85,6 @@ module Time = struct
   module Zone = Zone
 end
 
-let sec = Time.Span.of_sec
-
 module type S = sig
   type 'a t with sexp_of
 
@@ -217,7 +215,12 @@ module type S = sig
   val next_alarm_fires_at : _ t -> Time.t option
 
 
-  (** At the heart of a timing wheel is a priority queue in which the keys are
+  (***********************************************************************************)
+  (* The rest of this interface is not intended to be used with Timing_wheel, but is a
+     separate data structure used to implement Timing_wheel, and may find use
+     elsewhere. *)
+
+  (** Timing wheel is implemented as a priority queue in which the keys are
       non-negative integers corresponding to the intervals of time.  The priority queue is
       unlike a typical priority queue in that rather than having a "delete min" operation,
       it has a nondecreasing minimum allowed key, which corresponds to the current time,

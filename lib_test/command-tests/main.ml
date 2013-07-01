@@ -7,8 +7,8 @@ let spec =
     empty
     +> flag "-fondue" no_arg ~doc:" make sure fondue is doing the same stuff"
     +> flag "-gilt" (optional string) ~doc:"NAME which gilt should do the stuff"
-    +> anon ("OXIDE" %: int)
-    +> anon (maybe ("PATH" %: file))
+    +> anon ("OxIdE" %: int) (*Note: Mixed case here ensures output is uppercased *)
+    +> anon (maybe ("path" %: file)) (*path will become PATH in output *)
   )
 
 let leaf =
@@ -50,9 +50,9 @@ let () =
   run
     (group ~summary:"this command does stuff" [
       ("jab", leaf_with_readme);
-      ("moonshot", leaf);
-      ("mixture", leaf);
-      ( "adverb"
+      ("MOONSHOT", leaf); (* All subcommands will be automatically lowercased *)
+      ("MIXture", leaf);
+      ( "ADVeRB"
       , group ~summary:"this command does more stuff" ~readme [
         ("nemeses",  leaf_show_internals);
         ("drolly", leaf);

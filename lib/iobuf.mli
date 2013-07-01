@@ -22,10 +22,8 @@
 open Common
 open Iobuf_intf
 
-(** [no_seek] and [seek] are defined and used in a similar manner to
-    [read_only] and [read_write]. *)
-type no_seek with sexp_of                (** like [read_only] *)
-type seek = private no_seek with sexp_of (** like [read_write] *)
+type nonrec seek = seek       with sexp_of
+type nonrec no_seek = no_seek with sexp_of
 
 (** The first type parameter controls whether the iobuf can be written to.
     The second type parameter controls whether the window and limits can be changed.
@@ -80,49 +78,73 @@ val narrow : (_, seek) t -> unit
 
 (** {1 Changing the window} *)
 
-(** One can call [snapshot t] to get a snapshot of the front of the window, and then later
-    restore that snapshot.  This is useful for speculatively parsing, and then rewinding
-    when there isn't enough data to finish.
+(** One can call [Lo_bound.window t] to get a snapshot of the lower bound of the
+    window, and then later restore that snapshot with [Lo_bound.restore].  This is
+    useful for speculatively parsing, and then rewinding when there isn't enough data to
+    finish.
+
+    Similarly for [Hi_bound.window] and [Lo_bound.restore].
 
     Using a snapshot with a different iobuf, even a sub iobuf of the snapshotted one, has
     unspecified results.  An exception may be raised, or a silent error may occur.
     However, the safety guarantees of the iobuf will not be violated, i.e., the attempt
-    will not enlarge the limits of the subject iobuf. *)
-module Snapshot : sig
-  type ('d, 'w) iobuf = ('d, 'w) t
-  type t with sexp_of
-  val restore : t -> (_, seek) iobuf -> unit
-end with type ('d, 'w) iobuf := ('d, 'w) t
-val snapshot : (_, seek) t -> Snapshot.t
+    will not enlarge the limits of the subject iobuf.
+*)
 
-(** [advance t amount] advances the front of the window by [amount].  It is an error to
-    advance past the back of the window or the lower limit. *)
+module type Bound = Bound with type ('d, 'w) iobuf := ('d, 'w) t
+module Lo_bound : Bound
+module Hi_bound : Bound
+
+(** [advance t amount] advances the lower bound of the window by [amount].  It is an error
+    to advance past the upper bound of the window or the lower limit. *)
 val advance : (_, seek) t -> int -> unit
 
 (** [resize t] sets the length of [t]'s window, provided it does not exceed limits. *)
 val resize : (_, seek) t -> len:int -> unit
 
-(** [rewind t] sets the front of the window to the lower limit. *)
+(** [rewind t] sets the lower bound of the window to the lower limit. *)
 val rewind : (_, seek) t -> unit
 
 (** [reset t] sets the window to the limits. *)
 val reset : (_, seek) t -> unit
 
-(** [flip t] sets the window to range from the lower limit to the front of the old window.
-    This is typically called after a series of [Fill]s, to reposition the window in
-    preparation to [Consume] the newly written data. *)
-val flip : (_, seek) t -> unit
+(** [flip_lo t] sets the window to range from the lower limit to the lower bound of the
+    old window.  This is typically called after a series of [Fill]s, to reposition the
+    window in preparation to [Consume] the newly written data.
+
+    The bounded version narrows the effective limit.  This can preserve some data near the
+    limit, such as an hypothetical packet header, in the case of [bounded_flip_lo] or
+    unfilled suffix of a buffer, in [bounded_flip_hi]. *)
+val flip_lo         : (_, seek) t -> unit
+val bounded_flip_lo : (_, seek) t -> Lo_bound.t -> unit
 
 (** [compact t] copies data from the window to the lower limit of the iobuf and sets the
     window to range from the end of the copied data to the upper limit.  This is typically
     called after a series of [Consume]s to save unread data and prepare for the next
-    series of [Fill]s and [flip]. *)
+    series of [Fill]s and [flip_lo]. *)
 val compact : (read_write, seek) t -> unit
+val bounded_compact : (read_write, seek) t -> Lo_bound.t -> Hi_bound.t -> unit
+
+(** [flip_hi t] sets the window to range from the the upper bound of the current window to
+    the upper limit.  This operation is dual to [flip_lo] and is typically called when the
+    data in the current (narrowed) window has been processed and the window needs to be
+    positioned over the remaining data in the buffer.  For example:
+
+    {[
+      (* ... determine initial_data_len ... *)
+      Iobuf.resize buf ~len:initial_data_len;
+      (* ... and process initial data ... *)
+      Iobuf.flip_hi buf;
+    ]}
+
+    Now the window of [buf] ranges over the remainder of the data. *)
+val flip_hi         : (_, seek) t -> unit
+val bounded_flip_hi : (_, seek) t -> Hi_bound.t -> unit
 
 (** {1 Getting and setting data} *)
-(** "consume" and "fill" functions access data at the front of the window and advance the
-    front of the window.  "peek" and "poke" functions access data but do not advance the
-    window. *)
+(** "consume" and "fill" functions access data at the lower bound of the window and
+    advance lower bound of the window.  "peek" and "poke" functions access data but do not
+    advance the window. *)
 
 (** [to_string t] returns the bytes in [t] as a string.  It does not alter the window. *)
 val to_string : ?len:int -> (_, _) t -> string
@@ -135,12 +157,12 @@ val consume_into_string    : ?pos:int -> ?len:int -> (_, seek) t ->    string   
 val consume_into_bigstring : ?pos:int -> ?len:int -> (_, seek) t -> Bigstring.t -> unit
 
 (** [Consume.string t ~len] reads [len] characters (all, by default) from [t] into a new
-    string and advances the front of the window accordingly. *)
+    string and advances the lower bound of the window accordingly. *)
 module Consume
   : Accessors with type ('a, 'd, 'w) t = ('d, seek) t -> 'a
 module Fill
   : Accessors with type ('a, 'd, 'w) t = (read_write, seek) t -> 'a -> unit
-(** [Peek] and [Poke] functions access a value at [pos] from the front of the window
+(** [Peek] and [Poke] functions access a value at [pos] from the lower bound of the window
     and do not advance. *)
 module Peek
   : Accessors with type ('a, 'd, 'w) t = ('d, 'w) t -> pos:int -> 'a
@@ -156,30 +178,30 @@ module Unsafe : sig
   module Poke    : module type of Poke
 end
 
-(** [fill_bin_prot] writes a bin-prot value to the front of the window, prefixed by its
-    length, and advances the front of the window by the amount written.  [fill_bin_prot]
-    returns an error if the window is too small to write the value.
+(** [fill_bin_prot] writes a bin-prot value to the lower bound of the window, prefixed by
+    its length, and advances by the amount written.  [fill_bin_prot] returns an error if
+    the window is too small to write the value.
 
-    [consume_bin_prot t reader] reads a bin-prot value from the front of the window, which
-    should have been written using [fill_bin_prot], and advances the window by the amount
-    read.  [consume_bin_prot] returns an error if there is not a complete message in the
-    window and in that case the window is left unchanged. *)
+    [consume_bin_prot t reader] reads a bin-prot value from the lower bound of the window,
+    which should have been written using [fill_bin_prot], and advances the window by the
+    amount read.  [consume_bin_prot] returns an error if there is not a complete message
+    in the window and in that case the window is left unchanged. *)
 val fill_bin_prot
   : (read_write, seek) t -> 'a Bin_prot.Type_class.writer -> 'a -> unit Or_error.t
 val consume_bin_prot
   :          (_, seek) t -> 'a Bin_prot.Type_class.reader -> 'a Or_error.t
 
-(** [transfer] blits [len] bytes from the front of [src] to the front of [dst], advancing
-    both.  It is an error if [len > length src || len > length dst || phys_equal src
+(** [transfer] blits [len] bytes from [src] to [dst], advancing the lower bounds of both
+    windows.  It is an error if [len > length src || len > length dst || phys_equal src
     dst]. *)
 val transfer
-  :  ?len:int  (** default is [min (length src) (length dst)] *)
+  :  ?len:int (** default is [min (length src) (length dst)] *)
   -> src:((_         , seek) t)
   -> dst:((read_write, seek) t)
   -> unit
 
 (** [memmove] blits [len] bytes from [src_pos] to [dst_pos] in an iobuf, both relative to
-    the front of the window.  The window is not advanced. *)
+    the lower bound of the window.  The window is not advanced. *)
 val memmove : (read_write, _) t -> src_pos:int -> dst_pos:int -> len:int -> unit
 
 (** {1 I/O} *)

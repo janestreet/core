@@ -7,6 +7,8 @@ open Timing_wheel_intf
 
 open Timing_wheel
 
+let sec = Time.Span.of_sec
+
 module Level_bits = struct
 
   open Level_bits

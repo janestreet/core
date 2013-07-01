@@ -614,10 +614,41 @@ module Anon = struct
       grammar = Grammar.concat [t1.grammar; t2.grammar; t3.grammar; t4.grammar];
     }
 
-    let (%:) name arg_type = {
-      p = Parser.one ~name arg_type;
-      grammar = Grammar.one name;
-    }
+    let normalize str =
+      (* Verify the string is not empty or surrounded by whitespace *)
+      let strlen = String.length str in
+      if strlen = 0 then failwith "Empty anonymous argument name provided";
+      if String.(<>) (String.strip str) str then
+        failwithf "argument name %S has surrounding whitespace" str ();
+      (* Now check for special surrounding characters and malformed pairs *)
+      let surrounded =
+        List.exists [('<','>'); ('[',']'); ('(',')'); ('{','}')]
+          ~f:(fun (prefix, suffix) ->
+            let prefix_match = Char.(=) prefix (String.get str 0) in
+            let suffix_match = Char.(=) suffix (String.get str (strlen - 1)) in
+            if Bool.(<>) prefix_match suffix_match then
+              failwithf "argument name %S has malformed surrounding characters" str ();
+            prefix_match)
+      in
+      if surrounded then str else String.uppercase str
+
+    TEST = String.equal (normalize "file")   "FILE"
+    TEST = String.equal (normalize "FiLe")   "FILE"
+    TEST = String.equal (normalize "<FiLe>") "<FiLe>"
+    TEST = String.equal (normalize "(FiLe)") "(FiLe)"
+    TEST = String.equal (normalize "[FiLe]") "[FiLe]"
+    TEST = String.equal (normalize "{FiLe}") "{FiLe}"
+    TEST = try ignore (normalize "<file"   ); false with _ -> true
+    TEST = try ignore (normalize "<file>a" ); false with _ -> true
+    TEST = try ignore (normalize "file}"   ); false with _ -> true
+    TEST = try ignore (normalize ""        ); false with _ -> true
+    TEST = try ignore (normalize " file "  ); false with _ -> true
+    TEST = try ignore (normalize "file "   ); false with _ -> true
+    TEST = try ignore (normalize " file"   ); false with _ -> true
+
+    let (%:) name arg_type =
+      let name = normalize name in
+      { p = Parser.one ~name arg_type; grammar = Grammar.one name; }
 
     let maybe t = {
       p = Parser.maybe t.p;
@@ -710,7 +741,7 @@ let normalize key_type key =
   match key_type with
   | Key_type.Flag ->
     if String.is_prefix ~prefix:"-" key then key else "-" ^ key
-  | Key_type.Subcommand -> key
+  | Key_type.Subcommand -> String.lowercase key
 
 let lookup_expand map prefix key_type =
   match String.Map.find map prefix with

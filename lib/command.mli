@@ -285,7 +285,18 @@ module Spec : sig
   val anon : 'a anons -> 'a param
 
   (** [(name %: typ)] specifies a required anonymous argument of type [typ].
-      The [name] is mentioned in the generated help for the command. *)
+
+      The [name] must not be surrounded by whitespace, if it is, an exn will be raised.
+
+      If the [name] is surrounded by a special character pair (<>, {}, [] or (),) 
+      [name] will remain as-is, otherwise, [name] will be uppercased.
+
+      In the situation where [name] is only prefixed or only suffixed by one of the
+      special character pairs, or different pairs are used, (e.g. "<ARG]") an exn will
+      be raised.
+
+      The (possibly transformed) [name] is mentioned in the generated help for the 
+      command. *)
   val (%:) : string -> 'a Arg_type.t -> 'a anons
 
   (** [sequence anons] specifies a sequence of anonymous arguments.  An exception
