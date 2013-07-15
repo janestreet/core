@@ -56,8 +56,8 @@ val temp_dir_name : string
     this file.  This function is more secure than [temp_file]: there
     is no risk that the temporary file will be modified (e.g. replaced
     by a symbolic link) before the program opens it. *)
-val open_temp_file :
-  ?perm: int -> ?in_dir: string -> string -> string -> string * out_channel
+val open_temp_file
+  : ?perm: int -> ?in_dir: string -> string -> string -> string * out_channel
 
 (** The conventional name for the current directory (e.g. [.] in Unix). *)
 val current_dir_name : string

@@ -90,8 +90,8 @@ let sub_shared ?(pos = 0) ?len (bstr : t) =
 
 (* Input functions *)
 
-external unsafe_read :
-  min_len : int -> file_descr -> pos : int -> len : int -> t -> int
+external unsafe_read
+  : min_len : int -> file_descr -> pos : int -> len : int -> t -> int
   = "bigstring_read_stub"
 
 let read ?min_len fd ?(pos = 0) ?len bstr =
@@ -101,8 +101,8 @@ let read ?min_len fd ?(pos = 0) ?len bstr =
   let min_len = check_min_len ~loc ~len min_len in
   unsafe_read ~min_len fd ~pos ~len bstr
 
-external unsafe_pread_assume_fd_is_nonblocking_stub :
-  file_descr -> offset : int -> pos : int -> len : int -> t -> int
+external unsafe_pread_assume_fd_is_nonblocking_stub
+  : file_descr -> offset : int -> pos : int -> len : int -> t -> int
   = "bigstring_pread_assume_fd_is_nonblocking_stub"
 
 let pread_assume_fd_is_nonblocking fd ~offset ?(pos = 0) ?len bstr =
@@ -115,8 +115,8 @@ let really_read fd ?(pos = 0) ?len bstr =
   let len = get_opt_len bstr ~pos len in
   ignore (read ~min_len:len fd ~pos ~len bstr)
 
-external unsafe_really_recv :
-  file_descr -> pos : int -> len : int -> t -> unit
+external unsafe_really_recv
+  : file_descr -> pos : int -> len : int -> t -> unit
   = "bigstring_really_recv_stub"
 
 let really_recv sock ?(pos = 0) ?len bstr =
@@ -124,8 +124,8 @@ let really_recv sock ?(pos = 0) ?len bstr =
   check_args ~loc:"really_recv" ~pos ~len bstr;
   unsafe_really_recv sock ~pos ~len bstr
 
-external unsafe_recvfrom_assume_fd_is_nonblocking :
-  file_descr -> pos : int -> len : int -> t -> int * sockaddr
+external unsafe_recvfrom_assume_fd_is_nonblocking
+  : file_descr -> pos : int -> len : int -> t -> int * sockaddr
   = "bigstring_recvfrom_assume_fd_is_nonblocking_stub"
 
 let recvfrom_assume_fd_is_nonblocking sock ?(pos = 0) ?len bstr =
@@ -133,8 +133,8 @@ let recvfrom_assume_fd_is_nonblocking sock ?(pos = 0) ?len bstr =
   check_args ~loc:"recvfrom_assume_fd_is_nonblocking" ~pos ~len bstr;
   unsafe_recvfrom_assume_fd_is_nonblocking sock ~pos ~len bstr
 
-external unsafe_read_assume_fd_is_nonblocking :
-  file_descr -> pos : int -> len : int -> t -> int
+external unsafe_read_assume_fd_is_nonblocking
+  : file_descr -> pos : int -> len : int -> t -> int
   = "bigstring_read_assume_fd_is_nonblocking_stub"
 
 let read_assume_fd_is_nonblocking fd ?(pos = 0) ?len bstr =
@@ -142,8 +142,8 @@ let read_assume_fd_is_nonblocking fd ?(pos = 0) ?len bstr =
   check_args ~loc:"read_assume_fd_is_nonblocking" ~pos ~len bstr;
   unsafe_read_assume_fd_is_nonblocking fd ~pos ~len bstr
 
-external unsafe_input :
-  min_len : int -> in_channel -> pos : int -> len : int -> t -> int
+external unsafe_input
+  : min_len : int -> in_channel -> pos : int -> len : int -> t -> int
   = "bigstring_input_stub"
 
 let input ?min_len ic ?(pos = 0) ?len bstr =
@@ -160,8 +160,8 @@ let really_input ic ?(pos = 0) ?len bstr =
 
 (* Output functions *)
 
-external unsafe_really_write :
-  file_descr -> pos : int -> len : int -> t -> unit
+external unsafe_really_write
+  : file_descr -> pos : int -> len : int -> t -> unit
   = "bigstring_really_write_stub"
 
 let really_write fd ?(pos = 0) ?len bstr =
@@ -169,8 +169,8 @@ let really_write fd ?(pos = 0) ?len bstr =
   check_args ~loc:"really_write" ~pos ~len bstr;
   unsafe_really_write fd ~pos ~len bstr
 
-external unsafe_pwrite_assume_fd_is_nonblocking :
-  file_descr -> offset : int -> pos : int -> len : int -> t -> int
+external unsafe_pwrite_assume_fd_is_nonblocking
+  : file_descr -> offset : int -> pos : int -> len : int -> t -> int
   = "bigstring_pwrite_assume_fd_is_nonblocking_stub"
 
 let pwrite_assume_fd_is_nonblocking fd ~offset ?(pos = 0) ?len bstr =
@@ -180,8 +180,8 @@ let pwrite_assume_fd_is_nonblocking fd ~offset ?(pos = 0) ?len bstr =
   unsafe_pwrite_assume_fd_is_nonblocking fd ~offset ~pos ~len bstr
 
 IFDEF MSG_NOSIGNAL THEN
-external unsafe_really_send_no_sigpipe :
-  file_descr -> pos : int -> len : int -> t -> unit
+external unsafe_really_send_no_sigpipe
+  : file_descr -> pos : int -> len : int -> t -> unit
   = "bigstring_really_send_no_sigpipe_stub"
 
 let really_send_no_sigpipe fd ?(pos = 0) ?len bstr =
@@ -189,8 +189,8 @@ let really_send_no_sigpipe fd ?(pos = 0) ?len bstr =
   check_args ~loc:"really_send_no_sigpipe" ~pos ~len bstr;
   unsafe_really_send_no_sigpipe fd ~pos ~len bstr
 
-external unsafe_send_nonblocking_no_sigpipe :
-  file_descr -> pos : int -> len : int -> t -> int
+external unsafe_send_nonblocking_no_sigpipe
+  : file_descr -> pos : int -> len : int -> t -> int
   = "bigstring_send_nonblocking_no_sigpipe_stub"
 
 let unsafe_send_nonblocking_no_sigpipe fd ~pos ~len buf =
@@ -203,8 +203,8 @@ let send_nonblocking_no_sigpipe fd ?(pos = 0) ?len bstr =
   check_args ~loc:"send_nonblocking_no_sigpipe" ~pos ~len bstr;
   unsafe_send_nonblocking_no_sigpipe fd ~pos ~len bstr
 
-external unsafe_sendto_nonblocking_no_sigpipe :
-  file_descr -> pos : int -> len : int -> t -> sockaddr -> int
+external unsafe_sendto_nonblocking_no_sigpipe
+  : file_descr -> pos : int -> len : int -> t -> sockaddr -> int
   = "bigstring_sendto_nonblocking_no_sigpipe_stub"
 
 let unsafe_sendto_nonblocking_no_sigpipe fd ~pos ~len buf sockaddr =
@@ -233,16 +233,16 @@ let unsafe_send_nonblocking_no_sigpipe = unimplemented "Bigstring.unsafe_send_no
 
 ENDIF
 
-external unsafe_write :
-  file_descr -> pos : int -> len : int -> t -> int = "bigstring_write_stub"
+external unsafe_write
+  : file_descr -> pos : int -> len : int -> t -> int = "bigstring_write_stub"
 
 let write fd ?(pos = 0) ?len bstr =
   let len = get_opt_len bstr ~pos len in
   check_args ~loc:"write" ~pos ~len bstr;
   unsafe_write fd ~pos ~len bstr
 
-external unsafe_write_assume_fd_is_nonblocking :
-  file_descr -> pos : int -> len : int -> t -> int
+external unsafe_write_assume_fd_is_nonblocking
+  : file_descr -> pos : int -> len : int -> t -> int
   = "bigstring_write_assume_fd_is_nonblocking_stub"
 
 let write_assume_fd_is_nonblocking fd ?(pos = 0) ?len bstr =
@@ -250,8 +250,8 @@ let write_assume_fd_is_nonblocking fd ?(pos = 0) ?len bstr =
   check_args ~loc:"write_assume_fd_is_nonblocking" ~pos ~len bstr;
   unsafe_write_assume_fd_is_nonblocking fd ~pos ~len bstr
 
-external unsafe_writev :
-  file_descr -> t Core_unix.IOVec.t array -> int -> int
+external unsafe_writev
+  : file_descr -> t Core_unix.IOVec.t array -> int -> int
   = "bigstring_writev_stub"
 
 let get_iovec_count loc iovecs = function
@@ -266,8 +266,8 @@ let writev fd ?count iovecs =
   let count = get_iovec_count "writev" iovecs count in
   unsafe_writev fd iovecs count
 
-external unsafe_writev_assume_fd_is_nonblocking :
-  file_descr -> t Core_unix.IOVec.t array -> int -> int
+external unsafe_writev_assume_fd_is_nonblocking
+  : file_descr -> t Core_unix.IOVec.t array -> int -> int
   = "bigstring_writev_assume_fd_is_nonblocking_stub"
 
 let writev_assume_fd_is_nonblocking fd ?count iovecs =
@@ -275,8 +275,8 @@ let writev_assume_fd_is_nonblocking fd ?count iovecs =
   unsafe_writev_assume_fd_is_nonblocking fd iovecs count
 ;;
 
-external unsafe_output :
-  min_len : int -> out_channel -> pos : int -> len : int -> t -> int
+external unsafe_output
+  : min_len : int -> out_channel -> pos : int -> len : int -> t -> int
   = "bigstring_output_stub"
 
 let output ?min_len oc ?(pos = 0) ?len bstr =
@@ -293,8 +293,8 @@ let really_output oc ?(pos = 0) ?len bstr =
 
 IFDEF RECVMMSG THEN
 
-external unsafe_recvmmsg_assume_fd_is_nonblocking :
-  file_descr
+external unsafe_recvmmsg_assume_fd_is_nonblocking
+  :  file_descr
   -> t Core_unix.IOVec.t array
   -> int
   -> sockaddr array option
@@ -383,8 +383,8 @@ ENDIF                                   (* RECVMMSG *)
 IFDEF MSG_NOSIGNAL THEN
 (* Input and output, linux only *)
 
-external unsafe_sendmsg_nonblocking_no_sigpipe :
-  file_descr -> t Core_unix.IOVec.t array -> int -> int
+external unsafe_sendmsg_nonblocking_no_sigpipe
+  : file_descr -> t Core_unix.IOVec.t array -> int -> int
   = "bigstring_sendmsg_nonblocking_no_sigpipe_stub"
 
 let unsafe_sendmsg_nonblocking_no_sigpipe fd iovecs count =

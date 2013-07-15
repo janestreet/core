@@ -7,6 +7,8 @@ open Timing_wheel_intf
 
 open Timing_wheel
 
+module Debug = Core_kernel.Std.Debug
+
 let sec = Time.Span.of_sec
 
 module Level_bits = struct
@@ -14,6 +16,8 @@ module Level_bits = struct
   open Level_bits
 
   type nonrec t = t
+
+  let invariant = invariant
 
   let max_num_bits = max_num_bits
 
@@ -222,9 +226,9 @@ module Priority_queue = struct
     in
     let test ~num_bits ~level_bits ~initial_min_allowed_key ~step =
       if false then
-        log "test" (`num_bits num_bits, `level_bits level_bits,
-                    `initial_min_allowed_key initial_min_allowed_key,
-                    `step step)
+        Debug.eprints "test" (`num_bits num_bits, `level_bits level_bits,
+                          `initial_min_allowed_key initial_min_allowed_key,
+                          `step step)
           (<:sexp_of< ([`num_bits of int] * [`level_bits of int list]
                        * [`initial_min_allowed_key of int]
                        * [`step of int]) >>);
@@ -466,7 +470,7 @@ let advance_clock = advance_clock
 TEST_UNIT =
   let test ~num_alarms ~alarm_precision ~alarm_separation ~advance_by =
     if false then
-      log "test" (num_alarms, alarm_precision, alarm_separation, advance_by)
+      Debug.eprints "test" (num_alarms, alarm_precision, alarm_separation, advance_by)
         (<:sexp_of< int * Time.Span.t * Time.Span.t * Time.Span.t >>);
     let t = create ~start:Time.epoch ~alarm_precision ~dummy:ignore () in
     for i = 1 to num_alarms do

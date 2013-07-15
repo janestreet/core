@@ -73,16 +73,16 @@ external fdatasync : Unix.file_descr -> unit = "unix_fdatasync"
 
 external dirfd : Unix.dir_handle -> File_descr.t = "unix_dirfd"
 
-external readdir_ino :
-  Unix.dir_handle -> string * nativeint = "unix_readdir_ino_stub"
+external readdir_ino
+  : Unix.dir_handle -> string * nativeint = "unix_readdir_ino_stub"
 
 external unsetenv : string -> unit = "unix_unsetenv"
 
 external exit_immediately : int -> _ = "caml_sys_exit"
 
-external unsafe_read_assume_fd_is_nonblocking :
-  File_descr.t -> string -> pos : int -> len : int -> int
-    = "unix_read_assume_fd_is_nonblocking_stub"
+external unsafe_read_assume_fd_is_nonblocking
+  : File_descr.t -> string -> pos : int -> len : int -> int
+  = "unix_read_assume_fd_is_nonblocking_stub"
 
 let check_string_args ~loc str ~pos ~len =
   if pos < 0 then invalid_arg (loc ^ ": pos < 0");
@@ -109,9 +109,9 @@ let read_assume_fd_is_nonblocking fd ?pos ?len buf =
   unsafe_read_assume_fd_is_nonblocking fd buf ~pos ~len
 ;;
 
-external unsafe_write_assume_fd_is_nonblocking :
-  File_descr.t -> string -> pos : int -> len : int -> int
-    = "unix_write_assume_fd_is_nonblocking_stub"
+external unsafe_write_assume_fd_is_nonblocking
+  : File_descr.t -> string -> pos : int -> len : int -> int
+  = "unix_write_assume_fd_is_nonblocking_stub"
 ;;
 
 let write_assume_fd_is_nonblocking fd ?pos ?len buf =
@@ -124,8 +124,8 @@ let write_assume_fd_is_nonblocking fd ?pos ?len buf =
 
 (* Filesystem functions *)
 
-external mknod :
-  string -> Unix.file_kind -> int -> int -> int -> unit = "unix_mknod_stub"
+external mknod
+  : string -> Unix.file_kind -> int -> int -> int -> unit = "unix_mknod_stub"
 
 let mknod
     ?(file_kind = Unix.S_REG) ?(perm = 0o600) ?(major = 0) ?(minor = 0)
@@ -349,8 +349,8 @@ let get_iovec_count loc iovecs = function
       count
 ;;
 
-external unsafe_writev_assume_fd_is_nonblocking :
-  File_descr.t -> string IOVec.t array -> int -> int
+external unsafe_writev_assume_fd_is_nonblocking
+  : File_descr.t -> string IOVec.t array -> int -> int
   = "unix_writev_assume_fd_is_nonblocking_stub"
 ;;
 
@@ -359,8 +359,8 @@ let writev_assume_fd_is_nonblocking fd ?count iovecs =
   unsafe_writev_assume_fd_is_nonblocking fd iovecs count
 ;;
 
-external unsafe_writev :
-  File_descr.t -> string IOVec.t array -> int -> int = "unix_writev_stub"
+external unsafe_writev
+  : File_descr.t -> string IOVec.t array -> int -> int = "unix_writev_stub"
 ;;
 
 let writev fd ?count iovecs =
@@ -368,10 +368,13 @@ let writev fd ?count iovecs =
   unsafe_writev fd iovecs count
 ;;
 
-external pselect :
-  File_descr.t list -> File_descr.t list -> File_descr.t list ->
-  float -> int list ->
-  File_descr.t list * File_descr.t list * File_descr.t list
+external pselect
+  :    File_descr.t list
+    -> File_descr.t list
+    -> File_descr.t list
+    -> float
+    -> int list
+    -> File_descr.t list * File_descr.t list * File_descr.t list
   = "unix_pselect_stub"
 ;;
 
@@ -421,8 +424,8 @@ module Fnmatch_flags = struct
   ;;
 end
 
-external fnmatch :
-  Fnmatch_flags.t -> pat : string -> string -> bool = "unix_fnmatch"
+external fnmatch
+  : Fnmatch_flags.t -> pat : string -> string -> bool = "unix_fnmatch"
 ;;
 
 let fnmatch ?flags ~pat fname = fnmatch (Fnmatch_flags.make flags) ~pat fname
@@ -477,13 +480,13 @@ external uname : unit -> Utsname.t = "unix_uname"
 
 external if_indextoname : int -> string = "unix_if_indextoname"
 
-external mcast_join :
-  ?ifname : string -> File_descr.t -> Unix.sockaddr -> unit
+external mcast_join
+  : ?ifname : string -> File_descr.t -> Unix.sockaddr -> unit
   = "unix_mcast_join"
 ;;
 
-external mcast_leave :
-  ?ifname : string -> File_descr.t -> Unix.sockaddr -> unit
+external mcast_leave
+  : ?ifname : string -> File_descr.t -> Unix.sockaddr -> unit
   = "unix_mcast_leave"
 ;;
 
@@ -510,8 +513,8 @@ module Scheduler = struct
     end
   end
 
-  external set :
-    pid : int -> policy : Policy.Ordered.t -> priority : int -> unit
+  external set
+    : pid : int -> policy : Policy.Ordered.t -> priority : int -> unit
     = "unix_sched_setscheduler"
   ;;
 
@@ -1378,13 +1381,13 @@ module Process_info = struct
   with sexp
 end
 
-external create_process :
-  ?working_dir : string ->
-  prog : string ->
-  args : string array ->
-  env : string array ->
-  search_path : bool ->
-  Process_info.t
+external create_process
+  :  ?working_dir : string
+  -> prog : string
+  -> args : string array
+  -> env : string array
+  -> search_path : bool
+  -> Process_info.t
   = "ml_create_process"
 
 type env =

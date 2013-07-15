@@ -116,6 +116,8 @@ module type S = sig
         for the running time of [add] and [increase_min_allowed_key] increases. *)
     type t with sexp
 
+    include Invariant.S with type t := t
+
     (* [max_num_bits] is how many bits in an integer key the timing wheel can use, i.e.
        [Word_size.num_bits word_size - 3].  We subtract the 3 bits in the word that we
        won't use:

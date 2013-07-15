@@ -288,14 +288,14 @@ module Spec : sig
 
       The [name] must not be surrounded by whitespace, if it is, an exn will be raised.
 
-      If the [name] is surrounded by a special character pair (<>, {}, [] or (),) 
+      If the [name] is surrounded by a special character pair (<>, \{\}, \[\] or (),)
       [name] will remain as-is, otherwise, [name] will be uppercased.
 
       In the situation where [name] is only prefixed or only suffixed by one of the
-      special character pairs, or different pairs are used, (e.g. "<ARG]") an exn will
+      special character pairs, or different pairs are used, (e.g. "<ARG\]") an exn will
       be raised.
 
-      The (possibly transformed) [name] is mentioned in the generated help for the 
+      The (possibly transformed) [name] is mentioned in the generated help for the
       command. *)
   val (%:) : string -> 'a Arg_type.t -> 'a anons
 

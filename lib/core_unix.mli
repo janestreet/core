@@ -611,13 +611,13 @@ val fchown : File_descr.t -> uid:int -> gid:int -> unit
 val umask : int -> int
 
 (** Check that the process has the given permissions over the named file. *)
-val access :
-  string
+val access
+  :  string
   -> [ `Read | `Write | `Exec | `Exists ] list
   -> (unit, exn) Result.t
 
-val access_exn :
-  string
+val access_exn
+  :  string
   -> [ `Read | `Write | `Exec | `Exists ] list
   -> unit
 
@@ -956,8 +956,7 @@ val getitimer : interval_timer -> interval_timer_status
    Setting [s.it_value] to zero disable the timer.
    Setting [s.it_interval] to zero causes the timer to be disabled
    after its next expiration. *)
-val setitimer :
-  interval_timer -> interval_timer_status -> interval_timer_status
+val setitimer : interval_timer -> interval_timer_status -> interval_timer_status
 
 
 (** {6 User id, group id}
@@ -1126,18 +1125,19 @@ type sockaddr = Unix.sockaddr =
 with sexp, bin_io
 
 (** Return the socket domain adequate for the given socket address. *)
-val domain_of_sockaddr: sockaddr -> socket_domain
+val domain_of_sockaddr : sockaddr -> socket_domain
 
 (** Create a new socket in the given domain, and with the
    given kind. The third argument is the protocol type; 0 selects
    the default protocol for that kind of sockets. *)
-val socket :
-  domain:socket_domain -> kind:socket_type -> protocol:int -> File_descr.t
+val socket : domain:socket_domain -> kind:socket_type -> protocol:int -> File_descr.t
 
 (** Create a pair of unnamed sockets, connected together. *)
-val socketpair :
-  domain:socket_domain -> kind:socket_type -> protocol:int ->
-    File_descr.t * File_descr.t
+val socketpair
+  :  domain:socket_domain
+  -> kind:socket_type
+  -> protocol:int
+  -> File_descr.t * File_descr.t
 
 (** Accept connections on the given socket. The returned descriptor
    is a socket connected to the client; the returned address is
@@ -1184,23 +1184,36 @@ type msg_flag = Unix.msg_flag =
 with sexp
 
 (** Receive data from an unconnected socket. *)
-val recv :
-  File_descr.t -> buf:string -> pos:int -> len:int -> mode:msg_flag list -> int
+val recv
+  :  File_descr.t
+  -> buf:string
+  -> pos:int
+  -> len:int
+  -> mode:msg_flag list
+  -> int
 
 (** Receive data from an unconnected socket. *)
-val recvfrom :
-  File_descr.t -> buf:string -> pos:int -> len:int -> mode:msg_flag list ->
-    int * sockaddr
+val recvfrom
+  :  File_descr.t
+  -> buf:string
+  -> pos:int
+  -> len:int
+  -> mode:msg_flag list
+  -> int * sockaddr
 
 (** Send data over an unconnected socket. *)
-val send :
-  File_descr.t -> buf:string -> pos:int -> len:int -> mode:msg_flag list -> int
+val send
+  : File_descr.t -> buf:string -> pos:int -> len:int -> mode:msg_flag list -> int
 
 (** Send data over an unconnected socket. *)
-val sendto :
-  File_descr.t -> buf:string -> pos:int -> len:int -> mode:msg_flag list ->
-    addr:sockaddr -> int
-
+val sendto
+  :  File_descr.t
+  -> buf:string
+  -> pos:int
+  -> len:int
+  -> mode:msg_flag list
+  -> addr:sockaddr
+  -> int
 
 (** {6 Socket options} *)
 
@@ -1274,8 +1287,8 @@ val getsockopt_float : File_descr.t -> socket_float_option -> float
 
 (** Same as {!UnixLabels.setsockopt} for a socket option whose value is a floating-point
     number. *)
-val setsockopt_float :
-  File_descr.t -> socket_float_option -> float -> unit
+val setsockopt_float
+  : File_descr.t -> socket_float_option -> float -> unit
 
 
 (** {6 High-level network connection functions} *)
@@ -1297,8 +1310,8 @@ val shutdown_connection : in_channel -> unit
    with two buffered channels connected to the client. A new process
    is created for each connection. The function {!UnixLabels.establish_server}
    never returns normally. *)
-val establish_server :
-  (in_channel -> out_channel -> unit) -> addr:sockaddr -> unit
+val establish_server
+  : (in_channel -> out_channel -> unit) -> addr:sockaddr -> unit
 
 
 (** {6 Host and protocol databases} *)
@@ -1406,8 +1419,7 @@ with sexp
     [opts] is a possibly empty list of options that allows the caller
     to force a particular socket domain (e.g. IPv6 only, or IPv4 only)
     or a particular socket type (e.g. TCP only or UDP only). *)
-val getaddrinfo:
-  string -> string -> getaddrinfo_option list -> addr_info list
+val getaddrinfo : string -> string -> getaddrinfo_option list -> addr_info list
 
 (** Host and service information returned by {!Unix.getnameinfo}. *)
 type name_info =
@@ -1663,14 +1675,14 @@ external fsync : File_descr.t -> unit = "unix_fsync"
     but do not necessarily write file attributes. *)
 external fdatasync : File_descr.t -> unit = "unix_fdatasync"
 
-external readdir_ino :
-  dir_handle -> string * nativeint = "unix_readdir_ino_stub"
+external readdir_ino
+  : dir_handle -> string * nativeint = "unix_readdir_ino_stub"
 (** [readdir_ino dh] return the next entry in a directory (([(filename,
     inode)]).  @raise End_of_file when the end of the directory has been
     reached. *)
 
-val read_assume_fd_is_nonblocking :
-  File_descr.t -> ?pos : int -> ?len : int -> string -> int
+val read_assume_fd_is_nonblocking
+  : File_descr.t -> ?pos : int -> ?len : int -> string -> int
 (** [read_assume_fd_is_nonblocking fd ?pos ?len buf] calls the system call
     [read] ASSUMING THAT IT IS NOT GOING TO BLOCK.  Reads at most [len]
     bytes into buffer [buf] starting at position [pos].  @return the
@@ -1683,8 +1695,8 @@ val read_assume_fd_is_nonblocking :
     @param len = [String.length buf - pos]
 *)
 
-val write_assume_fd_is_nonblocking :
-  File_descr.t -> ?pos : int -> ?len : int -> string -> int
+val write_assume_fd_is_nonblocking
+  : File_descr.t -> ?pos : int -> ?len : int -> string -> int
 (** [write_assume_fd_is_nonblocking fd ?pos ?len buf] calls the system call
     [write] ASSUMING THAT IT IS NOT GOING TO BLOCK.  Writes at most [len]
     bytes from buffer [buf] starting at position [pos].  @return the
@@ -1697,8 +1709,8 @@ val write_assume_fd_is_nonblocking :
     @param len = [String.length buf - pos]
 *)
 
-val writev_assume_fd_is_nonblocking :
-  File_descr.t -> ?count : int -> string IOVec.t array -> int
+val writev_assume_fd_is_nonblocking
+  : File_descr.t -> ?count : int -> string IOVec.t array -> int
 (** [writev_assume_fd_is_nonblocking fd ?count iovecs] calls the system call
     [writev] ASSUMING THAT IT IS NOT GOING TO BLOCK using [count]
     I/O-vectors [iovecs].  @return the number of bytes actually written.
@@ -1721,9 +1733,14 @@ val writev : File_descr.t -> ?count : int -> string IOVec.t array -> int
     @raise Unix_error on Unix-errors.
 *)
 
-external pselect :
-  File_descr.t list -> File_descr.t list -> File_descr.t list -> float -> int list ->
-  File_descr.t list * File_descr.t list * File_descr.t list = "unix_pselect_stub"
+external pselect
+  :  File_descr.t list
+    -> File_descr.t list
+    -> File_descr.t list
+    -> float
+    -> int list
+    -> File_descr.t list * File_descr.t list * File_descr.t list
+  = "unix_pselect_stub"
 (** [pselect rfds wfds efds timeout sigmask] like {!Core_unix.select} but
     also allows one to wait for the arrival of signals. *)
 
@@ -1817,7 +1834,7 @@ val mkstemp : string -> string * File_descr.t
     the name unique.
 
     @raise Unix_error on errors.
-k*)
+    k*)
 val mkdtemp : string -> string
 
 (** {2 Signal handling} *)
@@ -1842,18 +1859,21 @@ val getgroups : unit -> int array
 (** {2 Globbing and shell expansion} *)
 
 (* no system calls involved *)
-val fnmatch :
-  ?flags :
-    [ `No_escape
-    | `Pathname
-    | `Period
-    | `File_name
-    | `Leading_dir
-    | `Casefold ] list -> pat : string -> string -> bool
+val fnmatch
+  :  ?flags : [ `No_escape
+              | `Pathname
+              | `Period
+              | `File_name
+              | `Leading_dir
+              | `Casefold
+              ] list
+  -> pat : string
+  -> string
+  -> bool
 
 (* See man page for wordexp. *)
-val wordexp :
-  (?flags : [ `No_cmd | `Show_err | `Undef ] list -> string -> string array) Or_error.t
+val wordexp
+  : (?flags : [ `No_cmd | `Show_err | `Undef ] list -> string -> string array) Or_error.t
 
 (** {2 System information} *)
 

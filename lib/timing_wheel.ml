@@ -55,6 +55,12 @@ module Level_bits = struct
 
   let max_num_bits = Word_size.(num_bits word_size) - 3
 
+  let invariant t =
+    assert (not (List.is_empty t));
+    assert (List.for_all t ~f:(fun i -> i > 0));
+    assert (List.fold t ~init:0 ~f:(+) <= max_num_bits);
+  ;;
+
   let create_exn ints =
     if List.is_empty ints then
       failwith "Level_bits.create_exn requires a nonempty list";
@@ -202,14 +208,13 @@ module Priority_queue = struct
     let is_valid p t = Pool.pointer_is_valid p t
 
     let invariant pool invariant_a t =
-      Invariant.invariant "Timing_wheel.Priority_queue.Elt.invariant"
-        t <:sexp_of< _ t >> (fun () ->
-          assert (is_valid pool t);
-          invariant_a (value pool t);
-          let n = next pool t in
-          assert (is_null n || Pointer.phys_equal t (prev pool n));
-          let p = prev pool t in
-          assert (is_null p || Pointer.phys_equal t (next pool p)));
+      Invariant.invariant _here_ t <:sexp_of< _ t >> (fun () ->
+        assert (is_valid pool t);
+        invariant_a (value pool t);
+        let n = next pool t in
+        assert (is_null n || Pointer.phys_equal t (prev pool n));
+        let p = prev pool t in
+        assert (is_null p || Pointer.phys_equal t (next pool p)));
     ;;
 
     module Pool = struct
@@ -409,7 +414,7 @@ module Priority_queue = struct
     let module L = Level in
     let pool = t.pool in
     let level_invariant level =
-      Invariant.invariant "Timing_wheel.Level" level <:sexp_of< _ Level.t >> (fun () ->
+      Invariant.invariant _here_ level <:sexp_of< _ Level.t >> (fun () ->
         let check f = Invariant.check_field level f in
         Level.Fields.iter
           ~index:(check (fun index -> assert (index >= 0)))
@@ -449,7 +454,7 @@ module Priority_queue = struct
                   invariant_a (Elt_.value pool elt));
               end))))
     in
-    Invariant.invariant "Timing_wheel" t <:sexp_of< _ t_internal >> (fun () ->
+    Invariant.invariant _here_ t <:sexp_of< _ t_internal >> (fun () ->
       let check f = Invariant.check_field t f in
       assert (min_allowed_key t >= 0);
       assert (min_allowed_key t <= max_representable_key);
@@ -876,7 +881,7 @@ let time_key t time =
 let interval_start t time = key_time t (time_key t time)
 
 let invariant invariant_a t =
-  Invariant.invariant "Timing_wheel" t <:sexp_of< _ t >> (fun () ->
+  Invariant.invariant _here_ t <:sexp_of< _ t >> (fun () ->
     let check f = Invariant.check_field t f in
     Fields.iter
       ~start:ignore
@@ -934,7 +939,7 @@ let next_alarm_fires_at t =
 ;;
 
 module Debug (M : S) = struct
-  module Debug = Core_kernel.Import.Debug (struct end)
+  module Debug = Debug.Make (struct end)
 
   include Debug
 
@@ -949,7 +954,9 @@ module Debug (M : S) = struct
 
     type nonrec t = t with sexp
 
-    let debug x = Debug.debug (invariant ignore) "Timing_wheel.Level_bits" x
+    let invariant = invariant
+
+    let debug x = Debug.debug invariant ~module_name:"Timing_wheel.Level_bits" x
 
     let max_num_bits = max_num_bits
 
@@ -977,7 +984,7 @@ module Debug (M : S) = struct
 
   let invariant = invariant
 
-  let debug x = Debug.debug (invariant ignore) "Timing_wheel." x
+  let debug x = Debug.debug (invariant ignore) ~module_name:"Timing_wheel" x
 
   let create ?level_bits ~start ~alarm_precision ~dummy () =
     debug "create" []
@@ -1039,7 +1046,7 @@ module Debug (M : S) = struct
 
     let invariant = invariant
 
-    let debug x = Debug.debug (invariant ignore ) "Priority_queue" x
+    let debug x = Debug.debug (invariant ignore) ~module_name:"Priority_queue" x
 
     let create ?level_bits ~dummy () =
       debug "create" [] level_bits <:sexp_of< Level_bits.t option >> <:sexp_of< _ t >>

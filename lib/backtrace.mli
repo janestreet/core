@@ -16,6 +16,9 @@ type t with sexp_of
 
 val get : (unit -> t) Or_error.t
 
+(** [get_opt ()] returns a backtrace if [get] is implemented. *)
+val get_opt : unit -> t option
+
 val to_string : t -> string
 
 (** [Backtrace.Exn] has functions for controlling and printing the backtrace of the most

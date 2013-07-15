@@ -575,12 +575,12 @@ INCLUDE "core_config.mlh"
 
 IFDEF RECVMMSG THEN
 
-external unsafe_recvmmsg_assume_fd_is_nonblocking :
-  (File_descr.t
-   -> (read_write, seek) t array
-   -> int
-   -> Unix.sockaddr array option
-   -> int)
+external unsafe_recvmmsg_assume_fd_is_nonblocking
+  : (File_descr.t
+     -> (read_write, seek) t array
+     -> int
+     -> Unix.sockaddr array option
+     -> int)
   = "iobuf_recvmmsg_assume_fd_is_nonblocking_stub"
 
 let recvmmsg_assume_fd_is_nonblocking fd ?count ?srcs ts =

@@ -66,8 +66,8 @@ val convert
   -> Ofday.t
   -> (Date.t * Ofday.t)
 
-val utc_offset :
-  ?zone:Zone.t
+val utc_offset
+  :  ?zone:Zone.t
   -> t
   -> Span.t
 

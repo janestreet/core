@@ -77,12 +77,13 @@ val deactivate : t -> unit
     @param randomize default = none
     @param interval default = none
 *)
-val add :
-  t ->
-  (event -> Time.t -> unit) ->
-  ?randomize : float ->
-  ?interval : Span.t ->
-  Span.t -> event
+val add
+  :  t
+  -> (event -> Time.t -> unit)
+  -> ?randomize : float
+  -> ?interval : Span.t
+  -> Span.t
+  -> event
 
 (** [add_abs timer handler ?randomize ?interval time] same as {!add}, but
     takes an absolute time [time] for scheduling the event rather than
@@ -90,12 +91,13 @@ val add :
     a long time between the internal reading of the current time and
     the scheduling of the event, which would artificially delay event
     execution.  This function is also more efficient than {!add}. *)
-val add_abs :
-  t ->
-  (event -> Time.t -> unit) ->
-  ?randomize : float ->
-  ?interval : Span.t ->
-  Time.t -> event
+val add_abs
+  :  t
+  -> (event -> Time.t -> unit)
+  -> ?randomize : float
+  -> ?interval : Span.t
+  -> Time.t
+  -> event
 
 (** [remove event] removes [event] from its associated timer.
 

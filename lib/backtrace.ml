@@ -37,6 +37,12 @@ TEST_UNIT =
     assert (String.length s > 0);
 ;;
 
+let get_opt () =
+  match get with
+  | Error _ -> None
+  | Ok get -> Some (get ())
+;;
+
 module Exn = struct
   let set_recording = Printexc.record_backtrace
   let am_recording  = Printexc.backtrace_status

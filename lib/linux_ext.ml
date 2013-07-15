@@ -303,8 +303,8 @@ IFDEF LINUX_EXT THEN
 
 type file_descr = Core_unix.File_descr.t
 
-external sendfile :
-  sock : file_descr -> fd : file_descr -> pos : int -> len : int -> int
+external sendfile
+  : sock : file_descr -> fd : file_descr -> pos : int -> len : int -> int
     = "linux_sendfile_stub"
 ;;
 
@@ -361,14 +361,14 @@ module Sysinfo = struct
     })
 end
 
-external gettcpopt_bool :
-  file_descr -> tcp_bool_option -> bool = "linux_gettcpopt_bool_stub"
+external gettcpopt_bool
+  : file_descr -> tcp_bool_option -> bool = "linux_gettcpopt_bool_stub"
 
-external settcpopt_bool :
-  file_descr -> tcp_bool_option -> bool -> unit = "linux_settcpopt_bool_stub"
+external settcpopt_bool
+  : file_descr -> tcp_bool_option -> bool -> unit = "linux_settcpopt_bool_stub"
 
-external unsafe_send_nonblocking_no_sigpipe :
-  file_descr -> pos : int -> len : int -> string -> int
+external unsafe_send_nonblocking_no_sigpipe
+  : file_descr -> pos : int -> len : int -> string -> int
   = "linux_send_nonblocking_no_sigpipe_stub"
 
 let unsafe_send_nonblocking_no_sigpipe fd ~pos ~len buf =
@@ -376,8 +376,8 @@ let unsafe_send_nonblocking_no_sigpipe fd ~pos ~len buf =
   if res = -1 then None
   else Some res
 
-external unsafe_send_no_sigpipe :
-  file_descr -> pos : int -> len : int -> string -> int
+external unsafe_send_no_sigpipe
+  : file_descr -> pos : int -> len : int -> string -> int
   = "linux_send_no_sigpipe_stub"
 
 let check_send_args ?pos ?len buf =
@@ -410,8 +410,8 @@ let send_no_sigpipe sock ?pos ?len buf =
   let (pos, len) = check_send_args ?pos ?len buf in
   unsafe_send_no_sigpipe sock ~pos ~len buf
 
-external unsafe_sendmsg_nonblocking_no_sigpipe :
-  file_descr -> string Core_unix.IOVec.t array -> int -> int
+external unsafe_sendmsg_nonblocking_no_sigpipe
+  : file_descr -> string Core_unix.IOVec.t array -> int -> int
   = "linux_sendmsg_nonblocking_no_sigpipe_stub"
 
 let unsafe_sendmsg_nonblocking_no_sigpipe fd iovecs count =
@@ -445,8 +445,8 @@ let file_descr_realpath fd =
 let out_channel_realpath oc = file_descr_realpath (Unix.descr_of_out_channel oc)
 let in_channel_realpath ic = file_descr_realpath (Unix.descr_of_in_channel ic)
 
-external raw_sched_setaffinity :
-  pid : int -> cpuset : int list -> unit = "linux_sched_setaffinity"
+external raw_sched_setaffinity
+  : pid : int -> cpuset : int list -> unit = "linux_sched_setaffinity"
 
 let sched_setaffinity ?pid ~cpuset () =
   let pid = match pid with None -> 0 | Some pid -> Pid.to_int pid in

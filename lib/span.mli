@@ -56,8 +56,8 @@ val zero : t
 (* [create ?sign ?day ?hr ?min ?sec ?ms ?us ()] Create a span from the given parts.  All
    parts are assumed to be positive (no checking is done by the function) and the sign of
    the final span is given by [sign] which is positive by default. *)
-val create :
-  ?sign:Float.Sign.t
+val create
+  :  ?sign:Float.Sign.t
   -> ?day:int
   -> ?hr:int
   -> ?min:int

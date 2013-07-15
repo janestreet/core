@@ -4,8 +4,8 @@ open Extended_bigstring
 
 include Core_kernel.Std.Bigstring_marshal
 
-external unsafe_unmarshal :
-  pos : int -> len : int -> t -> 'a = "bigstring_unmarshal_stub"
+external unsafe_unmarshal
+  : pos : int -> len : int -> t -> 'a = "bigstring_unmarshal_stub"
 
 let unmarshal_from_sock ?buf sock =
   match buf with
