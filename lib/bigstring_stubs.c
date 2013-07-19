@@ -1,9 +1,16 @@
 #define _FILE_OFFSET_BITS 64
 
-#define _GNU_SOURCE             /* recvmmsg */
-
-/* For pread/pwrite */
-#define _XOPEN_SOURCE 500
+#ifdef JSC_RECVMMSG
+ #define _GNU_SOURCE             /* recvmmsg */
+#endif
+ 
+/* Defining _XOPEN_SOURCE on FreeBSD results in some
+   other definitions (MSG_NOSIGNAL) from being hidden. */
+#ifdef __linux__
+/* For pread/pwrite >= 500 */
+/* For ipv6 >= 600         */
+#define _XOPEN_SOURCE 600
+#endif
 
 #include <string.h>
 #include <unistd.h>
