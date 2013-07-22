@@ -38,7 +38,7 @@ val transfer_queue_in_uncond : 'a t -> 'a Queue.t -> unit
 
 (** Transfers all elements from the squeue to an ordinary queue.
     The elements remain in order.
-    Waits until at least one element can be transfered. *)
+    Waits until at least one element can be transferred. *)
 val transfer_queue : 'a t -> 'a Queue.t -> unit
 
 (** Transfers all elements from the squeue to an ordinary queue.
@@ -52,10 +52,10 @@ val clear : 'a t -> unit
 (** [wait_not_empty sq] Waits for something to be available. This is
     useful if you want to wait, but not take something out. This
     function is not useful in most cases, but in some complex cases it
-    is essential. For example you might need to take another lock
-    before you remove something from the queue for processing, you
-    might want to try to take that other lock, and if it fails do
-    something else.
+    is essential. For example, if you need to take another lock before
+    you remove something from the queue for processing, you might
+    want to try to take that other lock, and if it fails do something
+    else.
 
     This function is not dangerous, there is just ONE thing you HAVE
     to remember if you use it. Just because this function returns

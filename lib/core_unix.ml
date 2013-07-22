@@ -649,6 +649,11 @@ module Exit = struct
     else
       Error (`Exit_non_zero code)
   ;;
+
+  let or_error = function
+    | Ok _ as ok  -> ok
+    | Error error -> Or_error.error "Unix.Exit" error sexp_of_error
+  ;;
 end
 
 module Exit_or_signal = struct
@@ -670,6 +675,11 @@ module Exit_or_signal = struct
     | WSIGNALED i -> Error (`Signal (Signal.of_caml_int i))
     | WSTOPPED _ as status -> raise (Of_unix_got_invalid_status status)
   ;;
+
+  let or_error = function
+    | Ok _ as ok  -> ok
+    | Error error -> Or_error.error "Unix.Exit_or_signal" error sexp_of_error
+  ;;
 end
 
 module Exit_or_signal_or_stop = struct
@@ -688,6 +698,11 @@ module Exit_or_signal_or_stop = struct
     | WEXITED i -> if i = 0 then Ok () else Error (`Exit_non_zero i)
     | WSIGNALED i -> Error (`Signal (Signal.of_caml_int i))
     | WSTOPPED i -> Error (`Stop (Signal.of_caml_int i))
+  ;;
+
+  let or_error = function
+    | Ok _ as ok  -> ok
+    | Error error -> Or_error.error "Unix.Exit_or_signal_or_stop" error sexp_of_error
   ;;
 end
 
@@ -1850,6 +1865,10 @@ module Inet_addr = struct
   TEST = test_inet4_addr_to_int32 "8.8.8.8"          0x8080808l
   TEST = test_inet4_addr_to_int32 "173.194.73.103"  0xadc24967l
   TEST = test_inet4_addr_to_int32 "98.139.183.24"   0x628bb718l
+  TEST = test_inet4_addr_to_int32 "0.0.0.0"                  0l
+  TEST = test_inet4_addr_to_int32 "127.0.0.1"       0x7F000001l
+  TEST = test_inet4_addr_to_int32 "239.0.0.0"       0xEF000000l
+  TEST = test_inet4_addr_to_int32 "255.255.255.255" 0xFFFFFFFFl
 
   (* And from an int to a string? *)
   let test_inet4_addr_of_int32 num str =
@@ -1921,59 +1940,78 @@ module Cidr = struct
     | None -> false (* maybe they tried to use IPv6 *)
     | Some address -> Int32.equal (cidr_to_block t) (cidr_to_block {t with address})
 
-  (* This exists mostly to simplify the tests below. *)
-  let match_strings c a =
-    let c = of_string c in
-    let a = Inet_addr.of_string a in
-    does_match c a
+  let multicast = of_string "224.0.0.0/4"
 
-  let of_string_ok s =
-    try ignore (of_string s : t); true
-    with _e -> false
+  TEST_MODULE = struct
+    let match_strings c a =
+      let c = of_string c in
+      let a = Inet_addr.of_string a in
+      does_match c a
 
-  let of_string_err = Fn.compose not of_string_ok
+    let is_multicast a =
+      let a = Inet_addr.of_string a in
+      does_match multicast a
 
-  (* Can we parse some random correct netmasks? *)
-  TEST = of_string_ok "10.0.0.0/8"
-  TEST = of_string_ok "172.16.0.0/12"
-  TEST = of_string_ok "192.168.0.0/16"
-  TEST = of_string_ok "192.168.13.0/24"
-  TEST = of_string_ok "172.25.42.0/18"
+    let of_string_ok s =
+      try ignore (of_string s : t); true
+      with _ -> false
 
-  (* Do we properly fail on some nonsense? *)
-  TEST = of_string_err "172.25.42.0"
-  TEST = of_string_err "172.25.42.0/35"
-  TEST = of_string_err "172.25.42.0/sandwich"
-  TEST = of_string_err "sandwich/sandwich"
-  TEST = of_string_err "sandwich/39"
-  TEST = of_string_err "sandwich/16"
-  TEST = of_string_err "sandwich"
-  TEST = of_string_err "172.52.43/16"
-  TEST = of_string_err "172.52.493/16"
+    let of_string_err = Fn.compose not of_string_ok
 
-  (* Basic match tests *)
-  TEST = match_strings "10.0.0.0/8" "9.255.255.255" = false
-  TEST = match_strings "10.0.0.0/8" "10.0.0.1" = true
-  TEST = match_strings "10.0.0.0/8" "10.34.67.1" = true
-  TEST = match_strings "10.0.0.0/8" "10.255.255.255" = true
-  TEST = match_strings "10.0.0.0/8" "11.0.0.1" = false
+    (* Can we parse some random correct netmasks? *)
+    TEST = of_string_ok "10.0.0.0/8"
+    TEST = of_string_ok "172.16.0.0/12"
+    TEST = of_string_ok "192.168.0.0/16"
+    TEST = of_string_ok "192.168.13.0/24"
+    TEST = of_string_ok "172.25.42.0/18"
 
-  TEST = match_strings "172.16.0.0/12" "172.15.255.255" = false
-  TEST = match_strings "172.16.0.0/12" "172.16.0.0" = true
-  TEST = match_strings "172.16.0.0/12" "172.31.255.254" = true
+    (* Do we properly fail on some nonsense? *)
+    TEST = of_string_err "172.25.42.0"
+    TEST = of_string_err "172.25.42.0/35"
+    TEST = of_string_err "172.25.42.0/sandwich"
+    TEST = of_string_err "sandwich/sandwich"
+    TEST = of_string_err "sandwich/39"
+    TEST = of_string_err "sandwich/16"
+    TEST = of_string_err "sandwich"
+    TEST = of_string_err "172.52.43/16"
+    TEST = of_string_err "172.52.493/16"
 
-  TEST = match_strings "172.25.42.0/24" "172.25.42.1" = true
-  TEST = match_strings "172.25.42.0/24" "172.25.42.255" = true
-  TEST = match_strings "172.25.42.0/24" "172.25.42.0" = true
+    (* Basic match tests *)
+    TEST = match_strings "10.0.0.0/8" "9.255.255.255"  = false
+    TEST = match_strings "10.0.0.0/8" "10.0.0.1"       = true
+    TEST = match_strings "10.0.0.0/8" "10.34.67.1"     = true
+    TEST = match_strings "10.0.0.0/8" "10.255.255.255" = true
+    TEST = match_strings "10.0.0.0/8" "11.0.0.1"       = false
 
-  TEST = match_strings "172.25.42.0/16" "172.25.0.1" = true
-  TEST = match_strings "172.25.42.0/16" "172.25.255.254" = true
-  TEST = match_strings "172.25.42.0/16" "172.25.42.1" = true
-  TEST = match_strings "172.25.42.0/16" "172.25.105.237" = true
+    TEST = match_strings "172.16.0.0/12" "172.15.255.255" = false
+    TEST = match_strings "172.16.0.0/12" "172.16.0.0"     = true
+    TEST = match_strings "172.16.0.0/12" "172.31.255.254" = true
 
-  (* And some that should fail *)
-  TEST = match_strings "172.25.42.0/24" "172.26.42.47" = false
-  TEST = match_strings "172.25.42.0/24" "172.26.42.208" = false
+    TEST = match_strings "172.25.42.0/24" "172.25.42.1"   = true
+    TEST = match_strings "172.25.42.0/24" "172.25.42.255" = true
+    TEST = match_strings "172.25.42.0/24" "172.25.42.0"   = true
+
+    TEST = match_strings "172.25.42.0/16" "172.25.0.1"     = true
+    TEST = match_strings "172.25.42.0/16" "172.25.255.254" = true
+    TEST = match_strings "172.25.42.0/16" "172.25.42.1"    = true
+    TEST = match_strings "172.25.42.0/16" "172.25.105.237" = true
+
+    (* And some that should fail *)
+    TEST = match_strings "172.25.42.0/24" "172.26.42.47"  = false
+    TEST = match_strings "172.25.42.0/24" "172.26.42.208" = false
+
+    (* Multicast tests *)
+    TEST = is_multicast "224.0.0.0"       = true
+    TEST = is_multicast "224.0.0.1"       = true
+    TEST = is_multicast "239.255.255.255" = true
+    TEST = is_multicast "240.0.0.0"       = false
+    TEST = is_multicast "223.0.0.1"       = false
+    TEST = is_multicast "226.128.255.16"  = true
+    TEST = is_multicast "233.128.255.16"  = true
+    TEST = is_multicast "155.246.1.20"    = false
+    TEST = is_multicast "0.0.0.0"         = false
+    TEST = is_multicast "127.0.0.1"       = false
+  end
 end
 
 module Protocol = struct

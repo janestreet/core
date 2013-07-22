@@ -62,13 +62,23 @@ let add_random_string_round_trip_tests () =
     let pos_neg = if Random.bool () then "+" else "-" in
     let distance = Int.to_string (Random.int 10 + 1) in
     let s2 = String.concat [s1; pos_neg; distance; ":00"] in
+    let s1 =
+      let t = Time.of_string s1 in
+      let epoch = Time.to_epoch t in
+      let zone = Zone.machine_zone () in
+      let utc_epoch = Zone.shift_epoch_time zone `UTC epoch in
+      let f =
+        Time.Span.of_sec (utc_epoch -. epoch) |! Time.Span.to_float |! Float.to_int
+      in
+      s1 ^ (if f = 0 then "Z" else Printf.sprintf "%+03d:00" (f / 3600))
+    in
     add ("roundtrip string " ^ s1) (fun () ->
       let t = Time.of_string s1 in
-      let c1 = (Time.to_string_deprecated t) in
+      let c1 = Time.to_string_abs t in
       if s1 <> c1 then begin
         exit 7;
       end;
-      "s1" @? (s1 = (Time.to_string_deprecated (Time.of_string s1)));
+      "s1" @? (s1 = (Time.to_string_abs (Time.of_string s1)));
       "s2-time" @? (
         let s2_time1 = Time.of_string s2 in
         let s2_time2 = Time.of_string (Time.to_string_abs s2_time1) in

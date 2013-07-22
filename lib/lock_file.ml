@@ -98,8 +98,6 @@ module Nfs = struct
 
   let get_message path = Option.map (get_info path) ~f:(fun info -> info.Info.message)
 
-  (** [unlock_safely path] unlocks [path] if [path] was locked from the same
-      host and the pid in the file is not in the list of running processes. *)
   let unlock_safely path =
     (* Make sure error messages contain a reference to "lock.nfs_lock", which is the
        actually important file. *)

@@ -293,11 +293,11 @@ let () =
     );
   add "norollover"
     (fun () ->
-      let zone = Zone.machine_zone () in
+      let zone = Zone.of_string "nyc" in
       let t1   = Time.of_localized_string zone "2005-05-25 12:46:59.900" in
       let t2   = Time.add t1 (Time.Span.of_ms 99.9) in
       (* within 1 mic *)
-      "60secspr" @? ((Time.to_localized_string t2 zone) = "2005-05-25 12:46:59.999900");
+      "60secspr" @? ((Time.to_string_abs ~zone t2) = "2005-05-25 12:46:59.999900-04:00");
     );
   add "to_string,of_string"
     (fun () ->

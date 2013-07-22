@@ -36,8 +36,8 @@ module Level_bits = struct
         List.init (max_num_bits + 1) ~f:Fn.id;
       ]
       ~f:(fun level_bits ->
-        assert (does_fail (fun () -> Level_bits.create_exn level_bits));
-        assert (does_fail (fun () -> t_of_sexp (<:sexp_of< int list >> level_bits))))
+        assert (does_raise (fun () -> Level_bits.create_exn level_bits));
+        assert (does_raise (fun () -> t_of_sexp (<:sexp_of< int list >> level_bits))))
   ;;
 
   let default = default
@@ -172,7 +172,7 @@ module Priority_queue = struct
           max_representable_key + 1;
           Int.max_value;
         ]
-        ~f:(fun key -> assert (does_fail (fun () -> add ~key)))
+        ~f:(fun key -> assert (does_raise (fun () -> add ~key)))
     in
     check_adds_fail ();
     increase_min_allowed_key t ~key:1 ~handle_removed:ignore;
@@ -197,7 +197,7 @@ module Priority_queue = struct
     let add ~key = ignore (add t ~key () : _ Elt.t) in
     add ~key:0;
     add ~key:1;
-    assert (does_fail (fun () ->
+    assert (does_raise (fun () ->
       increase_min_allowed_key t ~key:(max_representable_key + 1)
         ~handle_removed:ignore));
     increase_min_allowed_key t ~key:max_representable_key ~handle_removed:ignore;
@@ -371,7 +371,7 @@ TEST_UNIT =
       sec 0.;
     ]
     ~f:(fun alarm_precision ->
-      assert (does_fail (fun () -> create_unit ~alarm_precision ())))
+      assert (does_raise (fun () -> create_unit ~alarm_precision ())))
 ;;
 
 let alarm_upper_bound = alarm_upper_bound
@@ -387,7 +387,7 @@ TEST_UNIT =
       Time.of_float Float.max_value;
     ]
     ~f:(fun time ->
-      assert (does_fail (fun () -> interval_start t time)));
+      assert (does_raise (fun () -> interval_start t time)));
   List.iter
     [ 0.,   0;
       0.1,  0;
@@ -507,7 +507,7 @@ TEST_UNIT =
     advance_clock t ~to_:(Time.add (now t) by)
       ~handle_fired:(fun alarm -> Alarm.value t alarm ())
   in
-  assert (does_fail (fun () -> add ~after:(sec (-1.)) ignore));
+  assert (does_raise (fun () -> add ~after:(sec (-1.)) ignore));
   assert (Time.equal (alarm_upper_bound t) (Time.add (now t) (sec 1024.)));
   assert (num_alarms () = 0);
   assert (is_none (next_alarm_fires_at t));

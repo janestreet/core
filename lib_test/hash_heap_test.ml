@@ -37,11 +37,11 @@ let test =
         List.iter s ~f:(fun i ->
           ("lookup" ^ z i) @? (Hash_heap.find_pop t i = Some i);
           ("remove" ^ z i) @? (not (Hash_heap.mem t i))));
-      "cond_pop" >:: (fun () ->
+      "pop_if" >:: (fun () ->
         let t = make () in
-        "no" @? (Hash_heap.cond_pop t (fun i -> i < 0) = None);
+        "no" @? (Hash_heap.pop_if t (fun i -> i < 0) = None);
         "still-there" @? (List.for_all s ~f:(Hash_heap.mem t));
-        "yes" @? (Hash_heap.cond_pop t (fun _ -> true) = Some 1);
+        "yes" @? (Hash_heap.pop_if t (fun _ -> true) = Some 1);
         "gone-top" @? (Hash_heap.top t <> Some 1);
         "gone-mem" @? (not (Hash_heap.mem t 1)));
       "iter" >:: (fun () ->
@@ -67,22 +67,4 @@ let test =
         Hash_heap.replace t ~key:1 ~data:12;
         "present" @? (Hash_heap.find t 1 = Some 12);
         "top" @? (Hash_heap.top t = Some 2));
-      "copy" >:: (fun () ->
-        let t = make () in
-        let t' = Hash_heap.copy t in
-        "phys_equal" @? (not (phys_equal t t'));
-        let top_key, top_value = Hash_heap.top_with_key_exn t in
-        "consistency" @? phys_equal top_value (Hash_heap.find_exn t top_key);
-        let top_key', top_value' = Hash_heap.top_with_key_exn t' in
-        "consistency'" @? phys_equal top_value' (Hash_heap.find_exn t' top_key');
-        "phys_equal top_value" @? (phys_equal top_value top_value');
-        ignore (Hash_heap.pop t');
-        "top" @? (Hash_heap.top t <> Hash_heap.top t');
-        "length" @? (Hash_heap.length t' = Hash_heap.length t - 1);
-        ignore (Hash_heap.pop t);
-        let top_key, _top_value = Hash_heap.top_with_key_exn t in
-        let top_key', _top_value' = Hash_heap.top_with_key_exn t' in
-        Hash_heap.remove t top_key;
-        Hash_heap.remove t' top_key';
-        "final length" @? (Hash_heap.length t' = Hash_heap.length t));
     ]

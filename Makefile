@@ -8,7 +8,7 @@ default: build
 
 # Setup for the development version
 setup-dev.exe: _oasis setup.ml
-	sed '/^#/D' setup.ml > setup_dev.ml
+	grep -v '^#' setup.ml > setup_dev.ml
 	ocamlfind ocamlopt -o $@ -linkpkg -package ocamlbuild,oasis.dynrun setup_dev.ml || 	  ocamlfind ocamlc -o $@ -linkpkg -package ocamlbuild,oasis.dynrun setup_dev.ml || true
 	rm -f setup_dev.*
 

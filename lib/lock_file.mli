@@ -62,7 +62,7 @@ val is_locked : string -> bool
       exits (in particular if it is killed with SIGKILL).
 *)
 module Nfs : sig
-  (** [lock ?message path] tries to create and lock the file at [path] by creating a hard
+  (** [create ?message path] tries to create and lock the file at [path] by creating a hard
       link to [path].nfs_lock.  The contents of [path] will be replaced with a sexp
       containing the caller's hostname and pid, and the optional [message].
 
@@ -92,4 +92,8 @@ module Nfs : sig
   (** [get_message path] reads the lock file at [path] and returns the message in the
       file.  Returns [None] if the file cannot be read. *)
   val get_message : string -> string option
+
+  (** [unlock_safely path] unlocks [path] if [path] was locked from the same host and the
+      pid in the file is not in the list of running processes. *)
+  val unlock_safely : string -> unit
 end

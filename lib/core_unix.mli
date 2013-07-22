@@ -156,6 +156,7 @@ module Exit : sig
 
   val code : t -> int
   val of_code : int -> t
+  val or_error : t -> unit Or_error.t
 end
 
 module Exit_or_signal : sig
@@ -168,6 +169,7 @@ module Exit_or_signal : sig
   val of_unix : Unix.process_status -> t
 
   val to_string_hum : t -> string
+  val or_error : t -> unit Or_error.t
 end
 
 module Exit_or_signal_or_stop : sig
@@ -181,6 +183,7 @@ module Exit_or_signal_or_stop : sig
   val of_unix : Unix.process_status -> t
 
   val to_string_hum : t -> string
+  val or_error : t -> unit Or_error.t
 end
 
 (** [exec ~prog ~args ?search_path ?env] execs [prog] with [args].  If [use_path = true]
@@ -1090,6 +1093,10 @@ module Cidr : sig
   (** [of_string] Generates a Cidr.t based on a string like ["10.0.0.0/8"].  Addresses are
       not expanded, i.e. ["10/8"] is invalid. *)
   include Stringable.S with type t := t
+
+  (** IPv4 multicast address can be represented by the CIDR prefix 224.0.0.0/4,
+      (i.e. addreses from 224.0.0.0 to 239.255.255.255, inclusive) *)
+  val multicast : t
 
   (** Is the given address inside the given Cidr.t?  Note that the broadcast and network
       addresses are considered valid so [does_match 10.0.0.0/8 10.0.0.0] is true. *)

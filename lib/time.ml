@@ -256,11 +256,6 @@ module Stable = struct
        situation because we would like to say include T, without shadowing. *)
     include T
 
-    let to_string_deprecated t =
-      let date, sec = to_local_date_ofday t in
-      String.concat [Date.to_string date; " "; Ofday.to_string sec]
-    ;;
-
     let to_string t = to_string_abs t
 
     exception Time_of_string of string * Exn.t with sexp
@@ -379,11 +374,6 @@ module Stable = struct
       let to_string = to_string
       let module_name = "Core.Std.Time"
     end)
-
-    let to_localized_string time zone =
-      let date,ofday = to_date_ofday time zone in
-      String.concat [Date.to_string date; " "; Ofday.to_string ofday]
-    ;;
 
     let of_localized_string zone str =
       try

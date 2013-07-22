@@ -1,7 +1,5 @@
 open OUnit
 
-let unused_test = Timer_test.test
-
 let rec flatten_list acc = function
   | [] -> acc
   | (TestCase _ as r)::rest -> flatten_list (r::acc) rest

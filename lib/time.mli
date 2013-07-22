@@ -91,16 +91,9 @@ val to_string_trimmed : t -> string
 (** [to_sec_string t] Same as to_string, but without milliseconds *)
 val to_sec_string : t -> string
 
-(** [to_localized_string time zone] returns a string representation of [time]
-    in the given zone in the form like "2008-11-18 15:34:56.123". *)
-val to_localized_string : t -> Zone.t -> string
-
 (** [of_localized_string zone str] read in the given string assuming that it represents
   a time in zone and return the appropriate Time.t *)
 val of_localized_string : Zone.t -> string -> t
-
-(** [to_string_deprecated] returns a string in the old format *)
-val to_string_deprecated : t -> string
 
 (** [to_string_abs ?zone t] returns a string that represents an absolute time, rather than
     a local time with an assumed time zone.  This string can be round-tripped, even on a
