@@ -76,8 +76,6 @@
     v}
 *)
 
-open Std_internal
-
 module Time = struct
   include Time
   module Ofday = Ofday
