@@ -1,5 +1,5 @@
 open Core_kernel.Std
-open Core_kernel.Import
+open Int.Replace_polymorphic_compare  let () = _squelch_unused_module_warning_
 open Timing_wheel_intf
 
 (* module Timing_wheel = Timing_wheel.Debug (Timing_wheel)

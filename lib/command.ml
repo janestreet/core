@@ -861,7 +861,7 @@ module Base = struct
           never_returns (Anon.Parser.complete anons env ~part);
     in
     match Result.try_with (fun () -> loop env (t.anons env) args `Parse_args) with
-    | Ok thunk -> thunk `Run_main
+    | Ok thunk -> Exn.handle_uncaught ~exit:true (fun () -> thunk `Run_main)
     | Error exn ->
       match exn with
       | Failed_to_parse_command_line _ when Args.ends_in_complete args ->

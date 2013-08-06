@@ -24,8 +24,8 @@ let test =
            "foo.excl_lower: value 0 <= bound 0";
            "foo.excl_lower: value 100 >= bound 100"]
         in
-        List.sort ~cmp:Polymorphic_compare.ascending (V.errors res) =
-            List.sort ~cmp:Polymorphic_compare.ascending expected
+        List.sort ~cmp:Poly.ascending (V.errors res) =
+            List.sort ~cmp:Poly.ascending expected
       );
 
       "inf/nan" @? (
@@ -39,8 +39,8 @@ let test =
           ["bar.nan: value is NaN";
            "bar.inf: value is infinite";]
         in
-        List.sort ~cmp:Polymorphic_compare.ascending (V.errors res) =
-            List.sort ~cmp:Polymorphic_compare.ascending expected
+        List.sort ~cmp:Poly.ascending (V.errors res) =
+            List.sort ~cmp:Poly.ascending expected
       );
 
       "nesting" @? (
@@ -62,8 +62,8 @@ let test =
            "nesting.sub0.sub3.sub4: value is NaN";
            "nesting.sub0.sub3.sub5: value is NaN"]
         in
-        List.sort ~cmp:Polymorphic_compare.ascending (V.errors res) =
-            List.sort ~cmp:Polymorphic_compare.ascending expected
+        List.sort ~cmp:Poly.ascending (V.errors res) =
+            List.sort ~cmp:Poly.ascending expected
       );
 
       "empty" @? (
@@ -76,8 +76,8 @@ let test =
           ]]
         in
         let expected = [] in
-        List.sort ~cmp:Polymorphic_compare.ascending (V.errors res) =
-            List.sort ~cmp:Polymorphic_compare.ascending expected
+        List.sort ~cmp:Poly.ascending (V.errors res) =
+            List.sort ~cmp:Poly.ascending expected
       );
     )
   ]
