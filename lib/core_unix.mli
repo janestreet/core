@@ -1960,7 +1960,7 @@ module Mman : sig
     type t = Current | Future with sexp
   end
 
-  (* Lock all pages in this processes virtual address space into physical memory. See [man
+  (* Lock all pages in this process's virtual address space into physical memory. See [man
      mlockall] for more details. *)
   val mlockall : Mcl_flags.t list -> unit
 
