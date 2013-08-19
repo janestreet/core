@@ -1,5 +1,5 @@
 open Core.Std
-module Bench = Core_bench.Bench_main
+open Core_bench.Std
 
 module Data = struct
   type t = string * int Queue.t

@@ -1,5 +1,9 @@
 module type Gen = sig
   type 'a t
+
+  (* [bound] is the type of points in the interval (and also of the bounds, which are
+     points; hence the name).  [bound] is instantiated in two different ways below: in
+     [module type S] as a monotype and in [module type S1] as ['a]. *)
   type 'a bound
 
   (** Module for simple closed intervals over arbitrary types that are ordered correctly
@@ -46,14 +50,19 @@ module type Gen = sig
   (** [is_superset i1 of_:i2] is whether i1 contains i2.  The empty interval is
       contained in every interval. *)
   val is_superset : 'a t -> of_:'a t -> bool
-  val is_subset : 'a t -> of_:'a t -> bool
+  val is_subset   : 'a t -> of_:'a t -> bool
 
   (** [map t ~f] returns [create (f l) (f u)] if [bounds t = Some (l, u)], and [empty] if
       [t] is empty.  Note that if [f l > f u], the result of [map] is [empty], by the
-      definition of [create]. *)
+      definition of [create].
+
+      If one thinks of an interval as a set of points, rather than a pair of its bounds,
+      then [map] is not the same as the usual mathematical notion of mapping [f] over that
+      set.  For example, [~f:(fun x -> x * x)] maps the interval {v [-1,1] v} to {v [1,1]
+      v}], not to {v [0,1] v}. *)
   val map : 'a t -> f:('a bound -> 'b bound) -> 'b t
 
-  (** Returns true iff a given set of intervals are disjoint *)
+  (** [are_disjoint ts] returns [true] iff the intervals in [ts] are pairwise disjoint. *)
   val are_disjoint : 'a t list -> bool
 
   (** Returns true iff a given set of intervals would be disjoint if considered as open
@@ -61,15 +70,15 @@ module type Gen = sig
   val are_disjoint_as_open_intervals : 'a t list -> bool
 
   (** Assuming that [ilist1] and [ilist2] are lists of (disjoint) intervals,
-      [list_intersect ilist1 ilist2] returns the list of disjoint intervals that correspond
-      to the intersection of [ilist1] with [ilist2].
-  *)
+      [list_intersect ilist1 ilist2] returns the list of disjoint intervals that
+      correspond to the intersection of [ilist1] with [ilist2]. *)
   val list_intersect : 'a t list -> 'a t list -> 'a t list
 
   (* Returns true if the intervals, when considered as half-open-intervals, nestle up
      cleanly one to the next.  i.e., if you sort the intervals by the lower bound, then
      the upper bound of the nth interval is equal to the lower bound of the n+1th
-     interval *)
+     interval.  The intervals do not need to partition the entire space, they just
+     need to partition their union. *)
   val half_open_intervals_are_a_partition : 'a t list -> bool
 end
 

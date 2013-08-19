@@ -52,6 +52,9 @@ module Stable : sig
     module Int : sig
       type t = Int.t with sexp, bin_io
     end
+    module Time : sig
+      type t = Time.t with sexp, bin_io
+    end
     module Ofday : sig
       type t = Ofday.t with sexp, bin_io
     end

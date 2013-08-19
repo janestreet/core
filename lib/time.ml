@@ -331,11 +331,11 @@ module Stable = struct
     let t_of_sexp     sexp = t_of_sexp_gen sexp of_string
     let t_of_sexp_abs sexp = t_of_sexp_gen sexp of_string_abs
 
-    let sexp_of_t_with_zone ?zone t =
+    let sexp_of_t_abs ?zone t =
       Sexp.List (List.map (to_string_abs_parts ?zone t) ~f:(fun s -> Sexp.Atom s))
     ;;
 
-    let sexp_of_t t = sexp_of_t_with_zone t
+    let sexp_of_t t = sexp_of_t_abs t
 
     module C = struct
       type t = T.t with bin_io
@@ -448,7 +448,7 @@ module Stable = struct
     TEST_MODULE "Time.V1 functor application" = Core_kernel.Stable_unit_test.Make (struct
       include V1
       let zone = Zone.find_office `nyc
-      let sexp_of_t t = sexp_of_t_with_zone ~zone t
+      let sexp_of_t t = sexp_of_t_abs ~zone t
 
       let tests =
         let time ~y ~m ~d ofday =

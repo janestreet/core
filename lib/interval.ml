@@ -43,6 +43,10 @@ module Stable = struct
       type t = int interval with sexp, bin_io
     end
 
+    module Time = struct
+      type t = Time.Stable.V1.t interval with sexp, bin_io
+    end
+
     module Ofday = struct
       type t = Ofday.Stable.V1.t interval with sexp, bin_io
     end
@@ -77,10 +81,40 @@ module Stable = struct
     include V1.Int
     let equal x1 x2 = (V1.T.compare Int.compare x1 x2) = 0
 
+
     module V = V1.T.Variants
     let tests = make_tests_v1
       ~non_empty: [ (-5, 789), "(-5 789)", "\000\255\251\254\021\003" ]
   end)
+
+  TEST_MODULE "Interval.V1.Time" = struct
+    module Arg = struct
+      include V1.Time
+      let equal x1 x2 = (V1.T.compare Time.compare x1 x2) = 0
+
+      let zone = Zone.of_string "America/New_York"
+
+      module V = V1.T.Variants
+      let tests =
+        let t1 = Time.of_date_ofday zone
+          (Date.create_exn ~y:2013 ~m:Month.Aug ~d:6)
+          (Ofday.create  ~hr:7 ~min:30 ~sec:7 ~ms:12 ~us:5 ())
+        in
+        let t2 = Time.of_date_ofday zone
+          (Date.create_exn ~y:2014 ~m:Month.Sep ~d:8)
+          (Ofday.create  ~hr:10 ~min:10 ~sec:0 ~ms:22 ~us:0 ())
+        in
+        make_tests_v1
+          ~non_empty: [ (t1, t2),
+                        "((2013-08-06 07:30:07.012005-04:00) (2014-09-08 10:10:00.022000-04:00))",
+                        "\000\177\196\192\1437\128\212Ash\001.n\003\213A" ]
+    end
+
+    (* Bypass sexp serialization tests because [Time.sexp_of_t] gives different
+       results depending on the local zone. *)
+    include Core_kernel.Stable_unit_test.Make_sexp_deserialization_test(Arg)
+    include Core_kernel.Stable_unit_test.Make_bin_io_test(Arg)
+  end
 
   TEST_MODULE "Interval.V1.Ofday" = Core_kernel.Stable_unit_test.Make(struct
     include V1.Ofday
