@@ -223,8 +223,10 @@ val recvmmsg_assume_fd_is_nonblocking
       Or_error.t
 
 val send_nonblocking_no_sigpipe
-  : unit -> ((_, seek) t -> Unix.File_descr.t                  -> int option) Or_error.t
+  : unit -> ((_, seek) t -> Unix.File_descr.t -> int option) Or_error.t
 val sendto_nonblocking_no_sigpipe
   : unit -> ((_, seek) t -> Unix.File_descr.t -> Unix.sockaddr -> int option) Or_error.t
-val write_assume_fd_is_nonblocking  : (_, seek) t -> Unix.File_descr.t -> int
-val pwrite_assume_fd_is_nonblocking : (_, seek) t -> Unix.File_descr.t -> offset:int -> int
+val write_assume_fd_is_nonblocking
+  : (_, seek) t -> Unix.File_descr.t -> int
+val pwrite_assume_fd_is_nonblocking
+  : (_, seek) t -> Unix.File_descr.t -> offset:int -> int
