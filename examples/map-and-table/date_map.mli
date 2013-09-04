@@ -78,6 +78,8 @@ val of_alist_exn : (Date.t * 'a) list -> 'a t
 
 val of_alist_fold : (Date.t * 'a) list -> init:'b -> f:('b -> 'a -> 'b) -> 'b t
 
+val of_alist_reduce : (Date.t * 'a) list -> f:('a -> 'a -> 'a) -> 'a t
+
 val of_alist_multi : (Date.t * 'a) list -> 'a list t
 
 val prev_key : 'a t -> Date.t -> (Date.t * 'a) option

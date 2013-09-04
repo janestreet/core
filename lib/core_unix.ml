@@ -875,6 +875,25 @@ let stdin = Unix.stdin
 let stdout = Unix.stdout
 let stderr = Unix.stderr
 
+IFDEF OCAML_4_01 THEN
+type open_flag =
+Unix.open_flag =
+| O_RDONLY
+| O_WRONLY
+| O_RDWR
+| O_NONBLOCK
+| O_APPEND
+| O_CREAT
+| O_TRUNC
+| O_EXCL
+| O_NOCTTY
+| O_DSYNC
+| O_SYNC
+| O_RSYNC
+| O_SHARE_DELETE
+| O_CLOEXEC
+with sexp
+ELSE
 type open_flag =
 Unix.open_flag =
 | O_RDONLY
@@ -891,6 +910,7 @@ Unix.open_flag =
 | O_RSYNC
 | O_SHARE_DELETE
 with sexp
+ENDIF
 
 type file_perm = int with of_sexp
 

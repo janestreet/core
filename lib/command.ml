@@ -276,6 +276,14 @@ module Flag = struct
           Arg (update, arg_type.Arg_type.complete);
       }
 
+    let map_flag t ~f =
+      fun input ->
+        let {action; read; optional} = t input in
+        { action;
+          read = (fun () -> f (read ()));
+          optional;
+        }
+
     let write_option name v arg =
       match !v with
       | None -> v := Some arg
@@ -495,6 +503,7 @@ module Anon = struct
     module For_opening : sig
       val return : 'a -> 'a t
       val (>>=) : 'a t -> ('a -> 'b t) -> 'b t
+      val (>>|) : 'a t -> ('a -> 'b) -> 'b t
     end
   end = struct
 
@@ -517,6 +526,8 @@ module Anon = struct
           (upd, t >>= f)
         in
         More (name, g, complete)
+
+    let (>>|) t f = t >>= fun x -> return (f x)
 
     let one_more ~name {Arg_type.complete; parse = of_string; key} =
       More (name, (fun anon ->
@@ -572,6 +583,7 @@ module Anon = struct
     module For_opening = struct
       let return = return
       let (>>=) = (>>=)
+      let (>>|) = (>>|)
     end
   end
 
@@ -649,6 +661,11 @@ module Anon = struct
     let (%:) name arg_type =
       let name = normalize name in
       { p = Parser.one ~name arg_type; grammar = Grammar.one name; }
+
+    let map_anons t ~f = {
+      p = t.p >>| f;
+      grammar = t.grammar;
+    }
 
     let maybe t = {
       p = Parser.maybe t.p;
@@ -966,6 +983,7 @@ module Base = struct
       open Anon.Spec
       type 'a anons = 'a t
       let (%:) = (%:)
+      let map_anons = map_anons
       let maybe = maybe
       let maybe_with_default = maybe_with_default
       let sequence = sequence
@@ -983,6 +1001,7 @@ module Base = struct
     include struct
       open Flag.Spec
       type 'a flag = 'a t
+      let map_flag = map_flag
       let escape = escape
       let listed = listed
       let no_arg = no_arg

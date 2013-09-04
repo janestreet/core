@@ -44,9 +44,15 @@ if [ "$WORDEXP" = yes ]; then
     echo "DEFINE WORDEXP" >> $OUT
 fi
 
-case "`ocamlc -version`" in
+OCAML_VERSION="`ocamlc -version`"
+case "$OCAML_VERSION" in
+    4.0[1-9]*|4.[1-9]*)
+        echo "DEFINE OCAML_4"    >> $OUT
+        echo "DEFINE OCAML_4_01" >> $OUT
+        ;;
     4*)
         echo "DEFINE OCAML_4" >> $OUT
+        ;;
 esac
 
 # The recvmmsg system call was added in Linux 2.6.32

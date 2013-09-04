@@ -57,7 +57,7 @@ let test =
               try
                 ignore (bin_read_int_set bstr ~pos_ref);
                 false
-              with Bin_prot.Common.Read_exc (Failure _, 3) -> true
+              with Failure _ when !pos_ref = 3 -> true
             in
             "dup_check" @? dup_check
           done;

@@ -235,6 +235,9 @@ module Spec : sig
   *)
   val flag : ?aliases:string list -> string -> 'a flag -> doc:string -> 'a param
 
+  (** [map_flag flag ~f] transforms the parsed result of [flag] by applying [f] *)
+  val map_flag : 'a flag -> f:('a -> 'b) -> 'b flag
+
   (** required flags must be passed exactly once *)
   val required : 'a Arg_type.t -> 'a flag
 
@@ -283,6 +286,9 @@ module Spec : sig
   (** [anon spec] specifies a command that, among other things, takes
       the anonymous arguments specified by [spec]. *)
   val anon : 'a anons -> 'a param
+
+  (** [map_anons anons ~f] transforms the parsed result of [anons] by applying [f] *)
+  val map_anons : 'a anons -> f:('a -> 'b) -> 'b anons
 
   (** [(name %: typ)] specifies a required anonymous argument of type [typ].
 
