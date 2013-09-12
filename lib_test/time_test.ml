@@ -293,7 +293,7 @@ let () =
     );
   add "norollover"
     (fun () ->
-      let zone = Zone.of_string "nyc" in
+      let zone = Time.Zone.of_string "nyc" in
       let t1   = Time.of_localized_string zone "2005-05-25 12:46:59.900" in
       let t2   = Time.add t1 (Time.Span.of_ms 99.9) in
       (* within 1 mic *)
@@ -316,14 +316,14 @@ let () =
     );
   add "to_string,of_string2"
     (fun () ->
-      let zone = Zone.find_exn "America/New_York" in
+      let zone = Time.Zone.find_exn "America/New_York" in
       let s = "2005-06-01 10:15:08.047123-04:00" in
       let t = Time.of_string s in
       "foo" @? (Time.to_string_abs t ~zone = s)
     );
   add "to_string,of_string3"
     (fun () ->
-      let zone = Zone.find_exn "America/New_York" in
+      let zone = Time.Zone.find_exn "America/New_York" in
       let s = "2006-06-16 04:37:07.082945-04:00" in
       let t = Time.of_string s in
       "foo" @? (Time.to_string_abs t ~zone = s)
@@ -358,14 +358,14 @@ let () =
     );
   add "daylight_saving_time"
     (fun () ->
-      let zone = Zone.find_exn "America/New_York" in
+      let zone = Time.Zone.find_exn "America/New_York" in
       let s = "2006-04-02 23:00:00.000000-04:00" in
       let time = Time.of_string s in
       "dst" @? (Time.to_string_abs ~zone time = s)
     );
   add "weird_date_in_time"
     (fun () ->
-      let zone = Zone.find_exn "America/New_York" in
+      let zone = Time.Zone.find_exn "America/New_York" in
       let t1 = Time.of_string "01 JAN 2008 10:37:22.551-05:00" in
       "rnse1" @? (Time.to_string_abs t1 ~zone = "2008-01-01 10:37:22.551000-05:00");
       let t2 = Time.of_string "01 FEB 2008 17:38:44.031-05:00" in
@@ -402,11 +402,11 @@ let () =
       let utimes = Time.to_local_ofday now :: List.map times ~f:(Time.Ofday.of_string) in
       let after_times =
         List.map utimes ~f:(fun ut ->
-          Time.occurrence `First_after_or_at now ~zone:(Zone.machine_zone ()) ~ofday:ut)
+          Time.occurrence `First_after_or_at now ~zone:(Time.Zone.machine_zone ()) ~ofday:ut)
       in
       let before_times =
         List.map utimes ~f:(fun ut ->
-          Time.occurrence `Last_before_or_at now ~zone:(Zone.machine_zone ()) ~ofday:ut)
+          Time.occurrence `Last_before_or_at now ~zone:(Time.Zone.machine_zone ()) ~ofday:ut)
       in
       "right-side-after" @? List.for_all after_times
         ~f:(fun t -> Time.to_float t >= now_f);
@@ -434,7 +434,7 @@ let () =
         let od         = Time.Ofday.of_string od_s in
         let prediction = Time.of_string prediction_s in
         let real       =
-          Time.occurrence `First_after_or_at now ~zone:(Zone.machine_zone ()) ~ofday:od
+          Time.occurrence `First_after_or_at now ~zone:(Time.Zone.machine_zone ()) ~ofday:od
         in
         ("right-distance - " ^ od_s ^ "," ^ prediction_s) @?
           if Time.Span.to_ms (Time.diff prediction real) = 0. then true
@@ -444,7 +444,7 @@ let () =
         let od         = Time.Ofday.of_string od_s in
         let prediction = Time.of_string prediction_s in
         let real       =
-          Time.occurrence `Last_before_or_at now ~zone:(Zone.machine_zone ()) ~ofday:od
+          Time.occurrence `Last_before_or_at now ~zone:(Time.Zone.machine_zone ()) ~ofday:od
         in
         ("right-distance - " ^ od_s ^ "," ^ prediction_s) @?
           if Time.Span.to_ms (Time.diff prediction real) = 0. then true

@@ -2,7 +2,7 @@ OASISFormat:      0.3
 OCamlVersion:     >= 4.00.1
 FindlibVersion:   >= 1.3.2
 Name:             core
-Version:          109.41.00
+Version:          109.42.00
 Synopsis:         Jane Street Capital's standard library overlay
 Authors:          Jane Street Capital LLC <opensource@janestreet.com>
 Copyrights:       (C) 2008-2013 Jane Street Capital LLC <opensource@janestreet.com>
@@ -58,6 +58,7 @@ Library core
                       Bucket,
                       Byte_units,
                       Caml,
+                      Check_std,
                       Command,
                       Common,
                       Commutative_group,
@@ -104,6 +105,7 @@ Library core
                       Crc,
                       Daemon,
                       Date,
+                      Date0,
                       Day_of_week,
                       Dequeue,
                       Doubly_linked,
@@ -199,6 +201,7 @@ Library core
                       T,
                       Thread_safe_queue,
                       Time,
+                      Time0,
                       Time_internal,
                       Timing_wheel,
                       Timing_wheel_intf,

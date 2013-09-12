@@ -1,17 +1,17 @@
-open Core_kernel.Std
+(** Piece-wise linear interpolation from float-like types to float. *)
 
-(** piece-wise linear interpolation from float-like types to float *)
+open Core_kernel.Std
 
 open Piecewise_linear_intf
 
 module type S = S
 module type S_invertible = S_invertible
 
-module Make (Key : Key) (Value : Value) : S
+module Make (Key : Float_like) (Value : Float_like) : S
   with type key = Key.t
   with type value = Value.t
 
-module Make_invertible (Key : Key) (Value : Value) : S_invertible
+module Make_invertible (Key : Float_like) (Value : Float_like) : S_invertible
   with type key = Key.t
   with type value = Value.t
 

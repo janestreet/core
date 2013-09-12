@@ -554,6 +554,12 @@ module Stable = struct
       Sexp.Atom t.name
     ;;
 
+    include Sexpable.To_stringable (struct
+      type nonrec t = t with sexp
+    end)
+
+    let compare t1 t2 = String.compare (to_string t1) (to_string t2)
+
     include (Bin_prot.Utils.Make_binable (struct
       type t' = t
       type t = t'
@@ -585,8 +591,6 @@ module Stable = struct
 end
 
 include Stable.V1
-
-include Sexpable.To_stringable (Stable.V1)
 
 let utc = of_utc_offset ~hours:0
 
@@ -709,5 +713,4 @@ include Identifiable.Make (struct
      outside world that would allow the construction of two Zone's with the same name and
      different transitions. *)
   let hash t        = String.hash (to_string t)
-  let compare t1 t2 = String.compare (to_string t1) (to_string t2)
 end)

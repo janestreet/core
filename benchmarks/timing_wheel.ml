@@ -29,7 +29,7 @@ module Report = struct
 end
 
 let test ~num_queue_elements ~num_steps =
-  let q = Q.create ~level_bits:(Timing_wheel.Level_bits.create_exn [16]) ~dummy:() () in
+  let q = Q.create ~level_bits:(Timing_wheel.Level_bits.create_exn [16]) () in
   let user_plus_sys_at_start = user_plus_sys () in
   for key = 1 to num_steps do
     ignore (Q.add q ~key () : _ Q.Elt.t);
@@ -55,8 +55,9 @@ let test ~num_queue_elements ~num_steps =
    way all times are newly allocated floats. *)
 let test_with_allocations ~num_queue_elements ~num_steps =
   let tw =
-    Timing_wheel.create ~start:Time.epoch
-      ~alarm_precision:Time.Span.millisecond ~dummy:() ()
+    Timing_wheel.create
+      ~config:(Timing_wheel.Config.create ~alarm_precision:Time.Span.millisecond ())
+      ~start:Time.epoch
   in
   let user_plus_sys_at_start = user_plus_sys () in
   let q : unit Timing_wheel.Alarm.t Queue.t = Queue.create () in

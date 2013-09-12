@@ -76,13 +76,6 @@
     v}
 *)
 
-module Time = struct
-  include Time
-  module Ofday = Ofday
-  module Span = Span
-  module Zone = Zone
-end
-
 module type S = sig
   type 'a t with sexp_of
 
@@ -91,8 +84,7 @@ module type S = sig
   module Alarm : sig
     type 'a t with sexp_of
 
-    (** In all [Alarm] functions, one must supply the timing wheel that the alarm was
-        [add]ed to.  It is an error to supply a different timing wheel. *)
+    (** All [Alarm] functions will raise if [not (Timing_wheel.mem timing_wheel t)]. *)
     val at    : 'a timing_wheel -> 'a t -> Time.t
     val key   : 'a timing_wheel -> 'a t -> int
     val value : 'a timing_wheel -> 'a t -> 'a
@@ -143,27 +135,37 @@ module type S = sig
     (** [num_bits t] is the sum of the [b_i] in [t]. *)
     val num_bits : t -> int
 
-    (** [durations t ~alarm_precision] returns the durations of the levels in [t],
-        assuming that each interval has duration [alarm_precision]. *)
-    val durations : t -> alarm_precision:Time.Span.t -> Time.Span.t list
   end
 
-  (** [create ~start ~alarm_precision ~dummy ()] creates a new timing wheel with current
-      time [start].  The [dummy] value is a performance optimization; it would be a bug if
-      the timing wheel ever returned the [dummy] value to client code.
+  module Config : sig
+    type t with sexp
+
+    include Invariant.S with type t := t
+
+    (** [create] raises if [alarm_precision <= 0]. *)
+    val create
+      :  ?alarm_precision:Time.Span.t
+      -> ?level_bits:Level_bits.t
+      -> unit
+      -> t
+
+    (** accessors *)
+    val alarm_precision : t -> Time.Span.t
+    val level_bits : t -> Level_bits.t
+
+    (** [default] is [create ()]. *)
+    val default : t
+
+    (** [durations t] returns the durations of the levels in [t] *)
+    val durations : t -> Time.Span.t list
+  end
+
+  (** [create ~config ~start] creates a new timing wheel with current time [start].
 
       For a fixed [level_bits], a smaller (i.e. more precise) [alarm_precision] decreases
       the representable range of times/keys and increases the constant factor for
-      [advance_clock].
-
-      [create] raises if [alarm_precision <= 0]. *)
-  val create
-    :  ?level_bits:Level_bits.t
-    -> start:Time.t
-    -> alarm_precision:Time.Span.t
-    -> dummy:'a
-    -> unit
-    -> 'a t
+      [advance_clock]. *)
+  val create : config:Config.t -> start:Time.t -> 'a t
 
   (** Accessors *)
   val alarm_precision : _ t -> Time.Span.t
@@ -176,11 +178,30 @@ module type S = sig
   val length : _ t -> int
   val iter : 'a t -> f:('a Alarm.t -> unit) -> unit
 
-  (** [interval_start t time] returns the time at the start of the half-open interval
-      containing [time], i.e. the largest time less than or equal to [time] that is of the
-      form [start t + k * alarm_precision t].  [interval_start] raises if [time < start t]
-      or [time] is too far in the future to represent. *)
-  val interval_start : _ t -> Time.t -> Time.t
+  (** [interval_num t time] returns the number of the interval that [time] is in, where
+      [0] is the interval that starts at [start].  [interval_num] raises if [time] is too
+      far in the past or future to represent.
+
+      [now_interval_num t] equals [interval_num t (now t)]. *)
+  val interval_num : _ t -> Time.t -> int
+  val now_interval_num : _ t -> int
+
+  (** [interval_num_start t n] is the start of the [n]'th interval in [t], i.e.:
+
+      {[
+        start t + n * alarm_precision t
+      ]}
+
+      [interval_start t time] is the start of the half-open interval containing [time],
+      i.e.:
+
+      {[
+        interval_num_start t (interval_num t time)
+      ]}
+
+      [interval_start] raises in the same cases that [interval_num] does. *)
+  val interval_num_start : _ t -> int    -> Time.t
+  val interval_start     : _ t -> Time.t -> Time.t
 
   (** [advance_clock t ~to_ ~handle_fired] advances [t]'s clock to [to_].  It fires and
       removes all alarms [a] in [t] with [Time.(<) (Alarm.at a) (interval_start t to_)]
@@ -201,12 +222,21 @@ module type S = sig
 
   (** [add t ~at a] adds a new value [a] to [t] and returns an alarm that can later be
       supplied to [remove] the alarm from [t].  [add] raises if [at < now t || at >=
-      alarm_upper_bound t]. *)
-  val add : 'a t -> at:Time.t -> 'a -> 'a Alarm.t
+      alarm_upper_bound t].
 
-  (** [remove t alarm] removes [alarm] from [t].  It is an error to [remove] an alarm
-      that is not in [t]. *)
+      [add_at_interval_num t ~at a] is equivalent to [add t ~at:(interval_num_start t at)
+      a]. *)
+  val add                 : 'a t -> at:Time.t -> 'a -> 'a Alarm.t
+  val add_at_interval_num : 'a t -> at:int    -> 'a -> 'a Alarm.t
+
+  val mem : 'a t -> 'a Alarm.t -> bool
+
+  (** [remove t alarm] removes [alarm] from [t].  [remove] raises if [not (mem t
+      alarm)]. *)
   val remove : 'a t -> 'a Alarm.t -> unit
+
+  (** [clear t] removes all alarms from [t]. *)
+  val clear : _ t -> unit
 
   (** [next_alarm_fires_at t] returns the minimum time to which the clock can be advanced
       such that an alarm will fire, or [None] if [t] has no alarms.  If
@@ -264,16 +294,9 @@ module type S = sig
 
     include Invariant.S1 with type 'a t := 'a t
 
-    (** [create ?level_bits ~dummy ()] creates a new empty timing wheel, [t], with [length
-        t = 0] and [min_allowed_key t = 0].
-
-        [dummy] is a dummy value that will never be returned by any operation, but that
-        allows the implementation to be more efficient. *)
-    val create
-      :  ?level_bits:Level_bits.t
-      -> dummy:'a
-      -> unit
-      -> 'a t
+    (** [create ?level_bits ()] creates a new empty timing wheel, [t], with [length t = 0]
+        and [min_allowed_key t = 0]. *)
+    val create : ?level_bits:Level_bits.t -> unit -> 'a t
 
     (** [length t] returns the number of elements in the timing wheel. *)
     val length : _ t -> int
@@ -327,6 +350,11 @@ module type S = sig
     (** [remove t elt] removes [elt] from [t].  It is an error if [elt] is not currently
         in [t], and this error may or may not be detected. *)
     val remove : 'a t -> 'a Elt.t -> unit
+
+    (** [clear t] removes all elts from [t]. *)
+    val clear : _ t -> unit
+
+    val mem : 'a t -> 'a Elt.t -> bool
 
     (** [increase_min_allowed_key t ~key ~handle_removed] increases the minimum allowed
         key in [t] to [key], and removes all elements with keys less than [key], applying

@@ -89,7 +89,7 @@ exception Invalid_file_format of string
 
 module Stable : sig
   module V1 : sig
-    type t with sexp, bin_io
+    type t with bin_io, compare, sexp
   end with type t = t
 end
 

@@ -65,8 +65,8 @@ let add_random_string_round_trip_tests () =
     let s1 =
       let t = Time.of_string s1 in
       let epoch = Time.to_epoch t in
-      let zone = Zone.machine_zone () in
-      let utc_epoch = Zone.shift_epoch_time zone `UTC epoch in
+      let zone = Time.Zone.machine_zone () in
+      let utc_epoch = Time.Zone.shift_epoch_time zone `UTC epoch in
       let f =
         Time.Span.of_sec (utc_epoch -. epoch) |! Time.Span.to_float |! Float.to_int
       in
@@ -86,7 +86,7 @@ let add_random_string_round_trip_tests () =
     )
   done
 
-let add_roundtrip_conversion_test (zone_name,(zone:Zone.t)) =
+let add_roundtrip_conversion_test (zone_name,(zone:Time.Zone.t)) =
   add ("roundtrip conversion " ^ zone_name) (fun () ->
     let tm = random_tm () in
     let unix_time = 1664476678.000 in
@@ -94,7 +94,7 @@ let add_roundtrip_conversion_test (zone_name,(zone:Zone.t)) =
     let (zone_date, zone_ofday) =
       let date,ofday = Time.to_local_date_ofday time in
       Time.convert
-        ~from_tz:(Zone.machine_zone ())
+        ~from_tz:(Time.Zone.machine_zone ())
         ~to_tz:zone
         date
         ofday
@@ -103,7 +103,7 @@ let add_roundtrip_conversion_test (zone_name,(zone:Zone.t)) =
       let round_date,round_ofday =
         Time.convert
         ~from_tz:zone
-        ~to_tz:(Zone.machine_zone ())
+        ~to_tz:(Time.Zone.machine_zone ())
         zone_date
         zone_ofday
       in
@@ -134,7 +134,7 @@ module Localtime_test_data = struct
 end
 
 let add_random_localtime_tests () =
-  List.iter (Zone.initialized_zones ()) ~f:(fun (zone_name, zone) ->
+  List.iter (Time.Zone.initialized_zones ()) ~f:(fun (zone_name, zone) ->
     add ("localtime " ^ zone_name) (fun () ->
       let tm          = random_tm () in
       let tm          = Unix.gmtime (Unix.timegm tm) in
@@ -179,7 +179,7 @@ let add_random_localtime_tests () =
 ;;
 
 let add_roundtrip_conversion_tests () =
-  List.iter (Zone.initialized_zones ()) ~f:add_roundtrip_conversion_test
+  List.iter (Time.Zone.initialized_zones ()) ~f:add_roundtrip_conversion_test
 
 let add_random_tests () =
   add_random_string_round_trip_tests ();

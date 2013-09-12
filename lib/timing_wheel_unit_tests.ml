@@ -1,6 +1,5 @@
 open Core_kernel.Std
 open Int.Replace_polymorphic_compare  let () = _squelch_unused_module_warning_
-open Timing_wheel_intf
 
 (* module Timing_wheel = Timing_wheel.Debug (Timing_wheel)
  * let () = Timing_wheel.show_messages := false *)
@@ -42,6 +41,9 @@ module Level_bits = struct
 
   let default = default
 
+  TEST_UNIT = invariant (default Word_size.W32)
+  TEST_UNIT = invariant (default Word_size.W64)
+
   (* Check that default [level_bits] gives desired range of times. *)
   TEST_UNIT =
     let start =
@@ -56,7 +58,9 @@ module Level_bits = struct
       ]
       ~f:(fun (word_size, alarm_precision, max_alarm_lower_bound) ->
         let level_bits = default word_size in
-        let t = create ~level_bits ~start ~alarm_precision ~dummy:() () in
+        let t =
+          create ~config:(Config.create ~level_bits ~alarm_precision ()) ~start
+        in
         assert (Date.(>=)
                   (Time.to_local_date (alarm_upper_bound t))
                   max_alarm_lower_bound))
@@ -78,6 +82,30 @@ module Level_bits = struct
         assert (Sexp.equal sexp (sexp_of_t (t_of_sexp sexp))))
   ;;
 
+end
+
+module Config = struct
+
+  open Config
+
+  type nonrec t = t with sexp
+
+  let invariant = invariant
+
+  let create = create
+  let alarm_precision = alarm_precision
+
+  TEST = does_raise (fun () -> create ~alarm_precision:(sec (-1.)) ())
+  TEST = does_raise (fun () -> create ~alarm_precision:(sec 0.) ())
+  TEST = Time.Span.equal (sec 1.) (alarm_precision (create ~alarm_precision:(sec 1.) ()))
+
+  let level_bits = level_bits
+
+  let default = default
+
+  TEST_UNIT = invariant default
+  TEST = Poly.equal default (create ())
+
   let durations = durations
 
   TEST_UNIT =
@@ -85,9 +113,12 @@ module Level_bits = struct
       [ [ 1 ], [ sec 2. ];
         [ 2; 1 ], [ sec 4.; sec 8. ];
       ]
-      ~f:(fun (bits, expect) ->
+      ~f:(fun (level_bits, expect) ->
         assert (Poly.equal expect
-                  (durations (create_exn bits) ~alarm_precision:(sec 1.))))
+                  (durations (create
+                                ~alarm_precision:(sec 1.)
+                                ~level_bits:(Level_bits.create_exn level_bits)
+                                ()))))
   ;;
 
 end
@@ -115,7 +146,7 @@ module Priority_queue = struct
   let create = create
 
   let create_unit ~level_bits =
-    create ~level_bits:(Level_bits.create_exn level_bits) ~dummy:() ()
+    create ~level_bits:(Level_bits.create_exn level_bits) ()
   ;;
 
   let min_allowed_key = min_allowed_key
@@ -136,10 +167,11 @@ module Priority_queue = struct
         assert (max_allowed_key t = expected_max_allowed_key))
   ;;
 
-  let add = add
-  let remove = remove
+  let add      = add
+  let remove   = remove
+  let mem      = mem
   let is_empty = is_empty
-  let length = length
+  let length   = length
 
   TEST_UNIT =
     let t = create_unit ~level_bits:[1] in
@@ -147,13 +179,19 @@ module Priority_queue = struct
     assert (length t = 0);
     let e1 = add t ~key:0 () in
     let e2 = add t ~key:0 () in
+    assert (mem t e1);
+    assert (mem t e2);
     assert (not (is_empty t));
     assert (length t = 2);
     assert (not (is_empty t));
     remove t e1;
+    assert (not (mem t e1));
+    assert (mem t e2);
     assert (length t = 1);
     assert (not (is_empty t));
     remove t e2;
+    assert (not (mem t e1));
+    assert (not (mem t e2));
     assert (length t = 0);
     assert (is_empty t);
   ;;
@@ -181,6 +219,18 @@ module Priority_queue = struct
     check_adds_fail ();
     increase_min_allowed_key t ~key:max_representable_key ~handle_removed:ignore;
     check_adds_fail ();
+  ;;
+
+  let clear = clear
+  TEST_UNIT =
+    let t = create_unit ~level_bits:[ 1; 1 ] in
+    clear t;
+    let e1 = add t ~key:0 () in
+    let e2 = add t ~key:2 () in
+    clear t;
+    assert (is_empty t);
+    assert (not (mem t e1));
+    assert (not (mem t e2));
   ;;
 
   let max_representable_key = max_representable_key
@@ -360,7 +410,7 @@ end
 let invariant = invariant
 
 let create_unit ?level_bits ?(start = Time.epoch) ?(alarm_precision = sec 1.) () =
-  create ?level_bits ~start ~alarm_precision ~dummy:() ()
+  create ~config:(Config.create ?level_bits ~alarm_precision ()) ~start
 ;;
 
 let create = create
@@ -376,18 +426,22 @@ TEST_UNIT =
 
 let alarm_upper_bound = alarm_upper_bound
 
-let interval_start = interval_start
+let interval_num       = interval_num
+let interval_num_start = interval_num_start
+let interval_start     = interval_start
 
 TEST_UNIT =
   let t = create_unit () in
   let start = start t in
   List.iter
-    [ Time.sub start (sec 1.);
+    [ Time.sub start (sec (2. *. Float.of_int Int.max_value));
       Time.add start (sec (2. *. Float.of_int Int.max_value));
       Time.of_float Float.max_value;
     ]
     ~f:(fun time ->
+      assert (does_raise (fun () -> interval_num t time));
       assert (does_raise (fun () -> interval_start t time)));
+  assert (Time.(<) (interval_num_start t (-1)) start);
   List.iter
     [ 0.,   0;
       0.1,  0;
@@ -398,8 +452,13 @@ TEST_UNIT =
       2.,   2;
     ]
     ~f:(fun (after, expected_interval) ->
+      let time = Time.add start (sec after) in
+      assert (interval_num t time = expected_interval);
       assert (Time.equal
-                (interval_start t (Time.add start (sec after)))
+                (interval_num_start t (interval_num t time))
+                (interval_start t time));
+      assert (Time.equal
+                (interval_start t time)
                 (Time.add start (sec (Float.of_int expected_interval)))));
 ;;
 
@@ -451,51 +510,75 @@ TEST_UNIT =
   iter t ~f:(fun _ -> assert false);
 ;;
 
+let clear = clear
+(* Already tested above for [Priority_queue]. *)
+
+let mem = mem
 let remove = remove
 
 (* Check that access to a removed alarm doesn't segfault. *)
 TEST_UNIT =
-  let t = create ~start:Time.epoch ~alarm_precision:(sec 1.) ~dummy:(ref 0) () in
+  let t =
+    create
+      ~config:(Config.create ~alarm_precision:(sec 1.) ())
+      ~start:Time.epoch
+  in
   let alarm = add t ~at:(Time.add (now t) (sec 5.)) (ref 1) in
+  assert (mem t alarm);
   remove t alarm;
-  assert (String.length (Time.to_string (Alarm.at t alarm)) > 0);
-  Alarm.value t alarm := 42;
-  assert (!(Alarm.value t alarm) = 42);
+  assert (not (mem t alarm));
+  assert (does_raise (fun _ -> Alarm.key t alarm));
+  assert (does_raise (fun _ -> Alarm.at t alarm));
+  assert (does_raise (fun _ -> Alarm.value t alarm));
 ;;
 
-let add = add
-let advance_clock = advance_clock
+let add                 = add
+let add_at_interval_num = add_at_interval_num
+let advance_clock       = advance_clock
+let now_interval_num    = now_interval_num
 
 (* No early alarms *)
 TEST_UNIT =
-  let test ~num_alarms ~alarm_precision ~alarm_separation ~advance_by =
+  let test ~add ~num_alarms ~alarm_precision ~alarm_separation ~advance_by =
     if false then
       Debug.eprints "test" (num_alarms, alarm_precision, alarm_separation, advance_by)
         (<:sexp_of< int * Time.Span.t * Time.Span.t * Time.Span.t >>);
-    let t = create ~start:Time.epoch ~alarm_precision ~dummy:ignore () in
+    let t =
+      create ~config:(Config.create ~alarm_precision ()) ~start:Time.epoch
+    in
     for i = 1 to num_alarms do
       let at = Time.add (now t) (Time.Span.scale alarm_separation (Float.of_int i)) in
       ignore (add t ~at (fun () -> assert (Time.(<=) at (now t))) : _ Alarm.t);
     done;
     while not (is_empty t) do
       let to_ = Time.add (now t) advance_by in
-      advance_clock t ~to_ ~handle_fired:(fun alarm -> Alarm.value t alarm ())
+      advance_clock t ~to_ ~handle_fired:(fun alarm -> Alarm.value t alarm ());
+      assert (now_interval_num t = interval_num t to_);
     done;
   in
-  List.iter [ 100 ] ~f:(fun num_alarms ->
-    List.iter [ 1.; 0.5; 0.1 ] ~f:(fun s ->
-      let alarm_precision = sec s in
-      List.iter [ 0.01; 0.1; 0.5; 1.; 2.; 10. ] ~f:(fun s ->
-        let alarm_separation = sec s in
-        List.iter [ 0.1; 0.5; 1.; 2.; 10. ] ~f:(fun s ->
-          let advance_by = sec s in
-          test ~num_alarms ~alarm_precision ~alarm_separation ~advance_by))));
+  List.iter
+    [ add
+    ; (fun t ~at a -> add_at_interval_num t ~at:(interval_num t at) a)
+    ]
+    ~f:(fun add ->
+      List.iter [ 100 ] ~f:(fun num_alarms ->
+        List.iter [ 1.; 0.5; 0.1 ] ~f:(fun s ->
+          let alarm_precision = sec s in
+          List.iter [ 0.01; 0.1; 0.5; 1.; 2.; 10. ] ~f:(fun s ->
+            let alarm_separation = sec s in
+            List.iter [ 0.1; 0.5; 1.; 2.; 10. ] ~f:(fun s ->
+              let advance_by = sec s in
+              test ~add ~num_alarms ~alarm_precision ~alarm_separation ~advance_by)))));
 ;;
 
 TEST_UNIT =
   let t =
-    create ~start:Time.epoch ~alarm_precision:(sec 1.)
-      ~level_bits:(Level_bits.create_exn [10]) ~dummy:ignore ()
+    create
+      ~config:(Config.create
+                 ~alarm_precision:(sec 1.)
+                 ~level_bits:(Level_bits.create_exn [10])
+                 ())
+      ~start:Time.epoch
   in
   let num_alarms () =
     let r = ref 0 in

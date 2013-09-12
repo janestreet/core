@@ -1,6 +1,41 @@
 (** A module for representing absolute points in time, independent of time zone. *)
 open Core_kernel.Std
 
+
+module Ofday : sig
+  include (module type of Ofday
+            with type t = Ofday.t
+            with module Zoned := Ofday.Zoned)
+
+  module Zoned : sig
+    include module type of Ofday.Zoned
+
+    val to_time : t -> Date0.t -> Time_internal.T.t
+  end
+
+  val now : unit -> t
+end
+
+module Span : sig
+  include (module type of Span
+            with type t = Span.t
+            with module Parts := Span.Parts)
+
+  module Parts : sig
+    type t = Span.Parts.t = private {
+      sign : Float.Sign.t;
+      hr   : int;
+      min  : int;
+      sec  : int;
+      ms   : int;
+      us   : int;
+    }
+    with sexp
+  end
+end
+
+module Zone : module type of Zone with type t = Zone.t
+
 (** A fully qualified point in time, independent of timezone. *)
 type t = Time_internal.T.t with bin_io, sexp
 
@@ -49,22 +84,22 @@ val abs_diff : t -> t -> Span.t
 (** All these conversion functions use the current time zone. Unless marked _utc,
     in which case they use Universal Coordinated Time *)
 
-val of_date_ofday : Zone.t -> Date.t -> Ofday.t -> t
-val to_date_ofday : t -> Zone.t -> Date.t * Ofday.t
-val to_date       : t -> Zone.t -> Date.t
+val of_date_ofday : Zone.t -> Date0.t -> Ofday.t -> t
+val to_date_ofday : t -> Zone.t -> Date0.t * Ofday.t
+val to_date       : t -> Zone.t -> Date0.t
 val to_ofday      : t -> Zone.t -> Ofday.t
 
-val of_local_date_ofday : Date.t -> Ofday.t -> t
-val to_local_date_ofday : t -> Date.t * Ofday.t
-val to_local_date       : t -> Date.t
+val of_local_date_ofday : Date0.t -> Ofday.t -> t
+val to_local_date_ofday : t -> Date0.t * Ofday.t
+val to_local_date       : t -> Date0.t
 val to_local_ofday      : t -> Ofday.t
 
 val convert
   :  from_tz:Zone.t
   -> to_tz:Zone.t
-  -> Date.t
+  -> Date0.t
   -> Ofday.t
-  -> (Date.t * Ofday.t)
+  -> (Date0.t * Ofday.t)
 
 val utc_offset
   :  ?zone:Zone.t
