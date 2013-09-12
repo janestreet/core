@@ -1,0 +1,14 @@
+# OASIS_START
+# DO NOT EDIT (digest: 7bf8d1251ddd1a7b7030e5a3ac10d528)
+backtrace_stubs.o
+bigstring_stubs.o
+crc_stubs.o
+iobuf_stubs.o
+linux_ext_stubs.o
+ocaml_utils_stubs.o
+recvmmsg.o
+signal_stubs.o
+timespec.o
+time_stubs.o
+unix_stubs.o
+# OASIS_STOP
