@@ -703,7 +703,7 @@ let abbreviation zone time =
 let name zone = zone.name
 
 include Identifiable.Make (struct
-  let module_name = "Core.Std.Zone"
+  let module_name = "Core.Std.Time.Zone"
 
   include Stable.V1
 
