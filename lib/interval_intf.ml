@@ -59,7 +59,7 @@ module type Gen = sig
       If one thinks of an interval as a set of points, rather than a pair of its bounds,
       then [map] is not the same as the usual mathematical notion of mapping [f] over that
       set.  For example, [~f:(fun x -> x * x)] maps the interval {v [-1,1] v} to {v [1,1]
-      v}], not to {v [0,1] v}. *)
+      v}, not to {v [0,1] v}. *)
   val map : 'a t -> f:('a bound -> 'b bound) -> 'b t
 
   (** [are_disjoint ts] returns [true] iff the intervals in [ts] are pairwise disjoint. *)
