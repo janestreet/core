@@ -93,7 +93,14 @@ module Nfs : sig
       file.  Returns [None] if the file cannot be read. *)
   val get_message : string -> string option
 
-  (** [unlock_safely path] unlocks [path] if [path] was locked from the same host and the
-      pid in the file is not in the list of running processes. *)
-  val unlock_safely : string -> unit
+  (** [unlock_exn path] unlocks [path] if [path] was locked from the same host and the pid
+      in the file is either the current pid or not the pid of a running process.  It will
+      raise if for some reason the lock at the given path cannot be unlocked, for example
+      if the lock is taken by somebody else that is still alive on the same box, or taken
+      by a process on a different host, or unix permissions issues, etc.  This function
+      should be used only by programs that need to release their lock before exiting.  If
+      releasing the lock can or should wait till the end of the running process, do not
+      call this function -- this library already takes care of releasing at exit all the
+      locks taken. *)
+  val unlock_exn : string -> unit
 end

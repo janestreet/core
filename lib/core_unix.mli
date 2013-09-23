@@ -1114,6 +1114,12 @@ module Cidr : sig
       not expanded, i.e. ["10/8"] is invalid. *)
   include Stringable.S with type t := t
 
+  (** Accessors.
+      - [base_address 192.168.0.0/24 = 192.168.0.0]
+      - [bits         192.168.0.0/24 = 24]. *)
+  val base_address : t -> Inet_addr.t
+  val bits         : t -> int
+
   (** IPv4 multicast address can be represented by the CIDR prefix 224.0.0.0/4,
       (i.e. addreses from 224.0.0.0 to 239.255.255.255, inclusive) *)
   val multicast : t

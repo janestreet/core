@@ -80,3 +80,27 @@ let float_of_hh_mm_ss hh mm ss =
 
 let to_tm t = Unix.localtime (T.to_float t)
 let to_tm_utc t = Unix.gmtime (T.to_float t)
+
+(* this is a recreation of the algorithm used internally by the linux kernel
+   (supposedly invented by Gauss).  In this case it is used to produce the number
+   of seconds since 1970-01-01 00:00:00 using epoch time semantics (86,400 seconds
+   per day) *)
+let utc_mktime ~year ~month ~day ~hour ~min ~sec ~ms ~us =
+  (* move February to the conceptual end of the ordering - 1..12 -> 11,12,1..10 -
+     because it carries the leap day.  The months are 0 indexed for this calculation,
+     so 1 is February. *)
+  let shuffle_year_month year month =
+    let month = month - 2 in
+    if month <= 0 then (year - 1, month + 12) else (year,month)
+  in
+  let hour       = Float.of_int hour in
+  let min        = Float.of_int min in
+  let sec        = Float.of_int sec in
+  let year,month = shuffle_year_month year month in
+  let days       = year / 4 - year / 100 + year / 400 + 367 * month / 12 + day in
+  let days       = Float.of_int days +. 365. *. Float.of_int year -. 719499. in
+  let hours      = 24. *. days +. hour in
+  let mins       = 60. *. hours +. min in
+  60. *. mins +. sec +. (Float.of_int ms /. 1000.)
+  +. (Float.of_int us /. 1000. /. 1000.)
+;;

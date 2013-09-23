@@ -5,30 +5,6 @@ module Unix = Core_unix
 
 module Stable = struct
   module V1 = struct
-    (* this is a recreation of the algorithm used internally by the linux kernel
-       (supposedly invented by Gauss).  In this case it is used to produce the number
-       of seconds since 1970-01-01 00:00:00 using epoch time semantics (86,400 seconds
-       per day) *)
-    let utc_mktime ~year ~month ~day ~hour ~min ~sec ~ms ~us =
-      (* move February to the conceptual end of the ordering - 1..12 -> 11,12,1..10 -
-         because it carries the leap day.  The months are 0 indexed for this calculation,
-         so 1 is February. *)
-      let shuffle_year_month year month =
-        let month = month - 2 in
-        if month <= 0 then (year - 1, month + 12) else (year,month)
-      in
-      let hour       = Float.of_int hour in
-      let min        = Float.of_int min in
-      let sec        = Float.of_int sec in
-      let year,month = shuffle_year_month year month in
-      let days       = year / 4 - year / 100 + year / 400 + 367 * month / 12 + day in
-      let days       = Float.of_int days +. 365. *. Float.of_int year -. 719499. in
-      let hours      = 24. *. days +. hour in
-      let mins       = 60. *. hours +. min in
-      60. *. mins +. sec +. (Float.of_int ms /. 1000.)
-      +. (Float.of_int us /. 1000. /. 1000.)
-    ;;
-
     (* IF THIS REPRESENTATION EVER CHANGES, ENSURE THAT EITHER
        (1) all values serialize the same way in both representations, or
        (2) you add a new Time version to stable.ml *)
@@ -105,6 +81,116 @@ module Stable = struct
       in
       T.of_float time
     ;;
+
+    let of_date_ofday_precise zone date ofday =
+      (* We assume that there will be only one zone shift within a given local day.  *)
+      let start_of_day = of_date_ofday zone date Ofday.start_of_day in
+      let proposed_time = T.add start_of_day (Ofday.to_span_since_start_of_day ofday) in
+      match Zone.next_clock_shift zone ~after:start_of_day with
+      | None -> `Once proposed_time
+      | Some (shift_start, shift_amount) ->
+        let shift_backwards = Span.(shift_amount < zero) in
+        (* start and end of the "problematic region" *)
+        let s,e =
+          if shift_backwards
+          then T.add shift_start shift_amount, shift_start
+          else shift_start, T.add shift_start shift_amount
+        in
+        if T.(proposed_time < s) then
+          `Once proposed_time
+        else if T.(s <= proposed_time && proposed_time < e) then begin
+          if shift_backwards
+          then `Twice (proposed_time, T.sub proposed_time shift_amount)
+          else `Never shift_start
+        end else
+          `Once (T.sub proposed_time shift_amount)
+    ;;
+
+    TEST_MODULE = struct
+      let ldn = Zone.find_office `ldn;;
+
+      let mkt month day hour min =
+        utc_mktime ~year:2013 ~month ~day ~hour ~min ~sec:0 ~ms:0 ~us:0
+      ;;
+
+      let expect_once date ofday expected =
+        match of_date_ofday_precise ldn date ofday with
+        | `Once t -> T.(t = of_float expected)
+        | _ -> false
+      ;;
+
+      let expect_never date ofday expected =
+        match of_date_ofday_precise ldn date ofday with
+        | `Never t -> T.(t = of_float expected)
+        | _ -> false
+      ;;
+
+      let expect_twice date ofday expected1 expected2 =
+        match of_date_ofday_precise ldn date ofday with
+        | `Twice (t1, t2) -> T.(t1 = of_float expected1 && t2 = of_float expected2)
+        | _ -> false
+      ;;
+
+      let outside_bst = Date.of_string "2013-01-01";;
+      let inside_bst  = Date.of_string "2013-06-01";;
+      let midday      = Ofday.of_string "12:00";;
+
+      TEST "of_date_ofday_precise, outside BST" =
+        expect_once outside_bst midday (mkt 01 01  12 00)
+      ;;
+
+      TEST "of_date_ofday_precise, inside BST" =
+        expect_once inside_bst midday (mkt 06 01  11 00)
+      ;;
+
+      let bst_start   = Date.of_string "2013-03-31";;
+      let bst_end     = Date.of_string "2013-10-27";;
+      let just_before = Ofday.of_string "00:59";;
+      let start_time  = Ofday.of_string "01:00";;
+      let during      = Ofday.of_string "01:30";;
+      let end_time    = Ofday.of_string "02:00";;
+      let just_after  = Ofday.of_string "02:01";;
+
+      TEST "of_date_ofday_precise, BST start, just_before" =
+        expect_once bst_start just_before (mkt 03 31  00 59)
+      ;;
+
+      TEST "of_date_ofday_precise, BST start, start_time" =
+        expect_never bst_start start_time (mkt 03 31  01 00)
+      ;;
+
+      TEST "of_date_ofday_precise, BST start, during" =
+        expect_never bst_start during (mkt 03 31  01 00)
+      ;;
+
+      TEST "of_date_ofday_precise, BST start, end_time" =
+        expect_once bst_start end_time (mkt 03 31  01 00)
+      ;;
+
+      TEST "of_date_ofday_precise, BST start, just_after" =
+        expect_once bst_start just_after (mkt 03 31  01 01)
+      ;;
+
+      TEST "of_date_ofday_precise, BST end, just_before" =
+        expect_once bst_end just_before (mkt 10 26  23 59)
+      ;;
+
+      TEST "of_date_ofday_precise, BST end, start_time" =
+        expect_twice bst_end start_time (mkt 10 27  00 00) (mkt 10 27  01 00)
+      ;;
+
+      TEST "of_date_ofday_precise, BST end, during" =
+        expect_twice bst_end during (mkt 10 27  00 30) (mkt 10 27  01 30)
+      ;;
+
+      TEST "of_date_ofday_precise, BST end, end_time" =
+        expect_once bst_end end_time (mkt 10 27  02 00)
+      ;;
+
+      TEST "of_date_ofday_precise, BST end, just_after" =
+        expect_once bst_end just_after (mkt 10 27  02 01)
+      ;;
+    end
 
     let to_local_date_ofday t          = to_date_ofday t (Zone.machine_zone ())
     let of_local_date_ofday date ofday = of_date_ofday (Zone.machine_zone ()) date ofday

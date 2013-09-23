@@ -1925,6 +1925,9 @@ module Cidr = struct
     }
   with sexp, fields, bin_io
 
+  let base_address t =
+    Inet_addr.inet4_addr_of_int32 t.address
+
   let of_string s =
     match String.split ~on:'/' s with
     | [s_inet_address ; s_bits] ->

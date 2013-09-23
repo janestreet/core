@@ -98,13 +98,13 @@ module Nfs = struct
 
   let get_message path = Option.map (get_info path) ~f:(fun info -> info.Info.message)
 
-  let unlock_safely path =
+  let unlock_safely_exn ~unlock_myself path =
     (* Make sure error messages contain a reference to "lock.nfs_lock", which is the
        actually important file. *)
     let lock_path = lock_path path in
     let error s =
       failwithf
-        "Lock_file.Nfs.unlock_safely: unable to unlock %s: %s" lock_path s ()
+        "Lock_file.Nfs.unlock_safely_exn: unable to unlock %s: %s" lock_path s ()
     in
     match Core_sys.file_exists ~follow_symlinks:false lock_path with
     | `Unknown -> error (sprintf "unable to read %s" lock_path)
@@ -124,21 +124,23 @@ module Nfs = struct
              process is not owned by the user running this code we should fail to unlock
              either earlier (unable to read the file) or later (unable to remove the
              file). *)
-          if Pid.(<>) locking_pid my_pid && Signal.can_send_to locking_pid then
-            error (sprintf "locking process (pid %i) still running on %s"
-              (Pid.to_int locking_pid) locking_hostname)
-          else
+          if (unlock_myself && Pid.(=) locking_pid my_pid)
+            || not (Signal.can_send_to locking_pid)
+          then
             try
               Unix.unlink path;
               Unix.unlink lock_path
             with | e -> error (Exn.to_string e)
+          else
+            error (sprintf "locking process (pid %i) still running on %s"
+              (Pid.to_int locking_pid) locking_hostname)
   ;;
 
   (* See mli for more information on the algorithm we use for locking over NFS.  Ensure
      that you understand it before you make any changes here. *)
   let create ?(message = "") path =
     try
-      unlock_safely path;
+      unlock_safely_exn ~unlock_myself:false path;
       let fd = Unix.openfile path ~mode:[Unix.O_WRONLY; Unix.O_CREAT] in
       let got_lock =
         try
@@ -158,7 +160,8 @@ module Nfs = struct
         | _ -> false
       in
       Unix.close fd;
-      if got_lock then at_exit (fun () -> try unlock_safely path with _ -> ());
+      if got_lock then at_exit (fun () ->
+        try unlock_safely_exn ~unlock_myself:true path with _ -> ());
       got_lock
     with
     | _ -> false
@@ -182,6 +185,19 @@ module Nfs = struct
 
   let critical_section ?message path ~f =
     create_exn ?message path;
-    Exn.protect ~f ~finally:(fun () -> unlock_safely path)
+    Exn.protect ~f ~finally:(fun () -> unlock_safely_exn ~unlock_myself:true path)
   ;;
+
+  let unlock_exn path = unlock_safely_exn ~unlock_myself:true path
+
+  TEST_MODULE = struct
+    let path = Filename.temp_file "lock_file" "unit_test"
+    let () = Unix.unlink path
+    TEST = create path
+    TEST = not (create path)
+    let () = unlock_exn path
+    TEST = create path
+    let () = unlock_exn path
+  end
+
 end

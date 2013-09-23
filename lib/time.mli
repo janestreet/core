@@ -89,6 +89,24 @@ val to_date_ofday : t -> Zone.t -> Date0.t * Ofday.t
 val to_date       : t -> Zone.t -> Date0.t
 val to_ofday      : t -> Zone.t -> Ofday.t
 
+(** Because timezone offsets change throughout the year (clocks go forward or back) some
+    local times can occur twice or not at all.  In the case that they occur twice, this
+    function gives [`Twice] with both occurrences in order; if they do not occur at all,
+    this function gives [`Never] with the time at which the local clock skips over the
+    desired time of day.
+
+    Note that this is really only intended to work with DST transitions and not unusual or
+    dramatic changes, like the calendar change in 1752 (run "cal 9 1752" in a shell to
+    see).  In particular it makes the assumption that midnight of each day is unambiguous.
+
+    Most callers should use {!of_date_ofday} rather than this function.  In the [`Twice]
+    and [`Never] cases, {!of_date_ofday} will return reasonable times for most uses. *)
+val of_date_ofday_precise
+  :  Zone.t
+  -> Date0.t
+  -> Ofday.t
+  -> [ `Once of t | `Twice of t * t | `Never of t ]
+
 val of_local_date_ofday : Date0.t -> Ofday.t -> t
 val to_local_date_ofday : t -> Date0.t * Ofday.t
 val to_local_date       : t -> Date0.t
@@ -180,7 +198,20 @@ val occurrence
   -> t
 
 (** [format t fmt] formats the given time according to fmt, which follows the formatting
-    rules given in 'man strftime'.  The time is output in the local timezone. *)
+    rules given in 'man strftime'.  The time is output in the local timezone.
+
+    {v
+      %Y - year (4 digits)
+      %y - year (2 digits)
+      %m - month
+      %d - day
+      %H - hour
+      %M - minute
+      %S - second
+    v}
+
+    a common choice would be: %Y-%m-%d %H:%M:%S
+*)
 val format : t -> string -> string
 
 (** [to_epoch t] returns the number of seconds since Jan 1, 1970 00:00:00 in UTC *)

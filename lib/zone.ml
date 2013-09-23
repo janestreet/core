@@ -626,21 +626,122 @@ let transition_as_localtime t =
   (t.Transition.start_time +. utc_off, t.Transition.end_time +. utc_off)
 ;;
 
-let linear_search ~min_bound ~max_bound transitions convert_transition time =
-  let rec loop i =
-    if i = min_bound then
-      transitions.(i).Transition.regime
-    else begin
-      let transition = transitions.(i) in
-      let (s,_e) = convert_transition transition in
-      if time > s then begin
-        transition.Transition.regime
-      end
-      else loop (i - 1)
-    end
+let rec bin_search time transitions transtype i min_bound max_bound =
+  (* passing around convert_transition directly turns out to be slower than working it out
+     from transtype every time *)
+  let convert_transition =
+    match transtype with
+    | `Local -> transition_as_localtime
+    | `UTC   -> transition_as_utc
   in
-  loop max_bound
+  (* when we reach a small slice of the array drop to linear search *)
+  if (max_bound - min_bound) <= 3 then
+    let rec loop i =
+      if i = min_bound then i
+      else begin
+        let transition = transitions.(i) in
+        let (s,_e) = convert_transition transition in
+        if time >= s
+        then i
+        else loop (i - 1)
+      end
+    in
+    loop max_bound
+  else begin
+    let (s,e) = convert_transition transitions.(i) in
+    if time < s then
+      bin_search time transitions transtype
+        (i - (Int.max ((i - min_bound) / 2) 1)) min_bound i
+    else if time >= e then
+      bin_search time transitions transtype
+        (i + (Int.max ((max_bound - i) / 2) 1)) i max_bound
+    else
+      i
+  end
 ;;
+
+(* Returns the next time the clocks move, if any, and how much they will move by. *)
+let next_clock_shift zone ~after =
+  let time = Time_internal.T.to_float after in
+  let module T = Transition in
+  let module R = Regime in
+  let transitions     = zone.transitions in
+  let num_transitions = Array.length transitions in
+  let default_off     = zone.default_local_time_type.R.utc_off in
+  if num_transitions = 0 then
+    None
+  else if transitions.(0).T.start_time > time then
+    Some
+      ( Time_internal.T.of_float transitions.(0).T.start_time
+      , Span.of_float (transitions.(0).T.regime.R.utc_off -. default_off)
+      )
+  else
+    let last_pos = num_transitions - 1 in
+    let i        = bin_search time transitions `UTC (last_pos / 2) 0 last_pos in
+    let this_off = transitions.(i).T.regime.R.utc_off in
+    Some (if i = last_pos
+        then
+          ( Time_internal.T.of_float transitions.(i).T.end_time
+          , Span.of_float (default_off -. this_off))
+        else
+          ( Time_internal.T.of_float transitions.(i + 1).T.start_time
+          , Span.of_float (transitions.(i + 1).T.regime.R.utc_off -. this_off)))
+;;
+
+TEST_MODULE = struct
+  let ldn = find_office `ldn;;
+
+  let mkt ?(year=2013) month day hour min =
+    Time_internal.T.of_float
+      (Time_internal.utc_mktime ~year ~month ~day ~hour ~min ~sec:0 ~ms:0 ~us:0)
+  ;;
+
+  TEST "next_clock_shift UTC" = Option.is_none
+    (next_clock_shift utc ~after:(mkt 01 01  12 00))
+  ;;
+
+  let expect_some after (time, amount) =
+    match next_clock_shift ldn ~after with
+    | Some (t, a) -> t = time && a = amount
+    | None -> false
+  ;;
+
+  let bst_start      = mkt ~year:2013 03 31  01 00, Span.hour;;
+  let bst_end        = mkt ~year:2013 10 27  01 00, Span.(neg hour);;
+  let bst_start_2014 = mkt ~year:2014 03 30  01 00, Span.hour;;
+
+  TEST "next_clock_shift, outside BST" =
+    expect_some (mkt 01 01  12 00) bst_start
+  ;;
+
+  TEST "next_clock_shift, just before BST start" =
+    expect_some (mkt 03 31  00 59) bst_start
+  ;;
+
+  TEST "next_clock_shift, BST start time" =
+    expect_some (mkt 03 31  01 00) bst_end
+  ;;
+
+  TEST "next_clock_shift, just after BST start" =
+    expect_some (mkt 03 31  01 01) bst_end
+  ;;
+
+  TEST "next_clock_shift, inside BST" =
+    expect_some (mkt 06 01  12 00) bst_end
+  ;;
+
+  TEST "next_clock_shift, just before BST end" =
+    expect_some (mkt 10 27  00 59) bst_end
+  ;;
+
+  TEST "next_clock_shift, BST end time" =
+    expect_some (mkt 10 27  01 00) bst_start_2014
+  ;;
+
+  TEST "next_clock_shift, just after BST end" =
+    expect_some (mkt 10 27  01 01) bst_start_2014
+  ;;
+end
 
 (* [find_local_regime zone `UTC time] finds the local time regime in force
    in [zone] at [seconds], from 1970/01/01:00:00:00 UTC.
@@ -650,7 +751,7 @@ let linear_search ~min_bound ~max_bound transitions convert_transition time =
 *)
 let find_local_regime zone transtype time =
   let module T = Transition in
-  let transitions         = zone.transitions in
+  let transitions        = zone.transitions in
   let convert_transition =
     match transtype with
     | `Local -> transition_as_localtime
@@ -669,23 +770,11 @@ let find_local_regime zone transtype time =
     with
     | Some t -> t.T.regime
     | None   ->
-      let rec bin_search i min_bound max_bound =
-        (* when we reach a small slice of the array drop to linear search *)
-        if (max_bound - min_bound) <= 3 then
-          linear_search ~min_bound ~max_bound transitions convert_transition time
-        else begin
-          let transition = transitions.(i) in
-          let (s,e)      = convert_transition transition in
-          if time < s then
-            bin_search (i - (Int.max ((i - min_bound) / 2) 1)) min_bound i
-          else if time >= e then
-            bin_search (i + (Int.max ((max_bound - i) / 2) 1)) i max_bound
-          else
-            transition.T.regime
-        end
-      in
       let last_pos = num_transitions - 1 in
-      bin_search (last_pos / 2) 0 last_pos
+      let i        =
+        bin_search time transitions transtype (last_pos / 2) 0 last_pos
+      in
+      transitions.(i).T.regime
   end
 ;;
 
