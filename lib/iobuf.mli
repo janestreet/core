@@ -59,6 +59,25 @@ val of_string : string -> (_, _) t
     arbitrary seek permissions on the resulting iobuf. *)
 val sub : ?pos:int -> ?len:int -> ('d, _) t -> ('d, _) t
 
+(** [set_bounds_and_buffer ~src ~dst] copies bounds (ie limits + window) and shallowly
+    copies the buffer from [src] to [dst].  [read_write] access is required on [src]
+    because the caller might have [read_write] access to [dst], and would after the call
+    then effectively have [read_write] access to [src]. *)
+val set_bounds_and_buffer : src:(read_write, _) t -> dst:(_, seek) t -> unit
+
+(** [set_bounds_and_buffer_sub ?pos ?len ~src ~dst ()] is a more efficient version of:
+    [set_bounds_and_buffer ~src:(Iobuf.sub ?pos ?len src) ~dst].
+
+    [set_bounds_and_buffer ~src ~dst] is not the same as
+    [set_bounds_and_buffer_sub ~dst ~src ()], because the limits are narrowed in the
+    latter case. *)
+val set_bounds_and_buffer_sub
+  :  ?pos:int
+  -> ?len:int
+  -> src:(read_write, _) t
+  -> dst:(_, seek) t
+  -> unit -> unit
+
 (** {1 Accessors} *)
 
 (** [capacity t] returns the size of [t]'s limits subrange.  The capacity of an iobuf can

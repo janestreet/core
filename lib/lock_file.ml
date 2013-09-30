@@ -55,11 +55,36 @@ let create_exn ?message ?close_on_exec ?unlink_on_exit path =
   if not (create ?message ?close_on_exec ?unlink_on_exit path) then
     failwithf "Lock_file.create_exn '%s' was unable to acquire the lock" path ()
 
-let rec blocking_create ?message ?close_on_exec ?unlink_on_exit path =
-  if not (create ?message ?close_on_exec ?unlink_on_exit path) then begin
-    Time.pause (Span.of_sec 1.);
-    blocking_create ?message ?close_on_exec ?unlink_on_exit path
-  end
+(* no timeout specified = wait indefinitely *)
+let repeat_with_timeout ?timeout lockf path =
+  match timeout with
+  | None ->
+    let rec loop () =
+      if not (lockf path) then begin
+        Unix.sleep 1;
+        loop ()
+      end
+    in
+    loop ()
+  | Some timeout ->
+    let start_time = Time.now () in
+    let rec loop () =
+      if not (lockf path) then begin
+        let since_start = Time.abs_diff start_time (Time.now ()) in
+        if Time.Span.(since_start > timeout) then
+          failwithf "Lock_file: '%s' timed out waiting for existing lock" path ()
+        else begin
+          Unix.sleep 1;
+          loop ()
+        end
+      end
+    in
+    loop ()
+
+(* default timeout is to wait indefinitely *)
+let blocking_create ?timeout ?message ?close_on_exec ?unlink_on_exit path =
+  repeat_with_timeout ?timeout
+    (fun path -> create ?message ?close_on_exec ?unlink_on_exit path) path
 
 let is_locked path =
   try
@@ -169,22 +194,16 @@ module Nfs = struct
 
   let create_exn ?message path =
     if create ?message path then ()
-    else failwithf "Lock_file.Nfs.lock_exn '%s' was unable to acquire the lock" path ()
+    else failwithf "Lock_file.Nfs.create_exn '%s' was unable to acquire the lock" path ()
   ;;
 
-  let blocking_create ?message path =
-    let rec loop () =
-      if create ?message path then ()
-      else begin
-        Unix.sleep 1;
-        loop ()
-      end
-    in
-    loop ()
+  (* default timeout is to wait indefinitely *)
+  let blocking_create ?timeout ?message path =
+    repeat_with_timeout ?timeout (fun path -> create ?message path) path
   ;;
 
-  let critical_section ?message path ~f =
-    create_exn ?message path;
+  let critical_section ?message path ~timeout ~f =
+    blocking_create ~timeout ?message path;
     Exn.protect ~f ~finally:(fun () -> unlock_safely_exn ~unlock_myself:true path)
   ;;
 

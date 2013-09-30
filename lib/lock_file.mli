@@ -33,9 +33,10 @@ val create_exn
   -> unit
 
 (** [blocking_create t] tries to create the lock. If another process holds the lock this
-    function will wait until it is released. *)
+    function will wait until it is released or until timeout expires. *)
 val blocking_create
-  :  ?message : string
+  :  ?timeout : Time.Span.t (* defaults to wait indefinitely *)
+  -> ?message : string
   -> ?close_on_exec : bool (* defaults to true *)
   -> ?unlink_on_exit : bool (* defaults to false *)
   -> string
@@ -77,13 +78,15 @@ module Nfs : sig
   val create_exn : ?message : string -> string -> unit
 
   (** [blocking_create ?message path] like create, but sleeps for 1 second between lock
-      attempts and does not return until it succeeds *)
-  val blocking_create : ?message : string -> string -> unit
+      attempts and does not return until it succeeds or timeout expires.  Timeout defaults
+      to wait indefinitely *)
+  val blocking_create : ?timeout : Time.Span.t -> ?message : string -> string -> unit
 
-  (** [critical_section ?message path ~f] wrap function [f] (including exceptions escaping
-      it) by first locking (using {!create_exn}) and then unlocking the given lock
-      file. *)
-  val critical_section : ?message : string -> string -> f : (unit -> 'a) -> 'a
+  (** [critical_section ?message ~timeout path ~f] wrap function [f] (including exceptions
+      escaping it) by first locking (using {!blocking_create}) and then unlocking the
+      given lock file. *)
+  val critical_section
+    : ?message : string -> string -> timeout : Time.Span.t -> f : (unit -> 'a) -> 'a
 
   (** [get_hostname_and_pid path] reads the lock file at [path] and returns the hostname
       and path in the file.  Returns [None] if the file cannot be read. *)

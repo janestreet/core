@@ -124,6 +124,17 @@ module Make (M : sig end) = struct
       <:sexp_of< (_, _) t >>
       (fun () -> sub ?pos ?len t)
   ;;
+
+  let set_bounds_and_buffer_sub ?pos ?len ~src ~dst () =
+    debug "sub" [src] (`pos pos, `len len)
+      <:sexp_of< [ `pos of int option ] * [ `len of int option ] >>
+      sexp_of_unit
+      (fun () -> set_bounds_and_buffer_sub ?pos ?len ~src ~dst ())
+  ;;
+  let set_bounds_and_buffer ~src ~dst =
+    debug "copy" [src] src <:sexp_of< (_, _) t >> sexp_of_unit
+      (fun () -> set_bounds_and_buffer ~src ~dst)
+  ;;
   let narrow t =
     debug "narrow" [t] t <:sexp_of< (_, _) t >> sexp_of_unit (fun () -> narrow t)
   ;;

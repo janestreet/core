@@ -278,6 +278,8 @@ module Test (Iobuf : sig
 
     let compact = compact
     let sub = sub
+    let set_bounds_and_buffer_sub = set_bounds_and_buffer_sub
+    let set_bounds_and_buffer = set_bounds_and_buffer
     let narrow = narrow
     TEST =
       let buf = of_string "123" in
@@ -299,6 +301,47 @@ module Test (Iobuf : sig
       assert (capacity buf = 1);
       length buf = 1
     ;;
+    TEST =
+      let src = of_string "123abcDEF" in
+      let dst = Iobuf.create ~len:0 in
+      set_bounds_and_buffer ~src ~dst;
+      src = dst
+    ;;
+    TEST =
+      let src = of_string "123abcDEF" in
+      let dst = Iobuf.create ~len:0 in
+      set_bounds_and_buffer_sub ~src ~dst ();
+      src = dst
+    ;;
+    TEST =
+      let src = of_string "123abcDEF" in
+      let src = Iobuf.sub ~pos:1 ~len:5 src in
+      let dst = Iobuf.create ~len:0 in
+      set_bounds_and_buffer ~src ~dst;
+      src = dst
+    ;;
+    TEST =
+      let src = of_string "123abcDEF" in
+      let src = Iobuf.sub ~pos:1 ~len:5 src in
+      let dst = Iobuf.create ~len:0 in
+      set_bounds_and_buffer_sub ~src ~dst ();
+      src = dst
+    ;;
+    TEST =
+      let src = of_string "123abcDEF" in
+      let src_sub = Iobuf.sub ~pos:1 ~len:5 src in
+      let dst = Iobuf.create ~len:0 in
+      set_bounds_and_buffer_sub ~pos:2 ~len:2 ~src:src_sub ~dst ();
+      let src_sub' = Iobuf.sub ~pos:3 ~len:2 src in
+      src_sub' = dst
+    ;;
+    TEST =
+      let buf1 = of_string "123abcDEF" in
+      let buf2 = of_string "123abcDEF" in
+      Iobuf.set_bounds_and_buffer ~src:buf1 ~dst:buf1;
+      buf1 = buf2
+    ;;
+
     let bounded_compact = bounded_compact
     TEST =
       let buf = of_string "123abcDEFghiJKL" in

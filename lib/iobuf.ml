@@ -3,7 +3,7 @@ open Std_internal
 module T = struct
   type t =
     (* WHEN YOU CHANGE THIS, CHANGE iobuf_fields IN iobuf_stubs.c AS WELL!!! *)
-    { buf : Bigstring.t sexp_opaque;
+    { mutable buf : Bigstring.t sexp_opaque;
       (* The data in [buf] is at indices [lo], [lo+1], ... [hi-1]. *)
       mutable lo_min : int;
       mutable lo     : int;
@@ -167,6 +167,30 @@ let sub ?(pos = 0) ?len t =
     hi;
     hi_max = hi;
   }
+;;
+
+let set_bounds_and_buffer_sub ?(pos = 0) ?len ~src ~dst () =
+  let len =
+    match len with
+    | None -> length src - pos
+    | Some len -> len
+  in
+  check_range src ~pos ~len;
+  let lo = src.lo + pos in
+  let hi = lo + len in
+  dst.lo_min <- lo;
+  dst.lo <- lo;
+  dst.hi <- hi;
+  dst.hi_max <- hi;
+  dst.buf <- src.buf
+;;
+
+let set_bounds_and_buffer ~src ~dst =
+  dst.lo_min <- src.lo_min;
+  dst.lo <- src.lo;
+  dst.hi <- src.hi;
+  dst.hi_max <- src.hi_max;
+  dst.buf <- src.buf
 ;;
 
 let narrow t = t.lo_min <- t.lo; t.hi_max <- t.hi; ;;

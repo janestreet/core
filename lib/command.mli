@@ -264,9 +264,11 @@ module Spec : sig
       just print something and exit. *)
   val no_arg_abort : exit:(unit -> never_returns) -> unit flag
 
-  (** [escape] flags may be passed at most once.  They cause the command
-      line parser to abort and pass through all remaining command line
-      arguments as the value of the flag. *)
+  (** [escape] flags may be passed at most once.  They cause the command line parser to
+      abort and pass through all remaining command line arguments as the value of the
+      flag.
+
+      A standard choice of flag name to use with [escape] is ["--"]. *)
   val escape : string list option flag
 
   (** [flags_of_args_exn args] creates a spec from [Arg.t]s, for compatibility with
