@@ -2,7 +2,7 @@ OASISFormat:      0.3
 OCamlVersion:     >= 4.00.1
 FindlibVersion:   >= 1.3.2
 Name:             core
-Version:          109.45.00
+Version:          109.47.00
 Synopsis:         Jane Street Capital's standard library overlay
 Authors:          Jane Street Capital LLC <opensource@janestreet.com>
 Copyrights:       (C) 2008-2013 Jane Street Capital LLC <opensource@janestreet.com>
@@ -203,6 +203,7 @@ Library core
                       Time,
                       Time0,
                       Time_internal,
+                      Time_stamp_counter,
                       Timing_wheel,
                       Timing_wheel_intf,
                       Timing_wheel_unit_tests,
@@ -238,6 +239,7 @@ Library core
                       timespec.c,
                       timespec.h,
                       time_stubs.c,
+                      time_stamp_counter_stubs.c,
                       unix_stubs.c,
                       unix_utils.h,
                       core_config.h

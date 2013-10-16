@@ -33,6 +33,7 @@ module Squeue = Squeue
 module Sys = Core_sys
 module Thread = Core_thread
 module Time = Time
+module Time_stamp_counter = Time_stamp_counter
 module Timing_wheel = Timing_wheel
 module Unix = Core_unix
 module User_and_group = User_and_group

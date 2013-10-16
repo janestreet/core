@@ -14,3 +14,5 @@
 "lib/iobuf.ml"             : mlh, pkg_camlp4.macro
 "lib/iobuf_tests.ml"       : mlh, pkg_camlp4.macro
 "lib/std.ml"               : mlh, pkg_camlp4.macro
+"lib/time_stamp_counter.ml"  : mlh, pkg_camlp4.macro
+"lib/time_stamp_counter.mli" : mlh, pkg_camlp4.macro

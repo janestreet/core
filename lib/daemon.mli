@@ -1,7 +1,6 @@
-(* This module provides support for daemonizing a process.  It provides flexibility
-   as to where the standard file descriptors (stdin, stdout and stderr) are connected
-   after daemonization has occurred.
-*)
+(** This module provides support for daemonizing a process.  It provides flexibility as to
+    where the standard file descriptors (stdin, stdout and stderr) are connected after
+    daemonization has occurred. *)
 
 module Fd_redirection : sig
   type t = [
@@ -29,7 +28,7 @@ val daemonize
   :  ?redirect_stdout : Fd_redirection.t
   -> ?redirect_stderr : Fd_redirection.t
   -> ?cd : string
-  -> ?umask : int
+  -> ?umask : int (** defaults to use existing umask *)
   -> unit
   -> unit
 
@@ -53,9 +52,9 @@ val daemonize
     @raise Failure if fork was unsuccessful.
 *)
 val daemonize_wait
-  :  ?redirect_stdout : Fd_redirection.t  (* default redirect to /dev/null *)
-  -> ?redirect_stderr : Fd_redirection.t  (* default redirect to /dev/null *)
-  -> ?cd : string  (* default / *)
-  -> ?umask : int  (* default zero *)
+  :  ?redirect_stdout : Fd_redirection.t  (** default redirect to /dev/null *)
+  -> ?redirect_stderr : Fd_redirection.t  (** default redirect to /dev/null *)
+  -> ?cd : string  (** default / *)
+  -> ?umask : int  (** defaults to use existing umask *)
   -> unit
   -> (unit -> unit) Staged.t

@@ -3,7 +3,6 @@ module Unix = Core_unix
 
 module Thread = Core_thread
 
-let default_umask = 0
 
 let check_threads () =
   (* forking, especially to daemonize, when running multiple threads is tricky, and
@@ -64,7 +63,7 @@ let redirect_stdio_fds ~skip_regular_files ~stdout ~stderr =
 ;;
 
 let daemonize ?(redirect_stdout=`Dev_null) ?(redirect_stderr=`Dev_null)
-    ?(cd = "/") ?umask:(umask_value = default_umask) () =
+    ?(cd = "/") ?umask () =
   check_threads ();
   let fork_no_parent () =
     match Unix.handle_unix_error Unix.fork with
@@ -80,7 +79,7 @@ let daemonize ?(redirect_stdout=`Dev_null) ?(redirect_stderr=`Dev_null)
   (* Release old working directory. *)
   Unix.chdir cd;
   (* Ensure sensible umask.  Adjust as needed. *)
-  ignore (Unix.umask umask_value);
+  Option.iter umask ~f:(fun umask -> ignore (Unix.umask umask));
   redirect_stdio_fds ~skip_regular_files:false
     ~stdout:redirect_stdout ~stderr:redirect_stderr;
 ;;
@@ -90,7 +89,7 @@ let fail_wstopped ~pid ~i =
     but waitpid not called with WUNTRACED.  This should not happen" i pid ()
 
 let daemonize_wait ?(redirect_stdout=`Dev_null) ?(redirect_stderr=`Dev_null)
-    ?(cd = "/") ?umask:(umask_value = default_umask) () =
+    ?(cd = "/") ?umask () =
   check_threads ();
   match Unix.handle_unix_error Unix.fork with
   | `In_the_child ->
@@ -103,7 +102,7 @@ let daemonize_wait ?(redirect_stdout=`Dev_null) ?(redirect_stderr=`Dev_null)
       (* The process that will become the actual daemon. *)
       Unix.close read_end;
       Unix.chdir cd;
-      ignore (Unix.umask umask_value);
+      Option.iter umask ~f:(fun umask -> ignore (Unix.umask umask));
       Staged.stage (fun () ->
         redirect_stdio_fds ~skip_regular_files:true
           ~stdout:redirect_stdout ~stderr:redirect_stderr;

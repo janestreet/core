@@ -27,13 +27,13 @@ module Spec : sig
   (** composable command-line specifications *)
   type ('main_in, 'main_out) t
   (**
-      Ultimately one forms a base command by combining a spec of type [('main, unit) t]
-      with a main function of type ['main]; see the [basic] function below.  Combinators
-      in this library incrementally build up the type of main according to what
-      command-line parameters it expects, so the resulting type of [main] is something
-      like:
+      Ultimately one forms a base command by combining a spec of type
+      [('main, unit -> unit) t] with a main function of type ['main]; see the [basic]
+      function below.  Combinators in this library incrementally build up the type of main
+      according to what command-line parameters it expects, so the resulting type of
+      [main] is something like:
 
-      [arg1 -> ... -> argN -> unit]
+      [arg1 -> ... -> argN -> unit -> unit]
 
       It may help to think of [('a, 'b) t] as a function space ['a -> 'b] embellished with
       information about:
@@ -46,28 +46,33 @@ module Spec : sig
       main function from type ['main_in] to ['main_out], typically by supplying some
       arguments.  E.g. a value of type [Spec.t] might have type:
 
-     {[
-       (arg1 -> ... -> argN -> 'r, 'r) Spec.t
-     ]}
+      {[
+        (arg1 -> ... -> argN -> 'r, 'r) Spec.t
+      ]}
 
       Such a value can transform a main function of type [arg1 -> ... -> argN -> 'r] by
       supplying it argument values of type [arg1], ..., [argn], leaving a main function
-      whose type is ['r].  In the end, [Command.basic] takes a completed spec where ['r =
-      unit], and hence whose type looks like:
+      whose type is ['r].  In the end, [Command.basic] takes a completed spec where
+      ['r = unit -> unit], and hence whose type looks like:
 
       {[
-        (arg1 -> ... -> argN -> unit, unit) Spec.t
-     ]}
+        (arg1 -> ... -> argN -> unit -> unit, unit -> unit) Spec.t
+      ]}
 
-      A value of this type can fully apply a main function of type [arg1 -> ... -> argN
-      -> unit] to all its arguments.
+      A value of this type can fully apply a main function of type
+      [arg1 -> ... -> argN -> unit -> unit] to all its arguments.
+
+      The final unit argument allows the implementation to distinguish between the phases
+      of (1) parsing the command line and (2) running the body of the command.  Exceptions
+      raised in phase (1) lead to a help message being displayed alongside the exception.
+      Exceptions raised in phase (2) are displayed without any command line help.
 
       The view of [('main_in, main_out) Spec.t] as a function from ['main_in] to
       ['main_out] is directly reflected by the [step] function, whose type is:
 
       {[
         val step : ('m1 -> 'm2) -> ('m1, 'm2) t
-     ]}
+      ]}
   *)
 
   (** [spec1 ++ spec2 ++ ... ++ specN] composes spec1 through specN.

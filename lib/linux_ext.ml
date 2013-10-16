@@ -630,7 +630,7 @@ ENDIF
         let check f field = f (Field.get field t) in
         Fields.iter
           ~epollfd:ignore
-          ~flags_by_fd:(check Table.invariant)
+          ~flags_by_fd:(check (Table.invariant ignore ignore))
           ~max_ready_events:(check (fun max_ready_events -> assert (max_ready_events > 0)))
           ~num_ready_events:(check (fun num_ready -> assert (num_ready >= 0)))
           ~ready_events:ignore

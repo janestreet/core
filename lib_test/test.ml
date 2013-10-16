@@ -51,7 +51,6 @@ let all () =
          Time_test.test;
          Zone_test.test;
          Int_set_test.test;
-         Core_float_test.test;
          Core_unix_test.test;
          Union_find_test.test;
          Ofday_unit_tests_v1.test ();
