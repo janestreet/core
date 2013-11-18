@@ -101,6 +101,6 @@ end
 
 module Stable : sig
   module V1 : sig
-    type t with sexp, bin_io, compare
-  end with type t = t
+    type nonrec t = t = private { y: int; m: Month.t; d: int; } with sexp, bin_io, compare
+  end
 end

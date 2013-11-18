@@ -153,6 +153,7 @@ module Int' =
 
 module Int'' =
   F (struct
+    type t = int
     include Comparable.Inherit (Int) (struct
         include Int
         let component x = x

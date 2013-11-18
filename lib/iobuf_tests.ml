@@ -439,6 +439,7 @@ module Test (Iobuf : sig
                      -> string          (* corresponding buffer contents *)
                      -> ('a -> Sexp.t)
                      -> unit
+                   val bin_prot_char : (char, 'd, 'w) t
                  end) = struct
       open Intf
 
@@ -463,6 +464,7 @@ module Test (Iobuf : sig
       let padded_fixed_string = padded_fixed_string
       let              string =              string
       let           bigstring =           bigstring
+      let            bin_prot =            bin_prot
 
       TEST_UNIT =
         let buf = of_string "ABCDEFGHIJ" in
@@ -475,6 +477,7 @@ module Test (Iobuf : sig
         t_pos_1 buf 1 char '\254' "A\254CDEFGHIJ" sexp_of_char;
         t_pos_1 buf 1 int8 (-1) "A\255CDEFGHIJ" sexp_of_int;
         t_pos_1 buf 1 uint8 12 "A\012CDEFGHIJ" sexp_of_int;
+        t_pos_1 buf 1 bin_prot_char 'x' "AxCDEFGHIJ" sexp_of_char;
         t_pos_1 buf 2 int16_be 0x0102 "A\001\002DEFGHIJ" sexp_of_int;
         t_pos_1 buf 2 int16_le 0x0304 "A\004\003DEFGHIJ" sexp_of_int;
         t_pos_1 buf 2 int16_be (-2) "A\255\254DEFGHIJ" sexp_of_int;
@@ -493,12 +496,14 @@ module Test (Iobuf : sig
         t_pos_1 buf 4 int32_be (-0x01020305) "A\254\253\252\251FGHIJ" sexp_of_int;
         t_pos_1 buf 4 int32_le (-0x05060709) "A\247\248\249\250FGHIJ" sexp_of_int;
 IFDEF ARCH_SIXTYFOUR THEN
-        t_pos_1 buf 4 uint32_be (large_int 0 0 0xF6F5 0xF4F3) "A\246\245\244\243FGHIJ" sexp_of_int;
-        t_pos_1 buf 4 uint32_le (large_int 0 0 0xFBFA 0xF9F8) "A\248\249\250\251FGHIJ" sexp_of_int;
-        t_pos_1 buf 8 int64_be (large_int 0x0102 0x0304 0x0506 0x0708) "A\001\002\003\004\005\006\007\008J"
-          sexp_of_int;
-        t_pos_1 buf 8 int64_le (large_int 0x090a 0x0b0c 0x0d0e 0x0f10) "A\016\015\014\013\012\011\010\009J"
-          sexp_of_int;
+        t_pos_1 buf 4 uint32_be (large_int 0 0 0xF6F5 0xF4F3)
+          "A\246\245\244\243FGHIJ" sexp_of_int;
+        t_pos_1 buf 4 uint32_le (large_int 0 0 0xFBFA 0xF9F8)
+          "A\248\249\250\251FGHIJ" sexp_of_int;
+        t_pos_1 buf 8 int64_be (large_int 0x0102 0x0304 0x0506 0x0708)
+          "A\001\002\003\004\005\006\007\008J" sexp_of_int;
+        t_pos_1 buf 8 int64_le (large_int 0x090a 0x0b0c 0x0d0e 0x0f10)
+          "A\016\015\014\013\012\011\010\009J" sexp_of_int;
         t_pos_1 buf 8 int64_be (-(large_int 0x0102 0x0304 0x0506 0x0709))
           "A\254\253\252\251\250\249\248\247J" sexp_of_int;
         t_pos_1 buf 8 int64_le (-(large_int 0x0102 0x0304 0x0506 0x0709))
@@ -514,14 +519,13 @@ ENDIF;
 
     module Poke = Intf (struct
       include Poke
+      type 'a bin_prot = 'a Bin_prot.Type_class.writer
 
-      let t_pos_1 buf _ f arg str sexp_of_arg =
+      let t_pos_1 buf _ f arg str _sexp_of_arg =
         f buf ~pos:1 arg;
-        if not (String.equal str (to_string buf)) then
-          (failwiths (sprintf "%S <> %S (is_safe=%b)" (to_string buf) str is_safe)
-             arg
-             sexp_of_arg;
-           failwith "Does this trick the compiler into not tail-calling failwiths?")
+        <:test_eq< string >> str (to_string buf)
+
+      let bin_prot_char t ~pos a = bin_prot Char.bin_writer_t t ~pos a
 
       (* Static permission tests for the cases that do compile.  Since the functions all
          use essentially the same type definitions, we don't need to test all of them.
@@ -550,6 +554,7 @@ ENDIF;
 
     module Peek = Intf (struct
       include Peek
+      type 'a bin_prot = 'a Bin_prot.Type_class.reader
 
       let t_pos_1 _ _ f expected str sexp_of_res =
         let res = f (of_string str) ~pos:1 in
@@ -557,6 +562,8 @@ ENDIF;
           failwiths (sprintf "%S" str)
             (res, expected)
             (Tuple.T2.sexp_of_t sexp_of_res sexp_of_res)
+
+      let bin_prot_char t ~pos = bin_prot Char.bin_reader_t t ~pos
 
       (* static permission tests; see above *)
       TEST = Char.(=) 'a' (char (of_string "a" : (_, no_seek) Iobuf.t) ~pos:0)
@@ -606,17 +613,34 @@ ENDIF;
 
     module Fill = Intf (struct
       include Fill
+      type 'a bin_prot = 'a Bin_prot.Type_class.writer
 
-      let t_pos_1 buf n f arg str sexp_of_arg =
+      let t_pos_1 buf n f arg str _sexp_of_arg =
         rewind buf;
         advance buf 1;
         f buf arg;
         assert (Iobuf.length buf = String.length str - 1 - n);
         rewind buf;
-        if not (String.equal str (to_string buf)) then
-          failwiths (sprintf "%S <> %S" (to_string buf) str)
-            arg
-            sexp_of_arg
+        <:test_eq< string >> str (to_string buf)
+
+      let bin_prot_char t a = bin_prot Char.bin_writer_t t a
+
+      TEST_UNIT =
+        let t = of_string "abc" in
+        bin_prot Char.bin_writer_t t 'd';
+        bin_prot Char.bin_writer_t t 'e';
+        <:test_eq< string >> "c" (to_string t);
+        flip_lo t;
+        assert (try bin_prot String.bin_writer_t t "fgh"; false with _ -> true);
+        <:test_eq< string >> "de" (to_string t);
+        reset t;
+        <:test_eq< string >> "dec" (to_string t);
+        bin_prot Char.bin_writer_t t 'i';
+        bin_prot Char.bin_writer_t t 'j';
+        bin_prot Char.bin_writer_t t 'k';
+        assert (is_empty t);
+        flip_lo t;
+        <:test_eq< string >> "ijk" (to_string t)
 
       (* static permission tests; see above *)
       TEST_UNIT = char (of_string "a" : (_, seek) Iobuf.t) 'b'
@@ -657,6 +681,7 @@ ENDIF;
 
     module Consume = Intf (struct
       include Consume
+      type 'a bin_prot = 'a Bin_prot.Type_class.reader
 
       let t_pos_1 _ n f expected str sexp_of_res =
         let buf = of_string str in
@@ -668,6 +693,8 @@ ENDIF;
           failwiths (sprintf "%S" (to_string buf))
             (res, expected)
             (Tuple.T2.sexp_of_t sexp_of_res sexp_of_res)
+
+      let bin_prot_char t = bin_prot Char.bin_reader_t t
 
       (* static permission tests; see above *)
       TEST = Char.(=) 'a' (char (of_string "a" : (_, seek) Iobuf.t))

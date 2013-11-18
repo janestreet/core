@@ -71,7 +71,7 @@ module Nfs : sig
       is no guarantee that this will occur under some types of program crash. If the
       program crashes without removing the lock file an attempt will be made to clean up
       on restart by checking the hostname and pid stored in the lockfile. *)
-  val create : ?message : string -> string -> bool
+  val create : ?message : string -> string -> unit Or_error.t
 
   (** [create_exn ?message path] like create, but throws an exception when it fails to
       obtain the lock *)
@@ -106,4 +106,5 @@ module Nfs : sig
       call this function -- this library already takes care of releasing at exit all the
       locks taken. *)
   val unlock_exn : string -> unit
+  val unlock     : string -> unit Or_error.t
 end

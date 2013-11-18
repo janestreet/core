@@ -96,8 +96,8 @@ exception Invalid_file_format of string
 
 module Stable : sig
   module V1 : sig
-    type t with bin_io, compare, sexp
-  end with type t = t
+    type nonrec t = t with bin_io, compare, sexp
+  end
 end
 
 (** {1 Notes on time}

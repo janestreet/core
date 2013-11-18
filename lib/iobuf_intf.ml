@@ -9,6 +9,7 @@ module type Accessors = sig
   (** [('d, 'w) Iobuf.t] accessor function manipulating ['a], either writing it to the
       iobuf or reading it from the iobuf. *)
   type ('a, 'd, 'w) t
+  type 'a bin_prot
 
   val char                :                             (char       , 'd, 'w) t
   val  int8               :                             (int        , 'd, 'w) t
@@ -28,6 +29,7 @@ module type Accessors = sig
   val padded_fixed_string : padding:char ->  len:int -> (   string  , 'd, 'w) t
   val              string : ?str_pos:int -> ?len:int -> (   string  , 'd, 'w) t
   val           bigstring : ?str_pos:int -> ?len:int -> (Bigstring.t, 'd, 'w) t
+  val            bin_prot : 'a bin_prot              -> ('a         , 'd, 'w) t
 end
 
 (** An iobuf window bound, either upper or lower.  You can't see its int value, but you

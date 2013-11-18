@@ -19,6 +19,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <net/if.h>
+#include <netinet/in.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
@@ -138,6 +139,15 @@ CAMLprim value unix_fcntl (value fd, value v_cmd, value v_arg) {
   if (result == -1) uerror("unix_fcntl", Nothing);
   return caml_alloc_int63(result);
 }
+
+int core_unix_close_durably(int fd)
+{
+  int ret;
+  do ret = close(fd);
+  while (ret == -1 && errno == EINTR);
+  return ret;
+}
+
 
 void close_on_exec(int fd)
 {
@@ -1016,6 +1026,54 @@ CAMLprim value unix_setrlimit(value v_resource, value v_limits)
 }
 
 
+/* return a simple [in_addr] as the address */
+struct in_addr core_unix_get_in_addr_for_interface(value v_interface)
+{
+  struct ifreq ifr;
+  int fd = -1;
+  char* error = NULL;
+
+  memset(&ifr, 0, sizeof(ifr));
+  ifr.ifr_addr.sa_family = AF_INET;
+  /* [ifr] is already initialized to zero, so it doesn't matter if the
+     incoming string is too long, and [strncpy] fails to add a \0. */
+  strncpy(ifr.ifr_name, String_val(v_interface), IFNAMSIZ - 1);
+
+  /* Note that [v_interface] is invalid past this point. */
+  caml_enter_blocking_section();
+
+  fd = socket(AF_INET, SOCK_DGRAM, 0);
+
+  if (fd == -1)
+    error = "linux_get_ipv4_address_for_interface: couldn't allocate socket";
+  else {
+    if (ioctl(fd, SIOCGIFADDR, &ifr) < 0)
+      error = "linux_get_ipv4_address_for_interface: ioctl(fd, SIOCGIFADDR, ...) failed";
+
+    (void) core_unix_close_durably(fd);
+  }
+
+  caml_leave_blocking_section();
+
+  if (error == NULL) {
+    /* This is weird but doing the usual casting causes errors when using
+     * the new gcc on CentOS 6.  This solution was picked up on Red Hat's
+     * bugzilla or something.  It also works to memcpy a sockaddr into
+     * a sockaddr_in.  This is faster hopefully.
+     */
+    union {
+      struct sockaddr sa;
+      struct sockaddr_in sain;
+    } u;
+    u.sa = ifr.ifr_addr;
+    return u.sain.sin_addr;
+  }
+
+  uerror(error, Nothing);
+  assert(0);  /* [uerror] should never return. */
+}
+
+
 /* Resource usage */
 
 CAMLprim value unix_getrusage(value v_who)
@@ -1524,6 +1582,24 @@ CAMLprim value unix_mcast_set_ttl(value v_socket, value v_ttl)
     unix_setsockopt_aux( "setsockopt", TYPE_INT, IPPROTO_IP, IP_MULTICAST_TTL, v_socket, v_ttl);
 }
 
+CAMLprim value unix_mcast_set_ifname(value v_socket, value v_ifname)
+{
+  struct in_addr addr;
+
+  assert(!Is_block(v_socket));
+
+  /* Here is the IPv4 address of the ethernet interface. */
+  addr = core_unix_get_in_addr_for_interface(v_ifname);
+
+  /* Now setsockopt to publish on the interface using the address. */
+  return
+    unix_setsockopt_aux("setsockopt",
+                        TYPE_INT,
+                        IPPROTO_IP, IP_MULTICAST_IF,
+                        v_socket,
+                        Val_int(addr.s_addr));
+}
+
 CAMLprim value unix_mcast_get_loop(value v_socket)
 {
   return
@@ -1725,4 +1801,3 @@ CAMLprim value core_unix_remove(value v_path)
 
   CAMLreturn(Val_unit);
 }
-

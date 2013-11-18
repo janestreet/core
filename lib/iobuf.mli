@@ -22,7 +22,7 @@
 open Common
 open Iobuf_intf
 
-type nonrec seek = seek       with sexp_of
+type nonrec seek    = seek    with sexp_of
 type nonrec no_seek = no_seek with sexp_of
 
 (** The first type parameter controls whether the iobuf can be written to.
@@ -176,17 +176,43 @@ val consume_into_string    : ?pos:int -> ?len:int -> (_, seek) t ->    string   
 val consume_into_bigstring : ?pos:int -> ?len:int -> (_, seek) t -> Bigstring.t -> unit
 
 (** [Consume.string t ~len] reads [len] characters (all, by default) from [t] into a new
-    string and advances the lower bound of the window accordingly. *)
+    string and advances the lower bound of the window accordingly.
+
+    [Consume.bin_prot X.bin_read_t t] returns the initial [X.t] in [t], advancing past the
+    bytes read. *)
 module Consume
-  : Accessors with type ('a, 'd, 'w) t = ('d, seek) t -> 'a
+  : Accessors
+    with type ('a, 'd, 'w) t = ('d, seek) t -> 'a
+    with type 'a bin_prot := 'a Bin_prot.Type_class.reader
+
+(** [Fill.bin_prot X.bin_write_t t x] writes [x] to [t] in bin-prot form, advancing past
+    the bytes written. *)
 module Fill
-  : Accessors with type ('a, 'd, 'w) t = (read_write, seek) t -> 'a -> unit
+  : Accessors
+    with type ('a, 'd, 'w) t = (read_write, seek) t -> 'a -> unit
+    with type 'a bin_prot := 'a Bin_prot.Type_class.writer
+
 (** [Peek] and [Poke] functions access a value at [pos] from the lower bound of the window
-    and do not advance. *)
+    and do not advance.
+
+    [Peek.bin_prot X.bin_read_t t] returns the initial [X.t] in [t] without advancing.
+
+    Following the [bin_prot] protocol, the representation of [x] is [X.bin_size_t x] bytes
+    long.  [Peek.], [Poke.], [Consume.], and [Fill.bin_prot] do not add any size prefix or
+    other framing to the [bin_prot] representation. *)
 module Peek
-  : Accessors with type ('a, 'd, 'w) t = ('d, 'w) t -> pos:int -> 'a
+  : Accessors
+    with type ('a, 'd, 'w) t = ('d, 'w) t -> pos:int -> 'a
+    with type 'a bin_prot := 'a Bin_prot.Type_class.reader
+
+(** [Poke.bin_prot X.bin_write_t t x] writes [x] to the beginning of [t] in binary form
+    without advancing.  You can use [X.bin_size_t] to tell how long it was.
+    [X.bin_write_t] is only allowed to write that portion of the buffer to which you have
+    access. *)
 module Poke
-  : Accessors with type ('a, 'd, 'w) t = (read_write, 'w) t -> pos:int -> 'a -> unit
+  : Accessors
+    with type ('a, 'd, 'w) t = (read_write, 'w) t -> pos:int -> 'a -> unit
+    with type 'a bin_prot := 'a Bin_prot.Type_class.writer
 
 (** [Unsafe] has submodules that are like their corresponding module, except with no range
     checks.  Hence, mistaken uses can cause segfaults.  Be careful! *)

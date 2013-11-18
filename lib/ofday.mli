@@ -32,8 +32,8 @@ module Zoned : sig
 
   module Stable : sig
     module V1 : sig
-      type t with sexp, bin_io
-    end with type t = t
+      type nonrec t = t with sexp, bin_io
+    end
   end
 end
 
@@ -87,6 +87,6 @@ val to_millisec_string : t -> string
 
 module Stable : sig
   module V1 : sig
-    type t with bin_io, compare, sexp
-  end with type t = t
+    type nonrec t = t with bin_io, compare, sexp
+  end
 end

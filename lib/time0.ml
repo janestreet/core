@@ -430,7 +430,7 @@ module Stable = struct
 
       let compare = compare
 
-      type comparator = T.comparator
+      type comparator_witness = T.comparator_witness
 
       let comparator = T.comparator
 

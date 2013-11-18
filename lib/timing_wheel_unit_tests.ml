@@ -4,9 +4,9 @@ open Int.Replace_polymorphic_compare  let () = _squelch_unused_module_warning_
 (* module Timing_wheel = Timing_wheel.Debug (Timing_wheel)
  * let () = Timing_wheel.show_messages := false *)
 
+module Debug_in_this_dir = Debug
 open Timing_wheel
-
-module Debug = Core_kernel.Std.Debug
+module Debug = Debug_in_this_dir
 
 let sec = Time.Span.of_sec
 

@@ -214,7 +214,9 @@ module Month = struct
   include (Month : (module type of Month with module Stable := Month.Stable))
   module Stable = struct
     module V1 = struct
-      type t = Month.Stable.V1.t with typerep(abstract)
+      type t = Month.Stable.V1.t =
+        | Jan | Feb | Mar | Apr | May | Jun | Jul | Aug | Sep | Oct | Nov | Dec
+      with typerep(abstract)
       include (Month.Stable.V1 : (module type of Month.Stable.V1 with type t := t))
       module T = struct
         type t =
@@ -253,7 +255,8 @@ module Date = struct
   include (Date : (module type of Date with module Stable := Date.Stable))
   module Stable = struct
     module V1 = struct
-      type t = Date.Stable.V1.t with typerep(abstract)
+      type t = Date.Stable.V1.t = private { y: int; m: Month.t; d: int; }
+      with typerep(abstract)
       include (Date.Stable.V1 : (module type of Date.Stable.V1 with type t := t))
       module T = struct
         type t = { y: int; m: Month.Stable.V1.t; d: int; } with typerep

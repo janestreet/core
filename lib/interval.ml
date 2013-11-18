@@ -279,8 +279,14 @@ module Raw_make (T : Bound) = struct
       match intervals with
       | [] -> true
       | x::xs -> is_partition x xs
-    ;;
 
+    let convex_hull intervals =
+      List.fold intervals ~init:empty ~f:(fun i1 i2 ->
+        (* Compute the convex hull of two intervals *)
+        match bounds i1, bounds i2 with
+        | None, _    -> i2
+        | _   , None -> i1
+        | Some (l1,u1), Some (l2,u2) -> create (T.min l1 l2) (T.max u1 u2))
   end
 
   module Set = struct
@@ -415,6 +421,42 @@ module type S = Interval_intf.S
 module Float = Make (Float)
 module Int   = Make (Int  )
 module Ofday = Make (Ofday)
+
+(* Tests for list bound functions *)
+TEST_MODULE = struct
+  let intervals =
+    [ Int.empty
+    ; Interval (3, 6)
+    ; Interval (2, 7)
+    ; Int.empty
+    ; Interval (4, 5)]
+
+  TEST =
+    match Int.convex_hull intervals with
+    | Interval (2, 7) -> true
+    | _ -> false
+
+  let intervals =
+    [ Int.empty
+    ; Interval (3, 6)
+    ; Interval (2, 3)
+    ; Int.empty
+    ; Interval (4, 5)]
+
+  TEST =
+    match Int.convex_hull intervals with
+    | Interval (2, 6) -> true
+    | _ -> false
+
+  let intervals =
+    [ Int.empty
+    ; Int.empty]
+
+  TEST =
+    match Int.convex_hull intervals with
+    | Empty -> true
+    | _ -> false
+end
 module Time = struct
   include Make(Time)
 

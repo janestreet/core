@@ -216,6 +216,11 @@ module Make (M : sig end) = struct
         <:sexp_of< [ `str_pos of int option ] * [ `len of int option ] >>
         sexp_of_bigstring
         (fun () -> bigstring ?str_pos ?len t)
+
+    let bin_prot reader t =
+      debug "Consume.bin_prot" [t] () <:sexp_of< unit >>
+        <:sexp_of< _ >>
+        (fun () -> bin_prot reader t)
   end
 
   module Fill = struct
@@ -261,6 +266,11 @@ module Make (M : sig end) = struct
         <:sexp_of< [ `str_pos of int option ] * [ `len of int option ] * bigstring >>
         sexp_of_unit
         (fun () -> bigstring ?str_pos ?len t str)
+
+    let bin_prot writer t a =
+      debug "Fill.bin_prot" [t] () <:sexp_of< _ >>
+        <:sexp_of< unit >>
+        (fun () -> bin_prot writer t a)
   end
 
   module Peek = struct
@@ -314,6 +324,11 @@ module Make (M : sig end) = struct
                   * [ `pos of int ] >>
         sexp_of_bigstring
         (fun () -> bigstring ?str_pos ?len t ~pos)
+
+    let bin_prot reader t ~pos =
+      debug "Consume.bin_prot" [t] (`pos pos) <:sexp_of< [ `pos of int ] >>
+        <:sexp_of< _ >>
+        (fun () -> bin_prot reader t ~pos)
   end
   module Poke = struct
     let d name f sexp_of_arg t ~pos arg =
@@ -369,6 +384,11 @@ module Make (M : sig end) = struct
                   * bigstring >>
         sexp_of_unit
         (fun () -> bigstring ?str_pos ?len t ~pos str)
+
+    let bin_prot writer t ~pos a =
+      debug "Poke.bin_prot" [t] (`pos pos) <:sexp_of< [ `pos of int ] >>
+        <:sexp_of< unit >>
+        (fun () -> bin_prot writer t a ~pos)
   end
 
   let consume_bin_prot t r =
@@ -516,6 +536,11 @@ module Make (M : sig end) = struct
           <:sexp_of< [ `str_pos of int option ] * [ `len of int option ] >>
           sexp_of_bigstring
           (fun () -> bigstring ?str_pos ?len t)
+
+      let bin_prot reader t =
+        debug "Unsafe.Consume.bin_prot" [t] () <:sexp_of< unit >>
+          <:sexp_of< _ >>
+          (fun () -> bin_prot reader t)
     end
     module Fill = struct
       let d name f sexp_of_arg t arg =
@@ -560,6 +585,11 @@ module Make (M : sig end) = struct
           <:sexp_of< [ `str_pos of int option ] * [ `len of int option ] * bigstring >>
           sexp_of_unit
           (fun () -> bigstring ?str_pos ?len t str)
+
+      let bin_prot writer t a =
+        debug "Unsafe.Fill.bin_prot" [t] () <:sexp_of< _ >>
+          <:sexp_of< unit >>
+          (fun () -> bin_prot writer t a)
     end
     module Peek = struct
       let d name f sexp_of_result t ~pos =
@@ -612,6 +642,11 @@ module Make (M : sig end) = struct
                     * [ `pos of int ] >>
           sexp_of_bigstring
           (fun () -> bigstring ?str_pos ?len t ~pos)
+
+      let bin_prot reader t ~pos =
+        debug "Unsafe.Consume.bin_prot" [t] (`pos pos) <:sexp_of< [ `pos of int ] >>
+          <:sexp_of< _ >>
+          (fun () -> bin_prot reader t ~pos)
     end
     module Poke = struct
       let d name f sexp_of_arg t ~pos arg =
@@ -670,6 +705,11 @@ module Make (M : sig end) = struct
                     * bigstring >>
           sexp_of_unit
           (fun () -> bigstring ?str_pos ?len t ~pos str)
+
+      let bin_prot writer t ~pos a =
+        debug "Unsafe.Poke.bin_prot" [t] (`pos pos) <:sexp_of< [ `pos of int ] >>
+          <:sexp_of< unit >>
+          (fun () -> bin_prot writer t a ~pos)
     end
   end
 end

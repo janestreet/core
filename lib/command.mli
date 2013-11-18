@@ -231,12 +231,17 @@ module Spec : sig
   (** [flag name spec ~doc] specifies a command that, among other things, takes a flag
       named [name] on its command line.  [doc] indicates the meaning of the flag.
 
-      NOTE: the [doc] for a flag which takes an argument should be of the form [arg_name ^
-      " " ^ description] where [arg_name] describes the argument and [description]
-      describes the meaning of the flag.
+      All flags must have a dash at the beginning of the name.  If [name] is not prefixed
+      by "-", it will be normalized to ["-" ^ name].
 
-      NOTE: flag names (including aliases) containing underscores will
-            be rejected.  Use dashes instead.
+      NOTE: the [doc] for a flag which takes an argument should be of the form
+            [arg_name ^ " " ^ description] where [arg_name] describes the argument and
+            [description] describes the meaning of the flag.
+
+      NOTE: flag names (including aliases) containing underscores will be rejected.
+            Use dashes instead.
+
+      NOTE: "-" by itself is an invalid flag name and will be rejected.
   *)
   val flag : ?aliases:string list -> string -> 'a flag -> doc:string -> 'a param
 

@@ -242,11 +242,10 @@ end
 include Stable.V1
 
 module C = struct
+
   type t = T.t with bin_io
 
-  let compare = compare
-
-  type comparator = T.comparator
+  type comparator_witness = T.comparator_witness
 
   let comparator = T.comparator
 

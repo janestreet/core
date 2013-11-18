@@ -63,6 +63,8 @@ module File_descr = struct
   include M
   include (Hashable.Make (M))
   include (Binable.Of_stringable (M))
+
+  let equal t1 t2 = to_int t1 = to_int t2
 end
 
 let sprintf = Printf.sprintf
@@ -498,6 +500,7 @@ external get_mcast_loop : File_descr.t -> bool = "unix_mcast_get_loop"
 
 external set_mcast_loop : File_descr.t -> bool -> unit = "unix_mcast_set_loop"
 
+external set_mcast_ifname : File_descr.t -> string -> unit = "unix_mcast_set_ifname"
 
 module Scheduler = struct
   module Policy = struct
@@ -1306,7 +1309,7 @@ module Open_flags = struct
   let check t string =
     let sexp1 = sexp_of_t t in
     let sexp2 = Sexp.of_string string in
-    if not (sexp1 = sexp2) then
+    if Sexp.(<>) sexp1 sexp2 then
       failwiths "unequal sexps" (sexp1, sexp2) <:sexp_of< Sexp.t * Sexp.t >>;
   ;;
 

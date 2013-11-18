@@ -22,16 +22,17 @@ module type Gen = sig
   val is_empty_or_singleton : 'a t -> bool
 
   val bounds : 'a t -> ('a bound * 'a bound) option
-
   val lbound : 'a t -> 'a bound option
-
   val ubound : 'a t -> 'a bound option
 
   val bounds_exn : 'a t -> ('a bound * 'a bound)
-
   val lbound_exn : 'a t -> 'a bound
-
   val ubound_exn : 'a t -> 'a bound
+
+  (** [convex_hull ts] returns an interval whose upperbound is the greatest upperbound of
+      the intervals in the list, and whose lowerbound is the least lowerbound of the
+      list. *)
+  val convex_hull : 'a t list -> 'a t
 
   val contains : 'a t -> 'a bound -> bool
 

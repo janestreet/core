@@ -757,6 +757,7 @@ let normalize key_type key =
   assert_no_underscores key_type key;
   match key_type with
   | Key_type.Flag ->
+    if String.equal key "-" then failwithf "invalid key name: %S" key ();
     if String.is_prefix ~prefix:"-" key then key else "-" ^ key
   | Key_type.Subcommand -> String.lowercase key
 
@@ -840,7 +841,9 @@ module Base = struct
           | `Required check -> check ());
         Anon.Parser.final_value anons
       | Args.Cons (arg, args) ->
-        if String.is_prefix arg ~prefix:"-" then begin
+        if String.is_prefix arg ~prefix:"-"
+        && not (String.equal arg "-") (* support the convention where "-" means stdin *)
+        then begin
           let flag = arg in
           let (flag, { Flag.action; name=_; aliases=_; doc=_; check_available=_ }) =
             match lookup_expand_with_aliases t.flags flag Key_type.Flag with

@@ -60,7 +60,8 @@ let repeat_with_timeout ?timeout lockf path =
   match timeout with
   | None ->
     let rec loop () =
-      if not (lockf path) then begin
+      try (lockf path)
+      with | _ -> begin
         Unix.sleep 1;
         loop ()
       end
@@ -69,10 +70,13 @@ let repeat_with_timeout ?timeout lockf path =
   | Some timeout ->
     let start_time = Time.now () in
     let rec loop () =
-      if not (lockf path) then begin
+      try lockf path
+      with
+      | e -> begin
         let since_start = Time.abs_diff start_time (Time.now ()) in
         if Time.Span.(since_start > timeout) then
-          failwithf "Lock_file: '%s' timed out waiting for existing lock" path ()
+          failwithf "Lock_file: '%s' timed out waiting for existing lock. \
+                     Last error was %s" path (Exn.to_string e) ()
         else begin
           Unix.sleep 1;
           loop ()
@@ -84,7 +88,7 @@ let repeat_with_timeout ?timeout lockf path =
 (* default timeout is to wait indefinitely *)
 let blocking_create ?timeout ?message ?close_on_exec ?unlink_on_exit path =
   repeat_with_timeout ?timeout
-    (fun path -> create ?message ?close_on_exec ?unlink_on_exit path) path
+    (fun path -> create_exn ?message ?close_on_exec ?unlink_on_exit path) path
 
 let is_locked path =
   try
@@ -163,12 +167,13 @@ module Nfs = struct
 
   (* See mli for more information on the algorithm we use for locking over NFS.  Ensure
      that you understand it before you make any changes here. *)
-  let create ?(message = "") path =
+  let create_exn ?(message = "") path =
     try
       unlock_safely_exn ~unlock_myself:false path;
       let fd = Unix.openfile path ~mode:[Unix.O_WRONLY; Unix.O_CREAT] in
-      let got_lock =
-        try
+      protect
+        ~finally:(fun () -> Unix.close fd)
+        ~f:(fun () ->
           Unix.link ~target:path ~link_name:(lock_path path) ();
           Unix.ftruncate fd ~len:0L;
           let info =
@@ -179,27 +184,22 @@ module Nfs = struct
             }
           in
           fprintf (Unix.out_channel_of_descr fd) "%s\n%!"
-            (Sexp.to_string_hum (Info.sexp_of_t info));
-          true
-        with
-        | _ -> false
-      in
-      Unix.close fd;
-      if got_lock then at_exit (fun () ->
-        try unlock_safely_exn ~unlock_myself:true path with _ -> ());
-      got_lock
+            (Sexp.to_string_hum (Info.sexp_of_t info)));
+      at_exit (fun () -> try unlock_safely_exn ~unlock_myself:true path with _ -> ());
     with
-    | _ -> false
+    | e ->
+      failwithf "Lock_file.Nfs.create_exn: unable to lock '%s' - %s" path
+        (Exn.to_string e) ()
   ;;
 
-  let create_exn ?message path =
-    if create ?message path then ()
-    else failwithf "Lock_file.Nfs.create_exn '%s' was unable to acquire the lock" path ()
-  ;;
+  let create ?message path = Or_error.try_with (fun () -> create_exn ?message path)
 
   (* default timeout is to wait indefinitely *)
   let blocking_create ?timeout ?message path =
-    repeat_with_timeout ?timeout (fun path -> create ?message path) path
+    repeat_with_timeout
+      ?timeout
+      (fun path -> create_exn ?message path)
+      path
   ;;
 
   let critical_section ?message path ~timeout ~f =
@@ -209,13 +209,16 @@ module Nfs = struct
 
   let unlock_exn path = unlock_safely_exn ~unlock_myself:true path
 
+  let unlock path = Or_error.try_with (fun () -> unlock_exn path)
+
   TEST_MODULE = struct
+    let create_bool path = match create path with Ok () -> true | Error _ -> false
     let path = Filename.temp_file "lock_file" "unit_test"
     let () = Unix.unlink path
-    TEST = create path
-    TEST = not (create path)
+    TEST = create_bool path
+    TEST = not (create_bool path)
     let () = unlock_exn path
-    TEST = create path
+    TEST = create_bool path
     let () = unlock_exn path
   end
 

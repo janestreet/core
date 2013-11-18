@@ -7,6 +7,7 @@ open Core_kernel.Std
 module File_descr : sig
   type t = Unix.file_descr with bin_io, sexp
 
+  include Equal     .S with type t := t
   include Hashable  .S with type t := t
   include Stringable.S with type t := t
 
@@ -1961,6 +1962,9 @@ val get_mcast_loop : File_descr.t -> bool
     multicast packets are looped back to local sockets. *)
 val set_mcast_loop : File_descr.t -> bool -> unit
 
+(** [set_mcast_ifname sock "eth0"] sets outgoing multicast traffic on IPv4 UDP socket
+    [sock] to go out through interface [eth0]. *)
+val set_mcast_ifname : File_descr.t -> string -> unit
 
 module Scheduler : sig
   module Policy : sig

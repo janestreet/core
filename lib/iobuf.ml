@@ -328,6 +328,14 @@ let bounded_compact t lo_min hi_max =
 let word_size = 64
 TEST = Sys.word_size = word_size
 
+let read_bin_prot reader t ~pos =
+  let buf_pos = unsafe_buf_pos t ~pos in
+  let pos_ref = ref buf_pos in
+  let a = reader.Bin_prot.Type_class.read t.buf ~pos_ref in
+  let len = !pos_ref - buf_pos in
+  check_range t ~pos ~len;
+  (a, len)
+
 module Consume = struct
   type nonrec ('a, 'd, 'w) t = ('d, seek) t -> 'a
 
@@ -354,6 +362,26 @@ module Consume = struct
     dst
   ;;
 
+  let bin_prot reader t =
+    let (a, len) = read_bin_prot reader t ~pos:0 in
+    unsafe_adv t len a;
+  ;;
+  TEST_UNIT "bin_prot char" =
+    let t = of_string "abc" in
+    let a = bin_prot Char.bin_reader_t t in
+    let b = bin_prot Char.bin_reader_t t in
+    <:test_eq< char >> a 'a';
+    <:test_eq< char >> b 'b';
+    <:test_eq< string >> (to_string t) "c";
+  ;;
+  TEST_UNIT "bin_prot int" =
+    let ints = [ 0; 1; -1; 12345; -67890; Int.min_value; Int.max_value; 666 ] in
+    let buf = Bigstring.create 1000 in
+    let _end_pos = List.fold ints ~init:0 ~f:(fun pos i -> Int.bin_write_t buf ~pos i) in
+    let t = of_bigstring buf in
+    List.iter ints ~f:(fun i -> <:test_eq< int >> i (bin_prot Int.bin_reader_t t));
+  ;;
+
   open Bigstring
 
   let len = 1
@@ -378,6 +406,18 @@ module Consume = struct
   let  int64_t_le t = unsafe_adv t len (unsafe_get_int64_t_le   t.buf ~pos:(pos t len))
 end
 
+let write_bin_prot writer t ~pos a =
+  let len = writer.Bin_prot.Type_class.size a in
+  let buf_pos = buf_pos t ~pos ~len in
+  let stop_pos = writer.Bin_prot.Type_class.write t.buf ~pos:buf_pos a in
+  if stop_pos - buf_pos = len then len
+  else fail t "Iobuf.write_bin_prot got unexpected number of bytes written \
+               (Bin_prot bug: Type_class.write disagrees with .size)"
+         (`size_len len, `buf_pos buf_pos, `write_stop_pos stop_pos)
+         <:sexp_of< [ `size_len of int ]
+                    * [ `buf_pos of int ]
+                    * [ `write_stop_pos of int ] >>
+
 module Fill = struct
   type nonrec ('a, 'd, 'w) t = (read_write, seek) t -> 'a -> unit
 
@@ -401,6 +441,8 @@ module Fill = struct
     Bigstring.blit ~src ~src_pos ~len ~dst:t.buf ~dst_pos:(pos t len);
     unsafe_adv t len
   ;;
+
+  let bin_prot writer t a = write_bin_prot writer t ~pos:0 a |> unsafe_adv t
 
   open Bigstring
 
@@ -449,6 +491,26 @@ module Peek = struct
     dst
   ;;
 
+  let bin_prot reader t ~pos = read_bin_prot reader t ~pos |> fst
+  TEST_UNIT "bin_prot char" =
+    let t = of_string "abc" in
+    let a = bin_prot Char.bin_reader_t t ~pos:0 in
+    let b = bin_prot Char.bin_reader_t t ~pos:1 in
+    <:test_eq< char >> a 'a';
+    <:test_eq< char >> b 'b';
+    <:test_eq< string >> (to_string t) "abc";
+  ;;
+  TEST_UNIT "bin_prot int" =
+    let ints = [ 0; 1; -1; 12345; -67890; Int.min_value; Int.max_value; 666 ] in
+    let buf = Bigstring.create 1000 in
+    let end_pos = List.fold ints ~init:0 ~f:(fun pos i -> Int.bin_write_t buf ~pos i) in
+    let t = of_bigstring buf in
+    List.fold ints ~init:0 ~f:(fun pos i ->
+      <:test_eq< int >> i (bin_prot Int.bin_reader_t t ~pos);
+      pos + Int.bin_size_t i)
+    |> (fun end_pos' -> <:test_eq< int >> end_pos end_pos');
+  ;;
+
   open Bigstring
 
   let len = 1
@@ -492,6 +554,21 @@ module Poke = struct
     Bigstring.blit ~src ~src_pos ~len ~dst:t.buf ~dst_pos:(buf_pos t ~len ~pos)
   ;;
 
+  let bin_prot writer t ~pos a = write_bin_prot writer t ~pos a |> (ignore : int -> unit)
+  TEST_UNIT =
+    let t = of_string "abc" in
+    bin_prot Char.bin_writer_t t 'd' ~pos:0;
+    bin_prot Char.bin_writer_t t 'e' ~pos:1;
+    <:test_eq< string >> "dec" (to_string t);
+    flip_lo t;
+    assert (try bin_prot String.bin_writer_t t "fgh" ~pos:0; false with _ -> true);
+    assert (is_empty t);
+    reset t;
+    <:test_eq< string >> "dec" (to_string t);
+    bin_prot Char.bin_writer_t t 'i' ~pos:0;
+    <:test_eq< string >> "iec" (to_string t);
+  ;;
+
   open Bigstring
 
   let len = 1
@@ -530,17 +607,7 @@ let consume_bin_prot t bin_prot_reader =
         t.lo <- mark;
         error "Iobuf.consume_bin_prot not enough data to read value" (v_len, t)
           (<:sexp_of< int * (_, _) t >>);
-      end else begin
-        let pos_ref = ref t.lo in
-        let v = bin_prot_reader.Bin_prot.Type_class.read t.buf ~pos_ref in
-        if !pos_ref - t.lo <> v_len then
-          fail t "Iobuf.consume_bin_prot bug"
-            (`amount_read (!pos_ref - t.lo), `expected_to_read v_len)
-            (<:sexp_of<  [ `amount_read of int ]
-                       * [ `expected_to_read of int ] >>);
-        unsafe_advance t v_len;
-        Ok v
-      end
+      end else Ok (Consume.bin_prot bin_prot_reader t)
     end
   in
   result;
@@ -555,13 +622,7 @@ let fill_bin_prot t writer v =
         (<:sexp_of< int * (_, _) t >>)
     else begin
       Fill.int32_be t v_len;
-      let pos = writer.Bin_prot.Type_class.write t.buf ~pos:t.lo v in
-      if pos - t.lo <> v_len then
-        fail t "Iobuf.fill_bin_prot bug"
-          (`amount_written (pos - t.lo), `expected_to_write v_len)
-          (<:sexp_of<  [ `amount_written of int ]
-                     * [ `expected_to_write of int ] >>);
-      unsafe_advance t v_len;
+      Fill.bin_prot writer t v;
       Ok ();
     end
   in
@@ -727,6 +788,8 @@ module Unsafe = struct
       dst
     ;;
 
+    let bin_prot = Consume.bin_prot
+
     open Bigstring
 
     let len = 1
@@ -776,6 +839,8 @@ module Unsafe = struct
       Bigstring.blit ~src ~src_pos ~len ~dst:t.buf ~dst_pos:(pos t len);
       unsafe_adv t len
     ;;
+
+    let bin_prot = Fill.bin_prot
 
     open Bigstring
 
@@ -828,6 +893,8 @@ module Unsafe = struct
       dst
     ;;
 
+    let bin_prot = Peek.bin_prot
+
     open Bigstring
 
     let len = 1
@@ -874,6 +941,8 @@ module Unsafe = struct
       let len = match len with None -> Bigstring.length src - src_pos | Some l -> l in
       Bigstring.blit ~src ~src_pos ~len ~dst:t.buf ~dst_pos:(buf_pos t ~len ~pos)
     ;;
+
+    let bin_prot = Poke.bin_prot
 
     open Bigstring
 
