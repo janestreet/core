@@ -2,14 +2,15 @@ open Core.Std
 open Core_bench.Std
 
 module Data = struct
-  type t = string * int Queue.t
+  type t =
+    { name : string
+    ; mutable index : int
+    ; data : int array
+    }
 
   let range name high =
-    let t = Queue.create () in
-    for _i = 1 to 1_000_000 do
-      Queue.enqueue t (Random.int high);
-    done;
-    name, t
+    let data = Array.init 1_000_000 ~f:(fun _ -> Random.int high) in
+    { name; index = 0; data }
   ;;
 
   let small_range  = range "small range" 10
@@ -17,20 +18,21 @@ module Data = struct
   let large_range  = range "large range" 1_000_000
 
   let ascending =
-    let t = Queue.create () in
-    for i = 1 to 1_000_000 do
-      Queue.enqueue  t i;
-    done;
-    "ascending", t
+    let len = 1_000_000 in
+    let data = Array.init len ~f:(fun i -> len - i) in
+    { name = "ascending"; index = len - 1; data }
   ;;
 
-  let next (_, t) =
-    let n = Queue.dequeue_exn t in
-    Queue.enqueue t n;
+  let next t =
+    let n = t.data.(t.index) in
+    t.index <- t.index - 1;
+    if t.index < 0 then t.index <- Array.length t.data - 1;
     n
   ;;
 
-  let name t = fst t
+  let name t = t.name
+
+  let reset t = t.index <- Array.length t.data - 1
 end
 
 let add_remove_from_existing_heap data initial_size =
@@ -46,25 +48,17 @@ let add_remove_from_existing_heap data initial_size =
 ;;
 
 let heap_sort data size =
-  let l =
-    let rec loop acc n =
-      if n = 0 then acc
-      else loop (Data.next data :: acc) (n - 1)
-    in
-    loop [] size
-  in
   Bench.Test.create ~name:(sprintf "sort list of length %i (%s)" size (Data.name data))
     (fun () ->
+      Data.reset data;
       let h = Heap.create ~cmp:Int.compare () in
-      List.iter l ~f:(fun i -> Heap.add h i);
-      try
-        let rec loop () =
-          ignore (Heap.pop_exn h);
-          loop ()
-        in
-        loop ()
-      with
-      | _ -> assert (Heap.is_empty h))
+      for _i = 1 to size do
+        Heap.add h (Data.next data);
+      done;
+      for _i = 1 to size do
+        ignore (Heap.pop_exn h);
+      done;
+      assert (Heap.is_empty h))
 ;;
 
 let () =
@@ -74,37 +68,36 @@ let () =
       add_remove_from_existing_heap Data.small_range 10;
       add_remove_from_existing_heap Data.small_range 1_000;
       add_remove_from_existing_heap Data.small_range 100_000;
-      add_remove_from_existing_heap Data.small_range 1_000_000;
+
       add_remove_from_existing_heap Data.medium_range 0;
       add_remove_from_existing_heap Data.medium_range 10;
       add_remove_from_existing_heap Data.medium_range 1_000;
       add_remove_from_existing_heap Data.medium_range 100_000;
-      add_remove_from_existing_heap Data.medium_range 1_000_000;
+
       add_remove_from_existing_heap Data.large_range 0;
       add_remove_from_existing_heap Data.large_range 10;
       add_remove_from_existing_heap Data.large_range 1_000;
       add_remove_from_existing_heap Data.large_range 100_000;
-      add_remove_from_existing_heap Data.large_range 1_000_000;
+
       add_remove_from_existing_heap Data.ascending 0;
       add_remove_from_existing_heap Data.ascending 10;
       add_remove_from_existing_heap Data.ascending 1_000;
       add_remove_from_existing_heap Data.ascending 100_000;
-      add_remove_from_existing_heap Data.ascending 1_000_000;
+
       heap_sort Data.small_range 10;
       heap_sort Data.small_range 1_000;
-      heap_sort Data.small_range 10_000;
-      heap_sort Data.small_range 1_000_000;
+      heap_sort Data.small_range 100_000;
+
       heap_sort Data.medium_range 10;
       heap_sort Data.medium_range 1_000;
-      heap_sort Data.medium_range 10_000;
-      heap_sort Data.medium_range 1_000_000;
+      heap_sort Data.medium_range 100_000;
+
       heap_sort Data.large_range 10;
       heap_sort Data.large_range 1_000;
-      heap_sort Data.large_range 10_000;
-      heap_sort Data.large_range 1_000_000;
+      heap_sort Data.large_range 100_000;
+
       heap_sort Data.ascending 10;
       heap_sort Data.ascending 1_000;
-      heap_sort Data.ascending 10_000;
-      heap_sort Data.ascending 1_000_000;
+      heap_sort Data.ascending 100_000;
     ]
 ;;

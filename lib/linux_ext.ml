@@ -617,7 +617,7 @@ ENDIF
   let close t =
     match !t with
     | `Closed -> ()
-    | `In_use { epollfd; flags_by_fd=_; max_ready_events=_; num_ready_events=_; ready_events=_ } ->
+    | `In_use { epollfd; _ } ->
       t := `Closed;
       Unix.close epollfd;
   ;;

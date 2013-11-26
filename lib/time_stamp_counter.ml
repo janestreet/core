@@ -86,8 +86,8 @@ let ewma ~alpha ~old ~add = ((1. -. alpha) *. old) +. (alpha *. add)
 
 module Int63 = Core_int63
 
-type t = Int63.t with bin_io, sexp
-type tsc = t     with bin_io, sexp
+type t = Int63.t with bin_io, compare, sexp
+type tsc = t     with bin_io, compare, sexp
 
 let diff t1 t2 = Int63.(-) t1 t2
 let add t s = Int63.(+) t s

@@ -2,7 +2,7 @@ OASISFormat:      0.3
 OCamlVersion:     >= 4.00.1
 FindlibVersion:   >= 1.3.2
 Name:             core
-Version:          109.52.00
+Version:          109.53.00
 Synopsis:         Jane Street Capital's standard library overlay
 Authors:          Jane Street Capital LLC <opensource@janestreet.com>
 Copyrights:       (C) 2008-2013 Jane Street Capital LLC <opensource@janestreet.com>
@@ -101,7 +101,6 @@ Library core
                       Core_sys,
                       Core_thread,
                       Core_unix,
-                      Core_weak,
                       Crc,
                       Daemon,
                       Date,
@@ -220,6 +219,7 @@ Library core
                       User_and_group,
                       Uuid,
                       Validate,
+                      Weak_hashtbl,
                       With_return,
                       Word_size,
                       Zone
@@ -289,6 +289,7 @@ Library core_top
   XMETARequires:      core
   XMETADescription:   Toplevel printers for Core
   BuildDepends:       core,compiler-libs
+  DataFiles:          01_core.ml ($libdir/toplevel/autoload)
 
 Executable test_runner
   Path:               lib_test

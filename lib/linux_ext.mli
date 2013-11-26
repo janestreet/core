@@ -354,6 +354,8 @@ module Epoll : sig
       a single call to [wait]. *)
   val create  : (num_file_descrs:int -> max_ready_events:int -> t) Or_error.t
 
+  val close : t -> unit
+
   (** map operations *)
   val find     : t -> File_descr.t -> Flags.t option
   val find_exn : t -> File_descr.t -> Flags.t

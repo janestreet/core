@@ -43,5 +43,6 @@ INCLUDE "version_defaults.mlh"
 IFDEF BUILD_VERSION_UTIL THEN
   module Version_util = Version_util
 ENDIF
+module Weak_hashtbl       = Weak_hashtbl
 
 let _squelch_unused_module_warning_ = ()

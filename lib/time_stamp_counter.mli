@@ -40,7 +40,7 @@
 INCLUDE "core_config.mlh"
 open Std_internal
 
-type t = private Core_int63.t with bin_io, sexp
+type t = private Core_int63.t with bin_io, compare, sexp
 
 (** A calibrator contains a snapshot of machine-specific information that is used to
     convert between TSC values and clock time.  This information needs to be calibrated
