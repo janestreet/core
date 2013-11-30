@@ -879,6 +879,7 @@ module Epoll = struct
 
   let invariant _               = assert false
 
+  let close _                   = assert false
   let find _ _                  = assert false
   let find_exn _ _              = assert false
   let set _ _ _                 = assert false
