@@ -52,6 +52,10 @@
 #include <wordexp.h>
 #endif
 
+#if defined(__FreeBSD__) || defined(__OpenBSD__)
+#define stat64 stat
+#endif
+
 CAMLprim value unix_error_stub(value v_errcode, value v_cmdname, value cmd_arg)
 {
   unix_error(Int_val(v_errcode), String_val(v_cmdname), cmd_arg);
@@ -964,7 +968,13 @@ static inline int resource_val(value v_resource)
     case 3 : resource = RLIMIT_FSIZE; break;
     case 4 : resource = RLIMIT_NOFILE; break;
     case 5 : resource = RLIMIT_STACK; break;
+#ifdef RLIMIT_AS
     case 6 : resource = RLIMIT_AS; break;
+#else
+    case 6 :
+      caml_failwith("resource_val: RLIMIT_AS invalid on this OS");
+      break;
+#endif
 #ifdef RLIMIT_NICE
     case 7 : resource = RLIMIT_NICE; break;
 #endif
