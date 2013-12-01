@@ -968,7 +968,13 @@ static inline int resource_val(value v_resource)
     case 3 : resource = RLIMIT_FSIZE; break;
     case 4 : resource = RLIMIT_NOFILE; break;
     case 5 : resource = RLIMIT_STACK; break;
+#ifdef RLIMIT_AS
     case 6 : resource = RLIMIT_AS; break;
+#else
+    case 6 :
+      caml_failwith("resource_val: RLIMIT_AS invalid on this OS");
+      break;
+#endif
 #ifdef RLIMIT_NICE
     case 7 : resource = RLIMIT_NICE; break;
 #endif
