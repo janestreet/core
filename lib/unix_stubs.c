@@ -52,6 +52,10 @@
 #include <wordexp.h>
 #endif
 
+#if defined(__FreeBSD__) || defined(__OpenBSD__)
+#define stat64 stat
+#endif
+
 CAMLprim value unix_error_stub(value v_errcode, value v_cmdname, value cmd_arg)
 {
   unix_error(Int_val(v_errcode), String_val(v_cmdname), cmd_arg);
