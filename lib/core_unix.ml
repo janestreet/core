@@ -157,7 +157,12 @@ module RLimit = struct
   let file_size            = File_size
   let num_file_descriptors = Num_file_descriptors
   let stack                = Stack
-  let virtual_memory       = Virtual_memory
+  let virtual_memory       =
+    IFDEF RLIMIT_AS THEN
+      Ok Virtual_memory
+    ELSE
+      unimplemented "RLIMIT_AS is not supported on this system"
+    ENDIF
   let nice                 =
     IFDEF RLIMIT_NICE THEN
       Ok Nice

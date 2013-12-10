@@ -24,7 +24,11 @@ CAMLprim value iobuf_recvmmsg_assume_fd_is_nonblocking_stub(
   ssize_t n_read = recvmmsg_assume_fd_is_nonblocking(v_fd, iovecs, v_count, v_srcs, hdrs);
   for (i = 0; i < n_read; i++) {
     v_iobuf = Field(v_iobufs, i);
-    Store_field(v_iobuf, lo, Val_int(Int_val(Field(v_iobuf, lo)) + hdrs[i].msg_len));
+
+    /* Knowing the structure of an Iobuf record (which we already are dependent on), we
+     * can use Field(v_iobuf, lo) as an lvalue and skip the caml_modify done by Store_field
+     */
+    Field(v_iobuf, lo) = Val_int(Int_val(Field(v_iobuf, lo)) + hdrs[i].msg_len);
   }
   CAMLreturn(Val_int(n_read));
 }

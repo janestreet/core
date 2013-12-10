@@ -455,6 +455,16 @@ module Make (M : sig end) = struct
         (fun () -> recvmmsg fd ?count ?srcs ts))
   ;;
 
+  let recvmmsg_assume_fd_is_nonblocking_no_options =
+    Or_error.map recvmmsg_assume_fd_is_nonblocking_no_options ~f:(fun recvmmsg fd ~count ts ->
+      debug "recvmmsg_assume_fd_is_nonblocking_no_options" (Array.to_list ts)
+        (fd, `count count)
+        (<:sexp_of< (File_descr.t
+                     * [ `count of int ]) >>)
+        (<:sexp_of< int >>)
+        (fun () -> recvmmsg fd ~count ts))
+  ;;
+
   let send_nonblocking_no_sigpipe () =
     match send_nonblocking_no_sigpipe () with
     | Error _ as x -> x

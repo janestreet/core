@@ -1,6 +1,6 @@
 open Core.Std
 
-module Bench = Core_extended.Deprecated_bench
+module Bench = Core_bench.Std.Bench
 module Test = Bench.Test
 
 let size = 10_000
@@ -92,8 +92,8 @@ let diff_by_iter2 map1 map2 ~data_equal =
   !results
 ;;
 
-let () =
-  Bench.bench [
+let command =
+  Bench.make_command [
     Test.create ~name:"Map.of_alist_exn" of_alist_exn;
     Test.create ~name:"Map.of_sorted_array" of_sorted_array;
     Test.create ~name:"Map.add" add;
@@ -118,3 +118,5 @@ let () =
       (gen_diff_test 100_000 ~number_of_diff:1000 ~diff:diff_by_iter2)
   ]
 ;;
+
+let () = Command.run command

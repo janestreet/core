@@ -899,6 +899,24 @@ ENDIF;
                 with Unix_error _ as e -> raise e | _ -> true);
     ;;
 
+    let recvmmsg_assume_fd_is_nonblocking_no_options = recvmmsg_assume_fd_is_nonblocking_no_options
+    TEST_UNIT "recvmmsg smoke" =
+      match recvmmsg_assume_fd_is_nonblocking_no_options with
+      | Error _ -> ()
+      | Ok recvmmsg ->
+        let open Unix in
+        let count = 10 in
+        let fd = socket ~domain:PF_INET ~kind:SOCK_DGRAM ~protocol:0 in
+        bind fd ~addr:(ADDR_INET (Inet_addr.bind_any, 0));
+        let iobufs = Array.init count ~f:(fun _ -> create ~len:1500) in
+        set_nonblock fd;
+        assert (try recvmmsg fd iobufs ~count = 0
+                with Unix_error _ -> true);
+        assert (try ignore (recvmmsg fd iobufs ~count:(count + 1)); false
+                with Unix_error _ as e -> raise e | _ -> true);
+    ;;
+
+
     let send_nonblocking_no_sigpipe = send_nonblocking_no_sigpipe
     let sendto_nonblocking_no_sigpipe = sendto_nonblocking_no_sigpipe
 

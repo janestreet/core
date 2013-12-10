@@ -680,6 +680,7 @@ let recvmmsg_assume_fd_is_nonblocking fd ?count ?srcs ts =
   unsafe_recvmmsg_assume_fd_is_nonblocking fd ts count srcs
 ;;
 
+
 let recvmmsg_assume_fd_is_nonblocking =
   (* At Jane Street, we link with [--wrap recvmmsg] so that we can use our own wrapper
      around [recvmmsg].  This allows us to compile an executable on a machine that has
@@ -697,11 +698,34 @@ let recvmmsg_assume_fd_is_nonblocking =
   | _ -> ok
 ;;
 
+let recvmmsg_assume_fd_is_nonblocking_no_options fd ~count ts =
+  let loc = "Iobuf.recvmmsg_assume_fd_is_nonblocking_no_options" in
+  if count < 0 then invalid_arg (loc ^ ": count < 0");
+  if count > Array.length ts then invalid_arg (loc ^ ": count > n_iobufs");
+  unsafe_recvmmsg_assume_fd_is_nonblocking fd ts count None
+;;
+
+let recvmmsg_assume_fd_is_nonblocking_no_options =
+  let ok = Ok recvmmsg_assume_fd_is_nonblocking_no_options in
+  try
+    assert (recvmmsg_assume_fd_is_nonblocking_no_options (File_descr.of_int (-1)) ~count:0 [||] = 0);
+    ok                                  (* maybe it will ignore the bogus sockfd *)
+  with
+  | Unix.Unix_error (Unix.ENOSYS, _, _) ->
+    unimplemented "Iobuf.recvmmsg_assume_fd_is_nonblocking_no_options"
+  | _ -> ok
+;;
+
 ELSE                                    (* NDEF RECVMMSG *)
 
 let recvmmsg_assume_fd_is_nonblocking =
   unimplemented "Iobuf.recvmmsg_assume_fd_is_nonblocking"
 ;;
+
+let recvmmsg_assume_fd_is_nonblocking_no_options =
+  unimplemented "Iobuf.recvmmsg_assume_fd_is_nonblocking_no_options"
+;;
+
 
 ENDIF                                   (* RECVMMSG *)
 

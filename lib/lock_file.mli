@@ -15,7 +15,10 @@ open Core_kernel.Std
     also terminate. If not specified, close_on_exec=true.  Note that by default, the lock
     file is not cleaned up for you when the process exits. If you pass
     [unlink_on_exit:true], an at_exit handler will be set up to remove the lock-file on
-    program termination. *)
+    program termination.
+
+    The lock file is created with mode 664, so will not be world-writable even with
+    umask 0. *)
 val create
   :  ?message : string
   -> ?close_on_exec : bool (* defaults to true *)
@@ -43,7 +46,7 @@ val blocking_create
   -> unit
 
 (** [is_locked path] returns true when the file at [path] exists and is locked, false
-    otherwise. *)
+    otherwise. Requires write permission for the lock file. *)
 val is_locked : string -> bool
 
 (** An implementation neutral NFS lock file scheme that relies on the atomicity of link

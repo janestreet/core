@@ -266,6 +266,13 @@ val recvmmsg_assume_fd_is_nonblocking
      -> (read_write, seek) t array
      -> int)
       Or_error.t
+val recvmmsg_assume_fd_is_nonblocking_no_options
+  : (Unix.File_descr.t
+     -> count:int
+     -> (read_write, seek) t array
+     -> int)
+      Or_error.t
+
 
 val send_nonblocking_no_sigpipe
   : unit -> ((_, seek) t -> Unix.File_descr.t -> int option) Or_error.t

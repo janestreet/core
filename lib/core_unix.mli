@@ -1795,7 +1795,7 @@ module RLimit : sig
   val file_size            : resource
   val num_file_descriptors : resource
   val stack                : resource
-  val virtual_memory       : resource
+  val virtual_memory       : resource Or_error.t
   val nice                 : resource Or_error.t
 
   (* See man pages for "getrlimit" and "setrlimit" for details. *)
