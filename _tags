@@ -1,3 +1,19 @@
+<lib{,_test}/*.ml{,i}>     : syntax_camlp4o
+"lib/backtrace.ml"         : mlh, package(camlp4.macro)
+"lib/bigstring.ml"         : mlh, package(camlp4.macro)
+"lib/bigstring_marshal.ml" : mlh, package(camlp4.macro)
+"lib/binary_packing.ml"    : mlh, package(camlp4.macro)
+"lib/command.ml"           : mlh, package(camlp4.macro)
+"lib/core_int63.ml"        : mlh, package(camlp4.macro)
+"lib/core_mutex.ml"        : mlh, package(camlp4.macro)
+"lib/core_unix.mli"        : mlh, package(camlp4.macro)
+"lib/core_unix.ml"         : mlh, package(camlp4.macro)
+"lib/linux_ext.ml"         : mlh, package(camlp4.macro)
+"lib/iobuf.ml"             : mlh, package(camlp4.macro)
+"lib/iobuf_tests.ml"       : mlh, package(camlp4.macro)
+"lib/std.ml"               : mlh, package(camlp4.macro)
+"lib/time_stamp_counter.ml"  : mlh, package(camlp4.macro)
+"lib/time_stamp_counter.mli" : mlh, package(camlp4.macro)
 # OASIS_START
 # DO NOT EDIT (digest: afa0c60a018d4fcfbc40c6d461c03b0c)
 # Ignore VCS directories, you can use the same kind of rule outside
@@ -551,19 +567,3 @@
 <lib_test/*.ml{,i}>: package(threads)
 <lib_test/test_runner.{native,byte}>: custom
 # OASIS_STOP
-<lib{,_test}/*.ml{,i}>     : syntax_camlp4o
-"lib/backtrace.ml"         : mlh, pkg_camlp4.macro
-"lib/bigstring.ml"         : mlh, pkg_camlp4.macro
-"lib/bigstring_marshal.ml" : mlh, pkg_camlp4.macro
-"lib/binary_packing.ml"    : mlh, pkg_camlp4.macro
-"lib/command.ml"           : mlh, pkg_camlp4.macro
-"lib/core_int63.ml"        : mlh, pkg_camlp4.macro
-"lib/core_mutex.ml"        : mlh, pkg_camlp4.macro
-"lib/core_unix.mli"        : mlh, pkg_camlp4.macro
-"lib/core_unix.ml"         : mlh, pkg_camlp4.macro
-"lib/linux_ext.ml"         : mlh, pkg_camlp4.macro
-"lib/iobuf.ml"             : mlh, pkg_camlp4.macro
-"lib/iobuf_tests.ml"       : mlh, pkg_camlp4.macro
-"lib/std.ml"               : mlh, pkg_camlp4.macro
-"lib/time_stamp_counter.ml"  : mlh, pkg_camlp4.macro
-"lib/time_stamp_counter.mli" : mlh, pkg_camlp4.macro
