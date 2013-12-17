@@ -38,7 +38,7 @@
 #include <sys/mman.h>
 #include <math.h>
 
-#if defined(__FreeBSD__) || defined(__NetBSD__)
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
 #define stat64 stat
 #define lstat64 lstat
 #define fstat64 fstat
@@ -50,10 +50,6 @@
 
 #if defined(JSC_WORDEXP)
 #include <wordexp.h>
-#endif
-
-#if defined(__FreeBSD__) || defined(__OpenBSD__)
-#define stat64 stat
 #endif
 
 CAMLprim value unix_error_stub(value v_errcode, value v_cmdname, value cmd_arg)
