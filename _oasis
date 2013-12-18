@@ -258,7 +258,6 @@ Library core
                       pa_pipebang,
                       pa_test,
                       pa_test.syntax,
-                      res,
                       sexplib,
                       sexplib.syntax,
                       unix,
@@ -273,7 +272,6 @@ Library core
                       bigarray,
                       pa_ounit,
                       pa_test,
-                      res,
                       unix,
                       threads
   XMETAExtraLines:    archive(byte, toploop) += "core_top.cma"
