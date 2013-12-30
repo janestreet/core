@@ -145,7 +145,7 @@ module Env = struct
 
   include Univ_map
 
-  let key_create name = Univ_map.Key.create name sexp_of_opaque
+  let key_create name = Univ_map.Key.create ~name sexp_of_opaque
 
   let multi_add = Univ_map.Multi.add
 

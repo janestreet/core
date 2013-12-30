@@ -38,7 +38,7 @@
 #include <sys/mman.h>
 #include <math.h>
 
-#if defined(__FreeBSD__) || defined(__NetBSD__)
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
 #define stat64 stat
 #define lstat64 lstat
 #define fstat64 fstat
@@ -50,10 +50,6 @@
 
 #if defined(JSC_WORDEXP)
 #include <wordexp.h>
-#endif
-
-#if defined(__FreeBSD__) || defined(__OpenBSD__)
-#define stat64 stat
 #endif
 
 CAMLprim value unix_error_stub(value v_errcode, value v_cmdname, value cmd_arg)
@@ -1031,19 +1027,30 @@ CAMLprim value unix_setrlimit(value v_resource, value v_limits)
   return Val_unit;
 }
 
+/* Populating the ifreq structure is wiley and we do it in a couple
+   of places, so lets factor it out here for safety. */
+static struct ifreq build_ifaddr_request(const char *interface)
+{
+  struct ifreq ifr;
+
+  assert(sizeof(ifr.ifr_name) == IFNAMSIZ);
+  if (strlen(interface) > IFNAMSIZ-1)
+    caml_failwith("build_ifaddr_request: interface name string too long");
+
+  memset(&ifr, 0, sizeof(ifr));
+  ifr.ifr_addr.sa_family = AF_INET;
+  /* No overrun possible because ifr.ifr_name is checked above */
+  strcpy(ifr.ifr_name, interface);
+
+  return ifr;
+}
 
 /* return a simple [in_addr] as the address */
 struct in_addr core_unix_get_in_addr_for_interface(value v_interface)
 {
-  struct ifreq ifr;
   int fd = -1;
   char* error = NULL;
-
-  memset(&ifr, 0, sizeof(ifr));
-  ifr.ifr_addr.sa_family = AF_INET;
-  /* [ifr] is already initialized to zero, so it doesn't matter if the
-     incoming string is too long, and [strncpy] fails to add a \0. */
-  strncpy(ifr.ifr_name, String_val(v_interface), IFNAMSIZ - 1);
+  struct ifreq ifr = build_ifaddr_request(String_val(v_interface));
 
   /* Note that [v_interface] is invalid past this point. */
   caml_enter_blocking_section();
@@ -1512,48 +1519,93 @@ CAMLprim value unix_if_indextoname(value v_index)
 
 #include "socketaddr.h"
 
-#define MK_MCAST(NAME, OP) \
-  CAMLprim value unix_mcast_##NAME(value v_ifname_opt, value v_fd, value v_sa) \
-  { \
-    int ret, fd = Int_val(v_fd); \
-    union sock_addr_union sau; \
-    struct sockaddr *sa = &sau.s_gen; \
-    socklen_param_type sa_len; \
-    get_sockaddr(v_sa, &sau, &sa_len); \
-    switch (sa->sa_family) { \
-      case AF_INET: { \
-        struct ip_mreq mreq; \
-        struct ifreq ifreq; \
-        memcpy(&mreq.imr_multiaddr, \
-               &((struct sockaddr_in *) sa)->sin_addr, \
-               sizeof(struct in_addr)); \
-        if (v_ifname_opt != Val_int(0)) { \
-          value v_ifname = Field(v_ifname_opt, 0); \
-          char *ifname = String_val(v_ifname); \
-          int ifname_len = caml_string_length(v_ifname) + 1; \
-          if (ifname_len > IFNAMSIZ) \
-            caml_failwith("mcast_" STR(NAME) ": ifname string too long"); \
-          strncpy(ifreq.ifr_name, ifname, IFNAMSIZ); \
-          if (ioctl(fd, SIOCGIFADDR, &ifreq) < 0) \
-            uerror("mcast_" STR(NAME), Nothing); \
-          memcpy(&mreq.imr_interface, \
-                 &((struct sockaddr_in *) &ifreq.ifr_addr)->sin_addr, \
-                 sizeof(struct in_addr)); \
-        } else mreq.imr_interface.s_addr = htonl(INADDR_ANY); \
-        ret = \
-          setsockopt(fd, IPPROTO_IP, IP_##OP##_MEMBERSHIP, \
-                     &mreq, sizeof(mreq)); \
-        if (ret == -1) uerror("mcast_" STR(NAME), Nothing); \
-        return Val_unit; \
-      } \
-      default : \
-        errno = EPROTONOSUPPORT; \
-        uerror("mcast_" STR(NAME), Nothing); \
-    } \
-  }
+/* Keep this in sync with the type Core_unix.Mcast_action.t */
+#define VAL_MCAST_ACTION_ADD  (Val_int(0))
+#define VAL_MCAST_ACTION_DROP (Val_int(1))
 
-MK_MCAST(join, ADD)
-MK_MCAST(leave, DROP)
+CAMLprim value core_unix_mcast_modify (value v_action,
+                                       value v_ifname_opt,
+                                       value v_source_opt,
+                                       value v_fd,
+                                       value v_sa)
+{
+  int ret, fd = Int_val(v_fd);
+  union sock_addr_union sau;
+  struct sockaddr *sa = &sau.s_gen;
+  socklen_param_type sa_len;
+
+  get_sockaddr(v_sa, &sau, &sa_len);
+
+  switch (sa->sa_family) {
+    case AF_INET: {
+      struct ip_mreq mreq;
+
+      memcpy(&mreq.imr_multiaddr,
+             &((struct sockaddr_in *) sa)->sin_addr,
+             sizeof(struct in_addr));
+
+      if (Is_block(v_ifname_opt)) {
+        struct ifreq ifreq;
+
+        assert(Tag_val(v_ifname_opt) == 0 && Wosize_val(v_ifname_opt) == 1);
+        ifreq = build_ifaddr_request(String_val(Field(v_ifname_opt,0)));
+
+        if (ioctl(fd, SIOCGIFADDR, &ifreq) < 0)
+          uerror("core_unix_mcast_modify: ioctl", Nothing);
+
+        memcpy(&mreq.imr_interface,
+               &((struct sockaddr_in *) &ifreq.ifr_addr)->sin_addr,
+               sizeof(struct in_addr));
+      } else {
+        assert(v_ifname_opt == Val_long(0) /* None */);
+        mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+      }
+
+      if (Is_block(v_source_opt)) {
+#if defined(__APPLE__)
+        caml_failwith("core_unix_mcast_modify: ~source is not supported on MacOS");
+#else
+        struct ip_mreq_source mreq_source;
+
+        assert(v_action == VAL_MCAST_ACTION_ADD);
+        assert(Tag_val(v_source_opt) == 0 && Wosize_val(v_source_opt) == 1);
+
+        mreq_source.imr_multiaddr  = mreq.imr_multiaddr;
+        mreq_source.imr_interface  = mreq.imr_interface;
+        mreq_source.imr_sourceaddr = GET_INET_ADDR(Field(v_source_opt, 0));
+
+        ret = setsockopt(fd, IPPROTO_IP, IP_ADD_SOURCE_MEMBERSHIP, &mreq_source,
+                         sizeof(mreq_source));
+#endif
+      } else {
+        int optname;
+
+        assert(v_source_opt == Val_long(0) /* None */);
+
+        switch (v_action) {
+          case VAL_MCAST_ACTION_ADD:
+            optname = IP_ADD_MEMBERSHIP;
+            break;
+
+          case VAL_MCAST_ACTION_DROP:
+            optname = IP_DROP_MEMBERSHIP;
+            break;
+
+          default:
+            caml_failwith("core_unix_mcast_modify: invalid action");
+        }
+
+        ret = setsockopt(fd, IPPROTO_IP, optname, &mreq, sizeof(mreq));
+      }
+
+      if (ret == -1) uerror("core_unix_mcast_modify: setsockopt", Nothing);
+      return Val_unit;
+    }
+
+    default:
+      unix_error(EPROTONOSUPPORT, "core_unix_mcast_modify", Nothing);
+  }
+}
 
 /* Similar to it's use in linux_ext, these are unfortunately not exported presently. It seems we
    should either get the functions exported, or have all portable ip level options (such as

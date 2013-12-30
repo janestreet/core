@@ -163,6 +163,8 @@ module Timerfd : sig
 
   type t = private File_descr.t with bin_io, compare, sexp
 
+  val to_file_descr : t -> File_descr.t
+
   (** [create ?flags clock] creates a new timer file descriptor.  With Linux 2.6.26 or
       earlier [flags] must be empty. *)
   val create : (?flags:Flags.t -> Clock.t -> t) Or_error.t

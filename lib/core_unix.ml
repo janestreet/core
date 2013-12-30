@@ -483,30 +483,6 @@ end
 
 external uname : unit -> Utsname.t = "unix_uname"
 
-(* Additional IP functionality *)
-
-external if_indextoname : int -> string = "unix_if_indextoname"
-
-external mcast_join
-  : ?ifname : string -> File_descr.t -> Unix.sockaddr -> unit
-  = "unix_mcast_join"
-;;
-
-external mcast_leave
-  : ?ifname : string -> File_descr.t -> Unix.sockaddr -> unit
-  = "unix_mcast_leave"
-;;
-
-external get_mcast_ttl : File_descr.t -> int = "unix_mcast_get_ttl"
-
-external set_mcast_ttl : File_descr.t -> int -> unit = "unix_mcast_set_ttl"
-
-external get_mcast_loop : File_descr.t -> bool = "unix_mcast_get_loop"
-
-external set_mcast_loop : File_descr.t -> bool -> unit = "unix_mcast_set_loop"
-
-external set_mcast_ifname : File_descr.t -> string -> unit = "unix_mcast_set_ifname"
-
 module Scheduler = struct
   module Policy = struct
     type t = [ `Fifo | `Round_robin | `Other ] with sexp
@@ -2282,6 +2258,44 @@ let (getsockopt_float, setsockopt_float) =
     sexp_of_socket_float_option sexp_of_float
 ;;
 
+(* Additional IP functionality *)
+
+external if_indextoname : int -> string = "unix_if_indextoname"
+
+module Mcast_action = struct
+  (* Keep this in sync with the VAL_MCAST_ACTION_* #defines in unix_stubs.c *)
+  type t =
+    | Add
+    | Drop
+end
+
+external mcast_modify
+  :  Mcast_action.t
+  -> ?ifname : string
+  -> ?source : Inet_addr.t
+  -> File_descr.t
+  -> Unix.sockaddr
+  -> unit
+  = "core_unix_mcast_modify"
+;;
+
+let mcast_join ?ifname ?source fd sockaddr =
+  mcast_modify Mcast_action.Add ?ifname ?source fd sockaddr
+;;
+
+let mcast_leave ?ifname fd sockaddr =
+  mcast_modify Mcast_action.Drop ?ifname fd sockaddr
+;;
+
+external get_mcast_ttl : File_descr.t -> int = "unix_mcast_get_ttl"
+
+external set_mcast_ttl : File_descr.t -> int -> unit = "unix_mcast_set_ttl"
+
+external get_mcast_loop : File_descr.t -> bool = "unix_mcast_get_loop"
+
+external set_mcast_loop : File_descr.t -> bool -> unit = "unix_mcast_set_loop"
+
+external set_mcast_ifname : File_descr.t -> string -> unit = "unix_mcast_set_ifname"
 
 let open_connection addr =
   improve (fun () -> Unix.open_connection addr) (fun () -> [addr_r addr])

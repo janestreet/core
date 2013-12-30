@@ -1,7 +1,9 @@
 INCLUDE "core_config.mlh"
 
 open Std_internal
+open Iobuf_intf
 
+module Blit = Core_kernel.Std.Blit
 module Unix = Core_unix
 
 let is_error = Result.is_error
@@ -30,26 +32,55 @@ module Test (Iobuf : sig
   type nonrec no_seek = no_seek with sexp_of
   module type Bound = Bound
 
+  let read_only = read_only
+  let no_seek   = no_seek
+
   let strings = [ ""; "a"; "hello"; "\000"; "\000\000\000"; "\000hello" ]
 
   (* [large_int] creates an integer constant that is not representable
      on 32bits systems. *)
   let large_int a b c d = (a lsl 48) lor (b lsl 32) lor (c lsl 16) lor d
 
+  type iter_examples_state =
+    { string   : string
+    ; len      : int
+    ; capacity : int
+    ; pos      : int
+    }
+  with sexp
   let iter_examples ~f =
     List.iter strings ~f:(fun string ->
       let len = String.length string in
       for capacity = max 1 len to len + 2 do
         for pos = 0 to 2 do
           if pos + len <= capacity then
-            f (create ~len:capacity) string ~pos
+            try f (create ~len:capacity) string ~pos
+            with e ->
+              failwiths "iter_examples" ({ string; len; capacity; pos }, e)
+                <:sexp_of< iter_examples_state * exn >>
         done
       done)
   ;;
 
+  type iter_slices_state =
+    { pos      : int option
+    ; len      : int option
+    ; pos'     : int
+    ; len'     : int
+    ; is_valid : bool
+    }
+  with sexp
   let iter_slices n ~f =
     let choices =
-      [ None; Some (-1); Some 0; Some 1; Some (n / 3); Some (n - 1); Some n; Some (n + 1) ]
+      [ None
+      ; Some (-1)
+      ; Some 0
+      ; Some 1
+      ; Some (n / 3)
+      ; Some (n - 1)
+      ; Some n
+      ; Some (n + 1)
+      ]
     in
     List.iter choices ~f:(fun pos ->
       List.iter choices ~f:(fun len ->
@@ -61,11 +92,17 @@ module Test (Iobuf : sig
           && len' >= 0
           && len' <= n - pos'
         in
-        if !show_messages then
-          log "iter_slice" (`pos pos, `len len, `pos' pos', `len' len', `is_valid is_valid)
-            (<:sexp_of< ([ `pos of int option ] * [ `len of int option ] * [ `pos' of int ]
-                         * [ `len' of int ] * [ `is_valid of bool ]) >>);
-        f ?pos ?len ~pos' ~len' ~is_valid ()))
+        if !show_messages && false then
+          log "iter_slice" { pos; len; pos'; len'; is_valid }
+            <:sexp_of< iter_slices_state >>;
+        try f ?pos ?len ~pos' ~len' ~is_valid ()
+        with e ->
+          failwiths "iter_slices"
+            ( { pos; len; pos'; len'; is_valid }
+            , e
+            , String.split ~on:'\n' (Exn.backtrace ())
+            )
+            <:sexp_of< iter_slices_state * exn * string list >>))
   ;;
 
   let invariant = invariant
@@ -430,7 +467,7 @@ module Test (Iobuf : sig
     ;;
 
     module Intf (Intf : sig
-                   include Iobuf_intf.Accessors
+                   include Accessors
                    val t_pos_1
                      :  (read_write, seek) Iobuf.t
                      -> int
@@ -552,25 +589,89 @@ ENDIF;
       ignore   (ws :> (read_write, no_seek) t);
     ;;
 
-    module Peek = Intf (struct
-      include Peek
-      type 'a bin_prot = 'a Bin_prot.Type_class.reader
+    let test_peek_to (blito : (Peek.src, _) Blit.blito)
+          create sub_string of_string to_string =
+      iter_examples ~f:(fun t string ~pos ->
+        let n = String.length string in
+        iter_slices n ~f:(fun ?pos:str_pos ?len ~pos' ~len' ~is_valid () ->
+          let fill_result =
+            Or_error.try_with (fun () ->
+              sub t ~pos |> (fun t -> Fill.string t string ?str_pos ?len))
+          in
+          <:test_eq< bool >> (is_ok fill_result) is_valid;
+          let str = create n in
+          let consume_result =
+            Or_error.try_with (fun () ->
+              sub (read_only (no_seek t)) ~pos |> (fun t ->
+                blito ~src:t ~src_pos:0 ~src_len:len'
+                  ~dst:str ?dst_pos:str_pos ()))
+          in
+          begin match consume_result, is_valid with
+          | Error _, false -> ()
+          | Ok (), true ->
+            <:test_eq< string >> (String.sub string ~pos:pos' ~len:len')
+              (sub_string str ~pos:pos' ~len:len')
+          | _, _ ->
+            failwiths "test_peek_to"
+              ( (consume_result, `is_valid is_valid)
+              , String.split ~on:'\n' (Exn.backtrace ())
+              )
+              <:sexp_of< (unit Or_error.t * [ `is_valid of bool ]) * string list >>
+          end));
+      let t = Iobuf.of_string "012345678" in
+      let dst = of_string "abcdefhij" in
+      blito ~src:t ~src_len:3 ~dst ~dst_pos:3 ();
+      <:test_eq< string >> (Iobuf.to_string t) "012345678";
+      <:test_eq< string >> (to_string dst) "abc012hij"
+    ;;
+    let test_peek_to_string blito =
+      test_peek_to blito String.create String.sub ident ident
+    let test_peek_to_bigstring blito =
+      test_peek_to blito Bigstring.create
+        (fun s ~pos ~len -> Bigstring.to_string s ~pos ~len)
+        Bigstring.of_string
+        Bigstring.to_string
+    ;;
 
-      let t_pos_1 _ _ f expected str sexp_of_res =
-        let res = f (of_string str) ~pos:1 in
-        if not (Pervasives.(=) res expected) then
-          failwiths (sprintf "%S" str)
-            (res, expected)
-            (Tuple.T2.sexp_of_t sexp_of_res sexp_of_res)
+    module Peek = struct
+      include Intf (struct
+        include Peek
+        type 'a bin_prot = 'a Bin_prot.Type_class.reader
 
-      let bin_prot_char t ~pos = bin_prot Char.bin_reader_t t ~pos
+        let t_pos_1 _ _ f expected str sexp_of_res =
+          let res = f (of_string str) ~pos:1 in
+          if not (Pervasives.(=) res expected) then
+            failwiths (sprintf "%S" str)
+              (res, expected)
+              (Tuple.T2.sexp_of_t sexp_of_res sexp_of_res)
 
-      (* static permission tests; see above *)
-      TEST = Char.(=) 'a' (char (of_string "a" : (_, no_seek) Iobuf.t) ~pos:0)
-      TEST = Char.(=) 'a' (char (of_string "a" : (_, seek) Iobuf.t) ~pos:0)
-      TEST = Char.(=) 'a' (char (of_string "a" : (read_only, _) Iobuf.t) ~pos:0)
-      TEST = Char.(=) 'a' (char (of_string "a" : (read_write, _) Iobuf.t) ~pos:0)
-    end)
+        let bin_prot_char t ~pos = bin_prot Char.bin_reader_t t ~pos
+
+        (* static permission tests; see above *)
+        TEST = Char.(=) 'a' (char (of_string "a" : (_, no_seek) Iobuf.t) ~pos:0)
+        TEST = Char.(=) 'a' (char (of_string "a" : (_, seek) Iobuf.t) ~pos:0)
+        TEST = Char.(=) 'a' (char (of_string "a" : (read_only, _) Iobuf.t) ~pos:0)
+        TEST = Char.(=) 'a' (char (of_string "a" : (read_write, _) Iobuf.t) ~pos:0)
+      end)
+
+      open Peek
+
+      module To_string = struct
+        open Peek.To_string
+        let blito = blito
+        TEST_UNIT = test_peek_to_string blito
+        (* Mostly rely on the [Blit.Make_distinct] testing. *)
+        let blit, unsafe_blit, sub, subo = blit, unsafe_blit, sub, subo
+      end
+      module To_bigstring = struct
+        open Peek.To_bigstring
+        let blito = blito
+        TEST_UNIT = test_peek_to_bigstring blito
+        (* Mostly rely on the [Blit.Make_distinct] testing. *)
+        let blit, unsafe_blit, sub, subo = blit, unsafe_blit, sub, subo
+      end
+      type nonrec src = src
+    end
 
     TEST_UNIT =
       let s = "hello" in
@@ -679,28 +780,89 @@ ENDIF;
         String.equal str (Consume.string dst)
     ;;
 
-    module Consume = Intf (struct
-      include Consume
-      type 'a bin_prot = 'a Bin_prot.Type_class.reader
+    let test_consume_to (blito : (Consume.src, _) consuming_blito)
+          create sub_string of_string to_string =
+      iter_examples ~f:(fun t string ~pos ->
+        let n = String.length string in
+        iter_slices n ~f:(fun ?pos:str_pos ?len ~pos' ~len' ~is_valid () ->
+          let fill_result =
+            Or_error.try_with (fun () ->
+              sub t ~pos |> (fun t -> Fill.string t string ?str_pos ?len))
+          in
+          <:test_eq< bool >> (is_ok fill_result) is_valid;
+          let str = create n in
+          let consume_result =
+            Or_error.try_with (fun () ->
+              sub (read_only t) ~pos |> (fun t ->
+                blito ~src:t ~src_len:len' ~dst:str ?dst_pos:str_pos ()))
+          in
+          begin match consume_result, is_valid with
+          | Error _, false -> ()
+          | Ok (), true ->
+            <:test_eq< string >> (String.sub string ~pos:pos' ~len:len')
+              (sub_string str ~pos:pos' ~len:len');
+          | _, _ ->
+            failwiths "test_consume_to"
+              (consume_result, is_valid, String.split ~on:'\n' (Exn.backtrace ()))
+              <:sexp_of< unit Or_error.t * bool * string list >>
+          end));
+      let t = Iobuf.of_string "012345678" in
+      let dst = of_string "abcdefhij" in
+      blito ~src:t ~src_len:3 ~dst ~dst_pos:3 ();
+      <:test_eq< string >> (Iobuf.to_string t) "345678";
+      <:test_eq< string >> (to_string dst) "abc012hij"
+    ;;
+    let test_consume_to_string blito =
+      test_consume_to blito String.create String.sub ident ident
+    let test_consume_to_bigstring blito =
+      test_consume_to blito Bigstring.create
+        (fun s ~pos ~len -> Bigstring.to_string s ~pos ~len)
+        Bigstring.of_string
+        Bigstring.to_string
+    ;;
 
-      let t_pos_1 _ n f expected str sexp_of_res =
-        let buf = of_string str in
-        advance buf 1;
-        let res = f buf in
-        assert (Iobuf.length buf = String.length str - 1 - n);
-        rewind buf;
-        if not (Pervasives.(=) res expected) then
-          failwiths (sprintf "%S" (to_string buf))
-            (res, expected)
-            (Tuple.T2.sexp_of_t sexp_of_res sexp_of_res)
+    module Consume = struct
+      include Intf (struct
+        include Consume
+        type 'a bin_prot = 'a Bin_prot.Type_class.reader
 
-      let bin_prot_char t = bin_prot Char.bin_reader_t t
+        let t_pos_1 _ n f expected str sexp_of_res =
+          let buf = of_string str in
+          advance buf 1;
+          let res = f buf in
+          assert (Iobuf.length buf = String.length str - 1 - n);
+          rewind buf;
+          if not (Pervasives.(=) res expected) then
+            failwiths (sprintf "%S" (to_string buf))
+              (res, expected)
+              (Tuple.T2.sexp_of_t sexp_of_res sexp_of_res)
 
-      (* static permission tests; see above *)
-      TEST = Char.(=) 'a' (char (of_string "a" : (_, seek) Iobuf.t))
-      TEST = Char.(=) 'a' (char (of_string "a" : (read_only, _) Iobuf.t))
-      TEST = Char.(=) 'a' (char (of_string "a" : (read_write, _) Iobuf.t))
-    end)
+        let bin_prot_char t = bin_prot Char.bin_reader_t t
+
+        (* static permission tests; see above *)
+        TEST = Char.(=) 'a' (char (of_string "a" : (_, seek) Iobuf.t))
+        TEST = Char.(=) 'a' (char (of_string "a" : (read_only, _) Iobuf.t))
+        TEST = Char.(=) 'a' (char (of_string "a" : (read_write, _) Iobuf.t))
+      end)
+
+      open Consume
+
+      module To_string = struct
+        open To_string
+        let blito = blito
+        TEST_UNIT = test_consume_to_string blito
+        (* Mostly rely on the [Blit.Make_distinct] testing. *)
+        let blit, unsafe_blit, sub, subo = blit, unsafe_blit, sub, subo
+      end
+      module To_bigstring = struct
+        open To_bigstring
+        let blito = blito
+        TEST_UNIT = test_consume_to_bigstring blito
+        (* Mostly rely on the [Blit.Make_distinct] testing. *)
+        let blit, unsafe_blit, sub, subo = blit, unsafe_blit, sub, subo
+      end
+      type nonrec src = src
+    end
 
     TEST_UNIT =
       let t = create ~len:1 in
@@ -736,46 +898,6 @@ ENDIF;
         let s' = Consume.string t in
         assert (is_empty t);
         assert (String.equal s s'));
-    ;;
-
-    let consume_into_string = consume_into_string
-    let test_consume_into_str consume_into create sub_string of_string to_string =
-      iter_examples ~f:(fun t string ~pos ->
-        let n = String.length string in
-        iter_slices n ~f:(fun ?pos:str_pos ?len ~pos' ~len' ~is_valid () ->
-          let fill_result =
-            Or_error.try_with (fun () ->
-              sub t ~pos |> (fun t -> Fill.string t string ?str_pos ?len))
-          in
-          assert (Bool.equal (is_ok fill_result) is_valid);
-          let str = create n in
-          let consume_result =
-            Or_error.try_with (fun () ->
-              sub t ~pos |> (fun t ->
-                consume_into ?pos:str_pos ?len t str))
-          in
-          begin match consume_result, is_valid with
-          | Error _, false -> ()
-          | Ok (), true ->
-            assert (String.equal
-                      (String.sub string ~pos:pos' ~len:len')
-                      (sub_string str ~pos:pos' ~len:len'));
-          | _, _ -> assert false
-          end));
-      let t = Iobuf.of_string "012345678" in
-      let dst = of_string "abcdefhij" in
-      consume_into ?pos:(Some 3) ?len:(Some 3) t dst;
-      assert (String.equal (Iobuf.to_string t) "345678");
-      String.equal (to_string dst) "abc012hij"
-    ;;
-    TEST = test_consume_into_str consume_into_string String.create String.sub ident ident
-
-    let consume_into_bigstring = consume_into_bigstring
-    TEST =
-      test_consume_into_str consume_into_bigstring Bigstring.create
-        (fun s ~pos ~len -> Bigstring.to_string s ~pos ~len)
-        Bigstring.of_string
-        Bigstring.to_string
     ;;
 
     (* [Fill.string] ranges *)

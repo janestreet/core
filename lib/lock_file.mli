@@ -64,6 +64,15 @@ val is_locked : string -> bool
 
     - Unlike a normal flock call the lock may not be removed when the calling program
       exits (in particular if it is killed with SIGKILL).
+
+    - NFS lock files are non-standard and difficult to reason about.  This implementation
+      strives to strike a balance between safety and utility in the common case:
+        - one program per machine
+        - one shared user running the program
+
+      Use cases outside of this may push on/break assumptions used for easy lock
+      cleanup/taking and may lead to double taking the lock.  If you have such an odd use
+      case you should test it carefully/consider a different locking mechanism.
 *)
 module Nfs : sig
   (** [create ?message path] tries to create and lock the file at [path] by creating a hard
@@ -73,7 +82,8 @@ module Nfs : sig
       Efforts will be made to release this lock when the calling program exits. But there
       is no guarantee that this will occur under some types of program crash. If the
       program crashes without removing the lock file an attempt will be made to clean up
-      on restart by checking the hostname and pid stored in the lockfile. *)
+      on restart by checking the hostname and pid stored in the lockfile.
+  *)
   val create : ?message : string -> string -> unit Or_error.t
 
   (** [create_exn ?message path] like create, but throws an exception when it fails to

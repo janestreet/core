@@ -84,6 +84,10 @@ module type S = sig
   module Alarm : sig
     type 'a t with sexp_of
 
+    (** [null ()] returns an alarm [t] such that [not (mem timing_wheel t)] for all
+        [timing_wheel]s. *)
+    val null : unit -> _ t
+
     (** All [Alarm] functions will raise if [not (Timing_wheel.mem timing_wheel t)]. *)
     val at    : 'a timing_wheel -> 'a t -> Time.t
     val key   : 'a timing_wheel -> 'a t -> int
@@ -221,8 +225,8 @@ module type S = sig
   val alarm_upper_bound : _ t -> Time.t
 
   (** [add t ~at a] adds a new value [a] to [t] and returns an alarm that can later be
-      supplied to [remove] the alarm from [t].  [add] raises if [at < now t || at >=
-      alarm_upper_bound t].
+      supplied to [remove] the alarm from [t].  [add] raises if [interval_num t at <
+      now_interval_num t || at >= alarm_upper_bound t].
 
       [add_at_interval_num t ~at a] is equivalent to [add t ~at:(interval_num_start t at)
       a]. *)

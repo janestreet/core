@@ -22,9 +22,11 @@ val find : string -> t option
 val find_office : [ `chi | `hkg | `ldn | `nyc ] -> t
 val find_exn : string -> t
 
-(** [machine_zone ?refresh ()] returns the machines zone (t).  It does this by first
-    looking for a value in the environment variable "TZ", and loading the named zone if
-    it is set.  If "TZ" is not set it reads /etc/localtime directly.
+(** Deprecated: this function will shortly be replaced by [local].
+
+    [machine_zone ?refresh ()] returns the machines zone (t).  It does this by first
+    looking for a value in the environment variable "TZ", and loading the named zone if it
+    is set.  If "TZ" is not set it reads /etc/localtime directly.
 
     The first call to machine_zone is cached, so there is no need to cache it locally.
     The cache can be bypassed and refreshed by setting ~refresh to true.
@@ -35,6 +37,15 @@ val find_exn : string -> t
     misconfiguration is quite rare.
 *)
 val machine_zone : ?refresh:bool (* defaults to false *) -> unit -> t
+
+(** [local] is the result of [machine_zone ()], taken the first time it is demanded. It
+    may be difficult to know exactly when that happens, so [local] should be avoided in
+    applications that expect TZ or /etc/localtime to change during program operation.
+
+    Arguably, changing the timezone of a running program is a problematic operation
+    anyway -- most people write code assuming the clock doesn't suddenly jump back several
+    hours without warning. *)
+val local : t
 
 (** [likely_machine_zones] is a list of zone names that will be searched first when trying
     to determine the machine zone of a box.  Setting this to a likely set of zones for

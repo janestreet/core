@@ -11,6 +11,12 @@ let dispatch = function
     flag ["mlh"; "ocaml"; "doc"]      (S[A"-ppopt"; A"-Ilib/"]);
 
     flag ["c"; "compile"] & S[A"-I"; A"lib"; A"-package"; A"core_kernel"];
+
+    List.iter
+      (fun tag ->
+         pflag ["ocaml"; tag] "pa_ounit_lib"
+           (fun s -> S[A"-ppopt"; A"-pa-ounit-lib"; A"-ppopt"; A s]))
+      ["ocamldep"; "compile"; "doc"]
   | _ ->
     ()
 

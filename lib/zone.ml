@@ -67,7 +67,7 @@ module Stable = struct
     (* IF THIS REPRESENTATION EVER CHANGES (particularly names), ENSURE THAT EITHER
        (1) all values serialize the same way in both representations, or
        (2) you add a new Time.Zone version to stable.ml *)
-    type t = {
+    type strict = {
       name                    : string;
       file_info               : (Digest.t * int64) option;
       transitions             : Transition.t array;
@@ -76,9 +76,11 @@ module Stable = struct
       default_local_time_type : Regime.t;
       leap_seconds            : Leap_second.t list;
     } with sexp_of
+    (* Lazy.t serialises identically to the underlying type *)
+    type t = strict Lazy.t with sexp_of
 
-    let digest zone    = Option.map zone.file_info ~f:fst
-    let file_size zone = Option.map zone.file_info ~f:snd
+    let digest (lazy zone)    = Option.map zone.file_info ~f:fst
+    let file_size (lazy zone) = Option.map zone.file_info ~f:snd
 
     module Zone_file : sig
       val input_tz_file : zonename:string -> filename:string -> t
@@ -338,7 +340,7 @@ module Stable = struct
             let file_digest = Digest.file filename in
             let file_size   = (Core_unix.stat filename).Core_unix.st_size in
             let r = make_zone zonename (file_digest, file_size) in
-            r)
+            lazy r)
         with
         | Invalid_file_format reason ->
           raise (Invalid_file_format (sprintf "%s - %s" filename reason))
@@ -456,7 +458,7 @@ module Stable = struct
       let name =
         if offset = 0 then "UTC"
         else sprintf "UTC%s%d" (if offset < 0 then "-" else "+") (abs offset) in
-      {
+      lazy {
         name               = name;
         file_info          = None;
         transitions        = [||];
@@ -470,7 +472,7 @@ module Stable = struct
       }
     ;;
 
-    let default_utc_offset_deprecated t =
+    let default_utc_offset_deprecated (lazy t) =
       let ltt = t.default_local_time_type in
       Int.of_float ltt.Regime.utc_off
     ;;
@@ -548,7 +550,7 @@ module Stable = struct
       | _ -> of_sexp_error "Time.Zone.t_of_sexp: expected atom" sexp
     ;;
 
-    let sexp_of_t t =
+    let sexp_of_t (lazy t) =
       if t.name = "/etc/localtime" then
         failwith "the Zone.t returned from Zone.machine_zone cannot be serialized";
       Sexp.Atom t.name
@@ -567,7 +569,7 @@ module Stable = struct
         type t = string with bin_io
       end
 
-      let to_binable t =
+      let to_binable (lazy t) =
         if t.name = "/etc/localtime" then
           failwith "the Zone.t returned from Zone.machine_zone cannot be serialized";
         t.name
@@ -579,7 +581,7 @@ module Stable = struct
   TEST_MODULE "Zone.V1" = Core_kernel.Stable_unit_test.Make (struct
     include V1
 
-    let equal z1 z2 = z1.name = z2.name
+    let equal (lazy z1) (lazy z2) = z1.name = z2.name
 
     let tests =
       let zone = find_exn in
@@ -617,6 +619,9 @@ let machine_zone =
       in
       zone := Some t;
       t)
+;;
+
+let local = lazy (Lazy.force (machine_zone ()))
 ;;
 
 let transition_as_utc t = (t.Transition.start_time, t.Transition.end_time)
@@ -661,7 +666,7 @@ let rec bin_search time transitions transtype i min_bound max_bound =
 ;;
 
 (* Returns the next time the clocks move, if any, and how much they will move by. *)
-let next_clock_shift zone ~after =
+let next_clock_shift (lazy zone) ~after =
   let time = Time_internal.T.to_float after in
   let module T = Transition in
   let module R = Regime in
@@ -749,7 +754,7 @@ end
    [find_local_regime zone `Local seconds] finds the local time regime in force in
    [zone] at [seconds], from 1970/01/01:00:00:00 of [zone].
 *)
-let find_local_regime zone transtype time =
+let find_local_regime (lazy zone) transtype time =
   let module T = Transition in
   let transitions        = zone.transitions in
   let convert_transition =
@@ -789,7 +794,7 @@ let abbreviation zone time =
   (find_local_regime zone `UTC time).Regime.abbrv
 ;;
 
-let name zone = zone.name
+let name (lazy zone) = zone.name
 
 include Identifiable.Make (struct
   let module_name = "Core.Std.Time.Zone"

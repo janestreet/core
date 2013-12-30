@@ -1,3 +1,4 @@
+open Core_kernel.Std
 open Std_internal
 
 module Unix = Core_unix
@@ -35,6 +36,12 @@ module Make (M : sig end) = struct
     if !check_invariant then List.iter ts ~f:(invariant ignore ignore);
     Result.ok_exn result_or_exn;
   ;;
+
+  let read_only t =
+    debug "read_only" [t] () sexp_of_unit <:sexp_of< (_, _) t >> (fun () -> read_only t)
+
+  let no_seek t =
+    debug "no_seek" [t] () sexp_of_unit <:sexp_of< (_, _) t >> (fun () -> no_seek t)
 
   let create ~len =
     debug "create" [] (`len len)
@@ -160,18 +167,53 @@ module Make (M : sig end) = struct
 
   let advance t i = debug "advance" [t] i sexp_of_int sexp_of_unit (fun () -> advance t i)
 
-  let debug_range name f =
-    fun ?pos ?len t buf ->
-      debug name [t] (`pos pos, `len len)
-        (<:sexp_of< [ `pos of int option ] * [ `len of int option ] >>)
-        (<:sexp_of< unit >>)
-        (fun () -> f ?pos ?len t buf)
-  ;;
+  module Consume_blit_debug = struct
+    module type To = Iobuf_intf.Consuming_blit with type src := Consume.src
 
-  let consume_into_string ?pos =
-    debug_range "consume_into_string" consume_into_string ?pos
-  let consume_into_bigstring ?pos =
-    debug_range "consume_into_bigstring" consume_into_bigstring ?pos
+    module To (To : sig
+                 include To
+                 val sexp_of_dst : dst -> Sexp.t
+                 val module_name : string
+               end) = struct
+      let blito ~src ?src_len ~dst ?dst_pos () =
+        debug (To.module_name ^ ".blito") [src]
+          (src_len, dst, dst_pos) <:sexp_of< int option * To.dst * int option >>
+          sexp_of_unit (To.blito ~src ?src_len ~dst ?dst_pos)
+      let blit ~src ~dst ~dst_pos ~len =
+        debug (To.module_name ^ ".blit") [src]
+          (dst, dst_pos, len) <:sexp_of< To.dst * int * int >>
+          sexp_of_unit (fun () -> To.blit ~src ~len ~dst ~dst_pos)
+      let unsafe_blit ~src ~dst ~dst_pos ~len =
+        debug (To.module_name ^ ".unsafe_blit") [src]
+          (dst, dst_pos, len) <:sexp_of< To.dst * int * int >>
+          sexp_of_unit (fun () -> To.unsafe_blit ~src ~len ~dst ~dst_pos)
+
+      let sub src ~len =
+        debug (To.module_name ^ ".sub") [src] len <:sexp_of< int >>
+          To.sexp_of_dst (fun () -> To.sub src ~len)
+      let subo ?len src =
+        debug (To.module_name ^ ".subo") [src] len <:sexp_of< int option >>
+          To.sexp_of_dst (fun () -> To.subo ?len src)
+    end
+
+    module Make (C : sig
+                   module To_string    : To with type dst := string
+                   module To_bigstring : To with type dst := bigstring
+                   val module_name : string
+                 end) = struct
+      module To_string = To (struct
+        type dst = string with sexp_of
+        include C.To_string
+        let module_name = C.module_name ^ ".To_string"
+      end)
+      module To_bigstring = To (struct
+        type dst = bigstring with sexp_of
+        include C.To_bigstring
+        let module_name = C.module_name ^ ".To_bigstring"
+      end)
+      type src = Consume.src
+    end
+  end
 
   module Consume = struct
     let d name f sexp_of_result t =
@@ -180,6 +222,11 @@ module Make (M : sig end) = struct
     ;;
 
     open Consume
+
+    include Consume_blit_debug.Make (struct
+      include Consume
+      let module_name = "Consume"
+    end)
 
     type nonrec ('a, 'd, 'w) t = ('a, 'd, 'w) t
 
@@ -273,6 +320,57 @@ module Make (M : sig end) = struct
         (fun () -> bin_prot writer t a)
   end
 
+  module Peek_blit_debug = struct
+    module type To = Blit.S_distinct with type src := Peek.src
+
+    module To (To : sig
+                 include To
+                 val sexp_of_dst : dst -> Sexp.t
+                 val module_name : string
+               end) = struct
+      let blito ~src ?src_pos ?src_len ~dst ?dst_pos () =
+        debug (To.module_name ^ ".blito") [src]
+          (src_pos, src_len, dst, dst_pos)
+          <:sexp_of< int option * int option * To.dst * int option >>
+          sexp_of_unit (To.blito ~src ?src_pos ?src_len ~dst ?dst_pos)
+      let blit ~src ~src_pos ~dst ~dst_pos ~len =
+        debug (To.module_name ^ ".blit") [src]
+          (src_pos, dst, dst_pos, len) <:sexp_of< int * To.dst * int * int >>
+          sexp_of_unit (fun () -> To.blit ~src ~src_pos ~dst ~dst_pos ~len)
+      let unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len =
+        debug (To.module_name ^ ".unsafe_blit") [src]
+          (src_pos, dst, dst_pos, len) <:sexp_of< int * To.dst * int * int >>
+          sexp_of_unit (fun () -> To.unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len)
+
+      let sub src ~pos ~len =
+        debug (To.module_name ^ ".sub") [src]
+          (pos, len) <:sexp_of< int * int >>
+          To.sexp_of_dst (fun () -> To.sub src ~pos ~len)
+      let subo ?pos ?len src =
+        debug (To.module_name ^ ".subo") [src]
+          (pos, len) <:sexp_of< int option * int option >>
+          To.sexp_of_dst (fun () -> To.subo ?pos ?len src)
+    end
+
+    module Make (C : sig
+                   module To_string    : To with type dst := string
+                   module To_bigstring : To with type dst := bigstring
+                   val module_name : string
+                 end) = struct
+      type src = Peek.src
+      module To_string = To (struct
+        type dst = string with sexp_of
+        include C.To_string
+        let module_name = C.module_name ^ ".To_string"
+      end)
+      module To_bigstring = To (struct
+        type dst = bigstring with sexp_of
+        include C.To_bigstring
+        let module_name = C.module_name ^ ".To_bigstring"
+      end)
+    end
+  end
+
   module Peek = struct
     let d name f sexp_of_result t ~pos =
       debug ("Peek." ^ name)
@@ -284,6 +382,8 @@ module Make (M : sig end) = struct
     ;;
 
     open Peek
+
+    include Peek_blit_debug.Make (struct include Peek let module_name = "Peek" end)
 
     type nonrec ('a, 'd, 'w) t = ('a, 'd, 'w) t
 
@@ -511,6 +611,11 @@ module Make (M : sig end) = struct
 
       open Consume
 
+      include Consume_blit_debug.Make (struct
+        include Consume
+        let module_name = "Unsafe.Consume"
+      end)
+
       type nonrec ('a, 'd, 'w) t = ('a, 'd, 'w) t
 
       let char        t = d "char"        char        sexp_of_char  t
@@ -612,6 +717,11 @@ module Make (M : sig end) = struct
       ;;
 
       open Peek
+
+      include Peek_blit_debug.Make (struct
+        include Peek
+        let module_name = "Unsafe.Peek"
+      end)
 
       type nonrec ('a, 'd, 'w) t = ('a, 'd, 'w) t
 

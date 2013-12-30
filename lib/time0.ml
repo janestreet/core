@@ -475,9 +475,10 @@ module Stable = struct
         Exn.reraise e "Time.of_localstring"
     ;;
 
-    let next_multiple ~base ~after ~interval =
-      if Span.(<=) interval Span.zero then
-        failwiths "Time.next_multiple got nonpositive interval" interval <:sexp_of< Span.t >>;
+    let next_multiple ?(can_equal_after = false) ~base ~after ~interval () =
+      if Span.(<=) interval Span.zero
+      then failwiths "Time.next_multiple got nonpositive interval" interval
+             <:sexp_of< Span.t >>;
       let base_to_after = diff after base in
       if Span.(<) base_to_after Span.zero
       then base (* [after < base], choose [k = 0]. *)
@@ -487,49 +488,50 @@ module Stable = struct
             (Span.scale interval
                (Float.round ~dir:`Down (Span.(//) base_to_after interval)))
         in
-        if next > after
+        if next > after || (can_equal_after && next = after)
         then next
         else add next interval
       end
     ;;
 
     TEST_UNIT =
-          let expected_next_multiple ~base ~after ~interval =
-            let rec loop at =
-              if (>) at after then
-                at
-              else
-                loop (add at interval)
-            in
-            loop base
-          in
-          List.iter ~f:(fun (since_base, interval) ->
-            let base = epoch in
-            let sec = Span.of_sec in
-            let interval = sec interval in
-            let after = add base (sec since_base) in
-            let actual_next_multiple = next_multiple ~base ~after ~interval in
-            let expected_next_multiple = expected_next_multiple ~base ~after ~interval in
-            let relativize time = diff time base in
-            let times_are_close t1 t2 = Float.(<) (Float.abs (Span.to_us (diff t1 t2))) 1. in
-            if not (times_are_close actual_next_multiple expected_next_multiple) then
-              failwiths "Time.next_multiple" (since_base, interval,
-                                              relativize expected_next_multiple,
-                                              relativize actual_next_multiple)
-                (<:sexp_of< float * Span.t * Span.t * Span.t >>))
-            [
-              0.    , 1.;
-              0.1   , 1.;
-              0.9   , 1.;
-              1.    , 1.;
-              1.1   , 1.;
-              1.9   , 1.;
-              1000.1, 1.;
-              (-1.) , 1.;
-              (-1.) , 0.1;
-              1.    , 0.2;
-              1E-5  , 1E-6;
-            ]
+      let expected_next_multiple ~base ~after ~interval =
+        let rec loop at =
+          if (>) at after then
+            at
+          else
+            loop (add at interval)
+        in
+        loop base
+      in
+      List.iter ~f:(fun (since_base, interval) ->
+        let base = epoch in
+        let sec = Span.of_sec in
+        let interval = sec interval in
+        let after = add base (sec since_base) in
+        let actual_next_multiple = next_multiple ~base ~after ~interval () in
+        let expected_next_multiple = expected_next_multiple ~base ~after ~interval in
+        let relativize time = diff time base in
+        let times_are_close t1 t2 = Float.(<) (Float.abs (Span.to_us (diff t1 t2))) 1. in
+        if not (times_are_close actual_next_multiple expected_next_multiple) then
+          failwiths "Time.next_multiple" (since_base, interval,
+                                          relativize expected_next_multiple,
+                                          relativize actual_next_multiple)
+            (<:sexp_of< float * Span.t * Span.t * Span.t >>))
+        [
+          0.    , 1.;
+          0.1   , 1.;
+          0.9   , 1.;
+          1.    , 1.;
+          1.1   , 1.;
+          1.9   , 1.;
+          1000.1, 1.;
+          (-1.) , 1.;
+          (-1.) , 0.1;
+          1.    , 0.2;
+          1E-5  , 1E-6;
+        ]
+    ;;
   end
 
   TEST_MODULE "Time.V1" = struct

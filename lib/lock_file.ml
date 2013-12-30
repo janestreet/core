@@ -8,9 +8,9 @@ module Unix = Core_unix
 
 let flock fd = Unix.flock fd Unix.Flock_command.lock_exclusive
 
-let lockf fd =
+let lockf ?(mode = Unix.F_TLOCK) fd =
   try
-    Unix.lockf fd ~mode:Unix.F_TLOCK ~len:Int64.zero;
+    Unix.lockf fd ~mode ~len:Int64.zero;
     true
   with
   | _ -> false
@@ -92,15 +92,34 @@ let blocking_create ?timeout ?message ?close_on_exec ?unlink_on_exit path =
 
 let is_locked path =
   try
-    let fd      = Unix.openfile path ~mode:[Unix.O_WRONLY] ~perm:0o664 in
+    let fd      = Unix.openfile path ~mode:[Unix.O_RDONLY] ~perm:0o664 in
     let flocked = flock fd in
-    let lockfed = lockf fd in
+    let lockfed = lockf fd ~mode:Unix.F_TEST in
     Unix.close fd; (* releases any locks from [flock] and/or [lockf] *)
     if flocked && lockfed then false
     else true
   with
   | Unix.Unix_error (Unix.ENOENT, _, _) -> false
   | e -> raise e
+
+TEST_MODULE = struct
+  let lock_file = Filename.temp_file "lock_file" "unit_test"
+  let () = Unix.unlink lock_file
+  TEST = create lock_file
+  TEST = not (create lock_file)
+  TEST = is_locked lock_file
+
+  let nolock_file = Filename.temp_file "nolock_file" "unit_test"
+  let () =
+    Unix.unlink nolock_file;
+    (* Create an empty file. *)
+    Unix.close (Unix.openfile nolock_file ~mode:[Unix.O_CREAT; Unix.O_WRONLY])
+  TEST =
+    (* Check that file exists. *)
+    try ignore (Unix.stat nolock_file); true
+    with Unix.Unix_error (Unix.ENOENT, _, _) -> false
+  TEST = not (is_locked nolock_file)
+end
 
 module Nfs = struct
   module Info = struct

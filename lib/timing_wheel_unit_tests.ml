@@ -402,6 +402,8 @@ module Alarm = struct
 
   type nonrec 'a t = 'a t with sexp_of
 
+  let null = null
+
   let at = at
   let key = key
   let value = value
@@ -432,6 +434,7 @@ let interval_start     = interval_start
 
 TEST_UNIT =
   let t = create_unit () in
+  assert (not (mem t (Alarm.null ())));
   let start = start t in
   List.iter
     [ Time.sub start (sec (2. *. Float.of_int Int.max_value));

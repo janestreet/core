@@ -23,3 +23,7 @@ include module type of Core_kernel.Debug
 val am  : Source_code_position.t -> unit
 val ams : Source_code_position.t -> string -> 'a -> ('a -> Sexp.t) -> unit
 val amf : Source_code_position.t -> ('r, unit, string, unit) format4 -> 'r
+
+
+(** [should_print_backtrace] governs whether the [am*] functions print a backtrace. *)
+val should_print_backtrace : bool ref

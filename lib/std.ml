@@ -20,7 +20,6 @@ module Daemon             = Daemon
 module Date               = Date
 module Debug              = Debug
 module Filename           = Core_filename
-module Gc                 = Core_gc
 module Interval           = Interval
 module Iobuf              = Iobuf
 module Linux_ext          = Linux_ext

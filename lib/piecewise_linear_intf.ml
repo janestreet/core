@@ -30,7 +30,12 @@ module type S = sig
       [get t 0.999] returns [1.499], and [get t 1.001] returns [10.001].
   *)
   val get : t -> key -> value
+
+  (* O(n) *)
   val to_knots : t -> (key * value) list
+
+  (* O(n) *)
+  val to_knots' : t -> key array * value array
 end
 
 module type S_invertible = sig

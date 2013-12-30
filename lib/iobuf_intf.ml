@@ -46,5 +46,33 @@ module type Bound = sig
   val restore : t -> (_, seek) iobuf -> unit
 end
 
+(* The [src_pos] argument of {!Core_kernel.Blit.blit} doesn't make sense here. *)
+type ('src, 'dst) consuming_blit
+  =  src     : 'src
+  -> dst     : 'dst
+  -> dst_pos : int
+  -> len     : int
+  -> unit
+type ('src, 'dst) consuming_blito
+  =  src      : 'src
+  -> ?src_len : int                     (** default is [Iobuf.length src] *)
+  -> dst      : 'dst
+  -> ?dst_pos : int                     (** default is [0] *)
+  -> unit
+  -> unit
+
+module type Consuming_blit = sig
+  type src
+  type dst
+
+  val blito       : (src, dst) consuming_blito
+  val blit        : (src, dst) consuming_blit
+  val unsafe_blit : (src, dst) consuming_blit
+
+  (** [subo] defaults to using [Iobuf.length src] *)
+  val subo : ?len:int -> src -> dst
+  val sub  : src -> len:int -> dst
+end
+
 (* For use in iobuf.mli -- can't be added to Std_internal due to dependencies *)
 module Unix = Core_unix

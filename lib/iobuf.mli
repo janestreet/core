@@ -19,20 +19,21 @@
     add a type constraint.
 *)
 
+open Core_kernel.Std
 open Common
 open Iobuf_intf
 
 type nonrec seek    = seek    with sexp_of
 type nonrec no_seek = no_seek with sexp_of
 
-(** The first type parameter controls whether the iobuf can be written to.
-    The second type parameter controls whether the window and limits can be changed.
+(** The first type parameter controls whether the iobuf can be written to.  The second
+    type parameter controls whether the window and limits can be changed.
 
     To allow [read_write] or [read_only] access, a function's type uses [_] rather than
     [read_only] as the type argument to [t].  Analogously, to allow [no_seek] or [seek]
     access, a function's type uses [_] rather than [no_seek] as the type argument to [t].
-    Using [_] allows the function to be directly applied to either permission.  Using
-    a specific permission would require code to use coercion [:>]. *)
+    Using [_] allows the function to be directly applied to either permission.  Using a
+    specific permission would require code to use coercion [:>]. *)
 type (+'data_perm_read_write, +'seek_permission) t with sexp_of
 
 include Invariant.S2 with type ('a, 'b) t := ('a, 'b) t
@@ -77,6 +78,17 @@ val set_bounds_and_buffer_sub
   -> src:(read_write, _) t
   -> dst:(_, seek) t
   -> unit -> unit
+
+(** {1 Generalization}
+
+    One may wonder why you'd want to call [read_only] or [no_seek], given that the casts
+    are already possible, e.g. [t : (read_write, _) t :> (read_only, _) t].  It turns out
+    that if you want to define some [f : (_, seek) t -> unit] of your own, which can be
+    conveniently applied to [read_only] and [read_write] iobufs without the user having to
+    cast [read_write] up, you need this [read_only] function.
+*)
+val read_only : (_, 's) t -> (read_only, 's) t
+val no_seek : ('r, _) t -> ('r, no_seek) t
 
 (** {1 Accessors} *)
 
@@ -168,22 +180,27 @@ val bounded_flip_hi : (_, seek) t -> Hi_bound.t -> unit
 (** [to_string t] returns the bytes in [t] as a string.  It does not alter the window. *)
 val to_string : ?len:int -> (_, _) t -> string
 
-(** [consume_into_string t s ~pos ~len] reads [len] bytes from [t], advancing [t]'s window
-    accordingly, and writes them into [s] starting at [pos].  By default [pos = 0] and
-    [len = String.length s - pos].  It is an error if [pos] and [len] don't specify a
-    valid region of [s] or [len > length t]. *)
-val consume_into_string    : ?pos:int -> ?len:int -> (_, seek) t ->    string   -> unit
-val consume_into_bigstring : ?pos:int -> ?len:int -> (_, seek) t -> Bigstring.t -> unit
 
 (** [Consume.string t ~len] reads [len] characters (all, by default) from [t] into a new
     string and advances the lower bound of the window accordingly.
 
     [Consume.bin_prot X.bin_read_t t] returns the initial [X.t] in [t], advancing past the
     bytes read. *)
-module Consume
-  : Accessors
-    with type ('a, 'd, 'w) t = ('d, seek) t -> 'a
+module Consume : sig
+  (** [To_string.blito ~src ~dst ~dst_pos ~src_len ()] reads [src_len] bytes from [src],
+      advancing [src]'s window accordingly, and writes them into [dst] starting at
+      [dst_pos].  By default [dst_pos = 0] and [src_len = length src].  It is an error if
+      [dst_pos] and [src_len] don't specify a valid region of [dst] or [src_len > length
+      src]. *)
+  type src = (read_only, seek) t
+  module To_string    : Consuming_blit with type src := src with type dst := string
+  module To_bigstring : Consuming_blit with type src := src with type dst := Bigstring.t
+
+  include
+    Accessors
+    with type ('a, 'r, 's) t = ('r, seek) t -> 'a
     with type 'a bin_prot := 'a Bin_prot.Type_class.reader
+end
 
 (** [Fill.bin_prot X.bin_write_t t x] writes [x] to [t] in bin-prot form, advancing past
     the bytes written. *)
@@ -200,10 +217,17 @@ module Fill
     Following the [bin_prot] protocol, the representation of [x] is [X.bin_size_t x] bytes
     long.  [Peek.], [Poke.], [Consume.], and [Fill.bin_prot] do not add any size prefix or
     other framing to the [bin_prot] representation. *)
-module Peek
-  : Accessors
+module Peek : sig
+  (** Similar to [Consume.To_*], but do not advance the buffer. *)
+  type src = (read_only, no_seek) t
+  module To_string    : Blit.S_distinct with type src := src with type dst := string
+  module To_bigstring : Blit.S_distinct with type src := src with type dst := Bigstring.t
+
+  include
+    Accessors
     with type ('a, 'd, 'w) t = ('d, 'w) t -> pos:int -> 'a
     with type 'a bin_prot := 'a Bin_prot.Type_class.reader
+end
 
 (** [Poke.bin_prot X.bin_write_t t x] writes [x] to the beginning of [t] in binary form
     without advancing.  You can use [X.bin_size_t] to tell how long it was.

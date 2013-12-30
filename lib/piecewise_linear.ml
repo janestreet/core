@@ -13,6 +13,7 @@ module Impl : sig
   val create : strict:bool -> (float * float) list -> t Or_error.t
 
   val to_knots : t -> (float * float) list
+  val to_knots' : t -> float array * float array
 
   (** Return the inverse of t. Requires strict monotonicity of y-values. Does not
       check x-values. *)
@@ -135,6 +136,11 @@ end = struct
     Array.map2_exn t.x t.y ~f:(fun x y -> (x,y))
     |! Array.to_list
 
+  (* Note that while we are not copying t.x and t.y here, they are not returned
+     directly to the user.  Rather, they will get passed to Array.map in
+     Make(...).to_knots'. *)
+  let to_knots' t = (t.x, t.y)
+
   let invert t =
     (* We try swapping x and y and validating *)
     match validate ~strict:true { x = t.y; y = t.x } with
@@ -209,6 +215,10 @@ module Make (Key : Float_like) (Value : Float_like) = struct
   let to_knots t =
     List.map (Impl.to_knots t) ~f:(fun (x, y) -> (Key.of_float x, Value.of_float y))
 
+  let to_knots' t =
+    let (x, y) = Impl.to_knots' t in
+    (Array.map x ~f:Key.of_float, Array.map y ~f:Value.of_float)
+
   let t_of_sexp sexp =
     let knots = knots_of_sexp sexp in
     match create knots with
@@ -257,6 +267,7 @@ module Make_invertible (Key : Float_like) (Value : Float_like) = struct
   let get t = M.get t.regular
 
   let to_knots t = M.to_knots t.regular
+  let to_knots' t = M.to_knots' t.regular
 
   let get_inverse t y = Key.of_float (Impl.get t.inverse (Value.to_float y))
 

@@ -115,6 +115,8 @@ module Timerfd = struct
 
   type t = File_descr.t with bin_io, compare, sexp
 
+  let to_file_descr t = t
+
   external timerfd_create : Clock.t -> Flags.t -> int = "linux_timerfd_create"
 
   (* At Jane Street, we link with [--wrap timerfd_create] so that we can use
@@ -230,6 +232,8 @@ module Timerfd = struct
   end
 
   type t = File_descr.t with bin_io, compare, sexp
+
+  let to_file_descr t = t
 
   type repeat = { fire_after : Span.t; interval : Span.t }
 
@@ -486,6 +490,9 @@ external get_terminal_size : unit -> int * int = "linux_get_terminal_size"
 external get_ipv4_address_for_interface : string -> string =
   "linux_get_ipv4_address_for_interface" ;;
 
+TEST "lo interface addr is 127.0.0.1" =
+  (* This could false positive if the test box is misconfigured *)
+  get_ipv4_address_for_interface "lo" = "127.0.0.1"
 
 (* The C-stub is a simple pass-through of the linux SO_BINDTODEVICE semantics, wherein an
    empty string removes any binding *)

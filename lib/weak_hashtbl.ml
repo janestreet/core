@@ -2,8 +2,6 @@
 open Core_kernel.Std
 open Std_internal
 
-module Gc = Core_gc
-
 
 module Entry = struct
 

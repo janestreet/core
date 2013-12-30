@@ -176,6 +176,7 @@ module Priority_queue = struct
 
     type 'a t = 'a pool_slots Pointer.t with sexp_of
 
+    let null = Pointer.null
   end
 
   module Internal_elt : sig
@@ -411,6 +412,8 @@ module Priority_queue = struct
     let invariant p invariant_a t =
       Internal_elt.invariant p.pool invariant_a (Internal_elt.of_external_exn p.pool t)
     ;;
+
+    let null = External_elt.null
 
     let at    p t = Internal_elt.at    p.pool (Internal_elt.of_external_exn p.pool t)
     let key   p t = Internal_elt.key   p.pool (Internal_elt.of_external_exn p.pool t)
@@ -923,6 +926,8 @@ let alarm_precision t = Config.alarm_precision t.config
 module Alarm = struct
   type 'a t = 'a Priority_queue.Elt.t with sexp_of
 
+  let null = Priority_queue.Elt.null
+
   let at    tw t = Priority_queue.Elt.at    tw.priority_queue t
   let value tw t = Priority_queue.Elt.value tw.priority_queue t
   let key   tw t = Priority_queue.Elt.key   tw.priority_queue t
@@ -1125,6 +1130,8 @@ module Debug (M : S) = struct
     open Alarm
 
     type nonrec 'a t = 'a t with sexp_of
+
+    let null = null
 
     let at = at
     let key = key
