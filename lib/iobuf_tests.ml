@@ -437,19 +437,28 @@ module Test (Iobuf : sig
     ;;
 
     let advance = advance
+    let unsafe_advance = unsafe_advance
 
     TEST_UNIT =
-      for len = 1 to 5 do
-        let t = create ~len in
-        let advance_fails amount = is_error (try_with (fun () -> advance t amount)) in
-        assert (advance_fails (-1));
-        assert (advance_fails (len + 1));
-        for amount = 0 to len do
-          sub t |> (fun t ->
-            advance t amount;
-            assert (length t = len - amount))
-        done;
-      done;
+      List.iter [advance, true;
+                 unsafe_advance, false]
+        ~f:(fun (advance, test_invalid_access) ->
+          for len = 1 to 5 do
+            let t = create ~len in
+            let advance_fails amount =
+              is_error (try_with (fun () -> advance t amount))
+            in
+            if test_invalid_access then begin
+              assert (advance_fails (-1));
+              assert (advance_fails (len + 1));
+            end;
+            for amount = 0 to len do
+              sub t |> (fun t ->
+                advance t amount;
+                assert (length t = len - amount))
+            done;
+          done;
+        )
     ;;
 
     let consume_bin_prot = consume_bin_prot

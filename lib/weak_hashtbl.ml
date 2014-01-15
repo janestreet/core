@@ -66,6 +66,13 @@ let set_data t key entry data =
 
 let replace t ~key ~data = set_data t key (get_entry t key) data
 
+let add_exn t ~key ~data =
+  let entry = get_entry t key in
+  if Entry.is_in_use entry
+  then failwiths "Weak_hashtbl.add_exn of key in use" t <:sexp_of< (_, _) t >>;
+  set_data t key entry data;
+;;
+
 let find t key =
   match Hashtbl.find t.entry_by_key key with
   | None -> None

@@ -32,7 +32,7 @@
 
 open Std_internal
 
-type ('a, 'b) t
+type ('a, 'b) t with sexp_of
 
 val create : 'a Hashtbl.Hashable.t -> ('a, 'b) t
 
@@ -41,6 +41,7 @@ val mem : ('a, _) t -> 'a -> bool
 val find        : ('a, 'b) t -> 'a -> 'b Heap_block.t option
 val find_or_add : ('a, 'b) t -> 'a -> default:(unit -> 'b Heap_block.t) -> 'b Heap_block.t
 val remove      : ('a, 'b) t -> 'a -> unit
+val add_exn     : ('a, 'b) t -> key:'a -> data:'b Heap_block.t -> unit
 val replace     : ('a, 'b) t -> key:'a -> data:'b Heap_block.t -> unit
 
 (** [key_is_using_space t key] returns [true] if [key] is using some space in [t].  [mem t

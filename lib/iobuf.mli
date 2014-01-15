@@ -130,6 +130,10 @@ module Hi_bound : Bound
     to advance past the upper bound of the window or the lower limit. *)
 val advance : (_, seek) t -> int -> unit
 
+(** [unsafe_advance] is like [advance] but with no bounds checking, so incorrect usage can
+    easily cause segfaults. *)
+val unsafe_advance : (_, seek) t -> int -> unit
+
 (** [resize t] sets the length of [t]'s window, provided it does not exceed limits. *)
 val resize : (_, seek) t -> len:int -> unit
 
@@ -254,7 +258,10 @@ end
     [consume_bin_prot t reader] reads a bin-prot value from the lower bound of the window,
     which should have been written using [fill_bin_prot], and advances the window by the
     amount read.  [consume_bin_prot] returns an error if there is not a complete message
-    in the window and in that case the window is left unchanged. *)
+    in the window and in that case the window is left unchanged.
+
+    Don't use these without a good reason, as they are incompatible with similar functions
+    in [Reader] and [Writer].  They use a 4-byte length rather than an 8-byte length. *)
 val fill_bin_prot
   : (read_write, seek) t -> 'a Bin_prot.Type_class.writer -> 'a -> unit Or_error.t
 val consume_bin_prot

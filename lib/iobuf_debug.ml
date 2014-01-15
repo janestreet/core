@@ -167,6 +167,9 @@ module Make (M : sig end) = struct
 
   let advance t i = debug "advance" [t] i sexp_of_int sexp_of_unit (fun () -> advance t i)
 
+  let unsafe_advance t i =
+    debug "unsafe_advance" [t] i sexp_of_int sexp_of_unit (fun () -> unsafe_advance t i)
+
   module Consume_blit_debug = struct
     module type To = Iobuf_intf.Consuming_blit with type src := Consume.src
 

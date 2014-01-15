@@ -202,8 +202,19 @@ module Nfs = struct
               message
             }
           in
-          fprintf (Unix.out_channel_of_descr fd) "%s\n%!"
-            (Sexp.to_string_hum (Info.sexp_of_t info)));
+          (* if this fprintf fails, empty lock file would be left behind, and
+             subsequent calls to [Lock_file.Nfs.create_exn] would be unable to
+             figure out that it is stale/corrupt and remove it. So we need to
+             remove it ourselves *)
+          try
+            fprintf (Unix.out_channel_of_descr fd) "%s\n%!"
+              (Sexp.to_string_hum (Info.sexp_of_t info))
+          with | (Sys_error _) as err -> begin
+            Unix.unlink path;
+            Unix.unlink (lock_path path);
+            raise err
+          end
+        );
       at_exit (fun () -> try unlock_safely_exn ~unlock_myself:true path with _ -> ());
     with
     | e ->
