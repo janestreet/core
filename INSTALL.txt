@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: b93cc4524b11e360c988eb645b21a5e9) *)
+(* DO NOT EDIT (digest: 2938fe62dbe6894408850866cbffafe3) *)
 This is the INSTALL file for the core distribution.
 
 This package uses OASIS to generate its build system. See section OASIS for
@@ -21,6 +21,7 @@ In order to compile this package, you will need:
 * pa_pipebang for library core
 * pa_test for library core
 * sexplib for library core
+* sexplib_unix for library core
 * variantslib for library core
 * compiler-libs for library core_top
 * oUnit (>= 1.0.2) for executable test_runner
