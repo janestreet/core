@@ -261,6 +261,7 @@ Library core
                       pa_test.syntax,
                       sexplib,
                       sexplib.syntax,
+                      sexplib_unix,
                       unix,
                       variantslib,
                       variantslib.syntax,
