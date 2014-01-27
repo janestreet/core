@@ -176,6 +176,13 @@ val bounded_compact : (read_write, seek) t -> Lo_bound.t -> Hi_bound.t -> unit
 val flip_hi         : (_, seek) t -> unit
 val bounded_flip_hi : (_, seek) t -> Hi_bound.t -> unit
 
+(** [protect_window_and_bounds t ~f] applies [f] to [t] and restores [t]'s bounds
+    afterwards. *)
+val protect_window_and_bounds
+  :  ('rw, no_seek) t
+  -> f:(('rw, seek) t -> 'a)
+  -> 'a
+
 (** {1 Getting and setting data} *)
 (** "consume" and "fill" functions access data at the lower bound of the window and
     advance lower bound of the window.  "peek" and "poke" functions access data but do not

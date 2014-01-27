@@ -150,6 +150,11 @@ module Make (M : sig end) = struct
       resize t ~len)
   ;;
 
+  let protect_window_and_bounds t ~f =
+    debug "protect_window_and_bounds" [t] t <:sexp_of< (_, _) t >> <:sexp_of< _ >>
+      (fun () -> protect_window_and_bounds t ~f)
+  ;;
+
   let of_string s =
     debug "of_string" []
       s <:sexp_of< string >> <:sexp_of< (_, _) t >>

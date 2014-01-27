@@ -19,13 +19,14 @@ let test =
         ]
         in
         let expected =
-          ["foo.incl_lower: value -1 < bound 0";
-           "foo.incl_upper: value 101 > bound 100";
-           "foo.excl_lower: value 0 <= bound 0";
-           "foo.excl_lower: value 100 >= bound 100"]
+          [ "(foo.incl_lower \"value -1 < bound 0\")"
+          ; "(foo.incl_upper \"value 101 > bound 100\")"
+          ; "(foo.excl_lower \"value 0 <= bound 0\")"
+          ; "(foo.excl_lower \"value 100 >= bound 100\")"
+          ]
         in
-        List.sort ~cmp:Poly.ascending (V.errors res) =
-            List.sort ~cmp:Poly.ascending expected
+        List.sort ~cmp:Poly.ascending (V.errors res)
+          = List.sort ~cmp:Poly.ascending expected;
       );
 
       "inf/nan" @? (
@@ -36,11 +37,12 @@ let test =
         ]
         in
         let expected =
-          ["bar.nan: value is NaN";
-           "bar.inf: value is infinite";]
+          [ "(bar.nan \"value is NaN\")"
+          ; "(bar.inf \"value is infinite\")"
+          ]
         in
-        List.sort ~cmp:Poly.ascending (V.errors res) =
-            List.sort ~cmp:Poly.ascending expected
+        List.sort ~cmp:Poly.ascending (V.errors res)
+          = List.sort ~cmp:Poly.ascending expected;
       );
 
       "nesting" @? (
@@ -56,14 +58,15 @@ let test =
             ]]]
         in
         let expected =
-          ["nesting.top: value is NaN";
-           "nesting.sub0.sub1: value is NaN";
-           "nesting.sub0.sub2: value is NaN";
-           "nesting.sub0.sub3.sub4: value is NaN";
-           "nesting.sub0.sub3.sub5: value is NaN"]
+          [ "(nesting.top \"value is NaN\")"
+          ; "(nesting.sub0.sub1 \"value is NaN\")"
+          ; "(nesting.sub0.sub2 \"value is NaN\")"
+          ; "(nesting.sub0.sub3.sub4 \"value is NaN\")"
+          ; "(nesting.sub0.sub3.sub5 \"value is NaN\")"
+          ]
         in
-        List.sort ~cmp:Poly.ascending (V.errors res) =
-            List.sort ~cmp:Poly.ascending expected
+        List.sort ~cmp:Poly.ascending (V.errors res)
+          = List.sort ~cmp:Poly.ascending expected;
       );
 
       "empty" @? (

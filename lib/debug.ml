@@ -2,7 +2,7 @@ open Core_kernel.Std
 
 include Core_kernel.Debug
 
-let should_print_backtrace = ref true
+let should_print_backtrace = ref false
 
 let am_internal here message =
   (* In this function we use [Printf.eprintf] rather than [Debug.eprintf], because the

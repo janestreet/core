@@ -394,6 +394,36 @@ module Test (Iobuf : sig
     ;;
     let resize = resize
 
+    TEST =
+      let buf = of_string "123abcDEF" in
+      let sub = ref "" in
+      let f (buf : (read_only, seek) t) =
+        advance buf 3;
+        resize buf ~len:3;
+        sub := to_string buf;
+      in
+      Iobuf.protect_window_and_bounds buf ~f;
+      String.equal (to_string buf) "123abcDEF" && String.equal !sub "abc";
+    ;;
+
+    TEST =
+      let buf = of_string "123abcDEF" in
+      let sub = ref "" in
+      let f (buf : (read_only, seek) t) =
+        advance buf 3;
+        resize buf ~len:3;
+        sub := to_string buf;
+        raise Not_found;
+      in
+      try
+        Iobuf.protect_window_and_bounds buf ~f;
+        false
+      with
+      | Not_found ->
+        String.equal (to_string buf) "123abcDEF" && String.equal !sub "abc";
+    ;;
+
+    let protect_window_and_bounds = protect_window_and_bounds
     TEST_UNIT =
       let test t =
         let n = length t in

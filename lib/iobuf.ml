@@ -207,6 +207,29 @@ let resize t ~len =
   t.hi <- hi;
 ;;
 
+let protect_window_and_bounds t ~f =
+  let lo = t.lo in
+  let hi = t.hi in
+  let lo_min = t.lo_min in
+  let hi_max = t.hi_max in
+  try
+    t.lo_min <- lo;
+    t.hi_max <- hi;
+    let result = f t in
+    t.lo <- lo;
+    t.hi <- hi;
+    t.lo_min <- lo_min;
+    t.hi_max <- hi_max;
+    result
+  with
+  | exn -> begin
+    t.lo <- lo;
+    t.hi <- hi;
+    t.lo_min <- lo_min;
+    t.hi_max <- hi_max;
+    raise exn
+  end
+
 let create ~len =
   if len < 0 then
     failwiths "Iobuf.create got negative len" len <:sexp_of< int >>;

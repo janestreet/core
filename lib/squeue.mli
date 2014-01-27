@@ -32,19 +32,19 @@ val lpop : 'a t -> 'a * int
 (** Transfers all the elements from an ordinary queue into the
     squeue. Blocks until there's room on the queue, then pushes. may
     grow queue past maxsize. *)
-val transfer_queue_in : 'a t -> 'a Queue.t -> unit
+val transfer_queue_in : 'a t -> 'a Linked_queue.t -> unit
 
-val transfer_queue_in_uncond : 'a t -> 'a Queue.t -> unit
+val transfer_queue_in_uncond : 'a t -> 'a Linked_queue.t -> unit
 
 (** Transfers all elements from the squeue to an ordinary queue.
     The elements remain in order.
     Waits until at least one element can be transferred. *)
-val transfer_queue : 'a t -> 'a Queue.t -> unit
+val transfer_queue : 'a t -> 'a Linked_queue.t -> unit
 
 (** Transfers all elements from the squeue to an ordinary queue.
     The elements remain in order.
     Does not wait for elements to arrive. *)
-val transfer_queue_nowait : 'a t -> 'a Queue.t -> unit
+val transfer_queue_nowait : 'a t -> 'a Linked_queue.t -> unit
 
 (** clears the queue *)
 val clear : 'a t -> unit

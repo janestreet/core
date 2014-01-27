@@ -53,7 +53,7 @@ let test =
           assert (to_list t = [2; 3]);
           assert (to_list t' = []);
         );
-      "transfer" >::
+      "blit_transfer" >::
         (fun () ->
           for i1 = 0 to 3 do
             let l1 = List.init i1 ~f:ident in
@@ -61,7 +61,7 @@ let test =
               let l2 = List.init i2 ~f:ident in
               let t1 = of_list l1 in
               let t2 = of_list l2 in
-              transfer ~src:t1 ~dst:t2;
+              blit_transfer ~src:t1 ~dst:t2 ();
               assert (is_empty t1);
               assert (to_list t2 = l2 @ l1);
             done
