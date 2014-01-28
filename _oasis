@@ -302,11 +302,3 @@ Test test_runner
   Run$:               flag(tests)
   Command:            $test_runner
   WorkingDirectory:   lib_test
-
-Document "core"
-  Title:                Jane street's core library
-  Type:                 ocamlbuild (0.3)
-  BuildTools+:          ocamldoc
-  XOCamlbuildPath:      lib
-  XOCamlbuildLibraries: core
-
