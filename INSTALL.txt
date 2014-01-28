@@ -1,15 +1,15 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: 2938fe62dbe6894408850866cbffafe3) *)
+(* DO NOT EDIT (digest: a7ac5a26369f7f443103f7ba2ca7747f) *)
 This is the INSTALL file for the core distribution.
 
 This package uses OASIS to generate its build system. See section OASIS for
-full information.
+full information. 
 
 Dependencies
 ============
 
 In order to compile this package, you will need:
-* ocaml (>= 4.00.1) for all, test test_runner, doc core
+* ocaml (>= 4.00.1) for all, test test_runner
 * findlib (>= 1.3.2)
 * bin_prot for library core
 * comparelib for library core
