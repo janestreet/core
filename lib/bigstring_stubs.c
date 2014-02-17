@@ -29,6 +29,8 @@
 #elif __GLIBC__
 #include <byteswap.h>
 #include <malloc.h>
+#elif __sun
+#include <sys/types.h>
 #else
 #include <sys/types.h>
 #include <sys/endian.h>

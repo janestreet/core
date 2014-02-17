@@ -10,6 +10,8 @@
 #include <sys/socket.h>
 #elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
 #include <sys/socket.h>
+#elif defined(__sun)
+#include <sys/sockio.h>
 #endif
 #include <sys/uio.h>
 #include <sys/utsname.h>
@@ -93,7 +95,9 @@ UNIX_INT63_CONST(F_GETFL)
 UNIX_INT63_CONST(F_SETFL)
 
 UNIX_INT63_CONST(O_APPEND)
+#ifndef __sun
 UNIX_INT63_CONST(O_ASYNC)
+#endif
 #ifndef O_CLOEXEC
 #define O_CLOEXEC 0
 #endif
@@ -428,7 +432,7 @@ static value core_stat_aux_64(struct stat64 *buf)
   CAMLparam0();
   CAMLlocal5(atime, mtime, ctime, offset, v);
 
-  #if defined _BSD_SOURCE || defined _SVID_SOURCE
+  #if defined _BSD_SOURCE || defined _SVID_SOURCE || defined(__sun)
     atime = caml_copy_double((double) buf->st_atime + (buf->st_atim.tv_nsec / 1000000000.0f));
     mtime = caml_copy_double((double) buf->st_mtime + (buf->st_mtim.tv_nsec / 1000000000.0f));
     ctime = caml_copy_double((double) buf->st_ctime + (buf->st_ctim.tv_nsec / 1000000000.0f));
@@ -554,6 +558,45 @@ CAMLprim value core_getpwent(value v_unit)
 
   CAMLreturn(res);
 }
+
+#if defined(__sun)
+
+#define   LOCK_SH   1    /* shared lock */
+#define   LOCK_EX   2    /* exclusive lock */
+#define   LOCK_NB   4    /* don't block when locking */
+#define   LOCK_UN   8    /* unlock */
+
+/* flock wrapper for solaris 11/openindiana by Jonathan Perkin */
+int flock(int fd, int op) {
+    int rc = 0;
+
+    struct flock fl = {0};
+
+    switch (op & (LOCK_EX|LOCK_SH|LOCK_UN)) {
+        case LOCK_EX:
+            fl.l_type = F_WRLCK;
+            break;
+        case LOCK_SH:
+            fl.l_type = F_RDLCK;
+            break;
+        case LOCK_UN:
+            fl.l_type = F_UNLCK;
+            break;
+        default:
+            errno = EINVAL;
+            return -1;
+    }
+
+    fl.l_whence = SEEK_SET;
+    rc = fcntl(fd, op & LOCK_NB ? F_SETLK : F_SETLKW, &fl);
+
+    if(rc && (errno == EAGAIN))
+        errno = EWOULDBLOCK;
+
+    return rc;
+}
+
+#endif
 
 #define FLOCK_BUF_LENGTH 80
 
@@ -1421,8 +1464,12 @@ CAMLprim value unix_fnmatch_make_flags(value v_flags)
       case 1 : flags |= FNM_PATHNAME; break;
       case 2 : flags |= FNM_PERIOD; break;
       case 3 : flags |= FNM_PATHNAME; break;
+#if defined(__sun)
+      default : flags |= FNM_IGNORECASE; break;
+#else
       case 4 : flags |= FNM_LEADING_DIR; break;
       default : flags |= FNM_CASEFOLD; break;
+#endif
     }
   }
   return caml_copy_int32(flags);
