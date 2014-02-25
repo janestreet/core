@@ -308,7 +308,6 @@ type open_flag =
     | O_RSYNC         (** Reads complete as writes (depending on O_SYNC/O_DSYNC) *)
     | O_SHARE_DELETE  (** Windows only: allow the file to be deleted while still open *)
     | O_CLOEXEC       (** Set the close-on-exec flag on the descriptor returned by {!openfile} *)
-with sexp
 ELSE
 type open_flag =
   Unix.open_flag =
@@ -325,8 +324,12 @@ type open_flag =
     | O_SYNC          (** Writes complete as `Synchronised I/O file integrity completion' *)
     | O_RSYNC         (** Reads complete as writes (depending on O_SYNC/O_DSYNC) *)
     | O_SHARE_DELETE  (** Windows only: allow the file to be deleted while still open *)
-with sexp
 ENDIF
+
+(* We can't use [with sexp] because pa_sexp inserts two copies of the [val] specs, which
+   leads to a spurious "unused" warning. *)
+val open_flag_of_sexp : Sexp.t -> open_flag
+val sexp_of_open_flag : open_flag -> Sexp.t
 
 (** The type of file access rights. *)
 type file_perm = int with sexp
@@ -2002,6 +2005,8 @@ module Mman : sig
   (* Unlock previously locked pages. See [man munlockall]. *)
   val munlockall : unit -> unit
 end
+
+module Syslog : module type of Syslog
 
 
 (* vim: set filetype=ocaml : *)

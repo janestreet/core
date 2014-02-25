@@ -142,7 +142,8 @@ module Stable = struct
         else if parts.hr > 0 then format_decimal parts.hr (parts.min / 6) "h"
         else if parts.min > 0 then format_decimal parts.min (parts.sec / 6) "m"
         else if parts.sec > 0 then format_decimal parts.sec (parts.ms / 100) "s"
-        else sprintf "%ims" parts.ms
+        else if parts.ms  > 0 then format_decimal parts.ms  (parts.us / 100) "ms"
+        else sprintf "%ius" parts.us
       in
       if parts.sign = Float.Sign.Neg then "-" ^ s else s
 
@@ -216,7 +217,10 @@ module Stable = struct
           let float n =
             match (String.drop_suffix s n) with
             | "" -> failwith "no number given"
-            | s  -> Float.of_string s
+            | s  ->
+              let v = Float.of_string s in
+              Validate.maybe_raise (Float.validate_ordinary v);
+              v
           in
           let len = String.length s in
           match s.[Int.(-) len 1] with

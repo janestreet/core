@@ -473,7 +473,13 @@ let roundtrip s =
 ;;
 
 
+exception Finished
 let () =
+  let assert_raises f =
+    try f (); raise Finished with
+    | Finished -> assert false
+    | _ -> ()
+  in
   let extensions = ["ms";"s";"m";"h"] in
   add "roundtrip span<->string" (fun () ->
     List.iter extensions ~f:(fun ext ->
@@ -486,6 +492,10 @@ let () =
     t "59.9999";
     t "59";
   );
+  add "Span.of_string (nan)" (fun () ->
+    assert_raises (fun () -> ignore (Time.Span.of_string "nans")));
+  add "Span.of_string (inf)" (fun () ->
+    assert_raises (fun () -> ignore (Time.Span.of_string "infs")));
   add "Span.of_string" (fun () ->
     let test string secs =
       ("sec " ^ string) @? (Time.Span.to_sec (Time.Span.of_string string) = secs)

@@ -2460,4 +2460,6 @@ let set_out_channel_timeout oc snd_timeout =
 
 external nanosleep : float -> float = "unix_nanosleep" ;;
 
+module Syslog = Syslog
+
 (* vim: set filetype=ocaml : *)

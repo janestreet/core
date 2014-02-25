@@ -391,7 +391,7 @@ end
 module Path : sig
   type t
   val empty : t
-  val root : t
+  val root : string -> t
   val add : t -> subcommand:string -> t
   val commands : t -> string list
   val to_string : t -> string
@@ -400,7 +400,7 @@ module Path : sig
 end = struct
   type t = string list
   let empty = []
-  let root = [Filename.basename Sys.argv.(0)]
+  let root cmd = [Filename.basename cmd]
   let add t ~subcommand = subcommand :: t
   let commands t = List.rev t
   let to_string t = unwords (commands t)
@@ -718,7 +718,7 @@ end
 
 TEST_MODULE "Args.extend" = struct
   let path_of_list subcommands =
-    List.fold subcommands ~init:Path.root ~f:(fun path subcommand ->
+    List.fold subcommands ~init:(Path.root "exe") ~f:(fun path subcommand ->
       Path.add path ~subcommand)
 
   let extend path =
@@ -1325,25 +1325,25 @@ complete -F %s %s
 
 let args_of_argv = function
   | [] -> failwith "missing executable name"
-  | _cmd :: args ->
+  | cmd :: args ->
     match getenv_and_clear "COMMAND_OUTPUT_INSTALLATION_BASH" with
     | Some _ ->
       dump_autocomplete_function ();
       exit 0
     | None ->
-      match
-        Option.bind (getenv_and_clear "COMP_CWORD") (fun i ->
-          Option.try_with (fun () -> Int.of_string i))
-      with
-      | None -> Args.of_list args
-      | Some i ->
-        let args = List.take (args @ [""]) i in
-        List.fold_right args ~init:Args.Nil ~f:(fun arg args ->
-          match args with
-          | Args.Nil -> Args.Complete arg
-          | _ -> Args.Cons (arg, args))
-
-let get_args () = Array.to_list Sys.argv |! args_of_argv
+      ( Path.root cmd
+      , match
+          Option.bind (getenv_and_clear "COMP_CWORD") (fun i ->
+            Option.try_with (fun () -> Int.of_string i))
+        with
+        | None -> Args.of_list args
+        | Some i ->
+          let args = List.take (args @ [""]) i in
+          List.fold_right args ~init:Args.Nil ~f:(fun arg args ->
+            match args with
+            | Args.Nil -> Args.Complete arg
+            | _ -> Args.Cons (arg, args))
+      )
 
 let rec add_help_subcommands = function
   | Base _ as t -> t
@@ -1397,16 +1397,12 @@ let rec dispatch t env ~extend ~path ~args =
         if String.is_prefix name ~prefix:part then print_endline name);
       exit 0
 
-let run ?version ?build_info ?argv ?extend t =
+let run ?version ?build_info ?(argv=Array.to_list Sys.argv) ?extend t =
   let t = Version_info.add t ?version ?build_info in
   let t = add_help_subcommands t in
-  let args =
-    match argv with
-    | Some x -> args_of_argv x
-    | None -> get_args ()
-  in
+  let (path, args) = args_of_argv argv in
   try
-    dispatch t Env.empty ~extend ~path:Path.root ~args
+    dispatch t Env.empty ~extend ~path ~args
   with
   | Failed_to_parse_command_line msg ->
     if Args.ends_in_complete args then exit 0 else begin prerr_endline msg; exit 1 end
