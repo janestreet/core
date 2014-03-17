@@ -1,4 +1,4 @@
-open Typereplib.Std
+open Typerep_experimental.Std
 
 (* adding with_typerep to some stable types *)
 include module type of Core.Std

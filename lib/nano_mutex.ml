@@ -37,9 +37,9 @@ end = struct
   let save_unused t = Thread_safe_queue.enqueue unused t
 
   let create () =
-    match Thread_safe_queue.dequeue unused with
-    | Some t -> t
-    | None -> { mutex = Mutex.create (); condition = Condition.create () }
+    if Thread_safe_queue.length unused > 0
+    then Thread_safe_queue.dequeue_exn unused
+    else { mutex = Mutex.create (); condition = Condition.create () }
   ;;
 
   let critical_section t ~f = Mutex.critical_section t.mutex ~f

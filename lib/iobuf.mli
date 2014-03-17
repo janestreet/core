@@ -44,6 +44,7 @@ include Invariant.S2 with type ('a, 'b) t := ('a, 'b) t
     with the limits and window set to the entire bigstring. *)
 val create : len:int -> (_, _) t
 
+
 (** [of_bigstring bigstring ~pos ~len] returns an iobuf backed by [bigstring], with the
     window and limits specified starting at [pos] and of length [len]. *)
 val of_bigstring
@@ -136,6 +137,10 @@ val unsafe_advance : (_, seek) t -> int -> unit
 
 (** [resize t] sets the length of [t]'s window, provided it does not exceed limits. *)
 val resize : (_, seek) t -> len:int -> unit
+
+(** [unsafe_resize] is like [resize] but with no bounds checking, so incorrect usage can
+    easily cause segfaults. *)
+val unsafe_resize : (_, seek) t -> len:int -> unit
 
 (** [rewind t] sets the lower bound of the window to the lower limit. *)
 val rewind : (_, seek) t -> unit
@@ -297,6 +302,12 @@ val pread_assume_fd_is_nonblocking
   : (read_write, seek) t -> Unix.File_descr.t -> offset:int -> int
 val recvfrom_assume_fd_is_nonblocking
   : (read_write, seek) t -> Unix.File_descr.t -> int * Unix.sockaddr
+
+(** When there are no packets awaiting reception, [recvmmsg_assume_fd_is_nonblocking]
+    returns <0 (actually, -[EWOULDBLOCK]/-[EAGAIN]), rather than raising [Unix_error] with
+    [EAGAIN]/[EWOULDBLOCK].  This saves the allocation of an exception (and backtrace) in
+    common cases, at the cost of callers having to handle but the return code and possible
+    exception. *)
 val recvmmsg_assume_fd_is_nonblocking
   : (Unix.File_descr.t
      -> ?count:int

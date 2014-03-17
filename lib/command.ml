@@ -173,12 +173,15 @@ module Arg_type = struct
     let parse x = Result.try_with (fun () -> of_string x) in
     { parse; key; complete }
 
-  let string    = create Fn.id
-  let int       = create Int.of_string
-  let float     = create Float.of_string
-  let bool      = create Bool.of_string
-  let date      = create Date.of_string
-  let time_span = create Span.of_string
+  let string = create Fn.id
+  let int    = create Int.of_string
+  let float  = create Float.of_string
+  let bool   = create Bool.of_string
+  let date   = create Date.of_string
+  let time   = create Time.of_string_abs
+  let time_ofday = create Time.Ofday.Zoned.of_string
+  let time_ofday_unzoned = create Time.Ofday.of_string
+  let time_span = create Time.Span.of_string
 
   let file =
     create Fn.id ~complete:(fun _ ~part ->
@@ -978,6 +981,9 @@ module Base = struct
       let float     = float
       let bool      = bool
       let date      = date
+      let time      = time
+      let time_ofday = time_ofday
+      let time_ofday_unzoned = time_ofday_unzoned
       let time_span = time_span
       let file      = file
     end

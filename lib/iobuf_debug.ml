@@ -146,8 +146,12 @@ module Make (M : sig end) = struct
     debug "narrow" [t] t <:sexp_of< (_, _) t >> sexp_of_unit (fun () -> narrow t)
   ;;
   let resize t ~len =
-    debug "resize" [t] (`len len) <:sexp_of< [ `len of int ] >> sexp_of_unit (fun () ->
-      resize t ~len)
+    debug "resize" [t] (`len len) <:sexp_of< [ `len of int ] >> sexp_of_unit
+      (fun () -> resize t ~len)
+  ;;
+  let unsafe_resize t ~len =
+    debug "unsafe_resize" [t] (`len len) <:sexp_of< [ `len of int ] >> sexp_of_unit
+      (fun () -> unsafe_resize t ~len)
   ;;
 
   let protect_window_and_bounds t ~f =

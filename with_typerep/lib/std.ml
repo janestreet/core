@@ -1,5 +1,5 @@
 
-open Typereplib.Std
+open Typerep_experimental.Std
 
 include (Core.Std : module type of Core.Std
   with module Month   := Core.Std.Month

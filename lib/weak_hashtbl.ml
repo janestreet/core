@@ -41,10 +41,12 @@ let remove t key = Hashtbl.remove t.entry_by_key key
    was previously finalized, the weak pointer must have been cleared.  This relies on the
    fact that the OCaml garbage collector clears weaks and then runs finalizers. *)
 let reclaim_space_for_keys_with_unused_data t =
-  Thread_safe_queue.dequeue_until_empty t.keys_with_unused_data (fun key ->
+  while Thread_safe_queue.length t.keys_with_unused_data > 0 do
+    let key = Thread_safe_queue.dequeue_exn t.keys_with_unused_data in
     match Hashtbl.find t.entry_by_key key with
     | None -> ()
-    | Some entry -> if not (Entry.is_in_use entry) then remove t key)
+    | Some entry -> if not (Entry.is_in_use entry) then remove t key
+  done;
 ;;
 
 let get_entry t key = Hashtbl.find_or_add t.entry_by_key key ~default:Entry.create

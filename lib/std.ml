@@ -32,6 +32,7 @@ module Signal             = Signal
 module Squeue             = Squeue
 module Sys                = Core_sys
 module Thread             = Core_thread
+module Thread_safe_queue  = Thread_safe_queue
 module Time               = Time
 module Time_stamp_counter = Time_stamp_counter
 module Timing_wheel       = Timing_wheel

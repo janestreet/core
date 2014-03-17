@@ -1,6 +1,7 @@
 #define _GNU_SOURCE             /* recvmmsg */
 
 #include <stdio.h>
+#include <errno.h>
 #include <sys/socket.h>
 
 #include "ocaml_utils.h"
@@ -48,7 +49,15 @@ ssize_t recvmmsg_assume_fd_is_nonblocking(
     caml_leave_blocking_section();
   }
   else n_read = recvmmsg(Int_val(v_fd), hdrs, Int_val(v_count), 0, 0);
-  if (n_read == -1) uerror("recvmmsg_assume_fd_is_nonblocking", Nothing);
+  if (n_read == -1) {
+    /* bnigito via pszilagyi: This prototype performance tweak saves
+       the allocation of an exception in common cases, at the cost of
+       conflating reception of an empty message with nothing to do. */
+    if (errno == EWOULDBLOCK || errno == EAGAIN)
+      n_read = -errno;
+    else
+      uerror("recvmmsg_assume_fd_is_nonblocking", Nothing);
+  }
   else {
     if (Is_block(v_srcs)) {     /* Some */
       v_sockaddrs = Field(v_srcs, 0);

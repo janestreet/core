@@ -393,17 +393,27 @@ module Test (Iobuf : sig
       String.equal "123ghiDEFghiJKL" (Iobuf.to_string buf)
     ;;
     let resize = resize
+    let unsafe_resize = unsafe_resize
 
-    TEST =
-      let buf = of_string "123abcDEF" in
-      let sub = ref "" in
-      let f (buf : (read_only, seek) t) =
-        advance buf 3;
-        resize buf ~len:3;
-        sub := to_string buf;
-      in
-      Iobuf.protect_window_and_bounds buf ~f;
-      String.equal (to_string buf) "123abcDEF" && String.equal !sub "abc";
+    TEST_UNIT =
+      List.iter [ resize,true ; unsafe_resize,false ]
+        ~f:(fun (resize, test_invalid_access) ->
+          let buf = of_string "123abcDEF" in
+          if test_invalid_access then begin
+            let resize_fails amount =
+              is_error (try_with (fun () -> resize buf ~len:amount))
+            in
+            assert (resize_fails (-1));
+            assert (resize_fails (Iobuf.length buf + 1))
+          end;
+          let sub = ref "" in
+          let f (buf : (read_only, seek) t) =
+            advance buf 3;
+            resize buf ~len:3;
+            sub := to_string buf;
+          in
+          Iobuf.protect_window_and_bounds buf ~f;
+          assert (String.equal (to_string buf) "123abcDEF" && String.equal !sub "abc"));
     ;;
 
     TEST =
@@ -1041,18 +1051,18 @@ ENDIF;
         let short_srcs = Array.create ~len:(count - 1)
                            (ADDR_INET (Inet_addr.bind_any, 0)) in
         set_nonblock fd;
-        (* EWOULDBLOCK/EAGAIN is a possible and expected, if atypical, result in these
-           smoke tests, where we listen to a random socket.  Here, we also don't try to
-           test recvmmsg's behavior, just our wrapper; Unix_error indicates that recvmmsg
-           returned -1, whereas other exceptions indicate that our wrapper detected
-           something wrong.  We treat the two situations separately. *)
-        assert (try recvmmsg fd iobufs ~count ~srcs = 0
+        (* EWOULDBLOCK/EAGAIN is reported as a negative value, is a possible and expected
+           result in these smoke tests, where we listen to a random socket.  Here, we also
+           don't try to test recvmmsg's behavior, just our wrapper; Unix_error indicates
+           that recvmmsg returned -1, whereas other exceptions indicate that our wrapper
+           detected something wrong.  We treat the two situations separately. *)
+        assert (try recvmmsg fd iobufs ~count ~srcs <= 0
                 with Unix_error _ -> true);
-        assert (try recvmmsg fd iobufs = 0
+        assert (try recvmmsg fd iobufs <= 0
                 with Unix_error _ -> true);
-        assert (try recvmmsg fd iobufs ~count:(count / 2) ~srcs = 0
+        assert (try recvmmsg fd iobufs ~count:(count / 2) ~srcs <= 0
                 with Unix_error _ -> true);
-        assert (try recvmmsg fd iobufs ~count:0 ~srcs = 0
+        assert (try recvmmsg fd iobufs ~count:0 ~srcs <= 0
                 with Unix_error _ -> true);
         assert (try ignore (recvmmsg fd iobufs ~count:(count + 1)); false
                 with Unix_error _ as e -> raise e | _ -> true);
@@ -1071,7 +1081,7 @@ ENDIF;
         bind fd ~addr:(ADDR_INET (Inet_addr.bind_any, 0));
         let iobufs = Array.init count ~f:(fun _ -> create ~len:1500) in
         set_nonblock fd;
-        assert (try recvmmsg fd iobufs ~count = 0
+        assert (try recvmmsg fd iobufs ~count <= 0
                 with Unix_error _ -> true);
         assert (try ignore (recvmmsg fd iobufs ~count:(count + 1)); false
                 with Unix_error _ as e -> raise e | _ -> true);
@@ -1120,10 +1130,10 @@ ENDIF;
                   match
                     Result.try_with (fun () -> recvfrom_assume_fd_is_nonblocking t fd)
                   with
-                  | Ok x -> x
                   | Error (Unix.Unix_error ((Unix.EWOULDBLOCK | Unix.EAGAIN), _, _)) ->
                     Time.pause (Span.of_ms 1.);
                     loop ()
+                  | Ok x -> x
                   | Error exn -> raise exn
                 in
                 loop ())
@@ -1140,14 +1150,20 @@ ENDIF;
         let t_len_before = length t in
         let addr_before = Unix.(ADDR_INET (Inet_addr.bind_any, 0)) in
         let srcs = Array.create ~len:1 addr_before in
-        assert (recvmmsg fd ~srcs (Array.create ~len:1 t) = 1);
+        let result  = recvmmsg fd ~srcs (Array.create ~len:1 t) in
+        (* we've altered the reporting of EWOULDBLOCK to return a negative value, rather
+           than an exception in the inner loop of some UDP heavy applications. Raise here
+           to mimic the behavior of the original api, and others such as recvfrom that
+           share testing code *)
+        if result < 0 then raise (Unix.Unix_error (Unix.EWOULDBLOCK, "recvmmsg", ""));
+        assert (result = 1);
         (* Check that the prototype source address wasn't modified in place.  It is
            expected to have been replaced in the array by a new sockaddr. *)
         assert (not (phys_equal addr_before srcs.(0)));
         assert (Pervasives.(<>) addr_before srcs.(0));
         t_len_before - length t, srcs.(0)))
 
-    TEST_UNIT = List.iter [ 0; 1 ] ~f:(fun pos ->
+TEST_UNIT = List.iter [ 0; 1 ] ~f:(fun pos ->
       let t = create ~len:10 in
       let i = 0xF234_5678_90AB_CDEFL in
       Poke.int64_t_le t ~pos i;

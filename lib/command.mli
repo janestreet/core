@@ -215,13 +215,20 @@ module Spec : sig
     val of_alist_exn : ?key:'a Univ_map.Multi.Key.t -> (string * 'a) list -> 'a t
   end
 
-  val string    : string Arg_type.t
-  val int       : int    Arg_type.t
-  val float     : float  Arg_type.t
-  val bool      : bool   Arg_type.t
-  val date      : Date.t Arg_type.t
-  val time_span : Span.t Arg_type.t
-  val file      : string Arg_type.t (* with bash autocompletion *)
+
+  val string             : string             Arg_type.t
+  val int                : int                Arg_type.t
+  val float              : float              Arg_type.t
+  val bool               : bool               Arg_type.t
+  val date               : Date.t             Arg_type.t
+  (** [time] requires a time zone. *)
+  val time               : Time.t             Arg_type.t
+  val time_ofday         : Time.Ofday.Zoned.t Arg_type.t
+  (** Use [time_ofday_unzoned] only when time zone is implied somehow. *)
+  val time_ofday_unzoned : Time.Ofday.t       Arg_type.t
+  val time_span          : Time.Span.t        Arg_type.t
+  (* [file] uses bash autocompletion. *)
+  val file               : string             Arg_type.t
 
 
   (** {1 flag specifications} *)

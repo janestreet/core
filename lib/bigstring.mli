@@ -282,7 +282,9 @@ val recvmmsg_assume_fd_is_nonblocking
 
     @see "recvmmsg(2)" re. the underlying system call.
 
-    @return the number of messages actually read.
+    @return the number of messages actually read, or a negative number to indicate
+    EWOULDBLOCK or EAGAIN. This is a compromise to mitigate the exception overhead for
+    what ends up being a very common result with our use of [recvmmsg].
 
     @raise Unix_error in the case of output errors.
     @raise Invalid_argument if the designated range is out of bounds.

@@ -200,6 +200,9 @@ let set_bounds_and_buffer ~src ~dst =
 
 let narrow t = t.lo_min <- t.lo; t.hi_max <- t.hi; ;;
 
+let unsafe_resize t ~len =
+  t.hi <- t.lo + len
+
 let resize t ~len =
   if len < 0 then bad_range t ~len ~pos:0;
   let hi = t.lo + len in
@@ -1072,6 +1075,7 @@ module Unsafe = struct
 end
 
 
+
 (* Minimal blit benchmarks. *)
 BENCH_MODULE "Blit tests" = struct
   let lengths = [5; 10; 100; 1000; 10_000]
@@ -1081,3 +1085,44 @@ BENCH_MODULE "Blit tests" = struct
     let str = String.create len in
     (fun () -> Peek.To_string.blit ~src:buf ~dst:str ~src_pos:0 ~dst_pos:0 ~len)
 end
+
+BENCH_MODULE "Poke tests" = struct
+  let offsets = List.init 9 ~f:Fn.id
+  let iobuf = create ~len:100
+
+  (* We test at different offsets to see if various byte alignments have a significant
+     effect on performance. *)
+  BENCH_INDEXED "char"      pos offsets = (fun () -> Poke.char      iobuf ~pos 'a')
+  BENCH_INDEXED "uint8"     pos offsets = (fun () -> Poke.uint8     iobuf ~pos pos)
+  BENCH_INDEXED "int8"      pos offsets = (fun () -> Poke.int8      iobuf ~pos pos)
+  BENCH_INDEXED "int16_be"  pos offsets = (fun () -> Poke.int16_be  iobuf ~pos pos)
+  BENCH_INDEXED "int16_le"  pos offsets = (fun () -> Poke.int16_le  iobuf ~pos pos)
+  BENCH_INDEXED "uint16_be" pos offsets = (fun () -> Poke.uint16_be iobuf ~pos pos)
+  BENCH_INDEXED "uint16_le" pos offsets = (fun () -> Poke.uint16_le iobuf ~pos pos)
+  BENCH_INDEXED "int32_be"  pos offsets = (fun () -> Poke.int32_be  iobuf ~pos pos)
+  BENCH_INDEXED "int32_le"  pos offsets = (fun () -> Poke.int32_le  iobuf ~pos pos)
+  BENCH_INDEXED "uint32_be" pos offsets = (fun () -> Poke.uint32_be iobuf ~pos pos)
+  BENCH_INDEXED "uint32_le" pos offsets = (fun () -> Poke.uint32_le iobuf ~pos pos)
+  BENCH_INDEXED "int64_be"  pos offsets = (fun () -> Poke.int64_be  iobuf ~pos pos)
+  BENCH_INDEXED "int64_le"  pos offsets = (fun () -> Poke.int64_le  iobuf ~pos pos)
+end
+
+BENCH_MODULE "Peek tests" = struct
+  let offsets = List.init 9 ~f:Fn.id
+  let iobuf = of_string (String.make 100 '\000')
+
+  BENCH_INDEXED "char"      pos offsets = (fun () -> ignore (Peek.char      iobuf ~pos))
+  BENCH_INDEXED "uint8"     pos offsets = (fun () -> ignore (Peek.uint8     iobuf ~pos))
+  BENCH_INDEXED "int8"      pos offsets = (fun () -> ignore (Peek.int8      iobuf ~pos))
+  BENCH_INDEXED "int16_be"  pos offsets = (fun () -> ignore (Peek.int16_be  iobuf ~pos))
+  BENCH_INDEXED "int16_le"  pos offsets = (fun () -> ignore (Peek.int16_le  iobuf ~pos))
+  BENCH_INDEXED "uint16_be" pos offsets = (fun () -> ignore (Peek.uint16_be iobuf ~pos))
+  BENCH_INDEXED "uint16_le" pos offsets = (fun () -> ignore (Peek.uint16_le iobuf ~pos))
+  BENCH_INDEXED "int32_be"  pos offsets = (fun () -> ignore (Peek.int32_be  iobuf ~pos))
+  BENCH_INDEXED "int32_le"  pos offsets = (fun () -> ignore (Peek.int32_le  iobuf ~pos))
+  BENCH_INDEXED "uint32_be" pos offsets = (fun () -> ignore (Peek.uint32_be iobuf ~pos))
+  BENCH_INDEXED "uint32_le" pos offsets = (fun () -> ignore (Peek.uint32_le iobuf ~pos))
+  BENCH_INDEXED "int64_be"  pos offsets = (fun () -> ignore (Peek.int64_be  iobuf ~pos))
+  BENCH_INDEXED "int64_le"  pos offsets = (fun () -> ignore (Peek.int64_le  iobuf ~pos))
+end
+
