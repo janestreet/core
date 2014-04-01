@@ -4,10 +4,11 @@ this command does stuff
 
 === subcommands ===
 
-  adverb    this command does more stuff
-  jab       this command does stuff here
-  mixture   this command does stuff here
-  moonshot  this command does stuff here
-  version   print version information
-  help      explain a given subcommand (perhaps recursively)
+  adverb           this command does more stuff
+  jab              this command does stuff here
+  mixture          this command does stuff here
+  moonshot         this command does stuff here
+  parse-sexp-file  parse a sexp file and display it
+  version          print version information
+  help             explain a given subcommand (perhaps recursively)
 

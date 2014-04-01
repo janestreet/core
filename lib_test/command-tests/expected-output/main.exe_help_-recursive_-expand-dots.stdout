@@ -11,6 +11,7 @@ this command does stuff
   jab               this command does stuff here
   mixture           this command does stuff here
   moonshot          this command does stuff here
+  parse-sexp-file   parse a sexp file and display it
   version           print version information
   help              explain a given subcommand (perhaps recursively)
 

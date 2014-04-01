@@ -13,7 +13,7 @@ mkdir -p $out
 export COLUMNS=90
 
 function run {
-  tok=$(echo "$@" | tr ' ' '_')
+  tok=$(echo "$@" | tr ' ' '_' | sed -r 's|([^.])/|\1_|g')
   "$@" >$out/$tok.stdout 2>$out/$tok.stderr
 }
 
@@ -47,5 +47,8 @@ group-cmd './main.exe' jab adverb
 group-cmd './main.exe adverb' nemeses
 version-cmd 'main.exe'
 run ./main.exe jab -help
+
+# check we get a nice sexp when an exception is raised during command line parsing
+run ./main.exe parse-sexp-file input-files/malformed-sexp || true
 
 diff -r $out $std

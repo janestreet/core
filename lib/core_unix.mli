@@ -654,7 +654,7 @@ val access_exn
    the given descriptor. *)
 val dup : File_descr.t -> File_descr.t
 
-(** [dup2 fd1 fd2] duplicates [fd1] to [fd2], closing [fd2] if already
+(** [dup2 ~src ~dst] duplicates [src] to [dst], closing [dst] if already
    opened. *)
 val dup2 : src:File_descr.t -> dst:File_descr.t -> unit
 

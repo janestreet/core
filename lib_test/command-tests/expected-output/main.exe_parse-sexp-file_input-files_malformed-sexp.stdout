@@ -1,0 +1,9 @@
+parse a sexp file and display it
+
+  main.exe parse-sexp-file CONFIG-FILE
+
+=== flags ===
+
+  [-help]  print this help text and exit
+           (alias: -?)
+

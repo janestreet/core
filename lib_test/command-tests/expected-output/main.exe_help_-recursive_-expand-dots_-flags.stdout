@@ -21,6 +21,7 @@ this command does stuff
   moonshot                       this command does stuff here
   moonshot [-fondue]             make sure fondue is doing the same stuff
   moonshot [-gilt NAME]          which gilt should do the stuff
+  parse-sexp-file                parse a sexp file and display it
   version                        print version information
   version [-build-info]          print build info for this build
   version [-version]             print the version of this build
