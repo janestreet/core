@@ -1,0 +1,53 @@
+(* OASIS_START *)
+(* DO NOT EDIT (digest: 4777a17f613d8ede2971b4416df74881) *)
+
+This is the INSTALL file for the core distribution.
+
+This package uses OASIS to generate its build system. See section OASIS for
+full information.
+
+Dependencies
+============
+
+In order to compile this package, you will need:
+
+* ocaml (>= 4.00.1) for all, test test_runner
+* findlib (>= 1.3.2)
+* bin_prot for library core
+* comparelib for library core
+* core_kernel for library core
+* enumerate for library core
+* fieldslib for library core
+* herelib for library core
+* pa_bench for library core
+* pa_ounit for library core
+* pa_pipebang for library core
+* pa_test for library core
+* sexplib for library core
+* sexplib_unix for library core
+* variantslib for library core
+* compiler-libs for library core_top
+* oUnit (>= 1.0.2) for executable test_runner
+
+Installing
+==========
+
+1. Uncompress the source archive and go to the root of the package
+2. Run 'ocaml setup.ml -configure'
+3. Run 'ocaml setup.ml -build'
+4. Run 'ocaml setup.ml -install'
+
+Uninstalling
+============
+
+1. Go to the root of the package
+2. Run 'ocaml setup.ml -uninstall'
+
+OASIS
+=====
+
+OASIS is a program that generates a setup.ml file using a simple '_oasis'
+configuration file. The generated setup only depends on the standard OCaml
+installation: no additional library is required.
+
+(* OASIS_STOP *)
