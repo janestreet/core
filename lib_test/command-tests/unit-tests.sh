@@ -51,4 +51,10 @@ run ./main.exe jab -help
 # check we get a nice sexp when an exception is raised during command line parsing
 run ./main.exe parse-sexp-file input-files/malformed-sexp || true
 
+function cleanup-std {
+    hg status -ni0 $std | xargs -0 -r rm -f
+    find $std -type d | tac | xargs -d $'\n' -r rmdir --ignore-fail-on-non-empty
+}
+
+cleanup-std
 diff -r $out $std

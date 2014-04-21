@@ -1,32 +1,74 @@
+INCLUDE "core_config.mlh"
+
 open Core_kernel.Std
 
 module Helpers = struct
-  (* These specialzed string converters are about 20 times faster than using sprintf.
-     sprintf is just horribly horribly slow. On a very fast machine it takes 1us to run
-     sprintf "%02d:%02d" i j, which is just ridiculous. *)
-  let blit_string_of_int_4_digits =
-    let tbl = Array.init 10000 ~f:(fun i -> Printf.sprintf "%04d" i) in
-    fun s ~pos i ->
-      if i >= 10000 || i < 0 then
-        invalid_argf
-          "Time.string_of_int_4_digits: argument must be (0, 9999) %d" i ();
-      String.blit ~src:tbl.(i) ~dst:s ~src_pos:0 ~dst_pos:pos ~len:4
 
-  let blit_string_of_int_2_digits =
-    let tbl = Array.init 100 ~f:(fun i -> Printf.sprintf "%02d" i) in
-    fun s ~pos i ->
-      if i >= 100 || i < 0 then
-        invalid_argf
-          "Time.string_of_int_2_digits: argument must be (0, 99) %d" i ();
-      String.blit ~src:tbl.(i) ~dst:s ~src_pos:0 ~dst_pos:pos ~len:2
+IFDEF ARCH_SIXTYFOUR THEN
+  (* http://www.hackersdelight.org/magic.htm *)
+  let div_by_10 i = (i * 1717986919) lsr 34
+ELSE
+  let div_by_10 i = i / 10
+ENDIF
 
-  let blit_string_of_int_3_digits =
-    let tbl = Array.init 1000 ~f:(fun i -> Printf.sprintf "%03d" i) in
-    fun s ~pos i ->
-      if i >= 1000 || i < 0 then
-        invalid_argf
-          "Time.string_of_int_3_digits: argument must be (0, 999) %d" i ();
-      String.blit ~src:tbl.(i) ~dst:s ~src_pos:0 ~dst_pos:pos ~len:3
+  let char_of_digit n = Char.unsafe_of_int (Char.to_int '0' + n)
+
+  let invalid_range ~digits ~max ~i =
+    invalid_argf
+      "Time.string_of_int_%d_digits: argument must be (0, %d) %d"
+      digits max i ()
+  ;;
+
+  let blit_string_of_int_4_digits s ~pos i =
+    if i >= 10000 || i < 0 then invalid_range ~digits:4 ~max:9999 ~i;
+    let j = div_by_10 i in
+    s.[pos + 3] <- char_of_digit (i - j * 10);
+    let k = div_by_10 j in
+    s.[pos + 2] <- char_of_digit (j - k * 10);
+    let l = div_by_10 k in
+    s.[pos + 1] <- char_of_digit (k - l * 10);
+    s.[pos    ] <- char_of_digit l;
+  ;;
+
+  TEST_UNIT =
+    for i = 0 to 9999 do
+      let s = String.make 4 ' ' in
+      blit_string_of_int_4_digits s ~pos:0 i;
+      <:test_result< string >> ~expect:(Printf.sprintf "%04d" i) s
+    done
+  ;;
+
+  let blit_string_of_int_2_digits s ~pos i =
+    if i >= 100 || i < 0 then invalid_range ~digits:4 ~max:99 ~i;
+    let j = div_by_10 i in
+    s.[pos + 1] <- char_of_digit (i - j * 10);
+    s.[pos    ] <- char_of_digit j;
+  ;;
+
+  TEST_UNIT =
+    for i = 0 to 99 do
+      let s = String.make 2 ' ' in
+      blit_string_of_int_2_digits s ~pos:0 i;
+      <:test_result< string >> ~expect:(Printf.sprintf "%02d" i) s
+    done
+  ;;
+
+  let blit_string_of_int_3_digits s ~pos i =
+    if i >= 1000 || i < 0 then invalid_range ~digits:4 ~max:999 ~i;
+    let j = div_by_10 i in
+    s.[pos + 2] <- char_of_digit (i - j * 10);
+    let k = div_by_10 j in
+    s.[pos + 1] <- char_of_digit (j - k * 10);
+    s.[pos    ] <- char_of_digit k;
+  ;;
+
+  TEST_UNIT =
+    for i = 0 to 999 do
+      let s = String.make 3 ' ' in
+      blit_string_of_int_3_digits s ~pos:0 i;
+      <:test_result< string >> ~expect:(Printf.sprintf "%03d" i) s
+    done
+  ;;
 
   let parse_two_digits str pos =
     let d1 = Char.get_digit_exn str.[pos] in

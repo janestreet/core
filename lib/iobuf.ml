@@ -249,6 +249,111 @@ let to_string ?len t =
 
 let of_string s = of_bigstring (Bigstring.of_string s)
 
+module Hexdump = struct
+
+  let half_line_length = 8
+  let full_line_length = half_line_length * 2
+
+  let get_char_within t ~lo ~hi ~pos =
+    if pos < 0 || pos >= (hi-lo)
+    then None
+    else Some (Bigstring.get t.buf (pos+lo))
+
+  let half_line t ~lo ~hi ~pos ~sep ~f =
+    let strs = ref [] in
+    for i = pos + half_line_length - 1 downto pos do
+      strs := f (get_char_within t ~lo ~hi ~pos:i) :: !strs
+    done;
+    String.concat ~sep (!strs)
+
+  let hex_char = function
+    | Some c -> sprintf "%02x" (Char.to_int c)
+    | None -> "  "
+
+  let ascii_char = function
+    | Some c -> if Char.is_print c then String.of_char c else "."
+    | None -> " "
+
+  let hex_half_line t ~lo ~hi ~pos = half_line t ~lo ~hi ~pos ~sep:" " ~f:hex_char
+  let ascii_half_line t ~lo ~hi ~pos = half_line t ~lo ~hi ~pos ~sep:"" ~f:ascii_char
+
+  let line_index ~lo ~hi ~pos =
+    let len = hi-lo in
+    if len <= (1 lsl 8) then sprintf "0x%02x" pos
+    else if len <= (1 lsl 16) then sprintf "0x%04x" pos
+    else if len <= (1 lsl 24) then sprintf "0x%06x" pos
+    else if len <= (1 lsl 32) then sprintf "0x%08x" pos
+    else if len <= (1 lsl 40) then sprintf "0x%010x" pos
+    else if len <= (1 lsl 48) then sprintf "0x%012x" pos
+    else if len <= (1 lsl 56) then sprintf "0x%014x" pos
+    else sprintf "0x%016x" pos
+
+  let to_string_line t ~lo ~hi ~pos =
+    let pos1 = pos in
+    let pos2 = pos + half_line_length in
+    sprintf "%s:  %s  %s  %s  %s"
+      (line_index ~lo ~hi ~pos)
+      (hex_half_line t ~lo ~hi ~pos:pos1)
+      (ascii_half_line t ~lo ~hi ~pos:pos1)
+      (ascii_half_line t ~lo ~hi ~pos:pos2)
+      (hex_half_line t ~lo ~hi ~pos:pos2)
+
+  let to_string_contents t ~lo ~hi =
+    if lo >= hi
+    then
+      "<empty buffer>"
+    else
+      let rec loop ~pos ~rev_lines =
+        if pos >= hi-lo
+        then String.concat ~sep:"\n" (List.rev rev_lines)
+        else
+          loop
+            ~pos:(pos + full_line_length)
+            ~rev_lines:(to_string_line t ~lo ~hi ~pos :: rev_lines)
+      in
+      loop ~pos:0 ~rev_lines:[]
+
+  let to_string_header t ~desc =
+    sprintf "Iobuf: bigstring length %d; limits [%d,%d]; window [%d,%d]; %s:\n"
+      (Bigstring.length t.buf)
+      t.lo_min
+      t.hi_max
+      t.lo
+      t.hi
+      desc
+
+  let to_string_within t ~lo ~hi ~desc =
+    to_string_header t ~desc
+    ^ to_string_contents t ~lo ~hi
+
+  let to_string_whole t =
+    to_string_within t
+      ~lo:0
+      ~hi:(Bigstring.length t.buf)
+      ~desc:"contents"
+
+  let to_string_limits t =
+    to_string_within t
+      ~lo:t.lo_min
+      ~hi:t.hi_max
+      ~desc:"contents within limits"
+
+  let to_string_window t =
+    to_string_within t
+      ~lo:t.lo
+      ~hi:t.hi
+      ~desc:"contents within window"
+
+  let to_string ?(bounds=`Limits) t =
+    match bounds with
+    | `Whole -> to_string_whole t
+    | `Limits -> to_string_limits t
+    | `Window -> to_string_window t
+
+end
+
+let to_string_hum = Hexdump.to_string
+
 (* We used to do it like {v
 
 let unsafe_with_range t ~pos f =

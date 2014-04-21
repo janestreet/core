@@ -196,6 +196,10 @@ val protect_window_and_bounds
 (** [to_string t] returns the bytes in [t] as a string.  It does not alter the window. *)
 val to_string : ?len:int -> (_, _) t -> string
 
+(** [to_string_hum t] produces a readable, multi-line representation of an iobuf.
+    [bounds] defaults to [`Limits] and determines how much of the contents are shown. *)
+val to_string_hum : ?bounds:[`Window | `Limits | `Whole] -> (_, _) t -> string
+
 
 (** [Consume.string t ~len] reads [len] characters (all, by default) from [t] into a new
     string and advances the lower bound of the window accordingly.

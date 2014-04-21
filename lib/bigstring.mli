@@ -95,7 +95,7 @@ val pread_assume_fd_is_nonblocking
     information. @return the number of bytes actually read.
 
     @raise Invalid_argument if the designated range is out of bounds.
-    @raise IOError in the case of input errors, or on EOF.
+    @raise Unix_error in the case of input errors.
 
     @param pos default = 0
     @param len default = [length bstr - pos]
@@ -216,7 +216,7 @@ val pwrite_assume_fd_is_nonblocking
     written.
 
     @raise Invalid_argument if the designated range is out of bounds.
-    @raise IOError in the case of input errors, or on EOF.
+    @raise Unix_error in the case of input errors.
 
     @param pos default = 0
     @param len default = [length bstr - pos]

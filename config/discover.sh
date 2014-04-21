@@ -40,6 +40,10 @@ $OCAMLC -ccopt -E $OCAML_CFLAGS -c $SRC | grep '^"OUT:[^"]*"$' | sed 's/"OUT:\([
 
 echo "DEFINE ARCH_$ARCH" >> $OUT
 
+if [ "$ARCH" = amd64 ]; then
+    echo "DEFINE ARCH_x86_64" >> $OUT
+fi
+
 if [ "$WORDEXP" = yes ]; then
     echo "DEFINE WORDEXP" >> $OUT
 fi

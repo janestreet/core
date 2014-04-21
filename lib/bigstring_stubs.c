@@ -130,6 +130,7 @@ CAMLprim value bigstring_read_stub(
       do {
         n_read = read(fd, bstr, len);
         if (n_read <= 0) {
+          if (n_read == -1 && errno == EINTR) continue;
           value v_n_good = Val_long(bstr - bstr_start);
           caml_leave_blocking_section();
           if (n_read == 0) {
@@ -194,6 +195,7 @@ CAMLprim value bigstring_really_recv_stub(
         while (len > 0) {
           n_read = recv(sock, bstr, len, MSG_WAITALL);
           if (n_read <= 0) {
+            if (n_read == -1 && errno == EINTR) continue;
             value v_n_total = Val_long(n_total);
             caml_leave_blocking_section();
             if (n_read == 0) raise_eof_io_error(v_n_total);
@@ -473,6 +475,7 @@ CAMLprim value bigstring_output_stub(
         do { \
           CALL_WRITE; \
           if (written == -1) { \
+            if (errno == EINTR) continue; \
             value v_n_good = Val_long(bstr - bstr_start); \
             caml_leave_blocking_section(); \
             raise_unix_io_error(v_n_good, STR(really_##NAME), Nothing); \

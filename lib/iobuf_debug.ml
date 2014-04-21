@@ -174,6 +174,13 @@ module Make (M : sig end) = struct
       (fun () -> to_string ?len t)
   ;;
 
+  let to_string_hum ?bounds t =
+    debug "to_string_hum" [t]
+      (`bounds bounds)
+      <:sexp_of<[`bounds of [`Window|`Limits|`Whole] option]>>
+      <:sexp_of<string>>
+      (fun () -> to_string_hum ?bounds t)
+
   let advance t i = debug "advance" [t] i sexp_of_int sexp_of_unit (fun () -> advance t i)
 
   let unsafe_advance t i =

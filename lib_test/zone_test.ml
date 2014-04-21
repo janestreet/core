@@ -20,27 +20,27 @@ let month_limits = Map.Poly.of_alist_exn [
     12, 31
   ]
 
-let random_time () =
+let random_time state =
   (* dpowers: if we go out much further then floating point errors at the microsecond
      level start to creep in.  We can change this when Time.t = int64 *)
-  let year  = 1970 + Random.int 67 in
-  let month = 1 + (Random.int 12) in
-  let day   = 1 + (Random.int (Map.find_exn month_limits month)) in
-  let hour  = Random.int 12 + 8 in
-  let min   = Random.int 60 in
-  let sec   = Random.int 60 in
-  let ms    = Random.int 1_000 in
-  let mic   = Random.int 1_000 in
+  let year  = 1970 + Random.State.int state 67 in
+  let month = 1 + (Random.State.int state 12) in
+  let day   = 1 + (Random.State.int state (Map.find_exn month_limits month)) in
+  let hour  = Random.State.int state 12 + 8 in
+  let min   = Random.State.int state 60 in
+  let sec   = Random.State.int state 60 in
+  let ms    = Random.State.int state 1_000 in
+  let mic   = Random.State.int state 1_000 in
   (year,month,day,hour,min,sec,ms,mic)
 ;;
 
-let random_time_str () =
-  let year,month,day,hour,min,sec,ms,_mic = random_time () in
+let random_time_str state =
+  let year,month,day,hour,min,sec,ms,_mic = random_time state in
   sprintf "%d-%0.2d-%0.2d %0.2d:%0.2d:%0.2d.%0.3d000" year month day hour min sec ms
 ;;
 
-let random_tm () =
-  let (year,month,day,hour,min,sec,_,_) = random_time () in
+let random_tm state =
+  let (year,month,day,hour,min,sec,_,_) = random_time state in
   {Unix.
     tm_sec   = sec;
     tm_min   = min;
@@ -56,41 +56,37 @@ let random_tm () =
 let zone_tests = ref []
 let add name test = zone_tests := (name >:: test) :: !zone_tests
 
-let add_random_string_round_trip_tests () =
-  for _i = 1 to 100 do
-    let s1 = random_time_str () in
-    let pos_neg = if Random.bool () then "+" else "-" in
-    let distance = Int.to_string (Random.int 10 + 1) in
-    let s2 = String.concat [s1; pos_neg; distance; ":00"] in
-    let s1 =
-      let t = Time.of_string s1 in
-      let epoch = Time.to_epoch t in
-      let zone = Time.Zone.machine_zone () in
-      let utc_epoch = Time.Zone.shift_epoch_time zone `UTC epoch in
-      let f =
-        Time.Span.of_sec (utc_epoch -. epoch) |! Time.Span.to_float |! Float.to_int
-      in
-      s1 ^ (if f = 0 then "Z" else Printf.sprintf "%+03d:00" (f / 3600))
+let add_random_string_round_trip_test state s1 =
+  let pos_neg = if Random.State.bool state then "+" else "-" in
+  let distance = Int.to_string (Random.State.int state 10 + 1) in
+  let s2 = String.concat [s1; pos_neg; distance; ":00"] in
+  let s1 =
+    let t = Time.of_string s1 in
+    let epoch = Time.to_epoch t in
+    let zone = Time.Zone.machine_zone () in
+    let utc_epoch = Time.Zone.shift_epoch_time zone `UTC epoch in
+    let f =
+      Time.Span.of_sec (utc_epoch -. epoch) |! Time.Span.to_float |! Float.to_int
     in
-    add ("roundtrip string " ^ s1) (fun () ->
-      let t = Time.of_string s1 in
-      let c1 = Time.to_string_abs t in
-      if s1 <> c1 then begin
-        exit 7;
-      end;
-      "s1" @? (s1 = (Time.to_string_abs (Time.of_string s1)));
-      "s2-time" @? (
-        let s2_time1 = Time.of_string s2 in
-        let s2_time2 = Time.of_string (Time.to_string_abs s2_time1) in
-        Time.(=) s2_time1 s2_time2)
-    )
-  done
+    s1 ^ (if f = 0 then "Z" else Printf.sprintf "%+03d:00" (f / 3600))
+  in
+  add ("roundtrip string " ^ s1) (fun () ->
+    "s1" @? (s1 = (Time.to_string_abs (Time.of_string s1)));
+    "s2-time" @? (
+      let s2_time1 = Time.of_string s2 in
+      let s2_time2 = Time.of_string (Time.to_string_abs s2_time1) in
+      Time.(=.) s2_time1 s2_time2)
+  )
 
-let add_roundtrip_conversion_test (zone_name,(zone:Time.Zone.t)) =
+let add_random_string_round_trip_tests state =
+  for _i = 1 to 100 do add_random_string_round_trip_test state (random_time_str state) done;
+;;
+
+let add_roundtrip_conversion_test state (zone_name,(zone:Time.Zone.t)) =
   add ("roundtrip conversion " ^ zone_name) (fun () ->
-    let tm = random_tm () in
+    let tm        = random_tm state in
     let unix_time = 1664476678.000 in
-    let time = Time.of_float unix_time in
+    let time      = Time.of_float unix_time in
     let (zone_date, zone_ofday) =
       let date,ofday = Time.to_local_date_ofday time in
       Time.convert
@@ -133,10 +129,10 @@ module Localtime_test_data = struct
   } with sexp
 end
 
-let add_random_localtime_tests () =
+let add_random_localtime_tests state =
   List.iter (Time.Zone.initialized_zones ()) ~f:(fun (zone_name, zone) ->
     add ("localtime " ^ zone_name) (fun () ->
-      let tm          = random_tm () in
+      let tm          = random_tm state in
       let tm          = Unix.gmtime (Unix.timegm tm) in
 
       (* goes through the dance of setting the env variable, then calling localtime, then
@@ -178,17 +174,19 @@ let add_random_localtime_tests () =
           failwith (Sexp.to_string (Localtime_test_data.sexp_of_t test_data)))))
 ;;
 
-let add_roundtrip_conversion_tests () =
-  List.iter (Time.Zone.initialized_zones ()) ~f:add_roundtrip_conversion_test
+let add_roundtrip_conversion_tests state =
+  List.iter (Time.Zone.initialized_zones ()) ~f:(add_roundtrip_conversion_test state)
+;;
 
-let add_random_tests () =
-  add_random_string_round_trip_tests ();
-  add_random_localtime_tests ()
+let add_randomized_tests () =
+  let state = Random.State.make [| 1; 2; 3; 4 |] in
+  add_random_string_round_trip_tests state;
+  add_random_localtime_tests state;
+  add_roundtrip_conversion_tests state
 ;;
 
 let () =
-  add_random_tests ();
-  add_roundtrip_conversion_tests ()
+  add_randomized_tests ();
 ;;
 
 let test = "zone" >::: !zone_tests
