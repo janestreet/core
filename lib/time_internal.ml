@@ -4,12 +4,12 @@ open Core_kernel.Std
 
 module Helpers = struct
 
-IFDEF ARCH_SIXTYFOUR THEN
+(*IFDEF ARCH_SIXTYFOUR THEN
   (* http://www.hackersdelight.org/magic.htm *)
   let div_by_10 i = (i * 1717986919) lsr 34
-ELSE
+ELSE*)
   let div_by_10 i = i / 10
-ENDIF
+(*ENDIF*)
 
   let char_of_digit n = Char.unsafe_of_int (Char.to_int '0' + n)
 
