@@ -16,6 +16,10 @@ module Spec : sig
   (** parameter transformation *)
   val map : 'a param -> f:('a -> 'b) -> 'b param
 
+  (** parameter combination *)
+  val apply : ('a -> 'b) param -> 'a param -> 'b param
+  val pair : 'a param -> 'b param -> ('a * 'b) param
+
   (** {2 various internal values} *)
 
   val help : string Lazy.t param (** the help text for the command *)
@@ -213,6 +217,14 @@ module Spec : sig
 
     (** convenience wrapper for [of_map].  Raises on duplicate keys *)
     val of_alist_exn : ?key:'a Univ_map.Multi.Key.t -> (string * 'a) list -> 'a t
+
+    (** [file] defines an [Arg_type.t] that completes in the same way as
+        [Command.Spec.file], but perhaps with a different type than [string] or with an
+        autocompletion key. *)
+    val file
+      :  ?key:'a Univ_map.Multi.Key.t
+      -> (string -> 'a)
+      -> 'a t
   end
 
 
@@ -370,16 +382,18 @@ end
 
 type t (** commands which can be combined into a hierarchy of subcommands *)
 
+type ('main, 'result) basic_command
+  =  summary:string
+  -> ?readme:(unit -> string)
+  -> ('main, unit -> 'result) Spec.t
+  -> 'main
+  -> t
+
 (** [basic ~summary ?readme spec main] is a basic command that executes a function [main]
     which is passed parameters parsed from the command line according to [spec]. [summary]
     is to contain a short one-line description of its behavior.  [readme] is to contain
     any longer description of its behavior that will go on that commands' help screen. *)
-val basic
-  :  summary:string
-  -> ?readme:(unit -> string)
-  -> ('main, unit -> unit) Spec.t
-  -> 'main
-  -> t
+val basic : ('main, unit) basic_command
 
 (** [group ~summary subcommand_alist] is a compound command with named
     subcommands, as found in [subcommand_alist].  [summary] is to contain

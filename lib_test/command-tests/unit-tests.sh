@@ -15,6 +15,9 @@ export COLUMNS=90
 function run {
   tok=$(echo "$@" | tr ' ' '_' | sed -r 's|([^.])/|\1_|g')
   "$@" >$out/$tok.stdout 2>$out/$tok.stderr
+  # sanitize out line numbers in output, if any, because they make the test brittle.
+  sed -i -r 's/((Called from|Raised at|Re-raised at) file .* line) [0-9]+/\1 @@@/' \
+    $out/$tok.stderr 
 }
 
 function group-cmd {

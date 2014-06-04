@@ -30,6 +30,8 @@ module type Accessors = sig
   val              string : ?str_pos:int -> ?len:int -> (   string  , 'd, 'w) t
   val           bigstring : ?str_pos:int -> ?len:int -> (Bigstring.t, 'd, 'w) t
   val            bin_prot : 'a bin_prot              -> ('a         , 'd, 'w) t
+  val  int64_be_trunc     :                             (int        , 'd, 'w) t
+  val  int64_le_trunc     :                             (int        , 'd, 'w) t
 end
 
 (** An iobuf window bound, either upper or lower.  You can't see its int value, but you
@@ -37,13 +39,14 @@ end
 module type Bound = sig
   type ('d, 'w) iobuf
 
-  (* Expose [t = private int] only if a [t] is stored in a mutable data structure
-     somewhere and leads to a measurable [caml_modify] performance problem. *)
-  type t with sexp_of
+  type t =
+    private int (* performance hack: avoid the write barrier *)
+  with sexp_of
 
   val window : (_, _) iobuf -> t
   val limit  : (_, _) iobuf -> t
   val restore : t -> (_, seek) iobuf -> unit
+
 end
 
 (* The [src_pos] argument of {!Core_kernel.Blit.blit} doesn't make sense here. *)

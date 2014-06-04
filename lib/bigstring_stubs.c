@@ -128,9 +128,10 @@ CAMLprim value bigstring_read_stub(
     char *bstr_min = bstr_start + min_len;
     caml_enter_blocking_section();
       do {
-        n_read = read(fd, bstr, len);
+        do {
+          n_read = read(fd, bstr, len);
+        } while (n_read == -1 && errno == EINTR);
         if (n_read <= 0) {
-          if (n_read == -1 && errno == EINTR) continue;
           value v_n_good = Val_long(bstr - bstr_start);
           caml_leave_blocking_section();
           if (n_read == 0) {
@@ -202,7 +203,7 @@ CAMLprim value bigstring_really_recv_stub(
             else raise_unix_io_error(v_n_total, "really_recv", Nothing);
           } else {
             len -= n_read;
-            bstr += len;
+            bstr += n_read;
             n_total += n_read;
           }
         }

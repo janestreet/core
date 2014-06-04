@@ -563,21 +563,23 @@ module Test (Iobuf : sig
 
       type nonrec ('a, 'd, 'w) t = ('a, 'd, 'w) t
 
-      let char        = char
-      let  int8       =  int8
-      let uint8       = uint8
-      let  int16_be   =  int16_be
-      let  int16_le   =  int16_le
-      let uint16_be   = uint16_be
-      let uint16_le   = uint16_le
-      let  int32_be   =  int32_be
-      let  int32_le   =  int32_le
-      let uint32_be   = uint32_be
-      let uint32_le   = uint32_le
-      let  int64_be   =  int64_be
-      let  int64_le   =  int64_le
-      let  int64_t_be =  int64_t_be
-      let  int64_t_le =  int64_t_le
+      let char            = char
+      let  int8           =  int8
+      let uint8           = uint8
+      let  int16_be       =  int16_be
+      let  int16_le       =  int16_le
+      let uint16_be       = uint16_be
+      let uint16_le       = uint16_le
+      let  int32_be       =  int32_be
+      let  int32_le       =  int32_le
+      let uint32_be       = uint32_be
+      let uint32_le       = uint32_le
+      let  int64_be       =  int64_be
+      let  int64_le       =  int64_le
+      let  int64_t_be     =  int64_t_be
+      let  int64_t_le     =  int64_t_le
+      let  int64_be_trunc =  int64_be_trunc
+      let  int64_le_trunc =  int64_le_trunc
 
       let padded_fixed_string = padded_fixed_string
       let              string =              string
@@ -625,6 +627,14 @@ IFDEF ARCH_SIXTYFOUR THEN
         t_pos_1 buf 8 int64_be (-(large_int 0x0102 0x0304 0x0506 0x0709))
           "A\254\253\252\251\250\249\248\247J" sexp_of_int;
         t_pos_1 buf 8 int64_le (-(large_int 0x0102 0x0304 0x0506 0x0709))
+          "A\247\248\249\250\251\252\253\254J" sexp_of_int;
+        t_pos_1 buf 8 int64_be_trunc (large_int 0x0102 0x0304 0x0506 0x0708)
+          "A\001\002\003\004\005\006\007\008J" sexp_of_int;
+        t_pos_1 buf 8 int64_le_trunc (large_int 0x090a 0x0b0c 0x0d0e 0x0f10)
+          "A\016\015\014\013\012\011\010\009J" sexp_of_int;
+        t_pos_1 buf 8 int64_be_trunc (-(large_int 0x0102 0x0304 0x0506 0x0709))
+          "A\254\253\252\251\250\249\248\247J" sexp_of_int;
+        t_pos_1 buf 8 int64_le_trunc (-(large_int 0x0102 0x0304 0x0506 0x0709))
           "A\247\248\249\250\251\252\253\254J" sexp_of_int;
 ENDIF;
         t_pos_1 buf 8 int64_t_be 1L "A\000\000\000\000\000\000\000\001J" sexp_of_int64;

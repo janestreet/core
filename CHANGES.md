@@ -1,3 +1,46 @@
+## 111.17.00
+
+- Fixed a bug in `Bigstring.really_recv` if `recv` doesn't receive all
+  the data it wants.
+
+  This bug has been around forever; it may not have caused trouble
+  because `Bigstring.really_recv` (1) is barely used (the only use is
+  in `Bigstring.unmarshal_from_sock`) and (2) passes `recv` the
+  `MSG_WAITALL` flag, so it will read the full amount unless it gets
+  interrupted by a signal.
+- Fixed `Bigstring.read`'s handling of `EINTR` so that it retries
+  rather than returning zero.
+
+  This fixes a bug introduced in 111.09 in the interaction between
+  `Bigstring.read` and `Async.Reader`.  Prior to 111.09,
+  `Bigstring.read` would raise on `EINTR`, and `Async.Reader` would
+  propagate the exception.  From 111.09 to 111.16, `Bigstring.read`
+  would return zero, which would confuse `Async.Reader` into thinking
+  it reached EOF when it hadn't.  From 111.17, `Bigstring.read` will
+  retry and not return zero when not at EOF.
+
+  We believe the bug was rare, because otherwise we would have
+  frequently seen `EINTR` exceptions prior to 111.09.
+- Added `Command.Spec.apply` and `pair`, which allow one to program
+  more with `Spec.param` rather than `Spec.t`.
+
+  ```ocaml
+  val apply : ('a -> 'b) param -> 'a param -> 'b param
+  val pair : 'a param -> 'b param -> ('a * 'b) param
+  ```
+- Added `Command.Spec.file`, which builds an `Arg_type` value with the
+  same autocompletion as `Spec.file`.
+
+  ```ocaml
+  (** [file] defines an [Arg_type.t] that completes in the same way as
+      [Command.Spec.file], but perhaps with a different type than [string] or with an
+      autocompletion key. *)
+  val file
+    :  ?key:'a Univ_map.Multi.Key.t
+    -> (string -> 'a)
+    -> 'a t
+  ```
+
 ## 111.11.00
 
 - Change some `Bigstring` functions to retry on `EINTR` rather than

@@ -19,6 +19,9 @@ val read : ?min_len : int -> file_descr -> ?pos : int -> ?len : int -> t -> int
     them to bigstring [bstr] starting at position [pos].  @return the
     number of bytes actually read.
 
+    [read] returns zero only if [len = 0].  If [len > 0] and there's nothing left to read,
+    [read] raises to indicate EOF even if [min_len = 0].
+
     NOTE: even if [len] is zero, there may still be errors when reading
     from the descriptor!
 

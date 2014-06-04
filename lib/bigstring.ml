@@ -50,7 +50,8 @@ TEST "create with different max_mem_waiting_gc" =
   (2 * large_max_mem) < small_max_mem
 
 
-external length : t -> int = "bigstring_length" "noalloc"
+(* external length : t -> int = "bigstring_length" "noalloc" *)
+let length = Array1.dim
 
 external is_mmapped : t -> bool = "bigstring_is_mmapped_stub" "noalloc"
 

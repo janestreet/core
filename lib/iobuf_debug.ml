@@ -249,21 +249,23 @@ module Make (M : sig end) = struct
 
     type nonrec ('a, 'd, 'w) t = ('a, 'd, 'w) t
 
-    let char        t = d "char"        char        sexp_of_char  t
-    let  int8       t = d  "int8"        int8       sexp_of_int   t
-    let  int16_be   t = d  "int16_be"    int16_be   sexp_of_int   t
-    let  int16_le   t = d  "int16_le"    int16_le   sexp_of_int   t
-    let  int32_be   t = d  "int32_be"    int32_be   sexp_of_int   t
-    let  int32_le   t = d  "int32_le"    int32_le   sexp_of_int   t
-    let uint8       t = d "uint8"       uint8       sexp_of_int   t
-    let uint16_be   t = d "uint16_be"   uint16_be   sexp_of_int   t
-    let uint16_le   t = d "uint16_le"   uint16_le   sexp_of_int   t
-    let uint32_be   t = d "uint32_be"   uint32_be   sexp_of_int   t
-    let uint32_le   t = d "uint32_le"   uint32_le   sexp_of_int   t
-    let  int64_be   t = d  "int64_be"    int64_be   sexp_of_int   t
-    let  int64_le   t = d  "int64_le"    int64_le   sexp_of_int   t
-    let  int64_t_be t = d  "int64_t_be"  int64_t_be sexp_of_int64 t
-    let  int64_t_le t = d  "int64_t_le"  int64_t_le sexp_of_int64 t
+    let char            t = d "char"           char              sexp_of_char  t
+    let  int8           t = d  "int8"           int8             sexp_of_int   t
+    let  int16_be       t = d  "int16_be"       int16_be         sexp_of_int   t
+    let  int16_le       t = d  "int16_le"       int16_le         sexp_of_int   t
+    let  int32_be       t = d  "int32_be"       int32_be         sexp_of_int   t
+    let  int32_le       t = d  "int32_le"       int32_le         sexp_of_int   t
+    let uint8           t = d "uint8"          uint8             sexp_of_int   t
+    let uint16_be       t = d "uint16_be"      uint16_be         sexp_of_int   t
+    let uint16_le       t = d "uint16_le"      uint16_le         sexp_of_int   t
+    let uint32_be       t = d "uint32_be"      uint32_be         sexp_of_int   t
+    let uint32_le       t = d "uint32_le"      uint32_le         sexp_of_int   t
+    let  int64_be       t = d  "int64_be"       int64_be         sexp_of_int   t
+    let  int64_le       t = d  "int64_le"       int64_le         sexp_of_int   t
+    let  int64_t_be     t = d  "int64_t_be"     int64_t_be       sexp_of_int64 t
+    let  int64_t_le     t = d  "int64_t_le"     int64_t_le       sexp_of_int64 t
+    let  int64_be_trunc t = d  "int64_be_trunc" int64_be_trunc   sexp_of_int   t
+    let  int64_le_trunc t = d  "int64_le_trunc" int64_le_trunc   sexp_of_int   t
 
     let padded_fixed_string ~padding ~len t =
       debug "Consume.padded_fixed_string" [t] (`padding padding, `len len)
@@ -299,21 +301,23 @@ module Make (M : sig end) = struct
 
     type nonrec ('a, 'd, 'w) t = ('a, 'd, 'w) t
 
-    let char        t = d "char"        char        sexp_of_char  t
-    let  int8       t = d  "int8"        int8       sexp_of_int   t
-    let  int16_be   t = d  "int16_be"    int16_be   sexp_of_int   t
-    let  int16_le   t = d  "int16_le"    int16_le   sexp_of_int   t
-    let  int32_be   t = d  "int32_be"    int32_be   sexp_of_int   t
-    let  int32_le   t = d  "int32_le"    int32_le   sexp_of_int   t
-    let uint8       t = d "uint8"       uint8       sexp_of_int   t
-    let uint16_be   t = d "uint16_be"   uint16_be   sexp_of_int   t
-    let uint16_le   t = d "uint16_le"   uint16_le   sexp_of_int   t
-    let uint32_be   t = d "uint32_be"   uint32_be   sexp_of_int   t
-    let uint32_le   t = d "uint32_le"   uint32_le   sexp_of_int   t
-    let  int64_be   t = d  "int64_be"    int64_be   sexp_of_int   t
-    let  int64_le   t = d  "int64_le"    int64_le   sexp_of_int   t
-    let  int64_t_be t = d  "int64_t_be"  int64_t_be sexp_of_int64 t
-    let  int64_t_le t = d  "int64_t_le"  int64_t_le sexp_of_int64 t
+    let char            t = d "char"              char              sexp_of_char  t
+    let  int8           t = d  "int8"              int8             sexp_of_int   t
+    let  int16_be       t = d  "int16_be"          int16_be         sexp_of_int   t
+    let  int16_le       t = d  "int16_le"          int16_le         sexp_of_int   t
+    let  int32_be       t = d  "int32_be"          int32_be         sexp_of_int   t
+    let  int32_le       t = d  "int32_le"          int32_le         sexp_of_int   t
+    let uint8           t = d "uint8"             uint8             sexp_of_int   t
+    let uint16_be       t = d "uint16_be"         uint16_be         sexp_of_int   t
+    let uint16_le       t = d "uint16_le"         uint16_le         sexp_of_int   t
+    let uint32_be       t = d "uint32_be"         uint32_be         sexp_of_int   t
+    let uint32_le       t = d "uint32_le"         uint32_le         sexp_of_int   t
+    let  int64_be       t = d  "int64_be"          int64_be         sexp_of_int   t
+    let  int64_le       t = d  "int64_le"          int64_le         sexp_of_int   t
+    let  int64_t_be     t = d  "int64_t_be"        int64_t_be       sexp_of_int64 t
+    let  int64_t_le     t = d  "int64_t_le"        int64_t_le       sexp_of_int64 t
+    let  int64_be_trunc t = d  "int64_be_trunc"    int64_be_trunc   sexp_of_int   t
+    let  int64_le_trunc t = d  "int64_le_trunc"    int64_le_trunc   sexp_of_int   t
 
     let padded_fixed_string ~padding ~len t str =
       debug "Fill.padded_fixed_string" [t] (`padding padding, `len len, str)
@@ -406,21 +410,23 @@ module Make (M : sig end) = struct
 
     type nonrec ('a, 'd, 'w) t = ('a, 'd, 'w) t
 
-    let char        t = d "char"        char        sexp_of_char  t
-    let  int8       t = d  "int8"        int8       sexp_of_int   t
-    let  int16_be   t = d  "int16_be"    int16_be   sexp_of_int   t
-    let  int16_le   t = d  "int16_le"    int16_le   sexp_of_int   t
-    let  int32_be   t = d  "int32_be"    int32_be   sexp_of_int   t
-    let  int32_le   t = d  "int32_le"    int32_le   sexp_of_int   t
-    let uint8       t = d "uint8"       uint8       sexp_of_int   t
-    let uint16_be   t = d "uint16_be"   uint16_be   sexp_of_int   t
-    let uint16_le   t = d "uint16_le"   uint16_le   sexp_of_int   t
-    let uint32_be   t = d "uint32_be"   uint32_be   sexp_of_int   t
-    let uint32_le   t = d "uint32_le"   uint32_le   sexp_of_int   t
-    let  int64_be   t = d  "int64_be"    int64_be   sexp_of_int   t
-    let  int64_le   t = d  "int64_le"    int64_le   sexp_of_int   t
-    let  int64_t_be t = d  "int64_t_be"  int64_t_be sexp_of_int64 t
-    let  int64_t_le t = d  "int64_t_le"  int64_t_le sexp_of_int64 t
+    let char            t = d "char"              char              sexp_of_char  t
+    let  int8           t = d  "int8"              int8             sexp_of_int   t
+    let  int16_be       t = d  "int16_be"          int16_be         sexp_of_int   t
+    let  int16_le       t = d  "int16_le"          int16_le         sexp_of_int   t
+    let  int32_be       t = d  "int32_be"          int32_be         sexp_of_int   t
+    let  int32_le       t = d  "int32_le"          int32_le         sexp_of_int   t
+    let uint8           t = d "uint8"             uint8             sexp_of_int   t
+    let uint16_be       t = d "uint16_be"         uint16_be         sexp_of_int   t
+    let uint16_le       t = d "uint16_le"         uint16_le         sexp_of_int   t
+    let uint32_be       t = d "uint32_be"         uint32_be         sexp_of_int   t
+    let uint32_le       t = d "uint32_le"         uint32_le         sexp_of_int   t
+    let  int64_be       t = d  "int64_be"          int64_be         sexp_of_int   t
+    let  int64_le       t = d  "int64_le"          int64_le         sexp_of_int   t
+    let  int64_t_be     t = d  "int64_t_be"        int64_t_be       sexp_of_int64 t
+    let  int64_t_le     t = d  "int64_t_le"        int64_t_le       sexp_of_int64 t
+    let  int64_be_trunc t = d  "int64_be_trunc"    int64_be_trunc   sexp_of_int   t
+    let  int64_le_trunc t = d  "int64_le_trunc"    int64_le_trunc   sexp_of_int   t
 
     let padded_fixed_string ~padding ~len t ~pos =
       debug "Peek.padded_fixed_string" [t] (`padding padding, `len len, `pos pos)
@@ -463,21 +469,23 @@ module Make (M : sig end) = struct
 
     type nonrec ('a, 'd, 'w) t = ('a, 'd, 'w) t
 
-    let char        t = d "char"        char        sexp_of_char  t
-    let  int8       t = d  "int8"        int8       sexp_of_int   t
-    let  int16_be   t = d  "int16_be"    int16_be   sexp_of_int   t
-    let  int16_le   t = d  "int16_le"    int16_le   sexp_of_int   t
-    let  int32_be   t = d  "int32_be"    int32_be   sexp_of_int   t
-    let  int32_le   t = d  "int32_le"    int32_le   sexp_of_int   t
-    let uint8       t = d "uint8"       uint8       sexp_of_int   t
-    let uint16_be   t = d "uint16_be"   uint16_be   sexp_of_int   t
-    let uint16_le   t = d "uint16_le"   uint16_le   sexp_of_int   t
-    let uint32_be   t = d "uint32_be"   uint32_be   sexp_of_int   t
-    let uint32_le   t = d "uint32_le"   uint32_le   sexp_of_int   t
-    let  int64_be   t = d  "int64_be"    int64_be   sexp_of_int   t
-    let  int64_le   t = d  "int64_le"    int64_le   sexp_of_int   t
-    let  int64_t_be t = d  "int64_t_be"  int64_t_be sexp_of_int64 t
-    let  int64_t_le t = d  "int64_t_le"  int64_t_le sexp_of_int64 t
+    let char            t = d "char"              char              sexp_of_char  t
+    let  int8           t = d  "int8"              int8             sexp_of_int   t
+    let  int16_be       t = d  "int16_be"          int16_be         sexp_of_int   t
+    let  int16_le       t = d  "int16_le"          int16_le         sexp_of_int   t
+    let  int32_be       t = d  "int32_be"          int32_be         sexp_of_int   t
+    let  int32_le       t = d  "int32_le"          int32_le         sexp_of_int   t
+    let uint8           t = d "uint8"             uint8             sexp_of_int   t
+    let uint16_be       t = d "uint16_be"         uint16_be         sexp_of_int   t
+    let uint16_le       t = d "uint16_le"         uint16_le         sexp_of_int   t
+    let uint32_be       t = d "uint32_be"         uint32_be         sexp_of_int   t
+    let uint32_le       t = d "uint32_le"         uint32_le         sexp_of_int   t
+    let  int64_be       t = d  "int64_be"          int64_be         sexp_of_int   t
+    let  int64_le       t = d  "int64_le"          int64_le         sexp_of_int   t
+    let  int64_t_be     t = d  "int64_t_be"        int64_t_be       sexp_of_int64 t
+    let  int64_t_le     t = d  "int64_t_le"        int64_t_le       sexp_of_int64 t
+    let  int64_be_trunc t = d  "int64_be_trunc"    int64_be_trunc   sexp_of_int   t
+    let  int64_le_trunc t = d  "int64_le_trunc"    int64_le_trunc   sexp_of_int   t
 
     let padded_fixed_string ~padding ~len t ~pos str =
       debug "Poke.padded_fixed_string" [t]
@@ -637,21 +645,23 @@ module Make (M : sig end) = struct
 
       type nonrec ('a, 'd, 'w) t = ('a, 'd, 'w) t
 
-      let char        t = d "char"        char        sexp_of_char  t
-      let  int8       t = d  "int8"        int8       sexp_of_int   t
-      let  int16_be   t = d  "int16_be"    int16_be   sexp_of_int   t
-      let  int16_le   t = d  "int16_le"    int16_le   sexp_of_int   t
-      let  int32_be   t = d  "int32_be"    int32_be   sexp_of_int   t
-      let  int32_le   t = d  "int32_le"    int32_le   sexp_of_int   t
-      let uint8       t = d "uint8"       uint8       sexp_of_int   t
-      let uint16_be   t = d "uint16_be"   uint16_be   sexp_of_int   t
-      let uint16_le   t = d "uint16_le"   uint16_le   sexp_of_int   t
-      let uint32_be   t = d "uint32_be"   uint32_be   sexp_of_int   t
-      let uint32_le   t = d "uint32_le"   uint32_le   sexp_of_int   t
-      let  int64_be   t = d  "int64_be"    int64_be   sexp_of_int   t
-      let  int64_le   t = d  "int64_le"    int64_le   sexp_of_int   t
-      let  int64_t_be t = d  "int64_t_be"  int64_t_be sexp_of_int64 t
-      let  int64_t_le t = d  "int64_t_le"  int64_t_le sexp_of_int64 t
+      let char            t = d "char"              char              sexp_of_char  t
+      let  int8           t = d  "int8"              int8             sexp_of_int   t
+      let  int16_be       t = d  "int16_be"          int16_be         sexp_of_int   t
+      let  int16_le       t = d  "int16_le"          int16_le         sexp_of_int   t
+      let  int32_be       t = d  "int32_be"          int32_be         sexp_of_int   t
+      let  int32_le       t = d  "int32_le"          int32_le         sexp_of_int   t
+      let uint8           t = d "uint8"             uint8             sexp_of_int   t
+      let uint16_be       t = d "uint16_be"         uint16_be         sexp_of_int   t
+      let uint16_le       t = d "uint16_le"         uint16_le         sexp_of_int   t
+      let uint32_be       t = d "uint32_be"         uint32_be         sexp_of_int   t
+      let uint32_le       t = d "uint32_le"         uint32_le         sexp_of_int   t
+      let  int64_be       t = d  "int64_be"          int64_be         sexp_of_int   t
+      let  int64_le       t = d  "int64_le"          int64_le         sexp_of_int   t
+      let  int64_t_be     t = d  "int64_t_be"        int64_t_be       sexp_of_int64 t
+      let  int64_t_le     t = d  "int64_t_le"        int64_t_le       sexp_of_int64 t
+      let  int64_be_trunc t = d  "int64_be_trunc"    int64_be_trunc   sexp_of_int   t
+      let  int64_le_trunc t = d  "int64_le_trunc"    int64_le_trunc   sexp_of_int   t
 
       let padded_fixed_string ~padding ~len t =
         debug "Unsafe.Consume.padded_fixed_string" [t] (`padding padding, `len len)
@@ -686,21 +696,23 @@ module Make (M : sig end) = struct
 
       type nonrec ('a, 'd, 'w) t = ('a, 'd, 'w) t
 
-      let char        t = d "char"        char        sexp_of_char  t
-      let  int8       t = d  "int8"        int8       sexp_of_int   t
-      let  int16_be   t = d  "int16_be"    int16_be   sexp_of_int   t
-      let  int16_le   t = d  "int16_le"    int16_le   sexp_of_int   t
-      let  int32_be   t = d  "int32_be"    int32_be   sexp_of_int   t
-      let  int32_le   t = d  "int32_le"    int32_le   sexp_of_int   t
-      let uint8       t = d "uint8"       uint8       sexp_of_int   t
-      let uint16_be   t = d "uint16_be"   uint16_be   sexp_of_int   t
-      let uint16_le   t = d "uint16_le"   uint16_le   sexp_of_int   t
-      let uint32_be   t = d "uint32_be"   uint32_be   sexp_of_int   t
-      let uint32_le   t = d "uint32_le"   uint32_le   sexp_of_int   t
-      let  int64_be   t = d  "int64_be"    int64_be   sexp_of_int   t
-      let  int64_le   t = d  "int64_le"    int64_le   sexp_of_int   t
-      let  int64_t_be t = d  "int64_t_be"  int64_t_be sexp_of_int64 t
-      let  int64_t_le t = d  "int64_t_le"  int64_t_le sexp_of_int64 t
+      let char            t = d "char"              char              sexp_of_char  t
+      let  int8           t = d  "int8"              int8             sexp_of_int   t
+      let  int16_be       t = d  "int16_be"          int16_be         sexp_of_int   t
+      let  int16_le       t = d  "int16_le"          int16_le         sexp_of_int   t
+      let  int32_be       t = d  "int32_be"          int32_be         sexp_of_int   t
+      let  int32_le       t = d  "int32_le"          int32_le         sexp_of_int   t
+      let uint8           t = d "uint8"             uint8             sexp_of_int   t
+      let uint16_be       t = d "uint16_be"         uint16_be         sexp_of_int   t
+      let uint16_le       t = d "uint16_le"         uint16_le         sexp_of_int   t
+      let uint32_be       t = d "uint32_be"         uint32_be         sexp_of_int   t
+      let uint32_le       t = d "uint32_le"         uint32_le         sexp_of_int   t
+      let  int64_be       t = d  "int64_be"          int64_be         sexp_of_int   t
+      let  int64_le       t = d  "int64_le"          int64_le         sexp_of_int   t
+      let  int64_t_be     t = d  "int64_t_be"        int64_t_be       sexp_of_int64 t
+      let  int64_t_le     t = d  "int64_t_le"        int64_t_le       sexp_of_int64 t
+      let  int64_be_trunc t = d  "int64_be_trunc"    int64_be_trunc   sexp_of_int   t
+      let  int64_le_trunc t = d  "int64_le_trunc"    int64_le_trunc   sexp_of_int   t
 
       let padded_fixed_string ~padding ~len t str =
         debug "Unsafe.Fill.padded_fixed_string" [t] (`padding padding, `len len, str)
@@ -744,21 +756,23 @@ module Make (M : sig end) = struct
 
       type nonrec ('a, 'd, 'w) t = ('a, 'd, 'w) t
 
-      let char        t = d "char"        char        sexp_of_char  t
-      let  int8       t = d  "int8"        int8       sexp_of_int   t
-      let  int16_be   t = d  "int16_be"    int16_be   sexp_of_int   t
-      let  int16_le   t = d  "int16_le"    int16_le   sexp_of_int   t
-      let  int32_be   t = d  "int32_be"    int32_be   sexp_of_int   t
-      let  int32_le   t = d  "int32_le"    int32_le   sexp_of_int   t
-      let uint8       t = d "uint8"       uint8       sexp_of_int   t
-      let uint16_be   t = d "uint16_be"   uint16_be   sexp_of_int   t
-      let uint16_le   t = d "uint16_le"   uint16_le   sexp_of_int   t
-      let uint32_be   t = d "uint32_be"   uint32_be   sexp_of_int   t
-      let uint32_le   t = d "uint32_le"   uint32_le   sexp_of_int   t
-      let  int64_be   t = d  "int64_be"    int64_be   sexp_of_int   t
-      let  int64_le   t = d  "int64_le"    int64_le   sexp_of_int   t
-      let  int64_t_be t = d  "int64_t_be"  int64_t_be sexp_of_int64 t
-      let  int64_t_le t = d  "int64_t_le"  int64_t_le sexp_of_int64 t
+      let char            t = d "char"              char              sexp_of_char  t
+      let  int8           t = d  "int8"              int8             sexp_of_int   t
+      let  int16_be       t = d  "int16_be"          int16_be         sexp_of_int   t
+      let  int16_le       t = d  "int16_le"          int16_le         sexp_of_int   t
+      let  int32_be       t = d  "int32_be"          int32_be         sexp_of_int   t
+      let  int32_le       t = d  "int32_le"          int32_le         sexp_of_int   t
+      let uint8           t = d "uint8"             uint8             sexp_of_int   t
+      let uint16_be       t = d "uint16_be"         uint16_be         sexp_of_int   t
+      let uint16_le       t = d "uint16_le"         uint16_le         sexp_of_int   t
+      let uint32_be       t = d "uint32_be"         uint32_be         sexp_of_int   t
+      let uint32_le       t = d "uint32_le"         uint32_le         sexp_of_int   t
+      let  int64_be       t = d  "int64_be"          int64_be         sexp_of_int   t
+      let  int64_le       t = d  "int64_le"          int64_le         sexp_of_int   t
+      let  int64_t_be     t = d  "int64_t_be"        int64_t_be       sexp_of_int64 t
+      let  int64_t_le     t = d  "int64_t_le"        int64_t_le       sexp_of_int64 t
+      let  int64_be_trunc t = d  "int64_be_trunc"    int64_be_trunc   sexp_of_int   t
+      let  int64_le_trunc t = d  "int64_le_trunc"    int64_le_trunc   sexp_of_int   t
 
       let padded_fixed_string ~padding ~len t ~pos =
         debug "Unsafe.Peek.padded_fixed_string" [t] (`padding padding, `len len, `pos pos)
@@ -801,21 +815,23 @@ module Make (M : sig end) = struct
 
       type nonrec ('a, 'd, 'w) t = ('a, 'd, 'w) t
 
-      let char        t = d "char"        char        sexp_of_char  t
-      let  int8       t = d  "int8"        int8       sexp_of_int   t
-      let  int16_be   t = d  "int16_be"    int16_be   sexp_of_int   t
-      let  int16_le   t = d  "int16_le"    int16_le   sexp_of_int   t
-      let  int32_be   t = d  "int32_be"    int32_be   sexp_of_int   t
-      let  int32_le   t = d  "int32_le"    int32_le   sexp_of_int   t
-      let uint8       t = d "uint8"       uint8       sexp_of_int   t
-      let uint16_be   t = d "uint16_be"   uint16_be   sexp_of_int   t
-      let uint16_le   t = d "uint16_le"   uint16_le   sexp_of_int   t
-      let uint32_be   t = d "uint32_be"   uint32_be   sexp_of_int   t
-      let uint32_le   t = d "uint32_le"   uint32_le   sexp_of_int   t
-      let  int64_be   t = d  "int64_be"    int64_be   sexp_of_int   t
-      let  int64_le   t = d  "int64_le"    int64_le   sexp_of_int   t
-      let  int64_t_be t = d  "int64_t_be"  int64_t_be sexp_of_int64 t
-      let  int64_t_le t = d  "int64_t_le"  int64_t_le sexp_of_int64 t
+      let char            t = d "char"              char              sexp_of_char  t
+      let  int8           t = d  "int8"              int8             sexp_of_int   t
+      let  int16_be       t = d  "int16_be"          int16_be         sexp_of_int   t
+      let  int16_le       t = d  "int16_le"          int16_le         sexp_of_int   t
+      let  int32_be       t = d  "int32_be"          int32_be         sexp_of_int   t
+      let  int32_le       t = d  "int32_le"          int32_le         sexp_of_int   t
+      let uint8           t = d "uint8"             uint8             sexp_of_int   t
+      let uint16_be       t = d "uint16_be"         uint16_be         sexp_of_int   t
+      let uint16_le       t = d "uint16_le"         uint16_le         sexp_of_int   t
+      let uint32_be       t = d "uint32_be"         uint32_be         sexp_of_int   t
+      let uint32_le       t = d "uint32_le"         uint32_le         sexp_of_int   t
+      let  int64_be       t = d  "int64_be"          int64_be         sexp_of_int   t
+      let  int64_le       t = d  "int64_le"          int64_le         sexp_of_int   t
+      let  int64_t_be     t = d  "int64_t_be"        int64_t_be       sexp_of_int64 t
+      let  int64_t_le     t = d  "int64_t_le"        int64_t_le       sexp_of_int64 t
+      let  int64_be_trunc t = d  "int64_be_trunc"    int64_be_trunc   sexp_of_int   t
+      let  int64_le_trunc t = d  "int64_le_trunc"    int64_le_trunc   sexp_of_int   t
 
       let padded_fixed_string ~padding ~len t ~pos str =
         debug "Unsafe.Poke.padded_fixed_string" [t]

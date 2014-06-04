@@ -183,10 +183,10 @@ module Arg_type = struct
   let time_ofday_unzoned = create Time.Ofday.of_string
   let time_span = create Time.Span.of_string
 
-  let file =
-    create Fn.id ~complete:(fun _ ~part ->
+  let file ?key of_string =
+    create ?key of_string ~complete:(fun _ ~part ->
       let prog = "bash" in
-      let args = [ "bash"; "-c"; "compgen -f $0"; part ] in
+      let args = ["bash"; "-c"; "compgen -f $0"; part] in
       never_returns (Unix.exec ~prog ~args ()))
 
   let of_map ?key map =
@@ -901,8 +901,8 @@ module Base = struct
 
     type ('a, 'b) t = {
       f : Env.t -> ('a -> 'b) Anon.Parser.t;
-      usage : Anon.Grammar.t;
-      flags : Flag.t list;
+      usage : unit -> Anon.Grammar.t;
+      flags : unit -> Flag.t list;
     }
 
     (* the reason that [param] is defined in terms of [t] rather than the other
@@ -918,8 +918,22 @@ module Base = struct
         t2.f env >>= fun v2 ->
         return (f v1 v2)
       );
-      flags = t2.flags @ t1.flags;
-      usage = Anon.Grammar.concat [t1.usage; t2.usage];
+      flags = (fun () -> t2.flags () @ t1.flags ());
+      usage = (fun () -> Anon.Grammar.concat [t1.usage (); t2.usage ()]);
+    }
+
+    (* So sad.  We can't define [apply] in terms of [app] because of the value
+       restriction. *)
+    let apply pf px = {
+      param = {
+        f = (fun env ->
+          pf.param.f env >>= fun mf ->
+          px.param.f env >>= fun mx ->
+          return (fun k -> mf (fun f -> mx (fun x -> k (f x))))
+        );
+        flags = (fun () -> px.param.flags () @ pf.param.flags ());
+        usage = (fun () -> Anon.Grammar.concat [pf.param.usage (); px.param.usage ()]);
+      }
     }
 
     let (++) t1 t2 = app t1 t2 ~f:(fun f1 f2 x -> f2 (f1 x))
@@ -928,21 +942,21 @@ module Base = struct
 
     let step f = {
       f = (fun _env -> return f);
-      flags = [];
-      usage = Anon.Grammar.zero;
+      flags = (fun () -> []);
+      usage = (fun () -> Anon.Grammar.zero);
     }
 
     let empty : 'm. ('m, 'm) t = {
       f = (fun _env -> return Fn.id);
-      flags = [];
-      usage = Anon.Grammar.zero;
+      flags = (fun () -> []);
+      usage = (fun () -> Anon.Grammar.zero);
     }
 
     let const v =
       { param =
         { f = (fun _env -> return (fun k -> k v));
-          flags = [];
-          usage = Anon.Grammar.zero; } }
+          flags = (fun () -> []);
+          usage = (fun () -> Anon.Grammar.zero); } }
 
     let map p ~f =
       { param =
@@ -960,8 +974,8 @@ module Base = struct
     let lookup key =
       { param =
         { f = (fun env -> return (fun m -> m (Env.find_exn env key)));
-          flags = [];
-          usage = Anon.Grammar.zero; } }
+          flags = (fun () -> []);
+          usage = (fun () -> Anon.Grammar.zero); } }
 
     let path : Path.t        param = lookup path_key
     let args : string list   param = lookup args_key
@@ -970,8 +984,10 @@ module Base = struct
     let env =
       { param =
         { f = (fun env -> return (fun m -> m env));
-          flags = [];
-          usage = Anon.Grammar.zero; } }
+          flags = (fun () -> []);
+          usage = (fun () -> Anon.Grammar.zero); } }
+
+    let pair p1 p2 = apply (apply (const (fun x y -> (x, y))) p1) p2
 
     include struct
       module Arg_type = Arg_type
@@ -985,7 +1001,7 @@ module Base = struct
       let time_ofday = time_ofday
       let time_ofday_unzoned = time_ofday_unzoned
       let time_span = time_span
-      let file      = file
+      let file      = file Fn.id
     end
 
     include struct
@@ -1000,11 +1016,13 @@ module Base = struct
       let t3 = t3
       let t4 = t4
 
-      let anon spec =
-        { param =
-          { f = (fun _env -> spec.p >>= fun v -> return (fun k -> k v));
-            flags = [];
-            usage = spec.grammar; } }
+      let anon spec = {
+        param = {
+          f = (fun _env -> spec.p >>= fun v -> return (fun k -> k v));
+          flags = (fun () -> []);
+          usage = (fun () -> spec.grammar);
+        }
+      }
     end
 
     include struct
@@ -1030,8 +1048,10 @@ module Base = struct
         in
         { param =
           { f = (fun _env -> return (fun k -> k (read ())));
-            flags = [{ Flag.name; aliases; doc; action; check_available }];
-            usage = Anon.Grammar.zero; } }
+            flags = (fun () -> [{ Flag.name; aliases; doc; action; check_available }]);
+            usage = (fun () -> Anon.Grammar.zero);
+          }
+        }
     end
 
     let flags_of_args_exn args =
@@ -1081,6 +1101,13 @@ and group = {
   subcommands : t String.Map.t
 }
 
+type ('main, 'result) basic_command
+  =  summary:string
+  -> ?readme:(unit -> string)
+  -> ('main, unit -> 'result) Base.Spec.t
+  -> 'main
+  -> t
+
 let get_summary = function
   | Base base -> Base.summary base
   | Group { summary; readme=_; subcommands=_ } -> summary
@@ -1128,6 +1155,8 @@ module Bailout_dump_flag = struct
 end
 
 let basic ~summary ?readme {Base.Spec.usage; flags; f} main =
+  let flags = flags () in
+  let usage = usage () in
   let anons env =
     let open Anon.Parser.For_opening in
     f env
