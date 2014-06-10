@@ -1220,7 +1220,7 @@ type msg_flag = Unix.msg_flag =
   | MSG_PEEK
 with sexp
 
-(** Receive data from an unconnected socket. *)
+(** Receive data from an connected socket. *)
 val recv
   :  File_descr.t
   -> buf:string
@@ -1238,7 +1238,7 @@ val recvfrom
   -> mode:msg_flag list
   -> int * sockaddr
 
-(** Send data over an unconnected socket. *)
+(** Send data over an connected socket. *)
 val send
   : File_descr.t -> buf:string -> pos:int -> len:int -> mode:msg_flag list -> int
 
