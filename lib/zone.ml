@@ -359,10 +359,14 @@ module Stable = struct
         table        : t String.Table.t
       }
 
+      let zone_from_env_or_default () =
+        Option.value (Sys.getenv "TZDIR") ~default:"/usr/share/zoneinfo/"
+      ;;
+
       let the_one_and_only =
         {
           full    = false;
-          basedir = "/usr/share/zoneinfo/";
+          basedir = zone_from_env_or_default ();
           table   = String.Table.create ();
         }
       ;;
