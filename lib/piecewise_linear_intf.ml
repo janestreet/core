@@ -6,10 +6,11 @@ module type Float_like = sig
 end
 
 module type S = sig
+  type ('k, 'v) t_
   type key
   type value
 
-  type t with bin_io, sexp, compare
+  type t = (key, value) t_ with bin_io, sexp, compare
 
   (** [create] enforces that x (key) values are non-decreasing.
 

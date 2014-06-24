@@ -7,6 +7,14 @@
    with hexadecimal digits x.
 *)
 
+module Stable = struct
+  open Core_kernel.Stable
+  module V1 = struct
+    type t = string with bin_io, compare, sexp
+    let for_testing = "5a863fc1-67b7-3a0a-dc90-aca2995afbf9"
+  end
+end
+
 open Core_kernel.Std
 module Unix = Core_unix
 
@@ -100,6 +108,8 @@ include Identifiable.Make (struct
   let compare t1 t2 = String.compare t1 t2
   let hash t = String.hash t
 end)
+
+let invariant t = ignore (of_string t : t)
 
 module Test = struct
   let test_size = 100_000

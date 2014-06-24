@@ -239,4 +239,12 @@ module Stable : sig
   module V1 : sig
     type t with bin_io, sexp, compare
   end with type t = t
+
+  (** Provides a sexp representation that is independent of the time zone of the machine
+      writing it. *)
+  module With_utc_sexp : sig
+    module V1 : sig
+      type t with bin_io, sexp, compare
+    end with type t = t
+  end
 end

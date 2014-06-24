@@ -93,6 +93,10 @@ let diff_by_iter2 map1 map2 ~data_equal =
 ;;
 
 let command =
+  let symmetric_diff t1 t2 ~data_equal =
+    Map.symmetric_diff t1 t2 ~data_equal
+    |> Sequence.to_list
+  in
   Bench.make_command [
     Test.create ~name:"Map.of_alist_exn" of_alist_exn;
     Test.create ~name:"Map.of_sorted_array" of_sorted_array;
@@ -105,11 +109,12 @@ let command =
     Test.create ~name:"Map.merge (old)" (merge_test old_map_merge);
 
     Test.create ~name:"Map.symmetric_diff-10"
-      (gen_diff_test 100_000 ~number_of_diff:10 ~diff:Map.symmetric_diff);
+      (gen_diff_test 100_000 ~number_of_diff:10
+         ~diff:symmetric_diff);
     Test.create ~name:"Map.symmetric_diff-100"
-      (gen_diff_test 100_000 ~number_of_diff:100 ~diff:Map.symmetric_diff);
+      (gen_diff_test 100_000 ~number_of_diff:100 ~diff:symmetric_diff);
     Test.create ~name:"Map.symmetric_diff-1000"
-      (gen_diff_test 100_000 ~number_of_diff:1000 ~diff:Map.symmetric_diff);
+      (gen_diff_test 100_000 ~number_of_diff:1000 ~diff:symmetric_diff);
     Test.create ~name:"Map.symmetric_diff_by_iter2-10"
       (gen_diff_test 100_000 ~number_of_diff:10 ~diff:diff_by_iter2);
     Test.create ~name:"Map.symmetric_diff_by_iter2-100"

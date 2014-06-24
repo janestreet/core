@@ -400,8 +400,8 @@ module Stable = struct
           else
             begin
               Array.iter (Sys.readdir dir) ~f:(fun fn ->
-                let full_fn     = dir ^ "/" ^ fn in
-                let relative_fn = String.drop_prefix full_fn basedir_len in
+                let fn = dir ^ "/" ^ fn in
+                let relative_fn = String.drop_prefix fn basedir_len in
                 if Core_sys.is_directory fn = `Yes then begin
                   if not (List.exists skip_prefixes ~f:(fun prefix ->
                       String.is_prefix ~prefix relative_fn)) then
@@ -420,6 +420,15 @@ module Stable = struct
             ignore (find_or_load zone_name));
           the_one_and_only.full <- true;
         end
+      ;;
+
+      TEST =
+        fill ();
+        let result = Option.is_some (find "America/New_York") in
+        (* keep this test from contaminating tests later in the file *)
+        the_one_and_only.full <- false;
+        Hashtbl.clear the_one_and_only.table;
+        result
       ;;
 
       let to_alist () = Hashtbl.to_alist the_one_and_only.table

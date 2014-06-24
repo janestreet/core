@@ -565,6 +565,14 @@ module Stable = struct
       ignore
         (V1.t_of_sexp (Sexp.of_string "(2012-04-09 12:00:00.000000 America/New_York)"))
   end
+
+  module With_utc_sexp = struct
+    module V1 = struct
+      include V1
+
+      let sexp_of_t t = sexp_of_t_abs t ~zone:Zone.utc
+    end
+  end
 end
 
 include Stable.V1
