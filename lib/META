@@ -4,4 +4,5 @@ package "syntax" (
  version = "109.32.00"
  description = "Metapackage for syntax extensions of the Core suite"
  requires = "sexplib.syntax fieldslib.syntax variantslib.syntax comparelib.syntax bin_prot.syntax custom_printf.syntax pa_pipebang herelib.syntax"
+ archive(syntax, preprocessor) = "-ignore dummy"
 )
