@@ -373,11 +373,10 @@ module Flag = struct
       in
       { action = Rest action; read; optional = true }
 
-    let no_arg_abort ~exit name = {
+    let no_arg_abort ~exit _name = {
       action = No_arg (fun _ -> never_returns (exit ()));
       optional = true;
-      read = (fun () ->
-        failwithf "BUG! somehow no_arg_abort flag %s is being read" name ());
+      read = (fun () -> ());
     }
 
     let escape name = escape_general ~deprecated_hook:None name

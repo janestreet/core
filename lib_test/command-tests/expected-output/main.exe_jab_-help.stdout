@@ -19,6 +19,7 @@ erat. Vestibulum in feugiat metus.
 
   [-fondue]     make sure fondue is doing the same stuff
   [-gilt NAME]  which gilt should do the stuff
+  [-happy]      abort when this is called
   [-help]       print this help text and exit
                 (alias: -?)
 

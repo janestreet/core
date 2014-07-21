@@ -7,17 +7,21 @@ let spec =
     empty
     +> flag "-fondue" no_arg ~doc:" make sure fondue is doing the same stuff"
     +> flag "-gilt" (optional string) ~doc:"NAME which gilt should do the stuff"
+    +> flag "-happy" (no_arg_abort ~exit:(fun () ->
+      print_endline "happy happy happy!";
+      exit 0
+    )) ~doc: " abort when this is called"
     +> anon ("OxIdE" %: int) (*Note: Mixed case here ensures output is uppercased *)
     +> anon (maybe ("path" %: file)) (*path will become PATH in output *)
   )
 
 let leaf =
   basic ~summary:"this command does stuff here"
-    spec (fun _ _ _ _ () -> print_endline "doing stuff here!")
+    spec (fun _ _ () _ _ () -> print_endline "doing stuff here!")
 
 let leaf_no_summary =
   basic ~summary:""
-    spec (fun _ _ _ _ () -> print_endline "doing stuff here!")
+    spec (fun _ _ () _ _ () -> print_endline "doing stuff here!")
 
 let readme () =
 "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque et
@@ -35,7 +39,7 @@ erat. Vestibulum in feugiat metus."
 
 let leaf_with_readme =
   basic ~summary:"this command does stuff here" ~readme
-    spec (fun _ _ _ _ () -> print_endline "doing stuff here!")
+    spec (fun _ _ () _ _ () -> print_endline "doing stuff here!")
 
 type internals = { path : string list; args : string list; help : string; } with sexp
 

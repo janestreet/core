@@ -10,6 +10,8 @@
 
 open Core_kernel.Std
 
+module Sys = Core_sys
+
 let likely_machine_zones = ref [
   "America/New_York";
   "Europe/London";
@@ -362,7 +364,7 @@ module Stable = struct
       let the_one_and_only =
         {
           full    = false;
-          basedir = "/usr/share/zoneinfo/";
+          basedir = Option.value (Sys.getenv "TZDIR") ~default:"/usr/share/zoneinfo/";
           table   = String.Table.create ();
         }
       ;;
@@ -402,7 +404,7 @@ module Stable = struct
               Array.iter (Sys.readdir dir) ~f:(fun fn ->
                 let fn = dir ^ "/" ^ fn in
                 let relative_fn = String.drop_prefix fn basedir_len in
-                if Core_sys.is_directory fn = `Yes then begin
+                if Sys.is_directory fn = `Yes then begin
                   if not (List.exists skip_prefixes ~f:(fun prefix ->
                       String.is_prefix ~prefix relative_fn)) then
                     dfs fn (depth - 1)
@@ -615,7 +617,7 @@ let machine_zone =
     | Some t -> t
     | None ->
       let t =
-        match Core_sys.getenv "TZ" with
+        match Sys.getenv "TZ" with
         | Some zone_name ->
           find_exn zone_name
         | None ->

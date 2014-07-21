@@ -75,7 +75,13 @@ static void report_error(int fd, const char* str)
   snprintf(buf2, MAX_ERROR_LEN, "%s (%s)\n", str, buf);
 #endif
   buf2[MAX_ERROR_LEN - 1] = '\0';
-  write(fd, buf2, strlen(buf2));
+  if (write(fd, buf2, strlen(buf2))) {}
+  /* The returned value from the above write is ignored.
+     This is fine because we are about to exit(254).
+
+     But newer versions of gcc warn, so we enclose the expression with
+     `if(..){}'. Note: simply casting to (void) is not sufficient to
+     suppress the warning. */
 }
 
 /* Maximum number of arguments plus one (for terminating NULL) that may

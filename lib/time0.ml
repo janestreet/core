@@ -230,6 +230,15 @@ module Stable = struct
       ]
     ;;
 
+    let to_string_abs_trimmed ?(zone=Zone.machine_zone ()) time =
+      let date, ofday = to_date_ofday time zone in
+      let offset_string = offset_string time ~zone in
+      String.concat ~sep:" "
+        [ (Date.to_string date)
+        ; (Ofday.to_string_trimmed ofday) ^ offset_string
+        ]
+    ;;
+
     let to_string_abs ?zone time =
       String.concat ~sep:" " (to_string_abs_parts ?zone time)
     ;;

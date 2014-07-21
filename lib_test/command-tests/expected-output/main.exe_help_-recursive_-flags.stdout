@@ -8,19 +8,24 @@ this command does stuff
   . drolly          this command does stuff here
   . . [-fondue]     make sure fondue is doing the same stuff
   . . [-gilt NAME]  which gilt should do the stuff
+  . . [-happy]      abort when this is called
   . nemeses         display internal values
   . opposable
   . . [-fondue]     make sure fondue is doing the same stuff
   . . [-gilt NAME]  which gilt should do the stuff
+  . . [-happy]      abort when this is called
   jab               this command does stuff here
   . [-fondue]       make sure fondue is doing the same stuff
   . [-gilt NAME]    which gilt should do the stuff
+  . [-happy]        abort when this is called
   mixture           this command does stuff here
   . [-fondue]       make sure fondue is doing the same stuff
   . [-gilt NAME]    which gilt should do the stuff
+  . [-happy]        abort when this is called
   moonshot          this command does stuff here
   . [-fondue]       make sure fondue is doing the same stuff
   . [-gilt NAME]    which gilt should do the stuff
+  . [-happy]        abort when this is called
   parse-sexp-file   parse a sexp file and display it
   version           print version information
   . [-build-info]   print build info for this build

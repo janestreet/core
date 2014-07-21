@@ -94,9 +94,10 @@ let find_or_add t key ~default =
 TEST_UNIT =
   let module M = struct
     type t =
-      { foo : int
-      ; bar : int
-      ; baz : string
+      (* [mutable foo] to force the compiler to allocate the record on the heap. *)
+      { mutable foo : int
+      ; bar         : int
+      ; baz         : string
       }
   end
   in

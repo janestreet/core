@@ -20,10 +20,12 @@ erat. Vestibulum in feugiat metus.
   drolly                  this command does stuff here
   drolly [-fondue]        make sure fondue is doing the same stuff
   drolly [-gilt NAME]     which gilt should do the stuff
+  drolly [-happy]         abort when this is called
   nemeses                 display internal values
   opposable
   opposable [-fondue]     make sure fondue is doing the same stuff
   opposable [-gilt NAME]  which gilt should do the stuff
+  opposable [-happy]      abort when this is called
   help                    explain a given subcommand (perhaps recursively)
   help [-expand-dots]     expand subcommands in recursive help
   help [-flags]           show flags as well in recursive help

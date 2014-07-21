@@ -154,8 +154,16 @@ val of_localized_string : Zone.t -> string -> t
 
     The string will display the date and of-day of [zone] together with [zone] as an
     offset from UTC.  The [zone] argument defaults to the machine's timezone.
+
+    [to_string_abs_trimmed] same as to_string_abs, but drops trailing seconds and
+    milliseconds if they are 0
 *)
 val to_string_abs
+  :  ?zone:Zone.t
+  -> t
+  -> string
+
+val to_string_abs_trimmed
   :  ?zone:Zone.t
   -> t
   -> string

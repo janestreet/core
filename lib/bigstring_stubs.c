@@ -107,8 +107,12 @@ static inline void raise_unix_io_error(
 
 static inline void raise_eof_io_error(value v_n_good)
 {
+#if defined(JSC_OCAML_4_02)
+  value v_eof_exn = *bigstring_exc_End_of_file;
+#else
   value v_eof_exn = caml_alloc_small(1, 0);
   Field(v_eof_exn, 0) = *bigstring_exc_End_of_file;
+#endif
   raise_io_error(v_n_good, v_eof_exn);
 }
 

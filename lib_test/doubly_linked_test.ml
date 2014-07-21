@@ -96,7 +96,10 @@ module Foil : S = struct
   let iter t ~f        = read_wrap t (fun () -> List.iter (to_list t) ~f)
   let fold t ~init ~f  = read_wrap t (fun () -> List.fold (to_list t) ~init ~f)
   let count t ~f       = read_wrap t (fun () -> List.count (to_list t) ~f)
+  let sum m t ~f       = read_wrap t (fun () -> List.sum m (to_list t) ~f)
   let mem ?equal t a   = read_wrap t (fun () -> List.mem ?equal (to_list t) a)
+  let min_elt t ~cmp   = read_wrap t (fun () -> List.min_elt ~cmp (to_list t))
+  let max_elt t ~cmp   = read_wrap t (fun () -> List.max_elt ~cmp (to_list t))
 
   let sexp_of_t sexp_of_a t = List.sexp_of_t sexp_of_a (to_list t)
   let t_of_sexp a_of_sexp s = of_list (List.t_of_sexp a_of_sexp s)
@@ -313,11 +316,14 @@ module Both : S = struct
   let of_list xs = pair Hero.of_list Foil.of_list *@ pure xs
   let to_list t = obs (pair Hero.to_list Foil.to_list *@ t)
   let to_array t = obs (pair Hero.to_array Foil.to_array *@ t)
+  let min_elt t ~cmp = obs (pair (Hero.min_elt ~cmp) (Foil.min_elt ~cmp) *@ t)
+  let max_elt t ~cmp = obs (pair (Hero.max_elt ~cmp) (Foil.max_elt ~cmp) *@ t)
 
   (* punt: so as not to duplicate any effects in passed-in functions *)
   let fold _ = failwith "unimplemented"
   let iter _ = failwith "unimplemented"
   let count _ = failwith "unimplemented"
+  let sum _ = failwith "unimplemented"
 
   let invariant t = obs (pair Hero.invariant Foil.invariant *@ t)
 

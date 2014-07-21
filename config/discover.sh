@@ -49,15 +49,13 @@ if [ "$WORDEXP" = yes ]; then
 fi
 
 OCAML_VERSION="`ocamlc -version`"
-case "$OCAML_VERSION" in
-    4.0[1-9]*|4.[1-9]*)
-        echo "DEFINE OCAML_4"    >> $OUT
-        echo "DEFINE OCAML_4_01" >> $OUT
-        ;;
-    4*)
-        echo "DEFINE OCAML_4" >> $OUT
-        ;;
-esac
+major=`echo $OCAML_VERSION | cut -d. -f1`
+minor=`echo $OCAML_VERSION | cut -d. -f2`
+if [ $major -ge 4 ]; then
+    echo "DEFINE OCAML_4" >> $OUT
+    [ $minor -ge 1 ] && echo "DEFINE OCAML_4_01" >> $OUT
+    [ $minor -ge 2 ] && echo "DEFINE OCAML_4_02" >> $OUT
+fi
 
 # The recvmmsg system call was added in Linux 2.6.32
 if gcc config/test_recvmmsg.c -o /dev/null; then

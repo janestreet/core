@@ -7,8 +7,8 @@ cmd=./main.exe
 out=./actual-output
 std=./expected-output
 
-rm -rf $out
 mkdir -p $out
+rm -rf $out/*
 
 export COLUMNS=90
 
@@ -53,6 +53,15 @@ run ./main.exe jab -help
 
 # check we get a nice sexp when an exception is raised during command line parsing
 run ./main.exe parse-sexp-file input-files/malformed-sexp || true
+
+# check that commands actually get run once they get arguments
+run ./main.exe jab 123
+
+# check that aborting no-arg flag works
+run ./main.exe jab -happy
+run ./main.exe jab 123 -happy
+run ./main.exe jab -fondue -happy
+
 
 function cleanup-std {
     hg status -ni0 $std | xargs -0 -r rm -f
