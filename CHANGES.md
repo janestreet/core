@@ -1,3 +1,25 @@
+## 111.25.00
+
+- Added `Gc.disable_compaction` function.
+- Added `Time.to_string_abs_trimmed`, which prints a trimmed time and
+  takes a `zone` argument.
+- Fixed `unix_stubs.c` to suppress a warning when building with some
+  versions of gcc.
+- Changed `Time.Zone` to allow the zoneinfo location to be specified
+  by an environment variable.
+
+  Closes #40
+- Fix compatibility with 4.02
+
+## 111.21.00
+
+- Fixed an issue where `Time.Zone.init` would not properly traverse the
+  directory containing timezone information.
+- Added `Time.With_utc_sexp`, which has stable serialization of `Time.t`
+  that is byte-for-byte equal across timezones.
+- Made `Uuid` stable.
+- Made `Piecewise_linear` stable.
+
 ## 111.17.00
 
 - Fixed a bug in `Bigstring.really_recv` if `recv` doesn't receive all
