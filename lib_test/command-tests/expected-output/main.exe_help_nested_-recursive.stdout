@@ -1,14 +1,16 @@
-this command does stuff
+this command is in another executable
 
-  main.exe SUBCOMMAND
+  main.exe nested SUBCOMMAND
 
 === subcommands ===
 
   adverb           this command does more stuff
+  . drolly         this command does stuff here
+  . nemeses        display internal values
+  . opposable
   jab              this command does stuff here
   mixture          this command does stuff here
   moonshot         this command does stuff here
-  nested           this command is in another executable
   parse-sexp-file  parse a sexp file and display it
   version          print version information
   help             explain a given subcommand (perhaps recursively)

@@ -38,7 +38,7 @@ module Hashable_ = My_hashable
 let gen_test_int_replace_and_find n tbl =
   let replace () =
     for i = 0 to n - 1 do
-      Hashtbl.replace tbl ~key:i ~data:i
+      Hashtbl.set tbl ~key:i ~data:i
     done
   in
   let find () =

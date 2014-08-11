@@ -23,10 +23,10 @@ IFDEF LINUX_EXT THEN
 external backtrace_get : unit -> string = "backtrace_get"
 let get = Ok backtrace_get
 ELSE
-let get = unimplemented "Backtrace.get"
+let get = Or_error.unimplemented "Backtrace.get"
 ENDIF
 ELSE
-let get = unimplemented "Backtrace.get"
+let get = Or_error.unimplemented "Backtrace.get"
 ENDIF
 
 TEST_UNIT =

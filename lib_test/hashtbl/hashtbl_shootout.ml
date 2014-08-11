@@ -40,7 +40,7 @@ module Std_hashtbl : Test_intf = struct
   let create ?hash size = let _ = hash in T.create ~size ()
   let find = Hashtbl.find
   let fold = Hashtbl.fold
-  let add t ~key ~data = Hashtbl.replace t ~key ~data; t
+  let add t ~key ~data = Hashtbl.set t ~key ~data; t
 end
 
 module Random = struct

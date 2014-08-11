@@ -83,14 +83,14 @@ let gen_tests m n =
     let create () = Heap.create ~cmp:Key.compare (), Key.Table.create () in
     let add (heap, elts) x =
       let elt = Heap.add_removable heap x in
-      Hashtbl.replace elts ~key:x ~data:elt
+      Hashtbl.set elts ~key:x ~data:elt
     in
     let update (heap, elts) x y =
       match Hashtbl.find elts x with
       | None -> ()
       | Some elt ->
         let elt = Heap.update heap elt y in
-        Hashtbl.replace elts ~key:y ~data:elt
+        Hashtbl.set elts ~key:y ~data:elt
     in
     [ Bench.Test.create ~name:(Key.name ^ "-mockheap-add&update")
         (gen_test_add_and_update ~create ~random ~add ~update n)
@@ -103,14 +103,14 @@ let gen_tests m n =
     let create () = Heap.create ~cmp:Key.compare (), Key.Table.create () in
     let add (heap, elts) x =
       let elt = Heap.add_removable heap x in
-      Hashtbl.replace elts ~key:x ~data:elt
+      Hashtbl.set elts ~key:x ~data:elt
     in
     let update (heap, elts) x y =
       match Hashtbl.find elts x with
       | None -> ()
       | Some elt ->
         let elt = Heap.update heap elt y in
-        Hashtbl.replace elts ~key:y ~data:elt
+        Hashtbl.set elts ~key:y ~data:elt
     in
     [ Bench.Test.create ~name:(Key.name ^ "-heap-add&update")
         (gen_test_add_and_update ~create ~random ~add ~update n)

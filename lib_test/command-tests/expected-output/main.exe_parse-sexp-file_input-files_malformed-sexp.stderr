@@ -3,13 +3,13 @@ Uncaught exception:
   (Sexplib.Conv.Of_sexp_error
    (Sexplib.Sexp.Annotated.Conv_exn input-files/malformed-sexp:1:0
     (Failure
-     "main.ml.config_of_sexp: the following record elements were undefined: bar"))
+     "common.ml.config_of_sexp: the following record elements were undefined: bar"))
    ((foo 3)))
 
 Raised at file "pre_sexp.ml", line @@@, characters 12-58
-Called from file "main.ml", line @@@, characters 11-54
+Called from file "common.ml", line @@@, characters 11-54
 Called from file "command.ml", line @@@, characters 18-24
 Called from file "result.ml", line @@@, characters 10-14
 Re-raised at file "command.ml", line @@@, characters 14-17
-Called from file "command.ml", line @@@, characters 6-46
+Called from file "command.ml", line @@@, characters 6-68
 Called from file "exn.ml", line @@@, characters 6-10

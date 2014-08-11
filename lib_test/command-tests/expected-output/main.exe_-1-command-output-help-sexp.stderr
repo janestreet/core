@@ -1,0 +1,10 @@
+Uncaught exception:
+  
+  ("Couldn't choose a supported help output version for Command.exec from the given supported versions."
+   (1) base/core/lib/command.ml:1588:6)
+
+Raised at file "error.ml", line 7, characters 21-29
+Called from file "command.ml", line 1588, characters 6-186
+Called from file "command.ml", line 1600, characters 4-228
+Called from file "command.ml", line 1713, characters 22-48
+Called from file "exn.ml", line 80, characters 6-10

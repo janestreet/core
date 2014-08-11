@@ -46,10 +46,28 @@ function version-cmd {
   diff <(./$foo version -build-info) <(sed -e '$a\' $foo.build_info.sexp)
 }
 
-group-cmd './main.exe' jab adverb
+function command-output-help-sexp {
+  version_string="$1"; shift
+  foo="$1"
+
+  export COMMAND_OUTPUT_HELP_SEXP="($version_string)"
+  tok="$(echo "$foo $version_string" | tr ' ' '_' | sed -r 's|([^.])/|\1_|g')-command-output-help-sexp"
+  ("$foo" || echo) >"$out/$tok-ugly.stdout" 2>"$out/$tok.stderr"
+  unset COMMAND_OUTPUT_HELP_SEXP
+
+  sed -i 's|(path_to_exe '$(readlink -f nested.exe)')|(path_to_exe XPWDX)|' "$out/$tok-ugly.stdout" $out/$tok.stderr
+
+  cat "$out/$tok-ugly.stdout" | sexp print >$out/$tok.stdout
+  rm "$out/$tok-ugly.stdout"
+}
+
+group-cmd './main.exe' jab adverb nested
 group-cmd './main.exe adverb' nemeses
-version-cmd 'main.exe'
+version-cmd './main.exe'
 run ./main.exe jab -help
+command-output-help-sexp "1" './main.exe'
+command-output-help-sexp "1 2" './main.exe'
+command-output-help-sexp "-1" './main.exe'
 
 # check we get a nice sexp when an exception is raised during command line parsing
 run ./main.exe parse-sexp-file input-files/malformed-sexp || true

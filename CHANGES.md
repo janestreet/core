@@ -1,3 +1,23 @@
+## 111.28.00
+
+- Added `Piecewise_linear.create_from_linear_combination`.
+
+        val create_from_linear_combination : (t * float) list -> t Or_error.t
+
+- Added `Time.is_{earlier,later} : Time.t -> than:Time.t -> bool`, which
+  are easier to read than `Time.(<)` and friends.
+- Added `Command.exec`, which allows one to include the `Command`
+  hierarchy from one executable in another.
+
+    `Command.exec` takes the file path to an executable that uses the
+    `Command` module and returns a `Command.t` that integrates the
+    executable (by exec'ing it), including providing recursive help and
+    autocompletion as if it were a standard `Command.t`.
+
+- Replaced most uses of `Hashtbl.replace` with `Hashtbl.set`.
+- Renamed `Float.epsilon` to `robust_comparison_tolerance`, to avoid
+  confusion with `epsilon_float`.
+
 ## 111.25.00
 
 - Added `Gc.disable_compaction` function.

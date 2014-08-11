@@ -161,13 +161,13 @@ module RLimit = struct
     IFDEF RLIMIT_AS THEN
       Ok Virtual_memory
     ELSE
-      unimplemented "RLIMIT_AS is not supported on this system"
+      Or_error.unimplemented "RLIMIT_AS is not supported on this system"
     ENDIF
   let nice                 =
     IFDEF RLIMIT_NICE THEN
       Ok Nice
     ELSE
-      unimplemented "RLIMIT_NICE is not supported on this system"
+      Or_error.unimplemented "RLIMIT_NICE is not supported on this system"
     ENDIF
 
   let resource_of_sexp sexp =
@@ -464,7 +464,7 @@ let wordexp = Ok (fun ?flags str -> wordexp (Wordexp_flags.make flags) str)
 
 ELSE
 
-let wordexp = unimplemented "Unix.wordexp"
+let wordexp = Or_error.unimplemented "Unix.wordexp"
 
 ENDIF
 

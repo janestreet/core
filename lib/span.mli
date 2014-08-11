@@ -50,7 +50,7 @@ val hour : t
 val day : t
 (* 10^-6 seconds, used in robustly comparable operators (<., >., =., ...) to determine
    equality *)
-val epsilon : t
+val robust_comparison_tolerance : t
 val zero : t
 
 (* [create ?sign ?day ?hr ?min ?sec ?ms ?us ()] Create a span from the given parts.  All

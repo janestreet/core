@@ -65,6 +65,6 @@ let marshal_to_sock_no_sigpipe = Ok marshal_to_sock_no_sigpipe
 ELSE
 
 let marshal_to_sock_no_sigpipe =
-  unimplemented "Bigstring_marshal.marshal_to_sock_no_sigpipe"
+  Or_error.unimplemented "Bigstring_marshal.marshal_to_sock_no_sigpipe"
 
 ENDIF

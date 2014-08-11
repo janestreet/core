@@ -4,35 +4,62 @@ this command does stuff
 
 === subcommands and flags ===
 
-  adverb                         this command does more stuff
-  adverb drolly                  this command does stuff here
-  adverb drolly [-fondue]        make sure fondue is doing the same stuff
-  adverb drolly [-gilt NAME]     which gilt should do the stuff
-  adverb drolly [-happy]         abort when this is called
-  adverb nemeses                 display internal values
+  adverb                                this command does more stuff
+  adverb drolly                         this command does stuff here
+  adverb drolly [-fondue]               make sure fondue is doing the same stuff
+  adverb drolly [-gilt NAME]            which gilt should do the stuff
+  adverb drolly [-happy]                abort when this is called
+  adverb nemeses                        display internal values
   adverb opposable
-  adverb opposable [-fondue]     make sure fondue is doing the same stuff
-  adverb opposable [-gilt NAME]  which gilt should do the stuff
-  adverb opposable [-happy]      abort when this is called
-  jab                            this command does stuff here
-  jab [-fondue]                  make sure fondue is doing the same stuff
-  jab [-gilt NAME]               which gilt should do the stuff
-  jab [-happy]                   abort when this is called
-  mixture                        this command does stuff here
-  mixture [-fondue]              make sure fondue is doing the same stuff
-  mixture [-gilt NAME]           which gilt should do the stuff
-  mixture [-happy]               abort when this is called
-  moonshot                       this command does stuff here
-  moonshot [-fondue]             make sure fondue is doing the same stuff
-  moonshot [-gilt NAME]          which gilt should do the stuff
-  moonshot [-happy]              abort when this is called
-  parse-sexp-file                parse a sexp file and display it
-  version                        print version information
-  version [-build-info]          print build info for this build
-  version [-version]             print the version of this build
-  help                           explain a given subcommand (perhaps
-                                 recursively)
-  help [-expand-dots]            expand subcommands in recursive help
-  help [-flags]                  show flags as well in recursive help
-  help [-recursive]              show subcommands of subcommands, etc.
+  adverb opposable [-fondue]            make sure fondue is doing the same stuff
+  adverb opposable [-gilt NAME]         which gilt should do the stuff
+  adverb opposable [-happy]             abort when this is called
+  jab                                   this command does stuff here
+  jab [-fondue]                         make sure fondue is doing the same stuff
+  jab [-gilt NAME]                      which gilt should do the stuff
+  jab [-happy]                          abort when this is called
+  mixture                               this command does stuff here
+  mixture [-fondue]                     make sure fondue is doing the same stuff
+  mixture [-gilt NAME]                  which gilt should do the stuff
+  mixture [-happy]                      abort when this is called
+  moonshot                              this command does stuff here
+  moonshot [-fondue]                    make sure fondue is doing the same stuff
+  moonshot [-gilt NAME]                 which gilt should do the stuff
+  moonshot [-happy]                     abort when this is called
+  nested                                this command is in another executable
+  nested adverb                         this command does more stuff
+  nested adverb drolly                  this command does stuff here
+  nested adverb drolly [-fondue]        make sure fondue is doing the same stuff
+  nested adverb drolly [-gilt NAME]     which gilt should do the stuff
+  nested adverb drolly [-happy]         abort when this is called
+  nested adverb nemeses                 display internal values
+  nested adverb opposable
+  nested adverb opposable [-fondue]     make sure fondue is doing the same stuff
+  nested adverb opposable [-gilt NAME]  which gilt should do the stuff
+  nested adverb opposable [-happy]      abort when this is called
+  nested jab                            this command does stuff here
+  nested jab [-fondue]                  make sure fondue is doing the same stuff
+  nested jab [-gilt NAME]               which gilt should do the stuff
+  nested jab [-happy]                   abort when this is called
+  nested mixture                        this command does stuff here
+  nested mixture [-fondue]              make sure fondue is doing the same stuff
+  nested mixture [-gilt NAME]           which gilt should do the stuff
+  nested mixture [-happy]               abort when this is called
+  nested moonshot                       this command does stuff here
+  nested moonshot [-fondue]             make sure fondue is doing the same stuff
+  nested moonshot [-gilt NAME]          which gilt should do the stuff
+  nested moonshot [-happy]              abort when this is called
+  nested parse-sexp-file                parse a sexp file and display it
+  nested version                        print version information
+  nested version [-build-info]          print build info for this build
+  nested version [-version]             print the version of this build
+  parse-sexp-file                       parse a sexp file and display it
+  version                               print version information
+  version [-build-info]                 print build info for this build
+  version [-version]                    print the version of this build
+  help                                  explain a given subcommand (perhaps
+                                        recursively)
+  help [-expand-dots]                   expand subcommands in recursive help
+  help [-flags]                         show flags as well in recursive help
+  help [-recursive]                     show subcommands of subcommands, etc.
 

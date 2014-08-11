@@ -380,7 +380,7 @@ module Stable = struct
             try
               let filename = the_one_and_only.basedir ^ "/" ^ zonename in
               let zone     = Zone_file.input_tz_file ~zonename ~filename in
-              Hashtbl.replace the_one_and_only.table ~key:zonename ~data:zone;
+              Hashtbl.set the_one_and_only.table ~key:zonename ~data:zone;
               Some zone
             with
             | _ -> None

@@ -102,6 +102,8 @@ module Stable = struct
 
       val get : t -> float -> float
 
+      val create_from_linear_combination : (t * float) list -> t Or_error.t
+
     end = struct
       (* float arrays don't have the boxing overhead that (float * float) arrays have.
          Also, when inverting, we can often swap x and y without duplicating the floats.
@@ -117,7 +119,7 @@ module Stable = struct
         let len_x = Array.length x in
         let len_y = Array.length y in
         if len_x <> len_y
-        then Or_error.error_string (sprintf "length x = %i <> length y = %i" len_x len_y)
+        then Or_error.errorf "length x = %i <> length y = %i" len_x len_y
         else if len_x = 0
         then Or_error.error_string "no knots given"
         else match Common.array_is_strongly_finite y with
@@ -188,7 +190,9 @@ module Stable = struct
         let t_x = t.x in
         let t_y = t.y in
         let l = Array.length t_x in
-        if Float.(<=) x t_x.(0)
+        (* Using Float.(<=) on next line gives wrong semantics if t starts with a
+           discontinuity. *)
+        if Float.(<) x t_x.(0)
         then t_y.(0)
         else if Float.(<=) t_x.(l - 1) x
         then t_y.(l - 1)
@@ -206,6 +210,35 @@ module Stable = struct
           let i = loop 0 (l - 1) in
           linear ~x ~x1:t_x.(i) ~y1:t_y.(i) ~x2:t_x.(i + 1) ~y2:t_y.(i + 1)
 
+      let create_from_linear_combination with_weights =
+        match with_weights with
+        | [] -> Or_error.error_string
+                  "Piecewise_linear.create_from_linear_combination with empty list"
+        | with_weights ->
+          let xs_strictly_incr = List.for_all with_weights ~f:(fun (t, _) ->
+            Common.array_is_sorted ~strict:true t.x ~compare:Float.compare)
+          in
+          if not xs_strictly_incr
+          then Or_error.error_string
+                 "Knot keys are not strictly increasing. create_from_linear_combination \
+                  does not support discontinuities"
+          else
+            let weights_are_ordinary = List.for_all with_weights ~f:(fun (_, w) ->
+              Float.is_finite w)
+            in
+            if not weights_are_ordinary
+            then Or_error.error_string "Some weights are not finite"
+            else
+              let xs =
+                List.map with_weights ~f:(fun (t, _) ->
+                  Float.Set.of_sorted_array_unchecked t.x
+                ) |> Float.Set.union_list
+              in
+              let y_of_x x =
+                List.fold with_weights ~init:0.
+                  ~f:(fun y_accum (t, weight) -> y_accum +. (get t x) *. weight)
+              in
+              create (List.map (Set.to_list xs) ~f:(fun x -> x, y_of_x x)) ~strict:true
     end
 
     type ('key, 'value) t_ = Impl.t
@@ -244,6 +277,8 @@ module Stable = struct
         let sexp_of_t t =
           sexp_of_knots (to_knots t)
 
+        let create_from_linear_combination = Impl.create_from_linear_combination
+
         (* We convert back to Key.t and Value.t for bin_io, because, for example,
            Time.Stable.V1 has bin_io, but there is no guarantee that Time.to_float and
            Time.of_float will not have their semantics change.  So, the user who goes to
@@ -271,7 +306,6 @@ module Stable = struct
       include Bin_prot.Utils.Make_binable(T)
 
       let get t x = Value.of_float (Impl.get t (Key.to_float x))
-
     end
 
     type invertible =
@@ -321,16 +355,19 @@ module Stable = struct
       include T
       include Bin_prot.Utils.Make_binable(T)
 
+      let create_from_regular regular =
+        let open Result.Monad_infix in
+        Impl.invert regular
+        >>| fun inverse ->
+        { regular; inverse }
+
       let create knots =
         let open Result.Monad_infix in
         let float_knots =
           List.map knots ~f:(fun (x, y) -> (Key.to_float x, Value.to_float y))
         in
         Impl.create ~strict:true float_knots
-        >>= fun regular ->
-        Impl.invert regular
-        >>| fun inverse ->
-        { regular; inverse }
+        >>= create_from_regular
 
       let get t = M.get t.regular
 
@@ -338,6 +375,12 @@ module Stable = struct
       let to_knots' t = M.to_knots' t.regular
 
       let get_inverse t y = Key.of_float (Impl.get t.inverse (Value.to_float y))
+
+      let create_from_linear_combination with_weights =
+        let open Result.Monad_infix in
+        let with_weights = List.map with_weights ~f:(fun (t, w) -> t.regular, w) in
+        Impl.create_from_linear_combination with_weights
+        >>= create_from_regular
 
     end
   end
@@ -393,6 +436,17 @@ TEST_MODULE = struct
       expected "get" 2. (Float.get t 0.5);
       expected "get" 2. (Float.get t 1.);
       expected "get" 2. (Float.get t 1.5)
+
+    TEST_UNIT =
+      let with_weights =
+        [ Or_error.ok_exn (Float.create [(1., 1.); (1.1, 1.5); (2., 2.)]), 1.
+        ; Or_error.ok_exn (Float.create [(1., 1.); (1.1, 1.5); (2., 3.)]), 1.
+        ]
+      in
+      let t = Or_error.ok_exn (Float.create_from_linear_combination with_weights) in
+      expected "get" 2. (Float.get t 1.);
+      expected "get" 2.5 (Float.get t 1.05);
+      expected "get" 5. (Float.get t 5.)
 
   end
 

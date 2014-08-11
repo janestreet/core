@@ -458,6 +458,9 @@ module Stable = struct
       ;;
     end
 
+    let is_earlier t1 ~than:t2 = t1 <. t2
+    let is_later   t1 ~than:t2 = t1 >. t2
+
     module Map = Map.Make_binable_using_comparator (C)
     module Set = Set.Make_binable_using_comparator (C)
 

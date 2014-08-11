@@ -78,6 +78,12 @@ val diff : t -> t -> Span.t
 (** [abs_diff t1 t2] returns the absolute span of time [t1] minus time [t2]. *)
 val abs_diff : t -> t -> Span.t
 
+(** {6 Comparisons} *)
+
+(** [is_earlier] and [is_later] are like using [<.], but easier to read. *)
+val is_earlier : t -> than:t -> bool
+val is_later   : t -> than:t -> bool
+
 (** {6 Constants} *)
 
 (** {6 Conversions} *)

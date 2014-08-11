@@ -25,7 +25,7 @@ module Stable = struct
       val (+)     : t -> t -> t
       val (-)     : t -> t -> t
       val zero    : t
-      val epsilon : t
+      val robust_comparison_tolerance : t
       val abs     : t -> t
       val neg     : t -> t
       val scale   : t -> float -> t
@@ -149,7 +149,8 @@ module Stable = struct
 
     (* due to precision limitations in float we can't expect better than microsecond
        precision *)
-    include Core_kernel.Float_robust_compare.Make(struct let epsilon = 1E-6 end)
+    include Core_kernel.Float_robust_compare.Make
+              (struct let robust_comparison_tolerance = 1E-6 end)
 
     let (/) t f = T.of_float ((t : T.t :> float) /. f)
     let (//) (f:T.t) (t:T.t) = (f :> float) /. (t :> float)

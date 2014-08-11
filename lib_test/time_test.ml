@@ -14,7 +14,7 @@ let speq s1 s2 = round (Time.Span.to_ms s1) = round (Time.Span.to_ms s2)
 let convtest ?tol f1 f2 =
   let x = float (Random.int 1_000_000) /. 1000. in
   let tol = match tol with
-    | None -> Float.epsilon
+    | None -> Float.robust_comparison_tolerance
     | Some pct -> x *. pct
   in
   Float.abs (f1 (f2 x) -. x) <= tol

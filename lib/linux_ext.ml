@@ -52,7 +52,7 @@ module Clock = struct
 
   let get               = Ok get
   ELSE
-  let get               = unimplemented "Linux_ext.Clock.get"
+  let get               = Or_error.unimplemented "Linux_ext.Clock.get"
   ENDIF
   let get_time          = Ok get_time
   let set_time          = Ok set_time
@@ -67,12 +67,12 @@ ELSE
 module Clock = struct
   type t
 
-  let get               = unimplemented "Linux_ext.Clock.get"
-  let get_time          = unimplemented "Linux_ext.Clock.get_time"
-  let set_time          = unimplemented "Linux_ext.Clock.set_time"
-  let get_resolution    = unimplemented "Linux_ext.Clock.get_resolution"
-  let get_process_clock = unimplemented "Linux_ext.Clock.get_process_clock"
-  let get_thread_clock  = unimplemented "Linux_ext.Clock.get_thread_clock"
+  let get               = Or_error.unimplemented "Linux_ext.Clock.get"
+  let get_time          = Or_error.unimplemented "Linux_ext.Clock.get_time"
+  let set_time          = Or_error.unimplemented "Linux_ext.Clock.set_time"
+  let get_resolution    = Or_error.unimplemented "Linux_ext.Clock.get_resolution"
+  let get_process_clock = Or_error.unimplemented "Linux_ext.Clock.get_process_clock"
+  let get_thread_clock  = Or_error.unimplemented "Linux_ext.Clock.get_thread_clock"
 end
 
 ENDIF
@@ -132,7 +132,7 @@ module Timerfd = struct
     match Result.try_with (fun () -> create Clock.realtime) with
     | Ok t -> (Unix.close t; Ok create)
     | Error (Unix.Unix_error (Unix.ENOSYS, _, _)) ->
-      unimplemented "Linux_ext.Timerfd.create"
+      Or_error.unimplemented "Linux_ext.Timerfd.create"
     | Error _ ->
       (* [timerfd_create] is implemented but fails with the arguments we used above.
          [create] might still be usable with different arguments, so we expose it here. *)
@@ -237,7 +237,7 @@ module Timerfd = struct
 
   type repeat = { fire_after : Span.t; interval : Span.t }
 
-  let create = unimplemented "Linux_ext.Timerfd.create"
+  let create = Or_error.unimplemented "Linux_ext.Timerfd.create"
 
   let set _                      _ = assert false
   let set_repeating ?initial:_ _ _ = assert false
@@ -843,31 +843,32 @@ ELSE
 module Sysinfo = struct
   include Sysinfo0
 
-  let sysinfo = unimplemented "Linux_ext.Sysinfo.sysinfo"
+  let sysinfo = Or_error.unimplemented "Linux_ext.Sysinfo.sysinfo"
 end
 
-let cores                          = unimplemented "Linux_ext.cores"
-let file_descr_realpath            = unimplemented "Linux_ext.file_descr_realpath"
-let get_ipv4_address_for_interface = unimplemented "Linux_ext.get_ipv4_address_for_interface"
-let bind_to_interface              = unimplemented "Linux_ext.bind_to_interface"
-let get_terminal_size              = unimplemented "Linux_ext.get_terminal_size"
-let gettcpopt_bool                 = unimplemented "Linux_ext.gettcpopt_bool"
-let gettid                         = unimplemented "Linux_ext.gettid"
-let setpriority                    = unimplemented "Linux_ext.setpriority"
-let getpriority                    = unimplemented "Linux_ext.getpriority"
-let in_channel_realpath            = unimplemented "Linux_ext.in_channel_realpath"
-let out_channel_realpath           = unimplemented "Linux_ext.out_channel_realpath"
-let pr_get_name                    = unimplemented "Linux_ext.pr_get_name"
-let pr_get_pdeathsig               = unimplemented "Linux_ext.pr_get_pdeathsig"
-let pr_set_name_first16            = unimplemented "Linux_ext.pr_set_name_first16"
-let pr_set_pdeathsig               = unimplemented "Linux_ext.pr_set_pdeathsig"
-let sched_setaffinity              = unimplemented "Linux_ext.sched_setaffinity"
-let sched_setaffinity_this_thread  = unimplemented "Linux_ext.sched_setaffinity_this_thread"
-let send_no_sigpipe                = unimplemented "Linux_ext.send_no_sigpipe"
-let send_nonblocking_no_sigpipe    = unimplemented "Linux_ext.send_nonblocking_no_sigpipe"
-let sendfile                       = unimplemented "Linux_ext.sendfile"
-let sendmsg_nonblocking_no_sigpipe = unimplemented "Linux_ext.sendmsg_nonblocking_no_sigpipe"
-let settcpopt_bool                 = unimplemented "Linux_ext.settcpopt_bool"
+let u = Or_error.unimplemented
+let cores                          = u "Linux_ext.cores"
+let file_descr_realpath            = u "Linux_ext.file_descr_realpath"
+let get_ipv4_address_for_interface = u "Linux_ext.get_ipv4_address_for_interface"
+let bind_to_interface              = u "Linux_ext.bind_to_interface"
+let get_terminal_size              = u "Linux_ext.get_terminal_size"
+let gettcpopt_bool                 = u "Linux_ext.gettcpopt_bool"
+let gettid                         = u "Linux_ext.gettid"
+let setpriority                    = u "Linux_ext.setpriority"
+let getpriority                    = u "Linux_ext.getpriority"
+let in_channel_realpath            = u "Linux_ext.in_channel_realpath"
+let out_channel_realpath           = u "Linux_ext.out_channel_realpath"
+let pr_get_name                    = u "Linux_ext.pr_get_name"
+let pr_get_pdeathsig               = u "Linux_ext.pr_get_pdeathsig"
+let pr_set_name_first16            = u "Linux_ext.pr_set_name_first16"
+let pr_set_pdeathsig               = u "Linux_ext.pr_set_pdeathsig"
+let sched_setaffinity              = u "Linux_ext.sched_setaffinity"
+let sched_setaffinity_this_thread  = u "Linux_ext.sched_setaffinity_this_thread"
+let send_no_sigpipe                = u "Linux_ext.send_no_sigpipe"
+let send_nonblocking_no_sigpipe    = u "Linux_ext.send_nonblocking_no_sigpipe"
+let sendfile                       = u "Linux_ext.sendfile"
+let sendmsg_nonblocking_no_sigpipe = u "Linux_ext.sendmsg_nonblocking_no_sigpipe"
+let settcpopt_bool                 = u "Linux_ext.settcpopt_bool"
 
 module Epoll = struct
   module Flags = Epoll_flags (struct
@@ -882,7 +883,7 @@ module Epoll = struct
   end)
 
   type t = [ `Epoll_is_not_implemented ] with sexp_of
-  let create = unimplemented "Linux_ext.Epoll.create"
+  let create = Or_error.unimplemented "Linux_ext.Epoll.create"
 
   let invariant _               = assert false
 

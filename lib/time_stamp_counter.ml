@@ -313,7 +313,7 @@ module Calibrator = struct
 
   let local = create ()
 
-  let cpu_mhz = unimplemented "\
+  let cpu_mhz = Or_error.unimplemented "\
 Time_stamp_counter.Calibrator.cpu_mhz is not defined for 32-bit platforms"
   ;;
 end

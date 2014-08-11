@@ -259,26 +259,35 @@ module Long_flag_description = struct
       (fun _ () -> ())
 end
 
-let command =
-  Command.group ~summary:"fcommand examples"
-  [
-    ("sing", Sing.command);
-    ("hg",
-      Command.group ~summary:"commands sharing a flag specification" [
-        ("log", Hg_log.command);
-        ("cat", Hg_cat.command);
-      ]);
-    ("cat", Cat.command);
-    ("prompting", Prompting.command);
-    ("fields", Fields.command);
-    ("fields-with-default", Fields_with_default.command);
-    ("complex-anons", Complex_anons.command);
-    ("sub",
-      Command.group ~summary:"a subcommand" [
-        ("goodies", Goodies.command);
-      ]);
-    ("long-flag-description", Long_flag_description.command);
-  ]
+module Recur = struct
+  let command =
+    Command.exec
+      ~summary:"recursively call main.exe again"
+      ~path_to_exe:(`Relative_to_me "main_no_recur.exe")
+      ()
+end
 
-let () = Exn.handle_uncaught ~exit:true (fun () -> Command.run command)
+let command =
+  let commands =
+    [ ("sing", Sing.command)
+    ; ("hg",
+       Command.group ~summary:"commands sharing a flag specification"
+         [ ("log", Hg_log.command)
+         ; ("cat", Hg_cat.command)
+         ])
+    ; ("cat", Cat.command)
+    ; ("prompting", Prompting.command)
+    ; ("fields", Fields.command)
+    ; ("fields-with-default", Fields_with_default.command)
+    ; ("complex-anons", Complex_anons.command)
+    ; ("sub", Command.group ~summary:"a subcommand" [ ("goodies", Goodies.command) ])
+    ; ("long-flag-description", Long_flag_description.command)
+    ; ("recur", Recur.command)
+    ]
+  in
+  Command.group ~summary:"command examples" commands
+;;
+
+
+let () = Command.run command
 

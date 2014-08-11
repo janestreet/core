@@ -8,6 +8,7 @@ module Debug_in_this_dir = Debug
 open Timing_wheel
 module Debug = Debug_in_this_dir
 
+let does_raise = Exn.does_raise
 let sec = Time.Span.of_sec
 
 module Level_bits = struct

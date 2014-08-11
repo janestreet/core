@@ -104,7 +104,8 @@ end = struct
 
   (* due to precision limitations in float we can't expect better than microsecond
      precision *)
-  include Core_kernel.Float_robust_compare.Make(struct let epsilon = 1E-6 end)
+  include Core_kernel.Float_robust_compare.Make
+            (struct let robust_comparison_tolerance = 1E-6 end)
 
   let diff t1 t2 = Span.of_sec (t1 - t2)
 

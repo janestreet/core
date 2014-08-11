@@ -91,9 +91,9 @@ let to_string, of_string, default_sys_behavior =
   let int_tbl = String.Table.create ~size:1 () in
   let behavior_tbl = Int.Table.create ~size:1 () in
   List.iter known ~f:(fun (name, s, behavior) ->
-    Hashtbl.replace str_tbl ~key:s ~data:name;
-    Hashtbl.replace int_tbl ~key:name ~data:s;
-    Hashtbl.replace behavior_tbl ~key:s ~data:behavior);
+    Hashtbl.set str_tbl ~key:s ~data:name;
+    Hashtbl.set int_tbl ~key:name ~data:s;
+    Hashtbl.set behavior_tbl ~key:s ~data:behavior);
   (* For unknown signal numbers, [to_string] returns a meaningful
      string, while [default_sys_behavior] has to raise an exception
      because we don't know what the right answer is. *)

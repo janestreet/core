@@ -37,6 +37,20 @@ module type S = sig
 
   (* O(n) *)
   val to_knots' : t -> key array * value array
+
+  (** Returns the [t] such that [get t key] = sum ([get t_i key]) * [weight_i]. This will
+      fail if given an empty list as an argument, if any weights are not finite, or if
+      any of the input [t]s has a discontinuity.
+
+      The domain of each [t] does not have to be the same. The domain of the [t] that is
+      returned will be the connected union of the domains.
+
+      There are cases in [S_invertible] in which all [t]s could be valid and invertible,
+      but the linear combination is not invertible. I.e. if one [t] is downward sloping,
+      the other [t] is upward sloping, and the linear combination is sometimes upward and
+      sometimes downward sloping.
+  *)
+  val create_from_linear_combination : (t * float) list -> t Or_error.t
 end
 
 module type S_invertible = sig

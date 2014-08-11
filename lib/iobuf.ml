@@ -893,7 +893,7 @@ let recvmmsg_assume_fd_is_nonblocking =
     ok                                  (* maybe it will ignore the bogus sockfd *)
   with
   | Unix.Unix_error (Unix.ENOSYS, _, _) ->
-    unimplemented "Iobuf.recvmmsg_assume_fd_is_nonblocking"
+    Or_error.unimplemented "Iobuf.recvmmsg_assume_fd_is_nonblocking"
   | _ -> ok
 ;;
 
@@ -911,18 +911,18 @@ let recvmmsg_assume_fd_is_nonblocking_no_options =
     ok                                  (* maybe it will ignore the bogus sockfd *)
   with
   | Unix.Unix_error (Unix.ENOSYS, _, _) ->
-    unimplemented "Iobuf.recvmmsg_assume_fd_is_nonblocking_no_options"
+    Or_error.unimplemented "Iobuf.recvmmsg_assume_fd_is_nonblocking_no_options"
   | _ -> ok
 ;;
 
 ELSE                                    (* NDEF RECVMMSG *)
 
 let recvmmsg_assume_fd_is_nonblocking =
-  unimplemented "Iobuf.recvmmsg_assume_fd_is_nonblocking"
+  Or_error.unimplemented "Iobuf.recvmmsg_assume_fd_is_nonblocking"
 ;;
 
 let recvmmsg_assume_fd_is_nonblocking_no_options =
-  unimplemented "Iobuf.recvmmsg_assume_fd_is_nonblocking_no_options"
+  Or_error.unimplemented "Iobuf.recvmmsg_assume_fd_is_nonblocking_no_options"
 ;;
 
 

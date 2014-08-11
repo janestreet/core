@@ -4,11 +4,6 @@ module Array = StdLabels.Array
 
 module List = Core_kernel.Core_list
 
-let invalid_argf = Core_kernel.Core_printf.invalid_argf
-
-let failwiths = Core_kernel.Error.failwiths
-let does_raise = Core_kernel.Common.does_raise
-
 type 'a t = 'a array
 
 module Sort = struct
@@ -260,7 +255,7 @@ let () =
   done;
   Printf.printf "%f\n" (Unix.gettimeofday () -. start);
 
-  
+
   let r = Array.init n ~f:(fun _ -> ref (Random.int n)) in
   let a = Array.make n (ref 0) in
 

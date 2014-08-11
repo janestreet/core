@@ -794,7 +794,7 @@ module Bisimulation = struct
         let count = ref 0 in
         let h = Hashtbl.Poly.create ~size:50 () in
         let v of_env _ =
-          Hashtbl.replace h ~key:(incr count; !count) ~data:of_env
+          Hashtbl.set h ~key:(incr count; !count) ~data:of_env
         in
         Variants.iter
           ~clear:         (v(fun env -> Clear (rand_l env)))
@@ -849,7 +849,7 @@ module Bisimulation = struct
       es = Hashtbl.Poly.create ~size:50 ();
     }
     in
-    let add h v = let id = Uid.create () in Hashtbl.replace h ~key:id ~data:(id, v); id in
+    let add h v = let id = Uid.create () in Hashtbl.set h ~key:id ~data:(id, v); id in
     let trace = Queue.create () in
     let add_list l = Queue.enqueue trace (`New_list (add env.ls l, l)) in
     let add_elt e = Queue.enqueue trace (`New_elt (add env.es e, e)) in
