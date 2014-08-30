@@ -13,21 +13,21 @@
 "OUT:DEFINE LINUX_EXT"
 #else
 #  warning "cpp test --defined(LINUX_EXT)-- was false"
-#  warning "Feature LINUX_EXT will not be availlable"
+#  warning "Feature LINUX_EXT will not be available"
 #endif
 
 #if defined(POSIX_TIMERS)
 "OUT:DEFINE POSIX_TIMERS"
 #else
 #  warning "cpp test --defined(POSIX_TIMERS)-- was false"
-#  warning "Feature POSIX_TIMERS will not be availlable"
+#  warning "Feature POSIX_TIMERS will not be available"
 #endif
 
 #if defined(RLIMIT_NICE)
 "OUT:DEFINE RLIMIT_NICE"
 #else
 #  warning "cpp test --defined(RLIMIT_NICE)-- was false"
-#  warning "Feature RLIMIT_NICE will not be availlable"
+#  warning "Feature RLIMIT_NICE will not be available"
 #endif
 
   /* Defined in <caml/mlvalues.h> */
@@ -39,26 +39,26 @@
 "OUT:DEFINE MSG_NOSIGNAL"
 #else
 #  warning "cpp test --defined MSG_NOSIGNAL-- was false"
-#  warning "Bigstring.(unsafe_|really_)?send(to)?(_noblocking)?_no_sigpipe will not be availlable"
+#  warning "Bigstring.(unsafe_|really_)?send(to)?(_noblocking)?_no_sigpipe will not be available"
 #endif
 
 #if defined(_POSIX_TIMEOUTS) && (_POSIX_TIMEOUTS > 0)
 "OUT:DEFINE MUTEX_TIMED_LOCK"
 #else
 #  warning "cpp test --defined(_POSIX_TIMEOUTS) && (_POSIX_TIMEOUTS > 0)-- was false"
-#  warning "Feature MUTEX_TIMED_LOCK will not be availlable"
+#  warning "Feature MUTEX_TIMED_LOCK will not be available"
 #endif
 
 #if defined(_POSIX_SYNCHRONIZED_IO) && _POSIX_SYNCHRONIZED_IO > 0
 "OUT:DEFINE FDATASYNC"
 #else
 #  warning "cpp test --defined(_POSIX_SYNCHRONIZED_IO) && _POSIX_SYNCHRONIZED_IO > 0-- was false"
-#  warning "Feature FDATASYNC will not be availlable"
+#  warning "Feature FDATASYNC will not be available"
 #endif
 
 #if defined(_POSIX_THREAD_CPUTIME)
 "OUT:DEFINE THREAD_CPUTIME"
 #else
 #  warning "cpp test --defined(_POSIX_THREAD_CPUTIME)-- was false"
-#  warning "Feature THREAD_CPUTIME will not be availlable"
+#  warning "Feature THREAD_CPUTIME will not be available"
 #endif
