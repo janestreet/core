@@ -1568,7 +1568,7 @@ CAMLprim value core_unix_mcast_modify (value v_action,
       }
 
       if (Is_block(v_source_opt)) {
-#if defined(__APPLE__) || defined(__OpenBSD__)
+#if defined(__APPLE__) || defined(__OpenBSD__) || defined(__NetBSD__)
         caml_failwith("core_unix_mcast_modify: ~source is not supported on MacOS");
 #else
         struct ip_mreq_source mreq_source;
