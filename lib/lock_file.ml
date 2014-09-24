@@ -174,11 +174,22 @@ module Nfs = struct
              file). *)
           if (unlock_myself && Pid.(=) locking_pid my_pid)
             || not (Signal.can_send_to locking_pid)
-          then
+          then begin
+            (* We need to be able to recover from situation where [path] does not
+               exist for whatever reason, but [lock_path] is present.
+               Error during unlink of [path] are ignored to be able to cope with this
+               situation and properly clean up stale locks.
+            *)
+            begin
+              try
+                Unix.unlink path
+              with | Unix.Unix_error (Unix.ENOENT, _, _) -> ()
+                   | e -> error (Exn.to_string e)
+            end;
             try
-              Unix.unlink path;
               Unix.unlink lock_path
             with | e -> error (Exn.to_string e)
+          end
           else
             error (sprintf "locking process (pid %i) still running on %s"
               (Pid.to_int locking_pid) locking_hostname)

@@ -36,7 +36,7 @@ let random_time state =
 
 let random_time_str state =
   let year,month,day,hour,min,sec,ms,_mic = random_time state in
-  sprintf "%d-%0.2d-%0.2d %0.2d:%0.2d:%0.2d.%0.3d000" year month day hour min sec ms
+  sprintf "%d-%.2d-%.2d %.2d:%.2d:%.2d.%.3d000" year month day hour min sec ms
 ;;
 
 let random_tm state =
@@ -110,11 +110,11 @@ let add_roundtrip_conversion_test state (zone_name,(zone:Time.Zone.t)) =
       else begin
         failwith (String.concat [
           sprintf "tm: %s\n" (Sexp.to_string_hum (Unix.sexp_of_tm tm));
-          sprintf "unix_time: %0.20f\n" unix_time;
-          sprintf "our_time: %0.20f\n" (Time.to_float time);
+          sprintf "unix_time: %.20f\n" unix_time;
+          sprintf "our_time: %.20f\n" (Time.to_float time);
           sprintf "date, ofday: %s, %s\n"
             (Date.to_string zone_date) (Time.Ofday.to_string zone_ofday);
-          sprintf "round_trip: %0.20f\n" (Time.to_float round_trip_time)
+          sprintf "round_trip: %.20f\n" (Time.to_float round_trip_time)
         ])
       end))
 

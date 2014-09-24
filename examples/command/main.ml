@@ -259,10 +259,10 @@ module Long_flag_description = struct
       (fun _ () -> ())
 end
 
-module Recur = struct
+module Command_dot_exec = struct
   let command =
     Command.exec
-      ~summary:"recursively call main.exe again"
+      ~summary:"example usage of [Command.exec]"
       ~path_to_exe:(`Relative_to_me "main_no_recur.exe")
       ()
 end
@@ -282,7 +282,7 @@ let command =
     ; ("complex-anons", Complex_anons.command)
     ; ("sub", Command.group ~summary:"a subcommand" [ ("goodies", Goodies.command) ])
     ; ("long-flag-description", Long_flag_description.command)
-    ; ("recur", Recur.command)
+    ; ("command-dot-exec", Command_dot_exec.command)
     ]
   in
   Command.group ~summary:"command examples" commands

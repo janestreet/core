@@ -91,7 +91,6 @@ val openlog
 val syslog
   :  ?facility : Facility.t  (** default is [USER] *)
   -> ?level : Level.t        (** default is [INFO] *)
-  -> ?add_stderr : bool      (** default is [false] *)
   -> string
   -> unit
 
@@ -100,10 +99,8 @@ val syslog
 val syslogf
   :  ?facility : Facility.t
   -> ?level : Level.t
-  -> ?add_stderr : bool
   -> ('a, unit, string, unit) format4
   -> 'a
-
 
 (** [closelog ()] closes the connection to the [syslog] daemon. *)
 val closelog : unit -> unit

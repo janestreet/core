@@ -1,3 +1,41 @@
+## 112.01.00
+
+- Removed vestigial code supporting OCaml 4.00.
+- Added `Command` support for flags that are passed one or more times.
+
+  Added `Command.Spec.one_or_more` and
+  `Command.Spec.non_empty_sequence` to deal with the cases where you
+  expect a flag or anonymous argument (respectively) to be passed one
+  or (optionally) more times.  This is common enough and distinct from
+  the case where you want the argument passed zero or more times that
+  it seems like we should canonize it in the library.
+- In `Lock_file`, made stale lock detection more robust.
+
+  Made `Lock_file.create foo` succeed if `foo` is absent and
+  `foo.nfs_lock` file is present and stale.  Previously, it would
+  fail.
+- Removed `Syslog.syslog`'s `add_stderr` argument; use the `PERROR`
+  option instead.
+- Fixed `unix_stubs.c` compilation on NetBSD
+
+  Closes #45
+- Added `Filename` operators `/^` and `/@`, and `of_parts`, like the
+  same functions for Catalog paths.
+- Changed `Iobuf` functions that advance the iobuf to not also return
+  a redundant number of bytes processed.
+
+  This avoids a small allocation (in the case of the `int option`
+  functions) and normalizes the result (so the same information isn't
+  returned two ways).  Actually, it doesn't yet avoid the allocation in
+  the implementation, as the corresponding `Bigstring` functions must
+  still return the number of bytes processed, and currently do so as an
+  option.  We hope to eventually change that.
+
+  In the future I expect we will change `unit` to some `error` variant
+  to also avoid the exception construction for `EWOULDBLOCK/EAGAIN`.  We
+  can even make Unix syscalls `noalloc` if we're careful.
+- In `Unix` module, added unit tests for `Cidr.does_match`.
+
 ## 111.28.00
 
 - Added `Piecewise_linear.create_from_linear_combination`.
@@ -1258,4 +1296,3 @@
 ## 109.02.00
 
 - Add Char.of_string
-

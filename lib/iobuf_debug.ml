@@ -553,21 +553,21 @@ module Make (M : sig end) = struct
   let read_assume_fd_is_nonblocking t fd =
     debug "read_assume_fd_is_nonblocking" [t] fd
       (<:sexp_of< File_descr.t >>)
-      (<:sexp_of< int >>)
+      (<:sexp_of< unit >>)
       (fun () -> read_assume_fd_is_nonblocking t fd)
   ;;
 
   let pread_assume_fd_is_nonblocking t fd ~offset =
     debug "pread_assume_fd_is_nonblocking" [t] (fd, `offset offset)
       (<:sexp_of< File_descr.t * [ `offset of int ] >>)
-      (<:sexp_of< int >>)
+      (<:sexp_of< unit >>)
       (fun () -> pread_assume_fd_is_nonblocking t fd ~offset)
   ;;
 
   let recvfrom_assume_fd_is_nonblocking t fd =
     debug "recvfrom_assume_fd_is_nonblocking" [t] fd
       (<:sexp_of< File_descr.t >>)
-      (<:sexp_of< int * Unix.sockaddr >>)
+      (<:sexp_of< Unix.sockaddr >>)
       (fun () -> recvfrom_assume_fd_is_nonblocking t fd)
   ;;
 
@@ -599,7 +599,7 @@ module Make (M : sig end) = struct
       Ok (fun t fd ->
         debug "send_nonblocking_no_sigpipe" [t] (fd, t)
           (<:sexp_of< File_descr.t * (_, _) t >>)
-          (<:sexp_of< int option >>)
+          (<:sexp_of< unit >>)
           (fun () -> send_nonblocking_no_sigpipe t fd))
   ;;
 
@@ -607,20 +607,20 @@ module Make (M : sig end) = struct
     Or_error.map (sendto_nonblocking_no_sigpipe ()) ~f:(fun f t fd addr ->
       debug "sendto_nonblocking_no_sigpipe" [t] (fd, addr)
         <:sexp_of< File_descr.t * Unix.sockaddr >>
-        <:sexp_of< int option >>
+        <:sexp_of< unit >>
         (fun () -> f t fd addr))
 
   let write_assume_fd_is_nonblocking t fd =
     debug "write_assume_fd_is_nonblocking" [t] (fd, t)
       (<:sexp_of< File_descr.t * (_, _) t >>)
-      (<:sexp_of< int >>)
+      (<:sexp_of< unit >>)
       (fun () -> write_assume_fd_is_nonblocking t fd)
   ;;
 
   let pwrite_assume_fd_is_nonblocking t fd ~offset =
     debug "pwrite_assume_fd_is_nonblocking" [t] (fd, t, `offset offset)
       (<:sexp_of< File_descr.t * (_, _) t * [ `offset of int ] >>)
-      (<:sexp_of< int >>)
+      (<:sexp_of< unit >>)
       (fun () -> pwrite_assume_fd_is_nonblocking t fd ~offset)
   ;;
 

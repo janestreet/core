@@ -229,6 +229,9 @@ module Spec : sig
 
 
   val string             : string             Arg_type.t
+  (** Beware that an anonymous argument of type [int] cannot be specified as negative, as
+      it is ambiguous whether -1 is a negative number or a flag. If you need to pass a
+      negative number to your program, make it a parameter to a flag. *)
   val int                : int                Arg_type.t
   val float              : float              Arg_type.t
   val bool               : bool               Arg_type.t
@@ -253,6 +256,10 @@ module Spec : sig
       All flags must have a dash at the beginning of the name.  If [name] is not prefixed
       by "-", it will be normalized to ["-" ^ name].
 
+      Unless [full_flag_required] is used, one doesn't have to pass [name] exactly on the
+      command line, but only an unambiguous prefix of [name] (i.e., a prefix which is not
+      a prefix of any other flag's name).
+
       NOTE: the [doc] for a flag which takes an argument should be of the form
             [arg_name ^ " " ^ description] where [arg_name] describes the argument and
             [description] describes the meaning of the flag.
@@ -262,7 +269,13 @@ module Spec : sig
 
       NOTE: "-" by itself is an invalid flag name and will be rejected.
   *)
-  val flag : ?aliases:string list -> string -> 'a flag -> doc:string -> 'a param
+  val flag
+    :  ?aliases:string list
+    -> ?full_flag_required:unit
+    -> string
+    -> 'a flag
+    -> doc:string
+    -> 'a param
 
   (** [map_flag flag ~f] transforms the parsed result of [flag] by applying [f] *)
   val map_flag : 'a flag -> f:('a -> 'b) -> 'b flag
@@ -279,6 +292,9 @@ module Spec : sig
 
   (** [listed] flags may be passed zero or more times *)
   val listed : 'a Arg_type.t -> 'a list flag
+
+  (** [one_or_more] flags must be passed one or more times *)
+  val one_or_more : 'a Arg_type.t -> ('a * 'a list) flag
 
   (** [no_arg] flags may be passed at most once.  The boolean returned
       is true iff the flag is passed on the command line *)
@@ -340,6 +356,10 @@ module Spec : sig
       will be raised if [anons] matches anything other than a fixed number of
       anonymous arguments  *)
   val sequence : 'a anons -> 'a list anons
+
+  (** [non_empty_sequence anons] is like [sequence anons] except an exception will be
+      raised if there is not at least one anonymous argument given. *)
+  val non_empty_sequence : 'a anons -> ('a * 'a list) anons
 
   (** [(maybe anons)] indicates that some anonymous arguments are optional *)
   val maybe : 'a anons -> 'a option anons

@@ -291,7 +291,6 @@ val stderr : File_descr.t
 
 (** The flags to {!UnixLabels.openfile}. *)
 
-IFDEF OCAML_4_01 THEN
 type open_flag =
   Unix.open_flag =
       O_RDONLY        (** Open for reading *)
@@ -308,23 +307,6 @@ type open_flag =
     | O_RSYNC         (** Reads complete as writes (depending on O_SYNC/O_DSYNC) *)
     | O_SHARE_DELETE  (** Windows only: allow the file to be deleted while still open *)
     | O_CLOEXEC       (** Set the close-on-exec flag on the descriptor returned by {!openfile} *)
-ELSE
-type open_flag =
-  Unix.open_flag =
-      O_RDONLY        (** Open for reading *)
-    | O_WRONLY        (** Open for writing *)
-    | O_RDWR          (** Open for reading and writing *)
-    | O_NONBLOCK      (** Open in non-blocking mode *)
-    | O_APPEND        (** Open for append *)
-    | O_CREAT         (** Create if nonexistent *)
-    | O_TRUNC         (** Truncate to 0 length if existing *)
-    | O_EXCL          (** Fail if existing *)
-    | O_NOCTTY        (** Don't make this dev a controlling tty *)
-    | O_DSYNC         (** Writes complete as `Synchronised I/O data integrity completion' *)
-    | O_SYNC          (** Writes complete as `Synchronised I/O file integrity completion' *)
-    | O_RSYNC         (** Reads complete as writes (depending on O_SYNC/O_DSYNC) *)
-    | O_SHARE_DELETE  (** Windows only: allow the file to be deleted while still open *)
-ENDIF
 
 (* We can't use [with sexp] because pa_sexp inserts two copies of the [val] specs, which
    leads to a spurious "unused" warning. *)

@@ -62,15 +62,11 @@ external core_syslog_setlogmask : int -> unit = "core_syslog_setlogmask" "noallo
 let openlog ?id ?(options = []) ?(facility = Facility.USER) () =
   core_syslog_openlog id (Open_option.mask options) (Facility.to_int facility)
 
-let syslog ?(facility = Facility.USER) ?(level = Level.INFO) ?(add_stderr = false)
-      message =
-  core_syslog_syslog (Level.to_int level lor Facility.to_int facility) message;
-  if add_stderr then
-    (eprintf "%s/%s: %s\n" (Facility.to_string facility) (Level.to_string level) message;
-     flush stderr)
+let syslog ?(facility = Facility.USER) ?(level = Level.INFO) message =
+  core_syslog_syslog (Level.to_int level lor Facility.to_int facility) message
 
-let syslogf ?facility ?level ?add_stderr format =
-  ksprintf (fun message -> syslog ?facility ?level ?add_stderr message) format
+let syslogf ?facility ?level format =
+  ksprintf (fun message -> syslog ?facility ?level message) format
 
 let logmask_range ?(to_level = Level.EMERG) from_level =
   Core_list.fold Level.all ~init:0 ~f:(fun logmask level ->

@@ -39,6 +39,15 @@ let concat p1 p2 =
   in
   collapse_trailing p1 ^ "/" ^ collapse_leading p2
 
+let (/^) = Filename.concat
+
+let (/@) root parts = List.fold parts ~init:root ~f:(fun acc part -> acc /^ part)
+
+  TEST = "/tmp" /^ "x" = "/tmp/x"
+  TEST = "/tmp" /^ "x" /^ "y" = "/tmp/x/y"
+  TEST = "/tmp" /@ ["x"; "y"] = "/tmp/x/y"
+  TEST = "/tmp" /@ [] = "/tmp"
+
 (* Finds the largest index i in [s] that is less than [from] and for which
    [f s.[i]]
    returns true. Then it returns [i+1]. Raises an exception if [from] isn't a
@@ -191,13 +200,37 @@ let parts filename =
   in
   loop [] filename
 
-TEST = parts "/tmp/foo/bar/baz" = ["/"; "tmp"; "foo"; "bar"; "baz" ]
-TEST = parts "/tmp/foo/bar/baz/" = ["/"; "tmp"; "foo"; "bar"; "baz" ]
-TEST = parts "" = ["."]
-TEST = parts "." = ["."]
-TEST = parts "./" = ["."]
-TEST = parts "/" = ["/"]
-TEST = parts "foo" = ["."; "foo"]
-TEST = parts "./foo" = ["."; "foo"]
-TEST = parts "./foo/" = ["."; "foo"]
-TEST = parts "./foo/." = ["."; "foo"; "."]
+let of_parts = function
+  | [] -> failwith "Filename.of_parts: empty parts list"
+  | root :: rest -> root /@ rest
+
+TEST_UNIT =
+  List.iter
+    ~f:(fun (path, pieces) ->
+      <:test_result< string >> ~expect:path (of_parts pieces);
+      <:test_result< string list >> ~expect:pieces (parts path))
+    [ "/tmp/foo/bar/baz",  ["/"; "tmp"; "foo"; "bar"; "baz"]
+    ; ".",                 ["."]
+    ; "/",                 ["/"]
+    ; "./foo",             ["."; "foo"]
+    ]
+
+TEST = parts "/tmp/foo/bar/baz/" = ["/"; "tmp"; "foo"; "bar"; "baz"]
+TEST = parts "//tmp//foo//bar"   = ["/"; "tmp"; "foo"; "bar"]
+TEST = parts ""                  = ["."]
+TEST = parts "./"                = ["."]
+TEST = parts "./."               = ["."]
+TEST = parts "././."             = ["."; "."]
+TEST = parts "foo"               = ["."; "foo"]
+TEST = parts "./foo/"            = ["."; "foo"]
+TEST = parts "./foo/."           = ["."; "foo"; "."]
+
+TEST = of_parts ["."; "."; "."] = "././."
+
+(* Note: keep this module at the bottom of the file with only definitions of the form [let
+   foo = foo], so it is painfully obvious that [Filename.O.foo] has the same meaning as
+   [Filename.foo] *)
+module O = struct
+  let (/^) = (/^)
+  let (/@) = (/@)
+end

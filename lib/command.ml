@@ -222,6 +222,7 @@ module Flag = struct
     action : action;
     doc : string;
     check_available : [ `Optional | `Required of (unit -> unit) ];
+    name_matching : [`Prefix | `Full_match_required];
   }
 
   let wrap_if_optional t x =
@@ -231,7 +232,9 @@ module Flag = struct
 
   module Deprecated = struct
     (* flag help in the format of the old command. used for injection *)
-    let help ({name; doc; aliases; action=_; check_available=_ } as t)  =
+    let help
+          ({name; doc; aliases; action=_; check_available=_; name_matching=_ } as t)
+      =
       if String.is_prefix doc ~prefix:" " then
         (name, String.lstrip doc)
         :: List.map aliases ~f:(fun x -> (x, sprintf "same as \"%s\"" name))
@@ -246,7 +249,7 @@ module Flag = struct
           (wrap_if_optional t (x ^ " " ^ arg), sprintf "same as \"%s\"" name))
   end
 
-  let align ({name; doc; aliases; action=_; check_available=_ } as t) =
+  let align ({name; doc; aliases; action=_; check_available=_; name_matching=_ } as t) =
     let (name, doc) =
       match String.lsplit2 doc ~on:' ' with
       | None | Some ("", _) -> (name, String.strip doc)
@@ -359,6 +362,16 @@ module Flag = struct
       let read () = List.rev !v in
       let write arg = v := arg :: !v in
       arg_flag name arg_type read write ~optional:true
+
+    let one_or_more arg_type name =
+      let q = Queue.create () in
+      let read () =
+        match Queue.to_list q with
+        | first :: rest -> (first, rest)
+        | [] -> die "missing required flag: %s" name ()
+      in
+      let write arg = Queue.enqueue q arg in
+      arg_flag name arg_type read write ~optional:false
 
     let escape_general ~deprecated_hook _name =
       let cell = ref None in
@@ -636,17 +649,12 @@ module Anon = struct
       if strlen = 0 then failwith "Empty anonymous argument name provided";
       if String.(<>) (String.strip str) str then
         failwithf "argument name %S has surrounding whitespace" str ();
-      (* Now check for special surrounding characters and malformed pairs *)
-      let surrounded =
-        List.exists [('<','>'); ('[',']'); ('(',')'); ('{','}')]
-          ~f:(fun (prefix, suffix) ->
-            let prefix_match = Char.(=) prefix (String.get str 0) in
-            let suffix_match = Char.(=) suffix (String.get str (strlen - 1)) in
-            if Bool.(<>) prefix_match suffix_match then
-              failwithf "argument name %S has malformed surrounding characters" str ();
-            prefix_match)
+      (* If the string contains special surrounding characters, don't do anything *)
+      let has_special_chars =
+        let special_chars = Char.Set.of_list ['<'; '>'; '['; ']'; '('; ')'; '{'; '}'] in
+        String.exists str ~f:(Set.mem special_chars)
       in
-      if surrounded then str else String.uppercase str
+      if has_special_chars then str else String.uppercase str
 
     TEST = String.equal (normalize "file")   "FILE"
     TEST = String.equal (normalize "FiLe")   "FILE"
@@ -654,9 +662,8 @@ module Anon = struct
     TEST = String.equal (normalize "(FiLe)") "(FiLe)"
     TEST = String.equal (normalize "[FiLe]") "[FiLe]"
     TEST = String.equal (normalize "{FiLe}") "{FiLe}"
-    TEST = try ignore (normalize "<file"   ); false with _ -> true
-    TEST = try ignore (normalize "<file>a" ); false with _ -> true
-    TEST = try ignore (normalize "file}"   ); false with _ -> true
+    TEST = String.equal (normalize "<file" ) "<file"
+    TEST = String.equal (normalize "<fil>a") "<fil>a"
     TEST = try ignore (normalize ""        ); false with _ -> true
     TEST = try ignore (normalize " file "  ); false with _ -> true
     TEST = try ignore (normalize "file "   ); false with _ -> true
@@ -684,6 +691,8 @@ module Anon = struct
       p = Parser.sequence t.p;
       grammar = Grammar.many t.grammar;
     }
+
+    let non_empty_sequence t = t2 t (sequence t)
 
     module Deprecated = struct
       let ad_hoc ~usage_arg = {
@@ -767,24 +776,32 @@ let normalize key_type key =
 
 let lookup_expand map prefix key_type =
   match String.Map.find map prefix with
-  | Some data -> Ok (prefix, data)
+  | Some (data, _name_matching) -> Ok (prefix, data)
   | None ->
     let alist = String.Map.to_alist map in
-    match List.filter alist ~f:(fun (key, _) -> String.is_prefix key ~prefix) with
-    | [(key, data)] -> Ok (key, data)
+    match
+      List.filter alist ~f:(function
+        | (key, (_, `Full_match_required)) -> String.(=) key prefix
+        | (key, (_, `Prefix)) -> String.is_prefix key ~prefix)
+    with
+    | [(key, (data, _name_matching))] -> Ok (key, data)
     | [] ->
-      Error (sprintf "unknown %s %s" (Key_type.to_string key_type) prefix)
+      Error (sprintf !"unknown %{Key_type} %s" key_type prefix)
     | matches ->
       let matching_keys = List.map ~f:fst matches in
-      Error (sprintf "%s %s is an ambiguous prefix: %s"
-               (Key_type.to_string key_type) prefix (String.concat ~sep:", " matching_keys))
+      Error (sprintf !"%{Key_type} %s is an ambiguous prefix: %s"
+               key_type prefix (String.concat ~sep:", " matching_keys))
 
 let lookup_expand_with_aliases map prefix key_type =
   let map =
     String.Map.of_alist
       (List.concat_map (String.Map.data map) ~f:(fun flag ->
-         let { Flag.name; aliases; action=_; doc=_; check_available=_ } = flag in
-         (name, flag) :: List.map aliases ~f:(fun alias -> (alias, flag))))
+         let
+           { Flag. name; aliases; action=_; doc=_; check_available=_; name_matching }
+           = flag
+         in
+         let data = (flag, name_matching) in
+         (name, data) :: List.map aliases ~f:(fun alias -> (alias, data))))
   in
   match map with
   | `Ok map -> lookup_expand map prefix key_type
@@ -868,7 +885,8 @@ module Base = struct
         && not (String.equal arg "-") (* support the convention where "-" means stdin *)
         then begin
           let flag = arg in
-          let (flag, { Flag.action; name=_; aliases=_; doc=_; check_available=_ }) =
+          let (flag, { Flag. action; name=_; aliases=_; doc=_; check_available=_;
+                       name_matching=_ }) =
             match lookup_expand_with_aliases t.flags flag Key_type.Flag with
             | Error msg -> die "%s" msg ()
             | Ok x -> x
@@ -1027,14 +1045,15 @@ module Base = struct
     include struct
       open Anon.Spec
       type 'a anons = 'a t
-      let (%:) = (%:)
-      let map_anons = map_anons
-      let maybe = maybe
+      let (%:)               = (%:)
+      let map_anons          = map_anons
+      let maybe              = maybe
       let maybe_with_default = maybe_with_default
-      let sequence = sequence
-      let t2 = t2
-      let t3 = t3
-      let t4 = t4
+      let sequence           = sequence
+      let non_empty_sequence = non_empty_sequence
+      let t2                 = t2
+      let t3                 = t3
+      let t4                 = t4
 
       let anon spec = {
         param = {
@@ -1048,17 +1067,18 @@ module Base = struct
     include struct
       open Flag.Spec
       type 'a flag = 'a t
-      let map_flag = map_flag
-      let escape = escape
-      let listed = listed
-      let no_arg = no_arg
-      let no_arg_register = no_arg_register
-      let no_arg_abort = no_arg_abort
-      let optional = optional
+      let map_flag              = map_flag
+      let escape                = escape
+      let listed                = listed
+      let one_or_more           = one_or_more
+      let no_arg                = no_arg
+      let no_arg_register       = no_arg_register
+      let no_arg_abort          = no_arg_abort
+      let optional              = optional
       let optional_with_default = optional_with_default
-      let required = required
+      let required              = required
 
-      let flag ?(aliases = []) name mode ~doc =
+      let flag ?(aliases = []) ?full_flag_required name mode ~doc =
         let normalize flag = normalize Key_type.Flag flag in
         let name = normalize name in
         let aliases = List.map ~f:normalize aliases in
@@ -1066,9 +1086,13 @@ module Base = struct
         let check_available =
           if optional then `Optional else `Required (fun () -> ignore (read ()))
         in
+        let name_matching =
+          if Option.is_some full_flag_required then `Full_match_required else `Prefix
+        in
         { param =
           { f = (fun _env -> return (fun k -> k (read ())));
-            flags = (fun () -> [{ Flag.name; aliases; doc; action; check_available }]);
+            flags = (fun () -> [{ Flag. name; aliases; doc; action; check_available;
+                                  name_matching }]);
             usage = (fun () -> Anon.Grammar.zero);
           }
         }
@@ -1291,6 +1315,7 @@ module Bailout_dump_flag = struct
                         exit 0
                      );
           doc = sprintf " print %s and exit" text_summary;
+          name_matching = `Prefix;
         }
     in
     { base with Base.flags }
@@ -1317,7 +1342,8 @@ let basic ~summary ?readme {Base.Spec.usage; flags; f} main =
         match
           String.Map.of_alist
             (List.concat_map flags
-              ~f:(fun { Flag.name; Flag.aliases; action=_; doc=_; check_available=_ } ->
+              ~f:(fun { Flag.name; Flag.aliases; action=_; doc=_; check_available=_;
+                        name_matching=_ } ->
                  (name, ()) :: List.map aliases ~f:(fun alias -> (alias, ()))))
         with
         | `Duplicate_key x -> failwithf "multiple flags or aliases named %s" x ()
@@ -1653,7 +1679,9 @@ let rec dispatch t env ~extend ~path ~args ~maybe_new_comp_cword =
         | _ -> (sub, rest)
       in
       begin
-        match lookup_expand subs sub Key_type.Subcommand with
+        match
+          lookup_expand (Map.map subs ~f:(fun x -> (x, `Prefix))) sub Key_type.Subcommand
+        with
         | Error msg -> die_showing_help msg
         | Ok (sub, t) ->
           dispatch t env

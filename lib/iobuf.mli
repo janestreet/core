@@ -301,11 +301,11 @@ val memmove : (read_write, _) t -> src_pos:int -> dst_pos:int -> len:int -> unit
 (** [Iobuf] has analogs of various [Bigstring] functions.  These analogs advance by the
     amount written/read. *)
 val read_assume_fd_is_nonblocking
-  : (read_write, seek) t -> Unix.File_descr.t -> int
+  : (read_write, seek) t -> Unix.File_descr.t -> unit
 val pread_assume_fd_is_nonblocking
-  : (read_write, seek) t -> Unix.File_descr.t -> offset:int -> int
+  : (read_write, seek) t -> Unix.File_descr.t -> offset:int -> unit
 val recvfrom_assume_fd_is_nonblocking
-  : (read_write, seek) t -> Unix.File_descr.t -> int * Unix.sockaddr
+  : (read_write, seek) t -> Unix.File_descr.t -> Unix.sockaddr
 
 (** When there are no packets awaiting reception, [recvmmsg_assume_fd_is_nonblocking]
     returns <0 (actually, -[EWOULDBLOCK]/-[EAGAIN]), rather than raising [Unix_error] with
@@ -326,12 +326,11 @@ val recvmmsg_assume_fd_is_nonblocking_no_options
      -> int)
       Or_error.t
 
-
 val send_nonblocking_no_sigpipe
-  : unit -> ((_, seek) t -> Unix.File_descr.t -> int option) Or_error.t
+  : unit -> ((_, seek) t -> Unix.File_descr.t -> unit) Or_error.t
 val sendto_nonblocking_no_sigpipe
-  : unit -> ((_, seek) t -> Unix.File_descr.t -> Unix.sockaddr -> int option) Or_error.t
+  : unit -> ((_, seek) t -> Unix.File_descr.t -> Unix.sockaddr -> unit) Or_error.t
 val write_assume_fd_is_nonblocking
-  : (_, seek) t -> Unix.File_descr.t -> int
+  : (_, seek) t -> Unix.File_descr.t -> unit
 val pwrite_assume_fd_is_nonblocking
-  : (_, seek) t -> Unix.File_descr.t -> offset:int -> int
+  : (_, seek) t -> Unix.File_descr.t -> offset:int -> unit

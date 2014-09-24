@@ -1046,13 +1046,17 @@ ENDIF;
           ~f:(fun () ->
             sub t ~pos |> (fun t -> Fill.string t string);
             sub t ~pos ~len:n |> (fun t ->
-              assert (write_assume_fd_is_nonblocking t fd = n));
+              let len_before = Iobuf.length t in
+              write_assume_fd_is_nonblocking t fd;
+              <:test_result< int >> (len_before - Iobuf.length t) ~expect:n);
             Unix.close fd;
             iter_examples ~f:(fun t _ ~pos ->
               if length t - pos >= String.length string then
                 let fd = Unix.openfile ~mode:[Unix.O_RDONLY] file in
                 sub t ~pos |> (fun t ->
-                  assert (read_assume_fd_is_nonblocking t fd = n));
+                  let len_before = Iobuf.length t in
+                  read_assume_fd_is_nonblocking t fd;
+                  <:test_result< int >> (len_before - Iobuf.length t) ~expect:n);
                 sub t ~pos ~len:n |> (fun t ->
                   assert (String.equal (to_string t) string));
                 Unix.close fd)))
@@ -1069,9 +1073,11 @@ ENDIF;
       protect ~finally:(fun () -> Unix.unlink file)
         ~f:(fun () ->
           sub t ~pos:0 ~len:n |> (fun t ->
-            assert (pwrite_assume_fd_is_nonblocking t fd ~offset:10 = n));
+            pwrite_assume_fd_is_nonblocking t fd ~offset:10;
+            assert (Iobuf.is_empty t));
           sub t ~pos:0 ~len:10 |> (fun t ->
-            assert (pread_assume_fd_is_nonblocking t fd ~offset:20 = 10));
+            pread_assume_fd_is_nonblocking t fd ~offset:20;
+            assert (Iobuf.is_empty t));
           sub t ~pos:0 ~len:10 |> (fun t ->
             assert (String.equal (to_string t) "1111111111"));
           Unix.close fd;)
@@ -1152,11 +1158,11 @@ ENDIF;
             let fd = socket () in
             let doit f =
               iter_examples ~f:(fun t string ~pos ->
-                sub t ~pos |> (fun t -> Fill.string t string);
+                Fill.string (sub t ~pos) string;
                 let len = String.length string in
-                match sub t ~pos ~len |> (fun t -> f t fd) with
-                | None -> assert false
-                | Some n -> assert (n = len))
+                let sub = sub t ~pos ~len in
+                f sub fd;
+                <:test_pred< (_, _) Iobuf.t >> Iobuf.is_empty sub)
             in
             let addr = Unix.(ADDR_INET (Inet_addr.localhost, port)) in
             doit (fun t fd -> sendto_nonblocking_no_sigpipe t fd addr);
@@ -1166,44 +1172,49 @@ ENDIF;
         in
         for _i = 0 to 1; do (* for send_* and sendto_* *)
           iter_examples ~f:(fun t string ~pos ->
-            let n, _sockaddr =
-              sub t ~pos |> (fun t ->
-                let rec loop () =
-                  match
-                    Result.try_with (fun () -> recvfrom_assume_fd_is_nonblocking t fd)
-                  with
-                  | Error (Unix.Unix_error ((Unix.EWOULDBLOCK | Unix.EAGAIN), _, _)) ->
-                    Time.pause (Span.of_ms 1.);
-                    loop ()
-                  | Ok x -> x
-                  | Error exn -> raise exn
-                in
-                loop ())
-            in
             let len = String.length string in
-            assert (n = len);
-            assert (String.equal string (sub t ~pos ~len |> to_string));
+            begin
+              let t = sub t ~pos in
+              let rec loop () =
+                match
+                  Result.try_with (fun () ->
+                    let len_before = Iobuf.length t in
+                    let _ : Unix.sockaddr = recvfrom_assume_fd_is_nonblocking t fd in
+                    <:test_result< int >> (len_before - Iobuf.length t) ~expect:len
+                  )
+                with
+                | Error (Unix.Unix_error ((Unix.EWOULDBLOCK | Unix.EAGAIN), _, _)) ->
+                  Time.pause (Span.of_ms 1.);
+                  loop ()
+                | Ok x -> x
+                | Error exn -> raise exn
+              in
+              loop ()
+            end;
+            <:test_result< string >> ~expect:string (sub t ~pos ~len |> to_string)
           );
         done
     ;;
     TEST_UNIT = sends_with_recvfrom recvfrom_assume_fd_is_nonblocking
-    TEST_UNIT = Result.iter recvmmsg_assume_fd_is_nonblocking ~f:(fun recvmmsg ->
-      sends_with_recvfrom (fun t fd ->
-        let t_len_before = length t in
-        let addr_before = Unix.(ADDR_INET (Inet_addr.bind_any, 0)) in
-        let srcs = Array.create ~len:1 addr_before in
-        let result  = recvmmsg fd ~srcs (Array.create ~len:1 t) in
-        (* we've altered the reporting of EWOULDBLOCK to return a negative value, rather
-           than an exception in the inner loop of some UDP heavy applications. Raise here
-           to mimic the behavior of the original api, and others such as recvfrom that
-           share testing code *)
-        if result < 0 then raise (Unix.Unix_error (Unix.EWOULDBLOCK, "recvmmsg", ""));
-        assert (result = 1);
-        (* Check that the prototype source address wasn't modified in place.  It is
-           expected to have been replaced in the array by a new sockaddr. *)
-        assert (not (phys_equal addr_before srcs.(0)));
-        assert (Pervasives.(<>) addr_before srcs.(0));
-        t_len_before - length t, srcs.(0)))
+    TEST_UNIT =
+      Result.iter recvmmsg_assume_fd_is_nonblocking ~f:(fun recvmmsg ->
+        sends_with_recvfrom (fun t fd ->
+          let addr_before = Unix.(ADDR_INET (Inet_addr.bind_any, 0)) in
+          let srcs = Array.create ~len:1 addr_before in
+          let result  = recvmmsg fd ~srcs (Array.create ~len:1 t) in
+          (* we've altered the reporting of EWOULDBLOCK to return a negative value, rather
+             than an exception in the inner loop of some UDP heavy applications. Raise
+             here to mimic the behavior of the original api, and others such as recvfrom
+             that share testing code *)
+          if result < 0 then raise (Unix.Unix_error (Unix.EWOULDBLOCK, "recvmmsg", ""));
+          assert (result = 1);
+          (* Check that the prototype source address wasn't modified in place.  It is
+             expected to have been replaced in the array by a new sockaddr. *)
+          assert (not (phys_equal addr_before srcs.(0)));
+          assert (Pervasives.(<>) addr_before srcs.(0));
+          srcs.(0)
+        )
+      )
 
 TEST_UNIT = List.iter [ 0; 1 ] ~f:(fun pos ->
       let t = create ~len:10 in
@@ -1295,10 +1306,8 @@ ENDIF;
           fill_int t len;
           Fill.string t s;
           flip_lo t;
-          let n = length t in
-          let m = write_assume_fd_is_nonblocking t fd in
-          assert (m = n);                   (* no short writes *)
-          assert (is_empty t);
+          write_assume_fd_is_nonblocking t fd;
+          <:test_pred< (_, _) Iobuf.t >> Iobuf.is_empty t; (* no short writes *)
           reset t
       done;
       Unix.close fd;
@@ -1339,12 +1348,14 @@ ENDIF;
           end
       in
       let rec loop_file () =
-        if read_assume_fd_is_nonblocking t fd > 0 then begin
+        let len_before = length t in
+        read_assume_fd_is_nonblocking t fd;
+        if len_before > length t then (
           flip_lo t;
           drain_messages ();
           compact t;
-          loop_file ();
-        end
+          loop_file ()
+        )
       in
       loop_file ();
       Unix.close fd;

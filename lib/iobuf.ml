@@ -4,7 +4,7 @@ module Blit = Core_kernel.Std.Blit
 
 module T = struct
   type t =
-    (* WHEN YOU CHANGE THIS, CHANGE iobuf_fields IN iobuf_stubs.c AS WELL!!! *)
+    (* WHEN YOU CHANGE THIS, CHANGE iobuf_fields IN iobuf.h AS WELL!!! *)
     { mutable buf : Bigstring.t sexp_opaque;
       (* The data in [buf] is at indices [lo], [lo+1], ... [hi-1]. *)
       mutable lo_min : int;
@@ -834,16 +834,14 @@ let read_assume_fd_is_nonblocking t fd =
   let nread =
     Bigstring.read_assume_fd_is_nonblocking fd t.buf ~pos:t.lo ~len:(length t)
   in
-  unsafe_advance t nread;
-  nread
+  unsafe_advance t nread
 ;;
 
 let pread_assume_fd_is_nonblocking t fd ~offset =
   let nread =
     Bigstring.pread_assume_fd_is_nonblocking fd ~offset t.buf ~pos:t.lo ~len:(length t)
   in
-  unsafe_advance t nread;
-  nread
+  unsafe_advance t nread
 ;;
 
 let recvfrom_assume_fd_is_nonblocking t fd =
@@ -851,7 +849,7 @@ let recvfrom_assume_fd_is_nonblocking t fd =
     Bigstring.recvfrom_assume_fd_is_nonblocking fd t.buf ~pos:t.lo ~len:(length t)
   in
   unsafe_advance t nread;
-  nread, sockaddr
+  sockaddr
 ;;
 
 (* recvmmsg based on bigstring.ml *)
@@ -947,39 +945,33 @@ ENDIF                                   (* RECVMMSG *)
 let send_nonblocking_no_sigpipe () =
   Or_error.map Bigstring.send_nonblocking_no_sigpipe ~f:(fun send ->
     fun t fd ->
-      let nwritten_opt = send fd t.buf ~pos:t.lo ~len:(length t) in
-      begin match nwritten_opt with
+      (* By returning unit, we're conflating blocking and succeeding to write zero bytes,
+         ie we're saying that trying to write zero bytes always blocks. *)
+      match send fd t.buf ~pos:t.lo ~len:(length t) with
       | None -> ()
-      | Some nwritten -> unsafe_advance t nwritten
-      end;
-      nwritten_opt)
+      | Some nwritten -> unsafe_advance t nwritten)
 ;;
 
 let sendto_nonblocking_no_sigpipe () =
   Or_error.map Bigstring.sendto_nonblocking_no_sigpipe ~f:(fun sendto ->
     fun t fd sockaddr ->
-      let nwritten_opt = sendto fd t.buf ~pos:t.lo ~len:(length t) sockaddr in
-      begin match nwritten_opt with
+      match sendto fd t.buf ~pos:t.lo ~len:(length t) sockaddr with
       | None -> ()
-      | Some nwritten -> unsafe_advance t nwritten
-      end;
-      nwritten_opt)
+      | Some nwritten -> unsafe_advance t nwritten)
 ;;
 
 let write_assume_fd_is_nonblocking t fd =
   let nwritten =
     Bigstring.write_assume_fd_is_nonblocking fd t.buf ~pos:t.lo ~len:(length t)
   in
-  unsafe_advance t nwritten;
-  nwritten
+  unsafe_advance t nwritten
 ;;
 
 let pwrite_assume_fd_is_nonblocking t fd ~offset =
   let nwritten =
     Bigstring.pwrite_assume_fd_is_nonblocking fd ~offset t.buf ~pos:t.lo ~len:(length t)
   in
-  unsafe_advance t nwritten;
-  nwritten
+  unsafe_advance t nwritten
 ;;
 
 module Unsafe = struct

@@ -1,6 +1,4 @@
-(** Warning! this library assumes we are in a POSIX compliant OS. It will not work
-    properly under windows.
-*)
+(** Warning! this library assumes we are in a POSIX compliant OS. *)
 
 open Core_kernel.Std
 
@@ -81,6 +79,16 @@ val dir_sep : string
 *)
 val concat : string -> string -> string
 
+module O : sig
+  (** Equal to [Filename.concat]. *)
+  val (/^) : string -> string -> string
+
+  (** [root /@ [p1; p2; p3] = root /^ p1 /^ p2 /^ p3]
+      [root /@ [] = root] *)
+  val (/@) : string -> string list -> string
+end
+include module type of O
+
 (** Return [true] if the file name is relative to the current
    directory, [false] if it is absolute (i.e. in Unix, starts
    with [/]). *)
@@ -140,8 +148,16 @@ val dirname : string -> string
 val split : string -> string * string
 
 (** [parts filename] returns a list of path components in order.  For instance:
-  /tmp/foo/bar/baz -> ["/"; "tmp"; "foo"; "bar"; "baz" ] *)
+    /tmp/foo/bar/baz -> ["/"; "tmp"; "foo"; "bar"; "baz"]. The first component is always
+    either "." for relative paths or "/" for absolute ones. *)
 val parts : string -> string list
+
+(** [of_parts parts] joins a list of path components into a path. It does roughly the
+    opposite of [parts], but they fail to be precisely mutually inverse because of
+    ambiguities like multiple consecutive slashes and . components.
+
+    Raises an error if given an empty list. *)
+val of_parts : string list -> string
 
 (** Return a quoted version of a file name, suitable for use as
     one argument in a command line, escaping all meta-characters.

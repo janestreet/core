@@ -859,7 +859,6 @@ let stdin = Unix.stdin
 let stdout = Unix.stdout
 let stderr = Unix.stderr
 
-IFDEF OCAML_4_01 THEN
 type open_flag =
 Unix.open_flag =
 | O_RDONLY
@@ -877,24 +876,6 @@ Unix.open_flag =
 | O_SHARE_DELETE
 | O_CLOEXEC
 with sexp
-ELSE
-type open_flag =
-Unix.open_flag =
-| O_RDONLY
-| O_WRONLY
-| O_RDWR
-| O_NONBLOCK
-| O_APPEND
-| O_CREAT
-| O_TRUNC
-| O_EXCL
-| O_NOCTTY
-| O_DSYNC
-| O_SYNC
-| O_RSYNC
-| O_SHARE_DELETE
-with sexp
-ENDIF
 
 type file_perm = int with of_sexp
 
@@ -1946,8 +1927,15 @@ module Cidr = struct
     with
     | None -> false (* maybe they tried to use IPv6 *)
     | Some address -> Int32.equal (cidr_to_block t) (cidr_to_block {t with address})
+  TEST = does_match (of_string "127.0.0.1/32") Inet_addr.localhost
+  TEST = does_match (of_string "127.0.0.0/8") Inet_addr.localhost
+  TEST = does_match (of_string "0.0.0.0/32") Inet_addr.bind_any
+  TEST = does_match (of_string "0.0.0.0/0") Inet_addr.bind_any
 
   let multicast = of_string "224.0.0.0/4"
+  TEST = does_match multicast (Inet_addr.of_string "224.0.0.1")
+  TEST = does_match multicast (Inet_addr.of_string "239.0.0.1")
+  TEST = not (does_match multicast (Inet_addr.of_string "240.0.0.1"))
 
   TEST_MODULE = struct
     let match_strings c a =
