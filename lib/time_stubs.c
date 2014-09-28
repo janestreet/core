@@ -54,8 +54,10 @@ CAMLprim value core_timegm (value tm_val) {
   tm.tm_wday = Int_val(Field(tm_val,6));
   tm.tm_yday = Int_val(Field(tm_val,7));
   tm.tm_isdst = 0;  /*  tm_isdst is not used by timegm (which sets it to 0) */
+#ifndef __sun
   tm.tm_gmtoff = 0; /* tm_gmtoff is not used by timegm (which sets it to 0) */
   tm.tm_zone = NULL;
+#endif
 
   res = timegm(&tm);
 
