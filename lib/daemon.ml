@@ -86,7 +86,7 @@ let daemonize ?(redirect_stdout=`Dev_null) ?(redirect_stderr=`Dev_null)
 
 let fail_wstopped ~pid ~i =
   failwithf "Bug: waitpid on process %i returned WSTOPPED %i, \
-    but waitpid not called with WUNTRACED.  This should not happen" i pid ()
+    but waitpid not called with WUNTRACED.  This should not happen" pid i ()
 
 let daemonize_wait ?(redirect_stdout=`Dev_null) ?(redirect_stderr=`Dev_null)
     ?(cd = "/") ?umask () =
