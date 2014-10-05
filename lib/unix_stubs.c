@@ -434,7 +434,10 @@ static value core_stat_aux_64(struct stat64 *buf)
   CAMLparam0();
   CAMLlocal5(atime, mtime, ctime, offset, v);
 
-  #if defined _BSD_SOURCE || defined _SVID_SOURCE
+  #if defined(_BSD_SOURCE) || defined(_SVID_SOURCE) || \
+    defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200809L || \
+    defined(_XOPEN_SOURCE) && _XOPEN_SOURCE >= 700
+
     atime = caml_copy_double((double) buf->st_atime + (buf->st_atim.tv_nsec / 1000000000.0f));
     mtime = caml_copy_double((double) buf->st_mtime + (buf->st_mtim.tv_nsec / 1000000000.0f));
     ctime = caml_copy_double((double) buf->st_ctime + (buf->st_ctim.tv_nsec / 1000000000.0f));
