@@ -228,6 +228,7 @@ Library core
                       iobuf_stubs.c,
                       jane_common.h,
                       linux_ext_stubs.c,
+                      nanosecond_stat.h,
                       ocaml_utils.h,
                       ocaml_utils_macros.h,
                       ocaml_utils_stubs.c,

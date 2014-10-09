@@ -58,12 +58,18 @@ if [ $major -ge 4 ]; then
 fi
 
 # The recvmmsg system call was added in Linux 2.6.32
-if gcc config/test_recvmmsg.c -o /dev/null; then
+if cc config/test_recvmmsg.c -o /dev/null; then
     echo "DEFINE RECVMMSG" >> $OUT;
 fi
 
-mv "$OUT" "$ML_OUTFILE"
+for i in 1 2 3; do
+    if cc -I lib -DJSC_STAT_NANOSEC_METHOD=$i config/test_nanosecond_stat.c -o /dev/null 2> /dev/null; then
+        echo "DEFINE STAT_NANOSEC_METHOD = $i" >> $OUT
+        break
+    fi
+done
 
+mv "$OUT" "$ML_OUTFILE"
 
 {
     sentinel="CORE_`basename "$C_OUTFILE" | tr a-z. A-Z_`"
@@ -71,7 +77,7 @@ mv "$OUT" "$ML_OUTFILE"
 #ifndef $sentinel
 #define $sentinel
 EOF
-    sed 's/^DEFINE */#define JSC_/' "$ML_OUTFILE"
+    sed 's/^DEFINE */#define JSC_/;s/=//' "$ML_OUTFILE"
     cat  <<EOF
 #endif /* $sentinel */
 EOF
