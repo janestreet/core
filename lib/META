@@ -1,6 +1,6 @@
 # OASIS_START
-# DO NOT EDIT (digest: 26c07823792b1a2a8d711e95b531c38d)
-version = "112.01.00"
+# DO NOT EDIT (digest: 64e6f9206cdd8984e4fd9b1d15a0ada7)
+version = "112.01.01"
 description = "Jane Street Capital's standard library overlay"
 requires =
 "bin_prot core_kernel custom_printf variantslib sexplib sexplib_unix enumerate fieldslib bigarray pa_bench pa_ounit pa_test unix threads"
@@ -12,7 +12,7 @@ archive(byte, toploop) += "core_top.cma"
 archive(native, toploop) += "core_top.cmxa"
 exists_if = "core.cma"
 package "top" (
- version = "112.01.00"
+ version = "112.01.01"
  description = "Toplevel printers for Core"
  requires = "core"
  archive(byte) = "core_top.cma"

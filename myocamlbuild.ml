@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: 9ad252d156e6b9ae03ff0f4c0dfe2842) *)
+(* DO NOT EDIT (digest: 2fc44052cb5e590bddeba6522534c737) *)
 module OASISGettext = struct
 (* # 22 "src/oasis/OASISGettext.ml" *)
 
@@ -605,6 +605,7 @@ let package_default =
                "lib/includes.h";
                "lib/iobuf.h";
                "lib/jane_common.h";
+               "lib/nanosecond_stat.h";
                "lib/ocaml_utils.h";
                "lib/ocaml_utils_macros.h";
                "lib/recvmmsg.h";
@@ -633,7 +634,7 @@ let package_default =
 
 let dispatch_default = MyOCamlbuildBase.dispatch_default package_default;;
 
-# 637 "myocamlbuild.ml"
+# 638 "myocamlbuild.ml"
 (* OASIS_STOP *)
 
 let dispatch = function
