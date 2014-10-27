@@ -210,7 +210,7 @@ module Stable = struct
 
     (* WARNING: if you are going to change this function in any material way, make sure
        you update Stable appropriately. *)
-    let of_string (s:string) =
+    let of_string_v1_v2 (s:string) ~is_v2 =
       try
         begin match s with
         | "" -> failwith "empty string"
@@ -226,12 +226,20 @@ module Stable = struct
           let len = String.length s in
           match s.[Int.(-) len 1] with
           | 's' ->
-            if Int.(>=) len 2 && Char.(=) s.[Int.(-) len 2] 'm' then of_ms (float 2)
+            if Int.(>=) len 2 && Char.(=) s.[Int.(-) len 2] 'm'
+            then of_ms (float 2)
+            else if is_v2 && Int.(>=) len 2 && Char.(=) s.[Int.(-) len 2] 'u'
+            then of_us (float 2)
+            else if is_v2 && Int.(>=) len 2 && Char.(=) s.[Int.(-) len 2] 'n'
+            then of_ns (float 2)
             else T.of_float (float 1)
           | 'm' -> of_min (float 1)
           | 'h' -> of_hr (float 1)
           | 'd' -> of_day (float 1)
-          | _ -> failwith "Time spans must end in ms, s, m, h, or d."
+          | _ ->
+            if is_v2
+            then failwith "Time spans must end in ns, us, ms, s, m, h, or d."
+            else failwith "Time spans must end in ms, s, m, h, or d."
         end
       with exn ->
         invalid_argf "Span.of_string could not parse '%s': %s" s (Exn.to_string exn) ()
@@ -242,22 +250,29 @@ module Stable = struct
     exception T_of_sexp of Sexp.t * exn with sexp
     exception T_of_sexp_expected_atom_but_got of Sexp.t with sexp
 
-    let t_of_sexp sexp =
+    let t_of_sexp_v1_v2 sexp ~is_v2 =
       match sexp with
       | Sexp.Atom x ->
         begin
-          try of_string x
+          try of_string_v1_v2 x ~is_v2
           with exn -> of_sexp_error_exn (T_of_sexp (sexp, exn)) sexp
         end
       | Sexp.List _ ->
         of_sexp_error_exn (T_of_sexp_expected_atom_but_got sexp) sexp
+
+    let string ~is_v2 suffix float =
+      if is_v2
+      (* This is the same float-to-string conversion used in [Float.sexp_of_t].  It's like
+         [Float.to_string_round_trippable], but may leave off trailing period. *)
+      then !Sexplib.Conv.default_string_of_float float ^ suffix
+      else sprintf "%g%s" float suffix
 
     (* WARNING: if you are going to change this function in any material way, make sure
        you update Stable appropriately. *)
     (* I'd like it to be the case that you could never construct an infinite span, but I
        can't think of a good way to enforce it.  So this to_string function can produce
        strings that will raise an exception when they are fed to of_string *)
-    let to_string (t:T.t) =
+    let to_string_v1_v2 (t:T.t) ~is_v2 =
       (* this is a sad broken abstraction... *)
       let module C = Float.Class in
       match Float.classify (t :> float) with
@@ -268,13 +283,31 @@ module Stable = struct
       | C.Normal ->
         let (<) = T.(<) in
         let abs_t = T.of_float (Float.abs (t :> float)) in
-        if abs_t < T.Constant.second then sprintf "%gms" (to_ms t)
-        else if abs_t < T.Constant.minute then sprintf "%gs" (to_sec t)
-        else if abs_t < T.Constant.hour then sprintf "%gm" (to_min t)
-        else if abs_t < T.Constant.day then sprintf "%gh" (to_hr t)
-        else sprintf "%gd" (to_day t)
+        if is_v2 && abs_t < T.Constant.microsecond then string ~is_v2 "ns" (to_ns t)
+        else if is_v2 && abs_t < T.Constant.millisecond then string ~is_v2 "us" (to_us t)
+        else if abs_t < T.Constant.second then string ~is_v2 "ms" (to_ms t)
+        else if abs_t < T.Constant.minute then string ~is_v2 "s" (to_sec t)
+        else if abs_t < T.Constant.hour then string ~is_v2 "m" (to_min t)
+        else if abs_t < T.Constant.day then string ~is_v2 "h" (to_hr t)
+        else string ~is_v2 "d" (to_day t)
 
-    let sexp_of_t t = Sexp.Atom (to_string t)
+    let sexp_of_t_v1_v2 t ~is_v2 = Sexp.Atom (to_string_v1_v2 t ~is_v2)
+
+    let t_of_sexp sexp = t_of_sexp_v1_v2 sexp ~is_v2:false
+    let sexp_of_t t = sexp_of_t_v1_v2 t ~is_v2:false
+    let of_string s = of_string_v1_v2 s ~is_v2:false
+    let to_string t = to_string_v1_v2 t ~is_v2:false
+  end
+
+  module V2 = struct
+
+    include V1
+
+    let t_of_sexp sexp = t_of_sexp_v1_v2 sexp ~is_v2:true
+    let sexp_of_t t = sexp_of_t_v1_v2 t ~is_v2:true
+    let of_string s = of_string_v1_v2 s ~is_v2:true
+    let to_string t = to_string_v1_v2 t ~is_v2:true
+
   end
 
   TEST_MODULE "Span.V1" = Core_kernel.Stable_unit_test.Make (struct
@@ -284,13 +317,157 @@ module Stable = struct
 
     let tests =
       let span = of_sec in
-      [ span 1234.56,    "20.576m",  "\010\215\163\112\061\074\147\064";
-        span 0.000001,   "0.001ms",  "\141\237\181\160\247\198\176\062";
-        span 80000006.4, "925.926d", "\154\153\153\025\208\018\147\065";
+      [ span 99e-12,     "9.9e-08ms", "\018\006\211\115\129\054\219\061";
+        span 1.2e-9,     "1.2e-06ms", "\076\206\097\227\167\157\020\062";
+        span 0.000001,   "0.001ms",   "\141\237\181\160\247\198\176\062";
+        span 0.707,      "707ms",     "\057\180\200\118\190\159\230\063";
+        span 42.,        "42s",       "\000\000\000\000\000\000\069\064";
+        span 1234.56,    "20.576m",   "\010\215\163\112\061\074\147\064";
+        span 39_996.,    "11.11h",    "\000\000\000\000\128\135\227\064";
+        span 80000006.4, "925.926d",  "\154\153\153\025\208\018\147\065";
       ]
   end)
+
+  TEST_MODULE "Span.V2" = Core_kernel.Stable_unit_test.Make (struct
+    include V2
+
+    let equal t1 t2 = Int.(=) 0 (compare t1 t2)
+
+    let tests =
+      let span = of_sec in
+      [ span 99e-12,     "0.098999999999999991ns", "\018\006\211\115\129\054\219\061";
+        span 1.2e-9,     "1.2ns",                  "\076\206\097\227\167\157\020\062";
+        span 0.000001,   "1us",                    "\141\237\181\160\247\198\176\062";
+        span 0.707,      "707ms",                  "\057\180\200\118\190\159\230\063";
+        span 42.,        "42s",                    "\000\000\000\000\000\000\069\064";
+        span 1234.56,    "20.576m",                "\010\215\163\112\061\074\147\064";
+        span 39_996.,    "11.11h",                 "\000\000\000\000\128\135\227\064";
+        span 80000006.4, "925.926d",               "\154\153\153\025\208\018\147\065";
+      ]
+  end)
+
 end
-include Stable.V1
+include Stable.V2
+let sexp_of_t = Stable.V1.sexp_of_t
+let to_string = Stable.V1.to_string
+
+TEST_MODULE "conversion compatibility" = struct
+
+  let tests =
+    let span = of_sec in
+    [ span 99e-12
+    ; span 1.2e-9
+    ; span 0.000001
+    ; span 0.707
+    ; span 42.
+    ; span 1234.56
+    ; span 39_996.
+    ; span 80000006.4
+    ]
+
+  TEST_UNIT =
+    List.iter tests ~f:(fun t ->
+      begin
+        (* Output must match Stable.V1: *)
+        <:test_result< Sexp.t >> (sexp_of_t t) ~expect:(Stable.V1.sexp_of_t t);
+        <:test_result< string >> (to_string t) ~expect:(Stable.V1.to_string t);
+        (* Stable.V1 must accept output (slightly redundant): *)
+        <:test_result< t >> (Stable.V1.t_of_sexp (sexp_of_t t)) ~expect:t;
+        <:test_result< t >> (Stable.V1.of_string (to_string t)) ~expect:t;
+        (* Stable.V2 should accept output: *)
+        <:test_result< t >> (Stable.V2.t_of_sexp (sexp_of_t t)) ~expect:t;
+        <:test_result< t >> (Stable.V2.of_string (to_string t)) ~expect:t;
+        (* Should accept Stable.V1 output: *)
+        <:test_result< t >> (t_of_sexp (Stable.V1.sexp_of_t t)) ~expect:t;
+        <:test_result< t >> (of_string (Stable.V1.to_string t)) ~expect:t;
+        (* Should accept Stable.V2 output: *)
+        <:test_result< t >> (t_of_sexp (Stable.V2.sexp_of_t t)) ~expect:t;
+        <:test_result< t >> (of_string (Stable.V2.to_string t)) ~expect:t;
+        (* Must round-trip: *)
+        <:test_result< t >> (t_of_sexp (sexp_of_t t)) ~expect:t;
+        <:test_result< t >> (of_string (to_string t)) ~expect:t;
+      end)
+
+end
+
+module Unit_of_time = struct
+
+  type t =
+    | Nanosecond
+    | Microsecond
+    | Millisecond
+    | Second
+    | Minute
+    | Hour
+    | Day
+  with sexp, compare
+
+end
+
+TEST_UNIT "Span.Unit_of_time.t" =
+  <:test_result<int>> (<:compare<Unit_of_time.t>> Nanosecond  Microsecond) ~expect:(-1);
+  <:test_result<int>> (<:compare<Unit_of_time.t>> Microsecond Millisecond) ~expect:(-1);
+  <:test_result<int>> (<:compare<Unit_of_time.t>> Millisecond Second)      ~expect:(-1);
+  <:test_result<int>> (<:compare<Unit_of_time.t>> Second      Minute)      ~expect:(-1);
+  <:test_result<int>> (<:compare<Unit_of_time.t>> Minute      Hour)        ~expect:(-1);
+  <:test_result<int>> (<:compare<Unit_of_time.t>> Hour        Day)         ~expect:(-1)
+
+let to_unit_of_time t : Unit_of_time.t =
+  let abs_t = abs t in
+  if abs_t >= day         then Day         else
+  if abs_t >= hour        then Hour        else
+  if abs_t >= minute      then Minute      else
+  if abs_t >= second      then Second      else
+  if abs_t >= millisecond then Millisecond else
+  if abs_t >= microsecond then Microsecond else
+    Nanosecond
+
+let of_unit_of_time : Unit_of_time.t -> t = function
+  | Nanosecond  -> nanosecond
+  | Microsecond -> microsecond
+  | Millisecond -> millisecond
+  | Second      -> second
+  | Minute      -> minute
+  | Hour        -> hour
+  | Day         -> day
+
+let to_string_hum ?(delimiter='_') ?(decimals=3) ?(align_decimal=false) ?unit_of_time t =
+  let float, suffix =
+    match Option.value unit_of_time ~default:(to_unit_of_time t) with
+    | Day         -> to_day t, "d"
+    | Hour        -> to_hr  t, "h"
+    | Minute      -> to_min t, "m"
+    | Second      -> to_sec t, "s"
+    | Millisecond -> to_ms  t, "ms"
+    | Microsecond -> to_us  t, "us"
+    | Nanosecond  -> to_ns  t, "ns"
+  in
+  let prefix =
+    Float.to_string_hum float ~delimiter ~decimals ~strip_zero:(not align_decimal)
+  in
+  let suffix =
+    if align_decimal && Int.(=) (String.length suffix) 1
+    then suffix ^ " "
+    else suffix
+  in
+  prefix ^ suffix
+
+TEST_UNIT "Span.to_string_hum" =
+  <:test_result<string>> (to_string_hum nanosecond) ~expect:"1ns";
+  <:test_result<string>> (to_string_hum day) ~expect:"1d";
+  <:test_result<string>>
+    (to_string_hum ~decimals:6                      day)
+    ~expect:"1d";
+  <:test_result<string>>
+    (to_string_hum ~decimals:6 ~align_decimal:false day)
+    ~expect:"1d";
+  <:test_result<string>>
+    (to_string_hum ~decimals:6 ~align_decimal:true  day)
+    ~expect:"1.000000d ";
+  <:test_result<string>>
+    (to_string_hum ~decimals:6 ~align_decimal:true ~unit_of_time:Day
+       (hour + minute))
+    ~expect:"0.042361d "
 
 include Pretty_printer.Register (struct
   type nonrec t = t

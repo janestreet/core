@@ -271,6 +271,15 @@ val getppid : unit -> Pid.t option
  *)
 val getppid_exn : unit -> Pid.t
 
+module Thread_id : sig
+  type t with sexp_of, bin_io
+  include Comparable.S with type t := t
+  val to_int : t -> int
+end
+
+(** Get the numeric ID of the current thread, e.g. for identifying it in top(1). *)
+val gettid : (unit -> Thread_id.t) Or_error.t
+
 (** Change the process priority. The integer argument is added to the
    ``nice'' value. (Higher values of the ``nice'' value mean
    lower priorities.) Return the new nice value. *)
@@ -1928,8 +1937,8 @@ val mcast_join
   -> sockaddr
   -> unit
 
-(** [mcast_leave ?ifname sock addr] leaves a multicast group at [addr]
-    with socket [sock], optionally using network interface [ifname].
+(** [mcast_leave ?ifname sock addr] leaves a multicast group at [addr] with socket [sock],
+    optionally using network interface [ifname].
 
     @param ifname default = any interface
 *)
@@ -1953,7 +1962,10 @@ val get_mcast_loop : File_descr.t -> bool
 val set_mcast_loop : File_descr.t -> bool -> unit
 
 (** [set_mcast_ifname sock "eth0"] sets outgoing multicast traffic on IPv4 UDP socket
-    [sock] to go out through interface [eth0]. *)
+    [sock] to go out through interface [eth0].
+
+    This uses [setsockopt] with [IP_MULTICAST_IF] and applies to multicast traffic.  For
+    non-multicast applications, see {!Linux_ext.bind_to_interface}. *)
 val set_mcast_ifname : File_descr.t -> string -> unit
 
 module Scheduler : sig

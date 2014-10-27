@@ -44,6 +44,7 @@
 #include <unix_utils.h>
 #include <socketaddr.h>
 #include <core_params.h>
+#include "recvmmsg.h"
 
 /* Initialisation */
 
@@ -200,11 +201,12 @@ CAMLprim value bigstring_really_recv_stub(
         while (len > 0) {
           n_read = recv(sock, bstr, len, MSG_WAITALL);
           if (n_read <= 0) {
-            if (n_read == -1 && errno == EINTR) continue;
-            value v_n_total = Val_long(n_total);
-            caml_leave_blocking_section();
-            if (n_read == 0) raise_eof_io_error(v_n_total);
-            else raise_unix_io_error(v_n_total, "really_recv", Nothing);
+            if (n_read != -1 || errno != EINTR) {
+              value v_n_total = Val_long(n_total);
+              caml_leave_blocking_section();
+              if (n_read == 0) raise_eof_io_error(v_n_total);
+              else raise_unix_io_error(v_n_total, "really_recv", Nothing);
+            }
           } else {
             len -= n_read;
             bstr += n_read;
@@ -481,9 +483,11 @@ CAMLprim value bigstring_output_stub(
           CALL_WRITE; \
           if (written == -1) { \
             if (errno == EINTR) continue; \
-            value v_n_good = Val_long(bstr - bstr_start); \
-            caml_leave_blocking_section(); \
-            raise_unix_io_error(v_n_good, STR(really_##NAME), Nothing); \
+            { \
+              value v_n_good = Val_long(bstr - bstr_start); \
+              caml_leave_blocking_section(); \
+              raise_unix_io_error(v_n_good, STR(really_##NAME), Nothing); \
+            } \
           }; \
           len -= written; \
           bstr += written; \
@@ -595,20 +599,12 @@ CAMLprim value bigstring_recvmmsg_assume_fd_is_nonblocking_stub(
   value v_fd, value v_iovecs, value v_count, value v_srcs, value v_lens)
 {
   CAMLparam5(v_fd, v_iovecs, v_count, v_srcs, v_lens);
-  CAMLlocal5(v_iovec, v_buf, v_pos, v_len, v_sockaddrs);
-  size_t total_len = 0;
-  struct mmsghdr hdrs[Long_val(v_count)];
-  union sock_addr_union addrs[Long_val(v_count)];
-  struct iovec iovecs[Long_val(v_count)];
+  CAMLlocal4(v_iovec, v_buf, v_pos, v_len);
   unsigned i;
-  ssize_t n_read;
-  int save_source_addresses;
-  int fd;
-  unsigned int count;
+  int n_read;
+  unsigned count;
 
-  save_source_addresses = Is_block(v_srcs);
-  fd = Int_val(v_fd);
-  count = (unsigned int) Long_val(v_count);
+  count = (unsigned) Long_val(v_count);
   if (count != Long_val(v_count)) {
     caml_invalid_argument("bigstring_recvmmsg_assume_fd_is_nonblocking_stub: "
                           "v_count exceeds unsigned int");
@@ -621,66 +617,37 @@ CAMLprim value bigstring_recvmmsg_assume_fd_is_nonblocking_stub(
     caml_invalid_argument("bigstring_recvmmsg_assume_fd_is_nonblocking_stub: "
                           "length v_lens < count");
   }
-
-  for (i = 0; i < count; i++) {
-    hdrs[i].msg_hdr.msg_name = (save_source_addresses ? &addrs[i].s_gen : 0);
-    hdrs[i].msg_hdr.msg_namelen = sizeof(addrs[i]);
-
-    v_iovec = Field(v_iovecs, i);
-    v_buf = Field(v_iovec, 0);
-    v_pos = Field(v_iovec, 1);
-    v_len = Field(v_iovec, 2);
-
-    iovecs[i].iov_base = get_bstr(v_buf, v_pos);
-    iovecs[i].iov_len = Long_val(v_len);
-    total_len += iovecs[i].iov_len;
-
-    hdrs[i].msg_hdr.msg_iov = &iovecs[i];
-    hdrs[i].msg_hdr.msg_iovlen = 1;
-
-    hdrs[i].msg_hdr.msg_control = 0;
-    hdrs[i].msg_hdr.msg_flags = 0;
+  if (count > RECVMMSG_MAX_COUNT) {
+    caml_invalid_argument("bigstring_recvmmsg_assume_fd_is_nonblocking_stub: "
+                          "v_count exceeds RECVMMSG_MAX_COUNT");
   }
 
-  if (total_len > THREAD_IO_CUTOFF) {
-    caml_enter_blocking_section();
-      n_read = recvmmsg(fd, hdrs, count, 0, 0);
-    caml_leave_blocking_section();
-  }
-  else {
-    n_read = recvmmsg(fd, hdrs, count, 0, 0);
-  }
+  {
+    /* For a big count (~100), a mostly idle system spent a
+       substantial amount of time (~10%) copying the iovec fields back
+       and forth.  This was greatly improved by passing a small (~4)
+       number of buffers. */
+    struct mmsghdr hdrs[RECVMMSG_MAX_COUNT];
+    struct iovec iovecs[RECVMMSG_MAX_COUNT];
 
-  if (n_read > count) {
-    caml_failwith("bigstring_recvmmsg_assume_fd_is_nonblocking_stub: "
-                  "recvmmsg unexpectedly returned n_read > count");
-  }
+    for (i = 0; i < count; i++) {
+      v_iovec = Field(v_iovecs, i);
+      v_buf = Field(v_iovec, 0);
+      v_pos = Field(v_iovec, 1);
+      v_len = Field(v_iovec, 2);
 
-  if (n_read == -1) {
-    uerror("recvmmsg_assume_fd_is_nonblocking", Nothing);
-  }
-  else {
-    if (save_source_addresses) {
-      v_sockaddrs = Field(v_srcs, 0);
-      if (!Is_block(v_sockaddrs)) {
-        caml_invalid_argument("bigstring_recvmmsg_assume_fd_is_nonblocking_stub: "
-                              "v_sockaddrs is not an array");
-      }
-      if (Wosize_val(v_sockaddrs) < count) {
-        caml_invalid_argument("bigstring_recvmmsg_assume_fd_is_nonblocking_stub: "
-                              "length v_sockaddrs < count");
-      }
-
-      for (i = 0; i < n_read; i++) {
-        value addr = alloc_sockaddr(&addrs[i], hdrs[i].msg_hdr.msg_namelen, -1);
-        Store_field(v_sockaddrs, i, addr);
-      }
+      iovecs[i].iov_base = get_bstr(v_buf, v_pos);
+      iovecs[i].iov_len = Long_val(v_len);
     }
-    for (i = 0; i < n_read; i++) {
+
+    n_read = recvmmsg_assume_fd_is_nonblocking(v_fd, iovecs, count, v_srcs, hdrs);
+
+    for (i = 0; (int) i < n_read; i++) {
       Field(v_lens, i) = Val_long(hdrs[i].msg_len);
     }
   }
-  CAMLreturn(Val_long(n_read));
+
+  CAMLreturn(Val_int(n_read));
 }
 
 #endif  /* JSC_RECVMMSG */

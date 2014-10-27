@@ -47,9 +47,9 @@ let redirect_fd ~skip_regular_files ~mode ~src ~dst =
         | `Dev_null ->
           Unix.openfile "/dev/null" ~mode:[mode] ~perm:0o777
         | `File_append file ->
-          Unix.openfile file ~mode:[mode; Unix.O_CREAT; Unix.O_APPEND] ~perm:0o777
+          Unix.openfile file ~mode:[mode; Unix.O_CREAT; Unix.O_APPEND]
         | `File_truncate file ->
-          Unix.openfile file ~mode:[mode; Unix.O_CREAT; Unix.O_TRUNC] ~perm:0o777
+          Unix.openfile file ~mode:[mode; Unix.O_CREAT; Unix.O_TRUNC]
       in
       Unix.dup2 ~src ~dst;
       Unix.close src;
@@ -86,7 +86,7 @@ let daemonize ?(redirect_stdout=`Dev_null) ?(redirect_stderr=`Dev_null)
 
 let fail_wstopped ~pid ~i =
   failwithf "Bug: waitpid on process %i returned WSTOPPED %i, \
-    but waitpid not called with WUNTRACED.  This should not happen" i pid ()
+    but waitpid not called with WUNTRACED.  This should not happen" pid i ()
 
 let daemonize_wait ?(redirect_stdout=`Dev_null) ?(redirect_stderr=`Dev_null)
     ?(cd = "/") ?umask () =

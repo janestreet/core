@@ -102,20 +102,45 @@ module Stable = struct
 
       val get : t -> float -> float
 
+      (* ?force is used to allow us to run bench tests. *)
+      val precache : ?force:bool -> ?density:float -> t -> unit
+
       val create_from_linear_combination : (t * float) list -> t Or_error.t
 
     end = struct
+      module Lookup = struct
+        type t =
+          { indices : int array
+          ; scale : float
+          }
+
+        let cached_bounds { indices ; scale } t_x x =
+          (* We're guaranteed that nl>=1, although the logic actually works when nl=0 *)
+          let nl = Array.length indices in
+          (* Note that we only index the interior points. *)
+          let idx = Pervasives.int_of_float ((x -. t_x.(0)) *. scale) in
+          let m = if idx = 0 then 0 else indices.(idx-1) in
+          let n = if idx = nl then (Array.length t_x) - 1 else indices.(idx)+1 in
+          m,n
+
+      end
+
       (* float arrays don't have the boxing overhead that (float * float) arrays have.
          Also, when inverting, we can often swap x and y without duplicating the floats.
       *)
       type t =
         { x : float array (* the x coordinates of the knots *)
         ; y : float array (* the corresponding y coordinates of the knots *)
-        } with compare
+        (* lookup.(i) is the index of the knot immmediately prior to the ith equi-spaced
+           interior point in the interval x.(0), x.(end-1) *)
+        ; mutable lookup : Lookup.t option
+        }
+
+      let compare t1 t2 = <:compare< float array * float array >> (t1.x, t1.y) (t2.x, t2.y)
 
       (** [validate ~strict t] returns [Ok t] if [t] is valid, and an [Error] otherwise. *)
       let validate ~strict t =
-        let { x; y } = t in
+        let { x; y; _ } = t in
         let len_x = Array.length x in
         let len_y = Array.length y in
         if len_x <> len_y
@@ -140,7 +165,7 @@ module Stable = struct
       let create ~strict knots =
         let x = Array.of_list_map knots ~f:fst in
         let y = Array.of_list_map knots ~f:snd in
-        let tentative_result = { x; y } in
+        let tentative_result = { x; y; lookup = None } in
         validate ~strict tentative_result
 
       let to_knots t =
@@ -153,11 +178,12 @@ module Stable = struct
          Make(...).to_knots'. *)
       let to_knots' t = (t.x, t.y)
 
-      let of_knots' ~x ~y = { x; y}
+      let of_knots' ~x ~y = { x; y; lookup = None}
 
       let invert t =
         (* We try swapping x and y and validating *)
-        match validate ~strict:true { x = t.y; y = t.x } with
+        let lookup = None in
+        match validate ~strict:true { x = t.y; y = t.x; lookup } with
         | Ok _ as result -> result
         | Error error_when_same_order ->
           (* Try reversing them; i.e. [invert t] should work if t.y is either
@@ -166,12 +192,40 @@ module Stable = struct
           Array.rev_inplace x;
           let y = Array.copy t.x in
           Array.rev_inplace y;
-          match validate ~strict:true { x; y } with
+          match validate ~strict:true { x; y; lookup } with
           | Ok _ as result -> result
           | Error error_when_reversed ->
             Or_error.error "Swapping x and y failed, for both original and reversed order"
               (`Same_order error_when_same_order, `Reverse_order error_when_reversed)
               <:sexp_of<[`Same_order of Error.t] * [`Reverse_order of Error.t]>>
+
+
+
+      (* ?force is used to allow us to run bench tests. *)
+      let precache ?(force = false) ?(density = 1.) t =
+        let t_x = t.x in
+        let m = Array.length t_x in
+        let n =  Float.to_int (float m *. density) - 2 in
+        if force || n > Option.value_map t.lookup ~default:0 ~f:(fun { indices; _ } ->
+          Array.length indices
+        )
+        then begin
+          let j = ref 0 in
+          let width = t_x.(m-1) -. t_x.(0) in
+          let scale = float (n + 1) /. width in
+          let indices = Array.init n ~f:(fun i ->
+
+            let rec loop () =
+              let idx = Float.to_int ((t_x.(!j+1) -. t_x.(0)) *. scale) in
+              if idx < i+1 then (incr j; loop () )
+            in
+            loop ();
+            (* j is the highest index of a knot whose associated value of idx is < i+1 *)
+            !j
+          )
+          in
+          t.lookup <- Some { indices ; scale }
+        end
 
       let linear ~x ~x1 ~y1 ~x2 ~y2 =
         let weight = (x -. x1) /. (x2 -. x1) in (* note: numerically unstable if x2=.x1 *)
@@ -185,30 +239,40 @@ module Stable = struct
 
 
       let get t x =
-        if Float.(<>) x x (* same as Float.is_nan but slightly faster *)
+        if Float.is_nan x
         then invalid_arg "Piecewise_linear.get on nan";
         let t_x = t.x in
         let t_y = t.y in
         let l = Array.length t_x in
+        let t_x0 = t_x.(0) in
         (* Using Float.(<=) on next line gives wrong semantics if t starts with a
            discontinuity. *)
-        if Float.(<) x t_x.(0)
+        if Float.(<) x t_x0
         then t_y.(0)
         else if Float.(<=) t_x.(l - 1) x
         then t_y.(l - 1)
         else
-          (* loop invariant: t_x.(m) <= x < t_x.(n) *)
-          let rec loop m n =
-            if n - m <= 1
-            then m
-            else
-              let mid = (m + n) / 2 in
-              if Float.(<=) t_x.(mid) x
-              then loop mid n
-              else loop m mid
+          (* Using the cached lookup, if available, determine a pair of knots that lie
+             either side of x *)
+
+          let m,n = match t.lookup with
+            | None -> 0,l-1
+            | Some lookup -> Lookup.cached_bounds lookup t_x x
           in
-          let i = loop 0 (l - 1) in
-          linear ~x ~x1:t_x.(i) ~y1:t_y.(i) ~x2:t_x.(i + 1) ~y2:t_y.(i + 1)
+
+          (* Writing this with a recursive function incurs an overhead that means that
+             using a while loop is up to 10% quicker. *)
+          let m = ref m in
+          let n = ref n in
+          (* loop invariant: t_x.(m) <= x < t_x.(n) *)
+          while !n - !m > 1 do
+            let mid = (!m + !n) / 2 in
+            if Float.(<=) (Array.unsafe_get t_x mid) x
+            then m := mid
+            else n := mid
+          done;
+          let i = !m in
+          linear ~x ~x1:t_x.(i) ~y1:t_y.(i) ~x2:t_x.(i+1) ~y2:t_y.(i+1)
 
       let create_from_linear_combination with_weights =
         match with_weights with
@@ -304,6 +368,7 @@ module Stable = struct
 
       include T
       include Bin_prot.Utils.Make_binable(T)
+      let precache = Impl.precache ~force:false
 
       let get t x = Value.of_float (Impl.get t (Key.to_float x))
     end
@@ -375,6 +440,9 @@ module Stable = struct
       let to_knots' t = M.to_knots' t.regular
 
       let get_inverse t y = Key.of_float (Impl.get t.inverse (Value.to_float y))
+      let precache ?density {regular; inverse} =
+        Impl.precache ?density regular;
+        Impl.precache ?density inverse
 
       let create_from_linear_combination with_weights =
         let open Result.Monad_infix in
@@ -449,6 +517,55 @@ TEST_MODULE = struct
       expected "get" 5. (Float.get t 5.)
 
   end
+
+  TEST_MODULE "precached" = struct
+    TEST = Result.is_ok (Float.create (to_knots [1.; 1.; 2.]))
+    TEST = Result.is_error (Float.create bad_knots)
+
+    TEST_UNIT = (* Test the normal case *)
+      let knots = [(1., 1.); (1.1, 1.5); (2., 2.)] in
+      let t = Or_error.ok_exn (Float.create knots) in
+      Float.precache t;
+      expected "get" 1. (Float.get t 1.);
+      expected "get" 1.5 (Float.get t 1.1);
+      expected "get" 1.25 (Float.get t 1.05);
+      expected "get" 1. (Float.get t 0.9);
+      expected "get" 2. (Float.get t 2.5);
+      expected "get" 2. (Float.get t 2.)
+
+    TEST_UNIT = (* Test the normal case with repeated x-values in knots *)
+      let knots = [(0.1, 2.); (0.5, 4.); (0.5, 5.); (0.9, 1.); (2.2, 2.2)] in
+      let t = Or_error.ok_exn (Float.create knots) in
+      Float.precache t;
+      expected "get" 5. (Float.get t 0.5); (* right continuity *)
+      expected "get" 4. (Float.get t 0.6);
+      expected "get" 3.5 (Float.get t 0.4);
+      expected_tol ~tol:1e-12 "get" (4. -. 5e-7) (Float.get t (0.5 -. 1e-7))
+
+    TEST_UNIT = (* Test a degenerate case *)
+      let knots = [(1., 2.)] in
+      let t = Or_error.ok_exn (Float.create knots) in
+      Float.precache t;
+      expected "get" 2. (Float.get t 0.5);
+      expected "get" 2. (Float.get t 1.);
+      expected "get" 2. (Float.get t 1.5)
+
+   (* This test exposed a floating point error when we weren't populating the cached
+     lookup correctly *)
+   TEST_UNIT =
+      let x0 = -0.18064178089785571 in
+      let x1 = 0.05702505363595689 in
+      let x2 = 0.373914166347706967 in
+      let knots = [(x0, 0.); (x1, 0.); (x1, 1.); (x2, 1.)] in
+      let t = Or_error.ok_exn (Float.create knots) in
+      Float.precache ~density:2. t;
+      let just_below_x1 = 0.0570250536359568835 in
+      (* Check that this value really is less than x1: *)
+      if F.(>=) just_below_x1 x1 then failwith "Bug in test, not necessarily in module";
+      let result = Float.get t just_below_x1 in
+      expected "get" 0. result
+  end
+
 
   TEST_MODULE "invertible" = struct
     module Float_invertible = Make_invertible (F) (F)
@@ -610,4 +727,30 @@ BENCH_MODULE "Piecewise_linear tests" = struct
        let x' = x' *. x' -. 2. in
        x := x')
 
+  let density = Some 1.5
+
+  BENCH_INDEXED "precache" len num_knots =
+    let t = Or_error.ok_exn (Float.create (create_knots len)) in
+    (fun () ->
+       ignore (Stable.V1.Impl.precache ~force:true ?density t))
+
+  BENCH_INDEXED "precache then get" len num_knots =
+    let t = Or_error.ok_exn (Float.create (create_knots len)) in
+    Float.precache t ?density;
+    let x = ref 0.3 in
+    (fun () ->
+       let x' = !x in
+       let x' = x' *. x' -. 2. in
+       x := x';
+       ignore (Float.get t x'))
+
+  BENCH_INDEXED "precache then get_inverse" len num_knots =
+    let t = Or_error.ok_exn (FI.create (create_knots len)) in
+    FI.precache t ?density;
+    let x = ref 0.3 in
+    (fun () ->
+       let x' = !x in
+       let x' = x' *. x' -. 2. in
+       x := x';
+       ignore (FI.get_inverse t x'))
 end

@@ -256,11 +256,11 @@ module Date = struct
   include (Date : (module type of Date with module Stable := Date.Stable))
   module Stable = struct
     module V1 = struct
-      type t = Date.Stable.V1.t = private { y: int; m: Month.t; d: int; }
+      type t = Date.Stable.V1.t
       with typerep(abstract)
       include (Date.Stable.V1 : (module type of Date.Stable.V1 with type t := t))
       module T = struct
-        type t = { y: int; m: Month.Stable.V1.t; d: int; } with typerep
+        type t = { y : int ; m : Month.Stable.V1.t ; d : int } with typerep
       end
       include Typestructable.Of_typerepable(T)
     end

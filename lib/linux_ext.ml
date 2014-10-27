@@ -457,7 +457,8 @@ let sched_setaffinity ?pid ~cpuset () =
   raw_sched_setaffinity ~pid ~cpuset
 ;;
 
-external gettid : unit -> int = "linux_ext_gettid"
+(* defined in unix_stubs.c *)
+external gettid : unit -> int = "unix_gettid"
 
 external setpriority : Priority.t -> unit = "linux_setpriority"
 
@@ -821,7 +822,6 @@ let get_ipv4_address_for_interface = Ok get_ipv4_address_for_interface
 let bind_to_interface              = Ok bind_to_interface
 let get_terminal_size              = Ok get_terminal_size
 let gettcpopt_bool                 = Ok gettcpopt_bool
-let gettid                         = Ok gettid
 let setpriority                    = Ok setpriority
 let getpriority                    = Ok getpriority
 let in_channel_realpath            = Ok in_channel_realpath
@@ -853,7 +853,6 @@ let get_ipv4_address_for_interface = u "Linux_ext.get_ipv4_address_for_interface
 let bind_to_interface              = u "Linux_ext.bind_to_interface"
 let get_terminal_size              = u "Linux_ext.get_terminal_size"
 let gettcpopt_bool                 = u "Linux_ext.gettcpopt_bool"
-let gettid                         = u "Linux_ext.gettid"
 let setpriority                    = u "Linux_ext.setpriority"
 let getpriority                    = u "Linux_ext.getpriority"
 let in_channel_realpath            = u "Linux_ext.in_channel_realpath"

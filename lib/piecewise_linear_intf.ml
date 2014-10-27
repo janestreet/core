@@ -38,6 +38,28 @@ module type S = sig
   (* O(n) *)
   val to_knots' : t -> key array * value array
 
+
+  (** [precache t] computes and stores a lookup table in [t] that speeds up subsequent
+      calls to [get t].  Any call to [get] needs to find the knots that define the
+      interval in which the key lies.  This is done by bisection.  Ordinarily the
+      bisection starts on the whole domain of the piecewise linear function.  Precaching
+      builds a lookup table based on an equispaced division of the domain.  This allows
+      [get] to quickly determine a (potentially very) small initial interval on which to
+      start the bisection.
+
+      This works best for knots that are reasonably evenly distributed.
+
+      [density] is the ratio of the size of the lookup table to the size of the knot
+      array.
+
+      Calling [precache] multiple times is safe.  If the existing lookup density is the
+      same or higher density than the requested density, the lookup table will not be
+      recomputed. *)
+  val precache
+    :  ?density:float  (** default is [1] *)
+    -> t
+    -> unit
+
   (** Returns the [t] such that [get t key] = sum ([get t_i key]) * [weight_i]. This will
       fail if given an empty list as an argument, if any weights are not finite, or if
       any of the input [t]s has a discontinuity.

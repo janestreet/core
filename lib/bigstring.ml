@@ -326,28 +326,27 @@ TEST_MODULE "recvmmsg smoke" = struct
   let short_srcs = Array.create ~len:(count - 1) (ADDR_INET (Inet_addr.bind_any, 0))
   let () = set_nonblock fd
 
-  TEST =
-    try recvmmsg_assume_fd_is_nonblocking fd iovecs ~count ~srcs ~lens = 0
-    with Unix_error _ -> true | _ -> false
-  TEST =
-    try recvmmsg_assume_fd_is_nonblocking fd iovecs ~lens = 0
-    with Unix_error _ -> true | _ -> false
-  TEST =
-    try recvmmsg_assume_fd_is_nonblocking fd iovecs ~count:(count / 2) ~srcs ~lens = 0
-    with Unix_error _ -> true | _ -> false
-  TEST =
-    try recvmmsg_assume_fd_is_nonblocking fd iovecs ~count:0 ~srcs ~lens = 0
-    with Unix_error _ -> true | _ -> false
-  TEST =
-    try
-      ignore (recvmmsg_assume_fd_is_nonblocking fd iovecs ~count:(count + 1) ~lens);
-      false
-    with Unix_error _ -> false | _ -> true
-  TEST =
-    try
-      ignore (recvmmsg_assume_fd_is_nonblocking fd iovecs ~srcs:short_srcs ~lens);
-      false
-    with Unix_error _ -> false | _ -> true
+  let test ?count ?srcs ~lens ok_pred error_pred =
+    <:test_pred< (int, exn) Result.t >>
+      (function Ok i -> ok_pred i | Error e -> error_pred e)
+      (Result.try_with
+         (fun () -> recvmmsg_assume_fd_is_nonblocking fd iovecs ?count ?srcs ~lens)
+      )
+  (* We return -EAGAIN and -EWOULDBLOCK directly as values, rather than as exceptions.
+     So, allow negative results. *)
+  TEST_UNIT =
+    test ~count ~srcs ~lens ((>=) 0) (function Unix_error _ -> true | _ -> false)
+  TEST_UNIT = test ~lens ((>=) 0) (function Unix_error _ -> true | _ -> false)
+  TEST_UNIT =
+    test ~count:(count / 2) ~srcs ~lens ((>=) 0)
+      (function Unix_error _ -> true | _ -> false)
+  TEST_UNIT =
+    test ~count:0 ~srcs ~lens ((>=) 0) (function Unix_error _ -> true | _ -> false)
+  TEST_UNIT =
+    test ~count:(count + 1) ~lens (const false)
+      (function Unix_error _ -> false | _ -> true)
+  TEST_UNIT =
+    test ~srcs:short_srcs ~lens (const false) (function Unix_error _ -> false | _ -> true)
 end
 ;;
 

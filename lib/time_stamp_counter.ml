@@ -60,11 +60,11 @@
    underlying TSC frequency to change on the machine.  It is defined as
    [max_perc_change_from_real_slope] below.
 
-   It is worth noting that the approximation of the the monotonic slope trying to catch up
+   It is worth noting that the approximation of the monotonic slope trying to catch up
    with the estimate slope can be achieved in many other ways.  A more principled approach
-   to this this would be to use a PID controller that adapts to error and gets the
-   reported monotonic time to smoothly fit the estimated time.  However PID controllers
-   are computationally more expensive and we use a simpler linear approximation.
+   to this would be to use a PID controller that adapts to error and gets the reported
+   monotonic time to smoothly fit the estimated time.  However PID controllers are
+   computationally more expensive and we use a simpler linear approximation.
 *)
 INCLUDE "core_config.mlh"
 open Core_kernel.Std
@@ -350,8 +350,12 @@ end
 
 let to_time ?(calibrator = Calibrator.local) t = Calibrator.tsc_to_time calibrator t
 
-let to_nanos_since_epoch ?(calibrator = Calibrator.local) t =
+let to_nanos_since_epoch ~calibrator t =
   Calibrator.tsc_to_nanos_since_epoch calibrator t;
+;;
+
+let to_time_ns ?(calibrator = Calibrator.local) t =
+  Time_ns.of_int63_ns_since_epoch (to_nanos_since_epoch ~calibrator t)
 ;;
 
 TEST_MODULE = struct

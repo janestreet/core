@@ -1,11 +1,6 @@
 open Core_kernel.Std
 
-type t = private {
-  y: int;
-  m: Month.t;
-  d: int;
-}
-with bin_io, sexp
+type t with bin_io, sexp
 
 include Hashable_binable with type t := t
 (** converts a string to a date, in formats:
@@ -88,14 +83,8 @@ val following_weekday : t -> t
     strictly after [t]. *)
 val first_strictly_after : t -> on:Day_of_week.t -> t
 
-
-
-module Export : sig
-  type _date = t = private { y: int; m: Month.t; d: int; }
-end
-
 module Stable : sig
   module V1 : sig
-    type nonrec t = t = private { y: int; m: Month.t; d: int; } with sexp, bin_io, compare
+    type nonrec t = t with sexp, bin_io, compare
   end
 end

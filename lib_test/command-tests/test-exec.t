@@ -52,7 +52,7 @@ Help works across Command.exec
   
 So does tab completion
 
-  $ tab-complete demo_parent.exe child -
+  $ tab_complete demo_parent.exe child -
   -build-info
   -date
   -file

@@ -20,6 +20,7 @@
       Calibrator.calibrate                 279   34.00
     v}
 
+
     Type [t] is an [Int63.t] and consequently has no allocation overhead (on 64-bit
     machines), unlike [Time.now ()] which returns a boxed float.
 
@@ -95,7 +96,6 @@ module Span : sig
   val of_ns        : ?calibrator:Calibrator.t -> Core_int63.t -> t
 end
 
-
 IFDEF ARCH_SIXTYFOUR THEN
 external now : unit -> t = "tsc_get" "noalloc"
 ELSE
@@ -112,8 +112,7 @@ val to_int63 : t -> Core_int63.t
     of [to_time ()] will return nondecreasing [Time.t] values. *)
 val to_time : ?calibrator:Calibrator.t -> t -> Time.t
 
-(** [to_nanos_since_epoch t] converts a [t] to an integer number of nanos since the
-    epoch. *)
-val to_nanos_since_epoch : ?calibrator:Calibrator.t -> t -> Core_int63.t
+(** [to_time_ns t] converts a [t] to an integer number of nanos since the epoch. *)
+val to_time_ns : ?calibrator:Calibrator.t -> t -> Time_ns.t
 
 
