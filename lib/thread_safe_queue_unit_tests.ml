@@ -1,8 +1,9 @@
+open Core_kernel.Std
+
 TEST_MODULE "Thread_safe_queue" = (struct
 
   let () = Debug.should_print_backtrace := false
 
-  open Std_internal
   open Thread_safe_queue
 
   type nonrec 'a t = 'a t

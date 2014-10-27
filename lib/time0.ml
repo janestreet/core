@@ -73,8 +73,8 @@ module Stable = struct
       let parts = Span.to_parts (Ofday.to_span_since_start_of_day ofday) in
       let time =
         let epoch =
-          utc_mktime ~year:date.Date.y ~month:(Month.to_int date.Date.m)
-            ~day:date.Date.d ~hour:parts.P.hr ~min:parts.P.min ~sec:parts.P.sec
+          utc_mktime ~year:(Date.year date) ~month:(Month.to_int (Date.month date))
+            ~day:(Date.day date) ~hour:parts.P.hr ~min:parts.P.min ~sec:parts.P.sec
             ~ms:parts.P.ms ~us:parts.P.us
         in
         Zone.shift_epoch_time zone `Local epoch

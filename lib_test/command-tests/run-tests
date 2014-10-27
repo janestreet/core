@@ -2,7 +2,7 @@
 set -e -u -o pipefail
 shopt -s nullglob
 
-export TEST_DIR=$(cd $(dirname $BASH_SOURCE)/.. && pwd)
+export TEST_DIR=$(cd $(dirname $BASH_SOURCE) && pwd)
 export TEST_BIN=$TEST_DIR/bin
 export TEST_ETC=$TEST_DIR/etc
 export TEST_TMP=$TEST_DIR/tmp
@@ -11,16 +11,17 @@ export HGRCPATH= # or a custom file if you want one in your tests
 
 cd $TEST_DIR
 
-function tab-complete {
+function tab_complete {
   COMP_CWORD=$((${#@} - 1)) "$@"
 }
 
-export -f tab-complete
+export -f tab_complete
 
 # Save the binaries we need so jenga can't change the executable from under running tests.
+mkdir -p bin
 for exe in demo_{child,help,internals,no_arg_abort,parent,sexp_load,full_flag}.exe; do
   rm -f ./bin/$exe
   ln -T ./$exe ./bin/$exe
 done
 
-$(hg root)/external-4.01.0/unified-tests/run-tests.sh "$@"
+$(hg root)/external/unified-tests/run-tests.sh "$@"

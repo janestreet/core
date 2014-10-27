@@ -211,12 +211,6 @@ CAMLprim value linux_pr_get_name(value __unused v_unit)
   return caml_copy_string(buf);
 }
 
-/* copy of the ocaml's stdlib wrapper for getpid */
-CAMLprim value linux_ext_gettid(value v_unit __unused)
-{
-  return Val_int(syscall(SYS_gettid));
-}
-
 CAMLprim value linux_setpriority(value v_priority)
 {
   int tid;

@@ -14,6 +14,7 @@
 "lib/iobuf_tests.ml"       : mlh, package(camlp4.macro)
 "lib/std.ml"               : mlh, package(camlp4.macro)
 "lib/time_internal.ml"     : mlh, package(camlp4.macro)
+"lib/time_ns.ml"           : mlh, package(camlp4.macro)
 "lib/time_stamp_counter.ml"  : mlh, package(camlp4.macro)
 "lib/time_stamp_counter.mli" : mlh, package(camlp4.macro)
 # OASIS_START

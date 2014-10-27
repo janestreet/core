@@ -1,3 +1,53 @@
+## 112.06.00
+
+- Renamed `Linux_ext.gettid` as `Unix.gettid`, and added OpenBSD support.
+
+    `SYS_gettid` is not available on OpenBSD, but is used in
+    `Core_extended`. See the mailing list discussion about this here:
+
+    https://groups.google.com/forum/#!topic/ocaml-core/51knlnuJ8MM
+
+    Seems like the OpenBSD alternative is:
+
+        pid_t        getthrid(void);
+
+    although it's not defined in any header file, which is a bit unfortunate.
+
+- Added `Piecewise_linear.precache`, which computes a lookup table that
+  speeds up subsequent calls to `Piecewise_linear.get`.
+- Added `Time_ns` module, representing times as 63-bit integers of
+  nanoseconds since the epoch.
+- Fixed build of `unix_stubs.c` on OpenBSD.
+- In `Daemon`, fixed an error message regarding `WSTOPPED` (fixes #47).
+- Added `Time.Span.Stable.V2`, with sexps that use new suffixes for
+  microseconds (`us`) and nanoseconds (`ns`).
+
+    `Time.Span.of_string` supports the new format, but
+    `Time.Span.to_string` doesn't yet produce it -- we plan to change
+    that later, after the new `of_string` has made it out more widely.
+
+- Added `Time.Span.to_string_hum`, which gives more options for
+  rendering time spans.
+- Merged the `recvmmsg` stubs in `Bigstring` and `Iobuf`.
+
+    Factored out a shared underlying `recvmmsg` call that both
+    stubs use.
+
+    Restored `-pedantic` by avoiding a C99 feature (variable-length
+    stack arrays).
+
+- Made `Date.t` abstract, and changed its representation from a 4-word
+  record to an immediate int (packing year, month, day).
+- In `Daemon`, changed the permissions of the `std{err,out}` files
+  generated during daemonization from `0o777` to `0o644`.
+- Moved `Thread_safe_queue` from `core` to `core_kernel`.
+
+    This was done so that `Async_kernel` can use it, eliminating one of
+    `Async_kernel`'s dependencies on `Core`.
+
+    `Thread_safe_queue_unit_tests` remains `Core`, at least for now,
+    because it has some dependencies on other stuff in `Core`.
+
 ## 112.01.00
 
 - Removed vestigial code supporting OCaml 4.00.
@@ -1296,3 +1346,4 @@
 ## 109.02.00
 
 - Add Char.of_string
+

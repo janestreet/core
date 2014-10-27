@@ -1030,15 +1030,13 @@ CAMLprim value unix_setrlimit(value v_resource, value v_limits)
 static struct ifreq build_ifaddr_request(const char *interface)
 {
   struct ifreq ifr;
-
-  assert(sizeof(ifr.ifr_name) == IFNAMSIZ);
-  if (strlen(interface) > IFNAMSIZ-1)
-    caml_failwith("build_ifaddr_request: interface name string too long");
-
   memset(&ifr, 0, sizeof(ifr));
   ifr.ifr_addr.sa_family = AF_INET;
-  /* No overrun possible because ifr.ifr_name is checked above */
-  strcpy(ifr.ifr_name, interface);
+  strncpy(ifr.ifr_name, interface, sizeof(ifr.ifr_name));
+
+  assert(sizeof(ifr.ifr_name) == IFNAMSIZ);
+  if (ifr.ifr_name[IFNAMSIZ-1] != '\0')
+    caml_failwith("build_ifaddr_request: interface name string too long");
 
   return ifr;
 }
@@ -1857,3 +1855,24 @@ CAMLprim value core_unix_remove(value v_path)
 
   CAMLreturn(Val_unit);
 }
+
+#if defined(JSC_LINUX_EXT)
+#include <sys/syscall.h>
+
+CAMLprim value unix_gettid(value v_unit __unused)
+{
+  return Val_long(syscall(SYS_gettid));
+}
+#elif defined(__OpenBSD__)
+/* Advice from Philip Guenther on the ocaml-core mailing list is that we need to prototype
+ * this ourselves :(
+ * See: https://groups.google.com/forum/#!topic/ocaml-core/51knlnuJ8MM */
+extern pid_t getthrid(void);
+
+CAMLprim value unix_gettid(value v_unit __unused)
+{
+  return Val_long(getthrid());
+}
+#elif defined(JSC_THREAD_ID)
+#error "JSC_THREAD_ID defined, but no implementation available (misconfigured in discover.sh?)"
+#endif

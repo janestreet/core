@@ -266,9 +266,6 @@ val cores : (unit -> int) Or_error.t
     columns of the terminal. *)
 val get_terminal_size : (unit -> int * int) Or_error.t
 
-(* Get the thread ID of the current thread (see gettid(2)). *)
-val gettid : (unit -> int) Or_error.t
-
 module Priority : sig
   (* [Priority.t] is what is usually referred to as the "nice" value of a process.  It is
      also known as the "dynamic" priority.  It is used with normal (as opposed to
@@ -297,11 +294,12 @@ val get_ipv4_address_for_interface : (string -> string) Or_error.t
 (* [bind_to_interface fd (`Interface_name "eth0")] restricts packets from being
    received/sent on the given file descriptor [fd] on any interface other than "eth0".
    Use [bind_to_interface fd `Any] to allow traffic on any interface.  The bindings are
-   not cumulative, you may only select one interface, or any.
+   not cumulative; you may only select one interface, or any.
 
-   Not to be confused with a traditional bsd sockets api "bind()" call, this linux
-   specific sockopt is being used for applications on multihomed machines with specific
-   security concerns. *)
+   Not to be confused with a traditional BSD sockets API [bind()] call, this
+   Linux-specific socket option ([SO_BINDTODEVICE]) is used for applications on
+   multi-homed machines with specific security concerns.  For similar functionality when
+   using multicast, see {!Core_unix.mcast_set_ifname}. *)
 val bind_to_interface
   : (File_descr.t -> [ `Any | `Interface_name of string ] -> unit) Or_error.t
 

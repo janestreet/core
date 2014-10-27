@@ -850,6 +850,15 @@ let getppid_exn () =
   Option.value_exn ~message:"You don't have a parent process"
     (getppid ())
 
+module Thread_id = Int
+
+IFDEF THREAD_ID THEN
+external gettid : unit -> Thread_id.t = "unix_gettid"
+let gettid = Ok gettid
+ELSE
+let gettid = Or_error.unimplemented "gettid is not supported on this system"
+ENDIF
+
 let nice i =
   improve (fun () -> Unix.nice i)
     (fun () -> [("priority", Int.sexp_of_t i)])

@@ -1,4 +1,4 @@
-type t = Date0.t = private { y: int; m: Month.t; d: int }
+type t = Date0.t
 
 include module type of Date0 with type t := t
 

@@ -8,16 +8,52 @@ module Time  = Time_internal.T
 module Stable = struct
   module V1 = struct
     module T : sig
-      type t = private { y: int; m: Month.Stable.V1.t; d: int; }
-      with bin_io
+      type t with bin_io
 
       val create_exn : y:int -> m:Month.Stable.V1.t -> d:int -> t
+
+      val year  : t -> int
+      val month : t -> Month.Stable.V1.t
+      val day   : t -> int
     end = struct
-      type t = { y: int; m: Month.Stable.V1.t; d: int; } with bin_io
+      (* We used to store dates like this:
+         type t = { y: int; m: Month.Stable.V1.t; d: int; }
+         In the below we make sure that the bin_io representation is
+         identical (and the stable unit tests check this)
+
+         In memory we use the following much more compact representation:
+         2 bytes year
+         1 byte month
+         1 byte day
+
+         all packed into a single immediate int (so from 4 words down to 1).
+      *)
+      type t = int
+
+      let create0 ~year ~month ~day =
+        (* create_exn's validation make sure that each value fits *)
+        (year lsl 16) lor (Month.to_int month lsl 8) lor day
+      ;;
+
+      let year t = t lsr 16
+      let month t = Month.of_int_exn ((t lsr 8) land 0xff)
+      let day t = t land 0xff
+
+      TEST_UNIT =
+        let test y m d =
+          let t = create0 ~year:y ~month:m ~day:d in
+          <:test_result< int     >> ~expect:y (year  t);
+          <:test_result< Month.t >> ~expect:m (month t);
+          <:test_result< int     >> ~expect:d (day   t);
+        in
+        test 2014 Month.Sep 24;
+        test 9999 Month.Dec 31;
+      ;;
 
       let is_leap_year year =
         (year mod 4 = 0 && not (year mod 100 = 0))
         || year mod 400 = 0
+      ;;
 
       let create_exn ~y:year ~m:month ~d:day =
         let invalid msg =
@@ -39,7 +75,53 @@ module Stable = struct
         | Month.Dec ->
           if day > 31 then invalid "31 day month violation"
         end;
-        { y = year; m = month; d = day; }
+        create0 ~year ~month:month ~day
+      ;;
+
+      (* We don't use Make_binable here, because that would go via an immediate
+         tuple or record.  That is exactly the 32 bytes we worked so hard above to
+         get rid of.  We also don't want to just bin_io the integer directly
+         because that would mean a new bin_io format.  *)
+
+      let bin_read_t buf ~pos_ref =
+        let year  = Int.bin_read_t buf ~pos_ref in
+        let month = Month.Stable.V1.bin_read_t buf ~pos_ref in
+        let day   = Int.bin_read_t buf ~pos_ref in
+        create0 ~year ~month ~day
+      ;;
+
+      let __bin_read_t__ _buf ~pos_ref =
+        (* __bin_read_t is only needed for variants *)
+        Bin_prot.Common.raise_variant_wrong_type "Date.t" !pos_ref
+      ;;
+
+      let bin_reader_t = {
+        Bin_prot.Type_class.
+        read = bin_read_t;
+        vtag_read = __bin_read_t__;
+      }
+
+      let bin_size_t t =
+        Int.bin_size_t (year t) + Month.bin_size_t (month t) + Int.bin_size_t (day t)
+      ;;
+
+      let bin_write_t buf ~pos t =
+        let pos = Int.bin_write_t buf ~pos (year t) in
+        let pos = Month.bin_write_t buf ~pos (month t) in
+        Int.bin_write_t buf ~pos (day t)
+      ;;
+
+      let bin_writer_t = {
+        Bin_prot.Type_class.
+        size   = bin_size_t;
+        write  = bin_write_t;
+      }
+
+      let bin_t = {
+        Bin_prot.Type_class.
+        reader = bin_reader_t;
+        writer = bin_writer_t;
+      }
     end
 
     include T
@@ -47,11 +129,11 @@ module Stable = struct
     (** YYYY-MM-DD *)
     let to_string_iso8601_extended t =
       let buf = String.create 10 in
-      blit_string_of_int_4_digits buf ~pos:0 t.y;
+      blit_string_of_int_4_digits buf ~pos:0 (year t);
       buf.[4] <- '-';
-      blit_string_of_int_2_digits buf ~pos:5 (Month.to_int t.m);
+      blit_string_of_int_2_digits buf ~pos:5 (Month.to_int (month t));
       buf.[7] <- '-';
-      blit_string_of_int_2_digits buf ~pos:8 t.d;
+      blit_string_of_int_2_digits buf ~pos:8 (day t);
       buf
     ;;
 
@@ -60,20 +142,20 @@ module Stable = struct
     (** YYYYMMDD *)
     let to_string_iso8601_basic t =
       let buf = String.create 8 in
-      blit_string_of_int_4_digits buf ~pos:0 t.y;
-      blit_string_of_int_2_digits buf ~pos:4 (Month.to_int t.m);
-      blit_string_of_int_2_digits buf ~pos:6 t.d;
+      blit_string_of_int_4_digits buf ~pos:0 (year t);
+      blit_string_of_int_2_digits buf ~pos:4 (Month.to_int (month t));
+      blit_string_of_int_2_digits buf ~pos:6 (day t);
       buf
     ;;
 
     (** MM/DD/YYYY *)
     let to_string_american t =
       let buf = String.create 10 in
-      blit_string_of_int_2_digits buf ~pos:0 (Month.to_int t.m);
+      blit_string_of_int_2_digits buf ~pos:0 (Month.to_int (month t));
       buf.[2] <- '/';
-      blit_string_of_int_2_digits buf ~pos:3 t.d;
+      blit_string_of_int_2_digits buf ~pos:3 (day t);
       buf.[5] <- '/';
-      blit_string_of_int_4_digits buf ~pos:6 t.y;
+      blit_string_of_int_4_digits buf ~pos:6 (year t);
       buf
     ;;
 
@@ -185,12 +267,12 @@ module Stable = struct
       include Binable
 
       let compare t1 t2 =
-        let n = Int.compare t1.y t2.y in
+        let n = Int.compare (year t1) (year t2) in
         if n <> 0 then n
         else
-          let n = Month.compare t1.m t2.m in
+          let n = Month.compare (month t1) (month t2) in
           if n <> 0 then n
-          else Int.compare t1.d t2.d
+          else Int.compare (day t1) (day t2)
       ;;
     end)
   end
@@ -215,7 +297,7 @@ include (Hashable.Make_binable (struct
   include T
   include Sexpable
   include Binable
-  let compare = compare
+  let compare (a:t) (b:t) = compare a b
   let hash (t : t) = Hashtbl.hash t
 end) : Hashable.S_binable with type t := t)
 
@@ -224,10 +306,6 @@ include Pretty_printer.Register (struct
   let module_name = "Core.Std.Date"
   let to_string = to_string
 end)
-
-let day t = t.d
-let month t = t.m
-let year t = t.y
 
 let of_tm tm =
   create_exn
@@ -254,9 +332,9 @@ end = struct
     365 * y + y / 4 - y / 100 + y / 400
 
   let of_date date =
-    let m = (Month.to_int date.m + 9) % 12 in
-    let y = date.y - m / 10 in
-    of_year y + (m * 306 + 5) / 10 + (date.d - 1)
+    let m = (Month.to_int (month date) + 9) % 12 in
+    let y = (year date) - m / 10 in
+    of_year y + (m * 306 + 5) / 10 + ((day date) - 1)
   ;;
 
   let c_10_000    = Int63.of_int 10_000
@@ -290,8 +368,8 @@ let add_days = Days.add_days
 let diff = Days.diff
 
 let add_months t n =
-  let total_months = (Month.to_int t.m) + n in
-  let y = t.y + (total_months /% 12) in
+  let total_months = (Month.to_int (month t)) + n in
+  let y = (year t) + (total_months /% 12) in
   let m = total_months % 12 in
   (** correct for december **)
   let (y, m) =
@@ -308,7 +386,7 @@ let add_months t n =
       assert (Int.(>=) d 1);
       try_create (d - 1)
   in
-  try_create t.d
+  try_create (day t)
 ;;
 
 (* http://en.wikipedia.org/wiki/Determination_of_the_day_of_the_week#Purely_mathematical_methods
@@ -318,9 +396,9 @@ let add_months t n =
 let day_of_week  =
   let table = [| 0; 3; 2; 5; 0; 3; 5; 1; 4; 6; 2; 4 |] in
   (fun t ->
-    let m = Month.to_int t.m in
-    let y = if Int.(<) m 3 then t.y - 1 else t.y in
-    Day_of_week.of_int_exn ((y + y / 4 - y / 100 + y / 400 + table.(m - 1) + t.d) % 7))
+    let m = Month.to_int (month t) in
+    let y = if Int.(<) m 3 then (year t) - 1 else (year t) in
+    Day_of_week.of_int_exn ((y + y / 4 - y / 100 + y / 400 + table.(m - 1) + (day t)) % 7))
 ;;
 
 let is_weekend t =
@@ -418,23 +496,19 @@ TEST_MODULE "first_strictly_after" = struct
   let mon2 = create_exn ~y:2013 ~m:Month.Apr ~d:8
   let tue2 = create_exn ~y:2013 ~m:Month.Apr ~d:9
 
-  TEST = equal (first_strictly_after tue1 ~on:Day_of_week.mon) mon2
-  TEST = equal (first_strictly_after tue1 ~on:Day_of_week.tue) tue2
-  TEST = equal (first_strictly_after tue1 ~on:Day_of_week.wed) wed1
-  TEST = equal (first_strictly_after tue1 ~on:Day_of_week.thu) thu1
-  TEST = equal (first_strictly_after tue1 ~on:Day_of_week.fri) fri1
-  TEST = equal (first_strictly_after tue1 ~on:Day_of_week.sat) sat1
-  TEST = equal (first_strictly_after tue1 ~on:Day_of_week.sun) sun1
-  TEST = equal (first_strictly_after mon1 ~on:Day_of_week.mon) mon2
-  TEST = equal (first_strictly_after mon1 ~on:Day_of_week.tue) tue1
-  TEST = equal (first_strictly_after mon1 ~on:Day_of_week.wed) wed1
-  TEST = equal (first_strictly_after mon1 ~on:Day_of_week.thu) thu1
-  TEST = equal (first_strictly_after mon1 ~on:Day_of_week.fri) fri1
-  TEST = equal (first_strictly_after mon1 ~on:Day_of_week.sat) sat1
-  TEST = equal (first_strictly_after mon1 ~on:Day_of_week.sun) sun1
+  TEST = equal (first_strictly_after tue1 ~on:Day_of_week.Mon) mon2
+  TEST = equal (first_strictly_after tue1 ~on:Day_of_week.Tue) tue2
+  TEST = equal (first_strictly_after tue1 ~on:Day_of_week.Wed) wed1
+  TEST = equal (first_strictly_after tue1 ~on:Day_of_week.Thu) thu1
+  TEST = equal (first_strictly_after tue1 ~on:Day_of_week.Fri) fri1
+  TEST = equal (first_strictly_after tue1 ~on:Day_of_week.Sat) sat1
+  TEST = equal (first_strictly_after tue1 ~on:Day_of_week.Sun) sun1
+  TEST = equal (first_strictly_after mon1 ~on:Day_of_week.Mon) mon2
+  TEST = equal (first_strictly_after mon1 ~on:Day_of_week.Tue) tue1
+  TEST = equal (first_strictly_after mon1 ~on:Day_of_week.Wed) wed1
+  TEST = equal (first_strictly_after mon1 ~on:Day_of_week.Thu) thu1
+  TEST = equal (first_strictly_after mon1 ~on:Day_of_week.Fri) fri1
+  TEST = equal (first_strictly_after mon1 ~on:Day_of_week.Sat) sat1
+  TEST = equal (first_strictly_after mon1 ~on:Day_of_week.Sun) sun1
 end
 
-
-module Export = struct
-  type _date = t = private { y: int; m: Month.t; d: int; }
-end
