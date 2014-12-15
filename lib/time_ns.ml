@@ -371,12 +371,23 @@ ENDIF
     end
   end
 
+IFDEF ARCH_SIXTYFOUR THEN
   external since_unix_epoch_or_zero : unit -> t
-    = "core_time_ns_clock_rt_gettime_or_zero" "noalloc"
+    = "core_time_ns_gettime_or_zero" "noalloc"
+ELSE
+  external since_unix_epoch_or_zero : unit -> t
+    = "core_time_ns_gettime_or_zero"
+ENDIF
+
+IFDEF POSIX_TIMERS THEN
+  let gettime_failed () = failwith "clock_gettime(CLOCK_REALTIME) failed"
+ELSE
+  let gettime_failed () = failwith "gettimeofday failed"
+ENDIF
 
   let since_unix_epoch () =
     let t = since_unix_epoch_or_zero () in
-    if t <> zero then t else failwith "clock_gettime(CLOCK_REALTIME) failed"
+    if t <> zero then t else gettime_failed ()
 
   module Stable = struct
     module V1 = struct
