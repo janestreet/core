@@ -12,6 +12,7 @@
 #include <caml/callback.h>
 #include <caml/custom.h>
 #include <caml/unixsupport.h>
+#include <stdint.h>
 
 #define XSTR(S) STR(S)
 #define STR(S) #S
@@ -24,7 +25,7 @@
 #  define Int63_val(v) Int64_val(v)
 #endif
 
-typedef int64 int63;
+typedef int64_t int63;
 
 #define DEFINE_INT63_CONSTANT(name,z) \
   CAMLprim value name(value __unused v_unit) { return caml_alloc_int63(z); }
