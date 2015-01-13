@@ -168,7 +168,7 @@ CAMLprim value bigstring_read_assume_fd_is_nonblocking_stub(
     End_roots();
   }
   else n_read = read(Int_val(v_fd), bstr, len);
-  if (n_read == -1) uerror("bigstring_read_assume_fd_is_nonblocking", Nothing);
+  if (n_read == -1) n_read = -errno;
   return Val_long(n_read);
 }
 
@@ -664,8 +664,8 @@ CAMLprim value bigstring_send_nonblocking_no_sigpipe_stub(
   char *bstr = get_bstr(v_bstr, v_pos);
   ssize_t ret =
     send(Int_val(v_fd), bstr, Long_val(v_len), nonblocking_no_sigpipe_flag);
-  if (ret == -1 && errno != EAGAIN && errno != EWOULDBLOCK)
-    uerror("send_nonblocking_no_sigpipe", Nothing);
+  if (ret == -1)
+    ret = -errno;
   return Val_long(ret);
 }
 

@@ -1,6 +1,6 @@
 (** A pair of unix username and primary unix group. *)
 
-open Std_internal
+open Core_kernel.Std
 
 type t
 

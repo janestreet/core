@@ -81,6 +81,13 @@ module Span : sig
   val to_parts : t -> Parts.t
   val of_parts : Parts.t -> t
 
+  (** {!Time.t} is precise to approximately 0.24us in 2014.  If [to_span] tries to convert
+      to the closest [Time.Span.t], we have stability problems: converting back yields a
+      different [t], sometimes different enough to have a different external
+      representation, because the conversion back and forth crosses a rounding boundary.
+
+      To stabilize conversion, we treat [Time.t] as having 1us precision: [to_span] and
+      [of_span] both round to the nearest 1us. *)
   val to_span : t -> Time.Span.t
   val of_span : Time.Span.t -> t
 
@@ -142,7 +149,10 @@ module Ofday : sig
   val end_of_day : t
 
   val to_span_since_start_of_day : t -> Span.t
-  val of_span_since_start_of_day : Span.t -> t
+
+  (** [of_span_since_start_of_day_exn] excludes obviously impossible times of day but
+      cannot exclude all invalid times of day due to DST, leap seconds, etc. *)
+  val of_span_since_start_of_day_exn : Span.t -> t
 
   module Stable : sig
     module V1 : sig
@@ -177,9 +187,9 @@ val of_int63_ns_since_epoch : Int63.t ->      t
 val to_int_ns_since_epoch : t   -> int
 val of_int_ns_since_epoch : int -> t
 
-val of_date_ofday : Zone.t -> Date.t -> Ofday.t -> t
+val of_date_ofday : zone:Zone.t -> Date.t -> Ofday.t -> t
 
-val to_date : t -> Zone.t -> Date.t
+val to_date : t -> zone:Zone.t -> Date.t
 
 val occurrence
   :  [ `First_after_or_at | `Last_before_or_at ]

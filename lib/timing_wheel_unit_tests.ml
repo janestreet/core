@@ -47,9 +47,9 @@ module Level_bits = struct
 
   (* Check that default [level_bits] gives desired range of times. *)
   TEST_UNIT =
+    let zone = Time.Zone.find_exn "America/New_York" in
     let start =
-      Time.of_date_ofday
-        (Time.Zone.find_office `nyc)
+      Time.of_date_ofday ~zone
         (Date.create_exn ~y:2000 ~m:Month.Jan ~d:1)
         Time.Ofday.start_of_day
     in
@@ -63,7 +63,7 @@ module Level_bits = struct
           create ~config:(Config.create ~level_bits ~alarm_precision ()) ~start
         in
         assert (Date.(>=)
-                  (Time.to_local_date (alarm_upper_bound t))
+                  (Time.to_date ~zone (alarm_upper_bound t))
                   max_alarm_lower_bound))
   ;;
 

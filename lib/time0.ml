@@ -61,14 +61,14 @@ module Stable = struct
         end)
     ;;
 
-    let to_date_ofday time zone =
+    let to_date_ofday time ~zone =
       try
         of_epoch zone (to_epoch time)
       with
       | Unix.Unix_error(_, "gmtime", _) -> raise (Invalid_argument "Time.to_date_ofday")
     ;;
 
-    let of_date_ofday zone date ofday =
+    let of_date_ofday date ofday ~zone =
       let module P = Span.Parts in
       let parts = Span.to_parts (Ofday.to_span_since_start_of_day ofday) in
       let time =
@@ -82,9 +82,9 @@ module Stable = struct
       T.of_float time
     ;;
 
-    let of_date_ofday_precise zone date ofday =
+    let of_date_ofday_precise date ofday ~zone =
       (* We assume that there will be only one zone shift within a given local day.  *)
-      let start_of_day = of_date_ofday zone date Ofday.start_of_day in
+      let start_of_day = of_date_ofday ~zone date Ofday.start_of_day in
       let proposed_time = T.add start_of_day (Ofday.to_span_since_start_of_day ofday) in
       match Zone.next_clock_shift zone ~after:start_of_day with
       | None -> `Once proposed_time
@@ -107,26 +107,26 @@ module Stable = struct
     ;;
 
     TEST_MODULE = struct
-      let ldn = Zone.find_office `ldn;;
+      let ldn = Zone.find_exn "Europe/London" ;;
 
       let mkt month day hour min =
         utc_mktime ~year:2013 ~month ~day ~hour ~min ~sec:0 ~ms:0 ~us:0
       ;;
 
       let expect_once date ofday expected =
-        match of_date_ofday_precise ldn date ofday with
+        match of_date_ofday_precise ~zone:ldn date ofday with
         | `Once t -> T.(t = of_float expected)
         | _ -> false
       ;;
 
       let expect_never date ofday expected =
-        match of_date_ofday_precise ldn date ofday with
+        match of_date_ofday_precise ~zone:ldn date ofday with
         | `Never t -> T.(t = of_float expected)
         | _ -> false
       ;;
 
       let expect_twice date ofday expected1 expected2 =
-        match of_date_ofday_precise ldn date ofday with
+        match of_date_ofday_precise ~zone:ldn date ofday with
         | `Twice (t1, t2) -> T.(t1 = of_float expected1 && t2 = of_float expected2)
         | _ -> false
       ;;
@@ -192,18 +192,14 @@ module Stable = struct
       ;;
     end
 
-    let to_local_date_ofday t          = to_date_ofday t (Zone.machine_zone ())
-    let of_local_date_ofday date ofday = of_date_ofday (Zone.machine_zone ()) date ofday
-    let to_date t zone                 = fst (to_date_ofday t zone)
-    let to_ofday t zone                = snd (to_date_ofday t zone)
-    let to_local_date t                = fst (to_local_date_ofday t)
-    let to_local_ofday t               = snd (to_local_date_ofday t)
+    let to_date t ~zone  = fst (to_date_ofday t ~zone)
+    let to_ofday t ~zone = snd (to_date_ofday t ~zone)
 
     let convert ~from_tz ~to_tz date ofday =
-      let start_time = T.to_float (of_date_ofday from_tz date ofday) in
+      let start_time = T.to_float (of_date_ofday ~zone:from_tz date ofday) in
       of_epoch to_tz start_time
 
-    let utc_offset ?(zone=Zone.machine_zone ()) t =
+    let utc_offset t ~zone =
       let epoch     = to_epoch t in
       let utc_epoch = Zone.shift_epoch_time zone `UTC epoch in
       Span.of_sec (utc_epoch -. epoch)
@@ -222,16 +218,16 @@ module Stable = struct
           ]
     ;;
 
-    let to_string_abs_parts ?(zone=Zone.machine_zone ()) time =
-      let date, ofday   = to_date_ofday time zone in
+    let to_string_abs_parts time ~zone =
+      let date, ofday   = to_date_ofday time ~zone in
       let offset_string = offset_string time ~zone in
       [ Date.to_string date;
         String.concat ~sep:"" [ Ofday.to_string ofday; offset_string ]
       ]
     ;;
 
-    let to_string_abs_trimmed ?(zone=Zone.machine_zone ()) time =
-      let date, ofday = to_date_ofday time zone in
+    let to_string_abs_trimmed time ~zone =
+      let date, ofday = to_date_ofday time ~zone in
       let offset_string = offset_string time ~zone in
       String.concat ~sep:" "
         [ (Date.to_string date)
@@ -239,32 +235,33 @@ module Stable = struct
         ]
     ;;
 
-    let to_string_abs ?zone time =
-      String.concat ~sep:" " (to_string_abs_parts ?zone time)
+    let to_string_abs time ~zone =
+      String.concat ~sep:" " (to_string_abs_parts ~zone time)
     ;;
 
-    let to_string_trimmed t =
-      let date, sec = to_local_date_ofday t in
+    let to_string_trimmed t ~zone =
+      let date, sec = to_date_ofday ~zone t in
       (Date.to_string date) ^ " " ^ (Ofday.to_string_trimmed sec)
     ;;
 
-    let to_sec_string t =
-      let date, sec = to_local_date_ofday t in
+    let to_sec_string t ~zone =
+      let date, sec = to_date_ofday ~zone t in
       (Date.to_string date) ^ " " ^ (Ofday.to_sec_string sec)
     ;;
 
-    let to_filename_string t =
-      let date, ofday = to_local_date_ofday t in
+    let to_filename_string t ~zone =
+      let date, ofday = to_date_ofday ~zone t in
       (Date.to_string date) ^ "_" ^
         (String.tr ~target:':' ~replacement:'-' (Ofday.to_string ofday))
     ;;
 
     let to_string_fix_proto utc t =
-      let date, sec =
+      let zone =
         match utc with
-        | `Utc -> to_date_ofday t Zone.utc
-        | `Local -> to_local_date_ofday t
+        | `Utc -> Zone.utc
+        | `Local -> Zone.local
       in
+      let date, sec = to_date_ofday t ~zone in
       (Date.to_string_iso8601_basic date) ^ "-" ^ (Ofday.to_millisec_string sec)
     ;;
 
@@ -274,21 +271,21 @@ module Stable = struct
         let expect_dash = 8 in
         if str.[expect_dash] <> '-' then
           failwithf "no dash in position %d" expect_dash ();
-        let of_date_ofday =
+        let zone =
           match utc with
-          | `Utc -> of_date_ofday Zone.utc
-          | `Local -> of_local_date_ofday
+          | `Utc -> Zone.utc
+          | `Local -> Zone.local
         in
         if Int.(>) (String.length str) expect_length then
           failwithf "input too long" ();
-        of_date_ofday
+        of_date_ofday ~zone
           (Date.of_string_iso8601_basic str ~pos:0)
           (Ofday.of_string_iso8601_extended str ~pos:(expect_dash + 1))
       with exn ->
         invalid_argf "Time.of_string_fix_proto %s: %s" str (Exn.to_string exn) ()
     ;;
 
-    let of_filename_string s =
+    let of_filename_string s ~zone =
       try
         match String.lsplit2 s ~on:'_' with
         | None -> failwith "no space in filename string"
@@ -296,7 +293,7 @@ module Stable = struct
           let date = Date.of_string date in
           let ofday = String.tr ~target:'-' ~replacement:':' ofday in
           let ofday = Ofday.of_string ofday in
-          of_local_date_ofday date ofday
+          of_date_ofday date ofday ~zone
       with
       | exn ->
         invalid_argf "Time.of_filename_string (%s): %s" s (Exn.to_string exn) ()
@@ -334,8 +331,8 @@ module Stable = struct
     ;;
 
     let occurrence before_or_after t ~ofday ~zone =
-      let first_guess_date = to_date t zone in
-      let first_guess      = of_date_ofday zone first_guess_date ofday in
+      let first_guess_date = to_date t ~zone in
+      let first_guess      = of_date_ofday ~zone first_guess_date ofday in
       let cmp, increment =
         match before_or_after with
         | `Last_before_or_at -> T.(<=), (-1)
@@ -343,7 +340,7 @@ module Stable = struct
       in
       if cmp first_guess t
       then first_guess
-      else of_date_ofday zone (Date.add_days first_guess_date increment) ofday
+      else of_date_ofday ~zone (Date.add_days first_guess_date increment) ofday
     ;;
 
     let epoch = T.of_float 0.0
@@ -353,7 +350,7 @@ module Stable = struct
        situation because we would like to say include T, without shadowing. *)
     include T
 
-    let to_string t = to_string_abs t
+    let to_string t = to_string_abs t ~zone:Zone.local
 
     exception Time_of_string of string * Exn.t with sexp
     exception Time_string_not_absolute of string with sexp
@@ -395,14 +392,14 @@ module Stable = struct
         let date  = Date.of_string date in
         let ofday = Ofday.of_string ofday in
         match tz with
-        | Some tz -> of_date_ofday (Zone.find_exn tz) date ofday
+        | Some tz -> of_date_ofday ~zone:(Zone.find_exn tz) date ofday
         | None ->
           match utc_offset with
           | None            ->
             if require_absolute then raise (Time_string_not_absolute s);
-            of_local_date_ofday date ofday
+            of_date_ofday ~zone:Zone.local date ofday
           | Some utc_offset ->
-            of_float (to_float (of_date_ofday Zone.utc date ofday) -. utc_offset)
+            of_float (to_float (of_date_ofday ~zone:Zone.utc date ofday) -. utc_offset)
       with
       | e -> raise (Time_of_string (s,e))
     ;;
@@ -414,7 +411,8 @@ module Stable = struct
       try
         match sexp with
         | Sexp.List [Sexp.Atom date; Sexp.Atom ofday; Sexp.Atom tz] ->
-          of_date_ofday (Zone.find_exn tz) (Date.of_string date) (Ofday.of_string ofday)
+          of_date_ofday ~zone:(Zone.find_exn tz)
+            (Date.of_string date) (Ofday.of_string ofday)
         | Sexp.List [Sexp.Atom date; Sexp.Atom ofday] ->
           of_string (date ^ " " ^ ofday)
         | Sexp.Atom datetime ->
@@ -428,11 +426,15 @@ module Stable = struct
     let t_of_sexp     sexp = t_of_sexp_gen sexp of_string
     let t_of_sexp_abs sexp = t_of_sexp_gen sexp of_string_abs
 
-    let sexp_of_t_abs ?zone t =
-      Sexp.List (List.map (to_string_abs_parts ?zone t) ~f:(fun s -> Sexp.Atom s))
+    let sexp_of_t_abs ~zone t =
+      Sexp.List (List.map (to_string_abs_parts ~zone t) ~f:(fun s -> Sexp.Atom s))
     ;;
 
-    let sexp_of_t t = sexp_of_t_abs t
+    let sexp_zone = ref Zone.local
+    let get_sexp_zone () = !sexp_zone
+    let set_sexp_zone zone = sexp_zone := zone
+
+    let sexp_of_t t = sexp_of_t_abs ~zone:!sexp_zone t
 
     module C = struct
       type t = T.t with bin_io
@@ -475,14 +477,14 @@ module Stable = struct
       let module_name = "Core.Std.Time"
     end)
 
-    let of_localized_string zone str =
+    let of_localized_string ~zone str =
       try
         match String.lsplit2 str ~on:' ' with
         | None -> invalid_arg (sprintf "no space in date_ofday string: %s" str)
         | Some (date,time) ->
           let date  = Date.of_string date in
           let ofday = Ofday.of_string time in
-          of_date_ofday zone date ofday
+          of_date_ofday ~zone date ofday
       with e ->
         Exn.reraise e "Time.of_localstring"
     ;;
@@ -549,12 +551,12 @@ module Stable = struct
   TEST_MODULE "Time.V1" = struct
     TEST_MODULE "Time.V1 functor application" = Core_kernel.Stable_unit_test.Make (struct
       include V1
-      let zone = Zone.find_office `nyc
+      let zone = Zone.find_exn "America/New_York"
       let sexp_of_t t = sexp_of_t_abs ~zone t
 
       let tests =
         let time ~y ~m ~d ofday =
-          of_date_ofday zone (Date.create_exn ~y ~m ~d) ofday
+          of_date_ofday ~zone (Date.create_exn ~y ~m ~d) ofday
         in
         [ time ~y:2012 ~m:Month.Apr ~d:9 (Ofday.create ~hr:12 ()),
           "(2012-04-09 12:00:00.000000-04:00)",

@@ -56,8 +56,8 @@ let () = add "t"
       "sexp1"  @? (Time.t_of_sexp (Time.sexp_of_t time1) = time1);
       "sexp2"  @? (Time.t_of_sexp (Time.sexp_of_t time2) = time2);
       "sexp3"  @? (Time.t_of_sexp (Time.sexp_of_t time3) = time3);
-      let zone = Time.Zone.find_office `nyc in
-      let date, ofday = Time.to_date_ofday time3 zone in
+      let zone = Time.Zone.find_exn "America/New_York" in
+      let date, ofday = Time.to_date_ofday time3 ~zone in
       "date"   @? (date = Date.of_string "2005-05-25");
       "ofday"  @? (Ofday.(=.) ofday (Time.Ofday.of_string "12:46:15.232"));
       "ofday1" @? (Time.Ofday.of_string "09:13" = Time.Ofday.of_string "0913");
@@ -92,15 +92,16 @@ let () =
 let () =
   add "date"
     (fun () ->
+      let zone = Time.Zone.local in
       let start =
-        Time.of_local_date_ofday
+        Time.of_date_ofday ~zone
           (Date.create_exn ~y:1999 ~m:Month.Jan ~d:1)
           Ofday.start_of_day
       in
       let day = Span.of_day 1. in
       for i = 0 to 100_000 do
         let date =
-          Time.to_local_date (Time.add start (Time.Span.scale day (float i)))
+          Time.to_date ~zone (Time.add start (Time.Span.scale day (float i)))
         in
         let date_string = Date.to_string date in
         let date' = Date.of_string date_string in
@@ -295,7 +296,7 @@ let () =
   add "norollover"
     (fun () ->
       let zone = Time.Zone.of_string "nyc" in
-      let t1   = Time.of_localized_string zone "2005-05-25 12:46:59.900" in
+      let t1   = Time.of_localized_string ~zone "2005-05-25 12:46:59.900" in
       let t2   = Time.add t1 (Time.Span.of_ms 99.9) in
       (* within 1 mic *)
       "60secspr" @? ((Time.to_string_abs ~zone t2) = "2005-05-25 12:46:59.999900-04:00");
@@ -331,10 +332,14 @@ let () =
     );
   add "to_filename_string,of_filename_string"
     (fun () ->
+      let zone = Time.Zone.local in
       let check time =
         if reasonable_time time
         then
-          let time' = Time.of_filename_string (Time.to_filename_string time) in
+          let time' =
+            Time.of_filename_string ~zone
+              (Time.to_filename_string time ~zone)
+          in
           similar_time time time'
         else true
       in
@@ -342,9 +347,10 @@ let () =
     );
   add "to_filename_string,of_filename_string2"
     (fun () ->
+      let zone = Time.Zone.local in
       let s = "2005-06-01_10-15-08.047983" in
-      let t = Time.of_filename_string s in
-      "foo" @? (Time.to_filename_string t = s)
+      let t = Time.of_filename_string s ~zone in
+      "foo" @? (Time.to_filename_string t ~zone = s)
     );
   add "of_sexp,to_sexp"
     (fun () ->
@@ -400,14 +406,15 @@ let () =
       ] in
       let now    = Time.now () in
       let now_f  = Time.to_float now in
-      let utimes = Time.to_local_ofday now :: List.map times ~f:(Time.Ofday.of_string) in
+      let zone   = Time.Zone.local in
+      let utimes = Time.to_ofday ~zone now :: List.map times ~f:(Time.Ofday.of_string) in
       let after_times =
         List.map utimes ~f:(fun ut ->
-          Time.occurrence `First_after_or_at now ~zone:(Time.Zone.machine_zone ()) ~ofday:ut)
+          Time.occurrence `First_after_or_at now ~zone ~ofday:ut)
       in
       let before_times =
         List.map utimes ~f:(fun ut ->
-          Time.occurrence `Last_before_or_at now ~zone:(Time.Zone.machine_zone ()) ~ofday:ut)
+          Time.occurrence `Last_before_or_at now ~zone ~ofday:ut)
       in
       "right-side-after" @? List.for_all after_times
         ~f:(fun t -> Time.to_float t >= now_f);
@@ -435,7 +442,7 @@ let () =
         let od         = Time.Ofday.of_string od_s in
         let prediction = Time.of_string prediction_s in
         let real       =
-          Time.occurrence `First_after_or_at now ~zone:(Time.Zone.machine_zone ()) ~ofday:od
+          Time.occurrence `First_after_or_at now ~zone:Time.Zone.local ~ofday:od
         in
         ("right-distance - " ^ od_s ^ "," ^ prediction_s) @?
           if Time.Span.to_ms (Time.diff prediction real) = 0. then true
@@ -445,7 +452,7 @@ let () =
         let od         = Time.Ofday.of_string od_s in
         let prediction = Time.of_string prediction_s in
         let real       =
-          Time.occurrence `Last_before_or_at now ~zone:(Time.Zone.machine_zone ()) ~ofday:od
+          Time.occurrence `Last_before_or_at now ~zone:Time.Zone.local ~ofday:od
         in
         ("right-distance - " ^ od_s ^ "," ^ prediction_s) @?
           if Time.Span.to_ms (Time.diff prediction real) = 0. then true

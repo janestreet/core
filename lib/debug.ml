@@ -9,10 +9,9 @@ let am_internal here message =
      former doesn't flush, while the latter does.  We'd rather flush once at the end,
      rather than three times. *)
   Printf.eprintf "%s:\n" (Source_code_position.to_string here);
-  if !should_print_backtrace then
-    Option.iter (Backtrace.get_opt ()) ~f:(fun backtrace ->
-      Printf.eprintf "%s\n"
-        (backtrace |> <:sexp_of< Backtrace.t >> |> Sexp.to_string_hum));
+  if !should_print_backtrace
+  then Printf.eprintf "%s\n"
+         (Backtrace.get () |> <:sexp_of< Backtrace.t >> |> Sexp.to_string_hum);
   begin match message with
   | None -> ()
   | Some message -> Printf.eprintf "%s\n" message;

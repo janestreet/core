@@ -174,7 +174,9 @@ module Expert = struct
     let to_caml = function
       | `Default -> Sys.Signal_default
       | `Ignore -> Sys.Signal_ignore
-      | `Handle f -> Sys.Signal_handle f
+      | `Handle f ->
+        Sys.Signal_handle (fun t -> Exn.handle_uncaught_and_exit (fun () -> f t))
+    ;;
   end
 
   let signal t behavior =

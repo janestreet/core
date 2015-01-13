@@ -1,18 +1,6 @@
 open OUnit
 open Core.Std
 
-module Make_uid (X : sig end) : sig
-  type t
-  val create : unit -> t
-  val equal : t -> t -> bool
-  val to_string : t -> string
-  val hash : t -> int
-end = struct
-  include Int
-  let n = ref 0
-  let create () = incr n; !n
-end
-
 module type S = sig
   val name : string
   module Elt : sig
@@ -701,7 +689,7 @@ module Bisimulation = struct
     let bool () = Random.State.bool prng
   end
 
-  module Uid = Make_uid (struct end)
+  module Uid = Unique_id.Int ()
 
   type v = int with sexp
   type l = Uid.t * v Both.t

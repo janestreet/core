@@ -76,6 +76,8 @@
     v}
 *)
 
+open Core_kernel.Std
+
 module type S = sig
   type 'a t with sexp_of
 

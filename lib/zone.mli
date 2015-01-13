@@ -13,43 +13,28 @@ open Core_kernel.Std
 type t
 
 include Identifiable.S with type t := t
-
 (** [find name] looks up a [t] by its name and returns it.  *)
 val find : string -> t option
 
-(** [find_office office] a more type-safe interface for pulling timezones related to
-    existing Jane Street offices/locations. *)
-val find_office : [ `chi | `hkg | `ldn | `nyc ] -> t
 val find_exn : string -> t
 
-(** Deprecated: this function will shortly be replaced by [local].
+(** [local] is the machine's local timezone, as determined from the [TZ] environment
+    variable or the [/etc/localtime] file.  It is computed from the state of the process
+    environment and on-disk tzdata database at some unspecified moment prior to its first
+    use, so its value may be unpredictable if that state changes during program operation.
+    Arguably, changing the timezone of a running program is a problematic operation anyway
+    -- most people write code assuming the clock doesn't suddenly jump several hours
+    without warning.
 
-    [machine_zone ?refresh ()] returns the machines zone (t).  It does this by first
-    looking for a value in the environment variable "TZ", and loading the named zone if it
-    is set.  If "TZ" is not set it reads /etc/localtime directly.
-
-    The first call to machine_zone is cached, so there is no need to cache it locally.
-    The cache can be bypassed and refreshed by setting ~refresh to true.
-
-    Note that this function can throw an exception if the TZ time variable is
-    misconfigured or if the appropriate timezone files can't be found because of the way
-    the box is configured.  We don't put an _exn on this function because that
-    misconfiguration is quite rare.
-*)
-val machine_zone : ?refresh:bool (* defaults to false *) -> unit -> t
-
-(** [local] is the result of [machine_zone ()], taken the first time it is demanded. It
-    may be difficult to know exactly when that happens, so [local] should be avoided in
-    applications that expect TZ or /etc/localtime to change during program operation.
-
-    Arguably, changing the timezone of a running program is a problematic operation
-    anyway -- most people write code assuming the clock doesn't suddenly jump back several
-    hours without warning. *)
+    Note that any function using this timezone can throw an exception if the [TZ]
+    environment variable is misconfigured or if the appropriate timezone files can't be
+    found because of the way the box is configured.  We don't sprinkle [_exn] all over all
+    the names in this module because such misconfiguration is quite rare. *)
 val local : t
 
 (** [likely_machine_zones] is a list of zone names that will be searched first when trying
     to determine the machine zone of a box.  Setting this to a likely set of zones for
-    your application will speed the very first call to machine_zone *)
+    your application will speed the very first use of the local timezone. *)
 val likely_machine_zones : string list ref
 
 (** [of_utc_offset offset] returns a timezone with a static UTC offset (given in

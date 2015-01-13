@@ -121,11 +121,16 @@ val zero   : t  (** [Ignore]     No-op; can be used to test whether the target
     complexity.
 
     An OCaml signal handler can run at any time, which introduces all the semantic
-    complexities of multithreading.  It is much easier to use async signal handling, see
+    complexities of multithreading.  It is much easier to use Async's signal handling, see
     {!Async_unix.Signal}, which does not involve multithreading, and runs user code as
-    ordinary async jobs.  Also, beware that there can only be a single OCaml signal
+    ordinary Async jobs.  Also, beware that there can only be a single OCaml signal
     handler for any signal, so handling a signal with a [Core] signal handler will
-    interfere if async is attempting to handle the same signal.
+    interfere if Async is attempting to handle the same signal.
+
+    All signal handler functions are called with [Exn.handle_uncaught_and_exit], to
+    prevent the signal handler from raising, because raising from a signal handler could
+    raise to any allocation or GC point in any thread, which would be impossible to
+    reason about.
 
     If you do use [Core] signal handlers, you should strive to make the signal handler
     perform a simple idempotent action, like setting a ref. *)

@@ -75,15 +75,8 @@ int recvmmsg_assume_fd_is_nonblocking(
                     "recvmmsg unexpectedly returned n_read > count");
     }
 
-    if (n_read == -1) {
-      /* This prototype performance tweak saves the allocation of an
-         exception in common cases, at the cost of conflating
-         reception of an empty message with nothing to do. */
-      if (errno == EWOULDBLOCK || errno == EAGAIN)
-        n_read = -errno;
-      else
-        uerror("recvmmsg_assume_fd_is_nonblocking", Nothing);
-    }
+    if (n_read == -1)
+      n_read = -errno;
     else {
       if (save_source_addresses) {
         v_sockaddrs = Field(v_srcs, 0);

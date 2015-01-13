@@ -37,4 +37,4 @@ let main () =
   ignore (run_test_tt_main
             ~arg_specs:[cnt_ounit]
             (Test.all ()):OUnit.test_result list)
-let () = Core.Exn.handle_uncaught ~exit:true main
+let () = Exn.handle_uncaught ~exit:true main

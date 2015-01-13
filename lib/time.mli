@@ -13,7 +13,7 @@ module Ofday : sig
     val to_time : t -> Date0.t -> Time_internal.T.t
   end
 
-  val now : unit -> t
+  val now : zone:Zone.t -> t
 end
 
 module Span : sig
@@ -38,6 +38,11 @@ module Zone : module type of Zone with type t = Zone.t
 
 (** A fully qualified point in time, independent of timezone. *)
 type t = Time_internal.T.t with bin_io, sexp
+
+(** Sexp conversions use the local timezone by default. This can be overridden by calling
+    [set_sexp_zone]. *)
+val get_sexp_zone : unit -> Zone.t
+val set_sexp_zone : Zone.t -> unit
 
 include Hashable_binable    with type t := t
 include Comparable_binable  with type t := t
@@ -90,10 +95,10 @@ val is_later   : t -> than:t -> bool
 (** All these conversion functions use the current time zone. Unless marked _utc,
     in which case they use Universal Coordinated Time *)
 
-val of_date_ofday : Zone.t -> Date0.t -> Ofday.t -> t
-val to_date_ofday : t -> Zone.t -> Date0.t * Ofday.t
-val to_date       : t -> Zone.t -> Date0.t
-val to_ofday      : t -> Zone.t -> Ofday.t
+val of_date_ofday : Date0.t -> Ofday.t -> zone:Zone.t -> t
+val to_date_ofday : t -> zone:Zone.t -> Date0.t * Ofday.t
+val to_date       : t -> zone:Zone.t -> Date0.t
+val to_ofday      : t -> zone:Zone.t -> Ofday.t
 
 (** Because timezone offsets change throughout the year (clocks go forward or back) some
     local times can occur twice or not at all.  In the case that they occur twice, this
@@ -108,15 +113,10 @@ val to_ofday      : t -> Zone.t -> Ofday.t
     Most callers should use {!of_date_ofday} rather than this function.  In the [`Twice]
     and [`Never] cases, {!of_date_ofday} will return reasonable times for most uses. *)
 val of_date_ofday_precise
-  :  Zone.t
-  -> Date0.t
+  :  Date0.t
   -> Ofday.t
+  -> zone:Zone.t
   -> [ `Once of t | `Twice of t * t | `Never of t ]
-
-val of_local_date_ofday : Date0.t -> Ofday.t -> t
-val to_local_date_ofday : t -> Date0.t * Ofday.t
-val to_local_date       : t -> Date0.t
-val to_local_ofday      : t -> Ofday.t
 
 val convert
   :  from_tz:Zone.t
@@ -126,53 +126,50 @@ val convert
   -> (Date0.t * Ofday.t)
 
 val utc_offset
-  :  ?zone:Zone.t
-  -> t
+  :  t
+  -> zone:Zone.t
   -> Span.t
 
 (** Other string conversions  *)
 
-(** [to_filename_string t] converts [t] to string with format YYYY-MM-DD_HH-MM-SS.mmm
-    which is suitable for using in filenames *)
-val to_filename_string : t -> string
+(** [to_filename_string t ~zone] converts [t] to string with format
+    YYYY-MM-DD_HH-MM-SS.mmm which is suitable for using in filenames. *)
+val to_filename_string : t -> zone:Zone.t -> string
 
-(** [of_filename_string s] converts [s] that has format YYYY-MM-DD_HH-MM-SS.mmm into
-    time *)
-val of_filename_string : string -> t
+(** [of_filename_string s ~zone] converts [s] that has format YYYY-MM-DD_HH-MM-SS.mmm into
+    time. *)
+val of_filename_string : string -> zone:Zone.t -> t
 
 val to_string_fix_proto : [`Utc | `Local] -> t -> string
 val of_string_fix_proto : [`Utc | `Local] -> string -> t
 
-(** [to_string_trimmed t] Same as to_string, but removes trailing seconds and
-  milliseconds if they are 0 *)
-val to_string_trimmed : t -> string
+(** Same as [to_string_abs], but removes trailing seconds and milliseconds
+    if they are 0 *)
+val to_string_trimmed : t -> zone:Zone.t -> string
 
-(** [to_sec_string t] Same as to_string, but without milliseconds *)
-val to_sec_string : t -> string
+(** Same as [to_string_abs], but without milliseconds *)
+val to_sec_string : t -> zone:Zone.t -> string
 
-(** [of_localized_string zone str] read in the given string assuming that it represents
+(** [of_localized_string ~zone str] read in the given string assuming that it represents
   a time in zone and return the appropriate Time.t *)
-val of_localized_string : Zone.t -> string -> t
+val of_localized_string : zone:Zone.t -> string -> t
 
-(** [to_string_abs ?zone t] returns a string that represents an absolute time, rather than
+(** [to_string_abs ~zone t] returns a string that represents an absolute time, rather than
     a local time with an assumed time zone.  This string can be round-tripped, even on a
     machine in a different time zone than the machine that wrote the string.
 
     The string will display the date and of-day of [zone] together with [zone] as an
-    offset from UTC.  The [zone] argument defaults to the machine's timezone.
+    offset from UTC.
 
-    [to_string_abs_trimmed] same as to_string_abs, but drops trailing seconds and
-    milliseconds if they are 0
+    [to_string_abs_trimmed] is the same as [to_string_abs], but drops trailing seconds and
+    milliseconds if they are 0.
+
+    Note that the difference between [to_string] and [to_string_abs] is not that one
+    returns an absolute time and one doesn't, but that [to_string_abs] lets you specify
+    the time zone, while [to_string] takes it to be the local time zone.
 *)
-val to_string_abs
-  :  ?zone:Zone.t
-  -> t
-  -> string
-
-val to_string_abs_trimmed
-  :  ?zone:Zone.t
-  -> t
-  -> string
+val to_string_abs         : t -> zone:Zone.t -> string
+val to_string_abs_trimmed : t -> zone:Zone.t -> string
 
 (** [of_string_abs s] is like [of_string], but demands that [s] indicate the timezone the
     time is expressed in. *)

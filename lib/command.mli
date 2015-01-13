@@ -233,6 +233,7 @@ module Spec : sig
       it is ambiguous whether -1 is a negative number or a flag. If you need to pass a
       negative number to your program, make it a parameter to a flag. *)
   val int                : int                Arg_type.t
+  val char               : char               Arg_type.t
   val float              : float              Arg_type.t
   val bool               : bool               Arg_type.t
   val date               : Date.t             Arg_type.t

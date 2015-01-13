@@ -1,9 +1,8 @@
 INCLUDE "core_config.mlh"
 
-open Std_internal
+open Core_kernel.Std_kernel
 open Iobuf_intf
 
-module Blit = Core_kernel.Std.Blit
 module Unix = Core_unix
 
 let is_error = Result.is_error
@@ -407,7 +406,7 @@ module Test (Iobuf : sig
             assert (resize_fails (Iobuf.length buf + 1))
           end;
           let sub = ref "" in
-          let f (buf : (read_only, seek) t) =
+          let f (buf : (read, seek) t) =
             advance buf 3;
             resize buf ~len:3;
             sub := to_string buf;
@@ -419,7 +418,7 @@ module Test (Iobuf : sig
     TEST =
       let buf = of_string "123abcDEF" in
       let sub = ref "" in
-      let f (buf : (read_only, seek) t) =
+      let f (buf : (read, seek) t) =
         advance buf 3;
         resize buf ~len:3;
         sub := to_string buf;
@@ -675,8 +674,8 @@ ENDIF;
       assert (Consume.char t = 'a');
       assert (Consume.char t = 'b');
       let ws = (t  :> (read_write, seek) t) in
-      let rs = (ws :> (read_only, seek) t) in
-      ignore   (rs :> (read_only, no_seek) t);
+      let rs = (ws :> (read, seek) t) in
+      ignore   (rs :> (read, no_seek) t);
       ignore   (ws :> (read_write, no_seek) t);
     ;;
 
@@ -741,7 +740,7 @@ ENDIF;
         (* static permission tests; see above *)
         TEST = Char.(=) 'a' (char (of_string "a" : (_, no_seek) Iobuf.t) ~pos:0)
         TEST = Char.(=) 'a' (char (of_string "a" : (_, seek) Iobuf.t) ~pos:0)
-        TEST = Char.(=) 'a' (char (of_string "a" : (read_only, _) Iobuf.t) ~pos:0)
+        TEST = Char.(=) 'a' (char (of_string "a" : (read, _) Iobuf.t) ~pos:0)
         TEST = Char.(=) 'a' (char (of_string "a" : (read_write, _) Iobuf.t) ~pos:0)
       end)
 
@@ -932,7 +931,7 @@ ENDIF;
 
         (* static permission tests; see above *)
         TEST = Char.(=) 'a' (char (of_string "a" : (_, seek) Iobuf.t))
-        TEST = Char.(=) 'a' (char (of_string "a" : (read_only, _) Iobuf.t))
+        TEST = Char.(=) 'a' (char (of_string "a" : (read, _) Iobuf.t))
         TEST = Char.(=) 'a' (char (of_string "a" : (read_write, _) Iobuf.t))
       end)
 
@@ -1055,8 +1054,15 @@ ENDIF;
                 let fd = Unix.openfile ~mode:[Unix.O_RDONLY] file in
                 sub t ~pos |> (fun t ->
                   let len_before = Iobuf.length t in
-                  read_assume_fd_is_nonblocking t fd;
-                  <:test_result< int >> (len_before - Iobuf.length t) ~expect:n);
+                  match
+                    Syscall_result.Unit.to_result
+                      (read_assume_fd_is_nonblocking t fd)
+                  with
+                  | Ok () | Error (EAGAIN | EINTR | EWOULDBLOCK) ->
+                    <:test_result< int >> (len_before - Iobuf.length t)
+                      ~expect:n
+                  | Error e -> raise (Unix.Unix_error (e, "read", ""))
+                );
                 sub t ~pos ~len:n |> (fun t ->
                   assert (String.equal (to_string t) string));
                 Unix.close fd)))
@@ -1083,7 +1089,18 @@ ENDIF;
           Unix.close fd;)
     ;;
 
+    let zero_or_wouldblock result =
+      match Unix.Syscall_result.Int.to_result result with
+      | Ok n                         -> n = 0
+      | Error (EWOULDBLOCK | EAGAIN) -> true
+      | Error _                      -> false
+    ;;
+
     let recvfrom_assume_fd_is_nonblocking = recvfrom_assume_fd_is_nonblocking
+
+    let expect_non_unix_exception f =
+      assert (try ignore (f () : Unix.Syscall_result.Int.t); false
+              with Unix.Unix_error _ as e -> raise e | _ -> true)
 
     let recvmmsg_assume_fd_is_nonblocking = recvmmsg_assume_fd_is_nonblocking
     TEST_UNIT "recvmmsg smoke" =
@@ -1099,23 +1116,21 @@ ENDIF;
         let short_srcs = Array.create ~len:(count - 1)
                            (ADDR_INET (Inet_addr.bind_any, 0)) in
         set_nonblock fd;
-        (* EWOULDBLOCK/EAGAIN is reported as a negative value, is a possible and expected
-           result in these smoke tests, where we listen to a random socket.  Here, we also
-           don't try to test recvmmsg's behavior, just our wrapper; Unix_error indicates
-           that recvmmsg returned -1, whereas other exceptions indicate that our wrapper
-           detected something wrong.  We treat the two situations separately. *)
-        assert (try recvmmsg fd iobufs ~count ~srcs <= 0
-                with Unix_error _ -> true);
-        assert (try recvmmsg fd iobufs <= 0
-                with Unix_error _ -> true);
-        assert (try recvmmsg fd iobufs ~count:(count / 2) ~srcs <= 0
-                with Unix_error _ -> true);
-        assert (try recvmmsg fd iobufs ~count:0 ~srcs <= 0
-                with Unix_error _ -> true);
-        assert (try ignore (recvmmsg fd iobufs ~count:(count + 1)); false
-                with Unix_error _ as e -> raise e | _ -> true);
-        assert (try ignore (recvmmsg fd iobufs ~srcs:short_srcs); false
-                with Unix_error _ as e -> raise e | _ -> true);
+        (* Errors are expected in these smoke tests, where we listen to a random socket.
+           Here, we also don't try to test recvmmsg's behavior, just our wrapper;
+           [is_error] indicates that [recvmmsg] returned -1, whereas other exceptions
+           indicate that our wrapper detected something wrong.  We treat the two
+           situations separately. *)
+        assert (recvmmsg fd iobufs ~count ~srcs
+                |> zero_or_wouldblock);
+        assert (recvmmsg fd iobufs
+                |> zero_or_wouldblock);
+        assert (recvmmsg fd iobufs ~count:(count / 2) ~srcs
+                |> zero_or_wouldblock);
+        assert (recvmmsg fd iobufs ~count:0 ~srcs
+                |> zero_or_wouldblock);
+        expect_non_unix_exception (fun () -> recvmmsg fd iobufs ~count:(count + 1));
+        expect_non_unix_exception (fun () -> recvmmsg fd iobufs ~srcs:short_srcs);
     ;;
 
     let recvmmsg_assume_fd_is_nonblocking_no_options = recvmmsg_assume_fd_is_nonblocking_no_options
@@ -1129,10 +1144,9 @@ ENDIF;
         bind fd ~addr:(ADDR_INET (Inet_addr.bind_any, 0));
         let iobufs = Array.init count ~f:(fun _ -> create ~len:1500) in
         set_nonblock fd;
-        assert (try recvmmsg fd iobufs ~count <= 0
-                with Unix_error _ -> true);
-        assert (try ignore (recvmmsg fd iobufs ~count:(count + 1)); false
-                with Unix_error _ as e -> raise e | _ -> true);
+        assert (recvmmsg fd iobufs ~count
+                |> zero_or_wouldblock);
+        expect_non_unix_exception (fun () ->recvmmsg fd iobufs ~count:(count + 1))
     ;;
 
 
@@ -1183,7 +1197,7 @@ ENDIF;
                     <:test_result< int >> (len_before - Iobuf.length t) ~expect:len
                   )
                 with
-                | Error (Unix.Unix_error ((Unix.EWOULDBLOCK | Unix.EAGAIN), _, _)) ->
+                | Error (Unix.Unix_error ((EWOULDBLOCK | EAGAIN), _, _)) ->
                   Time.pause (Span.of_ms 1.);
                   loop ()
                 | Ok x -> x
@@ -1201,12 +1215,10 @@ ENDIF;
         sends_with_recvfrom (fun t fd ->
           let addr_before = Unix.(ADDR_INET (Inet_addr.bind_any, 0)) in
           let srcs = Array.create ~len:1 addr_before in
-          let result  = recvmmsg fd ~srcs (Array.create ~len:1 t) in
-          (* we've altered the reporting of EWOULDBLOCK to return a negative value, rather
-             than an exception in the inner loop of some UDP heavy applications. Raise
-             here to mimic the behavior of the original api, and others such as recvfrom
-             that share testing code *)
-          if result < 0 then raise (Unix.Unix_error (Unix.EWOULDBLOCK, "recvmmsg", ""));
+          let result  =
+            recvmmsg fd ~srcs (Array.create ~len:1 t)
+            |> Unix.Syscall_result.Int.ok_or_unix_error_exn ~syscall_name:"recvmmsg"
+          in
           assert (result = 1);
           (* Check that the prototype source address wasn't modified in place.  It is
              expected to have been replaced in the array by a new sockaddr. *)
@@ -1349,7 +1361,12 @@ ENDIF;
       in
       let rec loop_file () =
         let len_before = length t in
-        read_assume_fd_is_nonblocking t fd;
+        let res = read_assume_fd_is_nonblocking t fd in
+        if Syscall_result.Unit.is_error res then (
+          match Syscall_result.Unit.error_exn res with
+          | EAGAIN | EINTR | EWOULDBLOCK -> ()
+          | e -> raise (Unix.Unix_error (e, "read", ""))
+        );
         if len_before > length t then (
           flip_lo t;
           drain_messages ();
@@ -1385,7 +1402,7 @@ end :
      [Iobuf]. *)
   Iobuf)
 
-include Test (Iobuf_debug.Make (struct end))
+include Test (Iobuf_debug.Make ())
 
 (* Ensure against bugs in [Iobuf_debug].  The above tests [Iobuf_debug], with invariants
    checked, and this tests the straight [Iobuf] module. *)

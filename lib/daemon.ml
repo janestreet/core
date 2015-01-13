@@ -39,7 +39,7 @@ let redirect_fd ~skip_regular_files ~mode ~src ~dst =
   | #Fd_redirection.do_redirect as src ->
     let is_regular () =
       try (Unix.fstat dst).Unix.st_kind = Unix.S_REG
-      with Unix.Unix_error (Unix.EBADF, _, _) -> false
+      with Unix.Unix_error (EBADF, _, _) -> false
     in
     let should_skip = skip_regular_files && is_regular () in
     if not should_skip then begin

@@ -28,7 +28,7 @@ going to be receiving a steady stream of interrupts.
 let rec retry_until_no_eintr f =
   try
     f ()
-  with Unix.Unix_error (Unix.EINTR, _, _) ->
+  with Unix.Unix_error (EINTR, _, _) ->
     retry_until_no_eintr f
 
 (* This wrapper improves the content of the Unix_error exception raised by the standard
@@ -557,20 +557,9 @@ let unary_filename ?restart f = unary ?restart filename_r f
 let unary_dirname ?restart f = unary ?restart dirname_r f
 let unary_dir_handle ?restart f = unary ?restart dir_handle_r f
 
-type error =
-Unix.error =
-| E2BIG | EACCES | EAGAIN | EBADF | EBUSY | ECHILD | EDEADLK | EDOM | EEXIST
-| EFAULT | EFBIG | EINTR | EINVAL | EIO | EISDIR | EMFILE | EMLINK
-| ENAMETOOLONG | ENFILE | ENODEV | ENOENT | ENOEXEC | ENOLCK | ENOMEM | ENOSPC
-| ENOSYS | ENOTDIR | ENOTEMPTY | ENOTTY | ENXIO | EPERM | EPIPE | ERANGE
-| EROFS | ESPIPE | ESRCH | EXDEV | EWOULDBLOCK | EINPROGRESS | EALREADY
-| ENOTSOCK | EDESTADDRREQ | EMSGSIZE | EPROTOTYPE | ENOPROTOOPT
-| EPROTONOSUPPORT | ESOCKTNOSUPPORT | EOPNOTSUPP | EPFNOSUPPORT | EAFNOSUPPORT
-| EADDRINUSE | EADDRNOTAVAIL | ENETDOWN | ENETUNREACH | ENETRESET
-| ECONNABORTED | ECONNRESET | ENOBUFS | EISCONN | ENOTCONN | ESHUTDOWN
-| ETOOMANYREFS | ETIMEDOUT | ECONNREFUSED | EHOSTDOWN | EHOSTUNREACH | ELOOP
-| EOVERFLOW | EUNKNOWNERR of int
-with sexp
+include Unix_error
+
+module Syscall_result = Syscall_result
 
 exception Unix_error = Unix.Unix_error
 
@@ -580,12 +569,86 @@ let handle_unix_error f = Unix.handle_unix_error f ()
 let environment = Unix.environment
 
 module Error = struct
-  type t = error
+  type t = Unix.error =
+    | E2BIG               (** Argument list too long *)
+    | EACCES              (** Permission denied *)
+    | EAGAIN              (** Resource temporarily unavailable; try again *)
+    | EBADF               (** Bad file descriptor *)
+    | EBUSY               (** Resource unavailable *)
+    | ECHILD              (** No child process *)
+    | EDEADLK             (** Resource deadlock would occur *)
+    | EDOM                (** Domain error for math functions, etc. *)
+    | EEXIST              (** File exists *)
+    | EFAULT              (** Bad address *)
+    | EFBIG               (** File too large *)
+    | EINTR               (** Function interrupted by signal *)
+    | EINVAL              (** Invalid argument *)
+    | EIO                 (** Hardware I/O error *)
+    | EISDIR              (** Is a directory *)
+    | EMFILE              (** Too many open files by the process *)
+    | EMLINK              (** Too many links *)
+    | ENAMETOOLONG        (** Filename too long *)
+    | ENFILE              (** Too many open files in the system *)
+    | ENODEV              (** No such device *)
+    | ENOENT              (** No such file or directory *)
+    | ENOEXEC             (** Not an executable file *)
+    | ENOLCK              (** No locks available *)
+    | ENOMEM              (** Not enough memory *)
+    | ENOSPC              (** No space left on device *)
+    | ENOSYS              (** Function not supported *)
+    | ENOTDIR             (** Not a directory *)
+    | ENOTEMPTY           (** Directory not empty *)
+    | ENOTTY              (** Inappropriate I/O control operation *)
+    | ENXIO               (** No such device or address *)
+    | EPERM               (** Operation not permitted *)
+    | EPIPE               (** Broken pipe *)
+    | ERANGE              (** Result too large *)
+    | EROFS               (** Read-only file system *)
+    | ESPIPE              (** Invalid seek e.g. on a pipe *)
+    | ESRCH               (** No such process *)
+    | EXDEV               (** Invalid link *)
+
+    | EWOULDBLOCK         (** Operation would block *)
+    | EINPROGRESS         (** Operation now in progress *)
+    | EALREADY            (** Operation already in progress *)
+    | ENOTSOCK            (** Socket operation on non-socket *)
+    | EDESTADDRREQ        (** Destination address required *)
+    | EMSGSIZE            (** Message too long *)
+    | EPROTOTYPE          (** Protocol wrong type for socket *)
+    | ENOPROTOOPT         (** Protocol not available *)
+    | EPROTONOSUPPORT     (** Protocol not supported *)
+    | ESOCKTNOSUPPORT     (** Socket type not supported *)
+    | EOPNOTSUPP          (** Operation not supported on socket *)
+    | EPFNOSUPPORT        (** Protocol family not supported *)
+    | EAFNOSUPPORT        (** Address family not supported by protocol family *)
+    | EADDRINUSE          (** Address already in use *)
+    | EADDRNOTAVAIL       (** Can't assign requested address *)
+    | ENETDOWN            (** Network is down *)
+    | ENETUNREACH         (** Network is unreachable *)
+    | ENETRESET           (** Network dropped connection on reset *)
+    | ECONNABORTED        (** Software caused connection abort *)
+    | ECONNRESET          (** Connection reset by peer *)
+    | ENOBUFS             (** No buffer space available *)
+    | EISCONN             (** Socket is already connected *)
+    | ENOTCONN            (** Socket is not connected *)
+    | ESHUTDOWN           (** Can't send after socket shutdown *)
+    | ETOOMANYREFS        (** Too many references: can't splice *)
+    | ETIMEDOUT           (** Connection timed out *)
+    | ECONNREFUSED        (** Connection refused *)
+    | EHOSTDOWN           (** Host is down *)
+    | EHOSTUNREACH        (** No route to host *)
+    | ELOOP               (** Too many levels of symbolic links *)
+    | EOVERFLOW           (** File size or position not representable *)
+
+    | EUNKNOWNERR of int  (** Unknown error *)
+  with sexp
 
   let of_system_int int =
     try unix_error int "" ""
     with Unix_error (t, _, _) -> t
   ;;
+
+  let message = Unix.error_message
 end
 
 let putenv ~key ~data =
@@ -609,9 +672,9 @@ type process_status = Unix.process_status =
 with sexp
 
 module Exit = struct
-  type error = [ `Exit_non_zero of int ] with sexp
+  type error = [ `Exit_non_zero of int ] with compare, sexp
 
-  type t = (unit, error) Result.t with sexp
+  type t = (unit, error) Result.t with compare, sexp
 
   let to_string_hum = function
     | Ok () -> "exited normally"
@@ -641,9 +704,9 @@ module Exit = struct
 end
 
 module Exit_or_signal = struct
-  type error = [ Exit.error | `Signal of Signal.t ] with sexp
+  type error = [ Exit.error | `Signal of Signal.t ] with compare, sexp
 
-  type t = (unit, error) Result.t with sexp
+  type t = (unit, error) Result.t with compare, sexp
 
   let to_string_hum = function
     | Ok () | Error #Exit.error as e -> Exit.to_string_hum e
@@ -714,9 +777,36 @@ let execvpe ~prog ~args ~env =
     (fun () -> [prog_r prog; args_r args; env_r env])
 ;;
 
+type env =
+  [ `Replace of (string * string) list
+  | `Extend of (string * string) list
+  ]
+with sexp
+
+let env_assignments env =
+  match env with
+  | `Replace_raw env -> env
+  | (`Replace _ | `Extend _) as env ->
+    let env_map =
+      let current, env =
+        match env with
+        | `Replace env -> [], env
+        | `Extend env ->
+          let current =
+            List.map (Array.to_list (Unix.environment ()))
+              ~f:(fun s -> String.lsplit2_exn s ~on:'=')
+          in
+          current, env
+      in
+      List.fold_left (current @ env) ~init:String.Map.empty
+        ~f:(fun map (key, data) -> Map.add map ~key ~data)
+    in
+    Map.fold env_map ~init:[]
+      ~f:(fun ~key ~data acc -> (key ^ "=" ^ data) :: acc)
+
 let exec ~prog ~args ?(use_path = true) ?env () =
   let args = Array.of_list args in
-  let env = Option.map env ~f:Array.of_list in
+  let env = Option.map env ~f:(Fn.compose Array.of_list env_assignments) in
   match use_path, env with
   | false, None -> execv ~prog ~args
   | false, Some env -> execve ~prog ~args ~env
@@ -1160,6 +1250,21 @@ let dup2 ~src ~dst =
                 ("dst", File_descr.sexp_of_t dst)])
 ;;
 
+TEST_UNIT "fork_exec ~env last binding takes precedence" =
+  protectx ~finally:remove (Filename.temp_file "test" "fork_exec.env.last-wins")
+    ~f:(fun temp_file ->
+      let env = [ "VAR", "first"; "VAR", "last" ] in
+      List.iter
+        [ `Replace_raw (List.map env ~f:(fun (v, s) -> v ^ "=" ^ s))
+        ; `Replace env
+        ; `Extend env
+        ]
+        ~f:(fun env ->
+          waitpid_exn
+            (fork_exec () ~env ~prog:"sh"
+               ~args:[ "sh"; "-c"; "echo $VAR > " ^ temp_file ]);
+          <:test_result< string >> ~expect:"last\n" (In_channel.read_all temp_file)))
+
 let set_nonblock = unary_fd Unix.set_nonblock
 let clear_nonblock = unary_fd Unix.clear_nonblock
 let set_close_on_exec = unary_fd Unix.set_close_on_exec
@@ -1399,34 +1504,13 @@ external create_process
   -> Process_info.t
   = "ml_create_process"
 
-type env =
-  [ `Replace of (string * string) list
-  | `Extend of (string * string) list
-  ]
-with sexp
-
 let create_process_env ?working_dir ~prog ~args ~env () =
-  let env_map =
-    let current, env =
-      match env with
-      | `Replace env -> [], env
-      | `Extend env ->
-        List.map (Array.to_list (Unix.environment ()))
-          ~f:(fun s -> String.lsplit2_exn s ~on:'='), env
-    in
-    List.fold_left (current @ env) ~init:String.Map.empty
-      ~f:(fun map (key, data) -> Map.add map ~key ~data)
-  in
-  let env =
-    Map.fold env_map ~init:[]
-      ~f:(fun ~key ~data acc -> (key ^ "=" ^ data) :: acc)
-  in
   create_process
     ?working_dir
     ~search_path:true
     ~prog
     ~args:(Array.of_list args)
-    ~env:(Array.of_list env)
+    ~env:(Array.of_list (env_assignments env))
 
 let create_process_env ?working_dir ~prog ~args ~env () =
   improve (fun () -> create_process_env ?working_dir ~prog ~args ~env ())

@@ -21,6 +21,8 @@ end
    Errors defined in the POSIX standard
    and additional errors, mostly BSD.
    All other errors are mapped to EUNKNOWNERR.
+
+    @deprecated in favor of {!Error.t} below.
 *)
 type error =
   Unix.error =
@@ -98,20 +100,103 @@ type error =
 with sexp
 
 module Error : sig
-  type t = error
+  (** The type of error codes.  Errors defined in the POSIX standard and additional
+      errors, mostly BSD.  All other errors are mapped to EUNKNOWNERR.  *)
+  type t = Unix.error =
+    | E2BIG               (** Argument list too long *)
+    | EACCES              (** Permission denied *)
+    | EAGAIN              (** Resource temporarily unavailable; try again *)
+    | EBADF               (** Bad file descriptor *)
+    | EBUSY               (** Resource unavailable *)
+    | ECHILD              (** No child process *)
+    | EDEADLK             (** Resource deadlock would occur *)
+    | EDOM                (** Domain error for math functions, etc. *)
+    | EEXIST              (** File exists *)
+    | EFAULT              (** Bad address *)
+    | EFBIG               (** File too large *)
+    | EINTR               (** Function interrupted by signal *)
+    | EINVAL              (** Invalid argument *)
+    | EIO                 (** Hardware I/O error *)
+    | EISDIR              (** Is a directory *)
+    | EMFILE              (** Too many open files by the process *)
+    | EMLINK              (** Too many links *)
+    | ENAMETOOLONG        (** Filename too long *)
+    | ENFILE              (** Too many open files in the system *)
+    | ENODEV              (** No such device *)
+    | ENOENT              (** No such file or directory *)
+    | ENOEXEC             (** Not an executable file *)
+    | ENOLCK              (** No locks available *)
+    | ENOMEM              (** Not enough memory *)
+    | ENOSPC              (** No space left on device *)
+    | ENOSYS              (** Function not supported *)
+    | ENOTDIR             (** Not a directory *)
+    | ENOTEMPTY           (** Directory not empty *)
+    | ENOTTY              (** Inappropriate I/O control operation *)
+    | ENXIO               (** No such device or address *)
+    | EPERM               (** Operation not permitted *)
+    | EPIPE               (** Broken pipe *)
+    | ERANGE              (** Result too large *)
+    | EROFS               (** Read-only file system *)
+    | ESPIPE              (** Invalid seek e.g. on a pipe *)
+    | ESRCH               (** No such process *)
+    | EXDEV               (** Invalid link *)
+
+    | EWOULDBLOCK         (** Operation would block *)
+    | EINPROGRESS         (** Operation now in progress *)
+    | EALREADY            (** Operation already in progress *)
+    | ENOTSOCK            (** Socket operation on non-socket *)
+    | EDESTADDRREQ        (** Destination address required *)
+    | EMSGSIZE            (** Message too long *)
+    | EPROTOTYPE          (** Protocol wrong type for socket *)
+    | ENOPROTOOPT         (** Protocol not available *)
+    | EPROTONOSUPPORT     (** Protocol not supported *)
+    | ESOCKTNOSUPPORT     (** Socket type not supported *)
+    | EOPNOTSUPP          (** Operation not supported on socket *)
+    | EPFNOSUPPORT        (** Protocol family not supported *)
+    | EAFNOSUPPORT        (** Address family not supported by protocol family *)
+    | EADDRINUSE          (** Address already in use *)
+    | EADDRNOTAVAIL       (** Can't assign requested address *)
+    | ENETDOWN            (** Network is down *)
+    | ENETUNREACH         (** Network is unreachable *)
+    | ENETRESET           (** Network dropped connection on reset *)
+    | ECONNABORTED        (** Software caused connection abort *)
+    | ECONNRESET          (** Connection reset by peer *)
+    | ENOBUFS             (** No buffer space available *)
+    | EISCONN             (** Socket is already connected *)
+    | ENOTCONN            (** Socket is not connected *)
+    | ESHUTDOWN           (** Can't send after socket shutdown *)
+    | ETOOMANYREFS        (** Too many references: can't splice *)
+    | ETIMEDOUT           (** Connection timed out *)
+    | ECONNREFUSED        (** Connection refused *)
+    | EHOSTDOWN           (** Host is down *)
+    | EHOSTUNREACH        (** No route to host *)
+    | ELOOP               (** Too many levels of symbolic links *)
+    | EOVERFLOW           (** File size or position not representable *)
+
+    | EUNKNOWNERR of int  (** Unknown error *)
+  with sexp
+
   val of_system_int : int -> t
+
+  (** Return a string describing the given error code. *)
+  val message : t -> string
 end
 
 (** Raised by the system calls below when an error is encountered.
    The first component is the error code; the second component
    is the function name; the third component is the string parameter
    to the function, if it has one, or the empty string otherwise. *)
-exception Unix_error of error * string * string
+exception Unix_error of Error.t * string * string
+
+module Syscall_result :
+  module type of Syscall_result with type 'a t = 'a Syscall_result.t
 
 (** @raise Unix_error with a given errno, function name and argument *)
 external unix_error : int -> string -> string -> _ = "unix_error_stub"
 
-(** Return a string describing the given error code. *)
+(** Return a string describing the given error code.
+
+    @deprecated in favor of {!Error.message}. *)
 val error_message : error -> string
 
 (** [handle_unix_error f] runs [f ()] and returns the result.  If the exception
@@ -149,9 +234,9 @@ val unsetenv : string -> unit
 
 (** The termination status of a process. *)
 module Exit : sig
-  type error = [ `Exit_non_zero of int ] with sexp
+  type error = [ `Exit_non_zero of int ] with compare, sexp
 
-  type t = (unit, error) Result.t with sexp
+  type t = (unit, error) Result.t with compare, sexp
 
   val to_string_hum : t -> string
 
@@ -161,9 +246,9 @@ module Exit : sig
 end
 
 module Exit_or_signal : sig
-  type error = [ Exit.error | `Signal of Signal.t ] with sexp
+  type error = [ Exit.error | `Signal of Signal.t ] with compare, sexp
 
-  type t = (unit, error) Result.t with sexp
+  type t = (unit, error) Result.t with compare, sexp
 
   (** [of_unix] assumes that any signal numbers in the incoming value are O'Caml internal
       signal numbers. *)
@@ -174,8 +259,7 @@ module Exit_or_signal : sig
 end
 
 module Exit_or_signal_or_stop : sig
-  type error = [ Exit_or_signal.error | `Stop of Signal.t ]
-  with sexp
+  type error = [ Exit_or_signal.error | `Stop of Signal.t ] with sexp
 
   type t = (unit, error) Result.t with sexp
 
@@ -187,30 +271,45 @@ module Exit_or_signal_or_stop : sig
   val or_error : t -> unit Or_error.t
 end
 
+type env = [ `Replace of (string * string) list
+           | `Extend of (string * string) list
+           ]
+with sexp
+
 (** [exec ~prog ~args ?search_path ?env] execs [prog] with [args].  If [use_path = true]
-    (the default) and [prog] doesn't contain a slash, then [exec] searches the PATH
+    (the default) and [prog] doesn't contain a slash, then [exec] searches the [PATH]
     environment variable for [prog].  If [env] is supplied, it is used as the environment
     when [prog] is executed.
 
     The first element in args should be the program itself; the correct way to call [exec]
     is:
 
-      exec ~prog ~args:[ prog; arg1; arg2; ...] () *)
+    {[    exec ~prog ~args:[ prog; arg1; arg2; ...] ()    ]}
+
+    [env] can take three forms.  [`Replace_raw] replaces the entire environment with
+    strings in the Unix style, like ["VARIABLE_NAME=value"].  [`Replace] has the same
+    effect as [`Replace_raw], but using bindings represented as ["VARIABLE_NAME",
+    "value"].  [`Extend] adds entries to the existing environment rather than replacing
+    the whole environment.
+
+    If [env] contains multiple bindings for the same variable, the last takes precedence.
+    In the case of [`Extend], bindings in [env] take precedence over the existing
+    environment. *)
 val exec
   :  prog:string
   -> args:string list
-  -> ?use_path:bool (* defaults to true *)
-  -> ?env:string list
+  -> ?use_path:bool  (** default is [true] *)
+  -> ?env:[ env | `Replace_raw of string list ]
   -> unit
   -> never_returns
 
 (** [fork_exec ~prog ~args ?use_path ?env ()] forks and execs [prog] with [args] in the
-    child process, returning the child pid to the parent. *)
+    child process, returning the child PID to the parent. *)
 val fork_exec
   :  prog:string
   -> args:string list
-  -> ?use_path:bool (* defaults to true *)
-  -> ?env:string list
+  -> ?use_path:bool  (** default is [true] *)
+  -> ?env:[ env | `Replace_raw of string list ]
   -> unit
   -> Pid.t
 
@@ -734,23 +833,18 @@ end
 
 (** Low-level process *)
 
-(** [create_process ~prog ~args] forks a new process that
-    executes the program [prog] with arguments [args].  The function
-    returns the pid of the process along with file descriptors attached to
-    stdin, stdout, and stderr of the new process.  The executable file
-    [prog] is searched for in the path.  The new process has the same
-    environment as the current process.  Unlike in [execve] the program
-    name is automatically passed as the first argument. *)
+(** [create_process ~prog ~args] forks a new process that executes the program [prog] with
+    arguments [args].  The function returns the pid of the process along with file
+    descriptors attached to stdin, stdout, and stderr of the new process.  The executable
+    file [prog] is searched for in the path.  The new process has the same environment as
+    the current process.  Unlike in [execve] the program name is automatically passed as
+    the first argument. *)
 val create_process : prog : string -> args : string list -> Process_info.t
 
-(** [create_process_env ~prog ~args ~env] as create process, but takes an additional
-    parameter that extends, or replaces the current environment.  No effort is made to
+(** [create_process_env ~prog ~args ~env] as [create_process], but takes an additional
+    parameter that extends or replaces the current environment.  No effort is made to
     ensure that the keys passed in as env are unique, so if an environment variable is set
     twice the second version will override the first. *)
-type env = [ `Replace of (string * string) list
-           | `Extend of (string * string) list
-           ]
-with sexp
 val create_process_env
   :  ?working_dir : string
   -> prog : string

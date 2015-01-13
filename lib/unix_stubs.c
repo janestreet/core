@@ -52,6 +52,16 @@
 #include <wordexp.h>
 #endif
 
+CAMLprim value core_unix_error_of_code(value code)
+{
+  return unix_error_of_code(Int_val(code));
+}
+
+CAMLprim value core_code_of_unix_error(value error)
+{
+  return Val_int(code_of_unix_error(error));
+}
+
 CAMLprim value unix_error_stub(value v_errcode, value v_cmdname, value cmd_arg)
 {
   unix_error(Int_val(v_errcode), String_val(v_cmdname), cmd_arg);

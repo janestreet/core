@@ -1,3 +1,4 @@
+<**/*.ml>                  : warn(-40)
 <lib/*.ml{,i}>             : pa_ounit_lib(core)
 <lib{,_test}/*.ml{,i}>     : syntax_camlp4o
 "lib/backtrace.ml"         : mlh, package(camlp4.macro)

@@ -488,13 +488,6 @@ module Stable = struct
       Int.of_float ltt.Regime.utc_off
     ;;
 
-    let map_office_to_zone office =
-      match office with
-      | `chi -> "America/Chicago"
-      | `hkg -> "Asia/Hong_Kong"
-      | `ldn -> "Europe/London"
-      | `nyc -> "America/New_York"
-    ;;
 
     let find zone =
       let zone =
@@ -504,10 +497,10 @@ module Stable = struct
         | "utc"         -> "UTC"
         | "gmt"         -> "GMT"
         (* legacy *)
-        | "chi"         -> map_office_to_zone `chi
-        | "nyc"         -> map_office_to_zone `nyc
-        | "hkg"         -> map_office_to_zone `hkg
-        | "lon" | "ldn" -> map_office_to_zone `ldn
+        | "chi"         -> "America/Chicago"
+        | "nyc"         -> "America/New_York"
+        | "hkg"         -> "Asia/Hong_Kong"
+        | "lon" | "ldn" -> "Europe/London"
         | "tyo"         -> "Asia/Tokyo"
         (* catchall *)
         | _             -> zone
@@ -520,8 +513,6 @@ module Stable = struct
       | None   -> raise (Unknown_zone zone)
       | Some z -> z
     ;;
-
-    let find_office office = find_exn (map_office_to_zone office)
 
     let t_of_sexp sexp =
       match sexp with
@@ -563,7 +554,7 @@ module Stable = struct
 
     let sexp_of_t (lazy t) =
       if t.name = "/etc/localtime" then
-        failwith "the Zone.t returned from Zone.machine_zone cannot be serialized";
+        failwith "the local time zone cannot be serialized";
       Sexp.Atom t.name
     ;;
 
@@ -582,7 +573,7 @@ module Stable = struct
 
       let to_binable (lazy t) =
         if t.name = "/etc/localtime" then
-          failwith "the Zone.t returned from Zone.machine_zone cannot be serialized";
+          failwith "the local time zone cannot be serialized";
         t.name
 
       let of_binable s = t_of_sexp (Sexp.Atom s)
@@ -607,32 +598,18 @@ include Stable.V1
 
 let utc = of_utc_offset ~hours:0
 
-(* This is intended to be thread safe at the expense of possibly doing more work than
-   strictly necessary *)
-let machine_zone =
-  let zone = ref None in
-  (fun ?(refresh = false) () ->
-    if refresh then zone := None;
-    match !zone with
-    | Some t -> t
+let local = lazy (Lazy.force begin
+    match Sys.getenv "TZ" with
+    | Some zone_name ->
+      find_exn zone_name
     | None ->
-      let t =
-        match Sys.getenv "TZ" with
-        | Some zone_name ->
-          find_exn zone_name
-        | None ->
-          let localtime_t =
-            Zone_file.input_tz_file ~zonename:"/etc/localtime" ~filename:"/etc/localtime"
-          in
-          match Zone_cache.find_or_load_matching localtime_t with
-          | Some t -> t
-          | None   -> localtime_t
+      let localtime_t =
+        Zone_file.input_tz_file ~zonename:"/etc/localtime" ~filename:"/etc/localtime"
       in
-      zone := Some t;
-      t)
-;;
-
-let local = lazy (Lazy.force (machine_zone ()))
+      match Zone_cache.find_or_load_matching localtime_t with
+      | Some t -> t
+      | None   -> localtime_t
+  end)
 ;;
 
 let transition_as_utc t = (t.Transition.start_time, t.Transition.end_time)
@@ -705,8 +682,6 @@ let next_clock_shift (lazy zone) ~after =
 ;;
 
 TEST_MODULE = struct
-  let ldn = find_office `ldn;;
-
   let mkt ?(year=2013) month day hour min =
     Time_internal.T.of_float
       (Time_internal.utc_mktime ~year ~month ~day ~hour ~min ~sec:0 ~ms:0 ~us:0)
@@ -717,7 +692,7 @@ TEST_MODULE = struct
   ;;
 
   let expect_some after (time, amount) =
-    match next_clock_shift ldn ~after with
+    match next_clock_shift (find_exn "Europe/London") ~after with
     | Some (t, a) -> t = time && a = amount
     | None -> false
   ;;

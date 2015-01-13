@@ -99,7 +99,7 @@ let is_locked path =
     if flocked && lockfed then false
     else true
   with
-  | Unix.Unix_error (Unix.ENOENT, _, _) -> false
+  | Unix.Unix_error (ENOENT, _, _) -> false
   | e -> raise e
 
 TEST_MODULE = struct
@@ -117,7 +117,7 @@ TEST_MODULE = struct
   TEST =
     (* Check that file exists. *)
     try ignore (Unix.stat nolock_file); true
-    with Unix.Unix_error (Unix.ENOENT, _, _) -> false
+    with Unix.Unix_error (ENOENT, _, _) -> false
   TEST = not (is_locked nolock_file)
 end
 
@@ -183,7 +183,7 @@ module Nfs = struct
             begin
               try
                 Unix.unlink path
-              with | Unix.Unix_error (Unix.ENOENT, _, _) -> ()
+              with | Unix.Unix_error (ENOENT, _, _) -> ()
                    | e -> error (Exn.to_string e)
             end;
             try

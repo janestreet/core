@@ -1,8 +1,6 @@
 open OUnit
 open Core.Std
 
-let my_tz = Time.Zone.machine_zone ()
-
 (* We don't test Feb 29th because generating proper leap year dates is
   trickier.  Also, there are no time zone changes on leap dates. *)
 let month_limits = Map.Poly.of_alist_exn [
@@ -60,10 +58,10 @@ let add_random_string_round_trip_test state s1 =
   let pos_neg = if Random.State.bool state then "+" else "-" in
   let distance = Int.to_string (Random.State.int state 10 + 1) in
   let s2 = String.concat [s1; pos_neg; distance; ":00"] in
+  let zone = Time.Zone.local in
   let s1 =
     let t = Time.of_string s1 in
     let epoch = Time.to_epoch t in
-    let zone = Time.Zone.machine_zone () in
     let utc_epoch = Time.Zone.shift_epoch_time zone `UTC epoch in
     let f =
       Time.Span.of_sec (utc_epoch -. epoch) |! Time.Span.to_float |! Float.to_int
@@ -71,10 +69,10 @@ let add_random_string_round_trip_test state s1 =
     s1 ^ (if f = 0 then "Z" else Printf.sprintf "%+03d:00" (f / 3600))
   in
   add ("roundtrip string " ^ s1) (fun () ->
-    "s1" @? (s1 = (Time.to_string_abs (Time.of_string s1)));
+    "s1" @? (s1 = (Time.to_string_abs (Time.of_string s1) ~zone));
     "s2-time" @? (
       let s2_time1 = Time.of_string s2 in
-      let s2_time2 = Time.of_string (Time.to_string_abs s2_time1) in
+      let s2_time2 = Time.of_string (Time.to_string_abs s2_time1 ~zone) in
       Time.(=.) s2_time1 s2_time2)
   )
 
@@ -88,9 +86,9 @@ let add_roundtrip_conversion_test state (zone_name,(zone:Time.Zone.t)) =
     let unix_time = 1664476678.000 in
     let time      = Time.of_float unix_time in
     let (zone_date, zone_ofday) =
-      let date,ofday = Time.to_local_date_ofday time in
+      let date,ofday = Time.to_date_ofday ~zone:Time.Zone.local time in
       Time.convert
-        ~from_tz:(Time.Zone.machine_zone ())
+        ~from_tz:Time.Zone.local
         ~to_tz:zone
         date
         ofday
@@ -99,11 +97,11 @@ let add_roundtrip_conversion_test state (zone_name,(zone:Time.Zone.t)) =
       let round_date,round_ofday =
         Time.convert
         ~from_tz:zone
-        ~to_tz:(Time.Zone.machine_zone ())
+        ~to_tz:Time.Zone.local
         zone_date
         zone_ofday
       in
-      Time.of_local_date_ofday round_date round_ofday
+      Time.of_date_ofday ~zone:Time.Zone.local round_date round_ofday
     in
     "time" @?
       (if time = round_trip_time then true
@@ -147,7 +145,7 @@ let add_random_localtime_tests state =
       Unix.unsetenv ("TZ");
       ignore (Unix.localtime 1000.);
 
-      let our_date,our_ofday = Time.to_date_ofday (Time.of_float unix_time) zone in
+      let our_date,our_ofday = Time.to_date_ofday (Time.of_float unix_time) ~zone in
       let test_data          =
         {Localtime_test_data.
           zone_name;

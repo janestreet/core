@@ -29,26 +29,6 @@ let create ?max_mem_waiting_gc size =
   if size < 0 then invalid_argf "create: size = %d < 0" size ();
   aux_create ~max_mem_waiting_gc ~size
 
-TEST "create with different max_mem_waiting_gc" =
-  Gc.full_major ();
-  let count_gc_cycles mem_units =
-    let cycles = ref 0 in
-    let alarm = Gc.create_alarm (fun () -> incr cycles) in
-    let large_int = 10_000 in
-    let max_mem_waiting_gc = Byte_units.create mem_units 256. in
-    for _i = 0 to large_int do
-      let (_ : t) = create ~max_mem_waiting_gc large_int in
-      ()
-    done;
-    Gc.delete_alarm alarm;
-    !cycles
-  in
-  let large_max_mem = count_gc_cycles `Megabytes in
-  let small_max_mem = count_gc_cycles `Bytes in
-  (* We don't care if it's twice as many, we are only testing that there are less cycles
-  involved *)
-  (2 * large_max_mem) < small_max_mem
-
 let length = Array1.dim
 
 external is_mmapped : t -> bool = "bigstring_is_mmapped_stub" "noalloc"
@@ -133,7 +113,7 @@ let recvfrom_assume_fd_is_nonblocking sock ?(pos = 0) ?len bstr =
   unsafe_recvfrom_assume_fd_is_nonblocking sock ~pos ~len bstr
 
 external unsafe_read_assume_fd_is_nonblocking
-  : file_descr -> pos : int -> len : int -> t -> int
+  : file_descr -> pos : int -> len : int -> t -> Syscall_result.Int.t
   = "bigstring_read_assume_fd_is_nonblocking_stub"
 
 let read_assume_fd_is_nonblocking fd ?(pos = 0) ?len bstr =
@@ -189,13 +169,8 @@ let really_send_no_sigpipe fd ?(pos = 0) ?len bstr =
   unsafe_really_send_no_sigpipe fd ~pos ~len bstr
 
 external unsafe_send_nonblocking_no_sigpipe
-  : file_descr -> pos : int -> len : int -> t -> int
-  = "bigstring_send_nonblocking_no_sigpipe_stub"
-
-let unsafe_send_nonblocking_no_sigpipe fd ~pos ~len buf =
-  let res = unsafe_send_nonblocking_no_sigpipe fd ~pos ~len buf in
-  if res = -1 then None
-  else Some res
+  : file_descr -> pos : int -> len : int -> t -> Syscall_result.Int.t
+  = "bigstring_send_nonblocking_no_sigpipe_stub" "noalloc"
 
 let send_nonblocking_no_sigpipe fd ?(pos = 0) ?len bstr =
   let len = get_opt_len bstr ~pos len in

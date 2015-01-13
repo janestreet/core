@@ -306,7 +306,7 @@ module Zoned = struct
 
   let create ofday zone = { ofday; zone }
 
-  let create_local ofday = create ofday (Zone.machine_zone ())
+  let create_local ofday = create ofday Zone.local
 
   let of_string string : t =
     match String.split string ~on:' ' with

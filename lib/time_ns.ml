@@ -28,12 +28,6 @@ ENDIF
 
 let float x = Int63.to_float x
 
-TEST_UNIT =
-  (* Set the timezone to UTC for unit test... *)
-  Core_unix.putenv ~key:"TZ" ~data:"utc";
-  ignore (Time.Zone.machine_zone ~refresh:true () : Time.Zone.t);
-;;
-
 (* This signature constraint is semi-temporary and serves to make the implementation more
    type-safe (so the compiler can help us more).  It would go away if we broke the
    implementation into multiple files. *)
@@ -145,8 +139,8 @@ module Span : sig
     end
   end
 end = struct
-  let to_span t = Time.Span.of_ns (Int63.to_float t)
-  let of_span s = round_nearest (Time.Span.to_ns s)
+  let to_span t = Time.Span.of_us Int63.(to_float ((t + of_int 500) / of_int 1000))
+  let of_span s = Int63.( * ) (round_nearest (Time.Span.to_us s)) (Int63.of_int 1000)
 
   module T = struct
     type t = Int63.t (** nanoseconds *)
@@ -424,6 +418,11 @@ let to_time t = Time.add Time.epoch (Span.to_span t)
 let of_time t = Span.of_span (Time.diff t Time.epoch)
 
 let sexp_of_t t = Time.sexp_of_t (to_time t)
+let sexp_of_t_abs ~zone t =
+  Sexp.List
+    (List.map (String.split ~on:' ' (Time.to_string_abs ~zone (to_time t)))
+       ~f:(fun s -> Sexp.Atom s)
+    )
 let t_of_sexp s = of_time (Time.t_of_sexp s)
 
 let to_string t = Time.to_string (to_time t)
@@ -436,6 +435,7 @@ module Stable0 = struct
 
   TEST_MODULE "Time_ns.Stable.V1" = Core_kernel.Stable_unit_test.Make (struct
     include V1
+    let sexp_of_t = sexp_of_t_abs ~zone:Zone.utc
 
     let equal = Span.equal
 
@@ -471,6 +471,11 @@ module Option = struct
   let to_option t = if is_none t then None else Some (value_exn t)
 
   let sexp_of_t t = <:sexp_of< time option >> (to_option t)
+  let sexp_of_t_abs ~zone t =
+    <:sexp_of< Sexp.t option >>
+      (Option.map (to_option t)
+         ~f:(sexp_of_t_abs ~zone)
+      )
   let t_of_sexp s = of_option (<:of_sexp< time option >> s)
 
   include Identifiable.Make (struct
@@ -487,6 +492,7 @@ module Option = struct
 
     TEST_MODULE "Time_ns.Option.Stable.V1" = Core_kernel.Stable_unit_test.Make (struct
       include V1
+      let sexp_of_t = sexp_of_t_abs ~zone:Zone.utc
 
       let equal t1 t2 = Int.(=) (t1 : t :> int) (t2 : t :> int)
 
@@ -526,10 +532,8 @@ TEST_MODULE = struct
     let times = List.map ~f:Time.of_float [ 0.0; 1.0; 1.123456789 ] in
     List.iter times ~f:(fun time ->
       let res = to_time (of_time time) in
-      if not (Time.equal res time)
-      then failwithf "Failed on time %s (%f)"
-             (Time.to_string time)
-             (Time.to_float time) ())
+      <:test_result< Time.t >> ~equal:Time.(=.) ~expect:time res
+    )
 
   TEST_UNIT "round trip from [t] to [Time.t] and back" =
     List.iter Span.([ zero; second; scale day 365. ]) ~f:(fun since_epoch ->
@@ -553,13 +557,19 @@ module Ofday = struct
 
   let start_of_day = Span.zero
   let end_of_day = Span.day
+  let end_of_day_with_dst_and_leap_second_allowance =
+    Span.(end_of_day + hour + minute)
 
   let to_span_since_start_of_day t = t
-  let of_span_since_start_of_day s = s
+  let of_span_since_start_of_day_exn s =
+    if s < start_of_day || s > end_of_day_with_dst_and_leap_second_allowance
+    then failwith "Time_ns.Ofday.of_span_since_start_of_day_exn: input out of bounds"
+    else s
 
   let local_midnight time =
-    let date, _ = Time.to_local_date_ofday (to_time time) in
-    let midnight = Time.of_local_date_ofday date Time.Ofday.start_of_day in
+    let zone = Time.Zone.local in
+    let date = Time.to_date (to_time time) ~zone in
+    let midnight = Time.of_date_ofday date Time.Ofday.start_of_day ~zone in
     of_time midnight
   ;;
 
@@ -643,7 +653,7 @@ TEST_MODULE = struct
 
   TEST_UNIT =
     let span = Span.create ~hr:8 ~min:27 ~sec:14 ~ms:359 () in
-    let ofday = Ofday.of_span_since_start_of_day span in
+    let ofday = Ofday.of_span_since_start_of_day_exn span in
     let expected = "08:27:14.359" in
     let ms_str = Ofday.to_millisecond_string ofday    in
     if String.(<>) ms_str expected then
@@ -677,12 +687,11 @@ ELSE
   let of_int_ns_since_epoch i = failwith "unsupported on 32bit machines"
 ENDIF
 
-
-let of_date_ofday zone date ofday =
-  of_time (Core_time.of_date_ofday zone date (Ofday.to_ofday ofday))
+let of_date_ofday ~zone date ofday =
+  of_time (Core_time.of_date_ofday ~zone date (Ofday.to_ofday ofday))
 ;;
 
-let to_date t zone = Core_time.to_date (to_time t) zone
+let to_date t ~zone = Core_time.to_date (to_time t) ~zone
 
 let occurrence what t ~ofday ~zone =
   of_time (Core_time.occurrence what (to_time t) ~ofday:(Ofday.to_ofday ofday) ~zone)

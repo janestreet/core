@@ -1,6 +1,8 @@
-(** [no_seek] and [seek] are defined and used in a similar manner to [read_only] and
+open Core_kernel.Std
+
+(** [no_seek] and [seek] are phantom types used in a similar manner to [read] and
     [read_write]. *)
-type no_seek                with sexp_of  (** like [read_only] *)
+type no_seek                with sexp_of  (** like [read] *)
 type seek = private no_seek with sexp_of  (** like [read_write] *)
 
 (** A collection of iobuf access functions.  This abstracts over [Iobuf.Consume],
@@ -8,7 +10,7 @@ type seek = private no_seek with sexp_of  (** like [read_write] *)
 module type Accessors = sig
   (** [('d, 'w) Iobuf.t] accessor function manipulating ['a], either writing it to the
       iobuf or reading it from the iobuf. *)
-  type ('a, 'd, 'w) t
+  type ('a, 'd, 'w) t constraint 'd = [> read ]
   type 'a bin_prot
 
   val char                :                             (char       , 'd, 'w) t

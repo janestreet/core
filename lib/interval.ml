@@ -96,11 +96,11 @@ module Stable = struct
 
       module V = V1.T.Variants
       let tests =
-        let t1 = Time.of_date_ofday zone
+        let t1 = Time.of_date_ofday ~zone
           (Date.create_exn ~y:2013 ~m:Month.Aug ~d:6)
           (Ofday.create  ~hr:7 ~min:30 ~sec:7 ~ms:12 ~us:5 ())
         in
-        let t2 = Time.of_date_ofday zone
+        let t2 = Time.of_date_ofday ~zone
           (Date.create_exn ~y:2014 ~m:Month.Sep ~d:8)
           (Ofday.create  ~hr:10 ~min:10 ~sec:0 ~ms:22 ~us:0 ())
         in
@@ -460,7 +460,7 @@ end
 module Time = struct
   include Make(Time)
 
-  let create_ending_after ?(zone = Zone.machine_zone ()) (open_ofday, close_ofday) ~now =
+  let create_ending_after ?(zone = Zone.local) (open_ofday, close_ofday) ~now =
     let close_time =
       Time.occurrence `First_after_or_at now ~zone ~ofday:close_ofday
     in
@@ -469,7 +469,7 @@ module Time = struct
     in
     create open_time close_time
 
-  let create_ending_before ?(zone = Zone.machine_zone ())
+  let create_ending_before ?(zone = Zone.local)
       (open_ofday, close_ofday) ~ubound =
     let close_time =
       Time.occurrence `Last_before_or_at ubound ~zone ~ofday:close_ofday

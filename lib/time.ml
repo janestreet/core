@@ -1,3 +1,5 @@
+open Core_kernel.Std
+
 module Zone = Zone
 module Span = Span
 
@@ -9,11 +11,11 @@ module Ofday = struct
   module Zoned = struct
     include Ofday.Zoned
 
-    let to_time t date = Time0.of_date_ofday (zone t) date (ofday t)
+    let to_time t date = Time0.of_date_ofday ~zone:(zone t) date (ofday t)
   end
 
   (* can't be defined in Ofday directly because it would create a circular reference *)
-  let now () = snd (Time0.to_local_date_ofday (Time0.now ()))
+  let now ~zone = Time0.to_ofday ~zone (Time0.now ())
 end
 
 include Time0
@@ -25,10 +27,9 @@ BENCH_MODULE "Time" = struct
 
   BENCH_FUN "Time.to_ofday" =
     let t = now () in
-    (fun () -> ignore (to_ofday t Zone.local))
+    (fun () -> ignore (to_ofday t ~zone:Zone.local))
 
   BENCH "Time.now" = now ()
-  BENCH "Time.Zone.find_office" = Zone.find_office `nyc
 
   let x = Float.of_string "1.1"
   BENCH "Time.Span.of_hr"  = Span.of_hr  x

@@ -61,7 +61,7 @@ let () =
   let int_tbl_replace2, int_tbl_find2 =
     let module I = Hashable.Make(struct
       include Int
-      let hash x = Core.Core_hashtbl_intf.Hashable.hash x
+      let hash x = Core.Std.Hashtbl_intf.Hashable.hash x
     end)
     in
     gen_test_int_replace_and_find n (I.Table.create ~size:(2*n) ())
@@ -73,7 +73,7 @@ let () =
   in
   let jst_hashtbl_hash () =
     for i = 0 to n - 1 do
-      let (_ : int) = Core.Core_hashtbl_intf.Hashable.hash i in ()
+      let (_ : int) = Core.Std.Hashtbl_intf.Hashable.hash i in ()
     done
   in
   Bench.bench

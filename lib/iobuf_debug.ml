@@ -1,5 +1,4 @@
 open Core_kernel.Std
-open Std_internal
 
 module Unix = Core_unix
 
@@ -10,7 +9,7 @@ let log string a sexp_of_a =
     (Sexp.to_string_hum (<:sexp_of< string * a  >> (string, a)));
 ;;
 
-module Make (M : sig end) = struct
+module Make () = struct
 
   let check_invariant = ref true
 
@@ -553,7 +552,7 @@ module Make (M : sig end) = struct
   let read_assume_fd_is_nonblocking t fd =
     debug "read_assume_fd_is_nonblocking" [t] fd
       (<:sexp_of< File_descr.t >>)
-      (<:sexp_of< unit >>)
+      (<:sexp_of< Syscall_result.Unit.t >>)
       (fun () -> read_assume_fd_is_nonblocking t fd)
   ;;
 
@@ -578,7 +577,7 @@ module Make (M : sig end) = struct
         (<:sexp_of< (File_descr.t
                      * [ `count of int option ]
                      * [ `srcs of Unix.sockaddr array option ]) >>)
-        (<:sexp_of< int >>)
+        (<:sexp_of< Unix.Syscall_result.Int.t >>)
         (fun () -> recvmmsg fd ?count ?srcs ts))
   ;;
 
@@ -588,7 +587,7 @@ module Make (M : sig end) = struct
         (fd, `count count)
         (<:sexp_of< (File_descr.t
                      * [ `count of int ]) >>)
-        (<:sexp_of< int >>)
+        (<:sexp_of< Unix.Syscall_result.Int.t >>)
         (fun () -> recvmmsg fd ~count ts))
   ;;
 

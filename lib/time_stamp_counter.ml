@@ -66,9 +66,11 @@
    monotonic time to smoothly fit the estimated time.  However PID controllers are
    computationally more expensive and we use a simpler linear approximation.
 *)
+
 INCLUDE "core_config.mlh"
+
 open Core_kernel.Std
-open Std_internal
+
 module Unix = Core_unix
 
 let catchup_cycles                  = 1E9
@@ -83,8 +85,6 @@ let initial_alpha                   = 1.
 
 let ewma ~alpha ~old ~add = ((1. -. alpha) *. old) +. (alpha *. add)
 
-
-module Int63 = Core_int63
 
 type t = Int63.t with bin_io, compare, sexp
 type tsc = t     with bin_io, compare, sexp
@@ -123,9 +123,9 @@ module Calibrator = struct
     ; mutable ewma_tsc                  : float
 
     (* for computing time in nanos *)
-    ; mutable time_nanos                : Core_int63.t
+    ; mutable time_nanos                : Int63.t
     ; mutable nanos_per_cycle           : float
-    ; mutable monotonic_time_nanos      : Core_int63.t
+    ; mutable monotonic_time_nanos      : Int63.t
     ; mutable monotonic_nanos_per_cycle : float
     }
   with bin_io, sexp

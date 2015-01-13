@@ -5,7 +5,6 @@ let sec = Time.Span.of_sec
 
 let ( ^/ ) = Core_filename.concat
 
-module Backtrace          = Backtrace
 module Bigbuffer          = Bigbuffer
 module Bigstring          = Bigstring
 module Bigstring_marshal  = Bigstring_marshal
@@ -49,7 +48,7 @@ let () = Sexplib_unix.Sexplib_unix_conv.linkme
 (* Test the Sexplib_unix exn converter was added correctly *)
 TEST_UNIT "Sexplib_unix sexp converter" =
   let open Sexp.O in
-  match sexp_of_exn (Unix.Unix_error (Unix.E2BIG, "loc", "arg")) with
+  match sexp_of_exn (Unix.Unix_error (E2BIG, "loc", "arg")) with
   | (List [ Atom "Unix.Unix_error"
           ; Atom _human_readable_message
           ; Atom "loc"

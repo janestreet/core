@@ -1,6 +1,4 @@
-
 open Core_kernel.Std
-open Std_internal
 
 
 module Entry = struct
@@ -24,8 +22,8 @@ type ('a, 'b) t =
   }
 with sexp_of
 
-let create hashable =
-  { entry_by_key                     = Hashtbl.create ~hashable ()
+let create ?growth_allowed ?size hashable =
+  { entry_by_key                     = Hashtbl.create ~hashable ?growth_allowed ?size ()
   ; keys_with_unused_data            = Thread_safe_queue.create ()
   ; thread_safe_run_when_unused_data = ignore
   }

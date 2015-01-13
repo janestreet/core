@@ -39,9 +39,10 @@
 *)
 
 INCLUDE "core_config.mlh"
-open Std_internal
 
-type t = private Core_int63.t with bin_io, compare, sexp
+open Core_kernel.Std
+
+type t = private Int63.t with bin_io, compare, sexp
 
 (** A calibrator contains a snapshot of machine-specific information that is used to
     convert between TSC values and clock time.  This information needs to be calibrated
@@ -83,7 +84,7 @@ end
 
 (** [Span] indicates some integer number of cycles. *)
 module Span : sig
-  type t = private Core_int63.t with bin_io, sexp
+  type t = private Int63.t with bin_io, sexp
 
   include Comparable with type t := t
   include Intable    with type t := t
@@ -92,8 +93,8 @@ module Span : sig
   val ( - ) : t -> t -> t
 
   val to_time_span : ?calibrator:Calibrator.t -> t -> Time.Span.t
-  val to_ns        : ?calibrator:Calibrator.t -> t -> Core_int63.t
-  val of_ns        : ?calibrator:Calibrator.t -> Core_int63.t -> t
+  val to_ns        : ?calibrator:Calibrator.t -> t -> Int63.t
+  val of_ns        : ?calibrator:Calibrator.t -> Int63.t -> t
 end
 
 IFDEF ARCH_SIXTYFOUR THEN
@@ -106,7 +107,7 @@ val diff            : t -> t -> Span.t
 val add             : t -> Span.t -> t
 
 (** [to_int63 t] returns the TSC value represented by [t] as an [Int63.t]. *)
-val to_int63 : t -> Core_int63.t
+val to_int63 : t -> Int63.t
 
 (** [to_time t] converts a [t] to a [Time.t].  It is guaranteed that repeated calls
     of [to_time ()] will return nondecreasing [Time.t] values. *)

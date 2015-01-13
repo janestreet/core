@@ -76,13 +76,12 @@ val recvfrom_assume_fd_is_nonblocking
 *)
 
 val read_assume_fd_is_nonblocking
-  : file_descr -> ?pos : int -> ?len : int -> t -> int
+  : file_descr -> ?pos : int -> ?len : int -> t -> Syscall_result.Int.t
 (** [read_assume_fd_is_nonblocking fd ?pos ?len bstr] reads up to
     [len] bytes into bigstring [bstr] starting at position [pos] from
     file descriptor [fd] without yielding to other OCaml-threads.
     @return the number of bytes actually read.
 
-    @raise Unix_error in the case of input errors.
     @raise Invalid_argument if the designated range is out of bounds.
 
     @param pos default = 0
@@ -170,14 +169,13 @@ val really_send_no_sigpipe
   : (file_descr -> ?pos : int -> ?len : int -> t -> unit) Or_error.t
 
 val send_nonblocking_no_sigpipe
-  : (file_descr -> ?pos : int -> ?len : int -> t -> int option) Or_error.t
+  : (file_descr -> ?pos : int -> ?len : int -> t -> Syscall_result.Int.t)
+      Or_error.t
 (** [send_nonblocking_no_sigpipe sock ?pos ?len bstr] tries to send
     [len] bytes in bigstring [bstr] starting at position [pos] to socket
-    [sock].  @return [Some bytes_written], or [None] if the operation
-    would have blocked.
+    [sock].  @return [bytes_written].
 
     @raise Invalid_argument if the designated range is out of bounds.
-    @raise Unix_error in the case of output errors.
 
     @param pos default = 0
     @param len default = [length bstr - pos]
@@ -355,7 +353,7 @@ val really_output
 (** {6 Unsafe functions} *)
 
 external unsafe_read_assume_fd_is_nonblocking
-  : file_descr -> pos : int -> len : int -> t -> int
+  : file_descr -> pos : int -> len : int -> t -> Syscall_result.Int.t
   = "bigstring_read_assume_fd_is_nonblocking_stub"
 (** [unsafe_read_assume_fd_is_nonblocking fd ~pos ~len bstr]
     similar to {!Bigstring.read_assume_fd_is_nonblocking}, but does
@@ -406,7 +404,8 @@ val unsafe_really_send_no_sigpipe
     {!Bigstring.send_nonblocking_no_sigpipe}, but does not perform any
     bounds checks.  Will crash on bounds errors! *)
 val unsafe_send_nonblocking_no_sigpipe
-  : (file_descr -> pos : int -> len : int -> t -> int option) Or_error.t
+  : (file_descr -> pos : int -> len : int -> t -> Syscall_result.Int.t)
+      Or_error.t
 
 external unsafe_writev
   : file_descr -> t Core_unix.IOVec.t array -> int -> int

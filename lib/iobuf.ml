@@ -1,6 +1,6 @@
-open Std_internal
+open Core_kernel.Std_kernel
 
-module Blit = Core_kernel.Std.Blit
+module Unix = Core_unix
 
 module T = struct
   type t =
@@ -14,7 +14,7 @@ module T = struct
     } with fields, sexp_of
 end
 open T
-type (+'read_write, +'seek) t = T.t with sexp_of
+type (-'read_write, +'seek) t = T.t with sexp_of
 type    seek = Iobuf_intf.   seek with sexp_of
 type no_seek = Iobuf_intf.no_seek with sexp_of
 module type Bound = Iobuf_intf.Bound with type ('d, 'w) iobuf := ('d, 'w) t
@@ -492,7 +492,7 @@ let read_bin_prot reader t ~pos =
   (a, len)
 
 module Consume = struct
-  type src = (read_only, seek) t
+  type src = (read, seek) t
   module To (Dst : sig
                type t with sexp_of
                val create : len:int -> t
@@ -530,6 +530,7 @@ module Consume = struct
   module To_bigstring = To (Bigstring_dst)
 
   type nonrec ('a, 'd, 'w) t = ('d, seek) t -> 'a
+    constraint 'd = [> read ]
 
   (* pszilagyi: This polymorphic helper does get inlined. *)
   let uadv t n x = unsafe_advance t n; x
@@ -613,6 +614,7 @@ let write_bin_prot writer t ~pos a =
 
 module Fill = struct
   type nonrec ('a, 'd, 'w) t = (read_write, seek) t -> 'a -> unit
+    constraint 'd = [> read ]
 
   let pos t len = buf_pos_exn t ~pos:0 ~len
   let uadv = unsafe_advance
@@ -663,11 +665,12 @@ module Fill = struct
 end
 
 module Peek = struct
-  type src = (read_only, no_seek) t
+  type src = (read, no_seek) t
   module To_string    = Blit.Make_distinct (Char_elt) (T_src) (String_dst)
   module To_bigstring = Blit.Make_distinct (Char_elt) (T_src) (Bigstring_dst)
 
   type nonrec ('a, 'd, 'w) t = ('d, 'w) t -> pos:int -> 'a
+    constraint 'd = [> read ]
 
   let spos = buf_pos_exn (* "safe position" *)
 
@@ -736,6 +739,7 @@ end
 
 module Poke = struct
   type nonrec ('a, 'd, 'w) t = (read_write, 'w) t -> pos:int -> 'a -> unit
+    constraint 'd = [> read ]
 
   let spos = buf_pos_exn (* "safe position" *)
 
@@ -834,7 +838,9 @@ let read_assume_fd_is_nonblocking t fd =
   let nread =
     Bigstring.read_assume_fd_is_nonblocking fd t.buf ~pos:t.lo ~len:(length t)
   in
-  unsafe_advance t nread
+  if Syscall_result.Int.is_ok nread then
+    unsafe_advance t (Syscall_result.Int.ok_exn nread);
+  Syscall_result.ignore_ok_value nread
 ;;
 
 let pread_assume_fd_is_nonblocking t fd ~offset =
@@ -862,7 +868,7 @@ external unsafe_recvmmsg_assume_fd_is_nonblocking
      -> (read_write, seek) t array
      -> int
      -> Unix.sockaddr array option
-     -> int)
+     -> Unix.Syscall_result.Int.t)
   = "iobuf_recvmmsg_assume_fd_is_nonblocking_stub"
 
 let recvmmsg_assume_fd_is_nonblocking fd ?count ?srcs ts =
@@ -877,7 +883,6 @@ let recvmmsg_assume_fd_is_nonblocking fd ?count ?srcs ts =
   unsafe_recvmmsg_assume_fd_is_nonblocking fd ts count srcs
 ;;
 
-
 let recvmmsg_assume_fd_is_nonblocking =
   (* At Jane Street, we link with [--wrap recvmmsg] so that we can use our own wrapper
      around [recvmmsg].  This allows us to compile an executable on a machine that has
@@ -885,14 +890,13 @@ let recvmmsg_assume_fd_is_nonblocking =
      (e.g., CentOS 5), but that has our wrapper library.  We set up our wrapper so that
      when running on a machine that doesn't have it, [recvmmsg] always returns -1 and sets
      errno to ENOSYS. *)
-  let ok = Ok recvmmsg_assume_fd_is_nonblocking in
-  try
-    assert (recvmmsg_assume_fd_is_nonblocking (File_descr.of_int (-1)) [||] = 0);
-    ok                                  (* maybe it will ignore the bogus sockfd *)
+  match
+    Unix.Syscall_result.Int.to_result
+      (recvmmsg_assume_fd_is_nonblocking (File_descr.of_int (-1)) [||])
   with
-  | Unix.Unix_error (Unix.ENOSYS, _, _) ->
+  | Error ENOSYS ->
     Or_error.unimplemented "Iobuf.recvmmsg_assume_fd_is_nonblocking"
-  | _ -> ok
+  | _ -> Ok recvmmsg_assume_fd_is_nonblocking
 ;;
 
 let recvmmsg_assume_fd_is_nonblocking_no_options fd ~count ts =
@@ -903,14 +907,14 @@ let recvmmsg_assume_fd_is_nonblocking_no_options fd ~count ts =
 ;;
 
 let recvmmsg_assume_fd_is_nonblocking_no_options =
-  let ok = Ok recvmmsg_assume_fd_is_nonblocking_no_options in
-  try
-    assert (recvmmsg_assume_fd_is_nonblocking_no_options (File_descr.of_int (-1)) ~count:0 [||] = 0);
-    ok                                  (* maybe it will ignore the bogus sockfd *)
+  match
+    Unix.Syscall_result.Int.to_result
+      (recvmmsg_assume_fd_is_nonblocking_no_options (File_descr.of_int (-1))
+         ~count:0 [||])
   with
-  | Unix.Unix_error (Unix.ENOSYS, _, _) ->
+  | Error ENOSYS ->
     Or_error.unimplemented "Iobuf.recvmmsg_assume_fd_is_nonblocking_no_options"
-  | _ -> ok
+  | _ -> Ok recvmmsg_assume_fd_is_nonblocking_no_options
 ;;
 
 ELSE                                    (* NDEF RECVMMSG *)
@@ -926,30 +930,21 @@ let recvmmsg_assume_fd_is_nonblocking_no_options =
 
 ENDIF                                   (* RECVMMSG *)
 
-(* This function and the one below have a 'fun () ->' in front of them because of the
-   following shortcoming in the typer:
-
-   # match () with () -> fun x -> x;;
-   - : '_a -> '_a = <fun>
-
-   Without the unit, in iobuf_debug.ml, we would try to wrap these functions by doing
-   matches like:
-
-   let send_nonblocking_no_sigpipe =
-     match send_nonblocking_no_sigpipe with
-     | Ok f -> Ok (fun t fd -> ... f t fd ...)
-     | Error _ as e -> e
-
-   but the typing problem shown above would prevent the generalization of the phantom
-   types variables in the iobuf types. *)
+(* This function and the one below have a 'fun () ->' in front of them because the value
+   restriction that comes from applying Or_error.map prevents the generalization of the
+   phantom types variables in the iobuf types. Or_error.map could be inlined though. *)
 let send_nonblocking_no_sigpipe () =
   Or_error.map Bigstring.send_nonblocking_no_sigpipe ~f:(fun send ->
     fun t fd ->
       (* By returning unit, we're conflating blocking and succeeding to write zero bytes,
          ie we're saying that trying to write zero bytes always blocks. *)
-      match send fd t.buf ~pos:t.lo ~len:(length t) with
-      | None -> ()
-      | Some nwritten -> unsafe_advance t nwritten)
+      let nwritten = send fd t.buf ~pos:t.lo ~len:(length t) in
+      if Syscall_result.Int.is_error nwritten then
+        match Syscall_result.Int.error_exn nwritten with
+        | EAGAIN | EINTR | EWOULDBLOCK -> ()
+        | e -> raise (Unix.Unix_error (e, "send", ""))
+      else unsafe_advance t (Syscall_result.Int.ok_exn nwritten)
+  )
 ;;
 
 let sendto_nonblocking_no_sigpipe () =
@@ -1235,4 +1230,3 @@ BENCH_MODULE "Peek tests" = struct
   BENCH_INDEXED "int64_be"  pos offsets = (fun () -> ignore (Peek.int64_be  iobuf ~pos))
   BENCH_INDEXED "int64_le"  pos offsets = (fun () -> ignore (Peek.int64_le  iobuf ~pos))
 end
-

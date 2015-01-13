@@ -1,7 +1,7 @@
 open Core.Std
 open Core_bench.Std
 
-let zone = Time.Zone.find_office `ldn;;
+let zone = Time.Zone.find_exn "Europe/London" ;;
 
 (* on every half-hour in the year *)
 let times =

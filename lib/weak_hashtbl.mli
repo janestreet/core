@@ -1,4 +1,3 @@
-
 (** A hashtable that keeps a weak pointer to each key's data and uses a finalizer to
     detect when the data is no longer referenced (by any non-weak pointers).
 
@@ -30,11 +29,17 @@
     At this point, the data associated with [key] is unreachable (since all we did with it
     was project out field bar), so it may disappear from the table at any time. *)
 
-open Std_internal
+open Core_kernel.Std
 
 type ('a, 'b) t with sexp_of
 
-val create : 'a Hashtbl.Hashable.t -> ('a, 'b) t
+val create
+  (** [growth_allowed] and [size] are both optionally passed on to the underlying call to
+      [Hashtbl.create]. *)
+  :  ?growth_allowed : bool  (** default is [true] *)
+  -> ?size           : int   (** default is [128] *)
+  -> 'a Hashtbl.Hashable.t
+  -> ('a, 'b) t
 
 val mem : ('a, _) t -> 'a -> bool
 

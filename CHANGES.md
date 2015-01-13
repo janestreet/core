@@ -1,3 +1,56 @@
+## 112.17.00
+
+- Deprecated the single-line files that simply `include` the
+  corresponding Core_kernel module.  Those are unnecessary, because
+  people should use `Core.Std`.
+
+  We will keep these aliases around for a version before deleted them
+  entirely.
+- Changed finalizers and signal handlers to, upon an unhandled
+  exception, exit nonzero rather than asynchronously raise.
+- Removed `Time.Zone.find_office`.
+
+  Replaced uses with the still-blocking `Time.Zone.find_exn`
+- Made many changes to `Time` to make the time zone explicit instead
+  of implicitly using the local timezone.
+
+  Added `zone:Time.Zone.t` parameters to many functions.  In almost
+  all cases, used `~zone:Time.Zone.local` where previously it was
+  implicit.
+
+  Removed `of_local_ofday` and `to_local_ofday` in favor of the
+  explicit versions (with `Time.Zone.local`).
+
+  Removed `Time.Zone.machine_zone ()` in favor of `local`.
+- Exported `Core.Std.With_return`.
+- Exposed `Core.Std.with_return_option`.
+- Fixed `Time_ns.Ofday.of_span_since_start_of_day` to check its input.
+- Changed `Time_ns.to_span` and `of_span` to round to microseconds,
+  for round trippability.
+- Added `Unix.Error` module, for the `Unix.error` type.
+- Added `Unix.Syscall_result`, a new abstract type representing the
+  result of a Unix system call as an `int`, to avoid allocation.
+
+  A lot of Unix system calls return an integer on success, so for ones
+  that are called a lot, we can encode errors as `-errno`.  This
+  module abstracts this concept.
+- Changed `Iobuf.recvmmsg` functions to return the new
+  `Unix.Syscall_result`.
+- Changed `Unix.exec`'s `?env` argument to support extending the
+  environment in addition to replacing it.
+- Added `with compare` to `Unix.Exit.t` and `Unix.Exit_or_signal.t`.
+- Moved `Backtrace` to `Core_kernel`.
+
+  Deleted `backtrace_stubs.c`, now that we have `Printexc.get_callstack`.
+- Changed `Bigstring.read_assume_fd_is_nonblocking` and
+  `send_nonblocking_no_sigpipe` to return `Unix.Syscall_result.t`, to
+  reduce allocation.
+- Changed `Iobuf.send_nonblocking_no_sigpipe` to handle `EINTR` like
+  `EAGAIN`, instead of raising.
+- Added `Command.Spec.char`.
+- Changed `Process_env.parse_ssh_client` to accept an `SSH_CLIENT`
+  that is just IP address without ports.
+
 ## 112.06.00
 
 - Renamed `Linux_ext.gettid` as `Unix.gettid`, and added OpenBSD support.

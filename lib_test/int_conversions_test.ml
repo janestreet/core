@@ -27,7 +27,7 @@ let () =
   ]
     ~f:(fun (input, expected) ->
       let got =
-        try Core.Int_conversions.insert_underscores input
+        try Int_conversions.insert_underscores input
         with exn ->
           failwithf "input = %s  exn = %s" input (Exn.to_string exn) ()
       in

@@ -178,6 +178,7 @@ module Arg_type = struct
 
   let string             = create Fn.id
   let int                = create Int.of_string
+  let char               = create Char.of_string
   let float              = create Float.of_string
   let bool               = create Bool.of_string
   let date               = create Date.of_string
@@ -1032,6 +1033,7 @@ module Base = struct
       open Arg_type
       let string    = string
       let int       = int
+      let char      = char
       let float     = float
       let bool      = bool
       let date      = date

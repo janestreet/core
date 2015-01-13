@@ -1082,7 +1082,7 @@ let next_alarm_fires_at t =
 
 module Debug (M : S) = struct
 
-  module Debug = Debug.Make (struct end)
+  module Debug = Debug.Make ()
 
   include Debug
 
