@@ -103,7 +103,7 @@ end
 module Option : sig
   type time
 
-  type t = private int with typerep
+  type t = private Int63.t with typerep
 
   include Identifiable with type t := t
 

@@ -120,7 +120,7 @@ module Span : sig
   module Option : sig
     type span
 
-    type t = private int with typerep
+    type t = private Int63.t with typerep
     include Identifiable with type t := t
 
     val none : t
@@ -269,7 +269,10 @@ end = struct
       eq (to_parts (create ~sign:Float.Sign.Neg ~hr:2 ~min:3 ~sec:4 ~ms:5 ~us:6 ~ns:7 ()))
         { Parts. sign = Float.Sign.Neg; hr = 2; min = 3; sec = 4; ms = 5; us = 6; ns = 7 }
     TEST_UNIT = round_trip (to_parts (create ~hr:25 ()))
-    TEST_UNIT = round_trip (to_parts (create ~hr:2217989799822798757 ()))
+IFDEF ARCH_SIXTYFOUR THEN
+    TEST_UNIT =
+      round_trip (to_parts (create ~hr:(Core_int64.to_int_exn 2217989799822798757L) ()))
+ENDIF
   end
 
   let of_ns       f = round_nearest f
@@ -488,7 +491,7 @@ module Option = struct
     TEST_MODULE "Time_ns.Option.Stable.V1" = Core_kernel.Stable_unit_test.Make (struct
       include V1
 
-      let equal t1 t2 = Int.(=) (t1 : t :> int) (t2 : t :> int)
+      let equal = Span.Option.equal
 
       let tests =
         let t i = Span.of_int63_ns (Int63.of_int64_exn i) in
@@ -654,10 +657,11 @@ TEST_MODULE = struct
     (* Ensure that local_midnight_cache doesn't interfere with converting times that are
        much earlier or later than each other. *)
     let check ofday =
+      let to_string t = Span.to_int63_ns t |> Int63.to_string in
       if Ofday.(<) ofday Ofday.start_of_day
-      then failwithf !"too small: %d" (ofday : Ofday.t :> int) ()
+      then failwithf "too small: %s" (to_string ofday) ()
       else if Ofday.(>=) ofday Ofday.end_of_day
-      then failwithf !"too large: %d" (ofday : Ofday.t :> int) ()
+      then failwithf "too large: %s" (to_string ofday) ()
       else ()
     in
     check (Ofday.of_local_time epoch);
