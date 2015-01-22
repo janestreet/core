@@ -156,7 +156,7 @@ end = struct
     let t_of_sexp s = of_span (Time.Span.Stable.V1.t_of_sexp s)
     let compare = Int63.compare
     let zero = Int63.zero
-    let module_name = "Time_ns.Span"
+    let module_name = "Core.Std.Time_ns.Span"
     let to_string t = Time.Span.to_string (to_span t)
     let of_string s = of_span (Time.Span.of_string s)
     let hash t = Int63.hash t
@@ -347,7 +347,7 @@ ENDIF
     include Identifiable.Make (struct
       type nonrec t = t with sexp, compare, bin_io
       let hash = Int63.hash
-      let module_name = "Time_ns.Span.Option"
+      let module_name = "Core.Std.Time_ns.Span.Option"
       include Sexpable.To_stringable (struct type nonrec t = t with sexp end)
     end)
 
@@ -478,7 +478,7 @@ module Option = struct
 
   include Identifiable.Make (struct
     type nonrec t = t with sexp, compare, bin_io
-    let module_name = "Time_ns.Option"
+    let module_name = "Core.Std.Time_ns.Option"
     let hash = Span.Option.hash
     include Sexpable.To_stringable (struct type nonrec t = t with sexp end)
   end)
@@ -513,7 +513,7 @@ let of_string_fix_proto zone s = of_time (Time.of_string_fix_proto zone s)
 
 include Identifiable.Make (struct
   type nonrec t = t with sexp, bin_io, compare
-  let module_name = "Time_ns"
+  let module_name = "Core.Std.Time_ns"
   let hash = Span.hash
   let of_string, to_string = of_string, to_string
 end)
@@ -617,7 +617,7 @@ module Ofday = struct
 
   include Identifiable.Make (struct
     type nonrec t = t with sexp, compare, bin_io
-    let module_name = "Time_ns.Ofday"
+    let module_name = "Core.Std.Time_ns.Ofday"
     let hash = Span.hash
     let of_string, to_string = of_string, to_string
   end)
