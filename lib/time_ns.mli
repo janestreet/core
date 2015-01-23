@@ -100,6 +100,11 @@ module Span : sig
   val to_int_ns : t   -> int
   val of_int_ns : int -> t
 
+  module Option : sig
+    type t
+    val pp : Format.formatter -> t -> unit
+  end
+
   module Stable : sig
     module V1 : sig
       type nonrec t = t with sexp, bin_io
