@@ -287,7 +287,6 @@ Library core
                       bigarray,
                       pa_bench,
                       pa_ounit,
-                      pa_pipebang,
                       pa_test,
                       unix,
                       threads,
