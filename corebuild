@@ -2,7 +2,6 @@
 
 ocamlbuild \
     -use-ocamlfind \
-    -classic-display \
     -syntax camlp4o \
     -pkg core \
     -pkg sexplib.syntax,comparelib.syntax,fieldslib.syntax,variantslib.syntax \
