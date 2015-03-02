@@ -2,6 +2,11 @@ open Core_kernel.Std
 open Time_internal.Helpers
 module Time  = Time_internal.T
 
+let is_leap_year year =
+  (year mod 4 = 0 && not (year mod 100 = 0))
+  || year mod 400 = 0
+;;
+
 (* Create a local private date type to ensure that all dates are created via
    Date.create_exn.
 *)
@@ -48,11 +53,6 @@ module Stable = struct
         in
         test 2014 Month.Sep 24;
         test 9999 Month.Dec 31;
-      ;;
-
-      let is_leap_year year =
-        (year mod 4 = 0 && not (year mod 100 = 0))
-        || year mod 400 = 0
       ;;
 
       let create_exn ~y:year ~m:month ~d:day =
@@ -401,6 +401,59 @@ let day_of_week  =
     Day_of_week.of_int_exn ((y + y / 4 - y / 100 + y / 400 + table.(m - 1) + (day t)) % 7))
 ;;
 
+(* http://en.wikipedia.org/wiki/Ordinal_date *)
+let non_leap_year_table = [| 0; 31; 59; 90; 120; 151; 181; 212; 243; 273; 304; 334 |]
+let leap_year_table     = [| 0; 31; 60; 91; 121; 152; 182; 213; 244; 274; 305; 335 |]
+let ordinal_date t =
+  let table = if is_leap_year (year t) then leap_year_table else non_leap_year_table in
+  let offset = table.(Month.to_int (month t) - 1) in
+  day t + offset
+;;
+
+let last_week_of_year y =
+  let first_of_year = create_exn ~y ~m:Jan ~d:1 in
+  let is t day = Day_of_week.equal (day_of_week t) day in
+  if is first_of_year Thu || (is_leap_year y && is first_of_year Wed)
+  then 53
+  else 52
+;;
+
+(* See http://en.wikipedia.org/wiki/ISO_week_date or ISO 8601 for the details of this
+   algorithm. *)
+let week_number t =
+  let ordinal = ordinal_date t in
+  let weekday = Day_of_week.iso_8601_weekday_number (day_of_week t) in
+  (* [ordinal - weekday + 4] is the ordinal of this week's Thursday, then (n + 6) / 7 is
+     division by 7 rounding up *)
+  let week = (ordinal - weekday + 10) / 7 in
+  let year = year t in
+  if Int.(<) week 1
+  then last_week_of_year (year - 1)
+  else begin
+    if Int.(>) week (last_week_of_year year)
+    then 1
+    else week
+  end
+;;
+
+(* Illustrative examples. See date.ml for some more exhaustive tests. *)
+TEST_MODULE "week_number" = struct
+  TEST_UNIT = <:test_result< int >> (ordinal_date (create_exn ~y:2014 ~m:Jan ~d:1)) ~expect:1
+  TEST_UNIT = <:test_result< int >> (ordinal_date (create_exn ~y:2014 ~m:Dec ~d:31)) ~expect:365
+  TEST_UNIT = <:test_result< int >> (ordinal_date (create_exn ~y:2014 ~m:Feb ~d:28)) ~expect:59
+
+  let test_week_number y m d ~expect =
+    <:test_result< int >> (week_number (create_exn ~y ~m ~d)) ~expect
+
+  TEST_UNIT = test_week_number 2014 Jan  1 ~expect:1
+  TEST_UNIT = test_week_number 2014 Dec 31 ~expect:1
+  TEST_UNIT = test_week_number 2010 Jan  1 ~expect:53
+  TEST_UNIT = test_week_number 2017 Jan  1 ~expect:52
+  TEST_UNIT = test_week_number 2014 Jan 10 ~expect:2
+  TEST_UNIT = test_week_number 2012 Jan  1 ~expect:52
+  TEST_UNIT = test_week_number 2012 Dec 31 ~expect:1
+end
+
 let is_weekend t =
   Day_of_week.is_sun_or_sat (day_of_week t)
 ;;
@@ -435,6 +488,28 @@ let dates_between ~min:t1 ~max:t2 =
   in
   loop t2 []
 ;;
+
+TEST_MODULE "ordinal_date" = struct
+  (* check the ordinal date tables we found on wikipedia... *)
+  let check_table year ordinal_date_table =
+    let days_of_year =
+      dates_between
+        ~min:(create_exn ~y:year ~m:Month.Jan ~d:01)
+        ~max:(create_exn ~y:year ~m:Month.Dec ~d:31)
+    in
+    <:test_result<int>> (List.length days_of_year) ~expect:(if is_leap_year year then 366 else 365);
+    let months = List.group days_of_year ~break:(fun d d' -> Month.(<>) (month d) (month d')) in
+    let sum =
+      List.foldi months ~init:0 ~f:(fun index sum month ->
+        <:test_result< int >> sum ~expect:ordinal_date_table.(index);
+        sum + List.length month)
+    in
+    <:test_result< int >> sum ~expect:(List.length days_of_year)
+  ;;
+
+  TEST_UNIT = check_table 2015 non_leap_year_table
+  TEST_UNIT = check_table 2000 leap_year_table
+end
 
 let weekdays_between ~min ~max =
   let all_dates = dates_between ~min ~max in

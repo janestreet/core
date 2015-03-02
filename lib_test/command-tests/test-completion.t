@@ -7,11 +7,17 @@ Here we demonstrate tab completion
   
   === subcommands ===
   
+    jab          this command does stuff here
+    jib          this command does stuff here
     adverb       this command does more stuff
     . drolly     this command does stuff here
     . opposable  this command does stuff here
-    jab          this command does stuff here
-    jib          this command does stuff here
+    with-body    this command does more stuff
+    . drolly     this command does stuff here
+    . opposable  this command does stuff here
+    ordered      group with unsorted subcommands
+    . zzz        this command does stuff here
+    . aaa        this command does stuff here
     version      print version information
     help         explain a given subcommand (perhaps recursively)
   
@@ -22,7 +28,9 @@ Tab completion works for subcommands ...
   help
   jab
   jib
+  ordered
   version
+  with-body
 
   $ tab_complete demo_help.exe 'j'
   jab
@@ -62,11 +70,13 @@ Tab completion works for [Arg_type.t] values which have defined it:
 both for flag arguments ...
 
   $ tab_complete demo_help.exe jab -pong ''
+  baa\ baa
   bar
   baz
   foo
 
   $ tab_complete demo_help.exe jab -pong 'ba'
+  baa\ baa
   bar
   baz
 
@@ -76,11 +86,13 @@ both for flag arguments ...
 ... and anonymous arguments (assumed not to be flags).
 
   $ tab_complete demo_help.exe jab ''
+  baa\ baa
   bar
   baz
   foo
 
   $ tab_complete demo_help.exe jab 'ba'
+  baa\ baa
   bar
   baz
 

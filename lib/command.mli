@@ -424,7 +424,16 @@ val basic : ('main, unit) basic_command
 
     NOTE: subcommand names containing underscores will be rejected.  Use dashes
     instead. *)
-val group : summary:string -> ?readme:(unit -> string) -> (string * t) list -> t
+val group
+  :  summary:string
+  -> ?readme:(unit -> string)
+  -> ?preserve_subcommand_order:unit
+  (** [body] is called when no additional arguments are passed -- in particular, when no
+      subcommand is passed.  The [path] argument is the subcommand path by which the group
+      command was reached. *)
+  -> ?body:(path:string list -> unit)
+  -> (string * t) list
+  -> t
 
 (** [exec ~summary ~path_to_exe] runs [exec] on the executable at [path_to_exe]. If
     [path_to_exe] is [`Absolute path] then [path] is executed without any further
@@ -451,6 +460,9 @@ val exec
   -> path_to_exe:[ `Absolute of string | `Relative_to_me of string ]
   -> unit
   -> t
+
+(** extract the summary string for a command *)
+val summary : t -> string
 
 (** Run a command against [Sys.argv], or [argv] if it is specified.
 

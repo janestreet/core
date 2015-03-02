@@ -17,7 +17,7 @@ let help_screen_compare a b =
   | (_, "[-build-info]") -> -1 | ("[-build-info]", _) -> 1
   | (_, "help")          -> -1 | ("help",        _)   -> 1
   | (_, "version")       -> -1 | ("version",     _)   -> 1
-  | _ -> String.compare a b
+  | _ -> 0
 
 module Format : sig
   module V1 : sig
@@ -39,7 +39,7 @@ end = struct
     } with sexp
 
     let sort ts =
-      List.sort ts ~cmp:(fun a b -> help_screen_compare a.name b.name)
+      List.stable_sort ts ~cmp:(fun a b -> help_screen_compare a.name b.name)
 
     let word_wrap text width =
       let chunks = String.split text ~on:'\n' in
@@ -415,6 +415,7 @@ module Path : sig
   val to_string : t -> string
   val to_string_dots : t -> string
   val pop_help : t -> t
+  val length : t -> int
 end = struct
   type t = string list
   let empty = []
@@ -422,6 +423,7 @@ end = struct
   let add t ~subcommand = subcommand :: t
   let commands t = List.rev t
   let to_string t = unwords (commands t)
+  let length = List.length
   let pop_help = function
     | "help" :: t -> t
     | _ -> assert false
@@ -775,38 +777,36 @@ let normalize key_type key =
     if String.is_prefix ~prefix:"-" key then key else "-" ^ key
   | Key_type.Subcommand -> String.lowercase key
 
-let lookup_expand map prefix key_type =
-  match String.Map.find map prefix with
-  | Some (data, _name_matching) -> Ok (prefix, data)
-  | None ->
-    let alist = String.Map.to_alist map in
-    match
-      List.filter alist ~f:(function
-        | (key, (_, `Full_match_required)) -> String.(=) key prefix
-        | (key, (_, `Prefix)) -> String.is_prefix key ~prefix)
-    with
-    | [(key, (data, _name_matching))] -> Ok (key, data)
-    | [] ->
-      Error (sprintf !"unknown %{Key_type} %s" key_type prefix)
-    | matches ->
+let lookup_expand alist prefix key_type =
+  match
+    List.filter alist ~f:(function
+      | (key, (_, `Full_match_required)) -> String.(=) key prefix
+      | (key, (_, `Prefix)) -> String.is_prefix key ~prefix)
+  with
+  | [(key, (data, _name_matching))] -> Ok (key, data)
+  | [] ->
+    Error (sprintf !"unknown %{Key_type} %s" key_type prefix)
+  | matches ->
+    match List.find matches ~f:(fun (key, _) -> String.(=) key prefix) with
+    | Some (key, (data, _name_matching)) -> Ok (key, data)
+    | None ->
       let matching_keys = List.map ~f:fst matches in
       Error (sprintf !"%{Key_type} %s is an ambiguous prefix: %s"
                key_type prefix (String.concat ~sep:", " matching_keys))
 
 let lookup_expand_with_aliases map prefix key_type =
-  let map =
-    String.Map.of_alist
-      (List.concat_map (String.Map.data map) ~f:(fun flag ->
-         let
-           { Flag. name; aliases; action=_; doc=_; check_available=_; name_matching }
-           = flag
-         in
-         let data = (flag, name_matching) in
-         (name, data) :: List.map aliases ~f:(fun alias -> (alias, data))))
+  let alist =
+    List.concat_map (String.Map.data map) ~f:(fun flag ->
+      let
+        { Flag. name; aliases; action=_; doc=_; check_available=_; name_matching }
+        = flag
+      in
+      let data = (flag, name_matching) in
+      (name, data) :: List.map aliases ~f:(fun alias -> (alias, data)))
   in
-  match map with
-  | `Ok map -> lookup_expand map prefix key_type
-  | `Duplicate_key flag -> failwithf "multiple flags named %s" flag ()
+  match List.find_a_dup alist ~compare:(fun (s1, _) (s2, _) -> String.compare s1 s2) with
+  | None -> lookup_expand alist prefix key_type
+  | Some (flag, _) -> failwithf "multiple flags named %s" flag ()
 
 module Base = struct
 
@@ -833,7 +833,11 @@ module Base = struct
   end
 
   let formatted_flags t =
-    Format.V1.sort (List.map (String.Map.data t.flags) ~f:Flag.align)
+    String.Map.data t.flags
+    |> List.map ~f:Flag.align
+    (* this sort puts optional flags after required ones *)
+    |> List.sort ~cmp:(fun a b -> String.compare a.Format.V1.name b.name)
+    |> Format.V1.sort
 
   let help_text ~path t =
     unparagraphs
@@ -1153,15 +1157,16 @@ module Group = struct
   type 'a t = {
     summary     : string;
     readme      : (unit -> string) option;
-    subcommands : 'a String.Map.t
+    subcommands : (string * 'a) list;
+    body        : (path:string list -> unit) option;
   }
 
   let help_text ~show_flags ~to_format_list ~path t =
     group_or_exec_help_text
       ~show_flags
       ~path
-      ~readme:(t.readme)
-      ~summary:(t.summary)
+      ~readme:t.readme
+      ~summary:t.summary
       ~format_list:(to_format_list t)
   ;;
 
@@ -1170,7 +1175,7 @@ module Group = struct
       type 'a t = {
         summary     : string;
         readme      : string sexp_option;
-        subcommands : 'a String.Map.t;
+        subcommands : (string, 'a) List.Assoc.t;
       } with sexp
     end
     include V1
@@ -1178,9 +1183,9 @@ module Group = struct
 
   let to_sexpable ~subcommand_to_sexpable t =
     { Sexpable.
-      summary     = t.summary;
-      readme      = Option.map ~f:(fun readme -> readme ()) t.readme;
-      subcommands = Map.map ~f:subcommand_to_sexpable t.subcommands;
+      summary = t.summary;
+      readme  = Option.map ~f:(fun readme -> readme ()) t.readme;
+      subcommands = List.Assoc.map ~f:subcommand_to_sexpable t.subcommands;
     }
 end
 
@@ -1297,10 +1302,18 @@ let get_summary = function
   | Group group -> group.Group.summary
   | Exec exec   -> exec.Exec.summary
 
-let extend_map_exn map key_type ~key data =
-  if String.Map.mem map key then
+let extend_exn ~mem ~add map key_type ~key data =
+  if mem map key then
     failwithf "there is already a %s named %s" (Key_type.to_string key_type) key ();
-  String.Map.add map ~key ~data
+  add map ~key ~data
+
+let extend_map_exn map key_type ~key data =
+  extend_exn map key_type ~key data ~mem:Map.mem ~add:Map.add
+
+let extend_alist_exn alist key_type ~key data =
+  extend_exn alist key_type ~key data
+    ~mem:(fun alist key -> List.Assoc.mem alist key ~equal:String.equal)
+    ~add:(fun alist ~key ~data -> List.Assoc.add alist key data ~equal:String.equal)
 
 module Bailout_dump_flag = struct
   let add base ~name ~aliases ~text ~text_summary =
@@ -1361,7 +1374,7 @@ let basic ~summary ?readme {Base.Spec.usage; flags; f} main =
   in
   Base base
 
-let subs_key : t String.Map.t Env.Key.t = Env.key_create "subcommands"
+let subs_key : (string * t) list Env.Key.t = Env.key_create "subcommands"
 
 let gather_help ~recursive ~show_flags ~expand_dots sexpable =
   let rec loop rpath acc sexpable =
@@ -1389,12 +1402,11 @@ let gather_help ~recursive ~show_flags ~expand_dots sexpable =
     let gather_group rpath acc subs =
       let subs =
         if recursive && rpath <> Path.empty
-        then String.Map.remove subs "help"
+        then List.Assoc.remove ~equal:String.(=) subs "help"
         else subs
       in
       let alist =
-        String.Map.to_alist subs
-        |> List.sort ~cmp:(fun a b -> help_screen_compare (fst a) (fst b))
+        List.stable_sort subs ~cmp:(fun a b -> help_screen_compare (fst a) (fst b))
       in
       List.fold alist ~init:acc ~f:(fun acc (subcommand, t) ->
         let rpath = Path.add rpath ~subcommand in
@@ -1460,9 +1472,15 @@ let help_subcommand ~summary ~readme =
       in
       let text =
         match cmd_opt with
-        | None -> group_help_text { Group. readme; summary; subcommands = subs }
+        | None ->
+          group_help_text {
+            readme;
+            summary;
+            subcommands = subs;
+            body = None;
+          }
         | Some cmd ->
-          match String.Map.find subs cmd with
+          match List.Assoc.find subs cmd ~equal:String.equal with
           | None ->
             die "unknown subcommand %s for command %s" cmd (Path.to_string path) ()
           | Some t ->
@@ -1473,16 +1491,19 @@ let help_subcommand ~summary ~readme =
       in
       print_endline text)
 
-let group ~summary ?readme alist =
+let group ~summary ?readme ?preserve_subcommand_order ?body alist =
   let alist =
     List.map alist ~f:(fun (name, t) -> (normalize Key_type.Subcommand name, t))
   in
   let subcommands =
     match String.Map.of_alist alist with
-    | `Ok subs -> subs
     | `Duplicate_key name -> failwithf "multiple subcommands named %s" name ()
+    | `Ok map ->
+      match preserve_subcommand_order with
+      | Some () -> alist
+      | None -> Map.to_alist map
   in
-  Group { Group. summary; readme; subcommands }
+  Group {summary; readme; subcommands; body}
 
 let exec ~summary ?readme ~path_to_exe () =
   let path_to_exe =
@@ -1500,6 +1521,17 @@ let exec ~summary ?readme ~path_to_exe () =
 
 INCLUDE "version_defaults.mlh"
 module Version_info = struct
+  let print_version ~version =
+    (* [version] was space delimited at some point and newline delimited
+       at another.  We always print one (repo, revision) pair per line
+       and ensure sorted order *)
+    String.split version ~on:' '
+    |> List.concat_map ~f:(String.split ~on:'\n')
+    |> List.sort ~cmp:String.compare
+    |> List.iter ~f:print_endline
+
+  let print_build_info ~build_info = print_endline build_info
+
   let command ~version ~build_info =
     basic ~summary:"print version information"
       Base.Spec.(
@@ -1509,25 +1541,15 @@ module Version_info = struct
       )
       (fun version_flag build_info_flag ->
          begin
-           let print_version () =
-             (* [version] was space delimited at some point and newline delimited
-                at another.  We always print one (repo, revision) pair per line
-                and ensure sorted order *)
-             String.split version ~on:' '
-             |> List.concat_map ~f:(String.split ~on:'\n')
-             |> List.sort ~cmp:String.compare
-             |> List.iter ~f:print_endline
-           in
-           let print_build_info () = print_endline build_info in
-           if build_info_flag then print_build_info ()
-           else if version_flag then print_version ()
-           else (print_build_info (); print_version ())
+           if build_info_flag then print_build_info ~build_info
+           else if version_flag then print_version ~version
+           else (print_build_info ~build_info; print_version ~version)
          end;
          exit 0)
 
   let add
-        ?(version = DEFAULT_VERSION)
-        ?(build_info = DEFAULT_BUILDINFO)
+        ~version
+        ~build_info
         unversioned =
     match unversioned with
     | Base base ->
@@ -1542,7 +1564,7 @@ module Version_info = struct
       Base base
     | Group group ->
       let subcommands =
-        extend_map_exn group.Group.subcommands Key_type.Subcommand ~key:"version"
+        extend_alist_exn group.Group.subcommands Key_type.Subcommand ~key:"version"
           (command ~version ~build_info)
       in
       Group { group with Group.subcommands }
@@ -1564,7 +1586,7 @@ let dump_autocomplete_function () =
     "function %s {
   export COMP_CWORD
   COMP_WORDS[0]=%s
-  COMPREPLY=($(\"${COMP_WORDS[@]}\"))
+  readarray -t COMPREPLY < <(\"${COMP_WORDS[@]}\")
 }
 complete -F %s %s
 %!" fname Sys.argv.(0) fname Sys.argv.(0)
@@ -1625,13 +1647,13 @@ let process_args ~cmd ~args =
 let rec add_help_subcommands = function
   | Base  _ as t -> t
   | Exec  _ as t -> t
-  | Group { Group. summary; readme; subcommands } ->
-    let subcommands = String.Map.map subcommands ~f:add_help_subcommands in
+  | Group {summary; readme; subcommands; body} ->
+    let subcommands = List.Assoc.map subcommands ~f:add_help_subcommands in
     let subcommands =
-      extend_map_exn subcommands Key_type.Subcommand ~key:"help"
+      extend_alist_exn subcommands Key_type.Subcommand ~key:"help"
         (help_subcommand ~summary ~readme)
     in
-    Group { Group. summary; readme; subcommands }
+    Group {summary; readme; subcommands; body}
 ;;
 
 let maybe_apply_extend args ~extend ~path =
@@ -1639,11 +1661,11 @@ let maybe_apply_extend args ~extend ~path =
     ~f:(fun f -> Args.extend args ~extend:f ~path)
 ;;
 
-let rec dispatch t env ~extend ~path ~args ~maybe_new_comp_cword =
-  let to_format_list group =
-    let subs = Map.to_alist group.Group.subcommands in
-    List.map subs ~f:(fun (name, summary) ->
-      { Format.V1. name; aliases = []; doc = summary })
+let rec dispatch t env ~extend ~path ~args ~maybe_new_comp_cword ~version ~build_info =
+  let to_format_list (group : _ Group.t) : Format.V1.t list =
+    let group = Group.to_sexpable ~subcommand_to_sexpable:to_sexpable group in
+    List.map group.subcommands ~f:(fun (name, sexpable) ->
+      { Format.V1. name; aliases = []; doc = Sexpable.get_summary sexpable })
     |> Format.V1.sort
   in
   match t with
@@ -1654,35 +1676,46 @@ let rec dispatch t env ~extend ~path ~args ~maybe_new_comp_cword =
     Option.iter ~f:set_comp_cword maybe_new_comp_cword;
     let args = Args.to_list (maybe_apply_extend args ~extend ~path) in
     Exec.exec_with_args ~args exec
-  | Group { Group. summary; readme; subcommands = subs } ->
+  | Group ({summary; readme; subcommands = subs; body} as group) ->
     let env = Env.set env subs_key subs in
     let die_showing_help msg =
       if not (Args.ends_in_complete args) then begin
-        let subs = String.Map.map subs ~f:get_summary in
         eprintf "%s\n%!"
           (Group.help_text ~to_format_list ~path ~show_flags:false
-             { Group. summary; readme; subcommands = subs });
+             {summary; readme; subcommands = subs; body});
         die "%s" msg ()
       end
     in
     match args with
     | Args.Nil ->
-      die_showing_help (sprintf "missing subcommand for command %s" (Path.to_string path))
+      begin
+        match body with
+        | None -> die_showing_help (sprintf "missing subcommand for command %s" (Path.to_string path))
+        | Some body -> body ~path:(Path.commands path)
+      end
     | Args.Cons (sub, rest) ->
       let (sub, rest) =
+        (* Match for flags recognized when subcommands are expected next *)
         match (sub, rest) with
+        (* Recognized at the top level command only *)
+        | ("-version", _) when Path.length path = 1 ->
+          Version_info.print_version ~version;
+          exit 0
+        | ("-build-info", _) when Path.length path = 1 ->
+          Version_info.print_build_info ~build_info;
+          exit 0
+        (* Recognized everywhere *)
         | ("-help", Args.Nil) ->
-          let subs = String.Map.map subs ~f:get_summary in
           print_endline
             (Group.help_text ~to_format_list ~path ~show_flags:false
-               { Group. summary; readme; subcommands = subs });
+               {group with subcommands = subs});
           exit 0
         | ("-help", Args.Cons (sub, rest)) -> (sub, Args.Cons ("-help", rest))
         | _ -> (sub, rest)
       in
       begin
         match
-          lookup_expand (Map.map subs ~f:(fun x -> (x, `Prefix))) sub Key_type.Subcommand
+          lookup_expand (List.Assoc.map subs ~f:(fun x -> (x, `Prefix))) sub Key_type.Subcommand
         with
         | Error msg -> die_showing_help msg
         | Ok (sub, t) ->
@@ -1691,21 +1724,33 @@ let rec dispatch t env ~extend ~path ~args ~maybe_new_comp_cword =
             ~path:(Path.add path ~subcommand:sub)
             ~args:rest
             ~maybe_new_comp_cword:(Option.map ~f:Int.pred maybe_new_comp_cword)
+            ~version
+            ~build_info
       end
     | Args.Complete part ->
-      List.iter (String.Map.keys subs) ~f:(fun name ->
-        if String.is_prefix name ~prefix:part then print_endline name);
+      let subs =
+        List.map subs ~f:fst
+        |> List.filter ~f:(fun name -> String.is_prefix name ~prefix:part)
+        |> List.sort ~cmp:String.compare
+      in
+      List.iter subs ~f:print_endline;
       exit 0
 ;;
 
-let run ?version ?build_info ?(argv=Array.to_list Sys.argv) ?extend t =
+let run
+      ?(version = DEFAULT_VERSION)
+      ?(build_info = DEFAULT_BUILDINFO)
+      ?(argv=Array.to_list Sys.argv)
+      ?extend
+      t =
   Exn.handle_uncaught ~exit:true (fun () ->
-    let t = Version_info.add t ?version ?build_info in
+    let t = Version_info.add t ~version ~build_info in
     let t = add_help_subcommands t in
     let (cmd, args) = handle_environment t ~argv in
     let (path, args, maybe_new_comp_cword) = process_args ~cmd ~args in
     try
       dispatch t Env.empty ~extend ~path ~args ~maybe_new_comp_cword
+        ~version ~build_info
     with
     | Failed_to_parse_command_line msg ->
       if Args.ends_in_complete args then
@@ -1715,6 +1760,11 @@ let run ?version ?build_info ?(argv=Array.to_list Sys.argv) ?extend t =
         exit 1
       end)
 ;;
+
+let summary = function
+  | Base  x -> x.summary
+  | Group x -> x.summary
+  | Exec  x -> x.summary
 
 module Spec = struct
   include Base.Spec
@@ -1745,10 +1795,10 @@ module Deprecated = struct
                (Base.Deprecated.flags_help ~display_help_flags:false base))
         else
           [base_help]
-      | Group { Group. summary; subcommands; readme=_ } ->
+      | Group {summary; subcommands; readme = _; body = _} ->
         (s ^ cmd, summary)
         :: begin
-          String.Map.to_alist subcommands
+          subcommands
           |> List.sort ~cmp:Base.Deprecated.subcommand_cmp_fst
           |> List.concat_map ~f:(fun (cmd', t) ->
             help_recursive_rec ~cmd:cmd' t new_s)
@@ -1758,6 +1808,9 @@ module Deprecated = struct
         []
     in
     help_recursive_rec ~cmd t s
+
+  let version = DEFAULT_VERSION
+  let build_info = DEFAULT_BUILDINFO
 
   let run t ~cmd ~args ~is_help ~is_help_rec ~is_help_rec_flags ~is_expand_dots =
     let path_strings = String.split cmd ~on: ' ' in
@@ -1772,9 +1825,8 @@ module Deprecated = struct
     let args = Args.of_list args in
     let t = add_help_subcommands t in
     dispatch t Env.empty ~path ~args ~extend:None ~maybe_new_comp_cword:None
+      ~version ~build_info
 
-  let version = DEFAULT_VERSION
-  let build_info = DEFAULT_BUILDINFO
 end
 
 (* testing claims made in the mli about order of evaluation and [flags_of_args_exn] *)

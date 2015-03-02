@@ -364,7 +364,7 @@ TEST_MODULE = struct
   TEST_UNIT =
     let calibrator = Calibrator.create () in
     let last = ref 0. in
-    for i = 1 to 1_000_000_000 do
+    for i = 1 to 10_000_000 do
       let cur = Time.to_float (to_time ~calibrator (now ())) in
       (* printf "%d %.9f\n%!" i (cur -. !last); *)
       if Float.(<) (cur -. !last) 0.

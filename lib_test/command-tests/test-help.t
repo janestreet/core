@@ -8,11 +8,13 @@ other subcommands along with their descriptions
   
   === subcommands ===
   
-    adverb   this command does more stuff
-    jab      this command does stuff here
-    jib      this command does stuff here
-    version  print version information
-    help     explain a given subcommand (perhaps recursively)
+    jab        this command does stuff here
+    jib        this command does stuff here
+    adverb     this command does more stuff
+    with-body  this command does more stuff
+    ordered    group with unsorted subcommands
+    version    print version information
+    help       explain a given subcommand (perhaps recursively)
   
 It can be used to show the entire command hierarchy
 
@@ -23,11 +25,17 @@ It can be used to show the entire command hierarchy
   
   === subcommands ===
   
+    jab          this command does stuff here
+    jib          this command does stuff here
     adverb       this command does more stuff
     . drolly     this command does stuff here
     . opposable  this command does stuff here
-    jab          this command does stuff here
-    jib          this command does stuff here
+    with-body    this command does more stuff
+    . drolly     this command does stuff here
+    . opposable  this command does stuff here
+    ordered      group with unsorted subcommands
+    . zzz        this command does stuff here
+    . aaa        this command does stuff here
     version      print version information
     help         explain a given subcommand (perhaps recursively)
   
@@ -40,6 +48,12 @@ And the flags for leaf commands.
   
   === subcommands and flags ===
   
+    jab               this command does stuff here
+    . [-ping]         make sure ping is doing the same stuff
+    . [-pong NAME]    which pong should do the stuff
+    jib               this command does stuff here
+    . [-ping]         make sure ping is doing the same stuff
+    . [-pong NAME]    which pong should do the stuff
     adverb            this command does more stuff
     . drolly          this command does stuff here
     . . [-ping]       make sure ping is doing the same stuff
@@ -47,12 +61,20 @@ And the flags for leaf commands.
     . opposable       this command does stuff here
     . . [-ping]       make sure ping is doing the same stuff
     . . [-pong NAME]  which pong should do the stuff
-    jab               this command does stuff here
-    . [-ping]         make sure ping is doing the same stuff
-    . [-pong NAME]    which pong should do the stuff
-    jib               this command does stuff here
-    . [-ping]         make sure ping is doing the same stuff
-    . [-pong NAME]    which pong should do the stuff
+    with-body         this command does more stuff
+    . drolly          this command does stuff here
+    . . [-ping]       make sure ping is doing the same stuff
+    . . [-pong NAME]  which pong should do the stuff
+    . opposable       this command does stuff here
+    . . [-ping]       make sure ping is doing the same stuff
+    . . [-pong NAME]  which pong should do the stuff
+    ordered           group with unsorted subcommands
+    . zzz             this command does stuff here
+    . . [-ping]       make sure ping is doing the same stuff
+    . . [-pong NAME]  which pong should do the stuff
+    . aaa             this command does stuff here
+    . . [-ping]       make sure ping is doing the same stuff
+    . . [-pong NAME]  which pong should do the stuff
     version           print version information
     . [-build-info]   print build info for this build
     . [-version]      print the version of this build
@@ -72,27 +94,41 @@ diffs of help output.
   
   === subcommands and flags ===
   
-    adverb                         this command does more stuff
-    adverb drolly                  this command does stuff here
-    adverb drolly [-ping]          make sure ping is doing the same stuff
-    adverb drolly [-pong NAME]     which pong should do the stuff
-    adverb opposable               this command does stuff here
-    adverb opposable [-ping]       make sure ping is doing the same stuff
-    adverb opposable [-pong NAME]  which pong should do the stuff
-    jab                            this command does stuff here
-    jab [-ping]                    make sure ping is doing the same stuff
-    jab [-pong NAME]               which pong should do the stuff
-    jib                            this command does stuff here
-    jib [-ping]                    make sure ping is doing the same stuff
-    jib [-pong NAME]               which pong should do the stuff
-    version                        print version information
-    version [-build-info]          print build info for this build
-    version [-version]             print the version of this build
-    help                           explain a given subcommand (perhaps
-                                   recursively)
-    help [-expand-dots]            expand subcommands in recursive help
-    help [-flags]                  show flags as well in recursive help
-    help [-recursive]              show subcommands of subcommands, etc.
+    jab                               this command does stuff here
+    jab [-ping]                       make sure ping is doing the same stuff
+    jab [-pong NAME]                  which pong should do the stuff
+    jib                               this command does stuff here
+    jib [-ping]                       make sure ping is doing the same stuff
+    jib [-pong NAME]                  which pong should do the stuff
+    adverb                            this command does more stuff
+    adverb drolly                     this command does stuff here
+    adverb drolly [-ping]             make sure ping is doing the same stuff
+    adverb drolly [-pong NAME]        which pong should do the stuff
+    adverb opposable                  this command does stuff here
+    adverb opposable [-ping]          make sure ping is doing the same stuff
+    adverb opposable [-pong NAME]     which pong should do the stuff
+    with-body                         this command does more stuff
+    with-body drolly                  this command does stuff here
+    with-body drolly [-ping]          make sure ping is doing the same stuff
+    with-body drolly [-pong NAME]     which pong should do the stuff
+    with-body opposable               this command does stuff here
+    with-body opposable [-ping]       make sure ping is doing the same stuff
+    with-body opposable [-pong NAME]  which pong should do the stuff
+    ordered                           group with unsorted subcommands
+    ordered zzz                       this command does stuff here
+    ordered zzz [-ping]               make sure ping is doing the same stuff
+    ordered zzz [-pong NAME]          which pong should do the stuff
+    ordered aaa                       this command does stuff here
+    ordered aaa [-ping]               make sure ping is doing the same stuff
+    ordered aaa [-pong NAME]          which pong should do the stuff
+    version                           print version information
+    version [-build-info]             print build info for this build
+    version [-version]                print the version of this build
+    help                              explain a given subcommand (perhaps
+                                      recursively)
+    help [-expand-dots]               expand subcommands in recursive help
+    help [-flags]                     show flags as well in recursive help
+    help [-recursive]                 show subcommands of subcommands, etc.
   
 Every subcommand which itself has subcommands has a help subcommand
 among them.  There is a -help flag that works
@@ -117,6 +153,21 @@ Every command in the hierarchy also takes a -help flag.
 For group commands, the -help flag behaves just like the help
 subcommand
 
+  $ demo_help.exe -help
+  this command does stuff
+  
+    demo_help.exe SUBCOMMAND
+  
+  === subcommands ===
+  
+    jab        this command does stuff here
+    jib        this command does stuff here
+    adverb     this command does more stuff
+    with-body  this command does more stuff
+    ordered    group with unsorted subcommands
+    version    print version information
+    help       explain a given subcommand (perhaps recursively)
+  
   $ demo_help.exe adverb -help
   this command does more stuff
   

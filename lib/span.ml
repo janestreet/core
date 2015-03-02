@@ -15,11 +15,10 @@ module Stable = struct
     end
 
     module type Like_a_float = sig
-      type t = private float with bin_io
+      type t with bin_io
       include Comparable.S_common  with type t := t
       include Comparable.With_zero with type t := t
       include Hashable_binable     with type t := t
-      include Robustly_comparable  with type t := t
       include Stringable           with type t := t
       include Floatable            with type t := t
       val (+)     : t -> t -> t
@@ -32,7 +31,9 @@ module Stable = struct
     end
 
     module T : sig
-      include Like_a_float
+      type t = private float with bin_io
+      include Like_a_float with type t := t
+      include Robustly_comparable  with type t := t
 
       module Constant : sig
         val nanoseconds_per_second : float
@@ -49,10 +50,17 @@ module Stable = struct
 
       val to_parts : t -> Parts.t
     end = struct
+      type t = float
+
       (* IF THIS REPRESENTATION EVER CHANGES, ENSURE THAT EITHER
          (1) all values serialize the same way in both representations, or
          (2) you add a new Time.Span version to stable.ml *)
-      include (Float : Like_a_float)
+      include (Float : Like_a_float with type t := t)
+
+      (* due to precision limitations in float we can't expect better than microsecond
+         precision *)
+      include Core_kernel.Float_robust_compare.Make
+          (struct let robust_comparison_tolerance = 1E-6 end)
 
       (* this prevents any worry about having these very common names redefined below and
          makes their usage within this module safer.  Constant is included at the very
@@ -146,11 +154,6 @@ module Stable = struct
         else sprintf "%ius" parts.us
       in
       if parts.sign = Float.Sign.Neg then "-" ^ s else s
-
-    (* due to precision limitations in float we can't expect better than microsecond
-       precision *)
-    include Core_kernel.Float_robust_compare.Make
-              (struct let robust_comparison_tolerance = 1E-6 end)
 
     let (/) t f = T.of_float ((t : T.t :> float) /. f)
     let (//) (f:T.t) (t:T.t) = (f :> float) /. (t :> float)
@@ -504,3 +507,7 @@ TEST =
   Set.equal (Set.of_list [hour])
     (Set.t_of_sexp (Sexp.List [Float.sexp_of_t (to_float hour)]))
 ;;
+
+(* We should be robustly equal within a microsecond *)
+TEST = (=.) zero microsecond
+TEST = not ((=.) zero (of_ns 1001.0))

@@ -62,7 +62,7 @@ let heap_sort data size =
 ;;
 
 let () =
-  Bench.bench
+  Command.run (Bench.make_command
     [
       add_remove_from_existing_heap Data.small_range 0;
       add_remove_from_existing_heap Data.small_range 10;
@@ -99,5 +99,5 @@ let () =
       heap_sort Data.ascending 10;
       heap_sort Data.ascending 1_000;
       heap_sort Data.ascending 100_000;
-    ]
+    ])
 ;;

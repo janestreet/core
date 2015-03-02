@@ -1,3 +1,104 @@
+## 112.24.00
+
+- Renamed `Dequeue` as `Deque`.
+- Added `Fdeque`, a functional deque (a double-ended `Fqueue`, or a functional `Deque`).
+- Changed `Fqueue`'s bin-io format, and added a stable type.
+
+  Deprecated deque-like functions in favor of `Fdeque`.
+
+- Added `Fheap`, a functional heap implementation based on pairing heaps.
+- Reverted the change to `Or_error`'s bin-io format made in 112.17, going back
+  to the format in 112.16 and before.
+- Added to `Unix.env` type a ``Replace_raw` variant, as used in `exec` and
+  `fork_exec`.
+- Added `Array.Permissioned` module, which has a permissioned array type and
+  permissioned versions of all the regular array functions.
+- Added `Date.week_number : t -> int`.
+- Added values to `Day_of_week`: `of_int_exn`, `iso_8601_weekday_number`,
+  `weekdays`.
+
+       val of_int_exn : int -> t
+       val iso_8601_weekday_number : t -> int
+       val weekdays : t list (- [ Mon; Tue; Wed; Thu; Fri ] *)
+
+- Switched `Float` IEEE functions to use `Int63.t` for the mantissa rather than
+  `int`, so they work on 32-bit platforms.
+- Added a `length` field to the `Map.t` record, making `Map.length` `O(1)`
+  rather than `O(n)`.
+- Moved a fragment of `Time_ns` from `Core` to `Core_kernel`, enough so that
+  `Async_kernel` can use `Core_kernel.Time_ns` and ultimately only depend on
+  `Core_kernel`.
+- Fixed compilation of `Time_ns` 32-bit Linux.
+- Added `Bounded_int_table.clear`.
+- Fixed the `module_name` passed to `Identifiable.Make` for a number of modules.
+
+  The module name must be an absolute module path.
+
+  Reported here: https://github.com/janestreet/core/issues/52
+
+- Added `Tuple.Binable` functor, for making binable tuples.
+- Sped up a `Time_stamp_counter` unit test.
+
+  `Time_stamp_counter` unit test has an 18s unit test, which seems
+  excessive.  Take a couple of orders of magnitude off the number of
+  iterations.
+
+- Added `Time_ns.pause`, whose implementation is the same as `Time.pause`.
+
+  This involved moving the `nanosleep` C code from `Core` to
+  `Core_kernel`.
+
+  This was necessary so that `Async_kernel` can pause without introducing
+  a dependence of Async on Core.
+
+- Made `Core_kernel.Time_ns.Alternate_sexp` use a similar format to `Core.Time_ns`.
+
+  This was needed so that `Async_kernel` can use a nice sexp format for
+  time spans.
+
+- Changed `Timing_wheel` implementation to use `Time_ns`, and moved to
+  `Core_kernel.Timing_wheel_ns`; made `Core.Timing_wheel` a wrapper around
+  `Timing_wheel_ns`.
+
+  Generalized the timing-wheel interface to be parametric in `Time`, so
+  that one interface applies to both `Timing_wheel` and
+  `Timing_wheel_ns`.
+
+  Generalized the timing-wheel unit tests to a functor,
+  `Timing_wheel_unit_tests.Make`, that is used to test both
+  `Timing_wheel_ns` and `Timing_wheel_float`.  Moved a few tests that
+  depend on `Time` and `Date` from the functor into
+  `timing_wheel_float_unit_tests.ml`.
+
+  Split out `Timing_wheel.Debug` into a separate functor,
+  `Timing_wheel_debug.Make`.
+
+  This was done in so that `Async_kernel` can depend only on
+  `Core_kernel` and not `Core`.
+
+- Added optional arguments to `Command.group`: `?body` and
+  `?preserve_subcommand_order`.
+
+  `preserve_subcommand_order : unit` causes subcommands to be in the order
+  they are specified, rather than sorted.
+
+  `body : (path:string list -> unit)` is called when no additional
+  arguments are passed.
+
+- Added accessor function `Command.summary : t -> string`.
+- Fixed a bug in `Time.Span` robust comparison.
+- Changed `Command`'s tab-completion bash code so that it is possible for
+  programs to return completions containing spaces.
+
+  Actually knowing when and how to do so is difficult, because of course there's escaping to
+  worry about. Adding helper functions to make that sort of thing manageable is left for
+  future work.
+
+- In `Command`, made the `-version` and `-build-info` flags work at the top
+  level when there are subcommands.
+- Added `Sequence.interleaved_cartesian_product`, which implements cartesian
+  product of potentially infinite sequences.
+
 ## 112.17.00
 
 - Deprecated the single-line files that simply `include` the

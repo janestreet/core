@@ -29,3 +29,11 @@ If you fail to specify -version or -build-info, you get both.
   $ demo_help.exe version
   ((username *) (hostname *) (kernel *) (build_date *) (build_time *) (x_library_inlining *) (ocaml_version *) (executable_path *) (build_system *)) (glob)
   (.*?) (re)
+
+The -version and -build-info flags also work for the top-level command.
+
+  $ demo_help.exe -build-info
+  ((username *) (hostname *) (kernel *) (build_date *) (build_time *) (x_library_inlining *) (ocaml_version *) (executable_path *) (build_system *)) (glob)
+
+  $ demo_help.exe -version
+  (.*?) (re)

@@ -271,35 +271,35 @@ module Exit_or_signal_or_stop : sig
   val or_error : t -> unit Or_error.t
 end
 
+(** [env] is used to control the environment of a child process, and can take three forms.
+    [`Replace_raw] replaces the entire environment with strings in the Unix style, like
+    ["VARIABLE_NAME=value"].  [`Replace] has the same effect as [`Replace_raw], but using
+    bindings represented as ["VARIABLE_NAME", "value"].  [`Extend] adds entries to the
+    existing environment rather than replacing the whole environment.
+
+    If [env] contains multiple bindings for the same variable, the last takes precedence.
+    In the case of [`Extend], bindings in [env] take precedence over the existing
+    environment. *)
 type env = [ `Replace of (string * string) list
            | `Extend of (string * string) list
+           | `Replace_raw of string list
            ]
 with sexp
 
 (** [exec ~prog ~args ?search_path ?env] execs [prog] with [args].  If [use_path = true]
     (the default) and [prog] doesn't contain a slash, then [exec] searches the [PATH]
-    environment variable for [prog].  If [env] is supplied, it is used as the environment
+    environment variable for [prog].  If [env] is supplied, it determines the environment
     when [prog] is executed.
 
     The first element in args should be the program itself; the correct way to call [exec]
     is:
 
-    {[    exec ~prog ~args:[ prog; arg1; arg2; ...] ()    ]}
-
-    [env] can take three forms.  [`Replace_raw] replaces the entire environment with
-    strings in the Unix style, like ["VARIABLE_NAME=value"].  [`Replace] has the same
-    effect as [`Replace_raw], but using bindings represented as ["VARIABLE_NAME",
-    "value"].  [`Extend] adds entries to the existing environment rather than replacing
-    the whole environment.
-
-    If [env] contains multiple bindings for the same variable, the last takes precedence.
-    In the case of [`Extend], bindings in [env] take precedence over the existing
-    environment. *)
+    {[    exec ~prog ~args:[ prog; arg1; arg2; ...] ()    ]} *)
 val exec
   :  prog:string
   -> args:string list
   -> ?use_path:bool  (** default is [true] *)
-  -> ?env:[ env | `Replace_raw of string list ]
+  -> ?env:env
   -> unit
   -> never_returns
 
@@ -309,7 +309,7 @@ val fork_exec
   :  prog:string
   -> args:string list
   -> ?use_path:bool  (** default is [true] *)
-  -> ?env:[ env | `Replace_raw of string list ]
+  -> ?env:env
   -> unit
   -> Pid.t
 

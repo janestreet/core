@@ -5,12 +5,10 @@
     the years 1823 and 2116 CE. *)
 open Core_kernel.Std
 
-(** [int]s are always immediate and so play nicely with the GC write barrier.
-    Unfortunately, [private int] is necessary for the compiler to optimize uses. *)
-type t = private Int63.t with typerep
+type t = Core_kernel.Time_ns.t with typerep
 
 module Span : sig
-  type t = private Int63.t with typerep
+  type t = Core_kernel.Time_ns.Span.t with typerep
 
   include Identifiable with type t := t
 
@@ -55,11 +53,15 @@ module Span : sig
   val to_int_sec : t -> int
 
   val zero : t
+  val min_value : t
+  val max_value : t
   val ( + ) : t -> t -> t
   val ( - ) : t -> t -> t
   val abs : t -> t
   val neg : t -> t
-  val scale : t -> float -> t
+  val scale     : t -> float -> t
+  val scale_int : t -> int   -> t
+  val div : t -> t -> int
   val ( / ) : t -> float -> t
   val ( // ) : t -> t -> float
 
@@ -88,7 +90,8 @@ module Span : sig
 
       To stabilize conversion, we treat [Time.t] as having 1us precision: [to_span] and
       [of_span] both round to the nearest 1us. *)
-  val to_span : t -> Time.Span.t
+  val to_span               : t -> Time.Span.t
+  val to_span_round_nearest : t -> Time.Span.t
   val of_span : Time.Span.t -> t
 
   include Robustly_comparable with type t := t
@@ -110,7 +113,7 @@ end
 module Option : sig
   type time
 
-  type t = private int with typerep
+  type t = private Int63.t with typerep
 
   include Identifiable with type t := t
 
@@ -165,6 +168,9 @@ include Identifiable with type t := t
 
 val epoch : t (** Unix epoch (1970-01-01 00:00:00 UTC) *)
 
+val min_value : t
+val max_value : t
+
 val now : unit -> t
 
 val add : t -> Span.t -> t
@@ -175,7 +181,8 @@ val abs_diff : t -> t -> Span.t
 val to_span_since_epoch : t -> Span.t
 val of_span_since_epoch : Span.t -> t
 
-val to_time : t -> Time.t
+val to_time               : t -> Time.t
+val to_time_round_nearest : t -> Time.t
 val of_time : Time.t -> t
 val to_string_fix_proto : [ `Utc | `Local ] -> t -> string
 val of_string_fix_proto : [ `Utc | `Local ] -> string -> t
@@ -186,6 +193,16 @@ val of_int63_ns_since_epoch : Int63.t ->      t
 (** Will raise on 32-bit platforms.  Consider [to_int63_ns_since_epoch] instead. *)
 val to_int_ns_since_epoch : t   -> int
 val of_int_ns_since_epoch : int -> t
+
+(** See [Core_kernel.Time_ns] *)
+val next_multiple
+  :  ?can_equal_after:bool  (** default is [false] *)
+  -> base:t
+  -> after:t
+  -> interval:Span.t
+  -> unit
+  -> t
+
 
 val of_date_ofday : zone:Zone.t -> Date.t -> Ofday.t -> t
 

@@ -1,12 +1,13 @@
 open Core.Std
 
-type pong = Foo | Bar | Baz
+type pong = Foo | Bar | Baz | Baa_baa
 
 let pong_arg =
   Command.Spec.Arg_type.of_alist_exn [
     ("foo", Foo);
     ("bar", Bar);
     ("baz", Baz);
+    ("baa\\ baa", Baa_baa);
   ]
 
 let readme () =
@@ -27,13 +28,29 @@ let basic =
        print_endline "doing stuff here!")
 
 let command =
-  Command.group ~summary:"this command does stuff" [
+  Command.group ~preserve_subcommand_order:() ~summary:"this command does stuff" [
     ("jab", basic);
     ("JIB", basic); (* Note: subcommand names are automatically lowercased *)
     ( "adverb"
     , Command.group ~summary:"this command does more stuff" ~readme [
       ("drolly", basic);
       ("opposable", basic);
+    ]);
+    ( "with-body"
+    , Command.group ~summary:"this command does more stuff"
+        ~body:(fun ~path ->
+          print_endline "BEGIN body code";
+          print_endline ("  path = (" ^ String.concat ~sep:" " path ^ ")");
+          print_endline "  (running this instead of reporting a missing subcommand)";
+          print_endline "END body code";
+        ) [
+        ("drolly", basic);
+        ("opposable", basic);
+      ]);
+    ("ordered"
+    , Command.group ~summary:"group with unsorted subcommands" ~preserve_subcommand_order:() [
+      ("zzz", basic);
+      ("aaa", basic);
     ]);
   ]
 

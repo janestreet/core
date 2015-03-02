@@ -780,6 +780,7 @@ let execvpe ~prog ~args ~env =
 type env =
   [ `Replace of (string * string) list
   | `Extend of (string * string) list
+  | `Replace_raw of string list
   ]
 with sexp
 
@@ -1606,18 +1607,7 @@ type process_times =
 }
 with sexp
 
-type tm =
-  Unix.tm = {
-  tm_sec   : int;
-  tm_min   : int;
-  tm_hour  : int;
-  tm_mday  : int;
-  tm_mon   : int;
-  tm_year  : int;
-  tm_wday  : int;
-  tm_yday  : int;
-  tm_isdst : bool;
-} with sexp
+include Core_kernel.Time_ns.Platform_specific
 
 let time = Unix.time
 let gettimeofday = Unix.gettimeofday
@@ -1631,8 +1621,6 @@ let alarm  = Unix.alarm
 let sleep  = Unix.sleep
 let times  = Unix.times
 let utimes = Unix.utimes
-
-external strftime : tm -> string -> string = "unix_strftime"
 
 external strptime : fmt:string -> string -> Unix.tm = "unix_strptime"
 TEST =
@@ -2539,7 +2527,7 @@ let set_out_channel_timeout oc snd_timeout =
   let s = descr_of_out_channel oc in
   setsockopt_float s SO_SNDTIMEO snd_timeout
 
-external nanosleep : float -> float = "unix_nanosleep" ;;
+external nanosleep : float -> float = "core_kernel_time_ns_nanosleep" ;;
 
 module Syslog = Syslog
 

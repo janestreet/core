@@ -30,16 +30,27 @@ val to_string_iso8601_basic : t -> string            (* YYYYMMDD *)
 
 val to_string_american : t -> string              (* MM/DD/YYYY *)
 
-val day : t -> int
+val day   : t -> int
 val month : t -> Month.t
-val year : t -> int
+val year  : t -> int
 
 val day_of_week : t -> Day_of_week.t
+
+(** Week of the year, from 1 to 53.  According to ISO 8601, weeks start on Monday, and the
+    first week of a year is the week that contains the first Thursday of the year.  Notice
+    that this means that dates near the end of the year can have week number 1, and dates
+    near the beginning of the year can have week number 52 or 53.
+
+    Warning: the triple (year, week number, week day) does not identify a date -- e.g.
+    2012-01-02 and 2012-12-31 are both Mondays of week 1. (However, if instead of the
+    year, you use the year of the nearest Thursday, then it does work.) *)
+val week_number : t -> int
 
 val is_weekend : t -> bool
 val is_weekday : t -> bool
 
-(* Monday through Friday are business days, unless they're a holiday *)
+(** Monday through Friday are business days, unless they're a holiday.  Use
+    [Pnl_db.Holidays.is_holiday] as a convenient holiday function. *)
 val is_business_day : t -> is_holiday:(t -> bool) -> bool
 
 (* [add_days t n] adds n days to [t] and returns the resulting date. *)
@@ -64,7 +75,7 @@ val add_weekdays : t -> int -> t
 
 (** [add_business_days t ~is_holiday n] returns a business day even when
     [n=0]. [add_business_days ~is_holiday:(fun _ -> false) ...] is the same as
-    [add_weekdays]. Use [Pnl_db.Calendar_events.is_holiday] as a conveninent holiday
+    [add_weekdays]. Use [Pnl_db.Holidays.is_holiday] as a convenient holiday
     function. *)
 val add_business_days : t -> is_holiday:(t -> bool) -> int -> t
 
