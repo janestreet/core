@@ -5,7 +5,9 @@ industrial user of OCaml.
 Core provides an overlay on the usual namespace, so the best way to
 use Core is to start your file with:
 
+``` ocaml
    open Core.Std
+```
 
 Please report bugs and feature requests on
 [GitHub](https://github.com/janestreet/core). For everything else you
