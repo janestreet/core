@@ -62,6 +62,10 @@ if cc config/test_recvmmsg.c -o /dev/null; then
     echo "DEFINE RECVMMSG" >> $OUT;
 fi
 
+if cc config/test_timerfd.c -o /dev/null; then
+    echo "DEFINE TIMERFD" >> $OUT;
+fi
+
 for i in 1 2 3; do
     if cc -I lib -DJSC_STAT_NANOSEC_METHOD=$i config/test_nanosecond_stat.c -o /dev/null 2> /dev/null; then
         echo "DEFINE STAT_NANOSEC_METHOD = $i" >> $OUT
