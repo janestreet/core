@@ -5,7 +5,7 @@ Name:             core
 Version:          112.24.00
 Synopsis:         Jane Street Capital's standard library overlay
 Authors:          Jane Street Group, LLC <opensource@janestreet.com>
-Copyrights:       (C) 2008-2013 Jane Street Group, LLC <opensource@janestreet.com>
+Copyrights:       (C) 2008-2013 Jane Street Group LLC <opensource@janestreet.com>
 Maintainers:      Jane Street Group, LLC <opensource@janestreet.com>
 License:          Apache-2.0
 LicenseFile:      LICENSE.txt
