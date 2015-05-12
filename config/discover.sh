@@ -67,7 +67,7 @@ if cc config/test_timerfd.c -o /dev/null; then
 fi
 
 for i in 1 2 3; do
-    if cc -I lib -DJSC_STAT_NANOSEC_METHOD=$i config/test_nanosecond_stat.c -o /dev/null 2> /dev/null; then
+    if cc -I src -DJSC_STAT_NANOSEC_METHOD=$i config/test_nanosecond_stat.c -o /dev/null 2> /dev/null; then
         echo "DEFINE STAT_NANOSEC_METHOD = $i" >> $OUT
         break
     fi

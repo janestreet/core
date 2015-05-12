@@ -3,7 +3,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "../lib/nanosecond_stat.h"
+#include "../src/nanosecond_stat.h"
 
 int main() {
   struct stat buf;

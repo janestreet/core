@@ -32,12 +32,12 @@ Flag "rt"
   Default$:    flag(rt_possible)
 
 PreConfCommand:  config/detect.sh
-PostConfCommand: config/discover.sh $ocamlc lib/core_config.mlh lib/core_config.h
+PostConfCommand: config/discover.sh $ocamlc src/core_config.mlh src/core_config.h
 
-PreDistCleanCommand: $rm lib/core_config.mlh lib/core_config.h
+PreDistCleanCommand: $rm src/core_config.mlh src/core_config.h
 
 Library core
-  Path:               lib
+  Path:               src
   FindlibName:        core
   Pack:               true
   Modules:            Bigbuffer,
@@ -303,7 +303,7 @@ Library core_top
   BuildDepends:       core,compiler-libs
 
 Executable test_runner
-  Path:               lib_test
+  Path:               test
   MainIs:             test_runner.ml
   Build$:             flag(tests)
   Custom:             true
@@ -314,4 +314,4 @@ Executable test_runner
 Test test_runner
   Run$:               flag(tests)
   Command:            $test_runner
-  WorkingDirectory:   lib_test
+  WorkingDirectory:   test

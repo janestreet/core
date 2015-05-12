@@ -11,9 +11,9 @@ let () =
       match lib.OASISTypes.lib_findlib_name with
         | Some "core" ->
             (cs, bs, lib, [
-                           "lib/ocaml_utils_macros.h";
-                           "lib/unix_utils.h";
-                           "lib/core_config.h"])
+                           "src/ocaml_utils_macros.h";
+                           "src/unix_utils.h";
+                           "src/core_config.h"])
         | _ ->
             (cs, bs, lib, [])
 ;;
