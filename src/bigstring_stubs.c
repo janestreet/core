@@ -681,8 +681,8 @@ CAMLprim value bigstring_sendto_nonblocking_no_sigpipe_stub(
     sendto(
       Int_val(v_fd), bstr, Long_val(v_len),
       nonblocking_no_sigpipe_flag, &addr.s_gen, addr_len);
-  if (ret == -1 && errno != EAGAIN && errno != EWOULDBLOCK)
-    uerror("sendto_nonblocking_no_sigpipe", Nothing);
+  if (ret == -1)
+    ret = -errno;
   return Val_long(ret);
 }
 

@@ -39,14 +39,7 @@ let concat p1 p2 =
   in
   collapse_trailing p1 ^ "/" ^ collapse_leading p2
 
-let (/^) = Filename.concat
-
-let (/@) root parts = List.fold parts ~init:root ~f:(fun acc part -> acc /^ part)
-
-  TEST = "/tmp" /^ "x" = "/tmp/x"
-  TEST = "/tmp" /^ "x" /^ "y" = "/tmp/x/y"
-  TEST = "/tmp" /@ ["x"; "y"] = "/tmp/x/y"
-  TEST = "/tmp" /@ [] = "/tmp"
+let (^/) = Filename.concat
 
 (* Finds the largest index i in [s] that is less than [from] and for which
    [f s.[i]]
@@ -202,7 +195,8 @@ let parts filename =
 
 let of_parts = function
   | [] -> failwith "Filename.of_parts: empty parts list"
-  | root :: rest -> root /@ rest
+  | root :: rest ->
+    List.fold rest ~init:root ~f:(fun acc part -> acc ^/ part)
 
 TEST_UNIT =
   List.iter
@@ -227,10 +221,3 @@ TEST = parts "./foo/."           = ["."; "foo"; "."]
 
 TEST = of_parts ["."; "."; "."] = "././."
 
-(* Note: keep this module at the bottom of the file with only definitions of the form [let
-   foo = foo], so it is painfully obvious that [Filename.O.foo] has the same meaning as
-   [Filename.foo] *)
-module O = struct
-  let (/^) = (/^)
-  let (/@) = (/@)
-end

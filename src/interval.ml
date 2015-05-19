@@ -6,15 +6,13 @@ let _ = (=)    (* turns off the unused open warning *)
 
 module Stable = struct
   module V1 = struct
-    (* THIS TYPE AND ITS SERIALIZATIONS SHOULD NEVER BE CHANGED - SEE stable.mli FOR MORE
-       DETAILS *)
     module T = struct
       type 'a t =
       | Interval of 'a * 'a
       | Empty
       with bin_io, of_sexp, variants, compare
 
-      type 'a interval = 'a t with bin_io, of_sexp
+      type 'a interval = 'a t with bin_io, of_sexp, compare
 
       let interval_of_sexp a_of_sexp sexp =
         try interval_of_sexp a_of_sexp sexp   (* for backwards compatibility *)
@@ -36,19 +34,19 @@ module Stable = struct
     open T
 
     module Float = struct
-      type t = float interval with sexp, bin_io
+      type t = float interval with sexp, bin_io, compare
     end
 
     module Int = struct
-      type t = int interval with sexp, bin_io
+      type t = int interval with sexp, bin_io, compare
     end
 
     module Time = struct
-      type t = Time.Stable.V1.t interval with sexp, bin_io
+      type t = Time.Stable.V1.t interval with sexp, bin_io, compare
     end
 
     module Ofday = struct
-      type t = Ofday.Stable.V1.t interval with sexp, bin_io
+      type t = Ofday.Stable.V1.t interval with sexp, bin_io, compare
     end
   end
 

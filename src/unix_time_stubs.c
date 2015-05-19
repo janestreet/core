@@ -9,7 +9,7 @@
 #include <caml/memory.h>
 #include <caml/callback.h>
 #include "ocaml_utils.h"
-
+#include "time_ns_stubs.h"
 /* Improved localtime implementation
 
    Addresses bug:
@@ -17,7 +17,6 @@
    http://caml.inria.fr/mantis/view.php?id=5193
  */
 
-#include <time.h>
 #include <errno.h>
 #include <stdio.h>
 
@@ -63,6 +62,26 @@ CAMLprim value core_timegm (value tm_val) {
 
   return caml_copy_double((double) res);
 }
+
+CAMLprim value core_time_ns_strftime(value v_tm, value v_fmt)
+{
+  struct tm tm;
+  tm.tm_sec  = Int_val(Field(v_tm, 0));
+  tm.tm_min  = Int_val(Field(v_tm, 1));
+  tm.tm_hour = Int_val(Field(v_tm, 2));
+  tm.tm_mday = Int_val(Field(v_tm, 3));
+  tm.tm_mon  = Int_val(Field(v_tm, 4));
+  tm.tm_year = Int_val(Field(v_tm, 5));
+  tm.tm_wday = Int_val(Field(v_tm, 6));
+  tm.tm_yday = Int_val(Field(v_tm, 7));
+  tm.tm_isdst = Bool_val(Field(v_tm, 8));
+#ifdef __USE_BSD
+  tm.tm_gmtoff = 0;  /* GNU extension, may not be visible everywhere */
+  tm.tm_zone = NULL; /* GNU extension, may not be visible everywhere */
+#endif
+  return core_kernel_time_ns_format_tm(&tm, v_fmt);
+}
+
 
 /*
  * These are the same functions as the ones in ocaml except that they call

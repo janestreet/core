@@ -6,8 +6,6 @@ module Core_time = Time
 module KSpan = Core_kernel.Time_ns.Span
 module KTime_ns = Core_kernel.Time_ns
 
-let round_nearest = KTime_ns.Platform_specific.internal_round_nearest
-
 (* This signature constraint is semi-temporary and serves to make the implementation more
    type-safe (so the compiler can help us more).  It would go away if we broke the
    implementation into multiple files. *)
@@ -22,7 +20,6 @@ module Span : sig
   val to_short_string : t -> string
   val randomize       : t -> percent : float -> t
   val to_span         : t -> Time.Span.t
-  val to_span_round_nearest : t -> Time.Span.t
   val of_span         : Time.Span.t -> t
 
   module Option : sig
@@ -50,41 +47,125 @@ module Span : sig
       type nonrec t = t with bin_io, compare, sexp
     end
   end
+
+  val random : unit -> t
 end = struct
   let half_microsecond = Int63.of_int 500
 
-
-  let to_span t =
-    Time.Span.of_us
-      Int63.(to_float ((KSpan.to_int63_ns t + half_microsecond) /  of_int 1000))
+  let nearest_microsecond t =
+    Int63.((KSpan.to_int63_ns t + half_microsecond) /% of_int 1000)
   ;;
 
-  let to_span_round_nearest t =
-    Time.Span.of_us
-      Int63.(to_float ((KSpan.to_int63_ns t + half_microsecond) /% of_int 1000))
-  ;;
+  let to_span t = Time.Span.of_us (Int63.to_float (nearest_microsecond t))
 
-  let min_span_value = to_span KSpan.min_value
-  let max_span_value = to_span KSpan.max_value
+  let min_kspan_value = to_span KSpan.min_value
+  let max_kspan_value = to_span KSpan.max_value
 
   let of_span s =
-    if Time.Span.( > ) s max_span_value
-    || Time.Span.( < ) s min_span_value
+    if Time.Span.( > ) s max_kspan_value
+    || Time.Span.( < ) s min_kspan_value
     then failwiths "Time_ns.Span does not support this span" s <:sexp_of< Time.Span.t >>;
+    (* Using [Time.Span.to_sec] (being the identity) so that
+       we make don't apply too many conversion
+        - Too many : `[Span.t] -> [a] -> [KSpan.t]`
+        - Only One : `[Span.t]==[a] -> [KSpan.t]`. *)
+    KSpan.of_sec_with_microsecond_precision (Time.Span.to_sec s)
+  ;;
+
+  let random () =
     KSpan.of_int63_ns
-      (Int63.( * ) (round_nearest (Time.Span.to_us s)) (Int63.of_int 1000))
+      (let open Int63 in
+       random KSpan.(to_int63_ns max_value)
+       + random (of_int 2)
+       - random KSpan.(to_int63_ns max_value)
+       - random KSpan.(to_int63_ns (neg (max_value + min_value)))
+       - random (of_int 2))
   ;;
 
-  (* check round trip *)
-  TEST_UNIT =
-    <:test_result< Time.Span.t >> ~expect:min_span_value
-      (to_span_round_nearest (of_span min_span_value))
-  ;;
+  (* TEST_UNIT "Time.Span.t -> Time_ns.Span.t round trip" =
+   *   let open Time.Span in
+   *   let sexp_of_t t = sexp_of_float (to_float t) in (\* more precise *\)
+   *   let time_spans =                                (\* touchstones *\)
+   *     min_kspan_value :: max_kspan_value :: Time.(diff (now ()) epoch)
+   *     :: Time.Span.([ zero; microsecond; millisecond; second; minute; hour; day;
+   *                     scale day 365.
+   *                   ])
+   *   in
+   *   let time_spans =                    (\* a few randoms *\)
+   *     time_spans
+   *     @ List.init 9
+   *         ~f:(fun _ -> Time.Span.(of_us (Random.float (to_us max_kspan_value))))
+   *   in
+   *   let time_spans =                    (\* a few multiples *\)
+   *     List.concat_map time_spans
+   *       ~f:(fun time_span ->
+   *         List.map (List.range (-3) 4)
+   *           ~f:(fun s -> Time.Span.scale time_span (float s)))
+   *   in
+   *   let time_spans =                    (\* a few microseconds around *\)
+   *     List.concat_map time_spans
+   *       ~f:(fun time_span ->
+   *         List.map (List.range (-3) 4)
+   *           ~f:(fun s -> Time.Span.(time_span + scale microsecond (float s))))
+   *   in
+   *   let time_spans =                    (\* nearest microsecond *\)
+   *     List.map time_spans
+   *       ~f:(fun s -> Time.Span.(of_us (Float.round_nearest (to_us s))))
+   *   in
+   *   let time_spans =                    (\* in range *\)
+   *     List.filter time_spans
+   *       ~f:(fun s -> Time.Span.(s >= min_kspan_value && s <= max_kspan_value))
+   *   in
+   *   List.iter time_spans
+   *     ~f:(fun expect ->
+   *       <:test_result< t >> ~expect (to_span (of_span expect)))
+   * ;; *)
 
-  TEST_UNIT =
-    <:test_result< Time.Span.t >> ~expect:max_span_value
-      (to_span_round_nearest (of_span max_span_value))
-  ;;
+  (* TEST_UNIT "Time_ns.Span.t -> Time.Span.t round trip" =
+   *   let open KSpan in
+   *   let open Alternate_sexp in
+   *   (\* The default sexp is not precise enough. *\)
+   *   let sexp_of_t kspan = Sexp.Atom (Int63.to_string (to_int63_ns kspan) ^ "ns") in
+   *   let kspans =                        (\* touchstones *\)
+   *     min_value :: max_value :: KTime_ns.(diff (now ()) epoch)
+   *     :: [ zero; microsecond; millisecond; second; minute; hour; day;
+   *          scale day 365.
+   *        ]
+   *   in
+   *   let kspans =                        (\* a few randoms *\)
+   *     kspans @ List.init 9 ~f:(fun _ -> of_us (Random.float (to_us max_value)))
+   *   in
+   *   let kspans =                        (\* a few multiples *\)
+   *     List.concat_map kspans
+   *       ~f:(fun kspan ->
+   *         List.filter_map (List.range (-3) 4)
+   *           (\* Some multiples will be out of range, which will cause [scale] to raise an
+   *              exception. *\)
+   *           ~f:(fun s -> Option.try_with (fun () -> scale kspan (float s))))
+   *   in
+   *   let kspans =                        (\* a few microseconds around *\)
+   *     List.concat_map kspans
+   *       ~f:(fun kspan ->
+   *         List.map (List.range (-3) 4)
+   *           ~f:(fun s -> kspan + scale microsecond (float s)))
+   *   in
+   *   let kspans =                        (\* nearest microsecond *\)
+   *     List.map kspans
+   *       ~f:(fun s -> of_int63_ns Int63.(nearest_microsecond s * of_int 1000))
+   *   in
+   *   let kspans =                        (\* in range *\)
+   *     List.filter kspans ~f:(fun s -> s >= min_value && s <= max_value)
+   *   in
+   *   List.iter kspans
+   *     ~f:(fun expect ->
+   *       let kspan = of_span (to_span expect) in
+   *       (\* Time.Span doesn't have full microsecond precision at the edge. *\)
+   *       if abs expect < of_sec 4426830820. then
+   *         <:test_result< t >> ~expect kspan
+   *       else
+   *         <:test_pred< t * t >> (fun (a, b) -> abs (a - b) <= microsecond)
+   *           (expect, kspan))
+   * ;; *)
 
   module T = struct
     include KSpan
@@ -177,11 +258,7 @@ include (KTime_ns
          end with module Span := Span)
 
 let to_time t =
-  Time.add Time.epoch (Span.to_span               (to_span_since_epoch t))
-;;
-
-let to_time_round_nearest t =
-  Time.add Time.epoch (Span.to_span_round_nearest (to_span_since_epoch t))
+  Time.add Time.epoch (Span.to_span (to_span_since_epoch t))
 ;;
 
 let min_time_value = to_time min_value
@@ -194,15 +271,107 @@ let of_time t =
   of_span_since_epoch (Span.of_span (Time.diff t Time.epoch))
 ;;
 
-(* check round trip *)
-TEST_UNIT =
-  <:test_result< Time.t >> ~expect:max_time_value
-    (to_time_round_nearest (of_time max_time_value))
+let random () =
+  KTime_ns.of_int63_ns_since_epoch
+    (let max_ns = to_int63_ns_since_epoch max_value in
+     let open Int63 in
+     random max_ns
+     + random (of_int 2)
+     - random max_ns
+     - random (neg (max_ns + to_int63_ns_since_epoch KTime_ns.min_value))
+     - random (of_int 2))
 ;;
 
-TEST_UNIT =
-  <:test_result< Time.t >> ~expect:min_time_value
-    (to_time_round_nearest (of_time min_time_value))
+TEST_UNIT "Time.t -> Time_ns.t round trip" =
+  let open Time in
+  let sexp_of_t t = <:sexp_of< t * float >> (t, to_float t) in (* more precise *)
+
+  let us_since_epoch time = Time.(Span.to_us (diff time epoch)) in
+  let min_us_since_epoch = us_since_epoch min_time_value in
+  let max_us_since_epoch = us_since_epoch max_time_value in
+
+  let time_of_us_since_epoch us_since_epoch =
+    Time.(add epoch (Span.of_us (Float.round_nearest us_since_epoch)))
+  in
+
+  let times =                           (* touchstones *)
+    [ min_time_value; Time.epoch; Time.now (); max_time_value ]
+  in
+  let times =                           (* a few units around *)
+    List.concat_map times
+      ~f:(fun time ->
+        List.concat_map
+          Time.Span.([ microsecond; millisecond; second; minute; hour; day;
+                       scale day 365.
+                     ])
+          ~f:(fun unit ->
+            List.map (List.map ~f:float (List.range (-3) 4))
+              ~f:(fun s -> Time.add time (Time.Span.scale unit s))))
+  in
+  let times =                           (* a few randoms *)
+    times @
+    List.init 9
+      ~f:(fun _ ->
+        Time.add Time.epoch
+          (Time.Span.of_us
+             (min_us_since_epoch
+              +. Random.float (max_us_since_epoch -. min_us_since_epoch))))
+  in
+  let times =                           (* nearest microsecond *)
+    List.map times
+      ~f:(fun time ->
+        time_of_us_since_epoch
+          (Float.round_nearest Time.(Span.to_us (diff time epoch))))
+  in
+  let times =                           (* in range *)
+    List.filter times
+      ~f:(fun time -> Time.(time >= min_time_value && time <= max_time_value))
+  in
+  List.iter times
+    ~f:(fun expect ->
+      let time = to_time (of_time expect) in
+      (* We don't have full microsecond precision at the far end of the range. *)
+      if expect < Time.of_string "2107-01-01 00:00:00" then
+        <:test_result< t >> ~expect time
+      else
+        <:test_pred< t * t >>
+          (fun (a, b) -> Span.(abs (diff a b) <= microsecond))
+          (expect, time))
+;;
+
+TEST_UNIT "Time_ns.t -> Time.t round trip" =
+  let open Alternate_sexp in
+  let ts =                              (* touchstones *)
+    [ min_value; epoch; now (); max_value ]
+  in
+  let ts =                              (* a few units around *)
+    List.concat_map ts
+      ~f:(fun time ->
+        List.concat_map
+          Span.([ microsecond; millisecond; second; minute; hour; day;
+                  scale day 365.
+                ])
+          ~f:(fun unit ->
+            List.map (List.map ~f:float (List.range (-3) 4))
+              ~f:(fun s -> add time (Span.scale unit s))))
+  in
+  let ts =                              (* a few randoms *)
+    ts @ List.init 9 ~f:(fun _ -> random ())
+  in
+  let ts =                              (* nearest microsecond since epoch *)
+    List.map ts
+      ~f:(fun time ->
+        KTime_ns.of_int63_ns_since_epoch
+          (let open Int63 in
+           (KTime_ns.to_int63_ns_since_epoch time + of_int 500)
+           /% of_int 1000
+           * of_int 1000))
+  in
+  let ts =                              (* in range *)
+    List.filter ts ~f:(fun t -> t >= min_value && t <= max_value)
+  in
+  List.iter ts
+    ~f:(fun expect -> <:test_result< t >> ~expect (of_time (to_time expect)))
 ;;
 
 let sexp_of_t (t : t) : Sexp.t = Time.sexp_of_t (to_time t)

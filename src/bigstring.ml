@@ -178,13 +178,8 @@ let send_nonblocking_no_sigpipe fd ?(pos = 0) ?len bstr =
   unsafe_send_nonblocking_no_sigpipe fd ~pos ~len bstr
 
 external unsafe_sendto_nonblocking_no_sigpipe
-  : file_descr -> pos : int -> len : int -> t -> sockaddr -> int
+  : file_descr -> pos : int -> len : int -> t -> sockaddr -> Syscall_result.Int.t
   = "bigstring_sendto_nonblocking_no_sigpipe_stub"
-
-let unsafe_sendto_nonblocking_no_sigpipe fd ~pos ~len buf sockaddr =
-  let res = unsafe_sendto_nonblocking_no_sigpipe fd ~pos ~len buf sockaddr in
-  if res = -1 then None
-  else Some res
 
 let sendto_nonblocking_no_sigpipe fd ?(pos = 0) ?len bstr sockaddr =
   let len = get_opt_len bstr ~pos len in

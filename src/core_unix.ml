@@ -6,6 +6,8 @@ INCLUDE "core_config.mlh"
 
 open Core_kernel.Std
 
+module Time_ns = Core_kernel.Time_ns_alternate_sexp
+
 module Unix = UnixLabels
 
 open Sexplib.Conv
@@ -643,10 +645,7 @@ module Error = struct
     | EUNKNOWNERR of int  (** Unknown error *)
   with sexp
 
-  let of_system_int int =
-    try unix_error int "" ""
-    with Unix_error (t, _, _) -> t
-  ;;
+  let of_system_int ~errno = Unix_error.of_errno errno
 
   let message = Unix.error_message
 end
@@ -1574,7 +1573,7 @@ module Select_fds = struct
   let empty = { read = []; write = []; except = [] }
 end
 
-type select_timeout = [ `Never | `Immediately | `After of float (* seconds *) ]
+type select_timeout = [ `Never | `Immediately | `After of Time_ns.Span.t ]
 with sexp_of
 
 let select ?restart ~read ~write ~except ~timeout () =
@@ -1583,17 +1582,18 @@ let select ?restart ~read ~write ~except ~timeout () =
       match timeout with
       | `Never -> -1.
       | `Immediately -> 0.
-      | `After seconds ->
-        if seconds < 0. then raise (Unix_error (EINVAL, "negative timeout", ""));
-        seconds
+      | `After span ->
+        if Time_ns.Span.( < ) span Time_ns.Span.zero
+        then 0.
+        else Time_ns.Span.to_sec span
     in
     let read, write, except = Unix.select ~read ~write ~except ~timeout in
-    { Select_fds.read = read; write = write; except = except })
+    { Select_fds. read; write; except })
     (fun () ->
-      [("read", sexp_of_list File_descr.sexp_of_t read);
-       ("write", sexp_of_list File_descr.sexp_of_t write);
-       ("except", sexp_of_list File_descr.sexp_of_t except);
-       ("timeout", <:sexp_of< select_timeout >> timeout)])
+       [("read", sexp_of_list File_descr.sexp_of_t read);
+        ("write", sexp_of_list File_descr.sexp_of_t write);
+        ("except", sexp_of_list File_descr.sexp_of_t except);
+        ("timeout", <:sexp_of< select_timeout >> timeout)])
 ;;
 
 let pause = Unix.pause
@@ -1607,11 +1607,28 @@ type process_times =
 }
 with sexp
 
-include Core_kernel.Time_ns.Platform_specific
+
+type tm =
+    Unix.tm = {
+    (* DON'T CHANGE THIS RECORD WITHOUT UPDATING unix_time_stubs.c!!!
+
+       The compiler will notice if the runtime's Unix.tm changes, and we must then update
+       unix_time_stubs.c, not just this copy of the definition. *)
+    tm_sec   : int;
+    tm_min   : int;
+    tm_hour  : int;
+    tm_mday  : int;
+    tm_mon   : int;
+    tm_year  : int;
+    tm_wday  : int;
+    tm_yday  : int;
+    tm_isdst : bool;
+  } with sexp
 
 let time = Unix.time
 let gettimeofday = Unix.gettimeofday
 
+external strftime : Unix.tm -> string -> string = "core_time_ns_strftime"
 external localtime : float -> Unix.tm = "core_localtime"
 external gmtime    : float -> Unix.tm = "core_gmtime"
 external timegm    : Unix.tm -> float = "core_timegm" (* the inverse of gmtime *)
@@ -1623,6 +1640,15 @@ let times  = Unix.times
 let utimes = Unix.utimes
 
 external strptime : fmt:string -> string -> Unix.tm = "unix_strptime"
+
+TEST_UNIT "record format hasn't changed" =
+  (* Exclude the time zone (%Z) because it depends on the location. *)
+  <:test_result< string >> ~expect:"1907-07-05 04:03:08; wday=2; yday=010"
+    (strftime
+       { tm_sec = 8; tm_min = 3; tm_hour = 4; tm_mday = 5; tm_mon = 6; tm_year = 7;
+         tm_wday = 2; tm_yday = 9; tm_isdst = true }
+       "%F %T; wday=%u; yday=%j")
+
 TEST =
   let res = strptime ~fmt:"%Y-%m-%d %H:%M:%S" "2012-05-23 10:14:23" in
   let res =
@@ -1964,130 +1990,140 @@ end
       - : string = "2a03:2880:10:1f03:face:b00c:0:25"
 *)
 module Cidr = struct
-  type t =
-    {
-      address : int32; (* IPv4 only *)
-      bits    : int;
-    }
-  with sexp, fields, bin_io
+  module T0 = struct
+    type t =
+      {
+        address : int32; (* IPv4 only *)
+        bits    : int;
+      }
+    with fields, bin_io, compare
 
-  let base_address t =
-    Inet_addr.inet4_addr_of_int32 t.address
-
-  let of_string s =
-    match String.split ~on:'/' s with
-    | [s_inet_address ; s_bits] ->
-      let address =
-        Inet_addr.of_string s_inet_address
-        |! Inet_addr.inet4_addr_to_int32_exn
-      in
-      let bits = Int.of_string s_bits in
+    let create ~base_address ~bits =
       if bits < 0 || bits > 32 then
         failwithf "%d is an invalid number of mask bits (0 <= bits <= 32)" bits ();
-      { address; bits }
-    | _ -> failwithf "Couldn't parse '%s' into a CIDR address/bits pair" s ()
-  let to_string t =
-    let addr = Inet_addr.inet4_addr_of_int32 t.address in
-    sprintf "%s/%d" (Inet_addr.to_string addr) t.bits
+      { address = Inet_addr.inet4_addr_to_int32_exn base_address; bits }
 
-  (* Serialize to/of "a.b.c.d/x" instead of "((address abcd)(bits x))". *)
-  let t_of_sexp sexp =
-    Sexp.to_string sexp |! of_string
-  let sexp_of_t t =
-    to_string t |! Sexp.of_string
+    let base_address t =
+      Inet_addr.inet4_addr_of_int32 t.address
 
-  let does_match t address =
-    let cidr_to_block c =
-      let baseip = c.address in
-      let shift = 32 - c.bits in
-      Int32.(shift_left (shift_right_logical baseip shift) shift)
-    in
-    match
-      Option.try_with (fun () ->
-        Inet_addr.inet4_addr_to_int32_exn address)
-    with
-    | None -> false (* maybe they tried to use IPv6 *)
-    | Some address -> Int32.equal (cidr_to_block t) (cidr_to_block {t with address})
-  TEST = does_match (of_string "127.0.0.1/32") Inet_addr.localhost
-  TEST = does_match (of_string "127.0.0.0/8") Inet_addr.localhost
-  TEST = does_match (of_string "0.0.0.0/32") Inet_addr.bind_any
-  TEST = does_match (of_string "0.0.0.0/0") Inet_addr.bind_any
+    let of_string s =
+      match String.split ~on:'/' s with
+      | [s_inet_address ; s_bits] ->
+        create
+          ~base_address:(Inet_addr.of_string s_inet_address)
+          ~bits:(Int.of_string s_bits)
+      | _ -> failwithf "Couldn't parse '%s' into a CIDR address/bits pair" s ()
 
-  let multicast = of_string "224.0.0.0/4"
-  TEST = does_match multicast (Inet_addr.of_string "224.0.0.1")
-  TEST = does_match multicast (Inet_addr.of_string "239.0.0.1")
-  TEST = not (does_match multicast (Inet_addr.of_string "240.0.0.1"))
+    let to_string t =
+      let addr = Inet_addr.inet4_addr_of_int32 t.address in
+      sprintf "%s/%d" (Inet_addr.to_string addr) t.bits
 
-  TEST_MODULE = struct
-    let match_strings c a =
-      let c = of_string c in
-      let a = Inet_addr.of_string a in
-      does_match c a
+    let netmask_of_bits t =
+      Int32.shift_left 0xffffffffl (32 - t.bits) |> Inet_addr.inet4_addr_of_int32
 
-    let is_multicast a =
-      let a = Inet_addr.of_string a in
-      does_match multicast a
+    let does_match t address =
+      let cidr_to_block c =
+        let baseip = c.address in
+        let shift = 32 - c.bits in
+        Int32.(shift_left (shift_right_logical baseip shift) shift)
+      in
+      match
+        Option.try_with (fun () ->
+          Inet_addr.inet4_addr_to_int32_exn address)
+      with
+      | None -> false (* maybe they tried to use IPv6 *)
+      | Some address -> Int32.equal (cidr_to_block t) (cidr_to_block {t with address})
 
-    let of_string_ok s =
-      try ignore (of_string s : t); true
-      with _ -> false
+    TEST = does_match (of_string "127.0.0.1/32") Inet_addr.localhost
+    TEST = does_match (of_string "127.0.0.0/8") Inet_addr.localhost
+    TEST = does_match (of_string "0.0.0.0/32") Inet_addr.bind_any
+    TEST = does_match (of_string "0.0.0.0/0") Inet_addr.bind_any
 
-    let of_string_err = Fn.compose not of_string_ok
+    let multicast = of_string "224.0.0.0/4"
+    TEST = does_match multicast (Inet_addr.of_string "224.0.0.1")
+    TEST = does_match multicast (Inet_addr.of_string "239.0.0.1")
+    TEST = not (does_match multicast (Inet_addr.of_string "240.0.0.1"))
 
-    (* Can we parse some random correct netmasks? *)
-    TEST = of_string_ok "10.0.0.0/8"
-    TEST = of_string_ok "172.16.0.0/12"
-    TEST = of_string_ok "192.168.0.0/16"
-    TEST = of_string_ok "192.168.13.0/24"
-    TEST = of_string_ok "172.25.42.0/18"
+    TEST_MODULE = struct
+      let match_strings c a =
+        let c = of_string c in
+        let a = Inet_addr.of_string a in
+        does_match c a
 
-    (* Do we properly fail on some nonsense? *)
-    TEST = of_string_err "172.25.42.0"
-    TEST = of_string_err "172.25.42.0/35"
-    TEST = of_string_err "172.25.42.0/sandwich"
-    TEST = of_string_err "sandwich/sandwich"
-    TEST = of_string_err "sandwich/39"
-    TEST = of_string_err "sandwich/16"
-    TEST = of_string_err "sandwich"
-    TEST = of_string_err "172.52.43/16"
-    TEST = of_string_err "172.52.493/16"
+      let is_multicast a =
+        let a = Inet_addr.of_string a in
+        does_match multicast a
 
-    (* Basic match tests *)
-    TEST = match_strings "10.0.0.0/8" "9.255.255.255"  = false
-    TEST = match_strings "10.0.0.0/8" "10.0.0.1"       = true
-    TEST = match_strings "10.0.0.0/8" "10.34.67.1"     = true
-    TEST = match_strings "10.0.0.0/8" "10.255.255.255" = true
-    TEST = match_strings "10.0.0.0/8" "11.0.0.1"       = false
+      let of_string_ok s =
+        try ignore (of_string s : t); true
+        with _ -> false
 
-    TEST = match_strings "172.16.0.0/12" "172.15.255.255" = false
-    TEST = match_strings "172.16.0.0/12" "172.16.0.0"     = true
-    TEST = match_strings "172.16.0.0/12" "172.31.255.254" = true
+      let of_string_err = Fn.compose not of_string_ok
 
-    TEST = match_strings "172.25.42.0/24" "172.25.42.1"   = true
-    TEST = match_strings "172.25.42.0/24" "172.25.42.255" = true
-    TEST = match_strings "172.25.42.0/24" "172.25.42.0"   = true
+      (* Can we parse some random correct netmasks? *)
+      TEST = of_string_ok "10.0.0.0/8"
+      TEST = of_string_ok "172.16.0.0/12"
+      TEST = of_string_ok "192.168.0.0/16"
+      TEST = of_string_ok "192.168.13.0/24"
+      TEST = of_string_ok "172.25.42.0/18"
 
-    TEST = match_strings "172.25.42.0/16" "172.25.0.1"     = true
-    TEST = match_strings "172.25.42.0/16" "172.25.255.254" = true
-    TEST = match_strings "172.25.42.0/16" "172.25.42.1"    = true
-    TEST = match_strings "172.25.42.0/16" "172.25.105.237" = true
+      (* Do we properly fail on some nonsense? *)
+      TEST = of_string_err "172.25.42.0"
+      TEST = of_string_err "172.25.42.0/35"
+      TEST = of_string_err "172.25.42.0/sandwich"
+      TEST = of_string_err "sandwich/sandwich"
+      TEST = of_string_err "sandwich/39"
+      TEST = of_string_err "sandwich/16"
+      TEST = of_string_err "sandwich"
+      TEST = of_string_err "172.52.43/16"
+      TEST = of_string_err "172.52.493/16"
 
-    (* And some that should fail *)
-    TEST = match_strings "172.25.42.0/24" "172.26.42.47"  = false
-    TEST = match_strings "172.25.42.0/24" "172.26.42.208" = false
+      (* Basic match tests *)
+      TEST = match_strings "10.0.0.0/8" "9.255.255.255"  = false
+      TEST = match_strings "10.0.0.0/8" "10.0.0.1"       = true
+      TEST = match_strings "10.0.0.0/8" "10.34.67.1"     = true
+      TEST = match_strings "10.0.0.0/8" "10.255.255.255" = true
+      TEST = match_strings "10.0.0.0/8" "11.0.0.1"       = false
 
-    (* Multicast tests *)
-    TEST = is_multicast "224.0.0.0"       = true
-    TEST = is_multicast "224.0.0.1"       = true
-    TEST = is_multicast "239.255.255.255" = true
-    TEST = is_multicast "240.0.0.0"       = false
-    TEST = is_multicast "223.0.0.1"       = false
-    TEST = is_multicast "226.128.255.16"  = true
-    TEST = is_multicast "233.128.255.16"  = true
-    TEST = is_multicast "155.246.1.20"    = false
-    TEST = is_multicast "0.0.0.0"         = false
-    TEST = is_multicast "127.0.0.1"       = false
+      TEST = match_strings "172.16.0.0/12" "172.15.255.255" = false
+      TEST = match_strings "172.16.0.0/12" "172.16.0.0"     = true
+      TEST = match_strings "172.16.0.0/12" "172.31.255.254" = true
+
+      TEST = match_strings "172.25.42.0/24" "172.25.42.1"   = true
+      TEST = match_strings "172.25.42.0/24" "172.25.42.255" = true
+      TEST = match_strings "172.25.42.0/24" "172.25.42.0"   = true
+
+      TEST = match_strings "172.25.42.0/16" "172.25.0.1"     = true
+      TEST = match_strings "172.25.42.0/16" "172.25.255.254" = true
+      TEST = match_strings "172.25.42.0/16" "172.25.42.1"    = true
+      TEST = match_strings "172.25.42.0/16" "172.25.105.237" = true
+
+      (* And some that should fail *)
+      TEST = match_strings "172.25.42.0/24" "172.26.42.47"  = false
+      TEST = match_strings "172.25.42.0/24" "172.26.42.208" = false
+
+      (* Multicast tests *)
+      TEST = is_multicast "224.0.0.0"       = true
+      TEST = is_multicast "224.0.0.1"       = true
+      TEST = is_multicast "239.255.255.255" = true
+      TEST = is_multicast "240.0.0.0"       = false
+      TEST = is_multicast "223.0.0.1"       = false
+      TEST = is_multicast "226.128.255.16"  = true
+      TEST = is_multicast "233.128.255.16"  = true
+      TEST = is_multicast "155.246.1.20"    = false
+      TEST = is_multicast "0.0.0.0"         = false
+      TEST = is_multicast "127.0.0.1"       = false
+    end
   end
+
+  module T1 = struct
+    include T0
+    (* Serialize to/of "a.b.c.d/x" instead of "((address abcd)(bits x))". *)
+    include Sexpable.Of_stringable (T0)
+  end
+
+  include T1
+  include Comparable.Make_binable (T1)
 end
 
 module Protocol = struct
@@ -2531,4 +2567,17 @@ external nanosleep : float -> float = "core_kernel_time_ns_nanosleep" ;;
 
 module Syslog = Syslog
 
-(* vim: set filetype=ocaml : *)
+let () = Sexplib_unix.Sexplib_unix_conv.linkme
+
+(* Test the Sexplib_unix exn converter was added correctly *)
+TEST_UNIT "Sexplib_unix sexp converter" =
+  let open Sexp.O in
+  match sexp_of_exn (Unix.Unix_error (E2BIG, "loc", "arg")) with
+  | (List [ Atom "Unix.Unix_error"
+          ; Atom _human_readable_message
+          ; Atom "loc"
+          ; Atom "arg"
+          ]) -> ()
+  | something_else ->
+      failwithf "sexp_of_exn (Unix_error ...) gave %s" (Sexp.to_string something_else) ()
+;;

@@ -8,17 +8,17 @@ type args = {
 } with sexp_of
 
 let command =
-  Command.basic ~summary:"child half of Command.exec demo"
+  Command.basic' ~summary:"child part of Command.exec demo"
     ~readme:(fun () ->
       "readme text. readme text. readme text. readme text. readme text. readme\n\
-      text. readme text. readme text. readme text. readme text. readme text. readme\n\
-      text. readme text. readme text.")
-    Command.Spec.(
-      empty
-      +> flag "date" (required date) ~doc:"DATE a required date argument"
-      +> flag "file" (optional file) ~doc:"FILE an optional file argument"
-      +> anon ("NUM" %: int)
-      +> anon (maybe ("BOOL" %: bool))
+       text. readme text. readme text. readme text. readme text. readme text. readme\n\
+       text. readme text. readme text.")
+    Command.Param.(
+      flag "date" (required date) ~doc:"DATE a required date argument"
+      @> flag "file" (optional file) ~doc:"FILE an optional file argument"
+      @> anon ("NUM" %: int)
+      @> anon (maybe ("BOOL" %: bool))
+      @> nil
     )
     (fun date file num bool () ->
        printf !"Entering main: %{Sexp}\n" (sexp_of_args {date; file; num; bool})

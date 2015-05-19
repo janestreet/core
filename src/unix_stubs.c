@@ -445,9 +445,9 @@ static value core_stat_aux_64(struct stat64 *buf)
   CAMLlocal5(atime, mtime, ctime, offset, v);
 
   #include "nanosecond_stat.h"
-  atime = caml_copy_double((double) buf->st_atime + (buf->NSEC(a) / 1000000000.0f));
-  mtime = caml_copy_double((double) buf->st_mtime + (buf->NSEC(m) / 1000000000.0f));
-  ctime = caml_copy_double((double) buf->st_ctime + (buf->NSEC(c) / 1000000000.0f));
+  atime = caml_copy_double((double) buf->st_atime + (buf->NSEC(a) / 1000000000.0));
+  mtime = caml_copy_double((double) buf->st_mtime + (buf->NSEC(m) / 1000000000.0));
+  ctime = caml_copy_double((double) buf->st_ctime + (buf->NSEC(c) / 1000000000.0));
   #undef NSEC
 
   offset = Val_file_offset(buf->st_size);

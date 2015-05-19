@@ -100,6 +100,9 @@ val os_type : string
     bits: 32 or 64. *)
 val word_size : int
 
+(** Whether the machine currently executing the Caml program is big-endian. *)
+val big_endian : bool
+
 (** Exception raised on interactive interrupt if {!Sys.catch_break} is on. *)
 exception Break
 

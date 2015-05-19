@@ -32,6 +32,10 @@ module type S = sig
   *)
   val get : t -> key -> value
 
+  (* O(1) *)
+  val first_knot : t -> (key * value) option
+  val last_knot  : t -> (key * value) option
+
   (* O(n) *)
   val to_knots : t -> (key * value) list
 

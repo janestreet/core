@@ -6,23 +6,25 @@
    [Time_ns] and [Time_ns.Span] values in this implementation will be a multiple of one
    microsecond.  Because of this, they satisfy:
 
-   {[
-     Time_ns.of_time      (Time_ns.to_time      time_ns)      = time_ns
-     Time_ns.Span.of_span (Time_ns.Span.to_span time_ns_span) = time_ns_span
-   ]}
+   - [Time_ns.of_time      (Time_ns.to_time      time_ns)      = time_ns]
+   - [Time_ns.Span.of_span (Time_ns.Span.to_span time_ns_span) = time_ns_span]
 *)
 
+module Time_ns_in_this_directory = Time_ns
 open Core_kernel.Std
+module Time_ns = Time_ns_in_this_directory
 
 module Time = Time (* for the .mli *)
 
+module Interval_num   = Timing_wheel_ns.Interval_num
 module Level_bits     = Timing_wheel_ns.Level_bits
 module Priority_queue = Timing_wheel_ns.Priority_queue
 
-let to_span = Time_ns.Span.to_span_round_nearest
-let to_time = Time_ns.to_time_round_nearest
+let to_span = Time_ns.Span.to_span
+let to_time = Time_ns.to_time
 
 type 'a t = 'a Timing_wheel_ns.t with sexp_of
+type 'a t_now = 'a t with sexp_of
 type 'a timing_wheel = 'a t
 
 module Alarm = struct
@@ -109,6 +111,10 @@ let now t = to_time (Timing_wheel_ns.now t)
 let now_interval_num = Timing_wheel_ns.now_interval_num
 
 let remove = Timing_wheel_ns.remove
+
+let reschedule t alarm ~at = Timing_wheel_ns.reschedule t alarm ~at:(Time_ns.of_time at)
+
+let reschedule_at_interval_num = Timing_wheel_ns.reschedule_at_interval_num
 
 let start t = to_time (Timing_wheel_ns.start t)
 

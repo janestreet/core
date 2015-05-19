@@ -5,7 +5,7 @@ let exec_child =
     ~path_to_exe:(`Relative_to_me "demo_child.exe") ()
 
 let command =
-  Command.group ~summary:"parent half of Command.exec demo" [
+  Command.group ~summary:"parent part of Command.exec demo" [
     ("child", exec_child)
   ]
 

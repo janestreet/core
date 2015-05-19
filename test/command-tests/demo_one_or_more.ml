@@ -1,11 +1,11 @@
 open Core.Std
 
 let command =
-  Command.basic ~summary:"Command.Spec.{one_or_more,non_empty_sequence} demo"
-    Command.Spec.(
-      empty
-      +> flag "foo" (one_or_more string) ~doc:"X required listed flag"
-      +> anon (non_empty_sequence ("Y" %: string))
+  Command.basic' ~summary:"Command.Spec.{one_or_more,non_empty_sequence} demo"
+    Command.Param.(
+      flag "foo" (one_or_more string) ~doc:"X required listed flag"
+      @> anon (non_empty_sequence ("Y" %: string))
+      @> nil
     )
     (fun xs ys () ->
        let info name zs =

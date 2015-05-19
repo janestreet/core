@@ -36,6 +36,14 @@ module Make () = struct
     Result.ok_exn result_or_exn;
   ;;
 
+  let debug_blit name ~src ~dst a sexp_of_a sexp_of_ret f =
+    debug name [src] (dst, a) <:sexp_of< (_, _) t * a >> <:sexp_of< ret >> (fun () ->
+      (* Check dst's invariant separately because it has a different type. *)
+      let finally () = if !check_invariant then invariant ignore ignore dst in
+      finally ();
+      protect ~finally ~f)
+  ;;
+
   let read_only t =
     debug "read_only" [t] () sexp_of_unit <:sexp_of< (_, _) t >> (fun () -> read_only t)
 
@@ -124,11 +132,11 @@ module Make () = struct
       bounded_flip_hi t hi_max)
   ;;
 
-  let sub ?pos ?len t =
-    debug "sub" [t] (`pos pos, `len len)
+  let sub_shared ?pos ?len t =
+    debug "sub_shared" [t] (`pos pos, `len len)
       <:sexp_of< [ `pos of int option ] * [ `len of int option ] >>
       <:sexp_of< (_, _) t >>
-      (fun () -> sub ?pos ?len t)
+      (fun () -> sub_shared ?pos ?len t)
   ;;
 
   let set_bounds_and_buffer_sub ?pos ?len ~src ~dst () =
@@ -143,6 +151,12 @@ module Make () = struct
   ;;
   let narrow t =
     debug "narrow" [t] t <:sexp_of< (_, _) t >> sexp_of_unit (fun () -> narrow t)
+  ;;
+  let narrow_lo t =
+    debug "narrow_lo" [t] t <:sexp_of< (_, _) t >> sexp_of_unit (fun () -> narrow_lo t)
+  ;;
+  let narrow_hi t =
+    debug "narrow_hi" [t] t <:sexp_of< (_, _) t >> sexp_of_unit (fun () -> narrow_hi t)
   ;;
   let resize t ~len =
     debug "resize" [t] (`len len) <:sexp_of< [ `len of int ] >> sexp_of_unit
@@ -317,6 +331,7 @@ module Make () = struct
     let  int64_t_le     t = d  "int64_t_le"        int64_t_le       sexp_of_int64 t
     let  int64_be_trunc t = d  "int64_be_trunc"    int64_be_trunc   sexp_of_int   t
     let  int64_le_trunc t = d  "int64_le_trunc"    int64_le_trunc   sexp_of_int   t
+    let decimal         t = d "decimal"           decimal           sexp_of_int   t
 
     let padded_fixed_string ~padding ~len t str =
       debug "Fill.padded_fixed_string" [t] (`padding padding, `len len, str)
@@ -343,7 +358,7 @@ module Make () = struct
   end
 
   module Peek_blit_debug = struct
-    module type To = Blit.S_distinct with type src := Peek.src
+    module type To = Core_kernel.Std.Blit.S_distinct with type src := Peek.src
 
     module To (To : sig
                  include To
@@ -486,6 +501,12 @@ module Make () = struct
     let  int64_be_trunc t = d  "int64_be_trunc"    int64_be_trunc   sexp_of_int   t
     let  int64_le_trunc t = d  "int64_le_trunc"    int64_le_trunc   sexp_of_int   t
 
+    let  decimal t ~pos arg =
+      debug "Poke.decimal" [t] (`pos pos, arg)
+        <:sexp_of< [ `pos of int ] * int >>
+        sexp_of_int
+        (fun () -> decimal t ~pos arg)
+
     let padded_fixed_string ~padding ~len t ~pos str =
       debug "Poke.padded_fixed_string" [t]
         (`padding padding, `len len, `pos pos, str)
@@ -517,6 +538,11 @@ module Make () = struct
         (fun () -> bin_prot writer t a ~pos)
   end
 
+  let crc32 t =
+    debug "crc32" [t] t <:sexp_of< (_, _) t >>
+      <:sexp_of< Int63.Hex.t >>
+      (fun () -> crc32 t)
+
   let consume_bin_prot t r =
     debug "consume_bin_prot" [t] t <:sexp_of< (_, _) t >>
       <:sexp_of< _ Or_error.t >>
@@ -529,23 +555,164 @@ module Make () = struct
       (fun () -> fill_bin_prot t w a)
   ;;
 
-  let transfer ?len ~src ~dst =
-    debug "transfer" [src] (`len len)
-      <:sexp_of< [ `len of int option ] >>
-      sexp_of_unit
-      (fun () ->
-        (* Check dst's invariant separately because it has a different type. *)
-        let finally () = if !check_invariant then invariant ignore ignore dst in
-        finally ();
-        protect ~finally ~f:(fun () -> transfer ?len ~src ~dst))
-  ;;
+  module Blit = struct
+    open Blit
+    type 'rw t_no_seek = 'rw Blit.t_no_seek
 
-  let memmove t ~src_pos ~dst_pos ~len =
-    debug "memmove" [t] (`src_pos src_pos, `dst_pos dst_pos, `len len)
-      (<:sexp_of< [`src_pos of int] * [`dst_pos of int] * [`len of int] >>)
-      (<:sexp_of< unit >>)
-      (fun () -> memmove t ~src_pos ~dst_pos ~len)
-  ;;
+    let unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len =
+      debug_blit "Blit.unsafe_blit" ~src ~dst
+        (`src_pos src_pos, `dst_pos dst_pos, `len len)
+        (<:sexp_of< [`src_pos of int] * [`dst_pos of int] * [`len of int] >>)
+        (<:sexp_of< unit >>)
+        (fun () -> unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len)
+    ;;
+
+    let blit ~src ~src_pos ~dst ~dst_pos ~len =
+      debug_blit "Blit.blit" ~src ~dst
+        (`src_pos src_pos, `dst_pos dst_pos, `len len)
+        (<:sexp_of< [`src_pos of int] * [`dst_pos of int] * [`len of int] >>)
+        (<:sexp_of< unit >>)
+        (fun () -> blit ~src ~src_pos ~dst ~dst_pos ~len)
+    ;;
+
+    let blito ~src ?src_pos ?src_len ~dst ?dst_pos () =
+      debug_blit "Blit.blito" ~src ~dst
+        (`src_pos src_pos, `src_len src_len, `dst_pos dst_pos)
+        (<:sexp_of< [`src_pos of int option] *
+                    [`src_len of int option] *
+                    [`dst_pos of int option] >>)
+        (<:sexp_of< unit >>)
+        (fun () -> blito ~src ?src_pos ?src_len ~dst ?dst_pos ())
+    ;;
+
+    let sub t ~pos ~len =
+      debug "Blit.sub" [t] (`pos pos, `len len)
+        (<:sexp_of< [`pos of int] * [`len of int] >>)
+        (<:sexp_of< (_, _) t >>)
+        (fun () ->
+           let t = sub t ~pos ~len in
+           if !check_invariant then invariant ignore ignore t;
+           t)
+    ;;
+
+    let subo ?pos ?len t =
+      debug "Blit.subo" [t] (`pos pos, `len len)
+        (<:sexp_of< [`pos of int option] * [`len of int option] >>)
+        (<:sexp_of< (_, _) t >>)
+        (fun () ->
+           let t = subo ?pos ?len t in
+           if !check_invariant then invariant ignore ignore t;
+           t)
+    ;;
+
+  end
+
+  module Blit_consume = struct
+    open Blit_consume
+
+    let unsafe_blit ~src ~dst ~dst_pos ~len =
+      debug_blit "Blit_consume.unsafe_blit" ~src ~dst
+        (`dst_pos dst_pos, `len len)
+        (<:sexp_of< [`dst_pos of int] * [`len of int] >>)
+        (<:sexp_of< unit >>)
+        (fun () -> unsafe_blit ~src ~dst ~dst_pos ~len)
+    ;;
+
+    let blit ~src ~dst ~dst_pos ~len =
+      debug_blit "Blit_consume.blit" ~src ~dst
+        (`dst_pos dst_pos, `len len)
+        (<:sexp_of< [`dst_pos of int] * [`len of int] >>)
+        (<:sexp_of< unit >>)
+        (fun () -> blit ~src ~dst ~dst_pos ~len)
+    ;;
+
+    let blito ~src ?src_len ~dst ?dst_pos () =
+      debug_blit "Blit_consume.blito" ~src ~dst
+        (`src_len src_len, `dst_pos dst_pos)
+        (<:sexp_of< [`src_len of int option] * [`dst_pos of int option] >>)
+        (<:sexp_of< unit >>)
+        (fun () -> blito ~src ?src_len ~dst ?dst_pos ())
+    ;;
+
+    let sub t ~len =
+      debug "Blit_consume.sub" [t] (`len len)
+        (<:sexp_of< [`len of int] >>)
+        (<:sexp_of< (_, _) t >>)
+        (fun () ->
+           let t = sub t ~len in
+           if !check_invariant then invariant ignore ignore t;
+           t)
+    ;;
+
+    let subo ?len t =
+      debug "Blit_consume.subo" [t] (`len len)
+        (<:sexp_of< [`len of int option] >>)
+        (<:sexp_of< (_, _) t >>)
+        (fun () ->
+           let t = subo ?len t in
+           if !check_invariant then invariant ignore ignore t;
+           t)
+    ;;
+
+  end
+
+  module Blit_fill = struct
+    open Blit_fill
+
+    let unsafe_blit ~src ~src_pos ~dst ~len =
+      debug_blit "Blit_fill.unsafe_blit" ~src ~dst
+        (`src_pos src_pos, `len len)
+        (<:sexp_of< [`src_pos of int] * [`len of int] >>)
+        (<:sexp_of< unit >>)
+        (fun () -> unsafe_blit ~src ~src_pos ~dst ~len)
+    ;;
+
+    let blit ~src ~src_pos ~dst ~len =
+      debug_blit "Blit_fill.blit" ~src ~dst
+        (`src_pos src_pos, `len len)
+        (<:sexp_of< [`src_pos of int] * [`len of int] >>)
+        (<:sexp_of< unit >>)
+        (fun () -> blit ~src ~src_pos ~dst ~len)
+    ;;
+
+    let blito ~src ?src_pos ?src_len ~dst () =
+      debug_blit "Blit_fill.blito" ~src ~dst
+        (`src_pos src_pos, `src_len src_len)
+        (<:sexp_of< [`src_pos of int option] * [`src_len of int option] >>)
+        (<:sexp_of< unit >>)
+        (fun () -> blito ~src ?src_pos ?src_len ~dst ())
+    ;;
+
+  end
+
+  module Blit_consume_and_fill = struct
+    open Blit_consume_and_fill
+
+    let unsafe_blit ~src ~dst ~len =
+      debug_blit "Blit_consume_and_fill.unsafe_blit" ~src ~dst
+        (`len len)
+        (<:sexp_of< [`len of int] >>)
+        (<:sexp_of< unit >>)
+        (fun () -> unsafe_blit ~src ~dst ~len)
+    ;;
+
+    let blit ~src ~dst ~len =
+      debug_blit "Blit_consume_and_fill.blit" ~src ~dst
+        (`len len)
+        (<:sexp_of< [`len of int] >>)
+        (<:sexp_of< unit >>)
+        (fun () -> blit ~src ~dst ~len)
+    ;;
+
+    let blito ~src ?src_len ~dst () =
+      debug_blit "Blit_consume_and_fill.blito" ~src ~dst
+        (`src_len src_len)
+        (<:sexp_of< [`src_len of int option] >>)
+        (<:sexp_of< unit >>)
+        (fun () -> blito ~src ?src_len ~dst ())
+    ;;
+
+  end
 
   module File_descr = Unix.File_descr
 
@@ -592,22 +759,23 @@ module Make () = struct
   ;;
 
   let send_nonblocking_no_sigpipe () =
-    match send_nonblocking_no_sigpipe () with
-    | Error _ as x -> x
-    | Ok send_nonblocking_no_sigpipe ->
-      Ok (fun t fd ->
+    Or_error.map (send_nonblocking_no_sigpipe ()) ~f:(fun send ->
+      fun t fd ->
         debug "send_nonblocking_no_sigpipe" [t] (fd, t)
           (<:sexp_of< File_descr.t * (_, _) t >>)
-          (<:sexp_of< unit >>)
-          (fun () -> send_nonblocking_no_sigpipe t fd))
+          (<:sexp_of< Syscall_result.Unit.t >>)
+          (fun () -> send t fd)
+    )
   ;;
 
   let sendto_nonblocking_no_sigpipe () =
-    Or_error.map (sendto_nonblocking_no_sigpipe ()) ~f:(fun f t fd addr ->
-      debug "sendto_nonblocking_no_sigpipe" [t] (fd, addr)
-        <:sexp_of< File_descr.t * Unix.sockaddr >>
-        <:sexp_of< unit >>
-        (fun () -> f t fd addr))
+    Or_error.map (sendto_nonblocking_no_sigpipe ()) ~f:(fun sendto ->
+      fun t fd addr ->
+        debug "sendto_nonblocking_no_sigpipe" [t] (fd, addr)
+          <:sexp_of< File_descr.t * Unix.sockaddr >>
+          <:sexp_of< Syscall_result.Unit.t >>
+          (fun () -> sendto t fd addr)
+    )
 
   let write_assume_fd_is_nonblocking t fd =
     debug "write_assume_fd_is_nonblocking" [t] (fd, t)
@@ -712,6 +880,7 @@ module Make () = struct
       let  int64_t_le     t = d  "int64_t_le"        int64_t_le       sexp_of_int64 t
       let  int64_be_trunc t = d  "int64_be_trunc"    int64_be_trunc   sexp_of_int   t
       let  int64_le_trunc t = d  "int64_le_trunc"    int64_le_trunc   sexp_of_int   t
+      let decimal         t = d "decimal"           decimal           sexp_of_int   t
 
       let padded_fixed_string ~padding ~len t str =
         debug "Unsafe.Fill.padded_fixed_string" [t] (`padding padding, `len len, str)
@@ -831,6 +1000,12 @@ module Make () = struct
       let  int64_t_le     t = d  "int64_t_le"        int64_t_le       sexp_of_int64 t
       let  int64_be_trunc t = d  "int64_be_trunc"    int64_be_trunc   sexp_of_int   t
       let  int64_le_trunc t = d  "int64_le_trunc"    int64_le_trunc   sexp_of_int   t
+
+      let  decimal t ~pos arg =
+        debug "Unsafe.Poke.decimal" [t] (`pos pos, arg)
+          <:sexp_of< [ `pos of int ] * int >>
+          sexp_of_int
+          (fun () -> decimal t ~pos arg)
 
       let padded_fixed_string ~padding ~len t ~pos str =
         debug "Unsafe.Poke.padded_fixed_string" [t]

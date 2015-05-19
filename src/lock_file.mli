@@ -49,6 +49,11 @@ val blocking_create
     otherwise. Requires write permission for the lock file. *)
 val is_locked : string -> bool
 
+(** [get_pid path] reads the lock file at [path] and returns the pid in the
+    file.  Returns [None] if the file cannot be read, or if the file contains
+    a message that is not an int. *)
+val get_pid : string -> Pid.t option
+
 (** An implementation neutral NFS lock file scheme that relies on the atomicity of link
     over NFS (see NFS Illustrated, atomicity for more information).  Rather than relying
     on a working traditional advisory lock system over NFS we create a hard link between

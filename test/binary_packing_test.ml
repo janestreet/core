@@ -30,8 +30,8 @@ let test byte_order =
             Binary_packing.test ();
             true
           with _ -> false in
-        Quickcheck.laws_exn "\"Runs without raising\""
-          1 (Quickcheck.always ()) test
+        Quickcheck_deprecated.laws_exn "\"Runs without raising\""
+          1 (Quickcheck_deprecated.always ()) test
       );
 
     "[pack|unpack]_signed_8" >::
@@ -79,8 +79,8 @@ let test byte_order =
           B.pack_float ~byte_order ~buf ~pos:0 i;
           let i' = B.unpack_float ~byte_order ~buf ~pos:0 in
           i' = i in
-        Quickcheck.laws_exn "unpack_float (pack_float x) = x"
-          100 Quickcheck.fg test_float
+        Quickcheck_deprecated.laws_exn "unpack_float (pack_float x) = x"
+          100 Quickcheck_deprecated.fg test_float
       );
   ]
 

@@ -261,7 +261,7 @@ module Stable = struct
     end
     include Sexpable
 
-    include Comparable.Make_binable (struct
+    module C = Comparable.Make_binable (struct
       include T
       include Sexpable
       include Binable
@@ -275,6 +275,11 @@ module Stable = struct
           else Int.compare (day t1) (day t2)
       ;;
     end)
+
+    include C
+    module O = struct
+      include (C : Comparable.Infix with type t := t)
+    end
   end
 
   TEST_MODULE "Date.V1" = Core_kernel.Stable_unit_test.Make (struct

@@ -169,28 +169,31 @@ module Timerfd : sig
       earlier [flags] must be empty. *)
   val create : (?flags:Flags.t -> Clock.t -> t) Or_error.t
 
-  (** [set t when] sets [t] to fire once, at the time specified by [when]. *)
-  val set : t -> [ `At of Time.t | `After of Span.t ] -> unit
+  (** [set_at t at] and [set_after t span] set [t] to fire once, at [at] or after [span].
+      [set_after] treats [span <= 0] as [span = 1ns]; unlike the underlying system call,
+      [timerfd_settime], it does not clear the timer if [span = 0].  To clear a timerfd,
+      use [Timerfd.clear].
 
-  (** [set_repeating ?initial t interval] sets [t] to fire every [interval] starting at
-      [when]. *)
-  val set_repeating
-    :  ?initial:[ `At of Time.t | `After of Span.t ] (** default is [`After interval] *)
-    -> t
-    -> Span.t
-    -> unit
+      [set_repeating ?after t interval] sets [t] to fire every [interval] starting after
+      [after] (default is [interval]), raising if [interval <= 0]. *)
+  val set_at        :                          t -> Time_ns.t      -> unit
+  val set_after     :                          t -> Time_ns.Span.t -> unit
+  val set_repeating : ?after:Time_ns.Span.t -> t -> Time_ns.Span.t -> unit
 
   (** [clear t] causes [t] to not fire any more. *)
   val clear : t -> unit
 
-  type repeat = { fire_after : Span.t; interval : Span.t }
+  type repeat =
+    { fire_after : Time_ns.Span.t
+    ; interval   : Time_ns.Span.t
+    }
 
   (** [get t] returns the current state of the timer [t]. *)
   val get
     :  t
     -> [ `Not_armed
-       | `Fire_after of Span.t
-       | `Repeat of repeat
+       | `Fire_after of Time_ns.Span.t
+       | `Repeat     of repeat
        ]
 end
 
@@ -368,17 +371,21 @@ module Epoll : sig
       by storing the ready set in it.  One can subsequently access the ready set by
       calling [iter_ready] or [fold_ready].
 
-      The [timeout] has a granularity of one millisecond.  [wait] rounds up the [timeout]
-      to the next millisecond.  E.g. a [timeout] of one microsecond will be rounded up
-      to one millisecond.
+      With [wait ~timeout:(`After span)], [span <= 0] is treated as [0].  If [span > 0],
+      then [span] is rounded to the nearest millisecond, with a minimum value of one
+      millisecond.
 
       Note that this method should not be considered thread safe.  There is mutable state
-      in t that will be changed by invocations to wait that cannot be prevented by mutexes
-      around [wait]. *)
+      in [t] that will be changed by invocations to wait that cannot be prevented by
+      mutexes around [wait]. *)
   val wait
     :  t
-    -> timeout:[ `Never | `Immediately | `After of Span.t ]
+    -> timeout:[ `Never | `Immediately | `After of Time_ns.Span.t ]
     -> [ `Ok | `Timeout ]
+
+  (** [wait_timeout_after t span = wait t ~timeout:(`After span)].  [wait_timeout_after]
+      is a performance hack to avoid allocating [`After span]. *)
+  val wait_timeout_after : t -> Time_ns.Span.t -> [ `Ok | `Timeout ]
 
   (** [iter_ready] and [fold_ready] iterate over the ready set computed by the last
       call to [wait]. *)

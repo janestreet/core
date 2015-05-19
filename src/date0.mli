@@ -99,3 +99,7 @@ module Stable : sig
     type nonrec t = t with sexp, bin_io, compare
   end
 end
+
+module O : sig
+  include Comparable.Infix with type t := t
+end

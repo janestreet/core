@@ -19,7 +19,6 @@
     add a type constraint. *)
 
 open Core_kernel.Std
-open Common
 open Iobuf_intf
 
 type nonrec seek    = seek    with sexp_of
@@ -56,10 +55,10 @@ val of_bigstring
 (** [of_string s] returns a new iobuf whose contents are [s]. *)
 val of_string : string -> (_, _) t
 
-(** [sub t ~pos ~len] returns a new iobuf with limits and window set to the subrange of
-    [t] specified by [pos] and [len].  [sub] preserves data permissions, but allows
-    arbitrary seek permissions on the resulting iobuf. *)
-val sub : ?pos:int -> ?len:int -> ('d, _) t -> ('d, _) t
+(** [sub_shared t ~pos ~len] returns a new iobuf with limits and window set to the
+    subrange of [t] specified by [pos] and [len].  [sub_shared] preserves data
+    permissions, but allows arbitrary seek permissions on the resulting iobuf. *)
+val sub_shared : ?pos:int -> ?len:int -> ('d, _) t -> ('d, _) t
 
 (** [set_bounds_and_buffer ~src ~dst] copies bounds metadata (i.e., limits and window) and
     shallowly copies the buffer (data pointer) from [src] to [dst].  It does not access
@@ -77,7 +76,7 @@ val set_bounds_and_buffer
   : src : ([> write] as 'data, _) t -> dst : ('data, seek) t -> unit
 
 (** [set_bounds_and_buffer_sub ?pos ?len ~src ~dst ()] is a more efficient version of:
-    [set_bounds_and_buffer ~src:(Iobuf.sub ?pos ?len src) ~dst].
+    [set_bounds_and_buffer ~src:(Iobuf.sub_shared ?pos ?len src) ~dst].
 
     [set_bounds_and_buffer ~src ~dst] is not the same as [set_bounds_and_buffer_sub ~dst
     ~src ()] because the limits are narrowed in the latter case. *)
@@ -119,6 +118,13 @@ val is_empty : (_, _) t -> bool
 
 (** [narrow t] sets [t]'s limits to the current window. *)
 val narrow : (_, seek) t -> unit
+
+(** [narrow_lo t] sets [t]'s lower limit to the beginning of the current window. *)
+val narrow_lo : (_, seek) t -> unit
+
+(** [narrow_hi t] sets [t]'s upper limit to the end of the current window. *)
+val narrow_hi : (_, seek) t -> unit
+
 
 (** {1 Changing the window} *)
 
@@ -236,10 +242,20 @@ end
 
 (** [Fill.bin_prot X.bin_write_t t x] writes [x] to [t] in bin-prot form, advancing past
     the bytes written. *)
-module Fill
-  : Accessors
+module Fill : sig
+  include
+    Accessors
     with type ('a, 'd, 'w) t = (read_write, seek) t -> 'a -> unit
     with type 'a bin_prot := 'a Bin_prot.Type_class.writer
+
+  (* [decimal t int] is equivalent to [Iobuf.Fill.string t (Int.to_string int)], but with
+     improved efficiency and no intermediate allocation.
+
+     In other words: It fills the decimal representation of [int] to [t].  [t] is advanced
+     by the number of characters written and no terminator is added.  If sufficient space
+     is not available [decimal] will raise. *)
+  val decimal : (int, _, _) t
+end
 
 (** [Peek] and [Poke] functions access a value at [pos] from the lower bound of the window
     and do not advance.
@@ -265,10 +281,15 @@ end
     without advancing.  You can use [X.bin_size_t] to tell how long it was.
     [X.bin_write_t] is only allowed to write that portion of the buffer to which you have
     access. *)
-module Poke
-  : Accessors
+module Poke : sig
+  (** [decimal t ~pos i] returns the number of bytes written at [pos]. *)
+  val decimal : (read_write, 'w) t -> pos:int -> int -> int
+
+  include
+    Accessors
     with type ('a, 'd, 'w) t = (read_write, 'w) t -> pos:int -> 'a -> unit
     with type 'a bin_prot := 'a Bin_prot.Type_class.writer
+end
 
 (** [Unsafe] has submodules that are like their corresponding module, except with no range
     checks.  Hence, mistaken uses can cause segfaults.  Be careful! *)
@@ -278,6 +299,8 @@ module Unsafe : sig
   module Peek    : module type of Peek
   module Poke    : module type of Poke
 end
+
+val crc32 : ([> read], _) t -> Int63.t
 
 (** [fill_bin_prot] writes a bin-prot value to the lower bound of the window, prefixed by
     its length, and advances by the amount written.  [fill_bin_prot] returns an error if
@@ -295,18 +318,97 @@ val fill_bin_prot
 val consume_bin_prot
   : ([> read] , seek) t -> 'a Bin_prot.Type_class.reader -> 'a Or_error.t
 
-(** [transfer] blits [len] bytes from [src] to [dst], advancing the lower bounds of both
-    windows.  It is an error if [len > length src || len > length dst || phys_equal src
-    dst]. *)
-val transfer
-  :  ?len:int (** default is [min (length src) (length dst)] *)
-  -> src:(([> read] , seek) t)
-  -> dst:((read_write, seek) t)
-  -> unit
+(** [Blit] copies between iobufs and advances neither [src] nor [dst]. *)
+module Blit : sig
+  type 'rw t_no_seek = ('rw, no_seek) t
+  include Blit.S_permissions
+    with type 'rw t := 'rw t_no_seek
+  (** Override types of [sub] and [subo] to allow return type to have [seek] as needed. *)
+  val sub
+    :  ([> read], no_seek) t
+    -> pos : int
+    -> len : int
+    -> (_, _) t
+  val subo
+    :  ?pos : int
+    -> ?len : int
+    -> ([> read], no_seek) t
+    -> (_, _) t
+end
 
-(** [memmove] blits [len] bytes from [src_pos] to [dst_pos] in an iobuf, both relative to
-    the lower bound of the window.  The window is not advanced. *)
-val memmove : (read_write, _) t -> src_pos:int -> dst_pos:int -> len:int -> unit
+(** [Blit_consume] copies between iobufs and advances [src] but does not advance [dst]. *)
+module Blit_consume : sig
+  val blit
+    :  src     : ([> read],  seek)    t
+    -> dst     : ([> write], no_seek) t
+    -> dst_pos : int
+    -> len     : int
+    -> unit
+  val blito
+    :  src      : ([> read],  seek)    t
+    -> ?src_len : int
+    -> dst      : ([> write], no_seek) t
+    -> ?dst_pos : int
+    -> unit
+    -> unit
+  val unsafe_blit
+    :  src     : ([> read],  seek)    t
+    -> dst     : ([> write], no_seek) t
+    -> dst_pos : int
+    -> len     : int
+    -> unit
+  val sub
+    :  ([> read], seek) t
+    -> len : int
+    -> (_, _) t
+  val subo
+    :  ?len : int
+    -> ([> read], seek) t
+    -> (_, _) t
+end
+
+(** [Blit_fill] copies between iobufs and advances [dst] but does not advance [src]. *)
+module Blit_fill : sig
+  val blit
+    :  src     : ([> read],  no_seek) t
+    -> src_pos : int
+    -> dst     : ([> write], seek)    t
+    -> len     : int
+    -> unit
+  val blito
+    :  src      : ([> read],  no_seek) t
+    -> ?src_pos : int
+    -> ?src_len : int
+    -> dst      : ([> write], seek)    t
+    -> unit
+    -> unit
+  val unsafe_blit
+    :  src     : ([> read],  no_seek) t
+    -> src_pos : int
+    -> dst     : ([> write], seek)    t
+    -> len     : int
+    -> unit
+end
+
+(** [Blit_consume_and_fill] copies between iobufs and advances both [src] and [dst]. *)
+module Blit_consume_and_fill : sig
+  val blit
+    :  src : ([> read],  seek) t
+    -> dst : ([> write], seek) t
+    -> len : int
+    -> unit
+  val blito
+    :  src      : ([> read],  seek) t
+    -> ?src_len : int
+    -> dst      : ([> write], seek) t
+    -> unit
+    -> unit
+  val unsafe_blit
+    :  src : ([> read],  seek) t
+    -> dst : ([> write], seek) t
+    -> len : int
+    -> unit
+end
 
 (** {1 I/O} *)
 
@@ -334,9 +436,18 @@ val recvmmsg_assume_fd_is_nonblocking_no_options
       Or_error.t
 
 val send_nonblocking_no_sigpipe
-  : unit -> (([> read], seek) t -> Unix.File_descr.t -> unit) Or_error.t
+  :  unit
+  -> (([> read], seek) t
+      -> Unix.File_descr.t
+      -> Unix.Syscall_result.Unit.t
+     ) Or_error.t
 val sendto_nonblocking_no_sigpipe
-  : unit -> (([> read], seek) t -> Unix.File_descr.t -> Unix.sockaddr -> unit) Or_error.t
+  :  unit
+  -> (([> read], seek) t
+      -> Unix.File_descr.t
+      -> Unix.sockaddr
+      -> Unix.Syscall_result.Unit.t
+     ) Or_error.t
 val write_assume_fd_is_nonblocking
   : ([> read], seek) t -> Unix.File_descr.t -> unit
 val pwrite_assume_fd_is_nonblocking

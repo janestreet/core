@@ -1,4 +1,6 @@
+module Time_ns_in_this_directory = Time_ns
 open Core_kernel.Std
+module Time_ns = Time_ns_in_this_directory
 
 module File_descr = Core_unix.File_descr
 
@@ -135,51 +137,94 @@ module Timerfd = struct
       Or_error.unimplemented "Linux_ext.Timerfd.create"
     | Error _ ->
       (* [timerfd_create] is implemented but fails with the arguments we used above.
-         [create] might still be usable with different arguments, so we expose it here. *)
+         [create] might still be usable with different arguments, so we expose it
+         here. *)
       Ok create
   ;;
 
-  external timerfd_settime : t -> bool -> float -> float -> unit = "linux_timerfd_settime"
+  external unsafe_timerfd_settime
+    :  t
+    -> bool
+    -> initial  : Int63.t
+    -> interval : Int63.t
+    -> unit
+    = "linux_timerfd_settime"
 
-  let settime ~initial ~interval t =
-    let absolute, initial =
-      match initial with
-      | `At t    -> (true,  Time.to_float t)
-      | `After s -> (false, Span.to_sec s)
-    in
-    let interval = Span.to_sec interval in
-    timerfd_settime t absolute initial interval;
+  let timerfd_settime t ~absolute ~initial ~interval =
+    (* We could accept [interval < 0] or [initial < 0 when absolute], but then the
+       conversions to timespecs in the C code become tedious and [timerfd_setttime] fails
+       when it gets anything negative anyway. *)
+    if Int63.O.( initial < zero || interval < zero )
+    then <:raise_structural_sexp<
+           "timerfd_settime got invalid parameters (initial < 0 or interval < 0)."
+           { timerfd  = (t : t)
+           ; initial  = (initial  : Int63.t)
+           ; interval = (interval : Int63.t)
+           } >>;
+    unsafe_timerfd_settime t absolute ~initial ~interval
   ;;
 
-  let set t when_ = settime t ~initial:when_ ~interval:Span.zero
-
-  let set_repeating ?initial  t interval =
-    settime t ~initial:(Option.value initial ~default:(`After interval)) ~interval
+  let initial_of_span span =
+    Time_ns.Span.to_int63_ns
+      (if Time_ns.Span.( <= ) span Time_ns.Span.zero
+       then Time_ns.Span.nanosecond
+       else span)
   ;;
 
-  let clear t = settime t ~initial:(`After Span.zero) ~interval:Span.zero
+  let set_at t at =
+    if Time_ns.( <= ) at Time_ns.epoch
+    then failwiths "Timerfd.set_at got time before epoch" at <:sexp_of< Time_ns.t >>;
+    timerfd_settime t
+      ~absolute:true
+      ~initial:(Time_ns.to_int63_ns_since_epoch at)
+      ~interval:Int63.zero
 
-  module Spec = struct
-    type t =
-      { fire_after : float;
-        interval : float;
-      }
-  end
+  let set_after t span =
+    timerfd_settime t
+      ~absolute:false
+      ~initial:(initial_of_span span)
+      ~interval:Int63.zero
+  ;;
 
-  type repeat = { fire_after : Span.t; interval : Span.t }
+  let set_repeating ?after t interval =
+    if Time_ns.Span.( <= ) interval Time_ns.Span.zero
+    then failwiths "Timerfd.set_repeating got invalid interval" interval
+           <:sexp_of< Time_ns.Span.t >>;
+    let interval = Time_ns.Span.to_int63_ns interval in
+    timerfd_settime t
+      ~absolute:false
+      ~initial:(Option.value_map after ~f:initial_of_span ~default:interval)
+      ~interval
+  ;;
 
-  external timerfd_gettime : t -> Spec.t = "linux_timerfd_gettime"
+  let clear t =
+    timerfd_settime t ~absolute:false ~initial:Int63.zero ~interval:Int63.zero
+
+  type repeat =
+    { fire_after : Time_ns.Span.t
+    ; interval   : Time_ns.Span.t
+    }
+
+  external timerfd_gettime : t -> repeat = "linux_timerfd_gettime"
 
   let get t =
-    let { Spec. fire_after; interval } = timerfd_gettime t in
-    let fire_after = Span.of_sec fire_after in
-    let interval = Span.of_sec interval in
-    if Span.equal interval Span.zero then
-      if Span.equal fire_after Span.zero
+    let spec = timerfd_gettime t in
+    if Time_ns.Span.equal spec.interval Time_ns.Span.zero
+    then
+      if Time_ns.Span.equal spec.fire_after Time_ns.Span.zero
       then `Not_armed
-      else `Fire_after fire_after
+      else `Fire_after spec.fire_after
     else
-      `Repeat { fire_after; interval }
+      `Repeat spec
+  ;;
+
+  (* We expect set_after to allocate nothing. *)
+  BENCH_FUN "Linux_ext.Timerfd.set_after" =
+    match create with
+    | Error _ -> ignore
+    | Ok create ->
+      let t = create Clock.realtime in
+      fun () -> set_after t Time_ns.Span.second
   ;;
 
   TEST_MODULE "Linux_ext.Timerfd" = struct
@@ -190,15 +235,16 @@ module Timerfd = struct
       | Ok create ->
         let t = create Clock.realtime in
         assert (get t = `Not_armed);
-        set t (`After Span.minute);
+        set_after t Time_ns.Span.minute;
         assert (match get t with
-                | `Fire_after span -> Span.(<=) span Span.minute
+                | `Fire_after span -> Time_ns.Span.(<=) span Time_ns.Span.minute
                 | _ -> false);
-        let span = Span.scale Span.minute 2. in
-        set_repeating t ~initial:(`After Span.minute) span;
+        let span = Time_ns.Span.scale Time_ns.Span.minute 2. in
+        set_repeating t ~after:Time_ns.Span.minute span;
         assert (match get t with
                 | `Repeat { fire_after; interval } ->
-                  Span.(<=) fire_after Span.minute && Span.equal interval span
+                  Time_ns.Span.(<=) fire_after Time_ns.Span.minute
+                  && Time_ns.Span.equal interval span
                 | _ ->
                   false);
     ;;
@@ -664,11 +710,13 @@ ENDIF
             })
   ;;
 
-  let use t ~f =
+  let in_use_exn t =
     match !t with
     | `Closed -> failwith "attempt to use closed epoll set"
-    | `In_use r -> f r
+    | `In_use r -> r
   ;;
+
+  let use t ~f = f (in_use_exn t)
 
   let find t file_descr = use t ~f:(fun t -> Table.find t.flags_by_fd file_descr)
 
@@ -697,31 +745,45 @@ ENDIF
 
   external epoll_wait : File_descr.t -> ready_events -> int -> int = "linux_epoll_wait"
 
-  let wait t ~timeout =
-    let timeout =
-      (* From the epoll man page:
+  let wait_internal t ~timeout_ms =
+    (* performance hack: [use] requires a closure allocation. *)
+    let t = in_use_exn t in
+    (* We clear [num_ready_events] because [epoll_wait] will invalidate [ready_events],
+       and we don't want another thread to observe [t] and see junk. *)
+    t.num_ready_events <- 0;
+    t.num_ready_events <- epoll_wait t.epollfd t.ready_events timeout_ms;
+    if t.num_ready_events = 0 then `Timeout else `Ok
+  ;;
 
-         | Specifying a timeout of -1 makes epoll_wait() wait indefinitely, while
-         | specifying a timeout equal to zero makes epoll_wait() to return immediately
-         | even if no events are available (return code equal to zero). *)
-      match timeout with
-      | `Never -> -1
-      | `Immediately -> 0
-      | `After span ->
-        if Span.(<) span Span.zero then
-          raise (Unix.Unix_error (Unix.EINVAL, "negative timeout", Span.to_string span));
-        (* We round up to ensure that we are guaranteed that the timeout has passed when
-           we wake up.  If we rounded down, then when the user requests a positive
-           sub-millisecond timeout, we would use a timout of zero, and return immediately.
-           This caused async to spin, repeatedly requesting slightly smaller timeouts. *)
-        Float.iround_exn ~dir:`Up (Span.to_ms span)
+  let wait_timeout_after t span =
+    let timeout_ms =
+      if Time_ns.Span.( <= ) span Time_ns.Span.zero
+      then 0
+      else
+        (* For positive timeouts, we use a minimum timeout of one millisecond, to ensure
+           that we are guaranteed that the timeout has passed when we wake up.  If we
+           allowed a positive sub-millisecond timeout, we would round down and end up
+           using a timeout of zero, causing [wait_internal] to return immediately.  Such
+           behaviour has been seen to cause Async to spin, repeatedly requesting slightly
+           smaller timeouts. *)
+        let span = Time_ns.Span.max span Time_ns.Span.millisecond in
+        Int63.to_int_exn
+          Time_ns.Span.(div (span + of_int_ns 500_000) (of_int_ns 1_000_000))
     in
-    use t ~f:(fun t ->
-      (* We clear [num_ready_events] because [epoll_wait] will invalidate [ready_events],
-         and we don't want another thread to observe [t] and see junk. *)
-      t.num_ready_events <- 0;
-      t.num_ready_events <- epoll_wait t.epollfd t.ready_events timeout;
-      if t.num_ready_events = 0 then `Timeout else `Ok)
+    assert (timeout_ms >= 0);
+    wait_internal t ~timeout_ms
+  ;;
+
+  let wait t ~timeout =
+    (* From the epoll man page:
+
+       | Specifying a timeout of -1 makes epoll_wait() wait indefinitely, while
+       | specifying a timeout equal to zero makes epoll_wait() to return immediately
+       | even if no events are available (return code equal to zero). *)
+    match timeout with
+    | `Never       -> wait_internal      t ~timeout_ms:(-1)
+    | `Immediately -> wait_internal      t ~timeout_ms:0
+    | `After span  -> wait_timeout_after t span
   ;;
 
   let fold_ready t ~init ~f =
@@ -735,18 +797,18 @@ ENDIF
 
   let iter_ready t ~f = fold_ready t ~init:() ~f:(fun () fd flags -> f fd flags)
 
-(* external epoll_pwait
- *   : File_descr.t -> Events_buffer.raw -> int -> int list -> int
- *   = "linux_epoll_pwait"
- *
- * let pwait t ~timeout sigs =
- *   let millis = Float.iround_exn ~dir:`Zero ( Span.to_ms timeout ) in
- *   let num_ready = epoll_pwait t.epollfd t.events millis sigs in
- *   if num_ready = 0 then `Timeout
- *   else `Ok { Ready_fds.num_ready ; events = t.events }
- * ;; *)
+  (* external epoll_pwait
+   *   : File_descr.t -> Events_buffer.raw -> int -> int list -> int
+   *   = "linux_epoll_pwait"
+   *
+   * let pwait t ~timeout sigs =
+   *   let millis = Float.iround_exn ~dir:`Zero ( Span.to_ms timeout ) in
+   *   let num_ready = epoll_pwait t.epollfd t.events millis sigs in
+   *   if num_ready = 0 then `Timeout
+   *   else `Ok { Ready_fds.num_ready ; events = t.events }
+   * ;; *)
 
-let create = Ok create
+  let create = Ok create
 end
 
 
@@ -788,13 +850,13 @@ TEST_MODULE = struct
   ;;
 
   TEST_UNIT "epoll test" = with_epoll ~f:(fun epset ->
-    let timeout = Span.of_sec 0.1 in
+    let span = Time_ns.Span.of_sec 0.1 in
     let sock1 = udp_listener ~port:7070 in
     let sock2 = udp_listener ~port:7071 in
     Epoll.set epset sock1 Flags.in_;
     Epoll.set epset sock2 Flags.in_;
     let _sent = send sock2 "TEST" ~port:7070 in
-    begin match Epoll.wait epset ~timeout:(`After timeout) with
+    begin match Epoll.wait_timeout_after epset span with
     | `Timeout -> assert false
     | `Ok ->
       let ready =
@@ -812,6 +874,22 @@ TEST_MODULE = struct
       | [_] -> failwith  "wrong socket is ready"
       | xs  -> failwithf "%d sockets are ready" (List.length xs) ()
     end)
+  ;;
+
+  TEST_UNIT "Timerfd.set_after small span test" =
+    match Timerfd.create with
+    | Error _ -> ()
+    | Ok timerfd_create ->
+      with_epoll ~f:(fun epoll ->
+        let timerfd = timerfd_create Timerfd.Clock.realtime in
+        Epoll.set epoll (timerfd :> File_descr.t) Epoll.Flags.in_;
+        List.iter [ 0; 1 ] ~f:(fun span_ns ->
+          Timerfd.set_after timerfd (Time_ns.Span.of_int_ns span_ns);
+          begin match Epoll.wait epoll ~timeout:`Never with
+          | `Timeout -> assert false
+          | `Ok -> ()
+          end);
+        Unix.close (timerfd :> Unix.File_descr.t))
   ;;
 end
 

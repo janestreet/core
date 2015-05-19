@@ -120,7 +120,8 @@ let daemonize_wait ?(redirect_stdout=`Dev_null) ?(redirect_stderr=`Dev_null)
           UnixLabels.waitpid ~mode:[UnixLabels.WNOHANG] pid in
         if wait_result = 0 then begin
           match
-            Unix.select ~read:[read_end] ~write:[] ~except:[] ~timeout:(`After 0.1) ()
+            Unix.select ~read:[read_end] ~write:[] ~except:[]
+              ~timeout:(`After (Time_ns.Span.of_sec 0.1)) ()
           with
           | { Unix.Select_fds.
               read = [read_end];

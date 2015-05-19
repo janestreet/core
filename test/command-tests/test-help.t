@@ -188,7 +188,7 @@ For leaf commands, it shows all available flags, along with their documentation.
   $ demo_help.exe adverb drolly -help
   this command does stuff here
   
-    demo_help.exe adverb drolly OXIDE [PATH]
+    demo_help.exe adverb drolly OXIDE DIODE [PATH]
   
   Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque et
   ante a nibh scelerisque ultrices. Fusce consectetur dictum ante quis
@@ -222,7 +222,7 @@ their sibling subcommands.
   $ demo_help.exe help jab
   this command does stuff here
   
-    demo_help.exe jab OXIDE [PATH]
+    demo_help.exe jab OXIDE DIODE [PATH]
   
   Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque et
   ante a nibh scelerisque ultrices. Fusce consectetur dictum ante quis

@@ -18,9 +18,9 @@ end
 (** {6 Error report} *)
 
 (** The type of error codes.
-   Errors defined in the POSIX standard
-   and additional errors, mostly BSD.
-   All other errors are mapped to EUNKNOWNERR.
+    Errors defined in the POSIX standard
+    and additional errors, mostly BSD.
+    All other errors are mapped to [EUNKNOWNERR].
 
     @deprecated in favor of {!Error.t} below.
 *)
@@ -101,7 +101,7 @@ with sexp
 
 module Error : sig
   (** The type of error codes.  Errors defined in the POSIX standard and additional
-      errors, mostly BSD.  All other errors are mapped to EUNKNOWNERR.  *)
+      errors, mostly BSD.  All other errors are mapped to [EUNKNOWNERR]. *)
   type t = Unix.error =
     | E2BIG               (** Argument list too long *)
     | EACCES              (** Permission denied *)
@@ -176,16 +176,16 @@ module Error : sig
     | EUNKNOWNERR of int  (** Unknown error *)
   with sexp
 
-  val of_system_int : int -> t
+  val of_system_int : errno:int -> t
 
   (** Return a string describing the given error code. *)
   val message : t -> string
 end
 
 (** Raised by the system calls below when an error is encountered.
-   The first component is the error code; the second component
-   is the function name; the third component is the string parameter
-   to the function, if it has one, or the empty string otherwise. *)
+    The first component is the error code; the second component
+    is the function name; the third component is the string parameter
+    to the function, if it has one, or the empty string otherwise. *)
 exception Unix_error of Error.t * string * string
 
 module Syscall_result :
@@ -940,7 +940,7 @@ module Select_fds : sig
   val empty : t
 end
 
-type select_timeout = [ `Never | `Immediately | `After of float (* seconds *) ]
+type select_timeout = [ `Never | `Immediately | `After of Core_kernel.Time_ns.Span.t ]
 with sexp_of
 
 (** Setting restart to true means that we want select to restart automatically
@@ -1199,9 +1199,13 @@ module Cidr : sig
 
   type t with sexp, bin_io
 
+  include Comparable.S_binable with type t := t
+
   (** [of_string] Generates a Cidr.t based on a string like ["10.0.0.0/8"].  Addresses are
       not expanded, i.e. ["10/8"] is invalid. *)
   include Stringable.S with type t := t
+
+  val create : base_address:Inet_addr.t -> bits:int -> t
 
   (** Accessors.
       - [base_address 192.168.0.0/24 = 192.168.0.0]
@@ -1210,12 +1214,17 @@ module Cidr : sig
   val bits         : t -> int
 
   (** IPv4 multicast address can be represented by the CIDR prefix 224.0.0.0/4,
-      (i.e. addreses from 224.0.0.0 to 239.255.255.255, inclusive) *)
+      (i.e. addresses from 224.0.0.0 to 239.255.255.255, inclusive) *)
   val multicast : t
 
   (** Is the given address inside the given Cidr.t?  Note that the broadcast and network
       addresses are considered valid so [does_match 10.0.0.0/8 10.0.0.0] is true. *)
   val does_match : t -> Inet_addr.t -> bool
+
+  (** Return the netmask corresponding to the number of network bits in the CIDR.
+      For example, the netmask for a CIDR with 24 network bits (e.g. 1.2.3.0/24)
+      is 255.255.255.0. *)
+  val netmask_of_bits : t -> Inet_addr.t
 end
 
 (** {6 Sockets} *)

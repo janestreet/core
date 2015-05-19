@@ -121,6 +121,23 @@ TEST_MODULE = struct
   TEST = not (is_locked nolock_file)
 end
 
+let read_file_and_convert ~of_string path =
+  Option.try_with
+    ( fun () ->
+        In_channel.read_all path
+        |> String.strip
+        |> of_string
+    )
+;;
+
+let get_pid path =
+  let of_string string =
+    Int.of_string string
+    |> Pid.of_int
+  in
+  read_file_and_convert ~of_string path
+;;
+
 module Nfs = struct
   module Info = struct
     type t = {
@@ -133,11 +150,11 @@ module Nfs = struct
   let lock_path path = path ^ ".nfs_lock"
 
   let get_info path =
-    try
-      let contents = In_channel.read_all path in
-      Some (Info.t_of_sexp (Sexp.of_string (String.strip contents)))
-    with
-    | _ -> None
+    let of_string string =
+      Sexp.of_string string
+      |> Info.t_of_sexp
+    in
+    read_file_and_convert ~of_string path
   ;;
 
   let get_hostname_and_pid path =

@@ -22,7 +22,7 @@ let convtest ?tol f1 f2 =
 let mintime_str = "0000-01-01 00:00:00.000000"
 let maxtime_str = "3000-01-01 00:00:00.000000"
 
-let time_gen () = Time.of_float (Quickcheck.fg ())
+let time_gen () = Time.of_float (Quickcheck_deprecated.fg ())
 
 let reasonable_time time =              (* between about 1970 and 2070 *)
   let time = Time.to_float time in
@@ -314,7 +314,7 @@ let () =
           end;
         end else true
       in
-      Quickcheck.laws_exn "string" 100 time_gen check;
+      Quickcheck_deprecated.laws_exn "string" 100 time_gen check;
     );
   add "to_string,of_string2"
     (fun () ->
@@ -343,7 +343,7 @@ let () =
           similar_time time time'
         else true
       in
-      Quickcheck.laws_exn "string" 100 time_gen check;
+      Quickcheck_deprecated.laws_exn "string" 100 time_gen check;
     );
   add "to_filename_string,of_filename_string2"
     (fun () ->
@@ -361,7 +361,7 @@ let () =
           similar_time time time'
         else true
       in
-      Quickcheck.laws_exn "sexp" 100 time_gen check;
+      Quickcheck_deprecated.laws_exn "sexp" 100 time_gen check;
     );
   add "daylight_saving_time"
     (fun () ->

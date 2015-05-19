@@ -2,7 +2,7 @@ OASISFormat:      0.3
 OCamlVersion:     >= 4.00.1
 FindlibVersion:   >= 1.3.2
 Name:             core
-Version:          112.24.00
+Version:          112.35.00
 Synopsis:         Jane Street Capital's standard library overlay
 Authors:          Jane Street Group, LLC <opensource@janestreet.com>
 Copyrights:       (C) 2008-2013 Jane Street Group LLC <opensource@janestreet.com>
@@ -46,7 +46,6 @@ Library core
                       Caml,
                       Check_std,
                       Command,
-                      Common,
                       Core_condition,
                       Core_filename,
                       Core_list,
@@ -239,10 +238,10 @@ Library core
                       signal_stubs.c,
                       socketaddr.h,
                       syslog_stubs.c,
-                      time_stubs.c,
                       time_ns_stubs.c,
                       time_stamp_counter_stubs.c,
                       unix_stubs.c,
+                      unix_time_stubs.c,
                       unix_utils.h,
                       core_config.h
   BuildDepends:       bigarray,
@@ -262,6 +261,8 @@ Library core
                       pa_ounit,
                       pa_ounit.syntax,
                       pa_pipebang,
+                      pa_structural_sexp,
+                      pa_structural_sexp.syntax,
                       pa_test,
                       pa_test.syntax,
                       sexplib,
@@ -284,6 +285,7 @@ Library core
                       bigarray,
                       pa_bench,
                       pa_ounit,
+                      pa_structural_sexp,
                       pa_test,
                       unix,
                       threads,

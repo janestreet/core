@@ -19,7 +19,6 @@ let likely_machine_zones = ref [
   "America/Chicago"
 ]
 
-
 exception Unknown_zone of string with sexp
 exception Invalid_file_format of string with sexp
 module Stable = struct
@@ -27,11 +26,7 @@ module Stable = struct
     module Digest = struct
       include Digest
 
-      include Bin_prot.Utils.Make_binable (struct
-        module Binable = struct
-          type t = string with bin_io
-        end
-
+      include Binable.Of_binable (String) (struct
         let to_binable str = str
         let of_binable str = str
 
@@ -61,22 +56,25 @@ module Stable = struct
     module Transition = struct
       type t = {
         start_time : float;
-        end_time   : float; (* non-inclusive *)
-        regime     : Regime.t
+        new_regime : Regime.t
       } with sexp_of, bin_io
     end
 
-    (* IF THIS REPRESENTATION EVER CHANGES (particularly names), ENSURE THAT EITHER
+    (* IF THIS REPRESENTATION EVER CHANGES (particularly [name]), ENSURE THAT EITHER
        (1) all values serialize the same way in both representations, or
-       (2) you add a new Time.Zone version to stable.ml *)
+       (2) you add a new Time.Zone version to stable.ml
+
+       Note that serialization is basically exclusively via the [name] field,
+       and we do not ultimately export the [sexp_of_t] that [with sexp_of]
+       generates. *)
     type strict = {
-      name                    : string;
-      file_info               : (Digest.t * int64) option;
-      transitions             : Transition.t array;
-      (* transitions close to the current time *)
-      likely_transitions      : Transition.t array;
-      default_local_time_type : Regime.t;
-      leap_seconds            : Leap_second.t list;
+      name                      : string;
+      file_info                 : (Digest.t * int64) option;
+      transitions               : Transition.t array;
+      (* caches the index of the last transition we used to make lookups faster *)
+      mutable last_regime_index : int;
+      default_local_time_type   : Regime.t;
+      leap_seconds              : Leap_second.t list;
     } with sexp_of
     (* Lazy.t serialises identically to the underlying type *)
     type t = strict Lazy.t with sexp_of
@@ -219,40 +217,14 @@ module Stable = struct
           let rec make_transitions acc l =
             match l with
             | [] -> Array.of_list (List.rev acc)
-            | [(time, regime)] ->
-              make_transitions
-                ({Transition.
-                  start_time = time;
-                  end_time   = Float.max_value;
-                  regime     = regime;
-                 } :: acc) []
-            | (start_time,regime) :: (((end_time,_) :: _) as rest) ->
+            | (start_time,regime) :: rest ->
               make_transitions
                 ({Transition.
                   start_time = start_time;
-                  end_time   = end_time;
-                  regime     = regime
+                  new_regime = regime
                  } :: acc) rest
           in
           make_transitions [] raw_transitions
-        in
-        let now = Time_internal.T.to_float (Time_internal.T.now ()) in
-        let likely_transitions =
-          match
-            Array.findi transitions ~f:(fun _i t ->
-              t.Transition.start_time <= now && t.Transition.end_time > now)
-          with
-          | None -> [||]
-          | Some (i, _x) ->
-            let last_pos = Array.length transitions - 1 in
-            if i > 0 && i < last_pos then
-              [| transitions.(i); transitions.(i + 1); transitions.(i - 1) |]
-            else if i > 0 then
-              [| transitions.(i); transitions.(i - 1) |]
-            else if i = 0 && i < last_pos then
-              [| transitions.(i); transitions.(i + 1) |]
-            else
-              [| transitions.(i) |]
         in
         let default_local_time_type =
           match
@@ -266,7 +238,7 @@ module Stable = struct
             name                    = name;
             file_info               = Some file_info;
             transitions             = transitions;
-            likely_transitions      = likely_transitions;
+            last_regime_index       = 0;
             default_local_time_type = default_local_time_type;
             leap_seconds            = leap_seconds;
           }
@@ -470,14 +442,14 @@ module Stable = struct
         if offset = 0 then "UTC"
         else sprintf "UTC%s%d" (if offset < 0 then "-" else "+") (abs offset) in
       lazy {
-        name               = name;
-        file_info          = None;
-        transitions        = [||];
-        likely_transitions = [||];
+        name                    = name;
+        file_info               = None;
+        transitions             = [||];
+        last_regime_index       = 0;
         default_local_time_type = {Regime.
-                                   utc_off = Float.of_int (offset * 60 * 60);
-                                   is_dst  = false;
-                                   abbrv   = name;
+                                    utc_off = Float.of_int (offset * 60 * 60);
+                                    is_dst  = false;
+                                    abbrv   = name;
                                   };
         leap_seconds = []
       }
@@ -564,12 +536,8 @@ module Stable = struct
 
     let compare t1 t2 = String.compare (to_string t1) (to_string t2)
 
-    include (Bin_prot.Utils.Make_binable (struct
-      type t' = t
-      type t = t'
-      module Binable = struct
-        type t = string with bin_io
-      end
+    include (Binable.Of_binable (String) (struct
+      type nonrec t = t
 
       let to_binable (lazy t) =
         if t.name = "/etc/localtime" then
@@ -612,127 +580,109 @@ let local = lazy (Lazy.force begin
   end)
 ;;
 
-let transition_as_utc t = (t.Transition.start_time, t.Transition.end_time)
-
-let transition_as_localtime t =
-  let utc_off = t.Transition.regime.Regime.utc_off in
-  (t.Transition.start_time +. utc_off, t.Transition.end_time +. utc_off)
-;;
-
-let rec bin_search time transitions transtype i min_bound max_bound =
-  (* passing around convert_transition directly turns out to be slower than working it out
-     from transtype every time *)
-  let convert_transition =
-    match transtype with
-    | `Local -> transition_as_localtime
-    | `UTC   -> transition_as_utc
+let clock_shift_at zone i =
+  let previous_shift =
+    if i = 0
+    then zone.default_local_time_type.utc_off
+    else zone.transitions.(i - 1).new_regime.utc_off
   in
-  (* when we reach a small slice of the array drop to linear search *)
-  if (max_bound - min_bound) <= 3 then
-    let rec loop i =
-      if i = min_bound then i
-      else begin
-        let transition = transitions.(i) in
-        let (s,_e) = convert_transition transition in
-        if time >= s
-        then i
-        else loop (i - 1)
-      end
-    in
-    loop max_bound
-  else begin
-    let (s,e) = convert_transition transitions.(i) in
-    if time < s then
-      bin_search time transitions transtype
-        (i - (Int.max ((i - min_bound) / 2) 1)) min_bound i
-    else if time >= e then
-      bin_search time transitions transtype
-        (i + (Int.max ((max_bound - i) / 2) 1)) i max_bound
-    else
-      i
-  end
-;;
+  ( Time_internal.T.of_float zone.transitions.(i).start_time
+  , Span.of_float (zone.transitions.(i).new_regime.utc_off -. previous_shift)
+  )
 
-(* Returns the next time the clocks move, if any, and how much they will move by. *)
 let next_clock_shift (lazy zone) ~after =
-  let time = Time_internal.T.to_float after in
-  let module T = Transition in
-  let module R = Regime in
-  let transitions     = zone.transitions in
-  let num_transitions = Array.length transitions in
-  let default_off     = zone.default_local_time_type.R.utc_off in
-  if num_transitions = 0 then
-    None
-  else if transitions.(0).T.start_time > time then
-    Some
-      ( Time_internal.T.of_float transitions.(0).T.start_time
-      , Span.of_float (transitions.(0).T.regime.R.utc_off -. default_off)
-      )
-  else
-    let last_pos = num_transitions - 1 in
-    let i        = bin_search time transitions `UTC (last_pos / 2) 0 last_pos in
-    let this_off = transitions.(i).T.regime.R.utc_off in
-    Some (if i = last_pos
-        then
-          ( Time_internal.T.of_float transitions.(i).T.end_time
-          , Span.of_float (default_off -. this_off))
-        else
-          ( Time_internal.T.of_float transitions.(i + 1).T.start_time
-          , Span.of_float (transitions.(i + 1).T.regime.R.utc_off -. this_off)))
+  let segment_of (transition : Transition.t) =
+    if Time_internal.T.(of_float transition.start_time > after)
+    then `Right
+    else `Left
+  in
+  Option.map (Array.binary_search_segmented zone.transitions ~segment_of `First_on_right)
+    ~f:(fun i -> clock_shift_at zone i)
 ;;
 
-TEST_MODULE = struct
+let prev_clock_shift (lazy zone) ~before =
+  let segment_of (transition : Transition.t) =
+    if Time_internal.T.(of_float transition.start_time < before)
+    then `Left
+    else `Right
+  in
+  Option.map (Array.binary_search_segmented zone.transitions ~segment_of `Last_on_left)
+    ~f:(fun i -> clock_shift_at zone i)
+;;
+
+TEST_MODULE "next_clock_shift, prev_clock_shift" = struct
   let mkt ?(year=2013) month day hour min =
     Time_internal.T.of_float
       (Time_internal.utc_mktime ~year ~month ~day ~hour ~min ~sec:0 ~ms:0 ~us:0)
-  ;;
 
-  TEST "next_clock_shift UTC" = Option.is_none
-    (next_clock_shift utc ~after:(mkt 01 01  12 00))
-  ;;
+  TEST "UTC" =
+    Option.is_none (next_clock_shift utc ~after:(mkt 01 01  12 00))
+      && Option.is_none (prev_clock_shift utc ~before:(mkt 01 01  12 00))
 
-  let expect_some after (time, amount) =
-    match next_clock_shift (find_exn "Europe/London") ~after with
-    | Some (t, a) -> t = time && a = amount
-    | None -> false
-  ;;
+  module Time_as_float = struct
+    type t = Time_internal.T.t with compare
 
-  let bst_start      = mkt ~year:2013 03 31  01 00, Span.hour;;
-  let bst_end        = mkt ~year:2013 10 27  01 00, Span.(neg hour);;
-  let bst_start_2014 = mkt ~year:2014 03 30  01 00, Span.hour;;
+    let sexp_of_t t = Float.sexp_of_t (Time_internal.T.to_float t)
+  end
 
-  TEST "next_clock_shift, outside BST" =
-    expect_some (mkt 01 01  12 00) bst_start
-  ;;
+  let expect_next after next =
+    <:test_result< (Time_as_float.t * Span.t) option >>
+      ~expect:(Some next)
+      (next_clock_shift (find_exn "Europe/London") ~after)
 
-  TEST "next_clock_shift, just before BST start" =
-    expect_some (mkt 03 31  00 59) bst_start
-  ;;
+  let expect_prev before prev =
+    <:test_result< (Time_as_float.t * Span.t) option >>
+      ~expect:(Some prev)
+      (prev_clock_shift (find_exn "Europe/London") ~before)
 
-  TEST "next_clock_shift, BST start time" =
-    expect_some (mkt 03 31  01 00) bst_end
-  ;;
+  let expect_between time prev next =
+    expect_prev time prev;
+    expect_next time next
 
-  TEST "next_clock_shift, just after BST start" =
-    expect_some (mkt 03 31  01 01) bst_end
-  ;;
+  let bst_start      = mkt ~year:2013 03 31  01 00, Span.hour
+  let bst_end        = mkt ~year:2013 10 27  01 00, Span.(neg hour)
+  let bst_start_2014 = mkt ~year:2014 03 30  01 00, Span.hour
 
-  TEST "next_clock_shift, inside BST" =
-    expect_some (mkt 06 01  12 00) bst_end
-  ;;
+  TEST_UNIT "outside BST" =
+    expect_next (mkt 01 01  12 00) bst_start
 
-  TEST "next_clock_shift, just before BST end" =
-    expect_some (mkt 10 27  00 59) bst_end
-  ;;
+  TEST_UNIT "just before BST start" =
+    expect_next (mkt 03 31  00 59) bst_start
 
-  TEST "next_clock_shift, BST end time" =
-    expect_some (mkt 10 27  01 00) bst_start_2014
-  ;;
+  TEST_UNIT "on BST start time" =
+    expect_next (mkt 03 31  01 00) bst_end
 
-  TEST "next_clock_shift, just after BST end" =
-    expect_some (mkt 10 27  01 01) bst_start_2014
-  ;;
+  TEST_UNIT "just after BST start" =
+    expect_between (mkt 03 31  01 01) bst_start bst_end
+
+  TEST_UNIT "inside BST" =
+    expect_between (mkt 06 01  12 00) bst_start bst_end
+
+  TEST_UNIT "just before BST end" =
+    expect_between (mkt 10 27  00 59) bst_start bst_end
+
+  TEST_UNIT "BST end time" =
+    expect_between (mkt 10 27  01 00) bst_start bst_start_2014
+
+  TEST_UNIT "just after BST end" =
+    expect_between (mkt 10 27  01 01) bst_end bst_start_2014
 end
+
+let convert_transition (transition : Transition.t) transtype =
+  match transtype with
+  | `UTC   -> transition.start_time
+  | `Local -> transition.start_time +. transition.new_regime.utc_off
+;;
+
+(* Determine if [time] is governed by the regime in [transitions.(index)]. *)
+let in_transition transitions ~index time transtype =
+  try
+    let s = convert_transition transitions.(index) transtype in
+    let e = convert_transition transitions.(index + 1) transtype in
+    s <= time && time < e
+  with
+  | _ -> false
+;;
 
 (* [find_local_regime zone `UTC time] finds the local time regime in force
    in [zone] at [seconds], from 1970/01/01:00:00:00 UTC.
@@ -742,30 +692,29 @@ end
 *)
 let find_local_regime (lazy zone) transtype time =
   let module T = Transition in
-  let transitions        = zone.transitions in
-  let convert_transition =
-    match transtype with
-    | `Local -> transition_as_localtime
-    | `UTC   -> transition_as_utc
-  in
+  let transitions     = zone.transitions in
   let num_transitions = Array.length transitions in
   if num_transitions = 0 then
     zone.default_local_time_type
   else if transitions.(0).T.start_time > time then
     zone.default_local_time_type
   else begin
-    match
-      Array.find zone.likely_transitions ~f:(fun t ->
-        let (s,e) = convert_transition t in
-        s <= time && time < e)
-    with
-    | Some t -> t.T.regime
-    | None   ->
-      let last_pos = num_transitions - 1 in
-      let i        =
-        bin_search time transitions transtype (last_pos / 2) 0 last_pos
+    if in_transition transitions ~index:zone.last_regime_index time transtype
+    then transitions.(zone.last_regime_index).new_regime
+    else begin
+      let segment_of (transition : Transition.t) =
+        let start_time = convert_transition transition transtype in
+        if time >= start_time
+        then `Left
+        else `Right
       in
-      transitions.(i).T.regime
+      let index =
+        Option.value_exn
+          (Array.binary_search_segmented transitions ~segment_of `Last_on_left)
+      in
+      zone.last_regime_index <- index;
+      transitions.(index).new_regime
+    end
   end
 ;;
 

@@ -12,6 +12,7 @@ let () =
         | Some "core" ->
             (cs, bs, lib, [
                            "src/ocaml_utils_macros.h";
+                           "src/ocaml_utils.h";
                            "src/unix_utils.h";
                            "src/core_config.h"])
         | _ ->

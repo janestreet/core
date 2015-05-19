@@ -5,13 +5,15 @@ let test =
   "common" >:::
     [ "% and /%" >::
         (fun () ->
-           let gen_int_pair () = (Quickcheck.uig (), abs (Quickcheck.uig ())) in
+           let gen_int_pair () =
+             (Quickcheck_deprecated.uig (), abs (Quickcheck_deprecated.uig ()))
+           in
            let modulus_invariant (a, b) =
              let r = a % b in
              let q = a /% b in
              r >= 0 && a = q * b + r
            in
-           Quickcheck.laws_exn "modulus invariant"
+           Quickcheck_deprecated.laws_exn "modulus invariant"
              1000 gen_int_pair modulus_invariant
         );
 
@@ -19,8 +21,8 @@ let test =
         (fun () ->
            let f x = x * x in
            let memo_f = Memo.general f in
-           Quickcheck.laws_exn "memoize"
-             1000 Quickcheck.uig (fun i -> f i = memo_f i)
+           Quickcheck_deprecated.laws_exn "memoize"
+             1000 Quickcheck_deprecated.uig (fun i -> f i = memo_f i)
         );
 
       "nan" >::

@@ -1,5 +1,6 @@
 open Core_kernel.Std
 
+(** @deprecated in favor of [t], below. *)
 type error
   = Unix.error
   = E2BIG | EACCES | EAGAIN | EBADF | EBUSY | ECHILD | EDEADLK | EDOM | EEXIST
@@ -13,6 +14,15 @@ type error
   | ECONNABORTED | ECONNRESET | ENOBUFS | EISCONN | ENOTCONN | ESHUTDOWN
   | ETOOMANYREFS | ETIMEDOUT | ECONNREFUSED | EHOSTDOWN | EHOSTUNREACH | ELOOP
   | EOVERFLOW | EUNKNOWNERR of int
-  with sexp
+  with sexp, compare
 
-type t = error with sexp
+type t = error with sexp, compare
+
+external of_errno : int -> t = "core_unix_error_of_code"
+external to_errno : t -> int = "core_code_of_unix_error"
+
+TEST_UNIT =
+  for i = 1 to 10000 do
+    <:test_result< int >> ~expect:i (to_errno (of_errno i))
+  done;
+;;

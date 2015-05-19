@@ -58,7 +58,13 @@ include Stringable          with type t := t
 
 (** {5 values} *)
 
-(* midnight, Jan 1, 1970 in UTC *)
+(** Unlike [Time_ns], this module purposely omits [max_value] and [min_value]:
+    1. They produce unintuitive corner cases because most people's mental models of time
+       do not include +/- infinity as concrete values
+    2. In practice, when people ask for these values, it is for questionable uses, e.g.,
+       as null values to use in place of explicit options. *)
+
+(** midnight, Jan 1, 1970 in UTC *)
 val epoch : t
 
 (** {6 Basic operations on times} *)
@@ -130,7 +136,7 @@ val utc_offset
   -> zone:Zone.t
   -> Span.t
 
-(** Other string conversions  *)
+(** {6 Other string conversions}  *)
 
 (** [to_filename_string t ~zone] converts [t] to string with format
     YYYY-MM-DD_HH-MM-SS.mmm which is suitable for using in filenames. *)

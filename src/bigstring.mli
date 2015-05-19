@@ -182,15 +182,20 @@ val send_nonblocking_no_sigpipe
 *)
 
 val sendto_nonblocking_no_sigpipe
-  : (file_descr -> ?pos : int -> ?len : int -> t ->
-     sockaddr -> int option) Or_error.t
+  : (file_descr
+     -> ?pos : int
+     -> ?len : int
+     -> t
+     -> sockaddr
+     -> Syscall_result.Int.t
+    ) Or_error.t
 (** [sendto_nonblocking_no_sigpipe sock ?pos ?len bstr sockaddr] tries
     to send [len] bytes in bigstring [bstr] starting at position [pos]
-    to socket [sock] using address [addr].  @return [Some bytes_written],
-    or [None] if the operation would have blocked.
+    to socket [sock] using address [addr].
+
+    @return [bytes_written].
 
     @raise Invalid_argument if the designated range is out of bounds.
-    @raise Unix_error in the case of output errors.
 
     @param pos default = 0
     @param len default = [length bstr - pos]

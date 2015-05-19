@@ -2,36 +2,249 @@
 
 open Core_kernel.Std
 
-(** composable command-line specifications *)
+(** {1 argument types} *)
+module Arg_type : sig
+  type 'a t (** the type of a command line argument *)
+
+  (** An argument type includes information about how to parse values of that type from
+      the command line, and (optionally) how to auto-complete partial arguments of that
+      type via bash's programmable TAB-completion.  In addition to the argument prefix,
+      autocompletion also has access to any previously parsed arguments in the form of a
+      heterogeneous map into which previously parsed arguments may register themselves by
+      providing a [Univ_map.Key] using the [~key] argument to [create].
+
+      If the [of_string] function raises an exception, command line parsing will be
+      aborted and the exception propagated up to top-level and printed along with
+      command-line help. *)
+  val create
+    :  ?complete:(Univ_map.t -> part:string -> string list)
+    -> ?key:'a Univ_map.Multi.Key.t
+    -> (string -> 'a)
+    -> 'a t
+
+  (** an auto-completing Arg_type over a finite set of values *)
+  val of_map : ?key:'a Univ_map.Multi.Key.t -> 'a String.Map.t -> 'a t
+
+  (** convenience wrapper for [of_map].  Raises on duplicate keys *)
+  val of_alist_exn : ?key:'a Univ_map.Multi.Key.t -> (string * 'a) list -> 'a t
+
+  (** [file] defines an [Arg_type.t] that completes in the same way as
+      [Command.Spec.file], but perhaps with a different type than [string] or with an
+      autocompletion key. *)
+  val file
+    :  ?key:'a Univ_map.Multi.Key.t
+    -> (string -> 'a)
+    -> 'a t
+
+  (* values to include in other namespaces *)
+  module Export : sig
+
+    val string             : string             t
+    (** Beware that an anonymous argument of type [int] cannot be specified as negative,
+        as it is ambiguous whether -1 is a negative number or a flag. If you need to pass
+        a negative number to your program, make it a parameter to a flag. *)
+    val int                : int                t
+    val char               : char               t
+    val float              : float              t
+    val bool               : bool               t
+    val date               : Date.t             t
+    (** [time] requires a time zone. *)
+    val time               : Time.t             t
+    val time_ofday         : Time.Ofday.Zoned.t t
+    (** Use [time_ofday_unzoned] only when time zone is implied somehow. *)
+    val time_ofday_unzoned : Time.Ofday.t       t
+    val time_span          : Time.Span.t        t
+    (* [file] uses bash autocompletion. *)
+    val file               : string             t
+  end
+end
+
+(** {1 flag specifications} *)
+module Flag : sig
+  type 'a t
+
+  (** required flags must be passed exactly once *)
+  val required : 'a Arg_type.t -> 'a t
+
+  (** optional flags may be passed at most once *)
+  val optional : 'a Arg_type.t -> 'a option t
+
+  (** [optional_with_default] flags may be passed at most once, and
+      default to a given value *)
+  val optional_with_default : 'a -> 'a Arg_type.t -> 'a t
+
+  (** [listed] flags may be passed zero or more times *)
+  val listed : 'a Arg_type.t -> 'a list t
+
+  (** [one_or_more] flags must be passed one or more times *)
+  val one_or_more : 'a Arg_type.t -> ('a * 'a list) t
+
+  (** [no_arg] flags may be passed at most once.  The boolean returned
+      is true iff the flag is passed on the command line *)
+  val no_arg : bool t
+
+  (** [no_arg_register ~key ~value] is like [no_arg], but associates [value]
+      with [key] in the in the auto-completion environment *)
+  val no_arg_register : key:'a Univ_map.With_default.Key.t -> value:'a -> bool t
+
+  (** [no_arg_abort ~exit] is like [no_arg], but aborts command-line parsing
+      by calling [exit].  This flag type is useful for "help"-style flags that
+      just print something and exit. *)
+  val no_arg_abort : exit:(unit -> never_returns) -> unit t
+
+  (** [escape] flags may be passed at most once.  They cause the command line parser to
+      abort and pass through all remaining command line arguments as the value of the
+      flag.
+
+      A standard choice of flag name to use with [escape] is ["--"]. *)
+  val escape : string list option t
+end
+
+(** {1 anonymous argument specifications} *)
+module Anons : sig
+
+  type 'a t (** a specification of some number of anonymous arguments *)
+
+  (** [(name %: typ)] specifies a required anonymous argument of type [typ].
+
+      The [name] must not be surrounded by whitespace, if it is, an exn will be raised.
+
+      If the [name] is surrounded by a special character pair (<>, \{\}, \[\] or (),)
+      [name] will remain as-is, otherwise, [name] will be uppercased.
+
+      In the situation where [name] is only prefixed or only suffixed by one of the
+      special character pairs, or different pairs are used, (e.g. "<ARG\]") an exn will
+      be raised.
+
+      The (possibly transformed) [name] is mentioned in the generated help for the
+      command. *)
+  val ( %: ) : string -> 'a Arg_type.t -> 'a t
+
+  (** [sequence anons] specifies a sequence of anonymous arguments.  An exception
+      will be raised if [anons] matches anything other than a fixed number of
+      anonymous arguments  *)
+  val sequence : 'a t -> 'a list t
+
+  (** [non_empty_sequence anons] is like [sequence anons] except an exception will be
+      raised if there is not at least one anonymous argument given. *)
+  val non_empty_sequence : 'a t -> ('a * 'a list) t
+
+  (** [(maybe anons)] indicates that some anonymous arguments are optional *)
+  val maybe : 'a t -> 'a option t
+
+  (** [(maybe_with_default default anons)] indicates an optional anonymous
+      argument with a default value *)
+  val maybe_with_default : 'a -> 'a t -> 'a t
+
+  (** [t2], [t3], and [t4] each concatenate multiple anonymous argument
+      specs into a single one. The purpose of these combinators is to allow
+      for optional sequences of anonymous arguments.  Consider a command with
+      usage:
+
+      {v
+        main.exe FOO [BAR BAZ]
+       v}
+
+      where the second and third anonymous arguments must either both
+      be there or both not be there.  This can be expressed as:
+
+      {[
+        t2 ("FOO" %: foo) (maybe (t2 ("BAR" %: bar) ("BAZ" %: baz)))]
+       ]}
+
+      Sequences of 5 or more anonymous arguments can be built up using
+      nested tuples:
+
+      {[
+        maybe (t3 a b (t3 c d e))
+      ]}
+  *)
+
+  val t2 : 'a t -> 'b t -> ('a * 'b) t
+
+  val t3 : 'a t -> 'b t -> 'c t -> ('a * 'b * 'c) t
+
+  val t4 : 'a t -> 'b t -> 'c t -> 'd t -> ('a * 'b * 'c * 'd) t
+end
+
+(** {1 specification of command parameters} *)
+module Param : sig
+  module type S = sig
+    include Applicative.S
+
+    (** {2 various internal values} *)
+
+    val help : string Lazy.t t (** the help text for the command *)
+    val path : string list   t (** the subcommand path of the command *)
+    val args : string list   t (** the arguments passed to the command *)
+
+    (** [flag name spec ~doc] specifies a command that, among other things, takes a flag
+        named [name] on its command line.  [doc] indicates the meaning of the flag.
+
+        All flags must have a dash at the beginning of the name.  If [name] is not prefixed
+        by "-", it will be normalized to ["-" ^ name].
+
+        Unless [full_flag_required] is used, one doesn't have to pass [name] exactly on the
+        command line, but only an unambiguous prefix of [name] (i.e., a prefix which is not
+        a prefix of any other flag's name).
+
+        NOTE: the [doc] for a flag which takes an argument should be of the form
+        [arg_name ^ " " ^ description] where [arg_name] describes the argument and
+        [description] describes the meaning of the flag.
+
+        NOTE: flag names (including aliases) containing underscores will be rejected.
+        Use dashes instead.
+
+        NOTE: "-" by itself is an invalid flag name and will be rejected.
+    *)
+    val flag
+      :  ?aliases            : string list
+      -> ?full_flag_required : unit
+      -> string
+      -> 'a Flag.t
+      -> doc : string
+      -> 'a t
+
+    (** [anon spec] specifies a command that, among other things, takes the anonymous
+        arguments specified by [spec]. *)
+    val anon : 'a Anons.t -> 'a t
+  end
+
+  include S
+
+  (* values included for convenience so you can specify all command line parameters inside
+     a single local open of [Param] *)
+
+  module Args : Applicative.Args with type 'a arg := 'a t
+  include module type of Args with type ('a, 'b) t := ('a, 'b) Args.t
+
+  module Arg_type : module type of Arg_type with type 'a t = 'a Arg_type.t
+  include module type of Arg_type.Export
+  include module type of Flag  with type 'a t := 'a Flag.t
+  include module type of Anons with type 'a t := 'a Anons.t
+end
+
+(** {1 older interface for command-line specifications} *)
 module Spec : sig
 
   (** {1 command parameters} *)
 
   (** specification of an individual parameter to the command's main function *)
-  type 'a param
+  type 'a param = 'a Param.t
+  include Param.S with type 'a t := 'a param
 
-  (** a hard-coded parameter *)
+  (** Superceded by [return], preserved for backwards compatibility *)
   val const : 'a -> 'a param
 
-  (** parameter transformation *)
-  val map : 'a param -> f:('a -> 'b) -> 'b param
-
-  (** parameter combination *)
-  val apply : ('a -> 'b) param -> 'a param -> 'b param
+  (** Superceded by [both], preserved for backwards compatibility *)
   val pair : 'a param -> 'b param -> ('a * 'b) param
-
-  (** {2 various internal values} *)
-
-  val help : string Lazy.t param (** the help text for the command *)
-  val path : string list param   (** the subcommand path of the command *)
-  val args : string list param   (** the arguments passed to the command *)
 
   (** {1 command specifications} *)
 
   (** composable command-line specifications *)
   type ('main_in, 'main_out) t
   (**
-      Ultimately one forms a base command by combining a spec of type
+      Ultimately one forms a basic command by combining a spec of type
       [('main, unit -> unit) t] with a main function of type ['main]; see the [basic]
       function below.  Combinators in this library incrementally build up the type of main
       according to what command-line parameters it expects, so the resulting type of
@@ -190,231 +403,59 @@ module Spec : sig
       }
   *)
 
-  (** {1 argument types} *)
+  module Arg_type : module type of Arg_type with type 'a t = 'a Arg_type.t
 
-  module Arg_type : sig
-    type 'a t (** the type of a command line argument *)
-
-    (** an argument type includes information about how to parse values of that type from
-        the command line, and (optionally) how to auto-complete partial arguments of that
-        type via bash's programmable TAB-completion.  In addition to the argument prefix,
-        autocompletion also has access to any previously parsed arguments in the form of a
-        heterogeneous map into which previously parsed arguments may register themselves by
-        providing a Univ_map.Key using the ~key argument to [create].
-
-        If the [of_string] function raises an exception, command line parsing will be
-        aborted and the exception propagated up to top-level and printed along with
-        command-line help.
-    *)
-    val create
-      :  ?complete:(Univ_map.t -> part:string -> string list)
-      -> ?key:'a Univ_map.Multi.Key.t
-      -> (string -> 'a)
-      -> 'a t
-
-    (** an auto-completing Arg_type over a finite set of values *)
-    val of_map : ?key:'a Univ_map.Multi.Key.t -> 'a String.Map.t -> 'a t
-
-    (** convenience wrapper for [of_map].  Raises on duplicate keys *)
-    val of_alist_exn : ?key:'a Univ_map.Multi.Key.t -> (string * 'a) list -> 'a t
-
-    (** [file] defines an [Arg_type.t] that completes in the same way as
-        [Command.Spec.file], but perhaps with a different type than [string] or with an
-        autocompletion key. *)
-    val file
-      :  ?key:'a Univ_map.Multi.Key.t
-      -> (string -> 'a)
-      -> 'a t
-  end
+  include module type of Arg_type.Export
 
 
-  val string             : string             Arg_type.t
-  (** Beware that an anonymous argument of type [int] cannot be specified as negative, as
-      it is ambiguous whether -1 is a negative number or a flag. If you need to pass a
-      negative number to your program, make it a parameter to a flag. *)
-  val int                : int                Arg_type.t
-  val char               : char               Arg_type.t
-  val float              : float              Arg_type.t
-  val bool               : bool               Arg_type.t
-  val date               : Date.t             Arg_type.t
-  (** [time] requires a time zone. *)
-  val time               : Time.t             Arg_type.t
-  val time_ofday         : Time.Ofday.Zoned.t Arg_type.t
-  (** Use [time_ofday_unzoned] only when time zone is implied somehow. *)
-  val time_ofday_unzoned : Time.Ofday.t       Arg_type.t
-  val time_span          : Time.Span.t        Arg_type.t
-  (* [file] uses bash autocompletion. *)
-  val file               : string             Arg_type.t
-
-
-  (** {1 flag specifications} *)
-
-  type 'a flag (** a flag specification *)
-
-  (** [flag name spec ~doc] specifies a command that, among other things, takes a flag
-      named [name] on its command line.  [doc] indicates the meaning of the flag.
-
-      All flags must have a dash at the beginning of the name.  If [name] is not prefixed
-      by "-", it will be normalized to ["-" ^ name].
-
-      Unless [full_flag_required] is used, one doesn't have to pass [name] exactly on the
-      command line, but only an unambiguous prefix of [name] (i.e., a prefix which is not
-      a prefix of any other flag's name).
-
-      NOTE: the [doc] for a flag which takes an argument should be of the form
-            [arg_name ^ " " ^ description] where [arg_name] describes the argument and
-            [description] describes the meaning of the flag.
-
-      NOTE: flag names (including aliases) containing underscores will be rejected.
-            Use dashes instead.
-
-      NOTE: "-" by itself is an invalid flag name and will be rejected.
-  *)
-  val flag
-    :  ?aliases:string list
-    -> ?full_flag_required:unit
-    -> string
-    -> 'a flag
-    -> doc:string
-    -> 'a param
+  type 'a flag = 'a Flag.t (** a flag specification *)
+  include module type of Flag with type 'a t := 'a flag
 
   (** [map_flag flag ~f] transforms the parsed result of [flag] by applying [f] *)
   val map_flag : 'a flag -> f:('a -> 'b) -> 'b flag
 
-  (** required flags must be passed exactly once *)
-  val required : 'a Arg_type.t -> 'a flag
-
-  (** optional flags may be passed at most once *)
-  val optional : 'a Arg_type.t -> 'a option flag
-
-  (** [optional_with_default] flags may be passed at most once, and
-      default to a given value *)
-  val optional_with_default : 'a -> 'a Arg_type.t -> 'a flag
-
-  (** [listed] flags may be passed zero or more times *)
-  val listed : 'a Arg_type.t -> 'a list flag
-
-  (** [one_or_more] flags must be passed one or more times *)
-  val one_or_more : 'a Arg_type.t -> ('a * 'a list) flag
-
-  (** [no_arg] flags may be passed at most once.  The boolean returned
-      is true iff the flag is passed on the command line *)
-  val no_arg : bool flag
-
-  (** [no_arg_register ~key ~value] is like [no_arg], but associates [value]
-      with [key] in the in the auto-completion environment *)
-  val no_arg_register : key:'a Univ_map.With_default.Key.t -> value:'a -> bool flag
-
-  (** [no_arg_abort ~exit] is like [no_arg], but aborts command-line parsing
-      by calling [exit].  This flag type is useful for "help"-style flags that
-      just print something and exit. *)
-  val no_arg_abort : exit:(unit -> never_returns) -> unit flag
-
-  (** [escape] flags may be passed at most once.  They cause the command line parser to
-      abort and pass through all remaining command line arguments as the value of the
-      flag.
-
-      A standard choice of flag name to use with [escape] is ["--"]. *)
-  val escape : string list option flag
-
-  (** [flags_of_args_exn args] creates a spec from [Arg.t]s, for compatibility with
+  (** [flags_of_args_exn args] creates a spec from [Caml.Arg.t]s, for compatibility with
       ocaml's base libraries.  Fails if it encounters an arg that cannot be converted.
 
-      NOTE: There is a difference in side effect ordering between [Arg] and [Command].  In
-      the [Arg] module, flag handling functions embedded in [Arg.t] values will be run in
-      the order that flags are passed on the command line.  In the [Command] module, using
-      [flags_of_args_exn flags], they are evaluated in the order that the [Arg.t] values
-      appear in [flags].  *)
-  val flags_of_args_exn : Arg.t list -> ('a, 'a) t
+      NOTE: There is a difference in side effect ordering between [Caml.Arg] and
+      [Command].  In the [Arg] module, flag handling functions embedded in [Caml.Arg.t]
+      values will be run in the order that flags are passed on the command line.  In the
+      [Command] module, using [flags_of_args_exn flags], they are evaluated in the order
+      that the [Caml.Arg.t] values appear in [flags].
+  *)
+  val flags_of_args_exn : Core_kernel.Std.Arg.t list -> ('a, 'a) t
 
-  (** {1 anonymous argument specifications} *)
-
-  type 'a anons (** a specification of some number of anonymous arguments *)
-
-  (** [anon spec] specifies a command that, among other things, takes
-      the anonymous arguments specified by [spec]. *)
-  val anon : 'a anons -> 'a param
+  type 'a anons = 'a Anons.t (** a specification of some number of anonymous arguments *)
+  include module type of Anons with type 'a t := 'a anons
 
   (** [map_anons anons ~f] transforms the parsed result of [anons] by applying [f] *)
   val map_anons : 'a anons -> f:('a -> 'b) -> 'b anons
-
-  (** [(name %: typ)] specifies a required anonymous argument of type [typ].
-
-      The [name] must not be surrounded by whitespace, if it is, an exn will be raised.
-
-      If the [name] is surrounded by a special character pair (<>, \{\}, \[\] or (),)
-      [name] will remain as-is, otherwise, [name] will be uppercased.
-
-      In the situation where [name] is only prefixed or only suffixed by one of the
-      special character pairs, or different pairs are used, (e.g. "<ARG\]") an exn will
-      be raised.
-
-      The (possibly transformed) [name] is mentioned in the generated help for the
-      command. *)
-  val (%:) : string -> 'a Arg_type.t -> 'a anons
-
-  (** [sequence anons] specifies a sequence of anonymous arguments.  An exception
-      will be raised if [anons] matches anything other than a fixed number of
-      anonymous arguments  *)
-  val sequence : 'a anons -> 'a list anons
-
-  (** [non_empty_sequence anons] is like [sequence anons] except an exception will be
-      raised if there is not at least one anonymous argument given. *)
-  val non_empty_sequence : 'a anons -> ('a * 'a list) anons
-
-  (** [(maybe anons)] indicates that some anonymous arguments are optional *)
-  val maybe : 'a anons -> 'a option anons
-
-  (** [(maybe_with_default default anons)] indicates an optional anonymous
-      argument with a default value *)
-  val maybe_with_default : 'a -> 'a anons -> 'a anons
-
-  (** [t2], [t3], and [t4] each concatenate multiple anonymous argument
-      specs into a single one. The purpose of these combinators is to allow
-      for optional sequences of anonymous arguments.  Consider a command with
-      usage:
-
-      {v
-        main.exe FOO [BAR BAZ]
-       v}
-
-      where the second and third anonymous arguments must either both
-      be there or both not be there.  This can be expressed as:
-
-      {[
-        t2 ("FOO" %: foo) (maybe (t2 ("BAR" %: bar) ("BAZ" %: baz)))]
-       ]}
-
-      Sequences of 5 or more anonymous arguments can be built up using
-      nested tuples:
-
-      {[
-        maybe (t3 a b (t3 c d e))
-      ]}
-  *)
-
-  val t2 : 'a anons -> 'b anons -> ('a * 'b) anons
-
-  val t3 : 'a anons -> 'b anons -> 'c anons -> ('a * 'b * 'c) anons
-
-  val t4 : 'a anons -> 'b anons -> 'c anons -> 'd anons -> ('a * 'b * 'c * 'd) anons
-
 end
 
 type t (** commands which can be combined into a hierarchy of subcommands *)
 
 type ('main, 'result) basic_command
-  =  summary:string
-  -> ?readme:(unit -> string)
+  =  summary : string
+  -> ?readme : (unit -> string)
   -> ('main, unit -> 'result) Spec.t
   -> 'main
   -> t
 
 (** [basic ~summary ?readme spec main] is a basic command that executes a function [main]
-    which is passed parameters parsed from the command line according to [spec]. [summary]
-    is to contain a short one-line description of its behavior.  [readme] is to contain
-    any longer description of its behavior that will go on that commands' help screen. *)
+    which is passed parameters parsed from the command line according to [spec].
+    [summary] is to contain a short one-line description of its behavior.  [readme] is to
+    contain any longer description of its behavior that will go on that commands' help
+    screen. *)
 val basic : ('main, unit) basic_command
+
+(** Same general behavior as [basic], but takes a command line specification built up
+    using [Params] instead of [Spec]. *)
+val basic'
+  :  summary : string
+  -> ?readme : (unit -> string)
+  -> ('main, unit -> unit) Param.Args.t
+  -> 'main
+  -> t
 
 (** [group ~summary subcommand_alist] is a compound command with named
     subcommands, as found in [subcommand_alist].  [summary] is to contain
@@ -423,15 +464,16 @@ val basic : ('main, unit) basic_command
     command's help screen.
 
     NOTE: subcommand names containing underscores will be rejected.  Use dashes
-    instead. *)
+    instead.
+
+    [body] is called when no additional arguments are passed -- in particular, when no
+    subcommand is passed.  Its [path] argument is the subcommand path by which the group
+    command was reached. *)
 val group
-  :  summary:string
-  -> ?readme:(unit -> string)
-  -> ?preserve_subcommand_order:unit
-  (** [body] is called when no additional arguments are passed -- in particular, when no
-      subcommand is passed.  The [path] argument is the subcommand path by which the group
-      command was reached. *)
-  -> ?body:(path:string list -> unit)
+  :  summary                    : string
+  -> ?readme                    : (unit -> string)
+  -> ?preserve_subcommand_order : unit
+  -> ?body                      : (path:string list -> unit)
   -> (string * t) list
   -> t
 
@@ -455,14 +497,26 @@ val group
     itself, [help -recursive] and autocompletion will hang forever (although actually
     running the subcommand will work). *)
 val exec
-  :  summary:string
-  -> ?readme:(unit -> string)
-  -> path_to_exe:[ `Absolute of string | `Relative_to_me of string ]
+  :  summary     : string
+  -> ?readme     : (unit -> string)
+  -> path_to_exe : [ `Absolute of string | `Relative_to_me of string ]
   -> unit
   -> t
 
 (** extract the summary string for a command *)
 val summary : t -> string
+
+module Shape : sig
+  type command
+  type t =
+    | Basic
+    | Group of (string * command) list
+    | Exec of (unit -> t)
+end
+with type command := t
+
+(** expose the shape of a command *)
+val shape : t -> Shape.t
 
 (** Run a command against [Sys.argv], or [argv] if it is specified.
 
@@ -483,10 +537,10 @@ val summary : t -> string
     add a default flags section to a user config file.
 *)
 val run
-  :  ?version:string
-  -> ?build_info:string
-  -> ?argv:string list
-  -> ?extend:(string list -> string list)
+  :  ?version    : string
+  -> ?build_info : string
+  -> ?argv       : string list
+  -> ?extend     : (string list -> string list)
   -> t
   -> unit
 
@@ -502,21 +556,21 @@ module Deprecated : sig
   val summary : t -> string
 
   val help_recursive
-    :  cmd:string
-    -> with_flags:bool
-    -> expand_dots:bool
+    :  cmd         : string
+    -> with_flags  : bool
+    -> expand_dots : bool
     -> t
     -> string
     -> (string * string) list
 
   val run
     :  t
-    -> cmd:string
-    -> args:string list
-    -> is_help:bool
-    -> is_help_rec:bool
-    -> is_help_rec_flags:bool
-    -> is_expand_dots:bool
+    -> cmd               : string
+    -> args              : string list
+    -> is_help           : bool
+    -> is_help_rec       : bool
+    -> is_help_rec_flags : bool
+    -> is_expand_dots    : bool
     -> unit
 
   val get_flag_names : t ->  string list

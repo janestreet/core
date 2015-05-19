@@ -14,16 +14,16 @@ type args = {
 } with sexp_of
 
 let command =
-  Command.basic ~summary:"demonstrate the no_arg_abort flag type"
-    Command.Spec.(
-      empty
-      +> flag "-readme" (no_arg_abort ~exit:dump_readme)
-           ~doc: " display README.txt and quit"
-      +> flag "-grammar" (no_arg_abort ~exit:dump_grammar)
+  Command.basic' ~summary:"demonstrate the no_arg_abort flag type"
+    Command.Param.(
+      flag "-readme" (no_arg_abort ~exit:dump_readme)
+        ~doc: " display README.txt and quit"
+      @> flag "-grammar" (no_arg_abort ~exit:dump_grammar)
            ~doc: " display GRAMMAR.txt and quit"
-      +> flag "-foo" (optional int)
+      @> flag "-foo" (optional int)
            ~doc:"NUM numeric flag"
-      +> anon (maybe ("NUM" %: int))
+      @> anon (maybe ("NUM" %: int))
+      @> nil
     )
     (fun () () foo anon () ->
        printf !"entering main with args: %{sexp:args}\n" {foo; anon};

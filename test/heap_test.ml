@@ -35,7 +35,7 @@ let test =
           );
         "top" >::
           (fun () ->
-            let (h,l) = random_heap_and_list Quickcheck.uig in
+            let (h,l) = random_heap_and_list Quickcheck_deprecated.uig in
             "foo" @? (match Heap.top h with
                         None -> false
                       | Some t -> t = List.hd_exn (List.sort ~cmp:compare l));
@@ -43,7 +43,7 @@ let test =
           );
         "pop" >::
           (fun () ->
-            let (h,l) = random_heap_and_list Quickcheck.uig in
+            let (h,l) = random_heap_and_list Quickcheck_deprecated.uig in
             "foo" @? (match Heap.pop h with
                         None -> false
                       | Some t -> t = List.hd_exn (List.sort ~cmp:compare l));
@@ -81,7 +81,7 @@ let test =
           (fun () ->
             "content differs" @?
               begin
-                let h,l = random_heap_and_list Quickcheck.fg in
+                let h,l = random_heap_and_list Quickcheck_deprecated.fg in
                 (List.sort ~cmp:Float.compare l) = (to_sorted_list h)
               end
           );
@@ -105,11 +105,11 @@ let test =
         "sort" >::
           (fun () ->
             "randomints" @? (
-              let (h,l) = random_heap_and_list Quickcheck.uig in
+              let (h,l) = random_heap_and_list Quickcheck_deprecated.uig in
               to_sorted_list h = List.sort ~cmp:compare l
             );
             "randomfloats" @? (
-              let (h,l) = random_heap_and_list Quickcheck.fg in
+              let (h,l) = random_heap_and_list Quickcheck_deprecated.fg in
               to_sorted_list h = List.sort ~cmp:compare l
             )
           )

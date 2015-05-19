@@ -42,18 +42,3 @@ ENDIF
 module Weak_hashtbl       = Weak_hashtbl
 
 let _squelch_unused_module_warning_ = ()
-
-let () = Sexplib_unix.Sexplib_unix_conv.linkme
-
-(* Test the Sexplib_unix exn converter was added correctly *)
-TEST_UNIT "Sexplib_unix sexp converter" =
-  let open Sexp.O in
-  match sexp_of_exn (Unix.Unix_error (E2BIG, "loc", "arg")) with
-  | (List [ Atom "Unix.Unix_error"
-          ; Atom _human_readable_message
-          ; Atom "loc"
-          ; Atom "arg"
-          ]) -> ()
-  | something_else ->
-      failwithf "sexp_of_exn (Unix_error ...) gave %s" (Sexp.to_string something_else) ()
-;;

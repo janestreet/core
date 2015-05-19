@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <sys/prctl.h>
 #include <errno.h>
@@ -496,11 +497,13 @@ CAMLprim value linux_timerfd_create(value v_clock_id, value v_flags)
   return Val_int(retcode);
 }
 
+#define NANOS_PER_SECOND 1000000000
+
 static inline void set_timespec(struct timespec *ts, value v)
 {
-  double d = Double_val(v);
-  ts->tv_sec = (time_t) d;
-  ts->tv_nsec = (long) ((d - ts->tv_sec) * 1e9);
+  uint64_t d = Int63_val(v);
+  ts->tv_sec = (time_t) (d / NANOS_PER_SECOND);
+  ts->tv_nsec = (long) (d - (ts->tv_sec * NANOS_PER_SECOND));
 }
 
 CAMLprim value linux_timerfd_settime(value v_fd, value v_absolute,
@@ -521,12 +524,17 @@ CAMLprim value linux_timerfd_settime(value v_fd, value v_absolute,
   return Val_unit;
 }
 
+#define Int63_ns_of_timespec(ts) \
+  caml_alloc_int63((uint64_t)ts.tv_sec * NANOS_PER_SECOND + (uint64_t)ts.tv_nsec)
+
 static value alloc_spec(struct itimerspec *spec)
 {
-  value v_spec = caml_alloc_small(2 * Double_wosize, Double_array_tag);
-  Double_field(v_spec, 0) = spec->it_value.tv_sec + spec->it_value.tv_nsec / 1e9;
-  Double_field(v_spec, 1) = spec->it_interval.tv_sec + spec->it_interval.tv_nsec / 1e9;
-  return v_spec;
+  CAMLparam0();
+  CAMLlocal1(v_spec);
+  v_spec = caml_alloc_tuple(2);
+  Store_field(v_spec, 0, Int63_ns_of_timespec(spec->it_value));
+  Store_field(v_spec, 1, Int63_ns_of_timespec(spec->it_interval));
+  CAMLreturn(v_spec);
 }
 
 CAMLprim value linux_timerfd_gettime(value v_fd)

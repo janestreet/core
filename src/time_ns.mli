@@ -61,7 +61,7 @@ module Span : sig
   val neg : t -> t
   val scale     : t -> float -> t
   val scale_int : t -> int   -> t
-  val div : t -> t -> int
+  val div : t -> t -> Int63.t
   val ( / ) : t -> float -> t
   val ( // ) : t -> t -> float
 
@@ -90,8 +90,7 @@ module Span : sig
 
       To stabilize conversion, we treat [Time.t] as having 1us precision: [to_span] and
       [of_span] both round to the nearest 1us. *)
-  val to_span               : t -> Time.Span.t
-  val to_span_round_nearest : t -> Time.Span.t
+  val to_span : t -> Time.Span.t
   val of_span : Time.Span.t -> t
 
   include Robustly_comparable with type t := t
@@ -113,6 +112,8 @@ module Span : sig
       type nonrec t = t with sexp, bin_io
     end
   end
+
+  val random : unit -> t
 end
 
 module Option : sig
@@ -186,9 +187,9 @@ val abs_diff : t -> t -> Span.t
 val to_span_since_epoch : t -> Span.t
 val of_span_since_epoch : Span.t -> t
 
-val to_time               : t -> Time.t
-val to_time_round_nearest : t -> Time.t
+val to_time : t -> Time.t
 val of_time : Time.t -> t
+
 val to_string_fix_proto : [ `Utc | `Local ] -> t -> string
 val of_string_fix_proto : [ `Utc | `Local ] -> string -> t
 
@@ -228,3 +229,5 @@ module Stable : sig
   module Option : module type of Option .Stable
   module Ofday  : module type of Ofday  .Stable
 end
+
+val random : unit -> t

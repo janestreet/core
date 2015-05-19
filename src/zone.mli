@@ -80,11 +80,17 @@ val initialized_zones : unit -> (string * t) list
     provided in Time instead. *)
 val shift_epoch_time : t -> [`Local | `UTC] -> float -> float
 
-(** Takes a [Time.t] and returns the next [Time.t], if any, that the time zone UTC offset
-    changes, and by how much it does so. *)
+(** Takes a [Time.t] and returns the next [Time.t] strictly after it, if any, that the
+    time zone UTC offset changes, and by how much it does so. *)
 val next_clock_shift
   :  t
   -> after:Time_internal.T.t
+  -> (Time_internal.T.t * Span.t) option
+
+(** As [next_clock_shift], but strictly *before* the given time. *)
+val prev_clock_shift
+  :  t
+  -> before:Time_internal.T.t
   -> (Time_internal.T.t * Span.t) option
 
 exception Unknown_zone of string

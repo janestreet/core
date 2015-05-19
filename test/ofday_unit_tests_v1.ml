@@ -30018,13 +30018,15 @@ let unit_tests ~create =
   ]
 
 let test () =
-  Pa_ounit_lib.Runtime.collect (fun () ->
-    let module T = Core.Stable.Unit_test (struct
-      include Core.Stable.Ofday.V1
-      let equal x1 x2 = Time.Span.(abs (Time.Ofday.diff x1 x2) < (of_ns 1.))
-      let tests =
-        let create ~hr ~min ~sec ~ms ~us = Time.Ofday.create ~hr ~min ~sec ~ms ~us () in
-        unit_tests ~create
-    end) in
-    ()
-  )
+  let tests =
+    Pa_ounit_lib.Runtime.collect (fun () ->
+      let module T = Core.Stable.Unit_test (struct
+        include Core.Stable.Ofday.V1
+        let equal x1 x2 = Time.Span.(abs (Time.Ofday.diff x1 x2) < (of_ns 1.))
+        let tests =
+          let create ~hr ~min ~sec ~ms ~us = Time.Ofday.create ~hr ~min ~sec ~ms ~us () in
+          unit_tests ~create
+      end) in
+      ())
+  in
+  OUnit.TestList (List.map tests ~f:(fun f -> OUnit.TestCase f))

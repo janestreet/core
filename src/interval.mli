@@ -46,17 +46,9 @@ module Ofday : S with type bound = Ofday.t
 
 module Stable : sig
   module V1 : sig
-    module Float : sig
-      type t = Float.t with sexp, bin_io
-    end
-    module Int : sig
-      type t = Int.t with sexp, bin_io
-    end
-    module Time : sig
-      type t = Time.t with sexp, bin_io
-    end
-    module Ofday : sig
-      type t = Ofday.t with sexp, bin_io
-    end
+    module Float : Stable with type t = Float.t
+    module Int   : Stable with type t = Int.  t
+    module Time  : Stable with type t = Time. t
+    module Ofday : Stable with type t = Ofday.t
   end
 end

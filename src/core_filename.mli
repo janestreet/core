@@ -79,16 +79,6 @@ val dir_sep : string
 *)
 val concat : string -> string -> string
 
-module O : sig
-  (** Equal to [Filename.concat]. *)
-  val (/^) : string -> string -> string
-
-  (** [root /@ [p1; p2; p3] = root /^ p1 /^ p2 /^ p3]
-      [root /@ [] = root] *)
-  val (/@) : string -> string list -> string
-end
-include module type of O
-
 (** Return [true] if the file name is relative to the current
    directory, [false] if it is absolute (i.e. in Unix, starts
    with [/]). *)

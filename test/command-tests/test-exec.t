@@ -2,7 +2,7 @@ parent.exe and child.exe are separate executables, but the "child"
 subcommand of the former is defined as a Command.exec of the latter.
 
   $ demo_parent.exe -help
-  parent half of Command.exec demo
+  parent part of Command.exec demo
   
     demo_parent.exe SUBCOMMAND
   
@@ -13,7 +13,7 @@ subcommand of the former is defined as a Command.exec of the latter.
     help     explain a given subcommand (perhaps recursively)
   
   $ demo_child.exe -help
-  child half of Command.exec demo
+  child part of Command.exec demo
   
     demo_child.exe NUM [BOOL]
   
@@ -33,7 +33,7 @@ subcommand of the former is defined as a Command.exec of the latter.
 Help works across Command.exec
 
   $ demo_parent.exe child -help
-  child half of Command.exec demo
+  child part of Command.exec demo
   
     demo_child.exe NUM [BOOL]
   
@@ -58,3 +58,30 @@ So does tab completion
   -file
   -help
   -version
+
+This works for multiple levels of nesting as well
+
+  $ demo_grandparent.exe help -r -f
+  grandparent part of Command.exec demo
+  
+    demo_grandparent.exe SUBCOMMAND
+  
+  === subcommands and flags ===
+  
+    parent             this command is in another executable
+    . child            this command is in another executable
+    . . -date DATE     a required date argument
+    . . [-file FILE]   an optional file argument
+    . . [-build-info]  print info about this build and exit
+    . . [-version]     print the version of this build and exit
+    . version          print version information
+    . . [-build-info]  print build info for this build
+    . . [-version]     print the version of this build
+    version            print version information
+    . [-build-info]    print build info for this build
+    . [-version]       print the version of this build
+    help               explain a given subcommand (perhaps recursively)
+    . [-expand-dots]   expand subcommands in recursive help
+    . [-flags]         show flags as well in recursive help
+    . [-recursive]     show subcommands of subcommands, etc.
+  

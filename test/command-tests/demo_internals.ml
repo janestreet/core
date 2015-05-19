@@ -3,14 +3,14 @@ open Core.Std
 let summary = "summary"
 
 let basic =
-  Command.basic ~summary
-    Command.Spec.(
-      empty
-      +> path
-      +> help
-      +> args
-      +> flag "foo" (optional int) ~doc:"NUM flag value"
-      +> anon (maybe ("BAR" %: int))
+  Command.basic' ~summary
+    Command.Param.(
+      path
+      @> help
+      @> args
+      @> flag "foo" (optional int) ~doc:"NUM flag value"
+      @> anon (maybe ("BAR" %: int))
+      @> nil
     )
     (fun path help args _foo _bar () ->
        printf !"path = %{sexp:string list}\n" path;

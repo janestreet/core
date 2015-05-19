@@ -18,11 +18,12 @@ is.
     
     (Sexplib.Conv.Of_sexp_error
      (Sexplib.Sexp.Annotated.Conv_exn
-      */base/core/lib_test/command-tests/etc/malformed.sexp:1:0 (glob)
+      */lib/core/test/command-tests/etc/malformed.sexp:1:0 (glob)
       (Failure
        "demo_sexp_load.ml.config_of_sexp: the following record elements were undefined: bar"))
      ((foo 3)))
   
+  (Raised|Re-raised|Called) (at|from) file ".*", line \d+, characters .* (re)
   (Raised|Re-raised|Called) (at|from) file ".*", line \d+, characters .* (re)
   (Raised|Re-raised|Called) (at|from) file ".*", line \d+, characters .* (re)
   (Raised|Re-raised|Called) (at|from) file ".*", line \d+, characters .* (re)

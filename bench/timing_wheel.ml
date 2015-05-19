@@ -32,9 +32,10 @@ let test ~num_queue_elements ~num_steps =
   let q = Q.create ~level_bits:(Timing_wheel.Level_bits.create_exn [16]) () in
   let user_plus_sys_at_start = user_plus_sys () in
   for key = 1 to num_steps do
-    ignore (Q.add q ~key () : _ Q.Elt.t);
+    ignore (Q.add q ~key:(Q.Key.of_int key) () : _ Q.Elt.t);
     if key > num_queue_elements then
-      Q.increase_min_allowed_key q ~key:(key - num_queue_elements) ~handle_removed:ignore;
+      Q.increase_min_allowed_key q ~key:(Q.Key.of_int (key - num_queue_elements))
+        ~handle_removed:ignore;
   done;
   let user_plus_sys = Time.Span.(-) (user_plus_sys ()) user_plus_sys_at_start in
   let report =

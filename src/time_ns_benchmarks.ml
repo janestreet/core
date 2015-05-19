@@ -26,7 +26,9 @@
 │ [time_ns_benchmarks.ml] Time_ns.of_time (Async.Std.Scheduler.cycle_start ()) │    16.45ns │   4.00w │          │          │            │
 └──────────────────────────────────────────────────────────────────────────────┴────────────┴─────────┴──────────┴──────────┴────────────┘
 *)
+module Time_ns_in_this_directory = Time_ns
 open Core_kernel.Std
+module Time_ns = Time_ns_in_this_directory
 
 BENCH "Time_ns.now" = Time_ns.now ()
 BENCH "Time_ns.Ofday.local_now" = Time_ns.Ofday.local_now ()

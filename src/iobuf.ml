@@ -157,7 +157,7 @@ let of_bigstring ?pos ?len buf =
   { buf; lo_min = lo; lo; hi; hi_max = hi }
 ;;
 
-let sub ?(pos = 0) ?len t =
+let sub_shared ?(pos = 0) ?len t =
   let len =
     match len with
     | None -> length t - pos
@@ -198,7 +198,10 @@ let set_bounds_and_buffer ~src ~dst =
   dst.buf <- src.buf
 ;;
 
-let narrow t = t.lo_min <- t.lo; t.hi_max <- t.hi; ;;
+let narrow_lo t = t.lo_min <- t.lo
+let narrow_hi t = t.hi_max <- t.hi
+
+let narrow t = narrow_lo t; narrow_hi t
 
 let unsafe_resize t ~len =
   t.hi <- t.lo + len
@@ -441,23 +444,6 @@ module Bigstring_dst = struct
   let create ~len = create len
 end
 
-let self_transfer t = fail t "Iobuf.self-transfer" () <:sexp_of< unit >>
-let transfer ?len ~src ~dst =
-  let len = match len with None -> min (length src) (length dst) | Some l -> l in
-  if phys_equal src dst then self_transfer src;
-  Bigstring.unsafe_blit
-    ~src:src.buf ~src_pos:(buf_pos_exn src ~pos:0 ~len) ~len
-    ~dst:dst.buf ~dst_pos:(buf_pos_exn dst ~pos:0 ~len);
-  unsafe_advance src len;
-  unsafe_advance dst len
-;;
-
-let memmove t ~src_pos ~dst_pos ~len =
-  Bigstring.unsafe_blit
-    ~src:t.buf ~src_pos:(buf_pos_exn t ~pos:src_pos ~len) ~len
-    ~dst:t.buf ~dst_pos:(buf_pos_exn t ~pos:dst_pos ~len)
-;;
-
 let compact t =
   let len = t.hi - t.lo in
   Bigstring.blit ~src:t.buf ~src_pos:t.lo ~len ~dst:t.buf ~dst_pos:t.lo_min;
@@ -612,6 +598,80 @@ let write_bin_prot writer t ~pos a =
                     * [ `buf_pos of int ]
                     * [ `write_stop_pos of int ] >>
 
+(* [Itoa] provides a range of functions for integer to ASCII conversion, used by [Poke],
+   [Fill] and their [Unsafe] versions.
+
+   The implementation here is done in terms of negative decimals due to the properties of
+   [Int.min_value]. Since the result of [Int.(abs min_value)] is [Int.min_value], an
+   attempt to utilize a positive decimal loop by writing the sign and calling [Int.abs x]
+   fails. The converse, with [- Int.max_value] works for both cases. *)
+module Itoa = struct
+  (* [num_digits x] returns the number of digits in [x] for non-positive integers
+     ([num_digits 0] is defined as 1).
+
+     The below tends to perform better than a binary search or [/= 10 while <> 0], likely
+     due to decimal values for our applications skewing towards smaller numbers. *)
+  let num_digits x =
+    if x > -10 then 1
+    else if x > -100 then 2
+    else if x > -1000 then 3
+    else if x > -10000 then 4
+    else if x > -100000 then 5
+    else if x > -1000000 then 6
+    else if x > -10000000 then 7
+    else if x > -100000000 then 8
+    else if x > -1000000000 then 9
+    else if x > -10000000000 then 10
+    else if x > -100000000000 then 11
+    else if x > -1000000000000 then 12
+    else if x > -10000000000000 then 13
+    else if x > -100000000000000 then 14
+    else if x > -1000000000000000 then 15
+    else if x > -10000000000000000 then 16
+    else if x > -100000000000000000 then 17
+    else if x > -1000000000000000000 then 18
+    else 19
+  TEST = String.length (Int.to_string Int.min_value) <= 19 + 1
+
+  (* Despite the div/mod by a constant optimizations, it's a slight savings to avoid a
+     second div/mod. Note also that passing in an [int ref], rather than creating the ref
+     locally here, results in allocation on the benchmarks. *)
+  let unsafe_poke_negative_decimal_without_sign t ~pos ~len int =
+    let int = ref int in
+    for pos = pos + len - 1 downto pos do
+      let x = !int in
+      int := !int / 10;
+      bigstring_unsafe_set t.buf ~pos (Char.unsafe_of_int (48 + ((- x) + !int * 10)));
+    done
+
+  let unsafe_poke_negative_decimal t ~pos ~len int =
+    bigstring_unsafe_set t.buf ~pos '-';
+    (* +1 and -1 to account for '-' *)
+    unsafe_poke_negative_decimal_without_sign t ~pos:(pos + 1) ~len:(len - 1) int
+
+  let poke_decimal t ~pos int =
+    if int < 0 then (
+      let len = 1 + num_digits int in
+      unsafe_poke_negative_decimal t ~pos:(buf_pos_exn t ~pos ~len) ~len int;
+      len)
+    else (
+      let len = num_digits (- int) in
+      unsafe_poke_negative_decimal_without_sign
+        t ~pos:(buf_pos_exn t ~pos ~len) ~len (- int);
+      len)
+
+  let unsafe_poke_decimal t ~pos int =
+    if int < 0 then (
+      let len = 1 + num_digits int in
+      unsafe_poke_negative_decimal t ~pos:(unsafe_buf_pos t ~pos) ~len int;
+      len)
+    else (
+      let len = num_digits (- int) in
+      unsafe_poke_negative_decimal_without_sign
+        t ~pos:(unsafe_buf_pos t ~pos) ~len (- int);
+      len)
+end
+
 module Fill = struct
   type nonrec ('a, 'd, 'w) t = (read_write, seek) t -> 'a -> unit
     constraint 'd = [> read ]
@@ -662,6 +722,8 @@ module Fill = struct
   let int64_t_le     t i = unsafe_set_int64_t_le t.buf i ~pos:(pos t len); uadv t len
   let int64_be_trunc t i = unsafe_set_int64_be   t.buf i ~pos:(pos t len); uadv t len
   let int64_le_trunc t i = unsafe_set_int64_le   t.buf i ~pos:(pos t len); uadv t len
+
+  let decimal        t i = uadv t (Itoa.poke_decimal t ~pos:0 i)
 end
 
 module Peek = struct
@@ -794,6 +856,71 @@ module Poke = struct
   let int64_t_le     t ~pos i = unsafe_set_int64_t_le t.buf ~pos:(spos t ~len ~pos) i
   let int64_be_trunc t ~pos i = unsafe_set_int64_be   t.buf ~pos:(spos t ~len ~pos) i
   let int64_le_trunc t ~pos i = unsafe_set_int64_le   t.buf ~pos:(spos t ~len ~pos) i
+
+  let decimal                 = Itoa.poke_decimal
+end
+
+let crc32 { buf ; lo ; hi ; _ } =
+  Crc.bigstring_crc32 buf ~pos:lo ~len:(hi - lo)
+
+module Blit = struct
+  type 'rw t_no_seek = ('rw, no_seek) t
+  module T_dst = struct
+    include T_src
+    let unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len =
+      Bigstring.unsafe_blit ~len
+        ~src:src.buf ~src_pos:(buf_pos_exn src ~pos:src_pos ~len)
+        ~dst:dst.buf ~dst_pos:(buf_pos_exn dst ~pos:dst_pos ~len)
+  end
+  include Blit.Make (Char_elt) (T_dst)
+  (* Workaround the inability of the compiler to inline in the presence of functors. *)
+  let unsafe_blit = T_dst.unsafe_blit
+end
+
+module Blit_consume = struct
+  let unsafe_blit ~src ~dst ~dst_pos ~len =
+    Blit.unsafe_blit ~src ~src_pos:0 ~dst ~dst_pos ~len;
+    unsafe_advance src len
+  let blit ~src ~dst ~dst_pos ~len =
+    Blit.blit ~src ~src_pos:0 ~dst ~dst_pos ~len;
+    unsafe_advance src len
+  let blito ~src ?(src_len = length src) ~dst ?(dst_pos = 0) () =
+    blit ~src ~dst ~dst_pos ~len:src_len
+  let sub src ~len =
+    let dst = Blit.sub src ~pos:0 ~len in
+    unsafe_advance src len;
+    dst
+  let subo ?len src =
+    let len = match len with None -> length src | Some len -> len in
+    sub src ~len
+end
+
+module Blit_fill = struct
+  let unsafe_blit ~src ~src_pos ~dst ~len =
+    Blit.unsafe_blit ~src ~src_pos ~dst ~dst_pos:0 ~len;
+    unsafe_advance dst len
+  let blit ~src ~src_pos ~dst ~len =
+    Blit.blit ~src ~src_pos ~dst ~dst_pos:0 ~len;
+    unsafe_advance dst len
+  let blito ~src ?(src_pos = 0) ?(src_len = length src - src_pos) ~dst () =
+    blit ~src ~src_pos ~dst ~len:src_len
+end
+
+module Blit_consume_and_fill = struct
+  let unsafe_blit ~src ~dst ~len =
+    if phys_equal src dst then advance src len else begin
+      Blit.unsafe_blit ~src ~src_pos:0 ~dst ~dst_pos:0 ~len;
+      unsafe_advance src len;
+      unsafe_advance dst len
+    end
+  let blit ~src ~dst ~len =
+    if phys_equal src dst then advance src len else begin
+      Blit.blit ~src ~src_pos:0 ~dst ~dst_pos:0 ~len;
+      unsafe_advance src len;
+      unsafe_advance dst len
+    end
+  let blito ~src ?(src_len = length src) ~dst () =
+    blit ~src ~dst ~len:src_len
 end
 
 let bin_prot_length_prefix_bytes = 4
@@ -930,29 +1057,25 @@ let recvmmsg_assume_fd_is_nonblocking_no_options =
 
 ENDIF                                   (* RECVMMSG *)
 
+let unsafe_sent t result =
+  if Syscall_result.Int.is_ok result
+  then (unsafe_advance t (Syscall_result.Int.ok_exn result);
+        Syscall_result.unit)
+  else Syscall_result.Int.reinterpret_error_exn result
+
 (* This function and the one below have a 'fun () ->' in front of them because the value
    restriction that comes from applying Or_error.map prevents the generalization of the
    phantom types variables in the iobuf types. Or_error.map could be inlined though. *)
 let send_nonblocking_no_sigpipe () =
   Or_error.map Bigstring.send_nonblocking_no_sigpipe ~f:(fun send ->
-    fun t fd ->
-      (* By returning unit, we're conflating blocking and succeeding to write zero bytes,
-         ie we're saying that trying to write zero bytes always blocks. *)
-      let nwritten = send fd t.buf ~pos:t.lo ~len:(length t) in
-      if Syscall_result.Int.is_error nwritten then
-        match Syscall_result.Int.error_exn nwritten with
-        | EAGAIN | EINTR | EWOULDBLOCK -> ()
-        | e -> raise (Unix.Unix_error (e, "send", ""))
-      else unsafe_advance t (Syscall_result.Int.ok_exn nwritten)
+    fun t fd -> unsafe_sent t (send fd t.buf ~pos:t.lo ~len:(length t))
   )
 ;;
 
 let sendto_nonblocking_no_sigpipe () =
   Or_error.map Bigstring.sendto_nonblocking_no_sigpipe ~f:(fun sendto ->
-    fun t fd sockaddr ->
-      match sendto fd t.buf ~pos:t.lo ~len:(length t) sockaddr with
-      | None -> ()
-      | Some nwritten -> unsafe_advance t nwritten)
+    fun t fd addr -> unsafe_sent t (sendto fd t.buf ~pos:t.lo ~len:(length t) addr)
+  )
 ;;
 
 let write_assume_fd_is_nonblocking t fd =
@@ -1077,6 +1200,8 @@ module Unsafe = struct
 
     let int64_be_trunc t i = unsafe_set_int64_be t.buf i ~pos:(upos t len); uadv t len
     let int64_le_trunc t i = unsafe_set_int64_le t.buf i ~pos:(upos t len); uadv t len
+
+    let decimal        t i = uadv t (Itoa.unsafe_poke_decimal t ~pos:0 i)
   end
 
   module Peek = struct
@@ -1176,19 +1301,80 @@ module Unsafe = struct
 
     let int64_be_trunc t ~pos i = unsafe_set_int64_be t.buf ~pos:(upos t ~pos) i
     let int64_le_trunc t ~pos i = unsafe_set_int64_le t.buf ~pos:(upos t ~pos) i
+
+    let decimal = Itoa.unsafe_poke_decimal
   end
 end
 
 
 
 (* Minimal blit benchmarks. *)
+(* ┌────────────────────────────────────────────────────────┬────────────┬────────────┐
+ * │ Name                                                   │   Time/Run │ Percentage │
+ * ├────────────────────────────────────────────────────────┼────────────┼────────────┤
+ * │ [iobuf.ml:Blit tests] string blit:5                    │    15.30ns │      1.11% │
+ * │ [iobuf.ml:Blit tests] string blit:10                   │    15.57ns │      1.13% │
+ * │ [iobuf.ml:Blit tests] string blit:100                  │    19.26ns │      1.39% │
+ * │ [iobuf.ml:Blit tests] string blit:1000                 │    47.83ns │      3.46% │
+ * │ [iobuf.ml:Blit tests] string blit:10000                │   197.90ns │     14.32% │
+ * │ [iobuf.ml:Blit tests] Blit:5                           │    24.38ns │      1.76% │
+ * │ [iobuf.ml:Blit tests] Blit:10                          │    26.88ns │      1.94% │
+ * │ [iobuf.ml:Blit tests] Blit:100                         │    30.01ns │      2.17% │
+ * │ [iobuf.ml:Blit tests] Blit:1000                        │    57.83ns │      4.18% │
+ * │ [iobuf.ml:Blit tests] Blit:10000                       │   391.42ns │     28.31% │
+ * │ [iobuf.ml:Blit tests] Blit_consume:5                   │    23.00ns │      1.66% │
+ * │ [iobuf.ml:Blit tests] Blit_consume:10                  │    25.36ns │      1.83% │
+ * │ [iobuf.ml:Blit tests] Blit_consume:100                 │    29.79ns │      2.15% │
+ * │ [iobuf.ml:Blit tests] Blit_consume:1000                │    58.93ns │      4.26% │
+ * │ [iobuf.ml:Blit tests] Blit_consume:10000               │   395.19ns │     28.59% │
+ * │ [iobuf.ml:Blit tests] Blit_fill:5                      │    24.28ns │      1.76% │
+ * │ [iobuf.ml:Blit tests] Blit_fill:10                     │    26.84ns │      1.94% │
+ * │ [iobuf.ml:Blit tests] Blit_fill:100                    │    29.54ns │      2.14% │
+ * │ [iobuf.ml:Blit tests] Blit_fill:1000                   │    57.05ns │      4.13% │
+ * │ [iobuf.ml:Blit tests] Blit_fill:10000                  │   395.72ns │     28.62% │
+ * │ [iobuf.ml:Blit tests] Blit_consume_and_fill:5          │    25.43ns │      1.84% │
+ * │ [iobuf.ml:Blit tests] Blit_consume_and_fill:10         │    27.19ns │      1.97% │
+ * │ [iobuf.ml:Blit tests] Blit_consume_and_fill:100        │    30.96ns │      2.24% │
+ * │ [iobuf.ml:Blit tests] Blit_consume_and_fill:1000       │    58.38ns │      4.22% │
+ * │ [iobuf.ml:Blit tests] Blit_consume_and_fill:10000      │   383.62ns │     27.75% │
+ * │ [iobuf.ml:Blit tests] Blit.unsafe_blit [overlap]:5     │    14.25ns │      1.03% │
+ * │ [iobuf.ml:Blit tests] Blit.unsafe_blit [overlap]:10    │    16.92ns │      1.23% │
+ * │ [iobuf.ml:Blit tests] Blit.unsafe_blit [overlap]:100   │    37.17ns │      2.70% │
+ * │ [iobuf.ml:Blit tests] Blit.unsafe_blit [overlap]:1000  │   169.60ns │     12.32% │
+ * │ [iobuf.ml:Blit tests] Blit.unsafe_blit [overlap]:10000 │ 1_377.01ns │    100.00% │
+ * └────────────────────────────────────────────────────────┴────────────┴────────────┘ *)
 BENCH_MODULE "Blit tests" = struct
   let lengths = [5; 10; 100; 1000; 10_000]
 
-  BENCH_INDEXED "functor blit" len lengths =
+  BENCH_INDEXED "string blit" len lengths =
     let buf = create ~len in
     let str = String.create len in
     (fun () -> Peek.To_string.blit ~src:buf ~dst:str ~src_pos:0 ~dst_pos:0 ~len)
+
+  BENCH_INDEXED "Blit" len lengths =
+    let src = create ~len in
+    let dst = create ~len in
+    (fun () -> Blit.blito () ~src ~dst)
+
+  BENCH_INDEXED "Blit_consume" len lengths =
+    let src = create ~len in
+    let dst = create ~len in
+    (fun () -> Blit_consume.blito () ~src ~dst; reset src)
+
+  BENCH_INDEXED "Blit_fill" len lengths =
+    let src = create ~len in
+    let dst = create ~len in
+    (fun () -> Blit_fill.blito () ~src ~dst; reset dst)
+
+  BENCH_INDEXED "Blit_consume_and_fill" len lengths =
+    let src = create ~len in
+    let dst = create ~len in
+    (fun () -> Blit_consume_and_fill.blito () ~src ~dst; reset src; reset dst)
+
+  BENCH_INDEXED "Blit.unsafe_blit [overlap]" len lengths =
+    let t = create ~len:(len + 1) in
+    (fun () -> Blit.unsafe_blit ~src:t ~dst:t ~len ~src_pos:0 ~dst_pos:1)
+
 end
 
 BENCH_MODULE "Poke tests" = struct
@@ -1229,4 +1415,18 @@ BENCH_MODULE "Peek tests" = struct
   BENCH_INDEXED "uint32_le" pos offsets = (fun () -> ignore (Peek.uint32_le iobuf ~pos))
   BENCH_INDEXED "int64_be"  pos offsets = (fun () -> ignore (Peek.int64_be  iobuf ~pos))
   BENCH_INDEXED "int64_le"  pos offsets = (fun () -> ignore (Peek.int64_le  iobuf ~pos))
+end
+
+BENCH_MODULE "Fill.decimal tests" = struct
+  (* Quantify the gain from our version of [Fill.decimal] over [Int.to_string]. *)
+  let values =
+    [ Int.min_value; Int.min_value + 1; -10_000; 0; 35; 1_000; 1_000_000; Int.max_value ]
+  let iobuf = create ~len:32
+
+  BENCH_INDEXED "Fill.decimal" x values =
+    (fun () -> reset iobuf; Fill.decimal iobuf x)
+  BENCH_INDEXED "Unsafe.Fill.decimal" x values =
+    (fun () -> reset iobuf; Unsafe.Fill.decimal iobuf x)
+  BENCH_INDEXED "Unsafe.Fill.string Int.to_string" x values =
+    (fun () -> reset iobuf; Fill.string iobuf (Int.to_string x))
 end

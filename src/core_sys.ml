@@ -60,6 +60,7 @@ include struct
   let interactive = interactive
   let os_type = os_type
   let word_size = word_size
+  let big_endian = big_endian
   exception Break = Break
   let catch_break = catch_break
   let ocaml_version = ocaml_version

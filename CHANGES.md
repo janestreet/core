@@ -1,3 +1,136 @@
+## 112.35.00
+
+- Tweaked `Unix.stat`'s C code to reduce float rounding error, by using
+  double-precision rather than single-precision floats.
+
+    Following Xavier's comment:
+    http://caml.inria.fr/mantis/view.php?id=6285
+
+- Added `Date.O` module.
+- In `Interval`, exposed `compare` in stable types by having the
+  appropriate modules match the `Stable` signature.
+- Added `Iobuf.Fill.decimal` and `Poke.decimal`, for efficiently writing
+  integers in decimal format.
+- Removed `Filename.O` (and `/^`), since it's not used that much, and is
+  inconsistent with the older operator for this that's exposed in
+  `Core.Std`: `^/`.
+- Improved `Command` autocompletion to work even if some arguments
+  can't be parsed.
+
+    This is useful because the completion mode does not get fed
+    precisely the same arguments that it would get if you hit RETURN.
+
+    As a simple example, if completion is set up for `my-exe` which
+    takes a sexp as its first argument, then:
+
+        my-exe '(a b)' <TAB>
+
+    will run `my-exe` in completion mode with:
+
+        '(a b)'
+
+    as its first argument, rather than:
+
+        (a b)
+
+    as would be passed if RETURN had been pressed instead.  Since
+    `Sexp.of_string "'(a b)'"` fails, in this example tab completion
+    won't work.
+
+    Changed the internals a bit to make this possible.  Most notably,
+    the `Parser` module is now applicative rather than monadic, which
+    required only a few simple changes to support.
+
+- Made `Time_ns.to_time` and `Time_ns.Span.to_span` round to the nearest
+  microsecond in all cases.
+
+    Previously, `Time_ns.Span.to_span` sometimes rounded incorrectly for
+    negative spans.
+
+- Added `Time.Zone.prev_clock_shift`, the analog of `next_clock_shift`.
+
+        val prev_clock_shift
+          :  t
+          -> before:Time_internal.T.t
+          -> (Time_internal.T.t * Span.t) option
+
+    Implemented `next_clock_shift` and `prev_clock_shift` using
+    `Array.binary_search_segmented`.
+
+- Added `Lock_file.get_pid : string -> Pid.t option`.
+- Added `val random: unit -> int` to `Time_ns` and `Time_ns.Span`.
+- Renamed `Iobuf.sub` as `Iobuf.sub_shared`.
+
+    This more closely matches `Bigstring`, and clarifies the semantics
+    of `Iobuf.sub` vs `sub` in `Blit_intf.S`.
+
+- Added `Iobuf` blit modules: `Blit`, `Blit_consume`, `Blit_fill`,
+  `Blit_consume_and_fill`.
+- Added `Piecewise_linear.first_knot` and `last_knot`.
+
+        val first_knot : t -> (key * value) option
+        val last_knot  : t -> (key * value) option
+
+- Made `Unix.Cidr` match `Comparable.S_binable`, and added `Cidr.create` and
+  `Cidr.netmask_of_bits`.
+- Moved `Unix.tm` and `Unix.strftime` from `Core_kernel` to `Core`.
+- Made `Crc.crc32` return `Int63.t` rather than `int64`, and added
+  `Crc.bigstring_crc32` and `Iobuf.crc32`.
+
+    Cleaned up old cruft in the C stubs for CRC checking.
+
+- Added `Iobuf.narrow_lo` and `narrow_hi`, which comprise
+  `Iobuf.narrow`.
+- Changed `Linux_ext.Timerfd`, `Epoll.wait`, and `Unix.select` to use
+  (`int`) `Time_ns` rather than (`float`) `Time`.
+
+    This avoids spurious float conversions and rounding problems.
+
+    Made all timeouts consistently treat negative timeouts as "timeout
+    immediately".
+
+    This fixes an incorrect behavior of `Linux_ext.Timerfd.set_after`
+    and `set`, which had been rounding to the nearest microsecond, which
+    was particularly bad for time spans smaller than 500ns, which would
+    be rounded to zero, and then would cause the timerfd to never fire.
+    Now, the small span is directly fed to `timerfd_settime`.  We also
+    changed a span of zero to be treated as `1ns`, to avoid the behavior
+    of `timerfd_settime 0`, which causes the timerfd to be cleared and
+    never fire.
+
+- Made `Or_error` match `Applicative.S`.
+- Added `Command.Param`, with the intention of one day replacing
+  `Command.Spec` and providing an applicative interface for command-line
+  parsing.
+
+    This change required lots of rearrangement of `command.mli` so that
+    `Command.Param` and `Command.Spec` could share large portions of
+    their interface.  As a side effect, the interface is more sweeksy
+    than before.
+
+- Added `Command.shape`, for exposing the shape of a command, including
+  what subcommands its has.
+
+- Changed `Syscall_result.to_result` to return a preallocated object,
+  and changed many uses to take advantage of this property.
+
+    Pattern matching on results is much clearer than if-analysis and
+    avoids double-checking errors in many cases.
+
+    `Syscall_result.to_result` can only return preallocated results for
+    a few `Ok` values from `Syscall_result.Int`, of course, and likewise
+    for other large `ok_value` types.  We have initially, and
+    arbitrarily, limited preallocation to 64 `errno`'s and 2048
+    `ok_value`'s.
+
+- Added `Sys.big_endian : bool`, from `Caml.Sys`.
+
+- Disabled unit tests in `Time_ns` that started failing around 10:40pm
+  NYC 2015-05-15.
+
+    The tests indicate an off-by-one-microsecond error in round tripping
+    between `Time.Span.t` and `Time_ns.Span.t`.
+
 ## 112.24.00
 
 - Renamed `Dequeue` as `Deque`.

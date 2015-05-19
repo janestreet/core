@@ -12,9 +12,9 @@ TEST_UNIT =
   let t = create_unit () in
   let start = start t in
   List.iter
-    [ Time.sub start (sec (2. *. Float.of_int Int.max_value));
-      Time.add start (sec (2. *. Float.of_int Int.max_value));
-      Time.of_float Float.max_value;
+    [ Time.sub start (sec (2. *. Float.of_int Int.max_value))
+    ; Time.add start (sec (2. *. Float.of_int Int.max_value))
+    ; Time.of_float Float.max_value
     ]
     ~f:(fun time ->
       assert (does_raise (fun () -> interval_num t time));
@@ -29,14 +29,11 @@ TEST_UNIT =
       (Date.create_exn ~y:2000 ~m:Month.Jan ~d:1)
       Time.Ofday.start_of_day
   in
-  List.iter
-    [ Word_size.W32, Time.Span.millisecond, Date.create_exn ~y:2000 ~m:Month.Jan ~d:7;
-      Word_size.W64, Time.Span.microsecond, Date.create_exn ~y:2073 ~m:Month.Jan ~d:1;
-    ]
-    ~f:(fun (word_size, alarm_precision, max_alarm_lower_bound) ->
-      let level_bits = Level_bits.default word_size in
-      let t = create ~config:(Config.create ~level_bits ~alarm_precision ()) ~start in
-      assert (Date.(>=)
-                (Time.to_date ~zone (alarm_upper_bound t))
-                max_alarm_lower_bound))
+  let alarm_precision = Time.Span.microsecond in
+  let max_alarm_lower_bound = Date.create_exn ~y:2073 ~m:Month.Jan ~d:1 in
+  let level_bits = Level_bits.default in
+  let t = create ~config:(Config.create ~level_bits ~alarm_precision ()) ~start in
+  assert (Date.(>=)
+            (Time.to_date ~zone (alarm_upper_bound t))
+            max_alarm_lower_bound)
 ;;

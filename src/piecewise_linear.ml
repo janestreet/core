@@ -88,6 +88,9 @@ module Stable = struct
       (** If [strict] is [true], the x-values must be strictly increasing. *)
       val create : strict:bool -> (float * float) list -> t Or_error.t
 
+      val first_knot : t -> (float * float) option
+      val last_knot : t -> (float * float) option
+
       val to_knots : t -> (float * float) list
 
       (** Data is not copied *)
@@ -167,6 +170,17 @@ module Stable = struct
         let y = Array.of_list_map knots ~f:snd in
         let tentative_result = { x; y; lookup = None } in
         validate ~strict tentative_result
+
+      let first_knot t =
+        if Array.length t.x > 0
+        then Some (t.x.(0), t.y.(0))
+        else None
+
+      let last_knot t =
+        let len = Array.length t.x in
+        if len > 0
+        then Some (t.x.(len-1), t.y.(len-1))
+        else None
 
       let to_knots t =
         (* [validate] above checks that [t.x] and [t.y] have the same length. *)
@@ -324,6 +338,10 @@ module Stable = struct
 
         type knots = (Key.t * Value.t) list with sexp
 
+        let convert_tuple (x, y) = Key.of_float x, Value.of_float y
+        let first_knot t = Option.map (Impl.first_knot t) ~f:convert_tuple
+        let last_knot t = Option.map (Impl.last_knot t) ~f:convert_tuple
+
         let to_knots t =
           List.map (Impl.to_knots t)
             ~f:(fun (x, y) -> (Key.of_float x, Value.of_float y))
@@ -342,32 +360,34 @@ module Stable = struct
           sexp_of_knots (to_knots t)
 
         let create_from_linear_combination = Impl.create_from_linear_combination
-
-        (* We convert back to Key.t and Value.t for bin_io, because, for example,
-           Time.Stable.V1 has bin_io, but there is no guarantee that Time.to_float and
-           Time.of_float will not have their semantics change.  So, the user who goes to
-           the trouble of creating inputs K and V to Make with stable bin_io will be
-           assured that Make(K)(V).Stable.V1.t has stable bin_io.  *)
-        module Binable = struct
-          type t =
-            { x : Key.t array
-            ; y : Value.t array
-            } with bin_io
-        end
-
-        let to_binable t =
-          let (x, y) = to_knots' t in
-          { Binable. x; y }
-
-        let of_binable bt =
-          let x = Array.map bt.Binable.x ~f:Key.to_float in
-          let y = Array.map bt.Binable.y ~f:Value.to_float in
-          Impl.of_knots' ~x ~y
-
       end
 
       include T
-      include Bin_prot.Utils.Make_binable(T)
+
+      (* We convert back to Key.t and Value.t for bin_io, because, for example,
+         Time.Stable.V1 has bin_io, but there is no guarantee that Time.to_float and
+         Time.of_float will not have their semantics change.  So, the user who goes to
+         the trouble of creating inputs K and V to Make with stable bin_io will be
+         assured that Make(K)(V).Stable.V1.t has stable bin_io.  *)
+      module Bin_rep = struct
+        type t =
+          { x : Key.t array
+          ; y : Value.t array
+          } with bin_io
+      end
+      include Binable.Of_binable (Bin_rep) (struct
+          type nonrec t = t
+
+          let to_binable t =
+            let (x, y) = to_knots' t in
+            { Bin_rep. x; y }
+
+          let of_binable (bt : Bin_rep.t) =
+            let x = Array.map bt.x ~f:Key.to_float in
+            let y = Array.map bt.y ~f:Value.to_float in
+            Impl.of_knots' ~x ~y
+        end)
+
       let precache = Impl.precache ~force:false
 
       let get t x = Value.of_float (Impl.get t (Key.to_float x))
@@ -399,26 +419,24 @@ module Stable = struct
           match Impl.invert regular with
           | Ok inverse -> { regular; inverse }
           | Error error -> Sexplib.Conv.of_sexp_error (Error.to_string_hum error) sexp
-
-        (* Our bin_io only stores [regular], and reconstructs [inverse] when loading. *)
-        module Binable = struct
-          type t = M.t with bin_io
-        end
-
-        let to_binable t = t.regular
-
-        let of_binable regular =
-          let inverse  =
-            Or_error.tag (Impl.invert regular)
-              "Got non-invertible set of knots when deserializing?"
-            |> Or_error.ok_exn
-          in
-          { regular; inverse }
-
       end
 
       include T
-      include Bin_prot.Utils.Make_binable(T)
+
+      (* Our bin_io only stores [regular], and reconstructs [inverse] when loading. *)
+      include Binable.Of_binable (M) (struct
+          type nonrec t = t
+
+          let to_binable t = t.regular
+
+          let of_binable regular =
+            let inverse  =
+              Or_error.tag (Impl.invert regular)
+                "Got non-invertible set of knots when deserializing?"
+              |> Or_error.ok_exn
+            in
+            { regular; inverse }
+        end)
 
       let create_from_regular regular =
         let open Result.Monad_infix in
@@ -436,6 +454,8 @@ module Stable = struct
 
       let get t = M.get t.regular
 
+      let first_knot t = M.first_knot t.regular
+      let last_knot t = M.last_knot t.regular
       let to_knots t = M.to_knots t.regular
       let to_knots' t = M.to_knots' t.regular
 

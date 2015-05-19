@@ -1,6 +1,6 @@
 open Core.Std;;
 open OUnit;;
-open Quickcheck;;
+open Quickcheck_deprecated;;
 
 (***************************************************************************)
 (** Simple bigstring testing utilties *)

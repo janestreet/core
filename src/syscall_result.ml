@@ -7,21 +7,39 @@ module type Arg = Syscall_result_intf.Arg
 
 module Unix = UnixLabels
 
-external unix_error_of_code : int -> Unix.error = "core_unix_error_of_code"
-external code_of_unix_error : Unix.error -> int = "core_code_of_unix_error"
-
-TEST_UNIT =
-  for i = 1 to 10000 do
-    <:test_result< int >> ~expect:i (code_of_unix_error (unix_error_of_code i))
-  done;
-;;
-
-let create_error err = - (code_of_unix_error err)
+let create_error err = - (Unix_error.to_errno err)
 
 module Make (M : Arg) () = struct
+  (* The only reason to have one of these per functor invocation is to make it trivial to
+     get the type right. *)
+  let preallocated_errnos : (_, Unix_error.t) Result.t array =
+    Array.init 64 ~f:(fun i -> Error (Unix_error.of_errno i))
+  ;;
+  (* Since we return [-errno] from C, we implicitly rely on there not being a 0 [errno].
+     However, we have 0 in [preallocated_errnos], partly so we can index directly by
+     [errno]. *)
+  TEST "no 0 errno" = preallocated_errnos.(0) = Error (Unix_error.EUNKNOWNERR 0)
+  let num_preallocated_errnos = Array.length preallocated_errnos
+
   type nonrec t = M.t t
 
   let compare = Int.compare
+
+  let preallocated_ms =
+    let rec loop i rev_acc =
+      (* Preallocate at most a handful of Ms.  2048 is the first round binary number after
+         1500, the likely maximum result for many network functions that use
+         [Syscall_result.Int]. *)
+      if i = 2048 then
+        Array.of_list_rev rev_acc
+      else
+        match M.of_int_exn i with
+        | exception _ -> Array.of_list_rev rev_acc
+        | m -> loop (i + 1) (Ok m :: rev_acc)
+    in
+    loop 0 []
+  ;;
+  let num_preallocated_ms = Array.length preallocated_ms
 
   let create_ok x =
     let t = M.to_int x in
@@ -38,9 +56,33 @@ module Make (M : Arg) () = struct
 
   let to_result t =
     if is_ok t then
-      Ok (M.of_int_exn t)
+      if t < num_preallocated_ms
+      then Array.unsafe_get preallocated_ms t
+      else Ok (M.of_int_exn t)
     else
-      Error (unix_error_of_code (-t))
+      (let errno = -t in
+       if errno < num_preallocated_errnos
+       then Array.unsafe_get preallocated_errnos errno
+       else Error (Unix_error.of_errno errno))
+  ;;
+  (* We can't use [Core_bench] to do this inside [Core], which it depends on. *)
+  TEST_UNIT "to_result doesn't allocate" =
+    for _i = 1 to 1000 do
+      for t = -(Array.length preallocated_errnos - 1) to Array.length preallocated_ms - 1
+      do
+        let before_minor = Gc.minor_words () in
+        let before_major = Gc.major_words () in
+        let result = to_result t in
+        let after_minor  = Gc.minor_words () in
+        let after_major  = Gc.major_words () in
+        <:test_result< int >> ~expect:0 (after_minor - before_minor);
+        <:test_result< int >> ~expect:0 (after_major - before_major);
+        <:test_result< (M.t, Unix_error.t) Result.t >> result
+          ~expect:(if is_ok t
+                   then Ok (M.of_int_exn t)
+                   else Error (Unix_error.of_errno (-t)));
+      done;
+    done;
   ;;
 
   let sexp_of_t t = <:sexp_of< (M.t, Unix_error.t) Result.t >> (to_result t)
@@ -59,7 +101,7 @@ module Make (M : Arg) () = struct
     else
       -t
   ;;
-  let error_exn t = unix_error_of_code (error_code_exn t)
+  let error_exn t = Unix_error.of_errno (error_code_exn t)
 
   let reinterpret_error_exn t =
     if is_ok t then
@@ -73,21 +115,21 @@ module Make (M : Arg) () = struct
     if is_ok t then
       M.of_int_exn t
     else
-      raise (Unix.Unix_error (unix_error_of_code (-t), syscall_name, ""))
+      raise (Unix.Unix_error (Unix_error.of_errno (-t), syscall_name, ""))
   ;;
 
   let ok_or_unix_error_with_args_exn t ~syscall_name x sexp_of_x =
     if is_ok t then
       M.of_int_exn t
     else
-      raise (Unix.Unix_error (unix_error_of_code (-t), syscall_name,
+      raise (Unix.Unix_error (Unix_error.of_errno (-t), syscall_name,
                               Sexp.to_string (sexp_of_x x)))
   ;;
 end
 
 module Int = Make (Int) ()
 module Unit = Make (struct
-  type t = unit with sexp_of
+  type t = unit with sexp_of, compare
   let of_int_exn n = assert (n = 0)
   let to_int () = 0
 end) ()
@@ -97,7 +139,7 @@ let ignore_ok_value t = Core_kernel.Std.Int.min t 0
 
 TEST_UNIT =
   for i = 1 to 10000 do
-    let err = unix_error_of_code i in
+    let err = Unix_error.of_errno i in
     assert (err = Unit.error_exn (Unit.create_error err))
   done;
 ;;

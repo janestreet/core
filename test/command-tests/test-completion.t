@@ -98,3 +98,30 @@ both for flag arguments ...
 
   $ tab_complete demo_help.exe jab 'bar'
   bar
+
+It continues to work even if one of the previous values failed to parse.
+
+  $ tab_complete demo_help.exe jab FeO 'ba'
+  baa\ baa
+  bar
+  baz
+
+  $ demo_help.exe jab FeO bar
+  this command does stuff here
+  
+    demo_help.exe jab OXIDE DIODE [PATH]
+  
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque et
+  ante a nibh scelerisque ultrices. Fusce consectetur dictum ante quis
+  commodo.
+  
+  === flags ===
+  
+    [-ping]       make sure ping is doing the same stuff
+    [-pong NAME]  which pong should do the stuff
+    [-help]       print this help text and exit
+                  (alias: -?)
+  
+  failed to parse OXIDE value "FeO"
+  (Failure "valid arguments: {baa\\ baa,bar,baz,foo}")
+  [1]

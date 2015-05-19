@@ -50,7 +50,7 @@ let test =
         );
       "for_all" >::
         (fun () ->
-           let list = Quickcheck.lg (fun () -> Random.int 1000) ~size_gen:(fun _ -> 1000) () in
+           let list = Quickcheck_deprecated.lg (fun () -> Random.int 1000) ~size_gen:(fun _ -> 1000) () in
            let array = Array.of_list list in
            "list1" @? (List.for_all ~f:((<>) 1) list = Array.for_all ~f:((<>) 1) array);
            "list2" @? (List.for_all ~f:((<>) 2) list = Array.for_all ~f:((<>) 2) array);
@@ -59,7 +59,7 @@ let test =
         );
       "mem" >::
         (fun () ->
-           let list = Quickcheck.lg (fun () -> Random.int 1000) ~size_gen:(fun _ -> 1000) () in
+           let list = Quickcheck_deprecated.lg (fun () -> Random.int 1000) ~size_gen:(fun _ -> 1000) () in
            let array = Array.of_list list in
            "list1" @? (List.mem list 1 = Array.mem array 1);
            "list2" @? (List.mem list 2 = Array.mem array 2);
@@ -87,7 +87,7 @@ let test =
       "replace_all" >::
         (fun () ->
            let random_list =
-             Quickcheck.lg (fun () -> Random.int 1000) ~size_gen:(fun _ -> 1000) ()
+             Quickcheck_deprecated.lg (fun () -> Random.int 1000) ~size_gen:(fun _ -> 1000) ()
            in
            let empty_list = [] in
            let one_list = [0] in
