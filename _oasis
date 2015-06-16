@@ -43,6 +43,7 @@ Library core
   Modules:            Bigbuffer,
                       Bigstring_marshal,
                       Bigstring,
+                      Bitlist,
                       Caml,
                       Check_std,
                       Command,
