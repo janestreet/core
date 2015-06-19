@@ -281,14 +281,15 @@ module Timerfd = struct
 
   let to_file_descr t = t
 
-  type repeat = { fire_after : Span.t; interval : Span.t }
+  type repeat = { fire_after : Time_ns.Span.t; interval : Time_ns.Span.t }
 
   let create = Or_error.unimplemented "Linux_ext.Timerfd.create"
 
-  let set _                      _ = assert false
-  let set_repeating ?initial:_ _ _ = assert false
-  let clear                      _ = assert false
-  let get                        _ = assert false
+  let set_at _                 _ = assert false
+  let set_after _              _ = assert false
+  let set_repeating ?after:_ _ _ = assert false
+  let clear                    _ = assert false
+  let get                      _ = assert false
 end
 
 ENDIF
@@ -971,6 +972,7 @@ module Epoll = struct
   let remove _ _                = assert false
   let iter _ ~f:_               = assert false
   let wait _ ~timeout:_         = assert false
+  let wait_timeout_after _ _    = assert false
   let iter_ready _ ~f:_         = assert false
   let fold_ready _ ~init:_ ~f:_ = assert false
 
