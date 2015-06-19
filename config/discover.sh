@@ -22,6 +22,9 @@ OCAML_CFLAGS=
 . ./setup.data
 [ "$linux" = true ] && OCAML_CFLAGS="$OCAML_CFLAGS -ccopt -DLINUX_EXT"
 [ "$posix_timers" = true ] && OCAML_CFLAGS="$OCAML_CFLAGS -ccopt -DPOSIX_TIMERS"
+# it doesn't really matter whether this is bytecomp_c_compiler or native_c_compiler, it
+# just needs to be a C compiler
+CC="$bytecomp_c_compiler"
 
 MAKEFILE_CONFIG=`ocamlc -where`/Makefile.config
 if [ ! -e $MAKEFILE_CONFIG ]; then
@@ -58,16 +61,16 @@ if [ $major -ge 4 ]; then
 fi
 
 # The recvmmsg system call was added in Linux 2.6.32
-if cc config/test_recvmmsg.c -o /dev/null; then
+if $CC config/test_recvmmsg.c -o /dev/null; then
     echo "DEFINE RECVMMSG" >> $OUT;
 fi
 
-if cc config/test_timerfd.c -o /dev/null; then
+if $CC config/test_timerfd.c -o /dev/null; then
     echo "DEFINE TIMERFD" >> $OUT;
 fi
 
 for i in 1 2 3; do
-    if cc -I src -DJSC_STAT_NANOSEC_METHOD=$i config/test_nanosecond_stat.c -o /dev/null 2> /dev/null; then
+    if $CC -I src -DJSC_STAT_NANOSEC_METHOD=$i config/test_nanosecond_stat.c -o /dev/null 2> /dev/null; then
         echo "DEFINE STAT_NANOSEC_METHOD = $i" >> $OUT
         break
     fi
