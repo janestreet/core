@@ -611,6 +611,7 @@ module Itoa = struct
 
      The below tends to perform better than a binary search or [/= 10 while <> 0], likely
      due to decimal values for our applications skewing towards smaller numbers. *)
+  let _10e9 = 1000000000
   let num_digits x =
     if x > -10 then 1
     else if x > -100 then 2
@@ -621,16 +622,22 @@ module Itoa = struct
     else if x > -10000000 then 7
     else if x > -100000000 then 8
     else if x > -1000000000 then 9
-    else if x > -10000000000 then 10
-    else if x > -100000000000 then 11
-    else if x > -1000000000000 then 12
-    else if x > -10000000000000 then 13
-    else if x > -100000000000000 then 14
-    else if x > -1000000000000000 then 15
-    else if x > -10000000000000000 then 16
-    else if x > -100000000000000000 then 17
-    else if x > -1000000000000000000 then 18
+    else
+IFDEF ARCH_SIXTYFOUR THEN
+         if x > _10e9 * -10 then 10
+    else if x > _10e9 * -100 then 11
+    else if x > _10e9 * -1000 then 12
+    else if x > _10e9 * -10000 then 13
+    else if x > _10e9 * -100000 then 14
+    else if x > _10e9 * -1000000 then 15
+    else if x > _10e9 * -10000000 then 16
+    else if x > _10e9 * -100000000 then 17
+    else if x > _10e9 * -1000000000 then 18
     else 19
+ELSE
+    10
+ENDIF
+
   TEST = String.length (Int.to_string Int.min_value) <= 19 + 1
 
   (* Despite the div/mod by a constant optimizations, it's a slight savings to avoid a
