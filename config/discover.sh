@@ -61,11 +61,11 @@ if [ $major -ge 4 ]; then
 fi
 
 # The recvmmsg system call was added in Linux 2.6.32
-if $CC config/test_recvmmsg.c -o /dev/null; then
+if $CC config/test_recvmmsg.c -o /dev/null 2> /dev/null; then
     echo "DEFINE RECVMMSG" >> $OUT;
 fi
 
-if $CC config/test_timerfd.c -o /dev/null; then
+if $CC config/test_timerfd.c -o /dev/null 2> /dev/null; then
     echo "DEFINE TIMERFD" >> $OUT;
 fi
 
