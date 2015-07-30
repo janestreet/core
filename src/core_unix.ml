@@ -2021,18 +2021,18 @@ module Cidr = struct
     let netmask_of_bits t =
       Int32.shift_left 0xffffffffl (32 - t.bits) |> Inet_addr.inet4_addr_of_int32
 
-    let does_match t address =
-      let cidr_to_block c =
-        let baseip = c.address in
-        let shift = 32 - c.bits in
-        Int32.(shift_left (shift_right_logical baseip shift) shift)
-      in
-      match
-        Option.try_with (fun () ->
-          Inet_addr.inet4_addr_to_int32_exn address)
-      with
-      | None -> false (* maybe they tried to use IPv6 *)
-      | Some address -> Int32.equal (cidr_to_block t) (cidr_to_block {t with address})
+    let start_address t =
+      let baseip = t.address in
+      let shift = 32 - t.bits in
+      Int32.(shift_left (shift_right_logical baseip shift) shift)
+
+    let does_match_int32 t address =
+      Int32.equal (start_address t) (start_address {t with address})
+
+    let does_match t inet_addr =
+      match Inet_addr.inet4_addr_to_int32_exn inet_addr with
+      | exception _ -> false (* maybe they tried to use IPv6 *)
+      | address     -> does_match_int32 t address
 
     TEST = does_match (of_string "127.0.0.1/32") Inet_addr.localhost
     TEST = does_match (of_string "127.0.0.0/8") Inet_addr.localhost
@@ -2043,6 +2043,12 @@ module Cidr = struct
     TEST = does_match multicast (Inet_addr.of_string "224.0.0.1")
     TEST = does_match multicast (Inet_addr.of_string "239.0.0.1")
     TEST = not (does_match multicast (Inet_addr.of_string "240.0.0.1"))
+
+    let all_matching_addresses t =
+      Sequence.unfold ~init:(start_address t) ~f:(fun address ->
+        if does_match_int32 t address
+        then Some (Inet_addr.inet4_addr_of_int32 address, Int32.succ address)
+        else None)
 
     TEST_MODULE = struct
       let match_strings c a =
@@ -2113,6 +2119,23 @@ module Cidr = struct
       TEST = is_multicast "155.246.1.20"    = false
       TEST = is_multicast "0.0.0.0"         = false
       TEST = is_multicast "127.0.0.1"       = false
+
+      let test_matching_addresses s l =
+        <:test_result< Inet_addr.t list >>
+          (of_string s |> all_matching_addresses |> Sequence.to_list)
+          ~expect:(List.map l ~f:Inet_addr.of_string)
+
+      TEST_UNIT =
+        test_matching_addresses "172.16.0.8/32"
+          [ "172.16.0.8" ]
+
+      TEST_UNIT =
+        test_matching_addresses "172.16.0.8/30"
+          [ "172.16.0.8" ; "172.16.0.9" ; "172.16.0.10" ; "172.16.0.11" ]
+
+      TEST_UNIT =
+        test_matching_addresses "172.16.0.8/24"
+          (List.init 256 ~f:(fun i -> sprintf "172.16.0.%d" i))
     end
   end
 
@@ -2563,7 +2586,7 @@ let set_out_channel_timeout oc snd_timeout =
   let s = descr_of_out_channel oc in
   setsockopt_float s SO_SNDTIMEO snd_timeout
 
-external nanosleep : float -> float = "core_kernel_time_ns_nanosleep" ;;
+external nanosleep : float -> float = "core_time_ns_nanosleep" ;;
 
 module Syslog = Syslog
 

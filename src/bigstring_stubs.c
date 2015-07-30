@@ -605,7 +605,18 @@ CAMLprim value bigstring_recvmmsg_assume_fd_is_nonblocking_stub(
   unsigned count;
 
   count = (unsigned) Long_val(v_count);
-  if (count != Long_val(v_count)) {
+  /* On 32-bit platforms, sizeof(unsigned) == sizeof(intnat); it thus suffices to
+     check that [v_count] is not negative.
+
+     On 64-bit platforms with unsigned being 32 bit and intnat being 64 bit, we
+     need the second check to ensure there is no truncation.  Note that "(intnat) count"
+     zero-extends to 64-bit width.  This check actually subsumes the [v_count] being
+     negative check.
+
+     If this code were built on a platform where both unsigned and intnat were 64 bit,
+     then it should still work, by analogy with the all-32 bit case.
+  */
+  if (Long_val(v_count) < 0 || (intnat) count != Long_val(v_count)) {
     caml_invalid_argument("bigstring_recvmmsg_assume_fd_is_nonblocking_stub: "
                           "v_count exceeds unsigned int");
   }

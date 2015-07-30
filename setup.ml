@@ -14,7 +14,8 @@ let () =
                            "src/ocaml_utils_macros.h";
                            "src/ocaml_utils.h";
                            "src/unix_utils.h";
-                           "src/core_config.h"])
+                           "src/core_config.h";
+                           "src/jane_common.h"])
         | _ ->
             (cs, bs, lib, [])
 ;;

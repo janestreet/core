@@ -9,15 +9,19 @@
     Here is a benchmark of execution time in nanos and allocations in words:
 
     {v
-      Name                            Time/Run   Minor
-      ------------------------------- ---------- -------
-      Time.now                           39.02    2.00
-      TSC.now                             7.54
-      TSC.to_time                         4.88    2.00
-      TSC.to_time (TSC.now ())            8.54    2.00
-      TSC.to_time_nanos                   4.49
-      TSC.to_time_nanos(TSC.now ())       8.95
-      Calibrator.calibrate                 279   34.00
+      Name                         Time/Run   mWd/Run
+     ---------------------------- ---------- ---------
+      Time.now                      37.93ns     2.00w
+      Time_ns.now                   28.18ns
+      TSC.Calibrator.calibrate     115.43ns    28.00w
+      TSC.now                        7.14ns
+      TSC.to_time                    3.44ns     2.00w
+      TSC.to_time (TSC.now ())       8.24ns     2.00w
+      TSC.to_time_ns                14.20ns
+      TSC.to_time_ns(TSC.now ())     9.80ns
+      id                             2.91ns
+      TSC.Span.of_ns                 5.81ns
+      TSC.Span.to_ns                 3.70ns
     v}
 
 

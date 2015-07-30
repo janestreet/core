@@ -14,9 +14,9 @@ CAMLprim value iobuf_recvmmsg_assume_fd_is_nonblocking_stub(
   unsigned i;
   int n_read;
   unsigned count;
-
-  count = Long_val(v_count);
-  if (count != Long_val(v_count)) {
+  count = (unsigned) Long_val(v_count);
+  /* See comment in bigstring_stubs.c about the following bounds check. */
+  if (Long_val(v_count) < 0 || (intnat) count != Long_val(v_count)) {
     caml_invalid_argument("iobuf_recvmmsg_assume_fd_is_nonblocking_stub: "
                           "v_count exceeds unsigned int");
   }

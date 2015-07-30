@@ -1,5 +1,9 @@
 open Core.Std
 
+(* Ensure that programs querying [Command.shape] of this executable preserve the
+   environment. *)
+let () = assert ("test" = Sys.getenv_exn "ENVVAR")
+
 type args = {
   date : Date.t;
   file : string option;

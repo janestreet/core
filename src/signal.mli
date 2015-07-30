@@ -46,20 +46,20 @@ val handle_default : t -> unit
 (** [ignore t] is [set t `Ignore]. *)
 val ignore : t -> unit
 
-type pid_spec = [ `Pid of Pid.t | `My_group | `Group of Pid.t ] ;;
+type pid_spec = [ `Pid of Pid.t | `My_group | `Group of Pid.t ]
 
-(** [send signal pid] sends [signal] to the process whose process id is [pid]. *)
-val send : t -> pid_spec -> [ `Ok | `No_such_process ]
+(** [send signal pid_spec] sends [signal] to the processes specified by [pid_spec].
 
-(** [send_i signal ~pid] sends [signal] to the process whose process id is [pid].
- * No exception will be raised if [pid] is a zombie or nonexistent.
- *)
-val send_i : t -> pid_spec -> unit
+    [send_i] is like [send], except that it silently returns if the specified processes
+    don't exist.
 
-(** [send_exn signal ~pid] sends [signal] to the process whose process id is
- * [pid].  In Caml's standard library, this is called [Unix.kill].  Sending a
- * signal to a zombie and/or nonexistent process will raise an exception.
- *)
+    [send_exn] is like [send], except that it raises if the specified processes
+    don't exist.
+
+    All of [send], [send_i], and [send_exn] raise if you don't have permission to send the
+    signal to the specified processes or if [signal] is unknown. *)
+val send     : t -> pid_spec -> [ `Ok | `No_such_process ]
+val send_i   : t -> pid_spec -> unit
 val send_exn : t -> pid_spec -> unit
 
 (** [can_send_to pid] returns true if [pid] is running and the current process has

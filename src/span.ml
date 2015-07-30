@@ -197,7 +197,7 @@ module Stable = struct
         () =
       let (+) = T.(+) in
       let t =
-        of_day    (Float.of_int day)
+        of_day   (Float.of_int day)
         + of_hr  (Float.of_int hr)
         + of_min (Float.of_int min)
         + of_sec (Float.of_int sec)

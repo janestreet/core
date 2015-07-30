@@ -1,6 +1,9 @@
 TEST_MODULE = struct
   open Core.Std
 
+  (* Required by demo_parent.exe and demo_child.exe: *)
+  let () = Unix.putenv ~key:"ENVVAR" ~data:"test"
+
   let command =
     Command.exec ()
       ~summary:"constructed Command.t"

@@ -280,11 +280,11 @@ module Make () = struct
     let  int64_be_trunc t = d  "int64_be_trunc" int64_be_trunc   sexp_of_int   t
     let  int64_le_trunc t = d  "int64_le_trunc" int64_le_trunc   sexp_of_int   t
 
-    let padded_fixed_string ~padding ~len t =
-      debug "Consume.padded_fixed_string" [t] (`padding padding, `len len)
+    let tail_padded_fixed_string ~padding ~len t =
+      debug "Consume.tail_padded_fixed_string" [t] (`padding padding, `len len)
         <:sexp_of< [ `padding of char ] * [ `len of int ] >>
         sexp_of_string
-        (fun () -> padded_fixed_string ~padding ~len t)
+        (fun () -> tail_padded_fixed_string ~padding ~len t)
 
     let string ?str_pos ?len t =
       debug "Consume.string" [t] (`str_pos str_pos, `len len)
@@ -333,11 +333,11 @@ module Make () = struct
     let  int64_le_trunc t = d  "int64_le_trunc"    int64_le_trunc   sexp_of_int   t
     let decimal         t = d "decimal"           decimal           sexp_of_int   t
 
-    let padded_fixed_string ~padding ~len t str =
-      debug "Fill.padded_fixed_string" [t] (`padding padding, `len len, str)
+    let tail_padded_fixed_string ~padding ~len t str =
+      debug "Fill.tail_padded_fixed_string" [t] (`padding padding, `len len, str)
         <:sexp_of< [ `padding of char ] * [ `len of int ] * string >>
         sexp_of_unit
-        (fun () -> padded_fixed_string ~padding ~len t str)
+        (fun () -> tail_padded_fixed_string ~padding ~len t str)
 
     let string ?str_pos ?len t str =
       debug "Fill.string" [t] (`str_pos str_pos, `len len, str)
@@ -442,11 +442,11 @@ module Make () = struct
     let  int64_be_trunc t = d  "int64_be_trunc"    int64_be_trunc   sexp_of_int   t
     let  int64_le_trunc t = d  "int64_le_trunc"    int64_le_trunc   sexp_of_int   t
 
-    let padded_fixed_string ~padding ~len t ~pos =
-      debug "Peek.padded_fixed_string" [t] (`padding padding, `len len, `pos pos)
+    let tail_padded_fixed_string ~padding ~len t ~pos =
+      debug "Peek.tail_padded_fixed_string" [t] (`padding padding, `len len, `pos pos)
         <:sexp_of< [ `padding of char ] * [ `len of int ] * [ `pos of int ] >>
         sexp_of_string
-        (fun () -> padded_fixed_string ~padding ~len t ~pos)
+        (fun () -> tail_padded_fixed_string ~padding ~len t ~pos)
 
     let string ?str_pos ?len t ~pos =
       debug "Peek.string" [t] (`str_pos str_pos, `len len, `pos pos)
@@ -507,12 +507,12 @@ module Make () = struct
         sexp_of_int
         (fun () -> decimal t ~pos arg)
 
-    let padded_fixed_string ~padding ~len t ~pos str =
-      debug "Poke.padded_fixed_string" [t]
+    let tail_padded_fixed_string ~padding ~len t ~pos str =
+      debug "Poke.tail_padded_fixed_string" [t]
         (`padding padding, `len len, `pos pos, str)
         <:sexp_of< [ `padding of char ] * [ `len of int ] * [ `pos of int ] * string >>
         sexp_of_unit
-        (fun () -> padded_fixed_string ~padding ~len t ~pos str)
+        (fun () -> tail_padded_fixed_string ~padding ~len t ~pos str)
 
     let string ?str_pos ?len t ~pos str =
       debug "Poke.string" [t] (`str_pos str_pos, `len len, `pos pos, str)
@@ -714,6 +714,14 @@ module Make () = struct
 
   end
 
+  module Expert = struct
+    let buf    = Expert.buf
+    let hi_max = Expert.hi_max
+    let hi     = Expert.hi
+    let lo     = Expert.lo
+    let lo_min = Expert.lo_min
+  end
+
   module File_descr = Unix.File_descr
 
   let read_assume_fd_is_nonblocking t fd =
@@ -830,11 +838,11 @@ module Make () = struct
       let  int64_be_trunc t = d  "int64_be_trunc"    int64_be_trunc   sexp_of_int   t
       let  int64_le_trunc t = d  "int64_le_trunc"    int64_le_trunc   sexp_of_int   t
 
-      let padded_fixed_string ~padding ~len t =
-        debug "Unsafe.Consume.padded_fixed_string" [t] (`padding padding, `len len)
+      let tail_padded_fixed_string ~padding ~len t =
+        debug "Unsafe.Consume.tail_padded_fixed_string" [t] (`padding padding, `len len)
           <:sexp_of< [ `padding of char ] * [ `len of int ] >>
           sexp_of_string
-          (fun () -> padded_fixed_string ~padding ~len t)
+          (fun () -> tail_padded_fixed_string ~padding ~len t)
 
       let string ?str_pos ?len t =
         debug "Unsafe.Consume.string" [t] (`str_pos str_pos, `len len)
@@ -882,11 +890,11 @@ module Make () = struct
       let  int64_le_trunc t = d  "int64_le_trunc"    int64_le_trunc   sexp_of_int   t
       let decimal         t = d "decimal"           decimal           sexp_of_int   t
 
-      let padded_fixed_string ~padding ~len t str =
-        debug "Unsafe.Fill.padded_fixed_string" [t] (`padding padding, `len len, str)
+      let tail_padded_fixed_string ~padding ~len t str =
+        debug "Unsafe.Fill.tail_padded_fixed_string" [t] (`padding padding, `len len, str)
           <:sexp_of< [ `padding of char ] * [ `len of int ] * string >>
           sexp_of_unit
-          (fun () -> padded_fixed_string ~padding ~len t str)
+          (fun () -> tail_padded_fixed_string ~padding ~len t str)
 
       let string ?str_pos ?len t str =
         debug "Unsafe.Fill.string" [t] (`str_pos str_pos, `len len, str)
@@ -942,11 +950,11 @@ module Make () = struct
       let  int64_be_trunc t = d  "int64_be_trunc"    int64_be_trunc   sexp_of_int   t
       let  int64_le_trunc t = d  "int64_le_trunc"    int64_le_trunc   sexp_of_int   t
 
-      let padded_fixed_string ~padding ~len t ~pos =
-        debug "Unsafe.Peek.padded_fixed_string" [t] (`padding padding, `len len, `pos pos)
+      let tail_padded_fixed_string ~padding ~len t ~pos =
+        debug "Unsafe.Peek.tail_padded_fixed_string" [t] (`padding padding, `len len, `pos pos)
           <:sexp_of< [ `padding of char ] * [ `len of int ] * [ `pos of int ] >>
           sexp_of_string
-          (fun () -> padded_fixed_string ~padding ~len t ~pos)
+          (fun () -> tail_padded_fixed_string ~padding ~len t ~pos)
 
       let string ?str_pos ?len t ~pos =
         debug "Unsafe.Peek.string" [t] (`str_pos str_pos, `len len, `pos pos)
@@ -1007,15 +1015,15 @@ module Make () = struct
           sexp_of_int
           (fun () -> decimal t ~pos arg)
 
-      let padded_fixed_string ~padding ~len t ~pos str =
-        debug "Unsafe.Poke.padded_fixed_string" [t]
+      let tail_padded_fixed_string ~padding ~len t ~pos str =
+        debug "Unsafe.Poke.tail_padded_fixed_string" [t]
           (`padding padding, `len len, `pos pos, str)
           <:sexp_of< [ `padding of char ]
                     * [ `len of int ]
                     * [ `pos of int ]
                     * string >>
           sexp_of_unit
-          (fun () -> padded_fixed_string ~padding ~len t ~pos str)
+          (fun () -> tail_padded_fixed_string ~padding ~len t ~pos str)
 
       let string ?str_pos ?len t ~pos str =
         debug "Unsafe.Poke.string" [t] (`str_pos str_pos, `len len, `pos pos, str)

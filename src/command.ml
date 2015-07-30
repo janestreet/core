@@ -1084,6 +1084,12 @@ module Base = struct
         flags = t.flags;
         usage = t.usage; }
 
+    let of_params params =
+      let t = params.param in
+      { f = (fun env -> t.f env >>| fun run main -> run Fn.id main);
+        flags = t.flags;
+        usage = t.usage; }
+
     let lookup key =
       { param =
           { f = (fun env -> return (fun m -> m (Env.find_exn env key)));
@@ -1358,19 +1364,29 @@ module Sexpable = struct
   let extraction_var = "COMMAND_OUTPUT_HELP_SEXP"
 
   let of_external ~path_to_exe =
-    let process_channels =
-      Unix.open_process_full path_to_exe ~env:[|
-        sprintf "%s=%s"
-          extraction_var (supported_versions |> Int.Set.sexp_of_t |> Sexp.to_string);
-      |]
+    let process_info =
+      Unix.create_process_env () ~prog:path_to_exe ~args:[]
+        ~env:(`Extend
+                [ ( extraction_var
+                  , supported_versions |> Int.Set.sexp_of_t |> Sexp.to_string
+                  )
+                ])
     in
+    (* We aren't writing to the process's stdin or reading from the process's stderr, so
+       close them early.  That way if we open a process that isn't behaving how we
+       expect, it at least won't block on these file descriptors. *)
+    Unix.close process_info.stdin;
+    Unix.close process_info.stderr;
     let t =
-      In_channel.input_all process_channels.Unix.Process_channels.stdout
+      process_info.stdout
+      |> Unix.in_channel_of_descr
+      |> In_channel.input_all
       |> String.strip
       |> Sexp.of_string
       |> t_of_sexp
     in
-    ignore (Unix.close_process_full process_channels);
+    Unix.close process_info.stdout;
+    ignore (Unix.wait (`Pid process_info.pid));
     t
 
   let rec find (t : t) ~path_to_subcommand =
@@ -1634,7 +1650,6 @@ let shape t : Shape.t =
     in
     loop ~path_to_exe ~path_to_subcommand
 
-INCLUDE "version_defaults.mlh"
 module Version_info = struct
   let print_version ~version =
     (* [version] was space delimited at some point and newline delimited
@@ -1862,9 +1877,17 @@ let rec dispatch t env ~extend ~path ~args ~maybe_new_comp_cword ~version ~build
       exit 0
 ;;
 
+INCLUDE "core_config.mlh"
+let default_version,default_build_info =
+  IFDEF BUILD_VERSION_UTIL THEN
+    Version_util.version, Version_util.build_info
+  ELSE
+    "no version util", "no build info"
+  ENDIF
+
 let run
-      ?(version = DEFAULT_VERSION)
-      ?(build_info = DEFAULT_BUILDINFO)
+      ?(version = default_version)
+      ?(build_info = default_build_info)
       ?(argv=Array.to_list Sys.argv)
       ?extend
       t =
@@ -1934,8 +1957,8 @@ module Deprecated = struct
     in
     help_recursive_rec ~cmd t s
 
-  let version = DEFAULT_VERSION
-  let build_info = DEFAULT_BUILDINFO
+  let version = default_version
+  let build_info = default_build_info
 
   let run t ~cmd ~args ~is_help ~is_help_rec ~is_help_rec_flags ~is_expand_dots =
     let path_strings = String.split cmd ~on: ' ' in
@@ -2008,7 +2031,23 @@ module Param = struct
   end
 
   include A
-  module Args = Applicative.Make_args (A)
+  module Args = struct
+    type ('a, 'b) t = ('a -> 'b) A.t
+    let applyN t1 t2 = A.map2 t1 t2 ~f:(fun f k -> k f)
+    let mapN ~f t = A.map t ~f:(fun k -> k f)
+    let step t ~f = A.map t ~f:(fun g x -> g (f x))
+    let cons p t = A.map2 p t ~f:(fun a f k -> f (k a))
+    let (@>) = cons
+    let nil =
+      (* inlined [let nil = return Fn.id] b/c of the value restriction *)
+      { Spec.
+        param = {
+          f = (fun _env -> Anons.Parser.For_opening.return (fun k -> k Fn.id));
+          flags = (fun () -> []);
+          usage = (fun () -> Anons.Grammar.zero);
+        };
+      }
+  end
   include (Args : module type of Args with type ('a, 'b) t := ('a, 'b) Args.t)
 
   let help = Spec.help
@@ -2044,6 +2083,12 @@ module Param = struct
   end
 end
 
+type ('main, 'result) basic_command'
+  =  summary : string
+  -> ?readme : (unit -> string)
+  -> ('main, unit -> 'result) Param.Args.t
+  -> 'main
+  -> t
+
 let basic' ~summary ?readme params main =
-  let param = Param.(mapN ~f:Fn.id (return main @> params)) in
-  basic ~summary ?readme Spec.(empty +> param) (fun body () -> body ())
+  basic ~summary ?readme Spec.(of_params params) main

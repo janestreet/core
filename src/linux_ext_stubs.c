@@ -327,8 +327,6 @@ CAMLprim value linux_bind_to_interface(value v_fd, value v_ifname)
 
 EPOLL_FLAG(EPOLLIN)
 EPOLL_FLAG(EPOLLOUT)
-/* 2012-05-22 sweeks: EPOLLRDHUP was unavailable on some of our machines, so I
-   commented it out until we need it. */
 /* EPOLL_FLAG(EPOLLRDHUP) */
 EPOLL_FLAG(EPOLLPRI)
 EPOLL_FLAG(EPOLLERR)
@@ -336,7 +334,7 @@ EPOLL_FLAG(EPOLLHUP)
 EPOLL_FLAG(EPOLLET)
 EPOLL_FLAG(EPOLLONESHOT)
 
-CAMLprim value linux_sizeof_epoll_event(value __unused v_unit)
+CAMLprim value linux_epoll_sizeof_epoll_event(value __unused v_unit)
 {
   return Val_long(sizeof(struct epoll_event));
 }
@@ -431,35 +429,16 @@ CAMLprim value linux_epoll_wait(value v_epfd, value v_array, value v_timeout)
   CAMLreturn(Val_long(retcode));
 }
 
-/* 2012-05-22 sweeks: epoll_pwait was unavailable on some of our machines, so I
-   commented it out until we need it.
+/** Offsets and sizes of the resulting ready events array. */
 
-   mshinwell has not fully read this yet.
-
-   bnigito: epoll_pwait, and associated signal masks is a possible routine we may expose
-   in the future. Since it's not available on some centos versions (and we do not currently
-   utilize the pselect analog) I've removed the premature references to it.
-*/
-
-/** Accessors for the resulting ready events array. Might want to do this as a pair. */
-
-static inline struct epoll_event * get_epoll_event(value v_array, value v_index)
+CAMLprim value linux_epoll_offsetof_readyfd(value __unused v_unit)
 {
-  int i = Long_val(v_index);
-  struct epoll_event * events = (struct epoll_event *) Caml_ba_data_val(v_array);
-  return &events[i];
+  return Val_int( offsetof(struct epoll_event, data.fd));
 }
 
-CAMLprim value linux_epoll_readyfd(value v_array, value v_index)
+CAMLprim value linux_epoll_offsetof_readyflags(value __unused v_unit)
 {
-  struct epoll_event * event = get_epoll_event(v_array, v_index);
-  return Val_long( event->data.fd );
-}
-
-CAMLprim value linux_epoll_readyflags(value v_array, value v_index)
-{
-  struct epoll_event * event = get_epoll_event(v_array, v_index);
-  return caml_alloc_int63( event->events );
+  return Val_int( offsetof(struct epoll_event, events));
 }
 
 #ifdef JSC_TIMERFD

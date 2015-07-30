@@ -24,8 +24,6 @@ let create ?max_mem_waiting_gc size =
     | None -> ~-1
     | Some v -> Float.to_int (Byte_units.bytes v)
   in
-  (* vgatien-baron: aux_create ~size:(-1) throws Out of memory, which could be quite
-     confusing during debugging. *)
   if size < 0 then invalid_argf "create: size = %d < 0" size ();
   aux_create ~max_mem_waiting_gc ~size
 
@@ -271,6 +269,37 @@ external unsafe_recvmmsg_assume_fd_is_nonblocking
   -> int array
   -> int
   = "bigstring_recvmmsg_assume_fd_is_nonblocking_stub"
+
+TEST_MODULE = struct
+  let expect_invalid_argument ?msg f =
+    assert (try ignore (f () : int); false
+            with Invalid_argument s ->
+              match msg with
+              | None -> true
+              | Some x when String.equal x s -> true
+              | Some x -> failwithf "expected %S but got %S" x s ())
+  ;;
+
+  let check_invalid ?msg count =
+    let fd = Core_unix.socket ~domain:PF_INET ~kind:SOCK_DGRAM ~protocol:0 in
+    expect_invalid_argument ?msg
+      (fun () -> unsafe_recvmmsg_assume_fd_is_nonblocking fd [||] count None [||])
+
+
+  TEST_UNIT "unsafe_recvmmsg_assume_fd_is_nonblocking: check count bounds" =
+    check_invalid (-1);
+    check_invalid Int.min_value;
+    check_invalid 65; (* RECVMMSG_MAX_COUNT = 64 *)
+    (
+IFDEF ARCH_SIXTYFOUR THEN
+    (* We are assuming that [unsigned int] is 32 bits wide. *)
+    check_invalid (Int64.to_int_exn 0xFFFF_FFFFL); (* exceeds RECVMMSG_MAX_COUNT *)
+    check_invalid (Int64.to_int_exn 0x1FFFF_FFFFL); (* exceeds unsigned int *)
+ENDIF
+    )
+  ;;
+end
+
 
 let recvmmsg_assume_fd_is_nonblocking fd ?count ?srcs iovecs ~lens =
   let loc = "recvmmsg_assume_fd_is_nonblocking" in

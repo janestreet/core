@@ -49,9 +49,9 @@ val create : ?hr:int -> ?min:int -> ?sec:int -> ?ms:int -> ?us:int -> unit -> t
 
 val to_parts : t -> Span.Parts.t
 
-(* smallest and largest valid ofdays *)
+(** Smallest valid ofday.  There is no exposed end_of_day value because the upper end of
+    the range is not closed. *)
 val start_of_day : t
-val end_of_day : t
 
 val to_span_since_start_of_day : t -> Span.t
 val of_span_since_start_of_day : Span.t -> t

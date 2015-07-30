@@ -69,13 +69,10 @@ module Stable = struct
     ;;
 
     let of_date_ofday date ofday ~zone =
-      let module P = Span.Parts in
-      let parts = Span.to_parts (Ofday.to_span_since_start_of_day ofday) in
       let time =
         let epoch =
           utc_mktime ~year:(Date.year date) ~month:(Month.to_int (Date.month date))
-            ~day:(Date.day date) ~hour:parts.P.hr ~min:parts.P.min ~sec:parts.P.sec
-            ~ms:parts.P.ms ~us:parts.P.us
+            ~day:(Date.day date) ~ofday_sec:(Span.to_sec (Ofday.to_span_since_start_of_day ofday))
         in
         Zone.shift_epoch_time zone `Local epoch
       in
@@ -109,8 +106,10 @@ module Stable = struct
     TEST_MODULE = struct
       let ldn = Zone.find_exn "Europe/London" ;;
 
-      let mkt month day hour min =
-        utc_mktime ~year:2013 ~month ~day ~hour ~min ~sec:0 ~ms:0 ~us:0
+      let mkt month day hr min =
+        let ofday_mins = ((Float.of_int hr *. 60.) +. (Float.of_int min)) in
+        let ofday_sec = ofday_mins *. 60. in
+        utc_mktime ~year:2013 ~month ~day ~ofday_sec
       ;;
 
       let expect_once date ofday expected =

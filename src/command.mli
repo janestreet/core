@@ -403,6 +403,8 @@ module Spec : sig
       }
   *)
 
+  val of_params : ('a, 'b) Param.Args.t -> ('a, 'b) t
+
   module Arg_type : module type of Arg_type with type 'a t = 'a Arg_type.t
 
   include module type of Arg_type.Export
@@ -448,14 +450,16 @@ type ('main, 'result) basic_command
     screen. *)
 val basic : ('main, unit) basic_command
 
-(** Same general behavior as [basic], but takes a command line specification built up
-    using [Params] instead of [Spec]. *)
-val basic'
-  :  summary : string
+type ('main, 'result) basic_command'
+  =  summary : string
   -> ?readme : (unit -> string)
-  -> ('main, unit -> unit) Param.Args.t
+  -> ('main, unit -> 'result) Param.Args.t
   -> 'main
   -> t
+
+(** Same general behavior as [basic], but takes a command line specification built up
+    using [Params] instead of [Spec]. *)
+val basic' : ('main, unit) basic_command'
 
 (** [group ~summary subcommand_alist] is a compound command with named
     subcommands, as found in [subcommand_alist].  [summary] is to contain

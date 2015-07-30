@@ -73,15 +73,12 @@ open Core_kernel.Std
 
 module Unix = Core_unix
 
-let catchup_cycles                  = 1E9
 
 let max_percent_change_from_real_slope = 0.20
 TEST_UNIT =
   assert (0. <= max_percent_change_from_real_slope);
   assert (max_percent_change_from_real_slope <= 1.);
 ;;
-
-let initial_alpha                   = 1.
 
 let ewma ~alpha ~old ~add = ((1. -. alpha) *. old) +. (alpha *. add)
 
@@ -92,9 +89,6 @@ type tsc = t     with bin_io, compare, sexp
 let diff t1 t2 = Int63.(-) t1 t2
 let add t s = Int63.(+) t s
 let to_int63 t = t
-
-let float_of_int63_exn x = Pervasives.float_of_int (Int63.to_int_exn x)
-let int63_of_float     x = Int63.of_int (Pervasives.int_of_float (x +. 0.5))
 
 IFDEF ARCH_SIXTYFOUR THEN
 
@@ -132,7 +126,7 @@ module Calibrator = struct
 
   let tsc_to_time =
     let convert t tsc base mul =
-      Time.of_float (base +. (mul *. float_of_int63_exn (diff tsc t.tsc)))
+      Time.of_float (base +. (mul *. Int63.to_float (diff tsc t.tsc)))
     in
     fun t tsc ->
       if tsc < t.monotonic_until_tsc
@@ -143,7 +137,7 @@ module Calibrator = struct
   let tsc_to_nanos_since_epoch =
     let convert t tsc base mul =
       (* Scale an int by a float without intermediate allocation and overflow. *)
-      Int63.(+) base (int63_of_float (mul *. float_of_int63_exn (diff tsc t.tsc)))
+      Int63.(+) base (Float.int63_round_nearest_exn (mul *. Int63.to_float (diff tsc t.tsc)))
     in
     fun t tsc ->
       if tsc < t.monotonic_until_tsc
@@ -164,11 +158,15 @@ module Calibrator = struct
     1. -. exp (-0.5 *. time_diff)
   ;;
 
+  let catchup_cycles                  = 1E9
+  let initial_alpha                   = 1.
+
+
   let calibrate_using t ~tsc ~time ~am_initializing =
     let estimated_time = Time.to_float (tsc_to_time t tsc)   in
     let time_diff_est  = time -. estimated_time              in
     let time_diff      = time -. t.time                      in
-    let tsc_diff       = float_of_int63_exn (diff tsc t.tsc) in
+    let tsc_diff       = Int63.to_float (diff tsc t.tsc) in
     let alpha =
       if am_initializing
       then initial_alpha
@@ -225,10 +223,10 @@ module Calibrator = struct
     end;
 
     (* Precompute values required for [tsc_to_nanos_since_epoch]. *)
-    t.time_nanos                <- int63_of_float (t.time                    *. 1E9);
-    t.nanos_per_cycle           <-                 t.sec_per_cycle           *. 1E9;
-    t.monotonic_time_nanos      <- int63_of_float (t.monotonic_time          *. 1E9);
-    t.monotonic_nanos_per_cycle <-                 t.monotonic_sec_per_cycle *. 1E9;
+    t.time_nanos                <- Float.int63_round_nearest_exn (t.time *. 1E9);
+    t.nanos_per_cycle           <- t.sec_per_cycle *. 1E9;
+    t.monotonic_time_nanos      <- Float.int63_round_nearest_exn (t.monotonic_time *. 1E9);
+    t.monotonic_nanos_per_cycle <- t.monotonic_sec_per_cycle *. 1E9;
   ;;
 
   let now_float () = Time.to_float (Time.now ())
@@ -322,18 +320,15 @@ ENDIF
 
 module Span = struct
   include Int63
-
-  let float_int63_iround_nearest x = int63_of_float (x +. 0.5)
-
 IFDEF ARCH_SIXTYFOUR THEN
   let to_ns ?(calibrator = Calibrator.local) t =
-    float_int63_iround_nearest
-      (float_of_int63_exn t *. calibrator.Calibrator.nanos_per_cycle)
+    Float.int63_round_nearest_exn
+      (Int63.to_float t *. calibrator.Calibrator.nanos_per_cycle)
   ;;
 
   let of_ns ?(calibrator = Calibrator.local) ns =
-    float_int63_iround_nearest
-      (float_of_int63_exn ns /. calibrator.Calibrator.nanos_per_cycle)
+    Float.int63_round_nearest_exn
+      (Int63.to_float ns /. calibrator.Calibrator.nanos_per_cycle)
   ;;
 ELSE
   (* [tsc_get] already returns the current time in ns *)
@@ -432,9 +427,9 @@ TEST_MODULE = struct
     Calibrator.initialize calibrator init_samples;
     let ewma_error = ref 0. in
     List.iter samples ~f:(fun (tsc, time) ->
-      let time_nanos = int63_of_float (time *. 1E9) in
+      let time_nanos = Float.int63_round_nearest_exn (time *. 1E9) in
       let cur_error =
-        scale_us_abs (float_of_int63_exn (diff
+        scale_us_abs (Int63.to_float (diff
                                         time_nanos
                                         (to_nanos_since_epoch ~calibrator tsc)))
       in
@@ -456,4 +451,42 @@ TEST_MODULE = struct
     test_time_and_cycles_nanos ~error_limit:3. ~alpha:0.1 ~verbose:false
       "time_stamp_counter_samples_at_60sec.sexp"
   ;;
+
+IFDEF ARCH_SIXTYFOUR THEN
+  TEST_UNIT =
+    let calibrator = Calibrator.local in
+    for x = 1 to 100_000 do
+      let y =
+        x
+        |> Int63.of_int
+        |> Span.of_ns ~calibrator
+        |> Span.to_ns ~calibrator
+        |> Int63.to_int_exn
+      in
+      (* Accept a difference of at most [nanos_per_cycle] because of the precision
+         lost during float truncation.
+         [trunc (x / nanos_per_cycle) * nanos_per_cycle]
+      *)
+      assert (abs (x - y) <= Float.to_int calibrator.nanos_per_cycle);
+    done
+  ;;
+
+  TEST_UNIT =
+    let calibrator = Calibrator.local in
+    for x = 1 to 100_000 do
+      let y =
+        x
+        |> Int63.of_int
+        |> Span.to_ns ~calibrator
+        |> Span.of_ns ~calibrator
+        |> Int63.to_int_exn
+      in
+      (* Accept a difference of at most [1/nanos_per_cycle] because of the precision
+         lost during float truncation.
+         [trunc (x * nanos_per_cycle) / nanos_per_cycle]
+      *)
+      assert (abs (x - y) <= Float.to_int (1. /. calibrator.nanos_per_cycle));
+    done
+  ;;
+ENDIF
 end

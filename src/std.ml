@@ -18,6 +18,7 @@ module Debug              = Debug
 module Filename           = Core_filename
 module Interval           = Interval
 module Iobuf              = Iobuf
+module Limiter            = Limiter
 module Linux_ext          = Linux_ext
 module Lock_file          = Lock_file
 module Mutex              = Core_mutex
@@ -35,7 +36,7 @@ module Timing_wheel       = Timing_wheel_float
 module Unix               = Core_unix
 module User_and_group     = User_and_group
 module Uuid               = Uuid
-INCLUDE "version_defaults.mlh"
+INCLUDE "core_config.mlh"
 IFDEF BUILD_VERSION_UTIL THEN
   module Version_util = Version_util
 ENDIF

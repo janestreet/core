@@ -242,7 +242,6 @@ module Month = struct
   TEST_UNIT =
     let months =
       (* Nobody likes Oct. *)
-      (* Especially after hurricane Sandy hit. Nice bit of premonition by ascvortov *)
       [ Month.Jan; Feb; Mar; Apr; May; Jun; Jul; Aug; Sep; Nov; Dec ]
     in
     Test.run

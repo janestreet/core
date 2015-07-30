@@ -4,13 +4,6 @@ open Core_kernel.Std
 
 module Helpers = struct
 
-(*IFDEF ARCH_SIXTYFOUR THEN
-  (* http://www.hackersdelight.org/magic.htm *)
-  let div_by_10 i = (i * 1717986919) lsr 34
-ELSE*)
-  let div_by_10 i = i / 10
-(*ENDIF*)
-
   let char_of_digit n = Char.unsafe_of_int (Char.to_int '0' + n)
 
   let invalid_range ~digits ~max ~i =
@@ -21,11 +14,11 @@ ELSE*)
 
   let blit_string_of_int_4_digits s ~pos i =
     if i >= 10000 || i < 0 then invalid_range ~digits:4 ~max:9999 ~i;
-    let j = div_by_10 i in
+    let j = i / 10 in
     s.[pos + 3] <- char_of_digit (i - j * 10);
-    let k = div_by_10 j in
+    let k = j / 10 in
     s.[pos + 2] <- char_of_digit (j - k * 10);
-    let l = div_by_10 k in
+    let l = k / 10 in
     s.[pos + 1] <- char_of_digit (k - l * 10);
     s.[pos    ] <- char_of_digit l;
   ;;
@@ -40,7 +33,7 @@ ELSE*)
 
   let blit_string_of_int_2_digits s ~pos i =
     if i >= 100 || i < 0 then invalid_range ~digits:4 ~max:99 ~i;
-    let j = div_by_10 i in
+    let j = i / 10 in
     s.[pos + 1] <- char_of_digit (i - j * 10);
     s.[pos    ] <- char_of_digit j;
   ;;
@@ -55,9 +48,9 @@ ELSE*)
 
   let blit_string_of_int_3_digits s ~pos i =
     if i >= 1000 || i < 0 then invalid_range ~digits:4 ~max:999 ~i;
-    let j = div_by_10 i in
+    let j = i / 10 in
     s.[pos + 2] <- char_of_digit (i - j * 10);
-    let k = div_by_10 j in
+    let k = j / 10 in
     s.[pos + 1] <- char_of_digit (j - k * 10);
     s.[pos    ] <- char_of_digit k;
   ;;
@@ -128,7 +121,7 @@ let to_tm_utc t = Unix.gmtime (T.to_float t)
    (supposedly invented by Gauss).  In this case it is used to produce the number
    of seconds since 1970-01-01 00:00:00 using epoch time semantics (86,400 seconds
    per day) *)
-let utc_mktime ~year ~month ~day ~hour ~min ~sec ~ms ~us =
+let utc_mktime ~year ~month ~day ~ofday_sec =
   (* move February to the conceptual end of the ordering - 1..12 -> 11,12,1..10 -
      because it carries the leap day.  The months are 0 indexed for this calculation,
      so 1 is February. *)
@@ -136,14 +129,9 @@ let utc_mktime ~year ~month ~day ~hour ~min ~sec ~ms ~us =
     let month = month - 2 in
     if month <= 0 then (year - 1, month + 12) else (year,month)
   in
-  let hour       = Float.of_int hour in
-  let min        = Float.of_int min in
-  let sec        = Float.of_int sec in
   let year,month = shuffle_year_month year month in
   let days       = year / 4 - year / 100 + year / 400 + 367 * month / 12 + day in
   let days       = Float.of_int days +. 365. *. Float.of_int year -. 719499. in
-  let hours      = 24. *. days +. hour in
-  let mins       = 60. *. hours +. min in
-  60. *. mins +. sec +. (Float.of_int ms /. 1000.)
-  +. (Float.of_int us /. 1000. /. 1000.)
+  (days *. 86400. +. ofday_sec)
 ;;
+

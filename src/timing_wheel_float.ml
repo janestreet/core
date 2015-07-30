@@ -76,6 +76,10 @@ let advance_clock t ~to_ ~handle_fired =
   Timing_wheel_ns.advance_clock t ~to_:(Time_ns.of_time to_) ~handle_fired;
 ;;
 
+let fire_past_alarms t ~handle_fired =
+  Timing_wheel_ns.fire_past_alarms t ~handle_fired;
+;;
+
 let alarm_precision t = to_span (Timing_wheel_ns.alarm_precision t)
 
 let alarm_upper_bound t = to_time (Timing_wheel_ns.alarm_upper_bound t)

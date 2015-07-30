@@ -22,40 +22,6 @@ module String_set_comp = struct
 
 end
 
-module Quick = struct
-  open Janecheck.Std
-
-  let set_gen elt_gen set_of_list =
-    let open Generator in
-    list elt_gen >>| set_of_list
-  ;;
-
-  let int_set_gen = set_gen Generator.int Int.Set.of_list
-
-  let int_set_pair_gen = Generator.tuple int_set_gen int_set_gen
-
-  let symmetric_diff_set s1 s2 =
-    Int.Set.symmetric_diff s1 s2
-    |> Sequence.to_list
-    |> List.map ~f:(function | First elt | Second elt -> elt)
-    |> Int.Set.of_list
-  ;;
-
-  (* textbook definition of symmetric diff *)
-  let symmetric_diff_spec s1 s2 = Int.Set.diff (Int.Set.union s1 s2) (Int.Set.inter s1 s2)
-
-  let symmetric_diff_test =
-    "symmetric_diff" >:: (fun () ->
-      let seed = `Deterministic "core set symmetric diff" in
-      let sexp_of = <:sexp_of< Int.Set.t * Int.Set.t >> in
-      Janecheck.test ~trials:100 ~seed ~sexp_of int_set_pair_gen ~f:(fun (s1, s2) ->
-        let expect = symmetric_diff_spec s1 s2 in
-        let actual = symmetric_diff_set s1 s2 in
-        <:test_eq< Int.Set.t >> actual expect))
-  ;;
-
-end
-
 let test =
   "core_fset" >:::
     [ "sexp" >::
@@ -97,5 +63,4 @@ let test =
           done;
         );
       "with_compare" >:: String_set_comp.test;
-      Quick.symmetric_diff_test
     ]

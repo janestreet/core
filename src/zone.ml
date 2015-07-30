@@ -486,9 +486,24 @@ module Stable = struct
       | Some z -> z
     ;;
 
+    let local = lazy (Lazy.force begin
+      match Sys.getenv "TZ" with
+      | Some zone_name ->
+        find_exn zone_name
+      | None ->
+        let localtime_t =
+          Zone_file.input_tz_file ~zonename:"/etc/localtime" ~filename:"/etc/localtime"
+        in
+        match Zone_cache.find_or_load_matching localtime_t with
+        | Some t -> t
+        | None   -> localtime_t
+    end)
+    ;;
+
     let t_of_sexp sexp =
       match sexp with
-      | Sexp.Atom name ->
+      | Sexp.Atom "Local" -> local
+      | Sexp.Atom name    ->
         begin
           try
             (* This special handling is needed because the offset directionality of the
@@ -559,26 +574,18 @@ module Stable = struct
         zone "ldn", "Europe/London",    "\013Europe/London";
         zone "hkg", "Asia/Hong_Kong",   "\014Asia/Hong_Kong";
       ]
+    ;;
+
+    TEST_UNIT "special form [Local]" =
+      ignore (t_of_sexp (Sexp.of_string "Local"))
+    ;;
+
   end)
 end
 
 include Stable.V1
 
 let utc = of_utc_offset ~hours:0
-
-let local = lazy (Lazy.force begin
-    match Sys.getenv "TZ" with
-    | Some zone_name ->
-      find_exn zone_name
-    | None ->
-      let localtime_t =
-        Zone_file.input_tz_file ~zonename:"/etc/localtime" ~filename:"/etc/localtime"
-      in
-      match Zone_cache.find_or_load_matching localtime_t with
-      | Some t -> t
-      | None   -> localtime_t
-  end)
-;;
 
 let clock_shift_at zone i =
   let previous_shift =
@@ -611,9 +618,11 @@ let prev_clock_shift (lazy zone) ~before =
 ;;
 
 TEST_MODULE "next_clock_shift, prev_clock_shift" = struct
-  let mkt ?(year=2013) month day hour min =
+  let mkt ?(year=2013) month day hr min =
+    let ofday_mins = ((Float.of_int hr *. 60.) +. (Float.of_int min)) in
+    let ofday_sec = ofday_mins *. 60. in
     Time_internal.T.of_float
-      (Time_internal.utc_mktime ~year ~month ~day ~hour ~min ~sec:0 ~ms:0 ~us:0)
+      (Time_internal.utc_mktime ~year ~month ~day ~ofday_sec)
 
   TEST "UTC" =
     Option.is_none (next_clock_shift utc ~after:(mkt 01 01  12 00))

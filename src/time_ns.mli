@@ -2,7 +2,33 @@
     but representing a narrower range of times.
 
     This module represents absolute times with nanosecond precision, approximately between
-    the years 1823 and 2116 CE. *)
+    the years 1823 and 2116 CE.
+
+    NOTE: you should normally default to using [Time] instead of this module.  The
+    reasons are:
+
+    - Many functions around our libraries expect [Time.t] values, so it will likely be
+      much more convenient for you.
+
+    - It leads to greater consistency across different codebases.  It would be bad to end
+      up with half our libraries expecting [Time.t] and the other half expecting
+      [Time_ns.t].
+
+    Some reasons you might want want to actually prefer [Time_ns.t] in certain cases:
+
+    - It has superior performance.
+
+    - It uses [int]s rather than [float]s internally, which makes certain things easier to
+      reason about, since ints respect a bunch of arithmetic identities that floats don't,
+      e.g., [x + (y + z) = (x + y) + z].
+
+    - It is available on non-UNIX platforms, including Javascript via js_of_ocaml.
+
+    All in all, it would have been nice to have chosen [Time_ns.t] to begin with, but
+    we're unlikely to flip everything to [Time_ns.t] in the short term (see comment at
+    the end of time_ns.ml).
+*)
+
 open Core_kernel.Std
 
 type t = Core_kernel.Time_ns.t with typerep
@@ -83,13 +109,22 @@ module Span : sig
   val to_parts : t -> Parts.t
   val of_parts : Parts.t -> t
 
-  (** {!Time.t} is precise to approximately 0.24us in 2014.  If [to_span] tries to convert
-      to the closest [Time.Span.t], we have stability problems: converting back yields a
+  (** {!Time.t} is precise to approximately 0.24us in 2014.  If [to_span] converts to the
+      closest [Time.Span.t], we have stability problems: converting back yields a
       different [t], sometimes different enough to have a different external
       representation, because the conversion back and forth crosses a rounding boundary.
 
       To stabilize conversion, we treat [Time.t] as having 1us precision: [to_span] and
-      [of_span] both round to the nearest 1us. *)
+      [of_span] both round to the nearest 1us.
+
+      Around 135y magnitudes, [Time.Span.t] no longer has 1us resolution.  At that point,
+      [to_span] and [of_span] raise.
+
+      The concern with stability is in part due to an earlier incarnation of
+      [Timing_wheel] that had surprising behavior due to rounding of floating-point times.
+      Timing_wheel was since re-implemented to use integer [Time_ns], and to treat
+      floating-point [Time]s as equivalence classes according to the [Time_ns] that they
+      round to.  See [Timing_wheel_float] for details. *)
   val to_span : t -> Time.Span.t
   val of_span : Time.Span.t -> t
 
@@ -98,14 +133,10 @@ module Span : sig
   val to_int63_ns : t       -> Int63.t (** Fast, implemented as the identity function. *)
   val of_int63_ns : Int63.t -> t       (** Fast, implemented as the identity function. *)
 
-  (** Will raise on 32-bit platforms.  Consider [to_int63_ns] instead. *)
+  (** Will raise on 32-bit platforms with spans corresponding to contemporary {!now}.
+      Consider [to_int63_ns] instead. *)
   val to_int_ns : t   -> int
   val of_int_ns : int -> t
-
-  module Option : sig
-    type t
-    val pp : Format.formatter -> t -> unit
-  end
 
   module Stable : sig
     module V1 : sig
@@ -114,6 +145,27 @@ module Span : sig
   end
 
   val random : unit -> t
+
+  module Option : sig
+    type span
+
+    type t = private Int63.t with typerep
+
+    include Identifiable with type t := t
+
+    val none : t
+    val some : span -> t
+    val is_none : t -> bool
+    val is_some : t -> bool
+    val value : t -> default : span -> span
+    val value_exn : t -> span
+
+    module Stable : sig
+      module V1 : sig
+        type nonrec t = t with sexp, bin_io
+      end
+    end
+  end with type span := t
 end
 
 module Option : sig
@@ -220,6 +272,17 @@ val occurrence
   -> ofday:Ofday.t
   -> zone:Zone.t
   -> t
+
+(** [pause span] sleeps for [span] time. *)
+val pause : Span.t -> unit
+
+(** [interruptible_pause span] sleeps for [span] time unless interrupted (e.g. by delivery
+    of a signal), in which case the remaining unslept portion of time is returned. *)
+val interruptible_pause : Span.t -> [ `Ok | `Remaining of Span.t ]
+
+(** [pause_forever] sleeps indefinitely. *)
+val pause_forever : unit -> never_returns
+
 
 module Stable : sig
   module V1 : sig

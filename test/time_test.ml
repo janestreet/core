@@ -330,6 +330,19 @@ let () =
       let t = Time.of_string s in
       "foo" @? (Time.to_string_abs t ~zone = s)
     );
+  add "of_string with leap second"
+    (fun () ->
+       let expected_time_at_leap_second =
+         Time.of_date_ofday
+           ~zone:Time.Zone.utc
+           (Date.create_exn ~y:2015 ~m:Jul ~d:1)
+           Time.Ofday.start_of_day
+       in
+       "foo" @?
+       List.for_all
+         ~f:(fun s -> Time.of_string s = expected_time_at_leap_second)
+         [ "2015-06-30 23:59:60Z"
+         ; "2015-06-30 23:59:60.500Z" ]);
   add "to_filename_string,of_filename_string"
     (fun () ->
       let zone = Time.Zone.local in

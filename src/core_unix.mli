@@ -1213,6 +1213,9 @@ module Cidr : sig
   val base_address : t -> Inet_addr.t
   val bits         : t -> int
 
+  (** Generate a sequence of all addresses in the block. *)
+  val all_matching_addresses : t -> Inet_addr.t Sequence.t
+
   (** IPv4 multicast address can be represented by the CIDR prefix 224.0.0.0/4,
       (i.e. addresses from 224.0.0.0 to 239.255.255.255, inclusive) *)
   val multicast : t

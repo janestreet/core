@@ -262,7 +262,8 @@ val sched_setaffinity : (?pid : Pid.t -> cpuset : int list -> unit -> unit) Or_e
 
 val sched_setaffinity_this_thread : (cpuset : int list -> unit) Or_error.t
 
-(** [cores ()] @return the number of cores on the machine *)
+(** [cores ()] @return the number of cores on the machine.  This may be different
+    than the number of cores available to the calling process. *)
 val cores : (unit -> int) Or_error.t
 
 (** [get_terminal_size ()] @return [(rows, cols)], the number of rows and
@@ -344,6 +345,10 @@ module Epoll : sig
       equivalent to the kernel epoll set, so that [sexp_of_t] produces useful
       human-readable information, and so that we can present our standard table
       interface.
+
+      The implementation assumes that one never closes a file descriptor that is the
+      domain of an [Epoll.t], since doing so might remove the fd from the kernel epoll set
+      without the implementation's knowledge.
 
       An [Epoll.t] also has a buffer that is used to store the set of ready fds returned
       by calling [wait]. *)

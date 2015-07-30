@@ -1,4 +1,5 @@
 open Core_kernel.Std_kernel
+INCLUDE "core_config.mlh"
 
 module Unix = Core_unix
 
@@ -116,9 +117,6 @@ let invariant _ _ t =
         assert (hi <= t.hi_max))
   with e -> fail t "Iobuf.invariant failed" e <:sexp_of< exn >>
 ;;
-
-(* pszilagyi: Passing the names of functions is redundant with the stack backtrace and
-   wreaks havoc with inlining. *)
 
 (* We want [check_range] inlined, so we don't want a string constant in there. *)
 let bad_range ~pos ~len t =
@@ -398,8 +396,7 @@ let buf_pos_exn t ~pos ~len = check_range t ~pos ~len; unsafe_buf_pos t ~pos
 let unsafe_advance t n = t.lo <- t.lo + n
 let advance t len = check_range t ~len ~pos:0; unsafe_advance t len
 
-(* This is from /janelibs/ocaml-4.00.1+jane1+with-fp/lib/ocaml/bigarray.mli per jdimino
-   via bnigito.  It's an unsafe, inline-able version of Bigstring.get. *)
+(* Unsafe, inline-able version of Bigstring.get. *)
 external bigstring_unsafe_get : Bigstring.t -> pos:int -> char
   = "%caml_ba_unsafe_ref_1"
 external bigstring_unsafe_set : Bigstring.t -> pos:int -> char -> unit
@@ -518,12 +515,11 @@ module Consume = struct
   type nonrec ('a, 'd, 'w) t = ('d, seek) t -> 'a
     constraint 'd = [> read ]
 
-  (* pszilagyi: This polymorphic helper does get inlined. *)
   let uadv t n x = unsafe_advance t n; x
   let pos t len = buf_pos_exn t ~pos:0 ~len
 
-  let padded_fixed_string ~padding ~len t =
-    uadv t len (Bigstring.get_padded_fixed_string t.buf ~pos:(pos t len) ~padding ~len ())
+  let tail_padded_fixed_string ~padding ~len t =
+    uadv t len (Bigstring.get_tail_padded_fixed_string t.buf ~pos:(pos t len) ~padding ~len ())
   ;;
 
   let string ?(str_pos = 0) ?len t =
@@ -611,6 +607,7 @@ module Itoa = struct
 
      The below tends to perform better than a binary search or [/= 10 while <> 0], likely
      due to decimal values for our applications skewing towards smaller numbers. *)
+  let _10e9 = 1_000_000_000
   let num_digits x =
     if x > -10 then 1
     else if x > -100 then 2
@@ -621,16 +618,22 @@ module Itoa = struct
     else if x > -10000000 then 7
     else if x > -100000000 then 8
     else if x > -1000000000 then 9
-    else if x > -10000000000 then 10
-    else if x > -100000000000 then 11
-    else if x > -1000000000000 then 12
-    else if x > -10000000000000 then 13
-    else if x > -100000000000000 then 14
-    else if x > -1000000000000000 then 15
-    else if x > -10000000000000000 then 16
-    else if x > -100000000000000000 then 17
-    else if x > -1000000000000000000 then 18
+    else
+IFDEF ARCH_SIXTYFOUR THEN
+         if x > _10e9 * -10 then 10
+    else if x > _10e9 * -100 then 11
+    else if x > _10e9 * -1000 then 12
+    else if x > _10e9 * -10000 then 13
+    else if x > _10e9 * -100000 then 14
+    else if x > _10e9 * -1000000 then 15
+    else if x > _10e9 * -10000000 then 16
+    else if x > _10e9 * -100000000 then 17
+    else if x > _10e9 * -1000000000 then 18
     else 19
+ELSE
+    10
+ENDIF
+
   TEST = String.length (Int.to_string Int.min_value) <= 19 + 1
 
   (* Despite the div/mod by a constant optimizations, it's a slight savings to avoid a
@@ -679,8 +682,8 @@ module Fill = struct
   let pos t len = buf_pos_exn t ~pos:0 ~len
   let uadv = unsafe_advance
 
-  let padded_fixed_string ~padding ~len t src =
-    Bigstring.set_padded_fixed_string ~padding ~len t.buf ~pos:(pos t len) src;
+  let tail_padded_fixed_string ~padding ~len t src =
+    Bigstring.set_tail_padded_fixed_string ~padding ~len t.buf ~pos:(pos t len) src;
     uadv t len
   ;;
 
@@ -736,8 +739,8 @@ module Peek = struct
 
   let spos = buf_pos_exn (* "safe position" *)
 
-  let padded_fixed_string ~padding ~len t ~pos =
-    Bigstring.get_padded_fixed_string t.buf ~padding ~len ~pos:(spos t ~len ~pos) ()
+  let tail_padded_fixed_string ~padding ~len t ~pos =
+    Bigstring.get_tail_padded_fixed_string t.buf ~padding ~len ~pos:(spos t ~len ~pos) ()
   ;;
 
   let string ?str_pos:(dst_pos = 0) ?len t ~pos =
@@ -805,8 +808,8 @@ module Poke = struct
 
   let spos = buf_pos_exn (* "safe position" *)
 
-  let padded_fixed_string ~padding ~len t ~pos src =
-    Bigstring.set_padded_fixed_string ~padding ~len t.buf ~pos:(spos t ~len ~pos) src
+  let tail_padded_fixed_string ~padding ~len t ~pos src =
+    Bigstring.set_tail_padded_fixed_string ~padding ~len t.buf ~pos:(spos t ~len ~pos) src
   ;;
 
   let string ?str_pos:(src_pos = 0) ?len t ~pos src =
@@ -959,6 +962,14 @@ let fill_bin_prot t writer v =
   result;
 ;;
 
+module Expert = struct
+  let buf t    = t.buf
+  let hi_max t = t.hi_max
+  let hi t     = t.hi
+  let lo t     = t.lo
+  let lo_min t = t.lo_min
+end
+
 module File_descr = Iobuf_intf.Unix.File_descr
 
 let read_assume_fd_is_nonblocking t fd =
@@ -986,7 +997,6 @@ let recvfrom_assume_fd_is_nonblocking t fd =
 ;;
 
 (* recvmmsg based on bigstring.ml *)
-INCLUDE "core_config.mlh"
 
 IFDEF RECVMMSG THEN
 
@@ -997,6 +1007,35 @@ external unsafe_recvmmsg_assume_fd_is_nonblocking
      -> Unix.sockaddr array option
      -> Unix.Syscall_result.Int.t)
   = "iobuf_recvmmsg_assume_fd_is_nonblocking_stub"
+
+TEST_MODULE = struct
+  let expect_invalid_argument ?msg f =
+    try ignore (f () : Unix.Syscall_result.Int.t); assert false
+    with Invalid_argument s ->
+      match msg with
+      | None -> ()
+      | Some x -> <:test_result< string >> s ~expect:x
+  ;;
+
+  let check_invalid ?msg count =
+    let fd = Unix.socket ~domain:PF_INET ~kind:SOCK_DGRAM ~protocol:0 in
+    expect_invalid_argument ?msg
+      (fun () -> unsafe_recvmmsg_assume_fd_is_nonblocking fd [||] count None)
+
+
+  TEST_UNIT "unsafe_recvmmsg_assume_fd_is_nonblocking: check count bounds" =
+    check_invalid (-1);
+    check_invalid Int.min_value;
+    check_invalid 65; (* RECVMMSG_MAX_COUNT = 64 *)
+    (
+IFDEF ARCH_SIXTYFOUR THEN
+    (* We are assuming that [unsigned int] is 32 bits wide. *)
+    check_invalid (Int64.to_int_exn 0xFFFF_FFFFL); (* exceeds RECVMMSG_MAX_COUNT *)
+    check_invalid (Int64.to_int_exn 0x1FFFF_FFFFL); (* exceeds unsigned int *)
+ENDIF
+    )
+  ;;
+end
 
 let recvmmsg_assume_fd_is_nonblocking fd ?count ?srcs ts =
   let loc = "Iobuf.recvmmsg_assume_fd_is_nonblocking" in
@@ -1108,12 +1147,11 @@ module Unsafe = struct
 
     type ('a, 'd, 'w) t = ('a, 'd, 'w) Consume.t
 
-    (* pszilagyi: This polymorphic helper does get inlined. *)
     let uadv t n x = unsafe_advance t n; x
     let upos t = unsafe_buf_pos t ~pos:0
 
-    let padded_fixed_string ~padding ~len t =
-      uadv t len (Bigstring.get_padded_fixed_string t.buf ~pos:(upos t) ~padding ~len ())
+    let tail_padded_fixed_string ~padding ~len t =
+      uadv t len (Bigstring.get_tail_padded_fixed_string t.buf ~pos:(upos t) ~padding ~len ())
     ;;
 
     let string    = Consume.string
@@ -1155,8 +1193,8 @@ module Unsafe = struct
     let upos t _len = unsafe_buf_pos t ~pos:0
     let uadv t n = unsafe_advance t n
 
-    let padded_fixed_string ~padding ~len t src =
-      Bigstring.set_padded_fixed_string ~padding ~len t.buf ~pos:(upos t len) src;
+    let tail_padded_fixed_string ~padding ~len t src =
+      Bigstring.set_tail_padded_fixed_string ~padding ~len t.buf ~pos:(upos t len) src;
       uadv t len
     ;;
 
@@ -1213,8 +1251,8 @@ module Unsafe = struct
 
     let upos = unsafe_buf_pos
 
-    let padded_fixed_string ~padding ~len t ~pos =
-      Bigstring.get_padded_fixed_string t.buf ~padding ~len ~pos:(upos t ~pos) ()
+    let tail_padded_fixed_string ~padding ~len t ~pos =
+      Bigstring.get_tail_padded_fixed_string t.buf ~padding ~len ~pos:(upos t ~pos) ()
     ;;
 
     let string ?str_pos:(dst_pos = 0) ?len t ~pos =
@@ -1262,8 +1300,8 @@ module Unsafe = struct
 
     let upos = unsafe_buf_pos
 
-    let padded_fixed_string ~padding ~len t ~pos src =
-      Bigstring.set_padded_fixed_string ~padding ~len t.buf ~pos:(upos t ~pos) src
+    let tail_padded_fixed_string ~padding ~len t ~pos src =
+      Bigstring.set_tail_padded_fixed_string ~padding ~len t.buf ~pos:(upos t ~pos) src
     ;;
 
     let string ?str_pos:(src_pos = 0) ?len t ~pos src =

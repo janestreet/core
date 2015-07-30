@@ -281,14 +281,15 @@ module Timerfd = struct
 
   let to_file_descr t = t
 
-  type repeat = { fire_after : Span.t; interval : Span.t }
+  type repeat = { fire_after : Time_ns.Span.t; interval : Time_ns.Span.t }
 
   let create = Or_error.unimplemented "Linux_ext.Timerfd.create"
 
-  let set _                      _ = assert false
-  let set_repeating ?initial:_ _ _ = assert false
-  let clear                      _ = assert false
-  let get                        _ = assert false
+  let set_at _                 _ = assert false
+  let set_after _              _ = assert false
+  let set_repeating ?after:_ _ _ = assert false
+  let clear                    _ = assert false
+  let get                      _ = assert false
 end
 
 ENDIF
@@ -577,8 +578,6 @@ module Epoll = struct
     let oneshot = flag_epolloneshot ()
   end)
 
-  external sizeof_epoll_event : unit -> int   = "linux_sizeof_epoll_event" "noalloc"
-
   external epoll_create : int -> File_descr.t = "linux_epoll_create"
 
   (* Some justification for the below interface: Unlike select() and poll(), epoll() fills
@@ -592,16 +591,18 @@ module Epoll = struct
      beneficial. *)
   type ready_events = Bigstring.t
 
-  external epoll_readyfd
-    : ready_events -> int -> File_descr.t = "linux_epoll_readyfd" "noalloc"
+  external epoll_sizeof_epoll_event
+    : unit -> int = "linux_epoll_sizeof_epoll_event" "noalloc"
 
-IFDEF ARCH_SIXTYFOUR THEN
-  external epoll_readyflags
-    : ready_events -> int -> Flags.t = "linux_epoll_readyflags" "noalloc"
-ELSE
-  external epoll_readyflags
-    : ready_events -> int -> Flags.t = "linux_epoll_readyflags"
-ENDIF
+  external epoll_offsetof_readyfd
+    : unit -> int = "linux_epoll_offsetof_readyfd" "noalloc"
+
+  external epoll_offsetof_readyflags
+    : unit -> int = "linux_epoll_offsetof_readyflags" "noalloc"
+
+  let sizeof_epoll_event  = epoll_sizeof_epoll_event ()
+  let offsetof_readyfd    = epoll_offsetof_readyfd ()
+  let offsetof_readyflags = epoll_offsetof_readyflags ()
 
   external epoll_ctl_add
     : File_descr.t -> File_descr.t -> Flags.t -> unit
@@ -638,6 +639,20 @@ ENDIF
   end
 
   open T
+
+  let epoll_readyfd t i =
+    Bigstring.unsafe_get_int32_le
+      t
+      ~pos:(i*sizeof_epoll_event + offsetof_readyfd)
+    |> File_descr.of_int
+  ;;
+
+  let epoll_readyflags t i =
+    Bigstring.unsafe_get_int32_le
+      t
+      ~pos:(i*sizeof_epoll_event + offsetof_readyflags)
+    |> Flags.of_int
+  ;;
 
   type in_use = ready_events T.t
 
@@ -706,7 +721,7 @@ ENDIF
                   ();
               max_ready_events;
               num_ready_events = 0;
-              ready_events = Bigstring.create (sizeof_epoll_event () * max_ready_events);
+              ready_events = Bigstring.create (sizeof_epoll_event * max_ready_events);
             })
   ;;
 
@@ -795,7 +810,12 @@ ENDIF
       !ac)
   ;;
 
-  let iter_ready t ~f = fold_ready t ~init:() ~f:(fun () fd flags -> f fd flags)
+  let iter_ready t ~f =
+    use t ~f:(fun t ->
+      for i = 0 to t.num_ready_events - 1 do
+        f (epoll_readyfd t.ready_events i) (epoll_readyflags t.ready_events i)
+      done)
+  ;;
 
   (* external epoll_pwait
    *   : File_descr.t -> Events_buffer.raw -> int -> int list -> int
@@ -965,12 +985,14 @@ module Epoll = struct
   let invariant _               = assert false
 
   let close _                   = assert false
+
   let find _ _                  = assert false
   let find_exn _ _              = assert false
   let set _ _ _                 = assert false
   let remove _ _                = assert false
   let iter _ ~f:_               = assert false
   let wait _ ~timeout:_         = assert false
+let wait_timeout_after _ _    = assert false
   let iter_ready _ ~f:_         = assert false
   let fold_ready _ ~init:_ ~f:_ = assert false
 

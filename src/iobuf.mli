@@ -452,3 +452,21 @@ val write_assume_fd_is_nonblocking
   : ([> read], seek) t -> Unix.File_descr.t -> unit
 val pwrite_assume_fd_is_nonblocking
   : ([> read], seek) t -> Unix.File_descr.t -> offset:int -> unit
+
+(** {1 Expert} *)
+
+(** The [Expert] module is for building efficient out-of-module [Iobuf] abstractions.
+
+    They will not allocate, and are mainly here to assist in building low-cost syscall
+    wrappers.
+
+    One must be careful to avoid writing out of the limits (between [lo_min] and [hi_max])
+    of the [buf].  Doing so would violate the invariants of the parent [Iobuf].
+*)
+module Expert: sig
+  val buf:    (_, _) t -> Bigstring.t
+  val hi_max: (_, _) t -> int
+  val hi:     (_, _) t -> int
+  val lo:     (_, _) t -> int
+  val lo_min: (_, _) t -> int
+end

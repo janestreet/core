@@ -9,6 +9,7 @@
 #include <caml/memory.h>
 #include <caml/callback.h>
 #include "ocaml_utils.h"
+#include "timespec.h"
 #include "time_ns_stubs.h"
 /* Improved localtime implementation
 
@@ -82,6 +83,27 @@ CAMLprim value core_time_ns_strftime(value v_tm, value v_fmt)
   return core_kernel_time_ns_format_tm(&tm, v_fmt);
 }
 
+CAMLprim value core_time_ns_nanosleep(value v_seconds)
+{
+  struct timespec req = timespec_of_double(Double_val(v_seconds));
+  struct timespec rem;
+  int retval;
+
+  caml_enter_blocking_section();
+  retval = nanosleep(&req, &rem);
+  caml_leave_blocking_section();
+
+  if (retval == 0)
+    return caml_copy_double(0.0);
+  else if (retval == -1) {
+    if (errno == EINTR)
+      return caml_copy_double(timespec_to_double(rem));
+    else
+      uerror("nanosleep", Nothing);
+  }
+  else
+    caml_failwith("core_time_ns_nanosleep: impossible return value from nanosleep(2)");
+}
 
 /*
  * These are the same functions as the ones in ocaml except that they call

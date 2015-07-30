@@ -1,7 +1,7 @@
 parent.exe and child.exe are separate executables, but the "child"
 subcommand of the former is defined as a Command.exec of the latter.
 
-  $ demo_parent.exe -help
+  $ ENVVAR=test demo_parent.exe -help
   parent part of Command.exec demo
   
     demo_parent.exe SUBCOMMAND
@@ -12,7 +12,7 @@ subcommand of the former is defined as a Command.exec of the latter.
     version  print version information
     help     explain a given subcommand (perhaps recursively)
   
-  $ demo_child.exe -help
+  $ ENVVAR=test demo_child.exe -help
   child part of Command.exec demo
   
     demo_child.exe NUM [BOOL]
@@ -32,7 +32,7 @@ subcommand of the former is defined as a Command.exec of the latter.
   
 Help works across Command.exec
 
-  $ demo_parent.exe child -help
+  $ ENVVAR=test demo_parent.exe child -help
   child part of Command.exec demo
   
     demo_child.exe NUM [BOOL]
@@ -52,7 +52,7 @@ Help works across Command.exec
   
 So does tab completion
 
-  $ tab_complete demo_parent.exe child -
+  $ ENVVAR=test tab_complete demo_parent.exe child -
   -build-info
   -date
   -file
@@ -61,7 +61,7 @@ So does tab completion
 
 This works for multiple levels of nesting as well
 
-  $ demo_grandparent.exe help -r -f
+  $ ENVVAR=test demo_grandparent.exe help -r -f
   grandparent part of Command.exec demo
   
     demo_grandparent.exe SUBCOMMAND

@@ -918,8 +918,6 @@ CAMLprim value unix_clock_getres(value v_cl)
    support for this feature in the OCaml-runtime.  The below function
    clearly does not do what is intended in the general case, but will
    probably usually do the right thing.
-
-   mshinwell: I'll see about trying to fix the runtime.
 */
 static inline pthread_t pthread_t_val(value __unused v_tid)
 {

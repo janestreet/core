@@ -37,8 +37,10 @@ module Test (Iobuf : sig
   let strings =
     [ ""; "a"; "hello"; "\000"; "\000\000\000"; "\000hello"; String.make 1000 'x' ]
 
+IFDEF ARCH_SIXTYFOUR THEN
   (* [large_int] creates an int that is not representable on 32-bit systems. *)
   let large_int a b c d = (a lsl 48) lor (b lsl 32) lor (c lsl 16) lor d
+ENDIF
 
   type iter_examples_state =
     { string   : string
@@ -608,7 +610,7 @@ module Test (Iobuf : sig
       let  int64_be_trunc =  int64_be_trunc
       let  int64_le_trunc =  int64_le_trunc
 
-      let padded_fixed_string = padded_fixed_string
+      let tail_padded_fixed_string = tail_padded_fixed_string
       let              string =              string
       let           bigstring =           bigstring
       let            bin_prot =            bin_prot
@@ -633,7 +635,7 @@ module Test (Iobuf : sig
         t_pos_1 buf 2 uint16_le 0xFDFC "A\252\253DEFGHIJ" sexp_of_int;
         t_pos_1 buf 2 int16_be 0x0506 "A\005\006DEFGHIJ" sexp_of_int;
         t_pos_1 buf 2 int16_le 0x0708 "A\008\007DEFGHIJ" sexp_of_int;
-        t_pos_1 buf 3 (padded_fixed_string ~padding:'p' ~len:3) "x"
+        t_pos_1 buf 3 (tail_padded_fixed_string ~padding:'p' ~len:3) "x"
           "AxppEFGHIJ" sexp_of_string;
         t_pos_1 buf 3 (string ?str_pos:None ~len:3) "123" "A123EFGHIJ" sexp_of_string;
         t_pos_1 buf 3 (bigstring ?str_pos:None ~len:3) (Bigstring.of_string "klm")
@@ -662,7 +664,8 @@ IFDEF ARCH_SIXTYFOUR THEN
         t_pos_1 buf 8 int64_be_trunc (-(large_int 0x0102 0x0304 0x0506 0x0709))
           "A\254\253\252\251\250\249\248\247J" sexp_of_int;
         t_pos_1 buf 8 int64_le_trunc (-(large_int 0x0102 0x0304 0x0506 0x0709))
-          "A\247\248\249\250\251\252\253\254J" sexp_of_int;
+          "A\247\248\249\250\251\252\253\254J" sexp_of_int
+ELSE ()
 ENDIF;
         t_pos_1 buf 8 int64_t_be 1L "A\000\000\000\000\000\000\000\001J" sexp_of_int64;
         t_pos_1 buf 8 int64_t_le 1L "A\001\000\000\000\000\000\000\000J" sexp_of_int64;
@@ -838,6 +841,7 @@ IFDEF ARCH_SIXTYFOUR THEN
         assert (Peek.int64_le t ~pos = i);
         Poke.int64_be t ~pos i;
         assert (Peek.int64_be t ~pos = i);
+ELSE ()
 ENDIF;
         let i = 0x1234_5678 in
         Poke.int32_le t ~pos i;
@@ -1041,6 +1045,7 @@ IFDEF ARCH_SIXTYFOUR THEN
         let i = large_int 0x1234 0x5678 0x90AB 0xCDEF in
         sub_shared t ~pos |> (fun t -> Fill.int64_le t i);
         assert (i = (sub_shared t ~pos |> Consume.int64_le));
+ELSE ()
 ENDIF;
         let i = 0x1234_5678 in
         sub_shared t ~pos |> (fun t -> Fill.int32_le t i);
@@ -1280,6 +1285,14 @@ ENDIF;
     end
     ;;
 
+    module Expert = struct
+      let buf    = Expert.buf
+      let hi_max = Expert.hi_max
+      let hi     = Expert.hi
+      let lo     = Expert.lo
+      let lo_min = Expert.lo_min
+    end
+
     let read_assume_fd_is_nonblocking = read_assume_fd_is_nonblocking
     let write_assume_fd_is_nonblocking = write_assume_fd_is_nonblocking
 
@@ -1351,6 +1364,7 @@ ENDIF;
     let expect_non_unix_exception f =
       assert (try ignore (f () : Unix.Syscall_result.Int.t); false
               with Unix.Unix_error _ as e -> raise e | _ -> true)
+    ;;
 
     let recvmmsg_assume_fd_is_nonblocking = recvmmsg_assume_fd_is_nonblocking
     TEST_UNIT "recvmmsg smoke" =
@@ -1380,6 +1394,7 @@ ENDIF;
         assert (recvmmsg fd iobufs ~count:0 ~srcs
                 |> zero_or_wouldblock);
         expect_non_unix_exception (fun () -> recvmmsg fd iobufs ~count:(count + 1));
+        expect_non_unix_exception (fun () -> recvmmsg fd iobufs ~count:(-1));
         expect_non_unix_exception (fun () -> recvmmsg fd iobufs ~srcs:short_srcs);
     ;;
 
@@ -1479,7 +1494,7 @@ TEST_UNIT = List.iter [ 0; 1 ] ~f:(fun pos ->
       assert (Peek.int64_t_le t ~pos = i);
       Poke.int64_t_be t ~pos i;
       assert (Peek.int64_t_be t ~pos = i);
-IFDEF ARCH_SIXTYFOUR THEN
+(IFDEF ARCH_SIXTYFOUR THEN
       let i = large_int 0x1234 0x5678 0x90AB 0xCDEF in
       Poke.int64_t_le t ~pos (Int64.of_int i);
       assert (Peek.int64_t_le t ~pos = Int64.of_int i);
@@ -1489,7 +1504,7 @@ IFDEF ARCH_SIXTYFOUR THEN
       assert (Peek.int64_le t ~pos = i);
       Poke.int64_be t ~pos i;
       assert (Peek.int64_be t ~pos = i);
-ENDIF;
+ENDIF);
       let i = 0x1234_5678 in
       Poke.int32_le t ~pos i;
       assert (Peek.int32_le t ~pos = i);
