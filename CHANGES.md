@@ -1,3 +1,70 @@
+## 113.00.00
+
+- Added support to `Time` and `Time.Ofday` for parsing leap second times to the
+  last representable moment in the day.
+
+- Removed hack in `Time` for fast division by ten, since it's now part of the
+  OCaml compiler.
+
+    let div_by_10 i = i / 10
+    let div_by_10_hack i = (i * 1717986919) lsr 34
+    BENCH "div_by_10"      =
+      for i = 0 to 10000 do ignore (div_by_10 i) done
+    BENCH "div_by_10_hack" =
+      for i = 0 to 10000 do ignore (div_by_10_hack i) done
+
+    +--------------------------------------------+----------+------------+
+    | Name                                       | Time/Run | Percentage |
+    +--------------------------------------------+----------+------------+
+    | [time_internal.ml:Helpers] div_by_10       |   5.56us |     99.93% |
+    | [time_internal.ml:Helpers] div_by_10_hack  |   5.57us |    100.00% |
+    +--------------------------------------------+----------+------------+
+
+- Added `Unix.Cidr.all_matching_addresses`.
+
+    val all_matching_addresses : t -> Inet_addr.t Sequence.t.
+
+- Renamed `Iobuf` `padded_fixed_string` functions as `tail_padded_fixed_string`.
+
+    This was done because `padded_fixed_string` does not allow padding on
+    both sides; padding is only permitted at the tail end of the string.
+
+- Added `Limiter` module
+
+    Implements a token bucket based throttling rate limiter.  This module is
+    useful for limiting network clients to a sensible query rate, or in any
+    case where you have jobs that consume a scarce, but replenishable resource.
+
+- Added to `Time_stamp_counter` some `BENCH` benchmarks.
+
+- Added `Iobuf.Expert` module, for building low-cost syscall wrappers outside
+  of the `Iobuf` module.
+
+- Implemented `Time_ns.Ofday.of_string`, which previously raised.
+
+- Fixed a bug in `Command.shape`, which did not preserve environment variables
+  that executables run by `Command.exec` might need in order to function.
+
+- Removed `Time.Ofday.end_of_day`.
+
+    `Time.Ofday` historically offered a value `end_of_day`.  This value
+    was defined as 24 hours after `start_of_day` which created the odd
+    situation where `end_of_day` equals `start_of_day` on the following
+    day.
+
+    This value has been removed because using `end_of_day` leads to odd
+    results, especially in cases where it is used assuming that events at
+    this time will happen on a particular date.
+
+- Added `Command.Spec.of_params`, to help ease the transition from `Spec` to
+  `Param`.
+
+    val of_params : ('a, 'b) Param.Args.t -> ('a, 'b) Spec.t
+
+- Made `Time.Zone.t_of_sexp` accept `Local` for the local timezone.
+
+- Moved `Time_ns.pause` functions from `Core_kernel` to `Core`.
+
 ## 112.35.00
 
 - Tweaked `Unix.stat`'s C code to reduce float rounding error, by using
