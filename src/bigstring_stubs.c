@@ -550,7 +550,7 @@ static inline ssize_t writev_in_blocking_section(
   CAMLparam1(v_iovecs);  /* To protect bigstrings outside of OCaml lock */
   caml_enter_blocking_section();
     ret = writev(Int_val(v_fd), iovecs, count);
-    free(iovecs);
+    caml_stat_free(iovecs);
   caml_leave_blocking_section();
   CAMLreturn(ret);
 }
@@ -587,7 +587,7 @@ CAMLprim value bigstring_writev_assume_fd_is_nonblocking_stub(
     ret = writev_in_blocking_section(v_fd, v_iovecs, iovecs, count);
   else {
     ret = writev(Int_val(v_fd), iovecs, count);
-    free(iovecs);
+    caml_stat_free(iovecs);
   }
   if (ret == -1) uerror("writev_assume_fd_is_nonblocking", Nothing);
   return Val_long(ret);
@@ -711,14 +711,14 @@ CAMLprim value bigstring_sendmsg_nonblocking_no_sigpipe_stub(
       msghdr.msg_iov = iovecs;
       msghdr.msg_iovlen = count;
       ret = sendmsg(Int_val(v_fd), &msghdr, nonblocking_no_sigpipe_flag);
-      free(iovecs);
+      caml_stat_free(iovecs);
     caml_leave_blocking_section();
     End_roots();
   } else {
     msghdr.msg_iov = iovecs;
     msghdr.msg_iovlen = count;
     ret = sendmsg(Int_val(v_fd), &msghdr, nonblocking_no_sigpipe_flag);
-    free(iovecs);
+    caml_stat_free(iovecs);
   }
   if (ret == -1 && errno != EAGAIN && errno != EWOULDBLOCK)
     uerror("sendmsg_nonblocking_no_sigpipe", Nothing);
