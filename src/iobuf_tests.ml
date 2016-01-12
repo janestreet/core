@@ -1,4 +1,4 @@
-INCLUDE "core_config.mlh"
+#import "config.mlh"
 
 open Core_kernel.Std_kernel
 open Iobuf_intf
@@ -13,7 +13,7 @@ let try_with = Or_error.try_with
 
 let log string a sexp_of_a =
   Printf.eprintf "%s\n%!"
-    (Sexp.to_string_hum (<:sexp_of< string * a  >> (string, a)));
+    (Sexp.to_string_hum ([%sexp_of: string * a] (string, a)));
 ;;
 
 module type Iobuf = module type of Iobuf
@@ -26,9 +26,9 @@ module Test (Iobuf : sig
   let () = show_messages := false
   open Iobuf
 
-  type nonrec ('d, 'w) t = ('d, 'w) t with sexp_of
-  type nonrec    seek =    seek with sexp_of
-  type nonrec no_seek = no_seek with sexp_of
+  type nonrec ('d, 'w) t = ('d, 'w) t [@@deriving sexp_of]
+  type nonrec    seek =    seek [@@deriving sexp_of]
+  type nonrec no_seek = no_seek [@@deriving sexp_of]
   module type Bound = Bound
 
   let read_only = read_only
@@ -37,10 +37,10 @@ module Test (Iobuf : sig
   let strings =
     [ ""; "a"; "hello"; "\000"; "\000\000\000"; "\000hello"; String.make 1000 'x' ]
 
-IFDEF ARCH_SIXTYFOUR THEN
+#if JSC_ARCH_SIXTYFOUR
   (* [large_int] creates an int that is not representable on 32-bit systems. *)
   let large_int a b c d = (a lsl 48) lor (b lsl 32) lor (c lsl 16) lor d
-ENDIF
+#endif
 
   type iter_examples_state =
     { string   : string
@@ -48,7 +48,7 @@ ENDIF
     ; capacity : int
     ; pos      : int
     }
-  with sexp
+  [@@deriving sexp]
   let iter_examples ~f =
     List.iter strings ~f:(fun string ->
       let len = String.length string in
@@ -59,7 +59,7 @@ ENDIF
             | e ->
               failwiths "iter_examples"
                 ({ string; len; capacity; pos }, e)
-                <:sexp_of< iter_examples_state * exn >>
+                [%sexp_of: iter_examples_state * exn]
         done
       done
     )
@@ -72,7 +72,7 @@ ENDIF
     ; len'     : int
     ; is_valid : bool
     }
-  with sexp
+  [@@deriving sexp]
   let iter_slices n ~f =
     let choices =
       [ None
@@ -97,7 +97,7 @@ ENDIF
         in
         if !show_messages && false then
           log "iter_slice" { pos; len; pos'; len'; is_valid }
-            <:sexp_of< iter_slices_state >>;
+            [%sexp_of: iter_slices_state];
         try f ?pos ?len ~pos' ~len' ~is_valid ()
         with e ->
           failwiths "iter_slices"
@@ -105,13 +105,13 @@ ENDIF
             , e
             , String.split ~on:'\n' (Exn.backtrace ())
             )
-            <:sexp_of< iter_slices_state * exn * string list >>))
+            [%sexp_of: iter_slices_state * exn * string list]))
   ;;
 
   let invariant = invariant
 
-  TEST_UNIT =
-    invariant ignore ignore (create ~len:(Random.int 100_000 + 1));
+  let%test_unit _ =
+    invariant ignore ignore (create ~len:(Random.int 100_000 + 1))
   ;;
 
   let create = create
@@ -120,53 +120,53 @@ ENDIF
   let is_empty = is_empty
 
   (* [create] with random capacity. *)
-  TEST_MODULE = struct
+  let%test_module _ = (module struct
     let n = Random.int 100_000 + 1 in
     assert (n > 0);
     let t = create ~len:n in
     assert (capacity t = n);
     assert (length t = n);
     assert (not (is_empty t));
-  end
+  end)
 
   (* [create] with user-supplied capacity. *)
-  TEST_UNIT =
+  let%test_unit _ =
     let t = create ~len:1 in
     assert (capacity t = 1);
     assert (length t = 1);
-    assert (not (is_empty t));
+    assert (not (is_empty t))
   ;;
 
-  TEST = is_empty (create ~len:0)
+  let%test _ = is_empty (create ~len:0)
 
   (* [create] with invalid capacity. *)
-  TEST_UNIT =
+  let%test_unit _ =
     assert (is_error (try_with (fun () ->
       ignore (create ~len:(-1) : (_, _) t))))
   ;;
 
   let crc32 = crc32
 
-  TEST_MODULE = struct
+  let%test_module _ = (module struct
 
     let str = "The quick brown fox jumps over the lazy dog"
     let len = String.length str
     let crc = Int63.of_int64_exn 0x414fa339L
 
-    TEST_UNIT =
-      <:test_result< Int63.Hex.t >>
+    let%test_unit _ =
+      [%test_result: Int63.Hex.t]
         (crc32 (of_string str))
         ~expect:crc
 
-    TEST_UNIT =
+    let%test_unit _ =
       let t = of_string ("12345" ^ str ^ "12345") in
       advance t 5;
       resize t ~len;
-      <:test_result< Int63.Hex.t >>
+      [%test_result: Int63.Hex.t]
         (crc32 t)
         ~expect:crc
 
-  end
+  end)
   ;;
 
   module Accessors (Accessors : sig
@@ -177,7 +177,7 @@ ENDIF
     open Accessors
 
     (* [window] *)
-    TEST_UNIT =
+    let%test_unit _ =
       let t = create ~len:10 in
       let n = length t in
       assert (n = 10);
@@ -187,7 +187,7 @@ ENDIF
         assert (length t = n);
         assert (Consume.char t = 'a'));
       assert (Consume.char t = 'a');
-      assert (Consume.char t = 'b');
+      assert (Consume.char t = 'b')
     ;;
 
     let in_each_window t ~f =
@@ -200,7 +200,7 @@ ENDIF
     ;;
 
     (* [sub_shared ?pos ?len]  *)
-    TEST_UNIT =
+    let%test_unit _ =
       let test t =
         let n = length t in
         let window_length ?pos ?len () =
@@ -228,16 +228,16 @@ ENDIF
         let t = create ~len in
         test t;
         in_each_window t ~f:test;
-      done;
+      done
     ;;
 
     module Lo_bound = struct
-      type t = Lo_bound.t
+      type t = Lo_bound.t [@@deriving compare]
 
       let sexp_of_t = Lo_bound.sexp_of_t
 
       let window, restore = Lo_bound.(window, restore)
-      TEST =
+      let%test _ =
         let iobuf = create ~len:2 in
         let snapshot = window iobuf in
         assert (length iobuf = 2);
@@ -258,7 +258,7 @@ ENDIF
         is_error (try_with (fun () -> restore snapshot iobuf))
 
       let limit = Lo_bound.limit
-      TEST =
+      let%test _ =
         let buf = of_string "123abcDEF" in
         advance buf 3;
         let lo_min = limit buf in
@@ -268,12 +268,12 @@ ENDIF
     end
 
     module Hi_bound = struct
-      type t = Hi_bound.t
+      type t = Hi_bound.t [@@deriving compare]
 
       let sexp_of_t = Hi_bound.sexp_of_t
 
       let window, restore = Hi_bound.(window, restore)
-      TEST =
+      let%test _ =
         let iobuf = create ~len:2 in
         let snapshot = window iobuf in
         assert (length iobuf = 2);
@@ -294,7 +294,7 @@ ENDIF
         is_error (try_with (fun () -> restore snapshot iobuf))
 
       let limit = Hi_bound.limit
-      TEST =
+      let%test _ =
         let buf = of_string "123abcDEF" in
         resize buf ~len:3;
         let hi_max = limit buf in
@@ -307,7 +307,7 @@ ENDIF
     let reset = reset
     let flip_lo = flip_lo
     let bounded_flip_lo = bounded_flip_lo
-    TEST =
+    let%test _ =
       let buf = of_string "123abcDEF" in
       Iobuf.advance buf 3;
       let lo = Lo_bound.window buf in
@@ -316,13 +316,13 @@ ENDIF
       String.equal "abc" (Iobuf.to_string buf)
     ;;
     let flip_hi = flip_hi
-    TEST =
+    let%test _ =
       let buf = of_string "123abcDEF" in
       Iobuf.resize buf ~len:3;
       Iobuf.flip_hi buf;
       String.equal "abcDEF" (Iobuf.to_string buf)
     ;;
-    TEST =
+    let%test _ =
       let buf = of_string "123abcDEF" in
       Iobuf.resize buf ~len:6;
       Iobuf.narrow buf;
@@ -331,7 +331,7 @@ ENDIF
       String.equal "abc" (Iobuf.to_string buf)
     ;;
     let bounded_flip_hi = bounded_flip_hi
-    TEST =
+    let%test _ =
       let buf = of_string "123abcDEF" in
       let hi = Hi_bound.window buf in
       Iobuf.advance buf 3;
@@ -347,7 +347,7 @@ ENDIF
     let narrow = narrow
     let narrow_lo = narrow_lo
     let narrow_hi = narrow_hi
-    TEST =
+    let%test _ =
       let buf = of_string "123" in
       assert (capacity buf = 3);
       assert (length buf = 3);
@@ -367,33 +367,33 @@ ENDIF
       assert (capacity buf = 1);
       length buf = 1
     ;;
-    TEST =
+    let%test _ =
       let src = of_string "123abcDEF" in
       let dst = Iobuf.create ~len:0 in
       set_bounds_and_buffer ~src ~dst;
       src = dst
     ;;
-    TEST =
+    let%test _ =
       let src = of_string "123abcDEF" in
       let dst = Iobuf.create ~len:0 in
       set_bounds_and_buffer_sub ~src ~dst ();
       src = dst
     ;;
-    TEST =
+    let%test _ =
       let src = of_string "123abcDEF" in
       let src = Iobuf.sub_shared ~pos:1 ~len:5 src in
       let dst = Iobuf.create ~len:0 in
       set_bounds_and_buffer ~src ~dst;
       src = dst
     ;;
-    TEST =
+    let%test _ =
       let src = of_string "123abcDEF" in
       let src = Iobuf.sub_shared ~pos:1 ~len:5 src in
       let dst = Iobuf.create ~len:0 in
       set_bounds_and_buffer_sub ~src ~dst ();
       src = dst
     ;;
-    TEST =
+    let%test _ =
       let src = of_string "123abcDEF" in
       let src_sub = Iobuf.sub_shared ~pos:1 ~len:5 src in
       let dst = Iobuf.create ~len:0 in
@@ -401,7 +401,7 @@ ENDIF
       let src_sub' = Iobuf.sub_shared ~pos:3 ~len:2 src in
       src_sub' = dst
     ;;
-    TEST =
+    let%test _ =
       let buf1 = of_string "123abcDEF" in
       let buf2 = of_string "123abcDEF" in
       Iobuf.set_bounds_and_buffer ~src:buf1 ~dst:buf1;
@@ -409,7 +409,7 @@ ENDIF
     ;;
 
     let bounded_compact = bounded_compact
-    TEST =
+    let%test _ =
       let buf = of_string "123abcDEFghiJKL" in
       advance buf 3;
       let lo = Lo_bound.window buf in
@@ -424,7 +424,7 @@ ENDIF
     let resize = resize
     let unsafe_resize = unsafe_resize
 
-    TEST_UNIT =
+    let%test_unit _ =
       List.iter [ resize,true ; unsafe_resize,false ]
         ~f:(fun (resize, test_invalid_access) ->
           let buf = of_string "123abcDEF" in
@@ -442,10 +442,10 @@ ENDIF
             sub := to_string buf;
           in
           Iobuf.protect_window_and_bounds buf ~f;
-          assert (String.equal (to_string buf) "123abcDEF" && String.equal !sub "abc"));
+          assert (String.equal (to_string buf) "123abcDEF" && String.equal !sub "abc"))
     ;;
 
-    TEST =
+    let%test _ =
       let buf = of_string "123abcDEF" in
       let sub = ref "" in
       let f (buf : (read, seek) t) =
@@ -459,11 +459,11 @@ ENDIF
         false
       with
       | Not_found ->
-        String.equal (to_string buf) "123abcDEF" && String.equal !sub "abc";
+        String.equal (to_string buf) "123abcDEF" && String.equal !sub "abc"
     ;;
 
     let protect_window_and_bounds = protect_window_and_bounds
-    TEST_UNIT =
+    let%test_unit _ =
       let test t =
         let n = length t in
         rewind t;
@@ -480,22 +480,22 @@ ENDIF
       in
       test (create ~len:10);
       let t = create ~len:10 in
-      sub_shared t ~pos:1 |> test;
+      sub_shared t ~pos:1 |> test
     ;;
 
     let to_string = to_string
 
     let of_string = of_string
 
-    TEST_UNIT =
+    let%test_unit _ =
       List.iter strings ~f:(fun string ->
         assert (String.equal string (to_string (of_string string))))
     ;;
 
     let to_string_hum = to_string_hum
 
-    TEST_UNIT =
-      <:test_eq< string >>
+    let%test_unit _ =
+      [%test_eq: string]
        (to_string_hum (Iobuf.of_string (String.init 256 ~f:Char.of_int_exn ^ "foo")))
        "Iobuf: bigstring length 259; limits [0,259]; window [0,259]; contents within limits:\
         \n0x0000:  00 01 02 03 04 05 06 07  ........  ........  08 09 0a 0b 0c 0d 0e 0f\
@@ -517,16 +517,16 @@ ENDIF
         \n0x0100:  66 6f 6f                 foo                                        "
     ;;
 
-    TEST_UNIT =
+    let%test_unit _ =
       List.iter strings ~f:(fun str1 ->
         List.iter strings ~f:(fun str2 ->
           let hum1 = to_string_hum (of_string str1) in
           let hum2 = to_string_hum (of_string str2) in
-          <:test_eq< bool >> (String.equal str1 str2) (String.equal hum1 hum2)))
+          [%test_eq: bool] (String.equal str1 str2) (String.equal hum1 hum2)))
 
     let of_bigstring = of_bigstring
 
-    TEST_UNIT =
+    let%test_unit _ =
       List.iter strings ~f:(fun string ->
         let bigstring = Bigstring.of_string string in
         iter_slices (String.length string) ~f:(fun ?pos ?len ~pos':_ ~len':_ ~is_valid () ->
@@ -534,13 +534,13 @@ ENDIF
           | Error _ -> assert (not is_valid)
           | Ok t ->
             assert is_valid;
-            assert (String.equal (to_string t) (Bigstring.to_string bigstring ?pos ?len))));
+            assert (String.equal (to_string t) (Bigstring.to_string bigstring ?pos ?len))))
     ;;
 
     let advance = advance
     let unsafe_advance = unsafe_advance
 
-    TEST_UNIT =
+    let%test_unit _ =
       List.iter [advance, true;
                  unsafe_advance, false]
         ~f:(fun (advance, test_invalid_access) ->
@@ -565,7 +565,7 @@ ENDIF
     let consume_bin_prot = consume_bin_prot
     let fill_bin_prot = fill_bin_prot
 
-    TEST_UNIT =
+    let%test_unit _ =
       let t = create ~len:2000 in
       List.iter strings
         ~f:(fun s ->
@@ -573,7 +573,7 @@ ENDIF
           flip_lo t;
           let s' = ok_exn (consume_bin_prot t String.bin_reader_t) in
           reset t;
-          assert (String.equal s s'));
+          assert (String.equal s s'))
     ;;
 
     module Intf (Intf : sig
@@ -604,6 +604,8 @@ ENDIF
       let uint32_be       = uint32_be
       let uint32_le       = uint32_le
       let  int64_be       =  int64_be
+      let uint64_le       = uint64_le
+      let uint64_be       = uint64_be
       let  int64_le       =  int64_le
       let  int64_t_be     =  int64_t_be
       let  int64_t_le     =  int64_t_le
@@ -611,11 +613,12 @@ ENDIF
       let  int64_le_trunc =  int64_le_trunc
 
       let tail_padded_fixed_string = tail_padded_fixed_string
+      let head_padded_fixed_string = head_padded_fixed_string
       let              string =              string
       let           bigstring =           bigstring
       let            bin_prot =            bin_prot
 
-      TEST_UNIT =
+      let%test_unit _ =
         let buf = of_string "ABCDEFGHIJ" in
         t_pos_1 buf 1 int8 127 "A\127CDEFGHIJ" sexp_of_int;
         t_pos_1 buf 1 int8 (-1) "A\255CDEFGHIJ" sexp_of_int;
@@ -635,8 +638,14 @@ ENDIF
         t_pos_1 buf 2 uint16_le 0xFDFC "A\252\253DEFGHIJ" sexp_of_int;
         t_pos_1 buf 2 int16_be 0x0506 "A\005\006DEFGHIJ" sexp_of_int;
         t_pos_1 buf 2 int16_le 0x0708 "A\008\007DEFGHIJ" sexp_of_int;
-        t_pos_1 buf 3 (tail_padded_fixed_string ~padding:'p' ~len:3) "x"
-          "AxppEFGHIJ" sexp_of_string;
+        let padded ~len str ~head ~tail =
+          t_pos_1 buf 3 (tail_padded_fixed_string ~padding:'p' ~len) str tail sexp_of_string;
+          t_pos_1 buf 3 (head_padded_fixed_string ~padding:'p' ~len) str head sexp_of_string
+        in
+        padded ~len:3 "x"   ~head:"AppxEFGHIJ" ~tail:"AxppEFGHIJ";
+        padded ~len:3 "xxx" ~head:"AxxxEFGHIJ" ~tail:"AxxxEFGHIJ";
+        padded ~len:3 "xpx" ~head:"AxpxEFGHIJ" ~tail:"AxpxEFGHIJ";
+        padded ~len:3 ""    ~head:"ApppEFGHIJ" ~tail:"ApppEFGHIJ";
         t_pos_1 buf 3 (string ?str_pos:None ~len:3) "123" "A123EFGHIJ" sexp_of_string;
         t_pos_1 buf 3 (bigstring ?str_pos:None ~len:3) (Bigstring.of_string "klm")
           "AklmEFGHIJ" sexp_of_bigstring;
@@ -644,7 +653,7 @@ ENDIF
         t_pos_1 buf 4 int32_le 0x01020304 "A\004\003\002\001FGHIJ" sexp_of_int;
         t_pos_1 buf 4 int32_be (-0x01020305) "A\254\253\252\251FGHIJ" sexp_of_int;
         t_pos_1 buf 4 int32_le (-0x05060709) "A\247\248\249\250FGHIJ" sexp_of_int;
-IFDEF ARCH_SIXTYFOUR THEN
+#if JSC_ARCH_SIXTYFOUR
         t_pos_1 buf 4 uint32_be (large_int 0 0 0xF6F5 0xF4F3)
           "A\246\245\244\243FGHIJ" sexp_of_int;
         t_pos_1 buf 4 uint32_le (large_int 0 0 0xFBFA 0xF9F8)
@@ -664,9 +673,8 @@ IFDEF ARCH_SIXTYFOUR THEN
         t_pos_1 buf 8 int64_be_trunc (-(large_int 0x0102 0x0304 0x0506 0x0709))
           "A\254\253\252\251\250\249\248\247J" sexp_of_int;
         t_pos_1 buf 8 int64_le_trunc (-(large_int 0x0102 0x0304 0x0506 0x0709))
-          "A\247\248\249\250\251\252\253\254J" sexp_of_int
-ELSE ()
-ENDIF;
+          "A\247\248\249\250\251\252\253\254J" sexp_of_int;
+#endif
         t_pos_1 buf 8 int64_t_be 1L "A\000\000\000\000\000\000\000\001J" sexp_of_int64;
         t_pos_1 buf 8 int64_t_le 1L "A\001\000\000\000\000\000\000\000J" sexp_of_int64;
         t_pos_1 buf 8 int64_t_be 0x8000000000000000L
@@ -689,31 +697,31 @@ ENDIF;
 
           let t_pos_1 buf _ f arg str _sexp_of_arg =
             f buf ~pos:1 arg;
-            <:test_eq< string >> str (to_string buf)
+            [%test_eq: string] str (to_string buf)
 
           let bin_prot_char t ~pos a = bin_prot Char.bin_writer_t t ~pos a
 
           (* Static permission tests for the cases that do compile.  Since the functions all
              use essentially the same type definitions, we don't need to test all of them.
              We've already tested them on a (read_write, seek) Iobuf.t above. *)
-          TEST_UNIT = char (of_string "a" : (_, no_seek) Iobuf.t) ~pos:0 'b'
-          TEST_UNIT = char (of_string "a" : (_, seek) Iobuf.t) ~pos:0 'b'
-          TEST_UNIT = char (of_string "a" : (read_write, _) Iobuf.t) ~pos:0 'b'
+          let%test_unit _ = char (of_string "a" : (_, no_seek) Iobuf.t) ~pos:0 'b'
+          let%test_unit _ = char (of_string "a" : (_, seek) Iobuf.t) ~pos:0 'b'
+          let%test_unit _ = char (of_string "a" : (read_write, _) Iobuf.t) ~pos:0 'b'
         end)
 
       let decimal = Poke.decimal
-      TEST_UNIT "Poke.decimal" =
+      let%test_unit "Poke.decimal" =
         let pos = 1 in
         let t = create ~len:(20 + pos) in
         List.iter cases_for_testing_decimal ~f:(fun x ->
           Iobuf.reset t;
           let len = decimal t ~pos x in
-          <:test_eq<string>>
+          [%test_eq: string]
             (Int.to_string x)
             (Iobuf.to_string (Iobuf.sub_shared ~pos t) ~len))
     end
 
-    TEST_UNIT =
+    let%test_unit _ =
       let t = create ~len:10 in
       let n = length t in
       assert (n = 10);
@@ -727,7 +735,7 @@ ENDIF;
       let ws = (t  :> (read_write, seek) t) in
       let rs = (ws :> (read, seek) t) in
       ignore   (rs :> (read, no_seek) t);
-      ignore   (ws :> (read_write, no_seek) t);
+      ignore   (ws :> (read_write, no_seek) t)
     ;;
 
     let test_peek_to (blito : (Peek.src, _) Core_kernel.Std_kernel.Blit.blito)
@@ -739,7 +747,7 @@ ENDIF;
             Or_error.try_with (fun () ->
               sub_shared t ~pos |> (fun t -> Fill.string t string ?str_pos ?len))
           in
-          <:test_eq< bool >> (is_ok fill_result) is_valid;
+          [%test_eq: bool] (is_ok fill_result) is_valid;
           let str = create n in
           let consume_result =
             Or_error.try_with (fun () ->
@@ -750,22 +758,22 @@ ENDIF;
           begin match consume_result, is_valid with
           | Error _, false -> ()
           | Ok (), true ->
-            <:test_eq< string >> (String.sub string ~pos:pos' ~len:len')
+            [%test_eq: string] (String.sub string ~pos:pos' ~len:len')
               (sub_string str ~pos:pos' ~len:len')
           | _, _ ->
             failwiths "test_peek_to"
               ( (consume_result, `is_valid is_valid)
               , String.split ~on:'\n' (Exn.backtrace ())
               )
-              <:sexp_of< (unit Or_error.t * [ `is_valid of bool ]) * string list >>
+              [%sexp_of: (unit Or_error.t * [ `is_valid of bool ]) * string list]
           end
         )
       );
       let t = Iobuf.of_string "012345678" in
       let dst = of_string "abcdefhij" in
       blito ~src:t ~src_len:3 ~dst ~dst_pos:3 ();
-      <:test_eq< string >> (Iobuf.to_string t) "012345678";
-      <:test_eq< string >> (to_string dst) "abc012hij"
+      [%test_eq: string] (Iobuf.to_string t) "012345678";
+      [%test_eq: string] (to_string dst) "abc012hij"
     ;;
     let test_peek_to_string blito =
       test_peek_to blito String.create String.sub ident ident
@@ -791,32 +799,34 @@ ENDIF;
         let bin_prot_char t ~pos = bin_prot Char.bin_reader_t t ~pos
 
         (* static permission tests; see above *)
-        TEST = Char.(=) 'a' (char (of_string "a" : (_, no_seek) Iobuf.t) ~pos:0)
-        TEST = Char.(=) 'a' (char (of_string "a" : (_, seek) Iobuf.t) ~pos:0)
-        TEST = Char.(=) 'a' (char (of_string "a" : (read, _) Iobuf.t) ~pos:0)
-        TEST = Char.(=) 'a' (char (of_string "a" : (read_write, _) Iobuf.t) ~pos:0)
+        let%test _ = Char.(=) 'a' (char (of_string "a" : (_, no_seek) Iobuf.t) ~pos:0)
+        let%test _ = Char.(=) 'a' (char (of_string "a" : (_, seek) Iobuf.t) ~pos:0)
+        let%test _ = Char.(=) 'a' (char (of_string "a" : (read, _) Iobuf.t) ~pos:0)
+        let%test _ = Char.(=) 'a' (char (of_string "a" : (read_write, _) Iobuf.t) ~pos:0)
       end)
 
       open Peek
 
+      let index = index
+
       module To_string = struct
         open Peek.To_string
         let blito = blito
-        TEST_UNIT = test_peek_to_string blito
+        let%test_unit _ = test_peek_to_string blito
         (* Mostly rely on the [Blit.Make_distinct] testing. *)
         let blit, unsafe_blit, sub, subo = blit, unsafe_blit, sub, subo
       end
       module To_bigstring = struct
         open Peek.To_bigstring
         let blito = blito
-        TEST_UNIT = test_peek_to_bigstring blito
+        let%test_unit _ = test_peek_to_bigstring blito
         (* Mostly rely on the [Blit.Make_distinct] testing. *)
         let blit, unsafe_blit, sub, subo = blit, unsafe_blit, sub, subo
       end
       type nonrec src = src
     end
 
-    TEST_UNIT =
+    let%test_unit _ =
       let s = "hello" in
       let t = of_string s in
       for i = 0 to String.length s - 1 do
@@ -829,20 +839,19 @@ ENDIF;
          assert (is_error (try_with (fun () -> Poke.char t ~pos:(-1) 'z')));
          assert (is_error (try_with (fun () -> Peek.char t ~pos:(String.length s))));
          assert (is_error (try_with (fun () ->
-           Poke.char t ~pos:(String.length s) 'z'))));
+           Poke.char t ~pos:(String.length s) 'z'))))
     ;;
 
-    TEST_UNIT =
+    let%test_unit _ =
       List.iter [ 0; 1 ] ~f:(fun pos ->
         let t = create ~len:10 in
-IFDEF ARCH_SIXTYFOUR THEN
+#if JSC_ARCH_SIXTYFOUR
         let i = large_int 0x1234 0x5678 0x90AB 0xCDEF in
         Poke.int64_le t ~pos i;
         assert (Peek.int64_le t ~pos = i);
         Poke.int64_be t ~pos i;
         assert (Peek.int64_be t ~pos = i);
-ELSE ()
-ENDIF;
+#endif
         let i = 0x1234_5678 in
         Poke.int32_le t ~pos i;
         assert (Peek.int32_le t ~pos = i);
@@ -867,43 +876,43 @@ ENDIF;
             f buf arg;
             assert (Iobuf.length buf = String.length str - 1 - n);
             rewind buf;
-            <:test_eq< string >> str (to_string buf)
+            [%test_eq: string] str (to_string buf)
 
           let bin_prot_char t a = bin_prot Char.bin_writer_t t a
 
-          TEST_UNIT =
+          let%test_unit _ =
             let t = of_string "abc" in
             bin_prot Char.bin_writer_t t 'd';
             bin_prot Char.bin_writer_t t 'e';
-            <:test_eq< string >> "c" (to_string t);
+            [%test_eq: string] "c" (to_string t);
             flip_lo t;
             assert (try bin_prot String.bin_writer_t t "fgh"; false with _ -> true);
-            <:test_eq< string >> "de" (to_string t);
+            [%test_eq: string] "de" (to_string t);
             reset t;
-            <:test_eq< string >> "dec" (to_string t);
+            [%test_eq: string] "dec" (to_string t);
             bin_prot Char.bin_writer_t t 'i';
             bin_prot Char.bin_writer_t t 'j';
             bin_prot Char.bin_writer_t t 'k';
             assert (is_empty t);
             flip_lo t;
-            <:test_eq< string >> "ijk" (to_string t)
+            [%test_eq: string] "ijk" (to_string t)
 
           (* static permission tests; see above *)
-          TEST_UNIT = char (of_string "a" : (_, seek) Iobuf.t) 'b'
-          TEST_UNIT = char (of_string "a" : (read_write, _) Iobuf.t) 'b'
+          let%test_unit _ = char (of_string "a" : (_, seek) Iobuf.t) 'b'
+          let%test_unit _ = char (of_string "a" : (read_write, _) Iobuf.t) 'b'
         end)
 
       let decimal = Fill.decimal
-      TEST_UNIT "Fill.decimal" =
+      let%test_unit "Fill.decimal" =
         let t = create ~len:20 in
         List.iter cases_for_testing_decimal ~f:(fun x ->
           Iobuf.reset t;
           decimal t x;
           Iobuf.flip_lo t;
-          <:test_eq<string>> (Int.to_string x) (Iobuf.to_string t))
+          [%test_eq: string] (Int.to_string x) (Iobuf.to_string t))
     end
 
-    TEST_UNIT =
+    let%test_unit _ =
       List.iter [ ""; "a"; "ab" ] ~f:(fun s ->
         let len = String.length s in
         for capacity = max 1 len to len + 2 do
@@ -919,7 +928,7 @@ ENDIF;
         done)
     ;;
 
-    TEST_UNIT =
+    let%test_unit _ =
       let src = create ~len:5 in
       let len = 3 in
       let str = "Hi." in
@@ -927,10 +936,10 @@ ENDIF;
       assert (capacity src >= len);
       Poke.string src str ~pos:0;
       Blit.blit ~src ~src_pos:0 ~dst:src ~dst_pos:2 ~len;
-      <:test_result< string >> (to_string src) ~expect:"HiHi."
+      [%test_result: string] (to_string src) ~expect:"HiHi."
     ;;
 
-    TEST_UNIT =
+    let%test_unit _ =
       let src = create ~len:5 in
       let len = 3 in
       let str = "Hi." in
@@ -941,7 +950,7 @@ ENDIF;
       flip_lo src;
       Blit_consume_and_fill.blit ~src ~dst ~len;
       flip_lo dst;
-      <:test_result< string >> (Consume.string dst) ~expect:str
+      [%test_result: string] (Consume.string dst) ~expect:str
     ;;
 
     let test_consume_to (blito : (Consume.src, _) consuming_blito)
@@ -953,7 +962,7 @@ ENDIF;
             Or_error.try_with (fun () ->
               sub_shared t ~pos |> (fun t -> Fill.string t string ?str_pos ?len))
           in
-          <:test_eq< bool >> (is_ok fill_result) is_valid;
+          [%test_eq: bool] (is_ok fill_result) is_valid;
           let str = create n in
           let consume_result =
             Or_error.try_with (fun () ->
@@ -963,18 +972,18 @@ ENDIF;
           begin match consume_result, is_valid with
           | Error _, false -> ()
           | Ok (), true ->
-            <:test_eq< string >> (String.sub string ~pos:pos' ~len:len')
+            [%test_eq: string] (String.sub string ~pos:pos' ~len:len')
               (sub_string str ~pos:pos' ~len:len');
           | _, _ ->
             failwiths "test_consume_to"
               (consume_result, is_valid, String.split ~on:'\n' (Exn.backtrace ()))
-              <:sexp_of< unit Or_error.t * bool * string list >>
+              [%sexp_of: unit Or_error.t * bool * string list]
           end));
       let t = Iobuf.of_string "012345678" in
       let dst = of_string "abcdefhij" in
       blito ~src:t ~src_len:3 ~dst ~dst_pos:3 ();
-      <:test_eq< string >> (Iobuf.to_string t) "345678";
-      <:test_eq< string >> (to_string dst) "abc012hij"
+      [%test_eq: string] (Iobuf.to_string t) "345678";
+      [%test_eq: string] (to_string dst) "abc012hij"
     ;;
     let test_consume_to_string blito =
       test_consume_to blito String.create String.sub ident ident
@@ -1004,9 +1013,9 @@ ENDIF;
         let bin_prot_char t = bin_prot Char.bin_reader_t t
 
         (* static permission tests; see above *)
-        TEST = Char.(=) 'a' (char (of_string "a" : (_, seek) Iobuf.t))
-        TEST = Char.(=) 'a' (char (of_string "a" : (read, _) Iobuf.t))
-        TEST = Char.(=) 'a' (char (of_string "a" : (read_write, _) Iobuf.t))
+        let%test _ = Char.(=) 'a' (char (of_string "a" : (_, seek) Iobuf.t))
+        let%test _ = Char.(=) 'a' (char (of_string "a" : (read, _) Iobuf.t))
+        let%test _ = Char.(=) 'a' (char (of_string "a" : (read_write, _) Iobuf.t))
       end)
 
       open Consume
@@ -1014,39 +1023,38 @@ ENDIF;
       module To_string = struct
         open To_string
         let blito = blito
-        TEST_UNIT = test_consume_to_string blito
+        let%test_unit _ = test_consume_to_string blito
         (* Mostly rely on the [Blit.Make_distinct] testing. *)
         let blit, unsafe_blit, sub, subo = blit, unsafe_blit, sub, subo
       end
       module To_bigstring = struct
         open To_bigstring
         let blito = blito
-        TEST_UNIT = test_consume_to_bigstring blito
+        let%test_unit _ = test_consume_to_bigstring blito
         (* Mostly rely on the [Blit.Make_distinct] testing. *)
         let blit, unsafe_blit, sub, subo = blit, unsafe_blit, sub, subo
       end
       type nonrec src = src
     end
 
-    TEST_UNIT =
+    let%test_unit _ =
       let t = create ~len:1 in
       let c = 'a' in
       sub_shared t |> (fun t ->
         Fill.char t c;
         assert (is_empty t));
       assert (Char.equal (Consume.char t) c);
-      assert (is_empty t);
+      assert (is_empty t)
     ;;
 
-    TEST_UNIT =
+    let%test_unit _ =
       List.iter [ 0; 1 ] ~f:(fun pos ->
         let t = create ~len:10 in
-IFDEF ARCH_SIXTYFOUR THEN
+#if JSC_ARCH_SIXTYFOUR
         let i = large_int 0x1234 0x5678 0x90AB 0xCDEF in
         sub_shared t ~pos |> (fun t -> Fill.int64_le t i);
         assert (i = (sub_shared t ~pos |> Consume.int64_le));
-ELSE ()
-ENDIF;
+#endif
         let i = 0x1234_5678 in
         sub_shared t ~pos |> (fun t -> Fill.int32_le t i);
         assert (i = (sub_shared t ~pos |> Consume.int32_le));
@@ -1057,16 +1065,16 @@ ENDIF;
       )
     ;;
 
-    TEST_UNIT =
+    let%test_unit _ =
       List.iter strings ~f:(fun s ->
         let t = of_string s in
         let s' = Consume.string t in
         assert (is_empty t);
-        assert (String.equal s s'));
+        assert (String.equal s s'))
     ;;
 
     (* [Fill.string] ranges *)
-    TEST_UNIT =
+    let%test_unit _ =
       let s = "hello" in
       let len = String.length s in
       let t = create ~len:len in
@@ -1076,7 +1084,7 @@ ENDIF;
       if is_safe then
         (assert (is_error (try_write ~str_pos:(-1) ()));
          assert (is_error (try_write ~str_pos:(len + 1) ()));
-         assert (is_error (try_write ~str_pos:0 ~len:(len + 1) ())));
+         assert (is_error (try_write ~str_pos:0 ~len:(len + 1) ())))
     ;;
 
     module Blit_consume_and_fill = struct
@@ -1092,7 +1100,7 @@ ENDIF;
           ~dst
           ?src_len:(if len = length src then None else Some len)
 
-      TEST_UNIT =
+      let%test_unit _ =
         List.iter [ blit ; unsafe_blit ; blit_via_blito ] ~f:(fun blit ->
           let t1 = create ~len:100 in
           let t2 = create ~len:100 in
@@ -1126,26 +1134,26 @@ ENDIF;
           ~dst
           ?src_len:(if len = length src - src_pos then None else Some len)
 
-      TEST_UNIT =
+      let%test_unit _ =
         List.iter [ blit ; unsafe_blit ; blit_via_blito ] ~f:(fun blit ->
           let t1 = of_string "0123456789" in
           let t2 = of_string "qwertyuiop" in
           let t3 = of_string "!@#$%^&*()" in
-          <:test_result< string >> (to_string t1) ~expect:"0123456789";
-          <:test_result< string >> (to_string t2) ~expect:"qwertyuiop";
-          <:test_result< string >> (to_string t3) ~expect:"!@#$%^&*()";
+          [%test_result: string] (to_string t1) ~expect:"0123456789";
+          [%test_result: string] (to_string t2) ~expect:"qwertyuiop";
+          [%test_result: string] (to_string t3) ~expect:"!@#$%^&*()";
           blit ~dst:t1 ~src:t2 ~src_pos:0 ~len:(length t2);
-          <:test_result< string >> (to_string t1) ~expect:"";
+          [%test_result: string] (to_string t1) ~expect:"";
           reset t1;
-          <:test_result< string >> (to_string t1) ~expect:"qwertyuiop";
-          <:test_result< string >> (to_string t2) ~expect:"qwertyuiop";
-          <:test_result< string >> (to_string t3) ~expect:"!@#$%^&*()";
+          [%test_result: string] (to_string t1) ~expect:"qwertyuiop";
+          [%test_result: string] (to_string t2) ~expect:"qwertyuiop";
+          [%test_result: string] (to_string t3) ~expect:"!@#$%^&*()";
           blit ~dst:t1 ~src:t3 ~src_pos:4 ~len:4;
-          <:test_result< string >> (to_string t1) ~expect:"tyuiop";
+          [%test_result: string] (to_string t1) ~expect:"tyuiop";
           reset t1;
-          <:test_result< string >> (to_string t1) ~expect:"%^&*tyuiop";
-          <:test_result< string >> (to_string t2) ~expect:"qwertyuiop";
-          <:test_result< string >> (to_string t3) ~expect:"!@#$%^&*()")
+          [%test_result: string] (to_string t1) ~expect:"%^&*tyuiop";
+          [%test_result: string] (to_string t2) ~expect:"qwertyuiop";
+          [%test_result: string] (to_string t3) ~expect:"!@#$%^&*()")
       ;;
 
     end
@@ -1164,26 +1172,26 @@ ENDIF;
           ~dst ?dst_pos:(if dst_pos = 0 then None else Some dst_pos)
           ?src_len:(if len = length src then None else Some len)
 
-      TEST_UNIT =
+      let%test_unit _ =
         List.iter [ blit ; unsafe_blit ; blit_via_blito ] ~f:(fun blit ->
           let t1 = of_string "0123456789" in
           let t2 = of_string "qwertyuiop" in
           let t3 = of_string "!@#$%^&*()" in
-          <:test_result< string >> (to_string t1) ~expect:"0123456789";
-          <:test_result< string >> (to_string t2) ~expect:"qwertyuiop";
-          <:test_result< string >> (to_string t3) ~expect:"!@#$%^&*()";
+          [%test_result: string] (to_string t1) ~expect:"0123456789";
+          [%test_result: string] (to_string t2) ~expect:"qwertyuiop";
+          [%test_result: string] (to_string t3) ~expect:"!@#$%^&*()";
           blit ~dst:t1 ~dst_pos:0 ~src:t2 ~len:(length t2);
-          <:test_result< string >> (to_string t2) ~expect:"";
+          [%test_result: string] (to_string t2) ~expect:"";
           reset t2;
-          <:test_result< string >> (to_string t1) ~expect:"qwertyuiop";
-          <:test_result< string >> (to_string t2) ~expect:"qwertyuiop";
-          <:test_result< string >> (to_string t3) ~expect:"!@#$%^&*()";
+          [%test_result: string] (to_string t1) ~expect:"qwertyuiop";
+          [%test_result: string] (to_string t2) ~expect:"qwertyuiop";
+          [%test_result: string] (to_string t3) ~expect:"!@#$%^&*()";
           blit ~dst:t1 ~dst_pos:2 ~src:t3 ~len:4;
-          <:test_result< string >> (to_string t3) ~expect:"%^&*()";
+          [%test_result: string] (to_string t3) ~expect:"%^&*()";
           reset t3;
-          <:test_result< string >> (to_string t1) ~expect:"qw!@#$uiop";
-          <:test_result< string >> (to_string t2) ~expect:"qwertyuiop";
-          <:test_result< string >> (to_string t3) ~expect:"!@#$%^&*()")
+          [%test_result: string] (to_string t1) ~expect:"qw!@#$uiop";
+          [%test_result: string] (to_string t2) ~expect:"qwertyuiop";
+          [%test_result: string] (to_string t3) ~expect:"!@#$%^&*()")
       ;;
 
       let sub = sub
@@ -1193,24 +1201,24 @@ ENDIF;
         subo src
           ?len:(if len = length src then None else Some len)
 
-      TEST_UNIT =
+      let%test_unit _ =
         List.iter [ sub ; sub_via_subo ] ~f:(fun sub ->
           let t1 = of_string "0123456789" in
           let t2 = sub t1 ~len:(length t1) in
-          <:test_result< string >> (to_string t1) ~expect:"";
+          [%test_result: string] (to_string t1) ~expect:"";
           reset t1;
           let t3 = sub t1 ~len:4 in
-          <:test_result< string >> (to_string t1) ~expect:"456789";
+          [%test_result: string] (to_string t1) ~expect:"456789";
           reset t1;
-          <:test_result< string >> (to_string t1) ~expect:"0123456789";
-          <:test_result< string >> (to_string t2) ~expect:"0123456789";
-          <:test_result< string >> (to_string t3) ~expect:"0123";
+          [%test_result: string] (to_string t1) ~expect:"0123456789";
+          [%test_result: string] (to_string t2) ~expect:"0123456789";
+          [%test_result: string] (to_string t3) ~expect:"0123";
           Poke.string t1 ~pos:0 "qwertyuiop";
           Poke.string t2 ~pos:0 "!@#$%^&*()";
           Poke.string t3 ~pos:0 "asdf";
-          <:test_result< string >> (to_string t1) ~expect:"qwertyuiop";
-          <:test_result< string >> (to_string t2) ~expect:"!@#$%^&*()";
-          <:test_result< string >> (to_string t3) ~expect:"asdf")
+          [%test_result: string] (to_string t1) ~expect:"qwertyuiop";
+          [%test_result: string] (to_string t2) ~expect:"!@#$%^&*()";
+          [%test_result: string] (to_string t3) ~expect:"asdf")
       ;;
 
     end
@@ -1230,25 +1238,25 @@ ENDIF;
           ~dst ?dst_pos:(if dst_pos = 0 then None else Some dst_pos)
           ?src_len:(if len = length src - src_pos then None else Some len)
 
-      TEST_UNIT =
+      let%test_unit _ =
         List.iter [ blit ; unsafe_blit ; blit_via_blito ] ~f:(fun blit ->
           let t1 = of_string "0123456789" in
           let t2 = of_string "qwertyuiop" in
           let t3 = of_string "!@#$%^&*()" in
-          <:test_result< string >> (to_string t1) ~expect:"0123456789";
-          <:test_result< string >> (to_string t2) ~expect:"qwertyuiop";
-          <:test_result< string >> (to_string t3) ~expect:"!@#$%^&*()";
+          [%test_result: string] (to_string t1) ~expect:"0123456789";
+          [%test_result: string] (to_string t2) ~expect:"qwertyuiop";
+          [%test_result: string] (to_string t3) ~expect:"!@#$%^&*()";
           blit ~dst:t1 ~dst_pos:0 ~src:t2 ~src_pos:0 ~len:(length t2);
-          <:test_result< string >> (to_string t1) ~expect:"qwertyuiop";
-          <:test_result< string >> (to_string t2) ~expect:"qwertyuiop";
-          <:test_result< string >> (to_string t3) ~expect:"!@#$%^&*()";
+          [%test_result: string] (to_string t1) ~expect:"qwertyuiop";
+          [%test_result: string] (to_string t2) ~expect:"qwertyuiop";
+          [%test_result: string] (to_string t3) ~expect:"!@#$%^&*()";
           blit ~dst:t1 ~dst_pos:2 ~src:t3 ~src_pos:4 ~len:4;
-          <:test_result< string >> (to_string t1) ~expect:"qw%^&*uiop";
-          <:test_result< string >> (to_string t2) ~expect:"qwertyuiop";
-          <:test_result< string >> (to_string t3) ~expect:"!@#$%^&*()")
+          [%test_result: string] (to_string t1) ~expect:"qw%^&*uiop";
+          [%test_result: string] (to_string t2) ~expect:"qwertyuiop";
+          [%test_result: string] (to_string t3) ~expect:"!@#$%^&*()")
       ;;
 
-      TEST_UNIT =
+      let%test_unit _ =
         List.iter [ blit ; unsafe_blit ; blit_via_blito ] ~f:(fun blit ->
           let s = "01234567899876543210" in
           let t = create ~len:(String.length s) in
@@ -1266,20 +1274,20 @@ ENDIF;
           ?pos:(if pos = 0 then None else Some pos)
           ?len:(if len = length src - pos then None else Some len)
 
-      TEST_UNIT =
+      let%test_unit _ =
         List.iter [ sub ; sub_via_subo ] ~f:(fun sub ->
           let t1 = of_string "0123456789" in
           let t2 = sub t1 ~pos:0 ~len:(length t1) in
           let t3 = sub t1 ~pos:3 ~len:4 in
-          <:test_result< string >> (to_string t1) ~expect:"0123456789";
-          <:test_result< string >> (to_string t2) ~expect:"0123456789";
-          <:test_result< string >> (to_string t3) ~expect:   "3456";
+          [%test_result: string] (to_string t1) ~expect:"0123456789";
+          [%test_result: string] (to_string t2) ~expect:"0123456789";
+          [%test_result: string] (to_string t3) ~expect:   "3456";
           Poke.string t1 ~pos:0 "qwertyuiop";
           Poke.string t2 ~pos:0 "!@#$%^&*()";
           Poke.string t3 ~pos:0 "asdf";
-          <:test_result< string >> (to_string t1) ~expect:"qwertyuiop";
-          <:test_result< string >> (to_string t2) ~expect:"!@#$%^&*()";
-          <:test_result< string >> (to_string t3) ~expect:"asdf")
+          [%test_result: string] (to_string t1) ~expect:"qwertyuiop";
+          [%test_result: string] (to_string t2) ~expect:"!@#$%^&*()";
+          [%test_result: string] (to_string t3) ~expect:"asdf")
       ;;
 
     end
@@ -1291,12 +1299,107 @@ ENDIF;
       let hi     = Expert.hi
       let lo     = Expert.lo
       let lo_min = Expert.lo_min
+
+      let to_bigstring_shared = Expert.to_bigstring_shared
+      let to_iovec_shared     = Expert.to_iovec_shared
+
+      let%test_unit _ =
+        let to_bigstring_shared_via_iovec ?pos ?len iobuf =
+          let iovec = to_iovec_shared ?pos ?len iobuf in
+          Bigstring.sub_shared iovec.buf ~pos:iovec.pos ~len:iovec.len
+        in
+        List.iter
+          [ to_bigstring_shared
+          ; to_bigstring_shared_via_iovec
+          ]
+          ~f:(fun to_bstr ->
+            let iobuf = Iobuf.of_string "0123456789" in
+            let bstr0 = to_bstr iobuf in
+            [%test_result: Bigstring.t] bstr0 ~expect:(Bigstring.of_string "0123456789");
+            Iobuf.Poke.char iobuf ~pos:0 'X';
+            [%test_result: Bigstring.t] bstr0 ~expect:(Bigstring.of_string "X123456789");
+            let bstr1 = to_bstr iobuf ~pos:1 ~len:8 in
+            [%test_result: Bigstring.t] bstr1 ~expect:(Bigstring.of_string "12345678");
+            Iobuf.Poke.char iobuf ~pos:1 'X';
+            [%test_result: Bigstring.t] bstr1 ~expect:(Bigstring.of_string "X2345678");
+            [%test_result: Bigstring.t] bstr0 ~expect:(Bigstring.of_string "XX23456789"))
+      ;;
     end
 
-    let read_assume_fd_is_nonblocking = read_assume_fd_is_nonblocking
+    type nonrec ok_or_eof = ok_or_eof = Ok | Eof [@@deriving compare, sexp_of]
+
+    module Io_test(Ch : sig
+        type in_
+        val create_in : string -> in_
+        val close_in : in_ -> unit
+        val read : ([> write], seek) Iobuf.t -> in_ -> ok_or_eof
+        type out_
+        val create_out : Unix.File_descr.t -> out_
+        val close_out : out_ -> unit
+        val write : ([> read], seek) Iobuf.t -> out_ -> unit
+      end) = struct
+
+        let%test_unit _ =
+          iter_examples ~f:(fun t string ~pos ->
+            let len = String.length string in
+            let file, fd = Unix.mkstemp "iobuf_test" in
+            protect ~finally:(fun () -> Unix.unlink file) ~f:(fun () ->
+              let ch = Ch.create_out fd in
+              Poke.string t string ~pos;
+              advance t pos;
+              resize t ~len;
+              Ch.write t ch;
+              Ch.close_out ch;
+              reset t;
+              for pos = 0 to length t - 1 do
+                Poke.char t '\000' ~pos
+              done;
+              let ch = Ch.create_in file in
+              advance t pos;
+              let lo = Lo_bound.window t in
+              (match Ch.read t ch with
+               | Ok  -> assert (len > 0 || Iobuf.is_empty t)
+               | Eof -> assert (len = 0 && not (Iobuf.is_empty t)));
+              bounded_flip_lo t lo;
+              [%test_result: string] (to_string t) ~expect:string;
+              reset t;
+              (match Ch.read t ch with
+               | Eof -> ()
+               | Ok -> assert false);
+              Ch.close_in ch))
+        ;;
+    end
+
+    let output = output
+    let input = input
+    include Io_test(struct
+        type in_ = In_channel.t
+        let create_in file = In_channel.create file
+        let close_in = In_channel.close
+        type out_ = Out_channel.t
+        let create_out = Unix.out_channel_of_descr
+        let close_out = Out_channel.close
+        let write = output
+        let read = input
+      end)
+
+    let read = read
+    let write = write
+    include Io_test(struct
+        type in_ = Unix.File_descr.t
+        type out_ = in_
+        let create_in file = Unix.openfile ~mode:[Unix.O_RDONLY] file
+        let close_in fd = Unix.close fd
+        let create_out = Fn.id
+        let close_out = close_in
+        let read = read
+        let write = write
+      end)
+
+    let read_assume_fd_is_nonblocking  = read_assume_fd_is_nonblocking
     let write_assume_fd_is_nonblocking = write_assume_fd_is_nonblocking
 
-    TEST_UNIT =
+    let%test_unit _ =
       iter_examples ~f:(fun t string ~pos ->
         let n = String.length string in
         let file, fd = Unix.mkstemp "iobuf_test" in
@@ -1306,7 +1409,7 @@ ENDIF;
             sub_shared t ~pos ~len:n |> (fun t ->
               let len_before = Iobuf.length t in
               write_assume_fd_is_nonblocking t fd;
-              <:test_result< int >> (len_before - Iobuf.length t) ~expect:n
+              [%test_result: int] (len_before - Iobuf.length t) ~expect:n
             );
             Unix.close fd;
             iter_examples ~f:(fun t _ ~pos ->
@@ -1319,7 +1422,7 @@ ENDIF;
                       (read_assume_fd_is_nonblocking t fd)
                   with
                   | Ok () | Error (EAGAIN | EINTR | EWOULDBLOCK) ->
-                    <:test_result< int >> (len_before - Iobuf.length t)
+                    [%test_result: int] (len_before - Iobuf.length t)
                       ~expect:n
                   | Error e -> raise (Unix.Unix_error (e, "read", ""))
                 );
@@ -1334,7 +1437,7 @@ ENDIF;
     let pread_assume_fd_is_nonblocking = pread_assume_fd_is_nonblocking
     let pwrite_assume_fd_is_nonblocking = pwrite_assume_fd_is_nonblocking
 
-    TEST_UNIT =
+    let%test_unit _ =
       let s = "000000000011111111112222222222" in
       let n = String.length s in
       let t = of_string s in
@@ -1352,69 +1455,10 @@ ENDIF;
           Unix.close fd;)
     ;;
 
-    let zero_or_wouldblock result =
-      match Unix.Syscall_result.Int.to_result result with
-      | Ok n                         -> n = 0
-      | Error (EWOULDBLOCK | EAGAIN) -> true
-      | Error _                      -> false
-    ;;
-
     let recvfrom_assume_fd_is_nonblocking = recvfrom_assume_fd_is_nonblocking
 
-    let expect_non_unix_exception f =
-      assert (try ignore (f () : Unix.Syscall_result.Int.t); false
-              with Unix.Unix_error _ as e -> raise e | _ -> true)
-    ;;
-
+    module Recvmmsg_context = Recvmmsg_context
     let recvmmsg_assume_fd_is_nonblocking = recvmmsg_assume_fd_is_nonblocking
-    TEST_UNIT "recvmmsg smoke" =
-      match recvmmsg_assume_fd_is_nonblocking with
-      | Error _ -> ()
-      | Ok recvmmsg ->
-        let open Unix in
-        let count = 10 in
-        let fd = socket ~domain:PF_INET ~kind:SOCK_DGRAM ~protocol:0 in
-        bind fd ~addr:(ADDR_INET (Inet_addr.bind_any, 0));
-        let iobufs = Array.init count ~f:(fun _ -> create ~len:1500) in
-        let srcs = Array.create ~len:count (ADDR_INET (Inet_addr.bind_any, 0)) in
-        let short_srcs = Array.create ~len:(count - 1)
-                           (ADDR_INET (Inet_addr.bind_any, 0)) in
-        set_nonblock fd;
-        (* Errors are expected in these smoke tests, where we listen to a random socket.
-           Here, we also don't try to test recvmmsg's behavior, just our wrapper;
-           [is_error] indicates that [recvmmsg] returned -1, whereas other exceptions
-           indicate that our wrapper detected something wrong.  We treat the two
-           situations separately. *)
-        assert (recvmmsg fd iobufs ~count ~srcs
-                |> zero_or_wouldblock);
-        assert (recvmmsg fd iobufs
-                |> zero_or_wouldblock);
-        assert (recvmmsg fd iobufs ~count:(count / 2) ~srcs
-                |> zero_or_wouldblock);
-        assert (recvmmsg fd iobufs ~count:0 ~srcs
-                |> zero_or_wouldblock);
-        expect_non_unix_exception (fun () -> recvmmsg fd iobufs ~count:(count + 1));
-        expect_non_unix_exception (fun () -> recvmmsg fd iobufs ~count:(-1));
-        expect_non_unix_exception (fun () -> recvmmsg fd iobufs ~srcs:short_srcs);
-    ;;
-
-    let recvmmsg_assume_fd_is_nonblocking_no_options =
-      recvmmsg_assume_fd_is_nonblocking_no_options
-    TEST_UNIT "recvmmsg smoke" =
-      match recvmmsg_assume_fd_is_nonblocking_no_options with
-      | Error _ -> ()
-      | Ok recvmmsg ->
-        let open Unix in
-        let count = 10 in
-        let fd = socket ~domain:PF_INET ~kind:SOCK_DGRAM ~protocol:0 in
-        bind fd ~addr:(ADDR_INET (Inet_addr.bind_any, 0));
-        let iobufs = Array.init count ~f:(fun _ -> create ~len:1500) in
-        set_nonblock fd;
-        assert (recvmmsg fd iobufs ~count
-                |> zero_or_wouldblock);
-        expect_non_unix_exception (fun () ->recvmmsg fd iobufs ~count:(count + 1))
-    ;;
-
 
     let send_nonblocking_no_sigpipe = send_nonblocking_no_sigpipe
     let sendto_nonblocking_no_sigpipe = sendto_nonblocking_no_sigpipe
@@ -1445,14 +1489,14 @@ ENDIF;
                    (fun () ->
                       Syscall_result.Unit.ok_or_unix_error_exn (sendto t send_fd addr)
                         ~syscall_name:sendto_name);
-                 <:test_pred< (_, _) Iobuf.t >> Iobuf.is_empty t
+                 [%test_pred: (_, _) Iobuf.t] Iobuf.is_empty t
                ))
             ()
         in
         iter_examples ~f:(fun t string ~pos:_ ->
           ignore (retry_until_ready (fun () -> recvfrom t recv_fd) : Unix.sockaddr);
           Iobuf.flip_lo t;
-          <:test_result< string >> ~expect:string (Iobuf.to_string t)
+          [%test_result: string] ~expect:string (Iobuf.to_string t)
         );
         Thread.join sender
       )
@@ -1468,43 +1512,30 @@ ENDIF;
       sendto_and_recvfrom recvfrom fd ~sendto_name:"sendto"
         (sendto_nonblocking_no_sigpipe ())
     ;;
-    TEST_UNIT = sends_with_recvfrom recvfrom_assume_fd_is_nonblocking
-    TEST_UNIT =
-      Result.iter recvmmsg_assume_fd_is_nonblocking ~f:(fun recvmmsg ->
-        sends_with_recvfrom (fun t fd ->
-          let addr_before = Unix.(ADDR_INET (Inet_addr.bind_any, 0)) in
-          let srcs = Array.create ~len:1 addr_before in
-          let result  =
-            recvmmsg fd ~srcs (Array.create ~len:1 t)
-            |> Unix.Syscall_result.Int.ok_or_unix_error_exn ~syscall_name:"recvmmsg"
-          in
-          assert (result = 1);
-          (* Check that the prototype source address wasn't modified in place.  It is
-             expected to have been replaced in the array by a new sockaddr. *)
-          assert (not (phys_equal addr_before srcs.(0)));
-          assert (Pervasives.(<>) addr_before srcs.(0));
-          srcs.(0)
-        )
-      )
+    let%test_unit _ = sends_with_recvfrom recvfrom_assume_fd_is_nonblocking
 
-TEST_UNIT = List.iter [ 0; 1 ] ~f:(fun pos ->
+let%test_unit _ =
+  List.iter [ 0; 1 ]
+    ~f:(fun pos ->
       let t = create ~len:10 in
       let i = 0xF234_5678_90AB_CDEFL in
       Poke.int64_t_le t ~pos i;
       assert (Peek.int64_t_le t ~pos = i);
       Poke.int64_t_be t ~pos i;
       assert (Peek.int64_t_be t ~pos = i);
-(IFDEF ARCH_SIXTYFOUR THEN
-      let i = large_int 0x1234 0x5678 0x90AB 0xCDEF in
-      Poke.int64_t_le t ~pos (Int64.of_int i);
-      assert (Peek.int64_t_le t ~pos = Int64.of_int i);
-      Poke.int64_t_be t ~pos (Int64.of_int i);
-      assert (Peek.int64_t_be t ~pos = Int64.of_int i);
-      Poke.int64_le t ~pos i;
-      assert (Peek.int64_le t ~pos = i);
-      Poke.int64_be t ~pos i;
-      assert (Peek.int64_be t ~pos = i);
-ENDIF);
+#if JSC_ARCH_SIXTYFOUR
+      begin
+        let i = large_int 0x1234 0x5678 0x90AB 0xCDEF in
+        Poke.int64_t_le t ~pos (Int64.of_int i);
+        assert (Peek.int64_t_le t ~pos = Int64.of_int i);
+        Poke.int64_t_be t ~pos (Int64.of_int i);
+        assert (Peek.int64_t_be t ~pos = Int64.of_int i);
+        Poke.int64_le t ~pos i;
+        assert (Peek.int64_le t ~pos = i);
+        Poke.int64_be t ~pos i;
+        assert (Peek.int64_be t ~pos = i);
+      end;
+#endif
       let i = 0x1234_5678 in
       Poke.int32_le t ~pos i;
       assert (Peek.int32_le t ~pos = i);
@@ -1529,7 +1560,7 @@ ENDIF);
       Poke.uint8 t ~pos i;
       assert (Peek.uint8 t ~pos = i))
 
-    TEST_UNIT =
+    let%test_unit _ =
       let t = create ~len:1024 in
       Fill.int8 t 12;
       Fill.int16_le t 1234;
@@ -1540,7 +1571,7 @@ ENDIF);
       assert (Consume.int8 t = 12);
       assert (Consume.int16_le t = 1234);
       assert (Consume.int32_le t = 345678);
-      assert (Consume.char t = 'x');
+      assert (Consume.char t = 'x')
     ;;
 
     (* Create a file of binary length prefixed messages of a known format to read back using
@@ -1578,7 +1609,7 @@ ENDIF);
           Fill.string t s;
           flip_lo t;
           write_assume_fd_is_nonblocking t fd;
-          <:test_pred< (_, _) Iobuf.t >> Iobuf.is_empty t; (* no short writes *)
+          [%test_pred: (_, _) Iobuf.t] Iobuf.is_empty t; (* no short writes *)
           reset t
       done;
       Unix.close fd;
@@ -1641,7 +1672,7 @@ ENDIF);
       !msg_number
     ;;
 
-    TEST_UNIT =
+    let%test_unit _ =
       let msgcount = 10_000 in
       List.iter [2; 4; 8] ~f:(fun int_size -> List.iter [false; true] ~f:(fun be ->
         let filename = create_sample_file ~int_size ~be ~msgcount in
@@ -1664,11 +1695,11 @@ end :
      [Iobuf]. *)
   Iobuf)
 
-TEST_MODULE = Test (Iobuf_debug.Make ())
+let%test_module _ = (module Test (Iobuf_debug.Make ()))
 
 (* Ensure against bugs in [Iobuf_debug].  The above tests [Iobuf_debug], with invariants
    checked, and this tests the straight [Iobuf] module. *)
-TEST_MODULE = Test (struct
+let%test_module _ = (module Test (struct
   include Iobuf
   let show_messages = ref true
-end)
+end))

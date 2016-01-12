@@ -25,7 +25,7 @@ module Format : sig
       name    : string;
       doc     : string;
       aliases : string list;
-    } with sexp
+    } [@@deriving sexp]
 
     val sort      : t list -> t list
     val to_string : t list -> string
@@ -36,7 +36,7 @@ end = struct
       name    : string;
       doc     : string;
       aliases : string list;
-    } with sexp
+    } [@@deriving sexp]
 
     let sort ts =
       List.stable_sort ts ~cmp:(fun a b -> help_screen_compare a.name b.name)
@@ -65,28 +65,28 @@ end = struct
         | None -> []
         | Some (lines, line) -> List.rev (line :: lines))
 
-    TEST_MODULE "word wrap" = struct
+    let%test_module "word wrap" = (module struct
 
-      TEST = word_wrap "" 10 = []
+      let%test _ = word_wrap "" 10 = []
 
       let short_word = "abcd"
 
-      TEST = word_wrap short_word (String.length short_word) = [short_word]
+      let%test _ = word_wrap short_word (String.length short_word) = [short_word]
 
-      TEST = word_wrap "abc\ndef\nghi" 100 = ["abc"; "def"; "ghi"]
+      let%test _ = word_wrap "abc\ndef\nghi" 100 = ["abc"; "def"; "ghi"]
 
       let long_text =
         "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus \
          fermentum condimentum eros, sit amet pulvinar dui ultrices in."
 
-      TEST = word_wrap long_text 1000 =
+      let%test _ = word_wrap long_text 1000 =
              ["Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus \
                fermentum condimentum eros, sit amet pulvinar dui ultrices in."]
 
-      TEST = word_wrap long_text 39 =
+      let%test _ = word_wrap long_text 39 =
       (*
-                .........1.........2.........3.........4
-                1234567890123456789012345678901234567890
+               .........1.........2.........3.........4
+               1234567890123456789012345678901234567890
              *)
              ["Lorem ipsum dolor sit amet, consectetur";
               "adipiscing elit. Vivamus fermentum";
@@ -94,12 +94,12 @@ end = struct
               "ultrices in."]
 
       (* no guarantees: too-long words just overhang the soft bound *)
-      TEST = word_wrap long_text 2 =
+      let%test _ = word_wrap long_text 2 =
              ["Lorem"; "ipsum"; "dolor"; "sit"; "amet,"; "consectetur";
               "adipiscing"; "elit."; "Vivamus"; "fermentum"; "condimentum";
               "eros,"; "sit"; "amet"; "pulvinar"; "dui"; "ultrices"; "in."]
 
-    end
+    end)
 
     let to_string ts =
       let n =
@@ -185,13 +185,34 @@ module Arg_type = struct
   let time               = create Time.of_string_abs
   let time_ofday         = create Time.Ofday.Zoned.of_string
   let time_ofday_unzoned = create Time.Ofday.of_string
+  let time_zone          = create Time.Zone.of_string
   let time_span          = create Time.Span.of_string
 
   let file ?key of_string =
     create ?key of_string ~complete:(fun _ ~part ->
-      let prog = "bash" in
-      let args = ["bash"; "-c"; "compgen -f $0"; part] in
-      never_returns (Unix.exec ~prog ~args ()))
+      let completions =
+        (* `compgen -f` handles some fiddly things nicely, e.g. completing "foo" and
+           "foo/" appropriately. *)
+        let command = sprintf "bash -c 'compgen -f %s'" part in
+        let chan_in = Unix.open_process_in command in
+        let completions = In_channel.input_lines chan_in in
+        ignore (Unix.close_process_in chan_in);
+        List.map (List.sort ~cmp:String.compare completions) ~f:(fun comp ->
+          if Sys.is_directory comp
+          then comp ^ "/"
+          else comp)
+      in
+      match completions with
+      | [dir] when String.is_suffix dir ~suffix:"/" ->
+        (* If the only match is a directory, we fake out bash here by creating a bogus
+           entry, which the user will never see - it forces bash to push the completion
+           out to the slash. Then when the user hits tab again, they will be at the end
+           of the line, at the directory with a slash and completion will continue into
+           the subdirectory.
+        *)
+        [dir; dir ^ "x"]
+      | _ -> completions
+    )
 
   let of_map ?key map =
     create ?key
@@ -220,6 +241,7 @@ module Arg_type = struct
     let time               = time
     let time_ofday         = time_ofday
     let time_ofday_unzoned = time_ofday_unzoned
+    let time_zone          = time_zone
     let time_span          = time_span
     let file               = file Fn.id
   end
@@ -455,6 +477,7 @@ module Anons = struct
 
   module Grammar : sig
     type t
+
     val zero : t
     val one : string -> t
     val many : t -> t
@@ -462,69 +485,145 @@ module Anons = struct
     val concat : t list -> t
     val usage : t -> string
     val ad_hoc : usage:string -> t
+
+    include Invariant.S with type t := t
+
+    module Sexpable : sig
+      module V1 : sig
+        type t =
+          | Zero
+          | One of string
+          | Many of t
+          | Maybe of t
+          | Concat of t list
+          | Ad_hoc of string
+        [@@deriving bin_io, compare, sexp]
+
+        val usage : t -> string
+      end
+
+      type t = V1.t [@@deriving bin_io, compare, sexp]
+    end
+    val to_sexpable : t -> Sexpable.t
+
   end = struct
 
-    type s = {
-      usage : string;
-      number : [`One | `Fixed | `Variable]
-    }
+    module Sexpable = struct
+      module V1 = struct
+        type t =
+          | Zero
+          | One of string
+          | Many of t
+          | Maybe of t
+          | Concat of t list
+          | Ad_hoc of string
+        [@@deriving bin_io, compare, sexp]
 
-    type t = s option
+        let rec invariant t = Invariant.invariant [%here] t [%sexp_of: t] (fun () ->
+          match t with
+          | Zero -> ()
+          | One _ -> ()
+          | Many Zero -> failwith "Many Zero should be just Zero"
+          | Many t -> invariant t
+          | Maybe Zero -> failwith "Maybe Zero should be just Zero"
+          | Maybe t -> invariant t
+          | Concat [] | Concat [ _ ] -> failwith "Flatten zero and one-element Concat"
+          | Concat ts -> List.iter ts ~f:invariant
+          | Ad_hoc _ -> ())
+        ;;
 
-    let usage = function
-      | None -> ""
-      | Some s -> s.usage
+        let t_of_sexp sexp =
+          let t = [%of_sexp: t] sexp in
+          invariant t;
+          t
+        ;;
 
-    let zero = None
+        let rec usage = function
+          | Zero -> ""
+          | One usage -> usage
+          | Many Zero -> failwith "bug in command.ml"
+          | Many (One _ as t) -> sprintf "[%s ...]" (usage t)
+          | Many t -> sprintf "[(%s) ...]" (usage t)
+          | Maybe Zero -> failwith "bug in command.ml"
+          | Maybe t -> sprintf "[%s]" (usage t)
+          | Concat ts -> String.concat ~sep:" " (List.map ts ~f:usage)
+          | Ad_hoc usage -> usage
+        ;;
+      end
+      include V1
+    end
 
-    let one name = Some { usage = name; number = `One }
+    type t = Sexpable.V1.t =
+      | Zero
+      | One of string
+      | Many of t
+      | Maybe of t
+      | Concat of t list
+      | Ad_hoc of string
+
+    let to_sexpable = Fn.id
+    let invariant = Sexpable.V1.invariant
+    let usage = Sexpable.V1.usage
+
+    let rec is_fixed_arity = function
+      | Zero     -> true
+      | One _    -> true
+      | Many _   -> false
+      | Maybe _  -> false
+      | Ad_hoc _ -> false
+      | Concat ts ->
+        match List.rev ts with
+        | [] -> failwith "bug in command.ml"
+        | last :: others ->
+          assert (List.for_all others ~f:is_fixed_arity);
+          is_fixed_arity last
+    ;;
+
+    let zero = Zero
+    let one name = One name
 
     let many = function
-      | None -> None (* strange, but not non-sense *)
-      | Some s ->
-        match s.number with
-        | `Variable ->
-          failwithf "iteration of variable-length grammars such as %s is disallowed"
-            s.usage ()
-        | (`One | `Fixed) as g ->
-          let s_usage =
-            match g with
-            | `One -> s.usage
-            | `Fixed -> sprintf "(%s)" s.usage
-          in
-          Some { usage = sprintf "[%s ...]" s_usage; number = `Variable }
+      | Zero -> Zero (* strange, but not non-sense *)
+      | t ->
+        if not (is_fixed_arity t)
+        then failwithf "iteration of variable-length grammars such as %s is disallowed"
+               (usage t) ();
+        Many t
+    ;;
 
     let maybe = function
-      | None -> None (* strange, but not non-sense *)
-      | Some s ->
-        Some { usage = sprintf "[%s]" s.usage; number = `Variable }
+      | Zero -> Zero (* strange, but not non-sense *)
+      | t -> Maybe t
+    ;;
 
-    let concat2 t1 t2 =
-      match (t1, t2) with
-      | (None, t) | (t, None) -> t
-      | (Some s1, Some s2) ->
-        let combined_usage = s1.usage ^ " " ^ s2.usage in
-        match s1.number with
-        | `Variable ->
-          failwithf "the grammar %s for anonymous arguments \
-                     is not supported because there is the possibility for \
-                     arguments (%s) following a variable number of \
-                     arguments (%s).  Supporting such grammars would complicate \
-                     the implementation significantly." combined_usage s2.usage s1.usage ()
-        | `One | `Fixed ->
-          Some {
-            usage = combined_usage;
-            number =
-              match s2.number with
-              | `Variable -> `Variable;
-              | `One | `Fixed -> `Fixed
-          }
+    let concat = function
+      | [] -> Zero
+      | car :: cdr ->
+        let car, cdr =
+          List.fold cdr ~init:(car, []) ~f:(fun (t1, acc) t2 ->
+            match t1, t2 with
+            | Zero, t | t, Zero -> (t, acc)
+            | _, _ ->
+              if is_fixed_arity t1
+              then (t2, t1 :: acc)
+              else
+                failwithf "the grammar %s for anonymous arguments \
+                           is not supported because there is the possibility for \
+                           arguments (%s) following a variable number of \
+                           arguments (%s).  Supporting such grammars would complicate \
+                           the implementation significantly."
+                  (usage (Concat (List.rev (t2 :: t1 :: acc))))
+                  (usage t2)
+                  (usage t1)
+                  ())
+        in
+        match cdr with
+        | [] -> car
+        | _ :: _ -> Concat (List.rev (car :: cdr))
+    ;;
 
-    let rec concat = function
-      | [] -> zero
-      | t :: ts -> concat2 t (concat ts)
+    let ad_hoc ~usage = Ad_hoc usage
 
-    let ad_hoc ~usage = Some { usage ; number = `Variable }
   end
 
   module Parser : sig
@@ -725,18 +824,18 @@ module Anons = struct
     in
     if has_special_chars then str else String.uppercase str
 
-  TEST = String.equal (normalize "file")   "FILE"
-  TEST = String.equal (normalize "FiLe")   "FILE"
-  TEST = String.equal (normalize "<FiLe>") "<FiLe>"
-  TEST = String.equal (normalize "(FiLe)") "(FiLe)"
-  TEST = String.equal (normalize "[FiLe]") "[FiLe]"
-  TEST = String.equal (normalize "{FiLe}") "{FiLe}"
-  TEST = String.equal (normalize "<file" ) "<file"
-  TEST = String.equal (normalize "<fil>a") "<fil>a"
-  TEST = try ignore (normalize ""        ); false with _ -> true
-  TEST = try ignore (normalize " file "  ); false with _ -> true
-  TEST = try ignore (normalize "file "   ); false with _ -> true
-  TEST = try ignore (normalize " file"   ); false with _ -> true
+  let%test _ = String.equal (normalize "file")   "FILE"
+  let%test _ = String.equal (normalize "FiLe")   "FILE"
+  let%test _ = String.equal (normalize "<FiLe>") "<FiLe>"
+  let%test _ = String.equal (normalize "(FiLe)") "(FiLe)"
+  let%test _ = String.equal (normalize "[FiLe]") "[FiLe]"
+  let%test _ = String.equal (normalize "{FiLe}") "{FiLe}"
+  let%test _ = String.equal (normalize "<file" ) "<file"
+  let%test _ = String.equal (normalize "<fil>a") "<fil>a"
+  let%test _ = try ignore (normalize ""        ); false with _ -> true
+  let%test _ = try ignore (normalize " file "  ); false with _ -> true
+  let%test _ = try ignore (normalize "file "   ); false with _ -> true
+  let%test _ = try ignore (normalize " file"   ); false with _ -> true
 
   let (%:) name arg_type =
     let name = normalize name in
@@ -796,7 +895,7 @@ module Cmdline = struct
 
 end
 
-TEST_MODULE "Cmdline.extend" = struct
+let%test_module "Cmdline.extend" = (module struct
   let path_of_list subcommands =
     List.fold subcommands ~init:(Path.root "exe") ~f:(fun path subcommand ->
       Path.add path ~subcommand)
@@ -816,10 +915,10 @@ TEST_MODULE "Cmdline.extend" = struct
     in
     Pervasives.(=) expected observed
 
-  TEST = test ["foo"; "bar"] ["anon"; "-flag"] ["anon"; "-flag"; "-foo"; "-bar"]
-  TEST = test ["foo"; "baz"] []                ["-foobaz"]
-  TEST = test ["zzz"]        ["x"; "y"; "z"]   ["x"; "y"; "z"; "default"]
-end
+  let%test _ = test ["foo"; "bar"] ["anon"; "-flag"] ["anon"; "-flag"; "-foo"; "-bar"]
+  let%test _ = test ["foo"; "baz"] []                ["-foobaz"]
+  let%test _ = test ["zzz"]        ["x"; "y"; "z"]   ["x"; "y"; "z"; "default"]
+end)
 
 module Key_type = struct
   type t = Subcommand | Flag
@@ -914,22 +1013,59 @@ module Base = struct
        ])
 
   module Sexpable = struct
+
+    module V2 = struct
+      type anons =
+        | Usage of string
+        | Grammar of Anons.Grammar.Sexpable.V1.t
+      [@@deriving sexp]
+
+      type t = {
+        summary : string;
+        readme  : string sexp_option;
+        anons   : anons;
+        flags   : Format.V1.t list;
+      } [@@deriving sexp]
+
+    end
+
     module V1 = struct
       type t = {
         summary : string;
         readme  : string sexp_option;
         usage   : string;
         flags   : Format.V1.t list;
-      } with sexp
+      } [@@deriving sexp]
+
+      let to_latest { summary; readme; usage; flags; } = {
+        V2.
+        summary;
+        readme;
+        anons = Usage usage;
+        flags;
+      }
+
+      let of_latest { V2.summary; readme; anons; flags; } = {
+        summary;
+        readme;
+        usage =
+          begin match anons with
+          | Usage usage -> usage
+          | Grammar grammar -> Anons.Grammar.Sexpable.V1.usage grammar
+          end;
+        flags;
+      }
+
     end
-    include V1
+
+    include V2
   end
 
   let to_sexpable t = {
     Sexpable.
     summary = t.summary;
     readme  = Option.map t.readme ~f:(fun readme -> readme ());
-    usage   = Anons.Grammar.usage t.usage;
+    anons   = Grammar (Anons.Grammar.to_sexpable t.usage);
     flags   = formatted_flags t;
   }
 
@@ -1090,6 +1226,16 @@ module Base = struct
         flags = t.flags;
         usage = t.usage; }
 
+    let to_params (t : ('a, 'b) t) : ('a -> 'b) param =
+      { param = {
+          f = (fun env -> t.f env >>| fun f k -> k f);
+          flags = t.flags;
+          usage = t.usage;
+        }
+      }
+
+    let to_param t main = map (to_params t) ~f:(fun k -> k main)
+
     let lookup key =
       { param =
           { f = (fun env -> return (fun m -> m (Env.find_exn env key)));
@@ -1124,13 +1270,15 @@ module Base = struct
       let t3                 = t3
       let t4                 = t4
 
-      let anon spec = {
-        param = {
-          f = (fun _env -> spec.p >>| fun v k -> k v);
-          flags = (fun () -> []);
-          usage = (fun () -> spec.grammar);
+      let anon spec =
+        Anons.Grammar.invariant spec.grammar;
+        {
+          param = {
+            f = (fun _env -> spec.p >>| fun v k -> k v);
+            flags = (fun () -> []);
+            usage = (fun () -> spec.grammar);
+          }
         }
-      }
     end
 
     include struct
@@ -1248,7 +1396,9 @@ module Group = struct
         summary     : string;
         readme      : string sexp_option;
         subcommands : (string, 'a) List.Assoc.t;
-      } with sexp
+      } [@@deriving sexp]
+
+      let map t ~f = { t with subcommands = List.Assoc.map t.subcommands ~f }
     end
     include V1
   end
@@ -1261,35 +1411,76 @@ module Group = struct
     }
 end
 
+let abs_path ~dir path =
+  if Filename.is_absolute path
+  then path
+  else Filename.concat dir path
+;;
+
+let%test_unit _ = [
+  "/",    "./foo",         "/foo";
+  "/tmp", "/usr/bin/grep", "/usr/bin/grep";
+  "/foo", "bar",           "/foo/bar";
+  "foo",  "bar",           "foo/bar";
+  "foo",  "../bar",        "foo/../bar";
+] |> List.iter ~f:(fun (dir, path, expected) ->
+  [%test_eq: string] (abs_path ~dir path) expected)
+
 module Exec = struct
   type t = {
     summary     : string;
     readme      : (unit -> string) option;
+    (* If [path_to_exe] is relative, interpret w.r.t. [working_dir] *)
+    working_dir : string;
     path_to_exe : string;
-    path_to_subcommand : string list; (* only used internally *)
   }
 
   module Sexpable = struct
+    module V2 = struct
+      type t = {
+        summary     : string;
+        readme      : string sexp_option;
+        working_dir : string;
+        path_to_exe : string;
+      } [@@deriving sexp]
+    end
+
     module V1 = struct
       type t = {
         summary     : string;
         readme      : string sexp_option;
+        (* [path_to_exe] must be absolute. *)
         path_to_exe : string;
-      } with sexp
+      } [@@deriving sexp]
+
+      let to_latest t : V2.t = {
+        summary = t.summary;
+        readme = t.readme;
+        working_dir = "/";
+        path_to_exe = t.path_to_exe;
+      }
+
+      let of_latest (t : V2.t) = {
+        summary = t.summary;
+        readme = t.readme;
+        path_to_exe = abs_path ~dir:t.working_dir t.path_to_exe;
+      }
     end
-    include V1
+
+    include V2
   end
 
   let to_sexpable t =
     { Sexpable.
       summary  = t.summary;
       readme   = Option.map ~f:(fun readme -> readme ()) t.readme;
+      working_dir = t.working_dir;
       path_to_exe = t.path_to_exe;
     }
 
   let exec_with_args t ~args =
-    let prog = t.path_to_exe in
-    never_returns (Unix.exec ~prog ~args:(prog :: t.path_to_subcommand @ args) ())
+    let prog = abs_path ~dir:t.working_dir t.path_to_exe in
+    never_returns (Unix.exec ~prog ~args:(prog :: args) ())
   ;;
 
   let help_text ~show_flags ~to_format_list ~path t =
@@ -1302,15 +1493,71 @@ module Exec = struct
   ;;
 end
 
+(* A proxy command is the structure of an Exec command obtained by running it in a
+   special way *)
+module Proxy = struct
+
+  module Kind = struct
+    type 'a t =
+      | Base  of Base.Sexpable.t
+      | Group of 'a Group.Sexpable.t
+      | Exec  of Exec.Sexpable.t
+  end
+
+  type t = {
+    working_dir        : string;
+    path_to_exe        : string;
+    path_to_subcommand : string list;
+    kind               : t Kind.t;
+  }
+
+  let get_summary t =
+    match t.kind with
+    | Base  b -> b.summary
+    | Group g -> g.summary
+    | Exec  e -> e.summary
+
+  let get_readme t =
+    match t.kind with
+    | Base  b -> b.readme
+    | Group g -> g.readme
+    | Exec  e -> e.readme
+
+  let help_text ~show_flags ~to_format_list ~path t =
+    group_or_exec_help_text
+      ~show_flags
+      ~path
+      ~readme:(get_readme t |> Option.map ~f:const)
+      ~summary:(get_summary t)
+      ~format_list:(to_format_list t)
+end
+
 type t =
   | Base  of Base.t
   | Group of t Group.t
   | Exec  of Exec.t
+  | Proxy of Proxy.t
 
 module Sexpable = struct
 
   let supported_versions : int Queue.t = Queue.create ()
   let add_version n = Queue.enqueue supported_versions n
+
+  module V2 = struct
+    let () = add_version 2
+
+    type t =
+      | Base of Base.Sexpable.V2.t
+      | Group of t Group.Sexpable.V1.t
+      | Exec  of Exec.Sexpable.V2.t
+    [@@deriving sexp]
+
+    let to_latest = Fn.id
+    let of_latest = Fn.id
+
+  end
+
+  module Latest = V2
 
   module V1 = struct
     let () = add_version 1
@@ -1319,58 +1566,65 @@ module Sexpable = struct
       | Base  of Base.Sexpable.V1.t
       | Group of t Group.Sexpable.V1.t
       | Exec  of Exec.Sexpable.V1.t
-    with sexp
+    [@@deriving sexp]
 
-    let to_latest = Fn.id
+    let rec to_latest : t -> Latest.t = function
+      | Base b -> Base (Base.Sexpable.V1.to_latest b)
+      | Group g -> Group (Group.Sexpable.V1.map g ~f:to_latest)
+      | Exec e -> Exec (Exec.Sexpable.V1.to_latest e)
+    ;;
+
+    let rec of_latest : Latest.t -> t = function
+      | Base b -> Base (Base.Sexpable.V1.of_latest b)
+      | Group g -> Group (Group.Sexpable.V1.map g ~f:of_latest)
+      | Exec e -> Exec (Exec.Sexpable.V1.of_latest e)
+    ;;
+
   end
 
   module Internal : sig
-    type t with sexp
-    val of_latest : V1.t -> t
-    val to_latest : t -> V1.t
+    type t [@@deriving sexp]
+    val of_latest : version_to_use:int -> Latest.t -> t
+    val to_latest : t -> Latest.t
   end = struct
     type t =
       | V1 of V1.t
-    with sexp
+      | V2 of V2.t
+    [@@deriving sexp]
 
-    let of_latest t = V1 t
     let to_latest = function
       | V1 t -> V1.to_latest t
+      | V2 t -> V2.to_latest t
+
+    let of_latest ~version_to_use latest =
+      match version_to_use with
+      | 1 -> V1 (V1.of_latest latest)
+      | 2 -> V2 (V2.of_latest latest)
+      | other -> failwiths "unsupported version_to_use" other [%sexp_of: int]
+    ;;
+
   end
 
-  include V1
-  module Latest = V1
+  include Latest
 
   let supported_versions = Int.Set.of_list (Queue.to_list supported_versions)
-
-  include Sexpable.Of_sexpable
-      (Internal)
-      (struct
-        type t = V1.t
-        let to_sexpable = Internal.of_latest
-        let of_sexpable = Internal.to_latest
-      end)
 
   let get_summary = function
     | Base  x -> x.summary
     | Group x -> x.summary
     | Exec  x -> x.summary
 
-  let get_readme = function
-    | Base  x -> x.readme
-    | Group x -> x.readme
-    | Exec  x -> x.readme
-
   let extraction_var = "COMMAND_OUTPUT_HELP_SEXP"
 
-  let of_external ~path_to_exe =
+  let of_external ~working_dir ~path_to_exe =
     let process_info =
-      Unix.create_process_env () ~prog:path_to_exe ~args:[]
-        ~env:(`Extend
-                [ ( extraction_var
-                  , supported_versions |> Int.Set.sexp_of_t |> Sexp.to_string
-                  )
-                ])
+      Unix.create_process_env () ~args:[]
+        ~prog:(abs_path ~dir:working_dir path_to_exe)
+        ~env:(`Extend [
+          ( extraction_var
+          , supported_versions |> Int.Set.sexp_of_t |> Sexp.to_string
+          )
+        ])
     in
     (* We aren't writing to the process's stdin or reading from the process's stderr, so
        close them early.  That way if we open a process that isn't behaving how we
@@ -1383,7 +1637,8 @@ module Sexpable = struct
       |> In_channel.input_all
       |> String.strip
       |> Sexp.of_string
-      |> t_of_sexp
+      |> Internal.t_of_sexp
+      |> Internal.to_latest
     in
     Unix.close process_info.stdout;
     ignore (Unix.wait (`Pid process_info.pid));
@@ -1395,17 +1650,31 @@ module Sexpable = struct
     | sub :: subs ->
       match t with
       | Base _ -> failwithf "unexpected subcommand %S" sub ()
-      | Exec {path_to_exe; _} ->
-        find (of_external ~path_to_exe) ~path_to_subcommand:(sub :: subs)
+      | Exec {path_to_exe; working_dir; _} ->
+        find (of_external ~working_dir ~path_to_exe) ~path_to_subcommand:(sub :: subs)
       | Group g ->
         match List.Assoc.find g.subcommands sub with
         | None -> failwithf "unknown subcommand %S" sub ()
         | Some t -> find t ~path_to_subcommand:subs
+
 end
 
+let rec sexpable_of_proxy proxy =
+  match proxy.Proxy.kind with
+  | Base  base  -> Sexpable.Base base
+  | Exec  exec  -> Sexpable.Exec exec
+  | Group group ->
+    Sexpable.Group
+      { group with
+        subcommands =
+          List.map group.subcommands ~f:(fun (str, proxy) ->
+            (str, sexpable_of_proxy proxy))
+      }
+
 let rec to_sexpable = function
-  | Base base   -> Sexpable.Base  (Base.to_sexpable base)
-  | Exec exec   -> Sexpable.Exec  (Exec.to_sexpable exec)
+  | Base  base  -> Sexpable.Base  (Base.to_sexpable base)
+  | Exec  exec  -> Sexpable.Exec  (Exec.to_sexpable exec)
+  | Proxy proxy -> sexpable_of_proxy proxy
   | Group group ->
     Sexpable.Group (Group.to_sexpable ~subcommand_to_sexpable:to_sexpable group)
 
@@ -1417,9 +1686,10 @@ type ('main, 'result) basic_command
   -> t
 
 let get_summary = function
-  | Base base   -> base.Base.summary
-  | Group group -> group.Group.summary
-  | Exec exec   -> exec.Exec.summary
+  | Base  base  -> base.summary
+  | Group group -> group.summary
+  | Exec  exec  -> exec.summary
+  | Proxy proxy -> Proxy.get_summary proxy
 
 let extend_exn ~mem ~add map key_type ~key data =
   if mem map key then
@@ -1496,9 +1766,8 @@ let gather_help ~recursive ~show_flags ~expand_dots sexpable =
       then Path.to_string
       else Path.to_string_dots
     in
-    let gather_exec rpath acc exec =
-      loop rpath acc
-        (Sexpable.of_external ~path_to_exe:exec.Exec.Sexpable.path_to_exe)
+    let gather_exec rpath acc {Exec.Sexpable.working_dir; path_to_exe; _} =
+      loop rpath acc (Sexpable.of_external ~working_dir ~path_to_exe)
     in
     let gather_group rpath acc subs =
       let subs =
@@ -1557,19 +1826,21 @@ let help_subcommand ~summary ~readme =
          Option.fold cmd_opt ~init:path
            ~f:(fun path subcommand -> Path.add path ~subcommand)
        in
+       let format_list t =
+         gather_help ~recursive ~show_flags ~expand_dots (to_sexpable t)
+         |> Fqueue.to_list
+       in
        let group_help_text group =
-         let to_format_list g =
-           gather_help ~recursive ~show_flags ~expand_dots (to_sexpable (Group g))
-           |> Fqueue.to_list
-         in
+         let to_format_list g = format_list (Group g) in
          Group.help_text ~show_flags ~to_format_list ~path group
        in
        let exec_help_text exec =
-         let to_format_list e =
-           gather_help ~recursive ~show_flags ~expand_dots (to_sexpable (Exec e))
-           |> Fqueue.to_list
-         in
+         let to_format_list e = format_list (Exec e) in
          Exec.help_text ~show_flags ~to_format_list ~path exec
+       in
+       let proxy_help_text proxy =
+         let to_format_list p = format_list (Proxy p) in
+         Proxy.help_text ~show_flags ~to_format_list ~path proxy
        in
        let text =
          match cmd_opt with
@@ -1586,9 +1857,10 @@ let help_subcommand ~summary ~readme =
              die "unknown subcommand %s for command %s" cmd (Path.to_string path) ()
            | Some t ->
              match t with
-             | Exec exec   -> exec_help_text exec
+             | Exec  exec  -> exec_help_text exec
              | Group group -> group_help_text group
-             | Base base   -> Base.help_text ~path base
+             | Base  base  -> Base.help_text ~path base
+             | Proxy proxy -> proxy_help_text proxy
        in
        print_endline text)
 
@@ -1607,48 +1879,148 @@ let group ~summary ?readme ?preserve_subcommand_order ?body alist =
   Group {summary; readme; subcommands; body}
 
 let exec ~summary ?readme ~path_to_exe () =
+  let working_dir = Filename.dirname Sys.executable_name in
   let path_to_exe =
     match path_to_exe with
     | `Absolute p        ->
-      if Filename.is_absolute p
-      then p
-      else failwith "Path passed to `Absolute must be absolute"
+      if not (Filename.is_absolute p)
+      then failwith "Path passed to `Absolute must be absolute"
+      else p
     | `Relative_to_me p ->
-      if Filename.is_relative p
-      then Filename.concat (Filename.dirname Sys.executable_name) p
-      else failwith "Path passed to `Relative_to_me must be relative"
+      if not (Filename.is_relative p)
+      then failwith "Path passed to `Relative_to_me must be relative"
+      else p
   in
-  Exec {summary; readme; path_to_exe; path_to_subcommand = []}
+  Exec {summary; readme; working_dir; path_to_exe}
 
 module Shape = struct
-  type command = t
-  type t =
-    | Basic
-    | Group of (string * command) list
-    | Exec of (unit -> t)
+  module Flag_info = struct
+
+    type t = Format.V1.t = {
+      name : string;
+      doc : string;
+      aliases : string list;
+    } [@@deriving bin_io, compare, fields, sexp]
+
+  end
+
+  module Base_info = struct
+
+    type grammar = Anons.Grammar.Sexpable.V1.t =
+      | Zero
+      | One of string
+      | Many of grammar
+      | Maybe of grammar
+      | Concat of grammar list
+      | Ad_hoc of string
+    [@@deriving bin_io, compare, sexp]
+
+    type anons = Base.Sexpable.V2.anons =
+      | Usage of string
+      | Grammar of grammar
+    [@@deriving bin_io, compare, sexp]
+
+    type t = Base.Sexpable.V2.t = {
+      summary : string;
+      readme  : string sexp_option;
+      anons   : anons;
+      flags   : Flag_info.t list;
+    } [@@deriving bin_io, compare, fields, sexp]
+
+  end
+
+  module Group_info = struct
+
+    type 'a t = 'a Group.Sexpable.V1.t = {
+      summary     : string;
+      readme      : string sexp_option;
+      subcommands : (string, 'a) List.Assoc.t;
+    } [@@deriving bin_io, compare, fields, sexp]
+
+    let map = Group.Sexpable.V1.map
+
+  end
+
+  module Exec_info = struct
+
+    type t = Exec.Sexpable.V2.t = {
+      summary     : string;
+      readme      : string sexp_option;
+      working_dir : string;
+      path_to_exe : string;
+    } [@@deriving bin_io, compare, fields, sexp]
+
+  end
+
+  module T = struct
+
+    type t =
+      | Basic of Base_info.t
+      | Group of t Group_info.t
+      | Exec of Exec_info.t * (unit -> t)
+
+  end
+
+  module Fully_forced = struct
+
+    type t =
+      | Basic of Base_info.t
+      | Group of t Group_info.t
+      | Exec of Exec_info.t * t
+    [@@deriving bin_io, compare, sexp]
+
+    let rec create : T.t -> t = function
+      | Basic b -> Basic b
+      | Group g -> Group (Group_info.map g ~f:create)
+      | Exec (e, f) -> Exec (e, create (f ()))
+
+  end
+
+  include T
+
 end
 
-let shape t : Shape.t =
+let rec proxy_of_sexpable sexpable ~working_dir ~path_to_exe ~path_to_subcommand =
+  let kind =
+    match (sexpable : Sexpable.t) with
+    | Base  b -> Proxy.Kind.Base b
+    | Exec  e -> Proxy.Kind.Exec e
+    | Group g ->
+      Proxy.Kind.Group
+        { g with
+          subcommands =
+            List.map g.subcommands ~f:(fun (str, sexpable) ->
+              let path_to_subcommand = path_to_subcommand @ [str] in
+              let proxy =
+                proxy_of_sexpable sexpable ~working_dir ~path_to_exe ~path_to_subcommand
+              in
+              (str, proxy))
+        }
+  in
+  { Proxy. working_dir; path_to_exe; path_to_subcommand; kind }
+
+let proxy_of_exe ~working_dir path_to_exe =
+  let sexpable = Sexpable.of_external ~working_dir ~path_to_exe in
+  proxy_of_sexpable sexpable ~working_dir ~path_to_exe ~path_to_subcommand:[]
+
+let rec shape_of_proxy proxy : Shape.t =
+  match proxy.Proxy.kind with
+  | Base  b -> Basic b
+  | Group g -> Group { g with subcommands = List.Assoc.map g.subcommands ~f:shape_of_proxy }
+  | Exec  e ->
+    let f () = shape_of_proxy (proxy_of_exe ~working_dir:e.working_dir e.path_to_exe) in
+    Exec (e, f)
+;;
+
+let rec shape t : Shape.t =
   match t with
-  | Base _ -> Basic
-  | Group x -> Group x.subcommands
-  | Exec {path_to_exe; path_to_subcommand; _} ->
-    let rec loop ~path_to_exe ~path_to_subcommand : Shape.t =
-      Exec (fun () ->
-        match Sexpable.find (Sexpable.of_external ~path_to_exe) ~path_to_subcommand with
-        | Base _ -> Basic
-        | Exec {path_to_exe; _} -> loop ~path_to_exe ~path_to_subcommand:[]
-        | Group x ->
-          Group (List.map x.subcommands ~f:(fun (sub, fmt) ->
-            ( sub
-            , Exec {
-                path_to_exe;
-                path_to_subcommand = path_to_subcommand @ [sub];
-                summary = Sexpable.get_summary fmt;
-                readme = Option.map ~f:Fn.const (Sexpable.get_readme fmt);
-              }))))
-    in
-    loop ~path_to_exe ~path_to_subcommand
+  | Base  b -> Basic (Base.to_sexpable b)
+  | Group g -> Group (Group.to_sexpable ~subcommand_to_sexpable:shape g)
+  | Proxy p -> shape_of_proxy p
+  | Exec  e ->
+    let f () = shape_of_proxy (proxy_of_exe ~working_dir:e.working_dir e.path_to_exe) in
+    Exec (Exec.to_sexpable e, f)
+;;
 
 module Version_info = struct
   let print_version ~version =
@@ -1698,7 +2070,8 @@ module Version_info = struct
           (command ~version ~build_info)
       in
       Group { group with Group.subcommands }
-    | Exec exec -> Exec exec
+    | Proxy proxy -> Proxy proxy
+    | Exec  exec  -> Exec  exec
 
 end
 
@@ -1737,10 +2110,10 @@ let dump_help_sexp ~supported_versions t ~path_to_subcommand =
                from the given supported versions."
       Sexpable.supported_versions Int.Set.sexp_of_t;
   | Some version_to_use ->
-    assert (version_to_use = 1); (* for now, this is the only valid version *)
     to_sexpable t
     |> Sexpable.find ~path_to_subcommand
-    |> Sexpable.sexp_of_t
+    |> Sexpable.Internal.of_latest ~version_to_use
+    |> Sexpable.Internal.sexp_of_t
     |> Sexp.to_string
     |> print_string
 ;;
@@ -1787,6 +2160,7 @@ let process_args ~cmd ~args =
 let rec add_help_subcommands = function
   | Base  _ as t -> t
   | Exec  _ as t -> t
+  | Proxy _ as t -> t
   | Group {summary; readme; subcommands; body} ->
     let subcommands = List.Assoc.map subcommands ~f:add_help_subcommands in
     let subcommands =
@@ -1815,6 +2189,21 @@ let rec dispatch t env ~extend ~path ~args ~maybe_new_comp_cword ~version ~build
   | Exec exec ->
     Option.iter ~f:set_comp_cword maybe_new_comp_cword;
     let args = Cmdline.to_list (maybe_apply_extend args ~extend ~path) in
+    Exec.exec_with_args ~args exec
+  | Proxy proxy ->
+    Option.iter ~f:set_comp_cword maybe_new_comp_cword;
+    let args =
+      proxy.path_to_subcommand
+      @ Cmdline.to_list (maybe_apply_extend args ~extend ~path)
+    in
+    let exec =
+      { Exec.
+        working_dir = proxy.working_dir;
+        path_to_exe = proxy.path_to_exe;
+        summary = Proxy.get_summary proxy;
+        readme = Proxy.get_readme proxy |> Option.map ~f:const;
+      }
+    in
     Exec.exec_with_args ~args exec
   | Group ({summary; readme; subcommands = subs; body} as group) ->
     let env = Env.set env subs_key subs in
@@ -1877,13 +2266,8 @@ let rec dispatch t env ~extend ~path ~args ~maybe_new_comp_cword ~version ~build
       exit 0
 ;;
 
-INCLUDE "core_config.mlh"
 let default_version,default_build_info =
-  IFDEF BUILD_VERSION_UTIL THEN
-    Version_util.version, Version_util.build_info
-  ELSE
-    "no version util", "no build info"
-  ENDIF
+  Version_util.version, Version_util.build_info
 
 let run
       ?(version = default_version)
@@ -1913,6 +2297,7 @@ let summary = function
   | Base  x -> x.summary
   | Group x -> x.summary
   | Exec  x -> x.summary
+  | Proxy x -> Proxy.get_summary x
 
 module Spec = struct
   include Base.Spec
@@ -1928,6 +2313,7 @@ module Deprecated = struct
   let get_flag_names = function
     | Base base -> base.Base.flags |> String.Map.keys
     | Group _
+    | Proxy _
     | Exec  _ -> assert false
 
   let help_recursive ~cmd ~with_flags ~expand_dots t s =
@@ -1951,7 +2337,7 @@ module Deprecated = struct
           |> List.concat_map ~f:(fun (cmd', t) ->
             help_recursive_rec ~cmd:cmd' t new_s)
         end
-      | Exec _exec ->
+      | (Proxy _ | Exec _) ->
         (* Command.exec does not support deprecated commands *)
         []
     in
@@ -1978,7 +2364,7 @@ module Deprecated = struct
 end
 
 (* testing claims made in the mli about order of evaluation and [flags_of_args_exn] *)
-TEST_MODULE "Command.Spec.flags_of_args_exn" = struct
+let%test_module "Command.Spec.flags_of_args_exn" = (module struct
 
   let args q = [
     ( "flag1", Arg.Unit (fun () -> Queue.enqueue q 1), "enqueue 1");
@@ -1992,11 +2378,11 @@ TEST_MODULE "Command.Spec.flags_of_args_exn" = struct
     run ~argv command;
     Queue.to_list q
 
-  TEST = parse ["foo.exe";"-flag1";"-flag2";"-flag3"] = [1;2;3]
-  TEST = parse ["foo.exe";"-flag2";"-flag3";"-flag1"] = [1;2;3]
-  TEST = parse ["foo.exe";"-flag3";"-flag2";"-flag1"] = [1;2;3]
+  let%test _ = parse ["foo.exe";"-flag1";"-flag2";"-flag3"] = [1;2;3]
+  let%test _ = parse ["foo.exe";"-flag2";"-flag3";"-flag1"] = [1;2;3]
+  let%test _ = parse ["foo.exe";"-flag3";"-flag2";"-flag1"] = [1;2;3]
 
-end
+end)
 
 (* NOTE: all that follows is simply namespace management boilerplate.  This will go away
    once we re-work the internals of Command to use Applicative from the ground up. *)
@@ -2031,24 +2417,6 @@ module Param = struct
   end
 
   include A
-  module Args = struct
-    type ('a, 'b) t = ('a -> 'b) A.t
-    let applyN t1 t2 = A.map2 t1 t2 ~f:(fun f k -> k f)
-    let mapN ~f t = A.map t ~f:(fun k -> k f)
-    let step t ~f = A.map t ~f:(fun g x -> g (f x))
-    let cons p t = A.map2 p t ~f:(fun a f k -> f (k a))
-    let (@>) = cons
-    let nil =
-      (* inlined [let nil = return Fn.id] b/c of the value restriction *)
-      { Spec.
-        param = {
-          f = (fun _env -> Anons.Parser.For_opening.return (fun k -> k Fn.id));
-          flags = (fun () -> []);
-          usage = (fun () -> Anons.Grammar.zero);
-        };
-      }
-  end
-  include (Args : module type of Args with type ('a, 'b) t := ('a, 'b) Args.t)
 
   let help = Spec.help
   let path = Spec.path
@@ -2083,12 +2451,20 @@ module Param = struct
   end
 end
 
-type ('main, 'result) basic_command'
+module Let_syntax = struct
+  include Param
+  module Open_on_rhs = Param
+  module Open_in_body = struct end
+end
+
+type 'result basic_command'
   =  summary : string
   -> ?readme : (unit -> string)
-  -> ('main, unit -> 'result) Param.Args.t
-  -> 'main
+  -> (unit -> 'result) Param.t
   -> t
 
-let basic' ~summary ?readme params main =
-  basic ~summary ?readme Spec.(of_params params) main
+let basic' ~summary ?readme param =
+  let spec =
+    Spec.of_params @@ Param.map param ~f:(fun run () () -> run ())
+  in
+  basic ~summary ?readme spec ()

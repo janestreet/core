@@ -1,6 +1,6 @@
-INCLUDE "core_config.mlh"
+#import "config.mlh"
 
-IFDEF MUTEX_TIMED_LOCK THEN
+#if JSC_MUTEX_TIMED_LOCK
 
 open Core_kernel.Std
 
@@ -13,10 +13,10 @@ let timedlock mtx time = mutex_timedlock mtx (Time.to_float time)
 
 let timedlock = Ok timedlock
 
-ELSE
+#else
 
 include Mutex0
 
 let timedlock = Or_error.unimplemented "Mutex.timedlock"
 
-ENDIF
+#endif

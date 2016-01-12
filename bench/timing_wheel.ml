@@ -25,7 +25,7 @@ module Report = struct
       nanoseconds_per_step : int;
       gc_stat : Gc.Stat.t;
     }
-  with sexp_of
+  [@@deriving sexp_of]
 end
 
 let test ~num_queue_elements ~num_steps =
@@ -49,7 +49,7 @@ let test ~num_queue_elements ~num_steps =
       gc_stat = Gc.stat ();
     }
   in
-  log "report" report <:sexp_of< Report.t >>
+  log "report" report [%sexp_of: Report.t]
 ;;
 
 (* Same as [test] but uses [Timing_wheel] instead of [Timing_wheel.Priority_queue]. This
@@ -83,7 +83,7 @@ let test_with_allocations ~num_queue_elements ~num_steps =
       gc_stat = Gc.stat ();
     }
   in
-  log "report" report <:sexp_of< Report.t >>
+  log "report" report [%sexp_of: Report.t]
 ;;
 
 let () = ignore (test, test_with_allocations)

@@ -3,7 +3,7 @@
 open Core_kernel.Std
 open Unix
 
-include module type of Core_kernel.Std.Bigstring with type t = Core_kernel.Std.Bigstring.t
+include module type of struct include Core_kernel.Std.Bigstring end
 
 (** Type of I/O errors *)
 exception IOError of

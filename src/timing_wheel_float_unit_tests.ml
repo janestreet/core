@@ -8,7 +8,7 @@ include Core_kernel.Timing_wheel_unit_tests.Make (Timing_wheel_float)
 
 let sec = Time.Span.of_sec
 
-TEST_UNIT =
+let%test_unit _ =
   let t = create_unit () in
   let start = start t in
   List.iter
@@ -18,11 +18,11 @@ TEST_UNIT =
     ]
     ~f:(fun time ->
       assert (does_raise (fun () -> interval_num t time));
-      assert (does_raise (fun () -> interval_start t time)));
+      assert (does_raise (fun () -> interval_start t time)))
 ;;
 
 (* Check that default [level_bits] gives desired range of times. *)
-TEST_UNIT =
+let%test_unit _ =
   let zone = Time.Zone.find_exn "America/New_York" in
   let start =
     Time.of_date_ofday ~zone

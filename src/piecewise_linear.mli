@@ -36,13 +36,13 @@ module Stable : sig
     type nonrec ('key, 'value) t_ = ('key, 'value) t_
 
     module Make (Key : Float_like) (Value : Float_like) : sig
-      type t = (Key.t, Value.t) t_ with bin_io, compare, sexp
+      type t = (Key.t, Value.t) t_ [@@deriving bin_io, compare, sexp]
     end
 
     type nonrec ('key, 'value) t_invertible = ('key, 'value) t_invertible
 
     module Make_invertible (Key : Float_like) (Value : Float_like) : sig
-      type t = (Key.t, Value.t) t_invertible with bin_io, compare, sexp
+      type t = (Key.t, Value.t) t_invertible [@@deriving bin_io, compare, sexp]
     end
   end
 end

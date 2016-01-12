@@ -73,7 +73,7 @@ let () =
          the same, so this uses a specific Random.State to generate a repeatable
          series of random times to test *)
       let rand_state = Random.State.make [| 1; 2; 3; 4; 5; 6; 7 |] in
-      for _i = 0 to 100_000 do
+      for _ = 0 to 100_000 do
         let secs = Random.State.int rand_state 86_400_000 in
         let ofday = Ofday.of_span_since_start_of_day (Time.Span.of_ms (float secs)) in
         let ofday_string = Ofday.to_string ofday in
@@ -271,7 +271,7 @@ let () =
     );
   add "span_conv"
     (fun () ->
-      for _i = 1 to 100 do
+      for _ = 1 to 100 do
         "sec" @? convtest Time.Span.to_sec sec;
         "ms" @? convtest Time.Span.to_ms Span.of_ms;
         "min" @? convtest (fun x -> Time.Span.to_sec x /. 60.) Span.of_min;
@@ -330,6 +330,22 @@ let () =
       let t = Time.of_string s in
       "foo" @? (Time.to_string_abs t ~zone = s)
     );
+
+  add "of_string without colon, negative offset"
+    (fun () ->
+
+      let t = "2015-07-14 10:31:55.564871-04:00" |> Time.of_string_abs in
+      let s = "2015-07-14 10:31:55.564871-0400" in
+      "no-colon-abs-negative-offset" @? (Time.of_string_abs s = t)
+    );
+
+  add "of_string without colon, positive offset"
+    (fun () ->
+      let t = "2015-07-14 10:31:55.564871+04:00" |> Time.of_string_abs in
+      let s = "2015-07-14 10:31:55.564871+0400" in
+      "no-colon-abs-positive-offset" @? (Time.of_string_abs s = t)
+    );
+
   add "of_string with leap second"
     (fun () ->
        let expected_time_at_leap_second =

@@ -26,5 +26,10 @@ val create_error : Unix_error.t -> _ t
 
 val unit : Unit.t
 
+val is_ok     : _ t -> bool
+val is_error  : _ t -> bool
+
+val error_exn : _ t -> Unix_error.t
+
 (** Keep only the error. *)
 val ignore_ok_value : _ t -> Unit.t

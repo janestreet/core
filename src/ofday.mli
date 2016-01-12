@@ -1,7 +1,7 @@
 open Core_kernel.Std
 
 (* Represented as a number of seconds since midnight *)
-type t = private float with bin_io, sexp
+type t = private float [@@deriving bin_io, sexp]
 
 module Zoned : sig
   (** A time of day along with a time zone.
@@ -16,7 +16,7 @@ module Zoned : sig
       Two [t]'s may or may not correspond to the same times depending on which date
       they're evaluated. *)
   type ofday = t
-  type t with bin_io, sexp
+  type t [@@deriving bin_io, sexp]
 
   (** Strings look like "12:01 nyc" *)
   include Stringable          with type t := t
@@ -32,7 +32,7 @@ module Zoned : sig
 
   module Stable : sig
     module V1 : sig
-      type nonrec t = t with sexp, bin_io
+      type nonrec t = t [@@deriving sexp, bin_io]
     end
   end
 end
@@ -69,9 +69,9 @@ val sub : t -> Span.t -> t option
     the same day *)
 val diff : t -> t -> Span.t
 
-(* Returns the time-span separating the two of-days, ignoring the hour information, and
-   assuming that the of-days represent times that are within a half-hour of each other.
-   This is useful for comparing two ofdays in unknown time-zones. *)
+(** Returns the time-span separating the two of-days, ignoring the hour information, and
+    assuming that the of-days represent times that are within a half-hour of each other.
+    This is useful for comparing two ofdays in unknown time-zones. *)
 val small_diff : t -> t -> Span.t
 
 (** trailing seconds and subseconds are trimmed off if they are 0 *)
@@ -87,6 +87,6 @@ val to_millisec_string : t -> string
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t with bin_io, compare, sexp
+    type nonrec t = t [@@deriving bin_io, compare, sexp]
   end
 end

@@ -3,12 +3,12 @@ open Quickcheck
 
 module Initial_example = struct
 
-  TEST_UNIT "fold_left vs fold_right" =
+  let%test_unit "fold_left vs fold_right" =
     Quickcheck.test
-      Generator.(list int)
-      ~sexp_of:<:sexp_of< int list >>
+      (List.gen Int.gen)
+      ~sexp_of:[%sexp_of: int list]
       ~f:(fun list ->
-        <:test_eq< int >>
+        [%test_eq: int]
           (List.fold_left  ~init:0 ~f:(+) list)
           (List.fold_right ~init:0 ~f:(+) list))
 
@@ -19,39 +19,39 @@ module Generator_examples = struct
   let (_ : _ Generator.t) =
     Generator.singleton "An arbitrary value."
   let (_ : _ Generator.t) =
-    Generator.string (* any string, including weird strings like "\000" *)
+    String.gen     (* any string, including weird strings like "\000" *)
   let (_ : _ Generator.t) =
-    Generator.int    (* any int, from [min_value] to [max_value] *)
+    Int.gen        (* any int, from [min_value] to [max_value] *)
   let (_ : _ Generator.t) =
-    Generator.float  (* any float, from [neg_infinity] to [infinity] plus [nan] *)
+    Float.gen      (* any float, from [neg_infinity] to [infinity] plus [nan] *)
   let (_ : _ Generator.t) =
-    Generator.size   (* small non-negative ints *)
+    Generator.size (* small non-negative ints *)
   let (_ : _ Generator.t) =
-    Generator.int_between ~lower_bound:(Incl 0) ~upper_bound:(Excl 100)
+    Int.gen_between ~lower_bound:(Incl 0) ~upper_bound:(Excl 100)
   let (_ : _ Generator.t) =
-    Generator.float_between
+    Float.gen_between
       ~lower_bound:(Incl 1.)
       ~upper_bound:Unbounded
       ~nan:Without
   let (_ : _ Generator.t) =
-    Generator.(tuple2 int float)
+    Generator.tuple2 Int.gen Float.gen
   let (_ : _ Generator.t) =
-    Generator.(list (tuple2 int float))
+    List.gen (Generator.tuple2 Int.gen Float.gen)
   let (_ : _ Generator.t) =
-    Generator.(list (tuple2 int float)
-                 ~unique:true
-                 ~length:(`At_most 12)
-                 ~sorted:(`By <:compare< int * float >>))
+    List.gen' (Generator.tuple2 Int.gen Float.gen)
+      ~unique:true
+      ~length:(`At_most 12)
+      ~sorted:(`By [%compare: int * float])
   let (_ : _ Generator.t) =
-    Generator.(either int float)
+    Either.gen Int.gen Float.gen
   let (_ : _ Generator.t) =
-    Generator.(option string)
+    Option.gen String.gen
   let (_ : _ Generator.t) =
-    Generator.(map char ~f:Char.to_int)
+    Generator.map Char.gen ~f:Char.to_int
   let (_ : _ Generator.t) =
-    Generator.(filter float ~f:Float.is_finite) (* use [filter] sparingly! *)
+    Generator.filter Float.gen ~f:Float.is_finite (* use [filter] sparingly! *)
   let (_ : _ Generator.t) =
-    Generator.(fn Observer.int bool)
+    Generator.fn Int.obs Bool.gen
   let (_ : _ Generator.t) =
     Generator.(union [ singleton (Ok ()) ; singleton (Or_error.error_string "fail") ])
 
@@ -59,9 +59,9 @@ module Generator_examples = struct
 
     let (_ : _ Generator.t) =
       let open Generator in
-      string
+      String.gen
       >>= fun str ->
-      int_between ~lower_bound:(Incl 0) ~upper_bound:(Excl (String.length str))
+      Int.gen_between ~lower_bound:(Incl 0) ~upper_bound:(Excl (String.length str))
       >>| fun i ->
       str, i, String.get str i
 
@@ -71,7 +71,7 @@ module Generator_examples = struct
 
     let (_ : _ Generator.t) =
       Generator.(recursive (fun sexp ->
-        either string (list sexp)
+        Either.gen String.gen (List.gen sexp)
         >>| function
         | First  a -> Sexp.Atom a
         | Second l -> Sexp.List l))
@@ -80,9 +80,9 @@ module Generator_examples = struct
       let open Generator in
       union
         [ singleton `Leaf
-        ; int_between    ~lower_bound ~upper_bound            >>= fun key   ->
-          binary_subtree ~lower_bound ~upper_bound:(Excl key) >>= fun left  ->
-          binary_subtree ~lower_bound:(Excl key) ~upper_bound >>| fun right ->
+        ; Int.gen_between ~lower_bound ~upper_bound            >>= fun key   ->
+          binary_subtree  ~lower_bound ~upper_bound:(Excl key) >>= fun left  ->
+          binary_subtree  ~lower_bound:(Excl key) ~upper_bound >>| fun right ->
           `Node (left, key, right)
         ]
 
@@ -106,32 +106,32 @@ end
 module Observer_examples = struct
 
   let (_ : _ Observer.t) = Observer.singleton ()
-  let (_ : _ Observer.t) = Observer.string
-  let (_ : _ Observer.t) = Observer.int
-  let (_ : _ Observer.t) = Observer.float
-  let (_ : _ Observer.t) = Observer.(tuple2 int float)
-  let (_ : _ Observer.t) = Observer.(list (tuple2 int float))
-  let (_ : _ Observer.t) = Observer.(either int float)
-  let (_ : _ Observer.t) = Observer.(option string)
-  let (_ : _ Observer.t) = Observer.(fn Generator.int bool ~sexp_of_dom:<:sexp_of< int >>)
+  let (_ : _ Observer.t) = String.obs
+  let (_ : _ Observer.t) = Int.obs
+  let (_ : _ Observer.t) = Float.obs
+  let (_ : _ Observer.t) = Observer.tuple2 Int.obs Float.obs
+  let (_ : _ Observer.t) = List.obs (Observer.tuple2 Int.obs Float.obs)
+  let (_ : _ Observer.t) = Either.obs Int.obs Float.obs
+  let (_ : _ Observer.t) = Option.obs String.obs
+  let (_ : _ Observer.t) = Observer.fn Int.gen Bool.obs ~sexp_of_dom:[%sexp_of: int]
   let (_ : _ Observer.t) =
-    Observer.(unmap char
-                ~f:Char.of_int_exn
-                ~f_sexp:(fun () -> Sexp.Atom "Char.of_int_exn"))
+    Observer.unmap Char.obs
+      ~f:Char.of_int_exn
+      ~f_sexp:(fun () -> Sexp.Atom "Char.of_int_exn")
 
 end
 
 module Example_1_functional = struct
 
   module Functional_stack : sig
-    type 'a t with sexp, compare
+    type 'a t [@@deriving sexp, compare]
     val empty : _ t
     val is_empty : _ t -> bool
     val push : 'a t -> 'a -> 'a t
     val top_exn : 'a t -> 'a
     val pop_exn : 'a t -> 'a t
   end = struct
-    type 'a t = 'a list with sexp, compare
+    type 'a t = 'a list [@@deriving sexp, compare]
     let empty = []
     let is_empty = List.is_empty
     let push t x = x :: t
@@ -145,31 +145,31 @@ module Example_1_functional = struct
 
   let stack elt =
     Generator.(recursive (fun self ->
-      either unit (tuple2 elt self)
+      Either.gen Unit.gen (tuple2 elt self)
       >>| function
       | First  ()     -> Functional_stack.empty
       | Second (x, t) -> Functional_stack.push t x))
 
   open Functional_stack
 
-  TEST_UNIT "push + is_empty" =
-    Quickcheck.test Generator.(tuple2 int (stack int)) ~f:(fun (x, t) ->
-      <:test_result< bool >> (is_empty (push t x)) ~expect:false)
+  let%test_unit "push + is_empty" =
+    Quickcheck.test (Generator.tuple2 Int.gen (stack Int.gen)) ~f:(fun (x, t) ->
+      [%test_result: bool] (is_empty (push t x)) ~expect:false)
 
-  TEST_UNIT "push + top_exn" =
-    Quickcheck.test Generator.(tuple2 int (stack int)) ~f:(fun (x, t) ->
-      <:test_result< int >> (top_exn (push t x)) ~expect:x)
+  let%test_unit "push + top_exn" =
+    Quickcheck.test (Generator.tuple2 Int.gen (stack Int.gen)) ~f:(fun (x, t) ->
+      [%test_result: int] (top_exn (push t x)) ~expect:x)
 
-  TEST_UNIT "push + pop_exn" =
-    Quickcheck.test Generator.(tuple2 int (stack int)) ~f:(fun (x, t) ->
-      <:test_result< int t >> (pop_exn (push t x)) ~expect:t)
+  let%test_unit "push + pop_exn" =
+    Quickcheck.test (Generator.tuple2 Int.gen (stack Int.gen)) ~f:(fun (x, t) ->
+      [%test_result: int t] (pop_exn (push t x)) ~expect:t)
 
 end
 
 module Example_2_imperative = struct
 
   module Imperative_stack : sig
-    type 'a t with sexp, compare
+    type 'a t [@@deriving sexp, compare]
     val create : unit -> _ t
     val is_empty : _ t -> bool
     val push : 'a t -> 'a -> unit
@@ -177,7 +177,7 @@ module Example_2_imperative = struct
     val iter : 'a t -> f:('a -> unit) -> unit
     val to_list : 'a t -> 'a list
   end = struct
-    type 'a t = 'a list ref with sexp, compare
+    type 'a t = 'a list ref [@@deriving sexp, compare]
     let create () = ref []
     let is_empty t = List.is_empty !t
     let push t x = t := x :: !t
@@ -191,7 +191,7 @@ module Example_2_imperative = struct
 
   let stack elt =
     let open Generator in
-    list elt
+    List.gen elt
     >>| fun xs ->
     let t = Imperative_stack.create () in
     List.iter xs ~f:(fun x -> Imperative_stack.push t x);
@@ -199,36 +199,36 @@ module Example_2_imperative = struct
 
   open Imperative_stack
 
-  TEST_UNIT "push + is_empty" =
-    Quickcheck.test Generator.(tuple2 string (stack string)) ~f:(fun (x, t) ->
-      <:test_result< bool >> (push t x; is_empty t) ~expect:false)
+  let%test_unit "push + is_empty" =
+    Quickcheck.test (Generator.tuple2 String.gen (stack String.gen)) ~f:(fun (x, t) ->
+      [%test_result: bool] (push t x; is_empty t) ~expect:false)
 
-  TEST_UNIT "push + pop_exn" =
-    Quickcheck.test Generator.(tuple2 string (stack string)) ~f:(fun (x, t) ->
+  let%test_unit "push + pop_exn" =
+    Quickcheck.test (Generator.tuple2 String.gen (stack String.gen)) ~f:(fun (x, t) ->
       push t x;
       let y = pop_exn t in
-      <:test_result< string >> y ~expect:x)
+      [%test_result: string] y ~expect:x)
 
-  TEST_UNIT "push + to_list" =
-    Quickcheck.test Generator.(tuple2 string (stack string)) ~f:(fun (x, t) ->
+  let%test_unit "push + to_list" =
+    Quickcheck.test (Generator.tuple2 String.gen (stack String.gen)) ~f:(fun (x, t) ->
       let list1 = to_list t in
       push t x;
       let list2 = to_list t in
-      <:test_result< string list >> list2 ~expect:(x :: list1))
+      [%test_result: string list] list2 ~expect:(x :: list1))
 
-  TEST_UNIT "push + pop_exn + to_list" =
-    Quickcheck.test Generator.(tuple2 string (stack string)) ~f:(fun (x, t) ->
+  let%test_unit "push + pop_exn + to_list" =
+    Quickcheck.test (Generator.tuple2 String.gen (stack String.gen)) ~f:(fun (x, t) ->
       let list1 = to_list t in
       push t x;
       let _ = pop_exn t in
       let list2 = to_list t in
-      <:test_result< string list >> list2 ~expect:list1)
+      [%test_result: string list] list2 ~expect:list1)
 
-  TEST_UNIT "iter" =
-    Quickcheck.test Generator.(stack string) ~f:(fun t ->
+  let%test_unit "iter" =
+    Quickcheck.test (stack String.gen) ~f:(fun t ->
       let q = Queue.create () in
       iter t ~f:(fun x -> Queue.enqueue q x);
-      <:test_result< string list >> (Queue.to_list q) ~expect:(to_list t))
+      [%test_result: string list] (Queue.to_list q) ~expect:(to_list t))
 
 end
 
@@ -237,7 +237,7 @@ module Example_3_asynchronous = struct
   open Async.Std
 
   module Async_stack : sig
-    type 'a t with sexp, compare
+    type 'a t [@@deriving sexp, compare]
     val create   : unit -> _ t
     val is_empty : 'a t -> bool
     val push     : 'a t -> 'a -> unit Deferred.t (* pushback until stack empties *)
@@ -256,9 +256,9 @@ module Example_3_asynchronous = struct
       ; pops = []
       }
     let to_list t = t.elts
-    let sexp_of_t sexp_of_elt t = <:sexp_of< elt list >> (to_list t)
-    let t_of_sexp elt_of_sexp sexp = of_list (<:of_sexp< elt list >> sexp)
-    let compare (type elt) compare_elt t1 t2 = <:compare< elt list >> t1.elts t2.elts
+    let sexp_of_t sexp_of_elt t = [%sexp_of: elt list] (to_list t)
+    let t_of_sexp elt_of_sexp sexp = of_list ([%of_sexp: elt list] sexp)
+    let compare (type elt) compare_elt t1 t2 = [%compare: elt list] t1.elts t2.elts
     let create () = of_list []
     let is_empty t = List.is_empty t.elts
     let push_without_pushback t x =
@@ -287,7 +287,7 @@ module Example_3_asynchronous = struct
 
   let stack elt =
     let open Generator in
-    list elt
+    List.gen elt
     >>| fun xs ->
     let t = Async_stack.create () in
     List.iter xs ~f:(fun x -> don't_wait_for (Async_stack.push t x));
@@ -295,52 +295,52 @@ module Example_3_asynchronous = struct
 
   open Async_stack
 
-  TEST_UNIT "push + is_empty" =
-    Quickcheck.test Generator.(tuple2 char (stack char)) ~f:(fun (x, t) ->
+  let%test_unit "push + is_empty" =
+    Quickcheck.test (Generator.tuple2 Char.gen (stack Char.gen)) ~f:(fun (x, t) ->
       don't_wait_for (push t x);
-      <:test_result< bool >> (is_empty t) ~expect:false)
+      [%test_result: bool] (is_empty t) ~expect:false)
 
-  TEST_UNIT "push + to_list" =
-    Quickcheck.test Generator.(tuple2 char (stack char)) ~f:(fun (x, t) ->
+  let%test_unit "push + to_list" =
+    Quickcheck.test (Generator.tuple2 Char.gen (stack Char.gen)) ~f:(fun (x, t) ->
       let list1 = to_list t in
       don't_wait_for (push t x);
       let list2 = to_list t in
-      <:test_result< char list >> list2 ~expect:(x :: list1))
+      [%test_result: char list] list2 ~expect:(x :: list1))
 
-  TEST_UNIT "push + pushback" =
-    Quickcheck.test Generator.(tuple2 char (stack char)) ~f:(fun (x, t) ->
+  let%test_unit "push + pushback" =
+    Quickcheck.test (Generator.tuple2 Char.gen (stack Char.gen)) ~f:(fun (x, t) ->
       let pushback = push t x in
-      <:test_result< bool >> (Deferred.is_determined pushback) ~expect:false)
+      [%test_result: bool] (Deferred.is_determined pushback) ~expect:false)
 
-  TEST_UNIT "push + pop" =
+  let%test_unit "push + pop" =
     Thread_safe.block_on_async_exn (fun () ->
-      Quickcheck.async_test Generator.(tuple2 char (stack char)) ~f:(fun (x, t) ->
+      Quickcheck.async_test (Generator.tuple2 Char.gen (stack Char.gen)) ~f:(fun (x, t) ->
         don't_wait_for (push t x);
         pop t >>| fun y ->
-        <:test_result< char >> y ~expect:x))
+        [%test_result: char] y ~expect:x))
 
-  TEST_UNIT "push + pop + to_list" =
+  let%test_unit "push + pop + to_list" =
     Thread_safe.block_on_async_exn (fun () ->
-      Quickcheck.async_test Generator.(tuple2 char (stack char)) ~f:(fun (x, t) ->
+      Quickcheck.async_test (Generator.tuple2 Char.gen (stack Char.gen)) ~f:(fun (x, t) ->
         let list1 = to_list t in
         don't_wait_for (push t x);
         pop t >>| fun _ ->
         let list2 = to_list t in
-        <:test_result< char list >> list2 ~expect:list1))
+        [%test_result: char list] list2 ~expect:list1))
 
-  TEST_UNIT "iter" =
+  let%test_unit "iter" =
     Thread_safe.block_on_async_exn (fun () ->
-      Quickcheck.async_test Generator.(stack char) ~f:(fun t ->
+      Quickcheck.async_test (stack Char.gen) ~f:(fun t ->
         let q = Queue.create () in
         iter t ~f:(fun x -> Queue.enqueue q x; Deferred.unit)
         >>| fun () ->
-        <:test_result< char list >> (Queue.to_list q) ~expect:(to_list t)))
+        [%test_result: char list] (Queue.to_list q) ~expect:(to_list t)))
 
-  TEST_UNIT "push + pop + pushback" =
+  let%test_unit "push + pop + pushback" =
     Thread_safe.block_on_async_exn (fun () ->
-      Quickcheck.async_test Generator.(tuple2 char (stack char)) ~f:(fun (x, t) ->
+      Quickcheck.async_test (Generator.tuple2 Char.gen (stack Char.gen)) ~f:(fun (x, t) ->
         let pushback = push t x in
         pop t >>| fun _ ->
-        <:test_result< bool >> (Deferred.is_determined pushback) ~expect:(is_empty t)))
+        [%test_result: bool] (Deferred.is_determined pushback) ~expect:(is_empty t)))
 
 end

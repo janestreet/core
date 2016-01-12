@@ -25,6 +25,7 @@ module Mutex              = Core_mutex
 module Nano_mutex         = Nano_mutex
 module Piecewise_linear   = Piecewise_linear
 module Process_env        = Process_env
+module Schedule           = Schedule
 module Signal             = Signal
 module Squeue             = Squeue
 module Sys                = Core_sys
@@ -36,10 +37,5 @@ module Timing_wheel       = Timing_wheel_float
 module Unix               = Core_unix
 module User_and_group     = User_and_group
 module Uuid               = Uuid
-INCLUDE "core_config.mlh"
-IFDEF BUILD_VERSION_UTIL THEN
-  module Version_util = Version_util
-ENDIF
+module Version_util = Version_util
 module Weak_hashtbl       = Weak_hashtbl
-
-let _squelch_unused_module_warning_ = ()

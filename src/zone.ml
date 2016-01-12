@@ -19,14 +19,14 @@ let likely_machine_zones = ref [
   "America/Chicago"
 ]
 
-exception Unknown_zone of string with sexp
-exception Invalid_file_format of string with sexp
+exception Unknown_zone of string [@@deriving sexp]
+exception Invalid_file_format of string [@@deriving sexp]
 module Stable = struct
   module V1 = struct
     module Digest = struct
       include Digest
 
-      include Binable.Of_binable (String) (struct
+      include Binable.Stable.Of_binable.V1 (String) (struct
         let to_binable str = str
         let of_binable str = str
 
@@ -41,7 +41,7 @@ module Stable = struct
         utc_off : float;
         is_dst  : bool;
         abbrv   : string;
-      } with sexp_of, bin_io
+      } [@@deriving sexp_of, bin_io]
     end
 
     (* holds information about when leap seconds should be applied - unused
@@ -50,14 +50,14 @@ module Stable = struct
       type t = {
         time    : float;
         seconds : float;
-      } with sexp_of, bin_io
+      } [@@deriving sexp_of, bin_io]
     end
 
     module Transition = struct
       type t = {
         start_time : float;
         new_regime : Regime.t
-      } with sexp_of, bin_io
+      } [@@deriving sexp_of, bin_io]
     end
 
     (* IF THIS REPRESENTATION EVER CHANGES (particularly [name]), ENSURE THAT EITHER
@@ -75,9 +75,9 @@ module Stable = struct
       mutable last_regime_index : int;
       default_local_time_type   : Regime.t;
       leap_seconds              : Leap_second.t list;
-    } with sexp_of
+    } [@@deriving sexp_of]
     (* Lazy.t serialises identically to the underlying type *)
-    type t = strict Lazy.t with sexp_of
+    type t = strict Lazy.t [@@deriving sexp_of]
 
     let digest (lazy zone)    = Option.map zone.file_info ~f:fst
     let file_size (lazy zone) = Option.map zone.file_info ~f:snd
@@ -396,7 +396,7 @@ module Stable = struct
         end
       ;;
 
-      TEST =
+      let%test _ =
         fill ();
         let result = Option.is_some (find "America/New_York") in
         (* keep this test from contaminating tests later in the file *)
@@ -545,13 +545,13 @@ module Stable = struct
       Sexp.Atom t.name
     ;;
 
-    include Sexpable.To_stringable (struct
-      type nonrec t = t with sexp
+    include Sexpable.Stable.To_stringable.V1 (struct
+      type nonrec t = t [@@deriving sexp]
     end)
 
     let compare t1 t2 = String.compare (to_string t1) (to_string t2)
 
-    include (Binable.Of_binable (String) (struct
+    include (Binable.Stable.Of_binable.V1 (String) (struct
       type nonrec t = t
 
       let to_binable (lazy t) =
@@ -563,7 +563,7 @@ module Stable = struct
     end) : Binable.S with type t := t)
   end
 
-  TEST_MODULE "Zone.V1" = Core_kernel.Stable_unit_test.Make (struct
+  let%test_module "Zone.V1" = (module Core_kernel.Stable_unit_test.Make (struct
     include V1
 
     let equal (lazy z1) (lazy z2) = z1.name = z2.name
@@ -576,11 +576,11 @@ module Stable = struct
       ]
     ;;
 
-    TEST_UNIT "special form [Local]" =
+    let%test_unit "special form [Local]" =
       ignore (t_of_sexp (Sexp.of_string "Local"))
     ;;
 
-  end)
+  end))
 end
 
 include Stable.V1
@@ -617,30 +617,30 @@ let prev_clock_shift (lazy zone) ~before =
     ~f:(fun i -> clock_shift_at zone i)
 ;;
 
-TEST_MODULE "next_clock_shift, prev_clock_shift" = struct
+let%test_module "next_clock_shift, prev_clock_shift" = (module struct
   let mkt ?(year=2013) month day hr min =
     let ofday_mins = ((Float.of_int hr *. 60.) +. (Float.of_int min)) in
     let ofday_sec = ofday_mins *. 60. in
     Time_internal.T.of_float
       (Time_internal.utc_mktime ~year ~month ~day ~ofday_sec)
 
-  TEST "UTC" =
+  let%test "UTC" =
     Option.is_none (next_clock_shift utc ~after:(mkt 01 01  12 00))
       && Option.is_none (prev_clock_shift utc ~before:(mkt 01 01  12 00))
 
   module Time_as_float = struct
-    type t = Time_internal.T.t with compare
+    type t = Time_internal.T.t [@@deriving compare]
 
     let sexp_of_t t = Float.sexp_of_t (Time_internal.T.to_float t)
   end
 
   let expect_next after next =
-    <:test_result< (Time_as_float.t * Span.t) option >>
+    [%test_result: (Time_as_float.t * Span.t) option]
       ~expect:(Some next)
       (next_clock_shift (find_exn "Europe/London") ~after)
 
   let expect_prev before prev =
-    <:test_result< (Time_as_float.t * Span.t) option >>
+    [%test_result: (Time_as_float.t * Span.t) option]
       ~expect:(Some prev)
       (prev_clock_shift (find_exn "Europe/London") ~before)
 
@@ -652,30 +652,30 @@ TEST_MODULE "next_clock_shift, prev_clock_shift" = struct
   let bst_end        = mkt ~year:2013 10 27  01 00, Span.(neg hour)
   let bst_start_2014 = mkt ~year:2014 03 30  01 00, Span.hour
 
-  TEST_UNIT "outside BST" =
+  let%test_unit "outside BST" =
     expect_next (mkt 01 01  12 00) bst_start
 
-  TEST_UNIT "just before BST start" =
+  let%test_unit "just before BST start" =
     expect_next (mkt 03 31  00 59) bst_start
 
-  TEST_UNIT "on BST start time" =
+  let%test_unit "on BST start time" =
     expect_next (mkt 03 31  01 00) bst_end
 
-  TEST_UNIT "just after BST start" =
+  let%test_unit "just after BST start" =
     expect_between (mkt 03 31  01 01) bst_start bst_end
 
-  TEST_UNIT "inside BST" =
+  let%test_unit "inside BST" =
     expect_between (mkt 06 01  12 00) bst_start bst_end
 
-  TEST_UNIT "just before BST end" =
+  let%test_unit "just before BST end" =
     expect_between (mkt 10 27  00 59) bst_start bst_end
 
-  TEST_UNIT "BST end time" =
+  let%test_unit "BST end time" =
     expect_between (mkt 10 27  01 00) bst_start bst_start_2014
 
-  TEST_UNIT "just after BST end" =
+  let%test_unit "just after BST end" =
     expect_between (mkt 10 27  01 01) bst_end bst_start_2014
-end
+end)
 
 let convert_transition (transition : Transition.t) transtype =
   match transtype with

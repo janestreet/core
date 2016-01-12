@@ -17,7 +17,7 @@ module Open_option : sig
     | NDELAY  (** No delay opening connection to syslog daemon *)
     | NOWAIT  (** Do not wait for child processes while logging message *)
     | PERROR  (** Print to stderr as well *)
-  with sexp
+  [@@deriving sexp]
 end
 
 (** Types of messages *)
@@ -43,7 +43,7 @@ module Facility : sig
     | LOCAL5
     | LOCAL6
     | LOCAL7    (** LOCAL0-7 reserved for local use *)
-  with sexp
+  [@@deriving sexp]
 end
 
 module Level : sig
@@ -56,7 +56,7 @@ module Level : sig
     | NOTICE                     (** Normal, but significant, condition *)
     | INFO                       (** Informational message *)
     | DEBUG                      (** Debug-level message *)
-  with compare, enumerate, sexp  (** [DEBUG] < [EMERG] *)
+  [@@deriving compare, enumerate, sexp]  (** [DEBUG] < [EMERG] *)
 
   include Stringable.S with type t := t
 end

@@ -1,7 +1,7 @@
 open Core_kernel.Std
 
 module type Float_like = sig
-  type t with bin_io, sexp
+  type t [@@deriving bin_io, sexp]
   include Floatable with type t := t
 end
 
@@ -10,7 +10,7 @@ module type S = sig
   type key
   type value
 
-  type t = (key, value) t_ with bin_io, sexp, compare
+  type t = (key, value) t_ [@@deriving bin_io, sexp, compare]
 
   (** [create] enforces that x (key) values are non-decreasing.
 

@@ -3,7 +3,7 @@
 
 open Std
 
-TEST_MODULE = struct
+let%test_module _ = (module struct
 
   module Check = Core_kernel.Std.Comparable.Check_sexp_conversion
 
@@ -27,4 +27,4 @@ TEST_MODULE = struct
     let examples = all
   end)
 
-end
+end)

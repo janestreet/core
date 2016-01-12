@@ -3,7 +3,7 @@ open Core_kernel.Std
 module Stable = struct
   module V1 = struct
     module T = struct
-      type t = { user : string; group : string } with fields, bin_io, compare
+      type t = { user : string; group : string } [@@deriving fields, bin_io, compare]
 
       let to_string t = sprintf "%s:%s" t.group t.user
 
@@ -15,7 +15,7 @@ module Stable = struct
         { user; group }
     end
     include T
-    include Sexpable.Of_stringable(T)
+    include Sexpable.Stable.Of_stringable.V1(T)
   end
 end
 
@@ -27,7 +27,7 @@ end
 include T'
 include Identifiable.Make (T')
 
-TEST = equal { user = "foo"; group = "bar" } (of_string "foo:bar")
+let%test _ = equal { user = "foo"; group = "bar" } (of_string "foo:bar")
 
 let create = Fields.create
 
@@ -35,7 +35,7 @@ let for_this_process () =
   let user = Unix.getlogin () in
   let gid = Unix.getgid () in
   match Core_unix.Group.getbygid gid with
-  | None -> Or_error.error "Couldn't get group" (`gid gid) <:sexp_of< [ `gid of int ] >>
+  | None -> Or_error.error "Couldn't get group" (`gid gid) [%sexp_of: [ `gid of int ]]
   | Some group -> Ok (create ~user ~group:group.Core_unix.Group.name)
 
 let for_this_process_exn () = Or_error.ok_exn (for_this_process ())

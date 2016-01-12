@@ -37,6 +37,9 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <math.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <ifaddrs.h>
 
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
 #define stat64 stat
@@ -44,8 +47,8 @@
 #define fstat64 fstat
 #endif
 
-#include <ocaml_utils.h>
-#include <core_config.h>
+#include "ocaml_utils.h"
+#include "config.h"
 #include "timespec.h"
 
 #if defined(JSC_WORDEXP)
@@ -425,48 +428,7 @@ CAMLprim value ml_create_process(value v_working_dir, value v_prog, value v_args
 
 /* Replacement for broken stat functions */
 
-static int file_kind_table[] = {
-  S_IFREG, S_IFDIR, S_IFCHR, S_IFBLK, S_IFLNK, S_IFIFO, S_IFSOCK
-};
-
 #define Val_file_offset(fofs) caml_copy_int64(fofs)
-
-static value cst_to_constr(int n, int *tbl, int size, int deflt)
-{
-  int i;
-  for (i = 0; i < size; i++)
-    if (n == tbl[i]) return Val_int(i);
-  return Val_int(deflt);
-}
-
-static value core_stat_aux_64(struct stat64 *buf)
-{
-  CAMLparam0();
-  CAMLlocal5(atime, mtime, ctime, offset, v);
-
-  #include "nanosecond_stat.h"
-  atime = caml_copy_double((double) buf->st_atime + (buf->NSEC(a) / 1000000000.0));
-  mtime = caml_copy_double((double) buf->st_mtime + (buf->NSEC(m) / 1000000000.0));
-  ctime = caml_copy_double((double) buf->st_ctime + (buf->NSEC(c) / 1000000000.0));
-  #undef NSEC
-
-  offset = Val_file_offset(buf->st_size);
-  v = caml_alloc_small(12, 0);
-  Field (v, 0) = Val_int (buf->st_dev);
-  Field (v, 1) = Val_int (buf->st_ino);
-  Field (v, 2) = cst_to_constr(buf->st_mode & S_IFMT, file_kind_table,
-                               sizeof(file_kind_table) / sizeof(int), 0);
-  Field (v, 3) = Val_int (buf->st_mode & 07777);
-  Field (v, 4) = Val_int (buf->st_nlink);
-  Field (v, 5) = Val_int (buf->st_uid);
-  Field (v, 6) = Val_int (buf->st_gid);
-  Field (v, 7) = Val_int (buf->st_rdev);
-  Field (v, 8) = offset;
-  Field (v, 9) = atime;
-  Field (v, 10) = mtime;
-  Field (v, 11) = ctime;
-  CAMLreturn(v);
-}
 
 static inline char * core_copy_to_c_string(value v_str)
 {
@@ -474,45 +436,6 @@ static inline char * core_copy_to_c_string(value v_str)
   char *p = caml_stat_alloc(len);
   memcpy(p, String_val(v_str), len);
   return p;
-}
-
-CAMLprim value core_unix_stat_64(value path)
-{
-  CAMLparam1(path);
-  int ret;
-  struct stat64 buf;
-  char *p = core_copy_to_c_string(path);
-  caml_enter_blocking_section();
-  ret = stat64(p, &buf);
-  caml_stat_free(p);
-  caml_leave_blocking_section();
-  if (ret == -1) uerror("stat", path);
-  CAMLreturn(core_stat_aux_64(&buf));
-}
-
-CAMLprim value core_unix_lstat_64(value path)
-{
-  CAMLparam1(path);
-  int ret;
-  struct stat64 buf;
-  char *p = core_copy_to_c_string(path);
-  caml_enter_blocking_section();
-  ret = lstat64(p, &buf);
-  caml_stat_free(p);
-  caml_leave_blocking_section();
-  if (ret == -1) uerror("lstat", path);
-  CAMLreturn(core_stat_aux_64(&buf));
-}
-
-CAMLprim value core_unix_fstat_64(value fd)
-{
-  int ret;
-  struct stat64 buf;
-  caml_enter_blocking_section();
-  ret = fstat64(Int_val(fd), &buf);
-  caml_leave_blocking_section();
-  if (ret == -1) uerror("fstat", Nothing);
-  return core_stat_aux_64(&buf);
 }
 
 CAMLprim value core_setpwent(value v_unit)
@@ -1511,6 +1434,7 @@ CAMLprim value unix_uname(value v_unit __unused)
   CAMLreturn(v_utsname);
 }
 
+
 /* Additional IP functionality */
 
 CAMLprim value unix_if_indextoname(value v_index)
@@ -1818,3 +1742,157 @@ CAMLprim value unix_gettid(value v_unit __unused)
 #elif defined(JSC_THREAD_ID)
 #error "JSC_THREAD_ID defined, but no implementation available (misconfigured in discover.sh?)"
 #endif
+
+static value
+sockaddr_to_caml_string_of_octets(struct sockaddr* sa, int family)
+{
+  CAMLparam0();
+  CAMLlocal1(caml_addr);
+  struct sockaddr_in* sin;
+  struct sockaddr_in6* sin6;
+  char* addr;
+  int i, addrlen;
+  char *addr_string;
+
+  /* It is possible and reasonable for addresses other than ifa_addr to be NULL */
+  if (sa == NULL) CAMLreturn(caml_alloc_string(0));
+
+  if (family != sa->sa_family)
+    caml_failwith("Not all addresses provided by getifaddrs have matching families.");
+
+  switch (sa->sa_family) {
+  case AF_INET:
+    sin = (struct sockaddr_in *)sa;
+    addr = (char *)&sin->sin_addr;
+    addrlen = sizeof(struct in_addr);
+    break;
+  case AF_INET6:
+    sin6 = (struct sockaddr_in6 *)sa;
+    addr = (char *)&sin6->sin6_addr;
+    addrlen = sizeof(struct in6_addr);
+    break;
+#if defined(JSC_LINUX_EXT)
+  case AF_PACKET:
+    addrlen = 0;
+    break;
+#endif
+  default:
+    /* Unknown AFs are filtered out below, before this function is called. */
+    caml_failwith("Unexpected address family received from getifaddrs.");
+  }
+
+  caml_addr = caml_alloc_string(addrlen);
+  addr_string = String_val(caml_addr);
+  for (i = 0; i < addrlen; i++) {
+    addr_string[i] = addr[i];
+  }
+  CAMLreturn(caml_addr);
+}
+
+static value
+alloc_ifaddrs(struct ifaddrs* ifap, value family_variant)
+{
+  CAMLparam1(family_variant);
+  CAMLlocal1(res);
+  int family = ifap->ifa_addr->sa_family;
+
+  res = caml_alloc(7, 0);
+
+  /* THE ORDER AND NUMBER OF THESE IS IMPORTANT, SEE core_unix.ml!!! */
+  Store_field(res, 0, caml_copy_string(ifap->ifa_name));
+  Store_field(res, 1, family_variant);
+  Store_field(res, 2, Val_int(ifap->ifa_flags));
+  Store_field(res, 3, sockaddr_to_caml_string_of_octets(ifap->ifa_addr,      family));
+  Store_field(res, 4, sockaddr_to_caml_string_of_octets(ifap->ifa_netmask,   family));
+  /* Including both may be the most portable thing to do. */
+  Store_field(res, 5, sockaddr_to_caml_string_of_octets(ifap->ifa_broadaddr, family));
+  Store_field(res, 6, sockaddr_to_caml_string_of_octets(ifap->ifa_dstaddr,   family));
+
+  CAMLreturn(res);
+}
+
+/* THE ORDERING OF THESE CONSTANTS MUST MATCH core_unix.ml!!! */
+static uint32_t iff_table [] = {
+  IFF_ALLMULTI,
+  IFF_AUTOMEDIA,
+  IFF_BROADCAST,
+  IFF_DEBUG,
+  IFF_DYNAMIC,
+  IFF_LOOPBACK,
+  IFF_MASTER,
+  IFF_MULTICAST,
+  IFF_NOARP,
+  IFF_NOTRAILERS,
+  IFF_POINTOPOINT,
+  IFF_PORTSEL,
+  IFF_PROMISC,
+  IFF_RUNNING,
+  IFF_SLAVE,
+  IFF_UP
+};
+
+CAMLprim value
+core_unix_iff_to_int(value v_iff)
+{
+  CAMLparam1(v_iff);
+  int tsize = sizeof(iff_table) / sizeof(int);
+  int i = Int_val(v_iff);
+
+  if (i < 0 || i > tsize - 1) caml_failwith("iff value out of range");
+
+  CAMLreturn(Val_int(iff_table[i]));
+}
+
+CAMLprim value
+core_unix_getifaddrs(value v_unit)
+{
+  CAMLparam1(v_unit);
+  CAMLlocal4(head, next, caml_ifap, family_variant);
+  struct ifaddrs* ifap_orig;
+  struct ifaddrs* ifap;
+  int retval;
+
+  caml_release_runtime_system ();
+  retval = getifaddrs(&ifap_orig);
+  caml_acquire_runtime_system ();
+
+  if (retval) uerror("getifaddrs", Nothing);
+
+  /* THE ORDER OF THESE IS IMPORTANT, SEE core_unix.ml!!! */
+#define CORE_PACKET 0
+#define CORE_INET4  1
+#define CORE_INET6  2
+
+  head = Val_int(0);
+  for (ifap = ifap_orig; ifap != NULL; ifap = ifap->ifa_next) {
+    if (ifap->ifa_addr == NULL) continue;
+
+    switch (ifap->ifa_addr->sa_family) {
+#if defined(JSC_LINUX_EXT)
+    case AF_PACKET:
+      family_variant = Val_int(CORE_PACKET);
+      break;
+#endif
+    case AF_INET:
+      family_variant = Val_int(CORE_INET4);
+      break;
+    case AF_INET6:
+      family_variant = Val_int(CORE_INET6);
+      break;
+    default:
+      continue;
+    }
+
+    caml_ifap = alloc_ifaddrs(ifap, family_variant);
+    next = caml_alloc(2, 0);
+    Store_field(next, 0, caml_ifap);
+    Store_field(next, 1, head);
+    head = next;
+  }
+
+  caml_release_runtime_system ();
+  freeifaddrs(ifap_orig);
+  caml_acquire_runtime_system ();
+
+  CAMLreturn(head);
+}

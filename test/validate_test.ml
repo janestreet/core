@@ -13,16 +13,16 @@ let test =
           V.name "incl_upper" (Int.validate_bound ~min:(Incl 0) ~max:(Incl 100) (101));
           V.name "incl_upper" (Int.validate_bound ~min:(Incl 0) ~max:(Incl 100) (100));
           V.name "excl_lower" (Int.validate_bound ~min:(Excl 0) ~max:(Excl 100) (0));
-          V.name "excl_lower" (Int.validate_bound ~min:(Excl 0) ~max:(Excl 100) (100));
+          V.name "excl_upper" (Int.validate_bound ~min:(Excl 0) ~max:(Excl 100) (100));
           V.name "excl_lower" (Int.validate_bound ~min:(Excl 0) ~max:(Excl 100) (1));
-          V.name "excl_lower" (Int.validate_bound ~min:(Excl 0) ~max:(Excl 100) (99));
+          V.name "excl_upper" (Int.validate_bound ~min:(Excl 0) ~max:(Excl 100) (99));
         ]
         in
         let expected =
           [ "(foo.incl_lower \"value -1 < bound 0\")"
           ; "(foo.incl_upper \"value 101 > bound 100\")"
           ; "(foo.excl_lower \"value 0 <= bound 0\")"
-          ; "(foo.excl_lower \"value 100 >= bound 100\")"
+          ; "(foo.excl_upper \"value 100 >= bound 100\")"
           ]
         in
         List.sort ~cmp:Poly.ascending (V.errors res)

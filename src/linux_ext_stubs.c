@@ -1,4 +1,4 @@
-#include <core_config.h>
+#include "config.h"
 #ifdef JSC_LINUX_EXT
 #define _FILE_OFFSET_BITS 64
 #define _GNU_SOURCE
@@ -28,8 +28,8 @@
 
 #include <sys/sysinfo.h>
 
-#include <ocaml_utils.h>
-#include <unix_utils.h>
+#include "ocaml_utils.h"
+#include "unix_utils.h"
 
 extern int core_unix_close_durably(int fd);
 extern struct in_addr core_unix_get_in_addr_for_interface(value v_interface);
@@ -429,6 +429,7 @@ CAMLprim value linux_epoll_wait(value v_epfd, value v_array, value v_timeout)
   CAMLreturn(Val_long(retcode));
 }
 
+
 /** Offsets and sizes of the resulting ready events array. */
 
 CAMLprim value linux_epoll_offsetof_readyfd(value __unused v_unit)
@@ -498,9 +499,7 @@ CAMLprim value linux_timerfd_settime(value v_fd, value v_absolute,
                             Bool_val(v_absolute) ? TFD_TIMER_ABSTIME : 0,
                             &new, &old);
 
-  if (retcode == -1) uerror("timerfd_settime", Nothing);
-
-  return Val_unit;
+  return retcode < 0 ? Val_int(-errno) : Val_unit;
 }
 
 #define Int63_ns_of_timespec(ts) \

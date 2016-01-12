@@ -15,11 +15,11 @@ let of_sorted_array () =
 
 let map = Int.Map.of_alist_exn alist
 
-let iter () = Map.iter map ~f:(fun ~key:_ ~data:_ -> ())
+let iter () = Map.iteri map ~f:(fun ~key:_ ~data:_ -> ())
 let iter2 () = Map.iter2 map map ~f:(fun ~key:_ ~data:_ -> ())
 let iter2_naive () =
   let iter2 a b ~f =
-    Map.iter a ~f:(fun ~key ~data:_ ->
+    Map.iteri a ~f:(fun ~key ~data:_ ->
       match Map.find b key with
       | None -> f `Left
       | Some _ -> f `Both
@@ -101,7 +101,7 @@ let command =
     Test.create ~name:"Map.of_alist_exn" of_alist_exn;
     Test.create ~name:"Map.of_sorted_array" of_sorted_array;
     Test.create ~name:"Map.add" add;
-    Test.create ~name:"Map.iter" iter;
+    Test.create ~name:"Map.iteri" iter;
     Test.create ~name:"Map.iter2" iter2;
     Test.create ~name:"Map.iter2_naive" iter2;
     Test.create ~name:"Map.remove" remove;

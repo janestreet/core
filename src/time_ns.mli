@@ -31,10 +31,10 @@
 
 open Core_kernel.Std
 
-type t = Core_kernel.Time_ns.t with typerep
+type t = Core_kernel.Time_ns.t [@@deriving typerep]
 
 module Span : sig
-  type t = Core_kernel.Time_ns.Span.t with typerep
+  type t = Core_kernel.Time_ns.Span.t [@@deriving typerep]
 
   include Identifiable with type t := t
 
@@ -49,7 +49,7 @@ module Span : sig
       ; us   : int
       ; ns   : int
       }
-    with sexp
+    [@@deriving sexp]
   end
 
   val nanosecond  : t
@@ -75,7 +75,11 @@ module Span : sig
   val to_hr  : t     -> float
   val to_day : t     -> float
 
+  val of_int_us  : int -> t
+  val of_int_ms  : int -> t
   val of_int_sec : int -> t
+  val to_int_us  : t -> int
+  val to_int_ms  : t -> int
   val to_int_sec : t -> int
 
   val zero : t
@@ -109,6 +113,20 @@ module Span : sig
   val to_parts : t -> Parts.t
   val of_parts : Parts.t -> t
 
+  module Unit_of_time = Time.Span.Unit_of_time
+
+  val to_unit_of_time : t -> Unit_of_time.t
+  val of_unit_of_time : Unit_of_time.t -> t
+
+  (** See [Time.Span.to_string_hum]. *)
+  val to_string_hum
+    :  ?delimiter:char              (** defaults to ['_'] *)
+    -> ?decimals:int                (** defaults to 3 *)
+    -> ?align_decimal:bool          (** defaults to [false] *)
+    -> ?unit_of_time:Unit_of_time.t (** defaults to [to_unit_of_time t] *)
+    -> t
+    -> string
+
   (** {!Time.t} is precise to approximately 0.24us in 2014.  If [to_span] converts to the
       closest [Time.Span.t], we have stability problems: converting back yields a
       different [t], sometimes different enough to have a different external
@@ -140,7 +158,13 @@ module Span : sig
 
   module Stable : sig
     module V1 : sig
-      type nonrec t = t with sexp, bin_io
+      type nonrec t = t
+      include Stable with type t := t
+      (** [to_int63] and [of_int63_exn] encode [t] for use in wire protocols; they are
+          designed to be efficient on 64-bit machines.  [of_int63_exn (to_int63 t) = t]
+          for all [t]; [of_int63_exn] raises for inputs not produced by [to_int63]. *)
+      val to_int63     : t -> Int63.t
+      val of_int63_exn : Int63.t -> t
     end
   end
 
@@ -149,7 +173,7 @@ module Span : sig
   module Option : sig
     type span
 
-    type t = private Int63.t with typerep
+    type t = private Int63.t [@@deriving typerep]
 
     include Identifiable with type t := t
 
@@ -162,7 +186,13 @@ module Span : sig
 
     module Stable : sig
       module V1 : sig
-        type nonrec t = t with sexp, bin_io
+        type nonrec t = t
+        include Stable with type t := t
+        (** [to_int63] and [of_int63_exn] encode [t] for use in wire protocols; they are
+            designed to be efficient on 64-bit machines.  [of_int63_exn (to_int63 t) = t]
+            for all [t]; [of_int63_exn] raises for inputs not produced by [to_int63]. *)
+        val to_int63     : t -> Int63.t
+        val of_int63_exn : Int63.t -> t
       end
     end
   end with type span := t
@@ -171,7 +201,7 @@ end
 module Option : sig
   type time
 
-  type t = private Int63.t with typerep
+  type t = private Int63.t [@@deriving typerep]
 
   include Identifiable with type t := t
 
@@ -187,7 +217,13 @@ module Option : sig
 
   module Stable : sig
     module V1 : sig
-      type nonrec t = t with sexp, bin_io
+      type nonrec t = t
+      include Stable with type t := t
+      (** [to_int63] and [of_int63_exn] encode [t] for use in wire protocols; they are
+          designed to be efficient on 64-bit machines.  [of_int63_exn (to_int63 t) = t]
+          for all [t]; [of_int63_exn] raises for inputs not produced by [to_int63]. *)
+      val to_int63     : t -> Int63.t
+      val of_int63_exn : Int63.t -> t
     end
   end
 end with type time := t
@@ -195,9 +231,14 @@ end with type time := t
 module Ofday : sig
   type time
 
-  type t = private Int63.t with typerep
+  type t = private Int63.t [@@deriving typerep]
 
   include Identifiable with type t := t
+
+  val add_exn : t -> Span.t -> t
+  val sub_exn : t -> Span.t -> t
+
+  val diff : t -> t -> Span.t
 
   val to_ofday : t -> Time.Ofday.t
   val of_ofday : Time.Ofday.t -> t
@@ -217,7 +258,13 @@ module Ofday : sig
 
   module Stable : sig
     module V1 : sig
-      type nonrec t = t with sexp, bin_io
+      type nonrec t = t
+      include Stable with type t := t
+      (** [to_int63] and [of_int63_exn] encode [t] for use in wire protocols; they are
+          designed to be efficient on 64-bit machines.  [of_int63_exn (to_int63 t) = t]
+          for all [t]; [of_int63_exn] raises for inputs not produced by [to_int63]. *)
+      val to_int63     : t -> Int63.t
+      val of_int63_exn : Int63.t -> t
     end
   end
 end with type time := t
@@ -245,8 +292,12 @@ val of_time : Time.t -> t
 val to_string_fix_proto : [ `Utc | `Local ] -> t -> string
 val of_string_fix_proto : [ `Utc | `Local ] -> string -> t
 
-val to_int63_ns_since_epoch : t ->      Int63.t
-val of_int63_ns_since_epoch : Int63.t ->      t
+(* See [Time] for documentation. *)
+val to_string_abs : t -> zone:Zone.t -> string
+val of_string_abs : string -> t
+
+val to_int63_ns_since_epoch : t -> Int63.t
+val of_int63_ns_since_epoch : Int63.t -> t
 
 (** Will raise on 32-bit platforms.  Consider [to_int63_ns_since_epoch] instead. *)
 val to_int_ns_since_epoch : t   -> int
@@ -283,10 +334,15 @@ val interruptible_pause : Span.t -> [ `Ok | `Remaining of Span.t ]
 (** [pause_forever] sleeps indefinitely. *)
 val pause_forever : unit -> never_returns
 
-
 module Stable : sig
   module V1 : sig
-    type nonrec t = t with bin_io, compare, sexp
+    type nonrec t = t
+    include Stable with type t := t
+    (** [to_int63] and [of_int63_exn] encode [t] for use in wire protocols; they are
+        designed to be efficient on 64-bit machines.  [of_int63_exn (to_int63 t) = t] for
+        all [t]; [of_int63_exn] raises for inputs not produced by [to_int63]. *)
+    val to_int63     : t -> Int63.t
+    val of_int63_exn : Int63.t -> t
   end
   module Span   : module type of Span   .Stable
   module Option : module type of Option .Stable

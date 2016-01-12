@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <sys/socket.h>
 
+#include "config.h"
 #include "ocaml_utils.h"
 #include "unix_utils.h"
 #include "socketaddr.h"

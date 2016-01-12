@@ -6,19 +6,21 @@
     contain the information that this module provides.  When building with OMake, our
     OMakeroot runs build_info.sh to generate *.build_info.c with the symbols and that is
     linked in.
+
+    Currently this module is not included in the public release.
 *)
 
-open Std_internal
+open Core_kernel.Std
 
-val version : string
-val version_list : string list
-val arg_spec : (string * Core_arg.spec * string) list
+val version : string (* all hg repos and their versions *)
+val version_list : string list (* same as [version], but one string per line *)
+val arg_spec : (string * Arg.spec * string) list
 
 (** [Application_specific_fields] is a single field in the build-info sexp that holds
     a [Sexp.t String.Map.t], which can be chosen by the application to hold custom
     fields that it needs. *)
 module Application_specific_fields : sig
-  type t = Sexp.t String.Map.t with sexp
+  type t = Sexp.t String.Map.t [@@deriving sexp]
 
   (** [putenv t] stores [t] in the process environment so that build_info.sh will see it.
       One calls [putenv t] in a program before calling OMake to set the appropriate
@@ -29,6 +31,8 @@ module Application_specific_fields : sig
   val putenv : t -> unit
 end
 
+(** various additional information about the circumstances of the build: who built it,
+    when, on what machine, etc. *)
 val build_info : string
 val build_info_as_sexp : Sexp.t
 
@@ -37,8 +41,11 @@ val hostname                       : string
 val kernel                         : string
 val time                           : Time.t
 val x_library_inlining             : bool
+val nodynlink                      : bool
 val compiled_for_speed             : bool
+val compiled_with_dynlink          : bool
 val application_specific_fields    : Application_specific_fields.t option
 val ocaml_version                  : string
 val executable_path                : string (** Relative to OMakeroot dir *)
-
+val build_system                   : string
+val packing                        : bool

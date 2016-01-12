@@ -26,52 +26,41 @@ OCAML_CFLAGS=
 # just needs to be a C compiler
 CC="$bytecomp_c_compiler"
 
-MAKEFILE_CONFIG=`ocamlc -where`/Makefile.config
-if [ ! -e $MAKEFILE_CONFIG ]; then
-    echo "Makefile.config missing in ocaml standard library path."
-    echo 2
-fi
-
-ARCH=`cat $MAKEFILE_CONFIG | grep '^ARCH=' | cut -d= -f2`
-WORDEXP=`{ echo '#include <wordexp.h>' | cpp &> /dev/null && echo yes; } || echo no`
-
 SRC=config/test.c
 OUT=config/test.out
 trap "rm -f $OUT" EXIT
 
 $OCAMLC -ccopt -E $OCAML_CFLAGS -c $SRC | grep '^"OUT:[^"]*"$' | sed 's/"OUT:\([^"]*\)"/\1/' | tee > $OUT
 
-echo "DEFINE ARCH_$ARCH" >> $OUT
+ARCH=`ocamlc -config | sed -nr 's/^architecture: *(.*)$/\1/p'`
+[ "$ARCH" = amd64 ] && ARCH=x86_64
+for arch in x86_64 i386; do
+    if [ "$ARCH" = "$arch" ]; then
+        echo "#let JSC_ARCH_$arch = true" >> $OUT
+    else
+        echo "#let JSC_ARCH_$arch = false" >> $OUT
+    fi
+done
 
-if [ "$ARCH" = amd64 ]; then
-    echo "DEFINE ARCH_x86_64" >> $OUT
-fi
-
-if [ "$WORDEXP" = yes ]; then
-    echo "DEFINE WORDEXP" >> $OUT
-fi
-
-OCAML_VERSION="`ocamlc -version`"
-major=`echo $OCAML_VERSION | cut -d. -f1`
-minor=`echo $OCAML_VERSION | cut -d. -f2`
-if [ $major -ge 4 ]; then
-    echo "DEFINE OCAML_4" >> $OUT
-    [ $minor -ge 1 ] && echo "DEFINE OCAML_4_01" >> $OUT
-    [ $minor -ge 2 ] && echo "DEFINE OCAML_4_02" >> $OUT
-fi
+WORDEXP=`{ echo '#include <wordexp.h>' | cpp &> /dev/null && echo true; } || echo false`
+echo "#let JSC_WORDEXP = $WORDEXP" >> $OUT
 
 # The recvmmsg system call was added in Linux 2.6.32
 if $CC config/test_recvmmsg.c -o /dev/null 2> /dev/null; then
-    echo "DEFINE RECVMMSG" >> $OUT;
+    echo "#let JSC_RECVMMSG = true" >> $OUT
+else
+    echo "#let JSC_RECVMMSG = false" >> $OUT
 fi
 
 if $CC config/test_timerfd.c -o /dev/null 2> /dev/null; then
-    echo "DEFINE TIMERFD" >> $OUT;
+    echo "#let JSC_TIMERFD = true" >> $OUT
+else
+    echo "#let JSC_TIMERFD = false" >> $OUT
 fi
 
 for i in 1 2 3; do
     if $CC -I src -DJSC_STAT_NANOSEC_METHOD=$i config/test_nanosecond_stat.c -o /dev/null 2> /dev/null; then
-        echo "DEFINE STAT_NANOSEC_METHOD = $i" >> $OUT
+        echo "#let JSC_STAT_NANOSEC_METHOD = $i" >> $OUT
         break
     fi
 done
@@ -84,7 +73,9 @@ mv "$OUT" "$ML_OUTFILE"
 #ifndef $sentinel
 #define $sentinel
 EOF
-    sed 's/^DEFINE */#define JSC_/;s/=//' "$ML_OUTFILE"
+    sed -r 's|^#let *([A-Za-z_0-9]+) *= *true *$|#define \1|;
+            s|^#let *([A-Za-z_0-9]+) *= *false *$|#undef \1|;
+            s|^#let *([A-Za-z_0-9]+) *= *([^ ])* *$|#define \1 \2|' "$ML_OUTFILE"
     cat  <<EOF
 #endif /* $sentinel */
 EOF

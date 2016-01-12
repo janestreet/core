@@ -18,7 +18,7 @@ module Stable = struct
         day_start : float;
         day_end   : float;
         date      : Date.t
-      } with sexp
+      } [@@deriving sexp]
     end
 
     let of_epoch_internal zone time (* shifted epoch for the time zone for conversion *) =
@@ -68,6 +68,66 @@ module Stable = struct
       | Unix.Unix_error(_, "gmtime", _) -> raise (Invalid_argument "Time.to_date_ofday")
     ;;
 
+    (* The correctness of this algorithm (interface, even) depends on the fact that
+       timezone shifts aren't too close together (as in, it can't simultaneously be the
+       case that a timezone shift of X hours occurred less than X hours ago, *and*
+       a timezone shift of Y hours will occur in less than Y hours' time) *)
+    let to_date_ofday_precise time ~zone =
+      let date, ofday       = to_date_ofday time ~zone in
+      let clock_shift_after = Zone.next_clock_shift zone ~after:time in
+      let clock_shift_before_or_at =
+        let after_time_but_not_after_next =
+          match clock_shift_after with
+          | None                 -> T.add time Span.second
+          | Some (next_start, _) -> next_start
+        in
+        Zone.prev_clock_shift zone ~before:after_time_but_not_after_next
+      in
+      let also_skipped_earlier amount =
+        (* Using [date] and [Option.value_exn] here is OK on the assumption that clock
+           shifts can't cross date boundaries. This is true in all cases I've ever heard
+           of (and [of_date_ofday_precise] would need revisiting if it turned out to be
+           false) *)
+        `Also_skipped
+          ( date
+          , Option.value_exn
+              ~error:(Error.create "Time.to_date_ofday_precise"
+                (T.to_float time, zone) [%sexp_of: float * Zone.t])
+              (Ofday.sub ofday amount)
+          )
+      in
+      let ambiguity =
+        (* Edge cases: the instant of transition belongs to the new zone regime. So if the
+           clock moved by an hour exactly one hour ago, there's no ambiguity, because the
+           hour-ago time belongs to the same regime as you, and conversely, if the clock
+           will move by an hour in an hours' time, there *is* ambiguity. Hence [>.] for
+           the first case and [<=.] for the second. *)
+        match clock_shift_before_or_at, clock_shift_after with
+        | Some (start, amount), _ when T.(>.) (T.add start (Span.abs amount)) time ->
+          (* clock shifted recently *)
+          if Span.(amount > zero) then
+            (* clock shifted forward recently: we skipped a time *)
+            also_skipped_earlier amount
+          else begin
+            (* clock shifted back recently: this date/ofday already happened *)
+            assert Span.(amount < zero);
+            `Also_at (T.sub time (Span.abs amount))
+          end
+        | _, Some (start, amount) when T.(<=.) (T.sub start (Span.abs amount)) time ->
+          (* clock is about to shift *)
+          if Span.(amount > zero) then
+            (* clock about to shift forward: no effect *)
+            `Only
+          else begin
+            (* clock about to shift back: this date/ofday will be repeated *)
+            assert Span.(amount < zero);
+            `Also_at (T.add time (Span.abs amount))
+          end
+        | _ -> `Only
+      in
+      date, ofday, ambiguity
+    ;;
+
     let of_date_ofday date ofday ~zone =
       let time =
         let epoch =
@@ -103,93 +163,113 @@ module Stable = struct
           `Once (T.sub proposed_time shift_amount)
     ;;
 
-    TEST_MODULE = struct
-      let ldn = Zone.find_exn "Europe/London" ;;
+    let%test_module "clock shift stuff" = (module struct
+      (* Some stuff to make [%test_result: t] failures look nicer. Notice that a bug in
+         [to_date_ofday] could cause this thing to lie. *)
+      type time = T.t [@@deriving compare]
+      let sexp_of_time t =
+        let d, o = to_date_ofday t ~zone:Zone.utc in
+        [%sexp_of: Date.t * Ofday.t * Zone.t] (d, o, Zone.utc)
+
+      type to_date_ofday_ambiguity =
+        [ `Only
+        | `Also_at of time
+        | `Also_skipped of (Date.t * Ofday.t)
+        ] [@@deriving compare, sexp_of]
+
+      type of_date_ofday_result =
+        [ `Once of time
+        | `Twice of time * time
+        | `Never of time
+        ] [@@deriving compare, sexp_of]
+
+      let zone = Zone.find_exn "Europe/London"
 
       let mkt month day hr min =
-        let ofday_mins = ((Float.of_int hr *. 60.) +. (Float.of_int min)) in
-        let ofday_sec = ofday_mins *. 60. in
-        utc_mktime ~year:2013 ~month ~day ~ofday_sec
-      ;;
+        let ofday_sec = 60. *. ((Float.of_int hr *. 60.) +. Float.of_int min) in
+        T.of_float (utc_mktime ~year:2013 ~month ~day ~ofday_sec)
 
-      let expect_once date ofday expected =
-        match of_date_ofday_precise ~zone:ldn date ofday with
-        | `Once t -> T.(t = of_float expected)
-        | _ -> false
-      ;;
+      let simple_case date ofday time =
+        [%test_result: of_date_ofday_result]
+          ~expect:(`Once time) (of_date_ofday_precise ~zone date ofday);
+        [%test_result: Date.t * Ofday.t * to_date_ofday_ambiguity]
+          ~expect:(date, ofday, `Only) (to_date_ofday_precise ~zone time)
 
-      let expect_never date ofday expected =
-        match of_date_ofday_precise ~zone:ldn date ofday with
-        | `Never t -> T.(t = of_float expected)
-        | _ -> false
-      ;;
+      let skipped_this_time date ofday skipped_at =
+        [%test_result: of_date_ofday_result]
+          ~expect:(`Never skipped_at) (of_date_ofday_precise ~zone date ofday);
+        let time = of_date_ofday ~zone date ofday in
+        let d, o, a = to_date_ofday_precise ~zone time in
+        [%test_result: Date.t] ~expect:date d;
+        let diff = Ofday.diff o ofday in
+        [%test_result: Span.t] ~expect:Span.hour diff;
+        [%test_result: to_date_ofday_ambiguity] ~expect:(`Also_skipped (date, ofday)) a
 
-      let expect_twice date ofday expected1 expected2 =
-        match of_date_ofday_precise ~zone:ldn date ofday with
-        | `Twice (t1, t2) -> T.(t1 = of_float expected1 && t2 = of_float expected2)
-        | _ -> false
-      ;;
+      let skipped_prev_time date ofday time =
+        [%test_result: of_date_ofday_result]
+          ~expect:(`Once time) (of_date_ofday_precise ~zone date ofday);
+        let d, o, a = to_date_ofday_precise ~zone time in
+        [%test_result: Date.t] ~expect:date d;
+        [%test_result: Ofday.t] ~expect:ofday o;
+        [%test_result: to_date_ofday_ambiguity]
+          ~expect:(`Also_skipped (date, Option.value_exn (Ofday.sub o Span.hour))) a
+
+      let repeated_time date ofday ~first =
+        let second = T.add first Span.hour in
+        [%test_result: of_date_ofday_result]
+          ~expect:(`Twice (first, second)) (of_date_ofday_precise ~zone date ofday);
+        [%test_result: Date.t * Ofday.t * to_date_ofday_ambiguity]
+          ~expect:(date, ofday, `Also_at second) (to_date_ofday_precise ~zone first);
+        [%test_result: Date.t * Ofday.t * to_date_ofday_ambiguity]
+          ~expect:(date, ofday, `Also_at first) (to_date_ofday_precise ~zone second)
+
+      let (^:) hr min = Ofday.create ~hr ~min ()
 
       let outside_bst = Date.of_string "2013-01-01";;
       let inside_bst  = Date.of_string "2013-06-01";;
-      let midday      = Ofday.of_string "12:00";;
 
-      TEST "of_date_ofday_precise, outside BST" =
-        expect_once outside_bst midday (mkt 01 01  12 00)
-      ;;
+      let%test_unit "of_date_ofday_precise, outside BST" =
+        simple_case outside_bst (12^:00) (mkt 01 01  12 00)
 
-      TEST "of_date_ofday_precise, inside BST" =
-        expect_once inside_bst midday (mkt 06 01  11 00)
-      ;;
+      let%test_unit "of_date_ofday_precise, inside BST" =
+        simple_case inside_bst (12^:00) (mkt 06 01  11 00)
 
       let bst_start   = Date.of_string "2013-03-31";;
       let bst_end     = Date.of_string "2013-10-27";;
-      let just_before = Ofday.of_string "00:59";;
-      let start_time  = Ofday.of_string "01:00";;
-      let during      = Ofday.of_string "01:30";;
-      let end_time    = Ofday.of_string "02:00";;
-      let just_after  = Ofday.of_string "02:01";;
 
-      TEST "of_date_ofday_precise, BST start, just_before" =
-        expect_once bst_start just_before (mkt 03 31  00 59)
-      ;;
+      let%test_unit "of_date_ofday_precise, just before skipped hour" =
+        simple_case bst_start (00^:59) (mkt 03 31  00 59)
 
-      TEST "of_date_ofday_precise, BST start, start_time" =
-        expect_never bst_start start_time (mkt 03 31  01 00)
-      ;;
+      let%test_unit "of_date_ofday_precise, start of skipped hour" =
+        skipped_this_time bst_start (01^:00) (mkt 03 31  01 00)
 
-      TEST "of_date_ofday_precise, BST start, during" =
-        expect_never bst_start during (mkt 03 31  01 00)
-      ;;
+      let%test_unit "of_date_ofday_precise, during skipped hour" =
+        skipped_this_time bst_start (01^:30) (mkt 03 31  01 00)
 
-      TEST "of_date_ofday_precise, BST start, end_time" =
-        expect_once bst_start end_time (mkt 03 31  01 00)
-      ;;
+      let%test_unit "of_date_ofday_precise, end of skipped hour" =
+        skipped_prev_time bst_start (02^:00) (mkt 03 31  01 00)
 
-      TEST "of_date_ofday_precise, BST start, just_after" =
-        expect_once bst_start just_after (mkt 03 31  01 01)
-      ;;
+      let%test_unit "of_date_ofday_precise, just after skipped hour" =
+        skipped_prev_time bst_start (02^:01) (mkt 03 31  01 01)
 
-      TEST "of_date_ofday_precise, BST end, just_before" =
-        expect_once bst_end just_before (mkt 10 26  23 59)
-      ;;
+      let%test_unit "of_date_ofday_precise, later after skipped hour" =
+        simple_case bst_start (03^:00) (mkt 03 31  02 00)
 
-      TEST "of_date_ofday_precise, BST end, start_time" =
-        expect_twice bst_end start_time (mkt 10 27  00 00) (mkt 10 27  01 00)
-      ;;
+      let%test_unit "of_date_ofday_precise, just before repeated hour" =
+        simple_case bst_end (00^:59) (mkt 10 26  23 59)
 
-      TEST "of_date_ofday_precise, BST end, during" =
-        expect_twice bst_end during (mkt 10 27  00 30) (mkt 10 27  01 30)
-      ;;
+      let%test_unit "of_date_ofday_precise, start of repeated hour" =
+        repeated_time bst_end (01^:00) ~first:(mkt 10 27  00 00)
 
-      TEST "of_date_ofday_precise, BST end, end_time" =
-        expect_once bst_end end_time (mkt 10 27  02 00)
-      ;;
+      let%test_unit "of_date_ofday_precise, during repeated hour" =
+        repeated_time bst_end (01^:30) ~first:(mkt 10 27  00 30)
 
-      TEST "of_date_ofday_precise, BST end, just_after" =
-        expect_once bst_end just_after (mkt 10 27  02 01)
-      ;;
-    end
+      let%test_unit "of_date_ofday_precise, end of repeated hour" =
+        simple_case bst_end (02^:00) (mkt 10 27  02 00)
+
+      let%test_unit "of_date_ofday_precise, after repeated hour" =
+        simple_case bst_end (02^:01) (mkt 10 27  02 01)
+    end)
 
     let to_date t ~zone  = fst (to_date_ofday t ~zone)
     let to_ofday t ~zone = snd (to_date_ofday t ~zone)
@@ -298,7 +378,15 @@ module Stable = struct
         invalid_argf "Time.of_filename_string (%s): %s" s (Exn.to_string exn) ()
     ;;
 
-    let format t s = Unix.strftime (to_tm t) s
+    let format t s ~zone =
+      let local = Zone.local in
+      let epoch_time =
+        to_epoch t
+        |> Zone.shift_epoch_time local `Local
+        |> Zone.shift_epoch_time zone `UTC
+      in
+      Unix.strftime (Unix.localtime epoch_time) s
+    ;;
 
     let pause_for span =
       let time_remaining =
@@ -351,9 +439,54 @@ module Stable = struct
 
     let to_string t = to_string_abs t ~zone:Zone.local
 
-    exception Time_of_string of string * Exn.t with sexp
-    exception Time_string_not_absolute of string with sexp
-    let of_string_gen ~require_absolute s =
+    let ensure_colon_in_offset offset =
+      if Char.(=) offset.[1] ':'
+         || Char.(=) offset.[2] ':'
+      then offset
+      else begin
+        let offset_length = String.length offset in
+        if Int.(<) offset_length 3 || Int.(>) offset_length 4
+        then failwithf "invalid offset %s" offset ()
+        else String.concat
+               [ String.slice offset 0 (offset_length - 2)
+               ; ":"
+               ; String.slice offset (offset_length - 2) offset_length ]
+      end
+    ;;
+
+    let%test_module "ensure_colon_in_offset" = (module struct
+      let gen_digit_string ~length =
+        let open Quickcheck.Generator in
+        List.gen' ~length Char.gen_digit
+        >>| String.of_char_list
+
+      let%test_unit "add colon" =
+        let gen = gen_digit_string ~length:(`Between_inclusive (3, 4)) in
+        Quickcheck.test gen ~sexp_of:String.sexp_of_t ~f:(fun digits ->
+          assert (not (String.mem digits ':'));
+          let output = ensure_colon_in_offset digits in
+          assert (Int.(=) (String.count output ~f:(Char.(=) ':')) 1);
+          let prefix, suffix = String.lsplit2_exn output ~on:':' in
+          assert (String.(<>) prefix "");
+          assert (Int.(>=) (String.length suffix) (String.length prefix))
+        )
+
+      let gen_offset_with_colon =
+        let open Quickcheck.Generator in
+        let gen_prefix = gen_digit_string ~length:(`Between_inclusive (1, 2)) in
+        let gen_suffix = gen_digit_string ~length:(`Exactly 2) in
+        (tuple2 gen_prefix gen_suffix)
+        >>| (fun (a, b) -> String.concat [a; ":"; b])
+
+      let%test_unit "do not add colon" =
+        Quickcheck.test gen_offset_with_colon ~sexp_of:String.sexp_of_t ~f:(fun offset ->
+          assert (Int.(=) (String.count offset ~f:(Char.(=) ':')) 1);
+          assert (String.equal offset (ensure_colon_in_offset offset)))
+    end)
+
+    exception Time_of_string of string * Exn.t [@@deriving sexp]
+    exception Time_string_not_absolute of string [@@deriving sexp]
+    let of_string_gen ~if_no_timezone s =
       try
         let date,ofday,tz =
           match String.split s ~on:' ' with
@@ -373,19 +506,20 @@ module Stable = struct
           match tz with
           | Some _ -> ofday, None
           | None   ->
-            if Char.(=) ofday.[String.length ofday - 1] 'Z' then
-              (String.sub ofday ~pos:0 ~len:(String.length ofday - 1)), Some 0.
+            if Char.(=) ofday.[String.length ofday - 1] 'Z'
+            then (String.sub ofday ~pos:0 ~len:(String.length ofday - 1), Some 0.)
             else begin
               match String.lsplit2 ~on:'+' ofday with
-              | Some (l,r) ->
-                assert (Char.(=) r.[1] ':' || Char.(=) r.[2] ':');
-                l, Some (ofday_to_sec (Ofday.of_string r))
+              | Some (l, r) ->
+                (l, Some (ofday_to_sec (Ofday.of_string (ensure_colon_in_offset r))))
               | None ->
-                match String.lsplit2 ~on:'-' ofday with
-                | Some (l,r) ->
-                  assert (Char.(=) r.[1] ':' || Char.(=) r.[2] ':');
-                  l, Some ((-1.) *. (ofday_to_sec (Ofday.of_string r)))
+                begin match String.lsplit2 ~on:'-' ofday with
+                | Some (l, r) ->
+                  ( l
+                  , Some ((-1.)
+                          *. (ofday_to_sec (Ofday.of_string (ensure_colon_in_offset r)))))
                 | None       -> ofday, None
+                end
             end
         in
         let date  = Date.of_string date in
@@ -395,48 +529,65 @@ module Stable = struct
         | None ->
           match utc_offset with
           | None            ->
-            if require_absolute then raise (Time_string_not_absolute s);
-            of_date_ofday ~zone:Zone.local date ofday
+            begin match if_no_timezone with
+            | `Fail -> raise (Time_string_not_absolute s);
+            | `Use_this_one zone -> of_date_ofday ~zone date ofday
+            end
           | Some utc_offset ->
             of_float (to_float (of_date_ofday ~zone:Zone.utc date ofday) -. utc_offset)
       with
       | e -> raise (Time_of_string (s,e))
     ;;
 
-    let of_string_abs s = of_string_gen ~require_absolute:true s
-    let of_string s     = of_string_gen ~require_absolute:false s
+    let of_string_abs s = of_string_gen ~if_no_timezone:`Fail s
+    let of_string s     = of_string_gen ~if_no_timezone:(`Use_this_one Zone.local) s
 
-    let t_of_sexp_gen sexp of_string =
+    let sexp_zone = ref Zone.local
+    let get_sexp_zone () = !sexp_zone
+    let set_sexp_zone zone = sexp_zone := zone
+
+    let t_of_sexp_gen ~if_no_timezone sexp =
       try
         match sexp with
         | Sexp.List [Sexp.Atom date; Sexp.Atom ofday; Sexp.Atom tz] ->
           of_date_ofday ~zone:(Zone.find_exn tz)
             (Date.of_string date) (Ofday.of_string ofday)
-        | Sexp.List [Sexp.Atom date; Sexp.Atom ofday] ->
-          of_string (date ^ " " ^ ofday)
+        (* This is actually where the output of [sexp_of_t] is handled, since that's e.g.
+           (2015-07-06 09:09:44.787988+01:00). *)
+        | Sexp.List [Sexp.Atom date; Sexp.Atom ofday_and_possibly_zone] ->
+          of_string_gen ~if_no_timezone (date ^ " " ^ ofday_and_possibly_zone)
         | Sexp.Atom datetime ->
-          of_string datetime
+          of_string_gen ~if_no_timezone datetime
         | _ -> of_sexp_error "Time.t_of_sexp" sexp
       with
       | Of_sexp_error _ as e -> raise e
       | e -> of_sexp_error (sprintf "Time.t_of_sexp: %s" (Exn.to_string e)) sexp
     ;;
 
-    let t_of_sexp     sexp = t_of_sexp_gen sexp of_string
-    let t_of_sexp_abs sexp = t_of_sexp_gen sexp of_string_abs
+    let t_of_sexp sexp =
+      t_of_sexp_gen sexp ~if_no_timezone:(`Use_this_one !sexp_zone)
+    let t_of_sexp_abs sexp =
+      t_of_sexp_gen sexp ~if_no_timezone:`Fail
 
     let sexp_of_t_abs ~zone t =
       Sexp.List (List.map (to_string_abs_parts ~zone t) ~f:(fun s -> Sexp.Atom s))
     ;;
 
-    let sexp_zone = ref Zone.local
-    let get_sexp_zone () = !sexp_zone
-    let set_sexp_zone zone = sexp_zone := zone
-
     let sexp_of_t t = sexp_of_t_abs ~zone:!sexp_zone t
 
+    let%test_unit _ =
+      let unzoned_sexp = Sexp.of_string "(2015-07-03 16:27:00)" in
+      set_sexp_zone Zone.utc;
+      let in_utc = t_of_sexp unzoned_sexp in
+      set_sexp_zone (Zone.of_utc_offset ~hours:8);
+      let in_plus8 = t_of_sexp unzoned_sexp in
+      set_sexp_zone Zone.local;
+      [%test_result: Span.t]
+        ~expect:(Span.of_hr 8.)
+        (diff in_utc in_plus8)
+
     module C = struct
-      type t = T.t with bin_io
+      type t = T.t [@@deriving bin_io]
 
       let compare = compare
 
@@ -465,16 +616,16 @@ module Stable = struct
     module Map = Map.Make_binable_using_comparator (C)
     module Set = Set.Make_binable_using_comparator (C)
 
-    TEST =
+    let%test _ =
       Set.equal (Set.of_list [epoch])
         (Set.t_of_sexp (Sexp.List [Float.sexp_of_t (to_float epoch)]))
     ;;
 
     include Pretty_printer.Register (struct
-      type nonrec t = t
-      let to_string = to_string
-      let module_name = "Core.Std.Time"
-    end)
+        type nonrec t = t
+        let to_string = to_string
+        let module_name = "Core.Std.Time"
+      end)
 
     let of_localized_string ~zone str =
       try
@@ -491,7 +642,7 @@ module Stable = struct
     let next_multiple ?(can_equal_after = false) ~base ~after ~interval () =
       if Span.(<=) interval Span.zero
       then failwiths "Time.next_multiple got nonpositive interval" interval
-             <:sexp_of< Span.t >>;
+             [%sexp_of: Span.t];
       let base_to_after = diff after base in
       if Span.(<) base_to_after Span.zero
       then base (* [after < base], choose [k = 0]. *)
@@ -507,7 +658,7 @@ module Stable = struct
       end
     ;;
 
-    TEST_UNIT =
+    let%test_unit _ =
       let expected_next_multiple ~base ~after ~interval =
         let rec loop at =
           if (>) at after then
@@ -530,7 +681,7 @@ module Stable = struct
           failwiths "Time.next_multiple" (since_base, interval,
                                           relativize expected_next_multiple,
                                           relativize actual_next_multiple)
-            (<:sexp_of< float * Span.t * Span.t * Span.t >>))
+            ([%sexp_of: float * Span.t * Span.t * Span.t]))
         [
           0.    , 1.;
           0.1   , 1.;
@@ -545,10 +696,31 @@ module Stable = struct
           1E-5  , 1E-6;
         ]
     ;;
+
+    let%test_module "format" =
+      (module struct
+        let local_zone_name = "Europe/London"
+        let local           = Zone.find_exn local_zone_name
+
+        let%test_unit _ =
+          let t = of_string_abs ("2015-01-01 10:00:00 " ^ local_zone_name) in
+          [%test_result: string] ~expect:"2015-01-01 10:00:00"
+            (format ~zone:local t "%Y-%m-%d %H:%M:%S")
+
+        let%test_unit _ =
+          let t = of_string_abs ("2015-06-06 10:00:00 " ^ local_zone_name) in
+          [%test_result: string] ~expect:"2015-06-06 17:00:00"
+            (format ~zone:(Zone.find_exn "Asia/Hong_Kong") t "%Y-%m-%d %H:%M:%S")
+
+        let%test_unit _ =
+          let t = of_string_abs ("2015-01-01 10:00:00 " ^ local_zone_name) in
+          [%test_result: string] ~expect:"2015-01-01 18:00:00"
+            (format ~zone:(Zone.find_exn "Asia/Hong_Kong") t "%Y-%m-%d %H:%M:%S")
+      end)
   end
 
-  TEST_MODULE "Time.V1" = struct
-    TEST_MODULE "Time.V1 functor application" = Core_kernel.Stable_unit_test.Make (struct
+  let%test_module "Time.V1" = (module struct
+    let%test_module "Time.V1 functor application" = (module Core_kernel.Stable_unit_test.Make (struct
       include V1
       let zone = Zone.find_exn "America/New_York"
       let sexp_of_t t = sexp_of_t_abs ~zone t
@@ -568,16 +740,16 @@ module Stable = struct
           "(2222-11-22 17:17:17.000000-05:00)",
           "\000\000\208\230\204\186\253\065";
         ]
-    end)
+    end))
 
     (* test that t_of_sexp accepts sexps qualified with time zones in two formats *)
-    TEST_UNIT =
+    let%test_unit _ =
       ignore (V1.t_of_sexp (Sexp.of_string "(2012-04-09 12:00:00.000000-04:00:00)"))
 
-    TEST_UNIT =
+    let%test_unit _ =
       ignore
         (V1.t_of_sexp (Sexp.of_string "(2012-04-09 12:00:00.000000 America/New_York)"))
-  end
+  end)
 
   module With_utc_sexp = struct
     module V1 = struct
@@ -590,13 +762,13 @@ end
 
 include Stable.V1
 
-TEST_MODULE "Time robustly compare" = struct
-  TEST = of_float 0.0 =. of_float 0.000_000_99
-  TEST = of_float 0.0 <. of_float 0.000_001_1
+let%test_module "Time robustly compare" = (module struct
+  let%test _ = of_float 0.0 =. of_float 0.000_000_99
+  let%test _ = of_float 0.0 <. of_float 0.000_001_1
 
-  TEST_UNIT =
+  let%test_unit _ =
     for i = 0 to 100 do
       let time = of_float (Float.of_int i /. 17.) in
       assert ((=.) time (sexp_of_t time |! t_of_sexp))
     done
-end
+end)

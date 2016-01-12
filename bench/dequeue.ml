@@ -1,4 +1,4 @@
-open Core.Std  let _ = _squelch_unused_module_warning_
+open! Core.Std
 
 module Bench = Core_extended.Deprecated_bench
 
@@ -7,7 +7,7 @@ let () =
   Deque.enqueue_front d ();
   Bench.bench
     [ Bench.Test.create ~name:"dequeue_push_pop" (fun () ->
-        for _i = 1 to 10 do
+        for _ = 1 to 10 do
           Deque.enqueue_front d ();
           Deque.dequeue_front_exn d;
         done);

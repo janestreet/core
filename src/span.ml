@@ -11,11 +11,11 @@ module Stable = struct
         ms   : int;
         us   : int;
       }
-      with sexp
+      [@@deriving sexp]
     end
 
     module type Like_a_float = sig
-      type t with bin_io
+      type t [@@deriving bin_io]
       include Comparable.S_common  with type t := t
       include Comparable.With_zero with type t := t
       include Hashable_binable     with type t := t
@@ -31,7 +31,7 @@ module Stable = struct
     end
 
     module T : sig
-      type t = private float with bin_io
+      type t = private float [@@deriving bin_io]
       include Like_a_float with type t := t
       include Robustly_comparable  with type t := t
 
@@ -250,8 +250,8 @@ module Stable = struct
     let of_sexp_error_exn exn sexp =
       of_sexp_error (Exn.to_string exn) sexp
 
-    exception T_of_sexp of Sexp.t * exn with sexp
-    exception T_of_sexp_expected_atom_but_got of Sexp.t with sexp
+    exception T_of_sexp of Sexp.t * exn [@@deriving sexp]
+    exception T_of_sexp_expected_atom_but_got of Sexp.t [@@deriving sexp]
 
     let t_of_sexp_v1_v2 sexp ~is_v2 =
       match sexp with
@@ -313,7 +313,7 @@ module Stable = struct
 
   end
 
-  TEST_MODULE "Span.V1" = Core_kernel.Stable_unit_test.Make (struct
+  let%test_module "Span.V1" = (module Core_kernel.Stable_unit_test.Make (struct
     include V1
 
     let equal t1 t2 = Int.(=) 0 (compare t1 t2)
@@ -329,9 +329,9 @@ module Stable = struct
         span 39_996.,    "11.11h",    "\000\000\000\000\128\135\227\064";
         span 80000006.4, "925.926d",  "\154\153\153\025\208\018\147\065";
       ]
-  end)
+  end))
 
-  TEST_MODULE "Span.V2" = Core_kernel.Stable_unit_test.Make (struct
+  let%test_module "Span.V2" = (module Core_kernel.Stable_unit_test.Make (struct
     include V2
 
     let equal t1 t2 = Int.(=) 0 (compare t1 t2)
@@ -347,14 +347,14 @@ module Stable = struct
         span 39_996.,    "11.11h",                 "\000\000\000\000\128\135\227\064";
         span 80000006.4, "925.926d",               "\154\153\153\025\208\018\147\065";
       ]
-  end)
+  end))
 
 end
 include Stable.V2
 let sexp_of_t = Stable.V1.sexp_of_t
 let to_string = Stable.V1.to_string
 
-TEST_MODULE "conversion compatibility" = struct
+let%test_module "conversion compatibility" = (module struct
 
   let tests =
     let span = of_sec in
@@ -368,30 +368,30 @@ TEST_MODULE "conversion compatibility" = struct
     ; span 80000006.4
     ]
 
-  TEST_UNIT =
+  let%test_unit _ =
     List.iter tests ~f:(fun t ->
       begin
         (* Output must match Stable.V1: *)
-        <:test_result< Sexp.t >> (sexp_of_t t) ~expect:(Stable.V1.sexp_of_t t);
-        <:test_result< string >> (to_string t) ~expect:(Stable.V1.to_string t);
+        [%test_result: Sexp.t] (sexp_of_t t) ~expect:(Stable.V1.sexp_of_t t);
+        [%test_result: string] (to_string t) ~expect:(Stable.V1.to_string t);
         (* Stable.V1 must accept output (slightly redundant): *)
-        <:test_result< t >> (Stable.V1.t_of_sexp (sexp_of_t t)) ~expect:t;
-        <:test_result< t >> (Stable.V1.of_string (to_string t)) ~expect:t;
+        [%test_result: t] (Stable.V1.t_of_sexp (sexp_of_t t)) ~expect:t;
+        [%test_result: t] (Stable.V1.of_string (to_string t)) ~expect:t;
         (* Stable.V2 should accept output: *)
-        <:test_result< t >> (Stable.V2.t_of_sexp (sexp_of_t t)) ~expect:t;
-        <:test_result< t >> (Stable.V2.of_string (to_string t)) ~expect:t;
+        [%test_result: t] (Stable.V2.t_of_sexp (sexp_of_t t)) ~expect:t;
+        [%test_result: t] (Stable.V2.of_string (to_string t)) ~expect:t;
         (* Should accept Stable.V1 output: *)
-        <:test_result< t >> (t_of_sexp (Stable.V1.sexp_of_t t)) ~expect:t;
-        <:test_result< t >> (of_string (Stable.V1.to_string t)) ~expect:t;
+        [%test_result: t] (t_of_sexp (Stable.V1.sexp_of_t t)) ~expect:t;
+        [%test_result: t] (of_string (Stable.V1.to_string t)) ~expect:t;
         (* Should accept Stable.V2 output: *)
-        <:test_result< t >> (t_of_sexp (Stable.V2.sexp_of_t t)) ~expect:t;
-        <:test_result< t >> (of_string (Stable.V2.to_string t)) ~expect:t;
+        [%test_result: t] (t_of_sexp (Stable.V2.sexp_of_t t)) ~expect:t;
+        [%test_result: t] (of_string (Stable.V2.to_string t)) ~expect:t;
         (* Must round-trip: *)
-        <:test_result< t >> (t_of_sexp (sexp_of_t t)) ~expect:t;
-        <:test_result< t >> (of_string (to_string t)) ~expect:t;
+        [%test_result: t] (t_of_sexp (sexp_of_t t)) ~expect:t;
+        [%test_result: t] (of_string (to_string t)) ~expect:t;
       end)
 
-end
+end)
 
 module Unit_of_time = struct
 
@@ -403,17 +403,17 @@ module Unit_of_time = struct
     | Minute
     | Hour
     | Day
-  with sexp, compare
+  [@@deriving sexp, compare]
 
 end
 
-TEST_UNIT "Span.Unit_of_time.t" =
-  <:test_result<int>> (<:compare<Unit_of_time.t>> Nanosecond  Microsecond) ~expect:(-1);
-  <:test_result<int>> (<:compare<Unit_of_time.t>> Microsecond Millisecond) ~expect:(-1);
-  <:test_result<int>> (<:compare<Unit_of_time.t>> Millisecond Second)      ~expect:(-1);
-  <:test_result<int>> (<:compare<Unit_of_time.t>> Second      Minute)      ~expect:(-1);
-  <:test_result<int>> (<:compare<Unit_of_time.t>> Minute      Hour)        ~expect:(-1);
-  <:test_result<int>> (<:compare<Unit_of_time.t>> Hour        Day)         ~expect:(-1)
+let%test_unit "Span.Unit_of_time.t" =
+  [%test_result: int] ([%compare: Unit_of_time.t] Nanosecond  Microsecond) ~expect:(-1);
+  [%test_result: int] ([%compare: Unit_of_time.t] Microsecond Millisecond) ~expect:(-1);
+  [%test_result: int] ([%compare: Unit_of_time.t] Millisecond Second)      ~expect:(-1);
+  [%test_result: int] ([%compare: Unit_of_time.t] Second      Minute)      ~expect:(-1);
+  [%test_result: int] ([%compare: Unit_of_time.t] Minute      Hour)        ~expect:(-1);
+  [%test_result: int] ([%compare: Unit_of_time.t] Hour        Day)         ~expect:(-1)
 
 let to_unit_of_time t : Unit_of_time.t =
   let abs_t = abs t in
@@ -455,19 +455,19 @@ let to_string_hum ?(delimiter='_') ?(decimals=3) ?(align_decimal=false) ?unit_of
   in
   prefix ^ suffix
 
-TEST_UNIT "Span.to_string_hum" =
-  <:test_result<string>> (to_string_hum nanosecond) ~expect:"1ns";
-  <:test_result<string>> (to_string_hum day) ~expect:"1d";
-  <:test_result<string>>
+let%test_unit "Span.to_string_hum" =
+  [%test_result: string] (to_string_hum nanosecond) ~expect:"1ns";
+  [%test_result: string] (to_string_hum day) ~expect:"1d";
+  [%test_result: string]
     (to_string_hum ~decimals:6                      day)
     ~expect:"1d";
-  <:test_result<string>>
+  [%test_result: string]
     (to_string_hum ~decimals:6 ~align_decimal:false day)
     ~expect:"1d";
-  <:test_result<string>>
+  [%test_result: string]
     (to_string_hum ~decimals:6 ~align_decimal:true  day)
     ~expect:"1.000000d ";
-  <:test_result<string>>
+  [%test_result: string]
     (to_string_hum ~decimals:6 ~align_decimal:true ~unit_of_time:Day
        (hour + minute))
     ~expect:"0.042361d "
@@ -479,7 +479,7 @@ include Pretty_printer.Register (struct
 end)
 
 module C = struct
-  type t = T.t with bin_io
+  type t = T.t [@@deriving bin_io]
 
   type comparator_witness = T.comparator_witness
 
@@ -503,11 +503,11 @@ end
 module Map = Map.Make_binable_using_comparator (C)
 module Set = Set.Make_binable_using_comparator (C)
 
-TEST =
+let%test _ =
   Set.equal (Set.of_list [hour])
     (Set.t_of_sexp (Sexp.List [Float.sexp_of_t (to_float hour)]))
 ;;
 
 (* We should be robustly equal within a microsecond *)
-TEST = (=.) zero microsecond
-TEST = not ((=.) zero (of_ns 1001.0))
+let%test _ = (=.) zero microsecond
+let%test _ = not ((=.) zero (of_ns 1001.0))

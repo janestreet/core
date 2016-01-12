@@ -182,7 +182,7 @@ end
 
 let add_remove_from_existing_heap data initial_size =
   let h = Heap.create ~lt:(fun (x : int) (x' : int) -> x < x') (initial_size + 1) 0 in
-  for _i = 1 to initial_size do
+  for _ = 1 to initial_size do
     Heap.add h (Data.next data);
   done;
   Bench.Test.create ~name:(sprintf "add/remove from heap of size %i (%s)" initial_size

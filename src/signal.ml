@@ -3,7 +3,7 @@ open Core_kernel.Std
 let failwithf = Printf.failwithf
 
 include (Int : sig
-  type t = int with bin_io
+  type t = int [@@deriving bin_io]
 
   include Comparable.S with type t := t
   include Hashable  .S with type t := t
@@ -27,7 +27,7 @@ type sys_behavior = [
 | `Ignore (** Ignore the signal *)
 | `Stop  (** Stop the process *)
 | `Terminate  (** Terminate the process *)
-] with sexp
+] [@@deriving sexp]
 
 let equal (t : t) t' = (t = t')
 
@@ -58,7 +58,7 @@ include struct
   let zero = 0
 end
 
-exception Invalid_signal_mnemonic_or_number of string with sexp
+exception Invalid_signal_mnemonic_or_number of string [@@deriving sexp]
 
 let to_string, of_string, default_sys_behavior =
   let known =
@@ -122,7 +122,7 @@ let to_string, of_string, default_sys_behavior =
   to_string, of_string, default_sys_behavior
 ;;
 
-exception Expected_atom of Sexplib.Sexp.t with sexp
+exception Expected_atom of Sexplib.Sexp.t [@@deriving sexp]
 
 let sexp_of_t t = Sexplib.Sexp.Atom (to_string t)
 
@@ -132,7 +132,7 @@ let t_of_sexp s =
   | _ -> raise (Expected_atom s)
 ;;
 
-type pid_spec = [ `Pid of Pid.t | `My_group | `Group of Pid.t ] ;;
+type pid_spec = [ `Pid of Pid.t | `My_group | `Group of Pid.t ] [@@deriving sexp_of]
 
 let pid_spec_to_int = function
   | `Pid pid -> Pid.to_int pid

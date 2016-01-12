@@ -23,8 +23,8 @@ module Priority_queue = Timing_wheel_ns.Priority_queue
 let to_span = Time_ns.Span.to_span
 let to_time = Time_ns.to_time
 
-type 'a t = 'a Timing_wheel_ns.t with sexp_of
-type 'a t_now = 'a t with sexp_of
+type 'a t = 'a Timing_wheel_ns.t [@@deriving sexp_of]
+type 'a t_now = 'a t [@@deriving sexp_of]
 type 'a timing_wheel = 'a t
 
 module Alarm = struct
@@ -36,12 +36,12 @@ end
 let nanoseconds_per_microsecond = 1000
 
 let invariant_span span =
-  <:test_result< int >> ~expect:0
+  [%test_result: int] ~expect:0
     (Int.rem (Time_ns.Span.to_int_ns span) nanoseconds_per_microsecond)
 ;;
 
 let invariant_time time =
-  <:test_result< int >> ~expect:0
+  [%test_result: int] ~expect:0
     (Int.rem (Time_ns.to_int_ns_since_epoch time) nanoseconds_per_microsecond)
 ;;
 
@@ -57,9 +57,9 @@ let invariant invariant_a t =
 module Config = struct
   include Timing_wheel_ns.Config
 
-  let create ?alarm_precision ?level_bits () =
+  let create ?level_bits ~alarm_precision () =
     create ()
-      ?alarm_precision:(Option.map alarm_precision ~f:Time_ns.Span.of_span)
+      ~alarm_precision:(alarm_precision |> Time_ns.Span.of_span)
       ?level_bits
   ;;
 
@@ -109,6 +109,8 @@ let next_alarm_fires_at t =
   | None -> None
   | Some time -> Some (to_time time)
 ;;
+
+let next_alarm_fires_at_exn t = to_time (Timing_wheel_ns.next_alarm_fires_at_exn t)
 
 let now t = to_time (Timing_wheel_ns.now t)
 

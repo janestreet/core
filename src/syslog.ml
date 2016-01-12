@@ -6,7 +6,7 @@ module Open_option = struct
   type t =
     (* THESE MUST STAY IN THE SAME ORDER AS IN syslog_stubs.c!!! *)
     | PID | CONS | ODELAY | NDELAY | NOWAIT | PERROR
-  with sexp
+  [@@deriving sexp]
   external to_int : t -> int = "core_syslog_open_option_to_int"
   let collect_mask i t = to_int t lor i
   let mask ts = Core_list.fold ~f:collect_mask ~init:0 ts
@@ -26,14 +26,14 @@ module Facility = struct
       | LOCAL5
       | LOCAL6
       | LOCAL7
-    with sexp
+    [@@deriving sexp]
     external to_int : t -> int = "core_syslog_facility_to_int"
   end
   include T
 
   include Sexpable.To_stringable (T)
-  TEST_UNIT = <:test_result< string >> ~expect:"KERN" (to_string KERN)
-  TEST_UNIT = <:test_result< t >> ~expect:LOCAL7 (of_string "LOCAL7")
+  let%test_unit _ = [%test_result: string] ~expect:"KERN" (to_string KERN)
+  let%test_unit _ = [%test_result: t] ~expect:LOCAL7 (of_string "LOCAL7")
 end
 
 module Level = struct
@@ -41,9 +41,9 @@ module Level = struct
     type t =
       (* THESE MUST STAY IN THE SAME ORDER AS IN syslog_stubs.c!!! *)
       | EMERG | ALERT | CRIT | ERR | WARNING | NOTICE | INFO | DEBUG
-    with sexp, enumerate, compare
+    [@@deriving sexp, enumerate, compare]
     let compare a b = compare b a       (* listed in descending order *)
-    TEST_UNIT = <:test_result< int >> ~expect:1 (compare EMERG DEBUG)
+    let%test_unit _ = [%test_result: int] ~expect:1 (compare EMERG DEBUG)
     external to_int : t -> int = "core_syslog_level_to_int"
     let collect_mask i t = to_int t lor i
     let mask ts = Core_list.fold ~f:collect_mask ~init:0 ts
@@ -51,8 +51,8 @@ module Level = struct
   include T
 
   include Sexpable.To_stringable (T)
-  TEST_UNIT = <:test_result< string >> ~expect:"EMERG" (to_string EMERG)
-  TEST_UNIT = <:test_result< t >> ~expect:DEBUG (of_string "DEBUG")
+  let%test_unit _ = [%test_result: string] ~expect:"EMERG" (to_string EMERG)
+  let%test_unit _ = [%test_result: t] ~expect:DEBUG (of_string "DEBUG")
 end
 
 external core_syslog_openlog : string option -> int -> int -> unit = "core_syslog_openlog"

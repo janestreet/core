@@ -5,12 +5,15 @@ let of_time time ~zone = Time.to_date ~zone time
 let today ~zone = of_time (Time.now ()) ~zone
 
 let format date pat =
-  let time = Time.of_date_ofday ~zone:Zone.local date Ofday.start_of_day in
-  Time.format time pat
+  (* as long as you don't use anything silly like %z, the zone here is irrelevant, since
+     we use the same zone for constructing a time and formatting it *)
+  let zone = Time.Zone.local in
+  let time = Time.of_date_ofday ~zone date Ofday.start_of_day in
+  Time.format time pat ~zone
 ;;
 
-TEST_MODULE "week_number" = struct
-  TEST_UNIT =
+let%test_module "week_number" = (module struct
+  let%test_unit _ =
     let module Error = Core_kernel.Error in
     let module Result = Core_kernel.Result in
     let module Or_error = Core_kernel.Or_error in
@@ -39,4 +42,4 @@ TEST_MODULE "week_number" = struct
     | Result.Ok ()   -> ()
     | Result.Error e -> Error.raise e
   ;;
-end
+end)

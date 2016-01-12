@@ -3,7 +3,7 @@ open Core_kernel.Std
 
 module Entry = struct
 
-  type 'a t = 'a Weak.t with sexp_of
+  type 'a t = 'a Weak.t [@@deriving sexp_of]
 
   let create () = Weak.create ~len:1
 
@@ -20,7 +20,7 @@ type ('a, 'b) t =
   ; keys_with_unused_data                    : 'a Thread_safe_queue.t
   ; mutable thread_safe_run_when_unused_data : unit -> unit
   }
-with sexp_of
+[@@deriving sexp_of]
 
 let create ?growth_allowed ?size hashable =
   { entry_by_key                     = Hashtbl.create ~hashable ?growth_allowed ?size ()
@@ -69,7 +69,7 @@ let replace t ~key ~data = set_data t key (get_entry t key) data
 let add_exn t ~key ~data =
   let entry = get_entry t key in
   if Entry.is_in_use entry
-  then failwiths "Weak_hashtbl.add_exn of key in use" t <:sexp_of< (_, _) t >>;
+  then failwiths "Weak_hashtbl.add_exn of key in use" t [%sexp_of: (_, _) t];
   set_data t key entry data;
 ;;
 
@@ -89,7 +89,7 @@ let find_or_add t key ~default =
     data
 ;;
 
-TEST_UNIT =
+let%test_unit _ =
   let module M = struct
     type t =
       (* [mutable foo] to force the compiler to allocate the record on the heap. *)
@@ -148,5 +148,5 @@ TEST_UNIT =
   assert (is_block k3 !b4);
   blackhole b4;
   stabilize ();
-  assert (is_absent k3);
+  assert (is_absent k3)
 ;;

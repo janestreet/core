@@ -13,7 +13,7 @@ let is_leap_year year =
 module Stable = struct
   module V1 = struct
     module T : sig
-      type t with bin_io
+      type t [@@deriving bin_io]
 
       val create_exn : y:int -> m:Month.Stable.V1.t -> d:int -> t
 
@@ -44,15 +44,15 @@ module Stable = struct
       let month t = Month.of_int_exn ((t lsr 8) land 0xff)
       let day t = t land 0xff
 
-      TEST_UNIT =
+      let%test_unit _ =
         let test y m d =
           let t = create0 ~year:y ~month:m ~day:d in
-          <:test_result< int     >> ~expect:y (year  t);
-          <:test_result< Month.t >> ~expect:m (month t);
-          <:test_result< int     >> ~expect:d (day   t);
+          [%test_result: int] ~expect:y (year  t);
+          [%test_result: Month.t] ~expect:m (month t);
+          [%test_result: int] ~expect:d (day   t);
         in
         test 2014 Month.Sep 24;
-        test 9999 Month.Dec 31;
+        test 9999 Month.Dec 31
       ;;
 
       let create_exn ~y:year ~m:month ~d:day =
@@ -239,7 +239,7 @@ module Stable = struct
     module Sexpable = struct
 
       module Old_date = struct
-        type t = { y: int; m: int; d: int; } with sexp
+        type t = { y: int; m: int; d: int; } [@@deriving sexp]
 
         let to_date t = T.create_exn ~y:t.y ~m:(Month.of_int_exn t.m) ~d:t.d
       end
@@ -282,7 +282,7 @@ module Stable = struct
     end
   end
 
-  TEST_MODULE "Date.V1" = Core_kernel.Stable_unit_test.Make (struct
+  let%test_module "Date.V1" = (module Core_kernel.Stable_unit_test.Make (struct
     include V1
 
     let equal = (=)
@@ -293,7 +293,7 @@ module Stable = struct
         date 1955 Month.Nov  5, "1955-11-05", "\254\163\007\010\005";
         date 2012 Month.Apr 19, "2012-04-19", "\254\220\007\003\019";
       ]
-  end)
+  end))
 end
 
 include Stable.V1
@@ -442,22 +442,22 @@ let week_number t =
 ;;
 
 (* Illustrative examples. See date.ml for some more exhaustive tests. *)
-TEST_MODULE "week_number" = struct
-  TEST_UNIT = <:test_result< int >> (ordinal_date (create_exn ~y:2014 ~m:Jan ~d:1)) ~expect:1
-  TEST_UNIT = <:test_result< int >> (ordinal_date (create_exn ~y:2014 ~m:Dec ~d:31)) ~expect:365
-  TEST_UNIT = <:test_result< int >> (ordinal_date (create_exn ~y:2014 ~m:Feb ~d:28)) ~expect:59
+let%test_module "week_number" = (module struct
+  let%test_unit _ = [%test_result: int] (ordinal_date (create_exn ~y:2014 ~m:Jan ~d:1)) ~expect:1
+  let%test_unit _ = [%test_result: int] (ordinal_date (create_exn ~y:2014 ~m:Dec ~d:31)) ~expect:365
+  let%test_unit _ = [%test_result: int] (ordinal_date (create_exn ~y:2014 ~m:Feb ~d:28)) ~expect:59
 
   let test_week_number y m d ~expect =
-    <:test_result< int >> (week_number (create_exn ~y ~m ~d)) ~expect
+    [%test_result: int] (week_number (create_exn ~y ~m ~d)) ~expect
 
-  TEST_UNIT = test_week_number 2014 Jan  1 ~expect:1
-  TEST_UNIT = test_week_number 2014 Dec 31 ~expect:1
-  TEST_UNIT = test_week_number 2010 Jan  1 ~expect:53
-  TEST_UNIT = test_week_number 2017 Jan  1 ~expect:52
-  TEST_UNIT = test_week_number 2014 Jan 10 ~expect:2
-  TEST_UNIT = test_week_number 2012 Jan  1 ~expect:52
-  TEST_UNIT = test_week_number 2012 Dec 31 ~expect:1
-end
+  let%test_unit _ = test_week_number 2014 Jan  1 ~expect:1
+  let%test_unit _ = test_week_number 2014 Dec 31 ~expect:1
+  let%test_unit _ = test_week_number 2010 Jan  1 ~expect:53
+  let%test_unit _ = test_week_number 2017 Jan  1 ~expect:52
+  let%test_unit _ = test_week_number 2014 Jan 10 ~expect:2
+  let%test_unit _ = test_week_number 2012 Jan  1 ~expect:52
+  let%test_unit _ = test_week_number 2012 Dec 31 ~expect:1
+end)
 
 let is_weekend t =
   Day_of_week.is_sun_or_sat (day_of_week t)
@@ -469,6 +469,77 @@ let is_business_day t ~is_holiday =
   is_weekday t
   && not (is_holiday t)
 ;;
+
+let rec diff_weekend_days t1 t2 =
+  if t1 < t2
+  then - diff_weekend_days t2 t1
+  else
+    (* Basic date diff *)
+    let diff = diff t1 t2 in
+    (* Compute the number of Saturday -> Sunday crossings *)
+    let d1 = day_of_week t1 in
+    let d2 = day_of_week t2 in
+    let num_satsun_crossings =
+      if Int.(<) (Day_of_week.to_int d1) (Day_of_week.to_int d2)
+      then 1 + diff / 7
+      else diff / 7
+    in
+    num_satsun_crossings * 2
+    + (if Day_of_week.(=) d2 Day_of_week.Sun then 1 else 0)
+    + (if Day_of_week.(=) d1 Day_of_week.Sun then -1 else 0)
+
+let diff_weekdays t1 t2 =
+  diff t1 t2 - diff_weekend_days t1 t2
+
+let%test_module "diff_weekdays" = (module struct
+  let c y m d = create_exn ~y ~m ~d
+
+  let%test "2014 Jan 1 is a Wednesday" = Day_of_week.(=) (day_of_week (c 2014 Jan 1)) Day_of_week.Wed
+
+  let (=) = Int.(=)
+  (* future minus Wednesday *)
+  let%test _ = diff_weekdays (c 2014 Jan  1) (c 2014 Jan  1) = 0
+  let%test _ = diff_weekdays (c 2014 Jan  2) (c 2014 Jan  1) = 1
+  let%test _ = diff_weekdays (c 2014 Jan  3) (c 2014 Jan  1) = 2
+  let%test _ = diff_weekdays (c 2014 Jan  4) (c 2014 Jan  1) = 3
+  let%test _ = diff_weekdays (c 2014 Jan  5) (c 2014 Jan  1) = 3
+  let%test _ = diff_weekdays (c 2014 Jan  6) (c 2014 Jan  1) = 3
+  let%test _ = diff_weekdays (c 2014 Jan  7) (c 2014 Jan  1) = 4
+  let%test _ = diff_weekdays (c 2014 Jan  8) (c 2014 Jan  1) = 5
+  let%test _ = diff_weekdays (c 2014 Jan  9) (c 2014 Jan  1) = 6
+  let%test _ = diff_weekdays (c 2014 Jan 10) (c 2014 Jan  1) = 7
+  let%test _ = diff_weekdays (c 2014 Jan 11) (c 2014 Jan  1) = 8
+  let%test _ = diff_weekdays (c 2014 Jan 12) (c 2014 Jan  1) = 8
+  let%test _ = diff_weekdays (c 2014 Jan 13) (c 2014 Jan  1) = 8
+  let%test _ = diff_weekdays (c 2014 Jan 14) (c 2014 Jan  1) = 9
+
+  (* Wednesday minus future *)
+  let%test _ = diff_weekdays (c 2014 Jan  1) (c 2014 Jan  2) = (-1)
+  let%test _ = diff_weekdays (c 2014 Jan  1) (c 2014 Jan  3) = (-2)
+  let%test _ = diff_weekdays (c 2014 Jan  1) (c 2014 Jan  4) = (-3)
+  let%test _ = diff_weekdays (c 2014 Jan  1) (c 2014 Jan  5) = (-3)
+  let%test _ = diff_weekdays (c 2014 Jan  1) (c 2014 Jan  6) = (-3)
+  let%test _ = diff_weekdays (c 2014 Jan  1) (c 2014 Jan  7) = (-4)
+  let%test _ = diff_weekdays (c 2014 Jan  1) (c 2014 Jan  8) = (-5)
+  let%test _ = diff_weekdays (c 2014 Jan  1) (c 2014 Jan  9) = (-6)
+
+  (* diff_weekend_days *)
+  let%test _ = diff_weekend_days (c 2014 Jan  1) (c 2014 Jan  1) = 0
+  let%test _ = diff_weekend_days (c 2014 Jan  2) (c 2014 Jan  1) = 0
+  let%test _ = diff_weekend_days (c 2014 Jan  3) (c 2014 Jan  1) = 0
+  let%test _ = diff_weekend_days (c 2014 Jan  4) (c 2014 Jan  1) = 0
+  let%test _ = diff_weekend_days (c 2014 Jan  5) (c 2014 Jan  1) = 1
+  let%test _ = diff_weekend_days (c 2014 Jan  6) (c 2014 Jan  1) = 2
+  let%test _ = diff_weekend_days (c 2014 Jan  7) (c 2014 Jan  1) = 2
+  let%test _ = diff_weekend_days (c 2014 Jan  8) (c 2014 Jan  1) = 2
+  let%test _ = diff_weekend_days (c 2014 Jan  9) (c 2014 Jan  1) = 2
+  let%test _ = diff_weekend_days (c 2014 Jan 10) (c 2014 Jan  1) = 2
+  let%test _ = diff_weekend_days (c 2014 Jan 11) (c 2014 Jan  1) = 2
+  let%test _ = diff_weekend_days (c 2014 Jan 12) (c 2014 Jan  1) = 3
+  let%test _ = diff_weekend_days (c 2014 Jan 13) (c 2014 Jan  1) = 4
+  let%test _ = diff_weekend_days (c 2014 Jan 14) (c 2014 Jan  1) = 4
+end)
+
 
 let add_days_skipping t ~skip n =
   let step = if Int.(>=) n 0 then 1 else -1 in
@@ -494,7 +565,7 @@ let dates_between ~min:t1 ~max:t2 =
   loop t2 []
 ;;
 
-TEST_MODULE "ordinal_date" = struct
+let%test_module "ordinal_date" = (module struct
   (* check the ordinal date tables we found on wikipedia... *)
   let check_table year ordinal_date_table =
     let days_of_year =
@@ -502,19 +573,19 @@ TEST_MODULE "ordinal_date" = struct
         ~min:(create_exn ~y:year ~m:Month.Jan ~d:01)
         ~max:(create_exn ~y:year ~m:Month.Dec ~d:31)
     in
-    <:test_result<int>> (List.length days_of_year) ~expect:(if is_leap_year year then 366 else 365);
+    [%test_result: int] (List.length days_of_year) ~expect:(if is_leap_year year then 366 else 365);
     let months = List.group days_of_year ~break:(fun d d' -> Month.(<>) (month d) (month d')) in
     let sum =
       List.foldi months ~init:0 ~f:(fun index sum month ->
-        <:test_result< int >> sum ~expect:ordinal_date_table.(index);
+        [%test_result: int] sum ~expect:ordinal_date_table.(index);
         sum + List.length month)
     in
-    <:test_result< int >> sum ~expect:(List.length days_of_year)
+    [%test_result: int] sum ~expect:(List.length days_of_year)
   ;;
 
-  TEST_UNIT = check_table 2015 non_leap_year_table
-  TEST_UNIT = check_table 2000 leap_year_table
-end
+  let%test_unit _ = check_table 2015 non_leap_year_table
+  let%test_unit _ = check_table 2000 leap_year_table
+end)
 
 let weekdays_between ~min ~max =
   let all_dates = dates_between ~min ~max in
@@ -535,6 +606,37 @@ let weekdays_between ~min ~max =
           else Some date)
     )
 ;;
+
+
+let%test_module "weekdays_between" = (module struct
+  let c y m d = create_exn ~y ~m ~d
+  (* systematic test of consistency between [weekdays_between] and [diff_weekdays] *)
+  let dates = [
+    c 2014 Jan  1;
+    c 2014 Jan  2;
+    c 2014 Jan  3;
+    c 2014 Jan  4;
+    c 2014 Jan  5;
+    c 2014 Jan  6;
+    c 2014 Jan  7;
+    c 2014 Feb  15;
+    c 2014 Feb  16;
+    c 2014 Feb  17;
+    c 2014 Feb  18;
+    c 2014 Feb  19;
+    c 2014 Feb  20;
+    c 2014 Feb  21;
+  ]
+  let (=) = Int.(=)
+  let%test_unit _ =
+    List.iter dates ~f:(fun date1 ->
+      List.iter dates ~f:(fun date2 ->
+        if date1 <= date2
+        then assert (List.length (weekdays_between ~min:date1 ~max:(add_days date2 (-1)))
+                     = diff_weekdays date2 date1);
+      ))
+end)
+
 
 let business_dates_between ~min ~max ~is_holiday =
   weekdays_between ~min ~max
@@ -565,7 +667,7 @@ let first_strictly_after t ~on:dow =
   add_days tplus1 diff
 ;;
 
-TEST_MODULE "first_strictly_after" = struct
+let%test_module "first_strictly_after" = (module struct
   let mon1 = create_exn ~y:2013 ~m:Month.Apr ~d:1
   let tue1 = create_exn ~y:2013 ~m:Month.Apr ~d:2
   let wed1 = create_exn ~y:2013 ~m:Month.Apr ~d:3
@@ -576,19 +678,19 @@ TEST_MODULE "first_strictly_after" = struct
   let mon2 = create_exn ~y:2013 ~m:Month.Apr ~d:8
   let tue2 = create_exn ~y:2013 ~m:Month.Apr ~d:9
 
-  TEST = equal (first_strictly_after tue1 ~on:Day_of_week.Mon) mon2
-  TEST = equal (first_strictly_after tue1 ~on:Day_of_week.Tue) tue2
-  TEST = equal (first_strictly_after tue1 ~on:Day_of_week.Wed) wed1
-  TEST = equal (first_strictly_after tue1 ~on:Day_of_week.Thu) thu1
-  TEST = equal (first_strictly_after tue1 ~on:Day_of_week.Fri) fri1
-  TEST = equal (first_strictly_after tue1 ~on:Day_of_week.Sat) sat1
-  TEST = equal (first_strictly_after tue1 ~on:Day_of_week.Sun) sun1
-  TEST = equal (first_strictly_after mon1 ~on:Day_of_week.Mon) mon2
-  TEST = equal (first_strictly_after mon1 ~on:Day_of_week.Tue) tue1
-  TEST = equal (first_strictly_after mon1 ~on:Day_of_week.Wed) wed1
-  TEST = equal (first_strictly_after mon1 ~on:Day_of_week.Thu) thu1
-  TEST = equal (first_strictly_after mon1 ~on:Day_of_week.Fri) fri1
-  TEST = equal (first_strictly_after mon1 ~on:Day_of_week.Sat) sat1
-  TEST = equal (first_strictly_after mon1 ~on:Day_of_week.Sun) sun1
-end
+  let%test _ = equal (first_strictly_after tue1 ~on:Day_of_week.Mon) mon2
+  let%test _ = equal (first_strictly_after tue1 ~on:Day_of_week.Tue) tue2
+  let%test _ = equal (first_strictly_after tue1 ~on:Day_of_week.Wed) wed1
+  let%test _ = equal (first_strictly_after tue1 ~on:Day_of_week.Thu) thu1
+  let%test _ = equal (first_strictly_after tue1 ~on:Day_of_week.Fri) fri1
+  let%test _ = equal (first_strictly_after tue1 ~on:Day_of_week.Sat) sat1
+  let%test _ = equal (first_strictly_after tue1 ~on:Day_of_week.Sun) sun1
+  let%test _ = equal (first_strictly_after mon1 ~on:Day_of_week.Mon) mon2
+  let%test _ = equal (first_strictly_after mon1 ~on:Day_of_week.Tue) tue1
+  let%test _ = equal (first_strictly_after mon1 ~on:Day_of_week.Wed) wed1
+  let%test _ = equal (first_strictly_after mon1 ~on:Day_of_week.Thu) thu1
+  let%test _ = equal (first_strictly_after mon1 ~on:Day_of_week.Fri) fri1
+  let%test _ = equal (first_strictly_after mon1 ~on:Day_of_week.Sat) sat1
+  let%test _ = equal (first_strictly_after mon1 ~on:Day_of_week.Sun) sun1
+end)
 

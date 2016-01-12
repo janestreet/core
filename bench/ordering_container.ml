@@ -15,7 +15,7 @@ module String_list = struct
   let name = "string-list"
 
   module T = struct
-    type t = string list with sexp, bin_io, compare
+    type t = string list [@@deriving sexp, bin_io, compare]
     let hash = Hashtbl.hash
   end
 
@@ -55,7 +55,7 @@ let gen_test_update ~create ~random ~add ~update n =
   let container = create () in
   Array.iter sample ~f:(fun x -> add container x);
   fun () ->
-    for _i = 0 to n/10 do
+    for _ = 0 to n/10 do
       let i = Random.int n in
       let a = random () in
       update container sample.(i) a;

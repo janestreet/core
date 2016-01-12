@@ -7,7 +7,7 @@ let test =
         (fun () ->
           "create" @? begin
             let b = Bag.create () in
-            Bag.invariant b;
+            Bag.invariant ignore b;
             assert (Bag.is_empty b);
             assert (0 = Bag.length b);
             true;
@@ -15,7 +15,7 @@ let test =
           "add1" @? begin
             let b = Bag.create () in
             let _e1 = Bag.add b 1 in
-            Bag.invariant b;
+            Bag.invariant ignore b;
             assert (1 = Bag.length b);
             assert (not (Bag.is_empty b));
             true;
@@ -24,7 +24,7 @@ let test =
             let b = Bag.create () in
             let _e1 = Bag.add b 1 in
             let _e2 = Bag.add b 2 in
-            Bag.invariant b;
+            Bag.invariant ignore b;
             assert (2 = Bag.length b);
             assert (not (Bag.is_empty b));
             true
@@ -32,7 +32,7 @@ let test =
           "remove" @? begin
             let b = Bag.create () in
             ignore (Bag.remove b (Bag.add b 1));
-            Bag.invariant b;
+            Bag.invariant ignore b;
             assert (Bag.is_empty b);
             true;
           end;
@@ -41,7 +41,7 @@ let test =
             let e1 = Bag.add b 1 in
             let _e2 = Bag.add b 2 in
             ignore (Bag.remove b e1);
-            Bag.invariant b;
+            Bag.invariant ignore b;
             assert (1 = Bag.length b);
             true;
           end;
@@ -50,17 +50,17 @@ let test =
             let n = 20 in
             for i = 1 to n do
               let _e = Bag.add b i in
-              Bag.invariant b;
+              Bag.invariant ignore b;
             done;
             assert (Bag.length b = n);
-            for _i = 1 to n do
-              Bag.invariant b;
+            for _ = 1 to n do
+              Bag.invariant ignore b;
               match Bag.remove_one b with
               | None -> assert false
               | Some _ -> ()
             done;
             assert (Bag.is_empty b);
-            Bag.invariant b;
+            Bag.invariant ignore b;
             true
           end;
           "container" @? begin

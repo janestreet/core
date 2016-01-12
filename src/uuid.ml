@@ -10,7 +10,7 @@
 module Stable = struct
   open Core_kernel.Stable
   module V1 = struct
-    type t = string with bin_io, compare, sexp
+    type t = string [@@deriving bin_io, compare, sexp]
     let for_testing = "5a863fc1-67b7-3a0a-dc90-aca2995afbf9"
   end
 end
@@ -58,7 +58,7 @@ module Base = struct
 end
 
 module T = struct
-  type t = string with bin_io
+  type t = string [@@deriving bin_io]
 
   let create () =
     let digest = Digest.to_hex (Digest.string (Base.to_string (Base.create ()))) in
@@ -144,6 +144,6 @@ module Test = struct
     no_collisions (List.rev_append !res1 !res2)
   ;;
 
-  TEST = no_collisions (generate test_size)
-  TEST = thread_test ()
+  let%test _ = no_collisions (generate test_size)
+  let%test _ = thread_test ()
 end

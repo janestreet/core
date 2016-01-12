@@ -19,7 +19,7 @@ let test_random_0_99 () =
   let f () =
     let set = ref ISet.empty in
     let int_set = ref Int_set.empty in
-    for _i = 0 to 99 do
+    for _ = 0 to 99 do
       let n = Random.int 100 in
       set := ISet.add !set n;
       int_set := Int_set.add !int_set n;
@@ -41,7 +41,7 @@ let test_random_0_99 () =
     assert (Int_set.max !int_set = ISet.max_elt !set);
     assert (Int_set.min !int_set = ISet.min_elt !set)
   in
-  for _i = 0 to 999 do f () done;
+  for _ = 0 to 999 do f () done;
   (* max and min for empty *)
   assert (Int_set.max Int_set.empty = Int_set.min Int_set.empty)
 

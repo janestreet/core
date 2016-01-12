@@ -42,11 +42,11 @@
     See also: http://en.wikipedia.org/wiki/Time_Stamp_Counter
 *)
 
-INCLUDE "core_config.mlh"
+#import "config.mlh"
 
 open Core_kernel.Std
 
-type t = private Int63.t with bin_io, compare, sexp
+type t = private Int63.t [@@deriving bin_io, compare, sexp]
 
 (** A calibrator contains a snapshot of machine-specific information that is used to
     convert between TSC values and clock time.  This information needs to be calibrated
@@ -70,7 +70,7 @@ type t = private Int63.t with bin_io, compare, sexp
     argument, the internal instance is used when no calibrator is explicitly specified.
 *)
 module Calibrator : sig
-  type t with bin_io, sexp
+  type t [@@deriving bin_io, sexp]
 
   (** [create ()] creates an uninitialized calibrator instance.  Creating a calibrator
       takes about 3ms.  One needs a recently calibrated [Calibrator.t] and the TSC value
@@ -88,7 +88,7 @@ end
 
 (** [Span] indicates some integer number of cycles. *)
 module Span : sig
-  type t = private Int63.t with bin_io, sexp
+  type t = private Int63.t [@@deriving bin_io, sexp]
 
   include Comparable with type t := t
   include Intable    with type t := t
@@ -101,11 +101,11 @@ module Span : sig
   val of_ns        : ?calibrator:Calibrator.t -> Int63.t -> t
 end
 
-IFDEF ARCH_SIXTYFOUR THEN
+#if JSC_ARCH_SIXTYFOUR
 external now : unit -> t = "tsc_get" "noalloc"
-ELSE
+#else
 external now : unit -> t = "tsc_get"
-ENDIF
+#endif
 
 val diff            : t -> t -> Span.t
 val add             : t -> Span.t -> t
@@ -119,5 +119,3 @@ val to_time : ?calibrator:Calibrator.t -> t -> Time.t
 
 (** [to_time_ns t] converts a [t] to an integer number of nanos since the epoch. *)
 val to_time_ns : ?calibrator:Calibrator.t -> t -> Time_ns.t
-
-

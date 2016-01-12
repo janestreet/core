@@ -6,12 +6,12 @@ module String_set = Set.Make(String)
 let s1 = String_set.of_list ["a"; "b"; "c"; "d"]
 (*let m2 = Map.of_alist ["a",1; "c",-3; "d",4; "e",5]*)
 
-type int_set = int Set.Poly.t with bin_io
+type int_set = int Set.Poly.t [@@deriving bin_io]
 
 module String_set_comp = struct
   include Int.Replace_polymorphic_compare
 
-  type string_set_comp = Int.t Set.Poly.t with compare
+  type string_set_comp = Int.t Set.Poly.t [@@deriving compare]
 
   let test () =
     let compare = compare_string_set_comp in
@@ -49,18 +49,21 @@ let test =
             let s2 = bin_read_int_set bstr ~pos_ref in
             "pos_ref" @? (!pos_ref = n + 1);
             "equal" @? (Set.equal s1 s2);
-            bstr.{0} <- '\002';
-            bstr.{1} <- 'x';
-            bstr.{2} <- 'x';
-            pos_ref := 0;
-            let dup_check =
-              try
-                ignore (bin_read_int_set bstr ~pos_ref);
-                false
-              with Bin_prot.Common.Read_exc (Failure _, 3) -> true
-            in
-            "dup_check" @? dup_check
+            if n >= 2
+            then begin
+              bstr.{1} <- 'x';
+              bstr.{2} <- 'x';
+              pos_ref := 0;
+
+              let dup_check =
+                try
+                  ignore(bin_read_int_set bstr ~pos_ref : Int.t Set.Poly.t);
+                  false
+                with Failure _ -> n + 1 = !pos_ref
+              in
+              "dup_check" @? dup_check
+            end
           done;
-        );
+      );
       "with_compare" >:: String_set_comp.test;
     ]

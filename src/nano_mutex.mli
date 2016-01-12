@@ -56,7 +56,7 @@
 
 open Core_kernel.Std
 
-type t with sexp_of
+type t [@@deriving sexp_of]
 
 val invariant : t -> unit
 

@@ -2,8 +2,8 @@ open Core_kernel.Std
 
 (** [no_seek] and [seek] are phantom types used in a similar manner to [read] and
     [read_write]. *)
-type no_seek                with sexp_of  (** like [read] *)
-type seek = private no_seek with sexp_of  (** like [read_write] *)
+type no_seek                [@@deriving sexp_of]  (** like [read] *)
+type seek = private no_seek [@@deriving sexp_of]  (** like [read_write] *)
 
 (** A collection of iobuf access functions.  This abstracts over [Iobuf.Consume],
     [Iobuf.Fill], [Iobuf.Peek], and [Iobuf.Poke]. *)
@@ -26,8 +26,11 @@ module type Accessors = sig
   val uint32_le           :                             (int        , 'd, 'w) t
   val  int64_be           :                             (int        , 'd, 'w) t
   val  int64_le           :                             (int        , 'd, 'w) t
+  val uint64_be           :                             (int        , 'd, 'w) t
+  val uint64_le           :                             (int        , 'd, 'w) t
   val  int64_t_be         :                             (Int64    .t, 'd, 'w) t
   val  int64_t_le         :                             (Int64    .t, 'd, 'w) t
+  val head_padded_fixed_string : padding:char ->  len:int -> (   string  , 'd, 'w) t
   val tail_padded_fixed_string : padding:char ->  len:int -> (   string  , 'd, 'w) t
   val              string : ?str_pos:int -> ?len:int -> (   string  , 'd, 'w) t
   val           bigstring : ?str_pos:int -> ?len:int -> (Bigstring.t, 'd, 'w) t
@@ -43,7 +46,7 @@ module type Bound = sig
 
   type t =
     private int (* performance hack: avoid the write barrier *)
-  with sexp_of
+  [@@deriving compare, sexp_of]
 
   val window : (_, _) iobuf -> t
   val limit  : (_, _) iobuf -> t

@@ -1,6 +1,6 @@
 open Core_kernel.Std
 
-type t with bin_io, sexp
+type t [@@deriving bin_io, sexp]
 
 include Hashable_binable with type t := t
 (** converts a string to a date, in formats:
@@ -63,6 +63,12 @@ val add_months : t -> int -> t
 
 (** [diff t1 t2] returns date [t1] minus date [t2] in days. *)
 val diff : t -> t -> int
+(** [diff_weekdays t1 t2] returns the number of weekdays in the half-open interval
+    [t2,t1) if t1 >= t2, and [- diff_weekdays t2 t1] otherwise. *)
+val diff_weekdays : t -> t -> int
+(** [diff_weekend_days t1 t2] returns the number of days that are weekend days in the
+    half-open interval [t2,t1) if t1 >= t2, and [- diff_weekend_days t2 t1] otherwise. *)
+val diff_weekend_days : t -> t -> int
 
 (** [add_weekdays t 0] returns the next weekday if [t] is a weekend and [t] otherwise.
     Unlike add_days this is done by looping over the count of days to be added (forward or
@@ -96,7 +102,7 @@ val first_strictly_after : t -> on:Day_of_week.t -> t
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t with sexp, bin_io, compare
+    type nonrec t = t [@@deriving sexp, bin_io, compare]
   end
 end
 

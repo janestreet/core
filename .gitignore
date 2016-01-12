@@ -5,5 +5,3 @@ _build/
 /*.docdir
 /*.native
 /*.byte
-/lib/core_config.h
-/lib/core_config.mlh

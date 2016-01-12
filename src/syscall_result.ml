@@ -9,6 +9,18 @@ module Unix = UnixLabels
 
 let create_error err = - (Unix_error.to_errno err)
 
+let is_ok    t = Int.O.(t >= 0)
+let is_error t = Int.O.(t <  0)
+
+let error_code_exn t =
+  if is_ok t
+  then failwiths "Syscall_result.error_code_exn received success value"
+         t [%sexp_of : int]
+  else -t
+;;
+
+let error_exn t = Unix_error.of_errno (error_code_exn t)
+
 module Make (M : Arg) () = struct
   (* The only reason to have one of these per functor invocation is to make it trivial to
      get the type right. *)
@@ -18,7 +30,7 @@ module Make (M : Arg) () = struct
   (* Since we return [-errno] from C, we implicitly rely on there not being a 0 [errno].
      However, we have 0 in [preallocated_errnos], partly so we can index directly by
      [errno]. *)
-  TEST "no 0 errno" = preallocated_errnos.(0) = Error (Unix_error.EUNKNOWNERR 0)
+  let%test "no 0 errno" = preallocated_errnos.(0) = Error (Unix_error.EUNKNOWNERR 0)
   let num_preallocated_errnos = Array.length preallocated_errnos
 
   type nonrec t = M.t t
@@ -51,8 +63,8 @@ module Make (M : Arg) () = struct
 
   let create_error = create_error
 
-  let is_ok    t = t >= 0
-  let is_error t = t < 0
+  let is_ok    = is_ok
+  let is_error = is_error
 
   let to_result t =
     if is_ok t then
@@ -66,8 +78,8 @@ module Make (M : Arg) () = struct
        else Error (Unix_error.of_errno errno))
   ;;
   (* We can't use [Core_bench] to do this inside [Core], which it depends on. *)
-  TEST_UNIT "to_result doesn't allocate" =
-    for _i = 1 to 1000 do
+  let%test_unit "to_result doesn't allocate" =
+    for _ = 1 to 1000 do
       for t = -(Array.length preallocated_errnos - 1) to Array.length preallocated_ms - 1
       do
         let before_minor = Gc.minor_words () in
@@ -75,17 +87,17 @@ module Make (M : Arg) () = struct
         let result = to_result t in
         let after_minor  = Gc.minor_words () in
         let after_major  = Gc.major_words () in
-        <:test_result< int >> ~expect:0 (after_minor - before_minor);
-        <:test_result< int >> ~expect:0 (after_major - before_major);
-        <:test_result< (M.t, Unix_error.t) Result.t >> result
+        [%test_result: int] ~expect:0 (after_minor - before_minor);
+        [%test_result: int] ~expect:0 (after_major - before_major);
+        [%test_result: (M.t, Unix_error.t) Result.t] result
           ~expect:(if is_ok t
                    then Ok (M.of_int_exn t)
                    else Error (Unix_error.of_errno (-t)));
       done;
-    done;
+    done
   ;;
 
-  let sexp_of_t t = <:sexp_of< (M.t, Unix_error.t) Result.t >> (to_result t)
+  let sexp_of_t t = [%sexp_of: (M.t, Unix_error.t) Result.t] (to_result t)
 
   let ok_exn t =
     if is_ok t then
@@ -129,7 +141,7 @@ end
 
 module Int = Make (Int) ()
 module Unit = Make (struct
-  type t = unit with sexp_of, compare
+  type t = unit [@@deriving sexp_of, compare]
   let of_int_exn n = assert (n = 0)
   let to_int () = 0
 end) ()
@@ -137,9 +149,9 @@ end) ()
 let unit = Unit.create_ok ()
 let ignore_ok_value t = Core_kernel.Std.Int.min t 0
 
-TEST_UNIT =
+let%test_unit _ =
   for i = 1 to 10000 do
     let err = Unix_error.of_errno i in
     assert (err = Unit.error_exn (Unit.create_error err))
-  done;
+  done
 ;;

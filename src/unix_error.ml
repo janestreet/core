@@ -14,15 +14,15 @@ type error
   | ECONNABORTED | ECONNRESET | ENOBUFS | EISCONN | ENOTCONN | ESHUTDOWN
   | ETOOMANYREFS | ETIMEDOUT | ECONNREFUSED | EHOSTDOWN | EHOSTUNREACH | ELOOP
   | EOVERFLOW | EUNKNOWNERR of int
-  with sexp, compare
+  [@@deriving sexp, compare]
 
-type t = error with sexp, compare
+type t = error [@@deriving sexp, compare]
 
 external of_errno : int -> t = "core_unix_error_of_code"
 external to_errno : t -> int = "core_code_of_unix_error"
 
-TEST_UNIT =
+let%test_unit _ =
   for i = 1 to 10000 do
-    <:test_result< int >> ~expect:i (to_errno (of_errno i))
-  done;
+    [%test_result: int] ~expect:i (to_errno (of_errno i))
+  done
 ;;

@@ -31,7 +31,7 @@
 
 open Core_kernel.Std
 
-type ('a, 'b) t with sexp_of
+type ('a, 'b) t [@@deriving sexp_of]
 
 val create
   (** [growth_allowed] and [size] are both optionally passed on to the underlying call to

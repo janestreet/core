@@ -4,7 +4,7 @@
 
 open Core_kernel.Std
 
-type t with sexp
+type t [@@deriving sexp]
 
 include Identifiable.S with type t := t
 include Invariant.S    with type t := t
@@ -15,7 +15,7 @@ val create : unit -> t
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t with bin_io, compare, sexp
+    type nonrec t = t [@@deriving bin_io, compare, sexp]
     val for_testing : t
   end
 end

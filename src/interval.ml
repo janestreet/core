@@ -1,8 +1,6 @@
 
 open Core_kernel.Std
-
-open Int.Replace_polymorphic_compare
-let _ = (=)    (* turns off the unused open warning *)
+open! Int.Replace_polymorphic_compare
 
 module Stable = struct
   module V1 = struct
@@ -10,9 +8,9 @@ module Stable = struct
       type 'a t =
       | Interval of 'a * 'a
       | Empty
-      with bin_io, of_sexp, variants, compare
+      [@@deriving bin_io, of_sexp, variants, compare]
 
-      type 'a interval = 'a t with bin_io, of_sexp, compare
+      type 'a interval = 'a t [@@deriving bin_io, of_sexp, compare]
 
       let interval_of_sexp a_of_sexp sexp =
         try interval_of_sexp a_of_sexp sexp   (* for backwards compatibility *)
@@ -34,19 +32,19 @@ module Stable = struct
     open T
 
     module Float = struct
-      type t = float interval with sexp, bin_io, compare
+      type t = float interval [@@deriving sexp, bin_io, compare]
     end
 
     module Int = struct
-      type t = int interval with sexp, bin_io, compare
+      type t = int interval [@@deriving sexp, bin_io, compare]
     end
 
     module Time = struct
-      type t = Time.Stable.V1.t interval with sexp, bin_io, compare
+      type t = Time.Stable.V1.t interval [@@deriving sexp, bin_io, compare]
     end
 
     module Ofday = struct
-      type t = Ofday.Stable.V1.t interval with sexp, bin_io, compare
+      type t = Ofday.Stable.V1.t interval [@@deriving sexp, bin_io, compare]
     end
   end
 
@@ -63,7 +61,7 @@ module Stable = struct
         assert (empty.V.rank = 1);
         [ empty.V.constructor, "()", "\001" ]))
 
-  TEST_MODULE "Interval.V1.Float" = Core_kernel.Stable_unit_test.Make(struct
+  let%test_module "Interval.V1.Float" = (module Core_kernel.Stable_unit_test.Make(struct
     include V1.Float
     let equal x1 x2 = (V1.T.compare Float.compare x1 x2) = 0
 
@@ -73,9 +71,9 @@ module Stable = struct
       [ (1.5, 120.), "(1.5 120)",
         "\000\000\000\000\000\000\000\248?\000\000\000\000\000\000^@"
       ]
-  end)
+  end))
 
-  TEST_MODULE "Interval.V1.Int" = Core_kernel.Stable_unit_test.Make(struct
+  let%test_module "Interval.V1.Int" = (module Core_kernel.Stable_unit_test.Make(struct
     include V1.Int
     let equal x1 x2 = (V1.T.compare Int.compare x1 x2) = 0
 
@@ -83,9 +81,9 @@ module Stable = struct
     module V = V1.T.Variants
     let tests = make_tests_v1
       ~non_empty: [ (-5, 789), "(-5 789)", "\000\255\251\254\021\003" ]
-  end)
+  end))
 
-  TEST_MODULE "Interval.V1.Time" = struct
+  let%test_module "Interval.V1.Time" = (module struct
     module Arg = struct
       include V1.Time
       let equal x1 x2 = (V1.T.compare Time.compare x1 x2) = 0
@@ -112,9 +110,9 @@ module Stable = struct
        results depending on the local zone. *)
     include Core_kernel.Stable_unit_test.Make_sexp_deserialization_test(Arg)
     include Core_kernel.Stable_unit_test.Make_bin_io_test(Arg)
-  end
+  end)
 
-  TEST_MODULE "Interval.V1.Ofday" = Core_kernel.Stable_unit_test.Make(struct
+  let%test_module "Interval.V1.Ofday" = (module Core_kernel.Stable_unit_test.Make(struct
     include V1.Ofday
     let equal x1 x2 = (V1.T.compare Ofday.compare x1 x2) = 0
 
@@ -127,7 +125,7 @@ module Stable = struct
         [ (t1, t2) , "(07:30:07.012005 09:45:08.000001)",
           "\000\153\158\176\196\192_\218@\223\024\002\000\128$\225@"
         ]
-  end)
+  end))
 end
 
 open Stable.V1.T
@@ -349,7 +347,7 @@ module Raw_make (T : Bound) = struct
 
 end
 
-type 'a t = 'a interval with bin_io, sexp
+type 'a t = 'a interval [@@deriving bin_io, sexp]
 type 'a bound_ = 'a
 
 module C = Raw_make (struct
@@ -367,18 +365,18 @@ let t_of_sexp a_of_sexp s =
 ;;
 
 module Set = struct
-  type 'a t = 'a interval list with bin_io, sexp
+  type 'a t = 'a interval list [@@deriving bin_io, sexp]
   include C.Set
 end
 
 module Make (Bound : sig
-  type t with bin_io, sexp
+  type t [@@deriving bin_io, sexp]
   include Comparable.S with type t := t
 end) = struct
 
-  type t = Bound.t interval with bin_io, sexp
+  type t = Bound.t interval [@@deriving bin_io, sexp]
   type 'a t_ = t
-  type interval = t with bin_io, sexp
+  type interval = t [@@deriving bin_io, sexp]
   type bound = Bound.t
   type 'a bound_ = bound
 
@@ -402,7 +400,7 @@ end) = struct
   ;;
 
   module Set = struct
-    type t = interval list with sexp, bin_io
+    type t = interval list [@@deriving sexp, bin_io]
     type 'a t_ = t
     include C.Set
     let to_poly (t : t) = t
@@ -417,11 +415,246 @@ module type S = Interval_intf.S
   with type 'a poly_set := 'a Set.t
 
 module Float = Make (Float)
-module Int   = Make (Int  )
 module Ofday = Make (Ofday)
 
+module Int = struct
+  include Make(Int)
+
+  let length t =
+    match t with
+    | Empty -> 0
+    | Interval (lo, hi) ->
+      let len = 1 + hi - lo in
+      (* If [hi] and [lo] are far enough apart (e.g. if [lo <= 0] and
+         [hi = Int.max_value]), [len] will overlow. *)
+      if len < 0 then
+        failwiths "interval length not representable" t [%sexp_of: t];
+      len
+
+  let get t i =
+    let fail () =
+      failwiths "index out of bounds" (i, t)
+        [%sexp_of: int * t]
+    in
+    match t with
+    | Empty -> fail ()
+    | Interval (lo, hi) ->
+      if i < 0 then fail ();
+      let x = lo + i in
+      if x < lo || x > hi then fail ();
+      x
+
+  let iter t ~f =
+    match t with
+    | Empty -> ()
+    | Interval (lo, hi) ->
+      for x = lo to hi do
+        f x
+      done
+
+  let fold =
+    let rec fold_interval ~lo ~hi ~acc ~f =
+      if lo = hi
+      then f acc hi
+      else fold_interval ~lo:(lo+1) ~hi ~acc:(f acc lo) ~f
+    in
+    fun t ~init ~f ->
+      match t with
+      | Empty             -> init
+      | Interval (lo, hi) -> fold_interval ~lo ~hi ~acc:init ~f
+
+  module For_container = Container.Make0 (struct
+      type nonrec t   = t
+      type nonrec elt = bound
+      let iter = `Custom iter
+      let fold = fold
+    end)
+
+  let exists   = For_container.exists
+  let for_all  = For_container.for_all
+  let sum      = For_container.sum
+  let count    = For_container.count
+  let find     = For_container.find
+  let find_map = For_container.find_map
+  let to_list  = For_container.to_list
+  let to_array = For_container.to_array
+
+  let min_elt t ~cmp =
+    if not (phys_equal cmp Int.compare)
+    then For_container.min_elt t ~cmp
+    else lbound t
+
+  let max_elt t ~cmp =
+    if not (phys_equal cmp Int.compare)
+    then For_container.max_elt t ~cmp
+    else ubound t
+
+  let mem ?(equal = Int.equal) t x =
+    if not (phys_equal equal Int.equal)
+    then For_container.mem ~equal t x
+    else contains t x
+
+  module For_binary_search = Binary_searchable.Make_without_tests (struct
+      type nonrec t   = t
+      type nonrec elt = bound
+      let length = length
+      let get    = get
+    end)
+
+  let binary_search           = For_binary_search.binary_search
+  let binary_search_segmented = For_binary_search.binary_search_segmented
+
+  let%test_module "vs array" = (module struct
+    module Gen = Quickcheck.Generator
+    module Obs = Quickcheck.Observer
+
+    let interval_of_length n =
+      let open Gen in
+      if n = 0
+      then singleton Empty
+      else
+        let range = n-1 in
+        Int.gen_between
+          ~lower_bound:Unbounded
+          ~upper_bound:(Incl (Int.max_value - range))
+        >>| fun lo ->
+        let hi = lo + range in
+        create lo hi
+
+    let interval =
+      let open Gen in
+      size
+      >>= fun n ->
+      interval_of_length n
+
+    let interval_with_index =
+      let open Gen in
+      size
+      >>= fun n ->
+      (* Can only generate indices for non-empty intervals. *)
+      let n = n + 1 in
+      Int.gen_between ~lower_bound:(Incl 0) ~upper_bound:(Excl n)
+      >>= fun index ->
+      interval_of_length n
+      >>| fun t ->
+      t, index
+
+    let%test_unit "to_list explicit" =
+      let check lo hi list =
+        [%test_eq: int list] (to_list (create lo hi)) list;
+      in
+      check 0 5 [0;1;2;3;4;5];
+      check 0 0 [0];
+      check 1 0 [];
+    ;;
+
+    let %test_unit "to_list and to_array" =
+      Quickcheck.test
+        (let int = Int.gen_between ~lower_bound:(Incl (-1000)) ~upper_bound:(Incl 1000) in
+         Gen.tuple2 int int)
+        ~sexp_of:[%sexp_of: int * int] ~f:(fun (lo,hi) ->
+          [%test_result: int list]
+            ~expect:(List.range ~start:`inclusive ~stop:`inclusive lo hi)
+            (to_list (create lo hi));
+          [%test_eq: int list]
+            (create lo hi |> to_list)
+            (create lo hi |> to_array |> Array.to_list)
+        )
+
+    let %test_unit "to_list and to_array 2" =
+      Quickcheck.test interval ~sexp_of:[%sexp_of: t] ~f:(fun t ->
+        [%test_eq: int list]
+          (to_list t) (to_array t |> Array.to_list))
+
+    let%test_unit "length" =
+      Quickcheck.test interval ~sexp_of:[%sexp_of: t] ~f:(fun t ->
+        [%test_result: int]
+          ~expect:(Array.length (to_array t))
+          (length t))
+
+    let%test_unit "get" =
+      Quickcheck.test interval_with_index ~sexp_of:[%sexp_of: t * int] ~f:(fun (t, i) ->
+        [%test_result: int]
+          ~expect:(Array.get (to_array t) i)
+          (get t i))
+
+    let%test_unit "iter" =
+      Quickcheck.test interval ~sexp_of:[%sexp_of: t] ~f:(fun t ->
+        [%test_result: int Queue.t]
+          ~expect:(let q = Queue.create () in
+                   Array.iter (to_array t) ~f:(Queue.enqueue q);
+                   q)
+          (let q = Queue.create () in
+           iter t ~f:(Queue.enqueue q);
+           q))
+
+    let%test_unit "fold" =
+      Quickcheck.test interval ~sexp_of:[%sexp_of: t] ~f:(fun t ->
+        let init = [] in
+        let f xs x = x :: xs in
+        [%test_result: int list]
+          ~expect:(Array.fold (to_array t) ~init ~f)
+          (fold t ~init ~f))
+
+    let%test_unit "min_elt w/ default cmp" =
+      Quickcheck.test interval ~sexp_of:[%sexp_of: t] ~f:(fun t ->
+        [%test_result: int option]
+          ~expect:(Array.min_elt (to_array t) ~cmp:Int.compare)
+          (min_elt t ~cmp:Int.compare))
+
+    let%test_unit "min_elt w/ reverse cmp" =
+      Quickcheck.test interval ~sexp_of:[%sexp_of: t] ~f:(fun t ->
+        let cmp x y = Int.compare y x in
+        [%test_result: int option]
+          ~expect:(Array.min_elt (to_array t) ~cmp)
+          (min_elt t ~cmp))
+
+    let%test_unit "max_elt w/ default cmp" =
+      Quickcheck.test interval ~sexp_of:[%sexp_of: t] ~f:(fun t ->
+        [%test_result: int option]
+          ~expect:(Array.max_elt (to_array t) ~cmp:Int.compare)
+          (max_elt t ~cmp:Int.compare))
+
+    let%test_unit "max_elt w/ reverse cmp" =
+      Quickcheck.test interval ~sexp_of:[%sexp_of: t] ~f:(fun t ->
+        let cmp x y = Int.compare y x in
+        [%test_result: int option]
+          ~expect:(Array.max_elt (to_array t) ~cmp)
+          (max_elt t ~cmp))
+
+    let%test_unit "mem w/o equal" =
+      Quickcheck.test
+        Gen.(tuple2 interval Int.gen)
+        ~sexp_of:[%sexp_of: t * int]
+        ~f:(fun (t, i) ->
+          [%test_result: bool]
+            ~expect:(Array.mem (to_array t) i)
+            (mem t i))
+
+    let%test_unit "mem w/ default equal" =
+      Quickcheck.test
+        Gen.(tuple2 interval Int.gen)
+        ~sexp_of:[%sexp_of: t * int]
+        ~f:(fun (t, i) ->
+          let equal = Int.equal in
+          [%test_result: bool]
+            ~expect:(Array.mem ~equal (to_array t) i)
+            (mem ~equal t i))
+
+    let%test_unit "mem w/ negated equal" =
+      Quickcheck.test
+        Gen.(tuple2 interval Int.gen)
+        ~sexp_of:[%sexp_of: t * int]
+        ~f:(fun (t, i) ->
+          let equal x y = (x = (-y)) in
+          [%test_result: bool]
+            ~expect:(Array.mem ~equal (to_array t) i)
+            (mem ~equal t i))
+  end)
+end
+
 (* Tests for list bound functions *)
-TEST_MODULE = struct
+let%test_module _ = (module struct
   let intervals =
     [ Int.empty
     ; Interval (3, 6)
@@ -429,7 +662,7 @@ TEST_MODULE = struct
     ; Int.empty
     ; Interval (4, 5)]
 
-  TEST =
+  let%test _ =
     match Int.convex_hull intervals with
     | Interval (2, 7) -> true
     | _ -> false
@@ -441,7 +674,7 @@ TEST_MODULE = struct
     ; Int.empty
     ; Interval (4, 5)]
 
-  TEST =
+  let%test _ =
     match Int.convex_hull intervals with
     | Interval (2, 6) -> true
     | _ -> false
@@ -450,11 +683,12 @@ TEST_MODULE = struct
     [ Int.empty
     ; Int.empty]
 
-  TEST =
+  let%test _ =
     match Int.convex_hull intervals with
     | Empty -> true
     | _ -> false
-end
+end)
+
 module Time = struct
   include Make(Time)
 

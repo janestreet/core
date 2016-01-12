@@ -1,6 +1,8 @@
-module Time_ns_in_this_directory = Time_ns
+module Bigstring_in_this_directory = Bigstring
+module Time_ns_in_this_directory   = Time_ns
 open Core_kernel.Std
-module Time_ns = Time_ns_in_this_directory
+module Bigstring = Bigstring_in_this_directory
+module Time_ns   = Time_ns_in_this_directory
 
 module File_descr = Core_unix.File_descr
 
@@ -21,278 +23,12 @@ module Sysinfo0 = struct
       freehigh : int;
       mem_unit : int;
     }
-  with bin_io, sexp
+  [@@deriving bin_io, sexp]
 end
 
 (* If you update this type, you also must update linux_tcpopt_bool, in the C stubs. (And
    do make sure you get the order correct) *)
-type tcp_bool_option = TCP_CORK with sexp, bin_io
-
-INCLUDE "core_config.mlh"
-
-IFDEF POSIX_TIMERS THEN
-module Clock = struct
-  type t
-
-  (* These functions should be in Unix, but due to the dependency on Time,
-     this is not possible (cyclic dependency). *)
-  external get_time : t -> float = "unix_clock_gettime"
-  let get_time t = Span.of_float (get_time t)
-
-  external set_time : t -> float -> unit = "unix_clock_settime"
-  let set_time t s = set_time t (Span.to_float s)
-
-  external get_resolution : t -> float = "unix_clock_getres"
-  let get_resolution t = Span.of_float (get_resolution t)
-
-  external get_process_clock : unit -> t = "unix_clock_process_cputime_id_stub"
-
-  external get_thread_clock : unit -> t = "unix_clock_thread_cputime_id_stub"
-
-  IFDEF THREAD_CPUTIME THEN
-  external get : Thread.t -> t = "unix_pthread_getcpuclockid"
-
-  let get               = Ok get
-  ELSE
-  let get               = Or_error.unimplemented "Linux_ext.Clock.get"
-  ENDIF
-  let get_time          = Ok get_time
-  let set_time          = Ok set_time
-  let get_resolution    = Ok get_resolution
-  let get_process_clock = Ok get_process_clock
-  let get_thread_clock  = Ok get_thread_clock
-
-end
-
-ELSE
-
-module Clock = struct
-  type t
-
-  let get               = Or_error.unimplemented "Linux_ext.Clock.get"
-  let get_time          = Or_error.unimplemented "Linux_ext.Clock.get_time"
-  let set_time          = Or_error.unimplemented "Linux_ext.Clock.set_time"
-  let get_resolution    = Or_error.unimplemented "Linux_ext.Clock.get_resolution"
-  let get_process_clock = Or_error.unimplemented "Linux_ext.Clock.get_process_clock"
-  let get_thread_clock  = Or_error.unimplemented "Linux_ext.Clock.get_thread_clock"
-end
-
-ENDIF
-
-IFDEF TIMERFD THEN
-
-module Timerfd = struct
-  module Clock : sig
-    type t with bin_io, compare, sexp
-    val realtime : t
-    val monotonic : t
-  end = struct
-    type t = Int63.t with bin_io, compare, sexp
-
-    external realtime : unit -> Int63.t = "linux_timerfd_CLOCK_REALTIME"
-    let realtime = realtime ()
-
-    external monotonic : unit -> Int63.t = "linux_timerfd_CLOCK_MONOTONIC"
-    let monotonic = monotonic ()
-  end
-
-  module Flags = struct
-    external nonblock : unit -> Int63.t = "linux_timerfd_TFD_NONBLOCK"
-    let nonblock = nonblock ()
-
-    external cloexec  : unit -> Int63.t = "linux_timerfd_TFD_CLOEXEC"
-    let cloexec = cloexec ()
-
-    include Flags.Make (struct
-      let allow_intersecting = false
-      let should_print_error = true
-      let remove_zero_flags = false
-      let known =
-        List.rev
-          [ nonblock, "nonblock";
-            cloexec,  "cloexec";
-          ]
-    end)
-  end
-
-  type t = File_descr.t with bin_io, compare, sexp
-
-  let to_file_descr t = t
-
-  external timerfd_create : Clock.t -> Flags.t -> int = "linux_timerfd_create"
-
-  (* At Jane Street, we link with [--wrap timerfd_create] so that we can use
-     our own wrapper around [timerfd_create].  This allows us to compile an executable on
-     a machine that has timerfd (e.g. CentOS 6) but then run the executable on a machine
-     that does not (e.g. CentOS 5), but that has our wrapper library.  We set up our
-     wrapper so that when running on a machine that doesn't have it, [timerfd_create]
-     raises ENOSYS. *)
-  let create =
-    let create ?(flags = Flags.empty) clock =
-      File_descr.of_int (timerfd_create clock flags)
-    in
-    match Result.try_with (fun () -> create Clock.realtime) with
-    | Ok t -> (Unix.close t; Ok create)
-    | Error (Unix.Unix_error (Unix.ENOSYS, _, _)) ->
-      Or_error.unimplemented "Linux_ext.Timerfd.create"
-    | Error _ ->
-      (* [timerfd_create] is implemented but fails with the arguments we used above.
-         [create] might still be usable with different arguments, so we expose it
-         here. *)
-      Ok create
-  ;;
-
-  external unsafe_timerfd_settime
-    :  t
-    -> bool
-    -> initial  : Int63.t
-    -> interval : Int63.t
-    -> unit
-    = "linux_timerfd_settime"
-
-  let timerfd_settime t ~absolute ~initial ~interval =
-    (* We could accept [interval < 0] or [initial < 0 when absolute], but then the
-       conversions to timespecs in the C code become tedious and [timerfd_setttime] fails
-       when it gets anything negative anyway. *)
-    if Int63.O.( initial < zero || interval < zero )
-    then <:raise_structural_sexp<
-           "timerfd_settime got invalid parameters (initial < 0 or interval < 0)."
-           { timerfd  = (t : t)
-           ; initial  = (initial  : Int63.t)
-           ; interval = (interval : Int63.t)
-           } >>;
-    unsafe_timerfd_settime t absolute ~initial ~interval
-  ;;
-
-  let initial_of_span span =
-    Time_ns.Span.to_int63_ns
-      (if Time_ns.Span.( <= ) span Time_ns.Span.zero
-       then Time_ns.Span.nanosecond
-       else span)
-  ;;
-
-  let set_at t at =
-    if Time_ns.( <= ) at Time_ns.epoch
-    then failwiths "Timerfd.set_at got time before epoch" at <:sexp_of< Time_ns.t >>;
-    timerfd_settime t
-      ~absolute:true
-      ~initial:(Time_ns.to_int63_ns_since_epoch at)
-      ~interval:Int63.zero
-
-  let set_after t span =
-    timerfd_settime t
-      ~absolute:false
-      ~initial:(initial_of_span span)
-      ~interval:Int63.zero
-  ;;
-
-  let set_repeating ?after t interval =
-    if Time_ns.Span.( <= ) interval Time_ns.Span.zero
-    then failwiths "Timerfd.set_repeating got invalid interval" interval
-           <:sexp_of< Time_ns.Span.t >>;
-    let interval = Time_ns.Span.to_int63_ns interval in
-    timerfd_settime t
-      ~absolute:false
-      ~initial:(Option.value_map after ~f:initial_of_span ~default:interval)
-      ~interval
-  ;;
-
-  let clear t =
-    timerfd_settime t ~absolute:false ~initial:Int63.zero ~interval:Int63.zero
-
-  type repeat =
-    { fire_after : Time_ns.Span.t
-    ; interval   : Time_ns.Span.t
-    }
-
-  external timerfd_gettime : t -> repeat = "linux_timerfd_gettime"
-
-  let get t =
-    let spec = timerfd_gettime t in
-    if Time_ns.Span.equal spec.interval Time_ns.Span.zero
-    then
-      if Time_ns.Span.equal spec.fire_after Time_ns.Span.zero
-      then `Not_armed
-      else `Fire_after spec.fire_after
-    else
-      `Repeat spec
-  ;;
-
-  (* We expect set_after to allocate nothing. *)
-  BENCH_FUN "Linux_ext.Timerfd.set_after" =
-    match create with
-    | Error _ -> ignore
-    | Ok create ->
-      let t = create Clock.realtime in
-      fun () -> set_after t Time_ns.Span.second
-  ;;
-
-  TEST_MODULE "Linux_ext.Timerfd" = struct
-
-    TEST_UNIT =
-      match create with
-      | Error _ -> ()
-      | Ok create ->
-        let t = create Clock.realtime in
-        assert (get t = `Not_armed);
-        set_after t Time_ns.Span.minute;
-        assert (match get t with
-                | `Fire_after span -> Time_ns.Span.(<=) span Time_ns.Span.minute
-                | _ -> false);
-        let span = Time_ns.Span.scale Time_ns.Span.minute 2. in
-        set_repeating t ~after:Time_ns.Span.minute span;
-        assert (match get t with
-                | `Repeat { fire_after; interval } ->
-                  Time_ns.Span.(<=) fire_after Time_ns.Span.minute
-                  && Time_ns.Span.equal interval span
-                | _ ->
-                  false);
-    ;;
-  end
-end
-
-ELSE
-
-module Timerfd = struct
-  module Clock = struct
-    type t = unit with bin_io, compare, sexp
-    let realtime = ()
-    let monotonic = ()
-  end
-
-  module Flags = struct
-    let nonblock = Int63.of_int 0o4000
-    let cloexec  = Int63.of_int 0o2000000
-
-    include Flags.Make (struct
-      let allow_intersecting = false
-      let should_print_error = true
-      let remove_zero_flags = false
-
-      let known =
-        List.rev
-          [ nonblock, "nonblock";
-            cloexec,  "cloexec";
-          ]
-    end)
-  end
-
-  type t = File_descr.t with bin_io, compare, sexp
-
-  let to_file_descr t = t
-
-  type repeat = { fire_after : Time_ns.Span.t; interval : Time_ns.Span.t }
-
-  let create = Or_error.unimplemented "Linux_ext.Timerfd.create"
-
-  let set_at _                 _ = assert false
-  let set_after _              _ = assert false
-  let set_repeating ?after:_ _ _ = assert false
-  let clear                    _ = assert false
-  let get                      _ = assert false
-end
-
-ENDIF
+type tcp_bool_option = TCP_CORK [@@deriving sexp, bin_io]
 
 (* We use [Int63] rather than [Int] because these flags use 32 bits. *)
 
@@ -330,7 +66,7 @@ end) = struct
 end
 
 module Priority : sig
-  type t with sexp
+  type t [@@deriving sexp]
 
   val equal : t -> t -> bool
   val of_int : int -> t
@@ -338,7 +74,7 @@ module Priority : sig
   val incr : t -> t
   val decr : t -> t
 end = struct
-  type t = int with sexp
+  type t = int [@@deriving sexp]
 
   let of_int t = t
   let to_int t = t
@@ -350,7 +86,363 @@ end = struct
   let equal (t : t) t' = t = t'
 end
 
-IFDEF LINUX_EXT THEN
+(* This module contains definitions that get used when the necessary features are not
+   enabled. We put these somewhere where they'll always be compiled, to prevent them from
+   getting out of sync with the real implementations. *)
+module Null : Linux_ext_intf.S = struct
+  type nonrec tcp_bool_option = tcp_bool_option = TCP_CORK [@@deriving sexp, bin_io]
+
+  module Priority = Priority
+
+  module Clock = struct
+    type t
+
+    let get               = Or_error.unimplemented "Linux_ext.Clock.get"
+    let get_time          = Or_error.unimplemented "Linux_ext.Clock.get_time"
+    let set_time          = Or_error.unimplemented "Linux_ext.Clock.set_time"
+    let get_resolution    = Or_error.unimplemented "Linux_ext.Clock.get_resolution"
+    let get_process_clock = Or_error.unimplemented "Linux_ext.Clock.get_process_clock"
+    let get_thread_clock  = Or_error.unimplemented "Linux_ext.Clock.get_thread_clock"
+  end
+
+  module Timerfd = struct
+    module Clock = struct
+      type t = unit [@@deriving bin_io, compare, sexp]
+      let realtime = ()
+      let monotonic = ()
+    end
+
+    module Flags = struct
+      let nonblock = Int63.of_int 0o4000
+      let cloexec  = Int63.of_int 0o2000000
+
+      include Flags.Make (struct
+        let allow_intersecting = false
+        let should_print_error = true
+        let remove_zero_flags = false
+
+        let known =
+          List.rev
+            [ nonblock, "nonblock";
+              cloexec,  "cloexec";
+            ]
+      end)
+    end
+
+    type t = File_descr.t [@@deriving bin_io, compare, sexp]
+
+    let to_file_descr t = t
+
+    type repeat =
+      { fire_after : Time_ns.Span.t
+      ; interval   : Time_ns.Span.t
+      }
+
+    let create = Or_error.unimplemented "Linux_ext.Timerfd.create"
+
+    let set_at _                 _ = assert false
+    let set_after _              _ = assert false
+    let set_repeating ?after:_ _ _ = assert false
+    let clear                    _ = assert false
+    let get                      _ = assert false
+  end
+
+  module Linux_ext = struct
+    module Sysinfo = struct
+      include Sysinfo0
+
+      let sysinfo = Or_error.unimplemented "Linux_ext.Sysinfo.sysinfo"
+    end
+
+    let u = Or_error.unimplemented
+    let cores                          = u "Linux_ext.cores"
+    let file_descr_realpath            = u "Linux_ext.file_descr_realpath"
+    let get_ipv4_address_for_interface = u "Linux_ext.get_ipv4_address_for_interface"
+    let bind_to_interface              = u "Linux_ext.bind_to_interface"
+    let get_terminal_size              = u "Linux_ext.get_terminal_size"
+    let gettcpopt_bool                 = u "Linux_ext.gettcpopt_bool"
+    let setpriority                    = u "Linux_ext.setpriority"
+    let getpriority                    = u "Linux_ext.getpriority"
+    let in_channel_realpath            = u "Linux_ext.in_channel_realpath"
+    let out_channel_realpath           = u "Linux_ext.out_channel_realpath"
+    let pr_get_name                    = u "Linux_ext.pr_get_name"
+    let pr_get_pdeathsig               = u "Linux_ext.pr_get_pdeathsig"
+    let pr_set_name_first16            = u "Linux_ext.pr_set_name_first16"
+    let pr_set_pdeathsig               = u "Linux_ext.pr_set_pdeathsig"
+    let sched_setaffinity              = u "Linux_ext.sched_setaffinity"
+    let sched_setaffinity_this_thread  = u "Linux_ext.sched_setaffinity_this_thread"
+    let send_no_sigpipe                = u "Linux_ext.send_no_sigpipe"
+    let send_nonblocking_no_sigpipe    = u "Linux_ext.send_nonblocking_no_sigpipe"
+    let sendfile                       = u "Linux_ext.sendfile"
+    let sendmsg_nonblocking_no_sigpipe = u "Linux_ext.sendmsg_nonblocking_no_sigpipe"
+    let settcpopt_bool                 = u "Linux_ext.settcpopt_bool"
+
+    module Epoll = struct
+      module Flags = Epoll_flags (struct
+        let in_     = Int63.of_int (1 lsl 0)
+        let out     = Int63.of_int (1 lsl 1)
+        (* let rdhup   = Int63.of_int (1 lsl 2) *)
+        let pri     = Int63.of_int (1 lsl 3)
+        let err     = Int63.of_int (1 lsl 4)
+        let hup     = Int63.of_int (1 lsl 5)
+        let et      = Int63.of_int (1 lsl 6)
+        let oneshot = Int63.of_int (1 lsl 7)
+      end)
+
+      type t = [ `Epoll_is_not_implemented ] [@@deriving sexp_of]
+      let create = Or_error.unimplemented "Linux_ext.Epoll.create"
+      let close _ = assert false
+
+      let invariant _               = assert false
+
+      let find _ _                  = assert false
+      let find_exn _ _              = assert false
+      let set _ _ _                 = assert false
+      let remove _ _                = assert false
+      let iter _ ~f:_               = assert false
+      let wait _ ~timeout:_         = assert false
+      let wait_timeout_after _ _    = assert false
+      let iter_ready _ ~f:_         = assert false
+      let fold_ready _ ~init:_ ~f:_ = assert false
+
+      (* let pwait _ ~timeout:_ _      = assert false *)
+    end
+  end
+
+  include Linux_ext
+end
+
+#import "config.mlh"
+
+#if JSC_POSIX_TIMERS
+module Clock = struct
+  type t
+
+  (* These functions should be in Unix, but due to the dependency on Time,
+     this is not possible (cyclic dependency). *)
+  external get_time : t -> float = "unix_clock_gettime"
+  let get_time t = Span.of_float (get_time t)
+
+  external set_time : t -> float -> unit = "unix_clock_settime"
+  let set_time t s = set_time t (Span.to_float s)
+
+  external get_resolution : t -> float = "unix_clock_getres"
+  let get_resolution t = Span.of_float (get_resolution t)
+
+  external get_process_clock : unit -> t = "unix_clock_process_cputime_id_stub"
+
+  external get_thread_clock : unit -> t = "unix_clock_thread_cputime_id_stub"
+
+#if JSC_THREAD_CPUTIME
+  external get : Thread.t -> t = "unix_pthread_getcpuclockid"
+
+  let get               = Ok get
+#else
+  let get               = Or_error.unimplemented "Linux_ext.Clock.get"
+#endif
+  let get_time          = Ok get_time
+  let set_time          = Ok set_time
+  let get_resolution    = Ok get_resolution
+  let get_process_clock = Ok get_process_clock
+  let get_thread_clock  = Ok get_thread_clock
+
+end
+
+#else
+module Clock = Null.Clock
+#endif
+
+#if JSC_TIMERFD
+
+module Timerfd = struct
+  module Clock : sig
+    type t [@@deriving bin_io, compare, sexp]
+    val realtime : t
+    val monotonic : t
+  end = struct
+    type t = Int63.t [@@deriving bin_io, compare, sexp]
+
+    external realtime : unit -> Int63.t = "linux_timerfd_CLOCK_REALTIME"
+    let realtime = realtime ()
+
+    external monotonic : unit -> Int63.t = "linux_timerfd_CLOCK_MONOTONIC"
+    let monotonic = monotonic ()
+  end
+
+  module Flags = struct
+    external nonblock : unit -> Int63.t = "linux_timerfd_TFD_NONBLOCK"
+    let nonblock = nonblock ()
+
+    external cloexec  : unit -> Int63.t = "linux_timerfd_TFD_CLOEXEC"
+    let cloexec = cloexec ()
+
+    include Flags.Make (struct
+      let allow_intersecting = false
+      let should_print_error = true
+      let remove_zero_flags = false
+      let known =
+        List.rev
+          [ nonblock, "nonblock";
+            cloexec,  "cloexec";
+          ]
+    end)
+  end
+
+  type t = File_descr.t [@@deriving bin_io, compare, sexp]
+
+  let to_file_descr t = t
+
+  external timerfd_create : Clock.t -> Flags.t -> int = "linux_timerfd_create"
+
+  (* At Jane Street, we link with [--wrap timerfd_create] so that we can use
+     our own wrapper around [timerfd_create].  This allows us to compile an executable on
+     a machine that has timerfd (e.g. CentOS 6) but then run the executable on a machine
+     that does not (e.g. CentOS 5), but that has our wrapper library.  We set up our
+     wrapper so that when running on a machine that doesn't have it, [timerfd_create]
+     raises ENOSYS. *)
+  let create =
+    let create ?(flags = Flags.empty) clock =
+      File_descr.of_int (timerfd_create clock flags)
+    in
+    match Result.try_with (fun () -> create Clock.realtime) with
+    | Ok t -> (Unix.close t; Ok create)
+    | Error (Unix.Unix_error (Unix.ENOSYS, _, _)) ->
+      Or_error.unimplemented "Linux_ext.Timerfd.create"
+    | Error _ ->
+      (* [timerfd_create] is implemented but fails with the arguments we used above.
+         [create] might still be usable with different arguments, so we expose it
+         here. *)
+      Ok create
+  ;;
+
+  external unsafe_timerfd_settime
+    :  t
+    -> bool
+    -> initial  : Int63.t
+    -> interval : Int63.t
+    -> Syscall_result.Unit.t
+    = "linux_timerfd_settime" "noalloc"
+
+  let%test_unit "unsafe_timerfd_settime returning errno" =
+    let result =
+      unsafe_timerfd_settime (File_descr.of_int (-1)) false
+        ~initial:Int63.zero ~interval:Int63.zero
+    in
+    if Syscall_result.Unit.is_ok result
+    then failwiths "unsafe_timerfd_settime unexpectedly succeeded" result
+           [%sexp_of: Syscall_result.Unit.t];
+    [%test_result: Unix_error.t] (Syscall_result.Unit.error_exn result) ~expect:EBADF
+  ;;
+
+  let timerfd_settime t ~absolute ~initial ~interval =
+    (* We could accept [interval < 0] or [initial < 0 when absolute], but then the
+       conversions to timespecs in the C code become tedious and [timerfd_setttime] fails
+       when it gets anything negative anyway. *)
+    if Int63.O.( initial < zero || interval < zero )
+    then raise_s
+           [%sexp
+             "timerfd_settime got invalid parameters (initial < 0 or interval < 0).",
+             { timerfd  = (t : t)
+             ; initial  = (initial  : Int63.t)
+             ; interval = (interval : Int63.t)
+             }
+           ];
+    unsafe_timerfd_settime t absolute ~initial ~interval
+    |> Syscall_result.Unit.ok_or_unix_error_exn ~syscall_name:"timerfd_settime"
+  ;;
+
+  let initial_of_span span =
+    Time_ns.Span.to_int63_ns
+      (if Time_ns.Span.( <= ) span Time_ns.Span.zero
+       then Time_ns.Span.nanosecond
+       else span)
+  ;;
+
+  let set_at t at =
+    if Time_ns.( <= ) at Time_ns.epoch
+    then failwiths "Timerfd.set_at got time before epoch" at [%sexp_of: Time_ns.t];
+    timerfd_settime t
+      ~absolute:true
+      ~initial:(Time_ns.to_int63_ns_since_epoch at)
+      ~interval:Int63.zero
+
+  let set_after t span =
+    timerfd_settime t
+      ~absolute:false
+      ~initial:(initial_of_span span)
+      ~interval:Int63.zero
+  ;;
+
+  let set_repeating ?after t interval =
+    if Time_ns.Span.( <= ) interval Time_ns.Span.zero
+    then failwiths "Timerfd.set_repeating got invalid interval" interval
+           [%sexp_of: Time_ns.Span.t];
+    let interval = Time_ns.Span.to_int63_ns interval in
+    timerfd_settime t
+      ~absolute:false
+      ~initial:(Option.value_map after ~f:initial_of_span ~default:interval)
+      ~interval
+  ;;
+
+  let clear t =
+    timerfd_settime t ~absolute:false ~initial:Int63.zero ~interval:Int63.zero
+
+  type repeat =
+    { fire_after : Time_ns.Span.t
+    ; interval   : Time_ns.Span.t
+    }
+
+  external timerfd_gettime : t -> repeat = "linux_timerfd_gettime"
+
+  let get t =
+    let spec = timerfd_gettime t in
+    if Time_ns.Span.equal spec.interval Time_ns.Span.zero
+    then
+      if Time_ns.Span.equal spec.fire_after Time_ns.Span.zero
+      then `Not_armed
+      else `Fire_after spec.fire_after
+    else
+      `Repeat spec
+  ;;
+
+  (* We expect set_after to allocate nothing. *)
+  let%bench_fun "Linux_ext.Timerfd.set_after" =
+    match create with
+    | Error _ -> ignore
+    | Ok create ->
+      let t = create Clock.realtime in
+      fun () -> set_after t Time_ns.Span.second
+  ;;
+
+  let%test_module "Linux_ext.Timerfd" = (module struct
+
+    let%test_unit _ =
+      match create with
+      | Error _ -> ()
+      | Ok create ->
+        let t = create Clock.realtime in
+        assert (get t = `Not_armed);
+        set_after t Time_ns.Span.minute;
+        assert (match get t with
+                | `Fire_after span -> Time_ns.Span.(<=) span Time_ns.Span.minute
+                | _ -> false);
+        let span = Time_ns.Span.scale Time_ns.Span.minute 2. in
+        set_repeating t ~after:Time_ns.Span.minute span;
+        assert (match get t with
+                | `Repeat { fire_after; interval } ->
+                  Time_ns.Span.(<=) fire_after Time_ns.Span.minute
+                  && Time_ns.Span.equal interval span
+                | _ ->
+                  false)
+    ;;
+  end)
+end
+
+#else
+module Timerfd = Null.Timerfd
+#endif
+
+#if JSC_LINUX_EXT
 
 type file_descr = Core_unix.File_descr.t
 
@@ -530,15 +622,15 @@ let cores =
     if num_cores > 0 then num_cores
     else failwith "Linux_ext.cores: failed to parse /proc/cpuinfo")
 
-TEST = cores () > 0
-TEST = cores () < 100000 (* 99,999 cores ought to be enough for anybody *)
+let%test _ = cores () > 0
+let%test _ = cores () < 100000 (* 99,999 cores ought to be enough for anybody *)
 
 external get_terminal_size : unit -> int * int = "linux_get_terminal_size"
 
 external get_ipv4_address_for_interface : string -> string =
   "linux_get_ipv4_address_for_interface" ;;
 
-TEST "lo interface addr is 127.0.0.1" =
+let%test "lo interface addr is 127.0.0.1" =
   (* This could false positive if the test box is misconfigured *)
   get_ipv4_address_for_interface "lo" = "127.0.0.1"
 
@@ -582,7 +674,7 @@ module Epoll = struct
 
   (* Some justification for the below interface: Unlike select() and poll(), epoll() fills
      in an array of ready events, analogous to a read() call where you pass in a buffer to
-     be filled.
+      be filled.
 
      Since this is at the core of the I/O loop, we'd like to avoid reallocating that
      buffer on every call to poll.  We're allocating the array on the ocaml side (as a
@@ -606,15 +698,15 @@ module Epoll = struct
 
   external epoll_ctl_add
     : File_descr.t -> File_descr.t -> Flags.t -> unit
-      = "linux_epoll_ctl_add"
+    = "linux_epoll_ctl_add"
 
   external epoll_ctl_mod
     : File_descr.t -> File_descr.t -> Flags.t -> unit
-      = "linux_epoll_ctl_mod"
+    = "linux_epoll_ctl_mod"
 
   external epoll_ctl_del
     : File_descr.t -> File_descr.t -> unit
-      = "linux_epoll_ctl_del"
+    = "linux_epoll_ctl_del"
 
   module Table = Bounded_int_table
 
@@ -635,7 +727,7 @@ module Epoll = struct
         mutable num_ready_events : int;
         ready_events : 'a;
       }
-    with fields, sexp_of
+    [@@deriving fields, sexp_of]
   end
 
   open T
@@ -661,11 +753,11 @@ module Epoll = struct
       { file_descr : File_descr.t;
         flags : Flags.t;
       }
-    with sexp_of
+    [@@deriving sexp_of]
 
-    type ready_events = ready_event array with sexp_of
+    type ready_events = ready_event array [@@deriving sexp_of]
 
-    type t = ready_events T.t with sexp_of
+    type t = ready_events T.t [@@deriving sexp_of]
   end
 
   let to_pretty t =
@@ -681,7 +773,7 @@ module Epoll = struct
 
   let sexp_of_in_use t = Pretty.sexp_of_t (to_pretty t)
 
-  type t = [ `Closed | `In_use of in_use ] ref with sexp_of
+  type t = [ `Closed | `In_use of in_use ] ref [@@deriving sexp_of]
 
   let close t =
     match !t with
@@ -704,13 +796,13 @@ module Epoll = struct
           ~num_ready_events:(check (fun num_ready -> assert (num_ready >= 0)))
           ~ready_events:ignore
       with exn ->
-        failwiths "Epoll.invariant failed" (exn, t) <:sexp_of< exn * in_use >>
+        failwiths "Epoll.invariant failed" (exn, t) [%sexp_of: exn * in_use]
   ;;
 
   let create ~num_file_descrs ~max_ready_events =
     if max_ready_events < 0 then
       failwiths "Epoll.create got nonpositive max_ready_events" max_ready_events
-        (<:sexp_of< int >>);
+        ([%sexp_of: int]);
     ref (`In_use
             { epollfd = epoll_create max_ready_events;
               flags_by_fd =
@@ -739,7 +831,7 @@ module Epoll = struct
 
   let iter t ~f =
     use t ~f:(fun t ->
-      Table.iter t.flags_by_fd ~f:(fun ~key:file_descr ~data:flags ->
+      Table.iteri t.flags_by_fd ~f:(fun ~key:file_descr ~data:flags ->
         f file_descr flags))
   ;;
 
@@ -802,19 +894,21 @@ module Epoll = struct
   ;;
 
   let fold_ready t ~init ~f =
-    use t ~f:(fun t ->
-      let ac = ref init in
-      for i = 0 to t.num_ready_events - 1 do
-        ac := f !ac (epoll_readyfd t.ready_events i) (epoll_readyflags t.ready_events i)
-      done;
-      !ac)
+    (* performance hack: [use] requires a closure allocation. *)
+    let t = in_use_exn t in
+    let ac = ref init in
+    for i = 0 to t.num_ready_events - 1 do
+      ac := f !ac (epoll_readyfd t.ready_events i) (epoll_readyflags t.ready_events i)
+    done;
+    !ac
   ;;
 
   let iter_ready t ~f =
-    use t ~f:(fun t ->
-      for i = 0 to t.num_ready_events - 1 do
-        f (epoll_readyfd t.ready_events i) (epoll_readyflags t.ready_events i)
-      done)
+    (* performance hack: [use] requires a closure allocation. *)
+    let t = in_use_exn t in
+    for i = 0 to t.num_ready_events - 1 do
+      f (epoll_readyfd t.ready_events i) (epoll_readyflags t.ready_events i)
+    done
   ;;
 
   (* external epoll_pwait
@@ -836,57 +930,58 @@ end
    adds them to an epoll set, sends data to one of them and calls Epoll.wait.
    The test passes if the resulting Ready_fds set has 1 ready fd, matching
    the one we sent to, with read, !write, and !error. *)
-TEST_MODULE = struct
+let%test_module _ =
+  (module struct
 
-  module Unix = Core_unix
-  module Flags = Epoll.Flags
+    module Unix = Core_unix
+    module Flags = Epoll.Flags
 
-  let udp_listener ~port =
-    let sock = Unix.socket ~domain:Unix.PF_INET ~kind:Unix.SOCK_DGRAM ~protocol:0 in
-    let iaddr = Unix.ADDR_INET (Unix.Inet_addr.localhost, port) in
-    Unix.setsockopt sock Unix.SO_REUSEADDR true;
-    Unix.bind sock ~addr:iaddr;
-    sock
-  ;;
+    let udp_listener ~port =
+      let sock = Unix.socket ~domain:Unix.PF_INET ~kind:Unix.SOCK_DGRAM ~protocol:0 in
+      let iaddr = Unix.ADDR_INET (Unix.Inet_addr.localhost, port) in
+      Unix.setsockopt sock Unix.SO_REUSEADDR true;
+      Unix.bind sock ~addr:iaddr;
+      sock
+    ;;
 
-  let send s buf ~port =
-    let addr = Unix.ADDR_INET (Unix.Inet_addr.localhost, port) in
-    let len  = String.length buf in
-    Unix.sendto s ~buf ~pos:0 ~len ~mode:[] ~addr
-  ;;
+    let send s buf ~port =
+      let addr = Unix.ADDR_INET (Unix.Inet_addr.localhost, port) in
+      let len  = String.length buf in
+      Unix.sendto s ~buf ~pos:0 ~len ~mode:[] ~addr
+    ;;
 
-  let with_epoll ~f =
-    protectx ~finally:Epoll.close ~f
-      ((Or_error.ok_exn Epoll.create) ~num_file_descrs:1024 ~max_ready_events:256)
+    let with_epoll ~f =
+      protectx ~finally:Epoll.close ~f
+        ((Or_error.ok_exn Epoll.create) ~num_file_descrs:1024 ~max_ready_events:256)
 
-  TEST_UNIT "epoll errors" = with_epoll ~f:(fun t ->
-    let tmp = "temporary-file-for-testing-epoll" in
-    let fd = Unix.openfile tmp ~mode:[Unix.O_CREAT; Unix.O_WRONLY] in
-    (* Epoll does not support ordinary files, and so should fail if you ask it to watch
-       one. *)
-    assert (Result.is_error (Result.try_with (fun () -> Epoll.set t fd Flags.none)));
-    Unix.close fd;
-    Unix.unlink tmp)
-  ;;
+    let%test_unit "epoll errors" = with_epoll ~f:(fun t ->
+      let tmp = "temporary-file-for-testing-epoll" in
+      let fd = Unix.openfile tmp ~mode:[Unix.O_CREAT; Unix.O_WRONLY] in
+      (* Epoll does not support ordinary files, and so should fail if you ask it to watch
+         one. *)
+      assert (Result.is_error (Result.try_with (fun () -> Epoll.set t fd Flags.none)));
+      Unix.close fd;
+      Unix.unlink tmp)
+    ;;
 
-  TEST_UNIT "epoll test" = with_epoll ~f:(fun epset ->
-    let span = Time_ns.Span.of_sec 0.1 in
-    let sock1 = udp_listener ~port:7070 in
-    let sock2 = udp_listener ~port:7071 in
-    Epoll.set epset sock1 Flags.in_;
-    Epoll.set epset sock2 Flags.in_;
-    let _sent = send sock2 "TEST" ~port:7070 in
-    begin match Epoll.wait_timeout_after epset span with
-    | `Timeout -> assert false
-    | `Ok ->
-      let ready =
-        Epoll.fold_ready epset ~init:[] ~f:(fun ac fd flags ->
-          if flags = Flags.in_ then fd :: ac else ac)
-      in
-      (* Explanation of the test:
-         1) I create two udp sockets, sock1 listening on 7070 and sock2, on 7071
-         2) These two sockets are both added to epoll for read notification
-         3) I send a packet, _using_ sock2 to sock1 (who is listening on 7070)
+    let%test_unit "epoll test" = with_epoll ~f:(fun epset ->
+      let span = Time_ns.Span.of_sec 0.1 in
+      let sock1 = udp_listener ~port:7070 in
+      let sock2 = udp_listener ~port:7071 in
+      Epoll.set epset sock1 Flags.in_;
+      Epoll.set epset sock2 Flags.in_;
+      let _sent = send sock2 "TEST" ~port:7070 in
+      begin match Epoll.wait_timeout_after epset span with
+      | `Timeout -> assert false
+      | `Ok ->
+        let ready =
+          Epoll.fold_ready epset ~init:[] ~f:(fun ac fd flags ->
+            if flags = Flags.in_ then fd :: ac else ac)
+        in
+        (* Explanation of the test:
+           1) I create two udp sockets, sock1 listening on 7070 and sock2, on 7071
+           2) These two sockets are both added to epoll for read notification
+           3) I send a packet, _using_ sock2 to sock1 (who is listening on 7070)
          4) epoll_wait should return, with [ sock1 ] ready to be read.
       *)
       match ready with
@@ -896,7 +991,7 @@ TEST_MODULE = struct
     end)
   ;;
 
-  TEST_UNIT "Timerfd.set_after small span test" =
+  let%test_unit "Timerfd.set_after small span test" =
     match Timerfd.create with
     | Error _ -> ()
     | Ok timerfd_create ->
@@ -911,7 +1006,45 @@ TEST_MODULE = struct
           end);
         Unix.close (timerfd :> Unix.File_descr.t))
   ;;
-end
+
+  let%test_unit "\
+epoll detects an error on the write side of a pipe when the read side of the pipe closes
+after a partial read" =
+    let saw_sigpipe = ref false in
+    let new_sigpipe_handler = `Handle (fun _ -> saw_sigpipe := true) in
+    let old_sigpipe_handler = Signal.Expert.signal Signal.pipe new_sigpipe_handler in
+    Exn.protect
+      ~finally:(fun () -> Signal.Expert.set Signal.pipe old_sigpipe_handler)
+      ~f:(fun () ->
+        let r, w = Unix.pipe () in
+        let w_len = 1_000_000 in
+        let r_len =     1_000 in
+        let read =
+          Thread.create (fun () ->
+            let nr = Bigstring.read r (Bigstring.create r_len) ~pos:0 ~len:r_len in
+            assert (nr > 0 && nr <= r_len);
+            Unix.close r)
+            ()
+        in
+        let nw =
+          Bigstring.writev w [| Unix.IOVec.of_bigstring (Bigstring.create w_len) |]
+        in
+        assert (nw > 0 && nw < w_len);
+        Thread.join read;
+        with_epoll ~f:(fun epoll ->
+          Epoll.set epoll w Epoll.Flags.out;
+          match Epoll.wait_timeout_after epoll Time_ns.Span.second with
+          | `Timeout -> assert false
+          | `Ok ->
+            assert !saw_sigpipe;
+            let saw_fd = ref false in
+            Epoll.iter_ready epoll ~f:(fun fd flags ->
+              assert (Unix.File_descr.equal fd w);
+              assert (Epoll.Flags.equal flags Epoll.Flags.err);
+              saw_fd := true);
+            assert !saw_fd))
+  ;;
+  end)
 
 
 let cores                          = Ok cores
@@ -936,67 +1069,6 @@ let sendfile                       = Ok sendfile
 let sendmsg_nonblocking_no_sigpipe = Ok sendmsg_nonblocking_no_sigpipe
 let settcpopt_bool                 = Ok settcpopt_bool
 
-ELSE
-
-module Sysinfo = struct
-  include Sysinfo0
-
-  let sysinfo = Or_error.unimplemented "Linux_ext.Sysinfo.sysinfo"
-end
-
-let u = Or_error.unimplemented
-let cores                          = u "Linux_ext.cores"
-let file_descr_realpath            = u "Linux_ext.file_descr_realpath"
-let get_ipv4_address_for_interface = u "Linux_ext.get_ipv4_address_for_interface"
-let bind_to_interface              = u "Linux_ext.bind_to_interface"
-let get_terminal_size              = u "Linux_ext.get_terminal_size"
-let gettcpopt_bool                 = u "Linux_ext.gettcpopt_bool"
-let setpriority                    = u "Linux_ext.setpriority"
-let getpriority                    = u "Linux_ext.getpriority"
-let in_channel_realpath            = u "Linux_ext.in_channel_realpath"
-let out_channel_realpath           = u "Linux_ext.out_channel_realpath"
-let pr_get_name                    = u "Linux_ext.pr_get_name"
-let pr_get_pdeathsig               = u "Linux_ext.pr_get_pdeathsig"
-let pr_set_name_first16            = u "Linux_ext.pr_set_name_first16"
-let pr_set_pdeathsig               = u "Linux_ext.pr_set_pdeathsig"
-let sched_setaffinity              = u "Linux_ext.sched_setaffinity"
-let sched_setaffinity_this_thread  = u "Linux_ext.sched_setaffinity_this_thread"
-let send_no_sigpipe                = u "Linux_ext.send_no_sigpipe"
-let send_nonblocking_no_sigpipe    = u "Linux_ext.send_nonblocking_no_sigpipe"
-let sendfile                       = u "Linux_ext.sendfile"
-let sendmsg_nonblocking_no_sigpipe = u "Linux_ext.sendmsg_nonblocking_no_sigpipe"
-let settcpopt_bool                 = u "Linux_ext.settcpopt_bool"
-
-module Epoll = struct
-  module Flags = Epoll_flags (struct
-    let in_     = Int63.of_int (1 lsl 0)
-    let out     = Int63.of_int (1 lsl 1)
-    (* let rdhup   = Int63.of_int (1 lsl 2) *)
-    let pri     = Int63.of_int (1 lsl 3)
-    let err     = Int63.of_int (1 lsl 4)
-    let hup     = Int63.of_int (1 lsl 5)
-    let et      = Int63.of_int (1 lsl 6)
-    let oneshot = Int63.of_int (1 lsl 7)
-  end)
-
-  type t = [ `Epoll_is_not_implemented ] with sexp_of
-  let create = Or_error.unimplemented "Linux_ext.Epoll.create"
-
-  let invariant _               = assert false
-
-  let close _                   = assert false
-
-  let find _ _                  = assert false
-  let find_exn _ _              = assert false
-  let set _ _ _                 = assert false
-  let remove _ _                = assert false
-  let iter _ ~f:_               = assert false
-  let wait _ ~timeout:_         = assert false
-let wait_timeout_after _ _    = assert false
-  let iter_ready _ ~f:_         = assert false
-  let fold_ready _ ~init:_ ~f:_ = assert false
-
-  (* let pwait _ ~timeout:_ _      = assert false *)
-end
-
-ENDIF
+#else
+include Null.Linux_ext
+#endif

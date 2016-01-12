@@ -239,7 +239,7 @@ let () =
   let a = Array.make n 0 in
   let start = Unix.gettimeofday () in
   let cmp (x : int) (x' : int) = compare x x' in
-  for _i = 0 to iter do
+  for _ = 0 to iter do
     Array.blit ~src:r ~src_pos:0 ~dst:a ~dst_pos:0 ~len:n;
     sort a ~cmp
   done;
@@ -249,7 +249,7 @@ let () =
   done;
 
   let start = Unix.gettimeofday () in
-  for _i = 0 to iter do
+  for _ = 0 to iter do
     Array.blit ~src:r ~src_pos:0 ~dst:a ~dst_pos:0 ~len:n;
     Core.Std.Array.sort a ~cmp
   done;
@@ -261,7 +261,7 @@ let () =
 
   let start = Unix.gettimeofday () in
   let cmp (x : int ref) (x' : int ref) = compare !x !x' in
-  for _i = 0 to iter do
+  for _ = 0 to iter do
     Array.blit ~src:r ~src_pos:0 ~dst:a ~dst_pos:0 ~len:n;
     sort a ~cmp
   done;
@@ -271,7 +271,7 @@ let () =
   done;
 
   let start = Unix.gettimeofday () in
-  for _i = 0 to iter do
+  for _ = 0 to iter do
     Array.blit ~src:r ~src_pos:0 ~dst:a ~dst_pos:0 ~len:n;
     Core.Std.Array.sort a ~cmp
   done;

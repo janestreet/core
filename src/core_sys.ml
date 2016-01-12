@@ -66,7 +66,7 @@ include struct
   let ocaml_version = ocaml_version
 end
 
-exception Command_failed_with_status of Int.t * String.t with sexp
+exception Command_failed_with_status of Int.t * String.t [@@deriving sexp]
 
 let command_exn string =
   let status = command string in
@@ -88,7 +88,7 @@ external executing_bytecode
 let execution_mode () =
   if executing_bytecode () () () () () () then `Bytecode else `Native
 
-TEST = execution_mode () =
+let%test _ = execution_mode () =
          (if String.is_suffix argv.(0) ~suffix:".exe" ||
              String.is_suffix argv.(0) ~suffix:".native"
           then `Native else `Bytecode)
@@ -97,5 +97,9 @@ TEST = execution_mode () =
 (* returns size, in bits, of an [int] type in C *)
 external c_int_size : unit -> int = "c_int_size" "noalloc"
 
-TEST = let size = c_int_size () in size >= 16 && size <= Sys.word_size
+let%test _ = let size = c_int_size () in size >= 16 && size <= Sys.word_size
 
+let home_directory () =
+  match getenv "HOME" with
+  | Some home -> home
+  | None -> (Unix.getpwuid (Unix.geteuid ())).pw_dir

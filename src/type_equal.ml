@@ -1,1 +1,0 @@
-include Core_kernel.Type_equal

@@ -1,4 +1,4 @@
-open Core.Std  let _ = _squelch_unused_module_warning_
+open! Core.Std
 
 module Stack = Core.Std.Stack
 
@@ -18,7 +18,7 @@ let () =
           let s = Stack.create () in
           Stack.push s ();
           fun () ->
-            for _i = 1 to 10 do
+            for _ = 1 to 10 do
               Stack.push s ();
               Stack.pop_exn s;
             done

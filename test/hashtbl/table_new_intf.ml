@@ -71,7 +71,12 @@ module type S = sig
   end
 
   val copy : ('k, 'v) t -> ('k, 'v) t
+  val iter_vals : ('k, 'v) t -> f:('v -> unit) -> unit
+
   val iter : ('k, 'v) t -> f:(key:'k -> data:'v -> unit) -> unit
+    [@@ocaml.deprecated "Use iteri instead"]
+
+  val iteri : ('k, 'v) t -> f:(key:'k -> data:'v -> unit) -> unit
   val map : ('k, 'v) t -> f:('v -> 'c) -> ('k, 'c) t
   val mapi : ('k, 'v) t -> f:(key:'k -> data:'v -> 'c) -> ('k, 'c) t
   val filter_map : ('k, 'v) t -> f:('v -> 'c option) -> ('k, 'c) t
@@ -79,7 +84,6 @@ module type S = sig
 
   val find_default : ('k, 'v) t -> 'k -> default:(unit -> 'v) -> 'v
   val find_exn : ('k, 'v) t -> 'k -> 'v
-  val iter_vals : ('k, 'v) t -> f:('v -> unit) -> unit
 
   val of_alist : ?params:params
     -> 'k hashable
@@ -99,7 +103,7 @@ module type S = sig
   val data : ('k, 'v) t -> 'v list
 
   val filter_inplace : ('k, 'v) t -> f:('v -> bool) -> unit
-  val filteri_inplace : ('k, 'v) t -> f:('k -> 'v -> bool) -> unit
+  val filteri_inplace : ('k, 'v) t -> f:(key:'k -> data:'v -> bool) -> unit
 
   val equal : ('k, 'v) t
     -> ('k, 'v) t
@@ -153,7 +157,7 @@ module Make (Basic : Basic) : S with type ('k, 'v) t = ('k, 'v) Basic.t = struct
     List.iter bindings ~f:(fun (key,data) -> add new_t ~key ~data);
     new_t
 
-  let iter t ~f =
+  let iteri t ~f =
     fold t ~init:() ~f:(fun ~key ~data () -> f ~key ~data)
 
   let map t ~f = mapi t ~f:(fun ~key:_ ~data -> f data)
@@ -182,7 +186,7 @@ module Make (Basic : Basic) : S with type ('k, 'v) t = ('k, 'v) Basic.t = struct
         add t ~key:id ~data:default;
         default
 
-  let iter_vals t ~f = iter t ~f:(fun ~key:_ ~data -> f data)
+  let iter_vals t ~f = iteri t ~f:(fun ~key:_ ~data -> f data)
 
   let of_alist ?params hashable lst =
     let t = create ?params hashable in
@@ -240,24 +244,24 @@ module Make (Basic : Basic) : S with type ('k, 'v) t = ('k, 'v) Basic.t = struct
     let t = create ?params (hashable t1) in
     let unique_keys = create ?params (hashable t1) in
     let record_key ~key ~data:_ = add unique_keys ~key ~data:() in
-    iter t1 ~f:record_key;
-    iter t2 ~f:record_key;
-    iter unique_keys ~f:(fun ~key ~data:_ ->
-                           match f ~key (find t1 key) (find t2 key) with
-                           | Some data -> add t ~key ~data
-                           | None -> ());
+    iteri t1 ~f:record_key;
+    iteri t2 ~f:record_key;
+    iteri unique_keys ~f:(fun ~key ~data:_ ->
+      match f ~key (find t1 key) (find t2 key) with
+      | Some data -> add t ~key ~data
+      | None -> ());
     t
 
   let filteri_inplace t ~f =
     let to_remove =
       fold t ~init:[] ~f:(fun ~key ~data ac ->
-        if f key data then ac else key :: ac)
+        if f ~key ~data then ac else key :: ac)
     in
     List.iter to_remove ~f:(fun key -> remove t key);
   ;;
 
   let filter_inplace t ~f =
-    filteri_inplace t ~f:(fun _ data -> f data)
+    filteri_inplace t ~f:(fun ~key:_ ~data -> f data)
   ;;
 
   let sexp_of_t sexp_of_k sexp_of_d t =
@@ -281,7 +285,7 @@ module Make (Basic : Basic) : S with type ('k, 'v) t = ('k, 'v) Basic.t = struct
   exception Not_equal
   let equal t t' equal =
     try
-      iter t ~f:(fun ~key ~data ->
+      iteri t ~f:(fun ~key ~data ->
         match find t' key with
         | None -> raise Not_equal
         | Some data' -> if not (equal data data') then raise Not_equal);

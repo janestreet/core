@@ -30019,7 +30019,7 @@ let unit_tests ~create =
 
 let test () =
   let tests =
-    Pa_ounit_lib.Runtime.collect (fun () ->
+    Ppx_inline_test_lib.Runtime.collect (fun () ->
       let module T = Core.Stable.Unit_test (struct
         include Core.Stable.Ofday.V1
         let equal x1 x2 = Time.Span.(abs (Time.Ofday.diff x1 x2) < (of_ns 1.))

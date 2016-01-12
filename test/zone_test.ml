@@ -75,7 +75,7 @@ let add_random_string_round_trip_test state s1 =
   )
 
 let add_random_string_round_trip_tests state =
-  for _i = 1 to 100 do add_random_string_round_trip_test state (random_time_str state) done;
+  for _ = 1 to 100 do add_random_string_round_trip_test state (random_time_str state) done;
 ;;
 
 let add_roundtrip_conversion_test state (zone_name,(zone:Time.Zone.t)) =
@@ -122,7 +122,7 @@ module Localtime_test_data = struct
     localtime_ofday_string : string;
     our_date_string        : string;
     our_ofday_string       : string;
-  } with sexp
+  } [@@deriving sexp]
 end
 
 let add_random_localtime_tests state =

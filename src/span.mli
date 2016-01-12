@@ -1,6 +1,6 @@
 open Core_kernel.Std
 
-type t = private float with bin_io, sexp (* number of seconds *)
+type t = private float [@@deriving bin_io, sexp] (* number of seconds *)
 
 (* Parts represents the individual parts of a Span as if it were written out (it is the
    counterpart to create).  For example, (sec 90.) is represented by {Parts.hr = 0;
@@ -14,7 +14,7 @@ module Parts : sig
       ms   : int;
       us   : int;
     }
-    with sexp
+    [@@deriving sexp]
 end
 
 include Comparable_binable   with type t := t
@@ -128,7 +128,7 @@ module Unit_of_time : sig
     | Minute
     | Hour
     | Day
-  with sexp, compare
+  [@@deriving sexp, compare]
 end
 
 (** [to_unit_of_time t] = [Day] if [abs t >= day], [Hour] if [abs t >= hour], and so on
@@ -162,9 +162,9 @@ val randomize : t -> percent:float -> t
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t with sexp, bin_io, compare
+    type nonrec t = t [@@deriving sexp, bin_io, compare]
   end
   module V2 : sig
-    type nonrec t = t with sexp, bin_io, compare
+    type nonrec t = t [@@deriving sexp, bin_io, compare]
   end
 end

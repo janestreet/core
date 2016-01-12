@@ -18,7 +18,7 @@ val for_this_process_exn : unit -> t
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t with sexp, bin_io, compare
+    type nonrec t = t [@@deriving sexp, bin_io, compare]
     include Stringable with type t := t
   end
 end

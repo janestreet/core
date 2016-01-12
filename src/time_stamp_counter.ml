@@ -67,7 +67,7 @@
    computationally more expensive and we use a simpler linear approximation.
 *)
 
-INCLUDE "core_config.mlh"
+#import "config.mlh"
 
 open Core_kernel.Std
 
@@ -75,22 +75,22 @@ module Unix = Core_unix
 
 
 let max_percent_change_from_real_slope = 0.20
-TEST_UNIT =
+let%test_unit _ =
   assert (0. <= max_percent_change_from_real_slope);
-  assert (max_percent_change_from_real_slope <= 1.);
+  assert (max_percent_change_from_real_slope <= 1.)
 ;;
 
 let ewma ~alpha ~old ~add = ((1. -. alpha) *. old) +. (alpha *. add)
 
 
-type t = Int63.t with bin_io, compare, sexp
-type tsc = t     with bin_io, compare, sexp
+type t = Int63.t [@@deriving bin_io, compare, sexp]
+type tsc = t     [@@deriving bin_io, compare, sexp]
 
 let diff t1 t2 = Int63.(-) t1 t2
 let add t s = Int63.(+) t s
 let to_int63 t = t
 
-IFDEF ARCH_SIXTYFOUR THEN
+#if JSC_ARCH_SIXTYFOUR
 
 (* noalloc on x86_64 only *)
 external now : unit -> tsc = "tsc_get" "noalloc"
@@ -122,7 +122,7 @@ module Calibrator = struct
     ; mutable monotonic_time_nanos      : Int63.t
     ; mutable monotonic_nanos_per_cycle : float
     }
-  with bin_io, sexp
+  [@@deriving bin_io, sexp]
 
   let tsc_to_time =
     let convert t tsc base mul =
@@ -287,7 +287,7 @@ module Calibrator = struct
   ;;
 end
 
-ELSE
+#else
 
 (* noalloc on x86_64 only *)
 external now : unit -> tsc = "tsc_get"
@@ -295,7 +295,7 @@ external now : unit -> tsc = "tsc_get"
 (** Outside of x86_64, [now] returns the result of clock_gettime(), i.e. the current time
     in nanos past epoch. *)
 module Calibrator = struct
-  type t = unit with bin_io, sexp
+  type t = unit [@@deriving bin_io, sexp]
 
   let tsc_to_time _t tsc = Time.of_float (Int63.to_float tsc *. 1e-9)
 
@@ -316,11 +316,11 @@ Time_stamp_counter.Calibrator.cpu_mhz is not defined for 32-bit platforms"
   ;;
 end
 
-ENDIF
+#endif
 
 module Span = struct
   include Int63
-IFDEF ARCH_SIXTYFOUR THEN
+#if JSC_ARCH_SIXTYFOUR
   let to_ns ?(calibrator = Calibrator.local) t =
     Float.int63_round_nearest_exn
       (Int63.to_float t *. calibrator.Calibrator.nanos_per_cycle)
@@ -330,13 +330,13 @@ IFDEF ARCH_SIXTYFOUR THEN
     Float.int63_round_nearest_exn
       (Int63.to_float ns /. calibrator.Calibrator.nanos_per_cycle)
   ;;
-ELSE
+#else
   (* [tsc_get] already returns the current time in ns *)
 
   let to_ns ?calibrator:_ t = t
 
   let of_ns ?calibrator:_ ns = ns
-ENDIF
+#endif
 
   let to_time_span ?calibrator t =
     Span.of_ns (Int63.to_float (to_ns ?calibrator t))
@@ -353,10 +353,10 @@ let to_time_ns ?(calibrator = Calibrator.local) t =
   Time_ns.of_int63_ns_since_epoch (to_nanos_since_epoch ~calibrator t)
 ;;
 
-TEST_MODULE = struct
+let%test_module _ = (module struct
 
   (* monotonicity testing *)
-  TEST_UNIT =
+  let%test_unit _ =
     let calibrator = Calibrator.create () in
     let last = ref 0. in
     for i = 1 to 10_000_000 do
@@ -371,9 +371,9 @@ TEST_MODULE = struct
   ;;
 
   module Samples = struct
-    type t = (tsc * float) list with sexp
+    type t = (tsc * float) list [@@deriving sexp]
 
-    let load file = Sexp.load_sexp_conv_exn file <:of_sexp< t >>
+    let load file = Sexp.load_sexp_conv_exn file [%of_sexp: t]
   end
 
   (* The following tests check to see that the errors in presampled data are within
@@ -406,7 +406,7 @@ TEST_MODULE = struct
      The error ewma of absolute error is atmost 1.2us, and the actual error ranges between
      7.6us and -1.4us.  It is worth noting that the errors are usually in the range of 1us
      and only occassionaly spike to the max/min values mentioned.*)
-  TEST_UNIT = test_time_and_cycles ~error_limit:3. ~alpha:0.1 ~verbose:false
+  let%test_unit _ = test_time_and_cycles ~error_limit:3. ~alpha:0.1 ~verbose:false
                 "time_stamp_counter_samples_at_1sec.sexp"
   ;;
   (* For this test, the data sample consists of 600 samples of Time.t and TSC.t sampled
@@ -414,7 +414,7 @@ TEST_MODULE = struct
 
      Errors range between -8.5 and 7.6 us and ewma of absolute error goes upto about
      2.4us.  The errors in this case tend to oscillate between +/-5us. *)
-  TEST_UNIT = test_time_and_cycles ~error_limit:3. ~alpha:0.1 ~verbose:false
+  let%test_unit _ = test_time_and_cycles ~error_limit:3. ~alpha:0.1 ~verbose:false
                 "time_stamp_counter_samples_at_60sec.sexp"
   ;;
 
@@ -443,17 +443,17 @@ TEST_MODULE = struct
   ;;
 
   (* Error profiles for the nanos tests are similar to those of the float cases above. *)
-  TEST_UNIT =
+  let%test_unit _ =
     test_time_and_cycles_nanos ~error_limit:500. ~alpha:0.1 ~verbose:false
       "time_stamp_counter_samples_at_1sec.sexp"
   ;;
-  TEST_UNIT =
+  let%test_unit _ =
     test_time_and_cycles_nanos ~error_limit:3. ~alpha:0.1 ~verbose:false
       "time_stamp_counter_samples_at_60sec.sexp"
   ;;
 
-IFDEF ARCH_SIXTYFOUR THEN
-  TEST_UNIT =
+#if JSC_ARCH_SIXTYFOUR
+  let%test_unit _ =
     let calibrator = Calibrator.local in
     for x = 1 to 100_000 do
       let y =
@@ -471,7 +471,7 @@ IFDEF ARCH_SIXTYFOUR THEN
     done
   ;;
 
-  TEST_UNIT =
+  let%test_unit _ =
     let calibrator = Calibrator.local in
     for x = 1 to 100_000 do
       let y =
@@ -488,5 +488,5 @@ IFDEF ARCH_SIXTYFOUR THEN
       assert (abs (x - y) <= Float.to_int (1. /. calibrator.nanos_per_cycle));
     done
   ;;
-ENDIF
-end
+#endif
+end)

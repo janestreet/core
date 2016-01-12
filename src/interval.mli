@@ -14,13 +14,19 @@ module type S = S
   with type 'a poly_set := 'a Set.t
 
 module Make (Bound : sig
-  type t with bin_io, sexp
+  type t [@@deriving bin_io, sexp]
   include Comparable.S with type t := t
 end)
   : S with type bound = Bound.t
 
 module Float : S with type bound = Float.t
-module Int   : S with type bound = Int.t
+
+module Int : sig
+  include S with type bound = Int.t
+
+  include Container.S0        with type t := t with type elt := bound
+  include Binary_searchable.S with type t := t with type elt := bound
+end
 
 module Time : sig
   include S with type bound = Time.t

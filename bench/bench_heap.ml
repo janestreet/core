@@ -37,7 +37,7 @@ end
 
 let add_remove_from_existing_heap data initial_size =
   let h = Heap.create ~cmp:Int.compare () in
-  for _i = 1 to initial_size do
+  for _ = 1 to initial_size do
     Heap.add h (Data.next data);
   done;
   Bench.Test.create ~name:(sprintf "add/remove from heap of size %i (%s)" initial_size
@@ -52,10 +52,10 @@ let heap_sort data size =
     (fun () ->
       Data.reset data;
       let h = Heap.create ~cmp:Int.compare () in
-      for _i = 1 to size do
+      for _ = 1 to size do
         Heap.add h (Data.next data);
       done;
-      for _i = 1 to size do
+      for _ = 1 to size do
         ignore (Heap.pop_exn h);
       done;
       assert (Heap.is_empty h))

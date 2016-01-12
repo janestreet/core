@@ -6,7 +6,7 @@ module Infinite_or_finite = struct
     type 'a t =
       | Infinite
       | Finite of 'a
-    with sexp, bin_io
+    [@@deriving sexp, bin_io]
   end
   include T
 
@@ -26,6 +26,20 @@ module Infinite_or_finite = struct
 end
 open Infinite_or_finite.T
 
+module Try_take_result = struct
+  type t =
+    | Taken
+    | Unable
+    | Asked_for_more_than_bucket_limit
+end
+
+module Tokens_may_be_available_result = struct
+  type t =
+    | At of Time.t
+    | Never_because_greater_than_bucket_limit
+    | When_return_to_hopper_is_called
+end
+
 module type Arith = sig
   type t
   val ( + ) : t -> t -> t
@@ -36,7 +50,6 @@ module type Arith = sig
   val ( <= ) : t -> t -> bool
   val ( <> ) : t -> t -> bool
   val min : t -> t -> t
-  val max : t -> t -> t
 
   val zero : t
 end
@@ -45,15 +58,20 @@ end
 
    in_hopper -> in_bucket -> in_flight
 
-   never results in dropped tokens or rounding errors due to floating point math. *)
+   never results in dropped tokens or rounding errors due to floating point math.
+
+   Originally this type was completely abstract and was Int63.t internally.  This had the
+   unfortunate effect of slowing down try_take by ~50% because the comparisons and math
+   couldn't be inlined.  Exposing it and dropping Int63 indirection feels like the lesser
+   of two evils. *)
 module Tokens : sig
-  type t with sexp, bin_io, compare
+  type t = private int [@@deriving sexp, bin_io, compare]
 
   module Arith : Arith with type t := t
   include Arith with type t := t
 
   (* the underlying scaling factor used for conversion from fixed <-> float space *)
-  val scaling_factor : Int63.t
+  val scaling_factor : int
 
   val of_float_round_up_exn : float -> t
   val of_float_round_down_exn : float -> t
@@ -61,37 +79,32 @@ module Tokens : sig
 
   val to_string : t -> string
 end = struct
-  type t = Int63.t with sexp, bin_io, compare
+  type t = Int.t [@@deriving sexp, bin_io, compare]
 
   (* The scaling factor effectively sets how small of a sub-job one can ask for. Choosing
      10m lets us specify quite high rates as fractional jobs, while leaving us with the
      ability of having buckets containing about 10 billion jobs.  This gives us plenty of
      space on both sides. *)
-  let scaling_factor = Int63.of_int 10_000_000
-  let float_scaling_factor = Float.of_int (Int63.to_int_exn scaling_factor)
+  let scaling_factor = 10_000_000
+  let float_scaling_factor = Float.of_int scaling_factor
 
-  let zero = Int63.of_int 0
-  let to_string t = Int63.to_string t
+  let zero = 0
+  let to_string t = Int.to_string t
 
-  let of_float_gen round x =
-    match Float.classify x with
-    | Infinite | Nan -> failwithf "cannot convert (%g) into Tokens.t" x ()
-    | Normal | Subnormal | Zero ->
-      Int63.of_int (round (x *. float_scaling_factor))
-  ;;
+  (* performance hack: The shared logic in these should not be lifted to
+     of_float_round_gen because it introduces an allocation.  This has been measured
+     but we don't know why it happens. *)
+  let of_float_round_up_exn   x = Float.iround_up_exn (x *. float_scaling_factor)
+  let of_float_round_down_exn x = Float.iround_down_exn (x *. float_scaling_factor)
 
-  let of_float_round_up_exn      = of_float_gen Float.iround_up_exn
-  let of_float_round_down_exn    = of_float_gen Float.iround_down_exn
-
-  let to_float t = Int63.to_float t /. float_scaling_factor
+  let to_float t = Int.to_float t /. float_scaling_factor
 
   module Arith = struct
-    let ( + ) t1 t2 = Int63.(t1 + t2)
-    let ( - ) t1 t2 = Int63.(t1 - t2)
+    let ( + ) t1 t2 = t1 + t2
+    let ( - ) t1 t2 = t1 - t2
     let zero = zero
-    include Comparable.Make_binable(Int63)
-    let min = Int63.min
-    let max = Int63.max
+    include Comparable.Make_binable(Int)
+    let min = Int.min
   end
   include Arith
 
@@ -111,7 +124,7 @@ let gen_fixed_checks fixed_op float_op =
     let fixed_b = Tokens.of_float_round_up_exn b in
     let fixed_result = fixed_op fixed_a fixed_b |> Tokens.to_float in
     let float_result = float_op a b in
-    let max_diff = 1. /. Int63.to_float Tokens.scaling_factor in
+    let max_diff = 1. /. Int.to_float Tokens.scaling_factor in
     let actual_diff = Float.abs (fixed_result -. float_result) in
     if Float.(>) actual_diff max_diff
     then failwithf !"Tokens math failure.  (a = %g) (b = %g) (fixed_a = %{Tokens}) \
@@ -119,8 +132,8 @@ let gen_fixed_checks fixed_op float_op =
            a b fixed_a fixed_b float_result fixed_result ())
 ;;
 
-TEST_UNIT "add" = gen_fixed_checks Tokens.( + ) Float.( + )
-TEST_UNIT "sub" = gen_fixed_checks Tokens.( - ) Float.( - )
+let%test_unit "add" = gen_fixed_checks Tokens.( + ) Float.( + )
+let%test_unit "sub" = gen_fixed_checks Tokens.( - ) Float.( - )
 
 type t =
   { start_time                            : Time.t
@@ -135,13 +148,16 @@ type t =
   ; mutable in_hopper                     : Tokens.t Infinite_or_finite.t
   (** Everything that has been taken from bucket but not returned to hopper *)
   ; mutable in_flight                     : Tokens.t
-  (** maximum size allowable in the hopper *)
-  ; mutable bucket_size                   : Tokens.t
+  (** maximum size allowable in the bucket *)
+  ; mutable bucket_limit                   : Tokens.t
+  (** maximum size allowable in flight *)
+  ; mutable in_flight_limit               : Tokens.t Infinite_or_finite.t
+  (** rate at which tokens "fall" from the hopper into the bucket *)
   ; mutable hopper_to_bucket_rate_per_sec : float Infinite_or_finite.t
   (** see .mli documentation for [set_token_target_level] *)
   ; mutable token_target_level             : Tokens.t Infinite_or_finite.t
   }
-with sexp_of, fields, compare
+[@@deriving sexp_of, fields, compare]
 
 let fill_rate_must_be_positive (fill_rate : float Infinite_or_finite.t) =
   match fill_rate with
@@ -162,14 +178,14 @@ let invariant t =
   fill_rate_must_be_positive t.hopper_to_bucket_rate_per_sec;
 
   (* bucket is limited to size *)
-  if t.in_bucket > t.bucket_size
-  then failwithf !"amount in_bucket (%{Tokens}) cannot be greater than bucket_size \
+  if t.in_bucket > t.bucket_limit
+  then failwithf !"amount in_bucket (%{Tokens}) cannot be greater than bucket_limit \
                    (%{Tokens})"
-          t.in_bucket t.bucket_size ();
+          t.in_bucket t.bucket_limit ();
 
   (* sizes must be positive *)
-  if t.bucket_size <= zero
-  then failwithf !"bucket_size (burst_size) (%{Tokens}) must be > 0" t.bucket_size ();
+  if t.bucket_limit <= zero
+  then failwithf !"bucket_limit (burst_size) (%{Tokens}) must be > 0" t.bucket_limit ();
 
   if t.in_bucket < zero
   then failwithf !"in_bucket (%{Tokens}) must be >= 0." t.in_bucket ();
@@ -209,7 +225,6 @@ let invariant t =
 
     (* max tokens can only exceed the total in the system when we are waiting
        for excess in_flight tokens to return. *)
-
     if in_system > token_target_level
     then begin
       match t.in_hopper with
@@ -240,7 +255,8 @@ end = struct
     ; in_bucket                     = Tokens.zero
     ; in_hopper                     = Finite Tokens.zero
     ; in_flight                     = Tokens.zero
-    ; bucket_size                   = Tokens.zero
+    ; bucket_limit                  = Tokens.zero
+    ; in_flight_limit               = Infinite
     ; hopper_to_bucket_rate_per_sec = Infinite
     ; token_target_level            = Finite Tokens.zero }
   ;;
@@ -257,7 +273,7 @@ end = struct
       let copy_to_t2 field =
         match Field.setter field with
         | None ->
-          failwith "bug in Core.Limiter.  Unexpected immutable field"
+          failwith "bug in Jane.Limiter.  Unexpected immutable field"
         | Some set -> set t2 (Field.get field t1)
       in
       Fields.iter
@@ -268,7 +284,8 @@ end = struct
         ~in_bucket:copy_to_t2
         ~in_hopper:copy_to_t2
         ~in_flight:copy_to_t2
-        ~bucket_size:copy_to_t2
+        ~bucket_limit:copy_to_t2
+        ~in_flight_limit:copy_to_t2
         ~hopper_to_bucket_rate_per_sec:copy_to_t2
         ~token_target_level:copy_to_t2;
     ;;
@@ -292,7 +309,7 @@ end = struct
 
   (* this test ensures that save and restore work as intended and don't throw because we
      accidentaly added a non-mutable field *)
-  TEST_UNIT =
+  let%test_unit _ =
     let t = empty () in
     begin try
       protect t (fun () ->
@@ -302,7 +319,7 @@ end = struct
         t.in_bucket                     <- Tokens.of_float_round_up_exn 7.;
         t.in_hopper                     <- Finite (Tokens.of_float_round_up_exn 7.);
         t.in_flight                     <- Tokens.of_float_round_up_exn 7.;
-        t.bucket_size                   <- Tokens.of_float_round_up_exn 15.;
+        t.bucket_limit                   <- Tokens.of_float_round_up_exn 15.;
         t.hopper_to_bucket_rate_per_sec <- Finite 4.;
         t.token_target_level            <- Finite (Tokens.of_float_round_up_exn 7.);
         assert false);
@@ -313,17 +330,21 @@ end = struct
   ;;
 end
 
-type limiter = t with sexp_of
+type limiter = t [@@deriving sexp_of]
 
 let create_exn
     ~now
     ~hopper_to_bucket_rate_per_sec
-    ~bucket_size
+    ~bucket_limit
+    ~in_flight_limit
     ~initial_bucket_level
     ~initial_hopper_level
   =
   let in_hopper =
     Infinite_or_finite.map initial_hopper_level ~f:Tokens.of_float_round_up_exn
+  in
+  let in_flight_limit =
+    Infinite_or_finite.map in_flight_limit ~f:Tokens.of_float_round_up_exn
   in
   let initial_bucket_level = Tokens.of_float_round_up_exn initial_bucket_level in
   let token_target_level =
@@ -340,7 +361,8 @@ let create_exn
     ; in_bucket = initial_bucket_level
     ; in_hopper
     ; in_flight = Tokens.zero
-    ; bucket_size = Tokens.of_float_round_up_exn bucket_size
+    ; bucket_limit = Tokens.of_float_round_up_exn bucket_limit
+    ; in_flight_limit
     ; hopper_to_bucket_rate_per_sec
     ; token_target_level
     }
@@ -349,27 +371,28 @@ let create_exn
   t
 ;;
 
-(** used for moving tokens from hopper to bucket in response to changes in time.  Note
-    that this approximately preserves the sum of in_bucket and in_hopper.  *)
-let move_at_most_from_hopper_to_bucket t max_move =
-  let open Tokens.Arith in
-  let space_in_bucket = max zero (t.bucket_size - t.in_bucket) in
-  let actual_move =
-    match max_move with
-    | Infinite        -> space_in_bucket
-    | Finite max_move -> min max_move space_in_bucket
-  in
-  t.in_bucket <- t.in_bucket + actual_move;
-  t.in_hopper <- Infinite_or_finite.map t.in_hopper
-                   ~f:(fun in_hopper -> in_hopper - actual_move)
+let move_from_hopper_to_bucket t max_move =
+  let space_in_bucket   = Tokens.(t.bucket_limit - t.in_bucket) in
+  let actual_move       = Tokens.min max_move space_in_bucket in
+  t.in_bucket <- Tokens.(t.in_bucket + actual_move);
+  match t.in_hopper with
+  | Infinite         -> ()
+  | Finite in_hopper -> t.in_hopper <- Finite Tokens.(in_hopper - actual_move)
 ;;
 
-(** Computes the number of tokens that would have dropped since start_time given the
-    current rate *)
-let calculate_time_in_token_space t =
-  Infinite_or_finite.map t.hopper_to_bucket_rate_per_sec ~f:(fun tokens_per_sec ->
-    let time_elapsed_since_start = Time.Span.to_sec (Time.diff t.time t.start_time) in
-    Tokens.of_float_round_down_exn (time_elapsed_since_start *. tokens_per_sec))
+(* Computes the number of tokens that would have dropped since start_time given the
+   current rate *)
+let calculate_time_in_token_space (t : t) =
+  (* performance hack: not Infinite_or_finite.map for speed/allocation reasons *)
+  match t.hopper_to_bucket_rate_per_sec with
+  | Infinite              -> Infinite
+  | Finite tokens_per_sec ->
+    (* performance hack: Time.diff allocates a word to hold the float return.  This
+       version uses a register. *)
+    let time_elapsed_since_start =
+      Time.to_float t.time -. Time.to_float t.start_time
+    in
+    Finite (Tokens.of_float_round_down_exn (time_elapsed_since_start *. tokens_per_sec))
 ;;
 
 (* advances [t]s notion of time, moving tokens from the hopper down into the bucket as
@@ -378,33 +401,41 @@ let calculate_time_in_token_space t =
    micro-tokens (see Token), otherwise it might be possible for an (admitedly degenerate)
    program to call advance_time in a tight loop without dropping any tokens at all. *)
 let advance_time t ~now =
-  let time_before_call = t.time in
-  t.time <- Time.max time_before_call now;
-  match t.time_in_token_space, calculate_time_in_token_space t with
-  | Infinite, Finite _
-  | Finite _, Infinite -> invariant t; assert false
-  | Infinite, Infinite  ->
-    move_at_most_from_hopper_to_bucket t t.in_hopper
-  | Finite previous_time_in_token_space, Finite new_time_in_token_space ->
-    t.time_in_token_space <- Finite new_time_in_token_space;
-    let amount_that_could_fall =
-      (* this will always be >= 0 because time always moves forward *)
-      Tokens.(-) new_time_in_token_space previous_time_in_token_space
-    in
+  if Time.(>) now t.time
+  then t.time <- now;
+  match t.time_in_token_space with
+  | Infinite ->
     let max_move =
       match t.in_hopper with
-      | Infinite         -> amount_that_could_fall
-      | Finite in_hopper -> Tokens.min in_hopper amount_that_could_fall
+      | Infinite         -> t.bucket_limit
+      | Finite in_hopper -> in_hopper
     in
-    move_at_most_from_hopper_to_bucket t (Finite max_move);
+    move_from_hopper_to_bucket t max_move
+  | Finite previous_time_in_token_space ->
+    begin match calculate_time_in_token_space t with
+    | Infinite -> invariant t; assert false
+    | Finite new_time_in_token_space as nt ->
+      t.time_in_token_space <- nt;
+      let amount_that_could_fall =
+        (* this will always be >= 0 because time always moves forward *)
+        Tokens.(-) new_time_in_token_space previous_time_in_token_space
+      in
+      let max_move =
+        match t.in_hopper with
+        | Infinite         -> amount_that_could_fall
+        | Finite in_hopper -> Tokens.min in_hopper amount_that_could_fall
+      in
+      move_from_hopper_to_bucket t max_move
+    end
 ;;
 
-TEST_UNIT "time can only move forward" =
+let%test_unit "time can only move forward" =
   let t =
     create_exn
       ~now:Time.epoch
       ~hopper_to_bucket_rate_per_sec:Infinite
-      ~bucket_size:1.
+      ~bucket_limit:1.
+      ~in_flight_limit:Infinite
       ~initial_bucket_level:0.
       ~initial_hopper_level:Infinite
   in
@@ -419,29 +450,39 @@ let set_hopper_to_bucket_rate_per_sec_exn t ~now rate =
     advance_time t ~now;
     t.hopper_to_bucket_rate_per_sec <- rate;
     t.time_in_token_space <- calculate_time_in_token_space t;
-    (* The only role of this is to fill the bucket in the case that the hopper rate has
-       been set to infinite.  Otherwise, this call to [advance_time] has no effect. *)
-    advance_time t ~now)
+    (* If we have set the hopper rate to infinite then the bucket can immediately be
+       filled.
+
+       In one round of optimizations we changed advance_time to be a no-op if time didn't
+       actually move forward, which broke this.  It's a judgement call, but after that we
+       felt that relying on a no-op advance_time to fix up the world was fragile.
+    *)
+    match rate with
+    | Finite _ -> ()
+    | Infinite -> t.in_bucket <- t.bucket_limit)
 ;;
 
-let set_bucket_size_exn t ~now bucket_size =
-  Update.protect t (fun () ->
-    advance_time t ~now;
-    t.bucket_size <- Tokens.of_float_round_up_exn bucket_size)
-;;
-
-let try_take t ~now amount =
+let can_put_n_tokens_in_flight t ~n =
   let open Tokens.Arith in
+  match t.in_flight_limit with
+  | Infinite               -> true
+  | Finite in_flight_limit -> t.in_flight + n <= in_flight_limit
+;;
+
+(* the casts are necessary to get fast comparison *)
+let try_take t ~now amount : Try_take_result.t =
   advance_time t ~now;
   let amount = Tokens.of_float_round_up_exn amount in
-  if amount > t.bucket_size
-  then `Asked_for_more_than_bucket_size
-  else if amount > t.in_bucket
-  then `Unable
+  if not (can_put_n_tokens_in_flight t ~n:amount)
+  then Unable
+  else if (amount :> int) > (t.bucket_limit :> int)
+  then Asked_for_more_than_bucket_limit
+  else if (amount :> int) > (t.in_bucket :> int)
+  then Unable
   else begin
-    t.in_bucket <- t.in_bucket - amount;
-    t.in_flight <- t.in_flight + amount;
-    `Taken
+    t.in_bucket <- Tokens.(-) t.in_bucket amount;
+    t.in_flight <- Tokens.(+) t.in_flight amount;
+    Taken
   end
 ;;
 
@@ -474,34 +515,40 @@ let return_to_hopper t ~now amount =
       end
   in
   t.in_flight <- t.in_flight - amount;
-  t.in_hopper <- Infinite_or_finite.map t.in_hopper
-                   ~f:(fun in_hopper -> in_hopper + amount_to_add)
+  (* performance hack: avoiding Infinite_or_finite.map *)
+  match t.in_hopper with
+  | Infinite         -> ()
+  | Finite in_hopper -> t.in_hopper <- Finite (in_hopper + amount_to_add)
 ;;
 
-let tokens_may_be_available_when t ~now amount =
+let tokens_may_be_available_when t ~now amount : Tokens_may_be_available_result.t =
   let open Tokens.Arith in
   (* Note that because we're rounding up, we may slightly overestimate the required
      waiting time *)
   let amount = Tokens.of_float_round_up_exn amount in
-  if amount > t.bucket_size then
-    `Never_because_greater_than_bucket_size
+  if not (can_put_n_tokens_in_flight t ~n:amount) then
+    When_return_to_hopper_is_called
+  else if amount > t.bucket_limit then
+    Never_because_greater_than_bucket_limit
   else begin
     advance_time t ~now;
     let amount_missing = amount - t.in_bucket in
     if amount_missing <= zero
-    then `At t.time
+    then At t.time
     else begin
       match t.hopper_to_bucket_rate_per_sec with
-      | Infinite -> `When_return_to_hopper_is_called
+      | Infinite -> When_return_to_hopper_is_called
       | Finite tokens_per_sec ->
         let min_seconds_left =
           Tokens.to_float amount_missing /. tokens_per_sec
         in
-        let min_time = `At (Time.add t.time (Time.Span.of_sec min_seconds_left)) in
+        let (min_time : Tokens_may_be_available_result.t) =
+          At (Time.add t.time (Time.Span.of_sec min_seconds_left))
+        in
         match t.in_hopper with
         | Finite in_hopper ->
           if amount_missing > in_hopper
-          then `When_return_to_hopper_is_called
+          then When_return_to_hopper_is_called
           else min_time
         | Infinite -> min_time
     end
@@ -533,24 +580,7 @@ let in_system t ~now =
   Infinite_or_finite.map (in_system t) ~f:Tokens.to_float
 ;;
 
-let set_token_target_level_exn t ~now token_target_level =
-  let open Tokens.Arith in
-  Update.protect t (fun () ->
-    advance_time t ~now;
-    begin match token_target_level with
-    | Infinite ->
-      t.token_target_level <- Infinite;
-      t.in_hopper <- Infinite;
-    | Finite token_target_level ->
-      let token_target_level = Tokens.of_float_round_up_exn token_target_level in
-      let target_for_bucket_plus_hopper = max zero (token_target_level - t.in_flight) in
-      t.in_bucket <- min target_for_bucket_plus_hopper t.in_bucket;
-      t.in_hopper <- Finite (target_for_bucket_plus_hopper - t.in_bucket);
-      t.token_target_level <- Finite token_target_level
-    end)
-;;
-
-let bucket_size t = Tokens.to_float t.bucket_size
+let bucket_limit t = Tokens.to_float t.bucket_limit
 
 let hopper_to_bucket_rate_per_sec t = t.hopper_to_bucket_rate_per_sec
 
@@ -559,20 +589,21 @@ module Token_bucket = struct
 
   let create_exn
         ~now
-        ~burst_size:bucket_size
+        ~burst_size:bucket_limit
         ~sustained_rate_per_sec:fill_rate
         ?(initial_bucket_level = 0.)
         ()
     =
     create_exn
       ~now
-      ~bucket_size
+      ~bucket_limit
+      ~in_flight_limit:Infinite
       ~hopper_to_bucket_rate_per_sec:(Finite fill_rate)
       ~initial_bucket_level
       ~initial_hopper_level:Infinite
   ;;
 
-  let try_take t ~now = try_take t ~now
+  let try_take = try_take
 end
 
 module Throttled_rate_limiter = struct
@@ -584,15 +615,16 @@ module Throttled_rate_limiter = struct
         ~sustained_rate_per_sec:fill_rate
         ~max_concurrent_jobs
     =
-    let bucket_size          = Float.of_int burst_size in
+    let bucket_limit         = Float.of_int burst_size in
     let max_concurrent_jobs  = Float.of_int max_concurrent_jobs in
-    let initial_bucket_level = Float.min bucket_size max_concurrent_jobs in
+    let initial_bucket_level = Float.min bucket_limit max_concurrent_jobs in
     let initial_hopper_level =
       Finite (Float.max 0. (max_concurrent_jobs -. initial_bucket_level))
     in
     create_exn
       ~now
-      ~bucket_size
+      ~bucket_limit
+      ~in_flight_limit:Infinite
       ~hopper_to_bucket_rate_per_sec:(Finite fill_rate)
       ~initial_bucket_level
       ~initial_hopper_level
@@ -600,13 +632,13 @@ module Throttled_rate_limiter = struct
 
   let try_start_job t ~now =
     match try_take t ~now 1. with
-    | `Asked_for_more_than_bucket_size -> assert false (* see create *)
-    | `Taken -> `Start
-    | `Unable ->
+    | Asked_for_more_than_bucket_limit -> assert false (* see create *)
+    | Taken                            -> `Start
+    | Unable                           ->
       begin match tokens_may_be_available_when t ~now 1. with
-      | `Never_because_greater_than_bucket_size -> assert false (* see create *)
-      | `When_return_to_hopper_is_called   -> `Max_concurrent_jobs_running
-      | `At time                      -> `Unable_until_at_least time
+      | Never_because_greater_than_bucket_limit -> assert false (* see create *)
+      | When_return_to_hopper_is_called         -> `Max_concurrent_jobs_running
+      | At time                                 -> `Unable_until_at_least time
       end
   ;;
 
@@ -647,7 +679,5 @@ module Expert = struct
   let return_to_hopper                      = return_to_hopper
   let set_hopper_to_bucket_rate_per_sec_exn = set_hopper_to_bucket_rate_per_sec_exn
   let tokens_may_be_available_when          = tokens_may_be_available_when
-  let set_token_target_level_exn            = set_token_target_level_exn
-  let set_bucket_size_exn                   = set_bucket_size_exn
 
 end

@@ -2,7 +2,7 @@
    informative string in the third field of Unix_error.  The problem with the standard
    Unix_error that gets raised is that it doesn't include information about the arguments
    to the function that failed. *)
-INCLUDE "core_config.mlh"
+#import "config.mlh"
 
 open Core_kernel.Std
 
@@ -139,8 +139,8 @@ let mknod
 (* Resource limits *)
 
 module RLimit = struct
-  type limit = Limit of int64 | Infinity with sexp
-  type t = { cur : limit; max : limit } with sexp
+  type limit = Limit of int64 | Infinity [@@deriving sexp]
+  type t = { cur : limit; max : limit } [@@deriving sexp]
 
   type resource =
     | Core_file_size
@@ -151,7 +151,7 @@ module RLimit = struct
     | Stack
     | Virtual_memory
     | Nice
-  with sexp ;;
+  [@@deriving sexp] ;;
 
   let core_file_size       = Core_file_size
   let cpu_seconds          = Cpu_seconds
@@ -160,17 +160,17 @@ module RLimit = struct
   let num_file_descriptors = Num_file_descriptors
   let stack                = Stack
   let virtual_memory       =
-    IFDEF RLIMIT_AS THEN
+#if JSC_RLIMIT_AS
       Ok Virtual_memory
-    ELSE
+#else
       Or_error.unimplemented "RLIMIT_AS is not supported on this system"
-    ENDIF
+#endif
   let nice                 =
-    IFDEF RLIMIT_NICE THEN
+#if JSC_RLIMIT_NICE
       Ok Nice
-    ELSE
+#else
       Or_error.unimplemented "RLIMIT_NICE is not supported on this system"
-    ENDIF
+#endif
 
   let resource_of_sexp sexp =
     match resource_of_sexp sexp with
@@ -222,7 +222,7 @@ module Resource_usage = struct
     nvcsw : int64;
     nivcsw : int64;
   }
-  with sexp, fields
+  [@@deriving sexp, fields]
 
   external getrusage : int -> t = "unix_getrusage"
 
@@ -266,7 +266,7 @@ type sysconf =
   | PHYS_PAGES
   | AVPHYS_PAGES
   | IOV_MAX
-with sexp
+[@@deriving sexp]
 
 external sysconf : sysconf -> int64 = "unix_sysconf"
 
@@ -283,7 +283,7 @@ module IOVec = struct
       pos : int;
       len : int;
     }
-  with sexp
+  [@@deriving sexp]
 
   type 'buf kind = 'buf
 
@@ -412,7 +412,7 @@ module Fnmatch_flags = struct
     | `Leading_dir
     | `Casefold
   ]
-  with sexp
+  [@@deriving sexp]
 
   let flag_to_internal = function
     | `No_escape -> 0
@@ -423,7 +423,7 @@ module Fnmatch_flags = struct
     | `Casefold -> 5
   ;;
 
-  type t = int32 with sexp
+  type t = int32 [@@deriving sexp]
 
   external internal_make : int array -> t = "unix_fnmatch_make_flags"
 
@@ -439,10 +439,10 @@ external fnmatch
 
 let fnmatch ?flags ~pat fname = fnmatch (Fnmatch_flags.make flags) ~pat fname
 
-IFDEF WORDEXP THEN
+#if JSC_WORDEXP
 
 module Wordexp_flags = struct
-  type _flag = [ `No_cmd | `Show_err | `Undef ] with sexp
+  type _flag = [ `No_cmd | `Show_err | `Undef ] [@@deriving sexp]
 
   let flag_to_internal = function
     | `No_cmd -> 0
@@ -450,7 +450,7 @@ module Wordexp_flags = struct
     | `Undef -> 2
   ;;
 
-  type t = int32 with sexp
+  type t = int32 [@@deriving sexp]
 
   external internal_make : int array -> t = "unix_wordexp_make_flags"
 
@@ -464,11 +464,11 @@ external wordexp : Wordexp_flags.t -> string -> string array = "unix_wordexp"
 
 let wordexp = Ok (fun ?flags str -> wordexp (Wordexp_flags.make flags) str)
 
-ELSE
+#else
 
 let wordexp = Or_error.unimplemented "Unix.wordexp"
 
-ENDIF
+#endif
 
 (* System information *)
 
@@ -480,17 +480,17 @@ module Utsname = struct
       version: string;
       machine: string;
     }
-  with fields, sexp
+  [@@deriving fields, sexp]
 end
 
 external uname : unit -> Utsname.t = "unix_uname"
 
 module Scheduler = struct
   module Policy = struct
-    type t = [ `Fifo | `Round_robin | `Other ] with sexp
+    type t = [ `Fifo | `Round_robin | `Other ] [@@deriving sexp]
 
     module Ordered = struct
-      type t = Fifo | Round_robin | Other with sexp
+      type t = Fifo | Round_robin | Other [@@deriving sexp]
       let create = function
         | `Fifo -> Fifo
         | `Round_robin -> Round_robin
@@ -525,7 +525,7 @@ module Mman = struct
          changing the C stub. *)
       | Current
       | Future
-    with sexp
+    [@@deriving sexp]
   end
   external unix_mlockall   : Mcl_flags.t array -> unit = "unix_mlockall" ;;
   external unix_munlockall : unit -> unit = "unix_munlockall" ;;
@@ -643,7 +643,7 @@ module Error = struct
     | EOVERFLOW           (** File size or position not representable *)
 
     | EUNKNOWNERR of int  (** Unknown error *)
-  with sexp
+  [@@deriving sexp]
 
   let of_system_int ~errno = Unix_error.of_errno errno
 
@@ -668,12 +668,12 @@ type process_status = Unix.process_status =
 | WEXITED of int
 | WSIGNALED of int
 | WSTOPPED of int
-with sexp
+[@@deriving sexp]
 
 module Exit = struct
-  type error = [ `Exit_non_zero of int ] with compare, sexp
+  type error = [ `Exit_non_zero of int ] [@@deriving compare, sexp]
 
-  type t = (unit, error) Result.t with compare, sexp
+  type t = (unit, error) Result.t [@@deriving compare, sexp]
 
   let to_string_hum = function
     | Ok () -> "exited normally"
@@ -685,7 +685,7 @@ module Exit = struct
     | Error (`Exit_non_zero i) -> i
   ;;
 
-  exception Exit_code_must_be_nonnegative of int with sexp
+  exception Exit_code_must_be_nonnegative of int [@@deriving sexp]
 
   let of_code code =
     if code < 0 then
@@ -703,9 +703,9 @@ module Exit = struct
 end
 
 module Exit_or_signal = struct
-  type error = [ Exit.error | `Signal of Signal.t ] with compare, sexp
+  type error = [ Exit.error | `Signal of Signal.t ] [@@deriving compare, sexp]
 
-  type t = (unit, error) Result.t with compare, sexp
+  type t = (unit, error) Result.t [@@deriving compare, sexp]
 
   let to_string_hum = function
     | Ok () | Error #Exit.error as e -> Exit.to_string_hum e
@@ -714,7 +714,7 @@ module Exit_or_signal = struct
         (Signal.to_string s) (Signal.to_system_int s)
   ;;
 
-  exception Of_unix_got_invalid_status of process_status with sexp
+  exception Of_unix_got_invalid_status of process_status [@@deriving sexp]
 
   let of_unix = function
     | WEXITED i -> if i = 0 then Ok () else Error (`Exit_non_zero i)
@@ -729,9 +729,9 @@ module Exit_or_signal = struct
 end
 
 module Exit_or_signal_or_stop = struct
-  type error = [ Exit_or_signal.error | `Stop of Signal.t ] with sexp
+  type error = [ Exit_or_signal.error | `Stop of Signal.t ] [@@deriving sexp]
 
-  type t = (unit, error) Result.t with sexp
+  type t = (unit, error) Result.t [@@deriving sexp]
 
   let to_string_hum = function
     | Ok () | Error #Exit_or_signal.error as e -> Exit_or_signal.to_string_hum e
@@ -781,7 +781,7 @@ type env =
   | `Extend of (string * string) list
   | `Replace_raw of string list
   ]
-with sexp
+[@@deriving sexp]
 
 let env_assignments env =
   match env with
@@ -814,7 +814,7 @@ let exec ~prog ~args ?(use_path = true) ?env () =
   | true, Some env -> execvpe ~prog ~args ~env
 ;;
 
-exception Fork_returned_negative_result of int with sexp
+exception Fork_returned_negative_result of int [@@deriving sexp]
 
 let fork () =
   let pid = Unix.fork () in
@@ -836,7 +836,7 @@ type wait_flag =
   Unix.wait_flag =
 | WNOHANG
 | WUNTRACED
-with sexp
+[@@deriving sexp]
 
 type wait_on =
   [ `Any
@@ -844,12 +844,12 @@ type wait_on =
   | `Group of Pid.t
   | `Pid of Pid.t
   ]
-with sexp
+[@@deriving sexp]
 
-type mode = wait_flag list with sexp_of
+type mode = wait_flag list [@@deriving sexp_of]
 type _t = mode
 
-type waitpid_result = (Pid.t * Exit_or_signal_or_stop.t) option with sexp_of
+type waitpid_result = (Pid.t * Exit_or_signal_or_stop.t) option [@@deriving sexp_of]
 
 let wait_gen
     ~mode
@@ -885,7 +885,7 @@ let wait_gen
   | None ->
     failwiths "waitpid syscall returned invalid result for mode"
       (pid, mode, waitpid_result)
-      (<:sexp_of< int * mode * waitpid_result >>)
+      ([%sexp_of: int * mode * waitpid_result])
 ;;
 
 let wait ?(restart=true) pid =
@@ -921,7 +921,7 @@ let waitpid_exn pid =
   if Result.is_error exit_or_signal then
     failwiths "child process didn't exit with status zero"
       (`Child_pid pid, exit_or_signal)
-      (<:sexp_of< [ `Child_pid of Pid.t ] * Exit_or_signal.t >>)
+      ([%sexp_of: [ `Child_pid of Pid.t ] * Exit_or_signal.t])
 ;;
 
 let system s =
@@ -942,12 +942,12 @@ let getppid_exn () =
 
 module Thread_id = Int
 
-IFDEF THREAD_ID THEN
+#if JSC_THREAD_ID
 external gettid : unit -> Thread_id.t = "unix_gettid"
 let gettid = Ok gettid
-ELSE
+#else
 let gettid = Or_error.unimplemented "gettid is not supported on this system"
-ENDIF
+#endif
 
 let nice i =
   improve (fun () -> Unix.nice i)
@@ -974,9 +974,9 @@ Unix.open_flag =
 | O_RSYNC
 | O_SHARE_DELETE
 | O_CLOEXEC
-with sexp
+[@@deriving sexp]
 
-type file_perm = int with of_sexp
+type file_perm = int [@@deriving of_sexp]
 
 (* Prints out in octal, which is much more standard in Unix. *)
 let sexp_of_file_perm fp = Sexp.Atom (Printf.sprintf "0o%03o" fp)
@@ -1025,7 +1025,7 @@ Unix.seek_command =
 | SEEK_SET
 | SEEK_CUR
 | SEEK_END
-with sexp
+[@@deriving sexp]
 
 type file_kind = Unix.file_kind =
 | S_REG
@@ -1035,7 +1035,7 @@ type file_kind = Unix.file_kind =
 | S_LNK
 | S_FIFO
 | S_SOCK
-with sexp
+[@@deriving sexp]
 
 let isatty = unary_fd Unix.isatty
 
@@ -1054,7 +1054,7 @@ module Native_file = struct
     st_atime : float;
     st_mtime : float;
     st_ctime : float;
-  } with sexp
+  } [@@deriving sexp]
 
   let stat = unary_filename Unix.stat
   let lstat = unary_filename Unix.lstat
@@ -1086,7 +1086,7 @@ type lock_command =
   | F_TEST
   | F_RLOCK
   | F_TRLOCK
-with sexp
+[@@deriving sexp]
 
 let lockf fd ~mode ~len =
   let len =
@@ -1149,16 +1149,11 @@ Unix.LargeFile.stats = {
   st_atime : float;
   st_mtime : float;
   st_ctime : float;
-} with sexp
+} [@@deriving sexp]
 
-external stat : string -> stats = "core_unix_stat_64"
-let stat = unary_filename stat
-
-external lstat : string -> stats = "core_unix_lstat_64"
-let lstat = unary_filename lstat
-
-external fstat : File_descr.t -> stats = "core_unix_fstat_64"
-let fstat = unary_fd fstat
+let stat  = unary_filename Unix.LargeFile.stat
+let lstat = unary_filename Unix.LargeFile.lstat
+let fstat = unary_fd       Unix.LargeFile.fstat
 
 let src_dst f ~src ~dst =
   improve (fun () -> f ~src ~dst)
@@ -1185,7 +1180,7 @@ type access_permission = Unix.access_permission =
   | W_OK
   | X_OK
   | F_OK
-with sexp
+[@@deriving sexp]
 
 let chmod filename ~perm =
   improve (fun () -> Unix.chmod filename ~perm)
@@ -1233,7 +1228,7 @@ let access_exn filename perm = Result.ok_exn (access filename perm)
 external remove : string -> unit = "core_unix_remove"
 let remove = unary_filename remove
 
-TEST =
+let%test _ =
   let dir = Core_filename.temp_dir "remove_test" "" in
   let file = dir ^/ "test" in
   Out_channel.write_all (dir ^ "/test") ~data:"testing Core.Unix.remove";
@@ -1250,7 +1245,7 @@ let dup2 ~src ~dst =
                 ("dst", File_descr.sexp_of_t dst)])
 ;;
 
-TEST_UNIT "fork_exec ~env last binding takes precedence" =
+let%test_unit "fork_exec ~env last binding takes precedence" =
   protectx ~finally:remove (Filename.temp_file "test" "fork_exec.env.last-wins")
     ~f:(fun temp_file ->
       let env = [ "VAR", "first"; "VAR", "last" ] in
@@ -1263,7 +1258,7 @@ TEST_UNIT "fork_exec ~env last binding takes precedence" =
           waitpid_exn
             (fork_exec () ~env ~prog:"sh"
                ~args:[ "sh"; "-c"; "echo $VAR > " ^ temp_file ]);
-          <:test_result< string >> ~expect:"last\n" (In_channel.read_all temp_file)))
+          [%test_result: string] ~expect:"last\n" (In_channel.read_all temp_file)))
 
 let set_nonblock = unary_fd Unix.set_nonblock
 let clear_nonblock = unary_fd Unix.clear_nonblock
@@ -1357,15 +1352,15 @@ module Open_flags = struct
 
   let can_read t = access_mode t = rdonly || access_mode t = rdwr
 
-  TEST = can_read rdonly
-  TEST = can_read rdwr
-  TEST = not (can_read wronly)
+  let%test _ = can_read rdonly
+  let%test _ = can_read rdwr
+  let%test _ = not (can_read wronly)
 
   let can_write t = access_mode t = wronly || access_mode t = rdwr
 
-  TEST = can_write wronly
-  TEST = can_write rdwr
-  TEST = not (can_write rdonly)
+  let%test _ = can_write wronly
+  let%test _ = can_write rdwr
+  let%test _ = not (can_write rdonly)
 
   let sexp_of_t t =
     let a = access_mode t in
@@ -1386,14 +1381,14 @@ module Open_flags = struct
     let sexp1 = sexp_of_t t in
     let sexp2 = Sexp.of_string string in
     if Sexp.(<>) sexp1 sexp2 then
-      failwiths "unequal sexps" (sexp1, sexp2) <:sexp_of< Sexp.t * Sexp.t >>;
+      failwiths "unequal sexps" (sexp1, sexp2) [%sexp_of: Sexp.t * Sexp.t];
   ;;
 
-  TEST_UNIT = check rdonly            "(rdonly)"
-  TEST_UNIT = check wronly            "(wronly)"
-  TEST_UNIT = check rdwr              "(rdwr)"
-  TEST_UNIT = check append            "(rdonly append)"
-  TEST_UNIT = check (wronly + append) "(wronly append)"
+  let%test_unit _ = check rdonly            "(rdonly)"
+  let%test_unit _ = check wronly            "(wronly)"
+  let%test_unit _ = check rdwr              "(rdwr)"
+  let%test_unit _ = check append            "(rdonly append)"
+  let%test_unit _ = check (wronly + append) "(wronly append)"
 end
 
 let fcntl_getfl, fcntl_setfl =
@@ -1415,7 +1410,7 @@ let fcntl_getfl, fcntl_setfl =
   fcntl_getfl, fcntl_setfl
 ;;
 
-TEST_UNIT =
+let%test_unit _ =
   let test = "unix_test_file" in
   let rm_test () = try unlink test with _ -> () in
   rm_test ();
@@ -1425,7 +1420,7 @@ TEST_UNIT =
   assert (Open_flags.are_disjoint flags Open_flags.append);
   fcntl_setfl fd (Open_flags.(+) flags Open_flags.append);
   assert (Open_flags.do_intersect (fcntl_getfl fd) Open_flags.append);
-  rm_test ();
+  rm_test ()
 ;;
 
 let mkdir ?(perm=0o777) dirname =
@@ -1492,7 +1487,7 @@ module Process_info = struct
       stdout : File_descr.t;
       stderr : File_descr.t;
     }
-  with sexp
+  [@@deriving sexp]
 end
 
 external create_process
@@ -1568,13 +1563,13 @@ module Select_fds = struct
       write : File_descr.t list;
       except : File_descr.t list;
     }
-  with sexp_of
+  [@@deriving sexp_of]
 
   let empty = { read = []; write = []; except = [] }
 end
 
 type select_timeout = [ `Never | `Immediately | `After of Time_ns.Span.t ]
-with sexp_of
+[@@deriving sexp_of]
 
 let select ?restart ~read ~write ~except ~timeout () =
   improve ?restart (fun () ->
@@ -1593,7 +1588,7 @@ let select ?restart ~read ~write ~except ~timeout () =
        [("read", sexp_of_list File_descr.sexp_of_t read);
         ("write", sexp_of_list File_descr.sexp_of_t write);
         ("except", sexp_of_list File_descr.sexp_of_t except);
-        ("timeout", <:sexp_of< select_timeout >> timeout)])
+        ("timeout", [%sexp_of: select_timeout] timeout)])
 ;;
 
 let pause = Unix.pause
@@ -1605,7 +1600,7 @@ type process_times =
   tms_cutime : float;
   tms_cstime : float;
 }
-with sexp
+[@@deriving sexp]
 
 
 type tm =
@@ -1623,7 +1618,7 @@ type tm =
     tm_wday  : int;
     tm_yday  : int;
     tm_isdst : bool;
-  } with sexp
+  } [@@deriving sexp]
 
 let time = Unix.time
 let gettimeofday = Unix.gettimeofday
@@ -1641,15 +1636,15 @@ let utimes = Unix.utimes
 
 external strptime : fmt:string -> string -> Unix.tm = "unix_strptime"
 
-TEST_UNIT "record format hasn't changed" =
+let%test_unit "record format hasn't changed" =
   (* Exclude the time zone (%Z) because it depends on the location. *)
-  <:test_result< string >> ~expect:"1907-07-05 04:03:08; wday=2; yday=010"
+  [%test_result: string] ~expect:"1907-07-05 04:03:08; wday=2; yday=010"
     (strftime
        { tm_sec = 8; tm_min = 3; tm_hour = 4; tm_mday = 5; tm_mon = 6; tm_year = 7;
          tm_wday = 2; tm_yday = 9; tm_isdst = true }
        "%F %T; wday=%u; yday=%j")
 
-TEST =
+let%test _ =
   let res = strptime ~fmt:"%Y-%m-%d %H:%M:%S" "2012-05-23 10:14:23" in
   let res =
     (* fill in optional fields if they are missing *)
@@ -1668,7 +1663,7 @@ TEST =
     tm_yday  = 143;
     tm_isdst = false; }
 
-TEST =
+let%test _ =
   try
     ignore (strptime ~fmt:"%Y-%m-%d" "2012-05-");
     false
@@ -1679,13 +1674,13 @@ type interval_timer = Unix.interval_timer =
   | ITIMER_REAL
   | ITIMER_VIRTUAL
   | ITIMER_PROF
-with sexp
+[@@deriving sexp]
 
 type interval_timer_status = Unix.interval_timer_status = {
   it_interval : float;
   it_value : float;
 }
-with sexp
+[@@deriving sexp]
 
 let getitimer = Unix.getitimer
 let setitimer = Unix.setitimer
@@ -1722,7 +1717,7 @@ module Passwd = struct
       dir : string;
       shell : string;
     }
-  with sexp
+  [@@deriving compare, sexp]
 
   let of_unix u =
     let module U = Unix in
@@ -1736,7 +1731,7 @@ module Passwd = struct
     }
   ;;
 
-  exception Getbyname of string with sexp
+  exception Getbyname of string [@@deriving sexp]
 
   let (getbyname, getbyname_exn) =
     make_by
@@ -1744,7 +1739,7 @@ module Passwd = struct
       (fun s -> Getbyname s)
   ;;
 
-  exception Getbyuid of int with sexp
+  exception Getbyuid of int [@@deriving sexp]
 
   let (getbyuid, getbyuid_exn) =
     make_by
@@ -1752,7 +1747,7 @@ module Passwd = struct
       (fun s -> Getbyuid s)
   ;;
 
-  exception Getpwent with sexp
+  exception Getpwent [@@deriving sexp]
 
   module Low_level = struct
     external core_setpwent : unit -> unit = "core_setpwent" ;;
@@ -1769,18 +1764,20 @@ module Passwd = struct
 
   let getpwents () =
     Mutex0.critical_section pwdb_lock ~f:(fun () ->
-      Low_level.setpwent ();
-      Exn.protect
-        ~f:(fun () ->
-          let rec loop acc =
-            try
-              let ent = Low_level.getpwent_exn () in
-              loop (ent :: acc)
-            with
-            | End_of_file -> List.rev acc
-          in
-          loop []))
-        ~finally:(fun () -> Low_level.endpwent ())
+      begin
+        Low_level.setpwent ();
+        Exn.protect
+          ~f:(fun () ->
+            let rec loop acc =
+              try
+                let ent = Low_level.getpwent_exn () in
+                loop (ent :: acc)
+              with
+              | End_of_file -> List.rev acc
+            in
+            loop [])
+          ~finally:(fun () -> Low_level.endpwent ())
+      end)
   ;;
 end
 
@@ -1791,7 +1788,7 @@ module Group = struct
       gid : int;
       mem : string array;
     }
-  with sexp_of
+  [@@deriving sexp_of]
 
   let of_unix u =
     { name = u.Unix.gr_name;
@@ -1801,13 +1798,13 @@ module Group = struct
     }
   ;;
 
-  exception Getbyname of string with sexp
+  exception Getbyname of string [@@deriving sexp]
 
   let (getbyname, getbyname_exn) =
     make_by (fun name -> of_unix (Unix.getgrnam name)) (fun s -> Getbyname s)
   ;;
 
-  exception Getbygid of int with sexp
+  exception Getbygid of int [@@deriving sexp]
 
   let (getbygid, getbygid_exn) =
     make_by (fun gid -> of_unix (Unix.getgrgid gid)) (fun s -> Getbygid s)
@@ -1821,7 +1818,7 @@ let getlogin () = (Unix.getpwuid (getuid ())).Unix.pw_name
 
 module Protocol_family = struct
   type t = [ `Unix | `Inet | `Inet6 ]
-  with bin_io, sexp
+  [@@deriving bin_io, sexp]
 
   let of_unix = function
     | Unix.PF_UNIX -> `Unix
@@ -1833,24 +1830,77 @@ end
 let gethostname = Unix.gethostname
 
 module Inet_addr0 = struct
-  module T = struct
-    type t = Unix.inet_addr
+  module Stable = struct
+    module V1 = struct
+      module T0 = struct
+        type t = Unix.inet_addr
 
-    let of_string = Unix.inet_addr_of_string
-    let to_string = Unix.string_of_inet_addr
+        let of_string = Unix.inet_addr_of_string
+        let to_string = Unix.string_of_inet_addr
 
-    (* Unix.inet_addr is represented as either a "struct in_addr"
-       or a "struct in6_addr" stuffed into an O'Caml string, so
-       polymorphic compare will work *)
-    let compare = Pervasives.compare
-
-    let sexp_of_t t = Sexp.Atom (to_string t)
-    let t_of_sexp = function
-      | Sexp.Atom s -> of_string s
-      | Sexp.List _ as sexp -> of_sexp_error "Inet_addr0.t_of_sexp: atom expected" sexp
+        (* Unix.inet_addr is represented as either a "struct in_addr"
+           or a "struct in6_addr" stuffed into an O'Caml string, so
+           polymorphic compare will work *)
+        let compare = Pervasives.compare
+      end
+      module T1 = struct
+        include T0
+        include Sexpable.Of_stringable (T0)
+        include Binable.Of_stringable  (T0)
+      end
+      include T1
+      include Comparable.Make(T1)
+    end
   end
-  include T
-  include Comparable.Make(T)
+  include Stable.V1
+  include Core_kernel.Stable_unit_test.Make (struct
+      type nonrec t = t [@@deriving sexp, bin_io]
+      let equal = equal
+      ;;
+
+      let tests =
+        (* IPv4 *)
+        [ of_string "0.0.0.0"        , "0.0.0.0"        , "\0070.0.0.0"
+        ; of_string "10.0.0.0"       , "10.0.0.0"       , "\00810.0.0.0"
+        ; of_string "127.0.0.1"      , "127.0.0.1"      , "\009127.0.0.1"
+        ; of_string "192.168.1.101"  , "192.168.1.101"  , "\013192.168.1.101"
+        ; of_string "255.255.255.255", "255.255.255.255", "\015255.255.255.255"
+        (* IPv6 *)
+        ; of_string "2001:0db8:85a3:0000:0000:8a2e:0370:7334",
+          "2001:db8:85a3::8a2e:370:7334",
+          "\0282001:db8:85a3::8a2e:370:7334"
+        ; of_string "2001:db8:85a3:0:0:8a2e:370:7334",
+          "2001:db8:85a3::8a2e:370:7334",
+          "\0282001:db8:85a3::8a2e:370:7334"
+        ; of_string "2001:db8:85a3::8a2e:370:7334",
+          "2001:db8:85a3::8a2e:370:7334",
+          "\0282001:db8:85a3::8a2e:370:7334"
+        ; of_string "0:0:0:0:0:0:0:1", "::1", "\003::1"
+        ; of_string "::1"            , "::1", "\003::1"
+        ; of_string "0:0:0:0:0:0:0:0", "::", "\002::"
+        ; of_string "::"             , "::", "\002::"
+        ; of_string "::ffff:c000:0280"  , "::ffff:192.0.2.128", "\018::ffff:192.0.2.128"
+        ; of_string "::ffff:192.0.2.128", "::ffff:192.0.2.128", "\018::ffff:192.0.2.128"
+        ; of_string "2001:0db8::0001", "2001:db8::1"  , "\0112001:db8::1"
+        ; of_string "2001:db8::1"    , "2001:db8::1"  , "\0112001:db8::1"
+        ; of_string "2001:db8::2:1"  , "2001:db8::2:1", "\0132001:db8::2:1"
+        ; of_string "2001:db8:0000:1:1:1:1:1",
+          "2001:db8:0:1:1:1:1:1",
+          "\0202001:db8:0:1:1:1:1:1"
+        ; of_string "2001:db8::1:1:1:1:1",
+          "2001:db8:0:1:1:1:1:1",
+          "\0202001:db8:0:1:1:1:1:1"
+        ; of_string "2001:db8:0:1:1:1:1:1",
+          "2001:db8:0:1:1:1:1:1",
+          "\0202001:db8:0:1:1:1:1:1"
+        ; of_string "2001:db8:0:0:1:0:0:1", "2001:db8::1:0:0:1", "\0172001:db8::1:0:0:1"
+        ; of_string "2001:db8:0:0:1::1"   , "2001:db8::1:0:0:1", "\0172001:db8::1:0:0:1"
+        ; of_string "2001:db8::1:0:0:1"   , "2001:db8::1:0:0:1", "\0172001:db8::1:0:0:1"
+        ; of_string "2001:DB8::1", "2001:db8::1", "\0112001:db8::1"
+        ; of_string "2001:db8::1", "2001:db8::1", "\0112001:db8::1"
+        ]
+      ;;
+    end)
 end
 
 module Host = struct
@@ -1860,7 +1910,7 @@ module Host = struct
       family : Protocol_family.t;
       addresses : Inet_addr0.t array;
     }
-  with sexp_of
+  [@@deriving sexp_of]
 
   let of_unix u =
     { name = u.Unix.h_name;
@@ -1870,13 +1920,13 @@ module Host = struct
     }
   ;;
 
-  exception Getbyname of string with sexp
+  exception Getbyname of string [@@deriving sexp]
 
   let (getbyname, getbyname_exn) =
     make_by (fun name -> of_unix (Unix.gethostbyname name)) (fun s -> Getbyname s)
   ;;
 
-  exception Getbyaddr of Inet_addr0.t with sexp
+  exception Getbyaddr of Inet_addr0.t [@@deriving sexp]
 
   let (getbyaddr, getbyaddr_exn) =
     make_by (fun addr -> of_unix (Unix.gethostbyaddr addr)) (fun a -> Getbyaddr a)
@@ -1892,9 +1942,7 @@ end
 module Inet_addr = struct
   include Inet_addr0
 
-  include (Binable.Of_stringable (Inet_addr0) : Binable.S with type t := t)
-
-  exception Get_inet_addr of string * string with sexp
+  exception Get_inet_addr of string * string [@@deriving sexp]
 
   let of_string_or_getbyname name =
     try of_string name
@@ -1910,10 +1958,17 @@ module Inet_addr = struct
           else raise (Get_inet_addr (name, "empty addrs"))
   ;;
 
-  let t_of_sexp = function
-    | Sexp.Atom name -> of_string_or_getbyname name
-    | Sexp.List _ as sexp -> of_sexp_error "Inet_addr.t_of_sexp: atom expected" sexp
+  module Blocking_sexp = struct
+    module T = struct
+      include Inet_addr0
+      let of_string = of_string_or_getbyname
+    end
+    include T
+    include Sexpable.Of_stringable (T)
+  end
   ;;
+
+  let t_of_sexp = Blocking_sexp.t_of_sexp
 
   let bind_any       = Unix.inet_addr_any
   let bind_any_inet6 = Unix.inet6_addr_any
@@ -1949,31 +2004,31 @@ module Inet_addr = struct
     let inet = of_string str in
     Int32.( = ) (inet4_addr_to_int32_exn inet) num
 
-  TEST = test_inet4_addr_to_int32 "0.0.0.1"                  1l
-  TEST = test_inet4_addr_to_int32 "1.0.0.0"          0x1000000l
-  TEST = test_inet4_addr_to_int32 "255.255.255.255" 0xffffffffl
-  TEST = test_inet4_addr_to_int32 "172.25.42.1"     0xac192a01l
-  TEST = test_inet4_addr_to_int32 "4.2.2.1"          0x4020201l
-  TEST = test_inet4_addr_to_int32 "8.8.8.8"          0x8080808l
-  TEST = test_inet4_addr_to_int32 "173.194.73.103"  0xadc24967l
-  TEST = test_inet4_addr_to_int32 "98.139.183.24"   0x628bb718l
-  TEST = test_inet4_addr_to_int32 "0.0.0.0"                  0l
-  TEST = test_inet4_addr_to_int32 "127.0.0.1"       0x7F000001l
-  TEST = test_inet4_addr_to_int32 "239.0.0.0"       0xEF000000l
-  TEST = test_inet4_addr_to_int32 "255.255.255.255" 0xFFFFFFFFl
+  let%test _ = test_inet4_addr_to_int32 "0.0.0.1"                  1l
+  let%test _ = test_inet4_addr_to_int32 "1.0.0.0"          0x1000000l
+  let%test _ = test_inet4_addr_to_int32 "255.255.255.255" 0xffffffffl
+  let%test _ = test_inet4_addr_to_int32 "172.25.42.1"     0xac192a01l
+  let%test _ = test_inet4_addr_to_int32 "4.2.2.1"          0x4020201l
+  let%test _ = test_inet4_addr_to_int32 "8.8.8.8"          0x8080808l
+  let%test _ = test_inet4_addr_to_int32 "173.194.73.103"  0xadc24967l
+  let%test _ = test_inet4_addr_to_int32 "98.139.183.24"   0x628bb718l
+  let%test _ = test_inet4_addr_to_int32 "0.0.0.0"                  0l
+  let%test _ = test_inet4_addr_to_int32 "127.0.0.1"       0x7F000001l
+  let%test _ = test_inet4_addr_to_int32 "239.0.0.0"       0xEF000000l
+  let%test _ = test_inet4_addr_to_int32 "255.255.255.255" 0xFFFFFFFFl
 
   (* And from an int to a string? *)
   let test_inet4_addr_of_int32 num str =
     let inet = of_string str in
     inet4_addr_of_int32 num = inet
 
-  TEST = test_inet4_addr_of_int32 0xffffffffl "255.255.255.255"
-  TEST = test_inet4_addr_of_int32          0l "0.0.0.0"
-  TEST = test_inet4_addr_of_int32 0x628bb718l "98.139.183.24"
-  TEST = test_inet4_addr_of_int32 0xadc24967l "173.194.73.103"
+  let%test _ = test_inet4_addr_of_int32 0xffffffffl "255.255.255.255"
+  let%test _ = test_inet4_addr_of_int32          0l "0.0.0.0"
+  let%test _ = test_inet4_addr_of_int32 0x628bb718l "98.139.183.24"
+  let%test _ = test_inet4_addr_of_int32 0xadc24967l "173.194.73.103"
 
   (* And round trip for kicks *)
-  TEST_UNIT =
+  let%test_unit _ =
     let inet  = of_string "4.2.2.1" in
     let inet' = inet4_addr_of_int32 (inet4_addr_to_int32_exn inet) in
     if inet <> inet' then
@@ -1991,17 +2046,29 @@ end
 *)
 module Cidr = struct
   module T0 = struct
+    (* [address] is always normalized such that the (32 - [bits]) least-significant
+       bits are zero. *)
     type t =
       {
         address : int32; (* IPv4 only *)
         bits    : int;
       }
-    with fields, bin_io, compare
+    [@@deriving fields, bin_io, compare]
+
+    let normalized_address ~base ~bits =
+      let shift = 32 - bits in
+      Int32.(shift_left (shift_right_logical base shift) shift)
+
+    let invariant t =
+      assert (t.bits >= 0 && t.bits <= 32);
+      assert (Int32.equal t.address (normalized_address ~base:t.address ~bits:t.bits))
 
     let create ~base_address ~bits =
       if bits < 0 || bits > 32 then
         failwithf "%d is an invalid number of mask bits (0 <= bits <= 32)" bits ();
-      { address = Inet_addr.inet4_addr_to_int32_exn base_address; bits }
+      let base = Inet_addr.inet4_addr_to_int32_exn base_address in
+      let address = normalized_address ~base ~bits in
+      { address; bits }
 
     let base_address t =
       Inet_addr.inet4_addr_of_int32 t.address
@@ -2021,122 +2088,146 @@ module Cidr = struct
     let netmask_of_bits t =
       Int32.shift_left 0xffffffffl (32 - t.bits) |> Inet_addr.inet4_addr_of_int32
 
-    let start_address t =
-      let baseip = t.address in
-      let shift = 32 - t.bits in
-      Int32.(shift_left (shift_right_logical baseip shift) shift)
-
     let does_match_int32 t address =
-      Int32.equal (start_address t) (start_address {t with address})
+      Int32.equal t.address (normalized_address ~base:address ~bits:t.bits)
 
     let does_match t inet_addr =
       match Inet_addr.inet4_addr_to_int32_exn inet_addr with
       | exception _ -> false (* maybe they tried to use IPv6 *)
       | address     -> does_match_int32 t address
 
-    TEST = does_match (of_string "127.0.0.1/32") Inet_addr.localhost
-    TEST = does_match (of_string "127.0.0.0/8") Inet_addr.localhost
-    TEST = does_match (of_string "0.0.0.0/32") Inet_addr.bind_any
-    TEST = does_match (of_string "0.0.0.0/0") Inet_addr.bind_any
+    let%test _ = does_match (of_string "127.0.0.1/32") Inet_addr.localhost
+    let%test _ = does_match (of_string "127.0.0.0/8") Inet_addr.localhost
+    let%test _ = does_match (of_string "0.0.0.0/32") Inet_addr.bind_any
+    let%test _ = does_match (of_string "0.0.0.0/0") Inet_addr.bind_any
 
     let multicast = of_string "224.0.0.0/4"
-    TEST = does_match multicast (Inet_addr.of_string "224.0.0.1")
-    TEST = does_match multicast (Inet_addr.of_string "239.0.0.1")
-    TEST = not (does_match multicast (Inet_addr.of_string "240.0.0.1"))
+    let%test _ = does_match multicast (Inet_addr.of_string "224.0.0.1")
+    let%test _ = does_match multicast (Inet_addr.of_string "239.0.0.1")
+    let%test _ = not (does_match multicast (Inet_addr.of_string "240.0.0.1"))
 
     let all_matching_addresses t =
-      Sequence.unfold ~init:(start_address t) ~f:(fun address ->
+      Sequence.unfold ~init:t.address ~f:(fun address ->
         if does_match_int32 t address
         then Some (Inet_addr.inet4_addr_of_int32 address, Int32.succ address)
         else None)
 
-    TEST_MODULE = struct
-      let match_strings c a =
-        let c = of_string c in
-        let a = Inet_addr.of_string a in
-        does_match c a
+    let%test_module _ =
+      (module struct
+        let match_strings c a =
+          let c = of_string c in
+          let a = Inet_addr.of_string a in
+          does_match c a
 
-      let is_multicast a =
-        let a = Inet_addr.of_string a in
-        does_match multicast a
+        let is_multicast a =
+          let a = Inet_addr.of_string a in
+          does_match multicast a
 
-      let of_string_ok s =
-        try ignore (of_string s : t); true
-        with _ -> false
+        let of_string_ok s =
+          match invariant (of_string s) with
+          | ()          -> true
+          | exception _ -> false
 
-      let of_string_err = Fn.compose not of_string_ok
+        let of_string_err = Fn.compose not of_string_ok
 
-      (* Can we parse some random correct netmasks? *)
-      TEST = of_string_ok "10.0.0.0/8"
-      TEST = of_string_ok "172.16.0.0/12"
-      TEST = of_string_ok "192.168.0.0/16"
-      TEST = of_string_ok "192.168.13.0/24"
-      TEST = of_string_ok "172.25.42.0/18"
+        (* Can we parse some random correct netmasks? *)
+        let%test _ = of_string_ok "10.0.0.0/8"
+        let%test _ = of_string_ok "172.16.0.0/12"
+        let%test _ = of_string_ok "192.168.0.0/16"
+        let%test _ = of_string_ok "192.168.13.0/24"
+        let%test _ = of_string_ok "172.25.42.0/18"
 
-      (* Do we properly fail on some nonsense? *)
-      TEST = of_string_err "172.25.42.0"
-      TEST = of_string_err "172.25.42.0/35"
-      TEST = of_string_err "172.25.42.0/sandwich"
-      TEST = of_string_err "sandwich/sandwich"
-      TEST = of_string_err "sandwich/39"
-      TEST = of_string_err "sandwich/16"
-      TEST = of_string_err "sandwich"
-      TEST = of_string_err "172.52.43/16"
-      TEST = of_string_err "172.52.493/16"
+        (* Do we properly fail on some nonsense? *)
+        let%test _ = of_string_err "172.25.42.0"
+        let%test _ = of_string_err "172.25.42.0/35"
+        let%test _ = of_string_err "172.25.42.0/sandwich"
+        let%test _ = of_string_err "sandwich/sandwich"
+        let%test _ = of_string_err "sandwich/39"
+        let%test _ = of_string_err "sandwich/16"
+        let%test _ = of_string_err "sandwich"
+        let%test _ = of_string_err "172.52.43/16"
+        let%test _ = of_string_err "172.52.493/16"
 
-      (* Basic match tests *)
-      TEST = match_strings "10.0.0.0/8" "9.255.255.255"  = false
-      TEST = match_strings "10.0.0.0/8" "10.0.0.1"       = true
-      TEST = match_strings "10.0.0.0/8" "10.34.67.1"     = true
-      TEST = match_strings "10.0.0.0/8" "10.255.255.255" = true
-      TEST = match_strings "10.0.0.0/8" "11.0.0.1"       = false
+        (* Basic match tests *)
+        let%test _ = match_strings "10.0.0.0/8" "9.255.255.255"  = false
+        let%test _ = match_strings "10.0.0.0/8" "10.0.0.1"       = true
+        let%test _ = match_strings "10.0.0.0/8" "10.34.67.1"     = true
+        let%test _ = match_strings "10.0.0.0/8" "10.255.255.255" = true
+        let%test _ = match_strings "10.0.0.0/8" "11.0.0.1"       = false
 
-      TEST = match_strings "172.16.0.0/12" "172.15.255.255" = false
-      TEST = match_strings "172.16.0.0/12" "172.16.0.0"     = true
-      TEST = match_strings "172.16.0.0/12" "172.31.255.254" = true
+        let%test _ = match_strings "172.16.0.0/12" "172.15.255.255" = false
+        let%test _ = match_strings "172.16.0.0/12" "172.16.0.0"     = true
+        let%test _ = match_strings "172.16.0.0/12" "172.31.255.254" = true
 
-      TEST = match_strings "172.25.42.0/24" "172.25.42.1"   = true
-      TEST = match_strings "172.25.42.0/24" "172.25.42.255" = true
-      TEST = match_strings "172.25.42.0/24" "172.25.42.0"   = true
+        let%test _ = match_strings "172.25.42.0/24" "172.25.42.1"   = true
+        let%test _ = match_strings "172.25.42.0/24" "172.25.42.255" = true
+        let%test _ = match_strings "172.25.42.0/24" "172.25.42.0"   = true
 
-      TEST = match_strings "172.25.42.0/16" "172.25.0.1"     = true
-      TEST = match_strings "172.25.42.0/16" "172.25.255.254" = true
-      TEST = match_strings "172.25.42.0/16" "172.25.42.1"    = true
-      TEST = match_strings "172.25.42.0/16" "172.25.105.237" = true
+        let%test _ = match_strings "172.25.42.0/16" "172.25.0.1"     = true
+        let%test _ = match_strings "172.25.42.0/16" "172.25.255.254" = true
+        let%test _ = match_strings "172.25.42.0/16" "172.25.42.1"    = true
+        let%test _ = match_strings "172.25.42.0/16" "172.25.105.237" = true
 
-      (* And some that should fail *)
-      TEST = match_strings "172.25.42.0/24" "172.26.42.47"  = false
-      TEST = match_strings "172.25.42.0/24" "172.26.42.208" = false
+        (* And some that should fail *)
+        let%test _ = match_strings "172.25.42.0/24" "172.26.42.47"  = false
+        let%test _ = match_strings "172.25.42.0/24" "172.26.42.208" = false
 
-      (* Multicast tests *)
-      TEST = is_multicast "224.0.0.0"       = true
-      TEST = is_multicast "224.0.0.1"       = true
-      TEST = is_multicast "239.255.255.255" = true
-      TEST = is_multicast "240.0.0.0"       = false
-      TEST = is_multicast "223.0.0.1"       = false
-      TEST = is_multicast "226.128.255.16"  = true
-      TEST = is_multicast "233.128.255.16"  = true
-      TEST = is_multicast "155.246.1.20"    = false
-      TEST = is_multicast "0.0.0.0"         = false
-      TEST = is_multicast "127.0.0.1"       = false
+        (* Multicast tests *)
+        let%test _ = is_multicast "224.0.0.0"       = true
+        let%test _ = is_multicast "224.0.0.1"       = true
+        let%test _ = is_multicast "239.255.255.255" = true
+        let%test _ = is_multicast "240.0.0.0"       = false
+        let%test _ = is_multicast "223.0.0.1"       = false
+        let%test _ = is_multicast "226.128.255.16"  = true
+        let%test _ = is_multicast "233.128.255.16"  = true
+        let%test _ = is_multicast "155.246.1.20"    = false
+        let%test _ = is_multicast "0.0.0.0"         = false
+        let%test _ = is_multicast "127.0.0.1"       = false
 
-      let test_matching_addresses s l =
-        <:test_result< Inet_addr.t list >>
-          (of_string s |> all_matching_addresses |> Sequence.to_list)
-          ~expect:(List.map l ~f:Inet_addr.of_string)
+        let test_matching_addresses s l =
+          [%test_result: Inet_addr.t list]
+            (of_string s |> all_matching_addresses |> Sequence.to_list)
+            ~expect:(List.map l ~f:Inet_addr.of_string)
 
-      TEST_UNIT =
-        test_matching_addresses "172.16.0.8/32"
-          [ "172.16.0.8" ]
+        let%test_unit _ =
+          test_matching_addresses "172.16.0.8/32"
+            [ "172.16.0.8" ]
 
-      TEST_UNIT =
-        test_matching_addresses "172.16.0.8/30"
-          [ "172.16.0.8" ; "172.16.0.9" ; "172.16.0.10" ; "172.16.0.11" ]
+        let%test_unit _ =
+          test_matching_addresses "172.16.0.8/30"
+            [ "172.16.0.8" ; "172.16.0.9" ; "172.16.0.10" ; "172.16.0.11" ]
 
-      TEST_UNIT =
-        test_matching_addresses "172.16.0.8/24"
-          (List.init 256 ~f:(fun i -> sprintf "172.16.0.%d" i))
-    end
+        let%test_unit _ =
+          test_matching_addresses "172.16.0.8/24"
+            (List.init 256 ~f:(fun i -> sprintf "172.16.0.%d" i))
+
+        (* example from .mli *)
+        let%test_unit _ =
+          [%test_result: string]
+            (to_string (of_string "192.168.1.101/24"))
+            ~expect:"192.168.1.0/24"
+      end)
+
+    (* Use [Caml.Int32.to_int] to avoid exceptions in some cases on 32-bit machines. *)
+    let hash t = Caml.Int32.to_int t.address
+
+    let%test_unit "hash function consistency" =
+      let t_list =
+        let addr_list =
+          ["0.0.0.0"; "255.0.0.0"; "255.255.0.0"; "255.255.255.0"; "255.255.255.255"]
+        in
+        let bits_list = [ 8; 16; 24; 32 ] in
+        List.concat_map addr_list ~f:(fun addr ->
+          let base_address = Inet_addr.of_string addr in
+          List.map bits_list ~f:(fun bits ->
+            create ~base_address ~bits))
+      in
+      List.iter t_list ~f:(fun t1 ->
+        List.iter t_list ~f:(fun t2 ->
+          if compare t1 t2 = 0 then
+            [%test_eq: int] (hash t1) (hash t2)))
+
+    let module_name = "Core.Std.Unix.Cidr"
   end
 
   module T1 = struct
@@ -2146,7 +2237,52 @@ module Cidr = struct
   end
 
   include T1
-  include Comparable.Make_binable (T1)
+  include Identifiable.Make (T1)
+
+  let%test_module _ =
+    (module struct
+
+      let same str1 str2 =
+        [%test_eq: t]
+          ~message:(sprintf "%s should equal %s" str1 str2)
+          (of_string str1)
+          (of_string str2)
+      let diff str1 str2 =
+        [%test_result: bool]
+          ~message:(sprintf "%s should not equal %s" str1 str2)
+          (equal (of_string str1) (of_string str2))
+          ~expect:false
+
+      (* differentiate bit counts *)
+
+      let%test_unit _ = same "0.0.0.0/32" "0.0.0.0/32"
+      let%test_unit _ = diff "0.0.0.0/32" "0.0.0.0/24"
+      let%test_unit _ = diff "0.0.0.0/32" "0.0.0.0/26"
+      let%test_unit _ = diff "0.0.0.0/32" "0.0.0.0/8"
+      let%test_unit _ = diff "0.0.0.0/32" "0.0.0.0/0"
+      let%test_unit _ = diff "0.0.0.0/24" "0.0.0.0/0"
+      let%test_unit _ = diff "0.0.0.0/16" "0.0.0.0/0"
+      let%test_unit _ = diff "0.0.0.0/8" "0.0.0.0/0"
+      let%test_unit _ = same "0.0.0.0/0" "0.0.0.0/0"
+
+      (* normalize base addresses *)
+
+      let%test_unit _ = diff "0.0.0.0/32" "0.0.0.1/32"
+      let%test_unit _ = same "0.0.0.0/31" "0.0.0.1/31"
+
+      let%test_unit _ = diff "0.0.0.0/25" "0.0.0.255/25"
+      let%test_unit _ = same "0.0.0.0/24" "0.0.0.255/24"
+
+      let%test_unit _ = diff "0.0.0.0/17" "0.0.255.255/17"
+      let%test_unit _ = same "0.0.0.0/16" "0.0.255.255/16"
+
+      let%test_unit _ = diff "0.0.0.0/9" "0.255.255.255/9"
+      let%test_unit _ = same "0.0.0.0/8" "0.255.255.255/8"
+
+      let%test_unit _ = diff "0.0.0.0/1" "255.255.255.255/1"
+      let%test_unit _ = same "0.0.0.0/0" "255.255.255.255/0"
+
+    end)
 end
 
 module Protocol = struct
@@ -2155,7 +2291,7 @@ module Protocol = struct
       aliases : string array;
       proto : int;
     }
-  with sexp
+  [@@deriving sexp]
 
   let of_unix u =
     { name = u.Unix.p_name;
@@ -2163,13 +2299,13 @@ module Protocol = struct
       proto = u.Unix.p_proto;
     }
 
-  exception Getbyname of string with sexp
+  exception Getbyname of string [@@deriving sexp]
   let (getbyname, getbyname_exn) =
     make_by (fun name -> of_unix (Unix.getprotobyname name))
       (fun s -> Getbyname s)
   ;;
 
-  exception Getbynumber of int with sexp
+  exception Getbynumber of int [@@deriving sexp]
   let (getbynumber, getbynumber_exn) =
     make_by (fun i -> of_unix (Unix.getprotobynumber i))
       (fun i -> Getbynumber i)
@@ -2183,7 +2319,7 @@ module Service = struct
       port : int;
       proto : string;
     }
-  with sexp
+  [@@deriving sexp]
 
   let of_unix u =
     { name = u.Unix.s_name;
@@ -2192,7 +2328,7 @@ module Service = struct
       proto = u.Unix.s_proto;
     }
 
-  exception Getbyname of string * string with sexp
+  exception Getbyname of string * string [@@deriving sexp]
 
   let getbyname_exn name ~protocol =
     try of_unix (Unix.getservbyname name ~protocol)
@@ -2204,7 +2340,7 @@ module Service = struct
     with _ -> None
   ;;
 
-  exception Getbyport of int * string with sexp
+  exception Getbyport of int * string [@@deriving sexp]
 
   let getbyport_exn num ~protocol =
     try of_unix (Unix.getservbyport num ~protocol)
@@ -2221,19 +2357,26 @@ type socket_domain = Unix.socket_domain =
   | PF_UNIX
   | PF_INET
   | PF_INET6
-with sexp, bin_io
+[@@deriving sexp, bin_io]
 
 type socket_type = Unix.socket_type =
   | SOCK_STREAM
   | SOCK_DGRAM
   | SOCK_RAW
   | SOCK_SEQPACKET
-with sexp, bin_io
+[@@deriving sexp, bin_io]
 
 type sockaddr = Unix.sockaddr =
   | ADDR_UNIX of string
   | ADDR_INET of Inet_addr.t * int
-with sexp, bin_io
+[@@deriving sexp_of, bin_io]
+
+type sockaddr_blocking_sexp = Unix.sockaddr =
+  | ADDR_UNIX of string
+  | ADDR_INET of Inet_addr.Blocking_sexp.t * int
+[@@deriving sexp, bin_io]
+
+let sockaddr_of_sexp = sockaddr_blocking_sexp_of_sexp
 
 let domain_of_sockaddr = Unix.domain_of_sockaddr
 
@@ -2268,16 +2411,16 @@ let connect fd ~addr =
     (fun () -> [fd_r fd; addr_r addr])
 ;;
 
-let listen fd ~max =
-  improve (fun () -> Unix.listen fd ~max)
-    (fun () -> [fd_r fd; ("max", Int.sexp_of_t max)])
+let listen fd ~backlog =
+  improve (fun () -> Unix.listen fd ~max:backlog)
+    (fun () -> [fd_r fd; ("backlog", Int.sexp_of_t backlog)])
 ;;
 
 type shutdown_command = Unix.shutdown_command =
   | SHUTDOWN_RECEIVE
   | SHUTDOWN_SEND
   | SHUTDOWN_ALL
-with sexp
+[@@deriving sexp]
 
 let shutdown fd ~mode =
   improve (fun () ->
@@ -2298,7 +2441,7 @@ Unix.msg_flag =
 | MSG_OOB
 | MSG_DONTROUTE
 | MSG_PEEK
-with sexp
+[@@deriving sexp]
 
 let recv_send f fd ~buf ~pos ~len ~mode =
   improve (fun () -> f fd ~buf ~pos ~len ~mode)
@@ -2333,7 +2476,7 @@ type socket_bool_option = Unix.socket_bool_option =
   | SO_ACCEPTCONN
   | TCP_NODELAY
   | IPV6_ONLY
-with sexp
+[@@deriving sexp]
 
 type socket_int_option = Unix.socket_int_option =
   | SO_SNDBUF
@@ -2342,16 +2485,16 @@ type socket_int_option = Unix.socket_int_option =
   | SO_TYPE
   | SO_RCVLOWAT
   | SO_SNDLOWAT
-with sexp
+[@@deriving sexp]
 
 type socket_optint_option = Unix.socket_optint_option =
   | SO_LINGER
-with sexp
+[@@deriving sexp]
 
 type socket_float_option = Unix.socket_float_option =
   | SO_RCVTIMEO
   | SO_SNDTIMEO
-with sexp
+[@@deriving sexp]
 
 let make_sockopt get set sexp_of_opt sexp_of_val =
   let getsockopt fd opt =
@@ -2436,13 +2579,21 @@ let establish_server handle_connection ~addr =
     (fun () -> [addr_r addr])
 ;;
 
-type addr_info = Unix.addr_info = {
-  ai_family : socket_domain;
-  ai_socktype : socket_type;
-  ai_protocol : int;
-  ai_addr : sockaddr;
-  ai_canonname : string;
-} with sexp
+type addr_info = Unix.addr_info =
+  { ai_family    : socket_domain
+  ; ai_socktype  : socket_type
+  ; ai_protocol  : int
+  ; ai_addr      : sockaddr
+  ; ai_canonname : string
+  } [@@deriving sexp_of]
+
+type addr_info_blocking_sexp = Unix.addr_info =
+  { ai_family    : socket_domain
+  ; ai_socktype  : socket_type
+  ; ai_protocol  : int
+  ; ai_addr      : sockaddr_blocking_sexp
+  ; ai_canonname : string
+  } [@@deriving sexp]
 
 type getaddrinfo_option = Unix.getaddrinfo_option =
   | AI_FAMILY of socket_domain
@@ -2451,7 +2602,7 @@ type getaddrinfo_option = Unix.getaddrinfo_option =
   | AI_NUMERICHOST
   | AI_CANONNAME
   | AI_PASSIVE
-with sexp
+[@@deriving sexp]
 
 let getaddrinfo host service opts =
   improve (fun () -> Unix.getaddrinfo host service opts)
@@ -2466,7 +2617,7 @@ Unix.name_info = {
   ni_hostname : string;
   ni_service : string;
 }
-with sexp
+[@@deriving sexp]
 
 type getnameinfo_option =
 Unix.getnameinfo_option =
@@ -2475,7 +2626,7 @@ Unix.getnameinfo_option =
 | NI_NAMEREQD
 | NI_NUMERICSERV
 | NI_DGRAM
-with sexp
+[@@deriving sexp]
 
 let getnameinfo addr opts =
   improve (fun () -> Unix.getnameinfo addr opts)
@@ -2525,7 +2676,7 @@ module Terminal_io = struct
     mutable c_vstart : char;
     mutable c_vstop : char;
   }
-  with sexp
+  [@@deriving sexp]
 
   let tcgetattr = unary_fd Unix.tcgetattr
 
@@ -2533,7 +2684,7 @@ module Terminal_io = struct
     | TCSANOW
     | TCSADRAIN
     | TCSAFLUSH
-  with sexp
+  [@@deriving sexp]
 
   let tcsetattr t fd ~mode =
     improve (fun () -> Unix.tcsetattr fd ~mode t)
@@ -2554,7 +2705,7 @@ module Terminal_io = struct
     | TCIFLUSH
     | TCOFLUSH
     | TCIOFLUSH
-  with sexp
+  [@@deriving sexp]
 
   let tcflush fd ~mode =
     improve (fun () -> Unix.tcflush fd ~mode)
@@ -2566,7 +2717,7 @@ module Terminal_io = struct
     | TCOON
     | TCIOFF
     | TCION
-  with sexp
+  [@@deriving sexp]
 
   let tcflow fd ~mode =
     improve (fun () -> Unix.tcflow fd ~mode)
@@ -2593,7 +2744,7 @@ module Syslog = Syslog
 let () = Sexplib_unix.Sexplib_unix_conv.linkme
 
 (* Test the Sexplib_unix exn converter was added correctly *)
-TEST_UNIT "Sexplib_unix sexp converter" =
+let%test_unit "Sexplib_unix sexp converter" =
   let open Sexp.O in
   match sexp_of_exn (Unix.Unix_error (E2BIG, "loc", "arg")) with
   | (List [ Atom "Unix.Unix_error"
@@ -2603,4 +2754,174 @@ TEST_UNIT "Sexplib_unix sexp converter" =
           ]) -> ()
   | something_else ->
       failwithf "sexp_of_exn (Unix_error ...) gave %s" (Sexp.to_string something_else) ()
+;;
+
+module Ifaddr = struct
+  module Broadcast_or_destination = struct
+    type t =
+      | Broadcast   of Inet_addr.t
+      | Destination of Inet_addr.t
+    [@@deriving sexp_of]
+  end
+
+  (* THE ORDER OF THESE IS IMPORTANT, SEE unix_stubs.c!!! *)
+  module Family = struct
+    type t = Packet | Inet4 | Inet6 [@@deriving sexp, bin_io]
+  end
+
+  module Flag = struct
+    (* THE ORDER OF FLAGS IS IMPORTANT TO MATCH unix_stubs.c!!! *)
+    module T = struct
+      type t =
+        | Allmulti
+        | Automedia
+        | Broadcast
+        | Debug
+        | Dynamic
+        | Loopback
+        | Master
+        | Multicast
+        | Noarp
+        | Notrailers
+        | Pointopoint
+        | Portsel
+        | Promisc
+        | Running
+        | Slave
+        | Up
+      [@@deriving sexp, compare, enumerate]
+    end
+    include T
+    include Comparable.Make(T)
+
+    external core_unix_iff_to_int : t -> int  = "core_unix_iff_to_int"
+
+    let set_of_int bitmask =
+      List.fold all
+        ~init:Set.empty
+        ~f:(fun flags t ->
+          let v = core_unix_iff_to_int t in
+          match bitmask land v with
+          | 0 -> flags
+          | _ -> Set.add flags t)
+    ;;
+
+    let int_of_set =
+      Set.fold ~init:0 ~f:(fun acc t -> acc lor (core_unix_iff_to_int t))
+    ;;
+
+    let to_int = core_unix_iff_to_int
+
+    let%test_unit _ = [%test_result: Set.t] (set_of_int 0) ~expect:Set.empty
+
+    let%test_unit _ =
+      List.iter all ~f:(fun t ->
+        let x = to_int t in
+        if Int.(<>) (Int.ceil_pow2 x) x
+        then failwiths "Flag is not a power of 2" t sexp_of_t)
+
+    let%test_unit _ =
+      List.iter all ~f:(fun t ->
+        [%test_result: Set.t] (set_of_int (int_of_set (Set.singleton t)))
+          ~expect:(Set.singleton t))
+
+    let%test_unit _ =
+      [%test_result: Set.t] (set_of_int (int_of_set (Set.of_list all)))
+        ~expect:(Set.of_list all)
+  end
+
+  type t =
+    { name                     : string
+    ; family                   : Family.t
+    ; flags                    : Flag.Set.t
+    ; address                  : Inet_addr.t                sexp_option
+    ; netmask                  : Inet_addr.t                sexp_option
+    ; broadcast_or_destination : Broadcast_or_destination.t sexp_option
+    }
+  [@@deriving sexp_of, fields]
+
+  (* THE ORDER AND NUMBER OF THESE IS IMPORTANT, SEE unix_stubs.c!!! *)
+  type ifaddrs =
+    { name               : string
+    ; family             : Family.t
+    ; flags              : int
+    ; addr_octets        : string
+    ; netmask_octets     : string
+    ; broadcast_octets   : string
+    ; destination_octets : string
+    }
+  external core_unix_getifaddrs : unit -> ifaddrs list = "core_unix_getifaddrs"
+
+  let inet4_to_inet_addr addr =
+    match String.length addr with
+    | 0 -> None
+    | 4 ->
+      sprintf "%d.%d.%d.%d"
+        (Char.to_int addr.[0])
+        (Char.to_int addr.[1])
+        (Char.to_int addr.[2])
+        (Char.to_int addr.[3])
+      |> Inet_addr.of_string
+      |> Option.return
+    | addrlen -> failwithf "IPv4 address is length %d!" addrlen ()
+  ;;
+
+  let inet6_to_inet_addr addr =
+    match String.length addr with
+    | 0  -> None
+    | 16 ->
+      sprintf "%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x"
+        (Char.to_int addr.[ 0])
+        (Char.to_int addr.[ 1])
+        (Char.to_int addr.[ 2])
+        (Char.to_int addr.[ 3])
+        (Char.to_int addr.[ 4])
+        (Char.to_int addr.[ 5])
+        (Char.to_int addr.[ 6])
+        (Char.to_int addr.[ 7])
+        (Char.to_int addr.[ 8])
+        (Char.to_int addr.[ 9])
+        (Char.to_int addr.[10])
+        (Char.to_int addr.[11])
+        (Char.to_int addr.[12])
+        (Char.to_int addr.[13])
+        (Char.to_int addr.[14])
+        (Char.to_int addr.[15])
+      |> Inet_addr.of_string
+      |> Option.return
+    | addrlen -> failwithf "IPv6 address is length %d!" addrlen ()
+  ;;
+
+  let addr_to_inet_addr family addr =
+    match family with
+    | Family.Packet -> None
+    | Family.Inet4  -> inet4_to_inet_addr addr
+    | Family.Inet6  -> inet6_to_inet_addr addr
+  ;;
+
+  let test_and_convert ifa =
+    let flags = Flag.set_of_int ifa.flags in
+    let broadcast_or_destination_convert ifa =
+      if Set.mem flags Broadcast
+      then
+        Option.map (addr_to_inet_addr ifa.family ifa.broadcast_octets)
+          ~f:(fun x -> Broadcast_or_destination.Broadcast x)
+      else if Set.mem flags Pointopoint
+      then
+        Option.map (addr_to_inet_addr ifa.family ifa.destination_octets)
+          ~f:(fun x -> Broadcast_or_destination.Destination x)
+      else None
+    in
+    { address                  = addr_to_inet_addr ifa.family ifa.addr_octets
+    ; netmask                  = addr_to_inet_addr ifa.family ifa.netmask_octets
+    ; broadcast_or_destination = broadcast_or_destination_convert ifa
+    ; flags                    = flags
+    ; name                     = ifa.name
+    ; family                   = ifa.family
+    }
+  ;;
+end
+
+let getifaddrs () =
+  List.map (Ifaddr.core_unix_getifaddrs ()) ~f:Ifaddr.test_and_convert
 ;;

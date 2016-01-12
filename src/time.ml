@@ -20,21 +20,21 @@ end
 
 include Time0
 
-BENCH_MODULE "Time" = struct
-  BENCH_FUN "Time.to_string" =
+let%bench_module "Time" = (module struct
+  let%bench_fun "Time.to_string" =
     let t = of_float 100000.99999999999 in
     (fun () -> ignore (to_string t))
 
-  BENCH_FUN "Time.to_ofday" =
+  let%bench_fun "Time.to_ofday" =
     let t = now () in
     (fun () -> ignore (to_ofday t ~zone:Zone.local))
 
-  BENCH "Time.now" = now ()
+  let%bench "Time.now" = now ()
 
   let x = Float.of_string "1.1"
-  BENCH "Time.Span.of_hr"  = Span.of_hr  x
-  BENCH "Time.Span.of_min" = Span.of_min x
-  BENCH "Time.Span.of_sec" = Span.of_sec x
-  BENCH "Time.Span.of_ms"  = Span.of_ms  x
-  BENCH "Time.Span.of_ns"  = Span.of_ns  x
-end
+  let%bench "Time.Span.of_hr"  = Span.of_hr  x
+  let%bench "Time.Span.of_min" = Span.of_min x
+  let%bench "Time.Span.of_sec" = Span.of_sec x
+  let%bench "Time.Span.of_ms"  = Span.of_ms  x
+  let%bench "Time.Span.of_ns"  = Span.of_ns  x
+end)

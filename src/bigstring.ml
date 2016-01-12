@@ -1,4 +1,4 @@
-INCLUDE "core_config.mlh"
+#import "config.mlh"
 
 open Core_kernel.Std
 open Unix
@@ -7,7 +7,7 @@ open Sexplib.Std
 
 include Core_kernel.Std.Bigstring
 
-exception IOError of int * exn with sexp
+exception IOError of int * exn [@@deriving sexp]
 
 external init : unit -> unit = "bigstring_init_stub"
 
@@ -156,7 +156,7 @@ let pwrite_assume_fd_is_nonblocking fd ~offset ?(pos = 0) ?len bstr =
   check_args ~loc ~pos ~len bstr;
   unsafe_pwrite_assume_fd_is_nonblocking fd ~offset ~pos ~len bstr
 
-IFDEF MSG_NOSIGNAL THEN
+#if JSC_MSG_NOSIGNAL
 external unsafe_really_send_no_sigpipe
   : file_descr -> pos : int -> len : int -> t -> unit
   = "bigstring_really_send_no_sigpipe_stub"
@@ -190,7 +190,7 @@ let sendto_nonblocking_no_sigpipe         = Ok sendto_nonblocking_no_sigpipe
 let unsafe_really_send_no_sigpipe         = Ok unsafe_really_send_no_sigpipe
 let unsafe_send_nonblocking_no_sigpipe    = Ok unsafe_send_nonblocking_no_sigpipe
 
-ELSE
+#else
 
 let u = Or_error.unimplemented
 let really_send_no_sigpipe             = u "Bigstring.really_send_no_sigpipe"
@@ -199,7 +199,7 @@ let sendto_nonblocking_no_sigpipe      = u "Bigstring.sendto_nonblocking_no_sigp
 let unsafe_really_send_no_sigpipe      = u "Bigstring.unsafe_really_send_no_sigpipe"
 let unsafe_send_nonblocking_no_sigpipe = u "Bigstring.unsafe_send_nonblocking_no_sigpipe"
 
-ENDIF
+#endif
 
 external unsafe_write
   : file_descr -> pos : int -> len : int -> t -> int = "bigstring_write_stub"
@@ -259,7 +259,7 @@ let really_output oc ?(pos = 0) ?len bstr =
   check_args ~loc:"really_output" ~pos ~len bstr;
   ignore (unsafe_output oc ~min_len:len ~pos ~len bstr)
 
-IFDEF RECVMMSG THEN
+#if JSC_RECVMMSG
 
 external unsafe_recvmmsg_assume_fd_is_nonblocking
   :  file_descr
@@ -270,7 +270,7 @@ external unsafe_recvmmsg_assume_fd_is_nonblocking
   -> int
   = "bigstring_recvmmsg_assume_fd_is_nonblocking_stub"
 
-TEST_MODULE = struct
+let%test_module _ = (module struct
   let expect_invalid_argument ?msg f =
     assert (try ignore (f () : int); false
             with Invalid_argument s ->
@@ -286,19 +286,19 @@ TEST_MODULE = struct
       (fun () -> unsafe_recvmmsg_assume_fd_is_nonblocking fd [||] count None [||])
 
 
-  TEST_UNIT "unsafe_recvmmsg_assume_fd_is_nonblocking: check count bounds" =
+  let%test_unit "unsafe_recvmmsg_assume_fd_is_nonblocking: check count bounds" =
     check_invalid (-1);
     check_invalid Int.min_value;
     check_invalid 65; (* RECVMMSG_MAX_COUNT = 64 *)
     (
-IFDEF ARCH_SIXTYFOUR THEN
+#if JSC_ARCH_SIXTYFOUR
     (* We are assuming that [unsigned int] is 32 bits wide. *)
     check_invalid (Int64.to_int_exn 0xFFFF_FFFFL); (* exceeds RECVMMSG_MAX_COUNT *)
     check_invalid (Int64.to_int_exn 0x1FFFF_FFFFL); (* exceeds unsigned int *)
-ENDIF
+#endif
     )
   ;;
-end
+end)
 
 
 let recvmmsg_assume_fd_is_nonblocking fd ?count ?srcs iovecs ~lens =
@@ -312,7 +312,7 @@ let recvmmsg_assume_fd_is_nonblocking fd ?count ?srcs iovecs ~lens =
   unsafe_recvmmsg_assume_fd_is_nonblocking fd iovecs count srcs lens
 ;;
 
-TEST_MODULE "recvmmsg smoke" = struct
+let%test_module "recvmmsg smoke" = (module struct
   module IOVec = Core_unix.IOVec
   module Inet_addr = Core_unix.Inet_addr
 
@@ -326,27 +326,27 @@ TEST_MODULE "recvmmsg smoke" = struct
   let () = set_nonblock fd
 
   let test ?count ?srcs ~lens ok_pred error_pred =
-    <:test_pred< (int, exn) Result.t >>
+    [%test_pred: (int, exn) Result.t]
       (function Ok i -> ok_pred i | Error e -> error_pred e)
       (Result.try_with
          (fun () -> recvmmsg_assume_fd_is_nonblocking fd iovecs ?count ?srcs ~lens)
       )
   (* We return -EAGAIN and -EWOULDBLOCK directly as values, rather than as exceptions.
      So, allow negative results. *)
-  TEST_UNIT =
+  let%test_unit _ =
     test ~count ~srcs ~lens ((>=) 0) (function Unix_error _ -> true | _ -> false)
-  TEST_UNIT = test ~lens ((>=) 0) (function Unix_error _ -> true | _ -> false)
-  TEST_UNIT =
+  let%test_unit _ = test ~lens ((>=) 0) (function Unix_error _ -> true | _ -> false)
+  let%test_unit _ =
     test ~count:(count / 2) ~srcs ~lens ((>=) 0)
       (function Unix_error _ -> true | _ -> false)
-  TEST_UNIT =
+  let%test_unit _ =
     test ~count:0 ~srcs ~lens ((>=) 0) (function Unix_error _ -> true | _ -> false)
-  TEST_UNIT =
+  let%test_unit _ =
     test ~count:(count + 1) ~lens (const false)
       (function Unix_error _ -> false | _ -> true)
-  TEST_UNIT =
+  let%test_unit _ =
     test ~srcs:short_srcs ~lens (const false) (function Unix_error _ -> false | _ -> true)
-end
+end)
 ;;
 
 let recvmmsg_assume_fd_is_nonblocking =
@@ -368,17 +368,19 @@ let recvmmsg_assume_fd_is_nonblocking =
   | _ -> ok
 ;;
 
-ELSE                                    (* NDEF RECVMMSG *)
+#else
+                                    (* NDEF RECVMMSG *)
 
 let recvmmsg_assume_fd_is_nonblocking =
   Or_error.unimplemented "Bigstring.recvmmsg_assume_fd_is_nonblocking"
 ;;
 
-ENDIF                                   (* RECVMMSG *)
+#endif
+                                   (* RECVMMSG *)
 
 (* Memory mapping *)
 
-IFDEF MSG_NOSIGNAL THEN
+#if JSC_MSG_NOSIGNAL
 (* Input and output, linux only *)
 
 external unsafe_sendmsg_nonblocking_no_sigpipe
@@ -397,7 +399,7 @@ let sendmsg_nonblocking_no_sigpipe fd ?count iovecs =
 let sendmsg_nonblocking_no_sigpipe        = Ok sendmsg_nonblocking_no_sigpipe
 let unsafe_sendmsg_nonblocking_no_sigpipe = Ok unsafe_sendmsg_nonblocking_no_sigpipe
 
-ELSE
+#else
 
 let sendmsg_nonblocking_no_sigpipe =
   Or_error.unimplemented "Bigstring.sendmsg_nonblocking_no_sigpipe"
@@ -407,4 +409,4 @@ let unsafe_sendmsg_nonblocking_no_sigpipe =
   Or_error.unimplemented "Bigstring.unsafe_sendmsg_nonblocking_no_sigpipe"
 ;;
 
-ENDIF
+#endif

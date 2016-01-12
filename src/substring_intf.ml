@@ -1,1 +1,0 @@
-include Core_kernel.Substring_intf

@@ -7,7 +7,7 @@ open Time_internal.Helpers
 module Stable = struct
   module V1 = struct
     module T : sig
-      type t = private float with bin_io
+      type t = private float [@@deriving bin_io]
       include Comparable.S_common  with type t := t
       include Comparable.With_zero with type t := t
       include Hashable_binable     with type t := t
@@ -76,7 +76,7 @@ module Stable = struct
       T.of_span_since_start_of_day (Span.create ?hr ?min ?sec ?ms ?us ())
     ;;
 
-    TEST "create can handle a leap second" =
+    let%test "create can handle a leap second" =
       let last_second = create ~hr:21 () in
       List.for_all
         ~f:(fun v -> v = last_second)
@@ -200,7 +200,7 @@ module Stable = struct
           (String.sub str ~pos ~len) (Exn.to_string exn) ()
     ;;
 
-    TEST "of_string_iso8601_extended supports leap seconds" =
+    let%test "of_string_iso8601_extended supports leap seconds" =
       let last_second = create ~hr:21 () in
       List.for_all
         ~f:(fun s -> of_string_iso8601_extended s = last_second)
@@ -209,7 +209,7 @@ module Stable = struct
         ; "20:59:60.000" ]
     ;;
 
-    TEST "of_string_iso8601_extended doesn't support two leap seconds" =
+    let%test "of_string_iso8601_extended doesn't support two leap seconds" =
       Exn.does_raise (fun () -> of_string_iso8601_extended "23:59:61")
 
     let small_diff =
@@ -272,7 +272,7 @@ module Stable = struct
         invalid_argf "Ofday.of_string (%s): %s" s (Exn.to_string exn) ()
     ;;
 
-    TEST "of_string supports leap seconds" =
+    let%test "of_string supports leap seconds" =
       let last_second = create ~hr:21 () in
       List.for_all
         ~f:(fun s -> of_string s = last_second)
@@ -302,7 +302,7 @@ include Stable.V1
 
 module C = struct
 
-  type t = T.t with bin_io
+  type t = T.t [@@deriving bin_io]
 
   type comparator_witness = T.comparator_witness
 
@@ -326,7 +326,7 @@ end
 module Map = Map.Make_binable_using_comparator (C)
 module Set = Set.Make_binable_using_comparator (C)
 
-TEST =
+let%test _ =
   Set.equal (Set.of_list [start_of_day])
     (Set.t_of_sexp (Sexp.List [Float.sexp_of_t (to_float start_of_day)]))
 ;;
@@ -341,14 +341,14 @@ module Zoned = struct
           { ofday : Stable.V1.t;
             zone  : Zone.Stable.V1.t;
           }
-        with bin_io, fields, compare
+        [@@deriving bin_io, fields, compare]
 
-        type sexp_repr = Stable.V1.t * Zone.Stable.V1.t with sexp
+        type sexp_repr = Stable.V1.t * Zone.Stable.V1.t [@@deriving sexp]
 
-        let sexp_of_t t = <:sexp_of< sexp_repr >> (t.ofday, t.zone)
+        let sexp_of_t t = [%sexp_of: sexp_repr] (t.ofday, t.zone)
 
         let t_of_sexp sexp =
-          let (ofday, zone) = <:of_sexp< sexp_repr >> sexp in
+          let (ofday, zone) = [%of_sexp: sexp_repr] sexp in
           { ofday; zone; }
         ;;
 
@@ -389,7 +389,7 @@ module Zoned = struct
     let module_name = "Core.Std.Time.Ofday.Zoned"
   end)
 
-  TEST_UNIT =
+  let%test_unit _ =
     List.iter
       [ "12:00 nyc";
         "12:00 America/New_York";

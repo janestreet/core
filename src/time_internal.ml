@@ -1,9 +1,6 @@
-INCLUDE "core_config.mlh"
-
 open Core_kernel.Std
 
 module Helpers = struct
-
   let char_of_digit n = Char.unsafe_of_int (Char.to_int '0' + n)
 
   let invalid_range ~digits ~max ~i =
@@ -23,11 +20,11 @@ module Helpers = struct
     s.[pos    ] <- char_of_digit l;
   ;;
 
-  TEST_UNIT =
+  let%test_unit _ =
     for i = 0 to 9999 do
       let s = String.make 4 ' ' in
       blit_string_of_int_4_digits s ~pos:0 i;
-      <:test_result< string >> ~expect:(Printf.sprintf "%04d" i) s
+      [%test_result: string] ~expect:(Printf.sprintf "%04d" i) s
     done
   ;;
 
@@ -38,11 +35,11 @@ module Helpers = struct
     s.[pos    ] <- char_of_digit j;
   ;;
 
-  TEST_UNIT =
+  let%test_unit _ =
     for i = 0 to 99 do
       let s = String.make 2 ' ' in
       blit_string_of_int_2_digits s ~pos:0 i;
-      <:test_result< string >> ~expect:(Printf.sprintf "%02d" i) s
+      [%test_result: string] ~expect:(Printf.sprintf "%02d" i) s
     done
   ;;
 
@@ -55,11 +52,11 @@ module Helpers = struct
     s.[pos    ] <- char_of_digit k;
   ;;
 
-  TEST_UNIT =
+  let%test_unit _ =
     for i = 0 to 999 do
       let s = String.make 3 ' ' in
       blit_string_of_int_3_digits s ~pos:0 i;
-      <:test_result< string >> ~expect:(Printf.sprintf "%03d" i) s
+      [%test_result: string] ~expect:(Printf.sprintf "%03d" i) s
     done
   ;;
 
@@ -76,7 +73,7 @@ end
    other floats.
 *)
 module T : sig
-  type t = private float with bin_io
+  type t = private float [@@deriving bin_io]
 
   include Comparable.S_common with type t := t
   include Hashable_binable    with type t := t

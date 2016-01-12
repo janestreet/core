@@ -30,51 +30,51 @@ module Time_ns_in_this_directory = Time_ns
 open Core_kernel.Std
 module Time_ns = Time_ns_in_this_directory
 
-BENCH "Time_ns.now" = Time_ns.now ()
-BENCH "Time_ns.Ofday.local_now" = Time_ns.Ofday.local_now ()
+let%bench "Time_ns.now" = Time_ns.now ()
+let%bench "Time_ns.Ofday.local_now" = Time_ns.Ofday.local_now ()
 
-BENCH_FUN "Time_ns.to_string" =
+let%bench_fun "Time_ns.to_string" =
   let t = Time_ns.now () in
   (fun () -> Time_ns.to_string t)
 
-BENCH_FUN "Time_ns.to_ofday" =
+let%bench_fun "Time_ns.to_ofday" =
   let t = Time_ns.now () in
   (fun () -> Time_ns.Ofday.of_local_time t)
 
-BENCH_FUN "Time_ns.to_int63_ns_since_epoch" =
+let%bench_fun "Time_ns.to_int63_ns_since_epoch" =
   let t = Time_ns.now () in
   (fun () -> Time_ns.Span.to_int63_ns (Time_ns.to_span_since_epoch t))
 
-BENCH_FUN "Time_ns.of_int63_ns_since_epoch" =
+let%bench_fun "Time_ns.of_int63_ns_since_epoch" =
   let t = Int63.of_string "100000" in
   (fun () -> Time_ns.of_span_since_epoch (Time_ns.Span.of_int63_ns t))
 
-BENCH_FUN "Time_ns.Ofday.to_string" =
+let%bench_fun "Time_ns.Ofday.to_string" =
   let t = Time_ns.Ofday.of_local_time (Time_ns.now ()) in
   (fun () -> Time_ns.Ofday.to_string t)
 
 
-BENCH "Time_ns.Span.of_day"     = Time_ns.Span.of_day       0.1
-BENCH "Time_ns.Span.of_hr"      = Time_ns.Span.of_hr        0.1
-BENCH "Time_ns.Span.of_min"     = Time_ns.Span.of_min       0.1
-BENCH "Time_ns.Span.of_sec"     = Time_ns.Span.of_sec       0.1
-BENCH "Time_ns.Span.of_ms"      = Time_ns.Span.of_ms        0.1
-BENCH "Time_ns.Span.of_int_sec" = Time_ns.Span.of_int_sec 10000
+let%bench "Time_ns.Span.of_day"     = Time_ns.Span.of_day       0.1
+let%bench "Time_ns.Span.of_hr"      = Time_ns.Span.of_hr        0.1
+let%bench "Time_ns.Span.of_min"     = Time_ns.Span.of_min       0.1
+let%bench "Time_ns.Span.of_sec"     = Time_ns.Span.of_sec       0.1
+let%bench "Time_ns.Span.of_ms"      = Time_ns.Span.of_ms        0.1
+let%bench "Time_ns.Span.of_int_sec" = Time_ns.Span.of_int_sec 10000
 
-BENCH_FUN "Time_ns.Span.to_int_sec" =
+let%bench_fun "Time_ns.Span.to_int_sec" =
   let t = Time_ns.to_span_since_epoch (Time_ns.now ()) in
   (fun () -> Time_ns.Span.to_int_sec t)
 
-BENCH_FUN "Time_ns.t assignment" =
+let%bench_fun "Time_ns.t assignment" =
   let t = Time_ns.now () in
   let x : Time_ns.t ref = ref t in
   (fun () -> x := t)
 
-BENCH_FUN "Time.t assignment" =
+let%bench_fun "Time.t assignment" =
   let t = Time.now () in
   let x : Time.t ref = ref t in
   (fun () -> x := t)
 
-BENCH_FUN "Time_ns.of_time" =
+let%bench_fun "Time_ns.of_time" =
   let time = Time.now () in
   (fun () -> Time_ns.of_time time)

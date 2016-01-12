@@ -1,3 +1,126 @@
+## 113.24.00
+
+N.B. Some interface change were made which are not listed here, as they are only
+cascading from `core_kernel`. Look at core\_kernel's CHANGES.md file to get a
+complete history of the changes made for this release.
+
+- Add `Core.Command.Arg_type.Export.time_zone`
+
+- Fix `Command.shape` to run external programs only once to get their sexp.
+
+  Introduces a new variant of Command.t called Proxy.  The Exec variant represents the
+  top-level command of an external executable that has not yet been run; the Proxy variant
+  represents an arbitrary subcommand that has been extracted by running an external
+  executable.  Command.exec constructs an Exec variant; Command.shape of an Exec variant
+  runs the executable and generates a tree of Proxy variants representing all the
+  information from the generated sexp, so the executable will not need to be re-run.
+
+- A version of recvmmsg that pre-allocates and reuses the iovec
+  record. Profiling indicates this is a non-trivial amount of our I/O
+  loop (under very heavy load).
+
+  Since nobody is using the heavyweight features of the existing
+  recvmmsg, replace it with the lightweight one.  This leads to minor
+  but important changes to the interfaces of
+  `Iobuf.recvmmsg_assume_fd_nonblocking` and `Udp.recvmmsg_loop`.
+
+- Switch to ppx.
+
+- `Time.set_sexp_zone` affects `t_of_sexp`
+
+  If we're willing to read sexps without zones, we should be willing to let you
+  control what timezone they're read with.
+
+- Sped up `Llimiter`.
+
+- Make `Interval.Int` implement `Container` and `Binary_searchable`.
+
+- Add `Identifiable.S` to `Unix.Cidr` so that it supports hash tables.
+  Update `Unix.Cidr.t` to normalize values, e.g. "192.168.1.101/24" ==> "192.168.1.0/24".
+
+- Added "noalloc" attribute to `Linux_ext.unsafe_timerfd_settime`.
+
+- In Iobuf, made some functions take:
+
+    (`> write`, _) Iobuf.t
+
+  rather than:
+
+    (read_write, _) Iobuf.t
+
+  if they only need to write to the iobuf and don't need to read it.
+
+- `Time.of_string_abs` didn't support ISO 8601 time zone strings
+  without colons, or those specified as locations. This version adds
+  support for time zones without colons
+
+- `Unix.Passwd.getpwents` takes the lock, partially applies `Exn.protect`, then
+  releases the lock, then completes the application and actually runs stuff.
+
+- Command.file-completion
+
+  Files are now completed correctly when paths contain a directory.
+
+  Previously, completion when pointed at a directory would put a space at the end.
+  This would cause the user to hit backspace every time a directory was in the path.
+
+- Add `diff_weekdays` and `diff_weekend_days` functions to date module.
+
+- `Time.to_date_ofday_precise` implements a complete inverse for
+  `of_date_ofday`. This is needed to give the DWIM-est semantics to Schedule.t
+  that we can think of.
+
+- `Reduce allocation in Linux_ext.Epoll`
+
+- Add `Time_ns.Of_day.(add_exn, sub_exn, diff)`.
+
+- Adding `head_padded_fixed_string` to Iobuf.
+
+
+- Move `Core_extended.Std.Sys.home` to `Core.Std.Sys.home_directory`.
+
+- Add `Iobuf.{read,write,input,output}` akin to the bigstring versions.
+
+- Add expert iobuf functions for extracting bigstrings and iovecs that share the iobuf's
+  underlying storage.
+
+- Add stable `Int63.t` conversions for types in `Time_ns`.
+
+- Rename DNS-based `Inet_addr` sexp conversions to expose their blocking nature.
+
+- Add `Unix.Inet_addr.Stable`.
+
+
+- Add [Core.Std.Schedule].
+
+- Fixed `Iobuf_packet.iter`, which behaved incorrectly if the packet
+  didn't start at the lo_min of the iobuf.  It used `Iobuf.rewind` when
+  it should have used `Iobuf.Lo_bound.restore`.
+
+  Added `@@deriving compare` to `Iobuf.Bound`.
+
+- Add ability to `Time.format` for a specific time zone
+
+- Make more information available via Command.Shape.t
+
+  Expose machine-readable info on anonymous arguments.
+
+- Remove unnecessary rebinding of `(^/)` in `core_filename.ml`.  It had one
+  call site and wasn't exposed.  The `(^/)` everyone uses comes from
+  std.ml
+
+- Add `getifaddrs` to `Core.Std.Unix`.
+
+  Handles Packet (for interfaces that do not have an address on Linux systems only), IPv4 and IPv6
+  address families.
+
+- Implement `Time_ns.Span.to_string_hum` by analogy to `Time.Span.to_string_hum`.
+  The code and tests are essentially copied from "lib/core/src/span.ml".
+
+- Remove our stubs for `Unix.stat`.
+
+  They were upstreamed in 4.02.2.
+
 ## 112.35.00
 
 - Tweaked `Unix.stat`'s C code to reduce float rounding error, by using

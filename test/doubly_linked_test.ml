@@ -11,8 +11,8 @@ module type S = sig
   end
   type 'a t
   include Container.S1 with type 'a t := 'a t
-  include Sexpable.S1 with type 'a t := 'a t
-  val invariant : 'a t -> unit
+  include Invariant.S1 with type 'a t := 'a t
+  include Sexpable. S1 with type 'a t := 'a t
   val create : unit -> 'a t
   val of_list : 'a list -> 'a t
   val equal : 'a t -> 'a t -> bool
@@ -92,7 +92,7 @@ module Foil : S = struct
   let sexp_of_t sexp_of_a t = List.sexp_of_t sexp_of_a (to_list t)
   let t_of_sexp a_of_sexp s = of_list (List.t_of_sexp a_of_sexp s)
 
-  let invariant _ = ()
+  let invariant _ _ = ()
 
   let equal t1 t2 = phys_equal t1 t2
 
@@ -313,7 +313,7 @@ module Both : S = struct
   let count _ = failwith "unimplemented"
   let sum _ = failwith "unimplemented"
 
-  let invariant t = obs (pair Hero.invariant Foil.invariant *@ t)
+  let invariant f t = obs (pair (Hero.invariant f) (Foil.invariant f) *@ t)
 
   let create () = pair Hero.create Foil.create *@ pure ()
 
@@ -614,7 +614,7 @@ module Make_test (X : S) = struct
             let open Help in
             let l = of_sexp "(1)" in
             let e = insert_first l 2 in
-            invariant l;
+            invariant ignore l;
             assert (Option.is_some (remove_first l));
             assert_raises (fun () -> ignore (is_last l e));
             ()
@@ -623,9 +623,9 @@ module Make_test (X : S) = struct
           (fun () ->
             let l = of_list [1] in
             let e = insert_first l 3 in
-            invariant l;
+            invariant ignore l;
             ignore (remove l e);
-            invariant l;
+            invariant ignore l;
             assert (Option.is_some (first_elt l))
           );
         "counterexample3" >::
@@ -634,7 +634,7 @@ module Make_test (X : S) = struct
             let l1 = of_sexp "(1 2 3)" in
             let l2 = copy l1 in
             transfer ~src:l2 ~dst:l1;
-            invariant l1;
+            invariant ignore l1;
           );
         "counterexample4" >::
           (fun () ->
@@ -691,14 +691,14 @@ module Bisimulation = struct
 
   module Uid = Unique_id.Int ()
 
-  type v = int with sexp
+  type v = int [@@deriving sexp]
   type l = Uid.t * v Both.t
   type e = Uid.t * v Both.Elt.t
 
   let sexp_of_l (id, _) = Sexp.Atom ("l" ^ Uid.to_string id)
   let sexp_of_e (id, _) = Sexp.Atom ("e" ^ Uid.to_string id)
 
-  type p = Even | Odd with sexp_of
+  type p = Even | Odd [@@deriving sexp_of]
 
   module F = struct
     type t =
@@ -738,10 +738,10 @@ module Bisimulation = struct
       | To_list of l
       | To_sexp of l
       | Transfer of l * l
-    with sexp_of, variants
+    [@@deriving sexp_of, variants]
   end
   open F
-  type f = F.t with sexp_of
+  type f = F.t [@@deriving sexp_of]
 
   type env = {
     ls : (Uid.t, l) Hashtbl.t;
@@ -756,7 +756,7 @@ module Bisimulation = struct
   let lists = List.to_array lists
   let sexps = List.to_array sexps
 
-  exception Skip with sexp
+  exception Skip [@@deriving sexp]
 
   let array_rand arr =
     try
@@ -829,7 +829,7 @@ module Bisimulation = struct
 
   exception Traced of
     Sexp.t * [ `Operation of f | `New_elt of e | `New_list of l ] list
-  with sexp
+  [@@deriving sexp]
 
   let simulate nsteps =
     let env = {
@@ -850,7 +850,7 @@ module Bisimulation = struct
       | Odd  -> fun n -> n mod 0 = 1
     in
     try
-      for _i = 1 to nsteps do
+      for _ = 1 to nsteps do
         try
           let f = rand_f env in
           Queue.enqueue trace (`Operation f);
@@ -873,7 +873,7 @@ module Bisimulation = struct
           | Insert_before (t, e, v) -> add_elt (Both.insert_before (snd t) (snd e) v)
           | Insert_first (t, v) -> add_elt (Both.insert_first (snd t) v)
           | Insert_last (t, v) -> add_elt (Both.insert_last (snd t) v)
-          | Invariant t -> Both.invariant (snd t)
+          | Invariant t -> Both.invariant ignore (snd t)
           | Is_empty t -> ignore (Both.is_empty (snd t))
           | Is_first (t, e) -> ignore (Both.is_first (snd t) (snd e))
           | Is_last (t, e) -> ignore (Both.is_last (snd t) (snd e))
@@ -899,7 +899,7 @@ module Bisimulation = struct
 
   let test =
     "bisimulation" >::
-      (fun () -> for _i = 1 to 100_000 do simulate 10 done)
+      (fun () -> for _ = 1 to 100_000 do simulate 10 done)
 
 end
 

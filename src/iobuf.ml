@@ -1,5 +1,5 @@
 open Core_kernel.Std_kernel
-INCLUDE "core_config.mlh"
+#import "config.mlh"
 
 module Unix = Core_unix
 
@@ -12,12 +12,12 @@ module T = struct
       mutable lo     : int;
       mutable hi     : int;
       mutable hi_max : int;
-    } with fields, sexp_of
+    } [@@deriving fields, sexp_of]
 end
 open T
-type (-'read_write, +'seek) t = T.t with sexp_of
-type    seek = Iobuf_intf.   seek with sexp_of
-type no_seek = Iobuf_intf.no_seek with sexp_of
+type (-'read_write, +'seek) t = T.t [@@deriving sexp_of]
+type    seek = Iobuf_intf.   seek [@@deriving sexp_of]
+type no_seek = Iobuf_intf.no_seek [@@deriving sexp_of]
 module type Bound = Iobuf_intf.Bound with type ('d, 'w) iobuf := ('d, 'w) t
 
 let read_only t = t
@@ -27,14 +27,14 @@ let fail t message a sexp_of_a =
   (* Immediately convert the iobuf to sexp.  Otherwise, the iobuf could be modified before
      conversion and printing.  Since we plan to use iobufs for pooled network buffers in
      practice, this could be very confusing when debugging production systems. *)
-  failwiths message (a, <:sexp_of< (_, _) t >> t)
+  failwiths message (a, [%sexp_of: (_, _) t] t)
     (Tuple.T2.sexp_of_t sexp_of_a ident)
 
 module Lo_bound = struct
   let stale t iobuf =
-    fail iobuf "Iobuf.Lo_bound.restore got stale snapshot" t <:sexp_of< int >>
+    fail iobuf "Iobuf.Lo_bound.restore got stale snapshot" t [%sexp_of: int]
 
-  type t = int with sexp_of (* lo *)
+  type t = int [@@deriving compare, sexp_of] (* lo *)
 
   let window t = t.lo
 
@@ -48,9 +48,9 @@ end
 
 module Hi_bound = struct
   let stale t iobuf =
-    fail iobuf "Iobuf.Hi_bound.restore got stale snapshot" t <:sexp_of< int >>
+    fail iobuf "Iobuf.Hi_bound.restore got stale snapshot" t [%sexp_of: int]
 
-  type t = int with sexp_of (* hi *)
+  type t = int [@@deriving compare, sexp_of] (* hi *)
 
   let window t = t.hi
 
@@ -78,7 +78,7 @@ let flip_lo t =
   t.lo <- t.lo_min;
 ;;
 let bounded_flip_lo_stale t lo_min =
-  fail t "Iobuf.bounded_flip_lo got stale snapshot" lo_min <:sexp_of< Lo_bound.t >>
+  fail t "Iobuf.bounded_flip_lo got stale snapshot" lo_min [%sexp_of: Lo_bound.t]
 ;;
 let bounded_flip_lo t lo_min =
   if lo_min < t.lo_min || lo_min > t.lo then bounded_flip_lo_stale t lo_min
@@ -90,7 +90,7 @@ let flip_hi t =
   t.hi <- t.hi_max;
 ;;
 let bounded_flip_hi_stale t hi_max =
-  fail t "Iobuf.bounded_flip_hi got stale snapshot" hi_max <:sexp_of< Hi_bound.t >>
+  fail t "Iobuf.bounded_flip_hi got stale snapshot" hi_max [%sexp_of: Hi_bound.t]
 ;;
 let bounded_flip_hi t hi_max =
   if hi_max > t.hi_max || hi_max < t.hi then bounded_flip_hi_stale t hi_max
@@ -115,13 +115,14 @@ let invariant _ _ t =
       ~hi:(fun _ _ hi ->
         assert (hi >= t.lo);
         assert (hi <= t.hi_max))
-  with e -> fail t "Iobuf.invariant failed" e <:sexp_of< exn >>
+  with e -> fail t "Iobuf.invariant failed" e [%sexp_of: exn]
 ;;
+
 
 (* We want [check_range] inlined, so we don't want a string constant in there. *)
 let bad_range ~pos ~len t =
   fail t "Iobuf got invalid range" (`pos pos, `len len)
-    <:sexp_of< [ `pos of int ] * [ `len of int ] >>;
+    [%sexp_of: [ `pos of int ] * [ `len of int ]];
 ;;
 
 let check_range t ~pos ~len =
@@ -137,7 +138,7 @@ let of_bigstring ?pos ?len buf =
     | Some pos ->
       if pos < 0 || pos > str_len then
         failwiths "Iobuf.of_bigstring got invalid pos" (pos, `str_len str_len)
-          (<:sexp_of< int * [ `str_len of int ]>>);
+          ([%sexp_of: int * [ `str_len of int ]]);
       pos
   in
   let len =
@@ -147,7 +148,7 @@ let of_bigstring ?pos ?len buf =
       let max_len = str_len - pos in
       if len < 0 || len > max_len then
         failwiths "Iobuf.of_bigstring got invalid len" (len, `max_len max_len)
-          (<:sexp_of< int * [ `max_len of int ] >>);
+          ([%sexp_of: int * [ `max_len of int ]]);
       len
   in
   let lo = pos in
@@ -185,7 +186,8 @@ let set_bounds_and_buffer_sub ?(pos = 0) ?len ~src ~dst () =
   dst.lo <- lo;
   dst.hi <- hi;
   dst.hi_max <- hi;
-  dst.buf <- src.buf
+  if not (phys_equal dst.buf src.buf)
+  then dst.buf <- src.buf
 ;;
 
 let set_bounds_and_buffer ~src ~dst =
@@ -193,7 +195,8 @@ let set_bounds_and_buffer ~src ~dst =
   dst.lo <- src.lo;
   dst.hi <- src.hi;
   dst.hi_max <- src.hi_max;
-  dst.buf <- src.buf
+  if not (phys_equal dst.buf src.buf)
+  then dst.buf <- src.buf
 ;;
 
 let narrow_lo t = t.lo_min <- t.lo
@@ -236,7 +239,7 @@ let protect_window_and_bounds t ~f =
 
 let create ~len =
   if len < 0 then
-    failwiths "Iobuf.create got negative len" len <:sexp_of< int >>;
+    failwiths "Iobuf.create got negative len" len [%sexp_of: int];
   of_bigstring (Bigstring.create len);
 ;;
 
@@ -396,7 +399,6 @@ let buf_pos_exn t ~pos ~len = check_range t ~pos ~len; unsafe_buf_pos t ~pos
 let unsafe_advance t n = t.lo <- t.lo + n
 let advance t len = check_range t ~len ~pos:0; unsafe_advance t len
 
-(* Unsafe, inline-able version of Bigstring.get. *)
 external bigstring_unsafe_get : Bigstring.t -> pos:int -> char
   = "%caml_ba_unsafe_ref_1"
 external bigstring_unsafe_set : Bigstring.t -> pos:int -> char -> unit
@@ -414,7 +416,7 @@ module Char_elt = struct
 end
 
 module T_src = struct
-  type t = T.t with sexp_of
+  type t = T.t [@@deriving sexp_of]
   let create = create
   let length = length
   let get t pos   = bigstring_unsafe_get t.buf ~pos:(buf_pos_exn t ~len:1 ~pos)
@@ -449,7 +451,7 @@ let compact t =
 ;;
 let bounded_compact_stale t lo_min hi_max =
   fail t "Iobuf.bounded_compact got stale snapshot" (lo_min, hi_max)
-    <:sexp_of< Lo_bound.t * Hi_bound.t >>
+    [%sexp_of: Lo_bound.t * Hi_bound.t]
 ;;
 let bounded_compact t lo_min hi_max =
   let len = t.hi - t.lo in
@@ -464,7 +466,7 @@ let bounded_compact t lo_min hi_max =
 (* Sys.word_size is determined only at runtime, but we need it to be a compile-time
    constant to generate good code for Consume.int8, etc. *)
 let word_size = 64
-TEST = Sys.word_size = word_size
+let%test _ = Sys.word_size = word_size
 
 let read_bin_prot reader t ~pos =
   let buf_pos = unsafe_buf_pos t ~pos in
@@ -477,7 +479,7 @@ let read_bin_prot reader t ~pos =
 module Consume = struct
   type src = (read, seek) t
   module To (Dst : sig
-               type t with sexp_of
+               type t [@@deriving sexp_of]
                val create : len:int -> t
                val length : t -> int
                val get : t -> int -> char
@@ -522,6 +524,10 @@ module Consume = struct
     uadv t len (Bigstring.get_tail_padded_fixed_string t.buf ~pos:(pos t len) ~padding ~len ())
   ;;
 
+  let head_padded_fixed_string ~padding ~len t =
+    uadv t len (Bigstring.get_head_padded_fixed_string t.buf ~pos:(pos t len) ~padding ~len ())
+  ;;
+
   let string ?(str_pos = 0) ?len t =
     let len = match len with None -> length t | Some l -> l in
     let dst = String.create (len + str_pos) in
@@ -540,46 +546,47 @@ module Consume = struct
     let (a, len) = read_bin_prot reader t ~pos:0 in
     uadv t len a
   ;;
-  TEST_UNIT "bin_prot char" =
+  let%test_unit "bin_prot char" =
     let t = of_string "abc" in
     let a = bin_prot Char.bin_reader_t t in
     let b = bin_prot Char.bin_reader_t t in
-    <:test_eq< char >> a 'a';
-    <:test_eq< char >> b 'b';
-    <:test_eq< string >> (to_string t) "c";
+    [%test_eq: char] a 'a';
+    [%test_eq: char] b 'b';
+    [%test_eq: string] (to_string t) "c"
   ;;
-  TEST_UNIT "bin_prot int" =
+  let%test_unit "bin_prot int" =
     let ints = [ 0; 1; -1; 12345; -67890; Int.min_value; Int.max_value; 666 ] in
     let buf = Bigstring.create 1000 in
     let _end_pos = List.fold ints ~init:0 ~f:(fun pos i -> Int.bin_write_t buf ~pos i) in
     let t = of_bigstring buf in
-    List.iter ints ~f:(fun i -> <:test_eq< int >> i (bin_prot Int.bin_reader_t t));
+    List.iter ints ~f:(fun i -> [%test_eq: int] i (bin_prot Int.bin_reader_t t))
   ;;
 
   open Bigstring
 
   let len = 1
-  let char        t = uadv t len (bigstring_unsafe_get    t.buf ~pos:(pos t len))
-  let uint8       t = Char.to_int (char t)
-  let  int8       t = (uint8 t lsl (word_size - 9)) asr (word_size - 9)
+  let char            t = uadv t len (bigstring_unsafe_get      t.buf ~pos:(pos t len))
+  let uint8           t = uadv t len (unsafe_get_uint8          t.buf ~pos:(pos t len))
+  let  int8           t = uadv t len (unsafe_get_int8           t.buf ~pos:(pos t len))
   let len = 2
-  let  int16_be   t = uadv t len (unsafe_get_int16_be     t.buf ~pos:(pos t len))
-  let  int16_le   t = uadv t len (unsafe_get_int16_le     t.buf ~pos:(pos t len))
-  let uint16_be   t = uadv t len (unsafe_get_uint16_be    t.buf ~pos:(pos t len))
-  let uint16_le   t = uadv t len (unsafe_get_uint16_le    t.buf ~pos:(pos t len))
+  let  int16_be       t = uadv t len (unsafe_get_int16_be       t.buf ~pos:(pos t len))
+  let  int16_le       t = uadv t len (unsafe_get_int16_le       t.buf ~pos:(pos t len))
+  let uint16_be       t = uadv t len (unsafe_get_uint16_be      t.buf ~pos:(pos t len))
+  let uint16_le       t = uadv t len (unsafe_get_uint16_le      t.buf ~pos:(pos t len))
   let len = 4
-  let  int32_be   t = uadv t len (unsafe_get_int32_be     t.buf ~pos:(pos t len))
-  let  int32_le   t = uadv t len (unsafe_get_int32_le     t.buf ~pos:(pos t len))
-  let uint32_be   t = uadv t len (unsafe_get_uint32_be    t.buf ~pos:(pos t len))
-  let uint32_le   t = uadv t len (unsafe_get_uint32_le    t.buf ~pos:(pos t len))
+  let  int32_be       t = uadv t len (unsafe_get_int32_be       t.buf ~pos:(pos t len))
+  let  int32_le       t = uadv t len (unsafe_get_int32_le       t.buf ~pos:(pos t len))
+  let uint32_be       t = uadv t len (unsafe_get_uint32_be      t.buf ~pos:(pos t len))
+  let uint32_le       t = uadv t len (unsafe_get_uint32_le      t.buf ~pos:(pos t len))
   let len = 8
-  let int64_be    t = uadv t len (unsafe_get_int64_be_exn t.buf ~pos:(pos t len))
-  let int64_le    t = uadv t len (unsafe_get_int64_le_exn t.buf ~pos:(pos t len))
-  let int64_t_be  t = uadv t len (unsafe_get_int64_t_be   t.buf ~pos:(pos t len))
-  let int64_t_le  t = uadv t len (unsafe_get_int64_t_le   t.buf ~pos:(pos t len))
-
-  let int64_be_trunc t = uadv t len (unsafe_get_int64_be_trunc t.buf ~pos:(pos t len))
-  let int64_le_trunc t = uadv t len (unsafe_get_int64_le_trunc t.buf ~pos:(pos t len))
+  let  int64_be       t = uadv t len (unsafe_get_int64_be_exn   t.buf ~pos:(pos t len))
+  let  int64_le       t = uadv t len (unsafe_get_int64_le_exn   t.buf ~pos:(pos t len))
+  let uint64_be       t = uadv t len (unsafe_get_uint64_be_exn  t.buf ~pos:(pos t len))
+  let uint64_le       t = uadv t len (unsafe_get_uint64_le_exn  t.buf ~pos:(pos t len))
+  let  int64_t_be     t = uadv t len (unsafe_get_int64_t_be     t.buf ~pos:(pos t len))
+  let  int64_t_le     t = uadv t len (unsafe_get_int64_t_le     t.buf ~pos:(pos t len))
+  let  int64_be_trunc t = uadv t len (unsafe_get_int64_be_trunc t.buf ~pos:(pos t len))
+  let  int64_le_trunc t = uadv t len (unsafe_get_int64_le_trunc t.buf ~pos:(pos t len))
 end
 
 let write_bin_prot writer t ~pos a =
@@ -590,9 +597,9 @@ let write_bin_prot writer t ~pos a =
   else fail t "Iobuf.write_bin_prot got unexpected number of bytes written \
                (Bin_prot bug: Type_class.write disagrees with .size)"
          (`size_len len, `buf_pos buf_pos, `write_stop_pos stop_pos)
-         <:sexp_of< [ `size_len of int ]
+         [%sexp_of: [ `size_len of int ]
                     * [ `buf_pos of int ]
-                    * [ `write_stop_pos of int ] >>
+                    * [ `write_stop_pos of int ]]
 
 (* [Itoa] provides a range of functions for integer to ASCII conversion, used by [Poke],
    [Fill] and their [Unsafe] versions.
@@ -619,7 +626,7 @@ module Itoa = struct
     else if x > -100000000 then 8
     else if x > -1000000000 then 9
     else
-IFDEF ARCH_SIXTYFOUR THEN
+#if JSC_ARCH_SIXTYFOUR
          if x > _10e9 * -10 then 10
     else if x > _10e9 * -100 then 11
     else if x > _10e9 * -1000 then 12
@@ -630,11 +637,11 @@ IFDEF ARCH_SIXTYFOUR THEN
     else if x > _10e9 * -100000000 then 17
     else if x > _10e9 * -1000000000 then 18
     else 19
-ELSE
+#else
     10
-ENDIF
+#endif
 
-  TEST = String.length (Int.to_string Int.min_value) <= 19 + 1
+  let%test _ = String.length (Int.to_string Int.min_value) <= 19 + 1
 
   (* Despite the div/mod by a constant optimizations, it's a slight savings to avoid a
      second div/mod. Note also that passing in an [int ref], rather than creating the ref
@@ -687,6 +694,11 @@ module Fill = struct
     uadv t len
   ;;
 
+  let head_padded_fixed_string ~padding ~len t src =
+    Bigstring.set_head_padded_fixed_string ~padding ~len t.buf ~pos:(pos t len) src;
+    uadv t len
+  ;;
+
   let string ?str_pos:(src_pos = 0) ?len t src =
     let len = match len with Some l -> l | None -> String.length src - src_pos in
     Bigstring.From_string.blit ~src ~src_pos ~len
@@ -706,8 +718,8 @@ module Fill = struct
 
   let len = 1
   let char           t c = bigstring_unsafe_set  t.buf c ~pos:(pos t len); uadv t len
-  let uint8          t i = char t (Char.unsafe_of_int i)
-  let  int8          t i = char t (Char.unsafe_of_int i)
+  let uint8          t i = unsafe_set_uint8      t.buf i ~pos:(pos t len); uadv t len
+  let  int8          t i = unsafe_set_int8       t.buf i ~pos:(pos t len); uadv t len
   let len = 2
   let  int16_be      t i = unsafe_set_int16_be   t.buf i ~pos:(pos t len); uadv t len
   let  int16_le      t i = unsafe_set_int16_le   t.buf i ~pos:(pos t len); uadv t len
@@ -721,6 +733,8 @@ module Fill = struct
   let len = 8
   let int64_be       t i = unsafe_set_int64_be   t.buf i ~pos:(pos t len); uadv t len
   let int64_le       t i = unsafe_set_int64_le   t.buf i ~pos:(pos t len); uadv t len
+  let uint64_be      t i = unsafe_set_uint64_be  t.buf i ~pos:(pos t len); uadv t len
+  let uint64_le      t i = unsafe_set_uint64_le  t.buf i ~pos:(pos t len); uadv t len
   let int64_t_be     t i = unsafe_set_int64_t_be t.buf i ~pos:(pos t len); uadv t len
   let int64_t_le     t i = unsafe_set_int64_t_le t.buf i ~pos:(pos t len); uadv t len
   let int64_be_trunc t i = unsafe_set_int64_be   t.buf i ~pos:(pos t len); uadv t len
@@ -743,6 +757,10 @@ module Peek = struct
     Bigstring.get_tail_padded_fixed_string t.buf ~padding ~len ~pos:(spos t ~len ~pos) ()
   ;;
 
+  let head_padded_fixed_string ~padding ~len t ~pos =
+    Bigstring.get_head_padded_fixed_string t.buf ~padding ~len ~pos:(spos t ~len ~pos) ()
+  ;;
+
   let string ?str_pos:(dst_pos = 0) ?len t ~pos =
     let len = match len with None -> length t - pos | Some l -> l in
     let dst = String.create (len + dst_pos) in
@@ -758,48 +776,55 @@ module Peek = struct
   ;;
 
   let bin_prot reader t ~pos = read_bin_prot reader t ~pos |> fst
-  TEST_UNIT "bin_prot char" =
+  let%test_unit "bin_prot char" =
     let t = of_string "abc" in
     let a = bin_prot Char.bin_reader_t t ~pos:0 in
     let b = bin_prot Char.bin_reader_t t ~pos:1 in
-    <:test_eq< char >> a 'a';
-    <:test_eq< char >> b 'b';
-    <:test_eq< string >> (to_string t) "abc";
+    [%test_eq: char] a 'a';
+    [%test_eq: char] b 'b';
+    [%test_eq: string] (to_string t) "abc"
   ;;
-  TEST_UNIT "bin_prot int" =
+  let%test_unit "bin_prot int" =
     let ints = [ 0; 1; -1; 12345; -67890; Int.min_value; Int.max_value; 666 ] in
     let buf = Bigstring.create 1000 in
     let end_pos = List.fold ints ~init:0 ~f:(fun pos i -> Int.bin_write_t buf ~pos i) in
     let t = of_bigstring buf in
     List.fold ints ~init:0 ~f:(fun pos i ->
-      <:test_eq< int >> i (bin_prot Int.bin_reader_t t ~pos);
+      [%test_eq: int] i (bin_prot Int.bin_reader_t t ~pos);
       pos + Int.bin_size_t i)
-    |> (fun end_pos' -> <:test_eq< int >> end_pos end_pos');
+    |> (fun end_pos' -> [%test_eq: int] end_pos end_pos')
+  ;;
+
+  let index t ?(pos = 0) ?(len = length t - pos) c =
+    let pos = spos t ~len ~pos in
+    Option.map (Bigstring.find ~pos ~len c t.buf) ~f:(fun x -> x - t.lo)
   ;;
 
   open Bigstring
 
-  let char           t ~pos = T_src.get t pos
-  (* int8 accessors are slow C calls.  Use the fast char primitive. *)
-  let uint8          t ~pos = Char.to_int (char t ~pos)
-  let  int8          t ~pos = (uint8 t ~pos lsl (word_size - 9)) asr (word_size - 9)
+  let len = 1
+  let char            t ~pos = T_src.get                 t                        pos
+  let uint8           t ~pos = unsafe_get_uint8          t.buf ~pos:(spos t ~len ~pos)
+  let  int8           t ~pos = unsafe_get_int8           t.buf ~pos:(spos t ~len ~pos)
   let len = 2
-  let  int16_be      t ~pos = unsafe_get_int16_be     t.buf ~pos:(spos t ~len ~pos)
-  let  int16_le      t ~pos = unsafe_get_int16_le     t.buf ~pos:(spos t ~len ~pos)
-  let uint16_be      t ~pos = unsafe_get_uint16_be    t.buf ~pos:(spos t ~len ~pos)
-  let uint16_le      t ~pos = unsafe_get_uint16_le    t.buf ~pos:(spos t ~len ~pos)
+  let  int16_be       t ~pos = unsafe_get_int16_be       t.buf ~pos:(spos t ~len ~pos)
+  let  int16_le       t ~pos = unsafe_get_int16_le       t.buf ~pos:(spos t ~len ~pos)
+  let uint16_be       t ~pos = unsafe_get_uint16_be      t.buf ~pos:(spos t ~len ~pos)
+  let uint16_le       t ~pos = unsafe_get_uint16_le      t.buf ~pos:(spos t ~len ~pos)
   let len = 4
-  let  int32_be      t ~pos = unsafe_get_int32_be     t.buf ~pos:(spos t ~len ~pos)
-  let  int32_le      t ~pos = unsafe_get_int32_le     t.buf ~pos:(spos t ~len ~pos)
-  let uint32_be      t ~pos = unsafe_get_uint32_be    t.buf ~pos:(spos t ~len ~pos)
-  let uint32_le      t ~pos = unsafe_get_uint32_le    t.buf ~pos:(spos t ~len ~pos)
+  let  int32_be       t ~pos = unsafe_get_int32_be       t.buf ~pos:(spos t ~len ~pos)
+  let  int32_le       t ~pos = unsafe_get_int32_le       t.buf ~pos:(spos t ~len ~pos)
+  let uint32_be       t ~pos = unsafe_get_uint32_be      t.buf ~pos:(spos t ~len ~pos)
+  let uint32_le       t ~pos = unsafe_get_uint32_le      t.buf ~pos:(spos t ~len ~pos)
   let len = 8
-  let int64_be       t ~pos = unsafe_get_int64_be_exn   t.buf ~pos:(spos t ~len ~pos)
-  let int64_le       t ~pos = unsafe_get_int64_le_exn   t.buf ~pos:(spos t ~len ~pos)
-  let int64_t_be     t ~pos = unsafe_get_int64_t_be     t.buf ~pos:(spos t ~len ~pos)
-  let int64_t_le     t ~pos = unsafe_get_int64_t_le     t.buf ~pos:(spos t ~len ~pos)
-  let int64_be_trunc t ~pos = unsafe_get_int64_be_trunc t.buf ~pos:(spos t ~len ~pos)
-  let int64_le_trunc t ~pos = unsafe_get_int64_le_trunc t.buf ~pos:(spos t ~len ~pos)
+  let int64_be        t ~pos = unsafe_get_int64_be_exn   t.buf ~pos:(spos t ~len ~pos)
+  let int64_le        t ~pos = unsafe_get_int64_le_exn   t.buf ~pos:(spos t ~len ~pos)
+  let uint64_be       t ~pos = unsafe_get_uint64_be_exn  t.buf ~pos:(spos t ~len ~pos)
+  let uint64_le       t ~pos = unsafe_get_uint64_le_exn  t.buf ~pos:(spos t ~len ~pos)
+  let  int64_t_be     t ~pos = unsafe_get_int64_t_be     t.buf ~pos:(spos t ~len ~pos)
+  let  int64_t_le     t ~pos = unsafe_get_int64_t_le     t.buf ~pos:(spos t ~len ~pos)
+  let  int64_be_trunc t ~pos = unsafe_get_int64_be_trunc t.buf ~pos:(spos t ~len ~pos)
+  let  int64_le_trunc t ~pos = unsafe_get_int64_le_trunc t.buf ~pos:(spos t ~len ~pos)
 end
 
 module Poke = struct
@@ -810,6 +835,10 @@ module Poke = struct
 
   let tail_padded_fixed_string ~padding ~len t ~pos src =
     Bigstring.set_tail_padded_fixed_string ~padding ~len t.buf ~pos:(spos t ~len ~pos) src
+  ;;
+
+  let head_padded_fixed_string ~padding ~len t ~pos src =
+    Bigstring.set_head_padded_fixed_string ~padding ~len t.buf ~pos:(spos t ~len ~pos) src
   ;;
 
   let string ?str_pos:(src_pos = 0) ?len t ~pos src =
@@ -823,44 +852,47 @@ module Poke = struct
   ;;
 
   let bin_prot writer t ~pos a = write_bin_prot writer t ~pos a |> (ignore : int -> unit)
-  TEST_UNIT =
+  let%test_unit _ =
     let t = of_string "abc" in
     bin_prot Char.bin_writer_t t 'd' ~pos:0;
     bin_prot Char.bin_writer_t t 'e' ~pos:1;
-    <:test_eq< string >> "dec" (to_string t);
+    [%test_eq: string] "dec" (to_string t);
     flip_lo t;
     assert (try bin_prot String.bin_writer_t t "fgh" ~pos:0; false with _ -> true);
     assert (is_empty t);
     reset t;
-    <:test_eq< string >> "dec" (to_string t);
+    [%test_eq: string] "dec" (to_string t);
     bin_prot Char.bin_writer_t t 'i' ~pos:0;
-    <:test_eq< string >> "iec" (to_string t);
+    [%test_eq: string] "iec" (to_string t)
   ;;
 
   open Bigstring
 
-  let char           t ~pos c = T_src.set t pos c
-  let uint8          t ~pos i = char t ~pos (Char.unsafe_of_int i)
-  let  int8          t ~pos i = char t ~pos (Char.unsafe_of_int i)
+  let len = 1
+  let char            t ~pos c = T_src.set             t                        pos  c
+  let uint8           t ~pos i = unsafe_set_uint8      t.buf ~pos:(spos t ~len ~pos) i
+  let  int8           t ~pos i = unsafe_set_int8       t.buf ~pos:(spos t ~len ~pos) i
   let len = 2
-  let  int16_be      t ~pos i = unsafe_set_int16_be   t.buf ~pos:(spos t ~len ~pos) i
-  let  int16_le      t ~pos i = unsafe_set_int16_le   t.buf ~pos:(spos t ~len ~pos) i
-  let uint16_be      t ~pos i = unsafe_set_uint16_be  t.buf ~pos:(spos t ~len ~pos) i
-  let uint16_le      t ~pos i = unsafe_set_uint16_le  t.buf ~pos:(spos t ~len ~pos) i
+  let  int16_be       t ~pos i = unsafe_set_int16_be   t.buf ~pos:(spos t ~len ~pos) i
+  let  int16_le       t ~pos i = unsafe_set_int16_le   t.buf ~pos:(spos t ~len ~pos) i
+  let uint16_be       t ~pos i = unsafe_set_uint16_be  t.buf ~pos:(spos t ~len ~pos) i
+  let uint16_le       t ~pos i = unsafe_set_uint16_le  t.buf ~pos:(spos t ~len ~pos) i
   let len = 4
-  let  int32_be      t ~pos i = unsafe_set_int32_be   t.buf ~pos:(spos t ~len ~pos) i
-  let  int32_le      t ~pos i = unsafe_set_int32_le   t.buf ~pos:(spos t ~len ~pos) i
-  let uint32_be      t ~pos i = unsafe_set_uint32_be  t.buf ~pos:(spos t ~len ~pos) i
-  let uint32_le      t ~pos i = unsafe_set_uint32_le  t.buf ~pos:(spos t ~len ~pos) i
+  let  int32_be       t ~pos i = unsafe_set_int32_be   t.buf ~pos:(spos t ~len ~pos) i
+  let  int32_le       t ~pos i = unsafe_set_int32_le   t.buf ~pos:(spos t ~len ~pos) i
+  let uint32_be       t ~pos i = unsafe_set_uint32_be  t.buf ~pos:(spos t ~len ~pos) i
+  let uint32_le       t ~pos i = unsafe_set_uint32_le  t.buf ~pos:(spos t ~len ~pos) i
   let len = 8
-  let int64_be       t ~pos i = unsafe_set_int64_be   t.buf ~pos:(spos t ~len ~pos) i
-  let int64_le       t ~pos i = unsafe_set_int64_le   t.buf ~pos:(spos t ~len ~pos) i
-  let int64_t_be     t ~pos i = unsafe_set_int64_t_be t.buf ~pos:(spos t ~len ~pos) i
-  let int64_t_le     t ~pos i = unsafe_set_int64_t_le t.buf ~pos:(spos t ~len ~pos) i
-  let int64_be_trunc t ~pos i = unsafe_set_int64_be   t.buf ~pos:(spos t ~len ~pos) i
-  let int64_le_trunc t ~pos i = unsafe_set_int64_le   t.buf ~pos:(spos t ~len ~pos) i
+  let  int64_be       t ~pos i = unsafe_set_int64_be   t.buf ~pos:(spos t ~len ~pos) i
+  let  int64_le       t ~pos i = unsafe_set_int64_le   t.buf ~pos:(spos t ~len ~pos) i
+  let uint64_be       t ~pos i = unsafe_set_uint64_be  t.buf ~pos:(spos t ~len ~pos) i
+  let uint64_le       t ~pos i = unsafe_set_uint64_le  t.buf ~pos:(spos t ~len ~pos) i
+  let  int64_t_be     t ~pos i = unsafe_set_int64_t_be t.buf ~pos:(spos t ~len ~pos) i
+  let  int64_t_le     t ~pos i = unsafe_set_int64_t_le t.buf ~pos:(spos t ~len ~pos) i
+  let  int64_be_trunc t ~pos i = unsafe_set_int64_be   t.buf ~pos:(spos t ~len ~pos) i
+  let  int64_le_trunc t ~pos i = unsafe_set_int64_le   t.buf ~pos:(spos t ~len ~pos) i
 
-  let decimal                 = Itoa.poke_decimal
+  let decimal = Itoa.poke_decimal
 end
 
 let crc32 { buf ; lo ; hi ; _ } =
@@ -932,14 +964,14 @@ let consume_bin_prot t bin_prot_reader =
   let result =
     if length t < bin_prot_length_prefix_bytes then
       error "Iobuf.consume_bin_prot not enough data to read length" t
-        (<:sexp_of< (_, _) t >>)
+        ([%sexp_of: (_, _) t])
     else begin
       let mark = t.lo in
       let v_len = Consume.int32_be t in
       if v_len > length t then begin
         t.lo <- mark;
         error "Iobuf.consume_bin_prot not enough data to read value" (v_len, t)
-          (<:sexp_of< int * (_, _) t >>);
+          ([%sexp_of: int * (_, _) t]);
       end else Ok (Consume.bin_prot bin_prot_reader t)
     end
   in
@@ -952,7 +984,7 @@ let fill_bin_prot t writer v =
   let result =
     if need > length t then
       error "Iobuf.fill_bin_prot not enough space" (need, t)
-        (<:sexp_of< int * (_, _) t >>)
+        ([%sexp_of: int * (_, _) t])
     else begin
       Fill.int32_be t v_len;
       Fill.bin_prot writer t v;
@@ -968,9 +1000,35 @@ module Expert = struct
   let hi t     = t.hi
   let lo t     = t.lo
   let lo_min t = t.lo_min
+
+  let to_bigstring_shared ?pos ?len t =
+    let t_len = length t in
+    let pos, len = Ordered_collection_common.get_pos_len_exn ?pos ?len ~length:t_len in
+    Bigstring.sub_shared t.buf ~pos:(t.lo + pos) ~len
+  ;;
+
+  let to_iovec_shared ?pos ?len t =
+    let t_len = length t in
+    let pos, len = Ordered_collection_common.get_pos_len_exn ?pos ?len ~length:t_len in
+    Unix.IOVec.of_bigstring t.buf ~pos:(t.lo + pos) ~len
+  ;;
 end
 
+type ok_or_eof = Ok | Eof [@@deriving compare, sexp_of]
+
 module File_descr = Iobuf_intf.Unix.File_descr
+
+let input t ch =
+  match Bigstring.input ch t.buf ~pos:t.lo ~len:(length t) with
+  | n                                            -> unsafe_advance t n; Ok
+  | exception Bigstring.IOError (n, End_of_file) -> unsafe_advance t n; Eof
+;;
+
+let read t fd =
+  match Bigstring.read fd t.buf ~pos:t.lo ~len:(length t) with
+  | n                                            -> unsafe_advance t n; Ok
+  | exception Bigstring.IOError (n, End_of_file) -> unsafe_advance t n; Eof
+;;
 
 let read_assume_fd_is_nonblocking t fd =
   let nread =
@@ -996,105 +1054,74 @@ let recvfrom_assume_fd_is_nonblocking t fd =
   sockaddr
 ;;
 
-(* recvmmsg based on bigstring.ml *)
+#if JSC_RECVMMSG
 
-IFDEF RECVMMSG THEN
+(* Allocate and pre-populate the [struct mmsghdr]s and associated [struct iovec]s. Reusing
+   this context reduces the cost of calls to [recvmmsg] considerably if the iobuf array is
+   large. *)
+module Recvmmsg_context = struct
+  type ctx
 
-external unsafe_recvmmsg_assume_fd_is_nonblocking
-  : (File_descr.t
-     -> (read_write, seek) t array
-     -> int
-     -> Unix.sockaddr array option
-     -> Unix.Syscall_result.Int.t)
-  = "iobuf_recvmmsg_assume_fd_is_nonblocking_stub"
+  external unsafe_ctx : ([> write], seek) t array -> ctx = "iobuf_recvmmsg_ctx"
 
-TEST_MODULE = struct
-  let expect_invalid_argument ?msg f =
-    try ignore (f () : Unix.Syscall_result.Int.t); assert false
-    with Invalid_argument s ->
-      match msg with
-      | None -> ()
-      | Some x -> <:test_result< string >> s ~expect:x
+  let ctx ts =
+    if Array.for_all ts ~f:(fun t -> length t = capacity t) then
+      unsafe_ctx ts
+    else
+      failwiths "Recvmmsg_context.create: all buffers must be reset" ts
+        [%sexp_of: (_, _) t array]
   ;;
 
-  let check_invalid ?msg count =
-    let fd = Unix.socket ~domain:PF_INET ~kind:SOCK_DGRAM ~protocol:0 in
-    expect_invalid_argument ?msg
-      (fun () -> unsafe_recvmmsg_assume_fd_is_nonblocking fd [||] count None)
+  (* we retain a reference to the underlying bigstrings, in the event that callers
+     mistakenly use set_bounds_and_buffer. Since we've cached the underlying memory
+     referenced by the bigstring, we want to prevent it from being garbage collected and
+     released. *)
+  type nonrec t = {
+    iobufs : (read_write, seek) t array;
+    bstrs  : Bigstring.t array;
+    ctx    : ctx;
+  }
 
-
-  TEST_UNIT "unsafe_recvmmsg_assume_fd_is_nonblocking: check count bounds" =
-    check_invalid (-1);
-    check_invalid Int.min_value;
-    check_invalid 65; (* RECVMMSG_MAX_COUNT = 64 *)
-    (
-IFDEF ARCH_SIXTYFOUR THEN
-    (* We are assuming that [unsigned int] is 32 bits wide. *)
-    check_invalid (Int64.to_int_exn 0xFFFF_FFFFL); (* exceeds RECVMMSG_MAX_COUNT *)
-    check_invalid (Int64.to_int_exn 0x1FFFF_FFFFL); (* exceeds unsigned int *)
-ENDIF
-    )
-  ;;
+  let create iobufs = {
+    iobufs;
+    bstrs = Array.map iobufs ~f:(fun iobuf -> iobuf.buf);
+    ctx = ctx iobufs;
+  }
 end
 
-let recvmmsg_assume_fd_is_nonblocking fd ?count ?srcs ts =
-  let loc = "Iobuf.recvmmsg_assume_fd_is_nonblocking" in
-  let count = Option.value count ~default:(Array.length ts) in
-  if count < 0 then invalid_arg (loc ^ ": count < 0");
-  if count > Array.length ts then invalid_arg (loc ^ ": count > n_iobufs");
-  begin match srcs with
-  | None -> ()
-  | Some a -> if count > Array.length a then invalid_arg (loc ^ ": count > n_srcs")
-  end;
-  unsafe_recvmmsg_assume_fd_is_nonblocking fd ts count srcs
+external unsafe_recvmmsg_assume_fd_is_nonblocking
+  : File_descr.t
+    -> (read_write, seek) t array
+    -> Recvmmsg_context.ctx
+    -> Unix.Syscall_result.Int.t
+  = "iobuf_recvmmsg_assume_fd_is_nonblocking_stub" "noalloc"
+
+let recvmmsg_assume_fd_is_nonblocking fd { Recvmmsg_context. iobufs; ctx; _ } =
+  unsafe_recvmmsg_assume_fd_is_nonblocking fd iobufs ctx
 ;;
 
 let recvmmsg_assume_fd_is_nonblocking =
-  (* At Jane Street, we link with [--wrap recvmmsg] so that we can use our own wrapper
-     around [recvmmsg].  This allows us to compile an executable on a machine that has
-     recvmmsg (e.g., CentOS 6) but then run the executable on a machine that does not
-     (e.g., CentOS 5), but that has our wrapper library.  We set up our wrapper so that
-     when running on a machine that doesn't have it, [recvmmsg] always returns -1 and sets
-     errno to ENOSYS. *)
+  (* We link with [--wrap recvmmsg].  If we have compiled on a machine with recvmmsg
+     (e.g., CentOS 6) but then run on a machine without (e.g., CentOS 5), our wrapped
+     [recvmmsg] always returns -1 and sets errno to ENOSYS. *)
   match
     Unix.Syscall_result.Int.to_result
-      (recvmmsg_assume_fd_is_nonblocking (File_descr.of_int (-1)) [||])
+      (let fd = File_descr.of_int (-1) in
+       recvmmsg_assume_fd_is_nonblocking fd (Recvmmsg_context.create [||]))
   with
-  | Error ENOSYS ->
-    Or_error.unimplemented "Iobuf.recvmmsg_assume_fd_is_nonblocking"
-  | _ -> Ok recvmmsg_assume_fd_is_nonblocking
+  | Error ENOSYS -> Or_error.unimplemented "Iobuf.recvmmsg_assume_fd_is_nonblocking"
+  | _            -> Ok                     recvmmsg_assume_fd_is_nonblocking
 ;;
 
-let recvmmsg_assume_fd_is_nonblocking_no_options fd ~count ts =
-  let loc = "Iobuf.recvmmsg_assume_fd_is_nonblocking_no_options" in
-  if count < 0 then invalid_arg (loc ^ ": count < 0");
-  if count > Array.length ts then invalid_arg (loc ^ ": count > n_iobufs");
-  unsafe_recvmmsg_assume_fd_is_nonblocking fd ts count None
-;;
-
-let recvmmsg_assume_fd_is_nonblocking_no_options =
-  match
-    Unix.Syscall_result.Int.to_result
-      (recvmmsg_assume_fd_is_nonblocking_no_options (File_descr.of_int (-1))
-         ~count:0 [||])
-  with
-  | Error ENOSYS ->
-    Or_error.unimplemented "Iobuf.recvmmsg_assume_fd_is_nonblocking_no_options"
-  | _ -> Ok recvmmsg_assume_fd_is_nonblocking_no_options
-;;
-
-ELSE                                    (* NDEF RECVMMSG *)
+#else
+                                    (* not JSC_RECVMMSG *)
 
 let recvmmsg_assume_fd_is_nonblocking =
   Or_error.unimplemented "Iobuf.recvmmsg_assume_fd_is_nonblocking"
 ;;
 
-let recvmmsg_assume_fd_is_nonblocking_no_options =
-  Or_error.unimplemented "Iobuf.recvmmsg_assume_fd_is_nonblocking_no_options"
-;;
-
-
-ENDIF                                   (* RECVMMSG *)
+#endif
+                                    (* JSC_RECVMMSG *)
 
 let unsafe_sent t result =
   if Syscall_result.Int.is_ok result
@@ -1115,6 +1142,20 @@ let sendto_nonblocking_no_sigpipe () =
   Or_error.map Bigstring.sendto_nonblocking_no_sigpipe ~f:(fun sendto ->
     fun t fd addr -> unsafe_sent t (sendto fd t.buf ~pos:t.lo ~len:(length t) addr)
   )
+;;
+
+let output t ch =
+  let nwritten =
+    Bigstring.output ch t.buf ~pos:t.lo ~len:(length t)
+  in
+  unsafe_advance t nwritten
+;;
+
+let write t fd =
+  let nwritten =
+    Bigstring.write fd t.buf ~pos:t.lo ~len:(length t)
+  in
+  unsafe_advance t nwritten
 ;;
 
 let write_assume_fd_is_nonblocking t fd =
@@ -1154,6 +1195,10 @@ module Unsafe = struct
       uadv t len (Bigstring.get_tail_padded_fixed_string t.buf ~pos:(upos t) ~padding ~len ())
     ;;
 
+    let head_padded_fixed_string ~padding ~len t =
+      uadv t len (Bigstring.get_head_padded_fixed_string t.buf ~pos:(upos t) ~padding ~len ())
+    ;;
+
     let string    = Consume.string
     let bigstring = Consume.bigstring
 
@@ -1162,27 +1207,28 @@ module Unsafe = struct
     open Bigstring
 
     let len = 1
-    let char           t = uadv t len (bigstring_unsafe_get      t.buf ~pos:(upos t))
+    let char            t = uadv t len (bigstring_unsafe_get      t.buf ~pos:(upos t))
+    let uint8           t = uadv t len (unsafe_get_uint8          t.buf ~pos:(upos t))
+    let  int8           t = uadv t len (unsafe_get_int8           t.buf ~pos:(upos t))
     let len = 2
-    let int16_be       t = uadv t len (unsafe_get_int16_be       t.buf ~pos:(upos t))
-    let int16_le       t = uadv t len (unsafe_get_int16_le       t.buf ~pos:(upos t))
-    let uint16_be      t = uadv t len (unsafe_get_uint16_be      t.buf ~pos:(upos t))
-    let uint16_le      t = uadv t len (unsafe_get_uint16_le      t.buf ~pos:(upos t))
+    let  int16_be       t = uadv t len (unsafe_get_int16_be       t.buf ~pos:(upos t))
+    let  int16_le       t = uadv t len (unsafe_get_int16_le       t.buf ~pos:(upos t))
+    let uint16_be       t = uadv t len (unsafe_get_uint16_be      t.buf ~pos:(upos t))
+    let uint16_le       t = uadv t len (unsafe_get_uint16_le      t.buf ~pos:(upos t))
     let len = 4
-    let int32_be       t = uadv t len (unsafe_get_int32_be       t.buf ~pos:(upos t))
-    let int32_le       t = uadv t len (unsafe_get_int32_le       t.buf ~pos:(upos t))
-    let uint32_be      t = uadv t len (unsafe_get_uint32_be      t.buf ~pos:(upos t))
-    let uint32_le      t = uadv t len (unsafe_get_uint32_le      t.buf ~pos:(upos t))
+    let  int32_be       t = uadv t len (unsafe_get_int32_be       t.buf ~pos:(upos t))
+    let  int32_le       t = uadv t len (unsafe_get_int32_le       t.buf ~pos:(upos t))
+    let uint32_be       t = uadv t len (unsafe_get_uint32_be      t.buf ~pos:(upos t))
+    let uint32_le       t = uadv t len (unsafe_get_uint32_le      t.buf ~pos:(upos t))
     let len = 8
-    let int64_be       t = uadv t len (unsafe_get_int64_be_exn   t.buf ~pos:(upos t))
-    let int64_le       t = uadv t len (unsafe_get_int64_le_exn   t.buf ~pos:(upos t))
-    let int64_t_be     t = uadv t len (unsafe_get_int64_t_be     t.buf ~pos:(upos t))
-    let int64_t_le     t = uadv t len (unsafe_get_int64_t_le     t.buf ~pos:(upos t))
-    let int64_be_trunc t = uadv t len (unsafe_get_int64_be_trunc t.buf ~pos:(upos t))
-    let int64_le_trunc t = uadv t len (unsafe_get_int64_le_trunc t.buf ~pos:(upos t))
-
-    let uint8          t = Char.to_int (char t)
-    let  int8          t = (uint8 t lsl (word_size - 9)) asr (word_size - 9)
+    let  int64_be       t = uadv t len (unsafe_get_int64_be_exn   t.buf ~pos:(upos t))
+    let  int64_le       t = uadv t len (unsafe_get_int64_le_exn   t.buf ~pos:(upos t))
+    let uint64_be       t = uadv t len (unsafe_get_uint64_be_exn  t.buf ~pos:(upos t))
+    let uint64_le       t = uadv t len (unsafe_get_uint64_le_exn  t.buf ~pos:(upos t))
+    let  int64_t_be     t = uadv t len (unsafe_get_int64_t_be     t.buf ~pos:(upos t))
+    let  int64_t_le     t = uadv t len (unsafe_get_int64_t_le     t.buf ~pos:(upos t))
+    let  int64_be_trunc t = uadv t len (unsafe_get_int64_be_trunc t.buf ~pos:(upos t))
+    let  int64_le_trunc t = uadv t len (unsafe_get_int64_le_trunc t.buf ~pos:(upos t))
   end
 
   module Fill = struct
@@ -1195,6 +1241,11 @@ module Unsafe = struct
 
     let tail_padded_fixed_string ~padding ~len t src =
       Bigstring.set_tail_padded_fixed_string ~padding ~len t.buf ~pos:(upos t len) src;
+      uadv t len
+    ;;
+
+    let head_padded_fixed_string ~padding ~len t src =
+      Bigstring.set_head_padded_fixed_string ~padding ~len t.buf ~pos:(upos t len) src;
       uadv t len
     ;;
 
@@ -1227,10 +1278,12 @@ module Unsafe = struct
     let uint32_be   t i = unsafe_set_uint32_be  t.buf i ~pos:(upos t len); uadv t len
     let uint32_le   t i = unsafe_set_uint32_le  t.buf i ~pos:(upos t len); uadv t len
     let len = 8
-    let  int64_be   t i = unsafe_set_int64_be   t.buf i ~pos:(upos t len); uadv t len
-    let  int64_le   t i = unsafe_set_int64_le   t.buf i ~pos:(upos t len); uadv t len
-    let  int64_t_be t i = unsafe_set_int64_t_be t.buf i ~pos:(upos t len); uadv t len
-    let  int64_t_le t i = unsafe_set_int64_t_le t.buf i ~pos:(upos t len); uadv t len
+    let int64_be    t i = unsafe_set_int64_be   t.buf i ~pos:(upos t len); uadv t len
+    let int64_le    t i = unsafe_set_int64_le   t.buf i ~pos:(upos t len); uadv t len
+    let uint64_be   t i = unsafe_set_uint64_be  t.buf i ~pos:(upos t len); uadv t len
+    let uint64_le   t i = unsafe_set_uint64_le  t.buf i ~pos:(upos t len); uadv t len
+    let int64_t_be  t i = unsafe_set_int64_t_be t.buf i ~pos:(upos t len); uadv t len
+    let int64_t_le  t i = unsafe_set_int64_t_le t.buf i ~pos:(upos t len); uadv t len
 
     (* Bigstring int8 accessors are slow C calls.  Use the fast char primitive. *)
     let uint8 t i = char t (Char.unsafe_of_int i)
@@ -1255,6 +1308,10 @@ module Unsafe = struct
       Bigstring.get_tail_padded_fixed_string t.buf ~padding ~len ~pos:(upos t ~pos) ()
     ;;
 
+    let head_padded_fixed_string ~padding ~len t ~pos =
+      Bigstring.get_head_padded_fixed_string t.buf ~padding ~len ~pos:(upos t ~pos) ()
+    ;;
+
     let string ?str_pos:(dst_pos = 0) ?len t ~pos =
       let len = match len with None -> length t - pos | Some l -> l in
       let dst = String.create (len + dst_pos) in
@@ -1272,27 +1329,29 @@ module Unsafe = struct
 
     let bin_prot = Peek.bin_prot
 
+    let index = Peek.index
+
     open Bigstring
 
-    let char        t ~pos = bigstring_unsafe_get    t.buf ~pos:(upos t ~pos)
-    let  int16_be   t ~pos = unsafe_get_int16_be     t.buf ~pos:(upos t ~pos)
-    let  int16_le   t ~pos = unsafe_get_int16_le     t.buf ~pos:(upos t ~pos)
-    let uint16_be   t ~pos = unsafe_get_uint16_be    t.buf ~pos:(upos t ~pos)
-    let uint16_le   t ~pos = unsafe_get_uint16_le    t.buf ~pos:(upos t ~pos)
-    let  int32_be   t ~pos = unsafe_get_int32_be     t.buf ~pos:(upos t ~pos)
-    let  int32_le   t ~pos = unsafe_get_int32_le     t.buf ~pos:(upos t ~pos)
-    let uint32_be   t ~pos = unsafe_get_uint32_be    t.buf ~pos:(upos t ~pos)
-    let uint32_le   t ~pos = unsafe_get_uint32_le    t.buf ~pos:(upos t ~pos)
-    let  int64_be   t ~pos = unsafe_get_int64_be_exn t.buf ~pos:(upos t ~pos)
-    let  int64_le   t ~pos = unsafe_get_int64_le_exn t.buf ~pos:(upos t ~pos)
-    let  int64_t_be t ~pos = unsafe_get_int64_t_be   t.buf ~pos:(upos t ~pos)
-    let  int64_t_le t ~pos = unsafe_get_int64_t_le   t.buf ~pos:(upos t ~pos)
-
-    let uint8 t ~pos = Char.to_int (char t ~pos)
-    let  int8 t ~pos = (uint8 t ~pos lsl (word_size - 9)) asr (word_size - 9)
-
-    let int64_be_trunc t ~pos = unsafe_get_int64_be_trunc t.buf ~pos:(upos t ~pos)
-    let int64_le_trunc t ~pos = unsafe_get_int64_le_trunc t.buf ~pos:(upos t ~pos)
+    let char            t ~pos = bigstring_unsafe_get      t.buf ~pos:(upos t ~pos)
+    let uint8           t ~pos = unsafe_get_uint8          t.buf ~pos:(upos t ~pos)
+    let  int8           t ~pos = unsafe_get_int8           t.buf ~pos:(upos t ~pos)
+    let  int16_be       t ~pos = unsafe_get_int16_be       t.buf ~pos:(upos t ~pos)
+    let  int16_le       t ~pos = unsafe_get_int16_le       t.buf ~pos:(upos t ~pos)
+    let uint16_be       t ~pos = unsafe_get_uint16_be      t.buf ~pos:(upos t ~pos)
+    let uint16_le       t ~pos = unsafe_get_uint16_le      t.buf ~pos:(upos t ~pos)
+    let  int32_be       t ~pos = unsafe_get_int32_be       t.buf ~pos:(upos t ~pos)
+    let  int32_le       t ~pos = unsafe_get_int32_le       t.buf ~pos:(upos t ~pos)
+    let uint32_be       t ~pos = unsafe_get_uint32_be      t.buf ~pos:(upos t ~pos)
+    let uint32_le       t ~pos = unsafe_get_uint32_le      t.buf ~pos:(upos t ~pos)
+    let  int64_be       t ~pos = unsafe_get_int64_be_exn   t.buf ~pos:(upos t ~pos)
+    let  int64_le       t ~pos = unsafe_get_int64_le_exn   t.buf ~pos:(upos t ~pos)
+    let uint64_be       t ~pos = unsafe_get_uint64_be_exn  t.buf ~pos:(upos t ~pos)
+    let uint64_le       t ~pos = unsafe_get_uint64_le_exn  t.buf ~pos:(upos t ~pos)
+    let  int64_t_be     t ~pos = unsafe_get_int64_t_be     t.buf ~pos:(upos t ~pos)
+    let  int64_t_le     t ~pos = unsafe_get_int64_t_le     t.buf ~pos:(upos t ~pos)
+    let  int64_be_trunc t ~pos = unsafe_get_int64_be_trunc t.buf ~pos:(upos t ~pos)
+    let  int64_le_trunc t ~pos = unsafe_get_int64_le_trunc t.buf ~pos:(upos t ~pos)
   end
 
   module Poke = struct
@@ -1302,6 +1361,10 @@ module Unsafe = struct
 
     let tail_padded_fixed_string ~padding ~len t ~pos src =
       Bigstring.set_tail_padded_fixed_string ~padding ~len t.buf ~pos:(upos t ~pos) src
+    ;;
+
+    let head_padded_fixed_string ~padding ~len t ~pos src =
+      Bigstring.set_head_padded_fixed_string ~padding ~len t.buf ~pos:(upos t ~pos) src
     ;;
 
     let string ?str_pos:(src_pos = 0) ?len t ~pos src =
@@ -1319,26 +1382,25 @@ module Unsafe = struct
 
     open Bigstring
 
-    let char        t ~pos c = bigstring_unsafe_set  t.buf ~pos:(upos t ~pos) c
-    let  int16_be   t ~pos i = unsafe_set_int16_be   t.buf ~pos:(upos t ~pos) i
-    let  int16_le   t ~pos i = unsafe_set_int16_le   t.buf ~pos:(upos t ~pos) i
-    let uint16_be   t ~pos i = unsafe_set_uint16_be  t.buf ~pos:(upos t ~pos) i
-    let uint16_le   t ~pos i = unsafe_set_uint16_le  t.buf ~pos:(upos t ~pos) i
-    let  int32_be   t ~pos i = unsafe_set_int32_be   t.buf ~pos:(upos t ~pos) i
-    let  int32_le   t ~pos i = unsafe_set_int32_le   t.buf ~pos:(upos t ~pos) i
-    let uint32_be   t ~pos i = unsafe_set_uint32_be  t.buf ~pos:(upos t ~pos) i
-    let uint32_le   t ~pos i = unsafe_set_uint32_le  t.buf ~pos:(upos t ~pos) i
-    let  int64_be   t ~pos i = unsafe_set_int64_be   t.buf ~pos:(upos t ~pos) i
-    let  int64_le   t ~pos i = unsafe_set_int64_le   t.buf ~pos:(upos t ~pos) i
-    let  int64_t_be t ~pos i = unsafe_set_int64_t_be t.buf ~pos:(upos t ~pos) i
-    let  int64_t_le t ~pos i = unsafe_set_int64_t_le t.buf ~pos:(upos t ~pos) i
-
-    (* Bigstring int8 accessors are slow C calls.  Use the fast char primitive. *)
-    let uint8 t ~pos i = char t ~pos (Char.unsafe_of_int i)
-    let  int8 t ~pos i = char t ~pos (Char.unsafe_of_int i)
-
-    let int64_be_trunc t ~pos i = unsafe_set_int64_be t.buf ~pos:(upos t ~pos) i
-    let int64_le_trunc t ~pos i = unsafe_set_int64_le t.buf ~pos:(upos t ~pos) i
+    let char            t ~pos c = bigstring_unsafe_set  t.buf ~pos:(upos t ~pos) c
+    let uint8           t ~pos i = unsafe_set_uint8      t.buf ~pos:(upos t ~pos) i
+    let  int8           t ~pos i = unsafe_set_int8       t.buf ~pos:(upos t ~pos) i
+    let  int16_be       t ~pos i = unsafe_set_int16_be   t.buf ~pos:(upos t ~pos) i
+    let  int16_le       t ~pos i = unsafe_set_int16_le   t.buf ~pos:(upos t ~pos) i
+    let uint16_be       t ~pos i = unsafe_set_uint16_be  t.buf ~pos:(upos t ~pos) i
+    let uint16_le       t ~pos i = unsafe_set_uint16_le  t.buf ~pos:(upos t ~pos) i
+    let  int32_be       t ~pos i = unsafe_set_int32_be   t.buf ~pos:(upos t ~pos) i
+    let  int32_le       t ~pos i = unsafe_set_int32_le   t.buf ~pos:(upos t ~pos) i
+    let uint32_be       t ~pos i = unsafe_set_uint32_be  t.buf ~pos:(upos t ~pos) i
+    let uint32_le       t ~pos i = unsafe_set_uint32_le  t.buf ~pos:(upos t ~pos) i
+    let  int64_be       t ~pos i = unsafe_set_int64_be   t.buf ~pos:(upos t ~pos) i
+    let  int64_le       t ~pos i = unsafe_set_int64_le   t.buf ~pos:(upos t ~pos) i
+    let uint64_be       t ~pos i = unsafe_set_uint64_be  t.buf ~pos:(upos t ~pos) i
+    let uint64_le       t ~pos i = unsafe_set_uint64_le  t.buf ~pos:(upos t ~pos) i
+    let  int64_t_be     t ~pos i = unsafe_set_int64_t_be t.buf ~pos:(upos t ~pos) i
+    let  int64_t_le     t ~pos i = unsafe_set_int64_t_le t.buf ~pos:(upos t ~pos) i
+    let  int64_be_trunc t ~pos i = unsafe_set_int64_be   t.buf ~pos:(upos t ~pos) i
+    let  int64_le_trunc t ~pos i = unsafe_set_int64_le   t.buf ~pos:(upos t ~pos) i
 
     let decimal = Itoa.unsafe_poke_decimal
   end
@@ -1381,90 +1443,129 @@ end
  * │ [iobuf.ml:Blit tests] Blit.unsafe_blit [overlap]:1000  │   169.60ns │     12.32% │
  * │ [iobuf.ml:Blit tests] Blit.unsafe_blit [overlap]:10000 │ 1_377.01ns │    100.00% │
  * └────────────────────────────────────────────────────────┴────────────┴────────────┘ *)
-BENCH_MODULE "Blit tests" = struct
+let%bench_module "Blit tests" = (module struct
   let lengths = [5; 10; 100; 1000; 10_000]
 
-  BENCH_INDEXED "string blit" len lengths =
+  let%bench_fun "string blit" [@indexed len = lengths] =
     let buf = create ~len in
     let str = String.create len in
     (fun () -> Peek.To_string.blit ~src:buf ~dst:str ~src_pos:0 ~dst_pos:0 ~len)
 
-  BENCH_INDEXED "Blit" len lengths =
+  let%bench_fun "Blit" [@indexed len = lengths] =
     let src = create ~len in
     let dst = create ~len in
     (fun () -> Blit.blito () ~src ~dst)
 
-  BENCH_INDEXED "Blit_consume" len lengths =
+  let%bench_fun "Blit_consume" [@indexed len = lengths] =
     let src = create ~len in
     let dst = create ~len in
     (fun () -> Blit_consume.blito () ~src ~dst; reset src)
 
-  BENCH_INDEXED "Blit_fill" len lengths =
+  let%bench_fun "Blit_fill" [@indexed len = lengths] =
     let src = create ~len in
     let dst = create ~len in
     (fun () -> Blit_fill.blito () ~src ~dst; reset dst)
 
-  BENCH_INDEXED "Blit_consume_and_fill" len lengths =
+  let%bench_fun "Blit_consume_and_fill" [@indexed len = lengths] =
     let src = create ~len in
     let dst = create ~len in
     (fun () -> Blit_consume_and_fill.blito () ~src ~dst; reset src; reset dst)
 
-  BENCH_INDEXED "Blit.unsafe_blit [overlap]" len lengths =
+  let%bench_fun "Blit.unsafe_blit [overlap]" [@indexed len = lengths] =
     let t = create ~len:(len + 1) in
     (fun () -> Blit.unsafe_blit ~src:t ~dst:t ~len ~src_pos:0 ~dst_pos:1)
 
-end
+end)
 
-BENCH_MODULE "Poke tests" = struct
+let%bench_module "Poke tests" = (module struct
   let offsets = List.init 9 ~f:Fn.id
   let iobuf = create ~len:100
 
   (* We test at different offsets to see if various byte alignments have a significant
      effect on performance. *)
-  BENCH_INDEXED "char"      pos offsets = (fun () -> Poke.char      iobuf ~pos 'a')
-  BENCH_INDEXED "uint8"     pos offsets = (fun () -> Poke.uint8     iobuf ~pos pos)
-  BENCH_INDEXED "int8"      pos offsets = (fun () -> Poke.int8      iobuf ~pos pos)
-  BENCH_INDEXED "int16_be"  pos offsets = (fun () -> Poke.int16_be  iobuf ~pos pos)
-  BENCH_INDEXED "int16_le"  pos offsets = (fun () -> Poke.int16_le  iobuf ~pos pos)
-  BENCH_INDEXED "uint16_be" pos offsets = (fun () -> Poke.uint16_be iobuf ~pos pos)
-  BENCH_INDEXED "uint16_le" pos offsets = (fun () -> Poke.uint16_le iobuf ~pos pos)
-  BENCH_INDEXED "int32_be"  pos offsets = (fun () -> Poke.int32_be  iobuf ~pos pos)
-  BENCH_INDEXED "int32_le"  pos offsets = (fun () -> Poke.int32_le  iobuf ~pos pos)
-  BENCH_INDEXED "uint32_be" pos offsets = (fun () -> Poke.uint32_be iobuf ~pos pos)
-  BENCH_INDEXED "uint32_le" pos offsets = (fun () -> Poke.uint32_le iobuf ~pos pos)
-  BENCH_INDEXED "int64_be"  pos offsets = (fun () -> Poke.int64_be  iobuf ~pos pos)
-  BENCH_INDEXED "int64_le"  pos offsets = (fun () -> Poke.int64_le  iobuf ~pos pos)
-end
+  let%bench_fun "char"      [@indexed pos = offsets] = (fun () -> Poke.char      iobuf ~pos 'a')
+  let%bench_fun "uint8"     [@indexed pos = offsets] = (fun () -> Poke.uint8     iobuf ~pos pos)
+  let%bench_fun "int8"      [@indexed pos = offsets] = (fun () -> Poke.int8      iobuf ~pos pos)
+  let%bench_fun "int16_be"  [@indexed pos = offsets] = (fun () -> Poke.int16_be  iobuf ~pos pos)
+  let%bench_fun "int16_le"  [@indexed pos = offsets] = (fun () -> Poke.int16_le  iobuf ~pos pos)
+  let%bench_fun "uint16_be" [@indexed pos = offsets] = (fun () -> Poke.uint16_be iobuf ~pos pos)
+  let%bench_fun "uint16_le" [@indexed pos = offsets] = (fun () -> Poke.uint16_le iobuf ~pos pos)
+  let%bench_fun "int32_be"  [@indexed pos = offsets] = (fun () -> Poke.int32_be  iobuf ~pos pos)
+  let%bench_fun "int32_le"  [@indexed pos = offsets] = (fun () -> Poke.int32_le  iobuf ~pos pos)
+  let%bench_fun "uint32_be" [@indexed pos = offsets] = (fun () -> Poke.uint32_be iobuf ~pos pos)
+  let%bench_fun "uint32_le" [@indexed pos = offsets] = (fun () -> Poke.uint32_le iobuf ~pos pos)
+  let%bench_fun "int64_be"  [@indexed pos = offsets] = (fun () -> Poke.int64_be  iobuf ~pos pos)
+  let%bench_fun "int64_le"  [@indexed pos = offsets] = (fun () -> Poke.int64_le  iobuf ~pos pos)
+end)
 
-BENCH_MODULE "Peek tests" = struct
+let%bench_module "Peek tests" = (module struct
   let offsets = List.init 9 ~f:Fn.id
   let iobuf = of_string (String.make 100 '\000')
 
-  BENCH_INDEXED "char"      pos offsets = (fun () -> ignore (Peek.char      iobuf ~pos))
-  BENCH_INDEXED "uint8"     pos offsets = (fun () -> ignore (Peek.uint8     iobuf ~pos))
-  BENCH_INDEXED "int8"      pos offsets = (fun () -> ignore (Peek.int8      iobuf ~pos))
-  BENCH_INDEXED "int16_be"  pos offsets = (fun () -> ignore (Peek.int16_be  iobuf ~pos))
-  BENCH_INDEXED "int16_le"  pos offsets = (fun () -> ignore (Peek.int16_le  iobuf ~pos))
-  BENCH_INDEXED "uint16_be" pos offsets = (fun () -> ignore (Peek.uint16_be iobuf ~pos))
-  BENCH_INDEXED "uint16_le" pos offsets = (fun () -> ignore (Peek.uint16_le iobuf ~pos))
-  BENCH_INDEXED "int32_be"  pos offsets = (fun () -> ignore (Peek.int32_be  iobuf ~pos))
-  BENCH_INDEXED "int32_le"  pos offsets = (fun () -> ignore (Peek.int32_le  iobuf ~pos))
-  BENCH_INDEXED "uint32_be" pos offsets = (fun () -> ignore (Peek.uint32_be iobuf ~pos))
-  BENCH_INDEXED "uint32_le" pos offsets = (fun () -> ignore (Peek.uint32_le iobuf ~pos))
-  BENCH_INDEXED "int64_be"  pos offsets = (fun () -> ignore (Peek.int64_be  iobuf ~pos))
-  BENCH_INDEXED "int64_le"  pos offsets = (fun () -> ignore (Peek.int64_le  iobuf ~pos))
-end
+  let%bench_fun "char"      [@indexed pos = offsets] = (fun () -> ignore (Peek.char      iobuf ~pos))
+  let%bench_fun "uint8"     [@indexed pos = offsets] = (fun () -> ignore (Peek.uint8     iobuf ~pos))
+  let%bench_fun "int8"      [@indexed pos = offsets] = (fun () -> ignore (Peek.int8      iobuf ~pos))
+  let%bench_fun "int16_be"  [@indexed pos = offsets] = (fun () -> ignore (Peek.int16_be  iobuf ~pos))
+  let%bench_fun "int16_le"  [@indexed pos = offsets] = (fun () -> ignore (Peek.int16_le  iobuf ~pos))
+  let%bench_fun "uint16_be" [@indexed pos = offsets] = (fun () -> ignore (Peek.uint16_be iobuf ~pos))
+  let%bench_fun "uint16_le" [@indexed pos = offsets] = (fun () -> ignore (Peek.uint16_le iobuf ~pos))
+  let%bench_fun "int32_be"  [@indexed pos = offsets] = (fun () -> ignore (Peek.int32_be  iobuf ~pos))
+  let%bench_fun "int32_le"  [@indexed pos = offsets] = (fun () -> ignore (Peek.int32_le  iobuf ~pos))
+  let%bench_fun "uint32_be" [@indexed pos = offsets] = (fun () -> ignore (Peek.uint32_be iobuf ~pos))
+  let%bench_fun "uint32_le" [@indexed pos = offsets] = (fun () -> ignore (Peek.uint32_le iobuf ~pos))
+  let%bench_fun "int64_be"  [@indexed pos = offsets] = (fun () -> ignore (Peek.int64_be  iobuf ~pos))
+  let%bench_fun "int64_le"  [@indexed pos = offsets] = (fun () -> ignore (Peek.int64_le  iobuf ~pos))
+end)
 
-BENCH_MODULE "Fill.decimal tests" = struct
+let%bench_module "Fill.decimal tests" = (module struct
   (* Quantify the gain from our version of [Fill.decimal] over [Int.to_string]. *)
   let values =
     [ Int.min_value; Int.min_value + 1; -10_000; 0; 35; 1_000; 1_000_000; Int.max_value ]
   let iobuf = create ~len:32
 
-  BENCH_INDEXED "Fill.decimal" x values =
+  let%bench_fun "Fill.decimal" [@indexed x = values] =
     (fun () -> reset iobuf; Fill.decimal iobuf x)
-  BENCH_INDEXED "Unsafe.Fill.decimal" x values =
+  let%bench_fun "Unsafe.Fill.decimal" [@indexed x = values] =
     (fun () -> reset iobuf; Unsafe.Fill.decimal iobuf x)
-  BENCH_INDEXED "Unsafe.Fill.string Int.to_string" x values =
+  let%bench_fun "Unsafe.Fill.string Int.to_string" [@indexed x = values] =
     (fun () -> reset iobuf; Fill.string iobuf (Int.to_string x))
-end
+end)
+
+(* In an attempt to verify how much a phys_equal check could optimize
+   [set_bounds_and_buffer], in the soon-to-be-common protogen use case,
+   here is the result on tot-qdv-perf2 with cross module inlining:
+
+   ┌────────────────────────────────────────────────────────┬──────────┬─────────┬────────────┐
+   │ Name                                                   │ Time/Run │ mWd/Run │ Percentage │
+   ├────────────────────────────────────────────────────────┼──────────┼─────────┼────────────┤
+   │ [iobuf.ml:set_bounds_and_buffer] with-write-barrier    │   7.78ns │         │    100.00% │
+   │ [iobuf.ml:set_bounds_and_buffer] without-write-barrier │   3.92ns │         │     50.40% │
+   │ [iobuf.ml:set_bounds_and_buffer] with-gc               │   5.34ns │   6.00w │     68.65% │
+   └────────────────────────────────────────────────────────┴──────────┴─────────┴────────────┘
+
+   and here is the code for the benchmark:
+
+   {[
+     let orig_set_bounds_and_buffer ~src ~dst =
+       dst.lo_min <- src.lo_min;
+       dst.lo <- src.lo;
+       dst.hi <- src.hi;
+       dst.hi_max <- src.hi_max;
+       dst.buf <- src.buf
+     ;;
+
+     let new_set_bounds_and_buffer = set_bounds_and_buffer
+
+     let%bench_module "set_bounds_and_buffer" = (
+       module struct
+         let src = create ~len:32
+         let dst = create ~len:32
+
+         let%bench_fun "with-write-barrier" =
+           (fun () -> orig_set_bounds_and_buffer ~src ~dst)
+         let%bench_fun "without-write-barrier" =
+           (fun () -> new_set_bounds_and_buffer ~src ~dst)
+         let%bench_fun "with-gc" =
+           (fun () -> sub_shared src)
+       end)
+   ]} *)

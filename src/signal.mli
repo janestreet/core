@@ -1,6 +1,6 @@
 open Core_kernel.Std
 
-type t with bin_io, sexp
+type t [@@deriving bin_io, sexp]
 
 include Comparable.S with type t := t
 include Hashable.S with type t := t
@@ -33,7 +33,7 @@ type sys_behavior = [
 | `Stop      (** Stop the process *)
 | `Terminate (** Terminate the process *)
 ]
-with sexp
+[@@deriving sexp]
 
 (** [default_sys_behavior t]
     Query the default system behavior for a signal.
@@ -46,7 +46,7 @@ val handle_default : t -> unit
 (** [ignore t] is [set t `Ignore]. *)
 val ignore : t -> unit
 
-type pid_spec = [ `Pid of Pid.t | `My_group | `Group of Pid.t ]
+type pid_spec = [ `Pid of Pid.t | `My_group | `Group of Pid.t ] [@@deriving sexp_of]
 
 (** [send signal pid_spec] sends [signal] to the processes specified by [pid_spec].
 

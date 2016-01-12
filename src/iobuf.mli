@@ -21,8 +21,8 @@
 open Core_kernel.Std
 open Iobuf_intf
 
-type nonrec seek    = seek    with sexp_of
-type nonrec no_seek = no_seek with sexp_of
+type nonrec seek    = seek    [@@deriving sexp_of]
+type nonrec no_seek = no_seek [@@deriving sexp_of]
 
 (** The first type parameter controls whether the iobuf can be written to.  The second
     type parameter controls whether the window and limits can be changed.
@@ -33,9 +33,9 @@ type nonrec no_seek = no_seek with sexp_of
     as the type argument to [t].  Using [_] allows the function to be directly applied to
     either permission.  Using a specific permission would require code to use coercion
     [:>]. *)
-type (-'data_perm_read_write, +'seek_permission) t with sexp_of
+type (-'data_perm_read_write, +'seek_permission) t [@@deriving sexp_of]
 
-include Invariant.S2 with type ('a, 'b) t := ('a, 'b) t
+include Invariant.S2 with type ('rw, 'seek) t := ('rw, 'seek) t
 
 (** {1 Creation} *)
 
@@ -271,6 +271,8 @@ module Peek : sig
   module To_string    : Blit.S_distinct with type src := src with type dst := string
   module To_bigstring : Blit.S_distinct with type src := src with type dst := Bigstring.t
 
+  val index : ([> read], _) t -> ?pos:int -> ?len:int -> char -> int option
+
   include
     Accessors
     with type ('a, 'd, 'w) t = ('d, 'w) t -> pos:int -> 'a
@@ -314,7 +316,7 @@ val crc32 : ([> read], _) t -> Int63.t
     Don't use these without a good reason, as they are incompatible with similar functions
     in [Reader] and [Writer].  They use a 4-byte length rather than an 8-byte length. *)
 val fill_bin_prot
-  : (read_write, seek) t -> 'a Bin_prot.Type_class.writer -> 'a -> unit Or_error.t
+  : ([> write], seek) t -> 'a Bin_prot.Type_class.writer -> 'a -> unit Or_error.t
 val consume_bin_prot
   : ([> read] , seek) t -> 'a Bin_prot.Type_class.reader -> 'a Or_error.t
 
@@ -412,28 +414,47 @@ end
 
 (** {1 I/O} *)
 
+type ok_or_eof = Ok | Eof [@@deriving compare, sexp_of]
+
 (** [Iobuf] has analogs of various [Bigstring] functions.  These analogs advance by the
     amount written/read. *)
-val read_assume_fd_is_nonblocking
-  : (read_write, seek) t -> Unix.File_descr.t -> Syscall_result.Unit.t
-val pread_assume_fd_is_nonblocking
-  : (read_write, seek) t -> Unix.File_descr.t -> offset:int -> unit
-val recvfrom_assume_fd_is_nonblocking
-  : (read_write, seek) t -> Unix.File_descr.t -> Unix.sockaddr
+val input : ([> write], seek) t -> In_channel.t      -> ok_or_eof
+val read  : ([> write], seek) t -> Unix.File_descr.t -> ok_or_eof
 
+val read_assume_fd_is_nonblocking
+  : ([> write], seek) t -> Unix.File_descr.t -> Syscall_result.Unit.t
+val pread_assume_fd_is_nonblocking
+  : ([> write], seek) t -> Unix.File_descr.t -> offset:int -> unit
+val recvfrom_assume_fd_is_nonblocking
+  : ([> write], seek) t -> Unix.File_descr.t -> Unix.sockaddr
+
+(** [recvmmsg]'s context comprises data needed by the system call.  Setup can be
+    expensive, particularly for many buffers.
+
+    NOTE: Unlike most system calls involving Iobufs, the lo offset is not respected.
+    Instead, the Iobuf is implicity [reset] (i.e. [lo <- lo_min] and [hi <- hi_max]) prior
+    to reading and a [flip_lo] applied afterward.  This is to prevent the memory-unsafe
+    case where an iobuf's lo pointer is advanced and recvmmsg attempts to copy into memory
+    exceeding the underlying [bigstring]'s capacity.  If any of the returned Iobufs have
+    had their underlying bigstring or limits changed (e.g. through a call to
+    [set_bounds_and_buffer] or [narrow_lo]), the call will fail with EINVAL.
+*)
+module Recvmmsg_context : sig
+  type ('rw, 'seek) iobuf
+  type t
+
+  (** Do not change these [Iobuf]'s [buf]s or limits before calling
+      [recvmmsg_assume_fd_is_nonblocking]. *)
+  val create : ([> write], seek) iobuf array -> t
+end with type ('rw, 'seek) iobuf := ('rw, 'seek) t
+
+(** [recvmmsg_assume_fd_is_nonblocking fd context] returns the number of [context] iobufs
+    read into (or [errno]).  [fd] must not block.  [THREAD_IO_CUTOFF] is ignored.
+
+    [EINVAL] is returned if an [Iobuf] passed to [Recvmmsg_context.create] has its [buf]
+    or limits changed. *)
 val recvmmsg_assume_fd_is_nonblocking
-  : (Unix.File_descr.t
-     -> ?count:int
-     -> ?srcs:Unix.sockaddr array
-     -> (read_write, seek) t array
-     -> Unix.Syscall_result.Int.t)
-      Or_error.t
-val recvmmsg_assume_fd_is_nonblocking_no_options
-  : (Unix.File_descr.t
-     -> count:int
-     -> (read_write, seek) t array
-     -> Unix.Syscall_result.Int.t)
-      Or_error.t
+  : (Unix.File_descr.t -> Recvmmsg_context.t -> Unix.Syscall_result.Int.t) Or_error.t
 
 val send_nonblocking_no_sigpipe
   :  unit
@@ -448,6 +469,10 @@ val sendto_nonblocking_no_sigpipe
       -> Unix.sockaddr
       -> Unix.Syscall_result.Unit.t
      ) Or_error.t
+
+val output : ([> read], seek) t -> Out_channel.t     -> unit
+val write  : ([> read], seek) t -> Unix.File_descr.t -> unit
+
 val write_assume_fd_is_nonblocking
   : ([> read], seek) t -> Unix.File_descr.t -> unit
 val pwrite_assume_fd_is_nonblocking
@@ -456,17 +481,27 @@ val pwrite_assume_fd_is_nonblocking
 (** {1 Expert} *)
 
 (** The [Expert] module is for building efficient out-of-module [Iobuf] abstractions.
-
-    They will not allocate, and are mainly here to assist in building low-cost syscall
-    wrappers.
-
-    One must be careful to avoid writing out of the limits (between [lo_min] and [hi_max])
-    of the [buf].  Doing so would violate the invariants of the parent [Iobuf].
 *)
 module Expert: sig
+  (** These accessors will not allocate, and are mainly here to assist in building
+      low-cost syscall wrappers.
+
+      One must be careful to avoid writing out of the limits (between [lo_min] and
+      [hi_max]) of the [buf].  Doing so would violate the invariants of the parent
+      [Iobuf].
+  *)
   val buf:    (_, _) t -> Bigstring.t
   val hi_max: (_, _) t -> int
   val hi:     (_, _) t -> int
   val lo:     (_, _) t -> int
   val lo_min: (_, _) t -> int
+
+  (** [to_bigstring_shared t] and [to_iobuf_shared t] allocate new wrappers around the
+      storage of [buf t], relative to [t]'s current bounds.
+
+      These operations allow access outside the bounds and limits of [t], and without
+      respect to its read/write access.  Be careful not to violate [t]'s invariants.
+  *)
+  val to_bigstring_shared : ?pos:int -> ?len:int -> (_, _) t -> Bigstring.t
+  val to_iovec_shared     : ?pos:int -> ?len:int -> (_, _) t -> Bigstring.t Unix.IOVec.t
 end

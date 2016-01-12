@@ -1,0 +1,34 @@
+version = "$(pkg_version)"
+description = "Industrial strength alternative to OCaml's standard library"
+requires = "bin_prot core.version_util_fallback core_kernel fieldslib ppx_assert.runtime-lib ppx_bench.runtime-lib ppx_expect.collector ppx_inline_test.runtime-lib sexplib sexplib.unix threads typerep variantslib"
+archive(byte          ) = "core.cma"
+archive(native        ) = "core.cmxa"
+archive(native, plugin) = "core.cmxs"
+exists_if = "core.cma"
+
+package "top" (
+  version = "$(pkg_version)"
+  description = ""
+  requires = "compiler-libs core"
+  archive(byte          ) = "core_top.cma"
+  archive(native        ) = "core_top.cmxa"
+  archive(native, plugin) = "core_top.cmxs"
+  exists_if = "core_top.cma"
+)
+
+package "version_util_fallback" (
+  version = "$(pkg_version)"
+  description = ""
+  requires = ""
+  archive(byte          ) = "version_util_fallback.cma"
+  archive(native        ) = "version_util_fallback.cmxa"
+  archive(native, plugin) = "version_util_fallback.cmxs"
+  exists_if = "version_util_fallback.cma"
+)
+
+package "syntax" (
+ version = "$(pkg_version)"
+ description = "Metapackage for syntax extensions of the Core suite"
+ requires = "sexplib.syntax fieldslib.syntax variantslib.syntax comparelib.syntax bin_prot.syntax custom_printf.syntax pa_pipebang herelib.syntax"
+ archive(syntax, preprocessor) = "-ignore dummy"
+)

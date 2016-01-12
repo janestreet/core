@@ -1,11 +1,9 @@
 (* This file is a modified version of unixLabels.mli from the OCaml distribution. *)
-INCLUDE "core_config.mlh"
-
 open Core_kernel.Std
 
 (** File descriptor. *)
 module File_descr : sig
-  type t = Unix.file_descr with bin_io, sexp
+  type t = Unix.file_descr [@@deriving bin_io, sexp]
 
   include Equal     .S with type t := t
   include Hashable  .S with type t := t
@@ -97,7 +95,7 @@ type error =
     | EOVERFLOW           (** File size or position not representable *)
 
     | EUNKNOWNERR of int  (** Unknown error *)
-with sexp
+[@@deriving sexp]
 
 module Error : sig
   (** The type of error codes.  Errors defined in the POSIX standard and additional
@@ -174,7 +172,7 @@ module Error : sig
     | EOVERFLOW           (** File size or position not representable *)
 
     | EUNKNOWNERR of int  (** Unknown error *)
-  with sexp
+  [@@deriving sexp]
 
   val of_system_int : errno:int -> t
 
@@ -234,9 +232,9 @@ val unsetenv : string -> unit
 
 (** The termination status of a process. *)
 module Exit : sig
-  type error = [ `Exit_non_zero of int ] with compare, sexp
+  type error = [ `Exit_non_zero of int ] [@@deriving compare, sexp]
 
-  type t = (unit, error) Result.t with compare, sexp
+  type t = (unit, error) Result.t [@@deriving compare, sexp]
 
   val to_string_hum : t -> string
 
@@ -246,9 +244,9 @@ module Exit : sig
 end
 
 module Exit_or_signal : sig
-  type error = [ Exit.error | `Signal of Signal.t ] with compare, sexp
+  type error = [ Exit.error | `Signal of Signal.t ] [@@deriving compare, sexp]
 
-  type t = (unit, error) Result.t with compare, sexp
+  type t = (unit, error) Result.t [@@deriving compare, sexp]
 
   (** [of_unix] assumes that any signal numbers in the incoming value are O'Caml internal
       signal numbers. *)
@@ -259,9 +257,9 @@ module Exit_or_signal : sig
 end
 
 module Exit_or_signal_or_stop : sig
-  type error = [ Exit_or_signal.error | `Stop of Signal.t ] with sexp
+  type error = [ Exit_or_signal.error | `Stop of Signal.t ] [@@deriving sexp]
 
-  type t = (unit, error) Result.t with sexp
+  type t = (unit, error) Result.t [@@deriving sexp]
 
   (** [of_unix] assumes that any signal numbers in the incoming value are O'Caml internal
       signal numbers. *)
@@ -284,7 +282,7 @@ type env = [ `Replace of (string * string) list
            | `Extend of (string * string) list
            | `Replace_raw of string list
            ]
-with sexp
+[@@deriving sexp]
 
 (** [exec ~prog ~args ?search_path ?env] execs [prog] with [args].  If [use_path = true]
     (the default) and [prog] doesn't contain a slash, then [exec] searches the [PATH]
@@ -334,7 +332,7 @@ type wait_on =
   | `My_group
   | `Pid of Pid.t
   ]
-with sexp
+[@@deriving sexp]
 
 
 val wait
@@ -371,7 +369,7 @@ val getppid : unit -> Pid.t option
 val getppid_exn : unit -> Pid.t
 
 module Thread_id : sig
-  type t with sexp_of, bin_io
+  type t [@@deriving sexp_of, bin_io]
   include Comparable.S with type t := t
   val to_int : t -> int
 end
@@ -422,7 +420,7 @@ val open_flag_of_sexp : Sexp.t -> open_flag
 val sexp_of_open_flag : open_flag -> Sexp.t
 
 (** The type of file access rights. *)
-type file_perm = int with sexp
+type file_perm = int [@@deriving sexp]
 
 (** Open the named file with the given flags. Third argument is the permissions to give to
     the file if it is created. Return a file descriptor on the named file. Default
@@ -434,7 +432,7 @@ module Open_flags : sig
       open-file-descriptor table.  It deals with the same thing as OCaml's [open_flag]
       type; however, it uses Core's [Flags] approach and the underlying integer bitmask
       representation, and so interoperates more smoothly with C. *)
-  type t with sexp_of
+  type t [@@deriving sexp_of]
 
   include Flags.S with type t := t
 
@@ -554,7 +552,7 @@ type seek_command =
       SEEK_SET (** indicates positions relative to the beginning of the file *)
     | SEEK_CUR (** indicates positions relative to the current position *)
     | SEEK_END (** indicates positions relative to the end of the file *)
-with sexp
+[@@deriving sexp]
 
 (** Set the current position for a file descriptor *)
 val lseek : File_descr.t -> int64 -> mode:seek_command -> int64
@@ -577,7 +575,7 @@ type file_kind =
     | S_LNK                   (** Symbolic link *)
     | S_FIFO                  (** Named pipe *)
     | S_SOCK                  (** Socket *)
-  with sexp
+  [@@deriving sexp]
 
 (** The informations returned by the {!UnixLabels.stat} calls. *)
 type stats =
@@ -596,7 +594,7 @@ type stats =
       st_atime : float;                   (** Last access time *)
       st_mtime : float;                   (** Last modification time *)
       st_ctime : float                    (** Last status change time *)
-    } with sexp
+    } [@@deriving sexp]
 
 (** Return the information for the named file. *)
 val stat : string -> stats
@@ -630,7 +628,7 @@ module Native_file : sig
         st_mtime : float;                   (** Last modification time *)
         st_ctime : float                    (** Last status change time *)
       }
-  with sexp
+  [@@deriving sexp]
 
   (** Return the information for the named file. *)
   val stat : string -> stats
@@ -660,7 +658,7 @@ type lock_command =
     | F_TEST   (** Test a region for other process locks *)
     | F_RLOCK  (** Lock a region for reading, and block if already locked *)
     | F_TRLOCK (** Lock a region for reading, or fail if already locked *)
-with sexp
+[@@deriving sexp]
 
 (** [lockf fd cmd size] place a lock on a file_descr that prevents any other process from
  * calling lockf successfully on the same file.  Due to a limitation in the current
@@ -828,7 +826,7 @@ module Process_info : sig
       stdout: File_descr.t;
       stderr: File_descr.t
     }
-  with sexp
+  [@@deriving sexp]
 end
 
 (** Low-level process *)
@@ -919,38 +917,34 @@ val readlink : string -> string
 
 (** {6 Polling} *)
 
-(** Wait until some input/output operations become possible on
-   some channels. The three list arguments are, respectively, a set
-   of descriptors to check for reading (first argument), for writing
-   (second argument), or for exceptional conditions (third argument).
-   The fourth argument is the maximal timeout, in seconds; a
-   negative fourth argument means no timeout (unbounded wait).
-   The result is composed of three sets of descriptors: those ready
-   for reading (first component), ready for writing (second component),
-   and over which an exceptional condition is pending (third
-   component). *)
 module Select_fds : sig
   type t =
-    { read : File_descr.t list;
-      write : File_descr.t list;
+    { read   : File_descr.t list;
+      write  : File_descr.t list;
       except : File_descr.t list;
     }
-  with sexp_of
+  [@@deriving sexp_of]
 
   val empty : t
 end
 
 type select_timeout = [ `Never | `Immediately | `After of Core_kernel.Time_ns.Span.t ]
-with sexp_of
+[@@deriving sexp_of]
 
-(** Setting restart to true means that we want select to restart automatically
-    on EINTR (instead of propagating the exception)... *)
+(** Wait until some input/output operations become possible on some channels.  The three
+    list arguments are a set of descriptors to check for reading, for writing, or for
+    exceptional conditions.  [~timeout] is the maximal timeout.  The result is composed of
+    three sets of descriptors: those ready for reading, ready for writing, and over which
+    an exceptional condition is pending.
+
+    Setting restart to true means that we want [select] to restart automatically on EINTR
+    (instead of propagating the exception)... *)
 val select
-  :  ?restart:bool (* defaults to false *)
-  -> read:File_descr.t list
-  -> write:File_descr.t list
-  -> except:File_descr.t list
-  -> timeout:select_timeout
+  :  ?restart : bool  (** defaults to [false] *)
+  -> read     : File_descr.t list
+  -> write    : File_descr.t list
+  -> except   : File_descr.t list
+  -> timeout  : select_timeout
   -> unit
   -> Select_fds.t
 
@@ -967,7 +961,7 @@ type process_times =
       tms_cutime : float;         (** User time for the children processes *)
       tms_cstime : float;         (** System time for the children processes *)
     }
-with sexp
+[@@deriving sexp]
 
 (** The type representing wallclock time and calendar date. *)
 type tm =
@@ -982,7 +976,7 @@ type tm =
       tm_yday : int;                      (** Day of year 0..365 *)
       tm_isdst : bool;                    (** Daylight time savings in effect *)
     }
-with sexp
+[@@deriving sexp]
 
 (** Return the current time since 00:00:00 GMT, Jan. 1, 1970, in seconds. *)
 val time : unit -> float
@@ -1023,9 +1017,8 @@ val alarm : int -> int
 val sleep : int -> unit
 
 (** [nanosleep f] delays execution of the program for at least [f] seconds.  The function
-  can return earlier if a signal has been delivered, in which case the number of
-  seconds left is returned.  Any other failure raises an exception.
- *)
+    can return earlier if a signal has been delivered, in which case the number of seconds
+    left is returned.  Any other failure raises an exception. *)
 val nanosleep : float -> float
 
 (** Return the execution times of the process. *)
@@ -1047,7 +1040,7 @@ type interval_timer =
       (** (for profiling) decrements both when the process
          is running and when the system is running on behalf of the
          process; it sends [SIGPROF] when expired. *)
-with sexp
+[@@deriving sexp]
 
 (** The type describing the status of an interval timer *)
 type interval_timer_status =
@@ -1055,7 +1048,7 @@ type interval_timer_status =
     { it_interval : float;          (** Period *)
       it_value : float;             (** Current value of the timer *)
     }
-with sexp
+[@@deriving sexp]
 
 (** Return the current status of the given interval timer. *)
 val getitimer : interval_timer -> interval_timer_status
@@ -1108,7 +1101,7 @@ module Passwd : sig
       dir : string;
       shell : string;
     }
-  with sexp
+  [@@deriving compare, sexp]
 
   val getbyname : string -> t option
   val getbyname_exn : string -> t
@@ -1116,8 +1109,8 @@ module Passwd : sig
   val getbyuid : int -> t option
   val getbyuid_exn : int -> t
 
-  (** [getpwents] is a thread-safe wrapper over the low-level passwd database
-      functions. *)
+  (** [getpwents] is a thread-safe wrapper over the low-level passwd database functions.
+      The order in which the results are returned is not deterministic. *)
   val getpwents : unit -> t list
 
   module Low_level : sig
@@ -1139,7 +1132,7 @@ module Group : sig
       gid : int;
       mem : string array;
     }
-  with sexp_of
+  [@@deriving sexp_of]
 
   val getbyname : string -> t option
   val getbyname_exn : string -> t
@@ -1151,13 +1144,24 @@ end
 val getlogin : unit -> string
 
 module Protocol_family : sig
-  type t = [ `Unix | `Inet | `Inet6 ] with bin_io, sexp
+  type t = [ `Unix | `Inet | `Inet6 ] [@@deriving bin_io, sexp]
 end
 
 (** {6 Internet addresses} *)
 
 module Inet_addr : sig
-  type t = Unix.inet_addr with bin_io, sexp
+  type t = Unix.inet_addr [@@deriving bin_io, compare, sexp_of]
+
+  (** [t_of_sexp] is deprecated because it used to block to do a DNS lookup, and we don't
+      want a sexp converter to do that.  As we transition away, one can use
+      [Blocking_sexp], which has the old behavior. *)
+  val t_of_sexp : Sexp.t -> t
+    [@@deprecated "[since 2015-10] Replace [t] by [Blocking_sexp.t]"]
+
+  (** [Blocking_sexp] performs DNS lookup to resolve hostnames to IP addresses. *)
+  module Blocking_sexp : sig
+    type t = Unix.inet_addr [@@deriving bin_io, compare, sexp]
+  end
 
   include Comparable.S with type t := t
 
@@ -1191,19 +1195,24 @@ module Inet_addr : sig
   (** [inet4_addr_to_int32_exn t = 0l] when [t = Inet_addr.of_string ("0.0.0.0")].
       An exception is raised if [t] is a not an IPv4 address. *)
   val inet4_addr_to_int32_exn : t -> Int32.t
+
+  module Stable : sig
+    module V1 : Stable with type t = t
+  end
 end
 
 (** A representation of CIDR netmasks (e.g. "192.168.0.0/24") and functions to match if a
-    given address is inside the range or not.  Only IPv4 addresses are supported. *)
+    given address is inside the range or not.  Only IPv4 addresses are supported.  Values
+    are always normalized so the base address is the lowest IP address in the range, so
+    for example [to_string (of_string "192.168.1.101/24") = "192.168.1.0/24"].
+*)
 module Cidr : sig
 
-  type t with sexp, bin_io
-
-  include Comparable.S_binable with type t := t
+  type t [@@deriving sexp, bin_io]
 
   (** [of_string] Generates a Cidr.t based on a string like ["10.0.0.0/8"].  Addresses are
       not expanded, i.e. ["10/8"] is invalid. *)
-  include Stringable.S with type t := t
+  include Identifiable.S with type t := t
 
   val create : base_address:Inet_addr.t -> bits:int -> t
 
@@ -1237,7 +1246,7 @@ type socket_domain = Unix.socket_domain =
   | PF_UNIX                             (** Unix domain *)
   | PF_INET                             (** Internet domain *)
   | PF_INET6                            (* Internet domain (IPv6) *)
-with sexp, bin_io
+[@@deriving sexp, bin_io]
 
 (** The type of socket kinds, specifying the semantics of
    communications. *)
@@ -1246,17 +1255,23 @@ type socket_type = Unix.socket_type =
   | SOCK_DGRAM                          (** Datagram socket *)
   | SOCK_RAW                            (** Raw socket *)
   | SOCK_SEQPACKET                      (* Sequenced packets socket *)
-with sexp, bin_io
+[@@deriving sexp, bin_io]
 
-(** The type of socket addresses. [ADDR_UNIX name] is a socket
-   address in the Unix domain; [name] is a file name in the file
-   system. [ADDR_INET(addr,port)] is a socket address in the Internet
-   domain; [addr] is the Internet address of the machine, and
-   [port] is the port number. *)
+(** The type of socket addresses. [ADDR_UNIX name] is a socket address in the Unix domain;
+    [name] is a file name in the file system. [ADDR_INET(addr,port)] is a socket address
+    in the Internet domain; [addr] is the Internet address of the machine, and [port] is
+    the port number. *)
 type sockaddr = Unix.sockaddr =
   | ADDR_UNIX of string
   | ADDR_INET of Inet_addr.t * int
-with sexp, bin_io
+[@@deriving bin_io, sexp_of]
+
+val sockaddr_of_sexp : Sexp.t -> sockaddr
+  [@@deprecated "[since 2015-10] Replace [sockaddr] by [sockaddr_blocking_sexp]"]
+
+(** [sockaddr_blocking_sexp] is like [sockaddr], with [of_sexp] that performs DNS lookup
+    to resolve [Inet_addr.t]. *)
+type sockaddr_blocking_sexp = sockaddr [@@deriving bin_io, sexp]
 
 (** Return the socket domain adequate for the given socket address. *)
 val domain_of_sockaddr : sockaddr -> socket_domain
@@ -1284,9 +1299,20 @@ val bind : File_descr.t -> addr:sockaddr -> unit
 (** Connect a socket to an address. *)
 val connect : File_descr.t -> addr:sockaddr -> unit
 
-(** Set up a socket for receiving connection requests. The integer
-   argument is the maximal number of pending requests. *)
-val listen : File_descr.t -> max:int -> unit
+(** Set up a socket for receiving connection requests. The integer argument is the number
+    of pending requests that will be established and queued for {!accept}.  Depending on
+    operating system, version, and configuration, subsequent connections may be refused
+    actively (as with [RST]), ignored, or effectively established and queued anyway.
+
+    Because handling of excess connections varies, it is most robust for applications to
+    accept and close excess connections if they can.  To be sure the client receives an
+    [RST] rather than an orderly shutdown, you can [setsockopt_optint file_descr SO_LINGER
+    (Some 0)] before closing.
+
+    In Linux, for example, the system configuration parameters [tcp_max_syn_backlog],
+    [tcp_abort_on_overflow], and [syncookies] can all affect connection queuing
+    behavior. *)
+val listen : File_descr.t -> backlog:int -> unit
 
 (** The type of commands for [shutdown]. *)
 type shutdown_command =
@@ -1294,7 +1320,7 @@ type shutdown_command =
       SHUTDOWN_RECEIVE                    (** Close for receiving *)
     | SHUTDOWN_SEND                       (** Close for sending *)
     | SHUTDOWN_ALL                        (** Close both *)
-with sexp
+[@@deriving sexp]
 
 (** Shutdown a socket connection. [SHUTDOWN_SEND] as second argument
    causes reads on the other end of the connection to return
@@ -1315,7 +1341,7 @@ type msg_flag = Unix.msg_flag =
     MSG_OOB
   | MSG_DONTROUTE
   | MSG_PEEK
-with sexp
+[@@deriving sexp]
 
 (** Receive data from a connected socket. *)
 val recv
@@ -1365,7 +1391,7 @@ type socket_bool_option =
   | SO_ACCEPTCONN          (* Report whether socket listening is enabled *)
   | TCP_NODELAY            (** Control the Nagle algorithm for TCP sockets *)
   | IPV6_ONLY              (** Forbid binding an IPv6 socket to an IPv4 address *)
-with sexp
+[@@deriving sexp]
 
 (** The socket options that can be consulted with {!UnixLabels.getsockopt_int}
    and modified with {!UnixLabels.setsockopt_int}.  These options have an
@@ -1377,7 +1403,7 @@ type socket_int_option =
   | SO_TYPE                (** Report the socket type *)
   | SO_RCVLOWAT            (** Minimum number of bytes to process for input operations *)
   | SO_SNDLOWAT            (* Minimum number of bytes to process for output operations *)
-with sexp
+[@@deriving sexp]
 
 (** The socket options that can be consulted with {!UnixLabels.getsockopt_optint}
    and modified with {!UnixLabels.setsockopt_optint}.  These options have a
@@ -1394,7 +1420,7 @@ with sexp                      that have data present, and for how long
 type socket_float_option =
     SO_RCVTIMEO            (** Timeout for input operations *)
   | SO_SNDTIMEO            (** Timeout for output operations *)
-with sexp
+[@@deriving sexp]
 
 (** Return the current status of a boolean-valued option
    in the given socket. *)
@@ -1461,7 +1487,7 @@ module Host : sig
       family : Protocol_family.t;
       addresses : Inet_addr.t array;
     }
-  with sexp_of
+  [@@deriving sexp_of]
 
   (** Find an entry in [hosts] with the given name.
 
@@ -1484,7 +1510,7 @@ module Protocol : sig
       aliases : string array;
       proto : int;
     }
-  with sexp
+  [@@deriving sexp]
 
   (** Find an entry in [protocols] with the given name. *)
   val getbyname : string -> t option
@@ -1503,7 +1529,7 @@ module Service : sig
       port : int;
       proto : string;
     }
-  with sexp
+  [@@deriving sexp]
 
   (** Find an entry in [services] with the given name. *)
   val getbyname : string -> protocol:string -> t option
@@ -1516,13 +1542,17 @@ end
 
 (** Address information returned by {!Unix.getaddrinfo}. *)
 type addr_info =
-  { ai_family : socket_domain;          (** Socket domain *)
-    ai_socktype : socket_type;          (** Socket type *)
-    ai_protocol : int;                  (** Socket protocol number *)
-    ai_addr : sockaddr;                 (** Address *)
-    ai_canonname : string               (* Canonical host name  *)
+  { ai_family    : socket_domain; (** Socket domain *)
+    ai_socktype  : socket_type;   (** Socket type *)
+    ai_protocol  : int;           (** Socket protocol number *)
+    ai_addr      : sockaddr;      (** Address *)
+    ai_canonname : string         (** Canonical host name *)
   }
-with sexp
+[@@deriving sexp_of]
+
+(** [addr_info_blocking_sexp] is like [addr_info], with [of_sexp] that performs DNS lookup
+    to resolve [Inet_addr.t]. *)
+type addr_info_blocking_sexp = addr_info [@@deriving sexp]
 
 (** Options to {!Unix.getaddrinfo}. *)
 type getaddrinfo_option =
@@ -1535,7 +1565,7 @@ type getaddrinfo_option =
                                             of the result *)
   | AI_PASSIVE                          (* Set address to ``any'' address
                                             for use with {!Unix.bind} *)
-with sexp
+[@@deriving sexp]
 
 (** [getaddrinfo host service opts] returns a list of {!Unix.addr_info}
     records describing socket parameters and addresses suitable for
@@ -1560,7 +1590,7 @@ type name_info =
   { ni_hostname : string;               (** Name or IP address of host *)
     ni_service : string;
   }               (** Name of service or port number *)
-with sexp
+[@@deriving sexp]
 
 (** Options to {!Unix.getnameinfo}. *)
 type getnameinfo_option =
@@ -1570,7 +1600,7 @@ type getnameinfo_option =
   | NI_NUMERICSERV       (** Always return service as port number *)
   | NI_DGRAM             (* Consider the service as UDP-based
                              instead of the default TCP *)
-with sexp
+[@@deriving sexp]
 
 (** [getnameinfo addr opts] returns the host name and service name
     corresponding to the socket address [addr].  [opts] is a possibly
@@ -1636,10 +1666,10 @@ module Terminal_io : sig
     mutable c_vtime : int;    (** Maximum read wait (in 0.1s units). *)
     mutable c_vstart : char;  (** Start character (usually ctrl-Q). *)
     mutable c_vstop : char;   (** Stop character (usually ctrl-S). *)
-  } with sexp_of
+  } [@@deriving sexp_of]
 
   type setattr_when = Unix.setattr_when = TCSANOW | TCSADRAIN | TCSAFLUSH
-  with sexp_of
+  [@@deriving sexp_of]
 
   (** Return the status of the terminal referred to by the given
       file descriptor. *)
@@ -1669,7 +1699,7 @@ module Terminal_io : sig
       TCIFLUSH
     | TCOFLUSH
     | TCIOFLUSH
-  with sexp
+  [@@deriving sexp]
 
   (** Discard data written on the given file descriptor but not yet
      transmitted, or data received but not yet read, depending on the
@@ -1684,7 +1714,7 @@ module Terminal_io : sig
   | TCOON
   | TCIOFF
   | TCION
-  with sexp
+  [@@deriving sexp]
 
   (** Suspend or restart reception or transmission of data on
      the given file descriptor, depending on the second argument:
@@ -1751,7 +1781,7 @@ module IOVec : sig
       pos : int;  (** Position of I/O-vector in buffer *)
       len : int;  (** Length of I/O-vector in buffer *)
     }
-  with sexp
+  [@@deriving sexp]
 
   type 'buf kind  (** Kind of I/O-vector buffers *)
 
@@ -1880,14 +1910,14 @@ external pselect
 
 (** {2 Resource limits} *)
 module RLimit : sig
-  type limit = Limit of int64 | Infinity with sexp
+  type limit = Limit of int64 | Infinity [@@deriving sexp]
 
   type t = {
     cur : limit;  (* soft limit *)
     max : limit;  (* hard limit (ceiling for soft limit) *)
-  } with sexp
+  } [@@deriving sexp]
 
-  type resource with sexp
+  type resource [@@deriving sexp]
 
   val core_file_size       : resource
   val cpu_seconds          : resource
@@ -1923,7 +1953,7 @@ module Resource_usage : sig
     nvcsw : int64;
     nivcsw : int64;
   }
-  with sexp, fields
+  [@@deriving sexp, fields]
 
   val get : [`Self | `Children] -> t
 
@@ -1949,7 +1979,7 @@ type sysconf =
   | PHYS_PAGES
   | AVPHYS_PAGES
   | IOV_MAX
-with sexp
+[@@deriving sexp]
 
 external sysconf : sysconf -> int64 = "unix_sysconf"
 
@@ -2012,7 +2042,7 @@ val wordexp
 (** {2 System information} *)
 
 module Utsname : sig
-  type t with sexp
+  type t [@@deriving sexp]
 
   val sysname : t -> string
   val nodename : t -> string
@@ -2076,7 +2106,7 @@ val set_mcast_ifname : File_descr.t -> string -> unit
 
 module Scheduler : sig
   module Policy : sig
-    type t = [ `Fifo | `Round_robin | `Other ] with sexp
+    type t = [ `Fifo | `Round_robin | `Other ] [@@deriving sexp]
   end
 
   (* See [man sched_setscheduler].
@@ -2095,7 +2125,7 @@ end
 (* For keeping your memory in RAM, i.e. preventing it from being swapped out. *)
 module Mman : sig
   module Mcl_flags : sig
-    type t = Current | Future with sexp
+    type t = Current | Future [@@deriving sexp]
   end
 
   (* Lock all pages in this process's virtual address space into physical memory. See [man
@@ -2107,6 +2137,55 @@ module Mman : sig
 end
 
 module Syslog : module type of Syslog
+
+(** A network interface on the local machine.  See [man getifaddrs]. *)
+module Ifaddr : sig
+  module Broadcast_or_destination : sig
+    type t =
+      | Broadcast   of Inet_addr.t
+      | Destination of Inet_addr.t
+    [@@deriving sexp_of]
+  end
+
+  module Flag : sig
+    type t =
+      | Allmulti
+      | Automedia
+      | Broadcast
+      | Debug
+      | Dynamic
+      | Loopback
+      | Master
+      | Multicast
+      | Noarp
+      | Notrailers
+      | Pointopoint
+      | Portsel
+      | Promisc
+      | Running
+      | Slave
+      | Up
+    [@@deriving enumerate, sexp_of]
+
+    include Comparable.S with type t := t
+  end
+
+  module Family : sig
+    type t = Packet | Inet4 | Inet6 [@@deriving sexp_of]
+  end
+
+  type t =
+    { name                     : string
+    ; family                   : Family.t
+    ; flags                    : Flag.Set.t
+    ; address                  : Inet_addr.t                option
+    ; netmask                  : Inet_addr.t                option
+    ; broadcast_or_destination : Broadcast_or_destination.t option
+    }
+  [@@deriving fields, sexp_of]
+end
+
+val getifaddrs : unit -> Ifaddr.t list
 
 
 (* vim: set filetype=ocaml : *)

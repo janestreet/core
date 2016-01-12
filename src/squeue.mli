@@ -2,7 +2,7 @@
 
 open Core_kernel.Std
 
-type 'a t with sexp_of
+type 'a t [@@deriving sexp_of]
 
 (** [create maxsize] returns a synchronized queue bounded to have no more than
     [maxsize] elements. *)

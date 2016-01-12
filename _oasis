@@ -1,19 +1,22 @@
-OASISFormat:      0.3
-OCamlVersion:     >= 4.00.1
-FindlibVersion:   >= 1.3.2
-Name:             core
-Version:          113.00.00
-Synopsis:         Jane Street Capital's standard library overlay
-Authors:          Jane Street Group, LLC <opensource@janestreet.com>
-Copyrights:       (C) 2008-2013 Jane Street Group LLC <opensource@janestreet.com>
-Maintainers:      Jane Street Group, LLC <opensource@janestreet.com>
-License:          Apache-2.0
-LicenseFile:      LICENSE.txt
-Homepage:         https://github.com/janestreet/core
-Plugins:          StdFiles (0.3), DevFiles (0.3), META (0.3)
-XStdFilesAUTHORS: false
-XStdFilesREADME:  false
-BuildTools:       ocamlbuild, camlp4o
+OASISFormat:           0.4
+OCamlVersion:          >= 4.02.3
+FindlibVersion:        >= 1.3.2
+Name:                  core
+Version:               113.24.00
+Synopsis:              Industrial strength alternative to OCaml's standard library
+Authors:               Jane Street Group, LLC <opensource@janestreet.com>
+Copyrights:            (C) 2008-2016 Jane Street Group LLC <opensource@janestreet.com>
+Maintainers:           Jane Street Group, LLC <opensource@janestreet.com>
+License:               Apache-2.0
+LicenseFile:           LICENSE.txt
+Homepage:              https://github.com/janestreet/core
+Plugins:               StdFiles (0.3), DevFiles (0.3), META (0.3)
+XStdFilesAUTHORS:      false
+XStdFilesREADME:       false
+BuildTools:            ocamlbuild
+AlphaFeatures:         ocamlbuild_more_args
+XOCamlbuildPluginTags: package(ppx_driver.ocamlbuild)
+FilesAB:               META.ab
 Description:
   The Core suite of libraries is an industrial strength alternative to
   OCaml's standard library that was developed by Jane Street, the
@@ -32,292 +35,119 @@ Flag "rt"
   Default$:    flag(rt_possible)
 
 PreConfCommand:  config/detect.sh
-PostConfCommand: config/discover.sh $ocamlc src/core_config.mlh src/core_config.h
+PostConfCommand: config/discover.sh $ocamlc src/config.mlh src/config.h
 
-PreDistCleanCommand: $rm src/core_config.mlh src/core_config.h
+PreDistCleanCommand: $rm src/config.mlh src/config.h
 
 Library core
-  Path:               src
-  FindlibName:        core
-  Pack:               true
-  Modules:            Bigbuffer,
-                      Bigstring_marshal,
-                      Bigstring,
-                      Caml,
-                      Check_std,
-                      Command,
-                      Core_condition,
-                      Core_filename,
-                      Core_list,
-                      Core_mutex,
-                      Core_sys,
-                      Core_thread,
-                      Core_unix,
-                      Crc,
-                      Daemon,
-                      Date0,
-                      Date,
-                      Debug,
-                      Interval_intf,
-                      Interval,
-                      Iobuf_debug,
-                      Iobuf_intf,
-                      Iobuf,
-                      Iobuf_tests,
-                      Limiter,
-                      Limiter_unit_tests,
-                      Linux_ext,
-                      Lock_file,
-                      Mutex0,
-                      Nano_mutex,
-                      Ofday,
-                      Piecewise_linear_intf,
-                      Piecewise_linear,
-                      Process_env,
-                      Signal,
-                      Span,
-                      Squeue,
-                      Stable,
-                      Std,
-                      Syscall_result_intf,
-                      Syscall_result,
-                      Syslog,
-                      Thread_safe_queue_unit_tests,
-                      Time0,
-                      Time_internal,
-                      Time,
-                      Time_ns_benchmarks,
-                      Time_ns,
-                      Time_stamp_counter,
-                      Time_stamp_counter_benchmarks,
-                      Timing_wheel_float,
-                      Timing_wheel_float_unit_tests,
-                      Unix_error,
-                      User_and_group,
-                      Uuid,
-                      Weak_hashtbl,
-                      Zone,
-# Deprecated aliases kept for compatibility
-                      Array_permute,
-                      Avltree,
-                      Bag,
-                      Bigbuffer_internal,
-                      Bigsubstring,
-                      Binable,
-                      Binable0,
-                      Binary_packing,
-                      Blang,
-                      Bool,
-                      Bounded_int_table,
-                      Bucket,
-                      Byte_units,
-                      Commutative_group,
-                      Comparable,
-                      Comparable_intf,
-                      Comparator,
-                      Constrained_float,
-                      Container,
-                      Core_arg,
-                      Core_array,
-                      Core_bin_prot,
-                      Core_char,
-                      Core_field,
-                      Core_hashtbl,
-                      Core_hashtbl_intf,
-                      Core_int,
-                      Core_int32,
-                      Core_int63,
-                      Core_int64,
-                      Core_lazy,
-                      Core_map,
-                      Core_map_intf,
-                      Core_map_unit_tests,
-                      Core_nativeint,
-                      Core_printexc,
-                      Core_printf,
-                      Core_random,
-                      Core_set,
-                      Core_set_intf,
-                      Core_set_unit_tests,
-                      Core_sexp,
-                      Core_stack,
-                      Core_string,
-                      Day_of_week,
-                      Dequeue,
-                      Doubly_linked,
-                      Equal,
-                      Error,
-                      Exn,
-                      Flags,
-                      Flags_intf,
-                      Float,
-                      Float_intf,
-                      Float_robust_compare,
-                      Floatable,
-                      Fn,
-                      Force_once,
-                      Fqueue,
-                      Hash_heap,
-                      Hash_queue,
-                      Hash_set,
-                      Hash_set_intf,
-                      Hashable,
-                      Heap,
-                      Heap_block,
-                      Host_and_port,
-                      Identifiable,
-                      In_channel,
-                      Info,
-                      Int_conversions,
-                      Int_intf,
-                      Int_replace_polymorphic_compare,
-                      Int_set,
-                      Intable,
-                      Interfaces,
-                      Invariant,
-                      Make_substring,
-                      Memo,
-                      Monad,
-                      Month,
-                      Never_returns,
-                      No_polymorphic_compare,
-                      Nothing,
-                      Nothing0,
-                      Only_in_test,
-                      Option,
-                      Or_error,
-                      Ordered_collection_common,
-                      Ordering,
-                      Out_channel,
-                      Pid,
-                      Polymorphic_compare,
-                      Polymorphic_compare_intf,
-                      Pretty_printer,
-                      Ref,
-                      Result,
-                      Robustly_comparable,
-                      Set_once,
-                      Sexpable,
-                      Source_code_position,
-                      Source_code_position0,
-                      Stable_containers,
-                      Stable_internal,
-                      Stable_unit_test,
-                      Stable_unit_test_intf,
-                      Staged,
-                      Std_common,
-                      Std_internal,
-                      Std_kernel,
-                      String_id,
-                      Stringable,
-                      Substring,
-                      Substring_intf,
-                      T,
-                      Tuple,
-                      Type_equal,
-                      Union_find,
-                      Unique_id,
-                      Unique_id_intf,
-                      Unit,
-                      Univ,
-                      Univ_map,
-                      Unpack_buffer,
-                      Validate,
-                      Word_size
-  CSources:           bigstring_stubs.c,
-                      crc_stubs.c,
-                      includes.h,
-                      iobuf.h,
-                      iobuf_stubs.c,
-                      jane_common.h,
-                      linux_ext_stubs.c,
-                      nanosecond_stat.h,
-                      ocaml_utils.h,
-                      ocaml_utils_macros.h,
-                      ocaml_utils_stubs.c,
-                      recvmmsg.c,
-                      recvmmsg.h,
-                      signal_stubs.c,
-                      socketaddr.h,
-                      syslog_stubs.c,
-                      timespec.c,
-                      timespec.h,
-                      time_ns_stubs.c,
-                      time_stamp_counter_stubs.c,
-                      unix_stubs.c,
-                      unix_time_stubs.c,
-                      unix_utils.h,
-                      core_config.h
-  BuildDepends:       bigarray,
-                      bin_prot,
-                      bin_prot.syntax,
-                      comparelib.syntax,
-                      core_kernel,
-                      custom_printf,
-                      custom_printf.syntax,
-                      enumerate.syntax,
-                      fieldslib,
-                      fieldslib.syntax,
-                      herelib,
-                      herelib.syntax,
-                      pa_bench,
-                      pa_bench.syntax,
-                      pa_ounit,
-                      pa_ounit.syntax,
-                      pa_pipebang,
-                      pa_structural_sexp,
-                      pa_structural_sexp.syntax,
-                      pa_test,
-                      pa_test.syntax,
-                      sexplib,
-                      sexplib.syntax,
-                      sexplib_unix,
-                      typerep_lib,
-                      typerep_lib.syntax,
-                      unix,
-                      variantslib,
-                      variantslib.syntax,
-                      threads
-  XMETARequires:      bin_prot,
-                      core_kernel,
-                      custom_printf,
-                      variantslib,
-                      sexplib,
-                      sexplib_unix,
-                      enumerate,
-                      fieldslib,
-                      bigarray,
-                      pa_bench,
-                      pa_ounit,
-                      pa_structural_sexp,
-                      pa_test,
-                      unix,
-                      threads,
-                      typerep_lib
-  XMETAExtraLines:    archive(byte, toploop) += "core_top.cma"
-                      archive(native, toploop) += "core_top.cmxa"
+  Path:         src
+  Pack:         true
+  Modules:      Bigbuffer,
+                Bigstring,
+                Bigstring_marshal,
+                Caml,
+                Check_std,
+                Command,
+                Core_condition,
+                Core_filename,
+                Core_list,
+                Core_mutex,
+                Core_sys,
+                Core_thread,
+                Core_unix,
+                Crc,
+                Daemon,
+                Date,
+                Date0,
+                Debug,
+                Interval,
+                Interval_intf,
+                Iobuf,
+                Iobuf_debug,
+                Iobuf_intf,
+                Iobuf_tests,
+                Limiter,
+                Limiter_unit_tests,
+                Linux_ext,
+                Linux_ext_intf,
+                Lock_file,
+                Mutex0,
+                Nano_mutex,
+                Ofday,
+                Piecewise_linear,
+                Piecewise_linear_intf,
+                Process_env,
+                Schedule,
+                Schedule_unit_tests,
+                Signal,
+                Span,
+                Squeue,
+                Stable,
+                Std,
+                Syscall_result,
+                Syscall_result_intf,
+                Syslog,
+                Thread_safe_queue_unit_tests,
+                Time,
+                Time0,
+                Time_internal,
+                Time_ns,
+                Time_ns_benchmarks,
+                Time_stamp_counter,
+                Time_stamp_counter_benchmarks,
+                Timing_wheel_float,
+                Timing_wheel_float_unit_tests,
+                Unix_error,
+                User_and_group,
+                Uuid,
+                Version_util,
+                Weak_hashtbl,
+                Zone
+  BuildDepends: bin_prot,
+                core_kernel,
+                fieldslib,
+                ppx_assert.runtime-lib,
+                ppx_bench.runtime-lib,
+                ppx_expect.collector,
+                ppx_inline_test.runtime-lib,
+                sexplib,
+                sexplib.unix,
+                threads,
+                typerep,
+                variantslib,
+                version_util_fallback
+  CSources:     bigstring_stubs.c,
+                config.h,
+                crc_stubs.c,
+                includes.h,
+                iobuf.h,
+                iobuf_stubs.c,
+                jane_common.h,
+                linux_ext_stubs.c,
+                ocaml_utils_macros.h,
+                ocaml_utils_stubs.c,
+                recvmmsg.c,
+                recvmmsg.h,
+                signal_stubs.c,
+                socketaddr.h,
+                syslog_stubs.c,
+                time_stamp_counter_stubs.c,
+                timespec.c,
+                timespec.h,
+                unix_stubs.c,
+                unix_time_stubs.c
   if flag(rt)
     CCLib: -lrt
 
 Library core_top
-  Path:               top
-  FindlibName:        top
-  FindlibParent:      core
-  Modules:            Core_install_printers
-  XMETARequires:      core
-  XMETADescription:   Toplevel printers for Core
-  BuildDepends:       core,compiler-libs
+  Path:         top
+  Pack:         true
+  Modules:      Core_install_printers
+  BuildDepends: compiler-libs,
+                core
 
-Executable test_runner
-  Path:               test
-  MainIs:             test_runner.ml
-  Build$:             flag(tests)
-  Custom:             true
-  CompiledObject:     best
-  Install:            false
-  BuildDepends:       core,oUnit (>= 1.0.2)
-
-Test test_runner
-  Run$:               flag(tests)
-  Command:            $test_runner
-  WorkingDirectory:   test
+Library version_util_fallback
+  Path:     version_util_fallback
+  Pack:     false
+  Modules:  Version_util_fallback
+  CSources: version_util_fallback_stubs.c

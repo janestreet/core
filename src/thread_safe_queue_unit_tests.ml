@@ -1,6 +1,6 @@
 open Core_kernel.Std
 
-TEST_MODULE "Thread_safe_queue" = (struct
+let%test_module "Thread_safe_queue" = (module (struct
 
   let () = Debug.should_print_backtrace := false
 
@@ -12,14 +12,14 @@ TEST_MODULE "Thread_safe_queue" = (struct
 
   let sexp_of_t = sexp_of_t
 
-  TEST_UNIT = ignore (create () |> <:sexp_of< unit t >> : Sexp.t)
+  let%test_unit _ = ignore (create () |> [%sexp_of: unit t] : Sexp.t)
 
-  TEST_UNIT =
+  let%test_unit _ =
     let t = create () in
     enqueue t 1;
     enqueue t 2;
     enqueue t 3;
-    ignore (t |> <:sexp_of< int t >> : Sexp.t);
+    ignore (t |> [%sexp_of: int t] : Sexp.t)
   ;;
 
   let create      = create
@@ -27,7 +27,7 @@ TEST_MODULE "Thread_safe_queue" = (struct
   let enqueue     = enqueue
   let length      = length
 
-  TEST_UNIT =
+  let%test_unit _ =
     let t = create () in
     invariant ignore t;
     assert (length t = 0);
@@ -42,22 +42,22 @@ TEST_MODULE "Thread_safe_queue" = (struct
     assert (length t = 1);
     dequeue_exn t;
     invariant ignore t;
-    assert (length t = 0);
+    assert (length t = 0)
   ;;
 
-  TEST_UNIT = (* invariant passes with element from pool in the queue *)
+  let%test_unit _ = (* invariant passes with element from pool in the queue *)
     let t = create () in
-    for _i = 1 to 3 do
+    for _ = 1 to 3 do
       enqueue t ();
     done;
-    for _i = 1 to 2 do
+    for _ = 1 to 2 do
       dequeue_exn t;
     done;
     enqueue t ();
-    invariant ignore t;
+    invariant ignore t
   ;;
 
-  TEST_UNIT =
+  let%test_unit _ =
     let verbose = false in
     let sec = Time.Span.of_sec in
     let quick_pause () = Time.pause (sec 0.00001) in
@@ -66,7 +66,7 @@ TEST_MODULE "Thread_safe_queue" = (struct
     for num_enqueuers = 1 to 1 do
       for num_dequeuers = 1 to 1 do
         if verbose
-        then Debug.eprints "testing" (num_enqueuers, num_dequeuers) <:sexp_of< int * int >>;
+        then Debug.eprints "testing" (num_enqueuers, num_dequeuers) [%sexp_of: int * int];
         let enqueue_counts = Array.create ~len:num_enqueuers 0 in
         let dequeue_counts = Array.create ~len:num_dequeuers 0 in
         let t = create () in
@@ -81,7 +81,7 @@ TEST_MODULE "Thread_safe_queue" = (struct
           while !num_enqueues < num_elts || !num_dequeues < num_elts do
             if verbose
             then Debug.eprints "current" (!num_enqueues, !num_dequeues)
-                   <:sexp_of< int * int >>;
+                   [%sexp_of: int * int];
             Time.pause (sec 1.);
           done);
         for i = 0 to num_enqueuers - 1 do
@@ -117,14 +117,14 @@ TEST_MODULE "Thread_safe_queue" = (struct
         List.iter !all_threads ~f:Thread.join;
         if verbose
         then Debug.eprints "counts" (enqueue_counts, dequeue_counts)
-               <:sexp_of< int array * int array >>;
+               [%sexp_of: int array * int array];
       done;
-    done;
+    done
   ;;
 
   let clear_internal_pool = clear_internal_pool
 
-  TEST_UNIT =
+  let%test_unit _ =
     let t = create () in
     clear_internal_pool t;
     enqueue t ();
@@ -132,9 +132,9 @@ TEST_MODULE "Thread_safe_queue" = (struct
     dequeue_exn t;
     clear_internal_pool t;
     enqueue t ();
-    clear_internal_pool t;
+    clear_internal_pool t
   ;;
 end
 (* This signature constraint is here to remind us to add a unit test whenever the
    interface to [Thread_safe_queue] changes. *)
-: module type of Thread_safe_queue)
+: module type of Thread_safe_queue))

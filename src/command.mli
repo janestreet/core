@@ -1,4 +1,22 @@
-(** purely functional command line parsing *)
+(** Purely functional command line parsing.
+
+    Here is a simple example:
+
+    {[
+      let () =
+        Command.basic
+          ~summary:"cook eggs"
+          Command.Spec.(
+            empty
+            +> flag "num-eggs" (required int) ~doc:"COUNT cook this many eggs"
+            +> flag "style" (required (Arg_type.create Egg_style.of_string))
+                 ~doc:"OVER-EASY|SUNNY-SIDE-UP style of eggs"
+            +> anon ("recipient" %: string))
+          (fun num_eggs style recipient ->
+             failwith "no eggs today")
+        |> Command.run
+    ]}
+*)
 
 open Core_kernel.Std
 
@@ -53,6 +71,7 @@ module Arg_type : sig
     val time_ofday         : Time.Ofday.Zoned.t t
     (** Use [time_ofday_unzoned] only when time zone is implied somehow. *)
     val time_ofday_unzoned : Time.Ofday.t       t
+    val time_zone          : Time.Zone.t        t
     val time_span          : Time.Span.t        t
     (* [file] uses bash autocompletion. *)
     val file               : string             t
@@ -168,8 +187,57 @@ module Anons : sig
 end
 
 (** {1 specification of command parameters} *)
+(** This module is meant to eventually replace [Command.Spec], because the types are
+    easier to understand. *)
 module Param : sig
   module type S = sig
+
+    (** [Command.Param] is intended to be used with the [%map_open] syntax defined in
+        [ppx_let], like so:
+        {[
+          let command =
+            Command.basic' ~summary:"..."
+              [%map_open
+                let count  = anon ("COUNT" %: int)
+                and port   = flag "port" (optional int) ~doc:"N listen on this port"
+                and person = person_param
+                in
+                (* ... command-line validation code, if any, goes here ... *)
+                fun () ->
+                  (* the body of the command *)
+                  do_stuff count port person
+              ]
+        ]}
+
+        One can also use [%map_open] to define composite command line parameters, like
+        [person_param] in the previous snippet:
+        {[
+          type person = { name : string; age : int }
+
+          let person_param : person Command.Param.t =
+            [%map_open
+              let name = flag "name" (required string) ~doc:"X name of the person"
+              and age  = flag "age"  (required int)    ~doc:"N how many years old"
+              in
+              {name; age}
+            ]
+        ]}
+
+        The right hand sides of [%map_open] definitions have [Command.Param] in scope.
+
+        Alternatively, you can say:
+
+        {[
+          let module Let_syntax = Foo.Let_syntax in
+          [%map_open
+            let x ...
+          ]
+        }]
+
+        if [Foo] follows the same conventions as [Command.Param].
+
+        See examples/command/main.ml for more examples.
+    *)
     include Applicative.S
 
     (** {2 various internal values} *)
@@ -215,14 +283,20 @@ module Param : sig
   (* values included for convenience so you can specify all command line parameters inside
      a single local open of [Param] *)
 
-  module Args : Applicative.Args with type 'a arg := 'a t
-  include module type of Args with type ('a, 'b) t := ('a, 'b) Args.t
-
   module Arg_type : module type of Arg_type with type 'a t = 'a Arg_type.t
   include module type of Arg_type.Export
   include module type of Flag  with type 'a t := 'a Flag.t
   include module type of Anons with type 'a t := 'a Anons.t
 end
+
+module Let_syntax : sig
+  type 'a t (** substituted below *)
+  val return : 'a -> 'a t
+  val map    : 'a t -> f:('a -> 'b) -> 'b t
+  val both   : 'a t -> 'b t -> ('a * 'b) t
+  module Open_on_rhs = Param
+  module Open_in_body : sig end
+end with type 'a t := 'a Param.t
 
 (** {1 older interface for command-line specifications} *)
 module Spec : sig
@@ -403,8 +477,6 @@ module Spec : sig
       }
   *)
 
-  val of_params : ('a, 'b) Param.Args.t -> ('a, 'b) t
-
   module Arg_type : module type of Arg_type with type 'a t = 'a Arg_type.t
 
   include module type of Arg_type.Export
@@ -432,6 +504,9 @@ module Spec : sig
 
   (** [map_anons anons ~f] transforms the parsed result of [anons] by applying [f] *)
   val map_anons : 'a anons -> f:('a -> 'b) -> 'b anons
+
+  (** useful for converting to new-style Param commands *)
+  val to_param : ('a, 'r) t -> 'a -> 'r Param.t
 end
 
 type t (** commands which can be combined into a hierarchy of subcommands *)
@@ -450,16 +525,15 @@ type ('main, 'result) basic_command
     screen. *)
 val basic : ('main, unit) basic_command
 
-type ('main, 'result) basic_command'
+type 'result basic_command'
   =  summary : string
   -> ?readme : (unit -> string)
-  -> ('main, unit -> 'result) Param.Args.t
-  -> 'main
+  -> (unit -> 'result) Param.t
   -> t
 
 (** Same general behavior as [basic], but takes a command line specification built up
     using [Params] instead of [Spec]. *)
-val basic' : ('main, unit) basic_command'
+val basic' : unit basic_command'
 
 (** [group ~summary subcommand_alist] is a compound command with named
     subcommands, as found in [subcommand_alist].  [summary] is to contain
@@ -511,13 +585,86 @@ val exec
 val summary : t -> string
 
 module Shape : sig
-  type command
+
+  module Flag_info : sig
+
+    type t = {
+      name : string;
+      doc : string;
+      aliases : string list;
+    } [@@deriving bin_io, compare, fields, sexp]
+
+  end
+
+  module Base_info : sig
+
+    type grammar =
+      | Zero
+      | One of string
+      | Many of grammar
+      | Maybe of grammar
+      | Concat of grammar list
+      | Ad_hoc of string
+    [@@deriving bin_io, compare, sexp]
+
+    type anons =
+      (** When exec'ing an older binary whose help sexp doesn't expose the grammar. *)
+      | Usage of string
+      | Grammar of grammar
+    [@@deriving bin_io, compare, sexp]
+
+    type t = {
+      summary : string;
+      readme  : string sexp_option;
+      anons   : anons;
+      flags   : Flag_info.t list;
+    } [@@deriving bin_io, compare, fields, sexp]
+
+  end
+
+  module Group_info : sig
+
+    type 'a t = {
+      summary     : string;
+      readme      : string sexp_option;
+      subcommands : (string, 'a) List.Assoc.t;
+    } [@@deriving bin_io, compare, fields, sexp]
+
+    val map : 'a t -> f:('a -> 'b) -> 'b t
+
+  end
+
+  module Exec_info : sig
+
+    type t = {
+      summary     : string;
+      readme      : string sexp_option;
+      working_dir : string;
+      path_to_exe : string;
+    } [@@deriving bin_io, compare, fields, sexp]
+
+  end
+
   type t =
-    | Basic
-    | Group of (string * command) list
-    | Exec of (unit -> t)
+    | Basic of Base_info.t
+    | Group of t Group_info.t
+    | Exec of Exec_info.t * (unit -> t)
+
+  (* Fully forced shapes are comparable and serializable. *)
+  module Fully_forced : sig
+    type shape = t
+
+    type t =
+      | Basic of Base_info.t
+      | Group of t Group_info.t
+      | Exec of Exec_info.t * t
+    [@@deriving bin_io, compare, sexp]
+
+    val create : shape -> t
+
+  end with type shape := t
+
 end
-with type command := t
 
 (** expose the shape of a command *)
 val shape : t -> Shape.t

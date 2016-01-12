@@ -13,7 +13,7 @@ include struct
   let parent_dir_name = parent_dir_name
   let dir_sep = dir_sep
   let quote = quote
-  let temp_dir_name = temp_dir_name
+  let temp_dir_name = get_temp_dir_name ()
 end
 
 let is_absolute p = not (is_relative p)
@@ -38,8 +38,6 @@ let concat p1 p2 =
     | Some _ | None -> s
   in
   collapse_trailing p1 ^ "/" ^ collapse_leading p2
-
-let (^/) = Filename.concat
 
 (* Finds the largest index i in [s] that is less than [from] and for which
    [f s.[i]]
@@ -104,7 +102,7 @@ let is_posix_pathname_component s =
   && not (S.contains s '\000')
 
 
-let prng = Random.State.make_self_init ()
+let prng = Random.State.make_self_init ~allow_in_tests:true ()
 
 (* try up to 1000 times to not get a Sys_error when opening a temp
    file / name: *)
@@ -170,18 +168,18 @@ let split_extension fn =
   in
   (fn, ext)
 
-TEST = split_extension "/foo/my_file"       = ("/foo/my_file", None)
-TEST = split_extension "/foo/my_file.txt"   = ("/foo/my_file", Some "txt")
-TEST = split_extension "/foo/my_file.1.txt" = ("/foo/my_file.1", Some "txt")
-TEST = split_extension "/home/c.falls/my_file"       = ("/home/c.falls/my_file", None)
-TEST = split_extension "/home/c.falls/my_file.txt"   = ("/home/c.falls/my_file", Some "txt")
-TEST = split_extension "/home/c.falls/my_file.1.txt" = ("/home/c.falls/my_file.1", Some "txt")
-TEST = split_extension "my_file"       = ("my_file", None)
-TEST = split_extension "my_file.txt"   = ("my_file", Some "txt")
-TEST = split_extension "my_file.1.txt" = ("my_file.1", Some "txt")
-TEST = split_extension "/my_file"       = ("/my_file", None)
-TEST = split_extension "/my_file.txt"   = ("/my_file", Some "txt")
-TEST = split_extension "/my_file.1.txt" = ("/my_file.1", Some "txt")
+let%test _ = split_extension "/foo/my_file"       = ("/foo/my_file", None)
+let%test _ = split_extension "/foo/my_file.txt"   = ("/foo/my_file", Some "txt")
+let%test _ = split_extension "/foo/my_file.1.txt" = ("/foo/my_file.1", Some "txt")
+let%test _ = split_extension "/home/c.falls/my_file"       = ("/home/c.falls/my_file", None)
+let%test _ = split_extension "/home/c.falls/my_file.txt"   = ("/home/c.falls/my_file", Some "txt")
+let%test _ = split_extension "/home/c.falls/my_file.1.txt" = ("/home/c.falls/my_file.1", Some "txt")
+let%test _ = split_extension "my_file"       = ("my_file", None)
+let%test _ = split_extension "my_file.txt"   = ("my_file", Some "txt")
+let%test _ = split_extension "my_file.1.txt" = ("my_file.1", Some "txt")
+let%test _ = split_extension "/my_file"       = ("/my_file", None)
+let%test _ = split_extension "/my_file.txt"   = ("/my_file", Some "txt")
+let%test _ = split_extension "/my_file.1.txt" = ("/my_file.1", Some "txt")
 
 let parts filename =
   let rec loop acc filename =
@@ -195,29 +193,28 @@ let parts filename =
 
 let of_parts = function
   | [] -> failwith "Filename.of_parts: empty parts list"
-  | root :: rest ->
-    List.fold rest ~init:root ~f:(fun acc part -> acc ^/ part)
+  | root :: rest -> List.fold rest ~init:root ~f:Filename.concat
 
-TEST_UNIT =
+let%test_unit _ =
   List.iter
     ~f:(fun (path, pieces) ->
-      <:test_result< string >> ~expect:path (of_parts pieces);
-      <:test_result< string list >> ~expect:pieces (parts path))
+      [%test_result: string] ~expect:path (of_parts pieces);
+      [%test_result: string list] ~expect:pieces (parts path))
     [ "/tmp/foo/bar/baz",  ["/"; "tmp"; "foo"; "bar"; "baz"]
     ; ".",                 ["."]
     ; "/",                 ["/"]
     ; "./foo",             ["."; "foo"]
     ]
 
-TEST = parts "/tmp/foo/bar/baz/" = ["/"; "tmp"; "foo"; "bar"; "baz"]
-TEST = parts "//tmp//foo//bar"   = ["/"; "tmp"; "foo"; "bar"]
-TEST = parts ""                  = ["."]
-TEST = parts "./"                = ["."]
-TEST = parts "./."               = ["."]
-TEST = parts "././."             = ["."; "."]
-TEST = parts "foo"               = ["."; "foo"]
-TEST = parts "./foo/"            = ["."; "foo"]
-TEST = parts "./foo/."           = ["."; "foo"; "."]
+let%test _ = parts "/tmp/foo/bar/baz/" = ["/"; "tmp"; "foo"; "bar"; "baz"]
+let%test _ = parts "//tmp//foo//bar"   = ["/"; "tmp"; "foo"; "bar"]
+let%test _ = parts ""                  = ["."]
+let%test _ = parts "./"                = ["."]
+let%test _ = parts "./."               = ["."]
+let%test _ = parts "././."             = ["."; "."]
+let%test _ = parts "foo"               = ["."; "foo"]
+let%test _ = parts "./foo/"            = ["."; "foo"]
+let%test _ = parts "./foo/."           = ["."; "foo"; "."]
 
-TEST = of_parts ["."; "."; "."] = "././."
+let%test _ = of_parts ["."; "."; "."] = "././."
 

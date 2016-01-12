@@ -11,7 +11,7 @@ type 'a t = {
   not_empty: Condition.t sexp_opaque;
   not_full: Condition.t sexp_opaque;
   finally:unit -> unit;
-} with sexp_of
+} [@@deriving sexp_of]
 
 let create maxsize =
   let ev_q = Queue.create () in

@@ -1,1 +1,0 @@
-include Core_kernel.Constrained_float

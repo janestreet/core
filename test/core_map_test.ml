@@ -59,6 +59,33 @@ let test =
           let s_dup = Sexp.of_string s_dup in
           try ignore (StringMap.t_of_sexp int_of_sexp s_dup); assert false with _ -> ()
         );
+      "bin_io" >::
+      (fun () ->
+         let max_n = 20 in
+         let bstr = Bigstring.create (2 * max_n + 1) in
+         for n = 0 to max_n do
+           let m1 = Int.Map.of_alist_exn (List.init n ~f:(fun x -> x, succ x)) in
+           let pos = Int.Map.bin_write_t Int.bin_write_t bstr ~pos:0 m1 in
+           "pos" @? (pos = 2 * n + 1);
+           let pos_ref = ref 0 in
+           let m2 = Int.Map.bin_read_t Int.bin_read_t bstr ~pos_ref in
+           "pos_ref" @? (!pos_ref = 2 * n + 1);
+           "equal" @? (Int.Map.equal Int.equal m1 m2);
+           if n >= 2
+           then begin
+             bstr.{1} <- 'x';
+             bstr.{3} <- 'x';
+             pos_ref := 0;
+             let dup_check =
+               try
+                 ignore(Int.Map.bin_read_t Int.bin_read_t bstr ~pos_ref : Int.t Int.Map.t);
+                 false
+               with Failure _ -> !pos_ref = 2 * n + 1
+             in
+             "dup_check" @? dup_check
+           end
+         done;
+      );
       "of_alist" >::
         (fun () ->
           let a = [("a", 1); ("b", 2); ("c", 3); ("d", 4)] in

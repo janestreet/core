@@ -1,6 +1,6 @@
 open Core_kernel.Std
 
-include module type of Core_kernel.Debug
+include module type of struct include Core_kernel.Debug end
 
 (** [am], [ams], and [amf] output a source code position and backtrace to stderr.  [amf]
     accepts a printf-style format string.  [ams] accepts a message, value, and sexp
@@ -8,11 +8,11 @@ include module type of Core_kernel.Debug
 
     {[
       ...;
-      Debug.am _here_;
+      Debug.am [%here];
       ...;
-      Debug.amf _here_ "hello (%s, %s)" (X.to_string x) (Y.to_string y);
+      Debug.amf [%here] "hello (%s, %s)" (X.to_string x) (Y.to_string y);
       ...;
-      Debug.ams _here_ "hello" (x, y) <:sexp_of< X.t * Y.t >>;
+      Debug.ams [%here] "hello" (x, y) <:sexp_of< X.t * Y.t >>;
       ...;
     ]}
 

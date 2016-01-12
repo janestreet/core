@@ -26,7 +26,7 @@ let do_add ~set ~t ~present ~i ~added =
    right value (as opposed to the value being correct to start
    with, and we made no write to it.) *)
   added := present;
-  let res = Avltree.add !t ~compare ~added ~key:i ~data:i in
+  let res = Avltree.add !t ~replace:true ~compare ~added ~key:i ~data:i in
   if present
   then assert (not !added)
   else assert (!added);

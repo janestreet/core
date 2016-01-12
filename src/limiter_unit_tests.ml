@@ -6,9 +6,9 @@ module Step_test = struct
   type step =
     | Take of float * bool
     | Fill of float
-  with sexp
+  [@@deriving sexp]
 
-  type timed_step = (float * step) with sexp
+  type timed_step = (float * step) [@@deriving sexp]
 
   let take time amount expect = (time,Take (amount,expect))
   let fill time amount = (time,Fill amount)
@@ -22,14 +22,14 @@ module Step_test = struct
         | Fill amount -> Limiter.Expert.return_to_hopper t ~now (Float.abs amount)
         | Take (amount,expect) ->
           match Limiter.Expert.try_take t ~now amount with
-          | `Asked_for_more_than_bucket_size ->
+          | Asked_for_more_than_bucket_limit ->
             failwithf !"test asked to take more (%g) than bucket size (%{Sexp}) at time %f"
               amount (Limiter.sexp_of_t t) now_offset ()
-          | `Taken  ->
+          | Taken  ->
             if not expect
             then failwithf !"incorrectly able to take %g from the bucket (%{Sexp}) at time %f"
                    amount (Limiter.sexp_of_t t) now_offset ();
-          | `Unable ->
+          | Unable ->
             if expect
             then failwithf !"unable to take %g from the bucket (%{Sexp}) at time %f"
                    amount (Limiter.sexp_of_t t) now_offset ()
@@ -39,69 +39,29 @@ module Step_test = struct
       Error.raise
         (Error.tag_arg (Error.of_exn e)
            "Limiter step test failed" (t,l)
-           <:sexp_of< Limiter.t * timed_step list>>)
+           [%sexp_of: Limiter.t * timed_step list])
   ;;
 
-  TEST_UNIT "return_to_hopper invariants" =
+  let%test_unit "return_to_hopper invariants" =
     let t =
       Limiter.Expert.create_exn
         ~now:Time.epoch
         ~hopper_to_bucket_rate_per_sec:Infinite
-        ~bucket_size:10.
+        ~bucket_limit:10.
+        ~in_flight_limit:Infinite
         ~initial_bucket_level:10.
         ~initial_hopper_level:(Finite 0.)
     in
-    <:test_result<bool>>
+    [%test_result: bool]
       ~expect:true
       (Exn.does_raise (fun () -> Limiter.Expert.return_to_hopper t ~now:Time.epoch 1.))
 
-  TEST_UNIT "return_to_hopper after lowering target" =
-    let t =
-      Limiter.Expert.create_exn
-        ~now:Time.epoch
-        ~hopper_to_bucket_rate_per_sec:Infinite
-        ~bucket_size:10.
-        ~initial_bucket_level:10.
-        ~initial_hopper_level:(Finite 0.)
-    in
-    let now = Time.epoch in
-    begin match  Limiter.Expert.try_take t ~now 10. with
-    | `Asked_for_more_than_bucket_size
-    | `Unable -> assert false
-    | `Taken -> ()
-    end;
-    Limiter.Expert.set_token_target_level_exn t ~now (Finite 5.);
-    Limiter.Expert.return_to_hopper t ~now 6.;
-    <:test_result<bool>>
-      ~expect:true
-      (Limiter.in_system t ~now = Finite 5.)
-
-  TEST_UNIT "return_to_hopper after raising target" =
-    let t =
-      Limiter.Expert.create_exn
-        ~now:Time.epoch
-        ~hopper_to_bucket_rate_per_sec:Infinite
-        ~bucket_size:10.
-        ~initial_bucket_level:10.
-        ~initial_hopper_level:(Finite 0.)
-    in
-    let now = Time.epoch in
-    begin match  Limiter.Expert.try_take t ~now 10. with
-    | `Asked_for_more_than_bucket_size
-    | `Unable -> assert false
-    | `Taken -> ()
-    end;
-    Limiter.Expert.set_token_target_level_exn t ~now (Finite 15.);
-    Limiter.Expert.return_to_hopper t ~now 6.;
-    <:test_result<bool>>
-      ~expect:true
-      (Limiter.in_system t ~now = Finite 15.)
-
-  TEST_UNIT "Generic" =
+  let%test_unit "Generic" =
     run (Limiter.Expert.create_exn
           ~now:Time.epoch
           ~hopper_to_bucket_rate_per_sec:(Finite (60. /. 60.))
-          ~bucket_size:60.
+          ~bucket_limit:60.
+        ~in_flight_limit:Infinite
           ~initial_bucket_level:0.
           ~initial_hopper_level:Infinite)
       [ take 0.0  1. false
@@ -111,11 +71,12 @@ module Step_test = struct
       ; take 60. 60. false
       ; take 60. 59. true ]
 
-  TEST_UNIT "Generic" =
+  let%test_unit "Generic" =
     run (Limiter.Expert.create_exn
            ~now:Time.epoch
            ~hopper_to_bucket_rate_per_sec:(Finite (60. /. 60.))
-           ~bucket_size:120.
+           ~bucket_limit:120.
+           ~in_flight_limit:Infinite
            ~initial_bucket_level:0.
            ~initial_hopper_level:Infinite)
       [ take 0.0  1.   false
@@ -126,11 +87,12 @@ module Step_test = struct
       ; take 360. 120. true
       ]
 
-  TEST_UNIT "Generic" =
+  let%test_unit "Generic" =
     run (Limiter.Expert.create_exn
            ~now:Time.epoch
            ~hopper_to_bucket_rate_per_sec:(Finite (60. /. 60.))
-           ~bucket_size:60.
+           ~bucket_limit:60.
+           ~in_flight_limit:Infinite
            ~initial_bucket_level:0.
            ~initial_hopper_level:(Finite 10.))
       [ take  1.  1. true
@@ -147,7 +109,7 @@ module Step_test = struct
       ]
   ;;
 
-  TEST_UNIT "Throttled_rate_limiter" =
+  let%test_unit "Throttled_rate_limiter" =
     let limiter =
       Limiter.Throttled_rate_limiter.create_exn
         ~now:Time.epoch
@@ -173,7 +135,7 @@ module Step_test = struct
       ]
   ;;
 
-  TEST_UNIT "Throttle" =
+  let%test_unit "Throttle" =
     let throttle =
       Limiter.Throttle.create_exn
         ~now:Time.epoch
@@ -187,7 +149,7 @@ module Step_test = struct
       ; fill 1. 1.
       ; take 1. 1. true ]
 
-  TEST_UNIT "Rounding is reasonble for 1_000_000 elements" =
+  let%test_unit "Rounding is reasonble for 1_000_000 elements" =
     let throttle =
       Limiter.Throttle.create_exn
         ~now:Time.epoch

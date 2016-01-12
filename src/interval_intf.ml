@@ -111,7 +111,7 @@ module type Gen_set = sig
 end
 
 module type S = sig
-  type t with bin_io, sexp
+  type t [@@deriving bin_io, sexp]
   type bound
 
   type 'a t_ = t
@@ -128,7 +128,7 @@ module type S = sig
 
   type 'a poly_set
   module Set : sig
-    type t with bin_io, sexp
+    type t [@@deriving bin_io, sexp]
     type 'a t_ = t
     include Gen_set
       with type 'a t := 'a t_
@@ -140,7 +140,7 @@ module type S = sig
 end
 
 module type S1 = sig
-  type 'a t with bin_io, sexp
+  type 'a t [@@deriving bin_io, sexp]
   type 'a bound_ = 'a
 
   include Gen
@@ -148,7 +148,7 @@ module type S1 = sig
     with type 'a bound := 'a bound_
 
   module Set : sig
-    type 'a t with bin_io, sexp
+    type 'a t [@@deriving bin_io, sexp]
     include Gen_set with type 'a t := 'a t
   end
     with type 'a bound := 'a bound_

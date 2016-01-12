@@ -5,7 +5,7 @@ let ok_exn = Or_error.ok_exn
 (* A [Blocker.t] is an ordinary mutex and conditional variable used to implement blocking
    when there is lock contention. *)
 module Blocker : sig
-  type t with sexp_of
+  type t [@@deriving sexp_of]
 
   val create : unit -> t
   val critical_section : t -> f:(unit -> 'a) -> 'a
@@ -24,7 +24,7 @@ end = struct
     { mutex : Mutex.t sexp_opaque;
       condition : Condition.t sexp_opaque;
     }
-  with sexp_of
+  [@@deriving sexp_of]
 
   (* We keep a cache of unused blockers, since they are relatively costly to create, and
      we should never need very many simultaneously.  We should never need more blockers
@@ -77,7 +77,7 @@ type t =
     mutable num_using_blocker : int;
     mutable blocker : Blocker.t option;
   }
-with fields, sexp_of
+[@@deriving fields, sexp_of]
 
 let invariant t =
   try
@@ -89,7 +89,7 @@ let invariant t =
        [with_blocker], which only relies on test-and-set of [t.blocker] to make sure
        there is an agreed-upon winner in the race to create a blocker. *)
     if t.num_using_blocker = 0 then assert (Option.is_none t.blocker);
-  with exn -> failwiths "invariant failed" (exn, t) <:sexp_of< exn * t >>
+  with exn -> failwiths "invariant failed" (exn, t) [%sexp_of: exn * t]
 ;;
 
 let equal (t : t) t' = phys_equal t t'
@@ -111,7 +111,7 @@ let current_thread_has_lock t = t.id_of_thread_holding_lock = current_thread_id 
 
 let recursive_lock_error t =
   Error.create "attempt to lock mutex by thread already holding it"
-    (current_thread_id (), t) <:sexp_of< int * t >>
+    (current_thread_id (), t) [%sexp_of: int * t]
 ;;
 
 let try_lock t =
@@ -217,7 +217,7 @@ type message =
   { current_thread_id : int;
     mutex : t;
   }
-with sexp_of
+[@@deriving sexp_of]
 
 let unlock t =
   let current_thread_id = current_thread_id () in
@@ -233,10 +233,10 @@ let unlock t =
       Result.ok_unit;
     end else
       Error (Error.create "attempt to unlock mutex held by another thread"
-               { current_thread_id; mutex = t } <:sexp_of< message >>)
+               { current_thread_id; mutex = t } [%sexp_of: message])
   end else
     Error (Error.create "attempt to unlock an unlocked mutex"
-             { current_thread_id; mutex = t } <:sexp_of< message >>)
+             { current_thread_id; mutex = t } [%sexp_of: message])
 ;;
 
 let unlock_exn t = ok_exn (unlock t)
@@ -246,7 +246,7 @@ let critical_section t ~f =
   protect ~f ~finally:(fun () -> unlock_exn t);
 ;;
 
-TEST_UNIT =
+let%test_unit _ =
   let l = create () in
   lock_exn l;
   unlock_exn l;
@@ -255,7 +255,7 @@ TEST_UNIT =
   | Ok `Acquired -> unlock_exn l
 ;;
 
-TEST_UNIT =
+let%test_unit _ =
   List.iter
     [
       (   2, 100, 0.);
@@ -269,7 +269,7 @@ TEST_UNIT =
         let am_holding_lock = ref false in
         let one_thread () =
           Thread.create (fun () ->
-            for _i = 1 to num_iterations do
+            for _ = 1 to num_iterations do
               lock_exn l;
               if !am_holding_lock then failwith "lock multiply acquired";
               am_holding_lock := true;
@@ -284,5 +284,5 @@ TEST_UNIT =
       | exn ->
         failwiths "test failed"
           (num_threads, num_iterations, pause_for, exn)
-          (<:sexp_of< int * int * float * exn >>))
+          ([%sexp_of: int * int * float * exn]))
 ;;

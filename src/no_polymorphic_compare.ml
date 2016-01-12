@@ -1,1 +1,0 @@
-include Core_kernel.No_polymorphic_compare

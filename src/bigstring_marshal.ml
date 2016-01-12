@@ -50,9 +50,9 @@ let marshal_to_fd ?buf ?flags fd v =
   marshal_to_gen ?buf ?flags fd v ~f:(fun fd buf ~len ->
     really_write fd buf ~len)
 
-INCLUDE "core_config.mlh"
+#import "config.mlh"
 
-IFDEF MSG_NOSIGNAL THEN
+#if JSC_MSG_NOSIGNAL
 
 let really_send_no_sigpipe = Or_error.ok_exn really_send_no_sigpipe
 
@@ -62,9 +62,9 @@ let marshal_to_sock_no_sigpipe ?buf ?flags fd v =
 
 let marshal_to_sock_no_sigpipe = Ok marshal_to_sock_no_sigpipe
 
-ELSE
+#else
 
 let marshal_to_sock_no_sigpipe =
   Or_error.unimplemented "Bigstring_marshal.marshal_to_sock_no_sigpipe"
 
-ENDIF
+#endif

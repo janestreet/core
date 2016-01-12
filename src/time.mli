@@ -30,14 +30,14 @@ module Span : sig
       ms   : int;
       us   : int;
     }
-    with sexp
+    [@@deriving sexp]
   end
 end
 
 module Zone : module type of Zone with type t = Zone.t
 
 (** A fully qualified point in time, independent of timezone. *)
-type t = Time_internal.T.t with bin_io, sexp
+type t = Time_internal.T.t [@@deriving bin_io, sexp]
 
 (** Sexp conversions use the local timezone by default. This can be overridden by calling
     [set_sexp_zone]. *)
@@ -60,9 +60,9 @@ include Stringable          with type t := t
 
 (** Unlike [Time_ns], this module purposely omits [max_value] and [min_value]:
     1. They produce unintuitive corner cases because most people's mental models of time
-       do not include +/- infinity as concrete values
+    do not include +/- infinity as concrete values
     2. In practice, when people ask for these values, it is for questionable uses, e.g.,
-       as null values to use in place of explicit options. *)
+    as null values to use in place of explicit options. *)
 
 (** midnight, Jan 1, 1970 in UTC *)
 val epoch : t
@@ -124,6 +124,29 @@ val of_date_ofday_precise
   -> zone:Zone.t
   -> [ `Once of t | `Twice of t * t | `Never of t ]
 
+(** Always returns the [Date.t * Ofday.t] that [to_date_ofday] would have returned, and in
+    addition returns a variant indicating whether the time is associated with a time zone
+    transition.
+
+    {v
+      - `Only         -> there is a one-to-one mapping between [t]'s and
+                         [Date.t * Ofday.t] pairs
+      - `Also_at      -> there is another [t] that maps to the same [Date.t * Ofday.t]
+                         (this date/time pair happened twice because the clock fell back)
+      - `Also_skipped -> there is another [Date.t * Ofday.t] pair that never happened (due
+                         to a jump forward) that [of_date_ofday] would map to the same
+                         [t].
+    v}
+*)
+val to_date_ofday_precise
+  :  t
+  -> zone:Zone.t
+  -> Date0.t * Ofday.t
+     * [ `Only
+       | `Also_at of t
+       | `Also_skipped of Date0.t * Ofday.t
+       ]
+
 val convert
   :  from_tz:Zone.t
   -> to_tz:Zone.t
@@ -157,7 +180,7 @@ val to_string_trimmed : t -> zone:Zone.t -> string
 val to_sec_string : t -> zone:Zone.t -> string
 
 (** [of_localized_string ~zone str] read in the given string assuming that it represents
-  a time in zone and return the appropriate Time.t *)
+    a time in zone and return the appropriate Time.t *)
 val of_localized_string : zone:Zone.t -> string -> t
 
 (** [to_string_abs ~zone t] returns a string that represents an absolute time, rather than
@@ -194,7 +217,7 @@ val now : unit -> t
 val pause : Span.t -> unit
 
 (** [interruptible_pause span] sleeps for span time unless interrupted (e.g. by delivery
-   of a signal), in which case the remaining unslept portion of time is returned. *)
+    of a signal), in which case the remaining unslept portion of time is returned. *)
 val interruptible_pause : Span.t -> [`Ok | `Remaining of Span.t]
 
 (** [pause_forever] sleeps indefinitely. *)
@@ -215,7 +238,7 @@ val occurrence
   -> t
 
 (** [format t fmt] formats the given time according to fmt, which follows the formatting
-    rules given in 'man strftime'.  The time is output in the local timezone.
+    rules given in 'man strftime'.  The time is output in the given timezone.
 
     {v
       %Y - year (4 digits)
@@ -229,7 +252,7 @@ val occurrence
 
     a common choice would be: %Y-%m-%d %H:%M:%S
 *)
-val format : t -> string -> string
+val format : t -> string -> zone:Zone.t -> string
 
 (** [to_epoch t] returns the number of seconds since Jan 1, 1970 00:00:00 in UTC *)
 val to_epoch : t -> float
@@ -254,14 +277,14 @@ val next_multiple
 
 module Stable : sig
   module V1 : sig
-    type t with bin_io, sexp, compare
+    type t [@@deriving bin_io, sexp, compare]
   end with type t = t
 
   (** Provides a sexp representation that is independent of the time zone of the machine
       writing it. *)
   module With_utc_sexp : sig
     module V1 : sig
-      type t with bin_io, sexp, compare
+      type t [@@deriving bin_io, sexp, compare]
     end with type t = t
   end
 end

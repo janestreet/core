@@ -54,36 +54,36 @@ module Common = struct
       in
       loop 0
 
-  TEST_MODULE = struct
+  let%test_module _ = (module struct
       let a = [|0.; 0.1; 0.2; 0.3; 0.4; 0.5; 0.6; 0.7; 0.8|];;
 
       let b = [|0.; 0.1; 0.2; 0.4; 0.4; 0.4; 0.6; 0.7|];;
 
       let c = [|0.; 0.5; 0.4; 0.6|] (* an array that is not sorted *)
 
-      TEST =      array_is_sorted ~strict:false a ~compare:Float.compare
-      TEST =      array_is_sorted ~strict:true  a ~compare:Float.compare
-      TEST =      array_is_sorted ~strict:false b ~compare:Float.compare
-      TEST = not (array_is_sorted ~strict:true  b ~compare:Float.compare)
-      TEST = not (array_is_sorted ~strict:false c ~compare:Float.compare)
-      TEST = not (array_is_sorted ~strict:true  c ~compare:Float.compare)
+      let%test _ =      array_is_sorted ~strict:false a ~compare:Float.compare
+      let%test _ =      array_is_sorted ~strict:true  a ~compare:Float.compare
+      let%test _ =      array_is_sorted ~strict:false b ~compare:Float.compare
+      let%test _ = not (array_is_sorted ~strict:true  b ~compare:Float.compare)
+      let%test _ = not (array_is_sorted ~strict:false c ~compare:Float.compare)
+      let%test _ = not (array_is_sorted ~strict:true  c ~compare:Float.compare)
 
       let not_strongly_finite1 = [| (-1e308); 1e308 |]
       let not_strongly_finite2 = [| 1.; 2.; Float.nan |]
       let not_strongly_finite3 = [| Float.infinity |]
 
-      TEST = Result.is_error (array_is_strongly_finite not_strongly_finite1)
-      TEST = Result.is_error (array_is_strongly_finite not_strongly_finite2)
-      TEST = Result.is_error (array_is_strongly_finite not_strongly_finite3)
+      let%test _ = Result.is_error (array_is_strongly_finite not_strongly_finite1)
+      let%test _ = Result.is_error (array_is_strongly_finite not_strongly_finite2)
+      let%test _ = Result.is_error (array_is_strongly_finite not_strongly_finite3)
 
-  end
+  end)
 end
 
 module Stable = struct
   module V1 = struct
 
     module Impl : sig
-      type t with compare
+      type t [@@deriving compare]
 
       (** If [strict] is [true], the x-values must be strictly increasing. *)
       val create : strict:bool -> (float * float) list -> t Or_error.t
@@ -139,7 +139,7 @@ module Stable = struct
         ; mutable lookup : Lookup.t option
         }
 
-      let compare t1 t2 = <:compare< float array * float array >> (t1.x, t1.y) (t2.x, t2.y)
+      let compare t1 t2 = [%compare: float array * float array] (t1.x, t1.y) (t2.x, t2.y)
 
       (** [validate ~strict t] returns [Ok t] if [t] is valid, and an [Error] otherwise. *)
       let validate ~strict t =
@@ -152,11 +152,11 @@ module Stable = struct
         then Or_error.error_string "no knots given"
         else match Common.array_is_strongly_finite y with
           | Error error_message ->
-            error "problem with knot values" error_message <:sexp_of<string>>
+            error "problem with knot values" error_message [%sexp_of: string]
           | Ok () ->
             match Common.array_is_strongly_finite x with
             | Error error_message ->
-              error "problem with knot keys" error_message <:sexp_of<string>>
+              error "problem with knot keys" error_message [%sexp_of: string]
             | Ok () ->
               if Common.array_is_sorted ~strict ~compare:Float.compare x
               then Ok t
@@ -211,7 +211,7 @@ module Stable = struct
           | Error error_when_reversed ->
             Or_error.error "Swapping x and y failed, for both original and reversed order"
               (`Same_order error_when_same_order, `Reverse_order error_when_reversed)
-              <:sexp_of<[`Same_order of Error.t] * [`Reverse_order of Error.t]>>
+              [%sexp_of: [`Same_order of Error.t] * [`Reverse_order of Error.t]]
 
 
 
@@ -328,7 +328,7 @@ module Stable = struct
       type value = Value.t
 
       module T = struct
-        type t = Impl.t with compare
+        type t = Impl.t [@@deriving compare]
 
         let create knots =
           let float_knots =
@@ -336,7 +336,7 @@ module Stable = struct
           in
           Impl.create ~strict:false float_knots
 
-        type knots = (Key.t * Value.t) list with sexp
+        type knots = (Key.t * Value.t) list [@@deriving sexp]
 
         let convert_tuple (x, y) = Key.of_float x, Value.of_float y
         let first_knot t = Option.map (Impl.first_knot t) ~f:convert_tuple
@@ -373,9 +373,9 @@ module Stable = struct
         type t =
           { x : Key.t array
           ; y : Value.t array
-          } with bin_io
+          } [@@deriving bin_io]
       end
-      include Binable.Of_binable (Bin_rep) (struct
+      include Binable.Stable.Of_binable.V1 (Bin_rep) (struct
           type nonrec t = t
 
           let to_binable t =
@@ -397,7 +397,7 @@ module Stable = struct
       { regular : Impl.t
       ; inverse : Impl.t
       }
-    with compare
+    [@@deriving compare]
 
     type ('key, 'value) t_invertible = invertible
 
@@ -410,7 +410,7 @@ module Stable = struct
       type value = Value.t
 
       module T = struct
-        type t = invertible with compare
+        type t = invertible [@@deriving compare]
 
         let sexp_of_t t = M.sexp_of_t t.regular
 
@@ -424,7 +424,7 @@ module Stable = struct
       include T
 
       (* Our bin_io only stores [regular], and reconstructs [inverse] when loading. *)
-      include Binable.Of_binable (M) (struct
+      include Binable.Stable.Of_binable.V1 (M) (struct
           type nonrec t = t
 
           let to_binable t = t.regular
@@ -483,7 +483,7 @@ module Span  = Make (Span)  (F)
 module Float = Make (Float) (F)
 module Int   = Make (Int)   (F)
 
-TEST_MODULE = struct
+let%test_module _ = (module struct
 
   let expected name expected actual =
     if F.(<>) expected actual
@@ -496,11 +496,11 @@ TEST_MODULE = struct
   let to_knots x_values = List.map x_values ~f:(fun x -> (x, 0.))
   let bad_knots = to_knots [1.; 0.; 2.]
 
-  TEST_MODULE "normal" = struct
-    TEST = Result.is_ok (Float.create (to_knots [1.; 1.; 2.]))
-    TEST = Result.is_error (Float.create bad_knots)
+  let%test_module "normal" = (module struct
+    let%test _ = Result.is_ok (Float.create (to_knots [1.; 1.; 2.]))
+    let%test _ = Result.is_error (Float.create bad_knots)
 
-    TEST_UNIT = (* Test the normal case *)
+    let%test_unit _ = (* Test the normal case *)
       let knots = [(1., 1.); (1.1, 1.5); (2., 2.)] in
       let t = Or_error.ok_exn (Float.create knots) in
       expected "get" 1. (Float.get t 1.);
@@ -510,7 +510,7 @@ TEST_MODULE = struct
       expected "get" 2. (Float.get t 2.5);
       expected "get" 2. (Float.get t 2.)
 
-    TEST_UNIT = (* Test the normal case with repeated x-values in knots *)
+    let%test_unit _ = (* Test the normal case with repeated x-values in knots *)
       let knots = [(0.1, 2.); (0.5, 4.); (0.5, 5.); (0.9, 1.); (2.2, 2.2)] in
       let t = Or_error.ok_exn (Float.create knots) in
       expected "get" 5. (Float.get t 0.5); (* right continuity *)
@@ -518,14 +518,14 @@ TEST_MODULE = struct
       expected "get" 3.5 (Float.get t 0.4);
       expected_tol ~tol:1e-12 "get" (4. -. 5e-7) (Float.get t (0.5 -. 1e-7))
 
-    TEST_UNIT = (* Test a degenerate case *)
+    let%test_unit _ = (* Test a degenerate case *)
       let knots = [(1., 2.)] in
       let t = Or_error.ok_exn (Float.create knots) in
       expected "get" 2. (Float.get t 0.5);
       expected "get" 2. (Float.get t 1.);
       expected "get" 2. (Float.get t 1.5)
 
-    TEST_UNIT =
+    let%test_unit _ =
       let with_weights =
         [ Or_error.ok_exn (Float.create [(1., 1.); (1.1, 1.5); (2., 2.)]), 1.
         ; Or_error.ok_exn (Float.create [(1., 1.); (1.1, 1.5); (2., 3.)]), 1.
@@ -536,13 +536,13 @@ TEST_MODULE = struct
       expected "get" 2.5 (Float.get t 1.05);
       expected "get" 5. (Float.get t 5.)
 
-  end
+  end)
 
-  TEST_MODULE "precached" = struct
-    TEST = Result.is_ok (Float.create (to_knots [1.; 1.; 2.]))
-    TEST = Result.is_error (Float.create bad_knots)
+  let%test_module "precached" = (module struct
+    let%test _ = Result.is_ok (Float.create (to_knots [1.; 1.; 2.]))
+    let%test _ = Result.is_error (Float.create bad_knots)
 
-    TEST_UNIT = (* Test the normal case *)
+    let%test_unit _ = (* Test the normal case *)
       let knots = [(1., 1.); (1.1, 1.5); (2., 2.)] in
       let t = Or_error.ok_exn (Float.create knots) in
       Float.precache t;
@@ -553,7 +553,7 @@ TEST_MODULE = struct
       expected "get" 2. (Float.get t 2.5);
       expected "get" 2. (Float.get t 2.)
 
-    TEST_UNIT = (* Test the normal case with repeated x-values in knots *)
+    let%test_unit _ = (* Test the normal case with repeated x-values in knots *)
       let knots = [(0.1, 2.); (0.5, 4.); (0.5, 5.); (0.9, 1.); (2.2, 2.2)] in
       let t = Or_error.ok_exn (Float.create knots) in
       Float.precache t;
@@ -562,7 +562,7 @@ TEST_MODULE = struct
       expected "get" 3.5 (Float.get t 0.4);
       expected_tol ~tol:1e-12 "get" (4. -. 5e-7) (Float.get t (0.5 -. 1e-7))
 
-    TEST_UNIT = (* Test a degenerate case *)
+    let%test_unit _ = (* Test a degenerate case *)
       let knots = [(1., 2.)] in
       let t = Or_error.ok_exn (Float.create knots) in
       Float.precache t;
@@ -572,7 +572,7 @@ TEST_MODULE = struct
 
    (* This test exposed a floating point error when we weren't populating the cached
      lookup correctly *)
-   TEST_UNIT =
+   let%test_unit _ =
       let x0 = -0.18064178089785571 in
       let x1 = 0.05702505363595689 in
       let x2 = 0.373914166347706967 in
@@ -584,23 +584,23 @@ TEST_MODULE = struct
       if F.(>=) just_below_x1 x1 then failwith "Bug in test, not necessarily in module";
       let result = Float.get t just_below_x1 in
       expected "get" 0. result
-  end
+  end)
 
 
-  TEST_MODULE "invertible" = struct
+  let%test_module "invertible" = (module struct
     module Float_invertible = Make_invertible (F) (F)
 
     let not_invertible = [(1., 1.); (1., 1.5); (2., 2.)]
     let not_invertible2 = [(1., 1.); (1.5, 1.); (2., 2.)]
-    TEST = Result.is_error (Float_invertible.create not_invertible)
-    TEST = Result.is_error (Float_invertible.create not_invertible2)
-    TEST = Result.is_error (Float_invertible.create bad_knots)
+    let%test _ = Result.is_error (Float_invertible.create not_invertible)
+    let%test _ = Result.is_error (Float_invertible.create not_invertible2)
+    let%test _ = Result.is_error (Float_invertible.create bad_knots)
 
     let check_both t x y =
       expected "get" y (Float_invertible.get t x);
       expected "get_inverse" x (Float_invertible.get_inverse t y)
 
-    TEST_UNIT = (* Test the case where both x and y are increasing *)
+    let%test_unit _ = (* Test the case where both x and y are increasing *)
       let is_invertible = [(1., 1.); (1.1, 1.5); (2., 2.)] in
       let t = Or_error.ok_exn (Float_invertible.create is_invertible) in
       check_both t 1. 1.;
@@ -612,7 +612,7 @@ TEST_MODULE = struct
       expected "get_inverse" 1. (Float_invertible.get_inverse t 0.5);
       expected "get_inverse" 2. (Float_invertible.get_inverse t 2.5)
 
-    TEST_UNIT =   (* Test the case where y is decreasing *)
+    let%test_unit _ =   (* Test the case where y is decreasing *)
       let is_invertible = [(1., 2.); (1.1, 1.5); (2., 1.)] in
       let t = Or_error.ok_exn (Float_invertible.create is_invertible) in
       check_both t 1. 2.;
@@ -624,9 +624,9 @@ TEST_MODULE = struct
       expected "get_inverse" 2. (Float_invertible.get_inverse t 0.5);
       expected "get_inverse" 1. (Float_invertible.get_inverse t 2.5)
 
-  end
+  end)
 
-  TEST_MODULE "io" = struct
+  let%test_module "io" = (module struct
     (* The following tests want exact equality, so they could fail if sexp conversion or
        binary io is inexact.  However, we have used values that should be preserved
        exactly. *)
@@ -637,7 +637,7 @@ TEST_MODULE = struct
     let t1 = Time_.of_string "2014-05-20 15:00:00-04:00"
     let t2 = Time_.of_string "2014-05-20 16:00:00-04:00"
 
-    TEST "sexp" =
+    let%test "sexp" =
       let knots = [(t0, 2.); (t1, 1.5); (t2, 1.)] in
       let t = Or_error.ok_exn (Time.create knots) in
       let sexp = Time.sexp_of_t t in
@@ -661,7 +661,7 @@ TEST_MODULE = struct
           current_offset := !current_offset + len
         end
 
-    TEST "bin_io" =
+    let%test "bin_io" =
       let knots0 = [(t0, 2.); (t1, 1.5); (t2, 1.)] in
       let knots1 = [(t0, 0.5); (t1, 3.); (t2, 3.5)] in
       let t0 = Or_error.ok_exn (Time.create knots0) in
@@ -677,14 +677,14 @@ TEST_MODULE = struct
 
     module Time_invertible = Make_invertible (Time_) (F)
 
-    TEST "invertible sexp" =
+    let%test "invertible sexp" =
       let knots = [(t0, 2.); (t1, 1.5); (t2, 1.)] in
       let t = Or_error.ok_exn (Time_invertible.create knots) in
       let sexp = Time_invertible.sexp_of_t t in
       let t' = Time_invertible.t_of_sexp sexp in
       Time_invertible.compare t t' = 0
 
-    TEST "invertible bin_io" =
+    let%test "invertible bin_io" =
       let knots0 = [(t0, 2.); (t1, 1.5); (t2, 1.)] in
       let knots1 = [(t0, 0.5); (t1, 3.); (t2, 3.5)] in
       let t0 = Or_error.ok_exn (Time_invertible.create knots0) in
@@ -698,10 +698,10 @@ TEST_MODULE = struct
       Time_invertible.compare t0 t0' = 0 && Time_invertible.compare t1 t1' = 0
       && Time_invertible.compare t0 t1 <> 0
 
-  end
-end
+  end)
+end)
 
-BENCH_MODULE "Piecewise_linear tests" = struct
+let%bench_module "Piecewise_linear tests" = (module struct
   let num_knots = [2; 100; 10_000]
 
   let create_knots len =
@@ -718,7 +718,7 @@ BENCH_MODULE "Piecewise_linear tests" = struct
   (* Some x values can yield faster lookups than others, so we explore the domain a little
      in the benchmarks by leting x' = x ** 2 - 2.  This bounces around in the interval
      [-2, 2].  *)
-  BENCH_INDEXED "get" len num_knots =
+  let%bench_fun "get" [@indexed len = num_knots] =
     let t = Or_error.ok_exn (Float.create (create_knots len)) in
     let x = ref 0.3 in
     (fun () ->
@@ -731,7 +731,7 @@ BENCH_MODULE "Piecewise_linear tests" = struct
 
   (* This can actually be a little faster than the above, but note that the knots are
      different. *)
-  BENCH_INDEXED "get_inverse" len num_knots =
+  let%bench_fun "get_inverse" [@indexed len = num_knots] =
     let t = Or_error.ok_exn (FI.create (create_knots len)) in
     let x = ref 0.3 in
     (fun () ->
@@ -740,7 +740,7 @@ BENCH_MODULE "Piecewise_linear tests" = struct
        x := x';
        ignore (FI.get_inverse t x'))
 
-  BENCH_FUN "testing overhead" =
+  let%bench_fun "testing overhead" =
     let x = ref 0.3 in
     (fun () ->
        let x' = !x in
@@ -749,12 +749,12 @@ BENCH_MODULE "Piecewise_linear tests" = struct
 
   let density = Some 1.5
 
-  BENCH_INDEXED "precache" len num_knots =
+  let%bench_fun "precache" [@indexed len = num_knots] =
     let t = Or_error.ok_exn (Float.create (create_knots len)) in
     (fun () ->
        ignore (Stable.V1.Impl.precache ~force:true ?density t))
 
-  BENCH_INDEXED "precache then get" len num_knots =
+  let%bench_fun "precache then get" [@indexed len = num_knots] =
     let t = Or_error.ok_exn (Float.create (create_knots len)) in
     Float.precache t ?density;
     let x = ref 0.3 in
@@ -764,7 +764,7 @@ BENCH_MODULE "Piecewise_linear tests" = struct
        x := x';
        ignore (Float.get t x'))
 
-  BENCH_INDEXED "precache then get_inverse" len num_knots =
+  let%bench_fun "precache then get_inverse" [@indexed len = num_knots] =
     let t = Or_error.ok_exn (FI.create (create_knots len)) in
     FI.precache t ?density;
     let x = ref 0.3 in
@@ -773,4 +773,4 @@ BENCH_MODULE "Piecewise_linear tests" = struct
        let x' = x' *. x' -. 2. in
        x := x';
        ignore (FI.get_inverse t x'))
-end
+end)
