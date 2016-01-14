@@ -10,4 +10,9 @@ let sections =
     ; ("src/config.h", None)
     ; ("src/config.mlh", None)
     ])
+  ; ("bin",
+    [],
+    [ ("coretop", None)
+    ; ("corebuild", None)
+    ])
   ]
