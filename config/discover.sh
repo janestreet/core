@@ -42,8 +42,11 @@ for arch in x86_64 i386; do
     fi
 done
 
-WORDEXP=`{ echo '#include <wordexp.h>' | cpp &> /dev/null && echo true; } || echo false`
-echo "#let JSC_WORDEXP = $WORDEXP" >> $OUT
+if echo '#include <wordexp.h>' | cpp > /dev/null 2> /dev/null; then
+    echo "#let JSC_WORDEXP = true" >> $OUT
+else
+    echo "#let JSC_WORDEXP = false" >> $OUT
+fi
 
 # The recvmmsg system call was added in Linux 2.6.32
 if $CC config/test_recvmmsg.c -o /dev/null 2> /dev/null; then
