@@ -32,7 +32,7 @@ trap "rm -f $OUT" EXIT
 
 $OCAMLC -ccopt -E $OCAML_CFLAGS -c $SRC | grep '^"OUT:[^"]*"$' | sed 's/"OUT:\([^"]*\)"/\1/' | tee > $OUT
 
-ARCH=`ocamlc -config | sed -nr 's/^architecture: *(.*)$/\1/p'`
+ARCH=`ocamlc -config | sed -n 's/^architecture: *\(.*\)$/\1/p'`
 [ "$ARCH" = amd64 ] && ARCH=x86_64
 for arch in x86_64 i386; do
     if [ "$ARCH" = "$arch" ]; then
@@ -78,7 +78,7 @@ mv "$OUT" "$ML_OUTFILE"
 EOF
     sed 's|^#let *\([A-Za-z_0-9]*\) *= *true *$|#define \1|;
          s|^#let *\([A-Za-z_0-9]*\) *= *false *$|#undef \1|;
-         s|^#let *\([A-Za-z_0-9]*\) *= *\([^ ]\)* *$|#define \1 \2|' "$ML_OUTFILE"
+         s|^#let *\([A-Za-z_0-9]*\) *= *\([^ ]*\) *$|#define \1 \2|' "$ML_OUTFILE"
     cat  <<EOF
 #endif /* $sentinel */
 EOF
