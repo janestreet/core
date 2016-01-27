@@ -1811,6 +1811,55 @@ alloc_ifaddrs(struct ifaddrs* ifap, value family_variant)
   CAMLreturn(res);
 }
 
+#if !defined(IFF_ALLMULTI)
+#  define IFF_ALLMULTI 0
+#endif
+#if !defined(IFF_AUTOMEDIA)
+#  define IFF_AUTOMEDIA 0
+#endif
+#if !defined(IFF_BROADCAST)
+#  define IFF_BROADCAST 0
+#endif
+#if !defined(IFF_DEBUG)
+#  define IFF_DEBUG 0
+#endif
+#if !defined(IFF_DYNAMIC)
+#  define IFF_DYNAMIC 0
+#endif
+#if !defined(IFF_LOOPBACK)
+#  define IFF_LOOPBACK 0
+#endif
+#if !defined(IFF_MASTER)
+#  define IFF_MASTER 0
+#endif
+#if !defined(IFF_MULTICAST)
+#  define IFF_MULTICAST 0
+#endif
+#if !defined(IFF_NOARP)
+#  define IFF_NOARP 0
+#endif
+#if !defined(IFF_NOTRAILERS)
+#  define IFF_NOTRAILERS 0
+#endif
+#if !defined(IFF_POINTOPOINT)
+#  define IFF_POINTOPOINT 0
+#endif
+#if !defined(IFF_PORTSEL)
+#  define IFF_PORTSEL 0
+#endif
+#if !defined(IFF_PROMISC)
+#  define IFF_PROMISC 0
+#endif
+#if !defined(IFF_RUNNING)
+#  define IFF_RUNNING 0
+#endif
+#if !defined(IFF_SLAVE)
+#  define IFF_SLAVE 0
+#endif
+#if !defined(IFF_UP)
+#  define IFF_UP 0
+#endif
+
 /* THE ORDERING OF THESE CONSTANTS MUST MATCH core_unix.ml!!! */
 static uint32_t iff_table [] = {
   IFF_ALLMULTI,

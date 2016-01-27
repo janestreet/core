@@ -1116,6 +1116,11 @@ let recvmmsg_assume_fd_is_nonblocking =
 #else
                                     (* not JSC_RECVMMSG *)
 
+module Recvmmsg_context = struct
+  type t = unit
+  let create = ignore
+end
+
 let recvmmsg_assume_fd_is_nonblocking =
   Or_error.unimplemented "Iobuf.recvmmsg_assume_fd_is_nonblocking"
 ;;

@@ -86,9 +86,70 @@ end = struct
   let equal (t : t) t' = t = t'
 end
 
-(* This module contains definitions that get used when the necessary features are not
+(* These module contains definitions that get used when the necessary features are not
    enabled. We put these somewhere where they'll always be compiled, to prevent them from
    getting out of sync with the real implementations. *)
+module Null_toplevel = struct
+  module Sysinfo = struct
+    include Sysinfo0
+
+    let sysinfo = Or_error.unimplemented "Linux_ext.Sysinfo.sysinfo"
+  end
+
+  let u = Or_error.unimplemented
+  let cores                          = u "Linux_ext.cores"
+  let file_descr_realpath            = u "Linux_ext.file_descr_realpath"
+  let get_ipv4_address_for_interface = u "Linux_ext.get_ipv4_address_for_interface"
+  let bind_to_interface              = u "Linux_ext.bind_to_interface"
+  let get_terminal_size              = u "Linux_ext.get_terminal_size"
+  let gettcpopt_bool                 = u "Linux_ext.gettcpopt_bool"
+  let setpriority                    = u "Linux_ext.setpriority"
+  let getpriority                    = u "Linux_ext.getpriority"
+  let in_channel_realpath            = u "Linux_ext.in_channel_realpath"
+  let out_channel_realpath           = u "Linux_ext.out_channel_realpath"
+  let pr_get_name                    = u "Linux_ext.pr_get_name"
+  let pr_get_pdeathsig               = u "Linux_ext.pr_get_pdeathsig"
+  let pr_set_name_first16            = u "Linux_ext.pr_set_name_first16"
+  let pr_set_pdeathsig               = u "Linux_ext.pr_set_pdeathsig"
+  let sched_setaffinity              = u "Linux_ext.sched_setaffinity"
+  let sched_setaffinity_this_thread  = u "Linux_ext.sched_setaffinity_this_thread"
+  let send_no_sigpipe                = u "Linux_ext.send_no_sigpipe"
+  let send_nonblocking_no_sigpipe    = u "Linux_ext.send_nonblocking_no_sigpipe"
+  let sendfile                       = u "Linux_ext.sendfile"
+  let sendmsg_nonblocking_no_sigpipe = u "Linux_ext.sendmsg_nonblocking_no_sigpipe"
+  let settcpopt_bool                 = u "Linux_ext.settcpopt_bool"
+
+  module Epoll = struct
+    module Flags = Epoll_flags (struct
+        let in_     = Int63.of_int (1 lsl 0)
+        let out     = Int63.of_int (1 lsl 1)
+        (* let rdhup   = Int63.of_int (1 lsl 2) *)
+        let pri     = Int63.of_int (1 lsl 3)
+        let err     = Int63.of_int (1 lsl 4)
+        let hup     = Int63.of_int (1 lsl 5)
+        let et      = Int63.of_int (1 lsl 6)
+        let oneshot = Int63.of_int (1 lsl 7)
+      end)
+
+    type t = [ `Epoll_is_not_implemented ] [@@deriving sexp_of]
+    let create = Or_error.unimplemented "Linux_ext.Epoll.create"
+    let close _ = assert false
+
+    let invariant _               = assert false
+
+    let find _ _                  = assert false
+    let find_exn _ _              = assert false
+    let set _ _ _                 = assert false
+    let remove _ _                = assert false
+    let iter _ ~f:_               = assert false
+    let wait _ ~timeout:_         = assert false
+    let wait_timeout_after _ _    = assert false
+    let iter_ready _ ~f:_         = assert false
+    let fold_ready _ ~init:_ ~f:_ = assert false
+
+    (* let pwait _ ~timeout:_ _      = assert false *)
+  end
+end
 module Null : Linux_ext_intf.S = struct
   type nonrec tcp_bool_option = tcp_bool_option = TCP_CORK [@@deriving sexp, bin_io]
 
@@ -147,69 +208,7 @@ module Null : Linux_ext_intf.S = struct
     let get                      _ = assert false
   end
 
-  module Linux_ext = struct
-    module Sysinfo = struct
-      include Sysinfo0
-
-      let sysinfo = Or_error.unimplemented "Linux_ext.Sysinfo.sysinfo"
-    end
-
-    let u = Or_error.unimplemented
-    let cores                          = u "Linux_ext.cores"
-    let file_descr_realpath            = u "Linux_ext.file_descr_realpath"
-    let get_ipv4_address_for_interface = u "Linux_ext.get_ipv4_address_for_interface"
-    let bind_to_interface              = u "Linux_ext.bind_to_interface"
-    let get_terminal_size              = u "Linux_ext.get_terminal_size"
-    let gettcpopt_bool                 = u "Linux_ext.gettcpopt_bool"
-    let setpriority                    = u "Linux_ext.setpriority"
-    let getpriority                    = u "Linux_ext.getpriority"
-    let in_channel_realpath            = u "Linux_ext.in_channel_realpath"
-    let out_channel_realpath           = u "Linux_ext.out_channel_realpath"
-    let pr_get_name                    = u "Linux_ext.pr_get_name"
-    let pr_get_pdeathsig               = u "Linux_ext.pr_get_pdeathsig"
-    let pr_set_name_first16            = u "Linux_ext.pr_set_name_first16"
-    let pr_set_pdeathsig               = u "Linux_ext.pr_set_pdeathsig"
-    let sched_setaffinity              = u "Linux_ext.sched_setaffinity"
-    let sched_setaffinity_this_thread  = u "Linux_ext.sched_setaffinity_this_thread"
-    let send_no_sigpipe                = u "Linux_ext.send_no_sigpipe"
-    let send_nonblocking_no_sigpipe    = u "Linux_ext.send_nonblocking_no_sigpipe"
-    let sendfile                       = u "Linux_ext.sendfile"
-    let sendmsg_nonblocking_no_sigpipe = u "Linux_ext.sendmsg_nonblocking_no_sigpipe"
-    let settcpopt_bool                 = u "Linux_ext.settcpopt_bool"
-
-    module Epoll = struct
-      module Flags = Epoll_flags (struct
-        let in_     = Int63.of_int (1 lsl 0)
-        let out     = Int63.of_int (1 lsl 1)
-        (* let rdhup   = Int63.of_int (1 lsl 2) *)
-        let pri     = Int63.of_int (1 lsl 3)
-        let err     = Int63.of_int (1 lsl 4)
-        let hup     = Int63.of_int (1 lsl 5)
-        let et      = Int63.of_int (1 lsl 6)
-        let oneshot = Int63.of_int (1 lsl 7)
-      end)
-
-      type t = [ `Epoll_is_not_implemented ] [@@deriving sexp_of]
-      let create = Or_error.unimplemented "Linux_ext.Epoll.create"
-      let close _ = assert false
-
-      let invariant _               = assert false
-
-      let find _ _                  = assert false
-      let find_exn _ _              = assert false
-      let set _ _ _                 = assert false
-      let remove _ _                = assert false
-      let iter _ ~f:_               = assert false
-      let wait _ ~timeout:_         = assert false
-      let wait_timeout_after _ _    = assert false
-      let iter_ready _ ~f:_         = assert false
-      let fold_ready _ ~init:_ ~f:_ = assert false
-
-      (* let pwait _ ~timeout:_ _      = assert false *)
-    end
-  end
-
-  include Linux_ext
+  include Null_toplevel
 end
 
 #import "config.mlh"
@@ -1070,5 +1069,5 @@ let sendmsg_nonblocking_no_sigpipe = Ok sendmsg_nonblocking_no_sigpipe
 let settcpopt_bool                 = Ok settcpopt_bool
 
 #else
-include Null.Linux_ext
+include Null_toplevel
 #endif
