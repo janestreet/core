@@ -2,10 +2,8 @@
 
 ocamlbuild \
     -use-ocamlfind \
-    -syntax camlp4o \
     -pkg core \
-    -pkg sexplib.syntax,comparelib.syntax,fieldslib.syntax,variantslib.syntax \
-    -pkg bin_prot.syntax \
+    -tag "ppx(ppx-jane -as-ppx)" \
     -tag thread \
     -tag debug \
     -tag bin_annot \
