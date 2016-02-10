@@ -1,3 +1,9 @@
+## 113.24.01
+
+- Updated corebuild to use ppx-jane instead of camlp4
+
+  Closes #70
+
 ## 113.24.00
 
 N.B. Some interface change were made which are not listed here, as they are only
