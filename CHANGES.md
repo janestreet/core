@@ -1,3 +1,7 @@
+## 113.24.02
+
+- Deprecated core.syntax and updated `coretop` to use `ppx_jane`
+
 ## 113.24.01
 
 - Updated corebuild to use ppx-jane instead of camlp4
