@@ -54,7 +54,7 @@
     v}
 *)
 
-open Core_kernel.Std
+open! Core_kernel.Std
 
 type t [@@deriving sexp_of]
 

@@ -328,6 +328,22 @@ module Stable = struct
       Serializable.(sexp_of_t sexp_of_tag (of_gadt t))
     ;;
 
+    let flag (type b) ?(flag_name = "schedule") ?default ?(doc = "") m () =
+      let open Command.Param in
+      let module B = (val m : Sexpable.S with type t = b) in
+      let arg_type =
+        Arg_type.create (fun str ->
+          t_of_sexp B.t_of_sexp (Sexp.of_string str))
+      in
+      match default with
+      | None ->
+        flag flag_name (required arg_type) ~doc:(sprintf "SCHEDULE %s" doc)
+      | Some def ->
+        flag flag_name (optional_with_default def arg_type)
+          ~doc:(sprintf "SCHEDULE %s (default: %s)"
+                  doc (Sexp.to_string_mach (sexp_of_t B.sexp_of_t def)))
+    ;;
+
     include Binable.Of_binable1.V1 (Serializable) (struct
         let to_binable t            = Serializable.of_gadt t
         let of_binable serializable = Serializable.to_gadt serializable
@@ -695,6 +711,7 @@ module Valid_invalid_span = struct
   type t =
     | In_range_for_at_least of Time.Span.t
     | Out_of_range_for_at_least of Time.Span.t
+    [@@deriving sexp_of]
 
   let never   = Out_of_range_for_at_least Time.Span.day
   let forever = In_range_for_at_least Time.Span.day
@@ -767,6 +784,30 @@ let last_ofday =
   |> Time.Ofday.of_span_since_start_of_day
 ;;
 
+let s_is_inrange_today_after_ofday ~start_inc_exc ~s ~ofday =
+  match (start_inc_exc : Inclusive_exclusive.t)  with
+  | Inclusive -> Time.Ofday.(<) ofday s
+  | Exclusive -> Time.Ofday.(<=) ofday s
+;;
+
+let maybe_exclude_without_crossing_day_boundary s =
+  if Time.Ofday.(=) s last_ofday
+  then s
+  else
+    Time.Ofday.to_float s
+    |> Float.one_ulp `Up
+    |> Time.Ofday.of_float
+;;
+
+let boundary_end ~start_inc_exc ~s ~ofday =
+  if s_is_inrange_today_after_ofday ~start_inc_exc ~s ~ofday
+  then
+    match start_inc_exc with
+    | Inclusive -> s
+    | Exclusive -> maybe_exclude_without_crossing_day_boundary s
+  else last_ofday
+;;
+
 let boundary_span ~start_inc_exc ~s ~end_inc_exc ~e it : Valid_invalid_span.t =
   let ofday = Internal_time.ofday it in
   let in_range =
@@ -776,11 +817,7 @@ let boundary_span ~start_inc_exc ~s ~end_inc_exc ~e it : Valid_invalid_span.t =
   if in_range
   then In_range_for_at_least (calculate_ofday_diff ~s:ofday ~e)
   else begin
-    let e =
-      if Time.Ofday.(<) ofday s
-      then s
-      else last_ofday
-    in
+    let e = boundary_end ~start_inc_exc ~s ~ofday in
     Out_of_range_for_at_least (calculate_ofday_diff ~s:ofday ~e)
   end
 ;;
@@ -1077,40 +1114,40 @@ module Event = struct
 end
 
 let next_tags_between t start_time stop_time prev_tags tag_equal =
-  let rec loop time =
-    let compare_tags continue_looping =
-      let new_tags = tags t time in
-      begin match prev_tags, new_tags with
-      | None      , `Not_included      ->
-        begin match continue_looping with
-        | None -> (None, `No_change_until_at_least (`Out_of_range, stop_time))
-        | Some span -> loop (Time.add time span)
-        end
-      | None      , `Included tags     -> (Some tags, `Enter (time, tags))
-      | Some _    , `Not_included      -> (None, `Leave time)
-      | Some tags , `Included new_tags ->
-        if Int.(=) (List.length new_tags) (List.length tags)
-        then begin
-          if List.for_all2_exn tags new_tags ~f:tag_equal
-          then
-            begin match continue_looping with
-            | None -> (Some tags, `No_change_until_at_least (`In_range, stop_time))
-            | Some span -> loop (Time.add time span)
-            end
-          else (Some new_tags, `Change_tags (time, new_tags))
-        end
+  let compare_tags continue_looping time loop =
+    let new_tags = tags t time in
+    begin match prev_tags, new_tags with
+    | None      , `Not_included      ->
+      begin match continue_looping with
+      | None -> (None, `No_change_until_at_least (`Out_of_range, stop_time))
+      | Some span -> loop (Time.add time span)
+      end
+    | None      , `Included tags     -> (Some tags, `Enter (time, tags))
+    | Some _    , `Not_included      -> (None, `Leave time)
+    | Some tags , `Included new_tags ->
+      if Int.(=) (List.length new_tags) (List.length tags)
+      then begin
+        if List.for_all2_exn tags new_tags ~f:tag_equal
+        then
+          begin match continue_looping with
+          | None -> (Some tags, `No_change_until_at_least (`In_range, stop_time))
+          | Some span -> loop (Time.add time span)
+          end
         else (Some new_tags, `Change_tags (time, new_tags))
       end
-    in
+      else (Some new_tags, `Change_tags (time, new_tags))
+    end
+  in
+  let rec loop time =
     if Time.(>=) time stop_time
-    then compare_tags None
+    then compare_tags None time loop
     else begin
       let span =
         match includes t time with
         | In_range_for_at_least span
         | Out_of_range_for_at_least span -> span
       in
-      compare_tags (Some span)
+      compare_tags (Some span) time loop
     end
   in
   loop start_time

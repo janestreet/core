@@ -44,7 +44,7 @@
 
 #import "config.mlh"
 
-open Core_kernel.Std
+open! Core_kernel.Std
 
 type t = private Int63.t [@@deriving bin_io, compare, sexp]
 

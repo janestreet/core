@@ -1,5 +1,5 @@
 (* This file is a modified version of unixLabels.mli from the OCaml distribution. *)
-open Core_kernel.Std
+open! Core_kernel.Std
 
 (** File descriptor. *)
 module File_descr : sig

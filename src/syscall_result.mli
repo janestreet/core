@@ -7,7 +7,7 @@
     [EAGAIN].  Indeed, in some context we issue a system call in a tight loop that will
     often fail with [EAGAIN] and using exceptions to return it is costly. *)
 
-open Core_kernel.Std
+open! Core_kernel.Std
 
 (** There is no [with sexp_of] on purpose as it could only print the ['a] value as an
     integer.  Use [<:sexp_of< Int.t >>] or [<:sexp_of< Unit.t >>]. *)

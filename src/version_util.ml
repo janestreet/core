@@ -46,11 +46,11 @@ module Application_specific_fields = struct
 end
 
 type t = {
-  username                    : string;
-  hostname                    : string;
-  kernel                      : string;
-  build_date                  : Date.t;
-  build_time                  : Ofday.t;
+  username                    : string sexp_option;
+  hostname                    : string sexp_option;
+  kernel                      : string sexp_option;
+  build_date                  : Date.t sexp_option;
+  build_time                  : Ofday.t sexp_option;
   x_library_inlining          : bool;
   nodynlink                   : bool;
   ocaml_version               : string;
@@ -82,4 +82,8 @@ let { username;
 
 let compiled_for_speed = x_library_inlining
 let compiled_with_dynlink = not nodynlink
-let time = Time.of_date_ofday ~zone:Zone.utc build_date build_time
+let time =
+  match build_date, build_time with
+  | None, _ | _, None -> None
+  | Some build_date, Some build_time ->
+    Some (Time.of_date_ofday ~zone:Zone.utc build_date build_time)

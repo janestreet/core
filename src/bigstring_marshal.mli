@@ -3,7 +3,7 @@
     @author Markus Mottl <mmottl\@janestreet.com>
 *)
 
-open Core_kernel.Std
+open! Core_kernel.Std
 open Bigstring
 
 include module type of struct include Core_kernel.Std.Bigstring_marshal end

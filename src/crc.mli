@@ -1,6 +1,6 @@
 (** Crc functions *)
 
-open Core_kernel.Std
+open! Core_kernel.Std
 
 (** Compute the 32-bit crc *)
 val crc32 : string -> Int63.t

@@ -29,7 +29,7 @@
     At this point, the data associated with [key] is unreachable (since all we did with it
     was project out field bar), so it may disappear from the table at any time. *)
 
-open Core_kernel.Std
+open! Core_kernel.Std
 
 type ('a, 'b) t [@@deriving sexp_of]
 

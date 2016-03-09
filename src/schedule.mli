@@ -73,7 +73,7 @@
   no special attempt to artificially include it.
 *)
 
-open Core_kernel.Std
+open! Core_kernel.Std
 
 (** these phantom types are concrete and exposed to help the compiler understand
     that zoned and unzoned cannot be the same type (which it could not know if they
@@ -155,7 +155,17 @@ val compare : ('b -> 'b -> int) -> ('a, 'b) t -> ('a, 'b) t -> int
 val to_string_zoned : (zoned, 'b) t -> string_of_tag:('b -> string) -> string
 
 module Stable : sig
-  module V4 : Stable1 with type 'b t = (zoned, 'b) t
+  module V4 : sig
+    include Stable1 with type 'b t = (zoned, 'b) t
+
+    val flag
+      :  ?flag_name:string
+      -> ?default:'b t
+      -> ?doc:string
+      -> (module Sexpable.S with type t = 'b)
+      -> unit
+      -> 'b t Command.Spec.param
+  end
 end
 
 (** [includes t time] is true if the second represented by [time] falls within the

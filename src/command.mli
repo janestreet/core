@@ -4,21 +4,27 @@
 
     {[
       let () =
-        Command.basic
+        let open Command.Let_syntax in
+        Command.basic'
           ~summary:"cook eggs"
-          Command.Spec.(
-            empty
-            +> flag "num-eggs" (required int) ~doc:"COUNT cook this many eggs"
-            +> flag "style" (required (Arg_type.create Egg_style.of_string))
-                 ~doc:"OVER-EASY|SUNNY-SIDE-UP style of eggs"
-            +> anon ("recipient" %: string))
-          (fun num_eggs style recipient ->
-             failwith "no eggs today")
+          [%map_open
+            let num_eggs =
+              flag "num-eggs" (required int) ~doc:"COUNT cook this many eggs"
+            and style =
+              flag "style" (required (Arg_type.create Egg_style.of_string))
+                ~doc:"OVER-EASY|SUNNY-SIDE-UP style of eggs"
+            and recipient =
+              anon ("recipient" %: string)
+            in
+            fun () ->
+              (* TODO: implement egg-cooking in ocaml *)
+              failwith "no eggs today"
+          ]
         |> Command.run
     ]}
 *)
 
-open Core_kernel.Std
+open! Core_kernel.Std
 
 (** {1 argument types} *)
 module Arg_type : sig
@@ -66,6 +72,7 @@ module Arg_type : sig
     val float              : float              t
     val bool               : bool               t
     val date               : Date.t             t
+    val percent            : Percent.t          t
     (** [time] requires a time zone. *)
     val time               : Time.t             t
     val time_ofday         : Time.Ofday.Zoned.t t
@@ -122,7 +129,7 @@ end
 (** {1 anonymous argument specifications} *)
 module Anons : sig
 
-  type 'a t (** a specification of some number of anonymous arguments *)
+  type +'a t (** a specification of some number of anonymous arguments *)
 
   (** [(name %: typ)] specifies a required anonymous argument of type [typ].
 
@@ -192,6 +199,8 @@ end
 module Param : sig
   module type S = sig
 
+    type +'a t
+
     (** [Command.Param] is intended to be used with the [%map_open] syntax defined in
         [ppx_let], like so:
         {[
@@ -228,7 +237,7 @@ module Param : sig
         Alternatively, you can say:
 
         {[
-          let module Let_syntax = Foo.Let_syntax in
+          let open Foo.Let_syntax in
           [%map_open
             let x ...
           ]
@@ -238,7 +247,7 @@ module Param : sig
 
         See examples/command/main.ml for more examples.
     *)
-    include Applicative.S
+    include Applicative.S with type 'a t := 'a t
 
     (** {2 various internal values} *)
 
@@ -276,6 +285,14 @@ module Param : sig
     (** [anon spec] specifies a command that, among other things, takes the anonymous
         arguments specified by [spec]. *)
     val anon : 'a Anons.t -> 'a t
+
+    (** [choose_one clauses ~if_nothing_chosen] expresses a sum type.  It raises if more
+        than one of [clauses] is [Some _].  When [if_nothing_chosen = `Raise], it also
+        raises if none of [clauses] is [Some _]. *)
+    val choose_one
+      :  'a option t list
+      -> if_nothing_chosen:[ `Default_to of 'a | `Raise ]
+      -> 'a t
   end
 
   include S
@@ -290,13 +307,15 @@ module Param : sig
 end
 
 module Let_syntax : sig
-  type 'a t (** substituted below *)
-  val return : 'a -> 'a t
-  val map    : 'a t -> f:('a -> 'b) -> 'b t
-  val both   : 'a t -> 'b t -> ('a * 'b) t
-  module Open_on_rhs = Param
-  module Open_in_body : sig end
-end with type 'a t := 'a Param.t
+  module Let_syntax : sig
+    type 'a t (** substituted below *)
+    val return : 'a -> 'a t
+    val map    : 'a t -> f:('a -> 'b) -> 'b t
+    val both   : 'a t -> 'b t -> ('a * 'b) t
+    module Open_on_rhs = Param
+    module Open_in_body : sig end
+  end with type 'a t := 'a Param.t
+end
 
 (** {1 older interface for command-line specifications} *)
 module Spec : sig
@@ -316,7 +335,7 @@ module Spec : sig
   (** {1 command specifications} *)
 
   (** composable command-line specifications *)
-  type ('main_in, 'main_out) t
+  type (-'main_in, +'main_out) t
   (**
       Ultimately one forms a basic command by combining a spec of type
       [('main, unit -> unit) t] with a main function of type ['main]; see the [basic]
@@ -505,8 +524,10 @@ module Spec : sig
   (** [map_anons anons ~f] transforms the parsed result of [anons] by applying [f] *)
   val map_anons : 'a anons -> f:('a -> 'b) -> 'b anons
 
-  (** useful for converting to new-style Param commands *)
+  (** conversions to and from new-style [Param] command line specifications *)
+
   val to_param : ('a, 'r) t -> 'a -> 'r Param.t
+  val of_param : 'r Param.t -> ('r -> 'm, 'm) t
 end
 
 type t (** commands which can be combined into a hierarchy of subcommands *)

@@ -1,6 +1,6 @@
 (** Warning! this library assumes we are in a POSIX compliant OS. *)
 
-open Core_kernel.Std
+open! Core_kernel.Std
 
 (**  The path of the root.*)
 val root : string

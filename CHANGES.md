@@ -1,3 +1,48 @@
+## 113.33.00
+
+- Updated to follow core\_kernel's evolution.
+
+- Add variance annotations to a few types in `Command`.
+
+- `Command.Param.choice` represents a sum type.
+
+- Added `Command.Spec.of_param` for conversion from new-style to old
+  style command line specifications.  This is expected to be useful for
+  gradually converting Spec-based commands into Param-based ones.
+
+- `flag_names` and `anon_names` gives the flags and anons used by a
+  Command.Param.t, while `mnemonic` combines them to give a string
+  that's good for referring to that param in error messages.
+
+  This feature improves the interface of `Command.Param.one_of` by
+  saving the caller from passing the flag names separately.
+
+- Remove the closure allocation from `Date0.create_exn`
+
+- Many apps take schedules as command line parameters (to determine when
+  they'll be up, or when they should raise issues, etc.).  Let's add a
+  Schedule.Stable.V4.flag function to generate the command line param to
+  make writing this common pattern easier.
+
+- Add Ofday.Option to `time_ns.ml`.
+
+  Exports `Time_ns.Span.Option.unchecked_value` and
+  `.Ofday.Option.unchecked_value`!
+
+- Finally fix `Time_ns.Of_day.of_local_time` w.r.t. DST transitions after
+  regression test failures at the DST transition.
+
+  As a result, clarified slightly the role of `Time_ns.Ofday`, like
+  `Time.Ofday`, as 24h wall-clock times, not linear time offsets, which
+  latter would have to be up to 25h for DST.
+
+- Adds `Command.Spec.Arg_type.percent`.
+
+- Add `Stable.V1` to `Time_ns.Ofday.Option.t`, add it to `Core.Stable`, and
+  standardize the interface to `Option` modules in `Time_ns`.
+
+- Add `Time_ns.to_ofday`.
+
 ## 113.24.02
 
 - Deprecated core.syntax and updated `coretop` to use `ppx_jane`

@@ -4,34 +4,60 @@
     This module represents absolute times with nanosecond precision, approximately between
     the years 1823 and 2116 CE.
 
-    NOTE: you should normally default to using [Time] instead of this module.  The
-    reasons are:
+    You should normally default to using [Time] instead of this module!  The reasons are:
 
     - Many functions around our libraries expect [Time.t] values, so it will likely be
       much more convenient for you.
-
     - It leads to greater consistency across different codebases.  It would be bad to end
       up with half our libraries expecting [Time.t] and the other half expecting
       [Time_ns.t].
+    - [Time_ns] silently ignores overflow.
 
     Some reasons you might want want to actually prefer [Time_ns.t] in certain cases:
 
     - It has superior performance.
-
     - It uses [int]s rather than [float]s internally, which makes certain things easier to
-      reason about, since ints respect a bunch of arithmetic identities that floats don't,
-      e.g., [x + (y + z) = (x + y) + z].
-
+      reason about, since [int]s respect a bunch of arithmetic identities that [float]s
+      don't, e.g., [x + (y + z) = (x + y) + z].
     - It is available on non-UNIX platforms, including Javascript via js_of_ocaml.
 
     All in all, it would have been nice to have chosen [Time_ns.t] to begin with, but
-    we're unlikely to flip everything to [Time_ns.t] in the short term (see comment at
-    the end of time_ns.ml).
-*)
+    we're unlikely to flip everything to [Time_ns.t] in the short term (see comment at the
+    end of [time_ns.ml]).
 
-open Core_kernel.Std
+    See {!Core_kernel.Time_ns} for additional low level documentation. *)
+
+open! Core_kernel.Std
 
 type t = Core_kernel.Time_ns.t [@@deriving typerep]
+
+module type Option = sig
+  type value
+  type t = private Int63.t [@@deriving typerep]
+  include Identifiable with type t := t
+  val none : t
+  val some : value -> t
+  val is_none : t -> bool
+  val is_some : t -> bool
+  val value : t -> default : value -> value
+  val value_exn : t -> value
+  (** [unchecked_value t] is like [value_exn t], except its return value is only defined
+      if [is_some t].  This avoids an extra branch if it is known that [is_some t]. *)
+  val unchecked_value : t -> value
+  val of_option : value option -> t
+  val to_option : t -> value option
+  module Stable : sig
+    module V1 : sig
+      type nonrec t = t
+      include Stable with type t := t
+      (** [to_int63] and [of_int63_exn] encode [t] for use in wire protocols; they are
+          designed to be efficient on 64-bit machines.  [of_int63_exn (to_int63 t) = t]
+          for all [t]; [of_int63_exn] raises for inputs not produced by [to_int63]. *)
+      val to_int63     : t -> Int63.t
+      val of_int63_exn : Int63.t -> t
+    end
+  end
+end
 
 module Span : sig
   type t = Core_kernel.Time_ns.Span.t [@@deriving typerep]
@@ -41,7 +67,7 @@ module Span : sig
   (** Similar to {!Time.Span.Parts}, but adding [ns]. *)
   module Parts : sig
     type t =
-      { sign : Float.Sign.t
+      { sign : Sign.t
       ; hr   : int
       ; min  : int
       ; sec  : int
@@ -85,18 +111,19 @@ module Span : sig
   val zero : t
   val min_value : t
   val max_value : t
-  val ( + ) : t -> t -> t
-  val ( - ) : t -> t -> t
+  val ( + ) : t -> t -> t (** overflows silently *)
+  val ( - ) : t -> t -> t (** overflows silently *)
   val abs : t -> t
   val neg : t -> t
   val scale     : t -> float -> t
-  val scale_int : t -> int   -> t
+  val scale_int : t -> int   -> t (** overflows silently *)
   val div : t -> t -> Int63.t
   val ( / ) : t -> float -> t
   val ( // ) : t -> t -> float
 
+  (** Overflows silently. *)
   val create
-    :  ?sign : Float.Sign.t
+    :  ?sign : Sign.t
     -> ?day : int
     -> ?hr  : int
     -> ?min : int
@@ -111,7 +138,7 @@ module Span : sig
   val randomize : t -> percent : float -> t
 
   val to_parts : t -> Parts.t
-  val of_parts : Parts.t -> t
+  val of_parts : Parts.t -> t (** overflows silently *)
 
   module Unit_of_time = Time.Span.Unit_of_time
 
@@ -148,8 +175,8 @@ module Span : sig
 
   include Robustly_comparable with type t := t
 
-  val to_int63_ns : t       -> Int63.t (** Fast, implemented as the identity function. *)
-  val of_int63_ns : Int63.t -> t       (** Fast, implemented as the identity function. *)
+  val to_int63_ns : t -> Int63.t (** Fast, implemented as the identity function. *)
+  val of_int63_ns : Int63.t -> t (** Somewhat fast, implemented as a range check. *)
 
   (** Will raise on 32-bit platforms with spans corresponding to contemporary {!now}.
       Consider [to_int63_ns] instead. *)
@@ -170,66 +197,18 @@ module Span : sig
 
   val random : unit -> t
 
-  module Option : sig
-    type span
-
-    type t = private Int63.t [@@deriving typerep]
-
-    include Identifiable with type t := t
-
-    val none : t
-    val some : span -> t
-    val is_none : t -> bool
-    val is_some : t -> bool
-    val value : t -> default : span -> span
-    val value_exn : t -> span
-
-    module Stable : sig
-      module V1 : sig
-        type nonrec t = t
-        include Stable with type t := t
-        (** [to_int63] and [of_int63_exn] encode [t] for use in wire protocols; they are
-            designed to be efficient on 64-bit machines.  [of_int63_exn (to_int63 t) = t]
-            for all [t]; [of_int63_exn] raises for inputs not produced by [to_int63]. *)
-        val to_int63     : t -> Int63.t
-        val of_int63_exn : Int63.t -> t
-      end
-    end
-  end with type span := t
+  (** [Span.Option.t] is like [Span.t option], except that the value is immediate.  This
+      module should mainly be used to avoid allocations. *)
+  module Option : Option with type value := t
 end
 
-module Option : sig
-  type time
+(** [Option.t] is like [t option], except that the value is immediate.  This module should
+    mainly be used to avoid allocations. *)
+module Option : Option with type value := t
 
-  type t = private Int63.t [@@deriving typerep]
-
-  include Identifiable with type t := t
-
-  val none : t
-  val some : time -> t
-  val is_none : t -> bool
-  val is_some : t -> bool
-  val value : t -> default : time -> time
-  val value_exn : t -> time
-
-  val of_option : time option -> t
-  val to_option : t -> time option
-
-  module Stable : sig
-    module V1 : sig
-      type nonrec t = t
-      include Stable with type t := t
-      (** [to_int63] and [of_int63_exn] encode [t] for use in wire protocols; they are
-          designed to be efficient on 64-bit machines.  [of_int63_exn (to_int63 t) = t]
-          for all [t]; [of_int63_exn] raises for inputs not produced by [to_int63]. *)
-      val to_int63     : t -> Int63.t
-      val of_int63_exn : Int63.t -> t
-    end
-  end
-end with type time := t
-
+(** Times of day on a 24-hour wall clock.  See {!Time.Ofday}. *)
 module Ofday : sig
-  type time
+  type time = t
 
   type t = private Int63.t [@@deriving typerep]
 
@@ -243,6 +222,7 @@ module Ofday : sig
   val to_ofday : t -> Time.Ofday.t
   val of_ofday : Time.Ofday.t -> t
 
+  val of_time : time -> zone : Zone.t -> t
   val local_now : unit -> t
   val of_local_time : time -> t
   val to_millisecond_string : t -> string
@@ -251,9 +231,6 @@ module Ofday : sig
   val end_of_day : t
 
   val to_span_since_start_of_day : t -> Span.t
-
-  (** [of_span_since_start_of_day_exn] excludes obviously impossible times of day but
-      cannot exclude all invalid times of day due to DST, leap seconds, etc. *)
   val of_span_since_start_of_day_exn : Span.t -> t
 
   module Stable : sig
@@ -267,6 +244,8 @@ module Ofday : sig
       val of_int63_exn : Int63.t -> t
     end
   end
+
+  module Option : Option with type value := t
 end with type time := t
 
 include Identifiable with type t := t
@@ -278,10 +257,10 @@ val max_value : t
 
 val now : unit -> t
 
-val add : t -> Span.t -> t
-val sub : t -> Span.t -> t
-val diff : t -> t -> Span.t
-val abs_diff : t -> t -> Span.t
+val add      : t -> Span.t -> t (** overflows silently *)
+val sub      : t -> Span.t -> t (** overflows silently *)
+val diff     : t -> t -> Span.t (** overflows silently *)
+val abs_diff : t -> t -> Span.t (** overflows silently *)
 
 val to_span_since_epoch : t -> Span.t
 val of_span_since_epoch : Span.t -> t
@@ -300,10 +279,12 @@ val to_int63_ns_since_epoch : t -> Int63.t
 val of_int63_ns_since_epoch : Int63.t -> t
 
 (** Will raise on 32-bit platforms.  Consider [to_int63_ns_since_epoch] instead. *)
-val to_int_ns_since_epoch : t   -> int
+val to_int_ns_since_epoch : t -> int
 val of_int_ns_since_epoch : int -> t
 
-(** See [Core_kernel.Time_ns] *)
+(** See [Core_kernel.Time_ns].
+
+    Overflows silently. *)
 val next_multiple
   :  ?can_equal_after:bool  (** default is [false] *)
   -> base:t
@@ -315,7 +296,8 @@ val next_multiple
 
 val of_date_ofday : zone:Zone.t -> Date.t -> Ofday.t -> t
 
-val to_date : t -> zone:Zone.t -> Date.t
+val to_ofday : t -> zone:Zone.t -> Ofday.t
+val to_date  : t -> zone:Zone.t -> Date.t
 
 val occurrence
   :  [ `First_after_or_at | `Last_before_or_at ]
@@ -344,9 +326,6 @@ module Stable : sig
     val to_int63     : t -> Int63.t
     val of_int63_exn : Int63.t -> t
   end
-  module Span   : module type of Span   .Stable
-  module Option : module type of Option .Stable
-  module Ofday  : module type of Ofday  .Stable
 end
 
 val random : unit -> t

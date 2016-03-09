@@ -10,7 +10,7 @@
     Currently this module is not included in the public release.
 *)
 
-open Core_kernel.Std
+open! Core_kernel.Std
 
 val version : string (* all hg repos and their versions *)
 val version_list : string list (* same as [version], but one string per line *)
@@ -36,10 +36,10 @@ end
 val build_info : string
 val build_info_as_sexp : Sexp.t
 
-val username                       : string
-val hostname                       : string
-val kernel                         : string
-val time                           : Time.t
+val username                       : string option
+val hostname                       : string option
+val kernel                         : string option
+val time                           : Time.t option
 val x_library_inlining             : bool
 val nodynlink                      : bool
 val compiled_for_speed             : bool

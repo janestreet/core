@@ -1,7 +1,7 @@
 (** Module for simple closed intervals over arbitrary types that are ordered
     correctly using polymorphic compare. *)
 
-open Core_kernel.Std
+open! Core_kernel.Std
 open Interval_intf
 
 module type S1 = S1
@@ -30,6 +30,7 @@ end
 
 module Time : sig
   include S with type bound = Time.t
+
 
   (** [create_ending_after ?zone (od1, od2) ~now] returns the smallest interval [(t1 t2)]
       with minimum [t2] such that [t2 >= now], [to_ofday t1 = od1], and [to_ofday t2 =

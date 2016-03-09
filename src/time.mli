@@ -1,5 +1,5 @@
 (** A module for representing absolute points in time, independent of time zone. *)
-open Core_kernel.Std
+open! Core_kernel.Std
 
 
 module Ofday : sig
@@ -23,7 +23,7 @@ module Span : sig
 
   module Parts : sig
     type t = Span.Parts.t = private {
-      sign : Float.Sign.t;
+      sign : Sign.t;
       hr   : int;
       min  : int;
       sec  : int;
@@ -256,6 +256,8 @@ val format : t -> string -> zone:Zone.t -> string
 
 (** [to_epoch t] returns the number of seconds since Jan 1, 1970 00:00:00 in UTC *)
 val to_epoch : t -> float
+(** [of_epoch x] returns the time x seconds after Jan 1, 1970 00:00:00 in UTC *)
+val of_epoch : float -> t
 
 (* [next_multiple ~base ~after ~interval] returns the smallest [time] of the form:
 

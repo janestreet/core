@@ -18,7 +18,7 @@
     To present a restricted view of an iobuf to a client, one can create a sub-iobuf or
     add a type constraint. *)
 
-open Core_kernel.Std
+open! Core_kernel.Std
 open Iobuf_intf
 
 type nonrec seek    = seek    [@@deriving sexp_of]

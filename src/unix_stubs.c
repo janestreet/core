@@ -48,6 +48,7 @@
 #endif
 
 #include "ocaml_utils.h"
+#include "unix_utils.h"
 #include "config.h"
 #include "timespec.h"
 
@@ -682,7 +683,7 @@ CAMLprim value unix_writev_assume_fd_is_nonblocking_stub(
     iovec->iov_base = String_val(v_iov_base) + Long_val(v_iov_pos);
     iovec->iov_len = Long_val(v_iov_len);
   }
-  ret = writev(Int_val(v_fd), iovecs, count);
+  ret = jane_writev(Int_val(v_fd), iovecs, count);
   caml_stat_free(iovecs);
   if (ret == -1) uerror("unix_writev_assume_fd_is_nonblocking", Nothing);
   return Val_long(ret);

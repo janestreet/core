@@ -182,6 +182,7 @@ module Arg_type = struct
   let float              = create Float.of_string
   let bool               = create Bool.of_string
   let date               = create Date.of_string
+  let percent            = create Percent.of_string
   let time               = create Time.of_string_abs
   let time_ofday         = create Time.Ofday.Zoned.of_string
   let time_ofday_unzoned = create Time.Ofday.of_string
@@ -238,6 +239,7 @@ module Arg_type = struct
     let float              = float
     let bool               = bool
     let date               = date
+    let percent            = percent
     let time               = time
     let time_ofday         = time_ofday
     let time_ofday_unzoned = time_ofday_unzoned
@@ -297,6 +299,16 @@ module Flag = struct
       in
       let name = wrap_if_optional t name in
       { Format.V1.name; doc; aliases}
+
+    let create flags =
+      match String.Map.of_alist (List.map flags ~f:(fun flag -> (flag.name, flag))) with
+      | `Duplicate_key flag -> failwithf "multiple flags named %s" flag ()
+      | `Ok map ->
+        List.concat_map flags ~f:(fun flag -> flag.name :: flag.aliases)
+        |> List.find_a_dup ~compare:[%compare: string]
+        |> Option.iter ~f:(fun x -> failwithf "multiple flags or aliases named %s" x ());
+        map
+    ;;
 
   end
 
@@ -506,6 +518,8 @@ module Anons = struct
     end
     val to_sexpable : t -> Sexpable.t
 
+    val names : t -> string list
+
   end = struct
 
     module Sexpable = struct
@@ -579,6 +593,15 @@ module Anons = struct
           is_fixed_arity last
     ;;
 
+    let rec names = function
+      | Zero      -> []
+      | One s     -> [ s ]
+      | Many t    -> names t
+      | Maybe t   -> names t
+      | Ad_hoc s  -> [ s ]
+      | Concat ts -> List.concat_map ts ~f:names
+    ;;
+
     let zero = Zero
     let one name = One name
 
@@ -627,7 +650,7 @@ module Anons = struct
   end
 
   module Parser : sig
-    type 'a t
+    type +'a t
     val one : name:string -> 'a Arg_type.t -> 'a t
     val maybe : 'a t -> 'a option t
     val sequence : 'a t -> 'a list t
@@ -1234,6 +1257,8 @@ module Base = struct
         }
       }
 
+    let of_param p = p.param
+
     let to_param t main = map (to_params t) ~f:(fun k -> k main)
 
     let lookup key =
@@ -1356,6 +1381,55 @@ module Base = struct
       include Flag.Deprecated
       include Anons.Deprecated
     end
+
+    let to_string_for_choose_one param =
+      let t = param.param in
+      let flag_names = Map.keys (Flag.Internal.create (t.flags ())) in
+      let anon_names = Anons.Grammar.names (t.usage ()) in
+      let names = List.concat [ flag_names; anon_names; ] in
+      let names_with_commas = List.filter names ~f:(fun s -> String.contains s ',') in
+      if not (List.is_empty names_with_commas) then
+        failwiths
+          "For simplicity, [Command.Spec.choose_one] does not support names with commas."
+          names_with_commas [%sexp_of: string list];
+      String.concat ~sep:"," names
+    ;;
+
+    let choose_one ts ~if_nothing_chosen =
+      let ts = List.map ts ~f:(fun t -> to_string_for_choose_one t, t) in
+      Option.iter (List.find_a_dup (List.map ~f:fst ts)) ~f:(fun name ->
+        failwiths "Command.Spec.choose_one called with duplicate name" name
+          [%sexp_of: string]);
+      List.fold ts ~init:(return None) ~f:(fun init (name, t) ->
+        map2 init t ~f:(fun init value ->
+          match value with
+          | None -> init
+          | Some value ->
+            match init with
+            | None -> Some (name, value)
+            | Some (name', _) ->
+              die "cannot have values for both %s and %s" name name' ()))
+      |> map ~f:(function
+        | Some (_, value) -> value
+        | None ->
+          match if_nothing_chosen with
+          | `Default_to value -> value
+          | `Raise ->
+            die "one of these must have a value: %s"
+              (String.concat ~sep:", " (List.map ~f:fst ts)) ())
+    ;;
+
+    let%test_unit "choose_one" =
+      let should_raise reason flags =
+        match choose_one flags ~if_nothing_chosen:`Raise with
+        | exception _ -> ()
+        | _ -> failwiths "failed to raise despite" reason [%sexp_of: string]
+      in
+      should_raise "duplicate names" [
+        flag "-foo" (optional int) ~doc:"";
+        flag "-foo" (optional int) ~doc:"";
+      ];
+    ;;
 
   end
 end
@@ -1730,25 +1804,7 @@ let basic ~summary ?readme {Base.Spec.usage; flags; f} main =
     let thunk = k main in
     fun `Run_main -> thunk ()
   in
-  let flags =
-    match
-      String.Map.of_alist (List.map flags ~f:(fun flag -> (flag.name, flag)))
-    with
-    | `Duplicate_key flag -> failwithf "multiple flags named %s" flag ()
-    | `Ok map ->
-      begin (* check for alias collision, too *)
-        match
-          String.Map.of_alist
-            (List.concat_map flags
-               ~f:(fun { name; aliases; action = _; doc = _; check_available = _;
-                         name_matching = _ } ->
-                    (name, ()) :: List.map aliases ~f:(fun alias -> (alias, ()))))
-        with
-        | `Duplicate_key x -> failwithf "multiple flags or aliases named %s" x ()
-        | `Ok _ -> ()
-      end;
-      map
-  in
+  let flags = Flag.Internal.create flags in
   let base = { Base.summary; readme; usage; flags; anons } in
   let base =
     Bailout_dump_flag.add base ~name:"-help" ~aliases:["-?"]
@@ -2389,7 +2445,8 @@ end)
 
 module Param = struct
   module type S = sig
-    include Applicative.S
+    type +'a t
+    include Applicative.S with type 'a t := 'a t
 
     val help : string Lazy.t t
     val path : string list   t
@@ -2404,6 +2461,11 @@ module Param = struct
       -> 'a t
 
     val anon : 'a Anons.t -> 'a t
+
+    val choose_one
+      :  'a option t list
+      -> if_nothing_chosen:[ `Default_to of 'a | `Raise ]
+      -> 'a t
   end
 
   module A = struct
@@ -2418,11 +2480,12 @@ module Param = struct
 
   include A
 
-  let help = Spec.help
-  let path = Spec.path
-  let args = Spec.args
-  let flag = Spec.flag
-  let anon = Spec.anon
+  let help       = Spec.help
+  let path       = Spec.path
+  let args       = Spec.args
+  let flag       = Spec.flag
+  let anon       = Spec.anon
+  let choose_one = Spec.choose_one
 
   module Arg_type = Arg_type
   include Arg_type.Export
@@ -2452,9 +2515,11 @@ module Param = struct
 end
 
 module Let_syntax = struct
-  include Param
-  module Open_on_rhs = Param
-  module Open_in_body = struct end
+  module Let_syntax = struct
+    include Param
+    module Open_on_rhs = Param
+    module Open_in_body = struct end
+  end
 end
 
 type 'result basic_command'
@@ -2468,3 +2533,61 @@ let basic' ~summary ?readme param =
     Spec.of_params @@ Param.map param ~f:(fun run () () -> run ())
   in
   basic ~summary ?readme spec ()
+
+let%expect_test "choose_one strings" =
+  let open Param in
+  let to_string = Spec.to_string_for_choose_one in
+  print_string (to_string begin
+    flag "-a" no_arg ~doc:""
+  end);
+  [%expect {| -a |} ];
+  print_string (to_string begin
+    map2 ~f:Tuple2.create
+      (flag "-a" no_arg ~doc:"")
+      (flag "-b" no_arg ~doc:"")
+  end);
+  [%expect {| -a,-b |} ];
+  print_string (to_string begin
+    map2 ~f:Tuple2.create
+      (flag "-a" no_arg ~doc:"")
+      (flag "-b" (optional int) ~doc:"")
+  end);
+  [%expect {| -a,-b |} ];
+  printf !"%{sexp: string Or_error.t}"
+    (Or_error.try_with (fun () ->
+       to_string begin
+         map2 ~f:Tuple2.create
+           (flag "-a" no_arg ~doc:"")
+           (flag "-b,c" (optional int) ~doc:"")
+       end));
+  [%expect {|
+    (Error
+     ("For simplicity, [Command.Spec.choose_one] does not support names with commas."
+      (-b,c) *:*:*)) (glob) |}];
+  print_string (to_string begin
+    map2 ~f:Tuple2.create
+      (anon ("FOO" %: string))
+      (flag "-a" no_arg ~doc:"")
+  end);
+  [%expect {| -a,FOO |} ];
+  print_string (to_string begin
+    map2 ~f:Tuple2.create
+      (anon ("FOO" %: string))
+      (map2 ~f:Tuple2.create
+         (flag "-a" no_arg ~doc:"")
+         (flag "-b" no_arg ~doc:""))
+  end);
+  [%expect {| -a,-b,FOO |} ];
+  print_string (to_string begin
+    map2 ~f:Tuple2.create
+      (anon (maybe ("FOO" %: string)))
+      (flag "-a" no_arg ~doc:"")
+  end);
+  [%expect {| -a,FOO |} ];
+  print_string (to_string begin
+    map2 ~f:Tuple2.create
+      (anon ("fo{}O" %: string))
+      (flag "-a" no_arg ~doc:"")
+  end);
+  [%expect {| -a,fo{}O |} ];
+;;

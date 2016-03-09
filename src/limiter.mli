@@ -33,7 +33,7 @@
     into 10k pieces, which limits the effective granularity to which your job request will
     be rounded.
 *)
-open Core_kernel.Std
+open! Core_kernel.Std
 
 type t [@@deriving sexp_of]
 type limiter = t [@@deriving sexp_of]

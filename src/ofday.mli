@@ -1,6 +1,14 @@
-open Core_kernel.Std
+open! Core_kernel.Std
 
-(* Represented as a number of seconds since midnight *)
+(** Times of day.
+
+    [t] represents a clock-face time of day.  Usually this is equivalent to a time-offset
+    from midnight, and each [t] occurs exactly once in each calendar day.  However, when
+    daylight savings time begins or ends, some clock face times (and therefore [t]'s) can
+    occur more than once per day or not at all, and e.g. 04:00 can occur three or five
+    hours after midnight, so knowing your current offset from midnight is *not* in general
+    equivalent to knowing the current [t].
+    (See {!Zone} for tools to help you cope with DST.) *)
 type t = private float [@@deriving bin_io, sexp]
 
 module Zoned : sig
@@ -8,8 +16,7 @@ module Zoned : sig
 
       Expresses things like "Seinfeld moved to 6:30pm EST.", while a plain [Ofday]
       expresses something more like "I eat lunch at noon (in whichever timezone I'm in at
-      the time).".
-  *)
+      the time).". *)
 
   (** Sexps look like "(12:01 nyc)"
 
@@ -53,20 +60,22 @@ val to_parts : t -> Span.Parts.t
     the range is not closed. *)
 val start_of_day : t
 
+(** Note that these names are only really accurate on days without DST transitions. When
+    clocks move forward or back, [of_span_since_start_of_day s] will not necessarily occur
+    [s] after that day's midnight. *)
 val to_span_since_start_of_day : t -> Span.t
 val of_span_since_start_of_day : Span.t -> t
 
-(* Due to a circular reference, this function is defined in Core.Std. *)
-(* val now : unit -> t *)
+(** Due to a circular reference, this declaration is found in time.mli. *)
+(** val now : zone:Zone.t -> t *)
 
-(** [add t s] shifts the time of day [t] by the span [s].  It returns None if
-    the result is not in the same day.
-*)
+(** [add t s] shifts the time of day [t] by the span [s].  It returns [None] if the result
+    is not in the same 24-hour day. *)
 val add : t -> Span.t -> t option
 val sub : t -> Span.t -> t option
 
 (** [diff t1 t2] returns the difference in time between two ofdays, as if they occurred on
-    the same day *)
+    the same 24-hour day. *)
 val diff : t -> t -> Span.t
 
 (** Returns the time-span separating the two of-days, ignoring the hour information, and

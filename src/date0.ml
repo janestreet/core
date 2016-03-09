@@ -56,26 +56,35 @@ module Stable = struct
       ;;
 
       let create_exn ~y:year ~m:month ~d:day =
-        let invalid msg =
+        (* year, month, and day need to be passed as parameters to avoid allocating
+           a closure (see unit test below) *)
+        let invalid ~year ~month ~day msg =
           invalid_argf "Date.create_exn ~y:%d ~m:%s ~d:%d error: %s"
             year (Month.to_string month) day msg ()
         in
-        if year < 0 || year > 9999 then invalid "year outside of [0..9999]";
-        if day <= 0 then invalid "day <= 0";
+        if year < 0 || year > 9999 then invalid ~year ~month ~day "year outside of [0..9999]";
+        if day <= 0 then invalid ~year ~month ~day "day <= 0";
         begin match month with
         | Month.Apr | Month.Jun | Month.Sep | Month.Nov ->
-          if day > 30 then invalid "30 day month violation"
+          if day > 30 then invalid ~year ~month ~day "30 day month violation"
         | Month.Feb ->
           if is_leap_year year then begin
-            if day > 29 then invalid "29 day month violation" else ()
+            if day > 29 then invalid ~year ~month ~day "29 day month violation" else ()
           end else if day > 28 then begin
-            invalid "28 day month violation"
+            invalid ~year ~month ~day "28 day month violation"
           end else ()
         | Month.Jan | Month.Mar | Month.May | Month.Jul | Month.Aug | Month.Oct
         | Month.Dec ->
-          if day > 31 then invalid "31 day month violation"
+          if day > 31 then invalid ~year ~month ~day "31 day month violation"
         end;
         create0 ~year ~month:month ~day
+      ;;
+
+      let%test_unit "create_exn doesn't allocate" =
+        let allocation_before = Gc.major_plus_minor_words () in
+        ignore (create_exn ~y:1999 ~m:Dec ~d:31 : t);
+        let allocation_after = Gc.major_plus_minor_words () in
+        [%test_eq: int] allocation_before allocation_after;
       ;;
 
       (* We don't use Make_binable here, because that would go via an immediate

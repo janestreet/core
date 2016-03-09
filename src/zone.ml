@@ -752,3 +752,5 @@ include Identifiable.Make (struct
      different transitions. *)
   let hash t        = String.hash (to_string t)
 end)
+
+let%bench "=" = local = local

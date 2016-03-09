@@ -406,7 +406,7 @@ CAMLprim value bigstring_output_stub(
       bstr_iov->iov_len = bstr_len;
       caml_enter_blocking_section();
       while (1) {
-        written = writev(fd, iovecs, 2);
+        written = jane_writev(fd, iovecs, 2);
         if (written == -1) {
           /* Interrupt and error handling */
           if (errno == EINTR) continue;
@@ -544,7 +544,7 @@ static inline ssize_t writev_in_blocking_section(
   ssize_t ret;
   CAMLparam1(v_iovecs);  /* To protect bigstrings outside of OCaml lock */
   caml_enter_blocking_section();
-    ret = writev(Int_val(v_fd), iovecs, count);
+    ret = jane_writev(Int_val(v_fd), iovecs, count);
     free(iovecs);
   caml_leave_blocking_section();
   CAMLreturn(ret);
@@ -581,7 +581,7 @@ CAMLprim value bigstring_writev_assume_fd_is_nonblocking_stub(
     /* NOTE: writev_in_blocking_section frees iovecs */
     ret = writev_in_blocking_section(v_fd, v_iovecs, iovecs, count);
   else {
-    ret = writev(Int_val(v_fd), iovecs, count);
+    ret = jane_writev(Int_val(v_fd), iovecs, count);
     free(iovecs);
   }
   if (ret == -1) uerror("writev_assume_fd_is_nonblocking", Nothing);

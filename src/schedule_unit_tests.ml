@@ -253,7 +253,7 @@ let%test_module "Schedule" = (module struct
     ]
   ;;
 
-  let%test_unit "Test that inlcudes does the right thing for every branch in a simple case" =
+  let%test_unit "Test that includes does the right thing for every branch in a simple case" =
     let get_time = function
       | Time      time -> time
       | Next_time time -> next_representable_time time
@@ -1160,6 +1160,35 @@ let%test_module "Schedule" = (module struct
         (time (date ~d:17) Time.Ofday.start_of_day)
     in
     is_correct_transition ~here:[[%here]] output (Some (start_of_day ~d:17))
+  ;;
+
+  let%test_unit "exclusive start time in between is honored" =
+    Time.set_sexp_zone Time.Zone.utc;
+    let schedule =
+      Schedule.(
+        In_zone ((Time.Zone.find_exn "Europe/London")
+                , Between ((Exclusive , Time.Ofday.create ~hr:11 ())
+                          , (Inclusive, Time.Ofday.create ~hr:13 ()))))
+    in
+    let s =
+      begin
+        match Schedule.to_endless_sequence schedule
+                ~start_time:(Time.of_string "2016-01-05 00:00:00Z")
+                ~emit:Transitions
+        with
+        | `Started_in_range (_, q) -> q
+        | `Started_out_of_range q -> q
+      end
+      |> Fn.flip Sequence.take 5
+      |> Sequence.to_list
+    in
+    [%test_eq: [ Event.no_change | unit Event.transition ] list]
+      [ `Enter (next_representable_time (Time.of_string "2016-01-05 11:00:00Z"), [])
+      ; `Leave (next_representable_time (Time.of_string "2016-01-05 13:00:00.000000Z"))
+      ; `Enter (next_representable_time (Time.of_string "2016-01-06 11:00:00Z"), [])
+      ; `Leave (next_representable_time (Time.of_string "2016-01-06 13:00:00.000000Z"))
+      ; `Enter (next_representable_time (Time.of_string "2016-01-07 11:00:00Z"), []) ]
+      s
   ;;
 
   let%test_module "Schedule.Stable.V4" = (module Core_kernel.Stable_unit_test.Make (struct

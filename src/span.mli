@@ -1,4 +1,4 @@
-open Core_kernel.Std
+open! Core_kernel.Std
 
 type t = private float [@@deriving bin_io, sexp] (* number of seconds *)
 
@@ -7,7 +7,7 @@ type t = private float [@@deriving bin_io, sexp] (* number of seconds *)
    min = 1; sec = 30; ms = 0}.  The fields will always be positive. *)
 module Parts : sig
   type t = private {
-      sign : Float.Sign.t;
+      sign : Sign.t;
       hr   : int;
       min  : int;
       sec  : int;
@@ -64,7 +64,7 @@ val zero : t
    parts are assumed to be positive (no checking is done by the function) and the sign of
    the final span is given by [sign] which is positive by default. *)
 val create
-  :  ?sign:Float.Sign.t
+  :  ?sign:Sign.t
   -> ?day:int
   -> ?hr:int
   -> ?min:int

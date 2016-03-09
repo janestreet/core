@@ -1,6 +1,6 @@
 (** Piece-wise linear interpolation from float-like types to float. *)
 
-open Core_kernel.Std
+open! Core_kernel.Std
 
 open Piecewise_linear_intf
 

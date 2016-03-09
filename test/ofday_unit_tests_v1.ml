@@ -1,6 +1,5 @@
 open Core.Std
 
-
 let hand_generated ~create =
   [ create ~hr:0 ~min:0 ~sec:0 ~ms:0 ~us:0,
     "00:00:00.000000",

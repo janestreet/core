@@ -4,7 +4,7 @@
 <**/*.ml{,i}>: predicate(ppx_driver)
 <src/*.ml>: for-pack(Core)
 <top/*.ml>: for-pack(Core_top)
-<src/*.ml{,i}>: pp(ppx-jane -dump-ast -inline-test-lib core)
+<src/*.ml{,i}>: pp(ppx-jane -dump-ast -inline-test-drop -bench-drop -inline-test-lib fake_for_drop)
 <src/*.ml{,i}>: pp_deps_for_src
 # OASIS_START
 # OASIS_STOP

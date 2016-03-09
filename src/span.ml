@@ -4,7 +4,7 @@ module Stable = struct
   module V1 = struct
     module Parts = struct
       type t = {
-        sign : Float.Sign.t;
+        sign : Sign.t;
         hr   : int;
         min  : int;
         sec  : int;
@@ -79,13 +79,14 @@ module Stable = struct
         let day         = of_float (24. *. 60. *. 60.)
       end
 
+
       let to_parts_64 t =
         let t = to_float t *. 1.E6 in
-        let sign = Float.sign t in
+        let sign = Float.sign_exn t in
         let t =
           match sign with
-          | Float.Sign.Neg -> Float.neg t
-          | Float.Sign.Pos | Float.Sign.Zero -> t
+          | Neg -> Float.neg t
+          | Pos | Zero -> t
         in
         let t   = Float.iround_exn ~dir:`Nearest t in
         let sec = t / 1_000_000 in
@@ -107,11 +108,11 @@ module Stable = struct
 
       let to_parts_32 t =
         let t      = Float.round (to_float t *. 1E6) /. 1E6 in
-        let sign   = Float.sign t in
+        let sign   = Float.sign_exn t in
         let t =
           match sign with
-          | Float.Sign.Neg -> Float.neg t
-          | Float.Sign.Pos | Float.Sign.Zero -> t
+          | Neg -> Float.neg t
+          | Pos | Zero -> t
         in
         let parts  = Float.modf t in
         let intval = Float.iround_exn ~dir:`Down (Float.Parts.integral parts) in
@@ -153,7 +154,7 @@ module Stable = struct
         else if parts.ms  > 0 then format_decimal parts.ms  (parts.us / 100) "ms"
         else sprintf "%ius" parts.us
       in
-      if parts.sign = Float.Sign.Neg then "-" ^ s else s
+      if parts.sign = Neg then "-" ^ s else s
 
     let (/) t f = T.of_float ((t : T.t :> float) /. f)
     let (//) (f:T.t) (t:T.t) = (f :> float) /. (t :> float)
@@ -187,7 +188,7 @@ module Stable = struct
     ;;
 
     let create
-        ?(sign=Float.Sign.Pos)
+        ?(sign=Sign.Pos)
         ?(day = 0)
         ?(hr = 0)
         ?(min = 0)
@@ -205,8 +206,8 @@ module Stable = struct
         + of_us  (Float.of_int us)
       in
       match sign with
-      | Float.Sign.Neg -> T.(-) T.zero t
-      | Float.Sign.Pos | Float.Sign.Zero -> t
+      | Neg -> T.(-) T.zero t
+      | Pos | Zero -> t
 
     include T
     include Constant

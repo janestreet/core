@@ -1,5 +1,5 @@
 open Core.Std
-module Let_syntax = Command.Let_syntax
+open Command.Let_syntax
 
 (* BEGIN -- useful utilities *)
 
@@ -90,16 +90,16 @@ module Cat = struct
                     constructing commands with a body that returns a [Deferred.t]. *)
   let command =
     Command.async' ~summary:"example async command: cat a file to stdout"
-      [%map_open
-        let path = anon ("FILE" %: string)
-        in
-        fun () ->
-          Reader.with_file path ~f:(fun r ->
-            Pipe.iter_without_pushback (Reader.pipe r) ~f:(fun chunk ->
-              Writer.write (Lazy.force Writer.stdout) chunk))
-          >>= fun _ ->
-          return ()
-      ]
+      (let open Command.Let_syntax in
+       let%map_open path = anon ("FILE" %: string)
+       in
+       fun () ->
+         Reader.with_file path ~f:(fun r ->
+           Pipe.iter_without_pushback (Reader.pipe r) ~f:(fun chunk ->
+             Writer.write (Lazy.force Writer.stdout) chunk))
+         >>= fun _ ->
+         return ()
+      )
 end
 
 module Prompting = struct

@@ -19,6 +19,8 @@ let month_limits = Map.Poly.of_alist_exn [
   ]
 
 let random_time state =
+  (* If we go out much further then floating point errors at the microsecond
+     level start to creep in.  We can change this when Time.t = int64 *)
   let year  = 1970 + Random.State.int state 67 in
   let month = 1 + (Random.State.int state 12) in
   let day   = 1 + (Random.State.int state (Map.find_exn month_limits month)) in

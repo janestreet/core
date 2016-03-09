@@ -1,18 +1,36 @@
 open Core_kernel.Std
 
-module Core_time = Time
-
-module KSpan = Core_kernel.Time_ns.Span
-module KTime_ns = Core_kernel.Time_ns
+module type Option = sig
+  type value
+  type t = private Int63.t [@@deriving typerep]
+  include Identifiable with type t := t
+  val none : t
+  val some : value -> t
+  val is_none : t -> bool
+  val is_some : t -> bool
+  val value : t -> default : value -> value
+  val value_exn : t -> value
+  val unchecked_value : t -> value
+  val of_option : value option -> t
+  val to_option : t -> value option
+  module Stable : sig
+    module V1 : sig
+      type nonrec t = t
+      include Stable with type t := t
+      (** [to_int63] and [of_int63_exn] encode [t] for use in wire protocols; they are
+          designed to be efficient on 64-bit machines.  [of_int63_exn (to_int63 t) = t]
+          for all [t]; [of_int63_exn] raises for inputs not produced by [to_int63]. *)
+      val to_int63     : t -> Int63.t
+      val of_int63_exn : Int63.t -> t
+    end
+  end
+end
 
 (* This signature constraint is semi-temporary and serves to make the implementation more
    type-safe (so the compiler can help us more).  It would go away if we broke the
    implementation into multiple files. *)
 module Span : sig
-  include module type of
-  (struct
-    include KSpan
-  end)
+  include module type of (struct include Core_kernel.Time_ns.Span end)
 
   include Identifiable with type t := t
 
@@ -34,28 +52,7 @@ module Span : sig
     -> t
     -> string
 
-  module Option : sig
-    type span
-
-    type t = private Int63.t [@@deriving typerep]
-    include Identifiable with type t := t
-
-    val none : t
-    val some : span -> t
-    val is_none : t -> bool
-    val is_some : t -> bool
-    val value : t -> default : span -> span
-    val value_exn : t -> span
-
-    module Stable : sig
-      module V1 : sig
-        type nonrec t = t
-        include Stable with type t := t
-        val to_int63     : t -> Int63.t
-        val of_int63_exn : Int63.t -> t
-      end
-    end
-  end with type span := t
+  module Option : Option with type value := t
 
   module Stable : sig
     module V1 : sig
@@ -66,22 +63,37 @@ module Span : sig
   end
 
   val random : unit -> t
+
+  val check_range : t -> t
 end = struct
   let half_microsecond = Int63.of_int 500
 
   let nearest_microsecond t =
-    Int63.((KSpan.to_int63_ns t + half_microsecond) /% of_int 1000)
+    Int63.((Core_kernel.Time_ns.Span.to_int63_ns t + half_microsecond) /% of_int 1000)
   ;;
 
-  let to_span t = Time.Span.of_us (Int63.to_float (nearest_microsecond t))
+  let check_range t =
+    let open Core_kernel.Time_ns.Span in
+    if t < min_value || t > max_value then
+      failwiths "Span.t exceeds limits" (t, min_value, max_value)
+        [%sexp_of: Alternate_sexp.t *
+                   Alternate_sexp.t *
+                   Alternate_sexp.t]
+    else t
+  ;;
+
+  let to_span t =
+    Time.Span.of_us (Int63.to_float (nearest_microsecond (check_range t)))
+  ;;
   let%test "to_span +/-140y raises" =
     List.for_all [ 1.; -1. ]
       ~f:(fun sign ->
-        does_raise (fun () -> to_span (KSpan.of_day (140. *. 366. *. sign))))
+        does_raise (fun () ->
+          to_span (Core_kernel.Time_ns.Span.of_day (140. *. 366. *. sign))))
   ;;
 
-  let min_kspan_value = to_span KSpan.min_value
-  let max_kspan_value = to_span KSpan.max_value
+  let min_kspan_value = to_span Core_kernel.Time_ns.Span.min_value
+  let max_kspan_value = to_span Core_kernel.Time_ns.Span.max_value
 
   let of_span s =
     if Time.Span.( > ) s max_kspan_value
@@ -89,9 +101,9 @@ end = struct
     then failwiths "Time_ns.Span does not support this span" s [%sexp_of: Time.Span.t];
     (* Using [Time.Span.to_sec] (being the identity) so that
        we make don't apply too many conversion
-       - Too many : `[Span.t] -> [a] -> [KSpan.t]`
-       - Only One : `[Span.t]==[a] -> [KSpan.t]`. *)
-    KSpan.of_sec_with_microsecond_precision (Time.Span.to_sec s)
+       - Too many : `[Span.t] -> [a] -> [Time_ns.Span.t]`
+       - Only One : `[Span.t]==[a] -> [Time_ns.Span.t]`. *)
+    Core_kernel.Time_ns.Span.of_sec_with_microsecond_precision (Time.Span.to_sec s)
   ;;
   let%test "of_span +/-140y raises" =
     List.for_all [ 1.; -1. ]
@@ -99,10 +111,10 @@ end = struct
         does_raise (fun () -> of_span (Time.Span.of_day (140. *. 366. *. sign))))
   ;;
 
-  module Unit_of_time = Core_time.Span.Unit_of_time
+  module Unit_of_time = Time.Span.Unit_of_time
 
   let of_unit_of_time u =
-    let open KSpan in
+    let open Core_kernel.Time_ns.Span in
     match (u : Unit_of_time.t) with
     | Nanosecond  -> nanosecond
     | Microsecond -> microsecond
@@ -114,7 +126,7 @@ end = struct
   ;;
 
   let to_unit_of_time t : Unit_of_time.t =
-    let open KSpan in
+    let open Core_kernel.Time_ns.Span in
     let abs_t = abs t in
     if abs_t >= day         then Day         else
     if abs_t >= hour        then Hour        else
@@ -129,7 +141,7 @@ end = struct
      [to_span] conversion is limited to microsecond precision. *)
   let to_string_hum ?(delimiter='_') ?(decimals=3) ?(align_decimal=false) ?unit_of_time t
     =
-    let open KSpan in
+    let open Core_kernel.Time_ns.Span in
     let float, suffix =
       match Option.value unit_of_time ~default:(to_unit_of_time t) with
       | Day         -> to_day t, "d"
@@ -152,7 +164,7 @@ end = struct
   ;;
 
   let%test_unit "Span.to_string_hum" =
-    let open KSpan in
+    let open Core_kernel.Time_ns.Span in
     [%test_result: string] (to_string_hum nanosecond) ~expect:"1ns";
     [%test_result: string] (to_string_hum day) ~expect:"1d";
     [%test_result: string]
@@ -170,12 +182,12 @@ end = struct
       ~expect:"0.042361d "
 
   let random () =
-    KSpan.of_int63_ns
+    Core_kernel.Time_ns.Span.of_int63_ns
       (let open Int63 in
-       random KSpan.(to_int63_ns max_value)
+       random Core_kernel.Time_ns.Span.(to_int63_ns max_value)
        + random (of_int 2)
-       - random KSpan.(to_int63_ns max_value)
-       - random KSpan.(to_int63_ns (neg (max_value + min_value)))
+       - random Core_kernel.Time_ns.Span.(to_int63_ns max_value)
+       - random Core_kernel.Time_ns.Span.(to_int63_ns (neg (max_value + min_value)))
        - random (of_int 2))
   ;;
 
@@ -218,11 +230,11 @@ end = struct
   ;;
 
   let%test_unit "Time_ns.Span.t -> Time.Span.t round trip" =
-    let open KSpan in
+    let open Core_kernel.Time_ns.Span in
     (* The default sexp is not precise enough. *)
     let sexp_of_t kspan = Sexp.Atom (Int63.to_string (to_int63_ns kspan) ^ "ns") in
     let kspans =                        (* touchstones *)
-      min_value :: max_value :: KTime_ns.(diff (now ()) epoch)
+      min_value :: max_value :: Core_kernel.Time_ns.(diff (now ()) epoch)
       :: [ zero; microsecond; millisecond; second; minute; hour; day;
            scale day 365.
          ]
@@ -236,12 +248,14 @@ end = struct
     in
     let kspans =                        (* a few multiples *)
       List.concat_map kspans
-        ~f:(fun kspan -> filter_map (List.range (-3) 4) ~f:(fun s -> scale kspan (float s)))
+        ~f:(fun kspan ->
+          filter_map (List.range (-3) 4) ~f:(fun s -> scale kspan (float s)))
     in
     let kspans =                        (* a few microseconds around *)
       List.concat_map kspans
         ~f:(fun kspan ->
-          filter_map (List.range (-3) 4) ~f:(fun s -> kspan + scale microsecond (float s)))
+          filter_map (List.range (-3) 4)
+            ~f:(fun s -> kspan + scale microsecond (float s)))
     in
     let kspans =                        (* nearest microsecond *)
       List.map kspans
@@ -253,11 +267,12 @@ end = struct
     List.iter kspans
       ~f:(fun expect ->
         let kspan = of_span (to_span expect) in
-        [%test_pred: t * t] (fun (a, b) -> abs (a - b) <= microsecond) (expect, kspan))
+        [%test_pred: t * t] (fun (a, b) -> abs (a - b) <= microsecond)
+          (expect, kspan))
   ;;
 
   module T = struct
-    include KSpan
+    include Core_kernel.Time_ns.Span
 
     let sexp_of_t t = Time.Span.Stable.V1.sexp_of_t (to_span t)
     let t_of_sexp s = of_span (Time.Span.Stable.V1.t_of_sexp s)
@@ -265,7 +280,7 @@ end = struct
     let module_name = "Core.Std.Time_ns.Span"
     let to_string t = Time.Span.to_string (to_span t)
     let of_string s = of_span (Time.Span.of_string s)
-    let hash t = Int63.hash (KSpan.to_int63_ns t)
+    let hash t = Int63.hash (Core_kernel.Time_ns.Span.to_int63_ns t)
     let compare = compare
   end
   include T
@@ -281,34 +296,41 @@ end = struct
     type span = t [@@deriving sexp]
     type t = Int63.t [@@deriving bin_io, typerep, compare] (* nanoseconds or none *)
     let none = Int63.min_value
-    let%test "none is not a valid span" = does_raise (fun () -> of_int63_ns none)
-    let some t = to_int63_ns t
+    let some span = to_int63_ns (check_range span)
+    let%test "none is not a valid span" = does_raise (fun () -> some (of_int63_ns none))
     let is_none t = Int63.(t = none)
     let is_some t = Int63.(t <> none)
     let value t ~default = if is_none t then default else of_int63_ns t
-    let value_exn t = assert (is_some t); of_int63_ns t
+    let unchecked_value t = of_int63_ns t
+
+    let value_exn t =
+      if is_some t
+      then unchecked_value t
+      else raise_s [%message [%here] "Span.Option.value_exn none"]
+
     let of_option = function None -> none | Some t -> some t
     let to_option t = if is_none t then None else Some (of_int63_ns t)
     let sexp_of_t t = [%sexp_of: span option] (to_option t)
     let t_of_sexp s = of_option ([%of_sexp: span option] s)
 
     include Identifiable.Make (struct
-      type nonrec t = t [@@deriving sexp, compare, bin_io]
-      let hash = Int63.hash
-      let module_name = "Core.Std.Time_ns.Span.Option"
-      include Sexpable.To_stringable (struct type nonrec t = t [@@deriving sexp] end)
-    end)
+        type nonrec t = t [@@deriving sexp, compare, bin_io]
+        let hash = Int63.hash
+        let module_name = "Core.Std.Time_ns.Span.Option"
+        include Sexpable.To_stringable (struct type nonrec t = t [@@deriving sexp] end)
+      end)
 
     module Stable = struct
       module V1 = struct
         type nonrec t = t [@@deriving sexp, compare, bin_io]
-        let of_int63_exn n = if n = none then none else some (of_int63_ns n)
+        let of_int63_exn i = if i = none then none else some (of_int63_ns i)
         let to_int63     t = t
       end
 
       let%test_module "Time_ns.Span.Stable.V1" =
         (module struct
-          include Core_kernel.Stable_unit_test.Make (struct
+          include
+            Core_kernel.Stable_unit_test.Make (struct
               include V1
 
               let equal = Int63.equal
@@ -346,7 +368,7 @@ end = struct
   module Stable = struct
     module V1 = struct
       type nonrec t = t [@@deriving bin_io, compare, sexp]
-      let of_int63_exn t = of_int63_ns t
+      let of_int63_exn t = check_range (of_int63_ns t)
       let to_int63     t = to_int63_ns t
     end
 
@@ -355,7 +377,7 @@ end = struct
         include Core_kernel.Stable_unit_test.Make (struct
             include V1
 
-            let equal = KSpan.equal
+            let equal = Core_kernel.Time_ns.Span.equal
 
             let tests =
               let t i = of_int63_ns (Int63.of_int64_exn i) in
@@ -376,16 +398,14 @@ end = struct
         let%test_unit _ = test "0.187924m" 11_275_440_000L
         let%test_unit _ = test "828.97d"   71_623_008_000_000_000L
 
-        let%test_unit _ = assert (does_raise (fun () ->
-          V1.of_int63_exn (Int63.succ Int63.min_value)))
+        let%test_unit "of_int63_exn checks range" =
+          assert (does_raise (fun () ->
+            V1.of_int63_exn (Int63.succ Int63.min_value)))
       end)
   end
 end
 
-include (KTime_ns
-         : module type of struct
-           include KTime_ns
-         end with module Span := Span)
+include (Core_kernel.Time_ns : module type of struct include Core_kernel.Time_ns end with module Span := Span)
 
 let nanosleep t = Span.of_sec (Core_unix.nanosleep (Span.to_sec t))
 
@@ -431,13 +451,13 @@ let of_time t =
 ;;
 
 let random () =
-  KTime_ns.of_int63_ns_since_epoch
+  Core_kernel.Time_ns.of_int63_ns_since_epoch
     (let max_ns = to_int63_ns_since_epoch max_value in
      let open Int63 in
      random max_ns
      + random (of_int 2)
      - random max_ns
-     - (let extra = neg (max_ns + to_int63_ns_since_epoch KTime_ns.min_value) in
+     - (let extra = neg (max_ns + to_int63_ns_since_epoch Core_kernel.Time_ns.min_value) in
         (* Now that Core_kernel.Std.Time_ns.Span.min/max_value are symmetric around
            zero, watch out for that case. *)
         if extra = zero then zero else random extra)
@@ -527,9 +547,9 @@ let%test_unit "Time_ns.t -> Time.t round trip" =
   let ts =                              (* nearest microsecond since epoch *)
     List.map ts
       ~f:(fun time ->
-        KTime_ns.of_int63_ns_since_epoch
+        Core_kernel.Time_ns.of_int63_ns_since_epoch
           (let open Int63 in
-           (KTime_ns.to_int63_ns_since_epoch time + of_int 500)
+           (Core_kernel.Time_ns.to_int63_ns_since_epoch time + of_int 500)
            /% of_int 1000
            * of_int 1000))
   in
@@ -553,11 +573,14 @@ let of_string s = of_time (Time.of_string s)
 let to_string_abs t ~zone = Time.to_string_abs ~zone (to_time t)
 let of_string_abs s = of_time (Time.of_string_abs s)
 
-module Stable0 = struct
+module Stable = struct
   module V1 = struct
     type nonrec t = t [@@deriving bin_io, compare, sexp]
-    let of_int63_exn t = of_int63_ns_since_epoch t
-    let to_int63     t = to_int63_ns_since_epoch t
+
+    let of_int63_exn t =
+      of_span_since_epoch (Span.check_range (Span.of_int63_ns t))
+
+    let to_int63 t = to_int63_ns_since_epoch t
   end
 
   let%test_module "Time_ns.Stable.V1" =
@@ -590,8 +613,9 @@ module Stable0 = struct
       let%test_unit _ = test "(2013-10-07 14:30:00.010101Z)" 1_381_156_200_010_101_000L
       let%test_unit _ = test "(2100-04-01 23:59:59.999999Z)" 4_110_307_199_999_999_000L
 
-      let%test_unit _ = assert (does_raise (fun () ->
-        V1.of_int63_exn (Int63.succ Int63.min_value)))
+      let%test_unit "of_int63_exn checks range" =
+        assert (does_raise (fun () ->
+          V1.of_int63_exn (Int63.succ Int63.min_value)))
     end)
 end
 
@@ -609,6 +633,7 @@ module Option = struct
       (Span.Option.value
          ~default:(to_span_since_epoch default) t)
   let value_exn t = of_span_since_epoch (Span.Option.value_exn t)
+  let unchecked_value t = of_span_since_epoch (Span.Option.unchecked_value t)
   let%test_module "round trip" = (module struct
     let roundtrip t = (value_exn (some t))
     let%test_unit "epoch" = [%test_result: time] (roundtrip epoch) ~expect:epoch
@@ -628,11 +653,11 @@ module Option = struct
   let t_of_sexp s = of_option ([%of_sexp: time option] s)
 
   include Identifiable.Make (struct
-    type nonrec t = t [@@deriving sexp, compare, bin_io]
-    let module_name = "Core.Std.Time_ns.Option"
-    let hash = Span.Option.hash
-    include Sexpable.To_stringable (struct type nonrec t = t [@@deriving sexp] end)
-  end)
+      type nonrec t = t [@@deriving sexp, compare, bin_io]
+      let module_name = "Core.Std.Time_ns.Option"
+      let hash = Span.Option.hash
+      include Sexpable.To_stringable (struct type nonrec t = t [@@deriving sexp] end)
+    end)
 
   module Stable = struct
     module V1 = struct
@@ -675,8 +700,9 @@ module Option = struct
         let%test_unit _ =
           test "((2100-04-01 23:59:59.999999Z))" 4_110_307_199_999_999_000L
 
-        let%test_unit _ = assert (does_raise (fun () ->
-          V1.of_int63_exn (Int63.succ Int63.min_value)))
+        let%test_unit "of_int63_exn checks range" =
+          assert (does_raise (fun () ->
+            V1.of_int63_exn (Int63.succ Int63.min_value)))
       end)
   end
 end
@@ -685,11 +711,11 @@ let to_string_fix_proto zone t = Time.to_string_fix_proto zone (to_time t)
 let of_string_fix_proto zone s = of_time (Time.of_string_fix_proto zone s)
 
 include Identifiable.Make (struct
-  type nonrec t = t [@@deriving sexp, bin_io, compare]
-  let module_name = "Core.Std.Time_ns"
-  let hash t = Int63.hash (to_int63_ns_since_epoch t)
-  let of_string, to_string = of_string, to_string
-end)
+    type nonrec t = t [@@deriving sexp, bin_io, compare]
+    let module_name = "Core.Std.Time_ns"
+    let hash t = Int63.hash (to_int63_ns_since_epoch t)
+    let of_string, to_string = of_string, to_string
+  end)
 
 let%test_module _ = (module struct
   let%test _ = epoch = of_span_since_epoch Span.zero
@@ -715,20 +741,33 @@ let%test_module _ = (module struct
                      * [ `discrepancy of Span.t ]])
 end)
 
-(** Presently this is not zoned. *)
+let to_date t ~zone = Time.to_date (to_time t) ~zone
+
+let of_date_ofday ~zone date ofday =
+  of_time (Time.of_date_ofday ~zone date ofday)
+;;
+
+(* Presently this is not zoned.
+
+   Does not represent extra hours due to DST (daylight saving time) (because DST makes
+   adjustments in terms of wall clock time) or leap seconds (which aren't represented in
+   Unix linear time).  See {!Ofday}. *)
 module Ofday = struct
-  type t = Span.t (* since midnight, i.e., since start of day *)
+  type t = Span.t (* since wall-clock midnight *)
   [@@deriving typerep, compare, bin_io]
 
 
   let start_of_day : t = Span.zero
-  let end_of_day : t = Span.day
-  let end_of_day_with_dst_and_leap_second_allowance : t =
-    Span.(end_of_day + hour + minute)
+  let end_of_day   : t = Span.day
 
   let to_span_since_start_of_day t = t
   let of_span_since_start_of_day_exn (s : Span.t) =
-    if Span.(<) s start_of_day || Span.(>) s end_of_day_with_dst_and_leap_second_allowance
+    (* Why we use [Span.(>)] rather than [.(>=)] below:
+
+       We allow to represent the end-of-day sentinel value ([24.000000000h]), which is not
+       itself a valid clock face time.  However, since valid clock face times readily
+       round up to it, it's better to allow it to be represented. *)
+    if Span.(<) s start_of_day || Span.(>) s end_of_day
     then failwith "Time_ns.Ofday.of_span_since_start_of_day_exn: input out of bounds"
     else s
 
@@ -737,23 +776,54 @@ module Ofday = struct
 
   let diff t u = Span.(-) t u
 
-  let local_midnight time =
-    let zone = Time.Zone.local in
-    let date = Time.to_date (to_time time) ~zone in
-    let midnight = Time.of_date_ofday date Time.Ofday.start_of_day ~zone in
-    of_time midnight
+  let midnight date ~zone = of_date_ofday ~zone date Time.Ofday.start_of_day
+
+  let of_ofday core = Span.of_span (Time.Ofday.to_span_since_start_of_day core)
+
+  let of_time =
+    let module Cache = struct
+      type t =
+        { mutable zone          : Zone.t
+        ; mutable midnight      : Core_kernel.Time_ns.t
+        ; mutable next_midnight : Core_kernel.Time_ns.t
+        }
+    end in
+    let cache : Cache.t =
+      { zone = Zone.local; midnight = epoch; next_midnight = epoch }
+    in
+    fun time ~zone ->
+      (* Zones are strings.  You have to cache-validate them physically. *)
+      if phys_equal cache.zone zone
+      && time >= cache.midnight
+      && time < cache.next_midnight
+      then Core_kernel.Time_ns.diff time cache.midnight
+      else
+        let date, ofday   = Time.to_date_ofday (to_time time)         ~zone in
+        let next_midnight = midnight           (Date.add_days date 1) ~zone in
+        let midnight      = midnight           date                   ~zone in
+        (* Use one code path uniformly on non-DST-transition days, and a different one on
+           DST-transition days (of_ofday). *)
+        if Span.(=) (Core_kernel.Time_ns.diff next_midnight midnight) Span.day then
+          begin
+            cache.zone          <- zone;
+            cache.midnight      <- midnight;
+            cache.next_midnight <- next_midnight;
+            Core_kernel.Time_ns.diff time cache.midnight
+          end
+        else of_ofday ofday
+  ;;
+  let%bench_module "of_time" =
+    (module struct
+      let zones = !Zone.likely_machine_zones
+
+      let%bench_fun "of_time now" [@indexed i = List.range 0 (List.length zones)] =
+        let zone = Zone.find_exn (List.nth_exn zones i) in
+        let time = now () in
+        fun () -> of_time time ~zone
+    end)
   ;;
 
-  let local_midnight_cache = ref (local_midnight (now ()))
-
-  let of_local_time time =
-    let t = Core_kernel.Time_ns.diff time !local_midnight_cache in
-    if Span.(>=) t start_of_day && Span.(<) t end_of_day then t
-    else begin
-      local_midnight_cache := local_midnight time;
-      Core_kernel.Time_ns.diff time !local_midnight_cache
-    end
-  ;;
+  let of_local_time time = of_time time ~zone:Zone.local
 
   let local_now () = of_local_time (now ())
 
@@ -785,7 +855,6 @@ module Ofday = struct
     else "Incorrect day"
   ;;
 
-  let of_ofday core = Span.of_span (Time.Ofday.to_span_since_start_of_day core)
   let to_ofday t = Time.Ofday.of_span_since_start_of_day (Span.to_span t)
 
   let of_string s = of_ofday (Time.Ofday.of_string s)
@@ -794,11 +863,11 @@ module Ofday = struct
   let sexp_of_t (t : t) = Time.Ofday.sexp_of_t (to_ofday t)
 
   include Identifiable.Make (struct
-    type nonrec t = t [@@deriving sexp, compare, bin_io]
-    let module_name = "Core.Std.Time_ns.Ofday"
-    let hash = Span.hash
-    let of_string, to_string = of_string, to_string
-  end)
+      type nonrec t = t [@@deriving sexp, compare, bin_io]
+      let module_name = "Core.Std.Time_ns.Ofday"
+      let hash = Span.hash
+      let of_string, to_string = of_string, to_string
+    end)
 
   module Stable = struct
     module V1 = struct
@@ -818,7 +887,8 @@ module Ofday = struct
               let t i = Span.of_int63_ns (Int63.of_int64_exn i) in
               [ t                 0L, "00:00:00.000000", "\000"
               ; t             1_000L, "00:00:00.000001", "\254\232\003"
-              ; t 1_234_560_000_000L, "00:20:34.560000", "\252\000\160\130q\031\001\000\000"
+              ; t 1_234_560_000_000L, "00:20:34.560000",
+                "\252\000\160\130q\031\001\000\000"
               ]
           end)
 
@@ -832,56 +902,183 @@ module Ofday = struct
         let%test_unit _ = test "14:30:00.010101" 52_200_010_101_000L
         let%test_unit _ = test "23:59:59.999999" 86_399_999_999_000L
 
-        let%test_unit _ = assert (does_raise (fun () ->
-          V1.of_int63_exn (Int63.succ Int63.min_value)))
+        let%test_unit "of_int63_exn checks range" =
+          assert (does_raise (fun () ->
+            V1.of_int63_exn (Int63.succ Int63.min_value)))
       end)
+  end
+
+  module Option = struct
+    type ofday = t [@@deriving sexp, compare]
+    type t = Span.Option.t [@@deriving compare, bin_io, typerep]
+
+    let none            = Span.Option.none
+    let some            = Span.Option.some
+    let is_none         = Span.Option.is_none
+    let is_some         = Span.Option.is_some
+    let value           = Span.Option.value
+    let value_exn       = Span.Option.value_exn
+    let unchecked_value = Span.Option.unchecked_value
+
+    let of_option = function None -> none | Some t -> some t
+    let to_option t = if is_none t then None else Some (value_exn t)
+
+    let sexp_of_t t = [%sexp_of: ofday option] (to_option t)
+    let t_of_sexp s = of_option ([%of_sexp: ofday option] s)
+
+    include Identifiable.Make (struct
+        type nonrec t = t [@@deriving sexp, compare, bin_io]
+        let module_name = "Core.Std.Time_ns.Ofday.Option"
+        let hash = Span.Option.hash
+        include Sexpable.To_stringable (struct type nonrec t = t [@@deriving sexp] end)
+      end)
+
+    module Stable = struct
+      module V1 = struct
+        type nonrec t = t [@@deriving compare, sexp, bin_io]
+        let to_int63     t = Span.Option.Stable.V1.to_int63     t
+        let of_int63_exn t = Span.Option.Stable.V1.of_int63_exn t
+      end
+
+      let%test_module "Time_ns.Ofday.Option.Stable.V1" =
+        (module struct
+          include Core_kernel.Stable_unit_test.Make (struct
+              include V1
+              let equal = Span.Option.equal
+
+              let tests =
+                let t i = of_int63_exn (Int63.of_int64_exn i) in
+                [ t (-4_611_686_018_427_387_904L),
+                  "()",
+                  "\252\000\000\000\000\000\000\000\192"
+                ; t 0L, "(00:00:00.000000)", "\000"
+                ; t 1_000L, "(00:00:00.000001)", "\254\232\003"
+                ; t 987_654_321_000L,
+                  "(00:16:27.654321)",
+                  "\252h\243\200\244\229\000\000\000"
+                ; t 86_399_999_999_000L,
+                  "(23:59:59.999999)",
+                  "\252\024\252N\145\148N\000\000"
+                ]
+            end)
+
+          let test str int64 =
+            let t = t_of_sexp (Sexp.of_string str) in
+            let int63 = Int63.of_int64_exn int64 in
+            [%test_result: Int63.t] (V1.to_int63     t)     ~expect:int63;
+            [%test_result: t]       (V1.of_int63_exn int63) ~expect:t
+
+          let%test_unit _ = test "()"                (-4_611_686_018_427_387_904L)
+          let%test_unit _ = test "(00:00:00)"        0L
+          let%test_unit _ = test "(14:30:00.010101)" 52_200_010_101_000L
+          let%test_unit _ = test "(23:59:59.999999)" 86_399_999_999_000L
+
+          let%test_unit "of_int63_exn checks range" =
+            assert (does_raise (fun () ->
+              V1.of_int63_exn (Int63.succ Int63.min_value)))
+        end)
+    end
   end
 end
 
-let%test_module _ = (module struct
+let%test_module _ =
+  (module struct
+    let%test_unit _ =
+      let span = Span.create ~hr:8 ~min:27 ~sec:14 ~ms:359 () in
+      let ofday = Ofday.of_span_since_start_of_day_exn span in
+      let expected = "08:27:14.359" in
+      let ms_str = Ofday.to_millisecond_string ofday    in
+      if String.(<>) ms_str expected then
+        failwithf "Failed on Ofday.to_millisecond_string Got (%s) expected (%s)"
+          ms_str expected ()
 
-  let%test_unit _ =
-    let span = Span.create ~hr:8 ~min:27 ~sec:14 ~ms:359 () in
-    let ofday = Ofday.of_span_since_start_of_day_exn span in
-    let expected = "08:27:14.359" in
-    let ms_str = Ofday.to_millisecond_string ofday    in
-    if String.(<>) ms_str expected then
-      failwithf "Failed on Ofday.to_millisecond_string Got (%s) expected (%s)"
-        ms_str expected ()
-
-  let%test_unit _ =
-    (* Ensure that local_midnight_cache doesn't interfere with converting times that are
-       much earlier or later than each other. *)
     let check ofday =
-      let to_string t = Span.to_int63_ns t |> Int63.to_string in
-      if Ofday.(<) ofday Ofday.start_of_day
-      then failwithf "too small: %s" (to_string ofday) ()
-      else if Ofday.(>=) ofday Ofday.end_of_day
-      then failwithf "too large: %s" (to_string ofday) ()
-      else ()
-    in
-    check (Ofday.of_local_time epoch);
-    check (Ofday.of_local_time (now ()));
-    check (Ofday.of_local_time epoch)
+      try
+        assert Ofday.(ofday >= start_of_day && ofday < end_of_day);
+        (* The sexp is more similar than the string.  The string includes different
+           numbers of trailing zeros, which are trimmed in the sexp. *)
+        [%test_result: Sexp.t] (Ofday.sexp_of_t ofday)
+          ~expect:(Time.Ofday.sexp_of_t (Ofday.to_ofday ofday))
+      with raised ->
+        failwiths "check ofday"
+          (Or_error.try_with (fun () -> [%sexp_of: Ofday.t] ofday),
+           Span.to_int63_ns ofday,
+           raised)
+          [%sexp_of: Sexp.t Or_error.t * Int63.t * exn]
 
-end)
+    let%test_unit _ =
+      (* Ensure that midnight_cache doesn't interfere with converting times that are much
+         earlier or later than each other. *)
+      check (Ofday.of_local_time epoch);
+      check (Ofday.of_local_time (now ()));
+      check (Ofday.of_local_time epoch)
+
+    (* Reproduce a failure of the prior test before taking DST into account. *)
+    let%test_unit "Ofday.of_local_time around fall 2015 DST transition" =
+      List.iter
+        ~f:(fun (time_ns, expect) ->
+          let zone = Zone.find_exn "US/Eastern" in
+          (* First make sure Time.Ofday.of_time behaves as expected with these inputs. *)
+          let time_ofday = Time.to_ofday (to_time time_ns) ~zone in
+          if Time.Ofday.(<>) time_ofday (Time.Ofday.of_string expect) then
+            failwiths "Time.Ofday.of_time"
+              [%sexp (time_ns    : t),
+                     (time_ofday : Time.Ofday.t),
+                     (expect     : string)]
+              Fn.id;
+          (* Then make sure we do the same, correct thing. *)
+          let ofday = Ofday.of_time time_ns ~zone in
+          check ofday;
+          if Ofday.(<>) ofday (Ofday.of_string expect) then
+            failwiths "Ofday.of_time"
+              [%sexp (time_ns : t),
+                     (ofday   : Ofday.t),
+                     (expect  : string)]
+              Fn.id)
+        ([ epoch, "19:00:00"
+         ; of_string_abs "2015-11-02 23:59:59 US/Eastern", "23:59:59"
+         ; epoch, "19:00:00"
+         (* [of_string] chooses the second occurrence of a repeated wall clock time in a
+            DST (Daylight Saving Time) transition. *)
+         ; add (of_string "2015-11-01 01:59:59 US/Eastern") Span.second, "02:00:00"
+         ]
+         (* We can denote specific linear times during the repeated wall-clock hour
+            relative to a time before the ambiguity. *)
+         @ List.map
+             ~f:(fun (span, ofday) ->
+               add (of_string "2015-11-01 00:59:59 US/Eastern") span, ofday)
+             [ Span.second,          "01:00:00"
+             ; Span.(second + hour), "01:00:00"
+             ]
+         @ [ add (of_string "2015-03-08 01:59:59 US/Eastern") Span.second, "03:00:00"
+           ; epoch, "19:00:00"
+           ])
+
+    let%test_unit "Ofday.of_time random" =
+      List.iter !Zone.likely_machine_zones ~f:(fun zone ->
+        let zone = Zone.find_exn zone in
+        for _ = 0 to 1_000 do check (Ofday.of_time (random ()) ~zone) done)
+    let%bench_fun "Ofday.of_time random" =
+      let time = random () in
+      let zone = Zone.find_exn List.(hd_exn (permute !Zone.likely_machine_zones)) in
+      fun () -> Ofday.of_time time ~zone
+
+    let%test_unit "Ofday.of_local_time random" =
+      for _ = 0 to 1_000 do check (Ofday.of_local_time (random ())) done
+    let%bench_fun "Ofday.of_local_time random" =
+      let time = random () in
+      fun () -> Ofday.of_local_time time
+  end)
+
+let to_ofday t ~zone = Ofday.of_time t ~zone
 
 let of_date_ofday ~zone date ofday =
-  of_time (Core_time.of_date_ofday ~zone date (Ofday.to_ofday ofday))
+  of_date_ofday ~zone date (Ofday.to_ofday ofday)
 ;;
-
-let to_date t ~zone = Core_time.to_date (to_time t) ~zone
 
 let occurrence what t ~ofday ~zone =
-  of_time (Core_time.occurrence what (to_time t) ~ofday:(Ofday.to_ofday ofday) ~zone)
+  of_time (Time.occurrence what (to_time t) ~ofday:(Ofday.to_ofday ofday) ~zone)
 ;;
-
-module Stable = struct
-  include Stable0
-  module Span   = Span   .Stable
-  module Option = Option .Stable
-  module Ofday  = Ofday  .Stable
-end
 
 (*
   Dropping Time in favor of Time_ns is possible and has been discussed, but we have

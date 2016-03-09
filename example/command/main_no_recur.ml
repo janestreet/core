@@ -1,5 +1,5 @@
 open Core.Std
-module Let_syntax = Command.Let_syntax
+open Command.Let_syntax
 
 let command =
   Command.basic' ~summary:"demo of word wrap for long flag descriptions"
