@@ -83,7 +83,7 @@ let ls_dir directory = Array.to_list (readdir directory)
 *)
 external executing_bytecode
   : unit -> unit -> unit -> unit -> unit -> unit -> bool
-  = "executing_bytecode" "not_executing_bytecode" "noalloc"
+  = "executing_bytecode" "not_executing_bytecode" [@@noalloc]
 
 let execution_mode () =
   if executing_bytecode () () () () () () then `Bytecode else `Native
@@ -95,7 +95,7 @@ let%test _ = execution_mode () =
 
 
 (* returns size, in bits, of an [int] type in C *)
-external c_int_size : unit -> int = "c_int_size" "noalloc"
+external c_int_size : unit -> int = "c_int_size" [@@noalloc]
 
 let%test _ = let size = c_int_size () in size >= 16 && size <= Sys.word_size
 

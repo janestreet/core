@@ -910,7 +910,7 @@ val close_process_full : Process_channels.t -> Exit_or_signal.t
 
 (** [symlink source dest] creates the file [dest] as a symbolic link
    to the file [source]. *)
-val symlink : src:string -> dst:string -> unit
+val symlink : ?to_dir:bool -> src:string -> dst:string -> unit
 
 (** Read the contents of a link. *)
 val readlink : string -> string
@@ -2007,7 +2007,7 @@ val mkdtemp : string -> string
    caught and the signal handler does not return.  If the SIGABRT signal is
    blocked or ignored, the abort() function will still override it.
 *)
-external abort : unit -> _ = "unix_abort" "noalloc"
+external abort : unit -> _ = "unix_abort" [@@noalloc]
 
 (** {2 User id, group id} *)
 

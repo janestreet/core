@@ -169,7 +169,7 @@ let test =
           simple_conversion_test ~n:"single" "1";
           repeat 50 (simple_conversion_test ~n:"random") sg;
         );
-
+(*
      "input" >::
        (fun () ->
          fd_test really_read_test  ~n:"single" (bs_of_s "X");
@@ -178,6 +178,7 @@ let test =
          repeat 100 (fd_test really_read_test ~n:"random big")
            (bsg ~size:(fun () -> 100 * png ()));
        );
+*)
 
      "destruction" >::
        (fun () ->
@@ -209,6 +210,7 @@ let test =
            blit_test ~n:"random" ~src_pos ~dst_pos ~len (s1,s2))
            (fun () -> (sg (), sg(),nng (), nng (), nng ()))
        );
+(*
       "really write/read pipe" >::
          (fun () ->
            let write_read_test = write_read_test Unix.pipe in
@@ -239,6 +241,7 @@ let test =
            repeat 500 (output_input_test ~n:"random big")
              (bsg ~size:(fun () -> 100 * png ()));
          );
+*)
 
        "sub" >::
          (fun () ->
