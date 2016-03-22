@@ -320,7 +320,7 @@ module Timerfd = struct
     -> initial  : Int63.t
     -> interval : Int63.t
     -> Syscall_result.Unit.t
-    = "linux_timerfd_settime" "noalloc"
+    = "linux_timerfd_settime" [@@noalloc]
 
   let%test_unit "unsafe_timerfd_settime returning errno" =
     let result =
@@ -683,13 +683,13 @@ module Epoll = struct
   type ready_events = Bigstring.t
 
   external epoll_sizeof_epoll_event
-    : unit -> int = "linux_epoll_sizeof_epoll_event" "noalloc"
+    : unit -> int = "linux_epoll_sizeof_epoll_event" [@@noalloc]
 
   external epoll_offsetof_readyfd
-    : unit -> int = "linux_epoll_offsetof_readyfd" "noalloc"
+    : unit -> int = "linux_epoll_offsetof_readyfd" [@@noalloc]
 
   external epoll_offsetof_readyflags
-    : unit -> int = "linux_epoll_offsetof_readyflags" "noalloc"
+    : unit -> int = "linux_epoll_offsetof_readyflags" [@@noalloc]
 
   let sizeof_epoll_event  = epoll_sizeof_epoll_event ()
   let offsetof_readyfd    = epoll_offsetof_readyfd ()

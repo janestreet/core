@@ -7,7 +7,7 @@ open Core.Std
   compare: 'k -> 'k -> int;
 }
 
-external hash_param : int -> int -> 'a -> int = "caml_hash_univ_param" "noalloc"
+external hash_param : int -> int -> 'a -> int = "caml_hash_univ_param" [@@noalloc]
 
 let poly = {
   hash = (fun z -> hash_param 10 100 z);
