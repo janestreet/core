@@ -29,7 +29,7 @@ let create ?max_mem_waiting_gc size =
 
 let length = Array1.dim
 
-external is_mmapped : t -> bool = "bigstring_is_mmapped_stub" "noalloc"
+external is_mmapped : t -> bool = "bigstring_is_mmapped_stub" [@@noalloc]
 
 let init n ~f =
   let t = create n in
@@ -168,7 +168,7 @@ let really_send_no_sigpipe fd ?(pos = 0) ?len bstr =
 
 external unsafe_send_nonblocking_no_sigpipe
   : file_descr -> pos : int -> len : int -> t -> Syscall_result.Int.t
-  = "bigstring_send_nonblocking_no_sigpipe_stub" "noalloc"
+  = "bigstring_send_nonblocking_no_sigpipe_stub" [@@noalloc]
 
 let send_nonblocking_no_sigpipe fd ?(pos = 0) ?len bstr =
   let len = get_opt_len bstr ~pos len in

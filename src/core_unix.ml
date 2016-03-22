@@ -393,7 +393,7 @@ external mkdtemp : string -> string = "unix_mkdtemp"
 
 (* Signal handling *)
 
-external abort : unit -> 'a = "unix_abort" "noalloc"
+external abort : unit -> 'a = "unix_abort" [@@noalloc]
 
 (* User id, group id management *)
 
@@ -1160,6 +1160,11 @@ let src_dst f ~src ~dst =
     (fun () -> [("src", atom src); ("dst", atom dst)])
 ;;
 
+let src_dst' f ?to_dir ~src ~dst =
+  improve (fun () -> f ?to_dir ~src ~dst)
+    (fun () -> [("src", atom src); ("dst", atom dst)])
+;;
+
 let unlink = unary_filename Unix.unlink
 
 let rename = src_dst Unix.rename
@@ -1554,7 +1559,7 @@ let close_process_full c =
   Exit_or_signal.of_unix (Unix.close_process_full (c.C.stdout, c.C.stdin, c.C.stderr))
 ;;
 
-let symlink = src_dst Unix.symlink
+let symlink = src_dst' Unix.symlink
 let readlink = unary_filename Unix.readlink
 
 module Select_fds = struct
