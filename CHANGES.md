@@ -1,3 +1,7 @@
+## 113.33.01
+
+- Fix build problem on BSD related to `endian.h`.
+
 ## 113.33.00
 
 - Updated to follow core\_kernel's evolution.
