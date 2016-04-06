@@ -2,9 +2,14 @@ open Core_kernel.Std
 open! Int.Replace_polymorphic_compare
 module Unix = Core_unix
 
+#import "config.mlh"
+
 (* We have reason to believe that lockf doesn't work properly on CIFS mounts.  The idea
    behind requiring both lockf and flock is to prevent programs taking locks on
-   network filesystems where they may not be sound.  *)
+   network filesystems where they may not be sound.
+
+   However, since this isn't very portable, we do it only on Linux.
+*)
 
 let flock fd = Unix.flock fd Unix.Flock_command.lock_exclusive
 
@@ -20,7 +25,11 @@ let lock fd =
      function, it must have come from [flock]. *)
   let flocked = flock fd in
   let lockfed = lockf fd in
+#if JSC_LINUX_EXT
   flocked && lockfed
+#else
+  flocked || lockfed
+#endif
 
 let create
     ?(message = Pid.to_string (Unix.getpid ()))

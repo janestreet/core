@@ -31,7 +31,7 @@ let read_setup_data () =
   |> List.map (fun line -> Scanf.sscanf line "%[^=]=%S" (fun k v -> (k, v)))
 
 let remove_cwd =
-  let prefix = Sys.getcwd () ^ "/" in
+  let prefix = Sys.getcwd () ^ Filename.dir_sep in
   let len_prefix = String.length prefix in
   fun fn ->
     let len = String.length fn in
