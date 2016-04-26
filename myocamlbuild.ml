@@ -1,26 +1,9 @@
 (* OASIS_START *)
 (* OASIS_STOP *)
 
-(* Temporary hacks *)
-let js_hacks = function
-  | After_rules ->
-    rule "Generate a cmxs from a cmxa"
-      ~dep:"%.cmxa"
-      ~prod:"%.cmxs"
-      ~insert:`top
-      (fun env _ ->
-         Cmd (S [ !Options.ocamlopt
-                ; A "-shared"
-                ; A "-linkall"
-                ; A "-I"; A (Pathname.dirname (env "%"))
-                ; A (env "%.cmxa")
-                ; A "-o"
-                ; A (env "%.cmxs")
-            ]));
+module JS = Jane_street_ocamlbuild_goodies
 
-    (* Pass -predicates to ocamldep *)
-    pflag ["ocaml"; "ocamldep"] "predicate" (fun s -> S [A "-predicates"; A s])
-  | _ -> ()
+let dev_mode = true
 
 let setup_preprocessor_deps = function
   | After_rules ->
@@ -35,7 +18,9 @@ let dispatch = function
 
 let () =
   Ocamlbuild_plugin.dispatch (fun hook ->
-    js_hacks hook;
+    JS.alt_cmxs_of_cmxa_rule hook;
+    JS.pass_predicates_to_ocamldep hook;
+    if dev_mode && not Sys.win32 then JS.track_external_deps hook;
     setup_preprocessor_deps hook;
     Ppx_driver_ocamlbuild.dispatch hook;
     dispatch hook;
