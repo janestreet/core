@@ -13,7 +13,7 @@ let flag_prompt_if_missing name of_string ~doc =
     | Some v -> v
     | None ->
       printf "enter %s: %!" name;
-      match In_channel.input_line stdin with
+      match In_channel.input_line In_channel.stdin with
       | None -> failwith "no value entered. aborting."
       | Some line -> (of_string line)
   ]

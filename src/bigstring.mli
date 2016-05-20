@@ -103,7 +103,7 @@ val pread_assume_fd_is_nonblocking
     @param len default = [length bstr - pos]
 *)
 
-val input : ?min_len : int -> in_channel -> ?pos : int -> ?len : int -> t -> int
+val input : ?min_len : int -> In_channel.t -> ?pos : int -> ?len : int -> t -> int
 (** [input ?min_len ic ?pos ?len bstr] tries to read [len] bytes
     (guarantees to read at least [min_len] bytes (must be greater than
     or equal to zero and smaller or equal to [len]), if possible, before
@@ -128,7 +128,7 @@ val input : ?min_len : int -> in_channel -> ?pos : int -> ?len : int -> t -> int
     @param len default = [length bstr - pos]
 *)
 
-val really_input : in_channel -> ?pos : int -> ?len : int -> t -> unit
+val really_input : In_channel.t -> ?pos : int -> ?len : int -> t -> unit
 (** [really_input ic ?pos ?len bstr] reads exactly [len] bytes from
     input channel [ic], and writes them to bigstring [bstr] starting at
     position [pos].
@@ -276,7 +276,7 @@ val recvmmsg_assume_fd_is_nonblocking
 (** [recvmmsg_assume_fd_is_nonblocking fd iovecs ~count ~lens] receives up to [count]
     messages into [iovecs] from file descriptor [fd] without yielding to other OCaml
     threads.  If [~count] is supplied, it must be that [0 <= count <= Array.length
-    iovecs].  If [~srcs] is supplied, save the source addresses for corresponding recieved
+    iovecs].  If [~srcs] is supplied, save the source addresses for corresponding received
     messages there.  If supplied, [Array.length srcs] must be [>= count].  Save the
     lengths of the received messages in [lens].  It is required that [Array.length lens >=
     count].
@@ -314,7 +314,7 @@ val sendmsg_nonblocking_no_sigpipe
 *)
 
 val output
-  : ?min_len : int -> out_channel -> ?pos : int -> ?len : int -> t -> int
+  : ?min_len : int -> Out_channel.t -> ?pos : int -> ?len : int -> t -> int
 (** [output ?min_len oc ?pos ?len bstr] tries to output
     [len] bytes (guarantees to write at least [min_len] bytes (must be
     equal to or greater than zero), if possible, before returning) from
@@ -340,7 +340,7 @@ val output
 *)
 
 val really_output
-  : out_channel -> ?pos : int -> ?len : int -> t -> unit
+  : Out_channel.t -> ?pos : int -> ?len : int -> t -> unit
 (** [really_output oc ?pos ?len bstr] outputs exactly [len]
     bytes from bigstring [bstr] starting at position [pos] to output
     channel [oc].
@@ -426,14 +426,14 @@ val unsafe_sendmsg_nonblocking_no_sigpipe
   : (file_descr -> t Core_unix.IOVec.t array -> int -> int option) Or_error.t
 
 external unsafe_input
-  : min_len : int -> in_channel -> pos : int -> len : int -> t -> int
+  : min_len : int -> In_channel.t -> pos : int -> len : int -> t -> int
   = "bigstring_input_stub"
 (** [unsafe_input ~min_len ic ~pos ~len bstr] similar to
     {!Bigstring.input}, but does not perform any bounds checks.
     Will crash on bounds errors! *)
 
 external unsafe_output
-  : min_len : int -> out_channel -> pos : int -> len : int -> t -> int
+  : min_len : int -> Out_channel.t -> pos : int -> len : int -> t -> int
   = "bigstring_output_stub"
 (** [unsafe_output ~min_len oc ~pos ~len bstr] similar to
     {!Bigstring.output}, but does not perform any bounds checks.

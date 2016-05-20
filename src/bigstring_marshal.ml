@@ -50,9 +50,9 @@ let marshal_to_fd ?buf ?flags fd v =
   marshal_to_gen ?buf ?flags fd v ~f:(fun fd buf ~len ->
     really_write fd buf ~len)
 
-#import "config.mlh"
+#import "config.h"
 
-#if JSC_MSG_NOSIGNAL
+#ifdef JSC_MSG_NOSIGNAL
 
 let really_send_no_sigpipe = Or_error.ok_exn really_send_no_sigpipe
 

@@ -1,4 +1,4 @@
-open Core_kernel.Std
+open! Core.Std
 
 let%test_module "Schedule" = (module struct
   open Schedule
@@ -1275,4 +1275,40 @@ let%test_module "Schedule" = (module struct
       ignore (t_of_sexp (Sexp.of_string "(In_zone Local Always)"))
     ;;
   end))
+
+  let extract_first_element_of_endless_sequence ~schedule ~start_time ~emit =
+    match Schedule.to_endless_sequence schedule ~start_time ~emit with
+    | `Started_in_range (_, seq)
+    | `Started_out_of_range seq -> Sequence.hd_exn seq
+  ;;
+
+  let schedule_do_not_spin_forever ~start_time schedule =
+    let one_day_later = Time.add start_time (Time.Span.of_hr 24.) in
+    let tags =
+      extract_first_element_of_endless_sequence ~schedule ~start_time
+        ~emit:(Transitions_and_tag_changes (=))
+    in
+    let no_change = (`No_change_until_at_least (`In_range, one_day_later)) in
+    match tags with
+    | #Event.tag_change ->
+      extract_first_element_of_endless_sequence ~schedule ~start_time ~emit:Transitions
+      |> [%test_eq: [ unit Event.transition | Event.no_change ]] no_change;
+    | #Event.transition
+    | #Event.no_change -> assert false
+  ;;
+
+  let%test_unit "Schedules with tag transitions but no Enter/Leave do not spin forever." =
+    let start_time = Time.of_string "2016-05-06 00:00Z" in
+    let zone = Time.Zone.find_exn "America/New_York" in
+    schedule_do_not_spin_forever ~start_time
+      (In_zone (zone, Or [ Always; Tag ((), Hours [19] )]));
+    let initial_bug_report =
+      In_zone (zone
+               , Or
+                   [ After (Exclusive, (Date.of_string "2016-05-05", Time.Ofday.of_string "1:00"))
+                   ; Tag ( ()
+                         , Not (Between ( (Inclusive, Time.Ofday.of_string "1:05")
+                                        , (Inclusive, Time.Ofday.of_string "23:00")))) ])
+    in
+    schedule_do_not_spin_forever ~start_time initial_bug_report
 end)

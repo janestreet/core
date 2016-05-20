@@ -4,8 +4,7 @@ module Zone = Zone
 module Span = Span
 
 module Ofday = struct
-  include (Ofday : (module type of Ofday
-                     with type t = Ofday.t
+  include (Ofday : (module type of struct include Ofday end
                      with module Zoned := Ofday.Zoned))
 
   module Zoned = struct

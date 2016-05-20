@@ -166,6 +166,23 @@ module Stable = struct
           `Once (T.sub proposed_time shift_amount)
     ;;
 
+    let of_tm tm ~zone =
+      (* Explicitly ignoring isdst, wday, yday (they are redundant with the other fields
+         and the [zone] argument) *)
+      let
+        { Core_unix.tm_year; tm_mon; tm_mday; tm_hour; tm_min; tm_sec
+        ; tm_isdst = _; tm_wday = _; tm_yday = _ } = tm
+      in
+      let date =
+        Date.create_exn
+          ~y:(tm_year + 1900)
+          ~m:(Month.of_int_exn (tm_mon + 1))
+          ~d:tm_mday
+      in
+      let ofday = Ofday.create ~hr:tm_hour ~min:tm_min ~sec:tm_sec () in
+      of_date_ofday ~zone date ofday
+    ;;
+
     let%test_module "clock shift stuff" = (module struct
       (* Some stuff to make [%test_result: t] failures look nicer. Notice that a bug in
          [to_date_ofday] could cause this thing to lie. *)
@@ -389,6 +406,11 @@ module Stable = struct
         |> Zone.shift_epoch_time zone `UTC
       in
       Unix.strftime (Unix.localtime epoch_time) s
+    ;;
+
+    let parse s ~fmt ~zone =
+      Unix.strptime ~fmt s
+      |> of_tm ~zone
     ;;
 
     let pause_for span =
@@ -700,6 +722,22 @@ module Stable = struct
         ]
     ;;
 
+    let%test_module "of_tm" =
+      (module struct
+        let unix_epoch_t =
+          of_date_ofday ~zone:Zone.utc
+            (Date.create_exn ~y:1970 ~m:Core_kernel.Month.Jan ~d:1)
+            (Ofday.create ())
+
+        let%test_unit _ =
+          [%test_result: t] ~expect:unix_epoch_t
+            (of_tm ~zone:Zone.local (Core_unix.localtime 0.))
+
+        let%test_unit _ =
+          [%test_result: t] ~expect:unix_epoch_t
+            (of_tm ~zone:Zone.utc (Core_unix.gmtime 0.))
+      end)
+
     let%test_module "format" =
       (module struct
         let local_zone_name = "Europe/London"
@@ -719,6 +757,25 @@ module Stable = struct
           let t = of_string_abs ("2015-01-01 10:00:00 " ^ local_zone_name) in
           [%test_result: string] ~expect:"2015-01-01 18:00:00"
             (format ~zone:(Zone.find_exn "Asia/Hong_Kong") t "%Y-%m-%d %H:%M:%S")
+      end)
+
+    let%test_module "parse" =
+      (module struct
+        let unix_epoch_t =
+          of_date_ofday ~zone:Zone.utc
+            (Date.create_exn ~y:1970 ~m:Core_kernel.Month.Jan ~d:1)
+            (Ofday.create ())
+
+        let%test_unit _ =
+          [%test_result: t] ~expect:unix_epoch_t
+            (parse ~zone:Zone.utc ~fmt:"%Y-%m-%d %H:%M:%S" "1970-01-01 00:00:00")
+
+        let%test_unit _ =
+          [%test_result: t] ~expect:unix_epoch_t
+            (parse
+               ~zone:(Zone.find_exn "Asia/Hong_Kong")
+               ~fmt:"%Y-%m-%d %H:%M:%S"
+               "1970-01-01 08:00:00")
       end)
   end
 
@@ -775,3 +832,13 @@ let%test_module "Time robustly compare" = (module struct
       assert ((=.) time (sexp_of_t time |! t_of_sexp))
     done
 end)
+
+let%expect_test "in tests, [to_string] uses NYC's time zone" =
+  printf "%s" (to_string epoch);
+  [%expect {| 1969-12-31 19:00:00.000000-05:00 |}];
+;;
+
+let%expect_test "in tests, [sexp_of_t] uses NYC's time zone" =
+  printf !"%{Sexp}" [%sexp (epoch : t)];
+  [%expect {| (1969-12-31 19:00:00.000000-05:00) |}];
+;;

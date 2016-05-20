@@ -49,8 +49,8 @@ val week_number : t -> int
 val is_weekend : t -> bool
 val is_weekday : t -> bool
 
-(** Monday through Friday are business days, unless they're a holiday.  Use
-    [Pnl_db.Holidays.is_holiday] as a convenient holiday function. *)
+(** Monday through Friday are business days, unless they're a holiday.
+*)
 val is_business_day : t -> is_holiday:(t -> bool) -> bool
 
 (* [add_days t n] adds n days to [t] and returns the resulting date. *)
@@ -81,8 +81,9 @@ val add_weekdays : t -> int -> t
 
 (** [add_business_days t ~is_holiday n] returns a business day even when
     [n=0]. [add_business_days ~is_holiday:(fun _ -> false) ...] is the same as
-    [add_weekdays]. Use [Pnl_db.Holidays.is_holiday] as a convenient holiday
-    function. *)
+    [add_weekdays].
+
+*)
 val add_business_days : t -> is_holiday:(t -> bool) -> int -> t
 
 (* the following returns a closed interval (endpoints included) *)
@@ -101,9 +102,9 @@ val following_weekday : t -> t
 val first_strictly_after : t -> on:Day_of_week.t -> t
 
 module Stable : sig
-  module V1 : sig
-    type nonrec t = t [@@deriving sexp, bin_io, compare]
-  end
+  module V1 : Stable
+    with type t = t
+    with type comparator_witness = comparator_witness
 end
 
 module O : sig

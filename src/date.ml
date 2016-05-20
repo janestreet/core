@@ -12,6 +12,20 @@ let format date pat =
   Time.format time pat ~zone
 ;;
 
+let parse ~fmt s =
+  Core_unix.strptime ~fmt s
+  |> of_tm
+;;
+
+let%test_unit "parse" =
+  [%test_result: t]
+    ~expect:(create_exn ~y:1970 ~m:Core_kernel.Month.Jan ~d:1)
+    (parse ~fmt:"%a, %d %b %Y" "Thu, 1 Jan 1970");
+  [%test_result: t]
+    ~expect:(create_exn ~y:2016 ~m:Core_kernel.Month.Apr ~d:19)
+    (parse ~fmt:"%a, %d %b %Y %H:%M:%S %z" "Tue, 19 Apr 2016 07:34:04 +0800")
+;;
+
 let%test_module "week_number" = (module struct
   let%test_unit _ =
     let module Error = Core_kernel.Error in

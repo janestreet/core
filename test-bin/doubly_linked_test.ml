@@ -88,6 +88,10 @@ module Foil : S = struct
   let mem ?equal t a   = read_wrap t (fun () -> List.mem ?equal (to_list t) a)
   let min_elt t ~cmp   = read_wrap t (fun () -> List.min_elt ~cmp (to_list t))
   let max_elt t ~cmp   = read_wrap t (fun () -> List.max_elt ~cmp (to_list t))
+  let fold_result t ~init ~f  =
+    read_wrap t (fun () -> List.fold_result (to_list t) ~init ~f)
+  let fold_until t ~init ~f  =
+    read_wrap t (fun () -> List.fold_until (to_list t) ~init ~f)
 
   let sexp_of_t sexp_of_a t = List.sexp_of_t sexp_of_a (to_list t)
   let t_of_sexp a_of_sexp s = of_list (List.t_of_sexp a_of_sexp s)
@@ -309,6 +313,8 @@ module Both : S = struct
 
   (* punt: so as not to duplicate any effects in passed-in functions *)
   let fold _ = failwith "unimplemented"
+  let fold_result _ = failwith "unimplemented"
+  let fold_until _ = failwith "unimplemented"
   let iter _ = failwith "unimplemented"
   let count _ = failwith "unimplemented"
   let sum _ = failwith "unimplemented"
@@ -760,8 +766,7 @@ module Bisimulation = struct
 
   let array_rand arr =
     try
-      let n = Array.length arr in
-      arr.(Random.int n)
+      Array.random_element_exn arr
     with
       _ -> raise Skip (* sometimes we try to select from a not-yet-non-empty array *)
 

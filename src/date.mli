@@ -8,3 +8,5 @@ val today : zone:Zone.t -> t
 (** This formats a date using the format patterns available in [strftime]. *)
 val format : t -> string -> string
 
+(** This parses a date using the format patterns available in [strptime]. *)
+val parse : fmt:string -> string -> t

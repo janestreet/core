@@ -17,4 +17,4 @@
     ]}
 *)
 
-include Core_kernel.Timing_wheel_intf.Timing_wheel with module Time = Time
+include Core_kernel.Timing_wheel_ns_intf.Timing_wheel with module Time = Time

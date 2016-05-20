@@ -22,7 +22,7 @@
     to the module internals.
 
     This interface is the simple, non-concurrent interface, and requires machinery on top
-    to implement a specific strategy.  See Async_jane for an async-friendly implementation
+    to implement a specific strategy.  See Async_extra for an async-friendly implementation
     on top of this module.
 
     Most functions in this interface take an explicit time as an argument.  [now] is

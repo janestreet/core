@@ -1,8 +1,8 @@
-#import "config.mlh"
+#import "config.h"
 
 open Core_kernel.Std
 
-#if JSC_MUTEX_TIMED_LOCK
+#ifdef JSC_MUTEX_TIMED_LOCK
 
 include Mutex0
 

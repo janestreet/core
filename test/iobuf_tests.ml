@@ -1,9 +1,7 @@
-#import "config.mlh"
+#import "../src/config.h"
 
-open Core_kernel.Std_kernel
-open Iobuf_intf
-
-module Unix = Core_unix
+open! Core.Std
+open! Core.Iobuf_intf
 
 let is_error = Result.is_error
 let is_ok    = Result.is_ok
@@ -37,7 +35,7 @@ module Test (Iobuf : sig
   let strings =
     [ ""; "a"; "hello"; "\000"; "\000\000\000"; "\000hello"; String.make 1000 'x' ]
 
-#if JSC_ARCH_SIXTYFOUR
+#ifdef JSC_ARCH_SIXTYFOUR
   (* [large_int] creates an int that is not representable on 32-bit systems. *)
   let large_int a b c d = (a lsl 48) lor (b lsl 32) lor (c lsl 16) lor d
 #endif
@@ -562,6 +560,7 @@ module Test (Iobuf : sig
         )
     ;;
 
+    let bin_prot_length_prefix_bytes = bin_prot_length_prefix_bytes
     let consume_bin_prot = consume_bin_prot
     let fill_bin_prot = fill_bin_prot
 
@@ -653,7 +652,7 @@ module Test (Iobuf : sig
         t_pos_1 buf 4 int32_le 0x01020304 "A\004\003\002\001FGHIJ" sexp_of_int;
         t_pos_1 buf 4 int32_be (-0x01020305) "A\254\253\252\251FGHIJ" sexp_of_int;
         t_pos_1 buf 4 int32_le (-0x05060709) "A\247\248\249\250FGHIJ" sexp_of_int;
-#if JSC_ARCH_SIXTYFOUR
+#ifdef JSC_ARCH_SIXTYFOUR
         t_pos_1 buf 4 uint32_be (large_int 0 0 0xF6F5 0xF4F3)
           "A\246\245\244\243FGHIJ" sexp_of_int;
         t_pos_1 buf 4 uint32_le (large_int 0 0 0xFBFA 0xF9F8)
@@ -845,7 +844,7 @@ module Test (Iobuf : sig
     let%test_unit _ =
       List.iter [ 0; 1 ] ~f:(fun pos ->
         let t = create ~len:10 in
-#if JSC_ARCH_SIXTYFOUR
+#ifdef JSC_ARCH_SIXTYFOUR
         let i = large_int 0x1234 0x5678 0x90AB 0xCDEF in
         Poke.int64_le t ~pos i;
         assert (Peek.int64_le t ~pos = i);
@@ -1050,7 +1049,7 @@ module Test (Iobuf : sig
     let%test_unit _ =
       List.iter [ 0; 1 ] ~f:(fun pos ->
         let t = create ~len:10 in
-#if JSC_ARCH_SIXTYFOUR
+#ifdef JSC_ARCH_SIXTYFOUR
         let i = large_int 0x1234 0x5678 0x90AB 0xCDEF in
         sub_shared t ~pos |> (fun t -> Fill.int64_le t i);
         assert (i = (sub_shared t ~pos |> Consume.int64_le));
@@ -1418,7 +1417,7 @@ module Test (Iobuf : sig
                 sub_shared t ~pos |> (fun t ->
                   let len_before = Iobuf.length t in
                   match
-                    Syscall_result.Unit.to_result
+                    Unix.Syscall_result.Unit.to_result
                       (read_assume_fd_is_nonblocking t fd)
                   with
                   | Ok () | Error (EAGAIN | EINTR | EWOULDBLOCK) ->
@@ -1487,7 +1486,7 @@ module Test (Iobuf : sig
                  Iobuf.flip_lo t;
                  retry_until_ready
                    (fun () ->
-                      Syscall_result.Unit.ok_or_unix_error_exn (sendto t send_fd addr)
+                      Unix.Syscall_result.Unit.ok_or_unix_error_exn (sendto t send_fd addr)
                         ~syscall_name:sendto_name);
                  [%test_pred: (_, _) Iobuf.t] Iobuf.is_empty t
                ))
@@ -1523,7 +1522,7 @@ let%test_unit _ =
       assert (Peek.int64_t_le t ~pos = i);
       Poke.int64_t_be t ~pos i;
       assert (Peek.int64_t_be t ~pos = i);
-#if JSC_ARCH_SIXTYFOUR
+#ifdef JSC_ARCH_SIXTYFOUR
       begin
         let i = large_int 0x1234 0x5678 0x90AB 0xCDEF in
         Poke.int64_t_le t ~pos (Int64.of_int i);
@@ -1654,7 +1653,7 @@ let%test_unit _ =
         begin
           match
             read_assume_fd_is_nonblocking t fd
-            |> Syscall_result.Unit.to_result (* doesn't allocate *)
+            |> Unix.Syscall_result.Unit.to_result (* doesn't allocate *)
           with
           | Error (EAGAIN | EINTR | EWOULDBLOCK) -> ()
           | Error e -> raise (Unix.Unix_error (e, "read", ""))

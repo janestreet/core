@@ -73,7 +73,7 @@ end
    other floats.
 *)
 module T : sig
-  type t = private float [@@deriving bin_io]
+  type t = private float [@@deriving bin_io, typerep]
 
   include Comparable.S_common with type t := t
   include Hashable_binable    with type t := t
@@ -102,7 +102,23 @@ end = struct
   let abs_diff t1 t2 = Span.abs (diff t1 t2)
   let add t span = t +. (Span.to_sec span)
   let sub t span = t -. (Span.to_sec span)
-  let now () = Unix.gettimeofday ()
+
+  let now () =
+    let float_ns =
+      Core_kernel.Std.Time_ns.now ()
+      |> Core_kernel.Std.Time_ns.to_int63_ns_since_epoch
+      |> Int63.to_float
+    in
+    float_ns *. 1E-9
+
+  let%bench_module "now"=
+    (module struct
+      let%bench_fun "gettimeofday" =
+        Unix.gettimeofday
+
+      let%bench_fun "now" =
+        now
+    end)
 end
 
 let float_of_hh_mm_ss hh mm ss =

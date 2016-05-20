@@ -10,7 +10,7 @@ exists_if = "core.cma"
 package "top" (
   version = "$(pkg_version)"
   description = ""
-  requires = "compiler-libs core"
+  requires = "compiler-libs.opttoplevel core"
   archive(byte  ) = "core_top.cma"
   archive(native) = "core_top.cmxa"
   plugin(byte  ) = "core_top.cma"

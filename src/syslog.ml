@@ -9,7 +9,7 @@ module Open_option = struct
   [@@deriving sexp]
   external to_int : t -> int = "core_syslog_open_option_to_int"
   let collect_mask i t = to_int t lor i
-  let mask ts = Core_list.fold ~f:collect_mask ~init:0 ts
+  let mask ts = List.fold ~f:collect_mask ~init:0 ts
 end
 
 module Facility = struct
@@ -46,7 +46,7 @@ module Level = struct
     let%test_unit _ = [%test_result: int] ~expect:1 (compare EMERG DEBUG)
     external to_int : t -> int = "core_syslog_level_to_int"
     let collect_mask i t = to_int t lor i
-    let mask ts = Core_list.fold ~f:collect_mask ~init:0 ts
+    let mask ts = List.fold ~f:collect_mask ~init:0 ts
   end
   include T
 
@@ -70,7 +70,7 @@ let syslogf ?facility ?level format =
   ksprintf (fun message -> syslog ?facility ?level message) format
 
 let logmask_range ?(to_level = Level.EMERG) from_level =
-  Core_list.fold Level.all ~init:0 ~f:(fun logmask level ->
+  List.fold Level.all ~init:0 ~f:(fun logmask level ->
     if Level.compare from_level    level < 1
     && Level.compare      level to_level < 1
     then Level.to_int level lor logmask

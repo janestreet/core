@@ -590,6 +590,8 @@ module Make () = struct
       (fun () -> consume_bin_prot t r)
   ;;
 
+  let bin_prot_length_prefix_bytes = bin_prot_length_prefix_bytes
+
   let fill_bin_prot t w a =
     debug "fill_bin_prot" [t] t [%sexp_of: (_, _) t]
       [%sexp_of: unit Or_error.t]

@@ -135,7 +135,7 @@ module Stable = struct
     let of_string_iso8601_extended ?pos ?len str =
       let (pos, len) =
         match
-          (Core_kernel.Ordered_collection_common.get_pos_len ?pos ?len ~length:(String.length str))
+          Core_kernel.Ordered_collection_common.get_pos_len ?pos ?len ~length:(String.length str)
         with
         | Result.Ok z    -> z
         | Result.Error s -> failwithf "Ofday.of_string_iso8601_extended: %s" s ()
@@ -244,19 +244,49 @@ module Stable = struct
       let module_name = "Core.Std.Time.Ofday"
     end)
 
+    (* lifted allowed meridiem suffixes out so that tests can reuse them *)
+    let plus_lowercase xs = xs @ List.map xs ~f:String.lowercase
+    let ante = lazy (plus_lowercase ["AM";"A";"A.M";"A.M."])
+    let post = lazy (plus_lowercase ["PM";"P";"P.M";"P.M."])
+
     let of_string s =
       try
+        let prefix, meridiem =
+          let chop_suffixes s ~suffixes:lst =
+            List.find_map lst ~f:(fun suffix -> String.chop_suffix s ~suffix)
+          in
+          match chop_suffixes s ~suffixes:(Lazy.force ante) with
+          | Some prefix -> String.rstrip prefix, Some `AM
+          | None ->
+            match chop_suffixes s ~suffixes:(Lazy.force post) with
+            | Some prefix -> String.rstrip prefix, Some `PM
+            | None -> s, None
+        in
         let h, m, s =
-          match String.split s ~on:':' with
+          match String.split prefix ~on:':' with
           | [h; m; s] -> (h, m, Float.of_string s)
           | [h; m]    -> (h, m, 0.)
           | [hm]      ->
-            if Int.(=) (String.length hm) 4 then
-              ((String.sub hm ~pos:0 ~len:2), (String.sub hm ~pos:2 ~len:2), 0.)
+            if Option.is_some meridiem
+            then (hm, "00", 0.)
+            else if Int.(=) (String.length hm) 4
+            then ((String.sub hm ~pos:0 ~len:2), (String.sub hm ~pos:2 ~len:2), 0.)
             else failwith "No colon, expected string of length four"
           | _ -> failwith "More than two colons"
         in
-        let h = Int.of_string h in
+        let h =
+          let h = Int.of_string h in
+          match meridiem with
+          | None -> h
+          | Some am_or_pm ->
+            (if Int.(>) h 12
+             then failwith "hour must be <= 12 when AM/PM is specified");
+            (if Int.(=) h 0
+             then failwith "hour must be > 0 when AM/PM is specified");
+            match am_or_pm with
+            | `AM -> if Int.(=) h 12 then 0 else h
+            | `PM -> if Int.(=) h 12 then 12 else Int.(+) h 12
+        in
         let m = Int.of_string m in
         let is_end_of_day = Int.(h = 24 && m = 0) && Float.(s = 0.) in
         if not (Int.(h <= 23 && h >= 0) || is_end_of_day) then
@@ -277,6 +307,8 @@ module Stable = struct
         invalid_argf "Ofday.of_string (%s): %s" s (Exn.to_string exn) ()
     ;;
 
+    let%bench "Time.Ofday.of_string" = of_string "12:00:00am"
+
     let%test "of_string supports leap seconds" =
       let last_second = create ~hr:21 () in
       List.for_all
@@ -284,6 +316,69 @@ module Stable = struct
         [ "20:59:60"
         ; "20:59:60.500"
         ; "20:59:60.000" ]
+    ;;
+
+    let%test_unit "of_string supports non-meridiem times" =
+      assert (create ~hr:7 ~min:21 ~sec:0 () = of_string "07:21:00")
+    ;;
+
+    let%test_unit "of_string supports meridiem times" =
+      let test_excluding_noon ~hr ~zeroes ~meridiem () =
+        let hrs_to_add, suffixes =
+          let plus_space xs = xs @ List.map xs ~f:(fun x -> " " ^ x) in
+          match meridiem with
+          | None     -> 0,  [""]
+          | Some `AM -> 0,  plus_space (Lazy.force ante)
+          | Some `PM -> 12, plus_space (Lazy.force post)
+        in
+        List.iter suffixes ~f:(fun suffix ->
+          let t = create ~hr:(hr + hrs_to_add) () in
+          let str = sprintf "%d%s%s" hr zeroes suffix in
+          assert (t = (of_string str)));
+      in
+      let failure f = assert (Option.is_none (Option.try_with f)) in
+      let success f =
+        match Or_error.try_with f with
+        | Ok _ -> ()
+        | Error e -> Error.raise (Error.tag e ~tag:"expected success")
+      in
+      (* Test everything but hour 12 and 0 *)
+      let first_half_of_day_except_0_and_12 = [1;2;3;4;5;6;7;8;9;10;11] in
+      let second_half_of_day = [13;14;15;16;17;18;19;21;21;22;23;24] in
+      (* 1 -> 11 are tested here, simplistically by adding 12 when
+         [meridiem is `PM]. We test ~hr:12 later *)
+      List.iter first_half_of_day_except_0_and_12 ~f:(fun hr ->
+        (* Test X:00:00am, X:00am. amd Xam *)
+        success (test_excluding_noon ~hr ~zeroes:":00:00" ~meridiem:(Some `AM));
+        success (test_excluding_noon ~hr ~zeroes:":00"    ~meridiem:(Some `AM));
+        success (test_excluding_noon ~hr ~zeroes:""       ~meridiem:(Some `AM));
+        success (test_excluding_noon ~hr ~zeroes:":00:00" ~meridiem:(Some `AM));
+        success (test_excluding_noon ~hr ~zeroes:":00"    ~meridiem:(Some `PM));
+        success (test_excluding_noon ~hr ~zeroes:""       ~meridiem:(Some `PM));
+        (* "11pm" is fine, but "11" is not a valid ofday *)
+        failure (test_excluding_noon ~hr ~zeroes:""       ~meridiem:None);
+      );
+      (* None of hour 13 -> 24 should support AM or PM *)
+      List.iter second_half_of_day ~f:(fun hr ->
+        failure (test_excluding_noon ~zeroes:":00:00" ~hr ~meridiem:(Some `AM));
+        failure (test_excluding_noon ~zeroes:":00"    ~hr ~meridiem:(Some `AM));
+        failure (test_excluding_noon ~zeroes:""       ~hr ~meridiem:(Some `AM));
+        failure (test_excluding_noon ~zeroes:":00:00" ~hr ~meridiem:(Some `PM));
+        failure (test_excluding_noon ~zeroes:":00"    ~hr ~meridiem:(Some `PM));
+        failure (test_excluding_noon ~zeroes:""       ~hr ~meridiem:(Some `PM));
+      );
+      List.iter ([0;12] @ first_half_of_day_except_0_and_12 @ second_half_of_day)
+        ~f:(fun hr ->
+          success (test_excluding_noon ~hr ~zeroes:":00:00" ~meridiem:None);
+          success (test_excluding_noon ~hr ~zeroes:":00"    ~meridiem:None);
+          failure (test_excluding_noon ~hr ~zeroes:""       ~meridiem:None);
+      );
+      (* Test hour 12 *)
+      assert ((create ~hr:12 ()) = (of_string "12:00:00 PM"));
+      assert ((create ~hr:0 ())  = (of_string "12:00:00 AM"));
+      (* Can't have a 0'th hour ofday with a meridiem suffix *)
+      failure (fun () -> (of_string "00:00:00 AM"));
+      failure (fun () -> (of_string "00:00:00 PM"));
     ;;
 
     let t_of_sexp sexp =

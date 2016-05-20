@@ -44,12 +44,12 @@ let test =
         "yes" @? (Hash_heap.pop_if t (fun _ -> true) = Some 1);
         "gone-top" @? (Hash_heap.top t <> Some 1);
         "gone-mem" @? (not (Hash_heap.mem t 1)));
-      "iter" >:: (fun () ->
+      "iteri" >:: (fun () ->
         let t = make () in
         "match" @?
           (Set.compare_direct (Set.Poly.of_list s)
               (let s = ref Set.Poly.empty in
-               Hash_heap.iter t ~f:(fun ~key ~data ->
+               Hash_heap.iteri t ~f:(fun ~key ~data ->
                  s := Set.add !s key;
                  assert (key = data));
               !s)

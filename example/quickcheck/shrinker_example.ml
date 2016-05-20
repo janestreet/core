@@ -15,7 +15,7 @@ module Sorted_list = struct
 
   let gen elt =
     let open Generator.Monad_infix in
-    List.gen' ~sorted:(`By Int.compare) elt >>| of_list
+    List.gen elt >>| of_list
 
   let custom_int_shrinker =
     Shrinker.create (fun n ->

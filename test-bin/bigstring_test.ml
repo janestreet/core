@@ -90,7 +90,7 @@ let inchan_test ~n test orig =
   protect ~f:(fun () ->
     really_output outc orig;
     Out_channel.close outc;
-    let inc = open_in fname in
+    let inc = In_channel.create fname in
     test ~n orig inc)
     ~finally:(fun () -> Unix.unlink fname)
 ;;
@@ -141,18 +141,18 @@ let write_read_test ~n fdpair bs =
     bs
 
 let output_input_test ?(runs = 2) ~n fdpair bs =
-  let ic = ref stdin in
-  let oc = ref stdout in
+  let ic = ref In_channel.stdin in
+  let oc = ref Out_channel.stdout in
   fdpair_test ~n fdpair
     (fun bs fd ->
       if !oc = stdout then oc := Unix.out_channel_of_descr fd;
       for _ = 1 to runs do
         Bigstring.really_output !oc bs
       done;
-      flush !oc
+      Out_channel.flush !oc
     )
     (fun ~n bs fd ->
-      if !ic = stdin then ic := Unix.in_channel_of_descr fd;
+      if !ic = In_channel.stdin then ic := Unix.in_channel_of_descr fd;
       let bs' = Bigstring.create (Bigstring.length bs) in
       for _ = 1 to runs do
         Bigstring.really_input !ic bs'

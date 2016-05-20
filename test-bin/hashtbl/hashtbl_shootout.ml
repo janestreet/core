@@ -84,7 +84,7 @@ module Strings = struct
       t.set.(t.next)
     end
 
-  let random t = t.set.(Random.int t.state 1_000_000)
+  let random t = Array.random_element_exn ~random_state:t.state t.set
 
   (* force the processor to read lots of data into it's cache *)
   let bash_cache t =

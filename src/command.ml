@@ -188,6 +188,8 @@ module Arg_type = struct
   let time_ofday_unzoned = create Time.Ofday.of_string
   let time_zone          = create Time.Zone.of_string
   let time_span          = create Time.Span.of_string
+  let sexp               = create Sexp.of_string
+  let sexp_conv of_sexp  = create (fun s -> of_sexp (Sexp.of_string s))
 
   let file ?key of_string =
     create ?key of_string ~complete:(fun _ ~part ->
@@ -246,24 +248,24 @@ module Arg_type = struct
     let time_zone          = time_zone
     let time_span          = time_span
     let file               = file Fn.id
+    let sexp               = sexp
+    let sexp_conv          = sexp_conv
   end
 end
 
 module Flag = struct
+  type action =
+    | No_arg of (Env.t                -> Env.t)
+    | Arg    of (Env.t -> string      -> Env.t) * Completer.t
+    | Rest   of (Env.t -> string list -> Env.t)
 
   module Internal = struct
-
-    type action =
-      | No_arg of (Env.t -> Env.t)
-      | Arg    of (string -> Env.t -> Env.t) * Completer.t
-      | Rest   of (string list -> unit)
-
     type t = {
       name : string;
       aliases : string list;
       action : action;
       doc : string;
-      check_available : [ `Optional | `Required of (unit -> unit) ];
+      check_available : [ `Optional | `Required of (Env.t -> unit) ];
       name_matching : [`Prefix | `Full_match_required];
     }
 
@@ -309,12 +311,11 @@ module Flag = struct
         |> Option.iter ~f:(fun x -> failwithf "multiple flags or aliases named %s" x ());
         map
     ;;
-
   end
 
   type 'a state = {
-    action : Internal.action;
-    read : unit -> 'a;
+    action : action;
+    read : Env.t -> 'a;
     optional : bool;
   }
 
@@ -323,12 +324,12 @@ module Flag = struct
   let arg_flag name arg_type read write ~optional =
     { read; optional;
       action =
-        let update arg env =
+        let update env arg =
           match arg_type.Arg_type.parse arg with
           | Error exn ->
             die "failed to parse %s value %S.\n%s" name arg (Exn.to_string exn) ()
           | Ok arg ->
-            write arg;
+            let env = write env arg in
             match arg_type.Arg_type.key with
             | None -> env
             | Some key -> Env.multi_add env key arg
@@ -340,26 +341,27 @@ module Flag = struct
     fun input ->
       let {action; read; optional} = t input in
       { action;
-        read = (fun () -> f (read ()));
+        read = (fun env -> f (read env));
         optional;
       }
 
-  let write_option name v arg =
-    match !v with
-    | None -> v := Some arg
-    | Some _ -> die "flag %s passed more than once" name ()
+  let write_option name key env arg =
+    Env.update env key ~f:(function
+      | None -> arg
+      | Some _ -> die "flag %s passed more than once" name ()
+    )
 
   let required_value ?default arg_type name ~optional =
-    let v = ref None in
-    let read () =
-      match !v with
+    let key = Env.Key.create ~name [%sexp_of: _] in
+    let read env =
+      match Env.find env key with
       | Some v -> v
       | None ->
         match default with
         | Some v -> v
         | None -> die "missing required flag: %s" name ()
     in
-    let write arg = write_option name v arg in
+    let write env arg = write_option name key env arg in
     arg_flag name arg_type read write ~optional
 
   let required arg_type name =
@@ -369,19 +371,19 @@ module Flag = struct
     required_value ~default arg_type name ~optional:true
 
   let optional arg_type name =
-    let v = ref None in
-    let read () = !v in
-    let write arg = write_option name v arg in
+    let key = Env.Key.create ~name [%sexp_of: _] in
+    let read env = Env.find env key in
+    let write env arg = write_option name key env arg in
     arg_flag name arg_type read write ~optional:true
 
   let no_arg_general ~key_value ~deprecated_hook name =
-    let v = ref false in
-    let read () = !v in
-    let write () =
-      if !v then
+    let key = Env.Key.create ~name [%sexp_of: unit] in
+    let read env = Env.mem env key in
+    let write env =
+      if Env.mem env key then
         die "flag %s passed more than once" name ()
       else
-        v := true
+        Env.set env key ()
     in
     let action env =
       let env =
@@ -389,15 +391,14 @@ module Flag = struct
           ~f:(fun env (key, value) ->
             Env.set_with_default env key value)
       in
-      write ();
-      env
+      write env
     in
     let action =
       match deprecated_hook with
       | None -> action
       | Some f ->
-        (fun x ->
-           let env = action x in
+        (fun env ->
+           let env = action env in
            f ();
            env
         )
@@ -410,32 +411,40 @@ module Flag = struct
     no_arg_general name ~key_value:(Some (key, value)) ~deprecated_hook:None
 
   let listed arg_type name =
-    let v = ref [] in
-    let read () = List.rev !v in
-    let write arg = v := arg :: !v in
+    let key =
+      Env.With_default.Key.create ~default:[] ~name [%sexp_of: _ list]
+    in
+    let read env = List.rev (Env.With_default.find env key) in
+    let write env arg =
+      Env.With_default.change env key ~f:(fun list -> arg :: list)
+    in
     arg_flag name arg_type read write ~optional:true
 
   let one_or_more arg_type name =
-    let q = Queue.create () in
-    let read () =
-      match Queue.to_list q with
+    let key =
+      Env.With_default.Key.create ~default:Fqueue.empty ~name [%sexp_of: _ Fqueue.t]
+    in
+    let read env =
+      match Fqueue.to_list (Env.With_default.find env key) with
       | first :: rest -> (first, rest)
       | [] -> die "missing required flag: %s" name ()
     in
-    let write arg = Queue.enqueue q arg in
+    let write env arg =
+      Env.With_default.change env key ~f:(fun q -> Fqueue.enqueue q arg)
+    in
     arg_flag name arg_type read write ~optional:false
 
-  let escape_general ~deprecated_hook _name =
-    let cell = ref None in
-    let action = (fun cmd_line -> cell := Some cmd_line) in
-    let read () = !cell in
+  let escape_general ~deprecated_hook name =
+    let key = Env.Key.create ~name [%sexp_of: string list] in
+    let action = (fun env cmd_line -> Env.set env key cmd_line) in
+    let read env = Env.find env key in
     let action =
       match deprecated_hook with
       | None -> action
       | Some f ->
-        (fun x ->
+        (fun env x ->
            f x;
-           action x
+           action env x
         )
     in
     { action = Rest action; read; optional = true }
@@ -443,7 +452,7 @@ module Flag = struct
   let no_arg_abort ~exit _name = {
     action = No_arg (fun _ -> never_returns (exit ()));
     optional = true;
-    read = (fun () -> ());
+    read = (fun _ -> ());
   }
 
   let escape name = escape_general ~deprecated_hook:None name
@@ -651,10 +660,11 @@ module Anons = struct
 
   module Parser : sig
     type +'a t
+    val from_env : (Env.t -> 'a) -> 'a t
     val one : name:string -> 'a Arg_type.t -> 'a t
     val maybe : 'a t -> 'a option t
     val sequence : 'a t -> 'a list t
-    val final_value : 'a t -> 'a
+    val final_value : 'a t -> Env.t -> 'a
     val consume : 'a t -> string -> for_completion:bool -> (Env.t -> Env.t) * 'a t
     val complete : 'a t -> Env.t -> part:string -> never_returns
     module For_opening : sig
@@ -665,7 +675,7 @@ module Anons = struct
   end = struct
 
     type 'a t =
-      | Done of 'a
+      | Done of (Env.t -> 'a)
       | More of 'a more
       (* A [Test] will (generally) return a [Done _] value if there is no more input and
          a [More] parser to use if there is any more input. *)
@@ -682,7 +692,9 @@ module Anons = struct
 
     and packed = Packed : 'a t -> packed
 
-    let return a = Done a
+    let return a = Done (fun _ -> a)
+
+    let from_env f = Done f
 
     let pack_for_completion = function
       | Done _ -> [] (* won't complete or consume anything *)
@@ -693,7 +705,7 @@ module Anons = struct
       match tf with
       | Done f ->
         begin match tx with
-        | Done x -> Done (f x)
+        | Done x -> Done (fun env -> f env (x env))
         | Test test -> Test (fun ~more -> tf <*> test ~more)
         | More {name; parse; complete} ->
           let parse arg ~for_completion =
@@ -730,7 +742,7 @@ module Anons = struct
           let update env =
             Option.fold key ~init:env ~f:(fun env key -> Env.multi_add env key v)
           in
-          (update, Done v)
+          (update, return v)
       in
       More {name; parse; complete}
 
@@ -757,9 +769,10 @@ module Anons = struct
       in
       loop
 
-    let rec final_value = function
-      | Done a -> a
-      | Test f -> final_value (f ~more:false)
+    let rec final_value t env =
+      match t with
+      | Done a -> a env
+      | Test f -> final_value (f ~more:false) env
       | More {name; _} -> die "missing anonymous argument: %s" name ()
       | Only_for_completion _ ->
         failwith "BUG: asked for final value when doing completion"
@@ -1000,7 +1013,7 @@ module Base = struct
     summary : string;
     readme : (unit -> string) option;
     flags : Flag.Internal.t String.Map.t;
-    anons : Env.t -> ([`Parse_args] -> [`Run_main] -> unit) Anons.Parser.t;
+    anons : unit -> ([`Parse_args] -> [`Run_main] -> unit) Anons.Parser.t;
     usage : Anons.Grammar.t;
   }
 
@@ -1106,8 +1119,8 @@ module Base = struct
         List.iter (String.Map.data t.flags) ~f:(fun flag ->
           match flag.check_available with
           | `Optional -> ()
-          | `Required check -> check ());
-        Anons.Parser.final_value anons
+          | `Required check -> check env);
+        Anons.Parser.final_value anons env
       | Cons (arg, args) ->
         if String.is_prefix arg ~prefix:"-"
            && not (String.equal arg "-") (* support the convention where "-" means stdin *)
@@ -1128,7 +1141,7 @@ module Base = struct
             | Nil -> die "missing argument for flag %s" flag ()
             | Cons (arg, rest) ->
               let env =
-                try f arg env with
+                try f env arg with
                 | Failed_to_parse_command_line _ as e ->
                   if Cmdline.ends_in_complete rest then env else raise e
               in
@@ -1138,7 +1151,7 @@ module Base = struct
             end
           | Rest f ->
             if Cmdline.ends_in_complete args then exit 0;
-            f (Cmdline.to_list args);
+            let env = f env (Cmdline.to_list args) in
             loop env anons Nil
         end else begin
           let (env_upd, anons) =
@@ -1155,7 +1168,7 @@ module Base = struct
         end else
           never_returns (Anons.Parser.complete anons env ~part);
     in
-    match Result.try_with (fun () -> loop env (t.anons env) args `Parse_args) with
+    match Result.try_with (fun () -> loop env (t.anons ()) args `Parse_args) with
     | Ok thunk -> thunk `Run_main
     | Error exn ->
       match exn with
@@ -1172,23 +1185,23 @@ module Base = struct
   module Spec = struct
 
     type ('a, 'b) t = {
-      f : Env.t -> ('a -> 'b) Anons.Parser.t;
+      f     : unit -> ('a -> 'b) Anons.Parser.t;
       usage : unit -> Anons.Grammar.t;
       flags : unit -> Flag.Internal.t list;
     }
 
-    (* the reason that [param] is defined in terms of [t] rather than the other
-       way round is that the delayed evaluation matters for sequencing of read/write
-       operations on ref cells in the representation of flags *)
+    (* the (historical) reason that [param] is defined in terms of [t] rather than the
+       other way round is that the delayed evaluation mattered for sequencing of
+       read/write operations on ref cells in the old representation of flags *)
     type 'a param = { param : 'm. ('a -> 'm, 'm) t }
 
     open Anons.Parser.For_opening
 
     let app t1 t2 ~f = {
-      f = (fun env ->
+      f = (fun () ->
         return f
-        <*> t1.f env
-        <*> t2.f env
+        <*> t1.f ()
+        <*> t2.f ()
       );
       flags = (fun () -> t2.flags () @ t1.flags ());
       usage = (fun () -> Anons.Grammar.concat [t1.usage (); t2.usage ()]);
@@ -1198,10 +1211,10 @@ module Base = struct
        restriction. *)
     let apply pf px = {
       param = {
-        f = (fun env ->
+        f = (fun () ->
           return (fun mf mx k -> mf (fun f -> (mx (fun x -> k (f x)))))
-          <*> pf.param.f env
-          <*> px.param.f env
+          <*> pf.param.f ()
+          <*> px.param.f ()
         );
         flags = (fun () -> px.param.flags () @ pf.param.flags ());
         usage = (fun () -> Anons.Grammar.concat [pf.param.usage (); px.param.usage ()]);
@@ -1213,45 +1226,43 @@ module Base = struct
     let (+<) t1 p2 = app p2.param t1 ~f:(fun f2 f1 x -> f1 (f2 x))
 
     let step f = {
-      f = (fun _env -> return f);
+      f = (fun () -> return f);
       flags = (fun () -> []);
       usage = (fun () -> Anons.Grammar.zero);
     }
 
     let empty : 'm. ('m, 'm) t = {
-      f = (fun _env -> return Fn.id);
+      f = (fun () -> return Fn.id);
       flags = (fun () -> []);
       usage = (fun () -> Anons.Grammar.zero);
     }
 
     let const v =
       { param =
-          { f = (fun _env -> return (fun k -> k v));
+          { f = (fun () -> return (fun k -> k v));
             flags = (fun () -> []);
             usage = (fun () -> Anons.Grammar.zero); } }
 
     let map p ~f =
       { param =
-          { f =
-              (fun env -> p.param.f env >>| fun c k -> c (fun v -> k (f v)));
+          { f = (fun () -> p.param.f () >>| fun c k -> c (fun v -> k (f v)));
             flags = p.param.flags;
             usage = p.param.usage; } }
 
     let wrap f t =
-      { f =
-          (fun env -> t.f env >>| fun run main -> f ~run ~main);
+      { f = (fun () -> t.f () >>| fun run main -> f ~run ~main);
         flags = t.flags;
         usage = t.usage; }
 
     let of_params params =
       let t = params.param in
-      { f = (fun env -> t.f env >>| fun run main -> run Fn.id main);
+      { f = (fun () -> t.f () >>| fun run main -> run Fn.id main);
         flags = t.flags;
         usage = t.usage; }
 
     let to_params (t : ('a, 'b) t) : ('a -> 'b) param =
       { param = {
-          f = (fun env -> t.f env >>| fun f k -> k f);
+          f = (fun () -> t.f () >>| fun f k -> k f);
           flags = t.flags;
           usage = t.usage;
         }
@@ -1263,19 +1274,24 @@ module Base = struct
 
     let lookup key =
       { param =
-          { f = (fun env -> return (fun m -> m (Env.find_exn env key)));
+          { f = (fun () -> Anons.Parser.from_env (fun env m -> m (Env.find_exn env key)));
             flags = (fun () -> []);
-            usage = (fun () -> Anons.Grammar.zero); } }
+            usage = (fun () -> Anons.Grammar.zero);
+          }
+      }
 
     let path : Path.t        param = lookup path_key
     let args : string list   param = lookup args_key
     let help : string Lazy.t param = lookup help_key
 
+    (* This is only used internally, for the help command. *)
     let env =
       { param =
-          { f = (fun env -> return (fun m -> m env));
+          { f = (fun () -> Anons.Parser.from_env (fun env m -> m env));
             flags = (fun () -> []);
-            usage = (fun () -> Anons.Grammar.zero); } }
+            usage = (fun () -> Anons.Grammar.zero);
+          }
+      }
 
     include struct
       module Arg_type = Arg_type
@@ -1299,7 +1315,7 @@ module Base = struct
         Anons.Grammar.invariant spec.grammar;
         {
           param = {
-            f = (fun _env -> spec.p >>| fun v k -> k v);
+            f = (fun () -> spec.p >>| fun v k -> k v);
             flags = (fun () -> []);
             usage = (fun () -> spec.grammar);
           }
@@ -1326,13 +1342,13 @@ module Base = struct
         let aliases = List.map ~f:normalize aliases in
         let {read; action; optional} = mode name in
         let check_available =
-          if optional then `Optional else `Required (fun () -> ignore (read ()))
+          if optional then `Optional else `Required (fun env -> ignore (read env))
         in
         let name_matching =
           if Option.is_some full_flag_required then `Full_match_required else `Prefix
         in
         { param =
-            { f = (fun _env -> return (fun k -> k (read ())));
+            { f = (fun () -> Anons.Parser.from_env (fun env m -> m (read env)));
               flags = (fun () -> [{ name; aliases; doc; action;
                                     check_available; name_matching }]);
               usage = (fun () -> Anons.Grammar.zero);
@@ -1690,6 +1706,38 @@ module Sexpable = struct
 
   let extraction_var = "COMMAND_OUTPUT_HELP_SEXP"
 
+
+  let read_stdout_and_stderr (process_info : Unix.Process_info.t) =
+    (* We need to read each of stdout and stderr in a separate thread to avoid deadlocks
+       if the child process decides to wait for a read on one before closing the other.
+       Buffering may hide this problem until output is "sufficiently large". *)
+    let start_reading descr info =
+      let output = Set_once.create () in
+      let thread = Core_thread.create (fun () ->
+        Result.try_with (fun () ->
+          descr
+          |> Unix.in_channel_of_descr
+          |> In_channel.input_all)
+        |> Set_once.set_exn output) ()
+      in
+      stage (fun () ->
+        Core_thread.join thread;
+        Unix.close descr;
+        match Set_once.get output with
+        | None ->
+          raise_s [%message "BUG failed to read" (info : Info.t)]
+        | Some (Ok output) -> output
+        | Some (Error exn) -> raise exn)
+    in
+    (* We might hang forever trying to join the reading threads if the child process keeps
+       the file descriptor open. Not handling this because I think we've never seen it
+       in the wild despite running vulnerable code for years. *)
+    (* We have to start both threads before joining any of them. *)
+    let finish_stdout = start_reading process_info.stdout (Info.of_string "stdout") in
+    let finish_stderr = start_reading process_info.stderr (Info.of_string "stderr") in
+    unstage finish_stdout (), unstage finish_stderr ()
+  ;;
+
   let of_external ~working_dir ~path_to_exe =
     let process_info =
       Unix.create_process_env () ~args:[]
@@ -1700,23 +1748,22 @@ module Sexpable = struct
           )
         ])
     in
-    (* We aren't writing to the process's stdin or reading from the process's stderr, so
-       close them early.  That way if we open a process that isn't behaving how we
-       expect, it at least won't block on these file descriptors. *)
     Unix.close process_info.stdin;
-    Unix.close process_info.stderr;
-    let t =
-      process_info.stdout
-      |> Unix.in_channel_of_descr
-      |> In_channel.input_all
+    let stdout, stderr = read_stdout_and_stderr process_info in
+    ignore (Unix.wait (`Pid process_info.pid));
+    (* Now we've killed all the processes and threads we made. *)
+    match
+      stdout
       |> String.strip
       |> Sexp.of_string
       |> Internal.t_of_sexp
       |> Internal.to_latest
-    in
-    Unix.close process_info.stdout;
-    ignore (Unix.wait (`Pid process_info.pid));
-    t
+    with
+    | exception exn ->
+      raise_s [%message "cannot parse command shape"
+                          ~_:(exn : exn) (stdout : string) (stderr : string)]
+    | t -> t
+  ;;
 
   let rec find (t : t) ~path_to_subcommand =
     match path_to_subcommand with
@@ -1797,9 +1844,9 @@ end
 let basic ~summary ?readme {Base.Spec.usage; flags; f} main =
   let flags = flags () in
   let usage = usage () in
-  let anons env =
+  let anons () =
     let open Anons.Parser.For_opening in
-    f env
+    f ()
     >>| fun k `Parse_args ->
     let thunk = k main in
     fun `Run_main -> thunk ()
@@ -2079,15 +2126,15 @@ let rec shape t : Shape.t =
 ;;
 
 module Version_info = struct
-  let print_version ~version =
+  let sanitize_version ~version =
     (* [version] was space delimited at some point and newline delimited
        at another.  We always print one (repo, revision) pair per line
        and ensure sorted order *)
     String.split version ~on:' '
     |> List.concat_map ~f:(String.split ~on:'\n')
     |> List.sort ~cmp:String.compare
-    |> List.iter ~f:print_endline
 
+  let print_version ~version = List.iter (sanitize_version ~version) ~f:print_endline
   let print_build_info ~build_info = print_endline build_info
 
   let command ~version ~build_info =
@@ -2113,7 +2160,8 @@ module Version_info = struct
     | Base base ->
       let base =
         Bailout_dump_flag.add base ~name:"-version" ~aliases:[]
-          ~text_summary:"the version of this build" ~text:(Fn.const version)
+          ~text_summary:"the version of this build"
+          ~text:(fun _ -> String.concat ~sep:"\n" (sanitize_version ~version))
       in
       let base =
         Bailout_dump_flag.add base ~name:"-build-info" ~aliases:[]
@@ -2518,7 +2566,6 @@ module Let_syntax = struct
   module Let_syntax = struct
     include Param
     module Open_on_rhs = Param
-    module Open_in_body = struct end
   end
 end
 
@@ -2590,4 +2637,25 @@ let%expect_test "choose_one strings" =
       (flag "-a" no_arg ~doc:"")
   end);
   [%expect {| -a,fo{}O |} ];
+;;
+
+let%test_unit "multiple runs" =
+  let r = ref (None, "not set") in
+  let command =
+    let open Let_syntax in
+    basic' ~summary:"test"
+      [%map_open
+        let a = flag "int" (optional int) ~doc:"INT some number"
+        and b = anon ("string" %: string)
+        in
+        fun () -> r := (a, b)
+      ]
+  in
+  let test args expect =
+    run command ~argv:(Sys.argv.(0) :: args);
+    [%test_result: int option * string] !r ~expect
+  in
+  test ["foo"; "-int"; "23"] (Some 23, "foo");
+  test ["-int"; "17"; "bar"] (Some 17, "bar");
+  test ["baz"]               (None,    "baz");
 ;;

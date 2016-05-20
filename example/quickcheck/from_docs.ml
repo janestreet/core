@@ -25,7 +25,9 @@ module Generator_examples = struct
   let (_ : _ Generator.t) =
     Float.gen      (* any float, from [neg_infinity] to [infinity] plus [nan] *)
   let (_ : _ Generator.t) =
-    Generator.size (* small non-negative ints *)
+    Generator.small_non_negative_int
+  let (_ : _ Generator.t) =
+    Generator.small_positive_int
   let (_ : _ Generator.t) =
     Int.gen_between ~lower_bound:(Incl 0) ~upper_bound:(Excl 100)
   let (_ : _ Generator.t) =
@@ -38,10 +40,7 @@ module Generator_examples = struct
   let (_ : _ Generator.t) =
     List.gen (Generator.tuple2 Int.gen Float.gen)
   let (_ : _ Generator.t) =
-    List.gen' (Generator.tuple2 Int.gen Float.gen)
-      ~unique:true
-      ~length:(`At_most 12)
-      ~sorted:(`By [%compare: int * float])
+    List.gen' (Generator.tuple2 Int.gen Float.gen) ~length:(`At_most 12)
   let (_ : _ Generator.t) =
     Either.gen Int.gen Float.gen
   let (_ : _ Generator.t) =
@@ -113,11 +112,8 @@ module Observer_examples = struct
   let (_ : _ Observer.t) = List.obs (Observer.tuple2 Int.obs Float.obs)
   let (_ : _ Observer.t) = Either.obs Int.obs Float.obs
   let (_ : _ Observer.t) = Option.obs String.obs
-  let (_ : _ Observer.t) = Observer.fn Int.gen Bool.obs ~sexp_of_dom:[%sexp_of: int]
-  let (_ : _ Observer.t) =
-    Observer.unmap Char.obs
-      ~f:Char.of_int_exn
-      ~f_sexp:(fun () -> Sexp.Atom "Char.of_int_exn")
+  let (_ : _ Observer.t) = Observer.fn Int.gen Bool.obs
+  let (_ : _ Observer.t) = Observer.unmap Char.obs ~f:Char.of_int_exn
 
 end
 

@@ -2,7 +2,7 @@ open Core_kernel.Std
 open! Int.Replace_polymorphic_compare
 module Unix = Core_unix
 
-#import "config.mlh"
+#import "config.h"
 
 (* We have reason to believe that lockf doesn't work properly on CIFS mounts.  The idea
    behind requiring both lockf and flock is to prevent programs taking locks on
@@ -25,7 +25,7 @@ let lock fd =
      function, it must have come from [flock]. *)
   let flocked = flock fd in
   let lockfed = lockf fd in
-#if JSC_LINUX_EXT
+#ifdef JSC_LINUX_EXT
   flocked && lockfed
 #else
   flocked || lockfed

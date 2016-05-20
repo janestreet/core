@@ -230,14 +230,14 @@ module type S = sig
       associated with output channel [oc].
 
       @raise Unix_error on errors. *)
-  val out_channel_realpath : (out_channel -> string) Or_error.t
+  val out_channel_realpath : (Out_channel.t -> string) Or_error.t
 
   (** [in_channel_realpath ic] @return the canonicalized absolute pathname of the file
       associated with input channel [ic].
 
       @raise Unix_error on errors.
   *)
-  val in_channel_realpath : (in_channel -> string) Or_error.t
+  val in_channel_realpath : (In_channel.t -> string) Or_error.t
 
   (** {2 Affinity} *)
 

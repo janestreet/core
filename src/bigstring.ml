@@ -1,4 +1,4 @@
-#import "config.mlh"
+#import "config.h"
 
 open Core_kernel.Std
 open Unix
@@ -120,7 +120,7 @@ let read_assume_fd_is_nonblocking fd ?(pos = 0) ?len bstr =
   unsafe_read_assume_fd_is_nonblocking fd ~pos ~len bstr
 
 external unsafe_input
-  : min_len : int -> in_channel -> pos : int -> len : int -> t -> int
+  : min_len : int -> In_channel.t -> pos : int -> len : int -> t -> int
   = "bigstring_input_stub"
 
 let input ?min_len ic ?(pos = 0) ?len bstr =
@@ -156,7 +156,7 @@ let pwrite_assume_fd_is_nonblocking fd ~offset ?(pos = 0) ?len bstr =
   check_args ~loc ~pos ~len bstr;
   unsafe_pwrite_assume_fd_is_nonblocking fd ~offset ~pos ~len bstr
 
-#if JSC_MSG_NOSIGNAL
+#ifdef JSC_MSG_NOSIGNAL
 external unsafe_really_send_no_sigpipe
   : file_descr -> pos : int -> len : int -> t -> unit
   = "bigstring_really_send_no_sigpipe_stub"
@@ -244,7 +244,7 @@ let writev_assume_fd_is_nonblocking fd ?count iovecs =
 ;;
 
 external unsafe_output
-  : min_len : int -> out_channel -> pos : int -> len : int -> t -> int
+  : min_len : int -> Out_channel.t -> pos : int -> len : int -> t -> int
   = "bigstring_output_stub"
 
 let output ?min_len oc ?(pos = 0) ?len bstr =
@@ -259,7 +259,7 @@ let really_output oc ?(pos = 0) ?len bstr =
   check_args ~loc:"really_output" ~pos ~len bstr;
   ignore (unsafe_output oc ~min_len:len ~pos ~len bstr)
 
-#if JSC_RECVMMSG
+#ifdef JSC_RECVMMSG
 
 external unsafe_recvmmsg_assume_fd_is_nonblocking
   :  file_descr
@@ -291,7 +291,7 @@ let%test_module _ = (module struct
     check_invalid Int.min_value;
     check_invalid 65; (* RECVMMSG_MAX_COUNT = 64 *)
     (
-#if JSC_ARCH_SIXTYFOUR
+#ifdef JSC_ARCH_SIXTYFOUR
     (* We are assuming that [unsigned int] is 32 bits wide. *)
     check_invalid (Int64.to_int_exn 0xFFFF_FFFFL); (* exceeds RECVMMSG_MAX_COUNT *)
     check_invalid (Int64.to_int_exn 0x1FFFF_FFFFL); (* exceeds unsigned int *)
@@ -380,7 +380,7 @@ let recvmmsg_assume_fd_is_nonblocking =
 
 (* Memory mapping *)
 
-#if JSC_MSG_NOSIGNAL
+#ifdef JSC_MSG_NOSIGNAL
 (* Input and output, linux only *)
 
 external unsafe_sendmsg_nonblocking_no_sigpipe

@@ -23,6 +23,11 @@ module Priority_queue = Timing_wheel_ns.Priority_queue
 let to_span = Time_ns.Span.to_span
 let to_time = Time_ns.to_time
 
+let to_time_option = function
+  | None -> None
+  | Some time -> Some (to_time time)
+;;
+
 type 'a t = 'a Timing_wheel_ns.t [@@deriving sexp_of]
 type 'a t_now = 'a t [@@deriving sexp_of]
 type 'a timing_wheel = 'a t
@@ -33,16 +38,16 @@ module Alarm = struct
   let at timing_wheel t = to_time (at timing_wheel t)
 end
 
-let nanoseconds_per_microsecond = 1000
+let nanoseconds_per_microsecond = Int63.of_int 1000
 
 let invariant_span span =
-  [%test_result: int] ~expect:0
-    (Int.rem (Time_ns.Span.to_int_ns span) nanoseconds_per_microsecond)
+  [%test_result: Int63.t] ~expect:Int63.zero
+    (Int63.rem (Time_ns.Span.to_int63_ns span) nanoseconds_per_microsecond)
 ;;
 
 let invariant_time time =
-  [%test_result: int] ~expect:0
-    (Int.rem (Time_ns.to_int_ns_since_epoch time) nanoseconds_per_microsecond)
+  [%test_result: Int63.t] ~expect:Int63.zero
+    (Int63.rem (Time_ns.to_int63_ns_since_epoch time) nanoseconds_per_microsecond)
 ;;
 
 let invariant invariant_a t =
@@ -104,11 +109,19 @@ let length = Timing_wheel_ns.length
 
 let mem = Timing_wheel_ns.mem
 
-let next_alarm_fires_at t =
-  match Timing_wheel_ns.next_alarm_fires_at t with
-  | None -> None
-  | Some time -> Some (to_time time)
+let max_alarm_time_in_min_interval t =
+  to_time_option (Timing_wheel_ns.max_alarm_time_in_min_interval t)
 ;;
+
+let max_alarm_time_in_min_interval_exn t =
+  to_time (Timing_wheel_ns.max_alarm_time_in_min_interval_exn t)
+;;
+
+let min_alarm_interval_num = Timing_wheel_ns.min_alarm_interval_num
+
+let min_alarm_interval_num_exn = Timing_wheel_ns.min_alarm_interval_num_exn
+
+let next_alarm_fires_at t = to_time_option (Timing_wheel_ns.next_alarm_fires_at t)
 
 let next_alarm_fires_at_exn t = to_time (Timing_wheel_ns.next_alarm_fires_at_exn t)
 

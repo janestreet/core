@@ -67,7 +67,7 @@
    computationally more expensive and we use a simpler linear approximation.
 *)
 
-#import "config.mlh"
+#import "config.h"
 
 open Core_kernel.Std
 
@@ -90,7 +90,7 @@ let diff t1 t2 = Int63.(-) t1 t2
 let add t s = Int63.(+) t s
 let to_int63 t = t
 
-#if JSC_ARCH_SIXTYFOUR
+#ifdef JSC_ARCH_SIXTYFOUR
 
 (* noalloc on x86_64 only *)
 external now : unit -> tsc = "tsc_get" "noalloc"
@@ -320,7 +320,7 @@ end
 
 module Span = struct
   include Int63
-#if JSC_ARCH_SIXTYFOUR
+#ifdef JSC_ARCH_SIXTYFOUR
   let to_ns ?(calibrator = Calibrator.local) t =
     Float.int63_round_nearest_exn
       (Int63.to_float t *. calibrator.Calibrator.nanos_per_cycle)
@@ -452,7 +452,7 @@ let%test_module _ = (module struct
       "time_stamp_counter_samples_at_60sec.sexp"
   ;;
 
-#if JSC_ARCH_SIXTYFOUR
+#ifdef JSC_ARCH_SIXTYFOUR
   let%test_unit _ =
     let calibrator = Calibrator.local in
     for x = 1 to 100_000 do

@@ -1,10 +1,11 @@
-open Core_kernel.Std
+open! Core.Std
 
-(* module Timing_wheel_float = Timing_wheel_debug.Debug (Time) (Timing_wheel_float) *)
+(* module Timing_wheel =
+   Core_kernel_unit_tests.Timing_wheel_debug.Make (Time) (Timing_wheel) *)
 
-open Timing_wheel_float
+open Timing_wheel
 
-include Core_kernel.Timing_wheel_unit_tests.Make (Timing_wheel_float)
+include Core_kernel_test.Timing_wheel_unit_tests.Make (Timing_wheel)
 
 let sec = Time.Span.of_sec
 

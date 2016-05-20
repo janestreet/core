@@ -1,5 +1,5 @@
 open Core_kernel.Std_kernel
-#import "config.mlh"
+#import "config.h"
 
 module Unix = Core_unix
 
@@ -463,11 +463,6 @@ let bounded_compact t lo_min hi_max =
      t.lo <- lo_min + len;
      t.hi <- hi_max)
 
-(* Sys.word_size is determined only at runtime, but we need it to be a compile-time
-   constant to generate good code for Consume.int8, etc. *)
-let word_size = 64
-let%test _ = Sys.word_size = word_size
-
 let read_bin_prot reader t ~pos =
   let buf_pos = unsafe_buf_pos t ~pos in
   let pos_ref = ref buf_pos in
@@ -626,7 +621,7 @@ module Itoa = struct
     else if x > -100000000 then 8
     else if x > -1000000000 then 9
     else
-#if JSC_ARCH_SIXTYFOUR
+#ifdef JSC_ARCH_SIXTYFOUR
          if x > _10e9 * -10 then 10
     else if x > _10e9 * -100 then 11
     else if x > _10e9 * -1000 then 12
@@ -1054,7 +1049,7 @@ let recvfrom_assume_fd_is_nonblocking t fd =
   sockaddr
 ;;
 
-#if JSC_RECVMMSG
+#ifdef JSC_RECVMMSG
 
 (* Allocate and pre-populate the [struct mmsghdr]s and associated [struct iovec]s. Reusing
    this context reduces the cost of calls to [recvmmsg] considerably if the iobuf array is

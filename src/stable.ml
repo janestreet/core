@@ -26,3 +26,7 @@ module Time_ns = struct
     module Option = Time_ns.Ofday.Option.Stable
   end
 end
+
+module Unix = struct
+  module Inet_addr = Core_unix.Inet_addr.Stable
+end

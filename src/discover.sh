@@ -1,16 +1,15 @@
 #!/usr/bin/env bash
 set -e -u -o pipefail
 
-if [ $# -lt 4 ]; then
-    echo "Usage: discover.sh OCAML OCAMLC CONFIG_MLH CONFIG_H" >&2
+if [ $# -lt 3 ]; then
+    echo "Usage: discover.sh OCAML OCAMLC CONFIG_H" >&2
     exit 2
 fi
 
 OCAML="$1"
 OCAMLC="$2"
-CONFIG_MLH="$3"
-CONFIG_H="$4"
-shift 4
+CONFIG_H="$3"
+shift 3
 
 if getconf GNU_LIBC_VERSION | \
     awk -F '[ .]' '{ exit ($2 > 2 || ($2 == 2 && $3 >= 8) ? 0 : 1) }'; then
@@ -27,9 +26,9 @@ function cpp_test () {
     fi
     cat <<EOF
 #if ${cond}
-printf ("#let $name = true\n");
+printf ("#define $name\n");
 #else
-printf ("#let $name = false\n");
+printf ("#undef $name\n");
 EOF
 if [[ "$warning" != "" ]]; then
 cat <<EOF
@@ -44,6 +43,12 @@ WORD_SIZE="$(${OCAML} <( echo "print_int Sys.word_size;;"))"
 SRC="$(x=$(mktemp "./discover_src.XXXXXXX") && mv "$x"{,.c} && echo "$x".c)"
 PGM="$(mktemp "./discover.XXXXXXX")"
 OUT="$(mktemp "./discover.out.XXXXXXX")"
+
+sentinel="CORE_$(basename "$CONFIG_H" | tr a-z. A-Z_)"
+cat > $OUT <<EOF
+#ifndef $sentinel
+#define $sentinel
+EOF
 
 
 trap "rm -f $SRC $PGM $OUT" EXIT
@@ -62,19 +67,19 @@ int main () {
   $(cpp_test JSC_RLIMIT_NICE  "defined(RLIMIT_NICE)")
   $(cpp_test JSC_WORDEXP      "defined(WORDEXP)")
   $(if [[ ${WORD_SIZE} = 64 ]]; then
-       echo 'printf ("#let JSC_ARCH_SIXTYFOUR = true\n");';
+       echo 'printf ("#define JSC_ARCH_SIXTYFOUR\n");';
     else
-       echo 'printf ("#let JSC_ARCH_SIXTYFOUR = false\n");';
+       echo 'printf ("#undef JSC_ARCH_SIXTYFOUR\n");';
     fi)
   $(if [[ $(uname -p) = "x86_64" ]]; then
-       echo 'printf ("#let JSC_ARCH_x86_64 = true\n");';
+       echo 'printf ("#define JSC_ARCH_x86_64\n");';
     else
-       echo 'printf ("#let JSC_ARCH_x86_64 = false\n");';
+       echo 'printf ("#undef JSC_ARCH_x86_64\n");';
     fi)
   $(if [[ $(uname -p) = "i386" ]]; then
-       echo 'printf ("#let JSC_ARCH_i386 = true\n");';
+       echo 'printf ("#define JSC_ARCH_i386\n");';
     else
-       echo 'printf ("#let JSC_ARCH_i386 = false\n");';
+       echo 'printf ("#undef JSC_ARCH_i386\n");';
     fi)
   $(cpp_test JSC_MSG_NOSIGNAL "defined MSG_NOSIGNAL" \
      "Bigstring.(unsafe_|really_)?send(to)?(_noblocking)?_no_sigpipe\
@@ -95,7 +100,7 @@ EOF
 # gcc
 gcc "$SRC" -o "$PGM" "$@"
 rm "$SRC"
-"$PGM" > "$OUT"
+"$PGM" >> "$OUT"
 
 # The recvmmsg system call was added in Linux 2.6.32, so is in CentOS
 # 6, but not 5.
@@ -106,25 +111,15 @@ cat > "$SRC" <<EOF
 int main () { return recvmmsg(0, 0, 0, 0, 0); }
 EOF
 if gcc "$SRC" -o "$PGM" "$@"; then
-    echo '#let JSC_RECVMMSG = true' >>"$OUT";
+    echo '#define JSC_RECVMMSG' >>"$OUT";
 else
-    echo '#let JSC_RECVMMSG = false' >>"$OUT";
+    echo '#undef JSC_RECVMMSG' >>"$OUT";
 fi
 rm "$SRC"
 
-rm -f "$PGM"
-mv "$OUT" "$CONFIG_MLH"
-
-sentinel="CORE_$(basename "$CONFIG_H" | tr a-z. A-Z_)"
-cat > $OUT <<EOF
-#ifndef $sentinel
-#define $sentinel
-
-$(sed -r 's|^#let *([A-Za-z0-9_]+) *= *true *$|#define \1|;
-          s|^#let *([A-Za-z0-9_]+) *= *false *$|/* #define \1 */|;
-          s|^#let *([A-Za-z0-9_]+) *= *([0-9]+) *$|#define \1 \2|' \
-  "$CONFIG_MLH")
-
+cat >> $OUT <<EOF
 #endif
 EOF
-mv $OUT "$CONFIG_H"
+
+rm -f "$PGM"
+mv "$OUT" "$CONFIG_H"

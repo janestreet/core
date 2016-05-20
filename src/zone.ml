@@ -90,7 +90,7 @@ module Stable = struct
       let input_long_as_float ic =
         let int32_of_char chr = Int32.of_int_exn (int_of_char chr) in
         let long = String.create 4 in
-        really_input ic long 0 4;
+        In_channel.really_input_exn ic ~buf:long ~pos:0 ~len:4;
         let sb1 = Int32.shift_left (int32_of_char long.[0]) 24 in
         let sb2 = Int32.shift_left (int32_of_char long.[1]) 16 in
         let sb3 = Int32.shift_left (int32_of_char long.[2]) 8 in
@@ -103,7 +103,7 @@ module Stable = struct
         let int63_of_char chr = Int63.of_int_exn (int_of_char chr) in
         let shift c bits = Int63.shift_left (int63_of_char c) bits in
         let long_long = String.create 8 in
-        really_input ic long_long 0 8;
+        In_channel.really_input_exn ic ~buf:long_long ~pos:0 ~len:8;
         let result =                           shift long_long.[0] 56 in
         let result = Int63.bit_or result (shift long_long.[1] 48) in
         let result = Int63.bit_or result (shift long_long.[2] 40) in
@@ -135,8 +135,8 @@ module Stable = struct
 
       let input_regime ic =
         let utc_off = input_long_as_float ic in
-        let is_dst = bool_of_int (input_byte ic) in
-        let abbrv_index = input_byte ic in
+        let is_dst = bool_of_int (Option.value_exn (In_channel.input_byte ic)) in
+        let abbrv_index = Option.value_exn (In_channel.input_byte ic) in
         let lt abbrv =
           { Regime.
             utc_off = utc_off;
@@ -148,7 +148,9 @@ module Stable = struct
       ;;
 
       let input_abbreviations ic ~len =
-        let raw_abbrvs = input_list ic ~len ~f:(input_char) in
+        let raw_abbrvs =
+          input_list ic ~len ~f:(fun ic -> Option.value_exn (In_channel.input_char ic))
+        in
         let buf = Buffer.create len in
         let _,indexed_abbrvs = List.fold raw_abbrvs ~init:(0, Map.Poly.empty)
           ~f:(fun (index,abbrvs) c ->
@@ -176,7 +178,10 @@ module Stable = struct
         let type_count         = input_long_as_int ic in
         let abbrv_char_count   = input_long_as_int ic in
         let transition_times   = input_list ic ~f:input_transition ~len:transition_count in
-        let transition_indices = input_list ic ~f:input_byte ~len:transition_count in
+        let transition_indices =
+          input_list ic ~f:(fun ic ->
+            Option.value_exn (In_channel.input_byte ic)) ~len:transition_count
+        in
         let regimes            = input_list ic ~f:input_regime ~len:type_count in
         let abbreviations      = input_abbreviations ic ~len:abbrv_char_count in
         let leap_seconds       = input_list ic ~f:input_leap_second ~len:leap_count in
@@ -195,10 +200,12 @@ module Stable = struct
            completeness, and because it's possible that we will later discover a case where
            they are used. *)
         let _std_wall_indicators =
-          input_array ic ~len:std_wall_count ~f:(fun ic -> bool_of_int (input_byte ic))
+          input_array ic ~len:std_wall_count
+            ~f:(fun ic -> bool_of_int (Option.value_exn (In_channel.input_byte ic)))
         in
         let _utc_local_indicators =
-          input_array ic ~len:utc_local_count ~f:(fun ic -> bool_of_int (input_byte ic))
+          input_array ic ~len:utc_local_count
+            ~f:(fun ic -> bool_of_int (Option.value_exn (In_channel.input_byte ic)))
         in
         let regimes =
           Array.of_list (List.map regimes
@@ -256,18 +263,20 @@ module Stable = struct
 
       let read_header ic =
         let buf = String.create 4 in
-        really_input ic buf 0 4;
+        In_channel.really_input_exn ic ~buf ~pos:0 ~len:4;
         if buf <> "TZif" then
           raise (Invalid_file_format "magic characters TZif not present");
         let version =
-          match input_char ic with
-          | '\000' -> `V1
-          | '2'    -> `V2
-          | bad_version ->
+          match In_channel.input_char ic with
+          | Some '\000' -> `V1
+          | Some '2'    -> `V2
+          | None        ->
+            raise (Invalid_file_format "expected version, found nothing")
+          | Some bad_version ->
             raise (Invalid_file_format (sprintf "version (%c) is invalid" bad_version))
         in
         (* space reserved for future use in the format *)
-        really_input ic (String.create 15) 0 15;
+        In_channel.really_input_exn ic ~buf:(String.create 15) ~pos:0 ~len:15;
         version
       ;;
 

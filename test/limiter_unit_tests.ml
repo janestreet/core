@@ -1,4 +1,4 @@
-open Core_kernel.Std
+open! Core.Std
 
 module Step_test = struct
   let offset off = Time.add Time.epoch (Time.Span.of_sec off)

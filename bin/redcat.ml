@@ -9,10 +9,10 @@ let run () =
   while true do
     let len = Unix.read Unix.stdin ~buf ~pos:0 ~len:4096 in
     if len = 0 then exit 0;
-    print_string header;
-    output stdout buf 0 len;
-    print_string footer;
-    flush stdout
+    Out_channel.output_string Out_channel.stdout header;
+    Out_channel.output Out_channel.stdout ~buf ~pos:0 ~len;
+    Out_channel.output_string Out_channel.stdout footer;
+    Out_channel.flush stdout
   done
 
 let usage_msg = "redcat.exe\n\

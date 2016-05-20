@@ -32,19 +32,35 @@ module Stable = struct
     open T
 
     module Float = struct
-      type t = float interval [@@deriving sexp, bin_io, compare]
+      module T = struct
+        type t = float interval [@@deriving sexp, bin_io, compare]
+      end
+      include T
+      include Comparator.Stable.V1.Make (T)
     end
 
     module Int = struct
-      type t = int interval [@@deriving sexp, bin_io, compare]
+      module T = struct
+        type t = int interval [@@deriving sexp, bin_io, compare]
+      end
+      include T
+      include Comparator.Stable.V1.Make (T)
     end
 
     module Time = struct
-      type t = Time.Stable.V1.t interval [@@deriving sexp, bin_io, compare]
+      module T = struct
+        type t = Time.Stable.V1.t interval [@@deriving sexp, bin_io, compare]
+      end
+      include T
+      include Comparator.Stable.V1.Make (T)
     end
 
     module Ofday = struct
-      type t = Ofday.Stable.V1.t interval [@@deriving sexp, bin_io, compare]
+      module T = struct
+        type t = Ofday.Stable.V1.t interval [@@deriving sexp, bin_io, compare]
+      end
+      include T
+      include Comparator.Stable.V1.Make (T)
     end
   end
 
@@ -478,6 +494,8 @@ module Int = struct
   let find_map = For_container.find_map
   let to_list  = For_container.to_list
   let to_array = For_container.to_array
+  let fold_result = For_container.fold_result
+  let fold_until = For_container.fold_until
 
   let min_elt t ~cmp =
     if not (phys_equal cmp Int.compare)
@@ -523,13 +541,13 @@ module Int = struct
 
     let interval =
       let open Gen in
-      size
+      small_non_negative_int
       >>= fun n ->
       interval_of_length n
 
     let interval_with_index =
       let open Gen in
-      size
+      small_non_negative_int
       >>= fun n ->
       (* Can only generate indices for non-empty intervals. *)
       let n = n + 1 in

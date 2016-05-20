@@ -38,9 +38,7 @@ module Zoned : sig
   val zone  : t -> Zone.t
 
   module Stable : sig
-    module V1 : sig
-      type nonrec t = t [@@deriving sexp, bin_io]
-    end
+    module V1 : Stable with type t = t
   end
 end
 
@@ -50,7 +48,20 @@ include Floatable            with type t := t
 include Hashable_binable     with type t := t
 include Pretty_printer.S     with type t := t
 include Robustly_comparable  with type t := t
-include Stringable           with type t := t
+
+(** [of_string] supports and correctly interprets 12h strings with the following suffixes:
+
+    {v
+      "A", "AM", "A.M.", "A.M"
+      "P", "PM", "P.M.", "P.M"
+    v}
+
+    as well as the lowercase and space-prefixed versions of these suffixes.
+
+    [of_string] also fully supports 24h wall-clock times.
+
+    [to_string] only produces the 24h format. *)
+include Stringable with type t := t
 
 val create : ?hr:int -> ?min:int -> ?sec:int -> ?ms:int -> ?us:int -> unit -> t
 

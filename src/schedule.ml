@@ -331,10 +331,7 @@ module Stable = struct
     let flag (type b) ?(flag_name = "schedule") ?default ?(doc = "") m () =
       let open Command.Param in
       let module B = (val m : Sexpable.S with type t = b) in
-      let arg_type =
-        Arg_type.create (fun str ->
-          t_of_sexp B.t_of_sexp (Sexp.of_string str))
-      in
+      let arg_type = sexp_conv [%of_sexp: B.t t] in
       match default with
       | None ->
         flag flag_name (required arg_type) ~doc:(sprintf "SCHEDULE %s" doc)
@@ -1113,52 +1110,111 @@ module Event = struct
   ;;
 end
 
-let next_tags_between t start_time stop_time prev_tags tag_equal =
-  let compare_tags continue_looping time loop =
-    let new_tags = tags t time in
-    begin match prev_tags, new_tags with
-    | None      , `Not_included      ->
-      begin match continue_looping with
-      | None -> (None, `No_change_until_at_least (`Out_of_range, stop_time))
-      | Some span -> loop (Time.add time span)
-      end
-    | None      , `Included tags     -> (Some tags, `Enter (time, tags))
-    | Some _    , `Not_included      -> (None, `Leave time)
-    | Some tags , `Included new_tags ->
-      if Int.(=) (List.length new_tags) (List.length tags)
-      then begin
-        if List.for_all2_exn tags new_tags ~f:tag_equal
-        then
-          begin match continue_looping with
-          | None -> (Some tags, `No_change_until_at_least (`In_range, stop_time))
-          | Some span -> loop (Time.add time span)
-          end
-        else (Some new_tags, `Change_tags (time, new_tags))
-      end
+let base_compare_tags
+      t
+      ~prev_tags
+      ~continue_looping
+      ~time
+      ~stop_time
+      ~emit_dispatch
+      ~loop
+  =
+  let new_tags = tags t time in
+  match prev_tags, new_tags with
+  | None      , `Not_included      ->
+    begin match continue_looping with
+    | None -> (None, `No_change_until_at_least (`Out_of_range, stop_time))
+    | Some span -> loop (Time.add time span)
+    end
+  | None           , `Included tags     -> (Some tags, `Enter (time, tags))
+  | Some _         , `Not_included      -> (None, `Leave time)
+  | Some prev_tags , `Included new_tags -> emit_dispatch ~prev_tags ~new_tags
+;;
+
+let compare_tags_with_transitions
+      ~tag_equal
+      t
+      ~prev_tags
+      ~continue_looping
+      ~time
+      ~stop_time
+      loop
+  =
+  let emit_dispatch ~prev_tags ~new_tags =
+    if Int.(=) (List.length new_tags) (List.length prev_tags)
+    then begin
+      if List.for_all2_exn prev_tags new_tags ~f:tag_equal
+      then
+        begin match continue_looping with
+        | None -> (Some prev_tags, `No_change_until_at_least (`In_range, stop_time))
+        | Some span -> loop (Time.add time span)
+        end
       else (Some new_tags, `Change_tags (time, new_tags))
     end
+    else (Some new_tags, `Change_tags (time, new_tags))
   in
+  base_compare_tags t ~prev_tags ~continue_looping ~time ~stop_time ~emit_dispatch ~loop
+;;
+
+let compare_tags_without_transitions
+      t
+      ~prev_tags
+      ~continue_looping
+      ~time
+      ~stop_time
+      loop
+  =
+  let emit_dispatch ~prev_tags:_ ~new_tags =
+    match continue_looping with
+    | None      -> (Some new_tags, `No_change_until_at_least (`In_range, stop_time))
+    | Some span -> loop (Time.add time span)
+  in
+  base_compare_tags t ~prev_tags ~continue_looping ~time ~stop_time ~emit_dispatch ~loop
+;;
+
+type ('tag, 'a) emit =
+  | Transitions                 : ('tag, [ Event.no_change | 'tag Event.transition ]) emit
+  | Transitions_and_tag_changes : ('tag -> 'tag -> bool)
+    -> ('tag, [ Event.no_change | 'tag Event.transition | 'tag Event.tag_change ]) emit
+
+type ('tag, 'a) compare_tags =
+  (zoned, 'tag) Internal.t
+  -> prev_tags:'tag list option
+  -> continue_looping:Time.Span.t option
+  -> time:Time.t
+  -> stop_time:Time.t
+  -> (Time.t -> ('tag list option * 'a))
+  -> 'tag list option * 'a
+
+let compare_tags (type tag) (type a) (emit : (tag, a) emit) : (tag, a) compare_tags =
+  match (emit : ((tag, a) emit)) with
+  | Transitions                           -> compare_tags_without_transitions
+  | Transitions_and_tag_changes tag_equal -> compare_tags_with_transitions ~tag_equal
+;;
+
+let next_tags_between t ~start_time ~stop_time ~prev_tags emit =
+  let compare_tags = compare_tags emit in
   let rec loop time =
     if Time.(>=) time stop_time
-    then compare_tags None time loop
+    then compare_tags t ~prev_tags ~continue_looping:None ~time ~stop_time loop
     else begin
       let span =
         match includes t time with
         | In_range_for_at_least span
         | Out_of_range_for_at_least span -> span
       in
-      compare_tags (Some span) time loop
+      compare_tags t ~prev_tags ~continue_looping:(Some span) ~time ~stop_time loop
     end
   in
   loop start_time
 ;;
 
-let search_one_chunk t ~prev_tags ~tag_equal start_time =
+let search_one_chunk t ~start_time ~prev_tags emit =
   let max_stop_time = Time.add start_time (Time.Span.of_day 1.) in
-  (next_tags_between t start_time max_stop_time prev_tags tag_equal)
+  (next_tags_between t ~start_time ~stop_time:max_stop_time ~prev_tags emit)
 ;;
 
-let to_tag_sequence t ~start_time ~tag_equal () =
+let to_tag_sequence t ~start_time emit =
   let t = Internal.of_external t in
   let tags t time =
     match tags t time with
@@ -1180,50 +1236,32 @@ let to_tag_sequence t ~start_time ~tag_equal () =
   in
   let sequence =
     Sequence.unfold ~init ~f:(fun (cur_tags, cur_event) ->
-      let time   = Event.to_time cur_event in
-      let next_s = search_one_chunk t ~prev_tags:cur_tags ~tag_equal time in
-      Some (snd next_s, next_s))
+      let start_time = Event.to_time cur_event in
+      let (_next_tags, next_event) as next_s =
+        search_one_chunk t ~start_time ~prev_tags:cur_tags emit
+      in
+      Some (next_event, next_s))
   in
   match in_schedule with
   | `In_range     -> `Started_in_range (tags t start_time, sequence)
   | `Out_of_range -> `Started_out_of_range sequence
 ;;
 
-type ('tag, 'a) emit =
-  | Transitions                 : ('tag, [ Event.no_change | 'tag Event.transition ]) emit
-  | Transitions_and_tag_changes : ('tag -> 'tag -> bool)
-    -> ('tag, [ Event.no_change | 'tag Event.transition | 'tag Event.tag_change ]) emit
-
-let aux_to_sequence t ~start_time ~filter_sequence ~tag_equal =
-  match to_tag_sequence t ~start_time ~tag_equal () with
-  | `Started_in_range (tags, sequence) ->
-    `Started_in_range (tags, filter_sequence sequence)
-  | `Started_out_of_range sequence     ->
-    `Started_out_of_range (filter_sequence sequence)
-;;
-
-type ('tag, 'a) sequence =
-  [ `Started_in_range     of 'tag list * 'a Sequence.t
-  | `Started_out_of_range of 'a Sequence.t ]
-
-let to_endless_sequence (type a) (type tag) t ~start_time ~emit : (tag, a) sequence =
-  match (emit : ((tag, a) emit)) with
-  | Transitions ->
-    let filter_sequence =
-      Sequence.filter_map ~f:(function
-        | `Change_tags _-> None
-        | `No_change_until_at_least (_, _)
-        | `Enter _
-        | `Leave _ as event -> Some event)
-    in
-    let tag_equal _ _ = true in
-    aux_to_sequence t ~start_time ~filter_sequence ~tag_equal
-  | Transitions_and_tag_changes tag_equal ->
-    aux_to_sequence t ~start_time ~filter_sequence:Fn.id ~tag_equal
+let to_endless_sequence
+      (type tag)
+      (type a)
+      t
+      ~start_time
+      ~(emit : (tag, a) emit)
+  : [ `Started_in_range of tag list * a Sequence.t
+    | `Started_out_of_range of a Sequence.t ]
+  =
+  match (emit : (tag, a) emit) with
+  | Transitions                   -> to_tag_sequence t ~start_time emit
+  | Transitions_and_tag_changes _ -> to_tag_sequence t ~start_time emit
 ;;
 
 let map_tags = External.map_tags
-;;
 
 let get_event seq ~stop_time ~f =
   Sequence.take_while seq ~f:(fun event -> Time.(<=) (Event.to_time event) stop_time)

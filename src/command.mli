@@ -82,6 +82,9 @@ module Arg_type : sig
     val time_span          : Time.Span.t        t
     (* [file] uses bash autocompletion. *)
     val file               : string             t
+    val sexp               : Sexp.t             t
+
+    val sexp_conv : (Sexp.t -> 'a) -> 'a t
   end
 end
 
@@ -313,7 +316,6 @@ module Let_syntax : sig
     val map    : 'a t -> f:('a -> 'b) -> 'b t
     val both   : 'a t -> 'b t -> ('a * 'b) t
     module Open_on_rhs = Param
-    module Open_in_body : sig end
   end with type 'a t := 'a Param.t
 end
 

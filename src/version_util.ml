@@ -24,14 +24,14 @@ let arg_spec = [
   ("-version",
    Arg.Unit
      (fun () ->
-       print_endline hg_version;
-       exit 0),
+        print_endline hg_version;
+        exit 0),
    " Print the hg revision of this build and exit");
   ("-build_info",
    Arg.Unit
      (fun () ->
-       print_endline build_info;
-       exit 0),
+        print_endline build_info;
+        exit 0),
    " Print build info as sexp and exit");
 ]
 

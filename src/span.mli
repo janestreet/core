@@ -117,20 +117,6 @@ val (//)  : t -> t -> float
   *)
 val to_short_string : t -> string
 
-module Unit_of_time : sig
-  (** Represents a unit of time for purposes of human-readable display.  Comparison
-      respects Nanosecond < Microsecond < Millisecond < Second < Minute < Hour < Day.  *)
-  type t =
-    | Nanosecond
-    | Microsecond
-    | Millisecond
-    | Second
-    | Minute
-    | Hour
-    | Day
-  [@@deriving sexp, compare]
-end
-
 (** [to_unit_of_time t] = [Day] if [abs t >= day], [Hour] if [abs t >= hour], and so on
     down to [Microsecond] if [abs t >= microsecond], and [Nanosecond] otherwise. *)
 val to_unit_of_time : t -> Unit_of_time.t

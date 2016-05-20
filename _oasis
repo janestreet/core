@@ -2,7 +2,7 @@ OASISFormat:           0.4
 OCamlVersion:          >= 4.02.3
 FindlibVersion:        >= 1.3.2
 Name:                  core
-Version:               113.33.03
+Version:               113.43+70
 Synopsis:              Industrial strength alternative to OCaml's standard library
 Authors:               Jane Street Group, LLC <opensource@janestreet.com>
 Copyrights:            (C) 2008-2016 Jane Street Group LLC <opensource@janestreet.com>
@@ -36,9 +36,9 @@ Flag "rt"
   Default$:    flag(rt_possible)
 
 PreConfCommand:  config/detect.sh
-PostConfCommand: config/discover.sh $ocamlc src/config.mlh src/config.h
+PostConfCommand: config/discover.sh $ocamlc src/config.h
 
-PreDistCleanCommand: $rm src/config.mlh src/config.h
+PreDistCleanCommand: $rm src/config.h
 
 Library core
   Path:         src
@@ -51,7 +51,6 @@ Library core
                 Command,
                 Core_condition,
                 Core_filename,
-                Core_list,
                 Core_mutex,
                 Core_sys,
                 Core_thread,
@@ -65,9 +64,7 @@ Library core
                 Iobuf,
                 Iobuf_debug,
                 Iobuf_intf,
-                Iobuf_tests,
                 Limiter,
-                Limiter_unit_tests,
                 Linux_ext,
                 Linux_ext_intf,
                 Lock_file,
@@ -78,7 +75,6 @@ Library core
                 Piecewise_linear_intf,
                 Process_env,
                 Schedule,
-                Schedule_unit_tests,
                 Signal,
                 Span,
                 Squeue,
@@ -87,16 +83,15 @@ Library core
                 Syscall_result,
                 Syscall_result_intf,
                 Syslog,
-                Thread_safe_queue_unit_tests,
                 Time,
                 Time0,
                 Time_internal,
                 Time_ns,
                 Time_ns_benchmarks,
+                Time_ns_intf,
                 Time_stamp_counter,
                 Time_stamp_counter_benchmarks,
                 Timing_wheel_float,
-                Timing_wheel_float_unit_tests,
                 Unix_error,
                 User_and_group,
                 Uuid,
@@ -143,5 +138,5 @@ Library core_top
   Path:         top
   Pack:         true
   Modules:      Core_install_printers
-  BuildDepends: compiler-libs,
+  BuildDepends: compiler-libs.opttoplevel,
                 core

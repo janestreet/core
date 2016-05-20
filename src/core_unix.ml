@@ -2,7 +2,7 @@
    informative string in the third field of Unix_error.  The problem with the standard
    Unix_error that gets raised is that it doesn't include information about the arguments
    to the function that failed. *)
-#import "config.mlh"
+#import "config.h"
 
 open Core_kernel.Std
 
@@ -160,13 +160,13 @@ module RLimit = struct
   let num_file_descriptors = Num_file_descriptors
   let stack                = Stack
   let virtual_memory       =
-#if JSC_RLIMIT_AS
+#ifdef JSC_RLIMIT_AS
       Ok Virtual_memory
 #else
       Or_error.unimplemented "RLIMIT_AS is not supported on this system"
 #endif
   let nice                 =
-#if JSC_RLIMIT_NICE
+#ifdef JSC_RLIMIT_NICE
       Ok Nice
 #else
       Or_error.unimplemented "RLIMIT_NICE is not supported on this system"
@@ -439,7 +439,7 @@ external fnmatch
 
 let fnmatch ?flags ~pat fname = fnmatch (Fnmatch_flags.make flags) ~pat fname
 
-#if JSC_WORDEXP
+#ifdef JSC_WORDEXP
 
 module Wordexp_flags = struct
   type _flag = [ `No_cmd | `Show_err | `Undef ] [@@deriving sexp]
@@ -826,9 +826,16 @@ let fork () =
     `In_the_parent (Pid.of_int pid)
 ;;
 
+(* Same as [Pervasives.exit] but does not run at_exit handlers *)
+external sys_exit : int -> 'a = "caml_sys_exit"
+
 let fork_exec ~prog ~args ?use_path ?env () =
   match fork () with
-  | `In_the_child -> never_returns (exec ~prog ~args ?use_path ?env ())
+  | `In_the_child ->
+    never_returns (
+      try exec ~prog ~args ?use_path ?env ()
+      with _ -> sys_exit 127
+    )
   | `In_the_parent pid -> pid
 ;;
 
@@ -942,7 +949,7 @@ let getppid_exn () =
 
 module Thread_id = Int
 
-#if JSC_THREAD_ID
+#ifdef JSC_THREAD_ID
 external gettid : unit -> Thread_id.t = "unix_gettid"
 let gettid = Ok gettid
 #else
@@ -1530,9 +1537,9 @@ let open_process = make_open_process Unix.open_process
 
 module Process_channels = struct
   type t = {
-    stdin : out_channel;
-    stdout : in_channel;
-    stderr : in_channel;
+    stdin : Out_channel.t;
+    stdout : In_channel.t;
+    stderr : In_channel.t;
   }
 end
 
@@ -2044,6 +2051,7 @@ end
       Unix.Inet_addr.to_string ;;
       - : string = "2a03:2880:10:1f03:face:b00c:0:25"
 *)
+
 module Cidr = struct
   module T0 = struct
     (* [address] is always normalized such that the (32 - [bits]) least-significant
@@ -2056,8 +2064,11 @@ module Cidr = struct
     [@@deriving fields, bin_io, compare]
 
     let normalized_address ~base ~bits =
-      let shift = 32 - bits in
-      Int32.(shift_left (shift_right_logical base shift) shift)
+      if bits = 0
+      then 0l
+      else
+        let shift = 32 - bits in
+        Int32.(shift_left (shift_right_logical base shift) shift)
 
     let invariant t =
       assert (t.bits >= 0 && t.bits <= 32);

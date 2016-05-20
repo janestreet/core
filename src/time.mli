@@ -3,12 +3,11 @@ open! Core_kernel.Std
 
 
 module Ofday : sig
-  include (module type of Ofday
-            with type t = Ofday.t
+  include (module type of struct include Ofday end
             with module Zoned := Ofday.Zoned)
 
   module Zoned : sig
-    include module type of Ofday.Zoned
+    include module type of struct include Ofday.Zoned end
 
     val to_time : t -> Date0.t -> Time_internal.T.t
   end
@@ -105,6 +104,10 @@ val of_date_ofday : Date0.t -> Ofday.t -> zone:Zone.t -> t
 val to_date_ofday : t -> zone:Zone.t -> Date0.t * Ofday.t
 val to_date       : t -> zone:Zone.t -> Date0.t
 val to_ofday      : t -> zone:Zone.t -> Ofday.t
+
+(** [of_tm] converts a [Unix.tm] (mirroring a [struct tm] from the C stdlib) into a
+    [Time.t].  Note that the [tm_wday], [tm_yday], and [tm_isdst] fields are ignored. *)
+val of_tm : Core_unix.tm -> zone:Zone.t -> t
 
 (** Because timezone offsets change throughout the year (clocks go forward or back) some
     local times can occur twice or not at all.  In the case that they occur twice, this
@@ -254,6 +257,22 @@ val occurrence
 *)
 val format : t -> string -> zone:Zone.t -> string
 
+(** [parse string ~fmt ~zone] parses [string], according to [fmt], which follows the
+    formatting rules given in 'man strptime'.  The time is assumed to be in the given
+    timezone.
+
+    {v
+      %Y - year (4 digits)
+      %y - year (2 digits)
+      %m - month
+      %d - day
+      %H - hour
+      %M - minute
+      %S - second
+    v}
+*)
+val parse : string -> fmt:string -> zone:Zone.t -> t
+
 (** [to_epoch t] returns the number of seconds since Jan 1, 1970 00:00:00 in UTC *)
 val to_epoch : t -> float
 (** [of_epoch x] returns the time x seconds after Jan 1, 1970 00:00:00 in UTC *)
@@ -279,14 +298,28 @@ val next_multiple
 
 module Stable : sig
   module V1 : sig
-    type t [@@deriving bin_io, sexp, compare]
-  end with type t = t
+    type nonrec t = t
+    type nonrec comparator_witness = comparator_witness
+    include Stable
+      with type t := t
+      with type comparator_witness := comparator_witness
+    include Comparable.Stable.V1.S
+      with type comparable := t
+      with type comparator_witness := comparator_witness
+  end
 
   (** Provides a sexp representation that is independent of the time zone of the machine
       writing it. *)
   module With_utc_sexp : sig
     module V1 : sig
-      type t [@@deriving bin_io, sexp, compare]
-    end with type t = t
+      type nonrec t = t
+      type nonrec comparator_witness = comparator_witness
+      include Stable
+        with type t := t
+        with type comparator_witness := comparator_witness
+      include Comparable.Stable.V1.S
+        with type comparable := t
+        with type comparator_witness := comparator_witness
+    end
   end
 end

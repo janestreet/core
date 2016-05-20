@@ -211,9 +211,9 @@ module Null : Linux_ext_intf.S = struct
   include Null_toplevel
 end
 
-#import "config.mlh"
+#import "config.h"
 
-#if JSC_POSIX_TIMERS
+#ifdef JSC_POSIX_TIMERS
 module Clock = struct
   type t
 
@@ -232,7 +232,7 @@ module Clock = struct
 
   external get_thread_clock : unit -> t = "unix_clock_thread_cputime_id_stub"
 
-#if JSC_THREAD_CPUTIME
+#ifdef JSC_THREAD_CPUTIME
   external get : Thread.t -> t = "unix_pthread_getcpuclockid"
 
   let get               = Ok get
@@ -251,7 +251,7 @@ end
 module Clock = Null.Clock
 #endif
 
-#if JSC_TIMERFD
+#ifdef JSC_TIMERFD
 
 module Timerfd = struct
   module Clock : sig
@@ -441,7 +441,7 @@ end
 module Timerfd = Null.Timerfd
 #endif
 
-#if JSC_LINUX_EXT
+#ifdef JSC_LINUX_EXT
 
 type file_descr = Core_unix.File_descr.t
 
@@ -874,7 +874,9 @@ module Epoll = struct
            smaller timeouts. *)
         let span = Time_ns.Span.max span Time_ns.Span.millisecond in
         Int63.to_int_exn
-          Time_ns.Span.(div (span + of_int_ns 500_000) (of_int_ns 1_000_000))
+          Time_ns.Span.(div
+                          (span + of_int63_ns (Int63.of_int 500_000))
+                          (of_int63_ns (Int63.of_int 1_000_000)))
     in
     assert (timeout_ms >= 0);
     wait_internal t ~timeout_ms
@@ -998,7 +1000,7 @@ let%test_module _ =
         let timerfd = timerfd_create Timerfd.Clock.realtime in
         Epoll.set epoll (timerfd :> File_descr.t) Epoll.Flags.in_;
         List.iter [ 0; 1 ] ~f:(fun span_ns ->
-          Timerfd.set_after timerfd (Time_ns.Span.of_int_ns span_ns);
+          Timerfd.set_after timerfd (Time_ns.Span.of_int63_ns (Int63.of_int span_ns));
           begin match Epoll.wait epoll ~timeout:`Never with
           | `Timeout -> assert false
           | `Ok -> ()

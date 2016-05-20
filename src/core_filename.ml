@@ -127,8 +127,6 @@ let retry ?(in_dir=temp_dir_name) ~f prefix suffix =
   in
   try_name 0
 
-let open_temp_mode = [Open_wronly; Open_creat; Open_excl]
-
 (* these functions are the same as the ones in the std lib but you
    can override the temporary directory you are working in.  They also try the
    exact filename specified by the user before reverting to the "try with"
@@ -141,7 +139,7 @@ let temp_dir ?(perm=0o700) ?in_dir prefix suffix =
 
 let open_temp_file ?(perm=0o600) ?in_dir prefix suffix =
   retry ?in_dir prefix suffix
-    ~f:(fun name -> (name, open_out_gen open_temp_mode perm name))
+    ~f:(fun name -> (name, Out_channel.create ~perm ~fail_if_exists:true name))
 
 let temp_file ?perm ?in_dir prefix suffix =
   let (name, oc) = open_temp_file ?perm ?in_dir prefix suffix in

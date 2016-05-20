@@ -2,15 +2,14 @@
 
 set -e
 
-if [ $# -lt 2 ]; then
-    echo "Usage: discover.sh OCAMLC ML_OUTFILE C_OUTFILE" >&2
+if [ $# -ne 2 ]; then
+    echo "Usage: discover.sh OCAMLC OUTFILE" >&2
     exit 2
 fi
 
 OCAMLC="$1"
-ML_OUTFILE="$2"
-C_OUTFILE="$3"
-shift 3
+OUTFILE="$2"
+shift 2
 
 if [ ! -e setup.data ]; then
     echo "setup.data missing, run ./configure first."
@@ -27,59 +26,56 @@ OCAML_CFLAGS=
 CC="$bytecomp_c_compiler"
 
 SRC=config/test.c
-OUT=config/test.out
+OUT=config/result.h
 trap "rm -f $OUT" EXIT
 
-$OCAMLC -ccopt -E $OCAML_CFLAGS -c $SRC | grep '^"OUT:[^"]*"$' | sed 's/"OUT:\([^"]*\)"/\1/' | tee > $OUT
+sentinel="CORE_`basename "$OUTFILE" | tr a-z. A-Z_`"
+cat > $OUT  <<EOF
+#ifndef $sentinel
+#define $sentinel
+EOF
+
+
+$OCAMLC -ccopt -E $OCAML_CFLAGS -c $SRC | grep '^"OUT:[^"]*"$' | sed 's/"OUT:\([^"]*\)"/\1/' | tee >> $OUT
 
 ARCH=`ocamlc -config | sed -n 's/^architecture: *\(.*\)$/\1/p'`
 [ "$ARCH" = amd64 ] && ARCH=x86_64
 for arch in x86_64 i386; do
     if [ "$ARCH" = "$arch" ]; then
-        echo "#let JSC_ARCH_$arch = true" >> $OUT
+        echo "#define JSC_ARCH_$arch" >> $OUT
     else
-        echo "#let JSC_ARCH_$arch = false" >> $OUT
+        echo "#undef JSC_ARCH_$arch" >> $OUT
     fi
 done
 
 if echo '#include <wordexp.h>' | cpp > /dev/null 2> /dev/null; then
-    echo "#let JSC_WORDEXP = true" >> $OUT
+    echo "#define JSC_WORDEXP" >> $OUT
 else
-    echo "#let JSC_WORDEXP = false" >> $OUT
+    echo "#undef JSC_WORDEXP" >> $OUT
 fi
 
 # The recvmmsg system call was added in Linux 2.6.32
 if $CC config/test_recvmmsg.c -o /dev/null 2> /dev/null; then
-    echo "#let JSC_RECVMMSG = true" >> $OUT
+    echo "#define JSC_RECVMMSG" >> $OUT
 else
-    echo "#let JSC_RECVMMSG = false" >> $OUT
+    echo "#undef JSC_RECVMMSG" >> $OUT
 fi
 
 if $CC config/test_timerfd.c -o /dev/null 2> /dev/null; then
-    echo "#let JSC_TIMERFD = true" >> $OUT
+    echo "#define JSC_TIMERFD" >> $OUT
 else
-    echo "#let JSC_TIMERFD = false" >> $OUT
+    echo "#undef JSC_TIMERFD" >> $OUT
 fi
 
 for i in 1 2 3; do
     if $CC -I src -DJSC_STAT_NANOSEC_METHOD=$i config/test_nanosecond_stat.c -o /dev/null 2> /dev/null; then
-        echo "#let JSC_STAT_NANOSEC_METHOD = $i" >> $OUT
+        echo "#define JSC_STAT_NANOSEC_METHOD $i" >> $OUT
         break
     fi
 done
 
-mv "$OUT" "$ML_OUTFILE"
+cat >> $OUT  <<EOF
+#endif
+EOF
 
-{
-    sentinel="CORE_`basename "$C_OUTFILE" | tr a-z. A-Z_`"
-    cat  <<EOF
-#ifndef $sentinel
-#define $sentinel
-EOF
-    sed 's|^#let *\([A-Za-z_0-9]*\) *= *true *$|#define \1|;
-         s|^#let *\([A-Za-z_0-9]*\) *= *false *$|#undef \1|;
-         s|^#let *\([A-Za-z_0-9]*\) *= *\([^ ]*\) *$|#define \1 \2|' "$ML_OUTFILE"
-    cat  <<EOF
-#endif /* $sentinel */
-EOF
-} > "$C_OUTFILE"
+mv $OUT $OUTFILE

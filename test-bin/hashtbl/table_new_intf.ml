@@ -71,16 +71,20 @@ module type S = sig
   end
 
   val copy : ('k, 'v) t -> ('k, 'v) t
-  val iter_vals : ('k, 'v) t -> f:('v -> unit) -> unit
-
-  val iter : ('k, 'v) t -> f:(key:'k -> data:'v -> unit) -> unit
-    [@@ocaml.deprecated "Use iteri instead"]
-
+  val iter_keys : ('k, 'v) t -> f:('k -> unit) -> unit
+  val iter : ('k, 'v) t -> f:('v -> unit) -> unit
   val iteri : ('k, 'v) t -> f:(key:'k -> data:'v -> unit) -> unit
+
+  val iter_vals : ('k, 'v) t -> f:('v -> unit) -> unit
+    [@@deprecated "[since 2016-04] Use iter instead"]
+
   val map : ('k, 'v) t -> f:('v -> 'c) -> ('k, 'c) t
   val mapi : ('k, 'v) t -> f:(key:'k -> data:'v -> 'c) -> ('k, 'c) t
   val filter_map : ('k, 'v) t -> f:('v -> 'c option) -> ('k, 'c) t
   val filter_mapi : ('k, 'v) t -> f:(key:'k -> data:'v -> 'c option) -> ('k, 'c) t
+  val filter_keys : ('k, 'v) t -> f:('k -> bool) -> ('k, 'v) t
+  val filter : ('k, 'v) t -> f:('v -> bool) -> ('k, 'v) t
+  val filteri : ('k, 'v) t -> f:(key:'k -> data:'v -> bool) -> ('k, 'v) t
 
   val find_default : ('k, 'v) t -> 'k -> default:(unit -> 'v) -> 'v
   val find_exn : ('k, 'v) t -> 'k -> 'v
@@ -102,6 +106,7 @@ module type S = sig
   val keys : ('k, 'v) t -> 'k list
   val data : ('k, 'v) t -> 'v list
 
+  val filter_keys_inplace : ('k, 'v) t -> f:('k -> bool) -> unit
   val filter_inplace : ('k, 'v) t -> f:('v -> bool) -> unit
   val filteri_inplace : ('k, 'v) t -> f:(key:'k -> data:'v -> bool) -> unit
 
@@ -157,8 +162,10 @@ module Make (Basic : Basic) : S with type ('k, 'v) t = ('k, 'v) Basic.t = struct
     List.iter bindings ~f:(fun (key,data) -> add new_t ~key ~data);
     new_t
 
-  let iteri t ~f =
-    fold t ~init:() ~f:(fun ~key ~data () -> f ~key ~data)
+  let iter_keys t ~f = fold t ~init:() ~f:(fun ~key ~data:_ () -> f key)
+  let iter t ~f = fold t ~init:() ~f:(fun ~key:_ ~data () -> f data)
+  let iteri t ~f = fold t ~init:() ~f:(fun ~key ~data () -> f ~key ~data)
+  let iter_vals = iter
 
   let map t ~f = mapi t ~f:(fun ~key:_ ~data -> f data)
 
@@ -176,6 +183,13 @@ module Make (Basic : Basic) : S with type ('k, 'v) t = ('k, 'v) Basic.t = struct
 
   let filter_map t ~f = filter_mapi t ~f:(fun ~key:_ ~data -> f data)
 
+  let filteri t ~f =
+    filter_mapi t ~f:(fun ~key ~data -> if f ~key ~data then Some data else None)
+  let filter t ~f =
+    filteri t ~f:(fun ~key:_ ~data -> f data)
+  let filter_keys t ~f =
+    filteri t ~f:(fun ~key ~data:_ -> f key)
+
   let remove_all = remove
 
   let find_default t id ~default =
@@ -185,8 +199,6 @@ module Make (Basic : Basic) : S with type ('k, 'v) t = ('k, 'v) Basic.t = struct
         let default = default () in
         add t ~key:id ~data:default;
         default
-
-  let iter_vals t ~f = iteri t ~f:(fun ~key:_ ~data -> f data)
 
   let of_alist ?params hashable lst =
     let t = create ?params hashable in
@@ -262,6 +274,9 @@ module Make (Basic : Basic) : S with type ('k, 'v) t = ('k, 'v) Basic.t = struct
 
   let filter_inplace t ~f =
     filteri_inplace t ~f:(fun ~key:_ ~data -> f data)
+  ;;
+  let filter_keys_inplace t ~f =
+    filteri_inplace t ~f:(fun ~key ~data:_ -> f key)
   ;;
 
   let sexp_of_t sexp_of_k sexp_of_d t =

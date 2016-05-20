@@ -17,6 +17,7 @@ module Date               = Date
 module Filename           = Core_filename
 module Interval           = Interval
 module Iobuf              = Iobuf
+module Iobuf_debug        = Iobuf_debug
 module Limiter            = Limiter
 module Linux_ext          = Linux_ext
 module Lock_file          = Lock_file

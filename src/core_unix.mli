@@ -859,13 +859,13 @@ val create_process_env
     by the shell [/bin/sh] (cf. [system]). Warning: writes on channels
     are buffered, hence be careful to call {!Pervasives.flush} at the right times
     to ensure correct synchronization. *)
-val open_process_in : string -> in_channel
+val open_process_in : string -> In_channel.t
 
 (** See {!UnixLabels.open_process_in}. *)
-val open_process_out : string -> out_channel
+val open_process_out : string -> Out_channel.t
 
 (** See {!UnixLabels.open_process_in}. *)
-val open_process : string -> in_channel * out_channel
+val open_process : string -> In_channel.t * Out_channel.t
 
 (** Similar to {!UnixLabels.open_process}, but the second argument specifies
    the environment passed to the command.  The result is a triple
@@ -873,9 +873,9 @@ val open_process : string -> in_channel * out_channel
    and standard error of the command. *)
 module Process_channels : sig
   type t =
-    { stdin : out_channel;
-      stdout : in_channel;
-      stderr : in_channel;
+    { stdin : Out_channel.t;
+      stdout : In_channel.t;
+      stderr : In_channel.t;
     }
 end
 
@@ -888,18 +888,18 @@ val open_process_full : string -> env:string array -> Process_channels.t
     wait for the associated command to terminate,
     and return its termination status.
 *)
-val close_process_in : in_channel -> Exit_or_signal.t
+val close_process_in : In_channel.t -> Exit_or_signal.t
 
 (** Close channels opened by {!UnixLabels.open_process_out},
     wait for the associated command to terminate,
     and return its termination status.
 *)
-val close_process_out : out_channel -> Exit_or_signal.t
+val close_process_out : Out_channel.t -> Exit_or_signal.t
 
 (** Close channels opened by {!UnixLabels.open_process},
    wait for the associated command to terminate,
    and return its termination status. *)
-val close_process : in_channel * out_channel -> Exit_or_signal.t
+val close_process : In_channel.t * Out_channel.t -> Exit_or_signal.t
 
 (** Close channels opened by {!UnixLabels.open_process_full},
    wait for the associated command to terminate,
@@ -1458,12 +1458,12 @@ val setsockopt_float
    Return a pair of buffered channels connected to the server.
    Remember to call {!Pervasives.flush} on the output channel at the right times
    to ensure correct synchronization. *)
-val open_connection : sockaddr -> in_channel * out_channel
+val open_connection : sockaddr -> In_channel.t * Out_channel.t
 
 (** ``Shut down'' a connection established with {!UnixLabels.open_connection};
    that is, transmit an end-of-file condition to the server reading
    on the other side of the connection. *)
-val shutdown_connection : in_channel -> unit
+val shutdown_connection : In_channel.t -> unit
 
 (** Establish a server on the given address.
    The function given as first argument is called for each connection
@@ -1471,7 +1471,7 @@ val shutdown_connection : in_channel -> unit
    is created for each connection. The function {!UnixLabels.establish_server}
    never returns normally. *)
 val establish_server
-  : (in_channel -> out_channel -> unit) -> addr:sockaddr -> unit
+  : (In_channel.t -> Out_channel.t -> unit) -> addr:sockaddr -> unit
 
 
 (** {6 Host and protocol databases} *)
@@ -1731,11 +1731,11 @@ end
 (** Get a sockaddr from a hostname or IP, and a port *)
 val get_sockaddr : string -> int -> sockaddr
 
-(** Set a timeout for a socket associated with an [in_channel] *)
-val set_in_channel_timeout : in_channel -> float -> unit
+(** Set a timeout for a socket associated with an [In_channel.t] *)
+val set_in_channel_timeout : In_channel.t -> float -> unit
 
-(** Set a timeout for a socket associated with an [out_channel] *)
-val set_out_channel_timeout : out_channel -> float -> unit
+(** Set a timeout for a socket associated with an [Out_channel.t] *)
+val set_out_channel_timeout : Out_channel.t -> float -> unit
 
 (** [exit_immediately exit_code] immediately calls the [exit] system call with the given
     exit code without performing any other actions (unlike Pervasives.exit).  Does not

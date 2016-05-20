@@ -7,7 +7,7 @@ let dev_mode = true
 
 let setup_preprocessor_deps = function
   | After_rules ->
-    dep ["pp_deps_for_src"] ["src/config.h"; "src/config.mlh"];
+    dep ["pp_deps_for_src"] ["src/config.h"];
   | _ -> ()
 
 let dispatch = function

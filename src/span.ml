@@ -394,28 +394,6 @@ let%test_module "conversion compatibility" = (module struct
 
 end)
 
-module Unit_of_time = struct
-
-  type t =
-    | Nanosecond
-    | Microsecond
-    | Millisecond
-    | Second
-    | Minute
-    | Hour
-    | Day
-  [@@deriving sexp, compare]
-
-end
-
-let%test_unit "Span.Unit_of_time.t" =
-  [%test_result: int] ([%compare: Unit_of_time.t] Nanosecond  Microsecond) ~expect:(-1);
-  [%test_result: int] ([%compare: Unit_of_time.t] Microsecond Millisecond) ~expect:(-1);
-  [%test_result: int] ([%compare: Unit_of_time.t] Millisecond Second)      ~expect:(-1);
-  [%test_result: int] ([%compare: Unit_of_time.t] Second      Minute)      ~expect:(-1);
-  [%test_result: int] ([%compare: Unit_of_time.t] Minute      Hour)        ~expect:(-1);
-  [%test_result: int] ([%compare: Unit_of_time.t] Hour        Day)         ~expect:(-1)
-
 let to_unit_of_time t : Unit_of_time.t =
   let abs_t = abs t in
   if abs_t >= day         then Day         else

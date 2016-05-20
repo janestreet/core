@@ -1,8 +1,8 @@
 (** Mutual exclusion between processes using flock and lockf.  A file is
-    considered locked if either of these mechanisms works.
+    considered locked only if both of these mechanisms work.
 
-    These locks are OS-level but are Local (will not work across computers
-    even if they mount the same directory).
+    These locks are OS-level and as such are local to the machine and will
+    not work across computers even if they mount the same directory.
 *)
 
 open! Core_kernel.Std

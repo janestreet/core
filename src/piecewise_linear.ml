@@ -432,7 +432,7 @@ module Stable = struct
           let of_binable regular =
             let inverse  =
               Or_error.tag (Impl.invert regular)
-                "Got non-invertible set of knots when deserializing?"
+                ~tag:"Got non-invertible set of knots when deserializing?"
               |> Or_error.ok_exn
             in
             { regular; inverse }
