@@ -1,3 +1,59 @@
+## 113.43.00
+
+- `Time.Ofday.of_string` supports "AM and "PM" suffixes.
+
+- Change the innards of `Command.Flag` so it no longer uses mutable state. It now
+  updates a `Univ_map.t` instead.
+
+- Renamed:
+
+    core/test        --> core/test-bin
+
+  since these directories contain executables to run rather than
+  libraries with standard unit tests.  This is in preparation for moving
+  the standard unit tests to a more "normal" test directory.
+
+- Move unit tests from core/src to core/test .
+
+- The output for the "version" subcommand and the "-version" flag is now the same.
+
+- Core.Std.Lock_file doesn't work properly on OSX, see this:
+
+    https://github.com/janestreet/jenga/issues/4#issuecomment-205176593
+
+  This fix the issue by requiring both flock and lockf only on Linux.
+
+  Closes janestreet/jenga#4
+
+- Unix.fork_exec needs to handle exceptions raised by exec
+
+- Remove `Core.Core_list`, which was not in `Core.Std` and had only an unused `to_sequence`.
+
+- Array.random_element
+
+- Shift operations are unspecified outside of the range `0 <= x < bitsize`.
+
+  This fixes unit tests for core/src/core_unix.ml in 32bit.
+
+- Replace all occurences (in Core) of `Time_ns.Span.to_int_ns` and `Time_ns.to_int_ns_since_epoch` with
+  their 63bit counterpart.
+
+  `Time_ns.Span.to_int_ns` and `Time_ns.to_int_ns_since_epoch` are not implemented in 32bit.
+
+  The is one step toward have unit tests to pass in 32bit.
+
+- Wrap Unix.strptime in Date and Time
+
+- New arg types in Command.Param:
+
+    sexp = Arg_type.create Sexp.of_string
+
+    sexp_conv a_of_sexp = Arg_type.create (fun s -> a_of_sexp (Sexp.of_string s))
+
+- `Time_ns.Ofday.create` presently makes 2 function calls to
+  `caml_int_compare`. Changed to use the native int comparisons and
+  avoid the calls in `create` (and other comparisons).
+
 ## 113.33.01
 
 - Fix build problem on BSD related to `endian.h`.
@@ -1815,4 +1871,3 @@ complete history of the changes made for this release.
 ## 109.02.00
 
 - Add Char.of_string
-

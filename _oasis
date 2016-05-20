@@ -138,5 +138,5 @@ Library core_top
   Path:         top
   Pack:         true
   Modules:      Core_install_printers
-  BuildDepends: compiler-libs.opttoplevel,
+  BuildDepends: compiler-libs.toplevel,
                 core
