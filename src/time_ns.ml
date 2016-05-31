@@ -100,16 +100,6 @@ end = struct
          (hour + minute))
       ~expect:"0.042361d "
 
-  let random () =
-    Time_ns.Span.of_int63_ns
-      (let open Int63 in
-       random Time_ns.Span.(to_int63_ns max_value)
-       + random (of_int 2)
-       - random Time_ns.Span.(to_int63_ns max_value)
-       - random Time_ns.Span.(to_int63_ns (neg (max_value + min_value)))
-       - random (of_int 2))
-  ;;
-
   let%test_unit "Time.Span.t -> Time_ns.Span.t round trip with microsecond precision" =
     let open Time.Span in
     let sexp_of_t t = sexp_of_float (to_float t) in (* more precise *)
@@ -393,20 +383,6 @@ let of_time t =
   || Time.( > ) t max_time_value
   then failwiths "Time_ns does not support this time" t [%sexp_of: Time.t];
   of_span_since_epoch (Span.of_span (Time.diff t Time.epoch))
-;;
-
-let random () =
-  Time_ns.of_int63_ns_since_epoch
-    (let max_ns = to_int63_ns_since_epoch max_value in
-     let open Int63 in
-     random max_ns
-     + random (of_int 2)
-     - random max_ns
-     - (let extra = neg (max_ns + to_int63_ns_since_epoch Time_ns.min_value) in
-        (* Now that Core_kernel.Std.Time_ns.Span.min/max_value are symmetric around
-           zero, watch out for that case. *)
-        if extra = zero then zero else random extra)
-     - random (of_int 2))
 ;;
 
 let%test_unit "Time.t -> Time_ns.t round trip" =

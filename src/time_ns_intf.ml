@@ -153,7 +153,7 @@ module type Span = sig
     module V1 : Stable_int63able with type t = t
   end
 
-  val random : unit -> t
+  val random : ?state:Random.State.t -> unit -> t
 
   (** [Span.Option.t] is like [Span.t option], except that the value is immediate.  This
       module should mainly be used to avoid allocations. *)
@@ -323,6 +323,6 @@ module type Time_ns = sig
     module V1 : Stable_int63able with type t = t
   end
 
-  val random : unit -> t
+  val random : ?state:Random.State.t -> unit -> t
 
 end
