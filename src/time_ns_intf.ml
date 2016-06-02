@@ -1,15 +1,5 @@
 open! Core_kernel.Std
 
-module type Stable_int63able = sig
-  type t
-  include Stable with type t := t
-  (** [to_int63] and [of_int63_exn] encode [t] for use in wire protocols; they are
-      designed to be efficient on 64-bit machines.  [of_int63_exn (to_int63 t) = t] for
-      all [t]; [of_int63_exn] raises for inputs not produced by [to_int63]. *)
-  val to_int63     : t -> Int63.t
-  val of_int63_exn : Int63.t -> t
-end
-
 module type Option = sig
   type value
   type t = private Int63.t [@@deriving typerep]
