@@ -1,13 +1,14 @@
 open! Core_kernel.Std
 
-(** Times of day.
+(** Time of day.
 
     [t] represents a clock-face time of day.  Usually this is equivalent to a time-offset
     from midnight, and each [t] occurs exactly once in each calendar day.  However, when
-    daylight savings time begins or ends, some clock face times (and therefore [t]'s) can
+    daylight saving time begins or ends, some clock face times (and therefore [t]'s) can
     occur more than once per day or not at all, and e.g. 04:00 can occur three or five
     hours after midnight, so knowing your current offset from midnight is *not* in general
     equivalent to knowing the current [t].
+
     (See {!Zone} for tools to help you cope with DST.) *)
 type t = private float [@@deriving bin_io, sexp]
 

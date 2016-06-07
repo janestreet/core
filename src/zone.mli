@@ -56,7 +56,7 @@ val abbreviation : t -> float -> string
 (** [name zone] returns the name of the time zone *)
 val name : t -> string
 
-(* {1 Low-level functions}
+(** {1 Low-level functions}
 
   The functions below are lower level and should be used more rarely. *)
 

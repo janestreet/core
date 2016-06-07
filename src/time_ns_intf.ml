@@ -163,6 +163,9 @@ module type Ofday = sig
 
   include Identifiable with type t := t
 
+  (** On some days, [add_exn t span] doesn't occur [span] from [t] in real time.  For
+      example, this happens on days when daylight saving time begins or ends.  See
+      {!Time.Ofday} for more detail. *)
   val add_exn : t -> span -> t
   val sub_exn : t -> span -> t
 
@@ -237,8 +240,10 @@ module type Time_ns = sig
     end
   end
 
-  (** Times of day on a 24-hour wall clock.  See {!Time.Ofday}. *)
-  module Ofday : Ofday with type time := t and type span := Span.t
+  (** Clock-face time of day.  See {!Time.Ofday}. *)
+  module Ofday : Ofday
+    with type time := t
+     and type span := Span.t
 
   include Identifiable with type t := t
 
@@ -285,9 +290,8 @@ module type Time_ns = sig
     -> unit
     -> t
 
-
+  (** These lose precision because they go through [Time.t]. *)
   val of_date_ofday : zone:Zone.t -> Date.t -> Ofday.t -> t
-
   val to_ofday : t -> zone:Zone.t -> Ofday.t
   val to_date  : t -> zone:Zone.t -> Date.t
 
