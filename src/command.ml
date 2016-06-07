@@ -2037,7 +2037,7 @@ module Shape = struct
     type 'a t = 'a Group.Sexpable.V1.t = {
       summary     : string;
       readme      : string sexp_option;
-      subcommands : (string, 'a) List.Assoc.t;
+      subcommands : (string * 'a) List.t;
     } [@@deriving bin_io, compare, fields, sexp]
 
     let map = Group.Sexpable.V1.map

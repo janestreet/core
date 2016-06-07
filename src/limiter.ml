@@ -49,9 +49,6 @@ module type Arith = sig
   val ( > )  : t -> t -> bool
   val ( <= ) : t -> t -> bool
   val ( <> ) : t -> t -> bool
-  val min : t -> t -> t
-
-  val zero : t
 end
 
 (* We implement token math using fixed point math so that moving tokens through
@@ -59,14 +56,10 @@ end
    in_hopper -> in_bucket -> in_flight
 
    never results in dropped tokens or rounding errors due to floating point math.
+*)
 
-   Originally this type was completely abstract and was Int63.t internally.  This had the
-   unfortunate effect of slowing down try_take by ~50% because the comparisons and math
-   couldn't be inlined.  Exposing it and dropping Int63 indirection feels like the lesser
-   of two evils. *)
 module Tokens : sig
-  type t = private int [@@deriving sexp, bin_io, compare]
-
+  type t = private Int63.t [@@deriving sexp, bin_io, compare]
   module Arith : Arith with type t := t
   include Arith with type t := t
 
@@ -78,9 +71,9 @@ module Tokens : sig
   val to_float : t -> float
 
   val to_string : t -> string
+  val zero : t
+  val min : t -> t -> t
 end = struct
-  type t = Int.t [@@deriving sexp, bin_io, compare]
-
   (* The scaling factor effectively sets how small of a sub-job one can ask for. Choosing
      10m lets us specify quite high rates as fractional jobs, while leaving us with the
      ability of having buckets containing about 10 billion jobs.  This gives us plenty of
@@ -88,26 +81,16 @@ end = struct
   let scaling_factor = 10_000_000
   let float_scaling_factor = Float.of_int scaling_factor
 
-  let zero = 0
-  let to_string t = Int.to_string t
+  include Int63
 
-  (* performance hack: The shared logic in these should not be lifted to
+(* performance hack: The shared logic in these should not be lifted to
      of_float_round_gen because it introduces an allocation.  This has been measured
      but we don't know why it happens. *)
-  let of_float_round_up_exn   x = Float.iround_up_exn (x *. float_scaling_factor)
-  let of_float_round_down_exn x = Float.iround_down_exn (x *. float_scaling_factor)
+  let of_float_round_up_exn   x = Float.int63_round_up_exn (x *. float_scaling_factor)
+  let of_float_round_down_exn x = Float.int63_round_down_exn (x *. float_scaling_factor)
 
-  let to_float t = Int.to_float t /. float_scaling_factor
-
-  module Arith = struct
-    let ( + ) t1 t2 = t1 + t2
-    let ( - ) t1 t2 = t1 - t2
-    let zero = zero
-    include Comparable.Make_binable(Int)
-    let min = Int.min
-  end
-  include Arith
-
+  let to_float t = to_float t /. float_scaling_factor
+  module Arith = O
 end
 
 let gen_fixed_checks fixed_op float_op =
@@ -184,20 +167,20 @@ let invariant t =
           t.in_bucket t.bucket_limit ();
 
   (* sizes must be positive *)
-  if t.bucket_limit <= zero
+  if t.bucket_limit <= Tokens.zero
   then failwithf !"bucket_limit (burst_size) (%{Tokens}) must be > 0" t.bucket_limit ();
 
-  if t.in_bucket < zero
+  if t.in_bucket < Tokens.zero
   then failwithf !"in_bucket (%{Tokens}) must be >= 0." t.in_bucket ();
 
   begin match t.in_hopper with
   | Infinite         -> ()
   | Finite in_hopper ->
-    if in_hopper < zero
+    if in_hopper < Tokens.zero
     then failwithf !"in_hopper (%{Tokens}) must be >= 0." in_hopper ();
   end;
 
-  if t.in_flight < zero
+  if t.in_flight < Tokens.zero
   then failwithf !"in_flight (%{Tokens}) must be >= 0." t.in_flight ();
 
   begin match t.hopper_to_bucket_rate_per_sec, t.time_in_token_space with
@@ -220,7 +203,7 @@ let invariant t =
     failwithf !"token_target_level (%{Tokens}) is finite and tokens in system is infinite"
       token_target_level ()
   | Finite token_target_level, Finite in_system ->
-    if token_target_level < zero
+    if token_target_level < Tokens.zero
     then failwithf !"token_target_level (%{Tokens}) must be >= 0." token_target_level ();
 
     (* max tokens can only exceed the total in the system when we are waiting
@@ -232,8 +215,8 @@ let invariant t =
         failwithf !"total tokens in_system (Infinite) > token_target_level (%{Tokens})"
           token_target_level ()
       | Finite in_hopper ->
-        if    in_hopper   <> zero
-           || t.in_bucket <> zero
+        if    in_hopper   <> Tokens.zero
+           || t.in_bucket <> Tokens.zero
         then
           failwithf !"total tokens in_system (%{Tokens}) > token_target_level (%{Tokens})"
             in_system token_target_level ()
@@ -469,15 +452,14 @@ let can_put_n_tokens_in_flight t ~n =
   | Finite in_flight_limit -> t.in_flight + n <= in_flight_limit
 ;;
 
-(* the casts are necessary to get fast comparison *)
 let try_take t ~now amount : Try_take_result.t =
   advance_time t ~now;
   let amount = Tokens.of_float_round_up_exn amount in
   if not (can_put_n_tokens_in_flight t ~n:amount)
   then Unable
-  else if (amount :> int) > (t.bucket_limit :> int)
+  else if Tokens.(>) amount t.bucket_limit
   then Asked_for_more_than_bucket_limit
-  else if (amount :> int) > (t.in_bucket :> int)
+  else if Tokens.(>) amount t.in_bucket
   then Unable
   else begin
     t.in_bucket <- Tokens.(-) t.in_bucket amount;
@@ -491,7 +473,7 @@ let try_take t ~now amount : Try_take_result.t =
 let return_to_hopper t ~now amount =
   let open Tokens.Arith in
   let amount = Tokens.of_float_round_up_exn amount in
-  if amount < zero
+  if amount < Tokens.zero
   then failwithf !"return_to_hopper passed a negative amount (%{Tokens})" amount ();
 
   if amount > t.in_flight
@@ -510,7 +492,7 @@ let return_to_hopper t ~now amount =
       then amount
       else begin
         let excess_tokens  = currently_in_system - token_target_level in
-        let tokens_to_drop = min amount excess_tokens in
+        let tokens_to_drop = Tokens.min amount excess_tokens in
         amount - tokens_to_drop
       end
   in
@@ -533,7 +515,7 @@ let tokens_may_be_available_when t ~now amount : Tokens_may_be_available_result.
   else begin
     advance_time t ~now;
     let amount_missing = amount - t.in_bucket in
-    if amount_missing <= zero
+    if amount_missing <= Tokens.zero
     then At t.time
     else begin
       match t.hopper_to_bucket_rate_per_sec with

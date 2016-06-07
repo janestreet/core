@@ -17,7 +17,16 @@ module Time_ns = Time_ns_in_this_directory
 module Time = Time (* for the .mli *)
 
 module Interval_num   = Timing_wheel_ns.Interval_num
-module Level_bits     = Timing_wheel_ns.Level_bits
+module Level_bits     = struct
+  include Timing_wheel_ns.Level_bits
+  let default = match Word_size.word_size with
+    | W64 -> default
+    (* On 32-bit platforms, [Time] doesn't support times beyond 2035, due to its
+       use of 32-bit time_t values.  So, we use a smaller default [level_bits]
+       that still covers the full range of times, at microsecond precision.  See
+       ../test/timing_wheel_float_unit_tests.ml. *)
+    | W32 -> Timing_wheel_ns.Level_bits.create_exn [ 11; 10; 10; 10; 9 ]
+end
 module Priority_queue = Timing_wheel_ns.Priority_queue
 
 let to_span = Time_ns.Span.to_span

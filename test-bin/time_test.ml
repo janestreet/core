@@ -24,7 +24,7 @@ let maxtime_str = "3000-01-01 00:00:00.000000"
 
 let time_gen () = Time.of_float (Quickcheck_deprecated.fg ())
 
-let reasonable_time time =              (* between about 1970 and 2070 *)
+let reasonable_time time = (* between about 1970 and 2070 *)
   let time = Time.to_float time in
   time > 0. && time < 100. *. 52. *. 24. *. 60. *. 60.
 
@@ -99,7 +99,12 @@ let () =
           Ofday.start_of_day
       in
       let day = Span.of_day 1. in
-      for i = 0 to 100_000 do
+      let number_of_days =
+        match Word_size.word_size with
+        | W64 -> 100_000
+        | W32 -> 365 * 39 (* do not go pass 2038 *)
+      in
+      for i = 0 to number_of_days do
         let date =
           Time.to_date ~zone (Time.add start (Time.Span.scale day (float i)))
         in
@@ -314,7 +319,7 @@ let () =
           end;
         end else true
       in
-      Quickcheck_deprecated.laws_exn "string" 100 time_gen check;
+      Quickcheck_deprecated.laws_exn "string" 100 time_gen check
     );
   add "to_string,of_string2"
     (fun () ->
@@ -390,7 +395,7 @@ let () =
           similar_time time time'
         else true
       in
-      Quickcheck_deprecated.laws_exn "sexp" 100 time_gen check;
+      Quickcheck_deprecated.laws_exn "sexp" 100 time_gen check
     );
   add "daylight_saving_time"
     (fun () ->

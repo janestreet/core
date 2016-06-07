@@ -22,6 +22,7 @@ module Stable = struct
       } [@@deriving sexp]
     end
 
+    let upper_bound_native_int = Core_kernel.Float0.upper_bound_for_int Nativeint.num_bits
      (* shifted epoch for the time zone for conversion *)
     let date_ofday_of_epoch_internal zone time =
       let parts  = Float.modf time in
@@ -31,6 +32,8 @@ module Stable = struct
         if subsec < 0. then (sec -. 1., 1. +. subsec)
         else (sec, subsec)
       in
+      if Float.(abs sec > upper_bound_native_int)
+      then raise (Invalid_argument "Time.date_ofday_of_epoch");
       let tm      = Unix.gmtime sec in
       let date    = Date.of_tm tm in
       let ofday_span =
@@ -68,7 +71,9 @@ module Stable = struct
       try
         date_ofday_of_epoch zone (to_epoch time)
       with
-      | Unix.Unix_error(_, "gmtime", _) -> raise (Invalid_argument "Time.to_date_ofday")
+      | Invalid_argument _
+      | Unix.Unix_error(_, "gmtime", _)
+        -> raise (Invalid_argument "Time.to_date_ofday")
     ;;
 
     (* The correctness of this algorithm (interface, even) depends on the fact that
@@ -189,7 +194,7 @@ module Stable = struct
       type time = T.t [@@deriving compare]
       let sexp_of_time t =
         let d, o = to_date_ofday t ~zone:Zone.utc in
-        [%sexp_of: Date.t * Ofday.t * Zone.t] (d, o, Zone.utc)
+        [%sexp_of:  Date.t * Ofday.t * Zone.t] (d, o, Zone.utc)
 
       type to_date_ofday_ambiguity =
         [ `Only

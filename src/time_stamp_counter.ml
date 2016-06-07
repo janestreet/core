@@ -355,6 +355,9 @@ let to_time_ns ?(calibrator = Calibrator.local) t =
 
 let%test_module _ = (module struct
 
+  let _unused_in_32bit = ewma, Calibrator.initialize, Calibrator.calibrate_using
+
+#ifdef JSC_ARCH_SIXTYFOUR
   (* monotonicity testing *)
   let%test_unit _ =
     let calibrator = Calibrator.create () in
@@ -452,7 +455,6 @@ let%test_module _ = (module struct
       "time_stamp_counter_samples_at_60sec.sexp"
   ;;
 
-#ifdef JSC_ARCH_SIXTYFOUR
   let%test_unit _ =
     let calibrator = Calibrator.local in
     for x = 1 to 100_000 do

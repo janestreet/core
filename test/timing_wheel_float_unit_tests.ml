@@ -13,8 +13,8 @@ let%test_unit _ =
   let t = create_unit () in
   let start = start t in
   List.iter
-    [ Time.sub start (sec (2. *. Float.of_int Int.max_value))
-    ; Time.add start (sec (2. *. Float.of_int Int.max_value))
+    [ Time.sub start (sec (2. *. Float.of_int64 (Int63.(to_int64 max_value))))
+    ; Time.add start (sec (2. *. Float.of_int64 (Int63.(to_int64 max_value))))
     ; Time.of_float Float.max_value
     ]
     ~f:(fun time ->
@@ -31,10 +31,14 @@ let%test_unit _ =
       Time.Ofday.start_of_day
   in
   let alarm_precision = Time.Span.microsecond in
-  let max_alarm_lower_bound = Date.create_exn ~y:2073 ~m:Month.Jan ~d:1 in
+  let max_alarm_lower_bound =
+    match Word_size.word_size with
+    | W32 -> Date.create_exn ~y:2035 ~m:Jan ~d:1
+    | W64 -> Date.create_exn ~y:2073 ~m:Jan ~d:1
+  in
   let level_bits = Level_bits.default in
   let t = create ~config:(Config.create ~level_bits ~alarm_precision ()) ~start in
-  assert (Date.(>=)
-            (Time.to_date ~zone (alarm_upper_bound t))
-            max_alarm_lower_bound)
+  [%test_pred: Date.t * Date.t] (fun (a, b) -> Date.( >= ) a b)
+    (Time.to_date ~zone (alarm_upper_bound t),
+     max_alarm_lower_bound)
 ;;

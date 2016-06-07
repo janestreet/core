@@ -97,14 +97,7 @@ module Stable = struct
         let us  = t mod 1_000_000 in
         let ms  = us / 1_000 in
         let us  = us mod 1_000 in
-        {Parts.
-         sign = sign;
-         hr   = hr;
-         min  = min;
-         sec  = sec;
-         ms   = ms;
-         us   = us;
-        }
+        { Parts.sign; hr; min; sec; ms; us }
 
       let to_parts_32 t =
         let t      = Float.round (to_float t *. 1E6) /. 1E6 in
@@ -116,21 +109,18 @@ module Stable = struct
         in
         let parts  = Float.modf t in
         let intval = Float.iround_exn ~dir:`Down (Float.Parts.integral parts) in
-        let min    = intval / 60 in
-        let sec    = intval mod 60 in
-        let hr     = min / 60 in
-        let min    = min mod 60 in
         let us     = Float.iround_exn ~dir:`Nearest (Float.Parts.fractional parts *. 1.E6) in
         let ms     = us / 1_000 in
-        let us     = us mod 1_000 in
-        {Parts.
-         sign = sign;
-         hr   = hr;
-         min  = min;
-         sec  = sec;
-         ms   = ms;
-         us   = us;
-        }
+        (* Rounding might have introduced a extra second *)
+        let extra_sec = ms / 1000 in
+        let ms        = ms % 1000 in
+        let us        = us mod 1_000 in
+        let intval    = Int.(+) extra_sec intval in
+        let min       = intval / 60 in
+        let sec       = intval mod 60 in
+        let hr        = min / 60 in
+        let min       = min mod 60 in
+        { Parts.sign; hr; min; sec; ms; us }
 
       let to_parts = if Int.(=) Core_sys.word_size 64 then to_parts_64 else to_parts_32
     end

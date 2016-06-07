@@ -1,4 +1,8 @@
-(** A module for representing absolute points in time, independent of time zone. *)
+(** A module for representing absolute points in time, independent of time zone.
+
+    Note that on 32bit architecture, most functions will raise when used on time
+    outside the range [1901-12-13 20:45:52 - 2038-01-19 03:14:07].
+*)
 open! Core_kernel.Std
 
 

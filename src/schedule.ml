@@ -1141,17 +1141,13 @@ let compare_tags_with_transitions
       loop
   =
   let emit_dispatch ~prev_tags ~new_tags =
-    if Int.(=) (List.length new_tags) (List.length prev_tags)
-    then begin
-      if List.for_all2_exn prev_tags new_tags ~f:tag_equal
-      then
-        begin match continue_looping with
-        | None -> (Some prev_tags, `No_change_until_at_least (`In_range, stop_time))
-        | Some span -> loop (Time.add time span)
-        end
-      else (Some new_tags, `Change_tags (time, new_tags))
-    end
-    else (Some new_tags, `Change_tags (time, new_tags))
+    match List.for_all2 prev_tags new_tags ~f:tag_equal with
+    | Ok true ->
+      begin match continue_looping with
+      | None -> (Some prev_tags, `No_change_until_at_least (`In_range, stop_time))
+      | Some span -> loop (Time.add time span)
+      end
+    | Ok false | Unequal_lengths -> (Some new_tags, `Change_tags (time, new_tags))
   in
   base_compare_tags t ~prev_tags ~continue_looping ~time ~stop_time ~emit_dispatch ~loop
 ;;

@@ -43,7 +43,8 @@ end = struct
   let of_span s =
     if Time.Span.( > ) s max_kspan_value
     || Time.Span.( < ) s min_kspan_value
-    then failwiths "Time_ns.Span does not support this span" s [%sexp_of: Time.Span.t];
+    then
+      failwiths "Time_ns.Span does not support this span" s [%sexp_of: Time.Span.t];
     (* Using [Time.Span.to_sec] (being the identity) so that
        we make don't apply too many conversion
        - Too many : `[Span.t] -> [a] -> [Time_ns.Span.t]`
@@ -102,7 +103,6 @@ end = struct
 
   let%test_unit "Time.Span.t -> Time_ns.Span.t round trip with microsecond precision" =
     let open Time.Span in
-    let sexp_of_t t = sexp_of_float (to_float t) in (* more precise *)
     let time_spans =                                (* touchstones *)
       min_kspan_value :: max_kspan_value :: Time.(diff (now ()) epoch)
       :: Time.Span.([ zero; microsecond; millisecond; second; minute; hour; day;
@@ -135,7 +135,9 @@ end = struct
     in
     List.iter time_spans
       ~f:(fun expect ->
-        [%test_result: t] ~expect (to_span (of_span expect)))
+        let kspan = to_span (of_span expect) in
+        [%test_pred: Span.t * Span.t] (fun (a,b) -> abs (a - b) <= microsecond)
+          (expect, kspan))
   ;;
 
   let%test_unit "Time_ns.Span.t -> Time.Span.t round trip" =
@@ -430,11 +432,15 @@ let%test_unit "Time.t -> Time_ns.t round trip" =
     List.filter times
       ~f:(fun time -> Time.(time >= min_time_value && time <= max_time_value))
   in
+  let is_64bit = match Word_size.word_size with
+    | W64 -> true
+    | W32 -> false
+  in
   List.iter times
     ~f:(fun expect ->
       let time = to_time (of_time expect) in
       (* We don't have full microsecond precision at the far end of the range. *)
-      if expect < Time.of_string "2107-01-01 00:00:00" then
+      if is_64bit && expect < Time.of_string "2107-01-01 00:00:00" then
         [%test_result: t] ~expect time
       else
         [%test_pred: t * t]
@@ -1022,13 +1028,29 @@ let%test_module _ =
            ; epoch, "19:00:00"
            ])
 
+    let random_nativeint_range =
+      match Word_size.word_size with
+      | W64 -> fun () -> random ()
+      | W32 ->
+        (* In 32 bits, some functions in [Time] don't work on all the float values, but
+           only the part that fits in a native int. *)
+        let in_ns = Int63.of_float 1e9 in
+        let max_time_ns = Int63.(of_nativeint_exn Nativeint.max_value * in_ns) in
+        let min_time_ns = Int63.(of_nativeint_exn Nativeint.min_value * in_ns) in
+        let range = Int63.(one + max_time_ns - min_time_ns) in
+        fun () ->
+          let r = Time_ns.to_int63_ns_since_epoch (random ()) in
+          Time_ns.of_int63_ns_since_epoch
+            Int63.(((r - min_time_ns) % range) + min_time_ns)
+    ;;
+
     let%test_unit "Ofday.of_time random" =
       List.iter !Zone.likely_machine_zones ~f:(fun zone ->
         let zone = Zone.find_exn zone in
-        for _ = 0 to 1_000 do check (Ofday.of_time (random ()) ~zone) done)
+        for _ = 0 to 1_000 do check (Ofday.of_time (random_nativeint_range ()) ~zone) done)
 
     let%test_unit "Ofday.of_local_time random" =
-      for _ = 0 to 1_000 do check (Ofday.of_local_time (random ())) done
+      for _ = 0 to 1_000 do check (Ofday.of_local_time (random_nativeint_range ())) done
   end)
 
 let%bench_module "Ofday" =
