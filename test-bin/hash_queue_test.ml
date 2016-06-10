@@ -9,7 +9,6 @@ let test =
           include String
           let hash (x : t) = Hashtbl.hash x
           let sexp_of_t = Sexplib.Conv.sexp_of_string
-          let t_of_sexp = Sexplib.Conv.string_of_sexp
         end in
         let module Hq = Hash_queue.Make (Hq_arg) in
         let hq = Hq.create () in

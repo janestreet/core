@@ -188,6 +188,7 @@ module Arg_type = struct
   let time_ofday_unzoned = create Time.Ofday.of_string
   let time_zone          = create Time.Zone.of_string
   let time_span          = create Time.Span.of_string
+  let host_and_port      = create Host_and_port.of_string
   let sexp               = create Sexp.of_string
   let sexp_conv of_sexp  = create (fun s -> of_sexp (Sexp.of_string s))
 
@@ -248,6 +249,7 @@ module Arg_type = struct
     let time_zone          = time_zone
     let time_span          = time_span
     let file               = file Fn.id
+    let host_and_port      = host_and_port
     let sexp               = sexp
     let sexp_conv          = sexp_conv
   end

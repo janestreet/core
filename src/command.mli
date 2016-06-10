@@ -82,6 +82,7 @@ module Arg_type : sig
     val time_span          : Time.Span.t        t
     (* [file] uses bash autocompletion. *)
     val file               : string             t
+    val host_and_port      : Host_and_port.t    t
     val sexp               : Sexp.t             t
 
     val sexp_conv : (Sexp.t -> 'a) -> 'a t

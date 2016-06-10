@@ -84,9 +84,13 @@ let daemonize ?(redirect_stdout=`Dev_null) ?(redirect_stderr=`Dev_null)
     ~stdout:redirect_stdout ~stderr:redirect_stderr;
 ;;
 
-let fail_wstopped ~pid ~i =
-  failwithf "Bug: waitpid on process %i returned WSTOPPED %i, \
-    but waitpid not called with WUNTRACED.  This should not happen" pid i ()
+let process_status_to_exit_code = function
+  | Ok () -> 0
+  | Error (`Exit_non_zero i) -> i
+  | Error (`Signal s) ->
+    (* looking at byterun/signals.c in ocaml source tree, I think this should never be
+       zero for signals coming from [wait*] function family. *)
+    Signal.to_caml_int s
 
 let daemonize_wait ?(redirect_stdout=`Dev_null) ?(redirect_stderr=`Dev_null)
     ?(cd = "/") ?umask () =
@@ -112,13 +116,11 @@ let daemonize_wait ?(redirect_stdout=`Dev_null) ?(redirect_stderr=`Dev_null)
         Unix.close write_end
       )
     | `In_the_parent pid ->
-      let pid = Pid.to_int pid in
       (* The middle process, after it has forked its child. *)
       Unix.close write_end;
       let rec loop () =
-        let wait_result, process_status =
-          UnixLabels.waitpid ~mode:[UnixLabels.WNOHANG] pid in
-        if wait_result = 0 then begin
+        match Core_unix.wait_nohang (`Pid pid) with
+        | None -> begin
           match
             Unix.select ~read:[read_end] ~write:[] ~except:[]
               ~timeout:(`After (Time_ns.Span.of_sec 0.1)) ()
@@ -138,15 +140,11 @@ let daemonize_wait ?(redirect_stdout=`Dev_null) ?(redirect_stderr=`Dev_null)
             else
               loop ()
           | _ -> loop ()
-        end else
-          match process_status with
-          | UnixLabels.WEXITED i | UnixLabels.WSIGNALED i -> exit i
-          | UnixLabels.WSTOPPED i -> fail_wstopped ~pid ~i
+          end
+        | Some (_pid, process_status) ->
+          exit (process_status_to_exit_code process_status)
       in loop ()
     end
   | `In_the_parent pid ->
-    let pid = Pid.to_int pid in
-    match snd (UnixLabels.waitpid ~mode:[] pid) with
-    | UnixLabels.WEXITED i | UnixLabels.WSIGNALED i -> exit i
-    | UnixLabels.WSTOPPED i -> fail_wstopped ~pid ~i
+    exit (process_status_to_exit_code (Core_unix.waitpid pid))
 ;;
