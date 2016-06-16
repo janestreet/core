@@ -176,6 +176,11 @@ module Arg_type = struct
     let parse x = Result.try_with (fun () -> of_string x) in
     { parse; key; complete }
 
+  let map ?key t ~f =
+    let parse str = Result.map (t.parse str) ~f in
+    let complete = t.complete in
+    { parse ; complete ; key }
+
   let string             = create Fn.id
   let int                = create Int.of_string
   let char               = create Char.of_string
@@ -234,6 +239,36 @@ module Arg_type = struct
     | `Ok map -> of_map ?key map
     | `Duplicate_key key ->
       failwithf "Command.Spec.Arg_type.of_alist_exn: duplicate key %s" key ()
+
+  let comma_separated ?key ?(strip_whitespace = false) t =
+    let complete =
+      Option.map t.complete ~f:(fun complete_elt ->
+        (fun env ~part ->
+           let prefix, suffix =
+             match String.rsplit2 part ~on:',' with
+             | None                 -> "", part
+             | Some (before, after) -> before ^ ",", after
+           in
+           let choices = complete_elt env ~part:suffix in
+           List.concat_map choices ~f:(fun choice ->
+             if String.mem choice ','
+             then []
+             else [prefix ^ choice; prefix ^ choice ^ ","])))
+    in
+    let strip =
+      if strip_whitespace
+      then (fun str -> String.strip str)
+      else Fn.id
+    in
+    let of_string string =
+      let string = strip string in
+      if String.is_empty string
+      then []
+      else
+        List.map (String.split string ~on:',') ~f:(fun str ->
+          Result.ok_exn (t.parse (strip str)))
+    in
+    create ?key ?complete of_string
 
   module Export = struct
     let string             = string

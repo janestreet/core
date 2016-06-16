@@ -46,6 +46,9 @@ module Arg_type : sig
     -> (string -> 'a)
     -> 'a t
 
+  (** Transform the result of a [t] using [f]. *)
+  val map : ?key:'b Univ_map.Multi.Key.t -> 'a t -> f:('a -> 'b) -> 'b t
+
   (** an auto-completing Arg_type over a finite set of values *)
   val of_map : ?key:'a Univ_map.Multi.Key.t -> 'a String.Map.t -> 'a t
 
@@ -59,6 +62,16 @@ module Arg_type : sig
     :  ?key:'a Univ_map.Multi.Key.t
     -> (string -> 'a)
     -> 'a t
+
+  (** [comma_separated t] accepts comma-separated lists of arguments parsed by [t].  If
+      [strip_whitespace = true], whitespace is stripped from each comma-separated string
+      before it is parsed by [t].  The empty string (or just whitespace, if
+      [strip_whitespace = true]) results in an empty list. *)
+  val comma_separated
+    :  ?key              : 'a list Univ_map.Multi.Key.t
+    -> ?strip_whitespace : bool  (** default: [false] *)
+    -> 'a t
+    -> 'a list t
 
   (* values to include in other namespaces *)
   module Export : sig
