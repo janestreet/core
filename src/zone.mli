@@ -98,7 +98,7 @@ exception Invalid_file_format of string
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving  bin_io, compare, sexp]
+    type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
   end
 end
 

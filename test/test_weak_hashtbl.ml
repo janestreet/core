@@ -93,3 +93,66 @@ let%expect_test "[set_run_when_unused_data]" =
     (ran true) |}] in
   return ();
 ;;
+
+let%expect_test _ =
+  let module M = struct
+    type t =
+      (* [mutable foo] to force the compiler to allocate the record on the heap. *)
+      { mutable foo : int
+      ; bar         : int
+      ; baz         : string
+      }
+  end
+  in
+  let open M in
+  let block foo = Heap_block.create_exn ({ foo; bar = 0; baz = "hello" }, 0) in
+  let tbl = create () in
+  let stabilize () =
+    Gc.full_major ();
+    reclaim_space_for_keys_with_unused_data tbl;
+  in
+  let add k b = ignore (find_or_add tbl k ~default:(fun () -> !b)) in
+  (* We put the blocks in refs and manually blackhole them, so that the unit test will
+     pass with the bytecode compiler. *)
+  let b1 = ref (block 1) in
+  let b2 = ref (block 2) in
+  let b3 = ref (block 3) in
+  let b4 = ref (block 4) in
+  let blackhole b = b := block 0 in
+  let k1 = 1 in
+  let k2 = 2 in
+  let k3 = 3 in
+  add k1 b1;
+  add k2 b2;
+  add k3 b3;
+  (* Checking [is_absent k] is stronger than checking that [is_none (find tbl k)].  We
+     want to make sure that a key has been removed from the table, and in particular rule
+     out the case where the key is in the table but the corresponding weak is none. *)
+  let is_absent k = not (key_is_using_space tbl k) in
+  let is_block k b =
+    match find tbl k with
+    | None -> false
+    | Some v -> phys_equal v b
+  in
+  require [%here] (is_block k1 !b1);
+  require [%here] (is_block k2 !b2);
+  require [%here] (is_block k3 !b3);
+  blackhole b1;
+  stabilize ();
+  require [%here] (is_absent k1);
+  require [%here] (is_block k2 !b2);
+  require [%here] (is_block k3 !b3);
+  blackhole b2;
+  stabilize ();
+  require [%here] (is_absent k1);
+  require [%here] (is_absent k2);
+  require [%here] (is_block k3 !b3);
+  replace tbl ~key:k3 ~data:!b4;
+  blackhole b3;
+  stabilize ();
+  require [%here] (is_block k3 !b4);
+  blackhole b4;
+  stabilize ();
+  require [%here] (is_absent k3);
+  return ();
+;;

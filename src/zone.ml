@@ -558,7 +558,12 @@ module Stable = struct
       type nonrec t = t [@@deriving sexp]
     end)
 
+    (* The correctness of these relies on not exposing raw loading/creation functions to
+       the outside world that would allow the construction of two Zone's with the same
+       name and different transitions. *)
     let compare t1 t2 = String.compare (to_string t1) (to_string t2)
+    let hash_fold_t state t = String.hash_fold_t state (to_string t)
+    let hash = [%hash: t]
 
     include (Binable.Stable.Of_binable.V1 (String) (struct
       type nonrec t = t
@@ -569,7 +574,8 @@ module Stable = struct
         t.name
 
       let of_binable s = t_of_sexp (Sexp.Atom s)
-    end) : Binable.S with type t := t)
+             end) : Binable.S with type t := t)
+
   end
 
   let%test_module "Zone.V1" = (module Core_kernel.Stable_unit_test.Make (struct
@@ -756,10 +762,6 @@ include Identifiable.Make (struct
 
   let of_string     = of_string
   let to_string     = to_string
-  (* The correctness of these relies on not exposing raw loading/creation functions to the
-     outside world that would allow the construction of two Zone's with the same name and
-     different transitions. *)
-  let hash t        = String.hash (to_string t)
 end)
 
 let%bench "=" = local = local

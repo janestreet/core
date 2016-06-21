@@ -7,7 +7,7 @@ open Time_internal.Helpers
 module Stable = struct
   module V1 = struct
     module T : sig
-      type t = private float [@@deriving bin_io]
+      type t = private float [@@deriving bin_io, hash]
       include Comparable.S_common  with type t := t
       include Comparable.With_zero with type t := t
       include Hashable_binable     with type t := t
@@ -441,7 +441,7 @@ module Zoned = struct
           { ofday : Stable.V1.t;
             zone  : Zone.Stable.V1.t;
           }
-        [@@deriving bin_io, fields, compare]
+        [@@deriving bin_io, fields, compare, hash]
 
         type sexp_repr = Stable.V1.t * Zone.Stable.V1.t [@@deriving sexp]
 
@@ -452,7 +452,6 @@ module Zoned = struct
           { ofday; zone; }
         ;;
 
-        let hash t = Hashtbl.hash t
       end
       include T
       include Comparable.Make_binable(T)
