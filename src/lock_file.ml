@@ -64,16 +64,21 @@ let create_exn ?message ?close_on_exec ?unlink_on_exit path =
   if not (create ?message ?close_on_exec ?unlink_on_exit path) then
     failwithf "Lock_file.create_exn '%s' was unable to acquire the lock" path ()
 
+let random = lazy (Random.State.make_self_init ())
+
 (* no timeout specified = wait indefinitely *)
 let repeat_with_timeout ?timeout lockf path =
+  let max_delay = 0.3 in
   match timeout with
   | None ->
     let rec loop () =
       try (lockf path)
       with | _ -> begin
-        Unix.sleep 1;
-        loop ()
-      end
+          let (_ : float) =
+            Unix.nanosleep (Random.State.float (Lazy.force random) max_delay)
+          in
+          loop ()
+        end
     in
     loop ()
   | Some timeout ->
@@ -82,15 +87,17 @@ let repeat_with_timeout ?timeout lockf path =
       try lockf path
       with
       | e -> begin
-        let since_start = Time.abs_diff start_time (Time.now ()) in
-        if Time.Span.(since_start > timeout) then
-          failwithf "Lock_file: '%s' timed out waiting for existing lock. \
-                     Last error was %s" path (Exn.to_string e) ()
-        else begin
-          Unix.sleep 1;
-          loop ()
+          let since_start = Time.abs_diff start_time (Time.now ()) in
+          if Time.Span.(since_start > timeout) then
+            failwithf "Lock_file: '%s' timed out waiting for existing lock. \
+                       Last error was %s" path (Exn.to_string e) ()
+          else begin
+            let (_ : float) =
+              Unix.nanosleep (Random.State.float (Lazy.force random) max_delay)
+            in
+            loop ()
+          end
         end
-      end
     in
     loop ()
 

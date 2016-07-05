@@ -95,9 +95,9 @@ module Nfs : sig
       obtain the lock *)
   val create_exn : ?message : string -> string -> unit
 
-  (** [blocking_create ?message path] like create, but sleeps for 1 second between lock
-      attempts and does not return until it succeeds or timeout expires.  Timeout defaults
-      to wait indefinitely *)
+  (** [blocking_create ?message path] like create, but sleeps for a short while between
+      lock attempts and does not return until it succeeds or timeout expires.  Timeout
+      defaults to wait indefinitely *)
   val blocking_create : ?timeout : Time.Span.t -> ?message : string -> string -> unit
 
   (** [critical_section ?message ~timeout path ~f] wrap function [f] (including exceptions

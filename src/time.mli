@@ -326,4 +326,21 @@ module Stable : sig
         with type comparator_witness := comparator_witness
     end
   end
+
+  (** Provides a sexp representation where all sexps must include a timezone (in contrast
+      to [V1] above, which will assume local timezone if it's not specified). When
+      serializing, it uses the local timezone.  Concretely, this is just [V1] but
+      [t_of_sexp] is replaced with [t_of_sexp_abs]. *)
+  module With_t_of_sexp_abs : sig
+    module V1 : sig
+      type nonrec t = t
+      type nonrec comparator_witness = comparator_witness
+      include Stable
+        with type t := t
+        with type comparator_witness := comparator_witness
+      include Comparable.Stable.V1.S
+        with type comparable := t
+        with type comparator_witness := comparator_witness
+    end
+  end
 end

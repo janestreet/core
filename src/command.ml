@@ -249,11 +249,18 @@ module Arg_type = struct
              | None                 -> "", part
              | Some (before, after) -> before ^ ",", after
            in
-           let choices = complete_elt env ~part:suffix in
-           List.concat_map choices ~f:(fun choice ->
-             if String.mem choice ','
-             then []
-             else [prefix ^ choice; prefix ^ choice ^ ","])))
+           let choices =
+             List.filter (complete_elt env ~part:suffix) ~f:(fun choice ->
+               not (String.mem choice ','))
+           in
+           (* If there is exactly one choice to auto-complete, add a second choice with a
+              trailing comma so that auto-completion will go to the end but bash won't add
+              a space.  If there are multiple choices, there is no need to add a dummy
+              option. *)
+           match choices with
+           | []              -> []
+           | [ choice ]      -> [prefix ^ choice; prefix ^ choice ^ ","]
+           | ( _ :: _ :: _ ) -> List.map choices ~f:(fun choice -> prefix ^ choice)))
     in
     let strip =
       if strip_whitespace

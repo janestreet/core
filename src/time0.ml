@@ -823,6 +823,13 @@ module Stable = struct
       let sexp_of_t t = sexp_of_t_abs t ~zone:Zone.utc
     end
   end
+
+  module With_t_of_sexp_abs = struct
+    module V1 = struct
+      include V1
+      let t_of_sexp = t_of_sexp_abs
+    end
+  end
 end
 
 include Stable.V1

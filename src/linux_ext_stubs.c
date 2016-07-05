@@ -357,6 +357,7 @@ static value linux_epoll_ctl(value v_epfd, value v_fd, value v_flags, int operat
 {
   struct epoll_event evt;
 
+  evt.data.ptr = NULL;
   evt.events = Int63_val(v_flags);
   evt.data.fd = Long_val(v_fd);
 
