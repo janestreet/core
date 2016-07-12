@@ -93,7 +93,7 @@ let to_int63 t = t
 #ifdef JSC_ARCH_SIXTYFOUR
 
 (* noalloc on x86_64 only *)
-external now : unit -> tsc = "tsc_get" "noalloc"
+external now : unit -> tsc = "tsc_get" [@@noalloc]
 
 module Calibrator = struct
 

@@ -102,7 +102,7 @@ module Span : sig
 end
 
 #ifdef JSC_ARCH_SIXTYFOUR
-external now : unit -> t = "tsc_get" "noalloc"
+external now : unit -> t = "tsc_get" [@@noalloc]
 #else
 external now : unit -> t = "tsc_get"
 #endif

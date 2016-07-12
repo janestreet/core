@@ -213,7 +213,7 @@ static inline int safe_close_idem(int fd)
    of strings and fill it will strings contained in the string array
    [arg].  Pointers stored in the result points directly inside the
    OCaml heap. */
-extern char **cstringvect(value arg);
+extern char **cstringvect(value arg, char* cmdname);
 
 /* Given v_prog, an O'Caml string value specifying a program name,
    v_args, an O'Caml array specifying program arguments (not
@@ -378,7 +378,7 @@ CAMLprim value ml_create_process(value v_working_dir, value v_prog, value v_args
 
     /* We don't bother saving/restoring the environment or freeing the
        new one since we exit the process in case of error. */
-    environ = cstringvect(v_env);
+    environ = cstringvect(v_env, "ml_create_process");
 
     if (Is_block(v_working_dir))
       working_dir = String_val(Field(v_working_dir, 0));

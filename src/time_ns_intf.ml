@@ -20,7 +20,8 @@ end
 module type Span = sig
   type t = Core_kernel.Time_ns.Span.t [@@deriving typerep]
 
-  include Identifiable with type t := t
+  include Identifiable         with type t := t
+  include Comparable.With_zero with type t := t
 
   (** Similar to {!Time.Span.Parts}, but adding [ns]. *)
   module Parts : sig

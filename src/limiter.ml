@@ -33,6 +33,11 @@ module Try_take_result = struct
     | Asked_for_more_than_bucket_limit
 end
 
+module Try_return_to_bucket_result = struct
+  type t =
+    | Returned_to_bucket
+    | Unable
+end
 module Tokens_may_be_available_result = struct
   type t =
     | At of Time.t
@@ -475,11 +480,9 @@ let return_to_hopper t ~now amount =
   let amount = Tokens.of_float_round_up_exn amount in
   if amount < Tokens.zero
   then failwithf !"return_to_hopper passed a negative amount (%{Tokens})" amount ();
-
   if amount > t.in_flight
   then failwithf !"return_to_hopper passed an amount (%{Tokens}) > in_flight (%{Tokens})"
          amount t.in_flight ();
-
   advance_time t ~now;
   let currently_in_system = in_system t in
   let amount_to_add =
@@ -502,6 +505,23 @@ let return_to_hopper t ~now amount =
   | Infinite         -> ()
   | Finite in_hopper -> t.in_hopper <- Finite (in_hopper + amount_to_add)
 ;;
+
+let try_return_to_bucket t ~now amount : Try_return_to_bucket_result.t =
+  let open Tokens.Arith in
+  let amount = Tokens.of_float_round_up_exn amount in
+  advance_time t ~now;
+  let space_in_bucket = t.bucket_limit - t.in_bucket in
+  if amount < Tokens.zero
+  || amount > t.in_flight
+  || amount > space_in_bucket
+  then Unable
+  else begin
+    t.in_flight <- t.in_flight - amount;
+    t.in_bucket <- t.in_bucket + amount;
+    Returned_to_bucket
+  end
+;;
+
 
 let tokens_may_be_available_when t ~now amount : Tokens_may_be_available_result.t =
   let open Tokens.Arith in
@@ -659,6 +679,7 @@ module Expert = struct
   let create_exn                            = create_exn
   let try_take                              = try_take
   let return_to_hopper                      = return_to_hopper
+  let try_return_to_bucket                  = try_return_to_bucket
   let set_hopper_to_bucket_rate_per_sec_exn = set_hopper_to_bucket_rate_per_sec_exn
   let tokens_may_be_available_when          = tokens_may_be_available_when
 

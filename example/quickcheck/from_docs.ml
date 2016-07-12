@@ -69,11 +69,10 @@ module Generator_examples = struct
   module Recursive = struct
 
     let (_ : _ Generator.t) =
-      Generator.(recursive (fun sexp ->
-        Either.gen String.gen (List.gen sexp)
-        >>| function
-        | First  a -> Sexp.Atom a
-        | Second l -> Sexp.List l))
+  Generator.(recursive (fun f ~size ->
+    if size = 0
+    then (String.gen                  >>| fun atom -> Sexp.Atom atom)
+    else (List.gen (f ~size:(size-1)) >>| fun list -> Sexp.List list)))
 
     let rec binary_subtree ~lower_bound ~upper_bound =
       let open Generator in
@@ -140,11 +139,14 @@ module Example_1_functional = struct
   end
 
   let stack elt =
-    Generator.(recursive (fun self ->
-      Either.gen Unit.gen (tuple2 elt self)
-      >>| function
-      | First  ()     -> Functional_stack.empty
-      | Second (x, t) -> Functional_stack.push t x))
+    Generator.(recursive (fun f ~size ->
+      if size = 0
+      then return Functional_stack.empty
+      else begin
+        elt              >>= fun x ->
+        f ~size:(size-1) >>= fun t ->
+        return (Functional_stack.push t x)
+      end))
 
   open Functional_stack
 

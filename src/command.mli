@@ -66,10 +66,13 @@ module Arg_type : sig
   (** [comma_separated t] accepts comma-separated lists of arguments parsed by [t].  If
       [strip_whitespace = true], whitespace is stripped from each comma-separated string
       before it is parsed by [t].  The empty string (or just whitespace, if
-      [strip_whitespace = true]) results in an empty list. *)
+      [strip_whitespace = true]) results in an empty list.  If [unique_values = true] no
+      autocompletion will be offered for arguments already supplied in the fragment to
+      complete. *)
   val comma_separated
     :  ?key              : 'a list Univ_map.Multi.Key.t
-    -> ?strip_whitespace : bool  (** default: [false] *)
+    -> ?strip_whitespace : bool (** default: [false] *)
+    -> ?unique_values    : bool (** default: [false] *)
     -> 'a t
     -> 'a list t
 

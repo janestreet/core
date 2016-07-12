@@ -240,32 +240,47 @@ module Arg_type = struct
     | `Duplicate_key key ->
       failwithf "Command.Spec.Arg_type.of_alist_exn: duplicate key %s" key ()
 
-  let comma_separated ?key ?(strip_whitespace = false) t =
-    let complete =
-      Option.map t.complete ~f:(fun complete_elt ->
-        (fun env ~part ->
-           let prefix, suffix =
-             match String.rsplit2 part ~on:',' with
-             | None                 -> "", part
-             | Some (before, after) -> before ^ ",", after
-           in
-           let choices =
-             List.filter (complete_elt env ~part:suffix) ~f:(fun choice ->
-               not (String.mem choice ','))
-           in
-           (* If there is exactly one choice to auto-complete, add a second choice with a
-              trailing comma so that auto-completion will go to the end but bash won't add
-              a space.  If there are multiple choices, there is no need to add a dummy
-              option. *)
-           match choices with
-           | []              -> []
-           | [ choice ]      -> [prefix ^ choice; prefix ^ choice ^ ","]
-           | ( _ :: _ :: _ ) -> List.map choices ~f:(fun choice -> prefix ^ choice)))
-    in
+  let comma_separated ?key ?(strip_whitespace = false) ?(unique_values = false) t =
     let strip =
       if strip_whitespace
       then (fun str -> String.strip str)
       else Fn.id
+    in
+    let complete =
+      Option.map t.complete ~f:(fun complete_elt ->
+        (fun env ~part ->
+           let prefixes, suffix =
+             match String.split part ~on:',' |> List.rev with
+             | []       -> [], part
+             | hd :: tl -> List.rev tl, hd
+           in
+           let is_allowed =
+             if not (unique_values) then
+               (fun (_ : string) -> true)
+             else begin
+               let seen_already =
+                 prefixes
+                 |> List.map ~f:strip
+                 |> String.Set.of_list
+               in
+               (fun choice -> not (Set.mem seen_already (strip choice)))
+             end
+           in
+           let choices =
+             match
+               List.filter (complete_elt env ~part:suffix) ~f:(fun choice ->
+                 not (String.mem choice ',')
+                 && is_allowed choice)
+             with
+             (* If there is exactly one choice to auto-complete, add a second choice with
+                a trailing comma so that auto-completion will go to the end but bash
+                won't add a space.  If there are multiple choices, or a single choice
+                that must be final, there is no need to add a dummy option. *)
+             | [ choice ] -> [ choice; choice ^ "," ]
+             | choices    -> choices
+           in
+           List.map choices ~f:(fun choice ->
+             String.concat ~sep:"," (prefixes @ [choice]))))
     in
     let of_string string =
       let string = strip string in

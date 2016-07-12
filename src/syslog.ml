@@ -57,8 +57,8 @@ end
 
 external core_syslog_openlog : string option -> int -> int -> unit = "core_syslog_openlog"
 external core_syslog_syslog : int -> string -> unit = "core_syslog_syslog"
-external core_syslog_closelog : unit -> unit = "core_syslog_closelog" "noalloc"
-external core_syslog_setlogmask : int -> unit = "core_syslog_setlogmask" "noalloc"
+external core_syslog_closelog : unit -> unit = "core_syslog_closelog" [@@noalloc]
+external core_syslog_setlogmask : int -> unit = "core_syslog_setlogmask" [@@noalloc]
 
 let openlog ?id ?(options = []) ?(facility = Facility.USER) () =
   core_syslog_openlog id (Open_option.mask options) (Facility.to_int facility)

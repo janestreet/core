@@ -100,6 +100,11 @@ val os_type : string
     bits: 32 or 64. *)
 val word_size : int
 
+(** Size of an int.  It is 31 bits (resp. 63 bits) when using the OCaml compiler on a 32
+    bits (resp. 64 bits) platform.  It may differ for other compilers, e.g. it is 32 bits
+    when compiling to JavaScript.  @since 4.03.0 *)
+val int_size : int
+
 (** Whether the machine currently executing the Caml program is big-endian. *)
 val big_endian : bool
 
@@ -134,8 +139,23 @@ val execution_mode : unit -> [ `Bytecode | `Native ]
 (** [c_int_size] returns the number of bits in a C [int]. Note that this can be
     different from [word_size]. For example, Linux x86-64 should have
     [word_size = 64], but [c_int_size () = 32] *)
-external c_int_size : unit -> int = "c_int_size" "noalloc"
+external c_int_size : unit -> int = "c_int_size" [@@noalloc]
 
 (** Return the home directory, using the [HOME] environment variable if that is defined,
     and if not, using the effective user's information in the Unix password database. *)
 val home_directory : unit -> string
+
+(** {6 Optimization} *)
+
+(** For the purposes of optimization, [opaque_identity] behaves like an unknown (and thus
+    possibly side-effecting) function.  At runtime, [opaque_identity] disappears
+    altogether.  A typical use of this function is to prevent pure computations from being
+    optimized away in benchmarking loops.  For example:
+
+    {[
+      for _round = 1 to 100_000 do
+        ignore (Sys.opaque_identity (my_pure_computation ()))
+      done
+    ]}
+*)
+external opaque_identity : 'a -> 'a = "%opaque"

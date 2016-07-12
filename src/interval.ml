@@ -527,9 +527,9 @@ module Int = struct
     module Obs = Quickcheck.Observer
 
     let interval_of_length n =
-      let open Gen in
+      let open Gen.Monad_infix in
       if n = 0
-      then singleton Empty
+      then Gen.singleton Empty
       else
         let range = n-1 in
         Int.gen_between

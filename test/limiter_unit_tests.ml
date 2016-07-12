@@ -4,14 +4,19 @@ module Step_test = struct
   let offset off = Time.add Time.epoch (Time.Span.of_sec off)
 
   type step =
-    | Take of float * bool
-    | Fill of float
+    | Take             of float * bool
+    | Return_to_hopper of float
+    | Return_to_bucket of float * bool
   [@@deriving sexp]
 
   type timed_step = (float * step) [@@deriving sexp]
 
-  let take time amount expect = (time,Take (amount,expect))
-  let fill time amount = (time,Fill amount)
+  let take time amount expect : timed_step =
+    (time, Take (amount,expect))
+  let return_to_bucket time amount expect : timed_step =
+    (time, Return_to_bucket (amount,expect))
+  let return_to_hopper time amount : timed_step =
+    (time, Return_to_hopper amount)
 
   let run t l =
     try
@@ -19,9 +24,9 @@ module Step_test = struct
         Limiter.invariant t;
         let now = offset now_offset in
         begin match step with
-        | Fill amount -> Limiter.Expert.return_to_hopper t ~now (Float.abs amount)
-        | Take (amount,expect) ->
-          match Limiter.Expert.try_take t ~now amount with
+        | Return_to_hopper amount -> Limiter.Expert.return_to_hopper t ~now (Float.abs amount)
+        | Take (amount, expect) ->
+          begin match Limiter.Expert.try_take t ~now amount with
           | Asked_for_more_than_bucket_limit ->
             failwithf !"test asked to take more (%g) than bucket size (%{Sexp}) at time %f"
               amount (Limiter.sexp_of_t t) now_offset ()
@@ -33,6 +38,18 @@ module Step_test = struct
             if expect
             then failwithf !"unable to take %g from the bucket (%{Sexp}) at time %f"
                    amount (Limiter.sexp_of_t t) now_offset ()
+          end
+        | Return_to_bucket (amount, expect) ->
+          begin match Limiter.Expert.try_return_to_bucket t ~now amount with
+          | Returned_to_bucket ->
+            if not expect
+            then failwithf !"incorrectly able to return_to_bucket %g to the bucket (%{Sexp}) at time %f"
+                   amount (Limiter.sexp_of_t t) now_offset ();
+          | Unable ->
+            if expect
+            then failwithf !"unable to return_to_bucket %g to the bucket (%{Sexp}) at time %f"
+                   amount (Limiter.sexp_of_t t) now_offset ()
+          end
         end;
         Limiter.invariant t)
     with e ->
@@ -55,13 +72,48 @@ module Step_test = struct
     [%test_result: bool]
       ~expect:true
       (Exn.does_raise (fun () -> Limiter.Expert.return_to_hopper t ~now:Time.epoch 1.))
+  ;;
+
+  let%test_unit "try_return_to_bucket" =
+    run (Limiter.Expert.create_exn
+          ~now:Time.epoch
+          ~hopper_to_bucket_rate_per_sec:(Finite (60. /. 60.))
+          ~bucket_limit:60.
+          ~in_flight_limit:Infinite
+          ~initial_bucket_level:10.
+          ~initial_hopper_level:(Finite 0.))
+      [ return_to_bucket 0.0   1.  false
+      ; take             0.0   2.  true
+      ; return_to_bucket 1.0   1.  true
+      ; return_to_bucket 1.0  20.  false
+      ; return_to_bucket 1.0 (-2.) false
+      ]
+  ;;
+
+  let%test_unit "try_return_to_bucket with hopper" =
+    run (Limiter.Expert.create_exn
+          ~now:Time.epoch
+          ~hopper_to_bucket_rate_per_sec:(Finite (60. /. 60.))
+          ~bucket_limit:10.
+          ~in_flight_limit:Infinite
+          ~initial_bucket_level:10.
+          ~initial_hopper_level:(Finite 10.))
+      [ take              0.0 10. true
+      ; return_to_bucket  0.0 10. true
+      ; take              1.0 10. true
+      ; take              2.0 10. false
+      ; take              2.0  1. true
+      ; return_to_bucket  3.0 11. false
+      ; return_to_bucket  3.0  8. true
+      ; return_to_bucket 13.   2. false ]
+  ;;
 
   let%test_unit "Generic" =
     run (Limiter.Expert.create_exn
           ~now:Time.epoch
           ~hopper_to_bucket_rate_per_sec:(Finite (60. /. 60.))
           ~bucket_limit:60.
-        ~in_flight_limit:Infinite
+          ~in_flight_limit:Infinite
           ~initial_bucket_level:0.
           ~initial_hopper_level:Infinite)
       [ take 0.0  1. false
@@ -95,17 +147,17 @@ module Step_test = struct
            ~in_flight_limit:Infinite
            ~initial_bucket_level:0.
            ~initial_hopper_level:(Finite 10.))
-      [ take  1.  1. true
-      ; fill  1.  1.
-      ; take 10.  9. true
-      ; fill 10.  9.
-      ; take 11.  1. true
-      ; fill 11.  1.
-      ; take 15.  5. false
-      ; take 15.  4. true
-      ; fill 15.  4.
-      ; take 30. 11. false
-      ; take 30. 10. true
+      [ take              1.  1. true
+      ; return_to_hopper  1.  1.
+      ; take             10.  9. true
+      ; return_to_hopper 10.  9.
+      ; take             11.  1. true
+      ; return_to_hopper 11.  1.
+      ; take             15.  5. false
+      ; take             15.  4. true
+      ; return_to_hopper 15.  4.
+      ; take             30. 11. false
+      ; take             30. 10. true
       ]
   ;;
 
@@ -119,19 +171,19 @@ module Step_test = struct
     in
     run
       (limiter :> Limiter.t)
-      [ take  0.0  1. true
-      ; take  0.1  1. true
-      ; take  0.2  1. true   (* we can open these jobs because of the burst size *)
-      ; take  0.3  1. false  (* and now that's done *)
-      ; take  0.5 1. true   (* but after 1/2 second, we have another *)
-      ; take  1.0 1. true   (* and now one more.  We need to wait a bit longer than
+      [ take              0.0  1. true
+      ; take              0.1  1. true
+      ; take              0.2  1. true   (* we can open these jobs because of the burst size *)
+      ; take              0.3  1. false  (* and now that's done *)
+      ; take              0.5  1. true   (* but after 1/2 second, we have another *)
+      ; take              1.0  1. true   (* and now one more.  We need to wait a bit longer than
                                 would be perfect to accomodate token drip granularity. *)
-      ; take  2.0  2. false  (* but now there are too many concurrent jobs *)
-      ; fill  2.0  3.        (* give some back *)
-      ; take  2.0  1. false  (* and it takes time for them to get in the bucket *)
-      ; take  3.0  2. true   (* and now we can do a burst of 2 *)
-      ; take 10.0  1. true   (* and one more *)
-      ; take 10.0  1. false  (* but now we're out of concurrent jobs *)
+      ; take              2.0  2. false  (* but now there are too many concurrent jobs *)
+      ; return_to_hopper  2.0  3.        (* give some back *)
+      ; take              2.0  1. false  (* and it take            s time for them to get in the bucket *)
+      ; take              3.0  2. true   (* and now we can do a burst of 2 *)
+      ; take             10.0  1. true   (* and one more *)
+      ; take             10.0  1. false  (* but now we're out of concurrent jobs *)
       ]
   ;;
 
@@ -142,12 +194,12 @@ module Step_test = struct
         ~max_concurrent_jobs:3
     in
     run (throttle :> Limiter.t)
-      [ take 0. 1. true
-      ; take 0. 1. true
-      ; take 0. 1. true
-      ; take 0. 1. false
-      ; fill 1. 1.
-      ; take 1. 1. true ]
+      [ take             0. 1. true
+      ; take             0. 1. true
+      ; take             0. 1. true
+      ; take             0. 1. false
+      ; return_to_hopper 1. 1.
+      ; take             1. 1. true ]
 
   let%test_unit "Rounding is reasonble for 1_000_000 elements" =
     let throttle =

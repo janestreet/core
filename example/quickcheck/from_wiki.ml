@@ -21,16 +21,17 @@ let%test_unit "count vs length" =
         ~expect:(List.length float_list))
 
 let list_gen elt_gen =
-  Generator.(recursive (fun list_gen ->
-    variant2 Unit.gen (tuple2 elt_gen list_gen)
-    >>| function
-    | `A () -> []
-    | `B (head, tail) -> head :: tail))
+  Generator.(recursive (fun f ~size ->
+    if size = 0
+    then return []
+    else begin
+      elt_gen          >>= fun head ->
+      f ~size:(size-1) >>= fun tail ->
+      return (head :: tail)
+    end))
 
 let sexp_gen =
-  Generator.(recursive (fun sexp_gen ->
-    variant2 String.gen (list_gen sexp_gen)
-    >>| function
-    | `A atom -> Sexp.Atom atom
-    | `B list -> Sexp.List list))
-
+  Generator.(recursive (fun f ~size ->
+    if size = 0
+    then (String.gen                  >>| fun atom -> Sexp.Atom atom)
+    else (list_gen (f ~size:(size-1)) >>| fun list -> Sexp.List list)))

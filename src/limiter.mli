@@ -52,6 +52,12 @@ module Try_take_result : sig
     | Asked_for_more_than_bucket_limit
 end
 
+module Try_return_to_bucket_result : sig
+  type t =
+    | Returned_to_bucket
+    | Unable
+end
+
 module Tokens_may_be_available_result : sig
   type t =
     | At of Time.t
@@ -227,6 +233,11 @@ module Expert : sig
       previously may or may not work precisely, depending on the specific floating point
       numbers used.  *)
   val return_to_hopper : t -> now:Time.t -> float -> unit
+
+  (** return the given number of tokens directly to the bucket.  If the amount
+      is negative, is more than is currently in flight, or if moving the amount would
+      cause the bucket to surpass its [bucket_limit], [Unable] is returned. *)
+  val try_return_to_bucket : t -> now:Time.t -> float -> Try_return_to_bucket_result.t
 
   val set_hopper_to_bucket_rate_per_sec_exn
     :  t

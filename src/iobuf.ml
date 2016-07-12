@@ -1089,7 +1089,7 @@ external unsafe_recvmmsg_assume_fd_is_nonblocking
     -> (read_write, seek) t array
     -> Recvmmsg_context.ctx
     -> Unix.Syscall_result.Int.t
-  = "iobuf_recvmmsg_assume_fd_is_nonblocking_stub" "noalloc"
+  = "iobuf_recvmmsg_assume_fd_is_nonblocking_stub" [@@noalloc]
 
 let recvmmsg_assume_fd_is_nonblocking fd { Recvmmsg_context. iobufs; ctx; _ } =
   unsafe_recvmmsg_assume_fd_is_nonblocking fd iobufs ctx
