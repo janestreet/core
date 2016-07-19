@@ -1007,6 +1007,10 @@ module Expert = struct
     let pos, len = Ordered_collection_common.get_pos_len_exn ?pos ?len ~length:t_len in
     Unix.IOVec.of_bigstring t.buf ~pos:(t.lo + pos) ~len
   ;;
+
+  let set_bounds_and_buffer ~src ~dst = set_bounds_and_buffer ~src ~dst
+  let set_bounds_and_buffer_sub ?pos ?len ~src ~dst () =
+    set_bounds_and_buffer_sub ?pos ?len ~src ~dst ()
 end
 
 type ok_or_eof = Ok | Eof [@@deriving compare, sexp_of]

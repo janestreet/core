@@ -73,7 +73,7 @@ end
    other floats.
 *)
 module T : sig
-  type t = private float [@@deriving bin_io, typerep]
+  type t = private float [@@deriving bin_io, typerep, hash]
 
   include Comparable.S_common with type t := t
   include Hashable_binable    with type t := t
@@ -147,4 +147,3 @@ let utc_mktime ~year ~month ~day ~ofday_sec =
   let days       = Float.of_int days +. 365. *. Float.of_int year -. 719499. in
   (days *. 86400. +. ofday_sec)
 ;;
-

@@ -841,7 +841,7 @@ let%test_module "Time robustly compare" = (module struct
   let%test_unit _ =
     for i = 0 to 100 do
       let time = of_float (Float.of_int i /. 17.) in
-      assert ((=.) time (sexp_of_t time |! t_of_sexp))
+      assert ((=.) time (sexp_of_t time |> t_of_sexp))
     done
 end)
 

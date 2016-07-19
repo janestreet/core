@@ -507,4 +507,15 @@ module Expert: sig
   *)
   val to_bigstring_shared : ?pos:int -> ?len:int -> (_, _) t -> Bigstring.t
   val to_iovec_shared     : ?pos:int -> ?len:int -> (_, _) t -> Bigstring.t Unix.IOVec.t
+
+  (** These versions of [set_bounds_and_buffer] allow [~src] to be read-only.  [~dst] will
+      be writable through [~src] aliases even though the type does not reflect this! *)
+  val set_bounds_and_buffer : src : ('data, _) t -> dst : ('data, seek) t -> unit
+  val set_bounds_and_buffer_sub
+    :  ?pos:int
+    -> ?len:int
+    -> src : ('data, _) t
+    -> dst : ('data, seek) t
+    -> unit
+    -> unit
 end

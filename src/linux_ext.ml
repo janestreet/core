@@ -610,7 +610,7 @@ let cores =
   Memo.unit (fun () ->
     let num_cores =
       In_channel.with_file "/proc/cpuinfo" ~f:In_channel.input_lines
-      |! List.fold_left ~init:0 ~f:(fun count line ->
+      |> List.fold_left ~init:0 ~f:(fun count line ->
         count +
           (match String.lsplit2 ~on:':' line with
           | None -> 0

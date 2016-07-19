@@ -1849,6 +1849,8 @@ module Inet_addr0 = struct
            or a "struct in6_addr" stuffed into an O'Caml string, so
            polymorphic compare will work *)
         let compare = Pervasives.compare
+        let hash_fold_t hash t = hash_fold_int hash (Hashtbl.hash t)
+        let hash = [%hash: t]
       end
       module T1 = struct
         include T0
@@ -1994,7 +1996,7 @@ module Inet_addr = struct
   let inet4_addr_to_int32_exn addr =
     let addr_s = to_string addr in
     match
-      String.split ~on:'.' addr_s |! List.map ~f:(fun s ->
+      String.split ~on:'.' addr_s |> List.map ~f:(fun s ->
         let i = ((Int.of_string s) : int) in
         if Int.( < ) i 0 || Int.( > ) i 255 then
           failwithf "%d is not a valid IPv4 octet (in %s)" i addr_s ();
@@ -2047,7 +2049,7 @@ end
     The RFC regarding how to properly format an IPv6 string is...painful.
 
     Note the 0010 and 0000:
-    # "2a03:2880:0010:1f03:face:b00c:0000:0025" |! Unix.Inet_addr.of_string |!
+    # "2a03:2880:0010:1f03:face:b00c:0000:0025" |> Unix.Inet_addr.of_string |!
       Unix.Inet_addr.to_string ;;
       - : string = "2a03:2880:10:1f03:face:b00c:0:25"
 *)

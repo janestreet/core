@@ -1153,7 +1153,7 @@ end
 (** {6 Internet addresses} *)
 
 module Inet_addr : sig
-  type t = Unix.inet_addr [@@deriving bin_io, compare, sexp_of]
+  type t = Unix.inet_addr [@@deriving bin_io, compare, hash, sexp_of]
 
   (** [t_of_sexp] is deprecated because it used to block to do a DNS lookup, and we don't
       want a sexp converter to do that.  As we transition away, one can use

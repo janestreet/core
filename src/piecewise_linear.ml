@@ -185,7 +185,7 @@ module Stable = struct
       let to_knots t =
         (* [validate] above checks that [t.x] and [t.y] have the same length. *)
         Array.map2_exn t.x t.y ~f:(fun x y -> (x,y))
-        |! Array.to_list
+        |> Array.to_list
 
       (* Note that while we are not copying t.x and t.y here, they are not returned
          directly to the user.  Rather, they will get passed to Array.map in

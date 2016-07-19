@@ -1299,8 +1299,10 @@ module Test (Iobuf : sig
       let lo     = Expert.lo
       let lo_min = Expert.lo_min
 
-      let to_bigstring_shared = Expert.to_bigstring_shared
-      let to_iovec_shared     = Expert.to_iovec_shared
+      let to_bigstring_shared       = Expert.to_bigstring_shared
+      let to_iovec_shared           = Expert.to_iovec_shared
+      let set_bounds_and_buffer     = Expert.set_bounds_and_buffer
+      let set_bounds_and_buffer_sub = Expert.set_bounds_and_buffer_sub
 
       let%test_unit _ =
         let to_bigstring_shared_via_iovec ?pos ?len iobuf =
@@ -1322,6 +1324,13 @@ module Test (Iobuf : sig
             Iobuf.Poke.char iobuf ~pos:1 'X';
             [%test_result: Bigstring.t] bstr1 ~expect:(Bigstring.of_string "X2345678");
             [%test_result: Bigstring.t] bstr0 ~expect:(Bigstring.of_string "XX23456789"))
+      ;;
+
+      let%test "set_bounds_and_buffer from ro" =
+        let src = read_only (of_string "123abcDEF") in
+        let dst = Iobuf.create ~len:0 in
+        Expert.set_bounds_and_buffer ~src ~dst;
+        src = dst
       ;;
     end
 

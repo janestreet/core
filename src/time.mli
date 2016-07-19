@@ -40,7 +40,7 @@ end
 module Zone : module type of Zone with type t = Zone.t
 
 (** A fully qualified point in time, independent of timezone. *)
-type t = Time_internal.T.t [@@deriving bin_io, sexp]
+type t = Time_internal.T.t [@@deriving bin_io, hash, sexp]
 
 (** Sexp conversions use the local timezone by default. This can be overridden by calling
     [set_sexp_zone]. *)

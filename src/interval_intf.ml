@@ -29,8 +29,8 @@ module type Gen = sig
   val lbound_exn : 'a t -> 'a bound
   val ubound_exn : 'a t -> 'a bound
 
-  (** [convex_hull ts] returns an interval whose upperbound is the greatest upperbound of
-      the intervals in the list, and whose lowerbound is the least lowerbound of the
+  (** [convex_hull ts] returns an interval whose upper bound is the greatest upper bound
+      of the intervals in the list, and whose lower bound is the least lower bound of the
       list. *)
   val convex_hull : 'a t list -> 'a t
 

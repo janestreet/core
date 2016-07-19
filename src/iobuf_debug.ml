@@ -777,6 +777,18 @@ module Make () = struct
         [%sexp_of: Bigstring.t Unix.IOVec.t]
         (fun () -> Expert.to_iovec_shared ?pos ?len t)
     ;;
+
+    let set_bounds_and_buffer_sub ?pos ?len ~src ~dst () =
+      debug "sub" [src] (`pos pos, `len len)
+        [%sexp_of: [ `pos of int option ] * [ `len of int option ]]
+        sexp_of_unit
+        (fun () -> Expert.set_bounds_and_buffer_sub ?pos ?len ~src ~dst ())
+    ;;
+
+    let set_bounds_and_buffer ~src ~dst =
+      debug "copy" [src] src [%sexp_of: (_, _) t] sexp_of_unit
+        (fun () -> Expert.set_bounds_and_buffer ~src ~dst)
+    ;;
   end
 
   type nonrec ok_or_eof = ok_or_eof = Ok | Eof [@@deriving compare, sexp_of]

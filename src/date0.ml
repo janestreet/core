@@ -649,7 +649,7 @@ end)
 
 let business_dates_between ~min ~max ~is_holiday =
   weekdays_between ~min ~max
-  |! List.filter ~f:(fun d -> not (is_holiday d))
+  |> List.filter ~f:(fun d -> not (is_holiday d))
 ;;
 
 let rec previous_weekday t =
