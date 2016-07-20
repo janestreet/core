@@ -75,18 +75,19 @@ val sub_shared : ?pos:int -> ?len:int -> ('d, _) t -> ('d, _) t
 val set_bounds_and_buffer
   : src : ([> write] as 'data, _) t -> dst : ('data, seek) t -> unit
 
-(** [set_bounds_and_buffer_sub ?pos ?len ~src ~dst ()] is a more efficient version of:
+(** [set_bounds_and_buffer_sub ?pos ~len ~src ~dst ()] is a more efficient version of:
     [set_bounds_and_buffer ~src:(Iobuf.sub_shared ?pos ?len src) ~dst].
 
     [set_bounds_and_buffer ~src ~dst] is not the same as [set_bounds_and_buffer_sub ~dst
-    ~src ()] because the limits are narrowed in the latter case. *)
+    ~src ~len ()] because the limits are narrowed in the latter case. *)
 val set_bounds_and_buffer_sub
   :  ?pos:int
-  -> ?len:int
+  -> len : int
   -> src : ([> write] as 'data, _) t
   -> dst : ('data, seek) t
   -> unit
   -> unit
+  [@@inline]
 
 (** {1 Generalization}
 
@@ -513,7 +514,7 @@ module Expert: sig
   val set_bounds_and_buffer : src : ('data, _) t -> dst : ('data, seek) t -> unit
   val set_bounds_and_buffer_sub
     :  ?pos:int
-    -> ?len:int
+    -> len:int
     -> src : ('data, _) t
     -> dst : ('data, seek) t
     -> unit

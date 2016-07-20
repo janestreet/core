@@ -653,6 +653,8 @@ module Option = struct
       let hash = Span.Option.hash
       include Sexpable.To_stringable (struct type nonrec t = t [@@deriving sexp] end)
     end)
+  (* bring back the efficient implementation of comparison operators *)
+  include (Span.Option : Core_kernel.Polymorphic_compare_intf.Infix with type t := t)
 end
 
 let to_string_fix_proto zone t = Time.to_string_fix_proto zone (to_time t)
@@ -664,6 +666,9 @@ include Identifiable.Make (struct
     let hash t = Int63.hash (to_int63_ns_since_epoch t)
     let of_string, to_string = of_string, to_string
   end)
+(* bring back the efficient implementation of comparison operators *)
+include (Core_kernel.Time_ns : Core_kernel.Polymorphic_compare_intf.Infix with type t := t)
+
 
 let%test_module _ = (module struct
   let%test _ = epoch = of_span_since_epoch Span.zero

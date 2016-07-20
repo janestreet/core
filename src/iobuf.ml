@@ -173,12 +173,7 @@ let sub_shared ?(pos = 0) ?len t =
   }
 ;;
 
-let set_bounds_and_buffer_sub ?(pos = 0) ?len ~src ~dst () =
-  let len =
-    match len with
-    | None -> length src - pos
-    | Some len -> len
-  in
+let set_bounds_and_buffer_sub ?(pos = 0) ~len ~src ~dst () =
   check_range src ~pos ~len;
   let lo = src.lo + pos in
   let hi = lo + len in
@@ -609,7 +604,6 @@ module Itoa = struct
 
      The below tends to perform better than a binary search or [/= 10 while <> 0], likely
      due to decimal values for our applications skewing towards smaller numbers. *)
-  let _10e9 = 1_000_000_000
   let num_digits x =
     if x > -10 then 1
     else if x > -100 then 2
@@ -622,15 +616,15 @@ module Itoa = struct
     else if x > -1000000000 then 9
     else
 #ifdef JSC_ARCH_SIXTYFOUR
-         if x > _10e9 * -10 then 10
-    else if x > _10e9 * -100 then 11
-    else if x > _10e9 * -1000 then 12
-    else if x > _10e9 * -10000 then 13
-    else if x > _10e9 * -100000 then 14
-    else if x > _10e9 * -1000000 then 15
-    else if x > _10e9 * -10000000 then 16
-    else if x > _10e9 * -100000000 then 17
-    else if x > _10e9 * -1000000000 then 18
+         if x > -1000000000_0 then 10
+    else if x > -1000000000_00 then 11
+    else if x > -1000000000_000 then 12
+    else if x > -1000000000_0000 then 13
+    else if x > -1000000000_00000 then 14
+    else if x > -1000000000_000000 then 15
+    else if x > -1000000000_0000000 then 16
+    else if x > -1000000000_00000000 then 17
+    else if x > -1000000000_000000000 then 18
     else 19
 #else
     10
@@ -1009,8 +1003,8 @@ module Expert = struct
   ;;
 
   let set_bounds_and_buffer ~src ~dst = set_bounds_and_buffer ~src ~dst
-  let set_bounds_and_buffer_sub ?pos ?len ~src ~dst () =
-    set_bounds_and_buffer_sub ?pos ?len ~src ~dst ()
+  let set_bounds_and_buffer_sub ?pos ~len ~src ~dst () =
+    (set_bounds_and_buffer_sub [@inlined]) ?pos ~len ~src ~dst ()
 end
 
 type ok_or_eof = Ok | Eof [@@deriving compare, sexp_of]

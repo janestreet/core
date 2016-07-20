@@ -374,7 +374,7 @@ module Test (Iobuf : sig
     let%test _ =
       let src = of_string "123abcDEF" in
       let dst = Iobuf.create ~len:0 in
-      set_bounds_and_buffer_sub ~src ~dst ();
+      set_bounds_and_buffer_sub ~src ~dst ~len:(length src) ();
       src = dst
     ;;
     let%test _ =
@@ -388,7 +388,7 @@ module Test (Iobuf : sig
       let src = of_string "123abcDEF" in
       let src = Iobuf.sub_shared ~pos:1 ~len:5 src in
       let dst = Iobuf.create ~len:0 in
-      set_bounds_and_buffer_sub ~src ~dst ();
+      set_bounds_and_buffer_sub ~src ~dst ~len:(length src) ();
       src = dst
     ;;
     let%test _ =
@@ -1711,3 +1711,18 @@ let%test_module _ = (module Test (struct
   include Iobuf
   let show_messages = ref true
 end))
+
+let%test_module "allocation" =
+  (module struct
+    open Expect_test_helpers.Std
+
+    let%expect_test "set_bounds_and_buffer_sub" =
+      let src = Iobuf.of_string "123abcDEF" in
+      let dst = Iobuf.create ~len:0 in
+      show_allocation (fun () ->
+        Iobuf.set_bounds_and_buffer_sub ~src ~dst ~len:(Iobuf.length src) ());
+      [%expect {|
+        (allocated
+          (minor_words 0)
+          (major_words 0)) |}]
+  end)

@@ -139,11 +139,11 @@ module Make () = struct
       (fun () -> sub_shared ?pos ?len t)
   ;;
 
-  let set_bounds_and_buffer_sub ?pos ?len ~src ~dst () =
+  let set_bounds_and_buffer_sub ?pos ~len ~src ~dst () =
     debug "sub" [src] (`pos pos, `len len)
-      [%sexp_of: [ `pos of int option ] * [ `len of int option ]]
+      [%sexp_of: [ `pos of int option ] * [ `len of int ]]
       sexp_of_unit
-      (fun () -> set_bounds_and_buffer_sub ?pos ?len ~src ~dst ())
+      (fun () -> set_bounds_and_buffer_sub ?pos ~len ~src ~dst ())
   ;;
   let set_bounds_and_buffer ~src ~dst =
     debug "copy" [src] src [%sexp_of: (_, _) t] sexp_of_unit
@@ -778,11 +778,11 @@ module Make () = struct
         (fun () -> Expert.to_iovec_shared ?pos ?len t)
     ;;
 
-    let set_bounds_and_buffer_sub ?pos ?len ~src ~dst () =
+    let set_bounds_and_buffer_sub ?pos ~len ~src ~dst () =
       debug "sub" [src] (`pos pos, `len len)
-        [%sexp_of: [ `pos of int option ] * [ `len of int option ]]
+        [%sexp_of: [ `pos of int option ] * [ `len of int ]]
         sexp_of_unit
-        (fun () -> Expert.set_bounds_and_buffer_sub ?pos ?len ~src ~dst ())
+        (fun () -> Expert.set_bounds_and_buffer_sub ?pos ~len ~src ~dst ())
     ;;
 
     let set_bounds_and_buffer ~src ~dst =

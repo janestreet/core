@@ -1754,8 +1754,6 @@ module Passwd = struct
       (fun s -> Getbyuid s)
   ;;
 
-  exception Getpwent [@@deriving sexp]
-
   module Low_level = struct
     external core_setpwent : unit -> unit = "core_setpwent" ;;
     external core_endpwent : unit -> unit = "core_endpwent" ;;
