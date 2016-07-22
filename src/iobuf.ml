@@ -1531,7 +1531,8 @@ end)
 
 (* In an attempt to verify how much a phys_equal check could optimize
    [set_bounds_and_buffer], in the soon-to-be-common protogen use case,
-   here is the result on tot-qdv-perf2 with cross module inlining:
+   here is the result with cross module inlining:
+
 
    ┌────────────────────────────────────────────────────────┬──────────┬─────────┬────────────┐
    │ Name                                                   │ Time/Run │ mWd/Run │ Percentage │

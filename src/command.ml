@@ -1686,6 +1686,7 @@ type t =
   | Group of t Group.t
   | Exec  of Exec.t
   | Proxy of Proxy.t
+  | Lazy  of t Lazy.t
 
 module Sexpable = struct
 
@@ -1857,6 +1858,7 @@ let rec to_sexpable = function
   | Proxy proxy -> sexpable_of_proxy proxy
   | Group group ->
     Sexpable.Group (Group.to_sexpable ~subcommand_to_sexpable:to_sexpable group)
+  | Lazy  thunk -> to_sexpable (Lazy.force thunk)
 
 type ('main, 'result) basic_command
   =  summary:string
@@ -1865,11 +1867,12 @@ type ('main, 'result) basic_command
   -> 'main
   -> t
 
-let get_summary = function
+let rec get_summary = function
   | Base  base  -> base.summary
   | Group group -> group.summary
   | Exec  exec  -> exec.summary
   | Proxy proxy -> Proxy.get_summary proxy
+  | Lazy  thunk -> get_summary (Lazy.force thunk)
 
 let extend_exn ~mem ~add map key_type ~key data =
   if mem map key then
@@ -2018,11 +2021,14 @@ let help_subcommand ~summary ~readme =
            | None ->
              die "unknown subcommand %s for command %s" cmd (Path.to_string path) ()
            | Some t ->
-             match t with
-             | Exec  exec  -> exec_help_text exec
-             | Group group -> group_help_text group
-             | Base  base  -> Base.help_text ~path base
-             | Proxy proxy -> proxy_help_text proxy
+             let rec help_text = function
+               | Exec  exec  -> exec_help_text exec
+               | Group group -> group_help_text group
+               | Base  base  -> Base.help_text ~path base
+               | Proxy proxy -> proxy_help_text proxy
+               | Lazy  thunk -> help_text (Lazy.force thunk)
+             in
+             help_text t
        in
        print_endline text)
 
@@ -2054,6 +2060,8 @@ let exec ~summary ?readme ~path_to_exe () =
       else p
   in
   Exec {summary; readme; working_dir; path_to_exe}
+
+let of_lazy thunk = Lazy thunk
 
 module Shape = struct
   module Flag_info = struct
@@ -2182,6 +2190,7 @@ let rec shape t : Shape.t =
   | Exec  e ->
     let f () = shape_of_proxy (proxy_of_exe ~working_dir:e.working_dir e.path_to_exe) in
     Exec (Exec.to_sexpable e, f)
+  | Lazy thunk -> shape (Lazy.force thunk)
 ;;
 
 module Version_info = struct
@@ -2211,7 +2220,7 @@ module Version_info = struct
          end;
          exit 0)
 
-  let add
+  let rec add
         ~version
         ~build_info
         unversioned =
@@ -2235,6 +2244,7 @@ module Version_info = struct
       Group { group with Group.subcommands }
     | Proxy proxy -> Proxy proxy
     | Exec  exec  -> Exec  exec
+    | Lazy  thunk -> Lazy (lazy (add ~version ~build_info (Lazy.force thunk)))
 
 end
 
@@ -2331,6 +2341,8 @@ let rec add_help_subcommands = function
         (help_subcommand ~summary ~readme)
     in
     Group {summary; readme; subcommands; body}
+  | Lazy thunk ->
+    Lazy (lazy (add_help_subcommands (Lazy.force thunk)))
 ;;
 
 let maybe_apply_extend args ~extend ~path =
@@ -2346,6 +2358,9 @@ let rec dispatch t env ~extend ~path ~args ~maybe_new_comp_cword ~version ~build
     |> Format.V1.sort
   in
   match t with
+  | Lazy thunk ->
+    let t = Lazy.force thunk in
+    dispatch t env ~extend ~path ~args ~maybe_new_comp_cword ~version ~build_info
   | Base base ->
     let args = maybe_apply_extend args ~extend ~path in
     Base.run base env ~path ~args
@@ -2456,11 +2471,12 @@ let run
       end)
 ;;
 
-let summary = function
+let rec summary = function
   | Base  x -> x.summary
   | Group x -> x.summary
   | Exec  x -> x.summary
   | Proxy x -> Proxy.get_summary x
+  | Lazy thunk -> summary (Lazy.force thunk)
 
 module Spec = struct
   include Base.Spec
@@ -2473,8 +2489,9 @@ module Deprecated = struct
 
   let summary = get_summary
 
-  let get_flag_names = function
+  let rec get_flag_names = function
     | Base base -> base.Base.flags |> String.Map.keys
+    | Lazy thunk -> get_flag_names (Lazy.force thunk)
     | Group _
     | Proxy _
     | Exec  _ -> assert false
@@ -2483,6 +2500,9 @@ module Deprecated = struct
     let rec help_recursive_rec ~cmd t s =
       let new_s = s ^ (if expand_dots then cmd else ".") ^ " " in
       match t with
+      | Lazy thunk ->
+        let t = Lazy.force thunk in
+        help_recursive_rec ~cmd t s
       | Base base ->
         let base_help = s ^ cmd, summary (Base base) in
         if with_flags then

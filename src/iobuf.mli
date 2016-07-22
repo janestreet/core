@@ -76,13 +76,17 @@ val set_bounds_and_buffer
   : src : ([> write] as 'data, _) t -> dst : ('data, seek) t -> unit
 
 (** [set_bounds_and_buffer_sub ?pos ~len ~src ~dst ()] is a more efficient version of:
-    [set_bounds_and_buffer ~src:(Iobuf.sub_shared ?pos ?len src) ~dst].
+    [set_bounds_and_buffer ~src:(Iobuf.sub_shared ?pos ~len src) ~dst].
 
     [set_bounds_and_buffer ~src ~dst] is not the same as [set_bounds_and_buffer_sub ~dst
-    ~src ~len ()] because the limits are narrowed in the latter case. *)
+    ~src ~len:(Iobuf.length src) ()] because the limits are narrowed in the latter case.
+
+    [~len] is mandatory for performance reasons, in concert with [@@inline].  If it were
+    optional, allocation would be necessary when passing a non-default, non-constant
+    length, which is an important use case. *)
 val set_bounds_and_buffer_sub
-  :  ?pos:int
-  -> len : int
+  :  ?pos : int
+  -> len  : int
   -> src : ([> write] as 'data, _) t
   -> dst : ('data, seek) t
   -> unit

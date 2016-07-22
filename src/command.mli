@@ -621,6 +621,10 @@ val exec
   -> unit
   -> t
 
+(** [of_lazy thunk] constructs a lazy command that is forced only when necessary to run it
+    or extract its shape *)
+val of_lazy : t Lazy.t -> t
+
 (** extract the summary string for a command *)
 val summary : t -> string
 
