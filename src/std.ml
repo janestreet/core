@@ -39,3 +39,9 @@ module User_and_group     = User_and_group
 module Uuid               = Uuid
 module Version_util       = Version_util
 module Weak_hashtbl       = Weak_hashtbl
+
+(* See [Core_kernel.Std_kernel] for the reason that we perform top-level side effects in
+   the [Std] modules. *)
+let () =
+  Am_running_inline_test.initialize_module ()
+;;

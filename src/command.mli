@@ -171,9 +171,11 @@ module Anons : sig
       anonymous arguments  *)
   val sequence : 'a t -> 'a list t
 
-  (** [non_empty_sequence anons] is like [sequence anons] except an exception will be
-      raised if there is not at least one anonymous argument given. *)
-  val non_empty_sequence : 'a t -> ('a * 'a list) t
+  (** [non_empty_sequence anons] and [non_empty_sequence_as_list anons] are like
+      [sequence anons] except that an exception will be raised if there is not at least
+      one anonymous argument given. *)
+  val non_empty_sequence         : 'a t -> ('a * 'a list) t
+  val non_empty_sequence_as_list : 'a t ->       'a list  t
 
   (** [(maybe anons)] indicates that some anonymous arguments are optional *)
   val maybe : 'a t -> 'a option t

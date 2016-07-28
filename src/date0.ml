@@ -33,7 +33,7 @@ module Stable = struct
 
          all packed into a single immediate int (so from 4 words down to 1).
       *)
-      type t = int
+      type t = int [@@deriving bin_shape ~basetype:"899ee3e0-490a-11e6-a10a-a3734f733566"]
 
       let create0 ~year ~month ~day =
         (* create_exn's validation make sure that each value fits *)
@@ -130,6 +130,7 @@ module Stable = struct
         Bin_prot.Type_class.
         reader = bin_reader_t;
         writer = bin_writer_t;
+        shape = bin_shape_t;
       }
     end
 

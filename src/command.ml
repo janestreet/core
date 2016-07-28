@@ -957,6 +957,10 @@ module Anons = struct
 
   let non_empty_sequence t = t2 t (sequence t)
 
+  let non_empty_sequence_as_list t =
+    let t = non_empty_sequence t in
+    { t with p = t.p >>| fun (x, xs) -> x :: xs }
+
   module Deprecated = struct
     let ad_hoc ~usage_arg = {
       p = Parser.sequence (Parser.one ~name:"WILL NEVER BE PRINTED" Arg_type.string);
@@ -1360,15 +1364,16 @@ module Base = struct
     include struct
       open Anons
       type 'a anons = 'a t
-      let (%:)               = (%:)
-      let map_anons          = map_anons
-      let maybe              = maybe
-      let maybe_with_default = maybe_with_default
-      let sequence           = sequence
-      let non_empty_sequence = non_empty_sequence
-      let t2                 = t2
-      let t3                 = t3
-      let t4                 = t4
+      let (%:)                       = (%:)
+      let map_anons                  = map_anons
+      let maybe                      = maybe
+      let maybe_with_default         = maybe_with_default
+      let sequence                   = sequence
+      let non_empty_sequence         = non_empty_sequence
+      let non_empty_sequence_as_list = non_empty_sequence_as_list
+      let t2                         = t2
+      let t3                         = t3
+      let t4                         = t4
 
       let anon spec =
         Anons.Grammar.invariant spec.grammar;
@@ -2630,14 +2635,15 @@ module Param = struct
   end
   include struct
     open Anons
-    let (%:)               = (%:)
-    let maybe              = maybe
-    let maybe_with_default = maybe_with_default
-    let non_empty_sequence = non_empty_sequence
-    let sequence           = sequence
-    let t2                 = t2
-    let t3                 = t3
-    let t4                 = t4
+    let (%:)                       = (%:)
+    let maybe                      = maybe
+    let maybe_with_default         = maybe_with_default
+    let non_empty_sequence         = non_empty_sequence
+    let non_empty_sequence_as_list = non_empty_sequence_as_list
+    let sequence                   = sequence
+    let t2                         = t2
+    let t3                         = t3
+    let t4                         = t4
   end
 end
 
