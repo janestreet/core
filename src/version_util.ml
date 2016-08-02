@@ -52,11 +52,10 @@ type t = {
   build_date                  : Date.t sexp_option;
   build_time                  : Ofday.t sexp_option;
   x_library_inlining          : bool;
-  nodynlink                   : bool;
+  dynlinkable_code            : bool;
   ocaml_version               : string;
   executable_path             : string;
   build_system                : string;
-  packing                     : bool;
   application_specific_fields : Application_specific_fields.t sexp_option;
 } [@@deriving of_sexp]
 
@@ -70,18 +69,16 @@ let { username;
       build_date;
       build_time;
       x_library_inlining;
-      nodynlink;
+      dynlinkable_code;
       ocaml_version;
       executable_path;
       build_system;
-      packing;
       application_specific_fields;
     } =
   Exn.handle_uncaught_and_exit (fun () -> t_of_sexp build_info_as_sexp)
 ;;
 
 let compiled_for_speed = x_library_inlining
-let compiled_with_dynlink = not nodynlink
 let time =
   match build_date, build_time with
   | None, _ | _, None -> None

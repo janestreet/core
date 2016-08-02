@@ -41,11 +41,10 @@ val hostname                       : string option
 val kernel                         : string option
 val time                           : Time.t option
 val x_library_inlining             : bool
-val nodynlink                      : bool
+val dynlinkable_code               : bool
 val compiled_for_speed             : bool
-val compiled_with_dynlink          : bool
 val application_specific_fields    : Application_specific_fields.t option
 val ocaml_version                  : string
 val executable_path                : string (** Relative to OMakeroot dir *)
 val build_system                   : string
-val packing                        : bool
+

@@ -18,7 +18,7 @@ module type Option = sig
 end
 
 module type Span = sig
-  type t = Core_kernel.Time_ns.Span.t [@@deriving typerep]
+  type t = Core_kernel.Time_ns.Span.t [@@deriving typerep, sexp_of]
 
   include Identifiable         with type t := t
   include Comparable.With_zero with type t := t

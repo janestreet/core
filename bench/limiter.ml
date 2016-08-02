@@ -8,29 +8,28 @@ module Token_bucket = struct
 
   let always_limited =
     let t = M.create_exn
-              ~now:(Time.now ())
-              ~burst_size:1.
+              ~now:(Time_ns.now ())
+              ~burst_size:1
               ~sustained_rate_per_sec:1.
               ()
     in
-    let now = ref (Time.now ()) in
+    let now = ref (Time_ns.now ()) in
     fun () ->
-      M.try_take ~now:!now t 1.0
+      M.try_take ~now:!now t 1
   ;;
 
   let never_limited =
-    let now = ref (Time.now ()) in
+    let now = ref (Time_ns.now ()) in
     let t = M.create_exn
               ~now:!now
-              ~burst_size:1.
+              ~burst_size:1
               ~sustained_rate_per_sec:1.
               ()
     in
-    let second = Time.Span.of_sec 1.1 in
-    (* this math costs 2W of allocation and ~9ns on a uid box circa 2015 *)
+    let second = Time_ns.Span.of_sec 1.1 in
     fun () ->
-      now := Time.add !now second;
-      M.try_take ~now:!now t 1.0
+      now := Time_ns.add !now second;
+      M.try_take ~now:!now t 1
 end
 
 let command =

@@ -24,11 +24,10 @@ CAMLprim CAMLweakdef value generated_build_info (value unit __attribute__ ((unus
       "(build_date \"1970-01-01\")"
       "(build_time \"00:00:00\")"
       "(x_library_inlining false)"
-      "(nodynlink true)"
+      "(dynlinkable_code false)"
       "(ocaml_version \"\")"
       "(executable_path \"\")"
       "(build_system \"\")"
-      "(packing false)"
     ")";
   return(caml_copy_string(v));
 }

@@ -955,10 +955,10 @@ module Anons = struct
     grammar = Grammar.many t.grammar;
   }
 
-  let non_empty_sequence t = t2 t (sequence t)
+  let non_empty_sequence_as_pair t = t2 t (sequence t)
 
   let non_empty_sequence_as_list t =
-    let t = non_empty_sequence t in
+    let t = non_empty_sequence_as_pair t in
     { t with p = t.p >>| fun (x, xs) -> x :: xs }
 
   module Deprecated = struct
@@ -1184,6 +1184,10 @@ module Base = struct
           | `Optional -> ()
           | `Required check -> check env);
         Anons.Parser.final_value anons env
+      | Cons ("-anon", Cons (arg, args)) ->
+        (* the very special -anon flag is here as an escape hatch in case you have an
+           anonymous argument that starts with a hyphen. *)
+        anon env anons arg args
       | Cons (arg, args) ->
         if String.is_prefix arg ~prefix:"-"
            && not (String.equal arg "-") (* support the convention where "-" means stdin *)
@@ -1216,13 +1220,8 @@ module Base = struct
             if Cmdline.ends_in_complete args then exit 0;
             let env = f env (Cmdline.to_list args) in
             loop env anons Nil
-        end else begin
-          let (env_upd, anons) =
-            Anons.Parser.consume anons arg ~for_completion:(Cmdline.ends_in_complete args)
-          in
-          let env = env_upd env in
-          loop env anons args
-        end
+        end else
+          anon env anons arg args
       | Complete part ->
         if String.is_prefix part ~prefix:"-" then begin
           List.iter (String.Map.keys t.flags) ~f:(fun name ->
@@ -1230,6 +1229,12 @@ module Base = struct
           exit 0
         end else
           never_returns (Anons.Parser.complete anons env ~part);
+    and anon env anons arg args =
+      let (env_upd, anons) =
+        Anons.Parser.consume anons arg ~for_completion:(Cmdline.ends_in_complete args)
+      in
+      let env = env_upd env in
+      loop env anons args
     in
     match Result.try_with (fun () -> loop env (t.anons ()) args `Parse_args) with
     | Ok thunk -> thunk `Run_main
@@ -1369,7 +1374,7 @@ module Base = struct
       let maybe                      = maybe
       let maybe_with_default         = maybe_with_default
       let sequence                   = sequence
-      let non_empty_sequence         = non_empty_sequence
+      let non_empty_sequence_as_pair = non_empty_sequence_as_pair
       let non_empty_sequence_as_list = non_empty_sequence_as_list
       let t2                         = t2
       let t3                         = t3
@@ -2638,7 +2643,7 @@ module Param = struct
     let (%:)                       = (%:)
     let maybe                      = maybe
     let maybe_with_default         = maybe_with_default
-    let non_empty_sequence         = non_empty_sequence
+    let non_empty_sequence_as_pair = non_empty_sequence_as_pair
     let non_empty_sequence_as_list = non_empty_sequence_as_list
     let sequence                   = sequence
     let t2                         = t2
