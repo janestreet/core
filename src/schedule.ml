@@ -979,7 +979,7 @@ let fold_tags (type tag)(type m) (t : (zoned, tag) Internal.t) ~(init:m) ~f time
   in
   let fold_and ~f l m =
     List.fold l ~init:(Some m)
-      ~f:(fun m_opt t -> Option.bind m_opt (fun m -> f t m))
+      ~f:(fun m_opt t -> Option.bind m_opt ~f:(fun m -> f t m))
   in
   let fold_or ~f l m =
     List.fold l ~init:None

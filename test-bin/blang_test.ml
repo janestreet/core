@@ -83,10 +83,10 @@ let test =
       ];
       "substitution" >::: [
         "base" >:: (fun () ->
-          bind (base "A") (fun x -> and_ [base x; base x])
+          bind (base "A") ~f:(fun x -> and_ [base x; base x])
             === and_ [base "A"; base "A"]);
         "and" >:: (fun () ->
-          bind (and_ [base "A"; base "B"]) (fun x -> or_ [base x; base x])
+          bind (and_ [base "A"; base "B"]) ~f:(fun x -> or_ [base x; base x])
             === and_ [or_ [base "A"; base "A"]; or_ [base "B"; base "B"]]);
       ];
       "values" >:: (fun () ->
