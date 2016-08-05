@@ -1,0 +1,4 @@
+(executables
+ ((names (mail_test diff_sexp diff_sexps redcat piecewise_linear_perf_test))
+  (libraries (core_extended))
+  (preprocess (((pps ()) All)))))

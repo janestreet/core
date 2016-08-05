@@ -1,0 +1,21 @@
+(executables
+ ((names (array_heap
+          array_iter
+          array_sort
+          bench_hashtbl
+          bench_heap
+          bench_map
+          core_stack
+          core_string_search_pattern
+          dequeue
+          limiter
+          ordering_container
+          string_escaping
+          time_to_string
+          timing_wheel
+          zone_next_clock_shift))
+  (libraries (core
+              core_bench
+              core_extended
+              pcre
+              re2))))

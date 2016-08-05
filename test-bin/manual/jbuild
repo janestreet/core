@@ -1,0 +1,6 @@
+(executables (
+  (names (backtrace getpwents))
+  (libraries (
+    core
+  ))
+))

@@ -1,0 +1,6 @@
+(executables
+ ((names (main main_no_recur))
+  (libraries (async
+                    core
+                    fieldslib
+                    sexplib))))

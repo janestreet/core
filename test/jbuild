@@ -1,0 +1,13 @@
+(library
+ ((name core_test)
+  (libraries (core
+              core_kernel_test
+              expect_test_helpers))
+  (inline_tests
+   ((deps (
+     ../test-bin/am_running_inline_test.exe
+     ../test-bin/command_shape_test_parent.exe
+     ../test-bin/command_shape_test_child.exe
+     ))
+     ))
+  (preprocessor_deps (../src/config.h))))

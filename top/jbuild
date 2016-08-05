@@ -1,0 +1,5 @@
+(library
+ ((name core_top)
+  (public_name core.top)
+  (libraries (ocamltoplevel core))
+  (preprocess (((pps ()) All)))))

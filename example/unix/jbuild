@@ -1,0 +1,4 @@
+(executables (
+  (names (gettid getifaddrs))
+  (libraries (async core))
+))

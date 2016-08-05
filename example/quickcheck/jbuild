@@ -1,0 +1,3 @@
+(library
+  ((name quickcheck_examples)
+   (libraries (core async))))

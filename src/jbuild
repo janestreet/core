@@ -1,0 +1,38 @@
+;; config.h is created atomically by discover.sh to avoid a problem where gcc -MM on some
+;; file that includes config.h reads a partial written file, and fails
+(rule
+ ((targets (config.h))
+  (deps (discover.sh))
+  (action "./${<} ${OCAML} ${OCAMLC} config.h -DLINUX_EXT -DPOSIX_TIMERS -DWORDEXP")))
+
+(library
+ ((name core)
+  (public_name core)
+  (libraries
+   (core_kernel
+    sexplib_unix
+    threads
+    ))
+  (c_flags (:standard -D_LARGEFILE64_SOURCE -I../../core_kernel/src))
+  (c_names
+   (bigstring_stubs
+    crc_stubs
+    iobuf_stubs
+    linux_ext_stubs
+    ocaml_utils_stubs
+    recvmmsg
+    signal_stubs
+    syslog_stubs
+    time_stamp_counter_stubs
+    timespec
+    unix_stubs
+    unix_time_stubs
+    version_util_fallback_stubs))
+  (preprocessor_deps (config.h))
+  (inline_tests ((deps (time_stamp_counter_samples_at_1sec.sexp
+                        time_stamp_counter_samples_at_60sec.sexp))))))
+
+(alias
+ ((name save_benchmarks)
+  (deps (inline_benchmarks_runner inline_benchmarks_runner.exe))
+  (action "./inline_benchmarks_runner jenga-save-benchmarks")))
