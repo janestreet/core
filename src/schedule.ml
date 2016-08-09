@@ -530,56 +530,67 @@ end = struct
     let%test_unit "sec equals parts for all seconds" =
       test_against_parts ~from_parts:(fun p -> p.sec) ~from_t:sec
     ;;
-
   end
 
   include Fast_parts_of_ofday
 
+  (* It is possble to see the 24th hour of the day due to permissiveness in our
+     Ofday.t parsing and/or floating point math issues.  In these cases we consider
+     the hour of the day to be the 0th hour of the next date. *)
+  let normalize t =
+    if hour t = 24
+    then { t with date = Date.add_days t.date 1; ofday = Time.Ofday.start_of_day }
+    else t
+  ;;
+
   let next_t_with_difference_in t field =
-    match field with
-    | `Date | `Week | `Weekday | `Day ->
-      {t with date = Date.add_days t.date 1; ofday = Time.Ofday.start_of_day }
-    | `Month ->
-      let t_month = month t in
-      let next_month = Month.shift t_month 1 in
-      let date =
-        if Month.(>) next_month (month t)
-        then Date.create_exn ~d:1 ~m:next_month ~y:(Date.year t.date)
-        else Date.create_exn ~d:1 ~m:next_month ~y:(Date.year t.date + 1)
-      in
-      {t with date; ofday = Time.Ofday.start_of_day }
-    | `Hour ->
-      let parts = Time.Ofday.to_parts t.ofday in
-      let date, ofday =
-        if parts.hr = 23
-        then (Date.add_days t.date 1, Time.Ofday.start_of_day)
-        else t.date, Time.Ofday.create ~hr:(parts.hr + 1) ()
-      in
-      {t with date; ofday }
-    | `Min ->
-      let span = Time.Ofday.to_span_since_start_of_day t.ofday in
-      let span = Time.Span.(+) span (Time.Span.of_min 1.) in
-      let date, ofday =
-        if Time.Span.(>) span Time.Span.day
-        then Date.add_days t.date 1, Time.Ofday.start_of_day
-        else begin
-          let parts = Time.Span.to_parts span in
-          t.date, Time.Ofday.create ~hr:parts.hr ~min:parts.min ()
-        end
-      in
-      {t with date; ofday }
-    | `Sec ->
-      let span = Time.Ofday.to_span_since_start_of_day t.ofday in
-      let span = Time.Span.(+) span (Time.Span.of_sec 1.) in
-      let date, ofday =
-        if Time.Span.(>) span Time.Span.day
-        then Date.add_days t.date 1, Time.Ofday.start_of_day
-        else begin
-          let parts = Time.Span.to_parts span in
-          t.date, Time.Ofday.create ~hr:parts.hr ~min:parts.min ~sec:parts.sec ()
-        end
-      in
-      {t with date; ofday }
+    let t =
+      match field with
+      | `Date | `Week | `Weekday | `Day ->
+        {t with date = Date.add_days t.date 1; ofday = Time.Ofday.start_of_day }
+      | `Month ->
+        let t_month = month t in
+        let next_month = Month.shift t_month 1 in
+        let date =
+          if Month.(>) next_month (month t)
+          then Date.create_exn ~d:1 ~m:next_month ~y:(Date.year t.date)
+          else Date.create_exn ~d:1 ~m:next_month ~y:(Date.year t.date + 1)
+        in
+        {t with date; ofday = Time.Ofday.start_of_day }
+      | `Hour ->
+        let date, ofday =
+          let hr = hour t in
+          if Int.(=) hr 23
+          then (Date.add_days t.date 1, Time.Ofday.start_of_day)
+          else t.date, Time.Ofday.create ~hr:(hr + 1) ()
+        in
+        {t with date; ofday }
+      | `Min ->
+        let span = Time.Ofday.to_span_since_start_of_day t.ofday in
+        let span = Time.Span.(+) span (Time.Span.of_min 1.) in
+        let date, ofday =
+          if Time.Span.(>) span Time.Span.day
+          then Date.add_days t.date 1, Time.Ofday.start_of_day
+          else begin
+            let parts = Time.Span.to_parts span in
+            t.date, Time.Ofday.create ~hr:parts.hr ~min:parts.min ()
+          end
+        in
+        {t with date; ofday }
+      | `Sec ->
+        let span = Time.Ofday.to_span_since_start_of_day t.ofday in
+        let span = Time.Span.(+) span (Time.Span.of_sec 1.) in
+        let date, ofday =
+          if Time.Span.(>) span Time.Span.day
+          then Date.add_days t.date 1, Time.Ofday.start_of_day
+          else begin
+            let parts = Time.Span.to_parts span in
+            t.date, Time.Ofday.create ~hr:parts.hr ~min:parts.min ~sec:parts.sec ()
+          end
+        in
+        {t with date; ofday }
+    in
+    normalize t
   ;;
 
   let span_to_possible_difference_in t field =
@@ -593,9 +604,10 @@ end = struct
 
   let of_time time ~zone =
     let date, ofday = Time.to_date_ofday time ~zone in
-    { date
-    ; ofday
-    ; zone }
+    normalize
+      { date
+      ; ofday
+      ; zone }
   ;;
 end
 

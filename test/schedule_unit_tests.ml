@@ -1129,6 +1129,29 @@ let%test_module "Schedule" = (module struct
     is_correct_transition ~here:[[%here]] output (Some at_9)
   ;;
 
+  let%test_unit "Regression test: this does not crash" =
+    let time = Time.of_string "2016-07-27 00:00:00.000000Z" in
+    let _ : Time.t option =
+      Schedule.next_enter_between Schedule.(In_zone (Time.Zone.utc, Hours [])) time
+        (Time.add time (Time.Span.of_day 1.))
+    in
+    ()
+  ;;
+
+  (* note that next_enter_between is inclusive on both ends *)
+  let%test_unit "Test 24:00:00 handling for Hours [0]" =
+    let time = Time.of_string "2016-07-26 24:00:00.000000Z" in
+    let next =
+      Schedule.next_enter_between
+        Schedule.(In_zone (Time.Zone.utc, Hours [0]))
+        time
+        (Time.add time (Time.Span.of_hr 5.))
+    in
+    match next with
+    | None    -> failwith "no next time found starting with hour 0"
+    | Some t' -> assert (Time.(=) time t')
+  ;;
+
   (* Test start of day *)
   let schedule = At [ Time.Ofday.start_of_day ]
   let schedule = In_zone (zone, schedule)
