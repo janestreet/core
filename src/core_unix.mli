@@ -1,4 +1,4 @@
-(* This file is a modified version of unixLabels.mli from the OCaml distribution. *)
+(*_ This file is a modified version of unixLabels.mli from the OCaml distribution. *)
 open! Core_kernel.Std
 
 (** File descriptor. *)
@@ -336,13 +336,13 @@ type wait_on =
 
 
 val wait
-  : ?restart:bool (* defaults to true *) -> wait_on ->  Pid.t * Exit_or_signal.t
+  : ?restart:bool (** defaults to true *) -> wait_on ->  Pid.t * Exit_or_signal.t
 val wait_nohang
-  :                                         wait_on -> (Pid.t * Exit_or_signal .t       ) option
+  :                                          wait_on -> (Pid.t * Exit_or_signal .t       ) option
 val wait_untraced
-  : ?restart:bool (* defaults to true *) -> wait_on ->  Pid.t * Exit_or_signal_or_stop.t
+  : ?restart:bool (** defaults to true *) -> wait_on ->  Pid.t * Exit_or_signal_or_stop.t
 val wait_nohang_untraced
-  :                                         wait_on -> (Pid.t * Exit_or_signal_or_stop.t) option
+  :                                          wait_on -> (Pid.t * Exit_or_signal_or_stop.t) option
 
 (** [waitpid pid] waits for child process [pid] to terminate, and returns its exit status.
     [waitpid_exn] is like [waitpid], except it only returns if the child exits with status
@@ -414,8 +414,8 @@ type open_flag =
     | O_SHARE_DELETE  (** Windows only: allow the file to be deleted while still open *)
     | O_CLOEXEC       (** Set the close-on-exec flag on the descriptor returned by {!openfile} *)
 
-(* We can't use [with sexp] because pa_sexp inserts two copies of the [val] specs, which
-   leads to a spurious "unused" warning. *)
+(** We can't use [with sexp] because pa_sexp inserts two copies of the [val] specs, which
+    leads to a spurious "unused" warning. *)
 val open_flag_of_sexp : Sexp.t -> open_flag
 val sexp_of_open_flag : open_flag -> Sexp.t
 
@@ -477,7 +477,7 @@ val fcntl_getfl : File_descr.t -> Open_flags.t
 val fcntl_setfl : File_descr.t -> Open_flags.t -> unit
 
 (** Close a file descriptor. *)
-val close : ?restart:bool (* defaults to false *) -> File_descr.t -> unit
+val close : ?restart:bool (** defaults to false *) -> File_descr.t -> unit
 
 (** [with_file file ~mode ~perm ~f] opens [file], and applies [f] to the resulting file
     descriptor.  When [f] finishes (or raises), [with_file] closes the descriptor and
@@ -493,7 +493,7 @@ val with_file
     [fd], storing them in string [buff], starting at position [ofs]
     in string [buff]. Return the number of characters actually read. *)
 val read
-  :  ?restart:bool (* defaults to false *)
+  :  ?restart:bool (** defaults to false *)
   -> ?pos:int
   -> ?len:int
   -> File_descr.t
@@ -517,7 +517,7 @@ val write : ?pos:int -> ?len:int -> File_descr.t -> buf:string -> int
 (** Same as [write] but ensures that all errors are reported and
    that no character has ever been written when an error is reported. *)
 val single_write
-  :  ?restart:bool (* defaults to false *)
+  :  ?restart:bool (** defaults to false *)
   -> ?pos:int
   -> ?len:int
   -> File_descr.t
@@ -589,8 +589,8 @@ type stats =
       st_gid : int;                       (** Group ID of the file's group *)
       st_rdev : int;                      (** Device minor number *)
       st_size : int64;                    (** Size in bytes *)
-      (* The floats below are really Time.t or Time.Span.t, but Time depends on Unix, so
-         the fix isn't so trivial.  Same for Native_file.stats below. *)
+      (*_ The floats below are really Time.t or Time.Span.t, but Time depends on Unix, so
+          the fix isn't so trivial.  Same for Native_file.stats below. *)
       st_atime : float;                   (** Last access time *)
       st_mtime : float;                   (** Last modification time *)
       st_ctime : float                    (** Last status change time *)
@@ -607,7 +607,7 @@ val lstat : string -> stats
    descriptor. *)
 val fstat : File_descr.t -> stats
 
-(* This sub-module provides the normal OCaml Unix functions that deal with file size
+(** This sub-module provides the normal OCaml Unix functions that deal with file size
   using native ints.  These are here because, in general, you should be using 64bit
   file operations so that large files aren't an issue.  If you have a real need to
   use potentially 31bit file operations (and you should be dubious of such a need) you
@@ -682,7 +682,7 @@ val flock : File_descr.t -> Flock_command.t -> bool
    console window, [false] otherwise. *)
 val isatty : File_descr.t -> bool
 
-(* {6 Seeking, truncating and statistics on large files} *)
+(** {6 Seeking, truncating and statistics on large files} *)
 
 
 (** {6 Operations on file names} *)
@@ -702,7 +702,7 @@ val rename : src:string -> dst:string -> unit
     place of [link_name] will be unlinked.  This unlinking may raise a Unix
     error, e.g. if the entry is a directory. *)
 val link
-  :  ?force:bool (* defaults to false *)
+  :  ?force:bool (** defaults to false *)
   -> target : string
   -> link_name : string
   -> unit
@@ -794,7 +794,7 @@ val chroot : string -> unit
 type dir_handle = Unix.dir_handle
 
 (** Open a descriptor on a directory *)
-val opendir : ?restart:bool (* defaults to false *) -> string -> dir_handle
+val opendir : ?restart:bool (** defaults to false *) -> string -> dir_handle
 
 (** Return the next entry in a directory.
    @raise End_of_file when the end of the directory has been reached. *)
@@ -881,8 +881,8 @@ end
 
 val open_process_full : string -> env:string array -> Process_channels.t
 
-(* close_process_* raises Unix_error if, for example, the file descriptor has already been
-   closed. *)
+(** [close_process_*] raises [Unix_error] if, for example, the file descriptor has already
+    been closed. *)
 
 (** Close channels opened by {!UnixLabels.open_process_in},
     wait for the associated command to terminate,
@@ -1117,8 +1117,8 @@ module Passwd : sig
   val getpwents : unit -> t list
 
   module Low_level : sig
-    (* These functions may not be thread safe.
-       Use [getpwents], above, if possible. *)
+    (** These functions may not be thread safe.
+        Use [getpwents], above, if possible. *)
 
     val setpwent : unit -> unit
     val getpwent : unit -> t option
@@ -1188,8 +1188,9 @@ module Inet_addr : sig
   val bind_any_inet6 : t
 
   (** Special addresses representing the host machine. *)
-  val localhost       : t (* [127.0.0.1] *)
-  val localhost_inet6 : t (* ([::1]) *)
+  val localhost       : t (** [127.0.0.1] *)
+
+  val localhost_inet6 : t (** ([::1]) *)
 
   (** Some things (like the kernel) report addresses as hex or decimal strings.
       Provide conversion functions. *)
@@ -1248,7 +1249,7 @@ end
 type socket_domain = Unix.socket_domain =
   | PF_UNIX                             (** Unix domain *)
   | PF_INET                             (** Internet domain *)
-  | PF_INET6                            (* Internet domain (IPv6) *)
+  | PF_INET6                            (** Internet domain (IPv6) *)
 [@@deriving sexp, bin_io]
 
 (** The type of socket kinds, specifying the semantics of
@@ -1257,7 +1258,7 @@ type socket_type = Unix.socket_type =
   | SOCK_STREAM                         (** Stream socket *)
   | SOCK_DGRAM                          (** Datagram socket *)
   | SOCK_RAW                            (** Raw socket *)
-  | SOCK_SEQPACKET                      (* Sequenced packets socket *)
+  | SOCK_SEQPACKET                      (** Sequenced packets socket *)
 [@@deriving sexp, bin_io]
 
 (** The type of socket addresses. [ADDR_UNIX name] is a socket address in the Unix domain;
@@ -1391,7 +1392,7 @@ type socket_bool_option =
   | SO_KEEPALIVE           (** Keep connection active *)
   | SO_DONTROUTE           (** Bypass the standard routing algorithms *)
   | SO_OOBINLINE           (** Leave out-of-band data in line *)
-  | SO_ACCEPTCONN          (* Report whether socket listening is enabled *)
+  | SO_ACCEPTCONN          (** Report whether socket listening is enabled *)
   | TCP_NODELAY            (** Control the Nagle algorithm for TCP sockets *)
   | IPV6_ONLY              (** Forbid binding an IPv6 socket to an IPv4 address *)
 [@@deriving sexp]
@@ -1405,7 +1406,7 @@ type socket_int_option =
   | SO_ERROR               (** Report the error status and clear it *)
   | SO_TYPE                (** Report the socket type *)
   | SO_RCVLOWAT            (** Minimum number of bytes to process for input operations *)
-  | SO_SNDLOWAT            (* Minimum number of bytes to process for output operations *)
+  | SO_SNDLOWAT            (** Minimum number of bytes to process for output operations *)
 [@@deriving sexp]
 
 (** The socket options that can be consulted with {!UnixLabels.getsockopt_optint}
@@ -1566,7 +1567,7 @@ type getaddrinfo_option =
                                             expect numeric IP address *)
   | AI_CANONNAME                        (** Fill the [ai_canonname] field
                                             of the result *)
-  | AI_PASSIVE                          (* Set address to ``any'' address
+  | AI_PASSIVE                          (** Set address to ``any'' address
                                             for use with {!Unix.bind} *)
 [@@deriving sexp]
 
@@ -1589,10 +1590,11 @@ type getaddrinfo_option =
 val getaddrinfo : string -> string -> getaddrinfo_option list -> addr_info list
 
 (** Host and service information returned by {!Unix.getnameinfo}. *)
-type name_info =
-  { ni_hostname : string;               (** Name or IP address of host *)
-    ni_service : string;
-  }               (** Name of service or port number *)
+type name_info = {
+  ni_hostname : string; (** Name or IP address of host *)
+
+  ni_service : string; (** Name of service or port number *)
+}
 [@@deriving sexp]
 
 (** Options to {!Unix.getnameinfo}. *)
@@ -1601,7 +1603,7 @@ type getnameinfo_option =
   | NI_NUMERICHOST       (** Always return host as IP address *)
   | NI_NAMEREQD          (** Fail if host name cannot be determined *)
   | NI_NUMERICSERV       (** Always return service as port number *)
-  | NI_DGRAM             (* Consider the service as UDP-based
+  | NI_DGRAM             (** Consider the service as UDP-based
                              instead of the default TCP *)
 [@@deriving sexp]
 
@@ -1624,7 +1626,7 @@ val getnameinfo : sockaddr -> getnameinfo_option list -> name_info
 
 module Terminal_io : sig
   type t = Unix.terminal_io = {
-    (* Input modes: *)
+    (*_ Input modes: *)
     mutable c_ignbrk : bool;  (** Ignore the break condition. *)
     mutable c_brkint : bool;  (** Signal interrupt on break condition. *)
     mutable c_ignpar : bool;  (** Ignore characters with parity errors. *)
@@ -1636,9 +1638,9 @@ module Terminal_io : sig
     mutable c_icrnl : bool;   (** Map CR to NL on input. *)
     mutable c_ixon : bool;    (** Recognize XON/XOFF characters on input. *)
     mutable c_ixoff : bool;   (** Emit XON/XOFF chars to control input flow. *)
-    (* Output modes: *)
+    (*_ Output modes: *)
     mutable c_opost : bool;   (** Enable output processing. *)
-    (* Control modes: *)
+    (*_ Control modes: *)
     mutable c_obaud : int;    (** Output baud rate (0 means close connection).*)
     mutable c_ibaud : int;    (** Input baud rate. *)
     mutable c_csize : int;    (** Number of bits per character (5-8). *)
@@ -1648,7 +1650,7 @@ module Terminal_io : sig
     mutable c_parodd : bool;  (** Specify odd parity instead of even. *)
     mutable c_hupcl : bool;   (** Hang up on last close. *)
     mutable c_clocal : bool;  (** Ignore modem status lines. *)
-    (* Local modes: *)
+    (*_ Local modes: *)
     mutable c_isig : bool;    (** Generate signal on INTR, QUIT, SUSP. *)
     mutable c_icanon : bool;  (** Enable canonical processing
                                  (line buffering and editing) *)
@@ -1657,7 +1659,7 @@ module Terminal_io : sig
     mutable c_echoe : bool;   (** Echo ERASE (to erase previous character). *)
     mutable c_echok : bool;   (** Echo KILL (to erase the current line). *)
     mutable c_echonl : bool;  (** Echo NL even if c_echo is not set. *)
-    (* Control characters: *)
+    (*_ Control characters: *)
     mutable c_vintr : char;   (** Interrupt character (usually ctrl-C). *)
     mutable c_vquit : char;   (** Quit character (usually ctrl-\). *)
     mutable c_verase : char;  (** Erase character (usually DEL or ctrl-H). *)
@@ -1916,8 +1918,8 @@ module RLimit : sig
   type limit = Limit of int64 | Infinity [@@deriving sexp]
 
   type t = {
-    cur : limit;  (* soft limit *)
-    max : limit;  (* hard limit (ceiling for soft limit) *)
+    cur : limit;  (** soft limit *)
+    max : limit;  (** hard limit (ceiling for soft limit) *)
   } [@@deriving sexp]
 
   type resource [@@deriving sexp]
@@ -1931,7 +1933,8 @@ module RLimit : sig
   val virtual_memory       : resource Or_error.t
   val nice                 : resource Or_error.t
 
-  (* See man pages for "getrlimit" and "setrlimit" for details. *)
+  (** See man pages for "getrlimit" and "setrlimit" for details. *)
+
   val get : resource -> t
   val set : resource -> t -> unit
 end
@@ -2006,7 +2009,7 @@ val mkdtemp : string -> string
 
 (** {2 Signal handling} *)
 
-(* Causes abnormal program termination unless the signal SIGABRT is
+(** Causes abnormal program termination unless the signal SIGABRT is
    caught and the signal handler does not return.  If the SIGABRT signal is
    blocked or ignored, the abort() function will still override it.
 *)
@@ -2025,7 +2028,7 @@ val getgroups : unit -> int array
 
 (** {2 Globbing and shell expansion} *)
 
-(* no system calls involved *)
+(** no system calls involved *)
 val fnmatch
   :  ?flags : [ `No_escape
               | `Pathname
@@ -2038,7 +2041,7 @@ val fnmatch
   -> string
   -> bool
 
-(* See man page for wordexp. *)
+(** See man page for wordexp. *)
 val wordexp
   : (?flags : [ `No_cmd | `Show_err | `Undef ] list -> string -> string array) Or_error.t
 
@@ -2054,12 +2057,12 @@ module Utsname : sig
   val machine : t -> string
 end
 
-(* See man page for uname. *)
+(** See man page for uname. *)
 val uname : unit -> Utsname.t
 
 (** {2 Additional IP functionality} *)
 
-(* [if_indextoname ifindex] If [ifindex] is an interface index, then
+(** [if_indextoname ifindex] If [ifindex] is an interface index, then
    the function returns the interface name.  Otherwise, it raises
    [Unix_error]. *)
 val if_indextoname : int -> string
@@ -2112,12 +2115,12 @@ module Scheduler : sig
     type t = [ `Fifo | `Round_robin | `Other ] [@@deriving sexp]
   end
 
-  (* See [man sched_setscheduler].
+  (** See [man sched_setscheduler].
 
-     The [priority] supplied here is *not* the nice value of a process.  It is the
-     "static" priority (1 .. 99) used in conjunction with real-time processes.  If you
-     want to set the nice value of a normal process, use [Linux_ext.setpriority]
-     or [Core_unix.nice]. *)
+      The [priority] supplied here is *not* the nice value of a process.  It is the
+      "static" priority (1 .. 99) used in conjunction with real-time processes.  If you
+      want to set the nice value of a normal process, use [Linux_ext.setpriority]
+      or [Core_unix.nice]. *)
   val set : pid:Pid.t option -> policy : Policy.t -> priority : int -> unit
 end
 
@@ -2125,17 +2128,17 @@ module Priority : sig
   external nice : int -> int = "unix_nice"
 end
 
-(* For keeping your memory in RAM, i.e. preventing it from being swapped out. *)
+(** For keeping your memory in RAM, i.e. preventing it from being swapped out. *)
 module Mman : sig
   module Mcl_flags : sig
     type t = Current | Future [@@deriving sexp]
   end
 
-  (* Lock all pages in this process's virtual address space into physical memory. See [man
+  (** Lock all pages in this process's virtual address space into physical memory. See [man
      mlockall] for more details. *)
   val mlockall : Mcl_flags.t list -> unit
 
-  (* Unlock previously locked pages. See [man munlockall]. *)
+  (** Unlock previously locked pages. See [man munlockall]. *)
   val munlockall : unit -> unit
 end
 
@@ -2191,4 +2194,4 @@ end
 val getifaddrs : unit -> Ifaddr.t list
 
 
-(* vim: set filetype=ocaml : *)
+(*_ vim: set filetype=ocaml : *)

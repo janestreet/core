@@ -291,9 +291,9 @@ end
 
 (* noalloc on x86_64 only *)
 external now : unit -> tsc = "tsc_get"
+(* Outside of x86_64, [now] returns the result of clock_gettime(), i.e. the current time
+   in nanos past epoch. *)
 
-(** Outside of x86_64, [now] returns the result of clock_gettime(), i.e. the current time
-    in nanos past epoch. *)
 module Calibrator = struct
   type t = unit [@@deriving bin_io, sexp]
 

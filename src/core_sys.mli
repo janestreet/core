@@ -23,21 +23,21 @@ val executable_name : string
    whether they are on the system or not (e.g. files in directories to which we
    do not have read permission). *)
 val file_exists
-  : ?follow_symlinks:bool (* defaults to true *) -> string ->  [ `Yes | `No | `Unknown ]
+  : ?follow_symlinks:bool (** defaults to true *) -> string ->  [ `Yes | `No | `Unknown ]
 
 (** Same as [file_exists] but blows up on [`Unknown] *)
 val file_exists_exn
-  : ?follow_symlinks:bool (* defaults to true *) -> string -> bool
+  : ?follow_symlinks:bool (** defaults to true *) -> string -> bool
 
 (** Returns [`Yes] if the file exists and is a directory*)
 val is_directory
-  : ?follow_symlinks:bool (* defaults to true *) -> string -> [ `Yes | `No | `Unknown ]
+  : ?follow_symlinks:bool (** defaults to true *) -> string -> [ `Yes | `No | `Unknown ]
 
 (** Returns [`Yes] if the file exists and is a regular file *)
 val is_file
-  : ?follow_symlinks:bool (* defaults to true *) -> string -> [ `Yes | `No | `Unknown ]
-val is_directory_exn : ?follow_symlinks:bool (* defaults to true *) -> string -> bool
-val is_file_exn      : ?follow_symlinks:bool (* defaults to true *) -> string -> bool
+  : ?follow_symlinks:bool (** defaults to true *) -> string -> [ `Yes | `No | `Unknown ]
+val is_directory_exn : ?follow_symlinks:bool (** defaults to true *) -> string -> bool
+val is_file_exn      : ?follow_symlinks:bool (** defaults to true *) -> string -> bool
 
 (** Remove the given file name from the file system. *)
 val remove : string -> unit
@@ -54,6 +54,7 @@ val getenv_exn : string -> string
 
 (** Execute the given shell command and return its exit code. *)
 val command : string -> int
+
 (** [command_exn command] runs [command] and then raises an exception if it
     returns with nonzero exit status. *)
 val command_exn : string -> unit
@@ -72,7 +73,7 @@ val getcwd : unit -> string
     particular, guaranteed to appear in alphabetical order. *)
 val readdir : string -> string array
 
-(*
+(**
   Call [readdir], and fold over the elements of the array.
   @raise Sys_error _ if readdir fails.
   As with [readdir], ["."] and [".."] are not returned

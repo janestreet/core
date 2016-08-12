@@ -29,6 +29,7 @@
     unix_time_stubs
     version_util_fallback_stubs))
   (preprocessor_deps (config.h))
+  (preprocess (((pps (JANE -check-doc-comments)) All)))
   (inline_tests ((deps (time_stamp_counter_samples_at_1sec.sexp
                         time_stamp_counter_samples_at_60sec.sexp))))))
 

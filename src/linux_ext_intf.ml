@@ -152,6 +152,7 @@ module type S = sig
       include Flags.S with type t := t
 
       val nonblock : t (** [TFD_NONBLOCK] *)
+
       val cloexec  : t (** [TFD_CLOEXEC]  *)
     end
 
@@ -314,17 +315,26 @@ module type S = sig
 
       include Flags.S with type t := t
 
-      (* The names of the flags match the man pages.  E.g. [in_] = "EPOLLIN", [out] =
-         "EPOLLOUT", etc. *)
-      val none    : t (* Associated fd is readable                      *)
-      val in_     : t (* Associated fd is readable                      *)
-      val out     : t (* Associated fd is writable                      *)
-      (* val rdhup   : t (\* Event flag For detecting tcp half-close        *\) *)
-      val pri     : t (* Urgent data available                          *)
-      val err     : t (* Error condition (always on, no need to set it) *)
-      val hup     : t (* Hang up happened (always on)                   *)
-      val et      : t (* Edge Triggered behavior (see man page)         *)
-      val oneshot : t (* one-shot behavior for the associated fd        *)
+      (** The names of the flags match the man pages.  E.g. [in_] = "EPOLLIN", [out] =
+          "EPOLLOUT", etc. *)
+
+      val none    : t (** Associated fd is readable                      *)
+
+      val in_     : t (** Associated fd is readable                      *)
+
+      val out     : t (** Associated fd is writable                      *)
+
+      (*_ val rdhup   : t (\* Event flag For detecting tcp half-close        *\) *)
+
+      val pri     : t (** Urgent data available                          *)
+
+      val err     : t (** Error condition (always on, no need to set it) *)
+
+      val hup     : t (** Hang up happened (always on)                   *)
+
+      val et      : t (** Edge Triggered behavior (see man page)         *)
+
+      val oneshot : t (** one-shot behavior for the associated fd        *)
     end
 
     (** An [Epoll.t] maintains a map from [File_descr.t] to [Flags.t], where the domain is
@@ -386,8 +396,9 @@ module type S = sig
     val iter_ready : t -> f:(File_descr.t -> Flags.t -> unit) -> unit
     val fold_ready : t -> init:'a -> f:('a -> File_descr.t -> Flags.t -> 'a) -> 'a
 
-    (* pwait -> with the specified sigmask, analogous to pselect *)
-    (* val pwait   : t -> timeout:Span.t -> int list -> [ `Ok of Ready_fds.t | `Timeout ]
+    (*_
+      (* pwait -> with the specified sigmask, analogous to pselect *)
+      (* val pwait   : t -> timeout:Span.t -> int list -> [ `Ok of Ready_fds.t | `Timeout ] *)
     *)
   end
 end

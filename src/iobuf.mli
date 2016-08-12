@@ -253,12 +253,12 @@ module Fill : sig
     with type ('a, 'd, 'w) t = (read_write, seek) t -> 'a -> unit
     with type 'a bin_prot := 'a Bin_prot.Type_class.writer
 
-  (* [decimal t int] is equivalent to [Iobuf.Fill.string t (Int.to_string int)], but with
-     improved efficiency and no intermediate allocation.
+  (** [decimal t int] is equivalent to [Iobuf.Fill.string t (Int.to_string int)], but with
+      improved efficiency and no intermediate allocation.
 
-     In other words: It fills the decimal representation of [int] to [t].  [t] is advanced
-     by the number of characters written and no terminator is added.  If sufficient space
-     is not available [decimal] will raise. *)
+      In other words: It fills the decimal representation of [int] to [t].  [t] is
+      advanced by the number of characters written and no terminator is added.  If
+      sufficient space is not available [decimal] will raise. *)
   val decimal : (int, _, _) t
 end
 
@@ -333,6 +333,7 @@ module Blit : sig
   type 'rw t_no_seek = ('rw, no_seek) t
   include Blit.S_permissions
     with type 'rw t := 'rw t_no_seek
+
   (** Override types of [sub] and [subo] to allow return type to have [seek] as needed. *)
   val sub
     :  ([> read], no_seek) t

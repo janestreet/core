@@ -6,7 +6,7 @@ open Interval_intf
 
 module type S1 = S1
 
-(* Sexps are () for empty interval and (3 5) for an interval containing 3, 4, and 5. *)
+(** Sexps are () for empty interval and (3 5) for an interval containing 3, 4, and 5. *)
 include S1
 
 module type S = S
@@ -47,8 +47,8 @@ module Time : sig
   val create_ending_before : ?zone:Zone.t -> Ofday.t * Ofday.t -> ubound:Time.t -> t
 end
 
-(* The spec for [Ofday] must be below the spec for [Time], so as not to shadow the uses
-   of [Ofday] in the spec for [Time]. *)
+(** The spec for [Ofday] must be below the spec for [Time], so as not to shadow the uses
+    of [Ofday] in the spec for [Time]. *)
 module Ofday : S with type bound = Ofday.t
 
 module Stable : sig

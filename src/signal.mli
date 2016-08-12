@@ -93,26 +93,47 @@ val sigsuspend : t list -> unit
 (** Specific signals, along with their default behavior and meaning. *)
 
 val abrt   : t  (** [Dump_core]  Abnormal termination                           *)
+
 val alrm   : t  (** [Terminate]  Timeout                                        *)
+
 val chld   : t  (** [Ignore]     Child process terminated                       *)
+
 val cont   : t  (** [Continue]   Continue                                       *)
+
 val fpe    : t  (** [Dump_core]  Arithmetic exception                           *)
+
 val hup    : t  (** [Terminate]  Hangup on controlling terminal                 *)
+
 val ill    : t  (** [Dump_core]  Invalid hardware instruction                   *)
+
 val int    : t  (** [Terminate]  Interactive interrupt (ctrl-C)                 *)
+
 val kill   : t  (** [Terminate]  Termination (cannot be ignored)                *)
+
 val pipe   : t  (** [Terminate]  Broken pipe                                    *)
+
 val prof   : t  (** [Terminate]  Profiling interrupt                            *)
+
 val quit   : t  (** [Dump_core]  Interactive termination                        *)
+
 val segv   : t  (** [Dump_core]  Invalid memory reference                       *)
+
 val stop   : t  (** [Stop]       Stop                                           *)
+
 val term   : t  (** [Terminate]  Termination                                    *)
+
 val tstp   : t  (** [Stop]       Interactive stop                               *)
+
 val ttin   : t  (** [Stop]       Terminal read from background process          *)
+
 val ttou   : t  (** [Stop]       Terminal write from background process         *)
+
 val usr1   : t  (** [Terminate]  Application-defined signal 1                   *)
+
 val usr2   : t  (** [Terminate]  Application-defined signal 2                   *)
+
 val vtalrm : t  (** [Terminate]  Timeout in virtual time                        *)
+
 val zero   : t  (** [Ignore]     No-op; can be used to test whether the target
                                  process exists and the current process has
                                  permission to signal it                        *)

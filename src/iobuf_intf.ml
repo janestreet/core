@@ -2,7 +2,9 @@ open Core_kernel.Std
 
 (** [no_seek] and [seek] are phantom types used in a similar manner to [read] and
     [read_write]. *)
+
 type no_seek                [@@deriving sexp_of]  (** like [read] *)
+
 type seek = private no_seek [@@deriving sexp_of]  (** like [read_write] *)
 
 (** A collection of iobuf access functions.  This abstracts over [Iobuf.Consume],
@@ -45,7 +47,7 @@ module type Bound = sig
   type ('d, 'w) iobuf
 
   type t =
-    private int (* performance hack: avoid the write barrier *)
+    private int (*_ performance hack: avoid the write barrier *)
   [@@deriving compare, sexp_of]
 
   val window : (_, _) iobuf -> t
@@ -54,7 +56,8 @@ module type Bound = sig
 
 end
 
-(* The [src_pos] argument of {!Core_kernel.Blit.blit} doesn't make sense here. *)
+(** The [src_pos] argument of {!Core_kernel.Blit.blit} doesn't make sense here. *)
+
 type ('src, 'dst) consuming_blit
   =  src     : 'src
   -> dst     : 'dst
@@ -82,5 +85,5 @@ module type Consuming_blit = sig
   val sub  : src -> len:int -> dst
 end
 
-(* For use in iobuf.mli -- can't be added to Std_internal due to dependencies *)
+(*_ For use in iobuf.mli -- can't be added to Std_internal due to dependencies *)
 module Unix = Core_unix

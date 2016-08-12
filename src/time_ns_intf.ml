@@ -10,6 +10,7 @@ module type Option = sig
   val is_some : t -> bool
   val value : t -> default : value -> value
   val value_exn : t -> value
+
   (** [unchecked_value t] is like [value_exn t], except its return value is only defined
       if [is_some t].  This avoids an extra branch if it is known that [is_some t]. *)
   val unchecked_value : t -> value
@@ -71,11 +72,14 @@ module type Span = sig
   val min_value : t
   val max_value : t
   val ( + ) : t -> t -> t (** overflows silently *)
+
   val ( - ) : t -> t -> t (** overflows silently *)
+
   val abs : t -> t
   val neg : t -> t
   val scale     : t -> float -> t
   val scale_int : t -> int   -> t (** overflows silently *)
+
   val div : t -> t -> Int63.t
   val ( / ) : t -> float -> t
   val ( // ) : t -> t -> float
@@ -133,6 +137,7 @@ module type Span = sig
   include Robustly_comparable with type t := t
 
   val to_int63_ns : t -> Int63.t (** Fast, implemented as the identity function. *)
+
   val of_int63_ns : Int63.t -> t (** Somewhat fast, implemented as a range check. *)
 
   (** Will raise on 32-bit platforms with spans corresponding to contemporary {!now}.
@@ -256,8 +261,11 @@ module type Time_ns = sig
   val now : unit -> t
 
   val add      : t -> Span.t -> t (** overflows silently *)
+
   val sub      : t -> Span.t -> t (** overflows silently *)
+
   val diff     : t -> t -> Span.t (** overflows silently *)
+
   val abs_diff : t -> t -> Span.t (** overflows silently *)
 
   val to_span_since_epoch : t -> Span.t
@@ -269,7 +277,7 @@ module type Time_ns = sig
   val to_string_fix_proto : [ `Utc | `Local ] -> t -> string
   val of_string_fix_proto : [ `Utc | `Local ] -> string -> t
 
-  (* See [Time] for documentation. *)
+  (** See [Time] for documentation. *)
   val to_string_abs : t -> zone:Zone.t -> string
   val of_string_abs : string -> t
 

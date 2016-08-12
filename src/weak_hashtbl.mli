@@ -33,9 +33,9 @@ open! Core_kernel.Std
 
 type ('a, 'b) t [@@deriving sexp_of]
 
+(** [growth_allowed] and [size] are both optionally passed on to the underlying call to
+    [Hashtbl.create]. *)
 val create
-  (** [growth_allowed] and [size] are both optionally passed on to the underlying call to
-      [Hashtbl.create]. *)
   :  ?growth_allowed : bool  (** default is [true] *)
   -> ?size           : int   (** default is [128] *)
   -> 'a Hashtbl.Hashable.t

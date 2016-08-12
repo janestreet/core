@@ -280,18 +280,19 @@ val parse : string -> fmt:string -> zone:Zone.t -> t
 
 (** [to_epoch t] returns the number of seconds since Jan 1, 1970 00:00:00 in UTC *)
 val to_epoch : t -> float
+
 (** [of_epoch x] returns the time x seconds after Jan 1, 1970 00:00:00 in UTC *)
 val of_epoch : float -> t
 
-(* [next_multiple ~base ~after ~interval] returns the smallest [time] of the form:
+(** [next_multiple ~base ~after ~interval] returns the smallest [time] of the form:
 
-   {[
-     time = base + k * interval
-   ]}
+    {[
+      time = base + k * interval
+    ]}
 
-   where [k >= 0] and [time > after].  It is an error if [interval <= 0].
+    where [k >= 0] and [time > after].  It is an error if [interval <= 0].
 
-   Supplying [~can_equal_after:true] allows the result to satisfy [time >= after].
+    Supplying [~can_equal_after:true] allows the result to satisfy [time >= after].
 *)
 val next_multiple
   :  ?can_equal_after:bool  (** default is [false] *)

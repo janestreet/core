@@ -1,7 +1,7 @@
 module type Gen = sig
   type 'a t
 
-  (* [bound] is the type of points in the interval (and also of the bounds, which are
+  (** [bound] is the type of points in the interval (and also of the bounds, which are
      points; hence the name).  [bound] is instantiated in two different ways below: in
      [module type S] as a monotype and in [module type S1] as ['a]. *)
   type 'a bound
@@ -75,11 +75,11 @@ module type Gen = sig
       correspond to the intersection of [ilist1] with [ilist2]. *)
   val list_intersect : 'a t list -> 'a t list -> 'a t list
 
-  (* Returns true if the intervals, when considered as half-open-intervals, nestle up
-     cleanly one to the next.  i.e., if you sort the intervals by the lower bound, then
-     the upper bound of the nth interval is equal to the lower bound of the n+1th
-     interval.  The intervals do not need to partition the entire space, they just
-     need to partition their union. *)
+  (** Returns true if the intervals, when considered as half-open-intervals, nestle up
+      cleanly one to the next.  i.e., if you sort the intervals by the lower bound, then
+      the upper bound of the nth interval is equal to the lower bound of the n+1th
+      interval.  The intervals do not need to partition the entire space, they just
+      need to partition their union. *)
   val half_open_intervals_are_a_partition : 'a t list -> bool
 end
 
@@ -87,22 +87,22 @@ module type Gen_set = sig
   type 'a t
   type 'a bound
   type 'a interval
-  (* An interval set is a set of nonempty disjoint intervals. *)
+  (** An interval set is a set of nonempty disjoint intervals. *)
 
-  (* [create] creates an interval set containing values between each pair of
-     values.  It is an error if the pairs overlap. *)
+  (** [create] creates an interval set containing values between each pair of
+      values.  It is an error if the pairs overlap. *)
   val create : ('a bound * 'a bound) list -> 'a t
 
-  (* [create_from_intervals] creates an interval set.  Empty intervals are
-     dropped.  It is an error if the nonempty intervals are not disjoint. *)
+  (** [create_from_intervals] creates an interval set.  Empty intervals are
+      dropped.  It is an error if the nonempty intervals are not disjoint. *)
   val create_from_intervals : 'a interval list -> 'a t
 
   val contains : 'a t -> 'a bound -> bool
 
   val contains_set : container:('a t) -> contained:('a t) -> bool
 
-  (* The largest and smallest element of the interval set, respectively.  Raises
-     Invalid_argument on empty sets. *)
+  (** The largest and smallest element of the interval set, respectively.  Raises
+      Invalid_argument on empty sets. *)
   val ubound_exn : 'a t -> 'a bound
   val lbound_exn : 'a t -> 'a bound
 
@@ -119,8 +119,9 @@ module type S = sig
   include Gen
     with type 'a t := 'a t_
     with type 'a bound := 'a bound_
-  (* [create] has the same type as in [Gen], but adding it here prevents a type-checker
-     issue with nongeneralizable type variables. *)
+
+  (** [create] has the same type as in [Gen], but adding it here prevents a type-checker
+      issue with nongeneralizable type variables. *)
   val create : bound -> bound -> t
 
   type 'a poly_t

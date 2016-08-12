@@ -3,20 +3,20 @@
   A [Schedule.t] describes a (potentially repeating) schedule by selecting
   a subset of all seconds using the set operations in [t].  For example:
 
-    - every 5 min after the hour : {v Mins [ 5 ] }
+    - every 5 min after the hour : {v Mins [ 5 ] v}
 
     - 9am to 10am every day :
-      {v Between (Time.Ofday.create ~hr:9 (), Time.Ofday.create ~hr:10 ()) }
+      {v Between (Time.Ofday.create ~hr:9 (), Time.Ofday.create ~hr:10 ()) v}
 
     - Every weekday at 3pm:
       {v And
         [ Weekdays [ Mon; Tue; Wed; Thu; Fri ]
-        ; At [ Time.Ofday.create ~hr:15 () ] ] }
+        ; At [ Time.Ofday.create ~hr:15 () ] ] v}
 
     - On the 15th of every month at midnight:
       {v And
         [ Days [ 15 ]
-        ; At [ Time.Ofday.start_of_day ] ] }
+        ; At [ Time.Ofday.start_of_day ] ] v}
 
     - 9:30 am on weekends, and 5 am on weekdays
       {v Or
@@ -26,7 +26,7 @@
         ; And
             [ Weekdays [ Mon; Tue; Wed; Thu; Fri ]
             ; At [ Time.Ofday.create ~hr:5 () ] ]
-        ] }
+        ] v}
 *)
 
 (** {1 Zones and Tags}
@@ -42,20 +42,20 @@
   Combining these we can express something complex like the on-call groups across three
   offices:
 
-  {v
-  let weekdays         = Weekdays Day_of_week.weekdays in
-  let working_hours    = Between Time.Ofday.((create ~hr:8 (), create ~hr:18 ())) in
-  let working_schedule = And [ weekdays; working_hours ] in
-  let offices =
-    let (!!) = Time.Zone.find_exn in
-    Location.Abbrev.([
-      tot, !!"America/New_York"
-    ; hkg, !!"Asia/Hong_Kong"
-    ; ldn, !!"Europe/London" ])
-  in
-  List.map offices ~f:(fun (office, zone) ->
-    In_zone (zone, Tag (office, working_schedule)))
-  }
+  {[
+    let weekdays         = Weekdays Day_of_week.weekdays in
+    let working_hours    = Between Time.Ofday.((create ~hr:8 (), create ~hr:18 ())) in
+    let working_schedule = And [ weekdays; working_hours ] in
+    let offices =
+      let (!!) = Time.Zone.find_exn in
+      Location.Abbrev.([
+        tot, !!"America/New_York"
+      ; hkg, !!"Asia/Hong_Kong"
+      ; ldn, !!"Europe/London" ])
+    in
+    List.map offices ~f:(fun (office, zone) ->
+      In_zone (zone, Tag (office, working_schedule)))
+  ]}
 
   after which we can use the [tags] function to extract the groups on call at any moment.
 *)

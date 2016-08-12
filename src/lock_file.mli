@@ -21,8 +21,8 @@ open! Core_kernel.Std
     umask 0. *)
 val create
   :  ?message : string
-  -> ?close_on_exec : bool (* defaults to true *)
-  -> ?unlink_on_exit : bool (* defaults to false *)
+  -> ?close_on_exec : bool (** defaults to true *)
+  -> ?unlink_on_exit : bool (** defaults to false *)
   -> string
   -> bool
 
@@ -30,18 +30,18 @@ val create
     failure instead of returning a boolean value *)
 val create_exn
   :  ?message : string
-  -> ?close_on_exec : bool (* defaults to true *)
-  -> ?unlink_on_exit : bool (* defaults to false *)
+  -> ?close_on_exec : bool (** defaults to true *)
+  -> ?unlink_on_exit : bool (** defaults to false *)
   -> string
   -> unit
 
 (** [blocking_create t] tries to create the lock. If another process holds the lock this
     function will wait until it is released or until timeout expires. *)
 val blocking_create
-  :  ?timeout : Time.Span.t (* defaults to wait indefinitely *)
+  :  ?timeout : Time.Span.t (** defaults to wait indefinitely *)
   -> ?message : string
-  -> ?close_on_exec : bool (* defaults to true *)
-  -> ?unlink_on_exit : bool (* defaults to false *)
+  -> ?close_on_exec : bool (** defaults to true *)
+  -> ?unlink_on_exit : bool (** defaults to false *)
   -> string
   -> unit
 

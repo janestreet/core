@@ -5,10 +5,11 @@ open Unix
 
 include module type of struct include Core_kernel.Std.Bigstring end
 
-(** Type of I/O errors *)
-exception IOError of
-    int *  (** Number of bytes successfully read/written before error *)
-      exn  (** The occurred exception (e.g. Unix_error, End_of_file) *)
+(** Type of I/O errors
+
+    In [IOError (n, exn)], [n] is the number of bytes successfully read/written before
+    the error and [exn] is the occured exception (e.g. Unix_error, End_of_file) *)
+exception IOError of int * exn
 
 (** {6 Input functions} *)
 

@@ -386,7 +386,7 @@ let add_months t n =
   let total_months = (Month.to_int (month t)) + n in
   let y = (year t) + (total_months /% 12) in
   let m = total_months % 12 in
-  (** correct for december **)
+  (* correct for december **)
   let (y, m) =
     if Int.(=) m 0 then
       (y - 1, m + 12)
@@ -394,7 +394,7 @@ let add_months t n =
       (y, m)
   in
   let m = Month.of_int_exn m in
-  (** handle invalid dates for months with fewer number of days **)
+  (* handle invalid dates for months with fewer number of days **)
   let rec try_create d =
     try create_exn ~y ~m ~d
     with _exn ->

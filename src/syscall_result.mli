@@ -12,7 +12,7 @@ open! Core_kernel.Std
 (** There is no [with sexp_of] on purpose as it could only print the ['a] value as an
     integer.  Use [<:sexp_of< Int.t >>] or [<:sexp_of< Unit.t >>]. *)
 type 'a t
-  = private int (* performance hack *)
+  = private int (*_ performance hack *)
 
 module type S   = Syscall_result_intf.S with type 'a syscall_result := 'a t
 module type Arg = Syscall_result_intf.Arg

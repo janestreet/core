@@ -32,7 +32,7 @@ val timedlock : (t -> Time.t -> bool) Or_error.t
 *)
 val unlock : t -> unit
 
-(* [critical_section t ~f] locks [t], runs [f], unlocks [t], and returns the result of
+(** [critical_section t ~f] locks [t], runs [f], unlocks [t], and returns the result of
    [f] (or raises if [f] raised). *)
 val critical_section : t -> f:(unit -> 'a) -> 'a
 

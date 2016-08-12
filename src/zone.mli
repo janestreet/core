@@ -13,6 +13,8 @@ open! Core_kernel.Std
 type t
 
 include Identifiable.S with type t := t
+
+
 (** [find name] looks up a [t] by its name and returns it.  *)
 val find : string -> t option
 

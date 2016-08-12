@@ -12,8 +12,10 @@
 
 open! Core_kernel.Std
 
-val version : string (* all hg repos and their versions *)
-val version_list : string list (* same as [version], but one string per line *)
+val version : string (** all hg repos and their versions *)
+
+val version_list : string list (** same as [version], but one string per line *)
+
 val arg_spec : (string * Arg.spec * string) list
 
 (** [Application_specific_fields] is a single field in the build-info sexp that holds
@@ -45,6 +47,8 @@ val dynlinkable_code               : bool
 val compiled_for_speed             : bool
 val application_specific_fields    : Application_specific_fields.t option
 val ocaml_version                  : string
+
 val executable_path                : string (** Relative to OMakeroot dir *)
+
 val build_system                   : string
 

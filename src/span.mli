@@ -1,8 +1,8 @@
 open! Core_kernel.Std
 
-type t = private float [@@deriving bin_io, sexp] (* number of seconds *)
+type t = private float [@@deriving bin_io, sexp] (** number of seconds *)
 
-(* Parts represents the individual parts of a Span as if it were written out (it is the
+(** Parts represents the individual parts of a Span as if it were written out (it is the
    counterpart to create).  For example, (sec 90.) is represented by {Parts.hr = 0;
    min = 1; sec = 30; ms = 0}.  The fields will always be positive. *)
 module Parts : sig
@@ -24,30 +24,31 @@ include Hashable_binable     with type t := t
 include Pretty_printer.S     with type t := t
 include Robustly_comparable  with type t := t
 
-(* String converters and sexp converters allow for specifying of time spans in various
-   units after a leading float (e.g. 45s, 3h, or 1d):
+(** String converters and sexp converters allow for specifying of time spans in various
+    units after a leading float (e.g. 45s, 3h, or 1d):
 
-    ms - milliseconds
-    s - seconds
-    m - minutes
-    h - hours
-    d - days
+     ms - milliseconds
+     s - seconds
+     m - minutes
+     h - hours
+     d - days
 
-   The outgoing conversion functions use these units as well, choosing the largest
-   available type.  For instance, if it's a bit greater than or equal to 1 hour, the span
-   will be rendered in hours, (Time.to_string (Time.of_string "66m") = "1.1h").
+    The outgoing conversion functions use these units as well, choosing the largest
+    available type.  For instance, if it's a bit greater than or equal to 1 hour, the span
+    will be rendered in hours, (Time.to_string (Time.of_string "66m") = "1.1h").
 
-   As of [Stable.V2], [of_string] and [t_of_sexp] also accept "us"=microseconds and
-   "ns"=nanoseconds suffixes.  [Stable.V2] will produce these suffixes, but for
-   compatibility with [Stable.V1], ordinary [to_string] and [sexp_of_t] will not, for now.
-   Once use of the new [of_] family is more widespread, we will switch the [to_] family to
-   the more expressive format.  In the meantime, you can get [ns] and [us] suffixes by
-   using [to_string_hum].
+    As of [Stable.V2], [of_string] and [t_of_sexp] also accept "us"=microseconds and
+    "ns"=nanoseconds suffixes.  [Stable.V2] will produce these suffixes, but for
+    compatibility with [Stable.V1], ordinary [to_string] and [sexp_of_t] will not, for now.
+    Once use of the new [of_] family is more widespread, we will switch the [to_] family to
+    the more expressive format.  In the meantime, you can get [ns] and [us] suffixes by
+    using [to_string_hum].
 *)
 val to_string : t -> string
 val of_string : string -> t
 
-(* values *)
+(** {6 values} *)
+
 val nanosecond : t
 val microsecond : t
 val millisecond : t
@@ -55,14 +56,16 @@ val second : t
 val minute : t
 val hour : t
 val day : t
-(* 10^-6 seconds, used in robustly comparable operators (<., >., =., ...) to determine
-   equality *)
+
+(** 10^-6 seconds, used in robustly comparable operators (<., >., =., ...) to determine
+    equality *)
 val robust_comparison_tolerance : t
+
 val zero : t
 
-(* [create ?sign ?day ?hr ?min ?sec ?ms ?us ()] Create a span from the given parts.  All
-   parts are assumed to be positive (no checking is done by the function) and the sign of
-   the final span is given by [sign] which is positive by default. *)
+(** [create ?sign ?day ?hr ?min ?sec ?ms ?us ()] Create a span from the given parts.  All
+    parts are assumed to be positive (no checking is done by the function) and the sign of
+    the final span is given by [sign] which is positive by default. *)
 val create
   :  ?sign:Sign.t
   -> ?day:int
@@ -76,7 +79,8 @@ val create
 
 val to_parts : t -> Parts.t
 
-(* converters *)
+(** {6 converters} *)
+
 val of_ns      : float -> t
 val of_us      : float -> t
 val of_ms      : float -> t
@@ -95,10 +99,13 @@ val to_hr  : t -> float
 val to_day : t -> float
 
 (** {6 Basic operations on spans} *)
+
 val (+)   : t -> t -> t
 val (-)   : t -> t -> t
 val abs   : t -> t (** absolute value *)
+
 val neg   : t -> t (** negation *)
+
 val scale : t -> float -> t
 val (/)   : t -> float -> t
 val (//)  : t -> t -> float

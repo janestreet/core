@@ -76,10 +76,11 @@ module Arg_type : sig
     -> 'a t
     -> 'a list t
 
-  (* values to include in other namespaces *)
+  (** values to include in other namespaces *)
   module Export : sig
 
     val string             : string             t
+
     (** Beware that an anonymous argument of type [int] cannot be specified as negative,
         as it is ambiguous whether -1 is a negative number or a flag. If you need to pass
         a negative number to your program, make it a parameter to a flag. *)
@@ -89,14 +90,17 @@ module Arg_type : sig
     val bool               : bool               t
     val date               : Date.t             t
     val percent            : Percent.t          t
+
     (** [time] requires a time zone. *)
     val time               : Time.t             t
     val time_ofday         : Time.Ofday.Zoned.t t
+
     (** Use [time_ofday_unzoned] only when time zone is implied somehow. *)
     val time_ofday_unzoned : Time.Ofday.t       t
     val time_zone          : Time.Zone.t        t
     val time_span          : Time.Span.t        t
-    (* [file] uses bash autocompletion. *)
+
+    (** [file] uses bash autocompletion. *)
     val file               : string             t
     val host_and_port      : Host_and_port.t    t
     val sexp               : Sexp.t             t
@@ -216,6 +220,7 @@ module Anons : sig
 end
 
 (** {1 specification of command parameters} *)
+
 (** This module is meant to eventually replace [Command.Spec], because the types are
     easier to understand. *)
 module Param : sig
@@ -263,7 +268,7 @@ module Param : sig
           [%map_open
             let x ...
           ]
-        }]
+        ]}
 
         if [Foo] follows the same conventions as [Command.Param].
 
@@ -274,7 +279,9 @@ module Param : sig
     (** {2 various internal values} *)
 
     val help : string Lazy.t t (** the help text for the command *)
+
     val path : string list   t (** the subcommand path of the command *)
+
     val args : string list   t (** the arguments passed to the command *)
 
     (** [flag name spec ~doc] specifies a command that, among other things, takes a flag
@@ -319,8 +326,8 @@ module Param : sig
 
   include S
 
-  (* values included for convenience so you can specify all command line parameters inside
-     a single local open of [Param] *)
+  (** values included for convenience so you can specify all command line parameters inside
+      a single local open of [Param] *)
 
   module Arg_type : module type of Arg_type with type 'a t = 'a Arg_type.t
   include module type of Arg_type.Export
@@ -330,7 +337,7 @@ end
 
 module Let_syntax : sig
   module Let_syntax : sig
-    type 'a t (** substituted below *)
+    type 'a t (*_ substituted below *)
     val return : 'a -> 'a t
     val map    : 'a t -> f:('a -> 'b) -> 'b t
     val both   : 'a t -> 'b t -> ('a * 'b) t
@@ -522,7 +529,8 @@ module Spec : sig
   include module type of Arg_type.Export
 
 
-  type 'a flag = 'a Flag.t (** a flag specification *)
+  (** a flag specification *)
+  type 'a flag = 'a Flag.t
   include module type of Flag with type 'a t := 'a flag
 
   (** [map_flag flag ~f] transforms the parsed result of [flag] by applying [f] *)
@@ -539,7 +547,8 @@ module Spec : sig
   *)
   val flags_of_args_exn : Core_kernel.Std.Arg.t list -> ('a, 'a) t
 
-  type 'a anons = 'a Anons.t (** a specification of some number of anonymous arguments *)
+  (** a specification of some number of anonymous arguments *)
+  type 'a anons = 'a Anons.t
   include module type of Anons with type 'a t := 'a anons
 
   (** [map_anons anons ~f] transforms the parsed result of [anons] by applying [f] *)
@@ -654,8 +663,7 @@ module Shape : sig
     [@@deriving bin_io, compare, sexp]
 
     type anons =
-      (** When exec'ing an older binary whose help sexp doesn't expose the grammar. *)
-      | Usage of string
+      | Usage of string (** When exec'ing an older binary whose help sexp doesn't expose the grammar. *)
       | Grammar of grammar
     [@@deriving bin_io, compare, sexp]
 
@@ -696,7 +704,7 @@ module Shape : sig
     | Group of t Group_info.t
     | Exec of Exec_info.t * (unit -> t)
 
-  (* Fully forced shapes are comparable and serializable. *)
+  (** Fully forced shapes are comparable and serializable. *)
   module Fully_forced : sig
     type shape = t
 

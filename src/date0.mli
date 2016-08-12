@@ -3,6 +3,7 @@ open! Core_kernel.Std
 type t [@@deriving bin_io, sexp]
 
 include Hashable_binable with type t := t
+
 (** converts a string to a date, in formats:
  * m/d/y
  * y-m-d (* valid iso8601_extended *)
@@ -21,14 +22,15 @@ val create_exn : y:int -> m:Month.t -> d:int -> t
 
 val of_tm : Core_unix.tm -> t
 
-(* For details on this ISO format, see:
+(** For details on this ISO format, see:
 
-   http://www.wikipedia.org/wiki/iso8601
+    http://www.wikipedia.org/wiki/iso8601
 *)
-val of_string_iso8601_basic : string -> pos:int -> t (* YYYYMMDD *)
-val to_string_iso8601_basic : t -> string            (* YYYYMMDD *)
+val of_string_iso8601_basic : string -> pos:int -> t (** YYYYMMDD *)
 
-val to_string_american : t -> string              (* MM/DD/YYYY *)
+val to_string_iso8601_basic : t -> string            (** YYYYMMDD *)
+
+val to_string_american : t -> string              (** MM/DD/YYYY *)
 
 val day   : t -> int
 val month : t -> Month.t
@@ -53,7 +55,7 @@ val is_weekday : t -> bool
 *)
 val is_business_day : t -> is_holiday:(t -> bool) -> bool
 
-(* [add_days t n] adds n days to [t] and returns the resulting date. *)
+(** [add_days t n] adds n days to [t] and returns the resulting date. *)
 val add_days : t -> int -> t
 
 (** [add_months t n] returns date with max days for the month if the date would be
@@ -63,11 +65,13 @@ val add_months : t -> int -> t
 
 (** [diff t1 t2] returns date [t1] minus date [t2] in days. *)
 val diff : t -> t -> int
+
 (** [diff_weekdays t1 t2] returns the number of weekdays in the half-open interval
-    [t2,t1) if t1 >= t2, and [- diff_weekdays t2 t1] otherwise. *)
+    \[t2,t1) if t1 >= t2, and [- diff_weekdays t2 t1] otherwise. *)
 val diff_weekdays : t -> t -> int
+
 (** [diff_weekend_days t1 t2] returns the number of days that are weekend days in the
-    half-open interval [t2,t1) if t1 >= t2, and [- diff_weekend_days t2 t1] otherwise. *)
+    half-open interval \[t2,t1) if t1 >= t2, and [- diff_weekend_days t2 t1] otherwise. *)
 val diff_weekend_days : t -> t -> int
 
 (** [add_weekdays t 0] returns the next weekday if [t] is a weekend and [t] otherwise.
@@ -86,7 +90,7 @@ val add_weekdays : t -> int -> t
 *)
 val add_business_days : t -> is_holiday:(t -> bool) -> int -> t
 
-(* the following returns a closed interval (endpoints included) *)
+(** the following returns a closed interval (endpoints included) *)
 val dates_between : min:t -> max:t -> t list
 
 val business_dates_between : min:t -> max:t -> is_holiday:(t -> bool) -> t list

@@ -31,11 +31,12 @@ val id : t -> int
 val exit : unit -> unit
 (** Terminate prematurely the currently executing thread. *)
 
-(* This has been deliberately removed from the interface because it is an inherently
-  unsafe operation and is never required *)
-(* val kill : t -> unit *)
-(** Terminate prematurely the thread whose handle is given.
-   This functionality is available only with bytecode-level threads. *)
+(*_ This has been deliberately removed from the interface because it is an inherently
+    unsafe operation and is never required
+  val kill : t -> unit
+  (** Terminate prematurely the thread whose handle is given.
+    This functionality is available only with bytecode-level threads. *)
+*)
 
 (** {6 Suspending threads} *)
 
