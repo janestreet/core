@@ -337,7 +337,8 @@ end
 
 module Let_syntax : sig
   module Let_syntax : sig
-    type 'a t (*_ substituted below *)
+    type 'a t (** substituted below *)
+
     val return : 'a -> 'a t
     val map    : 'a t -> f:('a -> 'b) -> 'b t
     val both   : 'a t -> 'b t -> ('a * 'b) t

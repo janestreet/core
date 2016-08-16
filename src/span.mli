@@ -3,8 +3,8 @@ open! Core_kernel.Std
 type t = private float [@@deriving bin_io, sexp] (** number of seconds *)
 
 (** Parts represents the individual parts of a Span as if it were written out (it is the
-   counterpart to create).  For example, (sec 90.) is represented by {Parts.hr = 0;
-   min = 1; sec = 30; ms = 0}.  The fields will always be positive. *)
+    counterpart to create).  For example, (sec 90.) is represented by {Parts.hr = 0;
+    min = 1; sec = 30; ms = 0}.  The fields will always be positive. *)
 module Parts : sig
   type t = private {
       sign : Sign.t;

@@ -80,7 +80,7 @@ let ls_dir directory = Array.to_list (readdir directory)
 
 (* This function takes six units to cause ocaml to call a different
    function when executing bytecode:
-   http://caml.inria.fr/pub/docs/manual-ocaml/manual033.html#19.1.2
+   http://caml.inria.fr/pub/docs/manual-ocaml/intfc.html#sec400
 *)
 external executing_bytecode
   : unit -> unit -> unit -> unit -> unit -> unit -> bool

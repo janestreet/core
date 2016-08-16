@@ -1,4 +1,5 @@
-(*_ This file is a modified version of unixLabels.mli from the OCaml distribution. *)
+(** This file is a modified version of unixLabels.mli from the OCaml distribution. *)
+
 open! Core_kernel.Std
 
 (** File descriptor. *)
@@ -419,7 +420,7 @@ type open_flag =
 val open_flag_of_sexp : Sexp.t -> open_flag
 val sexp_of_open_flag : open_flag -> Sexp.t
 
-(** The type of file access rights. *)
+(** file access rights *)
 type file_perm = int [@@deriving sexp]
 
 (** Open the named file with the given flags. Third argument is the permissions to give to
@@ -577,7 +578,9 @@ type file_kind =
     | S_SOCK                  (** Socket *)
   [@@deriving sexp]
 
-(** The informations returned by the {!UnixLabels.stat} calls. *)
+(** The informations returned by the {!UnixLabels.stat} calls.  The times are [float]
+    number of seconds since the epoch; we don't use [Time.t] because [Time] depends on
+    [Unix], so the fix isn't so trivial.  Same for [Native_file.stats] below. *)
 type stats =
   Unix.LargeFile.stats =
     { st_dev : int;                       (** Device number *)
@@ -589,8 +592,6 @@ type stats =
       st_gid : int;                       (** Group ID of the file's group *)
       st_rdev : int;                      (** Device minor number *)
       st_size : int64;                    (** Size in bytes *)
-      (*_ The floats below are really Time.t or Time.Span.t, but Time depends on Unix, so
-          the fix isn't so trivial.  Same for Native_file.stats below. *)
       st_atime : float;                   (** Last access time *)
       st_mtime : float;                   (** Last modification time *)
       st_ctime : float                    (** Last status change time *)
@@ -1626,6 +1627,7 @@ val getnameinfo : sockaddr -> getnameinfo_option list -> name_info
 
 module Terminal_io : sig
   type t = Unix.terminal_io = {
+
     (*_ Input modes: *)
     mutable c_ignbrk : bool;  (** Ignore the break condition. *)
     mutable c_brkint : bool;  (** Signal interrupt on break condition. *)
@@ -1638,8 +1640,10 @@ module Terminal_io : sig
     mutable c_icrnl : bool;   (** Map CR to NL on input. *)
     mutable c_ixon : bool;    (** Recognize XON/XOFF characters on input. *)
     mutable c_ixoff : bool;   (** Emit XON/XOFF chars to control input flow. *)
+
     (*_ Output modes: *)
     mutable c_opost : bool;   (** Enable output processing. *)
+
     (*_ Control modes: *)
     mutable c_obaud : int;    (** Output baud rate (0 means close connection).*)
     mutable c_ibaud : int;    (** Input baud rate. *)
@@ -1650,15 +1654,16 @@ module Terminal_io : sig
     mutable c_parodd : bool;  (** Specify odd parity instead of even. *)
     mutable c_hupcl : bool;   (** Hang up on last close. *)
     mutable c_clocal : bool;  (** Ignore modem status lines. *)
+
     (*_ Local modes: *)
     mutable c_isig : bool;    (** Generate signal on INTR, QUIT, SUSP. *)
-    mutable c_icanon : bool;  (** Enable canonical processing
-                                 (line buffering and editing) *)
+    mutable c_icanon : bool;  (** Enable canonical processing (line buffering and editing) *)
     mutable c_noflsh : bool;  (** Disable flush after INTR, QUIT, SUSP. *)
     mutable c_echo : bool;    (** Echo input characters. *)
     mutable c_echoe : bool;   (** Echo ERASE (to erase previous character). *)
     mutable c_echok : bool;   (** Echo KILL (to erase the current line). *)
     mutable c_echonl : bool;  (** Echo NL even if c_echo is not set. *)
+
     (*_ Control characters: *)
     mutable c_vintr : char;   (** Interrupt character (usually ctrl-C). *)
     mutable c_vquit : char;   (** Quit character (usually ctrl-\). *)
@@ -1666,8 +1671,7 @@ module Terminal_io : sig
     mutable c_vkill : char;   (** Kill line character (usually ctrl-U). *)
     mutable c_veof : char;    (** End-of-file character (usually ctrl-D). *)
     mutable c_veol : char;    (** Alternate end-of-line char. (usually none). *)
-    mutable c_vmin : int;     (** Minimum number of characters to read
-                                 before the read request is satisfied. *)
+    mutable c_vmin : int;     (** Minimum number of characters to read before the read request is satisfied. *)
     mutable c_vtime : int;    (** Maximum read wait (in 0.1s units). *)
     mutable c_vstart : char;  (** Start character (usually ctrl-Q). *)
     mutable c_vstop : char;   (** Stop character (usually ctrl-S). *)
@@ -1732,6 +1736,7 @@ module Terminal_io : sig
      its controlling terminal. *)
   val setsid : unit -> int
 end
+
 
 (** Get a sockaddr from a hostname or IP, and a port *)
 val get_sockaddr : string -> int -> sockaddr
@@ -2087,6 +2092,7 @@ val mcast_join
 val mcast_leave : ?ifname : string -> File_descr.t -> sockaddr -> unit
 
 
+
 (** [get_mcast_ttl sock] reads the time-to-live value of outgoing multicast packets for
     socket [sock]. *)
 val get_mcast_ttl : File_descr.t -> int
@@ -2194,4 +2200,4 @@ end
 val getifaddrs : unit -> Ifaddr.t list
 
 
-(*_ vim: set filetype=ocaml : *)
+
