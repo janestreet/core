@@ -343,6 +343,19 @@ module Stable = struct
       String.concat ~sep:" " (to_string_abs_parts ~zone time)
     ;;
 
+    let to_string_iso8601_basic time ~zone =
+      String.concat ~sep:"T" (to_string_abs_parts ~zone time)
+
+    let%expect_test "[to_string_iso8601] in in zulu" =
+      printf !"%s" (to_string_iso8601_basic ~zone:Zone.utc (T.of_float 12.345678));
+      [%expect {| 1970-01-01T00:00:12.345678Z |}];
+    ;;
+
+    let%expect_test "[to_string_iso8601] in in local/nyc" =
+      printf !"%s" (to_string_iso8601_basic ~zone:Zone.local (T.of_float 12.345678));
+      [%expect {| 1969-12-31T19:00:12.345678-05:00 |}];
+    ;;
+
     let to_string_trimmed t ~zone =
       let date, sec = to_date_ofday ~zone t in
       (Date.to_string date) ^ " " ^ (Ofday.to_string_trimmed sec)

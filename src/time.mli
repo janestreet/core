@@ -208,6 +208,13 @@ val of_localized_string : zone:Zone.t -> string -> t
 val to_string_abs         : t -> zone:Zone.t -> string
 val to_string_abs_trimmed : t -> zone:Zone.t -> string
 
+(** [to_string_iso8601_basic] return a string representation of the following form:
+    %Y-%m-%dT%H:%M:%S.%s%Z
+    e.g.
+    [ to_string_iso8601_basic ~zone:Time.Zone.utc epoch = "1970-01-01T00:00:00.000000Z" ]
+*)
+val to_string_iso8601_basic : t -> zone:Zone.t -> string
+
 (** [of_string_abs s] is like [of_string], but demands that [s] indicate the timezone the
     time is expressed in. *)
 val of_string_abs : string -> t
