@@ -214,6 +214,7 @@ let protect_window_and_bounds t ~f =
   let hi = t.hi in
   let lo_min = t.lo_min in
   let hi_max = t.hi_max in
+  let buf = t.buf in  (* also mutable *)
   try
     t.lo_min <- lo;
     t.hi_max <- hi;
@@ -222,15 +223,15 @@ let protect_window_and_bounds t ~f =
     t.hi <- hi;
     t.lo_min <- lo_min;
     t.hi_max <- hi_max;
+    t.buf <- buf;
     result
-  with
-  | exn -> begin
+  with exn ->
     t.lo <- lo;
     t.hi <- hi;
     t.lo_min <- lo_min;
     t.hi_max <- hi_max;
+    t.buf <- buf;
     raise exn
-  end
 
 let create ~len =
   if len < 0 then

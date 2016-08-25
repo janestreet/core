@@ -1726,3 +1726,11 @@ let%test_module "allocation" =
           (minor_words 0)
           (major_words 0)) |}]
   end)
+
+let%test_unit "SEGV bug repro" =
+  let tmp = Iobuf.create ~len:10000000 in
+  Iobuf.advance tmp (Iobuf.length tmp - 5);
+  Iobuf.protect_window_and_bounds tmp ~f:(fun tmp ->
+    let tmp2 = Iobuf.create ~len:5 in
+    Iobuf.set_bounds_and_buffer ~src:tmp2 ~dst:tmp);
+  ignore (Iobuf.Consume.To_string.subo (Iobuf.read_only tmp) : string)

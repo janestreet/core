@@ -69,9 +69,9 @@ val sub_shared : ?pos:int -> ?len:int -> ('d, _) t -> ('d, _) t
     read] and the other [immutable :> read], which would allow to write the [immutable]
     alias's data through the [read_write] alias.
 
-    [set_bounds_and_buffer] is typically used to allocate a frame iobuf only once.  This
-    frame can be updated repeatedly and handed to users, without further allocation.  Only
-    the most allocation-sensitive applications need this. *)
+    [set_bounds_and_buffer] is typically used with a frame iobuf that need be allocated
+    only once.  This frame can be updated repeatedly and handed to users, without further
+    allocation.  Allocation-sensitive applications need this. *)
 val set_bounds_and_buffer
   : src : ([> write] as 'data, _) t -> dst : ('data, seek) t -> unit
 
@@ -204,12 +204,9 @@ val bounded_compact : (read_write, seek) t -> Lo_bound.t -> Hi_bound.t -> unit
 val flip_hi         : (_, seek) t -> unit
 val bounded_flip_hi : (_, seek) t -> Hi_bound.t -> unit
 
-(** [protect_window_and_bounds t ~f] applies [f] to [t] and restores [t]'s bounds
-    afterwards. *)
-val protect_window_and_bounds
-  :  ('rw, no_seek) t
-  -> f:(('rw, seek) t -> 'a)
-  -> 'a
+(** [protect_window_and_bounds t ~f] applies [f] to [t] and restores [t]'s bounds and
+    buffer afterward. *)
+val protect_window_and_bounds : ('rw, no_seek) t -> f:(('rw, seek) t -> 'a) -> 'a
 
 (** {1 Getting and setting data} *)
 (** "consume" and "fill" functions access data at the lower bound of the window and
