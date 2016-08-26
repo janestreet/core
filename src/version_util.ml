@@ -78,7 +78,7 @@ let { username;
   Exn.handle_uncaught_and_exit (fun () -> t_of_sexp build_info_as_sexp)
 ;;
 
-let compiled_for_speed = x_library_inlining
+let compiled_for_speed = x_library_inlining && not dynlinkable_code
 let time =
   match build_date, build_time with
   | None, _ | _, None -> None

@@ -1334,4 +1334,35 @@ let%test_module "Schedule" = (module struct
                                         , (Inclusive, Time.Ofday.of_string "23:00")))) ])
     in
     schedule_do_not_spin_forever ~start_time initial_bug_report
+  ;;
+
+  let%test_unit "Schedules using Sec and Min are inclusive when used with next_enter_between" =
+    let start_time = Time.of_string "2016-07-27 00:00:00.000000+00:00" in
+    let test_inclusivity sched =
+      let first_enter_found =
+        Schedule.next_enter_between
+          sched
+          start_time
+          (Time.add start_time (Time.Span.of_day 365.))
+        |> Option.value_exn
+      in
+      let second_enter_found =
+        Schedule.next_enter_between
+          sched
+          first_enter_found
+          (Time.add first_enter_found (Time.Span.of_day 365.))
+        |> Option.value_exn
+      in
+      if Time.(<>) first_enter_found second_enter_found
+      then raise_s
+             [%message
+               "next_enter_between should always be inclusive in the first bound"
+                 (first_enter_found : Time.t)
+                 (second_enter_found : Time.t) ]
+    in
+    let sec_sched = Schedule.(In_zone (Time.Zone.utc, Secs [15])) in
+    let min_sched = Schedule.(In_zone (Time.Zone.utc, Mins [15])) in
+    test_inclusivity sec_sched;
+    test_inclusivity min_sched;
+  ;;
 end)

@@ -566,27 +566,28 @@ end = struct
         in
         {t with date; ofday }
       | `Min ->
-        let span = Time.Ofday.to_span_since_start_of_day t.ofday in
-        let span = Time.Span.(+) span (Time.Span.of_min 1.) in
         let date, ofday =
-          if Time.Span.(>) span Time.Span.day
-          then Date.add_days t.date 1, Time.Ofday.start_of_day
-          else begin
-            let parts = Time.Span.to_parts span in
-            t.date, Time.Ofday.create ~hr:parts.hr ~min:parts.min ()
-          end
+          let hr = hour t in
+          let m = min t in
+          if Int.(=) hr 23 && Int.(=) m 59
+          then (Date.add_days t.date 1, Time.Ofday.start_of_day)
+          else if Int.(=) m 59
+          then (t.date, Time.Ofday.create ~hr:(hr + 1) ~min:0 ())
+          else (t.date, Time.Ofday.create ~hr ~min:(m + 1) ())
         in
         {t with date; ofday }
       | `Sec ->
         let span = Time.Ofday.to_span_since_start_of_day t.ofday in
-        let span = Time.Span.(+) span (Time.Span.of_sec 1.) in
+        let next_sec_span =
+          Time.Span.to_sec span
+          |> Float.round_down
+          |> (+.) 1.
+          |> Time.Span.of_sec
+        in
         let date, ofday =
-          if Time.Span.(>) span Time.Span.day
+          if Time.Span.(>=) span Time.Span.day
           then Date.add_days t.date 1, Time.Ofday.start_of_day
-          else begin
-            let parts = Time.Span.to_parts span in
-            t.date, Time.Ofday.create ~hr:parts.hr ~min:parts.min ~sec:parts.sec ()
-          end
+          else t.date, Time.Ofday.of_span_since_start_of_day next_sec_span
         in
         {t with date; ofday }
     in
@@ -926,8 +927,7 @@ let includes (t : (zoned, _) Internal.t) (time : Time.t) : Valid_invalid_span.t 
      yield 0/very small sized spans.  This enforces that we always make forward
      progress by ensuring that the returned span will always take us at least to
      the next representable time. This is always correct because if includes is true,
-     it is always in the schedule for a least one ulp, and similiarly for excludes.
-  *)
+     it is always in the schedule for a least one ulp, and similiarly for excludes. *)
   Valid_invalid_span.with_span (loop t (O.Z time))
     (fun span ->
        if Time.(>) (Time.add time span) time
@@ -1105,7 +1105,9 @@ module Event = struct
     [ `Change_tags of Time.t * 'tag list
     ] [@@deriving sexp_of, compare]
 
-  let to_time (t : [< no_change | 'tag transition | 'tag tag_change]) =
+  type 'tag t = [ no_change | 'tag transition | 'tag tag_change] [@@deriving sexp_of]
+
+  let to_time (t : [< 'tag t]) =
     match t with
     | `Enter (time, _)
     | `Change_tags (time, _)
@@ -1278,7 +1280,7 @@ let get_event seq ~stop_time ~f =
 ;;
 
 let next_between_gen t start_time stop_time ~f =
-  (* go back in time slightly in case there is an event exectly on start_time *)
+  (* go back in time slightly in case there is an event exactly on start_time *)
   let start_time = Time.of_float (Float.one_ulp `Down (Time.to_epoch start_time)) in
   let ( `Started_in_range (_, seq)
       | `Started_out_of_range seq ) =
