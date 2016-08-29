@@ -59,7 +59,7 @@ module Stable = struct
 
       (* due to precision limitations in float we can't expect better than microsecond
          precision *)
-      include Core_kernel.Float_robust_compare.Make
+      include Float.Robust_compare.Make
           (struct let robust_comparison_tolerance = 1E-6 end)
 
       (* this prevents any worry about having these very common names redefined below and
