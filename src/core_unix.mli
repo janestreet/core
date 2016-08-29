@@ -797,9 +797,14 @@ type dir_handle = Unix.dir_handle
 (** Open a descriptor on a directory *)
 val opendir : ?restart:bool (** defaults to false *) -> string -> dir_handle
 
-(** Return the next entry in a directory.
-   @raise End_of_file when the end of the directory has been reached. *)
+(** Return the next entry in a directory.  Returns [None] when the end of the directory
+    has been reached. *)
+val readdir_opt : dir_handle -> string option
+
+(** Same as [readdir_opt] except that it signals the end of the directory by raising
+    [End_of_file]. *)
 val readdir : dir_handle -> string
+  [@@deprecated "[since 2016-08] use [readdir_opt] instead"]
 
 (** Reposition the descriptor to the beginning of the directory *)
 val rewinddir : dir_handle -> unit
@@ -1849,11 +1854,15 @@ external fsync : File_descr.t -> unit = "unix_fsync"
     but do not necessarily write file attributes. *)
 external fdatasync : File_descr.t -> unit = "unix_fdatasync"
 
+(** [readdir_ino_opt dh] return the next entry in a directory (([(filename, inode)]).  Returns
+    [None] when the end of the directory has been reached. *)
+val readdir_ino_opt : dir_handle -> (string * nativeint) option
+
+(** Same as [readdir_ino_opt] except that it signals the end of the directory by raising
+    [End_of_file]. *)
 external readdir_ino
   : dir_handle -> string * nativeint = "unix_readdir_ino_stub"
-(** [readdir_ino dh] return the next entry in a directory (([(filename,
-    inode)]).  @raise End_of_file when the end of the directory has been
-    reached. *)
+  [@@deprecated "[since 2016-08] use readdir_ino_opt instead"]
 
 val read_assume_fd_is_nonblocking
   : File_descr.t -> ?pos : int -> ?len : int -> string -> int
@@ -2198,6 +2207,4 @@ module Ifaddr : sig
 end
 
 val getifaddrs : unit -> Ifaddr.t list
-
-
 

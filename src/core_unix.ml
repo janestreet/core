@@ -80,6 +80,11 @@ external dirfd : Unix.dir_handle -> File_descr.t = "unix_dirfd"
 external readdir_ino
   : Unix.dir_handle -> string * nativeint = "unix_readdir_ino_stub"
 
+let readdir_ino_opt dh =
+  match readdir_ino dh with
+  | entry                 -> Some entry
+  | exception End_of_file -> None
+
 external unsetenv : string -> unit = "unix_unsetenv"
 
 external exit_immediately : int -> _ = "caml_sys_exit"
@@ -1470,6 +1475,10 @@ type dir_handle = Unix.dir_handle
 
 let opendir ?restart = unary_dirname ?restart Unix.opendir
 let readdir = unary_dir_handle Unix.readdir (* Non-intr *)
+let readdir_opt dh =
+  match readdir dh with
+  | entry                 -> Some entry
+  | exception End_of_file -> None
 let rewinddir = unary_dir_handle Unix.rewinddir (* Non-intr *)
 (* if closedir is passed an already closed file handle it will try to call
   dirfd on it to get a file descriptor for the error message, which will fail
