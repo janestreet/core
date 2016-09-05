@@ -28,9 +28,9 @@ let%test_unit "parse" =
 
 let%test_module "week_number" = (module struct
   let%test_unit _ =
-    let module Error = Core_kernel.Error in
-    let module Result = Core_kernel.Result in
-    let module Or_error = Core_kernel.Or_error in
+    let module Error = Core_kernel.Std.Error in
+    let module Result = Core_kernel.Std.Result in
+    let module Or_error = Core_kernel.Std.Or_error in
     let start_date = create_exn ~y:2000 ~m:Jan ~d:1 in
     let stop_date  = create_exn ~y:2020 ~m:Dec ~d:31 in
     let rec loop acc d =

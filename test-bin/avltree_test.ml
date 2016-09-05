@@ -1,4 +1,4 @@
-module Avltree = Core_kernel.Avltree
+module Avltree = Base.Avltree
 open OUnit
 open Core.Std
 
