@@ -82,8 +82,11 @@ module Arg_type : sig
     val string             : string             t
 
     (** Beware that an anonymous argument of type [int] cannot be specified as negative,
-        as it is ambiguous whether -1 is a negative number or a flag. If you need to pass
-        a negative number to your program, make it a parameter to a flag. *)
+        as it is ambiguous whether -1 is a negative number or a flag.  (The same applies
+        to [float], [time_span], etc.)  You can use the special built-in "-anon" flag to
+        force a string starting with a hyphen to be interpreted as an anonymous argument
+        rather than as a flag, or you can just make it a parameter to a flag to avoid the
+        issue. *)
     val int                : int                t
     val char               : char               t
     val float              : float              t
@@ -272,7 +275,7 @@ module Param : sig
 
         if [Foo] follows the same conventions as [Command.Param].
 
-        See examples/command/main.ml for more examples.
+        See example/command/main.ml for more examples.
     *)
     include Applicative.S with type 'a t := 'a t
 
