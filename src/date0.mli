@@ -1,6 +1,6 @@
 open! Core_kernel.Std
 
-type t [@@deriving bin_io, sexp]
+type t [@@deriving bin_io, hash, sexp]
 
 include Hashable_binable with type t := t
 

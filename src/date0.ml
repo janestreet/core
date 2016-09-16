@@ -13,7 +13,7 @@ let is_leap_year year =
 module Stable = struct
   module V1 = struct
     module T : sig
-      type t [@@deriving bin_io]
+      type t [@@deriving bin_io, hash]
 
       val create_exn : y:int -> m:Month.Stable.V1.t -> d:int -> t
 
@@ -33,7 +33,8 @@ module Stable = struct
 
          all packed into a single immediate int (so from 4 words down to 1).
       *)
-      type t = int [@@deriving bin_shape ~basetype:"899ee3e0-490a-11e6-a10a-a3734f733566"]
+      type t = int
+      [@@deriving hash, bin_shape ~basetype:"899ee3e0-490a-11e6-a10a-a3734f733566"]
 
       let create0 ~year ~month ~day =
         (* create_exn's validation make sure that each value fits *)
@@ -313,7 +314,6 @@ include (Hashable.Make_binable (struct
   include Sexpable
   include Binable
   let compare (a:t) (b:t) = compare a b
-  let hash (t : t) = Hashtbl.hash t
 end) : Hashable.S_binable with type t := t)
 
 include Pretty_printer.Register (struct

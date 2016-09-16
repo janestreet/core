@@ -135,7 +135,7 @@ module Stable = struct
     let of_string_iso8601_extended ?pos ?len str =
       let (pos, len) =
         match
-          Core_kernel.Ordered_collection_common.get_pos_len ?pos ?len ~length:(String.length str)
+          Ordered_collection_common.get_pos_len ?pos ?len ~length:(String.length str)
         with
         | Result.Ok z    -> z
         | Result.Error s -> failwithf "Ofday.of_string_iso8601_extended: %s" s ()
@@ -455,7 +455,7 @@ module Zoned = struct
       end
       include T
       include Comparable.Make_binable(T)
-      include Core_kernel.Hashable.Make_binable(T)
+      include Hashable.Make_binable(T)
     end
   end
 

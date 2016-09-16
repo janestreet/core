@@ -13,6 +13,8 @@ let log message a sexp_of_a =
   eprintf "%s\n%!" (Sexp.to_string_hum (Info.sexp_of_t (Info.create message a sexp_of_a)));
 ;;
 
+module Timing_wheel = Timing_wheel_float
+
 module Q = Timing_wheel.Priority_queue
 
 module Gc = Core.Std.Gc
@@ -57,7 +59,9 @@ let test ~num_queue_elements ~num_steps =
 let test_with_allocations ~num_queue_elements ~num_steps =
   let tw =
     Timing_wheel.create
-      ~config:(Timing_wheel.Config.create ~alarm_precision:Time.Span.millisecond ())
+      ~config:(Timing_wheel.Config.create ()
+                 ~alarm_precision:(Time.Span.millisecond
+                                   |> Timing_wheel.Alarm_precision.of_span))
       ~start:Time.epoch
   in
   let user_plus_sys_at_start = user_plus_sys () in

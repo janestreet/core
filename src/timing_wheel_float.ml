@@ -16,8 +16,10 @@ module Time_ns = Time_ns_in_this_directory
 
 module Time = Time (* for the .mli *)
 
-module Interval_num   = Timing_wheel_ns.Interval_num
-module Level_bits     = struct
+module Interval_num    = Timing_wheel_ns.Interval_num
+module Priority_queue  = Timing_wheel_ns.Priority_queue
+
+module Level_bits = struct
   include Timing_wheel_ns.Level_bits
   let default = match Word_size.word_size with
     | W64 -> default
@@ -27,7 +29,6 @@ module Level_bits     = struct
        ../test/timing_wheel_float_unit_tests.ml. *)
     | W32 -> Timing_wheel_ns.Level_bits.create_exn [ 11; 10; 10; 10; 9 ]
 end
-module Priority_queue = Timing_wheel_ns.Priority_queue
 
 let to_span = Time_ns.Span.to_span
 let to_time = Time_ns.to_time
@@ -45,6 +46,20 @@ module Alarm = struct
   include Timing_wheel_ns.Alarm
 
   let at timing_wheel t = to_time (at timing_wheel t)
+end
+
+module Alarm_precision = struct
+  module Alarm_precision = Timing_wheel_ns.Alarm_precision
+
+  type t = Alarm_precision.t [@@deriving compare, sexp_of]
+
+  let equal = Alarm_precision.equal
+
+  let of_span span = span |> Time_ns.Span.of_span |> Alarm_precision.of_span
+
+  let to_span t = t |> Alarm_precision.to_span |> to_span
+
+  module Unstable = Alarm_precision.Unstable
 end
 
 let nanoseconds_per_microsecond = Int63.of_int 1000
@@ -72,9 +87,7 @@ module Config = struct
   include Timing_wheel_ns.Config
 
   let create ?level_bits ~alarm_precision () =
-    create ()
-      ~alarm_precision:(alarm_precision |> Time_ns.Span.of_span)
-      ?level_bits
+    create () ~alarm_precision ?level_bits
   ;;
 
   let alarm_precision t = to_span (alarm_precision t)

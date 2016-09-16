@@ -22,7 +22,7 @@ module Stable = struct
       } [@@deriving sexp]
     end
 
-    let upper_bound_native_int = Core_kernel.Float0.upper_bound_for_int Nativeint.num_bits
+    let upper_bound_native_int = Base0.Float0.upper_bound_for_int Nativeint.num_bits
      (* shifted epoch for the time zone for conversion *)
     let date_ofday_of_epoch_internal zone time =
       let parts  = Float.modf time in

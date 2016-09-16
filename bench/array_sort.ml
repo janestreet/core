@@ -225,7 +225,7 @@ end
 
 let sort ?pos ?len arr ~cmp =
   let pos, len =
-    Core_kernel.Ordered_collection_common.get_pos_len_exn ?pos ?len ~length:(Array.length arr)
+    Core.Std.Ordered_collection_common.get_pos_len_exn ?pos ?len ~length:(Array.length arr)
   in
   Sort.Intro_sort.sort arr ~cmp ~left:pos ~right:(pos + len - 1)
 

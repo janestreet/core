@@ -1261,7 +1261,7 @@ CAMLprim value unix_mkstemp(value v_path)
   value v_res;
   init_mktemp(loc, buf, v_path);
   caml_enter_blocking_section();
-    fd = mkstemp(buf);
+    fd = mkostemp(buf, O_CLOEXEC);
   caml_leave_blocking_section();
   if (fd == -1) uerror(loc, v_path);
   v_res_path = caml_copy_string(buf);

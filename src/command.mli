@@ -106,9 +106,9 @@ module Arg_type : sig
     (** [file] uses bash autocompletion. *)
     val file               : string             t
     val host_and_port      : Host_and_port.t    t
+    val ip_address         : Unix.inet_addr     t
     val sexp               : Sexp.t             t
-
-    val sexp_conv : (Sexp.t -> 'a) -> 'a t
+    val sexp_conv          : (Sexp.t -> 'a) -> 'a t
   end
 end
 

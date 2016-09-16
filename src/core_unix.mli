@@ -1218,6 +1218,7 @@ end
 *)
 module Cidr : sig
 
+  (*_  *)
   type t [@@deriving sexp, bin_io]
 
   (** [of_string] Generates a Cidr.t based on a string like ["10.0.0.0/8"].  Addresses are
@@ -2008,6 +2009,8 @@ external sysconf : sysconf -> int64 = "unix_sysconf"
 (** [mkstemp prefix] creates and opens a unique temporary file with [prefix],
     automatically appending a suffix of six random characters to make the name unique.
     Unlike C's [mkstemp], [prefix] should not include six X's at the end.
+
+    The file descriptor will have close-on-exec flag set if O_CLOEXEC flag is supported.
 
     @raise Unix_error on errors.
 *)

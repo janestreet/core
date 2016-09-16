@@ -421,7 +421,7 @@ module Stable = struct
       ;;
 
       let find_or_load_matching t1 =
-        Core_kernel.With_return.with_return (fun r ->
+        With_return.with_return (fun r ->
           let return_if_matches zone_name =
             let filename =
               String.concat ~sep:"/" [the_one_and_only.basedir; zone_name]
@@ -433,7 +433,7 @@ module Stable = struct
               with
               | _ -> false
             in
-            if matches then r.Core_kernel.With_return.return (find_or_load zone_name) else ();
+            if matches then r.With_return.return (find_or_load zone_name) else ();
           in
           List.iter !likely_machine_zones ~f:return_if_matches;
           traverse the_one_and_only.basedir ~f:return_if_matches;

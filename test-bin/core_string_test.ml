@@ -197,7 +197,7 @@ let test =
             "end" @? (S.chop_suffix_exn str1 ~suffix:"" = "1234567890");
             assert_raises
               ~msg:"not a suffix"
-              (Invalid_argument "Core_string.chop_suffix_exn \"1234567890\" \"abc\"")
+              (Invalid_argument "Base_string.chop_suffix_exn \"1234567890\" \"abc\"")
               (fun () -> S.chop_suffix_exn str1 ~suffix:"abc")
         );
         "chop_prefix_exn" >::
@@ -206,7 +206,7 @@ let test =
             "end" @? (S.chop_prefix_exn str1 ~prefix:"" = "1234567890");
             assert_raises
               ~msg:"not a prefix"
-              (Invalid_argument "Core_string.chop_prefix_exn \"1234567890\" \"abc\"")
+              (Invalid_argument "Base_string.chop_prefix_exn \"1234567890\" \"abc\"")
               (fun () -> S.chop_prefix_exn str1 ~prefix:"abc")
         );
         "chop_suffix" >::

@@ -3,9 +3,9 @@ open! Core.Std
 (* module Timing_wheel =
    Core_kernel_unit_tests.Timing_wheel_debug.Make (Time) (Timing_wheel) *)
 
-open Timing_wheel
+open Timing_wheel_float
 
-include Core_kernel_test.Timing_wheel_unit_tests.Make (Timing_wheel)
+include Core_kernel_test.Timing_wheel_unit_tests.Make (Timing_wheel_float)
 
 let sec = Time.Span.of_sec
 
@@ -30,7 +30,7 @@ let%test_unit _ =
       (Date.create_exn ~y:2000 ~m:Month.Jan ~d:1)
       Time.Ofday.start_of_day
   in
-  let alarm_precision = Time.Span.microsecond in
+  let alarm_precision = Time.Span.microsecond |> Alarm_precision.of_span in
   let max_alarm_lower_bound =
     match Word_size.word_size with
     | W32 -> Date.create_exn ~y:2035 ~m:Jan ~d:1

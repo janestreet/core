@@ -1,5 +1,7 @@
 (** A timing wheel in which time is represented by [Time.t], i.e. a floating-point number
-    of seconds since the epoch.
+    of seconds since the epoch.  This is a wrapper around [Timing_wheel_ns], which is
+    preferable to use due to its better performance and avoiding issues due to floating
+    point.
 
     The implementation uses [Timing_wheel_ns], and rounds all [Time.t] values to the
     nearest microsecond before feeding them to the underlying timing wheel.  Thus, it is

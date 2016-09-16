@@ -196,6 +196,7 @@ module Arg_type = struct
   let host_and_port      = create Host_and_port.of_string
   let sexp               = create Sexp.of_string
   let sexp_conv of_sexp  = create (fun s -> of_sexp (Sexp.of_string s))
+  let ip_address         = create Unix.Inet_addr.of_string
 
   let file ?key of_string =
     create ?key of_string ~complete:(fun _ ~part ->
@@ -309,6 +310,7 @@ module Arg_type = struct
     let host_and_port      = host_and_port
     let sexp               = sexp
     let sexp_conv          = sexp_conv
+    let ip_address         = ip_address
   end
 end
 
