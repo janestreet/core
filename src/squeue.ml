@@ -1,4 +1,5 @@
-open Core_kernel.Std
+open! Import
+
 module Queue = Linked_queue
 
 module Mutex = Core_mutex

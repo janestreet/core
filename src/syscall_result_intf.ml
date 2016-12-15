@@ -1,5 +1,4 @@
-open Core_kernel.Std
-
+open! Import
 module type S = sig
   type ok_value
   type 'a syscall_result

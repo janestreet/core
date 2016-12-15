@@ -1,4 +1,8 @@
-include Date0
+open! Import
+
+include Core_kernel.Date
+
+let of_tm = Time0.date_of_tm
 
 let of_time time ~zone = Time.to_date ~zone time
 
@@ -19,18 +23,15 @@ let parse ~fmt s =
 
 let%test_unit "parse" =
   [%test_result: t]
-    ~expect:(create_exn ~y:1970 ~m:Core_kernel.Month.Jan ~d:1)
+    ~expect:(create_exn ~y:1970 ~m:Jan ~d:1)
     (parse ~fmt:"%a, %d %b %Y" "Thu, 1 Jan 1970");
   [%test_result: t]
-    ~expect:(create_exn ~y:2016 ~m:Core_kernel.Month.Apr ~d:19)
+    ~expect:(create_exn ~y:2016 ~m:Apr ~d:19)
     (parse ~fmt:"%a, %d %b %Y %H:%M:%S %z" "Tue, 19 Apr 2016 07:34:04 +0800")
 ;;
 
 let%test_module "week_number" = (module struct
   let%test_unit _ =
-    let module Error = Core_kernel.Std.Error in
-    let module Result = Core_kernel.Std.Result in
-    let module Or_error = Core_kernel.Std.Or_error in
     let start_date = create_exn ~y:2000 ~m:Jan ~d:1 in
     let stop_date  = create_exn ~y:2020 ~m:Dec ~d:31 in
     let rec loop acc d =
@@ -40,7 +41,7 @@ let%test_module "week_number" = (module struct
         let format_str = format d "%V" in
         let week_number_str = Printf.sprintf "%02i" (week_number d) in
         let result =
-          if Core_kernel.Core_string.(<>) format_str week_number_str
+          if String.(<>) format_str week_number_str
           then
             Or_error.errorf
               "week_number for %s (%s) doesn't match output of (format \"%%V\") (%s)"

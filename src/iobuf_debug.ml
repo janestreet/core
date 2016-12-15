@@ -1,4 +1,4 @@
-open Core_kernel.Std
+open! Import
 
 module Unix = Core_unix
 
@@ -17,10 +17,15 @@ module Make () = struct
 
   open Iobuf
 
-  type nonrec ('d, 'w) t = ('d, 'w) t [@@deriving sexp_of]
+  type nonrec ('d, 'w) t = ('d, 'w) Hexdump.t [@@deriving sexp_of]
   type nonrec    seek =    seek [@@deriving sexp_of]
   type nonrec no_seek = no_seek [@@deriving sexp_of]
   module type Bound = Bound
+
+  module Window  = Window
+  module Limits  = Limits
+  module Debug   = Debug
+  module Hexdump = Hexdump
 
   let invariant = invariant
 
@@ -139,11 +144,11 @@ module Make () = struct
       (fun () -> sub_shared ?pos ?len t)
   ;;
 
-  let set_bounds_and_buffer_sub ?pos ~len ~src ~dst () =
+  let set_bounds_and_buffer_sub ~pos ~len ~src ~dst =
     debug "sub" [src] (`pos pos, `len len)
-      [%sexp_of: [ `pos of int option ] * [ `len of int ]]
+      [%sexp_of: [ `pos of int ] * [ `len of int ]]
       sexp_of_unit
-      (fun () -> set_bounds_and_buffer_sub ?pos ~len ~src ~dst ())
+      (fun () -> set_bounds_and_buffer_sub ~pos ~len ~src ~dst)
   ;;
   let set_bounds_and_buffer ~src ~dst =
     debug "copy" [src] src [%sexp_of: (_, _) t] sexp_of_unit
@@ -187,12 +192,12 @@ module Make () = struct
       (fun () -> to_string ?len t)
   ;;
 
-  let to_string_hum ?bounds t =
+  let to_string_hum ?max_lines t =
     debug "to_string_hum" [t]
-      (`bounds bounds)
-      [%sexp_of: [`bounds of [`Window|`Limits|`Whole] option]]
+      (`max_lines max_lines)
+      [%sexp_of: [`max_lines of int option]]
       [%sexp_of: string]
-      (fun () -> to_string_hum ?bounds t)
+      (fun () -> to_string_hum ?max_lines t)
 
   let advance t i = debug "advance" [t] i sexp_of_int sexp_of_unit (fun () -> advance t i)
 
@@ -294,17 +299,29 @@ module Make () = struct
         sexp_of_string
         (fun () -> head_padded_fixed_string ~padding ~len t)
 
-    let string ?str_pos ?len t =
-      debug "Consume.string" [t] (`str_pos str_pos, `len len)
-        [%sexp_of: [ `str_pos of int option ] * [ `len of int option ]]
+    let string ~str_pos ~len t =
+      debug "Consume.string" [t] ()
+        (fun () -> [%sexp { str_pos : int; len : int }])
         sexp_of_string
-        (fun () -> string ?str_pos ?len t)
+        (fun () -> string ~str_pos ~len t)
 
-    let bigstring ?str_pos ?len t =
-      debug "Consume.bigstring" [t] (`str_pos str_pos, `len len)
-        [%sexp_of: [ `str_pos of int option ] * [ `len of int option ]]
+    let bigstring ~str_pos ~len t =
+      debug "Consume.bigstring" [t] ()
+        (fun () -> [%sexp { str_pos : int; len : int }])
         sexp_of_bigstring
-        (fun () -> bigstring ?str_pos ?len t)
+        (fun () -> bigstring ~str_pos ~len t)
+
+    let stringo ?str_pos ?len t =
+      debug "Consume.stringo" [t] ()
+        (fun () -> [%sexp { str_pos : int option; len : int option }])
+        sexp_of_string
+        (fun () -> stringo ?str_pos ?len t)
+
+    let bigstringo ?str_pos ?len t =
+      debug "Consume.bigstringo" [t] ()
+        (fun () -> [%sexp { str_pos : int option; len : int option }])
+        sexp_of_bigstring
+        (fun () -> bigstringo ?str_pos ?len t)
 
     let bin_prot reader t =
       debug "Consume.bin_prot" [t] () [%sexp_of: unit]
@@ -355,17 +372,29 @@ module Make () = struct
         sexp_of_unit
         (fun () -> head_padded_fixed_string ~padding ~len t str)
 
-    let string ?str_pos ?len t str =
+    let string ~str_pos ~len t str =
       debug "Fill.string" [t] (`str_pos str_pos, `len len, str)
+        [%sexp_of: [ `str_pos of int ] * [ `len of int ] * string]
+        sexp_of_unit
+        (fun () -> string ~str_pos ~len t str)
+
+    let bigstring ~str_pos ~len t str =
+      debug "Fill.bigstring" [t] (`str_pos str_pos, `len len, str)
+        [%sexp_of: [ `str_pos of int ] * [ `len of int ] * bigstring]
+        sexp_of_unit
+        (fun () -> bigstring ~str_pos ~len t str)
+
+    let stringo ?str_pos ?len t str =
+      debug "Fill.stringo" [t] (`str_pos str_pos, `len len, str)
         [%sexp_of: [ `str_pos of int option ] * [ `len of int option ] * string]
         sexp_of_unit
-        (fun () -> string ?str_pos ?len t str)
+        (fun () -> stringo ?str_pos ?len t str)
 
-    let bigstring ?str_pos ?len t str =
-      debug "Fill.bigstring" [t] (`str_pos str_pos, `len len, str)
+    let bigstringo ?str_pos ?len t str =
+      debug "Fill.bigstringo" [t] (`str_pos str_pos, `len len, str)
         [%sexp_of: [ `str_pos of int option ] * [ `len of int option ] * bigstring]
         sexp_of_unit
-        (fun () -> bigstring ?str_pos ?len t str)
+        (fun () -> bigstringo ?str_pos ?len t str)
 
     let bin_prot writer t a =
       debug "Fill.bin_prot" [t] () [%sexp_of: _]
@@ -472,21 +501,29 @@ module Make () = struct
         sexp_of_string
         (fun () -> head_padded_fixed_string ~padding ~len t ~pos)
 
-    let string ?str_pos ?len t ~pos =
+    let string ~str_pos ~len t ~pos =
       debug "Peek.string" [t] (`str_pos str_pos, `len len, `pos pos)
-        [%sexp_of: [ `str_pos of int option ]
-                   * [ `len of int option ]
-                   * [ `pos of int ]]
+        [%sexp_of: [ `str_pos of int ] * [ `len of int ] * [ `pos of int ]]
         sexp_of_string
-        (fun () -> string ?str_pos ?len t ~pos)
+        (fun () -> string ~str_pos ~len t ~pos)
 
-    let bigstring ?str_pos ?len t ~pos =
+    let bigstring ~str_pos ~len t ~pos =
       debug "Peek.bigstring" [t] (`str_pos str_pos, `len len, `pos pos)
-        [%sexp_of: [ `str_pos of int option ]
-                   * [ `len of int option ]
-                   * [ `pos of int ]]
+        [%sexp_of: [ `str_pos of int ] * [ `len of int ] * [ `pos of int ]]
         sexp_of_bigstring
-        (fun () -> bigstring ?str_pos ?len t ~pos)
+        (fun () -> bigstring ~str_pos ~len t ~pos)
+
+    let stringo ?str_pos ?len t ~pos =
+      debug "Peek.stringo" [t] (`str_pos str_pos, `len len, `pos pos)
+        [%sexp_of: [ `str_pos of int option ] * [ `len of int option ] * [ `pos of int ]]
+        sexp_of_string
+        (fun () -> stringo ?str_pos ?len t ~pos)
+
+    let bigstringo ?str_pos ?len t ~pos =
+      debug "Peek.bigstringo" [t] (`str_pos str_pos, `len len, `pos pos)
+        [%sexp_of: [ `str_pos of int option ] * [ `len of int option ] * [ `pos of int ]]
+        sexp_of_bigstring
+        (fun () -> bigstringo ?str_pos ?len t ~pos)
 
     let bin_prot reader t ~pos =
       debug "Consume.bin_prot" [t] (`pos pos) [%sexp_of: [ `pos of int ]]
@@ -555,23 +592,31 @@ module Make () = struct
         sexp_of_unit
         (fun () -> head_padded_fixed_string ~padding ~len t ~pos str)
 
-    let string ?str_pos ?len t ~pos str =
+    let string ~str_pos ~len t ~pos str =
       debug "Poke.string" [t] (`str_pos str_pos, `len len, `pos pos, str)
-        [%sexp_of: [ `str_pos of int option ]
-                   * [ `len of int option ]
-                   * [ `pos of int ]
+        [%sexp_of: [ `str_pos of int ] * [ `len of int ] * [ `pos of int ] * string]
+        sexp_of_unit
+        (fun () -> string ~str_pos ~len t ~pos str)
+
+    let bigstring ~str_pos ~len t ~pos str =
+      debug "Poke.bigstring" [t] (`str_pos str_pos, `len len, `pos pos, str)
+        [%sexp_of: [ `str_pos of int ] * [ `len of int ] * [ `pos of int ] * bigstring]
+        sexp_of_unit
+        (fun () -> bigstring ~str_pos ~len t ~pos str)
+
+    let stringo ?str_pos ?len t ~pos str =
+      debug "Poke.stringo" [t] (`str_pos str_pos, `len len, `pos pos, str)
+        [%sexp_of: [ `str_pos of int option ] * [ `len of int option ] * [ `pos of int ]
                    * string]
         sexp_of_unit
-        (fun () -> string ?str_pos ?len t ~pos str)
+        (fun () -> stringo ?str_pos ?len t ~pos str)
 
-    let bigstring ?str_pos ?len t ~pos str =
-      debug "Poke.bigstring" [t] (`str_pos str_pos, `len len, `pos pos, str)
-        [%sexp_of: [ `str_pos of int option ]
-                   * [ `len of int option ]
-                   * [ `pos of int ]
+    let bigstringo ?str_pos ?len t ~pos str =
+      debug "Poke.bigstringo" [t] (`str_pos str_pos, `len len, `pos pos, str)
+        [%sexp_of: [ `str_pos of int option ] * [ `len of int option ] * [ `pos of int ]
                    * bigstring]
         sexp_of_unit
-        (fun () -> bigstring ?str_pos ?len t ~pos str)
+        (fun () -> bigstringo ?str_pos ?len t ~pos str)
 
     let bin_prot writer t ~pos a =
       debug "Poke.bin_prot" [t] (`pos pos) [%sexp_of: [ `pos of int ]]
@@ -778,11 +823,11 @@ module Make () = struct
         (fun () -> Expert.to_iovec_shared ?pos ?len t)
     ;;
 
-    let set_bounds_and_buffer_sub ?pos ~len ~src ~dst () =
+    let set_bounds_and_buffer_sub ~pos ~len ~src ~dst =
       debug "sub" [src] (`pos pos, `len len)
-        [%sexp_of: [ `pos of int option ] * [ `len of int ]]
+        [%sexp_of: [ `pos of int ] * [ `len of int ]]
         sexp_of_unit
-        (fun () -> Expert.set_bounds_and_buffer_sub ?pos ~len ~src ~dst ())
+        (fun () -> Expert.set_bounds_and_buffer_sub ~pos ~len ~src ~dst)
     ;;
 
     let set_bounds_and_buffer ~src ~dst =
@@ -949,17 +994,29 @@ module Make () = struct
           sexp_of_string
           (fun () -> head_padded_fixed_string ~padding ~len t)
 
-      let string ?str_pos ?len t =
+      let string ~str_pos ~len t =
         debug "Unsafe.Consume.string" [t] (`str_pos str_pos, `len len)
+          [%sexp_of: [ `str_pos of int ] * [ `len of int ]]
+          sexp_of_string
+          (fun () -> string ~str_pos ~len t)
+
+      let bigstring ~str_pos ~len t =
+        debug "Unsafe.Consume.bigstring" [t] (`str_pos str_pos, `len len)
+          [%sexp_of: [ `str_pos of int ] * [ `len of int ]]
+          sexp_of_bigstring
+          (fun () -> bigstring ~str_pos ~len t)
+
+      let stringo ?str_pos ?len t =
+        debug "Unsafe.Consume.stringo" [t] (`str_pos str_pos, `len len)
           [%sexp_of: [ `str_pos of int option ] * [ `len of int option ]]
           sexp_of_string
-          (fun () -> string ?str_pos ?len t)
+          (fun () -> stringo ?str_pos ?len t)
 
-      let bigstring ?str_pos ?len t =
-        debug "Unsafe.Consume.bigstring" [t] (`str_pos str_pos, `len len)
+      let bigstringo ?str_pos ?len t =
+        debug "Unsafe.Consume.bigstringo" [t] (`str_pos str_pos, `len len)
           [%sexp_of: [ `str_pos of int option ] * [ `len of int option ]]
           sexp_of_bigstring
-          (fun () -> bigstring ?str_pos ?len t)
+          (fun () -> bigstringo ?str_pos ?len t)
 
       let bin_prot reader t =
         debug "Unsafe.Consume.bin_prot" [t] () [%sexp_of: unit]
@@ -1009,17 +1066,29 @@ module Make () = struct
           sexp_of_unit
           (fun () -> head_padded_fixed_string ~padding ~len t str)
 
-      let string ?str_pos ?len t str =
+      let string ~str_pos ~len t str =
         debug "Unsafe.Fill.string" [t] (`str_pos str_pos, `len len, str)
+          [%sexp_of: [ `str_pos of int ] * [ `len of int ] * string]
+          sexp_of_unit
+          (fun () -> string ~str_pos ~len t str)
+
+      let bigstring ~str_pos ~len t str =
+        debug "Unsafe.Fill.bigstring" [t] (`str_pos str_pos, `len len, str)
+          [%sexp_of: [ `str_pos of int ] * [ `len of int ] * bigstring]
+          sexp_of_unit
+          (fun () -> bigstring ~str_pos ~len t str)
+
+      let stringo ?str_pos ?len t str =
+        debug "Unsafe.Fill.stringo" [t] (`str_pos str_pos, `len len, str)
           [%sexp_of: [ `str_pos of int option ] * [ `len of int option ] * string]
           sexp_of_unit
-          (fun () -> string ?str_pos ?len t str)
+          (fun () -> stringo ?str_pos ?len t str)
 
-      let bigstring ?str_pos ?len t str =
-        debug "Unsafe.Fill.bigstring" [t] (`str_pos str_pos, `len len, str)
+      let bigstringo ?str_pos ?len t str =
+        debug "Unsafe.Fill.bigstringo" [t] (`str_pos str_pos, `len len, str)
           [%sexp_of: [ `str_pos of int option ] * [ `len of int option ] * bigstring]
           sexp_of_unit
-          (fun () -> bigstring ?str_pos ?len t str)
+          (fun () -> bigstringo ?str_pos ?len t str)
 
       let bin_prot writer t a =
         debug "Unsafe.Fill.bin_prot" [t] () [%sexp_of: _]
@@ -1066,32 +1135,44 @@ module Make () = struct
       let  int64_le_trunc t = d  "int64_le_trunc"    int64_le_trunc   sexp_of_int   t
 
       let tail_padded_fixed_string ~padding ~len t ~pos =
-        debug "Unsafe.Peek.tail_padded_fixed_string" [t] (`padding padding, `len len, `pos pos)
+        debug "Unsafe.Peek.tail_padded_fixed_string" [t]
+          (`padding padding, `len len, `pos pos)
           [%sexp_of: [ `padding of char ] * [ `len of int ] * [ `pos of int ]]
           sexp_of_string
           (fun () -> tail_padded_fixed_string ~padding ~len t ~pos)
 
       let head_padded_fixed_string ~padding ~len t ~pos =
-        debug "Unsafe.Peek.head_padded_fixed_string" [t] (`padding padding, `len len, `pos pos)
+        debug "Unsafe.Peek.head_padded_fixed_string" [t]
+          (`padding padding, `len len, `pos pos)
           [%sexp_of: [ `padding of char ] * [ `len of int ] * [ `pos of int ]]
           sexp_of_string
           (fun () -> head_padded_fixed_string ~padding ~len t ~pos)
 
-      let string ?str_pos ?len t ~pos =
+      let string ~str_pos ~len t ~pos =
         debug "Unsafe.Peek.string" [t] (`str_pos str_pos, `len len, `pos pos)
-          [%sexp_of: [ `str_pos of int option ]
-                    * [ `len of int option ]
-                    * [ `pos of int ]]
+          [%sexp_of: [ `str_pos of int ] * [ `len of int ] * [ `pos of int ]]
           sexp_of_string
-          (fun () -> string ?str_pos ?len t ~pos)
+          (fun () -> string ~str_pos ~len t ~pos)
 
-      let bigstring ?str_pos ?len t ~pos =
+      let bigstring ~str_pos ~len t ~pos =
         debug "Unsafe.Peek.bigstring" [t] (`str_pos str_pos, `len len, `pos pos)
-          [%sexp_of: [ `str_pos of int option ]
-                    * [ `len of int option ]
-                    * [ `pos of int ]]
+          [%sexp_of: [ `str_pos of int ] * [ `len of int ] * [ `pos of int ]]
           sexp_of_bigstring
-          (fun () -> bigstring ?str_pos ?len t ~pos)
+          (fun () -> bigstring ~str_pos ~len t ~pos)
+
+      let stringo ?str_pos ?len t ~pos =
+        debug "Unsafe.Peek.stringo" [t] (`str_pos str_pos, `len len, `pos pos)
+          [%sexp_of: [ `str_pos of int option ] * [ `len of int option ]
+                     * [ `pos of int ]]
+          sexp_of_string
+          (fun () -> stringo ?str_pos ?len t ~pos)
+
+      let bigstringo ?str_pos ?len t ~pos =
+        debug "Unsafe.Peek.bigstringo" [t] (`str_pos str_pos, `len len, `pos pos)
+          [%sexp_of: [ `str_pos of int option ] * [ `len of int option ]
+                     * [ `pos of int ]]
+          sexp_of_bigstring
+          (fun () -> bigstringo ?str_pos ?len t ~pos)
 
       let bin_prot reader t ~pos =
         debug "Unsafe.Consume.bin_prot" [t] (`pos pos) [%sexp_of: [ `pos of int ]]
@@ -1166,23 +1247,31 @@ module Make () = struct
           sexp_of_unit
           (fun () -> head_padded_fixed_string ~padding ~len t ~pos str)
 
-      let string ?str_pos ?len t ~pos str =
+      let string ~str_pos ~len t ~pos str =
         debug "Unsafe.Poke.string" [t] (`str_pos str_pos, `len len, `pos pos, str)
-          [%sexp_of: [ `str_pos of int option ]
-                    * [ `len of int option ]
-                    * [ `pos of int ]
-                    * string]
+          [%sexp_of: [ `str_pos of int ] * [ `len of int ] * [ `pos of int ] * string]
           sexp_of_unit
-          (fun () -> string ?str_pos ?len t ~pos str)
+          (fun () -> string ~str_pos ~len t ~pos str)
 
-      let bigstring ?str_pos ?len t ~pos str =
+      let bigstring ~str_pos ~len t ~pos str =
         debug "Unsafe.Poke.bigstring" [t] (`str_pos str_pos, `len len, `pos pos, str)
-          [%sexp_of: [ `str_pos of int option ]
-                    * [ `len of int option ]
-                    * [ `pos of int ]
-                    * bigstring]
+          [%sexp_of: [ `str_pos of int ] * [ `len of int ] * [ `pos of int ] * bigstring]
           sexp_of_unit
-          (fun () -> bigstring ?str_pos ?len t ~pos str)
+          (fun () -> bigstring ~str_pos ~len t ~pos str)
+
+      let stringo ?str_pos ?len t ~pos str =
+        debug "Unsafe.Poke.stringo" [t] (`str_pos str_pos, `len len, `pos pos, str)
+          [%sexp_of: [ `str_pos of int option ] * [ `len of int option ] * [ `pos of int ]
+                     * string]
+          sexp_of_unit
+          (fun () -> stringo ?str_pos ?len t ~pos str)
+
+      let bigstringo ?str_pos ?len t ~pos str =
+        debug "Unsafe.Poke.bigstringo" [t] (`str_pos str_pos, `len len, `pos pos, str)
+          [%sexp_of: [ `str_pos of int option ] * [ `len of int option ] * [ `pos of int ]
+                     * bigstring]
+          sexp_of_unit
+          (fun () -> bigstringo ?str_pos ?len t ~pos str)
 
       let bin_prot writer t ~pos a =
         debug "Unsafe.Poke.bin_prot" [t] (`pos pos) [%sexp_of: [ `pos of int ]]

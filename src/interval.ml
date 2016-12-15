@@ -1,5 +1,6 @@
 
-open Core_kernel.Std
+module Time_ns_in_this_directory = Time_ns
+open! Import
 open! Int.Replace_polymorphic_compare
 
 module Stable = struct
@@ -55,6 +56,15 @@ module Stable = struct
       include Comparator.Stable.V1.Make (T)
     end
 
+    module Time_ns = struct
+      module T = struct
+        type t =
+          Time_ns_in_this_directory.Stable.V1.t interval [@@deriving sexp, bin_io, compare]
+      end
+      include T
+      include Comparator.Stable.V1.Make (T)
+    end
+
     module Ofday = struct
       module T = struct
         type t = Ofday.Stable.V1.t interval [@@deriving sexp, bin_io, compare]
@@ -65,7 +75,7 @@ module Stable = struct
   end
 
   let make_tests_v1 ~non_empty =
-    let module V = Variantslib.Variant in
+    let module V = Variant in
     let c f tests variant = (f variant) @ tests in
     V1.T.Variants.fold
       ~init:[]
@@ -77,7 +87,7 @@ module Stable = struct
         assert (empty.V.rank = 1);
         [ empty.V.constructor, "()", "\001" ]))
 
-  let%test_module "Interval.V1.Float" = (module Core_kernel.Stable_unit_test.Make(struct
+  let%test_module "Interval.V1.Float" = (module Stable_unit_test.Make(struct
     include V1.Float
     let equal x1 x2 = (V1.T.compare Float.compare x1 x2) = 0
 
@@ -89,7 +99,7 @@ module Stable = struct
       ]
   end))
 
-  let%test_module "Interval.V1.Int" = (module Core_kernel.Stable_unit_test.Make(struct
+  let%test_module "Interval.V1.Int" = (module Stable_unit_test.Make(struct
     include V1.Int
     let equal x1 x2 = (V1.T.compare Int.compare x1 x2) = 0
 
@@ -124,11 +134,11 @@ module Stable = struct
 
     (* Bypass sexp serialization tests because [Time.sexp_of_t] gives different
        results depending on the local zone. *)
-    include Core_kernel.Stable_unit_test.Make_sexp_deserialization_test(Arg)
-    include Core_kernel.Stable_unit_test.Make_bin_io_test(Arg)
+    include Stable_unit_test.Make_sexp_deserialization_test(Arg)
+    include Stable_unit_test.Make_bin_io_test(Arg)
   end)
 
-  let%test_module "Interval.V1.Ofday" = (module Core_kernel.Stable_unit_test.Make(struct
+  let%test_module "Interval.V1.Ofday" = (module Stable_unit_test.Make(struct
     include V1.Ofday
     let equal x1 x2 = (V1.T.compare Ofday.compare x1 x2) = 0
 
@@ -376,7 +386,7 @@ include C.Interval
 let t_of_sexp a_of_sexp s =
   let t = t_of_sexp a_of_sexp s in
   if is_malformed t then
-    Sexplib.Conv.of_sexp_error "Interval.t_of_sexp error: malformed input" s;
+    of_sexp_error "Interval.t_of_sexp error: malformed input" s;
   t
 ;;
 
@@ -430,8 +440,13 @@ module type S = Interval_intf.S
   with type 'a poly_t := 'a t
   with type 'a poly_set := 'a Set.t
 
+module type S_time = Interval_intf.S_time
+  with type 'a poly_t := 'a t
+  with type 'a poly_set := 'a Set.t
+
 module Float = Make (Float)
 module Ofday = Make (Ofday)
+module Ofday_ns = Make (Time_ns_in_this_directory.Ofday)
 
 module Int = struct
   include Make(Int)
@@ -512,15 +527,34 @@ module Int = struct
     then For_container.mem ~equal t x
     else contains t x
 
-  module For_binary_search = Binary_searchable.Make_without_tests (struct
+  (* Note that we use zero-based indexing here, because that's what Binary_searchable
+     requires, even though at the end we want to export functions that use the natural
+     bounds of the interval.  *)
+  module For_binary_search = Binary_searchable.Make (struct
       type nonrec t   = t
       type nonrec elt = bound
       let length = length
       let get    = get
     end)
 
-  let binary_search           = For_binary_search.binary_search
-  let binary_search_segmented = For_binary_search.binary_search_segmented
+  let binary_search ?pos ?len t ~compare which elt =
+    let zero_based_pos =
+      Option.map pos ~f:(fun x -> x - lbound_exn t)
+    in
+    let zero_based_result =
+      For_binary_search.binary_search ?pos:zero_based_pos ?len t ~compare which elt
+    in
+    Option.map zero_based_result ~f:(fun x -> x + lbound_exn t)
+
+  let binary_search_segmented ?pos ?len t ~segment_of which =
+    let zero_based_pos =
+      Option.map pos ~f:(fun x -> x - lbound_exn t)
+    in
+    let zero_based_result =
+      For_binary_search.binary_search_segmented
+        ?pos:zero_based_pos ?len t ~segment_of which
+    in
+    Option.map zero_based_result ~f:(fun x -> x + lbound_exn t)
 
   let%test_module "vs array" = (module struct
     module Gen = Quickcheck.Generator
@@ -540,22 +574,51 @@ module Int = struct
         create lo hi
 
     let interval =
-      let open Gen in
-      small_non_negative_int
-      >>= fun n ->
+      let open Gen.Let_syntax in
+      let%bind n = Gen.small_non_negative_int in
       interval_of_length n
 
     let interval_with_index =
-      let open Gen in
-      small_non_negative_int
-      >>= fun n ->
+      let open Gen.Let_syntax in
+      let%bind n = Gen.small_non_negative_int in
       (* Can only generate indices for non-empty intervals. *)
       let n = n + 1 in
-      Int.gen_between ~lower_bound:(Incl 0) ~upper_bound:(Excl n)
-      >>= fun index ->
-      interval_of_length n
-      >>| fun t ->
-      t, index
+      let%bind index = Int.gen_between ~lower_bound:(Incl 0) ~upper_bound:(Excl n) in
+      let%map t = interval_of_length n in
+      (t, index)
+
+    let interval_and_nearby_int =
+      let open Gen.Let_syntax in
+      let%bind n = Gen.small_non_negative_int in
+      let%bind t = interval_of_length n in
+      let%map nearby =
+        if n = 0
+        then Int.gen
+        else Int.gen_between
+               ~lower_bound:(Incl (lbound_exn t - n))
+               ~upper_bound:(Incl (ubound_exn t + n))
+      in
+      (t, nearby)
+
+    type which =
+      [ `Last_strictly_less_than
+      | `Last_less_than_or_equal_to
+      | `Last_equal_to
+      | `First_equal_to
+      | `First_greater_than_or_equal_to
+      | `First_strictly_greater_than
+      ]
+    [@@deriving sexp_of]
+
+    let which =
+      Gen.of_list
+        [ `Last_strictly_less_than
+        ; `Last_less_than_or_equal_to
+        ; `Last_equal_to
+        ; `First_equal_to
+        ; `First_greater_than_or_equal_to
+        ; `First_strictly_greater_than
+        ]
 
     let%test_unit "to_list explicit" =
       let check lo hi list =
@@ -642,7 +705,7 @@ module Int = struct
 
     let%test_unit "mem w/o equal" =
       Quickcheck.test
-        Gen.(tuple2 interval Int.gen)
+        interval_and_nearby_int
         ~sexp_of:[%sexp_of: t * int]
         ~f:(fun (t, i) ->
           [%test_result: bool]
@@ -651,7 +714,7 @@ module Int = struct
 
     let%test_unit "mem w/ default equal" =
       Quickcheck.test
-        Gen.(tuple2 interval Int.gen)
+        interval_and_nearby_int
         ~sexp_of:[%sexp_of: t * int]
         ~f:(fun (t, i) ->
           let equal = Int.equal in
@@ -661,13 +724,40 @@ module Int = struct
 
     let%test_unit "mem w/ negated equal" =
       Quickcheck.test
-        Gen.(tuple2 interval Int.gen)
+        interval_and_nearby_int
         ~sexp_of:[%sexp_of: t * int]
         ~f:(fun (t, i) ->
           let equal x y = (x = (-y)) in
           [%test_result: bool]
             ~expect:(Array.mem ~equal (to_array t) i)
             (mem ~equal t i))
+
+    let%test_unit "binary_search" =
+      Quickcheck.test
+        Gen.(tuple2 interval_and_nearby_int which)
+        ~sexp_of:[%sexp_of: (t * int) * which]
+        ~f:(fun ((t, i), which) ->
+          let array = to_array t in
+          let compare = Int.compare in
+          [%test_result: int option]
+            ~expect:(Array.binary_search array ~compare which i
+                     |> Option.map ~f:(Array.get array))
+            (binary_search t ~compare which i))
+
+    let%expect_test "explicit binary_search" =
+      let pr x = print_endline @@ Sexp.to_string_hum @@ [%sexp_of: int option] x in
+      pr @@ binary_search (Interval (4,80)) ~compare:Int.compare
+              `First_strictly_greater_than 18;
+      [%expect {| (19) |}];
+      pr @@ binary_search (Interval (25,80)) ~compare:Int.compare
+              `First_strictly_greater_than 18;
+      [%expect {| (25) |}];
+      pr @@ binary_search (Interval (25,80)) ~compare:Int.compare
+              `First_strictly_greater_than 1000;
+      [%expect {| () |}];
+    ;;
+
+
   end)
 end
 
@@ -707,7 +797,21 @@ let%test_module _ = (module struct
     | _ -> false
 end)
 
-module Time = struct
+module type Time_bound = sig
+  type t [@@deriving bin_io, sexp]
+  include Comparable.S with type t := t
+  module Ofday : sig
+    type t
+  end
+  val occurrence
+    :  [`First_after_or_at | `Last_before_or_at ]
+    -> t
+    -> ofday: Ofday.t
+    -> zone: Zone.t
+    -> t
+end
+
+module Make_time (Time : Time_bound) = struct
   include Make(Time)
 
   let create_ending_after ?(zone = Zone.local) (open_ofday, close_ofday) ~now =
@@ -731,3 +835,5 @@ module Time = struct
 
 end
 
+module Time    = Make_time(Time)
+module Time_ns = Make_time(Time_ns_in_this_directory)

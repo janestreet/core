@@ -1,11 +1,12 @@
 (* These checks are here rather than in their corresponding modules because we want to
    check a property of the module as it is exported in Core.Std. *)
 
+open! Import
 open Std
 
 let%test_module _ = (module struct
 
-  module Check = Core_kernel.Std.Comparable.Check_sexp_conversion
+  module Check = Comparable.Check_sexp_conversion
 
   include Check (struct
     include Time
@@ -28,3 +29,7 @@ let%test_module _ = (module struct
   end)
 
 end)
+
+(* This ensures that Time_intf.S fits inside the intersection of Time and Time_ns. *)
+include ((Time    : Time_common.S) : sig end)
+include ((Time_ns : Time_common.S) : sig end)

@@ -1,6 +1,6 @@
 (** String type based on [Bigarray], for use in I/O and C-bindings *)
 
-open! Core_kernel.Std
+open! Import
 open Unix
 
 include module type of struct include Core_kernel.Std.Bigstring end

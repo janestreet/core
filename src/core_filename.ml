@@ -1,5 +1,4 @@
-open Core_kernel.Std
-open Printf
+open! Import
 
 include struct
   open Caml.Filename

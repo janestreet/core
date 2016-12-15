@@ -1,4 +1,4 @@
-open Core_kernel.Std
+open! Import
 
 module Unix = Core_unix
 

@@ -44,7 +44,7 @@
 
 #import "config.h"
 
-open! Core_kernel.Std
+open! Import
 
 type t = private Int63.t [@@deriving bin_io, compare, sexp]
 
@@ -110,12 +110,9 @@ external now : unit -> t = "tsc_get"
 val diff            : t -> t -> Span.t
 val add             : t -> Span.t -> t
 
-(** [to_int63 t] returns the TSC value represented by [t] as an [Int63.t]. *)
 val to_int63 : t -> Int63.t
 
-(** [to_time t] converts a [t] to a [Time.t].  It is guaranteed that repeated calls
-    of [to_time ()] will return nondecreasing [Time.t] values. *)
+(** It is guaranteed that repeated calls will return nondecreasing [Time.t] values. *)
 val to_time : ?calibrator:Calibrator.t -> t -> Time.t
 
-(** [to_time_ns t] converts a [t] to an integer number of nanos since the epoch. *)
 val to_time_ns : ?calibrator:Calibrator.t -> t -> Time_ns.t

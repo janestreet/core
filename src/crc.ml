@@ -1,4 +1,4 @@
-open Core_kernel.Std
+open! Import
 
 external crc32 : string -> Int63.t = "core_crc_string_crc32"
 external unsafe_bigstring_crc32 : Bigstring.t -> pos:int -> len:int -> Int63.t

@@ -1,6 +1,6 @@
 (** A pair of unix username and primary unix group. *)
 
-open! Core_kernel.Std
+open! Import
 
 type t
 

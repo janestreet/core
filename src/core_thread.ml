@@ -1,4 +1,4 @@
-open Core_kernel.Std
+open! Import
 
 let threads_have_been_created = ref false
 

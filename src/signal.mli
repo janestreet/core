@@ -1,4 +1,4 @@
-open! Core_kernel.Std
+open! Import
 
 type t [@@deriving bin_io, sexp]
 

@@ -18,7 +18,7 @@
     To present a restricted view of an iobuf to a client, one can create a sub-iobuf or
     add a type constraint. *)
 
-open! Core_kernel.Std
+open! Import
 open Iobuf_intf
 
 type nonrec seek    = seek    [@@deriving sexp_of]
@@ -32,10 +32,27 @@ type nonrec no_seek = no_seek [@@deriving sexp_of]
     To allow [no_seek] or [seek] access, a function's type uses [_] rather than [no_seek]
     as the type argument to [t].  Using [_] allows the function to be directly applied to
     either permission.  Using a specific permission would require code to use coercion
-    [:>]. *)
-type (-'data_perm_read_write, +'seek_permission) t [@@deriving sexp_of]
+    [:>].
+
+    There is no [t_of_sexp].  One should use [Iobuf.Hexdump.t_of_sexp] or [sexp_opaque]
+    as desired. *)
+type (-'data_perm_read_write, +'seek_permission) t
 
 include Invariant.S2 with type ('rw, 'seek) t := ('rw, 'seek) t
+
+(** Provides a [Window.Hexdump] submodule that renders the contents of [t]'s window. *)
+module Window : Hexdump.S2 with type ('rw, 'seek) t := ('rw, 'seek) t
+
+(** Provides a [Window.Hexdump] submodule that renders the contents of [t]'s limits. *)
+module Limits : Hexdump.S2 with type ('rw, 'seek) t := ('rw, 'seek) t
+
+(** Provides a [Hexdump] submodule that renders the contents of [t]'s window and limits
+    using indices relative to the limits. *)
+include Compound_hexdump with type ('rw, 'seek) t := ('rw, 'seek) t
+
+(** Provides a [Debug.Hexdump] submodule that renders the contents of [t]'s window,
+    limits, and underlying bigstring using indices relative to the bigstring. *)
+module Debug : Compound_hexdump with type ('rw, 'seek) t := ('rw, 'seek) t
 
 (** {1 Creation} *)
 
@@ -75,21 +92,20 @@ val sub_shared : ?pos:int -> ?len:int -> ('d, _) t -> ('d, _) t
 val set_bounds_and_buffer
   : src : ([> write] as 'data, _) t -> dst : ('data, seek) t -> unit
 
-(** [set_bounds_and_buffer_sub ?pos ~len ~src ~dst ()] is a more efficient version of:
-    [set_bounds_and_buffer ~src:(Iobuf.sub_shared ?pos ~len src) ~dst].
+(** [set_bounds_and_buffer_sub ~pos ~len ~src ~dst] is a more efficient version of:
+    [set_bounds_and_buffer ~src:(Iobuf.sub_shared ~pos ~len src) ~dst].
 
     [set_bounds_and_buffer ~src ~dst] is not the same as [set_bounds_and_buffer_sub ~dst
-    ~src ~len:(Iobuf.length src) ()] because the limits are narrowed in the latter case.
+    ~src ~len:(Iobuf.length src)] because the limits are narrowed in the latter case.
 
-    [~len] is mandatory for performance reasons, in concert with [@@inline].  If it were
-    optional, allocation would be necessary when passing a non-default, non-constant
-    length, which is an important use case. *)
+    [~len] and [~pos] are mandatory for performance reasons, in concert with [@@inline].
+    If they were optional, allocation would be necessary when passing a non-default,
+    non-constant value, which is an important use case. *)
 val set_bounds_and_buffer_sub
-  :  ?pos : int
-  -> len  : int
+  :  pos : int
+  -> len : int
   -> src : ([> write] as 'data, _) t
   -> dst : ('data, seek) t
-  -> unit
   -> unit
   [@@inline]
 
@@ -143,8 +159,7 @@ val narrow_hi : (_, seek) t -> unit
     Using a snapshot with a different iobuf, even a sub iobuf of the snapshotted one, has
     unspecified results.  An exception may be raised, or a silent error may occur.
     However, the safety guarantees of the iobuf will not be violated, i.e., the attempt
-    will not enlarge the limits of the subject iobuf.
-*)
+    will not enlarge the limits of the subject iobuf. *)
 
 module type Bound = Bound with type ('d, 'w) iobuf := ('d, 'w) t
 module Lo_bound : Bound
@@ -216,9 +231,8 @@ val protect_window_and_bounds : ('rw, no_seek) t -> f:(('rw, seek) t -> 'a) -> '
 (** [to_string t] returns the bytes in [t] as a string.  It does not alter the window. *)
 val to_string : ?len:int -> ([> read], _) t -> string
 
-(** [to_string_hum t] produces a readable, multi-line representation of an iobuf.
-    [bounds] defaults to [`Limits] and determines how much of the contents are shown. *)
-val to_string_hum : ?bounds:[`Window | `Limits | `Whole] -> ([> read], _) t -> string
+(** Equivalent to [Hexdump.to_string_hum].  Renders [t]'s windows and limits. *)
+val to_string_hum : ?max_lines:int -> (_, _) t -> string
 
 
 (** [Consume.string t ~len] reads [len] characters (all, by default) from [t] into a new
@@ -443,8 +457,7 @@ val recvfrom_assume_fd_is_nonblocking
     case where an iobuf's lo pointer is advanced and recvmmsg attempts to copy into memory
     exceeding the underlying [bigstring]'s capacity.  If any of the returned Iobufs have
     had their underlying bigstring or limits changed (e.g. through a call to
-    [set_bounds_and_buffer] or [narrow_lo]), the call will fail with EINVAL.
-*)
+    [set_bounds_and_buffer] or [narrow_lo]), the call will fail with EINVAL. *)
 module Recvmmsg_context : sig
   type ('rw, 'seek) iobuf
   type t
@@ -486,28 +499,25 @@ val pwrite_assume_fd_is_nonblocking
 
 (** {1 Expert} *)
 
-(** The [Expert] module is for building efficient out-of-module [Iobuf] abstractions.
-*)
+(** The [Expert] module is for building efficient out-of-module [Iobuf] abstractions. *)
 module Expert: sig
   (** These accessors will not allocate, and are mainly here to assist in building
       low-cost syscall wrappers.
 
       One must be careful to avoid writing out of the limits (between [lo_min] and
       [hi_max]) of the [buf].  Doing so would violate the invariants of the parent
-      [Iobuf].
-  *)
-  val buf:    (_, _) t -> Bigstring.t
-  val hi_max: (_, _) t -> int
-  val hi:     (_, _) t -> int
-  val lo:     (_, _) t -> int
-  val lo_min: (_, _) t -> int
+      [Iobuf]. *)
+  val buf    : (_, _) t -> Bigstring.t
+  val hi_max : (_, _) t -> int
+  val hi     : (_, _) t -> int
+  val lo     : (_, _) t -> int
+  val lo_min : (_, _) t -> int
 
   (** [to_bigstring_shared t] and [to_iobuf_shared t] allocate new wrappers around the
       storage of [buf t], relative to [t]'s current bounds.
 
       These operations allow access outside the bounds and limits of [t], and without
-      respect to its read/write access.  Be careful not to violate [t]'s invariants.
-  *)
+      respect to its read/write access.  Be careful not to violate [t]'s invariants. *)
   val to_bigstring_shared : ?pos:int -> ?len:int -> (_, _) t -> Bigstring.t
   val to_iovec_shared     : ?pos:int -> ?len:int -> (_, _) t -> Bigstring.t Unix.IOVec.t
 
@@ -515,10 +525,9 @@ module Expert: sig
       be writable through [~src] aliases even though the type does not reflect this! *)
   val set_bounds_and_buffer : src : ('data, _) t -> dst : ('data, seek) t -> unit
   val set_bounds_and_buffer_sub
-    :  ?pos:int
-    -> len:int
+    :  pos : int
+    -> len : int
     -> src : ('data, _) t
     -> dst : ('data, seek) t
-    -> unit
     -> unit
 end

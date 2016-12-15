@@ -1,6 +1,5 @@
-open Core_kernel.Std
-
-open Int.Replace_polymorphic_compare
+open! Import
+open! Int.Replace_polymorphic_compare
 
 open Piecewise_linear_intf
 
@@ -353,7 +352,7 @@ module Stable = struct
         let t_of_sexp sexp =
           let knots = knots_of_sexp sexp in
           match create knots with
-          | Error error -> Sexplib.Conv.of_sexp_error (Error.to_string_hum error) sexp
+          | Error error -> of_sexp_error (Error.to_string_hum error) sexp
           | Ok t -> t
 
         let sexp_of_t t =
@@ -418,7 +417,7 @@ module Stable = struct
           let regular = M.t_of_sexp sexp in
           match Impl.invert regular with
           | Ok inverse -> { regular; inverse }
-          | Error error -> Sexplib.Conv.of_sexp_error (Error.to_string_hum error) sexp
+          | Error error -> of_sexp_error (Error.to_string_hum error) sexp
       end
 
       include T
@@ -478,8 +477,8 @@ include Stable.V1
 module F = Float
 module Time_ = Time (* so we can refer to it later *)
 module Time  = Make (Time)  (F)
-module Ofday = Make (Ofday) (F)
-module Span  = Make (Span)  (F)
+module Ofday = Make (Time_.Ofday) (F)
+module Span  = Make (Time_.Span)  (F)
 module Float = Make (Float) (F)
 module Int   = Make (Int)   (F)
 

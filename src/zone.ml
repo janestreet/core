@@ -8,7 +8,7 @@
    local time.
 *)
 
-open Core_kernel.Std
+open! Import
 
 module Sys = Core_sys
 
@@ -421,7 +421,7 @@ module Stable = struct
       ;;
 
       let find_or_load_matching t1 =
-        With_return.with_return (fun r ->
+        with_return (fun r ->
           let return_if_matches zone_name =
             let filename =
               String.concat ~sep:"/" [the_one_and_only.basedir; zone_name]
@@ -433,7 +433,7 @@ module Stable = struct
               with
               | _ -> false
             in
-            if matches then r.With_return.return (find_or_load zone_name) else ();
+            if matches then r.return (find_or_load zone_name) else ();
           in
           List.iter !likely_machine_zones ~f:return_if_matches;
           traverse the_one_and_only.basedir ~f:return_if_matches;
@@ -469,15 +469,14 @@ module Stable = struct
       Int.of_float ltt.Regime.utc_off
     ;;
 
-
     let find zone =
       let zone =
-        (* The offices should be considered legacy/deprecated aliases.  Other aliases are
-           for convenience. *)
+        (* Some aliases for convenience *)
         match zone with
+        (* case insensitivity *)
         | "utc"         -> "UTC"
         | "gmt"         -> "GMT"
-        (* legacy *)
+        (* some aliases for common zones *)
         | "chi"         -> "America/Chicago"
         | "nyc"         -> "America/New_York"
         | "hkg"         -> "Asia/Hong_Kong"
@@ -578,7 +577,7 @@ module Stable = struct
 
   end
 
-  let%test_module "Zone.V1" = (module Core_kernel.Stable_unit_test.Make (struct
+  let%test_module "Zone.V1" = (module Stable_unit_test.Make (struct
     include V1
 
     let equal (lazy z1) (lazy z2) = z1.name = z2.name

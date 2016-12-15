@@ -1,6 +1,4 @@
-open Core_kernel.Std
-open Format
-open Sexplib.Std
+open! Import
 
 module Open_option = struct
   type t =

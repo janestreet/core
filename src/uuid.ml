@@ -15,7 +15,8 @@ module Stable = struct
   end
 end
 
-open Core_kernel.Std
+open! Import
+
 module Unix = Core_unix
 
 (* The base module is responsible for generating unique string identifiers.  It should be

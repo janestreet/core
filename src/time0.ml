@@ -1,9 +1,16 @@
-open Core_kernel.Std
+open! Import
 
-module Date = Date0
+module Date = Core_kernel.Std.Date
 module Unix = Core_unix
 
-module Stable = struct
+let date_of_tm tm =
+  Date.create_exn
+    ~y:(tm.Unix.tm_year + 1900)
+    ~m:(Month.of_int_exn (tm.Unix.tm_mon + 1))
+    ~d:tm.Unix.tm_mday
+;;
+
+module Stable0 = struct
   module V1 = struct
     (* IF THIS REPRESENTATION EVER CHANGES, ENSURE THAT EITHER
        (1) all values serialize the same way in both representations, or
@@ -22,7 +29,7 @@ module Stable = struct
       } [@@deriving sexp]
     end
 
-    let upper_bound_native_int = Base0.Float0.upper_bound_for_int Nativeint.num_bits
+    let upper_bound_native_int = Base.Not_exposed_properly.Float0.upper_bound_for_int Nativeint.num_bits
      (* shifted epoch for the time zone for conversion *)
     let date_ofday_of_epoch_internal zone time =
       let parts  = Float.modf time in
@@ -35,7 +42,7 @@ module Stable = struct
       if Float.(abs sec > upper_bound_native_int)
       then raise (Invalid_argument "Time.date_ofday_of_epoch");
       let tm      = Unix.gmtime sec in
-      let date    = Date.of_tm tm in
+      let date    = date_of_tm tm in
       let ofday_span =
         Float.of_int
           (tm.Unix.tm_hour * 60 * 60
@@ -136,7 +143,7 @@ module Stable = struct
       date, ofday, ambiguity
     ;;
 
-    let of_date_ofday date ofday ~zone =
+    let of_date_ofday ~zone date ofday =
       let time =
         let epoch =
           utc_mktime ~year:(Date.year date) ~month:(Month.to_int (Date.month date))
@@ -744,7 +751,7 @@ module Stable = struct
       (module struct
         let unix_epoch_t =
           of_date_ofday ~zone:Zone.utc
-            (Date.create_exn ~y:1970 ~m:Core_kernel.Month.Jan ~d:1)
+            (Date.create_exn ~y:1970 ~m:Jan ~d:1)
             (Ofday.create ())
 
         let%test_unit _ =
@@ -781,7 +788,7 @@ module Stable = struct
       (module struct
         let unix_epoch_t =
           of_date_ofday ~zone:Zone.utc
-            (Date.create_exn ~y:1970 ~m:Core_kernel.Month.Jan ~d:1)
+            (Date.create_exn ~y:1970 ~m:Jan ~d:1)
             (Ofday.create ())
 
         let%test_unit _ =
@@ -798,7 +805,7 @@ module Stable = struct
   end
 
   let%test_module "Time.V1" = (module struct
-    let%test_module "Time.V1 functor application" = (module Core_kernel.Stable_unit_test.Make (struct
+    let%test_module "Time.V1 functor application" = (module Stable_unit_test.Make (struct
       include V1
       let zone = Zone.find_exn "America/New_York"
       let sexp_of_t t = sexp_of_t_abs ~zone t
@@ -845,7 +852,7 @@ module Stable = struct
   end
 end
 
-include Stable.V1
+include Stable0.V1
 
 let%test_module "Time robustly compare" = (module struct
   let%test _ = of_float 0.0 =. of_float 0.000_000_99

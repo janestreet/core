@@ -1,3 +1,5 @@
+open! Import
+
 include Condition
 
 let phys_equal = Caml.(==)

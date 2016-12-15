@@ -1,6 +1,6 @@
 #import "config.h"
 
-open Core_kernel.Std
+open! Import
 
 #ifdef JSC_MUTEX_TIMED_LOCK
 

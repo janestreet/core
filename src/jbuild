@@ -10,10 +10,12 @@
   (public_name core)
   (libraries
    (core_kernel
-    sexplib_unix
+    core_kernel.base_for_tests
+    sexplib.unix
     threads
     ))
   (c_flags (:standard -D_LARGEFILE64_SOURCE -I../../core_kernel/src))
+  (public_headers (config))
   (c_names
    (bigstring_stubs
     crc_stubs
@@ -26,10 +28,9 @@
     time_stamp_counter_stubs
     timespec
     unix_stubs
-    unix_time_stubs
-    version_util_fallback_stubs))
+    unix_time_stubs))
   (preprocessor_deps (config.h))
-  (preprocess (((pps (JANE -check-doc-comments)) All)))
+  (preprocess (pps (ppx_jane -check-doc-comments)))
   (inline_tests ((deps (time_stamp_counter_samples_at_1sec.sexp
                         time_stamp_counter_samples_at_60sec.sexp))))))
 
@@ -37,3 +38,5 @@
  ((name save_benchmarks)
   (deps (inline_benchmarks_runner inline_benchmarks_runner.exe))
   (action "./inline_benchmarks_runner jenga-save-benchmarks")))
+
+(provides core:config.h)

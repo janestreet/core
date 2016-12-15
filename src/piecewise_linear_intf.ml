@@ -1,4 +1,4 @@
-open Core_kernel.Std
+open! Import
 
 module type Float_like = sig
   type t [@@deriving bin_io, sexp]

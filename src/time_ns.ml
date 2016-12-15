@@ -1,4 +1,6 @@
-open Core_kernel.Std
+open! Import
+
+module Zone = Zone
 
 (* To break the dependency in the public release *)
 module Time_ns = Core_kernel.Time_ns
@@ -136,7 +138,7 @@ end = struct
     List.iter time_spans
       ~f:(fun expect ->
         let kspan = to_span (of_span expect) in
-        [%test_pred: Span.t * Span.t] (fun (a,b) -> abs (a - b) <= microsecond)
+        [%test_pred: Time.Span.t * Time.Span.t] (fun (a,b) -> abs (a - b) <= microsecond)
           (expect, kspan))
   ;;
 
@@ -201,7 +203,7 @@ end = struct
       (module struct
         open V1
 
-        include Core_kernel.Stable_unit_test.Make (struct
+        include Stable_unit_test.Make (struct
             type t = V1.t [@@deriving bin_io, sexp]
 
             let equal = Time_ns.Span.equal
@@ -258,7 +260,7 @@ end = struct
 
   module Option = struct
     type span = t [@@deriving sexp]
-    type t = Int63.t [@@deriving bin_io, typerep, compare] (* nanoseconds or none *)
+    type t = Int63.t [@@deriving bin_io, compare, hash, typerep] (* nanoseconds or none *)
     let none = Int63.min_value
     let some span = to_int63_ns (check_range span)
     let%test "none is not a valid span" = does_raise (fun () -> some (of_int63_ns none))
@@ -274,6 +276,13 @@ end = struct
 
     let of_option = function None -> none | Some t -> some t
     let to_option t = if is_none t then None else Some (of_int63_ns t)
+
+    module Optional_syntax = struct
+      module Optional_syntax = struct
+        let is_none         = is_none
+        let unchecked_value = unchecked_value
+      end
+    end
 
     module Stable = struct
       module V1 = struct
@@ -295,7 +304,7 @@ end = struct
           open V1
 
           include
-            Core_kernel.Stable_unit_test.Make (struct
+            Stable_unit_test.Make (struct
               type t = V1.t [@@deriving bin_io, sexp]
 
               let equal = Int63.equal
@@ -486,7 +495,7 @@ let%test_unit "Time_ns.t -> Time.t round trip" =
   List.iter ts ~f:(fun expect -> [%test_result: t] ~expect (of_time (to_time expect)))
 ;;
 
-module Stable = struct
+module Stable0 = struct
   module V1 = struct
     module T = struct
       type nonrec t = t [@@deriving bin_io, compare]
@@ -512,7 +521,7 @@ module Stable = struct
     (module struct
       open V1
 
-      include Core_kernel.Stable_unit_test.Make (struct
+      include Stable_unit_test.Make (struct
           type t = V1.t [@@deriving bin_io, of_sexp]
 
           let sexp_of_t = sexp_of_t_abs ~zone:Zone.utc
@@ -547,8 +556,8 @@ module Stable = struct
     end)
 end
 
-let sexp_of_t = Stable.V1.sexp_of_t
-let t_of_sexp = Stable.V1.t_of_sexp
+let sexp_of_t = Stable0.V1.sexp_of_t
+let t_of_sexp = Stable0.V1.t_of_sexp
 
 let to_string t = Time.to_string (to_time t)
 let of_string s = of_time (Time.of_string s)
@@ -559,7 +568,7 @@ let of_string_abs s = of_time (Time.of_string_abs s)
 module Option = struct
   type time = t [@@deriving sexp, compare]
 
-  type t = Span.Option.t [@@deriving bin_io, compare, typerep]
+  type t = Span.Option.t [@@deriving bin_io, compare, hash, typerep]
 
   let none = Span.Option.none
   let some time = Span.Option.some (to_span_since_epoch time)
@@ -581,18 +590,25 @@ module Option = struct
   let of_option = function None -> none | Some t -> some t
   let to_option t = if is_none t then None else Some (value_exn t)
 
+  module Optional_syntax = struct
+    module Optional_syntax = struct
+      let is_none         = is_none
+      let unchecked_value = unchecked_value
+    end
+  end
+
   module Stable = struct
     module V1 = struct
       module T = struct
         type nonrec t = t [@@deriving compare, bin_io]
 
-        let sexp_of_t t = [%sexp_of: Stable.V1.t option] (to_option t)
+        let sexp_of_t t = [%sexp_of: Stable0.V1.t option] (to_option t)
         let sexp_of_t_abs ~zone t =
           [%sexp_of: Sexp.t option]
             (Option.map (to_option t)
-               ~f:(Stable.V1.sexp_of_t_abs ~zone)
+               ~f:(Stable0.V1.sexp_of_t_abs ~zone)
             )
-        let t_of_sexp s = of_option ([%of_sexp: Stable.V1.t option] s)
+        let t_of_sexp s = of_option ([%of_sexp: Stable0.V1.t option] s)
 
         let to_int63     t = Span.Option.Stable.V1.to_int63     t
         let of_int63_exn t = Span.Option.Stable.V1.of_int63_exn t
@@ -605,7 +621,7 @@ module Option = struct
       (module struct
         open V1
 
-        include Core_kernel.Stable_unit_test.Make (struct
+        include Stable_unit_test.Make (struct
             type t = V1.t [@@deriving bin_io, of_sexp]
 
             let sexp_of_t = sexp_of_t_abs ~zone:Zone.utc
@@ -657,6 +673,8 @@ module Option = struct
   include (Span.Option : Core_kernel.Polymorphic_compare_intf.Infix with type t := t)
 end
 
+(* Note: This is FIX standard millisecond precision. You should use
+   [Zero.Time_ns_with_fast_accurate_to_of_string] if you need nanosecond precision. *)
 let to_string_fix_proto zone t = Time.to_string_fix_proto zone (to_time t)
 let of_string_fix_proto zone s = of_time (Time.of_string_fix_proto zone s)
 
@@ -694,7 +712,23 @@ let%test_module _ = (module struct
                      * [ `discrepancy of Span.t ]])
 end)
 
-let to_date t ~zone = Time.to_date (to_time t) ~zone
+(* Helper function to avoid inaccuracies in [Time_ns.t] <-> [Date.t * Ofday.t] conversions
+   below.  We do the conversions by round-tripping through [Time.t] and [Time.Ofday.t],
+   which (if done naively) would be inaccurate.  However, multiples of 1s can be
+   accurately represented as [Time.t] and [Time.Ofday.t], so we deal with it by splitting
+   into the full second and whatever is left. *)
+let split_into_sec_and_ns (x : Int63.t) =
+  let billion = Int63.of_int 1_000_000_000 in
+  let sec = Int63.(/) x billion in
+  let sec_as_ns = Int63.( * ) sec billion in
+  let rem_ns = Int63.(-) x sec_as_ns in
+  (sec_as_ns, Span.of_int63_ns rem_ns)
+;;
+
+let to_date t ~zone =
+  let t', _ = split_into_sec_and_ns (to_int63_ns_since_epoch t) in
+  Time.to_date (to_time (of_int63_ns_since_epoch t')) ~zone
+;;
 
 let of_date_ofday ~zone date ofday =
   of_time (Time.of_date_ofday ~zone date ofday)
@@ -708,6 +742,8 @@ let of_date_ofday ~zone date ofday =
 module Ofday = struct
   type t = Span.t (* since wall-clock midnight *)
   [@@deriving typerep, compare, bin_io]
+
+  include Comparable.Validate_with_zero (Span)
 
 
   let start_of_day : t = Span.zero
@@ -733,6 +769,10 @@ module Ofday = struct
 
   let of_ofday core = Span.of_span (Time.Ofday.to_span_since_start_of_day core)
 
+  let create ?hr ?min ?sec ?ms ?us () =
+    of_ofday (Time.Ofday.create ?hr ?min ?sec ?ms ?us ())
+  ;;
+
   let of_time =
     let module Cache = struct
       type t =
@@ -751,7 +791,9 @@ module Ofday = struct
       && time < cache.next_midnight
       then Time_ns.diff time cache.midnight
       else
-        let date, ofday   = Time.to_date_ofday (to_time time)         ~zone in
+        let time', ns     = split_into_sec_and_ns (to_int63_ns_since_epoch time) in
+        let time'         = of_int63_ns_since_epoch time' in
+        let date, ofday   = Time.to_date_ofday (to_time time')        ~zone in
         let next_midnight = midnight           (Date.add_days date 1) ~zone in
         let midnight      = midnight           date                   ~zone in
         (* Use one code path uniformly on non-DST-transition days, and a different one on
@@ -763,7 +805,10 @@ module Ofday = struct
             cache.next_midnight <- next_midnight;
             Time_ns.diff time cache.midnight
           end
-        else of_ofday ofday
+        else
+          begin
+            Span.(+) (of_ofday ofday) ns
+          end
   ;;
   let%bench_module "of_time" =
     (module struct
@@ -783,7 +828,9 @@ module Ofday = struct
 
   let of_local_time time = of_time time ~zone:Zone.local
 
-  let local_now () = of_local_time (now ())
+  let now ~zone = of_time (now ()) ~zone
+
+  let local_now () = now ~zone:Time.Zone.local
 
   let to_string t =
     if Span.(<=) start_of_day t && Span.(<) t end_of_day then
@@ -836,7 +883,7 @@ module Ofday = struct
       (module struct
         open V1
 
-        include Core_kernel.Stable_unit_test.Make (struct
+        include Stable_unit_test.Make (struct
             type t = V1.t [@@deriving bin_io, sexp]
 
             let equal = Span.equal
@@ -878,7 +925,7 @@ module Ofday = struct
 
   module Option = struct
     type ofday = t [@@deriving sexp, compare]
-    type t = Span.Option.t [@@deriving compare, bin_io, typerep]
+    type t = Span.Option.t [@@deriving bin_io, compare, hash, typerep]
 
     let none            = Span.Option.none
     let some            = Span.Option.some
@@ -890,6 +937,13 @@ module Ofday = struct
 
     let of_option = function None -> none | Some t -> some t
     let to_option t = if is_none t then None else Some (value_exn t)
+
+    module Optional_syntax = struct
+      module Optional_syntax = struct
+        let is_none         = is_none
+        let unchecked_value = unchecked_value
+      end
+    end
 
     module Stable = struct
       module V1 = struct
@@ -910,7 +964,7 @@ module Ofday = struct
         (module struct
           open V1
 
-          include Core_kernel.Stable_unit_test.Make (struct
+          include Stable_unit_test.Make (struct
               type t = V1.t [@@deriving bin_io, sexp]
 
               let equal = Span.Option.equal
@@ -1071,12 +1125,88 @@ let%bench_module "Ofday" =
 
 let to_ofday t ~zone = Ofday.of_time t ~zone
 
+let to_date_ofday t ~zone = (to_date ~zone t, to_ofday t ~zone)
+
+let split_into_sec_and_ns ~ofday =
+  let ofday = Ofday.to_span_since_start_of_day ofday |> Span.to_int63_ns in
+  let ofday, span = split_into_sec_and_ns ofday in
+  let ofday = Span.of_int63_ns ofday |> Ofday.of_span_since_start_of_day_exn in
+  ofday, span
+;;
+
 let of_date_ofday ~zone date ofday =
-  of_date_ofday ~zone date (Ofday.to_ofday ofday)
+  let ofday, span = split_into_sec_and_ns ~ofday in
+  Time_ns.add (of_date_ofday ~zone date (Ofday.to_ofday ofday)) span
+;;
+
+(* This may round rather than truncate, since [to_time] rounds. *)
+let to_sec_string t ~zone = Time.to_sec_string (to_time t) ~zone
+
+(* [{to,of}_filename_string] just call the functions from [Time]. It doesn't seem worth
+   duplicating the code until people actually want sub-millisecond precision in filenames.
+*)
+let to_filename_string t ~zone =
+  Time.to_filename_string (to_time t) ~zone
+;;
+
+let of_filename_string time_str ~zone =
+  of_time (Time.of_filename_string time_str ~zone)
 ;;
 
 let occurrence what t ~ofday ~zone =
-  of_time (Time.occurrence what (to_time t) ~ofday:(Ofday.to_ofday ofday) ~zone)
+  let ofday, span = split_into_sec_and_ns ~ofday in
+  Time_ns.add
+    (of_time (Time.occurrence what (to_time t) ~ofday:(Ofday.to_ofday ofday) ~zone))
+    span
+;;
+
+let%expect_test "[to_date ofday] - [of_date_ofday] roundtrip" =
+  let times =
+    (* midnight EDT on 2016-11-01 +/- 1ns and 2ns *)
+    [ 1477972799999999998L
+    ; 1477972799999999999L
+    ; 1477972800000000000L
+    ; 1477972800000000001L
+    ; 1477972800000000002L
+    (* two timestamps on 2016-11-01 in the middle of the day, 1ns apart *)
+    ; 1478011075019386869L
+    ; 1478011075019386670L
+    (* two timestamps on 2016-11-06 (Sunday), when DST ends at 2am. When DST ends, time
+       jumps from 2:00am back to 1:00am. Hence there are two 1:00ams, the later occurs 1hr
+       later in linear time. This test starts with the initial 1:00am (as inputs to
+       [to_date] and [to_ofday]) and then gets reinterpreted as the later 1:00am by
+       [of_date_ofday] *)
+    ; 1478408399999999999L (* just before 1am *)
+    ; 1478408400000000000L (* 1ns later, at 1am (for the first time),
+                              NOTE: we're off by 1h when we try the round-trip, see
+                              [3600000000000] in the expect_test below.  *)
+    ; 1478412000000000000L (* 1h later, which is 1am again (this time we round-trip) *)
+    ; 1478412000000000001L (* another 1ns later *)
+    ]
+  in
+  let zone = Time.Zone.of_string "America/New_York" in
+  List.iter times ~f:(fun ns ->
+    let t = Int63.of_int64_exn ns |> Time_ns.of_int63_ns_since_epoch in
+    let date = to_date t ~zone in
+    let ofday = to_ofday t ~zone in
+    let t' = of_date_ofday ~zone date ofday in
+    printf !"%{Date} %{Ofday} %{Int64} %{Int64}\n"
+      date
+      ofday
+      ns
+      (Int64.(-) (to_int63_ns_since_epoch t' |> Int63.to_int64) ns));
+  [%expect {|
+    2016-10-31 23:59:59.999999998 1477972799999999998 0
+    2016-10-31 23:59:59.999999999 1477972799999999999 0
+    2016-11-01 00:00:00.000000000 1477972800000000000 0
+    2016-11-01 00:00:00.000000001 1477972800000000001 0
+    2016-11-01 00:00:00.000000002 1477972800000000002 0
+    2016-11-01 10:37:55.019386869 1478011075019386869 0
+    2016-11-01 10:37:55.019386670 1478011075019386670 0
+    2016-11-06 00:59:59.999999999 1478408399999999999 0
+    2016-11-06 01:00:00.000000000 1478408400000000000 3600000000000
+    2016-11-06 01:00:00.000000000 1478412000000000000 0
+    2016-11-06 01:00:00.000000001 1478412000000000001 0 |}]
 ;;
 
 let%expect_test "in tests, [to_string] uses NYC's time zone" =
@@ -1089,9 +1219,22 @@ let%expect_test "in tests, [sexp_of_t] uses NYC's time zone" =
   [%expect {| (1969-12-31 19:00:00.000000-05:00) |}];
 ;;
 
+module Stable = struct
+  module Option = Option.Stable
+  module Span = struct
+    include Span.Stable
+    module Option = Span.Option.Stable
+  end
+  module Ofday = struct
+    include Ofday.Stable
+    module Option = Ofday.Option.Stable
+  end
+  include Stable0
+end
+
 (*
-  Dropping Time in favor of Time_ns is possible and has been discussed, but we have
-  chosen not to do so at this time for a few reasons:
+   Dropping Time in favor of Time_ns is possible and has been discussed, but we have
+   chosen not to do so at this time for a few reasons:
 
   - It's a lot of work.  All functions over Time, including the related
     modules Date, Ofday, Zone, Span, Schedule have to be converted to Time_ns
@@ -1115,6 +1258,6 @@ let%expect_test "in tests, [sexp_of_t] uses NYC's time zone" =
     pushback is probably minimal and, if we could get over the work concerns,
     could be eliminated.
 
-  - Converting between Time and Time_ns when you use libraries based on different ones
-    isn't so bad. (?)
+   - Converting between Time and Time_ns when you use libraries based on different ones
+   isn't so bad. (?)
 *)

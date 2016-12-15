@@ -24,10 +24,17 @@ module Test (Iobuf : sig
   let () = show_messages := false
   open Iobuf
 
-  type nonrec ('d, 'w) t = ('d, 'w) t [@@deriving sexp_of]
+  type nonrec ('d, 'w) t = ('d, 'w) Hexdump.t [@@deriving sexp_of]
   type nonrec    seek =    seek [@@deriving sexp_of]
   type nonrec no_seek = no_seek [@@deriving sexp_of]
   module type Bound = Bound
+
+  (* see iobuf_view_tests.ml for expect-tests of these *)
+  module Window  = Window
+  module Limits  = Limits
+  module Debug   = Debug
+  module Hexdump = Hexdump
+  let to_string_hum = to_string_hum
 
   let read_only = read_only
   let no_seek   = no_seek
@@ -374,7 +381,7 @@ module Test (Iobuf : sig
     let%test _ =
       let src = of_string "123abcDEF" in
       let dst = Iobuf.create ~len:0 in
-      set_bounds_and_buffer_sub ~src ~dst ~len:(length src) ();
+      set_bounds_and_buffer_sub ~src ~dst ~len:(length src) ~pos:0;
       src = dst
     ;;
     let%test _ =
@@ -388,14 +395,14 @@ module Test (Iobuf : sig
       let src = of_string "123abcDEF" in
       let src = Iobuf.sub_shared ~pos:1 ~len:5 src in
       let dst = Iobuf.create ~len:0 in
-      set_bounds_and_buffer_sub ~src ~dst ~len:(length src) ();
+      set_bounds_and_buffer_sub ~src ~dst ~len:(length src) ~pos:0;
       src = dst
     ;;
     let%test _ =
       let src = of_string "123abcDEF" in
       let src_sub = Iobuf.sub_shared ~pos:1 ~len:5 src in
       let dst = Iobuf.create ~len:0 in
-      set_bounds_and_buffer_sub ~pos:2 ~len:2 ~src:src_sub ~dst ();
+      set_bounds_and_buffer_sub ~pos:2 ~len:2 ~src:src_sub ~dst;
       let src_sub' = Iobuf.sub_shared ~pos:3 ~len:2 src in
       src_sub' = dst
     ;;
@@ -490,49 +497,20 @@ module Test (Iobuf : sig
         assert (String.equal string (to_string (of_string string))))
     ;;
 
-    let to_string_hum = to_string_hum
-
-    let%test_unit _ =
-      [%test_eq: string]
-       (to_string_hum (Iobuf.of_string (String.init 256 ~f:Char.of_int_exn ^ "foo")))
-       "Iobuf: bigstring length 259; limits [0,259]; window [0,259]; contents within limits:\
-        \n0x0000:  00 01 02 03 04 05 06 07  ........  ........  08 09 0a 0b 0c 0d 0e 0f\
-        \n0x0010:  10 11 12 13 14 15 16 17  ........  ........  18 19 1a 1b 1c 1d 1e 1f\
-        \n0x0020:  20 21 22 23 24 25 26 27   !\"#$%&'  ()*+,-./  28 29 2a 2b 2c 2d 2e 2f\
-        \n0x0030:  30 31 32 33 34 35 36 37  01234567  89:;<=>?  38 39 3a 3b 3c 3d 3e 3f\
-        \n0x0040:  40 41 42 43 44 45 46 47  @ABCDEFG  HIJKLMNO  48 49 4a 4b 4c 4d 4e 4f\
-        \n0x0050:  50 51 52 53 54 55 56 57  PQRSTUVW  XYZ[\\]^_  58 59 5a 5b 5c 5d 5e 5f\
-        \n0x0060:  60 61 62 63 64 65 66 67  `abcdefg  hijklmno  68 69 6a 6b 6c 6d 6e 6f\
-        \n0x0070:  70 71 72 73 74 75 76 77  pqrstuvw  xyz{|}~.  78 79 7a 7b 7c 7d 7e 7f\
-        \n0x0080:  80 81 82 83 84 85 86 87  ........  ........  88 89 8a 8b 8c 8d 8e 8f\
-        \n0x0090:  90 91 92 93 94 95 96 97  ........  ........  98 99 9a 9b 9c 9d 9e 9f\
-        \n0x00a0:  a0 a1 a2 a3 a4 a5 a6 a7  ........  ........  a8 a9 aa ab ac ad ae af\
-        \n0x00b0:  b0 b1 b2 b3 b4 b5 b6 b7  ........  ........  b8 b9 ba bb bc bd be bf\
-        \n0x00c0:  c0 c1 c2 c3 c4 c5 c6 c7  ........  ........  c8 c9 ca cb cc cd ce cf\
-        \n0x00d0:  d0 d1 d2 d3 d4 d5 d6 d7  ........  ........  d8 d9 da db dc dd de df\
-        \n0x00e0:  e0 e1 e2 e3 e4 e5 e6 e7  ........  ........  e8 e9 ea eb ec ed ee ef\
-        \n0x00f0:  f0 f1 f2 f3 f4 f5 f6 f7  ........  ........  f8 f9 fa fb fc fd fe ff\
-        \n0x0100:  66 6f 6f                 foo                                        "
-    ;;
-
-    let%test_unit _ =
-      List.iter strings ~f:(fun str1 ->
-        List.iter strings ~f:(fun str2 ->
-          let hum1 = to_string_hum (of_string str1) in
-          let hum2 = to_string_hum (of_string str2) in
-          [%test_eq: bool] (String.equal str1 str2) (String.equal hum1 hum2)))
-
     let of_bigstring = of_bigstring
 
     let%test_unit _ =
       List.iter strings ~f:(fun string ->
         let bigstring = Bigstring.of_string string in
-        iter_slices (String.length string) ~f:(fun ?pos ?len ~pos':_ ~len':_ ~is_valid () ->
-          match try_with (fun () -> of_bigstring bigstring ?pos ?len) with
-          | Error _ -> assert (not is_valid)
-          | Ok t ->
-            assert is_valid;
-            assert (String.equal (to_string t) (Bigstring.to_string bigstring ?pos ?len))))
+        iter_slices (String.length string)
+          ~f:(fun ?pos ?len ~pos':_ ~len':_ ~is_valid () ->
+            match try_with (fun () -> of_bigstring bigstring ?pos ?len) with
+            | Error _ -> assert (not is_valid)
+            | Ok t ->
+              assert is_valid;
+              assert (String.equal
+                        (to_string t)
+                        (Bigstring.to_string bigstring ?pos ?len))))
     ;;
 
     let advance = advance
@@ -575,18 +553,26 @@ module Test (Iobuf : sig
           assert (String.equal s s'))
     ;;
 
+    module type Accessee = sig
+      type t [@@deriving sexp_of]
+      include Stringable with type t := t
+      val equal : t -> t -> bool
+    end
+
     module Intf (Intf : sig
-                   include Accessors
-                   val t_pos_1
-                     :  (read_write, seek) Iobuf.t
-                     -> int
-                     -> ('a, read_write, seek) t
-                     -> 'a
-                     -> string          (* corresponding buffer contents *)
-                     -> ('a -> Sexp.t)
-                     -> unit
-                   val bin_prot_char : (char, 'd, 'w) t
-                 end) = struct
+        include Accessors
+
+        val accessor_pos_1
+          :  without_value : (read_write, seek) Iobuf.t
+          -> value_len : int
+          -> ('a, read_write, seek) t
+          -> value : 'a
+          -> with_value : string
+          -> (module Accessee with type t = 'a)
+          -> unit
+
+        val bin_prot_char : (char, 'd, 'w) t
+      end) = struct
       open Intf
 
       type nonrec ('a, 'd, 'w) t = ('a, 'd, 'w) t
@@ -611,76 +597,123 @@ module Test (Iobuf : sig
       let  int64_be_trunc =  int64_be_trunc
       let  int64_le_trunc =  int64_le_trunc
 
-      let tail_padded_fixed_string = tail_padded_fixed_string
-      let head_padded_fixed_string = head_padded_fixed_string
-      let              string =              string
-      let           bigstring =           bigstring
-      let            bin_prot =            bin_prot
+      let tail_padded_fixed_string  = tail_padded_fixed_string
+      let head_padded_fixed_string  = head_padded_fixed_string
+      let                   string  =                   string
+      let                bigstring  =                bigstring
+      let                   stringo =                   stringo
+      let                bigstringo =                bigstringo
+      let bin_prot                  = bin_prot
+
+      module type String_accessee = sig
+        include Accessee
+        val subo : (t, t) Base.Blit_intf.subo
+      end
+
+      module Bigstringable : String_accessee with type t = bigstring = struct
+        include Bigstring
+        let to_string t = to_string t (* drop optional args *)
+        let of_string s = of_string s (* drop optional args *)
+      end
 
       let%test_unit _ =
         let buf = of_string "ABCDEFGHIJ" in
-        t_pos_1 buf 1 int8 127 "A\127CDEFGHIJ" sexp_of_int;
-        t_pos_1 buf 1 int8 (-1) "A\255CDEFGHIJ" sexp_of_int;
-        t_pos_1 buf 1 int8 (-128) "A\128CDEFGHIJ" sexp_of_int;
-        t_pos_1 buf 1 uint8 0 "A\000CDEFGHIJ" sexp_of_int;
-        t_pos_1 buf 1 uint8 255 "A\255CDEFGHIJ" sexp_of_int;
-        t_pos_1 buf 1 char 'K' "AKCDEFGHIJ" sexp_of_char;
-        t_pos_1 buf 1 char '\254' "A\254CDEFGHIJ" sexp_of_char;
-        t_pos_1 buf 1 int8 (-1) "A\255CDEFGHIJ" sexp_of_int;
-        t_pos_1 buf 1 uint8 12 "A\012CDEFGHIJ" sexp_of_int;
-        t_pos_1 buf 1 bin_prot_char 'x' "AxCDEFGHIJ" sexp_of_char;
-        t_pos_1 buf 2 int16_be 0x0102 "A\001\002DEFGHIJ" sexp_of_int;
-        t_pos_1 buf 2 int16_le 0x0304 "A\004\003DEFGHIJ" sexp_of_int;
-        t_pos_1 buf 2 int16_be (-2) "A\255\254DEFGHIJ" sexp_of_int;
-        t_pos_1 buf 2 int16_le (-3) "A\253\255DEFGHIJ" sexp_of_int;
-        t_pos_1 buf 2 uint16_be 0xFFFE "A\255\254DEFGHIJ" sexp_of_int;
-        t_pos_1 buf 2 uint16_le 0xFDFC "A\252\253DEFGHIJ" sexp_of_int;
-        t_pos_1 buf 2 int16_be 0x0506 "A\005\006DEFGHIJ" sexp_of_int;
-        t_pos_1 buf 2 int16_le 0x0708 "A\008\007DEFGHIJ" sexp_of_int;
-        let padded ~len str ~head ~tail =
-          t_pos_1 buf 3 (tail_padded_fixed_string ~padding:'p' ~len) str tail sexp_of_string;
-          t_pos_1 buf 3 (head_padded_fixed_string ~padding:'p' ~len) str head sexp_of_string
+        let int_pos_1 n a v s =
+          accessor_pos_1 ~without_value:buf ~value_len:n a ~value:v ~with_value:s
+            (module Int)
         in
-        padded ~len:3 "x"   ~head:"AppxEFGHIJ" ~tail:"AxppEFGHIJ";
-        padded ~len:3 "xxx" ~head:"AxxxEFGHIJ" ~tail:"AxxxEFGHIJ";
-        padded ~len:3 "xpx" ~head:"AxpxEFGHIJ" ~tail:"AxpxEFGHIJ";
-        padded ~len:3 ""    ~head:"ApppEFGHIJ" ~tail:"ApppEFGHIJ";
-        t_pos_1 buf 3 (string ?str_pos:None ~len:3) "123" "A123EFGHIJ" sexp_of_string;
-        t_pos_1 buf 3 (bigstring ?str_pos:None ~len:3) (Bigstring.of_string "klm")
-          "AklmEFGHIJ" sexp_of_bigstring;
-        t_pos_1 buf 4 int32_be 0x0A0B0C0D "A\010\011\012\013FGHIJ" sexp_of_int;
-        t_pos_1 buf 4 int32_le 0x01020304 "A\004\003\002\001FGHIJ" sexp_of_int;
-        t_pos_1 buf 4 int32_be (-0x01020305) "A\254\253\252\251FGHIJ" sexp_of_int;
-        t_pos_1 buf 4 int32_le (-0x05060709) "A\247\248\249\250FGHIJ" sexp_of_int;
+        int_pos_1 1 int8  127    "A\127CDEFGHIJ";
+        int_pos_1 1 int8  (-1)   "A\255CDEFGHIJ";
+        int_pos_1 1 int8  (-128) "A\128CDEFGHIJ";
+        int_pos_1 1 uint8 0      "A\000CDEFGHIJ";
+        int_pos_1 1 uint8 255    "A\255CDEFGHIJ";
+        let char_pos_1  a v s =
+          accessor_pos_1 ~without_value:buf ~value_len:1 a ~value:v ~with_value:s
+            (module Char)
+        in
+        char_pos_1 char 'K' "AKCDEFGHIJ";
+        char_pos_1 char '\254' "A\254CDEFGHIJ";
+        int_pos_1 1 int8  (-1) "A\255CDEFGHIJ";
+        int_pos_1 1 uint8 12   "A\012CDEFGHIJ";
+        char_pos_1 bin_prot_char 'x' "AxCDEFGHIJ";
+        int_pos_1 2 int16_be  0x0102 "A\001\002DEFGHIJ";
+        int_pos_1 2 int16_le  0x0304 "A\004\003DEFGHIJ";
+        int_pos_1 2 int16_be  (-2)   "A\255\254DEFGHIJ";
+        int_pos_1 2 int16_le  (-3)   "A\253\255DEFGHIJ";
+        int_pos_1 2 uint16_be 0xFFFE "A\255\254DEFGHIJ";
+        int_pos_1 2 uint16_le 0xFDFC "A\252\253DEFGHIJ";
+        int_pos_1 2 int16_be  0x0506 "A\005\006DEFGHIJ";
+        int_pos_1 2 int16_le  0x0708 "A\008\007DEFGHIJ";
+        let metastring_pos_1 (type v)
+              (module Value : String_accessee with type t = v)
+              value_len accessor ~skip value with_value =
+          accessor_pos_1 ~without_value:buf ~value_len accessor
+            ~value:(Value.of_string value)
+            ~with_value
+            (module struct
+              include Value
+
+              (* The prefix is garbage if [str_pos <> 0]. *)
+              let equal t u = equal (subo ~pos:skip t) (subo ~pos:skip u)
+            end)
+        in
+        let string_pos_1    = metastring_pos_1 (module String)        in
+        let bigstring_pos_1 = metastring_pos_1 (module Bigstringable) in
+        let padded_string_pos_1 ~len str ~head ~tail =
+          accessor_pos_1 ~without_value:buf ~value_len:len
+            (tail_padded_fixed_string ~padding:'p' ~len)
+            ~value:str ~with_value:tail (module String);
+          accessor_pos_1 ~without_value:buf ~value_len:len
+            (head_padded_fixed_string ~padding:'p' ~len)
+            ~value:str ~with_value:head (module String)
+        in
+        padded_string_pos_1 ~len:3 "x"   ~head:"AppxEFGHIJ" ~tail:"AxppEFGHIJ";
+        padded_string_pos_1 ~len:3 "xxx" ~head:"AxxxEFGHIJ" ~tail:"AxxxEFGHIJ";
+        padded_string_pos_1 ~len:3 "xpx" ~head:"AxpxEFGHIJ" ~tail:"AxpxEFGHIJ";
+        padded_string_pos_1 ~len:3 ""    ~head:"ApppEFGHIJ" ~tail:"ApppEFGHIJ";
+        string_pos_1    3 (string     ~str_pos:0    ~len:3) ~skip:0 "123"    "A123EFGHIJ";
+        bigstring_pos_1 3 (bigstring  ~str_pos:0    ~len:3) ~skip:0 "klm"    "AklmEFGHIJ";
+        string_pos_1    2 (string     ~str_pos:1    ~len:2) ~skip:1 "\00023" "A23mEFGHIJ";
+        bigstring_pos_1 2 (bigstring  ~str_pos:1    ~len:2) ~skip:1 "\000lm" "AlmmEFGHIJ";
+        string_pos_1    3 (stringo    ?str_pos:None ~len:3) ~skip:0 "123"    "A123EFGHIJ";
+        bigstring_pos_1 3 (bigstringo ?str_pos:None ~len:3) ~skip:0 "klm"    "AklmEFGHIJ";
+        string_pos_1    3 (stringo    ~str_pos:0    ~len:3) ~skip:0 "123"    "A123EFGHIJ";
+        bigstring_pos_1 3 (bigstringo ~str_pos:0    ~len:3) ~skip:0 "klm"    "AklmEFGHIJ";
+        string_pos_1    2 (stringo    ~str_pos:1    ~len:2) ~skip:1 "\00023" "A23mEFGHIJ";
+        bigstring_pos_1 2 (bigstringo ~str_pos:1    ~len:2) ~skip:1 "\000lm" "AlmmEFGHIJ";
+        int_pos_1 4 int32_be 0x0A0B0C0D    "A\010\011\012\013FGHIJ";
+        int_pos_1 4 int32_le 0x01020304    "A\004\003\002\001FGHIJ";
+        int_pos_1 4 int32_be (-0x01020305) "A\254\253\252\251FGHIJ";
+        int_pos_1 4 int32_le (-0x05060709) "A\247\248\249\250FGHIJ";
 #ifdef JSC_ARCH_SIXTYFOUR
-        t_pos_1 buf 4 uint32_be (large_int 0 0 0xF6F5 0xF4F3)
-          "A\246\245\244\243FGHIJ" sexp_of_int;
-        t_pos_1 buf 4 uint32_le (large_int 0 0 0xFBFA 0xF9F8)
-          "A\248\249\250\251FGHIJ" sexp_of_int;
-        t_pos_1 buf 8 int64_be (large_int 0x0102 0x0304 0x0506 0x0708)
-          "A\001\002\003\004\005\006\007\008J" sexp_of_int;
-        t_pos_1 buf 8 int64_le (large_int 0x090a 0x0b0c 0x0d0e 0x0f10)
-          "A\016\015\014\013\012\011\010\009J" sexp_of_int;
-        t_pos_1 buf 8 int64_be (-(large_int 0x0102 0x0304 0x0506 0x0709))
-          "A\254\253\252\251\250\249\248\247J" sexp_of_int;
-        t_pos_1 buf 8 int64_le (-(large_int 0x0102 0x0304 0x0506 0x0709))
-          "A\247\248\249\250\251\252\253\254J" sexp_of_int;
-        t_pos_1 buf 8 int64_be_trunc (large_int 0x0102 0x0304 0x0506 0x0708)
-          "A\001\002\003\004\005\006\007\008J" sexp_of_int;
-        t_pos_1 buf 8 int64_le_trunc (large_int 0x090a 0x0b0c 0x0d0e 0x0f10)
-          "A\016\015\014\013\012\011\010\009J" sexp_of_int;
-        t_pos_1 buf 8 int64_be_trunc (-(large_int 0x0102 0x0304 0x0506 0x0709))
-          "A\254\253\252\251\250\249\248\247J" sexp_of_int;
-        t_pos_1 buf 8 int64_le_trunc (-(large_int 0x0102 0x0304 0x0506 0x0709))
-          "A\247\248\249\250\251\252\253\254J" sexp_of_int;
+        int_pos_1 4 uint32_be (large_int 0 0 0xF6F5 0xF4F3) "A\246\245\244\243FGHIJ";
+        int_pos_1 4 uint32_le (large_int 0 0 0xFBFA 0xF9F8) "A\248\249\250\251FGHIJ";
+        int_pos_1 8 int64_be (large_int 0x0102 0x0304 0x0506 0x0708)
+          "A\001\002\003\004\005\006\007\008J";
+        int_pos_1 8 int64_le (large_int 0x090a 0x0b0c 0x0d0e 0x0f10)
+          "A\016\015\014\013\012\011\010\009J";
+        int_pos_1 8 int64_be (-(large_int 0x0102 0x0304 0x0506 0x0709))
+          "A\254\253\252\251\250\249\248\247J";
+        int_pos_1 8 int64_le (-(large_int 0x0102 0x0304 0x0506 0x0709))
+          "A\247\248\249\250\251\252\253\254J";
+        int_pos_1 8 int64_be_trunc (large_int 0x0102 0x0304 0x0506 0x0708)
+          "A\001\002\003\004\005\006\007\008J";
+        int_pos_1 8 int64_le_trunc (large_int 0x090a 0x0b0c 0x0d0e 0x0f10)
+          "A\016\015\014\013\012\011\010\009J";
+        int_pos_1 8 int64_be_trunc (-(large_int 0x0102 0x0304 0x0506 0x0709))
+          "A\254\253\252\251\250\249\248\247J";
+        int_pos_1 8 int64_le_trunc (-(large_int 0x0102 0x0304 0x0506 0x0709))
+          "A\247\248\249\250\251\252\253\254J";
 #endif
-        t_pos_1 buf 8 int64_t_be 1L "A\000\000\000\000\000\000\000\001J" sexp_of_int64;
-        t_pos_1 buf 8 int64_t_le 1L "A\001\000\000\000\000\000\000\000J" sexp_of_int64;
-        t_pos_1 buf 8 int64_t_be 0x8000000000000000L
-          "A\128\000\000\000\000\000\000\000J" sexp_of_int64;
-        t_pos_1 buf 8 int64_t_le 0x8000000000000000L
-          "A\000\000\000\000\000\000\000\128J" sexp_of_int64
-    end
+        let int64_pos_1 f value with_value =
+          accessor_pos_1 ~without_value:buf ~value_len:8 f ~value ~with_value
+            (module Int64)
+        in
+        int64_pos_1 int64_t_be 1L                  "A\000\000\000\000\000\000\000\001J";
+        int64_pos_1 int64_t_le 1L                  "A\001\000\000\000\000\000\000\000J";
+        int64_pos_1 int64_t_be 0x8000000000000000L "A\128\000\000\000\000\000\000\000J";
+        int64_pos_1 int64_t_le 0x8000000000000000L "A\000\000\000\000\000\000\000\128J"
+      end
 
     let cases_for_testing_decimal =
       [ Int.min_value; (Int.min_value + 1); -100; -9; 0; 10; 15; 45; 120; 987; 2814;
@@ -694,18 +727,26 @@ module Test (Iobuf : sig
           include Poke
           type 'a bin_prot = 'a Bin_prot.Type_class.writer
 
-          let t_pos_1 buf _ f arg str _sexp_of_arg =
+          let accessor_pos_1 (type a)
+                ~without_value:buf ~value_len:_ f ~value:arg ~with_value:str
+                (module Arg : Accessee with type t = a) =
             f buf ~pos:1 arg;
-            [%test_eq: string] str (to_string buf)
+            let buf_str = to_string buf in
+            if String.(<>) str buf_str then
+              raise_s [%message "Poke accessor_pos_1 failed"
+                                  (str     : string)
+                                  (buf_str : string)
+                                  (arg     : Arg.t)]
 
           let bin_prot_char t ~pos a = bin_prot Char.bin_writer_t t ~pos a
 
-          (* Static permission tests for the cases that do compile.  Since the functions all
-             use essentially the same type definitions, we don't need to test all of them.
-             We've already tested them on a (read_write, seek) Iobuf.t above. *)
-          let%test_unit _ = char (of_string "a" : (_, no_seek) Iobuf.t) ~pos:0 'b'
-          let%test_unit _ = char (of_string "a" : (_, seek) Iobuf.t) ~pos:0 'b'
-          let%test_unit _ = char (of_string "a" : (read_write, _) Iobuf.t) ~pos:0 'b'
+          (* Static permission tests for the cases that do compile.  Since the functions
+             all use essentially the same type definitions, we don't need to test all of
+             them.  We've already tested them on a (read_write, seek) Iobuf.t above. *)
+          let%test_unit _ =
+            char (of_string "a" : (_,          no_seek) Iobuf.t) ~pos:0 'b';
+            char (of_string "a" : (_,          seek)    Iobuf.t) ~pos:0 'b';
+            char (of_string "a" : (read_write, _)       Iobuf.t) ~pos:0 'b'
         end)
 
       let decimal = Poke.decimal
@@ -744,15 +785,15 @@ module Test (Iobuf : sig
         iter_slices n ~f:(fun ?pos:str_pos ?len ~pos' ~len' ~is_valid () ->
           let fill_result =
             Or_error.try_with (fun () ->
-              sub_shared t ~pos |> (fun t -> Fill.string t string ?str_pos ?len))
+              sub_shared t ~pos |> (fun t -> Fill.stringo t string ?str_pos ?len))
           in
           [%test_eq: bool] (is_ok fill_result) is_valid;
           let str = create n in
           let consume_result =
             Or_error.try_with (fun () ->
-              sub_shared (read_only (no_seek t)) ~pos |> (fun t ->
-                blito ~src:t ~src_pos:0 ~src_len:len'
-                  ~dst:str ?dst_pos:str_pos ()))
+              sub_shared (read_only (no_seek t)) ~pos
+              |> (fun t ->
+                blito ~src:t ~src_pos:0 ~src_len:len' ~dst:str ?dst_pos:str_pos ()))
           in
           begin match consume_result, is_valid with
           | Error _, false -> ()
@@ -785,24 +826,28 @@ module Test (Iobuf : sig
 
     module Peek = struct
       include Intf (struct
-        include Peek
-        type 'a bin_prot = 'a Bin_prot.Type_class.reader
+          include Peek
+          type 'a bin_prot = 'a Bin_prot.Type_class.reader
 
-        let t_pos_1 _ _ f expected str sexp_of_res =
-          let res = f (of_string str) ~pos:1 in
-          if not (Pervasives.(=) res expected) then
-            failwiths (sprintf "%S" str)
-              (res, expected)
-              (Tuple.T2.sexp_of_t sexp_of_res sexp_of_res)
+          let accessor_pos_1 (type a)
+                ~without_value:_ ~value_len:_ f ~value:expected ~with_value:str
+                (module Res : Accessee with type t = a) =
+            let res = f (of_string str) ~pos:1 in
+            if not (Res.equal res expected) then
+              raise_s [%message "Peek accessor_pos_1 failed"
+                                  (res      : Res.t)
+                                  (expected : Res.t)
+                                  (str      : string)]
 
-        let bin_prot_char t ~pos = bin_prot Char.bin_reader_t t ~pos
+          let bin_prot_char t ~pos = bin_prot Char.bin_reader_t t ~pos
 
-        (* static permission tests; see above *)
-        let%test _ = Char.(=) 'a' (char (of_string "a" : (_, no_seek) Iobuf.t) ~pos:0)
-        let%test _ = Char.(=) 'a' (char (of_string "a" : (_, seek) Iobuf.t) ~pos:0)
-        let%test _ = Char.(=) 'a' (char (of_string "a" : (read, _) Iobuf.t) ~pos:0)
-        let%test _ = Char.(=) 'a' (char (of_string "a" : (read_write, _) Iobuf.t) ~pos:0)
-      end)
+          (* static permission tests; see above *)
+          let char_a_pos_0 iobuf = Char.(=) 'a' (char iobuf ~pos:0)
+          let%test _ = char_a_pos_0 (of_string "a" : (_,          no_seek) Iobuf.t)
+          let%test _ = char_a_pos_0 (of_string "a" : (_,          seek)    Iobuf.t)
+          let%test _ = char_a_pos_0 (of_string "a" : (read,       _)       Iobuf.t)
+          let%test _ = char_a_pos_0 (of_string "a" : (read_write, _)       Iobuf.t)
+        end)
 
       open Peek
 
@@ -812,14 +857,14 @@ module Test (Iobuf : sig
         open Peek.To_string
         let blito = blito
         let%test_unit _ = test_peek_to_string blito
-        (* Mostly rely on the [Blit.Make_distinct] testing. *)
+        (* Mostly rely on the [Blit_tests.Make_distinct] testing. *)
         let blit, unsafe_blit, sub, subo = blit, unsafe_blit, sub, subo
       end
       module To_bigstring = struct
         open Peek.To_bigstring
         let blito = blito
         let%test_unit _ = test_peek_to_bigstring blito
-        (* Mostly rely on the [Blit.Make_distinct] testing. *)
+        (* Mostly rely on the [Blit_tests.Make_distinct] testing. *)
         let blit, unsafe_blit, sub, subo = blit, unsafe_blit, sub, subo
       end
       type nonrec src = src
@@ -869,13 +914,26 @@ module Test (Iobuf : sig
           include Fill
           type 'a bin_prot = 'a Bin_prot.Type_class.writer
 
-          let t_pos_1 buf n f arg str _sexp_of_arg =
+          let accessor_pos_1 (type a)
+                ~without_value:buf ~value_len:n f ~value:arg ~with_value:str
+                (module Arg : Accessee with type t = a) =
             rewind buf;
             advance buf 1;
             f buf arg;
-            assert (Iobuf.length buf = String.length str - 1 - n);
+            if Iobuf.length buf <> String.length str - 1 - n then
+              raise_s [%message "Fill accessor_pos_1 post length check failed"
+                                  (buf : (_, _) Iobuf.Hexdump.t)
+                                  (str : string)
+                                  (n   : int)
+                                  (arg : Arg.t)];
             rewind buf;
-            [%test_eq: string] str (to_string buf)
+            let buf_str = to_string buf in
+            if String.(<>) buf_str str then
+              raise_s [%message "Fill accessor_pos_1 post rewind check failed"
+                                  (buf_str : string)
+                                  (str     : string)
+                                  (n       : int)
+                                  (arg     : Arg.t)]
 
           let bin_prot_char t a = bin_prot Char.bin_writer_t t a
 
@@ -917,7 +975,7 @@ module Test (Iobuf : sig
         for capacity = max 1 len to len + 2 do
           let t = create ~len:capacity in
           for pos = 0 to capacity - len do
-            sub_shared t ~pos |> (fun t -> Fill.string t s);
+            sub_shared t ~pos |> (fun t -> Fill.stringo t s);
             sub_shared t ~pos ~len |> (fun t ->
               let s' = to_string t in
               assert (String.equal s s');
@@ -933,7 +991,7 @@ module Test (Iobuf : sig
       let str = "Hi." in
       assert (len >= String.length str);
       assert (capacity src >= len);
-      Poke.string src str ~pos:0;
+      Poke.stringo src str ~pos:0;
       Blit.blit ~src ~src_pos:0 ~dst:src ~dst_pos:2 ~len;
       [%test_result: string] (to_string src) ~expect:"HiHi."
     ;;
@@ -945,11 +1003,11 @@ module Test (Iobuf : sig
       assert (len >= String.length str);
       assert (capacity src >= len);
       let dst = create ~len:5 in
-      Fill.string src str;
+      Fill.stringo src str;
       flip_lo src;
       Blit_consume_and_fill.blit ~src ~dst ~len;
       flip_lo dst;
-      [%test_result: string] (Consume.string dst) ~expect:str
+      [%test_result: string] (Consume.stringo dst) ~expect:str
     ;;
 
     let test_consume_to (blito : (Consume.src, _) consuming_blito)
@@ -959,14 +1017,14 @@ module Test (Iobuf : sig
         iter_slices n ~f:(fun ?pos:str_pos ?len ~pos' ~len' ~is_valid () ->
           let fill_result =
             Or_error.try_with (fun () ->
-              sub_shared t ~pos |> (fun t -> Fill.string t string ?str_pos ?len))
+              sub_shared t ~pos |> (fun t -> Fill.stringo t string ?str_pos ?len))
           in
           [%test_eq: bool] (is_ok fill_result) is_valid;
           let str = create n in
           let consume_result =
             Or_error.try_with (fun () ->
-              sub_shared (read_only t) ~pos |> (fun t ->
-                blito ~src:t ~src_len:len' ~dst:str ?dst_pos:str_pos ()))
+              sub_shared (read_only t) ~pos
+              |> (fun t -> blito ~src:t ~src_len:len' ~dst:str ?dst_pos:str_pos ()))
           in
           begin match consume_result, is_valid with
           | Error _, false -> ()
@@ -995,27 +1053,36 @@ module Test (Iobuf : sig
 
     module Consume = struct
       include Intf (struct
-        include Consume
-        type 'a bin_prot = 'a Bin_prot.Type_class.reader
+          include Consume
+          type 'a bin_prot = 'a Bin_prot.Type_class.reader
 
-        let t_pos_1 _ n f expected str sexp_of_res =
-          let buf = of_string str in
-          advance buf 1;
-          let res = f buf in
-          assert (Iobuf.length buf = String.length str - 1 - n);
-          rewind buf;
-          if not (Pervasives.(=) res expected) then
-            failwiths (sprintf "%S" (to_string buf))
-              (res, expected)
-              (Tuple.T2.sexp_of_t sexp_of_res sexp_of_res)
+          let accessor_pos_1 (type r)
+                ~without_value:_ ~value_len:n f ~value:expected ~with_value:str
+                (module Res : Accessee with type t = r) =
+            let buf = of_string str in
+            advance buf 1;
+            let res = f buf in
+            if Iobuf.length buf <> String.length str - 1 - n then
+              raise_s [%message "Consume accessor_pos_1 post length check failed"
+                                  (buf : (_, _) Iobuf.Hexdump.t)
+                                  (str : string)
+                                  (n   : int)
+                                  (res : Res.t)];
+            rewind buf;
+            if not (Res.equal res expected) then
+              raise_s [%message "Consume accessor_pos_1 post rewind check failed"
+                                  (res      : Res.t)
+                                  (expected : Res.t)
+                                  (str      : string)
+                                  (n        : int)]
 
-        let bin_prot_char t = bin_prot Char.bin_reader_t t
+          let bin_prot_char t = bin_prot Char.bin_reader_t t
 
-        (* static permission tests; see above *)
-        let%test _ = Char.(=) 'a' (char (of_string "a" : (_, seek) Iobuf.t))
-        let%test _ = Char.(=) 'a' (char (of_string "a" : (read, _) Iobuf.t))
-        let%test _ = Char.(=) 'a' (char (of_string "a" : (read_write, _) Iobuf.t))
-      end)
+          (* static permission tests; see above *)
+          let%test _ = Char.(=) 'a' (char (of_string "a" : (_,          seek) Iobuf.t))
+          let%test _ = Char.(=) 'a' (char (of_string "a" : (read,       _)    Iobuf.t))
+          let%test _ = Char.(=) 'a' (char (of_string "a" : (read_write, _)    Iobuf.t))
+        end)
 
       open Consume
 
@@ -1023,14 +1090,14 @@ module Test (Iobuf : sig
         open To_string
         let blito = blito
         let%test_unit _ = test_consume_to_string blito
-        (* Mostly rely on the [Blit.Make_distinct] testing. *)
+        (* Mostly rely on the [Blit_tests.Make_distinct] testing. *)
         let blit, unsafe_blit, sub, subo = blit, unsafe_blit, sub, subo
       end
       module To_bigstring = struct
         open To_bigstring
         let blito = blito
         let%test_unit _ = test_consume_to_bigstring blito
-        (* Mostly rely on the [Blit.Make_distinct] testing. *)
+        (* Mostly rely on the [Blit_tests.Make_distinct] testing. *)
         let blit, unsafe_blit, sub, subo = blit, unsafe_blit, sub, subo
       end
       type nonrec src = src
@@ -1067,7 +1134,7 @@ module Test (Iobuf : sig
     let%test_unit _ =
       List.iter strings ~f:(fun s ->
         let t = of_string s in
-        let s' = Consume.string t in
+        let s' = Consume.stringo t in
         assert (is_empty t);
         assert (String.equal s s'))
     ;;
@@ -1078,7 +1145,7 @@ module Test (Iobuf : sig
       let len = String.length s in
       let t = create ~len:len in
       let try_write ?str_pos ?len () : _ Or_error.t =
-        try_with (fun () -> sub_shared t |> (fun t -> Fill.string t s ?str_pos ?len))
+        try_with (fun () -> sub_shared t |> (fun t -> Fill.stringo t s ?str_pos ?len))
       in
       if is_safe then
         (assert (is_error (try_write ~str_pos:(-1) ()));
@@ -1104,16 +1171,16 @@ module Test (Iobuf : sig
           let t1 = create ~len:100 in
           let t2 = create ~len:100 in
           let s = "585038473775210758" in
-          Fill.string t1 s;
+          Fill.stringo t1 s;
           flip_lo t1;
-          assert (String.equal s (Consume.string t1));
+          assert (String.equal s (Consume.stringo t1));
           assert (is_empty t1);
           reset t1;
-          Fill.string t1 s;
+          Fill.stringo t1 s;
           flip_lo t1;
           blit ~src:t1 ~dst:t2 ~len:(length t1);
           flip_lo t2;
-          assert (String.equal s (Consume.string t2));
+          assert (String.equal s (Consume.stringo t2));
           assert (is_empty t2))
       ;;
 
@@ -1212,9 +1279,9 @@ module Test (Iobuf : sig
           [%test_result: string] (to_string t1) ~expect:"0123456789";
           [%test_result: string] (to_string t2) ~expect:"0123456789";
           [%test_result: string] (to_string t3) ~expect:"0123";
-          Poke.string t1 ~pos:0 "qwertyuiop";
-          Poke.string t2 ~pos:0 "!@#$%^&*()";
-          Poke.string t3 ~pos:0 "asdf";
+          Poke.stringo t1 ~pos:0 "qwertyuiop";
+          Poke.stringo t2 ~pos:0 "!@#$%^&*()";
+          Poke.stringo t3 ~pos:0 "asdf";
           [%test_result: string] (to_string t1) ~expect:"qwertyuiop";
           [%test_result: string] (to_string t2) ~expect:"!@#$%^&*()";
           [%test_result: string] (to_string t3) ~expect:"asdf")
@@ -1259,7 +1326,7 @@ module Test (Iobuf : sig
         List.iter [ blit ; unsafe_blit ; blit_via_blito ] ~f:(fun blit ->
           let s = "01234567899876543210" in
           let t = create ~len:(String.length s) in
-          Iobuf.sub_shared t |> (fun t -> Fill.string t s);
+          Iobuf.sub_shared t |> (fun t -> Fill.stringo t s);
           blit ~src:t ~dst:t ~src_pos:0 ~dst_pos:10 ~len:10;
           let s2 = to_string t in
           assert (String.equal s2 "01234567890123456789"))
@@ -1281,9 +1348,9 @@ module Test (Iobuf : sig
           [%test_result: string] (to_string t1) ~expect:"0123456789";
           [%test_result: string] (to_string t2) ~expect:"0123456789";
           [%test_result: string] (to_string t3) ~expect:   "3456";
-          Poke.string t1 ~pos:0 "qwertyuiop";
-          Poke.string t2 ~pos:0 "!@#$%^&*()";
-          Poke.string t3 ~pos:0 "asdf";
+          Poke.stringo t1 ~pos:0 "qwertyuiop";
+          Poke.stringo t2 ~pos:0 "!@#$%^&*()";
+          Poke.stringo t3 ~pos:0 "asdf";
           [%test_result: string] (to_string t1) ~expect:"qwertyuiop";
           [%test_result: string] (to_string t2) ~expect:"!@#$%^&*()";
           [%test_result: string] (to_string t3) ~expect:"asdf")
@@ -1353,7 +1420,7 @@ module Test (Iobuf : sig
             let file, fd = Unix.mkstemp "iobuf_test" in
             protect ~finally:(fun () -> Unix.unlink file) ~f:(fun () ->
               let ch = Ch.create_out fd in
-              Poke.string t string ~pos;
+              Poke.stringo t string ~pos;
               advance t pos;
               resize t ~len;
               Ch.write t ch;
@@ -1413,7 +1480,7 @@ module Test (Iobuf : sig
         let file, fd = Unix.mkstemp "iobuf_test" in
         protect ~finally:(fun () -> Unix.unlink file)
           ~f:(fun () ->
-            sub_shared t ~pos |> (fun t -> Fill.string t string);
+            sub_shared t ~pos |> (fun t -> Fill.stringo t string);
             sub_shared t ~pos ~len:n |> (fun t ->
               let len_before = Iobuf.length t in
               write_assume_fd_is_nonblocking t fd;
@@ -1491,13 +1558,13 @@ module Test (Iobuf : sig
             (fun () ->
                let send_fd = Unix.(socket ~domain:PF_INET ~kind:SOCK_DGRAM ~protocol:0) in
                iter_examples ~f:(fun t string ~pos:_ ->
-                 Fill.string t string;
+                 Fill.stringo t string;
                  Iobuf.flip_lo t;
                  retry_until_ready
                    (fun () ->
                       Unix.Syscall_result.Unit.ok_or_unix_error_exn (sendto t send_fd addr)
                         ~syscall_name:sendto_name);
-                 [%test_pred: (_, _) Iobuf.t] Iobuf.is_empty t
+                 [%test_pred: (_, _) Iobuf.Hexdump.t] Iobuf.is_empty t
                ))
             ()
         in
@@ -1614,10 +1681,10 @@ let%test_unit _ =
             | _ -> failwithf "Unknown int size %d" int_size ()
           in
           fill_int t len;
-          Fill.string t s;
+          Fill.stringo t s;
           flip_lo t;
           write_assume_fd_is_nonblocking t fd;
-          [%test_pred: (_, _) Iobuf.t] Iobuf.is_empty t; (* no short writes *)
+          [%test_pred: (_, _) t] Iobuf.is_empty t; (* no short writes *)
           reset t
       done;
       Unix.close fd;
@@ -1629,7 +1696,7 @@ let%test_unit _ =
     let check_msgs ?(int_size = 2) ?(be = false) file =
       let msg_number = ref 0 in
       let check_message r =
-        let msg = Consume.string r in
+        let msg = Consume.stringo r in
         let s = sprintf "MESSAGE %d" !msg_number in
         assert( String.equal s msg );
         msg_number := !msg_number + 1
@@ -1690,12 +1757,13 @@ let%test_unit _ =
   end
 
   include Accessors (struct
-    module Consume = Consume
-    module Fill = Fill
-    module Peek = Peek
-    module Poke = Poke
-    let is_safe = true
-  end)
+      module Consume = Consume
+      module Fill    = Fill
+      module Peek    = Peek
+      module Poke    = Poke
+
+      let is_safe = true
+    end)
 
   module Unsafe = Accessors (struct include Unsafe let is_safe = false end)
 end :
@@ -1720,7 +1788,20 @@ let%test_module "allocation" =
       let src = Iobuf.of_string "123abcDEF" in
       let dst = Iobuf.create ~len:0 in
       show_allocation (fun () ->
-        Iobuf.set_bounds_and_buffer_sub ~src ~dst ~len:(Iobuf.length src) ());
+        Iobuf.set_bounds_and_buffer_sub ~src ~dst ~len:(Iobuf.length src) ~pos:0);
+      [%expect {|
+        (allocated
+          (minor_words 0)
+          (major_words 0)) |}]
+
+    let%expect_test "Fill.string" =
+      let str = "123" in
+      (* The labeled arguments mustn't be constant or they don't test anything - optional
+         constant arguments can always be preallocated. *)
+      let str_pos = Random.int (String.length str) in
+      let len = Random.int (String.length str - str_pos) in
+      let dst = Iobuf.create ~len in
+      show_allocation (fun () -> Iobuf.Fill.string dst str ~str_pos ~len);
       [%expect {|
         (allocated
           (minor_words 0)

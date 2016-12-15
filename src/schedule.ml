@@ -1,7 +1,7 @@
-open Core_kernel.Std
+open! Import
 
-type zoned   = Zoned
-type unzoned = Unzoned
+type zoned   = Zoned [@@deriving compare]
+type unzoned = Unzoned [@@deriving compare]
 
 module Inclusive_exclusive = struct
   module Stable = struct
@@ -17,12 +17,12 @@ module Inclusive_exclusive = struct
 end
 
 module type S = sig
-  type int_set [@@deriving compare]
-  type ofday_set [@@deriving compare]
+  type int_set         [@@deriving compare]
+  type ofday_set       [@@deriving compare]
   type day_of_week_set [@@deriving compare]
-  type month_set [@@deriving compare]
-  type date_set [@@deriving compare]
-  type boundary_type [@@deriving compare]
+  type month_set       [@@deriving compare]
+  type date_set        [@@deriving compare]
+  type boundary_type   [@@deriving compare]
 end
 
 module Make (T : S) = struct
@@ -78,14 +78,14 @@ module Make (T : S) = struct
       | Never                     -> Never
   ;;
 
-  let compare_lists compare_a compare l1 l2 =
+  let compare_lists compare_zoning compare_a compare l1 l2 =
     let rec loop l1 l2 =
       match l1, l2 with
       | [], [] -> 0
       | [], _  -> -1
       | _, []  -> 1
       | t1 :: t1_rest, t2 :: t2_rest ->
-        let c = compare compare_a t1 t2 in
+        let c = compare compare_zoning compare_a t1 t2 in
         if c = 0
         then loop t1_rest t2_rest
         else c
@@ -93,33 +93,34 @@ module Make (T : S) = struct
     loop l1 l2
   ;;
 
-  let rec compare :
+  let rec compare_gadt :
     type zoning.
-    ('b -> 'b -> int)
+    (zoning -> zoning -> int)
+    -> ('b -> 'b -> int)
     -> (zoning, 'b) gadt
     -> (zoning, 'b) gadt
     -> int =
-    fun compare_a t1 t2 ->
+    fun compare_zoning compare_a t1 t2 ->
       match t1, t2 with
       | In_zone (z1, t1), In_zone (z2, t2) ->
         let c = Time.Zone.compare z1 z2 in
         if c = 0
-        then compare compare_a t1 t2
+        then compare_gadt compare_unzoned compare_a t1 t2
         else c
       | Tag (tag1, t1), Tag (tag2, t2) ->
         let c = compare_a tag1 tag2 in
         if c = 0
-        then compare compare_a t1 t2
+        then compare_gadt compare_zoning compare_a t1 t2
         else c
       | And l1, And l2
-      | Or l1, Or l2   -> compare_lists compare_a compare l1 l2
-      | Not t1, Not t2 -> compare compare_a t1 t2
+      | Or l1, Or l2   -> compare_lists compare_zoning compare_a compare_gadt l1 l2
+      | Not t1, Not t2 -> compare_gadt compare_zoning compare_a t1 t2
       | If_then_else (s1, s2, s3), If_then_else (s1', s2', s3') ->
-        compare_lists compare_a compare [s1; s2; s3] [s1'; s2'; s3']
+        compare_lists compare_zoning compare_a compare_gadt [s1; s2; s3] [s1'; s2'; s3']
       | Shift (span1, t1), Shift (span2, t2) ->
         let c = Time.Span.compare span1 span2 in
         if c = 0
-        then compare compare_a t1 t2
+        then compare_gadt compare_zoning compare_a t1 t2
         else c
       | Between ((sie1, s1), (eie1, e1)), Between ((sie2, s2), (eie2, e2)) ->
         List.find ~f:(fun c -> Int.(<>) c 0)
@@ -187,7 +188,7 @@ module Stable = struct
   (* we want to be included in Core.Stable, so we can't rely on it here, forcing us to be
      careful in the type definitions below to use the stable versions. *)
   module Date                = Date.Stable
-  module Ofday               = Ofday.Stable
+  module Ofday               = Time.Ofday.Stable
   module Span                = Time.Span.Stable
   module Day_of_week         = Day_of_week.Stable
   module Month               = Month.Stable
@@ -315,8 +316,7 @@ module Stable = struct
     end
 
     type 'b t = (zoned, 'b) External.gadt
-
-    let compare compare_b t = External.compare compare_b t
+    [@@deriving compare]
 
     let map t ~f = External.map_tags t ~f
 
@@ -1079,7 +1079,7 @@ type ('a, 'b) t = ('a, 'b) External.gadt =
   | Always       : ('a, 'b) t
   | Never        : ('a, 'b) t
 
-let compare = External.compare
+let compare = External.compare_gadt
 
 let tags t time =
   match fold_tags t ~init:[] ~f:(fun l x -> x::l) time with

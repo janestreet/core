@@ -1,19 +1,12 @@
-open Core_kernel.Std
+open! Import
 
 module Zone = Zone
 module Span = Span
 
 module Ofday = struct
-  include (Ofday : (module type of struct include Ofday end
-                     with module Zoned := Ofday.Zoned))
+  include Core_kernel.Ofday
+  module Zoned = Ofday_zoned
 
-  module Zoned = struct
-    include Ofday.Zoned
-
-    let to_time t date = Time0.of_date_ofday ~zone:(zone t) date (ofday t)
-  end
-
-  (* can't be defined in Ofday directly because it would create a circular reference *)
   let now ~zone = Time0.to_ofday ~zone (Time0.now ())
 end
 
@@ -37,3 +30,13 @@ let%bench_module "Time" = (module struct
   let%bench "Time.Span.of_ms"  = Span.of_ms  x
   let%bench "Time.Span.of_ns"  = Span.of_ns  x
 end)
+
+
+module Stable = struct
+  include Stable0
+  module Span = Span.Stable
+  module Ofday = struct
+    include Ofday.Stable
+    module Zoned = Ofday.Zoned.Stable
+  end
+end

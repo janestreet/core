@@ -1,5 +1,6 @@
-open Core_kernel.Std
+open! Import
 open! Int.Replace_polymorphic_compare
+
 module Unix = Core_unix
 
 #import "config.h"

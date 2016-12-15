@@ -69,10 +69,9 @@
 
 #import "config.h"
 
-open Core_kernel.Std
+open! Import
 
 module Unix = Core_unix
-
 
 let max_percent_change_from_real_slope = 0.20
 let%test_unit _ =
@@ -339,7 +338,7 @@ module Span = struct
 #endif
 
   let to_time_span ?calibrator t =
-    Span.of_ns (Int63.to_float (to_ns ?calibrator t))
+    Time.Span.of_ns (Int63.to_float (to_ns ?calibrator t))
   ;;
 end
 

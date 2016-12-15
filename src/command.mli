@@ -24,7 +24,7 @@
     ]}
 *)
 
-open! Core_kernel.Std
+open! Import
 
 (** {1 argument types} *)
 module Arg_type : sig
@@ -87,28 +87,28 @@ module Arg_type : sig
         force a string starting with a hyphen to be interpreted as an anonymous argument
         rather than as a flag, or you can just make it a parameter to a flag to avoid the
         issue. *)
-    val int                : int                t
-    val char               : char               t
-    val float              : float              t
-    val bool               : bool               t
-    val date               : Date.t             t
-    val percent            : Percent.t          t
+    val int                      : int       t
+    val char                     : char      t
+    val float                    : float     t
+    val bool                     : bool      t
+    val date                     : Date.t    t
+    val percent                  : Percent.t t
 
     (** [time] requires a time zone. *)
-    val time               : Time.t             t
-    val time_ofday         : Time.Ofday.Zoned.t t
+    val time                     : Time.t             t
+    val time_ofday               : Time.Ofday.Zoned.t t
 
     (** Use [time_ofday_unzoned] only when time zone is implied somehow. *)
-    val time_ofday_unzoned : Time.Ofday.t       t
-    val time_zone          : Time.Zone.t        t
-    val time_span          : Time.Span.t        t
+    val time_ofday_unzoned       : Time.Ofday.t       t
+    val time_zone                : Time.Zone.t        t
+    val time_span                : Time.Span.t        t
 
     (** [file] uses bash autocompletion. *)
-    val file               : string             t
-    val host_and_port      : Host_and_port.t    t
-    val ip_address         : Unix.inet_addr     t
-    val sexp               : Sexp.t             t
-    val sexp_conv          : (Sexp.t -> 'a) -> 'a t
+    val file                     : string             t
+    val host_and_port            : Host_and_port.t    t
+    val ip_address               : Unix.inet_addr     t
+    val sexp                     : Sexp.t             t
+    val sexp_conv                : (Sexp.t -> 'a) -> 'a t
   end
 end
 
@@ -339,6 +339,11 @@ module Param : sig
 end
 
 module Let_syntax : sig
+
+  type 'a t (** substituted below *)
+
+  val return : 'a -> 'a t
+
   module Let_syntax : sig
     type 'a t (** substituted below *)
 
@@ -347,7 +352,7 @@ module Let_syntax : sig
     val both   : 'a t -> 'b t -> ('a * 'b) t
     module Open_on_rhs = Param
   end with type 'a t := 'a Param.t
-end
+end with type 'a t := 'a Param.t
 
 (** {1 older interface for command-line specifications} *)
 module Spec : sig

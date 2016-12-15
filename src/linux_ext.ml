@@ -1,6 +1,6 @@
 module Bigstring_in_this_directory = Bigstring
 module Time_ns_in_this_directory   = Time_ns
-open Core_kernel.Std
+open! Import
 module Bigstring = Bigstring_in_this_directory
 module Time_ns   = Time_ns_in_this_directory
 
@@ -8,7 +8,7 @@ module File_descr = Core_unix.File_descr
 
 module Sysinfo0 = struct
   type t =
-    { uptime : Span.t;
+    { uptime : Time.Span.t;
       load1 : int;
       load5 : int;
       load15 : int;
@@ -220,13 +220,13 @@ module Clock = struct
   (* These functions should be in Unix, but due to the dependency on Time,
      this is not possible (cyclic dependency). *)
   external get_time : t -> float = "unix_clock_gettime"
-  let get_time t = Span.of_float (get_time t)
+  let get_time t = Time.Span.of_float (get_time t)
 
   external set_time : t -> float -> unit = "unix_clock_settime"
-  let set_time t s = set_time t (Span.to_float s)
+  let set_time t s = set_time t (Time.Span.to_float s)
 
   external get_resolution : t -> float = "unix_clock_getres"
-  let get_resolution t = Span.of_float (get_resolution t)
+  let get_resolution t = Time.Span.of_float (get_resolution t)
 
   external get_process_clock : unit -> t = "unix_clock_process_cputime_id_stub"
 
@@ -486,7 +486,7 @@ module Sysinfo = struct
   let sysinfo = Ok (fun () ->
     let raw = raw_sysinfo () in
     {
-      uptime = Span.of_int_sec raw.Raw_sysinfo.uptime;
+      uptime = Time.Span.of_int_sec raw.Raw_sysinfo.uptime;
       load1 = raw.Raw_sysinfo.load1;
       load5 = raw.Raw_sysinfo.load5;
       load15 = raw.Raw_sysinfo.load15;

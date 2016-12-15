@@ -15,6 +15,8 @@ let log message a sexp_of_a =
 
 module Timing_wheel = Timing_wheel_float
 
+module Alarm_precision = Timing_wheel.Alarm_precision
+
 module Q = Timing_wheel.Priority_queue
 
 module Gc = Core.Std.Gc
@@ -60,8 +62,7 @@ let test_with_allocations ~num_queue_elements ~num_steps =
   let tw =
     Timing_wheel.create
       ~config:(Timing_wheel.Config.create ()
-                 ~alarm_precision:(Time.Span.millisecond
-                                   |> Timing_wheel.Alarm_precision.of_span))
+                 ~alarm_precision:Alarm_precision.about_one_millisecond)
       ~start:Time.epoch
   in
   let user_plus_sys_at_start = user_plus_sys () in

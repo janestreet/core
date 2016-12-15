@@ -112,5 +112,10 @@ let test =
           try Hq.iter hq ~f:(fun _ -> ignore (Hq.remove hq "foo")); assert false
           with _ -> ();
         end;
+        [%test_result: int] (Hq.lookup_and_move_to_back_exn hq "2") ~expect:2;
+        [%test_result: string * int] (Hq.dequeue_with_key_exn hq) ~expect:("1",1);
+        [%test_result: string * int] (Hq.dequeue_with_key_exn hq) ~expect:("3",3);
+        [%test_result: string * int] (Hq.dequeue_with_key_exn hq) ~expect:("2",2);
+        [%test_result: (string * int) option] (Hq.dequeue_with_key hq) ~expect:None;
       )
     ]

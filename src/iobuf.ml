@@ -1,5 +1,8 @@
-open Core_kernel.Std_kernel
 #import "config.h"
+
+module Bigstring_in_this_directory = Bigstring
+open! Import
+module Bigstring = Bigstring_in_this_directory
 
 module Unix = Core_unix
 
@@ -173,7 +176,7 @@ let sub_shared ?(pos = 0) ?len t =
   }
 ;;
 
-let set_bounds_and_buffer_sub ?(pos = 0) ~len ~src ~dst () =
+let set_bounds_and_buffer_sub ~pos ~len ~src ~dst =
   check_range src ~pos ~len;
   let lo = src.lo + pos in
   let hi = lo + len in
@@ -248,111 +251,6 @@ let to_string ?len t =
   Bigstring.to_string t.buf ~pos:t.lo ~len
 
 let of_string s = of_bigstring (Bigstring.of_string s)
-
-module Hexdump = struct
-
-  let half_line_length = 8
-  let full_line_length = half_line_length * 2
-
-  let get_char_within t ~lo ~hi ~pos =
-    if pos < 0 || pos >= (hi-lo)
-    then None
-    else Some (Bigstring.get t.buf (pos+lo))
-
-  let half_line t ~lo ~hi ~pos ~sep ~f =
-    let strs = ref [] in
-    for i = pos + half_line_length - 1 downto pos do
-      strs := f (get_char_within t ~lo ~hi ~pos:i) :: !strs
-    done;
-    String.concat ~sep (!strs)
-
-  let hex_char = function
-    | Some c -> sprintf "%02x" (Char.to_int c)
-    | None -> "  "
-
-  let ascii_char = function
-    | Some c -> if Char.is_print c then String.of_char c else "."
-    | None -> " "
-
-  let hex_half_line t ~lo ~hi ~pos = half_line t ~lo ~hi ~pos ~sep:" " ~f:hex_char
-  let ascii_half_line t ~lo ~hi ~pos = half_line t ~lo ~hi ~pos ~sep:"" ~f:ascii_char
-
-  let line_index ~lo ~hi ~pos =
-    let len = hi-lo in
-    if len <= (1 lsl 8) then sprintf "0x%02x" pos
-    else if len <= (1 lsl 16) then sprintf "0x%04x" pos
-    else if len <= (1 lsl 24) then sprintf "0x%06x" pos
-    else if len <= (1 lsl 32) then sprintf "0x%08x" pos
-    else if len <= (1 lsl 40) then sprintf "0x%010x" pos
-    else if len <= (1 lsl 48) then sprintf "0x%012x" pos
-    else if len <= (1 lsl 56) then sprintf "0x%014x" pos
-    else sprintf "0x%016x" pos
-
-  let to_string_line t ~lo ~hi ~pos =
-    let pos1 = pos in
-    let pos2 = pos + half_line_length in
-    sprintf "%s:  %s  %s  %s  %s"
-      (line_index ~lo ~hi ~pos)
-      (hex_half_line t ~lo ~hi ~pos:pos1)
-      (ascii_half_line t ~lo ~hi ~pos:pos1)
-      (ascii_half_line t ~lo ~hi ~pos:pos2)
-      (hex_half_line t ~lo ~hi ~pos:pos2)
-
-  let to_string_contents t ~lo ~hi =
-    if lo >= hi
-    then
-      "<empty buffer>"
-    else
-      let rec loop ~pos ~rev_lines =
-        if pos >= hi-lo
-        then String.concat ~sep:"\n" (List.rev rev_lines)
-        else
-          loop
-            ~pos:(pos + full_line_length)
-            ~rev_lines:(to_string_line t ~lo ~hi ~pos :: rev_lines)
-      in
-      loop ~pos:0 ~rev_lines:[]
-
-  let to_string_header t ~desc =
-    sprintf "Iobuf: bigstring length %d; limits [%d,%d]; window [%d,%d]; %s:\n"
-      (Bigstring.length t.buf)
-      t.lo_min
-      t.hi_max
-      t.lo
-      t.hi
-      desc
-
-  let to_string_within t ~lo ~hi ~desc =
-    to_string_header t ~desc
-    ^ to_string_contents t ~lo ~hi
-
-  let to_string_whole t =
-    to_string_within t
-      ~lo:0
-      ~hi:(Bigstring.length t.buf)
-      ~desc:"contents"
-
-  let to_string_limits t =
-    to_string_within t
-      ~lo:t.lo_min
-      ~hi:t.hi_max
-      ~desc:"contents within limits"
-
-  let to_string_window t =
-    to_string_within t
-      ~lo:t.lo
-      ~hi:t.hi
-      ~desc:"contents within window"
-
-  let to_string ?(bounds=`Limits) t =
-    match bounds with
-    | `Whole -> to_string_whole t
-    | `Limits -> to_string_limits t
-    | `Window -> to_string_window t
-
-end
-
-let to_string_hum = Hexdump.to_string
 
 (* We used to do it like {v
 
@@ -477,7 +375,7 @@ module Consume = struct
                val set : t -> int -> char -> unit
                val unsafe_blit : (T.t, t) Blit.blit
              end) = struct
-    include Blit.Make_distinct (Char_elt) (T_src) (Dst)
+    include Test_blit.Make_distinct_and_test (Char_elt) (T_src) (Dst)
 
     let blit ~src ~dst ~dst_pos ~len =
       blit ~src ~src_pos:0 ~dst ~dst_pos ~len;
@@ -519,18 +417,24 @@ module Consume = struct
     uadv t len (Bigstring.get_head_padded_fixed_string t.buf ~pos:(pos t len) ~padding ~len ())
   ;;
 
-  let string ?(str_pos = 0) ?len t =
-    let len = match len with None -> length t | Some l -> l in
+  let string ~str_pos ~len t =
     let dst = String.create (len + str_pos) in
     To_string.blit ~src:t ~dst ~len ~dst_pos:str_pos;
     dst
   ;;
 
-  let bigstring ?(str_pos = 0) ?len t =
-    let len = match len with None -> length t | Some l -> l in
+  let bigstring ~str_pos ~len t =
     let dst = Bigstring.create (len + str_pos) in
     To_bigstring.blit ~src:t ~dst ~len ~dst_pos:str_pos;
     dst
+  ;;
+
+  let stringo ?(str_pos = 0) ?len t =
+    string t ~str_pos ~len:(match len with None -> length t | Some len -> len)
+  ;;
+
+  let bigstringo ?(str_pos = 0) ?len t =
+    bigstring t ~str_pos ~len:(match len with None -> length t | Some len -> len)
   ;;
 
   let bin_prot reader t =
@@ -689,17 +593,24 @@ module Fill = struct
     uadv t len
   ;;
 
-  let string ?str_pos:(src_pos = 0) ?len t src =
-    let len = match len with Some l -> l | None -> String.length src - src_pos in
-    Bigstring.From_string.blit ~src ~src_pos ~len
-      ~dst:t.buf ~dst_pos:(pos t len);
+  let string ~str_pos ~len t src =
+    Bigstring.From_string.blit ~src ~src_pos:str_pos ~len ~dst:t.buf ~dst_pos:(pos t len);
     uadv t len
   ;;
 
-  let bigstring ?str_pos:(src_pos = 0) ?len t src =
-    let len = match len with Some l -> l | None -> Bigstring.length src - src_pos in
-    Bigstring.blit ~src ~src_pos ~len ~dst:t.buf ~dst_pos:(pos t len);
+  let bigstring ~str_pos ~len t src =
+    Bigstring.blit ~src ~src_pos:str_pos ~len ~dst:t.buf ~dst_pos:(pos t len);
     uadv t len
+  ;;
+
+  let stringo ?(str_pos = 0) ?len t src =
+    string t src ~str_pos
+      ~len:(match len with None -> String.length src - str_pos | Some len -> len)
+  ;;
+
+  let bigstringo ?(str_pos = 0) ?len t src =
+    bigstring t src ~str_pos
+      ~len:(match len with None -> Bigstring.length src - str_pos | Some len -> len)
   ;;
 
   let bin_prot writer t a = write_bin_prot writer t ~pos:0 a |> uadv t
@@ -735,8 +646,8 @@ end
 
 module Peek = struct
   type src = (read, no_seek) t
-  module To_string    = Blit.Make_distinct (Char_elt) (T_src) (String_dst)
-  module To_bigstring = Blit.Make_distinct (Char_elt) (T_src) (Bigstring_dst)
+  module To_string    = Test_blit.Make_distinct_and_test (Char_elt) (T_src) (String_dst)
+  module To_bigstring = Test_blit.Make_distinct_and_test (Char_elt) (T_src) (Bigstring_dst)
 
   type nonrec ('a, 'd, 'w) t = ('d, 'w) t -> pos:int -> 'a
     constraint 'd = [> read ]
@@ -751,18 +662,27 @@ module Peek = struct
     Bigstring.get_head_padded_fixed_string t.buf ~padding ~len ~pos:(spos t ~len ~pos) ()
   ;;
 
-  let string ?str_pos:(dst_pos = 0) ?len t ~pos =
-    let len = match len with None -> length t - pos | Some l -> l in
-    let dst = String.create (len + dst_pos) in
-    Bigstring.To_string.blit ~src:t.buf ~src_pos:(spos t ~len ~pos) ~len ~dst ~dst_pos;
+  let string ~str_pos ~len t ~pos =
+    let dst = String.create (len + str_pos) in
+    Bigstring.To_string.blit ~src:t.buf ~src_pos:(spos t ~len ~pos) ~len
+      ~dst ~dst_pos:str_pos;
     dst
   ;;
 
-  let bigstring ?str_pos:(dst_pos = 0) ?len t ~pos =
-    let len = match len with None -> length t - pos | Some l -> l in
-    let dst = Bigstring.create (len + dst_pos) in
-    Bigstring.blit ~src:t.buf ~src_pos:(spos t ~len ~pos) ~len ~dst ~dst_pos;
+  let bigstring ~str_pos ~len t ~pos =
+    let dst = Bigstring.create (len + str_pos) in
+    Bigstring.blit ~src:t.buf ~src_pos:(spos t ~len ~pos) ~len ~dst ~dst_pos:str_pos;
     dst
+  ;;
+
+  let stringo ?(str_pos = 0) ?len t ~pos =
+    string t ~pos ~str_pos
+      ~len:(match len with None -> length t - pos | Some len -> len)
+  ;;
+
+  let bigstringo ?(str_pos = 0) ?len t ~pos =
+    bigstring t ~pos ~str_pos
+      ~len:(match len with None -> length t - pos | Some len -> len)
   ;;
 
   let bin_prot reader t ~pos = read_bin_prot reader t ~pos |> fst
@@ -831,14 +751,23 @@ module Poke = struct
     Bigstring.set_head_padded_fixed_string ~padding ~len t.buf ~pos:(spos t ~len ~pos) src
   ;;
 
-  let string ?str_pos:(src_pos = 0) ?len t ~pos src =
-    let len = match len with None -> String.length src - src_pos | Some l -> l in
-    Bigstring.From_string.blit ~src ~src_pos ~len ~dst:t.buf ~dst_pos:(spos t ~len ~pos)
+  let string ~str_pos ~len t ~pos src =
+    Bigstring.From_string.blit ~src ~src_pos:str_pos ~len
+      ~dst:t.buf ~dst_pos:(spos t ~len ~pos)
   ;;
 
-  let bigstring ?str_pos:(src_pos = 0) ?len t ~pos src =
-    let len = match len with None -> Bigstring.length src - src_pos | Some l -> l in
-    Bigstring.blit ~src ~src_pos ~len ~dst:t.buf ~dst_pos:(spos t ~len ~pos)
+  let bigstring ~str_pos ~len t ~pos src =
+    Bigstring.blit ~src ~src_pos:str_pos ~len ~dst:t.buf ~dst_pos:(spos t ~len ~pos)
+  ;;
+
+  let stringo ?(str_pos = 0) ?len t ~pos src =
+    string t ~str_pos ~pos src
+      ~len:(match len with None -> String.length src - str_pos | Some len -> len)
+  ;;
+
+  let bigstringo ?(str_pos = 0) ?len t ~pos src =
+    bigstring t ~str_pos ~pos src
+      ~len:(match len with None -> Bigstring.length src - str_pos | Some len -> len)
   ;;
 
   let bin_prot writer t ~pos a = write_bin_prot writer t ~pos a |> (ignore : int -> unit)
@@ -897,7 +826,7 @@ module Blit = struct
         ~src:src.buf ~src_pos:(buf_pos_exn src ~pos:src_pos ~len)
         ~dst:dst.buf ~dst_pos:(buf_pos_exn dst ~pos:dst_pos ~len)
   end
-  include Blit.Make (Char_elt) (T_dst)
+  include Test_blit.Make_and_test (Char_elt) (T_dst)
   (* Workaround the inability of the compiler to inline in the presence of functors. *)
   let unsafe_blit = T_dst.unsafe_blit
 end
@@ -1004,8 +933,8 @@ module Expert = struct
   ;;
 
   let set_bounds_and_buffer ~src ~dst = set_bounds_and_buffer ~src ~dst
-  let set_bounds_and_buffer_sub ?pos ~len ~src ~dst () =
-    (set_bounds_and_buffer_sub [@inlined]) ?pos ~len ~src ~dst ()
+  let set_bounds_and_buffer_sub ~pos ~len ~src ~dst =
+    (set_bounds_and_buffer_sub [@inlined]) ~pos ~len ~src ~dst
 end
 
 type ok_or_eof = Ok | Eof [@@deriving compare, sexp_of]
@@ -1191,15 +1120,19 @@ module Unsafe = struct
     let upos t = unsafe_buf_pos t ~pos:0
 
     let tail_padded_fixed_string ~padding ~len t =
-      uadv t len (Bigstring.get_tail_padded_fixed_string t.buf ~pos:(upos t) ~padding ~len ())
+      uadv t len
+        (Bigstring.get_tail_padded_fixed_string t.buf ~pos:(upos t) ~padding ~len ())
     ;;
 
     let head_padded_fixed_string ~padding ~len t =
-      uadv t len (Bigstring.get_head_padded_fixed_string t.buf ~pos:(upos t) ~padding ~len ())
+      uadv t len
+        (Bigstring.get_head_padded_fixed_string t.buf ~pos:(upos t) ~padding ~len ())
     ;;
 
-    let string    = Consume.string
-    let bigstring = Consume.bigstring
+    let string     = Consume.string
+    let bigstring  = Consume.bigstring
+    let stringo    = Consume.stringo
+    let bigstringo = Consume.bigstringo
 
     let bin_prot = Consume.bin_prot
 
@@ -1248,16 +1181,25 @@ module Unsafe = struct
       uadv t len
     ;;
 
-    let string ?str_pos:(src_pos = 0) ?len t src =
-      let len = match len with Some l -> l | None -> String.length src - src_pos in
-      Bigstring.From_string.blit ~src ~src_pos ~len ~dst:t.buf ~dst_pos:(upos t len);
+    let string ~str_pos ~len t src =
+      Bigstring.From_string.blit ~src ~src_pos:str_pos ~len
+        ~dst:t.buf ~dst_pos:(upos t len);
       uadv t len
     ;;
 
-    let bigstring ?str_pos:(src_pos = 0) ?len t src =
-      let len = match len with Some l -> l | None -> Bigstring.length src - src_pos in
-      Bigstring.blit ~src ~src_pos ~len ~dst:t.buf ~dst_pos:(upos t len);
+    let bigstring ~str_pos ~len t src =
+      Bigstring.blit ~src ~src_pos:str_pos ~len ~dst:t.buf ~dst_pos:(upos t len);
       uadv t len
+    ;;
+
+    let stringo ?(str_pos = 0) ?len t src =
+      string t src ~str_pos
+        ~len:(match len with None -> String.length src - str_pos | Some len -> len)
+    ;;
+
+    let bigstringo ?(str_pos = 0) ?len t src =
+      bigstring t src ~str_pos
+        ~len:(match len with None -> Bigstring.length src - str_pos | Some len -> len)
     ;;
 
     let bin_prot = Fill.bin_prot
@@ -1311,19 +1253,27 @@ module Unsafe = struct
       Bigstring.get_head_padded_fixed_string t.buf ~padding ~len ~pos:(upos t ~pos) ()
     ;;
 
-    let string ?str_pos:(dst_pos = 0) ?len t ~pos =
-      let len = match len with None -> length t - pos | Some l -> l in
-      let dst = String.create (len + dst_pos) in
+    let string ~str_pos ~len t ~pos =
+      let dst = String.create (len + str_pos) in
       Bigstring.To_string.unsafe_blit ~src:t.buf ~src_pos:(upos t ~pos)
-        ~len ~dst ~dst_pos;
+        ~len ~dst ~dst_pos:str_pos;
       dst
     ;;
 
-    let bigstring ?str_pos:(dst_pos = 0) ?len t ~pos =
-      let len = match len with None -> length t - pos | Some l -> l in
-      let dst = Bigstring.create (len + dst_pos) in
-      Bigstring.unsafe_blit ~src:t.buf ~src_pos:(upos t ~pos) ~len ~dst ~dst_pos;
+    let bigstring ~str_pos ~len t ~pos =
+      let dst = Bigstring.create (len + str_pos) in
+      Bigstring.unsafe_blit ~src:t.buf ~src_pos:(upos t ~pos) ~len ~dst ~dst_pos:str_pos;
       dst
+    ;;
+
+    let stringo ?(str_pos = 0) ?len t ~pos =
+      string t ~pos ~str_pos
+        ~len:(match len with None -> length t - pos | Some len -> len)
+    ;;
+
+    let bigstringo ?(str_pos = 0) ?len t ~pos =
+      bigstring t ~pos ~str_pos
+        ~len:(match len with None -> length t - pos | Some len -> len)
     ;;
 
     let bin_prot = Peek.bin_prot
@@ -1366,15 +1316,23 @@ module Unsafe = struct
       Bigstring.set_head_padded_fixed_string ~padding ~len t.buf ~pos:(upos t ~pos) src
     ;;
 
-    let string ?str_pos:(src_pos = 0) ?len t ~pos src =
-      let len = match len with None -> String.length src - src_pos | Some l -> l in
-      Bigstring.From_string.unsafe_blit ~src ~src_pos ~len
+    let string ~str_pos ~len t ~pos src =
+      Bigstring.From_string.unsafe_blit ~src ~src_pos:str_pos ~len
         ~dst:t.buf ~dst_pos:(upos t ~pos)
     ;;
 
-    let bigstring ?str_pos:(src_pos = 0) ?len t ~pos src =
-      let len = match len with None -> Bigstring.length src - src_pos | Some l -> l in
-      Bigstring.unsafe_blit ~src ~src_pos ~len ~dst:t.buf ~dst_pos:(upos t ~pos)
+    let bigstring ~str_pos ~len t ~pos src =
+      Bigstring.unsafe_blit ~src ~src_pos:str_pos ~len ~dst:t.buf ~dst_pos:(upos t ~pos)
+    ;;
+
+    let stringo ?(str_pos = 0) ?len t ~pos src =
+      string t ~str_pos ~pos src
+        ~len:(match len with None -> String.length src - str_pos | Some len -> len)
+    ;;
+
+    let bigstringo ?(str_pos = 0) ?len t ~pos src =
+      bigstring t ~str_pos ~pos src
+        ~len:(match len with None -> Bigstring.length src - str_pos | Some len -> len)
     ;;
 
     let bin_prot = Poke.bin_prot
@@ -1405,7 +1363,130 @@ module Unsafe = struct
   end
 end
 
+module For_hexdump = struct
 
+  module T2 = struct
+    type nonrec ('rw, 'seek) t = ('rw, 'seek) t
+  end
+
+  module Window_indexable = struct
+    include T2
+    let length t = length t
+    let get t pos = Peek.char t ~pos
+  end
+
+  module Limits_indexable = struct
+    include T2
+    let length t = t.hi_max - t.lo_min
+    let get t pos = Bigstring.get t.buf (t.lo_min + pos)
+  end
+
+  module Buffer_indexable = struct
+    include T2
+    let length t = Bigstring.length t.buf
+    let get t pos = Bigstring.get t.buf pos
+  end
+
+  module Window = Hexdump.Of_indexable2 (Window_indexable)
+  module Limits = Hexdump.Of_indexable2 (Limits_indexable)
+  module Buffer = Hexdump.Of_indexable2 (Buffer_indexable)
+
+  module type Relative_indexable = sig
+    val name : string
+    val lo : (_, _) t -> int
+    val hi : (_, _) t -> int
+  end
+
+  module type Compound_indexable = sig
+    include Hexdump.S2 with type ('rw, 'seek) t := ('rw, 'seek) t
+    val parts : (module Relative_indexable) list
+  end
+
+  module Make_compound_hexdump (Compound : Compound_indexable) = struct
+    module Hexdump = struct
+      include T2
+
+      let relative_sequence ?max_lines t (module Relative : Relative_indexable) =
+        let lo = Relative.lo t in
+        let hi = Relative.hi t in
+        Compound.Hexdump.to_sequence ?max_lines ~pos:lo ~len:(hi - lo) t
+
+      let to_sequence ?max_lines t =
+        List.concat_map Compound.parts ~f:(fun (module Relative) ->
+          [ Sequence.singleton (String.capitalize Relative.name)
+          ; relative_sequence ?max_lines t (module Relative)
+            |> Sequence.map ~f:(fun line -> "  " ^ line)
+          ])
+        |> Sequence.of_list
+        |> Sequence.concat
+
+      let to_string_hum ?max_lines t =
+        to_sequence ?max_lines t
+        |> Sequence.to_list
+        |> String.concat ~sep:"\n"
+
+      let sexp_of_t _ _ t =
+        List.map Compound.parts ~f:(fun (module Relative) ->
+          Relative.name, Sequence.to_list (relative_sequence t (module Relative)))
+        |> [%sexp_of: (string * string list) list]
+    end
+  end
+
+  module Window_within_limits = struct
+    let name = "window"
+    let lo t = t.lo - t.lo_min
+    let hi t = t.hi - t.lo_min
+  end
+
+  module Limits_within_limits = struct
+    let name = "limits"
+    let lo _ = 0
+    let hi t = t.hi_max - t.lo_min
+  end
+
+  module Window_within_buffer = struct
+    let name = "window"
+    let lo t = t.lo
+    let hi t = t.hi
+  end
+
+  module Limits_within_buffer = struct
+    let name = "limits"
+    let lo t = t.lo_min
+    let hi t = t.hi_max
+  end
+
+  module Buffer_within_buffer = struct
+    let name = "buffer"
+    let lo _ = 0
+    let hi t = Bigstring.length t.buf
+  end
+
+  module Window_and_limits = Make_compound_hexdump (struct
+      include Limits
+      let parts =
+        [ (module Window_within_limits : Relative_indexable)
+        ; (module Limits_within_limits : Relative_indexable)
+        ]
+    end)
+
+  module Window_and_limits_and_buffer = Make_compound_hexdump (struct
+      include Buffer
+      let parts =
+        [ (module Window_within_buffer : Relative_indexable)
+        ; (module Limits_within_buffer : Relative_indexable)
+        ; (module Buffer_within_buffer : Relative_indexable)
+        ]
+    end)
+end
+
+module Window = For_hexdump.Window
+module Limits = For_hexdump.Limits
+module Debug  = For_hexdump.Window_and_limits_and_buffer
+
+include For_hexdump.Window_and_limits
+
+let to_string_hum = Hexdump.to_string_hum
 
 (* Minimal blit benchmarks. *)
 (* ┌────────────────────────────────────────────────────────┬────────────┬────────────┐
@@ -1527,7 +1608,7 @@ let%bench_module "Fill.decimal tests" = (module struct
   let%bench_fun "Unsafe.Fill.decimal" [@indexed x = values] =
     (fun () -> reset iobuf; Unsafe.Fill.decimal iobuf x)
   let%bench_fun "Unsafe.Fill.string Int.to_string" [@indexed x = values] =
-    (fun () -> reset iobuf; Fill.string iobuf (Int.to_string x))
+    (fun () -> reset iobuf; Fill.stringo iobuf (Int.to_string x))
 end)
 
 (* In an attempt to verify how much a phys_equal check could optimize

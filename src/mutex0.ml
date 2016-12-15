@@ -1,6 +1,6 @@
-open Core_kernel.Std
-
 (* Error-checking mutexes. *)
+
+open! Import
 
 include Mutex
 

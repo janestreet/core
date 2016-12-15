@@ -1215,9 +1215,9 @@ let%test_module "Schedule" = (module struct
   ;;
 
   let%test_module "Schedule.Stable.V4" = (module Core_kernel.Stable_unit_test.Make (struct
-    type t = unit Schedule.Stable.V4.t [@@deriving sexp, bin_io]
+    type t = unit Schedule.Stable.V4.t [@@deriving bin_io, compare, sexp]
 
-    let equal t1 t2 = Int.(=) (Schedule.compare Unit.compare t1 t2) 0
+    let equal = [%compare.equal: t]
 
     let tests =
       [ Always

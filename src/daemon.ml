@@ -1,6 +1,6 @@
-open Core_kernel.Std
-module Unix = Core_unix
+open! Import
 
+module Unix   = Core_unix
 module Thread = Core_thread
 
 

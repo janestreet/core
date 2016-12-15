@@ -3,19 +3,17 @@
     Note that on 32bit architecture, most functions will raise when used on time
     outside the range [1901-12-13 20:45:52 - 2038-01-19 03:14:07].
 *)
-open! Core_kernel.Std
 
+open! Import
+
+
+(*_ Despite the fact that [open! Import] brings [Date = Core_kernel.Std.Date] into scope,
+   we still have to qualify occurrences of [Date] below, because there's also a local
+   date.ml in this directory, so ocamldep will get confused *)
 
 module Ofday : sig
-  include (module type of struct include Ofday end
-            with module Zoned := Ofday.Zoned)
-
-  module Zoned : sig
-    include module type of struct include Ofday.Zoned end
-
-    val to_time : t -> Date0.t -> Time_internal.T.t
-  end
-
+  include (module type of struct include Ofday end)
+  module Zoned : module type of struct include Ofday_zoned end
   val now : zone:Zone.t -> t
 end
 
@@ -105,9 +103,9 @@ val is_later   : t -> than:t -> bool
 (** All these conversion functions use the current time zone. Unless marked _utc,
     in which case they use Universal Coordinated Time *)
 
-val of_date_ofday : Date0.t -> Ofday.t -> zone:Zone.t -> t
-val to_date_ofday : t -> zone:Zone.t -> Date0.t * Ofday.t
-val to_date       : t -> zone:Zone.t -> Date0.t
+val of_date_ofday : zone:Zone.t -> Core_kernel.Std.Date.t -> Ofday.t -> t
+val to_date_ofday : t -> zone:Zone.t -> Core_kernel.Std.Date.t * Ofday.t
+val to_date       : t -> zone:Zone.t -> Core_kernel.Std.Date.t
 val to_ofday      : t -> zone:Zone.t -> Ofday.t
 
 (** [of_tm] converts a [Unix.tm] (mirroring a [struct tm] from the C stdlib) into a
@@ -127,7 +125,7 @@ val of_tm : Core_unix.tm -> zone:Zone.t -> t
     Most callers should use {!of_date_ofday} rather than this function.  In the [`Twice]
     and [`Never] cases, {!of_date_ofday} will return reasonable times for most uses. *)
 val of_date_ofday_precise
-  :  Date0.t
+  :  Core_kernel.Std.Date.t
   -> Ofday.t
   -> zone:Zone.t
   -> [ `Once of t | `Twice of t * t | `Never of t ]
@@ -149,18 +147,18 @@ val of_date_ofday_precise
 val to_date_ofday_precise
   :  t
   -> zone:Zone.t
-  -> Date0.t * Ofday.t
+  -> Core_kernel.Std.Date.t * Ofday.t
      * [ `Only
        | `Also_at of t
-       | `Also_skipped of Date0.t * Ofday.t
+       | `Also_skipped of Core_kernel.Std.Date.t * Ofday.t
        ]
 
 val convert
   :  from_tz:Zone.t
   -> to_tz:Zone.t
-  -> Date0.t
+  -> Core_kernel.Std.Date.t
   -> Ofday.t
-  -> (Date0.t * Ofday.t)
+  -> (Core_kernel.Std.Date.t * Ofday.t)
 
 val utc_offset
   :  t
@@ -350,6 +348,18 @@ module Stable : sig
       include Comparable.Stable.V1.S
         with type comparable := t
         with type comparator_witness := comparator_witness
+    end
+  end
+
+  module Span : sig
+    module V1 : Stable_without_comparator with type t = Span.Stable.V1.t
+    module V2 : Stable_without_comparator with type t = Span.Stable.V2.t
+  end
+
+  module Ofday : sig
+    module V1 : Stable_without_comparator with type t = Ofday.Stable.V1.t
+    module Zoned : sig
+      module V1 : Stable_without_comparator with type t = Ofday.Zoned.Stable.V1.t
     end
   end
 end

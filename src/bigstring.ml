@@ -1,9 +1,8 @@
 #import "config.h"
 
-open Core_kernel.Std
+open! Import
 open Unix
 open Bigarray
-open Sexplib.Std
 
 include Core_kernel.Std.Bigstring
 

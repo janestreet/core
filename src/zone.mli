@@ -1,5 +1,6 @@
 (** Time-zone handling. *)
-open! Core_kernel.Std
+
+open! Import
 
 (** {1 User-friendly interface} *)
 

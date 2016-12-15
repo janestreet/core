@@ -1,6 +1,6 @@
 (** Lightweight threads. *)
 
-open! Core_kernel.Std
+open! Import
 
 (** The type of thread handles. *)
 type t

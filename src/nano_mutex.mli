@@ -1,4 +1,3 @@
-
 (** A nano-mutex is a lightweight mutex that can be used only within a single OCaml
     runtime.
 
@@ -54,7 +53,7 @@
     v}
 *)
 
-open! Core_kernel.Std
+open! Import
 
 type t [@@deriving sexp_of]
 
@@ -86,3 +85,4 @@ val unlock     : t -> unit Or_error.t
 val unlock_exn : t -> unit
 
 val critical_section : t -> f:(unit -> 'a) -> 'a
+

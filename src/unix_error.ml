@@ -1,4 +1,4 @@
-open Core_kernel.Std
+open! Import
 
 (** @deprecated in favor of [t], below. *)
 type error

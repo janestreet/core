@@ -1,4 +1,4 @@
-open! Core_kernel.Std
+open! Import
 
 type t = Mutex.t
 

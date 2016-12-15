@@ -73,14 +73,14 @@
   no special attempt to artificially include it.
 *)
 
-open! Core_kernel.Std
+open! Import
 
 (** these phantom types are concrete and exposed to help the compiler understand
     that zoned and unzoned cannot be the same type (which it could not know if they
     were abstract), which helps it infer the injectivity of the type [t] below.
 *)
-type zoned   = Zoned
-type unzoned = Unzoned
+type zoned   = Zoned   [@@deriving compare]
+type unzoned = Unzoned [@@deriving compare]
 
 (**
    - [In_zone]: see the discussion under Zones and Tags above
@@ -123,6 +123,7 @@ module Inclusive_exclusive : sig
   type t =
     | Inclusive
     | Exclusive
+  [@@deriving compare]
 end
 
 type ('a, 'b) t =
@@ -148,8 +149,7 @@ type ('a, 'b) t =
   | After        : (Inclusive_exclusive.t * (Date.t * Time.Ofday.t)) -> (unzoned, 'b) t
   | Always       : ('a, 'b) t
   | Never        : ('a, 'b) t
-
-val compare : ('b -> 'b -> int) -> ('a, 'b) t -> ('a, 'b) t -> int
+[@@deriving compare]
 
 (** Return a string suitable for debugging purposes. *)
 val to_string_zoned : (zoned, 'b) t -> string_of_tag:('b -> string) -> string

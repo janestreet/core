@@ -1,6 +1,4 @@
-open Core_kernel.Std
-
-let failwithf = Printf.failwithf
+open! Import
 
 include (Int : sig
   type t = int [@@deriving bin_io]
@@ -122,13 +120,13 @@ let to_string, of_string, default_sys_behavior =
   to_string, of_string, default_sys_behavior
 ;;
 
-exception Expected_atom of Sexplib.Sexp.t [@@deriving sexp]
+exception Expected_atom of Sexp.t [@@deriving sexp]
 
-let sexp_of_t t = Sexplib.Sexp.Atom (to_string t)
+let sexp_of_t t = Sexp.Atom (to_string t)
 
 let t_of_sexp s =
   match s with
-  | Sexplib.Sexp.Atom s -> of_string s
+  | Sexp.Atom s -> of_string s
   | _ -> raise (Expected_atom s)
 ;;
 

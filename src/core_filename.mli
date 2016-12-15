@@ -1,6 +1,6 @@
 (** Warning! this library assumes we are in a POSIX compliant OS. *)
 
-open! Core_kernel.Std
+open! Import
 
 (**  The path of the root.*)
 val root : string
@@ -12,8 +12,9 @@ val root : string
 val realpath : string -> string
 
 (** [is_posix_pathname_component f]
-   @return true if [f] is a valid filename in a POSIX compliant OS (a path
-   component and not a full path).
+   @return true if [f] is a valid path component on a POSIX compliant OS
+
+   Note that this checks a path component, and not a full path.
 
    http://www.opengroup.org/onlinepubs/000095399/basedefs/xbd_chap03.html#tag_03_169
 *)

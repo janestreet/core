@@ -1,4 +1,4 @@
-open Core_kernel.Std
+open! Import
 
 module Stable = struct
   module V1 = struct

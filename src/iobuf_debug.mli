@@ -1,4 +1,4 @@
-open! Core_kernel.Std
+open! Import
 
 (** [Make] builds a module that is like [Iobuf], except that the module also has some
     controls for whether the various Iobuf functions do invariant checking and/or show

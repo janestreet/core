@@ -1,4 +1,4 @@
-open Core_kernel.Std
+open! Import
 
 let ok_exn = Or_error.ok_exn
 

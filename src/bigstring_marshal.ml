@@ -1,6 +1,8 @@
-module Extended_bigstring = Bigstring
-open Core_kernel.Std
-open Extended_bigstring
+module Bigstring_in_this_directory = Bigstring
+open! Import
+module Bigstring = Bigstring_in_this_directory
+
+open Bigstring
 
 include Core_kernel.Std.Bigstring_marshal
 

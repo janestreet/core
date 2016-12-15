@@ -6,7 +6,7 @@
     necessarily kept forever.  For application level logging consider
     {!Core_extended.Std.Logger} instead. *)
 
-open! Core_kernel.Std
+open! Import
 
 module Open_option : sig
   type t =

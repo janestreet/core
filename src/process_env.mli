@@ -1,6 +1,6 @@
 (** Utility functions for dealing with the environment. *)
 
-open! Core_kernel.Std
+open! Import
 
 (** [parse_ssh_client] reads the [SSH_CLIENT] environment variable, retrieving the IP from
     which you are currently sshing. *)

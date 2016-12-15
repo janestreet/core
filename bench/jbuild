@@ -8,8 +8,8 @@
           core_stack
           core_string_search_pattern
           dequeue
-          limiter
           ordering_container
+          piecewise_linear_perf_test
           string_escaping
           time_to_string
           timing_wheel

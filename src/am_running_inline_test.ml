@@ -1,3 +1,5 @@
+open! Import
+
 let initialize_module () =
   (* This sets the environment variable needed for
      [Ppx_inline_test_lib.Runtime.am_running_inline_test] to be [true] in child processes

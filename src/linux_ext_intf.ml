@@ -1,4 +1,4 @@
-open Core_kernel.Std
+open! Import
 open Core_unix
 
 module type S = sig
@@ -9,7 +9,7 @@ module type S = sig
   module Sysinfo : sig
     (** Result of sysinfo syscall (man 2 sysinfo) *)
     type t =
-      { uptime : Span.t;  (** time since boot *)
+      { uptime : Time.Span.t;  (** time since boot *)
         load1 : int;      (** load average over the last minute *)
         load5 : int;      (** load average over the last 5 minutes*)
         load15 : int;     (** load average over the last 15 minutes *)
@@ -119,11 +119,11 @@ module type S = sig
     (** returns the CPU-clock associated with the thread *)
     val get : (Thread.t -> t) Or_error.t
 
-    val get_time : (t -> Span.t) Or_error.t
+    val get_time : (t -> Time.Span.t) Or_error.t
 
-    val set_time : (t -> Span.t -> unit) Or_error.t
+    val set_time : (t -> Time.Span.t -> unit) Or_error.t
 
-    val get_resolution : (t -> Span.t) Or_error.t
+    val get_resolution : (t -> Time.Span.t) Or_error.t
 
     (** [get_process_clock] the clock measuring the CPU-time of a process. *)
     val get_process_clock : (unit -> t) Or_error.t

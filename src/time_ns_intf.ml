@@ -1,21 +1,8 @@
-open! Core_kernel.Std
+open! Import
 
 module type Option = sig
-  type value
-  type t = private Int63.t [@@deriving typerep]
+  include Immediate_option.Int63
   include Identifiable with type t := t
-  val none : t
-  val some : value -> t
-  val is_none : t -> bool
-  val is_some : t -> bool
-  val value : t -> default : value -> value
-  val value_exn : t -> value
-
-  (** [unchecked_value t] is like [value_exn t], except its return value is only defined
-      if [is_some t].  This avoids an extra branch if it is known that [is_some t]. *)
-  val unchecked_value : t -> value
-  val of_option : value option -> t
-  val to_option : t -> value option
 end
 
 module type Span = sig
@@ -167,7 +154,8 @@ module type Ofday = sig
 
   type t = private Int63.t [@@deriving typerep]
 
-  include Identifiable with type t := t
+  include Identifiable         with type t := t
+  include Comparable.With_zero with type t := t
 
   (** On some days, [add_exn t span] doesn't occur [span] from [t] in real time.  For
       example, this happens on days when daylight saving time begins or ends.  See
@@ -181,6 +169,7 @@ module type Ofday = sig
   val of_ofday : Time.Ofday.t -> t
 
   val of_time : time -> zone : Zone.t -> t
+  val now : zone:Zone.t -> t
   val local_now : unit -> t
   val of_local_time : time -> t
   val to_millisecond_string : t -> string
@@ -190,6 +179,16 @@ module type Ofday = sig
 
   val to_span_since_start_of_day : t -> span
   val of_span_since_start_of_day_exn : span -> t
+
+  (** Note: there is no [ns] argument. This calls {!Time.Ofday}'s [create] function. *)
+  val create
+    :  ?hr  : int
+    -> ?min : int
+    -> ?sec : int
+    -> ?ms  : int
+    -> ?us  : int
+    -> unit
+    -> t
 
   module Stable : sig
     module V1 : Stable_int63able with type t = t
@@ -253,6 +252,8 @@ module type Time_ns = sig
 
   include Identifiable with type t := t
 
+  module Zone : module type of Zone with type t = Zone.t
+
   val epoch : t (** Unix epoch (1970-01-01 00:00:00 UTC) *)
 
   val min_value : t
@@ -272,7 +273,7 @@ module type Time_ns = sig
   val of_span_since_epoch : Span.t -> t
 
   val to_time : t -> Time.t
-  val of_time : Time.t -> t
+  val of_time : Time.t -> t (** not injective (rounds to nearest microsecond) *)
 
   val to_string_fix_proto : [ `Utc | `Local ] -> t -> string
   val of_string_fix_proto : [ `Utc | `Local ] -> string -> t
@@ -280,6 +281,7 @@ module type Time_ns = sig
   (** See [Time] for documentation. *)
   val to_string_abs : t -> zone:Zone.t -> string
   val of_string_abs : string -> t
+  val to_sec_string : t -> zone:Zone.t -> string
 
   val to_int63_ns_since_epoch : t -> Int63.t
   val of_int63_ns_since_epoch : Int63.t -> t
@@ -287,6 +289,10 @@ module type Time_ns = sig
   (** Will raise on 32-bit platforms.  Consider [to_int63_ns_since_epoch] instead. *)
   val to_int_ns_since_epoch : t -> int
   val of_int_ns_since_epoch : int -> t
+
+  (** See [Time] for documentation *)
+  val to_filename_string : t      -> zone:Zone.t -> string
+  val of_filename_string : string -> zone:Zone.t -> t
 
   (** See [Core_kernel.Time_ns].
 
@@ -299,11 +305,10 @@ module type Time_ns = sig
     -> unit
     -> t
 
-  (** These lose precision because they go through [Time.t]. *)
   val of_date_ofday : zone:Zone.t -> Date.t -> Ofday.t -> t
   val to_ofday : t -> zone:Zone.t -> Ofday.t
   val to_date  : t -> zone:Zone.t -> Date.t
-
+  val to_date_ofday: t -> zone:Zone.t -> Date.t * Ofday.t
   val occurrence
     :  [ `First_after_or_at | `Last_before_or_at ]
     -> t
@@ -324,6 +329,21 @@ module type Time_ns = sig
 
   module Stable : sig
     module V1 : Stable_int63able with type t = t
+    module Option : sig
+      module V1 : Stable_int63able with type t = Option.t
+    end
+    module Span : sig
+      module V1 : Stable_int63able with type t = Span.t
+      module Option : sig
+        module V1 : Stable_int63able with type t = Span.Option.t
+      end
+    end
+    module Ofday : sig
+      module V1 : Stable_int63able with type t = Ofday.t
+      module Option : sig
+        module V1 : Stable_int63able with type t = Ofday.Option.t
+      end
+    end
   end
 
   val random : ?state:Random.State.t -> unit -> t

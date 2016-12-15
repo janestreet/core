@@ -19,6 +19,6 @@
     core
     core_extended
     oUnit
-    ppx_inline_test_lib
+    ppx_inline_test.runtime-lib
     sexplib
     variantslib))))

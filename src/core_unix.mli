@@ -1,6 +1,6 @@
 (** This file is a modified version of unixLabels.mli from the OCaml distribution. *)
 
-open! Core_kernel.Std
+open! Import
 
 (** File descriptor. *)
 module File_descr : sig
@@ -16,87 +16,85 @@ end
 
 (** {6 Error report} *)
 
-(** The type of error codes.
-    Errors defined in the POSIX standard
-    and additional errors, mostly BSD.
-    All other errors are mapped to [EUNKNOWNERR].
-
-    @deprecated in favor of {!Error.t} below.
-*)
 type error =
   Unix.error =
-      E2BIG               (** Argument list too long *)
-    | EACCES              (** Permission denied *)
-    | EAGAIN              (** Resource temporarily unavailable; try again *)
-    | EBADF               (** Bad file descriptor *)
-    | EBUSY               (** Resource unavailable *)
-    | ECHILD              (** No child process *)
-    | EDEADLK             (** Resource deadlock would occur *)
-    | EDOM                (** Domain error for math functions, etc. *)
-    | EEXIST              (** File exists *)
-    | EFAULT              (** Bad address *)
-    | EFBIG               (** File too large *)
-    | EINTR               (** Function interrupted by signal *)
-    | EINVAL              (** Invalid argument *)
-    | EIO                 (** Hardware I/O error *)
-    | EISDIR              (** Is a directory *)
-    | EMFILE              (** Too many open files by the process *)
-    | EMLINK              (** Too many links *)
-    | ENAMETOOLONG        (** Filename too long *)
-    | ENFILE              (** Too many open files in the system *)
-    | ENODEV              (** No such device *)
-    | ENOENT              (** No such file or directory *)
-    | ENOEXEC             (** Not an executable file *)
-    | ENOLCK              (** No locks available *)
-    | ENOMEM              (** Not enough memory *)
-    | ENOSPC              (** No space left on device *)
-    | ENOSYS              (** Function not supported *)
-    | ENOTDIR             (** Not a directory *)
-    | ENOTEMPTY           (** Directory not empty *)
-    | ENOTTY              (** Inappropriate I/O control operation *)
-    | ENXIO               (** No such device or address *)
-    | EPERM               (** Operation not permitted *)
-    | EPIPE               (** Broken pipe *)
-    | ERANGE              (** Result too large *)
-    | EROFS               (** Read-only file system *)
-    | ESPIPE              (** Invalid seek e.g. on a pipe *)
-    | ESRCH               (** No such process *)
-    | EXDEV               (** Invalid link *)
+      E2BIG
+    | EACCES
+    | EAGAIN
+    | EBADF
+    | EBUSY
+    | ECHILD
+    | EDEADLK
+    | EDOM
+    | EEXIST
+    | EFAULT
+    | EFBIG
+    | EINTR
+    | EINVAL
+    | EIO
+    | EISDIR
+    | EMFILE
+    | EMLINK
+    | ENAMETOOLONG
+    | ENFILE
+    | ENODEV
+    | ENOENT
+    | ENOEXEC
+    | ENOLCK
+    | ENOMEM
+    | ENOSPC
+    | ENOSYS
+    | ENOTDIR
+    | ENOTEMPTY
+    | ENOTTY
+    | ENXIO
+    | EPERM
+    | EPIPE
+    | ERANGE
+    | EROFS
+    | ESPIPE
+    | ESRCH
+    | EXDEV
 
-    | EWOULDBLOCK         (** Operation would block *)
-    | EINPROGRESS         (** Operation now in progress *)
-    | EALREADY            (** Operation already in progress *)
-    | ENOTSOCK            (** Socket operation on non-socket *)
-    | EDESTADDRREQ        (** Destination address required *)
-    | EMSGSIZE            (** Message too long *)
-    | EPROTOTYPE          (** Protocol wrong type for socket *)
-    | ENOPROTOOPT         (** Protocol not available *)
-    | EPROTONOSUPPORT     (** Protocol not supported *)
-    | ESOCKTNOSUPPORT     (** Socket type not supported *)
-    | EOPNOTSUPP          (** Operation not supported on socket *)
-    | EPFNOSUPPORT        (** Protocol family not supported *)
-    | EAFNOSUPPORT        (** Address family not supported by protocol family *)
-    | EADDRINUSE          (** Address already in use *)
-    | EADDRNOTAVAIL       (** Can't assign requested address *)
-    | ENETDOWN            (** Network is down *)
-    | ENETUNREACH         (** Network is unreachable *)
-    | ENETRESET           (** Network dropped connection on reset *)
-    | ECONNABORTED        (** Software caused connection abort *)
-    | ECONNRESET          (** Connection reset by peer *)
-    | ENOBUFS             (** No buffer space available *)
-    | EISCONN             (** Socket is already connected *)
-    | ENOTCONN            (** Socket is not connected *)
-    | ESHUTDOWN           (** Can't send after socket shutdown *)
-    | ETOOMANYREFS        (** Too many references: can't splice *)
-    | ETIMEDOUT           (** Connection timed out *)
-    | ECONNREFUSED        (** Connection refused *)
-    | EHOSTDOWN           (** Host is down *)
-    | EHOSTUNREACH        (** No route to host *)
-    | ELOOP               (** Too many levels of symbolic links *)
-    | EOVERFLOW           (** File size or position not representable *)
+    | EWOULDBLOCK
+    | EINPROGRESS
+    | EALREADY
+    | ENOTSOCK
+    | EDESTADDRREQ
+    | EMSGSIZE
+    | EPROTOTYPE
+    | ENOPROTOOPT
+    | EPROTONOSUPPORT
+    | ESOCKTNOSUPPORT
+    | EOPNOTSUPP
+    | EPFNOSUPPORT
+    | EAFNOSUPPORT
+    | EADDRINUSE
+    | EADDRNOTAVAIL
+    | ENETDOWN
+    | ENETUNREACH
+    | ENETRESET
+    | ECONNABORTED
+    | ECONNRESET
+    | ENOBUFS
+    | EISCONN
+    | ENOTCONN
+    | ESHUTDOWN
+    | ETOOMANYREFS
+    | ETIMEDOUT
+    | ECONNREFUSED
+    | EHOSTDOWN
+    | EHOSTUNREACH
+    | ELOOP
+    | EOVERFLOW
 
-    | EUNKNOWNERR of int  (** Unknown error *)
-[@@deriving sexp]
+    | EUNKNOWNERR of int
+[@@deprecated "[since 2016-10] use [Unix.Error.t] instead"]
+
+val sexp_of_error : Unix.error -> Sexp.t
+[@@deprecated "[since 2016-10] use [Unix.Error.t] instead"]
+val error_of_sexp : Sexp.t -> Unix.error
+[@@deprecated "[since 2016-10] use [Unix.Error.t] instead"]
 
 module Error : sig
   (** The type of error codes.  Errors defined in the POSIX standard and additional
@@ -193,10 +191,8 @@ module Syscall_result :
 (** @raise Unix_error with a given errno, function name and argument *)
 external unix_error : int -> string -> string -> _ = "unix_error_stub"
 
-(** Return a string describing the given error code.
-
-    @deprecated in favor of {!Error.message}. *)
-val error_message : error -> string
+val error_message : Error.t -> string
+[@@deprecated "[since 2016-10] use [Unix.Error.message] instead"]
 
 (** [handle_unix_error f] runs [f ()] and returns the result.  If the exception
     [Unix_error] is raised, it prints a message describing the error and exits with code
@@ -683,9 +679,6 @@ val flock : File_descr.t -> Flock_command.t -> bool
    console window, [false] otherwise. *)
 val isatty : File_descr.t -> bool
 
-(** {6 Seeking, truncating and statistics on large files} *)
-
-
 (** {6 Operations on file names} *)
 
 
@@ -937,7 +930,7 @@ module Select_fds : sig
   val empty : t
 end
 
-type select_timeout = [ `Never | `Immediately | `After of Core_kernel.Time_ns.Span.t ]
+type select_timeout = [ `Never | `Immediately | `After of Core_kernel.Std.Time_ns.Span.t ]
 [@@deriving sexp_of]
 
 (** Wait until some input/output operations become possible on some channels.  The three
@@ -1217,13 +1210,12 @@ end
     for example [to_string (of_string "192.168.1.101/24") = "192.168.1.0/24"].
 *)
 module Cidr : sig
-
-  (*_  *)
   type t [@@deriving sexp, bin_io]
 
   (** [of_string] Generates a Cidr.t based on a string like ["10.0.0.0/8"].  Addresses are
       not expanded, i.e. ["10/8"] is invalid. *)
   include Identifiable.S with type t := t
+  include Invariant.S    with type t := t
 
   val create : base_address:Inet_addr.t -> bits:int -> t
 
@@ -1248,6 +1240,15 @@ module Cidr : sig
       For example, the netmask for a CIDR with 24 network bits (e.g. 1.2.3.0/24)
       is 255.255.255.0. *)
   val netmask_of_bits : t -> Inet_addr.t
+
+  (** [is_subset t1 ~of:t2] is true iff the set of IP addresses specified by [t1] is a
+      subset of those specified by [t2].
+
+      If [is_subset t1 ~of_:t2], then [does_match t1 x] implies [does_match t2 x].
+
+      If [does_match t1 x] and [does_match t2 x], then either [is_subset t1 ~of_:t2] or
+      [is_subset t2 ~of_:t1] (or both). *)
+  val is_subset : t -> of_:t -> bool
 end
 
 (** {6 Sockets} *)
@@ -1620,8 +1621,6 @@ type getnameinfo_option =
     Raise [Not_found] if an error occurs. *)
 val getnameinfo : sockaddr -> getnameinfo_option list -> name_info
 
-
-(** {2 Getting terminal size} *)
 
 
 (** {6 Terminal interface} *)
@@ -2211,3 +2210,9 @@ end
 
 val getifaddrs : unit -> Ifaddr.t list
 
+
+module Stable : sig
+  module Inet_addr : sig
+    module V1 : Stable with type t = Inet_addr.Stable.V1.t
+  end
+end

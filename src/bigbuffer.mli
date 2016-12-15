@@ -1,4 +1,4 @@
-open! Core_kernel.Std
+open! Import
 
 include module type of struct include Core_kernel.Std.Bigbuffer end
 

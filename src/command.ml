@@ -1,4 +1,4 @@
-open Core_kernel.Std
+open! Import
 
 module Unix     = Core_unix
 module Filename = Core_filename
@@ -185,7 +185,6 @@ module Arg_type = struct
   let int                = create Int.of_string
   let char               = create Char.of_string
   let float              = create Float.of_string
-  let bool               = create Bool.of_string
   let date               = create Date.of_string
   let percent            = create Percent.of_string
   let time               = create Time.of_string_abs
@@ -241,6 +240,8 @@ module Arg_type = struct
     | `Duplicate_key key ->
       failwithf "Command.Spec.Arg_type.of_alist_exn: duplicate key %s" key ()
 
+  let bool = of_alist_exn [("true", true); ("false", false)]
+
   let comma_separated ?key ?(strip_whitespace = false) ?(unique_values = false) t =
     let strip =
       if strip_whitespace
@@ -294,23 +295,23 @@ module Arg_type = struct
     create ?key ?complete of_string
 
   module Export = struct
-    let string             = string
-    let int                = int
-    let char               = char
-    let float              = float
-    let bool               = bool
-    let date               = date
-    let percent            = percent
-    let time               = time
-    let time_ofday         = time_ofday
-    let time_ofday_unzoned = time_ofday_unzoned
-    let time_zone          = time_zone
-    let time_span          = time_span
-    let file               = file Fn.id
-    let host_and_port      = host_and_port
-    let sexp               = sexp
-    let sexp_conv          = sexp_conv
-    let ip_address         = ip_address
+    let string                   = string
+    let int                      = int
+    let char                     = char
+    let float                    = float
+    let bool                     = bool
+    let date                     = date
+    let percent                  = percent
+    let time                     = time
+    let time_ofday               = time_ofday
+    let time_ofday_unzoned       = time_ofday_unzoned
+    let time_zone                = time_zone
+    let time_span                = time_span
+    let file                     = file Fn.id
+    let host_and_port            = host_and_port
+    let sexp                     = sexp
+    let sexp_conv                = sexp_conv
+    let ip_address               = ip_address
   end
 end
 
@@ -530,6 +531,7 @@ module Path : sig
   val empty : t
   val root : string -> t
   val add : t -> subcommand:string -> t
+  val replace_first : t -> from:string -> to_:string -> t
   val commands : t -> string list
   val to_string : t -> string
   val to_string_dots : t -> string
@@ -543,6 +545,18 @@ end = struct
   let commands t = List.rev t
   let to_string t = unwords (commands t)
   let length = List.length
+  let replace_first t ~from ~to_ =
+    let replaced : unit Set_once.t = Set_once.create () in
+    List.rev_map (List.rev t) ~f:(fun x ->
+      match Set_once.get replaced with
+      | Some () -> x
+      | None ->
+        if String.(<>) x from
+        then x
+        else begin
+          Set_once.set_exn replaced ();
+          to_
+        end)
   let pop_help = function
     | "help" :: t -> t
     | _ -> assert false
@@ -554,6 +568,19 @@ end = struct
     in
     to_string t
 end
+
+let%test_unit _ =
+  let path =
+    Path.empty
+    |> Path.add ~subcommand:"foo"
+    |> Path.add ~subcommand:"bar"
+    |> Path.add ~subcommand:"bar"
+    |> Path.add ~subcommand:"baz"
+  in
+  [%test_result: string list] (Path.commands path) ~expect:["foo"; "bar"; "bar"; "baz"];
+  let path = Path.replace_first path ~from:"bar" ~to_:"qux" in
+  [%test_result: string list] (Path.commands path) ~expect:["foo"; "qux"; "bar"; "baz"];
+  ()
 
 module Anons = struct
 
@@ -2007,37 +2034,41 @@ let help_subcommand ~summary ~readme =
          gather_help ~recursive ~show_flags ~expand_dots (to_sexpable t)
          |> Fqueue.to_list
        in
-       let group_help_text group =
+       let group_help_text group ~path =
          let to_format_list g = format_list (Group g) in
          Group.help_text ~show_flags ~to_format_list ~path group
        in
-       let exec_help_text exec =
+       let exec_help_text exec ~path =
          let to_format_list e = format_list (Exec e) in
          Exec.help_text ~show_flags ~to_format_list ~path exec
        in
-       let proxy_help_text proxy =
+       let proxy_help_text proxy ~path =
          let to_format_list p = format_list (Proxy p) in
          Proxy.help_text ~show_flags ~to_format_list ~path proxy
        in
        let text =
          match cmd_opt with
          | None ->
-           group_help_text {
+           group_help_text ~path {
              readme;
              summary;
              subcommands = subs;
              body = None;
            }
          | Some cmd ->
-           match List.Assoc.find subs cmd ~equal:String.equal with
-           | None ->
-             die "unknown subcommand %s for command %s" cmd (Path.to_string path) ()
-           | Some t ->
+           match
+             lookup_expand (List.Assoc.map subs ~f:(fun x -> (x, `Prefix))) cmd Subcommand
+           with
+           | Error e ->
+             die "unknown subcommand %s for command %s: %s" cmd (Path.to_string path) e ()
+           | Ok (possibly_expanded_name, t) ->
+             (* Fix the unexpanded value *)
+             let path = Path.replace_first ~from:cmd ~to_:possibly_expanded_name path in
              let rec help_text = function
-               | Exec  exec  -> exec_help_text exec
-               | Group group -> group_help_text group
+               | Exec  exec  -> exec_help_text exec ~path
+               | Group group -> group_help_text group ~path
                | Base  base  -> Base.help_text ~path base
-               | Proxy proxy -> proxy_help_text proxy
+               | Proxy proxy -> proxy_help_text proxy ~path
                | Lazy  thunk -> help_text (Lazy.force thunk)
              in
              help_text t
@@ -2655,6 +2686,7 @@ module Param = struct
 end
 
 module Let_syntax = struct
+  include Param
   module Let_syntax = struct
     include Param
     module Open_on_rhs = Param

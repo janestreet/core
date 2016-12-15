@@ -4,17 +4,13 @@
    to the function that failed. *)
 #import "config.h"
 
-open Core_kernel.Std
+open! Import
 
 module Time_ns = Core_kernel.Time_ns_alternate_sexp
 
 module Unix = UnixLabels
 
-open Sexplib.Conv
-
 let ( ^/ ) = Core_filename.concat
-
-let failwithf = Printf.failwithf
 
 let atom x = Sexp.Atom x
 let list x = Sexp.List x
@@ -1869,7 +1865,7 @@ module Inet_addr0 = struct
     end
   end
   include Stable.V1
-  include Core_kernel.Stable_unit_test.Make (struct
+  include Stable_unit_test.Make (struct
       type nonrec t = t [@@deriving sexp, bin_io]
       let equal = equal
       ;;
@@ -2116,15 +2112,11 @@ module Cidr = struct
       | exception _ -> false (* maybe they tried to use IPv6 *)
       | address     -> does_match_int32 t address
 
-    let%test _ = does_match (of_string "127.0.0.1/32") Inet_addr.localhost
-    let%test _ = does_match (of_string "127.0.0.0/8") Inet_addr.localhost
-    let%test _ = does_match (of_string "0.0.0.0/32") Inet_addr.bind_any
-    let%test _ = does_match (of_string "0.0.0.0/0") Inet_addr.bind_any
-
     let multicast = of_string "224.0.0.0/4"
-    let%test _ = does_match multicast (Inet_addr.of_string "224.0.0.1")
-    let%test _ = does_match multicast (Inet_addr.of_string "239.0.0.1")
-    let%test _ = not (does_match multicast (Inet_addr.of_string "240.0.0.1"))
+
+    let is_subset t ~of_ =
+      bits of_ <= bits t
+      && does_match_int32 of_ t.address
 
     let all_matching_addresses t =
       Sequence.unfold ~init:t.address ~f:(fun address ->
@@ -2132,120 +2124,8 @@ module Cidr = struct
         then Some (Inet_addr.inet4_addr_of_int32 address, Int32.succ address)
         else None)
 
-    let%test_module _ =
-      (module struct
-        let match_strings c a =
-          let c = of_string c in
-          let a = Inet_addr.of_string a in
-          does_match c a
-
-        let is_multicast a =
-          let a = Inet_addr.of_string a in
-          does_match multicast a
-
-        let of_string_ok s =
-          match invariant (of_string s) with
-          | ()          -> true
-          | exception _ -> false
-
-        let of_string_err = Fn.compose not of_string_ok
-
-        (* Can we parse some random correct netmasks? *)
-        let%test _ = of_string_ok "10.0.0.0/8"
-        let%test _ = of_string_ok "172.16.0.0/12"
-        let%test _ = of_string_ok "192.168.0.0/16"
-        let%test _ = of_string_ok "192.168.13.0/24"
-        let%test _ = of_string_ok "172.25.42.0/18"
-
-        (* Do we properly fail on some nonsense? *)
-        let%test _ = of_string_err "172.25.42.0"
-        let%test _ = of_string_err "172.25.42.0/35"
-        let%test _ = of_string_err "172.25.42.0/sandwich"
-        let%test _ = of_string_err "sandwich/sandwich"
-        let%test _ = of_string_err "sandwich/39"
-        let%test _ = of_string_err "sandwich/16"
-        let%test _ = of_string_err "sandwich"
-        let%test _ = of_string_err "172.52.43/16"
-        let%test _ = of_string_err "172.52.493/16"
-
-        (* Basic match tests *)
-        let%test _ = match_strings "10.0.0.0/8" "9.255.255.255"  = false
-        let%test _ = match_strings "10.0.0.0/8" "10.0.0.1"       = true
-        let%test _ = match_strings "10.0.0.0/8" "10.34.67.1"     = true
-        let%test _ = match_strings "10.0.0.0/8" "10.255.255.255" = true
-        let%test _ = match_strings "10.0.0.0/8" "11.0.0.1"       = false
-
-        let%test _ = match_strings "172.16.0.0/12" "172.15.255.255" = false
-        let%test _ = match_strings "172.16.0.0/12" "172.16.0.0"     = true
-        let%test _ = match_strings "172.16.0.0/12" "172.31.255.254" = true
-
-        let%test _ = match_strings "172.25.42.0/24" "172.25.42.1"   = true
-        let%test _ = match_strings "172.25.42.0/24" "172.25.42.255" = true
-        let%test _ = match_strings "172.25.42.0/24" "172.25.42.0"   = true
-
-        let%test _ = match_strings "172.25.42.0/16" "172.25.0.1"     = true
-        let%test _ = match_strings "172.25.42.0/16" "172.25.255.254" = true
-        let%test _ = match_strings "172.25.42.0/16" "172.25.42.1"    = true
-        let%test _ = match_strings "172.25.42.0/16" "172.25.105.237" = true
-
-        (* And some that should fail *)
-        let%test _ = match_strings "172.25.42.0/24" "172.26.42.47"  = false
-        let%test _ = match_strings "172.25.42.0/24" "172.26.42.208" = false
-
-        (* Multicast tests *)
-        let%test _ = is_multicast "224.0.0.0"       = true
-        let%test _ = is_multicast "224.0.0.1"       = true
-        let%test _ = is_multicast "239.255.255.255" = true
-        let%test _ = is_multicast "240.0.0.0"       = false
-        let%test _ = is_multicast "223.0.0.1"       = false
-        let%test _ = is_multicast "226.128.255.16"  = true
-        let%test _ = is_multicast "233.128.255.16"  = true
-        let%test _ = is_multicast "155.246.1.20"    = false
-        let%test _ = is_multicast "0.0.0.0"         = false
-        let%test _ = is_multicast "127.0.0.1"       = false
-
-        let test_matching_addresses s l =
-          [%test_result: Inet_addr.t list]
-            (of_string s |> all_matching_addresses |> Sequence.to_list)
-            ~expect:(List.map l ~f:Inet_addr.of_string)
-
-        let%test_unit _ =
-          test_matching_addresses "172.16.0.8/32"
-            [ "172.16.0.8" ]
-
-        let%test_unit _ =
-          test_matching_addresses "172.16.0.8/30"
-            [ "172.16.0.8" ; "172.16.0.9" ; "172.16.0.10" ; "172.16.0.11" ]
-
-        let%test_unit _ =
-          test_matching_addresses "172.16.0.8/24"
-            (List.init 256 ~f:(fun i -> sprintf "172.16.0.%d" i))
-
-        (* example from .mli *)
-        let%test_unit _ =
-          [%test_result: string]
-            (to_string (of_string "192.168.1.101/24"))
-            ~expect:"192.168.1.0/24"
-      end)
-
     (* Use [Caml.Int32.to_int] to avoid exceptions in some cases on 32-bit machines. *)
     let hash t = Caml.Int32.to_int t.address
-
-    let%test_unit "hash function consistency" =
-      let t_list =
-        let addr_list =
-          ["0.0.0.0"; "255.0.0.0"; "255.255.0.0"; "255.255.255.0"; "255.255.255.255"]
-        in
-        let bits_list = [ 8; 16; 24; 32 ] in
-        List.concat_map addr_list ~f:(fun addr ->
-          let base_address = Inet_addr.of_string addr in
-          List.map bits_list ~f:(fun bits ->
-            create ~base_address ~bits))
-      in
-      List.iter t_list ~f:(fun t1 ->
-        List.iter t_list ~f:(fun t2 ->
-          if compare t1 t2 = 0 then
-            [%test_eq: int] (hash t1) (hash t2)))
 
     let module_name = "Core.Std.Unix.Cidr"
   end
@@ -2258,51 +2138,6 @@ module Cidr = struct
 
   include T1
   include Identifiable.Make (T1)
-
-  let%test_module _ =
-    (module struct
-
-      let same str1 str2 =
-        [%test_eq: t]
-          ~message:(sprintf "%s should equal %s" str1 str2)
-          (of_string str1)
-          (of_string str2)
-      let diff str1 str2 =
-        [%test_result: bool]
-          ~message:(sprintf "%s should not equal %s" str1 str2)
-          (equal (of_string str1) (of_string str2))
-          ~expect:false
-
-      (* differentiate bit counts *)
-
-      let%test_unit _ = same "0.0.0.0/32" "0.0.0.0/32"
-      let%test_unit _ = diff "0.0.0.0/32" "0.0.0.0/24"
-      let%test_unit _ = diff "0.0.0.0/32" "0.0.0.0/26"
-      let%test_unit _ = diff "0.0.0.0/32" "0.0.0.0/8"
-      let%test_unit _ = diff "0.0.0.0/32" "0.0.0.0/0"
-      let%test_unit _ = diff "0.0.0.0/24" "0.0.0.0/0"
-      let%test_unit _ = diff "0.0.0.0/16" "0.0.0.0/0"
-      let%test_unit _ = diff "0.0.0.0/8" "0.0.0.0/0"
-      let%test_unit _ = same "0.0.0.0/0" "0.0.0.0/0"
-
-      (* normalize base addresses *)
-
-      let%test_unit _ = diff "0.0.0.0/32" "0.0.0.1/32"
-      let%test_unit _ = same "0.0.0.0/31" "0.0.0.1/31"
-
-      let%test_unit _ = diff "0.0.0.0/25" "0.0.0.255/25"
-      let%test_unit _ = same "0.0.0.0/24" "0.0.0.255/24"
-
-      let%test_unit _ = diff "0.0.0.0/17" "0.0.255.255/17"
-      let%test_unit _ = same "0.0.0.0/16" "0.0.255.255/16"
-
-      let%test_unit _ = diff "0.0.0.0/9" "0.255.255.255/9"
-      let%test_unit _ = same "0.0.0.0/8" "0.255.255.255/8"
-
-      let%test_unit _ = diff "0.0.0.0/1" "255.255.255.255/1"
-      let%test_unit _ = same "0.0.0.0/0" "255.255.255.255/0"
-
-    end)
 end
 
 module Protocol = struct
@@ -2945,3 +2780,9 @@ end
 let getifaddrs () =
   List.map (Ifaddr.core_unix_getifaddrs ()) ~f:Ifaddr.test_and_convert
 ;;
+
+module Stable = struct
+  module Inet_addr = struct
+    module V1 = Inet_addr.Stable.V1
+  end
+end
