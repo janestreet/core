@@ -91,7 +91,7 @@ int main () {
      "defined(_POSIX_SYNCHRONIZED_IO) && _POSIX_SYNCHRONIZED_IO > 0")
 
   $(cpp_test JSC_THREAD_CPUTIME \
-	  "defined(_POSIX_THREAD_CPUTIME)")
+	  "defined(_POSIX_THREAD_CPUTIME) && defined(LINUX_EXT)")
 
   return 0;
 }
