@@ -3,7 +3,7 @@
 (rule
  ((targets (config.h))
   (deps (discover.sh))
-  (action "./${<} ${OCAML} ${OCAMLC} config.h -DLINUX_EXT -DPOSIX_TIMERS -DWORDEXP")))
+  (action "./${<} ${OCAML} ${OCAMLC} config.h -DPOSIX_TIMERS -DWORDEXP")))
 
 (library
  ((name core)
