@@ -16,6 +16,26 @@ if getconf GNU_LIBC_VERSION | \
     set -- -DTIMERFD "$@"
 fi
 
+eval $($OCAMLC -config | sed -r 's/: /="/;s/$/"/')
+if [[ $system == linux ]]; then
+    set -- -DLINUX_EXT "$@"
+fi
+
+ptimer=`getconf _POSIX_TIMERS || echo undefined`
+case $ptimer in
+    undefined)
+        ;;
+    *)
+        if [ $ptimer -ge 200111 ]; then
+            set -- -DPOSIX_TIMERS "$@"
+        fi
+        ;;
+esac
+
+if echo '#include <wordexp.h>' | cpp &>/dev/null; then
+    set -- -DWORDEXP "$@"
+fi
+
 function cpp_test () {
     local name="$1"
     local cond="$2"
@@ -91,7 +111,7 @@ int main () {
      "defined(_POSIX_SYNCHRONIZED_IO) && _POSIX_SYNCHRONIZED_IO > 0")
 
   $(cpp_test JSC_THREAD_CPUTIME \
-	  "defined(_POSIX_THREAD_CPUTIME)")
+	  "defined(_POSIX_THREAD_CPUTIME) && defined(LINUX_EXT)")
 
   return 0;
 }
