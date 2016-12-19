@@ -16,7 +16,7 @@ if getconf GNU_LIBC_VERSION | \
     set -- -DTIMERFD "$@"
 fi
 
-eval $($OCAMLC -config | sed -r 's/: /="/;s/$/"/')
+eval $($OCAMLC -config | sed -E 's/: /="/;s/$/"/')
 if [[ $system == linux ]]; then
     set -- -DLINUX_EXT "$@"
 fi
