@@ -1261,7 +1261,18 @@ CAMLprim value unix_mkstemp(value v_path)
   value v_res;
   init_mktemp(loc, buf, v_path);
   caml_enter_blocking_section();
-    fd = mkostemp(buf, O_CLOEXEC);
+#if defined (JSC_MKOSTEMP)
+  fd = mkostemp(buf, O_CLOEXEC);
+#else
+  fd = mkstemp(buf);
+  if (fd != -1) {
+    int flags = fcntl(fd, F_GETFD);
+    if (flags == -1 || fcntl(fd, F_SETFD, flags | O_CLOEXEC) == -1) {
+      close(fd);
+      fd = -1;
+    }
+  }
+#endif
   caml_leave_blocking_section();
   if (fd == -1) uerror(loc, v_path);
   v_res_path = caml_copy_string(buf);

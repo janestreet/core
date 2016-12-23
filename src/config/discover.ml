@@ -119,6 +119,15 @@ int main () {
 }
 |}
 
+let mkostemp_code = {|
+#include <stdlib.h>
+
+int main () {
+  mkostemp("", 0);
+  return 0;
+}
+|}
+
 let () =
   C.main ~name:"core" (fun c ->
     let posix_timers =
@@ -147,6 +156,7 @@ let () =
         ; "RECVMMSG"         , recvmmsg_code         , []
         ; "MUTEX_TIMED_LOCK" , mutex_timed_lock_code , ["-lpthread"]
         ; "THREAD_CPUTIME"   , thread_cputime_code   , ["-lpthread"]
+        ; "MKOSTEMP"         , mkostemp_code         , []
         ]
     in
 
