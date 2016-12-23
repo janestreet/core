@@ -2,8 +2,8 @@
 ;; file that includes config.h reads a partial written file, and fails
 (rule
  ((targets (config.h))
-  (deps (discover.sh))
-  (action "./${<} ${OCAML} ${OCAMLC} config.h")))
+  (deps    (config/discover.exe))
+  (action  (run ${<} -ocamlc ${OCAMLC}))))
 
 (library
  ((name core)
@@ -12,6 +12,7 @@
    (core_kernel
     core_kernel.base_for_tests
     sexplib.unix
+    spawn
     threads
     ))
   (c_flags (:standard -D_LARGEFILE64_SOURCE -I../../core_kernel/src))

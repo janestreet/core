@@ -92,7 +92,7 @@ let () =
 let () =
   add "date"
     (fun () ->
-      let zone = Time.Zone.local in
+      let zone = (force Time.Zone.local) in
       let start =
         Time.of_date_ofday ~zone
           (Date.create_exn ~y:1999 ~m:Month.Jan ~d:1)
@@ -366,7 +366,7 @@ let () =
          ; "2015-06-30 23:59:60.500Z" ]);
   add "to_filename_string,of_filename_string"
     (fun () ->
-      let zone = Time.Zone.local in
+      let zone = (force Time.Zone.local) in
       let check time =
         if reasonable_time time
         then
@@ -381,7 +381,7 @@ let () =
     );
   add "to_filename_string,of_filename_string2"
     (fun () ->
-      let zone = Time.Zone.local in
+      let zone = (force Time.Zone.local) in
       let s = "2005-06-01_10-15-08.047983" in
       let t = Time.of_filename_string s ~zone in
       "foo" @? (Time.to_filename_string t ~zone = s)
@@ -440,7 +440,7 @@ let () =
       ] in
       let now    = Time.now () in
       let now_f  = Time.to_float now in
-      let zone   = Time.Zone.local in
+      let zone   = (force Time.Zone.local) in
       let utimes = Time.to_ofday ~zone now :: List.map times ~f:(Time.Ofday.of_string) in
       let after_times =
         List.map utimes ~f:(fun ut ->
@@ -476,7 +476,7 @@ let () =
         let od         = Time.Ofday.of_string od_s in
         let prediction = Time.of_string prediction_s in
         let real       =
-          Time.occurrence `First_after_or_at now ~zone:Time.Zone.local ~ofday:od
+          Time.occurrence `First_after_or_at now ~zone:(force Time.Zone.local) ~ofday:od
         in
         ("right-distance - " ^ od_s ^ "," ^ prediction_s) @?
           if Time.Span.to_ms (Time.diff prediction real) = 0. then true
@@ -486,7 +486,7 @@ let () =
         let od         = Time.Ofday.of_string od_s in
         let prediction = Time.of_string prediction_s in
         let real       =
-          Time.occurrence `Last_before_or_at now ~zone:Time.Zone.local ~ofday:od
+          Time.occurrence `Last_before_or_at now ~zone:(force Time.Zone.local) ~ofday:od
         in
         ("right-distance - " ^ od_s ^ "," ^ prediction_s) @?
           if Time.Span.to_ms (Time.diff prediction real) = 0. then true

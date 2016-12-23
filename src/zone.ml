@@ -67,7 +67,7 @@ module Stable = struct
        Note that serialization is basically exclusively via the [name] field,
        and we do not ultimately export the [sexp_of_t] that [with sexp_of]
        generates. *)
-    type strict = {
+    type t = {
       name                      : string;
       file_info                 : (Digest.t * int64) option;
       transitions               : Transition.t array;
@@ -76,11 +76,9 @@ module Stable = struct
       default_local_time_type   : Regime.t;
       leap_seconds              : Leap_second.t list;
     } [@@deriving sexp_of]
-    (* Lazy.t serialises identically to the underlying type *)
-    type t = strict Lazy.t [@@deriving sexp_of]
 
-    let digest (lazy zone)    = Option.map zone.file_info ~f:fst
-    let file_size (lazy zone) = Option.map zone.file_info ~f:snd
+    let digest zone    = Option.map zone.file_info ~f:fst
+    let file_size zone = Option.map zone.file_info ~f:snd
 
     module Zone_file : sig
       val input_tz_file : zonename:string -> filename:string -> t
@@ -323,7 +321,7 @@ module Stable = struct
             let file_digest = Digest.file filename in
             let file_size   = (Core_unix.stat filename).Core_unix.st_size in
             let r = make_zone zonename (file_digest, file_size) in
-            lazy r)
+            r)
         with
         | Invalid_file_format reason ->
           raise (Invalid_file_format (sprintf "%s - %s" filename reason))
@@ -450,7 +448,7 @@ module Stable = struct
       let name =
         if offset = 0 then "UTC"
         else sprintf "UTC%s%d" (if offset < 0 then "-" else "+") (abs offset) in
-      lazy {
+      {
         name                    = name;
         file_info               = None;
         transitions             = [||];
@@ -462,11 +460,6 @@ module Stable = struct
                                   };
         leap_seconds = []
       }
-    ;;
-
-    let default_utc_offset_deprecated (lazy t) =
-      let ltt = t.default_local_time_type in
-      Int.of_float ltt.Regime.utc_off
     ;;
 
     let find zone =
@@ -494,7 +487,7 @@ module Stable = struct
       | Some z -> z
     ;;
 
-    let local = lazy (Lazy.force begin
+    let local = lazy (
       match Sys.getenv "TZ" with
       | Some zone_name ->
         find_exn zone_name
@@ -504,13 +497,12 @@ module Stable = struct
         in
         match Zone_cache.find_or_load_matching localtime_t with
         | Some t -> t
-        | None   -> localtime_t
-    end)
+        | None   -> localtime_t)
     ;;
 
     let t_of_sexp sexp =
       match sexp with
-      | Sexp.Atom "Local" -> local
+      | Sexp.Atom "Local" -> Lazy.force local
       | Sexp.Atom name    ->
         begin
           try
@@ -547,7 +539,7 @@ module Stable = struct
       | _ -> of_sexp_error "Time.Zone.t_of_sexp: expected atom" sexp
     ;;
 
-    let sexp_of_t (lazy t) =
+    let sexp_of_t t =
       if t.name = "/etc/localtime" then
         failwith "the local time zone cannot be serialized";
       Sexp.Atom t.name
@@ -567,7 +559,7 @@ module Stable = struct
     include (Binable.Stable.Of_binable.V1 (String) (struct
       type nonrec t = t
 
-      let to_binable (lazy t) =
+      let to_binable t =
         if t.name = "/etc/localtime" then
           failwith "the local time zone cannot be serialized";
         t.name
@@ -580,7 +572,7 @@ module Stable = struct
   let%test_module "Zone.V1" = (module Stable_unit_test.Make (struct
     include V1
 
-    let equal (lazy z1) (lazy z2) = z1.name = z2.name
+    let equal z1 z2 = z1.name = z2.name
 
     let tests =
       let zone = find_exn in
@@ -611,7 +603,7 @@ let clock_shift_at zone i =
   , Span.of_float (zone.transitions.(i).new_regime.utc_off -. previous_shift)
   )
 
-let next_clock_shift (lazy zone) ~after =
+let next_clock_shift zone ~after =
   let segment_of (transition : Transition.t) =
     if Time_internal.T.(of_float transition.start_time > after)
     then `Right
@@ -621,7 +613,7 @@ let next_clock_shift (lazy zone) ~after =
     ~f:(fun i -> clock_shift_at zone i)
 ;;
 
-let prev_clock_shift (lazy zone) ~before =
+let prev_clock_shift zone ~before =
   let segment_of (transition : Transition.t) =
     if Time_internal.T.(of_float transition.start_time < before)
     then `Left
@@ -634,9 +626,9 @@ let prev_clock_shift (lazy zone) ~before =
 let%test_module "next_clock_shift, prev_clock_shift" = (module struct
   let mkt ?(year=2013) month day hr min =
     let ofday_mins = ((Float.of_int hr *. 60.) +. (Float.of_int min)) in
-    let ofday_sec = ofday_mins *. 60. in
+    let ofday = ofday_mins *. 60. in
     Time_internal.T.of_float
-      (Time_internal.utc_mktime ~year ~month ~day ~ofday_sec)
+      (Time_internal.utc_mktime ~year ~month ~day ~ofday)
 
   let%test "UTC" =
     Option.is_none (next_clock_shift utc ~after:(mkt 01 01  12 00))
@@ -713,7 +705,7 @@ let in_transition transitions ~index time transtype =
    [find_local_regime zone `Local seconds] finds the local time regime in force in
    [zone] at [seconds], from 1970/01/01:00:00:00 of [zone].
 *)
-let find_local_regime (lazy zone) transtype time =
+let find_local_regime zone transtype time =
   let module T = Transition in
   let transitions     = zone.transitions in
   let num_transitions = Array.length transitions in
@@ -752,7 +744,7 @@ let abbreviation zone time =
   (find_local_regime zone `UTC time).Regime.abbrv
 ;;
 
-let name (lazy zone) = zone.name
+let name zone = zone.name
 
 include Identifiable.Make (struct
   let module_name = "Core.Std.Time.Zone"
@@ -763,4 +755,4 @@ include Identifiable.Make (struct
   let to_string     = to_string
 end)
 
-let%bench "=" = local = local
+let%bench "=" = Lazy.force local = Lazy.force local

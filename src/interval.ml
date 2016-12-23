@@ -814,7 +814,12 @@ end
 module Make_time (Time : Time_bound) = struct
   include Make(Time)
 
-  let create_ending_after ?(zone = Zone.local) (open_ofday, close_ofday) ~now =
+  let create_ending_after ?zone (open_ofday, close_ofday) ~now =
+    let zone =
+      match zone with
+      | None   -> Lazy.force Zone.local
+      | Some z -> z
+    in
     let close_time =
       Time.occurrence `First_after_or_at now ~zone ~ofday:close_ofday
     in
@@ -823,8 +828,13 @@ module Make_time (Time : Time_bound) = struct
     in
     create open_time close_time
 
-  let create_ending_before ?(zone = Zone.local)
+  let create_ending_before ?zone
       (open_ofday, close_ofday) ~ubound =
+    let zone =
+      match zone with
+      | None   -> Lazy.force Zone.local
+      | Some z -> z
+    in
     let close_time =
       Time.occurrence `Last_before_or_at ubound ~zone ~ofday:close_ofday
     in

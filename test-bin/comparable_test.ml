@@ -102,7 +102,7 @@ module Ofday =
 module Date =
   F (struct
     include Date
-    let zone = Time.Zone.local
+    let zone = (force Time.Zone.local)
     let one = Time.now ()
     let two = Time.add one (Time.Span.of_hr 30.0)
     let three = Time.add two (Time.Span.of_hr 30.0)

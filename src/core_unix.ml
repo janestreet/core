@@ -784,26 +784,50 @@ type env =
   ]
 [@@deriving sexp]
 
+let env_map env =
+  let current, env =
+    match env with
+    | `Replace env -> [], env
+    | `Extend env ->
+      let current =
+        List.map (Array.to_list (Unix.environment ()))
+          ~f:(fun s -> String.lsplit2_exn s ~on:'=')
+      in
+      current, env
+  in
+  List.fold_left (current @ env) ~init:String.Map.empty
+    ~f:(fun map (key, data) -> Map.add map ~key ~data)
+;;
+
 let env_assignments env =
   match env with
   | `Replace_raw env -> env
-  | (`Replace _ | `Extend _) as env ->
-    let env_map =
-      let current, env =
-        match env with
-        | `Replace env -> [], env
-        | `Extend env ->
-          let current =
-            List.map (Array.to_list (Unix.environment ()))
-              ~f:(fun s -> String.lsplit2_exn s ~on:'=')
-          in
-          current, env
-      in
-      List.fold_left (current @ env) ~init:String.Map.empty
-        ~f:(fun map (key, data) -> Map.add map ~key ~data)
-    in
-    Map.fold env_map ~init:[]
+  | `Replace _
+  | `Extend  _ as env ->
+    Map.fold (env_map env) ~init:[]
       ~f:(fun ~key ~data acc -> (key ^ "=" ^ data) :: acc)
+;;
+
+(* Linux allows arbitrary strings to be passed as environment entries: they don't even
+   have to contain the '=' character.
+   You can also pass the same variable multiple times and that's somehow fine. Most
+   programs (in particular, C stdlib) will use the first entry if there are multiple. *)
+let lookup_raw env key =
+  List.find_map env ~f:(fun x ->
+    match String.lsplit2 x ~on:'=' with
+    | None -> None
+    | Some (key2, value) ->
+      if String.(=) key key2
+      then Some value
+      else None)
+;;
+
+let env_lookup env key =
+  match env with
+  | `Extend  _
+  | `Replace _ as env -> Map.find (env_map env) key
+  | `Replace_raw raw_env -> lookup_raw raw_env key
+;;
 
 let exec ~prog ~args ?(use_path = true) ?env () =
   let args = Array.of_list args in
@@ -950,7 +974,7 @@ let getppid_exn () =
 
 module Thread_id = Int
 
-#ifdef JSC_THREAD_ID
+#if JSC_THREAD_ID_METHOD > 0
 external gettid : unit -> Thread_id.t = "unix_gettid"
 let gettid = Ok gettid
 #else
@@ -1502,22 +1526,173 @@ module Process_info = struct
   [@@deriving sexp]
 end
 
-external create_process
+let create_process_backend = ref (
+  match Core_sys.getenv "CORE_CREATE_PROCESS_USE_SPAWN_BACKEND" with
+  | None ->
+    `ml_create_process
+  | Some _ ->
+    `spawn_vfork)
+;;
+
+external create_process_old
   :  ?working_dir : string
-  -> prog : string
+  -> prog        : string
   -> args : string array
   -> env : string array
   -> search_path : bool
   -> Process_info.t
   = "ml_create_process"
+;;
+
+let create_process_internal
+  :  working_dir : string option
+  -> prog        : string
+  -> argv        : string list
+  -> env         : string list
+  -> Process_info.t
+  =
+  fun ~working_dir ~prog ~argv ~env ->
+    let close_on_err = ref [] in
+    let safe_pipe () =
+      let (fd_read, fd_write) as result = Spawn.safe_pipe () in
+      close_on_err := fd_read :: fd_write :: !close_on_err;
+      result
+    in
+    try
+      let in_read,  in_write  = safe_pipe () in
+      let out_read, out_write = safe_pipe () in
+      let err_read, err_write = safe_pipe () in
+      let pid =
+        Spawn.spawn
+          ?cwd:(Option.map working_dir ~f:(fun x -> Spawn.Working_dir.Path x))
+          ~prog
+          ~argv
+          ~env
+          ~stdin:in_read
+          ~stdout:out_write
+          ~stderr:err_write
+          ()
+        |> Pid.of_int
+      in
+      close in_read; close out_write; close err_write;
+      { pid; stdin = in_write; stdout = out_read; stderr = err_read; }
+    with exn ->
+      List.iter !close_on_err ~f:(fun x -> try close x with _ -> ());
+      raise exn
+;;
+
+module Execvp_emulation : sig
+  (* This is a reimplementation of execvp semantics with two main differences:
+     - it does [spawn] instead of [execve] and returns its result on success
+     - it checks file existence and access rights before trying to spawn.
+     This optimization is valuable because a failed [spawn] is much more expensive than a
+     failed [execve]. *)
+  val run
+    :  working_dir : string option
+    -> spawn       : (prog:string -> argv:string list -> 'a)
+    -> env_lookup  : (string -> string option)
+    -> prog        : string
+    -> args        : string list
+    -> 'a
+
+end = struct
+
+  let get_path env_lookup =
+    env_lookup "PATH"
+    |> Option.value_map ~f:(String.split ~on:':') ~default:[""; "/bin"; "/usr/bin"]
+    |> List.map ~f:(function
+      | "" -> "."
+      | x  -> x)
+  ;;
+
+  let candidate_paths ~env_lookup prog =
+    (* [assert] is to make bugs less subtle if we try to make this
+       portable to non-POSIX in the future. *)
+    assert (Filename.dir_sep = "/");
+    if String.contains prog '/' then
+      [ prog ]
+    else
+      List.map (get_path env_lookup) ~f:(fun h -> h ^/ prog)
+  ;;
+
+  type 'a spawn1_result =
+    | Eaccess           of exn
+    | Enoent_or_similar of exn
+    | Ok                of 'a
+
+  let run ~working_dir ~spawn ~env_lookup ~prog ~args =
+    let argv = prog :: args in
+    let spawn1 candidate =
+      match
+        (try
+           Unix.access
+             (if not (Filename.is_relative candidate) then
+                candidate
+              else
+                match working_dir with
+                | Some working_dir -> working_dir ^/ candidate
+                | None -> candidate)
+             ~perm:[Unix.X_OK]
+         with Unix_error (code, _, args) ->
+           raise (Unix_error (code, "Core.Unix.create_process", args)));
+        spawn ~prog:candidate ~argv
+      with
+      | exception Unix_error (ENOEXEC, _, _) -> Ok (
+        (* As crazy as it looks, this is what execvp does. It's even documented in the man
+           page. *)
+        spawn
+          ~prog:"/bin/sh"
+          ~argv:("/bin/sh" :: candidate :: args))
+      | exception (Unix_error (EACCES, _, _) as exn) ->
+        Eaccess exn
+      | exception (Unix_error (
+        (ENOENT | (* ESTALE | *) ENOTDIR | ENODEV | ETIMEDOUT), _, _) as exn) ->
+        Enoent_or_similar exn
+      | pid -> Ok pid
+    in
+    let rec go first_eaccess = function
+      | [] -> assert false (* [candidate_paths] can't return an empty list *)
+      | [ candidate ] ->
+        (match spawn1 candidate with
+         | Eaccess exn
+         | Enoent_or_similar exn ->
+           raise (Option.value first_eaccess ~default:exn)
+         | Ok pid -> pid)
+      | candidate :: (_ :: _ as candidates) ->
+        match spawn1 candidate with
+        | Eaccess exn ->
+          let first_eaccess = Some (Option.value first_eaccess ~default:exn) in
+          go first_eaccess candidates
+        | Enoent_or_similar _exn ->
+          go first_eaccess candidates
+        | Ok pid -> pid
+    in
+    go None (candidate_paths ~env_lookup prog)
+  ;;
+end
 
 let create_process_env ?working_dir ~prog ~args ~env () =
-  create_process
-    ?working_dir
-    ~search_path:true
-    ~prog
-    ~args:(Array.of_list args)
-    ~env:(Array.of_list (env_assignments env))
+  let env_assignments = env_assignments env in
+  match !create_process_backend with
+  | `spawn_vfork ->
+    Execvp_emulation.run
+      ~prog
+      ~args
+      ~env_lookup:(env_lookup env)
+      ~working_dir
+      ~spawn:(fun ~prog ~argv ->
+        create_process_internal
+          ~working_dir
+          ~prog
+          ~argv
+          ~env:env_assignments)
+  | `ml_create_process ->
+    create_process_old
+      ?working_dir
+      ~search_path:true
+      ~prog
+      ~args:(Array.of_list args)
+      ~env:(Array.of_list env_assignments)
 
 let create_process_env ?working_dir ~prog ~args ~env () =
   improve (fun () -> create_process_env ?working_dir ~prog ~args ~env ())

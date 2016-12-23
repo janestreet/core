@@ -19,7 +19,7 @@ let%bench_module "Time" = (module struct
 
   let%bench_fun "Time.to_ofday" =
     let t = now () in
-    (fun () -> ignore (to_ofday t ~zone:Zone.local))
+    (fun () -> ignore (to_ofday t ~zone:(Lazy.force Zone.local)))
 
   let%bench "Time.now" = now ()
 

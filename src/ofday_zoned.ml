@@ -30,7 +30,7 @@ include Stable.V1
 
 let create ofday zone = { ofday; zone }
 
-let create_local ofday = create ofday Zone.local
+let create_local ofday = create ofday (Lazy.force Zone.local)
 
 let of_string string : t =
   match String.split string ~on:' ' with

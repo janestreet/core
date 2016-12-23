@@ -1,14 +1,172 @@
 open! Import
 
 module Date = Core_kernel.Std.Date
-module Unix = Core_unix
 
-let date_of_tm tm =
-  Date.create_exn
-    ~y:(tm.Unix.tm_year + 1900)
-    ~m:(Month.of_int_exn (tm.Unix.tm_mon + 1))
-    ~d:tm.Unix.tm_mday
-;;
+module Gmtime : sig
+  module Parts : sig
+    type t =
+      { date  : Date.t
+      ; ofday : Ofday.t }
+  end
+
+  val gmtime : float -> Parts.t
+end = struct
+  module Parts = struct
+    type t =
+      { date  : Date.t
+      ; ofday : Ofday.t }
+  end
+
+  let days_per_month ~month ~is_leap_year =
+    match month with
+    | 1  -> 31
+    | 2  -> if is_leap_year then 29 else 28
+    | 3  -> 31
+    | 4  -> 30
+    | 5  -> 31
+    | 6  -> 30
+    | 7  -> 31
+    | 8  -> 31
+    | 9  -> 30
+    | 10 -> 31
+    | 11 -> 30
+    | 12 -> 31
+    | _  -> failwithf "illegal month (%i) passed to days_per_month" month ()
+  ;;
+
+  let is_leap_year year =
+    (Int.rem year 4 = 0)
+    && (Int.rem year 100 <> 0 || Int.rem year 400 = 0)
+  ;;
+
+  let year_size year =
+    if is_leap_year year
+    then 366
+    else 365
+  ;;
+
+  (* This is a faithless recreation of the algorithm used by gmtime in glibc
+     (see time/offtime.c in any recent version of glibc).  This accounts for the lack of
+     clarity of the algorithm when compared to a simpler looping approach through year
+     sized chunks of days.  Unfortunately, the more naive algorithm is meaningfully
+     slower. *)
+  let [@inline always] calculate_year_and_day_of_year ~days_from_epoch =
+    let div a b = a / b - (if Int.rem a b < 0 then 1 else 0) in
+    let num_leaps_thru_end_of year = div year 4 - div year 100 + div year 400 in
+    let days = ref days_from_epoch in
+    let year = ref 1970 in
+    while !days < 0 || !days >= year_size !year do
+      let year_guess = !year + div !days 365 in
+      days := !days - ((year_guess - !year) * 365
+                       + num_leaps_thru_end_of (year_guess - 1)
+                       - num_leaps_thru_end_of (!year - 1));
+      year := year_guess;
+    done;
+    !year, !days + 1
+  ;;
+
+  (* Written with refs and a loop for speed.  Comparision with a let rec loop version
+     showed that this was faster. *)
+  let [@inline always] calculate_month_and_day_of_month ~day_of_year ~year =
+    let month        = ref 1 in
+    let days_left    = ref day_of_year in
+    let is_leap_year = is_leap_year year in
+    while !days_left > days_per_month ~month:!month ~is_leap_year do
+      days_left := !days_left - days_per_month ~month:!month ~is_leap_year;
+      incr month;
+    done;
+    (!month, !days_left)
+  ;;
+
+  (* a recreation of the system call gmtime specialized to the fields we need that also
+     doesn't rely on Unix. *)
+
+  let gmtime_lower_bound = -62_167_219_200.
+  let gmtime_upper_bound = 253_402_300_799.
+
+  let gmtime sec_since_epoch : Parts.t =
+    (* Years out of range for [Date.create_exn] (see unit test below). Failing early makes
+       the rest of the code easier to think about (e.g. all ints are representable as
+       floats, [Float.to_int] won't overflow, etc.) *)
+    begin if sec_since_epoch >=. gmtime_upper_bound +. 1. || sec_since_epoch <. gmtime_lower_bound
+    then failwithf "Time.gmtime: out of range (%f)" sec_since_epoch ()
+    end;
+    let sec_per_day = 86_400. in
+    let days_from_epoch = Float.iround_down_exn (sec_since_epoch /. sec_per_day) in
+    let sec_since_start_of_day =
+      sec_since_epoch -. sec_per_day *. Float.of_int days_from_epoch
+    in
+    let year, day_of_year   = calculate_year_and_day_of_year ~days_from_epoch in
+    let month, day_of_month = calculate_month_and_day_of_month ~day_of_year ~year in
+    let date  = Date.create_exn ~y:year ~m:(Month.of_int_exn month) ~d:day_of_month in
+    let ofday = Ofday.of_span_since_start_of_day (Span.of_sec sec_since_start_of_day) in
+    { date; ofday }
+  ;;
+
+  let%test_unit "lower limit" =
+    let t = gmtime gmtime_lower_bound in
+    [%test_result: Date.t] ~expect:(Date.of_string "0000-01-01") t.date;
+    [%test_result: Ofday.t] ~expect:(Ofday.of_string "00:00:00") t.ofday
+
+  let%test_unit "upper limit" =
+    let t = gmtime gmtime_upper_bound in
+    [%test_result: Date.t] ~expect:(Date.of_string "9999-12-31") t.date;
+    [%test_result: Ofday.t] ~expect:(Ofday.of_string "23:59:59") t.ofday
+
+  let%test_unit "our gmtime matches Unix.gmtime" =
+    let unix_date_ofday t =
+      let parts  = Float.modf t in
+      let sec    = Float.Parts.integral parts in
+      let subsec = Float.Parts.fractional parts in
+      let sec, subsec =
+        if subsec < 0. then (sec -. 1., 1. +. subsec)
+        else (sec, subsec)
+      in
+      let tm     = Unix.gmtime sec in
+      let unix_date =
+        Date.create_exn
+          ~y:(tm.tm_year + 1900)
+          ~m:(Month.of_int_exn (tm.tm_mon + 1))
+          ~d:tm.tm_mday
+      in
+      let integral_ofday =
+        ((tm.tm_hour * 60 * 60)
+         + (tm.tm_min * 60)
+         + tm.tm_sec)
+        |> Float.of_int
+      in
+      let unix_ofday =
+        (* put back the subseconds *)
+        integral_ofday +. subsec
+        |> Span.of_sec
+        |> Ofday.of_span_since_start_of_day
+      in
+      (unix_date, unix_ofday)
+    in
+    let generator =
+      let open Quickcheck.Generator.Let_syntax in
+      let one_hundred_years = 86_400 * 365 * 100 * 1_000 * 1_000 in
+      let upper_bound       = Incl one_hundred_years in
+      let lower_bound       = Incl (Int.neg one_hundred_years) in
+      let%map mics          = Int.gen_between ~lower_bound ~upper_bound in
+      Float.of_int mics /. (1_000. *. 1_000.)
+    in
+    Quickcheck.test generator
+      ~sexp_of:[%sexp_of: float]
+      ~trials:100_000
+      ~examples:[ 0.; 100.; -100.; 90_000.; -90_000. ]
+      ~f:(fun t ->
+        let {Parts. date=my_date; ofday=my_ofday} = gmtime t in
+        let (unix_date, unix_ofday) = unix_date_ofday t in
+        let results = ((my_date, my_ofday), (unix_date, unix_ofday)) in
+        if not (Tuple.T2.equal ~eq1:Date.equal ~eq2:Ofday.equal
+                  (fst results) (snd results))
+        then raise_s [%message "our gmtime doesn't match Unix.gmtime"
+                                 (t: float)
+                                 (results : ((Date.t * Ofday.t) * (Date.t * Ofday.t)))])
+  ;;
+end
+
 
 module Stable0 = struct
   module V1 = struct
@@ -30,28 +188,12 @@ module Stable0 = struct
     end
 
     let upper_bound_native_int = Base.Not_exposed_properly.Float0.upper_bound_for_int Nativeint.num_bits
-     (* shifted epoch for the time zone for conversion *)
+
     let date_ofday_of_epoch_internal zone time =
-      let parts  = Float.modf time in
-      let sec    = Float.Parts.integral parts in
-      let subsec = Float.Parts.fractional parts in
-      let sec,subsec =
-        if subsec < 0. then (sec -. 1., 1. +. subsec)
-        else (sec, subsec)
-      in
-      if Float.(abs sec > upper_bound_native_int)
+      if Float.(abs time > upper_bound_native_int)
       then raise (Invalid_argument "Time.date_ofday_of_epoch");
-      let tm      = Unix.gmtime sec in
-      let date    = date_of_tm tm in
-      let ofday_span =
-        Float.of_int
-          (tm.Unix.tm_hour * 60 * 60
-           + tm.Unix.tm_min * 60
-           + tm.Unix.tm_sec)
-        +. (Float.abs subsec)
-      in
-      let ofday     = Ofday.of_span_since_start_of_day (Span.of_sec ofday_span) in
-      let day_start = time -. ofday_span in
+      let {Gmtime.Parts. date; ofday }  = Gmtime.gmtime time in
+      let day_start = time -. Span.to_sec (Ofday.to_span_since_start_of_day ofday) in
       let day_end   = day_start +. (24. *. 60. *. 60.) in
       let cache     = {Epoch_cache. zone; day_start; day_end; date } in
       (cache, (date, ofday))
@@ -74,13 +216,7 @@ module Stable0 = struct
         end)
     ;;
 
-    let to_date_ofday time ~zone =
-      try
-        date_ofday_of_epoch zone (to_epoch time)
-      with
-      | Invalid_argument _
-      | Unix.Unix_error(_, "gmtime", _)
-        -> raise (Invalid_argument "Time.to_date_ofday")
+    let to_date_ofday time ~zone = date_ofday_of_epoch zone (to_epoch time)
     ;;
 
     (* The correctness of this algorithm (interface, even) depends on the fact that
@@ -147,7 +283,7 @@ module Stable0 = struct
       let time =
         let epoch =
           utc_mktime ~year:(Date.year date) ~month:(Month.to_int (Date.month date))
-            ~day:(Date.day date) ~ofday_sec:(Span.to_sec (Ofday.to_span_since_start_of_day ofday))
+            ~day:(Date.day date) ~ofday:(Span.to_sec (Ofday.to_span_since_start_of_day ofday))
         in
         Zone.shift_epoch_time zone `Local epoch
       in
@@ -218,8 +354,8 @@ module Stable0 = struct
       let zone = Zone.find_exn "Europe/London"
 
       let mkt month day hr min =
-        let ofday_sec = 60. *. ((Float.of_int hr *. 60.) +. Float.of_int min) in
-        T.of_float (utc_mktime ~year:2013 ~month ~day ~ofday_sec)
+        let ofday = 60. *. ((Float.of_int hr *. 60.) +. Float.of_int min) in
+        T.of_float (utc_mktime ~year:2013 ~month ~day ~ofday)
 
       let simple_case date ofday time =
         [%test_result: of_date_ofday_result]
@@ -359,7 +495,7 @@ module Stable0 = struct
     ;;
 
     let%expect_test "[to_string_iso8601] in in local/nyc" =
-      printf !"%s" (to_string_iso8601_basic ~zone:Zone.local (T.of_float 12.345678));
+      printf !"%s" (to_string_iso8601_basic ~zone:(Lazy.force Zone.local) (T.of_float 12.345678));
       [%expect {| 1969-12-31T19:00:12.345678-05:00 |}];
     ;;
 
@@ -382,8 +518,8 @@ module Stable0 = struct
     let to_string_fix_proto utc t =
       let zone =
         match utc with
-        | `Utc -> Zone.utc
-        | `Local -> Zone.local
+        | `Utc   -> Zone.utc
+        | `Local -> Lazy.force Zone.local
       in
       let date, sec = to_date_ofday t ~zone in
       (Date.to_string_iso8601_basic date) ^ "-" ^ (Ofday.to_millisec_string sec)
@@ -397,8 +533,8 @@ module Stable0 = struct
           failwithf "no dash in position %d" expect_dash ();
         let zone =
           match utc with
-          | `Utc -> Zone.utc
-          | `Local -> Zone.local
+          | `Utc   -> Zone.utc
+          | `Local -> Lazy.force Zone.local
         in
         if Int.(>) (String.length str) expect_length then
           failwithf "input too long" ();
@@ -424,17 +560,17 @@ module Stable0 = struct
     ;;
 
     let format t s ~zone =
-      let local = Zone.local in
+      let local = Lazy.force Zone.local in
       let epoch_time =
         to_epoch t
         |> Zone.shift_epoch_time local `Local
         |> Zone.shift_epoch_time zone `UTC
       in
-      Unix.strftime (Unix.localtime epoch_time) s
+      Core_unix.strftime (Unix.localtime epoch_time) s
     ;;
 
     let parse s ~fmt ~zone =
-      Unix.strptime ~fmt s
+      Core_unix.strptime ~fmt s
       |> of_tm ~zone
     ;;
 
@@ -445,7 +581,7 @@ module Stable0 = struct
            select loop.  This is handled by pausing for no longer than 100 days.
         *)
         let span = Span.min span (Span.scale Span.day 100.) in
-        Unix.nanosleep (Span.to_sec span)
+        Core_unix.nanosleep (Span.to_sec span)
       in
       if time_remaining > 0.0
       then `Remaining (Span.of_sec time_remaining)
@@ -487,7 +623,7 @@ module Stable0 = struct
        situation because we would like to say include T, without shadowing. *)
     include T
 
-    let to_string t = to_string_abs t ~zone:Zone.local
+    let to_string t = to_string_abs t ~zone:(Lazy.force Zone.local)
 
     let ensure_colon_in_offset offset =
       if Char.(=) offset.[1] ':'
@@ -590,11 +726,11 @@ module Stable0 = struct
     ;;
 
     let of_string_abs s = of_string_gen ~if_no_timezone:`Fail s
-    let of_string s     = of_string_gen ~if_no_timezone:(`Use_this_one Zone.local) s
+    let of_string s     = of_string_gen ~if_no_timezone:(`Use_this_one (Lazy.force Zone.local)) s
 
     let sexp_zone = ref Zone.local
-    let get_sexp_zone () = !sexp_zone
-    let set_sexp_zone zone = sexp_zone := zone
+    let get_sexp_zone () = Lazy.force !sexp_zone
+    let set_sexp_zone zone = sexp_zone := lazy zone
 
     let t_of_sexp_gen ~if_no_timezone sexp =
       try
@@ -615,7 +751,7 @@ module Stable0 = struct
     ;;
 
     let t_of_sexp sexp =
-      t_of_sexp_gen sexp ~if_no_timezone:(`Use_this_one !sexp_zone)
+      t_of_sexp_gen sexp ~if_no_timezone:(`Use_this_one (get_sexp_zone ()))
     let t_of_sexp_abs sexp =
       t_of_sexp_gen sexp ~if_no_timezone:`Fail
 
@@ -623,7 +759,7 @@ module Stable0 = struct
       Sexp.List (List.map (to_string_abs_parts ~zone t) ~f:(fun s -> Sexp.Atom s))
     ;;
 
-    let sexp_of_t t = sexp_of_t_abs ~zone:!sexp_zone t
+    let sexp_of_t t = sexp_of_t_abs ~zone:(get_sexp_zone ()) t
 
     let%test_unit _ =
       let unzoned_sexp = Sexp.of_string "(2015-07-03 16:27:00)" in
@@ -631,7 +767,7 @@ module Stable0 = struct
       let in_utc = t_of_sexp unzoned_sexp in
       set_sexp_zone (Zone.of_utc_offset ~hours:8);
       let in_plus8 = t_of_sexp unzoned_sexp in
-      set_sexp_zone Zone.local;
+      set_sexp_zone (Lazy.force Zone.local);
       [%test_result: Span.t]
         ~expect:(Span.of_hr 8.)
         (diff in_utc in_plus8)
@@ -756,7 +892,7 @@ module Stable0 = struct
 
         let%test_unit _ =
           [%test_result: t] ~expect:unix_epoch_t
-            (of_tm ~zone:Zone.local (Core_unix.localtime 0.))
+            (of_tm ~zone:(Lazy.force Zone.local) (Core_unix.localtime 0.))
 
         let%test_unit _ =
           [%test_result: t] ~expect:unix_epoch_t

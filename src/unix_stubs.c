@@ -1331,9 +1331,10 @@ CAMLprim value unix_getgrouplist(value v_user, value v_group)
 
   if (n == -1) uerror ("getgrouplist", Nothing);
 
-  ret = caml_alloc_small(n, 0);
-  for (n = n - 1; n >= 0; n--)
-    Field(ret, n) = Val_long(groups[n]);
+  ret = caml_alloc(n, 0);
+  for (n = n - 1; n >= 0; n--) {
+    Store_field(ret, n, Val_long(groups[n]));
+  }
 
   return ret;
 }
@@ -1723,14 +1724,14 @@ CAMLprim value core_unix_remove(value v_path)
   CAMLreturn(Val_unit);
 }
 
-#if defined(JSC_LINUX_EXT)
+#if JSC_THREAD_ID_METHOD == 1
 #include <sys/syscall.h>
 
 CAMLprim value unix_gettid(value v_unit __unused)
 {
   return Val_long(syscall(SYS_gettid));
 }
-#elif defined(__OpenBSD__)
+#elif JSC_THREAD_ID_METHOD == 2
 /* Advice from Philip Guenther on the ocaml-core mailing list is that we need to prototype
  * this ourselves :(
  * See: https://groups.google.com/forum/#!topic/ocaml-core/51knlnuJ8MM */
@@ -1740,8 +1741,8 @@ CAMLprim value unix_gettid(value v_unit __unused)
 {
   return Val_long(getthrid());
 }
-#elif defined(JSC_THREAD_ID)
-#error "JSC_THREAD_ID defined, but no implementation available (misconfigured in discover.sh?)"
+#elif JSC_THREAD_ID_METHOD != -1
+#error "Unknown JSC_THREAD_ID method"
 #endif
 
 static value

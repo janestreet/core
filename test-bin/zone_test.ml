@@ -58,7 +58,7 @@ let add_random_string_round_trip_test state s1 =
   let pos_neg = if Random.State.bool state then "+" else "-" in
   let distance = Int.to_string (Random.State.int state 10 + 1) in
   let s2 = String.concat [s1; pos_neg; distance; ":00"] in
-  let zone = Time.Zone.local in
+  let zone = (force Time.Zone.local) in
   let s1 =
     let t = Time.of_string s1 in
     let epoch = Time.to_epoch t in
@@ -86,9 +86,9 @@ let add_roundtrip_conversion_test state (zone_name,(zone:Time.Zone.t)) =
     let unix_time = 1664476678.000 in
     let time      = Time.of_float unix_time in
     let (zone_date, zone_ofday) =
-      let date,ofday = Time.to_date_ofday ~zone:Time.Zone.local time in
+      let date,ofday = Time.to_date_ofday ~zone:(force Time.Zone.local) time in
       Time.convert
-        ~from_tz:Time.Zone.local
+        ~from_tz:(force Time.Zone.local)
         ~to_tz:zone
         date
         ofday
@@ -97,11 +97,11 @@ let add_roundtrip_conversion_test state (zone_name,(zone:Time.Zone.t)) =
       let round_date,round_ofday =
         Time.convert
         ~from_tz:zone
-        ~to_tz:Time.Zone.local
+        ~to_tz:(force Time.Zone.local)
         zone_date
         zone_ofday
       in
-      Time.of_date_ofday ~zone:Time.Zone.local round_date round_ofday
+      Time.of_date_ofday ~zone:(force Time.Zone.local) round_date round_ofday
     in
     "time" @?
       (if time = round_trip_time then true

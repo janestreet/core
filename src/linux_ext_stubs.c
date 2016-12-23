@@ -339,15 +339,11 @@ CAMLprim value linux_epoll_sizeof_epoll_event(value __unused v_unit)
   return Val_long(sizeof(struct epoll_event));
 }
 
-/*
- * Don't think too hard about the parameter here, the man pages for epoll indicate
- * that the size parameter is ignored for current implementations of epoll.
- */
-CAMLprim value linux_epoll_create(value v_size)
+CAMLprim value linux_epoll_create(value __unused v_unit)
 {
   int retcode;
 
-  retcode = epoll_create(Long_val(v_size));
+  retcode = epoll_create1(EPOLL_CLOEXEC);
   if (retcode == -1) uerror("epoll_create", Nothing);
 
   return Val_long(retcode);

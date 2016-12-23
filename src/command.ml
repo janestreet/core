@@ -1853,7 +1853,6 @@ module Sexpable = struct
     (* Now we've killed all the processes and threads we made. *)
     match
       stdout
-      |> String.strip
       |> Sexp.of_string
       |> Internal.t_of_sexp
       |> Internal.to_latest

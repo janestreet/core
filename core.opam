@@ -9,11 +9,16 @@ build: [
   ["jbuilder" "build-package" "core" "-j" jobs]
 ]
 depends: [
+  "base"
+  "configurator"
   "core_kernel"
   "jbuilder"
+  "ppx_assert"
   "ppx_driver"
   "ppx_jane"
   "sexplib"
+  "spawn"
+  "stdio"
   "base-threads"
 ]
 available: [ ocaml-version >= "4.03.0" ]

@@ -669,7 +669,7 @@ module Epoll = struct
     let oneshot = flag_epolloneshot ()
   end)
 
-  external epoll_create : int -> File_descr.t = "linux_epoll_create"
+  external epoll_create : unit -> File_descr.t = "linux_epoll_create"
 
   (* Some justification for the below interface: Unlike select() and poll(), epoll() fills
      in an array of ready events, analogous to a read() call where you pass in a buffer to
@@ -803,7 +803,7 @@ module Epoll = struct
       failwiths "Epoll.create got nonpositive max_ready_events" max_ready_events
         ([%sexp_of: int]);
     ref (`In_use
-            { epollfd = epoll_create max_ready_events;
+            { epollfd = epoll_create ();
               flags_by_fd =
                 Table.create
                   ~num_keys:num_file_descrs
