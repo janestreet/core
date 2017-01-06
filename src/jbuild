@@ -2,7 +2,7 @@
 ;; file that includes config.h reads a partial written file, and fails
 (rule
  ((targets (config.h))
-  (deps    (config/discover.exe))
+  (deps    (config/discover.exe thread_id.h))
   (action  (run ${<} -ocamlc ${OCAMLC}))))
 
 (library

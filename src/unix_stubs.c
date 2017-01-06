@@ -51,6 +51,7 @@
 #include "unix_utils.h"
 #include "config.h"
 #include "timespec.h"
+#include "thread_id.h"
 
 #if defined(JSC_WORDEXP)
 #include <wordexp.h>
@@ -1735,25 +1736,13 @@ CAMLprim value core_unix_remove(value v_path)
   CAMLreturn(Val_unit);
 }
 
-#if JSC_THREAD_ID_METHOD == 1
-#include <sys/syscall.h>
+#if defined(GET_THREAD_ID)
 
 CAMLprim value unix_gettid(value v_unit __unused)
 {
-  return Val_long(syscall(SYS_gettid));
+  return Val_long(GET_THREAD_ID);
 }
-#elif JSC_THREAD_ID_METHOD == 2
-/* Advice from Philip Guenther on the ocaml-core mailing list is that we need to prototype
- * this ourselves :(
- * See: https://groups.google.com/forum/#!topic/ocaml-core/51knlnuJ8MM */
-extern pid_t getthrid(void);
 
-CAMLprim value unix_gettid(value v_unit __unused)
-{
-  return Val_long(getthrid());
-}
-#elif JSC_THREAD_ID_METHOD != -1
-#error "Unknown JSC_THREAD_ID method"
 #endif
 
 static value

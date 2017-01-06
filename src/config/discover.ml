@@ -35,33 +35,16 @@ int main()
 }
 |}
 
-let sys_gettid_code = {|
-#define _GNU_SOURCE
-#include <unistd.h>
-#include <sys/syscall.h>
+let thread_id_code ~thread_id_method ~thread_id_header = Printf.sprintf {|
+#define JSC_THREAD_ID_METHOD %d
+#include "%s"
 
 int main ()
 {
-  syscall(SYS_gettid);
+  GET_THREAD_ID;
   return 0;
 }
-|}
-
-let getthrid_code = {|
-#include <sys/types.h>
-#include <unistd.h>
-
-/* Advice from Philip Guenther on the ocaml-core mailing list is that we need to prototype
- * this ourselves :(
- * See: https://groups.google.com/forum/#!topic/ocaml-core/51knlnuJ8MM */
-extern pid_t getthrid(void);
-
-int main()
-{
-  getthrid();
-  return 0;
-}
-|}
+|} thread_id_method thread_id_header
 
 let msg_nosignal_code = {|
 #include <sys/types.h>
@@ -136,12 +119,10 @@ let () =
     in
 
     let thread_id_method =
-      if C.c_test c sys_gettid_code then
-        1
-      else if C.c_test c getthrid_code then
-        2
-      else
-        -1
+      let thread_id_header = Caml.Filename.concat (Caml.Sys.getcwd ()) "thread_id.h" in
+      List.find [1; 2] ~f:(fun thread_id_method ->
+        C.c_test c (thread_id_code ~thread_id_method ~thread_id_header))
+      |> Option.value ~default:(-1)
     in
 
     let linux = String.equal (C.ocaml_config_var_exn c "system") "linux" in
