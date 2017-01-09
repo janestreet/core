@@ -125,7 +125,10 @@ let () =
       |> Option.value ~default:(-1)
     in
 
-    let linux = String.equal (C.ocaml_config_var_exn c "system") "linux" in
+    let linux =
+      (* Possible values for this field: linux, linux_elf, linux_eabi, ... *)
+      String.is_prefix (C.ocaml_config_var_exn c "system") ~prefix:"linux"
+    in
 
     let simple_vars =
       List.map ~f:(fun (v, code, link_flags) ->
