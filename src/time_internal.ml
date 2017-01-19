@@ -7,7 +7,7 @@ module Time_ns = Core_kernel.Std.Time_ns
    other floats.
 *)
 module T : sig
-  type t = private float [@@deriving bin_io, typerep, hash]
+  type t = private float [@@deriving bin_io, typerep, hash, sexp_of]
 
   include Comparable.S_common with type t := t
   include Hashable_binable    with type t := t
@@ -69,6 +69,7 @@ let to_tm_utc t = Unix.gmtime (T.to_float t)
    of seconds since 1970-01-01 00:00:00 using epoch time semantics (86,400 seconds
    per day) *)
 let utc_mktime ~year ~month ~day ~ofday =
+  let month = Month.to_int month in
   (* move February to the conceptual end of the ordering - 1..12 -> 11,12,1..10 -
      because it carries the leap day.  The months are 0 indexed for this calculation,
      so 1 is February. *)
@@ -79,5 +80,5 @@ let utc_mktime ~year ~month ~day ~ofday =
   let year,month = shuffle_year_month year month in
   let days       = year / 4 - year / 100 + year / 400 + 367 * month / 12 + day in
   let days       = Float.of_int days +. 365. *. Float.of_int year -. 719499. in
-  (days *. 86400. +. ofday)
+  T.of_float (days *. 86400. +. ofday)
 ;;

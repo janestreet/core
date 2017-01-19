@@ -1,5 +1,5 @@
 open! Core.Std
-open! Expect_test_helpers_kernel.Std
+open! Expect_test_helpers_kernel
 
 module Inet_addr = Unix.Inet_addr
 module Cidr      = Unix.Cidr

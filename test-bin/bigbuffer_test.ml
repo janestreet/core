@@ -24,7 +24,7 @@ let test =
           Bigbuffer.add_char buf 'x';
           Bigbuffer.add_char buf 'y';
           Bigbuffer.add_string buf "asdf";
-          Bigbuffer.add_substring buf "fdsa" 1 2;
+          Bigbuffer.add_substring buf "fdsa" ~pos:1 ~len:2;
           Bigbuffer.add_buffer buf buf;
           let str = "xyasdfds" in
           "contents" @? (Bigbuffer.contents buf = str ^ str);

@@ -1,5 +1,59 @@
 open! Core.Std
-open  Expect_test_helpers_kernel.Std
+open  Expect_test_helpers_kernel
+
+let%test_unit "Time_ns.to_date_ofday" =
+  assert (does_raise (fun () ->
+    Time_ns.to_date_ofday Time_ns.max_value ~zone:Time.Zone.utc));
+;;
+
+let%test_module "Core_kernel.Std.Time_ns.Utc.to_date_and_span_since_start_of_day" =
+  (module struct
+    type time_ns = Time_ns.t [@@deriving compare]
+    let sexp_of_time_ns = Core_kernel.Std.Time_ns.Alternate_sexp.sexp_of_t
+    ;;
+
+    (* move 1ms off min and max values because [Time_ns]'s boundary checking in functions
+       that convert to/from float apparently has some fuzz issues. *)
+    let safe_min_value = Time_ns.add Time_ns.min_value Time_ns.Span.microsecond
+    let safe_max_value = Time_ns.sub Time_ns.max_value Time_ns.Span.microsecond
+    ;;
+
+    let gen =
+      let open Quickcheck.Generator.Let_syntax in
+      let%map ns_since_epoch =
+        Int63.gen_incl
+          (Time_ns.to_int63_ns_since_epoch safe_min_value)
+          (Time_ns.to_int63_ns_since_epoch safe_max_value)
+      in
+      Time_ns.of_int63_ns_since_epoch ns_since_epoch
+    ;;
+
+    let test f =
+      require_does_not_raise [%here] (fun () ->
+        Quickcheck.test gen ~f
+          ~sexp_of:[%sexp_of: time_ns]
+          ~examples:[ safe_min_value; Time_ns.epoch; safe_max_value ])
+    ;;
+
+    let%expect_test "Utc.to_date_and_span_since_start_of_day vs Time_ns.to_date_ofday" =
+      test (fun time_ns ->
+        match Word_size.word_size with
+        | W64 ->
+          let kernel_date, kernel_span_since_start_of_day =
+            Core_kernel.Std.Time_ns.Utc.to_date_and_span_since_start_of_day time_ns
+          in
+          let kernel_ofday =
+            Time_ns.Ofday.of_span_since_start_of_day_exn kernel_span_since_start_of_day
+          in
+          let core_date, core_ofday = Time_ns.to_date_ofday time_ns ~zone:Time.Zone.utc in
+          [%test_result: Date.t * Time_ns.Ofday.t]
+            (kernel_date, kernel_ofday)
+            ~expect:(core_date, core_ofday)
+        | W32 ->
+          ());
+      [%expect {| |}];
+    ;;
+  end)
 
 let%expect_test "Time_ns.Span.Stable.V1" =
   let module V = Time_ns.Span.Stable.V1 in

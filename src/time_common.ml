@@ -55,6 +55,10 @@ module type S = sig
     val ( / )  : t -> float -> t
     val ( // ) : t -> t -> float
 
+    (** The only condition [to_proportional_float] is supposed to satisfy is that for all
+        [t1, t2 : t]: [to_proportional_float t1 /. to_proportional_float t2 = t1 // t2]. *)
+    val to_proportional_float : t -> float
+
     val to_short_string : t -> string
     val to_string_hum
       :  ?delimiter    :char

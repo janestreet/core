@@ -3,7 +3,7 @@
 open! Import
 
 (** The type of thread handles. *)
-type t
+type t [@@deriving sexp_of]
 
 (** {6 Thread creation and termination} *)
 

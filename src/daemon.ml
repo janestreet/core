@@ -4,14 +4,15 @@ module Unix   = Core_unix
 module Thread = Core_thread
 
 
-let check_threads () =
+let check_threads ~allow_threads_to_have_been_created =
   (* forking, especially to daemonize, when running multiple threads is tricky, and
      generally a mistake.  It's so bad, and so hard to catch, that we test in two
      different ways *)
-  if Thread.threads_have_been_created () then
+
+  if not allow_threads_to_have_been_created && Thread.threads_have_been_created () then
     failwith
       "Daemon.check_threads: may not be called \
-      if any threads have ever been created";
+       if any threads have ever been created";
   begin match Thread.num_threads () with
   | None -> ()  (* This is pretty bad, but more likely to be a problem with num_threads *)
   | Some (1 | 2) -> () (* main thread, or main + ticker - both ok *)
@@ -63,8 +64,8 @@ let redirect_stdio_fds ~skip_regular_files ~stdout ~stderr =
 ;;
 
 let daemonize ?(redirect_stdout=`Dev_null) ?(redirect_stderr=`Dev_null)
-    ?(cd = "/") ?umask () =
-  check_threads ();
+      ?(cd = "/") ?umask ?(allow_threads_to_have_been_created = false) () =
+  check_threads ~allow_threads_to_have_been_created;
   let fork_no_parent () =
     match Unix.handle_unix_error Unix.fork with
     | `In_the_child -> ()
@@ -93,8 +94,8 @@ let process_status_to_exit_code = function
     Signal.to_caml_int s
 
 let daemonize_wait ?(redirect_stdout=`Dev_null) ?(redirect_stderr=`Dev_null)
-    ?(cd = "/") ?umask () =
-  check_threads ();
+    ?(cd = "/") ?umask ?(allow_threads_to_have_been_created = false) () =
+  check_threads ~allow_threads_to_have_been_created;
   match Unix.handle_unix_error Unix.fork with
   | `In_the_child ->
     ignore (Unix.Terminal_io.setsid ());

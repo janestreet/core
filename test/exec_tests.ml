@@ -1,5 +1,5 @@
 open Core.Std
-open Expect_test_helpers.Std
+open Expect_test_helpers
 
 module Let_syntax         = Async.Std.Let_syntax
 module Expect_test_config = Async.Std.Expect_test_config

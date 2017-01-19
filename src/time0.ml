@@ -9,7 +9,7 @@ module Gmtime : sig
       ; ofday : Ofday.t }
   end
 
-  val gmtime : float -> Parts.t
+  val gmtime : Time_internal.T.t -> Parts.t
 end = struct
   module Parts = struct
     type t =
@@ -80,14 +80,14 @@ end = struct
 
   (* a recreation of the system call gmtime specialized to the fields we need that also
      doesn't rely on Unix. *)
-
   let gmtime_lower_bound = -62_167_219_200.
   let gmtime_upper_bound = 253_402_300_799.
 
-  let gmtime sec_since_epoch : Parts.t =
+  let gmtime time : Parts.t =
     (* Years out of range for [Date.create_exn] (see unit test below). Failing early makes
        the rest of the code easier to think about (e.g. all ints are representable as
        floats, [Float.to_int] won't overflow, etc.) *)
+    let sec_since_epoch = Time_internal.T.to_float time in
     begin if sec_since_epoch >=. gmtime_upper_bound +. 1. || sec_since_epoch <. gmtime_lower_bound
     then failwithf "Time.gmtime: out of range (%f)" sec_since_epoch ()
     end;
@@ -104,12 +104,12 @@ end = struct
   ;;
 
   let%test_unit "lower limit" =
-    let t = gmtime gmtime_lower_bound in
+    let t = gmtime (Time_internal.T.of_float gmtime_lower_bound) in
     [%test_result: Date.t] ~expect:(Date.of_string "0000-01-01") t.date;
     [%test_result: Ofday.t] ~expect:(Ofday.of_string "00:00:00") t.ofday
 
   let%test_unit "upper limit" =
-    let t = gmtime gmtime_upper_bound in
+    let t = gmtime (Time_internal.T.of_float gmtime_upper_bound) in
     [%test_result: Date.t] ~expect:(Date.of_string "9999-12-31") t.date;
     [%test_result: Ofday.t] ~expect:(Ofday.of_string "23:59:59") t.ofday
 
@@ -146,9 +146,9 @@ end = struct
     let generator =
       let open Quickcheck.Generator.Let_syntax in
       let one_hundred_years = 86_400 * 365 * 100 * 1_000 * 1_000 in
-      let upper_bound       = Incl one_hundred_years in
-      let lower_bound       = Incl (Int.neg one_hundred_years) in
-      let%map mics          = Int.gen_between ~lower_bound ~upper_bound in
+      let upper_bound       = one_hundred_years in
+      let lower_bound       = Int.neg one_hundred_years in
+      let%map mics          = Int.gen_incl lower_bound upper_bound in
       Float.of_int mics /. (1_000. *. 1_000.)
     in
     Quickcheck.test generator
@@ -156,7 +156,7 @@ end = struct
       ~trials:100_000
       ~examples:[ 0.; 100.; -100.; 90_000.; -90_000. ]
       ~f:(fun t ->
-        let {Parts. date=my_date; ofday=my_ofday} = gmtime t in
+        let {Parts. date=my_date; ofday=my_ofday} = gmtime (Time_internal.T.of_float t) in
         let (unix_date, unix_ofday) = unix_date_ofday t in
         let results = ((my_date, my_ofday), (unix_date, unix_ofday)) in
         if not (Tuple.T2.equal ~eq1:Date.equal ~eq2:Ofday.equal
@@ -181,20 +181,20 @@ module Stable0 = struct
     module Epoch_cache = struct
       type t = {
         zone      : Zone.t;
-        day_start : float;
-        day_end   : float;
+        day_start : T.t;
+        day_end   : T.t;
         date      : Date.t
-      } [@@deriving sexp]
+      } [@@deriving sexp_of]
     end
 
     let upper_bound_native_int = Base.Not_exposed_properly.Float0.upper_bound_for_int Nativeint.num_bits
 
-    let date_ofday_of_epoch_internal zone time =
-      if Float.(abs time > upper_bound_native_int)
+    let date_ofday_of_epoch_internal zone (time : T.t) =
+      if Float.(abs (to_epoch time) > upper_bound_native_int)
       then raise (Invalid_argument "Time.date_ofday_of_epoch");
-      let {Gmtime.Parts. date; ofday }  = Gmtime.gmtime time in
-      let day_start = time -. Span.to_sec (Ofday.to_span_since_start_of_day ofday) in
-      let day_end   = day_start +. (24. *. 60. *. 60.) in
+      let {Gmtime.Parts. date; ofday } = Gmtime.gmtime time in
+      let day_start = T.sub time (Ofday.to_span_since_start_of_day ofday) in
+      let day_end   = T.add day_start Span.day in
       let cache     = {Epoch_cache. zone; day_start; day_end; date } in
       (cache, (date, ofday))
     ;;
@@ -203,20 +203,20 @@ module Stable0 = struct
        (date_ofday_of_epoch_internal just above) used only to gain some speed when we
        translate the same time/date over and over again *)
     let date_ofday_of_epoch =
-      let cache = ref (fst (date_ofday_of_epoch_internal Zone.utc (to_epoch (T.now ())))) in
+      let cache = ref (fst (date_ofday_of_epoch_internal Zone.utc (T.now ()))) in
       (fun zone unshifted ->
         let time = Zone.shift_epoch_time zone `UTC unshifted in
         let {Epoch_cache.zone = z; day_start = s; day_end = e; date = date} = !cache in
         if phys_equal zone z && time >= s && time < e then (
-          (date, Ofday.of_span_since_start_of_day (Span.of_sec (time -. s))))
+          (date, Ofday.of_span_since_start_of_day (T.diff time s)))
         else begin
-          let (new_cache,r) = date_ofday_of_epoch_internal zone time in
+          let (new_cache, r) = date_ofday_of_epoch_internal zone time in
           cache := new_cache;
           r
         end)
     ;;
 
-    let to_date_ofday time ~zone = date_ofday_of_epoch zone (to_epoch time)
+    let to_date_ofday time ~zone = date_ofday_of_epoch zone time
     ;;
 
     (* The correctness of this algorithm (interface, even) depends on the fact that
@@ -280,14 +280,11 @@ module Stable0 = struct
     ;;
 
     let of_date_ofday ~zone date ofday =
-      let time =
-        let epoch =
-          utc_mktime ~year:(Date.year date) ~month:(Month.to_int (Date.month date))
-            ~day:(Date.day date) ~ofday:(Span.to_sec (Ofday.to_span_since_start_of_day ofday))
-        in
-        Zone.shift_epoch_time zone `Local epoch
+      let epoch =
+        utc_mktime ~year:(Date.year date) ~month:(Date.month date)
+          ~day:(Date.day date) ~ofday:(Span.to_sec (Ofday.to_span_since_start_of_day ofday))
       in
-      T.of_float time
+      Zone.shift_epoch_time zone `Local epoch
     ;;
 
     let of_date_ofday_precise date ofday ~zone =
@@ -355,7 +352,8 @@ module Stable0 = struct
 
       let mkt month day hr min =
         let ofday = 60. *. ((Float.of_int hr *. 60.) +. Float.of_int min) in
-        T.of_float (utc_mktime ~year:2013 ~month ~day ~ofday)
+        utc_mktime ~year:2013 ~month ~day ~ofday
+      ;;
 
       let simple_case date ofday time =
         [%test_result: of_date_ofday_result]
@@ -397,59 +395,59 @@ module Stable0 = struct
       let inside_bst  = Date.of_string "2013-06-01";;
 
       let%test_unit "of_date_ofday_precise, outside BST" =
-        simple_case outside_bst (12^:00) (mkt 01 01  12 00)
+        simple_case outside_bst (12^:00) (mkt Jan 01  12 00)
 
       let%test_unit "of_date_ofday_precise, inside BST" =
-        simple_case inside_bst (12^:00) (mkt 06 01  11 00)
+        simple_case inside_bst (12^:00) (mkt Jun 01  11 00)
 
       let bst_start   = Date.of_string "2013-03-31";;
       let bst_end     = Date.of_string "2013-10-27";;
 
       let%test_unit "of_date_ofday_precise, just before skipped hour" =
-        simple_case bst_start (00^:59) (mkt 03 31  00 59)
+        simple_case bst_start (00^:59) (mkt Mar 31  00 59)
 
       let%test_unit "of_date_ofday_precise, start of skipped hour" =
-        skipped_this_time bst_start (01^:00) (mkt 03 31  01 00)
+        skipped_this_time bst_start (01^:00) (mkt Mar 31  01 00)
 
       let%test_unit "of_date_ofday_precise, during skipped hour" =
-        skipped_this_time bst_start (01^:30) (mkt 03 31  01 00)
+        skipped_this_time bst_start (01^:30) (mkt Mar 31  01 00)
 
       let%test_unit "of_date_ofday_precise, end of skipped hour" =
-        skipped_prev_time bst_start (02^:00) (mkt 03 31  01 00)
+        skipped_prev_time bst_start (02^:00) (mkt Mar 31  01 00)
 
       let%test_unit "of_date_ofday_precise, just after skipped hour" =
-        skipped_prev_time bst_start (02^:01) (mkt 03 31  01 01)
+        skipped_prev_time bst_start (02^:01) (mkt Mar 31  01 01)
 
       let%test_unit "of_date_ofday_precise, later after skipped hour" =
-        simple_case bst_start (03^:00) (mkt 03 31  02 00)
+        simple_case bst_start (03^:00) (mkt Mar 31  02 00)
 
       let%test_unit "of_date_ofday_precise, just before repeated hour" =
-        simple_case bst_end (00^:59) (mkt 10 26  23 59)
+        simple_case bst_end (00^:59) (mkt Oct 26  23 59)
 
       let%test_unit "of_date_ofday_precise, start of repeated hour" =
-        repeated_time bst_end (01^:00) ~first:(mkt 10 27  00 00)
+        repeated_time bst_end (01^:00) ~first:(mkt Oct 27  00 00)
 
       let%test_unit "of_date_ofday_precise, during repeated hour" =
-        repeated_time bst_end (01^:30) ~first:(mkt 10 27  00 30)
+        repeated_time bst_end (01^:30) ~first:(mkt Oct 27  00 30)
 
       let%test_unit "of_date_ofday_precise, end of repeated hour" =
-        simple_case bst_end (02^:00) (mkt 10 27  02 00)
+        simple_case bst_end (02^:00) (mkt Oct 27  02 00)
 
       let%test_unit "of_date_ofday_precise, after repeated hour" =
-        simple_case bst_end (02^:01) (mkt 10 27  02 01)
+        simple_case bst_end (02^:01) (mkt Oct 27  02 01)
     end)
 
     let to_date t ~zone  = fst (to_date_ofday t ~zone)
     let to_ofday t ~zone = snd (to_date_ofday t ~zone)
 
     let convert ~from_tz ~to_tz date ofday =
-      let start_time = T.to_float (of_date_ofday ~zone:from_tz date ofday) in
+      let start_time = of_date_ofday ~zone:from_tz date ofday in
       date_ofday_of_epoch to_tz start_time
+    ;;
 
     let utc_offset t ~zone =
-      let epoch     = to_epoch t in
-      let utc_epoch = Zone.shift_epoch_time zone `UTC epoch in
-      Span.of_sec (utc_epoch -. epoch)
+      let utc_epoch = Zone.shift_epoch_time zone `UTC t in
+      T.diff utc_epoch t
     ;;
 
     let offset_string time ~zone =
@@ -562,9 +560,9 @@ module Stable0 = struct
     let format t s ~zone =
       let local = Lazy.force Zone.local in
       let epoch_time =
-        to_epoch t
-        |> Zone.shift_epoch_time local `Local
+        Zone.shift_epoch_time local `Local t
         |> Zone.shift_epoch_time zone `UTC
+        |> to_epoch
       in
       Core_unix.strftime (Unix.localtime epoch_time) s
     ;;

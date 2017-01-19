@@ -29,12 +29,13 @@ module Generator_examples = struct
   let (_ : _ Generator.t) =
     Generator.small_positive_int
   let (_ : _ Generator.t) =
-    Int.gen_between ~lower_bound:(Incl 0) ~upper_bound:(Excl 100)
+    Int.gen_incl 0 99
   let (_ : _ Generator.t) =
-    Float.gen_between
-      ~lower_bound:(Incl 1.)
-      ~upper_bound:Unbounded
-      ~nan:Without
+    Int.gen_uniform_incl 0 99
+  let (_ : _ Generator.t) =
+    Float.gen_incl 1. 100.
+  let (_ : _ Generator.t) =
+    Float.gen_finite
   let (_ : _ Generator.t) =
     Generator.tuple2 Int.gen Float.gen
   let (_ : _ Generator.t) =
@@ -60,7 +61,7 @@ module Generator_examples = struct
       let open Generator in
       String.gen
       >>= fun str ->
-      Int.gen_between ~lower_bound:(Incl 0) ~upper_bound:(Excl (String.length str))
+      Int.gen_incl 0 (String.length str - 1)
       >>| fun i ->
       str, i, String.get str i
 
@@ -69,23 +70,26 @@ module Generator_examples = struct
   module Recursive = struct
 
     let (_ : _ Generator.t) =
-  Generator.(recursive (fun f ~size ->
-    if size = 0
-    then (String.gen                  >>| fun atom -> Sexp.Atom atom)
-    else (List.gen (f ~size:(size-1)) >>| fun list -> Sexp.List list)))
+      Generator.(recursive (fun self ->
+        size >>= function
+        | 0 -> String.gen    >>| fun atom -> Sexp.Atom atom
+        | _ -> List.gen self >>| fun list -> Sexp.List list))
 
-    let rec binary_subtree ~lower_bound ~upper_bound =
+    let rec binary_subtree lower_bound upper_bound =
       let open Generator in
-      union
-        [ singleton `Leaf
-        ; Int.gen_between ~lower_bound ~upper_bound            >>= fun key   ->
-          binary_subtree  ~lower_bound ~upper_bound:(Excl key) >>= fun left  ->
-          binary_subtree  ~lower_bound:(Excl key) ~upper_bound >>| fun right ->
-          `Node (left, key, right)
-        ]
+      if lower_bound > upper_bound
+      then singleton `Leaf
+      else
+        union
+          [ singleton `Leaf
+          ; Int.gen_incl lower_bound upper_bound >>= fun key   ->
+            binary_subtree  lower_bound (key - 1)   >>= fun left  ->
+            binary_subtree  (key + 1)   upper_bound >>| fun right ->
+            `Node (left, key, right)
+          ]
 
-    let _binary_tree () : _ Generator.t =
-      binary_subtree ~lower_bound:Unbounded ~upper_bound:Unbounded
+    let _binary_tree : _ Generator.t =
+      binary_subtree Int.min_value Int.max_value
 
     let rec powers_of_two_starting_from x =
       let open Generator in
@@ -138,15 +142,11 @@ module Example_1_functional = struct
       | _ :: t -> t
   end
 
+  let of_list list =
+    List.fold list ~init:Functional_stack.empty ~f:Functional_stack.push
+
   let stack elt =
-    Generator.(recursive (fun f ~size ->
-      if size = 0
-      then return Functional_stack.empty
-      else begin
-        elt              >>= fun x ->
-        f ~size:(size-1) >>= fun t ->
-        return (Functional_stack.push t x)
-      end))
+    Generator.map (List.gen elt) ~f:of_list
 
   open Functional_stack
 

@@ -2,43 +2,82 @@
 
 open! Import
 
-module type Zone = sig
+(** [module type Time] is the common portion of the interface of [module Time] and [module
+    Time_ns] used as the argument to the [Zone.Make] functor, which implements a [Zone]
+    module generically in terms of [module type Time]. *)
+module type Time = sig
+  module Span : sig
+    type t [@@deriving sexp, compare]
+
+    val of_int32_seconds : Int32.t -> t
+    val of_int63_seconds : Int63.t -> t
+
+    val (-)  : t -> t -> t
+  end
+
+  type t [@@deriving compare, sexp_of]
+
+  val add  : t -> Span.t -> t
+  val sub  : t -> Span.t -> t
+  val diff : t -> t -> Span.t
+
+  val of_span_since_epoch : Span.t -> t
+  val to_span_since_epoch : t -> Span.t
+
+  val utc_mktime : year:int -> month:Month.t -> day:int -> ofday:Span.t -> t
+
+  val ( > ) : t -> t -> bool
+  val ( < ) : t -> t -> bool
+end
+
+module type S = sig
+  module Time : Time
+
   (** {1 User-friendly interface} *)
 
   (** The type of a time-zone.
 
-      bin_io and sexp representations of Zone.t are the name of the zone, and not the full
-      data that is read from disk when Zone.find is called.  The full Zone.t is
-      reconstructed on the receiving/reading side by reloading the zone file from disk.  Any
-      zone name that is accepted by [find] is acceptable in the bin_io and sexp
-      representations. *)
+      bin_io and sexp representations of Zone.t are the name of the zone, and
+      not the full data that is read from disk when Zone.find is called.  The
+      full Zone.t is reconstructed on the receiving/reading side by reloading
+      the zone file from disk.  Any zone name that is accepted by [find] is
+      acceptable in the bin_io and sexp representations. *)
   type t
 
   include Identifiable.S with type t := t
 
+  (** [find name] looks up a [t] by its name and returns it.  This also accepts some
+      aliases, including:
 
-  (** [find name] looks up a [t] by its name and returns it.  *)
+      - chi -> America/Chicago
+      - nyc -> America/New_York
+      - hkg -> Asia/Hong_Kong
+      - lon -> Europe/London
+      - tyo -> Asia/Tokyo *)
   val find : string -> t option
 
   val find_exn : string -> t
 
-  (** [local] is the machine's local timezone, as determined from the [TZ] environment
-      variable or the [/etc/localtime] file.  It is computed from the state of the process
-      environment and on-disk tzdata database at some unspecified moment prior to its first
-      use, so its value may be unpredictable if that state changes during program operation.
-      Arguably, changing the timezone of a running program is a problematic operation anyway
-      -- most people write code assuming the clock doesn't suddenly jump several hours
-      without warning.
+  (** [local] is the machine's local timezone, as determined from the [TZ]
+      environment variable or the [/etc/localtime] file.  It is computed from
+      the state of the process environment and on-disk tzdata database at
+      some unspecified moment prior to its first use, so its value may be
+      unpredictable if that state changes during program operation. Arguably,
+      changing the timezone of a running program is a problematic operation
+      anyway -- most people write code assuming the clock doesn't suddenly
+      jump several hours without warning.
 
-      Note that any function using this timezone can throw an exception if the [TZ]
-      environment variable is misconfigured or if the appropriate timezone files can't be
-      found because of the way the box is configured.  We don't sprinkle [_exn] all over all
-      the names in this module because such misconfiguration is quite rare. *)
+      Note that any function using this timezone can throw an exception if
+      the [TZ] environment variable is misconfigured or if the appropriate
+      timezone files can't be found because of the way the box is configured.
+      We don't sprinkle [_exn] all over all the names in this module because
+      such misconfiguration is quite rare. *)
   val local : t Lazy.t
 
-  (** [likely_machine_zones] is a list of zone names that will be searched first when trying
-      to determine the machine zone of a box.  Setting this to a likely set of zones for
-      your application will speed the very first use of the local timezone. *)
+  (** [likely_machine_zones] is a list of zone names that will be searched
+      first when trying to determine the machine zone of a box.  Setting this
+      to a likely set of zones for your application will speed the very first
+      use of the local timezone. *)
   val likely_machine_zones : string list ref
 
   (** [of_utc_offset offset] returns a timezone with a static UTC offset (given in
@@ -48,65 +87,93 @@ module type Zone = sig
   (** [utc] the UTC time zone.  Included for convenience *)
   val utc : t
 
-  (** [abbreviation zone t] returns t abbreviation name such as EDT, EST, JST of given
-      [zone] at the time [t].  This string conversion is one-way only, and cannot reliably
-      be turned back into a t *)
-  val abbreviation : t -> float -> string
+  (** [abbreviation t time] returns the abbreviation name (such as EDT, EST, JST) of given
+      zone [t] at [time].  This string conversion is one-way only, and cannot reliably be
+      turned back into a [t]. *)
+  val abbreviation : t -> Time.t -> string
 
-  (** [name zone] returns the name of the time zone *)
   val name : t -> string
 
   (** {1 Low-level functions}
 
       The functions below are lower level and should be used more rarely. *)
 
-  (** [init ()] pre-load all available time zones from disk, this function has no effect if
-      it is called multiple times.  Time zones will otherwise be loaded at need from the
-      disk on the first call to find/find_exn. *)
+  (** [init ()] pre-load all available time zones from disk, this function
+      has no effect if it is called multiple times.  Time zones will
+      otherwise be loaded at need from the disk on the first call to
+      find/find_exn. *)
   val init : unit -> unit
 
   (** [digest t] return the MD5 digest of the file the t was created from (if any) *)
   val digest : t -> string option
 
-  (** [initialized_zones ()] returns a sorted list of time zone names that have been loaded
-      from disk thus far. *)
+  (** [initialized_zones ()] returns a sorted list of time zone names that
+      have been loaded from disk thus far. *)
   val initialized_zones : unit -> (string * t) list
 
-  (** [shift_epoch_time zone [`Local | `UTC] time] Takes an epoch (aka "unix") time given
-      either in local or in UTC (as indicated in the arguments) and shifts it according to
-      the local time regime in force in zone.  That is, given a Local epoch time it will
-      return the corresponding UTC timestamp and vice versa.  This function is low level,
-      and is not intended to be called by most client code.  Use the high level functions
-      provided in Time instead. *)
-  val shift_epoch_time : t -> [`Local | `UTC] -> float -> float
+  (** [shift_epoch_time zone [`Local | `UTC] time] Takes an epoch (aka
+      "unix") time given either in local or in UTC (as indicated in the
+      arguments) and shifts it according to the local time regime in force in
+      zone.  That is, given a Local epoch time it will return the
+      corresponding UTC timestamp and vice versa.  This function is low
+      level, and is not intended to be called by most client code.  Use the
+      high level functions provided in Time instead. *)
+  val shift_epoch_time : t -> [`Local | `UTC] -> Time.t -> Time.t
 
-  (** Takes a [Time.t] and returns the next [Time.t] strictly after it, if any, that the
-      time zone UTC offset changes, and by how much it does so. *)
+  (** Takes a [Time.t] and returns the next [Time.t] strictly after it, if
+      any, that the time zone UTC offset changes, and by how much it does so. *)
   val next_clock_shift
     :  t
-    -> after:Time_internal.T.t
-    -> (Time_internal.T.t * Span.t) option
+    -> after:Time.t
+    -> (Time.t * Time.Span.t) option
 
   (** As [next_clock_shift], but strictly *before* the given time. *)
   val prev_clock_shift
     :  t
-    -> before:Time_internal.T.t
-    -> (Time_internal.T.t * Span.t) option
-
-  exception Unknown_zone of string
-  exception Invalid_file_format of string
+    -> before:Time.t
+    -> (Time.t * Time.Span.t) option
 
   module Stable : sig
     module V1 : sig
       type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
     end
   end
+end
+
+(** [module Time] is the float-time module matching [module type Time]. *)
+module Time = struct
+  module Span = struct
+    include Span
+
+    let of_int32_seconds sec = of_sec (Int32.to_float sec)
+    let of_int63_seconds sec = of_sec (Int63.to_float sec)
+  end
+
+  include Time_internal.T
+
+  let of_span_since_epoch s = of_float (Span.to_sec s)
+  let to_span_since_epoch t = Span.of_sec (to_float t)
+
+  let utc_mktime ~year ~month ~day ~ofday =
+    let ofday = Span.to_sec ofday in
+    Time_internal.utc_mktime ~year ~month ~day ~ofday
+  ;;
+end
+
+module type Zone = sig
+  module type S    = S
+  module type Time = Time
+
+  module Make (Time : Time) : S with module Time := Time
+
+  include module type of Make (Time)
+end
 
 (** {1 Notes on time}
 
-    This library replicates and extends the functionality of the standard Unix time handling
-    functions (currently exposed in the Unix module, and indirectly through the Time
-    module).
+    This library replicates and extends the functionality of the standard Unix time
+    handling functions (currently exposed in the Unix module, and indirectly through the
+    Time module).
 
     Things you should know before delving into the mess of time...
 
@@ -248,4 +315,3 @@ module type Zone = sig
     The existence of both cases make a strong argument for serializing all times in UTC,
     which doesn't suffer from these issues.
 *)
-end

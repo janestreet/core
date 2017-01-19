@@ -566,9 +566,7 @@ module Int = struct
       then Gen.singleton Empty
       else
         let range = n-1 in
-        Int.gen_between
-          ~lower_bound:Unbounded
-          ~upper_bound:(Incl (Int.max_value - range))
+        Int.gen_incl Int.min_value (Int.max_value - range)
         >>| fun lo ->
         let hi = lo + range in
         create lo hi
@@ -583,7 +581,7 @@ module Int = struct
       let%bind n = Gen.small_non_negative_int in
       (* Can only generate indices for non-empty intervals. *)
       let n = n + 1 in
-      let%bind index = Int.gen_between ~lower_bound:(Incl 0) ~upper_bound:(Excl n) in
+      let%bind index = Int.gen_incl 0 (n - 1) in
       let%map t = interval_of_length n in
       (t, index)
 
@@ -594,9 +592,12 @@ module Int = struct
       let%map nearby =
         if n = 0
         then Int.gen
-        else Int.gen_between
-               ~lower_bound:(Incl (lbound_exn t - n))
-               ~upper_bound:(Incl (ubound_exn t + n))
+        else
+          let lbound = lbound_exn t in
+          let ubound = ubound_exn t in
+          Int.gen_incl
+            (if lbound - n <= lbound then lbound - n else Int.min_value)
+            (if ubound + n >= ubound then ubound + n else Int.max_value)
       in
       (t, nearby)
 
@@ -631,7 +632,7 @@ module Int = struct
 
     let %test_unit "to_list and to_array" =
       Quickcheck.test
-        (let int = Int.gen_between ~lower_bound:(Incl (-1000)) ~upper_bound:(Incl 1000) in
+        (let int = Int.gen_incl (-1000) 1000 in
          Gen.tuple2 int int)
         ~sexp_of:[%sexp_of: int * int] ~f:(fun (lo,hi) ->
           [%test_result: int list]

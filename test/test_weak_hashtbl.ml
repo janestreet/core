@@ -1,6 +1,6 @@
 open! Core.Std
 open! Async.Std
-open! Expect_test_helpers.Std
+open! Expect_test_helpers
 open! Core.Std.Weak_hashtbl
 
 let create () = create Int.hashable

@@ -132,6 +132,10 @@ module type Span = sig
   val to_int_ns : t   -> int
   val of_int_ns : int -> t
 
+  (** The only condition [to_proportional_float] is supposed to satisfy is that for all
+      [t1, t2 : t]: [to_proportional_float t1 /. to_proportional_float t2 = t1 // t2]. *)
+  val to_proportional_float : t -> float
+
   module Stable : sig
     module V1 : Stable_int63able with type t = t
   end

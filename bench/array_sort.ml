@@ -2,7 +2,7 @@
 
 module Array = StdLabels.Array
 
-module List = Core_kernel.Core_list
+module List = Core_kernel.List
 
 type 'a t = 'a array
 

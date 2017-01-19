@@ -44,11 +44,7 @@ let%test_module "sorted list" =
   (module struct
 
     let sorted_list_tuple_gen =
-      let int_gen =
-        Int.gen_between
-          ~lower_bound:(Maybe_bound.Incl (-100))
-          ~upper_bound:(Maybe_bound.Incl 100)
-      in
+      let int_gen = Int.gen_incl (-100) 100 in
       let sorted_list_gen = Sorted_list.gen int_gen in
       Generator.tuple2 sorted_list_gen sorted_list_gen
 

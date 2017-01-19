@@ -9,8 +9,8 @@
 
 open! Import
 
-(** There is no [with sexp_of] on purpose as it could only print the ['a] value as an
-    integer.  Use [<:sexp_of< Int.t >>] or [<:sexp_of< Unit.t >>]. *)
+(** There is no [[@@deriving sexp_of]] on purpose as it could only print the ['a] value as
+    an integer.  Use [[%sexp_of: Int.t]] or [[%sexp_of: Unit.t]]. *)
 type 'a t
   = private int (** exposed only as a performance hack *)
 

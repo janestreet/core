@@ -9,8 +9,14 @@ module Unix = Core_unix
    behind requiring both lockf and flock is to prevent programs taking locks on
    network filesystems where they may not be sound.
 
-   However, since this isn't very portable, we do it only on Linux.
-*)
+   However, this assumes that [lockf] and [flock] take independent locks, which
+   is true on local Linux filesystems, but is false on many OSes (for example, Mac OS X),
+   so we use just [flock] on non-linux OSes and give up the fail-on-CIFS-and-NFS property.
+
+   We prefer [flock] and not [lockf] because [lockf] has bad semantics if used multiple
+   times within the same process: for example [lockf a; lockf b; close a] succeeds (bad!)
+   and leaves the file unlocked (bad!) if [a] and [b] are unrelated file descriptors for
+   the same file. *)
 
 let flock fd = Unix.flock fd Unix.Flock_command.lock_exclusive
 
@@ -22,14 +28,14 @@ let lockf ?(mode = Unix.F_TLOCK) fd =
   | _ -> false
 
 let lock fd =
+#ifdef JSC_LINUX_EXT
   (* [lockf] doesn't throw any exceptions, so if an exception is raised from this
      function, it must have come from [flock]. *)
   let flocked = flock fd in
   let lockfed = lockf fd in
-#ifdef JSC_LINUX_EXT
   flocked && lockfed
 #else
-  flocked || lockfed
+  flock fd
 #endif
 
 let create

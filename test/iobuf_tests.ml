@@ -1,7 +1,6 @@
 #import "../src/config.h"
 
 open! Core.Std
-open! Core.Iobuf_intf
 
 let is_error = Result.is_error
 let is_ok    = Result.is_ok
@@ -560,7 +559,7 @@ module Test (Iobuf : sig
     end
 
     module Intf (Intf : sig
-        include Accessors
+        include Iobuf_intf.Accessors
 
         val accessor_pos_1
           :  without_value : (read_write, seek) Iobuf.t
@@ -1010,7 +1009,7 @@ module Test (Iobuf : sig
       [%test_result: string] (Consume.stringo dst) ~expect:str
     ;;
 
-    let test_consume_to (blito : (Consume.src, _) consuming_blito)
+    let test_consume_to (blito : (Consume.src, _) Iobuf_intf.consuming_blito)
           create sub_string of_string to_string =
       iter_examples ~f:(fun t string ~pos ->
         let n = String.length string in
@@ -1782,7 +1781,7 @@ end))
 
 let%test_module "allocation" =
   (module struct
-    open Expect_test_helpers.Std
+    open Expect_test_helpers
 
     let%expect_test "set_bounds_and_buffer_sub" =
       let src = Iobuf.of_string "123abcDEF" in

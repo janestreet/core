@@ -61,10 +61,11 @@ let add_random_string_round_trip_test state s1 =
   let zone = (force Time.Zone.local) in
   let s1 =
     let t = Time.of_string s1 in
-    let epoch = Time.to_epoch t in
-    let utc_epoch = Time.Zone.shift_epoch_time zone `UTC epoch in
+    let utc_epoch = Time.Zone.shift_epoch_time zone `UTC t in
     let f =
-      Time.Span.of_sec (utc_epoch -. epoch) |> Time.Span.to_float |> Float.to_int
+      Time.diff utc_epoch t
+      |> Time.Span.to_float
+      |> Float.to_int
     in
     s1 ^ (if f = 0 then "Z" else Printf.sprintf "%+03d:00" (f / 3600))
   in

@@ -4,6 +4,8 @@ let threads_have_been_created = ref false
 
 include Thread
 
+let sexp_of_t t = [%message "thread" ~id:(id t : int)]
+
 let create f arg =
   threads_have_been_created := true;
   let f arg =

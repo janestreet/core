@@ -167,7 +167,8 @@ end = struct
 end
 
 include (Time_ns : module type of struct include Time_ns end
-         with module Span := Time_ns.Span)
+         with module Span   := Time_ns.Span
+          and module Stable := Time_ns.Stable)
 
 let nanosleep t = Span.of_sec (Core_unix.nanosleep (Span.to_sec t))
 

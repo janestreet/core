@@ -1,6 +1,6 @@
 open Core.Std
 open Async.Std
-open Expect_test_helpers.Std
+open Expect_test_helpers
 open Deferred.Let_syntax
 
 let run_scenario instructions =

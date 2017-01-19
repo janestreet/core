@@ -24,6 +24,8 @@ end
     eaten.  This behaviour may be adjusted by using [redirect_stdout] and
     [redirect_stderr].  See the documentation for [daemonize_wait] below.
 
+    See [daemonize_wait] for a description of [allow_threads_to_have_been_created].
+
     @raise Failure if fork was unsuccessful.
 *)
 val daemonize
@@ -31,6 +33,7 @@ val daemonize
   -> ?redirect_stderr : Fd_redirection.t
   -> ?cd : string
   -> ?umask : int (** defaults to use existing umask *)
+  -> ?allow_threads_to_have_been_created : bool (** defaults to false *)
   -> unit
   -> unit
 
@@ -51,6 +54,17 @@ val daemonize
     [daemonize], toplevel exceptions during startup would get sent to /dev/null.  With
     [daemonize_wait], toplevel exceptions can go to the terminal until you call [release].
 
+    Forking, especially to daemonize, when running multiple threads is tricky, and
+    generally a mistake.  [daemonize] and [daemonize_wait] check that the current number
+    of threads is not greater than expected.  [daemonize_wait] and [daemonize] also check
+    that threads have not been created, which is more conservative than the actual
+    requirement that multiple threads are not running.  Using
+    [~allow_threads_to_have_been_created:true] bypasses that check.  This is useful if
+    Async was previously running, and therefore threads have been created, but has since
+    been shutdown.  On non-Linux platforms, using
+    [~allow_threads_to_have_been_created:true] eliminates the protection [daemonize] and
+    [daemonize_wait] have regarding threads.
+
     @raise Failure if fork was unsuccessful.
 *)
 val daemonize_wait
@@ -58,5 +72,6 @@ val daemonize_wait
   -> ?redirect_stderr : Fd_redirection.t  (** default redirect to /dev/null *)
   -> ?cd : string  (** default / *)
   -> ?umask : int  (** defaults to use existing umask *)
+  -> ?allow_threads_to_have_been_created : bool (** defaults to false *)
   -> unit
   -> (unit -> unit) Staged.t
