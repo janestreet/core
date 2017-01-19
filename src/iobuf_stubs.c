@@ -101,10 +101,8 @@ iobuf_recvmmsg_assume_fd_is_nonblocking_stub
   unsigned i;
   int n_read;
   struct mmsghdr * hdrs;
-  struct iovec   * iovecs;
 
   hdrs   = Recvmmsg_ctx_ptr(v_recvmmsg_ctx)->hdrs;
-  iovecs = Recvmmsg_ctx_ptr(v_recvmmsg_ctx)->iovecs;
   n_read = recvmmsg(Int_val(v_fd), hdrs, Wosize_val(v_iobufs), 0, 0);
 
   for (i = 0; (int) i < n_read; i++) {

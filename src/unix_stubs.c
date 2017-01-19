@@ -235,7 +235,7 @@ CAMLprim value ml_create_process(value v_working_dir, value v_prog, value v_args
   /* No need to protect the arguments or other values: we never release
      the O'Caml lock, and we never use O'Caml values after other values
      get allocated in the O'Caml heap. */
-  typedef enum { READ_END = 0, WRITE_END = 1 } pipe_end_t;
+  enum { READ_END = 0, WRITE_END = 1 };
   value v_res;
   int stdin_pfds[2];
   int stdout_pfds[2];
