@@ -121,10 +121,9 @@ let%expect_test "Time_ns.Span.Stable.V1" =
     V.of_int63_exn (Int63.succ Int63.min_value));
   [%expect {|
     (raised (
-      exn (
-        "Span.t exceeds limits"
-        (-53375.995583650321d -49275d 49275d)
-        lib/core/src/time_ns.ml:LINE:COL))) |}];
+      "Span.t exceeds limits"
+      (-53375.995583650321d -49275d 49275d)
+      lib/core/src/time_ns.ml:LINE:COL)) |}];
 ;;
 
 let%expect_test "Time_ns.Span.Option.Stable.V1" =
@@ -197,10 +196,9 @@ let%expect_test "Time_ns.Span.Option.Stable.V1" =
     V.of_int63_exn (Int63.succ Int63.min_value));
   [%expect {|
     (raised (
-      exn (
-        "Span.t exceeds limits"
-        (-53375.995583650321d -49275d 49275d)
-        lib/core/src/time_ns.ml:LINE:COL))) |}];
+      "Span.t exceeds limits"
+      (-53375.995583650321d -49275d 49275d)
+      lib/core/src/time_ns.ml:LINE:COL)) |}];
 ;;
 
 let%expect_test "Time_ns.Stable.V1" =
@@ -274,10 +272,9 @@ let%expect_test "Time_ns.Stable.V1" =
     V.of_int63_exn (Int63.succ Int63.min_value));
   [%expect {|
     (raised (
-      exn (
-        "Span.t exceeds limits"
-        (-53375.995583650321d -49275d 49275d)
-        lib/core/src/time_ns.ml:LINE:COL))) |}];
+      "Span.t exceeds limits"
+      (-53375.995583650321d -49275d 49275d)
+      lib/core/src/time_ns.ml:LINE:COL)) |}];
 ;;
 
 let%expect_test "Time_ns.Option.Stable.V1" =
@@ -355,10 +352,9 @@ let%expect_test "Time_ns.Option.Stable.V1" =
     V.of_int63_exn (Int63.succ Int63.min_value));
   [%expect {|
     (raised (
-      exn (
-        "Span.t exceeds limits"
-        (-53375.995583650321d -49275d 49275d)
-        lib/core/src/time_ns.ml:LINE:COL))) |}];
+      "Span.t exceeds limits"
+      (-53375.995583650321d -49275d 49275d)
+      lib/core/src/time_ns.ml:LINE:COL)) |}];
 ;;
 
 let%expect_test "Time_ns.Ofday.Stable.V1" =
@@ -411,10 +407,9 @@ let%expect_test "Time_ns.Ofday.Stable.V1" =
     V.of_int63_exn (Int63.succ Int63.min_value));
   [%expect {|
     (raised (
-      exn (
-        "Span.t exceeds limits"
-        (-53375.995583650321d -49275d 49275d)
-        lib/core/src/time_ns.ml:LINE:COL))) |}];
+      "Span.t exceeds limits"
+      (-53375.995583650321d -49275d 49275d)
+      lib/core/src/time_ns.ml:LINE:COL)) |}];
 ;;
 
 let%expect_test "Time_ns.Ofday.Option.Stable.V1" =
@@ -471,10 +466,9 @@ let%expect_test "Time_ns.Ofday.Option.Stable.V1" =
     V.of_int63_exn (Int63.succ Int63.min_value));
   [%expect {|
     (raised (
-      exn (
-        "Span.t exceeds limits"
-        (-53375.995583650321d -49275d 49275d)
-        lib/core/src/time_ns.ml:LINE:COL))) |}];
+      "Span.t exceeds limits"
+      (-53375.995583650321d -49275d 49275d)
+      lib/core/src/time_ns.ml:LINE:COL)) |}];
 ;;
 
 let%test_module "Time_ns.Span" =
