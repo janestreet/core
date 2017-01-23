@@ -1,4 +1,6 @@
 open! Import
+open Import_time
+
 module Upstream = Import.Version_util
 module Unix = Core_unix
 
@@ -20,4 +22,4 @@ let time =
   match build_date, build_time with
   | None, _ | _, None -> None
   | Some build_date, Some build_time ->
-    Some (Time.of_date_ofday ~zone:Zone.utc build_date build_time)
+    Some (Time.of_date_ofday ~zone:Time.Zone.utc build_date build_time)

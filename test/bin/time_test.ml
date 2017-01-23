@@ -7,7 +7,8 @@ module Span = Time.Span
 
 let teq t1 t2 =
   if Sys.word_size = 64 then
-    Float.iround ~dir:`Zero (Time.to_float t1 *. 1000.) = Float.iround ~dir:`Zero (Time.to_float t2 *. 1000.)
+    Float.iround ~dir:`Zero (Time.Span.to_sec (Time.to_span_since_epoch t1) *. 1000.)
+    = Float.iround ~dir:`Zero (Time.Span.to_sec (Time.to_span_since_epoch t2) *. 1000.)
   else
     true (* milliseconds since 1970 too large for truncate *)
 let speq s1 s2 = round (Time.Span.to_ms s1) = round (Time.Span.to_ms s2)
@@ -22,15 +23,15 @@ let convtest ?tol f1 f2 =
 let mintime_str = "0000-01-01 00:00:00.000000"
 let maxtime_str = "3000-01-01 00:00:00.000000"
 
-let time_gen () = Time.of_float (Quickcheck_deprecated.fg ())
+let time_gen () = Time.of_span_since_epoch (Time.Span.of_sec (Quickcheck_deprecated.fg ()))
 
 let reasonable_time time = (* between about 1970 and 2070 *)
-  let time = Time.to_float time in
+  let time = Time.to_span_since_epoch time |> Time.Span.to_sec in
   time > 0. && time < 100. *. 52. *. 24. *. 60. *. 60.
 
 let similar_time time time' =
-  let time = Time.to_float time in
-  let time' = Time.to_float time' in
+  let time = Time.to_span_since_epoch time |> Time.Span.to_sec in
+  let time' = Time.to_span_since_epoch time' |> Time.Span.to_sec in
   Float.abs (time -. time') < 0.01
 
 let test_list = ref []
@@ -80,8 +81,8 @@ let () =
         let ofday' = Ofday.of_string ofday_string in
         if Ofday.(<>.) ofday ofday' then
           failwithf "(%d seconds) %s (%.20f) <> Ofday.of_string %s (%.20f)"
-            secs ofday_string (Ofday.to_float ofday) (Ofday.to_string ofday')
-            (Ofday.to_float ofday') ();
+            secs ofday_string (Ofday.to_span_since_start_of_day ofday |> Time.Span.to_sec) (Ofday.to_string ofday')
+            (Ofday.to_span_since_start_of_day ofday' |> Time.Span.to_sec) ();
         let ofday' = Ofday.of_string ofday_string in
         if Ofday.(<>.) ofday ofday' then
           failwithf "%s <> Ofday.of_string %s"
@@ -140,10 +141,10 @@ module Old_date_impl = struct
   let to_time_internal t =
     let tm_date = to_tm t in
     let time = fst (Unix.mktime tm_date) in
-    Time.of_float time
+    Time.of_span_since_epoch (Time.Span.of_sec time)
   ;;
 
-  let of_time_internal time = of_tm (Unix.localtime (Float.round ~dir:`Down (Time.to_float time)))
+  let of_time_internal time = of_tm (Unix.localtime (Float.round ~dir:`Down (Time.to_span_since_epoch time |> Time.Span.to_sec)))
 
   let add_days t n =
     let time = to_time_internal t in
@@ -314,7 +315,7 @@ let () =
           let time' = Time.of_string (Time.to_string time) in
           if similar_time time time' then true
           else begin
-            Printf.printf "\nbad time: %f\n%!" (Time.to_float time);
+            Printf.printf "\nbad time: %f\n%!" (Time.to_span_since_epoch time |> Time.Span.to_sec);
             exit 7;
           end;
         end else true
@@ -439,7 +440,7 @@ let () =
         "23:59:59";
       ] in
       let now    = Time.now () in
-      let now_f  = Time.to_float now in
+      let now_f  = Time.to_span_since_epoch now |> Time.Span.to_sec in
       let zone   = (force Time.Zone.local) in
       let utimes = Time.to_ofday ~zone now :: List.map times ~f:(Time.Ofday.of_string) in
       let after_times =
@@ -451,9 +452,9 @@ let () =
           Time.occurrence `Last_before_or_at now ~zone ~ofday:ut)
       in
       "right-side-after" @? List.for_all after_times
-        ~f:(fun t -> Time.to_float t >= now_f);
+        ~f:(fun t -> Time.Span.to_sec (Time.to_span_since_epoch t) >= now_f);
       "right-side-before" @? List.for_all before_times
-        ~f:(fun t -> Time.to_float t <= now_f);
+        ~f:(fun t -> Time.Span.to_sec (Time.to_span_since_epoch t) <= now_f);
     );
   add "occurrence_distance"
     (fun () ->
@@ -555,7 +556,7 @@ let () =
     in
     test
       "20080603-13:55:35.577"
-      (Time.of_float (Int64.float_of_bits 4742872407195577745L)))
+      (Time.of_span_since_epoch (Time.Span.of_sec (Int64.float_of_bits 4742872407195577745L))))
 ;;
 
 

@@ -18,5 +18,6 @@
       Alarm.at a >= now t - alarm_precision t
     ]}
 *)
+open Import_time
 
 include Core_kernel.Timing_wheel_ns_intf.Timing_wheel with module Time = Time

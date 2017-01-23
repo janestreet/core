@@ -13,6 +13,7 @@
 module Time_ns_in_this_directory = Time_ns
 
 open! Import
+open Import_time
 
 module Time = Time (* for the .mli *)
 

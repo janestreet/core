@@ -1,4 +1,5 @@
 open! Import
+open Import_time
 open! Int.Replace_polymorphic_compare
 
 open Piecewise_linear_intf
@@ -475,9 +476,30 @@ end
 include Stable.V1
 
 module F = Float
-module Time_ = Time (* so we can refer to it later *)
-module Time  = Make (Time)  (F)
-module Ofday = Make (Time_.Ofday) (F)
+module Time_ = struct
+  module Span = struct
+    include Time.Span
+
+    let to_float = to_sec
+    let of_float = of_sec
+  end
+
+  include (Time : (module type of (struct include Time end))
+           with module Span := Span)
+
+  let to_float t = Span.to_sec (to_span_since_epoch t)
+  let of_float f = of_span_since_epoch (Span.of_sec f)
+end
+
+module Ofday_ = struct
+  include Time_.Ofday
+
+  let to_float t = to_span_since_start_of_day t |> Time.Span.to_sec
+  let of_float s = of_span_since_start_of_day (Time.Span.of_sec s)
+end
+
+module Time  = Make (Time_)  (F)
+module Ofday = Make (Ofday_) (F)
 module Span  = Make (Time_.Span)  (F)
 module Float = Make (Float) (F)
 module Int   = Make (Int)   (F)
@@ -632,9 +654,9 @@ let%test_module _ = (module struct
 
     open Bigarray
 
-    let t0 = Time_.of_string "2014-05-20 12:34:56-04:00"
-    let t1 = Time_.of_string "2014-05-20 15:00:00-04:00"
-    let t2 = Time_.of_string "2014-05-20 16:00:00-04:00"
+    let t0 = Import_time.Time.of_string "2014-05-20 12:34:56-04:00"
+    let t1 = Import_time.Time.of_string "2014-05-20 15:00:00-04:00"
+    let t2 = Import_time.Time.of_string "2014-05-20 16:00:00-04:00"
 
     let%test "sexp" =
       let knots = [(t0, 2.); (t1, 1.5); (t2, 1.)] in

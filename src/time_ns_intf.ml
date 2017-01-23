@@ -1,4 +1,5 @@
 open! Import
+open! Import_time
 
 module type Option = sig
   include Immediate_option.Int63
@@ -172,8 +173,8 @@ module type Ofday = sig
   val to_ofday : t -> Time.Ofday.t
   val of_ofday : Time.Ofday.t -> t
 
-  val of_time : time -> zone : Zone.t -> t
-  val now : zone:Zone.t -> t
+  val of_time : time -> zone : Time.Zone.t -> t
+  val now : zone:Time.Zone.t -> t
   val local_now : unit -> t
   val of_local_time : time -> t
   val to_millisecond_string : t -> string
@@ -216,17 +217,21 @@ end
 
     - Many functions around our libraries expect [Time.t] values, so it will likely be
     much more convenient for you.
+
     - It leads to greater consistency across different codebases.  It would be bad to end
     up with half our libraries expecting [Time.t] and the other half expecting
     [Time_ns.t].
+
     - [Time_ns] silently ignores overflow.
 
     Some reasons you might want want to actually prefer [Time_ns.t] in certain cases:
 
     - It has superior performance.
+
     - It uses [int]s rather than [float]s internally, which makes certain things easier to
     reason about, since [int]s respect a bunch of arithmetic identities that [float]s
     don't, e.g., [x + (y + z) = (x + y) + z].
+
     - It is available on non-UNIX platforms, including Javascript via js_of_ocaml.
 
     All in all, it would have been nice to have chosen [Time_ns.t] to begin with, but
@@ -249,14 +254,14 @@ module type Time_ns = sig
     end
   end
 
-  (** Clock-face time of day.  See {!Time.Ofday}. *)
+  (** See {!Time.Ofday}. *)
   module Ofday : Ofday
     with type time := t
      and type span := Span.t
 
   include Identifiable with type t := t
 
-  module Zone : module type of Zone with type t = Zone.t
+  module Zone : module type of Time.Zone with type t = Time.Zone.t
 
   val epoch : t (** Unix epoch (1970-01-01 00:00:00 UTC) *)
 
@@ -283,7 +288,7 @@ module type Time_ns = sig
   val of_string_fix_proto : [ `Utc | `Local ] -> string -> t
 
   (** See [Time] for documentation. *)
-  val to_string_abs : t -> zone:Zone.t -> string
+  val to_string_abs : t -> zone:Time.Zone.t -> string
   val of_string_abs : string -> t
   val to_sec_string : t -> zone:Zone.t -> string
 
@@ -317,7 +322,7 @@ module type Time_ns = sig
     :  [ `First_after_or_at | `Last_before_or_at ]
     -> t
     -> ofday:Ofday.t
-    -> zone:Zone.t
+    -> zone:Time.Zone.t
     -> t
 
   (** [pause span] sleeps for [span] time. *)

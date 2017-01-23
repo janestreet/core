@@ -64,7 +64,7 @@ let add_random_string_round_trip_test state s1 =
     let utc_epoch = Time.Zone.shift_epoch_time zone `UTC t in
     let f =
       Time.diff utc_epoch t
-      |> Time.Span.to_float
+      |> Time.Span.to_sec
       |> Float.to_int
     in
     s1 ^ (if f = 0 then "Z" else Printf.sprintf "%+03d:00" (f / 3600))
@@ -85,7 +85,7 @@ let add_roundtrip_conversion_test state (zone_name,(zone:Time.Zone.t)) =
   add ("roundtrip conversion " ^ zone_name) (fun () ->
     let tm        = random_tm state in
     let unix_time = 1664476678.000 in
-    let time      = Time.of_float unix_time in
+    let time      = Time.of_span_since_epoch (Time.Span.of_sec unix_time) in
     let (zone_date, zone_ofday) =
       let date,ofday = Time.to_date_ofday ~zone:(force Time.Zone.local) time in
       Time.convert
@@ -110,10 +110,10 @@ let add_roundtrip_conversion_test state (zone_name,(zone:Time.Zone.t)) =
         failwith (String.concat [
           sprintf "tm: %s\n" (Sexp.to_string_hum (Unix.sexp_of_tm tm));
           sprintf "unix_time: %.20f\n" unix_time;
-          sprintf "our_time: %.20f\n" (Time.to_float time);
+          sprintf "our_time: %.20f\n" (Time.to_span_since_epoch time |> Time.Span.to_sec);
           sprintf "date, ofday: %s, %s\n"
             (Date.to_string zone_date) (Time.Ofday.to_string zone_ofday);
-          sprintf "round_trip: %.20f\n" (Time.to_float round_trip_time)
+          sprintf "round_trip: %.20f\n" (Time.to_span_since_epoch round_trip_time |> Time.Span.to_sec)
         ])
       end))
 
@@ -146,7 +146,7 @@ let add_random_localtime_tests state =
       Unix.unsetenv ("TZ");
       ignore (Unix.localtime 1000.);
 
-      let our_date,our_ofday = Time.to_date_ofday (Time.of_float unix_time) ~zone in
+      let our_date,our_ofday = Time.to_date_ofday (Time.of_span_since_epoch (Time.Span.of_sec unix_time)) ~zone in
       let test_data          =
         {Localtime_test_data.
           zone_name;

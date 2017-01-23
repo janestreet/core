@@ -74,6 +74,7 @@
 *)
 
 open! Import
+open Import_time
 
 (** these phantom types are concrete and exposed to help the compiler understand
     that zoned and unzoned cannot be the same type (which it could not know if they

@@ -1,4 +1,4 @@
-#import "../src/config.h"
+#import "../../src/config.h"
 
 open! Core.Std
 

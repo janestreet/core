@@ -1,6 +1,7 @@
 (** Piece-wise linear interpolation from float-like types to float. *)
 
 open! Import
+open Import_time
 
 open Piecewise_linear_intf
 
@@ -25,9 +26,9 @@ module Make_invertible (Key : Float_like) (Value : Float_like) : S_invertible
 
 module Ofday : S with type key = Time.Ofday.t with type value = float
 module Span  : S with type key = Time.Span.t  with type value = float
-module Time  : S with type key = Time.t  with type value = float
-module Float : S with type key = float   with type value = float
-module Int   : S with type key = int     with type value = float
+module Time  : S with type key = Time.t       with type value = float
+module Float : S with type key = float        with type value = float
+module Int   : S with type key = int          with type value = float
 
 (** Note that applications of the following functors are only as stable
     as [Key] and [Value]. *)

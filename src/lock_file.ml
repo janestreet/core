@@ -1,5 +1,6 @@
 open! Import
 open! Int.Replace_polymorphic_compare
+open Import_time
 
 module Unix = Core_unix
 

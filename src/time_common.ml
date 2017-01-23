@@ -2,6 +2,7 @@
     and [Core.Std.Time_ns].  We verify that that relation holds in check_std.ml. *)
 
 open! Import
+open! Import_time
 
 module type S = sig
   type t

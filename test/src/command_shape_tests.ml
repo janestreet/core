@@ -6,7 +6,7 @@ open Deferred.Let_syntax
 let run_scenario instructions =
   run "env"
     ("OCAMLRUNPARAM="  (* disable backtraces *)
-     :: "../test-bin/command_shape_test_parent.exe"
+     :: "../bin/command_shape_test_parent.exe"
      :: [%of_sexp: string list] (Sexp.of_string instructions))
 ;;
 

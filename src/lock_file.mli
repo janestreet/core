@@ -6,6 +6,7 @@
 *)
 
 open! Import
+open Import_time
 
 (** [create ?close_on_exec ?message path] tries to create a file at [path] containing the
     text [message], which defaults to the pid of the locking process.  It returns true on

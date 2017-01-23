@@ -23,7 +23,7 @@ let rec run ~num_retries =
 
   let wait_for_v tmout =
     let timeout = Unix.gettimeofday () +. tmout in
-    not (Condition.timedwait cnd_v_is_true v_mtx (Time.of_float timeout))
+    not (Condition.timedwait cnd_v_is_true v_mtx (Time.of_span_since_epoch (Time.Span.of_sec timeout)))
   in
 
   Mutex.lock v_mtx;

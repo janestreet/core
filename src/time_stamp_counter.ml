@@ -125,7 +125,9 @@ module Calibrator = struct
 
   let tsc_to_time =
     let convert t tsc base mul =
-      Time.of_float (base +. (mul *. Int63.to_float (diff tsc t.tsc)))
+      Time.of_span_since_epoch
+        (Time.Span.of_sec
+           (base +. (mul *. Int63.to_float (diff tsc t.tsc))))
     in
     fun t tsc ->
       if tsc < t.monotonic_until_tsc
@@ -162,7 +164,7 @@ module Calibrator = struct
 
 
   let calibrate_using t ~tsc ~time ~am_initializing =
-    let estimated_time = Time.to_float (tsc_to_time t tsc)   in
+    let estimated_time = Time.Span.to_sec (Time.to_span_since_epoch (tsc_to_time t tsc)) in
     let time_diff_est  = time -. estimated_time              in
     let time_diff      = time -. t.time                      in
     let tsc_diff       = Int63.to_float (diff tsc t.tsc) in
@@ -228,7 +230,7 @@ module Calibrator = struct
     t.monotonic_nanos_per_cycle <- t.monotonic_sec_per_cycle *. 1E9;
   ;;
 
-  let now_float () = Time.to_float (Time.now ())
+  let now_float () = Time.Span.to_sec (Time.to_span_since_epoch (Time.now ()))
 
   let initialize t samples =
     List.iter samples ~f:(fun (tsc, time) ->
@@ -296,7 +298,7 @@ external now : unit -> tsc = "tsc_get"
 module Calibrator = struct
   type t = unit [@@deriving bin_io, sexp]
 
-  let tsc_to_time _t tsc = Time.of_float (Int63.to_float tsc *. 1e-9)
+  let tsc_to_time _t tsc = Time.of_span_since_epoch (Time.Span.of_sec (Int63.to_float tsc *. 1e-9))
 
   let tsc_to_nanos_since_epoch _t tsc = tsc
 
@@ -362,7 +364,9 @@ let%test_module _ = (module struct
     let calibrator = Calibrator.create () in
     let last = ref 0. in
     for i = 1 to 10_000_000 do
-      let cur = Time.to_float (to_time ~calibrator (now ())) in
+      let cur =
+        Time.Span.to_sec (Time.to_span_since_epoch (to_time ~calibrator (now ())))
+      in
       (* printf "%d %.9f\n%!" i (cur -. !last); *)
       if Float.(<) (cur -. !last) 0.
       then failwithf "Time is not monotonic (diff %.12f)" (cur -. !last) ();
@@ -391,7 +395,11 @@ let%test_module _ = (module struct
     Calibrator.initialize calibrator init_samples;
     let ewma_error = ref 0. in
     List.iter samples ~f:(fun (tsc, time) ->
-      let cur_error = scale_us_abs (time -. Time.to_float (to_time ~calibrator tsc)) in
+      let cur_error =
+        scale_us_abs
+          (time -. Time.Span.to_sec
+                     (Time.to_span_since_epoch (to_time ~calibrator tsc)))
+      in
       ewma_error := ewma ~alpha ~old:!ewma_error ~add:cur_error;
       if verbose then
         printf "%f %f %s %f\n%!" cur_error !ewma_error (Int63.to_string tsc) time;

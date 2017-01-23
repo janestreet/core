@@ -15,7 +15,7 @@ let%test_unit _ =
   List.iter
     [ Time.sub start (sec (2. *. Float.of_int64 (Int63.(to_int64 max_value))))
     ; Time.add start (sec (2. *. Float.of_int64 (Int63.(to_int64 max_value))))
-    ; Time.of_float Float.max_value
+    ; Time.of_span_since_epoch (Time.Span.of_sec Float.max_value)
     ]
     ~f:(fun time ->
       assert (does_raise (fun () -> interval_num t time));

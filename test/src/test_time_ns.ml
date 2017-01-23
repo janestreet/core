@@ -97,7 +97,7 @@ let%expect_test "Time_ns.Span.Stable.V1" =
     ((sexp   0s)
      (bin_io "\001")
      (int63  1))
-    (* imprecise: require-failed: lib/core/test/test_time_ns.ml:LINE:COL.
+    (* imprecise: require-failed: lib/core/test/src/test_time_ns.ml:LINE:COL.
        Do not 'X' this CR; instead make the required property true,
        which will make the CR disappear.  For more information, see
        [Expect_test_helpers.Helpers.require]. *)
@@ -108,7 +108,7 @@ let%expect_test "Time_ns.Span.Stable.V1" =
     ((sexp   11.2754s)
      (bin_io "\252\128\143\017\160\002\000\000\000")
      (int63  11275440000))
-    (* imprecise: require-failed: lib/core/test/test_time_ns.ml:LINE:COL.
+    (* imprecise: require-failed: lib/core/test/src/test_time_ns.ml:LINE:COL.
        Do not 'X' this CR; instead make the required property true,
        which will make the CR disappear.  For more information, see
        [Expect_test_helpers.Helpers.require]. *)
@@ -172,7 +172,7 @@ let%expect_test "Time_ns.Span.Option.Stable.V1" =
     ((sexp (0s))
      (bin_io "\001")
      (int63  1))
-    (* imprecise: require-failed: lib/core/test/test_time_ns.ml:LINE:COL.
+    (* imprecise: require-failed: lib/core/test/src/test_time_ns.ml:LINE:COL.
        Do not 'X' this CR; instead make the required property true,
        which will make the CR disappear.  For more information, see
        [Expect_test_helpers.Helpers.require]. *)
@@ -183,7 +183,7 @@ let%expect_test "Time_ns.Span.Option.Stable.V1" =
     ((sexp (11.2754s))
      (bin_io "\252\128\143\017\160\002\000\000\000")
      (int63  11275440000))
-    (* imprecise: require-failed: lib/core/test/test_time_ns.ml:LINE:COL.
+    (* imprecise: require-failed: lib/core/test/src/test_time_ns.ml:LINE:COL.
        Do not 'X' this CR; instead make the required property true,
        which will make the CR disappear.  For more information, see
        [Expect_test_helpers.Helpers.require]. *)
@@ -211,6 +211,7 @@ let%expect_test "Time_ns.Stable.V1" =
     make         1_234_560_000_000L;
     make    80_000_006_400_000_000L;
     make 1_381_156_200_010_101_000L;
+    make 4_110_307_199_999_999_000L;
   ];
   [%expect {|
     (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
@@ -228,25 +229,7 @@ let%expect_test "Time_ns.Stable.V1" =
      (int63  80000006400000000))
     ((sexp (2013-10-07 10:30:00.010101-04:00))
      (bin_io "\252\b1\238\b?\218*\019")
-     (int63  1381156200010101000)) |}];
-  (* stable checks for values that do not work on 32-bit builds *)
-  begin
-    let list = [
-      make 4_110_307_199_999_999_000L;
-    ] in
-    match Word_size.word_size with
-    | W64 -> print_and_check_stable_int63able_type [%here] (module V) list
-    | W32 ->
-      require [%here] (List.for_all list ~f:(fun t ->
-        does_raise (fun () -> V.sexp_of_t t)));
-      print_endline {|
-        (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
-        ((sexp (2100-04-01 18:59:59.999999-05:00))
-         (bin_io "\252\024\252\186\253\158\190\n9")
-         (int63  4110307199999999000)) |};
-  end;
-  [%expect {|
-    (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
+     (int63  1381156200010101000))
     ((sexp (2100-04-01 18:59:59.999999-05:00))
      (bin_io "\252\024\252\186\253\158\190\n9")
      (int63  4110307199999999000)) |}];
@@ -259,7 +242,7 @@ let%expect_test "Time_ns.Stable.V1" =
     ((sexp (1969-12-31 19:00:00.000000-05:00))
      (bin_io "\001")
      (int63  1))
-    (* imprecise: require-failed: lib/core/test/test_time_ns.ml:LINE:COL.
+    (* imprecise: require-failed: lib/core/test/src/test_time_ns.ml:LINE:COL.
        Do not 'X' this CR; instead make the required property true,
        which will make the CR disappear.  For more information, see
        [Expect_test_helpers.Helpers.require]. *)
@@ -287,6 +270,7 @@ let%expect_test "Time_ns.Option.Stable.V1" =
     make           1_234_560_000_000L;
     make      80_000_006_400_000_000L;
     make   1_381_156_200_010_101_000L;
+    make   4_110_307_199_999_999_000L;
     make (-4_611_686_018_427_387_904L);
   ];
   [%expect {|
@@ -306,30 +290,12 @@ let%expect_test "Time_ns.Option.Stable.V1" =
     ((sexp ((2013-10-07 10:30:00.010101-04:00)))
      (bin_io "\252\b1\238\b?\218*\019")
      (int63  1381156200010101000))
-    ((sexp ())
-     (bin_io "\252\000\000\000\000\000\000\000\192")
-     (int63  -4611686018427387904)) |}];
-  (* stable checks for values that do not work on 32-bit builds *)
-  begin
-    let list = [
-      make 4_110_307_199_999_999_000L;
-    ] in
-    match Word_size.word_size with
-    | W64 -> print_and_check_stable_int63able_type [%here] (module V) list
-    | W32 ->
-      require [%here] (List.for_all list ~f:(fun t ->
-        does_raise (fun () -> V.sexp_of_t t)));
-      print_endline {|
-        (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
-        ((sexp ((2100-04-01 18:59:59.999999-05:00)))
-         (bin_io "\252\024\252\186\253\158\190\n9")
-         (int63  4110307199999999000)) |};
-  end;
-  [%expect {|
-    (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
     ((sexp ((2100-04-01 18:59:59.999999-05:00)))
      (bin_io "\252\024\252\186\253\158\190\n9")
-     (int63  4110307199999999000)) |}];
+     (int63  4110307199999999000))
+    ((sexp ())
+     (bin_io "\252\000\000\000\000\000\000\000\192")
+     (int63  -4611686018427387904)) |} ];
   (* stable checks for values that do not precisely round-trip *)
   print_and_check_stable_int63able_type [%here] (module V) ~cr:"imprecise:" [
     make 1L;
@@ -339,7 +305,7 @@ let%expect_test "Time_ns.Option.Stable.V1" =
     ((sexp ((1969-12-31 19:00:00.000000-05:00)))
      (bin_io "\001")
      (int63  1))
-    (* imprecise: require-failed: lib/core/test/test_time_ns.ml:LINE:COL.
+    (* imprecise: require-failed: lib/core/test/src/test_time_ns.ml:LINE:COL.
        Do not 'X' this CR; instead make the required property true,
        which will make the CR disappear.  For more information, see
        [Expect_test_helpers.Helpers.require]. *)
@@ -394,7 +360,7 @@ let%expect_test "Time_ns.Ofday.Stable.V1" =
     ((sexp   00:00:00.000000)
      (bin_io "\001")
      (int63  1))
-    (* imprecise: require-failed: lib/core/test/test_time_ns.ml:LINE:COL.
+    (* imprecise: require-failed: lib/core/test/src/test_time_ns.ml:LINE:COL.
        Do not 'X' this CR; instead make the required property true,
        which will make the CR disappear.  For more information, see
        [Expect_test_helpers.Helpers.require]. *)
@@ -453,7 +419,7 @@ let%expect_test "Time_ns.Ofday.Option.Stable.V1" =
     ((sexp (00:00:00.000000))
      (bin_io "\001")
      (int63  1))
-    (* imprecise: require-failed: lib/core/test/test_time_ns.ml:LINE:COL.
+    (* imprecise: require-failed: lib/core/test/src/test_time_ns.ml:LINE:COL.
        Do not 'X' this CR; instead make the required property true,
        which will make the CR disappear.  For more information, see
        [Expect_test_helpers.Helpers.require]. *)
@@ -617,7 +583,8 @@ let%test_module "Time_ns" =
 
     let%test_unit "Time.t -> Time_ns.t round trip" =
       let open Time in
-      let sexp_of_t t = [%sexp_of: t * float] (t, to_float t) in (* more precise *)
+      let time_to_float t = Time.to_span_since_epoch t |> Time.Span.to_sec in
+      let sexp_of_t t = [%sexp_of: t * float] (t, time_to_float t) in (* more precise *)
       let us_since_epoch time = Time.(Span.to_us (diff time epoch)) in
       let min_us_since_epoch = us_since_epoch min_time_value in
       let max_us_since_epoch = us_since_epoch max_time_value in
@@ -714,7 +681,8 @@ let%test_module "Time_ns" =
     let%test _ = epoch = of_span_since_epoch Span.zero
 
     let%test_unit "round trip from [Time.t] to [t] and back" =
-      let times = List.map ~f:Time.of_float [ 0.0; 1.0; 1.123456789 ] in
+      let time_of_float f = Time.of_span_since_epoch (Time.Span.of_sec f) in
+      let times = List.map ~f:time_of_float [ 0.0; 1.0; 1.123456789 ] in
       List.iter times ~f:(fun time ->
         let res = to_time (of_time time) in
         [%test_result: Time.t] ~equal:Time.(=.) ~expect:time res

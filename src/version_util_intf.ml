@@ -1,4 +1,5 @@
 open! Import
+open Import_time
 
 module Version_util = Core_kernel.Std.Version_util
 

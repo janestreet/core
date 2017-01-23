@@ -25,6 +25,7 @@
 *)
 
 open! Import
+open Import_time
 
 (** {1 argument types} *)
 module Arg_type : sig
@@ -87,28 +88,31 @@ module Arg_type : sig
         force a string starting with a hyphen to be interpreted as an anonymous argument
         rather than as a flag, or you can just make it a parameter to a flag to avoid the
         issue. *)
-    val int                      : int       t
-    val char                     : char      t
-    val float                    : float     t
-    val bool                     : bool      t
-    val date                     : Date.t    t
-    val percent                  : Percent.t t
+    val int                : int                t
+    val char               : char               t
+    val float              : float              t
+    val bool               : bool               t
+    val date               : Date.t             t
+    val percent            : Percent.t          t
+    val time               : Time.t             t
 
-    (** [time] requires a time zone. *)
-    val time                     : Time.t             t
-    val time_ofday               : Time.Ofday.Zoned.t t
+    (** requires a time zone *)
+    val time_ofday         : Time.Ofday.Zoned.t t
 
-    (** Use [time_ofday_unzoned] only when time zone is implied somehow. *)
-    val time_ofday_unzoned       : Time.Ofday.t       t
-    val time_zone                : Time.Zone.t        t
-    val time_span                : Time.Span.t        t
+    (** for when zone is implied *)
+    val time_ofday_unzoned : Time.Ofday.t       t
 
-    (** [file] uses bash autocompletion. *)
-    val file                     : string             t
-    val host_and_port            : Host_and_port.t    t
-    val ip_address               : Unix.inet_addr     t
-    val sexp                     : Sexp.t             t
-    val sexp_conv                : (Sexp.t -> 'a) -> 'a t
+    val time_zone          : Time.Zone.t        t
+    val time_span          : Time.Span.t        t
+
+    (** uses bash autocompletion *)
+    val file               : string             t
+
+    val host_and_port      : Host_and_port.t    t
+    val ip_address         : Unix.inet_addr     t
+    val sexp               : Sexp.t             t
+
+    val sexp_conv          : (Sexp.t -> 'a) -> 'a t
   end
 end
 
@@ -205,7 +209,7 @@ module Anons : sig
 
       {[
         t2 ("FOO" %: foo) (maybe (t2 ("BAR" %: bar) ("BAZ" %: baz)))]
-       ]}
+      ]}
 
       Sequences of 5 or more anonymous arguments can be built up using
       nested tuples:
@@ -374,52 +378,52 @@ module Spec : sig
   (** composable command-line specifications *)
   type (-'main_in, +'main_out) t
   (**
-      Ultimately one forms a basic command by combining a spec of type
-      [('main, unit -> unit) t] with a main function of type ['main]; see the [basic]
-      function below.  Combinators in this library incrementally build up the type of main
-      according to what command-line parameters it expects, so the resulting type of
-      [main] is something like:
+     Ultimately one forms a basic command by combining a spec of type
+     [('main, unit -> unit) t] with a main function of type ['main]; see the [basic]
+     function below.  Combinators in this library incrementally build up the type of main
+     according to what command-line parameters it expects, so the resulting type of
+     [main] is something like:
 
-      [arg1 -> ... -> argN -> unit -> unit]
+     [arg1 -> ... -> argN -> unit -> unit]
 
-      It may help to think of [('a, 'b) t] as a function space ['a -> 'b] embellished with
-      information about:
+     It may help to think of [('a, 'b) t] as a function space ['a -> 'b] embellished with
+     information about:
 
-      {ul {- how to parse command line}
-          {- what the command does and how to call it}
-          {- how to auto-complete a partial command line}}
+     {ul {- how to parse command line}
+     {- what the command does and how to call it}
+     {- how to auto-complete a partial command line}}
 
-      One can view a value of type [('main_in, 'main_out) t] as function that transforms a
-      main function from type ['main_in] to ['main_out], typically by supplying some
-      arguments.  E.g. a value of type [Spec.t] might have type:
+     One can view a value of type [('main_in, 'main_out) t] as function that transforms a
+     main function from type ['main_in] to ['main_out], typically by supplying some
+     arguments.  E.g. a value of type [Spec.t] might have type:
 
-      {[
-        (arg1 -> ... -> argN -> 'r, 'r) Spec.t
-      ]}
+     {[
+       (arg1 -> ... -> argN -> 'r, 'r) Spec.t
+     ]}
 
-      Such a value can transform a main function of type [arg1 -> ... -> argN -> 'r] by
-      supplying it argument values of type [arg1], ..., [argn], leaving a main function
-      whose type is ['r].  In the end, [Command.basic] takes a completed spec where
-      ['r = unit -> unit], and hence whose type looks like:
+     Such a value can transform a main function of type [arg1 -> ... -> argN -> 'r] by
+     supplying it argument values of type [arg1], ..., [argn], leaving a main function
+     whose type is ['r].  In the end, [Command.basic] takes a completed spec where
+     ['r = unit -> unit], and hence whose type looks like:
 
-      {[
-        (arg1 -> ... -> argN -> unit -> unit, unit -> unit) Spec.t
-      ]}
+     {[
+       (arg1 -> ... -> argN -> unit -> unit, unit -> unit) Spec.t
+     ]}
 
-      A value of this type can fully apply a main function of type
-      [arg1 -> ... -> argN -> unit -> unit] to all its arguments.
+     A value of this type can fully apply a main function of type
+     [arg1 -> ... -> argN -> unit -> unit] to all its arguments.
 
-      The final unit argument allows the implementation to distinguish between the phases
-      of (1) parsing the command line and (2) running the body of the command.  Exceptions
-      raised in phase (1) lead to a help message being displayed alongside the exception.
-      Exceptions raised in phase (2) are displayed without any command line help.
+     The final unit argument allows the implementation to distinguish between the phases
+     of (1) parsing the command line and (2) running the body of the command.  Exceptions
+     raised in phase (1) lead to a help message being displayed alongside the exception.
+     Exceptions raised in phase (2) are displayed without any command line help.
 
-      The view of [('main_in, main_out) Spec.t] as a function from ['main_in] to
-      ['main_out] is directly reflected by the [step] function, whose type is:
+     The view of [('main_in, main_out) Spec.t] as a function from ['main_in] to
+     ['main_out] is directly reflected by the [step] function, whose type is:
 
-      {[
-        val step : ('m1 -> 'm2) -> ('m1, 'm2) t
-      ]}
+     {[
+       val step : ('m1 -> 'm2) -> ('m1, 'm2) t
+     ]}
   *)
 
   (** [spec1 ++ spec2 ++ ... ++ specN] composes spec1 through specN.
@@ -428,7 +432,7 @@ module Spec : sig
 
       {[
         spec_a: (a1 -> ... -> aN -> 'ra, 'ra) Spec.t
-        spec_b: (b1 -> ... -> bM -> 'rb, 'rb) Spec.t
+                  spec_b: (b1 -> ... -> bM -> 'rb, 'rb) Spec.t
       ]}
 
       then [spec_a ++ spec_b] has the following type:
@@ -446,7 +450,7 @@ module Spec : sig
 
       {[
         spec_a: \/ra. (a1 -> ... -> aN -> 'ra) -> 'ra
-        spec_b: \/rb. (b1 -> ... -> bM -> 'rb) -> 'rb
+                                                    spec_b: \/rb. (b1 -> ... -> bM -> 'rb) -> 'rb
       ]}
 
       Under this interpretation, the composition of [spec_a] and [spec_b] has type:
@@ -473,19 +477,19 @@ module Spec : sig
 
   (** add a leftmost parameter onto the type of main *)
   val (+<) : ('m1, 'm2) t -> 'a param -> ('a -> 'm1, 'm2) t
-    (** this function should only be used as a workaround in situations where the
-        order of composition is at odds with the order of anonymous arguments due
-        to factoring out some common spec *)
+  (** this function should only be used as a workaround in situations where the
+      order of composition is at odds with the order of anonymous arguments due
+      to factoring out some common spec *)
 
   (** combinator for patching up how parameters are obtained or presented *)
   val step : ('m1 -> 'm2) -> ('m1, 'm2) t
   (** Here are a couple examples of some of its many uses
       {ul
-        {li {i introducing labeled arguments}
-            {v step (fun m v -> m ~foo:v)
+      {li {i introducing labeled arguments}
+      {v step (fun m v -> m ~foo:v)
                +> flag "-foo" no_arg : (foo:bool -> 'm, 'm) t v}}
-        {li {i prompting for missing values}
-            {v step (fun m user -> match user with
+      {li {i prompting for missing values}
+      {v step (fun m user -> match user with
                  | Some user -> m user
                  | None -> print_string "enter username: "; m (read_line ()))
                +> flag "-user" (optional string) ~doc:"USER to frobnicate"
@@ -520,13 +524,13 @@ module Spec : sig
   val wrap : (run:('m1 -> 'r1) -> main:'m2 -> 'r2) -> ('m1, 'r1) t -> ('m2, 'r2) t
   (** Here are two examples of command classes defined using [wrap]
       {ul
-        {li {i print top-level exceptions to stderr}
-            {v wrap (fun ~run ~main ->
+      {li {i print top-level exceptions to stderr}
+      {v wrap (fun ~run ~main ->
                  Exn.handle_uncaught ~exit:true (fun () -> run main)
                ) : ('m, unit) t -> ('m, unit) t
              v}}
-        {li {i iterate over lines from stdin}
-            {v wrap (fun ~run ~main ->
+      {li {i iterate over lines from stdin}
+      {v wrap (fun ~run ~main ->
                  In_channel.iter_lines stdin ~f:(fun line -> run (main line))
                ) : ('m, unit) t -> (string -> 'm, unit) t
              v}}
@@ -739,12 +743,12 @@ val shape : t -> Shape.t
     output will be appended to the list of arguments being processed.  For example,
     suppose a program like this is compiled into [exe]:
 
-      {[
-        let bar = Command.basic ...
-        let foo = Command.group ~summary:... ["bar", bar]
-        let main = Command.group ~summary:... ["foo", foo]
-        Command.run ~extend:(fun _ -> ["-baz"]) main
-      ]}
+    {[
+      let bar = Command.basic ...
+                  let foo = Command.group ~summary:... ["bar", bar]
+      let main = Command.group ~summary:... ["foo", foo]
+                   Command.run ~extend:(fun _ -> ["-baz"]) main
+    ]}
 
     Then if a user ran [exe f b], [extend] would be passed [["foo"; "bar"]] and ["-baz"]
     would be appended to the command line for processing by [bar].  This can be used to

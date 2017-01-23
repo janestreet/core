@@ -1,4 +1,5 @@
 open! Import
+open Import_time
 
 type zoned   = Zoned [@@deriving compare]
 type unzoned = Unzoned [@@deriving compare]
@@ -789,9 +790,6 @@ let calculate_ofday_diff ~s ~e =
   Time.Span.(-) e s
 ;;
 
-let last_ofday =
-  Time.Span.of_sec (Float.one_ulp `Down 86400.)
-  |> Time.Ofday.of_span_since_start_of_day
 ;;
 
 let s_is_inrange_today_after_ofday ~start_inc_exc ~s ~ofday =
@@ -801,21 +799,23 @@ let s_is_inrange_today_after_ofday ~start_inc_exc ~s ~ofday =
 ;;
 
 let maybe_exclude_without_crossing_day_boundary s =
-  if Time.Ofday.(=) s last_ofday
-  then s
-  else
-    Time.Ofday.to_float s
-    |> Float.one_ulp `Up
-    |> Time.Ofday.of_float
+  match Time.Ofday.next s with
+  | None      -> s
+  | Some next -> next
 ;;
 
-let boundary_end ~start_inc_exc ~s ~ofday =
-  if s_is_inrange_today_after_ofday ~start_inc_exc ~s ~ofday
-  then
-    match start_inc_exc with
-    | Inclusive -> s
-    | Exclusive -> maybe_exclude_without_crossing_day_boundary s
-  else last_ofday
+let boundary_end =
+  let last_ofday =
+    Time.Ofday.prev (Time.Ofday.of_span_since_start_of_day (Time.Span.of_sec 86_400.))
+    |> Option.value_exn
+  in
+  fun ~start_inc_exc ~s ~ofday ->
+    if s_is_inrange_today_after_ofday ~start_inc_exc ~s ~ofday
+    then
+      match start_inc_exc with
+      | Inclusive -> s
+      | Exclusive -> maybe_exclude_without_crossing_day_boundary s
+    else last_ofday
 ;;
 
 let boundary_span ~start_inc_exc ~s ~end_inc_exc ~e it : Valid_invalid_span.t =
@@ -840,9 +840,8 @@ let span_from_field it in_set field : Valid_invalid_span.t =
 ;;
 
 let span_to_next_representable_time time =
-  let time = Time.to_epoch time in
-  let next_representable_time = Float.one_ulp `Up time in
-  Time.Span.of_sec (next_representable_time -. time)
+  let next_representable_time = Time.next time in
+  Time.diff next_representable_time time
 ;;
 
 let includes (t : (zoned, _) Internal.t) (time : Time.t) : Valid_invalid_span.t =
@@ -1281,7 +1280,7 @@ let get_event seq ~stop_time ~f =
 
 let next_between_gen t start_time stop_time ~f =
   (* go back in time slightly in case there is an event exactly on start_time *)
-  let start_time = Time.of_float (Float.one_ulp `Down (Time.to_epoch start_time)) in
+  let start_time = Time.prev start_time in
   let ( `Started_in_range (_, seq)
       | `Started_out_of_range seq ) =
     to_endless_sequence t ~start_time ~emit:Transitions

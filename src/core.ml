@@ -1,9 +1,6 @@
 module Std = struct
   include Core_kernel.Std_kernel
 
-  (* Can't go in Common for circular-reference reasons *)
-  let sec = Time.Span.of_sec
-
   let ( ^/ ) = Core_filename.concat
 
   module Bigbuffer          = Bigbuffer
@@ -14,7 +11,7 @@ module Std = struct
   module Condition          = Core_condition
   module Crc                = Crc
   module Daemon             = Daemon
-  module Date               = Date
+  module Date               = Core_date
   module Filename           = Core_filename
   module Interval           = Interval
   module Iobuf              = Iobuf
@@ -32,7 +29,7 @@ module Std = struct
   module Squeue             = Squeue
   module Sys                = Core_sys
   module Thread             = Core_thread
-  module Time               = Time
+  module Time               = Core_time_float
   module Time_common        = Time_common
   module Time_ns            = Time_ns
   module Time_stamp_counter = Time_stamp_counter
@@ -42,6 +39,9 @@ module Std = struct
   module Uuid               = Uuid
   module Version_util       = Version_util
   module Weak_hashtbl       = Weak_hashtbl
+
+  (* Can't go in Common for circular-reference reasons *)
+  let sec = Time.Span.of_sec
 
   (* See [Core_kernel.Std_kernel] for the reason that we perform top-level side effects in
      the [Std] modules. *)
@@ -53,5 +53,4 @@ end
 include Std
 module Stable = Stable
 
-module Time0         = Time0
-module Time_internal = Time_internal
+

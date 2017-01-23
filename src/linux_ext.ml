@@ -220,13 +220,13 @@ module Clock = struct
   (* These functions should be in Unix, but due to the dependency on Time,
      this is not possible (cyclic dependency). *)
   external get_time : t -> float = "unix_clock_gettime"
-  let get_time t = Time.Span.of_float (get_time t)
+  let get_time t = Time.Span.of_sec (get_time t)
 
   external set_time : t -> float -> unit = "unix_clock_settime"
-  let set_time t s = set_time t (Time.Span.to_float s)
+  let set_time t s = set_time t (Time.Span.to_sec s)
 
   external get_resolution : t -> float = "unix_clock_getres"
-  let get_resolution t = Time.Span.of_float (get_resolution t)
+  let get_resolution t = Time.Span.of_sec (get_resolution t)
 
   external get_process_clock : unit -> t = "unix_clock_process_cputime_id_stub"
 

@@ -69,11 +69,11 @@ let test_with_allocations ~num_queue_elements ~num_steps =
   let q : unit Timing_wheel.Alarm.t Queue.t = Queue.create () in
   for key = 1 to num_steps do
     Queue.enqueue q (Timing_wheel.add tw ()
-                       ~at:(Time.of_float (float key /. float num_steps)));
+                       ~at:(Time.of_span_since_epoch (Time.Span.of_sec (float key /. float num_steps))));
     if key > num_queue_elements then
       Timing_wheel.advance_clock tw
-        ~to_:(Time.of_float
-                (float (key - num_queue_elements) /. float num_steps))
+        ~to_:(Time.of_span_since_epoch (Time.Span.of_sec
+                (float (key - num_queue_elements) /. float num_steps)))
         ~handle_fired:(fun _ -> ignore (Queue.dequeue_exn q));
   done;
   let user_plus_sys = Time.Span.(-) (user_plus_sys ()) user_plus_sys_at_start in

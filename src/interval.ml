@@ -3,6 +3,8 @@ module Time_ns_in_this_directory = Time_ns
 open! Import
 open! Int.Replace_polymorphic_compare
 
+module Core_time = Import_time.Time
+
 module Stable = struct
   module V1 = struct
     module T = struct
@@ -50,7 +52,7 @@ module Stable = struct
 
     module Time = struct
       module T = struct
-        type t = Time.Stable.V1.t interval [@@deriving sexp, bin_io, compare]
+        type t = Core_time.Stable.V1.t interval [@@deriving sexp, bin_io, compare]
       end
       include T
       include Comparator.Stable.V1.Make (T)
@@ -67,7 +69,7 @@ module Stable = struct
 
     module Ofday = struct
       module T = struct
-        type t = Ofday.Stable.V1.t interval [@@deriving sexp, bin_io, compare]
+        type t = Core_time.Ofday.Stable.V1.t interval [@@deriving sexp, bin_io, compare]
       end
       include T
       include Comparator.Stable.V1.Make (T)
@@ -114,17 +116,17 @@ module Stable = struct
       include V1.Time
       let equal x1 x2 = (V1.T.compare Time.compare x1 x2) = 0
 
-      let zone = Zone.of_string "America/New_York"
+      let zone = Core_time.Zone.find_exn "America/New_York"
 
       module V = V1.T.Variants
       let tests =
         let t1 = Time.of_date_ofday ~zone
           (Date.create_exn ~y:2013 ~m:Month.Aug ~d:6)
-          (Ofday.create  ~hr:7 ~min:30 ~sec:7 ~ms:12 ~us:5 ())
+          (Core_time.Ofday.create  ~hr:7 ~min:30 ~sec:7 ~ms:12 ~us:5 ())
         in
         let t2 = Time.of_date_ofday ~zone
           (Date.create_exn ~y:2014 ~m:Month.Sep ~d:8)
-          (Ofday.create  ~hr:10 ~min:10 ~sec:0 ~ms:22 ~us:0 ())
+          (Core_time.Ofday.create  ~hr:10 ~min:10 ~sec:0 ~ms:22 ~us:0 ())
         in
         make_tests_v1
           ~non_empty: [ (t1, t2),
@@ -140,12 +142,12 @@ module Stable = struct
 
   let%test_module "Interval.V1.Ofday" = (module Stable_unit_test.Make(struct
     include V1.Ofday
-    let equal x1 x2 = (V1.T.compare Ofday.compare x1 x2) = 0
+    let equal x1 x2 = (V1.T.compare Core_time.Ofday.compare x1 x2) = 0
 
     module V = V1.T.Variants
     let tests =
-      let t1 = Ofday.create ~hr:7 ~min:30 ~sec:7 ~ms:12 ~us:5 () in
-      let t2 = Ofday.create ~hr:9 ~min:45 ~sec:8 ~ms:0 ~us:1 () in
+      let t1 = Core_time.Ofday.create ~hr:7 ~min:30 ~sec:7 ~ms:12 ~us:5 () in
+      let t2 = Core_time.Ofday.create ~hr:9 ~min:45 ~sec:8 ~ms:0 ~us:1 () in
       make_tests_v1
         ~non_empty:
         [ (t1, t2) , "(07:30:07.012005 09:45:08.000001)",
@@ -444,8 +446,8 @@ module type S_time = Interval_intf.S_time
   with type 'a poly_t := 'a t
   with type 'a poly_set := 'a Set.t
 
-module Float = Make (Float)
-module Ofday = Make (Ofday)
+module Float    = Make (Float)
+module Ofday    = Make (Core_time.Ofday)
 module Ofday_ns = Make (Time_ns_in_this_directory.Ofday)
 
 module Int = struct
@@ -800,10 +802,19 @@ end)
 
 module type Time_bound = sig
   type t [@@deriving bin_io, sexp]
+
   include Comparable.S with type t := t
+
   module Ofday : sig
     type t
   end
+
+  module Zone : sig
+    type t
+
+    val local : t Lazy.t
+  end
+
   val occurrence
     :  [`First_after_or_at | `Last_before_or_at ]
     -> t
@@ -818,7 +829,7 @@ module Make_time (Time : Time_bound) = struct
   let create_ending_after ?zone (open_ofday, close_ofday) ~now =
     let zone =
       match zone with
-      | None   -> Lazy.force Zone.local
+      | None   -> Lazy.force Time.Zone.local
       | Some z -> z
     in
     let close_time =
@@ -833,7 +844,7 @@ module Make_time (Time : Time_bound) = struct
       (open_ofday, close_ofday) ~ubound =
     let zone =
       match zone with
-      | None   -> Lazy.force Zone.local
+      | None   -> Lazy.force Time.Zone.local
       | Some z -> z
     in
     let close_time =
@@ -843,8 +854,7 @@ module Make_time (Time : Time_bound) = struct
       Time.occurrence `Last_before_or_at close_time ~zone ~ofday:open_ofday
     in
     create open_time close_time
-
 end
 
-module Time    = Make_time(Time)
+module Time    = Make_time(Core_time)
 module Time_ns = Make_time(Time_ns_in_this_directory)

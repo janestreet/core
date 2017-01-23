@@ -1,6 +1,7 @@
 open! Import
+open! Import_time
 
-include Core_kernel.Date
+include Date
 
 let of_tm (tm : Core_unix.tm) =
   create_exn
@@ -9,15 +10,11 @@ let of_tm (tm : Core_unix.tm) =
     ~d:tm.tm_mday
 ;;
 
-let of_time time ~zone = Time.to_date ~zone time
-
-let today ~zone = of_time (Time.now ()) ~zone
-
 let format date pat =
   (* as long as you don't use anything silly like %z, the zone here is irrelevant, since
      we use the same zone for constructing a time and formatting it *)
   let zone = (force Time.Zone.local) in
-  let time = Time.of_date_ofday ~zone date Ofday.start_of_day in
+  let time = Time.of_date_ofday ~zone date Time.Ofday.start_of_day in
   Time.format time pat ~zone
 ;;
 

@@ -1,6 +1,7 @@
 open! Import
+open Import_time
 
-module Zone = Zone
+module Zone = Time.Zone
 
 (* To break the dependency in the public release *)
 module Time_ns = Core_kernel.Time_ns

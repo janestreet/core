@@ -1,4 +1,5 @@
 open! Import
+open Import_time
 
 module Unix     = Core_unix
 module Filename = Core_filename

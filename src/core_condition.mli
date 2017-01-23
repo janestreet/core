@@ -1,4 +1,5 @@
 open! Import
+open Import_time
 
 type t = Condition.t
 
