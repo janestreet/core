@@ -1,5 +1,5 @@
 open OUnit
-open Core.Std
+open Core
 
 module String_set = Set.Make(String)
 

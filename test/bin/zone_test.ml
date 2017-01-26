@@ -1,5 +1,5 @@
 open OUnit
-open Core.Std
+open Core
 
 (* We don't test Feb 29th because generating proper leap year dates is
   trickier.  Also, there are no time zone changes on leap dates. *)

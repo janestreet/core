@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 
 (* This test is vulnerable to someone changing the user database at exactly
    the wrong time. Unfortunately there doesn't seem to be a good way

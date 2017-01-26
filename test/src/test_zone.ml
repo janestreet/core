@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 
 let%test_module "Zone.V1" = (module Stable_unit_test.Make (struct
     include Time.Zone.Stable.V1
@@ -19,7 +19,7 @@ let%test_module "Zone.V1" = (module Stable_unit_test.Make (struct
   end))
 
 let%test_module "Zone.V1" = (module Stable_unit_test.Make (struct
-    include Core.Stable.Time.Zone.V1
+    include Core.Core_stable.Time.Zone.V1
 
     let equal z1 z2 = Time.Zone.name z1 = Time.Zone.name z2
 

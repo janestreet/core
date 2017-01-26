@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 
 module Test_S1
   (M : sig

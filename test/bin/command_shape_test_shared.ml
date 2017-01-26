@@ -5,7 +5,7 @@
    We also used to have some tests where the child process hung and never closed its
    stdout/stderr, but that seems like too rare a failure mode to handle. We've been
    running vulnerable code for years without seeing it. *)
-open! Core.Std
+open! Core
 
 let summary = "test failure modes of Command shape extraction"
 

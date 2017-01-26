@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 open Core_bench.Std
 
 let rec x k =

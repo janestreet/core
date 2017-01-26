@@ -1,4 +1,4 @@
-open! Core.Std
+open! Core
 open! Expect_test_helpers_kernel
 
 module Inet_addr = Unix.Inet_addr

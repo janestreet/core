@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 
 open Time
 open Exposed_for_tests

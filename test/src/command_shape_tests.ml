@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 open Async.Std
 open Expect_test_helpers
 open Deferred.Let_syntax

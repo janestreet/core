@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 open Quickcheck
 
 let%test_unit "count vs length" =

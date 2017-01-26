@@ -324,5 +324,5 @@ let%bench_module "Mac_address" =
 
 include Identifiable.Make_using_comparator (struct
     include Stable.Latest
-    let module_name = "Core.Std.Mac_address"
+    let module_name = "Core.Mac_address"
   end)

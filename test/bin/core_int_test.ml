@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 open OUnit
 
 let esc_test i = int_of_string (Int.to_string_hum i) = i

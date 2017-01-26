@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 open Quickcheck.Observer
 
 type 'a bst = Leaf | Node of 'a bst * 'a * 'a bst

@@ -104,7 +104,7 @@ end
 include T
 
 include Identifiable.Make (struct
-  let module_name = "Core.Std.Uuid"
+  let module_name = "Core.Uuid"
   include T
   include Sexpable.Of_stringable (T)
   let compare t1 t2 = String.compare t1 t2

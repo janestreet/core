@@ -1,7 +1,7 @@
 (* These checks are here rather than in their corresponding modules because we want to
-   check a property of the module as it is exported in Core.Std. *)
+   check a property of the module as it is exported in Core. *)
 
-open Core.Std
+open Core
 
 let%test_module _ = (module struct
 

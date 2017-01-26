@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 
 module Shrinker = Quickcheck.Shrinker
 module Generator = Quickcheck.Generator

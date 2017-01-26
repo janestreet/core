@@ -1,6 +1,6 @@
 (**
 
-   Outside of Core.Std Time appears to be a single module with a number of submodules:
+   Outside of Core Time appears to be a single module with a number of submodules:
 
    - Time
      - Span
@@ -36,7 +36,7 @@
    Core.Core_date    - adds the Unix dependent functions to Date
    Core.Core_time    - adds the Unix dependent functions to Time
 
-   Core.Std          - renames the Core_{base} modules to {base} for ease of access in
+   Core          - renames the Core_{base} modules to {base} for ease of access in
                        modules outside of Core
 *)
 
@@ -282,7 +282,7 @@ module Make (Time0 : Time0_intf.S) (Time : Time_intf.S with module Time := Time0
     end
 
     include Identifiable.Make (struct
-        let module_name = "Core.Std.Time.Zone"
+        let module_name = "Core.Time.Zone"
 
         include Stable.V1
 
@@ -352,7 +352,7 @@ module Make (Time0 : Time0_intf.S) (Time : Time_intf.S with module Time := Time0
       include Pretty_printer.Register (struct
           type nonrec t = t
           let to_string = to_string
-          let module_name = "Core.Std.Time.Ofday.Zoned"
+          let module_name = "Core.Time.Ofday.Zoned"
         end)
     end
   end
@@ -488,7 +488,7 @@ module Make (Time0 : Time0_intf.S) (Time : Time_intf.S with module Time := Time0
   include Pretty_printer.Register (struct
       type nonrec t = t
       let to_string = to_string
-      let module_name = "Core.Std.Time"
+      let module_name = "Core.Time"
     end)
 
   module Stable = struct

@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 
 let hand_generated ~create =
   [ create ~hr:0 ~min:0 ~sec:0 ~ms:0 ~us:0,
@@ -30019,8 +30019,8 @@ let unit_tests ~create =
 let test () =
   let tests =
     Ppx_inline_test_lib.Runtime.collect (fun () ->
-      let module T = Core.Stable.Unit_test (struct
-        include Core.Stable.Time.Ofday.V1
+      let module T = Core.Core_stable.Unit_test (struct
+        include Core.Core_stable.Time.Ofday.V1
         let equal x1 x2 = Time.Span.(abs (Time.Ofday.diff x1 x2) < (of_ns 1.))
         let tests =
           let create ~hr ~min ~sec ~ms ~us = Time.Ofday.create ~hr ~min ~sec ~ms ~us () in

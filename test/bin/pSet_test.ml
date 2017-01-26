@@ -1,5 +1,5 @@
 open OUnit;;
-open Core.Std
+open Core
 
 let s1 = Set.Poly.of_list ["a"; "b"; "c"; "d"]
 (*let m2 = Map.of_alist ["a",1; "c",-3; "d",4; "e",5]*)

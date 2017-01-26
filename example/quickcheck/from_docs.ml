@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 open Quickcheck
 
 module Initial_example = struct

@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 
 let f n =
   if n = 2 then (

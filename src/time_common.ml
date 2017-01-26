@@ -1,5 +1,5 @@
-(** This module type is basically the intersection of the module types of [Core.Std.Time]
-    and [Core.Std.Time_ns].  We verify that that relation holds in check_std.ml. *)
+(** This module type is basically the intersection of the module types of [Core.Time]
+    and [Core.Time_ns].  We verify that that relation holds in check_std.ml. *)
 
 open! Import
 open! Import_time

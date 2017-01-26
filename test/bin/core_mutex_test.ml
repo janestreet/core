@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 open OUnit
 
 let try_with_mutex f =

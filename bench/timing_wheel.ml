@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 
 let ok_exn = Or_error.ok_exn
 
@@ -19,7 +19,7 @@ module Alarm_precision = Timing_wheel.Alarm_precision
 
 module Q = Timing_wheel.Priority_queue
 
-module Gc = Core.Std.Gc
+module Gc = Core.Gc
 
 module Report = struct
   type t =

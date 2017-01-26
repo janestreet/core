@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 open Core_bench.Std
 
 let date = Date.create_exn ~d:14 ~m:Month.Jul ~y:1789

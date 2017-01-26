@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 
 let test_with_overhead number_of_knots number_of_lookups =
   let xmax = 10. in

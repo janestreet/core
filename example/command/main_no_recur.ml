@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 open Command.Let_syntax
 
 let command =

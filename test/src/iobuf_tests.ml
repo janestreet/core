@@ -1,6 +1,6 @@
 #import "../../src/config.h"
 
-open! Core.Std
+open! Core
 
 let is_error = Result.is_error
 let is_ok    = Result.is_ok

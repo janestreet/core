@@ -1,4 +1,4 @@
-open Core.Std;;
+open Core;;
 open OUnit;;
 
 let rec count acc = function

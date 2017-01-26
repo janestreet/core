@@ -1,4 +1,4 @@
-open! Core.Std
+open! Core
 open! Expect_test_helpers_kernel
 
 let string =

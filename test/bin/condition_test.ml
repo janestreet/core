@@ -5,7 +5,7 @@
   unix function. Both branches (timeout, success) are tested; all the possible
   race conditions are assumed to be handled properly by pthread and not tested.
 *)
-open Core.Std
+open Core
 open OUnit
 
 let rec run ~num_retries =

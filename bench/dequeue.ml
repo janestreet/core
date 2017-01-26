@@ -1,4 +1,4 @@
-open! Core.Std
+open! Core
 
 module Bench = Core_extended.Deprecated_bench
 

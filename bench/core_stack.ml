@@ -1,6 +1,6 @@
-open! Core.Std
+open! Core
 
-module Stack = Core.Std.Stack
+module Stack = Core.Stack
 
 module Bench = Core_extended.Deprecated_bench
 

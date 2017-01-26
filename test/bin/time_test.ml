@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 open OUnit;;
 
 module Date = Date

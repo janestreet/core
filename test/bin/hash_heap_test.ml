@@ -1,5 +1,5 @@
 open OUnit;;
-open Core.Std
+open Core
 
 module Hash_heap = Hash_heap.Make(Int)
 

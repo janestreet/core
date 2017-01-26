@@ -225,7 +225,7 @@ end
 
 let sort ?pos ?len arr ~cmp =
   let pos, len =
-    Core.Std.Ordered_collection_common.get_pos_len_exn ?pos ?len ~length:(Array.length arr)
+    Core.Ordered_collection_common.get_pos_len_exn ?pos ?len ~length:(Array.length arr)
   in
   Sort.Intro_sort.sort arr ~cmp ~left:pos ~right:(pos + len - 1)
 
@@ -251,7 +251,7 @@ let () =
   let start = Unix.gettimeofday () in
   for _ = 0 to iter do
     Array.blit ~src:r ~src_pos:0 ~dst:a ~dst_pos:0 ~len:n;
-    Core.Std.Array.sort a ~cmp
+    Core.Array.sort a ~cmp
   done;
   Printf.printf "%f\n" (Unix.gettimeofday () -. start);
 
@@ -273,7 +273,7 @@ let () =
   let start = Unix.gettimeofday () in
   for _ = 0 to iter do
     Array.blit ~src:r ~src_pos:0 ~dst:a ~dst_pos:0 ~len:n;
-    Core.Std.Array.sort a ~cmp
+    Core.Array.sort a ~cmp
   done;
   Printf.printf "%f\n" (Unix.gettimeofday () -. start);
 

@@ -1,5 +1,5 @@
 open OUnit
-open Core.Std
+open Core
 
 module type S = sig
   val name : string

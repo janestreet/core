@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 
 let printers = Pretty_printer.all ()
 

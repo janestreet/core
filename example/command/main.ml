@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 
 (* BEGIN -- useful utilities *)
 

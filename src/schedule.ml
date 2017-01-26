@@ -186,7 +186,7 @@ module External = Make (struct
 
 module Stable = struct
 
-  (* we want to be included in Core.Stable, so we can't rely on it here, forcing us to be
+  (* we want to be included in Core.Core_stable, so we can't rely on it here, forcing us to be
      careful in the type definitions below to use the stable versions. *)
   module Date                = Date.Stable
   module Ofday               = Time.Ofday.Stable

@@ -1,4 +1,4 @@
-open! Core.Std
+open! Core
 
 let%expect_test _ =
   Unix.system "../bin/am_running_inline_test.exe"

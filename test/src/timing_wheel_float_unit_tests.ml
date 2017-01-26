@@ -1,4 +1,4 @@
-open! Core.Std
+open! Core
 
 (* module Timing_wheel =
    Core_kernel_unit_tests.Timing_wheel_debug.Make (Time) (Timing_wheel) *)

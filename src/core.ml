@@ -9,6 +9,7 @@ module Std = struct
   module Caml               = Caml
   module Command            = Command
   module Condition          = Core_condition
+  module Core_stable        = Stable
   module Crc                = Crc
   module Daemon             = Daemon
   module Date               = Core_date
@@ -51,6 +52,3 @@ module Std = struct
 end
 
 include Std
-module Stable = Stable
-
-

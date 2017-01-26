@@ -1,4 +1,4 @@
-open! Core.Std
+open! Core
 
 let%test_module "Thread_safe_queue" = (module (struct
 

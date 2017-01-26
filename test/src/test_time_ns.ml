@@ -1,4 +1,4 @@
-open! Core.Std
+open! Core
 open  Expect_test_helpers_kernel
 
 let%test_unit "Time_ns.to_date_ofday" =
@@ -535,7 +535,7 @@ let%test_module "Time_ns.Span" =
       in
       (* Some tweaks will be out of range, which will raise exceptions. *)
       let filter_map list ~f =
-        List.filter_map list ~f:(fun x -> Core.Std.Option.try_with (fun () -> f x))
+        List.filter_map list ~f:(fun x -> Core.Option.try_with (fun () -> f x))
       in
       let kspans =                        (* a few multiples *)
         List.concat_map kspans
@@ -647,7 +647,7 @@ let%test_module "Time_ns" =
       in
       (* Some tweaks will be out of range, which will raise exceptions. *)
       let filter_map list ~f =
-        List.filter_map list ~f:(fun x -> Core.Std.Option.try_with (fun () -> f x))
+        List.filter_map list ~f:(fun x -> Core.Option.try_with (fun () -> f x))
       in
       let ts =                              (* a few units around *)
         List.concat_map ts

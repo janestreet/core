@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 open Expect_test_helpers
 
 module Let_syntax         = Async.Std.Let_syntax

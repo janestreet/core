@@ -2302,7 +2302,7 @@ module Cidr = struct
     (* Use [Caml.Int32.to_int] to avoid exceptions in some cases on 32-bit machines. *)
     let hash t = Caml.Int32.to_int t.address
 
-    let module_name = "Core.Std.Unix.Cidr"
+    let module_name = "Core.Unix.Cidr"
   end
 
   module T1 = struct

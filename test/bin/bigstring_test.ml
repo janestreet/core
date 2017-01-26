@@ -1,4 +1,4 @@
-open Core.Std;;
+open Core;;
 open OUnit;;
 open Quickcheck_deprecated;;
 

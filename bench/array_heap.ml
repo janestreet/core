@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 open Core_bench.Std
 
 (** A faster alternative implementation of heap. *)

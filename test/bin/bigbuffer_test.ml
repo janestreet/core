@@ -1,6 +1,6 @@
 open Unix
 open OUnit;;
-open Core.Std
+open Core
 open Bigstring_test
 
 let io_test ~n =

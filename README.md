@@ -5,7 +5,7 @@ industrial user of OCaml.
 Core provides an overlay on the usual namespace, so the best way to
 use Core is to start your file with:
 
-    open Core.Std
+    open Core
 
 In the case of bugs, feature requests and similar, you can contact us
 at <opensource@janestreet.com>.  You can find all of Jane Street's

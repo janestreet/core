@@ -1,6 +1,6 @@
 (* [Popcount] is in [Core_kernel], but we test it with [Core] so we can use
    [Version_utils]. *)
-open Core.Std
+open Core
 
 let test_int       n bits = [%test_result: int] (Int.popcount       n) ~expect:bits
 let test_int32     n bits = [%test_result: int] (Int32.popcount     n) ~expect:bits

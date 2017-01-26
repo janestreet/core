@@ -1,5 +1,5 @@
 open OUnit
-open Core.Std
+open Core
 open Blang
 
 let to_string t = Sexp.to_string (Blang.sexp_of_t String.sexp_of_t t)

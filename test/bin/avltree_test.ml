@@ -1,6 +1,6 @@
 module Avltree = Base.Avltree
 open OUnit
-open Core.Std
+open Core
 
 let test_f t s test_data f =
   let is_present i =

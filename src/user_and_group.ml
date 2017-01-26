@@ -22,7 +22,7 @@ end
 module T' = struct
   include Stable.V1
   let hash t = String.hash (to_string t)
-  let module_name = "Core.Std.User_and_group"
+  let module_name = "Core.User_and_group"
 end
 include T'
 include Identifiable.Make (T')
