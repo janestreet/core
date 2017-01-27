@@ -1,5 +1,5 @@
-include (Core_kernel.Stable : module type of Core_kernel.Stable
-         with module Time_ns := Core_kernel.Stable.Time_ns)
+include (Core_kernel.Core_kernel_stable : module type of Core_kernel.Core_kernel_stable
+         with module Time_ns := Core_kernel.Core_kernel_stable.Time_ns)
 
 module Interval       = Interval            .Stable
 module Mac_address    = Mac_address         .Stable

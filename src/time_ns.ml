@@ -20,13 +20,18 @@ end = struct
     Int63.((Time_ns.Span.to_int63_ns t + half_microsecond) /% of_int 1000)
   ;;
 
+  let [@inline never] invalid_range t =
+    let open Time_ns.Span in
+    raise_s [%message "Span.t exceeds limits"
+                        (t         : Alternate_sexp.t)
+                        (min_value : Alternate_sexp.t)
+                        (max_value : Alternate_sexp.t)]
+  ;;
+
   let check_range t =
     let open Time_ns.Span in
-    if t < min_value || t > max_value then
-      failwiths "Span.t exceeds limits" (t, min_value, max_value)
-        [%sexp_of: Alternate_sexp.t *
-                   Alternate_sexp.t *
-                   Alternate_sexp.t]
+    if t < min_value || t > max_value
+    then invalid_range t
     else t
   ;;
 

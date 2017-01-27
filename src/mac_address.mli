@@ -53,7 +53,7 @@ module Stable : sig
       with type comparable := t
        and type comparator_witness := comparator_witness
 
-    include Core_kernel.Stable.Hashable.V1.S
+    include Core_kernel.Core_kernel_stable.Hashable.V1.S
       with type key := t
   end
 end

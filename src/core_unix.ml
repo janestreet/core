@@ -6,7 +6,7 @@
 
 open! Import
 
-module Time_ns = Core_kernel.Time_ns_alternate_sexp
+module Time_ns = Core_kernel.Core_kernel_private.Time_ns_alternate_sexp
 
 module Unix = UnixLabels
 

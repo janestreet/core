@@ -777,7 +777,7 @@ module Test (Iobuf : sig
       ignore   (ws :> (read_write, no_seek) t)
     ;;
 
-    let test_peek_to (blito : (Peek.src, _) Core_kernel.Std_kernel.Blit.blito)
+    let test_peek_to (blito : (Peek.src, _) Core_kernel.Core_kernel_private.Std_kernel.Blit.blito)
           create sub_string of_string to_string =
       iter_examples ~f:(fun t string ~pos ->
         let n = String.length string in

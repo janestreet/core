@@ -1,5 +1,5 @@
 module Std = struct
-  include Core_kernel.Std_kernel
+  include Core_kernel.Core_kernel_private.Std_kernel
 
   let ( ^/ ) = Core_filename.concat
 

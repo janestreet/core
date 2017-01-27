@@ -1,4 +1,4 @@
-open Core_kernel.Stable
+open Core_kernel.Core_kernel_stable
 
 module Stable = struct
   module String_style = struct

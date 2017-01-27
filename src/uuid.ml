@@ -8,7 +8,7 @@
 *)
 
 module Stable = struct
-  open Core_kernel.Stable
+  open Core_kernel.Core_kernel_stable
   module V1 = struct
     type t = string [@@deriving bin_io, compare, sexp]
     let for_testing = "5a863fc1-67b7-3a0a-dc90-aca2995afbf9"

@@ -4,7 +4,7 @@ module Bigstring = Bigstring_in_this_directory
 
 include Core_kernel.Std.Bigbuffer
 
-open Core_kernel.Bigbuffer_internal
+open Core_kernel.Core_kernel_private.Bigbuffer_internal
 
 let add_channel buf ic len =
   let buf = __internal buf in
