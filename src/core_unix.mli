@@ -943,7 +943,7 @@ module Select_fds : sig
   val empty : t
 end
 
-type select_timeout = [ `Never | `Immediately | `After of Core_kernel.Std.Time_ns.Span.t ]
+type select_timeout = [ `Never | `Immediately | `After of Core_kernel.Time_ns.Span.t ]
 [@@deriving sexp_of]
 
 (** Wait until some input/output operations become possible on some channels.  The three

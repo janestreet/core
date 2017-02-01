@@ -558,7 +558,7 @@ module Spec : sig
       [Command] module, using [flags_of_args_exn flags], they are evaluated in the order
       that the [Caml.Arg.t] values appear in [flags].
   *)
-  val flags_of_args_exn : Core_kernel.Std.Arg.t list -> ('a, 'a) t
+  val flags_of_args_exn : Core_kernel.Arg.t list -> ('a, 'a) t
 
   (** a specification of some number of anonymous arguments *)
   type 'a anons = 'a Anons.t

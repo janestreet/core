@@ -3,7 +3,7 @@
 open! Import
 open Unix
 
-include module type of struct include Core_kernel.Std.Bigstring end
+include module type of struct include Core_kernel.Bigstring end
 
 (** Type of I/O errors
 

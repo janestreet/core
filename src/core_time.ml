@@ -30,7 +30,7 @@
    relationship between Time, Span, Ofday, and Zone
    Core_kernel.Time_float  - ties Time, Span, Ofday, Zone, and Date together and provides
    the higher level functions for them that don't rely on Unix
-   Core_kernel.Std.Time    - re-exposes Time_float
+   Core_kernel.Time    - re-exposes Time_float
 
    Core.Zone_cache   - implements a caching layer between the Unix filesystem and Zones
    Core.Core_date    - adds the Unix dependent functions to Date
@@ -534,52 +534,66 @@ module Make (Time0 : Time0_intf.S) (Time : Time_intf.S with module Time := Time0
 
       let sexp_of_t t = sexp_of_t_abs ~zone:(Lazy.force !sexp_zone) t
 
-      module C = struct
-        type nonrec t = t [@@deriving bin_io]
+      module type C = Comparable.Map_and_set_binable
+        with type t := t
+         and type comparator_witness := comparator_witness
 
-        let compare = compare
+      let make_comparable ?(sexp_of_t = sexp_of_t) ?(t_of_sexp = t_of_sexp) ()
+        : (module C) =
+        (module struct
+          module C = struct
+            type nonrec t = t [@@deriving bin_io]
 
-        type nonrec comparator_witness = comparator_witness
+            type nonrec comparator_witness = comparator_witness
 
-        let comparator = comparator
+            let comparator = comparator
 
-        (* In 108.06a and earlier, times in sexps of Maps and Sets were raw floats.  From
-           108.07 through 109.13, the output format remained raw as before, but both the raw
-           and pretty format were accepted as input.  From 109.14 on, the output format was
-           changed from raw to pretty, while continuing to accept both formats.  Once we
-           believe most programs are beyond 109.14, we will switch the input format to no
-           longer accept raw. *)
-        let sexp_of_t = sexp_of_t
+            let sexp_of_t = sexp_of_t
 
-        let t_of_sexp sexp =
-          match Option.try_with (fun () ->
-            of_span_since_epoch (Span.of_sec (Float.t_of_sexp sexp))) with
-          | Some t -> t
-          | None -> t_of_sexp sexp
-        ;;
-      end
+            let t_of_sexp = t_of_sexp
+          end
 
-      module Map = Map.Make_binable_using_comparator (C)
-      module Set = Set.Make_binable_using_comparator (C)
+          include C
+
+          module Map = Map.Make_binable_using_comparator (C)
+          module Set = Set.Make_binable_using_comparator (C)
+        end)
+
+      (* In 108.06a and earlier, times in sexps of Maps and Sets were raw floats.  From
+         108.07 through 109.13, the output format remained raw as before, but both the raw
+         and pretty format were accepted as input.  From 109.14 on, the output format was
+         changed from raw to pretty, while continuing to accept both formats.  Once we
+         believe most programs are beyond 109.14, we will switch the input format to no
+         longer accept raw. *)
+      include (val make_comparable () ~t_of_sexp:(fun sexp ->
+        match Option.try_with (fun () ->
+          of_span_since_epoch (Span.of_sec (Float.t_of_sexp sexp))) with
+        | Some t -> t
+        | None -> t_of_sexp sexp
+      ))
 
       let%test _ =
-        Set.equal (Set.of_list [epoch])
-          (Set.t_of_sexp (Sexp.List
-                            [Float.sexp_of_t (Span.to_sec (to_span_since_epoch epoch))]))
+        Set.equal
+          (Set.of_list [epoch])
+          (Set.t_of_sexp
+             (Sexp.List [Float.sexp_of_t (Span.to_sec (to_span_since_epoch epoch))]))
       ;;
     end
 
     module With_utc_sexp = struct
       module V1 = struct
-        include V1
+        include (V1 : module type of V1 with module Map := V1.Map and module Set := V1.Set)
 
         let sexp_of_t t = sexp_of_t_abs t ~zone:Zone.utc
+
+        include (val make_comparable ~sexp_of_t ())
       end
     end
 
     module With_t_of_sexp_abs = struct
       module V1 = struct
-        include V1
+        include (V1 : module type of V1 with module Map := V1.Map and module Set := V1.Set)
+
         let t_of_sexp = t_of_sexp_abs
       end
     end

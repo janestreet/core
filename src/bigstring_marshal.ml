@@ -4,7 +4,7 @@ module Bigstring = Bigstring_in_this_directory
 
 open Bigstring
 
-include Core_kernel.Std.Bigstring_marshal
+include Core_kernel.Bigstring_marshal
 
 external unsafe_unmarshal
   : pos : int -> len : int -> t -> 'a = "bigstring_unmarshal_stub"

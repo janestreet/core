@@ -6,10 +6,10 @@ let%test_unit "Time_ns.to_date_ofday" =
     Time_ns.to_date_ofday Time_ns.max_value ~zone:Time.Zone.utc));
 ;;
 
-let%test_module "Core_kernel.Std.Time_ns.Utc.to_date_and_span_since_start_of_day" =
+let%test_module "Core_kernel.Time_ns.Utc.to_date_and_span_since_start_of_day" =
   (module struct
     type time_ns = Time_ns.t [@@deriving compare]
-    let sexp_of_time_ns = Core_kernel.Std.Time_ns.Alternate_sexp.sexp_of_t
+    let sexp_of_time_ns = Core_kernel.Time_ns.Alternate_sexp.sexp_of_t
     ;;
 
     (* move 1ms off min and max values because [Time_ns]'s boundary checking in functions
@@ -40,7 +40,7 @@ let%test_module "Core_kernel.Std.Time_ns.Utc.to_date_and_span_since_start_of_day
         match Word_size.word_size with
         | W64 ->
           let kernel_date, kernel_span_since_start_of_day =
-            Core_kernel.Std.Time_ns.Utc.to_date_and_span_since_start_of_day time_ns
+            Core_kernel.Time_ns.Utc.to_date_and_span_since_start_of_day time_ns
           in
           let kernel_ofday =
             Time_ns.Ofday.of_span_since_start_of_day_exn kernel_span_since_start_of_day
@@ -623,7 +623,7 @@ let%test_module "Time_ns" =
     ;;
 
     let%test_unit "Time_ns.t -> Time.t round trip" =
-      let open Core_kernel.Std.Time_ns.Alternate_sexp in
+      let open Core_kernel.Time_ns.Alternate_sexp in
       let ts =                              (* touchstones *)
         [ min_value; epoch; now (); max_value ]
       in

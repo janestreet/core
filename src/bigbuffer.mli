@@ -1,6 +1,6 @@
 open! Import
 
-include module type of struct include Core_kernel.Std.Bigbuffer end
+include module type of struct include Core_kernel.Bigbuffer end
 
 val add_channel : t -> In_channel.t -> int -> unit
 (** [add_channel b ic n] reads exactly [n] character from the

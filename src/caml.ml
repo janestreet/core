@@ -1,4 +1,4 @@
-include Core_kernel.Std.Caml
+include Core_kernel.Caml
 
 module Condition  = Condition
 module Mutex      = Mutex

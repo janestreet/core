@@ -1,4 +1,4 @@
-include Core_kernel.Std
+include Core_kernel
 include Base_for_tests
 
 module Variant = Variantslib.Variant

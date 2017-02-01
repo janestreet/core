@@ -147,7 +147,7 @@ module Unit = Make (struct
   end) ()
 
 let unit = Unit.create_ok ()
-let ignore_ok_value t = Core_kernel.Std.Int.min t 0
+let ignore_ok_value t = Core_kernel.Int.min t 0
 
 let%test_unit _ =
   for i = 1 to 10000 do

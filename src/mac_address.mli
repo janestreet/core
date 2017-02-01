@@ -1,6 +1,6 @@
 (** A 48-bit MAC address. *)
 
-open Core_kernel.Std
+open Core_kernel
 
 type t = private Int63.t (** [private int] to enable immediate-type optimizations *)
 

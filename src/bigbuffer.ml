@@ -2,7 +2,7 @@ module Bigstring_in_this_directory = Bigstring
 open! Import
 module Bigstring = Bigstring_in_this_directory
 
-include Core_kernel.Std.Bigbuffer
+include Core_kernel.Bigbuffer
 
 open Core_kernel.Core_kernel_private.Bigbuffer_internal
 

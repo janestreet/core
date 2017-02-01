@@ -4,7 +4,7 @@ open! Import
 open Unix
 open Bigarray
 
-include Core_kernel.Std.Bigstring
+include Core_kernel.Bigstring
 
 exception IOError of int * exn [@@deriving sexp]
 

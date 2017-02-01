@@ -245,9 +245,6 @@ module type S = sig
         include Stable
           with type t := t
           with type comparator_witness := comparator_witness
-        include Comparable.Stable.V1.S
-          with type comparable := t
-          with type comparator_witness := comparator_witness
       end
     end
 

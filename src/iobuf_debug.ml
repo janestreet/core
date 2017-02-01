@@ -403,7 +403,7 @@ module Make () = struct
   end
 
   module Peek_blit_debug = struct
-    module type To = Core_kernel.Std.Blit.S_distinct with type src := Peek.src
+    module type To = Core_kernel.Blit.S_distinct with type src := Peek.src
 
     module To (To : sig
         include To

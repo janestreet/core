@@ -6,7 +6,7 @@
 open! Import
 open Bigstring
 
-include module type of struct include Core_kernel.Std.Bigstring_marshal end
+include module type of struct include Core_kernel.Bigstring_marshal end
 
 (** [marshal_to_fd ?buf fd v] marshals data [v] to file descriptor [fd]
     using marshalling buffer [buf], and marshalling flags [flags].

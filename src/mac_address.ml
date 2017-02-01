@@ -17,16 +17,16 @@ module Stable = struct
       module Deriving_hash : sig
         type t [@@deriving hash]
       end with type t := t = struct
-        type t = Core_kernel.Std.Int63.t [@@deriving hash]
+        type t = Core_kernel.Int63.t [@@deriving hash]
       end
 
       include Deriving_hash
 
       let invalid_hex_char char =
-        Core_kernel.Std.raise_s [%message "invalid hex digit" (char : char)]
+        Core_kernel.raise_s [%message "invalid hex digit" (char : char)]
 
       let invalid_hex_digit int =
-        Core_kernel.Std.raise_s [%message "invalid hex digit" (int : int)]
+        Core_kernel.raise_s [%message "invalid hex digit" (int : int)]
 
       (* convert a hex char to a int *)
       let int_of_hex c =
@@ -44,22 +44,22 @@ module Stable = struct
         then char_of_int (int_of_char 'a' + (i - 0xa))
         else invalid_hex_digit i
 
-      let int63_of_int = Core_kernel.Std.Int63.of_int
-      let int_of_int63 = Core_kernel.Std.Int63.to_int_exn
+      let int63_of_int = Core_kernel.Int63.of_int
+      let int_of_int63 = Core_kernel.Int63.to_int_exn
 
       let int63_of_hex c     = int63_of_int (int_of_hex   c)
       let hex_of_int63 int63 = hex_of_int   (int_of_int63 int63)
 
       let bad_string s =
-        Core_kernel.Std.raise_s [%message
+        Core_kernel.raise_s [%message
           "invalid MAC address"
             ~_:(s : string)]
 
-      let get = Core_kernel.Std.String.unsafe_get
-      let set = Core_kernel.Std.String.unsafe_set
+      let get = Core_kernel.String.unsafe_get
+      let set = Core_kernel.String.unsafe_set
 
       include struct
-        open Core_kernel.Std.Int63
+        open Core_kernel.Int63
 
         let (lxor) = bit_xor
         let (land) = bit_and
@@ -85,7 +85,7 @@ module Stable = struct
         (int63_of_hex (get s 13) lsl (4 *  0))
 
       let to_string_quad (t : t) c =
-        let s = Core_kernel.Std.String.make 14 c in
+        let s = Core_kernel.String.make 14 c in
         set s  0 (hex_of_int63 ((t lsr (4 * 11)) land int63_of_int 0xf));
         set s  1 (hex_of_int63 ((t lsr (4 * 10)) land int63_of_int 0xf));
         set s  2 (hex_of_int63 ((t lsr (4 *  9)) land int63_of_int 0xf));
@@ -121,7 +121,7 @@ module Stable = struct
         (int63_of_hex (get s 16) lsl (4 *  0))
 
       let to_string_pair (t : t) c =
-        let s = Core_kernel.Std.String.make 17 c in
+        let s = Core_kernel.String.make 17 c in
         set s  0 (hex_of_int63 ((t lsr (4 * 11)) land int63_of_int 0xf));
         set s  1 (hex_of_int63 ((t lsr (4 * 10)) land int63_of_int 0xf));
         set s  3 (hex_of_int63 ((t lsr (4 *  9)) land int63_of_int 0xf));
@@ -137,7 +137,7 @@ module Stable = struct
         s
 
       let of_string s : t =
-        match Core_kernel.Std.String.length s with
+        match Core_kernel.String.length s with
         | 14 -> of_string_quad s '.'
         | 17 ->
           (match get s 2 with
@@ -173,7 +173,7 @@ module Stable = struct
         include Without_containers
         let equal x y = (compare x y = 0)
 
-        let make = Core_kernel.Std.Int63.of_int64_exn
+        let make = Core_kernel.Int63.of_int64_exn
 
         let tests =
           [ make 0x0000_0000_0000L, "00-00-00-00-00-00", "\000"
@@ -187,7 +187,7 @@ module Stable = struct
   module Latest = V1
 end
 
-open Core_kernel.Std
+open Core_kernel
 
 module String_style = struct
   module Stable = Stable.String_style
