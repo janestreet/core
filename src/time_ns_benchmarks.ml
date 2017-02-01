@@ -4,27 +4,27 @@
    assignment and hence rely on compiler optimization enabled by the [private int]
    declarations of [time_ns.mli].
 
-┌──────────────────────────────────────────────────────────────────────────────┬────────────┬─────────┬──────────┬──────────┬────────────┐
-│ Name                                                                         │   Time/Run │ mWd/Run │ mjWd/Run │ Prom/Run │ Percentage │
-├──────────────────────────────────────────────────────────────────────────────┼────────────┼─────────┼──────────┼──────────┼────────────┤
-│ [time_ns_benchmarks.ml] Time_ns.now                                          │    28.93ns │         │          │          │      1.96% │
-│ [time_ns_benchmarks.ml] Time_ns.Ofday.local_now                              │    33.49ns │         │          │          │      2.27% │
-│ [time_ns_benchmarks.ml] Time_ns.to_string                                    │   726.16ns │ 188.00w │          │          │     49.30% │
-│ [time_ns_benchmarks.ml] Time_ns.to_ofday                                     │     7.30ns │         │          │          │      0.50% │
-│ [time_ns_benchmarks.ml] Time_ns.to_int                                       │     1.90ns │         │          │          │      0.13% │
-│ [time_ns_benchmarks.ml] Time_ns.of_int                                       │     1.91ns │         │          │          │      0.13% │
-│ [time_ns_benchmarks.ml] Time_ns.Ofday.to_string                              │ 1_472.82ns │ 391.01w │    0.10w │    0.10w │    100.00% │
-│ [time_ns_benchmarks.ml] Time_ns.Span.of_hr                                   │     4.15ns │   2.00w │          │          │      0.28% │
-│ [time_ns_benchmarks.ml] Time_ns.Span.of_min                                  │     4.51ns │   2.00w │          │          │      0.31% │
-│ [time_ns_benchmarks.ml] Time_ns.Span.of_sec                                  │     4.15ns │   2.00w │          │          │      0.28% │
-│ [time_ns_benchmarks.ml] Time_ns.Span.of_ms                                   │     4.97ns │   2.00w │          │          │      0.34% │
-│ [time_ns_benchmarks.ml] Time_ns.Span.of_int_sec                              │     2.70ns │         │          │          │      0.18% │
-│ [time_ns_benchmarks.ml] Time_ns.Span.to_int_sec                              │     9.14ns │         │          │          │      0.62% │
-│ [time_ns_benchmarks.ml] Time_ns.t assignment                                 │     2.18ns │         │          │          │      0.15% │
-│ [time_ns_benchmarks.ml] Time.t assignment                                    │     7.23ns │         │          │          │            │
-│ [time_ns_benchmarks.ml] Time_ns.of_time                                      │    11.86ns │   4.00w │          │          │            │
-│ [time_ns_benchmarks.ml] Time_ns.of_time (Async.Std.Scheduler.cycle_start ()) │    16.45ns │   4.00w │          │          │            │
-└──────────────────────────────────────────────────────────────────────────────┴────────────┴─────────┴──────────┴──────────┴────────────┘
+   ┌──────────────────────────────────────────────────────────────────────────────┬────────────┬─────────┬──────────┬──────────┬────────────┐
+   │ Name                                                                         │   Time/Run │ mWd/Run │ mjWd/Run │ Prom/Run │ Percentage │
+   ├──────────────────────────────────────────────────────────────────────────────┼────────────┼─────────┼──────────┼──────────┼────────────┤
+   │ [time_ns_benchmarks.ml] Time_ns.now                                          │    28.93ns │         │          │          │      1.96% │
+   │ [time_ns_benchmarks.ml] Time_ns.Ofday.local_now                              │    33.49ns │         │          │          │      2.27% │
+   │ [time_ns_benchmarks.ml] Time_ns.to_string                                    │   726.16ns │ 188.00w │          │          │     49.30% │
+   │ [time_ns_benchmarks.ml] Time_ns.to_ofday                                     │     7.30ns │         │          │          │      0.50% │
+   │ [time_ns_benchmarks.ml] Time_ns.to_int                                       │     1.90ns │         │          │          │      0.13% │
+   │ [time_ns_benchmarks.ml] Time_ns.of_int                                       │     1.91ns │         │          │          │      0.13% │
+   │ [time_ns_benchmarks.ml] Time_ns.Ofday.to_string                              │ 1_472.82ns │ 391.01w │    0.10w │    0.10w │    100.00% │
+   │ [time_ns_benchmarks.ml] Time_ns.Span.of_hr                                   │     4.15ns │   2.00w │          │          │      0.28% │
+   │ [time_ns_benchmarks.ml] Time_ns.Span.of_min                                  │     4.51ns │   2.00w │          │          │      0.31% │
+   │ [time_ns_benchmarks.ml] Time_ns.Span.of_sec                                  │     4.15ns │   2.00w │          │          │      0.28% │
+   │ [time_ns_benchmarks.ml] Time_ns.Span.of_ms                                   │     4.97ns │   2.00w │          │          │      0.34% │
+   │ [time_ns_benchmarks.ml] Time_ns.Span.of_int_sec                              │     2.70ns │         │          │          │      0.18% │
+   │ [time_ns_benchmarks.ml] Time_ns.Span.to_int_sec                              │     9.14ns │         │          │          │      0.62% │
+   │ [time_ns_benchmarks.ml] Time_ns.t assignment                                 │     2.18ns │         │          │          │      0.15% │
+   │ [time_ns_benchmarks.ml] Time.t assignment                                    │     7.23ns │         │          │          │            │
+   │ [time_ns_benchmarks.ml] Time_ns.of_time                                      │    11.86ns │   4.00w │          │          │            │
+   │ [time_ns_benchmarks.ml] Time_ns.of_time (Async.Std.Scheduler.cycle_start ()) │    16.45ns │   4.00w │          │          │            │
+   └──────────────────────────────────────────────────────────────────────────────┴────────────┴─────────┴──────────┴──────────┴────────────┘
 *)
 
 module Time_ns_in_this_directory = Time_ns

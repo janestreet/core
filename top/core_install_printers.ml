@@ -11,8 +11,8 @@ let eval_string
 let rec install_printers = function
   | [] -> true
   | printer :: printers ->
-      let cmd = Printf.sprintf "#install_printer %s;;" printer in
-      eval_string cmd && install_printers printers
+    let cmd = Printf.sprintf "#install_printer %s;;" printer in
+    eval_string cmd && install_printers printers
 
 let () =
   if not (install_printers printers) then

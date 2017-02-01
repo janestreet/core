@@ -36,10 +36,10 @@ module Sort = struct
         let rec loop i =
           let i_next = i - 1 in
           if i_next >= left && cmp (Obj.magic (Array.unsafe_get arr i_next)) v > 0 then
-          begin
-            Array.unsafe_set arr i (Array.unsafe_get arr i_next);
-            loop i_next
-          end else
+            begin
+              Array.unsafe_set arr i (Array.unsafe_get arr i_next);
+              loop i_next
+            end else
             i
         in
         let final_pos = loop pos in
@@ -66,15 +66,15 @@ module Sort = struct
       let right_child   = (2 * relative_root) + left + 2 in
       let largest =
         if left_child <= right
-          && cmp (Obj.magic (Array.unsafe_get arr left_child))
-            (Obj.magic (Array.unsafe_get arr root)) > 0
+        && cmp (Obj.magic (Array.unsafe_get arr left_child))
+             (Obj.magic (Array.unsafe_get arr root)) > 0
         then left_child
         else root
       in
       let largest =
         if right_child <= right
-          && cmp (Obj.magic (Array.unsafe_get arr right_child))
-            (Obj.magic (Array.unsafe_get arr largest)) > 0
+        && cmp (Obj.magic (Array.unsafe_get arr right_child))
+             (Obj.magic (Array.unsafe_get arr largest)) > 0
         then right_child
         else largest
       in
@@ -132,13 +132,15 @@ module Sort = struct
     ;;
 
     (* choose pivots for the array by sorting 5 elements and examining the center three
-        elements.  The goal is to choose two pivots that will either:
-        - break the range up into 3 even partitions
-        or
-        - eliminate a commonly appearing element by sorting it into the center partition
-          by itself
-        To this end we look at the center 3 elements of the 5 and return pairs of equal
-        elements or the widest range *)
+       elements.  The goal is to choose two pivots that will either:
+
+       - break the range up into 3 even partitions
+       or
+       - eliminate a commonly appearing element by sorting it into the center partition
+       by itself
+
+       To this end we look at the center 3 elements of the 5 and return pairs of equal
+       elements or the widest range *)
     let choose_pivots arr ~cmp ~left ~right =
       let sixth = (right - left) / 6 in
       let m1 = left + sixth in
@@ -162,7 +164,7 @@ module Sort = struct
          1.  left <= l < r <= right
          2.  l <= p <= r
          3.  l <= x < p     implies arr[x] >= pivot1
-                                and arr[x] <= pivot2
+         and arr[x] <= pivot2
          4.  left <= x < l  implies arr[x] < pivot1
          5.  r < x <= right implies arr[x] > pivot2
       *)

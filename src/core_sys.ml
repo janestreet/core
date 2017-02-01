@@ -16,9 +16,9 @@ let stat_check_exn f ?(follow_symlinks = true) path =
   let rec loop () =
     try
       f (if follow_symlinks then
-          LargeFile.stat path
-        else
-          LargeFile.lstat path)
+           LargeFile.stat path
+         else
+           LargeFile.lstat path)
     with
     | Unix.Unix_error(Unix.EINTR,_,_) -> loop ()
     | Unix.Unix_error ((Unix.ENOENT|Unix.ENOTDIR), _, _) -> false
@@ -41,11 +41,11 @@ let file_exists_exn = stat_check_exn (fun _ -> true)
 
 let is_directory = stat_check (fun stat -> stat.LargeFile.st_kind = Unix.S_DIR)
 let is_directory_exn = stat_check_exn
-  (fun stat -> stat.LargeFile.st_kind = Unix.S_DIR)
+                         (fun stat -> stat.LargeFile.st_kind = Unix.S_DIR)
 
 let is_file = stat_check (fun stat -> stat.LargeFile.st_kind = Unix.S_REG)
 let is_file_exn = stat_check_exn
-  (fun stat -> stat.LargeFile.st_kind = Unix.S_REG)
+                    (fun stat -> stat.LargeFile.st_kind = Unix.S_REG)
 
 include struct
   open Caml.Sys
@@ -90,9 +90,9 @@ let execution_mode () =
   if executing_bytecode () () () () () () then `Bytecode else `Native
 
 let%test _ = execution_mode () =
-         (if String.is_suffix argv.(0) ~suffix:".exe" ||
-             String.is_suffix argv.(0) ~suffix:".native"
-          then `Native else `Bytecode)
+             (if String.is_suffix argv.(0) ~suffix:".exe" ||
+                 String.is_suffix argv.(0) ~suffix:".native"
+              then `Native else `Bytecode)
 
 
 (* returns size, in bits, of an [int] type in C *)

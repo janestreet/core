@@ -59,15 +59,15 @@ let () =
   Command.run (
     Bench.make_command (
       (*
-      List.init 13 ~f:(fun k ->
-        let x = x k in
-        Bench.Test.create ~name:("slow_create_" ^ (Int.to_string (String.length x))) (fun () ->
-          ignore (slow_create x)))
+         List.init 13 ~f:(fun k ->
+         let x = x k in
+         Bench.Test.create ~name:("slow_create_" ^ (Int.to_string (String.length x))) (fun () ->
+         ignore (slow_create x)))
 
-      @
+         @
       *)
       List.concat (
-         List.map [3; 9; 12; 16] ~f:(fun k ->
+        List.map [3; 9; 12; 16] ~f:(fun k ->
           let x = x k in
           let kk = Int.to_string (String.length x) in
           [Bench.Test.create ~name:("kmp_create__" ^ kk)  (a x);
@@ -89,5 +89,5 @@ let () =
                         (* (f, "pcre_search_"); *)]
                 ~f:(fun (f, n) ->
                   Bench.Test.create ~name:(n ^ kk ^ "_" ^ jj) (f y x))))))
-                            ))
+    ))
 ;;

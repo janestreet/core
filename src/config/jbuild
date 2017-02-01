@@ -2,3 +2,5 @@
  ((names (discover))
   (libraries (base stdio configurator))
   (preprocess (pps (ppx_assert)))))
+
+(enforce_style ())

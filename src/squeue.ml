@@ -70,7 +70,7 @@ let push_uncond q x =
   wrap q run
 
 (** Pushes an event on the queue if the queue is less than maxsize, otherwise drops it.
-  Returns true if the push was successful *)
+    Returns true if the push was successful *)
 let push_or_drop q x =
   let run () =
     if Queue.length q.ev_q < q.maxsize then

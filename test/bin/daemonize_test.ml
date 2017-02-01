@@ -7,11 +7,11 @@ let () =
   match Unix.fork () with
   | `In_the_child ->
     (* the child tries to daemonize itself, and also ignores USR1 signal *)
-       let _ = Core.Signal.Expert.handle Signal.usr1 (fun _ -> ()) in
-       let release = Daemon.daemonize_wait () in
-       sleep 1.;
-       Staged.unstage release ();
-       ignore (Unix.write writer ~buf:"x")
+    let _ = Core.Signal.Expert.handle Signal.usr1 (fun _ -> ()) in
+    let release = Daemon.daemonize_wait () in
+    sleep 1.;
+    Staged.unstage release ();
+    ignore (Unix.write writer ~buf:"x")
   | `In_the_parent child ->
     (* the parent tries kills the child with USR1 and expects the signal to be ignored *)
     sleep 0.2;

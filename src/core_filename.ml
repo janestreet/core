@@ -23,7 +23,7 @@ external realpath : string -> string = "unix_realpath"
 let concat p1 p2 =
   if p1 = "" then
     failwithf "Filename.concat called with an empty string as its first \
-              argument (second argument: %s)"
+               argument (second argument: %s)"
       p2
       ();
   let rec collapse_trailing s =
@@ -32,9 +32,9 @@ let concat p1 p2 =
     | Some (s , ("." | "")) -> collapse_trailing s
     | None | Some _ -> s
   in let rec collapse_leading s =
-    match String.lsplit2 s ~on:'/' with
-    | Some (("." | ""), s) -> collapse_leading s
-    | Some _ | None -> s
+       match String.lsplit2 s ~on:'/' with
+       | Some (("." | ""), s) -> collapse_leading s
+       | Some _ | None -> s
   in
   collapse_trailing p1 ^ "/" ^ collapse_leading p2
 
@@ -60,31 +60,31 @@ let skip_end_slashes s ~from =
   | None   -> `All_slashes
 
 (*
-  Fix for #0004549. (in the inria bug tracker)
+   Fix for #0004549. (in the inria bug tracker)
 *)
 let split = function
   | "" -> ".", "."
   | s ->
-      match skip_end_slashes s ~from:(String.length s) with
-      | `All_slashes -> "/", "/"
-      | `Ends_at basename_end ->
-          match string_rexists s ~f:(fun c -> c = '/') ~from:basename_end with
-          | None -> ".", String.sub ~pos:0 ~len:basename_end s
-          | Some basename_start ->
-              let basename =
-                String.sub s ~pos:basename_start
-                  ~len:(basename_end - basename_start)
-              in
-              let dirname =
-                match skip_end_slashes s ~from:basename_start with
-                | `All_slashes -> "/"
-                | `Ends_at dirname_end -> String.sub ~pos:0 ~len:dirname_end s
-              in
-              dirname, basename
+    match skip_end_slashes s ~from:(String.length s) with
+    | `All_slashes -> "/", "/"
+    | `Ends_at basename_end ->
+      match string_rexists s ~f:(fun c -> c = '/') ~from:basename_end with
+      | None -> ".", String.sub ~pos:0 ~len:basename_end s
+      | Some basename_start ->
+        let basename =
+          String.sub s ~pos:basename_start
+            ~len:(basename_end - basename_start)
+        in
+        let dirname =
+          match skip_end_slashes s ~from:basename_start with
+          | `All_slashes -> "/"
+          | `Ends_at dirname_end -> String.sub ~pos:0 ~len:dirname_end s
+        in
+        dirname, basename
 
 (*
-  http://www.opengroup.org/onlinepubs/9699919799/utilities/basename.html
-  http://www.opengroup.org/onlinepubs/9699919799/utilities/dirname.html
+   http://www.opengroup.org/onlinepubs/9699919799/utilities/basename.html
+   http://www.opengroup.org/onlinepubs/9699919799/utilities/dirname.html
 *)
 let basename path = snd (split path)
 let dirname path = fst (split path)
@@ -108,8 +108,8 @@ let prng = Random.State.make_self_init ~allow_in_tests:true ()
 let retry ?(in_dir=temp_dir_name) ~f prefix suffix =
   let escape s =
     String.map s ~f:(function
-                       | '/' | '\'' | '\000' | '\n' | '-' -> '_'
-                       | c -> c)
+      | '/' | '\'' | '\000' | '\n' | '-' -> '_'
+      | c -> c)
   in
   let prefix = escape prefix in
   let suffix = escape suffix in

@@ -152,9 +152,9 @@ module Foil : S = struct
   let search z e =
     let rec loop ({before; cursor = this; after} as z) =
       if Elt.equal e this then Some z else
-      match after with
-      | [] -> None
-      | next :: rest -> loop { before = this :: before; cursor = next; after = rest }
+        match after with
+        | [] -> None
+        | next :: rest -> loop { before = this :: before; cursor = next; after = rest }
     in
     loop z
 
@@ -357,9 +357,9 @@ module Both : S = struct
   let transfer ~src ~dst =
     obs
       (pair
-        (fun src dst -> Hero.transfer ~src ~dst)
-        (fun src dst -> Foil.transfer ~src ~dst)
-          *@ src *@ dst)
+         (fun src dst -> Hero.transfer ~src ~dst)
+         (fun src dst -> Foil.transfer ~src ~dst)
+       *@ src *@ dst)
 
 end
 
@@ -380,284 +380,284 @@ module Make_test (X : S) = struct
 
   let test =
     X.name >:::
-      [ "empty" >::
-          (fun () ->
-            let t = create () in
-            assert (length t = 0);
-            assert (is_empty t);
-            assert (first_elt t = None);
-            assert (last_elt t = None);
-            assert (first t = None);
-            assert (last t = None);
-            assert (remove_first t = None);
-            assert (remove_last t = None);
-            assert (to_list t = [])
-          );
-        "single" >::
-          (fun () ->
-            let t = create () in
-            let elt = insert_first t 13 in
-            assert (length t = 1);
-            assert (not (is_empty t));
-            assert (first t = Some 13);
-            assert (last t = Some 13);
-            assert (to_list t = [13]);
-            assert (is_first t elt);
-            assert (is_last t elt);
-          );
-        "pair" >::
-          (fun () ->
-            let t = create () in
-            let elt2 = insert_first t 14 in
-            let elt1 = insert_first t 13 in
-            assert (length t = 2);
-            assert (not (is_empty t));
-            assert true;
-            assert (first t = Some 13);
-            assert (last t = Some 14);
-            assert (to_list t = [13; 14]);
-            assert (is_first t elt1);
-            assert (is_last t elt2);
-          );
-        "container" >::
-          (fun () ->
-            let module T = Container_test.Test_S1 (X) in
-            T.test ();
-          );
-        "of_list" >::
-          (fun () ->
-            for i = 0 to 5 do
-              let l = List.init i ~f:ident in
-              let t = of_list l in
-              assert (l = to_list t);
-            done
-          );
-        "clear" >::
-          (fun () ->
-            for i = 0 to 5 do
-              let t = of_list (List.init i ~f:ident) in
-              clear t;
-              assert (is_empty t)
-            done);
-        "transfer" >::
-          (fun () ->
-            for i1 = 0 to 3 do
-              let l1 = List.init i1 ~f:ident in
-              for i2 = 0 to 3 do
-                let l2 = List.init i2 ~f:ident in
-                let t1 = of_list l1 in
-                let t2 = of_list l2 in
-                transfer ~src:t1 ~dst:t2;
-                assert (is_empty t1);
-                assert (to_list t2 = l2 @ l1);
-              done
-            done
-          );
-        "transfer2" >::
-          (fun () ->
-            let l1 = create () in
-            let e = insert_first l1 9 in
-            let l2 = create () in
-            transfer ~src:l1 ~dst:l2;
-            remove l2 e;
-            assert (is_empty l1);
-            assert (is_empty l2);
-          );
-        "insert-remove" >::
-          (fun () ->
-            let t = create () in
-            let is_elts elts =
-              assert (to_list t = List.map elts ~f:Elt.value);
-              let rec loop elt elts =
-                match (elt, elts) with
-                | (None, []) -> ()
-                | (Some elt, elt' :: elts) ->
-                    assert (Elt.equal elt elt');
-                    loop (next t elt) elts
-                | _ -> assert false
-              in
-              loop (first_elt t) elts;
-              begin match elts with
-              | [] -> ()
-              | elt :: elts ->
-                  assert (prev t elt = None);
-                  assert (is_first t elt);
-                  assert (Option.equal Elt.equal (first_elt t) (Some elt));
-                  List.iter elts ~f:(fun elt -> assert (not (is_first t elt)));
-                  ignore
-                    (List.fold elts ~init:elt ~f:(fun prev elt ->
-                      assert (Option.equal Elt.equal (X.prev t elt)
-                                (Some prev));
-                      elt));
-              end;
-              begin match List.rev elts with
-              | [] -> ()
-              | elt :: elts ->
-                  assert (next t elt = None);
-                  assert (is_last t elt);
-                  assert (Option.equal Elt.equal (last_elt t) (Some elt));
-                  List.iter elts ~f:(fun elt -> assert (not (is_last t elt)));
-                  ignore (List.fold elts ~init:elt ~f:(fun next elt ->
-                    assert (Option.equal Elt.equal (X.next t elt) (Some next));
-                    elt))
-              end
-            in
-            let elt1 = insert_first t () in
-            is_elts [elt1];
-            let elt2 = insert_first t () in
-            is_elts [elt2; elt1];
-            let elt3 = insert_last t () in
-            is_elts [elt2; elt1; elt3];
-            remove t elt1;
-            is_elts [elt2; elt3];
-            let elt4 = insert_after t elt2 () in
-            is_elts [elt2; elt4; elt3];
-            let elt5 = insert_before t elt2 () in
-            is_elts [elt5; elt2; elt4; elt3];
-            ignore (remove_last t);
-            is_elts [elt5; elt2; elt4];
-            ignore (remove_first t);
-            is_elts [elt2; elt4];
-            ignore (remove_first t);
-            is_elts [elt4];
-            ignore (remove_first t);
-            is_elts [];
-          );
-        "filter-inplace" >::
-          (fun () ->
-            let t = create () in
-            let r1 = ref 0 in
-            let r2 = ref 1 in
-            let r3 = ref 2 in
-            let i x = ignore (insert_first t x) in
-            i r1;
-            i r2;
-            i r3;
-            assert (length t = 3);
-            filter_inplace t ~f:(fun r -> not (phys_equal r r2));
-            assert (length t = 2);
-            let len =
-              fold t ~init:0 ~f:(fun acc x ->
-                assert (not (phys_equal x r2));
-                acc + 1)
-            in
-            assert (len = length t)
-          );
-        "wrong-list-1" >::
-          (fun () ->
-            let t1 = create () in
-            let t2 = create () in
-            let e1 = insert_first t1 0 in
-            (try ignore (remove t2 e1); assert false with _ -> ());
-          );
-        "wrong-list-2" >::
-          (fun () ->
-            let t4 = create () in
-            let t5 = t_of_sexp Int.t_of_sexp (Sexp.of_string "(1 2)") in
-            match last_elt t5 with
-            | None -> assert false
-            | Some e6 ->
-              try ignore (prev t4 e6); raise Exit
-              with
-              | Exit -> assert false
-              | _ -> ()
-          );
-        "transfer-self" >::
-          (fun () ->
-            let l2 = of_list [] in
-            try transfer ~src:l2 ~dst:l2; raise Exit
-            with
-            | Exit -> assert false
-            | _ -> ()
-          );
-        "write-lock" >::: [
-          "remove" >::
-            (fun () ->
-              let xs = [1; 2; 3] in
-              let t = of_list xs in
-              let e = Option.value_exn (first_elt t) in
-              iter t ~f:(fun _ ->
-                assert_raises (fun () -> ignore (remove_first t)));
-              assert (to_list t = xs);
-              iter t ~f:(fun _ ->
-                assert_raises (fun () -> ignore (remove_last t)));
-              assert (to_list t = xs);
-              iter t ~f:(fun _ ->
-                assert_raises (fun () -> ignore (remove t e)));
-              assert (to_list t = xs)
-            );
-          "insert" >::
-            (fun () ->
-              let xs = [1; 2; 3] in
-              let t = of_list xs in
-              let e = Option.value_exn (first_elt t) in
-              iter t ~f:(fun _ ->
-                assert_raises (fun () -> ignore (insert_first t 4)));
-              assert (to_list t = xs);
-              iter t ~f:(fun _ ->
-                assert_raises (fun () -> ignore (insert_last t 5)));
-              assert (to_list t = xs);
-              iter t ~f:(fun _ ->
-                assert_raises (fun () -> ignore (insert_before t e 6)));
-              assert (to_list t = xs);
-              iter t ~f:(fun _ ->
-                assert_raises (fun () -> ignore (insert_after t e 7)));
-              assert (to_list t = xs)
-            );
-        ];
-        "transfer2" >::
-          (fun () ->
-            let open Help in
-            let src = of_sexp "(1)" in ignore src;
-            let elt = insert_last src 4 in ignore elt;
-            let dst = of_sexp "(1 2 3 4)" in ignore dst;
-            transfer ~src ~dst;
-            ignore (next dst elt);
-            ()
-          );
-        "counterexample1" >::
-          (fun () ->
-            let open Help in
-            let l = of_sexp "(1)" in
-            let e = insert_first l 2 in
-            invariant ignore l;
-            assert (Option.is_some (remove_first l));
-            assert_raises (fun () -> ignore (is_last l e));
-            ()
-          );
-        "counterexample2" >::
-          (fun () ->
-            let l = of_list [1] in
-            let e = insert_first l 3 in
-            invariant ignore l;
-            ignore (remove l e);
-            invariant ignore l;
-            assert (Option.is_some (first_elt l))
-          );
-        "counterexample3" >::
-          (fun () ->
-            let open Help in
-            let l1 = of_sexp "(1 2 3)" in
-            let l2 = copy l1 in
-            transfer ~src:l2 ~dst:l1;
-            invariant ignore l1;
-          );
-        "counterexample4" >::
-          (fun () ->
-            let open Help in
-            let l1 = of_sexp "(1 2 3 4)" in
-            assert (length l1 = 4);
-            let _ = insert_last l1 4 in
-            assert (length l1 = 5);
-            let l2 = of_list [1; 2; 3] in
-            assert (length l2 = 3);
-            transfer ~src:l1 ~dst:l2;
-            match (length l1, length l2) with
-            | (0, 8) -> ()
-            | (len1, len2) ->
-              failwithf "%s: len1 = %d =/= 0; len2 = %d =/= 8" X.name len1 len2 ()
-          );
-      ]
+    [ "empty" >::
+      (fun () ->
+         let t = create () in
+         assert (length t = 0);
+         assert (is_empty t);
+         assert (first_elt t = None);
+         assert (last_elt t = None);
+         assert (first t = None);
+         assert (last t = None);
+         assert (remove_first t = None);
+         assert (remove_last t = None);
+         assert (to_list t = [])
+      );
+      "single" >::
+      (fun () ->
+         let t = create () in
+         let elt = insert_first t 13 in
+         assert (length t = 1);
+         assert (not (is_empty t));
+         assert (first t = Some 13);
+         assert (last t = Some 13);
+         assert (to_list t = [13]);
+         assert (is_first t elt);
+         assert (is_last t elt);
+      );
+      "pair" >::
+      (fun () ->
+         let t = create () in
+         let elt2 = insert_first t 14 in
+         let elt1 = insert_first t 13 in
+         assert (length t = 2);
+         assert (not (is_empty t));
+         assert true;
+         assert (first t = Some 13);
+         assert (last t = Some 14);
+         assert (to_list t = [13; 14]);
+         assert (is_first t elt1);
+         assert (is_last t elt2);
+      );
+      "container" >::
+      (fun () ->
+         let module T = Container_test.Test_S1 (X) in
+         T.test ();
+      );
+      "of_list" >::
+      (fun () ->
+         for i = 0 to 5 do
+           let l = List.init i ~f:ident in
+           let t = of_list l in
+           assert (l = to_list t);
+         done
+      );
+      "clear" >::
+      (fun () ->
+         for i = 0 to 5 do
+           let t = of_list (List.init i ~f:ident) in
+           clear t;
+           assert (is_empty t)
+         done);
+      "transfer" >::
+      (fun () ->
+         for i1 = 0 to 3 do
+           let l1 = List.init i1 ~f:ident in
+           for i2 = 0 to 3 do
+             let l2 = List.init i2 ~f:ident in
+             let t1 = of_list l1 in
+             let t2 = of_list l2 in
+             transfer ~src:t1 ~dst:t2;
+             assert (is_empty t1);
+             assert (to_list t2 = l2 @ l1);
+           done
+         done
+      );
+      "transfer2" >::
+      (fun () ->
+         let l1 = create () in
+         let e = insert_first l1 9 in
+         let l2 = create () in
+         transfer ~src:l1 ~dst:l2;
+         remove l2 e;
+         assert (is_empty l1);
+         assert (is_empty l2);
+      );
+      "insert-remove" >::
+      (fun () ->
+         let t = create () in
+         let is_elts elts =
+           assert (to_list t = List.map elts ~f:Elt.value);
+           let rec loop elt elts =
+             match (elt, elts) with
+             | (None, []) -> ()
+             | (Some elt, elt' :: elts) ->
+               assert (Elt.equal elt elt');
+               loop (next t elt) elts
+             | _ -> assert false
+           in
+           loop (first_elt t) elts;
+           begin match elts with
+           | [] -> ()
+           | elt :: elts ->
+             assert (prev t elt = None);
+             assert (is_first t elt);
+             assert (Option.equal Elt.equal (first_elt t) (Some elt));
+             List.iter elts ~f:(fun elt -> assert (not (is_first t elt)));
+             ignore
+               (List.fold elts ~init:elt ~f:(fun prev elt ->
+                  assert (Option.equal Elt.equal (X.prev t elt)
+                            (Some prev));
+                  elt));
+           end;
+           begin match List.rev elts with
+           | [] -> ()
+           | elt :: elts ->
+             assert (next t elt = None);
+             assert (is_last t elt);
+             assert (Option.equal Elt.equal (last_elt t) (Some elt));
+             List.iter elts ~f:(fun elt -> assert (not (is_last t elt)));
+             ignore (List.fold elts ~init:elt ~f:(fun next elt ->
+               assert (Option.equal Elt.equal (X.next t elt) (Some next));
+               elt))
+           end
+         in
+         let elt1 = insert_first t () in
+         is_elts [elt1];
+         let elt2 = insert_first t () in
+         is_elts [elt2; elt1];
+         let elt3 = insert_last t () in
+         is_elts [elt2; elt1; elt3];
+         remove t elt1;
+         is_elts [elt2; elt3];
+         let elt4 = insert_after t elt2 () in
+         is_elts [elt2; elt4; elt3];
+         let elt5 = insert_before t elt2 () in
+         is_elts [elt5; elt2; elt4; elt3];
+         ignore (remove_last t);
+         is_elts [elt5; elt2; elt4];
+         ignore (remove_first t);
+         is_elts [elt2; elt4];
+         ignore (remove_first t);
+         is_elts [elt4];
+         ignore (remove_first t);
+         is_elts [];
+      );
+      "filter-inplace" >::
+      (fun () ->
+         let t = create () in
+         let r1 = ref 0 in
+         let r2 = ref 1 in
+         let r3 = ref 2 in
+         let i x = ignore (insert_first t x) in
+         i r1;
+         i r2;
+         i r3;
+         assert (length t = 3);
+         filter_inplace t ~f:(fun r -> not (phys_equal r r2));
+         assert (length t = 2);
+         let len =
+           fold t ~init:0 ~f:(fun acc x ->
+             assert (not (phys_equal x r2));
+             acc + 1)
+         in
+         assert (len = length t)
+      );
+      "wrong-list-1" >::
+      (fun () ->
+         let t1 = create () in
+         let t2 = create () in
+         let e1 = insert_first t1 0 in
+         (try ignore (remove t2 e1); assert false with _ -> ());
+      );
+      "wrong-list-2" >::
+      (fun () ->
+         let t4 = create () in
+         let t5 = t_of_sexp Int.t_of_sexp (Sexp.of_string "(1 2)") in
+         match last_elt t5 with
+         | None -> assert false
+         | Some e6 ->
+           try ignore (prev t4 e6); raise Exit
+           with
+           | Exit -> assert false
+           | _ -> ()
+      );
+      "transfer-self" >::
+      (fun () ->
+         let l2 = of_list [] in
+         try transfer ~src:l2 ~dst:l2; raise Exit
+         with
+         | Exit -> assert false
+         | _ -> ()
+      );
+      "write-lock" >::: [
+        "remove" >::
+        (fun () ->
+           let xs = [1; 2; 3] in
+           let t = of_list xs in
+           let e = Option.value_exn (first_elt t) in
+           iter t ~f:(fun _ ->
+             assert_raises (fun () -> ignore (remove_first t)));
+           assert (to_list t = xs);
+           iter t ~f:(fun _ ->
+             assert_raises (fun () -> ignore (remove_last t)));
+           assert (to_list t = xs);
+           iter t ~f:(fun _ ->
+             assert_raises (fun () -> ignore (remove t e)));
+           assert (to_list t = xs)
+        );
+        "insert" >::
+        (fun () ->
+           let xs = [1; 2; 3] in
+           let t = of_list xs in
+           let e = Option.value_exn (first_elt t) in
+           iter t ~f:(fun _ ->
+             assert_raises (fun () -> ignore (insert_first t 4)));
+           assert (to_list t = xs);
+           iter t ~f:(fun _ ->
+             assert_raises (fun () -> ignore (insert_last t 5)));
+           assert (to_list t = xs);
+           iter t ~f:(fun _ ->
+             assert_raises (fun () -> ignore (insert_before t e 6)));
+           assert (to_list t = xs);
+           iter t ~f:(fun _ ->
+             assert_raises (fun () -> ignore (insert_after t e 7)));
+           assert (to_list t = xs)
+        );
+      ];
+      "transfer2" >::
+      (fun () ->
+         let open Help in
+         let src = of_sexp "(1)" in ignore src;
+         let elt = insert_last src 4 in ignore elt;
+         let dst = of_sexp "(1 2 3 4)" in ignore dst;
+         transfer ~src ~dst;
+         ignore (next dst elt);
+         ()
+      );
+      "counterexample1" >::
+      (fun () ->
+         let open Help in
+         let l = of_sexp "(1)" in
+         let e = insert_first l 2 in
+         invariant ignore l;
+         assert (Option.is_some (remove_first l));
+         assert_raises (fun () -> ignore (is_last l e));
+         ()
+      );
+      "counterexample2" >::
+      (fun () ->
+         let l = of_list [1] in
+         let e = insert_first l 3 in
+         invariant ignore l;
+         ignore (remove l e);
+         invariant ignore l;
+         assert (Option.is_some (first_elt l))
+      );
+      "counterexample3" >::
+      (fun () ->
+         let open Help in
+         let l1 = of_sexp "(1 2 3)" in
+         let l2 = copy l1 in
+         transfer ~src:l2 ~dst:l1;
+         invariant ignore l1;
+      );
+      "counterexample4" >::
+      (fun () ->
+         let open Help in
+         let l1 = of_sexp "(1 2 3 4)" in
+         assert (length l1 = 4);
+         let _ = insert_last l1 4 in
+         assert (length l1 = 5);
+         let l2 = of_list [1; 2; 3] in
+         assert (length l2 = 3);
+         transfer ~src:l1 ~dst:l2;
+         match (length l1, length l2) with
+         | (0, 8) -> ()
+         | (len1, len2) ->
+           failwithf "%s: len1 = %d =/= 0; len2 = %d =/= 8" X.name len1 len2 ()
+      );
+    ]
 
 end
 
@@ -665,32 +665,32 @@ module Bisimulation = struct
 
   module Random = struct
     let prng = Random.State.make
-        [|3; 1; 4; 1; 5; 9; 2; 6; 5; 3; 5; 8; 9; 7; 9; 3; 2; 3; 8; 4;
-          6; 2; 6; 4; 3; 3; 8; 3; 2; 7; 9; 5; 0; 2; 8; 8; 4; 1; 9; 7; 1;
-          6; 9; 3; 9; 9; 3; 7; 5; 1; 0; 5; 8; 2; 0; 9; 7; 4; 9; 4; 4; 5;
-          9; 2; 3; 0; 7; 8; 1; 6; 4; 0; 6; 2; 8; 6; 2; 0; 8; 9; 9; 8; 6;
-          2; 8; 0; 3; 4; 8; 2; 5; 3; 4; 2; 1; 1; 7; 0; 6; 7; 9; 8; 2; 1;
-          4; 8; 0; 8; 6; 5; 1; 3; 2; 8; 2; 3; 0; 6; 6; 4; 7; 0; 9; 3; 8;
-          4; 4; 6; 0; 9; 5; 5; 0; 5; 8; 2; 2; 3; 1; 7; 2; 5; 3; 5; 9; 4;
-          0; 8; 1; 2; 8; 4; 8; 1; 1; 1; 7; 4; 5; 0; 2; 8; 4; 1; 0; 2; 7;
-          0; 1; 9; 3; 8; 5; 2; 1; 1; 0; 5; 5; 5; 9; 6; 4; 4; 6; 2; 2; 9;
-          4; 8; 9; 5; 4; 9; 3; 0; 3; 8; 1; 9; 6; 4; 4; 2; 8; 8; 1; 0; 9;
-          7; 5; 6; 6; 5; 9; 3; 3; 4; 4; 6; 1; 2; 8; 4; 7; 5; 6; 4; 8; 2;
-          3; 3; 7; 8; 6; 7; 8; 3; 1; 6; 5; 2; 7; 1; 2; 0; 1; 9; 0; 9; 1;
-          4; 5; 6; 4; 8; 5; 6; 6; 9; 2; 3; 4; 6; 0; 3; 4; 8; 6; 1; 0; 4;
-          5; 4; 3; 2; 6; 6; 4; 8; 2; 1; 3; 3; 9; 3; 6; 0; 7; 2; 6; 0; 2;
-          4; 9; 1; 4; 1; 2; 7; 3; 7; 2; 4; 5; 8; 7; 0; 0; 6; 6; 0; 6; 3;
-          1; 5; 5; 8; 8; 1; 7; 4; 8; 8; 1; 5; 2; 0; 9; 2; 0; 9; 6; 2; 8;
-          2; 9; 2; 5; 4; 0; 9; 1; 7; 1; 5; 3; 6; 4; 3; 6; 7; 8; 9; 2; 5;
-          9; 0; 3; 6; 0; 0; 1; 1; 3; 3; 0; 5; 3; 0; 5; 4; 8; 8; 2; 0; 4;
-          6; 6; 5; 2; 1; 3; 8; 4; 1; 4; 6; 9; 5; 1; 9; 4; 1; 5; 1; 1; 6;
-          0; 9; 4; 3; 3; 0; 5; 7; 2; 7; 0; 3; 6; 5; 7; 5; 9; 5; 9; 1; 9;
-          5; 3; 0; 9; 2; 1; 8; 6; 1; 1; 7; 3; 8; 1; 9; 3; 2; 6; 1; 1; 7;
-          9; 3; 1; 0; 5; 1; 1; 8; 5; 4; 8; 0; 7; 4; 4; 6; 2; 3; 7; 9; 9;
-          6; 2; 7; 4; 9; 5; 6; 7; 3; 5; 1; 8; 8; 5; 7; 5; 2; 7; 2; 4; 8;
-          9; 1; 2; 2; 7; 9; 3; 8; 1; 8; 3; 0; 1; 1; 9; 4; 9; 1; 2; 9; 8;
-          3; 3; 6; 7; 3; 3; 6; 2; 4; 4; 0; 6; 5; 6; 6; 4; 3; 0; 8; 6; 0;
-      |]
+                 [|3; 1; 4; 1; 5; 9; 2; 6; 5; 3; 5; 8; 9; 7; 9; 3; 2; 3; 8; 4;
+                   6; 2; 6; 4; 3; 3; 8; 3; 2; 7; 9; 5; 0; 2; 8; 8; 4; 1; 9; 7; 1;
+                   6; 9; 3; 9; 9; 3; 7; 5; 1; 0; 5; 8; 2; 0; 9; 7; 4; 9; 4; 4; 5;
+                   9; 2; 3; 0; 7; 8; 1; 6; 4; 0; 6; 2; 8; 6; 2; 0; 8; 9; 9; 8; 6;
+                   2; 8; 0; 3; 4; 8; 2; 5; 3; 4; 2; 1; 1; 7; 0; 6; 7; 9; 8; 2; 1;
+                   4; 8; 0; 8; 6; 5; 1; 3; 2; 8; 2; 3; 0; 6; 6; 4; 7; 0; 9; 3; 8;
+                   4; 4; 6; 0; 9; 5; 5; 0; 5; 8; 2; 2; 3; 1; 7; 2; 5; 3; 5; 9; 4;
+                   0; 8; 1; 2; 8; 4; 8; 1; 1; 1; 7; 4; 5; 0; 2; 8; 4; 1; 0; 2; 7;
+                   0; 1; 9; 3; 8; 5; 2; 1; 1; 0; 5; 5; 5; 9; 6; 4; 4; 6; 2; 2; 9;
+                   4; 8; 9; 5; 4; 9; 3; 0; 3; 8; 1; 9; 6; 4; 4; 2; 8; 8; 1; 0; 9;
+                   7; 5; 6; 6; 5; 9; 3; 3; 4; 4; 6; 1; 2; 8; 4; 7; 5; 6; 4; 8; 2;
+                   3; 3; 7; 8; 6; 7; 8; 3; 1; 6; 5; 2; 7; 1; 2; 0; 1; 9; 0; 9; 1;
+                   4; 5; 6; 4; 8; 5; 6; 6; 9; 2; 3; 4; 6; 0; 3; 4; 8; 6; 1; 0; 4;
+                   5; 4; 3; 2; 6; 6; 4; 8; 2; 1; 3; 3; 9; 3; 6; 0; 7; 2; 6; 0; 2;
+                   4; 9; 1; 4; 1; 2; 7; 3; 7; 2; 4; 5; 8; 7; 0; 0; 6; 6; 0; 6; 3;
+                   1; 5; 5; 8; 8; 1; 7; 4; 8; 8; 1; 5; 2; 0; 9; 2; 0; 9; 6; 2; 8;
+                   2; 9; 2; 5; 4; 0; 9; 1; 7; 1; 5; 3; 6; 4; 3; 6; 7; 8; 9; 2; 5;
+                   9; 0; 3; 6; 0; 0; 1; 1; 3; 3; 0; 5; 3; 0; 5; 4; 8; 8; 2; 0; 4;
+                   6; 6; 5; 2; 1; 3; 8; 4; 1; 4; 6; 9; 5; 1; 9; 4; 1; 5; 1; 1; 6;
+                   0; 9; 4; 3; 3; 0; 5; 7; 2; 7; 0; 3; 6; 5; 7; 5; 9; 5; 9; 1; 9;
+                   5; 3; 0; 9; 2; 1; 8; 6; 1; 1; 7; 3; 8; 1; 9; 3; 2; 6; 1; 1; 7;
+                   9; 3; 1; 0; 5; 1; 1; 8; 5; 4; 8; 0; 7; 4; 4; 6; 2; 3; 7; 9; 9;
+                   6; 2; 7; 4; 9; 5; 6; 7; 3; 5; 1; 8; 8; 5; 7; 5; 2; 7; 2; 4; 8;
+                   9; 1; 2; 2; 7; 9; 3; 8; 1; 8; 3; 0; 1; 1; 9; 4; 9; 1; 2; 9; 8;
+                   3; 3; 6; 7; 3; 3; 6; 2; 4; 4; 0; 6; 5; 6; 6; 4; 3; 0; 8; 6; 0;
+                 |]
     let int n = Random.State.int prng n
     let bool () = Random.State.bool prng
   end
@@ -833,7 +833,7 @@ module Bisimulation = struct
       hashtbl_rand (Lazy.force tbl) env
 
   exception Traced of
-    Sexp.t * [ `Operation of f | `New_elt of e | `New_list of l ] list
+      Sexp.t * [ `Operation of f | `New_elt of e | `New_list of l ] list
   [@@deriving sexp]
 
   let simulate nsteps =
@@ -897,14 +897,14 @@ module Bisimulation = struct
           | To_list t -> ignore (Both.to_list (snd t))
           | Transfer (t1, t2) -> ignore (Both.transfer ~src:(snd t1) ~dst:(snd t2))
         with
-          | Both_raised | Skip -> ()
+        | Both_raised | Skip -> ()
       done
     with
       e -> raise (Traced (Exn.sexp_of_t e, Queue.to_list trace))
 
   let test =
     "bisimulation" >::
-      (fun () -> for _ = 1 to 100_000 do simulate 10 done)
+    (fun () -> for _ = 1 to 100_000 do simulate 10 done)
 
 end
 

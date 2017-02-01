@@ -228,7 +228,7 @@ module Stable0 = struct
       let t_of_sexp s : t = of_time (Time.Stable.V1.t_of_sexp s)
 
       let of_int63_exn t =
-      of_span_since_epoch (Span.check_range (Span.of_int63_ns t))
+        of_span_since_epoch (Span.check_range (Span.of_int63_ns t))
 
       let to_int63 t = to_int63_ns_since_epoch t
     end
@@ -424,65 +424,113 @@ module Ofday = struct
       let zones = !Zone.likely_machine_zones
 
       let%bench_fun "now" [@indexed i = List.range 0 (List.length zones)] =
-        let zone = Zone.find_exn (List.nth_exn zones i) in
-        let time = now () in
-        fun () -> of_time time ~zone
+let zone = Zone.find_exn (List.nth_exn zones i) in
+let time = now () in
+fun () -> of_time time ~zone
 
-      let%bench_fun "random" =
-        let time = random () in
-        let zone = Zone.find_exn List.(hd_exn (permute !Zone.likely_machine_zones)) in
-        fun () -> of_time time ~zone
-    end)
-  ;;
+let%bench_fun "random" =
+  let time = random () in
+  let zone = Zone.find_exn List.(hd_exn (permute !Zone.likely_machine_zones)) in
+  fun () -> of_time time ~zone
+end)
+;;
 
-  let of_local_time time = of_time time ~zone:(Lazy.force Zone.local)
+let of_local_time time = of_time time ~zone:(Lazy.force Zone.local)
 
-  let now ~zone = of_time (now ()) ~zone
+let now ~zone = of_time (now ()) ~zone
 
-  let local_now () = now ~zone:(force Time.Zone.local)
+let local_now () = now ~zone:(force Time.Zone.local)
 
-  let to_string t =
-    if Span.(<=) start_of_day t && Span.(<) t end_of_day then
-      let ns = Span.to_int63_ns t in
-      let s = Span.to_int_sec t in
-      let m = s / 60 in
-      let h = m / 60 in
-      sprintf "%02d:%02d:%02d.%09d"
-        h
-        (m mod 60)
-        (s mod 60)
-        Int63.(to_int_exn (rem ns Span.(to_int63_ns second)))
-    else "Incorrect day"
-  ;;
+let to_string t =
+  if Span.(<=) start_of_day t && Span.(<) t end_of_day then
+    let ns = Span.to_int63_ns t in
+    let s = Span.to_int_sec t in
+    let m = s / 60 in
+    let h = m / 60 in
+    sprintf "%02d:%02d:%02d.%09d"
+      h
+      (m mod 60)
+      (s mod 60)
+      Int63.(to_int_exn (rem ns Span.(to_int63_ns second)))
+  else "Incorrect day"
+;;
 
-  let to_millisecond_string t =
-    if Span.(<=) start_of_day t && Span.(<) t end_of_day then
-      let ms = Int63.(Span.to_int63_ns t / of_int 1_000_000) in
-      let s = Int63.(ms / of_int 1000) in
-      let m = Int63.(s / of_int 60) in
-      let h = Int63.(m / of_int 60) in
-      sprintf "%02d:%02d:%02d.%03d"
-        Int63.(to_int_exn h)
-        Int63.(to_int_exn (rem m (of_int 60)))
-        Int63.(to_int_exn (rem s (of_int 60)))
-        Int63.(to_int_exn (rem ms (of_int 1000)))
-    else "Incorrect day"
-  ;;
+let to_millisecond_string t =
+  if Span.(<=) start_of_day t && Span.(<) t end_of_day then
+    let ms = Int63.(Span.to_int63_ns t / of_int 1_000_000) in
+    let s = Int63.(ms / of_int 1000) in
+    let m = Int63.(s / of_int 60) in
+    let h = Int63.(m / of_int 60) in
+    sprintf "%02d:%02d:%02d.%03d"
+      Int63.(to_int_exn h)
+      Int63.(to_int_exn (rem m (of_int 60)))
+      Int63.(to_int_exn (rem s (of_int 60)))
+      Int63.(to_int_exn (rem ms (of_int 1000)))
+  else "Incorrect day"
+;;
 
-  let to_ofday t = Time.Ofday.of_span_since_start_of_day (Span.to_span t)
+let to_ofday t = Time.Ofday.of_span_since_start_of_day (Span.to_span t)
 
-  let of_string s = of_ofday (Time.Ofday.of_string s)
+let of_string s = of_ofday (Time.Ofday.of_string s)
+
+module Stable = struct
+  module V1 = struct
+    module T = struct
+      type nonrec t = t [@@deriving compare, bin_io]
+
+      let t_of_sexp s : t = of_ofday (Time.Ofday.Stable.V1.t_of_sexp s)
+      let sexp_of_t (t : t) = Time.Ofday.Stable.V1.sexp_of_t (to_ofday t)
+
+      let to_int63     t = Span.Stable.V1.to_int63     t
+      let of_int63_exn t = Span.Stable.V1.of_int63_exn t
+    end
+    include T
+    include Comparator.Stable.V1.Make (T)
+  end
+end
+
+let sexp_of_t = Stable.V1.sexp_of_t
+let t_of_sexp = Stable.V1.t_of_sexp
+
+include Identifiable.Make (struct
+    type nonrec t = t [@@deriving sexp, compare, bin_io]
+    let module_name = "Core.Time_ns.Ofday"
+    let hash = Span.hash
+    let of_string, to_string = of_string, to_string
+  end)
+
+module Option = struct
+  type ofday = t [@@deriving sexp, compare]
+  type t = Span.Option.t [@@deriving bin_io, compare, hash, typerep]
+
+  let none            = Span.Option.none
+  let some            = Span.Option.some
+  let is_none         = Span.Option.is_none
+  let is_some         = Span.Option.is_some
+  let value           = Span.Option.value
+  let value_exn       = Span.Option.value_exn
+  let unchecked_value = Span.Option.unchecked_value
+
+  let of_option = function None -> none | Some t -> some t
+  let to_option t = if is_none t then None else Some (value_exn t)
+
+  module Optional_syntax = struct
+    module Optional_syntax = struct
+      let is_none         = is_none
+      let unchecked_value = unchecked_value
+    end
+  end
 
   module Stable = struct
     module V1 = struct
       module T = struct
         type nonrec t = t [@@deriving compare, bin_io]
 
-        let t_of_sexp s : t = of_ofday (Time.Ofday.Stable.V1.t_of_sexp s)
-        let sexp_of_t (t : t) = Time.Ofday.Stable.V1.sexp_of_t (to_ofday t)
+        let sexp_of_t t = [%sexp_of: Stable.V1.t option] (to_option t)
+        let t_of_sexp s = of_option ([%of_sexp: Stable.V1.t option] s)
 
-        let to_int63     t = Span.Stable.V1.to_int63     t
-        let of_int63_exn t = Span.Stable.V1.of_int63_exn t
+        let to_int63     t = Span.Option.Stable.V1.to_int63     t
+        let of_int63_exn t = Span.Option.Stable.V1.of_int63_exn t
       end
       include T
       include Comparator.Stable.V1.Make (T)
@@ -494,59 +542,11 @@ module Ofday = struct
 
   include Identifiable.Make (struct
       type nonrec t = t [@@deriving sexp, compare, bin_io]
-      let module_name = "Core.Time_ns.Ofday"
-      let hash = Span.hash
-      let of_string, to_string = of_string, to_string
+      let module_name = "Core.Time_ns.Ofday.Option"
+      let hash = Span.Option.hash
+      include Sexpable.To_stringable (struct type nonrec t = t [@@deriving sexp] end)
     end)
-
-  module Option = struct
-    type ofday = t [@@deriving sexp, compare]
-    type t = Span.Option.t [@@deriving bin_io, compare, hash, typerep]
-
-    let none            = Span.Option.none
-    let some            = Span.Option.some
-    let is_none         = Span.Option.is_none
-    let is_some         = Span.Option.is_some
-    let value           = Span.Option.value
-    let value_exn       = Span.Option.value_exn
-    let unchecked_value = Span.Option.unchecked_value
-
-    let of_option = function None -> none | Some t -> some t
-    let to_option t = if is_none t then None else Some (value_exn t)
-
-    module Optional_syntax = struct
-      module Optional_syntax = struct
-        let is_none         = is_none
-        let unchecked_value = unchecked_value
-      end
-    end
-
-    module Stable = struct
-      module V1 = struct
-        module T = struct
-          type nonrec t = t [@@deriving compare, bin_io]
-
-          let sexp_of_t t = [%sexp_of: Stable.V1.t option] (to_option t)
-          let t_of_sexp s = of_option ([%of_sexp: Stable.V1.t option] s)
-
-          let to_int63     t = Span.Option.Stable.V1.to_int63     t
-          let of_int63_exn t = Span.Option.Stable.V1.of_int63_exn t
-        end
-        include T
-        include Comparator.Stable.V1.Make (T)
-      end
-    end
-
-    let sexp_of_t = Stable.V1.sexp_of_t
-    let t_of_sexp = Stable.V1.t_of_sexp
-
-    include Identifiable.Make (struct
-        type nonrec t = t [@@deriving sexp, compare, bin_io]
-        let module_name = "Core.Time_ns.Ofday.Option"
-        let hash = Span.Option.hash
-        include Sexpable.To_stringable (struct type nonrec t = t [@@deriving sexp] end)
-      end)
-  end
+end
 end
 
 let%bench_module "Ofday" =
@@ -614,27 +614,27 @@ end
    Dropping Time in favor of Time_ns is possible and has been discussed, but we have
    chosen not to do so at this time for a few reasons:
 
-  - It's a lot of work.  All functions over Time, including the related
-    modules Date, Ofday, Zone, Span, Schedule have to be converted to Time_ns
-    space.  This is largely mechanical, but will create a lot of churn within
-    the modules and possibly externally where the floatiness of the Time world
-    leaks out.
+   - It's a lot of work.  All functions over Time, including the related
+   modules Date, Ofday, Zone, Span, Schedule have to be converted to Time_ns
+   space.  This is largely mechanical, but will create a lot of churn within
+   the modules and possibly externally where the floatiness of the Time world
+   leaks out.
 
-  - It's of limited utility compared to other things we could be working on.
-    Time math would be easier to understand and somewhat faster, but very few
-    modules/programs would benefit from faster time math.  Those that do can
-    use Time_ns already for the most part.
+   - It's of limited utility compared to other things we could be working on.
+   Time math would be easier to understand and somewhat faster, but very few
+   modules/programs would benefit from faster time math.  Those that do can
+   use Time_ns already for the most part.
 
-  - Having Time_ns and a conversion function already gives the bulk of the
-    value to programs that want a fast, non-allocating version of [Time.now].
-    Indeed, many remaining unconverted functions
+   - Having Time_ns and a conversion function already gives the bulk of the
+   value to programs that want a fast, non-allocating version of [Time.now].
+   Indeed, many remaining unconverted functions
 
-  - We aren't certain about how the boundaries around Time_ns will affect the
-    external viability of Core.  Internally we don't think being limited to
-    a smaller time range is an issue, and really far off times are better
-    represented as (Date.t * Ofday.t), but it is still a restriction.  This
-    pushback is probably minimal and, if we could get over the work concerns,
-    could be eliminated.
+   - We aren't certain about how the boundaries around Time_ns will affect the
+   external viability of Core.  Internally we don't think being limited to
+   a smaller time range is an issue, and really far off times are better
+   represented as (Date.t * Ofday.t), but it is still a restriction.  This
+   pushback is probably minimal and, if we could get over the work concerns,
+   could be eliminated.
 
    - Converting between Time and Time_ns when you use libraries based on different ones
    isn't so bad. (?)

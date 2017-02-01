@@ -186,10 +186,10 @@ let add_remove_from_existing_heap data initial_size =
     Heap.add h (Data.next data);
   done;
   Bench.Test.create ~name:(sprintf "add/remove from heap of size %i (%s)" initial_size
-    (Data.name data))
+                             (Data.name data))
     (fun () ->
-      Heap.add h (Data.next data);
-      ignore (Heap.pop_exn h))
+       Heap.add h (Data.next data);
+       ignore (Heap.pop_exn h))
 ;;
 
 let heap_sort data size =
@@ -202,16 +202,16 @@ let heap_sort data size =
   in
   Bench.Test.create ~name:(sprintf "sort list of length %i (%s)" size (Data.name data))
     (fun () ->
-      let h = Heap.create ~lt:(fun (x : int) (x' : int) -> x < x') size 0 in
-      List.iter l ~f:(fun i -> Heap.add h i);
-      try
-        let rec loop () =
-          ignore (Heap.pop_exn h);
-          loop ()
-        in
-        loop ()
-      with
-      | _ -> assert (Heap.is_empty h))
+       let h = Heap.create ~lt:(fun (x : int) (x' : int) -> x < x') size 0 in
+       List.iter l ~f:(fun i -> Heap.add h i);
+       try
+         let rec loop () =
+           ignore (Heap.pop_exn h);
+           loop ()
+         in
+         loop ()
+       with
+       | _ -> assert (Heap.is_empty h))
 ;;
 
 let () =
@@ -260,33 +260,33 @@ let () =
   let r = Array.init n ~f:(fun _ -> Random.int n) in
   let ah = Array_heap.create ~lt:(fun (x : int ref) (y : int ref) -> !x < !y) n (ref 0) in
   for i = 0 to n - 1 do
-    Array_heap.add ah (ref r.(i))
+  Array_heap.add ah (ref r.(i))
   done;
   let array_heap_test = Bench.Test.create ~name:"Array_heap" (fun () ->
-    let r = !(ref r) in
-    let ah = !(ref ah) in
-    let last = ref 0 in
-    for i = 0 to Array.length r - 1 do
-      let top = Array_heap.pop_exn ah in
-      assert (!top >= !last);
-      last := !top;
-      top := !top + Array.unsafe_get r i;
-      Array_heap.add ah top
-    done)
+  let r = !(ref r) in
+  let ah = !(ref ah) in
+  let last = ref 0 in
+  for i = 0 to Array.length r - 1 do
+  let top = Array_heap.pop_exn ah in
+  assert (!top >= !last);
+  last := !top;
+  top := !top + Array.unsafe_get r i;
+  Array_heap.add ah top
+  done)
   in
   let h = Heap.create ~cmp:(fun x y -> Int.compare !x !y) () in
   for i = 0 to Array.length r - 1 do
-    Heap.add h (ref r.(i));
+  Heap.add h (ref r.(i));
   done;
   let heap_test = Bench.Test.create ~name:"Heap" (fun () ->
-    let r = !(ref r) in
-    let h = !(ref h) in
-    for i = 0 to Array.length r - 1 do
-      let top = Heap.pop_exn h in
-      top := !top + Array.unsafe_get r i;
-      Heap.add h top
-    done)
+  let r = !(ref r) in
+  let h = !(ref h) in
+  for i = 0 to Array.length r - 1 do
+  let top = Heap.pop_exn h in
+  top := !top + Array.unsafe_get r i;
+  Heap.add h top
+  done)
   in
   Bench.bench
-    ~run_config:(Bench.Run_config.create  ~time_quota:(Time.Span.of_sec 1.) ())
-    [array_heap_test; heap_test]*)
+  ~run_config:(Bench.Run_config.create  ~time_quota:(Time.Span.of_sec 1.) ())
+  [array_heap_test; heap_test]*)

@@ -8,8 +8,8 @@ module type Gen = sig
   type 'a t
 
   (** [bound] is the type of points in the interval (and also of the bounds, which are
-     points; hence the name).  [bound] is instantiated in two different ways below: in
-     [module type S] as a monotype and in [module type S1] as ['a]. *)
+      points; hence the name).  [bound] is instantiated in two different ways below: in
+      [module type S] as a monotype and in [module type S1] as ['a]. *)
   type 'a bound
 
   (** Module for simple closed intervals over arbitrary types that are ordered correctly
@@ -143,7 +143,7 @@ module type S = sig
 
     val to_poly : t -> bound poly_set
   end
-    with type 'a interval := 'a t_
+  with type 'a interval := 'a t_
 end
 
 module type S1 = sig
@@ -158,8 +158,8 @@ module type S1 = sig
     type 'a t [@@deriving bin_io, sexp]
     include Gen_set with type 'a t := 'a t
   end
-    with type 'a bound := 'a bound_
-    with type 'a interval := 'a t
+  with type 'a bound := 'a bound_
+  with type 'a interval := 'a t
 end
 
 module type S_time = sig

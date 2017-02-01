@@ -11,3 +11,8 @@
      ))
     ))
   (preprocessor_deps (../../src/config.h))))
+
+(enforce_style
+ ((exceptions
+   (iobuf_tests.ml  ;; ocp-indent doesn't handle [#import]
+    ))))

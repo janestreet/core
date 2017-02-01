@@ -9,8 +9,8 @@ module Stable = struct
   module V1 = struct
     module T = struct
       type 'a t =
-      | Interval of 'a * 'a
-      | Empty
+        | Interval of 'a * 'a
+        | Empty
       [@@deriving bin_io, of_sexp, variants, compare]
 
       type 'a interval = 'a t [@@deriving bin_io, of_sexp, compare]
@@ -18,12 +18,12 @@ module Stable = struct
       let interval_of_sexp a_of_sexp sexp =
         try interval_of_sexp a_of_sexp sexp   (* for backwards compatibility *)
         with _exn ->
-          match sexp with
-          | Sexp.List [] -> Empty
-          | Sexp.List [ lb; ub ] ->
-            Interval (a_of_sexp lb, a_of_sexp ub)
-          | Sexp.Atom _ | Sexp.List _ ->
-            of_sexp_error "Interval.t_of_sexp: expected pair or empty list" sexp
+        match sexp with
+        | Sexp.List [] -> Empty
+        | Sexp.List [ lb; ub ] ->
+          Interval (a_of_sexp lb, a_of_sexp ub)
+        | Sexp.Atom _ | Sexp.List _ ->
+          of_sexp_error "Interval.t_of_sexp: expected pair or empty list" sexp
 
       let sexp_of_interval sexp_of_a t =
         match t with
@@ -90,70 +90,71 @@ module Stable = struct
         [ empty.V.constructor, "()", "\001" ]))
 
   let%test_module "Interval.V1.Float" = (module Stable_unit_test.Make(struct
-    include V1.Float
-    let equal x1 x2 = (V1.T.compare Float.compare x1 x2) = 0
+      include V1.Float
+      let equal x1 x2 = (V1.T.compare Float.compare x1 x2) = 0
 
-    module V = V1.T.Variants
-    let tests = make_tests_v1
-      ~non_empty:
-      [ (1.5, 120.), "(1.5 120)",
-        "\000\000\000\000\000\000\000\248?\000\000\000\000\000\000^@"
-      ]
-  end))
+      module V = V1.T.Variants
+      let tests = make_tests_v1
+                    ~non_empty:
+                      [ (1.5, 120.), "(1.5 120)",
+                        "\000\000\000\000\000\000\000\248?\000\000\000\000\000\000^@"
+                      ]
+    end))
 
   let%test_module "Interval.V1.Int" = (module Stable_unit_test.Make(struct
-    include V1.Int
-    let equal x1 x2 = (V1.T.compare Int.compare x1 x2) = 0
+      include V1.Int
+      let equal x1 x2 = (V1.T.compare Int.compare x1 x2) = 0
 
 
-    module V = V1.T.Variants
-    let tests = make_tests_v1
-      ~non_empty: [ (-5, 789), "(-5 789)", "\000\255\251\254\021\003" ]
-  end))
+      module V = V1.T.Variants
+      let tests = make_tests_v1
+                    ~non_empty: [ (-5, 789), "(-5 789)", "\000\255\251\254\021\003" ]
+    end))
 
-  let%test_module "Interval.V1.Time" = (module struct
-    module Arg = struct
-      include V1.Time
-      let equal x1 x2 = (V1.T.compare Time.compare x1 x2) = 0
+  let%test_module "Interval.V1.Time" =
+    (module struct
+      module Arg = struct
+        include V1.Time
+        let equal x1 x2 = (V1.T.compare Time.compare x1 x2) = 0
 
-      let zone = Core_time.Zone.find_exn "America/New_York"
+        let zone = Core_time.Zone.find_exn "America/New_York"
+
+        module V = V1.T.Variants
+        let tests =
+          let t1 = Time.of_date_ofday ~zone
+                     (Date.create_exn ~y:2013 ~m:Month.Aug ~d:6)
+                     (Core_time.Ofday.create  ~hr:7 ~min:30 ~sec:7 ~ms:12 ~us:5 ())
+          in
+          let t2 = Time.of_date_ofday ~zone
+                     (Date.create_exn ~y:2014 ~m:Month.Sep ~d:8)
+                     (Core_time.Ofday.create  ~hr:10 ~min:10 ~sec:0 ~ms:22 ~us:0 ())
+          in
+          make_tests_v1
+            ~non_empty: [ (t1, t2),
+                          "((2013-08-06 07:30:07.012005-04:00) (2014-09-08 10:10:00.022000-04:00))",
+                          "\000\177\196\192\1437\128\212Ash\001.n\003\213A" ]
+      end
+
+      (* Bypass sexp serialization tests because [Time.sexp_of_t] gives different
+         results depending on the local zone. *)
+      include Stable_unit_test.Make_sexp_deserialization_test(Arg)
+      include Stable_unit_test.Make_bin_io_test(Arg)
+    end)
+
+  let%test_module "Interval.V1.Ofday" = (module Stable_unit_test.Make(struct
+      include V1.Ofday
+      let equal x1 x2 = (V1.T.compare Core_time.Ofday.compare x1 x2) = 0
 
       module V = V1.T.Variants
       let tests =
-        let t1 = Time.of_date_ofday ~zone
-          (Date.create_exn ~y:2013 ~m:Month.Aug ~d:6)
-          (Core_time.Ofday.create  ~hr:7 ~min:30 ~sec:7 ~ms:12 ~us:5 ())
-        in
-        let t2 = Time.of_date_ofday ~zone
-          (Date.create_exn ~y:2014 ~m:Month.Sep ~d:8)
-          (Core_time.Ofday.create  ~hr:10 ~min:10 ~sec:0 ~ms:22 ~us:0 ())
-        in
+        let t1 = Core_time.Ofday.create ~hr:7 ~min:30 ~sec:7 ~ms:12 ~us:5 () in
+        let t2 = Core_time.Ofday.create ~hr:9 ~min:45 ~sec:8 ~ms:0 ~us:1 () in
         make_tests_v1
-          ~non_empty: [ (t1, t2),
-                        "((2013-08-06 07:30:07.012005-04:00) (2014-09-08 10:10:00.022000-04:00))",
-                        "\000\177\196\192\1437\128\212Ash\001.n\003\213A" ]
-    end
-
-    (* Bypass sexp serialization tests because [Time.sexp_of_t] gives different
-       results depending on the local zone. *)
-    include Stable_unit_test.Make_sexp_deserialization_test(Arg)
-    include Stable_unit_test.Make_bin_io_test(Arg)
-  end)
-
-  let%test_module "Interval.V1.Ofday" = (module Stable_unit_test.Make(struct
-    include V1.Ofday
-    let equal x1 x2 = (V1.T.compare Core_time.Ofday.compare x1 x2) = 0
-
-    module V = V1.T.Variants
-    let tests =
-      let t1 = Core_time.Ofday.create ~hr:7 ~min:30 ~sec:7 ~ms:12 ~us:5 () in
-      let t2 = Core_time.Ofday.create ~hr:9 ~min:45 ~sec:8 ~ms:0 ~us:1 () in
-      make_tests_v1
-        ~non_empty:
-        [ (t1, t2) , "(07:30:07.012005 09:45:08.000001)",
-          "\000\153\158\176\196\192_\218@\223\024\002\000\128$\225@"
-        ]
-  end))
+          ~non_empty:
+            [ (t1, t2) , "(07:30:07.012005 09:45:08.000001)",
+              "\000\153\158\176\196\192_\218@\223\024\002\000\128$\225@"
+            ]
+    end))
 end
 
 open Stable.V1.T
@@ -222,26 +223,26 @@ module Raw_make (T : Bound) = struct
     let compare_value i x = match i with
       | Empty -> `Interval_is_empty
       | Interval (l,u) ->
-          if T.(<) x l
-          then `Below
-          else if T.(>) x u
-          then `Above
-          else `Within
+        if T.(<) x l
+        then `Below
+        else if T.(>) x u
+        then `Above
+        else `Within
 
     let contains i x = Pervasives.(=) (compare_value i x) `Within
 
     let bound i x = match i with
       | Empty -> None
       | Interval (l,u) ->
-          let bounded_value =
-            if T.(<) x l then l
-            else if T.(<) u x then u
-            else x in
-          Some bounded_value
+        let bounded_value =
+          if T.(<) x l then l
+          else if T.(<) u x then u
+          else x in
+        Some bounded_value
 
     let is_superset i1 ~of_:i2 = match i1,i2 with
       | Interval (l1,u1), Interval (l2,u2) ->
-          T.(<=) l1 l2 && T.(>=) u1 u2
+        T.(<=) l1 l2 && T.(>=) u1 u2
       | _, Empty -> true
       | Empty, Interval (_, _) -> false
 
@@ -260,8 +261,8 @@ module Raw_make (T : Bound) = struct
       | Empty, Interval _ -> -1
       | Interval _, Empty -> 1
       | Interval (l1,u1), Interval (l2,u2) ->
-          let c = T.compare l1 l2 in
-          if Int.(<>) c 0 then c else T.compare u1 u2
+        let c = T.compare l1 l2 in
+        if Int.(<>) c 0 then c else T.compare u1 u2
     ;;
 
     let are_disjoint_gen ~are_disjoint intervals =
@@ -316,7 +317,7 @@ module Raw_make (T : Bound) = struct
   module Set = struct
     let create_from_intervals intervals =
       let intervals = List.filter intervals
-        ~f:(fun i -> not (Interval.is_empty i))
+                        ~f:(fun i -> not (Interval.is_empty i))
       in
       let intervals =
         let lb i = Interval.lbound_exn i in
@@ -329,7 +330,7 @@ module Raw_make (T : Bound) = struct
 
     let create pair_list =
       let intervals = List.map pair_list
-        ~f:(fun (lbound, ubound) -> Interval.create lbound ubound)
+                        ~f:(fun (lbound, ubound) -> Interval.create lbound ubound)
       in
       create_from_intervals intervals
     ;;
@@ -379,9 +380,9 @@ type 'a t = 'a interval [@@deriving bin_io, sexp]
 type 'a bound_ = 'a
 
 module C = Raw_make (struct
-  type 'a bound = 'a
-  include Pervasives
-end)
+    type 'a bound = 'a
+    include Pervasives
+  end)
 
 include C.Interval
 
@@ -398,9 +399,9 @@ module Set = struct
 end
 
 module Make (Bound : sig
-  type t [@@deriving bin_io, sexp]
-  include Comparable.S with type t := t
-end) = struct
+    type t [@@deriving bin_io, sexp]
+    include Comparable.S with type t := t
+  end) = struct
 
   type t = Bound.t interval [@@deriving bin_io, sexp]
   type 'a t_ = t
@@ -409,10 +410,10 @@ end) = struct
   type 'a bound_ = bound
 
   module C = Raw_make (struct
-    type 'a bound = Bound.t
-    let compare = Bound.compare
-    include (Bound : Comparable.Infix with type t := Bound.t)
-  end)
+      type 'a bound = Bound.t
+      let compare = Bound.compare
+      include (Bound : Comparable.Infix with type t := Bound.t)
+    end)
 
   include C.Interval
 
@@ -558,247 +559,249 @@ module Int = struct
     in
     Option.map zero_based_result ~f:(fun x -> x + lbound_exn t)
 
-  let%test_module "vs array" = (module struct
-    module Gen = Quickcheck.Generator
-    module Obs = Quickcheck.Observer
+  let%test_module "vs array" =
+    (module struct
+      module Gen = Quickcheck.Generator
+      module Obs = Quickcheck.Observer
 
-    let interval_of_length n =
-      let open Gen.Monad_infix in
-      if n = 0
-      then Gen.singleton Empty
-      else
-        let range = n-1 in
-        Int.gen_incl Int.min_value (Int.max_value - range)
-        >>| fun lo ->
-        let hi = lo + range in
-        create lo hi
-
-    let interval =
-      let open Gen.Let_syntax in
-      let%bind n = Gen.small_non_negative_int in
-      interval_of_length n
-
-    let interval_with_index =
-      let open Gen.Let_syntax in
-      let%bind n = Gen.small_non_negative_int in
-      (* Can only generate indices for non-empty intervals. *)
-      let n = n + 1 in
-      let%bind index = Int.gen_incl 0 (n - 1) in
-      let%map t = interval_of_length n in
-      (t, index)
-
-    let interval_and_nearby_int =
-      let open Gen.Let_syntax in
-      let%bind n = Gen.small_non_negative_int in
-      let%bind t = interval_of_length n in
-      let%map nearby =
+      let interval_of_length n =
+        let open Gen.Monad_infix in
         if n = 0
-        then Int.gen
+        then Gen.singleton Empty
         else
-          let lbound = lbound_exn t in
-          let ubound = ubound_exn t in
-          Int.gen_incl
-            (if lbound - n <= lbound then lbound - n else Int.min_value)
-            (if ubound + n >= ubound then ubound + n else Int.max_value)
-      in
-      (t, nearby)
+          let range = n-1 in
+          Int.gen_incl Int.min_value (Int.max_value - range)
+          >>| fun lo ->
+          let hi = lo + range in
+          create lo hi
 
-    type which =
-      [ `Last_strictly_less_than
-      | `Last_less_than_or_equal_to
-      | `Last_equal_to
-      | `First_equal_to
-      | `First_greater_than_or_equal_to
-      | `First_strictly_greater_than
-      ]
-    [@@deriving sexp_of]
+      let interval =
+        let open Gen.Let_syntax in
+        let%bind n = Gen.small_non_negative_int in
+        interval_of_length n
 
-    let which =
-      Gen.of_list
+      let interval_with_index =
+        let open Gen.Let_syntax in
+        let%bind n = Gen.small_non_negative_int in
+        (* Can only generate indices for non-empty intervals. *)
+        let n = n + 1 in
+        let%bind index = Int.gen_incl 0 (n - 1) in
+        let%map t = interval_of_length n in
+        (t, index)
+
+      let interval_and_nearby_int =
+        let open Gen.Let_syntax in
+        let%bind n = Gen.small_non_negative_int in
+        let%bind t = interval_of_length n in
+        let%map nearby =
+          if n = 0
+          then Int.gen
+          else
+            let lbound = lbound_exn t in
+            let ubound = ubound_exn t in
+            Int.gen_incl
+              (if lbound - n <= lbound then lbound - n else Int.min_value)
+              (if ubound + n >= ubound then ubound + n else Int.max_value)
+        in
+        (t, nearby)
+
+      type which =
         [ `Last_strictly_less_than
-        ; `Last_less_than_or_equal_to
-        ; `Last_equal_to
-        ; `First_equal_to
-        ; `First_greater_than_or_equal_to
-        ; `First_strictly_greater_than
+        | `Last_less_than_or_equal_to
+        | `Last_equal_to
+        | `First_equal_to
+        | `First_greater_than_or_equal_to
+        | `First_strictly_greater_than
         ]
+      [@@deriving sexp_of]
 
-    let%test_unit "to_list explicit" =
-      let check lo hi list =
-        [%test_eq: int list] (to_list (create lo hi)) list;
-      in
-      check 0 5 [0;1;2;3;4;5];
-      check 0 0 [0];
-      check 1 0 [];
-    ;;
+      let which =
+        Gen.of_list
+          [ `Last_strictly_less_than
+          ; `Last_less_than_or_equal_to
+          ; `Last_equal_to
+          ; `First_equal_to
+          ; `First_greater_than_or_equal_to
+          ; `First_strictly_greater_than
+          ]
 
-    let %test_unit "to_list and to_array" =
-      Quickcheck.test
-        (let int = Int.gen_incl (-1000) 1000 in
-         Gen.tuple2 int int)
-        ~sexp_of:[%sexp_of: int * int] ~f:(fun (lo,hi) ->
-          [%test_result: int list]
-            ~expect:(List.range ~start:`inclusive ~stop:`inclusive lo hi)
-            (to_list (create lo hi));
+      let%test_unit "to_list explicit" =
+        let check lo hi list =
+          [%test_eq: int list] (to_list (create lo hi)) list;
+        in
+        check 0 5 [0;1;2;3;4;5];
+        check 0 0 [0];
+        check 1 0 [];
+      ;;
+
+      let %test_unit "to_list and to_array" =
+        Quickcheck.test
+          (let int = Int.gen_incl (-1000) 1000 in
+           Gen.tuple2 int int)
+          ~sexp_of:[%sexp_of: int * int] ~f:(fun (lo,hi) ->
+            [%test_result: int list]
+              ~expect:(List.range ~start:`inclusive ~stop:`inclusive lo hi)
+              (to_list (create lo hi));
+            [%test_eq: int list]
+              (create lo hi |> to_list)
+              (create lo hi |> to_array |> Array.to_list)
+          )
+
+      let %test_unit "to_list and to_array 2" =
+        Quickcheck.test interval ~sexp_of:[%sexp_of: t] ~f:(fun t ->
           [%test_eq: int list]
-            (create lo hi |> to_list)
-            (create lo hi |> to_array |> Array.to_list)
-        )
+            (to_list t) (to_array t |> Array.to_list))
 
-    let %test_unit "to_list and to_array 2" =
-      Quickcheck.test interval ~sexp_of:[%sexp_of: t] ~f:(fun t ->
-        [%test_eq: int list]
-          (to_list t) (to_array t |> Array.to_list))
+      let%test_unit "length" =
+        Quickcheck.test interval ~sexp_of:[%sexp_of: t] ~f:(fun t ->
+          [%test_result: int]
+            ~expect:(Array.length (to_array t))
+            (length t))
 
-    let%test_unit "length" =
-      Quickcheck.test interval ~sexp_of:[%sexp_of: t] ~f:(fun t ->
-        [%test_result: int]
-          ~expect:(Array.length (to_array t))
-          (length t))
+      let%test_unit "get" =
+        Quickcheck.test interval_with_index ~sexp_of:[%sexp_of: t * int] ~f:(fun (t, i) ->
+          [%test_result: int]
+            ~expect:(Array.get (to_array t) i)
+            (get t i))
 
-    let%test_unit "get" =
-      Quickcheck.test interval_with_index ~sexp_of:[%sexp_of: t * int] ~f:(fun (t, i) ->
-        [%test_result: int]
-          ~expect:(Array.get (to_array t) i)
-          (get t i))
+      let%test_unit "iter" =
+        Quickcheck.test interval ~sexp_of:[%sexp_of: t] ~f:(fun t ->
+          [%test_result: int Queue.t]
+            ~expect:(let q = Queue.create () in
+                     Array.iter (to_array t) ~f:(Queue.enqueue q);
+                     q)
+            (let q = Queue.create () in
+             iter t ~f:(Queue.enqueue q);
+             q))
 
-    let%test_unit "iter" =
-      Quickcheck.test interval ~sexp_of:[%sexp_of: t] ~f:(fun t ->
-        [%test_result: int Queue.t]
-          ~expect:(let q = Queue.create () in
-                   Array.iter (to_array t) ~f:(Queue.enqueue q);
-                   q)
-          (let q = Queue.create () in
-           iter t ~f:(Queue.enqueue q);
-           q))
+      let%test_unit "fold" =
+        Quickcheck.test interval ~sexp_of:[%sexp_of: t] ~f:(fun t ->
+          let init = [] in
+          let f xs x = x :: xs in
+          [%test_result: int list]
+            ~expect:(Array.fold (to_array t) ~init ~f)
+            (fold t ~init ~f))
 
-    let%test_unit "fold" =
-      Quickcheck.test interval ~sexp_of:[%sexp_of: t] ~f:(fun t ->
-        let init = [] in
-        let f xs x = x :: xs in
-        [%test_result: int list]
-          ~expect:(Array.fold (to_array t) ~init ~f)
-          (fold t ~init ~f))
-
-    let%test_unit "min_elt w/ default cmp" =
-      Quickcheck.test interval ~sexp_of:[%sexp_of: t] ~f:(fun t ->
-        [%test_result: int option]
-          ~expect:(Array.min_elt (to_array t) ~cmp:Int.compare)
-          (min_elt t ~cmp:Int.compare))
-
-    let%test_unit "min_elt w/ reverse cmp" =
-      Quickcheck.test interval ~sexp_of:[%sexp_of: t] ~f:(fun t ->
-        let cmp x y = Int.compare y x in
-        [%test_result: int option]
-          ~expect:(Array.min_elt (to_array t) ~cmp)
-          (min_elt t ~cmp))
-
-    let%test_unit "max_elt w/ default cmp" =
-      Quickcheck.test interval ~sexp_of:[%sexp_of: t] ~f:(fun t ->
-        [%test_result: int option]
-          ~expect:(Array.max_elt (to_array t) ~cmp:Int.compare)
-          (max_elt t ~cmp:Int.compare))
-
-    let%test_unit "max_elt w/ reverse cmp" =
-      Quickcheck.test interval ~sexp_of:[%sexp_of: t] ~f:(fun t ->
-        let cmp x y = Int.compare y x in
-        [%test_result: int option]
-          ~expect:(Array.max_elt (to_array t) ~cmp)
-          (max_elt t ~cmp))
-
-    let%test_unit "mem w/o equal" =
-      Quickcheck.test
-        interval_and_nearby_int
-        ~sexp_of:[%sexp_of: t * int]
-        ~f:(fun (t, i) ->
-          [%test_result: bool]
-            ~expect:(Array.mem (to_array t) i)
-            (mem t i))
-
-    let%test_unit "mem w/ default equal" =
-      Quickcheck.test
-        interval_and_nearby_int
-        ~sexp_of:[%sexp_of: t * int]
-        ~f:(fun (t, i) ->
-          let equal = Int.equal in
-          [%test_result: bool]
-            ~expect:(Array.mem ~equal (to_array t) i)
-            (mem ~equal t i))
-
-    let%test_unit "mem w/ negated equal" =
-      Quickcheck.test
-        interval_and_nearby_int
-        ~sexp_of:[%sexp_of: t * int]
-        ~f:(fun (t, i) ->
-          let equal x y = (x = (-y)) in
-          [%test_result: bool]
-            ~expect:(Array.mem ~equal (to_array t) i)
-            (mem ~equal t i))
-
-    let%test_unit "binary_search" =
-      Quickcheck.test
-        Gen.(tuple2 interval_and_nearby_int which)
-        ~sexp_of:[%sexp_of: (t * int) * which]
-        ~f:(fun ((t, i), which) ->
-          let array = to_array t in
-          let compare = Int.compare in
+      let%test_unit "min_elt w/ default cmp" =
+        Quickcheck.test interval ~sexp_of:[%sexp_of: t] ~f:(fun t ->
           [%test_result: int option]
-            ~expect:(Array.binary_search array ~compare which i
-                     |> Option.map ~f:(Array.get array))
-            (binary_search t ~compare which i))
+            ~expect:(Array.min_elt (to_array t) ~cmp:Int.compare)
+            (min_elt t ~cmp:Int.compare))
 
-    let%expect_test "explicit binary_search" =
-      let pr x = print_endline @@ Sexp.to_string_hum @@ [%sexp_of: int option] x in
-      pr @@ binary_search (Interval (4,80)) ~compare:Int.compare
-              `First_strictly_greater_than 18;
-      [%expect {| (19) |}];
-      pr @@ binary_search (Interval (25,80)) ~compare:Int.compare
-              `First_strictly_greater_than 18;
-      [%expect {| (25) |}];
-      pr @@ binary_search (Interval (25,80)) ~compare:Int.compare
-              `First_strictly_greater_than 1000;
-      [%expect {| () |}];
-    ;;
+      let%test_unit "min_elt w/ reverse cmp" =
+        Quickcheck.test interval ~sexp_of:[%sexp_of: t] ~f:(fun t ->
+          let cmp x y = Int.compare y x in
+          [%test_result: int option]
+            ~expect:(Array.min_elt (to_array t) ~cmp)
+            (min_elt t ~cmp))
+
+      let%test_unit "max_elt w/ default cmp" =
+        Quickcheck.test interval ~sexp_of:[%sexp_of: t] ~f:(fun t ->
+          [%test_result: int option]
+            ~expect:(Array.max_elt (to_array t) ~cmp:Int.compare)
+            (max_elt t ~cmp:Int.compare))
+
+      let%test_unit "max_elt w/ reverse cmp" =
+        Quickcheck.test interval ~sexp_of:[%sexp_of: t] ~f:(fun t ->
+          let cmp x y = Int.compare y x in
+          [%test_result: int option]
+            ~expect:(Array.max_elt (to_array t) ~cmp)
+            (max_elt t ~cmp))
+
+      let%test_unit "mem w/o equal" =
+        Quickcheck.test
+          interval_and_nearby_int
+          ~sexp_of:[%sexp_of: t * int]
+          ~f:(fun (t, i) ->
+            [%test_result: bool]
+              ~expect:(Array.mem (to_array t) i)
+              (mem t i))
+
+      let%test_unit "mem w/ default equal" =
+        Quickcheck.test
+          interval_and_nearby_int
+          ~sexp_of:[%sexp_of: t * int]
+          ~f:(fun (t, i) ->
+            let equal = Int.equal in
+            [%test_result: bool]
+              ~expect:(Array.mem ~equal (to_array t) i)
+              (mem ~equal t i))
+
+      let%test_unit "mem w/ negated equal" =
+        Quickcheck.test
+          interval_and_nearby_int
+          ~sexp_of:[%sexp_of: t * int]
+          ~f:(fun (t, i) ->
+            let equal x y = (x = (-y)) in
+            [%test_result: bool]
+              ~expect:(Array.mem ~equal (to_array t) i)
+              (mem ~equal t i))
+
+      let%test_unit "binary_search" =
+        Quickcheck.test
+          Gen.(tuple2 interval_and_nearby_int which)
+          ~sexp_of:[%sexp_of: (t * int) * which]
+          ~f:(fun ((t, i), which) ->
+            let array = to_array t in
+            let compare = Int.compare in
+            [%test_result: int option]
+              ~expect:(Array.binary_search array ~compare which i
+                       |> Option.map ~f:(Array.get array))
+              (binary_search t ~compare which i))
+
+      let%expect_test "explicit binary_search" =
+        let pr x = print_endline @@ Sexp.to_string_hum @@ [%sexp_of: int option] x in
+        pr @@ binary_search (Interval (4,80)) ~compare:Int.compare
+                `First_strictly_greater_than 18;
+        [%expect {| (19) |}];
+        pr @@ binary_search (Interval (25,80)) ~compare:Int.compare
+                `First_strictly_greater_than 18;
+        [%expect {| (25) |}];
+        pr @@ binary_search (Interval (25,80)) ~compare:Int.compare
+                `First_strictly_greater_than 1000;
+        [%expect {| () |}];
+      ;;
 
 
-  end)
+    end)
 end
 
 (* Tests for list bound functions *)
-let%test_module _ = (module struct
-  let intervals =
-    [ Int.empty
-    ; Interval (3, 6)
-    ; Interval (2, 7)
-    ; Int.empty
-    ; Interval (4, 5)]
+let%test_module _ =
+  (module struct
+    let intervals =
+      [ Int.empty
+      ; Interval (3, 6)
+      ; Interval (2, 7)
+      ; Int.empty
+      ; Interval (4, 5)]
 
-  let%test _ =
-    match Int.convex_hull intervals with
-    | Interval (2, 7) -> true
-    | _ -> false
+    let%test _ =
+      match Int.convex_hull intervals with
+      | Interval (2, 7) -> true
+      | _ -> false
 
-  let intervals =
-    [ Int.empty
-    ; Interval (3, 6)
-    ; Interval (2, 3)
-    ; Int.empty
-    ; Interval (4, 5)]
+    let intervals =
+      [ Int.empty
+      ; Interval (3, 6)
+      ; Interval (2, 3)
+      ; Int.empty
+      ; Interval (4, 5)]
 
-  let%test _ =
-    match Int.convex_hull intervals with
-    | Interval (2, 6) -> true
-    | _ -> false
+    let%test _ =
+      match Int.convex_hull intervals with
+      | Interval (2, 6) -> true
+      | _ -> false
 
-  let intervals =
-    [ Int.empty
-    ; Int.empty]
+    let intervals =
+      [ Int.empty
+      ; Int.empty]
 
-  let%test _ =
-    match Int.convex_hull intervals with
-    | Empty -> true
-    | _ -> false
-end)
+    let%test _ =
+      match Int.convex_hull intervals with
+      | Empty -> true
+      | _ -> false
+  end)
 
 module type Time_bound = sig
   type t [@@deriving bin_io, sexp]
@@ -841,7 +844,7 @@ module Make_time (Time : Time_bound) = struct
     create open_time close_time
 
   let create_ending_before ?zone
-      (open_ofday, close_ofday) ~ubound =
+        (open_ofday, close_ofday) ~ubound =
     let zone =
       match zone with
       | None   -> Lazy.force Time.Zone.local

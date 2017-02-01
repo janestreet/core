@@ -14,7 +14,7 @@ type error
   | ECONNABORTED | ECONNRESET | ENOBUFS | EISCONN | ENOTCONN | ESHUTDOWN
   | ETOOMANYREFS | ETIMEDOUT | ECONNREFUSED | EHOSTDOWN | EHOSTUNREACH | ELOOP
   | EOVERFLOW | EUNKNOWNERR of int
-  [@@deriving sexp, compare]
+[@@deriving sexp, compare]
 
 type t = error [@@deriving sexp, compare]
 

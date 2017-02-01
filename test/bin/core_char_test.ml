@@ -9,8 +9,8 @@ let of_string_test () =
 
 let test =
   "core_char" >:::
-    [ "to_string_hum" >::
-        (fun () ->
-          "of_string" @? of_string_test ();
-        )
-    ]
+  [ "to_string_hum" >::
+    (fun () ->
+       "of_string" @? of_string_test ();
+    )
+  ]

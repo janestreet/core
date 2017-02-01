@@ -1,9 +1,9 @@
 (* Test Condition.timedwait *)
 
 (*
-  This only tests the pthread_cond_timedwait wrapper and not the underlying
-  unix function. Both branches (timeout, success) are tested; all the possible
-  race conditions are assumed to be handled properly by pthread and not tested.
+   This only tests the pthread_cond_timedwait wrapper and not the underlying
+   unix function. Both branches (timeout, success) are tested; all the possible
+   race conditions are assumed to be handled properly by pthread and not tested.
 *)
 open Core
 open OUnit
@@ -68,6 +68,6 @@ let test = "Condition_test" >::: [
   "test" >:: (fun () ->
     "1" @? (try run ~num_retries:5; true with e ->
       eprintf "in cond\
- ition test:%s\n%!" (Exn.to_string e);
+               ition test:%s\n%!" (Exn.to_string e);
       false));
 ]

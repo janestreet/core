@@ -18,10 +18,10 @@ let check_unlock_other_locked () =
 
 let test =
   "core_mutex" >:::
-    [
-      "error checking" >:: (fun () ->
-        "double lock" @? check_double_lock ();
-        "unlock unlocked" @? check_unlock_unlocked ();
-        "unlock other locked" @? check_unlock_other_locked ();
-      )
-    ]
+  [
+    "error checking" >:: (fun () ->
+      "double lock" @? check_double_lock ();
+      "unlock unlocked" @? check_unlock_unlocked ();
+      "unlock other locked" @? check_unlock_other_locked ();
+    )
+  ]

@@ -1,4 +1,5 @@
 open Core
+open Expect_test_helpers_kernel
 
 open Time
 open Exposed_for_tests
@@ -297,3 +298,489 @@ let%expect_test "time/span/ofday can be cast to their underlying type" =
   let _ = (Time.Ofday.start_of_day :> float) in
   ()
 ;;
+
+module Specialize_to_int (Poly : Stable1) = struct
+  type t = int Poly.t [@@deriving bin_io, compare, sexp]
+end
+
+let%test_module "Time.Stable" =
+  (module struct
+    let zone_new_york = Zone.find_exn "America/New_York"
+
+    let mk date ofday =
+      of_date_ofday
+        ~zone:zone_new_york
+        (Date.of_string date)
+        (Ofday.of_string ofday)
+
+    let examples =
+      [ Time.epoch
+      ; mk "1999-12-31" "23:59:59"
+      ; mk "2000-01-01" "00:00:00"
+      ; mk "2013-10-07" "09:30:00"
+      ; mk "2037-07-22" "14:23:37"
+      ]
+
+    let set_examples =
+      [ Set.empty ]
+      @
+      List.map examples ~f:Set.singleton
+      @
+      [ Set.of_list examples ]
+
+    let map_examples =
+      [ Map.empty ]
+      @
+      List.mapi examples ~f:(fun i example ->
+        Map.singleton example i)
+      @
+      [ Map.of_alist_exn (List.mapi examples ~f:(fun i example ->
+          (example, i))) ]
+
+    let%expect_test "V1" =
+      print_and_check_stable_type [%here]
+        (module Time.Stable.V1)
+        examples;
+      [%expect {|
+        (bin_shape_digest 1fd923acb2dd9c5d401ad5b08b1d40cd)
+        ((sexp (1969-12-31 19:00:00.000000-05:00))
+         (bin_io "\000\000\000\000\000\000\000\000"))
+        ((sexp (1999-12-31 23:59:59.000000-05:00))
+         (bin_io "\000\000\128\231\1966\204A"))
+        ((sexp (2000-01-01 00:00:00.000000-05:00))
+         (bin_io "\000\000\000\232\1966\204A"))
+        ((sexp (2013-10-07 09:30:00.000000-04:00))
+         (bin_io "\000\000\000\214\173\148\212A"))
+        ((sexp (2037-07-22 14:23:37.000000-04:00)) (bin_io "\000\000@j\141\196\223A")) |}];
+    ;;
+
+    let%expect_test "V1.Set" =
+      print_and_check_stable_type [%here]
+        (module Time.Stable.V1.Set)
+        set_examples;
+      [%expect {|
+        (bin_shape_digest 4e7cbf6fe56bd628b963b7f8259e58bf)
+        ((sexp ()) (bin_io "\000"))
+        ((sexp ((1969-12-31 19:00:00.000000-05:00)))
+         (bin_io "\001\000\000\000\000\000\000\000\000"))
+        ((sexp ((1999-12-31 23:59:59.000000-05:00)))
+         (bin_io "\001\000\000\128\231\1966\204A"))
+        ((sexp ((2000-01-01 00:00:00.000000-05:00)))
+         (bin_io "\001\000\000\000\232\1966\204A"))
+        ((sexp ((2013-10-07 09:30:00.000000-04:00)))
+         (bin_io "\001\000\000\000\214\173\148\212A"))
+        ((sexp ((2037-07-22 14:23:37.000000-04:00)))
+         (bin_io "\001\000\000@j\141\196\223A"))
+        ((sexp (
+           (1969-12-31 19:00:00.000000-05:00)
+           (1999-12-31 23:59:59.000000-05:00)
+           (2000-01-01 00:00:00.000000-05:00)
+           (2013-10-07 09:30:00.000000-04:00)
+           (2037-07-22 14:23:37.000000-04:00)))
+         (bin_io
+          "\005\000\000\000\000\000\000\000\000\000\000\128\231\1966\204A\000\000\000\232\1966\204A\000\000\000\214\173\148\212A\000\000@j\141\196\223A")) |}];
+    ;;
+
+    let%expect_test "V1.Map" =
+      print_and_check_stable_type [%here]
+        (module Specialize_to_int (Time.Stable.V1.Map))
+        map_examples;
+      [%expect {|
+        (bin_shape_digest 31404094f08cdbe1f9fca07a1a1e5303)
+        ((sexp ()) (bin_io "\000"))
+        ((sexp (((1969-12-31 19:00:00.000000-05:00) 0)))
+         (bin_io "\001\000\000\000\000\000\000\000\000\000"))
+        ((sexp (((1999-12-31 23:59:59.000000-05:00) 1)))
+         (bin_io "\001\000\000\128\231\1966\204A\001"))
+        ((sexp (((2000-01-01 00:00:00.000000-05:00) 2)))
+         (bin_io "\001\000\000\000\232\1966\204A\002"))
+        ((sexp (((2013-10-07 09:30:00.000000-04:00) 3)))
+         (bin_io "\001\000\000\000\214\173\148\212A\003"))
+        ((sexp (((2037-07-22 14:23:37.000000-04:00) 4)))
+         (bin_io "\001\000\000@j\141\196\223A\004"))
+        ((sexp (
+           ((1969-12-31 19:00:00.000000-05:00) 0)
+           ((1999-12-31 23:59:59.000000-05:00) 1)
+           ((2000-01-01 00:00:00.000000-05:00) 2)
+           ((2013-10-07 09:30:00.000000-04:00) 3)
+           ((2037-07-22 14:23:37.000000-04:00) 4)))
+         (bin_io
+          "\005\000\000\000\000\000\000\000\000\000\000\000\128\231\1966\204A\001\000\000\000\232\1966\204A\002\000\000\000\214\173\148\212A\003\000\000@j\141\196\223A\004")) |}];
+    ;;
+
+    (* [With_utc_sexp] *)
+
+    let%expect_test "With_utc_sexp.V1" =
+      print_and_check_stable_type [%here]
+        (module Time.Stable.With_utc_sexp.V1)
+        examples;
+      [%expect {|
+        (bin_shape_digest 1fd923acb2dd9c5d401ad5b08b1d40cd)
+        ((sexp (1970-01-01 00:00:00.000000Z))
+         (bin_io "\000\000\000\000\000\000\000\000"))
+        ((sexp (2000-01-01 04:59:59.000000Z)) (bin_io "\000\000\128\231\1966\204A"))
+        ((sexp (2000-01-01 05:00:00.000000Z)) (bin_io "\000\000\000\232\1966\204A"))
+        ((sexp (2013-10-07 13:30:00.000000Z))
+         (bin_io "\000\000\000\214\173\148\212A"))
+        ((sexp (2037-07-22 18:23:37.000000Z)) (bin_io "\000\000@j\141\196\223A")) |}];
+    ;;
+
+    let%expect_test "With_utc_sexp.V1.Set" =
+      print_and_check_stable_type [%here]
+        (module Time.Stable.With_utc_sexp.V1.Set)
+        set_examples;
+      [%expect {|
+        (bin_shape_digest 4e7cbf6fe56bd628b963b7f8259e58bf)
+        ((sexp ()) (bin_io "\000"))
+        ((sexp ((1969-12-31 19:00:00.000000-05:00)))
+         (bin_io "\001\000\000\000\000\000\000\000\000"))
+        ((sexp ((1999-12-31 23:59:59.000000-05:00)))
+         (bin_io "\001\000\000\128\231\1966\204A"))
+        ((sexp ((2000-01-01 00:00:00.000000-05:00)))
+         (bin_io "\001\000\000\000\232\1966\204A"))
+        ((sexp ((2013-10-07 09:30:00.000000-04:00)))
+         (bin_io "\001\000\000\000\214\173\148\212A"))
+        ((sexp ((2037-07-22 14:23:37.000000-04:00)))
+         (bin_io "\001\000\000@j\141\196\223A"))
+        ((sexp (
+           (1969-12-31 19:00:00.000000-05:00)
+           (1999-12-31 23:59:59.000000-05:00)
+           (2000-01-01 00:00:00.000000-05:00)
+           (2013-10-07 09:30:00.000000-04:00)
+           (2037-07-22 14:23:37.000000-04:00)))
+         (bin_io
+          "\005\000\000\000\000\000\000\000\000\000\000\128\231\1966\204A\000\000\000\232\1966\204A\000\000\000\214\173\148\212A\000\000@j\141\196\223A")) |}];
+    ;;
+
+    let%expect_test "With_utc_sexp.V1.Map" =
+      print_and_check_stable_type [%here]
+        (module Specialize_to_int (Time.Stable.With_utc_sexp.V1.Map))
+        map_examples;
+      [%expect {|
+        (bin_shape_digest 31404094f08cdbe1f9fca07a1a1e5303)
+        ((sexp ()) (bin_io "\000"))
+        ((sexp (((1969-12-31 19:00:00.000000-05:00) 0)))
+         (bin_io "\001\000\000\000\000\000\000\000\000\000"))
+        ((sexp (((1999-12-31 23:59:59.000000-05:00) 1)))
+         (bin_io "\001\000\000\128\231\1966\204A\001"))
+        ((sexp (((2000-01-01 00:00:00.000000-05:00) 2)))
+         (bin_io "\001\000\000\000\232\1966\204A\002"))
+        ((sexp (((2013-10-07 09:30:00.000000-04:00) 3)))
+         (bin_io "\001\000\000\000\214\173\148\212A\003"))
+        ((sexp (((2037-07-22 14:23:37.000000-04:00) 4)))
+         (bin_io "\001\000\000@j\141\196\223A\004"))
+        ((sexp (
+           ((1969-12-31 19:00:00.000000-05:00) 0)
+           ((1999-12-31 23:59:59.000000-05:00) 1)
+           ((2000-01-01 00:00:00.000000-05:00) 2)
+           ((2013-10-07 09:30:00.000000-04:00) 3)
+           ((2037-07-22 14:23:37.000000-04:00) 4)))
+         (bin_io
+          "\005\000\000\000\000\000\000\000\000\000\000\000\128\231\1966\204A\001\000\000\000\232\1966\204A\002\000\000\000\214\173\148\212A\003\000\000@j\141\196\223A\004")) |}];
+    ;;
+
+    (* [With_t_of_sexp_abs] *)
+
+    let%expect_test "With_t_of_sexp_abs.V1" =
+      print_and_check_stable_type [%here]
+        (module Time.Stable.With_t_of_sexp_abs.V1)
+        examples;
+      [%expect {|
+        (bin_shape_digest 1fd923acb2dd9c5d401ad5b08b1d40cd)
+        ((sexp (1969-12-31 19:00:00.000000-05:00))
+         (bin_io "\000\000\000\000\000\000\000\000"))
+        ((sexp (1999-12-31 23:59:59.000000-05:00))
+         (bin_io "\000\000\128\231\1966\204A"))
+        ((sexp (2000-01-01 00:00:00.000000-05:00))
+         (bin_io "\000\000\000\232\1966\204A"))
+        ((sexp (2013-10-07 09:30:00.000000-04:00))
+         (bin_io "\000\000\000\214\173\148\212A"))
+        ((sexp (2037-07-22 14:23:37.000000-04:00)) (bin_io "\000\000@j\141\196\223A")) |}];
+      show_raise (fun () ->
+        Time.Stable.With_t_of_sexp_abs.V1.t_of_sexp
+          (Sexp.of_string "(2000-01-01 00:00:00.000000)"));
+      [%expect {|
+        (raised (
+          Sexplib.Conv.Of_sexp_error
+          (Failure
+           "Time.t_of_sexp: (time.ml.Make.Time_of_string \"2000-01-01 00:00:00.000000\"\n  (core_time.ml.Make.Time_string_not_absolute \"2000-01-01 00:00:00.000000\"))")
+          (2000-01-01 00:00:00.000000))) |}];
+    ;;
+
+    let%expect_test "With_t_of_sexp_abs.V1.Set" =
+      print_and_check_stable_type [%here]
+        (module Time.Stable.With_t_of_sexp_abs.V1.Set)
+        set_examples;
+      [%expect {|
+        (bin_shape_digest 4e7cbf6fe56bd628b963b7f8259e58bf)
+        ((sexp ()) (bin_io "\000"))
+        ((sexp ((1969-12-31 19:00:00.000000-05:00)))
+         (bin_io "\001\000\000\000\000\000\000\000\000"))
+        ((sexp ((1999-12-31 23:59:59.000000-05:00)))
+         (bin_io "\001\000\000\128\231\1966\204A"))
+        ((sexp ((2000-01-01 00:00:00.000000-05:00)))
+         (bin_io "\001\000\000\000\232\1966\204A"))
+        ((sexp ((2013-10-07 09:30:00.000000-04:00)))
+         (bin_io "\001\000\000\000\214\173\148\212A"))
+        ((sexp ((2037-07-22 14:23:37.000000-04:00)))
+         (bin_io "\001\000\000@j\141\196\223A"))
+        ((sexp (
+           (1969-12-31 19:00:00.000000-05:00)
+           (1999-12-31 23:59:59.000000-05:00)
+           (2000-01-01 00:00:00.000000-05:00)
+           (2013-10-07 09:30:00.000000-04:00)
+           (2037-07-22 14:23:37.000000-04:00)))
+         (bin_io
+          "\005\000\000\000\000\000\000\000\000\000\000\128\231\1966\204A\000\000\000\232\1966\204A\000\000\000\214\173\148\212A\000\000@j\141\196\223A")) |}];
+      show_raise (fun () ->
+        Time.Stable.With_t_of_sexp_abs.V1.Set.t_of_sexp
+          (Sexp.of_string "((2000-01-01 00:00:00.000000))"));
+      [%expect {|
+        "did not raise" |}];
+    ;;
+
+    let%expect_test "With_t_of_sexp_abs.V1.Map" =
+      print_and_check_stable_type [%here]
+        (module Specialize_to_int (Time.Stable.With_t_of_sexp_abs.V1.Map))
+        map_examples;
+      [%expect {|
+        (bin_shape_digest 31404094f08cdbe1f9fca07a1a1e5303)
+        ((sexp ()) (bin_io "\000"))
+        ((sexp (((1969-12-31 19:00:00.000000-05:00) 0)))
+         (bin_io "\001\000\000\000\000\000\000\000\000\000"))
+        ((sexp (((1999-12-31 23:59:59.000000-05:00) 1)))
+         (bin_io "\001\000\000\128\231\1966\204A\001"))
+        ((sexp (((2000-01-01 00:00:00.000000-05:00) 2)))
+         (bin_io "\001\000\000\000\232\1966\204A\002"))
+        ((sexp (((2013-10-07 09:30:00.000000-04:00) 3)))
+         (bin_io "\001\000\000\000\214\173\148\212A\003"))
+        ((sexp (((2037-07-22 14:23:37.000000-04:00) 4)))
+         (bin_io "\001\000\000@j\141\196\223A\004"))
+        ((sexp (
+           ((1969-12-31 19:00:00.000000-05:00) 0)
+           ((1999-12-31 23:59:59.000000-05:00) 1)
+           ((2000-01-01 00:00:00.000000-05:00) 2)
+           ((2013-10-07 09:30:00.000000-04:00) 3)
+           ((2037-07-22 14:23:37.000000-04:00) 4)))
+         (bin_io
+          "\005\000\000\000\000\000\000\000\000\000\000\000\128\231\1966\204A\001\000\000\000\232\1966\204A\002\000\000\000\214\173\148\212A\003\000\000@j\141\196\223A\004")) |}];
+      show_raise (fun () ->
+        Time.Stable.With_t_of_sexp_abs.V1.Map.t_of_sexp int_of_sexp
+          (Sexp.of_string "(((2000-01-01 00:00:00.000000) 0))"));
+      [%expect {|
+        "did not raise" |}];
+    ;;
+  end)
+
+let%test_module "Time.Stable.Span" =
+  (module struct
+    let units =
+      [ Span.nanosecond
+      ; Span.microsecond
+      ; Span.millisecond
+      ; Span.second
+      ; Span.minute
+      ; Span.hour
+      ; Span.day
+      ]
+
+    let examples =
+      [ Span.zero ]
+      @ units @
+      [ List.sum (module Span) units ~f:ident ]
+
+    let%expect_test "V1" =
+      print_and_check_stable_type [%here]
+        (* V1 round-trips imprecisely in some cases, so we document them and note that
+           they are still reasonably close. *)
+        ~cr:Comment
+        ~hide_positions:true
+        (module Time.Stable.Span.V1)
+        examples;
+      [%expect {|
+        (bin_shape_digest 1fd923acb2dd9c5d401ad5b08b1d40cd)
+        ((sexp   0s)
+         (bin_io "\000\000\000\000\000\000\000\000"))
+        ((sexp   1e-06ms)
+         (bin_io "\149\214&\232\011.\017>"))
+        (* require-failed: lib/core/test/src/test_time.ml:LINE:COL. *)
+        ("sexp serialization failed to round-trip"
+          (original       1e-06ms)
+          (sexp           1e-06ms)
+          (sexp_roundtrip 1e-06ms))
+        ((sexp   0.001ms)
+         (bin_io "\141\237\181\160\247\198\176>"))
+        ((sexp   1ms)
+         (bin_io "\252\169\241\210MbP?"))
+        ((sexp   1s)
+         (bin_io "\000\000\000\000\000\000\240?"))
+        ((sexp   1m)
+         (bin_io "\000\000\000\000\000\000N@"))
+        ((sexp   1h)
+         (bin_io "\000\000\000\000\000 \172@"))
+        ((sexp   1d)
+         (bin_io "\000\000\000\000\000\024\245@"))
+        ((sexp   1.04237d)
+         (bin_io ")\160\025\004\208\252\245@"))
+        (* require-failed: lib/core/test/src/test_time.ml:LINE:COL. *)
+        ("sexp serialization failed to round-trip"
+          (original       1.04237d)
+          (sexp           1.04237d)
+          (sexp_roundtrip 1.04237d)) |}];
+    ;;
+
+    let%expect_test "V2" =
+      print_and_check_stable_type [%here]
+        (module Time.Stable.Span.V2)
+        examples;
+      [%expect {|
+        (bin_shape_digest 1fd923acb2dd9c5d401ad5b08b1d40cd)
+        ((sexp   0s)
+         (bin_io "\000\000\000\000\000\000\000\000"))
+        ((sexp   1ns)
+         (bin_io "\149\214&\232\011.\017>"))
+        ((sexp   1us)
+         (bin_io "\141\237\181\160\247\198\176>"))
+        ((sexp   1ms)
+         (bin_io "\252\169\241\210MbP?"))
+        ((sexp   1s)
+         (bin_io "\000\000\000\000\000\000\240?"))
+        ((sexp   1m)
+         (bin_io "\000\000\000\000\000\000N@"))
+        ((sexp   1h)
+         (bin_io "\000\000\000\000\000 \172@"))
+        ((sexp   1d)
+         (bin_io "\000\000\000\000\000\024\245@"))
+        ((sexp   1.0423726967708449d)
+         (bin_io ")\160\025\004\208\252\245@")) |}];
+    ;;
+  end)
+
+let%test_module "Time.Stable.Ofday" =
+  (module struct
+    let examples =
+      [ Ofday.start_of_day
+      ; Ofday.create ~hr:12 ()
+      ; Ofday.create ~hr:23 ~min:59 ~sec:29 ~ms:999 ~us:999 ()
+      (* individual units *)
+      ; Ofday.create ~us: 1 ()
+      ; Ofday.create ~ms: 1 ()
+      ; Ofday.create ~sec:1 ()
+      ; Ofday.create ~min:1 ()
+      ; Ofday.create ~hr: 1 ()
+      ]
+
+    let%expect_test "V1" =
+      print_and_check_stable_type [%here]
+        (* V1 round-trips imprecisely in some cases, so we document them and note that
+           they are still reasonably close. *)
+        ~cr:Comment
+        ~hide_positions:true
+        (module Time.Stable.Ofday.V1)
+        examples;
+      [%expect {|
+        (bin_shape_digest 1fd923acb2dd9c5d401ad5b08b1d40cd)
+        ((sexp   00:00:00.000000)
+         (bin_io "\000\000\000\000\000\000\000\000"))
+        ((sexp   12:00:00.000000)
+         (bin_io "\000\000\000\000\000\024\229@"))
+        ((sexp   23:59:29.999999)
+         (bin_io "\144\243\254\255\031\022\245@"))
+        (* require-failed: lib/core/test/src/test_time.ml:LINE:COL. *)
+        ("sexp serialization failed to round-trip"
+          (original       23:59:29.999999)
+          (sexp           23:59:29.999999)
+          (sexp_roundtrip 23:59:29.999999))
+        ((sexp   00:00:00.000001)
+         (bin_io "\141\237\181\160\247\198\176>"))
+        ((sexp   00:00:00.001000)
+         (bin_io "\252\169\241\210MbP?"))
+        ((sexp   00:00:01.000000)
+         (bin_io "\000\000\000\000\000\000\240?"))
+        ((sexp   00:01:00.000000)
+         (bin_io "\000\000\000\000\000\000N@"))
+        ((sexp   01:00:00.000000)
+         (bin_io "\000\000\000\000\000 \172@")) |}];
+    ;;
+
+    let zoned_examples =
+      let zone_new_york = Zone.find_exn "America/New_York" in
+      List.map examples ~f:(fun example ->
+        Ofday.Zoned.create example Zone.utc)
+      @
+      List.map examples ~f:(fun example ->
+        Ofday.Zoned.create example zone_new_york)
+
+    let%expect_test "Zoned.V1" =
+      print_and_check_stable_type [%here]
+        (* V1 round-trips imprecisely in some cases, so we document them and note that
+           they are still reasonably close. *)
+        ~cr:Comment
+        ~hide_positions:true
+        (module Time.Stable.Ofday.Zoned.V1)
+        zoned_examples;
+      [%expect {|
+        (bin_shape_digest 490573c3397b4fe37e8ade0086fb4759)
+        ((sexp (00:00:00.000000 UTC))
+         (bin_io "\000\000\000\000\000\000\000\000\003UTC"))
+        ((sexp (12:00:00.000000 UTC)) (bin_io "\000\000\000\000\000\024\229@\003UTC"))
+        ((sexp (23:59:29.999999 UTC)) (bin_io "\144\243\254\255\031\022\245@\003UTC"))
+        (* require-failed: lib/core/test/src/test_time.ml:LINE:COL. *)
+        ("sexp serialization failed to round-trip"
+          (original       (23:59:29.999999 UTC))
+          (sexp           (23:59:29.999999 UTC))
+          (sexp_roundtrip (23:59:29.999999 UTC)))
+        ((sexp (00:00:00.000001 UTC)) (bin_io "\141\237\181\160\247\198\176>\003UTC"))
+        ((sexp (00:00:00.001000 UTC)) (bin_io "\252\169\241\210MbP?\003UTC"))
+        ((sexp (00:00:01.000000 UTC)) (bin_io "\000\000\000\000\000\000\240?\003UTC"))
+        ((sexp (00:01:00.000000 UTC)) (bin_io "\000\000\000\000\000\000N@\003UTC"))
+        ((sexp (01:00:00.000000 UTC)) (bin_io "\000\000\000\000\000 \172@\003UTC"))
+        ((sexp (00:00:00.000000 America/New_York))
+         (bin_io "\000\000\000\000\000\000\000\000\016America/New_York"))
+        ((sexp (12:00:00.000000 America/New_York))
+         (bin_io "\000\000\000\000\000\024\229@\016America/New_York"))
+        ((sexp (23:59:29.999999 America/New_York))
+         (bin_io "\144\243\254\255\031\022\245@\016America/New_York"))
+        (* require-failed: lib/core/test/src/test_time.ml:LINE:COL. *)
+        ("sexp serialization failed to round-trip"
+          (original       (23:59:29.999999 America/New_York))
+          (sexp           (23:59:29.999999 America/New_York))
+          (sexp_roundtrip (23:59:29.999999 America/New_York)))
+        ((sexp (00:00:00.000001 America/New_York))
+         (bin_io "\141\237\181\160\247\198\176>\016America/New_York"))
+        ((sexp (00:00:00.001000 America/New_York))
+         (bin_io "\252\169\241\210MbP?\016America/New_York"))
+        ((sexp (00:00:01.000000 America/New_York))
+         (bin_io "\000\000\000\000\000\000\240?\016America/New_York"))
+        ((sexp (00:01:00.000000 America/New_York))
+         (bin_io "\000\000\000\000\000\000N@\016America/New_York"))
+        ((sexp (01:00:00.000000 America/New_York))
+         (bin_io "\000\000\000\000\000 \172@\016America/New_York")) |}];
+    ;;
+  end)
+
+let%test_module "Time.Stable.Zone" =
+  (module struct
+    let examples =
+      [ Zone.utc
+      ; Zone.find_exn "hkg"
+      ; Zone.find_exn "ldn"
+      ; Zone.find_exn "nyc"
+      ]
+
+    let%expect_test "V1" =
+      print_and_check_stable_type [%here]
+        (module Time.Stable.Zone.V1)
+        examples;
+      [%expect {|
+        (bin_shape_digest d9a8da25d5656b016fb4dbdc2e4197fb)
+        ((sexp   UTC)
+         (bin_io "\003UTC"))
+        ((sexp   Asia/Hong_Kong)
+         (bin_io "\014Asia/Hong_Kong"))
+        ((sexp   Europe/London)
+         (bin_io "\rEurope/London"))
+        ((sexp   America/New_York)
+         (bin_io "\016America/New_York")) |}];
+    ;;
+  end)

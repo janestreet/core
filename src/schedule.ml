@@ -722,7 +722,7 @@ module Valid_invalid_span = struct
   type t =
     | In_range_for_at_least of Time.Span.t
     | Out_of_range_for_at_least of Time.Span.t
-    [@@deriving sexp_of]
+  [@@deriving sexp_of]
 
   let never   = Out_of_range_for_at_least Time.Span.day
   let forever = In_range_for_at_least Time.Span.day
@@ -1031,7 +1031,7 @@ let fold_tags (type tag)(type m) (t : (zoned, tag) Internal.t) ~(init:m) ~f time
         let ofday = IT.ofday it in
         maybe_negate under_not m
           (if (boundary_test (module Time.Ofday) `After start_inc_exc) ofday s
-              && (boundary_test (module Time.Ofday) `Before end_inc_exc) ofday e
+           && (boundary_test (module Time.Ofday) `Before end_inc_exc) ofday e
            then Some m
            else None)
       | At ofdays, O.U (_, _, it)          -> ofday_mem ofdays it under_not m

@@ -52,17 +52,17 @@ let () =
   let n = 1_000_000 in
   let int_tbl_replace1, int_tbl_find1 =
     let module I = Hashable.Make(struct
-      include Int
-      let hash x = Caml.Hashtbl.hash x
-    end)
+                     include Int
+                     let hash x = Caml.Hashtbl.hash x
+                   end)
     in
     gen_test_int_replace_and_find n (I.Table.create ~size:(2*n) ())
   in
   let int_tbl_replace2, int_tbl_find2 =
     let module I = Hashable.Make(struct
-      include Int
-      let hash x = Core.Hashtbl_intf.Hashable.hash x
-    end)
+                     include Int
+                     let hash x = Core.Hashtbl_intf.Hashable.hash x
+                   end)
     in
     gen_test_int_replace_and_find n (I.Table.create ~size:(2*n) ())
   in

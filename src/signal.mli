@@ -27,11 +27,11 @@ val to_string : t -> string
     program.  See include/linux/kernel.h in the Linux kernel source tree (not the file
     /usr/include/linux/kernel.h). *)
 type sys_behavior = [
-| `Continue  (** Continue the process if it is currently stopped*)
-| `Dump_core (** Terminate the process and dump core *)
-| `Ignore    (** Ignore the signal*)
-| `Stop      (** Stop the process *)
-| `Terminate (** Terminate the process *)
+  | `Continue  (** Continue the process if it is currently stopped*)
+  | `Dump_core (** Terminate the process and dump core *)
+  | `Ignore    (** Ignore the signal*)
+  | `Stop      (** Stop the process *)
+  | `Terminate (** Terminate the process *)
 ]
 [@@deriving sexp]
 
@@ -75,18 +75,18 @@ type sigprocmask_command = [ `Set | `Block | `Unblock ]
  * If [cmd] is [`Unblock], the signals in [sigs] are removed from the set of
  *   blocked signals.
  * [sigprocmask] returns the set of previously blocked signals.
- *)
+*)
 val sigprocmask : sigprocmask_command -> t list -> t list
 
 (** [sigpending ()] returns the set of blocked signals that are currently
  * pending.
- *)
+*)
 val sigpending : unit -> t list
 
 (** [sigsuspend sigs] atomically sets the blocked signals to [sigs] and waits for
  * a non-ignored, non-blocked signal to be delivered.  On return, the blocked
  * signals are reset to their initial value.
- *)
+*)
 val sigsuspend : t list -> unit
 
 
@@ -135,8 +135,8 @@ val usr2   : t  (** [Terminate]  Application-defined signal 2                   
 val vtalrm : t  (** [Terminate]  Timeout in virtual time                        *)
 
 val zero   : t  (** [Ignore]     No-op; can be used to test whether the target
-                                 process exists and the current process has
-                                 permission to signal it                        *)
+                    process exists and the current process has
+                    permission to signal it                        *)
 
 (** The [Expert] module contains functions that novice users should avoid, due to their
     complexity.

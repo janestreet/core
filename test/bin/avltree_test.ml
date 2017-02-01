@@ -22,9 +22,9 @@ let test_f t s test_data f =
 
 let do_add ~set ~t ~present ~i ~added =
   (* Set added to be the opposite of the expected value, so we
-   can verify that it in fact does get set and it is set to the
-   right value (as opposed to the value being correct to start
-   with, and we made no write to it.) *)
+     can verify that it in fact does get set and it is set to the
+     right value (as opposed to the value being correct to start
+     with, and we made no write to it.) *)
   added := present;
   let res = Avltree.add !t ~replace:true ~compare ~added ~key:i ~data:i in
   if present
@@ -43,7 +43,7 @@ let test_add t s test_data =
 let do_add_if_not_exists ~set ~t ~present ~i ~added =
   added := present;
   let res = Avltree.add !t ~replace:false ~compare ~added ~key:i
-    ~data:(if present then i+1 else i) in
+              ~data:(if present then i+1 else i) in
   if present
   then assert (not !added)
   else assert (!added);
@@ -105,7 +105,7 @@ let test =
     x
   in
   "Avltree" >:::
-    (test "random" random_data1 random_data2
-     @ test "sorted" sorted_data random_data2
-     @ test "reverse_sorted" reverse_sorted_data random_data2)
+  (test "random" random_data1 random_data2
+   @ test "sorted" sorted_data random_data2
+   @ test "reverse_sorted" reverse_sorted_data random_data2)
 ;;

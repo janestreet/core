@@ -49,7 +49,7 @@ let num_threads () =
   try
     find_thread_count
       (In_channel.read_lines
-        ("/proc/" ^ string_of_int (Unix.getpid ()) ^ "/status"))
+         ("/proc/" ^ string_of_int (Unix.getpid ()) ^ "/status"))
   with _ -> None
 ;;
 

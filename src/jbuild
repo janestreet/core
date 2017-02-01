@@ -41,3 +41,16 @@
   (action "./inline_benchmarks_runner jenga-save-benchmarks")))
 
 (provides core:config.h)
+
+(enforce_style
+ ((exceptions
+   (bigstring.ml            ;; ocp-indent doesn't handle [#import]
+    bigstring_marshal.ml    ;; ocp-indent doesn't handle [#import]
+    core_mutex.ml           ;; ocp-indent doesn't handle [#import]
+    core_unix.ml            ;; ocp-indent doesn't handle [#import]
+    iobuf.ml                ;; ocp-indent doesn't handle [#import]
+    linux_ext.ml            ;; ocp-indent doesn't handle [#import]
+    lock_file.ml            ;; ocp-indent doesn't handle [#import]
+    time_stamp_counter.ml   ;; ocp-indent doesn't handle [#import]
+    time_stamp_counter.mli  ;; ocp-indent doesn't handle [#import]
+    ))))

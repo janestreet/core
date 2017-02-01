@@ -88,7 +88,7 @@ let%expect_test "Time_ns.Span.Stable.V1" =
      (bin_io "\252\000@\128\251\1487\028\001")
      (int63  80000006400000000)) |}];
   (* stable checks for values that do not precisely round-trip *)
-  print_and_check_stable_int63able_type [%here] (module V) ~cr:"imprecise:" [
+  print_and_check_stable_int63able_type [%here] (module V) ~cr:Comment [
     make              1L;
     make 11_275_440_000L;
   ] ~hide_positions:true;
@@ -97,10 +97,7 @@ let%expect_test "Time_ns.Span.Stable.V1" =
     ((sexp   0s)
      (bin_io "\001")
      (int63  1))
-    (* imprecise: require-failed: lib/core/test/src/test_time_ns.ml:LINE:COL.
-       Do not 'X' this CR; instead make the required property true,
-       which will make the CR disappear.  For more information, see
-       [Expect_test_helpers.Helpers.require]. *)
+    (* require-failed: lib/core/test/src/test_time_ns.ml:LINE:COL. *)
     ("sexp serialization failed to round-trip"
       (original       0s)
       (sexp           0s)
@@ -108,10 +105,7 @@ let%expect_test "Time_ns.Span.Stable.V1" =
     ((sexp   11.2754s)
      (bin_io "\252\128\143\017\160\002\000\000\000")
      (int63  11275440000))
-    (* imprecise: require-failed: lib/core/test/src/test_time_ns.ml:LINE:COL.
-       Do not 'X' this CR; instead make the required property true,
-       which will make the CR disappear.  For more information, see
-       [Expect_test_helpers.Helpers.require]. *)
+    (* require-failed: lib/core/test/src/test_time_ns.ml:LINE:COL. *)
     ("sexp serialization failed to round-trip"
       (original       11.2754s)
       (sexp           11.2754s)
@@ -164,7 +158,7 @@ let%expect_test "Time_ns.Span.Option.Stable.V1" =
      (bin_io "\252\000\000\000\000\000\000\000\192")
      (int63  -4611686018427387904)) |}];
   (* stable checks for values that do not precisely round-trip *)
-  print_and_check_stable_int63able_type [%here] (module V) ~cr:"imprecise:" [
+  print_and_check_stable_int63able_type [%here] (module V) ~cr:Comment [
     make              1L;
     make 11_275_440_000L;
   ] ~hide_positions:true;
@@ -173,10 +167,7 @@ let%expect_test "Time_ns.Span.Option.Stable.V1" =
     ((sexp (0s))
      (bin_io "\001")
      (int63  1))
-    (* imprecise: require-failed: lib/core/test/src/test_time_ns.ml:LINE:COL.
-       Do not 'X' this CR; instead make the required property true,
-       which will make the CR disappear.  For more information, see
-       [Expect_test_helpers.Helpers.require]. *)
+    (* require-failed: lib/core/test/src/test_time_ns.ml:LINE:COL. *)
     ("sexp serialization failed to round-trip"
       (original       (0s))
       (sexp           (0s))
@@ -184,10 +175,7 @@ let%expect_test "Time_ns.Span.Option.Stable.V1" =
     ((sexp (11.2754s))
      (bin_io "\252\128\143\017\160\002\000\000\000")
      (int63  11275440000))
-    (* imprecise: require-failed: lib/core/test/src/test_time_ns.ml:LINE:COL.
-       Do not 'X' this CR; instead make the required property true,
-       which will make the CR disappear.  For more information, see
-       [Expect_test_helpers.Helpers.require]. *)
+    (* require-failed: lib/core/test/src/test_time_ns.ml:LINE:COL. *)
     ("sexp serialization failed to round-trip"
       (original       (11.2754s))
       (sexp           (11.2754s))
@@ -236,7 +224,7 @@ let%expect_test "Time_ns.Stable.V1" =
      (bin_io "\252\024\252\186\253\158\190\n9")
      (int63  4110307199999999000)) |}];
   (* stable checks for values that do not precisely round-trip *)
-  print_and_check_stable_int63able_type [%here] (module V) ~cr:"imprecise:" [
+  print_and_check_stable_int63able_type [%here] (module V) ~cr:Comment [
     make 1L;
   ] ~hide_positions:true;
   [%expect {|
@@ -244,10 +232,7 @@ let%expect_test "Time_ns.Stable.V1" =
     ((sexp (1969-12-31 19:00:00.000000-05:00))
      (bin_io "\001")
      (int63  1))
-    (* imprecise: require-failed: lib/core/test/src/test_time_ns.ml:LINE:COL.
-       Do not 'X' this CR; instead make the required property true,
-       which will make the CR disappear.  For more information, see
-       [Expect_test_helpers.Helpers.require]. *)
+    (* require-failed: lib/core/test/src/test_time_ns.ml:LINE:COL. *)
     ("sexp serialization failed to round-trip"
       (original       (1969-12-31 19:00:00.000000-05:00))
       (sexp           (1969-12-31 19:00:00.000000-05:00))
@@ -300,7 +285,7 @@ let%expect_test "Time_ns.Option.Stable.V1" =
      (bin_io "\252\000\000\000\000\000\000\000\192")
      (int63  -4611686018427387904)) |} ];
   (* stable checks for values that do not precisely round-trip *)
-  print_and_check_stable_int63able_type [%here] (module V) ~cr:"imprecise:" [
+  print_and_check_stable_int63able_type [%here] (module V) ~cr:Comment [
     make 1L;
   ] ~hide_positions:true;
   [%expect {|
@@ -308,10 +293,7 @@ let%expect_test "Time_ns.Option.Stable.V1" =
     ((sexp ((1969-12-31 19:00:00.000000-05:00)))
      (bin_io "\001")
      (int63  1))
-    (* imprecise: require-failed: lib/core/test/src/test_time_ns.ml:LINE:COL.
-       Do not 'X' this CR; instead make the required property true,
-       which will make the CR disappear.  For more information, see
-       [Expect_test_helpers.Helpers.require]. *)
+    (* require-failed: lib/core/test/src/test_time_ns.ml:LINE:COL. *)
     ("sexp serialization failed to round-trip"
       (original       ((1969-12-31 19:00:00.000000-05:00)))
       (sexp           ((1969-12-31 19:00:00.000000-05:00)))
@@ -356,7 +338,7 @@ let%expect_test "Time_ns.Ofday.Stable.V1" =
      (bin_io "\252\024\252N\145\148N\000\000")
      (int63  86399999999000)) |}];
   (* stable checks for values that do not precisely round-trip *)
-  print_and_check_stable_int63able_type [%here] (module V) ~cr:"imprecise:" [
+  print_and_check_stable_int63able_type [%here] (module V) ~cr:Comment [
     make 1L;
   ] ~hide_positions:true;
   [%expect {|
@@ -364,10 +346,7 @@ let%expect_test "Time_ns.Ofday.Stable.V1" =
     ((sexp   00:00:00.000000)
      (bin_io "\001")
      (int63  1))
-    (* imprecise: require-failed: lib/core/test/src/test_time_ns.ml:LINE:COL.
-       Do not 'X' this CR; instead make the required property true,
-       which will make the CR disappear.  For more information, see
-       [Expect_test_helpers.Helpers.require]. *)
+    (* require-failed: lib/core/test/src/test_time_ns.ml:LINE:COL. *)
     ("sexp serialization failed to round-trip"
       (original       00:00:00.000000)
       (sexp           00:00:00.000000)
@@ -416,7 +395,7 @@ let%expect_test "Time_ns.Ofday.Option.Stable.V1" =
      (bin_io "\252\000\000\000\000\000\000\000\192")
      (int63  -4611686018427387904)) |}];
   (* stable checks for values that do not precisely round-trip *)
-  print_and_check_stable_int63able_type [%here] (module V) ~cr:"imprecise:" [
+  print_and_check_stable_int63able_type [%here] (module V) ~cr:Comment [
     make 1L;
   ] ~hide_positions:true;
   [%expect {|
@@ -424,10 +403,7 @@ let%expect_test "Time_ns.Ofday.Option.Stable.V1" =
     ((sexp (00:00:00.000000))
      (bin_io "\001")
      (int63  1))
-    (* imprecise: require-failed: lib/core/test/src/test_time_ns.ml:LINE:COL.
-       Do not 'X' this CR; instead make the required property true,
-       which will make the CR disappear.  For more information, see
-       [Expect_test_helpers.Helpers.require]. *)
+    (* require-failed: lib/core/test/src/test_time_ns.ml:LINE:COL. *)
     ("sexp serialization failed to round-trip"
       (original       (00:00:00.000000))
       (sexp           (00:00:00.000000))

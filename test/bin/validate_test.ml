@@ -26,7 +26,7 @@ let test =
           ]
         in
         List.sort ~cmp:Poly.ascending (V.errors res)
-          = List.sort ~cmp:Poly.ascending expected;
+        = List.sort ~cmp:Poly.ascending expected;
       );
 
       "inf/nan" @? (
@@ -42,7 +42,7 @@ let test =
           ]
         in
         List.sort ~cmp:Poly.ascending (V.errors res)
-          = List.sort ~cmp:Poly.ascending expected;
+        = List.sort ~cmp:Poly.ascending expected;
       );
 
       "nesting" @? (
@@ -66,7 +66,7 @@ let test =
           ]
         in
         List.sort ~cmp:Poly.ascending (V.errors res)
-          = List.sort ~cmp:Poly.ascending expected;
+        = List.sort ~cmp:Poly.ascending expected;
       );
 
       "empty" @? (
@@ -80,7 +80,7 @@ let test =
         in
         let expected = [] in
         List.sort ~cmp:Poly.ascending (V.errors res) =
-            List.sort ~cmp:Poly.ascending expected
+        List.sort ~cmp:Poly.ascending expected
       );
     )
   ]

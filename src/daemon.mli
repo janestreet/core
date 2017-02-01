@@ -6,10 +6,10 @@ open! Import
 
 module Fd_redirection : sig
   type t = [
-  | `Dev_null
-  | `Do_not_redirect
-  | `File_append of string
-  | `File_truncate of string
+    | `Dev_null
+    | `Do_not_redirect
+    | `File_append of string
+    | `File_truncate of string
   ]
 end
 

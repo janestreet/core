@@ -956,9 +956,9 @@ module Make () = struct
       open Consume
 
       include Consume_blit_debug.Make (struct
-        include Consume
-        let module_name = "Unsafe.Consume"
-      end)
+          include Consume
+          let module_name = "Unsafe.Consume"
+        end)
 
       type nonrec ('a, 'd, 'w) t = ('a, 'd, 'w) t
 
@@ -1108,9 +1108,9 @@ module Make () = struct
       open Peek
 
       include Peek_blit_debug.Make (struct
-        include Peek
-        let module_name = "Unsafe.Peek"
-      end)
+          include Peek
+          let module_name = "Unsafe.Peek"
+        end)
 
       type nonrec ('a, 'd, 'w) t = ('a, 'd, 'w) t
 
@@ -1231,9 +1231,9 @@ module Make () = struct
         debug "Unsafe.Poke.tail_padded_fixed_string" [t]
           (`padding padding, `len len, `pos pos, str)
           [%sexp_of: [ `padding of char ]
-                    * [ `len of int ]
-                    * [ `pos of int ]
-                    * string]
+                     * [ `len of int ]
+                     * [ `pos of int ]
+                     * string]
           sexp_of_unit
           (fun () -> tail_padded_fixed_string ~padding ~len t ~pos str)
 
@@ -1241,9 +1241,9 @@ module Make () = struct
         debug "Unsafe.Poke.head_padded_fixed_string" [t]
           (`padding padding, `len len, `pos pos, str)
           [%sexp_of: [ `padding of char ]
-                    * [ `len of int ]
-                    * [ `pos of int ]
-                    * string]
+                     * [ `len of int ]
+                     * [ `pos of int ]
+                     * string]
           sexp_of_unit
           (fun () -> head_padded_fixed_string ~padding ~len t ~pos str)
 

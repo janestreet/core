@@ -19,3 +19,5 @@
               core_extended
               pcre
               re2))))
+
+(enforce_style ())

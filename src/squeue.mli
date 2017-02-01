@@ -15,7 +15,7 @@ val push : 'a t -> 'a -> unit
 val push_uncond : 'a t -> 'a -> unit
 
 (** Pushes an event on the queue if the queue is less than maxsize, otherwise drops it.
-  Returns true if the push was successful *)
+    Returns true if the push was successful *)
 val push_or_drop : 'a t -> 'a -> bool
 
 (** returns the number of elements in the queue. *)
@@ -26,7 +26,7 @@ val length : 'a t -> int
 val pop : 'a t -> 'a
 
 (** returns the element popped and the length of the queue after
-    * this element was popped. *)
+ * this element was popped. *)
 val lpop : 'a t -> 'a * int
 
 (** Transfers all the elements from an ordinary queue into the

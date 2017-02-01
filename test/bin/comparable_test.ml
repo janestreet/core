@@ -2,13 +2,13 @@ open OUnit;;
 open Core
 
 module F
-  (M : sig
-    type t
-    include Comparable.S with type t := t
-    val one : t
-    val two : t
-    val three : t
-  end) : sig
+    (M : sig
+       type t
+       include Comparable.S with type t := t
+       val one : t
+       val two : t
+       val three : t
+     end) : sig
   val test : OUnit.test
 end = struct
   open M
@@ -18,52 +18,52 @@ end = struct
   let test =
     let foreach f = f one; f two; f three in
     "comparable" >::
-      (fun () ->
-        foreach (fun a ->
-          foreach (fun b ->
-            assert (equal (min a b) (min b a));
-            assert (equal (max a b) (max b a));
-            assert ((a < b) = (Int.(<) (compare a b) 0));
-            assert ((equal a b) = (Int.equal (compare a b) 0));
-            assert ((a > b) = (Int.(>) (compare a b) 0));
-            assert ((a < b) = (Int.(<) (ascending a b) 0));
-            assert ((equal a b) = (Int.equal (ascending a b) 0));
-            assert ((a > b) = (Int.(>) (ascending a b) 0));
-            assert ((a > b) = (Int.(<) (descending a b) 0));
-            assert ((equal a b) = (Int.(=) (descending a b) 0));
-            assert ((a < b) = (Int.(>) (descending a b) 0));
-            assert ((a > b) = (b < a));
-            assert ((a >= b) = (b <= a));
-            assert ((a < b) = not (a >= b));
-            assert ((a > b) = not (a <= b));
-            assert ((equal a b) = not (a <> b));
-            assert ((a >= b) = (a > b || equal a b));
-            assert ((a <= b) = (a < b || equal a b))));
-        assert (equal one one);
-        assert (equal two two);
-        assert (equal three three);
-        assert (not (one < one));
-        assert (one < two);
-        assert (one < three);
-        assert (not (two < one));
-        assert (not (two < two));
-        assert (two < three);
-        assert (not (three < one));
-        assert (not (three < two));
-        assert (not (three < three));
-        assert (equal (max one one) one);
-        assert (equal (max one two) two);
-        assert (equal (max one three) three);
-        assert (equal (max two two) two);
-        assert (equal (max two three) three);
-        assert (equal (max three three) three);
-        assert (equal (min one one) one);
-        assert (equal (min one two) one);
-        assert (equal (min one three) one);
-        assert (equal (min two two) two);
-        assert (equal (min two three) two);
-        assert (equal (min three three) three);
-      )
+    (fun () ->
+       foreach (fun a ->
+         foreach (fun b ->
+           assert (equal (min a b) (min b a));
+           assert (equal (max a b) (max b a));
+           assert ((a < b) = (Int.(<) (compare a b) 0));
+           assert ((equal a b) = (Int.equal (compare a b) 0));
+           assert ((a > b) = (Int.(>) (compare a b) 0));
+           assert ((a < b) = (Int.(<) (ascending a b) 0));
+           assert ((equal a b) = (Int.equal (ascending a b) 0));
+           assert ((a > b) = (Int.(>) (ascending a b) 0));
+           assert ((a > b) = (Int.(<) (descending a b) 0));
+           assert ((equal a b) = (Int.(=) (descending a b) 0));
+           assert ((a < b) = (Int.(>) (descending a b) 0));
+           assert ((a > b) = (b < a));
+           assert ((a >= b) = (b <= a));
+           assert ((a < b) = not (a >= b));
+           assert ((a > b) = not (a <= b));
+           assert ((equal a b) = not (a <> b));
+           assert ((a >= b) = (a > b || equal a b));
+           assert ((a <= b) = (a < b || equal a b))));
+       assert (equal one one);
+       assert (equal two two);
+       assert (equal three three);
+       assert (not (one < one));
+       assert (one < two);
+       assert (one < three);
+       assert (not (two < one));
+       assert (not (two < two));
+       assert (two < three);
+       assert (not (three < one));
+       assert (not (three < two));
+       assert (not (three < three));
+       assert (equal (max one one) one);
+       assert (equal (max one two) two);
+       assert (equal (max one three) three);
+       assert (equal (max two two) two);
+       assert (equal (max two three) three);
+       assert (equal (max three three) three);
+       assert (equal (min one one) one);
+       assert (equal (min one two) one);
+       assert (equal (min one three) one);
+       assert (equal (min two two) two);
+       assert (equal (min two three) two);
+       assert (equal (min three three) three);
+    )
   ;;
 end
 
@@ -77,10 +77,10 @@ module Float =
 
 module String =
   F (struct
-     include String
-     let one = "a"
-     let two = "b"
-     let three = "c"
+    include String
+    let one = "a"
+    let two = "b"
+    let three = "c"
   end)
 
 module Span =
@@ -186,19 +186,19 @@ let lexicographic_test =
 
 let test =
   TestList
-  [Float.test;
-   String.test;
-   Float.test;
-   Span.test;
-   Ofday.test;
-   Date.test;
-   Time.test;
-   Int.test;
-   Int32.test;
-   Int64.test;
-   Nativeint.test;
-   Int'.test;
-   Int''.test;
-   lexicographic_test;
-  ]
+    [Float.test;
+     String.test;
+     Float.test;
+     Span.test;
+     Ofday.test;
+     Date.test;
+     Time.test;
+     Int.test;
+     Int32.test;
+     Int64.test;
+     Nativeint.test;
+     Int'.test;
+     Int''.test;
+     lexicographic_test;
+    ]
 ;;

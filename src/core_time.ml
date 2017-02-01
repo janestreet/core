@@ -3,9 +3,9 @@
    Outside of Core Time appears to be a single module with a number of submodules:
 
    - Time
-     - Span
-     - Ofday
-     - Zone
+   - Span
+   - Ofday
+   - Zone
 
    The reality under the covers isn't as simple for a three reasons:
 
@@ -27,9 +27,9 @@
    Core_kernel.Date  - the core type of date
    Core_kernel.Zone  - the base functor for creating a Zone type
    Core_kernel.Time_float0 - contains the base Time.t type and lays out the basic
-                             relationship between Time, Span, Ofday, and Zone
+   relationship between Time, Span, Ofday, and Zone
    Core_kernel.Time_float  - ties Time, Span, Ofday, Zone, and Date together and provides
-                             the higher level functions for them that don't rely on Unix
+   the higher level functions for them that don't rely on Unix
    Core_kernel.Std.Time    - re-exposes Time_float
 
    Core.Zone_cache   - implements a caching layer between the Unix filesystem and Zones
@@ -37,7 +37,7 @@
    Core.Core_time    - adds the Unix dependent functions to Time
 
    Core          - renames the Core_{base} modules to {base} for ease of access in
-                       modules outside of Core
+   modules outside of Core
 *)
 
 open! Import

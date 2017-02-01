@@ -18,9 +18,9 @@ module type S_time = S_time
   with type 'a poly_set := 'a Set.t
 
 module Make (Bound : sig
-  type t [@@deriving bin_io, sexp]
-  include Comparable.S with type t := t
-end)
+    type t [@@deriving bin_io, sexp]
+    include Comparable.S with type t := t
+  end)
   : S with type bound = Bound.t
 
 module Float : S with type bound = Float.t

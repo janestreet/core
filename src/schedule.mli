@@ -1,25 +1,25 @@
 (** {1 Overview}
 
-  A [Schedule.t] describes a (potentially repeating) schedule by selecting
-  a subset of all seconds using the set operations in [t].  For example:
+    A [Schedule.t] describes a (potentially repeating) schedule by selecting
+    a subset of all seconds using the set operations in [t].  For example:
 
     - every 5 min after the hour : {v Mins [ 5 ] v}
 
     - 9am to 10am every day :
-      {v Between (Time.Ofday.create ~hr:9 (), Time.Ofday.create ~hr:10 ()) v}
+    {v Between (Time.Ofday.create ~hr:9 (), Time.Ofday.create ~hr:10 ()) v}
 
     - Every weekday at 3pm:
-      {v And
+    {v And
         [ Weekdays [ Mon; Tue; Wed; Thu; Fri ]
         ; At [ Time.Ofday.create ~hr:15 () ] ] v}
 
     - On the 15th of every month at midnight:
-      {v And
+    {v And
         [ Days [ 15 ]
         ; At [ Time.Ofday.start_of_day ] ] v}
 
     - 9:30 am on weekends, and 5 am on weekdays
-      {v Or
+    {v Or
         [ And
             [ Weekdays [ Sat; Sun ]
             ; At [ Time.Ofday.create ~hr:9 ~min:30 () ] ]
@@ -31,46 +31,46 @@
 
 (** {1 Zones and Tags}
 
-  On top of this selection language there are two labeling branches of the variant that
-  are important.
+    On top of this selection language there are two labeling branches of the variant that
+    are important.
 
-  [In_zone (zone, t)] expresses that all of t should be evaluated relative to the time
-  zone given.
+    [In_zone (zone, t)] expresses that all of t should be evaluated relative to the time
+    zone given.
 
-  [Tag (tag, t)] tags anything matching t with [tag].
+    [Tag (tag, t)] tags anything matching t with [tag].
 
-  Combining these we can express something complex like the on-call groups across three
-  offices:
+    Combining these we can express something complex like the on-call groups across three
+    offices:
 
-  {[
-    let weekdays         = Weekdays Day_of_week.weekdays in
-    let working_hours    = Between Time.Ofday.((create ~hr:8 (), create ~hr:18 ())) in
-    let working_schedule = And [ weekdays; working_hours ] in
-    let offices =
-      let (!!) = Time.Zone.find_exn in
-      Location.Abbrev.([
-        tot, !!"America/New_York"
-      ; hkg, !!"Asia/Hong_Kong"
-      ; ldn, !!"Europe/London" ])
-    in
-    List.map offices ~f:(fun (office, zone) ->
-      In_zone (zone, Tag (office, working_schedule)))
-  ]}
+    {[
+      let weekdays         = Weekdays Day_of_week.weekdays in
+      let working_hours    = Between Time.Ofday.((create ~hr:8 (), create ~hr:18 ())) in
+      let working_schedule = And [ weekdays; working_hours ] in
+      let offices =
+        let (!!) = Time.Zone.find_exn in
+        Location.Abbrev.([
+          tot, !!"America/New_York"
+        ; hkg, !!"Asia/Hong_Kong"
+        ; ldn, !!"Europe/London" ])
+      in
+      List.map offices ~f:(fun (office, zone) ->
+        In_zone (zone, Tag (office, working_schedule)))
+    ]}
 
-  after which we can use the [tags] function to extract the groups on call at any moment.
+    after which we can use the [tags] function to extract the groups on call at any moment.
 *)
 
 (** {1 Daylight Savings Time}
 
-  Schedules are expressed in terms of wall clock time, and as such have interesting
-  behavior around daylight savings time boundaries.  There are two circumstances that
-  might affect a schedule.  The first is a repeated time, which occurs when time jumps
-  back (e.g. 2:30 may happen twice in one day).  The second is a skipped time, which
-  occurs when time jumps forward by an hour.
+    Schedules are expressed in terms of wall clock time, and as such have interesting
+    behavior around daylight savings time boundaries.  There are two circumstances that
+    might affect a schedule.  The first is a repeated time, which occurs when time jumps
+    back (e.g. 2:30 may happen twice in one day).  The second is a skipped time, which
+    occurs when time jumps forward by an hour.
 
-  In both cases [Schedule] does the naive thing.  If the time happens twice and is
-  included in the schedule it is included twice.  If it never happens [Schedule] makes
-  no special attempt to artificially include it.
+    In both cases [Schedule] does the naive thing.  If the time happens twice and is
+    included in the schedule it is included twice.  If it never happens [Schedule] makes
+    no special attempt to artificially include it.
 *)
 
 open! Import
@@ -87,13 +87,13 @@ type unzoned = Unzoned [@@deriving compare]
    - [In_zone]: see the discussion under Zones and Tags above
    - [Tag]: see the discussion under Zones and Tags above
    - [And], [Or], [Not]: correspond to the set operations intersection, union, and
-     complement.
+   complement.
    - [If_then_else (A, B, C)]: corresponds to (A && B) || (NOT A && C), useful for dealing
-     with schedules that change during certain times of the year (holidays, etc.)
+   with schedules that change during certain times of the year (holidays, etc.)
    - [At]       : the exact times given on every day
    - [Shift]    : shifts an entire schedule forward or backwards by a known span. (e.g:
-        - [Shift ((sec 3.), Secs[10]) = Secs [13]]
-        - [Shift ((sec (-3.)), Secs[10]) = Secs [7]])
+   - [Shift ((sec 3.), Secs[10]) = Secs [13]]
+   - [Shift ((sec (-3.)), Secs[10]) = Secs [7]])
    - [Between]  : the contiguous range between the start and end times given on every day
    - [Secs]     : the exact seconds given during every hour of every day
    - [Mins]     : all seconds in the minutes given during every hour of every day
@@ -136,7 +136,7 @@ type ('a, 'b) t =
   | If_then_else : (('a, 'b) t * ('a, 'b) t * ('a, 'b) t)            -> ('a, 'b) t
   | Shift        : Time.Span.t * ('a, 'b) t                          -> ('a, 'b) t
   | Between      :   (Inclusive_exclusive.t * Time.Ofday.t)
-                   * (Inclusive_exclusive.t * Time.Ofday.t)          -> (unzoned, 'b) t
+                     * (Inclusive_exclusive.t * Time.Ofday.t)          -> (unzoned, 'b) t
   | At           : Time.Ofday.t list                                 -> (unzoned, 'b) t
   | Secs         : int list                                          -> (unzoned, 'b) t
   | Mins         : int list                                          -> (unzoned, 'b) t

@@ -31,10 +31,10 @@ let test_random_0_99 () =
     let ranges = Int_set.ranges !int_set in
     let discrete (x1,x2) (y1,y2) =  x2 + 1 < y1 || y2 + 1 < x1 in
     let rec f = function
-        | [] -> ()
-        | x::xs ->
-            List.iter xs ~f:(fun y -> assert (discrete x y));
-            f xs
+      | [] -> ()
+      | x::xs ->
+        List.iter xs ~f:(fun y -> assert (discrete x y));
+        f xs
     in
     f ranges;
     (* max and min *)
@@ -52,7 +52,7 @@ let test_add_range () =
                   [ (0, 100) ], [ (0, 49); (51, 100); (50, 50) ] ]
   in
   let iset_of_ranges = List.fold ~init:Int_set.empty
-    ~f:(fun st (x,y) -> Int_set.add_range st x y)
+                         ~f:(fun st (x,y) -> Int_set.add_range st x y)
   in
   List.iter targets ~f:(fun (answer, subranges) ->
     let answer = iset_of_ranges answer in

@@ -141,10 +141,10 @@ end
 
 module Int = Make (Int) ()
 module Unit = Make (struct
-  type t = unit [@@deriving sexp_of, compare]
-  let of_int_exn n = assert (n = 0)
-  let to_int () = 0
-end) ()
+    type t = unit [@@deriving sexp_of, compare]
+    let of_int_exn n = assert (n = 0)
+    let to_int () = 0
+  end) ()
 
 let unit = Unit.create_ok ()
 let ignore_ok_value t = Core_kernel.Std.Int.min t 0

@@ -1,14 +1,14 @@
 open Core
 
 module Test_S1
-  (M : sig
-    include Container.S1
-    val of_list : 'a list -> 'a  t
-  end) : sig
-    val test : unit -> unit
+    (M : sig
+       include Container.S1
+       val of_list : 'a list -> 'a  t
+     end) : sig
+  val test : unit -> unit
 end = struct
   let lists = List.init 10 ~f:(fun i -> List.init i ~f:ident)
-      
+
   let test () =
     List.iter lists ~f:(fun l ->
       let m = M.of_list l in

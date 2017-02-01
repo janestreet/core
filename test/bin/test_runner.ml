@@ -26,13 +26,13 @@ let count_pa_ounit = function
 let main () =
   let cnt_ounit =
     "-cnt",
-     Arg.Unit (fun () ->
-       let pa_ounit,total = count_pa_ounit (Test.all ()) in
-       Printf.printf "converted: %i total: %i\n%!" pa_ounit total;
-       exit 0
-     ),
-     " Count how many of the tests were converted to pa_ounit (for \
- informational purposes only)"
+    Arg.Unit (fun () ->
+      let pa_ounit,total = count_pa_ounit (Test.all ()) in
+      Printf.printf "converted: %i total: %i\n%!" pa_ounit total;
+      exit 0
+    ),
+    " Count how many of the tests were converted to pa_ounit (for \
+     informational purposes only)"
   in
   ignore (run_test_tt_main
             ~arg_specs:[cnt_ounit]

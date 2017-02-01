@@ -4,3 +4,5 @@
   (modes (byte))
   (libraries (compiler-libs.toplevel core))
   (preprocess (pps ()))))
+
+(enforce_style ())

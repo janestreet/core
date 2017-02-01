@@ -6,7 +6,7 @@ module Generator = Quickcheck.Generator
 module Sorted_list = struct
 
   type t = int list
-    [@@deriving sexp]
+  [@@deriving sexp]
 
   let of_list list =
     List.stable_sort ~cmp:Int.compare list
@@ -68,7 +68,7 @@ let%test_module "sorted list" =
       in
       (* Swap which line is commented below to see error message with shrinking. *)
       assert (does_raise run)
-      (* run () *)
+    (* run () *)
 
     let%test_unit
       "Invalid merge \"should\" produce a valid sorted list (with shrinking)"
@@ -82,7 +82,7 @@ let%test_module "sorted list" =
       in
       (* Swap which line is commented below to see error message with shrinking. *)
       assert (does_raise run)
-      (* run () *)
+    (* run () *)
 
     let%test_unit "Valid merge should produce a valid sorted list (with shrinking)" =
       Quickcheck.test

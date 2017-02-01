@@ -2,3 +2,5 @@
   (names (gettid getifaddrs))
   (libraries (async core))
 ))
+
+(enforce_style ())

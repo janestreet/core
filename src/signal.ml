@@ -1,11 +1,11 @@
 open! Import
 
 include (Int : sig
-  type t = int [@@deriving bin_io]
+           type t = int [@@deriving bin_io]
 
-  include Comparable.S with type t := t
-  include Hashable  .S with type t := t
-end)
+           include Comparable.S with type t := t
+           include Hashable  .S with type t := t
+         end)
 
 external ml_caml_to_nonportable_signal_number : int -> int =
   "ml_caml_to_nonportable_signal_number"
@@ -20,11 +20,11 @@ let of_caml_int t = t
 let to_caml_int t = t
 
 type sys_behavior = [
-| `Continue (** Continue the process if it is currently stopped *)
-| `Dump_core (** Terminate the process and dump core *)
-| `Ignore (** Ignore the signal *)
-| `Stop  (** Stop the process *)
-| `Terminate  (** Terminate the process *)
+  | `Continue (** Continue the process if it is currently stopped *)
+  | `Dump_core (** Terminate the process and dump core *)
+  | `Ignore (** Ignore the signal *)
+  | `Stop  (** Stop the process *)
+  | `Terminate  (** Terminate the process *)
 ] [@@deriving sexp]
 
 let equal (t : t) t' = (t = t')
@@ -113,8 +113,8 @@ let to_string, of_string, default_sys_behavior =
   let default_sys_behavior s =
     match Hashtbl.find behavior_tbl s with
     | None ->
-        raise (Invalid_argument ("Signal.default_sys_behavior: unknown signal " ^
-  Int.to_string s))
+      raise (Invalid_argument ("Signal.default_sys_behavior: unknown signal " ^
+                               Int.to_string s))
     | Some behavior -> behavior
   in
   to_string, of_string, default_sys_behavior
@@ -154,8 +154,8 @@ let send_exn t pid_spec =
   match send t pid_spec with
   | `Ok -> ()
   | `No_such_process ->
-      failwithf "Signal.send_exn %s pid:%s" (to_string t)
-        (pid_spec_to_string pid_spec) ()
+    failwithf "Signal.send_exn %s pid:%s" (to_string t)
+      (pid_spec_to_string pid_spec) ()
 ;;
 
 module Expert = struct

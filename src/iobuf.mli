@@ -107,7 +107,7 @@ val set_bounds_and_buffer_sub
   -> src : ([> write] as 'data, _) t
   -> dst : ('data, seek) t
   -> unit
-  [@@inline]
+[@@inline]
 
 (** {1 Generalization}
 

@@ -66,41 +66,42 @@ end = struct
         | None -> []
         | Some (lines, line) -> List.rev (line :: lines))
 
-    let%test_module "word wrap" = (module struct
+    let%test_module "word wrap" =
+      (module struct
 
-      let%test _ = word_wrap "" 10 = []
+        let%test _ = word_wrap "" 10 = []
 
-      let short_word = "abcd"
+        let short_word = "abcd"
 
-      let%test _ = word_wrap short_word (String.length short_word) = [short_word]
+        let%test _ = word_wrap short_word (String.length short_word) = [short_word]
 
-      let%test _ = word_wrap "abc\ndef\nghi" 100 = ["abc"; "def"; "ghi"]
+        let%test _ = word_wrap "abc\ndef\nghi" 100 = ["abc"; "def"; "ghi"]
 
-      let long_text =
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus \
-         fermentum condimentum eros, sit amet pulvinar dui ultrices in."
+        let long_text =
+          "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus \
+           fermentum condimentum eros, sit amet pulvinar dui ultrices in."
 
-      let%test _ = word_wrap long_text 1000 =
-             ["Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus \
-               fermentum condimentum eros, sit amet pulvinar dui ultrices in."]
+        let%test _ = word_wrap long_text 1000 =
+                     ["Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus \
+                       fermentum condimentum eros, sit amet pulvinar dui ultrices in."]
 
-      let%test _ = word_wrap long_text 39 =
+        let%test _ = word_wrap long_text 39 =
       (*
-               .........1.........2.........3.........4
-               1234567890123456789012345678901234567890
-             *)
-             ["Lorem ipsum dolor sit amet, consectetur";
-              "adipiscing elit. Vivamus fermentum";
-              "condimentum eros, sit amet pulvinar dui";
-              "ultrices in."]
+                        .........1.........2.........3.........4
+                        1234567890123456789012345678901234567890
+                     *)
+                     ["Lorem ipsum dolor sit amet, consectetur";
+                      "adipiscing elit. Vivamus fermentum";
+                      "condimentum eros, sit amet pulvinar dui";
+                      "ultrices in."]
 
-      (* no guarantees: too-long words just overhang the soft bound *)
-      let%test _ = word_wrap long_text 2 =
-             ["Lorem"; "ipsum"; "dolor"; "sit"; "amet,"; "consectetur";
-              "adipiscing"; "elit."; "Vivamus"; "fermentum"; "condimentum";
-              "eros,"; "sit"; "amet"; "pulvinar"; "dui"; "ultrices"; "in."]
+        (* no guarantees: too-long words just overhang the soft bound *)
+        let%test _ = word_wrap long_text 2 =
+                     ["Lorem"; "ipsum"; "dolor"; "sit"; "amet,"; "consectetur";
+                      "adipiscing"; "elit."; "Vivamus"; "fermentum"; "condimentum";
+                      "eros,"; "sit"; "amet"; "pulvinar"; "dui"; "ultrices"; "in."]
 
-    end)
+      end)
 
     let to_string ts =
       let n =
@@ -911,7 +912,7 @@ module Anons = struct
       return (fun a1 a2 -> (a1, a2))
       <*> t1.p
       <*> t2.p
-    ;
+  ;
     grammar = Grammar.concat [t1.grammar; t2.grammar];
   }
 
@@ -921,7 +922,7 @@ module Anons = struct
       <*> t1.p
       <*> t2.p
       <*> t3.p
-    ;
+  ;
     grammar = Grammar.concat [t1.grammar; t2.grammar; t3.grammar];
   }
 
@@ -932,7 +933,7 @@ module Anons = struct
       <*> t2.p
       <*> t3.p
       <*> t4.p
-    ;
+  ;
     grammar = Grammar.concat [t1.grammar; t2.grammar; t3.grammar; t4.grammar];
   }
 
@@ -1024,30 +1025,31 @@ module Cmdline = struct
 
 end
 
-let%test_module "Cmdline.extend" = (module struct
-  let path_of_list subcommands =
-    List.fold subcommands ~init:(Path.root "exe") ~f:(fun path subcommand ->
-      Path.add path ~subcommand)
+let%test_module "Cmdline.extend" =
+  (module struct
+    let path_of_list subcommands =
+      List.fold subcommands ~init:(Path.root "exe") ~f:(fun path subcommand ->
+        Path.add path ~subcommand)
 
-  let extend path =
-    match path with
-    | ["foo"; "bar"] -> ["-foo"; "-bar"]
-    | ["foo"; "baz"] -> ["-foobaz"]
-    | _ -> ["default"]
+    let extend path =
+      match path with
+      | ["foo"; "bar"] -> ["-foo"; "-bar"]
+      | ["foo"; "baz"] -> ["-foobaz"]
+      | _ -> ["default"]
 
-  let test path args expected =
-    let expected = Cmdline.of_list expected in
-    let observed =
-      let path = path_of_list path in
-      let args = Cmdline.of_list args in
-      Cmdline.extend args ~extend ~path
-    in
-    Pervasives.(=) expected observed
+    let test path args expected =
+      let expected = Cmdline.of_list expected in
+      let observed =
+        let path = path_of_list path in
+        let args = Cmdline.of_list args in
+        Cmdline.extend args ~extend ~path
+      in
+      Pervasives.(=) expected observed
 
-  let%test _ = test ["foo"; "bar"] ["anon"; "-flag"] ["anon"; "-flag"; "-foo"; "-bar"]
-  let%test _ = test ["foo"; "baz"] []                ["-foobaz"]
-  let%test _ = test ["zzz"]        ["x"; "y"; "z"]   ["x"; "y"; "z"; "default"]
-end)
+    let%test _ = test ["foo"; "bar"] ["anon"; "-flag"] ["anon"; "-flag"; "-foo"; "-bar"]
+    let%test _ = test ["foo"; "baz"] []                ["-foobaz"]
+    let%test _ = test ["zzz"]        ["x"; "y"; "z"]   ["x"; "y"; "z"; "default"]
+  end)
 
 module Key_type = struct
   type t = Subcommand | Flag
@@ -1220,7 +1222,7 @@ module Base = struct
         anon env anons arg args
       | Cons (arg, args) ->
         if String.is_prefix arg ~prefix:"-"
-           && not (String.equal arg "-") (* support the convention where "-" means stdin *)
+        && not (String.equal arg "-") (* support the convention where "-" means stdin *)
         then begin
           let flag = arg in
           let (flag, { Flag.Internal. action; name=_; aliases=_; doc=_; check_available=_;
@@ -1455,11 +1457,11 @@ module Base = struct
         }
 
       include Applicative.Make (struct
-        type nonrec 'a t = 'a param
-        let return = const
-        let apply = apply
-        let map = `Custom map
-      end)
+          type nonrec 'a t = 'a param
+          let return = const
+          let apply = apply
+          let map = `Custom map
+        end)
 
       let pair = both
     end
@@ -2264,9 +2266,9 @@ module Version_info = struct
          exit 0)
 
   let rec add
-        ~version
-        ~build_info
-        unversioned =
+            ~version
+            ~build_info
+            unversioned =
     match unversioned with
     | Base base ->
       let base =
@@ -2590,25 +2592,26 @@ module Deprecated = struct
 end
 
 (* testing claims made in the mli about order of evaluation and [flags_of_args_exn] *)
-let%test_module "Command.Spec.flags_of_args_exn" = (module struct
+let%test_module "Command.Spec.flags_of_args_exn" =
+  (module struct
 
-  let args q = [
-    ( "flag1", Arg.Unit (fun () -> Queue.enqueue q 1), "enqueue 1");
-    ( "flag2", Arg.Unit (fun () -> Queue.enqueue q 2), "enqueue 2");
-    ( "flag3", Arg.Unit (fun () -> Queue.enqueue q 3), "enqueue 3");
-  ]
+    let args q = [
+      ( "flag1", Arg.Unit (fun () -> Queue.enqueue q 1), "enqueue 1");
+      ( "flag2", Arg.Unit (fun () -> Queue.enqueue q 2), "enqueue 2");
+      ( "flag3", Arg.Unit (fun () -> Queue.enqueue q 3), "enqueue 3");
+    ]
 
-  let parse argv =
-    let q = Queue.create () in
-    let command = basic ~summary:"" (Spec.flags_of_args_exn (args q)) Fn.id in
-    run ~argv command;
-    Queue.to_list q
+    let parse argv =
+      let q = Queue.create () in
+      let command = basic ~summary:"" (Spec.flags_of_args_exn (args q)) Fn.id in
+      run ~argv command;
+      Queue.to_list q
 
-  let%test _ = parse ["foo.exe";"-flag1";"-flag2";"-flag3"] = [1;2;3]
-  let%test _ = parse ["foo.exe";"-flag2";"-flag3";"-flag1"] = [1;2;3]
-  let%test _ = parse ["foo.exe";"-flag3";"-flag2";"-flag1"] = [1;2;3]
+    let%test _ = parse ["foo.exe";"-flag1";"-flag2";"-flag3"] = [1;2;3]
+    let%test _ = parse ["foo.exe";"-flag2";"-flag3";"-flag1"] = [1;2;3]
+    let%test _ = parse ["foo.exe";"-flag3";"-flag2";"-flag1"] = [1;2;3]
 
-end)
+  end)
 
 (* NOTE: all that follows is simply namespace management boilerplate.  This will go away
    once we re-work the internals of Command to use Applicative from the ground up. *)

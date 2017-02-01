@@ -19,16 +19,16 @@ let check_threads ~allow_threads_to_have_been_created =
   | Some _ ->
     failwith
       "Daemon.check_threads: may not be called if more than 2 threads \
-        (hopefully the main thread + ticker thread) are running"
+       (hopefully the main thread + ticker thread) are running"
   end;
 ;;
 
 module Fd_redirection = struct
   type do_redirect =
-  [ `Dev_null
-  | `File_append of string
-  | `File_truncate of string
-  ]
+    [ `Dev_null
+    | `File_append of string
+    | `File_truncate of string
+    ]
 
   type t = [ `Do_not_redirect | do_redirect ]
 end
@@ -94,7 +94,7 @@ let process_status_to_exit_code = function
     Signal.to_caml_int s
 
 let daemonize_wait ?(redirect_stdout=`Dev_null) ?(redirect_stderr=`Dev_null)
-    ?(cd = "/") ?umask ?(allow_threads_to_have_been_created = false) () =
+      ?(cd = "/") ?umask ?(allow_threads_to_have_been_created = false) () =
   check_threads ~allow_threads_to_have_been_created;
   match Unix.handle_unix_error Unix.fork with
   | `In_the_child ->
@@ -122,25 +122,25 @@ let daemonize_wait ?(redirect_stdout=`Dev_null) ?(redirect_stderr=`Dev_null)
       let rec loop () =
         match Core_unix.wait_nohang (`Pid pid) with
         | None -> begin
-          match
-            Unix.select ~read:[read_end] ~write:[] ~except:[]
-              ~timeout:(`After (Time_ns.Span.of_sec 0.1)) ()
-          with
-          | { Unix.Select_fds.
-              read = [read_end];
-              write = [];
-              except = [] } ->
-            (* If the child process exits before detaching and the middle process
-               happens to be in this call to select, the pipe will be closed and select
-               will return a ready file descriptor, but with zero bytes to read.
-               In this case, we want to loop back again and call waitpid to obtain
-               the correct exit status to propagate on to the outermost parent
-               (otherwise we might incorrectly return a success). *)
-            if Unix.read read_end ~buf:(String.create len) ~pos:0 ~len > 0 then
-              exit 0
-            else
-              loop ()
-          | _ -> loop ()
+            match
+              Unix.select ~read:[read_end] ~write:[] ~except:[]
+                ~timeout:(`After (Time_ns.Span.of_sec 0.1)) ()
+            with
+            | { Unix.Select_fds.
+                read = [read_end];
+                write = [];
+                except = [] } ->
+              (* If the child process exits before detaching and the middle process
+                 happens to be in this call to select, the pipe will be closed and select
+                 will return a ready file descriptor, but with zero bytes to read.
+                 In this case, we want to loop back again and call waitpid to obtain
+                 the correct exit status to propagate on to the outermost parent
+                 (otherwise we might incorrectly return a success). *)
+              if Unix.read read_end ~buf:(String.create len) ~pos:0 ~len > 0 then
+                exit 0
+              else
+                loop ()
+            | _ -> loop ()
           end
         | Some (_pid, process_status) ->
           exit (process_status_to_exit_code process_status)

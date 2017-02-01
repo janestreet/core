@@ -1,3 +1,5 @@
 (library
   ((name quickcheck_examples)
    (libraries (core async))))
+
+(enforce_style ())
