@@ -1,8 +1,8 @@
 open Core
 open Expect_test_helpers
 
-module Let_syntax         = Async.Std.Let_syntax
-module Expect_test_config = Async.Std.Expect_test_config
+module Let_syntax         = Async.Let_syntax
+module Expect_test_config = Async.Expect_test_config
 
 let%expect_test "Unix.fork_exec" =
   let pid = Unix.fork_exec ~prog:"program_that_doesnt_exist" ~args:[] () in

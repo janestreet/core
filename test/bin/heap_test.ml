@@ -67,8 +67,8 @@ let test =
       );
       "search functions" >::
       (fun () ->
-         "yup" @? (Heap.mem (float_heap ()) 0.);
-         "nope" @? not (Heap.mem (float_heap ()) 0.5);
+         "yup" @? (Heap.mem (float_heap ()) 0. ~equal:Float.equal);
+         "nope" @? not (Heap.mem (float_heap ()) 0.5 ~equal:Float.equal);
          "find" @?
          begin
            let el =

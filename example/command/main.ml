@@ -89,8 +89,8 @@ module Hg_cat = struct
 end
 
 module Cat = struct
-  open Async.Std (* async has its own Command overlay module that introduces functions for
-                    constructing commands with a body that returns a [Deferred.t]. *)
+  open Async (* async has its own Command overlay module that introduces functions for
+                constructing commands with a body that returns a [Deferred.t]. *)
   let command =
     Command.async' ~summary:"example async command: cat a file to stdout"
       (let open Command.Let_syntax in

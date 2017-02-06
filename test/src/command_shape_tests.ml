@@ -1,5 +1,5 @@
 open Core
-open Async.Std
+open Async
 open Expect_test_helpers
 open Deferred.Let_syntax
 

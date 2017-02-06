@@ -61,10 +61,11 @@ let test =
     (fun () ->
        let list = Quickcheck_deprecated.lg (fun () -> Random.int 1000) ~size_gen:(fun _ -> 1000) () in
        let array = Array.of_list list in
-       "list1" @? (List.mem list 1 = Array.mem array 1);
-       "list2" @? (List.mem list 2 = Array.mem array 2);
-       "list3" @? (List.mem list 3 = Array.mem array 3);
-       "list4" @? (List.mem list 4 = Array.mem array 4);
+       let equal = Core.Int.equal in
+       "list1" @? (List.mem list 1 ~equal = Array.mem array 1 ~equal);
+       "list2" @? (List.mem list 2 ~equal = Array.mem array 2 ~equal);
+       "list3" @? (List.mem list 3 ~equal = Array.mem array 3 ~equal);
+       "list4" @? (List.mem list 4 ~equal = Array.mem array 4 ~equal);
     );
     "rev" >::
     (fun () ->

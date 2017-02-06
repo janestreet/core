@@ -85,7 +85,7 @@ module Foil : S = struct
   let fold t ~init ~f  = read_wrap t (fun () -> List.fold (to_list t) ~init ~f)
   let count t ~f       = read_wrap t (fun () -> List.count (to_list t) ~f)
   let sum m t ~f       = read_wrap t (fun () -> List.sum m (to_list t) ~f)
-  let mem ?equal t a   = read_wrap t (fun () -> List.mem ?equal (to_list t) a)
+  let mem t a ~equal   = read_wrap t (fun () -> List.mem (to_list t) a ~equal)
   let min_elt t ~cmp   = read_wrap t (fun () -> List.min_elt ~cmp (to_list t))
   let max_elt t ~cmp   = read_wrap t (fun () -> List.max_elt ~cmp (to_list t))
   let fold_result t ~init ~f  =
@@ -297,8 +297,8 @@ module Both : S = struct
     pair Hero.t_of_sexp Foil.t_of_sexp *@ pure a_of_sexp *@ pure s
 
   let exists t ~f = obs (pair (Hero.exists ~f) (Foil.exists ~f) *@ t)
-  let mem ?equal t a =
-    obs (pair (fun h -> Hero.mem ?equal h a) (fun f -> Foil.mem ?equal f a) *@ t)
+  let mem t a ~equal =
+    obs (pair (fun h -> Hero.mem h a ~equal) (fun f -> Foil.mem f a ~equal) *@ t)
   ;;
   let find_map t ~f = obs (pair (Hero.find_map ~f) (Foil.find_map ~f) *@ t)
   let find t ~f = obs (pair (Hero.find ~f) (Foil.find ~f) *@ t)

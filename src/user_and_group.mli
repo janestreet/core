@@ -12,7 +12,7 @@ val user : t -> string
 val group : t -> string
 
 (** Get the [t] for the current process.  If you're using async, there is a wrapper,
-    [Async.Std.User_and_group], that doesn't do blocking calls. *)
+    [Async.User_and_group], that doesn't do blocking calls. *)
 val for_this_process     : unit -> t Or_error.t
 val for_this_process_exn : unit -> t
 

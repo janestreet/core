@@ -499,7 +499,7 @@ module Int = struct
 
   module For_container = Container.Make0 (struct
       type nonrec t   = t
-      type nonrec elt = bound
+      module Elt = Int
       let iter = `Custom iter
       let fold = fold
     end)
@@ -525,9 +525,9 @@ module Int = struct
     then For_container.max_elt t ~cmp
     else ubound t
 
-  let mem ?(equal = Int.equal) t x =
+  let mem t x =
     if not (phys_equal equal Int.equal)
-    then For_container.mem ~equal t x
+    then For_container.mem t x
     else contains t x
 
   (* Note that we use zero-based indexing here, because that's what Binary_searchable
@@ -708,34 +708,14 @@ module Int = struct
             ~expect:(Array.max_elt (to_array t) ~cmp)
             (max_elt t ~cmp))
 
-      let%test_unit "mem w/o equal" =
+      let%test_unit "mem" =
         Quickcheck.test
           interval_and_nearby_int
           ~sexp_of:[%sexp_of: t * int]
           ~f:(fun (t, i) ->
             [%test_result: bool]
-              ~expect:(Array.mem (to_array t) i)
+              ~expect:(Array.mem ~equal:Int.equal (to_array t) i)
               (mem t i))
-
-      let%test_unit "mem w/ default equal" =
-        Quickcheck.test
-          interval_and_nearby_int
-          ~sexp_of:[%sexp_of: t * int]
-          ~f:(fun (t, i) ->
-            let equal = Int.equal in
-            [%test_result: bool]
-              ~expect:(Array.mem ~equal (to_array t) i)
-              (mem ~equal t i))
-
-      let%test_unit "mem w/ negated equal" =
-        Quickcheck.test
-          interval_and_nearby_int
-          ~sexp_of:[%sexp_of: t * int]
-          ~f:(fun (t, i) ->
-            let equal x y = (x = (-y)) in
-            [%test_result: bool]
-              ~expect:(Array.mem ~equal (to_array t) i)
-              (mem ~equal t i))
 
       let%test_unit "binary_search" =
         Quickcheck.test

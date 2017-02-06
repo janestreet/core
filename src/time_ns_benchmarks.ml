@@ -23,7 +23,7 @@
    │ [time_ns_benchmarks.ml] Time_ns.t assignment                                 │     2.18ns │         │          │          │      0.15% │
    │ [time_ns_benchmarks.ml] Time.t assignment                                    │     7.23ns │         │          │          │            │
    │ [time_ns_benchmarks.ml] Time_ns.of_time                                      │    11.86ns │   4.00w │          │          │            │
-   │ [time_ns_benchmarks.ml] Time_ns.of_time (Async.Std.Scheduler.cycle_start ()) │    16.45ns │   4.00w │          │          │            │
+   │ [time_ns_benchmarks.ml] Time_ns.of_time (Async.Scheduler.cycle_start ()) │    16.45ns │   4.00w │          │          │            │
    └──────────────────────────────────────────────────────────────────────────────┴────────────┴─────────┴──────────┴──────────┴────────────┘
 *)
 

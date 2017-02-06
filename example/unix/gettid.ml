@@ -1,5 +1,5 @@
 open Core
-open Async.Std
+open Async
 module Unix = Core.Unix
 
 let gettid_exn () = Or_error.ok_exn Unix.gettid ()

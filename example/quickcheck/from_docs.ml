@@ -232,7 +232,7 @@ end
 
 module Example_3_asynchronous = struct
 
-  open Async.Std
+  open Async
 
   module Async_stack : sig
     type 'a t [@@deriving sexp, compare]

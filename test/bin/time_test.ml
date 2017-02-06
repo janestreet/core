@@ -250,7 +250,7 @@ let () =
     (fun () ->
        let test lbl d1 n d2 =
          let is_holiday d =
-           List.mem (List.map [
+           List.mem ~equal:Date.equal (List.map [
              "2009-01-01";
              "2009-03-01";
              "2009-03-02";
