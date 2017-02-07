@@ -338,33 +338,55 @@ module Flag = struct
       | `Optional -> sprintf "[%s]" x
       | `Required _ -> x
 
+    module Doc = struct
+      type t =
+        { arg_doc : string option
+        ; doc     : string
+        }
+
+      let parse ~action ~doc =
+        let arg_doc =
+          match (action : action) with
+          | No_arg _ -> None
+          | Rest _ | Arg _ ->
+            match String.lsplit2 doc ~on:' ' with
+            | None | Some ("", _) -> None
+            | Some (arg, doc) -> Some (arg, doc)
+        in
+        match arg_doc with
+        | None                -> { doc = String.strip doc; arg_doc = None }
+        | Some (arg_doc, doc) -> { doc = String.strip doc; arg_doc = Some arg_doc }
+      ;;
+
+      let concat ~name ~arg_doc =
+        match arg_doc with
+        | None -> name
+        | Some arg_doc -> name ^ " " ^ arg_doc
+      ;;
+    end
+
     module Deprecated = struct
       (* flag help in the format of the old command. used for injection *)
       let help
-            ({name; doc; aliases; action=_; check_available=_; name_matching=_ } as t)
+            ({name; doc; aliases; action; check_available=_; name_matching=_ } as t)
         =
         if String.is_prefix doc ~prefix:" " then
           (name, String.lstrip doc)
           :: List.map aliases ~f:(fun x -> (x, sprintf "same as \"%s\"" name))
-        else
-          let (arg, doc) =
-            match String.lsplit2 doc ~on:' ' with
-            | None -> (doc, "")
-            | Some pair -> pair
-          in
-          (wrap_if_optional t (name ^ " " ^ arg), String.lstrip doc)
+        else (
+          let { Doc. arg_doc; doc } = Doc.parse ~action ~doc in
+          (wrap_if_optional t (Doc.concat ~name ~arg_doc), doc)
           :: List.map aliases ~f:(fun x ->
-            (wrap_if_optional t (x ^ " " ^ arg), sprintf "same as \"%s\"" name))
+            (wrap_if_optional t (Doc.concat ~name:x ~arg_doc)
+            , sprintf "same as \"%s\"" name)))
+      ;;
     end
 
-    let align ({name; doc; aliases; action=_; check_available=_; name_matching=_ } as t) =
-      let (name, doc) =
-        match String.lsplit2 doc ~on:' ' with
-        | None | Some ("", _) -> (name, String.strip doc)
-        | Some (arg, doc) -> (name ^ " " ^ arg, doc)
-      in
-      let name = wrap_if_optional t name in
+    let align ({name; doc; aliases; action; check_available=_; name_matching=_ } as t) =
+      let { Doc. arg_doc; doc } = Doc.parse ~action ~doc in
+      let name = wrap_if_optional t (Doc.concat ~name ~arg_doc) in
       { Format.V1.name; doc; aliases}
+    ;;
 
     let create flags =
       match String.Map.of_alist (List.map flags ~f:(fun flag -> (flag.name, flag))) with
