@@ -43,7 +43,7 @@
 open! Import
 open Core_kernel.Core_kernel_private
 
-module Sys  = Core_sys
+module Sys = Core_sys
 
 include Core_time_intf
 
@@ -611,6 +611,10 @@ module Make (Time0 : Time0_intf.S) (Time : Time_intf.S with module Time := Time0
   include (Stable.V1 : module type of Stable.V1
            with type t := t
             and type comparator_witness := comparator_witness)
+
+  include Hashable.Make_binable (struct
+      type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
+    end)
 
   module Exposed_for_tests = struct
     let ensure_colon_in_offset = ensure_colon_in_offset

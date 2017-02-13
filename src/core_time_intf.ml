@@ -122,22 +122,21 @@ module type S = sig
 
 
   (** Sexp conversions use the local timezone by default. This can be overridden by
-      calling [set_sexp_zone]. *)
-  include Sexpable.S with type t := t
+      calling [set_sexp_zone].
+
+      The [{to,of}_string] functions in [Time] will produce times with time zone
+      indications, but are generous in what they will read in. String/Sexp.t
+      representations without time zone indications are assumed to be in the machine's
+      local zone. *)
+  include Identifiable.S
+    with type   t                           := t
+     and type   comparator_witness          := comparator_witness
+     and module Replace_polymorphic_compare := Replace_polymorphic_compare
+
   val get_sexp_zone : unit -> Zone.t
   val set_sexp_zone : Zone.t -> unit
 
   include Robustly_comparable with type t := t
-  include Pretty_printer.S    with type t := t
-  include Comparable_binable  with type t := t
-                               and type comparator_witness := comparator_witness
-                               and module Replace_polymorphic_compare := Replace_polymorphic_compare
-
-  (** The [{to,of}_string] functions in [Time] will produce times with time zone
-      indications, but are generous in what they will read in.  String/Sexp.t
-      representations without time zone indications are assumed to be in the machine's
-      local zone. *)
-  include Stringable          with type t := t
 
   (** [of_tm] converts a [Unix.tm] (mirroring a [struct tm] from the C stdlib) into a
       [Time.t].  Note that the [tm_wday], [tm_yday], and [tm_isdst] fields are ignored. *)
@@ -249,8 +248,14 @@ module type S = sig
     end
 
     module Span : sig
-      module V1 : Stable_without_comparator with type t = Span.Stable.V1.t
-      module V2 : Stable_without_comparator with type t = Span.Stable.V2.t
+      module V1 : sig
+        type t = Span.Stable.V1.t [@@deriving hash]
+        include Stable_without_comparator with type t := t
+      end
+      module V2 : sig
+        type t = Span.Stable.V2.t [@@deriving hash]
+        include Stable_without_comparator with type t := t
+      end
     end
 
     module Ofday : sig
