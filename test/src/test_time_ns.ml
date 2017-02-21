@@ -853,3 +853,182 @@ let%test_module "Time_ns.Option" =
 
     let%test _ = is_error (Result.try_with (fun () -> value_exn none))
   end)
+
+let%expect_test _ =
+  print_and_check_container_sexps [%here] (module Time_ns) [
+    Time_ns.epoch;
+    Time_ns.of_string "1955-11-12 18:38:00-08:00";
+    Time_ns.of_string "1985-10-26 21:00:00-08:00";
+    Time_ns.of_string "2015-10-21 19:28:00-08:00";
+  ];
+  [%expect {|
+    (Set (
+      (1955-11-12 21:38:00.000000-05:00)
+      (1969-12-31 19:00:00.000000-05:00)
+      (1985-10-27 01:00:00.000000-04:00)
+      (2015-10-21 23:28:00.000000-04:00)))
+    (Map (
+      ((1955-11-12 21:38:00.000000-05:00) 1)
+      ((1969-12-31 19:00:00.000000-05:00) 0)
+      ((1985-10-27 01:00:00.000000-04:00) 2)
+      ((2015-10-21 23:28:00.000000-04:00) 3)))
+    (Hash_set (
+      (1955-11-12 21:38:00.000000-05:00)
+      (1969-12-31 19:00:00.000000-05:00)
+      (1985-10-27 01:00:00.000000-04:00)
+      (2015-10-21 23:28:00.000000-04:00)))
+    (Table (
+      ((1955-11-12 21:38:00.000000-05:00) 1)
+      ((1969-12-31 19:00:00.000000-05:00) 0)
+      ((1985-10-27 01:00:00.000000-04:00) 2)
+      ((2015-10-21 23:28:00.000000-04:00) 3))) |}];
+;;
+
+let%expect_test _ =
+  print_and_check_container_sexps [%here] (module Time_ns.Option) [
+    Time_ns.Option.none;
+    Time_ns.Option.some (Time_ns.epoch);
+    Time_ns.Option.some (Time_ns.of_string "1955-11-12 18:38:00-08:00");
+    Time_ns.Option.some (Time_ns.of_string "1985-10-26 21:00:00-08:00");
+    Time_ns.Option.some (Time_ns.of_string "2015-10-21 19:28:00-08:00");
+  ];
+  [%expect {|
+    (Set (
+      ()
+      ((1955-11-12 21:38:00.000000-05:00))
+      ((1969-12-31 19:00:00.000000-05:00))
+      ((1985-10-27 01:00:00.000000-04:00))
+      ((2015-10-21 23:28:00.000000-04:00))))
+    (Map (
+      (() 0)
+      (((1955-11-12 21:38:00.000000-05:00)) 2)
+      (((1969-12-31 19:00:00.000000-05:00)) 1)
+      (((1985-10-27 01:00:00.000000-04:00)) 3)
+      (((2015-10-21 23:28:00.000000-04:00)) 4)))
+    (Hash_set (
+      ()
+      ((1955-11-12 21:38:00.000000-05:00))
+      ((1969-12-31 19:00:00.000000-05:00))
+      ((1985-10-27 01:00:00.000000-04:00))
+      ((2015-10-21 23:28:00.000000-04:00))))
+    (Table (
+      (() 0)
+      (((1955-11-12 21:38:00.000000-05:00)) 2)
+      (((1969-12-31 19:00:00.000000-05:00)) 1)
+      (((1985-10-27 01:00:00.000000-04:00)) 3)
+      (((2015-10-21 23:28:00.000000-04:00)) 4))) |}];
+;;
+
+let%expect_test _ =
+  print_and_check_container_sexps [%here] (module Time_ns.Span) [
+    Time_ns.Span.zero;
+    Time_ns.Span.of_string "101.5ms";
+    Time_ns.Span.of_string "3.125s";
+    Time_ns.Span.of_string "252d";
+  ];
+  [%expect {|
+    (Set (0s 101.5ms 3.125s 252d))
+    (Map (
+      (0s      0)
+      (101.5ms 1)
+      (3.125s  2)
+      (252d    3)))
+    (Hash_set (0s 101.5ms 3.125s 252d))
+    (Table (
+      (0s      0)
+      (101.5ms 1)
+      (3.125s  2)
+      (252d    3))) |}]
+;;
+
+let%expect_test _ =
+  print_and_check_container_sexps [%here] (module Time_ns.Span.Option) [
+    Time_ns.Span.Option.none;
+    Time_ns.Span.Option.some (Time_ns.Span.zero);
+    Time_ns.Span.Option.some (Time_ns.Span.of_string "101.5ms");
+    Time_ns.Span.Option.some (Time_ns.Span.of_string "3.125s");
+    Time_ns.Span.Option.some (Time_ns.Span.of_string "252d");
+  ];
+  [%expect {|
+    (Set (
+      ()
+      (0s)
+      (101.5ms)
+      (3.125s)
+      (252d)))
+    (Map (
+      (() 0)
+      ((0s)      1)
+      ((101.5ms) 2)
+      ((3.125s)  3)
+      ((252d)    4)))
+    (Hash_set (
+      ()
+      (0s)
+      (101.5ms)
+      (3.125s)
+      (252d)))
+    (Table (
+      (() 0)
+      ((0s)      1)
+      ((101.5ms) 2)
+      ((3.125s)  3)
+      ((252d)    4))) |}];
+;;
+
+let%expect_test _ =
+  print_and_check_container_sexps [%here] (module Time_ns.Ofday) [
+    Time_ns.Ofday.start_of_day;
+    Time_ns.Ofday.of_string "18:38:00";
+    Time_ns.Ofday.of_string "21:00:00";
+    Time_ns.Ofday.of_string "19:28:00";
+  ];
+  [%expect {|
+    (Set (00:00:00.000000 18:38:00.000000 19:28:00.000000 21:00:00.000000))
+    (Map (
+      (00:00:00.000000 0)
+      (18:38:00.000000 1)
+      (19:28:00.000000 3)
+      (21:00:00.000000 2)))
+    (Hash_set (00:00:00.000000 18:38:00.000000 19:28:00.000000 21:00:00.000000))
+    (Table (
+      (00:00:00.000000 0)
+      (18:38:00.000000 1)
+      (19:28:00.000000 3)
+      (21:00:00.000000 2))) |}];
+;;
+
+let%expect_test _ =
+  print_and_check_container_sexps [%here] (module Time_ns.Ofday.Option) [
+    Time_ns.Ofday.Option.none;
+    Time_ns.Ofday.Option.some (Time_ns.Ofday.start_of_day);
+    Time_ns.Ofday.Option.some (Time_ns.Ofday.of_string "18:38:00");
+    Time_ns.Ofday.Option.some (Time_ns.Ofday.of_string "21:00:00");
+    Time_ns.Ofday.Option.some (Time_ns.Ofday.of_string "19:28:00");
+  ];
+  [%expect {|
+    (Set (
+      ()
+      (00:00:00.000000)
+      (18:38:00.000000)
+      (19:28:00.000000)
+      (21:00:00.000000)))
+    (Map (
+      (() 0)
+      ((00:00:00.000000) 1)
+      ((18:38:00.000000) 2)
+      ((19:28:00.000000) 4)
+      ((21:00:00.000000) 3)))
+    (Hash_set (
+      ()
+      (00:00:00.000000)
+      (18:38:00.000000)
+      (19:28:00.000000)
+      (21:00:00.000000)))
+    (Table (
+      (() 0)
+      ((00:00:00.000000) 1)
+      ((18:38:00.000000) 2)
+      ((19:28:00.000000) 4)
+      ((21:00:00.000000) 3))) |}];
+;;

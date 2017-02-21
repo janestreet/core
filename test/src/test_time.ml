@@ -162,6 +162,63 @@ let%test_module "parse" =
            "1970-01-01 08:00:00")
   end)
 
+let%expect_test "accept float instead of time/span/ofday for hash tables and hash sets" =
+  let module Of_string (M : Sexpable.S1) = struct
+    type t = string M.t [@@deriving sexp]
+  end in
+  let test (module M : Sexpable) string =
+    print_s (M.sexp_of_t (M.t_of_sexp (Sexp.of_string string)))
+  in
+  test (module Time.Hash_set) {| (0 0.05 946746000 1381152600) |};
+  [%expect {|
+    ((1969-12-31 19:00:00.000000-05:00)
+     (1969-12-31 19:00:00.050000-05:00)
+     (2000-01-01 12:00:00.000000-05:00)
+     (2013-10-07 09:30:00.000000-04:00)) |}];
+  test (module Of_string (Time.Table)) {|
+    ((0          "arbitrary value")
+     (0.05       "arbitrary value")
+     (946746000  "arbitrary value")
+     (1381152600 "arbitrary value")) |};
+  [%expect {|
+    (((1969-12-31 19:00:00.000000-05:00) "arbitrary value")
+     ((1969-12-31 19:00:00.050000-05:00) "arbitrary value")
+     ((2000-01-01 12:00:00.000000-05:00) "arbitrary value")
+     ((2013-10-07 09:30:00.000000-04:00) "arbitrary value")) |}];
+  test (module Time.Span.Hash_set) {| (0 1E-09 1E-06 0.001 1 60 3600 86400) |};
+  [%expect {| (0s 1e-06ms 0.001ms 1ms 1s 1m 1h 1d) |}];
+  test (module Of_string (Time.Span.Table)) {|
+    ((0     "arbitrary value")
+     (1E-09 "arbitrary value")
+     (1E-06 "arbitrary value")
+     (0.001 "arbitrary value")
+     (1     "arbitrary value")
+     (60    "arbitrary value")
+     (3600  "arbitrary value")
+     (86400 "arbitrary value")) |};
+  [%expect {|
+    ((0s      "arbitrary value")
+     (1e-06ms "arbitrary value")
+     (0.001ms "arbitrary value")
+     (1ms     "arbitrary value")
+     (1s      "arbitrary value")
+     (1m      "arbitrary value")
+     (1h      "arbitrary value")
+     (1d      "arbitrary value")) |}];
+  test (module Time.Ofday.Hash_set) {| (0 0.05 34200 43200) |};
+  [%expect {| (00:00:00.000000 00:00:00.050000 09:30:00.000000 12:00:00.000000) |}];
+  test (module Of_string (Time.Ofday.Table)) {|
+    ((0     "arbitrary value")
+     (0.05  "arbitrary value")
+     (34200 "arbitrary value")
+     (43200 "arbitrary value")) |};
+  [%expect {|
+    ((00:00:00.000000 "arbitrary value")
+     (00:00:00.050000 "arbitrary value")
+     (09:30:00.000000 "arbitrary value")
+     (12:00:00.000000 "arbitrary value")) |}];
+;;
+
 let%test_module "Time.Stable.V1" =
   (module struct
     let%test_module "Time.Stable.V1 functor application" = (module Stable_unit_test.Make (struct

@@ -166,7 +166,7 @@ module Nfs = struct
   module Info = struct
     type t = {
       host    : string;
-      pid     : Pid.t;
+      pid     : Pid.Stable.V1.t;
       message : string
     } [@@deriving sexp]
   end

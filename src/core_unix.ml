@@ -2162,57 +2162,153 @@ module Inet_addr = struct
   let localhost       = Unix.inet_addr_loopback
   let localhost_inet6 = Unix.inet6_addr_loopback
 
-  let inet4_addr_of_int32 l =
-    let lower_24 = Int32.(to_int_exn (bit_and l (of_int_exn 0xFF_FFFF))) in
-    let upper_8  = Int32.(to_int_exn (shift_right_logical l 24)) in
-    of_string (sprintf "%d.%d.%d.%d"
-                 (upper_8         land 0xFF)
-                 (lower_24 lsr 16 land 0xFF)
-                 (lower_24 lsr  8 land 0xFF)
-                 (lower_24        land 0xFF))
+  let int32_to_ipv4_string =
+    let open Int.O in
+    let octet_digits octet =
+      if octet >= 100 then 3 else
+      if octet >=  10 then 2 else
+        1
+    in
+    let char_of_digit digit =
+      Char.of_int_exn (Char.to_int '0' + digit)
+    in
+    let write_char string ~pos char =
+      string.[pos] <- char;
+      Int.succ pos
+    in
+    let write_digit string ~pos digit =
+      write_char string ~pos (char_of_digit digit)
+    in
+    let write_octet string ~pos octet =
+      let pos =
+        if octet >= 100
+        then write_digit string ~pos (octet / 100)
+        else pos
+      in
+      let pos =
+        if octet >= 10
+        then write_digit string ~pos ((octet / 10) % 10)
+        else pos
+      in
+      write_digit string ~pos (octet % 10)
+    in
+    fun int32 ->
+      let open Int32.O in
+      let octet1 = (int32 lsr 24) land 0xFFl |> Int32.to_int_exn in
+      let octet2 = (int32 lsr 16) land 0xFFl |> Int32.to_int_exn in
+      let octet3 = (int32 lsr  8) land 0xFFl |> Int32.to_int_exn in
+      let octet4 = (int32 lsr  0) land 0xFFl |> Int32.to_int_exn in
+      let open Int.O in
+      let len =
+        octet_digits octet1 +
+        octet_digits octet2 +
+        octet_digits octet3 +
+        octet_digits octet4 +
+        3
+      in
+      let string = String.create len in
+      let pos = 0 in
+      let pos = write_octet string ~pos octet1 in
+      let pos = write_char  string ~pos '.'    in
+      let pos = write_octet string ~pos octet2 in
+      let pos = write_char  string ~pos '.'    in
+      let pos = write_octet string ~pos octet3 in
+      let pos = write_char  string ~pos '.'    in
+      let pos = write_octet string ~pos octet4 in
+      assert (Int.equal pos len);
+      string
+
+  let int32_of_ipv4_string =
+    let open Int.O in
+    let [@inline never] invalid string =
+      raise_s [%message "not a valid IPv4 address" string]
+    in
+    let rec find_sep string ~len ~pos =
+      if pos < len && not (Char.equal '.' (String.unsafe_get string pos))
+      then find_sep string ~len ~pos:(pos + 1)
+      else pos
+    in
+    let find_sep_exn string ~len ~pos =
+      let pos = find_sep string ~len ~pos in
+      if pos >= len then invalid string;
+      pos
+    in
+    let find_end_exn string ~len ~pos =
+      let pos = find_sep string ~len ~pos in
+      if pos < len then invalid string
+    in
+    let read_digit string pos =
+      match String.unsafe_get string pos with
+      | '0'..'9' as char -> Char.to_int char - Char.to_int '0'
+      | _                -> invalid string
+    in
+    let rec read_int string start until ~prefix =
+      if start = until
+      then prefix
+      else begin
+        read_int string (start + 1) until
+          ~prefix:((prefix * 10) + (read_digit string start))
+      end
+    in
+    let read_octet string start until =
+      let len = until - start in
+      if len < 1 || len > 3 then invalid string;
+      let int = read_int string start until ~prefix:0 in
+      if int < 0 || int > 255 then invalid string;
+      int
+    in
+    let int32_of_octets octet1 octet2 octet3 octet4 =
+      let open Int32.O in
+      ((Caml.Int32.of_int octet1) lsl 24) lor
+      ((Caml.Int32.of_int octet2) lsl 16) lor
+      ((Caml.Int32.of_int octet3) lsl  8) lor
+      ((Caml.Int32.of_int octet4) lsl  0)
+    in
+    fun string ->
+      let len = String.length string in
+      let sep1 = find_sep_exn string ~len ~pos:0          in
+      let sep2 = find_sep_exn string ~len ~pos:(sep1 + 1) in
+      let sep3 = find_sep_exn string ~len ~pos:(sep2 + 1) in
+      let ()   = find_end_exn string ~len ~pos:(sep3 + 1) in
+      let octet1 = read_octet string 0          sep1 in
+      let octet2 = read_octet string (sep1 + 1) sep2 in
+      let octet3 = read_octet string (sep2 + 1) sep3 in
+      let octet4 = read_octet string (sep3 + 1) len  in
+      int32_of_octets octet1 octet2 octet3 octet4
+
+  let inet4_addr_of_int32 int32 =
+    of_string (int32_to_ipv4_string int32)
 
   let inet4_addr_to_int32_exn addr =
-    let addr_s = to_string addr in
-    match
-      String.split ~on:'.' addr_s |> List.map ~f:(fun s ->
-        let i = ((Int.of_string s) : int) in
-        if Int.( < ) i 0 || Int.( > ) i 255 then
-          failwithf "%d is not a valid IPv4 octet (in %s)" i addr_s ();
-        i)
-    with
-    | [a;b;c;d] ->
-      let lower_24 = Int32.of_int_exn ((b lsl 16) lor (c lsl 8) lor d)
-      and upper_8  = Int32.(shift_left (of_int_exn a) 24)in
-      Int32.bit_or upper_8 lower_24
-    | _ -> failwithf "'%s' is not a valid IPv4 address" addr_s ()
+    int32_of_ipv4_string (to_string addr)
 
   (* Can we convert ip addr to an int? *)
   let test_inet4_addr_to_int32 str num =
     let inet = of_string str in
-    Int32.( = ) (inet4_addr_to_int32_exn inet) num
+    [%test_result: Int32.t] (inet4_addr_to_int32_exn inet) ~expect:num
 
-  let%test _ = test_inet4_addr_to_int32 "0.0.0.1"                  1l
-  let%test _ = test_inet4_addr_to_int32 "1.0.0.0"          0x1000000l
-  let%test _ = test_inet4_addr_to_int32 "255.255.255.255" 0xffffffffl
-  let%test _ = test_inet4_addr_to_int32 "172.25.42.1"     0xac192a01l
-  let%test _ = test_inet4_addr_to_int32 "4.2.2.1"          0x4020201l
-  let%test _ = test_inet4_addr_to_int32 "8.8.8.8"          0x8080808l
-  let%test _ = test_inet4_addr_to_int32 "173.194.73.103"  0xadc24967l
-  let%test _ = test_inet4_addr_to_int32 "98.139.183.24"   0x628bb718l
-  let%test _ = test_inet4_addr_to_int32 "0.0.0.0"                  0l
-  let%test _ = test_inet4_addr_to_int32 "127.0.0.1"       0x7F000001l
-  let%test _ = test_inet4_addr_to_int32 "239.0.0.0"       0xEF000000l
-  let%test _ = test_inet4_addr_to_int32 "255.255.255.255" 0xFFFFFFFFl
+  let%test_unit _ = test_inet4_addr_to_int32 "0.0.0.1"                  1l
+  let%test_unit _ = test_inet4_addr_to_int32 "1.0.0.0"          0x1000000l
+  let%test_unit _ = test_inet4_addr_to_int32 "255.255.255.255" 0xffffffffl
+  let%test_unit _ = test_inet4_addr_to_int32 "172.25.42.1"     0xac192a01l
+  let%test_unit _ = test_inet4_addr_to_int32 "4.2.2.1"          0x4020201l
+  let%test_unit _ = test_inet4_addr_to_int32 "8.8.8.8"          0x8080808l
+  let%test_unit _ = test_inet4_addr_to_int32 "173.194.73.103"  0xadc24967l
+  let%test_unit _ = test_inet4_addr_to_int32 "98.139.183.24"   0x628bb718l
+  let%test_unit _ = test_inet4_addr_to_int32 "0.0.0.0"                  0l
+  let%test_unit _ = test_inet4_addr_to_int32 "127.0.0.1"       0x7F000001l
+  let%test_unit _ = test_inet4_addr_to_int32 "239.0.0.0"       0xEF000000l
+  let%test_unit _ = test_inet4_addr_to_int32 "255.255.255.255" 0xFFFFFFFFl
 
   (* And from an int to a string? *)
   let test_inet4_addr_of_int32 num str =
     let inet = of_string str in
-    inet4_addr_of_int32 num = inet
+    [%test_result: t] (inet4_addr_of_int32 num) ~expect:inet
 
-  let%test _ = test_inet4_addr_of_int32 0xffffffffl "255.255.255.255"
-  let%test _ = test_inet4_addr_of_int32          0l "0.0.0.0"
-  let%test _ = test_inet4_addr_of_int32 0x628bb718l "98.139.183.24"
-  let%test _ = test_inet4_addr_of_int32 0xadc24967l "173.194.73.103"
+  let%test_unit _ = test_inet4_addr_of_int32 0xffffffffl "255.255.255.255"
+  let%test_unit _ = test_inet4_addr_of_int32          0l "0.0.0.0"
+  let%test_unit _ = test_inet4_addr_of_int32 0x628bb718l "98.139.183.24"
+  let%test_unit _ = test_inet4_addr_of_int32 0xadc24967l "173.194.73.103"
 
   (* And round trip for kicks *)
   let%test_unit _ =
