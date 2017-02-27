@@ -54,3 +54,5 @@
     time_stamp_counter.ml   ;; ocp-indent doesn't handle [#import]
     time_stamp_counter.mli  ;; ocp-indent doesn't handle [#import]
     ))))
+
+(jbuild_version jane_street)

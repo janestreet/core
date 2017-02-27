@@ -1,7 +1,10 @@
 open Core
+open Int.Replace_polymorphic_compare
 
-let%test_module "Unix.Cidr" = (module Stable_unit_test.Make (struct
-    include Unix.Cidr
+let%test_module "Unix.Cidr.Stable.V1" = (module Stable_unit_test.Make (struct
+    include Unix.Cidr.Stable.V1
+
+    let equal a b = compare a b = 0
 
     let tests =
       [ (Unix.Cidr.of_string "0.0.0.0/8"      , "0.0.0.0/8"     , "\000\b"             )

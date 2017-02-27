@@ -2329,86 +2329,93 @@ end
 *)
 
 module Cidr = struct
-  module T0 = struct
-    (* [address] is always normalized such that the (32 - [bits]) least-significant
-       bits are zero. *)
-    type t =
-      {
-        address : int32; (* IPv4 only *)
-        bits    : int;
-      }
-    [@@deriving fields, bin_io, compare]
+  module Stable = struct
+    module V1 = struct
+      module T0 = struct
+        (* [address] is always normalized such that the (32 - [bits]) least-significant
+           bits are zero. *)
+        type t =
+          { address : int32; (* IPv4 only *)
+            bits    : int;
+          }
+        [@@deriving fields, bin_io, compare, hash, compare]
 
-    let normalized_address ~base ~bits =
-      if bits = 0
-      then 0l
-      else
-        let shift = 32 - bits in
-        Int32.(shift_left (shift_right_logical base shift) shift)
+        let normalized_address ~base ~bits =
+          if bits = 0
+          then 0l
+          else
+            let shift = 32 - bits in
+            Int32.(shift_left (shift_right_logical base shift) shift)
 
-    let invariant t =
-      assert (t.bits >= 0 && t.bits <= 32);
-      assert (Int32.equal t.address (normalized_address ~base:t.address ~bits:t.bits))
+        let create ~base_address ~bits =
+          if bits < 0 || bits > 32 then
+            failwithf "%d is an invalid number of mask bits (0 <= bits <= 32)" bits ();
+          let base = Inet_addr.inet4_addr_to_int32_exn base_address in
+          let address = normalized_address ~base ~bits in
+          { address; bits }
 
-    let create ~base_address ~bits =
-      if bits < 0 || bits > 32 then
-        failwithf "%d is an invalid number of mask bits (0 <= bits <= 32)" bits ();
-      let base = Inet_addr.inet4_addr_to_int32_exn base_address in
-      let address = normalized_address ~base ~bits in
-      { address; bits }
+        let of_string s =
+          match String.split ~on:'/' s with
+          | [s_inet_address ; s_bits] ->
+            create
+              ~base_address:(Inet_addr.of_string s_inet_address)
+              ~bits:(Int.of_string s_bits)
+          | _ -> failwithf "Couldn't parse '%s' into a CIDR address/bits pair" s ()
 
-    let base_address t =
-      Inet_addr.inet4_addr_of_int32 t.address
+        let to_string t =
+          let addr = Inet_addr.inet4_addr_of_int32 t.address in
+          sprintf "%s/%d" (Inet_addr.to_string addr) t.bits
+      end
+      module T1 = Sexpable.Stable.Of_stringable.V1(T0)
+      module T2 = Comparator.Stable.V1.Make(struct include T0 include T1 end)
+      module T3 = Comparable.Stable.V1.Make(struct include T0 include T1 include T2 end)
+      include T0
+      include T1
+      include T2
+      include T3
+    end
+  end
 
-    let of_string s =
-      match String.split ~on:'/' s with
-      | [s_inet_address ; s_bits] ->
-        create
-          ~base_address:(Inet_addr.of_string s_inet_address)
-          ~bits:(Int.of_string s_bits)
-      | _ -> failwithf "Couldn't parse '%s' into a CIDR address/bits pair" s ()
+  include Stable.V1.T0
+  include Stable.V1.T1
+  include Stable.V1.T2
 
-    let to_string t =
-      let addr = Inet_addr.inet4_addr_of_int32 t.address in
-      sprintf "%s/%d" (Inet_addr.to_string addr) t.bits
+  let invariant t =
+    assert (t.bits >= 0 && t.bits <= 32);
+    assert (Int32.equal t.address (normalized_address ~base:t.address ~bits:t.bits))
 
-    let netmask_of_bits t =
-      Int32.shift_left 0xffffffffl (32 - t.bits) |> Inet_addr.inet4_addr_of_int32
+  let base_address t =
+    Inet_addr.inet4_addr_of_int32 t.address
 
-    let does_match_int32 t address =
-      Int32.equal t.address (normalized_address ~base:address ~bits:t.bits)
+  let netmask_of_bits t =
+    Int32.shift_left 0xffffffffl (32 - t.bits) |> Inet_addr.inet4_addr_of_int32
 
-    let does_match t inet_addr =
-      match Inet_addr.inet4_addr_to_int32_exn inet_addr with
-      | exception _ -> false (* maybe they tried to use IPv6 *)
-      | address     -> does_match_int32 t address
+  let does_match_int32 t address =
+    Int32.equal t.address (normalized_address ~base:address ~bits:t.bits)
 
-    let multicast = of_string "224.0.0.0/4"
+  let does_match t inet_addr =
+    match Inet_addr.inet4_addr_to_int32_exn inet_addr with
+    | exception _ -> false (* maybe they tried to use IPv6 *)
+    | address     -> does_match_int32 t address
 
-    let is_subset t ~of_ =
-      bits of_ <= bits t
-      && does_match_int32 of_ t.address
+  let multicast = of_string "224.0.0.0/4"
 
-    let all_matching_addresses t =
-      Sequence.unfold ~init:t.address ~f:(fun address ->
-        if does_match_int32 t address
-        then Some (Inet_addr.inet4_addr_of_int32 address, Int32.succ address)
-        else None)
+  let is_subset t ~of_ =
+    bits of_ <= bits t
+    && does_match_int32 of_ t.address
 
-    (* Use [Caml.Int32.to_int] to avoid exceptions in some cases on 32-bit machines. *)
-    let hash t = Caml.Int32.to_int t.address
+  let all_matching_addresses t =
+    Sequence.unfold ~init:t.address ~f:(fun address ->
+      if does_match_int32 t address
+      then Some (Inet_addr.inet4_addr_of_int32 address, Int32.succ address)
+      else None)
 
+  include Identifiable.Make_using_comparator(struct
     let module_name = "Core.Unix.Cidr"
-  end
-
-  module T1 = struct
-    include T0
-    (* Serialize to/of "a.b.c.d/x" instead of "((address abcd)(bits x))". *)
-    include Sexpable.Of_stringable (T0)
-  end
-
-  include T1
-  include Identifiable.Make (T1)
+    include Stable.V1.T0
+    include Stable.V1.T1
+    include Stable.V1.T2
+  end)
 end
 
 module Protocol = struct
@@ -3053,7 +3060,6 @@ let getifaddrs () =
 ;;
 
 module Stable = struct
-  module Inet_addr = struct
-    module V1 = Inet_addr.Stable.V1
-  end
+  module Inet_addr = Inet_addr.Stable
+  module Cidr = Cidr.Stable
 end

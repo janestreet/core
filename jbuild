@@ -1,3 +1,5 @@
 (install
  ((section bin)
   (files   (coretop corebuild))))
+
+(jbuild_version jane_street)

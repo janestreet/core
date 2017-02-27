@@ -16,3 +16,5 @@
  ((exceptions
    (iobuf_tests.ml  ;; ocp-indent doesn't handle [#import]
     ))))
+
+(jbuild_version jane_street)
