@@ -327,9 +327,19 @@ module Span = struct
       (Int63.to_float t *. calibrator.Calibrator.nanos_per_cycle)
   ;;
 
+  (* If the calibrator has not been well calibrated and [ns] is a large value, the
+     following can overflow. This happens rarely in hydra in a way that difficult to
+     reproduce. We've improved the exn here so that we have more information to debug
+     these spurious errors when they come up. *)
   let of_ns ?(calibrator = Calibrator.local) ns =
-    Float.int63_round_nearest_exn
-      (Int63.to_float ns /. calibrator.Calibrator.nanos_per_cycle)
+    try
+      Float.int63_round_nearest_exn
+        (Int63.to_float ns /. calibrator.Calibrator.nanos_per_cycle)
+    with exn ->
+      raise_s [%message
+        ""
+          ~_:(exn : Exn.t)
+          (calibrator : Calibrator.t)]
   ;;
 #else
   (* [tsc_get] already returns the current time in ns *)

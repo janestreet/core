@@ -180,8 +180,8 @@ let () =
 
     (* Make sure things are consistent *)
     [%test_eq: C.C_define.Value.t]
-      (List.Assoc.find_exn vars "ARCH_SIXTYFOUR")
-      (List.Assoc.find_exn vars "ARCH_x86_64");
+      (List.Assoc.find_exn vars ~equal:String.equal "ARCH_SIXTYFOUR")
+      (List.Assoc.find_exn vars ~equal:String.equal "ARCH_x86_64");
 
     let jsc_vars =
       List.map vars ~f:(fun (name, v) -> ("JSC_" ^ name, v))

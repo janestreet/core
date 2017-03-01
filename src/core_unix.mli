@@ -281,28 +281,29 @@ type env = [ `Replace of (string * string) list
            ]
 [@@deriving sexp]
 
-(** [exec ~prog ~args ?search_path ?env] execs [prog] with [args].  If [use_path = true]
+(** [exec ~prog ~argv ?search_path ?env] execs [prog] with [argv].  If [use_path = true]
     (the default) and [prog] doesn't contain a slash, then [exec] searches the [PATH]
     environment variable for [prog].  If [env] is supplied, it determines the environment
     when [prog] is executed.
 
-    The first element in args should be the program itself; the correct way to call [exec]
-    is:
+    The first element in [argv] should be the program itself; the correct way to call
+    [exec] is:
 
-    {[    exec ~prog ~args:[ prog; arg1; arg2; ...] ()    ]} *)
+    {[    exec ~prog ~argv:[ prog; arg1; arg2; ...] ()    ]} *)
 val exec
   :  prog:string
-  -> args:string list
+  -> argv:string list
   -> ?use_path:bool  (** default is [true] *)
   -> ?env:env
   -> unit
   -> never_returns
 
-(** [fork_exec ~prog ~args ?use_path ?env ()] forks and execs [prog] with [args] in the
-    child process, returning the child PID to the parent. *)
+(** [fork_exec ~prog ~argv ?use_path ?env ()] forks and execs [prog] with [argv] in the
+    child process, returning the child PID to the parent. As in [exec], the first element
+    in [argv] should be the program itself. *)
 val fork_exec
   :  prog:string
-  -> args:string list
+  -> argv:string list
   -> ?use_path:bool  (** default is [true] *)
   -> ?env:env
   -> unit

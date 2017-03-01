@@ -242,8 +242,9 @@ module Nfs = struct
     try
       unlock_safely_exn ~unlock_myself:false path;
       let fd = Unix.openfile path ~mode:[Unix.O_WRONLY; Unix.O_CREAT] in
+      let cleanup = ref (fun () -> Unix.close fd) in
       protect
-        ~finally:(fun () -> Unix.close fd)
+        ~finally:(fun () -> !cleanup ())
         ~f:(fun () ->
           Unix.link ~target:path ~link_name:(lock_path path) ();
           Unix.ftruncate fd ~len:0L;
@@ -259,7 +260,9 @@ module Nfs = struct
              figure out that it is stale/corrupt and remove it. So we need to
              remove it ourselves *)
           try
-            fprintf (Unix.out_channel_of_descr fd) "%s\n%!"
+            let out_channel = Unix.out_channel_of_descr fd in
+            cleanup := (fun () -> Caml.close_out_noerr out_channel);
+            fprintf out_channel "%s\n%!"
               (Sexp.to_string_hum (Info.sexp_of_t info))
           with | (Sys_error _) as err -> begin
             Unix.unlink path;

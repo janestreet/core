@@ -754,27 +754,27 @@ module Exit_or_signal_or_stop = struct
 end
 
 let prog_r prog = ("prog", atom prog)
-let args_r args = ("args", sexp_of_array atom args)
+let args_r argv = ("argv", sexp_of_array atom argv)
 let env_r env = ("env", sexp_of_array atom env)
 
-let execv ~prog ~args =
-  improve (fun () -> Unix.execv ~prog ~args)
-    (fun () -> [prog_r prog; args_r args])
+let execv ~prog ~argv =
+  improve (fun () -> Unix.execv ~prog ~args:argv)
+    (fun () -> [prog_r prog; args_r argv])
 ;;
 
-let execve ~prog ~args ~env =
-  improve (fun () -> Unix.execve ~prog ~args ~env)
-    (fun () -> [prog_r prog; args_r args; env_r env])
+let execve ~prog ~argv ~env =
+  improve (fun () -> Unix.execve ~prog ~args:argv ~env)
+    (fun () -> [prog_r prog; args_r argv; env_r env])
 ;;
 
-let execvp ~prog ~args =
-  improve (fun () -> Unix.execvp ~prog ~args)
-    (fun () -> [prog_r prog; args_r args])
+let execvp ~prog ~argv =
+  improve (fun () -> Unix.execvp ~prog ~args:argv)
+    (fun () -> [prog_r prog; args_r argv])
 ;;
 
-let execvpe ~prog ~args ~env =
-  improve (fun () -> Unix.execvpe ~prog ~args ~env)
-    (fun () -> [prog_r prog; args_r args; env_r env])
+let execvpe ~prog ~argv ~env =
+  improve (fun () -> Unix.execvpe ~prog ~args:argv ~env)
+    (fun () -> [prog_r prog; args_r argv; env_r env])
 ;;
 
 type env =
@@ -829,14 +829,14 @@ let env_lookup env key =
   | `Replace_raw raw_env -> lookup_raw raw_env key
 ;;
 
-let exec ~prog ~args ?(use_path = true) ?env () =
-  let args = Array.of_list args in
+let exec ~prog ~argv ?(use_path = true) ?env () =
+  let argv = Array.of_list argv in
   let env = Option.map env ~f:(Fn.compose Array.of_list env_assignments) in
   match use_path, env with
-  | false, None -> execv ~prog ~args
-  | false, Some env -> execve ~prog ~args ~env
-  | true, None -> execvp ~prog ~args
-  | true, Some env -> execvpe ~prog ~args ~env
+  | false, None -> execv ~prog ~argv
+  | false, Some env -> execve ~prog ~argv ~env
+  | true, None -> execvp ~prog ~argv
+  | true, Some env -> execvpe ~prog ~argv ~env
 ;;
 
 exception Fork_returned_negative_result of int [@@deriving sexp]
@@ -854,11 +854,11 @@ let fork () =
 (* Same as [Pervasives.exit] but does not run at_exit handlers *)
 external sys_exit : int -> 'a = "caml_sys_exit"
 
-let fork_exec ~prog ~args ?use_path ?env () =
+let fork_exec ~prog ~argv ?use_path ?env () =
   match fork () with
   | `In_the_child ->
     never_returns (
-      try exec ~prog ~args ?use_path ?env ()
+      try exec ~prog ~argv ?use_path ?env ()
       with _ -> sys_exit 127
     )
   | `In_the_parent pid -> pid
@@ -1289,7 +1289,7 @@ let%test_unit "fork_exec ~env last binding takes precedence" =
         ~f:(fun env ->
           waitpid_exn
             (fork_exec () ~env ~prog:"sh"
-               ~args:[ "sh"; "-c"; "echo $VAR > " ^ temp_file ]);
+               ~argv:[ "sh"; "-c"; "echo $VAR > " ^ temp_file ]);
           [%test_result: string] ~expect:"last\n" (In_channel.read_all temp_file)))
 
 let set_nonblock = unary_fd Unix.set_nonblock

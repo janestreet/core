@@ -1693,7 +1693,7 @@ module Exec = struct
 
   let exec_with_args t ~args =
     let prog = abs_path ~dir:t.working_dir t.path_to_exe in
-    never_returns (Unix.exec ~prog ~args:(prog :: args) ())
+    never_returns (Unix.exec ~prog ~argv:(prog :: args) ())
   ;;
 
   let help_text ~show_flags ~to_format_list ~path t =
@@ -1897,7 +1897,7 @@ module Sexpable = struct
       | Exec {path_to_exe; working_dir; _} ->
         find (of_external ~working_dir ~path_to_exe) ~path_to_subcommand:(sub :: subs)
       | Group g ->
-        match List.Assoc.find g.subcommands sub with
+        match List.Assoc.find g.subcommands ~equal:String.equal sub with
         | None -> failwithf "unknown subcommand %S" sub ()
         | Some t -> find t ~path_to_subcommand:subs
 
