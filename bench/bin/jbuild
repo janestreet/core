@@ -18,8 +18,8 @@
               core_bench
               core_extended
               pcre
-              re2))))
+              re2))
+  (preprocess (pps (ppx_jane)))))
 
-(enforce_style ())
 
 (jbuild_version jane_street)

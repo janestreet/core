@@ -32,8 +32,7 @@
     unix_time_stubs))
   (preprocessor_deps (config.h))
   (preprocess (pps (ppx_jane -check-doc-comments)))
-  (inline_tests ((deps (time_stamp_counter_samples_at_1sec.sexp
-                        time_stamp_counter_samples_at_60sec.sexp))))))
+))
 
 (alias
  ((name save_benchmarks)
@@ -42,17 +41,5 @@
 
 (provides core:config.h)
 
-(enforce_style
- ((exceptions
-   (bigstring.ml            ;; ocp-indent doesn't handle [#import]
-    bigstring_marshal.ml    ;; ocp-indent doesn't handle [#import]
-    core_mutex.ml           ;; ocp-indent doesn't handle [#import]
-    core_unix.ml            ;; ocp-indent doesn't handle [#import]
-    iobuf.ml                ;; ocp-indent doesn't handle [#import]
-    linux_ext.ml            ;; ocp-indent doesn't handle [#import]
-    lock_file.ml            ;; ocp-indent doesn't handle [#import]
-    time_stamp_counter.ml   ;; ocp-indent doesn't handle [#import]
-    time_stamp_counter.mli  ;; ocp-indent doesn't handle [#import]
-    ))))
 
 (jbuild_version jane_street)

@@ -21,8 +21,8 @@
     oUnit
     ppx_inline_test.runtime-lib
     sexplib
-    variantslib))))
+    variantslib))
+  (preprocess (pps (ppx_jane)))))
 
-(enforce_style ())
 
 (jbuild_version jane_street)

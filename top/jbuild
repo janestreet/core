@@ -5,6 +5,5 @@
   (libraries (compiler-libs.toplevel core))
   (preprocess (pps ()))))
 
-(enforce_style ())
 
 (jbuild_version jane_street)

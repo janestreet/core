@@ -1,8 +1,8 @@
 (executables (
   (names (gettid getifaddrs))
   (libraries (async core))
+  (preprocess (pps (ppx_jane)))
 ))
 
-(enforce_style ())
 
 (jbuild_version jane_street)

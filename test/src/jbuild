@@ -3,18 +3,8 @@
   (libraries (core
               core_kernel_test
               expect_test_helpers))
-  (inline_tests
-   ((deps (
-     ../bin/am_running_inline_test.exe
-     ../bin/command_shape_test_parent.exe
-     ../bin/command_shape_test_child.exe
-     ))
-    ))
-  (preprocessor_deps (../../src/config.h))))
+  (preprocessor_deps (../../src/config.h))
+  (preprocess (pps (ppx_jane)))))
 
-(enforce_style
- ((exceptions
-   (iobuf_tests.ml  ;; ocp-indent doesn't handle [#import]
-    ))))
 
 (jbuild_version jane_street)

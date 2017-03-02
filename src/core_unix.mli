@@ -840,8 +840,10 @@ end
     [`spawn_vfork] has almost no known disadvantages, but it's new, and therefore could
     have some less subtle bugs.
 
-    This defaults to [`ml_create_process] unless [CORE_CREATE_PROCESS_USE_SPAWN_BACKEND]
-    environment variable is set, in which case its initial value is [`spawn_vfork]. *)
+    This defaults to [`spawn_vfork] unless
+    [CORE_CREATE_PROCESS_DONT_USE_SPAWN_BACKEND_UNLESS_TOLD_TO]
+    environment variable is set, which in turn can be overridden by
+    [CORE_CREATE_PROCESS_USE_SPAWN_BACKEND]. *)
 val create_process_backend : [ `ml_create_process | `spawn_vfork ] ref
 
 (** [create_process ~prog ~args] forks a new process that executes the program [prog] with

@@ -1527,11 +1527,14 @@ module Process_info = struct
 end
 
 let create_process_backend = ref (
-  match Core_sys.getenv "CORE_CREATE_PROCESS_USE_SPAWN_BACKEND" with
+  match Core_sys.getenv "CORE_CREATE_PROCESS_DONT_USE_SPAWN_BACKEND_UNLESS_TOLD_TO" with
   | None ->
-    `ml_create_process
+    `spawn_vfork
   | Some _ ->
-    `spawn_vfork)
+    match Core_sys.getenv "CORE_CREATE_PROCESS_USE_SPAWN_BACKEND" with
+    | None -> `ml_create_process
+    | Some _ ->
+      `spawn_vfork)
 ;;
 
 external create_process_old
