@@ -37,7 +37,7 @@
 (alias
  ((name save_benchmarks)
   (deps (inline_benchmarks_runner inline_benchmarks_runner.exe))
-  (action "./inline_benchmarks_runner jenga-save-benchmarks")))
+  (action (bash "./inline_benchmarks_runner jenga-save-benchmarks"))))
 
 (provides core:config.h)
 

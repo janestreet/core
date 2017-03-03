@@ -1,12 +1,12 @@
 (alias
  ((name runtest)
   (deps (test_runner.exe))
-  (action "./test_runner.exe")))
+  (action (bash "./test_runner.exe"))))
 
 (alias
  ((name runtest)
   (deps (daemonize_test.exe))
-  (action "./daemonize_test.exe")))
+  (action (bash "./daemonize_test.exe"))))
 
 (executables
  ((names (am_running_inline_test
