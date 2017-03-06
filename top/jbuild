@@ -3,7 +3,7 @@
   (public_name core.top)
   (modes (byte))
   (libraries (compiler-libs.toplevel core))
-  (preprocess (pps ()))))
+  (preprocess (pps ( ppx_driver.runner)))))
 
 
 (jbuild_version jane_street)

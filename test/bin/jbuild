@@ -22,7 +22,7 @@
     ppx_inline_test.runtime-lib
     sexplib
     variantslib))
-  (preprocess (pps (ppx_jane)))))
+  (preprocess (pps (ppx_jane ppx_driver.runner)))))
 
 
 (jbuild_version jane_street)

@@ -31,7 +31,7 @@
     unix_stubs
     unix_time_stubs))
   (preprocessor_deps (config.h))
-  (preprocess (pps (ppx_jane -check-doc-comments)))
+  (preprocess (pps (ppx_jane -check-doc-comments ppx_driver.runner)))
 ))
 
 (alias

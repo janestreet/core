@@ -1,7 +1,7 @@
 (executables
  ((names (discover))
   (libraries (base stdio configurator))
-  (preprocess (pps (ppx_assert)))))
+  (preprocess (pps (ppx_assert ppx_driver.runner)))))
 
 
 (jbuild_version jane_street)

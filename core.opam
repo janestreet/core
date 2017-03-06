@@ -12,7 +12,7 @@ depends: [
   "base"
   "configurator"
   "core_kernel"
-  "jbuilder"
+  "jbuilder"                {build}
   "ppx_assert"
   "ppx_driver"
   "ppx_jane"
@@ -20,6 +20,7 @@ depends: [
   "spawn"
   "stdio"
   "base-threads"
+  "ocaml-migrate-parsetree"
 ]
 available: [ ocaml-version >= "4.03.0" ]
 descr: "
