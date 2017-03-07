@@ -39,7 +39,6 @@
   (deps (inline_benchmarks_runner inline_benchmarks_runner.exe))
   (action (bash "./inline_benchmarks_runner jenga-save-benchmarks"))))
 
-(provides core:config.h)
 
 
 (jbuild_version jane_street)
