@@ -1,4 +1,5 @@
 opam-version: "1.2"
+version: "v0.9.0"
 maintainer: "opensource@janestreet.com"
 authors: ["Jane Street Group, LLC <opensource@janestreet.com>"]
 homepage: "https://github.com/janestreet/core"
@@ -9,16 +10,16 @@ build: [
   ["jbuilder" "build" "--only-packages" "core" "--root" "." "-j" jobs "@install"]
 ]
 depends: [
-  "base"
-  "configurator"
-  "core_kernel"
+  "base"                    {>= "v0.9" & < "v0.10"}
+  "configurator"            {>= "v0.9" & < "v0.10"}
+  "core_kernel"             {>= "v0.9" & < "v0.10"}
   "jbuilder"                {build & >= "1.0+beta2"}
-  "ppx_assert"
-  "ppx_driver"
-  "ppx_jane"
-  "sexplib"
-  "spawn"
-  "stdio"
+  "ppx_assert"              {>= "v0.9" & < "v0.10"}
+  "ppx_driver"              {>= "v0.9" & < "v0.10"}
+  "ppx_jane"                {>= "v0.9" & < "v0.10"}
+  "sexplib"                 {>= "v0.9" & < "v0.10"}
+  "spawn"                   {>= "v0.9" & < "v0.10"}
+  "stdio"                   {>= "v0.9" & < "v0.10"}
   "base-threads"
   "ocaml-migrate-parsetree" {>= "0.4"}
 ]
