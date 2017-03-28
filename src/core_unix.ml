@@ -1006,6 +1006,9 @@ Unix.open_flag =
 | O_RSYNC
 | O_SHARE_DELETE
 | O_CLOEXEC
+#if ocaml_version >= (4, 06, 0)
+| O_KEEPEXEC
+#endif
 [@@deriving sexp]
 
 type file_perm = int [@@deriving of_sexp]
