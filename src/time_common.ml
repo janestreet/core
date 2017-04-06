@@ -68,7 +68,7 @@ module type S = sig
       -> ?unit_of_time :Unit_of_time.t
       -> t -> string
 
-    val randomize : t -> percent:float -> t
+    val randomize : t -> percent:Percent.t -> t
 
     val to_unit_of_time : t -> Unit_of_time.t
     val of_unit_of_time : Unit_of_time.t -> t

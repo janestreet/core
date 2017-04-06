@@ -42,6 +42,7 @@
 
 open! Import
 open Core_kernel.Core_kernel_private
+open! Int.Replace_polymorphic_compare
 
 module Sys = Core_sys
 
@@ -99,11 +100,12 @@ module Make (Time0 : Time0_intf.S) (Time : Time_intf.S with module Time := Time0
             Array.iter (Sys.readdir dir) ~f:(fun fn ->
               let fn = dir ^ "/" ^ fn in
               let relative_fn = String.drop_prefix fn basedir_len in
-              if Sys.is_directory fn = `Yes then begin
+              match Sys.is_directory fn with
+              | `Yes ->
                 if not (List.exists skip_prefixes ~f:(fun prefix ->
                   String.is_prefix ~prefix relative_fn)) then
                   dfs fn (depth - 1)
-              end else
+              | `No | `Unknown ->
                 f relative_fn
             )
           end
@@ -144,8 +146,11 @@ module Make (Time0 : Time0_intf.S) (Time : Time_intf.S with module Time := Time0
           in
           let matches =
             try
-              t1_file_size = Some (file_size filename)
-              && Time.Zone.digest t1 = Option.(join (map (find_or_load zone_name) ~f:Time.Zone.digest))
+              [%equal: int64 option] t1_file_size (Some (file_size filename))
+              &&
+              [%equal: string option]
+                (Time.Zone.digest t1)
+                (Option.(join (map (find_or_load zone_name) ~f:Time.Zone.digest)))
             with
             | _ -> false
           in
@@ -224,11 +229,13 @@ module Make (Time0 : Time0_intf.S) (Time : Time_intf.S with module Time := Time0
                   || String.is_prefix name ~prefix:"GMT+"
                   || String.is_prefix name ~prefix:"UTC-"
                   || String.is_prefix name ~prefix:"UTC+"
-                  || name = "GMT"
-                  || name = "UTC"
+                  || String.equal name "GMT"
+                  || String.equal name "UTC"
                 then begin
                   let offset =
-                    if name = "GMT" || name = "UTC" then 0
+                    if String.equal name "GMT"
+                    || String.equal name "UTC"
+                    then 0
                     else
                       let base =
                         Int.of_string (String.sub name ~pos:4 ~len:(String.length name - 4))
@@ -250,7 +257,7 @@ module Make (Time0 : Time0_intf.S) (Time : Time_intf.S with module Time := Time0
 
         let sexp_of_t t =
           let name = name t in
-          if name = "/etc/localtime" then
+          if String.equal name "/etc/localtime" then
             failwith "the local time zone cannot be serialized";
           Sexp.Atom name
         ;;
@@ -271,7 +278,7 @@ module Make (Time0 : Time0_intf.S) (Time : Time_intf.S with module Time := Time0
 
                    let to_binable t =
                      let name = name t in
-                     if name = "/etc/localtime" then
+                     if String.equal name "/etc/localtime" then
                        failwith "the local time zone cannot be serialized";
                      name
                    ;;

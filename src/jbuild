@@ -3,7 +3,7 @@
 (rule
  ((targets (config.h))
   (deps    (config/discover.exe thread_id.h))
-  (action  (run ${<} -ocamlc ${OCAMLC}))))
+  (action  (run ${<} -ocamlc ${OCAMLC} -portable-int63 ${PORTABLE_INT63}))))
 
 (library
  ((name core)

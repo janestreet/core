@@ -751,15 +751,21 @@ end
    all changes.  This includes out_of_ranges as well because if you not them, they become
    in_range, and can have tags.
 *)
-let includes_and l o loop =
+let includes_and ~output_includes_tags l o loop =
   let open Valid_invalid_span in
   match l with
   | []      -> Valid_invalid_span.forever
   | x :: xs ->
     let init = loop x o in
+    let min_or_max =
+      if output_includes_tags
+      then Time.Span.min
+      else Time.Span.max
+    in
     List.fold xs ~init ~f:(fun acc t ->
       match acc, loop t o with
-      | Out_of_range_for_at_least s1, Out_of_range_for_at_least s2
+      | Out_of_range_for_at_least s1, Out_of_range_for_at_least s2 ->
+        Out_of_range_for_at_least (min_or_max s1 s2)
       | Out_of_range_for_at_least s1, In_range_for_at_least s2
       | In_range_for_at_least     s1, Out_of_range_for_at_least s2 ->
         Out_of_range_for_at_least (Time.Span.min s1 s2)
@@ -767,15 +773,21 @@ let includes_and l o loop =
         In_range_for_at_least (Time.Span.min s1 s2))
 ;;
 
-let includes_or l o loop =
+let includes_or ~output_includes_tags l o loop =
   let open Valid_invalid_span in
   match l with
   | []      -> Valid_invalid_span.never
   | x :: xs ->
     let init = loop x o in
+    let min_or_max =
+      if output_includes_tags
+      then Time.Span.min
+      else Time.Span.max
+    in
     List.fold xs ~init ~f:(fun acc t ->
       match acc, loop t o with
-      | In_range_for_at_least     s1, In_range_for_at_least s2
+      | In_range_for_at_least     s1, In_range_for_at_least s2 ->
+        In_range_for_at_least (min_or_max s1 s2)
       | Out_of_range_for_at_least s1, In_range_for_at_least s2
       | In_range_for_at_least     s1, Out_of_range_for_at_least s2 ->
         In_range_for_at_least (Time.Span.min s1 s2)
@@ -788,8 +800,6 @@ let calculate_ofday_diff ~s ~e =
   let e = Time.Ofday.to_span_since_start_of_day e in
   assert (Time.Span.(<=) s e);
   Time.Span.(-) e s
-;;
-
 ;;
 
 let s_is_inrange_today_after_ofday ~start_inc_exc ~s ~ofday =
@@ -844,7 +854,7 @@ let span_to_next_representable_time time =
   Time.diff next_representable_time time
 ;;
 
-let includes (t : (zoned, _) Internal.t) (time : Time.t) : Valid_invalid_span.t =
+let includes (t : (zoned, _) Internal.t) ~output_includes_tags (time : Time.t) : Valid_invalid_span.t =
   let open Internal in
   let module IT = Internal_time in
   let rec loop : type zoning. (zoning, _) t -> (zoning, IT.t) O.t -> Valid_invalid_span.t =
@@ -860,8 +870,8 @@ let includes (t : (zoned, _) Internal.t) (time : Time.t) : Valid_invalid_span.t 
           Valid_invalid_span.limit_to ss span_to_next_shift
         end
       | Tag (_, t), o                -> loop t o
-      | And l, o                     -> includes_and l o loop
-      | Or l, o                      -> includes_or l o loop
+      | And l, o                     -> includes_and ~output_includes_tags l o loop
+      | Or l, o                      -> includes_or ~output_includes_tags l o loop
       | Not t, o                     -> Valid_invalid_span.flip (loop t o)
       | If_then_else (t1, t2, t3), o ->
         (* If_then_else (A, B, C)] is (A && B) || (NOT A && C) *)
@@ -1144,7 +1154,7 @@ let base_compare_tags
   | Some prev_tags , `Included new_tags -> emit_dispatch ~prev_tags ~new_tags
 ;;
 
-let compare_tags_with_transitions
+let compare_event_with_tags
       ~tag_equal
       t
       ~prev_tags
@@ -1165,7 +1175,7 @@ let compare_tags_with_transitions
   base_compare_tags t ~prev_tags ~continue_looping ~time ~stop_time ~emit_dispatch ~loop
 ;;
 
-let compare_tags_without_transitions
+let compare_event_without_tags
       t
       ~prev_tags
       ~continue_looping
@@ -1186,6 +1196,12 @@ type ('tag, 'a) emit =
   | Transitions_and_tag_changes : ('tag -> 'tag -> bool)
     -> ('tag, [ Event.no_change | 'tag Event.transition | 'tag Event.tag_change ]) emit
 
+let output_includes_tags (type tag) (type a) emit =
+  match (emit : ((tag, a) emit)) with
+  | Transitions                   -> false
+  | Transitions_and_tag_changes _ -> true
+;;
+
 type ('tag, 'a) compare_tags =
   (zoned, 'tag) Internal.t
   -> prev_tags:'tag list option
@@ -1195,24 +1211,25 @@ type ('tag, 'a) compare_tags =
   -> (Time.t -> ('tag list option * 'a))
   -> 'tag list option * 'a
 
-let compare_tags (type tag) (type a) (emit : (tag, a) emit) : (tag, a) compare_tags =
+let compare_event (type tag) (type a) (emit : (tag, a) emit) : (tag, a) compare_tags =
   match (emit : ((tag, a) emit)) with
-  | Transitions                           -> compare_tags_without_transitions
-  | Transitions_and_tag_changes tag_equal -> compare_tags_with_transitions ~tag_equal
+  | Transitions                           -> compare_event_without_tags
+  | Transitions_and_tag_changes tag_equal -> compare_event_with_tags ~tag_equal
 ;;
 
-let next_tags_between t ~start_time ~stop_time ~prev_tags emit =
-  let compare_tags = compare_tags emit in
+let next_between t ~start_time ~stop_time ~prev_tags emit =
+  let output_includes_tags = output_includes_tags emit in
+  let compare_event = compare_event emit in
   let rec loop time =
     if Time.(>=) time stop_time
-    then compare_tags t ~prev_tags ~continue_looping:None ~time ~stop_time loop
+    then compare_event t ~prev_tags ~continue_looping:None ~time ~stop_time loop
     else begin
       let span =
-        match includes t time with
+        match includes ~output_includes_tags t time with
         | In_range_for_at_least span
         | Out_of_range_for_at_least span -> span
       in
-      compare_tags t ~prev_tags ~continue_looping:(Some span) ~time ~stop_time loop
+      compare_event t ~prev_tags ~continue_looping:(Some span) ~time ~stop_time loop
     end
   in
   loop start_time
@@ -1220,18 +1237,19 @@ let next_tags_between t ~start_time ~stop_time ~prev_tags emit =
 
 let search_one_chunk t ~start_time ~prev_tags emit =
   let max_stop_time = Time.add start_time (Time.Span.of_day 1.) in
-  (next_tags_between t ~start_time ~stop_time:max_stop_time ~prev_tags emit)
+  (next_between t ~start_time ~stop_time:max_stop_time ~prev_tags emit)
 ;;
 
-let to_tag_sequence t ~start_time emit =
+let to_sequence t ~start_time emit =
   let t = Internal.of_external t in
   let tags t time =
     match tags t time with
     | `Not_included -> []
     | `Included l   -> l
   in
+  let output_includes_tags = output_includes_tags emit in
   let in_schedule =
-    match includes t start_time with
+    match includes ~output_includes_tags t start_time with
     | In_range_for_at_least _     -> `In_range
     | Out_of_range_for_at_least _ -> `Out_of_range
   in
@@ -1266,8 +1284,8 @@ let to_endless_sequence
     | `Started_out_of_range of a Sequence.t ]
   =
   match (emit : (tag, a) emit) with
-  | Transitions                   -> to_tag_sequence t ~start_time emit
-  | Transitions_and_tag_changes _ -> to_tag_sequence t ~start_time emit
+  | Transitions                   -> to_sequence t ~start_time emit
+  | Transitions_and_tag_changes _ -> to_sequence t ~start_time emit
 ;;
 
 let map_tags = External.map_tags
@@ -1305,8 +1323,8 @@ let next_enter_between t start_time stop_time =
     | _                -> None)
 ;;
 
-let includes t time            =
-  match includes (Internal.of_external t) time with
+let includes t time =
+  match includes ~output_includes_tags:false (Internal.of_external t) time with
   | In_range_for_at_least _     -> true
   | Out_of_range_for_at_least _ -> false
 ;;

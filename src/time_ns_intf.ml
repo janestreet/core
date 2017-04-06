@@ -1,8 +1,14 @@
 open! Import
 open! Import_time
 
+#import "config.h"
+
 module type Option = sig
-  include Immediate_option.Int63
+#ifndef JSC_PORTABLE_INT63
+  include Immediate_option.S_on_64_bit
+#else
+  include Immediate_option.S_without_immediate
+#endif
   include Identifiable with type t := t
 end
 
@@ -86,7 +92,7 @@ module type Span = sig
     -> t
 
   val to_short_string : t -> string
-  val randomize : t -> percent : float -> t
+  val randomize : t -> percent : Percent.t -> t
 
   val to_parts : t -> Parts.t
   val of_parts : Parts.t -> t (** overflows silently *)
@@ -143,8 +149,9 @@ module type Span = sig
 
   val random : ?state:Random.State.t -> unit -> t
 
-  (** [Span.Option.t] is like [Span.t option], except that the value is immediate.  This
-      module should mainly be used to avoid allocations. *)
+  (** [Span.Option.t] is like [Span.t option], except that the value is immediate on
+      architectures where [Int63.t] is immediate.  This module should mainly be used to
+      avoid allocations. *)
   module Option : sig
     include Option with type value := t
     module Stable : sig
@@ -231,6 +238,7 @@ end
     - It uses [int]s rather than [float]s internally, which makes certain things easier to
     reason about, since [int]s respect a bunch of arithmetic identities that [float]s
     don't, e.g., [x + (y + z) = (x + y) + z].
+
 
     - It is available on non-UNIX platforms, including Javascript via js_of_ocaml.
 

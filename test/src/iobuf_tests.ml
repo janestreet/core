@@ -107,7 +107,7 @@ module Test (Iobuf : sig
           failwiths "iter_slices"
             ( { pos; len; pos'; len'; is_valid }
             , e
-            , String.split ~on:'\n' (Exn.backtrace ())
+            , String.split ~on:'\n' (Backtrace.Exn.most_recent ())
             )
             [%sexp_of: iter_slices_state * exn * string list]))
   ;;
@@ -802,7 +802,7 @@ module Test (Iobuf : sig
           | _, _ ->
             failwiths "test_peek_to"
               ( (consume_result, `is_valid is_valid)
-              , String.split ~on:'\n' (Exn.backtrace ())
+              , String.split ~on:'\n' (Backtrace.Exn.most_recent ())
               )
               [%sexp_of: (unit Or_error.t * [ `is_valid of bool ]) * string list]
           end
@@ -1032,7 +1032,7 @@ module Test (Iobuf : sig
               (sub_string str ~pos:pos' ~len:len');
           | _, _ ->
             failwiths "test_consume_to"
-              (consume_result, is_valid, String.split ~on:'\n' (Exn.backtrace ()))
+              (consume_result, is_valid, String.split ~on:'\n' (Backtrace.Exn.most_recent ()))
               [%sexp_of: unit Or_error.t * bool * string list]
           end));
       let t = Iobuf.of_string "012345678" in

@@ -411,7 +411,7 @@ type open_flag =
   | O_RSYNC         (** Reads complete as writes (depending on O_SYNC/O_DSYNC) *)
   | O_SHARE_DELETE  (** Windows only: allow the file to be deleted while still open *)
   | O_CLOEXEC       (** Set the close-on-exec flag on the descriptor returned by {!openfile} *)
-#if ocaml_version >= (4, 06, 0)
+#if ocaml_version >= (4, 05, 0)
   | O_KEEPEXEC
 #endif
 

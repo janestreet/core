@@ -503,6 +503,32 @@ let%test_module "Schedule" =
       test_speed_to_sequence schedule start_time
     ;;
 
+    let%test_unit "Show that schedules are fast for schedules that only happen once a year specified in minutes" =
+      (* Regression test for a common case in Grass and perhaps Appd. *)
+      let span_of_computation_time_in_ms () =
+        (* We have to use [Unix.times], not [Time.now] so this doesn't fail when the test
+           box is under heavy load. *)
+        let { Unix.tms_stime; tms_utime; tms_cstime; tms_cutime } = Unix.times () in
+        tms_stime +. tms_utime +. tms_cstime +. tms_cutime
+      in
+      let less_than_10ms f =
+        let before_f = span_of_computation_time_in_ms () in
+        f ();
+        let after_f = span_of_computation_time_in_ms () in
+        assert (after_f -. before_f < 10.)
+      in
+      let start_time = Time.of_string "2014-01-02 00:00:00Z" in
+      let schedule =
+        In_zone (zone
+                , And
+                    [ Mins [1]
+                    ; Hours [1]
+                    ; Days [1]
+                    ; Months [Month.Jan]])
+      in
+      less_than_10ms (fun () -> test_speed_to_sequence schedule start_time);
+    ;;
+
     let%test_unit "Ensure that to_sequence is fast for a schedule that occurs every day" =
       let start_time = Time.of_string "2014-01-01 00:00:00Z" in
       let on_date ~y ~m ~d = On [ date ~y ~m ~d ] in

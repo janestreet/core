@@ -136,7 +136,7 @@ type ('a, 'b) t =
   | If_then_else : (('a, 'b) t * ('a, 'b) t * ('a, 'b) t)            -> ('a, 'b) t
   | Shift        : Time.Span.t * ('a, 'b) t                          -> ('a, 'b) t
   | Between      :   (Inclusive_exclusive.t * Time.Ofday.t)
-                     * (Inclusive_exclusive.t * Time.Ofday.t)          -> (unzoned, 'b) t
+                     * (Inclusive_exclusive.t * Time.Ofday.t)        -> (unzoned, 'b) t
   | At           : Time.Ofday.t list                                 -> (unzoned, 'b) t
   | Secs         : int list                                          -> (unzoned, 'b) t
   | Mins         : int list                                          -> (unzoned, 'b) t

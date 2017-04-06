@@ -129,7 +129,7 @@ let%test_module "clock shift stuff" =
       Time.utc_mktime date ofday
     ;;
 
-    let simple_case date ofday time =
+    let simple_case ?(zone = zone) date ofday time =
       [%test_result: of_date_ofday_result]
         ~expect:(`Once time) (Time.of_date_ofday_precise ~zone date ofday);
       [%test_result: Date.t * Time.Ofday.t * to_date_ofday_ambiguity]
@@ -209,5 +209,14 @@ let%test_module "clock shift stuff" =
 
     let%test_unit "of_date_ofday_precise, after repeated hour" =
       simple_case bst_end (02^:01) (mkt Oct 27  02 01)
-  end)
 
+    let%test_unit "of_date_ofday_precise, time zone with no transitions" =
+      simple_case (Date.of_string "2013-01-01") (12^:00) (mkt Jan 01 04 00)
+        ~zone:(Time.Zone.of_utc_offset ~hours:8)
+
+    let%test_unit "of_date_ofday_precise, time zone with no recent transitions" =
+      (* The Hong Kong time zone observed daylight savings from 1941 to 1979, but not
+         since, so the zone arithmetic for recent dates hits boundary cases. *)
+      simple_case (Date.of_string "2013-01-01") (12^:00) (mkt Jan 01 04 00)
+        ~zone:(Time.Zone.find_exn "Asia/Hong_Kong")
+  end)

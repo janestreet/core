@@ -126,6 +126,7 @@ end = struct
     let some span = to_int63_ns (check_range span)
     let is_none t = Int63.(t = none)
     let is_some t = Int63.(t <> none)
+    let some_is_representable span = is_some (to_int63_ns span)
     let value t ~default = if is_none t then default else of_int63_ns t
     let unchecked_value t = of_int63_ns t
 
@@ -255,6 +256,8 @@ module Option = struct
   let some time = Span.Option.some (to_span_since_epoch time)
   let is_none = Span.Option.is_none
   let is_some = Span.Option.is_some
+  let some_is_representable time =
+    Span.Option.some_is_representable (to_span_since_epoch time)
   let value t ~default =
     of_span_since_epoch
       (Span.Option.value
@@ -503,13 +506,14 @@ module Option = struct
   type ofday = t [@@deriving sexp, compare]
   type t = Span.Option.t [@@deriving bin_io, compare, hash, typerep]
 
-  let none            = Span.Option.none
-  let some            = Span.Option.some
-  let is_none         = Span.Option.is_none
-  let is_some         = Span.Option.is_some
-  let value           = Span.Option.value
-  let value_exn       = Span.Option.value_exn
-  let unchecked_value = Span.Option.unchecked_value
+  let none                  = Span.Option.none
+  let some                  = Span.Option.some
+  let is_none               = Span.Option.is_none
+  let is_some               = Span.Option.is_some
+  let some_is_representable = Span.Option.some_is_representable
+  let value                 = Span.Option.value
+  let value_exn             = Span.Option.value_exn
+  let unchecked_value       = Span.Option.unchecked_value
 
   let of_option = function None -> none | Some t -> some t
   let to_option t = if is_none t then None else Some (value_exn t)

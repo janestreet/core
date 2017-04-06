@@ -27,7 +27,7 @@
 open! Import
 open Import_time
 
-(** {1 argument types} *)
+(** Argument types. *)
 module Arg_type : sig
   type 'a t (** the type of a command line argument *)
 
@@ -116,7 +116,7 @@ module Arg_type : sig
   end
 end
 
-(** {1 flag specifications} *)
+(** Command-line flag specifications *)
 module Flag : sig
   type 'a t
 
@@ -157,7 +157,7 @@ module Flag : sig
   val escape : string list option t
 end
 
-(** {1 anonymous argument specifications} *)
+(** Anonymous command-line argument specification. *)
 module Anons : sig
 
   type +'a t (** a specification of some number of anonymous arguments *)
@@ -226,10 +226,11 @@ module Anons : sig
   val t4 : 'a t -> 'b t -> 'c t -> 'd t -> ('a * 'b * 'c * 'd) t
 end
 
-(** {1 specification of command parameters} *)
 
-(** This module is meant to eventually replace [Command.Spec], because the types are
-    easier to understand. *)
+(** Command-line parameter specification.
+
+    This module replaces {Command.Spec}, and should be used in all new code.
+    Its types and compositional rules are much easier to understand. *)
 module Param : sig
   module type S = sig
 
@@ -358,7 +359,10 @@ module Let_syntax : sig
   end with type 'a t := 'a Param.t
 end with type 'a t := 'a Param.t
 
-(** {1 older interface for command-line specifications} *)
+(** The old interface for command-line specifications -- Do Not Use.
+
+    This interface should not be used. See the {Param} module for the new way
+    to do things. *)
 module Spec : sig
 
   (** {1 command parameters} *)
