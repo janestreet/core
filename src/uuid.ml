@@ -44,7 +44,7 @@ module Base = struct
     String.concat ~sep:"-" [
       t.hostname;
       Int.to_string (Pid.to_int t.pid);
-      Float.to_string (Time.Span.to_sec (Time.to_span_since_epoch t.time));
+      Float.to_string_12 (Time.Span.to_sec (Time.to_span_since_epoch t.time));
       Int.to_string t.counter
     ]
   ;;
