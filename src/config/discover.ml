@@ -114,7 +114,14 @@ int main () {
 let () =
   let portable_int63 = ref false in
   let args =
-    [ "-portable-int63", Caml.Arg.Bool (fun x -> portable_int63 := x),
+    [ "-portable-int63", Caml.Arg.Symbol
+                           (["true";"false";"!true";"!false"],
+                            fun x ->
+                              portable_int63 :=
+                                match x with
+                                | "true" | "!false" -> true
+                                | "false" | "!true" -> false
+                                | _ -> assert false),
       " true if Base.Int63.t is selected at runtime, false if at compiler time" ]
   in
   C.main ~args ~name:"core" (fun c ->
