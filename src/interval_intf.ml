@@ -27,6 +27,8 @@ module type Gen = sig
 
   val is_empty_or_singleton : 'a t -> bool
 
+  (*_ If you are looking for a simple interval type where the bounds are not optional,
+    consider Min_max_pair.t. *)
   val bounds : 'a t -> ('a bound * 'a bound) option
   val lbound : 'a t -> 'a bound option
   val ubound : 'a t -> 'a bound option

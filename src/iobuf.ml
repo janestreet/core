@@ -6,6 +6,8 @@ module Bigstring = Bigstring_in_this_directory
 
 module Unix = Core_unix
 
+let arch_sixtyfour = Sys.word_size = 64
+
 module T = struct
   type t =
     (* WHEN YOU CHANGE THIS, CHANGE iobuf_fields IN iobuf.h AS WELL!!! *)
@@ -519,21 +521,20 @@ module Itoa = struct
     else if x > -10000000 then 7
     else if x > -100000000 then 8
     else if x > -1000000000 then 9
+    else if arch_sixtyfour
+    then
+      if      x > -1000000000 * 10 then 10
+      else if x > -1000000000 * 100 then 11
+      else if x > -1000000000 * 1000 then 12
+      else if x > -1000000000 * 10000 then 13
+      else if x > -1000000000 * 100000 then 14
+      else if x > -1000000000 * 1000000 then 15
+      else if x > -1000000000 * 10000000 then 16
+      else if x > -1000000000 * 100000000 then 17
+      else if x > -1000000000 * 1000000000 then 18
+      else 19
     else
-#ifdef JSC_ARCH_SIXTYFOUR
-         if x > -1000000000_0 then 10
-    else if x > -1000000000_00 then 11
-    else if x > -1000000000_000 then 12
-    else if x > -1000000000_0000 then 13
-    else if x > -1000000000_00000 then 14
-    else if x > -1000000000_000000 then 15
-    else if x > -1000000000_0000000 then 16
-    else if x > -1000000000_00000000 then 17
-    else if x > -1000000000_000000000 then 18
-    else 19
-#else
-    10
-#endif
+      10
 
   let%test _ = String.length (Int.to_string Int.min_value) <= 19 + 1
 

@@ -39,7 +39,7 @@ let remove =
 
 let old_map_merge t1 t2 ~f =
   let all_keys =
-    List.dedup ~compare (List.append (Map.keys t1) (Map.keys t2))
+    List.dedup_and_sort ~compare (List.append (Map.keys t1) (Map.keys t2))
   in
   List.fold ~init:Map.Poly.empty all_keys
     ~f:(fun t key ->

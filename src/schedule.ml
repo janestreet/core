@@ -378,7 +378,7 @@ end = struct
 
     let create l ~cmp:compare =
       let set =
-        List.dedup l ~compare
+        List.dedup_and_sort l ~compare
         |> List.sort ~cmp:compare
         |> Array.of_list
       in

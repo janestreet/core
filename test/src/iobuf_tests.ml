@@ -1,6 +1,6 @@
-#import "../../src/config.h"
-
 open! Core
+
+let arch_sixtyfour = Sys.word_size = 64
 
 let is_error = Result.is_error
 let is_ok    = Result.is_ok
@@ -16,9 +16,9 @@ let log string a sexp_of_a =
 module type Iobuf = module type of Iobuf
 
 module Test (Iobuf : sig
-               include Iobuf
-               val show_messages : bool ref
-             end) : sig end = (struct
+    include Iobuf
+    val show_messages : bool ref
+  end) : sig end = (struct
   let show_messages = Iobuf.show_messages
   let () = show_messages := false
   open Iobuf
@@ -41,10 +41,8 @@ module Test (Iobuf : sig
   let strings =
     [ ""; "a"; "hello"; "\000"; "\000\000\000"; "\000hello"; String.make 1000 'x' ]
 
-#ifdef JSC_ARCH_SIXTYFOUR
   (* [large_int] creates an int that is not representable on 32-bit systems. *)
   let large_int a b c d = (a lsl 48) lor (b lsl 32) lor (c lsl 16) lor d
-#endif
 
   type iter_examples_state =
     { string   : string
@@ -124,14 +122,15 @@ module Test (Iobuf : sig
   let is_empty = is_empty
 
   (* [create] with random capacity. *)
-  let%test_module _ = (module struct
-    let n = Random.int 100_000 + 1 in
-    assert (n > 0);
-    let t = create ~len:n in
-    assert (capacity t = n);
-    assert (length t = n);
-    assert (not (is_empty t));
-  end)
+  let%test_module _ =
+    (module struct
+      let n = Random.int 100_000 + 1 in
+      assert (n > 0);
+      let t = create ~len:n in
+      assert (capacity t = n);
+      assert (length t = n);
+      assert (not (is_empty t));
+    end)
 
   (* [create] with user-supplied capacity. *)
   let%test_unit _ =
@@ -151,32 +150,33 @@ module Test (Iobuf : sig
 
   let crc32 = crc32
 
-  let%test_module _ = (module struct
+  let%test_module _ =
+    (module struct
 
-    let str = "The quick brown fox jumps over the lazy dog"
-    let len = String.length str
-    let crc = Int63.of_int64_exn 0x414fa339L
+      let str = "The quick brown fox jumps over the lazy dog"
+      let len = String.length str
+      let crc = Int63.of_int64_exn 0x414fa339L
 
-    let%test_unit _ =
-      [%test_result: Int63.Hex.t]
-        (crc32 (of_string str))
-        ~expect:crc
+      let%test_unit _ =
+        [%test_result: Int63.Hex.t]
+          (crc32 (of_string str))
+          ~expect:crc
 
-    let%test_unit _ =
-      let t = of_string ("12345" ^ str ^ "12345") in
-      advance t 5;
-      resize t ~len;
-      [%test_result: Int63.Hex.t]
-        (crc32 t)
-        ~expect:crc
+      let%test_unit _ =
+        let t = of_string ("12345" ^ str ^ "12345") in
+        advance t 5;
+        resize t ~len;
+        [%test_result: Int63.Hex.t]
+          (crc32 t)
+          ~expect:crc
 
-  end)
+    end)
   ;;
 
   module Accessors (Accessors : sig
-                      include module type of Unsafe
-                      val is_safe : bool
-                    end) =
+      include module type of Unsafe
+      val is_safe : bool
+    end) =
   struct
     open Accessors
 
@@ -684,26 +684,27 @@ module Test (Iobuf : sig
         int_pos_1 4 int32_le 0x01020304    "A\004\003\002\001FGHIJ";
         int_pos_1 4 int32_be (-0x01020305) "A\254\253\252\251FGHIJ";
         int_pos_1 4 int32_le (-0x05060709) "A\247\248\249\250FGHIJ";
-#ifdef JSC_ARCH_SIXTYFOUR
-        int_pos_1 4 uint32_be (large_int 0 0 0xF6F5 0xF4F3) "A\246\245\244\243FGHIJ";
-        int_pos_1 4 uint32_le (large_int 0 0 0xFBFA 0xF9F8) "A\248\249\250\251FGHIJ";
-        int_pos_1 8 int64_be (large_int 0x0102 0x0304 0x0506 0x0708)
-          "A\001\002\003\004\005\006\007\008J";
-        int_pos_1 8 int64_le (large_int 0x090a 0x0b0c 0x0d0e 0x0f10)
-          "A\016\015\014\013\012\011\010\009J";
-        int_pos_1 8 int64_be (-(large_int 0x0102 0x0304 0x0506 0x0709))
-          "A\254\253\252\251\250\249\248\247J";
-        int_pos_1 8 int64_le (-(large_int 0x0102 0x0304 0x0506 0x0709))
-          "A\247\248\249\250\251\252\253\254J";
-        int_pos_1 8 int64_be_trunc (large_int 0x0102 0x0304 0x0506 0x0708)
-          "A\001\002\003\004\005\006\007\008J";
-        int_pos_1 8 int64_le_trunc (large_int 0x090a 0x0b0c 0x0d0e 0x0f10)
-          "A\016\015\014\013\012\011\010\009J";
-        int_pos_1 8 int64_be_trunc (-(large_int 0x0102 0x0304 0x0506 0x0709))
-          "A\254\253\252\251\250\249\248\247J";
-        int_pos_1 8 int64_le_trunc (-(large_int 0x0102 0x0304 0x0506 0x0709))
-          "A\247\248\249\250\251\252\253\254J";
-#endif
+        if arch_sixtyfour
+        then begin
+          int_pos_1 4 uint32_be (large_int 0 0 0xF6F5 0xF4F3) "A\246\245\244\243FGHIJ";
+          int_pos_1 4 uint32_le (large_int 0 0 0xFBFA 0xF9F8) "A\248\249\250\251FGHIJ";
+          int_pos_1 8 int64_be (large_int 0x0102 0x0304 0x0506 0x0708)
+            "A\001\002\003\004\005\006\007\008J";
+          int_pos_1 8 int64_le (large_int 0x090a 0x0b0c 0x0d0e 0x0f10)
+            "A\016\015\014\013\012\011\010\009J";
+          int_pos_1 8 int64_be (-(large_int 0x0102 0x0304 0x0506 0x0709))
+            "A\254\253\252\251\250\249\248\247J";
+          int_pos_1 8 int64_le (-(large_int 0x0102 0x0304 0x0506 0x0709))
+            "A\247\248\249\250\251\252\253\254J";
+          int_pos_1 8 int64_be_trunc (large_int 0x0102 0x0304 0x0506 0x0708)
+            "A\001\002\003\004\005\006\007\008J";
+          int_pos_1 8 int64_le_trunc (large_int 0x090a 0x0b0c 0x0d0e 0x0f10)
+            "A\016\015\014\013\012\011\010\009J";
+          int_pos_1 8 int64_be_trunc (-(large_int 0x0102 0x0304 0x0506 0x0709))
+            "A\254\253\252\251\250\249\248\247J";
+          int_pos_1 8 int64_le_trunc (-(large_int 0x0102 0x0304 0x0506 0x0709))
+            "A\247\248\249\250\251\252\253\254J"
+        end;
         let int64_pos_1 f value with_value =
           accessor_pos_1 ~without_value:buf ~value_len:8 f ~value ~with_value
             (module Int64)
@@ -712,7 +713,7 @@ module Test (Iobuf : sig
         int64_pos_1 int64_t_le 1L                  "A\001\000\000\000\000\000\000\000J";
         int64_pos_1 int64_t_be 0x8000000000000000L "A\128\000\000\000\000\000\000\000J";
         int64_pos_1 int64_t_le 0x8000000000000000L "A\000\000\000\000\000\000\000\128J"
-      end
+    end
 
     let cases_for_testing_decimal =
       [ Int.min_value; (Int.min_value + 1); -100; -9; 0; 10; 15; 45; 120; 987; 2814;
@@ -888,13 +889,13 @@ module Test (Iobuf : sig
     let%test_unit _ =
       List.iter [ 0; 1 ] ~f:(fun pos ->
         let t = create ~len:10 in
-#ifdef JSC_ARCH_SIXTYFOUR
-        let i = large_int 0x1234 0x5678 0x90AB 0xCDEF in
-        Poke.int64_le t ~pos i;
-        assert (Peek.int64_le t ~pos = i);
-        Poke.int64_be t ~pos i;
-        assert (Peek.int64_be t ~pos = i);
-#endif
+        if arch_sixtyfour then begin
+          let i = large_int 0x1234 0x5678 0x90AB 0xCDEF in
+          Poke.int64_le t ~pos i;
+          assert (Peek.int64_le t ~pos = i);
+          Poke.int64_be t ~pos i;
+          assert (Peek.int64_be t ~pos = i)
+        end;
         let i = 0x1234_5678 in
         Poke.int32_le t ~pos i;
         assert (Peek.int32_le t ~pos = i);
@@ -1115,11 +1116,11 @@ module Test (Iobuf : sig
     let%test_unit _ =
       List.iter [ 0; 1 ] ~f:(fun pos ->
         let t = create ~len:10 in
-#ifdef JSC_ARCH_SIXTYFOUR
-        let i = large_int 0x1234 0x5678 0x90AB 0xCDEF in
-        sub_shared t ~pos |> (fun t -> Fill.int64_le t i);
-        assert (i = (sub_shared t ~pos |> Consume.int64_le));
-#endif
+        if arch_sixtyfour then begin
+          let i = large_int 0x1234 0x5678 0x90AB 0xCDEF in
+          sub_shared t ~pos |> (fun t -> Fill.int64_le t i);
+          assert (i = (sub_shared t ~pos |> Consume.int64_le))
+        end;
         let i = 0x1234_5678 in
         sub_shared t ~pos |> (fun t -> Fill.int32_le t i);
         assert (i = (sub_shared t ~pos |> Consume.int32_le));
@@ -1413,35 +1414,35 @@ module Test (Iobuf : sig
         val write : ([> read], seek) Iobuf.t -> out_ -> unit
       end) = struct
 
-        let%test_unit _ =
-          iter_examples ~f:(fun t string ~pos ->
-            let len = String.length string in
-            let file, fd = Unix.mkstemp "iobuf_test" in
-            protect ~finally:(fun () -> Unix.unlink file) ~f:(fun () ->
-              let ch = Ch.create_out fd in
-              Poke.stringo t string ~pos;
-              advance t pos;
-              resize t ~len;
-              Ch.write t ch;
-              Ch.close_out ch;
-              reset t;
-              for pos = 0 to length t - 1 do
-                Poke.char t '\000' ~pos
-              done;
-              let ch = Ch.create_in file in
-              advance t pos;
-              let lo = Lo_bound.window t in
-              (match Ch.read t ch with
-               | Ok  -> assert (len > 0 || Iobuf.is_empty t)
-               | Eof -> assert (len = 0 && not (Iobuf.is_empty t)));
-              bounded_flip_lo t lo;
-              [%test_result: string] (to_string t) ~expect:string;
-              reset t;
-              (match Ch.read t ch with
-               | Eof -> ()
-               | Ok -> assert false);
-              Ch.close_in ch))
-        ;;
+      let%test_unit _ =
+        iter_examples ~f:(fun t string ~pos ->
+          let len = String.length string in
+          let file, fd = Unix.mkstemp "iobuf_test" in
+          protect ~finally:(fun () -> Unix.unlink file) ~f:(fun () ->
+            let ch = Ch.create_out fd in
+            Poke.stringo t string ~pos;
+            advance t pos;
+            resize t ~len;
+            Ch.write t ch;
+            Ch.close_out ch;
+            reset t;
+            for pos = 0 to length t - 1 do
+              Poke.char t '\000' ~pos
+            done;
+            let ch = Ch.create_in file in
+            advance t pos;
+            let lo = Lo_bound.window t in
+            (match Ch.read t ch with
+             | Ok  -> assert (len > 0 || Iobuf.is_empty t)
+             | Eof -> assert (len = 0 && not (Iobuf.is_empty t)));
+            bounded_flip_lo t lo;
+            [%test_result: string] (to_string t) ~expect:string;
+            reset t;
+            (match Ch.read t ch with
+             | Eof -> ()
+             | Ok -> assert false);
+            Ch.close_in ch))
+      ;;
     end
 
     let output = output
@@ -1588,51 +1589,50 @@ module Test (Iobuf : sig
     ;;
     let%test_unit _ = sends_with_recvfrom recvfrom_assume_fd_is_nonblocking
 
-let%test_unit _ =
-  List.iter [ 0; 1 ]
-    ~f:(fun pos ->
-      let t = create ~len:10 in
-      let i = 0xF234_5678_90AB_CDEFL in
-      Poke.int64_t_le t ~pos i;
-      assert (Peek.int64_t_le t ~pos = i);
-      Poke.int64_t_be t ~pos i;
-      assert (Peek.int64_t_be t ~pos = i);
-#ifdef JSC_ARCH_SIXTYFOUR
-      begin
-        let i = large_int 0x1234 0x5678 0x90AB 0xCDEF in
-        Poke.int64_t_le t ~pos (Int64.of_int i);
-        assert (Peek.int64_t_le t ~pos = Int64.of_int i);
-        Poke.int64_t_be t ~pos (Int64.of_int i);
-        assert (Peek.int64_t_be t ~pos = Int64.of_int i);
-        Poke.int64_le t ~pos i;
-        assert (Peek.int64_le t ~pos = i);
-        Poke.int64_be t ~pos i;
-        assert (Peek.int64_be t ~pos = i);
-      end;
-#endif
-      let i = 0x1234_5678 in
-      Poke.int32_le t ~pos i;
-      assert (Peek.int32_le t ~pos = i);
-      Poke.int32_be t ~pos i;
-      assert (Peek.int32_be t ~pos = i);
-      Poke.uint32_le t ~pos i;
-      assert (Peek.uint32_le t ~pos = i);
-      Poke.uint32_be t ~pos i;
-      assert (Peek.uint32_be t ~pos = i);
-      let i = 0x1234 in
-      Poke.int16_le t ~pos i;
-      assert (Peek.int16_le t ~pos = i);
-      Poke.int16_be t ~pos i;
-      assert (Peek.int16_be t ~pos = i);
-      Poke.uint16_le t ~pos i;
-      assert (Peek.uint16_le t ~pos = i);
-      Poke.uint16_be t ~pos i;
-      assert (Peek.uint16_be t ~pos = i);
-      let i = 0x12 in
-      Poke.int8 t ~pos i;
-      assert (Peek.int8 t ~pos = i);
-      Poke.uint8 t ~pos i;
-      assert (Peek.uint8 t ~pos = i))
+    let%test_unit _ =
+      List.iter [ 0; 1 ]
+        ~f:(fun pos ->
+          let t = create ~len:10 in
+          let i = 0xF234_5678_90AB_CDEFL in
+          Poke.int64_t_le t ~pos i;
+          assert (Peek.int64_t_le t ~pos = i);
+          Poke.int64_t_be t ~pos i;
+          assert (Peek.int64_t_be t ~pos = i);
+          if arch_sixtyfour then
+            begin
+              let i = large_int 0x1234 0x5678 0x90AB 0xCDEF in
+              Poke.int64_t_le t ~pos (Int64.of_int i);
+              assert (Peek.int64_t_le t ~pos = Int64.of_int i);
+              Poke.int64_t_be t ~pos (Int64.of_int i);
+              assert (Peek.int64_t_be t ~pos = Int64.of_int i);
+              Poke.int64_le t ~pos i;
+              assert (Peek.int64_le t ~pos = i);
+              Poke.int64_be t ~pos i;
+              assert (Peek.int64_be t ~pos = i)
+            end;
+          let i = 0x1234_5678 in
+          Poke.int32_le t ~pos i;
+          assert (Peek.int32_le t ~pos = i);
+          Poke.int32_be t ~pos i;
+          assert (Peek.int32_be t ~pos = i);
+          Poke.uint32_le t ~pos i;
+          assert (Peek.uint32_le t ~pos = i);
+          Poke.uint32_be t ~pos i;
+          assert (Peek.uint32_be t ~pos = i);
+          let i = 0x1234 in
+          Poke.int16_le t ~pos i;
+          assert (Peek.int16_le t ~pos = i);
+          Poke.int16_be t ~pos i;
+          assert (Peek.int16_be t ~pos = i);
+          Poke.uint16_le t ~pos i;
+          assert (Peek.uint16_le t ~pos = i);
+          Poke.uint16_be t ~pos i;
+          assert (Peek.uint16_be t ~pos = i);
+          let i = 0x12 in
+          Poke.int8 t ~pos i;
+          assert (Peek.int8 t ~pos = i);
+          Poke.uint8 t ~pos i;
+          assert (Peek.uint8 t ~pos = i))
 
     let%test_unit _ =
       let t = create ~len:1024 in
@@ -1765,19 +1765,18 @@ let%test_unit _ =
     end)
 
   module Unsafe = Accessors (struct include Unsafe let is_safe = false end)
-end :
   (* The signature here is to remind us to add a unit test whenever we add a function to
      [Iobuf]. *)
-  Iobuf)
+end : Iobuf)
 
 let%test_module _ = (module Test (Iobuf_debug.Make ()))
 
 (* Ensure against bugs in [Iobuf_debug].  The above tests [Iobuf_debug], with invariants
    checked, and this tests the straight [Iobuf] module. *)
 let%test_module _ = (module Test (struct
-  include Iobuf
-  let show_messages = ref true
-end))
+    include Iobuf
+    let show_messages = ref true
+  end))
 
 let%test_module "allocation" =
   (module struct

@@ -146,9 +146,9 @@ module Make (Time0 : Time0_intf.S) (Time : Time_intf.S with module Time := Time0
           in
           let matches =
             try
-              [%equal: int64 option] t1_file_size (Some (file_size filename))
+              [%compare.equal: int64 option] t1_file_size (Some (file_size filename))
               &&
-              [%equal: string option]
+              [%compare.equal: string option]
                 (Time.Zone.digest t1)
                 (Option.(join (map (find_or_load zone_name) ~f:Time.Zone.digest)))
             with

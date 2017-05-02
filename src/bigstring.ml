@@ -8,6 +8,8 @@ include Core_kernel.Bigstring
 
 exception IOError of int * exn [@@deriving sexp]
 
+let arch_sixtyfour = Sys.word_size = 64
+
 external init : unit -> unit = "bigstring_init_stub"
 
 let () =
@@ -289,13 +291,11 @@ let%test_module _ = (module struct
     check_invalid (-1);
     check_invalid Int.min_value;
     check_invalid 65; (* RECVMMSG_MAX_COUNT = 64 *)
-    (
-#ifdef JSC_ARCH_SIXTYFOUR
-    (* We are assuming that [unsigned int] is 32 bits wide. *)
-    check_invalid (Int64.to_int_exn 0xFFFF_FFFFL); (* exceeds RECVMMSG_MAX_COUNT *)
-    check_invalid (Int64.to_int_exn 0x1FFFF_FFFFL); (* exceeds unsigned int *)
-#endif
-    )
+    if arch_sixtyfour then begin
+      (* We are assuming that [unsigned int] is 32 bits wide. *)
+      check_invalid (Int64.to_int_exn 0xFFFF_FFFFL); (* exceeds RECVMMSG_MAX_COUNT *)
+      check_invalid (Int64.to_int_exn 0x1FFFF_FFFFL) (* exceeds unsigned int *)
+    end
   ;;
 end)
 
