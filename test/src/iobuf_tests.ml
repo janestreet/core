@@ -1785,12 +1785,9 @@ let%test_module "allocation" =
     let%expect_test "set_bounds_and_buffer_sub" =
       let src = Iobuf.of_string "123abcDEF" in
       let dst = Iobuf.create ~len:0 in
-      show_allocation (fun () ->
+      require_no_allocation [%here] (fun () ->
         Iobuf.set_bounds_and_buffer_sub ~src ~dst ~len:(Iobuf.length src) ~pos:0);
-      [%expect {|
-        (allocated
-          (minor_words 0)
-          (major_words 0)) |}]
+      [%expect {| |}]
 
     let%expect_test "Fill.string" =
       let str = "123" in
@@ -1799,11 +1796,8 @@ let%test_module "allocation" =
       let str_pos = Random.int (String.length str) in
       let len = Random.int (String.length str - str_pos) in
       let dst = Iobuf.create ~len in
-      show_allocation (fun () -> Iobuf.Fill.string dst str ~str_pos ~len);
-      [%expect {|
-        (allocated
-          (minor_words 0)
-          (major_words 0)) |}]
+      require_no_allocation [%here] (fun () -> Iobuf.Fill.string dst str ~str_pos ~len);
+      [%expect {| |}]
   end)
 
 let%test_unit "SEGV bug repro" =
