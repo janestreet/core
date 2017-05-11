@@ -112,19 +112,7 @@ int main () {
 |}
 
 let () =
-  let portable_int63 = ref false in
-  let args =
-    [ "-portable-int63", Caml.Arg.Symbol
-                           (["true";"false";"!true";"!false"],
-                            fun x ->
-                              portable_int63 :=
-                                match x with
-                                | "true" | "!false" -> true
-                                | "false" | "!true" -> false
-                                | _ -> assert false),
-      " true if Base.Int63.t is selected at runtime, false if at compiler time" ]
-  in
-  C.main ~args ~name:"core" (fun c ->
+  C.main ~name:"core" (fun c ->
     let posix_timers =
       C.c_test c posix_timers_code ~link_flags:["-lrt"] ||
       C.c_test c posix_timers_code
@@ -186,7 +174,6 @@ let () =
         ; [ "POSIX_TIMERS"    , Switch posix_timers
           ; "THREAD_ID_METHOD", Int thread_id_method
           ; "LINUX_EXT"       , Switch linux
-          ; "PORTABLE_INT63"  , Switch !portable_int63
           ]
         ]
     in

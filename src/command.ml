@@ -578,7 +578,7 @@ end = struct
         if String.(<>) x from
         then x
         else begin
-          Set_once.set_exn replaced ();
+          Set_once.set_exn replaced [%here] ();
           to_
         end)
   let pop_help = function
@@ -1842,7 +1842,7 @@ module Sexpable = struct
           descr
           |> Unix.in_channel_of_descr
           |> In_channel.input_all)
-        |> Set_once.set_exn output) ()
+        |> Set_once.set_exn output [%here]) ()
       in
       stage (fun () ->
         Core_thread.join thread;

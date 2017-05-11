@@ -1,14 +1,8 @@
 open! Import
 open! Import_time
 
-#import "config.h"
-
 module type Option = sig
-#ifndef JSC_PORTABLE_INT63
-  include Immediate_option.S_on_64_bit
-#else
-  include Immediate_option.S_without_immediate
-#endif
+  include Immediate_option.S_int63
   include Identifiable with type t := t
 end
 
