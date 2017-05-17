@@ -459,8 +459,7 @@ module Test (Iobuf : sig
         raise Not_found;
       in
       try
-        Iobuf.protect_window_and_bounds buf ~f;
-        false
+        Nothing.unreachable_code (Iobuf.protect_window_and_bounds buf ~f)
       with
       | Not_found ->
         String.equal (to_string buf) "123abcDEF" && String.equal !sub "abc"
