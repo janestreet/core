@@ -8,6 +8,7 @@ open! Import
 
 module Time_ns = Core_kernel.Core_kernel_private.Time_ns_alternate_sexp
 
+module UnixNoLabels = Unix
 module Unix = UnixLabels
 
 let ( ^/ ) = Core_filename.concat
@@ -1006,6 +1007,9 @@ Unix.open_flag =
 | O_RSYNC
 | O_SHARE_DELETE
 | O_CLOEXEC
+#if ocaml_version >= (4, 05, 0)
+| O_KEEPEXEC
+#endif
 [@@deriving sexp]
 
 type file_perm = int [@@deriving of_sexp]
@@ -1272,7 +1276,7 @@ let%test _ =
 let dup = unary_fd Unix.dup
 
 let dup2 ~src ~dst =
-  improve (fun () -> Unix.dup2 ~src ~dst)
+  improve (fun () -> UnixNoLabels.dup2 src dst)
     (fun () -> [("src", File_descr.sexp_of_t src);
                 ("dst", File_descr.sexp_of_t dst)])
 ;;
@@ -1507,7 +1511,7 @@ let closedir = (* Non-intr *)
   unary_dir_handle (fun dh ->
     try Unix.closedir dh with | Invalid_argument _ -> ())
 
-let pipe = Unix.pipe
+let pipe () = Unix.pipe ()
 
 let mkfifo name ~perm =
   improve (fun () -> Unix.mkfifo name ~perm)
@@ -2519,14 +2523,14 @@ let domain_of_sockaddr = Unix.domain_of_sockaddr
 let addr_r addr = ("addr", sexp_of_sockaddr addr)
 
 let socket_or_pair f ~domain ~kind ~protocol =
-  improve (fun () -> f ~domain ~kind ~protocol)
+  improve (fun () -> f domain kind protocol)
     (fun () -> [("domain", sexp_of_socket_domain domain);
                 ("kind", sexp_of_socket_type kind);
                 ("protocol", Int.sexp_of_t protocol)])
 ;;
 
-let socket = socket_or_pair Unix.socket
-let socketpair = socket_or_pair Unix.socketpair
+let socket = socket_or_pair UnixNoLabels.socket
+let socketpair = socket_or_pair UnixNoLabels.socketpair
 
 let accept fd =
   let fd, addr = unary_fd Unix.accept fd in
