@@ -234,24 +234,21 @@ let%test_module "Mac_address" =
         ]
 
     let gen_dash =
-      let open Quickcheck.Generator in
       let open Quickcheck.Generator.Let_syntax in
-      let two_hex_chars = String.gen' ~length:(of_list [2]) gen_hex_char in
-      let%bind pairs = List.gen' ~length:(`Exactly 6) two_hex_chars in
+      let two_hex_chars = String.gen_with_length 2 gen_hex_char in
+      let%bind pairs = List.gen_with_length 6 two_hex_chars in
       return (String.concat ~sep:"-" pairs)
 
     let gen_dotted =
-      let open Quickcheck.Generator in
       let open Quickcheck.Generator.Let_syntax in
-      let four_hex_chars = String.gen' ~length:(of_list [4]) gen_hex_char in
-      let%bind quads = List.gen' ~length:(`Exactly 3) four_hex_chars in
+      let four_hex_chars = String.gen_with_length 4 gen_hex_char in
+      let%bind quads = List.gen_with_length 3 four_hex_chars in
       return (String.concat ~sep:"." quads)
 
     let gen_colon =
-      let open Quickcheck.Generator in
       let open Quickcheck.Generator.Let_syntax in
-      let two_hex_chars = String.gen' ~length:(of_list [2]) gen_hex_char in
-      let%bind pairs = List.gen' ~length:(`Exactly 6) two_hex_chars in
+      let two_hex_chars = String.gen_with_length 2 gen_hex_char in
+      let%bind pairs = List.gen_with_length 6 two_hex_chars in
       return (String.concat ~sep:":" pairs)
 
     let seed = `Deterministic "mac tests"

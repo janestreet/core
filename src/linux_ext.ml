@@ -630,7 +630,7 @@ external get_ipv4_address_for_interface : string -> string =
   "linux_get_ipv4_address_for_interface" ;;
 
 let%test "lo interface addr is 127.0.0.1" =
-  (* This could false positive if the test box is misconfigured *)
+  (* This could be a false positive if the test box is misconfigured. *)
   get_ipv4_address_for_interface "lo" = "127.0.0.1"
 
 (* The C-stub is a simple pass-through of the linux SO_BINDTODEVICE semantics, wherein an

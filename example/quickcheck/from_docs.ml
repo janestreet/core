@@ -41,7 +41,7 @@ module Generator_examples = struct
   let (_ : _ Generator.t) =
     List.gen (Generator.tuple2 Int.gen Float.gen)
   let (_ : _ Generator.t) =
-    List.gen' (Generator.tuple2 Int.gen Float.gen) ~length:(`At_most 12)
+    List.gen_with_length 12 (Generator.tuple2 Int.gen Float.gen)
   let (_ : _ Generator.t) =
     Either.gen Int.gen Float.gen
   let (_ : _ Generator.t) =

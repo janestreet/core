@@ -51,7 +51,16 @@ let create
   try
     if lock fd then begin
       if close_on_exec then Unix.set_close_on_exec fd;
-      if unlink_on_exit then at_exit (fun () -> try Unix.unlink path with _ -> ());
+      let pid_when_lock_file_was_created = Unix.getpid () in
+      if unlink_on_exit then at_exit (fun () ->
+        (* Do not unlink if we are in a different process than the one
+           that created the lock file (e.g. a forked child)
+        *)
+        if (Pid.(=) pid_when_lock_file_was_created (Unix.getpid ()))
+        then begin
+          try Unix.unlink path with _ -> ()
+        end
+      );
       Unix.ftruncate fd ~len:Int64.zero;
       ignore (Unix.write fd ~buf:message ~pos:0 ~len:(String.length message));
       (* we truncated the file, so we need the region lock back.  We don't really

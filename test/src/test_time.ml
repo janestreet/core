@@ -23,12 +23,12 @@ let%expect_test "[to_string_iso8601] in local (which is set to NYC in tests)" =
 let%test_module "ensure_colon_in_offset" =
   (module struct
     let gen_digit_string ~length =
-      let open Quickcheck.Generator in
-      List.gen' ~length Char.gen_digit
-      >>| String.of_char_list
+      let open Quickcheck.Let_syntax in
+      let%bind len = length in
+      String.gen_with_length len Char.gen_digit
 
     let%test_unit "add colon" =
-      let gen = gen_digit_string ~length:(`Between_inclusive (3, 4)) in
+      let gen = gen_digit_string ~length:(Int.gen_incl 3 4) in
       Quickcheck.test gen ~sexp_of:String.sexp_of_t ~f:(fun digits ->
         assert (not (String.mem digits ':'));
         let output = ensure_colon_in_offset digits in
@@ -40,8 +40,8 @@ let%test_module "ensure_colon_in_offset" =
 
     let gen_offset_with_colon =
       let open Quickcheck.Generator in
-      let gen_prefix = gen_digit_string ~length:(`Between_inclusive (1, 2)) in
-      let gen_suffix = gen_digit_string ~length:(`Exactly 2) in
+      let gen_prefix = gen_digit_string ~length:(Int.gen_incl 1 2) in
+      let gen_suffix = gen_digit_string ~length:(return 2) in
       (tuple2 gen_prefix gen_suffix)
       >>| (fun (a, b) -> String.concat [a; ":"; b])
 

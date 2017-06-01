@@ -6,7 +6,7 @@ bug-reports: "https://github.com/janestreet/core/issues"
 dev-repo: "git+https://github.com/janestreet/core.git"
 license: "Apache-2.0"
 build: [
-  ["jbuilder" "build" "--only-packages" "core" "--root" "." "-j" jobs "@install"]
+  ["jbuilder" "build" "-p" name "-j" jobs]
 ]
 depends: [
   "base"

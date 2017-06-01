@@ -2036,9 +2036,8 @@ module Inet_addr0 = struct
         let of_string = Unix.inet_addr_of_string
         let to_string = Unix.string_of_inet_addr
 
-        (* Unix.inet_addr is represented as either a "struct in_addr"
-           or a "struct in6_addr" stuffed into an O'Caml string, so
-           polymorphic compare will work *)
+        (* Unix.inet_addr is represented as either a "struct in_addr" or a "struct
+           in6_addr" stuffed into an O'Caml string, so polymorphic compare will work. *)
         let compare = Pervasives.compare
         let hash_fold_t hash t = hash_fold_int hash (Hashtbl.hash t)
         let hash = [%hash: t]

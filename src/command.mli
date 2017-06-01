@@ -625,10 +625,12 @@ val group
 
 (** [exec ~summary ~path_to_exe] runs [exec] on the executable at [path_to_exe]. If
     [path_to_exe] is [`Absolute path] then [path] is executed without any further
-    qualification.  If it is [`Relative_to_me path] then [Filename.dirname
-    Sys.executable_name ^ "/" ^ path] is executed instead.  All of the usual caveats about
-    [Sys.executable_name] apply: specifically, it may only return an absolute path in
-    Linux.  On other operating systems it will return [Sys.argv.(0)].
+    qualification.  If it is [`Relative_to_me path] then
+    [Filename.dirname Sys.executable_name ^ "/" ^ path] is executed instead.
+    All of the usual caveats about [Sys.executable_name] apply: specifically, it may only
+    return an absolute path in Linux.  On other operating systems it will return
+    [Sys.argv.(0)].  If it is [`Relative_to_argv0 path] then [Sys.argv.(0) ^ "/" ^ path]
+    is executed.
 
     Care has been taken to support nesting multiple executables built with Command.  In
     particular, recursive help and autocompletion should work as expected.
@@ -645,7 +647,11 @@ val group
 val exec
   :  summary     : string
   -> ?readme     : (unit -> string)
-  -> path_to_exe : [ `Absolute of string | `Relative_to_me of string ]
+  -> path_to_exe :
+       [ `Absolute          of string
+       | `Relative_to_argv0 of string
+       | `Relative_to_me    of string
+       ]
   -> unit
   -> t
 

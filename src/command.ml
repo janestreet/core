@@ -2114,14 +2114,19 @@ let group ~summary ?readme ?preserve_subcommand_order ?body alist =
   Group {summary; readme; subcommands; body}
 
 let exec ~summary ?readme ~path_to_exe () =
-  let working_dir = Filename.dirname Sys.executable_name in
+  let working_dir =
+    Filename.dirname @@
+    match path_to_exe with
+    | `Absolute _ | `Relative_to_me _ -> Sys.executable_name
+    | `Relative_to_argv0 _ -> Sys.argv.(0)
+  in
   let path_to_exe =
     match path_to_exe with
     | `Absolute p        ->
       if not (Filename.is_absolute p)
       then failwith "Path passed to `Absolute must be absolute"
       else p
-    | `Relative_to_me p ->
+    | `Relative_to_me p | `Relative_to_argv0 p ->
       if not (Filename.is_relative p)
       then failwith "Path passed to `Relative_to_me must be relative"
       else p
