@@ -1367,6 +1367,7 @@ module Test (Iobuf : sig
 
       let to_bigstring_shared       = Expert.to_bigstring_shared
       let to_iovec_shared           = Expert.to_iovec_shared
+      let reinitialize_of_bigstring = Expert.reinitialize_of_bigstring
       let set_bounds_and_buffer     = Expert.set_bounds_and_buffer
       let set_bounds_and_buffer_sub = Expert.set_bounds_and_buffer_sub
 
@@ -1390,6 +1391,19 @@ module Test (Iobuf : sig
             Iobuf.Poke.char iobuf ~pos:1 'X';
             [%test_result: Bigstring.t] bstr1 ~expect:(Bigstring.of_string "X2345678");
             [%test_result: Bigstring.t] bstr0 ~expect:(Bigstring.of_string "XX23456789"))
+      ;;
+
+      let%test_unit "reinitialize_of_bigstring" =
+        let iobuf = Iobuf.of_string "1234" in
+        let bstr0 = buf iobuf in
+        [%test_result: Bigstring.t] bstr0 ~expect:(Bigstring.of_string "1234");
+        let bstr1 = Bigstring.of_string "abcd" in
+        reinitialize_of_bigstring iobuf bstr1 ~len:(Bigstring.length bstr1) ~pos:0;
+        assert (phys_equal bstr1 (buf iobuf));
+        Iobuf.Poke.char iobuf ~pos:0 'A';
+        [%test_result: Bigstring.t] bstr0 ~expect:(Bigstring.of_string "1234");
+        [%test_result: Bigstring.t] bstr1 ~expect:(Bigstring.of_string "Abcd");
+        [%test_result: string] (Iobuf.to_string iobuf) ~expect:"Abcd"
       ;;
 
       let%test "set_bounds_and_buffer from ro" =

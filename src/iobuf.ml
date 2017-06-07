@@ -933,6 +933,28 @@ module Expert = struct
     Unix.IOVec.of_bigstring t.buf ~pos:(t.lo + pos) ~len
   ;;
 
+  let reinitialize_of_bigstring t ~pos ~len buf =
+    let str_len = Bigstring.length buf in
+    if pos < 0 || pos > str_len then
+      raise_s [%message "Expert.reinitialize_of_bigstring got invalid pos"
+                          (pos     : int)
+                          (str_len : int)];
+    let max_len = str_len - pos in
+    if len < 0 || len > max_len then
+      raise_s [%message "Expert.reinitialize_of_bigstring got invalid len"
+                          (len     : int)
+                          (max_len : int)];
+    let lo = pos in
+    let hi = pos + len in
+    Fields.Direct.set_all_mutable_fields
+      t
+      ~buf
+      ~lo_min:lo
+      ~lo
+      ~hi
+      ~hi_max:hi
+  ;;
+
   let set_bounds_and_buffer ~src ~dst = set_bounds_and_buffer ~src ~dst
   let set_bounds_and_buffer_sub ~pos ~len ~src ~dst =
     (set_bounds_and_buffer_sub [@inlined]) ~pos ~len ~src ~dst

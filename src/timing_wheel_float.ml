@@ -10,8 +10,6 @@
    - [Time_ns.Span.of_span (Time_ns.Span.to_span time_ns_span) = time_ns_span]
 *)
 
-module Time_ns_in_this_directory = Time_ns
-
 open! Import
 open Import_time
 
@@ -32,7 +30,7 @@ module Level_bits = struct
 end
 
 module Time_ns = struct
-  include Time_ns_in_this_directory
+  include Core_time_ns
 
   let to_time_option = function
     | None -> None

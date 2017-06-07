@@ -1,8 +1,7 @@
 module Bigstring_in_this_directory = Bigstring
-module Time_ns_in_this_directory   = Time_ns
 open! Import
 module Bigstring = Bigstring_in_this_directory
-module Time_ns   = Time_ns_in_this_directory
+module Time_ns = Core_time_ns
 
 module File_descr = Core_unix.File_descr
 
@@ -822,37 +821,40 @@ module Epoll = struct
     | `In_use r -> r
   ;;
 
-  let use t ~f = f (in_use_exn t)
+  let find t file_descr =
+    let t = in_use_exn t in
+    Table.find t.flags_by_fd file_descr
+  ;;
 
-  let find t file_descr = use t ~f:(fun t -> Table.find t.flags_by_fd file_descr)
-
-  let find_exn t file_descr = use t ~f:(fun t -> Table.find_exn t.flags_by_fd file_descr)
+  let find_exn t file_descr =
+    let t = in_use_exn t in
+    Table.find_exn t.flags_by_fd file_descr
+  ;;
 
   let iter t ~f =
-    use t ~f:(fun t ->
-      Table.iteri t.flags_by_fd ~f:(fun ~key:file_descr ~data:flags ->
-        f file_descr flags))
+    let t = in_use_exn t in
+    Table.iteri t.flags_by_fd ~f:(fun ~key:file_descr ~data:flags ->
+      f file_descr flags)
   ;;
 
   let set t fd flags =
-    use t ~f:(fun t ->
-      let already_present = Table.mem t.flags_by_fd fd in
-      Table.set t.flags_by_fd ~key:fd ~data:flags;
-      if already_present
-      then epoll_ctl_mod t.epollfd fd flags
-      else epoll_ctl_add t.epollfd fd flags);
+    let t = in_use_exn t in
+    let already_present = Table.mem t.flags_by_fd fd in
+    Table.set t.flags_by_fd ~key:fd ~data:flags;
+    if already_present
+    then epoll_ctl_mod t.epollfd fd flags
+    else epoll_ctl_add t.epollfd fd flags
   ;;
 
   let remove t fd =
-    use t ~f:(fun t ->
-      if Table.mem t.flags_by_fd fd then epoll_ctl_del t.epollfd fd;
-      Table.remove t.flags_by_fd fd)
+    let t = in_use_exn t in
+    if Table.mem t.flags_by_fd fd then epoll_ctl_del t.epollfd fd;
+    Table.remove t.flags_by_fd fd
   ;;
 
   external epoll_wait : File_descr.t -> ready_events -> int -> int = "linux_epoll_wait"
 
   let wait_internal t ~timeout_ms =
-    (* performance hack: [use] requires a closure allocation. *)
     let t = in_use_exn t in
     (* We clear [num_ready_events] because [epoll_wait] will invalidate [ready_events],
        and we don't want another thread to observe [t] and see junk. *)
@@ -895,7 +897,6 @@ module Epoll = struct
   ;;
 
   let fold_ready t ~init ~f =
-    (* performance hack: [use] requires a closure allocation. *)
     let t = in_use_exn t in
     let ac = ref init in
     for i = 0 to t.num_ready_events - 1 do
@@ -905,7 +906,6 @@ module Epoll = struct
   ;;
 
   let iter_ready t ~f =
-    (* performance hack: [use] requires a closure allocation. *)
     let t = in_use_exn t in
     for i = 0 to t.num_ready_events - 1 do
       f (epoll_readyfd t.ready_events i) (epoll_readyflags t.ready_events i)
@@ -955,8 +955,7 @@ let%test_module _ =
       protectx ~finally:Epoll.close ~f
         ((Or_error.ok_exn Epoll.create) ~num_file_descrs:1024 ~max_ready_events:256)
 
-    let%test_unit "epoll errors" = with_epoll ~f:(fun t ->
-      let tmp = "temporary-file-for-testing-epoll" in
+    let%test_unit "epoll errors" = with_epoll ~f:(fun t ->      let tmp = "temporary-file-for-testing-epoll" in
       let fd = Unix.openfile tmp ~mode:[Unix.O_CREAT; Unix.O_WRONLY] in
       (* Epoll does not support ordinary files, and so should fail if you ask it to watch
          one. *)

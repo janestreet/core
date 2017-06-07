@@ -477,6 +477,7 @@ end
 include Stable.V1
 
 module F = Float
+
 module Time_ = struct
   module Span = struct
     include Time.Span
@@ -492,6 +493,24 @@ module Time_ = struct
   let of_float f = of_span_since_epoch (Span.of_sec f)
 end
 
+(* In [Time_ns] (and its associated [Span] and [Ofday] modules), we convert to floats in
+   terms of ns instead of seconds.  This saves a division/multiplication.  It also avoids
+   the small loss of precision that comes from these unnecessary float ops. *)
+module Time_ns_ = struct
+  module Span = struct
+    include Core_time_ns.Span
+
+    let to_float = to_ns
+    let of_float = of_ns
+  end
+
+  include (Core_time_ns : (module type of (struct include Core_time_ns end))
+           with module Span := Span)
+
+  let to_float t = Span.to_ns (to_span_since_epoch t)
+  let of_float f = of_span_since_epoch (Span.of_ns f)
+end
+
 module Ofday_ = struct
   include Time_.Ofday
 
@@ -499,11 +518,21 @@ module Ofday_ = struct
   let of_float s = of_span_since_start_of_day (Time.Span.of_sec s)
 end
 
-module Time  = Make (Time_)  (F)
-module Ofday = Make (Ofday_) (F)
-module Span  = Make (Time_.Span)  (F)
-module Float = Make (Float) (F)
-module Int   = Make (Int)   (F)
+module Ofday_ns_ = struct
+  include Time_ns_.Ofday
+
+  let to_float t = to_span_since_start_of_day t |> Time_ns.Span.to_sec
+  let of_float s = of_span_since_start_of_day_exn (Time_ns.Span.of_sec s)
+end
+
+module Time     = Make (Time_)         (F)
+module Ofday    = Make (Ofday_)        (F)
+module Span     = Make (Time_.Span)    (F)
+module Time_ns  = Make (Time_ns_)      (F)
+module Ofday_ns = Make (Ofday_ns_)     (F)
+module Span_ns  = Make (Time_ns_.Span) (F)
+module Float    = Make (Float)         (F)
+module Int      = Make (Int)           (F)
 
 let%test_module _ =
   (module struct

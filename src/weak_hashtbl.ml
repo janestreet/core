@@ -35,11 +35,7 @@ let reclaim_space_for_keys_with_unused_data t =
 
 let get_entry t key =
   Hashtbl.find_or_add t.entry_by_key key
-    ~default:(fun () ->
-      Weak_pointer.create ()
-        ~thread_safe_after_cleared:(fun () ->
-          Thread_safe_queue.enqueue t.keys_with_unused_data key;
-          t.thread_safe_run_when_unused_data ()));
+    ~default:(fun () -> Weak_pointer.create ());
 ;;
 
 let mem t key =
@@ -50,13 +46,20 @@ let mem t key =
 
 let key_is_using_space t key = Hashtbl.mem t.entry_by_key key
 
-let replace t ~key ~data = Weak_pointer.set (get_entry t key) data
+let set_data t key entry data =
+  Weak_pointer.set entry data;
+  Gc.Expert.add_finalizer_last data (fun () ->
+    Thread_safe_queue.enqueue t.keys_with_unused_data key;
+    t.thread_safe_run_when_unused_data ());
+;;
+
+let replace t ~key ~data = set_data t key (get_entry t key) data
 
 let add_exn t ~key ~data =
   let entry = get_entry t key in
   if Weak_pointer.is_some entry
   then failwiths "Weak_hashtbl.add_exn of key in use" t [%sexp_of: (_, _) t];
-  Weak_pointer.set entry data;
+  set_data t key entry data;
 ;;
 
 let find t key =
@@ -71,6 +74,6 @@ let find_or_add t key ~default =
   | Some v -> v
   | None ->
     let data = default () in
-    Weak_pointer.set entry data;
+    set_data t key entry data;
     data
 ;;

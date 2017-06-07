@@ -823,6 +823,13 @@ module Make () = struct
         (fun () -> Expert.to_iovec_shared ?pos ?len t)
     ;;
 
+    let reinitialize_of_bigstring t ~pos ~len buf =
+      debug "reinitialize_of_bigstring" [t] (`pos pos, `len len)
+        [%sexp_of: [`pos of int] * [`len of int]]
+        sexp_of_unit
+        (fun () -> Expert.reinitialize_of_bigstring t ~pos ~len buf)
+    ;;
+
     let set_bounds_and_buffer_sub ~pos ~len ~src ~dst =
       debug "sub" [src] (`pos pos, `len len)
         [%sexp_of: [ `pos of int ] * [ `len of int ]]

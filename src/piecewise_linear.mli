@@ -24,11 +24,20 @@ module Make_invertible (Key : Float_like) (Value : Float_like) : S_invertible
   with type key = Key.t
   with type value = Value.t
 
-module Ofday : S with type key = Time.Ofday.t with type value = float
-module Span  : S with type key = Time.Span.t  with type value = float
-module Time  : S with type key = Time.t       with type value = float
-module Float : S with type key = float        with type value = float
-module Int   : S with type key = int          with type value = float
+(** Sexp conversion of many of the following is lossy, because sexp conversion in the
+    underlying modules is lossy. *)
+
+module Ofday    : S with type key = Time.Ofday.t         with type value = float
+module Span     : S with type key = Time.Span.t          with type value = float
+module Time     : S with type key = Time.t               with type value = float
+module Ofday_ns : S with type key = Core_time_ns.Ofday.t with type value = float
+module Span_ns  : S with type key = Core_time_ns.Span.t  with type value = float
+
+(** Since keys are represented as floats internally, the precision of the keys is about
+    238ns (from early 2004 to early 2038). *)
+module Time_ns  : S with type key = Core_time_ns.t       with type value = float
+module Float    : S with type key = float                with type value = float
+module Int      : S with type key = int                  with type value = float
 
 (** Note that applications of the following functors are only as stable
     as [Key] and [Value]. *)

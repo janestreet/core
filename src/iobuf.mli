@@ -521,6 +521,10 @@ module Expert: sig
   val to_bigstring_shared : ?pos:int -> ?len:int -> (_, _) t -> Bigstring.t
   val to_iovec_shared     : ?pos:int -> ?len:int -> (_, _) t -> Bigstring.t Unix.IOVec.t
 
+  (** [reinitialize_of_bigstring t bigstring] reinitializes [t] with backing [bigstring],
+      and the window and limits specified starting at [pos] and of length [len]. *)
+  val reinitialize_of_bigstring : (_, _) t -> pos:int -> len:int -> Bigstring.t -> unit
+
   (** These versions of [set_bounds_and_buffer] allow [~src] to be read-only.  [~dst] will
       be writable through [~src] aliases even though the type does not reflect this! *)
   val set_bounds_and_buffer : src : ('data, _) t -> dst : ('data, seek) t -> unit

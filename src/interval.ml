@@ -1,5 +1,4 @@
 
-module Time_ns_in_this_directory = Time_ns
 open! Import
 open! Int.Replace_polymorphic_compare
 
@@ -61,7 +60,7 @@ module Stable = struct
     module Time_ns = struct
       module T = struct
         type t =
-          Time_ns_in_this_directory.Stable.V1.t interval [@@deriving sexp, bin_io, compare]
+          Core_time_ns.Stable.V1.t interval [@@deriving sexp, bin_io, compare]
       end
       include T
       include Comparator.Stable.V1.Make (T)
@@ -449,7 +448,7 @@ module type S_time = Interval_intf.S_time
 
 module Float    = Make (Float)
 module Ofday    = Make (Core_time.Ofday)
-module Ofday_ns = Make (Time_ns_in_this_directory.Ofday)
+module Ofday_ns = Make (Core_time_ns.Ofday)
 
 module Int = struct
   include Make(Int)
@@ -840,4 +839,4 @@ module Make_time (Time : Time_bound) = struct
 end
 
 module Time    = Make_time(Core_time)
-module Time_ns = Make_time(Time_ns_in_this_directory)
+module Time_ns = Make_time(Core_time_ns)

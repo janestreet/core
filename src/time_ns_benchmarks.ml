@@ -27,9 +27,8 @@
    └──────────────────────────────────────────────────────────────────────────────┴────────────┴─────────┴──────────┴──────────┴────────────┘
 *)
 
-module Time_ns_in_this_directory = Time_ns
 open! Import
-module Time_ns = Time_ns_in_this_directory
+module Time_ns = Core_time_ns
 
 let%bench "Time_ns.now" = Time_ns.now ()
 let%bench "Time_ns.Ofday.local_now" = Time_ns.Ofday.local_now ()

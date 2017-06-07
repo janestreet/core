@@ -364,6 +364,8 @@ module type S = sig
     val close : t -> unit
 
     (** map operations *)
+
+    (** [find] raises in the case that [t] is closed. *)
     val find     : t -> File_descr.t -> Flags.t option
     val find_exn : t -> File_descr.t -> Flags.t
     val set      : t -> File_descr.t -> Flags.t -> unit

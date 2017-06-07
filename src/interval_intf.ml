@@ -1,7 +1,6 @@
-module Time_ns_in_this_directory = Time_ns
 open! Import
 open Import_time
-module Time_ns = Time_ns_in_this_directory
+module Time_ns = Core_time_ns
 module Zone = Time.Zone
 
 module type Gen = sig
