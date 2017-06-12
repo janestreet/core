@@ -2040,7 +2040,7 @@ module Inet_addr0 = struct
            in6_addr" stuffed into an O'Caml string, so polymorphic compare will work. *)
         let compare = Pervasives.compare
         let hash_fold_t hash t = hash_fold_int hash (Hashtbl.hash t)
-        let hash = [%hash: t]
+        let hash = Ppx_hash_lib.Std.Hash.of_fold hash_fold_t
       end
       module T1 = struct
         include T0

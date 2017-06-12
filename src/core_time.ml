@@ -271,7 +271,7 @@ module Make (Time0 : Time0_intf.S) (Time : Time_intf.S with module Time := Time0
            name and different transitions. *)
         let compare t1 t2 = String.compare (to_string t1) (to_string t2)
         let hash_fold_t state t = String.hash_fold_t state (to_string t)
-        let hash = [%hash: t]
+        let hash = Ppx_hash_lib.Std.Hash.of_fold hash_fold_t
 
         include (Binable.Stable.Of_binable.V1 (String) (struct
                    type nonrec t = t

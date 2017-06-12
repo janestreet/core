@@ -30,18 +30,14 @@ let invariant ?(expected = Ok ()) string =
   match Or_error.try_with (fun () -> invariant (of_string string)), expected with
   | Ok _, Ok _ | Error _, Error _ -> ()
   | Ok _, Error _ ->
-    require [%here] false
-      ~if_false_then_print_s:
-        (lazy [%message
-          "[of_string] + [invariant] succeeded unexpectedly"
-            (string : string)])
+    print_cr [%here] [%message
+      "[of_string] + [invariant] succeeded unexpectedly"
+        (string : string)]
   | Error error, Ok _ ->
-    require [%here] false
-      ~if_false_then_print_s:
-        (lazy [%message
-          "[of_string] + [invariant] failed unexpectedly"
-            (string : string)
-            (error  : Error.t)])
+    print_cr [%here] [%message
+      "[of_string] + [invariant] failed unexpectedly"
+        (string : string)
+        (error  : Error.t)]
 ;;
 
 let test_all_matching_addresses cidr_string expected_strings =
