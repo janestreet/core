@@ -128,11 +128,13 @@ let invariant _ _ t =
 let bad_range ~pos ~len t =
   fail t "Iobuf got invalid range" (`pos pos, `len len)
     [%sexp_of: [ `pos of int ] * [ `len of int ]];
+[@@inline never]
 ;;
 
 let check_range t ~pos ~len =
   if pos < 0 || len < 0 || len > length t - pos then
     bad_range ~pos ~len t;
+[@@inline always]
 ;;
 
 let of_bigstring ?pos ?len buf =
@@ -212,6 +214,7 @@ let resize t ~len =
   let hi = t.lo + len in
   if hi > t.hi_max then bad_range t ~len ~pos:0;
   t.hi <- hi;
+[@@inline always]
 ;;
 
 let protect_window_and_bounds t ~f =
@@ -293,7 +296,7 @@ let unsafe_buf_pos t ~pos = t.lo + pos
 let buf_pos_exn t ~pos ~len = check_range t ~pos ~len; unsafe_buf_pos t ~pos
 
 let unsafe_advance t n = t.lo <- t.lo + n
-let advance t len = check_range t ~len ~pos:0; unsafe_advance t len
+let advance t len = check_range t ~len ~pos:0; unsafe_advance t len [@@inline always]
 
 external bigstring_unsafe_get : Bigstring.t -> pos:int -> char
   = "%caml_ba_unsafe_ref_1"
@@ -409,6 +412,8 @@ module Consume = struct
     constraint 'd = [> read ]
 
   let uadv t n x = unsafe_advance t n; x
+  [@@inline always]
+
   let pos t len = buf_pos_exn t ~pos:0 ~len
 
   let tail_padded_fixed_string ~padding ~len t =
@@ -1139,7 +1144,7 @@ module Unsafe = struct
 
     type ('a, 'd, 'w) t = ('a, 'd, 'w) Consume.t
 
-    let uadv t n x = unsafe_advance t n; x
+    let uadv t n x = unsafe_advance t n; x [@@inline always]
     let upos t = unsafe_buf_pos t ~pos:0
 
     let tail_padded_fixed_string ~padding ~len t =

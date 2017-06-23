@@ -63,7 +63,7 @@ module File_descr = struct
     let compare t1 t2 = Int.compare (to_int t1) (to_int t2)
   end
   include M
-  include (Hashable.Make (M))
+  include (Hashable.Make_and_derive_hash_fold_t (M))
   include (Binable.Of_stringable (M))
 
   (* Given that [to_int] and [of_int] are set to "%identity", this is considerably more

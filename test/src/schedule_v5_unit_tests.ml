@@ -1,8 +1,10 @@
+(* Please ensure that any applicable test changes are reflected both here and in
+   Schedule_v4_deprecated (and associated tests) if appropriate. *)
 open! Core
 
 let%test_module "Schedule" =
   (module struct
-    open Schedule
+    open Schedule_v5
 
     let next_representable_time t =
       Time.to_span_since_epoch t
@@ -20,15 +22,18 @@ let%test_module "Schedule" =
       |> Time.of_span_since_epoch
     ;;
 
-    let zone = Time.Zone.utc
-    let date = Date.create_exn
-    let time = Time.of_date_ofday ~zone
+    let zone  = Time.Zone.utc
+    let date  = Date.create_exn
+    let time  = Time.of_date_ofday ~zone
     let ofday = Time.Ofday.create
 
-    type testing =
-      | Time of Time.t
-      | Next_time of Time.t
-      | Prev_time of Time.t
+    module Testing = struct
+      type t =
+        | Time of Time.t
+        | Next_time of Time.t
+        | Prev_time of Time.t
+      [@@deriving sexp_of]
+    end
 
     (* The following schedules are tested to ensure that they behave as expected for
        includes.  The triples should contain (schedule, included times, excluded times).
@@ -42,7 +47,90 @@ let%test_module "Schedule" =
        - the end of the schedule
        - the ulp after the schedule ends
     *)
-    let includes_schedules =
+
+    let zoned_includes_schedules () =
+      let open Testing in
+      let zone1 = Time.Zone.utc in
+      let zone2 = Time.Zone.find_exn "America/New_York" in
+      let zone3 = Time.Zone.find_exn "Asia/Hong_Kong" in
+      [ Zoned_between ( (Inclusive, zone1, Time.Ofday.create ~hr:9 ())
+                      , (Exclusive, zone1, Time.Ofday.create ~hr:17 ()))
+      , [ Time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:09 ~min:00 ~sec:00 ()))
+        ; Time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:09 ~min:05 ~sec:00 ()))
+        ; Time (time (date ~y:2014 ~m:Jan ~d:01) (ofday ~hr:13 ~min:05 ~sec:00 ()))
+        ; Prev_time (time (date ~y:2014 ~m:Jan ~d:01) (ofday ~hr:17 ~min:00 ~sec:00 ())) ]
+      , [ Time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:03 ~min:05 ~sec:00 ()))
+        ; Time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:17 ~min:00 ~sec:00 ()))
+        ; Time (time (date ~y:2014 ~m:Jan ~d:01) (ofday ~hr:18 ~min:05 ~sec:00 ()))
+        ; Prev_time (time (date ~y:2014 ~m:Jan ~d:01) (ofday ~hr:09 ~min:00 ~sec:00 ())) ]
+      ; Zoned_between ( (Inclusive, zone2, Time.Ofday.create ~hr:18 ())
+                      , (Exclusive, zone3, Time.Ofday.create ~hr:14 ()))
+      , [ Time (Time.of_date_ofday ~zone:zone2 (date ~y:2014 ~m:Nov ~d:17)
+                  (ofday ~hr:18 ~min:00 ~sec:00 ()))
+        ; Prev_time (Time.of_date_ofday ~zone:zone3 (date ~y:2014 ~m:Nov ~d:18)
+                       (ofday ~hr:14 ~min:00 ~sec:00 ()))
+        ; Time (Time.of_date_ofday ~zone:zone2 (date ~y:2014 ~m:Nov ~d:17)
+                  (ofday ~hr:22 ~min:00 ~sec:00 ()))
+        ; Time (Time.of_date_ofday ~zone:zone2 (date ~y:2014 ~m:Nov ~d:17)
+                  (ofday ~hr:00 ~min:30 ~sec:00 ()))
+        ]
+      , [ Prev_time (Time.of_date_ofday ~zone:zone2 (date ~y:2014 ~m:Nov ~d:17)
+                       (ofday ~hr:18 ~min:00 ~sec:00 ()))
+        ; Time (Time.of_date_ofday ~zone:zone3 (date ~y:2014 ~m:Nov ~d:18)
+                  (ofday ~hr:14 ~min:00 ~sec:00 ()))
+        ; Time (Time.of_date_ofday ~zone:zone2 (date ~y:2014 ~m:Nov ~d:18)
+                  (ofday ~hr:14 ~min:00 ~sec:00 ()))
+        ; Time (Time.of_date_ofday ~zone:zone3 (date ~y:2014 ~m:Nov ~d:18)
+                  (ofday ~hr:16 ~min:00 ~sec:00 ()))
+        ]
+      ; Zoned_between ( (Inclusive, zone1, Time.Ofday.create ~hr:17 ())
+                      , (Exclusive, zone1, Time.Ofday.create ~hr:5 ()))
+      , [ Time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:18 ~min:00 ~sec:00 ()))
+        ; Time (time (date ~y:2014 ~m:Nov ~d:18) (ofday ~hr:2 ~min:00 ~sec:00 ()))
+        ; Time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:17 ~min:00 ~sec:00 ()))
+        ; Prev_time (time (date ~y:2014 ~m:Nov ~d:18) (ofday ~hr:5 ~min:00 ~sec:00 ()))
+        ]
+      , [ Time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:16 ~min:00 ~sec:00 ()))
+        ; Prev_time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:17 ~min:00 ~sec:00 ()))
+        ; Next_time (time (date ~y:2014 ~m:Nov ~d:18) (ofday ~hr:5 ~min:00 ~sec:00 ()))
+        ]
+      ; Zoned_between ( (Exclusive, zone1, Time.Ofday.create ~hr:9 ())
+                      , (Inclusive, zone1, Time.Ofday.create ~hr:9 ()))
+      , [ Time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:09 ~min:00 ~sec:00 ()))
+        ; Prev_time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:9 ~min:00 ~sec:00 ()))
+        ; Next_time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:9 ~min:00 ~sec:00 ())) ]
+      , []
+      ; Zoned_between ( (Inclusive, zone1, Time.Ofday.create ~hr:9 ())
+                      , (Exclusive, zone1, Time.Ofday.create ~hr:9 ()))
+      , [ Time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:09 ~min:00 ~sec:00 ()))
+        ; Prev_time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:9 ~min:00 ~sec:00 ()))
+        ; Next_time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:9 ~min:00 ~sec:00 ())) ]
+      , []
+      ; Zoned_between ( (Inclusive, zone1, Time.Ofday.create ~hr:9 ())
+                      , (Inclusive, zone1, Time.Ofday.create ~hr:9 ()))
+      , [ Time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:09 ~min:00 ~sec:00 ())) ]
+      , [ Time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:03 ~min:05 ~sec:00 ()))
+        ; Prev_time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:9 ~min:00 ~sec:00 ()))
+        ; Next_time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:9 ~min:00 ~sec:00 ())) ]
+      ; Zoned_between ( (Exclusive, zone1, Time.Ofday.create ~hr:9 ())
+                      , (Exclusive, zone1, Time.Ofday.create ~hr:9 ()))
+      , []
+      , [ Time      (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:9 ()))
+        ; Prev_time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:9 ()))
+        ; Next_time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:9 ())) ]
+      ; Not (Zoned_between ( (Inclusive, zone1, Time.Ofday.create ~hr:9 ())
+                           , (Exclusive, zone1, Time.Ofday.create ~hr:17 ())))
+      , [ Time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:03 ~min:05 ~sec:00 ()))
+        ; Time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:17 ~min:00 ~sec:00 ()))
+        ; Time (time (date ~y:2014 ~m:Jan ~d:01) (ofday ~hr:18 ~min:05 ~sec:00 ())) ]
+      , [ Time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:09 ~min:00 ~sec:00 ()))
+        ; Time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:09 ~min:05 ~sec:00 ()))
+        ; Time (time (date ~y:2014 ~m:Jan ~d:01) (ofday ~hr:13 ~min:05 ~sec:00 ())) ]
+      ]
+    ;;
+
+    let unzoned_includes_schedules =
+      let open Testing in
       [ Secs [ 30 ]
       , [ Time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:20 ~min:04 ~sec:30 ()))
         ; Time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:20 ~min:05 ~sec:30 ~ms:0123 ()))
@@ -131,7 +219,19 @@ let%test_module "Schedule" =
       , [ Time (time (date ~y:2014 ~m:Nov ~d:16) (ofday ~hr:03 ~min:05 ~sec:00 ()))
         ; Time (time (date ~y:2014 ~m:Jan ~d:01) (ofday ~hr:18 ~min:05 ~sec:00 ()))
         ; Prev_time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:24 ~min:00 ~sec:00 ())) ]
-      ; Between ((Inclusive, Time.Ofday.create ~hr:9 ()), (Exclusive, Time.Ofday.create ~hr:17 ()))
+      ; Between ( (Inclusive, Time.Ofday.create ~hr:17 ())
+                , (Exclusive, Time.Ofday.create ~hr:5 ()))
+      , [ Time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:18 ~min:00 ~sec:00 ()))
+        ; Time (time (date ~y:2014 ~m:Nov ~d:18) (ofday ~hr:2 ~min:00 ~sec:00 ()))
+        ; Time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:17 ~min:00 ~sec:00 ()))
+        ; Prev_time (time (date ~y:2014 ~m:Nov ~d:18) (ofday ~hr:5 ~min:00 ~sec:00 ()))
+        ]
+      , [ Time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:16 ~min:00 ~sec:00 ()))
+        ; Prev_time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:17 ~min:00 ~sec:00 ()))
+        ; Time (time (date ~y:2014 ~m:Nov ~d:18) (ofday ~hr:5 ~min:00 ~sec:00 ()))
+        ]
+      ; Between ( (Inclusive, Time.Ofday.create ~hr:9 ())
+                , (Exclusive, Time.Ofday.create ~hr:17 ()))
       , [ Time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:09 ~min:00 ~sec:00 ()))
         ; Time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:09 ~min:05 ~sec:00 ()))
         ; Time (time (date ~y:2014 ~m:Jan ~d:01) (ofday ~hr:13 ~min:05 ~sec:00 ()))
@@ -140,17 +240,20 @@ let%test_module "Schedule" =
         ; Time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:17 ~min:00 ~sec:00 ()))
         ; Time (time (date ~y:2014 ~m:Jan ~d:01) (ofday ~hr:18 ~min:05 ~sec:00 ()))
         ; Prev_time (time (date ~y:2014 ~m:Jan ~d:01) (ofday ~hr:09 ~min:00 ~sec:00 ())) ]
-      ; Between ((Exclusive, Time.Ofday.create ~hr:9 ()), (Inclusive, Time.Ofday.create ~hr:9 ()))
-      , []
+      ; Between ( (Exclusive, Time.Ofday.create ~hr:9 ())
+                , (Inclusive, Time.Ofday.create ~hr:9 ()))
       , [ Time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:09 ~min:00 ~sec:00 ()))
         ; Prev_time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:9 ~min:00 ~sec:00 ()))
         ; Next_time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:9 ~min:00 ~sec:00 ())) ]
-      ; Between ((Inclusive, Time.Ofday.create ~hr:9 ()), (Exclusive, Time.Ofday.create ~hr:9 ()))
       , []
+      ; Between ( (Inclusive, Time.Ofday.create ~hr:9 ())
+                , (Exclusive, Time.Ofday.create ~hr:9 ()))
       , [ Time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:09 ~min:00 ~sec:00 ()))
         ; Prev_time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:9 ~min:00 ~sec:00 ()))
         ; Next_time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:9 ~min:00 ~sec:00 ())) ]
-      ; Between ((Inclusive, Time.Ofday.create ~hr:9 ()), (Inclusive, Time.Ofday.create ~hr:9 ()))
+      , []
+      ; Between ( (Inclusive, Time.Ofday.create ~hr:9 ())
+                , (Inclusive, Time.Ofday.create ~hr:9 ()))
       , [ Time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:09 ~min:00 ~sec:00 ())) ]
       , [ Time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:03 ~min:05 ~sec:00 ()))
         ; Prev_time (time (date ~y:2014 ~m:Nov ~d:17) (ofday ~hr:9 ~min:00 ~sec:00 ()))
@@ -259,17 +362,23 @@ let%test_module "Schedule" =
     ;;
 
     let%test_unit "Test that includes does the right thing for every branch in a simple case" =
-      let get_time = function
+      let get_time (t : Testing.t) =
+        match t with
         | Time      time -> time
         | Next_time time -> next_representable_time time
         | Prev_time time -> prev_representable_time time
       in
-      List.iteri includes_schedules
+      let zoned_includes_schedules =
+        List.rev_append
+          (zoned_includes_schedules ())
+          (List.map unzoned_includes_schedules ~f:(fun (schedule, matches, fails) ->
+             In_zone (zone, schedule), matches, fails))
+      in
+      List.iteri zoned_includes_schedules
         ~f:(fun i (schedule, matches, fails) ->
-          let schedule = In_zone (zone, schedule) in
-          let not_schedule = Not schedule in
-          let schedule_with_tag = Tag(i, schedule) in
-          let not_schedule_with_tag = Tag(i, not_schedule) in
+          let not_schedule          = Not schedule in
+          let schedule_with_tag     = Tag (i, schedule) in
+          let not_schedule_with_tag = Tag (i, not_schedule) in
           List.iter matches ~f:(fun t ->
             let time = get_time t in
             try
@@ -281,10 +390,12 @@ let%test_module "Schedule" =
               | `Not_included     -> assert false
               end
             with
-            | _ ->
-              failwithf "%s failed inclusion tests on %s"
+            | exn ->
+              failwithf !"%s failed inclusion tests (%s) on %s : %{Exn}"
                 (Time.to_string_abs ~zone time)
+                (Sexp.to_string_hum (Testing.sexp_of_t t))
                 (to_string_zoned schedule ~string_of_tag:Int.to_string)
+                exn
                 ());
           List.iter fails ~f:(fun t ->
             let time = get_time t in
@@ -297,10 +408,12 @@ let%test_module "Schedule" =
               | `Not_included     -> assert false
               end
             with
-            | _ ->
-              failwithf "%s failed non-inclusion tests on %s"
+            | exn ->
+              failwithf !"%s failed non-inclusion test (%s) on %s : %{Exn}"
                 (Time.to_string_abs ~zone time)
+                (Sexp.to_string_hum (Testing.sexp_of_t t))
                 (to_string_zoned schedule ~string_of_tag:Int.to_string)
+                exn
                 ()))
     ;;
 
@@ -318,7 +431,7 @@ let%test_module "Schedule" =
       let start_time = Time.of_string "2014-11-16 15:54:00Z" in
       let ( `Started_in_range (_, sequence)
           | `Started_out_of_range sequence ) =
-        Schedule.to_endless_sequence schedule ~start_time ~emit:Transitions
+        to_endless_sequence schedule ~start_time ~emit:Transitions
       in
       [%test_result: [ [ `Start | `Stop ] Event.transition | Event.no_change ] list]
         ~expect:expected
@@ -595,7 +708,7 @@ let%test_module "Schedule" =
       let start_time = Time.of_string "2014-11-15 8:55:00Z" in
       let ( `Started_in_range (_, sequence)
           | `Started_out_of_range sequence ) =
-        Schedule.to_endless_sequence schedule ~start_time ~emit:Transitions
+        to_endless_sequence schedule ~start_time ~emit:Transitions
       in
       [%test_result: [ [ `Start | `Stop ] Event.transition | Event.no_change ] list]
         ~expect:expected
@@ -647,7 +760,7 @@ let%test_module "Schedule" =
       let start_time = Time.of_string "2015-06-07 22:00:00Z" in
       let ( `Started_in_range (_, sequence)
           | `Started_out_of_range sequence ) =
-        Schedule.to_endless_sequence schedule ~start_time ~emit:(Transitions_and_tag_changes Int.equal)
+        to_endless_sequence schedule ~start_time ~emit:(Transitions_and_tag_changes Int.equal)
       in
       [%test_result: [ int Event.transition | Event.no_change | int Event.tag_change ] list]
         ~expect:expected
@@ -699,7 +812,7 @@ let%test_module "Schedule" =
       let start_time = Time.of_string "2015-06-07 22:00:00Z" in
       let ( `Started_in_range (_, sequence)
           | `Started_out_of_range sequence ) =
-        Schedule.to_endless_sequence schedule ~start_time ~emit:(Transitions_and_tag_changes Int.equal)
+        to_endless_sequence schedule ~start_time ~emit:(Transitions_and_tag_changes Int.equal)
       in
       [%test_result: [ int Event.transition | Event.no_change | int Event.tag_change ] list]
         ~expect:expected
@@ -757,7 +870,7 @@ let%test_module "Schedule" =
       let start_time = Time.of_string "2014-11-15 15:54:00Z" in
       let ( `Started_in_range (_, sequence)
           | `Started_out_of_range sequence ) =
-        Schedule.to_endless_sequence schedule ~start_time ~emit:Transitions
+        to_endless_sequence schedule ~start_time ~emit:Transitions
       in
       [%test_result: [ [ `Start | `Stop ] Event.transition | Event.no_change ] list]
         ~expect:expected
@@ -783,9 +896,9 @@ let%test_module "Schedule" =
           (Time.Ofday.create ~hr ~min:0 ~sec:0 ())
       in
       let leave ~d ~hr = next_representable_time (enter ~d ~hr) in
-      let (expected : [ Schedule.Event.no_change
-                      | Tag.t Schedule.Event.transition
-                      | Tag.t Schedule.Event.tag_change
+      let (expected : [ Event.no_change
+                      | Tag.t Event.transition
+                      | Tag.t Event.tag_change
                       ] list)
         =
         [ `No_change_until_at_least (`Out_of_range, !!"2014-11-16 15:54:00Z")
@@ -838,16 +951,16 @@ let%test_module "Schedule" =
       let start_time = Time.of_string "2014-11-15 15:54:00Z" in
       let ( `Started_in_range (_, sequence)
           | `Started_out_of_range sequence ) =
-        Schedule.to_endless_sequence schedule
+        to_endless_sequence schedule
           ~start_time
           ~emit:(Transitions_and_tag_changes (fun t1 t2 -> Tag.compare t1 t2 = 0))
       in
       assert (Set.equal
-                (Schedule.all_tags schedule ~tag_comparator:Tag.comparator)
+                (all_tags schedule ~tag_comparator:Tag.comparator)
                 (Tag.Set.of_list [`Open; `Continuous; `Close]));
-      [%test_result: [ Schedule.Event.no_change
-                     | Tag.t Schedule.Event.transition
-                     | Tag.t Schedule.Event.tag_change
+      [%test_result: [ Event.no_change
+                     | Tag.t Event.transition
+                     | Tag.t Event.tag_change
                      ] list]
         ~expect:expected
         (Sequence.to_list (Sequence.take sequence 21))
@@ -1163,7 +1276,7 @@ let%test_module "Schedule" =
     let%test_unit "Regression test: this does not crash" =
       let time = Time.of_string "2016-07-27 00:00:00.000000Z" in
       let _ : Time.t option =
-        Schedule.next_enter_between Schedule.(In_zone (Time.Zone.utc, Hours [])) time
+        next_enter_between (In_zone (Time.Zone.utc, Hours [])) time
           (Time.add time (Time.Span.of_day 1.))
       in
       ()
@@ -1173,8 +1286,8 @@ let%test_module "Schedule" =
     let%test_unit "Test 24:00:00 handling for Hours [0]" =
       let time = Time.of_string "2016-07-26 24:00:00.000000Z" in
       let next =
-        Schedule.next_enter_between
-          Schedule.(In_zone (Time.Zone.utc, Hours [0]))
+        next_enter_between
+          (In_zone (Time.Zone.utc, Hours [0]))
           time
           (Time.add time (Time.Span.of_hr 5.))
       in
@@ -1219,14 +1332,14 @@ let%test_module "Schedule" =
     let%test_unit "exclusive start time in between is honored" =
       Time.set_sexp_zone Time.Zone.utc;
       let schedule =
-        Schedule.(
+        (
           In_zone ((Time.Zone.find_exn "Europe/London")
                   , Between ((Exclusive , Time.Ofday.create ~hr:11 ())
                             , (Inclusive, Time.Ofday.create ~hr:13 ()))))
       in
       let s =
         begin
-          match Schedule.to_endless_sequence schedule
+          match to_endless_sequence schedule
                   ~start_time:(Time.of_string "2016-01-05 00:00:00Z")
                   ~emit:Transitions
           with
@@ -1245,8 +1358,117 @@ let%test_module "Schedule" =
         s
     ;;
 
-    let%test_module "Schedule.Stable.V4" = (module Core_kernel.Stable_unit_test.Make (struct
-        type t = unit Schedule.Stable.V4.t [@@deriving bin_io, compare, sexp]
+    let%expect_test "changes to Zoned_between over a Zone transition" =
+      let t =
+        Zoned_between (
+          (Exclusive, (Time.Zone.find_exn "America/New_York"), (ofday ~hr:12 ()))
+        , (Exclusive, (Time.Zone.find_exn "Europe/London"),    (ofday ~hr:16 ~min:30 ())))
+      in
+      let start_time =
+        Time.of_date_ofday
+          ~zone:(Time.Zone.find_exn "America/New_York")
+          (Date.create_exn ~y:2017 ~m:Mar ~d:24)
+          (ofday ~hr:00 ())
+      in
+      let transitions =
+        match to_endless_sequence t ~start_time ~emit:Transitions with
+        | `Started_in_range (_, seq)
+        | `Started_out_of_range seq -> seq
+      in
+      let transitions = Sequence.take transitions 6 |> Sequence.to_list in
+      Printf.printf !"%{Sexp#hum}" [%message (transitions : ([ Event.no_change | unit Event.transition ] list))];
+      [%expect {|
+        (transitions
+         ((Enter ((2017-03-24 16:00:00.000000Z) ()))
+          (Leave (2017-03-24 16:30:00.000000Z))
+          (Enter ((2017-03-25 16:00:00.000000Z) ()))
+          (Leave (2017-03-26 15:30:00.000000Z))
+          (Enter ((2017-03-26 16:00:00.000000Z) ()))
+          (Leave (2017-03-27 15:30:00.000000Z)))) |}];
+    ;;
+
+    let%expect_test "changes to Zoned_between over DST" =
+      let t =
+        Zoned_between (
+          (Exclusive, (Time.Zone.find_exn "America/New_York"), (ofday ~hr:23 ()))
+        , (Exclusive, (Time.Zone.find_exn "America/New_York"), (ofday ~hr:1 ~min:30 ())))
+      in
+      let zone = Time.Zone.find_exn "America/New_York" in
+      let ofday = ofday ~hr:00 () in
+      let start_time1 =
+        Time.of_date_ofday ~zone (Date.create_exn ~y:2017 ~m:Nov ~d:4) ofday
+      in
+      let start_time2 =
+        Time.of_date_ofday ~zone (Date.create_exn ~y:2017 ~m:Nov ~d:5) ofday
+      in
+      let show_transitions start_time =
+        let `Started_in_range (_, transitions)
+          | `Started_out_of_range transitions = to_endless_sequence t ~start_time ~emit:Transitions
+        in
+        let transitions = Sequence.take transitions 6 |> Sequence.to_list in
+        Printf.printf !"%{Sexp#hum}\n" [%message (transitions : ([ Event.no_change | unit Event.transition ] list))];
+      in
+      show_transitions start_time1;
+      show_transitions start_time2;
+      [%expect {|
+       (transitions
+        ((Leave (2017-11-04 05:30:00.000000Z))
+         (Enter ((2017-11-05 03:00:00.000000Z) ()))
+         (Leave (2017-11-05 06:30:00.000000Z))
+         (Enter ((2017-11-06 04:00:00.000000Z) ()))
+         (Leave (2017-11-06 06:30:00.000000Z))
+         (Enter ((2017-11-07 04:00:00.000000Z) ()))))
+       (transitions
+        ((Leave (2017-11-05 06:30:00.000000Z))
+         (Enter ((2017-11-06 04:00:00.000000Z) ()))
+         (Leave (2017-11-06 06:30:00.000000Z))
+         (Enter ((2017-11-07 04:00:00.000000Z) ()))
+         (Leave (2017-11-07 06:30:00.000000Z))
+         (Enter ((2017-11-08 04:00:00.000000Z) ())))) |}];
+    ;;
+
+    let%expect_test "changes to Zoned_between over DST in one zone but not the other" =
+      let t =
+        Zoned_between (
+          (Exclusive, (Time.Zone.find_exn "America/New_York"), (ofday ~hr:23 ()))
+        , (Exclusive, (Time.Zone.find_exn "Europe/London"), (ofday ~hr:1 ~min:30 ())))
+      in
+      let zone = Time.Zone.find_exn "America/New_York" in
+      let ofday = ofday ~hr:00 () in
+      let start_time1 =
+        Time.of_date_ofday ~zone (Date.create_exn ~y:2017 ~m:Nov ~d:4) ofday
+      in
+      let start_time2 =
+        Time.of_date_ofday ~zone (Date.create_exn ~y:2017 ~m:Nov ~d:5) ofday
+      in
+      let show_transitions start_time =
+        let `Started_in_range (_, transitions)
+          | `Started_out_of_range transitions = to_endless_sequence t ~start_time ~emit:Transitions
+        in
+        let transitions = Sequence.take transitions 6 |> Sequence.to_list in
+        Printf.printf !"%{Sexp#hum}\n" [%message (transitions : ([ Event.no_change | unit Event.transition ] list))];
+      in
+      show_transitions start_time1;
+      show_transitions start_time2;
+      [%expect {|
+       (transitions
+        ((Leave (2017-11-05 01:30:00.000000Z))
+         (Enter ((2017-11-05 03:00:00.000000Z) ()))
+         (Leave (2017-11-06 01:30:00.000000Z))
+         (Enter ((2017-11-06 04:00:00.000000Z) ()))
+         (Leave (2017-11-07 01:30:00.000000Z))
+         (Enter ((2017-11-07 04:00:00.000000Z) ()))))
+       (transitions
+        ((Leave (2017-11-06 01:30:00.000000Z))
+         (Enter ((2017-11-06 04:00:00.000000Z) ()))
+         (Leave (2017-11-07 01:30:00.000000Z))
+         (Enter ((2017-11-07 04:00:00.000000Z) ()))
+         (Leave (2017-11-08 01:30:00.000000Z))
+         (Enter ((2017-11-08 04:00:00.000000Z) ())))) |}];
+    ;;
+
+    let%test_module "Schedule.Stable.V5" = (module Core_kernel.Stable_unit_test.Make (struct
+        type t = unit Schedule_v5.Stable.V5.t [@@deriving bin_io, compare, sexp]
 
         let equal = [%compare.equal: t]
 
@@ -1331,7 +1553,7 @@ let%test_module "Schedule" =
       end))
 
     let extract_first_element_of_endless_sequence ~schedule ~start_time ~emit =
-      match Schedule.to_endless_sequence schedule ~start_time ~emit with
+      match to_endless_sequence schedule ~start_time ~emit with
       | `Started_in_range (_, seq)
       | `Started_out_of_range seq -> Sequence.hd_exn seq
     ;;
@@ -1371,14 +1593,14 @@ let%test_module "Schedule" =
       let start_time = Time.of_string "2016-07-27 00:00:00.000000+00:00" in
       let test_inclusivity sched =
         let first_enter_found =
-          Schedule.next_enter_between
+          next_enter_between
             sched
             start_time
             (Time.add start_time (Time.Span.of_day 365.))
           |> Option.value_exn
         in
         let second_enter_found =
-          Schedule.next_enter_between
+          next_enter_between
             sched
             first_enter_found
             (Time.add first_enter_found (Time.Span.of_day 365.))
@@ -1391,8 +1613,8 @@ let%test_module "Schedule" =
                    (first_enter_found : Time.t)
                    (second_enter_found : Time.t) ]
       in
-      let sec_sched = Schedule.(In_zone (Time.Zone.utc, Secs [15])) in
-      let min_sched = Schedule.(In_zone (Time.Zone.utc, Mins [15])) in
+      let sec_sched = In_zone (Time.Zone.utc, Secs [15]) in
+      let min_sched = In_zone (Time.Zone.utc, Mins [15]) in
       test_inclusivity sec_sched;
       test_inclusivity min_sched;
     ;;

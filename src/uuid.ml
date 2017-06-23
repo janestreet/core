@@ -21,7 +21,7 @@ open! Import_time
 module Unix = Core_unix
 
 module T = struct
-  type t = string [@@deriving bin_io]
+  type t = string [@@deriving bin_io, compare, hash]
 
   let next_counter =
     let counter = ref 0 in
@@ -102,8 +102,6 @@ include Identifiable.Make (struct
     let module_name = "Core.Uuid"
     include T
     include Sexpable.Of_stringable (T)
-    let compare t1 t2 = String.compare t1 t2
-    let hash t = String.hash t
   end)
 
 let invariant t = ignore (of_string t : t)

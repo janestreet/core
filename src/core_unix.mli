@@ -1181,7 +1181,7 @@ module Inet_addr : sig
 
   (** [Blocking_sexp] performs DNS lookup to resolve hostnames to IP addresses. *)
   module Blocking_sexp : sig
-    type t = Unix.inet_addr [@@deriving bin_io, compare, sexp]
+    type t = Unix.inet_addr [@@deriving bin_io, compare, hash, sexp]
   end
 
   include Comparable.S with type t := t

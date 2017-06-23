@@ -1,5 +1,11 @@
 (** {1 Overview}
 
+    This version of Schedule has been superceded by V5.  In normal circumstances this
+    would just be a version bump to the Stable type, but the newer version of Schedule
+    has more expressive power and there are schedules that can't be expressed or
+    serialized using the V4 serializer available in this deprecated module.  Programs
+    are encouraged to upgrade as quickly as reasonably possible.
+
     A [Schedule.t] describes a (potentially repeating) schedule by selecting
     a subset of all seconds using the set operations in [t].  For example:
 
@@ -84,29 +90,30 @@ type zoned   = Zoned   [@@deriving compare]
 type unzoned = Unzoned [@@deriving compare]
 
 (**
-   - [In_zone]: see the discussion under Zones and Tags above
-   - [Tag]: see the discussion under Zones and Tags above
-   - [And], [Or], [Not]: correspond to the set operations intersection, union, and
-   complement.
-   - [If_then_else (A, B, C)]: corresponds to (A && B) || (NOT A && C), useful for dealing
-   with schedules that change during certain times of the year (holidays, etc.)
-   - [At]       : the exact times given on every day
-   - [Shift]    : shifts an entire schedule forward or backwards by a known span. (e.g:
-   - [Shift ((sec 3.), Secs[10]) = Secs [13]]
-   - [Shift ((sec (-3.)), Secs[10]) = Secs [7]])
-   - [Between]  : the contiguous range between the start and end times given on every day
-   - [Secs]     : the exact seconds given during every hour of every day
-   - [Mins]     : all seconds in the minutes given during every hour of every day
-   - [Hours]    : all seconds in the hours given on every day
-   - [Weekdays] : all seconds in the days given on every week
-   - [Days]     : all seconds in the days given, every month
-   - [Weeks]    : all seconds in the weeks given (numbered ISO 8601), every year
-   - [Months]   : all seconds in the months given, every year
-   - [On]       : all seconds in the exact dates given
-   - [Before]   : all seconds before the given boundary (inclusive or exclusive)
-   - [After]    : all seconds after the given boundary (inclusive or exclusive)
-   - [Always]   : the set of all seconds
-   - [Never]    : the empty set
+   {ul {- [In_zone]: see the discussion under Zones and Tags above}
+   {- [Tag]: see the discussion under Zones and Tags above}
+   {- [And], [Or], [Not]: correspond to the set operations intersection, union, and
+   complement.}
+   {- [If_then_else (A, B, C)]: corresponds to (A && B) || (NOT A && C), useful for
+   dealing with schedules that change during certain times of the year (holidays, etc.)}
+   {- [At]: the exact times given on every day}
+   {- [Shift]: shifts an entire schedule forward or backwards by a known span. For
+   example:
+   {ul {- [Shift ((sec 3.), Secs[10]) = Secs [13]]}
+   {- [Shift ((sec (-3.)), Secs[10]) = Secs [7]]}}}
+   {- [Between]: the contiguous range between the start and end times given on every day}
+   {- [Secs]: the exact seconds given during every hour of every day}
+   {- [Mins]: all seconds in the minutes given during every hour of every day}
+   {- [Hours]: all seconds in the hours given on every day}
+   {- [Weekdays]: all seconds in the days given on every week}
+   {- [Days]: all seconds in the days given, every month}
+   {- [Weeks]: all seconds in the weeks given (numbered ISO 8601), every year}
+   {- [Months]: all seconds in the months given, every year}
+   {- [On]: all seconds in the exact dates given}
+   {- [Before]: all seconds before the given boundary (inclusive or exclusive)}
+   {- [After]: all seconds after the given boundary (inclusive or exclusive)}
+   {- [Always]: the set of all seconds}
+   {- [Never]: the empty set}}
 
    ['a] indicates whether the schedule currently has an established zone.
 
@@ -116,9 +123,7 @@ type unzoned = Unzoned [@@deriving compare]
    [Between (a, b)] is the empty set if a > b.
 
    Items that take [int list]s silently ignore [int]s outside of the viable
-   range. E.g. [Days [32]] will never occur.
-
-*)
+   range. E.g. [Days [32]] will never occur. *)
 
 module Inclusive_exclusive : sig
   type t =
@@ -128,29 +133,31 @@ module Inclusive_exclusive : sig
 end
 
 type ('a, 'b) t =
-  | In_zone      : Time.Zone.t * (unzoned, 'b) t                     -> (zoned, 'b) t
-  | Tag          : 'b * ('a, 'b) t                                   -> ('a, 'b) t
-  | And          : ('a, 'b) t list                                   -> ('a, 'b) t
-  | Or           : ('a, 'b) t list                                   -> ('a, 'b) t
-  | Not          : ('a, 'b) t                                        -> ('a, 'b) t
-  | If_then_else : (('a, 'b) t * ('a, 'b) t * ('a, 'b) t)            -> ('a, 'b) t
-  | Shift        : Time.Span.t * ('a, 'b) t                          -> ('a, 'b) t
-  | Between      :   (Inclusive_exclusive.t * Time.Ofday.t)
-                     * (Inclusive_exclusive.t * Time.Ofday.t)        -> (unzoned, 'b) t
-  | At           : Time.Ofday.t list                                 -> (unzoned, 'b) t
-  | Secs         : int list                                          -> (unzoned, 'b) t
-  | Mins         : int list                                          -> (unzoned, 'b) t
-  | Hours        : int list                                          -> (unzoned, 'b) t
-  | Weekdays     : Day_of_week.t list                                -> (unzoned, 'b) t
-  | Days         : int list                                          -> (unzoned, 'b) t
-  | Weeks        : int list                                          -> (unzoned, 'b) t
-  | Months       : Month.t list                                      -> (unzoned, 'b) t
-  | On           : Date.t list                                       -> (unzoned, 'b) t
-  | Before       : (Inclusive_exclusive.t * (Date.t * Time.Ofday.t)) -> (unzoned, 'b) t
-  | After        : (Inclusive_exclusive.t * (Date.t * Time.Ofday.t)) -> (unzoned, 'b) t
-  | Always       : ('a, 'b) t
-  | Never        : ('a, 'b) t
+  | In_zone       : Time.Zone.t * (unzoned, 'b) t                     -> (zoned, 'b) t
+  | Tag           : 'b * ('a, 'b) t                                   -> ('a, 'b) t
+  | And           : ('a, 'b) t list                                   -> ('a, 'b) t
+  | Or            : ('a, 'b) t list                                   -> ('a, 'b) t
+  | Not           : ('a, 'b) t                                        -> ('a, 'b) t
+  | If_then_else  : (('a, 'b) t * ('a, 'b) t * ('a, 'b) t)            -> ('a, 'b) t
+  | Shift         : Time.Span.t * ('a, 'b) t                          -> ('a, 'b) t
+  | Between       : (Inclusive_exclusive.t * Time.Ofday.t)
+                    * (Inclusive_exclusive.t * Time.Ofday.t)        -> (unzoned, 'b) t
+  | At            : Time.Ofday.t list                                 -> (unzoned, 'b) t
+  | Secs          : int list                                          -> (unzoned, 'b) t
+  | Mins          : int list                                          -> (unzoned, 'b) t
+  | Hours         : int list                                          -> (unzoned, 'b) t
+  | Weekdays      : Day_of_week.t list                                -> (unzoned, 'b) t
+  | Days          : int list                                          -> (unzoned, 'b) t
+  | Weeks         : int list                                          -> (unzoned, 'b) t
+  | Months        : Month.t list                                      -> (unzoned, 'b) t
+  | On            : Date.t list                                       -> (unzoned, 'b) t
+  | Before        : (Inclusive_exclusive.t * (Date.t * Time.Ofday.t)) -> (unzoned, 'b) t
+  | After         : (Inclusive_exclusive.t * (Date.t * Time.Ofday.t)) -> (unzoned, 'b) t
+  | Always        : ('a, 'b) t
+  | Never         : ('a, 'b) t
 [@@deriving compare]
+
+type 'b zoned_t = (zoned, 'b) t [@@deriving sexp_of]
 
 (** Return a string suitable for debugging purposes. *)
 val to_string_zoned : (zoned, 'b) t -> string_of_tag:('b -> string) -> string

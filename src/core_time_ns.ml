@@ -165,8 +165,7 @@ end = struct
     let t_of_sexp = Stable.V1.t_of_sexp
 
     include Identifiable.Make (struct
-        type nonrec t = t [@@deriving sexp, compare, bin_io]
-        let hash = Int63.hash
+        type nonrec t = t [@@deriving sexp, compare, bin_io, hash]
         let module_name = "Core.Time_ns.Span.Option"
         include Sexpable.To_stringable (struct type nonrec t = t [@@deriving sexp] end)
       end)
@@ -295,9 +294,8 @@ module Option = struct
   let t_of_sexp = Stable.V1.t_of_sexp
 
   include Identifiable.Make (struct
-      type nonrec t = t [@@deriving sexp, compare, bin_io]
+      type nonrec t = t [@@deriving sexp, compare, bin_io, hash]
       let module_name = "Core.Time_ns.Option"
-      let hash = Span.Option.hash
       include Sexpable.To_stringable (struct type nonrec t = t [@@deriving sexp] end)
     end)
   (* bring back the efficient implementation of comparison operators *)
@@ -310,9 +308,8 @@ let to_string_fix_proto zone t = Time.to_string_fix_proto zone (to_time t)
 let of_string_fix_proto zone s = of_time (Time.of_string_fix_proto zone s)
 
 include Identifiable.Make (struct
-    type nonrec t = t [@@deriving sexp, bin_io, compare]
+    type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
     let module_name = "Core.Time_ns"
-    let hash t = Int63.hash (to_int63_ns_since_epoch t)
     let of_string, to_string = of_string, to_string
   end)
 (* bring back the efficient implementation of comparison operators *)
@@ -347,7 +344,7 @@ let of_date_ofday ~zone date ofday =
    Unix linear time).  See {!Ofday}. *)
 module Ofday = struct
   type t = Span.t (* since wall-clock midnight *)
-  [@@deriving typerep, compare, bin_io]
+  [@@deriving bin_io, compare, hash, typerep]
 
   include Comparable.Validate_with_zero (Span)
 
@@ -496,7 +493,7 @@ module Ofday = struct
   let t_of_sexp = Stable.V1.t_of_sexp
 
   include Identifiable.Make (struct
-      type nonrec t = t [@@deriving sexp, compare, bin_io]
+      type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
       let module_name = "Core.Time_ns.Ofday"
       let hash = Span.hash
       let of_string, to_string = of_string, to_string
@@ -545,9 +542,8 @@ module Ofday = struct
     let t_of_sexp = Stable.V1.t_of_sexp
 
     include Identifiable.Make (struct
-        type nonrec t = t [@@deriving sexp, compare, bin_io]
+        type nonrec t = t [@@deriving sexp, compare, bin_io, hash]
         let module_name = "Core.Time_ns.Ofday.Option"
-        let hash = Span.Option.hash
         include Sexpable.To_stringable (struct type nonrec t = t [@@deriving sexp] end)
       end)
   end

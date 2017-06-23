@@ -30,28 +30,28 @@ module Make (T : S) = struct
   open T
 
   type ('a, 'b) gadt =
-    | In_zone      : Time.Zone.t * (unzoned, 'b) gadt                -> (zoned, 'b) gadt
-    | Tag          : 'b * ('a, 'b) gadt                              -> ('a, 'b) gadt
-    | And          : ('a, 'b) gadt list                              -> ('a, 'b) gadt
-    | Or           : ('a, 'b) gadt list                              -> ('a, 'b) gadt
-    | Not          : ('a, 'b) gadt                                   -> ('a, 'b) gadt
-    | If_then_else : (('a, 'b) gadt * ('a, 'b) gadt * ('a, 'b) gadt) -> ('a, 'b) gadt
-    | Shift        : Time.Span.t * ('a, 'b) gadt                     -> ('a, 'b) gadt
-    | Between      :   (Inclusive_exclusive.t * Time.Ofday.t)
-                       * (Inclusive_exclusive.t * Time.Ofday.t)      -> (unzoned, 'b) gadt
-    | At           : ofday_set                                       -> (unzoned, 'b) gadt
-    | Secs         : int_set                                         -> (unzoned, 'b) gadt
-    | Mins         : int_set                                         -> (unzoned, 'b) gadt
-    | Hours        : int_set                                         -> (unzoned, 'b) gadt
-    | Weekdays     : day_of_week_set                                 -> (unzoned, 'b) gadt
-    | Days         : int_set                                         -> (unzoned, 'b) gadt
-    | Weeks        : int_set                                         -> (unzoned, 'b) gadt
-    | Months       : month_set                                       -> (unzoned, 'b) gadt
-    | On           : date_set                                        -> (unzoned, 'b) gadt
-    | Before       : (Inclusive_exclusive.t * boundary_type)         -> (unzoned, 'b) gadt
-    | After        : (Inclusive_exclusive.t * boundary_type)         -> (unzoned, 'b) gadt
-    | Always       : ('a, 'b) gadt
-    | Never        : ('a, 'b) gadt
+    | In_zone       : Time.Zone.t * (unzoned, 'b) gadt                -> (zoned, 'b) gadt
+    | Tag           : 'b * ('a, 'b) gadt                              -> ('a, 'b) gadt
+    | And           : ('a, 'b) gadt list                              -> ('a, 'b) gadt
+    | Or            : ('a, 'b) gadt list                              -> ('a, 'b) gadt
+    | Not           : ('a, 'b) gadt                                   -> ('a, 'b) gadt
+    | If_then_else  : (('a, 'b) gadt * ('a, 'b) gadt * ('a, 'b) gadt) -> ('a, 'b) gadt
+    | Shift         : Time.Span.t * ('a, 'b) gadt                     -> ('a, 'b) gadt
+    | Between       : (Inclusive_exclusive.t * Time.Ofday.t)
+                      * (Inclusive_exclusive.t * Time.Ofday.t)      -> (unzoned, 'b) gadt
+    | At            : ofday_set                                       -> (unzoned, 'b) gadt
+    | Secs          : int_set                                         -> (unzoned, 'b) gadt
+    | Mins          : int_set                                         -> (unzoned, 'b) gadt
+    | Hours         : int_set                                         -> (unzoned, 'b) gadt
+    | Weekdays      : day_of_week_set                                 -> (unzoned, 'b) gadt
+    | Days          : int_set                                         -> (unzoned, 'b) gadt
+    | Weeks         : int_set                                         -> (unzoned, 'b) gadt
+    | Months        : month_set                                       -> (unzoned, 'b) gadt
+    | On            : date_set                                        -> (unzoned, 'b) gadt
+    | Before        : (Inclusive_exclusive.t * boundary_type)         -> (unzoned, 'b) gadt
+    | After         : (Inclusive_exclusive.t * boundary_type)         -> (unzoned, 'b) gadt
+    | Always        : ('a, 'b) gadt
+    | Never         : ('a, 'b) gadt
 
   let rec map_tags : type a. (a, 'b) gadt -> f:('b -> 'c) -> (a, 'c) gadt =
     fun t ~f ->
@@ -151,27 +151,27 @@ module Make (T : S) = struct
         else c
       | Always, Always    -> 0
       | Never, Never      -> 0
-      | In_zone _, _      -> Pervasives.compare t1 t2
-      | Tag _, _          -> Pervasives.compare t1 t2
-      | And _, _          -> Pervasives.compare t1 t2
-      | Or _, _           -> Pervasives.compare t1 t2
-      | Not _, _          -> Pervasives.compare t1 t2
-      | If_then_else _, _ -> Pervasives.compare t1 t2
-      | Shift _, _        -> Pervasives.compare t1 t2
-      | Between _, _      -> Pervasives.compare t1 t2
-      | At _, _           -> Pervasives.compare t1 t2
-      | Secs _, _         -> Pervasives.compare t1 t2
-      | Mins _, _         -> Pervasives.compare t1 t2
-      | Hours _, _        -> Pervasives.compare t1 t2
-      | Weekdays _, _     -> Pervasives.compare t1 t2
-      | Days _, _         -> Pervasives.compare t1 t2
-      | Weeks _, _        -> Pervasives.compare t1 t2
-      | Months _, _       -> Pervasives.compare t1 t2
-      | On _, _           -> Pervasives.compare t1 t2
-      | Before _, _       -> Pervasives.compare t1 t2
-      | After _, _        -> Pervasives.compare t1 t2
-      | Always, _         -> Pervasives.compare t1 t2
-      | Never, _          -> Pervasives.compare t1 t2
+      | In_zone _, _       -> Pervasives.compare t1 t2
+      | Tag _, _           -> Pervasives.compare t1 t2
+      | And _, _           -> Pervasives.compare t1 t2
+      | Or _, _            -> Pervasives.compare t1 t2
+      | Not _, _           -> Pervasives.compare t1 t2
+      | If_then_else _, _  -> Pervasives.compare t1 t2
+      | Shift _, _         -> Pervasives.compare t1 t2
+      | Between _, _       -> Pervasives.compare t1 t2
+      | At _, _            -> Pervasives.compare t1 t2
+      | Secs _, _          -> Pervasives.compare t1 t2
+      | Mins _, _          -> Pervasives.compare t1 t2
+      | Hours _, _         -> Pervasives.compare t1 t2
+      | Weekdays _, _      -> Pervasives.compare t1 t2
+      | Days _, _          -> Pervasives.compare t1 t2
+      | Weeks _, _         -> Pervasives.compare t1 t2
+      | Months _, _        -> Pervasives.compare t1 t2
+      | On _, _            -> Pervasives.compare t1 t2
+      | Before _, _        -> Pervasives.compare t1 t2
+      | After _, _         -> Pervasives.compare t1 t2
+      | Always, _          -> Pervasives.compare t1 t2
+      | Never, _           -> Pervasives.compare t1 t2
   ;;
 end
 
@@ -183,6 +183,8 @@ module External = Make (struct
     type date_set        = Date.t list [@@deriving compare]
     type boundary_type   = Date.t * Time.Ofday.t [@@deriving compare]
   end)
+
+type 'b zoned_t = (zoned, 'b) External.gadt
 
 module Stable = struct
 
@@ -348,7 +350,6 @@ module Stable = struct
 
         type nonrec 'a t = 'a t
       end)
-
   end
 end
 
@@ -443,6 +444,7 @@ end = struct
   end
 end
 
+(* a wall clock time in a known zone *)
 module Internal_time : sig
   type t
 
@@ -1066,27 +1068,28 @@ let fold_tags (type tag)(type m) (t : (zoned, tag) Internal.t) ~(init:m) ~f time
 ;;
 
 type ('a, 'b) t = ('a, 'b) External.gadt =
-  | In_zone      : Time.Zone.t * (unzoned, 'b) t                   -> (zoned, 'b) t
-  | Tag          : 'b * ('a, 'b) t                                 -> ('a, 'b) t
-  | And          : ('a, 'b) t list                                 -> ('a, 'b) t
-  | Or           : ('a, 'b) t list                                 -> ('a, 'b) t
-  | Not          : ('a, 'b) t                                      -> ('a, 'b) t
-  | If_then_else : (('a, 'b) t * ('a, 'b) t * ('a, 'b) t)          -> ('a, 'b) t
-  | Shift        : Time.Span.t * ('a, 'b) t                        -> ('a, 'b) t
-  | Between      : (Inclusive_exclusive.t * Time.Ofday.t) * (Inclusive_exclusive.t * Time.Ofday.t) -> (unzoned, 'b) t
-  | At           : Time.Ofday.t list                               -> (unzoned, 'b) t
-  | Secs         : int list                                        -> (unzoned, 'b) t
-  | Mins         : int list                                        -> (unzoned, 'b) t
-  | Hours        : int list                                        -> (unzoned, 'b) t
-  | Weekdays     : Day_of_week.t list                              -> (unzoned, 'b) t
-  | Days         : int list                                        -> (unzoned, 'b) t
-  | Weeks        : int list                                        -> (unzoned, 'b) t
-  | Months       : Month.t list                                    -> (unzoned, 'b) t
-  | On           : Date.t list                                     -> (unzoned, 'b) t
-  | Before       : (Inclusive_exclusive.t * (Date.t * Time.Ofday.t)) -> (unzoned, 'b) t
-  | After        : (Inclusive_exclusive.t * (Date.t * Time.Ofday.t)) -> (unzoned, 'b) t
-  | Always       : ('a, 'b) t
-  | Never        : ('a, 'b) t
+  | In_zone       : Time.Zone.t * (unzoned, 'b) t                   -> (zoned, 'b) t
+  | Tag           : 'b * ('a, 'b) t                                 -> ('a, 'b) t
+  | And           : ('a, 'b) t list                                 -> ('a, 'b) t
+  | Or            : ('a, 'b) t list                                 -> ('a, 'b) t
+  | Not           : ('a, 'b) t                                      -> ('a, 'b) t
+  | If_then_else  : (('a, 'b) t * ('a, 'b) t * ('a, 'b) t)          -> ('a, 'b) t
+  | Shift         : Time.Span.t * ('a, 'b) t                        -> ('a, 'b) t
+  | Between       : (Inclusive_exclusive.t * Time.Ofday.t)
+                    * (Inclusive_exclusive.t * Time.Ofday.t) -> (unzoned, 'b) t
+  | At            : Time.Ofday.t list                               -> (unzoned, 'b) t
+  | Secs          : int list                                        -> (unzoned, 'b) t
+  | Mins          : int list                                        -> (unzoned, 'b) t
+  | Hours         : int list                                        -> (unzoned, 'b) t
+  | Weekdays      : Day_of_week.t list                              -> (unzoned, 'b) t
+  | Days          : int list                                        -> (unzoned, 'b) t
+  | Weeks         : int list                                        -> (unzoned, 'b) t
+  | Months        : Month.t list                                    -> (unzoned, 'b) t
+  | On            : Date.t list                                     -> (unzoned, 'b) t
+  | Before        : (Inclusive_exclusive.t * (Date.t * Time.Ofday.t)) -> (unzoned, 'b) t
+  | After         : (Inclusive_exclusive.t * (Date.t * Time.Ofday.t)) -> (unzoned, 'b) t
+  | Always        : ('a, 'b) t
+  | Never         : ('a, 'b) t
 
 let compare = External.compare_gadt
 
@@ -1099,6 +1102,8 @@ let tags t time =
 let to_string_zoned t ~string_of_tag =
   Sexp.to_string (Stable.V4.sexp_of_t (fun tag -> Sexp.Atom (string_of_tag tag)) t)
 ;;
+
+let sexp_of_zoned_t = Stable.V4.sexp_of_t
 
 module Event = struct
   type no_change =

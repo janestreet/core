@@ -16,7 +16,10 @@
     the limits) or can only read them.
 
     To present a restricted view of an iobuf to a client, one can create a sub-iobuf or
-    add a type constraint. *)
+    add a type constraint.
+
+    Functions operate on the window unless the documentation or naming indicates
+    otherwise. *)
 
 open! Import
 open Iobuf_intf
@@ -73,7 +76,7 @@ val of_bigstring
 val of_string : string -> (_, _) t
 
 (** [sub_shared t ~pos ~len] returns a new iobuf with limits and window set to the
-    subrange of [t] specified by [pos] and [len].  [sub_shared] preserves data
+    subrange of [t]'s window specified by [pos] and [len].  [sub_shared] preserves data
     permissions, but allows arbitrary seek permissions on the resulting iobuf. *)
 val sub_shared : ?pos:int -> ?len:int -> ('d, _) t -> ('d, _) t
 

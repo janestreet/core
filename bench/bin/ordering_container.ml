@@ -15,8 +15,7 @@ module String_list = struct
   let name = "string-list"
 
   module T = struct
-    type t = string list [@@deriving sexp, bin_io, compare]
-    let hash = Hashtbl.hash
+    type t = string list [@@deriving sexp, bin_io, compare, hash]
   end
 
   include T

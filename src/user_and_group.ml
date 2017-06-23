@@ -3,7 +3,7 @@ open! Import
 module Stable = struct
   module V1 = struct
     module T = struct
-      type t = { user : string; group : string } [@@deriving fields, bin_io, compare]
+      type t = { user : string; group : string } [@@deriving fields, bin_io, compare, hash]
 
       let to_string t = sprintf "%s:%s" t.group t.user
 
@@ -21,7 +21,6 @@ end
 
 module T' = struct
   include Stable.V1
-  let hash t = String.hash (to_string t)
   let module_name = "Core.User_and_group"
 end
 include T'
