@@ -36,7 +36,9 @@ module Ofday    : S with type bound = Time.Ofday.t
 module Ofday_ns : S with type bound = Time_ns.Ofday.t
 
 module Time    : S_time with module Time := Time
+                         and type t = Time.t t
 module Time_ns : S_time with module Time := Time_ns
+                         and type t = Time_ns.t t
 
 module Stable : sig
   module V1 : sig
