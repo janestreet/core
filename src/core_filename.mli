@@ -23,9 +23,9 @@ val is_posix_pathname_component : string -> bool
 (** [temp_file ?perm ?in_dir_name prefix suffix]
 
     Returns the name of a fresh temporary file in the temporary directory. The base name
-    of the temporary file is formed by concatenating prefix, then a 6-digit hex number,
-    then suffix. The temporary file is created empty. The file is guaranteed to be fresh,
-    i.e. not already existing in the directory.
+    of the temporary file is formed by concatenating prefix, then [.tmp.], then a 6-digit
+    hex number, then suffix. The temporary file is created empty. The file is guaranteed
+    to be fresh, i.e. not already existing in the directory.
 
     @param in_dir the directory in which to create the temporary file.  The default is
     [temp_dir_name]

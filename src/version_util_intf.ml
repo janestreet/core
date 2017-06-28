@@ -22,5 +22,5 @@ module type Version_util = sig
     val putenv : t -> unit
   end
 
-  val time : Time.t option
+  val build_time : Time.t option
 end

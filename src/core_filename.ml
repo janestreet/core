@@ -116,7 +116,7 @@ let retry ?(in_dir=temp_dir_name) ~f prefix suffix =
   let rec try_name counter =
     let name =
       let rnd = Random.State.bits prng land 0xFF_FFFF in
-      (Printf.sprintf "%s%06x%s" prefix rnd suffix)
+      (Printf.sprintf "%s.tmp.%06x%s" prefix rnd suffix)
     in
     let name = concat in_dir name in
     try

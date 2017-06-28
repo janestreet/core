@@ -2275,7 +2275,7 @@ module Version_info = struct
     |> List.sort ~cmp:String.compare
 
   let print_version ~version = List.iter (sanitize_version ~version) ~f:print_endline
-  let print_build_info ~build_info = print_endline build_info
+  let print_build_info ~build_info = print_endline (force build_info)
 
   let command ~version ~build_info =
     basic ~summary:"print version information"
@@ -2305,7 +2305,7 @@ module Version_info = struct
       in
       let base =
         Bailout_dump_flag.add base ~name:"-build-info" ~aliases:[]
-          ~text_summary:"info about this build" ~text:(Fn.const build_info)
+          ~text_summary:"info about this build" ~text:(fun _ -> force build_info)
       in
       Base base
     | Group group ->
@@ -2516,15 +2516,22 @@ let rec dispatch t env ~extend ~path ~args ~maybe_new_comp_cword ~version ~build
       exit 0
 ;;
 
-let default_version,default_build_info =
-  Version_util.version, Version_util.build_info
+let default_version, default_build_info =
+  Version_util.version,
+  (* lazy to avoid loading all the time zone stuff at toplevel *)
+  lazy (Version_util.reprint_build_info Time.sexp_of_t)
 
 let run
       ?(version = default_version)
-      ?(build_info = default_build_info)
+      ?build_info
       ?(argv=Array.to_list Sys.argv)
       ?extend
       t =
+  let build_info =
+    match build_info with
+    | Some v -> lazy v
+    | None -> default_build_info
+  in
   Exn.handle_uncaught ~exit:true (fun () ->
     let t = Version_info.add t ~version ~build_info in
     let t = add_help_subcommands t in

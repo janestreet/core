@@ -803,5 +803,5 @@ module Deprecated : sig
 
   val get_flag_names : t ->  string list
   val version : string
-  val build_info : string
+  val build_info : string Lazy.t
 end

@@ -1246,10 +1246,16 @@ CAMLprim value unix_realpath(value v_path)
 static inline void init_mktemp(char *loc, char *buf, value v_path)
 {
   int i, len = caml_string_length(v_path);
-  if (len > JANE_PATH_MAX - 7) caml_invalid_argument(loc);
+  if (len > JANE_PATH_MAX - 12) caml_invalid_argument(loc);
   memcpy(buf, String_val(v_path), len);
-  for (i = len; i < len + 6; ++i) buf[i] = 'X';
-  buf[len + 6] = '\0';
+  i = len;
+  buf[i++] = '.';
+  buf[i++] = 't';
+  buf[i++] = 'm';
+  buf[i++] = 'p';
+  buf[i++] = '.';
+  while (i < len + 11) buf[i++] = 'X';
+  buf[i++] = '\0';
 }
 
 CAMLprim value unix_mkstemp(value v_path)

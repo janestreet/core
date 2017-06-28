@@ -1,5 +1,4 @@
 open! Import
-open Import_time
 
 module Upstream = Import.Version_util
 module Unix = Core_unix
@@ -17,9 +16,3 @@ module Application_specific_fields = struct
     Unix.putenv ~key:"BUILD_INFO_APP_FIELDS" ~data:(Sexp.to_string (sexp_of_t t))
 
 end
-
-let time =
-  match build_date, build_time with
-  | None, _ | _, None -> None
-  | Some build_date, Some build_time ->
-    Some (Time.of_date_ofday ~zone:Time.Zone.utc build_date build_time)
