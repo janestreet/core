@@ -1478,6 +1478,12 @@ module Base = struct
             }
         }
 
+      let flag_optional_with_default_doc
+            ?aliases ?full_flag_required name arg_type sexp_of_default ~default ~doc =
+        flag ?aliases ?full_flag_required name (optional_with_default default arg_type)
+          ~doc:(sprintf !"%s (default: %{Sexp})" doc (sexp_of_default default))
+      ;;
+
       include Applicative.Make (struct
           type nonrec 'a t = 'a param
           let return = const
@@ -2667,6 +2673,16 @@ module Param = struct
       -> doc:string
       -> 'a t
 
+    val flag_optional_with_default_doc
+      :  ?aliases            : string list
+      -> ?full_flag_required : unit
+      -> string
+      -> 'a Arg_type.t
+      -> ('a -> Sexp.t)
+      -> default:'a
+      -> doc : string
+      -> 'a t
+
     val anon : 'a Anons.t -> 'a t
 
     val choose_one
@@ -2693,6 +2709,7 @@ module Param = struct
   let flag       = Spec.flag
   let anon       = Spec.anon
   let choose_one = Spec.choose_one
+  let flag_optional_with_default_doc = Spec.flag_optional_with_default_doc
 
   module Arg_type = Arg_type
   include Arg_type.Export

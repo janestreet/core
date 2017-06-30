@@ -319,6 +319,21 @@ module Param : sig
       -> doc : string
       -> 'a t
 
+    (** [flag_optional_with_default_doc name arg_type sexp_of_default ~default ~doc]
+        is a shortcut for [flag], where:
+        + The [Flag.t] is [optional_with_default default arg_type]
+        + The [doc] is passed through with an explanation of what the default value
+        appended. *)
+    val flag_optional_with_default_doc
+      :  ?aliases            : string list
+      -> ?full_flag_required : unit
+      -> string
+      -> 'a Arg_type.t
+      -> ('a -> Sexp.t)
+      -> default:'a
+      -> doc : string
+      -> 'a t
+
     (** [anon spec] specifies a command that, among other things, takes the anonymous
         arguments specified by [spec]. *)
     val anon : 'a Anons.t -> 'a t
