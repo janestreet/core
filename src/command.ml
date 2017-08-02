@@ -1596,7 +1596,7 @@ module Group = struct
   type 'a t = {
     summary     : string;
     readme      : (unit -> string) option;
-    subcommands : (string * 'a) list;
+    subcommands : (string * 'a) list Lazy.t;
     body        : (path:string list -> unit) option;
   }
 
@@ -1610,6 +1610,20 @@ module Group = struct
   ;;
 
   module Sexpable = struct
+    module V2 = struct
+      type 'a t = {
+        summary     : string;
+        readme      : string sexp_option;
+        subcommands : (string, 'a) List.Assoc.t Lazy.t;
+      } [@@deriving sexp]
+
+      let map t ~f =
+        { t with subcommands = Lazy.map t.subcommands ~f:(List.Assoc.map ~f) }
+      ;;
+    end
+
+    module Latest = V2
+
     module V1 = struct
       type 'a t = {
         summary     : string;
@@ -1617,16 +1631,27 @@ module Group = struct
         subcommands : (string, 'a) List.Assoc.t;
       } [@@deriving sexp]
 
-      let map t ~f = { t with subcommands = List.Assoc.map t.subcommands ~f }
+      let map t ~f =
+        { t with subcommands = List.Assoc.map t.subcommands ~f }
+      ;;
+
+      let to_latest { summary; readme; subcommands } : 'a Latest.t =
+        { summary; readme; subcommands = Lazy.from_val subcommands }
+      ;;
+
+      let of_latest ({ summary; readme; subcommands } : 'a Latest.t) : 'a t =
+        { summary; readme; subcommands = Lazy.force subcommands }
+      ;;
     end
-    include V1
+
+    include Latest
   end
 
   let to_sexpable ~subcommand_to_sexpable t =
     { Sexpable.
       summary = t.summary;
       readme  = Option.map ~f:(fun readme -> readme ()) t.readme;
-      subcommands = List.Assoc.map ~f:subcommand_to_sexpable t.subcommands;
+      subcommands = Lazy.map t.subcommands ~f:(List.Assoc.map ~f:subcommand_to_sexpable);
     }
 end
 
@@ -1645,16 +1670,50 @@ let%test_unit _ = [
 ] |> List.iter ~f:(fun (dir, path, expected) ->
   [%test_eq: string] (abs_path ~dir path) expected)
 
+let comp_cword = "COMP_CWORD"
+
+(* clear the setting of environment variable associated with command-line
+   completion and recursive help so that subprocesses don't see them. *)
+let getenv_and_clear var =
+  let value = Core_sys.getenv var in
+  if Option.is_some value then Unix.unsetenv var;
+  value
+;;
+
+let maybe_comp_cword () =
+  getenv_and_clear comp_cword
+  |> Option.map ~f:Int.of_string
+;;
+
+let set_comp_cword new_value =
+  let new_value = Int.to_string new_value in
+  Unix.putenv ~key:comp_cword ~data:new_value
+;;
+
 module Exec = struct
   type t = {
-    summary     : string;
-    readme      : (unit -> string) option;
+    summary          : string;
+    readme           : (unit -> string) option;
     (* If [path_to_exe] is relative, interpret w.r.t. [working_dir] *)
-    working_dir : string;
-    path_to_exe : string;
+    working_dir      : string;
+    path_to_exe      : string;
+    child_subcommand : string list;
   }
 
   module Sexpable = struct
+    module V3 = struct
+      type t = {
+        summary          : string;
+        readme           : string sexp_option;
+        working_dir      : string;
+        path_to_exe      : string;
+        child_subcommand : string list;
+      } [@@deriving sexp]
+
+      let to_latest = Fn.id
+      let of_latest = Fn.id
+    end
+
     module V2 = struct
       type t = {
         summary     : string;
@@ -1662,6 +1721,24 @@ module Exec = struct
         working_dir : string;
         path_to_exe : string;
       } [@@deriving sexp]
+
+      let to_v3 t : V3.t = {
+        summary = t.summary;
+        readme = t.readme;
+        working_dir = t.working_dir;
+        path_to_exe = t.path_to_exe;
+        child_subcommand = [];
+      }
+
+      let of_v3 (t : V3.t) = {
+        summary = t.summary;
+        readme = t.readme;
+        working_dir = t.working_dir;
+        path_to_exe = abs_path ~dir:t.working_dir t.path_to_exe;
+      }
+
+      let to_latest = Fn.compose V3.to_latest to_v3
+      let of_latest = Fn.compose of_v3 V3.of_latest
     end
 
     module V1 = struct
@@ -1672,21 +1749,25 @@ module Exec = struct
         path_to_exe : string;
       } [@@deriving sexp]
 
-      let to_latest t : V2.t = {
+      let to_v2 t : V2.t = {
         summary = t.summary;
         readme = t.readme;
         working_dir = "/";
         path_to_exe = t.path_to_exe;
       }
 
-      let of_latest (t : V2.t) = {
+      let of_v2 (t : V2.t) = {
         summary = t.summary;
         readme = t.readme;
         path_to_exe = abs_path ~dir:t.working_dir t.path_to_exe;
       }
+
+      let to_latest = Fn.compose V2.to_latest to_v2
+      let of_latest = Fn.compose of_v2 V2.of_latest
+
     end
 
-    include V2
+    include V3
   end
 
   let to_sexpable t =
@@ -1695,10 +1776,18 @@ module Exec = struct
       readme   = Option.map ~f:(fun readme -> readme ()) t.readme;
       working_dir = t.working_dir;
       path_to_exe = t.path_to_exe;
+      child_subcommand = t.child_subcommand;
     }
 
-  let exec_with_args t ~args =
+  let exec_with_args t ~args ~maybe_new_comp_cword =
     let prog = abs_path ~dir:t.working_dir t.path_to_exe in
+    let args = t.child_subcommand @ args in
+    Option.iter maybe_new_comp_cword ~f:(fun n ->
+      (* The logic for tracking [maybe_new_comp_cword] doesn't take into account whether
+         this exec specifies a child subcommand. If it does, COMP_CWORD needs to be set
+         higher to account for the arguments used to specify the child subcommand. *)
+      set_comp_cword (n + List.length t.child_subcommand)
+    );
     never_returns (Unix.exec ~prog ~argv:(prog :: args) ())
   ;;
 
@@ -1721,26 +1810,34 @@ module Proxy = struct
       | Base  of Base.Sexpable.t
       | Group of 'a Group.Sexpable.t
       | Exec  of Exec.Sexpable.t
+      | Lazy  of 'a t Lazy.t
   end
 
   type t = {
     working_dir        : string;
     path_to_exe        : string;
     path_to_subcommand : string list;
+    child_subcommand   : string list;
     kind               : t Kind.t;
   }
 
-  let get_summary t =
-    match t.kind with
+  let rec get_summary_from_kind (kind : t Kind.t) =
+    match kind with
     | Base  b -> b.summary
     | Group g -> g.summary
     | Exec  e -> e.summary
+    | Lazy  l -> get_summary_from_kind (Lazy.force l)
 
-  let get_readme t =
-    match t.kind with
+  let get_summary t = get_summary_from_kind t.kind
+
+  let rec get_readme_from_kind (kind : t Kind.t) =
+    match kind with
     | Base  b -> b.readme
     | Group g -> g.readme
     | Exec  e -> e.readme
+    | Lazy  l -> get_readme_from_kind (Lazy.force l)
+
+  let get_readme t = get_readme_from_kind t.kind
 
   let help_text ~show_flags ~to_format_list ~path t =
     group_or_exec_help_text
@@ -1763,6 +1860,22 @@ module Sexpable = struct
   let supported_versions : int Queue.t = Queue.create ()
   let add_version n = Queue.enqueue supported_versions n
 
+  module V3 = struct
+    let () = add_version 3
+
+    type t =
+      | Base  of Base.Sexpable.V2.t
+      | Group of t Group.Sexpable.V2.t
+      | Exec  of Exec.Sexpable.V3.t
+      | Lazy  of t Lazy.t
+    [@@deriving sexp]
+
+    let to_latest = Fn.id
+    let of_latest = Fn.id
+  end
+
+  module Latest = V3
+
   module V2 = struct
     let () = add_version 2
 
@@ -1772,12 +1885,22 @@ module Sexpable = struct
       | Exec  of Exec.Sexpable.V2.t
     [@@deriving sexp]
 
-    let to_latest = Fn.id
-    let of_latest = Fn.id
+    let rec to_latest : t -> Latest.t = function
+      | Base b -> Base b
+      | Exec e -> Exec (Exec.Sexpable.V2.to_latest e)
+      | Group g ->
+        Group (Group.Sexpable.V1.to_latest (Group.Sexpable.V1.map g ~f:to_latest))
+    ;;
+
+    let rec of_latest : Latest.t -> t = function
+      | Base b -> Base b
+      | Exec e -> Exec (Exec.Sexpable.V2.of_latest e)
+      | Lazy thunk -> of_latest (Lazy.force thunk)
+      | Group g ->
+        Group (Group.Sexpable.V1.map (Group.Sexpable.V1.of_latest g) ~f:of_latest)
+    ;;
 
   end
-
-  module Latest = V2
 
   module V1 = struct
     let () = add_version 1
@@ -1790,14 +1913,17 @@ module Sexpable = struct
 
     let rec to_latest : t -> Latest.t = function
       | Base b -> Base (Base.Sexpable.V1.to_latest b)
-      | Group g -> Group (Group.Sexpable.V1.map g ~f:to_latest)
       | Exec e -> Exec (Exec.Sexpable.V1.to_latest e)
+      | Group g ->
+        Group (Group.Sexpable.V1.to_latest (Group.Sexpable.V1.map g ~f:to_latest))
     ;;
 
     let rec of_latest : Latest.t -> t = function
       | Base b -> Base (Base.Sexpable.V1.of_latest b)
-      | Group g -> Group (Group.Sexpable.V1.map g ~f:of_latest)
       | Exec e -> Exec (Exec.Sexpable.V1.of_latest e)
+      | Lazy thunk -> of_latest (Lazy.force thunk)
+      | Group g ->
+        Group (Group.Sexpable.V1.map (Group.Sexpable.V1.of_latest g) ~f:of_latest)
     ;;
 
   end
@@ -1810,16 +1936,19 @@ module Sexpable = struct
     type t =
       | V1 of V1.t
       | V2 of V2.t
+      | V3 of V3.t
     [@@deriving sexp]
 
     let to_latest = function
       | V1 t -> V1.to_latest t
       | V2 t -> V2.to_latest t
+      | V3 t -> V3.to_latest t
 
     let of_latest ~version_to_use latest =
       match version_to_use with
       | 1 -> V1 (V1.of_latest latest)
       | 2 -> V2 (V2.of_latest latest)
+      | 3 -> V3 (V3.of_latest latest)
       | other -> failwiths "unsupported version_to_use" other [%sexp_of: int]
     ;;
 
@@ -1829,13 +1958,13 @@ module Sexpable = struct
 
   let supported_versions = Int.Set.of_list (Queue.to_list supported_versions)
 
-  let get_summary = function
+  let rec get_summary = function
     | Base  x -> x.summary
     | Group x -> x.summary
     | Exec  x -> x.summary
+    | Lazy  x -> get_summary (Lazy.force x)
 
   let extraction_var = "COMMAND_OUTPUT_HELP_SEXP"
-
 
   let read_stdout_and_stderr (process_info : Unix.Process_info.t) =
     (* We need to read each of stdout and stderr in a separate thread to avoid deadlocks
@@ -1868,10 +1997,11 @@ module Sexpable = struct
     unstage finish_stdout (), unstage finish_stderr ()
   ;;
 
-  let of_external ~working_dir ~path_to_exe =
+  let of_external ~working_dir ~path_to_exe ~child_subcommand =
     let process_info =
-      Unix.create_process_env () ~args:[]
+      Unix.create_process_env ()
         ~prog:(abs_path ~dir:working_dir path_to_exe)
+        ~args:child_subcommand
         ~env:(`Extend [
           ( extraction_var
           , supported_versions |> Int.Set.sexp_of_t |> Sexp.to_string
@@ -1900,26 +2030,33 @@ module Sexpable = struct
     | sub :: subs ->
       match t with
       | Base _ -> failwithf "unexpected subcommand %S" sub ()
-      | Exec {path_to_exe; working_dir; _} ->
-        find (of_external ~working_dir ~path_to_exe) ~path_to_subcommand:(sub :: subs)
+      | Lazy thunk -> find (Lazy.force thunk) ~path_to_subcommand
+      | Exec {path_to_exe; working_dir; child_subcommand; _} ->
+        find
+          (of_external ~working_dir ~path_to_exe ~child_subcommand)
+          ~path_to_subcommand:(sub :: (subs @ child_subcommand))
       | Group g ->
-        match List.Assoc.find g.subcommands ~equal:String.equal sub with
+        match List.Assoc.find (Lazy.force g.subcommands) ~equal:String.equal sub with
         | None -> failwithf "unknown subcommand %S" sub ()
         | Some t -> find t ~path_to_subcommand:subs
 
 end
 
-let rec sexpable_of_proxy proxy =
-  match proxy.Proxy.kind with
+let rec sexpable_of_proxy_kind (kind : Proxy.t Proxy.Kind.t) =
+  match kind with
   | Base  base  -> Sexpable.Base base
   | Exec  exec  -> Sexpable.Exec exec
+  | Lazy  thunk -> Sexpable.Lazy (Lazy.map ~f:sexpable_of_proxy_kind thunk)
   | Group group ->
     Sexpable.Group
       { group with
         subcommands =
-          List.map group.subcommands ~f:(fun (str, proxy) ->
-            (str, sexpable_of_proxy proxy))
+          Lazy.map group.subcommands
+            ~f:(List.map ~f:(fun (str, proxy) ->
+              (str, sexpable_of_proxy_kind proxy.Proxy.kind)))
       }
+
+let sexpable_of_proxy proxy = sexpable_of_proxy_kind proxy.Proxy.kind
 
 let rec to_sexpable = function
   | Base  base  -> Sexpable.Base  (Base.to_sexpable base)
@@ -1927,7 +2064,7 @@ let rec to_sexpable = function
   | Proxy proxy -> sexpable_of_proxy proxy
   | Group group ->
     Sexpable.Group (Group.to_sexpable ~subcommand_to_sexpable:to_sexpable group)
-  | Lazy  thunk -> to_sexpable (Lazy.force thunk)
+  | Lazy  thunk -> Sexpable.Lazy (Lazy.map ~f:to_sexpable thunk)
 
 type ('main, 'result) basic_command
   =  summary:string
@@ -2000,8 +2137,8 @@ let gather_help ~recursive ~show_flags ~expand_dots sexpable =
       then Path.to_string
       else Path.to_string_dots
     in
-    let gather_exec rpath acc {Exec.Sexpable.working_dir; path_to_exe; _} =
-      loop rpath acc (Sexpable.of_external ~working_dir ~path_to_exe)
+    let gather_exec rpath acc {Exec.Sexpable.working_dir; path_to_exe; child_subcommand; _} =
+      loop rpath acc (Sexpable.of_external ~working_dir ~path_to_exe ~child_subcommand)
     in
     let gather_group rpath acc subs =
       let subs =
@@ -2022,8 +2159,10 @@ let gather_help ~recursive ~show_flags ~expand_dots sexpable =
         else acc)
     in
     match sexpable with
-    | Sexpable.Exec exec   -> gather_exec rpath acc exec
-    | Sexpable.Group group -> gather_group rpath acc group.Group.Sexpable.subcommands
+    | Sexpable.Exec exec -> gather_exec rpath acc exec
+    | Sexpable.Lazy thunk -> loop rpath acc (Lazy.force thunk)
+    | Sexpable.Group group ->
+      gather_group rpath acc (Lazy.force group.Group.Sexpable.subcommands)
     | Sexpable.Base base   ->
       if show_flags then begin
         base.Base.Sexpable.flags
@@ -2082,7 +2221,7 @@ let help_subcommand ~summary ~readme =
            group_help_text ~path {
              readme;
              summary;
-             subcommands = subs;
+             subcommands = Lazy.from_val subs;
              body = None;
            }
          | Some cmd ->
@@ -2105,21 +2244,25 @@ let help_subcommand ~summary ~readme =
        in
        print_endline text)
 
-let group ~summary ?readme ?preserve_subcommand_order ?body alist =
-  let alist =
-    List.map alist ~f:(fun (name, t) -> (normalize Key_type.Subcommand name, t))
-  in
+let lazy_group ~summary ?readme ?preserve_subcommand_order ?body alist =
   let subcommands =
-    match String.Map.of_alist alist with
-    | `Duplicate_key name -> failwithf "multiple subcommands named %s" name ()
-    | `Ok map ->
-      match preserve_subcommand_order with
-      | Some () -> alist
-      | None -> Map.to_alist map
+    Lazy.map alist ~f:(fun alist ->
+      let alist =
+        List.map alist ~f:(fun (name, t) -> (normalize Key_type.Subcommand name, t))
+      in
+      match String.Map.of_alist alist with
+      | `Duplicate_key name -> failwithf "multiple subcommands named %s" name ()
+      | `Ok map ->
+        match preserve_subcommand_order with
+        | Some () -> alist
+        | None -> Map.to_alist map)
   in
   Group {summary; readme; subcommands; body}
 
-let exec ~summary ?readme ~path_to_exe () =
+let group ~summary ?readme ?preserve_subcommand_order ?body alist =
+  lazy_group ~summary ?readme ?preserve_subcommand_order ?body (Lazy.from_val alist)
+
+let exec ~summary ?readme ?(child_subcommand=[]) ~path_to_exe () =
   let working_dir =
     Filename.dirname @@
     match path_to_exe with
@@ -2137,7 +2280,7 @@ let exec ~summary ?readme ~path_to_exe () =
       then failwith "Path passed to `Relative_to_me must be relative"
       else p
   in
-  Exec {summary; readme; working_dir; path_to_exe}
+  Exec {summary; readme; working_dir; path_to_exe; child_subcommand}
 
 let of_lazy thunk = Lazy thunk
 
@@ -2179,23 +2322,24 @@ module Shape = struct
 
   module Group_info = struct
 
-    type 'a t = 'a Group.Sexpable.V1.t = {
+    type 'a t = 'a Group.Sexpable.V2.t = {
       summary     : string;
       readme      : string sexp_option;
-      subcommands : (string * 'a) List.t;
+      subcommands : (string * 'a) List.t Lazy.t;
     } [@@deriving bin_io, compare, fields, sexp]
 
-    let map = Group.Sexpable.V1.map
+    let map = Group.Sexpable.V2.map
 
   end
 
   module Exec_info = struct
 
-    type t = Exec.Sexpable.V2.t = {
-      summary     : string;
-      readme      : string sexp_option;
-      working_dir : string;
-      path_to_exe : string;
+    type t = Exec.Sexpable.V3.t = {
+      summary          : string;
+      readme           : string sexp_option;
+      working_dir      : string;
+      path_to_exe      : string;
+      child_subcommand : string list;
     } [@@deriving bin_io, compare, fields, sexp]
 
   end
@@ -2206,6 +2350,7 @@ module Shape = struct
       | Basic of Base_info.t
       | Group of t Group_info.t
       | Exec of Exec_info.t * (unit -> t)
+      | Lazy of t Lazy.t
 
   end
 
@@ -2221,6 +2366,7 @@ module Shape = struct
       | Basic b -> Basic b
       | Group g -> Group (Group_info.map g ~f:create)
       | Exec (e, f) -> Exec (e, create (f ()))
+      | Lazy thunk -> create (Lazy.force thunk)
 
   end
 
@@ -2228,35 +2374,77 @@ module Shape = struct
 
 end
 
-let rec proxy_of_sexpable sexpable ~working_dir ~path_to_exe ~path_to_subcommand =
+let rec proxy_of_sexpable
+          sexpable
+          ~working_dir
+          ~path_to_exe
+          ~child_subcommand
+          ~path_to_subcommand
+  : Proxy.t =
   let kind =
-    match (sexpable : Sexpable.t) with
-    | Base  b -> Proxy.Kind.Base b
-    | Exec  e -> Proxy.Kind.Exec e
-    | Group g ->
-      Proxy.Kind.Group
-        { g with
-          subcommands =
-            List.map g.subcommands ~f:(fun (str, sexpable) ->
+    kind_of_sexpable
+      sexpable
+      ~working_dir
+      ~path_to_exe
+      ~child_subcommand
+      ~path_to_subcommand
+  in
+  {working_dir; path_to_exe; path_to_subcommand; child_subcommand; kind}
+
+and kind_of_sexpable
+      sexpable
+      ~working_dir
+      ~path_to_exe
+      ~child_subcommand
+      ~path_to_subcommand
+  =
+  match (sexpable : Sexpable.t) with
+  | Base  b -> Proxy.Kind.Base b
+  | Exec  e -> Proxy.Kind.Exec e
+  | Lazy  l ->
+    Proxy.Kind.Lazy
+      (Lazy.map l ~f:(fun sexpable ->
+         kind_of_sexpable
+           sexpable
+           ~working_dir
+           ~path_to_exe
+           ~child_subcommand
+           ~path_to_subcommand))
+  | Group g ->
+    Proxy.Kind.Group
+      { g with
+        subcommands =
+          Lazy.map g.subcommands
+            ~f:(List.map ~f:(fun (str, sexpable) ->
               let path_to_subcommand = path_to_subcommand @ [str] in
               let proxy =
-                proxy_of_sexpable sexpable ~working_dir ~path_to_exe ~path_to_subcommand
+                proxy_of_sexpable
+                  sexpable
+                  ~working_dir
+                  ~path_to_exe
+                  ~child_subcommand
+                  ~path_to_subcommand
               in
-              (str, proxy))
-        }
-  in
-  { Proxy. working_dir; path_to_exe; path_to_subcommand; kind }
+              (str, proxy)))
+      }
 
-let proxy_of_exe ~working_dir path_to_exe =
-  let sexpable = Sexpable.of_external ~working_dir ~path_to_exe in
-  proxy_of_sexpable sexpable ~working_dir ~path_to_exe ~path_to_subcommand:[]
+let proxy_of_exe ~working_dir path_to_exe child_subcommand =
+  let sexpable = Sexpable.of_external ~working_dir ~path_to_exe ~child_subcommand in
+  proxy_of_sexpable sexpable ~working_dir ~path_to_exe ~child_subcommand ~path_to_subcommand:[]
 
 let rec shape_of_proxy proxy : Shape.t =
-  match proxy.Proxy.kind with
+  shape_of_proxy_kind proxy.Proxy.kind
+
+and shape_of_proxy_kind kind =
+  match kind with
   | Base  b -> Basic b
-  | Group g -> Group { g with subcommands = List.Assoc.map g.subcommands ~f:shape_of_proxy }
+  | Lazy  l -> Lazy (Lazy.map ~f:shape_of_proxy_kind l)
+  | Group g ->
+    Group { g with subcommands = Lazy.map g.subcommands ~f:(List.Assoc.map ~f:shape_of_proxy) }
   | Exec  e ->
-    let f () = shape_of_proxy (proxy_of_exe ~working_dir:e.working_dir e.path_to_exe) in
+    let f () =
+      shape_of_proxy (proxy_of_exe ~working_dir:e.working_dir e.path_to_exe e.child_subcommand)
+    in
     Exec (e, f)
 ;;
 
@@ -2266,7 +2454,9 @@ let rec shape t : Shape.t =
   | Group g -> Group (Group.to_sexpable ~subcommand_to_sexpable:shape g)
   | Proxy p -> shape_of_proxy p
   | Exec  e ->
-    let f () = shape_of_proxy (proxy_of_exe ~working_dir:e.working_dir e.path_to_exe) in
+    let f () =
+      shape_of_proxy (proxy_of_exe ~working_dir:e.working_dir e.path_to_exe e.child_subcommand)
+    in
     Exec (Exec.to_sexpable e, f)
   | Lazy thunk -> shape (Lazy.force thunk)
 ;;
@@ -2316,8 +2506,9 @@ module Version_info = struct
       Base base
     | Group group ->
       let subcommands =
-        extend_alist_exn group.Group.subcommands Key_type.Subcommand ~key:"version"
-          (command ~version ~build_info)
+        Lazy.map group.Group.subcommands ~f:(fun subcommands ->
+          extend_alist_exn subcommands Key_type.Subcommand ~key:"version"
+            (command ~version ~build_info))
       in
       Group { group with Group.subcommands }
     | Proxy proxy -> Proxy proxy
@@ -2325,14 +2516,6 @@ module Version_info = struct
     | Lazy  thunk -> Lazy (lazy (add ~version ~build_info (Lazy.force thunk)))
 
 end
-
-(* clear the setting of environment variable associated with command-line
-   completion and recursive help so that subprocesses don't see them. *)
-let getenv_and_clear var =
-  let value = Core_sys.getenv var in
-  if Option.is_some value then Unix.unsetenv var;
-  value
-;;
 
 (* This script works in both bash (via readarray) and zsh (via read -A).  If you change
    it, please test in both bash and zsh.  It does not work in ksh (unexpected null byte)
@@ -2385,16 +2568,8 @@ let handle_environment t ~argv =
     (cmd, args)
 ;;
 
-let set_comp_cword new_value =
-  let new_value = Int.to_string new_value in
-  Unix.putenv ~key:"COMP_CWORD" ~data:new_value
-;;
-
 let process_args ~cmd ~args =
-  let maybe_comp_cword =
-    getenv_and_clear "COMP_CWORD"
-    |> Option.map ~f:Int.of_string
-  in
+  let maybe_comp_cword = maybe_comp_cword () in
   let args =
     match maybe_comp_cword with
     | None -> Cmdline.of_list args
@@ -2413,10 +2588,13 @@ let rec add_help_subcommands = function
   | Exec  _ as t -> t
   | Proxy _ as t -> t
   | Group {summary; readme; subcommands; body} ->
-    let subcommands = List.Assoc.map subcommands ~f:add_help_subcommands in
     let subcommands =
-      extend_alist_exn subcommands Key_type.Subcommand ~key:"help"
-        (help_subcommand ~summary ~readme)
+      Lazy.map subcommands ~f:(fun subcommands ->
+        extend_alist_exn
+          (List.Assoc.map subcommands ~f:add_help_subcommands)
+          Key_type.Subcommand
+          ~key:"help"
+          (help_subcommand ~summary ~readme))
     in
     Group {summary; readme; subcommands; body}
   | Lazy thunk ->
@@ -2431,7 +2609,7 @@ let maybe_apply_extend args ~extend ~path =
 let rec dispatch t env ~extend ~path ~args ~maybe_new_comp_cword ~version ~build_info =
   let to_format_list (group : _ Group.t) : Format.V1.t list =
     let group = Group.to_sexpable ~subcommand_to_sexpable:to_sexpable group in
-    List.map group.subcommands ~f:(fun (name, sexpable) ->
+    List.map (Lazy.force group.subcommands) ~f:(fun (name, sexpable) ->
       { Format.V1. name; aliases = []; doc = Sexpable.get_summary sexpable })
     |> Format.V1.sort
   in
@@ -2443,11 +2621,9 @@ let rec dispatch t env ~extend ~path ~args ~maybe_new_comp_cword ~version ~build
     let args = maybe_apply_extend args ~extend ~path in
     Base.run base env ~path ~args
   | Exec exec ->
-    Option.iter ~f:set_comp_cword maybe_new_comp_cword;
     let args = Cmdline.to_list (maybe_apply_extend args ~extend ~path) in
-    Exec.exec_with_args ~args exec
+    Exec.exec_with_args ~args exec ~maybe_new_comp_cword
   | Proxy proxy ->
-    Option.iter ~f:set_comp_cword maybe_new_comp_cword;
     let args =
       proxy.path_to_subcommand
       @ Cmdline.to_list (maybe_apply_extend args ~extend ~path)
@@ -2456,13 +2632,14 @@ let rec dispatch t env ~extend ~path ~args ~maybe_new_comp_cword ~version ~build
       { Exec.
         working_dir = proxy.working_dir;
         path_to_exe = proxy.path_to_exe;
+        child_subcommand = proxy.child_subcommand;
         summary = Proxy.get_summary proxy;
         readme = Proxy.get_readme proxy |> Option.map ~f:const;
       }
     in
-    Exec.exec_with_args ~args exec
+    Exec.exec_with_args ~args exec ~maybe_new_comp_cword
   | Group ({summary; readme; subcommands = subs; body} as group) ->
-    let env = Env.set env subs_key subs in
+    let env = Env.set env subs_key (Lazy.force subs) in
     let die_showing_help msg =
       if not (Cmdline.ends_in_complete args) then begin
         eprintf "%s\n%!"
@@ -2500,7 +2677,10 @@ let rec dispatch t env ~extend ~path ~args ~maybe_new_comp_cword ~version ~build
       in
       begin
         match
-          lookup_expand (List.Assoc.map subs ~f:(fun x -> (x, `Prefix))) sub Subcommand
+          lookup_expand
+            (List.Assoc.map (Lazy.force subs) ~f:(fun x -> (x, `Prefix)))
+            sub
+            Subcommand
         with
         | Error msg -> die_showing_help msg
         | Ok (sub, t) ->
@@ -2514,7 +2694,8 @@ let rec dispatch t env ~extend ~path ~args ~maybe_new_comp_cword ~version ~build
       end
     | Complete part ->
       let subs =
-        List.map subs ~f:fst
+        Lazy.force subs
+        |> List.map ~f:fst
         |> List.filter ~f:(fun name -> String.is_prefix name ~prefix:part)
         |> List.sort ~cmp:String.compare
       in
@@ -2600,7 +2781,7 @@ module Deprecated = struct
       | Group {summary; subcommands; readme = _; body = _} ->
         (s ^ cmd, summary)
         :: begin
-          subcommands
+          Lazy.force subcommands
           |> List.sort ~cmp:Base.Deprecated.subcommand_cmp_fst
           |> List.concat_map ~f:(fun (cmd', t) ->
             help_recursive_rec ~cmd:cmd' t new_s)

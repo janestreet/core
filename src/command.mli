@@ -638,6 +638,16 @@ val group
   -> (string * t) list
   -> t
 
+(** [lazy_group] is the same as [group], except that
+    the list of subcommands may be generated lazily. *)
+val lazy_group
+  :  summary                    : string
+  -> ?readme                    : (unit -> string)
+  -> ?preserve_subcommand_order : unit
+  -> ?body                      : (path:string list -> unit)
+  -> (string * t) list Lazy.t
+  -> t
+
 (** [exec ~summary ~path_to_exe] runs [exec] on the executable at [path_to_exe]. If
     [path_to_exe] is [`Absolute path] then [path] is executed without any further
     qualification.  If it is [`Relative_to_me path] then
@@ -646,6 +656,10 @@ val group
     return an absolute path in Linux.  On other operating systems it will return
     [Sys.argv.(0)].  If it is [`Relative_to_argv0 path] then [Sys.argv.(0) ^ "/" ^ path]
     is executed.
+
+    The [child_subcommand] argument allows referencing a subcommand one or more levels
+    below the top-level of the child executable. It should *not* be used to pass flags or
+    anonymous arguments to the child.
 
     Care has been taken to support nesting multiple executables built with Command.  In
     particular, recursive help and autocompletion should work as expected.
@@ -660,9 +674,10 @@ val group
     itself, [help -recursive] and autocompletion will hang forever (although actually
     running the subcommand will work). *)
 val exec
-  :  summary     : string
-  -> ?readme     : (unit -> string)
-  -> path_to_exe :
+  :  summary           : string
+  -> ?readme           : (unit -> string)
+  -> ?child_subcommand : string list
+  -> path_to_exe       :
        [ `Absolute          of string
        | `Relative_to_argv0 of string
        | `Relative_to_me    of string
@@ -719,7 +734,7 @@ module Shape : sig
     type 'a t = {
       summary     : string;
       readme      : string sexp_option;
-      subcommands : (string, 'a) List.Assoc.t;
+      subcommands : (string, 'a) List.Assoc.t Lazy.t;
     } [@@deriving bin_io, compare, fields, sexp]
 
     val map : 'a t -> f:('a -> 'b) -> 'b t
@@ -729,10 +744,11 @@ module Shape : sig
   module Exec_info : sig
 
     type t = {
-      summary     : string;
-      readme      : string sexp_option;
-      working_dir : string;
-      path_to_exe : string;
+      summary          : string;
+      readme           : string sexp_option;
+      working_dir      : string;
+      path_to_exe      : string;
+      child_subcommand : string list;
     } [@@deriving bin_io, compare, fields, sexp]
 
   end
@@ -741,6 +757,7 @@ module Shape : sig
     | Basic of Base_info.t
     | Group of t Group_info.t
     | Exec of Exec_info.t * (unit -> t)
+    | Lazy of t Lazy.t
 
   (** Fully forced shapes are comparable and serializable. *)
   module Fully_forced : sig
