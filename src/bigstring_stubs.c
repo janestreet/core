@@ -662,11 +662,19 @@ CAMLprim value bigstring_recvmmsg_assume_fd_is_nonblocking_stub(
 
 #endif  /* JSC_RECVMMSG */
 
-#ifdef MSG_NOSIGNAL
+#if defined(JSC_MSG_NOSIGNAL) || defined(JSC_SO_NOSIGPIPE)
+
+#if defined(JSC_MSG_NOSIGNAL)
 MakeReallyOutputFun(send_no_sigpipe,
                     written = send(fd, bstr, len, MSG_NOSIGNAL))
 
 static int nonblocking_no_sigpipe_flag = MSG_DONTWAIT | MSG_NOSIGNAL;
+#elif defined(JSC_SO_NOSIGPIPE)
+MakeReallyOutputFun(send_no_sigpipe,
+                    written = send(fd, bstr, len, SO_NOSIGPIPE))
+
+static int nonblocking_no_sigpipe_flag = MSG_DONTWAIT | SO_NOSIGPIPE;
+#endif
 
 CAMLprim value bigstring_send_nonblocking_no_sigpipe_stub(
   value v_fd, value v_pos, value v_len, value v_bstr)
@@ -724,6 +732,6 @@ CAMLprim value bigstring_sendmsg_nonblocking_no_sigpipe_stub(
   return Val_long(ret);
 }
 #else
-#warning "MSG_NOSIGNAL not defined; bigstring_send{,msg}_noblocking_no_sigpipe not implemented"
-#warning "Try compiling on Linux?"
-#endif
+#warning "Neither MSG_NOSIGNAL nor SO_NOSIGPIPE defined; bigstring_send{,msg}_noblocking_no_sigpipe not implemented"
+#warning "Try compiling on Linux/mac OS?"
+#endif /* JSC_MSG_NOSIGNAL || JSC_SO_NOSIGPIPE */

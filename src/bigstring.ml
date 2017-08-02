@@ -158,6 +158,15 @@ let pwrite_assume_fd_is_nonblocking fd ~offset ?(pos = 0) ?len bstr =
   unsafe_pwrite_assume_fd_is_nonblocking fd ~offset ~pos ~len bstr
 
 #ifdef JSC_MSG_NOSIGNAL
+#define JSC_NOSIGPIPE
+#endif
+
+#ifdef JSC_SO_NOSIGPIPE
+#define JSC_NOSIGPIPE
+#endif
+
+#ifdef JSC_NOSIGPIPE
+
 external unsafe_really_send_no_sigpipe
   : file_descr -> pos : int -> len : int -> t -> unit
   = "bigstring_really_send_no_sigpipe_stub"

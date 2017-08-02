@@ -46,10 +46,16 @@
 "OUT:#undef JSC_ARCH_SIXTYFOUR"
 #endif
 
-#if defined MSG_NOSIGNAL
+#if defined(MSG_NOSIGNAL)
 "OUT:#define JSC_MSG_NOSIGNAL"
 #else
 "OUT:#undef JSC_MSG_NOSIGNAL"
+#endif
+
+#if defined(SO_NOSIGPIPE)
+"OUT:#define JSC_SO_NOSIGPIPE"
+#else
+"OUT:#undef JSC_SO_NOSIGPIPE"
 #endif
 
 #if defined(_POSIX_TIMEOUTS) && (_POSIX_TIMEOUTS > 0)

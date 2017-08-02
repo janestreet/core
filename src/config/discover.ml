@@ -57,6 +57,17 @@ int main()
 }
 |}
 
+let so_nosigpipe_code = {|
+#include <sys/types.h>
+#include <sys/socket.h>
+
+int main()
+{
+   send(0, "", 0, SO_NOSIGPIPE);
+   return 0;
+}
+|}
+
 let mutex_timed_lock_code = {|
 #include <pthread.h>
 #include <time.h>
@@ -136,6 +147,7 @@ let () =
         [ "TIMERFD"          , timerfd_code          , []
         ; "WORDEXP"          , wordexp_code          , []
         ; "MSG_NOSIGNAL"     , msg_nosignal_code     , []
+        ; "SO_NOSIGPIPE"     , so_nosigpipe_code     , []
         ; "FDATASYNC"        , fdatasync_code        , []
         ; "RECVMMSG"         , recvmmsg_code         , []
         ; "MUTEX_TIMED_LOCK" , mutex_timed_lock_code , ["-lpthread"]
