@@ -10,7 +10,7 @@
 module Stable = struct
   open Core_kernel.Core_kernel_stable
   module V1 = struct
-    type t = string [@@deriving bin_io, compare, sexp]
+    type t = string [@@deriving bin_io, compare, hash, sexp]
     let for_testing = "5a863fc1-67b7-3a0a-dc90-aca2995afbf9"
   end
 end
@@ -52,7 +52,7 @@ module T = struct
           ; Int.to_string counter
           ]
       in
-      Digest.to_hex (Digest.string base)
+      Md5.to_hex (Md5.digest_string base)
     in
     let s = String.create 36 in
     s.[8]  <- '-';

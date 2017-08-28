@@ -103,14 +103,15 @@ type unzoned = Unzoned [@@deriving compare]
       | Inclusive, Inclusive -> At
       | Exclusive, Inclusive
       | Inclusive, Exclusive -> Always v}}
-   {- [Secs]: the exact seconds given during every hour of every day}
-   {- [Mins]: all seconds in the minutes given during every hour of every day}
-   {- [Hours]: all seconds in the hours given on every day}
-   {- [Weekdays]: all seconds in the days given on every week}
-   {- [Days]: all seconds in the days given, every month}
-   {- [Weeks]: all seconds in the weeks given (numbered ISO 8601), every year}
-   {- [Months]: all seconds in the months given, every year}
-   {- [On]: all seconds in the exact dates given}
+   {- [Secs]: the given seconds of a minute, repeated every minute}
+   {- [Mins]: the given minutes of an hour, repeated every hour}
+   {- [Hours]: the given hours of a day, repeated every day}
+   {- [Weekdays]: the given weekdays, repeated every week}
+   {- [Days]: the given calendar dates, repeated every month (if the day
+   occurs in that month)}
+   {- [Weeks]: the given weeks (numbered by ISO 8601), repeated every year}
+   {- [Months]: the given months, repeated every year}
+   {- [On]: the exact dates given}
    {- [Before]: all seconds before the given boundary (inclusive or exclusive)}
    {- [After]: all seconds after the given boundary (inclusive or exclusive)}
    {- [Always]: the set of all seconds}
@@ -120,8 +121,6 @@ type unzoned = Unzoned [@@deriving compare]
 
    ['b] is the type of the tag used in this schedule. In many cases it can be
    unspecified.  See [tags] for more.
-
-   [Between (a, b)] is the empty set if a > b.
 
    Items that take [int list]s silently ignore [int]s outside of the viable
    range. E.g. [Days [32]] will never occur. *)

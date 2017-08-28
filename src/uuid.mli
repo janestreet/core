@@ -15,7 +15,7 @@ val create : unit -> t
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving bin_io, compare, sexp]
+    type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
     val for_testing : t
   end
 end

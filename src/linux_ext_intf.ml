@@ -56,7 +56,30 @@ module type S = sig
 
   (** {2 Non-portable TCP-functionality} *)
 
-  type tcp_bool_option = TCP_CORK [@@deriving sexp, bin_io]
+  type tcp_bool_option =
+    | TCP_CORK
+    (** TCP_CORK (since Linux 2.2) If set, don’t send out partial frames.  All queued
+        partial frames are sent when the option is cleared again.  This is useful for
+        prepending headers before calling sendfile(2), or for throughput optimization.  As
+        currently implemented, there is a 200 mil- lisecond ceiling on the time for which
+        output is corked by TCP_CORK.  If this ceiling is reached, then queued data is
+        automatically transmitted.
+
+        This option should not be used in code intended to be portable. *)
+    | TCP_QUICKACK
+    (** TCP_QUICKACK (since Linux 2.4.4) Quick acks solves an unfortunate interaction
+        between the delayed acks and the Nagle algorithm (TCP_NODELAY).  On fast LANs, the
+        Linux TCP stack quickly reached a CWND (congestion window) of 1 (Linux interprets
+        this as "1 unacknowledged packet", BSD/Windows and others consider it "1
+        unacknowledged segment of data").
+
+        If Linux determines a connection to be bidirectional, it will delay sending acks,
+        hoping to piggy back them with other outgoing data.  This can lead to serious
+        connection stalls on, say, a TCP market data connection with one second
+        heartbeats.  TCP_QUICKACK can be used to prevent entering this delayed ack state.
+
+        This option should not be used in code intended to be portable. *)
+  [@@deriving sexp, bin_io]
 
   (** [gettcpopt_bool sock opt] @return the current value of the boolean TCP socket option
       [opt] for socket [sock]. *)

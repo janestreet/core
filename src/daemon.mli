@@ -7,6 +7,8 @@ open! Import
 module Fd_redirection : sig
   type t = [
     | `Dev_null
+    | `Dev_null_skip_regular_files (** redirect to /dev/null unless already redirected to
+                                       a regular file. *)
     | `Do_not_redirect
     | `File_append of string
     | `File_truncate of string
@@ -44,7 +46,10 @@ val daemonize
     sent out normally.  After "release" is called, stdin is connected to /dev/null,
     and stdout and stderr are connected as specified by [redirect_stdout] and
     [redirect_stderr].  The default is the usual behaviour whereby both of these
-    descriptors are connected to /dev/null.
+    descriptors are connected to /dev/null. ([daemonize_wait], however, will not
+    redirect stdout/stderr to /dev/null if they are already redirected to regular
+    file by default, i.e. default redirection is `Dev_null_skip_regular_files. This
+    is to preserve behavior from versions before.)
 
     Note that calling [release] will adjust SIGPIPE handling, so you should not rely on
     the delivery of this signal during this time.
@@ -68,8 +73,8 @@ val daemonize
     @raise Failure if fork was unsuccessful.
 *)
 val daemonize_wait
-  :  ?redirect_stdout : Fd_redirection.t  (** default redirect to /dev/null *)
-  -> ?redirect_stderr : Fd_redirection.t  (** default redirect to /dev/null *)
+  :  ?redirect_stdout : Fd_redirection.t  (** default `Dev_null_skip_regular_files *)
+  -> ?redirect_stderr : Fd_redirection.t  (** default `Dev_null_skip_regular_files *)
   -> ?cd : string  (** default / *)
   -> ?umask : int  (** defaults to use existing umask *)
   -> ?allow_threads_to_have_been_created : bool (** defaults to false *)

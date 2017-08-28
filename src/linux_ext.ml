@@ -27,7 +27,7 @@ end
 
 (* If you update this type, you also must update linux_tcpopt_bool, in the C stubs. (And
    do make sure you get the order correct) *)
-type tcp_bool_option = TCP_CORK [@@deriving sexp, bin_io]
+type tcp_bool_option = TCP_CORK | TCP_QUICKACK [@@deriving sexp, bin_io]
 
 (* We use [Int63] rather than [Int] because these flags use 32 bits. *)
 
@@ -150,7 +150,9 @@ module Null_toplevel = struct
   end
 end
 module Null : Linux_ext_intf.S = struct
-  type nonrec tcp_bool_option = tcp_bool_option = TCP_CORK [@@deriving sexp, bin_io]
+  type nonrec tcp_bool_option = tcp_bool_option =
+      TCP_CORK | TCP_QUICKACK
+  [@@deriving sexp, bin_io]
 
   module Priority = Priority
 

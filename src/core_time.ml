@@ -148,7 +148,7 @@ module Make (Time0 : Time0_intf.S) (Time : Time_intf.S with module Time := Time0
             try
               [%compare.equal: int64 option] t1_file_size (Some (file_size filename))
               &&
-              [%compare.equal: string option]
+              [%compare.equal: Md5.t option]
                 (Time.Zone.digest t1)
                 (Option.(join (map (find_or_load zone_name) ~f:Time.Zone.digest)))
             with
@@ -366,7 +366,8 @@ module Make (Time0 : Time0_intf.S) (Time : Time_intf.S with module Time := Time0
 
   include (Time : module type of Time
            with module Zone  := Zone
-            and module Ofday := Ofday)
+            and module Ofday := Ofday
+            and module Stable := Time.Stable)
 
   let of_tm tm ~zone =
     (* Explicitly ignoring isdst, wday, yday (they are redundant with the other fields
@@ -416,14 +417,12 @@ module Make (Time0 : Time0_intf.S) (Time : Time_intf.S with module Time := Time0
   ;;
 
   let format t s ~zone =
-    let local = Zone.local in
     let epoch_time =
-      Zone.shift_epoch_time (Lazy.force local) `Local t
-      |> Zone.shift_epoch_time zone `UTC
+      Zone.shift_epoch_time zone `UTC t
       |> to_span_since_epoch
       |> Span.to_sec
     in
-    Core_unix.strftime (Unix.localtime epoch_time) s
+    Core_unix.strftime (Unix.gmtime epoch_time) s
   ;;
 
   let parse s ~fmt ~zone =
@@ -594,6 +593,17 @@ module Make (Time0 : Time0_intf.S) (Time : Time_intf.S with module Time := Time0
         let sexp_of_t t = sexp_of_t_abs t ~zone:Zone.utc
 
         include (val make_comparable ~sexp_of_t ())
+      end
+      module V2 = struct
+        module C = struct
+          include Time.Stable.With_utc_sexp.V2
+
+          type nonrec comparator_witness = comparator_witness
+
+          let comparator = comparator
+        end
+        include C
+        include Comparable.Stable.V1.Make (C)
       end
     end
 

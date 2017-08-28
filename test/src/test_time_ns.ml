@@ -91,7 +91,7 @@ let%expect_test "Time_ns.Span.Stable.V1" =
   print_and_check_stable_int63able_type [%here] (module V) ~cr:Comment [
     make              1L;
     make 11_275_440_000L;
-  ] ~hide_positions:true;
+  ];
   [%expect {|
     (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
     ((sexp   0s)
@@ -161,7 +161,7 @@ let%expect_test "Time_ns.Span.Option.Stable.V1" =
   print_and_check_stable_int63able_type [%here] (module V) ~cr:Comment [
     make              1L;
     make 11_275_440_000L;
-  ] ~hide_positions:true;
+  ];
   [%expect {|
     (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
     ((sexp (0s))
@@ -226,7 +226,7 @@ let%expect_test "Time_ns.Stable.V1" =
   (* stable checks for values that do not precisely round-trip *)
   print_and_check_stable_int63able_type [%here] (module V) ~cr:Comment [
     make 1L;
-  ] ~hide_positions:true;
+  ];
   [%expect {|
     (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
     ((sexp (1969-12-31 19:00:00.000000-05:00))
@@ -287,7 +287,7 @@ let%expect_test "Time_ns.Option.Stable.V1" =
   (* stable checks for values that do not precisely round-trip *)
   print_and_check_stable_int63able_type [%here] (module V) ~cr:Comment [
     make 1L;
-  ] ~hide_positions:true;
+  ];
   [%expect {|
     (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
     ((sexp ((1969-12-31 19:00:00.000000-05:00)))
@@ -340,7 +340,7 @@ let%expect_test "Time_ns.Ofday.Stable.V1" =
   (* stable checks for values that do not precisely round-trip *)
   print_and_check_stable_int63able_type [%here] (module V) ~cr:Comment [
     make 1L;
-  ] ~hide_positions:true;
+  ];
   [%expect {|
     (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
     ((sexp   00:00:00.000000)
@@ -397,7 +397,7 @@ let%expect_test "Time_ns.Ofday.Option.Stable.V1" =
   (* stable checks for values that do not precisely round-trip *)
   print_and_check_stable_int63able_type [%here] (module V) ~cr:Comment [
     make 1L;
-  ] ~hide_positions:true;
+  ];
   [%expect {|
     (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
     ((sexp (00:00:00.000000))
@@ -429,8 +429,8 @@ let%test_module "Time_ns.Span" =
       Int63.((Time_ns.Span.to_int63_ns t + half_microsecond) /% of_int 1000)
     ;;
 
-    let min_kspan_value = to_span Time_ns.Span.min_value
-    let max_kspan_value = to_span Time_ns.Span.max_value
+    let min_span_ns_as_span = to_span Time_ns.Span.min_value
+    let max_span_ns_as_span = to_span Time_ns.Span.max_value
 
     let%test "to_span +/-140y raises" =
       List.for_all [ 1.; -1. ]
@@ -463,85 +463,124 @@ let%test_module "Time_ns.Span" =
            (hour + minute))
         ~expect:"0.042361d "
 
-    let%test_unit "Time.Span.t -> Time_ns.Span.t round trip with microsecond precision" =
+    let a_few_more_or_less = [-3; -2; -1; 0; 1; 2; 3]
+
+    let span_examples =
       let open Time.Span in
-      let time_spans =                                (* touchstones *)
-        min_kspan_value :: max_kspan_value :: Time.(diff (now ()) epoch)
-        :: Time.Span.([ zero; microsecond; millisecond; second; minute; hour; day;
-                        scale day 365.
-                      ])
+      [
+        min_span_ns_as_span;
+        zero;
+        microsecond;
+        millisecond;
+        second;
+        minute;
+        hour;
+        day;
+        scale day 365.;
+        max_span_ns_as_span;
+      ]
+      @ List.init 9 ~f:(fun _ ->
+        of_us (Random.float (to_us max_span_ns_as_span)))
+
+    let multiples_of_span span =
+      List.map a_few_more_or_less ~f:(fun factor ->
+        Time.Span.scale span (float factor))
+
+    let within_a_few_microseconds_of_span span =
+      List.map a_few_more_or_less ~f:(fun number_of_microseconds ->
+        Time.Span.( + ) span
+          (Time.Span.scale Time.Span.microsecond (float number_of_microseconds)))
+
+    let nearest_microsecond_to_span span =
+      Time.Span.of_us (Float.round_nearest (Time.Span.to_us span))
+
+    let span_is_in_range span =
+      Time.Span.( >= ) span min_span_ns_as_span &&
+      Time.Span.( <= ) span max_span_ns_as_span
+
+    let%expect_test "Time.Span.t -> Time_ns.Span.t round trip" =
+      let open Time.Span in
+      let spans =
+        span_examples
+        |> List.concat_map ~f:multiples_of_span
+        |> List.concat_map ~f:within_a_few_microseconds_of_span
+        |> List.map        ~f:nearest_microsecond_to_span
+        |> List.filter     ~f:span_is_in_range
+        |> List.dedup_and_sort ~compare:Time.Span.compare
       in
-      let time_spans =                    (* a few randoms *)
-        time_spans
-        @ List.init 9 ~f:(fun _ -> Time.Span.(of_us (Random.float (to_us max_kspan_value))))
-      in
-      let time_spans =                    (* a few multiples *)
-        List.concat_map time_spans
-          ~f:(fun time_span ->
-            List.map (List.range (-3) 4)
-              ~f:(fun s -> Time.Span.scale time_span (float s)))
-      in
-      let time_spans =                    (* a few microseconds around *)
-        List.concat_map time_spans
-          ~f:(fun time_span ->
-            List.map (List.range (-3) 4)
-              ~f:(fun s -> Time.Span.(time_span + scale microsecond (float s))))
-      in
-      let time_spans =                    (* nearest microsecond *)
-        List.map time_spans
-          ~f:(fun s -> Time.Span.(of_us (Float.round_nearest (to_us s))))
-      in
-      let time_spans =                    (* in range *)
-        List.filter time_spans
-          ~f:(fun s -> Time.Span.(s >= min_kspan_value && s <= max_kspan_value))
-      in
-      List.iter time_spans
-        ~f:(fun expect ->
-          let kspan = to_span (of_span expect) in
-          [%test_pred: Time.Span.t * Time.Span.t] (fun (a,b) -> abs (a - b) <= microsecond)
-            (expect, kspan))
+      List.iter spans ~f:(fun span ->
+        let span_ns    = of_span span    in
+        let round_trip = to_span span_ns in
+        let precision = abs (round_trip - span) in
+        require [%here] (precision <= microsecond)
+          ~if_false_then_print_s:
+            (lazy [%message
+              "round-trip does not have microsecond precision"
+                (span       : Time.Span.t)
+                (span_ns    : Core_kernel.Time_ns.Span.Alternate_sexp.t)
+                (round_trip : Time.Span.t)
+                (precision  : Time.Span.t)]));
+      [%expect {||}];
     ;;
 
-    let%test_unit "Time_ns.Span.t -> Time.Span.t round trip" =
+    let span_ns_examples =
       let open Time_ns.Span in
-      (* The default sexp is not precise enough. *)
-      let sexp_of_t kspan = Sexp.Atom (Int63.to_string (to_int63_ns kspan) ^ "ns") in
-      let kspans =                        (* touchstones *)
-        min_value :: max_value :: Time_ns.(diff (now ()) epoch)
-        :: [ zero; microsecond; millisecond; second; minute; hour; day;
-             scale day 365.
-           ]
+      [
+        min_value;
+        zero;
+        microsecond;
+        millisecond;
+        second;
+        minute;
+        hour;
+        day;
+        scale day 365.;
+        max_value;
+      ]
+      @ List.init 9 ~f:(fun _ ->
+        of_us (Random.float (to_us max_value)))
+
+    let multiples_of_span_ns span_ns =
+      List.filter_map a_few_more_or_less ~f:(fun factor ->
+        Core.Option.try_with (fun () ->
+          Time_ns.Span.scale span_ns (float factor)))
+
+    let within_a_few_microseconds_of_span_ns span_ns =
+      List.filter_map a_few_more_or_less ~f:(fun number_of_microseconds ->
+        Core.Option.try_with (fun () ->
+          Time_ns.Span.( + ) span_ns
+            (Time_ns.Span.scale Time_ns.Span.microsecond (float number_of_microseconds))))
+
+    let nearest_microsecond_to_span_ns span_ns =
+      of_int63_ns (Int63.( * ) (nearest_microsecond span_ns) (Int63.of_int 1000))
+
+    let span_ns_is_in_range span_ns =
+      Time_ns.Span.( >= ) span_ns Time_ns.Span.min_value &&
+      Time_ns.Span.( <= ) span_ns Time_ns.Span.max_value
+
+    let%expect_test "Time_ns.Span.t -> Time.Span.t round trip" =
+      let open Time_ns.Span in
+      let span_nss =
+        span_ns_examples
+        |> List.concat_map ~f:multiples_of_span_ns
+        |> List.concat_map ~f:within_a_few_microseconds_of_span_ns
+        |> List.map        ~f:nearest_microsecond_to_span_ns
+        |> List.filter     ~f:span_ns_is_in_range
+        |> List.dedup_and_sort ~compare:Time_ns.Span.compare
       in
-      let kspans =                        (* a few randoms *)
-        kspans @ List.init 9 ~f:(fun _ -> of_us (Random.float (to_us max_value)))
-      in
-      (* Some tweaks will be out of range, which will raise exceptions. *)
-      let filter_map list ~f =
-        List.filter_map list ~f:(fun x -> Core.Option.try_with (fun () -> f x))
-      in
-      let kspans =                        (* a few multiples *)
-        List.concat_map kspans
-          ~f:(fun kspan ->
-            filter_map (List.range (-3) 4) ~f:(fun s -> scale kspan (float s)))
-      in
-      let kspans =                        (* a few microseconds around *)
-        List.concat_map kspans
-          ~f:(fun kspan ->
-            filter_map (List.range (-3) 4)
-              ~f:(fun s -> kspan + scale microsecond (float s)))
-      in
-      let kspans =                        (* nearest microsecond *)
-        List.map kspans
-          ~f:(fun s -> of_int63_ns Int63.(nearest_microsecond s * of_int 1000))
-      in
-      let kspans =                        (* in range *)
-        List.filter kspans ~f:(fun s -> s >= min_value && s <= max_value)
-      in
-      List.iter kspans
-        ~f:(fun expect ->
-          let kspan = of_span (to_span expect) in
-          [%test_pred: t * t] (fun (a, b) -> abs (a - b) <= microsecond)
-            (expect, kspan))
+      List.iter span_nss ~f:(fun span_ns ->
+        let span       = to_span span_ns in
+        let round_trip = of_span span    in
+        let precision = abs (round_trip - span_ns) in
+        require [%here] (precision <= microsecond)
+          ~if_false_then_print_s:
+            (lazy [%message
+              "round-trip does not have microsecond precision"
+                (span_ns    : Core_kernel.Time_ns.Span.Alternate_sexp.t)
+                (span       : Time.Span.t)
+                (round_trip : Core_kernel.Time_ns.Span.Alternate_sexp.t)
+                (precision  : Core_kernel.Time_ns.Span.Alternate_sexp.t)]));
+      [%expect {||}];
     ;;
 
     let%test _ = Time.Span.is_positive (to_span max_value)  (* make sure no overflow *)

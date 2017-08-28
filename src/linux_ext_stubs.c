@@ -76,7 +76,8 @@ CAMLprim value linux_sysinfo(value __unused v_unit)
 
 /**/
 
-static int linux_tcpopt_bool[] = { TCP_CORK };
+static int linux_tcpopt_bool[] = { TCP_CORK, TCP_QUICKACK };
+
 enum option_type {
   TYPE_BOOL = 0,
   TYPE_INT = 1,

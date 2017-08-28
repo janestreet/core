@@ -124,23 +124,147 @@ let%test_module "of_tm" =
 
 let%test_module "format" =
   (module struct
-    let local_zone_name = "Europe/London"
-    let local           = Zone.find_exn local_zone_name
+    let hkg = Time.Zone.find_exn "Asia/Hong_Kong"
+    let ldn = Time.Zone.find_exn "Europe/London"
+    let nyc = Time.Zone.find_exn "America/New_York"
 
-    let%test_unit _ =
-      let t = of_string_abs ("2015-01-01 10:00:00 " ^ local_zone_name) in
-      [%test_result: string] ~expect:"2015-01-01 10:00:00"
-        (format ~zone:local t "%Y-%m-%d %H:%M:%S")
+    let zones = [hkg; ldn; nyc]
 
-    let%test_unit _ =
-      let t = of_string_abs ("2015-06-06 10:00:00 " ^ local_zone_name) in
-      [%test_result: string] ~expect:"2015-06-06 17:00:00"
-        (format ~zone:(Zone.find_exn "Asia/Hong_Kong") t "%Y-%m-%d %H:%M:%S")
+    let test_time time =
+      print_endline (Time.to_string_abs time ~zone:Zone.utc);
+      List.iter zones ~f:(fun zone ->
+        print_endline (format time ~zone "%F %T" ^ " -- " ^ Time.Zone.name zone))
 
-    let%test_unit _ =
-      let t = of_string_abs ("2015-01-01 10:00:00 " ^ local_zone_name) in
-      [%test_result: string] ~expect:"2015-01-01 18:00:00"
-        (format ~zone:(Zone.find_exn "Asia/Hong_Kong") t "%Y-%m-%d %H:%M:%S")
+    let time1 = of_string_abs ("2015-01-01 10:00:00 Europe/London")
+    let time2 = of_string_abs ("2015-06-06 10:00:00 Europe/London")
+
+    let%expect_test _ =
+      test_time time1;
+      [%expect {|
+        2015-01-01 10:00:00.000000Z
+        2015-01-01 18:00:00 -- Asia/Hong_Kong
+        2015-01-01 10:00:00 -- Europe/London
+        2015-01-01 05:00:00 -- America/New_York |}]
+
+    let%expect_test _ =
+      test_time time2;
+      [%expect {|
+        2015-06-06 09:00:00.000000Z
+        2015-06-06 17:00:00 -- Asia/Hong_Kong
+        2015-06-06 10:00:00 -- Europe/London
+        2015-06-06 05:00:00 -- America/New_York |}]
+
+    let list_of_transition = function
+      | None           -> []
+      | Some (time, _) -> [time]
+
+    let transitions_of_time time zone =
+      List.concat_map ~f:list_of_transition [
+        Zone.prev_clock_shift zone ~before:time;
+        Zone.next_clock_shift zone ~after:time;
+      ]
+
+    let times_around time =
+      List.map [-2.;-1.;+0.;+1.;+2.] ~f:(fun min ->
+        Time.add time (Time.Span.of_min min))
+
+    let test_transition time =
+      List.iter (times_around time) ~f:test_time
+
+    let test_transitions time zone =
+      List.iter (transitions_of_time time zone) ~f:(fun time ->
+        print_endline "";
+        test_transition time)
+
+    let%expect_test _ =
+      test_transitions time1 ldn;
+      [%expect {|
+        2014-10-26 00:58:00.000000Z
+        2014-10-26 08:58:00 -- Asia/Hong_Kong
+        2014-10-26 01:58:00 -- Europe/London
+        2014-10-25 20:58:00 -- America/New_York
+        2014-10-26 00:59:00.000000Z
+        2014-10-26 08:59:00 -- Asia/Hong_Kong
+        2014-10-26 01:59:00 -- Europe/London
+        2014-10-25 20:59:00 -- America/New_York
+        2014-10-26 01:00:00.000000Z
+        2014-10-26 09:00:00 -- Asia/Hong_Kong
+        2014-10-26 01:00:00 -- Europe/London
+        2014-10-25 21:00:00 -- America/New_York
+        2014-10-26 01:01:00.000000Z
+        2014-10-26 09:01:00 -- Asia/Hong_Kong
+        2014-10-26 01:01:00 -- Europe/London
+        2014-10-25 21:01:00 -- America/New_York
+        2014-10-26 01:02:00.000000Z
+        2014-10-26 09:02:00 -- Asia/Hong_Kong
+        2014-10-26 01:02:00 -- Europe/London
+        2014-10-25 21:02:00 -- America/New_York
+
+        2015-03-29 00:58:00.000000Z
+        2015-03-29 08:58:00 -- Asia/Hong_Kong
+        2015-03-29 00:58:00 -- Europe/London
+        2015-03-28 20:58:00 -- America/New_York
+        2015-03-29 00:59:00.000000Z
+        2015-03-29 08:59:00 -- Asia/Hong_Kong
+        2015-03-29 00:59:00 -- Europe/London
+        2015-03-28 20:59:00 -- America/New_York
+        2015-03-29 01:00:00.000000Z
+        2015-03-29 09:00:00 -- Asia/Hong_Kong
+        2015-03-29 02:00:00 -- Europe/London
+        2015-03-28 21:00:00 -- America/New_York
+        2015-03-29 01:01:00.000000Z
+        2015-03-29 09:01:00 -- Asia/Hong_Kong
+        2015-03-29 02:01:00 -- Europe/London
+        2015-03-28 21:01:00 -- America/New_York
+        2015-03-29 01:02:00.000000Z
+        2015-03-29 09:02:00 -- Asia/Hong_Kong
+        2015-03-29 02:02:00 -- Europe/London
+        2015-03-28 21:02:00 -- America/New_York |}]
+
+    let%expect_test _ =
+      test_transitions time1 nyc;
+      [%expect {|
+        2014-11-02 05:58:00.000000Z
+        2014-11-02 13:58:00 -- Asia/Hong_Kong
+        2014-11-02 05:58:00 -- Europe/London
+        2014-11-02 01:58:00 -- America/New_York
+        2014-11-02 05:59:00.000000Z
+        2014-11-02 13:59:00 -- Asia/Hong_Kong
+        2014-11-02 05:59:00 -- Europe/London
+        2014-11-02 01:59:00 -- America/New_York
+        2014-11-02 06:00:00.000000Z
+        2014-11-02 14:00:00 -- Asia/Hong_Kong
+        2014-11-02 06:00:00 -- Europe/London
+        2014-11-02 01:00:00 -- America/New_York
+        2014-11-02 06:01:00.000000Z
+        2014-11-02 14:01:00 -- Asia/Hong_Kong
+        2014-11-02 06:01:00 -- Europe/London
+        2014-11-02 01:01:00 -- America/New_York
+        2014-11-02 06:02:00.000000Z
+        2014-11-02 14:02:00 -- Asia/Hong_Kong
+        2014-11-02 06:02:00 -- Europe/London
+        2014-11-02 01:02:00 -- America/New_York
+
+        2015-03-08 06:58:00.000000Z
+        2015-03-08 14:58:00 -- Asia/Hong_Kong
+        2015-03-08 06:58:00 -- Europe/London
+        2015-03-08 01:58:00 -- America/New_York
+        2015-03-08 06:59:00.000000Z
+        2015-03-08 14:59:00 -- Asia/Hong_Kong
+        2015-03-08 06:59:00 -- Europe/London
+        2015-03-08 01:59:00 -- America/New_York
+        2015-03-08 07:00:00.000000Z
+        2015-03-08 15:00:00 -- Asia/Hong_Kong
+        2015-03-08 07:00:00 -- Europe/London
+        2015-03-08 03:00:00 -- America/New_York
+        2015-03-08 07:01:00.000000Z
+        2015-03-08 15:01:00 -- Asia/Hong_Kong
+        2015-03-08 07:01:00 -- Europe/London
+        2015-03-08 03:01:00 -- America/New_York
+        2015-03-08 07:02:00.000000Z
+        2015-03-08 15:02:00 -- Asia/Hong_Kong
+        2015-03-08 07:02:00 -- Europe/London
+        2015-03-08 03:02:00 -- America/New_York |}]
   end)
 
 let%test_module "parse" =
@@ -487,26 +611,26 @@ let%test_module "Time.Stable" =
         (module Time.Stable.With_utc_sexp.V1.Set)
         set_examples;
       [%expect {|
-(bin_shape_digest 4e7cbf6fe56bd628b963b7f8259e58bf)
-((sexp ()) (bin_io "\000"))
-((sexp ((1970-01-01 00:00:00.000000Z)))
- (bin_io "\001\000\000\000\000\000\000\000\000"))
-((sexp ((2000-01-01 04:59:59.000000Z)))
- (bin_io "\001\000\000\128\231\1966\204A"))
-((sexp ((2000-01-01 05:00:00.000000Z)))
- (bin_io "\001\000\000\000\232\1966\204A"))
-((sexp ((2013-10-07 13:30:00.000000Z)))
- (bin_io "\001\000\000\000\214\173\148\212A"))
-((sexp ((2037-07-22 18:23:37.000000Z)))
- (bin_io "\001\000\000@j\141\196\223A"))
-((sexp (
-   (1970-01-01 00:00:00.000000Z)
-   (2000-01-01 04:59:59.000000Z)
-   (2000-01-01 05:00:00.000000Z)
-   (2013-10-07 13:30:00.000000Z)
-   (2037-07-22 18:23:37.000000Z)))
- (bin_io
-  "\005\000\000\000\000\000\000\000\000\000\000\128\231\1966\204A\000\000\000\232\1966\204A\000\000\000\214\173\148\212A\000\000@j\141\196\223A")) |}];
+        (bin_shape_digest 4e7cbf6fe56bd628b963b7f8259e58bf)
+        ((sexp ()) (bin_io "\000"))
+        ((sexp ((1970-01-01 00:00:00.000000Z)))
+         (bin_io "\001\000\000\000\000\000\000\000\000"))
+        ((sexp ((2000-01-01 04:59:59.000000Z)))
+         (bin_io "\001\000\000\128\231\1966\204A"))
+        ((sexp ((2000-01-01 05:00:00.000000Z)))
+         (bin_io "\001\000\000\000\232\1966\204A"))
+        ((sexp ((2013-10-07 13:30:00.000000Z)))
+         (bin_io "\001\000\000\000\214\173\148\212A"))
+        ((sexp ((2037-07-22 18:23:37.000000Z)))
+         (bin_io "\001\000\000@j\141\196\223A"))
+        ((sexp (
+           (1970-01-01 00:00:00.000000Z)
+           (2000-01-01 04:59:59.000000Z)
+           (2000-01-01 05:00:00.000000Z)
+           (2013-10-07 13:30:00.000000Z)
+           (2037-07-22 18:23:37.000000Z)))
+         (bin_io
+          "\005\000\000\000\000\000\000\000\000\000\000\128\231\1966\204A\000\000\000\232\1966\204A\000\000\000\214\173\148\212A\000\000@j\141\196\223A")) |}];
     ;;
 
     let%expect_test "With_utc_sexp.V1.Map" =
@@ -514,26 +638,95 @@ let%test_module "Time.Stable" =
         (module Specialize_to_int (Time.Stable.With_utc_sexp.V1.Map))
         map_examples;
       [%expect {|
-(bin_shape_digest 31404094f08cdbe1f9fca07a1a1e5303)
-((sexp ()) (bin_io "\000"))
-((sexp (((1970-01-01 00:00:00.000000Z) 0)))
- (bin_io "\001\000\000\000\000\000\000\000\000\000"))
-((sexp (((2000-01-01 04:59:59.000000Z) 1)))
- (bin_io "\001\000\000\128\231\1966\204A\001"))
-((sexp (((2000-01-01 05:00:00.000000Z) 2)))
- (bin_io "\001\000\000\000\232\1966\204A\002"))
-((sexp (((2013-10-07 13:30:00.000000Z) 3)))
- (bin_io "\001\000\000\000\214\173\148\212A\003"))
-((sexp (((2037-07-22 18:23:37.000000Z) 4)))
- (bin_io "\001\000\000@j\141\196\223A\004"))
-((sexp (
-   ((1970-01-01 00:00:00.000000Z) 0)
-   ((2000-01-01 04:59:59.000000Z) 1)
-   ((2000-01-01 05:00:00.000000Z) 2)
-   ((2013-10-07 13:30:00.000000Z) 3)
-   ((2037-07-22 18:23:37.000000Z) 4)))
- (bin_io
-  "\005\000\000\000\000\000\000\000\000\000\000\000\128\231\1966\204A\001\000\000\000\232\1966\204A\002\000\000\000\214\173\148\212A\003\000\000@j\141\196\223A\004")) |}];
+        (bin_shape_digest 31404094f08cdbe1f9fca07a1a1e5303)
+        ((sexp ()) (bin_io "\000"))
+        ((sexp (((1970-01-01 00:00:00.000000Z) 0)))
+         (bin_io "\001\000\000\000\000\000\000\000\000\000"))
+        ((sexp (((2000-01-01 04:59:59.000000Z) 1)))
+         (bin_io "\001\000\000\128\231\1966\204A\001"))
+        ((sexp (((2000-01-01 05:00:00.000000Z) 2)))
+         (bin_io "\001\000\000\000\232\1966\204A\002"))
+        ((sexp (((2013-10-07 13:30:00.000000Z) 3)))
+         (bin_io "\001\000\000\000\214\173\148\212A\003"))
+        ((sexp (((2037-07-22 18:23:37.000000Z) 4)))
+         (bin_io "\001\000\000@j\141\196\223A\004"))
+        ((sexp (
+           ((1970-01-01 00:00:00.000000Z) 0)
+           ((2000-01-01 04:59:59.000000Z) 1)
+           ((2000-01-01 05:00:00.000000Z) 2)
+           ((2013-10-07 13:30:00.000000Z) 3)
+           ((2037-07-22 18:23:37.000000Z) 4)))
+         (bin_io
+          "\005\000\000\000\000\000\000\000\000\000\000\000\128\231\1966\204A\001\000\000\000\232\1966\204A\002\000\000\000\214\173\148\212A\003\000\000@j\141\196\223A\004")) |}];
+    ;;
+
+    let%expect_test "With_utc_sexp.V2" =
+      print_and_check_stable_type [%here]
+        (module Time.Stable.With_utc_sexp.V2)
+        examples;
+      [%expect {|
+        (bin_shape_digest 1fd923acb2dd9c5d401ad5b08b1d40cd)
+        ((sexp (1970-01-01 00:00:00.000000Z))
+         (bin_io "\000\000\000\000\000\000\000\000"))
+        ((sexp (2000-01-01 04:59:59.000000Z)) (bin_io "\000\000\128\231\1966\204A"))
+        ((sexp (2000-01-01 05:00:00.000000Z)) (bin_io "\000\000\000\232\1966\204A"))
+        ((sexp (2013-10-07 13:30:00.000000Z))
+         (bin_io "\000\000\000\214\173\148\212A"))
+        ((sexp (2037-07-22 18:23:37.000000Z)) (bin_io "\000\000@j\141\196\223A")) |}];
+    ;;
+
+    let%expect_test "With_utc_sexp.V2.Set" =
+      print_and_check_stable_type [%here]
+        (module Time.Stable.With_utc_sexp.V2.Set)
+        set_examples;
+      [%expect {|
+        (bin_shape_digest 4e7cbf6fe56bd628b963b7f8259e58bf)
+        ((sexp ()) (bin_io "\000"))
+        ((sexp ((1970-01-01 00:00:00.000000Z)))
+         (bin_io "\001\000\000\000\000\000\000\000\000"))
+        ((sexp ((2000-01-01 04:59:59.000000Z)))
+         (bin_io "\001\000\000\128\231\1966\204A"))
+        ((sexp ((2000-01-01 05:00:00.000000Z)))
+         (bin_io "\001\000\000\000\232\1966\204A"))
+        ((sexp ((2013-10-07 13:30:00.000000Z)))
+         (bin_io "\001\000\000\000\214\173\148\212A"))
+        ((sexp ((2037-07-22 18:23:37.000000Z)))
+         (bin_io "\001\000\000@j\141\196\223A"))
+        ((sexp (
+           (1970-01-01 00:00:00.000000Z)
+           (2000-01-01 04:59:59.000000Z)
+           (2000-01-01 05:00:00.000000Z)
+           (2013-10-07 13:30:00.000000Z)
+           (2037-07-22 18:23:37.000000Z)))
+         (bin_io
+          "\005\000\000\000\000\000\000\000\000\000\000\128\231\1966\204A\000\000\000\232\1966\204A\000\000\000\214\173\148\212A\000\000@j\141\196\223A")) |}];
+    ;;
+
+    let%expect_test "With_utc_sexp.V2.Map" =
+      print_and_check_stable_type [%here]
+        (module Specialize_to_int (Time.Stable.With_utc_sexp.V2.Map))
+        map_examples;
+      [%expect {|
+        (bin_shape_digest 31404094f08cdbe1f9fca07a1a1e5303)
+        ((sexp ()) (bin_io "\000"))
+        ((sexp (((1970-01-01 00:00:00.000000Z) 0)))
+         (bin_io "\001\000\000\000\000\000\000\000\000\000"))
+        ((sexp (((2000-01-01 04:59:59.000000Z) 1)))
+         (bin_io "\001\000\000\128\231\1966\204A\001"))
+        ((sexp (((2000-01-01 05:00:00.000000Z) 2)))
+         (bin_io "\001\000\000\000\232\1966\204A\002"))
+        ((sexp (((2013-10-07 13:30:00.000000Z) 3)))
+         (bin_io "\001\000\000\000\214\173\148\212A\003"))
+        ((sexp (((2037-07-22 18:23:37.000000Z) 4)))
+         (bin_io "\001\000\000@j\141\196\223A\004"))
+        ((sexp (
+           ((1970-01-01 00:00:00.000000Z) 0)
+           ((2000-01-01 04:59:59.000000Z) 1)
+           ((2000-01-01 05:00:00.000000Z) 2)
+           ((2013-10-07 13:30:00.000000Z) 3)
+           ((2037-07-22 18:23:37.000000Z) 4)))
+         (bin_io
+          "\005\000\000\000\000\000\000\000\000\000\000\000\128\231\1966\204A\001\000\000\000\232\1966\204A\002\000\000\000\214\173\148\212A\003\000\000@j\141\196\223A\004")) |}];
     ;;
 
     (* [With_t_of_sexp_abs] *)
@@ -587,7 +780,6 @@ let%test_module "Time.Stable.Span" =
         (* V1 round-trips imprecisely in some cases, so we document them and note that
            they are still reasonably close. *)
         ~cr:Comment
-        ~hide_positions:true
         (module Time.Stable.Span.V1)
         examples;
       [%expect {|
@@ -668,7 +860,6 @@ let%test_module "Time.Stable.Ofday" =
         (* V1 round-trips imprecisely in some cases, so we document them and note that
            they are still reasonably close. *)
         ~cr:Comment
-        ~hide_positions:true
         (module Time.Stable.Ofday.V1)
         examples;
       [%expect {|
@@ -709,7 +900,6 @@ let%test_module "Time.Stable.Ofday" =
         (* V1 round-trips imprecisely in some cases, so we document them and note that
            they are still reasonably close. *)
         ~cr:Comment
-        ~hide_positions:true
         (module Time.Stable.Ofday.Zoned.V1)
         zoned_examples;
       [%expect {|

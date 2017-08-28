@@ -20,6 +20,7 @@
   (c_names
    (bigstring_stubs
     crc_stubs
+    md5_stubs
     iobuf_stubs
     linux_ext_stubs
     ocaml_utils_stubs
