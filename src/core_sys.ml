@@ -74,6 +74,57 @@ let command_exn string =
   if status <> 0 then raise (Command_failed_with_status (status, string))
 ;;
 
+let unix_quote x =
+  if not (String.is_empty x)
+  && String.for_all x
+       ~f:(function
+         | 'a'..'z' | 'A'..'Z' | '0'..'9'
+         | '_' | '-' | ':' | '.' | '/' | ',' | '+' | '=' | '%' | '@' -> true
+         | _ -> false)
+  then
+    (* Shell keywords, as output by [compgen -k] for bash, [man dash] for dash, and [PATH=
+       type -m '*' | grep reserved] for zsh, except for keywords that have special
+       characters like [[. Note that builtins don't matter because 'alias' and alias
+       behave the same, unlike 'if' and if. *)
+    match x with
+    | "if"
+    | "then"
+    | "else"
+    | "elif"
+    | "fi"
+    | "case"
+    | "esac"
+    | "for"
+    | "select"
+    | "while"
+    | "until"
+    | "do"
+    | "done"
+    | "in"
+    | "function"
+    | "time"
+    | "coproc"
+    | "foreach"
+    | "repeat"
+    | "nocorrect" -> Filename.quote x
+    | _ -> x
+  else Filename.quote x
+;;
+
+let%test_unit _ =
+  [%test_eq: string] (unix_quote "") {|''|};
+  [%test_eq: string] (unix_quote "a ") {|'a '|};
+  [%test_eq: string] (unix_quote "a'") {|'a'\'''|};
+  [%test_eq: string] (unix_quote "a/b/+share+") {|a/b/+share+|};
+  [%test_eq: string] (unix_quote "x\000y") "'x\000y'"
+;;
+
+let quote =
+  match Caml.Sys.os_type with
+  | "Unix" -> unix_quote
+  | _ -> Filename.quote
+;;
+
 let fold_dir ~init ~f directory = Array.fold (readdir directory) ~f ~init
 
 let ls_dir directory = Array.to_list (readdir directory)

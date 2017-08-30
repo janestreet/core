@@ -150,11 +150,13 @@ val parts : string -> string list
     Raises an error if given an empty list. *)
 val of_parts : string list -> string
 
-(** Return a quoted version of a file name, suitable for use as
-    one argument in a command line, escaping all meta-characters.
-    Warning: under Windows, the output is only suitable for use
-    with programs that follow the standard Windows quoting
-    conventions.
+(** Return a quoted version of a file name, suitable for use as one argument in a command
+    line, escaping all meta-characters.
+    Warning: under Windows, the output is only suitable for use with programs that follow
+    the standard Windows quoting conventions.
+
+    See [Sys.quote] for an alternative implementation that is more human readable but less
+    portable.
 *)
 val quote : string -> string
 

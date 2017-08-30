@@ -167,6 +167,35 @@ module Null : Linux_ext_intf.S = struct
     let get_thread_clock  = Or_error.unimplemented "Linux_ext.Clock.get_thread_clock"
   end
 
+  module Eventfd = struct
+    type t = File_descr.t [@@deriving compare, sexp_of]
+
+    module Flags = struct
+      (* These (and flags below) are in octal to match the system header file
+         <bits/eventfd.h> *)
+      let nonblock  = Int63.of_int 0o4000
+      let cloexec   = Int63.of_int 0o2000000
+      let semaphore = Int63.of_int 0o1
+
+      include Flags.Make(struct
+        let allow_intersecting = true
+        let should_print_error = true
+        let remove_zero_flags = false
+
+        let known =
+          [ nonblock , "nonblock"
+          ; cloexec  , "cloexec"
+          ; semaphore, "semaphore" ]
+      end)
+    end
+
+    let create = Or_error.unimplemented "Linux_ext.Eventfd.create"
+    let read _ = assert false
+    let write _ = assert false
+
+    let to_file_descr t = t
+  end
+
   module Timerfd = struct
     module Clock = struct
       type t = unit [@@deriving bin_io, compare, sexp]
@@ -251,6 +280,7 @@ end
 #else
 module Clock = Null.Clock
 #endif
+
 
 #ifdef JSC_TIMERFD
 
@@ -445,6 +475,42 @@ module Timerfd = Null.Timerfd
 #ifdef JSC_LINUX_EXT
 
 type file_descr = Core_unix.File_descr.t
+
+module Eventfd = struct
+  module Flags = struct
+    external cloexec   : unit -> Int63.t = "linux_eventfd_EFD_CLOEXEC"
+    external nonblock  : unit -> Int63.t = "linux_eventfd_EFD_NONBLOCK"
+    external semaphore : unit -> Int63.t = "linux_eventfd_EFD_SEMAPHORE"
+
+    let cloexec   = cloexec ()
+    let nonblock  = nonblock ()
+    let semaphore = semaphore ()
+
+    let known =
+      [ cloexec  , "cloexec"
+      ; nonblock , "nonblock"
+      ; semaphore, "semaphore" ]
+
+    include Flags.Make (struct
+      let allow_intersecting = true
+      let should_print_error = true
+      let known = known
+      let remove_zero_flags = false
+    end)
+  end
+
+  type t = File_descr.t [@@deriving compare, sexp_of]
+
+  external create : Int32.t -> Flags.t -> t  = "linux_eventfd"
+  external read   : t -> Int64.t             = "linux_eventfd_read"
+  external write  : t -> Int64.t -> unit     = "linux_eventfd_write"
+
+  let create =
+    let create ?(flags=Flags.empty) init = create init flags in
+    Or_error.return create
+
+  let to_file_descr t = t
+end
 
 external sendfile
   : sock : file_descr -> fd : file_descr -> pos : int -> len : int -> int
@@ -1073,4 +1139,5 @@ let settcpopt_bool                 = Ok settcpopt_bool
 
 #else
 include Null_toplevel
+module Eventfd = Null.Eventfd
 #endif

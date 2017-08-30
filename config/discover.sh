@@ -1,5 +1,6 @@
 #!/bin/sh
 
+
 set -e
 
 if [ $# -ne 2 ]; then
@@ -65,6 +66,12 @@ if $CC config/test_timerfd.c -o /dev/null 2> /dev/null; then
     echo "#define JSC_TIMERFD" >> $OUT
 else
     echo "#undef JSC_TIMERFD" >> $OUT
+fi
+
+if $CC config/test_eventfd.c -o /dev/null 2> /dev/null; then
+    echo "#define JSC_EVENTFD" >> $OUT
+else
+    echo "#undef JSC_EVENTFD" >> $OUT
 fi
 
 for i in 1 2 3; do

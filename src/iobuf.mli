@@ -482,15 +482,15 @@ val send_nonblocking_no_sigpipe
   :  unit
   -> (([> read], seek) t
       -> Unix.File_descr.t
-      -> Unix.Syscall_result.Unit.t
-     ) Or_error.t
+      -> Unix.Syscall_result.Unit.t)
+       Or_error.t
 val sendto_nonblocking_no_sigpipe
   :  unit
   -> (([> read], seek) t
       -> Unix.File_descr.t
       -> Unix.sockaddr
-      -> Unix.Syscall_result.Unit.t
-     ) Or_error.t
+      -> Unix.Syscall_result.Unit.t)
+       Or_error.t
 
 val output : ([> read], seek) t -> Out_channel.t     -> unit
 val write  : ([> read], seek) t -> Unix.File_descr.t -> unit

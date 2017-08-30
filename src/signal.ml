@@ -32,77 +32,91 @@ let equal (t : t) t' = (t = t')
 include struct
   (* Please keep in sync with the list for to_string/sys_behavior *)
   open Sys
-  let abrt = sigabrt
-  let alrm = sigalrm
-  let chld = sigchld
-  let cont = sigcont
-  let fpe = sigfpe
-  let hup = sighup
-  let ill = sigill
-  let int = sigint
-  let kill = sigkill
-  let pipe = sigpipe
-  let prof = sigprof
-  let quit = sigquit
-  let segv = sigsegv
-  let stop = sigstop
-  let term = sigterm
-  let tstp = sigtstp
-  let ttin = sigttin
-  let ttou = sigttou
-  let usr1 = sigusr1
-  let usr2 = sigusr2
+  let abrt   = sigabrt
+  let alrm   = sigalrm
+  let bus    = sigbus
+  let chld   = sigchld
+  let cont   = sigcont
+  let fpe    = sigfpe
+  let hup    = sighup
+  let ill    = sigill
+  let int    = sigint
+  let kill   = sigkill
+  let pipe   = sigpipe
+  let poll   = sigpoll
+  let prof   = sigprof
+  let quit   = sigquit
+  let segv   = sigsegv
+  let stop   = sigstop
+  let sys    = sigsys
+  let term   = sigterm
+  let trap   = sigtrap
+  let tstp   = sigtstp
+  let ttin   = sigttin
+  let ttou   = sigttou
+  let urg    = sigurg
+  let usr1   = sigusr1
+  let usr2   = sigusr2
   let vtalrm = sigvtalrm
-  let zero = 0
+  let xcpu   = sigxcpu
+  let xfsz   = sigxfsz
+  let zero   = 0
 end
 
 exception Invalid_signal_mnemonic_or_number of string [@@deriving sexp]
 
-let to_string, of_string, default_sys_behavior =
+let to_string_with_version, of_string, default_sys_behavior =
   let known =
     [
-      ("sigabrt", abrt, `Dump_core);
-      ("sigalrm", alrm, `Terminate);
-      ("sigchld", chld, `Ignore);
-      ("sigcont", cont, `Continue);
-      ("sigfpe", fpe, `Dump_core);
-      ("sighup", hup, `Terminate);
-      ("sigill", ill, `Dump_core);
-      ("sigint", int, `Terminate);
-      ("sigkill", kill, `Terminate);
-      ("sigpipe", pipe, `Terminate);
-      ("sigprof", prof, `Terminate);
-      ("sigquit", quit, `Dump_core);
-      ("sigsegv", segv, `Dump_core);
-      ("sigstop", stop, `Stop);
-      ("sigterm", term, `Terminate);
-      ("sigtstp", tstp, `Stop);
-      ("sigttin", ttin, `Stop);
-      ("sigttou", ttou, `Stop);
-      ("sigusr1", usr1, `Terminate);
-      ("sigusr2", usr2, `Terminate);
-      ("sigvtalrm", vtalrm, `Terminate);
-      ("sigzero", zero, `Ignore);
+      ("sigabrt",   abrt,   `Dump_core, 1);
+      ("sigalrm",   alrm,   `Terminate, 1);
+      ("sigbus",    bus,    `Dump_core, 2);
+      ("sigchld",   chld,   `Ignore,    1);
+      ("sigcont",   cont,   `Continue,  1);
+      ("sigfpe",    fpe,    `Dump_core, 1);
+      ("sighup",    hup,    `Terminate, 1);
+      ("sigill",    ill,    `Dump_core, 1);
+      ("sigint",    int,    `Terminate, 1);
+      ("sigkill",   kill,   `Terminate, 1);
+      ("sigpipe",   pipe,   `Terminate, 1);
+      ("sigpoll",   poll,   `Terminate, 2);
+      ("sigprof",   prof,   `Terminate, 1);
+      ("sigquit",   quit,   `Dump_core, 1);
+      ("sigsegv",   segv,   `Dump_core, 1);
+      ("sigstop",   stop,   `Stop,      1);
+      ("sigsys",    sys,    `Dump_core, 2);
+      ("sigterm",   term,   `Terminate, 1);
+      ("sigtrap",   trap,   `Dump_core, 2);
+      ("sigtstp",   tstp,   `Stop,      1);
+      ("sigttin",   ttin,   `Stop,      1);
+      ("sigttou",   ttou,   `Stop,      1);
+      ("sigurg",    urg,    `Ignore,    2);
+      ("sigusr1",   usr1,   `Terminate, 1);
+      ("sigusr2",   usr2,   `Terminate, 1);
+      ("sigvtalrm", vtalrm, `Terminate, 1);
+      ("sigxcpu",   xcpu,   `Dump_core, 2);
+      ("sigxfsz",   xfsz,   `Dump_core, 2);
+      ("sigzero",   zero,   `Ignore,    1);
     ]
   in
-  let str_tbl = Int.Table.create ~size:1 () in
-  let int_tbl = String.Table.create ~size:1 () in
-  let behavior_tbl = Int.Table.create ~size:1 () in
-  List.iter known ~f:(fun (name, s, behavior) ->
-    Hashtbl.set str_tbl ~key:s ~data:name;
-    Hashtbl.set int_tbl ~key:name ~data:s;
-    Hashtbl.set behavior_tbl ~key:s ~data:behavior);
+  let name_and_version_by_t = Int.Table.create ~size:1 () in
+  let t_by_name = String.Table.create ~size:1 () in
+  let behavior_by_t = Int.Table.create ~size:1 () in
+  List.iter known ~f:(fun (name, t, behavior, stable_version) ->
+    Hashtbl.set name_and_version_by_t ~key:t ~data:(name, stable_version);
+    Hashtbl.set t_by_name ~key:name ~data:t;
+    Hashtbl.set behavior_by_t ~key:t ~data:behavior);
   (* For unknown signal numbers, [to_string] returns a meaningful
      string, while [default_sys_behavior] has to raise an exception
      because we don't know what the right answer is. *)
-  let to_string s =
-    match Hashtbl.find str_tbl s with
-    | None -> "<unknown signal " ^ Int.to_string s ^ ">"
-    | Some string -> string
+  let to_string_with_version t ~version:requested_version =
+    match Hashtbl.find name_and_version_by_t t with
+    | Some (string, needed_version) when requested_version >= needed_version -> string
+    | _ -> "<unknown signal " ^ Int.to_string t ^ ">"
   in
   let of_string s =
     let s = String.lowercase (String.strip s) in
-    match Hashtbl.find int_tbl s with
+    match Hashtbl.find t_by_name s with
     | Some sn -> sn
     | None ->
       if String.is_prefix s ~prefix:"<unknown signal " then
@@ -110,19 +124,23 @@ let to_string, of_string, default_sys_behavior =
         with _ -> raise (Invalid_signal_mnemonic_or_number s)
       else raise (Invalid_signal_mnemonic_or_number s)
   in
-  let default_sys_behavior s =
-    match Hashtbl.find behavior_tbl s with
+  let default_sys_behavior t =
+    match Hashtbl.find behavior_by_t t with
     | None ->
       raise (Invalid_argument ("Signal.default_sys_behavior: unknown signal " ^
-                               Int.to_string s))
+                               Int.to_string t))
     | Some behavior -> behavior
   in
-  to_string, of_string, default_sys_behavior
+  to_string_with_version, of_string, default_sys_behavior
 ;;
 
 exception Expected_atom of Sexp.t [@@deriving sexp]
 
-let sexp_of_t t = Sexp.Atom (to_string t)
+let sexp_of_t_with_version t ~version = Sexp.Atom (to_string_with_version t ~version)
+
+let to_string s = to_string_with_version s ~version:2
+
+let sexp_of_t t = sexp_of_t_with_version t ~version:1
 
 let t_of_sexp s =
   match s with
@@ -215,4 +233,22 @@ let can_send_to pid =
   | _ -> false
 ;;
 
+module Stable = struct
+  module V2 = struct
+    type nonrec t = t [@@deriving bin_io, compare]
+    let t_of_sexp = t_of_sexp
+    let sexp_of_t t = sexp_of_t_with_version t ~version:2
+  end
+  module V1 = struct
+    type nonrec t = t [@@deriving bin_io, compare]
+    let t_of_sexp = t_of_sexp
+    let sexp_of_t t = sexp_of_t_with_version t ~version:1
+  end
+end
 
+let%test_unit _ =
+  [%test_eq: string] (to_string bus) "sigbus";
+  [%test_eq: string] (Sexp.to_string (sexp_of_t bus)) {|"<unknown signal -22>"|};
+  [%test_eq: string] (Sexp.to_string (Stable.V1.sexp_of_t bus)) {|"<unknown signal -22>"|};
+  [%test_eq: string] (Sexp.to_string (Stable.V2.sexp_of_t bus)) "sigbus";
+;;

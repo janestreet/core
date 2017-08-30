@@ -1,6 +1,16 @@
 open Base
 module C = Configurator
 
+let eventfd_code = {|
+#include <sys/eventfd.h>
+
+int main()
+{
+  int fd = eventfd(0, 0);
+  return 0;
+}
+|}
+
 let posix_timers_code = {|
 #include <time.h>
 
@@ -53,6 +63,17 @@ let msg_nosignal_code = {|
 int main()
 {
    send(0, "", 0, MSG_NOSIGNAL);
+   return 0;
+}
+|}
+
+let so_nosigpipe_code = {|
+#include <sys/types.h>
+#include <sys/socket.h>
+
+int main()
+{
+   send(0, "", 0, SO_NOSIGPIPE);
    return 0;
 }
 |}
@@ -133,9 +154,11 @@ let () =
     let simple_vars =
       List.map ~f:(fun (v, code, link_flags) ->
         (v, C.C_define.Value.Switch (C.c_test c code ~link_flags)))
-        [ "TIMERFD"          , timerfd_code          , []
+        [ "EVENTFD"          , eventfd_code          , []
+        ; "TIMERFD"          , timerfd_code          , []
         ; "WORDEXP"          , wordexp_code          , []
         ; "MSG_NOSIGNAL"     , msg_nosignal_code     , []
+        ; "SO_NOSIGPIPE"     , so_nosigpipe_code     , []
         ; "FDATASYNC"        , fdatasync_code        , []
         ; "RECVMMSG"         , recvmmsg_code         , []
         ; "MUTEX_TIMED_LOCK" , mutex_timed_lock_code , ["-lpthread"]

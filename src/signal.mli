@@ -96,6 +96,8 @@ val abrt   : t  (** [Dump_core]  Abnormal termination                           
 
 val alrm   : t  (** [Terminate]  Timeout                                        *)
 
+val bus    : t  (** [Dump_core]  Bus error                                      *)
+
 val chld   : t  (** [Ignore]     Child process terminated                       *)
 
 val cont   : t  (** [Continue]   Continue                                       *)
@@ -112,15 +114,21 @@ val kill   : t  (** [Terminate]  Termination (cannot be ignored)                
 
 val pipe   : t  (** [Terminate]  Broken pipe                                    *)
 
+val poll   : t  (** [Terminate]  Pollable event                                 *)
+
 val prof   : t  (** [Terminate]  Profiling interrupt                            *)
 
 val quit   : t  (** [Dump_core]  Interactive termination                        *)
 
 val segv   : t  (** [Dump_core]  Invalid memory reference                       *)
 
+val sys    : t  (** [Dump_core]  Bad argument to routine                        *)
+
 val stop   : t  (** [Stop]       Stop                                           *)
 
 val term   : t  (** [Terminate]  Termination                                    *)
+
+val trap   : t  (** [Dump_core]  Trace/breakpoint trap                          *)
 
 val tstp   : t  (** [Stop]       Interactive stop                               *)
 
@@ -128,11 +136,17 @@ val ttin   : t  (** [Stop]       Terminal read from background process          
 
 val ttou   : t  (** [Stop]       Terminal write from background process         *)
 
+val urg    : t  (** [Ignore]     Urgent condition on socket                     *)
+
 val usr1   : t  (** [Terminate]  Application-defined signal 1                   *)
 
 val usr2   : t  (** [Terminate]  Application-defined signal 2                   *)
 
 val vtalrm : t  (** [Terminate]  Timeout in virtual time                        *)
+
+val xcpu : t    (** [Dump_core]  Timeout in cpu time                            *)
+
+val xfsz : t    (** [Dump_core]  File size limit exceeded                       *)
 
 val zero   : t  (** [Ignore]     No-op; can be used to test whether the target
                     process exists and the current process has
@@ -175,4 +189,13 @@ module Expert : sig
   (** [handle t f] is [set t (`Handle f)]. *)
   val handle : t -> (t -> unit) -> unit
 
+end
+
+module Stable : sig
+  module V2 : sig
+    type nonrec t = t [@@deriving bin_io, compare, sexp]
+  end
+  module V1 : sig
+    type nonrec t = t [@@deriving bin_io, compare, sexp]
+  end
 end

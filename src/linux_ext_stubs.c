@@ -527,4 +527,66 @@ CAMLprim value linux_timerfd_gettime(value v_fd)
 
 #endif /* JSC_TIMERFD */
 
+#ifdef JSC_EVENTFD
+
+#include <sys/eventfd.h>
+
+#define EVENTFD_INT63(X) DEFINE_INT63_CONSTANT(linux_eventfd_##X, X)
+
+EVENTFD_INT63(EFD_CLOEXEC)
+EVENTFD_INT63(EFD_NONBLOCK)
+EVENTFD_INT63(EFD_SEMAPHORE)
+
+CAMLprim value
+linux_eventfd(value v_initval, value v_flags)
+{
+  CAMLparam2(v_initval, v_flags);
+
+  int initval, retval;
+
+  initval = Int32_val(v_initval);
+  if (initval < 0) caml_failwith("eventfd: initial value cannot be negative");
+
+  retval = eventfd(initval, Int63_val(v_flags));
+  if (retval < 0) uerror("eventfd", Nothing);
+
+  CAMLreturn(Val_int(retval));
+}
+
+CAMLprim value
+linux_eventfd_read(value v_fd)
+{
+  CAMLparam1(v_fd);
+
+  int fd = Int_val(v_fd);
+  uint64_t val;
+  int retval;
+
+  caml_enter_blocking_section();
+  retval = read(fd, &val, sizeof(uint64_t));
+  caml_leave_blocking_section();
+  if (retval < 0) uerror("eventfd_read", Nothing);
+
+  CAMLreturn(caml_copy_int64(val));
+}
+
+CAMLprim value
+linux_eventfd_write(value v_fd, value v_val)
+{
+  CAMLparam2(v_fd, v_val);
+
+  int fd = Int_val(v_fd);
+  uint64_t val = Int64_val(v_val);
+  int retval;
+
+  caml_enter_blocking_section();
+  retval = write(fd, &val, sizeof(uint64_t));
+  caml_leave_blocking_section();
+  if (retval < 0) uerror("eventfd_write", Nothing);
+
+  CAMLreturn(Val_unit);
+}
+
+#endif /* JSC_EVENTFD */
+
 #endif /* JSC_LINUX_EXT */

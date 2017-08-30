@@ -48,3 +48,57 @@ let%expect_test "[Epoll.remove] does not allocate" =
     require_no_allocation [%here] (fun () -> ignore (Epoll.remove epset sock1)));
   [%expect {| |}];
 ;;
+
+(* Eventfd *)
+
+let create = Or_error.ok_exn Eventfd.create
+
+let%test_unit "Eventfd.read returns the initial value on a non-semaphore fd" =
+  let fd = create 1l in
+  [%test_result : Int64.t]
+    ~expect:1L
+    (Eventfd.read fd);
+  let fd = create 10l in
+  [%test_result : Int64.t]
+    ~expect:10L
+    (Eventfd.read fd);
+;;
+
+let%test_unit "Eventfd.read returns [1] on a semaphore fd" =
+  let fd = create ~flags:Eventfd.Flags.semaphore 1l in
+  [%test_result : Int64.t]
+    ~expect:1L
+    (Eventfd.read fd);
+  let fd = create ~flags:Eventfd.Flags.semaphore 10l in
+  [%test_result : Int64.t]
+    ~expect:1L
+    (Eventfd.read fd)
+;;
+
+let nonblock_read fd =
+  try Some (Eventfd.read fd) with _ -> None
+
+let%test_unit "Eventfd.write updates the counter, and Eventfd.read clears it on a non-semaphore fd" =
+  let fd = create ~flags:Eventfd.Flags.nonblock 1l in
+  Eventfd.write fd 10L;
+  [%test_result : Int64.t]
+    ~expect:11L
+    (Eventfd.read fd);
+  [%test_result : Int64.t option]
+    ~expect:None
+    (nonblock_read fd)
+;;
+
+let%test_unit "Eventfd.read will not block until the counter is decremented to zero on a semaphore fd" =
+  let fd = create ~flags:Eventfd.Flags.(nonblock + semaphore) 10l in
+  let count = ref 10L in
+  while Int64.(!count > 0L) do
+    [%test_result : Int64.t option]
+      ~expect:(Some 1L)
+      (nonblock_read fd);
+    Int64.decr count
+  done;
+  [%test_result : Int64.t]
+    ~expect:0L
+    !count
+;;

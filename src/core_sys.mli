@@ -59,6 +59,14 @@ val command : string -> int
     returns with nonzero exit status. *)
 val command_exn : string -> unit
 
+(** [quote s] quotes the string in a format suitable for the shell of the current system
+    (e.g. suitable for [command]).  On Unix, this function only quotes as necessary, which
+    makes its output more legible than [Filename.quote].
+
+    WARNING: This may not work with some shells, but should work with sh, bash, and zsh.
+*)
+val quote : string -> string
+
 (** Change the current working directory of the process. *)
 val chdir : string -> unit
 
@@ -131,7 +139,7 @@ val catch_break : bool -> unit
     ["major.minor[.patchlevel][+additional-info]"], where [major], [minor], and
     [patchlevel] are integers, and [additional-info] is an arbitrary string. The
     [[.patchlevel]] and [[+additional-info]] parts may be absent. *)
-val ocaml_version : string;;
+val ocaml_version : string
 
 (** [execution_mode] tests whether the code being executed was compiled natively
     or to bytecode. *)
@@ -160,3 +168,4 @@ val home_directory : unit -> string
     ]}
 *)
 external opaque_identity : 'a -> 'a = "%opaque"
+

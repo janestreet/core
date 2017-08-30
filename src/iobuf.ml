@@ -1085,19 +1085,20 @@ let unsafe_sent t result =
         Syscall_result.unit)
   else Syscall_result.Int.reinterpret_error_exn result
 
-(* This function and the one below have a 'fun () ->' in front of them because the value
-   restriction that comes from applying Or_error.map prevents the generalization of the
-   phantom types variables in the iobuf types. Or_error.map could be inlined though. *)
+(* Don't use [Or_error.map].  The natural usage results in a partially applied function,
+   which is slower to call. *)
 let send_nonblocking_no_sigpipe () =
-  Or_error.map Bigstring.send_nonblocking_no_sigpipe ~f:(fun send ->
-    fun t fd -> unsafe_sent t (send fd t.buf ~pos:t.lo ~len:(length t))
-  )
+  match Bigstring.send_nonblocking_no_sigpipe with
+  | Error _ as e -> e
+  | Ok send ->
+    Ok (fun t fd -> unsafe_sent t (send fd t.buf ~pos:t.lo ~len:(length t)))
 ;;
 
 let sendto_nonblocking_no_sigpipe () =
-  Or_error.map Bigstring.sendto_nonblocking_no_sigpipe ~f:(fun sendto ->
-    fun t fd addr -> unsafe_sent t (sendto fd t.buf ~pos:t.lo ~len:(length t) addr)
-  )
+  match Bigstring.sendto_nonblocking_no_sigpipe with
+  | Error _ as e -> e
+  | Ok sendto ->
+    Ok (fun t fd addr -> unsafe_sent t (sendto fd t.buf ~pos:t.lo ~len:(length t) addr))
 ;;
 
 let output t ch =

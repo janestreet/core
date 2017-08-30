@@ -155,6 +155,51 @@ module type S = sig
     val get_thread_clock : (unit -> t) Or_error.t
   end
 
+  (** {2 Eventfd functions} *)
+
+  module Eventfd : sig
+    module Flags : sig
+      type t = private Int63.t [@@deriving sexp_of]
+
+      include Flags.S with type t := t
+
+      val cloexec   : t (** [EFD_CLOEXEC] *)
+
+      val nonblock  : t (** [EFD_NONBLOCK] *)
+
+      val semaphore : t (** [EFD_SEMAPHORE] *)
+    end
+
+    type t = private File_descr.t [@@deriving compare, sexp_of]
+
+    (** [create ?flags init] creates a new event file descriptor with [init] as
+        the counter's initial value.  With Linux 2.6.26 or earlier [flags] must
+        be [empty]. *)
+    val create : (?flags:Flags.t -> Int32.t -> t) Or_error.t
+
+    (** [read t] will block until [t]'s counter is non-zero, after which its behavior
+        depends on whether [t] was created with the {!Flags.semaphore} flag set. If it was
+        set, then [read t] will return [1] and decrement [t]'s counter. If it was not set,
+        then [read t] will return the value of [t]'s counter and set the counter to [0].
+        The returned value should be interpreted as an unsigned 64-bit integer.
+
+        In the case that [t] was created with the {!Flags.nonblock} flag set, this
+        function will raise a Unix error with the error code [EAGAIN] or [EWOULDBLOCK],
+        instead of blocking. *)
+    val read : t -> Int64.t
+
+    (** [write t v] will block until [t]'s counter is less than the max value of a
+        [uint64_t], after which it will increment [t]'s counter by [v], which will be
+        interpreted as an unsigned 64-bit integer.
+
+        In the case that [t] was created with the {!Flags.nonblock} flag set, this
+        function will raise a Unix error with the error code [EAGAIN] or [EWOULDBLOCK],
+        instead of blocking. *)
+    val write : t -> Int64.t -> unit
+
+    val to_file_descr : t -> File_descr.t
+  end
+
   (** {2 Timerfd functions} *)
 
   module Timerfd : sig
