@@ -1953,3 +1953,26 @@ core_unix_getifaddrs(value v_unit)
 
   CAMLreturn(head);
 }
+
+#include <arpa/inet.h>
+
+CAMLprim value core_unix_inet4_addr_of_int32(value v) {
+  CAMLparam1(v);
+
+  struct in_addr addr;
+  addr.s_addr = ntohl(Int32_val(v));
+
+  CAMLreturn(alloc_inet_addr(&addr));
+}
+
+CAMLprim value core_unix_inet4_addr_to_int32_exn(value v) {
+  CAMLparam1(v);
+  struct in_addr addr;
+
+  if (caml_string_length(v) != 4) {
+    caml_invalid_argument("not a valid IPv4 address");
+  }
+
+  addr = GET_INET_ADDR(v);
+  CAMLreturn(caml_copy_int32(htonl(addr.s_addr)));
+}

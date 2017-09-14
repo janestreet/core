@@ -2096,7 +2096,7 @@ val wordexp
 (** {2 System information} *)
 
 module Utsname : sig
-  type t [@@deriving sexp]
+  type t [@@deriving sexp, compare]
 
   val sysname : t -> string
   val nodename : t -> string

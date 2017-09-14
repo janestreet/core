@@ -292,7 +292,7 @@ let advance t len = with_advance t ~len ignore_range
    v} but higher order functions don't get inlined, even in simple uses like advance.
    Therefor, we stick to first order. *)
 
-let unsafe_buf_pos t ~pos = t.lo + pos
+let [@inline always] unsafe_buf_pos t ~pos = t.lo + pos
 let buf_pos_exn t ~pos ~len = check_range t ~pos ~len; unsafe_buf_pos t ~pos
 
 let unsafe_advance t n = t.lo <- t.lo + n
@@ -829,8 +829,8 @@ module Blit = struct
     include T_src
     let unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len =
       Bigstring.unsafe_blit ~len
-        ~src:src.buf ~src_pos:(buf_pos_exn src ~pos:src_pos ~len)
-        ~dst:dst.buf ~dst_pos:(buf_pos_exn dst ~pos:dst_pos ~len)
+        ~src:src.buf ~src_pos:(unsafe_buf_pos src ~pos:src_pos)
+        ~dst:dst.buf ~dst_pos:(unsafe_buf_pos dst ~pos:dst_pos)
   end
   include Test_blit.Make_and_test (Char_elt) (T_dst)
   (* Workaround the inability of the compiler to inline in the presence of functors. *)

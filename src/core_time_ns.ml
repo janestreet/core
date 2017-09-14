@@ -111,10 +111,10 @@ end = struct
   include T
   include Comparable.Validate_with_zero (T)
   include Identifiable.Make (T)
-  (* The inclusion of [Comparable.Validate_with_zero] replaces the infix compare operators
-     with [caml_int_compare] versions. The difference is noticable, a benchmark of
+  (* The inclusion of [Identifiable.Make] replaces the infix compare operators with
+     [caml_int_compare] versions. The difference is noticable, a benchmark of
      [of_span_since_start_of_day_exn] shows 9.53ns vs 2.45ns. *)
-  include (T : Core_kernel.Comparisons.Infix with type t := t)
+  include (T : Core_kernel.Comparisons.S with type t := t)
 
   let to_short_string t = Time.Span.to_short_string (to_span t)
   let randomize t ~percent = of_span (Time.Span.randomize (to_span t) ~percent)
@@ -169,6 +169,7 @@ end = struct
         let module_name = "Core.Time_ns.Span.Option"
         include Sexpable.To_stringable (struct type nonrec t = t [@@deriving sexp] end)
       end)
+    include (Int63 : Core_kernel.Comparisons.S with type t := t)
   end
 end
 
@@ -299,7 +300,7 @@ module Option = struct
       include Sexpable.To_stringable (struct type nonrec t = t [@@deriving sexp] end)
     end)
   (* bring back the efficient implementation of comparison operators *)
-  include (Span.Option : Core_kernel.Comparisons.Infix with type t := t)
+  include (Span.Option : Core_kernel.Comparisons.S with type t := t)
 end
 
 (* Note: This is FIX standard millisecond precision. You should use
@@ -313,7 +314,7 @@ include Identifiable.Make (struct
     let of_string, to_string = of_string, to_string
   end)
 (* bring back the efficient implementation of comparison operators *)
-include (Core_kernel.Time_ns : Core_kernel.Comparisons.Infix with type t := t)
+include (Core_kernel.Time_ns : Core_kernel.Comparisons.S with type t := t)
 
 (* Helper function to avoid inaccuracies in [Time_ns.t] <-> [Date.t * Ofday.t] conversions
    below.  We do the conversions by round-tripping through [Time.t] and [Time.Ofday.t],
@@ -498,6 +499,7 @@ module Ofday = struct
       let hash = Span.hash
       let of_string, to_string = of_string, to_string
     end)
+  include (Span : Core_kernel.Comparisons.S with type t := t)
 
   module Option = struct
     type ofday = t [@@deriving sexp, compare]
@@ -546,6 +548,7 @@ module Ofday = struct
         let module_name = "Core.Time_ns.Ofday.Option"
         include Sexpable.To_stringable (struct type nonrec t = t [@@deriving sexp] end)
       end)
+    include (Span.Option : Core_kernel.Comparisons.S with type t := t)
   end
 end
 
@@ -558,6 +561,34 @@ let%bench_module "Ofday" =
     let%bench_fun "of_span_since_start_of_day_exn random" =
       let random_span = Random.float Span.(to_ns day) |> Span.of_ns in
       fun () -> Ofday.of_span_since_start_of_day_exn random_span
+  end)
+
+let%bench_module "Comparisons" =
+  (module struct
+    let t1, t2 = random (), random ()
+    let%bench_fun "min"   = fun () -> Sys.opaque_identity (min   t1 t2)
+    let%bench_fun "max"   = fun () -> Sys.opaque_identity (max   t1 t2)
+    let%bench_fun "equal" = fun () -> Sys.opaque_identity (equal t1 t2)
+    let%bench_fun "(=)"   = fun () -> Sys.opaque_identity ((=)   t1 t2)
+    let t1, t2 = Option.some t1, Option.some t2
+    let%bench_fun "Option.equal" = fun () -> Sys.opaque_identity (Option.equal t1 t2)
+    let%bench_fun "Option.(=)"   = fun () -> Sys.opaque_identity (Option.(=)   t1 t2)
+    let t1, t2 = Span.random (), Span.random ()
+    let%bench_fun "Span.min"   = fun () -> Sys.opaque_identity (Span.min   t1 t2)
+    let%bench_fun "Span.max"   = fun () -> Sys.opaque_identity (Span.max   t1 t2)
+    let%bench_fun "Span.equal" = fun () -> Sys.opaque_identity (Span.equal t1 t2)
+    let%bench_fun "Span.(=)"   = fun () -> Sys.opaque_identity (Span.(=)   t1 t2)
+    let t1, t2 = Span.Option.some t1, Span.Option.some t2
+    let%bench_fun "Span.Option.equal" = fun () -> Sys.opaque_identity (Span.Option.equal t1 t2)
+    let%bench_fun "Span.Option.(=)"   = fun () -> Sys.opaque_identity (Span.Option.(=)   t1 t2)
+    let t1, t2 = Ofday.start_of_day, Ofday.end_of_day
+    let%bench_fun "Ofday.min"   = fun () -> Sys.opaque_identity (Ofday.min   t1 t2)
+    let%bench_fun "Ofday.max"   = fun () -> Sys.opaque_identity (Ofday.max   t1 t2)
+    let%bench_fun "Ofday.equal" = fun () -> Sys.opaque_identity (Ofday.equal t1 t2)
+    let%bench_fun "Ofday.(=)"   = fun () -> Sys.opaque_identity (Ofday.(=)   t1 t2)
+    let t1, t2 = Ofday.Option.some t1, Ofday.Option.some t2
+    let%bench_fun "Ofday.Option.equal" = fun () -> Sys.opaque_identity (Ofday.Option.equal t1 t2)
+    let%bench_fun "Ofday.Option.(=)"   = fun () -> Sys.opaque_identity (Ofday.Option.(=)   t1 t2)
   end)
 
 let to_ofday t ~zone = Ofday.of_time t ~zone
