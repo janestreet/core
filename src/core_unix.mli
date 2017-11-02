@@ -1218,6 +1218,9 @@ module Inet_addr : sig
       An exception is raised if [t] is a not an IPv4 address. *)
   val inet4_addr_to_int32_exn : t -> Int32.t
 
+  val inet4_addr_of_int63     : Int63.t -> t
+  val inet4_addr_to_int63_exn : t -> Int63.t
+
   module Stable : sig
     module V1 : Stable with type t = t
   end
@@ -1867,7 +1870,7 @@ module IOVec : sig
       @raise Failure if [n] is greater than length of [iovec].
   *)
 
-  val max_iovecs : int
+  val max_iovecs : int Lazy.t
 end
 
 
@@ -1961,7 +1964,14 @@ external pselect
 
 (** {2 Resource limits} *)
 module RLimit : sig
-  type limit = Limit of int64 | Infinity [@@deriving sexp]
+
+  module Limit : sig
+    type t = Limit of int64 | Infinity [@@deriving sexp]
+    val min : t -> t -> t
+    val max : t -> t -> t
+  end
+
+  type limit = Limit.t = Limit of int64 | Infinity [@@deriving sexp]
 
   type t = {
     cur : limit;  (** soft limit *)
@@ -2033,7 +2043,11 @@ type sysconf =
   | IOV_MAX
 [@@deriving sexp]
 
-external sysconf : sysconf -> int64 = "unix_sysconf"
+(** Wrapper over [sysconf] function in C. *)
+external sysconf : sysconf -> int64 option = "unix_sysconf"
+
+val sysconf_exn : sysconf -> int64
+
 
 (** {2 Temporary file and directory creation} *)
 

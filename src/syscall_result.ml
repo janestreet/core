@@ -36,6 +36,7 @@ module Make (M : Arg) () = struct
   type nonrec t = M.t t
 
   let compare = Int.compare
+  let equal   = Int.equal
 
   let preallocated_ms =
     let rec loop i rev_acc =
@@ -137,6 +138,17 @@ module Make (M : Arg) () = struct
       raise (Unix.Unix_error (Unix_error.of_errno (-t), syscall_name,
                               Sexp.to_string (sexp_of_x x)))
   ;;
+
+  let is_none t = is_error t
+  let unchecked_value t = M.of_int_exn t
+
+  module Optional_syntax = struct
+    module Optional_syntax = struct
+      let is_none = is_none
+      let unchecked_value = unchecked_value
+    end
+  end
+
 end
 
 module Int = Make (Int) ()

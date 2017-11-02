@@ -147,7 +147,25 @@ let mknod
 (* Resource limits *)
 
 module RLimit = struct
-  type limit = Limit of int64 | Infinity [@@deriving sexp]
+
+  module Limit = struct
+
+    type t = Limit of int64 | Infinity [@@deriving sexp]
+
+    let max t1 t2 =
+      match (t1, t2) with
+      | (Infinity, _) | (_, Infinity) -> Infinity
+      | (Limit n1, Limit n2) -> Limit (Int64.max n1 n2)
+
+    let min t1 t2 =
+      match (t1, t2) with
+      | (Infinity, t) | (t, Infinity) -> t
+      | (Limit n1, Limit n2) -> Limit (Int64.min n1 n2)
+
+  end
+
+  type limit = Limit.t = Limit of int64 | Infinity [@@deriving sexp]
+
   type t = { cur : limit; max : limit } [@@deriving sexp]
 
   type resource =
@@ -276,8 +294,14 @@ type sysconf =
   | IOV_MAX
 [@@deriving sexp]
 
-external sysconf : sysconf -> int64 = "unix_sysconf"
-
+external sysconf : sysconf -> int64 option = "unix_sysconf"
+let sysconf_exn conf = match sysconf conf with
+  | None ->
+    raise_s [%message
+      "[sysconf_exn]: value not available or limit is unspecified"
+        (conf : sysconf)
+    ]
+  | Some x -> x
 
 (* I/O vectors *)
 
@@ -350,10 +374,21 @@ module IOVec = struct
       }
   ;;
 
-  let max_iovecs =
-    let n64 = sysconf IOV_MAX in
-    if n64 > Int64.of_int Array.max_length then Array.max_length
-    else Int64.to_int_exn n64
+  (* [1024] is the limit on recent Linux systems.
+
+      Other values we could use:
+      - [Array.max_length] with the assumption that [None] means "unlimited" (which
+      some man pages seem to suggest); or
+      - the value IOV_MAX from a C header file. *)
+  let default_max_iovecs = 1024
+
+  let max_iovecs = lazy (
+    match sysconf IOV_MAX with
+    | None -> default_max_iovecs
+    | Some n64 ->
+      if Int64.(n64 > of_int Array.max_length)
+      then Array.max_length
+      else Int64.to_int_exn n64)
   ;;
 end
 
@@ -813,27 +848,6 @@ let env_assignments env =
   | `Extend  _ as env ->
     Map.fold (env_map env) ~init:[]
       ~f:(fun ~key ~data acc -> (key ^ "=" ^ data) :: acc)
-;;
-
-(* Linux allows arbitrary strings to be passed as environment entries: they don't even
-   have to contain the '=' character.
-   You can also pass the same variable multiple times and that's somehow fine. Most
-   programs (in particular, C stdlib) will use the first entry if there are multiple. *)
-let lookup_raw env key =
-  List.find_map env ~f:(fun x ->
-    match String.lsplit2 x ~on:'=' with
-    | None -> None
-    | Some (key2, value) ->
-      if String.(=) key key2
-      then Some value
-      else None)
-;;
-
-let env_lookup env key =
-  match env with
-  | `Extend  _
-  | `Replace _ as env -> Map.find (env_map env) key
-  | `Replace_raw raw_env -> lookup_raw raw_env key
 ;;
 
 let exec ~prog ~argv ?(use_path = true) ?env () =
@@ -1603,29 +1617,28 @@ module Execvp_emulation : sig
   val run
     :  working_dir : string option
     -> spawn       : (prog:string -> argv:string list -> 'a)
-    -> env_lookup  : (string -> string option)
     -> prog        : string
     -> args        : string list
     -> 'a
 
 end = struct
 
-  let get_path env_lookup =
-    env_lookup "PATH"
-    |> Option.value_map ~f:(String.split ~on:':') ~default:[""; "/bin"; "/usr/bin"]
+  let get_path () =
+    Core_sys.getenv "PATH"
+    |> Option.value_map ~f:(String.split ~on:':') ~default:["/bin"; "/usr/bin"]
     |> List.map ~f:(function
       | "" -> "."
       | x  -> x)
   ;;
 
-  let candidate_paths ~env_lookup prog =
+  let candidate_paths prog =
     (* [assert] is to make bugs less subtle if we try to make this
        portable to non-POSIX in the future. *)
     assert (Filename.dir_sep = "/");
     if String.contains prog '/' then
       [ prog ]
     else
-      List.map (get_path env_lookup) ~f:(fun h -> h ^/ prog)
+      List.map (get_path ()) ~f:(fun h -> h ^/ prog)
   ;;
 
   type 'a spawn1_result =
@@ -1633,7 +1646,7 @@ end = struct
     | Enoent_or_similar of exn
     | Ok                of 'a
 
-  let run ~working_dir ~spawn ~env_lookup ~prog ~args =
+  let run ~working_dir ~spawn ~prog ~args =
     let argv = prog :: args in
     let spawn1 candidate =
       match
@@ -1659,7 +1672,10 @@ end = struct
       | exception (Unix_error (EACCES, _, _) as exn) ->
         Eaccess exn
       | exception (Unix_error (
-        (ENOENT | (* ESTALE | *) ENOTDIR | ENODEV | ETIMEDOUT), _, _) as exn) ->
+        (* This list of nonfatal errors comes from glibc and openbsd implementations of
+           execvpe, as collected in [execvpe_ml] function in ocaml (see
+           otherlibs/unix/unix.ml in https://github.com/ocaml/ocaml/pull/1414). *)
+        (EISDIR|ELOOP|ENAMETOOLONG|ENODEV|ENOENT|ENOTDIR|ETIMEDOUT), _, _) as exn) ->
         Enoent_or_similar exn
       | pid -> Ok pid
     in
@@ -1680,7 +1696,7 @@ end = struct
           go first_eaccess candidates
         | Ok pid -> pid
     in
-    go None (candidate_paths ~env_lookup prog)
+    go None (candidate_paths prog)
   ;;
 end
 
@@ -1691,7 +1707,6 @@ let create_process_env ?working_dir ~prog ~args ~env () =
     Execvp_emulation.run
       ~prog
       ~args
-      ~env_lookup:(env_lookup env)
       ~working_dir
       ~spawn:(fun ~prog ~argv ->
         create_process_internal
@@ -1710,9 +1725,14 @@ let create_process_env ?working_dir ~prog ~args ~env () =
 let create_process_env ?working_dir ~prog ~args ~env () =
   improve (fun () -> create_process_env ?working_dir ~prog ~args ~env ())
     (fun () ->
-      [("prog", atom prog);
-       ("args", sexp_of_list atom args);
-       ("env", sexp_of_env env)])
+       (match working_dir with
+        | None -> []
+        | Some working_dir ->
+          ["working_dir", atom working_dir]
+       ) @
+       [("prog", atom prog);
+        ("args", sexp_of_list atom args);
+        ("env", sexp_of_env env)])
 
 let create_process ~prog ~args =
   improve (fun () -> create_process_env ~prog ~args ~env:(`Extend []) ())
@@ -2177,11 +2197,20 @@ module Inet_addr = struct
   external inet4_addr_of_int32     : int32 -> t = "core_unix_inet4_addr_of_int32"
   external inet4_addr_to_int32_exn : t -> int32 = "core_unix_inet4_addr_to_int32_exn"
 
-  let%bench_fun "inet4_addr_of_inet32" =
+  external inet4_addr_of_int63     : Int63.t -> t = "core_unix_inet4_addr_of_int63"
+  external inet4_addr_to_int63_exn : t -> Int63.t = "core_unix_inet4_addr_to_int63_exn"
+
+  let%bench_fun "inet4_addr_of_int32" =
     fun () -> inet4_addr_of_int32 0l
 
   let%bench_fun "inet4_addr_to_int32_exn" =
     fun () -> inet4_addr_to_int32_exn localhost
+
+  let%bench_fun "inet4_addr_of_int63" =
+    fun () -> inet4_addr_of_int63 (Int63.of_int 0)
+
+  let%bench_fun "inet4_addr_to_int63_exn" =
+    fun () -> inet4_addr_to_int63_exn localhost
 
   (* Can we convert ip addr to an int? *)
   let test_inet4_addr_to_int32 str num =
@@ -2190,7 +2219,6 @@ module Inet_addr = struct
 
   let%test_unit _ = test_inet4_addr_to_int32 "0.0.0.1"                  1l
   let%test_unit _ = test_inet4_addr_to_int32 "1.0.0.0"          0x1000000l
-  let%test_unit _ = test_inet4_addr_to_int32 "255.255.255.255" 0xffffffffl
   let%test_unit _ = test_inet4_addr_to_int32 "172.25.42.1"     0xac192a01l
   let%test_unit _ = test_inet4_addr_to_int32 "4.2.2.1"          0x4020201l
   let%test_unit _ = test_inet4_addr_to_int32 "8.8.8.8"          0x8080808l
@@ -2201,6 +2229,24 @@ module Inet_addr = struct
   let%test_unit _ = test_inet4_addr_to_int32 "239.0.0.0"       0xEF000000l
   let%test_unit _ = test_inet4_addr_to_int32 "255.255.255.255" 0xFFFFFFFFl
 
+  let test_inet4_addr_to_int63 str num =
+    let inet = of_string str in
+    let expect = Int63.of_int64_exn num in
+    [%test_result: Int63.t] (inet4_addr_to_int63_exn inet) ~expect
+
+  let%test_unit _ = test_inet4_addr_to_int63 "0.0.0.1"                  1L
+  let%test_unit _ = test_inet4_addr_to_int63 "1.0.0.0"          0x1000000L
+  let%test_unit _ = test_inet4_addr_to_int63 "255.255.255.255" 0xffffffffL
+  let%test_unit _ = test_inet4_addr_to_int63 "172.25.42.1"     0xac192a01L
+  let%test_unit _ = test_inet4_addr_to_int63 "4.2.2.1"          0x4020201L
+  let%test_unit _ = test_inet4_addr_to_int63 "8.8.8.8"          0x8080808L
+  let%test_unit _ = test_inet4_addr_to_int63 "173.194.73.103"  0xadc24967L
+  let%test_unit _ = test_inet4_addr_to_int63 "98.139.183.24"   0x628bb718L
+  let%test_unit _ = test_inet4_addr_to_int63 "0.0.0.0"                  0L
+  let%test_unit _ = test_inet4_addr_to_int63 "127.0.0.1"       0x7F000001L
+  let%test_unit _ = test_inet4_addr_to_int63 "239.0.0.0"       0xEF000000L
+  let%test_unit _ = test_inet4_addr_to_int63 "255.255.255.255" 0xFFFFFFFFL
+
   (* And from an int to a string? *)
   let test_inet4_addr_of_int32 num str =
     let inet = of_string str in
@@ -2210,6 +2256,15 @@ module Inet_addr = struct
   let%test_unit _ = test_inet4_addr_of_int32          0l "0.0.0.0"
   let%test_unit _ = test_inet4_addr_of_int32 0x628bb718l "98.139.183.24"
   let%test_unit _ = test_inet4_addr_of_int32 0xadc24967l "173.194.73.103"
+
+  let test_inet4_addr_of_int63 num str =
+    let inet = of_string str in
+    [%test_result: t] (inet4_addr_of_int63 num) ~expect:inet
+
+  let%test_unit _ = test_inet4_addr_of_int63 (Int63.of_int64_exn 0xffffffffL) "255.255.255.255"
+  let%test_unit _ = test_inet4_addr_of_int63 (Int63.of_int64_exn          0L) "0.0.0.0"
+  let%test_unit _ = test_inet4_addr_of_int63 (Int63.of_int64_exn 0x628bb718L) "98.139.183.24"
+  let%test_unit _ = test_inet4_addr_of_int63 (Int63.of_int64_exn 0xadc24967L) "173.194.73.103"
 
   (* And round trip for kicks *)
   let%test_unit _ =

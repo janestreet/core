@@ -420,21 +420,6 @@ module Ofday = struct
             Span.(+) (of_ofday ofday) ns
           end
   ;;
-  let%bench_module "of_time" =
-    (module struct
-      let zones = !Zone.likely_machine_zones
-
-      let%bench_fun "now" [@indexed i = List.range 0 (List.length zones)] =
-         let zone = Zone.find_exn (List.nth_exn zones i) in
-         let time = now () in
-         fun () -> of_time time ~zone
-
-      let%bench_fun "random" =
-        let time = random () in
-        let zone = Zone.find_exn List.(hd_exn (permute !Zone.likely_machine_zones)) in
-        fun () -> of_time time ~zone
-    end)
-  ;;
 
   let of_local_time time = of_time time ~zone:(Lazy.force Zone.local)
 
@@ -551,45 +536,6 @@ module Ofday = struct
     include (Span.Option : Core_kernel.Comparisons.S with type t := t)
   end
 end
-
-let%bench_module "Ofday" =
-  (module struct
-    let%bench_fun "of_local_time random" =
-      let time = random () in
-      fun () -> Ofday.of_local_time time
-
-    let%bench_fun "of_span_since_start_of_day_exn random" =
-      let random_span = Random.float Span.(to_ns day) |> Span.of_ns in
-      fun () -> Ofday.of_span_since_start_of_day_exn random_span
-  end)
-
-let%bench_module "Comparisons" =
-  (module struct
-    let t1, t2 = random (), random ()
-    let%bench_fun "min"   = fun () -> Sys.opaque_identity (min   t1 t2)
-    let%bench_fun "max"   = fun () -> Sys.opaque_identity (max   t1 t2)
-    let%bench_fun "equal" = fun () -> Sys.opaque_identity (equal t1 t2)
-    let%bench_fun "(=)"   = fun () -> Sys.opaque_identity ((=)   t1 t2)
-    let t1, t2 = Option.some t1, Option.some t2
-    let%bench_fun "Option.equal" = fun () -> Sys.opaque_identity (Option.equal t1 t2)
-    let%bench_fun "Option.(=)"   = fun () -> Sys.opaque_identity (Option.(=)   t1 t2)
-    let t1, t2 = Span.random (), Span.random ()
-    let%bench_fun "Span.min"   = fun () -> Sys.opaque_identity (Span.min   t1 t2)
-    let%bench_fun "Span.max"   = fun () -> Sys.opaque_identity (Span.max   t1 t2)
-    let%bench_fun "Span.equal" = fun () -> Sys.opaque_identity (Span.equal t1 t2)
-    let%bench_fun "Span.(=)"   = fun () -> Sys.opaque_identity (Span.(=)   t1 t2)
-    let t1, t2 = Span.Option.some t1, Span.Option.some t2
-    let%bench_fun "Span.Option.equal" = fun () -> Sys.opaque_identity (Span.Option.equal t1 t2)
-    let%bench_fun "Span.Option.(=)"   = fun () -> Sys.opaque_identity (Span.Option.(=)   t1 t2)
-    let t1, t2 = Ofday.start_of_day, Ofday.end_of_day
-    let%bench_fun "Ofday.min"   = fun () -> Sys.opaque_identity (Ofday.min   t1 t2)
-    let%bench_fun "Ofday.max"   = fun () -> Sys.opaque_identity (Ofday.max   t1 t2)
-    let%bench_fun "Ofday.equal" = fun () -> Sys.opaque_identity (Ofday.equal t1 t2)
-    let%bench_fun "Ofday.(=)"   = fun () -> Sys.opaque_identity (Ofday.(=)   t1 t2)
-    let t1, t2 = Ofday.Option.some t1, Ofday.Option.some t2
-    let%bench_fun "Ofday.Option.equal" = fun () -> Sys.opaque_identity (Ofday.Option.equal t1 t2)
-    let%bench_fun "Ofday.Option.(=)"   = fun () -> Sys.opaque_identity (Ofday.Option.(=)   t1 t2)
-  end)
 
 let to_ofday t ~zone = Ofday.of_time t ~zone
 

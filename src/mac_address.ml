@@ -56,7 +56,7 @@ module Stable = struct
             ~_:(s : string)]
 
       let get = Core_kernel.String.unsafe_get
-      let set = Core_kernel.String.unsafe_set
+      let set = Core_kernel.Bytes.unsafe_set
 
       include struct
         open Core_kernel.Int63

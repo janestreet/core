@@ -1049,7 +1049,6 @@ CAMLprim value unix_getrusage(value v_who)
   CAMLreturn(v_usage);
 }
 
-
 /* System configuration */
 
 CAMLprim value unix_sysconf(value v_name)
@@ -1081,9 +1080,17 @@ CAMLprim value unix_sysconf(value v_name)
       caml_failwith("unix_sysconf: unknown sum tag");
       break;
   }
+  errno = 0;
   ret = sysconf(name);
-  if (ret == -1) uerror("sysconf", Nothing);
-  return (caml_copy_int64(ret));
+  if (ret == -1) {
+    if (errno == 0) {
+      return core_Val_none;
+    }
+    else {
+      uerror("sysconf", Nothing);
+    }
+  }
+  return core_Val_some(caml_copy_int64(ret));
 }
 
 
@@ -1975,4 +1982,25 @@ CAMLprim value core_unix_inet4_addr_to_int32_exn(value v) {
 
   addr = GET_INET_ADDR(v);
   CAMLreturn(caml_copy_int32(htonl(addr.s_addr)));
+}
+
+CAMLprim value core_unix_inet4_addr_of_int63(value v) {
+  CAMLparam1(v);
+
+  struct in_addr addr;
+  addr.s_addr = ntohl(Int63_val(v));
+
+  CAMLreturn(alloc_inet_addr(&addr));
+}
+
+CAMLprim value core_unix_inet4_addr_to_int63_exn(value v) {
+  CAMLparam1(v);
+  struct in_addr addr;
+
+  if (caml_string_length(v) != 4) {
+    caml_invalid_argument("not a valid IPv4 address");
+  }
+
+  addr = GET_INET_ADDR(v);
+  CAMLreturn(caml_alloc_int63(htonl(addr.s_addr)));
 }

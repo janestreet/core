@@ -309,27 +309,22 @@ module Make (Time0 : Time0_intf.S) (Time : Time_intf.S with module Time := Time0
     module Zoned = struct
       module Stable = struct
         module V1 = struct
-          module T = struct
-            type t =
-              { ofday : Stable.V1.t;
-                zone  : Zone.Stable.V1.t;
-              }
-            [@@deriving bin_io, fields, compare, hash]
+          type t =
+            { ofday : Stable.V1.t;
+              zone  : Zone.Stable.V1.t;
+            }
+          [@@deriving bin_io, fields, compare, hash]
 
-            type sexp_repr = Stable.V1.t * Zone.Stable.V1.t [@@deriving sexp]
+          type sexp_repr = Stable.V1.t * Zone.Stable.V1.t [@@deriving sexp]
 
-            let sexp_of_t t = [%sexp_of: sexp_repr] (t.ofday, t.zone)
+          let sexp_of_t t = [%sexp_of: sexp_repr] (t.ofday, t.zone)
 
-            let t_of_sexp sexp =
-              let (ofday, zone) = [%of_sexp: sexp_repr] sexp in
-              { ofday; zone; }
-            ;;
-            let to_time t date = Time.of_date_ofday ~zone:(zone t) date (ofday t)
+          let t_of_sexp sexp =
+            let (ofday, zone) = [%of_sexp: sexp_repr] sexp in
+            { ofday; zone; }
+          ;;
+          let to_time t date = Time.of_date_ofday ~zone:(zone t) date (ofday t)
 
-          end
-          include T
-          include Comparable.Make_binable(T)
-          include Hashable.Make_binable(T)
         end
       end
 
@@ -355,6 +350,11 @@ module Make (Time0 : Time0_intf.S) (Time : Time_intf.S with module Time := Time0
           " ";
           Zone.to_string t.zone ]
       ;;
+
+      module With_nonchronological_compare = struct
+        type nonrec t = t
+        [@@deriving bin_io, compare, sexp, hash]
+      end
 
       include Pretty_printer.Register (struct
           type nonrec t = t

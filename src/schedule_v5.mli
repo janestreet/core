@@ -95,14 +95,15 @@ type unzoned = Unzoned [@@deriving compare]
    example:
    {ul {- [Shift ((sec 3.), Secs[10]) = Secs [13]]}
    {- [Shift ((sec (-3.)), Secs[10]) = Secs [7]]}}}
-   {- [Between]: the contiguous range between the start and end times given on every day}
-   {- [Zoned_between]: the contiguous range between the start and end times given. The
-   schedule can span the midnight boundary.  If the start and end ofdays are the same
+   {- [Between]: the contiguous range between the start and end times given.  The schedule
+   can span the midnight boundary. If the start and end ofdays are the same
    then:
-   {v | Exlusive,  Exclusive  -> Not At
+   {v | Exclusive, Exclusive  -> Not At
       | Inclusive, Inclusive -> At
       | Exclusive, Inclusive
       | Inclusive, Exclusive -> Always v}}
+   {- [Zoned_between]: As Between, but allows expressing the start and end times in
+   different zones}
    {- [Secs]: the given seconds of a minute, repeated every minute}
    {- [Mins]: the given minutes of an hour, repeated every hour}
    {- [Hours]: the given hours of a day, repeated every day}

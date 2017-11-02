@@ -6,7 +6,7 @@ module B = Binary_packing
 let test byte_order =
   let inverses inc inc_inc pack unpack min max to_string () =
     let try_it i =
-      let buf = String.create 100 in
+      let buf = Bytes.create 100 in
       pack ~byte_order ~buf ~pos:0 i;
       let i' = unpack ~byte_order ~buf ~pos:0 in
       if i' <> i then
@@ -75,7 +75,7 @@ let test byte_order =
     "[pack|unpack]_float" >::
     (fun () ->
        let test_float i =
-         let buf = String.create 100 in
+         let buf = Bytes.create 100 in
          B.pack_float ~byte_order ~buf ~pos:0 i;
          let i' = B.unpack_float ~byte_order ~buf ~pos:0 in
          i' = i in

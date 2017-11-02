@@ -815,7 +815,7 @@ module Test (Iobuf : sig
       [%test_eq: string] (to_string dst) "abc012hij"
     ;;
     let test_peek_to_string blito =
-      test_peek_to blito String.create String.sub ident ident
+      test_peek_to blito Bytes.create String.sub ident ident
     let test_peek_to_bigstring blito =
       test_peek_to blito Bigstring.create
         (fun s ~pos ~len -> Bigstring.to_string s ~pos ~len)
@@ -1042,7 +1042,7 @@ module Test (Iobuf : sig
       [%test_eq: string] (to_string dst) "abc012hij"
     ;;
     let test_consume_to_string blito =
-      test_consume_to blito String.create String.sub ident ident
+      test_consume_to blito Bytes.create String.sub ident ident
     let test_consume_to_bigstring blito =
       test_consume_to blito Bigstring.create
         (fun s ~pos ~len -> Bigstring.to_string s ~pos ~len)

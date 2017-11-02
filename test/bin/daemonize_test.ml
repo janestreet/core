@@ -16,7 +16,7 @@ let () =
     (* the parent tries kills the child with USR1 and expects the signal to be ignored *)
     sleep 0.2;
     UnixLabels.kill ~pid:(Pid.to_int child) ~signal:(Signal.to_caml_int Signal.usr1);
-    let buf = String.create 1 in
+    let buf = Bytes.create 1 in
     Unix.waitpid_exn child;
     assert (Unix.read reader ~buf = 1);
     assert (buf = "x");

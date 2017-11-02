@@ -403,6 +403,8 @@ let%expect_test "in tests, [sexp_of_t] uses NYC's time zone" =
 module Ofday_zoned = struct
   open Time.Ofday.Zoned
 
+  let (=) = [%compare.equal : With_nonchronological_compare.t]
+
   let%test_unit _ =
     List.iter
       [ "12:00 nyc";

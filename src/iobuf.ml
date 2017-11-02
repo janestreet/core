@@ -323,7 +323,7 @@ module T_src = struct
 end
 
 module String_dst = struct
-  include String
+  include Bytes
   let unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len =
     Bigstring.To_string.unsafe_blit
       ~src:src.buf ~src_pos:(unsafe_buf_pos src ~pos:src_pos)
@@ -425,7 +425,7 @@ module Consume = struct
   ;;
 
   let string ~str_pos ~len t =
-    let dst = String.create (len + str_pos) in
+    let dst = Bytes.create (len + str_pos) in
     To_string.blit ~src:t ~dst ~len ~dst_pos:str_pos;
     dst
   ;;
@@ -669,7 +669,7 @@ module Peek = struct
   ;;
 
   let string ~str_pos ~len t ~pos =
-    let dst = String.create (len + str_pos) in
+    let dst = Bytes.create (len + str_pos) in
     Bigstring.To_string.blit ~src:t.buf ~src_pos:(spos t ~len ~pos) ~len
       ~dst ~dst_pos:str_pos;
     dst
@@ -1116,8 +1116,10 @@ let write t fd =
 ;;
 
 let write_assume_fd_is_nonblocking t fd =
+  (* This is safe because of the invariant of [t] that the window is within the buffer
+     (unless the user has violated the invariant with an unsafe operation). *)
   let nwritten =
-    Bigstring.write_assume_fd_is_nonblocking fd t.buf ~pos:t.lo ~len:(length t)
+    Bigstring.unsafe_write_assume_fd_is_nonblocking fd t.buf ~pos:t.lo ~len:(length t)
   in
   unsafe_advance t nwritten
 ;;
@@ -1283,7 +1285,7 @@ module Unsafe = struct
     ;;
 
     let string ~str_pos ~len t ~pos =
-      let dst = String.create (len + str_pos) in
+      let dst = Bytes.create (len + str_pos) in
       Bigstring.To_string.unsafe_blit ~src:t.buf ~src_pos:(upos t ~pos)
         ~len ~dst ~dst_pos:str_pos;
       dst
@@ -1557,7 +1559,7 @@ let%bench_module "Blit tests" = (module struct
 
   let%bench_fun "string blit" [@indexed len = lengths] =
     let buf = create ~len in
-    let str = String.create len in
+    let str = Bytes.create len in
     (fun () -> Peek.To_string.blit ~src:buf ~dst:str ~src_pos:0 ~dst_pos:0 ~len)
 
   let%bench_fun "Blit" [@indexed len = lengths] =

@@ -89,10 +89,8 @@ module type S = sig
 
           Two [t]'s may or may not correspond to the same times depending on which date
           they're evaluated. *)
-      type t [@@deriving bin_io, sexp]
+      type t [@@deriving bin_io, sexp, hash]
 
-      include Comparable_binable  with type t := t
-      include Hashable_binable    with type t := t
       include Pretty_printer.S    with type t := t
       include Stringable          with type t := t (** Strings look like "12:01 nyc" *)
 
@@ -104,8 +102,17 @@ module type S = sig
 
       val to_time : t -> Date.t -> Time.t
 
+      module With_nonchronological_compare : sig
+        (** It is possible to consistently compare [t]'s, but due to the complexities of
+            time zones and daylight savings, the resulting ordering is not chronological.
+            That is, [compare t1 t2 > 0] does not imply [t2] occurs after [t1] every day,
+            or any day. *)
+        type nonrec t = t [@@deriving bin_io, sexp, compare, hash]
+      end
+
       module Stable : sig
         module V1 : sig
+          (** [Stable.V1] uses [With_nonchronological_compare.compare]. *)
           type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
         end
       end

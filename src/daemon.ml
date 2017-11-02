@@ -139,7 +139,7 @@ let daemonize_wait
                  In this case, we want to loop back again and call waitpid to obtain
                  the correct exit status to propagate on to the outermost parent
                  (otherwise we might incorrectly return a success). *)
-              if Unix.read read_end ~buf:(String.create len) ~pos:0 ~len > 0 then
+              if Unix.read read_end ~buf:(Bytes.create len) ~pos:0 ~len > 0 then
                 exit 0
               else
                 loop ()

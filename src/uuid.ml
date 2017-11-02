@@ -54,17 +54,17 @@ module T = struct
       in
       Md5.to_hex (Md5.digest_string base)
     in
-    let s = String.create 36 in
-    s.[8]  <- '-';
-    s.[13] <- '-';
-    s.[18] <- '-';
-    s.[23] <- '-';
-    String.blit ~src:digest ~dst:s ~src_pos:0 ~dst_pos:0 ~len:8;
-    String.blit ~src:digest ~dst:s ~src_pos:8 ~dst_pos:9 ~len:4;
-    String.blit ~src:digest ~dst:s ~src_pos:12 ~dst_pos:14 ~len:4;
-    String.blit ~src:digest ~dst:s ~src_pos:16 ~dst_pos:19 ~len:4;
-    String.blit ~src:digest ~dst:s ~src_pos:20 ~dst_pos:24 ~len:12;
-    s.[14] <- '3';
+    let s = Bytes.create 36 in
+    Bytes.set s 8 '-';
+    Bytes.set s 13 '-';
+    Bytes.set s 18 '-';
+    Bytes.set s 23 '-';
+    Bytes.blit ~src:digest ~dst:s ~src_pos:0 ~dst_pos:0 ~len:8;
+    Bytes.blit ~src:digest ~dst:s ~src_pos:8 ~dst_pos:9 ~len:4;
+    Bytes.blit ~src:digest ~dst:s ~src_pos:12 ~dst_pos:14 ~len:4;
+    Bytes.blit ~src:digest ~dst:s ~src_pos:16 ~dst_pos:19 ~len:4;
+    Bytes.blit ~src:digest ~dst:s ~src_pos:20 ~dst_pos:24 ~len:12;
+    Bytes.set s 14 '3';
     s
   ;;
 

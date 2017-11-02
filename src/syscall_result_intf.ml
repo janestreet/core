@@ -5,6 +5,8 @@ module type S = sig
 
   type t = ok_value syscall_result [@@deriving compare, sexp_of]
 
+  include Equal.S with type t := t
+
   val create_ok    : ok_value     -> t
   val create_error : Unix_error.t -> t
 
@@ -26,6 +28,10 @@ module type S = sig
     : t -> syscall_name:string ->                         ok_value
   val ok_or_unix_error_with_args_exn
     : t -> syscall_name:string -> 'a -> ('a -> Sexp.t) -> ok_value
+
+  module Optional_syntax : Optional_syntax.S 
+    with type t := t
+     and type value := ok_value
 end
 
 module type Arg = sig

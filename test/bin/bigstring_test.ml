@@ -22,7 +22,7 @@ let bs_of_s = Bigstring.of_string
 (** function for getting a short representation of a bigstring *)
 let repr bs =
   if Bigstring.length bs > 30 then
-    let s = String.create 30 in
+    let s = Bytes.create 30 in
     Bigstring.To_string.blito ~src:bs ~src_len:30 ~dst:s ();
     sprintf "<bs:%d:%s>" (Bigstring.length bs) s
   else
@@ -38,7 +38,7 @@ let blit_test ~n ~src_pos ~dst_pos ~len (s1,s2) =
   let s1 = String.copy s1 and s2 = String.copy s2 in
   let s_result =
     try
-      String.blit ~src_pos ~dst_pos ~len ~src:s1 ~dst:s2;
+      Bytes.blit ~src_pos ~dst_pos ~len ~src:s1 ~dst:s2;
       `Success s2
     with
       e -> `Failure (Exn.to_string e)
@@ -70,7 +70,7 @@ let simple_conversion_test ~n s =
   let len = String.length s in
   let bs = Bigstring.create len in
   Bigstring.From_string.blito ~src:s ~dst:bs ();
-  let s' = String.create len in
+  let s' = Bytes.create len in
   Bigstring.To_string.blito ~src:bs ~dst:s' ();
   (sprintf "%s: %s" n s) @? (s' = s)
 ;;
