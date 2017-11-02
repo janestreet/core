@@ -15,6 +15,7 @@
     spawn
     threads
     ))
+  (flags (:standard -unsafe-string))
   (c_flags (:standard -D_LARGEFILE64_SOURCE -I../../core_kernel/src))
   (install_c_headers (config))
   (c_names
