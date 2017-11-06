@@ -12,9 +12,9 @@ module type Span = sig
   include Identifiable         with type t := t
   include Comparable.With_zero with type t := t
 
-  (** Similar to {!Time.Span.Parts}, but adding [ns]. *)
+  (** Similar to {!Time.Span.Parts}. *)
   module Parts : sig
-    type t =
+    type t = private
       { sign : Sign.t
       ; hr   : int
       ; min  : int
@@ -89,7 +89,6 @@ module type Span = sig
   val randomize : t -> percent : Percent.t -> t
 
   val to_parts : t -> Parts.t
-  val of_parts : Parts.t -> t (** overflows silently *)
 
   val to_unit_of_time : t -> Unit_of_time.t
   val of_unit_of_time : Unit_of_time.t -> t
@@ -174,10 +173,7 @@ module type Ofday = sig
   val to_ofday : t -> Time.Ofday.t
   val of_ofday : Time.Ofday.t -> t
 
-  val of_time : time -> zone : Time.Zone.t -> t
   val now : zone:Time.Zone.t -> t
-  val local_now : unit -> t
-  val of_local_time : time -> t
   val to_millisecond_string : t -> string
 
   val start_of_day : t
@@ -186,13 +182,13 @@ module type Ofday = sig
   val to_span_since_start_of_day : t -> span
   val of_span_since_start_of_day_exn : span -> t
 
-  (** Note: there is no [ns] argument. This calls {!Time.Ofday}'s [create] function. *)
   val create
     :  ?hr  : int
     -> ?min : int
     -> ?sec : int
     -> ?ms  : int
     -> ?us  : int
+    -> ?ns  : int
     -> unit
     -> t
 

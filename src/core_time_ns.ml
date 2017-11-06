@@ -379,8 +379,15 @@ module Ofday = struct
 
   let of_ofday core = Span.of_span (Time.Ofday.to_span_since_start_of_day core)
 
-  let create ?hr ?min ?sec ?ms ?us () =
-    of_ofday (Time.Ofday.create ?hr ?min ?sec ?ms ?us ())
+  let create ?hr ?min ?sec ?ms ?us ?ns () =
+    (* Similar to [Time.Ofday.create], if we detect a leap second we strip off all
+       sub-second elements so that HH:MM:60.XXXXXXXXX is all mapped to HH:MM:60. *)
+    let ms, us, ns =
+      match sec with
+      | Some 60 -> Some 0, Some 0, Some 0
+      | _       -> ms,     us,     ns
+    in
+    of_span_since_start_of_day_exn (Span.create ?hr ?min ?sec ?ms ?us ?ns ())
   ;;
 
   let of_time =
@@ -421,11 +428,7 @@ module Ofday = struct
           end
   ;;
 
-  let of_local_time time = of_time time ~zone:(Lazy.force Zone.local)
-
   let now ~zone = of_time (now ()) ~zone
-
-  let local_now () = now ~zone:(force Time.Zone.local)
 
   let to_string t =
     if Span.(<=) start_of_day t && Span.(<) t end_of_day then

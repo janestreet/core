@@ -748,28 +748,28 @@ let%test_module "Time_ns" =
     let%test_unit _ =
       (* Ensure that midnight_cache doesn't interfere with converting times that are much
          earlier or later than each other. *)
-      check (Ofday.of_local_time epoch);
-      check (Ofday.of_local_time (now ()));
-      check (Ofday.of_local_time epoch)
+      check (to_ofday ~zone:(force Time_ns.Zone.local) epoch);
+      check (to_ofday ~zone:(force Time_ns.Zone.local) (now ()));
+      check (to_ofday ~zone:(force Time_ns.Zone.local) epoch)
 
     (* Reproduce a failure of the prior test before taking DST into account. *)
-    let%test_unit "Ofday.of_local_time around fall 2015 DST transition" =
+    let%test_unit "to_ofday around fall 2015 DST transition" =
       List.iter
         ~f:(fun (time_ns, expect) ->
           let zone = Time.Zone.find_exn "US/Eastern" in
-          (* First make sure Time.Ofday.of_time behaves as expected with these inputs. *)
+          (* First make sure Time.to_ofday behaves as expected with these inputs. *)
           let time_ofday = Time.to_ofday (to_time time_ns) ~zone in
           if Time.Ofday.(<>) time_ofday (Time.Ofday.of_string expect) then
-            failwiths "Time.Ofday.of_time"
+            failwiths "Time.to_ofday"
               [%sexp (time_ns    : t),
                      (time_ofday : Time.Ofday.t),
                      (expect     : string)]
               Fn.id;
           (* Then make sure we do the same, correct thing. *)
-          let ofday = Ofday.of_time time_ns ~zone in
+          let ofday = to_ofday time_ns ~zone in
           check ofday;
           if Ofday.(<>) ofday (Ofday.of_string expect) then
-            failwiths "Ofday.of_time"
+            failwiths "to_ofday"
               [%sexp (time_ns : t),
                      (ofday   : Ofday.t),
                      (expect  : string)]
@@ -809,13 +809,13 @@ let%test_module "Time_ns" =
             Int63.(((r - min_time_ns) % range) + min_time_ns)
     ;;
 
-    let%test_unit "Ofday.of_time random" =
+    let%test_unit "to_ofday random" =
       List.iter !Time.Zone.likely_machine_zones ~f:(fun zone ->
         let zone = Time.Zone.find_exn zone in
-        for _ = 0 to 1_000 do check (Ofday.of_time (random_nativeint_range ()) ~zone) done)
+        for _ = 0 to 1_000 do check (to_ofday (random_nativeint_range ()) ~zone) done)
 
-    let%test_unit "Ofday.of_local_time random" =
-      for _ = 0 to 1_000 do check (Ofday.of_local_time (random_nativeint_range ())) done
+    let%test_unit "to_ofday ~zone:(force Time_ns.Zone.local) random" =
+      for _ = 0 to 1_000 do check (to_ofday ~zone:(force Time_ns.Zone.local) (random_nativeint_range ())) done
 
     let%expect_test "[to_date ofday] - [of_date_ofday] roundtrip" =
       let times =
