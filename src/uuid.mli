@@ -4,7 +4,7 @@
 
 open! Import
 
-type t [@@deriving hash, sexp]
+type t [@@deriving hash, sexp_of]
 
 include Identifiable.S with type t := t
 include Invariant.S    with type t := t

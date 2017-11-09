@@ -177,7 +177,11 @@ module type Ofday = sig
   val to_millisecond_string : t -> string
 
   val start_of_day : t
-  val end_of_day : t
+  val start_of_next_day : t
+
+  (** The largest representable value below [start_of_next_day], i.e. one nanosecond
+      before midnight. *)
+  val approximate_end_of_day : t
 
   val to_span_since_start_of_day : t -> span
   val of_span_since_start_of_day_exn : span -> t

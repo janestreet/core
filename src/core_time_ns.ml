@@ -350,8 +350,11 @@ module Ofday = struct
   include Comparable.Validate_with_zero (Span)
 
 
-  let start_of_day : t = Span.zero
-  let end_of_day   : t = Span.day
+  let start_of_day      : t = Span.zero
+  let start_of_next_day : t = Span.day
+
+  let approximate_end_of_day =
+    Span.( - ) start_of_next_day Span.nanosecond
 
   let to_span_since_start_of_day t = t
 
@@ -366,7 +369,7 @@ module Ofday = struct
        We allow to represent the end-of-day sentinel value ([24.000000000h]), which is not
        itself a valid clock face time.  However, since valid clock face times readily
        round up to it, it's better to allow it to be represented. *)
-    if Span.(<) s start_of_day || Span.(>) s end_of_day
+    if Span.(<) s start_of_day || Span.(>) s start_of_next_day
     then input_out_of_bounds s
     else s
 
@@ -431,7 +434,7 @@ module Ofday = struct
   let now ~zone = of_time (now ()) ~zone
 
   let to_string t =
-    if Span.(<=) start_of_day t && Span.(<) t end_of_day then
+    if Span.(<=) start_of_day t && Span.(<) t start_of_next_day then
       let ns = Span.to_int63_ns t in
       let s = Span.to_int_sec t in
       let m = s / 60 in
@@ -445,7 +448,7 @@ module Ofday = struct
   ;;
 
   let to_millisecond_string t =
-    if Span.(<=) start_of_day t && Span.(<) t end_of_day then
+    if Span.(<=) start_of_day t && Span.(<) t start_of_next_day then
       let ms = Int63.(Span.to_int63_ns t / of_int 1_000_000) in
       let s = Int63.(ms / of_int 1000) in
       let m = Int63.(s / of_int 60) in

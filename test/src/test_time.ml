@@ -482,6 +482,29 @@ let%expect_test "time/span/ofday can be cast to their underlying type" =
   ()
 ;;
 
+let%expect_test "end-of-day constants" =
+  let zones = List.map !Time.Zone.likely_machine_zones ~f:Time.Zone.find_exn in
+  let test_round_trip zone date ofday ~expect =
+    require_equal [%here] (module Date)
+      (Time.of_date_ofday ~zone date ofday |> Time.to_date ~zone)
+      expect
+      ~message:(Time.Zone.name zone)
+  in
+  let test date_string =
+    let date = Date.of_string date_string in
+    List.iter zones ~f:(fun zone ->
+      test_round_trip zone date Time.Ofday.approximate_end_of_day
+        ~expect:date;
+      test_round_trip zone date Time.Ofday.start_of_next_day
+        ~expect:(Date.add_days date 1));
+  in
+  test "1970-01-01";
+  test "2013-10-07";
+  test "2099-12-31";
+  test "2121-04-01";
+  [%expect {||}];
+;;
+
 module Specialize_to_int (Poly : Stable1) = struct
   type t = int Poly.t [@@deriving bin_io, compare, sexp]
 end

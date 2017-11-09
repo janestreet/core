@@ -1,8 +1,6 @@
 open Core
 open Core_bench.Std
 
-module Heap = Heap.Removable
-
 module Int = struct
   let name = "int"
 

@@ -1520,6 +1520,10 @@ module Base = struct
           | Arg.Rest f -> gen (fun x -> Option.iter x ~f:(List.iter ~f)) escape
           | Arg.Tuple _ ->
             failwith "Arg.Tuple is not supported by Command.Spec.flags_of_args_exn"
+#if ocaml_version >= (4, 05, 0)
+          | Arg.Expand _ ->
+            failwith "Arg.Expand is not supported by Command.Spec.flags_of_args_exn"
+#endif
         end)
 
     module Deprecated = struct

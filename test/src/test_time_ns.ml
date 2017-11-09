@@ -733,7 +733,7 @@ let%test_module "Time_ns" =
 
     let check ofday =
       try
-        assert Ofday.(ofday >= start_of_day && ofday < end_of_day);
+        assert Ofday.(ofday >= start_of_day && ofday < start_of_next_day);
         (* The sexp is more similar than the string.  The string includes different
            numbers of trailing zeros, which are trimmed in the sexp. *)
         [%test_result: Sexp.t] (Ofday.sexp_of_t ofday)
@@ -876,6 +876,29 @@ let%test_module "Time_ns" =
       [%expect {| (1969-12-31 19:00:00.000000-05:00) |}];
     ;;
   end)
+
+let%expect_test "end-of-day constants" =
+  let zones = List.map !Time_ns.Zone.likely_machine_zones ~f:Time_ns.Zone.find_exn in
+  let test_round_trip zone date ofday ~expect =
+    require_equal [%here] (module Date)
+      (Time_ns.of_date_ofday ~zone date ofday |> Time_ns.to_date ~zone)
+      expect
+      ~message:(Time_ns.Zone.name zone)
+  in
+  let test date_string =
+    let date = Date.of_string date_string in
+    List.iter zones ~f:(fun zone ->
+      test_round_trip zone date Time_ns.Ofday.approximate_end_of_day
+        ~expect:date;
+      test_round_trip zone date Time_ns.Ofday.start_of_next_day
+        ~expect:(Date.add_days date 1));
+  in
+  test "1970-01-01";
+  test "2013-10-07";
+  test "2099-12-31";
+  test "2101-04-01";
+  [%expect {||}];
+;;
 
 let%test_module "Time_ns.Option" =
   (module struct

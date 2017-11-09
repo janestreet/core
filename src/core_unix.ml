@@ -8,7 +8,7 @@ open! Import
 
 module Time_ns = Core_kernel.Core_kernel_private.Time_ns_alternate_sexp
 
-(* 4.06 adds a [?cloexec] argument to all functions. It cannot be ignored for the
+(* 4.05 adds a [?cloexec] argument to all functions. It cannot be ignored for the
    functions with labels, so to keep the code compatible with all supported versions of
    OCaml, we sometimes use the non-labelled versions. *)
 module UnixNoLabels = Unix
