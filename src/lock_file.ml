@@ -62,7 +62,7 @@ let create
         end
       );
       Unix.ftruncate fd ~len:Int64.zero;
-      ignore (Unix.write fd ~buf:message ~pos:0 ~len:(String.length message));
+      ignore (Unix.write_substring fd ~buf:message ~pos:0 ~len:(String.length message));
       (* we truncated the file, so we need the region lock back.  We don't really
          understand why/if this call is needed, but experimental evidence indicates that
          we need to do it. *)

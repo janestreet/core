@@ -52,7 +52,7 @@ let test byte_order =
      else
        (fun () -> ()));
     "[pack|unpack]_signed_64" >:: (
-      let buf = String.make 8 'a' in
+      let buf = Bytes.make 8 'a' in
       let test name to_string p u ns () =
         List.iter ns ~f:(fun n ->
           p ~byte_order ~buf ~pos:0 n;

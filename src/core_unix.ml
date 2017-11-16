@@ -93,13 +93,13 @@ external unsetenv : string -> unit = "unix_unsetenv"
 external exit_immediately : int -> _ = "caml_sys_exit"
 
 external unsafe_read_assume_fd_is_nonblocking
-  : File_descr.t -> string -> pos : int -> len : int -> int
+  : File_descr.t -> Bytes.t -> pos : int -> len : int -> int
   = "unix_read_assume_fd_is_nonblocking_stub"
 
-let check_string_args ~loc str ~pos ~len =
+let check_bytes_args ~loc str ~pos ~len =
   if pos < 0 then invalid_arg (loc ^ ": pos < 0");
   if len < 0 then invalid_arg (loc ^ ": len < 0");
-  let str_len = String.length str in
+  let str_len = Bytes.length str in
   if str_len < pos + len then
     invalid_arg (Printf.sprintf "Unix_ext.%s: length(str) < pos + len" loc)
 
@@ -111,18 +111,18 @@ let get_opt_pos ~loc = function
 
 let get_opt_len str ~pos = function
   | Some len -> len
-  | None -> String.length str - pos
+  | None -> Bytes.length str - pos
 
 let read_assume_fd_is_nonblocking fd ?pos ?len buf =
   let loc = "read_assume_fd_is_nonblocking" in
   let pos = get_opt_pos ~loc pos in
   let len = get_opt_len buf ~pos len in
-  check_string_args ~loc buf ~pos ~len;
+  check_bytes_args ~loc buf ~pos ~len;
   unsafe_read_assume_fd_is_nonblocking fd buf ~pos ~len
 ;;
 
 external unsafe_write_assume_fd_is_nonblocking
-  : File_descr.t -> string -> pos : int -> len : int -> int
+  : File_descr.t -> Bytes.t -> pos : int -> len : int -> int
   = "unix_write_assume_fd_is_nonblocking_stub"
 ;;
 
@@ -130,7 +130,7 @@ let write_assume_fd_is_nonblocking fd ?pos ?len buf =
   let loc = "write_assume_fd_is_nonblocking" in
   let pos = get_opt_pos ~loc pos in
   let len = get_opt_len buf ~pos len in
-  check_string_args ~loc buf ~pos ~len;
+  check_bytes_args ~loc buf ~pos ~len;
   unsafe_write_assume_fd_is_nonblocking fd buf ~pos ~len
 ;;
 
@@ -1059,6 +1059,14 @@ let with_file ?perm file ~mode ~f = with_close (openfile file ~mode ?perm) ~f
 
 let read_write f ?restart ?pos ?len fd ~buf =
   let pos, len =
+    Ordered_collection_common.get_pos_len_exn ?pos ?len ~length:(Bytes.length buf)
+  in
+  improve ?restart (fun () -> f fd ~buf ~pos ~len)
+    (fun () -> [fd_r fd; ("pos", Int.sexp_of_t pos); len_r len])
+;;
+
+let read_write_string f ?restart ?pos ?len fd ~buf =
+  let pos, len =
     Ordered_collection_common.get_pos_len_exn ?pos ?len ~length:(String.length buf)
   in
   improve ?restart (fun () -> f fd ~buf ~pos ~len)
@@ -1068,8 +1076,10 @@ let read_write f ?restart ?pos ?len fd ~buf =
 let read = read_write Unix.read
 
 let write = read_write Unix.write ?restart:None
+let write_substring = read_write_string Unix.write_substring ?restart:None
 
 let single_write = read_write Unix.single_write
+let single_write_substring = read_write_string Unix.single_write_substring
 
 let in_channel_of_descr = Unix.in_channel_of_descr
 let out_channel_of_descr = Unix.out_channel_of_descr
@@ -2548,9 +2558,26 @@ let recv_send f fd ~buf ~pos ~len ~mode =
 let recv = recv_send Unix.recv
 let recvfrom = recv_send Unix.recvfrom
 let send = recv_send Unix.send
+let send_substring = recv_send Unix.send_substring
 
 let sendto fd ~buf ~pos ~len ~mode ~addr =
   improve (fun () -> Unix.sendto fd ~buf ~pos ~len ~mode ~addr)
+    (fun () ->
+      [fd_r fd;
+       ("pos", Int.sexp_of_t pos);
+       len_r len;
+       ("mode", sexp_of_list sexp_of_msg_flag mode);
+       ("addr", sexp_of_sockaddr addr)])
+;;
+
+let sendto_substring fd ~buf ~pos ~len ~mode ~addr =
+  improve (fun () ->
+#if ocaml_version >= (4, 05, 0)
+    Unix.sendto_substring fd ~buf ~pos ~len ~mode addr
+#else
+    Unix.sendto_substring fd ~bug:buf ~pos ~len ~mode addr
+#endif
+  )
     (fun () ->
       [fd_r fd;
        ("pos", Int.sexp_of_t pos);

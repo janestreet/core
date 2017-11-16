@@ -22,6 +22,7 @@
     ppx_inline_test.runtime-lib
     sexplib
     variantslib))
+  (flags (:standard -safe-string))
   (preprocess (pps (ppx_jane ppx_driver.runner)))))
 
 

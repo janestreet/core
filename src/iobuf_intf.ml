@@ -41,8 +41,10 @@ module type Accessors = sig
   val head_padded_fixed_string  : padding:char ->  len:int ->    (string,   'd, 'w) t
   val tail_padded_fixed_string  : padding:char ->  len:int ->    (string,   'd, 'w) t
   val                   string  :  str_pos:int ->  len:int ->    (string,   'd, 'w) t
+  val                   bytes   :  str_pos:int ->  len:int ->   (Bytes.t,   'd, 'w) t
   val                bigstring  :  str_pos:int ->  len:int -> (Bigstring.t, 'd, 'w) t
   val                   stringo : ?str_pos:int -> ?len:int ->    (string,   'd, 'w) t
+  val                   byteso  : ?str_pos:int -> ?len:int ->   (Bytes.t,   'd, 'w) t
   val                bigstringo : ?str_pos:int -> ?len:int -> (Bigstring.t, 'd, 'w) t
   val bin_prot                  : 'a bin_prot              -> ('a,          'd, 'w) t
 end

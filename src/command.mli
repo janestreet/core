@@ -5,7 +5,7 @@
     {[
       let () =
         let open Command.Let_syntax in
-        Command.basic'
+        Command.basic
           ~summary:"cook eggs"
           [%map_open
             let num_eggs =
@@ -240,7 +240,7 @@ module Param : sig
         [ppx_let], like so:
         {[
           let command =
-            Command.basic' ~summary:"..."
+            Command.basic ~summary:"..."
               [%map_open
                 let count  = anon ("COUNT" %: int)
                 and port   = flag "port" (optional int) ~doc:"N listen on this port"
@@ -594,29 +594,29 @@ end
 
 type t (** commands which can be combined into a hierarchy of subcommands *)
 
-type ('main, 'result) basic_command
+type ('main, 'result) basic_spec_command
   =  summary : string
   -> ?readme : (unit -> string)
   -> ('main, unit -> 'result) Spec.t
   -> 'main
   -> t
 
-(** [basic ~summary ?readme spec main] is a basic command that executes a function [main]
-    which is passed parameters parsed from the command line according to [spec].
+(** [basic_spec ~summary ?readme spec main] is a basic command that executes a function
+    [main] which is passed parameters parsed from the command line according to [spec].
     [summary] is to contain a short one-line description of its behavior.  [readme] is to
     contain any longer description of its behavior that will go on that commands' help
     screen. *)
-val basic : ('main, unit) basic_command
+val basic_spec : ('main, unit) basic_spec_command
 
-type 'result basic_command'
+type 'result basic_command
   =  summary : string
   -> ?readme : (unit -> string)
   -> (unit -> 'result) Param.t
   -> t
 
-(** Same general behavior as [basic], but takes a command line specification built up
+(** Same general behavior as [basic_spec], but takes a command line specification built up
     using [Params] instead of [Spec]. *)
-val basic' : unit basic_command'
+val basic : unit basic_command
 
 (** [group ~summary subcommand_alist] is a compound command with named
     subcommands, as found in [subcommand_alist].  [summary] is to contain
@@ -834,6 +834,4 @@ module Deprecated : sig
     -> unit
 
   val get_flag_names : t ->  string list
-  val version : string
-  val build_info : string Lazy.t
 end

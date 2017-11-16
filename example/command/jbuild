@@ -1,5 +1,6 @@
 (executables
  ((names (main main_no_recur))
+(flags (:standard -safe-string))
   (libraries (async
                     core
                     fieldslib

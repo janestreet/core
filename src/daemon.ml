@@ -115,7 +115,7 @@ let daemonize_wait
       Staged.stage (fun () ->
         redirect_stdio_fds ~stdout:redirect_stdout ~stderr:redirect_stderr;
         let old_sigpipe_behavior = Signal.Expert.signal Signal.pipe `Ignore in
-        (try ignore (Unix.write write_end ~buf ~pos:0 ~len : int) with _ -> ());
+        (try ignore (Unix.write_substring write_end ~buf ~pos:0 ~len : int) with _ -> ());
         Signal.Expert.set Signal.pipe old_sigpipe_behavior;
         Unix.close write_end
       )

@@ -18,7 +18,7 @@ let main () =
   Deferred.never ()
 ;;
 
-Command.async
+Command.async_spec
   ~summary:"demonstrate thread ID call"
   Command.Spec.empty
   main

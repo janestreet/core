@@ -1,5 +1,6 @@
 (executables (
   (names (backtrace getpwents))
+(flags (:standard -safe-string))
   (libraries (
     core
   ))

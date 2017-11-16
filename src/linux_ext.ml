@@ -577,7 +577,7 @@ external settcpopt_bool
   : file_descr -> tcp_bool_option -> bool -> unit = "linux_settcpopt_bool_stub"
 
 external unsafe_send_nonblocking_no_sigpipe
-  : file_descr -> pos : int -> len : int -> string -> int
+  : file_descr -> pos : int -> len : int -> Bytes.t -> int
   = "linux_send_nonblocking_no_sigpipe_stub"
 
 let unsafe_send_nonblocking_no_sigpipe fd ~pos ~len buf =
@@ -586,11 +586,11 @@ let unsafe_send_nonblocking_no_sigpipe fd ~pos ~len buf =
   else Some res
 
 external unsafe_send_no_sigpipe
-  : file_descr -> pos : int -> len : int -> string -> int
+  : file_descr -> pos : int -> len : int -> Bytes.t -> int
   = "linux_send_no_sigpipe_stub"
 
 let check_send_args ?pos ?len buf =
-  let str_len = String.length buf in
+  let str_len = Bytes.length buf in
   let pos =
     match pos with
     | None -> 0
@@ -1013,10 +1013,10 @@ let%test_module _ =
       sock
     ;;
 
-    let send s buf ~port =
+    let send_substring s buf ~port =
       let addr = Unix.ADDR_INET (Unix.Inet_addr.localhost, port) in
       let len  = String.length buf in
-      Unix.sendto s ~buf ~pos:0 ~len ~mode:[] ~addr
+      Unix.sendto_substring s ~buf ~pos:0 ~len ~mode:[] ~addr
     ;;
 
     let with_epoll ~f =
@@ -1038,7 +1038,7 @@ let%test_module _ =
       let sock2 = udp_listener ~port:7071 in
       Epoll.set epset sock1 Flags.in_;
       Epoll.set epset sock2 Flags.in_;
-      let _sent = send sock2 "TEST" ~port:7070 in
+      let _sent = send_substring sock2 "TEST" ~port:7070 in
       begin match Epoll.wait_timeout_after epset span with
       | `Timeout -> assert false
       | `Ok ->

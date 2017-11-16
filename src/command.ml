@@ -2070,7 +2070,7 @@ let rec to_sexpable = function
     Sexpable.Group (Group.to_sexpable ~subcommand_to_sexpable:to_sexpable group)
   | Lazy  thunk -> Sexpable.Lazy (Lazy.map ~f:to_sexpable thunk)
 
-type ('main, 'result) basic_command
+type ('main, 'result) basic_spec_command
   =  summary:string
   -> ?readme:(unit -> string)
   -> ('main, unit -> 'result) Base.Spec.t
@@ -2113,7 +2113,7 @@ module Bailout_dump_flag = struct
     { base with Base.flags }
 end
 
-let basic ~summary ?readme {Base.Spec.usage; flags; f} main =
+let basic_spec ~summary ?readme {Base.Spec.usage; flags; f} main =
   let flags = flags () in
   let usage = usage () in
   let anons () =
@@ -2131,6 +2131,8 @@ let basic ~summary ?readme {Base.Spec.usage; flags; f} main =
       ~text:(fun env -> Lazy.force (Env.find_exn env Base.help_key))
   in
   Base base
+
+let basic = basic_spec
 
 let subs_key : (string * t) list Env.Key.t = Env.key_create "subcommands"
 
@@ -2932,13 +2934,13 @@ module Let_syntax = struct
   end
 end
 
-type 'result basic_command'
+type 'result basic_command
   =  summary : string
   -> ?readme : (unit -> string)
   -> (unit -> 'result) Param.t
   -> t
 
-let basic' ~summary ?readme param =
+let basic ~summary ?readme param =
   let spec =
     Spec.of_params @@ Param.map param ~f:(fun run () () -> run ())
   in
@@ -3006,7 +3008,7 @@ let%test_unit "multiple runs" =
   let r = ref (None, "not set") in
   let command =
     let open Let_syntax in
-    basic' ~summary:"test"
+    basic ~summary:"test"
       [%map_open
         let a = flag "int" (optional int) ~doc:"INT some number"
         and b = anon ("string" %: string)

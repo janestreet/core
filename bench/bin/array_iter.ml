@@ -1,6 +1,6 @@
 open Core
 
-module Bench = Core_extended.Deprecated_bench
+module Bench = Core_bench.Bench
 
 let () =
   let a = Array.init 1000 ~f:ident in

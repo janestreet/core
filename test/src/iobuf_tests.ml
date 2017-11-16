@@ -597,8 +597,10 @@ module Test (Iobuf : sig
 
       let tail_padded_fixed_string  = tail_padded_fixed_string
       let head_padded_fixed_string  = head_padded_fixed_string
+      let                   bytes   =                   bytes
       let                   string  =                   string
       let                bigstring  =                bigstring
+      let                   byteso  =                    byteso
       let                   stringo =                   stringo
       let                bigstringo =                bigstringo
       let bin_prot                  = bin_prot
@@ -815,7 +817,7 @@ module Test (Iobuf : sig
       [%test_eq: string] (to_string dst) "abc012hij"
     ;;
     let test_peek_to_string blito =
-      test_peek_to blito Bytes.create String.sub ident ident
+      test_peek_to blito Bytes.create Bytes.To_string.sub Bytes.of_string Bytes.to_string
     let test_peek_to_bigstring blito =
       test_peek_to blito Bigstring.create
         (fun s ~pos ~len -> Bigstring.to_string s ~pos ~len)
@@ -852,8 +854,8 @@ module Test (Iobuf : sig
 
       let index = index
 
-      module To_string = struct
-        open Peek.To_string
+      module To_bytes = struct
+        open Peek.To_bytes
         let blito = blito
         let%test_unit _ = test_peek_to_string blito
         (* Mostly rely on the [Blit_tests.Make_distinct] testing. *)
@@ -865,6 +867,10 @@ module Test (Iobuf : sig
         let%test_unit _ = test_peek_to_bigstring blito
         (* Mostly rely on the [Blit_tests.Make_distinct] testing. *)
         let blit, unsafe_blit, sub, subo = blit, unsafe_blit, sub, subo
+      end
+      module To_string = struct
+        let blit, blito, unsafe_blit = Peek.To_bytes.(blit, blito, unsafe_blit)
+        let sub, subo = Peek.To_string.(sub, subo)
       end
       type nonrec src = src
     end
@@ -1042,7 +1048,7 @@ module Test (Iobuf : sig
       [%test_eq: string] (to_string dst) "abc012hij"
     ;;
     let test_consume_to_string blito =
-      test_consume_to blito Bytes.create String.sub ident ident
+      test_consume_to blito Bytes.create Bytes.To_string.sub Bytes.of_string Bytes.to_string
     let test_consume_to_bigstring blito =
       test_consume_to blito Bigstring.create
         (fun s ~pos ~len -> Bigstring.to_string s ~pos ~len)
@@ -1085,8 +1091,8 @@ module Test (Iobuf : sig
 
       open Consume
 
-      module To_string = struct
-        open To_string
+      module To_bytes = struct
+        open To_bytes
         let blito = blito
         let%test_unit _ = test_consume_to_string blito
         (* Mostly rely on the [Blit_tests.Make_distinct] testing. *)
@@ -1098,6 +1104,10 @@ module Test (Iobuf : sig
         let%test_unit _ = test_consume_to_bigstring blito
         (* Mostly rely on the [Blit_tests.Make_distinct] testing. *)
         let blit, unsafe_blit, sub, subo = blit, unsafe_blit, sub, subo
+      end
+      module To_string = struct
+        let blit, blito, unsafe_blit = To_bytes.(blit, blito, unsafe_blit)
+        let sub, subo = To_string.(sub, subo)
       end
       type nonrec src = src
     end
@@ -1819,4 +1829,4 @@ let%test_unit "SEGV bug repro" =
   Iobuf.protect_window_and_bounds tmp ~f:(fun tmp ->
     let tmp2 = Iobuf.create ~len:5 in
     Iobuf.set_bounds_and_buffer ~src:tmp2 ~dst:tmp);
-  ignore (Iobuf.Consume.To_string.subo (Iobuf.read_only tmp) : string)
+  ignore (Iobuf.Consume.To_bytes.subo (Iobuf.read_only tmp) : Bytes.t)

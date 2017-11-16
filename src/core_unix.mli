@@ -498,12 +498,12 @@ val read
   -> ?pos:int
   -> ?len:int
   -> File_descr.t
-  -> buf:string
+  -> buf:Bytes.t
   -> int
 
 (** [write fd buff ofs len] writes [len] characters to descriptor
-    [fd], taking them from string [buff], starting at position [ofs]
-    in string [buff]. Return the number of characters actually
+    [fd], taking them from bytes [buff], starting at position [ofs]
+    in bytes [buff]. Return the number of characters actually
     written.
 
     When an error is reported some characters might have already been
@@ -513,11 +513,23 @@ val read
     WARNING: write is an interruptible call and has no way to handle
     EINTR properly. You should most probably be using single write.
 *)
-val write : ?pos:int -> ?len:int -> File_descr.t -> buf:string -> int
+val write : ?pos:int -> ?len:int -> File_descr.t -> buf:Bytes.t -> int
+
+(** Same as [write] but with a string buffer. *)
+val write_substring : ?pos:int -> ?len:int -> File_descr.t -> buf:string -> int
 
 (** Same as [write] but ensures that all errors are reported and
     that no character has ever been written when an error is reported. *)
 val single_write
+  :  ?restart:bool (** defaults to false *)
+  -> ?pos:int
+  -> ?len:int
+  -> File_descr.t
+  -> buf:Bytes.t
+  -> int
+
+(** Same as [single_write] but with a string buffer. *)
+val single_write_substring
   :  ?restart:bool (** defaults to false *)
   -> ?pos:int
   -> ?len:int
@@ -1393,7 +1405,7 @@ type msg_flag = Unix.msg_flag =
 (** Receive data from a connected socket. *)
 val recv
   :  File_descr.t
-  -> buf:string
+  -> buf:Bytes.t
   -> pos:int
   -> len:int
   -> mode:msg_flag list
@@ -1402,7 +1414,7 @@ val recv
 (** Receive data from an unconnected socket. *)
 val recvfrom
   :  File_descr.t
-  -> buf:string
+  -> buf:Bytes.t
   -> pos:int
   -> len:int
   -> mode:msg_flag list
@@ -1410,10 +1422,24 @@ val recvfrom
 
 (** Send data over a connected socket. *)
 val send
+  : File_descr.t -> buf:Bytes.t -> pos:int -> len:int -> mode:msg_flag list -> int
+
+(** Same as [send] but with a string buffer. *)
+val send_substring
   : File_descr.t -> buf:string -> pos:int -> len:int -> mode:msg_flag list -> int
 
 (** Send data over an unconnected socket. *)
 val sendto
+  :  File_descr.t
+  -> buf:Bytes.t
+  -> pos:int
+  -> len:int
+  -> mode:msg_flag list
+  -> addr:sockaddr
+  -> int
+
+(** Same as [sendto] but with a string buffer. *)
+val sendto_substring
   :  File_descr.t
   -> buf:string
   -> pos:int
@@ -1900,7 +1926,7 @@ external readdir_ino
 [@@deprecated "[since 2016-08] use readdir_ino_opt instead"]
 
 val read_assume_fd_is_nonblocking
-  : File_descr.t -> ?pos : int -> ?len : int -> string -> int
+  : File_descr.t -> ?pos : int -> ?len : int -> Bytes.t -> int
 (** [read_assume_fd_is_nonblocking fd ?pos ?len buf] calls the system call
     [read] ASSUMING THAT IT IS NOT GOING TO BLOCK.  Reads at most [len]
     bytes into buffer [buf] starting at position [pos].  @return the
@@ -1914,7 +1940,7 @@ val read_assume_fd_is_nonblocking
 *)
 
 val write_assume_fd_is_nonblocking
-  : File_descr.t -> ?pos : int -> ?len : int -> string -> int
+  : File_descr.t -> ?pos : int -> ?len : int -> Bytes.t -> int
 (** [write_assume_fd_is_nonblocking fd ?pos ?len buf] calls the system call
     [write] ASSUMING THAT IT IS NOT GOING TO BLOCK.  Writes at most [len]
     bytes from buffer [buf] starting at position [pos].  @return the

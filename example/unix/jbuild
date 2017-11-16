@@ -1,5 +1,6 @@
 (executables (
   (names (gettid getifaddrs))
+(flags (:standard -safe-string))
   (libraries (async core))
   (preprocess (pps (ppx_jane ppx_driver.runner)))
 ))

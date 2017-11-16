@@ -11,7 +11,7 @@ let () =
     let release = Daemon.daemonize_wait () in
     sleep 1.;
     Staged.unstage release ();
-    ignore (Unix.write writer ~buf:"x")
+    ignore (Unix.write_substring writer ~buf:"x")
   | `In_the_parent child ->
     (* the parent tries kills the child with USR1 and expects the signal to be ignored *)
     sleep 0.2;
@@ -19,5 +19,5 @@ let () =
     let buf = Bytes.create 1 in
     Unix.waitpid_exn child;
     assert (Unix.read reader ~buf = 1);
-    assert (buf = "x");
+    assert (Bytes.to_string buf = "x");
 

@@ -244,14 +244,27 @@ val to_string_hum : ?max_lines:int -> (_, _) t -> string
     [Consume.bin_prot X.bin_read_t t] returns the initial [X.t] in [t], advancing past the
     bytes read. *)
 module Consume : sig
-  (** [To_string.blito ~src ~dst ~dst_pos ~src_len ()] reads [src_len] bytes from [src],
+  (** [To_bytes.blito ~src ~dst ~dst_pos ~src_len ()] reads [src_len] bytes from [src],
       advancing [src]'s window accordingly, and writes them into [dst] starting at
       [dst_pos].  By default [dst_pos = 0] and [src_len = length src].  It is an error if
       [dst_pos] and [src_len] don't specify a valid region of [dst] or [src_len > length
       src]. *)
   type src = (read, seek) t
-  module To_string    : Consuming_blit with type src := src with type dst := string
+  module To_bytes     : Consuming_blit with type src := src with type dst := Bytes.t
   module To_bigstring : Consuming_blit with type src := src with type dst := Bigstring.t
+
+  module To_string : sig
+    val blito       : (src, Bytes.t) consuming_blito
+    [@@deprecated "[since 2017-10] use [Consume.To_bytes.blito] instead"]
+    val blit        : (src, Bytes.t) consuming_blit
+    [@@deprecated "[since 2017-10] use [Consume.To_bytes.blit] instead"]
+    val unsafe_blit : (src, Bytes.t) consuming_blit
+    [@@deprecated "[since 2017-10] use [Consume.To_bytes.unsafe_blit] instead"]
+
+    (** [subo] defaults to using [Iobuf.length src] *)
+    val subo : ?len:int -> src -> string
+    val sub  : src -> len:int -> string
+  end
 
   include
     Accessors
@@ -287,8 +300,20 @@ end
 module Peek : sig
   (** Similar to [Consume.To_*], but do not advance the buffer. *)
   type src = (read, no_seek) t
-  module To_string    : Blit.S_distinct with type src := src with type dst := string
+  module To_bytes     : Blit.S_distinct with type src := src with type dst := Bytes.t
   module To_bigstring : Blit.S_distinct with type src := src with type dst := Bigstring.t
+
+  module To_string : sig
+    val blit        : (src, Bytes.t) Base.Blit_intf.blit
+    [@@deprecated "[since 2017-10] use [Peek.To_bytes.blit] instead"]
+    val blito       : (src, Bytes.t) Base.Blit_intf.blito
+    [@@deprecated "[since 2017-10] use [Peek.To_bytes.blito] instead"]
+    val unsafe_blit : (src, Bytes.t) Base.Blit_intf.blit
+    [@@deprecated "[since 2017-10] use [Peek.To_bytes.unsafe_blit] instead"]
+
+    val sub  : (src, string) Base.Blit_intf.sub
+    val subo : (src, string) Base.Blit_intf.subo
+  end
 
   val index : ([> read], _) t -> ?pos:int -> ?len:int -> char -> int option
 

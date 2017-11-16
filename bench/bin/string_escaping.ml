@@ -1,6 +1,6 @@
 open Core
 
-module Bench = Core_extended.Deprecated_bench
+module Bench = Core_bench.Bench
 
 let () =
   let module E = String.Escaping in

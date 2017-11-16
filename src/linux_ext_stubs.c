@@ -31,6 +31,11 @@
 #include "ocaml_utils.h"
 #include "unix_utils.h"
 
+/* Bytes_val is only available from 4.06 */
+#ifndef Bytes_val
+#define Bytes_val String_val
+#endif
+
 extern int core_unix_close_durably(int fd);
 extern struct in_addr core_unix_get_in_addr_for_interface(value v_interface);
 
@@ -118,7 +123,7 @@ static int nonblocking_no_sigpipe_flag = MSG_DONTWAIT | MSG_NOSIGNAL;
 CAMLprim value linux_send_nonblocking_no_sigpipe_stub(
   value v_fd, value v_pos, value v_len, value v_buf)
 {
-  char *buf = String_val(v_buf) + Long_val(v_pos);
+  char *buf = Bytes_val(v_buf) + Long_val(v_pos);
   ssize_t ret =
     send(Int_val(v_fd), buf, Long_val(v_len), nonblocking_no_sigpipe_flag);
   if (ret == -1 && errno != EAGAIN && errno != EWOULDBLOCK)
@@ -129,7 +134,7 @@ CAMLprim value linux_send_nonblocking_no_sigpipe_stub(
 CAMLprim value linux_send_no_sigpipe_stub(
   value v_fd, value v_pos, value v_len, value v_buf)
 {
-  char *buf = String_val(v_buf) + Long_val(v_pos);
+  char *buf = Bytes_val(v_buf) + Long_val(v_pos);
   ssize_t ret = send(Int_val(v_fd), buf, Long_val(v_len), MSG_NOSIGNAL);
   if (ret == -1) uerror("send_no_sigpipe", Nothing);
   return Val_long(ret);

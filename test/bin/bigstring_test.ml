@@ -23,8 +23,8 @@ let bs_of_s = Bigstring.of_string
 let repr bs =
   if Bigstring.length bs > 30 then
     let s = Bytes.create 30 in
-    Bigstring.To_string.blito ~src:bs ~src_len:30 ~dst:s ();
-    sprintf "<bs:%d:%s>" (Bigstring.length bs) s
+    Bigstring.To_bytes.blito ~src:bs ~src_len:30 ~dst:s ();
+    sprintf "<bs:%d:%s>" (Bigstring.length bs) (Bytes.to_string s)
   else
     sprintf "<bs:%s>" (Bigstring.to_string bs)
 ;;
@@ -35,18 +35,18 @@ let repr bs =
 
 let blit_test ~n ~src_pos ~dst_pos ~len (s1,s2) =
   let s1_orig = s1 and s2_orig = s2 in
-  let s1 = String.copy s1 and s2 = String.copy s2 in
+  let s1 = Bytes.of_string s1 and s2 = Bytes.of_string s2 in
   let s_result =
     try
       Bytes.blit ~src_pos ~dst_pos ~len ~src:s1 ~dst:s2;
-      `Success s2
+      `Success (Bytes.to_string s2)
     with
       e -> `Failure (Exn.to_string e)
   in
   let bs_result =
     try
-      let bs1 = Bigstring.of_string s1 in
-      let bs2 = Bigstring.of_string s2 in
+      let bs1 = Bigstring.of_bytes s1 in
+      let bs2 = Bigstring.of_bytes s2 in
       Bigstring.blito ~src:bs1 ~src_pos ~src_len:len ~dst:bs2 ~dst_pos ();
       `Success (Bigstring.to_string bs2)
     with
@@ -71,8 +71,8 @@ let simple_conversion_test ~n s =
   let bs = Bigstring.create len in
   Bigstring.From_string.blito ~src:s ~dst:bs ();
   let s' = Bytes.create len in
-  Bigstring.To_string.blito ~src:bs ~dst:s' ();
-  (sprintf "%s: %s" n s) @? (s' = s)
+  Bigstring.To_bytes.blito ~src:bs ~dst:s' ();
+  (sprintf "%s: %s" n s) @? (Bytes.to_string s' = s)
 ;;
 
 let really_output outc bs =

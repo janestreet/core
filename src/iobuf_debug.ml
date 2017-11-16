@@ -206,6 +206,10 @@ module Make () = struct
 
   module Consume_blit_debug = struct
     module type To = Iobuf_intf.Consuming_blit with type src := Consume.src
+    module type To_string = sig
+      val subo : ?len:int -> Consume.src -> string
+      val sub  : Consume.src -> len:int -> string
+    end
 
     module To (To : sig
         include To
@@ -234,20 +238,31 @@ module Make () = struct
     end
 
     module Make (C : sig
-        module To_string    : To with type dst := string
+        module To_bytes    : To with type dst := Bytes.t
         module To_bigstring : To with type dst := bigstring
+        module To_string : To_string
         val module_name : string
       end) = struct
-      module To_string = To (struct
-          type dst = string [@@deriving sexp_of]
-          include C.To_string
-          let module_name = C.module_name ^ ".To_string"
+      module To_bytes = To (struct
+          type dst = Bytes.t [@@deriving sexp_of]
+          include C.To_bytes
+          let module_name = C.module_name ^ ".To_bytes"
         end)
       module To_bigstring = To (struct
           type dst = bigstring [@@deriving sexp_of]
           include C.To_bigstring
           let module_name = C.module_name ^ ".To_bigstring"
         end)
+
+      module To_string = struct
+        include To_bytes
+        let sub src ~len =
+          debug (C.module_name ^ ".To_string.sub") [src] len [%sexp_of: int]
+            sexp_of_string (fun () -> C.To_string.sub src ~len)
+        let subo ?len src =
+          debug (C.module_name ^ ".To_string.subo") [src] len [%sexp_of: int option]
+            sexp_of_string (fun () -> C.To_string.subo ?len src)
+      end
       type src = Consume.src
     end
   end
@@ -299,6 +314,12 @@ module Make () = struct
         sexp_of_string
         (fun () -> head_padded_fixed_string ~padding ~len t)
 
+    let bytes ~str_pos ~len t =
+      debug "Consume.bytes" [t] ()
+        (fun () -> [%sexp { str_pos : int; len : int }])
+        sexp_of_bytes
+        (fun () -> bytes ~str_pos ~len t)
+
     let string ~str_pos ~len t =
       debug "Consume.string" [t] ()
         (fun () -> [%sexp { str_pos : int; len : int }])
@@ -310,6 +331,12 @@ module Make () = struct
         (fun () -> [%sexp { str_pos : int; len : int }])
         sexp_of_bigstring
         (fun () -> bigstring ~str_pos ~len t)
+
+    let byteso ?str_pos ?len t =
+      debug "Consume.byteso" [t] ()
+        (fun () -> [%sexp { str_pos : int option; len : int option }])
+        sexp_of_bytes
+        (fun () -> byteso ?str_pos ?len t)
 
     let stringo ?str_pos ?len t =
       debug "Consume.stringo" [t] ()
@@ -372,6 +399,12 @@ module Make () = struct
         sexp_of_unit
         (fun () -> head_padded_fixed_string ~padding ~len t str)
 
+    let bytes ~str_pos ~len t str =
+      debug "Fill.bytes" [t] (`str_pos str_pos, `len len, str)
+        [%sexp_of: [ `str_pos of int ] * [ `len of int ] * bytes]
+        sexp_of_unit
+        (fun () -> bytes ~str_pos ~len t str)
+
     let string ~str_pos ~len t str =
       debug "Fill.string" [t] (`str_pos str_pos, `len len, str)
         [%sexp_of: [ `str_pos of int ] * [ `len of int ] * string]
@@ -390,6 +423,12 @@ module Make () = struct
         sexp_of_unit
         (fun () -> stringo ?str_pos ?len t str)
 
+    let byteso ?str_pos ?len t str =
+      debug "Fill.byteso" [t] (`str_pos str_pos, `len len, str)
+        [%sexp_of: [ `str_pos of int option ] * [ `len of int option ] * bytes]
+        sexp_of_unit
+        (fun () -> byteso ?str_pos ?len t str)
+
     let bigstringo ?str_pos ?len t str =
       debug "Fill.bigstringo" [t] (`str_pos str_pos, `len len, str)
         [%sexp_of: [ `str_pos of int option ] * [ `len of int option ] * bigstring]
@@ -404,6 +443,10 @@ module Make () = struct
 
   module Peek_blit_debug = struct
     module type To = Core_kernel.Blit.S_distinct with type src := Peek.src
+    module type To_string = sig
+      val sub  : (Peek.src, string) Base.Blit_intf.sub
+      val subo : (Peek.src, string) Base.Blit_intf.subo
+    end
 
     module To (To : sig
         include To
@@ -435,24 +478,36 @@ module Make () = struct
     end
 
     module Make (C : sig
-        module To_string    : To with type dst := string
+        module To_bytes     : To with type dst := Bytes.t
         module To_bigstring : To with type dst := bigstring
+        module To_string    : To_string
         val module_name : string
       end) = struct
       type src = Peek.src
-      module To_string = To (struct
-          type dst = string [@@deriving sexp_of]
-          include C.To_string
-          let module_name = C.module_name ^ ".To_string"
+      module To_bytes = To (struct
+          type dst = Bytes.t [@@deriving sexp_of]
+          include C.To_bytes
+          let module_name = C.module_name ^ ".To_bytes"
         end)
       module To_bigstring = To (struct
           type dst = bigstring [@@deriving sexp_of]
           include C.To_bigstring
           let module_name = C.module_name ^ ".To_bigstring"
         end)
+
+      module To_string = struct
+        include To_bytes
+        let sub src ~pos ~len =
+          debug (C.module_name ^ ".To_string.sub") [src]
+            (pos, len) [%sexp_of: int * int]
+            sexp_of_string (fun () -> C.To_string.sub src ~pos ~len)
+        let subo ?pos ?len src =
+          debug (C.module_name ^ ".To_string.subo") [src]
+            (pos, len) [%sexp_of: int option * int option]
+            sexp_of_string (fun () -> C.To_string.subo ?pos ?len src)
+      end
     end
   end
-
   module Peek = struct
     let d name f sexp_of_result t ~pos =
       debug ("Peek." ^ name)
@@ -501,6 +556,12 @@ module Make () = struct
         sexp_of_string
         (fun () -> head_padded_fixed_string ~padding ~len t ~pos)
 
+    let bytes ~str_pos ~len t ~pos =
+      debug "Peek.bytes" [t] (`str_pos str_pos, `len len, `pos pos)
+        [%sexp_of: [ `str_pos of int ] * [ `len of int ] * [ `pos of int ]]
+        sexp_of_bytes
+        (fun () -> bytes ~str_pos ~len t ~pos)
+
     let string ~str_pos ~len t ~pos =
       debug "Peek.string" [t] (`str_pos str_pos, `len len, `pos pos)
         [%sexp_of: [ `str_pos of int ] * [ `len of int ] * [ `pos of int ]]
@@ -512,6 +573,12 @@ module Make () = struct
         [%sexp_of: [ `str_pos of int ] * [ `len of int ] * [ `pos of int ]]
         sexp_of_bigstring
         (fun () -> bigstring ~str_pos ~len t ~pos)
+
+    let byteso ?str_pos ?len t ~pos =
+      debug "Peek.byteso" [t] (`str_pos str_pos, `len len, `pos pos)
+        [%sexp_of: [ `str_pos of int option ] * [ `len of int option ] * [ `pos of int ]]
+        sexp_of_bytes
+        (fun () -> byteso ?str_pos ?len t ~pos)
 
     let stringo ?str_pos ?len t ~pos =
       debug "Peek.stringo" [t] (`str_pos str_pos, `len len, `pos pos)
@@ -592,6 +659,12 @@ module Make () = struct
         sexp_of_unit
         (fun () -> head_padded_fixed_string ~padding ~len t ~pos str)
 
+    let bytes ~str_pos ~len t ~pos str =
+      debug "Poke.bytes" [t] (`str_pos str_pos, `len len, `pos pos, str)
+        [%sexp_of: [ `str_pos of int ] * [ `len of int ] * [ `pos of int ] * bytes]
+        sexp_of_unit
+        (fun () -> bytes ~str_pos ~len t ~pos str)
+
     let string ~str_pos ~len t ~pos str =
       debug "Poke.string" [t] (`str_pos str_pos, `len len, `pos pos, str)
         [%sexp_of: [ `str_pos of int ] * [ `len of int ] * [ `pos of int ] * string]
@@ -603,6 +676,13 @@ module Make () = struct
         [%sexp_of: [ `str_pos of int ] * [ `len of int ] * [ `pos of int ] * bigstring]
         sexp_of_unit
         (fun () -> bigstring ~str_pos ~len t ~pos str)
+
+    let byteso ?str_pos ?len t ~pos str =
+      debug "Poke.byteso" [t] (`str_pos str_pos, `len len, `pos pos, str)
+        [%sexp_of: [ `str_pos of int option ] * [ `len of int option ] * [ `pos of int ]
+                   * bytes]
+        sexp_of_unit
+        (fun () -> byteso ?str_pos ?len t ~pos str)
 
     let stringo ?str_pos ?len t ~pos str =
       debug "Poke.stringo" [t] (`str_pos str_pos, `len len, `pos pos, str)
@@ -1001,6 +1081,12 @@ module Make () = struct
           sexp_of_string
           (fun () -> head_padded_fixed_string ~padding ~len t)
 
+      let bytes ~str_pos ~len t =
+        debug "Unsafe.Consume.bytes" [t] (`str_pos str_pos, `len len)
+          [%sexp_of: [ `str_pos of int ] * [ `len of int ]]
+          sexp_of_bytes
+          (fun () -> bytes ~str_pos ~len t)
+
       let string ~str_pos ~len t =
         debug "Unsafe.Consume.string" [t] (`str_pos str_pos, `len len)
           [%sexp_of: [ `str_pos of int ] * [ `len of int ]]
@@ -1012,6 +1098,12 @@ module Make () = struct
           [%sexp_of: [ `str_pos of int ] * [ `len of int ]]
           sexp_of_bigstring
           (fun () -> bigstring ~str_pos ~len t)
+
+      let byteso ?str_pos ?len t =
+        debug "Unsafe.Consume.byteso" [t] (`str_pos str_pos, `len len)
+          [%sexp_of: [ `str_pos of int option ] * [ `len of int option ]]
+          sexp_of_bytes
+          (fun () -> byteso ?str_pos ?len t)
 
       let stringo ?str_pos ?len t =
         debug "Unsafe.Consume.stringo" [t] (`str_pos str_pos, `len len)
@@ -1073,6 +1165,12 @@ module Make () = struct
           sexp_of_unit
           (fun () -> head_padded_fixed_string ~padding ~len t str)
 
+      let bytes ~str_pos ~len t str =
+        debug "Unsafe.Fill.bytes" [t] (`str_pos str_pos, `len len, str)
+          [%sexp_of: [ `str_pos of int ] * [ `len of int ] * bytes]
+          sexp_of_unit
+          (fun () -> bytes ~str_pos ~len t str)
+
       let string ~str_pos ~len t str =
         debug "Unsafe.Fill.string" [t] (`str_pos str_pos, `len len, str)
           [%sexp_of: [ `str_pos of int ] * [ `len of int ] * string]
@@ -1084,6 +1182,12 @@ module Make () = struct
           [%sexp_of: [ `str_pos of int ] * [ `len of int ] * bigstring]
           sexp_of_unit
           (fun () -> bigstring ~str_pos ~len t str)
+
+      let byteso ?str_pos ?len t str =
+        debug "Unsafe.Fill.byteso" [t] (`str_pos str_pos, `len len, str)
+          [%sexp_of: [ `str_pos of int option ] * [ `len of int option ] * bytes]
+          sexp_of_unit
+          (fun () -> byteso ?str_pos ?len t str)
 
       let stringo ?str_pos ?len t str =
         debug "Unsafe.Fill.stringo" [t] (`str_pos str_pos, `len len, str)
@@ -1155,6 +1259,12 @@ module Make () = struct
           sexp_of_string
           (fun () -> head_padded_fixed_string ~padding ~len t ~pos)
 
+      let bytes ~str_pos ~len t ~pos =
+        debug "Unsafe.Peek.bytes" [t] (`str_pos str_pos, `len len, `pos pos)
+          [%sexp_of: [ `str_pos of int ] * [ `len of int ] * [ `pos of int ]]
+          sexp_of_bytes
+          (fun () -> bytes ~str_pos ~len t ~pos)
+
       let string ~str_pos ~len t ~pos =
         debug "Unsafe.Peek.string" [t] (`str_pos str_pos, `len len, `pos pos)
           [%sexp_of: [ `str_pos of int ] * [ `len of int ] * [ `pos of int ]]
@@ -1166,6 +1276,13 @@ module Make () = struct
           [%sexp_of: [ `str_pos of int ] * [ `len of int ] * [ `pos of int ]]
           sexp_of_bigstring
           (fun () -> bigstring ~str_pos ~len t ~pos)
+
+      let byteso ?str_pos ?len t ~pos =
+        debug "Unsafe.Peek.byteso" [t] (`str_pos str_pos, `len len, `pos pos)
+          [%sexp_of: [ `str_pos of int option ] * [ `len of int option ]
+                     * [ `pos of int ]]
+          sexp_of_bytes
+          (fun () -> byteso ?str_pos ?len t ~pos)
 
       let stringo ?str_pos ?len t ~pos =
         debug "Unsafe.Peek.stringo" [t] (`str_pos str_pos, `len len, `pos pos)
@@ -1254,6 +1371,12 @@ module Make () = struct
           sexp_of_unit
           (fun () -> head_padded_fixed_string ~padding ~len t ~pos str)
 
+      let bytes ~str_pos ~len t ~pos str =
+        debug "Unsafe.Poke.bytes" [t] (`str_pos str_pos, `len len, `pos pos, str)
+          [%sexp_of: [ `str_pos of int ] * [ `len of int ] * [ `pos of int ] * bytes]
+          sexp_of_unit
+          (fun () -> bytes ~str_pos ~len t ~pos str)
+
       let string ~str_pos ~len t ~pos str =
         debug "Unsafe.Poke.string" [t] (`str_pos str_pos, `len len, `pos pos, str)
           [%sexp_of: [ `str_pos of int ] * [ `len of int ] * [ `pos of int ] * string]
@@ -1265,6 +1388,13 @@ module Make () = struct
           [%sexp_of: [ `str_pos of int ] * [ `len of int ] * [ `pos of int ] * bigstring]
           sexp_of_unit
           (fun () -> bigstring ~str_pos ~len t ~pos str)
+
+      let byteso ?str_pos ?len t ~pos str =
+        debug "Unsafe.Poke.byteso" [t] (`str_pos str_pos, `len len, `pos pos, str)
+          [%sexp_of: [ `str_pos of int option ] * [ `len of int option ] * [ `pos of int ]
+                     * bytes]
+          sexp_of_unit
+          (fun () -> byteso ?str_pos ?len t ~pos str)
 
       let stringo ?str_pos ?len t ~pos str =
         debug "Unsafe.Poke.stringo" [t] (`str_pos str_pos, `len len, `pos pos, str)

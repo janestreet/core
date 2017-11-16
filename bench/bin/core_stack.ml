@@ -2,7 +2,7 @@ open! Core
 
 module Stack = Core.Stack
 
-module Bench = Core_extended.Deprecated_bench
+module Bench = Core_bench.Bench
 
 let () =
   Bench.bench

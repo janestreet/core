@@ -96,7 +96,7 @@ module type S = sig
       bytes_written] or [None] if the operation would have blocked.
 
       @param pos default = 0
-      @param len default = [String.length buf - pos]
+      @param len default = [Bytes.length buf - pos]
 
       @raise Invalid_argument if the designated buffer range is invalid.
       @raise Unix_error on Unix-errors. *)
@@ -104,7 +104,7 @@ module type S = sig
     : (File_descr.t
        -> ?pos : int
        -> ?len : int
-       -> string
+       -> Bytes.t
        -> int option) Or_error.t
 
   (** [send_no_sigpipe sock ?pos ?len buf] tries to do a blocking send on socket [sock]
@@ -112,12 +112,12 @@ module type S = sig
       Unix-error in that case immediately.  @return the number of bytes written.
 
       @param pos default = 0
-      @param len default = [String.length buf - pos]
+      @param len default = [Bytes.length buf - pos]
 
       @raise Invalid_argument if the designated buffer range is invalid.
       @raise Unix_error on Unix-errors. *)
   val send_no_sigpipe
-    : (File_descr.t -> ?pos : int -> ?len : int -> string -> int) Or_error.t
+    : (File_descr.t -> ?pos : int -> ?len : int -> Bytes.t -> int) Or_error.t
 
   (** [sendmsg_nonblocking_no_sigpipe sock ?count iovecs] tries to do a nonblocking send
       on socket [sock] using [count] I/O-vectors [iovecs].  Prevents [SIGPIPE],

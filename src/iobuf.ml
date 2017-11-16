@@ -322,14 +322,26 @@ module T_src = struct
   let set t pos c = bigstring_unsafe_set t.buf ~pos:(buf_pos_exn t ~len:1 ~pos) c
 end
 
-module String_dst = struct
+module Bytes_dst = struct
   include Bytes
   let unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len =
-    Bigstring.To_string.unsafe_blit
+    Bigstring.To_bytes.unsafe_blit
       ~src:src.buf ~src_pos:(unsafe_buf_pos src ~pos:src_pos)
       ~dst ~dst_pos
       ~len
   let create ~len = create len
+end
+
+module String_dst = struct
+  let sub src ~pos ~len =
+    Bigstring.To_string.sub
+      src.buf ~pos:(buf_pos_exn src ~pos ~len)
+      ~len
+  let subo ?(pos = 0) ?len src =
+    let len = match len with None -> length src - pos | Some len -> len in
+    Bigstring.To_string.subo
+      src.buf ~pos:(buf_pos_exn src ~pos ~len)
+      ~len
 end
 
 module Bigstring_dst = struct
@@ -405,8 +417,23 @@ module Consume = struct
       unsafe_advance src len;
       dst
   end
-  module To_string    = To (String_dst)
+  module To_bytes    = To (Bytes_dst)
   module To_bigstring = To (Bigstring_dst)
+
+  module To_string = struct
+    include To_bytes
+
+    let sub src ~len =
+      let dst = String_dst.sub src ~len ~pos:0 in
+      unsafe_advance src len;
+      dst
+
+    let subo ?len src =
+      let len = match len with None -> length src | Some len -> len in
+      let dst = String_dst.subo ~pos:0 ~len src in
+      unsafe_advance src len;
+      dst
+  end
 
   type nonrec ('a, 'd, 'w) t = ('d, seek) t -> 'a
     constraint 'd = [> read ]
@@ -424,16 +451,23 @@ module Consume = struct
     uadv t len (Bigstring.get_head_padded_fixed_string t.buf ~pos:(pos t len) ~padding ~len ())
   ;;
 
-  let string ~str_pos ~len t =
+  let bytes ~str_pos ~len t =
     let dst = Bytes.create (len + str_pos) in
-    To_string.blit ~src:t ~dst ~len ~dst_pos:str_pos;
+    To_bytes.blit ~src:t ~dst ~len ~dst_pos:str_pos;
     dst
   ;;
+
+  let string ~str_pos ~len t =
+    Bytes.unsafe_to_string ~no_mutation_while_string_reachable:(bytes ~str_pos ~len t)
 
   let bigstring ~str_pos ~len t =
     let dst = Bigstring.create (len + str_pos) in
     To_bigstring.blit ~src:t ~dst ~len ~dst_pos:str_pos;
     dst
+  ;;
+
+  let byteso ?(str_pos = 0) ?len t =
+    bytes t ~str_pos ~len:(match len with None -> length t | Some len -> len)
   ;;
 
   let stringo ?(str_pos = 0) ?len t =
@@ -599,6 +633,11 @@ module Fill = struct
     uadv t len
   ;;
 
+  let bytes ~str_pos ~len t src =
+    Bigstring.From_bytes.blit ~src ~src_pos:str_pos ~len ~dst:t.buf ~dst_pos:(pos t len);
+    uadv t len
+  ;;
+
   let string ~str_pos ~len t src =
     Bigstring.From_string.blit ~src ~src_pos:str_pos ~len ~dst:t.buf ~dst_pos:(pos t len);
     uadv t len
@@ -607,6 +646,11 @@ module Fill = struct
   let bigstring ~str_pos ~len t src =
     Bigstring.blit ~src ~src_pos:str_pos ~len ~dst:t.buf ~dst_pos:(pos t len);
     uadv t len
+  ;;
+
+  let byteso ?(str_pos = 0) ?len t src =
+    bytes t src ~str_pos
+      ~len:(match len with None -> Bytes.length src - str_pos | Some len -> len)
   ;;
 
   let stringo ?(str_pos = 0) ?len t src =
@@ -652,8 +696,13 @@ end
 
 module Peek = struct
   type src = (read, no_seek) t
-  module To_string    = Test_blit.Make_distinct_and_test (Char_elt) (T_src) (String_dst)
+  module To_bytes    = Test_blit.Make_distinct_and_test (Char_elt) (T_src) (Bytes_dst)
   module To_bigstring = Test_blit.Make_distinct_and_test (Char_elt) (T_src) (Bigstring_dst)
+
+  module To_string = struct
+    include To_bytes
+    include String_dst
+  end
 
   type nonrec ('a, 'd, 'w) t = ('d, 'w) t -> pos:int -> 'a
     constraint 'd = [> read ]
@@ -668,17 +717,26 @@ module Peek = struct
     Bigstring.get_head_padded_fixed_string t.buf ~padding ~len ~pos:(spos t ~len ~pos) ()
   ;;
 
-  let string ~str_pos ~len t ~pos =
+  let bytes ~str_pos ~len t ~pos =
     let dst = Bytes.create (len + str_pos) in
-    Bigstring.To_string.blit ~src:t.buf ~src_pos:(spos t ~len ~pos) ~len
+    Bigstring.To_bytes.blit ~src:t.buf ~src_pos:(spos t ~len ~pos) ~len
       ~dst ~dst_pos:str_pos;
     dst
   ;;
+
+  let string ~str_pos ~len t ~pos =
+    Bytes.unsafe_to_string
+      ~no_mutation_while_string_reachable:(bytes ~str_pos ~len t ~pos)
 
   let bigstring ~str_pos ~len t ~pos =
     let dst = Bigstring.create (len + str_pos) in
     Bigstring.blit ~src:t.buf ~src_pos:(spos t ~len ~pos) ~len ~dst ~dst_pos:str_pos;
     dst
+  ;;
+
+  let byteso ?(str_pos = 0) ?len t ~pos =
+    bytes t ~pos ~str_pos
+      ~len:(match len with None -> length t - pos | Some len -> len)
   ;;
 
   let stringo ?(str_pos = 0) ?len t ~pos =
@@ -757,6 +815,11 @@ module Poke = struct
     Bigstring.set_head_padded_fixed_string ~padding ~len t.buf ~pos:(spos t ~len ~pos) src
   ;;
 
+  let bytes ~str_pos ~len t ~pos src =
+    Bigstring.From_bytes.blit ~src ~src_pos:str_pos ~len
+      ~dst:t.buf ~dst_pos:(spos t ~len ~pos)
+  ;;
+
   let string ~str_pos ~len t ~pos src =
     Bigstring.From_string.blit ~src ~src_pos:str_pos ~len
       ~dst:t.buf ~dst_pos:(spos t ~len ~pos)
@@ -764,6 +827,11 @@ module Poke = struct
 
   let bigstring ~str_pos ~len t ~pos src =
     Bigstring.blit ~src ~src_pos:str_pos ~len ~dst:t.buf ~dst_pos:(spos t ~len ~pos)
+  ;;
+
+  let byteso ?(str_pos = 0) ?len t ~pos src =
+    bytes t ~str_pos ~pos src
+      ~len:(match len with None -> Bytes.length src - str_pos | Some len -> len)
   ;;
 
   let stringo ?(str_pos = 0) ?len t ~pos src =
@@ -1136,14 +1204,16 @@ module Unsafe = struct
     (* copy of Consume with pos replaced by an unsafe version *)
 
     type src = Consume.src
-    module To_string = struct
-      include Consume.To_string
+    module To_bytes = struct
+      include Consume.To_bytes
       let blit = unsafe_blit
     end
     module To_bigstring = struct
       include Consume.To_bigstring
       let blit = unsafe_blit
     end
+
+    module To_string = Consume.To_string
 
     type ('a, 'd, 'w) t = ('a, 'd, 'w) Consume.t
 
@@ -1160,8 +1230,10 @@ module Unsafe = struct
         (Bigstring.get_head_padded_fixed_string t.buf ~pos:(upos t) ~padding ~len ())
     ;;
 
+    let bytes      = Consume.bytes
     let string     = Consume.string
     let bigstring  = Consume.bigstring
+    let byteso     = Consume.byteso
     let stringo    = Consume.stringo
     let bigstringo = Consume.bigstringo
 
@@ -1212,6 +1284,12 @@ module Unsafe = struct
       uadv t len
     ;;
 
+    let bytes ~str_pos ~len t src =
+      Bigstring.From_bytes.blit ~src ~src_pos:str_pos ~len
+        ~dst:t.buf ~dst_pos:(upos t len);
+      uadv t len
+    ;;
+
     let string ~str_pos ~len t src =
       Bigstring.From_string.blit ~src ~src_pos:str_pos ~len
         ~dst:t.buf ~dst_pos:(upos t len);
@@ -1221,6 +1299,11 @@ module Unsafe = struct
     let bigstring ~str_pos ~len t src =
       Bigstring.blit ~src ~src_pos:str_pos ~len ~dst:t.buf ~dst_pos:(upos t len);
       uadv t len
+    ;;
+
+    let byteso ?(str_pos = 0) ?len t src =
+      bytes t src ~str_pos
+        ~len:(match len with None -> Bytes.length src - str_pos | Some len -> len)
     ;;
 
     let stringo ?(str_pos = 0) ?len t src =
@@ -1269,8 +1352,10 @@ module Unsafe = struct
 
   module Peek = struct
     type src = Peek.src
-    module To_string    = struct include Peek.To_string    let blit = unsafe_blit end
+    module To_bytes     = struct include Peek.To_bytes     let blit = unsafe_blit end
     module To_bigstring = struct include Peek.To_bigstring let blit = unsafe_blit end
+
+    module To_string = Peek.To_string
 
     type ('a, 'd, 'w) t = ('a, 'd, 'w) Peek.t
 
@@ -1284,17 +1369,27 @@ module Unsafe = struct
       Bigstring.get_head_padded_fixed_string t.buf ~padding ~len ~pos:(upos t ~pos) ()
     ;;
 
-    let string ~str_pos ~len t ~pos =
+    let bytes ~str_pos ~len t ~pos =
       let dst = Bytes.create (len + str_pos) in
-      Bigstring.To_string.unsafe_blit ~src:t.buf ~src_pos:(upos t ~pos)
+      Bigstring.To_bytes.unsafe_blit ~src:t.buf ~src_pos:(upos t ~pos)
         ~len ~dst ~dst_pos:str_pos;
       dst
+    ;;
+
+    let string ~str_pos ~len t ~pos =
+      Bytes.unsafe_to_string
+        ~no_mutation_while_string_reachable:(bytes ~str_pos ~len t ~pos)
     ;;
 
     let bigstring ~str_pos ~len t ~pos =
       let dst = Bigstring.create (len + str_pos) in
       Bigstring.unsafe_blit ~src:t.buf ~src_pos:(upos t ~pos) ~len ~dst ~dst_pos:str_pos;
       dst
+    ;;
+
+    let byteso ?(str_pos = 0) ?len t ~pos =
+      bytes t ~pos ~str_pos
+        ~len:(match len with None -> length t - pos | Some len -> len)
     ;;
 
     let stringo ?(str_pos = 0) ?len t ~pos =
@@ -1347,6 +1442,11 @@ module Unsafe = struct
       Bigstring.set_head_padded_fixed_string ~padding ~len t.buf ~pos:(upos t ~pos) src
     ;;
 
+    let bytes ~str_pos ~len t ~pos src =
+      Bigstring.From_bytes.unsafe_blit ~src ~src_pos:str_pos ~len
+        ~dst:t.buf ~dst_pos:(upos t ~pos)
+    ;;
+
     let string ~str_pos ~len t ~pos src =
       Bigstring.From_string.unsafe_blit ~src ~src_pos:str_pos ~len
         ~dst:t.buf ~dst_pos:(upos t ~pos)
@@ -1354,6 +1454,11 @@ module Unsafe = struct
 
     let bigstring ~str_pos ~len t ~pos src =
       Bigstring.unsafe_blit ~src ~src_pos:str_pos ~len ~dst:t.buf ~dst_pos:(upos t ~pos)
+    ;;
+
+    let byteso ?(str_pos = 0) ?len t ~pos src =
+      bytes t ~str_pos ~pos src
+        ~len:(match len with None -> Bytes.length src - str_pos | Some len -> len)
     ;;
 
     let stringo ?(str_pos = 0) ?len t ~pos src =
@@ -1560,7 +1665,7 @@ let%bench_module "Blit tests" = (module struct
   let%bench_fun "string blit" [@indexed len = lengths] =
     let buf = create ~len in
     let str = Bytes.create len in
-    (fun () -> Peek.To_string.blit ~src:buf ~dst:str ~src_pos:0 ~dst_pos:0 ~len)
+    (fun () -> Peek.To_bytes.blit ~src:buf ~dst:str ~src_pos:0 ~dst_pos:0 ~len)
 
   let%bench_fun "Blit" [@indexed len = lengths] =
     let src = create ~len in

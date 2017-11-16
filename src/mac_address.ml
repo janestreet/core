@@ -85,7 +85,7 @@ module Stable = struct
         (int63_of_hex (get s 13) lsl (4 *  0))
 
       let to_string_quad (t : t) c =
-        let s = Core_kernel.String.make 14 c in
+        let s = Core_kernel.Bytes.make 14 c in
         set s  0 (hex_of_int63 ((t lsr (4 * 11)) land int63_of_int 0xf));
         set s  1 (hex_of_int63 ((t lsr (4 * 10)) land int63_of_int 0xf));
         set s  2 (hex_of_int63 ((t lsr (4 *  9)) land int63_of_int 0xf));
@@ -98,7 +98,7 @@ module Stable = struct
         set s 11 (hex_of_int63 ((t lsr (4 *  2)) land int63_of_int 0xf));
         set s 12 (hex_of_int63 ((t lsr (4 *  1)) land int63_of_int 0xf));
         set s 13 (hex_of_int63 ((t lsr (4 *  0)) land int63_of_int 0xf));
-        s
+        Core_kernel.Bytes.unsafe_to_string ~no_mutation_while_string_reachable:s
 
       let of_string_pair s c : t =
         if not (Char.equal c (get s  2))
@@ -121,7 +121,7 @@ module Stable = struct
         (int63_of_hex (get s 16) lsl (4 *  0))
 
       let to_string_pair (t : t) c =
-        let s = Core_kernel.String.make 17 c in
+        let s = Core_kernel.Bytes.make 17 c in
         set s  0 (hex_of_int63 ((t lsr (4 * 11)) land int63_of_int 0xf));
         set s  1 (hex_of_int63 ((t lsr (4 * 10)) land int63_of_int 0xf));
         set s  3 (hex_of_int63 ((t lsr (4 *  9)) land int63_of_int 0xf));
@@ -134,7 +134,7 @@ module Stable = struct
         set s 13 (hex_of_int63 ((t lsr (4 *  2)) land int63_of_int 0xf));
         set s 15 (hex_of_int63 ((t lsr (4 *  1)) land int63_of_int 0xf));
         set s 16 (hex_of_int63 ((t lsr (4 *  0)) land int63_of_int 0xf));
-        s
+        Core_kernel.Bytes.unsafe_to_string ~no_mutation_while_string_reachable:s
 
       let of_string s : t =
         match Core_kernel.String.length s with

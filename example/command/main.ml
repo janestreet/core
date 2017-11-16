@@ -27,7 +27,7 @@ module Sing = struct
     let arg_type = Command.Arg_type.create of_string
   end
   let command =
-    Command.basic' ~summary:"sing a song"
+    Command.basic ~summary:"sing a song"
       (let open Command.Let_syntax in
        [%map_open
           (* flags *)
@@ -64,7 +64,7 @@ let revision_flag =
 
 module Hg_log = struct
   let command =
-    Command.basic' ~summary:"show a point in hg history"
+    Command.basic ~summary:"show a point in hg history"
       (let open Command.Let_syntax in
        [%map_open
          let revision = revision_flag
@@ -77,7 +77,7 @@ end
 
 module Hg_cat = struct
   let command =
-    Command.basic' ~summary:"cat a file from hg history"
+    Command.basic ~summary:"cat a file from hg history"
       (let open Command.Let_syntax in
        [%map_open
          let revision = revision_flag
@@ -92,7 +92,7 @@ module Cat = struct
   open Async (* async has its own Command overlay module that introduces functions for
                 constructing commands with a body that returns a [Deferred.t]. *)
   let command =
-    Command.async' ~summary:"example async command: cat a file to stdout"
+    Command.async ~summary:"example async command: cat a file to stdout"
       (let open Command.Let_syntax in
        let%map_open path = anon ("FILE" %: string)
        in
@@ -108,7 +108,7 @@ end
 
 module Prompting = struct
   let command =
-    Command.basic' ~summary:"command demonstrating prompt-if-missing flags"
+    Command.basic ~summary:"command demonstrating prompt-if-missing flags"
       (let open Command.Let_syntax in
        [%map_open
          let revision = flag "-rev" (required string) ~doc:" print stuff"
@@ -142,7 +142,7 @@ module Composite = struct
   ;;
 
   let command =
-    Command.basic' ~summary:"example using a composite record param"
+    Command.basic ~summary:"example using a composite record param"
       (let open Command.Let_syntax in
        [%map_open
          let t = t_param in
@@ -154,7 +154,7 @@ end
 
 module Complex_anons = struct
   let command =
-    Command.basic' ~summary:"command with complex anonymous argument structure"
+    Command.basic ~summary:"command with complex anonymous argument structure"
       (let open Command.Let_syntax in
        [%map_open
          let a = anon ("A" %: string)
@@ -190,7 +190,7 @@ end
 
 module Goodies = struct
   let command =
-    Command.basic' ~summary:"demo of how to get various backdoor values"
+    Command.basic ~summary:"demo of how to get various backdoor values"
       (let open Command.Let_syntax in
        [%map_open
          let help = help
@@ -212,7 +212,7 @@ end
 
 module Long_flag_description = struct
   let command =
-    Command.basic' ~summary:"demo of word wrap for long flag descriptions"
+    Command.basic ~summary:"demo of word wrap for long flag descriptions"
       (let open Command.Let_syntax in
        [%map_open
          let foo =

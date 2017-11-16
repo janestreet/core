@@ -3,6 +3,7 @@
   (libraries (core
               core_kernel_test
               expect_test_helpers))
+  (flags (:standard -safe-string))
   (preprocess (pps (ppx_jane ppx_driver.runner)))
 ))
 
