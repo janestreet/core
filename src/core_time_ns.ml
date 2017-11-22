@@ -393,6 +393,7 @@ module Ofday = struct
     of_span_since_start_of_day_exn (Span.create ?hr ?min ?sec ?ms ?us ?ns ())
   ;;
 
+
   let of_time =
     let module Cache = struct
       type t =
@@ -433,45 +434,109 @@ module Ofday = struct
 
   let now ~zone = of_time (now ()) ~zone
 
-  let to_string t =
-    if Span.(<=) start_of_day t && Span.(<) t start_of_next_day then
-      let ns = Span.to_int63_ns t in
-      let s = Span.to_int_sec t in
-      let m = s / 60 in
-      let h = m / 60 in
-      sprintf "%02d:%02d:%02d.%09d"
-        h
-        (m mod 60)
-        (s mod 60)
-        Int63.(to_int_exn (rem ns Span.(to_int63_ns second)))
-    else "Incorrect day"
-  ;;
-
-  let to_millisecond_string t =
-    if Span.(<=) start_of_day t && Span.(<) t start_of_next_day then
-      let ms = Int63.(Span.to_int63_ns t / of_int 1_000_000) in
-      let s = Int63.(ms / of_int 1000) in
-      let m = Int63.(s / of_int 60) in
-      let h = Int63.(m / of_int 60) in
-      sprintf "%02d:%02d:%02d.%03d"
-        Int63.(to_int_exn h)
-        Int63.(to_int_exn (rem m (of_int 60)))
-        Int63.(to_int_exn (rem s (of_int 60)))
-        Int63.(to_int_exn (rem ms (of_int 1000)))
-    else "Incorrect day"
-  ;;
-
   let to_ofday t = Time.Ofday.of_span_since_start_of_day (Span.to_span t)
-
-  let of_string s = of_ofday (Time.Ofday.of_string s)
 
   module Stable = struct
     module V1 = struct
       module T = struct
         type nonrec t = t [@@deriving compare, bin_io]
 
-        let t_of_sexp s : t = of_ofday (Time.Ofday.Stable.V1.t_of_sexp s)
-        let sexp_of_t (t : t) = Time.Ofday.Stable.V1.sexp_of_t (to_ofday t)
+        module Digit = Core_kernel.Core_kernel_private.Digit_string_helpers
+
+        let to_string_with_unit =
+          let (/)   = Int63.(/)        in
+          let (mod) = Int63.rem        in
+          let (!)   = Int63.of_int     in
+          let i     = Int63.to_int_exn in
+          fun t ~unit ->
+            if Span.(<) t start_of_day || Span.(<) start_of_next_day t
+            then "Incorrect day"
+            else begin
+              let sixty    =   !60 in
+              let thousand = !1000 in
+              let ns = Span.to_int63_ns t in
+              let us = ns / thousand      in let ns = ns mod thousand |> i in
+              let ms = us / thousand      in let us = us mod thousand |> i in
+              let  s = ms / thousand      in let ms = ms mod thousand |> i in
+              let  m =  s /    sixty      in let  s =  s mod sixty    |> i in
+              let  h =  m /    sixty |> i in let  m =  m mod sixty    |> i in
+              let str =
+                Bytes.create
+                  begin match unit with
+                  | `Millisecond -> 12
+                  | `Nanosecond  -> 18
+                  end
+              in
+              Digit.blit_string_of_int_2_digits str ~pos:0 h;
+              Bytes.set str 2 ':';
+              Digit.blit_string_of_int_2_digits str ~pos:3 m;
+              Bytes.set str 5 ':';
+              Digit.blit_string_of_int_2_digits str ~pos:6 s;
+              Bytes.set str 8 '.';
+              Digit.blit_string_of_int_3_digits str ~pos:9 ms;
+              begin
+                match unit with
+                | `Millisecond -> ()
+                | `Nanosecond  ->
+                  Digit.blit_string_of_int_3_digits str ~pos:12 us;
+                  Digit.blit_string_of_int_3_digits str ~pos:15 ns;
+              end;
+              Bytes.unsafe_to_string ~no_mutation_while_string_reachable:str
+            end
+
+        let parse_nanoseconds string ~pos ~until =
+          let open Int.O in
+          let digits     = ref 0   in
+          let num_digits = ref 0   in
+          let pos        = ref pos in
+          (* read up to 10 digits; store the first 9, use the 10th to round *)
+          while !pos < until && !num_digits < 10 do
+            let c = String.get string !pos in
+            if Char.is_digit c
+            then begin
+              incr num_digits;
+              if !num_digits < 10
+              then digits := (!digits * 10) + Char.get_digit_exn c
+              else if Char.get_digit_exn c >= 5
+              then incr digits
+              else ()
+            end;
+            incr pos
+          done;
+          (* if there are missing digits, add zeroes *)
+          if !num_digits < 9
+          then begin
+            digits := !digits * Int.pow 10 (9 - !num_digits)
+          end;
+          !digits
+
+        let of_string =
+          let create_ofday string ~hr ~min ~sec ~subsec_pos ~subsec_len =
+            let nanoseconds =
+              if Int.equal subsec_len 0
+              then 0
+              else parse_nanoseconds string
+                     ~pos:   (subsec_pos + 1)
+                     ~until: (subsec_pos + subsec_len)
+            in
+            Span.of_int_ns nanoseconds
+            |> Span.( + ) (Span.scale_int Span.second sec)
+            |> Span.( + ) (Span.scale_int Span.minute min)
+            |> Span.( + ) (Span.scale_int Span.hour   hr)
+            |> of_span_since_start_of_day_exn
+          in
+          fun string ->
+            Core_kernel.Core_kernel_private.Ofday_parser.parse string ~f:create_ofday
+
+        let t_of_sexp sexp : t =
+          match sexp with
+          | Sexp.List _ -> of_sexp_error "expected an atom" sexp
+          | Sexp.Atom s -> (try of_string s with exn -> of_sexp_error_exn exn sexp)
+
+        let to_string (t : t) =
+          to_string_with_unit t ~unit:`Nanosecond
+
+        let sexp_of_t (t : t) = Sexp.Atom (to_string t)
 
         let to_int63     t = Span.Stable.V1.to_int63     t
         let of_int63_exn t = Span.Stable.V1.of_int63_exn t
@@ -483,6 +548,11 @@ module Ofday = struct
 
   let sexp_of_t = Stable.V1.sexp_of_t
   let t_of_sexp = Stable.V1.t_of_sexp
+  let of_string = Stable.V1.of_string
+  let to_string = Stable.V1.to_string
+
+  let to_millisecond_string t =
+    Stable.V1.to_string_with_unit t ~unit:`Millisecond
 
   include Identifiable.Make (struct
       type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
@@ -521,6 +591,7 @@ module Ofday = struct
           type nonrec t = t [@@deriving compare, bin_io]
 
           let sexp_of_t t = [%sexp_of: Stable.V1.t option] (to_option t)
+
           let t_of_sexp s = of_option ([%of_sexp: Stable.V1.t option] s)
 
           let to_int63     t = Span.Option.Stable.V1.to_int63     t
@@ -539,6 +610,7 @@ module Ofday = struct
         let module_name = "Core.Time_ns.Ofday.Option"
         include Sexpable.To_stringable (struct type nonrec t = t [@@deriving sexp] end)
       end)
+
     include (Span.Option : Core_kernel.Comparisons.S with type t := t)
   end
 end

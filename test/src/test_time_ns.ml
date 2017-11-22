@@ -1,4 +1,5 @@
 open! Core
+open! Int.Replace_polymorphic_compare
 open  Expect_test_helpers_kernel
 
 let%test_unit "Time_ns.to_date_ofday" =
@@ -309,115 +310,197 @@ let%expect_test "Time_ns.Option.Stable.V1" =
       (max_value 49275d))) |}];
 ;;
 
-let%expect_test "Time_ns.Ofday.Stable.V1" =
-  let module V = Time_ns.Ofday.Stable.V1 in
-  let make int64 = V.of_int63_exn (Int63.of_int64_exn int64) in
-  (* stable checks for values that round-trip *)
-  print_and_check_stable_int63able_type [%here] (module V) [
-    make                  0L;
-    make              1_000L;
-    make  1_234_560_000_000L;
-    make 52_200_010_101_000L;
-    make 86_399_999_999_000L;
-  ];
-  [%expect {|
-    (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
-    ((sexp   00:00:00.000000)
-     (bin_io "\000")
-     (int63  0))
-    ((sexp   00:00:00.000001)
-     (bin_io "\254\232\003")
-     (int63  1000))
-    ((sexp   00:20:34.560000)
-     (bin_io "\252\000\160\130q\031\001\000\000")
-     (int63  1234560000000))
-    ((sexp   14:30:00.010101)
-     (bin_io "\252\b1\015\195y/\000\000")
-     (int63  52200010101000))
-    ((sexp   23:59:59.999999)
-     (bin_io "\252\024\252N\145\148N\000\000")
-     (int63  86399999999000)) |}];
-  (* stable checks for values that do not precisely round-trip *)
-  print_and_check_stable_int63able_type [%here] (module V) ~cr:Comment [
-    make 1L;
-  ];
-  [%expect {|
-    (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
-    ((sexp   00:00:00.000000)
-     (bin_io "\001")
-     (int63  1))
-    (* require-failed: lib/core/test/src/test_time_ns.ml:LINE:COL. *)
-    ("sexp serialization failed to round-trip"
-      (original       00:00:00.000000)
-      (sexp           00:00:00.000000)
-      (sexp_roundtrip 00:00:00.000000)) |}];
-  (* make sure [of_int63_exn] checks range *)
-  show_raise ~hide_positions:true (fun () ->
-    V.of_int63_exn (Int63.succ Int63.min_value));
-  [%expect {|
-    (raised (
-      "Span.t exceeds limits"
-      (t         -53375.995583650321d)
-      (min_value -49275d)
-      (max_value 49275d))) |}];
-;;
+let%test_module "Time_ns.Ofday.Stable.V1" =
+  (module struct
+    module V = Time_ns.Ofday.Stable.V1
 
-let%expect_test "Time_ns.Ofday.Option.Stable.V1" =
-  let module V = Time_ns.Ofday.Option.Stable.V1 in
-  let make int64 = V.of_int63_exn (Int63.of_int64_exn int64) in
-  (* stable checks for values that round-trip *)
-  print_and_check_stable_int63able_type [%here] (module V) [
-    make                           0L;
-    make                       1_000L;
-    make             987_654_321_000L;
-    make          52_200_010_101_000L;
-    make          86_399_999_999_000L;
-    make (-4_611_686_018_427_387_904L);
-  ];
-  [%expect {|
-    (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
-    ((sexp (00:00:00.000000))
-     (bin_io "\000")
-     (int63  0))
-    ((sexp (00:00:00.000001))
-     (bin_io "\254\232\003")
-     (int63  1000))
-    ((sexp (00:16:27.654321))
-     (bin_io "\252h\243\200\244\229\000\000\000")
-     (int63  987654321000))
-    ((sexp (14:30:00.010101))
-     (bin_io "\252\b1\015\195y/\000\000")
-     (int63  52200010101000))
-    ((sexp (23:59:59.999999))
-     (bin_io "\252\024\252N\145\148N\000\000")
-     (int63  86399999999000))
-    ((sexp ())
-     (bin_io "\252\000\000\000\000\000\000\000\192")
-     (int63  -4611686018427387904)) |}];
-  (* stable checks for values that do not precisely round-trip *)
-  print_and_check_stable_int63able_type [%here] (module V) ~cr:Comment [
-    make 1L;
-  ];
-  [%expect {|
-    (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
-    ((sexp (00:00:00.000000))
-     (bin_io "\001")
-     (int63  1))
-    (* require-failed: lib/core/test/src/test_time_ns.ml:LINE:COL. *)
-    ("sexp serialization failed to round-trip"
-      (original       (00:00:00.000000))
-      (sexp           (00:00:00.000000))
-      (sexp_roundtrip (00:00:00.000000))) |}];
-  (* make sure [of_int63_exn] checks range *)
-  show_raise ~hide_positions:true (fun () ->
-    V.of_int63_exn (Int63.succ Int63.min_value));
-  [%expect {|
-    (raised (
-      "Span.t exceeds limits"
-      (t         -53375.995583650321d)
-      (min_value -49275d)
-      (max_value 49275d))) |}];
-;;
+    let%expect_test "stable conversions" =
+      let make int64 = V.of_int63_exn (Int63.of_int64_exn int64) in
+      (* stable checks for key values *)
+      print_and_check_stable_int63able_type [%here] (module V) [
+        make                  0L;
+        make                  1L;
+        make                499L;
+        make                500L;
+        make              1_000L;
+        make    123_456_789_012L;
+        make    987_654_321_000L;
+        make  1_234_560_000_000L;
+        make 52_200_010_101_000L;
+        make 86_399_999_999_000L;
+        make 86_399_999_999_999L;
+        make 86_400_000_000_000L;
+      ];
+      [%expect {|
+        (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
+        ((sexp   00:00:00.000000000)
+         (bin_io "\000")
+         (int63  0))
+        ((sexp   00:00:00.000000001)
+         (bin_io "\001")
+         (int63  1))
+        ((sexp   00:00:00.000000499)
+         (bin_io "\254\243\001")
+         (int63  499))
+        ((sexp   00:00:00.000000500)
+         (bin_io "\254\244\001")
+         (int63  500))
+        ((sexp   00:00:00.000001000)
+         (bin_io "\254\232\003")
+         (int63  1000))
+        ((sexp   00:02:03.456789012)
+         (bin_io "\252\020\026\153\190\028\000\000\000")
+         (int63  123456789012))
+        ((sexp   00:16:27.654321000)
+         (bin_io "\252h\243\200\244\229\000\000\000")
+         (int63  987654321000))
+        ((sexp   00:20:34.560000000)
+         (bin_io "\252\000\160\130q\031\001\000\000")
+         (int63  1234560000000))
+        ((sexp   14:30:00.010101000)
+         (bin_io "\252\b1\015\195y/\000\000")
+         (int63  52200010101000))
+        ((sexp   23:59:59.999999000)
+         (bin_io "\252\024\252N\145\148N\000\000")
+         (int63  86399999999000))
+        ((sexp   23:59:59.999999999)
+         (bin_io "\252\255\255N\145\148N\000\000")
+         (int63  86399999999999))
+        ((sexp   24:00:00.000000000)
+         (bin_io "\252\000\000O\145\148N\000\000")
+         (int63  86400000000000)) |}];
+      (* make sure [of_int63_exn] checks range *)
+      show_raise ~hide_positions:true (fun () ->
+        V.of_int63_exn (Int63.succ Int63.min_value));
+      [%expect {|
+        (raised (
+          "Span.t exceeds limits"
+          (t         -53375.995583650321d)
+          (min_value -49275d)
+          (max_value 49275d))) |}];
+      show_raise ~hide_positions:true (fun () ->
+        V.of_int63_exn (Int63.pred Int63.max_value));
+      [%expect {|
+        (raised (
+          "Span.t exceeds limits"
+          (t         53375.995583650321d)
+          (min_value -49275d)
+          (max_value 49275d))) |}];
+    ;;
+
+    let%test_unit "roundtrip quickcheck" =
+      let generator =
+        Core_kernel.Int63.gen_incl
+          (V.to_int63 Time_ns.Ofday.start_of_day)
+          (V.to_int63 Time_ns.Ofday.start_of_next_day)
+        |> Core_kernel.Quickcheck.Generator.map ~f:V.of_int63_exn
+      in
+      Core_kernel.Quickcheck.test generator
+        ~sexp_of:V.sexp_of_t
+        ~f:(fun ofday ->
+          [%test_result: V.t] ~expect:ofday (V.of_int63_exn (V.to_int63  ofday));
+          [%test_result: V.t] ~expect:ofday (V.t_of_sexp    (V.sexp_of_t ofday)))
+    ;;
+  end)
+
+let%test_module "Time_ns.Ofday.Option.Stable.V1" =
+  (module struct
+    module V = Time_ns.Ofday.Option.Stable.V1
+
+    let%expect_test "stable conversions" =
+      let make int64 = V.of_int63_exn (Int63.of_int64_exn int64) in
+      (* stable checks for key values *)
+      print_and_check_stable_int63able_type [%here] (module V) [
+        make                           0L;
+        make                           1L;
+        make                         499L;
+        make                         500L;
+        make                       1_000L;
+        make             123_456_789_012L;
+        make             987_654_321_000L;
+        make           1_234_560_000_000L;
+        make          52_200_010_101_000L;
+        make          86_399_999_999_000L;
+        make          86_399_999_999_999L;
+        make          86_400_000_000_000L;
+        make (-4_611_686_018_427_387_904L); (* None *)
+      ];
+      [%expect {|
+        (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
+        ((sexp (00:00:00.000000000))
+         (bin_io "\000")
+         (int63  0))
+        ((sexp (00:00:00.000000001))
+         (bin_io "\001")
+         (int63  1))
+        ((sexp (00:00:00.000000499))
+         (bin_io "\254\243\001")
+         (int63  499))
+        ((sexp (00:00:00.000000500))
+         (bin_io "\254\244\001")
+         (int63  500))
+        ((sexp (00:00:00.000001000))
+         (bin_io "\254\232\003")
+         (int63  1000))
+        ((sexp (00:02:03.456789012))
+         (bin_io "\252\020\026\153\190\028\000\000\000")
+         (int63  123456789012))
+        ((sexp (00:16:27.654321000))
+         (bin_io "\252h\243\200\244\229\000\000\000")
+         (int63  987654321000))
+        ((sexp (00:20:34.560000000))
+         (bin_io "\252\000\160\130q\031\001\000\000")
+         (int63  1234560000000))
+        ((sexp (14:30:00.010101000))
+         (bin_io "\252\b1\015\195y/\000\000")
+         (int63  52200010101000))
+        ((sexp (23:59:59.999999000))
+         (bin_io "\252\024\252N\145\148N\000\000")
+         (int63  86399999999000))
+        ((sexp (23:59:59.999999999))
+         (bin_io "\252\255\255N\145\148N\000\000")
+         (int63  86399999999999))
+        ((sexp (24:00:00.000000000))
+         (bin_io "\252\000\000O\145\148N\000\000")
+         (int63  86400000000000))
+        ((sexp ())
+         (bin_io "\252\000\000\000\000\000\000\000\192")
+         (int63  -4611686018427387904)) |}];
+      (* make sure [of_int63_exn] checks range *)
+      show_raise ~hide_positions:true (fun () ->
+        V.of_int63_exn (Int63.succ Int63.min_value));
+      [%expect {|
+        (raised (
+          "Span.t exceeds limits"
+          (t         -53375.995583650321d)
+          (min_value -49275d)
+          (max_value 49275d))) |}];
+      show_raise ~hide_positions:true (fun () ->
+        V.of_int63_exn Int63.max_value);
+      [%expect {|
+        (raised (
+          "Span.t exceeds limits"
+          (t         53375.995583650321d)
+          (min_value -49275d)
+          (max_value 49275d))) |}];
+    ;;
+
+    let%test_unit "roundtrip quickcheck" =
+      let generator =
+        Core_kernel.Int63.gen_incl
+          (V.to_int63 (Time_ns.Ofday.Option.some Time_ns.Ofday.start_of_day))
+          (V.to_int63 (Time_ns.Ofday.Option.some Time_ns.Ofday.start_of_next_day))
+        |> Core_kernel.Quickcheck.Generator.map ~f:V.of_int63_exn
+      in
+      Core_kernel.Quickcheck.test generator
+        ~sexp_of:V.sexp_of_t
+        ~f:(fun ofday_option ->
+          [%test_result: V.t] ~expect:ofday_option
+            (V.of_int63_exn (V.to_int63 ofday_option));
+          [%test_result: V.t] ~expect:ofday_option
+            (V.t_of_sexp (V.sexp_of_t ofday_option)))
+    ;;
+  end)
 
 let%test_module "Time_ns.Span" =
   (module struct
@@ -734,10 +817,17 @@ let%test_module "Time_ns" =
     let check ofday =
       try
         assert Ofday.(ofday >= start_of_day && ofday < start_of_next_day);
-        (* The sexp is more similar than the string.  The string includes different
-           numbers of trailing zeros, which are trimmed in the sexp. *)
-        [%test_result: Sexp.t] (Ofday.sexp_of_t ofday)
-          ~expect:(Time.Ofday.sexp_of_t (Ofday.to_ofday ofday))
+        [%test_result: Ofday.t] ~expect:ofday
+          (Ofday.of_string (Ofday.to_string ofday));
+        [%test_result: Ofday.t] ~expect:ofday
+          (Ofday.t_of_sexp (Ofday.sexp_of_t ofday));
+        let of_ofday = Ofday.of_ofday (Ofday.to_ofday ofday) in
+        let diff = Span.abs (Ofday.diff ofday of_ofday) in
+        if Span.( >= ) diff Span.microsecond then
+          raise_s [%message
+            "of_ofday / to_ofday round-trip failed"
+              (ofday    : Ofday.t)
+              (of_ofday : Ofday.t)]
       with raised ->
         failwiths "check ofday"
           (Or_error.try_with (fun () -> [%sexp_of: Ofday.t] ofday),
@@ -1046,18 +1136,20 @@ let%expect_test _ =
     Time_ns.Ofday.of_string "19:28:00";
   ];
   [%expect {|
-    (Set (00:00:00.000000 18:38:00.000000 19:28:00.000000 21:00:00.000000))
+    (Set (
+      00:00:00.000000000 18:38:00.000000000 19:28:00.000000000 21:00:00.000000000))
     (Map (
-      (00:00:00.000000 0)
-      (18:38:00.000000 1)
-      (19:28:00.000000 3)
-      (21:00:00.000000 2)))
-    (Hash_set (00:00:00.000000 18:38:00.000000 19:28:00.000000 21:00:00.000000))
+      (00:00:00.000000000 0)
+      (18:38:00.000000000 1)
+      (19:28:00.000000000 3)
+      (21:00:00.000000000 2)))
+    (Hash_set (
+      00:00:00.000000000 18:38:00.000000000 19:28:00.000000000 21:00:00.000000000))
     (Table (
-      (00:00:00.000000 0)
-      (18:38:00.000000 1)
-      (19:28:00.000000 3)
-      (21:00:00.000000 2))) |}];
+      (00:00:00.000000000 0)
+      (18:38:00.000000000 1)
+      (19:28:00.000000000 3)
+      (21:00:00.000000000 2))) |}];
 ;;
 
 let%expect_test _ =
@@ -1071,26 +1163,26 @@ let%expect_test _ =
   [%expect {|
     (Set (
       ()
-      (00:00:00.000000)
-      (18:38:00.000000)
-      (19:28:00.000000)
-      (21:00:00.000000)))
+      (00:00:00.000000000)
+      (18:38:00.000000000)
+      (19:28:00.000000000)
+      (21:00:00.000000000)))
     (Map (
       (() 0)
-      ((00:00:00.000000) 1)
-      ((18:38:00.000000) 2)
-      ((19:28:00.000000) 4)
-      ((21:00:00.000000) 3)))
+      ((00:00:00.000000000) 1)
+      ((18:38:00.000000000) 2)
+      ((19:28:00.000000000) 4)
+      ((21:00:00.000000000) 3)))
     (Hash_set (
       ()
-      (00:00:00.000000)
-      (18:38:00.000000)
-      (19:28:00.000000)
-      (21:00:00.000000)))
+      (00:00:00.000000000)
+      (18:38:00.000000000)
+      (19:28:00.000000000)
+      (21:00:00.000000000)))
     (Table (
       (() 0)
-      ((00:00:00.000000) 1)
-      ((18:38:00.000000) 2)
-      ((19:28:00.000000) 4)
-      ((21:00:00.000000) 3))) |}];
+      ((00:00:00.000000000) 1)
+      ((18:38:00.000000000) 2)
+      ((19:28:00.000000000) 4)
+      ((21:00:00.000000000) 3))) |}];
 ;;

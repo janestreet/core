@@ -1,0 +1,17 @@
+open Core
+open Uuid
+
+type u = { uuid : t } [@@deriving sexp]
+
+[%%expect {|
+Line _, characters 18-19:
+Warning 3: deprecated: Core.Uuid.t_of_sexp
+[since 2017-11] Use a [Stable] or [Unstable] [t_of_sexp].
+Line _:
+Error: Some fatal warnings were triggered (1 occurrences)
+|}]
+
+type v = { uuid : Unstable.t } [@@deriving sexp]
+
+[%%expect {|
+|}];;

@@ -117,6 +117,10 @@ let%test_unit "nil is valid" =
   is_valid_exn nil
 ;;
 
+module Unstable = struct
+  type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
+end
+
 let to_string_hum t =
   if am_running_inline_test
   then nil

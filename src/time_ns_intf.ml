@@ -159,6 +159,11 @@ module type Ofday = sig
 
   type t = private Int63.t [@@deriving typerep]
 
+  (** String and sexp output takes the form 'HH:MM:SS.sssssssss'; see
+      {!Core_kernel.Ofday_intf} for accepted input. If input includes more than 9 decimal
+      places in seconds, rounds to the nearest nanosecond, with the midpoint rounded up.
+      Allows 60[.sss...] seconds for leap seconds but treats it as exactly 60s regardless
+      of fractional part. *)
   include Identifiable         with type t := t
   include Comparable.With_zero with type t := t
 
