@@ -1,0 +1,11 @@
+{1 Core}
+
+Core is Jane Street's industrial-strength alternative to the OCaml standard
+library.
+
+Core provides an overlay on the usual namespace, so the best way to
+use Core is to start your file with:
+
+  {[open Core]}
+
+The full API is browsable {{!Core} here}.

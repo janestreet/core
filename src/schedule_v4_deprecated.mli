@@ -1,4 +1,8 @@
-(** {1 Overview}
+(**
+   Deprecated version of [Schedule], which defines a type for schedules like "every 5 min
+   after the hour" or "every weekday at 3pm."
+*)
+(** {2 Overview}
 
     This version of Schedule has been superceded by V5.  In normal circumstances this
     would just be a version bump to the Stable type, but the newer version of Schedule
@@ -35,7 +39,7 @@
         ] v}
 *)
 
-(** {1 Zones and Tags}
+(** {2 Zones and Tags}
 
     On top of this selection language there are two labeling branches of the variant that
     are important.
@@ -66,7 +70,7 @@
     after which we can use the [tags] function to extract the groups on call at any moment.
 *)
 
-(** {1 Daylight Savings Time}
+(** {2 Daylight Savings Time}
 
     Schedules are expressed in terms of wall clock time, and as such have interesting
     behavior around daylight savings time boundaries.  There are two circumstances that
@@ -78,6 +82,8 @@
     included in the schedule it is included twice.  If it never happens [Schedule] makes
     no special attempt to artificially include it.
 *)
+
+(** {2 Interface} *)
 
 open! Import
 open Import_time

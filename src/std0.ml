@@ -1,6 +1,6 @@
+(**/**)
 include Core_kernel.Core_kernel_private.Std_kernel
-
-let ( ^/ ) = Core_filename.concat
+(**/**)
 
 module Bigbuffer              = Bigbuffer
 module Bigstring              = Bigstring
@@ -14,6 +14,7 @@ module Daemon                 = Daemon
 module Date                   = Core_date
 module Filename               = Core_filename
 module Interval               = Interval
+module Interval_intf          = Interval_intf
 module Iobuf                  = Iobuf
 module Iobuf_debug            = Iobuf_debug
 module Iobuf_intf             = Iobuf_intf
@@ -45,6 +46,7 @@ module Weak_hashtbl           = Weak_hashtbl
 
 (* Can't go in Common for circular-reference reasons *)
 let sec = Time.Span.of_sec
+let ( ^/ ) = Core_filename.concat
 
 (* See [Core_kernel.Std_kernel] for the reason that we perform top-level side effects in
    the [Std] modules. *)

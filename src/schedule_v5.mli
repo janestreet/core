@@ -1,4 +1,10 @@
-(** {1 Overview}
+(**
+   Latest version of [Schedule], which defines a type for schedules like "every
+   5 min after the hour" or "every weekday at 3pm." More expressive than V4, for example
+   by adding the [Zoned_between] variant, which behaves like [Between] but allows
+   expressing the start and end times in different zones.
+*)
+(** {2 Overview}
 
     A [Schedule.t] describes a (potentially repeating) schedule by selecting
     a subset of all seconds using the set operations in [t].  For example:
@@ -29,7 +35,7 @@
         ] v}
 *)
 
-(** {1 Zones and Tags}
+(** {2 Zones and Tags}
 
     On top of this selection language there are two labeling branches of the variant that
     are important.
@@ -60,7 +66,7 @@
     after which we can use the [tags] function to extract the groups on call at any moment.
 *)
 
-(** {1 Daylight Savings Time}
+(** {2 Daylight Savings Time}
 
     Schedules are expressed in terms of wall clock time, and as such have interesting
     behavior around daylight savings time boundaries.  There are two circumstances that
@@ -72,6 +78,8 @@
     included in the schedule it is included twice.  If it never happens [Schedule] makes
     no special attempt to artificially include it.
 *)
+
+(** {2 Interface} *)
 
 open! Import
 open Import_time
