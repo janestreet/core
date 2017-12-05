@@ -61,7 +61,10 @@ let add_random_string_round_trip_test state s1 =
   let zone = (force Time.Zone.local) in
   let s1 =
     let t = Time.of_string s1 in
-    let utc_epoch = Time.Zone.shift_epoch_time zone `UTC t in
+    let utc_epoch =
+      Time.Zone.relative_time_of_absolute_time zone t
+      |> Time.Zone.absolute_time_of_relative_time Time.Zone.utc
+    in
     let f =
       Time.diff utc_epoch t
       |> Time.Span.to_sec
@@ -78,7 +81,9 @@ let add_random_string_round_trip_test state s1 =
   )
 
 let add_random_string_round_trip_tests state =
-  for _ = 1 to 100 do add_random_string_round_trip_test state (random_time_str state) done;
+  for _ = 1 to 100 do
+    add_random_string_round_trip_test state (random_time_str state)
+  done;
 ;;
 
 let add_roundtrip_conversion_test state (zone_name,(zone:Time.Zone.t)) =

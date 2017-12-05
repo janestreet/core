@@ -418,8 +418,8 @@ module Make (Time0 : Time0_intf.S) (Time : Time_intf.S with module Time := Time0
 
   let format t s ~zone =
     let epoch_time =
-      Zone.shift_epoch_time zone `UTC t
-      |> to_span_since_epoch
+      Zone.relative_time_of_absolute_time zone t
+      |> Relative_to_unspecified_zone.to_span_since_epoch
       |> Span.to_sec
     in
     Core_unix.strftime (Unix.gmtime epoch_time) s

@@ -8,11 +8,18 @@ type ('a, 'b) t =
   }
 [@@deriving sexp_of]
 
-let create ?growth_allowed ?size hashable =
-  { entry_by_key                     = Hashtbl.create ~hashable ?growth_allowed ?size ()
-  ; keys_with_unused_data            = Thread_safe_queue.create ()
-  ; thread_safe_run_when_unused_data = ignore
-  }
+module Using_hashable = struct
+  let create ?growth_allowed ?size hashable =
+    { entry_by_key                     = Hashtbl.Using_hashable.create ~hashable
+                                           ?growth_allowed ?size ()
+    ; keys_with_unused_data            = Thread_safe_queue.create ()
+    ; thread_safe_run_when_unused_data = ignore
+    }
+  ;;
+end
+
+let create ?growth_allowed ?size m =
+  Using_hashable.create ?growth_allowed ?size (Hashtbl.Hashable.of_key m)
 ;;
 
 let set_run_when_unused_data t ~thread_safe_f =

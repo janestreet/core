@@ -29,7 +29,7 @@ let iter2_naive () =
 
 let add =
   assert(not (Int.Map.mem map size));
-  fun () -> ignore (Map.add map ~key:size ~data:size)
+  fun () -> ignore (Map.set map ~key:size ~data:size)
 ;;
 
 let remove =
@@ -52,7 +52,7 @@ let old_map_merge t1 t2 ~f =
       in
       match f ~key z with
       | None -> t
-      | Some data -> Map.add t ~key ~data)
+      | Some data -> Map.set t ~key ~data)
 ;;
 
 let merge_test do_merge =
@@ -72,7 +72,7 @@ let gen_diff_test m ~number_of_diff ~diff =
   let map2 =
     let gen_pair i = gen_pair (i * 16856431 mod m) in
     List.fold (List.init number_of_diff ~f:gen_pair)
-      ~init:map1 ~f:(fun acc (key, data) -> Map.add acc ~key ~data)
+      ~init:map1 ~f:(fun acc (key, data) -> Map.set acc ~key ~data)
   in
   fun () ->
     let (_ : _ list) = diff map1 map2 ~data_equal:String.equal in
@@ -100,7 +100,7 @@ let command =
   Bench.make_command [
     Test.create ~name:"Map.of_alist_exn" of_alist_exn;
     Test.create ~name:"Map.of_sorted_array" of_sorted_array;
-    Test.create ~name:"Map.add" add;
+    Test.create ~name:"Map.set" add;
     Test.create ~name:"Map.iteri" iter;
     Test.create ~name:"Map.iter2" iter2;
     Test.create ~name:"Map.iter2_naive" iter2;

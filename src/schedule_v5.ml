@@ -1105,7 +1105,7 @@ let includes (t : (zoned, _) Internal.t) ~output_includes_tags (time : Time.t) :
 ;;
 
 let all_tags (t : (zoned, _) Internal.t) ~tag_comparator =
-  let empty = Set.empty ~comparator:tag_comparator in
+  let empty = Set.Using_comparator.empty ~comparator:tag_comparator in
   let open Internal in
   let module IT = Internal_time in
   let rec loop : type zoning. ('tag, 'cmp) Set.t -> (zoning, _) t -> ('tag, 'cmp) Set.t =

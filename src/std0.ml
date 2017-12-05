@@ -1,3 +1,5 @@
+(** [Core] is an extension of {!Core_kernel}. The unmodified libraries can be found there.
+*)
 (**/**)
 include Core_kernel.Core_kernel_private.Std_kernel
 (**/**)

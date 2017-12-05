@@ -3,7 +3,7 @@ open! Async
 open! Expect_test_helpers
 open! Core.Weak_hashtbl
 
-let create () = create Int.hashable
+let create () = create (module Int)
 
 let data int = ref int |> Heap_block.create_exn
 

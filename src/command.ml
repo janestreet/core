@@ -2090,7 +2090,7 @@ let extend_exn ~mem ~add map key_type ~key data =
   add map ~key ~data
 
 let extend_map_exn map key_type ~key data =
-  extend_exn map key_type ~key data ~mem:Map.mem ~add:Map.add
+  extend_exn map key_type ~key data ~mem:Map.mem ~add:Map.set
 
 let extend_alist_exn alist key_type ~key data =
   extend_exn alist key_type ~key data

@@ -336,15 +336,16 @@ module IOVec = struct
       match pos with
       | None -> 0
       | Some pos ->
-          if pos < 0 then invalid_arg (loc ^ ": pos < 0");
-          pos
+        if pos < 0 then invalid_arg (loc ^ ": pos < 0");
+        if pos > true_len then invalid_arg (loc ^ ": pos > length buf");
+        pos
     in
     let len =
       match len with
-      | None -> true_len
+      | None -> true_len - pos
       | Some len ->
-          if len < 0 then invalid_arg (loc ^ ": len < 0");
-          len
+        if len < 0 then invalid_arg (loc ^ ": len < 0");
+        len
     in
     if pos + len > true_len then invalid_arg (loc ^ ": pos + len > length buf");
     {
@@ -838,7 +839,7 @@ let env_map env =
       current, env
   in
   List.fold_left (current @ env) ~init:String.Map.empty
-    ~f:(fun map (key, data) -> Map.add map ~key ~data)
+    ~f:(fun map (key, data) -> Map.set map ~key ~data)
 ;;
 
 let env_assignments env =

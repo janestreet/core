@@ -83,7 +83,7 @@ end
     it, i.e., inclusive ranges like 40-50% or 0-100%. You would create your
     [Percent_interval] module by calling:
 
-    {[let Percent_interval = Interval.Make(Percent)]}
+    {[module Percent_interval = Interval.Make(Percent)]}
 
     You now have a module with lots of functionality ready to use. For instance you could
     call [Percent_interval.empty] to create an empty interval, or:
