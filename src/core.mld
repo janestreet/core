@@ -1,5 +1,7 @@
 {1 Core}
 
+{b {{!Core} The full API is browsable here}}.
+
 Core is Jane Street's industrial-strength alternative to the OCaml standard
 library.
 
@@ -8,4 +10,16 @@ use Core is to start your file with:
 
   {[open Core]}
 
-The full API is browsable {{!Core} here}.
+{2 Relationship to Core_kernel}
+
+Core extends {{: /core_kernel/index.html} Core_kernel}, which exists
+for cases when Core in its entirety can't be used, like in Javascript.
+
+In sum:
+
+- {b {!Base}}: minimal stdlib replacement. Portable and lightweight and
+  intended to be highly stable.
+- {b {!Core_kernel}}: Extension of Base. More fully featured, with more
+  code and dependencies, and APIs that evolve more quickly. Portable,
+  and works on Javascript.
+- {b {!Core}}: Core_kernel extended with UNIX APIs.
