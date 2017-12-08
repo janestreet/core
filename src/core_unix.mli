@@ -846,21 +846,6 @@ end
 
 (** Low-level process *)
 
-(** The backend used to spawn child processes.  As of 2016-11:
-
-    [`ml_create_process] is a backend we've been using for years, but it has some known
-    disadvantages (it's much slower, error handling is not as nice, it has some
-    theoretical race conditions, it's less general).
-
-    [`spawn_vfork] has almost no known disadvantages, but it's new, and therefore could
-    have some less subtle bugs.
-
-    This defaults to [`spawn_vfork] unless
-    [CORE_CREATE_PROCESS_DONT_USE_SPAWN_BACKEND_UNLESS_TOLD_TO]
-    environment variable is set, which in turn can be overridden by
-    [CORE_CREATE_PROCESS_USE_SPAWN_BACKEND]. *)
-val create_process_backend : [ `ml_create_process | `spawn_vfork ] ref
-
 (** [create_process ~prog ~args] forks a new process that executes the program [prog] with
     arguments [args].  The function returns the pid of the process along with file
     descriptors attached to stdin, stdout, and stderr of the new process.  The executable

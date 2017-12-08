@@ -1550,8 +1550,6 @@ let mkfifo name ~perm =
 ;;
 
 module Process_info = struct
-  (* Any change to the order of these fields must be accompanied by a
-     corresponding change to unix_stubs.c:ml_create_process. *)
   type t =
     { pid : Pid.t;
       stdin : File_descr.t;
@@ -1560,27 +1558,6 @@ module Process_info = struct
     }
   [@@deriving sexp]
 end
-
-let create_process_backend = ref (
-  match Core_sys.getenv "CORE_CREATE_PROCESS_DONT_USE_SPAWN_BACKEND_UNLESS_TOLD_TO" with
-  | None ->
-    `spawn_vfork
-  | Some _ ->
-    match Core_sys.getenv "CORE_CREATE_PROCESS_USE_SPAWN_BACKEND" with
-    | None -> `ml_create_process
-    | Some _ ->
-      `spawn_vfork)
-;;
-
-external create_process_old
-  :  ?working_dir : string
-  -> prog        : string
-  -> args : string array
-  -> env : string array
-  -> search_path : bool
-  -> Process_info.t
-  = "ml_create_process"
-;;
 
 let create_process_internal
   :  working_dir : string option
@@ -1713,25 +1690,16 @@ end
 
 let create_process_env ?working_dir ~prog ~args ~env () =
   let env_assignments = env_assignments env in
-  match !create_process_backend with
-  | `spawn_vfork ->
-    Execvp_emulation.run
-      ~prog
-      ~args
-      ~working_dir
-      ~spawn:(fun ~prog ~argv ->
-        create_process_internal
-          ~working_dir
-          ~prog
-          ~argv
-          ~env:env_assignments)
-  | `ml_create_process ->
-    create_process_old
-      ?working_dir
-      ~search_path:true
-      ~prog
-      ~args:(Array.of_list args)
-      ~env:(Array.of_list env_assignments)
+  Execvp_emulation.run
+    ~prog
+    ~args
+    ~working_dir
+    ~spawn:(fun ~prog ~argv ->
+      create_process_internal
+        ~working_dir
+        ~prog
+        ~argv
+        ~env:env_assignments)
 
 let create_process_env ?working_dir ~prog ~args ~env () =
   improve (fun () -> create_process_env ?working_dir ~prog ~args ~env ())

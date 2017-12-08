@@ -467,19 +467,19 @@ module Ofday = struct
                   | `Nanosecond  -> 18
                   end
               in
-              Digit.blit_string_of_int_2_digits str ~pos:0 h;
+              Digit.write_2_digit_int str ~pos:0 h;
               Bytes.set str 2 ':';
-              Digit.blit_string_of_int_2_digits str ~pos:3 m;
+              Digit.write_2_digit_int str ~pos:3 m;
               Bytes.set str 5 ':';
-              Digit.blit_string_of_int_2_digits str ~pos:6 s;
+              Digit.write_2_digit_int str ~pos:6 s;
               Bytes.set str 8 '.';
-              Digit.blit_string_of_int_3_digits str ~pos:9 ms;
+              Digit.write_3_digit_int str ~pos:9 ms;
               begin
                 match unit with
                 | `Millisecond -> ()
                 | `Nanosecond  ->
-                  Digit.blit_string_of_int_3_digits str ~pos:12 us;
-                  Digit.blit_string_of_int_3_digits str ~pos:15 ns;
+                  Digit.write_3_digit_int str ~pos:12 us;
+                  Digit.write_3_digit_int str ~pos:15 ns;
               end;
               Bytes.unsafe_to_string ~no_mutation_while_string_reachable:str
             end
