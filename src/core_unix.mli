@@ -981,6 +981,22 @@ type process_times =
   }
 [@@deriving sexp]
 
+module Clock : sig
+  (** Supported clocks. See clock_gettime(3) man pages for semantics. *)
+  type t =
+    | Realtime
+    | Monotonic
+    | Process_cpu
+    | Process_thread
+
+  (** Return the resolution of the given clock in nanoseconds. *)
+  val getres : (t -> Int63.t) Or_error.t
+
+  (** Return the current time of the given clock since 00:00:00 UTC, Jan. 1,
+      1970, in nanoseconds. *)
+  val gettime : (t -> Int63.t) Or_error.t
+end
+
 (** The type representing wallclock time and calendar date. *)
 type tm =
   Unix.tm =

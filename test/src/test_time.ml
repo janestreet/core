@@ -160,8 +160,8 @@ let%test_module "format" =
 
     let transitions_of_time time zone =
       List.concat_map ~f:list_of_transition [
-        Zone.prev_clock_shift zone ~before:time;
-        Zone.next_clock_shift zone ~after:time;
+        Zone.prev_clock_shift zone ~at_or_before:time;
+        Zone.next_clock_shift zone ~strictly_after:time;
       ]
 
     let times_around time =

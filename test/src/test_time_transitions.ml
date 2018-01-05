@@ -13,10 +13,10 @@ module Examples = struct
     let time =
       Time.of_date_ofday ~zone (Date.of_string "2013-10-07") (Time.Ofday.of_string "09:30")
     in
-    let prev_clock_shift = Time.Zone.prev_clock_shift zone ~before:time in
+    let prev_clock_shift = Time.Zone.prev_clock_shift zone ~at_or_before:time in
     print_s [%sexp (prev_clock_shift : (Time.t * Time.Span.t) option)];
     [%expect {| (((2013-03-10 03:00:00.000000-04:00) 1h)) |}];
-    let next_clock_shift = Time.Zone.next_clock_shift zone ~after:time in
+    let next_clock_shift = Time.Zone.next_clock_shift zone ~strictly_after:time in
     print_s [%sexp (next_clock_shift : (Time.t * Time.Span.t) option)];
     [%expect {| (((2013-11-03 01:00:00.000000-05:00) -1h)) |}];
   ;;
@@ -317,10 +317,7 @@ let%expect_test "Time.of_date_ofday_precise" =
        | (`Once _ | `Twice _) as times -> times
        | `Echo (time, _)               -> `Once time
        | `Never (`Synthetic time)      ->
-         match
-           Time.Zone.prev_clock_shift zone
-             ~before:(Time.add time Time.Span.second)
-         with
+         match Time.Zone.prev_clock_shift zone ~at_or_before:time with
          | None -> raise_s [%message "skipped time has no prior transition"]
          | Some (transition, _) -> `Never transition));
   [%expect {| |}]

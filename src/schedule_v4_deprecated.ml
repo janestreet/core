@@ -865,7 +865,7 @@ let includes (t : (zoned, _) Internal.t) ~output_includes_tags (time : Time.t) :
       | In_zone (zone, t), O.Z time ->
         let it = IT.of_time time ~zone in
         let ss = loop t (O.U (time, zone, it)) in
-        begin match Time.Zone.next_clock_shift zone ~after:time with
+        begin match Time.Zone.next_clock_shift zone ~strictly_after:time with
         | None                 -> ss
         | Some (next_shift, _) ->
           let span_to_next_shift = Time.diff next_shift time in

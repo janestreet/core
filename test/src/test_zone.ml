@@ -50,18 +50,18 @@ let%test_module "next_clock_shift, prev_clock_shift" =
       Time.of_date_ofday date ofday ~zone:Time.Zone.utc
 
     let%test "UTC" =
-      Option.is_none (Time.Zone.next_clock_shift Time.Zone.utc ~after:(mkt Jan 01  12 00))
-      && Option.is_none (Time.Zone.prev_clock_shift Time.Zone.utc ~before:(mkt Jan 01  12 00))
+      Option.is_none (Time.Zone.next_clock_shift Time.Zone.utc ~strictly_after: (mkt Jan 01 12 00)) &&
+      Option.is_none (Time.Zone.prev_clock_shift Time.Zone.utc ~at_or_before:   (mkt Jan 01 12 00))
 
-    let expect_next after next =
+    let expect_next strictly_after next =
       [%test_result: (Time.t * Span.t) option]
         ~expect:(Some next)
-        (Time.Zone.next_clock_shift (Time.Zone.find_exn "Europe/London") ~after)
+        (Time.Zone.next_clock_shift (Time.Zone.find_exn "Europe/London") ~strictly_after)
 
-    let expect_prev before prev =
+    let expect_prev at_or_before prev =
       [%test_result: (Time.t * Span.t) option]
         ~expect:(Some prev)
-        (Time.Zone.prev_clock_shift (Time.Zone.find_exn "Europe/London") ~before)
+        (Time.Zone.prev_clock_shift (Time.Zone.find_exn "Europe/London") ~at_or_before)
 
     let expect_between time prev next =
       expect_prev time prev;
@@ -90,7 +90,7 @@ let%test_module "next_clock_shift, prev_clock_shift" =
       expect_between (mkt Oct 27  00 59) bst_start bst_end
 
     let%test_unit "BST end time" =
-      expect_between (mkt Oct 27  01 00) bst_start bst_start_2014
+      expect_between (mkt Oct 27  01 00) bst_end bst_start_2014
 
     let%test_unit "just after BST end" =
       expect_between (mkt Oct 27  01 01) bst_end bst_start_2014

@@ -1801,6 +1801,33 @@ type process_times =
 }
 [@@deriving sexp]
 
+module Clock = struct
+  type t =
+    | Realtime
+    | Monotonic
+    | Process_cpu
+    | Process_thread
+
+#ifdef JSC_POSIX_TIMERS
+
+#ifdef JSC_ARCH_SIXTYFOUR
+  external getres : t -> Int63.t = "caml_clock_getres" [@@noalloc]
+  external gettime : t -> Int63.t = "caml_clock_gettime" [@@noalloc]
+#else
+  external getres : t -> Int63.t = "caml_clock_getres"
+  external gettime : t -> Int63.t = "caml_clock_gettime"
+#endif
+
+  let getres            = Ok getres
+  let gettime           = Ok gettime
+
+#else
+
+  let getres            = Or_error.unimplemented "Unix.Clock.getres"
+  let gettime           = Or_error.unimplemented "Unix.Clock.gettime"
+
+#endif
+end
 
 type tm =
     Unix.tm = {

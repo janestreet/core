@@ -141,7 +141,7 @@ end = struct
     module Optional_syntax = struct
       module Optional_syntax = struct
         let is_none         = is_none
-        let unchecked_value = unchecked_value
+        let unsafe_value = unchecked_value
       end
     end
 
@@ -271,7 +271,7 @@ module Option = struct
   module Optional_syntax = struct
     module Optional_syntax = struct
       let is_none         = is_none
-      let unchecked_value = unchecked_value
+      let unsafe_value = unchecked_value
     end
   end
 
@@ -581,7 +581,7 @@ module Ofday = struct
     module Optional_syntax = struct
       module Optional_syntax = struct
         let is_none         = is_none
-        let unchecked_value = unchecked_value
+        let unsafe_value = unchecked_value
       end
     end
 

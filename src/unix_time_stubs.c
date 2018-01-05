@@ -21,6 +21,35 @@
 #include <errno.h>
 #include <stdio.h>
 
+#include "config.h"
+
+#ifdef JSC_POSIX_TIMERS
+
+clockid_t caml_clockid_t_of_caml (value clock_type) {
+  switch (Int_val(clock_type)) {
+    case 0: return CLOCK_REALTIME;
+    case 1: return CLOCK_MONOTONIC;
+    case 2: return CLOCK_PROCESS_CPUTIME_ID;
+    case 3: return CLOCK_THREAD_CPUTIME_ID;
+  };
+
+  caml_failwith ("invalid Clock.t");
+}
+
+value caml_clock_getres (value clock_type) {
+  struct timespec tp;
+  clock_getres (caml_clockid_t_of_caml (clock_type), &tp);
+  return (caml_alloc_int63 (((__int64_t)tp.tv_sec * 1000 * 1000 * 1000) + (__int64_t)tp.tv_nsec));
+}
+
+value caml_clock_gettime (value clock_type) {
+  struct timespec tp;
+  clock_gettime (caml_clockid_t_of_caml (clock_type), &tp);
+  return (caml_alloc_int63 (((__int64_t)tp.tv_sec * 1000 * 1000 * 1000) + (__int64_t)tp.tv_nsec));
+}
+
+#endif /* JSC_POSIX_TIMERS */
+
 static value alloc_tm(struct tm *tm)
 {
   value res;

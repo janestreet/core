@@ -145,7 +145,7 @@ module Make (M : Arg) () = struct
   module Optional_syntax = struct
     module Optional_syntax = struct
       let is_none = is_none
-      let unchecked_value = unchecked_value
+      let unsafe_value = unchecked_value
     end
   end
 
