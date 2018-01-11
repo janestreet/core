@@ -607,7 +607,7 @@ module Test (Iobuf : sig
 
       module type String_accessee = sig
         include Accessee
-        val subo : (t, t) Base.Blit_intf.subo
+        val subo : (t, t) Base.Blit.subo
       end
 
       module Bigstringable : String_accessee with type t = bigstring = struct

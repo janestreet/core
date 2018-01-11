@@ -304,15 +304,15 @@ module Peek : sig
   module To_bigstring : Blit.S_distinct with type src := src with type dst := Bigstring.t
 
   module To_string : sig
-    val blit        : (src, Bytes.t) Base.Blit_intf.blit
+    val blit        : (src, Bytes.t) Base.Blit.blit
     [@@deprecated "[since 2017-10] use [Peek.To_bytes.blit] instead"]
-    val blito       : (src, Bytes.t) Base.Blit_intf.blito
+    val blito       : (src, Bytes.t) Base.Blit.blito
     [@@deprecated "[since 2017-10] use [Peek.To_bytes.blito] instead"]
-    val unsafe_blit : (src, Bytes.t) Base.Blit_intf.blit
+    val unsafe_blit : (src, Bytes.t) Base.Blit.blit
     [@@deprecated "[since 2017-10] use [Peek.To_bytes.unsafe_blit] instead"]
 
-    val sub  : (src, string) Base.Blit_intf.sub
-    val subo : (src, string) Base.Blit_intf.subo
+    val sub  : (src, string) Base.Blit.sub
+    val subo : (src, string) Base.Blit.subo
   end
 
   val index : ([> read], _) t -> ?pos:int -> ?len:int -> char -> int option

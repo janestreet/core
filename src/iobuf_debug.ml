@@ -444,8 +444,8 @@ module Make () = struct
   module Peek_blit_debug = struct
     module type To = Core_kernel.Blit.S_distinct with type src := Peek.src
     module type To_string = sig
-      val sub  : (Peek.src, string) Base.Blit_intf.sub
-      val subo : (Peek.src, string) Base.Blit_intf.subo
+      val sub  : (Peek.src, string) Base.Blit.sub
+      val subo : (Peek.src, string) Base.Blit.subo
     end
 
     module To (To : sig
