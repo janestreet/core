@@ -1,13 +1,16 @@
 open! Core
 
-(* module Timing_wheel =
-   Core_kernel_unit_tests.Timing_wheel_debug.Make (Time) (Timing_wheel) *)
-
 open Timing_wheel_float
 
-include Core_kernel_test.Timing_wheel_unit_tests.Make (Timing_wheel_float)
-
 let sec = Time.Span.of_sec
+
+let create_unit ?level_bits ?(start = Time.epoch) ?(alarm_precision = sec 1.) () =
+  create
+    ~config:(
+      Config.create ?level_bits ()
+        ~alarm_precision:(alarm_precision |> Alarm_precision.of_span))
+    ~start
+;;
 
 let%test_unit _ =
   let t = create_unit () in

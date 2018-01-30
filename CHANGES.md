@@ -1,3 +1,135 @@
+## v0.10
+
+As Core is built on top of Base and Core\_kernel
+you might want to have a look at Base's
+[changelog](https://github.com/janestreet/base/blob/master/CHANGES.md)
+and Core\_kernel's
+[changelog](https://github.com/janestreet/core_kernel/blob/master/CHANGES.md).
+
+- Renamed `Float.to_string` as `to_string_12`, to reflect its 12-digit
+  precision. And introduce a new `Float.to_string` with the behavior of
+  `Float.to_string_round_trippable`.
+
+- Added to `Command.exec` support for specifying another executable via
+  `argv.(0)` rather than `Sys.executable_name`.
+
+- Changed `Lock_file` to not delete lock files in forked processes.
+
+- In `Linux_ext.Epoll`, reduced closure allocation
+
+- Added support to `Piecewise_linear` for `Time_ns`
+
+- Added function `Iobuf.Expert.reinitialize_of_bigstring`, which allows users to
+  use an `Iobuf` while being passed a bigstring, without allocating
+
+- Changed `Command` to no longer print the entire help on parse errors.
+
+- Added `[@@deriving hash]` to `Identifiable.S*` and `Hashable.S*`. Added
+  functors `Identifiable.Make*_and_derive_hash_fold_t`, which generate
+  `hash_fold_t` from `hash`.
+
+- Added to `Iobuf` inlining annotations for Flambda.
+
+- Added to `Schedule` a `Zoned_between` constructor, which allows the span to
+  cross the midnight boundary, and allows a different time zone for the start
+  and end ofdays. Because of the new expressive power, renamed the existing
+  `Schedule` to `Schedule_v4_deprecated` and added the new functionality in
+  `Schedule_v5`.
+
+- Improved `Schedule_v5.Between` to support crossing the midnight boundary.
+
+- Exposed `[@@deriving hash]` in `Uuid`.
+
+- Changed `Command` to display build time in the local zone.
+
+- Changed `Command.exec` to allow executing a subcommand of the child executable.
+
+- Added `Command.Param.flag_optional_with_default_doc`, which takes a default
+  value and formats that value into the doc.
+
+- Added `Command.lazy_group` and `Command.Sexpable.Lazy`, so that help for lazy
+  commands and groups of commands doesn't have to force the lazy unless
+  necessary.
+
+- Changed `Filename` and `Unix` functions that generate temporary filenames and
+  directories to include `.tmp.` in the name, so one can reliably recognize
+  them.
+
+- Changed `Daemon.daemonize_wait` to obey stdout/stderr redirection even when
+  they are already pointing at a regular file.
+
+- Fixed `Time.Format`'s handling of zones.
+
+- In `Linux_ext`, added support for the `TCP_QUICKACK` socket option, for use on
+  TCP connections where latency is important
+
+- Added `Sys.quote` function for quoting bash input, like `Filename.quote`, but
+  with more readable output.
+
+- Added support to `Signal` for signals that were added in OCaml 4.03: bus,
+  poll, sys, trap, urg, xcpu, xfsz.
+
+- Added support to `Udp.sendto` for MacOS.
+
+- Added `Linux_ext.Eventfd` module, with bindings for `eventfd(2)`.
+
+- Removed bounds checks from `Iobuf.unsafe_blit`.
+
+- Optimized `Inet_addr.inet4_addr_to_int32_exn`, removing an intermediate string
+  allocation.
+
+- Optimized `Time_ns` comparison functions to use the `Int63` primitives; they
+  had been shadowed to use slower generic operations exported by
+  `Identifiable.Make`.
+
+- Added to `Unix.Rlimit` a `Limit` submodule, with `min` and `max` functions.
+
+- Added function `Unix.Inet_addr.inet4_addr_of_int63`, for efficient conversion
+  from an `Int63.t` to an `Inet_addr.t`.
+
+- Changed `Unix.create_process_env`'s execvp emulation w.r.t environment
+  handling, PATH, and allowed nonfatal errors.
+
+- Changed `Unix.sysconf` to return an option, and to correctly detect when there
+  is no value.
+
+- Made `Unix.IOVec.max_iovecs` lazy, to avoid calling sysconf at top-level.
+
+- Removed function `Time.Ofday.Zoned.compare`, which was misleading because it
+  does not correspond to a temporal ordering. The comparison is now available as
+  `Time.Ofday.Zoned.With_nonchronolgical_compare`.
+
+- Removed `Time_ns` functions: `of_time`, `local_now`, `of_local_time`. These
+  functions do not exist in `Time.Ofday` and are simple wrappers around existing
+  functions.
+
+- Renamed `Command.basic` as `basic_spec`.
+  Renamed Command.basic' as basic.
+  We want to encourage the use of `Command.Param` and discourage the use of
+  `Command.Spec`.
+
+- Removed `Uuid.t_of_sexp`.
+
+- Switched Core to `-safe-string`.
+
+- Changed `Uuid.sexp_of_t` to show the nil UUID when `am_running_inline_test`.
+
+- Added module-level documentation for `Interval`.
+
+- Changed `Time_ns.Ofday`'s `to_string` and `sexp_of_t` functions to output nine
+  decimal places rather than six.
+
+- Deprecated `Uuid.t_of_sexp`, in favor of `Unstable.t_of_sexp` and
+  `Stable.V1.t_of_sexp`.
+
+- Fixed `Unix.Iovec.of_string` and `of_bigstring` so that the default len
+  includes the suffix of the input starting at `pos`, as usual.
+
+- Removed `Unix.create_process`'s support for the old `ml_create_process`
+  backend, leaving it with only the `spawn_vfork` backend.
+
+## v0.9
+
 ## 113.43.00
 
 - `Time.Ofday.of_string` supports "AM and "PM" suffixes.
