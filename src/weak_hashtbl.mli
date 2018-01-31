@@ -2,12 +2,12 @@
     detect when the data is no longer referenced (by any non-weak pointers).
 
     Once a key's data is finalized, the table will effectively behave as if the key is not
-    in the table, e.g. [find] will return [None].  However, one must call
+    in the table, e.g., [find] will return [None]. However, one must call
     [reclaim_space_for_keys_with_unused_data] to actually reclaim the space used by the
     table for such keys.
 
     Unlike (OCaml's) [Weak.Make], which also describes itself as a "weak hashtable,"
-    [Weak_hashtbl] gives a dictionary style structure.  In fact, OCaml's [Weak.Make] may
+    [Weak_hashtbl] gives a dictionary-style structure.  In fact, OCaml's [Weak.Make] may
     better be described as a weak set.
 
     There's a tricky type of bug one can write with this module, e.g.:
@@ -27,7 +27,7 @@
     ]}
 
     At this point, the data associated with [key] is unreachable (since all we did with it
-    was project out field bar), so it may disappear from the table at any time. *)
+    was project out field [bar]), so it may disappear from the table at any time. *)
 
 open! Import
 
@@ -71,6 +71,6 @@ val reclaim_space_for_keys_with_unused_data : (_, _) t -> unit
     attached to each [data] in [t], after ensuring the entry being finalized will be
     handled in the next call to [reclaim_space_for_keys_with_unused_data].  This can be
     used to arrange to call [reclaim_space_for_keys_with_unused_data] at a convenient time
-    in the future.  [thread_safe_f] must be thread safe -- it is *not* safe for it to call
-    any [Weak_hashtbl] functions. *)
+    in the future.  [thread_safe_f] must be thread safe -- it is {e not} safe for it to
+    call any [Weak_hashtbl] functions. *)
 val set_run_when_unused_data : (_, _) t -> thread_safe_f:(unit -> unit) -> unit

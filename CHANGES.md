@@ -1,10 +1,14 @@
-## v0.10
-
 As Core is built on top of Base and Core\_kernel
 you might want to have a look at Base's
 [changelog](https://github.com/janestreet/base/blob/master/CHANGES.md)
 and Core\_kernel's
 [changelog](https://github.com/janestreet/core_kernel/blob/master/CHANGES.md).
+
+## git version
+
+- Fix a segfault in `Time`. (fixes #102)
+
+## v0.10
 
 - Renamed `Float.to_string` as `to_string_12`, to reflect its 12-digit
   precision. And introduce a new `Float.to_string` with the behavior of

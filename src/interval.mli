@@ -1,15 +1,15 @@
 (** Module for simple closed intervals over arbitrary types. Used by calling the
-    {{!module:Core.Interval.Make} Make} functor with a type that satisfies
-    {!module:Base.Comparable} (for correctly ordering elements).
+    {{!module:Core.Interval.Make}[Make]} functor with a type that satisfies
+    {{!module:Base.Comparable}[Comparable]} (for correctly ordering elements).
 
     Note that the actual interface for intervals is in
-    {{!modtype:Core__.Interval_intf.Gen} Interval_intf.Gen}, following a Core pattern of
+    {{!modtype:Core__.Interval_intf.Gen}[Interval_intf.Gen]}, following a Core pattern of
     defining an interface once in a [Gen] module, then reusing it across monomorphic ([S])
     and polymorphic ([S1], [S2], ... [SN]) variants, where [SN] denotes a signature of N
     parameters. Here, [S1] is included in this module because the signature of one ['a]
     parameter is the default.
 
-    See the documentation of {{!module:Core.Interval.Make} Interval.Make} for a more
+    See the documentation of {{!module:Core.Interval.Make}[Interval.Make]} for a more
     detailed usage example. *)
 
 open! Import

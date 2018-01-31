@@ -1,18 +1,18 @@
 (** A nano-mutex is a lightweight mutex that can be used only within a single OCaml
     runtime.
 
-    {1 Performance}
-    ===============
+    {2 Performance}
+
     Nano-mutexes are intended to be significantly cheaper than OS-level mutexes.  Creating
     a nano-mutex allocates a single OCaml record.  Locking and unlocking an uncontested
-    nano-mutex take a handful of instructions.  Only if a nano-mutex is contested will it
-    fall back to using an OS-level mutex.  If a nano-mutex becomes uncontested again, it
-    will switch back to using an OCaml-only lock.
+    nano-mutex each take a handful of instructions.  Only if a nano-mutex is contested
+    will it fall back to using an OS-level mutex.  If a nano-mutex becomes uncontested
+    again, it will switch back to using an OCaml-only lock.
 
     Nano-mutexes can be faster than using OS-level mutexes because OCaml uses a global
     lock on the runtime, and requires all running OCaml code to hold the lock.  The OCaml
-    compiler only allows thread switches at certain points, and we can use that fact to get
-    the atomic test-and-set used in the core of our implementaion without needing any
+    compiler only allows thread switches at certain points, and we can use that fact to
+    get the atomic test-and-set used in the core of our implementation without needing any
     primitive locking, essentially because we're protected by the OCaml global lock.
 
     Here are some benchmarks comparing various mutexes available in OCaml:
@@ -32,8 +32,8 @@
 
     The benchmark code is in core/extended/lib_test/bench_nano_mutex.ml.
 
-    {1 Error handling}
-    ==================
+    {2 Error handling}
+
     For any mutex, there are design choices as to how to behave in certain situations:
 
     - recursive locking (when a thread locks a mutex it already has)

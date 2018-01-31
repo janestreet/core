@@ -8,10 +8,10 @@ let digest_fd_blocking fd =
   of_binary_exn (digest_fd (Core_unix.File_descr.to_int fd))
 
 let digest_file_blocking path =
-  let fd = Core_unix.openfile path ~mode:[O_RDONLY] in
-  match digest_fd_blocking fd with
-  | res -> Core_unix.close fd; res
-  | exception e -> Core_unix.close fd; raise e
+  Exn.protectx
+    (Core_unix.openfile path ~mode:[O_RDONLY])
+    ~f:digest_fd_blocking
+    ~finally:Core_unix.close
 
 let%test_unit _ =
   let cwd = Sys.getcwd () in

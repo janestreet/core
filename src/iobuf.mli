@@ -7,7 +7,7 @@
     - window -- a subrange of the limits
 
     All iobuf operations are restricted to operate within the limits.  Initially, the
-    window of an iobuf is identical to the limits.  A phantom type, "seek" permission,
+    window of an iobuf is identical to its limits.  A phantom type, the "seek" permission,
     controls whether or not code is allowed to change the limits and window.  With seek
     permission, the limits can be [narrow]ed, but can never be widened, and the window can
     be set to an arbitrary subrange of the limits.
@@ -57,7 +57,7 @@ include Compound_hexdump with type ('rw, 'seek) t := ('rw, 'seek) t
     limits, and underlying bigstring using indices relative to the bigstring. *)
 module Debug : Compound_hexdump with type ('rw, 'seek) t := ('rw, 'seek) t
 
-(** {1 Creation} *)
+(** {2 Creation} *)
 
 (** [create ~len] creates a new iobuf, backed by a bigstring of length [len],
     with the limits and window set to the entire bigstring. *)
@@ -86,16 +86,16 @@ val sub_shared : ?pos:int -> ?len:int -> ('d, _) t -> ('d, _) t
 
     Because [set_bounds_and_buffer] creates an alias, we disallow immutable [src] and
     [dst] using [[> write]].  Otherwise, one of [src] or [dst] could be [read_write :>
-    read] and the other [immutable :> read], which would allow to write the [immutable]
-    alias's data through the [read_write] alias.
+    read] and the other [immutable :> read], which would allow you to write the
+    [immutable] alias's data through the [read_write] alias.
 
-    [set_bounds_and_buffer] is typically used with a frame iobuf that need be allocated
-    only once.  This frame can be updated repeatedly and handed to users, without further
-    allocation.  Allocation-sensitive applications need this. *)
+    [set_bounds_and_buffer] is typically used with a frame iobuf that need only be
+    allocated once.  This frame can be updated repeatedly and handed to users, without
+    further allocation.  Allocation-sensitive applications need this. *)
 val set_bounds_and_buffer
   : src : ([> write] as 'data, _) t -> dst : ('data, seek) t -> unit
 
-(** [set_bounds_and_buffer_sub ~pos ~len ~src ~dst] is a more efficient version of:
+(** [set_bounds_and_buffer_sub ~pos ~len ~src ~dst] is a more efficient version of
     [set_bounds_and_buffer ~src:(Iobuf.sub_shared ~pos ~len src) ~dst].
 
     [set_bounds_and_buffer ~src ~dst] is not the same as [set_bounds_and_buffer_sub ~dst
@@ -112,21 +112,21 @@ val set_bounds_and_buffer_sub
   -> unit
 [@@inline]
 
-(** {1 Generalization}
+(** {2 Generalization}
 
     One may wonder why you'd want to call [no_seek], given that a cast is already
-    possible, e.g. [t : (_, seek) t :> (_, no_seek) t].  It turns out that if you want to
-    define some [f : (_, _) t -> unit] of your own, which can be conveniently applied to
+    possible, e.g., [t : (_, seek) t :> (_, no_seek) t].  It turns out that if you want to
+    define some [f : (_, _) t -> unit] of your own that can be conveniently applied to
     [seek] iobufs without the user having to cast [seek] up, you need this [no_seek]
     function.
 
-    [read_only] is more of an historical convenience now that [read_write] is a
-    polymorphic variant, as one can now explicitly specify the general type for an
-    argument with something like [t : (_ perms, _) t :> (read, _) t]. *)
+    [read_only] is more of a historical convenience now that [read_write] is a polymorphic
+    variant, as one can now explicitly specify the general type for an argument with
+    something like [t : (_ perms, _) t :> (read, _) t]. *)
 val read_only : ([> read], 's) t -> (read, 's) t
 val no_seek : ('r, _) t -> ('r, no_seek) t
 
-(** {1 Accessors} *)
+(** {2 Accessors} *)
 
 (** [capacity t] returns the size of [t]'s limits subrange.  The capacity of an iobuf can
     be reduced via [narrow]. *)
@@ -138,7 +138,7 @@ val length : (_, _) t -> int
 (** [is_empty t] is [length t = 0]. *)
 val is_empty : (_, _) t -> bool
 
-(** {1 Changing the limits} *)
+(** {2 Changing the limits} *)
 
 (** [narrow t] sets [t]'s limits to the current window. *)
 val narrow : (_, seek) t -> unit
@@ -150,12 +150,11 @@ val narrow_lo : (_, seek) t -> unit
 val narrow_hi : (_, seek) t -> unit
 
 
-(** {1 Changing the window} *)
+(** {2 Changing the window} *)
 
-(** One can call [Lo_bound.window t] to get a snapshot of the lower bound of the
-    window, and then later restore that snapshot with [Lo_bound.restore].  This is
-    useful for speculatively parsing, and then rewinding when there isn't enough data to
-    finish.
+(** One can call [Lo_bound.window t] to get a snapshot of the lower bound of the window,
+    and then later restore that snapshot with [Lo_bound.restore].  This is useful for
+    speculatively parsing, and then rewinding when there isn't enough data to finish.
 
     Similarly for [Hi_bound.window] and [Lo_bound.restore].
 
@@ -194,8 +193,8 @@ val reset : (_, seek) t -> unit
     window in preparation to [Consume] the newly written data.
 
     The bounded version narrows the effective limit.  This can preserve some data near the
-    limit, such as an hypothetical packet header, in the case of [bounded_flip_lo] or
-    unfilled suffix of a buffer, in [bounded_flip_hi]. *)
+    limit, such as a hypothetical packet header (in the case of [bounded_flip_lo]) or
+    unfilled suffix of a buffer (in [bounded_flip_hi]). *)
 val flip_lo         : (_, seek) t -> unit
 val bounded_flip_lo : (_, seek) t -> Lo_bound.t -> unit
 
@@ -226,10 +225,11 @@ val bounded_flip_hi : (_, seek) t -> Hi_bound.t -> unit
     buffer afterward. *)
 val protect_window_and_bounds : ('rw, no_seek) t -> f:(('rw, seek) t -> 'a) -> 'a
 
-(** {1 Getting and setting data} *)
-(** "consume" and "fill" functions access data at the lower bound of the window and
-    advance lower bound of the window.  "peek" and "poke" functions access data but do not
-    advance the window. *)
+(** {2 Getting and setting data}
+
+    "consume" and "fill" functions access data at the lower bound of the window and
+    advance the lower bound of the window. "peek" and "poke" functions access data but do
+    not advance the window. *)
 
 (** [to_string t] returns the bytes in [t] as a string.  It does not alter the window. *)
 val to_string : ?len:int -> ([> read], _) t -> string
@@ -247,8 +247,8 @@ module Consume : sig
   (** [To_bytes.blito ~src ~dst ~dst_pos ~src_len ()] reads [src_len] bytes from [src],
       advancing [src]'s window accordingly, and writes them into [dst] starting at
       [dst_pos].  By default [dst_pos = 0] and [src_len = length src].  It is an error if
-      [dst_pos] and [src_len] don't specify a valid region of [dst] or [src_len > length
-      src]. *)
+      [dst_pos] and [src_len] don't specify a valid region of [dst] or if [src_len >
+      length src]. *)
   type src = (read, seek) t
   module To_bytes     : Consuming_blit with type src := src with type dst := Bytes.t
   module To_bigstring : Consuming_blit with type src := src with type dst := Bigstring.t
@@ -261,7 +261,7 @@ module Consume : sig
     val unsafe_blit : (src, Bytes.t) consuming_blit
     [@@deprecated "[since 2017-10] use [Consume.To_bytes.unsafe_blit] instead"]
 
-    (** [subo] defaults to using [Iobuf.length src] *)
+    (** [subo] defaults to using [Iobuf.length src]. *)
     val subo : ?len:int -> src -> string
     val sub  : src -> len:int -> string
   end
@@ -285,7 +285,7 @@ module Fill : sig
 
       In other words: It fills the decimal representation of [int] to [t].  [t] is
       advanced by the number of characters written and no terminator is added.  If
-      sufficient space is not available [decimal] will raise. *)
+      sufficient space is not available, [decimal] will raise. *)
   val decimal : (int, _, _) t
 end
 
@@ -325,8 +325,8 @@ end
 
 (** [Poke.bin_prot X.bin_write_t t x] writes [x] to the beginning of [t] in binary form
     without advancing.  You can use [X.bin_size_t] to tell how long it was.
-    [X.bin_write_t] is only allowed to write that portion of the buffer to which you have
-    access. *)
+    [X.bin_write_t] is only allowed to write that portion of the buffer you have access
+    to. *)
 module Poke : sig
   (** [decimal t ~pos i] returns the number of bytes written at [pos]. *)
   val decimal : (read_write, 'w) t -> pos:int -> int -> int
@@ -460,7 +460,7 @@ module Blit_consume_and_fill : sig
     -> unit
 end
 
-(** {1 I/O} *)
+(** {2 I/O} *)
 
 type ok_or_eof = Ok | Eof [@@deriving compare, sexp_of]
 
@@ -479,13 +479,13 @@ val recvfrom_assume_fd_is_nonblocking
 (** [recvmmsg]'s context comprises data needed by the system call.  Setup can be
     expensive, particularly for many buffers.
 
-    NOTE: Unlike most system calls involving Iobufs, the lo offset is not respected.
-    Instead, the Iobuf is implicity [reset] (i.e. [lo <- lo_min] and [hi <- hi_max]) prior
-    to reading and a [flip_lo] applied afterward.  This is to prevent the memory-unsafe
-    case where an iobuf's lo pointer is advanced and recvmmsg attempts to copy into memory
-    exceeding the underlying [bigstring]'s capacity.  If any of the returned Iobufs have
-    had their underlying bigstring or limits changed (e.g. through a call to
-    [set_bounds_and_buffer] or [narrow_lo]), the call will fail with EINVAL. *)
+    NOTE: Unlike most system calls involving iobufs, the lo offset is not respected.
+    Instead, the iobuf is implicity [reset] (i.e., [lo <- lo_min] and [hi <- hi_max])
+    prior to reading and a [flip_lo] applied afterward.  This is to prevent the
+    memory-unsafe case where an iobuf's lo pointer is advanced and [recvmmsg] attempts to
+    copy into memory exceeding the underlying [bigstring]'s capacity.  If any of the
+    returned iobufs have had their underlying bigstring or limits changed (e.g., through a
+    call to [set_bounds_and_buffer] or [narrow_lo]), the call will fail with [EINVAL]. *)
 module Recvmmsg_context : sig
   type ('rw, 'seek) iobuf
   type t
@@ -525,7 +525,7 @@ val write_assume_fd_is_nonblocking
 val pwrite_assume_fd_is_nonblocking
   : ([> read], seek) t -> Unix.File_descr.t -> offset:int -> unit
 
-(** {1 Expert} *)
+(** {2 Expert} *)
 
 (** The [Expert] module is for building efficient out-of-module [Iobuf] abstractions. *)
 module Expert: sig

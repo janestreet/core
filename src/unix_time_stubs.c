@@ -1,5 +1,6 @@
 
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
 #include <caml/mlvalues.h>
@@ -73,7 +74,7 @@ static value alloc_tm(struct tm *tm)
 CAMLprim value core_timegm (value tm_val) {
   struct tm tm;
   time_t res;
-
+  memset(&tm, 0, sizeof(struct tm));
   tm.tm_sec  = Int_val(Field(tm_val,0));
   tm.tm_min  = Int_val(Field(tm_val,1));
   tm.tm_hour = Int_val(Field(tm_val,2));
@@ -83,8 +84,6 @@ CAMLprim value core_timegm (value tm_val) {
   tm.tm_wday = Int_val(Field(tm_val,6));
   tm.tm_yday = Int_val(Field(tm_val,7));
   tm.tm_isdst = 0;  /*  tm_isdst is not used by timegm (which sets it to 0) */
-  tm.tm_gmtoff = 0; /* tm_gmtoff is not used by timegm (which sets it to 0) */
-  tm.tm_zone = NULL;
 
   res = timegm(&tm);
 
@@ -96,6 +95,7 @@ CAMLprim value core_timegm (value tm_val) {
 CAMLprim value core_time_ns_strftime(value v_tm, value v_fmt)
 {
   struct tm tm;
+  memset(&tm, 0, sizeof(struct tm));
   tm.tm_sec  = Int_val(Field(v_tm, 0));
   tm.tm_min  = Int_val(Field(v_tm, 1));
   tm.tm_hour = Int_val(Field(v_tm, 2));
@@ -105,10 +105,6 @@ CAMLprim value core_time_ns_strftime(value v_tm, value v_fmt)
   tm.tm_wday = Int_val(Field(v_tm, 6));
   tm.tm_yday = Int_val(Field(v_tm, 7));
   tm.tm_isdst = Bool_val(Field(v_tm, 8));
-#ifdef __USE_BSD
-  tm.tm_gmtoff = 0;  /* GNU extension, may not be visible everywhere */
-  tm.tm_zone = NULL; /* GNU extension, may not be visible everywhere */
-#endif
   return core_kernel_time_ns_format_tm(&tm, v_fmt);
 }
 

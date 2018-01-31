@@ -2,24 +2,23 @@ open! Import
 open Core_unix
 
 module type S = sig
-  (** Interface to Linux-specific system calls *)
 
   (** {2 sysinfo} *)
 
   module Sysinfo : sig
-    (** Result of sysinfo syscall (man 2 sysinfo) *)
+    (** Result of sysinfo syscall (man 2 sysinfo). *)
     type t =
-      { uptime : Time.Span.t;  (** time since boot *)
-        load1 : int;      (** load average over the last minute *)
-        load5 : int;      (** load average over the last 5 minutes*)
-        load15 : int;     (** load average over the last 15 minutes *)
-        total_ram : int;  (** total usable main memory *)
-        free_ram : int;   (** available memory size *)
-        shared_ram : int; (** amount of shared memory *)
-        buffer_ram : int; (** memory used by buffers *)
-        total_swap : int; (** total swap page size *)
-        free_swap : int;  (** available swap space *)
-        procs : int;      (** number of current processes *)
+      { uptime : Time.Span.t;  (** Time since boot *)
+        load1 : int;      (** Load average over the last minute *)
+        load5 : int;      (** Load average over the last 5 minutes*)
+        load15 : int;     (** Load average over the last 15 minutes *)
+        total_ram : int;  (** Total usable main memory *)
+        free_ram : int;   (** Available memory size *)
+        shared_ram : int; (** Amount of shared memory *)
+        buffer_ram : int; (** Memory used by buffers *)
+        total_swap : int; (** Total swap page size *)
+        free_swap : int;  (** Available swap space *)
+        procs : int;      (** Number of current processes *)
         totalhigh : int;  (** Total high memory size *)
         freehigh : int;   (** Available high memory size *)
         mem_unit : int;   (** Memory unit size in bytes *)
@@ -32,56 +31,53 @@ module type S = sig
   (** {2 Filesystem functions} *)
 
   (** [sendfile ?pos ?len ~fd sock] sends mmap-able data from file descriptor [fd] to
-      socket [sock] using offset [pos] and length [len].  @return the number of characters
+      socket [sock] using offset [pos] and length [len]. Returns the number of characters
       actually written.
 
-      NOTE: if the returned value is unequal to what was requested (= the initial size of
+      NOTE: If the returned value is unequal to what was requested (= the initial size of
       the data by default), the system call may have been interrupted by a signal, the
-      source file may have been truncated during operation, or a timeout occurred on the
-      socket during sending.  It is currently impossible to find out which of the events
-      above happened.  Calling {!sendfile} several times on the same descriptor that only
-      partially accepted data due to a timeout will eventually lead to the unix error
-      [EAGAIN].
+      source file may have been truncated during operation, or a timeout may have occurred
+      on the socket during sending.  It is currently impossible to find out which of these
+      events actually happened.  Calling {!sendfile} several times on the same descriptor
+      that only partially accepted data due to a timeout will eventually lead to the Unix
+      error [EAGAIN].
 
-      @raise Unix_error on Unix-errors.
-
-      @param default pos = 0
-      @param default len = length of data (file) associated with descriptor [fd] *)
+      Raises [Unix_error] on Unix-errors. *)
   val sendfile
-    : (?pos : int
-       -> ?len : int
+    : (?pos : int (** Defaults to 0. *)
+       -> ?len : int (** Defaults to length of data (file) associated with descriptor [fd]. *)
        -> fd : File_descr.t
        -> File_descr.t
        -> int) Or_error.t
 
-  (** {2 Non-portable TCP-functionality} *)
+  (** {2 Non-portable TCP functionality} *)
 
   type tcp_bool_option =
     | TCP_CORK
-    (** TCP_CORK (since Linux 2.2) If set, don’t send out partial frames.  All queued
-        partial frames are sent when the option is cleared again.  This is useful for
-        prepending headers before calling sendfile(2), or for throughput optimization.  As
-        currently implemented, there is a 200 mil- lisecond ceiling on the time for which
-        output is corked by TCP_CORK.  If this ceiling is reached, then queued data is
-        automatically transmitted.
+    (** (Since Linux 2.2) If set, don’t send out partial frames.  All queued partial
+        frames are sent when the option is cleared again.  This is useful for prepending
+        headers before calling [sendfile(2)], or for throughput optimization.  As
+        currently implemented, there is a 200ms ceiling on the time for which output is
+        corked by TCP_CORK.  If this ceiling is reached, queued data is automatically
+        transmitted.
 
         This option should not be used in code intended to be portable. *)
     | TCP_QUICKACK
-    (** TCP_QUICKACK (since Linux 2.4.4) Quick acks solves an unfortunate interaction
-        between the delayed acks and the Nagle algorithm (TCP_NODELAY).  On fast LANs, the
-        Linux TCP stack quickly reached a CWND (congestion window) of 1 (Linux interprets
-        this as "1 unacknowledged packet", BSD/Windows and others consider it "1
-        unacknowledged segment of data").
+    (** (Since Linux 2.4.4) Quick ack solves an unfortunate interaction between the
+        delayed acks and the Nagle algorithm (TCP_NODELAY).  On fast LANs, the Linux TCP
+        stack quickly reaches a CWND (congestion window) of 1 (Linux interprets this as "1
+        unacknowledged packet", BSD/Windows and others consider it "1 unacknowledged
+        segment of data").
 
         If Linux determines a connection to be bidirectional, it will delay sending acks,
-        hoping to piggy back them with other outgoing data.  This can lead to serious
+        hoping to bundle them with other outgoing data.  This can lead to serious
         connection stalls on, say, a TCP market data connection with one second
         heartbeats.  TCP_QUICKACK can be used to prevent entering this delayed ack state.
 
         This option should not be used in code intended to be portable. *)
   [@@deriving sexp, bin_io]
 
-  (** [gettcpopt_bool sock opt] @return the current value of the boolean TCP socket option
+  (** [gettcpopt_bool sock opt] Returns the current value of the boolean TCP socket option
       [opt] for socket [sock]. *)
   val gettcpopt_bool : (File_descr.t -> tcp_bool_option -> bool) Or_error.t
 
@@ -92,40 +88,38 @@ module type S = sig
 
   (** [send_nonblocking_no_sigpipe sock ?pos ?len buf] tries to do a nonblocking send on
       socket [sock] given buffer [buf], offset [pos] and length [len].  Prevents
-      [SIGPIPE], i.e. raise a Unix-error in that case immediately.  @return [Some
+      [SIGPIPE], i.e., raises a Unix-error in that case immediately.  Returns [Some
       bytes_written] or [None] if the operation would have blocked.
 
-      @param pos default = 0
-      @param len default = [Bytes.length buf - pos]
-
-      @raise Invalid_argument if the designated buffer range is invalid.
-      @raise Unix_error on Unix-errors. *)
+      Raises [Invalid_argument] if the designated buffer range is invalid.
+      Raises [Unix_error] on Unix-errors. *)
   val send_nonblocking_no_sigpipe
     : (File_descr.t
-       -> ?pos : int
-       -> ?len : int
+       -> ?pos : int (** default = 0 *)
+       -> ?len : int (** default = [Bytes.length buf - pos] *)
        -> Bytes.t
        -> int option) Or_error.t
 
   (** [send_no_sigpipe sock ?pos ?len buf] tries to do a blocking send on socket [sock]
-      given buffer [buf], offset [pos] and length [len].  Prevents [SIGPIPE], i.e. raise a
-      Unix-error in that case immediately.  @return the number of bytes written.
+      given buffer [buf], offset [pos] and length [len]. Prevents [SIGPIPE], i.e., raises
+      a Unix-error in that case immediately. Returns the number of bytes written.
 
-      @param pos default = 0
-      @param len default = [Bytes.length buf - pos]
-
-      @raise Invalid_argument if the designated buffer range is invalid.
-      @raise Unix_error on Unix-errors. *)
+      Raises [Invalid_argument] if the designated buffer range is invalid.
+      Raises [Unix_error] on Unix-errors. *)
   val send_no_sigpipe
-    : (File_descr.t -> ?pos : int -> ?len : int -> Bytes.t -> int) Or_error.t
+    : (File_descr.t
+       -> ?pos : int (** default = 0 *)
+       -> ?len : int (** default = [Bytes.length buf - pos] *)
+       -> Bytes.t
+       -> int) Or_error.t
 
   (** [sendmsg_nonblocking_no_sigpipe sock ?count iovecs] tries to do a nonblocking send
       on socket [sock] using [count] I/O-vectors [iovecs].  Prevents [SIGPIPE],
-      i.e. raises a Unix-error in that case immediately.  @return [Some bytes_written] or
+      i.e., raises a Unix-error in that case immediately.  Returns [Some bytes_written] or
       [None] if the operation would have blocked.
 
-      @raise Invalid_argument if the designated ranges are invalid.
-      @raise Unix_error on Unix-errors. *)
+      Raises [Invalid_argument] if the designated ranges are invalid.
+      Raises [Unix_error] on Unix-errors. *)
   val sendmsg_nonblocking_no_sigpipe
     : (File_descr.t
        -> ?count : int
@@ -137,9 +131,9 @@ module type S = sig
   module Clock : sig
     type t
 
-    (** All these functions can raise Unix_error. *)
+    (** All these functions can raise [Unix_error]. *)
 
-    (** returns the CPU-clock associated with the thread *)
+    (** Returns the CPU-clock associated with the thread. *)
     val get : (Thread.t -> t) Or_error.t
 
     val get_time : (t -> Time.Span.t) Or_error.t
@@ -148,10 +142,10 @@ module type S = sig
 
     val get_resolution : (t -> Time.Span.t) Or_error.t
 
-    (** [get_process_clock] the clock measuring the CPU-time of a process. *)
+    (** The clock measuring the CPU time of a process. *)
     val get_process_clock : (unit -> t) Or_error.t
 
-    (** [get_thread_clock] the clock measuring the CPU-time of the current thread. *)
+    (** The clock measuring the CPU time of the current thread. *)
     val get_thread_clock : (unit -> t) Or_error.t
   end
 
@@ -172,12 +166,12 @@ module type S = sig
 
     type t = private File_descr.t [@@deriving compare, sexp_of]
 
-    (** [create ?flags init] creates a new event file descriptor with [init] as
-        the counter's initial value.  With Linux 2.6.26 or earlier [flags] must
-        be [empty]. *)
+    (** [create ?flags init] creates a new event file descriptor with [init] as the
+        counter's initial value.  With Linux 2.6.26 or earlier, [flags] must be
+        [empty]. *)
     val create : (?flags:Flags.t -> Int32.t -> t) Or_error.t
 
-    (** [read t] will block until [t]'s counter is non-zero, after which its behavior
+    (** [read t] will block until [t]'s counter is nonzero, after which its behavior
         depends on whether [t] was created with the {!Flags.semaphore} flag set. If it was
         set, then [read t] will return [1] and decrement [t]'s counter. If it was not set,
         then [read t] will return the value of [t]'s counter and set the counter to [0].
@@ -229,7 +223,7 @@ module type S = sig
     val to_file_descr : t -> File_descr.t
 
     (** [create ?flags clock] creates a new timer file descriptor.  With Linux 2.6.26 or
-        earlier [flags] must be empty. *)
+        earlier, [flags] must be empty. *)
     val create : (?flags:Flags.t -> Clock.t -> t) Or_error.t
 
     (** [set_at t at] and [set_after t span] set [t] to fire once, at [at] or after
@@ -243,7 +237,7 @@ module type S = sig
     val set_after     :                          t -> Time_ns.Span.t -> unit
     val set_repeating : ?after:Time_ns.Span.t -> t -> Time_ns.Span.t -> unit
 
-    (** [clear t] causes [t] to not fire any more. *)
+    (** [clear t] causes [t] to not fire anymore. *)
     val clear : t -> unit
 
     type repeat =
@@ -266,12 +260,12 @@ module type S = sig
       its parent dies.  NOTE: the parent may have died before or while executing this
       system call.  To make sure that you do not miss this event, you should call
       {!getppid} to get the parent process id after this system call.  If the parent has
-      died, the returned parent PID will be 1, i.e. the init process will have adopted the
-      child.  You should then either send the signal to yourself using Unix.kill, or
+      died, the returned parent PID will be 1, i.e., the init process will have adopted
+      the child.  You should then either send the signal to yourself using [Unix.kill], or
       execute an appropriate handler. *)
   val pr_set_pdeathsig : (Signal.t -> unit) Or_error.t
 
-  (** [pr_get_pdeathsig ()] get the signal that will be sent to the currently executing
+  (** [pr_get_pdeathsig ()] gets the signal that will be sent to the currently executing
       process when its parent dies. *)
   val pr_get_pdeathsig : (unit -> Signal.t) Or_error.t
 
@@ -279,7 +273,7 @@ module type S = sig
   (** {2 Task name} *)
 
   (** [pr_set_name_first16 name] sets the name of the executing thread to [name].  Only
-      the first 16 bytes in [name] will be used, the rest is ignored. *)
+      the first 16 bytes in [name] will be used; the rest is ignored. *)
   val pr_set_name_first16 : (string -> unit) Or_error.t
 
   (** [pr_get_name ()] gets the name of the executing thread.  The name is at most 16
@@ -289,22 +283,22 @@ module type S = sig
 
   (** {2 Pathname resolution} *)
 
-  (** [file_descr_realpath fd] @return the canonicalized absolute pathname of the file
+  (** [file_descr_realpath fd] returns the canonicalized absolute pathname of the file
       associated with file descriptor [fd].
 
-      @raise Unix_error on errors. *)
+      Raises [Unix_error] on errors. *)
   val file_descr_realpath : (File_descr.t -> string) Or_error.t
 
-  (** [out_channel_realpath oc] @return the canonicalized absolute pathname of the file
+  (** [out_channel_realpath oc] returns the canonicalized absolute pathname of the file
       associated with output channel [oc].
 
-      @raise Unix_error on errors. *)
+      Raises [Unix_error] on errors. *)
   val out_channel_realpath : (Out_channel.t -> string) Or_error.t
 
-  (** [in_channel_realpath ic] @return the canonicalized absolute pathname of the file
+  (** [in_channel_realpath ic] returns the canonicalized absolute pathname of the file
       associated with input channel [ic].
 
-      @raise Unix_error on errors.
+      Raises [Unix_error] on errors.
   *)
   val in_channel_realpath : (In_channel.t -> string) Or_error.t
 
@@ -321,12 +315,12 @@ module type S = sig
 
   val sched_setaffinity_this_thread : (cpuset : int list -> unit) Or_error.t
 
-  (** [cores ()] @return the number of cores on the machine.  This may be different
+  (** [cores ()] returns the number of cores on the machine.  This may be different
       than the number of cores available to the calling process. *)
   val cores : (unit -> int) Or_error.t
 
-  (** [get_terminal_size ()] @return [(rows, cols)], the number of rows and
-      columns of the terminal. *)
+  (** [get_terminal_size ()] returns [(rows, cols)], the number of rows and columns of the
+      terminal. *)
   val get_terminal_size : (unit -> int * int) Or_error.t
 
   (** [Priority.t] is what is usually referred to as the "nice" value of a process.  It is
@@ -343,10 +337,10 @@ module type S = sig
     val decr : t -> t
   end
 
-  (** Set the calling thread's priority in the linux scheduler *)
+  (** Set the calling thread's priority in the Linux scheduler *)
   val setpriority : (Priority.t -> unit) Or_error.t
 
-  (** Get the calling thread's priority in the linux scheduler *)
+  (** Get the calling thread's priority in the Linux scheduler *)
   val getpriority : (unit -> Priority.t) Or_error.t
 
   (** [get_ipv4_address_for_interface "eth0"] returns the IP address assigned to eth0, or
@@ -356,7 +350,7 @@ module type S = sig
   (** [bind_to_interface fd (`Interface_name "eth0")] restricts packets from being
       received/sent on the given file descriptor [fd] on any interface other than "eth0".
       Use [bind_to_interface fd `Any] to allow traffic on any interface.  The bindings are
-      not cumulative; you may only select one interface, or any.
+      not cumulative; you may only select one interface, or [`Any].
 
       Not to be confused with a traditional BSD sockets API [bind()] call, this
       Linux-specific socket option ([SO_BINDTODEVICE]) is used for applications on
@@ -365,9 +359,9 @@ module type S = sig
   val bind_to_interface
     : (File_descr.t -> [ `Any | `Interface_name of string ] -> unit) Or_error.t
 
-  (** epoll() - a linux I/O multiplexer of the same family as select() or poll().  Its
-      main differences are support for Edge or Level triggered notifications (We're using
-      Level-triggered to emulate select) and much better scaling with the number of file
+  (** epoll(): a Linux I/O multiplexer of the same family as select() or poll().  Its main
+      differences are support for Edge- or Level-triggered notifications (we're using
+      Level-triggered to emulate "select") and much better scaling with the number of file
       descriptors.
 
       See the man pages for a full description of the epoll facility. *)
@@ -375,10 +369,10 @@ module type S = sig
 
     module Flags : sig
       (** An [Epoll.Flags.t] is an immutable set of flags for which one can register
-          interest for a file descriptor.  It is implemented as a bitmask, and so all
+          interest in a file descriptor.  It is implemented as a bitmask, and so all
           operations (+, -, etc.) are constant time with no allocation.
 
-          [sexp_of_t] produces a human-readable list of bits, e.g. "(in out)". *)
+          [sexp_of_t] produces a human-readable list of bits, e.g., "(in out)". *)
       type t [@@deriving sexp_of]
 
       include Flags.S with type t := t
@@ -400,9 +394,9 @@ module type S = sig
 
       val hup     : t (** Hang up happened (always on)                   *)
 
-      val et      : t (** Edge Triggered behavior (see man page)         *)
+      val et      : t (** Edge-Triggered behavior (see man page)         *)
 
-      val oneshot : t (** one-shot behavior for the associated fd        *)
+      val oneshot : t (** One-shot behavior for the associated fd        *)
     end
 
     (** An [Epoll.t] maintains a map from [File_descr.t] to [Flags.t], where the domain is
@@ -414,24 +408,24 @@ module type S = sig
         interface.
 
         The implementation assumes that one never closes a file descriptor that is the
-        domain of an [Epoll.t], since doing so might remove the fd from the kernel epoll
+        domain of an [Epoll.t], since doing so might remove the [fd] from the kernel epoll
         set without the implementation's knowledge.
 
-        An [Epoll.t] also has a buffer that is used to store the set of ready fds returned
-        by calling [wait]. *)
+        An [Epoll.t] also has a buffer that is used to store the set of ready [fd]s
+        returned by calling [wait]. *)
     type t [@@deriving sexp_of]
 
     val invariant : t -> unit
 
     (** [create ~num_file_descrs] creates a new epoll set able to watch file descriptors
-        in \[0, num_file_descrs).  Additionally, the set allocates space for reading the
-        ready events when [wait] returns, allowing for up to [max_ready_events] to be
+        in \[0, [num_file_descrs]).  Additionally, the set allocates space for reading the
+        "ready" events when [wait] returns, allowing for up to [max_ready_events] to be
         returned in a single call to [wait]. *)
     val create  : (num_file_descrs:int -> max_ready_events:int -> t) Or_error.t
 
     val close : t -> unit
 
-    (** map operations *)
+    (** Map operations *)
 
     (** [find] raises in the case that [t] is closed. *)
     val find     : t -> File_descr.t -> Flags.t option
@@ -449,9 +443,9 @@ module type S = sig
         then [span] is rounded to the nearest millisecond, with a minimum value of one
         millisecond.
 
-        Note that this method should not be considered thread safe.  There is mutable
-        state in [t] that will be changed by invocations to wait that cannot be prevented
-        by mutexes around [wait]. *)
+        Note that this method should not be considered thread-safe.  There is mutable
+        state in [t] that will be changed by invocations to [wait] that cannot be
+        prevented by mutexes around [wait]. *)
     val wait
       :  t
       -> timeout:[ `Never | `Immediately | `After of Time_ns.Span.t ]

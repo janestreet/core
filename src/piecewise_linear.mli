@@ -1,4 +1,4 @@
-(** Piece-wise linear interpolation from float-like types to float. *)
+(** Piecewise linear interpolation from float-like types to float. *)
 
 open! Import
 open Import_time
@@ -39,8 +39,8 @@ module Time_ns  : S with type key = Core_time_ns.t       with type value = float
 module Float    : S with type key = float                with type value = float
 module Int      : S with type key = int                  with type value = float
 
-(** Note that applications of the following functors are only as stable
-    as [Key] and [Value]. *)
+(** Note that applications of the following functors are only as stable as [Key] and
+    [Value]. *)
 module Stable : sig
   module V1 : sig
     type nonrec ('key, 'value) t_ = ('key, 'value) t_

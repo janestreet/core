@@ -1,4 +1,6 @@
-include module type of struct include Core_kernel.Md5 end
+(** Extends {{!Core_kernel.Md5}[Core_kernel.Md5]}. *)
+
+include module type of struct include Core_kernel.Md5 end (** @open *)
 
 (** This is similar to [digest_channel_blocking_without_releasing_runtime_lock] with a
     difference that this releases the OCaml lock for its whole duration. Therefore, this

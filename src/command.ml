@@ -1557,14 +1557,14 @@ module Base = struct
             match init with
             | None -> Some (name, value)
             | Some (name', _) ->
-              die "cannot have values for both %s and %s" name name' ()))
+              die "Cannot have values for both %s and %s" name name' ()))
       |> map ~f:(function
         | Some (_, value) -> value
         | None ->
           match if_nothing_chosen with
           | `Default_to value -> value
           | `Raise ->
-            die "one of these must have a value: %s"
+            die "One of these must have a value: %s"
               (String.concat ~sep:", " (List.map ~f:fst ts)) ())
     ;;
 

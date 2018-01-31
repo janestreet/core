@@ -1,8 +1,9 @@
-(** A 48-bit MAC address. *)
+(** Functions for working with and formatting 48-bit MAC addresses. *)
 
 open Core_kernel
 
-type t = private Int63.t (** [private int] to enable immediate-type optimizations *)
+(** [private Int63.t] to enable immediate-type optimizations on 64-bit platforms. *)
+type t = private Int63.t
 
 (** [of_string] and [t_of_sexp] accept any string-style notation (see [String_style]
     below).  They accept both lowercase and uppercase hex digits.  [to_string] and
@@ -21,9 +22,9 @@ val of_int63_exn : Int63.t -> t
 val to_int63     : t -> Int63.t
 
 module String_style : sig
-  (** [Dash] formatted strings look like "xx-xx-xx-xx-xx-xx", where the x's are any hex
-      digit.  [Dot] formatted strings look like "xxxx.xxxx.xxxx".  [Colon] formatted
-      strings look like "xx:xx:xx:xx:xx:xx" *)
+  (** [Dash]-formatted strings look like "xx-xx-xx-xx-xx-xx", where the [x]'s are any hex
+      digit.  [Dot]-formatted strings look like "xxxx.xxxx.xxxx".  [Colon]-formatted
+      strings look like "xx:xx:xx:xx:xx:xx". *)
   type t = Dash | Dot | Colon [@@deriving compare, sexp, enumerate]
 
   val arg : t Command.Arg_type.t
@@ -34,7 +35,7 @@ module String_style : sig
 end
 
 (** [to_string_with_style] produces the dash-, colon-, or dot-separated string
-    representation of the given mac.  It produces only lowercase hex digits. *)
+    representation of the given MAC.  It produces only lowercase hex digits. *)
 val to_string_with_style : t -> style:String_style.t -> string
 
 (** [broadcast] is ff-ff-ff-ff-ff-ff *)
@@ -57,4 +58,3 @@ module Stable : sig
       with type key := t
   end
 end
-

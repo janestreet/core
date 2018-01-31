@@ -12,12 +12,12 @@ use Core is to start your file with:
 
 {2 Relationship to Core_kernel}
 
-Core extends {{: /core_kernel/index.html} Core_kernel}, which exists
+Core extends {{: /core_kernel/index.html}[Core_kernel]}, which exists
 for cases when Core in its entirety can't be used, like in Javascript.
 
 In sum:
 
-- {b {!Base}}: minimal stdlib replacement. Portable and lightweight and
+- {b {!Base}}: Minimal stdlib replacement. Portable and lightweight and
   intended to be highly stable.
 - {b {!Core_kernel}}: Extension of Base. More fully featured, with more
   code and dependencies, and APIs that evolve more quickly. Portable,

@@ -1,3 +1,5 @@
+(** Signal handlers. *)
+
 open! Import
 
 type t [@@deriving bin_io, sexp]
@@ -15,8 +17,8 @@ val equal : t -> t -> bool
 val of_system_int : int -> t
 val to_system_int : t -> int
 
-(** [of_caml_int] constructs a Signal.t given an O'Caml internal signal number.  This is
-    only for the use of the Core_unix module. *)
+(** [of_caml_int] constructs a [Signal.t] given an OCaml internal signal number.  This is
+    only for the use of the [Core_unix] module. *)
 val of_caml_int : int -> t
 val to_caml_int : t -> int
 
@@ -35,8 +37,8 @@ type sys_behavior = [
 ]
 [@@deriving sexp]
 
-(** [default_sys_behavior t]
-    Query the default system behavior for a signal.
+(**
+   Queries the default system behavior for a signal.
 *)
 val default_sys_behavior : t -> sys_behavior
 
@@ -69,17 +71,17 @@ val can_send_to : Pid.t -> bool
 type sigprocmask_command = [ `Set | `Block | `Unblock ]
 
 (** [sigprocmask cmd sigs] changes the set of blocked signals.
- * If [cmd] is [`Set], blocked signals are set to those in the list [sigs].
- * If [cmd] is [`Block], the signals in [sigs] are added to the set of blocked
- *   signals.
- * If [cmd] is [`Unblock], the signals in [sigs] are removed from the set of
- *   blocked signals.
- * [sigprocmask] returns the set of previously blocked signals.
+
+    - If [cmd] is [`Set], blocked signals are set to those in the list [sigs].
+    - If [cmd] is [`Block], the signals in [sigs] are added to the set of blocked signals.
+    - If [cmd] is [`Unblock], the signals in [sigs] are removed from the set of blocked
+    signals.
+
+    [sigprocmask] returns the set of previously blocked signals.
 *)
 val sigprocmask : sigprocmask_command -> t list -> t list
 
-(** [sigpending ()] returns the set of blocked signals that are currently
- * pending.
+(** [sigpending ()] returns the set of blocked signals that are currently pending.
 *)
 val sigpending : unit -> t list
 
@@ -183,7 +185,7 @@ module Expert : sig
   val signal : t -> behavior -> behavior
 
 
-  (** [set t b] is [ignore (signal t b)] *)
+  (** [set t b] is [ignore (signal t b)]. *)
   val set : t -> behavior -> unit
 
   (** [handle t f] is [set t (`Handle f)]. *)

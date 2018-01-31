@@ -1,10 +1,10 @@
-(** Crc functions *)
+(** CRC functions. *)
 
 open! Import
 
-(** Compute the 32-bit crc *)
+(** Computes the 32-bit CRC. *)
 val crc32 : string -> Int63.t
 val bigstring_crc32 : Bigstring.t -> pos:int -> len:int -> Int63.t
 
-(** String version of the crc, encoded in hex. *)
+(** String version of the CRC, encoded in hex. *)
 val crc32hex : string -> string

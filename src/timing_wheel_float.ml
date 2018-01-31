@@ -51,11 +51,11 @@ end
 module Alarm_precision = struct
   include Timing_wheel_ns.Alarm_precision
 
-  let of_span span = span |> Time_ns.Span.of_span |> of_span
-
   let to_span t = t |> to_span |> Time_ns.Span.to_span
 
   let of_span_floor_pow2_ns span = span |> Time_ns.Span.of_span |> of_span_floor_pow2_ns
+
+  let of_span = of_span_floor_pow2_ns
 end
 
 let nanoseconds_per_microsecond = Int63.of_int 1000

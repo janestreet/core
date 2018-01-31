@@ -1,11 +1,13 @@
+(** See {{!Core.Iobuf}[Iobuf]} for documentation. *)
+
 open! Import
 
 (** [no_seek] and [seek] are phantom types used in a similar manner to [read] and
     [read_write]. *)
 
-type no_seek                [@@deriving sexp_of]  (** like [read] *)
+type no_seek                [@@deriving sexp_of]  (** Like [read]. *)
 
-type seek = private no_seek [@@deriving sexp_of]  (** like [read_write] *)
+type seek = private no_seek [@@deriving sexp_of]  (** Like [read_write]. *)
 
 (** A collection of iobuf access functions.  This abstracts over [Iobuf.Consume],
     [Iobuf.Fill], [Iobuf.Peek], and [Iobuf.Poke].
@@ -75,9 +77,9 @@ type ('src, 'dst) consuming_blit
   -> unit
 type ('src, 'dst) consuming_blito
   =  src      : 'src
-  -> ?src_len : int                     (** default is [Iobuf.length src] *)
+  -> ?src_len : int                     (** Default is [Iobuf.length src]. *)
   -> dst      : 'dst
-  -> ?dst_pos : int                     (** default is [0] *)
+  -> ?dst_pos : int                     (** Default is [0]. *)
   -> unit
   -> unit
 

@@ -22,6 +22,9 @@
           ]
         |> Command.run
     ]}
+
+    {b Note}: {{!Core.Command.Param}[Command.Param]} has replaced
+    {{!Core.Command.Spec}[Command.Spec] (DEPRECATED)} and should be used in all new code.
 *)
 
 open! Import
@@ -29,11 +32,11 @@ open Import_time
 
 (** Argument types. *)
 module Arg_type : sig
-  type 'a t (** the type of a command line argument *)
+  type 'a t (** The type of a command line argument. *)
 
   (** An argument type includes information about how to parse values of that type from
-      the command line, and (optionally) how to auto-complete partial arguments of that
-      type via bash's programmable TAB-completion.  In addition to the argument prefix,
+      the command line, and (optionally) how to autocomplete partial arguments of that
+      type via bash's programmable tab-completion. In addition to the argument prefix,
       autocompletion also has access to any previously parsed arguments in the form of a
       heterogeneous map into which previously parsed arguments may register themselves by
       providing a [Univ_map.Key] using the [~key] argument to [create].
@@ -47,13 +50,13 @@ module Arg_type : sig
     -> (string -> 'a)
     -> 'a t
 
-  (** Transform the result of a [t] using [f]. *)
+  (** Transforms the result of a [t] using [f]. *)
   val map : ?key:'b Univ_map.Multi.Key.t -> 'a t -> f:('a -> 'b) -> 'b t
 
-  (** an auto-completing Arg_type over a finite set of values *)
+  (** An auto-completing [Arg_type] over a finite set of values. *)
   val of_map : ?key:'a Univ_map.Multi.Key.t -> 'a String.Map.t -> 'a t
 
-  (** convenience wrapper for [of_map].  Raises on duplicate keys *)
+  (** Convenience wrapper for [of_map]. Raises on duplicate keys. *)
   val of_alist_exn : ?key:'a Univ_map.Multi.Key.t -> (string * 'a) list -> 'a t
 
   (** [file] defines an [Arg_type.t] that completes in the same way as
@@ -77,7 +80,7 @@ module Arg_type : sig
     -> 'a t
     -> 'a list t
 
-  (** values to include in other namespaces *)
+  (** Values to include in other namespaces. *)
   module Export : sig
 
     val string             : string             t
@@ -96,16 +99,16 @@ module Arg_type : sig
     val percent            : Percent.t          t
     val time               : Time.t             t
 
-    (** requires a time zone *)
+    (** Requires a time zone. *)
     val time_ofday         : Time.Ofday.Zoned.t t
 
-    (** for when zone is implied *)
+    (** For when the time zone is implied. *)
     val time_ofday_unzoned : Time.Ofday.t       t
 
     val time_zone          : Time.Zone.t        t
     val time_span          : Time.Span.t        t
 
-    (** uses bash autocompletion *)
+    (** Uses bash autocompletion. *)
     val file               : string             t
 
     val host_and_port      : Host_and_port.t    t
@@ -116,37 +119,37 @@ module Arg_type : sig
   end
 end
 
-(** Command-line flag specifications *)
+(** Command-line flag specifications. *)
 module Flag : sig
   type 'a t
 
-  (** required flags must be passed exactly once *)
+  (** Required flags must be passed exactly once. *)
   val required : 'a Arg_type.t -> 'a t
 
-  (** optional flags may be passed at most once *)
+  (** Optional flags may be passed at most once. *)
   val optional : 'a Arg_type.t -> 'a option t
 
-  (** [optional_with_default] flags may be passed at most once, and
-      default to a given value *)
+  (** [optional_with_default] flags may be passed at most once, and default to a given
+      value. *)
   val optional_with_default : 'a -> 'a Arg_type.t -> 'a t
 
-  (** [listed] flags may be passed zero or more times *)
+  (** [listed] flags may be passed zero or more times. *)
   val listed : 'a Arg_type.t -> 'a list t
 
-  (** [one_or_more] flags must be passed one or more times *)
+  (** [one_or_more] flags must be passed one or more times. *)
   val one_or_more : 'a Arg_type.t -> ('a * 'a list) t
 
-  (** [no_arg] flags may be passed at most once.  The boolean returned
-      is true iff the flag is passed on the command line *)
+  (** [no_arg] flags may be passed at most once.  The boolean returned is true iff the
+      flag is passed on the command line. *)
   val no_arg : bool t
 
-  (** [no_arg_register ~key ~value] is like [no_arg], but associates [value]
-      with [key] in the in the auto-completion environment *)
+  (** [no_arg_register ~key ~value] is like [no_arg], but associates [value] with [key] in
+      the autocomplete environment. *)
   val no_arg_register : key:'a Univ_map.With_default.Key.t -> value:'a -> bool t
 
-  (** [no_arg_abort ~exit] is like [no_arg], but aborts command-line parsing
-      by calling [exit].  This flag type is useful for "help"-style flags that
-      just print something and exit. *)
+  (** [no_arg_abort ~exit] is like [no_arg], but aborts command-line parsing by calling
+      [exit].  This flag type is useful for "help"-style flags that just print something
+      and exit. *)
   val no_arg_abort : exit:(unit -> never_returns) -> unit t
 
   (** [escape] flags may be passed at most once.  They cause the command line parser to
@@ -160,26 +163,26 @@ end
 (** Anonymous command-line argument specification. *)
 module Anons : sig
 
-  type +'a t (** a specification of some number of anonymous arguments *)
+  type +'a t (** A specification of some number of anonymous arguments. *)
 
   (** [(name %: typ)] specifies a required anonymous argument of type [typ].
 
-      The [name] must not be surrounded by whitespace, if it is, an exn will be raised.
+      The [name] must not be surrounded by whitespace; if it is, an exn will be raised.
 
       If the [name] is surrounded by a special character pair (<>, \{\}, \[\] or (),)
       [name] will remain as-is, otherwise, [name] will be uppercased.
 
       In the situation where [name] is only prefixed or only suffixed by one of the
-      special character pairs, or different pairs are used, (e.g. "<ARG\]") an exn will
+      special character pairs, or different pairs are used (e.g., "<ARG\]"), an exn will
       be raised.
 
       The (possibly transformed) [name] is mentioned in the generated help for the
       command. *)
   val ( %: ) : string -> 'a Arg_type.t -> 'a t
 
-  (** [sequence anons] specifies a sequence of anonymous arguments.  An exception
-      will be raised if [anons] matches anything other than a fixed number of
-      anonymous arguments  *)
+  (** [sequence anons] specifies a sequence of anonymous arguments.  An exception will be
+      raised if [anons] matches anything other than a fixed number of anonymous arguments.
+  *)
   val sequence : 'a t -> 'a list t
 
   (** [non_empty_sequence_as_pair anons] and [non_empty_sequence_as_list anons] are like
@@ -188,24 +191,23 @@ module Anons : sig
   val non_empty_sequence_as_pair : 'a t -> ('a * 'a list) t
   val non_empty_sequence_as_list : 'a t ->       'a list  t
 
-  (** [(maybe anons)] indicates that some anonymous arguments are optional *)
+  (** [(maybe anons)] indicates that some anonymous arguments are optional. *)
   val maybe : 'a t -> 'a option t
 
-  (** [(maybe_with_default default anons)] indicates an optional anonymous
-      argument with a default value *)
+  (** [(maybe_with_default default anons)] indicates an optional anonymous argument with a
+      default value. *)
   val maybe_with_default : 'a -> 'a t -> 'a t
 
-  (** [t2], [t3], and [t4] each concatenate multiple anonymous argument
-      specs into a single one. The purpose of these combinators is to allow
-      for optional sequences of anonymous arguments.  Consider a command with
-      usage:
+  (** [t2], [t3], and [t4] each concatenate multiple anonymous argument specs into a
+      single one. The purpose of these combinators is to allow for optional sequences of
+      anonymous arguments.  Consider a command with usage:
 
       {v
         main.exe FOO [BAR BAZ]
        v}
 
-      where the second and third anonymous arguments must either both
-      be there or both not be there.  This can be expressed as:
+      where the second and third anonymous arguments must either both be there or both not
+      be there.  This can be expressed as:
 
       {[
         t2 ("FOO" %: foo) (maybe (t2 ("BAR" %: bar) ("BAZ" %: baz)))]
@@ -229,14 +231,14 @@ end
 
 (** Command-line parameter specification.
 
-    This module replaces {Command.Spec}, and should be used in all new code.
-    Its types and compositional rules are much easier to understand. *)
+    This module replaces {{!Core.Command.Spec}[Command.Spec]}, and should be used in all
+    new code.  Its types and compositional rules are much easier to understand. *)
 module Param : sig
   module type S = sig
 
     type +'a t
 
-    (** [Command.Param] is intended to be used with the [%map_open] syntax defined in
+    (** [Command.Param] is intended to be used with the [[%map_open]] syntax defined in
         [ppx_let], like so:
         {[
           let command =
@@ -246,14 +248,14 @@ module Param : sig
                 and port   = flag "port" (optional int) ~doc:"N listen on this port"
                 and person = person_param
                 in
-                (* ... command-line validation code, if any, goes here ... *)
+                (* ... Command-line validation code, if any, goes here ... *)
                 fun () ->
-                  (* the body of the command *)
+                  (* The body of the command *)
                   do_stuff count port person
               ]
         ]}
 
-        One can also use [%map_open] to define composite command line parameters, like
+        One can also use [[%map_open]] to define composite command line parameters, like
         [person_param] in the previous snippet:
         {[
           type person = { name : string; age : int }
@@ -267,7 +269,7 @@ module Param : sig
             ]
         ]}
 
-        The right hand sides of [%map_open] definitions have [Command.Param] in scope.
+        The right-hand sides of [[%map_open]] definitions have [Command.Param] in scope.
 
         Alternatively, you can say:
 
@@ -284,23 +286,23 @@ module Param : sig
     *)
     include Applicative.S with type 'a t := 'a t
 
-    (** {2 various internal values} *)
+    (** {2 Various internal values} *)
 
-    val help : string Lazy.t t (** the help text for the command *)
+    val help : string Lazy.t t (** The help text for the command. *)
 
-    val path : string list   t (** the subcommand path of the command *)
+    val path : string list   t (** The subcommand path of the command. *)
 
-    val args : string list   t (** the arguments passed to the command *)
+    val args : string list   t (** The arguments passed to the command. *)
 
     (** [flag name spec ~doc] specifies a command that, among other things, takes a flag
         named [name] on its command line.  [doc] indicates the meaning of the flag.
 
-        All flags must have a dash at the beginning of the name.  If [name] is not prefixed
-        by "-", it will be normalized to ["-" ^ name].
+        All flags must have a dash at the beginning of the name.  If [name] is not
+        prefixed by "-", it will be normalized to ["-" ^ name].
 
-        Unless [full_flag_required] is used, one doesn't have to pass [name] exactly on the
-        command line, but only an unambiguous prefix of [name] (i.e., a prefix which is not
-        a prefix of any other flag's name).
+        Unless [full_flag_required] is used, one doesn't have to pass [name] exactly on
+        the command line, but only an unambiguous prefix of [name] (i.e., a prefix which
+        is not a prefix of any other flag's name).
 
         NOTE: the [doc] for a flag which takes an argument should be of the form
         [arg_name ^ " " ^ description] where [arg_name] describes the argument and
@@ -319,8 +321,8 @@ module Param : sig
       -> doc : string
       -> 'a t
 
-    (** [flag_optional_with_default_doc name arg_type sexp_of_default ~default ~doc]
-        is a shortcut for [flag], where:
+    (** [flag_optional_with_default_doc name arg_type sexp_of_default ~default ~doc] is a
+        shortcut for [flag], where:
         + The [Flag.t] is [optional_with_default default arg_type]
         + The [doc] is passed through with an explanation of what the default value
         appended. *)
@@ -347,10 +349,10 @@ module Param : sig
       -> 'a t
   end
 
-  include S
+  include S (** @open *)
 
-  (** values included for convenience so you can specify all command line parameters inside
-      a single local open of [Param] *)
+  (** Values included for convenience so you can specify all command line parameters
+      inside a single local open of [Param]. *)
 
   module Arg_type : module type of Arg_type with type 'a t = 'a Arg_type.t
   include module type of Arg_type.Export
@@ -360,12 +362,12 @@ end
 
 module Let_syntax : sig
 
-  type 'a t (** substituted below *)
+  type 'a t (** Substituted below. *)
 
   val return : 'a -> 'a t
 
   module Let_syntax : sig
-    type 'a t (** substituted below *)
+    type 'a t (** Substituted below. *)
 
     val return : 'a -> 'a t
     val map    : 'a t -> f:('a -> 'b) -> 'b t
@@ -374,84 +376,83 @@ module Let_syntax : sig
   end with type 'a t := 'a Param.t
 end with type 'a t := 'a Param.t
 
-(** The old interface for command-line specifications -- Do Not Use.
+(** The old interface for command-line specifications -- {b Do Not Use}.
 
-    This interface should not be used. See the {Param} module for the new way
-    to do things. *)
+    This interface should not be used. See the {{!Core.Command.Param}[Param]} module for
+    the new way to do things. *)
 module Spec : sig
 
-  (** {1 command parameters} *)
+  (** {2 Command parameters} *)
 
-  (** specification of an individual parameter to the command's main function *)
+  (** Specification of an individual parameter to the command's main function. *)
   type 'a param = 'a Param.t
   include Param.S with type 'a t := 'a param
 
-  (** Superceded by [return], preserved for backwards compatibility *)
+  (** Superceded by [return], preserved for backwards compatibility. *)
   val const : 'a -> 'a param
 
-  (** Superceded by [both], preserved for backwards compatibility *)
+  (** Superceded by [both], preserved for backwards compatibility. *)
   val pair : 'a param -> 'b param -> ('a * 'b) param
 
-  (** {1 command specifications} *)
+  (** {2 Command specifications} *)
 
-  (** composable command-line specifications *)
+  (** Composable command-line specifications. *)
   type (-'main_in, +'main_out) t
-  (**
-     Ultimately one forms a basic command by combining a spec of type
-     [('main, unit -> unit) t] with a main function of type ['main]; see the [basic]
-     function below.  Combinators in this library incrementally build up the type of main
-     according to what command-line parameters it expects, so the resulting type of
-     [main] is something like:
+  (** Ultimately one forms a basic command by combining a spec of type [('main, unit ->
+      unit) t] with a main function of type ['main]; see the [basic] function below.
+      Combinators in this library incrementally build up the type of main according to
+      what command-line parameters it expects, so the resulting type of [main] is
+      something like:
 
-     [arg1 -> ... -> argN -> unit -> unit]
+      [arg1 -> ... -> argN -> unit -> unit]
 
-     It may help to think of [('a, 'b) t] as a function space ['a -> 'b] embellished with
-     information about:
+      It may help to think of [('a, 'b) t] as a function space ['a -> 'b] embellished with
+      information about:
 
-     {ul {- how to parse command line}
-     {- what the command does and how to call it}
-     {- how to auto-complete a partial command line}}
+      {ul {- how to parse the command line}
+      {- what the command does and how to call it}
+      {- how to autocomplete a partial command line}}
 
-     One can view a value of type [('main_in, 'main_out) t] as function that transforms a
-     main function from type ['main_in] to ['main_out], typically by supplying some
-     arguments.  E.g. a value of type [Spec.t] might have type:
+      One can view a value of type [('main_in, 'main_out) t] as a function that transforms
+      a main function from type ['main_in] to ['main_out], typically by supplying some
+      arguments.  E.g., a value of type [Spec.t] might have type:
 
-     {[
-       (arg1 -> ... -> argN -> 'r, 'r) Spec.t
-     ]}
+      {[
+        (arg1 -> ... -> argN -> 'r, 'r) Spec.t
+      ]}
 
-     Such a value can transform a main function of type [arg1 -> ... -> argN -> 'r] by
-     supplying it argument values of type [arg1], ..., [argn], leaving a main function
-     whose type is ['r].  In the end, [Command.basic] takes a completed spec where
-     ['r = unit -> unit], and hence whose type looks like:
+      Such a value can transform a main function of type [arg1 -> ... -> argN -> 'r] by
+      supplying it argument values of type [arg1], ..., [argn], leaving a main function
+      whose type is ['r].  In the end, [Command.basic] takes a completed spec where
+      ['r = unit -> unit], and hence whose type looks like:
 
-     {[
-       (arg1 -> ... -> argN -> unit -> unit, unit -> unit) Spec.t
-     ]}
+      {[
+        (arg1 -> ... -> argN -> unit -> unit, unit -> unit) Spec.t
+      ]}
 
-     A value of this type can fully apply a main function of type
-     [arg1 -> ... -> argN -> unit -> unit] to all its arguments.
+      A value of this type can fully apply a main function of type [arg1 -> ... -> argN ->
+      unit -> unit] to all its arguments.
 
-     The final unit argument allows the implementation to distinguish between the phases
-     of (1) parsing the command line and (2) running the body of the command.  Exceptions
-     raised in phase (1) lead to a help message being displayed alongside the exception.
-     Exceptions raised in phase (2) are displayed without any command line help.
+      The final unit argument allows the implementation to distinguish between the phases
+      of (1) parsing the command line and (2) running the body of the command.  Exceptions
+      raised in phase (1) lead to a help message being displayed alongside the exception.
+      Exceptions raised in phase (2) are displayed without any command line help.
 
-     The view of [('main_in, main_out) Spec.t] as a function from ['main_in] to
-     ['main_out] is directly reflected by the [step] function, whose type is:
+      The view of [('main_in, main_out) Spec.t] as a function from ['main_in] to
+      ['main_out] is directly reflected by the [step] function, whose type is:
 
-     {[
-       val step : ('m1 -> 'm2) -> ('m1, 'm2) t
-     ]}
+      {[
+        val step : ('m1 -> 'm2) -> ('m1, 'm2) t
+      ]}
   *)
 
-  (** [spec1 ++ spec2 ++ ... ++ specN] composes spec1 through specN.
+  (** [spec1 ++ spec2 ++ ... ++ specN] composes [spec1] through [specN].
 
       For example, if [spec_a] and [spec_b] have types:
 
       {[
-        spec_a: (a1 -> ... -> aN -> 'ra, 'ra) Spec.t
-                  spec_b: (b1 -> ... -> bM -> 'rb, 'rb) Spec.t
+        spec_a: (a1 -> ... -> aN -> 'ra, 'ra) Spec.t;
+        spec_b: (b1 -> ... -> bM -> 'rb, 'rb) Spec.t
       ]}
 
       then [spec_a ++ spec_b] has the following type:
@@ -460,7 +461,7 @@ module Spec : sig
         (a1 -> ... -> aN -> b1 -> ... -> bM -> 'rb, 'rb) Spec.t
       ]}
 
-      So, [spec_a ++ spec_b] transforms a main function it by first supplying [spec_a]'s
+      So, [spec_a ++ spec_b] transforms a main function by first supplying [spec_a]'s
       arguments of type [a1], ..., [aN], and then supplying [spec_b]'s arguments of type
       [b1], ..., [bm].
 
@@ -468,8 +469,8 @@ module Spec : sig
       as concrete function types, representing the transformation of a main function:
 
       {[
-        spec_a: \/ra. (a1 -> ... -> aN -> 'ra) -> 'ra
-                                                    spec_b: \/rb. (b1 -> ... -> bM -> 'rb) -> 'rb
+        spec_a: \/ra. (a1 -> ... -> aN -> 'ra) -> 'ra;
+        spec_b: \/rb. (b1 -> ... -> bM -> 'rb) -> 'rb
       ]}
 
       Under this interpretation, the composition of [spec_a] and [spec_b] has type:
@@ -485,24 +486,25 @@ module Spec : sig
       ]}
   *)
 
-  (** the empty command-line spec *)
+  (** The empty command-line spec. *)
   val empty : ('m, 'm) t
 
-  (** command-line spec composition *)
+  (** Command-line spec composition. *)
   val (++) : ('m1, 'm2) t -> ('m2, 'm3) t -> ('m1, 'm3) t
 
-  (** add a rightmost parameter onto the type of main *)
+  (** Adds a rightmost parameter onto the type of main. *)
   val (+>) : ('m1, 'a -> 'm2) t -> 'a param -> ('m1, 'm2) t
 
-  (** add a leftmost parameter onto the type of main *)
-  val (+<) : ('m1, 'm2) t -> 'a param -> ('a -> 'm1, 'm2) t
-  (** this function should only be used as a workaround in situations where the
-      order of composition is at odds with the order of anonymous arguments due
-      to factoring out some common spec *)
+  (** Adds a leftmost parameter onto the type of main.
 
-  (** combinator for patching up how parameters are obtained or presented *)
-  val step : ('m1 -> 'm2) -> ('m1, 'm2) t
-  (** Here are a couple examples of some of its many uses
+      This function should only be used as a workaround in situations where the order of
+      composition is at odds with the order of anonymous arguments because you're
+      factoring out some common spec. *)
+  val (+<) : ('m1, 'm2) t -> 'a param -> ('a -> 'm1, 'm2) t
+
+  (** Combinator for patching up how parameters are obtained or presented.
+
+      Here are a couple examples of some of its many uses:
       {ul
       {li {i introducing labeled arguments}
       {v step (fun m v -> m ~foo:v)
@@ -537,11 +539,14 @@ module Spec : sig
 
       This spec transforms a main function that requires a labeled argument into
       a main function that requires the argument unlabeled, making it easily composable
-      with other spec combinators. *)
+      with other spec combinators.
 
-  (** combinator for defining a class of commands with common behavior *)
-  val wrap : (run:('m1 -> 'r1) -> main:'m2 -> 'r2) -> ('m1, 'r1) t -> ('m2, 'r2) t
-  (** Here are two examples of command classes defined using [wrap]
+  *)
+  val step : ('m1 -> 'm2) -> ('m1, 'm2) t
+
+  (** Combinator for defining a class of commands with common behavior.
+
+      Here are two examples of command classes defined using [wrap]:
       {ul
       {li {i print top-level exceptions to stderr}
       {v wrap (fun ~run ~main ->
@@ -555,44 +560,44 @@ module Spec : sig
              v}}
       }
   *)
+  val wrap : (run:('m1 -> 'r1) -> main:'m2 -> 'r2) -> ('m1, 'r1) t -> ('m2, 'r2) t
 
   module Arg_type : module type of Arg_type with type 'a t = 'a Arg_type.t
 
   include module type of Arg_type.Export
 
 
-  (** a flag specification *)
+  (** A flag specification. *)
   type 'a flag = 'a Flag.t
   include module type of Flag with type 'a t := 'a flag
 
-  (** [map_flag flag ~f] transforms the parsed result of [flag] by applying [f] *)
+  (** [map_flag flag ~f] transforms the parsed result of [flag] by applying [f]. *)
   val map_flag : 'a flag -> f:('a -> 'b) -> 'b flag
 
   (** [flags_of_args_exn args] creates a spec from [Caml.Arg.t]s, for compatibility with
-      ocaml's base libraries.  Fails if it encounters an arg that cannot be converted.
+      OCaml's base libraries.  Fails if it encounters an arg that cannot be converted.
 
       NOTE: There is a difference in side effect ordering between [Caml.Arg] and
       [Command].  In the [Arg] module, flag handling functions embedded in [Caml.Arg.t]
       values will be run in the order that flags are passed on the command line.  In the
       [Command] module, using [flags_of_args_exn flags], they are evaluated in the order
-      that the [Caml.Arg.t] values appear in [flags].
-  *)
+      that the [Caml.Arg.t] values appear in [flags].  *)
   val flags_of_args_exn : Core_kernel.Arg.t list -> ('a, 'a) t
 
-  (** a specification of some number of anonymous arguments *)
+  (** A specification of some number of anonymous arguments. *)
   type 'a anons = 'a Anons.t
   include module type of Anons with type 'a t := 'a anons
 
-  (** [map_anons anons ~f] transforms the parsed result of [anons] by applying [f] *)
+  (** [map_anons anons ~f] transforms the parsed result of [anons] by applying [f]. *)
   val map_anons : 'a anons -> f:('a -> 'b) -> 'b anons
 
-  (** conversions to and from new-style [Param] command line specifications *)
+  (** Conversions to and from new-style [Param] command line specifications. *)
 
   val to_param : ('a, 'r) t -> 'a -> 'r Param.t
   val of_param : 'r Param.t -> ('r -> 'm, 'm) t
 end
 
-type t (** commands which can be combined into a hierarchy of subcommands *)
+type t (** Commands which can be combined into a hierarchy of subcommands. *)
 
 type ('main, 'result) basic_spec_command
   =  summary : string
@@ -604,7 +609,7 @@ type ('main, 'result) basic_spec_command
 (** [basic_spec ~summary ?readme spec main] is a basic command that executes a function
     [main] which is passed parameters parsed from the command line according to [spec].
     [summary] is to contain a short one-line description of its behavior.  [readme] is to
-    contain any longer description of its behavior that will go on that commands' help
+    contain any longer description of its behavior that will go on that command's help
     screen. *)
 val basic_spec : ('main, unit) basic_spec_command
 
@@ -618,14 +623,12 @@ type 'result basic_command
     using [Params] instead of [Spec]. *)
 val basic : unit basic_command
 
-(** [group ~summary subcommand_alist] is a compound command with named
-    subcommands, as found in [subcommand_alist].  [summary] is to contain
-    a short one-line description of the command group.  [readme] is to
-    contain any longer description of its behavior that will go on that
-    command's help screen.
+(** [group ~summary subcommand_alist] is a compound command with named subcommands, as
+    found in [subcommand_alist].  [summary] is to contain a short one-line description of
+    the command group.  [readme] is to contain any longer description of its behavior that
+    will go on that command's help screen.
 
-    NOTE: subcommand names containing underscores will be rejected.  Use dashes
-    instead.
+    NOTE: subcommand names containing underscores will be rejected; use dashes instead.
 
     [body] is called when no additional arguments are passed -- in particular, when no
     subcommand is passed.  Its [path] argument is the subcommand path by which the group
@@ -638,8 +641,8 @@ val group
   -> (string * t) list
   -> t
 
-(** [lazy_group] is the same as [group], except that
-    the list of subcommands may be generated lazily. *)
+(** [lazy_group] is the same as [group], except that the list of subcommands may be
+    generated lazily. *)
 val lazy_group
   :  summary                    : string
   -> ?readme                    : (unit -> string)
@@ -650,21 +653,20 @@ val lazy_group
 
 (** [exec ~summary ~path_to_exe] runs [exec] on the executable at [path_to_exe]. If
     [path_to_exe] is [`Absolute path] then [path] is executed without any further
-    qualification.  If it is [`Relative_to_me path] then
-    [Filename.dirname Sys.executable_name ^ "/" ^ path] is executed instead.
-    All of the usual caveats about [Sys.executable_name] apply: specifically, it may only
-    return an absolute path in Linux.  On other operating systems it will return
-    [Sys.argv.(0)].  If it is [`Relative_to_argv0 path] then [Sys.argv.(0) ^ "/" ^ path]
-    is executed.
+    qualification.  If it is [`Relative_to_me path] then [Filename.dirname
+    Sys.executable_name ^ "/" ^ path] is executed instead.  All of the usual caveats about
+    [Sys.executable_name] apply: specifically, it may only return an absolute path in
+    Linux.  On other operating systems it will return [Sys.argv.(0)].  If it is
+    [`Relative_to_argv0 path] then [Sys.argv.(0) ^ "/" ^ path] is executed.
 
     The [child_subcommand] argument allows referencing a subcommand one or more levels
-    below the top-level of the child executable. It should *not* be used to pass flags or
-    anonymous arguments to the child.
+    below the top-level of the child executable. It should {e not} be used to pass flags
+    or anonymous arguments to the child.
 
     Care has been taken to support nesting multiple executables built with Command.  In
     particular, recursive help and autocompletion should work as expected.
 
-    NOTE: non-Command executables can be used with this function but will still be
+    NOTE: Non-Command executables can be used with this function but will still be
     executed when [help -recursive] is called or autocompletion is attempted (despite the
     fact that neither will be particularly helpful in this case).  This means that if you
     have a shell script called "reboot-everything.sh" that takes no arguments and reboots
@@ -686,10 +688,10 @@ val exec
   -> t
 
 (** [of_lazy thunk] constructs a lazy command that is forced only when necessary to run it
-    or extract its shape *)
+    or extract its shape. *)
 val of_lazy : t Lazy.t -> t
 
-(** extract the summary string for a command *)
+(** Extracts the summary string for a command. *)
 val summary : t -> string
 
 module Shape : sig
@@ -775,10 +777,10 @@ module Shape : sig
 
 end
 
-(** expose the shape of a command *)
+(** Exposes the shape of a command. *)
 val shape : t -> Shape.t
 
-(** Run a command against [Sys.argv], or [argv] if it is specified.
+(** Runs a command against [Sys.argv], or [argv] if it is specified.
 
     [extend] can be used to add extra command line arguments to basic subcommands of the
     command.  [extend] will be passed the (fully expanded) path to a command, and its

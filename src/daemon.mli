@@ -7,7 +7,7 @@ open! Import
 module Fd_redirection : sig
   type t = [
     | `Dev_null
-    | `Dev_null_skip_regular_files (** redirect to /dev/null unless already redirected to
+    | `Dev_null_skip_regular_files (** Redirect to /dev/null unless already redirected to
                                        a regular file. *)
     | `Do_not_redirect
     | `File_append of string
@@ -17,9 +17,6 @@ end
 
 (** [daemonize] makes the executing process a daemon.
 
-    See Chapter 13 of Advanced Programming in the UNIX Environment Second Edition by
-    Stephens and Rago for more details.
-
     The optional arguments have defaults as per [daemonize_wait], below.
 
     By default, output sent to stdout and stderr after daemonization will be silently
@@ -28,8 +25,7 @@ end
 
     See [daemonize_wait] for a description of [allow_threads_to_have_been_created].
 
-    @raise Failure if fork was unsuccessful.
-*)
+    Raises [Failure] if fork was unsuccessful. *)
 val daemonize
   :  ?redirect_stdout : Fd_redirection.t
   -> ?redirect_stderr : Fd_redirection.t
@@ -39,39 +35,38 @@ val daemonize
   -> unit
   -> unit
 
-(** [daemonize_wait] makes the executing process a daemon, but delays full detachment
-    from the calling shell/process until the returned "release" closure is called.
+(** [daemonize_wait] makes the executing process a daemon, but delays full detachment from
+    the calling shell/process until the returned "release" closure is called.
 
     Any output to stdout/stderr before the "release" closure is called will get
-    sent out normally.  After "release" is called, stdin is connected to /dev/null,
+    sent out normally. After "release" is called, stdin is connected to /dev/null,
     and stdout and stderr are connected as specified by [redirect_stdout] and
-    [redirect_stderr].  The default is the usual behaviour whereby both of these
-    descriptors are connected to /dev/null. ([daemonize_wait], however, will not
-    redirect stdout/stderr to /dev/null if they are already redirected to regular
-    file by default, i.e. default redirection is `Dev_null_skip_regular_files. This
-    is to preserve behavior from versions before.)
+    [redirect_stderr]. The default is the usual behavior whereby both of these
+    descriptors are connected to /dev/null. [daemonize_wait], however, will not
+    redirect stdout/stderr to /dev/null if they are already redirected to a regular
+    file by default, i.e., default redirection is [`Dev_null_skip_regular_files]. This
+    is to preserve behavior from earlier versions.)
 
     Note that calling [release] will adjust SIGPIPE handling, so you should not rely on
     the delivery of this signal during this time.
 
-    [daemonize_wait] allows you to daemonize and then start async, but still have
-    stdout/stderr go to the controlling terminal during startup.  By default, when you
-    [daemonize], toplevel exceptions during startup would get sent to /dev/null.  With
+    [daemonize_wait] allows you to daemonize and then start asynchronously, but still have
+    stdout/stderr go to the controlling terminal during startup. By default, when you
+    [daemonize], toplevel exceptions during startup would get sent to /dev/null. With
     [daemonize_wait], toplevel exceptions can go to the terminal until you call [release].
 
-    Forking, especially to daemonize, when running multiple threads is tricky, and
-    generally a mistake.  [daemonize] and [daemonize_wait] check that the current number
-    of threads is not greater than expected.  [daemonize_wait] and [daemonize] also check
-    that threads have not been created, which is more conservative than the actual
-    requirement that multiple threads are not running.  Using
-    [~allow_threads_to_have_been_created:true] bypasses that check.  This is useful if
+    Forking (especially to daemonize) when running multiple threads is tricky and
+    generally a mistake. [daemonize] and [daemonize_wait] check that the current number of
+    threads is not greater than expected. [daemonize_wait] and [daemonize] also check that
+    threads have not been created, which is more conservative than the actual requirement
+    that multiple threads are not running. Using
+    [~allow_threads_to_have_been_created:true] bypasses that check. This is useful if
     Async was previously running, and therefore threads have been created, but has since
-    been shutdown.  On non-Linux platforms, using
+    been shut down. On non-Linux platforms, using
     [~allow_threads_to_have_been_created:true] eliminates the protection [daemonize] and
     [daemonize_wait] have regarding threads.
 
-    @raise Failure if fork was unsuccessful.
-*)
+    Raises [Failure] if forking was unsuccessful. *)
 val daemonize_wait
   :  ?redirect_stdout : Fd_redirection.t  (** default `Dev_null_skip_regular_files *)
   -> ?redirect_stderr : Fd_redirection.t  (** default `Dev_null_skip_regular_files *)

@@ -71,11 +71,11 @@
     Schedules are expressed in terms of wall clock time, and as such have interesting
     behavior around daylight savings time boundaries.  There are two circumstances that
     might affect a schedule.  The first is a repeated time, which occurs when time jumps
-    back (e.g. 2:30 may happen twice in one day).  The second is a skipped time, which
+    back (e.g., 2:30 may happen twice in one day).  The second is a skipped time, which
     occurs when time jumps forward by an hour.
 
-    In both cases [Schedule] does the naive thing.  If the time happens twice and is
-    included in the schedule it is included twice.  If it never happens [Schedule] makes
+    In both cases [Schedule] does the naive thing: if the time happens twice and is
+    included in the schedule, it is included twice; if it never happens, [Schedule] makes
     no special attempt to artificially include it.
 *)
 
@@ -84,9 +84,9 @@
 open! Import
 open Import_time
 
-(** these phantom types are concrete and exposed to help the compiler understand
-    that zoned and unzoned cannot be the same type (which it could not know if they
-    were abstract), which helps it infer the injectivity of the type [t] below.
+(** These phantom types are concrete and exposed to help the compiler understand that
+    zoned and unzoned cannot be the same type (which it could not know if they were
+    abstract), which helps it infer the injectivity of the type [t] below.
 *)
 type zoned   = Zoned   [@@deriving compare]
 type unzoned = Unzoned [@@deriving compare]
@@ -170,13 +170,13 @@ type ('a, 'b) t =
 
 type 'b zoned_t = (zoned, 'b) t [@@deriving sexp_of]
 
-(** Return a string suitable for debugging purposes. *)
+(** Returns a string suitable for debugging purposes. *)
 val to_string_zoned : (zoned, 'b) t -> string_of_tag:('b -> string) -> string
 
 module Stable : sig
-  (** Conversion functions to translate to and from Schedule_v4_deprecated.t.  Schedules
-      containing Zoned_between cannot be downgraded, but all V4 schedules are expressable
-      as V5 schedules. *)
+  (** Conversion functions to translate to and from [Schedule_v4_deprecated.t]. Schedules
+      containing [Zoned_between] cannot be downgraded, but all V4 schedules are
+      expressable as V5 schedules. *)
   module V4_deprecated : sig
     module V4 = Schedule_v4_deprecated
 
@@ -203,13 +203,15 @@ end
     schedule [t]. *)
 val includes : (zoned, 'b) t -> Time.t -> bool
 
-(** [ tags t time = `Not_included ] iff [not (includes t time)]. Otherwise, [ tags t time
-    = `Included lst ], where [lst] includes all tags of a schedule such that [includes t'
-    time] is true where [t'] is a tagged branch of the schedule. E.g. for some [t] equal
+(** [tags t time = `Not_included] iff [not (includes t time)]. Otherwise, [tags t time
+    = `Included lst], where [lst] includes all tags of a schedule such that [includes t'
+    time] is true where [t'] is a tagged branch of the schedule. E.g., for some [t] equal
     to [Tag some_tag t'], [tags t time] will return [some_tag] if and only if [includes t'
-    time] returns true.  For a more interesting use case, consider the per-office on-call
-    schedule example given in the beginning of this module. Note that a schdeule may have
-    no tags, and therefore, [lst] can be empty.
+    time] returns true.
+
+    For a more interesting use case, consider the per-office on-call schedule example
+    given in the beginning of this module. Note that a schdeule may have no tags, and
+    therefore, [lst] can be empty.
 *)
 val tags
   :  (zoned, 'tag) t
@@ -237,9 +239,9 @@ val map_tags
   -> f:('b -> 'c)
   -> ('a, 'c) t
 
-(** Return a sequence of schedule changes over time that will never end.
+(** Returns a sequence of schedule changes over time that will never end.
 
-    If your schedules ends, you will continue to receive `No_change_until_at_least
+    If your schedules ends, you will continue to receive [`No_change_until_at_least]
     with increasing times forever.
 
     The return type indicates whether [includes t start_time] is true and
@@ -263,7 +265,7 @@ val map_tags
     element, so that pulling the next element of the sequence is always cheap.
     This is the primary motivation behind including [`No_change_until_at_least].
 
-    The [Time.t] returned by `No_change_until_at_least is guaranteed to be a reasonable
+    The [Time.t] returned by [`No_change_until_at_least] is guaranteed to be a reasonable
     amount of time in the future (at least 1 hour).
 *)
 
@@ -284,7 +286,7 @@ module Event : sig
   val to_time : [< no_change | 'tag transition | 'tag tag_change] -> Time.t
 end
 
-(** in [Transitions_and_tag_changes] equality for the tag type must be given *)
+(** In [Transitions_and_tag_changes], equality for the tag type must be given. *)
 type ('tag, 'a) emit =
   | Transitions                 : ('tag, [ Event.no_change | 'tag Event.transition ]) emit
   | Transitions_and_tag_changes : ('tag -> 'tag -> bool)
@@ -300,16 +302,17 @@ val to_endless_sequence
 (** [next_enter_between t start end] The given [start] [end] range is inclusive on both
     ends.  This function is useful for one-off events during the run of a program.
     If you want to track changes to a schedule over time it is better to call
-    [to_endless_sequence] *)
+    [to_endless_sequence]. *)
 val next_enter_between
   :  (zoned, 'tag) t
   -> Time.t
   -> Time.t
   -> Time.t option
 
-(** as [next_enter_between] but for leave events *)
+(** Like [next_enter_between] but for leave events. *)
 val next_leave_between
   :  (zoned, 'tag) t
   -> Time.t
   -> Time.t
   -> Time.t option
+

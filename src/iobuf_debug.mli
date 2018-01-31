@@ -1,3 +1,5 @@
+(** {{!Core.Iobuf}[Iobuf]}s with extra controls for debugging. *)
+
 open! Import
 
 (** [Make] builds a module that is like [Iobuf], except that the module also has some

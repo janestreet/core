@@ -1,4 +1,31 @@
-(** [Core] is an extension of {!Core_kernel}. The unmodified libraries can be found there.
+(** [Core] is an extension of {{!Core_kernel}[Core_kernel]} with Unix APIs. The unmodified
+    libraries can be found there.
+
+    In particular, [Core] has comprehensive implementation of times (see [Time],
+    [Time_ns], [Timing_wheel_float], and [Schedule_v5]), where some details are
+    platform-specific (like timing wheels based on floats).
+
+    Some modules are mere extensions of those existing in [Core_kernel], like [Bigbuffer],
+    [Bigstring], [Caml], [Time], and [Md5], where what's added is handlers for reading
+    from or writing to Unix sockets and file descriptors, or support for floating-point
+    numbers. Other modules are entirely new, like:
+
+    - [Command], a richly featured tool for creating command-line programs.
+    - [Daemon], for daemonizing processes.
+    - [Iobuf], which lets you use contiguous ranges of bytes for I/O purposes.
+    - [Lock_file], for managing OS-level locks.
+    - [Crc], for cyclic redundancy checks.
+    - [Linux_ext], providing a wrapper around Linux-specific system calls.
+    - [Mac_address], for managing MAC addresses.
+    - [Signal], for handling Unix signals like SIGHUP and SIGKILL.
+
+    A few modules in Core don't have any platform-specific functionality but haven't yet
+    been ported to Core_kernel for technical reasons (like a dependency on [Time], which
+    until recently was only in Core):
+
+    - [Interval]
+    - [Squeue]
+    - [Uuid]
 *)
 (**/**)
 include Core_kernel.Core_kernel_private.Std_kernel

@@ -27,9 +27,20 @@ let iter2_naive () =
   in
   iter2 map map ~f:ignore
 
-let add =
+let add_with_set =
   assert(not (Int.Map.mem map size));
   fun () -> ignore (Map.set map ~key:size ~data:size)
+;;
+
+let add_with_add =
+  assert(not (Int.Map.mem map size));
+  fun () -> ignore (Map.add map ~key:size ~data:size)
+;;
+
+let add_duplicate =
+  let map = Map.set map ~key:size ~data:size in
+  assert(Int.Map.mem map size);
+  fun () -> ignore (Map.add map ~key:size ~data:size)
 ;;
 
 let remove =
@@ -100,7 +111,9 @@ let command =
   Bench.make_command [
     Test.create ~name:"Map.of_alist_exn" of_alist_exn;
     Test.create ~name:"Map.of_sorted_array" of_sorted_array;
-    Test.create ~name:"Map.set" add;
+    Test.create ~name:"Map.add reporting duplicate" add_duplicate;
+    Test.create ~name:"Map.set adding a new element" add_with_set;
+    Test.create ~name:"Map.add" add_with_add;
     Test.create ~name:"Map.iteri" iter;
     Test.create ~name:"Map.iter2" iter2;
     Test.create ~name:"Map.iter2_naive" iter2;
