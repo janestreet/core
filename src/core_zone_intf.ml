@@ -58,12 +58,6 @@ module type Extend_zone = sig
       it is called multiple times.  Time zones will otherwise be loaded at need from the
       disk on the first call to find/find_exn. *)
   val init : unit -> unit
-
-  module Stable : sig
-    module V1 : sig
-      type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
-    end
-  end
 end
 
 module type Core_zone = sig
@@ -73,4 +67,12 @@ module type Core_zone = sig
     with type t = Time.Zone.t
 
   include Extend_zone with type t := t
+
+  module Stable : sig
+    module V1 : sig
+      type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
+    end
+
+    include Core_kernel_private.Time_zone.S_stable with type t := t
+  end
 end

@@ -45,13 +45,6 @@ module type S = sig
             or any day. *)
         type nonrec t = t [@@deriving bin_io, sexp, compare, hash]
       end
-
-      module Stable : sig
-        module V1 : sig
-          (** [Stable.V1] uses [With_nonchronological_compare.compare]. *)
-          type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
-        end
-      end
     end
 
     val now : zone:Zone.t -> t
@@ -206,24 +199,36 @@ module type S = sig
 
     module Span : sig
       module V1 : sig
-        type t = Span.Stable.V1.t [@@deriving hash]
+        type t = Time.Stable.Span.V1.t [@@deriving hash]
         include Stable_without_comparator with type t := t
       end
       module V2 : sig
-        type t = Span.Stable.V2.t [@@deriving hash]
+        type t = Time.Stable.Span.V2.t [@@deriving hash]
         include Stable_without_comparator with type t := t
       end
     end
 
     module Ofday : sig
-      module V1 : Stable_without_comparator with type t = Ofday.Stable.V1.t
+      module V1 : sig
+        type t = Time.Stable.Ofday.V1.t [@@deriving hash]
+        include Stable_without_comparator with type t := t
+      end
       module Zoned : sig
-        module V1 : Stable_without_comparator with type t = Ofday.Zoned.Stable.V1.t
+        module V1 : sig
+          (** This uses [With_nonchronological_compare.compare]. *)
+          type t = Ofday.Zoned.t
+          include Stable_without_comparator with type t := t
+        end
       end
     end
 
     module Zone : sig
-      module V1 : Stable_without_comparator with type t = Zone.Stable.V1.t
+      module V1 : Stable_without_comparator with type t = Core_zone.Stable.V1.t
+
+      module Full_data : sig
+        module V1 : Stable_without_comparator
+          with type t = Time.Stable.Zone.Full_data.V1.t
+      end
     end
   end
 

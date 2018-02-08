@@ -68,7 +68,7 @@ module Stable = struct
 
     module Ofday = struct
       module T = struct
-        type t = Core_time.Ofday.Stable.V1.t interval [@@deriving sexp, bin_io, compare]
+        type t = Core_time.Stable.Ofday.V1.t interval [@@deriving sexp, bin_io, compare]
       end
       include T
       include Comparator.Stable.V1.Make (T)

@@ -57,10 +57,7 @@ module Make (Time0 : Time0_intf.S) (Time : Time_intf.S with module Time := Time0
   end
 
   module Ofday = struct
-    (* we need to do this to satisfy ocamldep *)
-    include (Time.Ofday : module type of struct include Time.Ofday end
-             with module Stable := Time.Ofday.Stable)
-    module Stable = Time.Ofday.Stable
+    include Time.Ofday
 
     let now ~zone = Time.to_ofday ~zone (Time.now ())
 
@@ -68,12 +65,13 @@ module Make (Time0 : Time0_intf.S) (Time : Time_intf.S with module Time := Time0
       module Stable = struct
         module V1 = struct
           type t =
-            { ofday : Stable.V1.t;
-              zone  : Zone.Stable.V1.t;
+            { ofday : Time.Stable.Ofday.V1.t;
+              zone  : Core_zone.Stable.V1.t;
             }
           [@@deriving bin_io, fields, compare, hash]
 
-          type sexp_repr = Stable.V1.t * Zone.Stable.V1.t [@@deriving sexp]
+          type sexp_repr = Time.Stable.Ofday.V1.t * Core_zone.Stable.V1.t
+          [@@deriving sexp]
 
           let sexp_of_t t = [%sexp_of: sexp_repr] (t.ofday, t.zone)
 
@@ -373,14 +371,14 @@ module Make (Time0 : Time0_intf.S) (Time : Time_intf.S with module Time := Time0
       end
     end
 
-    module Span = Span.Stable
+    module Span = Time.Stable.Span
 
     module Ofday = struct
-      include Ofday.Stable
+      include Time.Stable.Ofday
       module Zoned = Ofday.Zoned.Stable
     end
 
-    module Zone = Zone.Stable
+    module Zone = Core_zone.Stable
   end
 
   include (Stable.V1 : module type of Stable.V1

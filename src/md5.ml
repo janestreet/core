@@ -1,11 +1,10 @@
 open Core_kernel.Std
 
-external digest_fd : int -> string = "core_md5_fd"
+external digest_fd : Core_unix.File_descr.t -> string = "core_md5_fd"
 
 include Md5
 
-let digest_fd_blocking fd =
-  of_binary_exn (digest_fd (Core_unix.File_descr.to_int fd))
+let digest_fd_blocking fd = of_binary_exn (digest_fd fd)
 
 let digest_file_blocking path =
   Exn.protectx

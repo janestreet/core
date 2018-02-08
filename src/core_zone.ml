@@ -4,7 +4,11 @@ module Sys = Core_sys
 
 include Core_zone_intf
 
-include Core_kernel_private.Time_zone
+include
+  (Core_kernel_private.Time_zone :
+     module type of struct
+     include Core_kernel_private.Time_zone
+   end with module Stable := Core_kernel_private.Time_zone.Stable)
 
 module Zone_cache = struct
   type z = {
@@ -165,6 +169,8 @@ let local = lazy
 ;;
 
 module Stable = struct
+  include Core_kernel_private.Time_zone.Stable
+
   module V1 = struct
     type nonrec t = t
 

@@ -191,11 +191,11 @@ module Stable = struct
   (* we want to be included in Core.Core_stable, so we can't rely on it here, forcing us to be
      careful in the type definitions below to use the stable versions. *)
   module Date                = Date.Stable
-  module Ofday               = Time.Ofday.Stable
-  module Span                = Time.Span.Stable
+  module Ofday               = Time.Stable.Ofday
+  module Span                = Time.Stable.Span
   module Day_of_week         = Day_of_week.Stable
   module Month               = Month.Stable
-  module Zone                = Time.Zone.Stable
+  module Zone                = Time.Stable.Zone
   module Binable             = Binable.Stable
   module Inclusive_exclusive = Inclusive_exclusive.Stable
 

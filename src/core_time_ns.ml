@@ -85,8 +85,8 @@ end = struct
       module T = struct
         type nonrec t = Time_ns.Span.t [@@deriving bin_io, compare]
 
-        let sexp_of_t t = Time.Span.Stable.V1.sexp_of_t (to_span t)
-        let t_of_sexp s = of_span (Time.Span.Stable.V1.t_of_sexp s)
+        let sexp_of_t t = Time.Stable.Span.V1.sexp_of_t (to_span t)
+        let t_of_sexp s = of_span (Time.Stable.Span.V1.t_of_sexp s)
 
         let of_int63_exn t = check_range (Time_ns.Span.of_int63_ns t)
         let to_int63     t = Time_ns.Span.to_int63_ns t
