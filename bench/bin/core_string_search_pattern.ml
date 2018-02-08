@@ -17,7 +17,7 @@ let y k j =
 ;;
 
 let a p = fun () -> ignore (String.Search_pattern.create p)
-let b p = fun () -> ignore (Re2.Regex.create_exn p)
+let b p = fun () -> ignore (Re2.create_exn p)
 let z p = fun () -> ignore (Pcre.regexp ~study:true p)
 
 let c h n =
@@ -26,8 +26,8 @@ let c h n =
   fun () -> assert (String.Search_pattern.index n ~in_:h = z)
 ;;
 let d h n =
-  let n = Re2.Regex.create_exn n in
-  fun () -> assert (Re2.Regex.matches n h)
+  let n = Re2.create_exn n in
+  fun () -> assert (Re2.matches n h)
 ;;
 let e h n =
   fun () -> assert (Core_extended.Extended_string.is_substring_deprecated ~substring:n h)

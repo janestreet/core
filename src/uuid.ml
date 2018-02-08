@@ -10,7 +10,13 @@
 module Stable = struct
   open Core_kernel.Core_kernel_stable
   module V1 = struct
-    type t = string [@@deriving bin_io, compare, hash, sexp]
+    module T = struct
+      type t = string [@@deriving bin_io, compare, hash, sexp]
+      include (val Comparator.V1.make ~compare ~sexp_of_t)
+    end
+    include T
+    include Comparable.V1.Make (T)
+
     let for_testing = "5a863fc1-67b7-3a0a-dc90-aca2995afbf9"
   end
 end
@@ -22,6 +28,9 @@ module Unix = Core_unix
 
 module T = struct
   type t = string [@@deriving bin_io, compare, hash]
+
+  type comparator_witness = Stable.V1.comparator_witness
+  let comparator = Stable.V1.comparator
 
   let next_counter =
     let counter = ref 0 in
@@ -103,7 +112,7 @@ end
 
 include T
 
-include Identifiable.Make (struct
+include Identifiable.Make_using_comparator (struct
     let module_name = "Core.Uuid"
     include T
     include Sexpable.Of_stringable (T)

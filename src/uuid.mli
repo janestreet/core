@@ -28,7 +28,15 @@ end
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
+    type nonrec t = t [@@deriving hash]
+    type nonrec comparator_witness = comparator_witness
+    include Stable
+      with type t := t
+      with type comparator_witness := comparator_witness
+    include Comparable.Stable.V1.S
+      with type comparable := t
+      with type comparator_witness := comparator_witness
+
     val for_testing : t
   end
 end

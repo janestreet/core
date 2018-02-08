@@ -62,29 +62,22 @@ module Make (Time0 : Time0_intf.S) (Time : Time_intf.S with module Time := Time0
     let now ~zone = Time.to_ofday ~zone (Time.now ())
 
     module Zoned = struct
-      module Stable = struct
-        module V1 = struct
-          type t =
-            { ofday : Time.Stable.Ofday.V1.t;
-              zone  : Core_zone.Stable.V1.t;
-            }
-          [@@deriving bin_io, fields, compare, hash]
+      type t =
+        { ofday : Time.Ofday.t;
+          zone  : Zone.t;
+        }
+      [@@deriving bin_io, fields, compare, hash]
 
-          type sexp_repr = Time.Stable.Ofday.V1.t * Core_zone.Stable.V1.t
-          [@@deriving sexp]
+      type sexp_repr = Time.Ofday.t * Zone.t
+      [@@deriving sexp]
 
-          let sexp_of_t t = [%sexp_of: sexp_repr] (t.ofday, t.zone)
+      let sexp_of_t t = [%sexp_of: sexp_repr] (t.ofday, t.zone)
 
-          let t_of_sexp sexp =
-            let (ofday, zone) = [%of_sexp: sexp_repr] sexp in
-            { ofday; zone; }
-          ;;
-          let to_time t date = Time.of_date_ofday ~zone:(zone t) date (ofday t)
-
-        end
-      end
-
-      include Stable.V1
+      let t_of_sexp sexp =
+        let (ofday, zone) = [%of_sexp: sexp_repr] sexp in
+        { ofday; zone; }
+      ;;
+      let to_time t date = Time.of_date_ofday ~zone:(zone t) date (ofday t)
 
       let create ofday zone = { ofday; zone }
 
@@ -122,8 +115,7 @@ module Make (Time0 : Time0_intf.S) (Time : Time_intf.S with module Time := Time0
 
   include (Time : module type of Time
            with module Zone  := Zone
-            and module Ofday := Ofday
-            and module Stable := Time.Stable)
+            and module Ofday := Ofday)
 
   let of_tm tm ~zone =
     (* Explicitly ignoring isdst, wday, yday (they are redundant with the other fields
@@ -253,137 +245,83 @@ module Make (Time0 : Time0_intf.S) (Time : Time_intf.S with module Time := Time0
       let module_name = "Core.Time"
     end)
 
-  module Stable = struct
-    module V1 = struct
-      (* IF THIS REPRESENTATION EVER CHANGES, ENSURE THAT EITHER
-         (1) all values serialize the same way in both representations, or
-         (2) you add a new Time version to stable.ml *)
-      type nonrec t = t [@@deriving bin_io, compare]
-      type nonrec comparator_witness = comparator_witness
+  let sexp_zone = ref Zone.local
+  let get_sexp_zone () = (Lazy.force !sexp_zone)
+  let set_sexp_zone zone = sexp_zone := lazy zone
 
-      let comparator = comparator
+  let t_of_sexp_gen ~if_no_timezone sexp =
+    try
+      match sexp with
+      | Sexp.List [Sexp.Atom date; Sexp.Atom ofday; Sexp.Atom tz] ->
+        of_date_ofday ~zone:(Zone.find_exn tz)
+          (Date.of_string date) (Ofday.of_string ofday)
+      (* This is actually where the output of [sexp_of_t] is handled, since that's e.g.
+         (2015-07-06 09:09:44.787988+01:00). *)
+      | Sexp.List [Sexp.Atom date; Sexp.Atom ofday_and_possibly_zone] ->
+        of_string_gen ~if_no_timezone (date ^ " " ^ ofday_and_possibly_zone)
+      | Sexp.Atom datetime ->
+        of_string_gen ~if_no_timezone datetime
+      | _ -> of_sexp_error "Time.t_of_sexp" sexp
+    with
+    | Of_sexp_error _ as e -> raise e
+    | e -> of_sexp_error (sprintf "Time.t_of_sexp: %s" (Exn.to_string e)) sexp
+  ;;
 
-      let sexp_zone = ref Zone.local
-      let get_sexp_zone () = (Lazy.force !sexp_zone)
-      let set_sexp_zone zone = sexp_zone := lazy zone
+  let t_of_sexp sexp =
+    t_of_sexp_gen sexp ~if_no_timezone:(`Use_this_one (Lazy.force !sexp_zone))
+  let t_of_sexp_abs sexp =
+    t_of_sexp_gen sexp ~if_no_timezone:`Fail
 
-      let t_of_sexp_gen ~if_no_timezone sexp =
-        try
-          match sexp with
-          | Sexp.List [Sexp.Atom date; Sexp.Atom ofday; Sexp.Atom tz] ->
-            of_date_ofday ~zone:(Zone.find_exn tz)
-              (Date.of_string date) (Ofday.of_string ofday)
-          (* This is actually where the output of [sexp_of_t] is handled, since that's e.g.
-             (2015-07-06 09:09:44.787988+01:00). *)
-          | Sexp.List [Sexp.Atom date; Sexp.Atom ofday_and_possibly_zone] ->
-            of_string_gen ~if_no_timezone (date ^ " " ^ ofday_and_possibly_zone)
-          | Sexp.Atom datetime ->
-            of_string_gen ~if_no_timezone datetime
-          | _ -> of_sexp_error "Time.t_of_sexp" sexp
-        with
-        | Of_sexp_error _ as e -> raise e
-        | e -> of_sexp_error (sprintf "Time.t_of_sexp: %s" (Exn.to_string e)) sexp
-      ;;
+  let sexp_of_t_abs t ~zone =
+    Sexp.List (List.map (Time.to_string_abs_parts ~zone t) ~f:(fun s -> Sexp.Atom s))
+  ;;
 
-      let t_of_sexp sexp =
-        t_of_sexp_gen sexp ~if_no_timezone:(`Use_this_one (Lazy.force !sexp_zone))
-      let t_of_sexp_abs sexp =
-        t_of_sexp_gen sexp ~if_no_timezone:`Fail
+  let sexp_of_t t = sexp_of_t_abs ~zone:(Lazy.force !sexp_zone) t
 
-      let sexp_of_t_abs t ~zone =
-        Sexp.List (List.map (Time.to_string_abs_parts ~zone t) ~f:(fun s -> Sexp.Atom s))
-      ;;
+  module type C = Comparable.Map_and_set_binable
+    with type t := t
+     and type comparator_witness := comparator_witness
 
-      let sexp_of_t t = sexp_of_t_abs ~zone:(Lazy.force !sexp_zone) t
+  let make_comparable ?(sexp_of_t = sexp_of_t) ?(t_of_sexp = t_of_sexp) ()
+    : (module C) =
+    (module struct
+      module C = struct
+        type nonrec t = t [@@deriving bin_io]
 
-      module type C = Comparable.Map_and_set_binable
-        with type t := t
-         and type comparator_witness := comparator_witness
+        type nonrec comparator_witness = comparator_witness
 
-      let make_comparable ?(sexp_of_t = sexp_of_t) ?(t_of_sexp = t_of_sexp) ()
-        : (module C) =
-        (module struct
-          module C = struct
-            type nonrec t = t [@@deriving bin_io]
+        let comparator = comparator
 
-            type nonrec comparator_witness = comparator_witness
+        let sexp_of_t = sexp_of_t
 
-            let comparator = comparator
-
-            let sexp_of_t = sexp_of_t
-
-            let t_of_sexp = t_of_sexp
-          end
-
-          include C
-
-          module Map = Map.Make_binable_using_comparator (C)
-          module Set = Set.Make_binable_using_comparator (C)
-        end)
-
-      (* In 108.06a and earlier, times in sexps of Maps and Sets were raw floats.  From
-         108.07 through 109.13, the output format remained raw as before, but both the raw
-         and pretty format were accepted as input.  From 109.14 on, the output format was
-         changed from raw to pretty, while continuing to accept both formats.  Once we
-         believe most programs are beyond 109.14, we will switch the input format to no
-         longer accept raw. *)
-      include (val make_comparable () ~t_of_sexp:(fun sexp ->
-        match Option.try_with (fun () ->
-          of_span_since_epoch (Span.of_sec (Float.t_of_sexp sexp))) with
-        | Some t -> t
-        | None -> t_of_sexp sexp
-      ))
-
-      let%test _ =
-        Set.equal
-          (Set.of_list [epoch])
-          (Set.t_of_sexp
-             (Sexp.List [Float.sexp_of_t (Span.to_sec (to_span_since_epoch epoch))]))
-      ;;
-    end
-
-    module With_utc_sexp = struct
-      module V1 = struct
-        include (V1 : module type of V1 with module Map := V1.Map and module Set := V1.Set)
-
-        let sexp_of_t t = sexp_of_t_abs t ~zone:Zone.utc
-
-        include (val make_comparable ~sexp_of_t ())
+        let t_of_sexp = t_of_sexp
       end
-      module V2 = struct
-        module C = struct
-          include Time.Stable.With_utc_sexp.V2
 
-          type nonrec comparator_witness = comparator_witness
+      include C
 
-          let comparator = comparator
-        end
-        include C
-        include Comparable.Stable.V1.Make (C)
-      end
-    end
+      module Map = Map.Make_binable_using_comparator (C)
+      module Set = Set.Make_binable_using_comparator (C)
+    end)
 
-    module With_t_of_sexp_abs = struct
-      module V1 = struct
-        include (V1 : module type of V1 with module Map := V1.Map and module Set := V1.Set)
+  (* In 108.06a and earlier, times in sexps of Maps and Sets were raw floats.  From
+     108.07 through 109.13, the output format remained raw as before, but both the raw
+     and pretty format were accepted as input.  From 109.14 on, the output format was
+     changed from raw to pretty, while continuing to accept both formats.  Once we
+     believe most programs are beyond 109.14, we will switch the input format to no
+     longer accept raw. *)
+  include (val make_comparable () ~t_of_sexp:(fun sexp ->
+    match Option.try_with (fun () ->
+      of_span_since_epoch (Span.of_sec (Float.t_of_sexp sexp))) with
+    | Some t -> t
+    | None -> t_of_sexp sexp
+  ))
 
-        let t_of_sexp = t_of_sexp_abs
-      end
-    end
-
-    module Span = Time.Stable.Span
-
-    module Ofday = struct
-      include Time.Stable.Ofday
-      module Zoned = Ofday.Zoned.Stable
-    end
-
-    module Zone = Core_zone.Stable
-  end
-
-  include (Stable.V1 : module type of Stable.V1
-           with type t := t
-            and type comparator_witness := comparator_witness)
+  let%test _ =
+    Set.equal
+      (Set.of_list [epoch])
+      (Set.t_of_sexp
+         (Sexp.List [Float.sexp_of_t (Span.to_sec (to_span_since_epoch epoch))]))
+  ;;
 
   include Hashable.Make_binable (struct
       type nonrec t = t [@@deriving bin_io, compare, hash, sexp]

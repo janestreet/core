@@ -1296,13 +1296,14 @@ module Base = struct
       match exn with
       | Failed_to_parse_command_line _ when Cmdline.ends_in_complete args ->
         exit 0
-      | Failed_to_parse_command_line msg ->
-        print_endline "Error parsing command line.  Run with -help for usage information.";
-        prerr_endline msg;
-        exit 1
       | _ ->
-        print_endline (Lazy.force help_text);
-        raise exn
+        print_endline "Error parsing command line.  Run with -help for usage information.";
+        (match exn with
+        | Failed_to_parse_command_line msg ->
+          prerr_endline msg;
+        | _ ->
+          prerr_endline (Sexp.to_string_hum ([%sexp (exn : exn)])));
+        exit 1
 
   module Spec = struct
 
