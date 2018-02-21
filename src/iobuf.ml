@@ -1,4 +1,4 @@
-#import "config.h"
+[%%import "config.h"]
 
 module Bigstring_in_this_directory = Bigstring
 open! Import
@@ -385,13 +385,13 @@ let read_bin_prot reader t ~pos =
 module Consume = struct
   type src = (read, seek) t
   module To (Dst : sig
-               type t [@@deriving sexp_of]
-               val create : len:int -> t
-               val length : t -> int
-               val get : t -> int -> char
-               val set : t -> int -> char -> unit
-               val unsafe_blit : (T.t, t) Blit.blit
-             end) = struct
+      type t [@@deriving sexp_of]
+      val create : len:int -> t
+      val length : t -> int
+      val get : t -> int -> char
+      val set : t -> int -> char -> unit
+      val unsafe_blit : (T.t, t) Blit.blit
+    end) = struct
     include Test_blit.Make_distinct_and_test (Char_elt) (T_src) (Dst)
 
     let blit ~src ~dst ~dst_pos ~len =
@@ -1073,7 +1073,7 @@ let recvfrom_assume_fd_is_nonblocking t fd =
   sockaddr
 ;;
 
-#ifdef JSC_RECVMMSG
+[%%ifdef JSC_RECVMMSG]
 
 (* Allocate and pre-populate the [struct mmsghdr]s and associated [struct iovec]s. Reusing
    this context reduces the cost of calls to [recvmmsg] considerably if the iobuf array is
@@ -1132,8 +1132,8 @@ let recvmmsg_assume_fd_is_nonblocking =
   | _            -> Ok                     recvmmsg_assume_fd_is_nonblocking
 ;;
 
-#else
-                                    (* not JSC_RECVMMSG *)
+[%%else]
+(* not JSC_RECVMMSG *)
 
 module Recvmmsg_context = struct
   type t = unit
@@ -1144,8 +1144,8 @@ let recvmmsg_assume_fd_is_nonblocking =
   Or_error.unimplemented "Iobuf.recvmmsg_assume_fd_is_nonblocking"
 ;;
 
-#endif
-                                    (* JSC_RECVMMSG *)
+[%%endif]
+(* JSC_RECVMMSG *)
 
 let unsafe_sent t result =
   if Syscall_result.Int.is_ok result
@@ -1660,91 +1660,91 @@ let to_string_hum = Hexdump.to_string_hum
  * │ [iobuf.ml:Blit tests] Blit.unsafe_blit [overlap]:10000 │ 1_377.01ns │    100.00% │
  * └────────────────────────────────────────────────────────┴────────────┴────────────┘ *)
 let%bench_module "Blit tests" = (module struct
-  let lengths = [5; 10; 100; 1000; 10_000]
+                                  let lengths = [5; 10; 100; 1000; 10_000]
 
-  let%bench_fun "string blit" [@indexed len = lengths] =
-    let buf = create ~len in
-    let str = Bytes.create len in
-    (fun () -> Peek.To_bytes.blit ~src:buf ~dst:str ~src_pos:0 ~dst_pos:0 ~len)
+                                  let%bench_fun "string blit" [@indexed len = lengths] =
+let buf = create ~len in
+let str = Bytes.create len in
+(fun () -> Peek.To_bytes.blit ~src:buf ~dst:str ~src_pos:0 ~dst_pos:0 ~len)
 
-  let%bench_fun "Blit" [@indexed len = lengths] =
-    let src = create ~len in
-    let dst = create ~len in
-    (fun () -> Blit.blito () ~src ~dst)
+let%bench_fun "Blit" [@indexed len = lengths] =
+let src = create ~len in
+let dst = create ~len in
+(fun () -> Blit.blito () ~src ~dst)
 
-  let%bench_fun "Blit_consume" [@indexed len = lengths] =
-    let src = create ~len in
-    let dst = create ~len in
-    (fun () -> Blit_consume.blito () ~src ~dst; reset src)
+let%bench_fun "Blit_consume" [@indexed len = lengths] =
+let src = create ~len in
+let dst = create ~len in
+(fun () -> Blit_consume.blito () ~src ~dst; reset src)
 
-  let%bench_fun "Blit_fill" [@indexed len = lengths] =
-    let src = create ~len in
-    let dst = create ~len in
-    (fun () -> Blit_fill.blito () ~src ~dst; reset dst)
+let%bench_fun "Blit_fill" [@indexed len = lengths] =
+let src = create ~len in
+let dst = create ~len in
+(fun () -> Blit_fill.blito () ~src ~dst; reset dst)
 
-  let%bench_fun "Blit_consume_and_fill" [@indexed len = lengths] =
-    let src = create ~len in
-    let dst = create ~len in
-    (fun () -> Blit_consume_and_fill.blito () ~src ~dst; reset src; reset dst)
+let%bench_fun "Blit_consume_and_fill" [@indexed len = lengths] =
+let src = create ~len in
+let dst = create ~len in
+(fun () -> Blit_consume_and_fill.blito () ~src ~dst; reset src; reset dst)
 
-  let%bench_fun "Blit.unsafe_blit [overlap]" [@indexed len = lengths] =
-    let t = create ~len:(len + 1) in
-    (fun () -> Blit.unsafe_blit ~src:t ~dst:t ~len ~src_pos:0 ~dst_pos:1)
+let%bench_fun "Blit.unsafe_blit [overlap]" [@indexed len = lengths] =
+let t = create ~len:(len + 1) in
+(fun () -> Blit.unsafe_blit ~src:t ~dst:t ~len ~src_pos:0 ~dst_pos:1)
 
 end)
 
 let%bench_module "Poke tests" = (module struct
-  let offsets = List.init 9 ~f:Fn.id
-  let iobuf = create ~len:100
+                                  let offsets = List.init 9 ~f:Fn.id
+                                  let iobuf = create ~len:100
 
-  (* We test at different offsets to see if various byte alignments have a significant
-     effect on performance. *)
-  let%bench_fun "char"      [@indexed pos = offsets] = (fun () -> Poke.char      iobuf ~pos 'a')
-  let%bench_fun "uint8"     [@indexed pos = offsets] = (fun () -> Poke.uint8     iobuf ~pos pos)
-  let%bench_fun "int8"      [@indexed pos = offsets] = (fun () -> Poke.int8      iobuf ~pos pos)
-  let%bench_fun "int16_be"  [@indexed pos = offsets] = (fun () -> Poke.int16_be  iobuf ~pos pos)
-  let%bench_fun "int16_le"  [@indexed pos = offsets] = (fun () -> Poke.int16_le  iobuf ~pos pos)
-  let%bench_fun "uint16_be" [@indexed pos = offsets] = (fun () -> Poke.uint16_be iobuf ~pos pos)
-  let%bench_fun "uint16_le" [@indexed pos = offsets] = (fun () -> Poke.uint16_le iobuf ~pos pos)
-  let%bench_fun "int32_be"  [@indexed pos = offsets] = (fun () -> Poke.int32_be  iobuf ~pos pos)
-  let%bench_fun "int32_le"  [@indexed pos = offsets] = (fun () -> Poke.int32_le  iobuf ~pos pos)
-  let%bench_fun "uint32_be" [@indexed pos = offsets] = (fun () -> Poke.uint32_be iobuf ~pos pos)
-  let%bench_fun "uint32_le" [@indexed pos = offsets] = (fun () -> Poke.uint32_le iobuf ~pos pos)
-  let%bench_fun "int64_be"  [@indexed pos = offsets] = (fun () -> Poke.int64_be  iobuf ~pos pos)
-  let%bench_fun "int64_le"  [@indexed pos = offsets] = (fun () -> Poke.int64_le  iobuf ~pos pos)
+                                  (* We test at different offsets to see if various byte alignments have a significant
+                                     effect on performance. *)
+                                  let%bench_fun "char"      [@indexed pos = offsets] = (fun () -> Poke.char      iobuf ~pos 'a')
+let%bench_fun "uint8"     [@indexed pos = offsets] = (fun () -> Poke.uint8     iobuf ~pos pos)
+let%bench_fun "int8"      [@indexed pos = offsets] = (fun () -> Poke.int8      iobuf ~pos pos)
+let%bench_fun "int16_be"  [@indexed pos = offsets] = (fun () -> Poke.int16_be  iobuf ~pos pos)
+let%bench_fun "int16_le"  [@indexed pos = offsets] = (fun () -> Poke.int16_le  iobuf ~pos pos)
+let%bench_fun "uint16_be" [@indexed pos = offsets] = (fun () -> Poke.uint16_be iobuf ~pos pos)
+let%bench_fun "uint16_le" [@indexed pos = offsets] = (fun () -> Poke.uint16_le iobuf ~pos pos)
+let%bench_fun "int32_be"  [@indexed pos = offsets] = (fun () -> Poke.int32_be  iobuf ~pos pos)
+let%bench_fun "int32_le"  [@indexed pos = offsets] = (fun () -> Poke.int32_le  iobuf ~pos pos)
+let%bench_fun "uint32_be" [@indexed pos = offsets] = (fun () -> Poke.uint32_be iobuf ~pos pos)
+let%bench_fun "uint32_le" [@indexed pos = offsets] = (fun () -> Poke.uint32_le iobuf ~pos pos)
+let%bench_fun "int64_be"  [@indexed pos = offsets] = (fun () -> Poke.int64_be  iobuf ~pos pos)
+let%bench_fun "int64_le"  [@indexed pos = offsets] = (fun () -> Poke.int64_le  iobuf ~pos pos)
 end)
 
 let%bench_module "Peek tests" = (module struct
-  let offsets = List.init 9 ~f:Fn.id
-  let iobuf = of_string (String.make 100 '\000')
+                                  let offsets = List.init 9 ~f:Fn.id
+                                  let iobuf = of_string (String.make 100 '\000')
 
-  let%bench_fun "char"      [@indexed pos = offsets] = (fun () -> ignore (Peek.char      iobuf ~pos))
-  let%bench_fun "uint8"     [@indexed pos = offsets] = (fun () -> ignore (Peek.uint8     iobuf ~pos))
-  let%bench_fun "int8"      [@indexed pos = offsets] = (fun () -> ignore (Peek.int8      iobuf ~pos))
-  let%bench_fun "int16_be"  [@indexed pos = offsets] = (fun () -> ignore (Peek.int16_be  iobuf ~pos))
-  let%bench_fun "int16_le"  [@indexed pos = offsets] = (fun () -> ignore (Peek.int16_le  iobuf ~pos))
-  let%bench_fun "uint16_be" [@indexed pos = offsets] = (fun () -> ignore (Peek.uint16_be iobuf ~pos))
-  let%bench_fun "uint16_le" [@indexed pos = offsets] = (fun () -> ignore (Peek.uint16_le iobuf ~pos))
-  let%bench_fun "int32_be"  [@indexed pos = offsets] = (fun () -> ignore (Peek.int32_be  iobuf ~pos))
-  let%bench_fun "int32_le"  [@indexed pos = offsets] = (fun () -> ignore (Peek.int32_le  iobuf ~pos))
-  let%bench_fun "uint32_be" [@indexed pos = offsets] = (fun () -> ignore (Peek.uint32_be iobuf ~pos))
-  let%bench_fun "uint32_le" [@indexed pos = offsets] = (fun () -> ignore (Peek.uint32_le iobuf ~pos))
-  let%bench_fun "int64_be"  [@indexed pos = offsets] = (fun () -> ignore (Peek.int64_be  iobuf ~pos))
-  let%bench_fun "int64_le"  [@indexed pos = offsets] = (fun () -> ignore (Peek.int64_le  iobuf ~pos))
+                                  let%bench_fun "char"      [@indexed pos = offsets] = (fun () -> ignore (Peek.char      iobuf ~pos))
+let%bench_fun "uint8"     [@indexed pos = offsets] = (fun () -> ignore (Peek.uint8     iobuf ~pos))
+let%bench_fun "int8"      [@indexed pos = offsets] = (fun () -> ignore (Peek.int8      iobuf ~pos))
+let%bench_fun "int16_be"  [@indexed pos = offsets] = (fun () -> ignore (Peek.int16_be  iobuf ~pos))
+let%bench_fun "int16_le"  [@indexed pos = offsets] = (fun () -> ignore (Peek.int16_le  iobuf ~pos))
+let%bench_fun "uint16_be" [@indexed pos = offsets] = (fun () -> ignore (Peek.uint16_be iobuf ~pos))
+let%bench_fun "uint16_le" [@indexed pos = offsets] = (fun () -> ignore (Peek.uint16_le iobuf ~pos))
+let%bench_fun "int32_be"  [@indexed pos = offsets] = (fun () -> ignore (Peek.int32_be  iobuf ~pos))
+let%bench_fun "int32_le"  [@indexed pos = offsets] = (fun () -> ignore (Peek.int32_le  iobuf ~pos))
+let%bench_fun "uint32_be" [@indexed pos = offsets] = (fun () -> ignore (Peek.uint32_be iobuf ~pos))
+let%bench_fun "uint32_le" [@indexed pos = offsets] = (fun () -> ignore (Peek.uint32_le iobuf ~pos))
+let%bench_fun "int64_be"  [@indexed pos = offsets] = (fun () -> ignore (Peek.int64_be  iobuf ~pos))
+let%bench_fun "int64_le"  [@indexed pos = offsets] = (fun () -> ignore (Peek.int64_le  iobuf ~pos))
 end)
 
 let%bench_module "Fill.decimal tests" = (module struct
-  (* Quantify the gain from our version of [Fill.decimal] over [Int.to_string]. *)
-  let values =
-    [ Int.min_value; Int.min_value + 1; -10_000; 0; 35; 1_000; 1_000_000; Int.max_value ]
-  let iobuf = create ~len:32
+                                          (* Quantify the gain from our version of [Fill.decimal] over [Int.to_string]. *)
+                                          let values =
+                                            [ Int.min_value; Int.min_value + 1; -10_000; 0; 35; 1_000; 1_000_000; Int.max_value ]
+                                          let iobuf = create ~len:32
 
-  let%bench_fun "Fill.decimal" [@indexed x = values] =
-    (fun () -> reset iobuf; Fill.decimal iobuf x)
-  let%bench_fun "Unsafe.Fill.decimal" [@indexed x = values] =
-    (fun () -> reset iobuf; Unsafe.Fill.decimal iobuf x)
-  let%bench_fun "Unsafe.Fill.string Int.to_string" [@indexed x = values] =
-    (fun () -> reset iobuf; Fill.stringo iobuf (Int.to_string x))
+                                          let%bench_fun "Fill.decimal" [@indexed x = values] =
+(fun () -> reset iobuf; Fill.decimal iobuf x)
+let%bench_fun "Unsafe.Fill.decimal" [@indexed x = values] =
+(fun () -> reset iobuf; Unsafe.Fill.decimal iobuf x)
+let%bench_fun "Unsafe.Fill.string Int.to_string" [@indexed x = values] =
+(fun () -> reset iobuf; Fill.stringo iobuf (Int.to_string x))
 end)
 
 (* In an attempt to verify how much a phys_equal check could optimize

@@ -1,4 +1,4 @@
-#import "config.h"
+[%%import "config.h"]
 
 open! Import
 open Unix
@@ -54,13 +54,13 @@ let get_opt_len bstr ~pos = function
 let check_min_len ~loc ~len = function
   | None -> 0
   | Some min_len ->
-      if min_len > len then (
-        let msg = sprintf "%s: min_len (%d) > len (%d)" loc min_len len in
-        invalid_arg msg);
-      if min_len < 0 then (
-        let msg = sprintf "%s: min_len (%d) < 0" loc min_len in
-        invalid_arg msg);
-      min_len
+    if min_len > len then (
+      let msg = sprintf "%s: min_len (%d) > len (%d)" loc min_len len in
+      invalid_arg msg);
+    if min_len < 0 then (
+      let msg = sprintf "%s: min_len (%d) < 0" loc min_len in
+      invalid_arg msg);
+    min_len
 
 let sub_shared ?(pos = 0) ?len (bstr : t) =
   let len = get_opt_len bstr ~pos len in
@@ -157,15 +157,15 @@ let pwrite_assume_fd_is_nonblocking fd ~offset ?(pos = 0) ?len bstr =
   check_args ~loc ~pos ~len bstr;
   unsafe_pwrite_assume_fd_is_nonblocking fd ~offset ~pos ~len bstr
 
-#ifdef JSC_MSG_NOSIGNAL
-#define JSC_NOSIGPIPE
-#endif
+[%%ifdef JSC_MSG_NOSIGNAL]
+[%%define JSC_NOSIGPIPE]
+[%%endif]
 
-#ifdef JSC_SO_NOSIGPIPE
-#define JSC_NOSIGPIPE
-#endif
+[%%ifdef JSC_SO_NOSIGPIPE]
+[%%define JSC_NOSIGPIPE]
+[%%endif]
 
-#ifdef JSC_NOSIGPIPE
+[%%ifdef JSC_NOSIGPIPE]
 
 external unsafe_really_send_no_sigpipe
   : file_descr -> pos : int -> len : int -> t -> unit
@@ -200,7 +200,7 @@ let sendto_nonblocking_no_sigpipe         = Ok sendto_nonblocking_no_sigpipe
 let unsafe_really_send_no_sigpipe         = Ok unsafe_really_send_no_sigpipe
 let unsafe_send_nonblocking_no_sigpipe    = Ok unsafe_send_nonblocking_no_sigpipe
 
-#else
+[%%else]
 
 let u = Or_error.unimplemented
 let really_send_no_sigpipe             = u "Bigstring.really_send_no_sigpipe"
@@ -209,7 +209,7 @@ let sendto_nonblocking_no_sigpipe      = u "Bigstring.sendto_nonblocking_no_sigp
 let unsafe_really_send_no_sigpipe      = u "Bigstring.unsafe_really_send_no_sigpipe"
 let unsafe_send_nonblocking_no_sigpipe = u "Bigstring.unsafe_send_nonblocking_no_sigpipe"
 
-#endif
+[%%endif]
 
 external unsafe_write
   : file_descr -> pos : int -> len : int -> t -> int = "bigstring_write_stub"
@@ -235,10 +235,10 @@ external unsafe_writev
 let get_iovec_count loc iovecs = function
   | None -> Array.length iovecs
   | Some count ->
-      if count < 0 then invalid_arg (loc ^ ": count < 0");
-      let n_iovecs = Array.length iovecs in
-      if count > n_iovecs then invalid_arg (loc ^ ": count > n_iovecs");
-      count
+    if count < 0 then invalid_arg (loc ^ ": count < 0");
+    let n_iovecs = Array.length iovecs in
+    if count > n_iovecs then invalid_arg (loc ^ ": count > n_iovecs");
+    count
 
 let writev fd ?count iovecs =
   let count = get_iovec_count "writev" iovecs count in
@@ -269,44 +269,44 @@ let really_output oc ?(pos = 0) ?len bstr =
   check_args ~loc:"really_output" ~pos ~len bstr;
   ignore (unsafe_output oc ~min_len:len ~pos ~len bstr)
 
-#ifdef JSC_RECVMMSG
+[%%ifdef JSC_RECVMMSG]
 
 external unsafe_recvmmsg_assume_fd_is_nonblocking
   :  file_descr
-  -> t Core_unix.IOVec.t array
-  -> int
-  -> sockaddr array option
-  -> int array
-  -> int
+    -> t Core_unix.IOVec.t array
+    -> int
+    -> sockaddr array option
+    -> int array
+    -> int
   = "bigstring_recvmmsg_assume_fd_is_nonblocking_stub"
 
 let%test_module _ = (module struct
-  let expect_invalid_argument ?msg f =
-    assert (try ignore (f () : int); false
-            with Invalid_argument s ->
-              match msg with
-              | None -> true
-              | Some x when String.equal x s -> true
-              | Some x -> failwithf "expected %S but got %S" x s ())
-  ;;
+                      let expect_invalid_argument ?msg f =
+                        assert (try ignore (f () : int); false
+                                with Invalid_argument s ->
+                                match msg with
+                                | None -> true
+                                | Some x when String.equal x s -> true
+                                | Some x -> failwithf "expected %S but got %S" x s ())
+                      ;;
 
-  let check_invalid ?msg count =
-    let fd = Core_unix.socket ~domain:PF_INET ~kind:SOCK_DGRAM ~protocol:0 in
-    expect_invalid_argument ?msg
-      (fun () -> unsafe_recvmmsg_assume_fd_is_nonblocking fd [||] count None [||])
+                      let check_invalid ?msg count =
+                        let fd = Core_unix.socket ~domain:PF_INET ~kind:SOCK_DGRAM ~protocol:0 in
+                        expect_invalid_argument ?msg
+                          (fun () -> unsafe_recvmmsg_assume_fd_is_nonblocking fd [||] count None [||])
 
 
-  let%test_unit "unsafe_recvmmsg_assume_fd_is_nonblocking: check count bounds" =
-    check_invalid (-1);
-    check_invalid Int.min_value;
-    check_invalid 65; (* RECVMMSG_MAX_COUNT = 64 *)
-    if arch_sixtyfour then begin
-      (* We are assuming that [unsigned int] is 32 bits wide. *)
-      check_invalid (Int64.to_int_exn 0xFFFF_FFFFL); (* exceeds RECVMMSG_MAX_COUNT *)
-      check_invalid (Int64.to_int_exn 0x1FFFF_FFFFL) (* exceeds unsigned int *)
-    end
-  ;;
-end)
+                      let%test_unit "unsafe_recvmmsg_assume_fd_is_nonblocking: check count bounds" =
+                        check_invalid (-1);
+                        check_invalid Int.min_value;
+                        check_invalid 65; (* RECVMMSG_MAX_COUNT = 64 *)
+                        if arch_sixtyfour then begin
+                          (* We are assuming that [unsigned int] is 32 bits wide. *)
+                          check_invalid (Int64.to_int_exn 0xFFFF_FFFFL); (* exceeds RECVMMSG_MAX_COUNT *)
+                          check_invalid (Int64.to_int_exn 0x1FFFF_FFFFL) (* exceeds unsigned int *)
+                        end
+                      ;;
+                    end)
 
 
 let recvmmsg_assume_fd_is_nonblocking fd ?count ?srcs iovecs ~lens =
@@ -321,40 +321,40 @@ let recvmmsg_assume_fd_is_nonblocking fd ?count ?srcs iovecs ~lens =
 ;;
 
 let%test_module "recvmmsg smoke" = (module struct
-  module IOVec = Core_unix.IOVec
-  module Inet_addr = Core_unix.Inet_addr
+                                     module IOVec = Core_unix.IOVec
+                                     module Inet_addr = Core_unix.Inet_addr
 
-  let count = 10
-  let fd = socket PF_INET SOCK_DGRAM 0
-  let () = bind fd (ADDR_INET (Inet_addr.bind_any, 0))
-  let iovecs = Array.init count ~f:(fun _ -> IOVec.of_bigstring (create 1500))
-  let srcs = Array.create ~len:count (ADDR_INET (Inet_addr.bind_any, 0))
-  let lens = Array.create ~len:count 0
-  let short_srcs = Array.create ~len:(count - 1) (ADDR_INET (Inet_addr.bind_any, 0))
-  let () = set_nonblock fd
+                                     let count = 10
+                                     let fd = socket PF_INET SOCK_DGRAM 0
+                                     let () = bind fd (ADDR_INET (Inet_addr.bind_any, 0))
+                                     let iovecs = Array.init count ~f:(fun _ -> IOVec.of_bigstring (create 1500))
+                                     let srcs = Array.create ~len:count (ADDR_INET (Inet_addr.bind_any, 0))
+                                     let lens = Array.create ~len:count 0
+                                     let short_srcs = Array.create ~len:(count - 1) (ADDR_INET (Inet_addr.bind_any, 0))
+                                     let () = set_nonblock fd
 
-  let test ?count ?srcs ~lens ok_pred error_pred =
-    [%test_pred: (int, exn) Result.t]
-      (function Ok i -> ok_pred i | Error e -> error_pred e)
-      (Result.try_with
-         (fun () -> recvmmsg_assume_fd_is_nonblocking fd iovecs ?count ?srcs ~lens)
-      )
-  (* We return -EAGAIN and -EWOULDBLOCK directly as values, rather than as exceptions.
-     So, allow negative results. *)
-  let%test_unit _ =
-    test ~count ~srcs ~lens ((>=) 0) (function Unix_error _ -> true | _ -> false)
-  let%test_unit _ = test ~lens ((>=) 0) (function Unix_error _ -> true | _ -> false)
-  let%test_unit _ =
-    test ~count:(count / 2) ~srcs ~lens ((>=) 0)
-      (function Unix_error _ -> true | _ -> false)
-  let%test_unit _ =
-    test ~count:0 ~srcs ~lens ((>=) 0) (function Unix_error _ -> true | _ -> false)
-  let%test_unit _ =
-    test ~count:(count + 1) ~lens (const false)
-      (function Unix_error _ -> false | _ -> true)
-  let%test_unit _ =
-    test ~srcs:short_srcs ~lens (const false) (function Unix_error _ -> false | _ -> true)
-end)
+                                     let test ?count ?srcs ~lens ok_pred error_pred =
+                                       [%test_pred: (int, exn) Result.t]
+                                         (function Ok i -> ok_pred i | Error e -> error_pred e)
+                                         (Result.try_with
+                                            (fun () -> recvmmsg_assume_fd_is_nonblocking fd iovecs ?count ?srcs ~lens)
+                                         )
+                                     (* We return -EAGAIN and -EWOULDBLOCK directly as values, rather than as exceptions.
+                                        So, allow negative results. *)
+                                     let%test_unit _ =
+                                       test ~count ~srcs ~lens ((>=) 0) (function Unix_error _ -> true | _ -> false)
+                                     let%test_unit _ = test ~lens ((>=) 0) (function Unix_error _ -> true | _ -> false)
+                                     let%test_unit _ =
+                                       test ~count:(count / 2) ~srcs ~lens ((>=) 0)
+                                         (function Unix_error _ -> true | _ -> false)
+                                     let%test_unit _ =
+                                       test ~count:0 ~srcs ~lens ((>=) 0) (function Unix_error _ -> true | _ -> false)
+                                     let%test_unit _ =
+                                       test ~count:(count + 1) ~lens (const false)
+                                         (function Unix_error _ -> false | _ -> true)
+                                     let%test_unit _ =
+                                       test ~srcs:short_srcs ~lens (const false) (function Unix_error _ -> false | _ -> true)
+                                   end)
 ;;
 
 let recvmmsg_assume_fd_is_nonblocking =
@@ -376,19 +376,19 @@ let recvmmsg_assume_fd_is_nonblocking =
   | _ -> ok
 ;;
 
-#else
-                                    (* NDEF RECVMMSG *)
+[%%else]
+(* NDEF RECVMMSG *)
 
 let recvmmsg_assume_fd_is_nonblocking =
   Or_error.unimplemented "Bigstring.recvmmsg_assume_fd_is_nonblocking"
 ;;
 
-#endif
-                                   (* RECVMMSG *)
+[%%endif]
+(* RECVMMSG *)
 
 (* Memory mapping *)
 
-#ifdef JSC_MSG_NOSIGNAL
+[%%ifdef JSC_MSG_NOSIGNAL]
 (* Input and output, linux only *)
 
 external unsafe_sendmsg_nonblocking_no_sigpipe
@@ -407,7 +407,7 @@ let sendmsg_nonblocking_no_sigpipe fd ?count iovecs =
 let sendmsg_nonblocking_no_sigpipe        = Ok sendmsg_nonblocking_no_sigpipe
 let unsafe_sendmsg_nonblocking_no_sigpipe = Ok unsafe_sendmsg_nonblocking_no_sigpipe
 
-#else
+[%%else]
 
 let sendmsg_nonblocking_no_sigpipe =
   Or_error.unimplemented "Bigstring.sendmsg_nonblocking_no_sigpipe"
@@ -417,7 +417,7 @@ let unsafe_sendmsg_nonblocking_no_sigpipe =
   Or_error.unimplemented "Bigstring.unsafe_sendmsg_nonblocking_no_sigpipe"
 ;;
 
-#endif
+[%%endif]
 
 (* Memory mapping *)
 

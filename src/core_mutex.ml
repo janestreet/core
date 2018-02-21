@@ -1,9 +1,9 @@
-#import "config.h"
+[%%import "config.h"]
 
 open! Import
 open Import_time
 
-#ifdef JSC_MUTEX_TIMED_LOCK
+[%%ifdef JSC_MUTEX_TIMED_LOCK]
 
 include Mutex0
 
@@ -16,10 +16,10 @@ let timedlock mtx time =
 
 let timedlock = Ok timedlock
 
-#else
+[%%else]
 
 include Mutex0
 
 let timedlock = Or_error.unimplemented "Mutex.timedlock"
 
-#endif
+[%%endif]

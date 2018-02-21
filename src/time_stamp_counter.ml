@@ -67,7 +67,7 @@
    computationally more expensive and we use a simpler linear approximation.
 *)
 
-#import "config.h"
+[%%import "config.h"]
 
 open! Import
 
@@ -89,7 +89,7 @@ let diff t1 t2 = Int63.(-) t1 t2
 let add t s = Int63.(+) t s
 let to_int63 t = t
 
-#ifdef JSC_ARCH_SIXTYFOUR
+[%%ifdef JSC_ARCH_SIXTYFOUR]
 
 (* noalloc on x86_64 only *)
 external now : unit -> tsc = "tsc_get" [@@noalloc]
@@ -98,7 +98,7 @@ module Calibrator = struct
 
   type t =
     {
-    (* the most recent observations and regression results *)
+      (* the most recent observations and regression results *)
       mutable time                      : float
     ; mutable tsc                       : tsc
     ; mutable sec_per_cycle             : float
@@ -192,7 +192,7 @@ module Calibrator = struct
            the estimated time, i.e. solve for [monotonic_sec_per_cycle] in:
 
            {[
-               t.monotonic_time + monotonic_sec_per_cyle * catchup_cycles
+             t.monotonic_time + monotonic_sec_per_cyle * catchup_cycles
              = t.time           + t.sec_per_cycle        * catchup_cycles
            ]}
 
@@ -288,7 +288,7 @@ module Calibrator = struct
   ;;
 end
 
-#else
+[%%else]
 
 (* noalloc on x86_64 only *)
 external now : unit -> tsc = "tsc_get"
@@ -317,11 +317,11 @@ Time_stamp_counter.Calibrator.cpu_mhz is not defined for 32-bit platforms"
   ;;
 end
 
-#endif
+[%%endif]
 
 module Span = struct
   include Int63
-#ifdef JSC_ARCH_SIXTYFOUR
+  [%%ifdef JSC_ARCH_SIXTYFOUR]
   let to_ns ?(calibrator = Calibrator.local) t =
     Float.int63_round_nearest_exn
       (Int63.to_float t *. calibrator.Calibrator.nanos_per_cycle)
@@ -341,13 +341,13 @@ module Span = struct
           ~_:(exn : Exn.t)
           (calibrator : Calibrator.t)]
   ;;
-#else
+  [%%else]
   (* [tsc_get] already returns the current time in ns *)
 
   let to_ns ?calibrator:_ t = t
 
   let of_ns ?calibrator:_ ns = ns
-#endif
+  [%%endif]
 
   let to_time_span ?calibrator t =
     Time.Span.of_ns (Int63.to_float (to_ns ?calibrator t))
@@ -366,146 +366,146 @@ let to_time_ns ?(calibrator = Calibrator.local) t =
 
 let%test_module _ = (module struct
 
-  let _unused_in_32bit = ewma, Calibrator.initialize, Calibrator.calibrate_using
+                      let _unused_in_32bit = ewma, Calibrator.initialize, Calibrator.calibrate_using
 
-#ifdef JSC_ARCH_SIXTYFOUR
-  (* monotonicity testing *)
-  let%test_unit _ =
-    let calibrator = Calibrator.create () in
-    let last = ref 0. in
-    for i = 1 to 10_000_000 do
-      let cur =
-        Time.Span.to_sec (Time.to_span_since_epoch (to_time ~calibrator (now ())))
-      in
-      (* printf "%d %.9f\n%!" i (cur -. !last); *)
-      if Float.(<) (cur -. !last) 0.
-      then failwithf "Time is not monotonic (diff %.12f)" (cur -. !last) ();
-      last := cur;
-      if i mod 100_000 = 0
-      then Calibrator.calibrate ~t:calibrator ();
-    done
-  ;;
+                      [%%ifdef JSC_ARCH_SIXTYFOUR]
+                      (* monotonicity testing *)
+                      let%test_unit _ =
+                        let calibrator = Calibrator.create () in
+                        let last = ref 0. in
+                        for i = 1 to 10_000_000 do
+                          let cur =
+                            Time.Span.to_sec (Time.to_span_since_epoch (to_time ~calibrator (now ())))
+                          in
+                          (* printf "%d %.9f\n%!" i (cur -. !last); *)
+                          if Float.(<) (cur -. !last) 0.
+                          then failwithf "Time is not monotonic (diff %.12f)" (cur -. !last) ();
+                          last := cur;
+                          if i mod 100_000 = 0
+                          then Calibrator.calibrate ~t:calibrator ();
+                        done
+                      ;;
 
-  module Samples = struct
-    type t = (tsc * float) list [@@deriving sexp]
+                      module Samples = struct
+                        type t = (tsc * float) list [@@deriving sexp]
 
-    let load file = Sexp.load_sexp_conv_exn file [%of_sexp: t]
-  end
+                        let load file = Sexp.load_sexp_conv_exn file [%of_sexp: t]
+                      end
 
-  (* The following tests check to see that the errors in presampled data are within
-     acceptable bounds.  Errors are checked at two different sampling rates to simulate
-     calls to [Calibrator.calibrate] at different rates to tests how errors accumulate in
-     this module.*)
+                      (* The following tests check to see that the errors in presampled data are within
+                         acceptable bounds.  Errors are checked at two different sampling rates to simulate
+                         calls to [Calibrator.calibrate] at different rates to tests how errors accumulate in
+                         this module.*)
 
-  let test_time_and_cycles samples_file ~error_limit ~alpha ~verbose =
-    let samples = Samples.load samples_file in
-    let init_samples, samples = List.split_n samples 3 in
-    let calibrator = Calibrator.create () in
-    let scale_us_abs t = Float.abs (t *. 1_000_000.) in
-    Calibrator.initialize calibrator init_samples;
-    let ewma_error = ref 0. in
-    List.iter samples ~f:(fun (tsc, time) ->
-      let cur_error =
-        scale_us_abs
-          (time -. Time.Span.to_sec
-                     (Time.to_span_since_epoch (to_time ~calibrator tsc)))
-      in
-      ewma_error := ewma ~alpha ~old:!ewma_error ~add:cur_error;
-      if verbose then
-        printf "%f %f %s %f\n%!" cur_error !ewma_error (Int63.to_string tsc) time;
-      if Float.(>=) (Float.abs !ewma_error) error_limit
-      then failwithf "Average error %fus (current error %fus) of estimated time is \
-                      beyond acceptable limits of %fus."
-             !ewma_error cur_error error_limit ();
-      Calibrator.calibrate_using calibrator ~tsc ~time ~am_initializing:false)
-  ;;
+                      let test_time_and_cycles samples_file ~error_limit ~alpha ~verbose =
+                        let samples = Samples.load samples_file in
+                        let init_samples, samples = List.split_n samples 3 in
+                        let calibrator = Calibrator.create () in
+                        let scale_us_abs t = Float.abs (t *. 1_000_000.) in
+                        Calibrator.initialize calibrator init_samples;
+                        let ewma_error = ref 0. in
+                        List.iter samples ~f:(fun (tsc, time) ->
+                          let cur_error =
+                            scale_us_abs
+                              (time -. Time.Span.to_sec
+                                         (Time.to_span_since_epoch (to_time ~calibrator tsc)))
+                          in
+                          ewma_error := ewma ~alpha ~old:!ewma_error ~add:cur_error;
+                          if verbose then
+                            printf "%f %f %s %f\n%!" cur_error !ewma_error (Int63.to_string tsc) time;
+                          if Float.(>=) (Float.abs !ewma_error) error_limit
+                          then failwithf "Average error %fus (current error %fus) of estimated time is \
+                                          beyond acceptable limits of %fus."
+                                 !ewma_error cur_error error_limit ();
+                          Calibrator.calibrate_using calibrator ~tsc ~time ~am_initializing:false)
+                      ;;
 
-  (* For this test, the data sample consists of 2,000 samples of Time.t and TSC.t sampled
-     randomly with intervals up to 1sec.
+                      (* For this test, the data sample consists of 2,000 samples of Time.t and TSC.t sampled
+                         randomly with intervals up to 1sec.
 
-     The error ewma of absolute error is atmost 1.2us, and the actual error ranges between
-     7.6us and -1.4us.  It is worth noting that the errors are usually in the range of 1us
-     and only occassionaly spike to the max/min values mentioned.*)
-  let%test_unit _ = test_time_and_cycles ~error_limit:3. ~alpha:0.1 ~verbose:false
-                "time_stamp_counter_samples_at_1sec.sexp"
-  ;;
-  (* For this test, the data sample consists of 600 samples of Time.t and TSC.t sampled
-     randomly with intervals up to 1minute.
+                         The error ewma of absolute error is atmost 1.2us, and the actual error ranges between
+                         7.6us and -1.4us.  It is worth noting that the errors are usually in the range of 1us
+                         and only occassionaly spike to the max/min values mentioned.*)
+                      let%test_unit _ = test_time_and_cycles ~error_limit:3. ~alpha:0.1 ~verbose:false
+                                          "time_stamp_counter_samples_at_1sec.sexp"
+                      ;;
+                      (* For this test, the data sample consists of 600 samples of Time.t and TSC.t sampled
+                         randomly with intervals up to 1minute.
 
-     Errors range between -8.5 and 7.6 us and ewma of absolute error goes upto about
-     2.4us.  The errors in this case tend to oscillate between +/-5us. *)
-  let%test_unit _ = test_time_and_cycles ~error_limit:3. ~alpha:0.1 ~verbose:false
-                "time_stamp_counter_samples_at_60sec.sexp"
-  ;;
+                         Errors range between -8.5 and 7.6 us and ewma of absolute error goes upto about
+                         2.4us.  The errors in this case tend to oscillate between +/-5us. *)
+                      let%test_unit _ = test_time_and_cycles ~error_limit:3. ~alpha:0.1 ~verbose:false
+                                          "time_stamp_counter_samples_at_60sec.sexp"
+                      ;;
 
-  (* Test error magnitude in pre-sampled data. *)
-  let test_time_and_cycles_nanos samples_file ~error_limit ~alpha ~verbose =
-    let samples = Samples.load samples_file in
-    let init_samples, samples = List.split_n samples 3 in
-    let calibrator = Calibrator.create () in
-    let scale_us_abs t = Float.abs (t *. 0.001) in
-    Calibrator.initialize calibrator init_samples;
-    let ewma_error = ref 0. in
-    List.iter samples ~f:(fun (tsc, time) ->
-      let time_nanos = Float.int63_round_nearest_exn (time *. 1E9) in
-      let cur_error =
-        scale_us_abs (Int63.to_float (diff
-                                        time_nanos
-                                        (to_nanos_since_epoch ~calibrator tsc)))
-      in
-      ewma_error := ewma ~alpha ~old:!ewma_error ~add:cur_error;
-      if verbose then printf "%f %f\n%!" cur_error !ewma_error;
-      if Float.(>=) (Float.abs !ewma_error) error_limit
-      then failwithf "Average error %fus (current error %fus) of estimated time is \
-                      beyond acceptable limits of %fus."
-             !ewma_error cur_error error_limit ();
-      Calibrator.calibrate_using calibrator ~tsc ~time ~am_initializing:false)
-  ;;
+                      (* Test error magnitude in pre-sampled data. *)
+                      let test_time_and_cycles_nanos samples_file ~error_limit ~alpha ~verbose =
+                        let samples = Samples.load samples_file in
+                        let init_samples, samples = List.split_n samples 3 in
+                        let calibrator = Calibrator.create () in
+                        let scale_us_abs t = Float.abs (t *. 0.001) in
+                        Calibrator.initialize calibrator init_samples;
+                        let ewma_error = ref 0. in
+                        List.iter samples ~f:(fun (tsc, time) ->
+                          let time_nanos = Float.int63_round_nearest_exn (time *. 1E9) in
+                          let cur_error =
+                            scale_us_abs (Int63.to_float (diff
+                                                            time_nanos
+                                                            (to_nanos_since_epoch ~calibrator tsc)))
+                          in
+                          ewma_error := ewma ~alpha ~old:!ewma_error ~add:cur_error;
+                          if verbose then printf "%f %f\n%!" cur_error !ewma_error;
+                          if Float.(>=) (Float.abs !ewma_error) error_limit
+                          then failwithf "Average error %fus (current error %fus) of estimated time is \
+                                          beyond acceptable limits of %fus."
+                                 !ewma_error cur_error error_limit ();
+                          Calibrator.calibrate_using calibrator ~tsc ~time ~am_initializing:false)
+                      ;;
 
-  (* Error profiles for the nanos tests are similar to those of the float cases above. *)
-  let%test_unit _ =
-    test_time_and_cycles_nanos ~error_limit:500. ~alpha:0.1 ~verbose:false
-      "time_stamp_counter_samples_at_1sec.sexp"
-  ;;
-  let%test_unit _ =
-    test_time_and_cycles_nanos ~error_limit:3. ~alpha:0.1 ~verbose:false
-      "time_stamp_counter_samples_at_60sec.sexp"
-  ;;
+                      (* Error profiles for the nanos tests are similar to those of the float cases above. *)
+                      let%test_unit _ =
+                        test_time_and_cycles_nanos ~error_limit:500. ~alpha:0.1 ~verbose:false
+                          "time_stamp_counter_samples_at_1sec.sexp"
+                      ;;
+                      let%test_unit _ =
+                        test_time_and_cycles_nanos ~error_limit:3. ~alpha:0.1 ~verbose:false
+                          "time_stamp_counter_samples_at_60sec.sexp"
+                      ;;
 
-  let%test_unit _ =
-    let calibrator = Calibrator.local in
-    for x = 1 to 100_000 do
-      let y =
-        x
-        |> Int63.of_int
-        |> Span.of_ns ~calibrator
-        |> Span.to_ns ~calibrator
-        |> Int63.to_int_exn
-      in
-      (* Accept a difference of at most [nanos_per_cycle] because of the precision
-         lost during float truncation.
-         [trunc (x / nanos_per_cycle) * nanos_per_cycle]
-      *)
-      assert (abs (x - y) <= Float.to_int calibrator.nanos_per_cycle);
-    done
-  ;;
+                      let%test_unit _ =
+                        let calibrator = Calibrator.local in
+                        for x = 1 to 100_000 do
+                          let y =
+                            x
+                            |> Int63.of_int
+                            |> Span.of_ns ~calibrator
+                            |> Span.to_ns ~calibrator
+                            |> Int63.to_int_exn
+                          in
+                          (* Accept a difference of at most [nanos_per_cycle] because of the precision
+                             lost during float truncation.
+                             [trunc (x / nanos_per_cycle) * nanos_per_cycle]
+                          *)
+                          assert (abs (x - y) <= Float.to_int calibrator.nanos_per_cycle);
+                        done
+                      ;;
 
-  let%test_unit _ =
-    let calibrator = Calibrator.local in
-    for x = 1 to 100_000 do
-      let y =
-        x
-        |> Int63.of_int
-        |> Span.to_ns ~calibrator
-        |> Span.of_ns ~calibrator
-        |> Int63.to_int_exn
-      in
-      (* Accept a difference of at most [1/nanos_per_cycle] because of the precision
-         lost during float truncation.
-         [trunc (x * nanos_per_cycle) / nanos_per_cycle]
-      *)
-      assert (abs (x - y) <= Float.to_int (1. /. calibrator.nanos_per_cycle));
-    done
-  ;;
-#endif
-end)
+                      let%test_unit _ =
+                        let calibrator = Calibrator.local in
+                        for x = 1 to 100_000 do
+                          let y =
+                            x
+                            |> Int63.of_int
+                            |> Span.to_ns ~calibrator
+                            |> Span.of_ns ~calibrator
+                            |> Int63.to_int_exn
+                          in
+                          (* Accept a difference of at most [1/nanos_per_cycle] because of the precision
+                             lost during float truncation.
+                             [trunc (x * nanos_per_cycle) / nanos_per_cycle]
+                          *)
+                          assert (abs (x - y) <= Float.to_int (1. /. calibrator.nanos_per_cycle));
+                        done
+                      ;;
+                      [%%endif]
+                    end)

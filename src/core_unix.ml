@@ -2,7 +2,7 @@
    informative string in the third field of Unix_error.  The problem with the standard
    Unix_error that gets raised is that it doesn't include information about the arguments
    to the function that failed. *)
-#import "config.h"
+[%%import "config.h"]
 
 open! Import
 
@@ -24,7 +24,7 @@ let record l =
 ;;
 
 (* No need to include a counter here. It just doesn't make sense to think we are
-going to be receiving a steady stream of interrupts.
+   going to be receiving a steady stream of interrupts.
    Glibc's macro doesn't have a counter either.
 *)
 let rec retry_until_no_eintr f =
@@ -140,8 +140,8 @@ external mknod
   : string -> Unix.file_kind -> int -> int -> int -> unit = "unix_mknod_stub"
 
 let mknod
-    ?(file_kind = Unix.S_REG) ?(perm = 0o600) ?(major = 0) ?(minor = 0)
-    pathname =
+      ?(file_kind = Unix.S_REG) ?(perm = 0o600) ?(major = 0) ?(minor = 0)
+      pathname =
   mknod pathname file_kind perm major minor
 
 (* Resource limits *)
@@ -185,18 +185,18 @@ module RLimit = struct
   let file_size            = File_size
   let num_file_descriptors = Num_file_descriptors
   let stack                = Stack
-  let virtual_memory       =
-#ifdef JSC_RLIMIT_AS
-      Ok Virtual_memory
-#else
-      Or_error.unimplemented "RLIMIT_AS is not supported on this system"
-#endif
-  let nice                 =
-#ifdef JSC_RLIMIT_NICE
-      Ok Nice
-#else
-      Or_error.unimplemented "RLIMIT_NICE is not supported on this system"
-#endif
+
+  [%%ifdef JSC_RLIMIT_AS]
+  let virtual_memory = Ok Virtual_memory
+  [%%else]
+  let virtual_memory = Or_error.unimplemented "RLIMIT_AS is not supported on this system"
+  [%%endif]
+
+  [%%ifdef JSC_RLIMIT_NICE]
+  let nice = Ok Nice
+  [%%else]
+  let nice = Or_error.unimplemented "RLIMIT_NICE is not supported on this system"
+  [%%endif]
 
   let resource_of_sexp sexp =
     match resource_of_sexp sexp with
@@ -377,10 +377,10 @@ module IOVec = struct
 
   (* [1024] is the limit on recent Linux systems.
 
-      Other values we could use:
-      - [Array.max_length] with the assumption that [None] means "unlimited" (which
-      some man pages seem to suggest); or
-      - the value IOV_MAX from a C header file. *)
+     Other values we could use:
+     - [Array.max_length] with the assumption that [None] means "unlimited" (which
+     some man pages seem to suggest); or
+     - the value IOV_MAX from a C header file. *)
   let default_max_iovecs = 1024
 
   let max_iovecs = lazy (
@@ -396,10 +396,10 @@ end
 let get_iovec_count loc iovecs = function
   | None -> Array.length iovecs
   | Some count ->
-      if count < 0 then invalid_arg (loc ^ ": count < 0");
-      let n_iovecs = Array.length iovecs in
-      if count > n_iovecs then invalid_arg (loc ^ ": count > n_iovecs");
-      count
+    if count < 0 then invalid_arg (loc ^ ": count < 0");
+    let n_iovecs = Array.length iovecs in
+    if count > n_iovecs then invalid_arg (loc ^ ": count > n_iovecs");
+    count
 ;;
 
 external unsafe_writev_assume_fd_is_nonblocking
@@ -483,7 +483,7 @@ external fnmatch
 
 let fnmatch ?flags ~pat fname = fnmatch (Fnmatch_flags.make flags) ~pat fname
 
-#ifdef JSC_WORDEXP
+[%%ifdef JSC_WORDEXP]
 
 module Wordexp_flags = struct
   type _flag = [ `No_cmd | `Show_err | `Undef ] [@@deriving sexp]
@@ -508,11 +508,11 @@ external wordexp : Wordexp_flags.t -> string -> string array = "unix_wordexp"
 
 let wordexp = Ok (fun ?flags str -> wordexp (Wordexp_flags.make flags) str)
 
-#else
+[%%else]
 
 let wordexp = Or_error.unimplemented "Unix.wordexp"
 
-#endif
+[%%endif]
 
 (* System information *)
 
@@ -709,9 +709,9 @@ let unsetenv name =
 ;;
 
 type process_status = Unix.process_status =
-| WEXITED of int
-| WSIGNALED of int
-| WSTOPPED of int
+  | WEXITED of int
+  | WSIGNALED of int
+  | WSTOPPED of int
 [@@deriving sexp]
 
 module Exit = struct
@@ -780,8 +780,8 @@ module Exit_or_signal_or_stop = struct
   let to_string_hum = function
     | Ok () | Error #Exit_or_signal.error as e -> Exit_or_signal.to_string_hum e
     | Error (`Stop s) ->
-        sprintf "stopped by %s (signal number %d)"
-          (Signal.to_string s) (Signal.to_system_int s)
+      sprintf "stopped by %s (signal number %d)"
+        (Signal.to_string s) (Signal.to_system_int s)
   ;;
 
   let of_unix = function
@@ -888,8 +888,8 @@ let fork_exec ~prog ~argv ?use_path ?env () =
 
 type wait_flag =
   Unix.wait_flag =
-| WNOHANG
-| WUNTRACED
+  | WNOHANG
+  | WUNTRACED
 [@@deriving sexp]
 
 type wait_on =
@@ -906,10 +906,10 @@ type _t = mode
 type waitpid_result = (Pid.t * Exit_or_signal_or_stop.t) option [@@deriving sexp_of]
 
 let wait_gen
-    ~mode
-    (type a) (f : waitpid_result -> a option)
-    ~restart
-    wait_on : a =
+      ~mode
+      (type a) (f : waitpid_result -> a option)
+      ~restart
+      wait_on : a =
   let pid =
     match wait_on with
     | `Any -> -1
@@ -920,11 +920,11 @@ let wait_gen
   let (pid, status) =
     improve ~restart
       (fun () ->
-        let x, ps = Unix.waitpid ~mode pid in
-        (x, Exit_or_signal_or_stop.of_unix ps))
+         let x, ps = Unix.waitpid ~mode pid in
+         (x, Exit_or_signal_or_stop.of_unix ps))
       (fun () ->
-        [("mode", sexp_of_list sexp_of_wait_flag mode);
-         ("pid", Int.sexp_of_t pid)])
+         [("mode", sexp_of_list sexp_of_wait_flag mode);
+          ("pid", Int.sexp_of_t pid)])
   in
   let waitpid_result =
     if pid = 0 then
@@ -996,12 +996,12 @@ let getppid_exn () =
 
 module Thread_id = Int
 
-#if JSC_THREAD_ID_METHOD > 0
+[%%if JSC_THREAD_ID_METHOD > 0]
 external gettid : unit -> Thread_id.t = "unix_gettid"
 let gettid = Ok gettid
-#else
+[%%else]
 let gettid = Or_error.unimplemented "gettid is not supported on this system"
-#endif
+[%%endif]
 
 let nice i =
   improve (fun () -> Unix.nice i)
@@ -1013,24 +1013,22 @@ let stdout = Unix.stdout
 let stderr = Unix.stderr
 
 type open_flag =
-Unix.open_flag =
-| O_RDONLY
-| O_WRONLY
-| O_RDWR
-| O_NONBLOCK
-| O_APPEND
-| O_CREAT
-| O_TRUNC
-| O_EXCL
-| O_NOCTTY
-| O_DSYNC
-| O_SYNC
-| O_RSYNC
-| O_SHARE_DELETE
-| O_CLOEXEC
-#if ocaml_version >= (4, 05, 0)
-| O_KEEPEXEC
-#endif
+  Unix.open_flag =
+  | O_RDONLY
+  | O_WRONLY
+  | O_RDWR
+  | O_NONBLOCK
+  | O_APPEND
+  | O_CREAT
+  | O_TRUNC
+  | O_EXCL
+  | O_NOCTTY
+  | O_DSYNC
+  | O_SYNC
+  | O_RSYNC
+  | O_SHARE_DELETE
+  | O_CLOEXEC
+  | O_KEEPEXEC [@if ocaml_version >= (4, 05, 0)]
 [@@deriving sexp]
 
 type file_perm = int [@@deriving of_sexp]
@@ -1088,27 +1086,27 @@ let descr_of_in_channel = Unix.descr_of_in_channel
 let descr_of_out_channel = Unix.descr_of_out_channel
 
 type seek_command =
-Unix.seek_command =
-| SEEK_SET
-| SEEK_CUR
-| SEEK_END
+  Unix.seek_command =
+  | SEEK_SET
+  | SEEK_CUR
+  | SEEK_END
 [@@deriving sexp]
 
 type file_kind = Unix.file_kind =
-| S_REG
-| S_DIR
-| S_CHR
-| S_BLK
-| S_LNK
-| S_FIFO
-| S_SOCK
+  | S_REG
+  | S_DIR
+  | S_CHR
+  | S_BLK
+  | S_LNK
+  | S_FIFO
+  | S_SOCK
 [@@deriving sexp]
 
 let isatty = unary_fd Unix.isatty
 
 module Native_file = struct
   type stats =
-  Unix.stats = {
+    Unix.stats = {
     st_dev : int;
     st_ino : int;
     st_kind : file_kind;
@@ -1203,7 +1201,7 @@ let ftruncate fd ~len =
 ;;
 
 type stats =
-Unix.LargeFile.stats = {
+  Unix.LargeFile.stats = {
   st_dev : int;
   st_ino : int;
   st_kind : file_kind;
@@ -1234,11 +1232,11 @@ let rename = src_dst Unix.rename
 let link ?(force = false) ~target ~link_name () =
   improve
     (fun () ->
-      if force then begin
-        try Unix.unlink link_name
-        with Unix_error (Unix.ENOENT, _, _) -> ()
-      end;
-      Unix.link ~src:target ~dst:link_name)
+       if force then begin
+         try Unix.unlink link_name
+         with Unix_error (Unix.ENOENT, _, _) -> ()
+       end;
+       Unix.link ~src:target ~dst:link_name)
     (fun () -> [("target", atom target); ("link_name", atom link_name)])
 ;;
 
@@ -1389,9 +1387,9 @@ module Open_flags = struct
       sync,      "sync";
       trunc,     "trunc";
 
-    (* We handle the access modes separately from the standard [Flags.sexp_of_t],
-       because they are multibit and include the [rdonly] flag, which is zero, which
-       [Flags] doesn't allow. *)
+      (* We handle the access modes separately from the standard [Flags.sexp_of_t],
+         because they are multibit and include the [rdonly] flag, which is zero, which
+         [Flags] doesn't allow. *)
 
     ]
   ;;
@@ -1404,12 +1402,12 @@ module Open_flags = struct
   ;;
 
   include Flags.Make (struct
-    let allow_intersecting = true
-    let should_print_error = true
-    let known = known
-    let remove_zero_flags = true
-    (* remove non existing flags, like cloexec on centos5 *)
-  end)
+      let allow_intersecting = true
+      let should_print_error = true
+      let known = known
+      let remove_zero_flags = true
+      (* remove non existing flags, like cloexec on centos5 *)
+    end)
 
   (* The lower two bits of the open flags are used to specify the access mode:
      rdonly, wronly, rdwr.  So, we have some code to treat those two bits together rather
@@ -1536,8 +1534,8 @@ let readdir_opt dh =
   | exception End_of_file -> None
 let rewinddir = unary_dir_handle Unix.rewinddir (* Non-intr *)
 (* if closedir is passed an already closed file handle it will try to call
-  dirfd on it to get a file descriptor for the error message, which will fail
-  with invalid argument because closedir sets the fd to null *)
+   dirfd on it to get a file descriptor for the error message, which will fail
+   with invalid argument because closedir sets the fd to null *)
 let closedir = (* Non-intr *)
   unary_dir_handle (fun dh ->
     try Unix.closedir dh with | Invalid_argument _ -> ())
@@ -1716,8 +1714,8 @@ let create_process_env ?working_dir ~prog ~args ~env () =
 let create_process ~prog ~args =
   improve (fun () -> create_process_env ~prog ~args ~env:(`Extend []) ())
     (fun () ->
-      [("prog", atom prog);
-       ("args", sexp_of_list atom args)])
+       [("prog", atom prog);
+        ("args", sexp_of_list atom args)])
 
 let make_open_process f command =
   improve (fun () -> f command)
@@ -1808,43 +1806,43 @@ module Clock = struct
     | Process_cpu
     | Process_thread
 
-#ifdef JSC_POSIX_TIMERS
+  [%%ifdef JSC_POSIX_TIMERS]
 
-#ifdef JSC_ARCH_SIXTYFOUR
+  [%%ifdef JSC_ARCH_SIXTYFOUR]
   external getres : t -> Int63.t = "caml_clock_getres" [@@noalloc]
   external gettime : t -> Int63.t = "caml_clock_gettime" [@@noalloc]
-#else
+  [%%else]
   external getres : t -> Int63.t = "caml_clock_getres"
   external gettime : t -> Int63.t = "caml_clock_gettime"
-#endif
+  [%%endif]
 
   let getres            = Ok getres
   let gettime           = Ok gettime
 
-#else
+  [%%else]
 
   let getres            = Or_error.unimplemented "Unix.Clock.getres"
   let gettime           = Or_error.unimplemented "Unix.Clock.gettime"
 
-#endif
+  [%%endif]
 end
 
 type tm =
-    Unix.tm = {
-    (* DON'T CHANGE THIS RECORD WITHOUT UPDATING unix_time_stubs.c!!!
+  Unix.tm = {
+  (* DON'T CHANGE THIS RECORD WITHOUT UPDATING unix_time_stubs.c!!!
 
-       The compiler will notice if the runtime's Unix.tm changes, and we must then update
-       unix_time_stubs.c, not just this copy of the definition. *)
-    tm_sec   : int;
-    tm_min   : int;
-    tm_hour  : int;
-    tm_mday  : int;
-    tm_mon   : int;
-    tm_year  : int;
-    tm_wday  : int;
-    tm_yday  : int;
-    tm_isdst : bool;
-  } [@@deriving sexp]
+     The compiler will notice if the runtime's Unix.tm changes, and we must then update
+     unix_time_stubs.c, not just this copy of the definition. *)
+  tm_sec   : int;
+  tm_min   : int;
+  tm_hour  : int;
+  tm_mday  : int;
+  tm_mon   : int;
+  tm_year  : int;
+  tm_wday  : int;
+  tm_yday  : int;
+  tm_isdst : bool;
+} [@@deriving sexp]
 
 let time = Unix.time
 let gettimeofday = Unix.gettimeofday
@@ -1879,15 +1877,15 @@ let%test _ =
     { res with Unix. tm_wday; tm_yday }
   in
   res = {Unix.
-    tm_sec   = 23;
-    tm_min   = 14;
-    tm_hour  = 10;
-    tm_mday  = 23;
-    tm_mon   = 4;
-    tm_year  = 2012 - 1900;
-    tm_wday  = 3;
-    tm_yday  = 143;
-    tm_isdst = false; }
+          tm_sec   = 23;
+          tm_min   = 14;
+          tm_hour  = 10;
+          tm_mday  = 23;
+          tm_mon   = 4;
+          tm_year  = 2012 - 1900;
+          tm_wday  = 3;
+          tm_yday  = 143;
+          tm_isdst = false; }
 
 let%test _ =
   try
@@ -2172,15 +2170,15 @@ module Inet_addr = struct
   let of_string_or_getbyname name =
     try of_string name
     with Failure _ ->
-      match Host.getbyname name with
-      | None -> raise (Get_inet_addr (name, "host not found"))
-      | Some host ->
-        match host.Host.family with
-        | `Unix -> assert false  (* impossible *)
-        | `Inet | `Inet6 ->
-          let addrs = host.Host.addresses in
-          if Int.(>) (Array.length addrs) 0 then addrs.(0)
-          else raise (Get_inet_addr (name, "empty addrs"))
+    match Host.getbyname name with
+    | None -> raise (Get_inet_addr (name, "host not found"))
+    | Some host ->
+      match host.Host.family with
+      | `Unix -> assert false  (* impossible *)
+      | `Inet | `Inet6 ->
+        let addrs = host.Host.addresses in
+        if Int.(>) (Array.length addrs) 0 then addrs.(0)
+        else raise (Get_inet_addr (name, "empty addrs"))
   ;;
 
   module Blocking_sexp = struct
@@ -2286,8 +2284,8 @@ end
 
     Note the 0010 and 0000:
     # "2a03:2880:0010:1f03:face:b00c:0000:0025" |> Unix.Inet_addr.of_string |!
-      Unix.Inet_addr.to_string ;;
-      - : string = "2a03:2880:10:1f03:face:b00c:0:25"
+    Unix.Inet_addr.to_string ;;
+    - : string = "2a03:2880:10:1f03:face:b00c:0:25"
 *)
 
 module Cidr = struct
@@ -2373,11 +2371,11 @@ module Cidr = struct
       else None)
 
   include Identifiable.Make_using_comparator(struct
-    let module_name = "Core.Unix.Cidr"
-    include Stable.V1.T0
-    include Stable.V1.T1
-    include Stable.V1.T2
-  end)
+      let module_name = "Core.Unix.Cidr"
+      include Stable.V1.T0
+      include Stable.V1.T1
+      include Stable.V1.T2
+    end)
 end
 
 module Protocol = struct
@@ -2536,19 +2534,19 @@ let getsockname = unary_fd Unix.getsockname
 let getpeername = unary_fd Unix.getpeername
 
 type msg_flag =
-Unix.msg_flag =
-| MSG_OOB
-| MSG_DONTROUTE
-| MSG_PEEK
+  Unix.msg_flag =
+  | MSG_OOB
+  | MSG_DONTROUTE
+  | MSG_PEEK
 [@@deriving sexp]
 
 let recv_send f fd ~buf ~pos ~len ~mode =
   improve (fun () -> f fd ~buf ~pos ~len ~mode)
     (fun () ->
-      [fd_r fd;
-       ("pos", Int.sexp_of_t pos);
-       len_r len;
-       ("mode", sexp_of_list sexp_of_msg_flag mode)])
+       [fd_r fd;
+        ("pos", Int.sexp_of_t pos);
+        len_r len;
+        ("mode", sexp_of_list sexp_of_msg_flag mode)])
 ;;
 
 let recv = recv_send Unix.recv
@@ -2559,27 +2557,29 @@ let send_substring = recv_send Unix.send_substring
 let sendto fd ~buf ~pos ~len ~mode ~addr =
   improve (fun () -> Unix.sendto fd ~buf ~pos ~len ~mode ~addr)
     (fun () ->
-      [fd_r fd;
-       ("pos", Int.sexp_of_t pos);
-       len_r len;
-       ("mode", sexp_of_list sexp_of_msg_flag mode);
-       ("addr", sexp_of_sockaddr addr)])
+       [fd_r fd;
+        ("pos", Int.sexp_of_t pos);
+        len_r len;
+        ("mode", sexp_of_list sexp_of_msg_flag mode);
+        ("addr", sexp_of_sockaddr addr)])
 ;;
 
+[%%if ocaml_version >= (4, 05, 0)]
+let unix_sendto_substring = Unix.sendto_substring
+[%%else]
+let unix_sendto_substring fd ~buf ~pos ~len ~mode addr =
+  Unix.sendto_substring fd ~bug:buf ~pos ~len ~mode addr
+[%%endif]
+
 let sendto_substring fd ~buf ~pos ~len ~mode ~addr =
-  improve (fun () ->
-#if ocaml_version >= (4, 05, 0)
-    Unix.sendto_substring fd ~buf ~pos ~len ~mode addr
-#else
-    Unix.sendto_substring fd ~bug:buf ~pos ~len ~mode addr
-#endif
-  )
+  improve
+    (fun () -> unix_sendto_substring fd ~buf ~pos ~len ~mode addr)
     (fun () ->
-      [fd_r fd;
-       ("pos", Int.sexp_of_t pos);
-       len_r len;
-       ("mode", sexp_of_list sexp_of_msg_flag mode);
-       ("addr", sexp_of_sockaddr addr)])
+       [fd_r fd;
+        ("pos", Int.sexp_of_t pos);
+        len_r len;
+        ("mode", sexp_of_list sexp_of_msg_flag mode);
+        ("addr", sexp_of_sockaddr addr)])
 ;;
 
 type socket_bool_option = Unix.socket_bool_option =
@@ -2620,7 +2620,7 @@ let make_sockopt get set sexp_of_opt sexp_of_val =
   let setsockopt fd opt value =
     improve (fun () -> set fd opt value)
       (fun () ->
-        [fd_r fd; ("opt", sexp_of_opt opt); ("val", sexp_of_val value)])
+         [fd_r fd; ("opt", sexp_of_opt opt); ("val", sexp_of_val value)])
   in
   (getsockopt, setsockopt)
 ;;
@@ -2658,7 +2658,7 @@ end
 
 external mcast_modify
   :  Mcast_action.t
-  -> ?ifname : string
+    -> ?ifname : string
   -> ?source : Inet_addr.t
   -> File_descr.t
   -> Unix.sockaddr
@@ -2723,32 +2723,32 @@ type getaddrinfo_option = Unix.getaddrinfo_option =
 let getaddrinfo host service opts =
   improve (fun () -> Unix.getaddrinfo host service opts)
     (fun () ->
-      [("host", atom host);
-       ("service", atom service);
-       ("opts", sexp_of_list sexp_of_getaddrinfo_option opts)])
+       [("host", atom host);
+        ("service", atom service);
+        ("opts", sexp_of_list sexp_of_getaddrinfo_option opts)])
 ;;
 
 type name_info =
-Unix.name_info = {
+  Unix.name_info = {
   ni_hostname : string;
   ni_service : string;
 }
 [@@deriving sexp]
 
 type getnameinfo_option =
-Unix.getnameinfo_option =
-| NI_NOFQDN
-| NI_NUMERICHOST
-| NI_NAMEREQD
-| NI_NUMERICSERV
-| NI_DGRAM
+  Unix.getnameinfo_option =
+  | NI_NOFQDN
+  | NI_NUMERICHOST
+  | NI_NAMEREQD
+  | NI_NUMERICSERV
+  | NI_DGRAM
 [@@deriving sexp]
 
 let getnameinfo addr opts =
   improve (fun () -> Unix.getnameinfo addr opts)
     (fun () ->
-      [("addr", sexp_of_sockaddr addr);
-       ("opts", sexp_of_list sexp_of_getnameinfo_option opts)])
+       [("addr", sexp_of_sockaddr addr);
+        ("opts", sexp_of_list sexp_of_getnameinfo_option opts)])
 ;;
 
 module Terminal_io = struct
@@ -2869,7 +2869,7 @@ let%test_unit "Sexplib_unix sexp converter" =
           ; Atom "arg"
           ]) -> ()
   | something_else ->
-      failwithf "sexp_of_exn (Unix_error ...) gave %s" (Sexp.to_string something_else) ()
+    failwithf "sexp_of_exn (Unix_error ...) gave %s" (Sexp.to_string something_else) ()
 ;;
 
 module Ifaddr = struct

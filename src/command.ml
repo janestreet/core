@@ -1299,10 +1299,10 @@ module Base = struct
       | _ ->
         print_endline "Error parsing command line.  Run with -help for usage information.";
         (match exn with
-        | Failed_to_parse_command_line msg ->
-          prerr_endline msg;
-        | _ ->
-          prerr_endline (Sexp.to_string_hum ([%sexp (exn : exn)])));
+         | Failed_to_parse_command_line msg ->
+           prerr_endline msg;
+         | _ ->
+           prerr_endline (Sexp.to_string_hum ([%sexp (exn : exn)])));
         exit 1
 
   module Spec = struct
@@ -1521,10 +1521,8 @@ module Base = struct
           | Arg.Rest f -> gen (fun x -> Option.iter x ~f:(List.iter ~f)) escape
           | Arg.Tuple _ ->
             failwith "Arg.Tuple is not supported by Command.Spec.flags_of_args_exn"
-#if ocaml_version >= (4, 05, 0)
-          | Arg.Expand _ ->
+          | Arg.Expand _ [@if ocaml_version >= (4, 05, 0)] ->
             failwith "Arg.Expand is not supported by Command.Spec.flags_of_args_exn"
-#endif
         end)
 
     module Deprecated = struct

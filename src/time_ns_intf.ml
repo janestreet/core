@@ -112,12 +112,7 @@ module type Span = sig
 
       Around 135y magnitudes, [Time.Span.t] no longer has 1us resolution.  At that point,
       [to_span] and [of_span] raise.
-
-      The concern with stability is in part due to an earlier incarnation of
-      [Timing_wheel] that had surprising behavior due to rounding of floating-point times.
-      Timing_wheel was since re-implemented to use integer [Time_ns], and to treat
-      floating-point [Time]s as equivalence classes according to the [Time_ns] that they
-      round to.  See [Timing_wheel_float] for details. *)
+  *)
   val to_span : t -> Time.Span.t
   val of_span : Time.Span.t -> t
 

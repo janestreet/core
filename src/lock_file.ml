@@ -4,7 +4,7 @@ open Import_time
 
 module Unix = Core_unix
 
-#import "config.h"
+[%%import "config.h"]
 
 (* We have reason to believe that lockf doesn't work properly on CIFS mounts.  The idea
    behind requiring both lockf and flock is to prevent programs taking locks on
@@ -28,22 +28,22 @@ let lockf ?(mode = Unix.F_TLOCK) fd =
   with
   | _ -> false
 
+[%%ifdef JSC_LINUX_EXT]
 let lock fd =
-#ifdef JSC_LINUX_EXT
   (* [lockf] doesn't throw any exceptions, so if an exception is raised from this
      function, it must have come from [flock]. *)
   let flocked = flock fd in
   let lockfed = lockf fd in
   flocked && lockfed
-#else
-  flock fd
-#endif
+[%%else]
+let lock = flock
+[%%endif]
 
 let create
-    ?(message = Pid.to_string (Unix.getpid ()))
-    ?(close_on_exec = true)
-    ?(unlink_on_exit = false)
-    path =
+      ?(message = Pid.to_string (Unix.getpid ()))
+      ?(close_on_exec = true)
+      ?(unlink_on_exit = false)
+      path =
   let message = sprintf "%s\n" message in
   (* We use [~perm:0o664] rather than our usual default perms, [0o666], because
      lock files shouldn't rely on the umask to disallow tampering by other. *)
@@ -136,23 +136,23 @@ let is_locked path =
   | e -> raise e
 
 let%test_module _ = (module struct
-  let lock_file = Filename.temp_file "lock_file" "unit_test"
-  let () = Unix.unlink lock_file
-  let%test _ = create lock_file
-  let%test _ = not (create lock_file)
-  let%test _ = is_locked lock_file
+                      let lock_file = Filename.temp_file "lock_file" "unit_test"
+                      let () = Unix.unlink lock_file
+                      let%test _ = create lock_file
+                      let%test _ = not (create lock_file)
+                      let%test _ = is_locked lock_file
 
-  let nolock_file = Filename.temp_file "nolock_file" "unit_test"
-  let () =
-    Unix.unlink nolock_file;
-    (* Create an empty file. *)
-    Unix.close (Unix.openfile nolock_file ~mode:[Unix.O_CREAT; Unix.O_WRONLY])
-  let%test _ =
-    (* Check that file exists. *)
-    try ignore (Unix.stat nolock_file); true
-    with Unix.Unix_error (ENOENT, _, _) -> false
-  let%test _ = not (is_locked nolock_file)
-end)
+                      let nolock_file = Filename.temp_file "nolock_file" "unit_test"
+                      let () =
+                        Unix.unlink nolock_file;
+                        (* Create an empty file. *)
+                        Unix.close (Unix.openfile nolock_file ~mode:[Unix.O_CREAT; Unix.O_WRONLY])
+                      let%test _ =
+                        (* Check that file exists. *)
+                        try ignore (Unix.stat nolock_file); true
+                        with Unix.Unix_error (ENOENT, _, _) -> false
+                      let%test _ = not (is_locked nolock_file)
+                    end)
 
 let read_file_and_convert ~of_string path =
   Option.try_with
@@ -222,27 +222,27 @@ module Nfs = struct
              process is not owned by the user running this code we should fail to unlock
              either earlier (unable to read the file) or later (unable to remove the
              file). *)
-          if (unlock_myself && Pid.(=) locking_pid my_pid)
-            || not (Signal.can_send_to locking_pid)
-          then begin
-            (* We need to be able to recover from situation where [path] does not
-               exist for whatever reason, but [lock_path] is present.
-               Error during unlink of [path] are ignored to be able to cope with this
-               situation and properly clean up stale locks.
-            *)
-            begin
-              try
-                Unix.unlink path
-              with | Unix.Unix_error (ENOENT, _, _) -> ()
-                   | e -> error (Exn.to_string e)
-            end;
+        if (unlock_myself && Pid.(=) locking_pid my_pid)
+        || not (Signal.can_send_to locking_pid)
+        then begin
+          (* We need to be able to recover from situation where [path] does not
+             exist for whatever reason, but [lock_path] is present.
+             Error during unlink of [path] are ignored to be able to cope with this
+             situation and properly clean up stale locks.
+          *)
+          begin
             try
-              Unix.unlink lock_path
-            with | e -> error (Exn.to_string e)
-          end
-          else
-            error (sprintf "locking process (pid %i) still running on %s"
-              (Pid.to_int locking_pid) locking_hostname)
+              Unix.unlink path
+            with | Unix.Unix_error (ENOENT, _, _) -> ()
+                 | e -> error (Exn.to_string e)
+          end;
+          try
+            Unix.unlink lock_path
+          with | e -> error (Exn.to_string e)
+        end
+        else
+          error (sprintf "locking process (pid %i) still running on %s"
+                   (Pid.to_int locking_pid) locking_hostname)
   ;;
 
   (* See mli for more information on the algorithm we use for locking over NFS.  Ensure
@@ -274,10 +274,10 @@ module Nfs = struct
             fprintf out_channel "%s\n%!"
               (Sexp.to_string_hum (Info.sexp_of_t info))
           with | (Sys_error _) as err -> begin
-            Unix.unlink path;
-            Unix.unlink (lock_path path);
-            raise err
-          end
+              Unix.unlink path;
+              Unix.unlink (lock_path path);
+              raise err
+            end
         );
       at_exit (fun () -> try unlock_safely_exn ~unlock_myself:true path with _ -> ());
     with
@@ -306,14 +306,14 @@ module Nfs = struct
   let unlock path = Or_error.try_with (fun () -> unlock_exn path)
 
   let%test_module _ = (module struct
-    let create_bool path = match create path with Ok () -> true | Error _ -> false
-    let path = Filename.temp_file "lock_file" "unit_test"
-    let () = Unix.unlink path
-    let%test _ = create_bool path
-    let%test _ = not (create_bool path)
-    let () = unlock_exn path
-    let%test _ = create_bool path
-    let () = unlock_exn path
-  end)
+                        let create_bool path = match create path with Ok () -> true | Error _ -> false
+                        let path = Filename.temp_file "lock_file" "unit_test"
+                        let () = Unix.unlink path
+                        let%test _ = create_bool path
+                        let%test _ = not (create_bool path)
+                        let () = unlock_exn path
+                        let%test _ = create_bool path
+                        let () = unlock_exn path
+                      end)
 
 end

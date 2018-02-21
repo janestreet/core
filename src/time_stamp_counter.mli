@@ -52,7 +52,7 @@
     See also: {:http://en.wikipedia.org/wiki/Time_Stamp_Counter}
 *)
 
-#import "config.h"
+[%%import "config.h"]
 
 open! Import
 
@@ -111,11 +111,11 @@ module Span : sig
   val of_ns        : ?calibrator:Calibrator.t -> Int63.t -> t
 end
 
-#ifdef JSC_ARCH_SIXTYFOUR
+[%%ifdef JSC_ARCH_SIXTYFOUR]
 external now : unit -> t = "tsc_get" [@@noalloc]
-#else
+[%%else]
 external now : unit -> t = "tsc_get"
-#endif
+[%%endif]
 
 val diff            : t -> t -> Span.t
 val add             : t -> Span.t -> t
