@@ -10,15 +10,15 @@
    The reality under the covers isn't as simple for a three reasons:
 
    - We want as much Time functionality available to Core_kernel as possible, and
-   Core_kernel modules shouldn't rely on Unix functions.  Some functions in Time
-   require Unix, which creates one split.
+     Core_kernel modules shouldn't rely on Unix functions.  Some functions in Time
+     require Unix, which creates one split.
 
    - We want some functionality to be functorized so that code can be shared
-   between Time and Time_ns.
+     between Time and Time_ns.
 
    - Time has internal circular dependencies.  For instance, Ofday.now relies on
-   Time.now, but Time also wants to expose Time.to_date_ofday, which relies on Ofday.
-   We use a stack of modules to break the cycle.
+     Time.now, but Time also wants to expose Time.to_date_ofday, which relies on Ofday.
+     We use a stack of modules to break the cycle.
 
    This leads to the following modules within Core_kernel and Core:
 

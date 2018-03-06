@@ -69,17 +69,18 @@ val get_pid : string -> Pid.t option
     There are a few caveats compared to local file locks:
 
     - These calls require the locker to have write access to the directory containing the
-    file being locked.
+      file being locked.
 
     - Unlike a normal flock call the lock may not be removed when the calling program
-    exits (in particular if it is killed with SIGKILL).
+      exits (in particular if it is killed with SIGKILL).
 
     - NFS lock files are non-standard and difficult to reason about.  This implementation
-    strives to strike a balance between safety and utility in the common case:
-    {ul
-    {li one program per machine}
-    {li one shared user running the program}
-    }
+      strives to strike a balance between safety and utility in the common case:
+      {ul
+      {li one program per machine}
+      {li one shared user running the program}
+      }
+
     Use cases outside of this may push on/break assumptions used for easy lock
     cleanup/taking and may lead to double-taking the lock.  If you have such an odd use
     case you should test it carefully/consider a different locking mechanism.

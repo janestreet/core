@@ -670,27 +670,27 @@ end
    chosen not to do so at this time for a few reasons:
 
    - It's a lot of work.  All functions over Time, including the related
-   modules Date, Ofday, Zone, Span, Schedule have to be converted to Time_ns
-   space.  This is largely mechanical, but will create a lot of churn within
-   the modules and possibly externally where the floatiness of the Time world
-   leaks out.
+     modules Date, Ofday, Zone, Span, Schedule have to be converted to Time_ns
+     space.  This is largely mechanical, but will create a lot of churn within
+     the modules and possibly externally where the floatiness of the Time world
+     leaks out.
 
    - It's of limited utility compared to other things we could be working on.
-   Time math would be easier to understand and somewhat faster, but very few
-   modules/programs would benefit from faster time math.  Those that do can
-   use Time_ns already for the most part.
+     Time math would be easier to understand and somewhat faster, but very few
+     modules/programs would benefit from faster time math.  Those that do can
+     use Time_ns already for the most part.
 
    - Having Time_ns and a conversion function already gives the bulk of the
-   value to programs that want a fast, non-allocating version of [Time.now].
-   Indeed, many remaining unconverted functions
+     value to programs that want a fast, non-allocating version of [Time.now].
+     Indeed, many remaining unconverted functions
 
    - We aren't certain about how the boundaries around Time_ns will affect the
-   external viability of Core.  Internally we don't think being limited to
-   a smaller time range is an issue, and really far off times are better
-   represented as (Date.t * Ofday.t), but it is still a restriction.  This
-   pushback is probably minimal and, if we could get over the work concerns,
-   could be eliminated.
+     external viability of Core.  Internally we don't think being limited to
+     a smaller time range is an issue, and really far off times are better
+     represented as (Date.t * Ofday.t), but it is still a restriction.  This
+     pushback is probably minimal and, if we could get over the work concerns,
+     could be eliminated.
 
    - Converting between Time and Time_ns when you use libraries based on different ones
-   isn't so bad. (?)
+     isn't so bad. (?)
 *)

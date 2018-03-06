@@ -32,22 +32,22 @@
     are some caveats to this that are worth noting:
 
     - The conversion to [Time.t] depends on an estimate of the time-stamp-counter
-    frequency.  This frequency may be volatile on some systems, thereby reducing the
-    utility of this conversion.  See the [Calibrator] module below for details.
+      frequency.  This frequency may be volatile on some systems, thereby reducing the
+      utility of this conversion.  See the [Calibrator] module below for details.
 
     - The captured [t] can only be converted to a [Time.t] if one also has a
-    recently calibrated [Calibrator.t] from the same machine.
+      recently calibrated [Calibrator.t] from the same machine.
 
     - Put another way, it would not make sense to send a sexp of [t] from one box to
-    another and then convert it to a [Time.t], because [t] counts the number of cycles
-    since reset. So the measure only makes sense in the context of a single machine.
+      another and then convert it to a [Time.t], because [t] counts the number of cycles
+      since reset. So the measure only makes sense in the context of a single machine.
 
     - Note that a cursory search for information about time stamp counter usage may give a
-    false impression of its unreliability. Early processor implementations of TSC could
-    be skewed by clock frequency changes (C-states) and by small differences between the
-    startup time of each processor on a multi-processor machine. Modern hardware can
-    usually be assumed to have an "invariant" tsc, and Linux has support to synchronize
-    the initial counters at boot time when multiple processors are present.
+      false impression of its unreliability. Early processor implementations of TSC could
+      be skewed by clock frequency changes (C-states) and by small differences between the
+      startup time of each processor on a multi-processor machine. Modern hardware can
+      usually be assumed to have an "invariant" tsc, and Linux has support to synchronize
+      the initial counters at boot time when multiple processors are present.
 
     See also: {:http://en.wikipedia.org/wiki/Time_Stamp_Counter}
 *)

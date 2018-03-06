@@ -181,54 +181,54 @@ end
     {2 Standards for measuring time }
 
     - Epoch time/Unix time/Posix time: Defined as the number of seconds that have passed
-    since midnight, January 1st, 1970 GMT.  However, under epoch time, a day is always
-    86,400 seconds long, and a minute never contains more than 60 total seconds.  In other
-    words, epoch time does not take leap seconds into account properly.  What a POSIX
-    compliant system does during a leap second depends on the way in which its clock is
-    managed.  It either ignores it, replays the second, or causes a second to last longer
-    than a second (retards the second).  The important thing to remember is that however
-    the transition is managed, all days start on an evenly divisible multiple of 86,400.
+      since midnight, January 1st, 1970 GMT.  However, under epoch time, a day is always
+      86,400 seconds long, and a minute never contains more than 60 total seconds.  In other
+      words, epoch time does not take leap seconds into account properly.  What a POSIX
+      compliant system does during a leap second depends on the way in which its clock is
+      managed.  It either ignores it, replays the second, or causes a second to last longer
+      than a second (retards the second).  The important thing to remember is that however
+      the transition is managed, all days start on an evenly divisible multiple of 86,400.
     - GMT/Greenwich Mean Time/Greenwich Civil Time: The time based on the movement of the
-    sun relative to the meridian through the Old Greenwich Observatory (0 degrees).  The
-    movement of the sun in this case is a "mean" movement of the sun to adjust for slight
-    eccentricities in the rotation of the earth, as well as for the effect of the tilt of
-    the earth on the visible speed of the sun across the sky at different times of the
-    year.  GMT is often used synonymously with the term UTC (see below), but may also be
-    used to refer to the time system described here, which differs from UTC (as of 2009)
-    by ~1 second.
+      sun relative to the meridian through the Old Greenwich Observatory (0 degrees).  The
+      movement of the sun in this case is a "mean" movement of the sun to adjust for slight
+      eccentricities in the rotation of the earth, as well as for the effect of the tilt of
+      the earth on the visible speed of the sun across the sky at different times of the
+      year.  GMT is often used synonymously with the term UTC (see below), but may also be
+      used to refer to the time system described here, which differs from UTC (as of 2009)
+      by ~1 second.
     - Standard Time: The time based on the adjusted (as in GMT) movement of the sun over a
-    point on the earth that is not Greenwich.  Colloquially, the time in a time zone
-    without accounting for any form of daylight savings time.
+      point on the earth that is not Greenwich.  Colloquially, the time in a time zone
+      without accounting for any form of daylight savings time.
     - Wall Clock Time: The time as it appears on a clock on the wall in a given time zone.
-    Essentially this is standard time with DST adjustments.
+      Essentially this is standard time with DST adjustments.
     - TAI: International atomic time.  The time based on a weighted average of the time kept
-    by roughly 300 atomic clocks worldwide.  TAI is written using the same format as
-    normal solar (also called civil) times, but is not based on, or adjusted for the
-    apparent solar time.  Thus, as of 2009 TAI appears to be ahead of most other time
-    systems by ~34 seconds when written out in date/time form (2004-09-17T00:00:32 TAI is
-    2004-09-17T00:00:00 UTC)
+      by roughly 300 atomic clocks worldwide.  TAI is written using the same format as
+      normal solar (also called civil) times, but is not based on, or adjusted for the
+      apparent solar time.  Thus, as of 2009 TAI appears to be ahead of most other time
+      systems by ~34 seconds when written out in date/time form (2004-09-17T00:00:32 TAI is
+      2004-09-17T00:00:00 UTC)
     - UTC/Universal Coordinated Time: Often taken as just another term for GMT, UTC is
-    actually TAI adjusted with leap seconds to keep it in line with apparent solar time.
-    Each UTC day is not an exact number of seconds long (unlike TAI or epoch time), and
-    every second is exactly one real second long (unlike GMT, which is based entirely on
-    the apparent motion of the sun, meaning that seconds under GMT slowly get longer as
-    the earth's rotation slows down).  Leap seconds are determined by the rotation of
-    the earth, which is carefully measured by the International Earth Rotation Service
-    in Paris, France using a combination of satellite and lunar laser ranging, very
-    long baseline interferometry, and Navstar Global Positioning System (GPS) stations.
-    This isn't important for using UTC, but is very cool.  UTC is not well defined before
-    about 1960.
+      actually TAI adjusted with leap seconds to keep it in line with apparent solar time.
+      Each UTC day is not an exact number of seconds long (unlike TAI or epoch time), and
+      every second is exactly one real second long (unlike GMT, which is based entirely on
+      the apparent motion of the sun, meaning that seconds under GMT slowly get longer as
+      the earth's rotation slows down).  Leap seconds are determined by the rotation of
+      the earth, which is carefully measured by the International Earth Rotation Service
+      in Paris, France using a combination of satellite and lunar laser ranging, very
+      long baseline interferometry, and Navstar Global Positioning System (GPS) stations.
+      This isn't important for using UTC, but is very cool.  UTC is not well defined before
+      about 1960.
     - Windows File Time: The number of 100-nanosecond intervals that have elapsed since
-    12:00 A.M. January 1, 1601, UTC.  This is great because UTC has no meaning in 1601
-    (being based on atomic timekeeping technologies that didn't exist then), and also
-    because 1601 predates the development of even reasonably accurate clocks of any sort.
-    The reasoning behind the Windows epoch time choice is that "The Gregorian calendar
-    operates on a 400-year cycle, and 1601 is the first year of the cycle that was
-    active at the time Windows NT was being designed. In other words, it was chosen to
-    make the math come out nicely."
-    (http://blogs.msdn.com/oldnewthing/archive/2009/03/06/9461176.aspx)
+      12:00 A.M. January 1, 1601, UTC.  This is great because UTC has no meaning in 1601
+      (being based on atomic timekeeping technologies that didn't exist then), and also
+      because 1601 predates the development of even reasonably accurate clocks of any sort.
+      The reasoning behind the Windows epoch time choice is that "The Gregorian calendar
+      operates on a 400-year cycle, and 1601 is the first year of the cycle that was
+      active at the time Windows NT was being designed. In other words, it was chosen to
+      make the math come out nicely."
+      (http://blogs.msdn.com/oldnewthing/archive/2009/03/06/9461176.aspx)
     - VBScript (this is my favorite):
-    http://blogs.msdn.com/ericlippert/archive/2003/09/16/eric-s-complete-guide-to-vt-date.aspx
+      http://blogs.msdn.com/ericlippert/archive/2003/09/16/eric-s-complete-guide-to-vt-date.aspx
 
     All of these systems start to exhibit problems as you go further back in time, partly
     because truly accurate timekeeping didn't make an appearance until roughly 1958, and

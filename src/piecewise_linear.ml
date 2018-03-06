@@ -776,58 +776,58 @@ let%bench_module "Piecewise_linear tests" =
        in the benchmarks by leting x' = x ** 2 - 2.  This bounces around in the interval
        [-2, 2].  *)
     let%bench_fun "get" [@indexed len = num_knots] =
-let t = Or_error.ok_exn (Float.create (create_knots len)) in
-let x = ref 0.3 in
-(fun () ->
-   let x' = !x in
-   let x' = x' *. x' -. 2. in
-   x := x';
-   ignore (Float.get t x'))
+      let t = Or_error.ok_exn (Float.create (create_knots len)) in
+      let x = ref 0.3 in
+      (fun () ->
+         let x' = !x in
+         let x' = x' *. x' -. 2. in
+         x := x';
+         ignore (Float.get t x'))
 
-module FI = Make_invertible (F) (F)
+    module FI = Make_invertible (F) (F)
 
-(* This can actually be a little faster than the above, but note that the knots are
-   different. *)
-let%bench_fun "get_inverse" [@indexed len = num_knots] =
-let t = Or_error.ok_exn (FI.create (create_knots len)) in
-let x = ref 0.3 in
-(fun () ->
-   let x' = !x in
-   let x' = x' *. x' -. 2. in
-   x := x';
-   ignore (FI.get_inverse t x'))
+    (* This can actually be a little faster than the above, but note that the knots are
+       different. *)
+    let%bench_fun "get_inverse" [@indexed len = num_knots] =
+      let t = Or_error.ok_exn (FI.create (create_knots len)) in
+      let x = ref 0.3 in
+      (fun () ->
+         let x' = !x in
+         let x' = x' *. x' -. 2. in
+         x := x';
+         ignore (FI.get_inverse t x'))
 
-let%bench_fun "testing overhead" =
-  let x = ref 0.3 in
-  (fun () ->
-     let x' = !x in
-     let x' = x' *. x' -. 2. in
-     x := x')
+    let%bench_fun "testing overhead" =
+      let x = ref 0.3 in
+      (fun () ->
+         let x' = !x in
+         let x' = x' *. x' -. 2. in
+         x := x')
 
-let density = Some 1.5
+    let density = Some 1.5
 
-let%bench_fun "precache" [@indexed len = num_knots] =
-let t = Or_error.ok_exn (Float.create (create_knots len)) in
-(fun () ->
-   ignore (Stable.V1.Impl.precache ~force:true ?density t))
+    let%bench_fun "precache" [@indexed len = num_knots] =
+      let t = Or_error.ok_exn (Float.create (create_knots len)) in
+      (fun () ->
+         ignore (Stable.V1.Impl.precache ~force:true ?density t))
 
-let%bench_fun "precache then get" [@indexed len = num_knots] =
-let t = Or_error.ok_exn (Float.create (create_knots len)) in
-Float.precache t ?density;
-let x = ref 0.3 in
-(fun () ->
-   let x' = !x in
-   let x' = x' *. x' -. 2. in
-   x := x';
-   ignore (Float.get t x'))
+    let%bench_fun "precache then get" [@indexed len = num_knots] =
+      let t = Or_error.ok_exn (Float.create (create_knots len)) in
+      Float.precache t ?density;
+      let x = ref 0.3 in
+      (fun () ->
+         let x' = !x in
+         let x' = x' *. x' -. 2. in
+         x := x';
+         ignore (Float.get t x'))
 
-let%bench_fun "precache then get_inverse" [@indexed len = num_knots] =
-let t = Or_error.ok_exn (FI.create (create_knots len)) in
-FI.precache t ?density;
-let x = ref 0.3 in
-(fun () ->
-   let x' = !x in
-   let x' = x' *. x' -. 2. in
-   x := x';
-   ignore (FI.get_inverse t x'))
-end)
+    let%bench_fun "precache then get_inverse" [@indexed len = num_knots] =
+      let t = Or_error.ok_exn (FI.create (create_knots len)) in
+      FI.precache t ?density;
+      let x = ref 0.3 in
+      (fun () ->
+         let x' = !x in
+         let x' = x' *. x' -. 2. in
+         x := x';
+         ignore (FI.get_inverse t x'))
+  end)

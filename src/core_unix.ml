@@ -379,7 +379,7 @@ module IOVec = struct
 
      Other values we could use:
      - [Array.max_length] with the assumption that [None] means "unlimited" (which
-     some man pages seem to suggest); or
+       some man pages seem to suggest); or
      - the value IOV_MAX from a C header file. *)
   let default_max_iovecs = 1024
 
@@ -1598,8 +1598,8 @@ module Execvp_emulation : sig
   (* This is a reimplementation of execvp semantics with two main differences:
      - it does [spawn] instead of [execve] and returns its result on success
      - it checks file existence and access rights before trying to spawn.
-     This optimization is valuable because a failed [spawn] is much more expensive than a
-     failed [execve]. *)
+       This optimization is valuable because a failed [spawn] is much more expensive than a
+       failed [execve]. *)
   val run
     :  working_dir : string option
     -> spawn       : (prog:string -> argv:string list -> 'a)

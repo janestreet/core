@@ -75,7 +75,7 @@ type sigprocmask_command = [ `Set | `Block | `Unblock ]
     - If [cmd] is [`Set], blocked signals are set to those in the list [sigs].
     - If [cmd] is [`Block], the signals in [sigs] are added to the set of blocked signals.
     - If [cmd] is [`Unblock], the signals in [sigs] are removed from the set of blocked
-    signals.
+      signals.
 
     [sigprocmask] returns the set of previously blocked signals.
 *)

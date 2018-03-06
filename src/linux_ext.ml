@@ -446,26 +446,26 @@ module Timerfd = struct
 
   let%test_module "Linux_ext.Timerfd" = (module struct
 
-                                          let%test_unit _ =
-                                            match create with
-                                            | Error _ -> ()
-                                            | Ok create ->
-                                              let t = create Clock.realtime in
-                                              assert (get t = `Not_armed);
-                                              set_after t Time_ns.Span.minute;
-                                              assert (match get t with
-                                                | `Fire_after span -> Time_ns.Span.(<=) span Time_ns.Span.minute
-                                                | _ -> false);
-                                              let span = Time_ns.Span.scale Time_ns.Span.minute 2. in
-                                              set_repeating t ~after:Time_ns.Span.minute span;
-                                              assert (match get t with
-                                                | `Repeat { fire_after; interval } ->
-                                                  Time_ns.Span.(<=) fire_after Time_ns.Span.minute
-                                                  && Time_ns.Span.equal interval span
-                                                | _ ->
-                                                  false)
-                                          ;;
-                                        end)
+    let%test_unit _ =
+      match create with
+      | Error _ -> ()
+      | Ok create ->
+        let t = create Clock.realtime in
+        assert (get t = `Not_armed);
+        set_after t Time_ns.Span.minute;
+        assert (match get t with
+          | `Fire_after span -> Time_ns.Span.(<=) span Time_ns.Span.minute
+          | _ -> false);
+        let span = Time_ns.Span.scale Time_ns.Span.minute 2. in
+        set_repeating t ~after:Time_ns.Span.minute span;
+        assert (match get t with
+          | `Repeat { fire_after; interval } ->
+            Time_ns.Span.(<=) fire_after Time_ns.Span.minute
+            && Time_ns.Span.equal interval span
+          | _ ->
+            false)
+    ;;
+  end)
 end
 
 [%%else]

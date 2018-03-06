@@ -217,11 +217,11 @@ end
     You should normally default to using [Time] instead of this module!  The reasons are:
 
     - Many functions around our libraries expect [Time.t] values, so it will likely be
-    much more convenient for you.
+      much more convenient for you.
 
     - It leads to greater consistency across different codebases.  It would be bad to end
-    up with half our libraries expecting [Time.t] and the other half expecting
-    [Time_ns.t].
+      up with half our libraries expecting [Time.t] and the other half expecting
+      [Time_ns.t].
 
     - [Time_ns] silently ignores overflow.
 
@@ -230,8 +230,8 @@ end
     - It has superior performance.
 
     - It uses [int]s rather than [float]s internally, which makes certain things easier to
-    reason about, since [int]s respect a bunch of arithmetic identities that [float]s
-    don't, e.g., [x + (y + z) = (x + y) + z].
+      reason about, since [int]s respect a bunch of arithmetic identities that [float]s
+      don't, e.g., [x + (y + z) = (x + y) + z].
 
 
     - It is available on non-UNIX platforms, including Javascript via js_of_ocaml.
