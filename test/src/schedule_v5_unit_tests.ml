@@ -1006,14 +1006,14 @@ let%test_module "Schedule" =
             | `Included tags -> tags
           in
           [%test_result: string list]
-            (List.sort ~cmp:String.compare tags)
+            (List.sort ~compare:String.compare tags)
             ~expect:expected_tags)
     ;;
 
     let sorted_tags schedule time =
       match tags schedule time with
       | `Not_included  -> []
-      | `Included tags -> List.sort ~cmp:String.compare tags
+      | `Included tags -> List.sort ~compare:String.compare tags
     ;;
 
     let%test_unit "Test tags is correct in a simple example"=

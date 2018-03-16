@@ -456,12 +456,12 @@ module Test (Iobuf : sig
         advance buf 3;
         resize buf ~len:3;
         sub := to_string buf;
-        raise Not_found;
+        raise Caml.Not_found;
       in
       try
         Nothing.unreachable_code (Iobuf.protect_window_and_bounds buf ~f)
       with
-      | Not_found ->
+      | Not_found_s _ | Caml.Not_found ->
         String.equal (to_string buf) "123abcDEF" && String.equal !sub "abc"
     ;;
 

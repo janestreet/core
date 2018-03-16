@@ -40,8 +40,7 @@ let%test_module "Window" =
         print_s [%sexp (iobuf : (_, _) t)];
         [%expect {|
           ("00000000  60 42 6f 73 74 6f 6e 27  20 69 73 20 64 69 73 79  |`Boston' is disy|"
-           "00000010  6c 6c 61 62 69 63                                 |llabic|"
-           00000016) |}]
+           "00000010  6c 6c 61 62 69 63                                 |llabic|") |}]
 
       let to_string_hum = to_string_hum
 
@@ -49,8 +48,7 @@ let%test_module "Window" =
         print_endline (to_string_hum iobuf);
         [%expect {|
           00000000  60 42 6f 73 74 6f 6e 27  20 69 73 20 64 69 73 79  |`Boston' is disy|
-          00000010  6c 6c 61 62 69 63                                 |llabic|
-          00000016 |}]
+          00000010  6c 6c 61 62 69 63                                 |llabic| |}]
 
       let to_sequence = to_sequence
 
@@ -58,8 +56,7 @@ let%test_module "Window" =
         print_s [%sexp (to_sequence iobuf |> Sequence.to_list : string list)];
         [%expect {|
           ("00000000  60 42 6f 73 74 6f 6e 27  20 69 73 20 64 69 73 79  |`Boston' is disy|"
-           "00000010  6c 6c 61 62 69 63                                 |llabic|"
-           00000016) |}]
+           "00000010  6c 6c 61 62 69 63                                 |llabic|") |}]
     end
   end : module type of Iobuf.Window))
 
@@ -83,8 +80,7 @@ let%test_module "Limits" =
            "00000010  79 6c 6c 61 62 69 63 27  20 69 73 20 61 62 6f 75  |yllabic' is abou|"
            "00000020  74 20 60 42 6f 73 74 6f  6e 27 20 61 6e 64 20 63  |t `Boston' and c|"
            "00000030  6f 6e 74 61 69 6e 73 20  60 60 42 6f 73 74 6f 6e  |ontains ``Boston|"
-           "00000040  27 27 2e                                          |''.|"
-           00000043) |}]
+           "00000040  27 27 2e                                          |''.|") |}]
 
       let to_string_hum = to_string_hum
 
@@ -95,8 +91,7 @@ let%test_module "Limits" =
           00000010  79 6c 6c 61 62 69 63 27  20 69 73 20 61 62 6f 75  |yllabic' is abou|
           00000020  74 20 60 42 6f 73 74 6f  6e 27 20 61 6e 64 20 63  |t `Boston' and c|
           00000030  6f 6e 74 61 69 6e 73 20  60 60 42 6f 73 74 6f 6e  |ontains ``Boston|
-          00000040  27 27 2e                                          |''.|
-          00000043 |}]
+          00000040  27 27 2e                                          |''.| |}]
 
       let to_sequence = to_sequence
 
@@ -107,8 +102,7 @@ let%test_module "Limits" =
            "00000010  79 6c 6c 61 62 69 63 27  20 69 73 20 61 62 6f 75  |yllabic' is abou|"
            "00000020  74 20 60 42 6f 73 74 6f  6e 27 20 61 6e 64 20 63  |t `Boston' and c|"
            "00000030  6f 6e 74 61 69 6e 73 20  60 60 42 6f 73 74 6f 6e  |ontains ``Boston|"
-           "00000040  27 27 2e                                          |''.|"
-           00000043) |}]
+           "00000040  27 27 2e                                          |''.|") |}]
     end
   end : module type of Iobuf.Limits))
 
@@ -125,15 +119,13 @@ let%test_module "Hexdump" =
       [%expect {|
           ((window (
              "00000001  60 42 6f 73 74 6f 6e 27  20 69 73 20 64 69 73 79  |`Boston' is disy|"
-             "00000011  6c 6c 61 62 69 63                                 |llabic|"
-             00000017))
+             "00000011  6c 6c 61 62 69 63                                 |llabic|"))
            (limits (
              "00000000  60 60 42 6f 73 74 6f 6e  27 20 69 73 20 64 69 73  |``Boston' is dis|"
              "00000010  79 6c 6c 61 62 69 63 27  20 69 73 20 61 62 6f 75  |yllabic' is abou|"
              "00000020  74 20 60 42 6f 73 74 6f  6e 27 20 61 6e 64 20 63  |t `Boston' and c|"
              "00000030  6f 6e 74 61 69 6e 73 20  60 60 42 6f 73 74 6f 6e  |ontains ``Boston|"
-             "00000040  27 27 2e                                          |''.|"
-             00000043))) |}]
+             "00000040  27 27 2e                                          |''.|"))) |}]
 
     let to_sequence = to_sequence
 
@@ -143,14 +135,12 @@ let%test_module "Hexdump" =
           (Window
            "  00000001  60 42 6f 73 74 6f 6e 27  20 69 73 20 64 69 73 79  |`Boston' is disy|"
            "  00000011  6c 6c 61 62 69 63                                 |llabic|"
-           "  00000017"
            Limits
            "  00000000  60 60 42 6f 73 74 6f 6e  27 20 69 73 20 64 69 73  |``Boston' is dis|"
            "  00000010  79 6c 6c 61 62 69 63 27  20 69 73 20 61 62 6f 75  |yllabic' is abou|"
            "  00000020  74 20 60 42 6f 73 74 6f  6e 27 20 61 6e 64 20 63  |t `Boston' and c|"
            "  00000030  6f 6e 74 61 69 6e 73 20  60 60 42 6f 73 74 6f 6e  |ontains ``Boston|"
-           "  00000040  27 27 2e                                          |''.|"
-           "  00000043") |}]
+           "  00000040  27 27 2e                                          |''.|") |}]
 
     let to_string_hum = to_string_hum
 
@@ -160,14 +150,12 @@ let%test_module "Hexdump" =
           Window
             00000001  60 42 6f 73 74 6f 6e 27  20 69 73 20 64 69 73 79  |`Boston' is disy|
             00000011  6c 6c 61 62 69 63                                 |llabic|
-            00000017
           Limits
             00000000  60 60 42 6f 73 74 6f 6e  27 20 69 73 20 64 69 73  |``Boston' is dis|
             00000010  79 6c 6c 61 62 69 63 27  20 69 73 20 61 62 6f 75  |yllabic' is abou|
             00000020  74 20 60 42 6f 73 74 6f  6e 27 20 61 6e 64 20 63  |t `Boston' and c|
             00000030  6f 6e 74 61 69 6e 73 20  60 60 42 6f 73 74 6f 6e  |ontains ``Boston|
-            00000040  27 27 2e                                          |''.|
-            00000043 |}]
+            00000040  27 27 2e                                          |''.| |}]
   end : module type of Iobuf.Hexdump))
 
 let%test_module "Debug" =
@@ -188,15 +176,13 @@ let%test_module "Debug" =
         [%expect {|
           ((window (
              "0000003d  60 42 6f 73 74 6f 6e 27  20 69 73 20 64 69 73 79  |`Boston' is disy|"
-             "0000004d  6c 6c 61 62 69 63                                 |llabic|"
-             00000053))
+             "0000004d  6c 6c 61 62 69 63                                 |llabic|"))
            (limits (
              "0000003c  60 60 42 6f 73 74 6f 6e  27 20 69 73 20 64 69 73  |``Boston' is dis|"
              "0000004c  79 6c 6c 61 62 69 63 27  20 69 73 20 61 62 6f 75  |yllabic' is abou|"
              "0000005c  74 20 60 42 6f 73 74 6f  6e 27 20 61 6e 64 20 63  |t `Boston' and c|"
              "0000006c  6f 6e 74 61 69 6e 73 20  60 60 42 6f 73 74 6f 6e  |ontains ``Boston|"
-             "0000007c  27 27 2e                                          |''.|"
-             0000007f))
+             "0000007c  27 27 2e                                          |''.|"))
            (buffer (
              "00000000  60 42 6f 73 74 6f 6e 20  69 73 20 70 6f 70 75 6c  |`Boston is popul|"
              "00000010  6f 75 73 27 20 69 73 20  61 62 6f 75 74 20 42 6f  |ous' is about Bo|"
@@ -226,8 +212,7 @@ let%test_module "Debug" =
              "00000190  61 6e 64 20 6e 6f 20 71  75 6f 74 61 74 69 6f 6e  |and no quotation|"
              "000001a0  20 6d 61 72 6b 73 3b 20  61 6e 64 20 42 6f 73 74  | marks; and Bost|"
              "000001b0  6f 6e 20 63 6f 6e 74 61  69 6e 73 20 73 6f 6d 65  |on contains some|"
-             "000001c0  20 38 30 30 2c 30 30 30  20 70 65 6f 70 6c 65 2e  | 800,000 people.|"
-             000001d0))) |}]
+             "000001c0  20 38 30 30 2c 30 30 30  20 70 65 6f 70 6c 65 2e  | 800,000 people.|"))) |}]
 
       let to_sequence = to_sequence
 
@@ -237,14 +222,12 @@ let%test_module "Debug" =
           (Window
            "  0000003d  60 42 6f 73 74 6f 6e 27  20 69 73 20 64 69 73 79  |`Boston' is disy|"
            "  0000004d  6c 6c 61 62 69 63                                 |llabic|"
-           "  00000053"
            Limits
            "  0000003c  60 60 42 6f 73 74 6f 6e  27 20 69 73 20 64 69 73  |``Boston' is dis|"
            "  0000004c  79 6c 6c 61 62 69 63 27  20 69 73 20 61 62 6f 75  |yllabic' is abou|"
            "  0000005c  74 20 60 42 6f 73 74 6f  6e 27 20 61 6e 64 20 63  |t `Boston' and c|"
            "  0000006c  6f 6e 74 61 69 6e 73 20  60 60 42 6f 73 74 6f 6e  |ontains ``Boston|"
            "  0000007c  27 27 2e                                          |''.|"
-           "  0000007f"
            Buffer
            "  00000000  60 42 6f 73 74 6f 6e 20  69 73 20 70 6f 70 75 6c  |`Boston is popul|"
            "  00000010  6f 75 73 27 20 69 73 20  61 62 6f 75 74 20 42 6f  |ous' is about Bo|"
@@ -274,8 +257,7 @@ let%test_module "Debug" =
            "  00000190  61 6e 64 20 6e 6f 20 71  75 6f 74 61 74 69 6f 6e  |and no quotation|"
            "  000001a0  20 6d 61 72 6b 73 3b 20  61 6e 64 20 42 6f 73 74  | marks; and Bost|"
            "  000001b0  6f 6e 20 63 6f 6e 74 61  69 6e 73 20 73 6f 6d 65  |on contains some|"
-           "  000001c0  20 38 30 30 2c 30 30 30  20 70 65 6f 70 6c 65 2e  | 800,000 people.|"
-           "  000001d0") |}]
+           "  000001c0  20 38 30 30 2c 30 30 30  20 70 65 6f 70 6c 65 2e  | 800,000 people.|") |}]
 
       let to_string_hum = to_string_hum
 
@@ -285,14 +267,12 @@ let%test_module "Debug" =
           Window
             0000003d  60 42 6f 73 74 6f 6e 27  20 69 73 20 64 69 73 79  |`Boston' is disy|
             0000004d  6c 6c 61 62 69 63                                 |llabic|
-            00000053
           Limits
             0000003c  60 60 42 6f 73 74 6f 6e  27 20 69 73 20 64 69 73  |``Boston' is dis|
             0000004c  79 6c 6c 61 62 69 63 27  20 69 73 20 61 62 6f 75  |yllabic' is abou|
             0000005c  74 20 60 42 6f 73 74 6f  6e 27 20 61 6e 64 20 63  |t `Boston' and c|
             0000006c  6f 6e 74 61 69 6e 73 20  60 60 42 6f 73 74 6f 6e  |ontains ``Boston|
             0000007c  27 27 2e                                          |''.|
-            0000007f
           Buffer
             00000000  60 42 6f 73 74 6f 6e 20  69 73 20 70 6f 70 75 6c  |`Boston is popul|
             00000010  6f 75 73 27 20 69 73 20  61 62 6f 75 74 20 42 6f  |ous' is about Bo|
@@ -322,7 +302,6 @@ let%test_module "Debug" =
             00000190  61 6e 64 20 6e 6f 20 71  75 6f 74 61 74 69 6f 6e  |and no quotation|
             000001a0  20 6d 61 72 6b 73 3b 20  61 6e 64 20 42 6f 73 74  | marks; and Bost|
             000001b0  6f 6e 20 63 6f 6e 74 61  69 6e 73 20 73 6f 6d 65  |on contains some|
-            000001c0  20 38 30 30 2c 30 30 30  20 70 65 6f 70 6c 65 2e  | 800,000 people.|
-            000001d0 |}]
+            000001c0  20 38 30 30 2c 30 30 30  20 70 65 6f 70 6c 65 2e  | 800,000 people.| |}]
     end
   end : module type of Iobuf.Debug))

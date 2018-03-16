@@ -366,8 +366,8 @@ module Array_set : sig
 
     val create             : ofday list -> t
     val compare            : t -> t -> int
-    val mem                : t -> cmp:(ofday -> ofday -> int) -> ofday -> bool
-    val next_after_rolling : t -> cmp:(ofday -> ofday -> int) -> ofday -> ofday option
+    val mem                : t -> ofday -> bool
+    val next_after_rolling : t -> Time.t -> zone:Time.Zone.t -> Time.t option
   end
 end = struct
   module T = struct
@@ -380,26 +380,54 @@ end = struct
     let create l ~cmp:compare =
       let set =
         List.dedup_and_sort l ~compare
-        |> List.sort ~cmp:compare
+        |> List.sort ~compare
         |> Array.of_list
       in
       { set; compare }
     ;;
 
-    let next_after t ?cmp v =
-      let compare = Option.value cmp ~default:t.compare in
-      match Array.binary_search t.set ~compare `First_strictly_greater_than v with
+    let next_after t time ~zone =
+      let date = Time.to_date time ~zone in
+      let compare ofday t = Time.compare (Time.of_date_ofday date ofday ~zone) t  in
+      match Array.binary_search t.set ~compare `First_strictly_greater_than time with
       | None   -> None
       | Some i -> Some t.set.(i)
     ;;
 
-    let next_after_rolling t ?cmp v =
-      match next_after t ?cmp v with
-      | Some _ as ret -> ret
+    let%expect_test "test next_after rolling around dst" =
+      let t =
+        create ~cmp:Time.Ofday.compare
+          [ Time.Ofday.create ~hr:1 ()
+          ; Time.Ofday.create ~hr:2 ()
+          ; Time.Ofday.create ~hr:3 ()
+          ]
+      in
+      let date = Date.of_string "2018-03-11" in
+      let zone = Lazy.force Time.Zone.local  in
+      let next_after ~hr =
+        Time.Ofday.create ~hr ()
+        |> Time.of_date_ofday date ~zone
+        |> next_after t  ~zone
+      in
+      let next = next_after ~hr:1 in
+      print_s [%sexp (next : Time.Ofday.t option)];
+      [%expect {| (02:00:00.000000) |}];
+      let next = next_after ~hr:2 in
+      print_s [%sexp (next : Time.Ofday.t option)];
+      [%expect {| () |}];
+      let next = next_after ~hr:3 in
+      print_s [%sexp (next : Time.Ofday.t option)];
+      [%expect {| () |}];
+    ;;
+
+    let next_after_rolling t time ~zone =
+      let date = Time.to_date time ~zone in
+      match next_after t time ~zone with
+      | Some ofday -> Some (Time.of_date_ofday date ofday ~zone)
       | None ->
         if Array.length t.set = 0
         then None
-        else Some (t.set.(0))
+        else Some (Time.of_date_ofday (Date.add_days date 1) t.set.(0) ~zone)
     ;;
 
     let mem t ?cmp v =
@@ -439,8 +467,8 @@ end = struct
 
     let create  = T.create ~cmp:Time.Ofday.compare
     let compare = T.compare Time.Ofday.compare
-    let mem t ~cmp v = T.mem t ~cmp v
-    let next_after_rolling t ~cmp v = T.next_after_rolling t ~cmp v
+    let mem t v = T.mem t ~cmp:Time.Ofday.compare v
+    let next_after_rolling t v = T.next_after_rolling t v
   end
 end
 
@@ -614,13 +642,6 @@ end = struct
       ; zone }
   ;;
 end
-
-let make_ofday_compare ~date ~zone =
-  fun v0 v ->
-    let time0 = Time.of_date_ofday date v0 ~zone in
-    let time  = Time.of_date_ofday date v ~zone in
-    Time.compare time0 time
-;;
 
 module Internal = struct
   module T =
@@ -885,22 +906,14 @@ let includes (t : (zoned, _) Internal.t) ~output_includes_tags (time : Time.t) :
         let ofday = IT.ofday it in
         let date  = IT.date it  in
         let zone  = IT.zone it  in
-        let cmp   = make_ofday_compare ~date ~zone in
-        if Array_set.Ofday.mem ofdays ~cmp ofday
+        let time = Time.of_date_ofday date ofday ~zone in
+        if Array_set.Ofday.mem ofdays ofday
         then In_range_for_at_least (span_to_next_representable_time time)
         else begin
-          match Array_set.Ofday.next_after_rolling ofdays ~cmp ofday with
+          match Array_set.Ofday.next_after_rolling ofdays time ~zone with
           | None            -> Valid_invalid_span.never
-          | Some next_ofday ->
-            let span =
-              let time = Time.of_date_ofday date ofday ~zone in
-              let next_time =
-                if Time.Ofday.(>) next_ofday ofday
-                then Time.of_date_ofday date next_ofday ~zone
-                else Time.of_date_ofday (Date.add_days date 1) next_ofday ~zone
-              in
-              Time.diff next_time time
-            in
+          | Some next_time ->
+            let span = Time.diff next_time time in
             Out_of_range_for_at_least span
         end
       | Secs secs, O.U (_, _, it)         ->
@@ -997,8 +1010,7 @@ let fold_tags (type tag)(type m) (t : (zoned, tag) Internal.t) ~(init:m) ~f time
        else None)
   in
   let ofday_mem s it under_not m =
-    let cmp = make_ofday_compare ~date:(IT.date it) ~zone:(IT.zone it) in
-    maybe_negate under_not m (if Array_set.Ofday.mem s ~cmp (IT.ofday it) then Some m else None)
+    maybe_negate under_not m (if Array_set.Ofday.mem s (IT.ofday it) then Some m else None)
   in
   let fold_and ~f l m =
     List.fold l ~init:(Some m)
@@ -1240,6 +1252,34 @@ let next_between t ~start_time ~stop_time ~prev_tags emit =
   loop start_time
 ;;
 
+let%expect_test "test at around DST" =
+  let schedule =
+    Internal.In_zone
+      (Lazy.force Time.Zone.local,
+       At (Array_set.Ofday.create
+             (List.init 2 ~f:(fun hr -> Time.Ofday.create ~hr:(hr + 1) ~sec:1 ()))))
+  in
+  let f start_time =
+    let _, time =
+      next_between schedule
+        ~start_time
+        ~stop_time:(Time.of_string "2018-03-13 00:00:00-04:00")
+        ~prev_tags:None
+        Transitions
+    in
+    print_s [%sexp (time : [ `Enter of Core_time_float.t * unit list
+                           | `Leave of Core_time_float.t
+                           | `No_change_until_at_least of
+                               [ `In_range | `Out_of_range ] * Core_time_float.t ])]
+  in
+  let start_time = Time.of_string "2018-03-11 03:00:01-04:00" in
+  f start_time;
+  [%expect {| (Enter ((2018-03-12 01:00:01.000000-04:00) ())) |}];
+  let start_time = Time.prev start_time in
+  f start_time;
+  [%expect {| (Enter ((2018-03-12 01:00:01.000000-04:00) ())) |}];
+;;
+
 let search_one_chunk t ~start_time ~prev_tags emit =
   let max_stop_time = Time.add start_time (Time.Span.of_day 1.) in
   (next_between t ~start_time ~stop_time:max_stop_time ~prev_tags emit)
@@ -1337,3 +1377,48 @@ let includes t time =
 let fold_tags t ~init ~f time  = fold_tags (Internal.of_external t) ~init ~f time
 let tags t time                = tags (Internal.of_external t) time
 let all_tags t ~tag_comparator = all_tags (Internal.of_external t) ~tag_comparator
+
+let%expect_test "Test At around dst: Times after dst unaffected" =
+  let schedule =
+    In_zone
+      (Lazy.force Time.Zone.local,
+       At (List.init 2 ~f:(fun hr -> Time.Ofday.create ~hr:(hr + 1) ~sec:1 ())))
+  in
+  let time =
+    next_enter_between schedule
+      (Time.of_string "2018-03-11 03:00:01-04:00")
+      (Time.of_string "2018-03-13 00:00:00-04:00")
+  in
+  print_s [%sexp (time : Time.t option)];
+  [%expect {| ((2018-03-12 01:00:01.000000-04:00)) |}];
+;;
+
+let%expect_test "Test at around dst: Times before DST unaffected" =
+  let schedule =
+    In_zone
+      (Lazy.force Time.Zone.local,
+       At (List.init 2 ~f:(fun hr -> Time.Ofday.create ~hr:(hr + 1) ~sec:1 ())))
+  in
+  let time =
+    next_enter_between schedule
+      (Time.of_string "2018-03-11 01:00:01-05:00")
+      (Time.of_string "2018-03-13 00:00:00-04:00")
+  in
+  print_s [%sexp (time : Time.t option)];
+  [%expect {| ((2018-03-11 01:00:01.000000-05:00)) |}];
+;;
+
+let%expect_test "Test at around dst: Time of the time change unaffected" =
+  let schedule =
+    In_zone
+      (Lazy.force Time.Zone.local,
+       At (List.init 3 ~f:(fun hr -> Time.Ofday.create ~hr:(hr + 1) ~sec:1 ())))
+  in
+  let time =
+    next_enter_between schedule
+      (Time.of_string "2018-03-11 01:00:02-05:00")
+      (Time.of_string "2018-03-13 00:00:00-04:00")
+  in
+  print_s [%sexp (time : Time.t option)];
+  [%expect {| ((2018-03-11 03:00:01.000000-04:00)) |}];
+;;

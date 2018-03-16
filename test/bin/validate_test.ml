@@ -25,8 +25,8 @@ let test =
           ; "(foo.excl_upper \"value 100 >= bound 100\")"
           ]
         in
-        List.sort ~cmp:Poly.ascending (V.errors res)
-        = List.sort ~cmp:Poly.ascending expected;
+        List.sort ~compare:Poly.ascending (V.errors res)
+        = List.sort ~compare:Poly.ascending expected;
       );
 
       "inf/nan" @? (
@@ -41,8 +41,8 @@ let test =
           ; "(bar.inf \"value is infinite\")"
           ]
         in
-        List.sort ~cmp:Poly.ascending (V.errors res)
-        = List.sort ~cmp:Poly.ascending expected;
+        List.sort ~compare:Poly.ascending (V.errors res)
+        = List.sort ~compare:Poly.ascending expected;
       );
 
       "nesting" @? (
@@ -65,8 +65,8 @@ let test =
           ; "(nesting.sub0.sub3.sub5 \"value is NaN\")"
           ]
         in
-        List.sort ~cmp:Poly.ascending (V.errors res)
-        = List.sort ~cmp:Poly.ascending expected;
+        List.sort ~compare:Poly.ascending (V.errors res)
+        = List.sort ~compare:Poly.ascending expected;
       );
 
       "empty" @? (
@@ -79,8 +79,8 @@ let test =
           ]]
         in
         let expected = [] in
-        List.sort ~cmp:Poly.ascending (V.errors res) =
-        List.sort ~cmp:Poly.ascending expected
+        List.sort ~compare:Poly.ascending (V.errors res) =
+        List.sort ~compare:Poly.ascending expected
       );
     )
   ]

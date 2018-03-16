@@ -86,8 +86,8 @@ module Foil : S = struct
   let count t ~f       = read_wrap t (fun () -> List.count (to_list t) ~f)
   let sum m t ~f       = read_wrap t (fun () -> List.sum m (to_list t) ~f)
   let mem t a ~equal   = read_wrap t (fun () -> List.mem (to_list t) a ~equal)
-  let min_elt t ~cmp   = read_wrap t (fun () -> List.min_elt ~cmp (to_list t))
-  let max_elt t ~cmp   = read_wrap t (fun () -> List.max_elt ~cmp (to_list t))
+  let min_elt t ~compare   = read_wrap t (fun () -> List.min_elt ~compare (to_list t))
+  let max_elt t ~compare   = read_wrap t (fun () -> List.max_elt ~compare (to_list t))
   let fold_result t ~init ~f  =
     read_wrap t (fun () -> List.fold_result (to_list t) ~init ~f)
   let fold_until t ~init ~f  =
@@ -308,8 +308,8 @@ module Both : S = struct
   let of_list xs = pair Hero.of_list Foil.of_list *@ pure xs
   let to_list t = obs (pair Hero.to_list Foil.to_list *@ t)
   let to_array t = obs (pair Hero.to_array Foil.to_array *@ t)
-  let min_elt t ~cmp = obs (pair (Hero.min_elt ~cmp) (Foil.min_elt ~cmp) *@ t)
-  let max_elt t ~cmp = obs (pair (Hero.max_elt ~cmp) (Foil.max_elt ~cmp) *@ t)
+  let min_elt t ~compare = obs (pair (Hero.min_elt ~compare) (Foil.min_elt ~compare) *@ t)
+  let max_elt t ~compare = obs (pair (Hero.max_elt ~compare) (Foil.max_elt ~compare) *@ t)
 
   (* punt: so as not to duplicate any effects in passed-in functions *)
   let fold _ = failwith "unimplemented"

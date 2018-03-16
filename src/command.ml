@@ -40,7 +40,7 @@ end = struct
     } [@@deriving sexp]
 
     let sort ts =
-      List.stable_sort ts ~cmp:(fun a b -> help_screen_compare a.name b.name)
+      List.stable_sort ts ~compare:(fun a b -> help_screen_compare a.name b.name)
 
     let word_wrap text width =
       let chunks = String.split text ~on:'\n' in
@@ -208,7 +208,7 @@ module Arg_type = struct
         let chan_in = Unix.open_process_in command in
         let completions = In_channel.input_lines chan_in in
         ignore (Unix.close_process_in chan_in);
-        List.map (List.sort ~cmp:String.compare completions) ~f:(fun comp ->
+        List.map (List.sort ~compare:String.compare completions) ~f:(fun comp ->
           if Sys.is_directory comp
           then comp ^ "/"
           else comp)
@@ -1152,7 +1152,7 @@ module Base = struct
     String.Map.data t.flags
     |> List.map ~f:Flag.Internal.align
     (* this sort puts optional flags after required ones *)
-    |> List.sort ~cmp:(fun a b -> String.compare a.Format.V1.name b.name)
+    |> List.sort ~compare:(fun a b -> String.compare a.Format.V1.name b.name)
     |> Format.V1.sort
 
   let help_text ~path t =
@@ -1545,9 +1545,10 @@ module Base = struct
 
     let choose_one ts ~if_nothing_chosen =
       let ts = List.map ts ~f:(fun t -> to_string_for_choose_one t, t) in
-      Option.iter (List.find_a_dup (List.map ~f:fst ts)) ~f:(fun name ->
-        failwiths "Command.Spec.choose_one called with duplicate name" name
-          [%sexp_of: string]);
+      Option.iter (List.find_a_dup (List.map ~f:fst ts) ~compare:String.compare)
+        ~f:(fun name ->
+          failwiths "Command.Spec.choose_one called with duplicate name" name
+            [%sexp_of: string]);
       List.fold ts ~init:(return None) ~f:(fun init (name, t) ->
         map2 init t ~f:(fun init value ->
           match value with
@@ -2152,7 +2153,7 @@ let gather_help ~recursive ~show_flags ~expand_dots sexpable =
         else subs
       in
       let alist =
-        List.stable_sort subs ~cmp:(fun a b -> help_screen_compare (fst a) (fst b))
+        List.stable_sort subs ~compare:(fun a b -> help_screen_compare (fst a) (fst b))
       in
       List.fold alist ~init:acc ~f:(fun acc (subcommand, t) ->
         let rpath = Path.add rpath ~subcommand in
@@ -2473,7 +2474,7 @@ module Version_info = struct
        and ensure sorted order *)
     String.split version ~on:' '
     |> List.concat_map ~f:(String.split ~on:'\n')
-    |> List.sort ~cmp:String.compare
+    |> List.sort ~compare:String.compare
 
   let print_version ~version = List.iter (sanitize_version ~version) ~f:print_endline
   let print_build_info ~build_info = print_endline (force build_info)
@@ -2702,7 +2703,7 @@ let rec dispatch t env ~extend ~path ~args ~maybe_new_comp_cword ~version ~build
         Lazy.force subs
         |> List.map ~f:fst
         |> List.filter ~f:(fun name -> String.is_prefix name ~prefix:part)
-        |> List.sort ~cmp:String.compare
+        |> List.sort ~compare:String.compare
       in
       List.iter subs ~f:print_endline;
       exit 0
@@ -2779,7 +2780,7 @@ module Deprecated = struct
         if with_flags then
           base_help ::
           List.map ~f:(fun (flag, h) -> (new_s ^ flag, h))
-            (List.sort ~cmp:Base.Deprecated.subcommand_cmp_fst
+            (List.sort ~compare:Base.Deprecated.subcommand_cmp_fst
                (Base.Deprecated.flags_help ~display_help_flags:false base))
         else
           [base_help]
@@ -2787,7 +2788,7 @@ module Deprecated = struct
         (s ^ cmd, summary)
         :: begin
           Lazy.force subcommands
-          |> List.sort ~cmp:Base.Deprecated.subcommand_cmp_fst
+          |> List.sort ~compare:Base.Deprecated.subcommand_cmp_fst
           |> List.concat_map ~f:(fun (cmd', t) ->
             help_recursive_rec ~cmd:cmd' t new_s)
         end

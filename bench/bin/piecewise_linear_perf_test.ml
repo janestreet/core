@@ -3,7 +3,7 @@ open Core
 let test_with_overhead number_of_knots number_of_lookups =
   let xmax = 10. in
   let kx = Array.init number_of_knots ~f:(fun _i -> Random.float xmax) in
-  Array.sort kx ~cmp:Float.compare;
+  Array.sort kx ~compare:Float.compare;
   let ky = Array.init number_of_knots ~f:(fun _i -> Random.float 20.) in
   let knots = Array.map2_exn kx ky ~f:(fun x y -> (x,y)) |> Array.to_list in
   let t = Or_error.ok_exn (Piecewise_linear.Float.create knots) in
@@ -25,7 +25,7 @@ let test_with_overhead number_of_knots number_of_lookups =
 let test number_of_knots number_of_lookups =
   let xmax = 10. in
   let kx = Array.init number_of_knots ~f:(fun _i -> Random.float xmax) in
-  Array.sort kx ~cmp:Float.compare;
+  Array.sort kx ~compare:Float.compare;
   let ky = Array.init number_of_knots ~f:(fun _i -> Random.float 20.) in
   let knots = Array.map2_exn kx ky ~f:(fun x y -> (x,y)) |> Array.to_list in
   let t = Or_error.ok_exn (Piecewise_linear.Float.create knots) in

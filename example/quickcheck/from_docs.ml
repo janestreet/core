@@ -70,7 +70,7 @@ module Generator_examples = struct
   module Recursive = struct
 
     let (_ : _ Generator.t) =
-      Generator.(recursive (fun self ->
+      Generator.(fixed_point (fun self ->
         size >>= function
         | 0 -> String.gen    >>| fun atom -> Sexp.Atom atom
         | _ -> List.gen self >>| fun list -> Sexp.List list))

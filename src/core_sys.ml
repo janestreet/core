@@ -2,7 +2,7 @@ open! Import
 
 module LargeFile = Unix.LargeFile
 
-let getenv var = try Some (Sys.getenv var) with Not_found -> None
+let getenv var = try Some (Sys.getenv var) with Not_found_s _ | Caml.Not_found -> None
 
 let getenv_exn var =
   match getenv var with

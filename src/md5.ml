@@ -1,4 +1,4 @@
-open Core_kernel.Std
+open Core_kernel
 
 external digest_fd : Core_unix.File_descr.t -> string = "core_md5_fd"
 

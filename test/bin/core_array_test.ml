@@ -85,7 +85,7 @@ let test =
         Array.rev_inplace one_array;
         List.rev one_list =|= one_array);
     );
-    "replace_all" >::
+    "map_inplace" >::
     (fun () ->
        let random_list =
          Quickcheck_deprecated.lg (fun () -> Random.int 1000) ~size_gen:(fun _ -> 1000) ()
@@ -95,15 +95,15 @@ let test =
        let f i = i * i in
        "random" @?
        (let random_array = Array.of_list random_list in
-        Array.replace_all ~f random_array;
+        Array.map_inplace ~f random_array;
         List.map ~f random_list =|= random_array);
        "empty" @?
        (let empty_array = Array.of_list empty_list in
-        Array.replace_all ~f empty_array;
+        Array.map_inplace ~f empty_array;
         List.map ~f empty_list =|= empty_array);
        "one" @?
        (let one_array = Array.of_list one_list in
-        Array.replace_all ~f one_array;
+        Array.map_inplace ~f one_array;
         List.map ~f one_list =|= one_array);
     );
     "cartesian_product" >::

@@ -38,7 +38,7 @@ let test =
          let (h,l) = random_heap_and_list Quickcheck_deprecated.uig in
          "foo" @? (match Heap.top h with
              None -> false
-           | Some t -> t = List.hd_exn (List.sort ~cmp:compare l));
+           | Some t -> t = List.hd_exn (List.sort ~compare l));
          "didnaepop" @? (Heap.length h = List.length l)
       );
       "pop" >::
@@ -46,7 +46,7 @@ let test =
          let (h,l) = random_heap_and_list Quickcheck_deprecated.uig in
          "foo" @? (match Heap.pop h with
              None -> false
-           | Some t -> t = List.hd_exn (List.sort ~cmp:compare l));
+           | Some t -> t = List.hd_exn (List.sort ~compare l));
          "popped" @? (Heap.length h = List.length l - 1)
       );
       "pop_if" >::
@@ -82,7 +82,7 @@ let test =
          "content differs" @?
          begin
            let h,l = random_heap_and_list Quickcheck_deprecated.fg in
-           (List.sort ~cmp:Float.compare l) = (to_sorted_list h)
+           (List.sort ~compare:Float.compare l) = (to_sorted_list h)
          end
       );
       "random heap" >::
@@ -106,11 +106,11 @@ let test =
       (fun () ->
          "randomints" @? (
            let (h,l) = random_heap_and_list Quickcheck_deprecated.uig in
-           to_sorted_list h = List.sort ~cmp:compare l
+           to_sorted_list h = List.sort ~compare l
          );
          "randomfloats" @? (
            let (h,l) = random_heap_and_list Quickcheck_deprecated.fg in
-           to_sorted_list h = List.sort ~cmp:compare l
+           to_sorted_list h = List.sort ~compare l
          )
       )
     ]

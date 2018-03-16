@@ -1926,8 +1926,8 @@ let setgid gid =
 let getgroups = Unix.getgroups
 
 let make_by f make_exn =
-  let normal arg = try Some (f arg) with Not_found -> None in
-  let exn arg = try f arg with Not_found -> raise (make_exn arg) in
+  let normal arg = try Some (f arg) with Not_found_s _ | Caml.Not_found -> None in
+  let exn arg = try f arg with Not_found_s _ | Caml.Not_found -> raise (make_exn arg) in
   (normal, exn)
 ;;
 
@@ -2298,7 +2298,7 @@ module Cidr = struct
           { address : int32; (* IPv4 only *)
             bits    : int;
           }
-        [@@deriving fields, bin_io, compare, hash, compare]
+        [@@deriving fields, bin_io, compare, hash]
 
         let normalized_address ~base ~bits =
           if bits = 0
@@ -2425,7 +2425,7 @@ module Service = struct
 
   let getbyname_exn name ~protocol =
     try of_unix (Unix.getservbyname name ~protocol)
-    with Not_found -> raise (Getbyname (name, protocol))
+    with Not_found_s _ | Caml.Not_found -> raise (Getbyname (name, protocol))
   ;;
 
   let getbyname name ~protocol =
@@ -2437,12 +2437,12 @@ module Service = struct
 
   let getbyport_exn num ~protocol =
     try of_unix (Unix.getservbyport num ~protocol)
-    with Not_found -> raise (Getbyport (num, protocol))
+    with Not_found_s _ | Caml.Not_found -> raise (Getbyport (num, protocol))
   ;;
 
   let getbyport num ~protocol =
     try Some (of_unix (Unix.getservbyport num ~protocol))
-    with Not_found -> None
+    with Not_found_s _ | Caml.Not_found -> None
   ;;
 end
 

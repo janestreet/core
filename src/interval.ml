@@ -33,6 +33,8 @@ module Stable = struct
 
     open T
 
+    type 'a t = 'a interval [@@deriving sexp, bin_io, compare]
+
     module Float = struct
       module T = struct
         type t = float interval [@@deriving sexp, bin_io, compare]
@@ -294,7 +296,7 @@ module Raw_make (T : Bound) = struct
 
     let half_open_intervals_are_a_partition intervals =
       let intervals = List.filter ~f:(fun x -> not (is_empty x)) intervals in
-      let intervals = List.sort ~cmp:interval_compare intervals in
+      let intervals = List.sort ~compare:interval_compare intervals in
       (* requires sorted list of intervals *)
       let rec is_partition a = function
         | [] -> true
@@ -320,7 +322,7 @@ module Raw_make (T : Bound) = struct
       in
       let intervals =
         let lb i = Interval.lbound_exn i in
-        List.sort intervals ~cmp:(fun i i' -> T.compare (lb i) (lb i'))
+        List.sort intervals ~compare:(fun i i' -> T.compare (lb i) (lb i'))
       in
       if not (Interval.are_disjoint intervals)
       then failwith "Interval_set.create: intervals were not disjoint"
@@ -514,14 +516,14 @@ module Int = struct
   let fold_result = For_container.fold_result
   let fold_until = For_container.fold_until
 
-  let min_elt t ~cmp =
-    if not (phys_equal cmp Int.compare)
-    then For_container.min_elt t ~cmp
+  let min_elt t ~compare =
+    if not (phys_equal compare Int.compare)
+    then For_container.min_elt t ~compare
     else lbound t
 
-  let max_elt t ~cmp =
-    if not (phys_equal cmp Int.compare)
-    then For_container.max_elt t ~cmp
+  let max_elt t ~compare =
+    if not (phys_equal compare Int.compare)
+    then For_container.max_elt t ~compare
     else ubound t
 
   let mem t x =
@@ -681,31 +683,31 @@ module Int = struct
             ~expect:(Array.fold (to_array t) ~init ~f)
             (fold t ~init ~f))
 
-      let%test_unit "min_elt w/ default cmp" =
+      let%test_unit "min_elt w/ default compare" =
         Quickcheck.test interval ~sexp_of:[%sexp_of: t] ~f:(fun t ->
           [%test_result: int option]
-            ~expect:(Array.min_elt (to_array t) ~cmp:Int.compare)
-            (min_elt t ~cmp:Int.compare))
+            ~expect:(Array.min_elt (to_array t) ~compare:Int.compare)
+            (min_elt t ~compare:Int.compare))
 
-      let%test_unit "min_elt w/ reverse cmp" =
+      let%test_unit "min_elt w/ reverse compare" =
         Quickcheck.test interval ~sexp_of:[%sexp_of: t] ~f:(fun t ->
-          let cmp x y = Int.compare y x in
+          let compare x y = Int.compare y x in
           [%test_result: int option]
-            ~expect:(Array.min_elt (to_array t) ~cmp)
-            (min_elt t ~cmp))
+            ~expect:(Array.min_elt (to_array t) ~compare)
+            (min_elt t ~compare))
 
-      let%test_unit "max_elt w/ default cmp" =
+      let%test_unit "max_elt w/ default compare" =
         Quickcheck.test interval ~sexp_of:[%sexp_of: t] ~f:(fun t ->
           [%test_result: int option]
-            ~expect:(Array.max_elt (to_array t) ~cmp:Int.compare)
-            (max_elt t ~cmp:Int.compare))
+            ~expect:(Array.max_elt (to_array t) ~compare:Int.compare)
+            (max_elt t ~compare:Int.compare))
 
-      let%test_unit "max_elt w/ reverse cmp" =
+      let%test_unit "max_elt w/ reverse compare" =
         Quickcheck.test interval ~sexp_of:[%sexp_of: t] ~f:(fun t ->
-          let cmp x y = Int.compare y x in
+          let compare x y = Int.compare y x in
           [%test_result: int option]
-            ~expect:(Array.max_elt (to_array t) ~cmp)
-            (max_elt t ~cmp))
+            ~expect:(Array.max_elt (to_array t) ~compare)
+            (max_elt t ~compare))
 
       let%test_unit "mem" =
         Quickcheck.test

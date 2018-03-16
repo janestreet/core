@@ -2,7 +2,7 @@
  ((names (discover))
 (flags (:standard -safe-string))
   (libraries (base stdio configurator))
-  (preprocess (pps (ppx_assert ppx_driver.runner)))))
+  (preprocess (pps (ppx_assert ppxlib.runner)))))
 
 
 (jbuild_version 1)

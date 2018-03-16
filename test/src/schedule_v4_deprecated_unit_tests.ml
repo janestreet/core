@@ -908,14 +908,14 @@ let%test_module "Schedule" =
             | `Included tags -> tags
           in
           [%test_result: string list]
-            (List.sort ~cmp:String.compare tags)
+            (List.sort ~compare:String.compare tags)
             ~expect:expected_tags)
     ;;
 
     let sorted_tags schedule time =
       match tags schedule time with
       | `Not_included  -> []
-      | `Included tags -> List.sort ~cmp:String.compare tags
+      | `Included tags -> List.sort ~compare:String.compare tags
     ;;
 
     let%test_unit "Test tags is correct in a simple example"=
@@ -1410,5 +1410,80 @@ let%test_module "Schedule" =
       let min_sched = In_zone (Time.Zone.utc, Mins [15]) in
       test_inclusivity sec_sched;
       test_inclusivity min_sched;
+    ;;
+
+    let%expect_test "DST fallback bugs" =
+      let schedule =
+        Schedule_v4_deprecated.In_zone
+          ( force Time.Zone.local
+          , At [ Time.Ofday.create ~hr:1 ~min:30 () ]
+          )
+      in
+      let print_next start_time =
+        Schedule_v4_deprecated.next_enter_between schedule
+          start_time
+          (Time.of_string "2018-11-06 00:00:00")
+        |> Option.map ~f:Time.to_string
+        |> [%sexp_of: string option]
+        |> print_s
+      in
+
+      (* Just demonstrating the relative ordering of two times, to help understand the
+         rest of the test. *)
+      begin
+        Time.compare
+          (Time.of_string "2018-11-04 01:30:00-04:00")
+          (Time.of_string "2018-11-04 01:30:00-05:00")
+        |> [%sexp_of: int]
+        |> print_s;
+        [%expect {| -1 |}]
+      end;
+
+      (* Start time as explicit offset from UTC *)
+      begin
+        (* The documentation claims that this should be in schedule twice, but this result
+           says the first occurrence is the second of the two. *)
+        print_next (Time.of_string "2018-11-04 00:59:00-04:00");
+        [%expect {| ("2018-11-04 01:30:00.000000-05:00") |}];
+
+        (* Moving the start time forward made the next event earlier, which is clearly a
+           bug. *)
+        print_next (Time.of_string "2018-11-04 01:29:00-04:00");
+        [%expect {| ("2018-11-04 01:30:00.000000-04:00") |}];
+
+        (* This looks correct. *)
+        print_next (Time.of_string "2018-11-04 01:31:00-04:00");
+        [%expect {| ("2018-11-04 01:30:00.000000-05:00") |}];
+
+        (* This looks correct. *)
+        print_next (Time.of_string "2018-11-04 01:31:00-05:00");
+        [%expect {| ("2018-11-05 01:30:00.000000-05:00") |}];
+      end;
+
+      (* Start time in NYC time zone *)
+      begin
+        (* The documentation claims that this should be in schedule twice, but this result
+           says the first occurrence is the second of the two. *)
+        print_next
+          (Time.of_date_ofday (Date.of_string "2018-11-04")
+             (Time.Ofday.create ~hr:0 ~min:59 ()) ~zone:(force Time.Zone.local));
+        [%expect {| ("2018-11-04 01:30:00.000000-05:00") |}];
+
+        (* Whether this is correct depends on whether [Time.of_date_ofday] is generating
+           the first or second occurrence of the given ofday, which I'm not sure of. If
+           it's the second, which seems likely, this is correct. *)
+        print_next
+          (Time.of_date_ofday (Date.of_string "2018-11-04")
+             (Time.Ofday.create ~hr:1 ~min:29 ()) ~zone:(force Time.Zone.local));
+        [%expect {| ("2018-11-04 01:30:00.000000-05:00") |}];
+
+        (* Whether this is correct depends on whether [Time.of_date_ofday] is generating
+           the first or second occurrence of the given ofday, which I'm not sure of. If
+           it's the second, which seems likely, this is correct. *)
+        print_next
+          (Time.of_date_ofday (Date.of_string "2018-11-04")
+             (Time.Ofday.create ~hr:1 ~min:31 ()) ~zone:(force Time.Zone.local));
+        [%expect {| ("2018-11-05 01:30:00.000000-05:00") |}];
+      end
     ;;
   end)

@@ -25,7 +25,7 @@ let test =
     "lsplit2_exn" >::
     (fun () ->
        "none" @? (try ignore (S.lsplit2_exn str1 ~on:' '); false
-                  with Not_found -> true | _ -> false);
+                  with Not_found_s _ | Caml.Not_found -> true | _ -> false);
        "some1" @? (S.lsplit2_exn str1 ~on:'5' = ("1234","67890"));
        "some2" @? (S.lsplit2_exn "123.456.789" ~on:'.' = ("123","456.789"));
     );
@@ -38,7 +38,7 @@ let test =
     "rsplit2_exn" >::
     (fun () ->
        "none" @? (try ignore (S.rsplit2_exn str1 ~on:' '); false
-                  with Not_found -> true | _ -> false);
+                  with Not_found_s _ | Caml.Not_found -> true | _ -> false);
        "some1" @? (S.rsplit2_exn str1 ~on:'5' = ("1234","67890"));
        "some2" @? (S.rsplit2_exn "123.456.789" ~on:'.' = ("123.456","789"));
     );

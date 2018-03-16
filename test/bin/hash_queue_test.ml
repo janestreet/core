@@ -96,7 +96,7 @@ let test =
               | _ -> true);
       assert (Hq.lookup hq "1" = None);
       assert (try ignore (Hq.lookup_exn hq "1"); false with
-        | Not_found -> true | _ -> false);
+        | Not_found_s _ | Caml.Not_found -> true | _ -> false);
 
       Hq.clear hq;
       assert (Hq.is_empty hq);

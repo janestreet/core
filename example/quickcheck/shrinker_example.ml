@@ -9,7 +9,7 @@ module Sorted_list = struct
   [@@deriving sexp]
 
   let of_list list =
-    List.stable_sort ~cmp:Int.compare list
+    List.stable_sort ~compare:Int.compare list
 
   let to_list t = t
 
@@ -37,7 +37,7 @@ module Sorted_list = struct
     List.append t_a t_b
 
   let merge t_a t_b =
-    List.merge t_a t_b ~cmp:Int.compare
+    List.merge t_a t_b ~compare:Int.compare
 end
 
 let%test_module "sorted list" =

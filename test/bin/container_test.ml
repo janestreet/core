@@ -14,7 +14,7 @@ end = struct
       let m = M.of_list l in
       assert (M.length m = List.length l);
       assert (M.is_empty m = List.is_empty l);
-      let is_l_unsorted l' = l = List.sort l' ~cmp:Int.compare in
+      let is_l_unsorted l' = l = List.sort l' ~compare:Int.compare in
       assert (is_l_unsorted (M.fold m ~init:[] ~f:(fun ac x -> x :: ac)));
       assert (is_l_unsorted (M.to_list m));
       let r = ref [] in

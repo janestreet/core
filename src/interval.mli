@@ -116,11 +116,12 @@ module Make (Bound : sig
 
 (**
    [Stable] is used to build stable protocols. It ensures backwards compatibility by
-   checking the sexp and bin-io representations of a given module. Here it's applied to
-   the [Float], [Int], [Time], [Time_ns], and [Ofday] intervals.
+   checking the sexp and bin-io representations of a given module. Here it's also applied
+   to the [Float], [Int], [Time], [Time_ns], and [Ofday] intervals.
 *)
 module Stable : sig
   module V1 : sig
+    type nonrec 'a t = 'a t [@@deriving bin_io, compare, sexp]
     module Float   : Stable with type t = Float.  t
     module Int     : Stable with type t = Int.    t
     module Time    : Stable with type t = Time.   t
