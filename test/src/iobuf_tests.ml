@@ -495,6 +495,15 @@ module Test (Iobuf : sig
         assert (String.equal string (to_string (of_string string))))
     ;;
 
+    let to_bytes = to_bytes
+
+    let of_bytes = of_bytes
+
+    let%test_unit _ =
+      List.iter (List.map strings ~f:Bytes.of_string) ~f:(fun bytes ->
+        assert (Bytes.equal bytes (to_bytes (of_bytes bytes))))
+    ;;
+
     let of_bigstring = of_bigstring
 
     let%test_unit _ =

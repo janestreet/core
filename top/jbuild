@@ -2,7 +2,6 @@
  ((name core_top)
   (public_name core.top)
   (modes (byte))
-  (flags (:standard -safe-string))
   (libraries (compiler-libs.toplevel core))
   (preprocess (pps ( ppxlib.runner)))))
 

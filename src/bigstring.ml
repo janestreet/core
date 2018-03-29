@@ -421,4 +421,6 @@ let unsafe_sendmsg_nonblocking_no_sigpipe =
 
 (* Memory mapping *)
 
-let map_file ~shared fd n = Array1.map_file fd Bigarray.char c_layout shared n
+let map_file ~shared fd size =
+  Bigarray.array1_of_genarray
+    (Unix.map_file fd Bigarray.char c_layout shared [|size|])

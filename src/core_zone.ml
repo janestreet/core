@@ -151,21 +151,26 @@ let find_exn zone =
   | Some z -> z
 ;;
 
-let local = lazy
-  begin match Sys.getenv "TZ" with
-  | Some zone_name ->
-    find_exn zone_name
-  | None ->
-    let localtime_t =
-      input_tz_file ~zonename:"/etc/localtime" ~filename:"/etc/localtime"
-    in
-    (* load the matching zone file from the real zone cache so that we can serialize
-       it properly.  The file loaded from /etc/localtime won't have a name we can use
-       on the other side to find the right zone. *)
-    match Zone_cache.find_or_load_matching localtime_t with
-    | Some t -> t
-    | None   -> localtime_t
-  end
+let local =
+  (* Load [TZ] immediately so that subsequent modifications to the environment cannot
+     alter the result of [force local]. *)
+  let local_zone_name = Sys.getenv "TZ" in
+  let load () =
+    match local_zone_name with
+    | Some zone_name ->
+      find_exn zone_name
+    | None ->
+      let localtime_t =
+        input_tz_file ~zonename:"/etc/localtime" ~filename:"/etc/localtime"
+      in
+      (* Load the matching zone file from the real zone cache so that we can serialize it
+         properly. The file loaded from /etc/localtime won't have a name we can use on the
+         other side to find the right zone. *)
+      match Zone_cache.find_or_load_matching localtime_t with
+      | Some t -> t
+      | None   -> localtime_t
+  in
+  Lazy.from_fun load
 ;;
 
 module Stable = struct

@@ -16,7 +16,6 @@
     threads
     ))
   (c_flags (:standard -D_LARGEFILE64_SOURCE -I../../core_kernel/src))
-  (flags (:standard -safe-string))
   (install_c_headers (config))
   (c_names
    (bigstring_stubs

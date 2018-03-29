@@ -237,6 +237,12 @@ val to_string : ?len:int -> ([> read], _) t -> string
 (** Equivalent to [Hexdump.to_string_hum].  Renders [t]'s windows and limits. *)
 val to_string_hum : ?max_lines:int -> (_, _) t -> string
 
+(** [to_bytes t] returns the bytes in [t] as a bytes.  It does not alter the window. *)
+val to_bytes : (_, _) t -> Bytes.t
+
+(** [of_bytes b] returns a new iobuf whose contents is [b]. *)
+val of_bytes : Bytes.t -> (_, _) t
+
 
 (** [Consume.string t ~len] reads [len] characters (all, by default) from [t] into a new
     string and advances the lower bound of the window accordingly.

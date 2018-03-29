@@ -33,19 +33,6 @@ module type Extend_zone = sig
       such misconfiguration is quite rare. *)
   val local : t Lazy.t
 
-  (** [likely_machine_zones] is a list of zone names that will be searched
-      first when trying to determine the machine zone of a box.  Setting this
-      to a likely set of zones for your application will speed the very first
-      use of the local timezone. *)
-  val likely_machine_zones : string list ref
-
-  (** [of_utc_offset offset] returns a timezone with a static UTC offset (given in
-      hours). *)
-  val of_utc_offset : hours:int -> t
-
-  (** [utc] the UTC time zone.  Included for convenience *)
-  val utc : t
-
   (** [initialized_zones ()] returns a sorted list of time zone names that have
       been loaded from disk thus far. *)
   val initialized_zones : unit -> (string * t) list

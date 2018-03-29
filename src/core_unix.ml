@@ -1240,6 +1240,8 @@ let link ?(force = false) ~target ~link_name () =
     (fun () -> [("target", atom target); ("link_name", atom link_name)])
 ;;
 
+let map_file fd ?pos kind layout ~shared dims = Unix.map_file fd ?pos ~kind ~layout ~shared ~dims
+
 type access_permission = Unix.access_permission =
   | R_OK
   | W_OK

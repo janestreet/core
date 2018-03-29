@@ -186,6 +186,15 @@ module Make () = struct
          t)
   ;;
 
+  let of_bytes s =
+    debug "of_bytes" []
+      s [%sexp_of: Bytes.t] [%sexp_of: (_, _) t]
+      (fun () ->
+         let t = of_bytes s in
+         if !check_invariant then invariant ignore ignore t;
+         t)
+  ;;
+
   let to_string ?len t =
     debug "to_string" [t]
       (`len len) [%sexp_of: [ `len of int option ]] [%sexp_of: string]
@@ -198,6 +207,12 @@ module Make () = struct
       [%sexp_of: [`max_lines of int option]]
       [%sexp_of: string]
       (fun () -> to_string_hum ?max_lines t)
+
+  let to_bytes t =
+    debug "to_bytes" [t]
+      t [%sexp_of: (_, _) t] [%sexp_of: Bytes.t]
+      (fun () -> to_bytes t)
+  ;;
 
   let advance t i = debug "advance" [t] i sexp_of_int sexp_of_unit (fun () -> advance t i)
 

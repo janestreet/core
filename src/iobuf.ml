@@ -257,6 +257,10 @@ let to_string ?len t =
 
 let of_string s = of_bigstring (Bigstring.of_string s)
 
+let to_bytes t = Bigstring.to_bytes t.buf ~pos:t.lo ~len:(length t)
+
+let of_bytes s = of_bigstring (Bigstring.of_bytes s)
+
 (* We used to do it like {v
 
 let unsafe_with_range t ~pos f =

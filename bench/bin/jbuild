@@ -12,7 +12,6 @@
           time_to_string
           timing_wheel
           zone_next_clock_shift))
-  (flags (:standard -safe-string))
   (libraries (core
               core_bench
               core_extended

@@ -1,6 +1,5 @@
 (executables
  ((names (discover))
-(flags (:standard -safe-string))
   (libraries (base stdio configurator))
   (preprocess (pps (ppx_assert ppxlib.runner)))))
 

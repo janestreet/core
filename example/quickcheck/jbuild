@@ -1,6 +1,5 @@
 (library
   ((name quickcheck_examples)
-(flags (:standard -safe-string))
    (libraries (core async))
    (preprocess (pps (ppx_jane ppxlib.runner)))))
 

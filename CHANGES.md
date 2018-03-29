@@ -4,6 +4,12 @@ you might want to have a look at Base's
 and Core\_kernel's
 [changelog](https://github.com/janestreet/core_kernel/blob/master/CHANGES.md).
 
+## git version
+
+- Added `Unix.map_file`.
+
+- Added `Iobuf.{of,to}_bytes`.
+
 ## v0.11
 
 - Fix a segfault in `Time`. (fixes #102)
