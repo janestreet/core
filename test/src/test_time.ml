@@ -310,7 +310,7 @@ let%expect_test "accept float instead of time/span/ofday for hash tables and has
      ((2000-01-01 12:00:00.000000-05:00) "arbitrary value")
      ((2013-10-07 09:30:00.000000-04:00) "arbitrary value")) |}];
   test (module Time.Span.Hash_set) {| (0 1E-09 1E-06 0.001 1 60 3600 86400) |};
-  [%expect {| (0s 1e-06ms 0.001ms 1ms 1s 1m 1h 1d) |}];
+  [%expect {| (0s 1ns 1us 1ms 1s 1m 1h 1d) |}];
   test (module Of_string (Time.Span.Table)) {|
     ((0     "arbitrary value")
      (1E-09 "arbitrary value")
@@ -321,14 +321,14 @@ let%expect_test "accept float instead of time/span/ofday for hash tables and has
      (3600  "arbitrary value")
      (86400 "arbitrary value")) |};
   [%expect {|
-    ((0s      "arbitrary value")
-     (1e-06ms "arbitrary value")
-     (0.001ms "arbitrary value")
-     (1ms     "arbitrary value")
-     (1s      "arbitrary value")
-     (1m      "arbitrary value")
-     (1h      "arbitrary value")
-     (1d      "arbitrary value")) |}];
+    ((0s  "arbitrary value")
+     (1ns "arbitrary value")
+     (1us "arbitrary value")
+     (1ms "arbitrary value")
+     (1s  "arbitrary value")
+     (1m  "arbitrary value")
+     (1h  "arbitrary value")
+     (1d  "arbitrary value")) |}];
   test (module Time.Ofday.Hash_set) {| (0 0.05 34200 43200) |};
   [%expect {| (00:00:00.000000 00:00:00.050000 09:30:00.000000 12:00:00.000000) |}];
   test (module Of_string (Time.Ofday.Table)) {|
@@ -407,7 +407,7 @@ let%expect_test "our gmtime matches Unix.gmtime" =
       (* put back the subseconds *)
       integral_ofday +. (Float.abs subsec)
       |> Time.Span.of_sec
-      |> Time.Ofday.of_span_since_start_of_day
+      |> Time.Ofday.of_span_since_start_of_day_exn
     in
     (unix_date, unix_ofday)
   in
@@ -2631,3 +2631,99 @@ let%test_module "Time.Stable.Zone" =
          (bin_io "\016America/New_York")) |}];
     ;;
   end)
+
+let%expect_test "Span.randomize" =
+  let span = Span.of_sec 1.  in
+  let upper_bound = Span.of_sec 1.3 in
+  let lower_bound = Span.of_sec 0.7 in
+  let percent = Percent.of_mult 0.3 in
+  let rec loop ~count ~trials =
+    let open Int.O in
+    if count >= trials
+    then begin
+      print_s [%message "succeeded" (count : int)]
+    end
+    else begin
+      let rand = Span.randomize span ~percent in
+      if (Span.( < ) rand lower_bound || Span.( > ) rand upper_bound)
+      then begin
+        print_cr [%here] [%message
+          "out of bounds"
+            (percent     : Percent.t)
+            (rand        : Span.t)
+            (lower_bound : Span.t)
+            (upper_bound : Span.t)]
+      end
+      else begin
+        loop ~count:(count + 1) ~trials
+      end
+    end
+  in
+  loop ~count:0 ~trials:1_000;
+  [%expect {| (succeeded (count 1000)) |}];
+;;
+
+let%expect_test "Span.to_short_string" =
+  let examples =
+    let magnitudes = [1.; Float.pi; 10.6] in
+    let pos_examples =
+      List.concat_map magnitudes ~f:(fun magnitude ->
+        List.map Unit_of_time.all ~f:(fun unit_of_time ->
+          Span.scale (Span.of_unit_of_time unit_of_time) magnitude))
+    in
+    let signed_examples =
+      List.concat_map pos_examples ~f:(fun span ->
+        [span; Span.neg span])
+    in
+    Span.zero :: signed_examples
+  in
+  let alist =
+    List.map examples ~f:(fun span ->
+      (span, Span.to_short_string span))
+  in
+  print_s [%sexp (alist : (Span.t * string) list)];
+  [%expect {|
+    ((0s                           0ns)
+     (1ns                          1ns)
+     (-1ns                         -1ns)
+     (1us                          1us)
+     (-1us                         -1us)
+     (1ms                          1ms)
+     (-1ms                         -1ms)
+     (1s                           1s)
+     (-1s                          -1s)
+     (1m                           1m)
+     (-1m                          -1m)
+     (1h                           1h)
+     (-1h                          -1h)
+     (1d                           1d)
+     (-1d                          -1d)
+     (3.1415926535897931ns         3ns)
+     (-3.1415926535897931ns        -3ns)
+     (3.1415926535897927us4e-13ns  3.1us)
+     (-3.1415926535897927us4e-13ns -3.1us)
+     (3.1415926535897931ms         3.1ms)
+     (-3.1415926535897931ms        -3.1ms)
+     (3.1415926535897931s          3.1s)
+     (-3.1415926535897931s         -3.1s)
+     (3m8.49555921538757s          3.1m)
+     (-3m8.49555921538757s         -3.1m)
+     (3h8m29.733552923255s         3.1h)
+     (-3h8m29.733552923255s        -3.1h)
+     (3d3h23m53.60527015815s       3.1d)
+     (-3d3h23m53.60527015815s      -3.1d)
+     (10.600000000000001ns         11ns)
+     (-10.600000000000001ns        -11ns)
+     (10.599999999999998us         10us)
+     (-10.599999999999998us        -10us)
+     (10.6ms                       10ms)
+     (-10.6ms                      -10ms)
+     (10.6s                        10s)
+     (-10.6s                       -10s)
+     (10m36s                       10m)
+     (-10m36s                      -10m)
+     (10h36m                       10h)
+     (-10h36m                      -10h)
+     (10d14h24m                    10d)
+     (-10d14h24m                   -10d)) |}];
+;;

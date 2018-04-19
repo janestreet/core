@@ -47,6 +47,10 @@ module Stable : sig
       type t = Time.Stable.Span.V2.t [@@deriving hash]
       include Stable_without_comparator with type t := t
     end
+    module V3 : sig
+      type t = Time.Stable.Span.V3.t [@@deriving hash]
+      include Stable_without_comparator with type t := t
+    end
   end
 
   module Ofday : sig

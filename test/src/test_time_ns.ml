@@ -52,9 +52,919 @@ let%test_module "Core_kernel.Time_ns.Utc.to_date_and_span_since_start_of_day" =
             ~expect:(core_date, core_ofday)
         | W32 ->
           ());
-      [%expect {| |}];
+      [%expect {||}];
     ;;
   end)
+
+let span_gen =
+  Quickcheck.Generator.map Int63.gen ~f:Time_ns.Span.of_int63_ns
+
+let span_option_gen =
+  let open Quickcheck.Generator in
+  weighted_union [
+    1.,  singleton Time_ns.Span.Option.none;
+    10., filter_map span_gen ~f:(fun span ->
+      if Time_ns.Span.Option.some_is_representable span
+      then Some (Time_ns.Span.Option.some span)
+      else None)
+  ]
+
+let span_examples =
+  let scales_of unit_of_time =
+    match (unit_of_time : Unit_of_time.t) with
+    | Nanosecond | Millisecond | Microsecond -> [0; 1; 10; 100; 999]
+    | Second | Minute                        -> [0; 1; 10; 59]
+    | Hour                                   -> [0; 1; 10; 23]
+    | Day                                    -> [0; 1; 10; 100; 1_000; 10_000; 36_500]
+  in
+  let multiples_of unit_of_time =
+    let span = Time_ns.Span.of_unit_of_time unit_of_time in
+    List.map (scales_of unit_of_time) ~f:(fun scale ->
+      Time_ns.Span.scale_int span scale)
+  in
+  List.fold Unit_of_time.all ~init:[Time_ns.Span.zero] ~f:(fun spans unit_of_time ->
+    List.concat_map spans ~f:(fun span ->
+      List.map (multiples_of unit_of_time) ~f:(fun addend ->
+        Time_ns.Span.( + ) span addend)))
+
+let span_option_examples =
+  Time_ns.Span.Option.none
+  :: List.filter_map span_examples ~f:(fun span ->
+    if Time_ns.Span.Option.some_is_representable span
+    then Some (Time_ns.Span.Option.some span)
+    else None)
+
+let%test_module "Time_ns.Span.to_string,of_string" =
+  (module struct
+    let print_nanos string =
+      let nanos = Time_ns.Span.to_int63_ns (Time_ns.Span.of_string string) in
+      print_endline (Int63.to_string nanos ^ "ns")
+
+    let%expect_test "to_string" =
+      let test int64 =
+        print_endline
+          (Time_ns.Span.to_string (Time_ns.Span.of_int63_ns (Int63.of_int64_exn int64)))
+      in
+      List.iter ~f:test [
+        1_066_651_290_789_012_345L;
+        (-86_460_001_001_000L);
+        86_399_000_000_000L;
+        105L;
+      ];
+      [%expect {|
+        12345d12h1m30.789012345s
+        -1d1m1.001ms
+        23h59m59s
+        105ns |}];
+    ;;
+
+    let%expect_test "of_string" =
+      let test str =
+        print_endline (Time_ns.Span.to_string (Time_ns.Span.of_string str))
+      in
+      List.iter ~f:test [
+        "1s60h7.890d";
+        "0.0005us";
+        "-0.0005us";
+        "0.49ns0.00049us";
+      ];
+      [%expect {|
+        10d9h21m37s
+        1ns
+        0s
+        0s |}]
+    ;;
+
+    let%expect_test "round-trip" =
+      let test span =
+        let string = Time_ns.Span.to_string span in
+        let round_trip = Time_ns.Span.of_string string in
+        require_equal [%here] (module Time_ns.Span) span round_trip
+      in
+      quickcheck [%here] span_gen
+        ~sexp_of:Time_ns.Span.sexp_of_t
+        ~examples:span_examples
+        ~f:test;
+      [%expect {||}];
+    ;;
+
+    let%expect_test "of_string: no allocation" [@tags "64-bits-only"] =
+      let test string =
+        ignore
+          (require_no_allocation [%here] (fun () ->
+             Time_ns.Span.of_string string)
+           : Time_ns.Span.t)
+      in
+      quickcheck [%here]
+        (Quickcheck.Generator.map span_gen ~f:Time_ns.Span.to_string)
+        ~sexp_of:String.sexp_of_t
+        ~f:test
+        ~examples:[
+          "12d34h56m78.123456789898989s";
+          "1.234567891234ms";
+          "1.234567891234us";
+          "1.234567891234ns";
+        ];
+      [%expect {||}];
+    ;;
+
+    let%expect_test "of_string: round to nearest ns" =
+      (* Convert the golden ratio in minutes to a number of nanoseconds.
+         This is the same as about 97082039324.994 nanoseconds, so it should round up
+         to 97082039325. *)
+      print_nanos "1.6180339887498949m";
+      [%expect {| 97082039325ns |}];
+
+      (* Test the bounds of the rounding behavior for the float parsing - it should
+         round to the nearest nanosecond, breaking ties by rounding towards +infinity. *)
+      print_nanos "0.1231231234s";
+      print_nanos "0.123123123499s";
+      print_nanos "0.1231231235s";
+      print_nanos "0.1231231236s";
+      [%expect {|
+        123123123ns
+        123123123ns
+        123123124ns
+        123123124ns |}];
+      print_nanos "-0.1231231234s";
+      print_nanos "-0.123123123499s";
+      print_nanos "-0.1231231235s";
+      print_nanos "-0.1231231236s";
+      [%expect {|
+        -123123123ns
+        -123123123ns
+        -123123123ns
+        -123123124ns |}];
+
+      (* 0.3333333333333...m and 0.33333333335m are 1 ns apart.
+         The midpoint point between them is 0.333333333341666....
+         which is the boundary at which we should start getting 20 billion or
+         20 billion + 1 nanos. *)
+      print_nanos "0.3333333333333333333333333333333334m";
+      print_nanos "0.3333333333416666666666666666666666m";
+      print_nanos "0.333333333341666666666666666666666659m";
+      print_nanos "0.3333333333416666666666666666666667m";
+      print_nanos "0.3333333333500000000000000000000000m";
+      [%expect {|
+        20000000000ns
+        20000000000ns
+        20000000000ns
+        20000000001ns
+        20000000001ns |}];
+      print_nanos "-0.3333333333333333333333333333333334m";
+      print_nanos "-0.3333333333416666666666666666666666m";
+      print_nanos "-0.333333333341666666666666666666666659m";
+      print_nanos "-0.3333333333416666666666666666666667m";
+      print_nanos "-0.3333333333500000000000000000000000m";
+      [%expect {|
+        -20000000000ns
+        -20000000000ns
+        -20000000000ns
+        -20000000001ns
+        -20000000001ns |}];
+
+      (* 0.6666666666666...m and 0.66666666668333...m are 1 ns apart.
+         The midpoint point between them is 0.666666666675m.
+         which is the boundary at which we should start getting 40 billion or
+         40 billion + 1 nanos. *)
+      print_nanos "0.666666666674m";
+      print_nanos "0.6666666666749m";
+      print_nanos "0.666666666675m";
+      print_nanos "0.66666666667500000000m";
+      print_nanos "0.66666666667500000001m";
+      [%expect {|
+        40000000000ns
+        40000000000ns
+        40000000001ns
+        40000000001ns
+        40000000001ns |}];
+      print_nanos "-0.666666666674m";
+      print_nanos "-0.6666666666749m";
+      print_nanos "-0.666666666675m";
+      print_nanos "-0.66666666667500000000m";
+      print_nanos "-0.66666666667500000001m";
+      [%expect {|
+        -40000000000ns
+        -40000000000ns
+        -40000000000ns
+        -40000000000ns
+        -40000000001ns |}];
+    ;;
+
+    let%expect_test "of_string: weird cases of underscore" =
+      let test here str =
+        require_does_not_raise here (fun () -> print_nanos str)
+      in
+
+      test [%here] "1s1s";
+      test [%here] "1s1._s";
+      test [%here] "1_s1_.s";
+
+      test [%here] "0.000_123ms123ns123_123us0.000_123_123s";
+      test [%here] "1d10_0_0_0_0_0s";
+
+      [%expect {|
+        2000000000ns
+        2000000000ns
+        2000000000ns
+        123246369ns
+        1086400000000000ns |}]
+    ;;
+
+    (* Test a bunch of random floats and make sure span parsing code rounds the same
+       way as the float would. *)
+    let%expect_test "of_string: random float parsing approx" =
+      let rand =
+        Random.State.make [| Hashtbl.hash "Time_ns random-float-parsing-approx" |]
+      in
+
+      (* When you multiply a float x by an integer n, sometimes the value y := (x*n) will
+         not exactly be representable as a float. That means that the computed y will
+         actually be a different value than the idealized mathematical (x*n).
+
+         If that difference puts the computed y and the ideal (x*n) on different sides of
+         a rounding boundary, we will get a different number of nanoseconds compared to if
+         we had parsed x directly with correct rounding. So allow some tolerance on the
+         difference in this test.
+
+         The larger that [n] is, the more likely this is, because (unless n is a multiple
+         of a large power of 2), the more we run into the fact that floats have a bounded
+         number of bits of precision. *)
+      let num_equality_tests  = ref 0 in
+      let num_equaled_exactly = ref 0 in
+      let print_ratio () =
+        printf "%d/%d equality tests were exact\n"
+          !num_equaled_exactly
+          !num_equality_tests;
+        num_equaled_exactly := 0;
+        num_equality_tests  := 0;
+      in
+      let approx_equal here span float_ns ~tolerance =
+        let open Int63.O in
+        let diff_ns =
+          Int63.abs
+            (Time_ns.Span.to_int63_ns span - Float.int63_round_nearest_exn float_ns)
+        in
+        incr num_equality_tests;
+        require here
+          (if diff_ns = zero
+           then (incr num_equaled_exactly; true)
+           else diff_ns <= Int63.of_int tolerance)
+          ~if_false_then_print_s:
+            (lazy [%message
+              "rounding failed"
+                (span      : Time_ns.Span.t)
+                (float_ns  : float)
+                (diff_ns   : Int63.t)
+                (tolerance : int)])
+      in
+
+      for _ = 1 to 20000 do
+        let float = Random.State.float_range rand (-5.0) 5.0 in
+        let float_str = sprintf "%.25f" float in
+        let test here ~suffix ~factor ~tolerance =
+          let span_str = float_str ^ suffix in
+          approx_equal here (Time_ns.Span.of_string span_str) (float *. factor) ~tolerance
+        in
+        test [%here] ~suffix:"ns" ~factor:             1. ~tolerance:0;
+        test [%here] ~suffix:"us" ~factor:         1_000. ~tolerance:1;
+        test [%here] ~suffix:"ms" ~factor:     1_000_000. ~tolerance:1;
+        test [%here] ~suffix:"s"  ~factor: 1_000_000_000. ~tolerance:1;
+        test [%here] ~suffix:"m"  ~factor:60_000_000_000. ~tolerance:1;
+      done;
+      (* The fraction of exact equalities should be *almost exactly* 1. The exact fraction
+         might change if [Random.State] ever changes in a future OCaml version, that's
+         okay. *)
+      print_ratio ();
+      [%expect {| 100000/100000 equality tests were exact |}];
+
+      for _ = 1 to 20000 do
+        let float = Random.State.float_range rand (-5.0) 5.0 in
+        let float_str = sprintf "%.25f" float in
+
+        let span_str = float_str ^ "h" in
+        approx_equal [%here]
+          (Time_ns.Span.of_string span_str)
+          (float *. 3_600_000_000_000.)
+          ~tolerance:1;
+      done;
+      (* The fraction of exact equalities should be *very close* to 1.
+         The exact fraction might change if [Random.State] ever changes in a future ocaml
+         version, that's okay. *)
+      print_ratio ();
+      [%expect {| 19987/20000 equality tests were exact |}];
+
+      for _ = 1 to 20000 do
+        let float = Random.State.float_range rand (-5.0) 5.0 in
+        let float_str = sprintf "%.25f" float in
+
+        let span_str = float_str ^ "d" in
+        approx_equal [%here]
+          (Time_ns.Span.of_string span_str)
+          (float *. 86_400_000_000_000.)
+          ~tolerance:1;
+      done;
+      (* The fraction of exact equalities should be *reasonably close* to 1.
+         The exact fraction might change if [Random.State] ever changes in a future ocaml
+         version, that's okay. *)
+      print_ratio ();
+      [%expect {| 19652/20000 equality tests were exact |}];
+    ;;
+
+    (* Test a bunch of random floats, but this time specifically generated to be on
+       half-nanosecond-boundaries a large fraction of time, and therefore trigger
+       "ties" a lot, to test the exact rounding behavior. *)
+    let%test_unit "random-float-parsing-exact" =
+      let rand =
+        Random.State.make [| Hashtbl.hash "Time_ns random-float-parsing-exact" |]
+      in
+      let min = -8_000_000_000L |> Int63.of_int64_exn in
+      let max =  8_000_000_000L |> Int63.of_int64_exn in
+      for _ = 1 to 10000 do
+        let int63 = Int63.random_incl ~state:rand min max in
+        let float = Int63.to_float int63 in
+
+        (* Divide by 4_000_000_000 so that we end up exactly on quarter-nanosecond values,
+           so that we test exact half-nanosecond rounding behavior a lot, as well as the
+           behavior in the intervals in between. *)
+        let seconds_divisor = 4_000_000_000. in
+        let ns_divisor = 4. in
+
+        let span_str = sprintf "%.11fs" (float /. seconds_divisor) in
+
+        (* Rounds ties towards positive infinity manually via integer math *)
+        let expected_ns_via_int_math =
+          let open Int63 in
+          if int63 >= zero
+          then (int63 + of_int 2) / of_int 4
+          else (int63 - of_int 1) / of_int 4
+        in
+
+        (* Float also rounds ties towards positive infinity *)
+        let expected_ns_via_float_math =
+          Float.int63_round_nearest_exn (float /. ns_divisor)
+        in
+
+        [%test_result: Int63.t]
+          (Time_ns.Span.to_int63_ns (Time_ns.Span.of_string span_str))
+          ~expect:expected_ns_via_int_math;
+        [%test_result: Int63.t]
+          (Time_ns.Span.to_int63_ns (Time_ns.Span.of_string span_str))
+          ~expect:expected_ns_via_float_math;
+      done
+    ;;
+
+    let%expect_test "way too big should overflow" =
+      let test str =
+        require_does_raise [%here] (fun () ->
+          print_nanos str)
+      in
+
+      (* These should all definitely overflow *)
+      test "123456789012345678901234567890.1234567890ns";
+      test "-123456789012345678901234567890.1234567890ns";
+      test "123456789012345678901234567890.1234567890us";
+      test "-123456789012345678901234567890.1234567890us";
+      test "123456789012345678901234567890.1234567890ms";
+      test "-123456789012345678901234567890.1234567890ms";
+      test "123456789012345678901234567890.1234567890s";
+      test "-123456789012345678901234567890.1234567890s";
+      test "123456789012345678901234567890.1234567890m";
+      test "-123456789012345678901234567890.1234567890m";
+      test "123456789012345678901234567890.1234567890h";
+      test "-123456789012345678901234567890.1234567890h";
+      test "123456789012345678901234567890.1234567890d";
+      test "-123456789012345678901234567890.1234567890d";
+      [%expect {|
+        ("Time_ns.Span.of_string: invalid string"
+          (string 123456789012345678901234567890.1234567890ns)
+          (reason "span would be outside of int63 range"))
+        ("Time_ns.Span.of_string: invalid string"
+          (string -123456789012345678901234567890.1234567890ns)
+          (reason "span would be outside of int63 range"))
+        ("Time_ns.Span.of_string: invalid string"
+          (string 123456789012345678901234567890.1234567890us)
+          (reason "span would be outside of int63 range"))
+        ("Time_ns.Span.of_string: invalid string"
+          (string -123456789012345678901234567890.1234567890us)
+          (reason "span would be outside of int63 range"))
+        ("Time_ns.Span.of_string: invalid string"
+          (string 123456789012345678901234567890.1234567890ms)
+          (reason "span would be outside of int63 range"))
+        ("Time_ns.Span.of_string: invalid string"
+          (string -123456789012345678901234567890.1234567890ms)
+          (reason "span would be outside of int63 range"))
+        ("Time_ns.Span.of_string: invalid string"
+          (string 123456789012345678901234567890.1234567890s)
+          (reason "span would be outside of int63 range"))
+        ("Time_ns.Span.of_string: invalid string"
+          (string -123456789012345678901234567890.1234567890s)
+          (reason "span would be outside of int63 range"))
+        ("Time_ns.Span.of_string: invalid string"
+          (string 123456789012345678901234567890.1234567890m)
+          (reason "span would be outside of int63 range"))
+        ("Time_ns.Span.of_string: invalid string"
+          (string -123456789012345678901234567890.1234567890m)
+          (reason "span would be outside of int63 range"))
+        ("Time_ns.Span.of_string: invalid string"
+          (string 123456789012345678901234567890.1234567890h)
+          (reason "span would be outside of int63 range"))
+        ("Time_ns.Span.of_string: invalid string"
+          (string -123456789012345678901234567890.1234567890h)
+          (reason "span would be outside of int63 range"))
+        ("Time_ns.Span.of_string: invalid string"
+          (string 123456789012345678901234567890.1234567890d)
+          (reason "span would be outside of int63 range"))
+        ("Time_ns.Span.of_string: invalid string"
+          (string -123456789012345678901234567890.1234567890d)
+          (reason "span would be outside of int63 range")) |}]
+    ;;
+
+    let%expect_test "precise overflow boundary testing" =
+      (* Use Bigint to do some fixed-point computations with precision well exceeding that
+         of an Int63 to compute things like the decimal number of hours needed to overflow
+         or underflow an Int63 number of nanoseconds. *)
+      let open Bigint.O in
+
+      let max = Bigint.of_int64 (Int63.to_int64 (Int63.max_value)) in
+      let min = Bigint.of_int64 (Int63.to_int64 (Int63.min_value)) in
+      let max_next = max + Bigint.one in
+      let min_next = min - Bigint.one in
+
+      let max_x100 = max * Bigint.of_int 100 in
+      let min_x100 = min * Bigint.of_int 100 in
+      let max_wont_round_x100 = max_x100 + Bigint.of_int 49 in
+      let min_wont_round_x100 = min_x100 - Bigint.of_int 50 in
+      let max_will_round_x100 = max_x100 + Bigint.of_int 50 in
+      let min_will_round_x100 = min_x100 - Bigint.of_int 51 in
+      let max_next_x100 = max_x100 + Bigint.of_int 100 in
+      let min_next_x100 = min_x100 - Bigint.of_int 100 in
+
+      let test ?decimals bignum suffix =
+        let string =
+          let bigstr = Bigint.to_string bignum in
+          let prefix =
+            match decimals with
+            | None   -> bigstr
+            | Some n -> String.drop_suffix bigstr n ^ "." ^ String.suffix bigstr n
+          in
+          prefix ^ suffix
+        in
+        print_endline "";
+        print_endline string;
+        show_raise (fun () ->
+          print_nanos string)
+      in
+
+      (* Nanosecond overflow boundary ----------------------------------------- *)
+      test max                             "ns";
+      test max_wont_round_x100 ~decimals:2 "ns";
+      test max_will_round_x100 ~decimals:2 "ns";
+      test max_next                        "ns";
+      [%expect {|
+        4611686018427387903ns
+        4611686018427387903ns
+        "did not raise"
+
+        4611686018427387903.49ns
+        4611686018427387903ns
+        "did not raise"
+
+        4611686018427387903.50ns
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string 4611686018427387903.50ns)
+          (reason "span would be outside of int63 range")))
+
+        4611686018427387904ns
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string 4611686018427387904ns)
+          (reason "span would be outside of int63 range"))) |}];
+
+      test min                             "ns";
+      test min_wont_round_x100 ~decimals:2 "ns";
+      test min_will_round_x100 ~decimals:2 "ns";
+      test min_next                        "ns";
+      [%expect {|
+        -4611686018427387904ns
+        -4611686018427387904ns
+        "did not raise"
+
+        -4611686018427387904.50ns
+        -4611686018427387904ns
+        "did not raise"
+
+        -4611686018427387904.51ns
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string -4611686018427387904.51ns)
+          (reason "span would be outside of int63 range")))
+
+        -4611686018427387905ns
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string -4611686018427387905ns)
+          (reason "span would be outside of int63 range"))) |}];
+
+      (* Microsecond overflow boundary ----------------------------------------- *)
+      test max_x100            ~decimals:5 "us";
+      test max_wont_round_x100 ~decimals:5 "us";
+      test max_will_round_x100 ~decimals:5 "us";
+      test max_next_x100       ~decimals:5 "us";
+      [%expect {|
+        4611686018427387.90300us
+        4611686018427387903ns
+        "did not raise"
+
+        4611686018427387.90349us
+        4611686018427387903ns
+        "did not raise"
+
+        4611686018427387.90350us
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string 4611686018427387.90350us)
+          (reason "span would be outside of int63 range")))
+
+        4611686018427387.90400us
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string 4611686018427387.90400us)
+          (reason "span would be outside of int63 range"))) |}];
+
+      test min_x100            ~decimals:5 "us";
+      test min_wont_round_x100 ~decimals:5 "us";
+      test min_will_round_x100 ~decimals:5 "us";
+      test min_next_x100       ~decimals:5 "us";
+      [%expect {|
+        -4611686018427387.90400us
+        -4611686018427387904ns
+        "did not raise"
+
+        -4611686018427387.90450us
+        -4611686018427387904ns
+        "did not raise"
+
+        -4611686018427387.90451us
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string -4611686018427387.90451us)
+          (reason "span would be outside of int63 range")))
+
+        -4611686018427387.90500us
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string -4611686018427387.90500us)
+          (reason "span would be outside of int63 range"))) |}];
+
+      (* Millisecond overflow boundary ----------------------------------------- *)
+      test max_x100            ~decimals:8 "ms";
+      test max_wont_round_x100 ~decimals:8 "ms";
+      test max_will_round_x100 ~decimals:8 "ms";
+      test max_next_x100       ~decimals:8 "ms";
+      [%expect {|
+        4611686018427.38790300ms
+        4611686018427387903ns
+        "did not raise"
+
+        4611686018427.38790349ms
+        4611686018427387903ns
+        "did not raise"
+
+        4611686018427.38790350ms
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string 4611686018427.38790350ms)
+          (reason "span would be outside of int63 range")))
+
+        4611686018427.38790400ms
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string 4611686018427.38790400ms)
+          (reason "span would be outside of int63 range"))) |}];
+
+      test min_x100            ~decimals:8 "ms";
+      test min_wont_round_x100 ~decimals:8 "ms";
+      test min_will_round_x100 ~decimals:8 "ms";
+      test min_next_x100       ~decimals:8 "ms";
+      [%expect {|
+        -4611686018427.38790400ms
+        -4611686018427387904ns
+        "did not raise"
+
+        -4611686018427.38790450ms
+        -4611686018427387904ns
+        "did not raise"
+
+        -4611686018427.38790451ms
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string -4611686018427.38790451ms)
+          (reason "span would be outside of int63 range")))
+
+        -4611686018427.38790500ms
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string -4611686018427.38790500ms)
+          (reason "span would be outside of int63 range"))) |}];
+
+      (* Second overflow boundary ----------------------------------------- *)
+      test max_x100            ~decimals:11 "s";
+      test max_wont_round_x100 ~decimals:11 "s";
+      test max_will_round_x100 ~decimals:11 "s";
+      test max_next_x100       ~decimals:11 "s";
+      [%expect {|
+        4611686018.42738790300s
+        4611686018427387903ns
+        "did not raise"
+
+        4611686018.42738790349s
+        4611686018427387903ns
+        "did not raise"
+
+        4611686018.42738790350s
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string 4611686018.42738790350s)
+          (reason "span would be outside of int63 range")))
+
+        4611686018.42738790400s
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string 4611686018.42738790400s)
+          (reason "span would be outside of int63 range"))) |}];
+
+      test min_x100            ~decimals:11 "s";
+      test min_wont_round_x100 ~decimals:11 "s";
+      test min_will_round_x100 ~decimals:11 "s";
+      test min_next_x100       ~decimals:11 "s";
+      [%expect {|
+        -4611686018.42738790400s
+        -4611686018427387904ns
+        "did not raise"
+
+        -4611686018.42738790450s
+        -4611686018427387904ns
+        "did not raise"
+
+        -4611686018.42738790451s
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string -4611686018.42738790451s)
+          (reason "span would be outside of int63 range")))
+
+        -4611686018.42738790500s
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string -4611686018.42738790500s)
+          (reason "span would be outside of int63 range"))) |}];
+
+      (* Minute overflow boundary ----------------------------------------- *)
+      (* Round towards zero vs round away from zero *)
+      let minuteify_rtz x = (x * Bigint.of_int 100) / Bigint.of_int 60 in
+      let minuteify_raz x =
+        if x < Bigint.of_int 0
+        then ((x * Bigint.of_int 100) - Bigint.of_int 59) / Bigint.of_int 60
+        else ((x * Bigint.of_int 100) + Bigint.of_int 59) / Bigint.of_int 60
+      in
+      test (minuteify_rtz max_x100)            ~decimals:13 "m";
+      test (minuteify_rtz max_wont_round_x100) ~decimals:13 "m";
+      test (minuteify_raz max_will_round_x100) ~decimals:13 "m";
+      test (minuteify_raz max_next_x100)       ~decimals:13 "m";
+      [%expect {|
+        76861433.6404564650500m
+        4611686018427387903ns
+        "did not raise"
+
+        76861433.6404564650581m
+        4611686018427387903ns
+        "did not raise"
+
+        76861433.6404564650584m
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string 76861433.6404564650584m)
+          (reason "span would be outside of int63 range")))
+
+        76861433.6404564650667m
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string 76861433.6404564650667m)
+          (reason "span would be outside of int63 range"))) |}];
+
+      test (minuteify_rtz min_x100)            ~decimals:13 "m";
+      test (minuteify_rtz min_wont_round_x100) ~decimals:13 "m";
+      test (minuteify_raz min_will_round_x100) ~decimals:13 "m";
+      test (minuteify_raz min_next_x100)       ~decimals:13 "m";
+      [%expect {|
+        -76861433.6404564650666m
+        -4611686018427387904ns
+        "did not raise"
+
+        -76861433.6404564650750m
+        -4611686018427387904ns
+        "did not raise"
+
+        -76861433.6404564650752m
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string -76861433.6404564650752m)
+          (reason "span would be outside of int63 range")))
+
+        -76861433.6404564650834m
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string -76861433.6404564650834m)
+          (reason "span would be outside of int63 range"))) |}];
+
+      (* Hour overflow boundary ----------------------------------------- *)
+      (* Round towards zero vs round away from zero *)
+      let hourify_rtz x = x * Bigint.of_int 10000 / Bigint.of_int 3600 in
+      let hourify_raz x =
+        if x < Bigint.of_int 0
+        then (x * Bigint.of_int 10000 - Bigint.of_int 3599) / Bigint.of_int 3600
+        else (x * Bigint.of_int 10000 + Bigint.of_int 3599) / Bigint.of_int 3600
+      in
+      test (hourify_rtz max_x100)            ~decimals:15 "h";
+      test (hourify_rtz max_wont_round_x100) ~decimals:15 "h";
+      test (hourify_raz max_will_round_x100) ~decimals:15 "h";
+      test (hourify_raz max_next_x100)       ~decimals:15 "h";
+      [%expect {|
+        1281023.894007607750833h
+        4611686018427387903ns
+        "did not raise"
+
+        1281023.894007607750969h
+        4611686018427387903ns
+        "did not raise"
+
+        1281023.894007607750973h
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string 1281023.894007607750973h)
+          (reason "span would be outside of int63 range")))
+
+        1281023.894007607751112h
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string 1281023.894007607751112h)
+          (reason "span would be outside of int63 range"))) |}];
+
+      test (hourify_rtz min_x100)            ~decimals:15 "h";
+      test (hourify_rtz min_wont_round_x100) ~decimals:15 "h";
+      test (hourify_raz min_will_round_x100) ~decimals:15 "h";
+      test (hourify_raz min_next_x100)       ~decimals:15 "h";
+      [%expect {|
+        -1281023.894007607751111h
+        -4611686018427387904ns
+        "did not raise"
+
+        -1281023.894007607751250h
+        -4611686018427387904ns
+        "did not raise"
+
+        -1281023.894007607751253h
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string -1281023.894007607751253h)
+          (reason "span would be outside of int63 range")))
+
+        -1281023.894007607751389h
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string -1281023.894007607751389h)
+          (reason "span would be outside of int63 range"))) |}];
+
+      (* Day overflow boundary ----------------------------------------- *)
+      (* Round towards zero vs round away from zero *)
+      let dayify_rtz x = x * Bigint.of_int 1000000 / Bigint.of_int 86400 in
+      let dayify_raz x =
+        if x < Bigint.of_int 0
+        then (x * Bigint.of_int 1000000 - Bigint.of_int 86399) / Bigint.of_int 86400
+        else (x * Bigint.of_int 1000000 + Bigint.of_int 86399) / Bigint.of_int 86400
+      in
+      test (dayify_rtz max_x100)            ~decimals:17 "d";
+      test (dayify_rtz max_wont_round_x100) ~decimals:17 "d";
+      test (dayify_raz max_will_round_x100) ~decimals:17 "d";
+      test (dayify_raz max_next_x100)       ~decimals:17 "d";
+      [%expect {|
+        53375.99558365032295138d
+        4611686018427387903ns
+        "did not raise"
+
+        53375.99558365032295706d
+        4611686018427387903ns
+        "did not raise"
+
+        53375.99558365032295718d
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string 53375.99558365032295718d)
+          (reason "span would be outside of int63 range")))
+
+        53375.99558365032296297d
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string 53375.99558365032296297d)
+          (reason "span would be outside of int63 range"))) |}];
+
+      test (dayify_rtz min_x100)            ~decimals:17 "d";
+      test (dayify_rtz min_wont_round_x100) ~decimals:17 "d";
+      test (dayify_raz min_will_round_x100) ~decimals:17 "d";
+      test (dayify_raz min_next_x100)       ~decimals:17 "d";
+      [%expect {|
+        -53375.99558365032296296d
+        -4611686018427387904ns
+        "did not raise"
+
+        -53375.99558365032296875d
+        -4611686018427387904ns
+        "did not raise"
+
+        -53375.99558365032296887d
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string -53375.99558365032296887d)
+          (reason "span would be outside of int63 range")))
+
+        -53375.99558365032297454d
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string -53375.99558365032297454d)
+          (reason "span would be outside of int63 range"))) |}];
+    ;;
+
+    let%expect_test "additional-overflow-testing" =
+      let test str =
+        show_raise (fun () ->
+          print_nanos str)
+      in
+
+      (* Should not overflow. *)
+      test "53375d";
+      test "-53375d";
+      [%expect {|
+        4611600000000000000ns
+        "did not raise"
+        -4611600000000000000ns
+        "did not raise" |}];
+
+      (* Should be overflow directly on the integer part *)
+      test "53376d";
+      test "-53376d";
+      [%expect {|
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string 53376d)
+          (reason "span would be outside of int63 range")))
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string -53376d)
+          (reason "span would be outside of int63 range"))) |}];
+
+      (* Should be overflow directly on the integer part, upon the multiply by ten rather
+         than upon adding the digit. *)
+      test "53380d";
+      test "-53380d";
+      [%expect {|
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string 53380d)
+          (reason "span would be outside of int63 range")))
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string -53380d)
+          (reason "span would be outside of int63 range"))) |}];
+
+      (* Should be overflow upon adding the fractional part but not the integer part *)
+      test "53375.999d";
+      test "-53375.999d";
+      [%expect {|
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string 53375.999d)
+          (reason "span would be outside of int63 range")))
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string -53375.999d)
+          (reason "span would be outside of int63 range"))) |}];
+
+      (* Should be overflow on combining parts but not on individual parts *)
+      test "30000d30000d";
+      test "50000000m3000000000000000000ns";
+      [%expect {|
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string 30000d30000d)
+          (reason "span would be outside of int63 range")))
+        (raised (
+          "Time_ns.Span.of_string: invalid string"
+          (string 50000000m3000000000000000000ns)
+          (reason "span would be outside of int63 range"))) |}];
+    ;;
+  end)
+;;
 
 let%expect_test "Time_ns.Span.Stable.V1" =
   let module V = Time_ns.Span.Stable.V1 in
@@ -117,9 +1027,185 @@ let%expect_test "Time_ns.Span.Stable.V1" =
   [%expect {|
     (raised (
       "Span.t exceeds limits"
-      (t         -53375.995583650321d)
+      (t         -53375d23h53m38.427387903s)
       (min_value -49275d)
       (max_value 49275d))) |}];
+;;
+
+let%test_module "Time_ns.Span.Stable.V2" =
+  (module struct
+    module V = Time_ns.Span.Stable.V2
+
+    let%test_unit "round-trip" =
+      Quickcheck.test ~examples:span_examples span_gen ~f:(fun span ->
+        let rt = V.t_of_sexp (V.sexp_of_t span) in
+        [%test_eq: Time_ns.Span.t] span rt;
+        let rt = V.of_int63_exn (V.to_int63 span) in
+        [%test_eq: Time_ns.Span.t] span rt;)
+    ;;
+
+    let%expect_test "stability" =
+      let make int64 = V.of_int63_exn (Int63.of_int64_exn int64) in
+      print_and_check_stable_int63able_type [%here] (module V) [
+        make                           0L;
+        make                           1L;
+        make                       (-499L);
+        make                         500L;
+        make                     (-1_000L);
+        make                 987_654_321L;
+        make           (-123_456_789_012L);
+        make          52_200_010_101_101L;
+        make        (-86_399_999_999_999L);
+        make          86_400_000_000_000L;
+        make     (-1_000_000_222_000_333L);
+        make      80_000_006_400_000_000L;
+        make (-1_381_156_200_010_101_000L);
+        make   4_110_307_199_999_999_000L;
+        make (Int63.to_int64 Int63.max_value);
+        make (Int63.to_int64 Int63.min_value);
+      ];
+      [%expect {|
+        (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
+        ((sexp   0s)
+         (bin_io "\000")
+         (int63  0))
+        ((sexp   1ns)
+         (bin_io "\001")
+         (int63  1))
+        ((sexp   -499ns)
+         (bin_io "\254\r\254")
+         (int63  -499))
+        ((sexp   500ns)
+         (bin_io "\254\244\001")
+         (int63  500))
+        ((sexp   -1us)
+         (bin_io "\254\024\252")
+         (int63  -1000))
+        ((sexp   987.654321ms)
+         (bin_io "\253\177h\222:")
+         (int63  987654321))
+        ((sexp   -2m3.456789012s)
+         (bin_io "\252\236\229fA\227\255\255\255")
+         (int63  -123456789012))
+        ((sexp   14h30m10.101101ms)
+         (bin_io "\252m1\015\195y/\000\000")
+         (int63  52200010101101))
+        ((sexp   -23h59m59.999999999s)
+         (bin_io "\252\001\000\177nk\177\255\255")
+         (int63  -86399999999999))
+        ((sexp   1d)
+         (bin_io "\252\000\000O\145\148N\000\000")
+         (int63  86400000000000))
+        ((sexp   -11d13h46m40.222000333s)
+         (bin_io "\2523\011\254M\129r\252\255")
+         (int63  -1000000222000333))
+        ((sexp   925d22h13m26.4s)
+         (bin_io "\252\000@\128\251\1487\028\001")
+         (int63  80000006400000000))
+        ((sexp   -15985d14h30m10.101ms)
+         (bin_io "\252\248\206\017\247\192%\213\236")
+         (int63  -1381156200010101000))
+        ((sexp   47572d23h59m59.999999s)
+         (bin_io "\252\024\252\186\253\158\190\n9")
+         (int63  4110307199999999000))
+        ((sexp   53375d23h53m38.427387903s)
+         (bin_io "\252\255\255\255\255\255\255\255?")
+         (int63  4611686018427387903))
+        ((sexp   -53375d23h53m38.427387904s)
+         (bin_io "\252\000\000\000\000\000\000\000\192")
+         (int63  -4611686018427387904)) |}];
+    ;;
+  end)
+;;
+
+let%test_module "Time_ns.Span.Option.Stable.V2" =
+  (module struct
+    module V = Time_ns.Span.Option.Stable.V2
+
+    let%test_unit "round-trip" =
+      Quickcheck.test
+        ~examples:span_option_examples
+        span_option_gen
+        ~f:(fun span ->
+          let rt = V.t_of_sexp (V.sexp_of_t span) in
+          [%test_eq: Time_ns.Span.Option.t] span rt;
+          let rt = V.of_int63_exn (V.to_int63 span) in
+          [%test_eq: Time_ns.Span.Option.t] span rt;
+        )
+    ;;
+
+    let%expect_test "stability" =
+      let make int64 = V.of_int63_exn (Int63.of_int64_exn int64) in
+      print_and_check_stable_int63able_type [%here] (module V) [
+        make                           0L;
+        make                           1L;
+        make                       (-499L);
+        make                         500L;
+        make                     (-1_000L);
+        make                 987_654_321L;
+        make           (-123_456_789_012L);
+        make          52_200_010_101_101L;
+        make        (-86_399_999_999_999L);
+        make          86_400_000_000_000L;
+        make     (-1_000_000_222_000_333L);
+        make      80_000_006_400_000_000L;
+        make (-1_381_156_200_010_101_000L);
+        make   4_110_307_199_999_999_000L;
+        make (Int63.to_int64 Int63.max_value);
+        make (Int63.to_int64 Int63.min_value); (* none *)
+      ];
+      [%expect {|
+        (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
+        ((sexp (0s))
+         (bin_io "\000")
+         (int63  0))
+        ((sexp (1ns))
+         (bin_io "\001")
+         (int63  1))
+        ((sexp (-499ns))
+         (bin_io "\254\r\254")
+         (int63  -499))
+        ((sexp (500ns))
+         (bin_io "\254\244\001")
+         (int63  500))
+        ((sexp (-1us))
+         (bin_io "\254\024\252")
+         (int63  -1000))
+        ((sexp (987.654321ms))
+         (bin_io "\253\177h\222:")
+         (int63  987654321))
+        ((sexp (-2m3.456789012s))
+         (bin_io "\252\236\229fA\227\255\255\255")
+         (int63  -123456789012))
+        ((sexp (14h30m10.101101ms))
+         (bin_io "\252m1\015\195y/\000\000")
+         (int63  52200010101101))
+        ((sexp (-23h59m59.999999999s))
+         (bin_io "\252\001\000\177nk\177\255\255")
+         (int63  -86399999999999))
+        ((sexp (1d))
+         (bin_io "\252\000\000O\145\148N\000\000")
+         (int63  86400000000000))
+        ((sexp (-11d13h46m40.222000333s))
+         (bin_io "\2523\011\254M\129r\252\255")
+         (int63  -1000000222000333))
+        ((sexp (925d22h13m26.4s))
+         (bin_io "\252\000@\128\251\1487\028\001")
+         (int63  80000006400000000))
+        ((sexp (-15985d14h30m10.101ms))
+         (bin_io "\252\248\206\017\247\192%\213\236")
+         (int63  -1381156200010101000))
+        ((sexp (47572d23h59m59.999999s))
+         (bin_io "\252\024\252\186\253\158\190\n9")
+         (int63  4110307199999999000))
+        ((sexp (53375d23h53m38.427387903s))
+         (bin_io "\252\255\255\255\255\255\255\255?")
+         (int63  4611686018427387903))
+        ((sexp ())
+         (bin_io "\252\000\000\000\000\000\000\000\192")
+         (int63  -4611686018427387904)) |}];
+    ;;
+  end)
 ;;
 
 let%expect_test "Time_ns.Span.Option.Stable.V1" =
@@ -187,7 +1273,7 @@ let%expect_test "Time_ns.Span.Option.Stable.V1" =
   [%expect {|
     (raised (
       "Span.t exceeds limits"
-      (t         -53375.995583650321d)
+      (t         -53375d23h53m38.427387903s)
       (min_value -49275d)
       (max_value 49275d))) |}];
 ;;
@@ -244,7 +1330,7 @@ let%expect_test "Time_ns.Stable.V1" =
   [%expect {|
     (raised (
       "Span.t exceeds limits"
-      (t         -53375.995583650321d)
+      (t         -53375d23h53m38.427387903s)
       (min_value -49275d)
       (max_value 49275d))) |}];
 ;;
@@ -305,14 +1391,14 @@ let%expect_test "Time_ns.Option.Stable.V1" =
   [%expect {|
     (raised (
       "Span.t exceeds limits"
-      (t         -53375.995583650321d)
+      (t         -53375d23h53m38.427387903s)
       (min_value -49275d)
       (max_value 49275d))) |}];
 ;;
 
-let%test_module "Time_ns.Ofday.Stable.V1" =
+let%test_module "Time_ns.Stable.Ofday.V1" =
   (module struct
-    module V = Time_ns.Ofday.Stable.V1
+    module V = Time_ns.Stable.Ofday.V1
 
     let%expect_test "stable conversions" =
       let make int64 = V.of_int63_exn (Int63.of_int64_exn int64) in
@@ -374,18 +1460,14 @@ let%test_module "Time_ns.Ofday.Stable.V1" =
         V.of_int63_exn (Int63.succ Int63.min_value));
       [%expect {|
         (raised (
-          "Span.t exceeds limits"
-          (t         -53375.995583650321d)
-          (min_value -49275d)
-          (max_value 49275d))) |}];
+          "Time_ns.Ofday.of_span_since_start_of_day_exn: input out of bounds"
+          (s -53375d23h53m38.427387903s))) |}];
       show_raise ~hide_positions:true (fun () ->
         V.of_int63_exn (Int63.pred Int63.max_value));
       [%expect {|
         (raised (
-          "Span.t exceeds limits"
-          (t         53375.995583650321d)
-          (min_value -49275d)
-          (max_value 49275d))) |}];
+          "Time_ns.Ofday.of_span_since_start_of_day_exn: input out of bounds"
+          (s 53375d23h53m38.427387902s))) |}];
     ;;
 
     let%test_unit "roundtrip quickcheck" =
@@ -472,7 +1554,7 @@ let%test_module "Time_ns.Ofday.Option.Stable.V1" =
       [%expect {|
         (raised (
           "Span.t exceeds limits"
-          (t         -53375.995583650321d)
+          (t         -53375d23h53m38.427387903s)
           (min_value -49275d)
           (max_value 49275d))) |}];
       show_raise ~hide_positions:true (fun () ->
@@ -480,7 +1562,7 @@ let%test_module "Time_ns.Ofday.Option.Stable.V1" =
       [%expect {|
         (raised (
           "Span.t exceeds limits"
-          (t         53375.995583650321d)
+          (t         53375d23h53m38.427387903s)
           (min_value -49275d)
           (max_value 49275d))) |}];
     ;;
@@ -600,7 +1682,7 @@ let%test_module "Time_ns.Span" =
             (lazy [%message
               "round-trip does not have microsecond precision"
                 (span       : Time.Span.t)
-                (span_ns    : Core_kernel.Time_ns.Span.Alternate_sexp.t)
+                (span_ns    : Core_kernel.Time_ns.Span.t)
                 (round_trip : Time.Span.t)
                 (precision  : Time.Span.t)]));
       [%expect {||}];
@@ -659,10 +1741,10 @@ let%test_module "Time_ns.Span" =
           ~if_false_then_print_s:
             (lazy [%message
               "round-trip does not have microsecond precision"
-                (span_ns    : Core_kernel.Time_ns.Span.Alternate_sexp.t)
+                (span_ns    : Core_kernel.Time_ns.Span.t)
                 (span       : Time.Span.t)
-                (round_trip : Core_kernel.Time_ns.Span.Alternate_sexp.t)
-                (precision  : Core_kernel.Time_ns.Span.Alternate_sexp.t)]));
+                (round_trip : Core_kernel.Time_ns.Span.t)
+                (precision  : Core_kernel.Time_ns.Span.t)]));
       [%expect {||}];
     ;;
 
@@ -943,17 +2025,17 @@ let%test_module "Time_ns" =
           ns
           (Int64.(-) (to_int63_ns_since_epoch t' |> Int63.to_int64) ns));
       [%expect {|
-    2016-10-31 23:59:59.999999998 1477972799999999998 0
-    2016-10-31 23:59:59.999999999 1477972799999999999 0
-    2016-11-01 00:00:00.000000000 1477972800000000000 0
-    2016-11-01 00:00:00.000000001 1477972800000000001 0
-    2016-11-01 00:00:00.000000002 1477972800000000002 0
-    2016-11-01 10:37:55.019386869 1478011075019386869 0
-    2016-11-01 10:37:55.019386670 1478011075019386670 0
-    2016-11-06 00:59:59.999999999 1478408399999999999 0
-    2016-11-06 01:00:00.000000000 1478408400000000000 3600000000000
-    2016-11-06 01:00:00.000000000 1478412000000000000 0
-    2016-11-06 01:00:00.000000001 1478412000000000001 0 |}]
+        2016-10-31 23:59:59.999999998 1477972799999999998 0
+        2016-10-31 23:59:59.999999999 1477972799999999999 0
+        2016-11-01 00:00:00.000000000 1477972800000000000 0
+        2016-11-01 00:00:00.000000001 1477972800000000001 0
+        2016-11-01 00:00:00.000000002 1477972800000000002 0
+        2016-11-01 10:37:55.019386869 1478011075019386869 0
+        2016-11-01 10:37:55.019386670 1478011075019386670 0
+        2016-11-06 00:59:59.999999999 1478408399999999999 0
+        2016-11-06 01:00:00.000000000 1478408400000000000 3600000000000
+        2016-11-06 01:00:00.000000000 1478412000000000000 0
+        2016-11-06 01:00:00.000000001 1478412000000000001 0 |}]
     ;;
 
     let%expect_test "in tests, [to_string] uses NYC's time zone" =
@@ -1282,4 +2364,102 @@ let%expect_test "time ns zone invalid offset parsing" =
     (time.ml.Make.Time_of_string
      "2000-01-01 12:34:56.789012--1"
      (Invalid_argument "index out of bounds")) |}];
+;;
+
+let%expect_test "Span.randomize" =
+  let module Span = Time_ns.Span in
+  let span = Span.of_sec 1.  in
+  let upper_bound = Span.of_sec 1.3 in
+  let lower_bound = Span.of_sec 0.7 in
+  let percent = Percent.of_mult 0.3 in
+  let rec loop ~count ~trials =
+    let open Int.O in
+    if count >= trials
+    then begin
+      print_s [%message "succeeded" (count : int)]
+    end
+    else begin
+      let rand = Span.randomize span ~percent in
+      if (Span.( < ) rand lower_bound || Span.( > ) rand upper_bound)
+      then begin
+        print_cr [%here] [%message
+          "out of bounds"
+            (percent : Percent.t)
+            (rand : Span.t)
+            (lower_bound : Span.t)
+            (upper_bound : Span.t)]
+      end
+      else begin
+        loop ~count:(count + 1) ~trials
+      end
+    end
+  in
+  loop ~count:0 ~trials:1_000;
+  [%expect {| (succeeded (count 1000)) |}];
+;;
+
+let%expect_test "Span.to_short_string" =
+  let module Span = Time_ns.Span in
+  let examples =
+    let magnitudes = [1.; Float.pi; 10.6] in
+    let pos_examples =
+      List.concat_map magnitudes ~f:(fun magnitude ->
+        List.map Unit_of_time.all ~f:(fun unit_of_time ->
+          Span.scale (Span.of_unit_of_time unit_of_time) magnitude))
+    in
+    let signed_examples =
+      List.concat_map pos_examples ~f:(fun span ->
+        [span; Span.neg span])
+    in
+    Span.zero :: signed_examples
+  in
+  let alist =
+    List.map examples ~f:(fun span ->
+      (span, Span.to_short_string span))
+  in
+  print_s [%sexp (alist : (Span.t * string) list)];
+  [%expect {|
+    ((0s                    0ns)
+     (1ns                   1ns)
+     (-1ns                  -1ns)
+     (1us                   1us)
+     (-1us                  -1us)
+     (1ms                   1ms)
+     (-1ms                  -1ms)
+     (1s                    1s)
+     (-1s                   -1s)
+     (1m                    1m)
+     (-1m                   -1m)
+     (1h                    1h)
+     (-1h                   -1h)
+     (1d                    1d)
+     (-1d                   -1d)
+     (3ns                   3ns)
+     (-3ns                  -3ns)
+     (3.142us               3.1us)
+     (-3.142us              -3.1us)
+     (3.141593ms            3.1ms)
+     (-3.141593ms           -3.1ms)
+     (3.141592654s          3.1s)
+     (-3.141592654s         -3.1s)
+     (3m8.495559215s        3.1m)
+     (-3m8.495559215s       -3.1m)
+     (3h8m29.733552923s     3.1h)
+     (-3h8m29.733552923s    -3.1h)
+     (3d3h23m53.605270158s  3.1d)
+     (-3d3h23m53.605270158s -3.1d)
+     (11ns                  11ns)
+     (-11ns                 -11ns)
+     (10.6us                10us)
+     (-10.6us               -10us)
+     (10.6ms                10ms)
+     (-10.6ms               -10ms)
+     (10.6s                 10s)
+     (-10.6s                -10s)
+     (10m36s                10m)
+     (-10m36s               -10m)
+     (10h36m                10h)
+     (-10h36m               -10h)
+     (10d14h24m             10d)
+     (-10d14h24m            -10d)) |}];
 ;;

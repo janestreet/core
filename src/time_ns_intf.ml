@@ -133,6 +133,7 @@ module type Span = sig
 
   module Stable : sig
     module V1 : Stable_int63able with type t = t
+    module V2 : Stable_int63able with type t = t
   end
 
   val random : ?state:Random.State.t -> unit -> t
@@ -144,61 +145,18 @@ module type Span = sig
     include Option with type value := t
     module Stable : sig
       module V1 : Stable_int63able with type t = t
+      module V2 : Stable_int63able with type t = t
     end
   end
 end
 
 module type Ofday = sig
-  type time
-  type span
+  include module type of struct include Time_ns.Ofday end
 
-  type t = private Int63.t [@@deriving typerep]
-
-  (** String and sexp output takes the form 'HH:MM:SS.sssssssss'; see
-      {!Core_kernel.Ofday_intf} for accepted input. If input includes more than 9 decimal
-      places in seconds, rounds to the nearest nanosecond, with the midpoint rounded up.
-      Allows 60[.sss...] seconds for leap seconds but treats it as exactly 60s regardless
-      of fractional part. *)
-  include Identifiable         with type t := t
-  include Comparable.With_zero with type t := t
-
-  (** On some days, [add_exn t span] doesn't occur [span] from [t] in real time.  For
-      example, this happens on days when daylight saving time begins or ends.  See
-      {!Time.Ofday} for more detail. *)
-  val add_exn : t -> span -> t
-  val sub_exn : t -> span -> t
-
-  val diff : t -> t -> span
+  val now : zone:Time.Zone.t -> t
 
   val to_ofday : t -> Time.Ofday.t
   val of_ofday : Time.Ofday.t -> t
-
-  val now : zone:Time.Zone.t -> t
-  val to_millisecond_string : t -> string
-
-  val start_of_day : t
-  val start_of_next_day : t
-
-  (** The largest representable value below [start_of_next_day], i.e. one nanosecond
-      before midnight. *)
-  val approximate_end_of_day : t
-
-  val to_span_since_start_of_day : t -> span
-  val of_span_since_start_of_day_exn : span -> t
-
-  val create
-    :  ?hr  : int
-    -> ?min : int
-    -> ?sec : int
-    -> ?ms  : int
-    -> ?us  : int
-    -> ?ns  : int
-    -> unit
-    -> t
-
-  module Stable : sig
-    module V1 : Stable_int63able with type t = t
-  end
 
   module Option : sig
     include Option with type value := t
@@ -258,8 +216,6 @@ module type Time_ns = sig
 
   (** See {!Time.Ofday}. *)
   module Ofday : Ofday
-    with type time := t
-     and type span := Span.t
 
 
 
@@ -349,8 +305,10 @@ module type Time_ns = sig
     end
     module Span : sig
       module V1 : Stable_int63able with type t = Span.t
+      module V2 : Stable_int63able with type t = Span.t
       module Option : sig
         module V1 : Stable_int63able with type t = Span.Option.t
+        module V2 : Stable_int63able with type t = Span.Option.t
       end
     end
     module Ofday : sig

@@ -114,8 +114,8 @@ module Make (Time0 : Time0_intf.S) (Time : Time_intf.S with module Time := Time0
   end
 
   include (Time : module type of Time
-           with module Zone  := Zone
-            and module Ofday := Ofday)
+           with module Zone  := Time.Zone
+            and module Ofday := Time.Ofday)
 
   let of_tm tm ~zone =
     (* Explicitly ignoring isdst, wday, yday (they are redundant with the other fields
@@ -161,7 +161,7 @@ module Make (Time0 : Time0_intf.S) (Time : Time_intf.S with module Time := Time0
       | `Local -> Lazy.force Zone.local
     in
     let date, sec = to_date_ofday t ~zone in
-    (Date.to_string_iso8601_basic date) ^ "-" ^ (Ofday.to_millisec_string sec)
+    (Date.to_string_iso8601_basic date) ^ "-" ^ (Ofday.to_millisecond_string sec)
   ;;
 
   let format t s ~zone =

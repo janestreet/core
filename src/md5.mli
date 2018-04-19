@@ -16,3 +16,6 @@ val digest_fd_blocking : Core_unix.File_descr.t -> t
     lock for its whole duration. Therefore, this can run in parallel with other OCaml
     threads and can be meaningfully used in [In_thread.run]. *)
 val digest_file_blocking : string -> t
+
+val digest_bigstring : Bigstring.t -> t
+val digest_subbigstring : Bigstring.t -> pos:int -> len:int -> t

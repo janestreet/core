@@ -15,14 +15,14 @@ depends: [
   "ppx_assert"
   "ppx_jane"
   "sexplib"
-  "spawn"
   "stdio"
   "base-threads"
   "jbuilder"                {build & >= "1.0+beta18.1"}
   "ocaml-migrate-parsetree" {>= "1.0"}
   "ppxlib"                  {>= "0.1.0"}
+  "spawn"
 ]
-available: [ ocaml-version >= "4.04.1" ]
+available: [ ocaml-version >= "4.06.1" ]
 descr: "
 Industrial strength alternative to OCaml's standard library
 

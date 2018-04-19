@@ -1023,14 +1023,24 @@ module Expert = struct
                           (max_len : int)];
     let lo = pos in
     let hi = pos + len in
-    Fields.Direct.set_all_mutable_fields
-      t
-      ~buf
-      ~lo_min:lo
-      ~lo
-      ~hi
-      ~hi_max:hi
+    (* avoid [caml_modify], if possible *)
+    if not (phys_equal t.buf buf)
+    then t.buf <- buf;
+    t.lo_min   <- lo;
+    t.lo       <- lo;
+    t.hi       <- hi;
+    t.hi_max   <- hi;
   ;;
+
+  let _remember_to_update_reinitialize_of_bigstring
+    :  (_, _) t
+      -> buf:Bigstring.t
+    -> lo_min:int
+    -> lo:int
+    -> hi:int
+    -> hi_max:int
+    -> unit
+    = Fields.Direct.set_all_mutable_fields
 
   let set_bounds_and_buffer ~src ~dst = set_bounds_and_buffer ~src ~dst
   let set_bounds_and_buffer_sub ~pos ~len ~src ~dst =

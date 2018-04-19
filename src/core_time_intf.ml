@@ -111,7 +111,8 @@ module type S = sig
   val pause_forever : unit -> never_returns
 
   (** [format t fmt] formats the given time according to fmt, which follows the formatting
-      rules given in 'man strftime'.  The time is output in the given timezone.
+      rules given in 'man strftime'.  The time is output in the given timezone. Here are
+      some commonly used control codes:
 
       {v
       %Y - year (4 digits)
@@ -124,6 +125,14 @@ module type S = sig
     v}
 
       a common choice would be: %Y-%m-%d %H:%M:%S
+
+      Although %Z and %z will be interpreted as format strings, Neither will be correct in
+      the current implementation. %Z will always refer to the local machine timezone, and
+      can be controlled by setting the "TZ" environment variable before calling [format].
+      %z behaves unreliably and should be avoided.
+
+      Not all strftime control codes are standard; the supported subset will depend on the
+      C libraries linked into a given executable.
   *)
   val format : t -> string -> zone:Zone.t -> string
 

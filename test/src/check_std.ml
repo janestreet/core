@@ -68,26 +68,26 @@ let%test_module _ =
         Time.Span.day;
       ];
       [%expect {|
-        (Set (0s 1e-06ms 0.001ms 1ms 1s 1m 1h 1d))
+        (Set (0s 1ns 1us 1ms 1s 1m 1h 1d))
         (Map (
-          (0s      0)
-          (1e-06ms 1)
-          (0.001ms 2)
-          (1ms     3)
-          (1s      4)
-          (1m      5)
-          (1h      6)
-          (1d      7)))
-        (Hash_set (0s 1e-06ms 0.001ms 1ms 1s 1m 1h 1d))
+          (0s  0)
+          (1ns 1)
+          (1us 2)
+          (1ms 3)
+          (1s  4)
+          (1m  5)
+          (1h  6)
+          (1d  7)))
+        (Hash_set (0s 1ns 1us 1ms 1s 1m 1h 1d))
         (Table (
-          (0s      0)
-          (1e-06ms 1)
-          (0.001ms 2)
-          (1ms     3)
-          (1s      4)
-          (1m      5)
-          (1h      6)
-          (1d      7))) |}];
+          (0s  0)
+          (1ns 1)
+          (1us 2)
+          (1ms 3)
+          (1s  4)
+          (1m  5)
+          (1h  6)
+          (1d  7))) |}];
     ;;
 
     let%expect_test _ =

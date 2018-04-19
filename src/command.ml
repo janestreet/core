@@ -244,7 +244,8 @@ module Arg_type = struct
 
   let bool = of_alist_exn [("true", true); ("false", false)]
 
-  let comma_separated ?key ?(strip_whitespace = false) ?(unique_values = false) t =
+  let comma_separated ~allow_empty ?key ?(strip_whitespace = false)
+        ?(unique_values = false) t =
     let strip =
       if strip_whitespace
       then (fun str -> String.strip str)
@@ -289,7 +290,10 @@ module Arg_type = struct
     let of_string string =
       let string = strip string in
       if String.is_empty string
-      then []
+      then
+        (if allow_empty
+         then []
+         else failwith "Command.Spec.Arg_type.comma_separated: empty list not allowed")
       else
         List.map (String.split string ~on:',') ~f:(fun str ->
           Result.ok_exn (t.parse (strip str)))

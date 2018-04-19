@@ -44,7 +44,7 @@ let%test_module "next_clock_shift, prev_clock_shift" =
       let ofday_mins = (hr * 60) + min in
       let ofday      =
         Span.of_sec (Float.of_int (ofday_mins * 60))
-        |> Time.Ofday.of_span_since_start_of_day
+        |> Time.Ofday.of_span_since_start_of_day_exn
       in
       let date = Date.create_exn ~y:year ~m:month ~d:day in
       Time.of_date_ofday date ofday ~zone:Time.Zone.utc
@@ -123,7 +123,7 @@ let%test_module "clock shift stuff" =
     let mkt month day hr min =
       let ofday =
         Time.Span.of_sec (60. *. ((Float.of_int hr *. 60.) +. Float.of_int min))
-        |> Time.Ofday.of_span_since_start_of_day
+        |> Time.Ofday.of_span_since_start_of_day_exn
       in
       let date = Date.create_exn ~y:2013 ~m:month ~d:day in
       Time.of_date_ofday date ofday ~zone:Time.Zone.utc

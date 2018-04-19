@@ -77,7 +77,7 @@ let () =
        let rand_state = Random.State.make [| 1; 2; 3; 4; 5; 6; 7 |] in
        for _ = 0 to 100_000 do
          let secs = Random.State.int rand_state 86_400_000 in
-         let ofday = Ofday.of_span_since_start_of_day (Time.Span.of_ms (float secs)) in
+         let ofday = Ofday.of_span_since_start_of_day_exn (Time.Span.of_ms (float secs)) in
          let ofday_string = Ofday.to_string ofday in
          let ofday' = Ofday.of_string ofday_string in
          if Ofday.(<>.) ofday ofday' then
@@ -506,13 +506,12 @@ let () =
     )
 ;;
 
-
 let roundtrip s =
   let t = Span.of_string s in
+  (* we only test rountrip in one direction because the other direction does not hold!
+     for example 1.34m comes back as 1m20.400000000000006s *)
   ("string roundtrip " ^ s) @?
-  Span.(=) t (Time.Span.of_string (Time.Span.to_string t));
-  ("span roundtrip " ^ s) @?
-  String.(=) s (Time.Span.to_string (Time.Span.of_string s))
+  Span.(=) t (Time.Span.of_string (Time.Span.to_string t))
 ;;
 
 

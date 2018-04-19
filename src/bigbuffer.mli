@@ -12,3 +12,6 @@ val add_channel : t -> In_channel.t -> int -> unit
 val output_buffer : Out_channel.t -> t -> unit
 (** [output_buffer oc b] writes the current contents of buffer [b] on the output channel
     [oc]. *)
+
+val md5 : t -> Md5.t
+(** Digest the current contents of the buffer. *)

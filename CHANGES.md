@@ -10,6 +10,9 @@ and Core\_kernel's
 
 - Added `Iobuf.{of,to}_bytes`.
 
+- Added `Md5.digest_bigstring` and used it to implement a more efficient
+  version of `Md5.digest_bin_prot`.
+
 ## v0.11
 
 - Fix a segfault in `Time`. (fixes #102)

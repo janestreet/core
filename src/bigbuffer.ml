@@ -1,6 +1,10 @@
 module Bigstring_in_this_directory = Bigstring
+module Md5_in_this_directory       = Md5
+
 open! Import
+
 module Bigstring = Bigstring_in_this_directory
+module Md5       = Md5_in_this_directory
 
 include Core_kernel.Bigbuffer
 
@@ -18,4 +22,9 @@ let add_channel buf ic len =
 let output_buffer oc buf =
   let buf = __internal buf in
   Bigstring.really_output oc buf.bstr ~len:buf.pos
+;;
+
+let md5 t =
+  let t = __internal t in
+  Md5.digest_subbigstring t.bstr ~pos:0 ~len:t.pos
 ;;

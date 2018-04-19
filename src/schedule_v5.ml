@@ -652,7 +652,7 @@ end = struct
       let date = Date.create_exn ~y:2000 ~m:Jan ~d:1 in
       for i = 0 to day_in_seconds - 1 do
         let ofday =
-          Time.Ofday.of_span_since_start_of_day
+          Time.Ofday.of_span_since_start_of_day_exn
             (Time.Span.of_sec (Float.of_int i))
         in
         let parts = Time.Ofday.to_parts ofday in
@@ -738,7 +738,7 @@ end = struct
         let date, ofday =
           if Time.Span.(>=) span Time.Span.day
           then Date.add_days t.date 1, Time.Ofday.start_of_day
-          else t.date, Time.Ofday.of_span_since_start_of_day next_sec_span
+          else t.date, Time.Ofday.of_span_since_start_of_day_exn next_sec_span
         in
         {t with date; ofday }
     in

@@ -487,7 +487,7 @@ module Time_ = struct
   end
 
   include (Time : (module type of (struct include Time end))
-           with module Span := Span)
+           with module Span := Time.Span)
 
   let to_float t = Span.to_sec (to_span_since_epoch t)
   let of_float f = of_span_since_epoch (Span.of_sec f)
@@ -505,7 +505,7 @@ module Time_ns_ = struct
   end
 
   include (Core_time_ns : (module type of (struct include Core_time_ns end))
-           with module Span := Span)
+           with module Span := Core_time_ns.Span)
 
   let to_float t = Span.to_ns (to_span_since_epoch t)
   let of_float f = of_span_since_epoch (Span.of_ns f)
@@ -515,7 +515,7 @@ module Ofday_ = struct
   include Time_.Ofday
 
   let to_float t = to_span_since_start_of_day t |> Time.Span.to_sec
-  let of_float s = of_span_since_start_of_day (Time.Span.of_sec s)
+  let of_float s = of_span_since_start_of_day_exn (Time.Span.of_sec s)
 end
 
 module Ofday_ns_ = struct
