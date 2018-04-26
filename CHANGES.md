@@ -4,6 +4,10 @@ you might want to have a look at Base's
 and Core\_kernel's
 [changelog](https://github.com/janestreet/core_kernel/blob/master/CHANGES.md).
 
+## v0.11.1
+
+- Fix compatibility with spawn v0.12.0
+
 ## v0.11
 
 - Fix a segfault in `Time`. (fixes #102)
