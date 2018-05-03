@@ -1582,7 +1582,7 @@ let create_process_internal
           ?cwd:(Option.map working_dir ~f:(fun x -> Spawn.Working_dir.Path x))
           ~prog
           ~argv
-          ~env
+          ~env:(Spawn.Env.of_list env)
           ~stdin:in_read
           ~stdout:out_write
           ~stderr:err_write
