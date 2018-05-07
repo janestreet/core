@@ -1,19 +1,38 @@
 open! Import
-open Core_kernel.Core_kernel_private
 
-module T = Core_time.Make (Time_float0) (Time_float)
+module T = Core_time.Make (Time) (Time)
 
 (* Previous versions rendered hash-based containers using float serialization rather than
    time serialization, so when reading hash-based containers in we accept either
    serialization. *)
 include Hashable.Make_binable (struct
-    include T
+    type t = Time.t [@@deriving bin_io, compare, hash]
+
+    let sexp_of_t = T.sexp_of_t
 
     let t_of_sexp sexp =
       match Float.t_of_sexp sexp with
-      | float       -> of_span_since_epoch (Span.of_sec float)
-      | exception _ -> t_of_sexp sexp
+      | float       -> Time.of_span_since_epoch (Time.Span.of_sec float)
+      | exception _ -> T.t_of_sexp sexp
   end)
+
+module Ofday = struct
+  include Time.Ofday
+
+  module Zoned = T.Ofday.Zoned
+
+  let now = T.Ofday.now
+end
+
+module Zone = struct
+  include (
+    T.Zone : module type of struct include T.Zone end
+    with module Index := T.Zone.Index
+    with type   t     := T.Zone.t
+  )
+
+  include Time.Zone
+end
 
 module Stable = struct
   module V1 = struct
@@ -62,7 +81,7 @@ module Stable = struct
   module Span = Time.Stable.Span
 
   module Ofday = struct
-    include Time_float.Stable.Ofday
+    include Time.Stable.Ofday
 
     module Zoned = struct
       module V1 = struct
@@ -72,7 +91,7 @@ module Stable = struct
 
         module Bin_repr = struct
           type t =
-            { ofday : Time_float.Stable.Ofday.V1.t;
+            { ofday : Time.Stable.Ofday.V1.t;
               zone  : Core_zone.Stable.V1.t;
             } [@@deriving bin_io]
         end
@@ -87,7 +106,7 @@ module Stable = struct
               create repr.ofday repr.zone
           end)
 
-        type sexp_repr = Time_float.Stable.Ofday.V1.t * Core_zone.Stable.V1.t
+        type sexp_repr = Time.Stable.Ofday.V1.t * Core_zone.Stable.V1.t
         [@@deriving sexp]
 
         let sexp_of_t t = [%sexp_of: sexp_repr] (ofday t, zone t)
@@ -103,7 +122,28 @@ module Stable = struct
   module Zone = Core_zone.Stable
 end
 
-include (T : module type of struct include T end
-         with module Table      := T.Table
-          and module Hash_set   := T.Hash_set
-          and module Hash_queue := T.Hash_queue)
+include (
+  T : module type of struct include T end
+  with module Table                        := T.Table
+  with module Hash_set                     := T.Hash_set
+  with module Hash_queue                   := T.Hash_queue
+  with module Span                         := T.Span
+  with module Ofday                        := T.Ofday
+  with module Replace_polymorphic_compare  := T.Replace_polymorphic_compare
+  with module Relative_to_unspecified_zone := T.Relative_to_unspecified_zone
+  with module Zone                         := T.Zone
+  with type   underlying                   := T.underlying
+  with type   t                            := T.t
+  with type   comparator_witness           := T.comparator_witness
+)
+
+include (
+  Time : module type of struct include Time end
+  with module Ofday  := Time.Ofday
+  with module Zone   := Time.Zone
+  with module Stable := Time.Stable
+)
+
+let to_string     = T.to_string
+let of_string     = T.of_string
+let of_string_gen = T.of_string_gen

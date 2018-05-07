@@ -41,14 +41,16 @@
 *)
 
 open! Import
-open Core_kernel.Core_kernel_private
 open! Int.Replace_polymorphic_compare
 
 module Sys = Core_sys
 
 include Core_time_intf
 
-module Make (Time0 : Time0_intf.S) (Time : Time_intf.S with module Time := Time0) = struct
+module Make
+    (Time0 : Time.S_kernel_without_zone)
+    (Time  : Time.S_kernel with module Time := Time0)
+= struct
 
   module Zone = struct
     include Time.Zone

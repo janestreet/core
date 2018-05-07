@@ -5,11 +5,10 @@
 *)
 
 open! Import
-open Core_kernel.Core_kernel_private
 
 module type S = sig
-  module Time0 : Time0_intf.S
-  module Time  : Time_intf.S with module Time := Time0
+  module Time0 : Time.S_kernel_without_zone
+  module Time  : Time.S_kernel with module Time := Time0
 
   module Zone  : sig
     include module type of (struct include Time.Zone end)
@@ -161,9 +160,9 @@ module type Core_time = sig
   module type S = S
 
   module Make
-      (Time0 : Time0_intf.S)
-      (Time  : Time_intf.S with module Time := Time0) : S with module Time0 := Time0
-                                                           and module Time  := Time
+      (Time0 : Time.S_kernel_without_zone)
+      (Time  : Time.S_kernel with module Time := Time0)
+    : S with module Time0 := Time0 and module Time := Time
 end
 
 (** {1 Notes on time}

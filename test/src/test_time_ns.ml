@@ -1461,13 +1461,13 @@ let%test_module "Time_ns.Stable.Ofday.V1" =
       [%expect {|
         (raised (
           "Time_ns.Ofday.of_span_since_start_of_day_exn: input out of bounds"
-          (s -53375d23h53m38.427387903s))) |}];
+          -53375d23h53m38.427387903s)) |}];
       show_raise ~hide_positions:true (fun () ->
         V.of_int63_exn (Int63.pred Int63.max_value));
       [%expect {|
         (raised (
           "Time_ns.Ofday.of_span_since_start_of_day_exn: input out of bounds"
-          (s 53375d23h53m38.427387902s))) |}];
+          53375d23h53m38.427387902s)) |}];
     ;;
 
     let%test_unit "roundtrip quickcheck" =
@@ -1891,7 +1891,7 @@ let%test_module "Time_ns" =
       let span = Span.create ~hr:8 ~min:27 ~sec:14 ~ms:359 () in
       let ofday = Ofday.of_span_since_start_of_day_exn span in
       let expected = "08:27:14.359" in
-      let ms_str = Ofday.to_millisecond_string ofday    in
+      let ms_str = Ofday.to_millisecond_string ofday in
       if String.(<>) ms_str expected then
         failwithf "Failed on Ofday.to_millisecond_string Got (%s) expected (%s)"
           ms_str expected ()
