@@ -13,6 +13,15 @@ and Core\_kernel's
 - Added `Md5.digest_bigstring` and used it to implement a more efficient
   version of `Md5.digest_bin_prot`.
 
+- Optimized Time_stamp_counter.Calibrator.calibrate to not allocate.
+
+- Removed `Piecewise_linear` and `Crc`.
+
+- `Weak_hashtbl` was moved out into its own library (which is still part of the
+  core package)
+
+- Move `Syslog` out of `Core.Unix` into its own library `core.syslog`.
+
 ## v0.11
 
 - Fix a segfault in `Time`. (fixes #102)

@@ -11,17 +11,17 @@
     {v
       Name                         Time/Run   mWd/Run
      ---------------------------- ---------- ---------
-      Time.now                      37.93ns     2.00w
-      Time_ns.now                   28.18ns
-      TSC.Calibrator.calibrate     115.43ns    28.00w
-      TSC.now                        7.14ns
-      TSC.to_time                    3.44ns     2.00w
-      TSC.to_time (TSC.now ())       8.24ns     2.00w
-      TSC.to_time_ns                14.20ns
-      TSC.to_time_ns(TSC.now ())     9.80ns
-      id                             2.91ns
-      TSC.Span.of_ns                 5.81ns
-      TSC.Span.to_ns                 3.70ns
+      Time.now                      27.99ns     2.00w
+      Time_ns.now                   25.21ns
+      TSC.Calibrator.calibrate      68.61ns
+      TSC.now                        6.87ns
+      TSC.to_time                    4.30ns     2.00w
+      TSC.to_time (TSC.now ())       8.75ns     2.00w
+      TSC.to_time_ns                 4.70ns
+      TSC.to_time_ns(TSC.now ())     9.56ns
+      id                             2.86ns
+      TSC.Span.of_ns                11.66ns
+      TSC.Span.to_ns                 3.84ns
     v}
 
     Type [t] is an [Int63.t] and consequently has no allocation overhead (on 64-bit

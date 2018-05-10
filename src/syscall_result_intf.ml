@@ -1,4 +1,5 @@
 open! Import
+
 module type S = sig
   type ok_value
   type 'a syscall_result
@@ -29,7 +30,7 @@ module type S = sig
   val ok_or_unix_error_with_args_exn
     : t -> syscall_name:string -> 'a -> ('a -> Sexp.t) -> ok_value
 
-  module Optional_syntax : Optional_syntax.S 
+  module Optional_syntax : Optional_syntax.S
     with type t := t
      and type value := ok_value
 end

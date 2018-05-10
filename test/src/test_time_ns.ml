@@ -124,12 +124,16 @@ let%test_module "Time_ns.Span.to_string,of_string" =
       in
       List.iter ~f:test [
         "1s60h7.890d";
+        "+1s60h7.890d";
         "0.0005us";
+        "+0.0005us";
         "-0.0005us";
         "0.49ns0.00049us";
       ];
       [%expect {|
         10d9h21m37s
+        10d9h21m37s
+        1ns
         1ns
         0s
         0s |}]
@@ -2462,4 +2466,26 @@ let%expect_test "Span.to_short_string" =
      (-10h36m               -10h)
      (10d14h24m             10d)
      (-10d14h24m            -10d)) |}];
+;;
+
+let%expect_test "times with implicit zones" =
+  let test f =
+    show_raise (fun () ->
+      print_endline (Time_ns.to_string (f ())))
+  in
+  test (fun () ->
+    Time_ns.Stable.V1.t_of_sexp (Sexp.Atom "2013-10-07 09:30:00"));
+  [%expect {|
+    2013-10-07 09:30:00.000000-04:00
+    "did not raise" |}];
+  test (fun () ->
+    Time_ns.t_of_sexp (Sexp.Atom "2013-10-07 09:30:00"));
+  [%expect {|
+    2013-10-07 09:30:00.000000-04:00
+    "did not raise" |}];
+  test (fun () ->
+    Time_ns.of_string "2013-10-07 09:30:00");
+  [%expect {|
+    2013-10-07 09:30:00.000000-04:00
+    "did not raise" |}];
 ;;

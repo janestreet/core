@@ -2,8 +2,7 @@
     libraries can be found there.
 
     In particular, [Core] has comprehensive implementation of times (see [Time],
-    [Time_ns], [Timing_wheel_float], and [Schedule_v5]), where some details are
-    platform-specific (like timing wheels based on floats).
+    [Time_ns], and [Schedule_v5]), where some details are platform-specific.
 
     Some modules are mere extensions of those existing in [Core_kernel], like [Bigbuffer],
     [Bigstring], [Caml], [Time], and [Md5], where what's added is handlers for reading
@@ -14,7 +13,6 @@
     - [Daemon], for daemonizing processes.
     - [Iobuf], which lets you use contiguous ranges of bytes for I/O purposes.
     - [Lock_file], for managing OS-level locks.
-    - [Crc], for cyclic redundancy checks.
     - [Linux_ext], providing a wrapper around Linux-specific system calls.
     - [Mac_address], for managing MAC addresses.
     - [Signal], for handling Unix signals like SIGHUP and SIGKILL.
@@ -38,7 +36,6 @@ module Caml                   = Caml
 module Command                = Command
 module Condition              = Core_condition
 module Core_stable            = Stable
-module Crc                    = Crc
 module Daemon                 = Daemon
 module Date                   = Core_date
 module Filename               = Core_filename
@@ -54,7 +51,6 @@ module Md5                    = Md5
 module Digest                 = Md5 [@@ocaml.deprecated "[since 2017-05] Use Md5 instead."]
 module Mutex                  = Core_mutex
 module Nano_mutex             = Nano_mutex
-module Piecewise_linear       = Piecewise_linear
 module Process_env            = Process_env
 module Schedule_v4_deprecated = Schedule_v4_deprecated
 module Schedule_v5            = Schedule_v5
@@ -66,12 +62,10 @@ module Time                   = Core_time_float
 module Time_common            = Time_common
 module Time_ns            = Core_time_ns
 module Time_stamp_counter     = Time_stamp_counter
-module Timing_wheel_float     = Timing_wheel_float
 module Unix                   = Core_unix
 module User_and_group         = User_and_group
 module Uuid                   = Uuid
 module Version_util           = Version_util
-module Weak_hashtbl           = Weak_hashtbl
 
 (* Can't go in Common for circular-reference reasons *)
 let sec = Time.Span.of_sec

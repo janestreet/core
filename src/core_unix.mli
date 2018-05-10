@@ -2267,8 +2267,6 @@ module Mman : sig
   val munlockall : unit -> unit
 end
 
-module Syslog : module type of Syslog
-
 (** A network interface on the local machine.  See [man getifaddrs]. *)
 module Ifaddr : sig
   module Broadcast_or_destination : sig

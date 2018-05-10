@@ -2727,3 +2727,30 @@ let%expect_test "Span.to_short_string" =
      (10d14h24m                    10d)
      (-10d14h24m                   -10d)) |}];
 ;;
+
+let%expect_test "times with implicit zones" =
+  let test f =
+    show_raise (fun () ->
+      print_endline (Time.to_string (f ())))
+  in
+  test (fun () ->
+    Time.Stable.With_utc_sexp.V2.t_of_sexp (Sexp.of_string "(2013-10-07 09:30)"));
+  [%expect {|
+    2013-10-07 05:30:00.000000-04:00
+    "did not raise" |}];
+  test (fun () ->
+    Time.Stable.V1.t_of_sexp (Sexp.of_string "(2013-10-07 09:30)"));
+  [%expect {|
+    2013-10-07 09:30:00.000000-04:00
+    "did not raise" |}];
+  test (fun () ->
+    Time.t_of_sexp (Sexp.Atom "2013-10-07 09:30"));
+  [%expect {|
+    2013-10-07 09:30:00.000000-04:00
+    "did not raise" |}];
+  test (fun () ->
+    Time.of_string "2013-10-07 09:30");
+  [%expect {|
+    2013-10-07 09:30:00.000000-04:00
+    "did not raise" |}];
+;;

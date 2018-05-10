@@ -7,10 +7,8 @@
           core_string_search_pattern
           dequeue
           ordering_container
-          piecewise_linear_perf_test
           string_escaping
           time_to_string
-          timing_wheel
           zone_next_clock_shift))
   (libraries (core
               core_bench

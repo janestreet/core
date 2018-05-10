@@ -719,11 +719,6 @@ module Make () = struct
         (fun () -> bin_prot writer t a ~pos)
   end
 
-  let crc32 t =
-    debug "crc32" [t] t [%sexp_of: (_, _) t]
-      [%sexp_of: Int63.Hex.t]
-      (fun () -> crc32 t)
-
   let consume_bin_prot t r =
     debug "consume_bin_prot" [t] t [%sexp_of: (_, _) t]
       [%sexp_of: _ Or_error.t]

@@ -148,31 +148,6 @@ module Test (Iobuf : sig
       ignore (create ~len:(-1) : (_, _) t))))
   ;;
 
-  let crc32 = crc32
-
-  let%test_module _ =
-    (module struct
-
-      let str = "The quick brown fox jumps over the lazy dog"
-      let len = String.length str
-      let crc = Int63.of_int64_exn 0x414fa339L
-
-      let%test_unit _ =
-        [%test_result: Int63.Hex.t]
-          (crc32 (of_string str))
-          ~expect:crc
-
-      let%test_unit _ =
-        let t = of_string ("12345" ^ str ^ "12345") in
-        advance t 5;
-        resize t ~len;
-        [%test_result: Int63.Hex.t]
-          (crc32 t)
-          ~expect:crc
-
-    end)
-  ;;
-
   module Accessors (Accessors : sig
       include module type of Unsafe
       val is_safe : bool

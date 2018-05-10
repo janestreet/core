@@ -2857,8 +2857,6 @@ let set_out_channel_timeout oc snd_timeout =
 
 external nanosleep : float -> float = "core_time_ns_nanosleep" ;;
 
-module Syslog = Syslog
-
 let () = Sexplib_unix.Sexplib_unix_conv.linkme
 
 (* Test the Sexplib_unix exn converter was added correctly *)

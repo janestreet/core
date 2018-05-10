@@ -1,7 +1,7 @@
 open! Core
 open! Async
 open! Expect_test_helpers
-open! Core.Weak_hashtbl
+open! Weak_hashtbl
 
 let create () = create (module Int)
 

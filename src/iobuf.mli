@@ -352,8 +352,6 @@ module Unsafe : sig
   module Poke    : module type of Poke
 end
 
-val crc32 : ([> read], _) t -> Int63.t
-
 (** The number of bytes in the length prefix of [consume_bin_prot] and [fill_bin_prot]. *)
 val bin_prot_length_prefix_bytes : int
 

@@ -1,0 +1,8 @@
+(library
+ ((name weak_hashtbl_test)
+  (libraries (async
+              expect_test_helpers
+              weak_hashtbl))
+  (preprocess (pps (ppx_jane ppxlib.runner)))))
+
+(jbuild_version 1)

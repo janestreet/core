@@ -892,9 +892,6 @@ module Poke = struct
   let decimal = Itoa.poke_decimal
 end
 
-let crc32 { buf ; lo ; hi ; _ } =
-  Crc.bigstring_crc32 buf ~pos:lo ~len:(hi - lo)
-
 module Blit = struct
   type 'rw t_no_seek = ('rw, no_seek) t
   module T_dst = struct

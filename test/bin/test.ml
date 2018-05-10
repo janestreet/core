@@ -28,7 +28,6 @@ let all () =
          Common_test.test;
          Comparable_test.test;
          Condition_test.test;
-         Crc_test.test;
          Doubly_linked_test.test;
          Float_test.test;
          Fdeque_test.test;

@@ -27,7 +27,7 @@ let test byte_order =
     (fun () ->
        let test () =
          try
-           Binary_packing.test ();
+           Core_kernel_test.Test_binary_packing.test ();
            true
          with _ -> false in
        Quickcheck_deprecated.laws_exn "\"Runs without raising\""

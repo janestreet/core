@@ -17,6 +17,7 @@
   (libraries
    (bin_prot
     core
+    core_kernel_test
     core_extended
     oUnit
     ppx_inline_test.runtime-lib

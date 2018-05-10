@@ -96,18 +96,17 @@ external now : unit -> tsc = "tsc_get" [@@noalloc]
 
 module Calibrator = struct
 
-  type t =
-    {
-      (* the most recent observations and regression results *)
-      mutable time                      : float
-    ; mutable tsc                       : tsc
+  (* performance hack: prevent writes to this record from boxing floats by making all
+     fields mutable floats *)
+  type float_fields =
+    (* the most recent observations and regression results *)
+    { mutable time                      : float
     ; mutable sec_per_cycle             : float
-    (* mutable sec_error_intercept               : float; *)
+    (* mutable sec_error_intercept      : float; *)
 
     (* this time value is monotonically increasing *)
     ; mutable monotonic_time            : float
     ; mutable monotonic_sec_per_cycle   : float
-    ; mutable monotonic_until_tsc       : tsc
 
     (* for linear regression *)
     ; mutable ewma_time_tsc             : float
@@ -116,23 +115,39 @@ module Calibrator = struct
     ; mutable ewma_tsc                  : float
 
     (* for computing time in nanos *)
-    ; mutable time_nanos                : Int63.t
     ; mutable nanos_per_cycle           : float
-    ; mutable monotonic_time_nanos      : Int63.t
     ; mutable monotonic_nanos_per_cycle : float
+    } [@@deriving bin_io, sexp]
+
+  type t =
+    (* the most recent observations and regression results *)
+    { mutable tsc                       : tsc
+
+    (* this time value is monotonically increasing *)
+    ; mutable monotonic_until_tsc       : tsc
+
+    (* for computing time in nanos *)
+    ; mutable time_nanos                : Int63.t
+    ; mutable monotonic_time_nanos      : Int63.t
+
+    ; floats                            : float_fields
     }
   [@@deriving bin_io, sexp]
 
-  let tsc_to_time =
-    let convert t tsc base mul =
-      Time.of_span_since_epoch
-        (Time.Span.of_sec
-           (base +. (mul *. Int63.to_float (diff tsc t.tsc))))
+  let tsc_to_seconds_since_epoch =
+    let [@inline] convert t tsc base mul =
+      base +. (mul *. Int63.to_float (diff tsc t.tsc))
     in
-    fun t tsc ->
-      if tsc < t.monotonic_until_tsc
-      then convert t tsc t.monotonic_time t.monotonic_sec_per_cycle
-      else convert t tsc t.time           t.sec_per_cycle
+    fun [@inline] t tsc ->
+      0. +. (* performance hack: stops float boxing *)
+      (if tsc < t.monotonic_until_tsc
+       then begin
+         0. +. (* performance hack: stops float boxing *)
+         convert t tsc t.floats.monotonic_time t.floats.monotonic_sec_per_cycle
+       end else begin
+         0. +. (* performance hack: stops float boxing *)
+         convert t tsc t.floats.time           t.floats.sec_per_cycle
+       end)
   ;;
 
   let tsc_to_nanos_since_epoch =
@@ -142,8 +157,8 @@ module Calibrator = struct
     in
     fun t tsc ->
       if tsc < t.monotonic_until_tsc
-      then convert t tsc t.monotonic_time_nanos t.monotonic_nanos_per_cycle
-      else convert t tsc t.time_nanos           t.nanos_per_cycle
+      then convert t tsc t.monotonic_time_nanos t.floats.monotonic_nanos_per_cycle
+      else convert t tsc t.time_nanos           t.floats.nanos_per_cycle
   ;;
 
   (* The rate of response to the variations in TSC frequency can be controlled via alpha.
@@ -162,11 +177,35 @@ module Calibrator = struct
   let catchup_cycles                  = 1E9
   let initial_alpha                   = 1.
 
+  (* performance hack: This function is the same as
 
-  let calibrate_using t ~tsc ~time ~am_initializing =
-    let estimated_time = Time.Span.to_sec (Time.to_span_since_epoch (tsc_to_time t tsc)) in
-    let time_diff_est  = time -. estimated_time              in
-    let time_diff      = time -. t.time                      in
+     {[
+       match Float.iround_up float with
+       | None   -> if_iround_up_fails
+       | Some i -> Int63.(+) int i
+     ]}
+
+     but I couldn't find a way to make the simple version stop allocating, even with
+     flambda turned on *)
+  let iround_up_and_add int ~if_iround_up_fails float =
+    if float > 0.0 then begin
+      let float' = Caml.ceil float in
+      if float' <= Float.iround_ubound
+      then Int63.(+) int (Int63.of_float_unchecked float')
+      else if_iround_up_fails
+    end else begin
+      if float >= Float.iround_lbound
+      then Int63.(+) int (Int63.of_float_unchecked float)
+      else if_iround_up_fails
+    end
+
+  let [@inline] calibrate_using t ~tsc ~time ~am_initializing =
+    let estimated_time =
+      0. +. (* performance hack: stops float boxing *)
+      tsc_to_seconds_since_epoch t tsc
+    in
+    let time_diff_est  = time -. estimated_time          in
+    let time_diff      = time -. t.floats.time           in
     let tsc_diff       = Int63.to_float (diff tsc t.tsc) in
     let alpha =
       if am_initializing
@@ -174,63 +213,67 @@ module Calibrator = struct
       else alpha_for_interval time_diff
     in
     (* update current times *)
-    t.time <- time;
-    t.tsc  <- tsc;
+    t.floats.time <- time;
+    t.tsc         <- tsc;
     (* update ewma and regression. *)
-    t.ewma_time_tsc   <- ewma ~alpha ~old:t.ewma_time_tsc   ~add:(tsc_diff *. time_diff);
-    t.ewma_tsc_square <- ewma ~alpha ~old:t.ewma_tsc_square ~add:(tsc_diff *. tsc_diff);
-    t.ewma_tsc        <- ewma ~alpha ~old:t.ewma_tsc        ~add:tsc_diff;
-    t.ewma_time       <- ewma ~alpha ~old:t.ewma_time       ~add:time_diff;
+    t.floats.ewma_time_tsc   <- ewma ~alpha ~old:t.floats.ewma_time_tsc   ~add:(tsc_diff *. time_diff);
+    t.floats.ewma_tsc_square <- ewma ~alpha ~old:t.floats.ewma_tsc_square ~add:(tsc_diff *. tsc_diff);
+    t.floats.ewma_tsc        <- ewma ~alpha ~old:t.floats.ewma_tsc        ~add:tsc_diff;
+    t.floats.ewma_time       <- ewma ~alpha ~old:t.floats.ewma_time       ~add:time_diff;
     (* linear regression *)
-    t.sec_per_cycle <- t.ewma_time_tsc /. t.ewma_tsc_square;
+    t.floats.sec_per_cycle <- t.floats.ewma_time_tsc /. t.floats.ewma_tsc_square;
     (* t.sec_error_intercept <- t.ewma_time -. t.sec_per_cycle *. t.ewma_tsc; *)
     (* monotonic predicted time and slope. *)
-    t.monotonic_time <- estimated_time;
+    t.floats.monotonic_time <- estimated_time;
     if not am_initializing then begin
       let catchup_sec_per_cycle =
         (* The slope so that after [catchup_cycles], the monotonic estimated time equals
            the estimated time, i.e. solve for [monotonic_sec_per_cycle] in:
 
            {[
-             t.monotonic_time + monotonic_sec_per_cyle * catchup_cycles
-             = t.time           + t.sec_per_cycle        * catchup_cycles
+             t.monotonic_time + monotonic_sec_per_cycle * catchup_cycles
+             = t.time         + t.sec_per_cycle         * catchup_cycles
            ]}
 
            Note that [time_diff_est = t.time - t.monotonic_time]. *)
-        t.sec_per_cycle +. (time_diff_est /. catchup_cycles)
+        t.floats.sec_per_cycle +. (time_diff_est /. catchup_cycles)
       in
-      t.monotonic_sec_per_cycle <-
+      t.floats.monotonic_sec_per_cycle <-
         if Float.is_positive time_diff_est
-        then Float.min catchup_sec_per_cycle
-               (t.sec_per_cycle *. (1. +. max_percent_change_from_real_slope))
-        else Float.max catchup_sec_per_cycle
-               (t.sec_per_cycle *. (1. -. max_percent_change_from_real_slope));
+        then begin
+          0. +. (* performance hack: stops float boxing *)
+          Float.min catchup_sec_per_cycle
+            (t.floats.sec_per_cycle *. (1. +. max_percent_change_from_real_slope))
+        end else begin
+          0. +. (* performance hack: stops float boxing *)
+          Float.max catchup_sec_per_cycle
+            (t.floats.sec_per_cycle *. (1. -. max_percent_change_from_real_slope))
+        end;
       (* Compute the number of cycles in the future at which monotonic estimated time
          equals estimated time, i.e. solve for [cycles] in:
 
          {[
-           t.monotonic_time + t.monotonic_sec_per_cyle * cycles
-           = t.time         + t.sec_per_cycle          * cycles
+           t.monotonic_time + t.monotonic_sec_per_cycle * cycles
+           = t.time         + t.sec_per_cycle           * cycles
          ]}
 
          This value might get very small when the two slopes are about the same.  In such
          cases we just use the estimated slope always. *)
       t.monotonic_until_tsc <-
-        (match
-           Float.iround_up (time_diff_est /. (t.monotonic_sec_per_cycle -. t.sec_per_cycle))
-         with
-         | Some x -> add tsc (Int63.of_int x)
-         | None   -> Int63.zero);
+        (time_diff_est /. (t.floats.monotonic_sec_per_cycle -. t.floats.sec_per_cycle))
+        |> iround_up_and_add tsc ~if_iround_up_fails:Int63.zero;
     end;
-
     (* Precompute values required for [tsc_to_nanos_since_epoch]. *)
-    t.time_nanos                <- Float.int63_round_nearest_exn (t.time *. 1E9);
-    t.nanos_per_cycle           <- t.sec_per_cycle *. 1E9;
-    t.monotonic_time_nanos      <- Float.int63_round_nearest_exn (t.monotonic_time *. 1E9);
-    t.monotonic_nanos_per_cycle <- t.monotonic_sec_per_cycle *. 1E9;
+    t.time_nanos                       <-
+      Float.int63_round_nearest_exn (t.floats.time *. 1E9);
+    t.floats.nanos_per_cycle           <- t.floats.sec_per_cycle *. 1E9;
+    t.monotonic_time_nanos             <-
+      Float.int63_round_nearest_exn (t.floats.monotonic_time *. 1E9);
+    t.floats.monotonic_nanos_per_cycle <- t.floats.monotonic_sec_per_cycle *. 1E9;
   ;;
 
-  let now_float () = Time.Span.to_sec (Time.to_span_since_epoch (Time.now ()))
+  let now_float () =
+    1E-9 *. Int.to_float (Time_ns.to_int_ns_since_epoch (Time_ns.now ()))
 
   let initialize t samples =
     List.iter samples ~f:(fun (tsc, time) ->
@@ -254,23 +297,22 @@ module Calibrator = struct
   let create () =
     let now_float = now_float () in
     let t =
-      { monotonic_time            = now_float
-      ; monotonic_sec_per_cycle   = 0.
-      ; monotonic_until_tsc       = Int63.zero
-
-      ; time                      = now_float
-      ; tsc                       = now ()
-      ; sec_per_cycle             = 0.
-
-      ; ewma_time_tsc             = 0.
-      ; ewma_tsc_square           = 0.
-      ; ewma_time                 = 0.
-      ; ewma_tsc                  = 0.
-
-      ; time_nanos                = Int63.zero
-      ; nanos_per_cycle           = 0.
-      ; monotonic_time_nanos      = Int63.zero
-      ; monotonic_nanos_per_cycle = 0.
+      { monotonic_until_tsc           = Int63.zero
+      ; tsc                           = now ()
+      ; time_nanos                    = Int63.zero
+      ; monotonic_time_nanos          = Int63.zero
+      ; floats                        =
+          { monotonic_time            = now_float
+          ; sec_per_cycle             = 0.
+          ; monotonic_sec_per_cycle   = 0.
+          ; time                      = now_float
+          ; ewma_time_tsc             = 0.
+          ; ewma_tsc_square           = 0.
+          ; ewma_time                 = 0.
+          ; ewma_tsc                  = 0.
+          ; nanos_per_cycle           = 0.
+          ; monotonic_nanos_per_cycle = 0.
+          }
       }
     in
     initialize t (collect_samples ~num_samples:3 ~interval:0.0005);
@@ -281,9 +323,13 @@ module Calibrator = struct
      for it at startup. *)
   let local = create ()
 
-  let cpu_mhz = Ok (fun ?(t = local) () -> 1. /. (t.sec_per_cycle *. 1E6))
+  let cpu_mhz = Ok (fun ?(t = local) () -> 1. /. (t.floats.sec_per_cycle *. 1E6))
 
-  let calibrate ?(t = local) () =
+  (* performance hack: [@inline never] so [time] is always unboxed. [now_float] and
+     [calibrate_using] need to be inlined into the same function for unboxed [time].
+     Preventing [calibrate] from being inlined makes the compiler's inlining decision
+     more predictable. *)
+  let [@inline never] calibrate ?(t = local) () =
     calibrate_using t ~tsc:(now ()) ~time:(now_float ()) ~am_initializing:false
   ;;
 end
@@ -298,7 +344,8 @@ external now : unit -> tsc = "tsc_get"
 module Calibrator = struct
   type t = unit [@@deriving bin_io, sexp]
 
-  let tsc_to_time _t tsc = Time.of_span_since_epoch (Time.Span.of_sec (Int63.to_float tsc *. 1e-9))
+  let tsc_to_seconds_since_epoch _t tsc =
+    Int63.to_float tsc *. 1e-9
 
   let tsc_to_nanos_since_epoch _t tsc = tsc
 
@@ -324,7 +371,7 @@ module Span = struct
   [%%ifdef JSC_ARCH_SIXTYFOUR]
   let to_ns ?(calibrator = Calibrator.local) t =
     Float.int63_round_nearest_exn
-      (Int63.to_float t *. calibrator.Calibrator.nanos_per_cycle)
+      (Int63.to_float t *. calibrator.floats.nanos_per_cycle)
   ;;
 
   (* If the calibrator has not been well calibrated and [ns] is a large value, the
@@ -334,7 +381,7 @@ module Span = struct
   let of_ns ?(calibrator = Calibrator.local) ns =
     try
       Float.int63_round_nearest_exn
-        (Int63.to_float ns /. calibrator.Calibrator.nanos_per_cycle)
+        (Int63.to_float ns /. calibrator.floats.nanos_per_cycle)
     with exn ->
       raise_s [%message
         ""
@@ -354,7 +401,10 @@ module Span = struct
   ;;
 end
 
-let to_time ?(calibrator = Calibrator.local) t = Calibrator.tsc_to_time calibrator t
+let to_time ?(calibrator = Calibrator.local) t =
+  Calibrator.tsc_to_seconds_since_epoch calibrator t
+  |> Time.Span.of_sec
+  |> Time.of_span_since_epoch
 
 let to_nanos_since_epoch ~calibrator t =
   Calibrator.tsc_to_nanos_since_epoch calibrator t;
@@ -375,7 +425,9 @@ let%test_module _ = (module struct
     let last = ref 0. in
     for i = 1 to 10_000_000 do
       let cur =
-        Time.Span.to_sec (Time.to_span_since_epoch (to_time ~calibrator (now ())))
+        to_time ~calibrator (now ())
+        |> Time.to_span_since_epoch
+        |> Time.Span.to_sec
       in
       (* printf "%d %.9f\n%!" i (cur -. !last); *)
       if Float.(<) (cur -. !last) 0.
@@ -407,8 +459,7 @@ let%test_module _ = (module struct
     List.iter samples ~f:(fun (tsc, time) ->
       let cur_error =
         scale_us_abs
-          (time -. Time.Span.to_sec
-                     (Time.to_span_since_epoch (to_time ~calibrator tsc)))
+          (time -. Time.Span.to_sec (Time.to_span_since_epoch (to_time ~calibrator tsc)))
       in
       ewma_error := ewma ~alpha ~old:!ewma_error ~add:cur_error;
       if verbose then
@@ -486,7 +537,7 @@ let%test_module _ = (module struct
          lost during float truncation.
          [trunc (x / nanos_per_cycle) * nanos_per_cycle]
       *)
-      assert (abs (x - y) <= Float.to_int calibrator.nanos_per_cycle);
+      assert (abs (x - y) <= Float.to_int calibrator.floats.nanos_per_cycle);
     done
   ;;
 
@@ -504,7 +555,7 @@ let%test_module _ = (module struct
          lost during float truncation.
          [trunc (x * nanos_per_cycle) / nanos_per_cycle]
       *)
-      assert (abs (x - y) <= Float.to_int (1. /. calibrator.nanos_per_cycle));
+      assert (abs (x - y) <= Float.to_int (1. /. calibrator.floats.nanos_per_cycle));
     done
   ;;
   [%%endif]

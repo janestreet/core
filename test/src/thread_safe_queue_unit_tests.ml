@@ -7,6 +7,14 @@ let%test_module "Thread_safe_queue" =
 
     open Thread_safe_queue
 
+    module Private = struct
+      module Uopt = struct
+        include Private.Uopt
+        let%test _ = is_none none
+        let%test _ = is_some (some ())
+      end
+    end
+
     type nonrec 'a t = 'a t
 
     let invariant = invariant
