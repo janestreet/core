@@ -74,6 +74,11 @@ module Int : sig
 
   include Container.S0        with type t := t with type elt := bound
   include Binary_searchable.S with type t := t with type elt := bound
+
+  (**/**)
+  module Private : sig
+    val get : t -> int -> int
+  end
 end
 
 (** [Interval.Make] is a functor that takes a type that you'd like to create intervals for
@@ -127,5 +132,18 @@ module Stable : sig
     module Time    : Stable with type t = Time.   t
     module Time_ns : Stable with type t = Time_ns.t
     module Ofday   : Stable with type t = Ofday.  t
+
+    (**/**)
+    module Private : sig
+      type 'a t =
+        | Interval of 'a * 'a
+        | Empty
+      [@@deriving compare, variants]
+
+      val to_float : float t -> Float.t
+      val to_int : int t -> Int.t
+      val to_ofday : Core_kernel.Time.Ofday.t t -> Ofday.t
+      val to_time : Core_kernel.Time.t t -> Time.t
+    end
   end
 end

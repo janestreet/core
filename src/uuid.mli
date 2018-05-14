@@ -37,3 +37,9 @@ module Stable : sig
     val for_testing : t
   end
 end
+
+(**/**)
+module Private : sig
+  val is_valid_exn : t -> unit
+  val nil : t
+end

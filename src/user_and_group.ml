@@ -26,8 +26,6 @@ end
 include T'
 include Identifiable.Make (T')
 
-let%test _ = equal { user = "foo"; group = "bar" } (of_string "foo:bar")
-
 let create = Fields.create
 
 let for_this_process () =

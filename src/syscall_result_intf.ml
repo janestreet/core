@@ -33,6 +33,13 @@ module type S = sig
   module Optional_syntax : Optional_syntax.S
     with type t := t
      and type value := ok_value
+
+  (**/**)
+  module Private : sig
+    val of_int : int -> t
+    val length_preallocated_errnos : int
+    val length_preallocated_ms : int
+  end
 end
 
 module type Arg = sig

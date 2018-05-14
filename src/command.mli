@@ -839,3 +839,38 @@ module Deprecated : sig
 
   val get_flag_names : t ->  string list
 end
+
+(**/**)
+module Private : sig
+  val abs_path : dir:string -> string -> string
+
+  module Anons : sig
+    val normalize : string -> string
+  end
+
+  module Format : sig
+    module V1 : sig
+      val word_wrap : string -> int -> string list
+    end
+  end
+
+  module Path : sig
+    type t
+    val add : t -> subcommand:string -> t
+    val commands : t -> string list
+    val empty : t
+    val replace_first : t -> from:string -> to_:string -> t
+    val root : string -> t
+  end
+
+  module Cmdline : sig
+    type t
+    val of_list : string list -> t
+    val extend : t -> extend:(string sexp_list -> string sexp_list) -> path:Path.t -> t
+  end
+
+  module Spec : sig
+    val flags_of_args_exn : (string * Arg.spec * string) sexp_list -> ('a, 'a) Spec.t
+    val to_string_for_choose_one : _ Param.t -> string
+  end
+end

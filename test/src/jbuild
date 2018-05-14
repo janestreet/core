@@ -4,9 +4,14 @@
               core
               core_kernel_test
               expect_test_helpers))
+  (preprocessor_deps (config.h))
   (preprocess (pps (ppx_jane ppxlib.runner)))
 ))
 
+(rule
+ ((targets (config.h))
+  (deps (${ROOT}/lib/core_kernel/src/config.h))
+  (action (bash "cp ${<} ${@}"))))
 
 
 (jbuild_version 1)

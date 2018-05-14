@@ -81,15 +81,6 @@ module Zone_cache = struct
     end
   ;;
 
-  let%test _ =
-    init ();
-    let result = Option.is_some (find "America/New_York") in
-    (* keep this test from contaminating tests later in the file *)
-    the_one_and_only.full <- false;
-    Hashtbl.clear the_one_and_only.table;
-    result
-  ;;
-
   let to_alist () = Hashtbl.to_alist the_one_and_only.table
 
   let initialized_zones t =
@@ -261,3 +252,7 @@ include Identifiable.Make (struct
     let of_string = of_string
     let to_string = to_string
   end)
+
+module Private = struct
+  module Zone_cache = Zone_cache
+end

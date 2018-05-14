@@ -62,4 +62,18 @@ module type Core_zone = sig
 
     include Core_kernel_private.Time_zone.S_stable with type t := t
   end
+
+  (**/**)
+  module Private : sig
+    module Zone_cache : sig
+      type z = {
+        mutable full : bool;
+        basedir      : string;
+        table        : Time.Zone.t String.Table.t
+      }
+      val the_one_and_only : z
+      val init : unit -> unit
+      val find : string -> t option
+    end
+  end
 end

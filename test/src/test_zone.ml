@@ -1,5 +1,15 @@
 open Core
 
+let%test _ =
+  let open Core_private.Core_zone.Private.Zone_cache in
+  init ();
+  let result = Option.is_some (find "America/New_York") in
+  (* keep this test from contaminating tests later in the file *)
+  the_one_and_only.full <- false;
+  Hashtbl.clear the_one_and_only.table;
+  result
+;;
+
 let%test_module "Zone.V1" = (module Stable_unit_test.Make (struct
     include Time.Stable.Zone.V1
 

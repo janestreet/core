@@ -267,6 +267,16 @@ val recvmmsg_assume_fd_is_nonblocking
      -> lens : int array
      -> int
     ) Or_error.t
+
+val unsafe_recvmmsg_assume_fd_is_nonblocking
+  :  (file_descr
+      -> t Core_unix.IOVec.t array
+      -> int
+      -> sockaddr array option
+      -> int array
+      -> int
+     ) Or_error.t
+
 (** [recvmmsg_assume_fd_is_nonblocking fd iovecs ~count ~lens] receives up to [count]
     messages into [iovecs] from file descriptor [fd] without yielding to other OCaml
     threads. If [~count] is supplied, it must be that [0 <= count <= Array.length

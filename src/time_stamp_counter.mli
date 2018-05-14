@@ -80,6 +80,8 @@ type t = private Int63.t [@@deriving bin_io, compare, sexp]
     argument, the internal instance is used when no calibrator is explicitly specified.
 *)
 module Calibrator : sig
+  type tsc
+
   type t [@@deriving bin_io, sexp]
 
   (** [create ()] creates an uninitialized calibrator instance.  Creating a calibrator
@@ -94,7 +96,15 @@ module Calibrator : sig
   (** Returns the estimated MHz of the CPU's time-stamp-counter based on the TSC and
       [Time.now ()].  This function is undefined on 32-bit machines. *)
   val cpu_mhz : (?t:t -> unit -> float) Or_error.t
-end
+
+  (**/**)
+
+  module Private : sig
+    val calibrate_using : t -> tsc:tsc -> time:float -> am_initializing:bool -> unit
+    val initialize : t -> (tsc * float) list -> unit
+    val nanos_per_cycle : t -> float
+  end
+end with type tsc := t
 
 (** [Span] indicates some integer number of cycles. *)
 module Span : sig
@@ -109,6 +119,13 @@ module Span : sig
   val to_time_span : ?calibrator:Calibrator.t -> t -> Time.Span.t
   val to_ns        : ?calibrator:Calibrator.t -> t -> Int63.t
   val of_ns        : ?calibrator:Calibrator.t -> Int63.t -> t
+
+  (**/**)
+
+  module Private : sig
+    val of_int63 : Int63.t -> t
+    val to_int63 : t -> Int63.t
+  end
 end
 
 [%%ifdef JSC_ARCH_SIXTYFOUR]
@@ -126,3 +143,12 @@ val to_int63 : t -> Int63.t
 val to_time : ?calibrator:Calibrator.t -> t -> Time.t
 
 val to_time_ns : ?calibrator:Calibrator.t -> t -> Time_ns.t
+
+(**/**)
+
+module Private : sig
+  val ewma : alpha:float -> old:float -> add:float -> float
+  val of_int63 : Int63.t -> t
+  val max_percent_change_from_real_slope : float
+  val to_nanos_since_epoch : calibrator:Calibrator.t -> t -> t
+end

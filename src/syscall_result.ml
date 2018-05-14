@@ -78,25 +78,6 @@ module Make (M : Arg) () = struct
        then Array.unsafe_get preallocated_errnos errno
        else Error (Unix_error.of_errno errno))
   ;;
-  (* We can't use [Core_bench] to do this inside [Core], which it depends on. *)
-  let%test_unit "to_result doesn't allocate" =
-    for _ = 1 to 1000 do
-      for t = -(Array.length preallocated_errnos - 1) to Array.length preallocated_ms - 1
-      do
-        let before_minor = Gc.minor_words () in
-        let before_major = Gc.major_words () in
-        let result = to_result t in
-        let after_minor  = Gc.minor_words () in
-        let after_major  = Gc.major_words () in
-        [%test_result: int] ~expect:0 (after_minor - before_minor);
-        [%test_result: int] ~expect:0 (after_major - before_major);
-        [%test_result: (M.t, Unix_error.t) Result.t] result
-          ~expect:(if is_ok t
-                   then Ok (M.of_int_exn t)
-                   else Error (Unix_error.of_errno (-t)));
-      done;
-    done
-  ;;
 
   let sexp_of_t t = [%sexp_of: (M.t, Unix_error.t) Result.t] (to_result t)
 
@@ -149,6 +130,11 @@ module Make (M : Arg) () = struct
     end
   end
 
+  module Private = struct
+    let of_int t = t
+    let length_preallocated_errnos = Array.length preallocated_errnos
+    let length_preallocated_ms = Array.length preallocated_ms
+  end
 end
 
 module Int = Make (Int) ()
@@ -160,10 +146,3 @@ module Unit = Make (struct
 
 let unit = Unit.create_ok ()
 let ignore_ok_value t = Core_kernel.Int.min t 0
-
-let%test_unit _ =
-  for i = 1 to 10000 do
-    let err = Unix_error.of_errno i in
-    assert (err = Unit.error_exn (Unit.create_error err))
-  done
-;;

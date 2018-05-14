@@ -30,13 +30,7 @@
     unix_stubs
     unix_time_stubs))
   (preprocessor_deps (config.h))
-  (preprocess (pps (ppx_jane -check-doc-comments ppxlib.runner)))
-))
-
-(alias
- ((name save_benchmarks)
-  (deps (inline_benchmarks_runner inline_benchmarks_runner.exe))
-  (action (bash "./inline_benchmarks_runner jenga-save-benchmarks"))))
+  (preprocess (pps (ppx_jane -check-doc-comments ppxlib.runner)))))
 
 
 

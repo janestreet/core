@@ -122,10 +122,6 @@ let invariant t = ignore (of_string t : t)
 
 let nil = "00000000-0000-0000-0000-000000000000"
 
-let%test_unit "nil is valid" =
-  is_valid_exn nil
-;;
-
 module Unstable = struct
   type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
 end
@@ -142,46 +138,7 @@ let sexp_of_t t =
   else sexp_of_t t
 ;;
 
-module Test = struct
-  let test_size = 100_000
-
-  let no_collisions l =
-    let rec loop set l =
-      match l with
-      | []        -> true
-      | t :: rest ->
-        if Set.mem set t
-        then false
-        else loop (Set.add set t) rest
-    in
-    loop Set.empty l
-  ;;
-
-  let generate (n:int) =
-    let rec loop acc n =
-      if Int.(=) n 0 then acc
-      else loop (create () :: acc) (n - 1)
-    in
-    loop [] n
-  ;;
-
-  let thread_test () =
-    let res1 = ref [] in
-    let res2 = ref [] in
-    let thread1 = Thread.create (fun () -> res1 := generate test_size) () in
-    let thread2 = Thread.create (fun () -> res2 := generate test_size) () in
-    Thread.join thread1;
-    Thread.join thread2;
-    no_collisions (List.rev_append !res1 !res2)
-  ;;
-
-  let%test _ = no_collisions (generate test_size)
-  let%test _ = thread_test ()
-
-  let%expect_test "UUIDs are shown as [nil] in tests" =
-    print_endline (to_string_hum (create ()));
-    [%expect {| 00000000-0000-0000-0000-000000000000 |}];
-    print_s [%sexp (create () : t)];
-    [%expect {| 00000000-0000-0000-0000-000000000000 |}];
-  ;;
+module Private = struct
+  let is_valid_exn = is_valid_exn
+  let nil = nil
 end

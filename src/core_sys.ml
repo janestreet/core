@@ -111,13 +111,6 @@ let unix_quote x =
   else Filename.quote x
 ;;
 
-let%test_unit _ =
-  [%test_eq: string] (unix_quote "") {|''|};
-  [%test_eq: string] (unix_quote "a ") {|'a '|};
-  [%test_eq: string] (unix_quote "a'") {|'a'\'''|};
-  [%test_eq: string] (unix_quote "a/b/+share+") {|a/b/+share+|};
-  [%test_eq: string] (unix_quote "x\000y") "'x\000y'"
-;;
 
 let quote =
   match Caml.Sys.os_type with
@@ -140,16 +133,8 @@ external executing_bytecode
 let execution_mode () =
   if executing_bytecode () () () () () () then `Bytecode else `Native
 
-let%test _ = execution_mode () =
-             (if String.is_suffix argv.(0) ~suffix:".exe" ||
-                 String.is_suffix argv.(0) ~suffix:".native"
-              then `Native else `Bytecode)
-
-
 (* returns size, in bits, of an [int] type in C *)
 external c_int_size : unit -> int = "c_int_size" [@@noalloc]
-
-let%test _ = let size = c_int_size () in size >= 16 && size <= Sys.word_size
 
 let home_directory () =
   match getenv "HOME" with
@@ -157,3 +142,7 @@ let home_directory () =
   | None -> (Unix.getpwuid (Unix.geteuid ())).pw_dir
 
 external opaque_identity : 'a -> 'a = "%opaque"
+
+module Private = struct
+  let unix_quote = unix_quote
+end

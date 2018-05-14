@@ -169,3 +169,9 @@ val home_directory : unit -> string
 *)
 external opaque_identity : 'a -> 'a = "%opaque"
 
+
+(**/**)
+
+module Private : sig
+  val unix_quote : string -> string
+end

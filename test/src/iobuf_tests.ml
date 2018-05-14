@@ -1,4 +1,5 @@
 open! Core
+open! Iobuf
 
 let arch_sixtyfour = Sys.word_size = 64
 
@@ -7,6 +8,70 @@ let is_ok    = Result.is_ok
 
 let ok_exn   = Or_error.ok_exn
 let try_with = Or_error.try_with
+
+let%test_module "[Consume]" =
+  (module struct
+    open Consume
+    let%test_unit "bin_prot char" =
+      let t = of_string "abc" in
+      let a = bin_prot Char.bin_reader_t t in
+      let b = bin_prot Char.bin_reader_t t in
+      [%test_eq: char] a 'a';
+      [%test_eq: char] b 'b';
+      [%test_eq: string] (to_string t) "c"
+    ;;
+
+    let%test_unit "bin_prot int" =
+      let ints = [ 0; 1; -1; 12345; -67890; Int.min_value; Int.max_value; 666 ] in
+      let buf = Bigstring.create 1000 in
+      let _end_pos = List.fold ints ~init:0 ~f:(fun pos i -> Int.bin_write_t buf ~pos i) in
+      let t = of_bigstring buf in
+      List.iter ints ~f:(fun i -> [%test_eq: int] i (bin_prot Int.bin_reader_t t))
+    ;;
+  end)
+
+let%test_module "[Peek]" =
+  (module struct
+    open Peek
+
+    let%test_unit "bin_prot char" =
+      let t = of_string "abc" in
+      let a = bin_prot Char.bin_reader_t t ~pos:0 in
+      let b = bin_prot Char.bin_reader_t t ~pos:1 in
+      [%test_eq: char] a 'a';
+      [%test_eq: char] b 'b';
+      [%test_eq: string] (to_string t) "abc"
+    ;;
+    let%test_unit "bin_prot int" =
+      let ints = [ 0; 1; -1; 12345; -67890; Int.min_value; Int.max_value; 666 ] in
+      let buf = Bigstring.create 1000 in
+      let end_pos = List.fold ints ~init:0 ~f:(fun pos i -> Int.bin_write_t buf ~pos i) in
+      let t = of_bigstring buf in
+      List.fold ints ~init:0 ~f:(fun pos i ->
+        [%test_eq: int] i (bin_prot Int.bin_reader_t t ~pos);
+        pos + Int.bin_size_t i)
+      |> (fun end_pos' -> [%test_eq: int] end_pos end_pos')
+    ;;
+  end)
+
+let%test_module "[Poke]" =
+  (module struct
+    open Poke
+
+    let%test_unit _ =
+      let t = of_string "abc" in
+      bin_prot Char.bin_writer_t t 'd' ~pos:0;
+      bin_prot Char.bin_writer_t t 'e' ~pos:1;
+      [%test_eq: string] "dec" (to_string t);
+      flip_lo t;
+      assert (try bin_prot String.bin_writer_t t "fgh" ~pos:0; false with _ -> true);
+      assert (is_empty t);
+      reset t;
+      [%test_eq: string] "dec" (to_string t);
+      bin_prot Char.bin_writer_t t 'i' ~pos:0;
+      [%test_eq: string] "iec" (to_string t)
+    ;;
+  end)
 
 let log string a sexp_of_a =
   Printf.eprintf "%s\n%!"

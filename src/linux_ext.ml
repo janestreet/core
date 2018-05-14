@@ -236,6 +236,10 @@ module Null : Linux_ext_intf.S = struct
     let set_repeating ?after:_ _ _ = assert false
     let clear                    _ = assert false
     let get                      _ = assert false
+
+    module Private = struct
+      let unsafe_timerfd_settime _ = assert false
+    end
   end
 
   include Null_toplevel
@@ -353,17 +357,6 @@ module Timerfd = struct
     -> Syscall_result.Unit.t
     = "linux_timerfd_settime" [@@noalloc]
 
-  let%test_unit "unsafe_timerfd_settime returning errno" =
-    let result =
-      unsafe_timerfd_settime (File_descr.of_int (-1)) false
-        ~initial:Int63.zero ~interval:Int63.zero
-    in
-    if Syscall_result.Unit.is_ok result
-    then failwiths "unsafe_timerfd_settime unexpectedly succeeded" result
-           [%sexp_of: Syscall_result.Unit.t];
-    [%test_result: Unix_error.t] (Syscall_result.Unit.error_exn result) ~expect:EBADF
-  ;;
-
   let timerfd_settime t ~absolute ~initial ~interval =
     (* We could accept [interval < 0] or [initial < 0 when absolute], but then the
        conversions to timespecs in the C code become tedious and [timerfd_setttime] fails
@@ -435,37 +428,9 @@ module Timerfd = struct
       `Repeat spec
   ;;
 
-  (* We expect set_after to allocate nothing. *)
-  let%bench_fun "Linux_ext.Timerfd.set_after" =
-    match create with
-    | Error _ -> ignore
-    | Ok create ->
-      let t = create Clock.realtime in
-      fun () -> set_after t Time_ns.Span.second
-  ;;
-
-  let%test_module "Linux_ext.Timerfd" = (module struct
-
-    let%test_unit _ =
-      match create with
-      | Error _ -> ()
-      | Ok create ->
-        let t = create Clock.realtime in
-        assert (get t = `Not_armed);
-        set_after t Time_ns.Span.minute;
-        assert (match get t with
-          | `Fire_after span -> Time_ns.Span.(<=) span Time_ns.Span.minute
-          | _ -> false);
-        let span = Time_ns.Span.scale Time_ns.Span.minute 2. in
-        set_repeating t ~after:Time_ns.Span.minute span;
-        assert (match get t with
-          | `Repeat { fire_after; interval } ->
-            Time_ns.Span.(<=) fire_after Time_ns.Span.minute
-            && Time_ns.Span.equal interval span
-          | _ ->
-            false)
-    ;;
-  end)
+  module Private = struct
+    let unsafe_timerfd_settime = unsafe_timerfd_settime
+  end
 end
 
 [%%else]
@@ -688,17 +653,10 @@ let cores =
     if num_cores > 0 then num_cores
     else failwith "Linux_ext.cores: failed to parse /proc/cpuinfo")
 
-let%test _ = cores () > 0
-let%test _ = cores () < 100000 (* 99,999 cores ought to be enough for anybody *)
-
 external get_terminal_size : unit -> int * int = "linux_get_terminal_size"
 
 external get_ipv4_address_for_interface : string -> string =
   "linux_get_ipv4_address_for_interface" ;;
-
-let%test "lo interface addr is 127.0.0.1" =
-  (* This could be a false positive if the test box is misconfigured. *)
-  get_ipv4_address_for_interface "lo" = "127.0.0.1"
 
 (* The C-stub is a simple pass-through of the linux SO_BINDTODEVICE semantics, wherein an
    empty string removes any binding *)
@@ -993,127 +951,6 @@ module Epoll = struct
 
   let create = Ok create
 end
-
-
-(* Epoll unit test included here for some example usage. Creates 2 sockets,
-   adds them to an epoll set, sends data to one of them and calls Epoll.wait.
-   The test passes if the resulting Ready_fds set has 1 ready fd, matching
-   the one we sent to, with read, !write, and !error. *)
-let%test_module _ =
-  (module struct
-
-    module Unix = Core_unix
-    module Flags = Epoll.Flags
-
-    let udp_listener ~port =
-      let sock = Unix.socket ~domain:Unix.PF_INET ~kind:Unix.SOCK_DGRAM ~protocol:0 in
-      let iaddr = Unix.ADDR_INET (Unix.Inet_addr.localhost, port) in
-      Unix.setsockopt sock Unix.SO_REUSEADDR true;
-      Unix.bind sock ~addr:iaddr;
-      sock
-    ;;
-
-    let send_substring s buf ~port =
-      let addr = Unix.ADDR_INET (Unix.Inet_addr.localhost, port) in
-      let len  = String.length buf in
-      Unix.sendto_substring s ~buf ~pos:0 ~len ~mode:[] ~addr
-    ;;
-
-    let with_epoll ~f =
-      protectx ~finally:Epoll.close ~f
-        ((Or_error.ok_exn Epoll.create) ~num_file_descrs:1024 ~max_ready_events:256)
-
-    let%test_unit "epoll errors" = with_epoll ~f:(fun t ->      let tmp = "temporary-file-for-testing-epoll" in
-                                                   let fd = Unix.openfile tmp ~mode:[Unix.O_CREAT; Unix.O_WRONLY] in
-                                                   (* Epoll does not support ordinary files, and so should fail if you ask it to watch
-                                                      one. *)
-                                                   assert (Result.is_error (Result.try_with (fun () -> Epoll.set t fd Flags.none)));
-                                                   Unix.close fd;
-                                                   Unix.unlink tmp)
-    ;;
-
-    let%test_unit "epoll test" = with_epoll ~f:(fun epset ->
-      let span = Time_ns.Span.of_sec 0.1 in
-      let sock1 = udp_listener ~port:7070 in
-      let sock2 = udp_listener ~port:7071 in
-      Epoll.set epset sock1 Flags.in_;
-      Epoll.set epset sock2 Flags.in_;
-      let _sent = send_substring sock2 "TEST" ~port:7070 in
-      begin match Epoll.wait_timeout_after epset span with
-      | `Timeout -> assert false
-      | `Ok ->
-        let ready =
-          Epoll.fold_ready epset ~init:[] ~f:(fun ac fd flags ->
-            if flags = Flags.in_ then fd :: ac else ac)
-        in
-        (* Explanation of the test:
-           1) I create two udp sockets, sock1 listening on 7070 and sock2, on 7071
-           2) These two sockets are both added to epoll for read notification
-           3) I send a packet, _using_ sock2 to sock1 (who is listening on 7070)
-           4) epoll_wait should return, with [ sock1 ] ready to be read.
-        *)
-        match ready with
-        | [ sock ] when sock = sock1 -> ()
-        | [_] -> failwith  "wrong socket is ready"
-        | xs  -> failwithf "%d sockets are ready" (List.length xs) ()
-      end)
-    ;;
-
-    let%test_unit "Timerfd.set_after small span test" =
-      match Timerfd.create with
-      | Error _ -> ()
-      | Ok timerfd_create ->
-        with_epoll ~f:(fun epoll ->
-          let timerfd = timerfd_create Timerfd.Clock.realtime in
-          Epoll.set epoll (timerfd :> File_descr.t) Epoll.Flags.in_;
-          List.iter [ 0; 1 ] ~f:(fun span_ns ->
-            Timerfd.set_after timerfd (Time_ns.Span.of_int63_ns (Int63.of_int span_ns));
-            begin match Epoll.wait epoll ~timeout:`Never with
-            | `Timeout -> assert false
-            | `Ok -> ()
-            end);
-          Unix.close (timerfd :> Unix.File_descr.t))
-    ;;
-
-    let%test_unit "\
-epoll detects an error on the write side of a pipe when the read side of the pipe closes
-after a partial read" =
-      let saw_sigpipe = ref false in
-      let new_sigpipe_handler = `Handle (fun _ -> saw_sigpipe := true) in
-      let old_sigpipe_handler = Signal.Expert.signal Signal.pipe new_sigpipe_handler in
-      Exn.protect
-        ~finally:(fun () -> Signal.Expert.set Signal.pipe old_sigpipe_handler)
-        ~f:(fun () ->
-          let r, w = Unix.pipe () in
-          let w_len = 1_000_000 in
-          let r_len =     1_000 in
-          let read =
-            Thread.create (fun () ->
-              let nr = Bigstring.read r (Bigstring.create r_len) ~pos:0 ~len:r_len in
-              assert (nr > 0 && nr <= r_len);
-              Unix.close r)
-              ()
-          in
-          let nw =
-            Bigstring.writev w [| Unix.IOVec.of_bigstring (Bigstring.create w_len) |]
-          in
-          assert (nw > 0 && nw < w_len);
-          Thread.join read;
-          with_epoll ~f:(fun epoll ->
-            Epoll.set epoll w Epoll.Flags.out;
-            match Epoll.wait_timeout_after epoll Time_ns.Span.second with
-            | `Timeout -> assert false
-            | `Ok ->
-              assert !saw_sigpipe;
-              let saw_fd = ref false in
-              Epoll.iter_ready epoll ~f:(fun fd flags ->
-                assert (Unix.File_descr.equal fd w);
-                assert (Epoll.Flags.equal flags Epoll.Flags.err);
-                saw_fd := true);
-              assert !saw_fd))
-    ;;
-  end)
-
 
 let cores                          = Ok cores
 let file_descr_realpath            = Ok file_descr_realpath

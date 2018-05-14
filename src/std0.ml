@@ -1,8 +1,8 @@
 (** [Core] is an extension of {{!Core_kernel}[Core_kernel]} with Unix APIs. The unmodified
     libraries can be found there.
 
-    In particular, [Core] has comprehensive implementation of times (see [Time],
-    [Time_ns], and [Schedule_v5]), where some details are platform-specific.
+    In particular, [Core] has comprehensive implementation of times ([Time] and
+    [Time_ns]), where some details are platform-specific.
 
     Some modules are mere extensions of those existing in [Core_kernel], like [Bigbuffer],
     [Bigstring], [Caml], [Time], and [Md5], where what's added is handlers for reading
@@ -52,8 +52,6 @@ module Digest                 = Md5 [@@ocaml.deprecated "[since 2017-05] Use Md5
 module Mutex                  = Core_mutex
 module Nano_mutex             = Nano_mutex
 module Process_env            = Process_env
-module Schedule_v4_deprecated = Schedule_v4_deprecated
-module Schedule_v5            = Schedule_v5
 module Signal                 = Signal
 module Squeue                 = Squeue
 module Sys                    = Core_sys
@@ -76,3 +74,7 @@ let ( ^/ ) = Core_filename.concat
 let () =
   Am_running_inline_test.initialize_module ()
 ;;
+
+module Core_private = struct
+  module Core_zone = Core_zone
+end

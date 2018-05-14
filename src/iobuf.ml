@@ -486,21 +486,6 @@ module Consume = struct
     let (a, len) = read_bin_prot reader t ~pos:0 in
     uadv t len a
   ;;
-  let%test_unit "bin_prot char" =
-    let t = of_string "abc" in
-    let a = bin_prot Char.bin_reader_t t in
-    let b = bin_prot Char.bin_reader_t t in
-    [%test_eq: char] a 'a';
-    [%test_eq: char] b 'b';
-    [%test_eq: string] (to_string t) "c"
-  ;;
-  let%test_unit "bin_prot int" =
-    let ints = [ 0; 1; -1; 12345; -67890; Int.min_value; Int.max_value; 666 ] in
-    let buf = Bigstring.create 1000 in
-    let _end_pos = List.fold ints ~init:0 ~f:(fun pos i -> Int.bin_write_t buf ~pos i) in
-    let t = of_bigstring buf in
-    List.iter ints ~f:(fun i -> [%test_eq: int] i (bin_prot Int.bin_reader_t t))
-  ;;
 
   open Bigstring
 
@@ -579,7 +564,7 @@ module Itoa = struct
     else
       10
 
-  let%test _ = String.length (Int.to_string Int.min_value) <= 19 + 1
+  let () = assert (String.length (Int.to_string Int.min_value) <= 19 + 1)
 
   (* Despite the div/mod by a constant optimizations, it's a slight savings to avoid a
      second div/mod. Note also that passing in an [int ref], rather than creating the ref
@@ -754,24 +739,6 @@ module Peek = struct
   ;;
 
   let bin_prot reader t ~pos = read_bin_prot reader t ~pos |> fst
-  let%test_unit "bin_prot char" =
-    let t = of_string "abc" in
-    let a = bin_prot Char.bin_reader_t t ~pos:0 in
-    let b = bin_prot Char.bin_reader_t t ~pos:1 in
-    [%test_eq: char] a 'a';
-    [%test_eq: char] b 'b';
-    [%test_eq: string] (to_string t) "abc"
-  ;;
-  let%test_unit "bin_prot int" =
-    let ints = [ 0; 1; -1; 12345; -67890; Int.min_value; Int.max_value; 666 ] in
-    let buf = Bigstring.create 1000 in
-    let end_pos = List.fold ints ~init:0 ~f:(fun pos i -> Int.bin_write_t buf ~pos i) in
-    let t = of_bigstring buf in
-    List.fold ints ~init:0 ~f:(fun pos i ->
-      [%test_eq: int] i (bin_prot Int.bin_reader_t t ~pos);
-      pos + Int.bin_size_t i)
-    |> (fun end_pos' -> [%test_eq: int] end_pos end_pos')
-  ;;
 
   let index t ?(pos = 0) ?(len = length t - pos) c =
     let pos = spos t ~len ~pos in
@@ -849,19 +816,6 @@ module Poke = struct
   ;;
 
   let bin_prot writer t ~pos a = write_bin_prot writer t ~pos a |> (ignore : int -> unit)
-  let%test_unit _ =
-    let t = of_string "abc" in
-    bin_prot Char.bin_writer_t t 'd' ~pos:0;
-    bin_prot Char.bin_writer_t t 'e' ~pos:1;
-    [%test_eq: string] "dec" (to_string t);
-    flip_lo t;
-    assert (try bin_prot String.bin_writer_t t "fgh" ~pos:0; false with _ -> true);
-    assert (is_empty t);
-    reset t;
-    [%test_eq: string] "dec" (to_string t);
-    bin_prot Char.bin_writer_t t 'i' ~pos:0;
-    [%test_eq: string] "iec" (to_string t)
-  ;;
 
   open Bigstring
 
@@ -1634,166 +1588,3 @@ module Debug  = For_hexdump.Window_and_limits_and_buffer
 include For_hexdump.Window_and_limits
 
 let to_string_hum = Hexdump.to_string_hum
-
-(* Minimal blit benchmarks. *)
-(* ┌────────────────────────────────────────────────────────┬────────────┬────────────┐
- * │ Name                                                   │   Time/Run │ Percentage │
- * ├────────────────────────────────────────────────────────┼────────────┼────────────┤
- * │ [iobuf.ml:Blit tests] string blit:5                    │    15.30ns │      1.11% │
- * │ [iobuf.ml:Blit tests] string blit:10                   │    15.57ns │      1.13% │
- * │ [iobuf.ml:Blit tests] string blit:100                  │    19.26ns │      1.39% │
- * │ [iobuf.ml:Blit tests] string blit:1000                 │    47.83ns │      3.46% │
- * │ [iobuf.ml:Blit tests] string blit:10000                │   197.90ns │     14.32% │
- * │ [iobuf.ml:Blit tests] Blit:5                           │    24.38ns │      1.76% │
- * │ [iobuf.ml:Blit tests] Blit:10                          │    26.88ns │      1.94% │
- * │ [iobuf.ml:Blit tests] Blit:100                         │    30.01ns │      2.17% │
- * │ [iobuf.ml:Blit tests] Blit:1000                        │    57.83ns │      4.18% │
- * │ [iobuf.ml:Blit tests] Blit:10000                       │   391.42ns │     28.31% │
- * │ [iobuf.ml:Blit tests] Blit_consume:5                   │    23.00ns │      1.66% │
- * │ [iobuf.ml:Blit tests] Blit_consume:10                  │    25.36ns │      1.83% │
- * │ [iobuf.ml:Blit tests] Blit_consume:100                 │    29.79ns │      2.15% │
- * │ [iobuf.ml:Blit tests] Blit_consume:1000                │    58.93ns │      4.26% │
- * │ [iobuf.ml:Blit tests] Blit_consume:10000               │   395.19ns │     28.59% │
- * │ [iobuf.ml:Blit tests] Blit_fill:5                      │    24.28ns │      1.76% │
- * │ [iobuf.ml:Blit tests] Blit_fill:10                     │    26.84ns │      1.94% │
- * │ [iobuf.ml:Blit tests] Blit_fill:100                    │    29.54ns │      2.14% │
- * │ [iobuf.ml:Blit tests] Blit_fill:1000                   │    57.05ns │      4.13% │
- * │ [iobuf.ml:Blit tests] Blit_fill:10000                  │   395.72ns │     28.62% │
- * │ [iobuf.ml:Blit tests] Blit_consume_and_fill:5          │    25.43ns │      1.84% │
- * │ [iobuf.ml:Blit tests] Blit_consume_and_fill:10         │    27.19ns │      1.97% │
- * │ [iobuf.ml:Blit tests] Blit_consume_and_fill:100        │    30.96ns │      2.24% │
- * │ [iobuf.ml:Blit tests] Blit_consume_and_fill:1000       │    58.38ns │      4.22% │
- * │ [iobuf.ml:Blit tests] Blit_consume_and_fill:10000      │   383.62ns │     27.75% │
- * │ [iobuf.ml:Blit tests] Blit.unsafe_blit [overlap]:5     │    14.25ns │      1.03% │
- * │ [iobuf.ml:Blit tests] Blit.unsafe_blit [overlap]:10    │    16.92ns │      1.23% │
- * │ [iobuf.ml:Blit tests] Blit.unsafe_blit [overlap]:100   │    37.17ns │      2.70% │
- * │ [iobuf.ml:Blit tests] Blit.unsafe_blit [overlap]:1000  │   169.60ns │     12.32% │
- * │ [iobuf.ml:Blit tests] Blit.unsafe_blit [overlap]:10000 │ 1_377.01ns │    100.00% │
- * └────────────────────────────────────────────────────────┴────────────┴────────────┘ *)
-let%bench_module "Blit tests" = (module struct
-  let lengths = [5; 10; 100; 1000; 10_000]
-
-  let%bench_fun "string blit" [@indexed len = lengths] =
-    let buf = create ~len in
-    let str = Bytes.create len in
-    (fun () -> Peek.To_bytes.blit ~src:buf ~dst:str ~src_pos:0 ~dst_pos:0 ~len)
-
-  let%bench_fun "Blit" [@indexed len = lengths] =
-    let src = create ~len in
-    let dst = create ~len in
-    (fun () -> Blit.blito () ~src ~dst)
-
-  let%bench_fun "Blit_consume" [@indexed len = lengths] =
-    let src = create ~len in
-    let dst = create ~len in
-    (fun () -> Blit_consume.blito () ~src ~dst; reset src)
-
-  let%bench_fun "Blit_fill" [@indexed len = lengths] =
-    let src = create ~len in
-    let dst = create ~len in
-    (fun () -> Blit_fill.blito () ~src ~dst; reset dst)
-
-  let%bench_fun "Blit_consume_and_fill" [@indexed len = lengths] =
-    let src = create ~len in
-    let dst = create ~len in
-    (fun () -> Blit_consume_and_fill.blito () ~src ~dst; reset src; reset dst)
-
-  let%bench_fun "Blit.unsafe_blit [overlap]" [@indexed len = lengths] =
-    let t = create ~len:(len + 1) in
-    (fun () -> Blit.unsafe_blit ~src:t ~dst:t ~len ~src_pos:0 ~dst_pos:1)
-
-end)
-
-let%bench_module "Poke tests" = (module struct
-  let offsets = List.init 9 ~f:Fn.id
-  let iobuf = create ~len:100
-
-  (* We test at different offsets to see if various byte alignments have a significant
-     effect on performance. *)
-  let%bench_fun "char"      [@indexed pos = offsets] = (fun () -> Poke.char      iobuf ~pos 'a')
-  let%bench_fun "uint8"     [@indexed pos = offsets] = (fun () -> Poke.uint8     iobuf ~pos pos)
-  let%bench_fun "int8"      [@indexed pos = offsets] = (fun () -> Poke.int8      iobuf ~pos pos)
-  let%bench_fun "int16_be"  [@indexed pos = offsets] = (fun () -> Poke.int16_be  iobuf ~pos pos)
-  let%bench_fun "int16_le"  [@indexed pos = offsets] = (fun () -> Poke.int16_le  iobuf ~pos pos)
-  let%bench_fun "uint16_be" [@indexed pos = offsets] = (fun () -> Poke.uint16_be iobuf ~pos pos)
-  let%bench_fun "uint16_le" [@indexed pos = offsets] = (fun () -> Poke.uint16_le iobuf ~pos pos)
-  let%bench_fun "int32_be"  [@indexed pos = offsets] = (fun () -> Poke.int32_be  iobuf ~pos pos)
-  let%bench_fun "int32_le"  [@indexed pos = offsets] = (fun () -> Poke.int32_le  iobuf ~pos pos)
-  let%bench_fun "uint32_be" [@indexed pos = offsets] = (fun () -> Poke.uint32_be iobuf ~pos pos)
-  let%bench_fun "uint32_le" [@indexed pos = offsets] = (fun () -> Poke.uint32_le iobuf ~pos pos)
-  let%bench_fun "int64_be"  [@indexed pos = offsets] = (fun () -> Poke.int64_be  iobuf ~pos pos)
-  let%bench_fun "int64_le"  [@indexed pos = offsets] = (fun () -> Poke.int64_le  iobuf ~pos pos)
-end)
-
-let%bench_module "Peek tests" = (module struct
-  let offsets = List.init 9 ~f:Fn.id
-  let iobuf = of_string (String.make 100 '\000')
-
-  let%bench_fun "char"      [@indexed pos = offsets] = (fun () -> ignore (Peek.char      iobuf ~pos))
-  let%bench_fun "uint8"     [@indexed pos = offsets] = (fun () -> ignore (Peek.uint8     iobuf ~pos))
-  let%bench_fun "int8"      [@indexed pos = offsets] = (fun () -> ignore (Peek.int8      iobuf ~pos))
-  let%bench_fun "int16_be"  [@indexed pos = offsets] = (fun () -> ignore (Peek.int16_be  iobuf ~pos))
-  let%bench_fun "int16_le"  [@indexed pos = offsets] = (fun () -> ignore (Peek.int16_le  iobuf ~pos))
-  let%bench_fun "uint16_be" [@indexed pos = offsets] = (fun () -> ignore (Peek.uint16_be iobuf ~pos))
-  let%bench_fun "uint16_le" [@indexed pos = offsets] = (fun () -> ignore (Peek.uint16_le iobuf ~pos))
-  let%bench_fun "int32_be"  [@indexed pos = offsets] = (fun () -> ignore (Peek.int32_be  iobuf ~pos))
-  let%bench_fun "int32_le"  [@indexed pos = offsets] = (fun () -> ignore (Peek.int32_le  iobuf ~pos))
-  let%bench_fun "uint32_be" [@indexed pos = offsets] = (fun () -> ignore (Peek.uint32_be iobuf ~pos))
-  let%bench_fun "uint32_le" [@indexed pos = offsets] = (fun () -> ignore (Peek.uint32_le iobuf ~pos))
-  let%bench_fun "int64_be"  [@indexed pos = offsets] = (fun () -> ignore (Peek.int64_be  iobuf ~pos))
-  let%bench_fun "int64_le"  [@indexed pos = offsets] = (fun () -> ignore (Peek.int64_le  iobuf ~pos))
-end)
-
-let%bench_module "Fill.decimal tests" = (module struct
-  (* Quantify the gain from our version of [Fill.decimal] over [Int.to_string]. *)
-  let values =
-    [ Int.min_value; Int.min_value + 1; -10_000; 0; 35; 1_000; 1_000_000; Int.max_value ]
-  let iobuf = create ~len:32
-
-  let%bench_fun "Fill.decimal" [@indexed x = values] =
-    (fun () -> reset iobuf; Fill.decimal iobuf x)
-  let%bench_fun "Unsafe.Fill.decimal" [@indexed x = values] =
-    (fun () -> reset iobuf; Unsafe.Fill.decimal iobuf x)
-  let%bench_fun "Unsafe.Fill.string Int.to_string" [@indexed x = values] =
-    (fun () -> reset iobuf; Fill.stringo iobuf (Int.to_string x))
-end)
-
-(* In an attempt to verify how much a phys_equal check could optimize
-   [set_bounds_and_buffer], in the soon-to-be-common protogen use case,
-   here is the result with cross module inlining:
-
-
-   ┌────────────────────────────────────────────────────────┬──────────┬─────────┬────────────┐
-   │ Name                                                   │ Time/Run │ mWd/Run │ Percentage │
-   ├────────────────────────────────────────────────────────┼──────────┼─────────┼────────────┤
-   │ [iobuf.ml:set_bounds_and_buffer] with-write-barrier    │   7.78ns │         │    100.00% │
-   │ [iobuf.ml:set_bounds_and_buffer] without-write-barrier │   3.92ns │         │     50.40% │
-   │ [iobuf.ml:set_bounds_and_buffer] with-gc               │   5.34ns │   6.00w │     68.65% │
-   └────────────────────────────────────────────────────────┴──────────┴─────────┴────────────┘
-
-   and here is the code for the benchmark:
-
-   {[
-     let orig_set_bounds_and_buffer ~src ~dst =
-       dst.lo_min <- src.lo_min;
-       dst.lo <- src.lo;
-       dst.hi <- src.hi;
-       dst.hi_max <- src.hi_max;
-       dst.buf <- src.buf
-     ;;
-
-     let new_set_bounds_and_buffer = set_bounds_and_buffer
-
-     let%bench_module "set_bounds_and_buffer" = (
-       module struct
-         let src = create ~len:32
-         let dst = create ~len:32
-
-         let%bench_fun "with-write-barrier" =
-           (fun () -> orig_set_bounds_and_buffer ~src ~dst)
-         let%bench_fun "without-write-barrier" =
-           (fun () -> new_set_bounds_and_buffer ~src ~dst)
-         let%bench_fun "with-gc" =
-           (fun () -> sub_shared src)
-       end)
-   ]} *)

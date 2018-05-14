@@ -252,6 +252,16 @@ module type S = sig
          | `Fire_after of Time_ns.Span.t
          | `Repeat     of repeat
          ]
+
+    (**/**)
+    module Private : sig
+      val unsafe_timerfd_settime
+        :  File_descr.t
+        -> bool
+        -> initial  : Int63.t
+        -> interval : Int63.t
+        -> Syscall_result.Unit.t
+    end
   end
 
   (** {2 Parent death notifications} *)

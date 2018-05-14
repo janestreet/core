@@ -171,12 +171,17 @@ module Error : sig
     | EOVERFLOW           (** File size or position not representable *)
 
     | EUNKNOWNERR of int  (** Unknown error *)
-  [@@deriving sexp]
+  [@@deriving compare, sexp]
 
   val of_system_int : errno:int -> t
 
   (** Return a string describing the given error code. *)
   val message : t -> string
+
+  (**/**)
+  module Private : sig
+    val to_errno : t -> int
+  end
 end
 
 (** Raised by the system calls below when an error is encountered.
@@ -965,12 +970,12 @@ val close_process_full : Process_channels.t -> Exit_or_signal.t
 
 (** {6 Symbolic links} *)
 
-(** [symlink source dest] creates the file [dest] as a symbolic link
-    to the file [source].
+(** [symlink ~target ~link_name] creates the file [link_name] as a symbolic link
+    to the file [target].
     On Windows, this has the semantics using [stat] as described at:
     http://caml.inria.fr/pub/docs/manual-ocaml/libref/Unix.html
 *)
-val symlink : src:string -> dst:string -> unit
+val symlink : target:string -> link_name:string -> unit
 
 (** Read the contents of a link. *)
 val readlink : string -> string
@@ -2297,6 +2302,12 @@ module Ifaddr : sig
     [@@deriving enumerate, sexp_of]
 
     include Comparable.S with type t := t
+
+    (**/**)
+    module Private : sig
+      val core_unix_iff_to_int : t -> int
+      val set_of_int : int -> Set.t
+    end
   end
 
   module Family : sig
