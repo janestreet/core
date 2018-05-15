@@ -369,6 +369,12 @@ module Calibrator = struct
   let cpu_mhz = Or_error.unimplemented "\
 Time_stamp_counter.Calibrator.cpu_mhz is not defined for 32-bit platforms"
   ;;
+
+  module Private = struct
+    let calibrate_using = calibrate_using
+    let initialize = initialize
+    let nanos_per_cycle _ = 1.
+  end
 end
 
 [%%endif]
