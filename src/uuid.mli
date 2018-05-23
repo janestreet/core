@@ -39,6 +39,9 @@ module Stable : sig
 end
 
 (**/**)
+(*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
+
+  https://opensource.janestreet.com/standards/#private-submodules *)
 module Private : sig
   val is_valid_exn : t -> unit
   val nil : t

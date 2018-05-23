@@ -58,6 +58,8 @@ open! Import
 
 type t = private Int63.t [@@deriving bin_io, compare, sexp]
 
+include Comparisons.S with type t := t
+
 (** A calibrator contains a snapshot of machine-specific information that is used to
     convert between TSC values and clock time.  This information needs to be calibrated
     periodically such that it stays updated w.r.t. changes in the CPU's time-stamp-counter
@@ -99,6 +101,9 @@ module Calibrator : sig
 
   (**/**)
 
+  (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
+
+    https://opensource.janestreet.com/standards/#private-submodules *)
   module Private : sig
     val calibrate_using : t -> tsc:tsc -> time:float -> am_initializing:bool -> unit
     val initialize : t -> (tsc * float) list -> unit
@@ -122,6 +127,9 @@ module Span : sig
 
   (**/**)
 
+  (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
+
+    https://opensource.janestreet.com/standards/#private-submodules *)
   module Private : sig
     val of_int63 : Int63.t -> t
     val to_int63 : t -> Int63.t
@@ -146,6 +154,9 @@ val to_time_ns : ?calibrator:Calibrator.t -> t -> Time_ns.t
 
 (**/**)
 
+(*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
+
+  https://opensource.janestreet.com/standards/#private-submodules *)
 module Private : sig
   val ewma : alpha:float -> old:float -> add:float -> float
   val of_int63 : Int63.t -> t

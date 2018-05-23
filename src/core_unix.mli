@@ -179,6 +179,9 @@ module Error : sig
   val message : t -> string
 
   (**/**)
+  (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
+
+    https://opensource.janestreet.com/standards/#private-submodules *)
   module Private : sig
     val to_errno : t -> int
   end
@@ -2304,6 +2307,9 @@ module Ifaddr : sig
     include Comparable.S with type t := t
 
     (**/**)
+    (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
+
+      https://opensource.janestreet.com/standards/#private-submodules *)
     module Private : sig
       val core_unix_iff_to_int : t -> int
       val set_of_int : int -> Set.t

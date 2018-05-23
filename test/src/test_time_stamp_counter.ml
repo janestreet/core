@@ -22,7 +22,7 @@ let%test_module _ = (module struct
       if Float.(<) (cur -. !last) 0.
       then failwithf "Time is not monotonic (diff %.12f)" (cur -. !last) ();
       last := cur;
-      if i mod 100_000 = 0
+      if Int.(=) (i mod 100_000) 0
       then Calibrator.calibrate ~t:calibrator ();
     done
   ;;
@@ -127,7 +127,7 @@ let%test_module _ = (module struct
          lost during float truncation.
          [trunc (x / nanos_per_cycle) * nanos_per_cycle]
       *)
-      assert (abs (x - y) <= Float.to_int (Calibrator.Private.nanos_per_cycle calibrator));
+      assert Int.(abs (x - y) <= Float.to_int (Calibrator.Private.nanos_per_cycle calibrator));
     done
   ;;
 
@@ -147,7 +147,7 @@ let%test_module _ = (module struct
          lost during float truncation.
          [trunc (x * nanos_per_cycle) / nanos_per_cycle]
       *)
-      assert (abs (x - y) <= Float.to_int (1. /. (Calibrator.Private.nanos_per_cycle calibrator)));
+      assert Int.(abs (x - y) <= Float.to_int (1. /. (Calibrator.Private.nanos_per_cycle calibrator)));
     done
   ;;
   [%%endif]

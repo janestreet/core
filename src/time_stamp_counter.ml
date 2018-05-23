@@ -85,6 +85,8 @@ let ewma ~alpha ~old ~add = ((1. -. alpha) *. old) +. (alpha *. add)
 type t = Int63.t [@@deriving bin_io, compare, sexp]
 type tsc = t     [@@deriving bin_io, compare, sexp]
 
+include (Int63 : Comparisons.S with type t := t)
+
 let diff t1 t2 = Int63.(-) t1 t2
 let add t s = Int63.(+) t s
 let of_int63 t = t
@@ -189,13 +191,13 @@ module Calibrator = struct
      but I couldn't find a way to make the simple version stop allocating, even with
      flambda turned on *)
   let iround_up_and_add int ~if_iround_up_fails float =
-    if float > 0.0 then begin
+    if Float.(>) float 0.0 then begin
       let float' = Caml.ceil float in
-      if float' <= Float.iround_ubound
+      if Float.(<=) float' (Float.iround_ubound)
       then Int63.(+) int (Int63.of_float_unchecked float')
       else if_iround_up_fails
     end else begin
-      if float >= Float.iround_lbound
+      if Float.(>=) float Float.iround_lbound
       then Int63.(+) int (Int63.of_float_unchecked float)
       else if_iround_up_fails
     end
@@ -282,11 +284,11 @@ module Calibrator = struct
   ;;
 
   let collect_samples ~num_samples ~interval =
-    assert (num_samples >= 1);
+    assert (Int.(>=) num_samples 1);
     (* We sleep at differing intervals to improve the estimation of [sec_per_cycle]. *)
     let rec loop n sleep =
       let sample = (now (), now_float ()) in
-      if n = 1
+      if Int.(=) n 1
       then [sample]
       else begin
         ignore (Unix.nanosleep sleep);

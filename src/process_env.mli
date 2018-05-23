@@ -8,6 +8,9 @@ val parse_ssh_client : unit -> [ `From of Core_unix.Inet_addr.t | `Nowhere ] Or_
 
 (**/**)
 
+(*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
+
+  https://opensource.janestreet.com/standards/#private-submodules *)
 module Private : sig
   val parse_ssh_client_var
     : string option -> [ `From of Core_unix.Inet_addr.t | `Nowhere ] Or_error.t

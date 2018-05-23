@@ -76,6 +76,9 @@ module Int : sig
   include Binary_searchable.S with type t := t with type elt := bound
 
   (**/**)
+  (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
+
+    https://opensource.janestreet.com/standards/#private-submodules *)
   module Private : sig
     val get : t -> int -> int
   end
@@ -134,6 +137,9 @@ module Stable : sig
     module Ofday   : Stable with type t = Ofday.  t
 
     (**/**)
+    (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
+
+      https://opensource.janestreet.com/standards/#private-submodules *)
     module Private : sig
       type 'a t =
         | Interval of 'a * 'a
