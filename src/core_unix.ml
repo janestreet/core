@@ -977,7 +977,7 @@ let waitpid pid =
 let waitpid_exn pid =
   let exit_or_signal = waitpid pid in
   if Result.is_error exit_or_signal then
-    failwiths "child process didn't exit with status zero"
+    failwiths "child process didn't exit with status 0"
       (`Child_pid pid, exit_or_signal)
       ([%sexp_of: [ `Child_pid of Pid.t ] * Exit_or_signal.t])
 ;;

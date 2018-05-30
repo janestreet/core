@@ -1,0 +1,26 @@
+open! Core
+
+(* This test verifies that [Command] satisfies the [Applicative.Let_syntax] interface for
+   some value of [Open_on_rhs].
+
+   We test this externally rather than by modifying [command.mli] because [command.mli]
+   has lots of module types that we would have to restructure significantly in order to
+   get a candidate for [Open_on_rhs_intf].
+
+   Instead, we just punt on saying exactly what [Open_on_rhs] contains and make sure
+   [Command] satisfies the remainder of the [Applicative.Let_syntax] interface.
+*)
+
+module Open_on_rhs_intf = struct
+  module type S = sig
+    (* Command includes lots more stuff in its [Open_on_rhs] module. *)
+  end
+end
+
+module Command :
+  Applicative.Let_syntax
+  with type 'a t := 'a Command.Param.t
+  with module Open_on_rhs_intf := Open_on_rhs_intf
+  = Command
+
+[%%expect]

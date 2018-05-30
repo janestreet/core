@@ -363,10 +363,10 @@ module Param : sig
 end
 
 module Let_syntax : sig
-
   type 'a t (** Substituted below. *)
 
   val return : 'a -> 'a t
+  include Applicative.Applicative_infix with type 'a t := 'a t
 
   module Let_syntax : sig
     type 'a t (** Substituted below. *)
