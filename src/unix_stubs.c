@@ -376,7 +376,7 @@ CAMLprim value unix_readdir_ino_stub(value v_dh)
 CAMLprim value unix_read_assume_fd_is_nonblocking_stub(
   value v_fd, value v_buf, value v_pos, value v_len)
 {
-  char *buf = String_val(v_buf) + Long_val(v_pos);
+  unsigned char *buf = Bytes_val(v_buf) + Long_val(v_pos);
   ssize_t ret = read(Int_val(v_fd), buf, Long_val(v_len));
   if (ret == -1) uerror("unix_read_assume_fd_is_nonblocking", Nothing);
   return Val_long(ret);
@@ -385,7 +385,8 @@ CAMLprim value unix_read_assume_fd_is_nonblocking_stub(
 CAMLprim value unix_write_assume_fd_is_nonblocking_stub(
   value v_fd, value v_buf, value v_pos, value v_len)
 {
-  char *buf = String_val(v_buf) + Long_val(v_pos);
+  /* note that [v_buf] is a [Bytes.t] in practice */
+  const char *buf = String_val(v_buf) + Long_val(v_pos);
   ssize_t ret = write(Int_val(v_fd), buf, Long_val(v_len));
   if (ret == -1) uerror("unix_write_assume_fd_is_nonblocking", Nothing);
   return Val_long(ret);
@@ -404,7 +405,7 @@ CAMLprim value unix_writev_assume_fd_is_nonblocking_stub(
     value v_iov_base = Field(v_iovec, 0);
     value v_iov_pos = Field(v_iovec, 1);
     value v_iov_len = Field(v_iovec, 2);
-    iovec->iov_base = String_val(v_iov_base) + Long_val(v_iov_pos);
+    iovec->iov_base = (void *) (String_val(v_iov_base) + Long_val(v_iov_pos));
     iovec->iov_len = Long_val(v_iov_len);
   }
   ret = jane_writev(Int_val(v_fd), iovecs, count);
@@ -948,7 +949,7 @@ CAMLprim value unix_create_error_checking_mutex(value __unused v_unit)
 #ifdef __GLIBC__
 CAMLprim value unix_realpath(value v_path)
 {
-  char *path = String_val(v_path);
+  const char *path = String_val(v_path);
   char *res = realpath(path, NULL);
   if (res == NULL) uerror("realpath", v_path);
   else {
@@ -1108,8 +1109,8 @@ CAMLprim value unix_fnmatch_make_flags(value v_flags)
 CAMLprim value unix_fnmatch(value v_flags, value v_glob, value v_str)
 {
   int flags = Int32_val(v_flags);
-  char *glob = String_val(v_glob);
-  char *str = String_val(v_str);
+  const char *glob = String_val(v_glob);
+  const char *str = String_val(v_str);
   int ret = fnmatch(glob, str, flags);
   switch (ret) {
     case 0 : return Val_true;
@@ -1490,7 +1491,7 @@ sockaddr_to_caml_string_of_octets(struct sockaddr* sa, int family)
   struct sockaddr_in6* sin6;
   char* addr;
   int i, addrlen;
-  char *addr_string;
+  unsigned char *addr_string;
 
   /* It is possible and reasonable for addresses other than ifa_addr to be NULL */
   if (sa == NULL) CAMLreturn(caml_alloc_string(0));
@@ -1520,7 +1521,7 @@ sockaddr_to_caml_string_of_octets(struct sockaddr* sa, int family)
   }
 
   caml_addr = caml_alloc_string(addrlen);
-  addr_string = String_val(caml_addr);
+  addr_string = Bytes_val(caml_addr);
   for (i = 0; i < addrlen; i++) {
     addr_string[i] = addr[i];
   }

@@ -155,7 +155,7 @@ CAMLprim value linux_sendmsg_nonblocking_no_sigpipe_stub(
     value v_iov_base = Field(v_iovec, 0);
     value v_iov_pos = Field(v_iovec, 1);
     value v_iov_len = Field(v_iovec, 2);
-    iovec->iov_base = String_val(v_iov_base) + Long_val(v_iov_pos);
+    iovec->iov_base = (void *) (String_val(v_iov_base) + Long_val(v_iov_pos));
     iovec->iov_len = Long_val(v_iov_len);
   }
   ret = sendmsg(Int_val(v_fd), &msghdr, nonblocking_no_sigpipe_flag);
@@ -202,7 +202,7 @@ CAMLprim value linux_sched_setaffinity(value v_pid, value cpulist)
 
 CAMLprim value linux_pr_set_name(value v_name)
 {
-  char *buf = String_val(v_name);
+  const char *buf = String_val(v_name);
   if (prctl(PR_SET_NAME, (unsigned long) buf) == -1)
     uerror("pr_set_name", Nothing);
   return Val_unit;
@@ -306,7 +306,7 @@ CAMLprim value linux_get_ipv4_address_for_interface(value v_interface)
 CAMLprim value linux_bind_to_interface(value v_fd, value v_ifname)
 {
   int ret, fd, ifname_len;
-  char *ifname;
+  const char *ifname;
 
   assert(!Is_block(v_fd));
   assert(Is_block(v_ifname) && Tag_val(v_ifname) == String_tag);

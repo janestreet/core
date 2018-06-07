@@ -59,7 +59,7 @@ end = struct
   module Stable = struct
     module V1 = struct
       module T = struct
-        type nonrec t = Time_ns.Span.t [@@deriving bin_io, compare]
+        type nonrec t = Time_ns.Span.t [@@deriving bin_io, compare, hash]
 
         let sexp_of_t t = Time.Stable.Span.V1.sexp_of_t (to_span t)
         let t_of_sexp s = of_span (Time.Stable.Span.V1.t_of_sexp s)

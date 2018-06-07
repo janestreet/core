@@ -132,8 +132,14 @@ module type Span = sig
   val to_proportional_float : t -> float
 
   module Stable : sig
-    module V1 : Stable_int63able with type t = t
-    module V2 : Stable_int63able with type t = t
+    module V1 : sig
+      type nonrec t = t [@@deriving hash]
+      include Stable_int63able with type t := t
+    end
+    module V2 : sig
+      type nonrec t = t [@@deriving hash]
+      include Stable_int63able with type t := t
+    end
   end
 
   val random : ?state:Random.State.t -> unit -> t
@@ -304,8 +310,14 @@ module type Time_ns = sig
       module V1 : Stable_int63able with type t = Option.t
     end
     module Span : sig
-      module V1 : Stable_int63able with type t = Span.t
-      module V2 : Stable_int63able with type t = Span.t
+      module V1 : sig
+        type t = Span.t [@@deriving hash]
+        include Stable_int63able with type t := t
+      end
+      module V2 : sig
+        type t = Span.t [@@deriving hash]
+        include Stable_int63able with type t := t
+      end
       module Option : sig
         module V1 : Stable_int63able with type t = Span.Option.t
         module V2 : Stable_int63able with type t = Span.Option.t
