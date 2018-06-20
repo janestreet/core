@@ -147,7 +147,7 @@ module type Gen_set = sig
 end
 
 module type S = sig
-  type t [@@deriving bin_io, sexp]
+  type t [@@deriving bin_io, sexp, compare, hash]
   type bound
 
   type 'a t_ = t
@@ -180,7 +180,7 @@ module type S1 = sig
   (** This type [t] supports bin-io and sexp conversion by way of the
       [[@@deriving bin_io, sexp]] extensions, which inline the relevant function
       signatures (like [bin_read_t] and [t_of_sexp]). *)
-  type 'a t [@@deriving bin_io, sexp]
+  type 'a t [@@deriving bin_io, sexp, compare, hash]
   type 'a bound_ = 'a
 
   include Gen

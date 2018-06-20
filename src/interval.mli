@@ -117,7 +117,7 @@ end
     ]}
 *)
 module Make (Bound : sig
-    type t [@@deriving bin_io, sexp]
+    type t [@@deriving bin_io, sexp, hash]
     include Comparable.S with type t := t
   end)
   : S with type bound = Bound.t

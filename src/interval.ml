@@ -10,9 +10,9 @@ module Stable = struct
       type 'a t =
         | Interval of 'a * 'a
         | Empty
-      [@@deriving bin_io, of_sexp, variants, compare]
+      [@@deriving bin_io, of_sexp, variants, compare, hash]
 
-      type 'a interval = 'a t [@@deriving bin_io, of_sexp, compare]
+      type 'a interval = 'a t [@@deriving bin_io, of_sexp, compare, hash]
 
       let interval_of_sexp a_of_sexp sexp =
         try interval_of_sexp a_of_sexp sexp   (* for backwards compatibility *)
@@ -33,11 +33,11 @@ module Stable = struct
 
     open T
 
-    type 'a t = 'a interval [@@deriving sexp, bin_io, compare]
+    type 'a t = 'a interval [@@deriving sexp, bin_io, compare, hash]
 
     module Float = struct
       module T = struct
-        type t = float interval [@@deriving sexp, bin_io, compare]
+        type t = float interval [@@deriving sexp, bin_io, compare, hash]
       end
       include T
       include Comparator.Stable.V1.Make (T)
@@ -45,7 +45,7 @@ module Stable = struct
 
     module Int = struct
       module T = struct
-        type t = int interval [@@deriving sexp, bin_io, compare]
+        type t = int interval [@@deriving sexp, bin_io, compare, hash]
       end
       include T
       include Comparator.Stable.V1.Make (T)
@@ -70,7 +70,7 @@ module Stable = struct
 
     module Ofday = struct
       module T = struct
-        type t = Core_time.Stable.Ofday.V1.t interval [@@deriving sexp, bin_io, compare]
+        type t = Core_time.Stable.Ofday.V1.t interval [@@deriving sexp, bin_io, compare, hash]
       end
       include T
       include Comparator.Stable.V1.Make (T)
@@ -306,7 +306,7 @@ module Raw_make (T : Bound) = struct
 
 end
 
-type 'a t = 'a interval [@@deriving bin_io, sexp]
+type 'a t = 'a interval [@@deriving bin_io, sexp, compare, hash]
 type 'a bound_ = 'a
 
 module C = Raw_make (struct
@@ -324,16 +324,16 @@ let t_of_sexp a_of_sexp s =
 ;;
 
 module Set = struct
-  type 'a t = 'a interval list [@@deriving bin_io, sexp]
+  type 'a t = 'a interval list [@@deriving bin_io, sexp, compare, hash]
   include C.Set
 end
 
 module Make (Bound : sig
-    type t [@@deriving bin_io, sexp]
+    type t [@@deriving bin_io, sexp, hash]
     include Comparable.S with type t := t
   end) = struct
 
-  type t = Bound.t interval [@@deriving bin_io, sexp]
+  type t = Bound.t interval [@@deriving bin_io, sexp, compare, hash]
   type 'a t_ = t
   type interval = t [@@deriving bin_io, sexp]
   type bound = Bound.t
@@ -494,7 +494,7 @@ module Int = struct
   end
 end
 module type Time_bound = sig
-  type t [@@deriving bin_io, sexp]
+  type t [@@deriving bin_io, sexp, compare, hash]
 
   include Comparable.S with type t := t
 

@@ -4,6 +4,8 @@ open! Expect_test_helpers_kernel
 open! Command
 open! Command.Private
 
+module Expect_test_config = Core.Expect_test_config
+
 let%test_module "word wrap" =
   (module struct
     let word_wrap = Format.V1.word_wrap
