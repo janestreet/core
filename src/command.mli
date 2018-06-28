@@ -808,7 +808,7 @@ val run
   -> t
   -> unit
 
-(** [Deprecated] should be used only by [Core_extended.Deprecated_command].  At some point
+(** [Deprecated] should be used only by [Deprecated_command].  At some point
     it will go away. *)
 module Deprecated : sig
   module Spec : sig

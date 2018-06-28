@@ -1,1 +1,0 @@
-include Core_extended.Quickcheck_deprecated

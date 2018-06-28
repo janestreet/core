@@ -60,7 +60,7 @@ module Stable : sig
     module Zoned : sig
       module V1 : sig
         (** This uses [With_nonchronological_compare.compare]. *)
-        type t = Ofday.Zoned.t
+        type t = Ofday.Zoned.t [@@deriving hash]
         include Stable_without_comparator with type t := t
       end
     end

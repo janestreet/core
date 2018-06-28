@@ -292,6 +292,7 @@ type sysconf =
   | PHYS_PAGES
   | AVPHYS_PAGES
   | IOV_MAX
+  | CLK_TCK
 [@@deriving sexp]
 
 external sysconf : sysconf -> int64 option = "unix_sysconf"

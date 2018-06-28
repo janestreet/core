@@ -86,7 +86,7 @@ module Stable = struct
     module Zoned = struct
       module V1 = struct
         open T.Ofday.Zoned
-        type nonrec t = t
+        type nonrec t = t [@@deriving hash]
         let compare = With_nonchronological_compare.compare
 
         module Bin_repr = struct

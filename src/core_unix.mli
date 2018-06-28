@@ -2094,7 +2094,7 @@ module Resource_usage : sig
   val add : t -> t -> t
 end
 
-(** {2 System configuration} *)
+(** {2 System configuration}  See 'man sysconf' for documentation. *)
 type sysconf =
   | ARG_MAX
   | CHILD_MAX
@@ -2111,6 +2111,7 @@ type sysconf =
   | PHYS_PAGES
   | AVPHYS_PAGES
   | IOV_MAX
+  | CLK_TCK
 [@@deriving sexp]
 
 (** Wrapper over [sysconf] function in C. *)

@@ -84,6 +84,18 @@ val get_pid : string -> Pid.t option
     Use cases outside of this may push on/break assumptions used for easy lock
     cleanup/taking and may lead to double-taking the lock.  If you have such an odd use
     case you should test it carefully/consider a different locking mechanism.
+
+    Specific known bugs:
+
+    - Safety bug: if there are two instances running on the same machine,
+      stale lock clean-up mechanism can remove a non-stale lock so the lock ends up
+      taken twice.
+
+    - Liveness bug: a process can write its hostname*pid information to the void
+      upon taking the lock, so you may end up with a broken (empty) lock file, which
+      needs manual clean-up afterwards.
+      (it seems that for this to happen another process needs to take and release the lock
+      in quick succession)
 *)
 module Nfs : sig
   (** [create ?message path] tries to create and lock the file at [path] by creating a

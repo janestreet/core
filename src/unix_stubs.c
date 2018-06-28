@@ -799,6 +799,7 @@ CAMLprim value unix_sysconf(value v_name)
     case 13 : name = _SC_AVPHYS_PAGES; break;
 #endif
     case 14 : name = _SC_IOV_MAX; break;
+    case 15 : name = _SC_CLK_TCK; break;
     default :
       /* impossible */
       caml_failwith("unix_sysconf: unknown sum tag");

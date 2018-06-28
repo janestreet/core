@@ -30,7 +30,7 @@ let d h n =
   fun () -> assert (Re2.matches n h)
 ;;
 let e h n =
-  fun () -> assert (Core_extended.Extended_string.is_substring_deprecated ~substring:n h)
+  fun () -> assert (String_extended.is_substring_deprecated ~substring:n h)
 ;;
 let f h n =
   let n = Pcre.regexp ~study:true n in

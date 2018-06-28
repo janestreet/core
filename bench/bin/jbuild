@@ -12,9 +12,9 @@
           zone_next_clock_shift))
   (libraries (core
               core_bench
-              core_extended
               pcre
-              re2))
+              re2
+              shell.string_extended))
   (preprocess (pps (ppx_jane ppxlib.runner)))))
 
 
