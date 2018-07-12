@@ -337,13 +337,12 @@ let of_date_ofday ~zone date ofday =
   of_time (Time.of_date_ofday ~zone date ofday)
 ;;
 
-(* Presently this is not zoned.
-
-   Does not represent extra hours due to DST (daylight saving time) (because DST makes
+(* Does not represent extra hours due to DST (daylight saving time) (because DST makes
    adjustments in terms of wall clock time) or leap seconds (which aren't represented in
    Unix linear time).  See {!Ofday}. *)
 module Ofday = struct
   include Time_ns.Ofday
+
 
   let midnight date ~zone = of_date_ofday ~zone date Time.Ofday.start_of_day
 
@@ -396,6 +395,97 @@ module Ofday = struct
     Time.Ofday.of_span_since_start_of_day_exn (Span.to_span (to_span_since_start_of_day t))
 
   let now ~zone = of_time (now ()) ~zone
+
+  (* This module is in [Core] instead of [Core_kernel] because to sexp a [Zone.t], we need
+     to read a time zone database to work out DST transitions. We do not have a portable
+     way to do that, and currently only support the operation on Unix via Core. *)
+  module Zoned = struct
+    type t =
+      { ofday : Time_ns.Ofday.t;
+        zone  : Zone.t;
+      }
+    [@@deriving bin_io, fields, compare, hash]
+
+    type sexp_repr = Time_ns.Ofday.t * Zone.t
+    [@@deriving sexp]
+
+    let sexp_of_t t = [%sexp_of: sexp_repr] (t.ofday, t.zone)
+
+    let t_of_sexp sexp =
+      let (ofday, zone) = [%of_sexp: sexp_repr] sexp in
+      { ofday; zone; }
+    ;;
+
+    let to_time_ns t date =
+      to_ofday (ofday t) |> of_date_ofday ~zone:(zone t) date
+    ;;
+
+    let create ofday zone = { ofday; zone }
+
+    let create_local ofday = create ofday (Lazy.force Zone.local)
+
+    let of_string string : t =
+      match String.split string ~on:' ' with
+      | [ ofday; zone ] ->
+        { ofday = Time_ns.Ofday.of_string ofday;
+          zone  = Zone.of_string  zone;
+        }
+      | _ ->
+        failwithf "Ofday.Zoned.of_string %s" string ()
+    ;;
+
+    let to_string (t : t) : string =
+      String.concat [
+        Time_ns.Ofday.to_string t.ofday;
+        " ";
+        Zone.to_string t.zone ]
+    ;;
+
+    module With_nonchronological_compare = struct
+      type nonrec t = t
+      [@@deriving bin_io, compare, sexp, hash]
+    end
+
+    include Pretty_printer.Register (struct
+        type nonrec t = t
+        let to_string = to_string
+        let module_name = "Core.Time_ns.Ofday.Zoned"
+      end)
+
+    module Stable = struct
+      module V1 = struct
+        type nonrec t = t [@@deriving hash]
+        let compare = With_nonchronological_compare.compare
+
+        module Bin_repr = struct
+          type t =
+            { ofday : Time_ns.Stable.Ofday.V1.t;
+              zone  : Core_zone.Stable.V1.t;
+            } [@@deriving bin_io]
+        end
+
+        include Binable.Of_binable (Bin_repr) (struct
+            type nonrec t = t
+
+            let to_binable t : Bin_repr.t =
+              { ofday = ofday t; zone = zone t }
+
+            let of_binable (repr : Bin_repr.t) =
+              create repr.ofday repr.zone
+          end)
+
+        type sexp_repr = Time_ns.Stable.Ofday.V1.t * Core_zone.Stable.V1.t
+        [@@deriving sexp]
+
+        let sexp_of_t t = [%sexp_of: sexp_repr] (ofday t, zone t)
+
+        let t_of_sexp sexp =
+          let (ofday, zone) = [%of_sexp: sexp_repr] sexp in
+          create ofday zone
+        ;;
+      end
+    end
+  end
 
   module Option = struct
     type ofday = t [@@deriving sexp, compare]
@@ -505,6 +595,8 @@ module Stable = struct
   end
   module Ofday = struct
     include Time_ns.Stable.Ofday
+
+    module Zoned = Ofday.Zoned.Stable
     module Option = Ofday.Option.Stable
   end
   include Stable0

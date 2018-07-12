@@ -2,14 +2,21 @@ open! Import
 
 module LargeFile = Unix.LargeFile
 
-let getenv var = try Some (Sys.getenv var) with Not_found_s _ | Caml.Not_found -> None
+let getenv_f ~f var = try Some (f var) with Not_found_s _ | Caml.Not_found -> None
 
-let getenv_exn var =
-  match getenv var with
+let getenv        = getenv_f ~f:Sys.getenv
+let unsafe_getenv = getenv_f ~f:Unix.unsafe_getenv
+
+let getenv_exn_f ~f_str ~f var =
+  match f var with
   | Some x -> x
   | None ->
     Printf.failwithf
-      "Sys.getenv_exn: environment variable %s is not set" var ()
+      "%s: environment variable %s is not set" f_str var ()
+;;
+
+let getenv_exn        = getenv_exn_f ~f_str:"Sys.getenv_exn"        ~f:getenv
+let unsafe_getenv_exn = getenv_exn_f ~f_str:"Sys.unsafe_getenv_exn" ~f:unsafe_getenv
 
 
 let stat_check_exn f ?(follow_symlinks = true) path =

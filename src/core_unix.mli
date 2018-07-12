@@ -217,7 +217,8 @@ val retry_until_no_eintr : (unit -> 'a) -> 'a
 *)
 
 (** Return the process environment, as an array of strings
-    with the format ``variable=value''. *)
+    with the format ``variable=value''.  The returned array
+    is empty if the process has special privileges. *)
 val environment : unit -> string array
 
 (** [Unix.putenv ~key ~data] sets the value associated to a

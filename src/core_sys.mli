@@ -47,10 +47,22 @@ val remove : string -> unit
     replace it, or raise an exception, depending on your operating system. *)
 val rename : string -> string -> unit
 
-(** Return the value associated to a variable in the process environment.  Return [None]
-    if the variable is unbound.  *)
+(** Return the value associated to a variable in the process environment unless the
+    process has special privileges. Return [None] if the variable is unbound or the
+    process has special privileges. *)
 val getenv : string -> string option
 val getenv_exn : string -> string
+
+(** Return the value associated to a variable in the process environment.
+
+    Unlike {!getenv}, this function returns the value even if the
+    process has special privileges. It is considered unsafe because the
+    programmer of a setuid or setgid program must be careful to avoid
+    using maliciously crafted environment variables in the search path
+    for executables, the locations for temporary files or logs, and the
+    like. *)
+val unsafe_getenv : string -> string option
+val unsafe_getenv_exn : string -> string
 
 (** Execute the given shell command and return its exit code. *)
 val command : string -> int

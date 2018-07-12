@@ -152,7 +152,7 @@ let get_pid path =
 
 module Nfs = struct
   let process_start_time pid =
-    (* Find the start time for a process, without requiring [Core_extended.Std.Procfs]
+    (* Find the start time for a process, without requiring the [Procfs] library
        -- start time is represented in USER_HZ units in /proc/<pid>/stat (confusingly
        referred to as 'jiffies' in the man page); USER_HZ is almost certainly 100, for
        mostly historical reasons, but just to be sure we'll ask sysconf.

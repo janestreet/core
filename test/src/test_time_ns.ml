@@ -94,6 +94,36 @@ let span_option_examples =
     then Some (Time_ns.Span.Option.some span)
     else None)
 
+let ofday_examples =
+  let predefined =
+    [ Time_ns.Ofday.start_of_day
+    ; Time_ns.Ofday.approximate_end_of_day
+    ; Time_ns.Ofday.start_of_next_day
+    ]
+  in
+  let spans =
+    List.map Unit_of_time.all ~f:(fun unit_of_time ->
+      Time_ns.Span.of_unit_of_time unit_of_time)
+  in
+  let units_since_midnight =
+    List.map spans ~f:(fun span ->
+      Time_ns.Ofday.add_exn Time_ns.Ofday.start_of_day span)
+  in
+  let units_before_midnight =
+    List.map spans ~f:(fun span ->
+      Time_ns.Ofday.sub_exn Time_ns.Ofday.start_of_next_day span)
+  in
+  (predefined @ units_since_midnight @ units_before_midnight)
+  |> List.dedup_and_sort ~compare:Time_ns.Ofday.compare
+
+let zoned_examples =
+  let zone_new_york = Time_ns.Zone.find_exn "America/New_York" in
+  List.map ofday_examples ~f:(fun example ->
+    Time_ns.Ofday.Zoned.create example Time_ns.Zone.utc)
+  @
+  List.map ofday_examples ~f:(fun example ->
+    Time_ns.Ofday.Zoned.create example zone_new_york)
+
 let%test_module "Time_ns.Span.to_string,of_string" =
   (module struct
     let print_nanos string =
@@ -2052,6 +2082,82 @@ let%test_module "Time_ns" =
       [%expect {| (1969-12-31 19:00:00.000000-05:00) |}];
     ;;
   end)
+
+module Ofday_zoned = struct
+  open Time_ns.Ofday.Zoned
+
+  let%expect_test _ =
+    let test string =
+      let t = of_string string in
+      let round_trip x =
+        require_compare_equal [%here] (module With_nonchronological_compare) t x
+      in
+      round_trip (of_string (to_string t));
+      round_trip (t_of_sexp (sexp_of_t t));
+    in
+    test "12:00 nyc";
+    test "12:00 America/New_York";
+    [%expect {| |}];
+  ;;
+
+  let%expect_test "Zoned.V1" =
+    print_and_check_stable_type [%here]
+      (module Time_ns.Stable.Ofday.Zoned.V1)
+      zoned_examples;
+    [%expect {|
+      (bin_shape_digest 116be3b907c3a1807e5fbf3e7677c018)
+      ((sexp (00:00:00.000000000 UTC)) (bin_io "\000\003UTC"))
+      ((sexp (00:00:00.000000001 UTC)) (bin_io "\001\003UTC"))
+      ((sexp (00:00:00.000001000 UTC)) (bin_io "\254\232\003\003UTC"))
+      ((sexp (00:00:00.001000000 UTC)) (bin_io "\253@B\015\000\003UTC"))
+      ((sexp (00:00:01.000000000 UTC)) (bin_io "\253\000\202\154;\003UTC"))
+      ((sexp (00:01:00.000000000 UTC))
+       (bin_io "\252\000XG\248\r\000\000\000\003UTC"))
+      ((sexp (01:00:00.000000000 UTC))
+       (bin_io "\252\000\160\1840F\003\000\000\003UTC"))
+      ((sexp (23:00:00.000000000 UTC)) (bin_io "\252\000`\150`NK\000\000\003UTC"))
+      ((sexp (23:59:00.000000000 UTC))
+       (bin_io "\252\000\168\007\153\134N\000\000\003UTC"))
+      ((sexp (23:59:59.000000000 UTC))
+       (bin_io "\252\0006\180U\148N\000\000\003UTC"))
+      ((sexp (23:59:59.999000000 UTC))
+       (bin_io "\252\192\189?\145\148N\000\000\003UTC"))
+      ((sexp (23:59:59.999999000 UTC))
+       (bin_io "\252\024\252N\145\148N\000\000\003UTC"))
+      ((sexp (23:59:59.999999999 UTC))
+       (bin_io "\252\255\255N\145\148N\000\000\003UTC"))
+      ((sexp (24:00:00.000000000 UTC))
+       (bin_io "\252\000\000O\145\148N\000\000\003UTC"))
+      ((sexp (00:00:00.000000000 America/New_York))
+       (bin_io "\000\016America/New_York"))
+      ((sexp (00:00:00.000000001 America/New_York))
+       (bin_io "\001\016America/New_York"))
+      ((sexp (00:00:00.000001000 America/New_York))
+       (bin_io "\254\232\003\016America/New_York"))
+      ((sexp (00:00:00.001000000 America/New_York))
+       (bin_io "\253@B\015\000\016America/New_York"))
+      ((sexp (00:00:01.000000000 America/New_York))
+       (bin_io "\253\000\202\154;\016America/New_York"))
+      ((sexp (00:01:00.000000000 America/New_York))
+       (bin_io "\252\000XG\248\r\000\000\000\016America/New_York"))
+      ((sexp (01:00:00.000000000 America/New_York))
+       (bin_io "\252\000\160\1840F\003\000\000\016America/New_York"))
+      ((sexp (23:00:00.000000000 America/New_York))
+       (bin_io "\252\000`\150`NK\000\000\016America/New_York"))
+      ((sexp (23:59:00.000000000 America/New_York))
+       (bin_io "\252\000\168\007\153\134N\000\000\016America/New_York"))
+      ((sexp (23:59:59.000000000 America/New_York))
+       (bin_io "\252\0006\180U\148N\000\000\016America/New_York"))
+      ((sexp (23:59:59.999000000 America/New_York))
+       (bin_io "\252\192\189?\145\148N\000\000\016America/New_York"))
+      ((sexp (23:59:59.999999000 America/New_York))
+       (bin_io "\252\024\252N\145\148N\000\000\016America/New_York"))
+      ((sexp (23:59:59.999999999 America/New_York))
+       (bin_io "\252\255\255N\145\148N\000\000\016America/New_York"))
+      ((sexp (24:00:00.000000000 America/New_York))
+       (bin_io "\252\000\000O\145\148N\000\000\016America/New_York")) |}];
+  ;;
+end
 
 let%expect_test "end-of-day constants" =
   let zones = List.map !Time_ns.Zone.likely_machine_zones ~f:Time_ns.Zone.find_exn in

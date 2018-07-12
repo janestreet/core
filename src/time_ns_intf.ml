@@ -164,6 +164,33 @@ module type Ofday = sig
   val to_ofday : t -> Time.Ofday.t
   val of_ofday : Time.Ofday.t -> t
 
+  module Zoned : sig
+    (** Sexps look like "(12:01 nyc)"
+
+        Two [t]'s may or may not correspond to the same times depending on which date
+        they're evaluated. *)
+    type t [@@deriving bin_io, sexp, hash]
+
+    include Pretty_printer.S with type t := t
+    include Stringable       with type t := t (** Strings look like "12:01 nyc" *)
+
+    val create       : Time_ns.Ofday.t -> Time.Zone.t -> t
+    val create_local : Time_ns.Ofday.t                -> t
+
+    val ofday : t -> Time_ns.Ofday.t
+    val zone  : t -> Time.Zone.t
+
+    val to_time_ns : t -> Date.t -> Time_ns.t
+
+    module With_nonchronological_compare : sig
+      (** It is possible to consistently compare [t]'s, but due to the complexities of
+          time zones and daylight savings, the resulting ordering is not chronological.
+          That is, [compare t1 t2 > 0] does not imply [t2] occurs after [t1] every day,
+          or any day. *)
+      type nonrec t = t [@@deriving bin_io, sexp, compare, hash]
+    end
+  end
+
   module Option : sig
     include Option with type value := t
     module Stable : sig
@@ -325,6 +352,12 @@ module type Time_ns = sig
     end
     module Ofday : sig
       module V1 : Stable_int63able with type t = Ofday.t
+      module Zoned : sig
+        module V1 : sig
+          type nonrec t = Ofday.Zoned.t [@@deriving hash]
+          include Stable_without_comparator with type t := t
+        end
+      end
       module Option : sig
         module V1 : Stable_int63able with type t = Ofday.Option.t
       end
