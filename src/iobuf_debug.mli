@@ -13,7 +13,7 @@ module Make () : sig
 
   (** We use [module type of struct include Iobuf end] rather than [module type of Iobuf]
       so that the debugging functions work on normal Iobufs. *)
-  include module type of struct include Iobuf end
+  include module type of struct include Iobuf end [@ocaml.remove_aliases]
 
   val check_invariant : bool ref
   val show_messages : bool ref
