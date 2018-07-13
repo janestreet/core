@@ -12,13 +12,13 @@ module type S = sig
   module Time  : Time_intf.S with module Time := Time0
 
   module Zone  : sig
-    include module type of (struct include Time.Zone end)
+    include (module type of struct include Time.Zone end [@remove_aliases])
 
     include Core_zone.Extend_zone with type t := t
   end
 
   module Ofday : sig
-    include (module type of struct include Time.Ofday end)
+    include (module type of struct include Time.Ofday end [@remove_aliases])
 
     module Zoned : sig
       (** Sexps look like "(12:01 nyc)"
@@ -56,7 +56,7 @@ module type S = sig
   include (module type of Time
             with type   t     := t
              and module Zone  := Zone
-             and module Ofday := Ofday)
+             and module Ofday := Ofday) [@remove_aliases]
 
   (** Sexp conversions use the local timezone by default. This can be overridden by
       calling [set_sexp_zone].
