@@ -41,6 +41,13 @@
 #include <netdb.h>
 #include <ifaddrs.h>
 
+/* makedev */
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+/* The BSDs expose the definition for this macro via <sys/types.h>. */
+#else
+#include <sys/sysmacros.h>
+#endif
+
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
 #define stat64 stat
 #define lstat64 lstat
