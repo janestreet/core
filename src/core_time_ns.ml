@@ -15,46 +15,9 @@ module Span : sig
 
   val check_range : t -> t
 end = struct
-  let half_microsecond = Int63.of_int 500
+  open Time_ns.Span
 
-  let nearest_microsecond t =
-    Int63.((Time_ns.Span.to_int63_ns t + half_microsecond) /% of_int 1000)
-  ;;
-
-  let [@inline never] invalid_range t =
-    let open Time_ns.Span in
-    raise_s [%message
-      "Span.t exceeds limits"
-        (t         : t)
-        (min_value : t)
-        (max_value : t)]
-  ;;
-
-  let check_range t =
-    let open Time_ns.Span in
-    if t < min_value || t > max_value
-    then invalid_range t
-    else t
-  ;;
-
-  let to_span t =
-    Time.Span.of_us (Int63.to_float (nearest_microsecond (check_range t)))
-  ;;
-
-  let min_kspan_value = to_span Time_ns.Span.min_value
-  let max_kspan_value = to_span Time_ns.Span.max_value
-
-  let of_span s =
-    if Time.Span.( > ) s max_kspan_value
-    || Time.Span.( < ) s min_kspan_value
-    then
-      failwiths "Time_ns.Span does not support this span" s [%sexp_of: Time.Span.t];
-    (* Using [Time.Span.to_sec] (being the identity) so that
-       we make don't apply too many conversion
-       - Too many : `[Span.t] -> [a] -> [Time_ns.Span.t]`
-       - Only One : `[Span.t]==[a] -> [Time_ns.Span.t]`. *)
-    Time_ns.Span.of_sec_with_microsecond_precision (Time.Span.to_sec s)
-  ;;
+  let check_range = Private.check_range
 
   module Stable = struct
     module V1 = struct
@@ -203,20 +166,6 @@ let interruptible_pause = pause_for
 let rec pause_forever () =
   pause Span.day;
   pause_forever ()
-;;
-
-let to_time t =
-  Time.add Time.epoch (Span.to_span (to_span_since_epoch t))
-;;
-
-let min_time_value = to_time min_value
-let max_time_value = to_time max_value
-
-let of_time t =
-  if Time.( < ) t min_time_value
-  || Time.( > ) t max_time_value
-  then failwiths "Time_ns does not support this time" t [%sexp_of: Time.t];
-  of_span_since_epoch (Span.of_span (Time.diff t Time.epoch))
 ;;
 
 module Stable0 = struct

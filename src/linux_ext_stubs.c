@@ -200,6 +200,35 @@ CAMLprim value linux_sched_setaffinity(value v_pid, value cpulist)
   return Val_unit;
 }
 
+static value cpuset_to_cpulist(cpu_set_t *cpuset)
+{
+  int i;
+  CAMLparam0();
+  CAMLlocal2(cpu_list, cons);
+
+  cpu_list = Val_emptylist;
+  for (i = CPU_SETSIZE - 1; i >= 0; i--) {
+    if (CPU_ISSET(i, cpuset)) {
+      cons = caml_alloc(2, 0);
+      Store_field(cons, 0, Val_int(i));
+      Store_field(cons, 1, cpu_list);
+      cpu_list = cons;
+    }
+  }
+
+  CAMLreturn(cpu_list);
+}
+
+CAMLprim value linux_sched_getaffinity(value v_pid)
+{
+  cpu_set_t set;
+  pid_t pid;
+  pid = Int_val(v_pid);
+  if (sched_getaffinity(pid, sizeof(cpu_set_t), &set) != 0)
+    uerror("getaffinity", Nothing);
+  return cpuset_to_cpulist(&set);
+}
+
 CAMLprim value linux_pr_set_name(value v_name)
 {
   const char *buf = String_val(v_name);

@@ -102,17 +102,7 @@ module type Span = sig
     -> t
     -> string
 
-  (** {!Time.t} is precise to approximately 0.24us in 2014.  If [to_span] converts to the
-      closest [Time.Span.t], we have stability problems: converting back yields a
-      different [t], sometimes different enough to have a different external
-      representation, because the conversion back and forth crosses a rounding boundary.
-
-      To stabilize conversion, we treat [Time.t] as having 1us precision: [to_span] and
-      [of_span] both round to the nearest 1us.
-
-      Around 135y magnitudes, [Time.Span.t] no longer has 1us resolution.  At that point,
-      [to_span] and [of_span] raise.
-  *)
+  (** See [Core_kernel.Time_ns.Span]. *)
   val to_span : t -> Time.Span.t
   val of_span : Time.Span.t -> t
 

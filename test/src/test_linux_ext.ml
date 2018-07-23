@@ -269,3 +269,20 @@ let%test_unit "Eventfd.read will not block until the counter is decremented to z
     ~expect:0L
     !count
 ;;
+
+(* CPU Affinity *)
+let%expect_test "set and get affinity" =
+  match sched_getaffinity, sched_setaffinity with
+  | Ok sched_getaffinity, Ok sched_setaffinity ->
+    let print_affinity () = printf !"%{sexp:int list}" (sched_getaffinity ()) in
+    let starting_cpus = sched_getaffinity () in
+    sched_setaffinity ~cpuset:[0] ();
+    print_affinity ();
+    [%expect {| (0) |}];
+    sched_setaffinity ~cpuset:[1; 2] ();
+    print_affinity ();
+    [%expect {| (1 2) |}];
+    sched_setaffinity ~cpuset:starting_cpus ();
+    printf "%b" (starting_cpus = sched_getaffinity ());
+    [%expect {| true |}]
+  | _ -> ()

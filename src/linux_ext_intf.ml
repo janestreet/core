@@ -325,6 +325,7 @@ module type S = sig
       for details. *)
   val sched_setaffinity : (?pid : Pid.t -> cpuset : int list -> unit -> unit) Or_error.t
 
+  val sched_getaffinity : (?pid : Pid.t -> unit -> int list) Or_error.t
 
   val sched_setaffinity_this_thread : (cpuset : int list -> unit) Or_error.t
 

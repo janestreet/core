@@ -111,6 +111,7 @@ module Null_toplevel = struct
   let pr_set_name_first16            = u "Linux_ext.pr_set_name_first16"
   let pr_set_pdeathsig               = u "Linux_ext.pr_set_pdeathsig"
   let sched_setaffinity              = u "Linux_ext.sched_setaffinity"
+  let sched_getaffinity              = u "Linux_ext.sched_getaffinity"
   let sched_setaffinity_this_thread  = u "Linux_ext.sched_setaffinity_this_thread"
   let send_no_sigpipe                = u "Linux_ext.send_no_sigpipe"
   let send_nonblocking_no_sigpipe    = u "Linux_ext.send_nonblocking_no_sigpipe"
@@ -627,6 +628,14 @@ let sched_setaffinity ?pid ~cpuset () =
   raw_sched_setaffinity ~pid ~cpuset
 ;;
 
+external raw_sched_getaffinity
+  : pid : int -> int list = "linux_sched_getaffinity"
+
+let sched_getaffinity ?pid () =
+  let pid = match pid with None -> 0 | Some pid -> Pid.to_int pid in
+  raw_sched_getaffinity ~pid
+;;
+
 (* defined in unix_stubs.c *)
 external gettid : unit -> int = "unix_gettid"
 
@@ -967,6 +976,7 @@ let pr_get_pdeathsig               = Ok pr_get_pdeathsig
 let pr_set_name_first16            = Ok pr_set_name_first16
 let pr_set_pdeathsig               = Ok pr_set_pdeathsig
 let sched_setaffinity              = Ok sched_setaffinity
+let sched_getaffinity              = Ok sched_getaffinity
 let sched_setaffinity_this_thread  = Ok sched_setaffinity_this_thread
 let send_no_sigpipe                = Ok send_no_sigpipe
 let send_nonblocking_no_sigpipe    = Ok send_nonblocking_no_sigpipe

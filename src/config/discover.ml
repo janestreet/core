@@ -167,13 +167,6 @@ let () =
         ]
     in
 
-    let arch_vars : (string * C.C_define.Value.t) list =
-      let target = C.ocaml_config_var_exn c "target" in
-      [ "ARCH_x86_64", Switch (String.is_prefix target ~prefix:"x86_64")
-      ; "ARCH_i386"  , Switch (String.is_prefix target ~prefix:"i386"  )
-      ]
-    in
-
     let rlimit_vars =
       C.C_define.import c ~includes:["sys/resource.h"]
         [ "RLIMIT_AS"  , Switch
@@ -193,18 +186,12 @@ let () =
         [ rlimit_vars
         ; ocaml_vars
         ; simple_vars
-        ; arch_vars
         ; [ "POSIX_TIMERS"    , Switch posix_timers
           ; "THREAD_ID_METHOD", Int thread_id_method
           ; "LINUX_EXT"       , Switch linux
           ]
         ]
     in
-
-    (* Make sure things are consistent *)
-    [%test_eq: C.C_define.Value.t]
-      (List.Assoc.find_exn vars ~equal:String.equal "ARCH_SIXTYFOUR")
-      (List.Assoc.find_exn vars ~equal:String.equal "ARCH_x86_64");
 
     let jsc_vars =
       List.map vars ~f:(fun (name, v) -> ("JSC_" ^ name, v))
