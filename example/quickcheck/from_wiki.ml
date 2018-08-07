@@ -6,7 +6,7 @@ let%test_unit "count vs length" =
     (* (\* Initial example that fails on NaN: *\)
      * (List.gen Float.gen) *)
     (* Working example that filters out NaN: *)
-    (List.gen (Generator.filter Float.gen ~f:(Fn.non Float.is_nan)))
+    (List.quickcheck_generator (Generator.filter Float.quickcheck_generator ~f:(Fn.non Float.is_nan)))
     (* (\* Simplest version: *\)
      * (List.gen Float.gen_without_nan) *)
     ~sexp_of:[%sexp_of: float list]
@@ -28,5 +28,5 @@ let sexp_gen =
      guarantees that the recursion will eventually bottom out. *)
   Generator.(fixed_point (fun self ->
     size >>= function
-    | 0 -> String.gen    >>| fun atom -> Sexp.Atom atom
+    | 0 -> String.quickcheck_generator    >>| fun atom -> Sexp.Atom atom
     | _ -> list_gen self >>| fun list -> Sexp.List list))

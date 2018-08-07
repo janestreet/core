@@ -1368,7 +1368,7 @@ type socket_type = Unix.socket_type =
 type sockaddr = Unix.sockaddr =
   | ADDR_UNIX of string
   | ADDR_INET of Inet_addr.t * int
-[@@deriving bin_io, sexp_of]
+[@@deriving bin_io, compare, sexp_of]
 
 val sockaddr_of_sexp : Sexp.t -> sockaddr
 [@@deprecated "[since 2015-10] Replace [sockaddr] by [sockaddr_blocking_sexp]"]

@@ -219,9 +219,9 @@ let of_int_exn int = of_int63_exn (Int63.of_int int)
 
 let to_int_exn t = Int63.to_int_exn (to_int63 t)
 
-let gen = Int63.gen_incl any broadcast
-let obs = Int63.obs
-let shrinker = Int63.shrinker
+let quickcheck_generator = Int63.gen_incl any broadcast
+let quickcheck_observer = Int63.quickcheck_observer
+let quickcheck_shrinker = Int63.quickcheck_shrinker
 
 include Identifiable.Make_using_comparator (struct
     include Stable.Latest

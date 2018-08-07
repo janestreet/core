@@ -3,6 +3,7 @@
           bench_hashtbl
           bench_heap
           bench_map
+          bench_nano_mutex
           core_stack
           core_string_search_pattern
           dequeue

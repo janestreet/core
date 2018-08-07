@@ -13,9 +13,9 @@ module Sorted_list = struct
 
   let to_list t = t
 
-  let gen elt =
+  let quickcheck_generator elt =
     let open Generator.Monad_infix in
-    List.gen elt >>| of_list
+    List.quickcheck_generator elt >>| of_list
 
   let custom_int_shrinker =
     Shrinker.create (fun n ->
@@ -23,8 +23,8 @@ module Sorted_list = struct
       then Sequence.empty
       else Sequence.singleton (n / 2))
 
-  let shrinker =
-    let list_shrinker = List.shrinker custom_int_shrinker in
+  let quickcheck_shrinker =
+    let list_shrinker = List.quickcheck_shrinker custom_int_shrinker in
     Shrinker.map list_shrinker ~f:of_list ~f_inverse:to_list
 
   let invariant t =
@@ -45,11 +45,11 @@ let%test_module "sorted list" =
 
     let sorted_list_tuple_gen =
       let int_gen = Int.gen_incl (-100) 100 in
-      let sorted_list_gen = Sorted_list.gen int_gen in
+      let sorted_list_gen = Sorted_list.quickcheck_generator int_gen in
       Generator.tuple2 sorted_list_gen sorted_list_gen
 
     let sorted_list_tuple_shrinker =
-      Shrinker.tuple2 Sorted_list.shrinker Sorted_list.shrinker
+      Shrinker.tuple2 Sorted_list.quickcheck_shrinker Sorted_list.quickcheck_shrinker
 
     let test f (a,b) =
       f a b |> Sorted_list.invariant

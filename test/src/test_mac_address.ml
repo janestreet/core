@@ -33,12 +33,12 @@ let%test_module "Mac_address" =
     let trials = 10_000
 
     let%test_unit "(of_string . to_string) = id[t -> t]" =
-      Quickcheck.test ~seed ~trials gen ~f:(fun expect ->
+      Quickcheck.test ~seed ~trials quickcheck_generator ~f:(fun expect ->
         let actual = of_string (to_string expect) in
         [%test_result: t] ~expect actual)
 
     let%test_unit "(of_int63_exn . to_int63) = id[t -> t]" =
-      Quickcheck.test ~seed ~trials gen ~f:(fun expect ->
+      Quickcheck.test ~seed ~trials quickcheck_generator ~f:(fun expect ->
         let actual = of_int63_exn (to_int63 expect) in
         [%test_result: t] ~expect actual)
 

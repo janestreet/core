@@ -28,8 +28,8 @@ let%test_module "ensure_colon_in_offset" =
       String.gen_with_length len Char.gen_digit
 
     let%test_unit "add colon" =
-      let gen = gen_digit_string ~length:(Int.gen_incl 3 4) in
-      Quickcheck.test gen ~sexp_of:String.sexp_of_t ~f:(fun digits ->
+      let quickcheck_generator = gen_digit_string ~length:(Int.gen_incl 3 4) in
+      Quickcheck.test quickcheck_generator ~sexp_of:String.sexp_of_t ~f:(fun digits ->
         assert (not (String.mem digits ':'));
         let output = ensure_colon_in_offset digits in
         assert (Int.(=) (String.count output ~f:(Char.(=) ':')) 1);
@@ -544,7 +544,7 @@ let%test_module "Time.Stable" =
     module type S = sig
       type t [@@deriving bin_io, compare, sexp]
       val examples : t list
-      val gen : t Quickcheck.Generator.t
+      val quickcheck_generator : t Quickcheck.Generator.t
     end
 
     let test_stability (module M : S) =
@@ -556,7 +556,7 @@ let%test_module "Time.Stable" =
            print them out, as we don't want to read thousands of examples, so we won't
            know if their representation changes, but at least we will know they
            round-trip. *)
-        quickcheck [%here] M.gen ~sexp_of:M.sexp_of_t ~f:(fun example ->
+        quickcheck [%here] M.quickcheck_generator ~sexp_of:M.sexp_of_t ~f:(fun example ->
           require_does_not_raise [%here] (fun () ->
             let sexp            = M.sexp_of_t example in
             let sexp_round_trip = M.t_of_sexp sexp    in
@@ -571,7 +571,7 @@ let%test_module "Time.Stable" =
       let compare = Time.robustly_compare
       let examples = examples
 
-      let gen =
+      let quickcheck_generator =
         (* If we add another digit, the times start to exceed the range of [gmtime] and
            sexp conversion raises. *)
         Int64.gen_uniform_incl
@@ -591,8 +591,8 @@ let%test_module "Time.Stable" =
 
       let examples = set_examples
 
-      let gen =
-        Quickcheck.Generator.map (List.gen For_time.gen) ~f:Time.Set.of_list
+      let quickcheck_generator =
+        Quickcheck.Generator.map (List.quickcheck_generator For_time.quickcheck_generator) ~f:Time.Set.of_list
     end
 
     module For_map = struct
@@ -603,8 +603,8 @@ let%test_module "Time.Stable" =
 
       let examples = map_examples
 
-      let gen =
-        List.gen (Quickcheck.Generator.tuple2 For_time.gen Int.gen)
+      let quickcheck_generator =
+        List.quickcheck_generator (Quickcheck.Generator.tuple2 For_time.quickcheck_generator Int.quickcheck_generator)
         |> Quickcheck.Generator.filter_map ~f:(fun alist ->
           match Time.Map.of_alist alist with
           | `Ok map          -> Some map

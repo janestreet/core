@@ -19,7 +19,7 @@ let%test_module "Core_kernel.Time_ns.Utc.to_date_and_span_since_start_of_day" =
     let safe_max_value = Time_ns.sub Time_ns.max_value Time_ns.Span.microsecond
     ;;
 
-    let gen =
+    let quickcheck_generator =
       let open Quickcheck.Generator.Let_syntax in
       let%map ns_since_epoch =
         Int63.gen_incl
@@ -31,7 +31,7 @@ let%test_module "Core_kernel.Time_ns.Utc.to_date_and_span_since_start_of_day" =
 
     let test f =
       require_does_not_raise [%here] (fun () ->
-        Quickcheck.test gen ~f
+        Quickcheck.test quickcheck_generator ~f
           ~sexp_of:[%sexp_of: time_ns]
           ~examples:[ safe_min_value; Time_ns.epoch; safe_max_value ])
     ;;
@@ -57,7 +57,7 @@ let%test_module "Core_kernel.Time_ns.Utc.to_date_and_span_since_start_of_day" =
   end)
 
 let span_gen =
-  Quickcheck.Generator.map Int63.gen ~f:Time_ns.Span.of_int63_ns
+  Quickcheck.Generator.map Int63.quickcheck_generator ~f:Time_ns.Span.of_int63_ns
 
 let span_option_gen =
   let open Quickcheck.Generator in

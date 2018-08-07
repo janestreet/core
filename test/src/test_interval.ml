@@ -131,7 +131,7 @@ let%test_module "vs array" =
       let%bind t = interval_of_length n in
       let%map nearby =
         if n = 0
-        then Int.gen
+        then Int.quickcheck_generator
         else
           let lbound = lbound_exn t in
           let ubound = ubound_exn t in

@@ -121,9 +121,10 @@ val os_type : string
     bits: 32 or 64. *)
 val word_size : int
 
-(** Size of an int.  It is 31 bits (resp. 63 bits) when using the OCaml compiler on a 32
-    bits (resp. 64 bits) platform.  It may differ for other compilers, e.g. it is 32 bits
-    when compiling to JavaScript.  @since 4.03.0 *)
+(** Size of an int. It is 31 bits (resp. 63 bits) when using the OCaml compiler on a 32
+    bits (resp. 64 bits) platform. It may differ for other compilers, e.g. it is 32 bits
+    when compiling to JavaScript. This is the same as [Core.Int.size_in_bits]. @since
+    4.03.0 *)
 val int_size : int
 
 (** Whether the machine currently executing the Caml program is big-endian. *)
@@ -157,9 +158,9 @@ val ocaml_version : string
     or to bytecode. *)
 val execution_mode : unit -> [ `Bytecode | `Native ]
 
-(** [c_int_size] returns the number of bits in a C [int]. Note that this can be
-    different from [word_size]. For example, Linux x86-64 should have
-    [word_size = 64], but [c_int_size () = 32] *)
+(** [c_int_size] returns the number of bits in a C [int], as specified in header
+    files. Note that this can be different from [word_size] and [Nativeint.num_bits]. For
+    example, Linux x86-64 should have [word_size = 64], but [c_int_size () = 32]. *)
 external c_int_size : unit -> int = "c_int_size" [@@noalloc]
 
 (** Return the home directory, using the [HOME] environment variable if that is defined,

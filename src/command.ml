@@ -208,7 +208,7 @@ module Arg_type = struct
 
   let bool = of_alist_exn [("true", true); ("false", false)]
 
-  let comma_separated ~allow_empty ?key ?(strip_whitespace = false)
+  let comma_separated ?(allow_empty = false) ?key ?(strip_whitespace = false)
         ?(unique_values = false) t =
     let strip =
       if strip_whitespace
