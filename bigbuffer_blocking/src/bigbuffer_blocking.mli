@@ -1,8 +1,8 @@
 (** Extends {{!Core_kernel.Bigbuffer}[Core_kernel.Bigbuffer]}. *)
 
+open! Core
 open! Import
-
-include module type of struct include Core_kernel.Bigbuffer end (** @open *)
+open! Core_kernel.Bigbuffer
 
 val add_channel : t -> In_channel.t -> int -> unit
 (** [add_channel b ic n] reads exactly [n] characters from the input channel [ic] and

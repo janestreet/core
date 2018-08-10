@@ -54,9 +54,7 @@ let%expect_test "[Unstable.t_of_sexp] validates its input"=
   require_does_raise [%here] (fun () ->
     [%of_sexp: Unstable.t] [%sexp "not a uuid"]);
   [%expect {|
-    (Sexplib.Conv.Of_sexp_error
-      (Failure "not a uuid: not a valid UUID")
-      "not a uuid") |}]
+    (Of_sexp_error "not a uuid: not a valid UUID" (invalid_sexp "not a uuid")) |}]
 ;;
 
 let%expect_test "[Stable.V1.t_of_sexp] does not validate its input" =

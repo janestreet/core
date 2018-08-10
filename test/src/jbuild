@@ -1,6 +1,7 @@
 (library
  ((name core_test)
-  (libraries (bignum
+  (libraries (bigbuffer_blocking
+              bignum
               core
               core_kernel_test
               expect_test_helpers))

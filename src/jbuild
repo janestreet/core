@@ -19,7 +19,6 @@
   (install_c_headers (config))
   (c_names
    (bigstring_stubs
-    md5_stubs
     iobuf_stubs
     linux_ext_stubs
     ocaml_utils_stubs

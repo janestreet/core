@@ -2,6 +2,7 @@
     where the standard file descriptors (stdin, stdout and stderr) are connected after
     daemonization has occurred. *)
 
+open! Core
 open! Import
 
 module Fd_redirection : sig

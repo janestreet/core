@@ -2415,10 +2415,9 @@ let%test_module "Time.Stable" =
           (Sexp.of_string "(2000-01-01 00:00:00.000000)"));
       [%expect {|
         (raised (
-          Sexplib.Conv.Of_sexp_error
-          (Failure
-           "Time.t_of_sexp: (time.ml.Make.Time_of_string \"2000-01-01 00:00:00.000000\"\n  (core_time.ml.Make.Time_string_not_absolute \"2000-01-01 00:00:00.000000\"))")
-          (2000-01-01 00:00:00.000000))) |}];
+          Of_sexp_error
+          "Time.t_of_sexp: (time.ml.Make.Time_of_string \"2000-01-01 00:00:00.000000\"\n  (core_time.ml.Make.Time_string_not_absolute \"2000-01-01 00:00:00.000000\"))"
+          (invalid_sexp (2000-01-01 00:00:00.000000)))) |}];
     ;;
   end)
 

@@ -1,7 +1,5 @@
+open! Core
 open! Import
-
-module Unix   = Core_unix
-module Thread = Core_thread
 
 
 let check_threads ~allow_threads_to_have_been_created =
@@ -123,7 +121,7 @@ let daemonize_wait
       (* The middle process, after it has forked its child. *)
       Unix.close write_end;
       let rec loop () =
-        match Core_unix.wait_nohang (`Pid pid) with
+        match Unix.wait_nohang (`Pid pid) with
         | None -> begin
             match
               Unix.select ~read:[read_end] ~write:[] ~except:[]
@@ -150,5 +148,5 @@ let daemonize_wait
       in loop ()
     end
   | `In_the_parent pid ->
-    exit (process_status_to_exit_code (Core_unix.waitpid pid))
+    exit (process_status_to_exit_code (Unix.waitpid pid))
 ;;

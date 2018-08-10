@@ -1,0 +1,11 @@
+(alias
+ ((name runtest)
+  (deps (daemonize_test.exe))
+  (action (bash "./daemonize_test.exe"))))
+
+(executables
+ ((names (daemonize_test))
+  (libraries (daemon))
+  (preprocess (pps (ppx_jane ppxlib.runner)))))
+
+(jbuild_version 1)

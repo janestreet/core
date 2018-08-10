@@ -272,8 +272,7 @@ module Consume : sig
     val sub  : src -> len:int -> string
   end
 
-  include
-    Accessors
+  include Accessors_read
     with type ('a, 'r, 's) t = ([> read] as 'r, seek) t -> 'a
     with type 'a bin_prot := 'a Bin_prot.Type_class.reader
 end
@@ -281,8 +280,7 @@ end
 (** [Fill.bin_prot X.bin_write_t t x] writes [x] to [t] in bin-prot form, advancing past
     the bytes written. *)
 module Fill : sig
-  include
-    Accessors
+  include Accessors_write
     with type ('a, 'd, 'w) t = (read_write, seek) t -> 'a -> unit
     with type 'a bin_prot := 'a Bin_prot.Type_class.writer
 
@@ -323,8 +321,7 @@ module Peek : sig
 
   val index : ([> read], _) t -> ?pos:int -> ?len:int -> char -> int option
 
-  include
-    Accessors
+  include Accessors_read
     with type ('a, 'd, 'w) t = ('d, 'w) t -> pos:int -> 'a
     with type 'a bin_prot := 'a Bin_prot.Type_class.reader
 end
@@ -337,8 +334,7 @@ module Poke : sig
   (** [decimal t ~pos i] returns the number of bytes written at [pos]. *)
   val decimal : (read_write, 'w) t -> pos:int -> int -> int
 
-  include
-    Accessors
+  include Accessors_write
     with type ('a, 'd, 'w) t = (read_write, 'w) t -> pos:int -> 'a -> unit
     with type 'a bin_prot := 'a Bin_prot.Type_class.writer
 end

@@ -623,4 +623,8 @@ linux_eventfd_write(value v_fd, value v_val)
 
 #endif /* JSC_EVENTFD */
 
+#else
+
+typedef int avoid_empty_translation_unit_compilation_error;
+
 #endif /* JSC_LINUX_EXT */
