@@ -908,9 +908,11 @@ val create_process : prog : string -> args : string list -> Process_info.t
 (** [create_process_env ~prog ~args ~env] as [create_process], but takes an additional
     parameter that extends or replaces the current environment.  No effort is made to
     ensure that the keys passed in as env are unique, so if an environment variable is set
-    twice the second version will override the first. *)
+    twice the second version will override the first. If [argv0] is given, it is used
+    (instead of [prog]) as the first element of the [argv] array passed to [execve]. *)
 val create_process_env
   :  ?working_dir : string
+  -> ?argv0 : string
   -> prog : string
   -> args : string list
   -> env : env

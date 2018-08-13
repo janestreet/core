@@ -8,4 +8,3 @@ module Time                   = Core_time_float        .Stable
 module Time_ns                = Core_time_ns           .Stable
 module Unix                   = Core_unix              .Stable
 module User_and_group         = User_and_group         .Stable
-module Uuid                   = Uuid                   .Stable

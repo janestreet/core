@@ -1,5 +1,6 @@
 
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
@@ -40,13 +41,13 @@ clockid_t caml_clockid_t_of_caml (value clock_type) {
 value caml_clock_getres (value clock_type) {
   struct timespec tp;
   clock_getres (caml_clockid_t_of_caml (clock_type), &tp);
-  return (caml_alloc_int63 (((__int64_t)tp.tv_sec * 1000 * 1000 * 1000) + (__int64_t)tp.tv_nsec));
+  return (caml_alloc_int63 (((int64_t)tp.tv_sec * 1000 * 1000 * 1000) + (int64_t)tp.tv_nsec));
 }
 
 value caml_clock_gettime (value clock_type) {
   struct timespec tp;
   clock_gettime (caml_clockid_t_of_caml (clock_type), &tp);
-  return (caml_alloc_int63 (((__int64_t)tp.tv_sec * 1000 * 1000 * 1000) + (__int64_t)tp.tv_nsec));
+  return (caml_alloc_int63 (((int64_t)tp.tv_sec * 1000 * 1000 * 1000) + (int64_t)tp.tv_nsec));
 }
 
 #endif /* JSC_POSIX_TIMERS */

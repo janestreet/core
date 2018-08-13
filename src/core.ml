@@ -57,7 +57,6 @@ module Time_ns            = Core_time_ns
 module Time_stamp_counter     = Time_stamp_counter
 module Unix                   = Core_unix
 module User_and_group         = User_and_group
-module Uuid                   = Uuid
 module Version_util           = Version_util
 
 (* Can't go in Common for circular-reference reasons *)

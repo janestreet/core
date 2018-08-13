@@ -1554,6 +1554,8 @@ module Execvp_emulation : sig
     -> spawn       : (prog:string -> argv:string list -> 'a)
     -> prog        : string
     -> args        : string list
+    -> ?argv0      : string
+    -> unit
     -> 'a
 
 end = struct
@@ -1581,8 +1583,8 @@ end = struct
     | Enoent_or_similar of exn
     | Ok                of 'a
 
-  let run ~working_dir ~spawn ~prog ~args =
-    let argv = prog :: args in
+  let run ~working_dir ~spawn ~prog ~args ?argv0 () =
+    let argv = (Option.value argv0 ~default:prog)::args in
     let spawn1 candidate =
       match
         (try
@@ -1635,11 +1637,12 @@ end = struct
   ;;
 end
 
-let create_process_env ?working_dir ~prog ~args ~env () =
+let create_process_env ?working_dir ?argv0 ~prog ~args ~env () =
   let env_assignments = env_assignments env in
   Execvp_emulation.run
     ~prog
     ~args
+    ?argv0
     ~working_dir
     ~spawn:(fun ~prog ~argv ->
       create_process_internal
@@ -1647,9 +1650,10 @@ let create_process_env ?working_dir ~prog ~args ~env () =
         ~prog
         ~argv
         ~env:env_assignments)
+    ()
 
-let create_process_env ?working_dir ~prog ~args ~env () =
-  improve (fun () -> create_process_env ?working_dir ~prog ~args ~env ())
+let create_process_env ?working_dir ?argv0 ~prog ~args ~env () =
+  improve (fun () -> create_process_env ?working_dir ?argv0 ~prog ~args ~env ())
     (fun () ->
        (match working_dir with
         | None -> []
