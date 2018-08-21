@@ -9,13 +9,9 @@ build: [
   ["jbuilder" "build" "-p" name "-j" jobs]
 ]
 depends: [
-  "base"
-  "configurator"
   "core_kernel"
-  "ppx_assert"
   "ppx_jane"
   "sexplib"
-  "stdio"
   "base-threads"
   "jbuilder"                {build & >= "1.0+beta18.1"}
   "ocaml-migrate-parsetree" {>= "1.0"}

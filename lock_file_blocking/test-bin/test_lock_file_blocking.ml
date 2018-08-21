@@ -14,7 +14,7 @@ let maybe_die () =
 let nfs_critical_section path ~f =
   let rec obtain () =
     maybe_die ();
-    match Core.Lock_file.Nfs.create path with
+    match Lock_file_blocking.Nfs.create path with
     | Error _e ->
       ignore (Core.Unix.nanosleep 0.0003);
       obtain ()
@@ -22,14 +22,14 @@ let nfs_critical_section path ~f =
   in
   obtain ();
   f ();
-  Core.Lock_file.Nfs.unlock_exn path
+  Lock_file_blocking.Nfs.unlock_exn path
 
 (* not quite a critical section because it only ends when the process dies,
    but close enough *)
 let local_critical_section path ~f =
   let rec obtain () =
     maybe_die ();
-    match Core.Lock_file.create path with
+    match Lock_file_blocking.create path with
     | false ->
       ignore (Core.Unix.nanosleep 0.0003);
       obtain ()

@@ -214,8 +214,7 @@ end
       reason about, since [int]s respect a bunch of arithmetic identities that [float]s
       don't, e.g., [x + (y + z) = (x + y) + z].
 
-
-    - It is available on non-UNIX platforms, including Javascript via js_of_ocaml.
+    Neither [Core.Time_ns] nor [Core.Time] are available in Javascript.
 
     All in all, it would have been nice to have chosen [Time_ns.t] to begin with, but
     we're unlikely to flip everything to [Time_ns.t] in the short term (see comment at the

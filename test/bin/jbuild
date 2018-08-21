@@ -9,7 +9,6 @@
    command_shape_test_child
    command_shape_test_parent
    test_runner
-   test_lock_file
    ))
   (libraries
    (bigbuffer_blocking

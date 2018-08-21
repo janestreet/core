@@ -1,5 +1,5 @@
 open! Core
-open! Lock_file
+open! Lock_file_blocking
 
 let%test_module _ = (module struct
   let lock_file = Filename.temp_file "lock_file" "unit_test"

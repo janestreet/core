@@ -1,8 +1,6 @@
+open! Core
 open! Import
 open! Int.Replace_polymorphic_compare
-open Import_time
-
-module Unix = Core_unix
 
 [%%import "config.h"]
 
@@ -226,7 +224,7 @@ module Nfs = struct
       failwithf
         "Lock_file.Nfs.unlock_safely_exn: unable to unlock %s: %s" lock_path s ()
     in
-    match Core_sys.file_exists ~follow_symlinks:false lock_path with
+    match Sys.file_exists ~follow_symlinks:false lock_path with
     | `Unknown -> error (sprintf "unable to read %s" lock_path)
     | `No      -> ()
     | `Yes     ->

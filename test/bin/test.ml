@@ -31,7 +31,6 @@ let all () =
          Doubly_linked_test.test;
          Float_test.test;
          Fdeque_test.test;
-         Hash_queue_test.test;
          Heap_test.test;
          Interval_test.test;
          Int_conversions_test.test;

@@ -1,9 +1,7 @@
-;; config.h is created atomically by discover.sh to avoid a problem where gcc -MM on some
-;; file that includes config.h reads a partial written file, and fails
 (rule
- ((targets (config.h))
-  (deps    (config/discover.exe thread_id.h))
-  (action  (run ${<} -ocamlc ${OCAMLC}))))
+ ((targets (config.h thread_id.h))
+  (deps ())
+  (action (bash "cp ${findlib:core_kernel.config_h:config.h} ${findlib:core_kernel.config_h:thread_id.h} ."))))
 
 (library
  ((name core)
