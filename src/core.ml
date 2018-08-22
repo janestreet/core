@@ -12,7 +12,6 @@
     - [Command], a richly featured tool for creating command-line programs.
     - [Iobuf], which lets you use contiguous ranges of bytes for I/O purposes.
     - [Linux_ext], providing a wrapper around Linux-specific system calls.
-    - [Mac_address], for managing MAC addresses.
     - [Signal], for handling Unix signals like SIGHUP and SIGKILL.
 
     A few modules in Core don't have any platform-specific functionality but haven't yet
@@ -40,7 +39,6 @@ module Iobuf                  = Iobuf
 module Iobuf_debug            = Iobuf_debug
 module Iobuf_intf             = Iobuf_intf
 module Linux_ext              = Linux_ext
-module Mac_address            = Mac_address
 module Digest                 = Md5 [@@ocaml.deprecated "[since 2017-05] Use Md5 instead."]
 module Mutex                  = Core_mutex
 module Nano_mutex             = Nano_mutex
