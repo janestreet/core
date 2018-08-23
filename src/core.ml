@@ -20,7 +20,6 @@
 
     - [Interval]
     - [Squeue]
-    - [Uuid]
 *)
 (**/**)
 include Core_kernel.Core_kernel_private.Std_kernel

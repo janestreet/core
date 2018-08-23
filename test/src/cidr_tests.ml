@@ -45,7 +45,7 @@ let test_all_matching_addresses cidr_string expected_strings =
   let addresses = all_matching_addresses cidr |> Sequence.to_list in
   let expected = List.map expected_strings ~f:Inet_addr.of_string in
   require [%here]
-    (List.equal ~equal:Inet_addr.equal addresses expected)
+    (List.equal Inet_addr.equal  addresses expected)
     ~if_false_then_print_s:
       (lazy [%message
         "[all_matching_addresses] gave unexpected result"

@@ -75,7 +75,7 @@ let test =
            | _ -> q,l
          in
          inv q;
-         assert (List.equal l (to_list q) ~equal:Int.equal);
+         assert (List.equal Int.equal l (to_list q) );
          q,l)))
   ]
 
