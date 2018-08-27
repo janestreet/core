@@ -66,7 +66,6 @@ module Time    : S_time with module Time := Time
 module Time_ns : S_time with module Time := Time_ns
                          and type t = Time_ns.t t
 
-
 module Float : S with type bound = Float.t
 
 module Int : sig

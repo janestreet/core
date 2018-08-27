@@ -1,4 +1,5 @@
-(** This file is a modified version of unixLabels.mli from the OCaml distribution. *)
+(** This file is a modified version of unixLabels.mli from the OCaml distribution. Many of
+    these functions raise exceptions but do not have a _exn suffixed name. *)
 
 open! Import
 
@@ -2223,7 +2224,6 @@ val mcast_join
 val mcast_leave : ?ifname : string -> File_descr.t -> sockaddr -> unit
 
 
-
 (** [get_mcast_ttl sock] reads the time-to-live value of outgoing multicast packets for
     socket [sock]. *)
 val get_mcast_ttl : File_descr.t -> int
@@ -2336,7 +2336,6 @@ module Ifaddr : sig
 end
 
 val getifaddrs : unit -> Ifaddr.t list
-
 
 module Stable : sig
   module Inet_addr = Inet_addr.Stable
