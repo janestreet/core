@@ -4,6 +4,16 @@ you might want to have a look at Base's
 and Core\_kernel's
 [changelog](https://github.com/janestreet/core_kernel/blob/master/CHANGES.md).
 
+## v0.11.3
+
+- Fix musl compilation (#115, fix #109, @copy)
+
+- Fix inclusion of makedev inLinux on glibc 2.26 (#114, @dark)
+
+## v0.11.2
+
+- Fix compatibility with OCaml 4.07
+
 ## v0.11.1
 
 - Fix compatibility with spawn v0.12.0
