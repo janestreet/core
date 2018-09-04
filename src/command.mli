@@ -25,15 +25,19 @@ module Arg_type : sig
     include module type of struct include Core_kernel.Command.Arg_type.Export end
 
     val time               : Time.t             t
+    val time_ns            : Time_ns.t          t
 
     (** Requires a time zone. *)
     val time_ofday         : Time.Ofday.Zoned.t t
+    val time_ns_ofday      : Core_time_ns.Ofday.Zoned.t t
 
     (** For when the time zone is implied. *)
     val time_ofday_unzoned : Time.Ofday.t       t
+    val time_ns_ofday_unzoned : Time_ns.Ofday.t t
 
     val time_zone          : Time.Zone.t        t
     val time_span          : Time.Span.t        t
+    val time_ns_span       : Time_ns.Span.t        t
 
     (** Uses bash autocompletion. *)
     val file               : string             t

@@ -60,10 +60,14 @@ module Arg_type = struct
     include Arg_type.Export
 
     let time               = create Time.of_string_abs
+    let time_ns            = create Core_time_ns.of_string_abs
     let time_ofday         = create Time.Ofday.Zoned.of_string
+    let time_ns_ofday      = create Core_time_ns.Ofday.Zoned.of_string
     let time_ofday_unzoned = create Time.Ofday.of_string
+    let time_ns_ofday_unzoned = create Time_ns.Ofday.of_string
     let time_zone          = create Time.Zone.of_string
     let time_span          = create Time.Span.of_string
+    let time_ns_span       = create Time_ns.Span.of_string
 
     let ip_address         = create Unix.Inet_addr.of_string
 
