@@ -10,7 +10,6 @@
    command_shape_test_parent
    test_runner
    ))
-  (preprocess (pps (ppx_jane -dont-check-doc-comments-attachment ppxlib.runner)))
   (libraries
    (bigbuffer_blocking
     bin_prot
@@ -20,7 +19,8 @@
     ppx_inline_test.runtime-lib
     quickcheck_deprecated
     sexplib
-    variantslib))))
+    variantslib))
+  (preprocess (pps (ppx_jane ppxlib.runner)))))
 
 
 (jbuild_version 1)

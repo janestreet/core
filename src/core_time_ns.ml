@@ -17,6 +17,8 @@ module Span : sig
 end = struct
   open Time_ns.Span
 
+  let arg_type = Core_kernel.Command.Arg_type.create of_string
+
   let check_range = Private.check_range
 
   module Stable = struct
@@ -195,6 +197,8 @@ let of_string s = of_time (Time.of_string s)
 let to_string_abs t ~zone = Time.to_string_abs ~zone (to_time t)
 let of_string_abs s = of_time (Time.of_string_abs s)
 
+let arg_type = Core_kernel.Command.Arg_type.create of_string_abs
+
 module Option = struct
   type time = t [@@deriving sexp, compare]
 
@@ -292,6 +296,7 @@ let of_date_ofday ~zone date ofday =
 module Ofday = struct
   include Time_ns.Ofday
 
+  let arg_type = Core_kernel.Command.Arg_type.create of_string
 
   let midnight date ~zone = of_date_ofday ~zone date Time.Ofday.start_of_day
 
@@ -389,6 +394,8 @@ module Ofday = struct
         " ";
         Zone.to_string t.zone ]
     ;;
+
+    let arg_type = Core_kernel.Command.Arg_type.create of_string
 
     module With_nonchronological_compare = struct
       type nonrec t = t

@@ -5,8 +5,8 @@
               core
               core_kernel_test
               expect_test_helpers))
-  (preprocess (pps (ppx_jane -dont-check-doc-comments-attachment ppxlib.runner)))
   (preprocessor_deps (config.h))
+  (preprocess (pps (ppx_jane ppxlib.runner)))
 ))
 
 (rule

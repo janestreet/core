@@ -2046,6 +2046,8 @@ module Inet_addr0 = struct
         ]
       ;;
     end)
+
+  let arg_type = Core_kernel.Command.Arg_type.create of_string
 end
 
 module Host = struct

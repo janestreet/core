@@ -10,14 +10,24 @@ module type S = sig
   module Time0 : Time.S_kernel_without_zone
   module Time  : Time.S_kernel with module Time := Time0
 
+  module Span : sig
+    include module type of Time.Span
+
+    val arg_type : t Core_kernel.Command.Arg_type.t
+  end
+
   module Zone  : sig
     include module type of struct include Time.Zone end [@ocaml.remove_aliases]
 
     include Core_zone.Extend_zone with type t := t
+
+    val arg_type : t Core_kernel.Command.Arg_type.t
   end
 
   module Ofday : sig
     include module type of struct include Time.Ofday end [@ocaml.remove_aliases]
+
+    val arg_type : t Core_kernel.Command.Arg_type.t
 
     module Zoned : sig
       (** Sexps look like "(12:01 nyc)"
@@ -28,6 +38,8 @@ module type S = sig
 
       include Pretty_printer.S    with type t := t
       include Stringable          with type t := t (** Strings look like "12:01 nyc" *)
+
+      val arg_type : t Core_kernel.Command.Arg_type.t
 
       val create       : Time.Ofday.t -> Zone.t -> t
       val create_local : Time.Ofday.t ->           t
@@ -55,7 +67,10 @@ module type S = sig
   include (module type of Time
             with type   t     := t
              and module Zone  := Time.Zone
-             and module Ofday := Time.Ofday)
+             and module Ofday := Time.Ofday
+             and module Span  := Time.Span)
+
+  val arg_type : t Core_kernel.Command.Arg_type.t
 
   (** Sexp conversions use the local timezone by default. This can be overridden by
       calling [set_sexp_zone].

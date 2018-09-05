@@ -52,14 +52,24 @@ module Make
     (Time  : Time.S_kernel with module Time := Time0)
 = struct
 
+  module Span = struct
+    include Time.Span
+
+    let arg_type = Core_kernel.Command.Arg_type.create of_string
+  end
+
   module Zone = struct
     include Time.Zone
 
     include (Core_zone : Core_zone.Extend_zone with type t := t)
+
+    let arg_type = Core_kernel.Command.Arg_type.create of_string
   end
 
   module Ofday = struct
     include Time.Ofday
+
+    let arg_type = Core_kernel.Command.Arg_type.create of_string
 
     let now ~zone = Time.to_ofday ~zone (Time.now ())
 
@@ -102,6 +112,8 @@ module Make
           Zone.to_string t.zone ]
       ;;
 
+      let arg_type = Core_kernel.Command.Arg_type.create of_string
+
       module With_nonchronological_compare = struct
         type nonrec t = t
         [@@deriving bin_io, compare, sexp, hash]
@@ -117,7 +129,8 @@ module Make
 
   include (Time : module type of Time
            with module Zone  := Time.Zone
-            and module Ofday := Time.Ofday)
+            and module Ofday := Time.Ofday
+            and module Span  := Time.Span)
 
   let of_tm tm ~zone =
     (* Explicitly ignoring isdst, wday, yday (they are redundant with the other fields
@@ -240,6 +253,8 @@ module Make
 
   let of_string_abs s = of_string_gen ~if_no_timezone:`Fail s
   let of_string s     = of_string_gen ~if_no_timezone:`Local s
+
+  let arg_type = Core_kernel.Command.Arg_type.create of_string_abs
 
   include Pretty_printer.Register (struct
       type nonrec t = t

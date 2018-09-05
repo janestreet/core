@@ -2,6 +2,34 @@ open! Import
 
 include Core_kernel.Filename
 
+let create_arg_type ?key of_string =
+  Core_kernel.Command.Arg_type.create ?key of_string ~complete:(fun _ ~part ->
+    let completions =
+      (* `compgen -f` handles some fiddly things nicely, e.g. completing "foo" and
+         "foo/" appropriately. *)
+      let command = sprintf "bash -c 'compgen -f %s'" part in
+      let chan_in = Unix.open_process_in command in
+      let completions = In_channel.input_lines chan_in in
+      ignore (Unix.close_process_in chan_in);
+      List.map (List.sort ~compare:String.compare completions) ~f:(fun comp ->
+        if Caml.Sys.is_directory comp
+        then comp ^ "/"
+        else comp)
+    in
+    match completions with
+    | [dir] when String.is_suffix dir ~suffix:"/" ->
+      (* If the only match is a directory, we fake out bash here by creating a bogus
+         entry, which the user will never see - it forces bash to push the completion
+         out to the slash. Then when the user hits tab again, they will be at the end
+         of the line, at the directory with a slash and completion will continue into
+         the subdirectory.
+      *)
+      [dir; dir ^ "x"]
+    | _ -> completions
+  )
+
+let arg_type = create_arg_type Fn.id
+
 external realpath : string -> string = "unix_realpath"
 
 let prng = Random.State.make_self_init ~allow_in_tests:true ()

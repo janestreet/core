@@ -1240,6 +1240,8 @@ end
 module Inet_addr : sig
   type t = Unix.inet_addr [@@deriving bin_io, compare, hash, sexp_of]
 
+  val arg_type : t Core_kernel.Command.Arg_type.t
+
   (** [t_of_sexp] is deprecated because it used to block to do a DNS lookup, and we don't
       want a sexp converter to do that.  As we transition away, one can use
       [Blocking_sexp], which has the old behavior. *)

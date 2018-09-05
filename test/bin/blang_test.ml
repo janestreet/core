@@ -18,10 +18,10 @@ let same_sexp b1 b2 =
 let test =
   "blang" >:::
   [ "simplification" >::: [
-      (**)
+      (***)
       "not1" >:: (fun () -> not_ true_ === false_);
       "not2" >:: (fun () -> not_ false_ === true_);
-      (**)
+      (***)
       "and1" >:: (fun () -> and_ [] === true_);
       "and2" >:: (fun () -> and_ [true_] === true_);
       "and3" >:: (fun () -> and_ [true_; base "A"] === base "A");
@@ -38,7 +38,7 @@ let test =
       "and11" >:: (fun () -> and_ [base "A"; base "B"; false_] === false_);
       "and12" >:: (fun () -> and_ [base "A"; false_; base "B"] === false_);
       "and13" >:: (fun () -> and_ [false_; base "A"; base "B"] === false_);
-      (**)
+      (***)
       "or1" >:: (fun () -> or_ [] === false_);
       "or2" >:: (fun () -> or_ [false_] === false_);
       "or3" >:: (fun () -> or_ [false_; base "A"] === base "A");
@@ -55,7 +55,7 @@ let test =
       "or11" >:: (fun () -> or_ [base "A"; base "B"; true_] === true_);
       "or12" >:: (fun () -> or_ [base "A"; true_; base "B"] === true_);
       "or13" >:: (fun () -> or_ [true_; base "A"; base "B"] === true_);
-      (**)
+      (***)
       "if1" >:: (fun () -> if_ true_ (base "A") (base "B") === base "A");
       "if2" >:: (fun () -> if_ false_ (base "A") (base "B") === base "B");
       "if3" >:: (fun () ->
@@ -66,7 +66,7 @@ let test =
         if_ (base "A") (base "B") true_ === or_ [not_ (base "A"); base "B"]);
       "if6" >:: (fun () ->
         if_ (base "A") false_ (base "B") === and_ [not_ (base "A"); base "B"]);
-      (**)
+      (***)
       "ifnot1" >:: (fun () -> if_ (not_ false_) (base "A") (base "B") === base "A");
       "ifnot2" >:: (fun () -> if_ (not_ true_) (base "A") (base "B") === base "B");
     ];
@@ -92,7 +92,7 @@ let test =
     "values" >:: (fun () ->
       let blang1 =
         and_ [
-          if_ (and_ []) (base "this") (base "that"); 
+          if_ (and_ []) (base "this") (base "that");
           or_ [
             if_ (not_ (and_ [])) (base "something") (base "other");
             base "yet another thing";

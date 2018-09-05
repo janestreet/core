@@ -36,3 +36,12 @@ val open_temp_file
 
 val temp_file: ?perm:int -> ?in_dir: string -> string -> string -> string
 val temp_dir : ?perm:int -> ?in_dir: string -> string -> string -> string
+
+(** [create_arg_type]'s resulting [Arg_type.t] does bash autocompletion, via [compgen]. *)
+val create_arg_type
+  :  ?key:'a Univ_map.Multi.Key.t
+  -> (string -> 'a)
+  -> 'a Core_kernel.Command.Arg_type.t
+
+(** [arg_type] is [create_arg_type Fn.id] *)
+val arg_type : string Core_kernel.Command.Arg_type.t

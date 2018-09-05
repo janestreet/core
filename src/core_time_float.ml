@@ -16,12 +16,19 @@ include Hashable.Make_binable (struct
       | exception _ -> T.t_of_sexp sexp
   end)
 
+module Span = struct
+  include Time.Span
+
+  let arg_type = T.Span.arg_type
+end
+
 module Ofday = struct
   include Time.Ofday
 
   module Zoned = T.Ofday.Zoned
 
   let now = T.Ofday.now
+  let arg_type = T.Ofday.arg_type
 end
 
 module Zone = struct
@@ -140,6 +147,7 @@ include (
 include (
   Time : module type of struct include Time end
   with module Ofday  := Time.Ofday
+  with module Span   := Time.Span
   with module Zone   := Time.Zone
   with module Stable := Time.Stable
 )

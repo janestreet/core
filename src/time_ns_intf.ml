@@ -12,6 +12,8 @@ module type Span = sig
   include Identifiable         with type t := t
   include Comparable.With_zero with type t := t
 
+  val arg_type : t Core_kernel.Command.Arg_type.t
+
   (** Similar to {!Time.Span.Parts}. *)
   module Parts : sig
     type t = private
@@ -149,6 +151,8 @@ end
 module type Ofday = sig
   include module type of struct include Time_ns.Ofday end
 
+  val arg_type : t Core_kernel.Command.Arg_type.t
+
   val now : zone:Time.Zone.t -> t
 
   val to_ofday : t -> Time.Ofday.t
@@ -163,6 +167,8 @@ module type Ofday = sig
 
     include Pretty_printer.S with type t := t
     include Stringable       with type t := t (** Strings look like "12:01 nyc" *)
+
+    val arg_type : t Core_kernel.Command.Arg_type.t
 
     val create       : Time_ns.Ofday.t -> Time.Zone.t -> t
     val create_local : Time_ns.Ofday.t                -> t
@@ -226,6 +232,8 @@ module type Time_ns = sig
   type t = Core_kernel.Time_ns.t [@@deriving typerep]
 
   module Span : Span
+
+  val arg_type : t Core_kernel.Command.Arg_type.t
 
   (** [Option.t] is like [t option], except that the value is immediate.  This module
       should mainly be used to avoid allocations. *)
