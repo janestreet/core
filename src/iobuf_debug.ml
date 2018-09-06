@@ -177,6 +177,11 @@ module Make () = struct
       (fun () -> protect_window_and_bounds t ~f)
   ;;
 
+  let protect_window_and_bounds_1 t x ~f =
+    debug "protect_window_and_bounds_1" [t] t [%sexp_of: (_, _) t] [%sexp_of: _]
+      (fun () -> protect_window_and_bounds_1 t x ~f)
+  ;;
+
   let of_string s =
     debug "of_string" []
       s [%sexp_of: string] [%sexp_of: (_, _) t]

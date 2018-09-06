@@ -240,6 +240,32 @@ let protect_window_and_bounds t ~f =
     t.hi_max <- hi_max;
     t.buf <- buf;
     raise exn
+;;
+
+let protect_window_and_bounds_1 t x ~f =
+  let lo = t.lo in
+  let hi = t.hi in
+  let lo_min = t.lo_min in
+  let hi_max = t.hi_max in
+  let buf = t.buf in  (* also mutable *)
+  try
+    t.lo_min <- lo;
+    t.hi_max <- hi;
+    let result = f t x in
+    t.lo <- lo;
+    t.hi <- hi;
+    t.lo_min <- lo_min;
+    t.hi_max <- hi_max;
+    t.buf <- buf;
+    result
+  with exn ->
+    t.lo <- lo;
+    t.hi <- hi;
+    t.lo_min <- lo_min;
+    t.hi_max <- hi_max;
+    t.buf <- buf;
+    raise exn
+;;
 
 let create ~len =
   if len < 0 then

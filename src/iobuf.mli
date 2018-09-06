@@ -221,9 +221,14 @@ val bounded_compact : (read_write, seek) t -> Lo_bound.t -> Hi_bound.t -> unit
 val flip_hi         : (_, seek) t -> unit
 val bounded_flip_hi : (_, seek) t -> Hi_bound.t -> unit
 
-(** [protect_window_and_bounds t ~f] applies [f] to [t] and restores [t]'s bounds and
+(** [protect_window_and_bounds t ~f] calls [f t] and restores [t]'s bounds and
     buffer afterward. *)
 val protect_window_and_bounds : ('rw, no_seek) t -> f:(('rw, seek) t -> 'a) -> 'a
+
+(** [protect_window_and_bounds_1 t x ~f] is a more efficient version of
+    [protect_window_and_bounds t ~f:(fun t -> f t x)]. *)
+val protect_window_and_bounds_1
+  : ('rw, no_seek) t -> 'a -> f:(('rw, seek) t -> 'a -> 'b) -> 'b
 
 (** {2 Getting and setting data}
 

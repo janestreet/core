@@ -482,32 +482,47 @@ sig end =
               assert (resize_fails (Iobuf.length buf + 1))
             end;
             let sub = ref "" in
-            let f (buf : (read, seek) t) =
-              advance buf 3;
-              resize buf ~len:3;
+            let f (buf : (read, seek) t) x =
+              advance buf x;
+              resize buf ~len:x;
               sub := to_string buf;
             in
-            Iobuf.protect_window_and_bounds buf ~f;
-            assert (String.equal (to_string buf) "123abcDEF" && String.equal !sub "abc"))
+            let check_result_and_reset () =
+              assert (String.equal (to_string buf) "123abcDEF" && String.equal !sub "abc");
+              sub := ""
+            in
+            Iobuf.protect_window_and_bounds buf ~f:(fun buf -> f buf 3);
+            check_result_and_reset ();
+            Iobuf.protect_window_and_bounds_1 buf 3 ~f;
+            check_result_and_reset ();
+          )
       ;;
 
-      let%test _ =
+      let%test_unit _ =
         let buf = of_string "123abcDEF" in
         let sub = ref "" in
-        let f (buf : (read, seek) t) =
-          advance buf 3;
-          resize buf ~len:3;
+        let f (buf : (read, seek) t) x =
+          advance buf x;
+          resize buf ~len:x;
           sub := to_string buf;
           raise Caml.Not_found;
         in
-        try
-          Nothing.unreachable_code (Iobuf.protect_window_and_bounds buf ~f)
-        with
-        | Not_found_s _ | Caml.Not_found ->
-          String.equal (to_string buf) "123abcDEF" && String.equal !sub "abc"
+        let test_and_reset f =
+          try Nothing.unreachable_code (f ())
+          with
+          | Not_found_s _ | Caml.Not_found ->
+            assert (String.equal (to_string buf) "123abcDEF" && String.equal !sub "abc");
+            sub := "";
+        in
+        test_and_reset (fun () ->
+          Iobuf.protect_window_and_bounds buf ~f:(fun buf -> f buf 3));
+        test_and_reset (fun () ->
+          Iobuf.protect_window_and_bounds_1 buf 3 ~f);
       ;;
 
       let protect_window_and_bounds = protect_window_and_bounds
+      let protect_window_and_bounds_1 = protect_window_and_bounds_1
+
       let%test_unit _ =
         let test t =
           let n = length t in
@@ -527,6 +542,7 @@ sig end =
         let t = create ~len:10 in
         sub_shared t ~pos:1 |> test
       ;;
+
 
       let to_string = to_string
 
