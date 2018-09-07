@@ -8,46 +8,12 @@ include Core_kernel.Bigstring
 
 exception IOError of int * exn [@@deriving sexp]
 
-external init : unit -> unit = "bigstring_init_stub"
+external init_stub : unit -> unit = "bigstring_init_stub"
 
 let () =
   Callback.register_exception "Bigstring.End_of_file" End_of_file;
   Callback.register_exception "Bigstring.IOError" (IOError (0, Exit));
-  init ()
-
-external aux_create: max_mem_waiting_gc:int -> size:int -> t = "bigstring_alloc"
-
-let create ?max_mem_waiting_gc size =
-  let max_mem_waiting_gc =
-    match max_mem_waiting_gc with
-    | None -> ~-1
-    | Some v -> Float.to_int (Byte_units.bytes v)
-  in
-  if size < 0 then invalid_argf "create: size = %d < 0" size ();
-  aux_create ~max_mem_waiting_gc ~size
-
-let length = Array1.dim
-
-external is_mmapped : t -> bool = "bigstring_is_mmapped_stub" [@@noalloc]
-
-let init n ~f =
-  let t = create n in
-  for i = 0 to n - 1; do
-    t.{i} <- f i;
-  done;
-  t
-;;
-
-let check_args ~loc ~pos ~len (bstr : t) =
-  if pos < 0 then invalid_arg (loc ^ ": pos < 0");
-  if len < 0 then invalid_arg (loc ^ ": len < 0");
-  let bstr_len = length bstr in
-  if bstr_len < pos + len then
-    invalid_arg (sprintf "Bigstring.%s: length(bstr) < pos + len" loc)
-
-let get_opt_len bstr ~pos = function
-  | Some len -> len
-  | None -> length bstr - pos
+  init_stub ()
 
 let check_min_len ~loc ~len = function
   | None -> 0
@@ -59,10 +25,6 @@ let check_min_len ~loc ~len = function
       let msg = sprintf "%s: min_len (%d) < 0" loc min_len in
       invalid_arg msg);
     min_len
-
-let sub_shared ?(pos = 0) ?len (bstr : t) =
-  let len = get_opt_len bstr ~pos len in
-  Array1.sub bstr pos len
 
 (* Input functions *)
 

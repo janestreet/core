@@ -31,7 +31,6 @@ module Sing = struct
     [@@deriving sexp]
 
     let of_string x = t_of_sexp (Sexp.Atom x)
-
     let arg_type = Command.Arg_type.create of_string
   end
 
@@ -87,7 +86,8 @@ module Hg_cat = struct
     Command.basic
       ~summary:"cat a file from hg history"
       (let open Command.Let_syntax in
-       let%map_open revision = revision_flag and file = anon ("FILE" %: string) in
+       let%map_open revision = revision_flag
+       and file = anon ("FILE" %: string) in
        fun () -> ignore (revision, file))
   ;;
 end
