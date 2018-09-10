@@ -8,17 +8,15 @@ type t [@@deriving sexp_of]
 (** {6 Thread creation and termination} *)
 
 val create : ('a -> 'b) -> 'a -> t
-(** [Thread.create funct arg] creates a new thread of control,
-    in which the function application [funct arg]
-    is executed concurrently with the other threads of the program.
-    The application of [Thread.create]
-    returns the handle of the newly created thread.
-    The new thread terminates when the application [funct arg]
-    returns, either normally or by raising an uncaught exception.
-    In the latter case, the exception is printed on standard error,
-    but not propagated back to the parent thread. Similarly, the
-    result of the application [funct arg] is discarded and not
-    directly accessible to the parent thread. *)
+(** [Thread.create funct arg] creates a new thread of control, in which the
+    function application [funct arg] is executed concurrently with the other
+    threads of the program. The application of [Thread.create] returns the
+    handle of the newly created thread. The new thread terminates when the
+    application [funct arg] returns, either normally or by raising an uncaught
+    exception. In the latter case, the exception is printed on standard error,
+    but not propagated back to the parent thread. Similarly, the result of the
+    application [funct arg] is discarded and not directly accessible to the
+    parent thread. *)
 
 val self : unit -> t
 (** Return the thread currently executing. *)
@@ -119,3 +117,40 @@ val num_threads : unit -> int option
 
 (** [block_forever ()] will block the calling thread forever. *)
 val block_forever : unit -> 'a
+
+(** {2 Non-portable pthread extensions}
+
+    The following operations may not be supported on all platforms. Before you
+    can use them, you must first check that they do not contain error values.
+    For example, if you wanted to use [setaffinity_self_exn] then you would
+    first do:
+
+    {[
+      let setaffinity_self_exn =
+        match Thread.setaffinity_self_exn with
+        | Ok f -> f
+        | Error err -> (* raise or provide a default implementation. *)
+    ]}
+
+    If your application requires that one of these operations be present then,
+    you could just do this instead:
+
+    {[
+      let setaffinity_self_exn = Or_error.ok_exn Thread.setaffinity_self_exn
+    ]}
+*)
+
+(** Sets the core affinity of the currently-running thread to the set
+    specified.
+
+    This function is implemented using [pthread_setaffinity_np(3)], when
+    available. See the man page for situations when this function may return an
+    error, and therefore raise. *)
+val setaffinity_self_exn : (Int.Set.t -> unit) Or_error.t
+
+(** Gets the core affinity of the currently-running thread.
+
+    This function is implemented using [pthread_getaffinity_np(3)], when
+    available. See the man page for situations when this function may return an
+    error, and therefore raise. *)
+val getaffinity_self_exn : (unit      -> Int.Set.t) Or_error.t

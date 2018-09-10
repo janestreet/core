@@ -56,3 +56,35 @@ let num_threads () =
 let block_forever () =
   Event.sync (Event.receive (Event.new_channel ()))
 ;;
+
+[%%import "config.h"]
+
+[%%ifdef JSC_PTHREAD_NP]
+external setaffinity_self_exn : int Array.t -> unit        = "pthread_np_setaffinity_self"
+external getaffinity_self_exn : unit        -> int Array.t = "pthread_np_getaffinity_self"
+
+let setaffinity_self_exn =
+  let setaffinity_self_exn cpuset =
+    setaffinity_self_exn (Int.Set.to_array cpuset)
+  in
+  Ok setaffinity_self_exn
+;;
+
+let getaffinity_self_exn =
+  let getaffinity_self_exn () =
+    Int.Set.of_array (getaffinity_self_exn ())
+  in
+  Ok getaffinity_self_exn
+;;
+[%%else]
+
+let not_supported name =
+  Error.of_string
+    (sprintf
+       "%s: non-portable pthread extension is not supported on this platform"
+       name)
+;;
+
+let setaffinity_self_exn = Error (not_supported "pthread_setaffinity_np")
+let getaffinity_self_exn = Error (not_supported "pthread_getaffinity_np")
+[%%endif]

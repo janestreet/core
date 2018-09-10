@@ -20,6 +20,7 @@
     iobuf_stubs
     linux_ext_stubs
     ocaml_utils_stubs
+    pthread_np_stubs
     recvmmsg
     signal_stubs
     time_stamp_counter_stubs
