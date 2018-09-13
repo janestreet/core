@@ -131,17 +131,17 @@ end
 
 include (
   T : module type of struct include T end
-  with module Table                        := T.Table
-  with module Hash_set                     := T.Hash_set
-  with module Hash_queue                   := T.Hash_queue
-  with module Span                         := T.Span
-  with module Ofday                        := T.Ofday
-  with module Replace_polymorphic_compare  := T.Replace_polymorphic_compare
-  with module Relative_to_unspecified_zone := T.Relative_to_unspecified_zone
-  with module Zone                         := T.Zone
-  with type   underlying                   := T.underlying
-  with type   t                            := T.t
-  with type   comparator_witness           := T.comparator_witness
+  with module Table                       := T.Table
+  with module Hash_set                    := T.Hash_set
+  with module Hash_queue                  := T.Hash_queue
+  with module Span                        := T.Span
+  with module Ofday                       := T.Ofday
+  with module Replace_polymorphic_compare := T.Replace_polymorphic_compare
+  with module Date_and_ofday              := T.Date_and_ofday
+  with module Zone                        := T.Zone
+  with type   underlying                  := T.underlying
+  with type   t                           := T.t
+  with type   comparator_witness          := T.comparator_witness
 )
 
 include (

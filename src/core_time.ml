@@ -181,8 +181,8 @@ module Make
 
   let format t s ~zone =
     let epoch_time =
-      Zone.relative_time_of_absolute_time zone t
-      |> Relative_to_unspecified_zone.to_span_since_epoch
+      Zone.date_and_ofday_of_absolute_time zone t
+      |> Date_and_ofday.to_synthetic_span_since_epoch
       |> Span.to_sec
     in
     Core_unix.strftime (Unix.gmtime epoch_time) s

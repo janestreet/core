@@ -62,8 +62,8 @@ let add_random_string_round_trip_test state s1 =
   let s1 =
     let t = Time.of_string s1 in
     let utc_epoch =
-      Time.Zone.relative_time_of_absolute_time zone t
-      |> Time.Zone.absolute_time_of_relative_time Time.Zone.utc
+      Time.Zone.date_and_ofday_of_absolute_time zone t
+      |> Time.Zone.absolute_time_of_date_and_ofday Time.Zone.utc
     in
     let f =
       Time.diff utc_epoch t
