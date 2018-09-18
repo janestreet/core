@@ -101,17 +101,56 @@ let%test_module "Cmdline.extend" =
     let%test _ = test ["zzz"]        ["x"; "y"; "z"]   ["x"; "y"; "z"; "default"]
   end)
 
-let%test_unit "choose_one" =
-  let open Param in
-  let should_raise reason flags =
-    match Param.choose_one flags ~if_nothing_chosen:`Raise with
-    | exception _ -> ()
-    | _ -> failwiths "failed to raise despite" reason [%sexp_of: string]
+let%expect_test "[choose_one] duplicate name" =
+  show_raise ~hide_positions:true (fun () ->
+    let open Param in
+    choose_one
+      [ flag "-foo" (optional int) ~doc:""
+      ; flag "-foo" (optional int) ~doc:""
+      ]
+      ~if_nothing_chosen:`Raise);
+  [%expect {|
+    (raised (
+      "Command.Spec.choose_one called with duplicate name"
+      -foo
+      lib/core_kernel/src/command.ml:LINE:COL)) |}];
+;;
+
+let%expect_test "[choose_one]" =
+  let test ?default arguments =
+    Command.run ~argv:("__exe_name__" :: arguments)
+      (Command.basic ~summary:""
+         (let open Command.Let_syntax in
+          let%map_open arg =
+            choose_one
+              ~if_nothing_chosen:
+                (match default with
+                 | Some x -> `Default_to x
+                 | None -> `Raise)
+              (List.map [ "-foo"; "-bar" ] ~f:(fun name ->
+                 match%map flag name no_arg ~doc:"" with
+                 | true -> Some name
+                 | false -> None))
+          in
+          fun () ->
+            print_s [%message (arg : string)]))
   in
-  should_raise "duplicate names" [
-    flag "-foo" (optional int) ~doc:"";
-    flag "-foo" (optional int) ~doc:"";
-  ];
+  test [];
+  [%expect {|
+    Error parsing command line.  Run with -help for usage information.
+    Must pass one of these: -foo, -bar
+    ("exit called" (status 1)) |}];
+  test [] ~default:"default";
+  [%expect {| (arg default) |}];
+  test [ "-foo" ];
+  [%expect {| (arg -foo) |}];
+  test [ "-bar" ];
+  [%expect {| (arg -bar) |}];
+  test [ "-foo"; "-bar" ];
+  [%expect {|
+    Error parsing command line.  Run with -help for usage information.
+    Cannot pass both -bar and -foo
+    ("exit called" (status 1)) |}]
 ;;
 
 let%test_unit _ = [
@@ -225,3 +264,29 @@ let%test_unit "multiple runs" =
   test ["baz"]               (None,    "baz");
 ;;
 
+let%expect_test "[?verbose_on_parse_error]" =
+  let test ?verbose_on_parse_error ( )=
+    Command.run ~argv:["__exe_name__"] ?verbose_on_parse_error
+      (Command.basic ~summary:""
+         (let open Command.Let_syntax in
+          let%map_open () =
+            let%map () = return () in
+            raise_s [%message "Fail!"]
+          in
+          fun () -> ()))
+  in
+  test ?verbose_on_parse_error:None ();
+  [%expect {|
+    Error parsing command line.  Run with -help for usage information.
+    Fail!
+    ("exit called" (status 1)) |}];
+  test ~verbose_on_parse_error:true ();
+  [%expect {|
+    Error parsing command line.  Run with -help for usage information.
+    Fail!
+    ("exit called" (status 1)) |}];
+  test ~verbose_on_parse_error:false ();
+  [%expect {|
+    Fail!
+    ("exit called" (status 1)) |}];
+;;

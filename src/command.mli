@@ -23,9 +23,14 @@ val shape : t -> Shape.t
     Then if a user ran [exe f b], [extend] would be passed [["foo"; "bar"]] and ["-baz"]
     would be appended to the command line for processing by [bar].  This can be used to
     add a default flags section to a user config file.
+
+    [verbose_on_parse_error] controls whether to print a line suggesting the user try the
+    "-help" flag when an exception is raised while parsing the arguments.  By default it
+    is true.
 *)
 val run
-  :  ?version    : string
+  :  ?verbose_on_parse_error : bool
+  -> ?version    : string
   -> ?build_info : string
   -> ?argv       : string list
   -> ?extend     : (string list -> string list)
