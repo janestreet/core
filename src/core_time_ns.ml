@@ -256,7 +256,7 @@ module Option = struct
 end
 
 (* Note: This is FIX standard millisecond precision. You should use
-   [Zero.Time_ns_with_fast_accurate_to_of_string] if you need nanosecond precision. *)
+   [Time_ns_with_fast_accurate_to_of_string] if you need nanosecond precision. *)
 let to_string_fix_proto zone t = Time.to_string_fix_proto zone (to_time t)
 let of_string_fix_proto zone s = of_time (Time.of_string_fix_proto zone s)
 
