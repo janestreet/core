@@ -1063,7 +1063,8 @@ let with_file ?perm file ~mode ~f = with_close (openfile file ~mode ?perm) ~f
 
 let read_write f ?restart ?pos ?len fd ~buf =
   let pos, len =
-    Ordered_collection_common.get_pos_len_exn ?pos ?len ~length:(Bytes.length buf)
+    Ordered_collection_common.get_pos_len_exn () ?pos ?len
+      ~total_length:(Bytes.length buf)
   in
   improve ?restart (fun () -> f fd ~buf ~pos ~len)
     (fun () -> [fd_r fd; ("pos", Int.sexp_of_t pos); len_r len])
@@ -1071,7 +1072,8 @@ let read_write f ?restart ?pos ?len fd ~buf =
 
 let read_write_string f ?restart ?pos ?len fd ~buf =
   let pos, len =
-    Ordered_collection_common.get_pos_len_exn ?pos ?len ~length:(String.length buf)
+    Ordered_collection_common.get_pos_len_exn () ?pos ?len
+      ~total_length:(String.length buf)
   in
   improve ?restart (fun () -> f fd ~buf ~pos ~len)
     (fun () -> [fd_r fd; ("pos", Int.sexp_of_t pos); len_r len])

@@ -1028,14 +1028,18 @@ module Expert = struct
   let lo_min t = t.lo_min
 
   let to_bigstring_shared ?pos ?len t =
-    let t_len = length t in
-    let pos, len = Ordered_collection_common.get_pos_len_exn ?pos ?len ~length:t_len in
+    let pos, len =
+      Ordered_collection_common.get_pos_len_exn () ?pos ?len
+        ~total_length:(length t)
+    in
     Bigstring.sub_shared t.buf ~pos:(t.lo + pos) ~len
   ;;
 
   let to_iovec_shared ?pos ?len t =
-    let t_len = length t in
-    let pos, len = Ordered_collection_common.get_pos_len_exn ?pos ?len ~length:t_len in
+    let pos, len =
+      Ordered_collection_common.get_pos_len_exn () ?pos ?len
+        ~total_length:(length t)
+    in
     Unix.IOVec.of_bigstring t.buf ~pos:(t.lo + pos) ~len
   ;;
 
