@@ -138,7 +138,7 @@ let%expect_test "[choose_one]" =
   test [];
   [%expect {|
     Error parsing command line.  Run with -help for usage information.
-    Must pass one of these: -foo, -bar
+    Must pass one of these: -foo; -bar
     ("exit called" (status 1)) |}];
   test [] ~default:"default";
   [%expect {| (arg default) |}];
@@ -151,6 +151,46 @@ let%expect_test "[choose_one]" =
     Error parsing command line.  Run with -help for usage information.
     Cannot pass both -bar and -foo
     ("exit called" (status 1)) |}]
+;;
+
+let%expect_test "nested [choose_one]" =
+  let test arguments =
+    Command.run ~argv:("__exe_name__" :: arguments)
+      (Command.basic ~summary:""
+         (let open Command.Let_syntax in
+          let%map_open arg =
+            choose_one ~if_nothing_chosen:`Raise
+              [ (let%map foo = flag "foo" no_arg ~doc:""
+                 and bar = flag "bar" no_arg ~doc:""
+                 in
+                 if foo || bar
+                 then Some (`Foo_bar (foo, bar))
+                 else None)
+              ; (let%map baz = flag "baz" no_arg ~doc:""
+                 and qux = flag "qux" no_arg ~doc:""
+                 in
+                 if baz || qux
+                 then Some (`Baz_qux (baz, qux))
+                 else None) ]
+          in
+          fun () ->
+            print_s
+              [%message (arg : [`Foo_bar of bool * bool | `Baz_qux of bool * bool])]))
+  in
+  test [];
+  [%expect {|
+    Error parsing command line.  Run with -help for usage information.
+    Must pass one of these: -bar,-foo; -baz,-qux
+    ("exit called" (status 1)) |}];
+  test [ "-foo"; "-baz" ];
+  [%expect {|
+    Error parsing command line.  Run with -help for usage information.
+    Cannot pass both -baz,-qux and -bar,-foo
+    ("exit called" (status 1)) |}];
+  test [ "-foo" ];
+  [%expect {| (arg (Foo_bar (true false))) |}];
+  test [ "-bar" ];
+  [%expect {| (arg (Foo_bar (false true))) |}]
 ;;
 
 let%test_unit _ = [
