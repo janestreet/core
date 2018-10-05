@@ -46,7 +46,7 @@ include Invariant.S2 with type ('rw, 'seek) t := ('rw, 'seek) t
 (** Provides a [Window.Hexdump] submodule that renders the contents of [t]'s window. *)
 module Window : Hexdump.S2 with type ('rw, 'seek) t := ('rw, 'seek) t
 
-(** Provides a [Window.Hexdump] submodule that renders the contents of [t]'s limits. *)
+(** Provides a [Limits.Hexdump] submodule that renders the contents of [t]'s limits. *)
 module Limits : Hexdump.S2 with type ('rw, 'seek) t := ('rw, 'seek) t
 
 (** Provides a [Hexdump] submodule that renders the contents of [t]'s window and limits
