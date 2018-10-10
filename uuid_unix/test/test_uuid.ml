@@ -1,6 +1,7 @@
 open! Core
 open! Expect_test_helpers_kernel
 open! Uuid
+open! Uuid_unix
 
 let%test_unit "nil is valid" =
   Private.(is_valid_exn nil)

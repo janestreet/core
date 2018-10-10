@@ -1,7 +1,6 @@
 (library
- ((name uuid)
-  (public_name core.uuid)
-  (libraries (core_kernel unix))
+ ((name uuid_unix_bench)
+  (libraries (uuid_unix))
   (preprocess (pps (ppx_jane ppxlib.runner)))))
 
 (jbuild_version 1)

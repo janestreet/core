@@ -203,28 +203,6 @@ let%test_unit _ = [
   [%test_eq: string] (abs_path ~dir path) expected)
 ;;
 
-(* testing claims made in the mli about order of evaluation and [flags_of_args_exn] *)
-let%test_module "Command.Spec.flags_of_args_exn" =
-  (module struct
-
-    let args q = [
-      ( "flag1", Arg.Unit (fun () -> Queue.enqueue q 1), "enqueue 1");
-      ( "flag2", Arg.Unit (fun () -> Queue.enqueue q 2), "enqueue 2");
-      ( "flag3", Arg.Unit (fun () -> Queue.enqueue q 3), "enqueue 3");
-    ]
-
-    let parse argv =
-      let q = Queue.create () in
-      let command = basic_spec ~summary:"" (Spec.flags_of_args_exn (args q)) Fn.id in
-      run ~argv command;
-      Queue.to_list q
-
-    let%test _ = parse ["foo.exe";"-flag1";"-flag2";"-flag3"] = [1;2;3]
-    let%test _ = parse ["foo.exe";"-flag2";"-flag3";"-flag1"] = [1;2;3]
-    let%test _ = parse ["foo.exe";"-flag3";"-flag2";"-flag1"] = [1;2;3]
-
-  end)
-
 let%expect_test "choose_one strings" =
   let open Param in
   let to_string = Spec.to_string_for_choose_one in
