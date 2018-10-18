@@ -5,9 +5,13 @@ include Core_time_intf.S
    and module Time  := Time
 
 module Stable : sig
-  module V1 : Stable_comparable.V1
-    with type t = t
-    with type comparator_witness = comparator_witness
+  module V1 : sig
+    type nonrec t = t [@@deriving hash]
+    type nonrec comparator_witness = comparator_witness
+    include Stable_comparable.V1
+      with type t := t
+      with type comparator_witness := comparator_witness
+  end
 
   (** Provides a sexp representation that is independent of the time zone of the machine
       writing it.
@@ -18,9 +22,13 @@ module Stable : sig
     module V1 : Stable_comparable.V1
       with type t = t
       with type comparator_witness = comparator_witness
-    module V2 : Stable_comparable.V1
-      with type t = t
-      with type comparator_witness = comparator_witness
+    module V2 : sig
+      type nonrec t = t [@@deriving hash]
+      type nonrec comparator_witness = comparator_witness
+      include Stable_comparable.V1
+        with type t := t
+        with type comparator_witness := comparator_witness
+    end
   end
 
   (** Provides a sexp representation where all sexps must include a timezone (in contrast

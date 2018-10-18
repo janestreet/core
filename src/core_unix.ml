@@ -828,30 +828,34 @@ let execvpe ~prog ~argv ~env =
 type env =
   [ `Replace of (string * string) list
   | `Extend of (string * string) list
+  | `Override of (string * string option) list
   | `Replace_raw of string list
   ]
 [@@deriving sexp]
 
 let env_map env =
-  let current, env =
-    match env with
-    | `Replace env -> [], env
-    | `Extend env ->
-      let current =
-        List.map (Array.to_list (Unix.environment ()))
-          ~f:(fun s -> String.lsplit2_exn s ~on:'=')
-      in
-      current, env
+  let current () =
+    List.map (Array.to_list (Unix.environment ()))
+      ~f:(fun s -> String.lsplit2_exn s ~on:'=')
   in
-  List.fold_left (current @ env) ~init:String.Map.empty
-    ~f:(fun map (key, data) -> Map.set map ~key ~data)
+  let map_of_list list = String.Map.of_alist_reduce list ~f:(fun _ x -> x) in
+  match env with
+  | `Replace env -> map_of_list env
+  | `Extend extend -> map_of_list (current () @ extend)
+  | `Override overrides ->
+    List.fold_left overrides ~init:(map_of_list (current ()))
+      ~f:(fun acc (key, v) ->
+        match v with
+        | None -> Map.remove acc key
+        | Some data -> Map.set acc ~key ~data)
 ;;
 
 let env_assignments env =
   match env with
   | `Replace_raw env -> env
   | `Replace _
-  | `Extend  _ as env ->
+  | `Extend  _
+  | `Override _ as env ->
     Map.fold (env_map env) ~init:[]
       ~f:(fun ~key ~data acc -> (key ^ "=" ^ data) :: acc)
 ;;

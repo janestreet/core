@@ -276,17 +276,19 @@ module Exit_or_signal_or_stop : sig
   val or_error : t -> unit Or_error.t
 end
 
-(** [env] is used to control the environment of a child process, and can take three forms.
+(** [env] is used to control the environment of a child process, and can take four forms.
     [`Replace_raw] replaces the entire environment with strings in the Unix style, like
     ["VARIABLE_NAME=value"].  [`Replace] has the same effect as [`Replace_raw], but using
     bindings represented as ["VARIABLE_NAME", "value"].  [`Extend] adds entries to the
-    existing environment rather than replacing the whole environment.
+    existing environment rather than replacing the whole environment. [`Override] is
+    similar to [`Extend] but allows unsetting variables too.
 
     If [env] contains multiple bindings for the same variable, the last takes precedence.
     In the case of [`Extend], bindings in [env] take precedence over the existing
     environment. *)
 type env = [ `Replace of (string * string) list
            | `Extend of (string * string) list
+           | `Override of (string * string option) list
            | `Replace_raw of string list
            ]
 [@@deriving sexp]

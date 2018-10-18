@@ -37,17 +37,25 @@ let%test _ =
 let%test_unit "fork_exec ~env last binding takes precedence" =
   protectx ~finally:remove (Filename.temp_file "test" "fork_exec.env.last-wins")
     ~f:(fun temp_file ->
+      let var_in_child env =
+        waitpid_exn
+          (fork_exec () ~env ~prog:"sh"
+             ~argv:[ "sh"; "-c"; "echo -n ${VAR-undefined} > " ^ temp_file ]);
+        In_channel.read_all temp_file
+      in
       let env = [ "VAR", "first"; "VAR", "last" ] in
       List.iter
         [ `Replace_raw (List.map env ~f:(fun (v, s) -> v ^ "=" ^ s))
         ; `Replace env
         ; `Extend env
+        ; `Override (List.map env ~f:(fun (v, s) -> v, Some s))
         ]
         ~f:(fun env ->
-          waitpid_exn
-            (fork_exec () ~env ~prog:"sh"
-               ~argv:[ "sh"; "-c"; "echo $VAR > " ^ temp_file ]);
-          [%test_result: string] ~expect:"last\n" (In_channel.read_all temp_file)))
+          [%test_result: string] ~expect:"last" (var_in_child env));
+      Unix.putenv ~key:"VAR" ~data:"in-process";
+      let env = `Override [("VAR", None)] in
+      [%test_result: string] ~expect:"undefined" (var_in_child env);
+    )
 
 let%test_module _ =
   (module struct
