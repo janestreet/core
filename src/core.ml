@@ -58,12 +58,6 @@ module Version_util           = Version_util
 let sec = Time.Span.of_sec
 let ( ^/ ) = Core_filename.concat
 
-(* See [Core_kernel.Std_kernel] for the reason that we perform top-level side effects in
-   the [Std] modules. *)
-let () =
-  Am_running_inline_test.initialize_module ()
-;;
-
 module Core_private = struct
   module Core_zone = Core_zone
 end

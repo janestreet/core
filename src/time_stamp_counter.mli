@@ -105,6 +105,7 @@ module Calibrator : sig
 
     https://opensource.janestreet.com/standards/#private-submodules *)
   module Private : sig
+    val create_using : tsc:tsc -> time:float -> samples:(tsc * float) list -> t
     val calibrate_using : t -> tsc:tsc -> time:float -> am_initializing:bool -> unit
     val initialize : t -> (tsc * float) list -> unit
     val nanos_per_cycle : t -> float
@@ -147,7 +148,9 @@ val add             : t -> Span.t -> t
 
 val to_int63 : t -> Int63.t
 
-(** It is guaranteed that repeated calls will return nondecreasing [Time.t] values. *)
+(**
+
+   It is guaranteed that repeated calls will return nondecreasing [Time.t] values. *)
 val to_time : ?calibrator:Calibrator.t -> t -> Time.t
 
 val to_time_ns : ?calibrator:Calibrator.t -> t -> Time_ns.t

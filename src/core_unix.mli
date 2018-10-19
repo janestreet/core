@@ -214,8 +214,7 @@ val retry_until_no_eintr : (unit -> 'a) -> 'a
 
 (** {6 Access to the process environment}
 
-    If you're looking for [getenv], that's in the Sys module.
-*)
+    If you're looking for [getenv], that's in the Sys module. *)
 
 (** Return the process environment, as an array of strings
     with the format ``variable=value''.  The returned array
@@ -228,11 +227,9 @@ val environment : unit -> string array
     and [data] its new associated value. *)
 val putenv : key : string -> data : string -> unit
 
-(**
-   [unsetenv name] deletes the variable [name] from the environment.
+(** [unsetenv name] deletes the variable [name] from the environment.
 
-   EINVAL [name] contained an ’=’ or an '\000' character.
-*)
+    EINVAL [name] contained an ’=’ or an '\000' character. *)
 val unsetenv : string -> unit
 
 (** {6 Process handling} *)
@@ -957,14 +954,12 @@ val open_process_full : string -> env:string array -> Process_channels.t
 
 (** Close channels opened by {!UnixLabels.open_process_in},
     wait for the associated command to terminate,
-    and return its termination status.
-*)
+    and return its termination status. *)
 val close_process_in : In_channel.t -> Exit_or_signal.t
 
 (** Close channels opened by {!UnixLabels.open_process_out},
     wait for the associated command to terminate,
-    and return its termination status.
-*)
+    and return its termination status. *)
 val close_process_out : Out_channel.t -> Exit_or_signal.t
 
 (** Close channels opened by {!UnixLabels.open_process},

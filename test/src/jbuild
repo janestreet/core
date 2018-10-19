@@ -1,6 +1,7 @@
 (library
  ((name core_test)
-  (libraries (bigbuffer_blocking
+  (libraries (async
+              bigbuffer_blocking
               bignum
               core
               core_kernel_test

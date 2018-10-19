@@ -28,8 +28,8 @@
    frequency of TSC.  The second, and probably the more significant one, is noise in real
    time, i.e. noise in the [Time.now ()] call.
 
-   (1) [Time.now ()] calls suffer from the overhead of transition from the the user
-   program to a kernel vdso and
+   (1) [Time.now ()] calls suffer from the overhead of transition from the user program to
+   a kernel vdso and
 
    (2) It is affected by NTP updates.
 
@@ -174,10 +174,11 @@ module Calibrator = struct
      the duration of time, i.e. longer time samples are given more weight and shorter time
      samples are given lesser weight. *)
   let alpha_for_interval time_diff =
-    1. -. exp (-0.5 *. time_diff)
+    0. +. (Float.max 0. (1. -. exp (-0.5 *. time_diff)))
   ;;
 
   let catchup_cycles                  = 1E9
+
   let initial_alpha                   = 1.
 
   (* performance hack: This function is the same as
@@ -297,18 +298,17 @@ module Calibrator = struct
     loop num_samples interval
   ;;
 
-  let create () =
-    let now_float = now_float () in
+  let create_using ~tsc ~time ~samples =
     let t =
       { monotonic_until_tsc           = Int63.zero
-      ; tsc                           = now ()
+      ; tsc                           = tsc
       ; time_nanos                    = Int63.zero
       ; monotonic_time_nanos          = Int63.zero
       ; floats                        =
-          { monotonic_time            = now_float
+          { monotonic_time            = time
           ; sec_per_cycle             = 0.
           ; monotonic_sec_per_cycle   = 0.
-          ; time                      = now_float
+          ; time                      = time
           ; ewma_time_tsc             = 0.
           ; ewma_tsc_square           = 0.
           ; ewma_time                 = 0.
@@ -318,8 +318,14 @@ module Calibrator = struct
           }
       }
     in
-    initialize t (collect_samples ~num_samples:3 ~interval:0.0005);
+    initialize t samples;
     t
+
+  let create () =
+    let time = now_float () in
+    let tsc = now () in
+    let samples = collect_samples ~num_samples:3 ~interval:0.0005 in
+    create_using ~tsc ~time ~samples
   ;;
 
   (* Creating a calibrator takes about 3ms and is fast enough that we don't mind paying
@@ -337,6 +343,7 @@ module Calibrator = struct
   ;;
 
   module Private = struct
+    let create_using = create_using
     let calibrate_using = calibrate_using
     let initialize = initialize
     let nanos_per_cycle t = t.floats.nanos_per_cycle
@@ -358,6 +365,8 @@ module Calibrator = struct
 
   let tsc_to_nanos_since_epoch _t tsc = tsc
 
+  let create_using ~tsc:_ ~time:_ ~samples:_ = ()
+
   let create () = ()
 
   let initialize _t _samples = ()
@@ -373,6 +382,7 @@ Time_stamp_counter.Calibrator.cpu_mhz is not defined for 32-bit platforms"
   ;;
 
   module Private = struct
+    let create_using = create_using
     let calibrate_using = calibrate_using
     let initialize = initialize
     let nanos_per_cycle _ = 1.
