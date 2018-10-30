@@ -348,8 +348,8 @@ module T_src = struct
   type t = T.t [@@deriving sexp_of]
   let create = create
   let length = length
-  let get t pos   = bigstring_unsafe_get t.buf ~pos:(buf_pos_exn t ~len:1 ~pos)
-  let set t pos c = bigstring_unsafe_set t.buf ~pos:(buf_pos_exn t ~len:1 ~pos) c
+  let[@inline] get t pos   = bigstring_unsafe_get t.buf ~pos:(buf_pos_exn t ~len:1 ~pos)
+  let[@inline] set t pos c = bigstring_unsafe_set t.buf ~pos:(buf_pos_exn t ~len:1 ~pos) c
 end
 
 module Bytes_dst = struct
@@ -447,7 +447,7 @@ module Consume = struct
       unsafe_advance src len;
       dst
   end
-  module To_bytes    = To (Bytes_dst)
+  module To_bytes     = To (Bytes_dst)
   module To_bigstring = To (Bigstring_dst)
 
   module To_string = struct
@@ -746,7 +746,7 @@ end
 
 module Peek = struct
   type src = (read, no_seek) t
-  module To_bytes    = Test_blit.Make_distinct_and_test (Char_elt) (T_src) (Bytes_dst)
+  module To_bytes     = Test_blit.Make_distinct_and_test (Char_elt) (T_src) (Bytes_dst)
   module To_bigstring = Test_blit.Make_distinct_and_test (Char_elt) (T_src) (Bigstring_dst)
 
   module To_string = struct

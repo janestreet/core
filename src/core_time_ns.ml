@@ -170,125 +170,24 @@ let rec pause_forever () =
   pause_forever ()
 ;;
 
-module Stable0 = struct
-  module V1 = struct
-    module T = struct
-      type nonrec t = t [@@deriving bin_io, compare]
+let to_string t = to_string_abs t ~zone:(Lazy.force Zone.local)
 
-      let sexp_of_t (t : t) : Sexp.t = Time.Stable.V1.sexp_of_t (to_time t)
-      let t_of_sexp s : t = of_time (Time.Stable.V1.t_of_sexp s)
+exception Time_string_not_absolute of string [@@deriving sexp]
 
-      let of_int63_exn t =
-        of_span_since_epoch (Span.check_range (Span.of_int63_ns t))
+let of_string_gen ~if_no_timezone s =
+  let default_zone () =
+    match if_no_timezone with
+    | `Fail              -> raise (Time_string_not_absolute s);
+    | `Local             -> Lazy.force Zone.local
+    | `Use_this_one zone -> zone
+  in
+  of_string_gen ~default_zone ~find_zone:Zone.find_exn s
+;;
 
-      let to_int63 t = to_int63_ns_since_epoch t
-    end
-    include T
-    include Comparator.Stable.V1.Make (T)
-  end
-end
-
-let sexp_of_t = Stable0.V1.sexp_of_t
-let t_of_sexp = Stable0.V1.t_of_sexp
-
-let to_string t = Time.to_string (to_time t)
-let of_string s = of_time (Time.of_string s)
-
-let to_string_abs t ~zone = Time.to_string_abs ~zone (to_time t)
-let of_string_abs s = of_time (Time.of_string_abs s)
+let of_string_abs s = of_string_gen ~if_no_timezone:`Fail s
+let of_string s     = of_string_gen ~if_no_timezone:`Local s
 
 let arg_type = Core_kernel.Command.Arg_type.create of_string_abs
-
-module Option = struct
-  type time = t [@@deriving sexp, compare]
-
-  type t = Span.Option.t [@@deriving bin_io, compare, hash, typerep]
-
-  let none = Span.Option.none
-  let some time = Span.Option.some (to_span_since_epoch time)
-  let is_none = Span.Option.is_none
-  let is_some = Span.Option.is_some
-  let some_is_representable time =
-    Span.Option.some_is_representable (to_span_since_epoch time)
-  let value t ~default =
-    of_span_since_epoch
-      (Span.Option.value
-         ~default:(to_span_since_epoch default) t)
-  let value_exn t = of_span_since_epoch (Span.Option.value_exn t)
-  let unchecked_value t = of_span_since_epoch (Span.Option.unchecked_value t)
-
-  let of_option = function None -> none | Some t -> some t
-  let to_option t = if is_none t then None else Some (value_exn t)
-
-  module Optional_syntax = struct
-    module Optional_syntax = struct
-      let is_none         = is_none
-      let unsafe_value = unchecked_value
-    end
-  end
-
-  module Stable = struct
-    module V1 = struct
-      module T = struct
-        type nonrec t = t [@@deriving compare, bin_io]
-
-        let sexp_of_t t = [%sexp_of: Stable0.V1.t option] (to_option t)
-        let t_of_sexp s = of_option ([%of_sexp: Stable0.V1.t option] s)
-
-        let to_int63     t = Span.Option.Stable.V1.to_int63     t
-        let of_int63_exn t = Span.Option.Stable.V1.of_int63_exn t
-      end
-      include T
-      include Comparator.Stable.V1.Make (T)
-    end
-  end
-
-  let sexp_of_t = Stable.V1.sexp_of_t
-  let t_of_sexp = Stable.V1.t_of_sexp
-
-  include Identifiable.Make (struct
-      type nonrec t = t [@@deriving sexp, compare, bin_io, hash]
-      let module_name = "Core.Time_ns.Option"
-      include Sexpable.To_stringable (struct type nonrec t = t [@@deriving sexp] end)
-    end)
-  (* bring back the efficient implementation of comparison operators *)
-  include (Span.Option : Core_kernel.Comparisons.S with type t := t)
-end
-
-(* Note: This is FIX standard millisecond precision. You should use
-   [Time_ns_with_fast_accurate_to_of_string] if you need nanosecond precision. *)
-let to_string_fix_proto zone t = Time.to_string_fix_proto zone (to_time t)
-let of_string_fix_proto zone s = of_time (Time.of_string_fix_proto zone s)
-
-include Identifiable.Make (struct
-    type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
-    let module_name = "Core.Time_ns"
-    let of_string, to_string = of_string, to_string
-  end)
-(* bring back the efficient implementation of comparison operators *)
-include (Core_kernel.Time_ns : Core_kernel.Comparisons.S with type t := t)
-
-(* Helper function to avoid inaccuracies in [Time_ns.t] <-> [Date.t * Ofday.t] conversions
-   below.  We do the conversions by round-tripping through [Time.t] and [Time.Ofday.t],
-   which (if done naively) would be inaccurate.  However, multiples of 1s can be
-   accurately represented as [Time.t] and [Time.Ofday.t], so we deal with it by splitting
-   into the full second and whatever is left. *)
-let split_into_sec_and_ns (x : Int63.t) =
-  let billion = Int63.of_int 1_000_000_000 in
-  let sec = Int63.(/) x billion in
-  let sec_as_ns = Int63.( * ) sec billion in
-  let rem_ns = Int63.(-) x sec_as_ns in
-  (sec_as_ns, Span.of_int63_ns rem_ns)
-;;
-
-let to_date t ~zone =
-  let t', _ = split_into_sec_and_ns (to_int63_ns_since_epoch t) in
-  Time.to_date (to_time (of_int63_ns_since_epoch t')) ~zone
-;;
-
-let of_date_ofday ~zone date ofday =
-  of_time (Time.of_date_ofday ~zone date ofday)
-;;
 
 (* Does not represent extra hours due to DST (daylight saving time) (because DST makes
    adjustments in terms of wall clock time) or leap seconds (which aren't represented in
@@ -298,52 +197,11 @@ module Ofday = struct
 
   let arg_type = Core_kernel.Command.Arg_type.create of_string
 
-  let midnight date ~zone = of_date_ofday ~zone date Time.Ofday.start_of_day
-
   let of_ofday core =
     of_span_since_start_of_day_exn
       (Span.of_span (Time.Ofday.to_span_since_start_of_day core))
 
-  let of_time =
-    let module Cache = struct
-      type t =
-        { mutable zone          : Time.Zone.t Lazy.t
-        ; mutable midnight      : Time_ns.t
-        ; mutable next_midnight : Time_ns.t
-        }
-    end in
-    let cache : Cache.t =
-      { zone = Time.Zone.local; midnight = Time_ns.epoch; next_midnight = Time_ns.epoch }
-    in
-    fun time ~zone ->
-      let span =
-        (* Zones are strings.  You have to cache-validate them physically. *)
-        if phys_equal (Lazy.force cache.zone) zone
-        && Time_ns.( >= ) time cache.midnight
-        && Time_ns.( <  ) time cache.next_midnight
-        then Time_ns.diff time cache.midnight
-        else
-          let time', ns     = split_into_sec_and_ns (to_int63_ns_since_epoch time) in
-          let time'         = of_int63_ns_since_epoch time' in
-          let date, ofday   = Time.to_date_ofday (to_time time')        ~zone in
-          let next_midnight = midnight           (Date.add_days date 1) ~zone in
-          let midnight      = midnight           date                   ~zone in
-          (* Use one code path uniformly on non-DST-transition days, and a different one on
-             DST-transition days (of_ofday). *)
-          if Span.(=) (Time_ns.diff next_midnight midnight) Span.day then
-            begin
-              cache.zone          <- lazy zone;
-              cache.midnight      <- midnight;
-              cache.next_midnight <- next_midnight;
-              Time_ns.diff time cache.midnight
-            end
-          else
-            begin
-              Span.(+) (to_span_since_start_of_day (of_ofday ofday)) ns
-            end
-      in
-      of_span_since_start_of_day_exn span
-  ;;
+  let of_time time ~zone = to_ofday time ~zone
 
   let to_ofday t =
     Time.Ofday.of_span_since_start_of_day_exn (Span.to_span (to_span_since_start_of_day t))
@@ -370,9 +228,7 @@ module Ofday = struct
       { ofday; zone; }
     ;;
 
-    let to_time_ns t date =
-      to_ofday (ofday t) |> of_date_ofday ~zone:(zone t) date
-    ;;
+    let to_time_ns t date = of_date_ofday ~zone:(zone t) date (ofday t)
 
     let create ofday zone = { ofday; zone }
 
@@ -506,42 +362,123 @@ module Ofday = struct
   end
 end
 
-let to_ofday t ~zone = Ofday.of_time t ~zone
+let get_sexp_zone = Time.get_sexp_zone
+let set_sexp_zone = Time.set_sexp_zone
 
-let to_date_ofday t ~zone = (to_date ~zone t, to_ofday t ~zone)
-
-let split_into_sec_and_ns ~ofday =
-  let ofday = Ofday.to_span_since_start_of_day ofday |> Span.to_int63_ns in
-  let ofday, span = split_into_sec_and_ns ofday in
-  let ofday = Span.of_int63_ns ofday |> Ofday.of_span_since_start_of_day_exn in
-  ofday, span
+let t_of_sexp_gen ~if_no_timezone sexp =
+  try
+    match sexp with
+    | Sexp.List [Sexp.Atom date; Sexp.Atom ofday; Sexp.Atom tz] ->
+      of_date_ofday ~zone:(Zone.find_exn tz)
+        (Date.of_string date) (Ofday.of_string ofday)
+    (* This is actually where the output of [sexp_of_t] is handled, since that's e.g.
+       (2015-07-06 09:09:44.787988+01:00). *)
+    | Sexp.List [Sexp.Atom date; Sexp.Atom ofday_and_possibly_zone] ->
+      of_string_gen ~if_no_timezone (date ^ " " ^ ofday_and_possibly_zone)
+    | Sexp.Atom datetime ->
+      of_string_gen ~if_no_timezone datetime
+    | _ -> of_sexp_error "Time.t_of_sexp" sexp
+  with
+  | Of_sexp_error _ as e -> raise e
+  | e -> of_sexp_error (sprintf "Time.t_of_sexp: %s" (Exn.to_string e)) sexp
 ;;
 
-let of_date_ofday ~zone date ofday =
-  let ofday, span = split_into_sec_and_ns ~ofday in
-  Time_ns.add (of_date_ofday ~zone date (Ofday.to_ofday ofday)) span
+let t_of_sexp sexp =
+  t_of_sexp_gen sexp ~if_no_timezone:(`Use_this_one (get_sexp_zone ()))
+let t_of_sexp_abs sexp =
+  t_of_sexp_gen sexp ~if_no_timezone:`Fail
+
+let sexp_of_t_abs t ~zone =
+  Sexp.List (List.map (Time_ns.to_string_abs_parts ~zone t) ~f:(fun s -> Sexp.Atom s))
 ;;
 
-(* This may round rather than truncate, since [to_time] rounds. *)
-let to_sec_string t ~zone = Time.to_sec_string (to_time t) ~zone
+let sexp_of_t t = sexp_of_t_abs ~zone:(get_sexp_zone ()) t
 
-(* [{to,of}_filename_string] just call the functions from [Time]. It doesn't seem worth
-   duplicating the code until people actually want sub-millisecond precision in filenames.
-*)
-let to_filename_string t ~zone =
-  Time.to_filename_string (to_time t) ~zone
-;;
+module Stable0 = struct
+  module V1 = struct
+    module T = struct
+      (* We use the unstable sexp here, and rely on comprehensive tests of the stable
+         conversion to make sure we don't change it. *)
+      type nonrec t = t [@@deriving bin_io, compare, sexp]
 
-let of_filename_string time_str ~zone =
-  of_time (Time.of_filename_string time_str ~zone)
-;;
+      let of_int63_exn t =
+        of_span_since_epoch (Span.check_range (Span.of_int63_ns t))
 
-let occurrence what t ~ofday ~zone =
-  let ofday, span = split_into_sec_and_ns ~ofday in
-  Time_ns.add
-    (of_time (Time.occurrence what (to_time t) ~ofday:(Ofday.to_ofday ofday) ~zone))
-    span
-;;
+      let to_int63 t = to_int63_ns_since_epoch t
+    end
+    include T
+    include Comparator.Stable.V1.Make (T)
+  end
+end
+
+module Option = struct
+  type time = t [@@deriving sexp, compare]
+
+  type t = Span.Option.t [@@deriving bin_io, compare, hash, typerep]
+
+  let none = Span.Option.none
+  let some time = Span.Option.some (to_span_since_epoch time)
+  let is_none = Span.Option.is_none
+  let is_some = Span.Option.is_some
+  let some_is_representable time =
+    Span.Option.some_is_representable (to_span_since_epoch time)
+  let value t ~default =
+    of_span_since_epoch
+      (Span.Option.value
+         ~default:(to_span_since_epoch default) t)
+  let value_exn t = of_span_since_epoch (Span.Option.value_exn t)
+  let unchecked_value t = of_span_since_epoch (Span.Option.unchecked_value t)
+
+  let of_option = function None -> none | Some t -> some t
+  let to_option t = if is_none t then None else Some (value_exn t)
+
+  module Optional_syntax = struct
+    module Optional_syntax = struct
+      let is_none         = is_none
+      let unsafe_value = unchecked_value
+    end
+  end
+
+  module Stable = struct
+    module V1 = struct
+      module T = struct
+        type nonrec t = t [@@deriving compare, bin_io]
+
+        let sexp_of_t t = [%sexp_of: Stable0.V1.t option] (to_option t)
+        let t_of_sexp s = of_option ([%of_sexp: Stable0.V1.t option] s)
+
+        let to_int63     t = Span.Option.Stable.V1.to_int63     t
+        let of_int63_exn t = Span.Option.Stable.V1.of_int63_exn t
+      end
+      include T
+      include Comparator.Stable.V1.Make (T)
+    end
+  end
+
+  let sexp_of_t = Stable.V1.sexp_of_t
+  let t_of_sexp = Stable.V1.t_of_sexp
+
+  include Identifiable.Make (struct
+      type nonrec t = t [@@deriving sexp, compare, bin_io, hash]
+      let module_name = "Core.Time_ns.Option"
+      include Sexpable.To_stringable (struct type nonrec t = t [@@deriving sexp] end)
+    end)
+  (* bring back the efficient implementation of comparison operators *)
+  include (Span.Option : Core_kernel.Comparisons.S with type t := t)
+end
+
+(* Note: This is FIX standard millisecond precision. You should use
+   [Zero.Time_ns_with_fast_accurate_to_of_string] if you need nanosecond precision. *)
+let to_string_fix_proto zone t = Time.to_string_fix_proto zone (to_time t)
+let of_string_fix_proto zone s = of_time (Time.of_string_fix_proto zone s)
+
+include Identifiable.Make (struct
+    type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
+    let module_name = "Core.Time_ns"
+    let of_string, to_string = of_string, to_string
+  end)
+(* bring back the efficient implementation of comparison operators *)
+include (Core_kernel.Time_ns : Core_kernel.Comparisons.S with type t := t)
 
 module Stable = struct
   module Option = Option.Stable

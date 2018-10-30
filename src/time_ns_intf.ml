@@ -248,12 +248,26 @@ module type Time_ns = sig
   module Ofday : Ofday
 
 
+  (** String conversions use the local timezone by default. Sexp conversions use
+      [get_sexp_zone ()] by default, which can be overridden by calling [set_sexp_zone].
+      These default time zones are used when writing a time, and when reading a time with
+      no explicit zone or UTC offset.
 
-
-
+      Sexps and strings display the date, ofday, and UTC offset of [t] relative to the
+      appropriate time zone. *)
   include Identifiable with type t := t
 
   module Zone : module type of Time.Zone with type t = Time.Zone.t
+
+  (** These functions are identical to those in [Time] and get/set the same variable. *)
+
+  val get_sexp_zone : unit -> Zone.t
+  val set_sexp_zone : Zone.t -> unit
+
+  (** [t_of_sexp_abs sexp] as [t_of_sexp], but demands that [sexp] indicate the timezone
+      the time is expressed in. *)
+  val t_of_sexp_abs : Sexp.t -> t
+  val sexp_of_t_abs : t -> zone:Zone.t -> Sexp.t
 
   val epoch : t (** Unix epoch (1970-01-01 00:00:00 UTC) *)
 
@@ -279,10 +293,45 @@ module type Time_ns = sig
   val to_string_fix_proto : [ `Utc | `Local ] -> t -> string
   val of_string_fix_proto : [ `Utc | `Local ] -> string -> t
 
-  (** See [Time] for documentation. *)
-  val to_string_abs : t -> zone:Time.Zone.t -> string
+  (** [to_string_abs ~zone t] is the same as [to_string t] except that it uses the given
+      time zone. *)
+  val to_string_abs         : t -> zone:Zone.t -> string
+
+  (** [to_string_abs_trimmed] is the same as [to_string_abs], but drops trailing seconds
+      and milliseconds if they are 0. *)
+  val to_string_abs_trimmed : t -> zone:Zone.t -> string
+
+  val to_string_abs_parts   : t -> zone:Zone.t -> string list
+
+  (** This is like [of_string] except that if the string doesn't specify the zone then it
+      raises rather than assume the local timezone. *)
   val of_string_abs : string -> t
+
+  (** Same as [to_string_abs_trimmed], except it leaves off the timezone, so won't
+      reliably round trip. *)
+  val to_string_trimmed : t -> zone:Zone.t -> string
+
+  (** Same as [to_string_abs], but without milliseconds *)
   val to_sec_string : t -> zone:Zone.t -> string
+
+  (** [of_localized_string ~zone str] read in the given string assuming that it represents
+      a time in zone and return the appropriate Time_ns.t *)
+  val of_localized_string : zone:Zone.t -> string -> t
+
+  (** [of_string_gen ~if_no_timezone s] attempts to parse [s] to a [t].  If [s] doesn't
+      supply a time zone [if_no_timezone] is consulted. *)
+  val of_string_gen
+    :  if_no_timezone:[ `Fail | `Local | `Use_this_one of Zone.t ]
+    -> string
+    -> t
+
+  (** [to_string_iso8601_basic] returns a string representation of the following form:
+      %Y-%m-%dT%H:%M:%S.%s%Z
+      e.g.
+      [ to_string_iso8601_basic ~zone:Time.Zone.utc epoch
+      = "1970-01-01T00:00:00.000000000Z" ]
+  *)
+  val to_string_iso8601_basic : t -> zone:Zone.t -> string
 
   val to_int63_ns_since_epoch : t -> Int63.t
   val of_int63_ns_since_epoch : Int63.t -> t
@@ -291,8 +340,12 @@ module type Time_ns = sig
   val to_int_ns_since_epoch : t -> int
   val of_int_ns_since_epoch : int -> t
 
-  (** See [Time] for documentation *)
+  (** [to_filename_string t ~zone] converts [t] to string with format
+      YYYY-MM-DD_HH-MM-SS.mmm which is suitable for using in filenames. *)
   val to_filename_string : t      -> zone:Zone.t -> string
+
+  (** [of_filename_string s ~zone] converts [s] that has format YYYY-MM-DD_HH-MM-SS.mmm
+      into time_ns. *)
   val of_filename_string : string -> zone:Zone.t -> t
 
   (** See [Core_kernel.Time_ns].
@@ -307,7 +360,50 @@ module type Time_ns = sig
     -> t
 
   val of_date_ofday : zone:Zone.t -> Date.t -> Ofday.t -> t
+
+  (** Because timezone offsets change throughout the year (clocks go forward or back) some
+      local times can occur twice or not at all.  In the case that they occur twice, this
+      function gives [`Twice] with both occurrences in order; if they do not occur at all,
+      this function gives [`Never] with the time at which the local clock skips over the
+      desired time of day.
+
+      Note that this is really only intended to work with DST transitions and not unusual or
+      dramatic changes, like the calendar change in 1752 (run "cal 9 1752" in a shell to
+      see).  In particular it makes the assumption that midnight of each day is unambiguous.
+
+      Most callers should use {!of_date_ofday} rather than this function.  In the [`Twice]
+      and [`Never] cases, {!of_date_ofday} will return reasonable times for most uses. *)
+  val of_date_ofday_precise
+    :  Date.t
+    -> Ofday.t
+    -> zone:Zone.t
+    -> [ `Once of t | `Twice of t * t | `Never of t ]
+
   val to_ofday : t -> zone:Zone.t -> Ofday.t
+
+  (** Always returns the [Date.t * Ofday.t] that [to_date_ofday] would have returned, and in
+      addition returns a variant indicating whether the time is associated with a time zone
+      transition.
+
+      {v
+      - `Only         -> there is a one-to-one mapping between [t]'s and
+                         [Date.t * Ofday.t] pairs
+      - `Also_at      -> there is another [t] that maps to the same [Date.t * Ofday.t]
+                         (this date/time pair happened twice because the clock fell back)
+      - `Also_skipped -> there is another [Date.t * Ofday.t] pair that never happened (due
+                         to a jump forward) that [of_date_ofday] would map to the same
+                         [t].
+    v}
+  *)
+  val to_date_ofday_precise
+    :  t
+    -> zone:Zone.t
+    -> Date.t * Ofday.t
+       * [ `Only
+         | `Also_at of t
+         | `Also_skipped of Date.t * Ofday.t
+         ]
+
   val to_date  : t -> zone:Zone.t -> Date.t
   val to_date_ofday: t -> zone:Zone.t -> Date.t * Ofday.t
   val occurrence
@@ -316,6 +412,25 @@ module type Time_ns = sig
     -> ofday:Ofday.t
     -> zone:Time.Zone.t
     -> t
+
+  (** For performance testing only; [reset_date_cache ()] resets an internal cache used to
+      speed up [to_date] and related functions when called repeatedly on times that fall
+      within the same day. *)
+  val reset_date_cache : unit -> unit
+
+  (** It's unspecified what happens if the given date/ofday/zone correspond to more than
+      one date/ofday pair in the other zone. *)
+  val convert
+    :  from_tz:Zone.t
+    -> to_tz:Zone.t
+    -> Date.t
+    -> Ofday.t
+    -> (Date.t * Ofday.t)
+
+  val utc_offset
+    :  t
+    -> zone:Zone.t
+    -> Span.t
 
   (** [pause span] sleeps for [span] time. *)
   val pause : Span.t -> unit
