@@ -72,13 +72,13 @@ module type S = sig
 
   val arg_type : t Core_kernel.Command.Arg_type.t
 
-  (** Sexp conversions use the local timezone by default. This can be overridden by
-      calling [set_sexp_zone].
+  (** String conversions use the local timezone by default. Sexp conversions use
+      [get_sexp_zone ()] by default, which can be overridden by calling [set_sexp_zone].
+      These default time zones are used when writing a time, and when reading a time with
+      no explicit zone or UTC offset.
 
-      The [{to,of}_string] functions in [Time] will produce times with time zone
-      indications, but are generous in what they will read in. String/Sexp.t
-      representations without time zone indications are assumed to be in the machine's
-      local zone. *)
+      Sexps and strings display the date, ofday, and UTC offset of [t] relative to the
+      appropriate time zone. *)
   include Identifiable.S
     with type   t                           := t
      and type   comparator_witness          := comparator_witness
@@ -96,8 +96,8 @@ module type S = sig
   val to_string_fix_proto : [`Utc | `Local] -> t -> string
   val of_string_fix_proto : [`Utc | `Local] -> string -> t
 
-  (** [of_string_abs s] is like [of_string], but demands that [s] indicate the timezone
-      the time is expressed in. *)
+  (** This is like [of_string] except that if the string doesn't specify the zone then it
+      raises rather than assume the local timezone. *)
   val of_string_abs : string -> t
 
   (** [of_string_gen ~if_no_timezone s] attempts to parse [s] to a [t].  If [s] doesn't
