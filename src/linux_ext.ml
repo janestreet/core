@@ -100,6 +100,7 @@ module Null_toplevel = struct
   let file_descr_realpath            = u "Linux_ext.file_descr_realpath"
   let get_ipv4_address_for_interface = u "Linux_ext.get_ipv4_address_for_interface"
   let bind_to_interface              = u "Linux_ext.bind_to_interface"
+  let get_bind_to_interface          = u "Linux_ext.get_bind_to_interface"
   let get_terminal_size              = u "Linux_ext.get_terminal_size"
   let gettcpopt_bool                 = u "Linux_ext.gettcpopt_bool"
   let setpriority                    = u "Linux_ext.setpriority"
@@ -662,7 +663,15 @@ let cores =
     if num_cores > 0 then num_cores
     else failwith "Linux_ext.cores: failed to parse /proc/cpuinfo")
 
-external get_terminal_size : unit -> int * int = "linux_get_terminal_size"
+external get_terminal_size : File_descr.t -> int * int = "linux_get_terminal_size"
+
+let get_terminal_size = function
+  | `Fd fd -> get_terminal_size fd
+  | `Controlling ->
+    protectx
+      (Unix.openfile "/dev/tty" [ O_RDWR ] 0)
+      ~finally:Unix.close
+      ~f:get_terminal_size
 
 external get_ipv4_address_for_interface : string -> string =
   "linux_get_ipv4_address_for_interface" ;;
@@ -680,6 +689,14 @@ let bind_to_interface fd ifname =
   in
   bind_to_interface' fd name
 ;;
+
+external get_bind_to_interface' : File_descr.t -> string =
+  "linux_get_bind_to_interface" ;;
+
+let get_bind_to_interface fd =
+  match get_bind_to_interface' fd with
+  | "" -> `Any
+  | name -> `Interface_name name
 
 module Epoll = struct
 
@@ -965,6 +982,7 @@ let cores                          = Ok cores
 let file_descr_realpath            = Ok file_descr_realpath
 let get_ipv4_address_for_interface = Ok get_ipv4_address_for_interface
 let bind_to_interface              = Ok bind_to_interface
+let get_bind_to_interface          = Ok get_bind_to_interface
 let get_terminal_size              = Ok get_terminal_size
 let gettcpopt_bool                 = Ok gettcpopt_bool
 let setpriority                    = Ok setpriority

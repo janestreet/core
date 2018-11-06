@@ -282,36 +282,16 @@ CAMLprim value linux_getpriority(value v_unit)
   return Val_long(priority);
 }
 
-CAMLprim value linux_get_terminal_size(value __unused v_unit)
+CAMLprim value linux_get_terminal_size(value vfd)
 {
-  int fd;
   struct winsize ws;
   int ret;
   value v_res;
 
-  caml_enter_blocking_section();
-
-  fd = open("/dev/tty", O_RDWR);
-  if (fd == -1) {
-    caml_leave_blocking_section();
-    uerror("get_terminal_size__open", Nothing);
-  }
-  ret = ioctl(fd, TIOCGWINSZ, &ws);
+  ret = ioctl(Int_val(vfd), TIOCGWINSZ, &ws);
   if (ret == -1) {
-    int old_errno = errno;
-    (void)core_unix_close_durably(fd);
-    caml_leave_blocking_section();
-    if (ret == -1) {
-      errno = old_errno;
-      uerror("get_terminal_size__ioctl_close", Nothing);
-    } else {
-      errno = old_errno;
-      uerror("get_terminal_size__ioctl", Nothing);
-    }
+    uerror("get_terminal_size", Nothing);
   }
-  ret = core_unix_close_durably(fd);
-  caml_leave_blocking_section();
-  if (ret == -1) uerror("get_terminal_size__close", Nothing);
 
   v_res = caml_alloc_small(2, 0);
   Field(v_res, 0) = Val_int(ws.ws_row);
@@ -354,6 +334,34 @@ CAMLprim value linux_bind_to_interface(value v_fd, value v_ifname)
   }
 
   return Val_unit;
+}
+
+CAMLprim value linux_get_bind_to_interface(value v_fd)
+{
+  int ret, fd;
+  char buf[IFNAMSIZ];
+  socklen_t len = IFNAMSIZ;
+
+  assert(!Is_block(v_fd));
+  fd = Int_val(v_fd);
+
+  /* For details of [getsockopt] operation (in particular with regard to the
+     handling of the NUL terminator in the returned string) see the kernel
+     code, e.g.:
+     https://elixir.bootlin.com/linux/latest/source/net/core/sock.c#L581
+  */
+  ret = getsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, buf, &len);
+  if (ret < 0) {
+    uerror("get_bind_to_interface", Nothing);
+  }
+
+  /* The returned [len] is the amount of space used in the buffer, i.e. the
+     length of the string + 1 for the terminating NUL.  [IFNAMSIZ] is
+     documented as including space for the terminator. */
+  assert(len >= 1 && len <= IFNAMSIZ);
+  assert(buf[len - 1] == '\0');
+
+  return caml_copy_string(buf);
 }
 
 /** Core epoll methods **/

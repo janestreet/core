@@ -286,3 +286,25 @@ let%expect_test "set and get affinity" =
     printf "%b" (starting_cpus = sched_getaffinity ());
     [%expect {| true |}]
   | _ -> ()
+
+let%test_unit "get_terminal_size" =
+  match get_terminal_size with
+  | Error _ -> ()
+  | Ok f ->
+    (
+      let with_tmp_fd f =
+        protectx (Filename.temp_file "get_terminal_size" "")
+          ~finally:Unix.unlink
+          ~f:(fun fname ->
+            protectx (Unix.openfile fname ~mode:[Unix.O_RDONLY] ~perm:0)
+              ~finally:Unix.close
+              ~f)
+      in
+      match with_tmp_fd (fun fd -> f (`Fd fd)) with
+      | exception Unix.Unix_error (ENOTTY, _, _) -> ()
+      | res -> raise_s [%sexp "get_terminal_size should have failed but returned", (res : int * int)]
+    );
+    (* Tested by hand:
+       eprintf !"get_terminal_size: %{sexp: int * int}\n%!" (f `Controlling);
+    *)
+;;

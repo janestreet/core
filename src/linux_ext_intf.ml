@@ -333,9 +333,11 @@ module type S = sig
       than the number of cores available to the calling process. *)
   val cores : (unit -> int) Or_error.t
 
-  (** [get_terminal_size ()] returns [(rows, cols)], the number of rows and columns of the
-      terminal. *)
-  val get_terminal_size : (unit -> int * int) Or_error.t
+  (** [get_terminal_size term] returns [(rows, cols)], the number of rows and columns of
+      the controlling terminal (raises if no controlling terminal), or of the specified
+      file descriptor (useful when writing to stdout, because stdout doesn't have to be
+      the controlling terminal). *)
+  val get_terminal_size : ([ `Controlling | `Fd of File_descr.t ] -> int * int) Or_error.t
 
   (** [Priority.t] is what is usually referred to as the "nice" value of a process.  It is
       also known as the "dynamic" priority.  It is used with normal (as opposed to
@@ -372,6 +374,14 @@ module type S = sig
       when using multicast, see {!Core_unix.mcast_set_ifname}. *)
   val bind_to_interface
     : (File_descr.t -> [ `Any | `Interface_name of string ] -> unit) Or_error.t
+
+  (** [get_bind_to_interface fd] returns the current interface the socket is bound to. It
+      uses getsockopt() with Linux-specific [SO_BINDTODEVICE] option. Empty string means
+      it is not bound to any specific interface. See [man 7 socket] for more information.
+  *)
+
+  val get_bind_to_interface
+    : (File_descr.t -> [ `Any | `Interface_name of string ]) Or_error.t
 
   (** epoll(): a Linux I/O multiplexer of the same family as select() or poll().  Its main
       differences are support for Edge- or Level-triggered notifications (we're using
