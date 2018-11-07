@@ -280,6 +280,10 @@ module type Time_ns = sig
 
   val sub      : t -> Span.t -> t (** overflows silently *)
 
+  val next : t -> t (** overflows silently *)
+
+  val prev : t -> t (** overflows silently *)
+
   val diff     : t -> t -> Span.t (** overflows silently *)
 
   val abs_diff : t -> t -> Span.t (** overflows silently *)

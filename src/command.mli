@@ -1,10 +1,8 @@
 open! Import
 
 include (module type of Core_kernel.Command
+          with module Shape := Command.Shape
           with module Deprecated := Command.Deprecated)
-
-(** Exposes the shape of a command. *)
-val shape : t -> Shape.t
 
 (** Runs a command against [Sys.argv], or [argv] if it is specified.
 
@@ -36,6 +34,42 @@ val run
   -> ?extend     : (string list -> string list)
   -> t
   -> unit
+
+module Path : sig
+  type t
+  val add : t -> subcommand:string -> t
+  val commands : t -> string list
+  val empty : t
+  val replace_first : t -> from:string -> to_:string -> t
+  val root : string -> t
+end
+
+module Shape : sig
+  include module type of struct include Core_kernel.Command.Shape end
+
+  (** Get the help text for a command shape.
+
+      The [Path.t] argument should be the path that identifies the shape argument.
+
+      [expand_dots]: expand subcommands in recursive help. (default: false)
+      This is the same as the [help] subcommand's ["-expand-dots"] flag.
+
+      [flags]: show flags in recursive help. (default: false)
+      This is the same as the [help] subcommand's ["-flags"] flag.
+
+      [recursive]: show subcommands of subcommands. (default: false)
+      This is the same as the [help] subcommand's ["-recursive"] flag. *)
+  val help_text
+    :  t
+    -> Path.t
+    -> expand_dots:bool
+    -> flags:bool
+    -> recursive:bool
+    -> string
+end
+
+(** Exposes the shape of a command. *)
+val shape : t -> Shape.t
 
 (** [Deprecated] should be used only by [Deprecated_command].  At some point
     it will go away. *)
