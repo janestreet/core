@@ -681,9 +681,9 @@ type lock_command =
 [@@deriving sexp]
 
 (** [lockf fd cmd size] place a lock on a file_descr that prevents any other process from
- * calling lockf successfully on the same file.  Due to a limitation in the current
- * implementation the length will be converted to a native int, potentially throwing an
- * exception if it is too large. *)
+    calling lockf successfully on the same file.  Due to a limitation in the current
+    implementation the length will be converted to a native int, potentially throwing an
+    exception if it is too large. *)
 val lockf : File_descr.t -> mode:lock_command -> len:Int64.t -> unit
 
 module Flock_command : sig

@@ -47,14 +47,27 @@ let%test_module "word wrap" =
 let%test_unit _ =
   let path =
     Path.empty
-    |> Path.add ~subcommand:"foo"
-    |> Path.add ~subcommand:"bar"
-    |> Path.add ~subcommand:"bar"
-    |> Path.add ~subcommand:"baz"
+    |> Path.append ~subcommand:"foo/bar.exe"
+    |> Path.append ~subcommand:"bar"
+    |> Path.append ~subcommand:"bar"
+    |> Path.append ~subcommand:"baz"
   in
-  [%test_result: string list] (Path.commands path) ~expect:["foo"; "bar"; "bar"; "baz"];
+  [%test_result: string list] (Path.parts path) ~expect:["foo/bar.exe"; "bar"; "bar"; "baz"];
   let path = Path.replace_first path ~from:"bar" ~to_:"qux" in
-  [%test_result: string list] (Path.commands path) ~expect:["foo"; "qux"; "bar"; "baz"];
+  [%test_result: string list] (Path.parts path) ~expect:["foo/bar.exe"; "qux"; "bar"; "baz"];
+  ()
+
+let%expect_test "[Path.to_string], [Path.to_string_dots]" =
+  let path =
+    Path.create ~path_to_exe:"foo/bar/baz.exe"
+    |> Path.append ~subcommand:"qux"
+    |> Path.append ~subcommand:"foo"
+    |> Path.append ~subcommand:"bar"
+  in
+  print_string (Path.to_string path);
+  [%expect {| baz.exe qux foo bar |}];
+  print_string (Path.to_string_dots path);
+  [%expect {| . . . bar |}];
   ()
 
 let%test_module "[Anons]" =
@@ -78,8 +91,10 @@ let%test_module "[Anons]" =
 let%test_module "Cmdline.extend" =
   (module struct
     let path_of_list subcommands =
-      List.fold subcommands ~init:(Path.root "exe") ~f:(fun path subcommand ->
-        Path.add path ~subcommand)
+      List.fold subcommands
+        ~init:(Path.create ~path_to_exe:"exe")
+        ~f:(fun path subcommand ->
+          Path.append path ~subcommand)
 
     let extend path =
       match path with

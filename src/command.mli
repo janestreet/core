@@ -36,12 +36,19 @@ val run
   -> unit
 
 module Path : sig
+  (** [Path.t] is a top-level executable name and sequence of subcommand names that can be
+      used to identify a command. *)
   type t
-  val add : t -> subcommand:string -> t
-  val commands : t -> string list
-  val empty : t
-  val replace_first : t -> from:string -> to_:string -> t
-  val root : string -> t
+
+  (** [create] creates a path from a toplevel executable given by [path_to_exe]. *)
+  val create : path_to_exe:string -> t
+
+  (** [append] appends a subcommand to [t]. *)
+  val append : t -> subcommand:string -> t
+
+  (** [parts] returns a list containing the path's executable name followed by its
+      subcommands. *)
+  val parts : t -> string list
 end
 
 module Shape : sig
