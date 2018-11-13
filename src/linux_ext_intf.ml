@@ -50,6 +50,12 @@ module type S = sig
        -> File_descr.t
        -> int) Or_error.t
 
+  (** Type for status of SO_BINDTODEVICE socket option. The socket may either restrict the
+      traffic to a given (by name, e.g. "eth0") interface, or do no restriction at all. *)
+  module Bound_to_interface : sig
+    type t = Any | Only of string [@@deriving sexp_of]
+  end
+
   (** {2 Non-portable TCP functionality} *)
 
   type tcp_bool_option =
@@ -363,17 +369,17 @@ module type S = sig
       throws an exception if no IP address is configured. *)
   val get_ipv4_address_for_interface : (string -> string) Or_error.t
 
-  (** [bind_to_interface fd (`Interface_name "eth0")] restricts packets from being
+  (** [bind_to_interface fd (Only "eth0")] restricts packets from being
       received/sent on the given file descriptor [fd] on any interface other than "eth0".
-      Use [bind_to_interface fd `Any] to allow traffic on any interface.  The bindings are
-      not cumulative; you may only select one interface, or [`Any].
+      Use [bind_to_interface fd Any] to allow traffic on any interface.  The bindings are
+      not cumulative; you may only select one interface, or [Any].
 
       Not to be confused with a traditional BSD sockets API [bind()] call, this
       Linux-specific socket option ([SO_BINDTODEVICE]) is used for applications on
       multi-homed machines with specific security concerns.  For similar functionality
       when using multicast, see {!Core_unix.mcast_set_ifname}. *)
   val bind_to_interface
-    : (File_descr.t -> [ `Any | `Interface_name of string ] -> unit) Or_error.t
+    : (File_descr.t -> Bound_to_interface.t -> unit) Or_error.t
 
   (** [get_bind_to_interface fd] returns the current interface the socket is bound to. It
       uses getsockopt() with Linux-specific [SO_BINDTODEVICE] option. Empty string means
@@ -381,7 +387,7 @@ module type S = sig
   *)
 
   val get_bind_to_interface
-    : (File_descr.t -> [ `Any | `Interface_name of string ]) Or_error.t
+    : (File_descr.t -> Bound_to_interface.t) Or_error.t
 
   (** epoll(): a Linux I/O multiplexer of the same family as select() or poll().  Its main
       differences are support for Edge- or Level-triggered notifications (we're using

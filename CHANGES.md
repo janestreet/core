@@ -22,6 +22,10 @@ and Core\_kernel's
 
 - Move `Syslog` out of `Core.Unix` into its own library `core.syslog`.
 
+- Add `get_bind_to_interface` function to read current status of SO_BINDTODEVICE socket
+  option. Make both `bind_to_interface` and `get_bind_to_interface` use new type
+  `Bound_interface_name.t` for its argument/return value.
+
 ## v0.11
 
 - Fix a segfault in `Time`. (fixes #102)

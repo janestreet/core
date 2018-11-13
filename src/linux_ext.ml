@@ -29,6 +29,10 @@ end
    do make sure you get the order correct) *)
 type tcp_bool_option = TCP_CORK | TCP_QUICKACK [@@deriving sexp, bin_io]
 
+module Bound_to_interface = struct
+  type t = Any | Only of string [@@deriving sexp_of]
+end
+
 (* We use [Int63] rather than [Int] because these flags use 32 bits. *)
 
 module Epoll_flags (Flag_values : sig
@@ -155,6 +159,11 @@ module Null : Linux_ext_intf.S = struct
   type nonrec tcp_bool_option = tcp_bool_option =
       TCP_CORK | TCP_QUICKACK
   [@@deriving sexp, bin_io]
+
+  module Bound_to_interface = struct
+    type t = Bound_to_interface.t = Any | Only of string
+    [@@deriving sexp_of]
+  end
 
   module Priority = Priority
 
@@ -684,8 +693,8 @@ external bind_to_interface' : File_descr.t -> string -> unit =
 let bind_to_interface fd ifname =
   let name =
     match ifname with
-    | `Interface_name name -> name
-    | `Any -> ""
+    | Bound_to_interface.Only name -> name
+    | Bound_to_interface.Any -> ""
   in
   bind_to_interface' fd name
 ;;
@@ -695,8 +704,8 @@ external get_bind_to_interface' : File_descr.t -> string =
 
 let get_bind_to_interface fd =
   match get_bind_to_interface' fd with
-  | "" -> `Any
-  | name -> `Interface_name name
+  | "" -> Bound_to_interface.Any
+  | name -> Bound_to_interface.Only name
 
 module Epoll = struct
 

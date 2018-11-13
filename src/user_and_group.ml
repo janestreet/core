@@ -29,7 +29,7 @@ include Identifiable.Make (T')
 let create = Fields.create
 
 let for_this_process () =
-  let user = Unix.getlogin () in
+  let user = Core_unix.getlogin () in
   let gid = Unix.getgid () in
   match Core_unix.Group.getbygid gid with
   | None -> Or_error.error "Couldn't get group" (`gid gid) [%sexp_of: [ `gid of int ]]

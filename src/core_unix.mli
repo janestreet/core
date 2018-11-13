@@ -325,8 +325,9 @@ val fork : unit -> [ `In_the_child | `In_the_parent of Pid.t ]
 (** [wait{,_nohang,_untraced,_nohang_untraced} ?restart wait_on] is a family of functions
     that wait on a process to exit (normally or via a signal) or be stopped by a signal
     (if [untraced] is used).  The [wait_on] argument specifies which processes to wait on.
-    The [nohang] variants return [None] immediately if no such process exists.  If
-    [nohang] is not used, [waitpid] will block until one of the desired processes exits.
+    The [nohang] variants return [None] immediately if none of the desired processes has
+    exited yet.  If [nohang] is not used, [waitpid] will block until one of the desired
+    processes exits.
 
     The non-nohang variants have a [restart] flag with (default true) that causes the
     system call to be retried upon EAGAIN|EINTR.  The nohang variants do not have this
