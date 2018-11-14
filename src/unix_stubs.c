@@ -162,10 +162,17 @@ void close_on_exec(int fd)
 
 #define Val_file_offset(fofs) caml_copy_int64(fofs)
 
+typedef value caml_generated_constant[1];
+extern caml_generated_constant caml_exn_Invalid_argument;
+
 static inline char * core_copy_to_c_string(value v_str)
 {
   asize_t len = caml_string_length(v_str) + 1;
-  char *p = caml_stat_alloc(len);
+  char *p;
+  if(!caml_string_is_c_safe(v_str)) {
+    caml_raise_with_arg((value) caml_exn_Invalid_argument, v_str);
+  }
+  p = caml_stat_alloc(len);
   memcpy(p, String_val(v_str), len);
   return p;
 }

@@ -34,6 +34,11 @@ let%test _ =
   Result.is_error (access file [`Exists])
   && Result.is_error (access dir [`Exists])
 
+let%expect_test "filename validation in [remove]" =
+  show_raise (fun () ->
+    remove "tmp-file-to-remove\000corrupted-filename");
+  [%expect {| (raised (Invalid_argument "tmp-file-to-remove\000corrupted-filename")) |}]
+
 let%test_unit "fork_exec ~env last binding takes precedence" =
   protectx ~finally:remove (Filename.temp_file "test" "fork_exec.env.last-wins")
     ~f:(fun temp_file ->

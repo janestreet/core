@@ -5,7 +5,9 @@
               bignum
               core
               core_kernel_test
-              expect_test_helpers))
+              expect_test_helpers
+              expect_test_helpers_kernel
+              ))
   (preprocessor_deps (config.h))
   (preprocess (pps (ppx_jane ppxlib.runner)))
 ))
