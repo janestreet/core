@@ -432,6 +432,7 @@ module Int = struct
       module Elt = Int
       let iter = `Custom iter
       let fold = fold
+      let length = `Custom length
     end)
 
   let exists   = For_container.exists
