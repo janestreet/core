@@ -1,7 +1,0 @@
-(library
-  ((name quickcheck_examples)
-   (libraries (core async))
-   (preprocess (pps (ppx_jane ppxlib.runner)))))
-
-
-(jbuild_version 1)

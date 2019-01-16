@@ -1,0 +1,86 @@
+(* -*- mode:tuareg -*- *)
+
+open StdLabels
+open Printf
+
+let template = {|
+CAMLprim value core_get${ENTRY}${KEY}_r(value v_${KEY}, value v_buf)
+{
+  CAMLparam2(v_${KEY}, v_buf);
+  CAMLlocal1(res);
+  char * buf = (char *) Caml_ba_data_val(v_buf);
+  size_t buflen = Caml_ba_array_val(v_buf)->dim[0];
+  ${KEY_C_TYPE} ${KEY} = ${KEY_OCAML_TO_C}(v_${KEY});
+  struct ${ENTRY_C_TYPE} entry;
+  struct ${ENTRY_C_TYPE} *result;
+  int retval;
+
+  caml_enter_blocking_section();
+  retval = get${ENTRY}${KEY}_r(${KEY}, &entry, buf, buflen, &result);
+  caml_leave_blocking_section();
+  if(retval) {
+    unix_error(retval, "get${ENTRY}${KEY}_r", ${v_KEY_AS_OCAML_STRING});
+  }
+  else {
+    if(!result) {
+      caml_raise_not_found();
+    } else {
+      assert(result == &entry);
+      res = ${ENTRY}_entry_alloc(&entry);
+      CAMLreturn(res);
+    }
+  }
+}
+|}
+
+let expand key value s : string =
+  Str.global_replace (Str.regexp (Str.quote (sprintf "${%s}" key))) value s
+
+let (|>) x f = f x
+
+type c_code = string
+
+type entry = {
+  entry : c_code;
+  entry_c_type : c_code;
+}
+
+type key = {
+  key : c_code;
+  key_c_type : c_code;
+  key_ocaml_to_c : c_code;
+  key_as_ocaml_string : c_code -> c_code;
+}
+
+let generate
+      { entry; entry_c_type }
+      { key; key_c_type; key_ocaml_to_c; key_as_ocaml_string } =
+  template
+  |> expand "ENTRY" entry
+  |> expand "ENTRY_C_TYPE" entry_c_type
+  |> expand "KEY" key
+  |> expand "KEY_C_TYPE" key_c_type
+  |> expand "KEY_OCAML_TO_C" key_ocaml_to_c
+  |> expand "v_KEY_AS_OCAML_STRING" (key_as_ocaml_string ("v_" ^ key))
+  |> printf "\n%s\n\n"
+
+let gr = { entry = "gr"; entry_c_type = "group" }
+let pw = { entry = "pw"; entry_c_type = "passwd" }
+
+let nam = {
+  key = "nam";
+  key_c_type = "const char *";
+  key_ocaml_to_c = "Caml_ba_data_val";
+  key_as_ocaml_string = (fun v -> v);
+}
+
+let id prefix_char =
+  let key = (prefix_char ^ "id") in
+  { key;
+    key_c_type = key ^ "_t";
+    key_ocaml_to_c = "Int_val";
+    key_as_ocaml_string = sprintf {|caml_alloc_sprintf("%%d", Int_val(%s))|};
+  }
+
+let uid = id "u"
+let gid = id "g"

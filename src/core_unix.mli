@@ -926,7 +926,7 @@ val create_process_env
     and return channels connected to the standard input and/or
     the standard output of the command. The command is interpreted
     by the shell [/bin/sh] (cf. [system]). Warning: writes on channels
-    are buffered, hence be careful to call {!Pervasives.flush} at the right times
+    are buffered, hence be careful to call {!Caml.flush} at the right times
     to ensure correct synchronization. *)
 val open_process_in : string -> In_channel.t
 
@@ -1577,7 +1577,7 @@ val setsockopt_float
 
 (** Connect to a server at the given address.
     Return a pair of buffered channels connected to the server.
-    Remember to call {!Pervasives.flush} on the output channel at the right times
+    Remember to call {!Caml.flush} on the output channel at the right times
     to ensure correct synchronization. *)
 val open_connection : sockaddr -> In_channel.t * Out_channel.t
 
@@ -1862,7 +1862,7 @@ val set_in_channel_timeout : In_channel.t -> float -> unit
 val set_out_channel_timeout : Out_channel.t -> float -> unit
 
 (** [exit_immediately exit_code] immediately calls the [exit] system call with the given
-    exit code without performing any other actions (unlike Pervasives.exit).  Does not
+    exit code without performing any other actions (unlike Caml.exit).  Does not
     return. *)
 val exit_immediately : int -> _
 

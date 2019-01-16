@@ -1,0 +1,5 @@
+(library (name lock_file_blocking) (public_name core.lock_file_blocking)
+ (libraries core) (preprocessor_deps config.h) (preprocess (pps ppx_jane)))
+
+(rule (targets config.h) (deps)
+ (action (bash "cp %{lib:core:config.h} %{targets}")))

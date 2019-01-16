@@ -33,3 +33,29 @@ let%test_module "[Nfs]" = (module struct
   let () = unlock_exn path
 end)
 
+open Expect_test_helpers_kernel
+
+let%expect_test "Symlink lock protocol" =
+  let lock_path = Filename.temp_file "lock_file" "unit_test" in
+  let () = Unix.unlink lock_path in
+  let lock_expect_success ~metadata =
+    match Symlink.lock_exn ~lock_path ~metadata with
+    | `We_took_it lock -> lock
+    | `Somebody_else_took_it _ ->
+      failwith "BUG: failed to take the lock when we should have succeeded"
+  in
+  let lock_expect_failure ~metadata =
+    match Symlink.lock_exn ~lock_path ~metadata with
+    | `We_took_it _lock ->
+      failwith "BUG: took the lock when we shouldn't have"
+    | `Somebody_else_took_it metadata ->
+      print_s [%sexp "Somebody else took it", { metadata : string Or_error.t }]
+  in
+  let lock = lock_expect_success ~metadata:"hello world" in
+  lock_expect_failure ~metadata:"goodbye world";
+  [%expect {|("Somebody else took it" ((metadata (Ok "hello world"))))|}];
+  let () = Symlink.unlock_exn lock in
+  let lock = lock_expect_success ~metadata:"hi" in
+  lock_expect_failure ~metadata:"hi";
+  [%expect {|("Somebody else took it" ((metadata (Ok hi))))|}];
+  Symlink.unlock_exn lock

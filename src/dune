@@ -1,0 +1,18 @@
+(rule (targets config.h thread_id.h) (deps)
+ (action
+  (bash
+   "cp %{lib:core_kernel.config_h:config.h} %{lib:core_kernel.config_h:thread_id.h} .")))
+
+(library (name core) (public_name core)
+ (libraries core_kernel core_kernel.base_for_tests sexplib.unix spawn
+  threads)
+ (c_flags :standard -D_LARGEFILE64_SOURCE -I../../core_kernel/src)
+ (install_c_headers config)
+ (c_names bigstring_stubs iobuf_stubs linux_ext_stubs ocaml_utils_stubs
+  pthread_np_stubs recvmmsg signal_stubs time_stamp_counter_stubs timespec
+  unix_stubs unix_time_stubs nss_stubs)
+ (preprocessor_deps config.h)
+ (preprocess (pps ppx_jane -check-doc-comments)))
+
+(alias (name runtest) (deps (:first_dep nss_stubs.c) nss_stubs.cinaps)
+ (action (bash "%{bin:cinaps} %{first_dep}")))

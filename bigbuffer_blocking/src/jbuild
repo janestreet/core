@@ -1,7 +1,0 @@
-(library
- ((name bigbuffer_blocking)
-  (public_name core.bigbuffer_blocking)
-  (libraries (core))
-  (preprocess (pps (ppx_jane ppxlib.runner)))))
-
-(jbuild_version 1)

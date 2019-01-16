@@ -340,3 +340,66 @@ module Nfs = struct
 
   let unlock path = Or_error.try_with (fun () -> unlock_exn path)
 end
+
+(* The reason this function is used is to make sure the file the path is pointing to
+   remains stable across [chdir]. In fact we'd prefer for it to remain stable over
+   other things, such as [rename] of a parent directory.
+   That could be achieved if we [open] the [dir] and use the resulting file descriptor
+   with linkat, unlinkat, etc system calls, but that's less portable and most
+   programs that use locks will break anyway if their directory is renamed. *)
+let canonicalize_dirname path =
+  let dir, name = Filename.dirname path, Filename.basename path in
+  let dir = Filename.realpath dir in
+  dir ^/ name
+
+module Mkdir = struct
+  type t = Locked of { lock_path : string }
+
+  let lock_exn ~lock_path =
+    let lock_path = canonicalize_dirname lock_path in
+    match Unix.mkdir lock_path with
+    | exception (Core.Unix.Unix_error (EEXIST, _, _)) -> `Somebody_else_took_it
+    | () -> `We_took_it (Locked { lock_path })
+
+  let unlock_exn (Locked { lock_path }) = Unix.rmdir lock_path
+end
+
+module Symlink = struct
+  type t = Locked of { lock_path : string }
+
+  let lock_exn ~lock_path ~metadata =
+    let lock_path = canonicalize_dirname lock_path in
+    match Unix.symlink ~link_name:lock_path ~target:metadata with
+    | exception (Core.Unix.Unix_error (EEXIST, _, _)) ->
+      `Somebody_else_took_it (Or_error.try_with (fun () -> Unix.readlink lock_path))
+    | () -> `We_took_it (Locked { lock_path })
+
+  let unlock_exn (Locked { lock_path }) = Unix.unlink lock_path
+end
+
+module Flock = struct
+
+  type t = {
+    fd : Caml.Unix.file_descr;
+    mutable unlocked : bool;
+  }
+
+  let lock_exn ~lock_path =
+    let fd =
+      Core.Unix.openfile ~perm:0o664 ~mode:[O_CREAT; O_WRONLY; O_CLOEXEC] lock_path
+    in
+    match flock fd with
+    | false ->
+      Core.Unix.close ~restart:true fd;
+      `Somebody_else_took_it
+    | true -> `We_took_it { fd; unlocked = false }
+    | exception exn ->
+      Core.Unix.close ~restart:true fd;
+      raise exn
+
+  let unlock_exn t =
+    if t.unlocked
+    then raise_s [%sexp "Lock_file_blocking.Flock.unlock_exn called twice"];
+    t.unlocked <- true;
+    Core.Unix.close ~restart:true t.fd;
+end

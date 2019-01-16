@@ -1,8 +1,10 @@
 (** Mutual exclusion between processes using flock and lockf.  A file is considered locked
     only if both of these mechanisms work.
 
-    These locks are OS-level and as such are local to the machine and will not work across
-    computers even if they mount the same directory.
+    These locks are advisory, meaning that they will not work with systems that don't also
+    try to acquire the matching locks. Although lockf can work across systems (and, in our
+    environment, does work across Linux systems), it is not guaranteed to do so across all
+    implementations.
 *)
 
 open! Core
@@ -146,4 +148,81 @@ module Nfs : sig
       at exit all the locks taken. *)
   val unlock_exn : string -> unit
   val unlock     : string -> unit Or_error.t
+end
+
+(** This is the dumbest lock imaginable: we [mkdir] to lock and [rmdir] to unlock.
+    This gives you pretty good mutual exclusion, but it makes you vulnerable to
+    stale locks. *)
+module Mkdir : sig
+  type t
+
+  (** Raises an exception if the [mkdir] system call fails for any reason other than
+      [EEXIST]. *)
+  val lock_exn : lock_path:string -> [`We_took_it of t | `Somebody_else_took_it]
+
+  (** Raises an exception if the [rmdir] system call fails. *)
+  val unlock_exn : t -> unit
+end
+
+(** This is a bit better than [Mkdir] and is very likely to be compatible: it lets you
+    atomically write the owner of the lock into the symlink, it's used both by emacs and
+    hg, and it's supposed to work on nfs. *)
+module Symlink : sig
+  type t
+
+  (** [metadata] should include some information to help the user identify
+      the lock holder. Usually it's the pid of the holder, but if you use this
+      across a fork or take the lock multiple times in the same program,
+      then some extra information could be useful.
+      This string will be saved as the target of a (usually dangling) symbolic link
+      at path [lock_path].
+
+      [`Somebody_else_took_it] returns the metadata of the process who took it
+      or an error if that can't be determined (for example: they released the lock by the
+      time we tried to inspect it)
+
+      Raises an exception if taking the lock fails for any reason other than somebody
+      else holding the lock.
+  *)
+  val lock_exn :
+    lock_path:string -> metadata:string
+    -> [`We_took_it of t | `Somebody_else_took_it of (string Or_error.t) ]
+
+  val unlock_exn : t -> unit
+end
+
+(** This just uses [flock].
+    The main reason this module exists is that [create] won't let you release locks,
+    so we need a new interface.
+
+    Another difference is that implementation is simpler because it omits some of
+    the features, such as
+
+    1. Unlinking on exit.
+    That seems unsafe. Consider the following scenario:
+    - both a and b create and open the file
+    - a locks, unlinks and unlocks it
+    - b locks and stays in critical section
+    - c finds that there is no file, creates a new one, locks it and enters
+      critical section
+      You end up with b and c in the critical section together!
+
+    2. Writing pid or message in the file.
+    The file is shared between multiple processes so this feature seems hard to
+    think about, and it already lead to weird code. Let's just remove it.
+    You can still find who holds the file open by inspecting output of [lsof].
+
+    3. [close_on_exec = false]
+    There is no objective reason to omit that, but I can't think of a reason to support
+    it either.
+*)
+module Flock : sig
+  type t
+
+  (** Raises an exception if taking the lock fails for any reason other than somebody else
+      holding the lock. *)
+  val lock_exn : lock_path:string -> [ `We_took_it of t | `Somebody_else_took_it ]
+
+  (** Raises an exception if this lock was already unlocked earlier. *)
+  val unlock_exn : t -> unit
 end

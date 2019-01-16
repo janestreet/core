@@ -1,9 +1,0 @@
-(library
- ((name uuid_unix_test)
-  (libraries (core
-              expect_test_helpers_kernel
-              uuid_unix))
-  (preprocess (pps (ppx_jane ppxlib.runner)))))
-
-
-(jbuild_version 1)

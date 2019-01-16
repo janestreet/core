@@ -1,0 +1,2 @@
+(library (name daemon) (public_name core.daemon) (libraries core)
+ (preprocess (pps ppx_jane)))

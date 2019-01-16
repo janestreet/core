@@ -159,7 +159,7 @@ module Raw_make (T : Bound) = struct
         then `Above
         else `Within
 
-    let contains i x = Pervasives.(=) (compare_value i x) `Within
+    let contains i x = Poly.(=) (compare_value i x) `Within
 
     let bound i x = match i with
       | Empty -> None
@@ -311,7 +311,7 @@ type 'a bound_ = 'a
 
 module C = Raw_make (struct
     type 'a bound = 'a
-    include Pervasives
+    include Poly
   end)
 
 include C.Interval

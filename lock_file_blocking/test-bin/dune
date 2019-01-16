@@ -1,0 +1,2 @@
+(executables (names test_lock_file_blocking) (libraries lock_file_blocking)
+ (preprocess (pps ppx_jane)))

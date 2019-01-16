@@ -2,19 +2,16 @@ open! Core
 open! Int.Replace_polymorphic_compare
 open  Expect_test_helpers_kernel
 
-let%test_unit "Time_ns.to_date_ofday" =
+let%expect_test "Time_ns.to_date_ofday" =
   require_does_not_raise [%here] (fun () ->
     ignore
       (Time_ns.to_date_ofday Time_ns.max_value ~zone:Time.Zone.utc
        : (Date.t * Time_ns.Ofday.t)));
+  [%expect {| |}]
 ;;
 
 let%test_module "Core_kernel.Time_ns.Utc.to_date_and_span_since_start_of_day" =
   (module struct
-    type time_ns = Time_ns.t [@@deriving compare]
-    let sexp_of_time_ns = Core_kernel.Time_ns.Alternate_sexp.sexp_of_t
-    ;;
-
     (* move 1ms off min and max values because [Time_ns]'s boundary checking in functions
        that convert to/from float apparently has some fuzz issues. *)
     let safe_min_value = Time_ns.add Time_ns.min_value Time_ns.Span.microsecond
@@ -31,29 +28,30 @@ let%test_module "Core_kernel.Time_ns.Utc.to_date_and_span_since_start_of_day" =
       Time_ns.of_int63_ns_since_epoch ns_since_epoch
     ;;
 
-    let test f =
-      require_does_not_raise [%here] (fun () ->
-        Quickcheck.test quickcheck_generator ~f
-          ~sexp_of:[%sexp_of: time_ns]
-          ~examples:[ safe_min_value; Time_ns.epoch; safe_max_value ])
-    ;;
-
     let%expect_test "Utc.to_date_and_span_since_start_of_day vs Time_ns.to_date_ofday" =
-      test (fun time_ns ->
-        match Word_size.word_size with
-        | W64 ->
-          let kernel_date, kernel_span_since_start_of_day =
-            Core_kernel.Time_ns.Utc.to_date_and_span_since_start_of_day time_ns
-          in
-          let kernel_ofday =
-            Time_ns.Ofday.of_span_since_start_of_day_exn kernel_span_since_start_of_day
-          in
-          let core_date, core_ofday = Time_ns.to_date_ofday time_ns ~zone:Time.Zone.utc in
-          [%test_result: Date.t * Time_ns.Ofday.t]
-            (kernel_date, kernel_ofday)
-            ~expect:(core_date, core_ofday)
-        | W32 ->
-          ());
+      quickcheck [%here]
+        quickcheck_generator
+        ~sexp_of:Time_ns.sexp_of_t
+        ~f:(fun time_ns ->
+          match Word_size.word_size with
+          | W64 ->
+            let kernel_date, kernel_span_since_start_of_day =
+              Core_kernel.Time_ns.Utc.to_date_and_span_since_start_of_day time_ns
+            in
+            let kernel_ofday =
+              Time_ns.Ofday.of_span_since_start_of_day_exn kernel_span_since_start_of_day
+            in
+            let core_date, core_ofday =
+              Time_ns.to_date_ofday time_ns ~zone:Time.Zone.utc
+            in
+            require_compare_equal [%here]
+              (module struct
+                type t = Date.t * Time_ns.Ofday.t [@@deriving compare, sexp_of]
+              end)
+              (kernel_date, kernel_ofday)
+              (core_date, core_ofday)
+          | W32 ->
+            ());
       [%expect {||}];
     ;;
   end)
@@ -410,7 +408,7 @@ let%test_module "Time_ns.Span.to_string,of_string" =
     (* Test a bunch of random floats, but this time specifically generated to be on
        half-nanosecond-boundaries a large fraction of time, and therefore trigger
        "ties" a lot, to test the exact rounding behavior. *)
-    let%test_unit "random-float-parsing-exact" =
+    let%expect_test "random-float-parsing-exact" =
       let rand =
         Random.State.make [| Hashtbl.hash "Time_ns random-float-parsing-exact" |]
       in
@@ -441,13 +439,14 @@ let%test_module "Time_ns.Span.to_string,of_string" =
           Float.int63_round_nearest_exn (float /. ns_divisor)
         in
 
-        [%test_result: Int63.t]
+        require_equal [%here] (module Int63)
           (Time_ns.Span.to_int63_ns (Time_ns.Span.of_string span_str))
-          ~expect:expected_ns_via_int_math;
-        [%test_result: Int63.t]
+          expected_ns_via_int_math;
+        require_equal [%here] (module Int63)
           (Time_ns.Span.to_int63_ns (Time_ns.Span.of_string span_str))
-          ~expect:expected_ns_via_float_math;
-      done
+          expected_ns_via_float_math;
+      done;
+      [%expect {| |}]
     ;;
 
     let%expect_test "way too big should overflow" =
@@ -1072,12 +1071,17 @@ let%test_module "Time_ns.Span.Stable.V2" =
   (module struct
     module V = Time_ns.Span.Stable.V2
 
-    let%test_unit "round-trip" =
-      Quickcheck.test ~examples:span_examples span_gen ~f:(fun span ->
-        let rt = V.t_of_sexp (V.sexp_of_t span) in
-        [%test_eq: Time_ns.Span.t] span rt;
-        let rt = V.of_int63_exn (V.to_int63 span) in
-        [%test_eq: Time_ns.Span.t] span rt;)
+    let%expect_test "round-trip" =
+      quickcheck [%here]
+        ~sexp_of:Time_ns.Span.sexp_of_t
+        ~examples:span_examples
+        span_gen
+        ~f:(fun span ->
+          let rt = V.t_of_sexp (V.sexp_of_t span) in
+          require_equal [%here] (module Time_ns.Span) span rt;
+          let rt = V.of_int63_exn (V.to_int63 span) in
+          require_equal [%here] (module Time_ns.Span) span rt);
+      [%expect {| |}]
     ;;
 
     let%expect_test "stability" =
@@ -1158,16 +1162,17 @@ let%test_module "Time_ns.Span.Option.Stable.V2" =
   (module struct
     module V = Time_ns.Span.Option.Stable.V2
 
-    let%test_unit "round-trip" =
-      Quickcheck.test
+    let%expect_test "round-trip" =
+      quickcheck [%here]
+        ~sexp_of:[%sexp_of: Time_ns.Span.Option.t]
         ~examples:span_option_examples
         span_option_gen
         ~f:(fun span ->
           let rt = V.t_of_sexp (V.sexp_of_t span) in
-          [%test_eq: Time_ns.Span.Option.t] span rt;
+          require_equal [%here] (module Time_ns.Span.Option) span rt;
           let rt = V.of_int63_exn (V.to_int63 span) in
-          [%test_eq: Time_ns.Span.Option.t] span rt;
-        )
+          require_equal [%here] (module Time_ns.Span.Option) span rt);
+      [%expect {| |}]
     ;;
 
     let%expect_test "stability" =
@@ -1486,18 +1491,22 @@ let%test_module "Time_ns.Stable.Ofday.V1" =
           53375d23h53m38.427387902s)) |}];
     ;;
 
-    let%test_unit "roundtrip quickcheck" =
+    let%expect_test "roundtrip quickcheck" =
       let generator =
         Core_kernel.Int63.gen_incl
           (V.to_int63 Time_ns.Ofday.start_of_day)
           (V.to_int63 Time_ns.Ofday.start_of_next_day)
         |> Core_kernel.Quickcheck.Generator.map ~f:V.of_int63_exn
       in
-      Core_kernel.Quickcheck.test generator
+      quickcheck [%here]
+        generator
         ~sexp_of:V.sexp_of_t
         ~f:(fun ofday ->
-          [%test_result: V.t] ~expect:ofday (V.of_int63_exn (V.to_int63  ofday));
-          [%test_result: V.t] ~expect:ofday (V.t_of_sexp    (V.sexp_of_t ofday)))
+          require_compare_equal [%here] (module V) ofday
+            (V.of_int63_exn (V.to_int63 ofday));
+          require_compare_equal [%here] (module V) ofday
+            (V.t_of_sexp (V.sexp_of_t ofday)));
+      [%expect {| |}]
     ;;
   end)
 
@@ -1583,20 +1592,22 @@ let%test_module "Time_ns.Ofday.Option.Stable.V1" =
           (max_value 49275d))) |}];
     ;;
 
-    let%test_unit "roundtrip quickcheck" =
+    let%expect_test "roundtrip quickcheck" =
       let generator =
-        Core_kernel.Int63.gen_incl
+        Int63.gen_incl
           (V.to_int63 (Time_ns.Ofday.Option.some Time_ns.Ofday.start_of_day))
           (V.to_int63 (Time_ns.Ofday.Option.some Time_ns.Ofday.start_of_next_day))
-        |> Core_kernel.Quickcheck.Generator.map ~f:V.of_int63_exn
+        |> Quickcheck.Generator.map ~f:V.of_int63_exn
       in
-      Core_kernel.Quickcheck.test generator
+      quickcheck [%here]
+        generator
         ~sexp_of:V.sexp_of_t
         ~f:(fun ofday_option ->
-          [%test_result: V.t] ~expect:ofday_option
+          require_compare_equal [%here] (module V) ofday_option
             (V.of_int63_exn (V.to_int63 ofday_option));
-          [%test_result: V.t] ~expect:ofday_option
-            (V.t_of_sexp (V.sexp_of_t ofday_option)))
+          require_compare_equal [%here] (module V) ofday_option
+            (V.t_of_sexp (V.sexp_of_t ofday_option)));
+      [%expect {| |}]
     ;;
   end)
 
@@ -1613,36 +1624,50 @@ let%test_module "Time_ns.Span" =
     let min_span_ns_as_span = to_span Time_ns.Span.min_value
     let max_span_ns_as_span = to_span Time_ns.Span.max_value
 
-    let%test "to_span +/-140y raises" =
-      List.for_all [ 1.; -1. ]
-        ~f:(fun sign ->
-          does_raise (fun () ->
-            to_span (Time_ns.Span.of_day (140. *. 366. *. sign))))
+    let%expect_test "to_span +/-140y raises" =
+      List.iter [ 1.; -1. ] ~f:(fun sign ->
+        require_does_raise [%here] (fun () ->
+          to_span (Time_ns.Span.of_day (140. *. 366. *. sign))));
+      [%expect {|
+        ("Span.t exceeds limits"
+          (t         51240d)
+          (min_value -49275d)
+          (max_value 49275d))
+        ("Span.t exceeds limits"
+          (t         -51240d)
+          (min_value -49275d)
+          (max_value 49275d)) |}]
     ;;
 
-    let%test "of_span +/-140y raises" =
-      List.for_all [ 1.; -1. ]
-        ~f:(fun sign ->
-          does_raise (fun () -> of_span (Time.Span.of_day (140. *. 366. *. sign))))
+    let%expect_test "of_span +/-140y raises" =
+      List.iter [ 1.; -1. ] ~f:(fun sign ->
+        require_does_raise [%here] ~hide_positions:true (fun () ->
+          of_span (Time.Span.of_day (140. *. 366. *. sign))));
+      [%expect {|
+        ("Time_ns.Span does not support this span"
+         51240d
+         lib/core_kernel/src/span_ns.ml:LINE:COL)
+        ("Time_ns.Span does not support this span"
+         -51240d
+         lib/core_kernel/src/span_ns.ml:LINE:COL) |}]
     ;;
 
-    let%test_unit "Span.to_string_hum" =
+    let%expect_test "Span.to_string_hum" =
       let open Time_ns.Span in
-      [%test_result: string] (to_string_hum nanosecond) ~expect:"1ns";
-      [%test_result: string] (to_string_hum day) ~expect:"1d";
-      [%test_result: string]
-        (to_string_hum ~decimals:6                      day)
-        ~expect:"1d";
-      [%test_result: string]
+      require_equal [%here] (module String) (to_string_hum nanosecond) "1ns";
+      require_equal [%here] (module String) (to_string_hum day) "1d";
+      require_equal [%here] (module String) (to_string_hum ~decimals:6 day) "1d";
+      require_equal [%here] (module String)
         (to_string_hum ~decimals:6 ~align_decimal:false day)
-        ~expect:"1d";
-      [%test_result: string]
-        (to_string_hum ~decimals:6 ~align_decimal:true  day)
-        ~expect:"1.000000d ";
-      [%test_result: string]
-        (to_string_hum ~decimals:6 ~align_decimal:true ~unit_of_time:Day
-           (hour + minute))
-        ~expect:"0.042361d "
+        "1d";
+      require_equal [%here] (module String)
+        (to_string_hum ~decimals:6 ~align_decimal:true day)
+        "1.000000d ";
+      require_equal [%here] (module String)
+        (to_string_hum ~decimals:6 ~align_decimal:true ~unit_of_time:Day (hour + minute))
+        "0.042361d ";
+      [%expect {| |}]
+    ;;
 
     let a_few_more_or_less = [-3; -2; -1; 0; 1; 2; 3]
 
@@ -1701,7 +1726,7 @@ let%test_module "Time_ns.Span" =
                 (span_ns    : Core_kernel.Time_ns.Span.t)
                 (round_trip : Time.Span.t)
                 (precision  : Time.Span.t)]));
-      [%expect {||}];
+      [%expect {| |}];
     ;;
 
     let span_ns_examples =
@@ -1764,16 +1789,24 @@ let%test_module "Time_ns.Span" =
       [%expect {||}];
     ;;
 
-    let%test _ = Time.Span.is_positive (to_span max_value)  (* make sure no overflow *)
+    let%expect_test _ =
+      require [%here] (Time.Span.is_positive (to_span max_value));
+      (* make sure no overflow *)
+      [%expect {| |}]
+    ;;
   end)
 
 let%test_module "Time_ns.Span.Option" =
   (module struct
     open Time_ns.Span.Option
 
-    let%test "none is not a valid span" =
-      does_raise (fun () ->
-        some (Time_ns.Span.of_int63_ns (Time_ns.Span.Option.Stable.V1.to_int63 none)))
+    let%expect_test "none is not a valid span" =
+      require_does_raise [%here] ~hide_positions:true (fun () ->
+        some (Time_ns.Span.of_int63_ns (Time_ns.Span.Option.Stable.V1.to_int63 none)));
+      [%expect {|
+        (lib/core/src/core_time_ns.ml:LINE:COL
+         "Span.Option.some value not representable") |}]
+    ;;
   end)
 
 let%test_module "Time_ns" =
@@ -1783,185 +1816,207 @@ let%test_module "Time_ns" =
     let min_time_value = to_time min_value
     let max_time_value = to_time max_value
 
-    let%test_unit "Time.t -> Time_ns.t round trip" =
+    let%expect_test "Time.t -> Time_ns.t round trip" =
       let open Time in
-      let time_to_float t = Time.to_span_since_epoch t |> Time.Span.to_sec in
-      let sexp_of_t t = [%sexp_of: t * float] (t, time_to_float t) in (* more precise *)
       let us_since_epoch time = Time.(Span.to_us (diff time epoch)) in
       let min_us_since_epoch = us_since_epoch min_time_value in
       let max_us_since_epoch = us_since_epoch max_time_value in
       let time_of_us_since_epoch us_since_epoch =
         Time.(add epoch (Span.of_us (Float.round_nearest us_since_epoch)))
       in
-      let times =                           (* touchstones *)
-        [ min_time_value; Time.epoch; Time.now (); max_time_value ]
-      in
-      let times =                           (* a few units around *)
-        List.concat_map times
-          ~f:(fun time ->
+      let times =
+        begin
+          (* touchstones *)
+          [ min_time_value; Time.epoch; Time.now (); max_time_value ]
+          (* a few units around *)
+          |> List.concat_map ~f:(fun time ->
             List.concat_map
-              Time.Span.([ microsecond; millisecond; second; minute; hour; day;
-                           scale day 365.
-                         ])
+              Time.Span.([ microsecond
+                         ; millisecond
+                         ; second
+                         ; minute
+                         ; hour
+                         ; day
+                         ; scale day 365. ])
               ~f:(fun unit ->
                 List.map (List.map ~f:float (List.range (-3) 4))
                   ~f:(fun s -> Time.add time (Time.Span.scale unit s))))
-      in
-      let times =                           (* a few randoms *)
-        times @
-        List.init 9
-          ~f:(fun _ ->
-            Time.add Time.epoch
-              (Time.Span.of_us
-                 (min_us_since_epoch
-                  +. Random.float (max_us_since_epoch -. min_us_since_epoch))))
-      in
-      let times =                           (* nearest microsecond *)
-        List.map times
-          ~f:(fun time ->
-            time_of_us_since_epoch
-              (Float.round_nearest Time.(Span.to_us (diff time epoch))))
-      in
-      let times =                           (* in range *)
-        List.filter times
-          ~f:(fun time -> Time.(time >= min_time_value && time <= max_time_value))
+        end
+        (* a few randoms *)
+        @ List.init 9 ~f:(fun _ ->
+          Time.add Time.epoch
+            (Time.Span.of_us
+               (min_us_since_epoch
+                +. Random.float (max_us_since_epoch -. min_us_since_epoch))))
+        (* nearest microsecond *)
+        |> List.map ~f:(fun time ->
+          time_of_us_since_epoch
+            (Float.round_nearest Time.(Span.to_us (diff time epoch))))
+        (* in range *)
+        |> List.filter ~f:(fun time ->
+          Time.(time >= min_time_value && time <= max_time_value))
       in
       let is_64bit = match Word_size.word_size with
         | W64 -> true
         | W32 -> false
       in
-      List.iter times
-        ~f:(fun expect ->
-          let time = to_time (of_time expect) in
-          (* We don't have full microsecond precision at the far end of the range. *)
-          if is_64bit && expect < Time.of_string "2107-01-01 00:00:00" then
-            [%test_result: t] ~expect time
-          else
-            [%test_pred: t * t]
-              (fun (a, b) -> Span.(abs (diff a b) <= microsecond))
-              (expect, time))
+      List.iter times ~f:(fun expect ->
+        let time = to_time (of_time expect) in
+        (* We don't have full microsecond precision at the far end of the range. *)
+        if is_64bit && expect < Time.of_string "2107-01-01 00:00:00"
+        then require_equal [%here] (module Time) expect time
+        else begin
+          let diff = Span.abs (diff expect time) in
+          require [%here] (Span.( <= ) diff Span.microsecond)
+            ~if_false_then_print_s:
+              (lazy [%message "too far apart" (time : t) (expect : t) (diff : Span.t)])
+        end);
+      [%expect {| |}]
     ;;
 
-    let%test_unit "Time_ns.t -> Time.t round trip" =
-      let open Core_kernel.Time_ns.Alternate_sexp in
-      let ts =                              (* touchstones *)
-        [ min_value; epoch; now (); max_value ]
-      in
+    let%expect_test "Time_ns.t -> Time.t round trip" =
       (* Some tweaks will be out of range, which will raise exceptions. *)
       let filter_map list ~f =
         List.filter_map list ~f:(fun x -> Core.Option.try_with (fun () -> f x))
       in
-      let ts =                              (* a few units around *)
-        List.concat_map ts
-          ~f:(fun time ->
+      let ts =
+        begin
+          (* touchstones *)
+          [ min_value; epoch; now (); max_value ]
+          (* a few units around *)
+          |> List.concat_map ~f:(fun time ->
             List.concat_map
-              Span.([ microsecond; millisecond; second; minute; hour; day;
-                      scale day 365.
-                    ])
+              Span.([ microsecond
+                    ; millisecond
+                    ; second
+                    ; minute
+                    ; hour
+                    ; day
+                    ; scale day 365. ])
               ~f:(fun unit ->
                 filter_map (List.map ~f:float (List.range (-3) 4))
                   ~f:(fun s -> add time (Span.scale unit s))))
+        end
+        (* a few randoms *)
+        @ List.init 9 ~f:(fun _ -> random ())
+        (* nearest microsecond since epoch *)
+        |> List.map ~f:(fun time ->
+          Time_ns.of_int63_ns_since_epoch
+            (let open Int63 in
+             (Time_ns.to_int63_ns_since_epoch time + of_int 500)
+             /% of_int 1000
+             * of_int 1000))
+        (* in range *)
+        |> List.filter ~f:(fun t ->
+          t >= min_value && t <= max_value)
       in
-      let ts =                              (* a few randoms *)
-        ts @ List.init 9 ~f:(fun _ -> random ())
-      in
-      let ts =                              (* nearest microsecond since epoch *)
-        List.map ts
-          ~f:(fun time ->
-            Time_ns.of_int63_ns_since_epoch
-              (let open Int63 in
-               (Time_ns.to_int63_ns_since_epoch time + of_int 500)
-               /% of_int 1000
-               * of_int 1000))
-      in
-      let ts =                              (* in range *)
-        List.filter ts ~f:(fun t -> t >= min_value && t <= max_value)
-      in
-      List.iter ts ~f:(fun expect -> [%test_result: t] ~expect (of_time (to_time expect)))
+      List.iter ts ~f:(fun expect ->
+        require_equal [%here] (module Time_ns) expect (of_time (to_time expect)));
+      [%expect {| |}]
     ;;
 
-    let%test _ = epoch = of_span_since_epoch Span.zero
+    let%expect_test _ =
+      require_equal [%here] (module Time_ns) epoch (of_span_since_epoch Span.zero);
+      [%expect {| |}]
+    ;;
 
-    let%test_unit "round trip from [Time.t] to [t] and back" =
+    let%expect_test "round trip from [Time.t] to [t] and back" =
       let time_of_float f = Time.of_span_since_epoch (Time.Span.of_sec f) in
       let times = List.map ~f:time_of_float [ 0.0; 1.0; 1.123456789 ] in
       List.iter times ~f:(fun time ->
         let res = to_time (of_time time) in
-        [%test_result: Time.t] ~equal:Time.(=.) ~expect:time res
-      )
+        require [%here] (Time.(=.) time res)
+          ~if_false_then_print_s:
+            (lazy [%message "too far apart" (time : Time.t) (res : Time.t)]));
+      [%expect {| |}]
+    ;;
 
-    let%test_unit "round trip from [t] to [Time.t] and back" =
+    let%expect_test "round trip from [t] to [Time.t] and back" =
       List.iter Span.([ zero; second; scale day 365. ]) ~f:(fun since_epoch ->
         let t = of_span_since_epoch since_epoch in
         let res = of_time (to_time t) in
         (* Allow up to 100ns discrepancy in a year due to float precision issues. *)
         let discrepancy = diff res t in
         if Span.(abs discrepancy > of_ns 100.) then
-          failwiths "Failed on span since epoch"
-            (`since_epoch since_epoch, t, `res res, `discrepancy discrepancy)
-            [%sexp_of: [ `since_epoch of Span.t ]
-                       * t * [ `res of t ]
-                       * [ `discrepancy of Span.t ]])
+          print_cr [%here] [%message
+            "Failed on span since epoch"
+              (since_epoch : Span.t)
+              (t : t)
+              (res : t)
+              (discrepancy : Span.t)]);
+      [%expect {| |}]
+    ;;
 
-    let%test_unit _ =
+    let%expect_test _ =
       let span = Span.create ~hr:8 ~min:27 ~sec:14 ~ms:359 () in
       let ofday = Ofday.of_span_since_start_of_day_exn span in
       let expected = "08:27:14.359" in
       let ms_str = Ofday.to_millisecond_string ofday in
       if String.(<>) ms_str expected then
-        failwithf "Failed on Ofday.to_millisecond_string Got (%s) expected (%s)"
-          ms_str expected ()
+        print_cr [%here] [%message
+          "Failed on Ofday.to_millisecond_string"
+            ~got:(ms_str : string)
+            (expected : string)];
+      [%expect {| |}]
+    ;;
 
     let check ofday =
-      try
-        assert Ofday.(ofday >= start_of_day && ofday < start_of_next_day);
-        [%test_result: Ofday.t] ~expect:ofday
-          (Ofday.of_string (Ofday.to_string ofday));
-        [%test_result: Ofday.t] ~expect:ofday
-          (Ofday.t_of_sexp (Ofday.sexp_of_t ofday));
-        let of_ofday = Ofday.of_ofday (Ofday.to_ofday ofday) in
-        let diff = Span.abs (Ofday.diff ofday of_ofday) in
-        if Span.( >= ) diff Span.microsecond then
-          raise_s [%message
+      let if_false_then_print_s = lazy [%message "check ofday" (ofday : Ofday.t)] in
+      require [%here] ~if_false_then_print_s
+        Ofday.(ofday >= start_of_day && ofday < start_of_next_day);
+      require_equal [%here] (module Ofday) ~if_false_then_print_s ofday
+        (Ofday.of_string (Ofday.to_string ofday));
+      require_equal [%here] (module Ofday) ~if_false_then_print_s ofday
+        (Ofday.t_of_sexp (Ofday.sexp_of_t ofday));
+      let of_ofday = Ofday.of_ofday (Ofday.to_ofday ofday) in
+      let diff = Span.abs (Ofday.diff ofday of_ofday) in
+      require [%here]
+        (Span.( < ) diff Span.microsecond)
+        ~if_false_then_print_s:
+          (lazy [%message
             "of_ofday / to_ofday round-trip failed"
               (ofday    : Ofday.t)
-              (of_ofday : Ofday.t)]
-      with raised ->
-        failwiths "check ofday"
-          (Or_error.try_with (fun () -> [%sexp_of: Ofday.t] ofday),
-           Span.to_int63_ns (Time_ns.Ofday.to_span_since_start_of_day ofday),
-           raised)
-          [%sexp_of: Sexp.t Or_error.t * Int63.t * exn]
+              (of_ofday : Ofday.t)])
+    ;;
 
-    let%test_unit _ =
+    let%expect_test _ =
       (* Ensure that midnight_cache doesn't interfere with converting times that are much
          earlier or later than each other. *)
       check (to_ofday ~zone:(force Time_ns.Zone.local) epoch);
       check (to_ofday ~zone:(force Time_ns.Zone.local) (now ()));
-      check (to_ofday ~zone:(force Time_ns.Zone.local) epoch)
+      check (to_ofday ~zone:(force Time_ns.Zone.local) epoch);
+      [%expect {| |}]
+    ;;
 
     (* Reproduce a failure of the prior test before taking DST into account. *)
-    let%test_unit "to_ofday around fall 2015 DST transition" =
-      List.iter
-        ~f:(fun (time_ns, expect) ->
-          let zone = Time.Zone.find_exn "US/Eastern" in
-          (* First make sure Time.to_ofday behaves as expected with these inputs. *)
-          let time_ofday = Time.to_ofday (to_time time_ns) ~zone in
-          if Time.Ofday.(<>) time_ofday (Time.Ofday.of_string expect) then
-            failwiths "Time.to_ofday"
-              [%sexp (time_ns    : t),
-                     (time_ofday : Time.Ofday.t),
-                     (expect     : string)]
-              Fn.id;
-          (* Then make sure we do the same, correct thing. *)
-          let ofday = to_ofday time_ns ~zone in
-          check ofday;
-          if Ofday.(<>) ofday (Ofday.of_string expect) then
-            failwiths "to_ofday"
-              [%sexp (time_ns : t),
-                     (ofday   : Ofday.t),
-                     (expect  : string)]
-              Fn.id)
+    let%expect_test "to_ofday around fall 2015 DST transition" =
+      let test (time_ns, expect) =
+        let zone = Time.Zone.find_exn "US/Eastern" in
+        (* First make sure Time.to_ofday behaves as expected with these inputs. *)
+        let time_ofday = Time.to_ofday (to_time time_ns) ~zone in
+        require_equal [%here] (module Time.Ofday)
+          time_ofday
+          (Time.Ofday.of_string expect)
+          ~if_false_then_print_s:
+            (lazy [%message
+              "Time.to_ofday"
+                (time_ns : t)
+                (time_ofday : Time.Ofday.t)
+                (expect : string)]);
+        (* Then make sure we do the same, correct thing. *)
+        let ofday = to_ofday time_ns ~zone in
+        check ofday;
+        require_equal [%here] (module Ofday)
+          ofday
+          (Ofday.of_string expect)
+          ~if_false_then_print_s:
+            (lazy [%message
+              "to_ofday"
+                (time_ns : t)
+                (ofday : Ofday.t)
+                (expect  : string)])
+      in
+      let examples =
         ([ epoch, "19:00:00"
          ; of_string_abs "2015-11-02 23:59:59 US/Eastern", "23:59:59"
          ; epoch, "19:00:00"
@@ -1980,6 +2035,10 @@ let%test_module "Time_ns" =
          @ [ add (of_string "2015-03-08 01:59:59 US/Eastern") Span.second, "03:00:00"
            ; epoch, "19:00:00"
            ])
+      in
+      List.iter examples ~f:test;
+      [%expect {| |}]
+    ;;
 
     let random_nativeint_range =
       match Word_size.word_size with
@@ -1997,13 +2056,21 @@ let%test_module "Time_ns" =
             Int63.(((r - min_time_ns) % range) + min_time_ns)
     ;;
 
-    let%test_unit "to_ofday random" =
+    let%expect_test "to_ofday random" =
       List.iter !Time.Zone.likely_machine_zones ~f:(fun zone ->
         let zone = Time.Zone.find_exn zone in
-        for _ = 0 to 1_000 do check (to_ofday (random_nativeint_range ()) ~zone) done)
+        for _ = 0 to 1_000 do
+          check (to_ofday (random_nativeint_range ()) ~zone)
+        done);
+      [%expect {| |}]
+    ;;
 
-    let%test_unit "to_ofday ~zone:(force Time_ns.Zone.local) random" =
-      for _ = 0 to 1_000 do check (to_ofday ~zone:(force Time_ns.Zone.local) (random_nativeint_range ())) done
+    let%expect_test "to_ofday ~zone:(force Time_ns.Zone.local) random" =
+      for _ = 0 to 1_000 do
+        check (to_ofday ~zone:(force Time_ns.Zone.local) (random_nativeint_range ()))
+      done;
+      [%expect {| |}]
+    ;;
 
     let%expect_test "[to_date ofday] - [of_date_ofday] roundtrip" =
       let times =
@@ -2016,11 +2083,11 @@ let%test_module "Time_ns" =
         (* two timestamps on 2016-11-01 in the middle of the day, 1ns apart *)
         ; 1478011075019386869L
         ; 1478011075019386670L
-        (* two timestamps on 2016-11-06 (Sunday), when DST ends at 2am. When DST ends, time
-           jumps from 2:00am back to 1:00am. Hence there are two 1:00ams, the later occurs 1hr
-           later in linear time. This test starts with the initial 1:00am (as inputs to
-           [to_date] and [to_ofday]) and then gets reinterpreted as the later 1:00am by
-           [of_date_ofday] *)
+        (* two timestamps on 2016-11-06 (Sunday), when DST ends at 2am. When DST ends,
+           time jumps from 2:00am back to 1:00am. Hence there are two 1:00ams, the later
+           occurs 1hr later in linear time. This test starts with the initial 1:00am (as
+           inputs to [to_date] and [to_ofday]) and then gets reinterpreted as the later
+           1:00am by [of_date_ofday] *)
         ; 1478408399999999999L (* just before 1am *)
         ; 1478408400000000000L (* 1ns later, at 1am (for the first time),
                                   NOTE: we're off by 1h when we try the round-trip, see
@@ -2055,12 +2122,12 @@ let%test_module "Time_ns" =
     ;;
 
     let%expect_test "in tests, [to_string] uses NYC's time zone" =
-      printf "%s" (to_string epoch);
+      print_endline (to_string epoch);
       [%expect {| 1969-12-31 19:00:00.000000000-05:00 |}];
     ;;
 
     let%expect_test "in tests, [sexp_of_t] uses NYC's time zone" =
-      printf !"%{Sexp}" [%sexp (epoch : t)];
+      print_s [%sexp (epoch : t)];
       [%expect {| (1969-12-31 19:00:00.000000000-05:00) |}];
     ;;
   end)
@@ -2171,13 +2238,24 @@ let%test_module "Time_ns.Option" =
     let%test_module "round trip" =
       (module struct
         let roundtrip t = (value_exn (some t))
-        let%test_unit "epoch" =
-          [%test_result: Time_ns.t] (roundtrip Time_ns.epoch) ~expect:Time_ns.epoch
-        let%test_unit "now" =
-          let t = Time_ns.now () in [%test_result: Time_ns.t] (roundtrip t) ~expect:t
+
+        let%expect_test "epoch" =
+          require_equal [%here] (module Time_ns) (roundtrip Time_ns.epoch) Time_ns.epoch;
+          [%expect {| |}]
+        ;;
+
+        let%expect_test "now" =
+          let t = Time_ns.now () in
+          require_equal [%here] (module Time_ns) (roundtrip t) t;
+          [%expect {| |}]
+        ;;
       end)
 
-    let%test _ = is_error (Result.try_with (fun () -> value_exn none))
+    let%expect_test _ =
+      require_does_raise [%here] ~hide_positions:true (fun () ->
+        value_exn none);
+      [%expect {| (lib/core/src/core_time_ns.ml:LINE:COL "Span.Option.value_exn none") |}]
+    ;;
   end)
 
 let%expect_test _ =

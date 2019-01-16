@@ -882,7 +882,7 @@ let fork () =
     `In_the_parent (Pid.of_int pid)
 ;;
 
-(* Same as [Pervasives.exit] but does not run at_exit handlers *)
+(* Same as [Caml.exit] but does not run at_exit handlers *)
 external sys_exit : int -> 'a = "caml_sys_exit"
 
 let fork_exec ~prog ~argv ?use_path ?env () =
@@ -1853,11 +1853,40 @@ let setgid gid =
 
 let getgroups = Unix.getgroups
 
+let with_buffer_increased_on_ERANGE f =
+  fun x ->
+    let rec go n =
+      match f x (Core_kernel.Bigstring.create n) with
+      | exception Unix_error (ERANGE, _, _) ->
+        (* Using 4 instead of 2 here as a multiple ~doubles the memory usage, but it
+           ~halves the number of calls. The number of calls is likely to be the more
+           important concern here.
+           Increasing it further has diminishing returns. *)
+        go (4 * n)
+      | x -> x
+    in
+    (* the recommented initial size is sysconf(_SC_GET{PW,GR}_R_SIZE_MAX),
+       but we don't have a binding for that and it might not
+       be available on every platform and the recommendation is unlikely to be
+       sufficiently well-informed so why bother. *)
+    go 10000
+
 let make_by f make_exn =
   let normal arg = try Some (f arg) with Not_found_s _ | Caml.Not_found -> None in
   let exn arg = try f arg with Not_found_s _ | Caml.Not_found -> raise (make_exn arg) in
   (normal, exn)
 ;;
+
+let string_to_zero_terminated_bigstring s =
+  if String.contains s '\000' then
+    Printf.ksprintf invalid_arg
+      "NUL bytes are not allowed in the group and user names, \
+       but found one in %S"
+      s;
+  Core_kernel.Bigstring.of_string (s ^ "\000")
+
+let make_by' f make_exn =
+  make_by (with_buffer_increased_on_ERANGE f) make_exn
 
 module Passwd = struct
   type t =
@@ -1883,32 +1912,52 @@ module Passwd = struct
     }
   ;;
 
+  module Low_level = struct
+
+    (* duplicating type definition here because we'll need to update the C bindings
+       if it ever changes *)
+    type passwd_entry = Unix.passwd_entry = {
+      pw_name : string;
+      pw_passwd : string;
+      pw_uid : file_perm;
+      pw_gid : file_perm;
+      pw_gecos : string;
+      pw_dir : string;
+      pw_shell : string;
+    }
+
+    external core_setpwent : unit -> unit = "core_setpwent" ;;
+    external core_endpwent : unit -> unit = "core_endpwent" ;;
+    external core_getpwent : unit -> passwd_entry = "core_getpwent" ;;
+    let setpwent = core_setpwent ;;
+
+    let getpwent_exn () = of_unix (core_getpwent ()) ;;
+    let getpwent () = Option.try_with (fun () -> getpwent_exn ()) ;;
+    let endpwent = core_endpwent ;;
+
+    external getpwnam_r :
+      bigstring -> bigstring -> passwd_entry = "core_getpwnam_r"
+    external getpwuid_r :
+      int -> bigstring -> passwd_entry = "core_getpwuid_r"
+  end ;;
+
   exception Getbyname of string [@@deriving sexp]
 
   let (getbyname, getbyname_exn) =
-    make_by
-      (fun name -> of_unix (Unix.getpwnam name))
+    make_by'
+      (fun name buf ->
+         of_unix (Low_level.getpwnam_r (
+           string_to_zero_terminated_bigstring name) buf))
       (fun s -> Getbyname s)
   ;;
 
   exception Getbyuid of int [@@deriving sexp]
 
   let (getbyuid, getbyuid_exn) =
-    make_by
-      (fun uid -> of_unix (Unix.getpwuid uid))
+    make_by'
+      (fun uid buf -> of_unix (Low_level.getpwuid_r uid buf))
       (fun s -> Getbyuid s)
   ;;
-
-  module Low_level = struct
-    external core_setpwent : unit -> unit = "core_setpwent" ;;
-    external core_endpwent : unit -> unit = "core_endpwent" ;;
-    external core_getpwent : unit -> Unix.passwd_entry = "core_getpwent" ;;
-    let setpwent = core_setpwent ;;
-
-    let getpwent_exn () = of_unix (core_getpwent ()) ;;
-    let getpwent () = Option.try_with (fun () -> getpwent_exn ()) ;;
-    let endpwent = core_endpwent ;;
-  end ;;
 
   let pwdb_lock = Mutex0.create () ;;
 
@@ -1948,23 +1997,40 @@ module Group = struct
     }
   ;;
 
+  module Low_level = struct
+    (* duplicating type definition here because we'll need to update the C bindings
+       if it ever changes *)
+    type group_entry = Unix.group_entry = {
+      gr_name : string;
+      gr_passwd : string;
+      gr_gid : file_perm;
+      gr_mem : string sexp_array;
+    }
+    external getgrnam_r : bigstring -> bigstring -> group_entry = "core_getgrnam_r"
+    external getgrgid_r : int -> bigstring -> group_entry = "core_getgrgid_r"
+  end
+
   exception Getbyname of string [@@deriving sexp]
 
   let (getbyname, getbyname_exn) =
-    make_by (fun name -> of_unix (Unix.getgrnam name)) (fun s -> Getbyname s)
+    make_by'
+      (fun name buf ->
+         of_unix (Low_level.getgrnam_r (string_to_zero_terminated_bigstring name) buf))
+      (fun s -> Getbyname s)
   ;;
 
   exception Getbygid of int [@@deriving sexp]
 
   let (getbygid, getbygid_exn) =
-    make_by (fun gid -> of_unix (Unix.getgrgid gid)) (fun s -> Getbygid s)
+    make_by'
+      (fun gid buf -> of_unix (Low_level.getgrgid_r gid buf)) (fun s -> Getbygid s)
   ;;
 end
 
 (* The standard getlogin function goes through utmp which is unreliable,
    see the BUGS section of getlogin(3) *)
 let _getlogin_orig = Unix.getlogin
-let getlogin () = (Unix.getpwuid (getuid ())).Unix.pw_name
+let getlogin () = (Passwd.getbyuid_exn (getuid ())).name
 
 module Protocol_family = struct
   type t = [ `Unix | `Inet | `Inet6 ]
@@ -1990,7 +2056,7 @@ module Inet_addr0 = struct
 
         (* Unix.inet_addr is represented as either a "struct in_addr" or a "struct
            in6_addr" stuffed into an O'Caml string, so polymorphic compare will work. *)
-        let compare = Pervasives.compare
+        let compare = Poly.compare
         let hash_fold_t hash t = hash_fold_int hash (Hashtbl.hash t)
         let hash = Ppx_hash_lib.Std.Hash.of_fold hash_fold_t
       end

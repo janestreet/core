@@ -109,7 +109,7 @@ let%test_module "Cmdline.extend" =
         let args = Cmdline.of_list args in
         Cmdline.extend args ~extend ~path
       in
-      Pervasives.(=) expected observed
+      [%compare.equal:Cmdline.t] expected observed
 
     let%test _ = test ["foo"; "bar"] ["anon"; "-flag"] ["anon"; "-flag"; "-foo"; "-bar"]
     let%test _ = test ["foo"; "baz"] []                ["-foobaz"]
