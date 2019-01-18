@@ -11,6 +11,7 @@ build: [
 ]
 depends: [
   "ocaml" {>= "4.07.0"}
+  "config_h"
   "core_kernel"
   "ppx_jane"
   "sexplib"
