@@ -57,6 +57,16 @@ let%test_module "Window" =
         [%expect {|
           ("00000000  60 42 6f 73 74 6f 6e 27  20 69 73 20 64 69 73 79  |`Boston' is disy|"
            "00000010  6c 6c 61 62 69 63                                 |llabic|") |}]
+
+      module Pretty = struct
+        include T
+
+        let sexp_of_t = Pretty.sexp_of_t
+
+        let%expect_test "sexp_of_t" =
+          print_s [%sexp (iobuf : (_,_) t)];
+          [%expect {| "`Boston' is disyllabic" |}]
+      end
     end
   end : module type of Iobuf.Window))
 
@@ -103,6 +113,17 @@ let%test_module "Limits" =
            "00000020  74 20 60 42 6f 73 74 6f  6e 27 20 61 6e 64 20 63  |t `Boston' and c|"
            "00000030  6f 6e 74 61 69 6e 73 20  60 60 42 6f 73 74 6f 6e  |ontains ``Boston|"
            "00000040  27 27 2e                                          |''.|") |}]
+
+
+      module Pretty = struct
+        include T
+
+        let sexp_of_t = Pretty.sexp_of_t
+
+        let%expect_test "sexp_of_t" =
+          print_s [%sexp (iobuf : (_,_) t)];
+          [%expect {| "``Boston' is disyllabic' is about `Boston' and contains ``Boston''." |}]
+      end
     end
   end : module type of Iobuf.Limits))
 
@@ -156,6 +177,8 @@ let%test_module "Hexdump" =
             00000020  74 20 60 42 6f 73 74 6f  6e 27 20 61 6e 64 20 63  |t `Boston' and c|
             00000030  6f 6e 74 61 69 6e 73 20  60 60 42 6f 73 74 6f 6e  |ontains ``Boston|
             00000040  27 27 2e                                          |''.| |}]
+
+
   end : module type of Iobuf.Hexdump))
 
 let%test_module "Debug" =
@@ -303,5 +326,7 @@ let%test_module "Debug" =
             000001a0  20 6d 61 72 6b 73 3b 20  61 6e 64 20 42 6f 73 74  | marks; and Bost|
             000001b0  6f 6e 20 63 6f 6e 74 61  69 6e 73 20 73 6f 6d 65  |on contains some|
             000001c0  20 38 30 30 2c 30 30 30  20 70 65 6f 70 6c 65 2e  | 800,000 people.| |}]
+
+
     end
   end : module type of Iobuf.Debug))
