@@ -6,7 +6,11 @@ include Thread
 
 let sexp_of_t t = [%message "thread" ~id:(id t : int)]
 
+let create_should_raise = ref false
+
 let create f arg =
+  if !create_should_raise
+  then raise_s [%message "Thread.create requested to raise"];
   threads_have_been_created := true;
   let f arg =
     try f arg
@@ -88,3 +92,7 @@ let not_supported name =
 let setaffinity_self_exn = Error (not_supported "pthread_setaffinity_np")
 let getaffinity_self_exn = Error (not_supported "pthread_getaffinity_np")
 [%%endif]
+
+module For_testing = struct
+  let create_should_raise = create_should_raise
+end

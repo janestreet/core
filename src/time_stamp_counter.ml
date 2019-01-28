@@ -328,17 +328,16 @@ module Calibrator = struct
     create_using ~tsc ~time ~samples
   ;;
 
-  (* Creating a calibrator takes about 3ms and is fast enough that we don't mind paying
-     for it at startup. *)
-  let local = create ()
+  (* Creating a calibrator takes about 3ms. *)
+  let local = lazy (create ())
 
-  let cpu_mhz = Ok (fun ?(t = local) () -> 1. /. (t.floats.sec_per_cycle *. 1E6))
+  let cpu_mhz = Ok (fun ?(t = force local) () -> 1. /. (t.floats.sec_per_cycle *. 1E6))
 
   (* performance hack: [@inline never] so [time] is always unboxed. [now_float] and
      [calibrate_using] need to be inlined into the same function for unboxed [time].
      Preventing [calibrate] from being inlined makes the compiler's inlining decision
      more predictable. *)
-  let [@inline never] calibrate ?(t = local) () =
+  let [@inline never] calibrate ?(t = force local) () =
     calibrate_using t ~tsc:(now ()) ~time:(now_float ()) ~am_initializing:false
   ;;
 
@@ -375,7 +374,7 @@ module Calibrator = struct
 
   let calibrate ?t:_ () = ()
 
-  let local = create ()
+  let local = lazy (create ())
 
   let cpu_mhz = Or_error.unimplemented "\
 Time_stamp_counter.Calibrator.cpu_mhz is not defined for 32-bit platforms"
@@ -401,7 +400,7 @@ module Span = struct
   end
 
   [%%ifdef JSC_ARCH_SIXTYFOUR]
-  let to_ns ?(calibrator = Calibrator.local) t =
+  let to_ns ?(calibrator = force Calibrator.local) t =
     Float.int63_round_nearest_exn
       (Int63.to_float t *. calibrator.floats.nanos_per_cycle)
   ;;
@@ -410,7 +409,7 @@ module Span = struct
      following can overflow. This happens rarely in hydra in a way that difficult to
      reproduce. We've improved the exn here so that we have more information to debug
      these spurious errors when they come up. *)
-  let of_ns ?(calibrator = Calibrator.local) ns =
+  let of_ns ?(calibrator = force Calibrator.local) ns =
     try
       Float.int63_round_nearest_exn
         (Int63.to_float ns /. calibrator.floats.nanos_per_cycle)
@@ -433,7 +432,7 @@ module Span = struct
   ;;
 end
 
-let to_time ?(calibrator = Calibrator.local) t =
+let to_time ?(calibrator = force Calibrator.local) t =
   Calibrator.tsc_to_seconds_since_epoch calibrator t
   |> Time.Span.of_sec
   |> Time.of_span_since_epoch
@@ -442,7 +441,7 @@ let to_nanos_since_epoch ~calibrator t =
   Calibrator.tsc_to_nanos_since_epoch calibrator t;
 ;;
 
-let to_time_ns ?(calibrator = Calibrator.local) t =
+let to_time_ns ?(calibrator = force Calibrator.local) t =
   Time_ns.of_int63_ns_since_epoch (to_nanos_since_epoch ~calibrator t)
 ;;
 

@@ -260,3 +260,15 @@ let%expect_test "[symlink] arguments are correct" =
     (raised (
       Unix.Unix_error "No such file or directory" readlink "((filename target))")) |}];
 ;;
+
+let%test_module "the search path passed to [create_process_env] has an effect" = (module struct
+  let call_ls =
+    Unix.create_process_env ~prog:"ls" ~args:[] ~env:(`Extend [])
+  let%test _ =
+    Or_error.is_ok @@
+    Or_error.try_with (fun () -> call_ls ())
+  let%test _ =
+    Or_error.is_error @@
+    Or_error.try_with (fun () -> call_ls ~prog_search_path:[] ())
+end)
+;;

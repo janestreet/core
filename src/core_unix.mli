@@ -907,12 +907,36 @@ end
 val create_process : prog : string -> args : string list -> Process_info.t
 
 (** [create_process_env ~prog ~args ~env] as [create_process], but takes an additional
-    parameter that extends or replaces the current environment.  No effort is made to
+    parameter that extends or replaces the current environment. No effort is made to
     ensure that the keys passed in as env are unique, so if an environment variable is set
     twice the second version will override the first. If [argv0] is given, it is used
-    (instead of [prog]) as the first element of the [argv] array passed to [execve]. *)
+    (instead of [prog]) as the first element of the [argv] array passed to [execve].
+
+    The exact program to execute is determined using the usual conventions. More
+    precisely, if [prog] contains at least one '/' character then it is used as is
+    (relative to [working_dir] if [prog] is a relative path, absolute otherwise). Note
+    that [working_dir] defaults to the working directory of the current process,
+    i.e. [getcwd ()]. If [prog] contains no '/' character, then it is looked up in
+    [prog_search_path]: for the first [dir] in [prog_search_path] such that
+    [Filename.concat dir prog] exists and is executable, [Filename.concat dir prog] is the
+    program that will be executed.
+
+    [prog_search_path] defaults to the list of directories encoded as a ':' separated list
+    in the "PATH" environment variable of the current running process. If no such variable
+    is defined, then {[["/bin"; "/usr/bin"]]} is used instead. Note that the "PATH"
+    environment variable is looked up in the environment of the current running process,
+    i.e. via [getenv "PATH"]. Setting the "PATH" variable in the [env] argument of this
+    function has no effect on how [prog] is resolved.
+
+    In a setuid or setgid program, or one which has inherited such privileges, reading of
+    the PATH variable will return an empty result.  If a search path is required then it
+    should be provided explicitly using [prog_search_path] in such scenarios;
+    alternatively, perhaps more satisfactorily, an absolute path should be given as
+    [prog].
+*)
 val create_process_env
   :  ?working_dir : string
+  -> ?prog_search_path : string list
   -> ?argv0 : string
   -> prog : string
   -> args : string list

@@ -1560,28 +1560,31 @@ module Execvp_emulation : sig
     -> spawn       : (prog:string -> argv:string list -> 'a)
     -> prog        : string
     -> args        : string list
+    -> ?prog_search_path : string list
     -> ?argv0      : string
     -> unit
     -> 'a
 
 end = struct
 
-  let get_path () =
-    Core_sys.getenv "PATH"
-    |> Option.value_map ~f:(String.split ~on:':') ~default:["/bin"; "/usr/bin"]
-    |> List.map ~f:(function
-      | "" -> "."
-      | x  -> x)
+  let get_path prog_search_path =
+    (match prog_search_path with
+     | Some dirs -> dirs
+     | None -> Core_sys.getenv "PATH"
+               |> Option.value_map ~f:(String.split ~on:':') ~default:["/bin"; "/usr/bin"]
+               |> List.map ~f:(function
+                 | "" -> "."
+                 | x  -> x))
   ;;
 
-  let candidate_paths prog =
+  let candidate_paths ?prog_search_path prog =
     (* [assert] is to make bugs less subtle if we try to make this
        portable to non-POSIX in the future. *)
     assert (Filename.dir_sep = "/");
     if String.contains prog '/' then
       [ prog ]
     else
-      List.map (get_path ()) ~f:(fun h -> h ^/ prog)
+      List.map (get_path prog_search_path) ~f:(fun h -> h ^/ prog)
   ;;
 
   type 'a spawn1_result =
@@ -1589,7 +1592,7 @@ end = struct
     | Enoent_or_similar of exn
     | Ok                of 'a
 
-  let run ~working_dir ~spawn ~prog ~args ?argv0 () =
+  let run ~working_dir ~spawn ~prog ~args ?prog_search_path ?argv0 () =
     let argv = (Option.value argv0 ~default:prog)::args in
     let spawn1 candidate =
       match
@@ -1639,16 +1642,17 @@ end = struct
           go first_eaccess candidates
         | Ok pid -> pid
     in
-    go None (candidate_paths prog)
+    go None (candidate_paths ?prog_search_path prog)
   ;;
 end
 
-let create_process_env ?working_dir ?argv0 ~prog ~args ~env () =
+let create_process_env ?working_dir ?prog_search_path ?argv0 ~prog ~args ~env () =
   let env_assignments = env_assignments env in
   Execvp_emulation.run
     ~prog
     ~args
     ?argv0
+    ?prog_search_path
     ~working_dir
     ~spawn:(fun ~prog ~argv ->
       create_process_internal
@@ -1658,8 +1662,8 @@ let create_process_env ?working_dir ?argv0 ~prog ~args ~env () =
         ~env:env_assignments)
     ()
 
-let create_process_env ?working_dir ?argv0 ~prog ~args ~env () =
-  improve (fun () -> create_process_env ?working_dir ?argv0 ~prog ~args ~env ())
+let create_process_env ?working_dir ?prog_search_path ?argv0 ~prog ~args ~env () =
+  improve (fun () -> create_process_env ?working_dir ?prog_search_path ?argv0 ~prog ~args ~env ())
     (fun () ->
        (match working_dir with
         | None -> []

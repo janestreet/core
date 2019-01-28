@@ -154,3 +154,10 @@ val setaffinity_self_exn : (Int.Set.t -> unit) Or_error.t
     available. See the man page for situations when this function may return an
     error, and therefore raise. *)
 val getaffinity_self_exn : (unit      -> Int.Set.t) Or_error.t
+
+module For_testing : sig
+  (** If [!create_should_raise = true], then [create] raises rather than creating a
+      thread.  This is useful for testing how code behaves upon thread-creation
+      failure, which can happen, e.g., due to lack of memory. *)
+  val create_should_raise : bool ref
+end
