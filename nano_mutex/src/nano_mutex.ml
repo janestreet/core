@@ -1,3 +1,4 @@
+open! Core
 open! Import
 
 let ok_exn = Or_error.ok_exn
@@ -11,18 +12,17 @@ module Blocker : sig
   val critical_section : t -> f:(unit -> 'a) -> 'a
   val wait : t -> unit
   val signal : t -> unit
-
   val save_unused : t -> unit
 end = struct
   (* Our use of mutexes is always via [Mutex.critical_section], so that we always lock
-     them and unlock them from a single thread.  So, we use [Mutex0], which is
+     them and unlock them from a single thread.  So, we use [Core.Mutex], which is
      error-checking mutexes, which will catch any use that is not what we expect. *)
   module Condition = Condition
-  module Mutex = Mutex0
+  module Mutex = Core.Mutex
 
   type t =
-    { mutex : Mutex.t sexp_opaque;
-      condition : Condition.t sexp_opaque;
+    { mutex : Mutex.t sexp_opaque
+    ; condition : Condition.t sexp_opaque
     }
   [@@deriving sexp_of]
 
@@ -43,9 +43,7 @@ end = struct
   ;;
 
   let critical_section t ~f = Mutex.critical_section t.mutex ~f
-
   let wait t = Condition.wait t.condition t.mutex
-
   let signal t = Condition.signal t.condition
 end
 
@@ -73,9 +71,9 @@ end
  * Performance -- do not spin trying to acquire the lock.  This is accomplished by
    waiting on a condition variable if a lock is contended. *)
 type t =
-  { mutable id_of_thread_holding_lock : int;
-    mutable num_using_blocker : int;
-    mutable blocker : Blocker.t option;
+  { mutable id_of_thread_holding_lock : int
+  ; mutable num_using_blocker : int
+  ; mutable blocker : Blocker.t option
   }
 [@@deriving fields, sexp_of]
 
@@ -88,30 +86,27 @@ let invariant t =
        [Some].  It could, but doing so is not necessary for the correctness of of
        [with_blocker], which only relies on test-and-set of [t.blocker] to make sure
        there is an agreed-upon winner in the race to create a blocker. *)
-    if t.num_using_blocker = 0 then assert (Option.is_none t.blocker);
-  with exn -> failwiths "invariant failed" (exn, t) [%sexp_of: exn * t]
+    if t.num_using_blocker = 0 then assert (Option.is_none t.blocker)
+  with
+  | exn -> failwiths "invariant failed" (exn, t) [%sexp_of: exn * t]
 ;;
 
 let equal (t : t) t' = phys_equal t t'
-
 let bogus_thread_id = -1
 
 let create () =
-  { id_of_thread_holding_lock = bogus_thread_id;
-    num_using_blocker = 0;
-    blocker = None;
-  }
+  { id_of_thread_holding_lock = bogus_thread_id; num_using_blocker = 0; blocker = None }
 ;;
 
 let is_locked t = t.id_of_thread_holding_lock <> bogus_thread_id
-
 let current_thread_id () = Thread.id (Thread.self ())
-
 let current_thread_has_lock t = t.id_of_thread_holding_lock = current_thread_id ()
 
 let recursive_lock_error t =
-  Error.create "attempt to lock mutex by thread already holding it"
-    (current_thread_id (), t) [%sexp_of: int * t]
+  Error.create
+    "attempt to lock mutex by thread already holding it"
+    (current_thread_id (), t)
+    [%sexp_of: int * t]
 ;;
 
 let try_lock t =
@@ -120,14 +115,14 @@ let try_lock t =
      agrees who acquired the lock. *)
   let current_thread_id = current_thread_id () in
   (* BEGIN ATOMIC *)
-  if t.id_of_thread_holding_lock = bogus_thread_id then begin
+  if t.id_of_thread_holding_lock = bogus_thread_id
+  then (
     t.id_of_thread_holding_lock <- current_thread_id;
     (* END ATOMIC *)
-    Ok `Acquired;
-  end else if current_thread_id = t.id_of_thread_holding_lock then
-    Error (recursive_lock_error t)
-  else
-    Ok `Not_acquired
+    Ok `Acquired)
+  else if current_thread_id = t.id_of_thread_holding_lock
+  then Error (recursive_lock_error t)
+  else Ok `Not_acquired
 ;;
 
 let try_lock_exn t = ok_exn (try_lock t)
@@ -151,23 +146,26 @@ let with_blocker t f =
         (* BEGIN ATOMIC *)
         match t.blocker with
         | Some blocker -> blocker
-        | None -> t.blocker <- new_blocker_opt; new_blocker
-        (* END ATOMIC *)
+        | None ->
+          t.blocker <- new_blocker_opt;
+          new_blocker
+          (* END ATOMIC *)
       in
       if not (phys_equal blocker new_blocker) then Blocker.save_unused new_blocker;
       blocker
   in
-  protect ~f:(fun () -> Blocker.critical_section blocker ~f:(fun () -> f blocker))
+  protect
+    ~f:(fun () -> Blocker.critical_section blocker ~f:(fun () -> f blocker))
     ~finally:(fun () ->
       (* We need the following decrement-test-and-set to be atomic so that we're sure that
          the last user of blocker clears it. *)
       (* BEGIN ATOMIC *)
       t.num_using_blocker <- t.num_using_blocker - 1;
-      if t.num_using_blocker = 0 then begin
+      if t.num_using_blocker = 0
+      then (
         t.blocker <- None;
         (* END ATOMIC *)
-        Blocker.save_unused blocker;
-      end)
+        Blocker.save_unused blocker))
 ;;
 
 let rec lock t =
@@ -198,24 +196,23 @@ let rec lock t =
      ever set [t.id_of_thread_holding_lock] to their current thread id, or clear it. *)
   let current_thread_id = current_thread_id () in
   (* BEGIN ATOMIC *)
-  if t.id_of_thread_holding_lock = bogus_thread_id then begin
+  if t.id_of_thread_holding_lock = bogus_thread_id
+  then (
     t.id_of_thread_holding_lock <- current_thread_id;
     (* END ATOMIC *)
-    Result.ok_unit
-  end
-  else if current_thread_id = t.id_of_thread_holding_lock then
-    Error (recursive_lock_error t)
-  else begin
+    Result.ok_unit)
+  else if current_thread_id = t.id_of_thread_holding_lock
+  then Error (recursive_lock_error t)
+  else (
     with_blocker t (fun blocker -> if is_locked t then Blocker.wait blocker);
-    lock t
-  end;
+    lock t)
 ;;
 
 let lock_exn t = ok_exn (lock t)
 
 type message =
-  { current_thread_id : int;
-    mutex : t;
+  { current_thread_id : int
+  ; mutex : t
   }
 [@@deriving sexp_of]
 
@@ -225,23 +222,31 @@ let unlock t =
      winner in a race between multiple unlockers, so that one unlock succeeds and the
      rest fail. *)
   (* BEGIN ATOMIC *)
-  if t.id_of_thread_holding_lock <> bogus_thread_id then begin
-    if t.id_of_thread_holding_lock = current_thread_id then begin
+  if t.id_of_thread_holding_lock <> bogus_thread_id
+  then
+    if t.id_of_thread_holding_lock = current_thread_id
+    then (
       t.id_of_thread_holding_lock <- bogus_thread_id;
       (* END ATOMIC *)
       if Option.is_some t.blocker then with_blocker t Blocker.signal;
-      Result.ok_unit;
-    end else
-      Error (Error.create "attempt to unlock mutex held by another thread"
-               { current_thread_id; mutex = t } [%sexp_of: message])
-  end else
-    Error (Error.create "attempt to unlock an unlocked mutex"
-             { current_thread_id; mutex = t } [%sexp_of: message])
+      Result.ok_unit)
+    else
+      Error
+        (Error.create
+           "attempt to unlock mutex held by another thread"
+           { current_thread_id; mutex = t }
+           [%sexp_of: message])
+  else
+    Error
+      (Error.create
+         "attempt to unlock an unlocked mutex"
+         { current_thread_id; mutex = t }
+         [%sexp_of: message])
 ;;
 
 let unlock_exn t = ok_exn (unlock t)
 
 let critical_section t ~f =
   lock_exn t;
-  protect ~f ~finally:(fun () -> unlock_exn t);
+  protect ~f ~finally:(fun () -> unlock_exn t)
 ;;

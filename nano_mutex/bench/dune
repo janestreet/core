@@ -1,0 +1,2 @@
+(executables (names bench_nano_mutex) (libraries core core_bench nano_mutex)
+ (preprocess (pps ppx_jane)))

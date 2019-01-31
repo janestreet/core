@@ -23,8 +23,10 @@
 #include <sys/sendfile.h>
 #include <sys/epoll.h>
 #include <sys/resource.h>
+#include <attr/xattr.h>
 #include <arpa/inet.h>
 #include <assert.h>
+#include <limits.h>
 
 #include <sys/sysinfo.h>
 
@@ -627,6 +629,106 @@ linux_eventfd_write(value v_fd, value v_val)
   if (retval < 0) uerror("eventfd_write", Nothing);
 
   CAMLreturn(Val_unit);
+}
+
+#define XATTR_FLAG(FLAG) DEFINE_INT63_CONSTANT (linux_xattr_##FLAG##_flag, FLAG)
+
+XATTR_FLAG(XATTR_CREATE)
+XATTR_FLAG(XATTR_REPLACE)
+
+CAMLprim value linux_getxattr(value v_path, value v_name)
+{
+  CAMLparam2(v_path, v_name);
+  CAMLlocal1(res);
+
+  const char *loc = "getxattr";
+  char buf[XATTR_SIZE_MAX + 1];
+  ssize_t retval;
+  char *c_path;
+  char *c_name;
+
+  caml_unix_check_path(v_path, loc);
+
+  c_path = strdup(String_val(v_path));
+  c_name = strdup(String_val(v_name));
+
+  caml_enter_blocking_section();
+  retval = getxattr(c_path, c_name, buf, XATTR_SIZE_MAX);
+  free(c_path);
+  free(c_name);
+  caml_leave_blocking_section();
+
+  if (retval < 0) {
+    switch (errno) {
+      case ENOATTR:
+        res = Val_int(0);
+        break;
+      case ERANGE:
+        res = Val_int(1);
+        break;
+      case ENOTSUP:
+        res = Val_int(2);
+        break;
+      default:
+        uerror(loc, v_path);
+    }
+  }
+  else {
+    buf[retval] = '\0';
+    res = caml_alloc(1, 0);
+    Store_field(res, 0, caml_copy_string(buf));
+  }
+
+  CAMLreturn(res);
+}
+
+CAMLprim value linux_setxattr(value v_path, value v_name, value v_value, value v_flags)
+{
+  CAMLparam4(v_path, v_name, v_value, v_flags);
+  CAMLlocal1(res);
+
+  const char *loc = "setxattr";
+  int retval;
+  char *c_path;
+  char *c_name;
+  char *c_value;
+  size_t c_value_size;
+  int c_flags;
+
+  caml_unix_check_path(v_path, loc);
+
+  c_path = strdup(String_val(v_path));
+  c_name = strdup(String_val(v_name));
+  c_value = strdup(String_val(v_value));
+  c_value_size = caml_string_length(v_value);
+  c_flags = Int63_val(v_flags);
+
+  caml_enter_blocking_section();
+  retval = setxattr(c_path, c_name, c_value, c_value_size, c_flags);
+  free(c_path);
+  free(c_name);
+  free(c_value);
+  caml_leave_blocking_section();
+
+  if (retval < 0) {
+    switch (errno) {
+      case EEXIST:
+        res = Val_int(1);
+        break;
+      case ENOATTR:
+        res = Val_int(2);
+        break;
+      case ENOTSUP:
+        res = Val_int(3);
+        break;
+      default:
+        uerror(loc, v_path);
+    }
+  } else {
+    res = Val_int(0);
+  }
+
+  CAMLreturn(res);
 }
 
 #endif /* JSC_EVENTFD */

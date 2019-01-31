@@ -308,3 +308,87 @@ let%test_unit "get_terminal_size" =
        eprintf !"get_terminal_size: %{sexp: int * int}\n%!" (f `Controlling);
     *)
 ;;
+
+(* Extended file attributes *)
+let%test_module "getxattr and setxattr" = (module struct
+  let expect_error f =
+    (match f () with
+     | exception exn -> print_s [%sexp (exn : Exn.t)]
+     | _ -> raise_s [%message "expected error but returned" ])
+  ;;
+
+  let with_tmpfile f =
+    let tmpfile = "temporary-file-for-testing-xattr" in
+    let fd = Unix.openfile tmpfile ~mode:[Unix.O_CREAT; Unix.O_WRONLY] in
+    Unix.close fd;
+    (try f tmpfile with
+     | (_ : exn) -> ());
+    Unix.unlink tmpfile
+  ;;
+
+  let get_and_print ~path ~name =
+    let value = (Extended_file_attributes.getxattr |> ok_exn) ~path ~name in
+    print_s [%sexp (value : Extended_file_attributes.Get_attr_result.t)]
+  ;;
+
+  let set_and_print ?how ~path ~name ~value () =
+    let result = (Extended_file_attributes.setxattr |> ok_exn) ?how ~path ~name ~value () in
+    print_s [%sexp (result : Extended_file_attributes.Set_attr_result.t)];
+  ;;
+
+  let%expect_test "simple test" =
+    with_tmpfile (fun path ->
+      let name = "user.foo" in
+      get_and_print ~path ~name;
+      [%expect {| ENOATTR |}];
+      set_and_print ~path ~name ~value:"bar" ();
+      [%expect {| Ok |}];
+      get_and_print ~path ~name;
+      [%expect{| (Ok bar) |}])
+  ;;
+
+  let%expect_test "test setxattr [`Create] semantics" =
+    with_tmpfile (fun path ->
+      let name = "user.foo" in
+      let set_and_create () = set_and_print ~how:`Create ~path ~name ~value:"blah" () in
+      set_and_create ();
+      [%expect{| Ok |}];
+      get_and_print ~path ~name;
+      [%expect{| (Ok blah) |}];
+      set_and_create ();
+      [%expect {| EEXIST |}])
+  ;;
+
+  let%expect_test "test setxattr [`Replace] semantics" =
+    with_tmpfile (fun path ->
+      let name = "user.foo" in
+      let set_with_replace () = set_and_print ~how:`Replace ~path ~name ~value:"xyz" () in
+      set_with_replace ();
+      [%expect {| ENOATTR |}];
+      set_and_print ~how:`Create ~path ~name ~value:"bar" ();
+      [%expect {| Ok |}];
+      get_and_print ~path ~name;
+      [%expect{| (Ok bar) |}];
+      set_with_replace ();
+      [%expect{| Ok |}];
+      get_and_print ~path ~name;
+      [%expect{| (Ok xyz) |}])
+  ;;
+
+  let%expect_test "test getxattr and setxattr on a non-existent file" =
+    let path = "some-file-that-doesnt-exist" in
+    let name = "user.foo" in
+    expect_error (fun () -> set_and_print ~path ~name ~value:"xyz" ());
+    [%expect {|
+      (Unix.Unix_error
+       "No such file or directory"
+       setxattr
+       some-file-that-doesnt-exist) |}];
+    expect_error (fun () -> get_and_print ~path ~name);
+    [%expect {|
+      (Unix.Unix_error
+       "No such file or directory"
+       getxattr
+       some-file-that-doesnt-exist) |}]
+  ;;
+end)

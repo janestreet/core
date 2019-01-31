@@ -3,7 +3,7 @@ open! Import
 module Upstream = Import.Version_util
 module Unix = Core_unix
 
-include (Upstream : module type of Upstream
+include (Upstream : module type of struct include Upstream end
          with module Application_specific_fields := Upstream.Application_specific_fields)
 
 module Application_specific_fields = struct

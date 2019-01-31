@@ -21,7 +21,7 @@ let make ~name (m : (module Mutex)) =
 ;;
 
 module Nano_mutex : Mutex = struct
-  include Core.Nano_mutex
+  include Nano_mutex
 
   let lock = lock_exn
   let unlock t = unlock_exn t

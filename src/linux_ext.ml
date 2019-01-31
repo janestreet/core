@@ -253,6 +253,30 @@ module Null : Linux_ext_intf.S = struct
     end
   end
 
+  module Extended_file_attributes = struct
+    module Get_attr_result = struct
+      type t =
+        | Ok of string
+        | ENOATTR
+        | ERANGE
+        | ENOTSUP
+      [@@deriving sexp_of]
+    end
+
+    let getxattr = Or_error.unimplemented "Linux_ext.Extended_file_attributes.getxattr"
+
+    module Set_attr_result = struct
+      type t =
+        | Ok
+        | EEXIST
+        | ENOATTR
+        | ENOTSUP
+      [@@deriving sexp_of]
+    end
+
+    let setxattr = Or_error.unimplemented "Linux_ext.Extended_file_attributes.setxattr"
+  end
+
   include Null_toplevel
 end
 
@@ -1010,6 +1034,52 @@ let send_nonblocking_no_sigpipe    = Ok send_nonblocking_no_sigpipe
 let sendfile                       = Ok sendfile
 let sendmsg_nonblocking_no_sigpipe = Ok sendmsg_nonblocking_no_sigpipe
 let settcpopt_bool                 = Ok settcpopt_bool
+
+module Extended_file_attributes = struct
+  module Flags = struct
+    external only_create : unit -> Int63.t = "linux_xattr_XATTR_CREATE_flag"
+    external only_replace : unit -> Int63.t = "linux_xattr_XATTR_REPLACE_flag"
+    let set = Int63.zero
+  end
+
+  module Get_attr_result = struct
+    type t =
+      | Ok of string
+      | ENOATTR
+      | ERANGE
+      | ENOTSUP
+    [@@deriving sexp_of]
+  end
+
+  module Set_attr_result = struct
+    type t =
+      | Ok
+      | EEXIST
+      | ENOATTR
+      | ENOTSUP
+    [@@deriving sexp_of]
+  end
+
+  external getxattr : string -> string -> Get_attr_result.t = "linux_getxattr"
+  external setxattr : string -> string -> string -> Int63.t -> Set_attr_result.t = "linux_setxattr"
+
+  let getxattr ~path ~name =
+    getxattr path name
+  ;;
+
+  let setxattr ?(how = `Set) ~path ~name ~value () =
+    let flags =
+      match how with
+      | `Set -> Flags.set
+      | `Create -> Flags.only_create ()
+      | `Replace -> Flags.only_replace ()
+    in
+    setxattr path name value flags
+  ;;
+
+  let getxattr = Ok getxattr
+  let setxattr = Ok setxattr
+end
 
 [%%else]
 include Null_toplevel

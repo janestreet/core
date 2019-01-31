@@ -1,0 +1,2 @@
+(library (name nano_mutex) (public_name core.nano_mutex) (libraries core)
+ (preprocess (pps ppx_jane)))

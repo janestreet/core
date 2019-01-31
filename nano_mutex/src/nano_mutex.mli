@@ -53,6 +53,7 @@
     v}
 *)
 
+open! Core_kernel
 open! Import
 
 type t [@@deriving sexp_of]
@@ -70,19 +71,20 @@ val current_thread_has_lock : t -> bool
 
 (** [lock t] locks the mutex [t], blocking until it can be locked.  [lock] immediately
     returns [Error] if the current thread already holds [t]. *)
-val lock     : t -> unit Or_error.t
+val lock : t -> unit Or_error.t
+
 val lock_exn : t -> unit
 
 (** [try_lock t] locks [t] if it can immediately do so.  The result indicates whether
     [try_lock] succeeded in acquiring the lock.  [try_lock] returns [Error] if the current
     thread already holds [t]. *)
-val try_lock     : t -> [ `Acquired | `Not_acquired ] Or_error.t
-val try_lock_exn : t -> [ `Acquired | `Not_acquired ]
+val try_lock : t -> [`Acquired | `Not_acquired] Or_error.t
+
+val try_lock_exn : t -> [`Acquired | `Not_acquired]
 
 (** [unlock t] unlocks [t], if the current thread holds it.  [unlock] returns [Error] if
     the lock is not held by the calling thread. *)
-val unlock     : t -> unit Or_error.t
+val unlock : t -> unit Or_error.t
+
 val unlock_exn : t -> unit
-
 val critical_section : t -> f:(unit -> 'a) -> 'a
-

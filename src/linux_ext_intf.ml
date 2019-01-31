@@ -495,4 +495,70 @@ module type S = sig
       (* val pwait   : t -> timeout:Span.t -> int list -> [ `Ok of Ready_fds.t | `Timeout ] *)
     *)
   end
+
+  module Extended_file_attributes : sig
+    (** Extended attributes are name:value pairs associated with inodes (files,
+        directories, symlinks, etc). They are extensions to the normal attributes which
+        are associated with all inodes in the system (i.e. the 'man 2 stat' data). A
+        complete overview of extended attributes concepts can be found in 'man 5 attr'.
+
+        [getxattr] retrieves the value of the extended attribute identified by name and
+        associated with the given path in the filesystem.
+
+        The [name] includes a namespace prefix - there may be several, disjoint namespaces
+        associated with an individual inode. The [value] is a chunk of arbitrary textual
+        or binary data.
+
+        If the attribute exists, it is returned as [Ok string]. Several common errors are
+        returned as possible constructors, namely:
+        - [ENOATTR]: The named attribute does not exist, or the process has no access to
+          this attribute.
+        - [ERANGE]: The size of the value buffer is too small to hold the result.
+        - [ENOTSUP]: Extended attributes are not supported by the filesystem, or are
+          disabled.
+
+        Many other errors are possible, and will raise an exception. See the man pages for
+        full details. *)
+
+    module Get_attr_result : sig
+      type t =
+        | Ok of string
+        | ENOATTR
+        | ERANGE
+        | ENOTSUP
+      [@@deriving sexp_of]
+    end
+
+    val getxattr : (path:string -> name:string -> Get_attr_result.t) Or_error.t
+
+    (** [setxattr] sets the value of the extended attribute identified by name and
+        associated with the given path in the filesystem.
+
+        [how] defaults to [`Set], in which case the extended attribute will be created if
+        need be, or will simply replace the value if the attribute exists. If [how] is
+        [`Create], then [setxattr] returns [EEXIST] if the named attribute exists already.
+        If [how] is [`Replace], then [setxattr] returns [ENOATTR] if the named attribute
+        does not already exist.
+
+        [ENOTSUP] means extended attributes are not supported by the filesystem, or are
+        disabled. Many other errors are possible, and will raise an exception. See the man
+        pages for full details. *)
+
+    module Set_attr_result : sig
+      type t =
+        | Ok
+        | EEXIST
+        | ENOATTR
+        | ENOTSUP
+      [@@deriving sexp_of]
+    end
+
+    val setxattr
+      :  (?how:[`Set | `Create | `Replace]
+          -> path:string
+          -> name:string
+          -> value:string
+          -> unit
+          -> Set_attr_result.t) Or_error.t
+  end
 end
