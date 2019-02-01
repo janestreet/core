@@ -105,8 +105,21 @@ module type Span = sig
     -> string
 
   (** See [Core_kernel.Time_ns.Span]. *)
+
   val to_span : t -> Time.Span.t
+  [@@deprecated
+    "[since 2019-01] use [to_span_float_round_nearest] or \
+     [to_span_float_round_nearest_microsecond]"]
+
   val of_span : Time.Span.t -> t
+  [@@deprecated
+    "[since 2019-01] use [of_span_float_round_nearest] or \
+     [of_span_float_round_nearest_microsecond]"]
+
+  val to_span_float_round_nearest : t -> Time.Span.t
+  val to_span_float_round_nearest_microsecond : t -> Time.Span.t
+  val of_span_float_round_nearest : Time.Span.t -> t
+  val of_span_float_round_nearest_microsecond : Time.Span.t -> t
 
   include Robustly_comparable with type t := t
 
@@ -156,7 +169,19 @@ module type Ofday = sig
   val now : zone:Time.Zone.t -> t
 
   val to_ofday : t -> Time.Ofday.t
+  [@@deprecated
+    "[since 2019-01] use [to_ofday_float_round_nearest] or \
+     [to_ofday_float_round_nearest_microsecond]"]
+
   val of_ofday : Time.Ofday.t -> t
+  [@@deprecated
+    "[since 2019-01] use [of_ofday_float_round_nearest] or \
+     [of_ofday_float_round_nearest_microsecond]"]
+
+  val to_ofday_float_round_nearest : t -> Time.Ofday.t
+  val to_ofday_float_round_nearest_microsecond : t -> Time.Ofday.t
+  val of_ofday_float_round_nearest : Time.Ofday.t -> t
+  val of_ofday_float_round_nearest_microsecond : Time.Ofday.t -> t
 
   module Zoned : sig
     (** Sexps look like "(12:01 nyc)"
@@ -292,7 +317,19 @@ module type Time_ns = sig
   val of_span_since_epoch : Span.t -> t
 
   val to_time : t -> Time.t
-  val of_time : Time.t -> t (** not injective (rounds to nearest microsecond) *)
+  [@@deprecated
+    "[since 2019-01] use [to_time_float_round_nearest] or \
+     [to_time_float_round_nearest_microsecond]"]
+
+  val of_time : Time.t -> t
+  [@@deprecated
+    "[since 2019-01] use [of_time_float_round_nearest] or \
+     [of_time_float_round_nearest_microsecond]"]
+
+  val to_time_float_round_nearest : t -> Time.t
+  val to_time_float_round_nearest_microsecond : t -> Time.t
+  val of_time_float_round_nearest : Time.t -> t
+  val of_time_float_round_nearest_microsecond : Time.t -> t
 
   val to_string_fix_proto : [ `Utc | `Local ] -> t -> string
   val of_string_fix_proto : [ `Utc | `Local ] -> string -> t

@@ -19,7 +19,6 @@
     until recently was only in Core):
 
     - [Interval]
-    - [Squeue]
 *)
 (**/**)
 
@@ -43,7 +42,6 @@ module Digest                 = Md5 [@@ocaml.deprecated "[since 2017-05] Use Md5
 module Mutex                  = Core_mutex
 module Process_env            = Process_env
 module Signal                 = Signal
-module Squeue                 = Squeue
 module Sys                    = Core_sys
 module Thread                 = Core_thread
 module Time                   = Core_time_float

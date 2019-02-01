@@ -1012,6 +1012,7 @@ let%expect_test "Time_ns.Span.Stable.V1" =
     make      1_234_560_000_000L;
     make 71_623_008_000_000_000L;
     make 80_000_006_400_000_000L;
+    make                      1L;
   ];
   [%expect {|
     (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
@@ -1032,22 +1033,16 @@ let%expect_test "Time_ns.Span.Stable.V1" =
      (int63  71623008000000000))
     ((sexp   925.926d)
      (bin_io "\252\000@\128\251\1487\028\001")
-     (int63  80000006400000000)) |}];
+     (int63  80000006400000000))
+    ((sexp   1e-06ms)
+     (bin_io "\001")
+     (int63  1)) |}];
   (* stable checks for values that do not precisely round-trip *)
   print_and_check_stable_int63able_type [%here] (module V) ~cr:Comment [
-    make              1L;
     make 11_275_440_000L;
   ];
   [%expect {|
     (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
-    ((sexp   0s)
-     (bin_io "\001")
-     (int63  1))
-    (* require-failed: lib/core/test/src/test_time_ns.ml:LINE:COL. *)
-    ("sexp serialization failed to round-trip"
-      (original       0s)
-      (sexp           0s)
-      (sexp_roundtrip 0s))
     ((sexp   11.2754s)
      (bin_io "\252\128\143\017\160\002\000\000\000")
      (int63  11275440000))
@@ -1261,6 +1256,7 @@ let%expect_test "Time_ns.Span.Option.Stable.V1" =
     make      71_623_008_000_000_000L;
     make      80_000_006_400_000_000L;
     make (-4_611_686_018_427_387_904L);
+    make                           1L;
   ] ~hide_positions:true;
   [%expect {|
     (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
@@ -1284,22 +1280,16 @@ let%expect_test "Time_ns.Span.Option.Stable.V1" =
      (int63  80000006400000000))
     ((sexp ())
      (bin_io "\252\000\000\000\000\000\000\000\192")
-     (int63  -4611686018427387904)) |}];
+     (int63  -4611686018427387904))
+    ((sexp (1e-06ms))
+     (bin_io "\001")
+     (int63  1)) |}];
   (* stable checks for values that do not precisely round-trip *)
   print_and_check_stable_int63able_type [%here] (module V) ~cr:Comment [
-    make              1L;
     make 11_275_440_000L;
   ];
   [%expect {|
     (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
-    ((sexp (0s))
-     (bin_io "\001")
-     (int63  1))
-    (* require-failed: lib/core/test/src/test_time_ns.ml:LINE:COL. *)
-    ("sexp serialization failed to round-trip"
-      (original       (0s))
-      (sexp           (0s))
-      (sexp_roundtrip (0s)))
     ((sexp (11.2754s))
      (bin_io "\252\128\143\017\160\002\000\000\000")
      (int63  11275440000))
@@ -1621,13 +1611,14 @@ let%test_module "Time_ns.Span" =
       Int63.((Time_ns.Span.to_int63_ns t + half_microsecond) /% of_int 1000)
     ;;
 
-    let min_span_ns_as_span = to_span Time_ns.Span.min_value
-    let max_span_ns_as_span = to_span Time_ns.Span.max_value
+    let min_span_ns_as_span = to_span_float_round_nearest Time_ns.Span.min_value
+    let max_span_ns_as_span = to_span_float_round_nearest Time_ns.Span.max_value
 
-    let%expect_test "to_span +/-140y raises" =
+    let%expect_test "to_span_float_round_nearest_microsecond +/-140y raises" =
       List.iter [ 1.; -1. ] ~f:(fun sign ->
         require_does_raise [%here] (fun () ->
-          to_span (Time_ns.Span.of_day (140. *. 366. *. sign))));
+          to_span_float_round_nearest_microsecond
+            (Time_ns.Span.of_day (140. *. 366. *. sign))));
       [%expect {|
         ("Span.t exceeds limits"
           (t         51240d)
@@ -1639,10 +1630,11 @@ let%test_module "Time_ns.Span" =
           (max_value 49275d)) |}]
     ;;
 
-    let%expect_test "of_span +/-140y raises" =
+    let%expect_test "of_span_float_round_nearest_microsecond +/-140y raises" =
       List.iter [ 1.; -1. ] ~f:(fun sign ->
         require_does_raise [%here] ~hide_positions:true (fun () ->
-          of_span (Time.Span.of_day (140. *. 366. *. sign))));
+          of_span_float_round_nearest_microsecond
+            (Time.Span.of_day (140. *. 366. *. sign))));
       [%expect {|
         ("Time_ns.Span does not support this span"
          51240d
@@ -1715,8 +1707,8 @@ let%test_module "Time_ns.Span" =
         |> List.dedup_and_sort ~compare:Time.Span.compare
       in
       List.iter spans ~f:(fun span ->
-        let span_ns    = of_span span    in
-        let round_trip = to_span span_ns in
+        let span_ns    = of_span_float_round_nearest span    in
+        let round_trip = to_span_float_round_nearest span_ns in
         let precision = abs (round_trip - span) in
         require [%here] (precision <= microsecond)
           ~if_false_then_print_s:
@@ -1775,8 +1767,8 @@ let%test_module "Time_ns.Span" =
         |> List.dedup_and_sort ~compare:Time_ns.Span.compare
       in
       List.iter span_nss ~f:(fun span_ns ->
-        let span       = to_span span_ns in
-        let round_trip = of_span span    in
+        let span       = to_span_float_round_nearest span_ns in
+        let round_trip = of_span_float_round_nearest span    in
         let precision = abs (round_trip - span_ns) in
         require [%here] (precision <= microsecond)
           ~if_false_then_print_s:
@@ -1790,7 +1782,7 @@ let%test_module "Time_ns.Span" =
     ;;
 
     let%expect_test _ =
-      require [%here] (Time.Span.is_positive (to_span max_value));
+      require [%here] (Time.Span.is_positive (to_span_float_round_nearest max_value));
       (* make sure no overflow *)
       [%expect {| |}]
     ;;
@@ -1813,8 +1805,8 @@ let%test_module "Time_ns" =
   (module struct
     open Time_ns
 
-    let min_time_value = to_time min_value
-    let max_time_value = to_time max_value
+    let min_time_value = to_time_float_round_nearest min_value
+    let max_time_value = to_time_float_round_nearest max_value
 
     let%expect_test "Time.t -> Time_ns.t round trip" =
       let open Time in
@@ -1856,21 +1848,24 @@ let%test_module "Time_ns" =
         |> List.filter ~f:(fun time ->
           Time.(time >= min_time_value && time <= max_time_value))
       in
-      let is_64bit = match Word_size.word_size with
-        | W64 -> true
-        | W32 -> false
-      in
       List.iter times ~f:(fun expect ->
-        let time = to_time (of_time expect) in
-        (* We don't have full microsecond precision at the far end of the range. *)
-        if is_64bit && expect < Time.of_string "2107-01-01 00:00:00"
-        then require_equal [%here] (module Time) expect time
-        else begin
-          let diff = Span.abs (diff expect time) in
-          require [%here] (Span.( <= ) diff Span.microsecond)
-            ~if_false_then_print_s:
-              (lazy [%message "too far apart" (time : t) (expect : t) (diff : Span.t)])
-        end);
+        List.iter
+          [ "nearest microsecond",
+            to_time_float_round_nearest_microsecond
+              (of_time_float_round_nearest_microsecond expect)
+          ; "nearest representable",
+            to_time_float_round_nearest (of_time_float_round_nearest expect)
+          ]
+          ~f:(fun (precision, time) ->
+            let diff = Span.abs (diff expect time) in
+            require [%here] (Span.( <= ) diff Span.microsecond)
+              ~if_false_then_print_s:
+                (lazy [%message
+                  "too far apart"
+                    (precision : string)
+                    (time : t)
+                    (expect : t)
+                    (diff : Span.t)])));
       [%expect {| |}]
     ;;
 
@@ -1911,7 +1906,21 @@ let%test_module "Time_ns" =
           t >= min_value && t <= max_value)
       in
       List.iter ts ~f:(fun expect ->
-        require_equal [%here] (module Time_ns) expect (of_time (to_time expect)));
+        require_equal [%here] (module Time_ns) expect
+          (of_time_float_round_nearest_microsecond
+             (to_time_float_round_nearest_microsecond expect));
+        let round_trip =
+          of_time_float_round_nearest (to_time_float_round_nearest expect)
+        in
+        require [%here]
+          (Time_ns.Span.( <= )
+             (Time_ns.abs_diff expect round_trip)
+             Time_ns.Span.microsecond)
+          ~if_false_then_print_s:
+            (lazy [%message
+              "too imprecise"
+                (expect : Time_ns.t)
+                (round_trip : Time_ns.t)]));
       [%expect {| |}]
     ;;
 
@@ -1924,7 +1933,7 @@ let%test_module "Time_ns" =
       let time_of_float f = Time.of_span_since_epoch (Time.Span.of_sec f) in
       let times = List.map ~f:time_of_float [ 0.0; 1.0; 1.123456789 ] in
       List.iter times ~f:(fun time ->
-        let res = to_time (of_time time) in
+        let res = to_time_float_round_nearest (of_time_float_round_nearest time) in
         require [%here] (Time.(=.) time res)
           ~if_false_then_print_s:
             (lazy [%message "too far apart" (time : Time.t) (res : Time.t)]));
@@ -1934,7 +1943,7 @@ let%test_module "Time_ns" =
     let%expect_test "round trip from [t] to [Time.t] and back" =
       List.iter Span.([ zero; second; scale day 365. ]) ~f:(fun since_epoch ->
         let t = of_span_since_epoch since_epoch in
-        let res = of_time (to_time t) in
+        let res = of_time_float_round_nearest (to_time_float_round_nearest t) in
         (* Allow up to 100ns discrepancy in a year due to float precision issues. *)
         let discrepancy = diff res t in
         if Span.(abs discrepancy > of_ns 100.) then
@@ -1968,7 +1977,9 @@ let%test_module "Time_ns" =
         (Ofday.of_string (Ofday.to_string ofday));
       require_equal [%here] (module Ofday) ~if_false_then_print_s ofday
         (Ofday.t_of_sexp (Ofday.sexp_of_t ofday));
-      let of_ofday = Ofday.of_ofday (Ofday.to_ofday ofday) in
+      let of_ofday =
+        Ofday.of_ofday_float_round_nearest (Ofday.to_ofday_float_round_nearest ofday)
+      in
       let diff = Span.abs (Ofday.diff ofday of_ofday) in
       require [%here]
         (Span.( < ) diff Span.microsecond)
@@ -1993,7 +2004,7 @@ let%test_module "Time_ns" =
       let test (time_ns, expect) =
         let zone = Time.Zone.find_exn "US/Eastern" in
         (* First make sure Time.to_ofday behaves as expected with these inputs. *)
-        let time_ofday = Time.to_ofday (to_time time_ns) ~zone in
+        let time_ofday = Time.to_ofday (to_time_float_round_nearest time_ns) ~zone in
         require_equal [%here] (module Time.Ofday)
           time_ofday
           (Time.Ofday.of_string expect)

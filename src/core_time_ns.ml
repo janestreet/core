@@ -26,8 +26,8 @@ end = struct
       module T = struct
         type nonrec t = Time_ns.Span.t [@@deriving bin_io, compare, hash]
 
-        let sexp_of_t t = Time.Stable.Span.V1.sexp_of_t (to_span t)
-        let t_of_sexp s = of_span (Time.Stable.Span.V1.t_of_sexp s)
+        let sexp_of_t t = Time.Stable.Span.V1.sexp_of_t (to_span_float_round_nearest t)
+        let t_of_sexp s = of_span_float_round_nearest (Time.Stable.Span.V1.t_of_sexp s)
 
         let of_int63_exn t = check_range (Time_ns.Span.of_int63_ns t)
         let to_int63     t = Time_ns.Span.to_int63_ns t
@@ -197,16 +197,30 @@ module Ofday = struct
 
   let arg_type = Core_kernel.Command.Arg_type.create of_string
 
-  let of_ofday core =
+  let of_ofday_float_round_nearest_microsecond core =
     of_span_since_start_of_day_exn
-      (Span.of_span (Time.Ofday.to_span_since_start_of_day core))
+      (Span.of_span_float_round_nearest_microsecond
+         (Time.Ofday.to_span_since_start_of_day core))
+
+  let of_ofday_float_round_nearest core =
+    of_span_since_start_of_day_exn
+      (Span.of_span_float_round_nearest (Time.Ofday.to_span_since_start_of_day core))
 
   let of_time time ~zone = to_ofday time ~zone
 
-  let to_ofday t =
-    Time.Ofday.of_span_since_start_of_day_exn (Span.to_span (to_span_since_start_of_day t))
+  let to_ofday_float_round_nearest_microsecond t =
+    Time.Ofday.of_span_since_start_of_day_exn
+      (Span.to_span_float_round_nearest_microsecond (to_span_since_start_of_day t))
+
+  let to_ofday_float_round_nearest t =
+    Time.Ofday.of_span_since_start_of_day_exn
+      (Span.to_span_float_round_nearest (to_span_since_start_of_day t))
 
   let now ~zone = of_time (now ()) ~zone
+
+  (* Legacy conversions that round to the nearest microsecond *)
+  let to_ofday = to_ofday_float_round_nearest_microsecond
+  let of_ofday = of_ofday_float_round_nearest_microsecond
 
   (* This module is in [Core] instead of [Core_kernel] because to sexp a [Zone.t], we need
      to read a time zone database to work out DST transitions. We do not have a portable
@@ -469,8 +483,10 @@ end
 
 (* Note: This is FIX standard millisecond precision. You should use
    [Zero.Time_ns_with_fast_accurate_to_of_string] if you need nanosecond precision. *)
-let to_string_fix_proto zone t = Time.to_string_fix_proto zone (to_time t)
-let of_string_fix_proto zone s = of_time (Time.of_string_fix_proto zone s)
+let to_string_fix_proto zone t =
+  Time.to_string_fix_proto zone (to_time_float_round_nearest_microsecond t)
+let of_string_fix_proto zone s =
+  of_time_float_round_nearest_microsecond (Time.of_string_fix_proto zone s)
 
 include Identifiable.Make (struct
     type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
