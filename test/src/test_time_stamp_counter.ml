@@ -108,7 +108,7 @@ let%test_module _ = (module struct
       then failwithf "Time is not monotonic (diff %.12f)" (cur -. !last) ();
       last := cur;
       if Int.(=) (i mod 100_000) 0
-      then Calibrator.calibrate ~t:calibrator ();
+      then Calibrator.calibrate calibrator;
     done
   ;;
 

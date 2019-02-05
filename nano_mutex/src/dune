@@ -1,2 +1,2 @@
-(library (name nano_mutex) (public_name core.nano_mutex) (libraries core)
- (preprocess (pps ppx_jane)))
+(library (name nano_mutex) (public_name core.nano_mutex)
+ (libraries core core_kernel.thread_safe_queue) (preprocess (pps ppx_jane)))

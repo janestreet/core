@@ -91,13 +91,13 @@ module Calibrator : sig
       from the same machine to meaningfully convert the TSC value to a [Time.t]. *)
   val create : unit -> t
 
-  (** [calibrate ~t] updates [t] by measuring the current value of the TSC and
+  (** [calibrate t] updates [t] by measuring the current value of the TSC and
       [Time.now]. *)
-  val calibrate : ?t:t -> unit -> unit
+  val calibrate : t -> unit
 
   (** Returns the estimated MHz of the CPU's time-stamp-counter based on the TSC and
       [Time.now ()].  This function is undefined on 32-bit machines. *)
-  val cpu_mhz : (?t:t -> unit -> float) Or_error.t
+  val cpu_mhz : (t -> float) Or_error.t
 
   (**/**)
 
@@ -122,9 +122,9 @@ module Span : sig
   val ( + ) : t -> t -> t
   val ( - ) : t -> t -> t
 
-  val to_time_span : ?calibrator:Calibrator.t -> t -> Time.Span.t
-  val to_ns        : ?calibrator:Calibrator.t -> t -> Int63.t
-  val of_ns        : ?calibrator:Calibrator.t -> Int63.t -> t
+  val to_time_span : t -> calibrator:Calibrator.t -> Time.Span.t
+  val to_ns        : t -> calibrator:Calibrator.t -> Int63.t
+  val of_ns        : Int63.t -> calibrator:Calibrator.t -> t
 
   (**/**)
 
@@ -148,12 +148,20 @@ val add             : t -> Span.t -> t
 
 val to_int63 : t -> Int63.t
 
+(** A default calibrator for the current process. Most programs can just use this
+    calibrator; use others if collecting data from other processes / machines.
+
+    The first time this lazy value is forced, it spends approximately 3ms calibrating.
+
+    While the [Async] scheduler is running, this value is recalibrated regularly. *)
+val calibrator : Calibrator.t Lazy.t
+
 (**
 
    It is guaranteed that repeated calls will return nondecreasing [Time.t] values. *)
-val to_time : ?calibrator:Calibrator.t -> t -> Time.t
+val to_time : t -> calibrator:Calibrator.t -> Time.t
 
-val to_time_ns : ?calibrator:Calibrator.t -> t -> Time_ns.t
+val to_time_ns : t -> calibrator:Calibrator.t -> Time_ns.t
 
 (**/**)
 
@@ -164,5 +172,5 @@ module Private : sig
   val ewma : alpha:float -> old:float -> add:float -> float
   val of_int63 : Int63.t -> t
   val max_percent_change_from_real_slope : float
-  val to_nanos_since_epoch : calibrator:Calibrator.t -> t -> t
+  val to_nanos_since_epoch : t -> calibrator:Calibrator.t -> t
 end
