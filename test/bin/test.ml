@@ -23,7 +23,6 @@ let all () =
          Bag_test.test;
          Bigbuffer_test.test;
          Bigstring_test.test;
-         Binary_packing_test.test;
          Blang_test.test;
          Common_test.test;
          Comparable_test.test;
