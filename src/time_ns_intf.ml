@@ -400,6 +400,17 @@ module type Time_ns = sig
     -> unit
     -> t
 
+  (** See [Core_kernel.Time_ns].
+
+      Overflows silently. *)
+  val prev_multiple
+    :  ?can_equal_before:bool  (** default is [false] *)
+    -> base:t
+    -> before:t
+    -> interval:Span.t
+    -> unit
+    -> t
+
   val of_date_ofday : zone:Zone.t -> Date.t -> Ofday.t -> t
 
   (** Because timezone offsets change throughout the year (clocks go forward or back) some

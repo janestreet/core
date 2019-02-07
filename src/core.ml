@@ -40,7 +40,6 @@ module Iobuf_intf             = Iobuf_intf
 module Linux_ext              = Linux_ext
 module Digest                 = Md5 [@@ocaml.deprecated "[since 2017-05] Use Md5 instead."]
 module Mutex                  = Core_mutex
-module Process_env            = Process_env
 module Signal                 = Signal
 module Sys                    = Core_sys
 module Thread                 = Core_thread
