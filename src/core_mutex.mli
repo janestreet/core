@@ -17,14 +17,6 @@ val lock : t -> unit
     it locks it and returns [`Acquired]. *)
 val try_lock : t -> [ `Already_held_by_me_or_other | `Acquired ]
 
-(** [timedlock mtx timeout] like [lock], but takes a [timeout] parameter.
-    @return [true] if the mutex was acquired, or [false] when [timeout]
-    expires otherwise.
-
-    @raise Unix_error if [timedlock] attempts to acquire [mtx] recursively.
-*)
-val timedlock : (t -> Time.t -> bool) Or_error.t
-
 (** [unlock mtx] unlocks [mtx].
 
     @raise Unix_error if [unlock] attempts to release an unacquired

@@ -866,28 +866,6 @@ static void caml_pthread_check(int retcode, char *msg)
 #undef err_buf_len
 }
 
-#if defined(_POSIX_TIMEOUTS) && (_POSIX_TIMEOUTS > 0)
-CAMLprim value unix_mutex_timedlock(value v_mtx, value v_timeo)
-{
-  int ret;
-  pthread_mutex_t *mtx = Mutex_val(v_mtx);
-  ret = pthread_mutex_trylock(mtx);
-  if (ret == EBUSY) {
-    struct timespec ts = timespec_of_double(Double_val(v_timeo));
-    Begin_roots1(v_mtx);
-    caml_enter_blocking_section();
-      ret = pthread_mutex_timedlock(mtx, &ts);
-    caml_leave_blocking_section();
-    End_roots();
-    if (ret == ETIMEDOUT) return Val_false;
-  }
-  caml_pthread_check(ret, "Mutex.timedlock");
-  return Val_true;
-}
-#else
-#warning "POSIX TMO not present; unix_mutex_timedlock undefined"
-#endif
-
 CAMLprim value unix_condition_timedwait(value v_cnd, value v_mtx, value v_timeo)
 {
   CAMLparam2(v_cnd, v_mtx);

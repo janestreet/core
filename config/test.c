@@ -58,12 +58,6 @@
 "OUT:#undef JSC_SO_NOSIGPIPE"
 #endif
 
-#if defined(_POSIX_TIMEOUTS) && (_POSIX_TIMEOUTS > 0)
-"OUT:#define JSC_MUTEX_TIMED_LOCK"
-#else
-"OUT:#undef JSC_MUTEX_TIMED_LOCK"
-#endif
-
 #if defined(_POSIX_SYNCHRONIZED_IO) && _POSIX_SYNCHRONIZED_IO > 0
 "OUT:#define JSC_FDATASYNC"
 #else
