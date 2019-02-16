@@ -24,6 +24,7 @@
 #include <sys/epoll.h>
 #include <sys/resource.h>
 #include <attr/xattr.h>
+#include <attr/attributes.h>
 #include <arpa/inet.h>
 #include <assert.h>
 #include <limits.h>
