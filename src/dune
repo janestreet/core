@@ -1,5 +1,6 @@
 (rule (targets config.h thread_id.h) (deps)
- (action (bash "cp %{lib:config_h:config.h} %{lib:config_h:thread_id.h} .")))
+ (action
+  (bash "cp %{lib:jst-config:config.h} %{lib:jst-config:thread_id.h} .")))
 
 (library (name core) (public_name core)
  (libraries core_kernel core_kernel.base_for_tests sexplib.unix spawn
