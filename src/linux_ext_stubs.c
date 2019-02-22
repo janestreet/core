@@ -23,7 +23,10 @@
 #include <sys/sendfile.h>
 #include <sys/epoll.h>
 #include <sys/resource.h>
-#include <attr/xattr.h>
+#include <sys/xattr.h>
+#ifndef ENOATTR
+# define ENOATTR ENODATA
+#endif
 #include <arpa/inet.h>
 #include <assert.h>
 #include <limits.h>
