@@ -1084,4 +1084,5 @@ end
 [%%else]
 include Null_toplevel
 module Eventfd = Null.Eventfd
+module Extended_file_attributes = Null.Extended_file_attributes
 [%%endif]
