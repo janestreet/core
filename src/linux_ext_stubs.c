@@ -30,6 +30,7 @@
 #include <arpa/inet.h>
 #include <assert.h>
 #include <limits.h>
+#include <linux/limits.h> /* needed to build with musl */
 
 #include <sys/sysinfo.h>
 
