@@ -192,6 +192,11 @@ let set_bounds_and_buffer_sub ~pos ~len ~src ~dst =
   then dst.buf <- src.buf
 ;;
 
+(* use a unique identifier to refer to set_bounds_and_buffer_sub
+ * so that Expert.set_bounds_and_buffer_sub can refer to it
+ * explicitly. *)
+let iobuf_set_bounds_and_buffer_sub = set_bounds_and_buffer_sub
+
 let set_bounds_and_buffer ~src ~dst =
   dst.lo_min <- src.lo_min;
   dst.lo <- src.lo;
@@ -1076,8 +1081,7 @@ module Expert = struct
     = Fields.Direct.set_all_mutable_fields
 
   let set_bounds_and_buffer ~src ~dst = set_bounds_and_buffer ~src ~dst
-  let set_bounds_and_buffer_sub ~pos ~len ~src ~dst =
-    (set_bounds_and_buffer_sub [@inlined]) ~pos ~len ~src ~dst
+  let set_bounds_and_buffer_sub = iobuf_set_bounds_and_buffer_sub
 end
 
 type ok_or_eof = Ok | Eof [@@deriving compare, sexp_of]
