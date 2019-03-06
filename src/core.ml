@@ -28,7 +28,6 @@ include Core_kernel.Core_kernel_private.Std_kernel
 module Bigstring              = Bigstring
 module Caml                   = Caml
 module Command                = Command
-module Condition              = Core_condition
 module Core_stable            = Stable
 module Date                   = Core_date
 module Filename               = Core_filename
@@ -39,16 +38,17 @@ module Iobuf_debug            = Iobuf_debug
 module Iobuf_intf             = Iobuf_intf
 module Linux_ext              = Linux_ext
 module Digest                 = Md5 [@@ocaml.deprecated "[since 2017-05] Use Md5 instead."]
-module Mutex                  = Core_mutex
+(* When we moved [Mutex] out of [Core], we added this declaration of [Mutex] to prevent a
+   mistake in which code that used to use [Core.Mutex] is unintentionally and silently
+   switched to the stdlib's [Mutex] module. *)
+module Mutex = struct end [@@deprecated "[since 2019-02] Use [Error_checking_mutex]"]
 module Signal                 = Signal
 module Sys                    = Core_sys
 module Thread                 = Core_thread
 module Time                   = Core_time_float
 module Time_common            = Time_common
 module Time_ns            = Core_time_ns
-module Time_stamp_counter     = Time_stamp_counter
 module Unix                   = Core_unix
-module User_and_group         = User_and_group
 module Version_util           = Version_util
 
 (* Can't go in Common for circular-reference reasons *)

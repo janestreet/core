@@ -18,7 +18,7 @@ end = struct
      them and unlock them from a single thread.  So, we use [Core.Mutex], which is
      error-checking mutexes, which will catch any use that is not what we expect. *)
   module Condition = Condition
-  module Mutex = Core.Mutex
+  module Mutex = Error_checking_mutex
 
   type t =
     { mutex : Mutex.t sexp_opaque

@@ -15,7 +15,7 @@ val lock : t -> unit
 (** [try_lock] is like [lock], but always returns immediately.  If the calling thread or
     another one already has the mutex it returns [`Already_held_by_me_or_other], otherwise
     it locks it and returns [`Acquired]. *)
-val try_lock : t -> [ `Already_held_by_me_or_other | `Acquired ]
+val try_lock : t -> [`Already_held_by_me_or_other | `Acquired]
 
 (** [unlock mtx] unlocks [mtx].
 
@@ -30,7 +30,7 @@ val critical_section : t -> f:(unit -> 'a) -> 'a
 
 (** [synchronize f] creates a mutex and returns a new function that is identical to [f]
     except that the mutex is held during its execution. *)
-val synchronize : ('a -> 'b) -> ('a -> 'b)
+val synchronize : ('a -> 'b) -> 'a -> 'b
 
 (** [update_signal mtx cnd ~f] updates some state within a critical
     section protected by mutex [mtx] using function [f] and signals

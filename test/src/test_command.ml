@@ -323,3 +323,22 @@ let%expect_test "[?verbose_on_parse_error]" =
     Fail!
     ("exit called" (status 1)) |}];
 ;;
+
+let%expect_test "illegal flag names" =
+  let test name =
+    show_raise (fun () ->
+      Command.basic ~summary:""
+        (let%map_open.Command.Let_syntax bool = flag name no_arg ~doc:"" in
+         fun () -> ignore (bool : bool)))
+  in
+  test "-no-spaces";
+  [%expect {| "did not raise" |}];
+  test "no-spaces";
+  [%expect {| "did not raise" |}];
+  test "-";
+  [%expect {| (raised (Failure "invalid flag name: \"-\"")) |}];
+  test "has whitespace";
+  [%expect {|
+    (raised (
+      Failure "invalid flag name (contains whitespace): \"has whitespace\"")) |}]
+;;

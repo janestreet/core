@@ -7,19 +7,10 @@ module Zone = Time.Zone
 (* To break the dependency in the public release *)
 module Time_ns = Core_kernel.Time_ns
 
-(* This signature constraint is semi-temporary and serves to make the implementation more
-   type-safe (so the compiler can help us more).  It would go away if we broke the
-   implementation into multiple files. *)
-module Span : sig
-  include Time_ns_intf.Span
-
-  val check_range : t -> t
-end = struct
+module Span = struct
   open Time_ns.Span
 
   let arg_type = Core_kernel.Command.Arg_type.create of_string
-
-  let check_range = Private.check_range
 
   module Stable = struct
     module V1 = struct
@@ -29,7 +20,7 @@ end = struct
         let sexp_of_t t = Time.Stable.Span.V1.sexp_of_t (to_span_float_round_nearest t)
         let t_of_sexp s = of_span_float_round_nearest (Time.Stable.Span.V1.t_of_sexp s)
 
-        let of_int63_exn t = check_range (Time_ns.Span.of_int63_ns t)
+        let of_int63_exn t = Time_ns.Span.of_int63_ns t
         let to_int63     t = Time_ns.Span.to_int63_ns t
       end
       include T
@@ -83,7 +74,9 @@ end = struct
         module T = struct
           type nonrec t = t [@@deriving compare, bin_io]
 
-          let v1_some span = to_int63_ns (check_range span)
+          let v1_some span =
+            assert (some_is_representable span);
+            to_int63_ns span
 
           let sexp_of_t t = [%sexp_of: Stable.V1.t option] (to_option t)
           let t_of_sexp s = of_option ([%of_sexp: Stable.V1.t option] s)
@@ -415,9 +408,7 @@ module Stable0 = struct
          conversion to make sure we don't change it. *)
       type nonrec t = t [@@deriving bin_io, compare, sexp]
 
-      let of_int63_exn t =
-        of_span_since_epoch (Span.check_range (Span.of_int63_ns t))
-
+      let of_int63_exn t = of_span_since_epoch (Span.of_int63_ns t)
       let to_int63 t = to_int63_ns_since_epoch t
     end
     include T
@@ -509,6 +500,7 @@ module Stable = struct
     module Option = Ofday.Option.Stable
   end
   include Stable0
+  module Alternate_sexp = Core_kernel.Time_ns.Stable.Alternate_sexp
 end
 
 (*

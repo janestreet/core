@@ -1,0 +1,5 @@
+(library (name time_stamp_counter_test) (libraries core time_stamp_counter)
+ (preprocessor_deps config.h) (preprocess (pps ppx_jane)))
+
+(rule (targets config.h) (deps)
+ (action (bash "cp cp %{lib:jst-config:config.h} .")))

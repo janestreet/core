@@ -1,0 +1,2 @@
+(library (name time_stamp_counter_bench) (libraries core time_stamp_counter)
+ (preprocess (pps ppx_jane)))

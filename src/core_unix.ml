@@ -1963,10 +1963,10 @@ module Passwd = struct
       (fun s -> Getbyuid s)
   ;;
 
-  let pwdb_lock = Mutex0.create () ;;
+  let pwdb_lock = Error_checking_mutex.create () ;;
 
   let getpwents () =
-    Mutex0.critical_section pwdb_lock ~f:(fun () ->
+    Error_checking_mutex.critical_section pwdb_lock ~f:(fun () ->
       begin
         Low_level.setpwent ();
         Exn.protect

@@ -52,8 +52,10 @@
     See also: {:http://en.wikipedia.org/wiki/Time_Stamp_Counter}
 *)
 
+
 [%%import "config.h"]
 
+open! Core_kernel
 open! Import
 
 type t = private Int63.t [@@deriving bin_io, compare, sexp]
@@ -81,9 +83,9 @@ include Comparisons.S with type t := t
     the [t] parameter.  In all the functions below that take an optional [Calibrator.t]
     argument, the internal instance is used when no calibrator is explicitly specified.
 *)
-module Calibrator : sig
+module Calibrator :
+sig
   type tsc
-
   type t [@@deriving bin_io, sexp]
 
   (** [create ()] creates an uninitialized calibrator instance.  Creating a calibrator
@@ -110,21 +112,23 @@ module Calibrator : sig
     val initialize : t -> (tsc * float) list -> unit
     val nanos_per_cycle : t -> float
   end
-end with type tsc := t
+end
+with type tsc := t
 
 (** [Span] indicates some integer number of cycles. *)
 module Span : sig
   type t = private Int63.t [@@deriving bin_io, sexp]
 
   include Comparable with type t := t
-  include Intable    with type t := t
+  include Intable with type t := t
 
   val ( + ) : t -> t -> t
   val ( - ) : t -> t -> t
 
+
   val to_time_span : t -> calibrator:Calibrator.t -> Time.Span.t
-  val to_ns        : t -> calibrator:Calibrator.t -> Int63.t
-  val of_ns        : Int63.t -> calibrator:Calibrator.t -> t
+  val to_ns : t -> calibrator:Calibrator.t -> Int63.t
+  val of_ns : Int63.t -> calibrator:Calibrator.t -> t
 
   (**/**)
 
@@ -138,15 +142,19 @@ module Span : sig
 end
 
 [%%ifdef JSC_ARCH_SIXTYFOUR]
+
 external now : unit -> t = "tsc_get" [@@noalloc]
+
 [%%else]
+
 external now : unit -> t = "tsc_get"
+
 [%%endif]
 
-val diff            : t -> t -> Span.t
-val add             : t -> Span.t -> t
-
+val diff : t -> t -> Span.t
+val add : t -> Span.t -> t
 val to_int63 : t -> Int63.t
+val zero : t
 
 (** A default calibrator for the current process. Most programs can just use this
     calibrator; use others if collecting data from other processes / machines.
@@ -161,6 +169,7 @@ val calibrator : Calibrator.t Lazy.t
    It is guaranteed that repeated calls will return nondecreasing [Time.t] values. *)
 val to_time : t -> calibrator:Calibrator.t -> Time.t
 
+
 val to_time_ns : t -> calibrator:Calibrator.t -> Time_ns.t
 
 (**/**)
@@ -169,6 +178,7 @@ val to_time_ns : t -> calibrator:Calibrator.t -> Time_ns.t
 
   https://opensource.janestreet.com/standards/#private-submodules *)
 module Private : sig
+
   val ewma : alpha:float -> old:float -> add:float -> float
   val of_int63 : Int63.t -> t
   val max_percent_change_from_real_slope : float

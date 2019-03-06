@@ -22,7 +22,7 @@ let%expect_test "zoned strings near min and max representable value" =
 let%expect_test "Time_ns.to_date_ofday" =
   require_does_not_raise [%here] (fun () ->
     ignore
-      (Time_ns.to_date_ofday Time_ns.max_value ~zone:Time.Zone.utc
+      (Time_ns.to_date_ofday Time_ns.max_value_for_1us_rounding ~zone:Time.Zone.utc
        : (Date.t * Time_ns.Ofday.t)));
   [%expect {| |}]
 ;;
@@ -31,8 +31,8 @@ let%test_module "Core_kernel.Time_ns.Utc.to_date_and_span_since_start_of_day" =
   (module struct
     (* move 1ms off min and max values because [Time_ns]'s boundary checking in functions
        that convert to/from float apparently has some fuzz issues. *)
-    let safe_min_value = Time_ns.add Time_ns.min_value Time_ns.Span.microsecond
-    let safe_max_value = Time_ns.sub Time_ns.max_value Time_ns.Span.microsecond
+    let safe_min_value = Time_ns.add Time_ns.min_value_for_1us_rounding Time_ns.Span.microsecond
+    let safe_max_value = Time_ns.sub Time_ns.max_value_for_1us_rounding Time_ns.Span.microsecond
     ;;
 
     let quickcheck_generator =
@@ -1068,15 +1068,10 @@ let%expect_test "Time_ns.Span.Stable.V1" =
       (original       11.2754s)
       (sexp           11.2754s)
       (sexp_roundtrip 11.2754s)) |}];
-  (* make sure [of_int63_exn] checks range *)
+  (* make sure [of_int63_exn] allows all values *)
   show_raise ~hide_positions:true (fun () ->
     V.of_int63_exn (Int63.succ Int63.min_value));
-  [%expect {|
-    (raised (
-      "Span.t exceeds limits"
-      (t         -53375d23h53m38.427387903s)
-      (min_value -49275d)
-      (max_value 49275d))) |}];
+  [%expect {| "did not raise" |}];
 ;;
 
 let%test_module "Time_ns.Span.Stable.V2" =
@@ -1315,15 +1310,10 @@ let%expect_test "Time_ns.Span.Option.Stable.V1" =
       (original       (11.2754s))
       (sexp           (11.2754s))
       (sexp_roundtrip (11.2754s))) |}];
-  (* make sure [of_int63_exn] checks range *)
+  (* make sure [of_int63_exn] allows all values *)
   show_raise ~hide_positions:true (fun () ->
     V.of_int63_exn (Int63.succ Int63.min_value));
-  [%expect {|
-    (raised (
-      "Span.t exceeds limits"
-      (t         -53375d23h53m38.427387903s)
-      (min_value -49275d)
-      (max_value 49275d))) |}];
+  [%expect {| "did not raise" |}];
 ;;
 
 let%expect_test "Time_ns.Stable.V1" =
@@ -1362,15 +1352,10 @@ let%expect_test "Time_ns.Stable.V1" =
     ((sexp (1969-12-31 19:00:00.000000001-05:00))
      (bin_io "\001")
      (int63  1)) |}];
-  (* make sure [of_int63_exn] checks range *)
+  (* make sure [of_int63_exn] allows all values *)
   show_raise ~hide_positions:true (fun () ->
     V.of_int63_exn (Int63.succ Int63.min_value));
-  [%expect {|
-    (raised (
-      "Span.t exceeds limits"
-      (t         -53375d23h53m38.427387903s)
-      (min_value -49275d)
-      (max_value 49275d))) |}];
+  [%expect {| "did not raise" |}];
 ;;
 
 let%expect_test "Time_ns.Option.Stable.V1" =
@@ -1413,15 +1398,10 @@ let%expect_test "Time_ns.Option.Stable.V1" =
     ((sexp ((1969-12-31 19:00:00.000000001-05:00)))
      (bin_io "\001")
      (int63  1)) |}];
-  (* make sure [of_int63_exn] checks range *)
+  (* make sure [of_int63_exn] allows all values *)
   show_raise ~hide_positions:true (fun () ->
     V.of_int63_exn (Int63.succ Int63.min_value));
-  [%expect {|
-    (raised (
-      "Span.t exceeds limits"
-      (t         -53375d23h53m38.427387903s)
-      (min_value -49275d)
-      (max_value 49275d))) |}];
+  [%expect {| "did not raise" |}];
 ;;
 
 let%test_module "Time_ns.Stable.Ofday.V1" =
@@ -1580,23 +1560,13 @@ let%test_module "Time_ns.Ofday.Option.Stable.V1" =
         ((sexp ())
          (bin_io "\252\000\000\000\000\000\000\000\192")
          (int63  -4611686018427387904)) |}];
-      (* make sure [of_int63_exn] checks range *)
+      (* make sure [of_int63_exn] allows all values *)
       show_raise ~hide_positions:true (fun () ->
         V.of_int63_exn (Int63.succ Int63.min_value));
-      [%expect {|
-        (raised (
-          "Span.t exceeds limits"
-          (t         -53375d23h53m38.427387903s)
-          (min_value -49275d)
-          (max_value 49275d))) |}];
+      [%expect {| "did not raise" |}];
       show_raise ~hide_positions:true (fun () ->
         V.of_int63_exn Int63.max_value);
-      [%expect {|
-        (raised (
-          "Span.t exceeds limits"
-          (t         53375d23h53m38.427387903s)
-          (min_value -49275d)
-          (max_value 49275d))) |}];
+      [%expect {| "did not raise" |}];
     ;;
 
     let%expect_test "roundtrip quickcheck" =
@@ -1628,8 +1598,8 @@ let%test_module "Time_ns.Span" =
       Int63.((Time_ns.Span.to_int63_ns t + half_microsecond) /% of_int 1000)
     ;;
 
-    let min_span_ns_as_span = to_span_float_round_nearest Time_ns.Span.min_value
-    let max_span_ns_as_span = to_span_float_round_nearest Time_ns.Span.max_value
+    let min_span_ns_as_span = to_span_float_round_nearest Time_ns.Span.min_value_for_1us_rounding
+    let max_span_ns_as_span = to_span_float_round_nearest Time_ns.Span.max_value_for_1us_rounding
 
     let%expect_test "to_span_float_round_nearest_microsecond +/-140y raises" =
       List.iter [ 1.; -1. ] ~f:(fun sign ->
@@ -1638,13 +1608,13 @@ let%test_module "Time_ns.Span" =
             (Time_ns.Span.of_day (140. *. 366. *. sign))));
       [%expect {|
         ("Span.t exceeds limits"
-          (t         51240d)
-          (min_value -49275d)
-          (max_value 49275d))
+          (t                          51240d)
+          (min_value_for_1us_rounding -49275d)
+          (max_value_for_1us_rounding 49275d))
         ("Span.t exceeds limits"
-          (t         -51240d)
-          (min_value -49275d)
-          (max_value 49275d)) |}]
+          (t                          -51240d)
+          (min_value_for_1us_rounding -49275d)
+          (max_value_for_1us_rounding 49275d)) |}]
     ;;
 
     let%expect_test "of_span_float_round_nearest_microsecond +/-140y raises" =
@@ -1741,7 +1711,7 @@ let%test_module "Time_ns.Span" =
     let span_ns_examples =
       let open Time_ns.Span in
       [
-        min_value;
+        min_value_for_1us_rounding;
         zero;
         microsecond;
         millisecond;
@@ -1750,10 +1720,10 @@ let%test_module "Time_ns.Span" =
         hour;
         day;
         scale day 365.;
-        max_value;
+        max_value_for_1us_rounding;
       ]
       @ List.init 9 ~f:(fun _ ->
-        of_us (Random.float (to_us max_value)))
+        of_us (Random.float (to_us max_value_for_1us_rounding)))
 
     let multiples_of_span_ns span_ns =
       List.filter_map a_few_more_or_less ~f:(fun factor ->
@@ -1770,8 +1740,8 @@ let%test_module "Time_ns.Span" =
       of_int63_ns (Int63.( * ) (nearest_microsecond span_ns) (Int63.of_int 1000))
 
     let span_ns_is_in_range span_ns =
-      Time_ns.Span.( >= ) span_ns Time_ns.Span.min_value &&
-      Time_ns.Span.( <= ) span_ns Time_ns.Span.max_value
+      Time_ns.Span.( >= ) span_ns Time_ns.Span.min_value_for_1us_rounding &&
+      Time_ns.Span.( <= ) span_ns Time_ns.Span.max_value_for_1us_rounding
 
     let%expect_test "Time_ns.Span.t -> Time.Span.t round trip" =
       let open Time_ns.Span in
@@ -1799,7 +1769,7 @@ let%test_module "Time_ns.Span" =
     ;;
 
     let%expect_test _ =
-      require [%here] (Time.Span.is_positive (to_span_float_round_nearest max_value));
+      require [%here] (Time.Span.is_positive (to_span_float_round_nearest max_value_for_1us_rounding));
       (* make sure no overflow *)
       [%expect {| |}]
     ;;
@@ -1822,8 +1792,8 @@ let%test_module "Time_ns" =
   (module struct
     open Time_ns
 
-    let min_time_value = to_time_float_round_nearest min_value
-    let max_time_value = to_time_float_round_nearest max_value
+    let min_time_value = to_time_float_round_nearest min_value_for_1us_rounding
+    let max_time_value = to_time_float_round_nearest max_value_for_1us_rounding
 
     let%expect_test "Time.t -> Time_ns.t round trip" =
       let open Time in
@@ -1894,7 +1864,7 @@ let%test_module "Time_ns" =
       let ts =
         begin
           (* touchstones *)
-          [ min_value; epoch; now (); max_value ]
+          [ min_value_for_1us_rounding; epoch; now (); max_value_for_1us_rounding ]
           (* a few units around *)
           |> List.concat_map ~f:(fun time ->
             List.concat_map
@@ -1920,7 +1890,7 @@ let%test_module "Time_ns" =
              * of_int 1000))
         (* in range *)
         |> List.filter ~f:(fun t ->
-          t >= min_value && t <= max_value)
+          t >= min_value_for_1us_rounding && t <= max_value_for_1us_rounding)
       in
       List.iter ts ~f:(fun expect ->
         require_equal [%here] (module Time_ns) expect

@@ -1,0 +1,6 @@
+(library (name time_stamp_counter) (public_name core.time_stamp_counter)
+ (preprocess (pps ppx_jane -check-doc-comments)) (preprocessor_deps config.h)
+ (c_names time_stamp_counter_stubs) (libraries core))
+
+(rule (targets config.h) (deps)
+ (action (bash "cp %{lib:jst-config:config.h} %{targets}")))

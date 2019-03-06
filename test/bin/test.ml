@@ -26,11 +26,9 @@ let all () =
          Blang_test.test;
          Common_test.test;
          Comparable_test.test;
-         Condition_test.test;
          Doubly_linked_test.test;
          Float_test.test;
          Fdeque_test.test;
-         Heap_test.test;
          Interval_test.test;
          Int_conversions_test.test;
          Core_char_test.test;
@@ -41,7 +39,6 @@ let all () =
          Core_set_test.test;
          Core_queue_test.test;
          Core_string_test.test;
-         Core_mutex_test.test;
          PMap_test.test;
          PSet_test.test;
          Time_test.test;

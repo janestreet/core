@@ -1,0 +1,3 @@
+(library (name error_checking_mutex_test)
+ (libraries error_checking_mutex expect_test_helpers_kernel)
+ (preprocess (pps ppx_jane)))

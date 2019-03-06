@@ -1,8 +1,4 @@
 (library (name core_test)
  (libraries async bignum.bigint core expect_test_helpers
   expect_test_helpers_kernel)
- (preprocessor_deps config.h) (preprocess (pps ppx_jane)))
-
-(rule (targets config.h)
- (deps (:first_dep %{workspace_root}/lib/core_kernel/src/config.h))
- (action (bash "cp %{first_dep} %{targets}")))
+ (preprocess (pps ppx_jane)))

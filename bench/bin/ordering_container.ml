@@ -1,5 +1,6 @@
 open Core
 open Core_bench.Std
+module Heap = Pairing_heap
 
 module Int = struct
   let name = "int"
