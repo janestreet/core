@@ -4,7 +4,7 @@
 
 (library (name core) (public_name core)
  (libraries core_kernel core_kernel.base_for_tests error_checking_mutex
-  sexplib.unix spawn threads)
+  core_kernel.flags sexplib.unix spawn threads)
  (c_flags :standard -D_LARGEFILE64_SOURCE -I../../core_kernel/src)
  (install_c_headers config)
  (c_names bigstring_stubs iobuf_stubs linux_ext_stubs ocaml_utils_stubs

@@ -4,6 +4,6 @@
 (executables
  (names am_running_inline_test command_shape_test_child
   command_shape_test_parent test_runner)
- (libraries bigbuffer_blocking bin_prot core core_kernel_test oUnit
+ (libraries bigbuffer_blocking bin_prot core oUnit
   ppx_inline_test.runtime-lib quickcheck_deprecated sexplib variantslib)
  (preprocess (pps ppx_jane)))
