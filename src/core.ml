@@ -47,8 +47,9 @@ module Sys                    = Core_sys
 module Thread                 = Core_thread
 module Time                   = Core_time_float
 module Time_common            = Time_common
-module Time_ns            = Core_time_ns
+module Time_ns                = Core_time_ns
 module Unix                   = Core_unix
+module Version_util           = Version_util
 
 (* Can't go in Common for circular-reference reasons *)
 let sec = Time.Span.of_sec

@@ -18,6 +18,7 @@ module For_unix = Private.For_unix (struct
     module Thread = Core_thread
     module Time = Time
     module Unix = Unix
+    module Version_util = Version_util
   end)
 
 let run = For_unix.run
