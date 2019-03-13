@@ -307,7 +307,6 @@ module Raw_make (T : Bound) = struct
 end
 
 type 'a t = 'a interval [@@deriving bin_io, sexp, compare, hash]
-type 'a bound_ = 'a
 
 module C = Raw_make (struct
     type 'a bound = 'a
@@ -334,10 +333,8 @@ module Make (Bound : sig
   end) = struct
 
   type t = Bound.t interval [@@deriving bin_io, sexp, compare, hash]
-  type 'a t_ = t
   type interval = t [@@deriving bin_io, sexp]
   type bound = Bound.t
-  type 'a bound_ = bound
 
   module C = Raw_make (struct
       type 'a bound = Bound.t
@@ -360,7 +357,6 @@ module Make (Bound : sig
 
   module Set = struct
     type t = interval list [@@deriving sexp, bin_io]
-    type 'a t_ = t
     include C.Set
     let to_poly (t : t) = t
   end
