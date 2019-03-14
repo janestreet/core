@@ -143,9 +143,7 @@ let%expect_test "[choose_one]" =
                  | Some x -> `Default_to x
                  | None -> `Raise)
               (List.map [ "-foo"; "-bar" ] ~f:(fun name ->
-                 match%map flag name no_arg ~doc:"" with
-                 | true -> Some name
-                 | false -> None))
+                 flag name (no_arg_some name) ~doc:"" ))
           in
           fun () ->
             print_s [%message (arg : string)]))
