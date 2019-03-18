@@ -4,6 +4,10 @@ you might want to have a look at Base's
 and Core\_kernel's
 [changelog](https://github.com/janestreet/core_kernel/blob/master/CHANGES.md).
 
+## v0.12.1
+
+- Fix linking of Core in bytecode executables
+
 ## git version
 
 - Added `Unix.map_file`.
