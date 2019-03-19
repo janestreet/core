@@ -140,10 +140,11 @@ module type S = sig
 
       a common choice would be: %Y-%m-%d %H:%M:%S
 
-      Although %Z and %z will be interpreted as format strings, Neither will be correct in
-      the current implementation. %Z will always refer to the local machine timezone, and
-      can be controlled by setting the "TZ" environment variable before calling [format].
-      %z behaves unreliably and should be avoided.
+      Although %Z and %z are interpreted as format strings, neither are correct in the
+      current implementation. %Z always refers to the local machine timezone, and does not
+      correctly detect whether DST is active. The effective local timezone can be
+      controlled by setting the "TZ" environment variable before calling [format]. %z
+      behaves unreliably and should be avoided.
 
       Not all strftime control codes are standard; the supported subset will depend on the
       C libraries linked into a given executable.
