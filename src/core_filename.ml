@@ -53,7 +53,7 @@ let retry ?(in_dir=temp_dir_name) ~f prefix suffix =
     try
       f name
     with Sys_error _ | Unix.Unix_error _ as e ->
-      if counter >= 1000 then raise e else try_name (counter + 1)
+      if Int.(counter >= 1000) then raise e else try_name (counter + 1)
   in
   try_name 0
 
