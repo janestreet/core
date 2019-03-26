@@ -188,7 +188,7 @@ module Nfs = struct
       { host       : string
       ; pid        : Pid.Stable.V1.t
       ; message    : string
-      ; start_time : Time.Stable.With_utc_sexp.V2.t sexp_option
+      ; start_time : Time.Stable.With_utc_sexp.V2.t option [@sexp.option]
       }
     [@@deriving sexp, fields]
 

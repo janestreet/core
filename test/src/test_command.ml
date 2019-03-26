@@ -150,8 +150,14 @@ let%expect_test "[choose_one]" =
   in
   test [];
   [%expect {|
-    Error parsing command line.  Run with -help for usage information.
-    Must pass one of these: -foo; -bar
+    Error parsing command line:
+
+      Must pass one of these: -foo; -bar
+
+    For usage information, run
+
+      __exe_name__ -help
+
     ("exit called" (status 1)) |}];
   test [] ~default:"default";
   [%expect {| (arg default) |}];
@@ -161,8 +167,14 @@ let%expect_test "[choose_one]" =
   [%expect {| (arg -bar) |}];
   test [ "-foo"; "-bar" ];
   [%expect {|
-    Error parsing command line.  Run with -help for usage information.
-    Cannot pass both -bar and -foo
+    Error parsing command line:
+
+      Cannot pass both -bar and -foo
+
+    For usage information, run
+
+      __exe_name__ -help
+
     ("exit called" (status 1)) |}]
 ;;
 
@@ -192,18 +204,66 @@ let%expect_test "nested [choose_one]" =
   in
   test [];
   [%expect {|
-    Error parsing command line.  Run with -help for usage information.
-    Must pass one of these: -bar,-foo; -baz,-qux
+    Error parsing command line:
+
+      Must pass one of these: -bar,-foo; -baz,-qux
+
+    For usage information, run
+
+      __exe_name__ -help
+
     ("exit called" (status 1)) |}];
   test [ "-foo"; "-baz" ];
   [%expect {|
-    Error parsing command line.  Run with -help for usage information.
-    Cannot pass both -baz,-qux and -bar,-foo
+    Error parsing command line:
+
+      Cannot pass both -baz,-qux and -bar,-foo
+
+    For usage information, run
+
+      __exe_name__ -help
+
     ("exit called" (status 1)) |}];
   test [ "-foo" ];
   [%expect {| (arg (Foo_bar (true false))) |}];
   test [ "-bar" ];
   [%expect {| (arg (Foo_bar (false true))) |}]
+;;
+
+let%expect_test "parse error with subcommand" =
+  let test arguments =
+    Command.run ~argv:("exe" :: "subcommand" :: arguments)
+      (Command.group ~summary:""
+         [ ("subcommand"
+           , Command.basic ~summary:""
+               (let%map_open.Command.Let_syntax required_flag =
+                  flag "required-flag" (required string) ~doc:""
+                in
+                fun () ->
+                  print_s [%message (required_flag : string)]))])
+  in
+  test [];
+  [%expect {|
+    Error parsing command line:
+
+      missing required flag: -required-flag
+
+    For usage information, run
+
+      exe subcommand -help
+
+    ("exit called" (status 1)) |}];
+  test [ "-foo" ];
+  [%expect {|
+    Error parsing command line:
+
+      unknown flag -foo
+
+    For usage information, run
+
+      exe subcommand -help
+
+    ("exit called" (status 1)) |}];
 ;;
 
 let%test_unit _ = [
@@ -308,13 +368,25 @@ let%expect_test "[?verbose_on_parse_error]" =
   in
   test ?verbose_on_parse_error:None ();
   [%expect {|
-    Error parsing command line.  Run with -help for usage information.
-    Fail!
+    Error parsing command line:
+
+      Fail!
+
+    For usage information, run
+
+      __exe_name__ -help
+
     ("exit called" (status 1)) |}];
   test ~verbose_on_parse_error:true ();
   [%expect {|
-    Error parsing command line.  Run with -help for usage information.
-    Fail!
+    Error parsing command line:
+
+      Fail!
+
+    For usage information, run
+
+      __exe_name__ -help
+
     ("exit called" (status 1)) |}];
   test ~verbose_on_parse_error:false ();
   [%expect {|

@@ -2008,7 +2008,7 @@ module Group = struct
       gr_name : string;
       gr_passwd : string;
       gr_gid : file_perm;
-      gr_mem : string sexp_array;
+      gr_mem : string array;
     }
     external getgrnam_r : bigstring -> bigstring -> group_entry = "core_getgrnam_r"
     external getgrgid_r : int -> bigstring -> group_entry = "core_getgrgid_r"
@@ -2302,6 +2302,8 @@ module Cidr = struct
       include Stable.V1.T1
       include Stable.V1.T2
     end)
+
+  let arg_type = Core_kernel.Command.Arg_type.create of_string
 end
 
 module Protocol = struct
@@ -2843,9 +2845,9 @@ module Ifaddr = struct
     { name                     : string
     ; family                   : Family.t
     ; flags                    : Flag.Set.t
-    ; address                  : Inet_addr.t                sexp_option
-    ; netmask                  : Inet_addr.t                sexp_option
-    ; broadcast_or_destination : Broadcast_or_destination.t sexp_option
+    ; address                  : Inet_addr.t                option [@sexp.option]
+    ; netmask                  : Inet_addr.t                option [@sexp.option]
+    ; broadcast_or_destination : Broadcast_or_destination.t option [@sexp.option]
     }
   [@@deriving sexp_of, fields]
 

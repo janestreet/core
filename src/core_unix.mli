@@ -1325,6 +1325,8 @@ end
 module Cidr : sig
   type t [@@deriving sexp, bin_io]
 
+  val arg_type : t Core_kernel.Command.Arg_type.t
+
   (** [of_string] Generates a Cidr.t based on a string like ["10.0.0.0/8"].  Addresses are
       not expanded, i.e. ["10/8"] is invalid. *)
   include Identifiable.S with type t := t

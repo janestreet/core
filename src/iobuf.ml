@@ -11,7 +11,7 @@ let arch_sixtyfour = Sys.word_size = 64
 module T = struct
   type t =
     (* WHEN YOU CHANGE THIS, CHANGE iobuf_fields IN iobuf.h AS WELL!!! *)
-    { mutable buf : Bigstring.t sexp_opaque;
+    { mutable buf : (Bigstring.t [@sexp.opaque]);
       (* The data in [buf] is at indices [lo], [lo+1], ... [hi-1]. *)
       mutable lo_min : int;
       mutable lo     : int;

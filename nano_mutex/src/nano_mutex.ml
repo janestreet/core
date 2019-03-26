@@ -21,8 +21,8 @@ end = struct
   module Mutex = Error_checking_mutex
 
   type t =
-    { mutex : Mutex.t sexp_opaque
-    ; condition : Condition.t sexp_opaque
+    { mutex : (Mutex.t[@sexp.opaque])
+    ; condition : (Condition.t[@sexp.opaque])
     }
   [@@deriving sexp_of]
 

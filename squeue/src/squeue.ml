@@ -8,9 +8,9 @@ module Queue = Linked_queue
 type 'a t =
   { ev_q : 'a Queue.t
   ; maxsize : int
-  ; mutex : Mutex.t sexp_opaque
-  ; not_empty : Condition.t sexp_opaque
-  ; not_full : Condition.t sexp_opaque
+  ; mutex : (Mutex.t[@sexp.opaque])
+  ; not_empty : (Condition.t[@sexp.opaque])
+  ; not_full : (Condition.t[@sexp.opaque])
   ; finally : unit -> unit
   }
 [@@deriving sexp_of]
