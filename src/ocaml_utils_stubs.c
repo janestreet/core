@@ -32,9 +32,9 @@ void raise_with_two_args(value tag, value arg1, value arg2)
   caml_raise(v_exc);
 }
 
-value* named_value_exn(const char* n)
+const value* named_value_exn(const char* n)
 {
-  value* v = caml_named_value(n);
+  const value* v = caml_named_value(n);
   if (v == NULL)
   {
     char msg[256];
@@ -47,7 +47,7 @@ value* named_value_exn(const char* n)
 void* malloc_exn(size_t size)
 {
   void* ptr;
-  value* malloc_exn;
+  const value* malloc_exn;
 
   ptr = malloc(size);
   if (ptr == NULL)

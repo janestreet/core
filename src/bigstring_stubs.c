@@ -52,9 +52,9 @@
 
 /* Initialisation */
 
-static value *bigstring_exc_IOError = NULL;
-static value *bigstring_exc_End_of_file = NULL;
-static value *unix_error_exn = NULL;
+static const value *bigstring_exc_IOError = NULL;
+static const value *bigstring_exc_End_of_file = NULL;
+static const value *unix_error_exn = NULL;
 
 CAMLprim value bigstring_init_stub(value __unused v_unit)
 {
