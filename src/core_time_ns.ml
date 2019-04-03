@@ -406,15 +406,17 @@ module Stable0 = struct
     module T = struct
       (* We use the unstable sexp here, and rely on comprehensive tests of the stable
          conversion to make sure we don't change it. *)
-      type nonrec t = t [@@deriving bin_io, compare, sexp]
+      type nonrec t = t [@@deriving bin_io, compare, sexp, hash]
 
       let of_int63_exn t = of_span_since_epoch (Span.of_int63_ns t)
       let to_int63 t = to_int63_ns_since_epoch t
     end
     include T
-    include Comparator.Stable.V1.Make (T)
+    module Comparator = Comparator.Stable.V1.Make (T)
+    include Comparator
   end
 end
+include Stable0.V1.Comparator
 
 module Option = struct
   type time = t [@@deriving sexp, compare]
@@ -479,8 +481,8 @@ let to_string_fix_proto zone t =
 let of_string_fix_proto zone s =
   of_time_float_round_nearest_microsecond (Time.of_string_fix_proto zone s)
 
-include Identifiable.Make (struct
-    type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
+include Identifiable.Make_using_comparator (struct
+    include Stable0.V1
     let module_name = "Core.Time_ns"
     let of_string, to_string = of_string, to_string
   end)

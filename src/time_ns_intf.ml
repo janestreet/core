@@ -201,7 +201,9 @@ module type Time_ns = sig
   val pause_forever : unit -> never_returns
 
   module Stable : sig
-    module V1 : Stable_int63able with type t = t
+    module V1 : Stable_int63able
+      with type t = t
+       and type comparator_witness = comparator_witness
     module Alternate_sexp : sig
       module V1 : Stable_without_comparator with type t = t
     end
