@@ -204,6 +204,9 @@ module type Time_ns = sig
     module V1 : Stable_int63able
       with type t = t
        and type comparator_witness = comparator_witness
+
+    (** Provides a sexp representation that is independent of the time zone of the machine
+        writing it. *)
     module Alternate_sexp : sig
       module V1 : Stable_without_comparator with type t = t
     end

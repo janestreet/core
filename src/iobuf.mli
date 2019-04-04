@@ -37,7 +37,7 @@ type nonrec no_seek = no_seek [@@deriving sexp_of]
     either permission.  Using a specific permission would require code to use coercion
     [:>].
 
-    There is no [t_of_sexp].  One should use [Iobuf.Hexdump.t_of_sexp] or [sexp_opaque]
+    There is no [t_of_sexp].  One should use [Iobuf.Hexdump.t_of_sexp] or [@sexp.opaque]
     as desired. *)
 type (-'data_perm_read_write, +'seek_permission) t
 
