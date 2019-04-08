@@ -1,4 +1,5 @@
 open Core
+open Poly
 
 let%test _ =
   let open Core_private.Core_zone.Private.Zone_cache in

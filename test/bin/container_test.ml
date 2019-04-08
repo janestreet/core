@@ -1,4 +1,5 @@
 open Core
+open Poly
 
 module Test_S1
     (M : sig

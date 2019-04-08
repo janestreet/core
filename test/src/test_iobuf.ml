@@ -1,4 +1,5 @@
 open! Core
+open Poly
 open! Iobuf
 
 let arch_sixtyfour = Sys.word_size = 64

@@ -1,4 +1,5 @@
 open Core
+open Poly
 open Unix
 open Linux_ext
 open Expect_test_helpers_kernel

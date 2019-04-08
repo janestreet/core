@@ -1,5 +1,6 @@
 open OUnit;;
 open Core
+open Poly
 
 let () =
   List.iter [

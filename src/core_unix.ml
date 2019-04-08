@@ -1448,31 +1448,22 @@ let mkdir ?(perm=0o777) dirname =
     (fun () -> [dirname_r dirname; file_perm_r perm])
 ;;
 
-let mkdir_p ?perm dirname =
-  let mkdir_if_missing ?perm dir =
-    try
-      mkdir ?perm dir
-    with
+let rec mkdir_p ?perm dir =
+  let mkdir_idempotent ?perm dir =
+    match mkdir ?perm dir with
+    | () -> ()
     (* [mkdir] on MacOSX returns [EISDIR] instead of [EEXIST] if the directory already
        exists. *)
-    | Unix_error ((EEXIST | EISDIR), _, _) -> ()
-    | e -> raise e
+    | exception Unix_error ((EEXIST | EISDIR), _, _) -> ()
   in
-  let init,dirs =
-    match Core_filename.parts dirname with
-    | [] -> assert false
-    | init :: dirs -> (init, dirs)
-  in
-  mkdir_if_missing ?perm init;
-  let (_:string) = (* just using the fold for the side effects and accumulator *)
-    (* This must be [fold_left], not [fold_right]. *)
-    List.fold_left dirs ~init ~f:(fun acc dir ->
-      let dir = Filename.concat acc dir in
-      mkdir_if_missing ?perm dir;
-      dir)
-  in
-  ()
-;;
+  match mkdir_idempotent dir with
+  | () -> ()
+  | exception ((Unix_error (ENOENT, _, _)) as exn) ->
+    let parent = Filename.dirname dir in
+    if Filename.(=) parent dir then raise exn
+    else
+      (mkdir_p ?perm parent;
+       mkdir_idempotent ?perm dir)
 
 let rmdir = unary_dirname Unix.rmdir
 let chdir = unary_dirname Unix.chdir

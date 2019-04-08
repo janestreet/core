@@ -1,5 +1,6 @@
 open OUnit;;
 open Core
+open Poly
 
 let concat_test p1 p2 res =
   (sprintf "%s ^/  %s" p1 p2) @?

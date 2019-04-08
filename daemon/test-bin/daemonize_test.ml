@@ -1,4 +1,5 @@
 open Core
+open Poly
 
 let rec sleep x = if x <= 0. then () else sleep (Unix.nanosleep x)
 

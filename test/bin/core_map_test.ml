@@ -1,5 +1,6 @@
 open OUnit;;
 open Core
+open Poly
 
 module StringMap = Map.Make (String)
 

@@ -1,4 +1,5 @@
-open Core;;
+open Core
+open Poly;;
 open OUnit;;
 open Quickcheck_deprecated;;
 

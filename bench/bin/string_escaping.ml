@@ -1,4 +1,5 @@
 open Core
+open Poly
 
 module Bench = Core_bench.Bench
 

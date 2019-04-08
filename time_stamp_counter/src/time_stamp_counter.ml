@@ -71,6 +71,7 @@
   "config.h"]
 
 open! Core
+open Poly
 open! Import
 
 let max_percent_change_from_real_slope = 0.20

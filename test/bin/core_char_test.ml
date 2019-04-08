@@ -1,4 +1,5 @@
 open Core
+open Poly
 open OUnit
 
 let of_string_test () =

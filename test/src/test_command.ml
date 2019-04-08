@@ -1,4 +1,5 @@
 open! Core
+open Poly
 open! Import
 open! Expect_test_helpers_kernel
 open! Command

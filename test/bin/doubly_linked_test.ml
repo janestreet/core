@@ -1,5 +1,6 @@
 open OUnit
 open Core
+open Poly
 
 module type S = sig
   val name : string

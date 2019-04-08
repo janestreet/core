@@ -1,6 +1,7 @@
 open Unix
 open OUnit;;
 open Core
+open Poly
 open Bigstring_test
 
 let io_test ~n =

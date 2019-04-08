@@ -1,5 +1,6 @@
 open OUnit
 open Core
+open Poly
 open Blang
 
 let to_string t = Sexp.to_string (Blang.sexp_of_t String.sexp_of_t t)
