@@ -57,9 +57,11 @@ static struct custom_operations caml_mutex_ops = {
   custom_serialize_default,
   custom_deserialize_default,
 # ifdef custom_compare_ext_default
-  custom_compare_ext_default
+  custom_compare_ext_default,
 #endif
-
+#ifdef custom_fixed_length_default
+  custom_fixed_length_default,
+#endif
 };
 
 #if defined(_POSIX_THREADS) && _POSIX_THREADS >= 200112L

@@ -47,7 +47,10 @@ static struct custom_operations recvmmsg_ctx_custom_ops =
     custom_hash_default,
     custom_serialize_default,
     custom_deserialize_default,
-    custom_compare_ext_default
+    custom_compare_ext_default,
+#ifdef custom_fixed_length_default
+    custom_fixed_length_default,
+#endif
   };
 
 CAMLprim value iobuf_recvmmsg_ctx(value v_iobufs)

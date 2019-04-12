@@ -1753,7 +1753,7 @@ type getnameinfo_option =
 (** [getnameinfo addr opts] returns the host name and service name
     corresponding to the socket address [addr].  [opts] is a possibly
     empty list of options that governs how these names are obtained.
-    Raise [Not_found] if an error occurs. *)
+    Raise [Caml.Not_found] or [Not_found_s] if an error occurs. *)
 val getnameinfo : sockaddr -> getnameinfo_option list -> name_info
 
 

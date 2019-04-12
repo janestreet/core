@@ -2664,7 +2664,15 @@ type getnameinfo_option =
 [@@deriving sexp]
 
 let getnameinfo addr opts =
-  improve (fun () -> Unix.getnameinfo addr opts)
+  improve (fun () ->
+    try Unix.getnameinfo addr opts
+    with Caml.Not_found ->
+      raise
+        (Not_found_s
+           [%message
+             "Unix.getnameinfo: not found"
+               (addr : sockaddr)
+               (opts : getnameinfo_option list)]))
     (fun () ->
        [("addr", sexp_of_sockaddr addr);
         ("opts", sexp_of_list sexp_of_getnameinfo_option opts)])

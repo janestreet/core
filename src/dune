@@ -3,8 +3,9 @@
   (bash "cp %{lib:jst-config:config.h} %{lib:jst-config:thread_id.h} .")))
 
 (library (name core) (public_name core)
- (libraries core_kernel core_kernel.base_for_tests error_checking_mutex
-  core_kernel.flags sexplib.unix spawn threads core_kernel.version_util)
+ (libraries core_kernel core_kernel.base_for_tests
+  core_kernel.bounded_int_table error_checking_mutex core_kernel.flags
+  sexplib.unix spawn threads core_kernel.version_util)
  (c_flags :standard -D_LARGEFILE64_SOURCE -I../../core_kernel/src)
  (install_c_headers config)
  (c_names bigstring_stubs iobuf_stubs linux_ext_stubs ocaml_utils_stubs
