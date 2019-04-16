@@ -1,5 +1,4 @@
 open Core
-open Poly
 open Core_bench.Std
 
 let rec x k =
@@ -24,7 +23,7 @@ let z p = fun () -> ignore (Pcre.regexp ~study:true p)
 let c h n =
   let z = Some (String.length h - String.length n) in
   let n = String.Search_pattern.create n in
-  fun () -> assert (String.Search_pattern.index n ~in_:h = z)
+  fun () -> assert ([%equal: int option] (String.Search_pattern.index n ~in_:h) z)
 ;;
 let d h n =
   let n = Re2.create_exn n in
@@ -48,7 +47,7 @@ let slow_create needle =
   for i = 0 to n - 1 do
     let x = prefix needle (i + 1) in
     for j = 0 to i do
-      if prefix x j = suffix x j then
+      if String.(=) (prefix x j) (suffix x j) then
         kmp_arr.(i) <- j
     done
   done;
