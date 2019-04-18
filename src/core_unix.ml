@@ -1456,7 +1456,7 @@ let rec mkdir_p ?perm dir =
        exists. *)
     | exception Unix_error ((EEXIST | EISDIR), _, _) -> ()
   in
-  match mkdir_idempotent dir with
+  match mkdir_idempotent ?perm dir with
   | () -> ()
   | exception ((Unix_error (ENOENT, _, _)) as exn) ->
     let parent = Filename.dirname dir in

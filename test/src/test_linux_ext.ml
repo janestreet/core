@@ -80,13 +80,14 @@ let%test_module _ =
       protectx ~finally:Epoll.close ~f
         ((Or_error.ok_exn Epoll.create) ~num_file_descrs:1024 ~max_ready_events:256)
 
-    let%test_unit "epoll errors" = with_epoll ~f:(fun t ->      let tmp = "temporary-file-for-testing-epoll" in
-                                                   let fd = Unix.openfile tmp ~mode:[Unix.O_CREAT; Unix.O_WRONLY] in
-                                                   (* Epoll does not support ordinary files, and so should fail if you ask it to watch
-                                                      one. *)
-                                                   assert (Result.is_error (Result.try_with (fun () -> Epoll.set t fd Flags.none)));
-                                                   Unix.close fd;
-                                                   Unix.unlink tmp)
+    let%test_unit "epoll errors" = with_epoll ~f:(fun t ->
+      let tmp = "temporary-file-for-testing-epoll" in
+      let fd = Unix.openfile tmp ~mode:[Unix.O_CREAT; Unix.O_WRONLY] in
+      (* Epoll does not support ordinary files, and so should fail if you ask it to watch
+         one. *)
+      assert (Result.is_error (Result.try_with (fun () -> Epoll.set t fd Flags.none)));
+      Unix.close fd;
+      Unix.unlink tmp)
     ;;
 
     let%test_unit "epoll test" = with_epoll ~f:(fun epset ->
@@ -216,6 +217,33 @@ let%expect_test "[Epoll.remove] does not allocate" =
     require_no_allocation [%here] (fun () -> ignore (Epoll.remove epset sock1)));
   [%expect {| |}];
 ;;
+
+let%expect_test "[Epoll.Expert.clear_ready]" =
+  with_epoll ~f:(fun t ->
+    let file_descr = make_socket () in
+    Epoll.set t file_descr Flags.out;
+    match Epoll.wait t ~timeout:`Immediately with
+    | `Timeout -> assert false
+    | `Ok ->
+      print_s (Epoll.sexp_of_t t);
+      [%expect {|
+        (In_use (
+          (epollfd 10)
+          (flags_by_fd ((num_keys 1024) (alist ((15 (out))))))
+          (max_ready_events 256)
+          (num_ready_events 1)
+          (ready_events (((file_descr 15) (flags (out))))))) |}];
+      Epoll.Expert.clear_ready t;
+      print_s (Epoll.sexp_of_t t);
+      [%expect {|
+        (In_use (
+          (epollfd 10)
+          (flags_by_fd ((num_keys 1024) (alist ((15 (out))))))
+          (max_ready_events 256)
+          (num_ready_events 0)
+          (ready_events ()))) |}])
+;;
+
 
 (* Eventfd *)
 

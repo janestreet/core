@@ -490,6 +490,13 @@ module type S = sig
     val iter_ready : t -> f:(File_descr.t -> Flags.t -> unit) -> unit
     val fold_ready : t -> init:'a -> f:('a -> File_descr.t -> Flags.t -> 'a) -> 'a
 
+    module Expert : sig
+      (** [clear_ready t] sets the number of ready events in [t] to [0]. This
+          should be called after all the events in [t] have been processed,
+          following a call to {!wait}. *)
+      val clear_ready : t -> unit
+    end
+
     (*_
       (* pwait -> with the specified sigmask, analogous to pselect *)
       (* val pwait   : t -> timeout:Span.t -> int list -> [ `Ok of Ready_fds.t | `Timeout ] *)

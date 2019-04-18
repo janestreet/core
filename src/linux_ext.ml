@@ -152,6 +152,10 @@ module Null_toplevel = struct
     let iter_ready _ ~f:_         = assert false
     let fold_ready _ ~init:_ ~f:_ = assert false
 
+    module Expert = struct
+      let clear_ready _           = assert false
+    end
+
     (* let pwait _ ~timeout:_ _      = assert false *)
   end
 end
@@ -996,6 +1000,13 @@ module Epoll = struct
       f (epoll_readyfd t.ready_events i) (epoll_readyflags t.ready_events i)
     done
   ;;
+
+  module Expert = struct
+    let clear_ready t =
+      let t = in_use_exn t in
+      t.num_ready_events <- 0
+    ;;
+  end
 
   (* external epoll_pwait
    *   : File_descr.t -> Events_buffer.raw -> int -> int list -> int

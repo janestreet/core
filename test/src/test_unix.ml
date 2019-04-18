@@ -9,6 +9,33 @@ let%test_unit "[Error]" =
   done
 ;;
 
+let%expect_test
+  "[mkdir_p ~perm name] sets the permissions on [name] and all other directories above it \
+   that it creates to [perm]" =
+  let dir = "parent/child/grandchild" in
+  let _ = Option.try_with (fun () -> remove dir) in
+  let prev_umask = Unix.umask 0o000 in
+  let perm = 0o755 in
+  mkdir_p ~perm dir;
+  let make_require_and_remove_dir lex dir =
+    let dir_perms = (stat dir).st_perm in
+    let lazy_sexp = lazy (Sexp.Atom (sprintf "%s has perms %o" dir dir_perms)) in
+    require ~if_false_then_print_s:lazy_sexp lex (perm = dir_perms);
+    remove dir
+  in
+  make_require_and_remove_dir [%here] dir;
+  make_require_and_remove_dir [%here] (Filename.dirname dir);
+  make_require_and_remove_dir [%here] (Filename.dirname (Filename.dirname dir));
+  let () = [%expect{| |}] in
+  let dir = "parent/child" in
+  mkdir ~perm (Filename.dirname dir);
+  mkdir_p ~perm dir;
+  make_require_and_remove_dir [%here] dir;
+  make_require_and_remove_dir [%here] (Filename.dirname dir);
+  let (_ : int) = Unix.umask prev_umask in
+  [%expect {| |}]
+;;
+
 let%expect_test "[mkdtemp] dir name contains [.tmp.]" =
   let dir = mkdtemp "foo" in
   rmdir dir;
