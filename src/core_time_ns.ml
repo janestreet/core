@@ -223,7 +223,7 @@ module Ofday = struct
       { ofday : Time_ns.Ofday.t;
         zone  : Zone.t;
       }
-    [@@deriving bin_io, fields, compare, hash]
+    [@@deriving bin_io, fields, compare, equal, hash]
 
     type sexp_repr = Time_ns.Ofday.t * Zone.t
     [@@deriving sexp]
@@ -262,7 +262,7 @@ module Ofday = struct
 
     module With_nonchronological_compare = struct
       type nonrec t = t
-      [@@deriving bin_io, compare, sexp, hash]
+      [@@deriving bin_io, compare, equal, sexp, hash]
     end
 
     include Pretty_printer.Register (struct

@@ -54,7 +54,7 @@ module type S = sig
             time zones and daylight savings, the resulting ordering is not chronological.
             That is, [compare t1 t2 > 0] does not imply [t2] occurs after [t1] every day,
             or any day. *)
-        type nonrec t = t [@@deriving bin_io, sexp, compare, hash]
+        type nonrec t = t [@@deriving bin_io, sexp, compare, equal, hash]
       end
     end
 
