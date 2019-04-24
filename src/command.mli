@@ -12,10 +12,10 @@ include (module type of Core_kernel.Command
     suppose a program like this is compiled into [exe]:
 
     {[
-      let bar = Command.basic ...
-                  let foo = Command.group ~summary:... ["bar", bar]
-      let main = Command.group ~summary:... ["foo", foo]
-                   Command.run ~extend:(fun _ -> ["-baz"]) main
+      let bar = Command.basic ___
+      let foo = Command.group ~summary:___ ["bar", bar]
+      let main = Command.group ~summary:___ ["foo", foo]
+      let () = Command.run ~extend:(fun _ -> ["-baz"]) main
     ]}
 
     Then if a user ran [exe f b], [extend] would be passed [["foo"; "bar"]] and ["-baz"]

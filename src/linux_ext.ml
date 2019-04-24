@@ -390,8 +390,8 @@ module Timerfd = struct
 
   external unsafe_timerfd_settime
     :  t
-      -> bool
-      -> initial  : Int63.t
+    -> bool
+    -> initial  : Int63.t
     -> interval : Int63.t
     -> Syscall_result.Unit.t
     = "linux_timerfd_settime" [@@noalloc]

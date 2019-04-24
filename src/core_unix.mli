@@ -2053,11 +2053,11 @@ val writev : File_descr.t -> ?count : int -> string IOVec.t array -> int
 
 external pselect
   :  File_descr.t list
-    -> File_descr.t list
-    -> File_descr.t list
-    -> float
-    -> int list
-    -> File_descr.t list * File_descr.t list * File_descr.t list
+  -> File_descr.t list
+  -> File_descr.t list
+  -> float
+  -> int list
+  -> File_descr.t list * File_descr.t list * File_descr.t list
   = "unix_pselect_stub"
 (** [pselect rfds wfds efds timeout sigmask] like {!Core_unix.select} but
     also allows one to wait for the arrival of signals. *)

@@ -1068,11 +1068,11 @@ module Expert = struct
   let _remember_to_update_reinitialize_of_bigstring
     :  (_, _) t
       -> buf:Bigstring.t
-    -> lo_min:int
-    -> lo:int
-    -> hi:int
-    -> hi_max:int
-    -> unit
+      -> lo_min:int
+      -> lo:int
+      -> hi:int
+      -> hi_max:int
+      -> unit
     = Fields.Direct.set_all_mutable_fields
 
   let set_bounds_and_buffer ~src ~dst = set_bounds_and_buffer ~src ~dst
@@ -1157,9 +1157,9 @@ end
 
 external unsafe_recvmmsg_assume_fd_is_nonblocking
   : File_descr.t
-    -> (read_write, seek) t array
-    -> Recvmmsg_context.ctx
-    -> Unix.Syscall_result.Int.t
+  -> (read_write, seek) t array
+  -> Recvmmsg_context.ctx
+  -> Unix.Syscall_result.Int.t
   = "iobuf_recvmmsg_assume_fd_is_nonblocking_stub" [@@noalloc]
 
 let recvmmsg_assume_fd_is_nonblocking fd { Recvmmsg_context. iobufs; ctx; _ } =

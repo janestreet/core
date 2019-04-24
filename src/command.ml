@@ -7,8 +7,8 @@ module Command = Core_kernel.Command
 
 include (Command
          : (module type of struct include Command end
-             with module Shape := Command.Shape
-             with module Deprecated := Command.Deprecated))
+           with module Shape := Command.Shape
+           with module Deprecated := Command.Deprecated))
 
 module Path = Private.Path
 

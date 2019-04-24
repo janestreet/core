@@ -424,11 +424,11 @@ let writev fd ?count iovecs =
 
 external pselect
   :    File_descr.t list
-    -> File_descr.t list
-    -> File_descr.t list
-    -> float
-    -> int list
-    -> File_descr.t list * File_descr.t list * File_descr.t list
+  -> File_descr.t list
+  -> File_descr.t list
+  -> float
+  -> int list
+  -> File_descr.t list * File_descr.t list * File_descr.t list
   = "unix_pselect_stub"
 ;;
 
@@ -1505,39 +1505,39 @@ end
 
 let create_process_internal
   :  working_dir : string option
-  -> prog        : string
-  -> argv        : string list
-  -> env         : string list
-  -> Process_info.t
+    -> prog        : string
+    -> argv        : string list
+    -> env         : string list
+    -> Process_info.t
   =
   fun ~working_dir ~prog ~argv ~env ->
-    let close_on_err = ref [] in
-    let safe_pipe () =
-      let (fd_read, fd_write) as result = Spawn.safe_pipe () in
-      close_on_err := fd_read :: fd_write :: !close_on_err;
-      result
+  let close_on_err = ref [] in
+  let safe_pipe () =
+    let (fd_read, fd_write) as result = Spawn.safe_pipe () in
+    close_on_err := fd_read :: fd_write :: !close_on_err;
+    result
+  in
+  try
+    let in_read,  in_write  = safe_pipe () in
+    let out_read, out_write = safe_pipe () in
+    let err_read, err_write = safe_pipe () in
+    let pid =
+      Spawn.spawn
+        ?cwd:(Option.map working_dir ~f:(fun x -> Spawn.Working_dir.Path x))
+        ~prog
+        ~argv
+        ~env:(Spawn.Env.of_list env)
+        ~stdin:in_read
+        ~stdout:out_write
+        ~stderr:err_write
+        ()
+      |> Pid.of_int
     in
-    try
-      let in_read,  in_write  = safe_pipe () in
-      let out_read, out_write = safe_pipe () in
-      let err_read, err_write = safe_pipe () in
-      let pid =
-        Spawn.spawn
-          ?cwd:(Option.map working_dir ~f:(fun x -> Spawn.Working_dir.Path x))
-          ~prog
-          ~argv
-          ~env:(Spawn.Env.of_list env)
-          ~stdin:in_read
-          ~stdout:out_write
-          ~stderr:err_write
-          ()
-        |> Pid.of_int
-      in
-      close in_read; close out_write; close err_write;
-      { pid; stdin = in_write; stdout = out_read; stderr = err_read; }
-    with exn ->
-      List.iter !close_on_err ~f:(fun x -> try close x with _ -> ());
-      raise exn
+    close in_read; close out_write; close err_write;
+    { pid; stdin = in_write; stdout = out_read; stderr = err_read; }
+  with exn ->
+    List.iter !close_on_err ~f:(fun x -> try close x with _ -> ());
+    raise exn
 ;;
 
 module Execvp_emulation : sig
@@ -1850,21 +1850,21 @@ let getgroups = Unix.getgroups
 
 let with_buffer_increased_on_ERANGE f =
   fun x ->
-    let rec go n =
-      match f x (Core_kernel.Bigstring.create n) with
-      | exception Unix_error (ERANGE, _, _) ->
-        (* Using 4 instead of 2 here as a multiple ~doubles the memory usage, but it
-           ~halves the number of calls. The number of calls is likely to be the more
-           important concern here.
-           Increasing it further has diminishing returns. *)
-        go (4 * n)
-      | x -> x
-    in
-    (* the recommented initial size is sysconf(_SC_GET{PW,GR}_R_SIZE_MAX),
-       but we don't have a binding for that and it might not
-       be available on every platform and the recommendation is unlikely to be
-       sufficiently well-informed so why bother. *)
-    go 10000
+  let rec go n =
+    match f x (Core_kernel.Bigstring.create n) with
+    | exception Unix_error (ERANGE, _, _) ->
+      (* Using 4 instead of 2 here as a multiple ~doubles the memory usage, but it
+         ~halves the number of calls. The number of calls is likely to be the more
+         important concern here.
+         Increasing it further has diminishing returns. *)
+      go (4 * n)
+    | x -> x
+  in
+  (* the recommented initial size is sysconf(_SC_GET{PW,GR}_R_SIZE_MAX),
+     but we don't have a binding for that and it might not
+     be available on every platform and the recommendation is unlikely to be
+     sufficiently well-informed so why bother. *)
+  go 10000
 
 let make_by f make_exn =
   let normal arg = try Some (f arg) with Not_found_s _ | Caml.Not_found -> None in
@@ -2577,7 +2577,7 @@ end
 
 external mcast_modify
   :  Mcast_action.t
-    -> ?ifname : string
+  -> ?ifname : string
   -> ?source : Inet_addr.t
   -> File_descr.t
   -> Unix.sockaddr

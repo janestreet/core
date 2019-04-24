@@ -233,11 +233,11 @@ let really_output oc ?(pos = 0) ?len bstr =
 
 external unsafe_recvmmsg_assume_fd_is_nonblocking
   :  file_descr
-    -> t Core_unix.IOVec.t array
-    -> int
-    -> sockaddr array option
-    -> int array
-    -> int
+  -> t Core_unix.IOVec.t array
+  -> int
+  -> sockaddr array option
+  -> int array
+  -> int
   = "bigstring_recvmmsg_assume_fd_is_nonblocking_stub"
 
 let recvmmsg_assume_fd_is_nonblocking fd ?count ?srcs iovecs ~lens =
