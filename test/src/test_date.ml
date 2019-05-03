@@ -18,7 +18,7 @@ let%test_module "week_number" =
       let stop_date  = create_exn ~y:2020 ~m:Dec ~d:31 in
       let rec loop acc d =
         if (>) d stop_date
-        then Result.ok_unit :: acc
+        then Ok () :: acc
         else begin
           let format_str = format d "%V" in
           let week_number_str = Printf.sprintf "%02i" (week_number d) in
@@ -28,7 +28,7 @@ let%test_module "week_number" =
               Or_error.errorf
                 "week_number for %s (%s) doesn't match output of (format \"%%V\") (%s)"
                 (to_string d) week_number_str format_str
-            else Result.ok_unit
+            else Ok ()
           in
           loop (result :: acc) (add_days d 1)
         end

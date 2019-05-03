@@ -220,28 +220,22 @@ let%expect_test "[Epoll.remove] does not allocate" =
 
 let%expect_test "[Epoll.Expert.clear_ready]" =
   with_epoll ~f:(fun t ->
+    let print_num_ready () =
+      let num_ready = ref 0 in
+      Epoll.iter_ready t ~f:(fun _ _ -> incr num_ready);
+      print_s [%message (!num_ready : int)];
+    in
     let file_descr = make_socket () in
     Epoll.set t file_descr Flags.out;
     match Epoll.wait t ~timeout:`Immediately with
     | `Timeout -> assert false
     | `Ok ->
-      print_s (Epoll.sexp_of_t t);
-      [%expect {|
-        (In_use (
-          (epollfd 10)
-          (flags_by_fd ((num_keys 1024) (alist ((15 (out))))))
-          (max_ready_events 256)
-          (num_ready_events 1)
-          (ready_events (((file_descr 15) (flags (out))))))) |}];
+      print_num_ready ();
       Epoll.Expert.clear_ready t;
-      print_s (Epoll.sexp_of_t t);
+      print_num_ready ();
       [%expect {|
-        (In_use (
-          (epollfd 10)
-          (flags_by_fd ((num_keys 1024) (alist ((15 (out))))))
-          (max_ready_events 256)
-          (num_ready_events 0)
-          (ready_events ()))) |}])
+        (!num_ready 1)
+        (!num_ready 0) |}])
 ;;
 
 

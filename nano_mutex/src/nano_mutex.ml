@@ -200,7 +200,7 @@ let rec lock t =
   then (
     t.id_of_thread_holding_lock <- current_thread_id;
     (* END ATOMIC *)
-    Result.ok_unit)
+    Ok ())
   else if current_thread_id = t.id_of_thread_holding_lock
   then Error (recursive_lock_error t)
   else (
@@ -229,7 +229,7 @@ let unlock t =
       t.id_of_thread_holding_lock <- bogus_thread_id;
       (* END ATOMIC *)
       if Option.is_some t.blocker then with_blocker t Blocker.signal;
-      Result.ok_unit)
+      Ok ())
     else
       Error
         (Error.create

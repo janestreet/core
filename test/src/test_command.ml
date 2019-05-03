@@ -413,3 +413,76 @@ let%expect_test "illegal flag names" =
     (raised (
       Failure "invalid flag name (contains whitespace): \"has whitespace\"")) |}]
 ;;
+
+let%expect_test "escape flag type" =
+  let test args =
+    Command.run ~argv:("__exe_name__" :: args)
+      (Command.basic
+         ~summary:""
+         (let%map_open.Command.Let_syntax dash_dash =
+            flag "--" escape ~doc:"... escape flag"
+          and also_an_escape_flag = flag "-also-an-escape-flag" escape ~doc:"... escape flag"
+          and other_flag = flag "-other-flag" no_arg ~doc:"" in
+          fun () ->
+            print_s [%message
+              "args"
+                (dash_dash : string list option)
+                (also_an_escape_flag : string list option)
+                (other_flag : bool)
+            ]
+         ))
+  in
+  test [ "-help" ];
+  [%expect {|
+      __exe_name__
+
+    === flags ===
+
+      [-- ...]                    escape flag
+      [-also-an-escape-flag ...]  escape flag
+      [-other-flag]
+      [-build-info]               print info about this build and exit
+      [-version]                  print the version of this build and exit
+      [-help]                     print this help text and exit
+                                  (alias: -?)
+
+    Error parsing command line:
+
+      ("exit called" (status 0))
+
+    For usage information, run
+
+      __exe_name__ -help
+
+    ("exit called" (status 1)) |}];
+  test [];
+  [%expect {|
+    (args
+      (dash_dash           ())
+      (also_an_escape_flag ())
+      (other_flag false)) |}];
+  test ["-other-flag"];
+  [%expect {|
+    (args
+      (dash_dash           ())
+      (also_an_escape_flag ())
+      (other_flag true)) |}];
+  test ["--"; "-other-flag"];
+  [%expect {|
+    (args (dash_dash ((-other-flag))) (also_an_escape_flag ()) (other_flag false)) |}];
+  test ["--"; "foo"; ""; "-bar"; "-anon"; "lorem ipsum"; "-also-an-escape-flag"];
+  [%expect {|
+    (args
+      (dash_dash ((foo "" -bar -anon "lorem ipsum" -also-an-escape-flag)))
+      (also_an_escape_flag ())
+      (other_flag false)) |}];
+  test ["-also-an-escape-flag"];
+  [%expect {|
+    (args (dash_dash ()) (also_an_escape_flag (())) (other_flag false)) |}];
+  test ["-also-an-escape-flag"; "-other-flag"; "--" ];
+  [%expect {|
+    (args
+      (dash_dash ())
+      (also_an_escape_flag ((-other-flag --)))
+      (other_flag false)) |}]
+;;
