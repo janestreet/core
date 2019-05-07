@@ -235,7 +235,7 @@ module Null : Linux_ext_intf.S = struct
         end)
     end
 
-    type t = File_descr.t [@@deriving bin_io, compare, sexp]
+    type t = File_descr.t [@@deriving compare, sexp_of]
 
     let to_file_descr t = t
 
@@ -361,7 +361,7 @@ module Timerfd = struct
       end)
   end
 
-  type t = File_descr.t [@@deriving bin_io, compare, sexp]
+  type t = File_descr.t [@@deriving compare, sexp_of]
 
   let to_file_descr t = t
 

@@ -58,13 +58,11 @@ module File_descr = struct
     let of_string string = of_int (Int.of_string string)
     let to_string t = Int.to_string (to_int t)
     let sexp_of_t t = Int.sexp_of_t (to_int t)
-    let t_of_sexp sexp = of_int (Int.t_of_sexp sexp)
     let hash t = Int.hash (to_int t)
     let compare t1 t2 = Int.compare (to_int t1) (to_int t2)
   end
   include M
-  include (Hashable.Make_and_derive_hash_fold_t (M))
-  include (Binable.Of_stringable (M))
+  include (Hashable.Make_plain_and_derive_hash_fold_t (M))
 
   (* Given that [to_int] and [of_int] are set to "%identity", this is considerably more
      direct.  It's unfortunate, but despite [Caml.Unix] using [type t = int] in the
@@ -1508,7 +1506,7 @@ module Process_info = struct
       stdout : File_descr.t;
       stderr : File_descr.t;
     }
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 end
 
 let create_process_internal

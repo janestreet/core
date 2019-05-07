@@ -5,10 +5,11 @@ open! Import
 
 (** File descriptor. *)
 module File_descr : sig
-  type t = Unix.file_descr [@@deriving bin_io, sexp]
+  type t = Unix.file_descr
+  [@@deriving sexp_of]
 
   include Equal     .S with type t := t
-  include Hashable  .S with type t := t
+  include Hashable  .S_plain with type t := t
   include Stringable.S with type t := t
 
   val of_int : int -> t
@@ -893,7 +894,7 @@ module Process_info : sig
       stdout: File_descr.t;
       stderr: File_descr.t
     }
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 end
 
 (** Low-level process *)

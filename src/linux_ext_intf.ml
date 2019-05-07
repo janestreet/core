@@ -224,7 +224,7 @@ module type S = sig
       val cloexec  : t (** [TFD_CLOEXEC]  *)
     end
 
-    type t = private File_descr.t [@@deriving bin_io, compare, sexp]
+    type t = private File_descr.t [@@deriving compare, sexp_of]
 
     val to_file_descr : t -> File_descr.t
 
