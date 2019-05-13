@@ -3,6 +3,21 @@ open Poly
 open! Unix
 open! Expect_test_helpers_kernel
 
+let%expect_test "[File_descr.sexp_of_t]" =
+  print_s
+    [%sexp
+      (List.map
+         [ -1; 0; 1; 2; 3 ]
+         ~f:(fun i ->
+           (i, i |> File_descr.of_int)) : (int * File_descr.t) list)];
+  [%expect {|
+    ((-1 -1)
+     (0  0)
+     (1  1)
+     (2  2)
+     (3  _)) |}];
+;;
+
 let%test_unit "[Error]" =
   for i = 1 to 10000 do
     [%test_result: int] ~expect:i (Error.Private.to_errno (Error.of_system_int ~errno:i))
