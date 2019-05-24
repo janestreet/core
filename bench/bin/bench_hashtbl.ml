@@ -26,7 +26,7 @@ module My_hashable = struct
     module Table = struct
       include My_hashtbl
 
-      let create ?(size=128) () =
+      let create ?(size=0) () =
         create ~size ~hash:M.hash
     end
   end
