@@ -13,6 +13,3 @@
   nss_stubs)
  (preprocessor_deps config.h)
  (preprocess (pps ppx_jane -check-doc-comments)))
-
-(alias (name runtest) (deps (:first_dep nss_stubs.c) nss_stubs.cinaps)
- (action (bash "%{bin:cinaps} %{first_dep}")))

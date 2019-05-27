@@ -1,3 +1,5 @@
+/*$ open Core_nss_cinaps $*/
+
 #define _GNU_SOURCE
 
 #include <string.h>
@@ -52,8 +54,7 @@ static value gr_entry_alloc (struct group *entry)
 }
 
 
-/*$ #use "nss_stubs.cinaps";;
-  generate gr gid */
+/*$ generate gr gid */
 
 CAMLprim value core_getgrgid_r(value v_gid, value v_buf)
 {
@@ -84,8 +85,7 @@ CAMLprim value core_getgrgid_r(value v_gid, value v_buf)
 }
 
 
-/*$ #use "nss_stubs.cinaps";;
-  generate pw uid */
+/*$ generate pw uid */
 
 CAMLprim value core_getpwuid_r(value v_uid, value v_buf)
 {
@@ -116,8 +116,7 @@ CAMLprim value core_getpwuid_r(value v_uid, value v_buf)
 }
 
 
-/*$ #use "nss_stubs.cinaps";;
-  generate pw nam */
+/*$ generate pw nam */
 
 CAMLprim value core_getpwnam_r(value v_nam, value v_buf)
 {
@@ -148,8 +147,7 @@ CAMLprim value core_getpwnam_r(value v_nam, value v_buf)
 }
 
 
-/*$ #use "nss_stubs.cinaps";;
-  generate gr nam */
+/*$ generate gr nam */
 
 CAMLprim value core_getgrnam_r(value v_nam, value v_buf)
 {

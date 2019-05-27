@@ -29,9 +29,9 @@ val to_string : t -> string
     program.  See include/linux/kernel.h in the Linux kernel source tree (not the file
     /usr/include/linux/kernel.h). *)
 type sys_behavior = [
-  | `Continue  (** Continue the process if it is currently stopped*)
+  | `Continue  (** Continue the process if it is currently stopped *)
   | `Dump_core (** Terminate the process and dump core *)
-  | `Ignore    (** Ignore the signal*)
+  | `Ignore    (** Ignore the signal *)
   | `Stop      (** Stop the process *)
   | `Terminate (** Terminate the process *)
 ]
