@@ -1240,6 +1240,14 @@ let unlink = unary_filename Unix.unlink
 
 let rename = src_dst Unix.rename
 
+[%%if ocaml_version >= (4, 08, 0)]
+let unix_link ~src ~dst =
+  Unix.link ~src ~dst ?follow:None
+[%%else]
+let unix_link ~src ~dst =
+  Unix.link ~src ~dst
+[%%endif]
+
 let link ?(force = false) ~target ~link_name () =
   improve
     (fun () ->
@@ -1247,7 +1255,7 @@ let link ?(force = false) ~target ~link_name () =
          try Unix.unlink link_name
          with Unix_error (Unix.ENOENT, _, _) -> ()
        end;
-       Unix.link ~src:target ~dst:link_name)
+       unix_link ~src:target ~dst:link_name)
     (fun () -> [("target", atom target); ("link_name", atom link_name)])
 ;;
 
