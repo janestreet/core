@@ -2367,5 +2367,6 @@ val getifaddrs : unit -> Ifaddr.t list
 module Stable : sig
   module Inet_addr = Inet_addr.Stable
   module Cidr = Cidr.Stable
+  module Signal = Signal.Stable
 end
 

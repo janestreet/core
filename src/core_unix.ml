@@ -2951,4 +2951,5 @@ let getifaddrs () =
 module Stable = struct
   module Inet_addr = Inet_addr.Stable
   module Cidr = Cidr.Stable
+  module Signal = Signal.Stable
 end
