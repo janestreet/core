@@ -159,7 +159,7 @@ let%expect_test "[choose_one]" =
 
       __exe_name__ -help
 
-    ("exit called" (status 1)) |}];
+    (command.ml.Exit_called (status 1)) |}];
   test [] ~default:"default";
   [%expect {| (arg default) |}];
   test [ "-foo" ];
@@ -176,7 +176,7 @@ let%expect_test "[choose_one]" =
 
       __exe_name__ -help
 
-    ("exit called" (status 1)) |}]
+    (command.ml.Exit_called (status 1)) |}]
 ;;
 
 let%expect_test "nested [choose_one]" =
@@ -213,7 +213,7 @@ let%expect_test "nested [choose_one]" =
 
       __exe_name__ -help
 
-    ("exit called" (status 1)) |}];
+    (command.ml.Exit_called (status 1)) |}];
   test [ "-foo"; "-baz" ];
   [%expect {|
     Error parsing command line:
@@ -224,7 +224,7 @@ let%expect_test "nested [choose_one]" =
 
       __exe_name__ -help
 
-    ("exit called" (status 1)) |}];
+    (command.ml.Exit_called (status 1)) |}];
   test [ "-foo" ];
   [%expect {| (arg (Foo_bar (true false))) |}];
   test [ "-bar" ];
@@ -253,7 +253,7 @@ let%expect_test "parse error with subcommand" =
 
       exe subcommand -help
 
-    ("exit called" (status 1)) |}];
+    (command.ml.Exit_called (status 1)) |}];
   test [ "-foo" ];
   [%expect {|
     Error parsing command line:
@@ -264,7 +264,7 @@ let%expect_test "parse error with subcommand" =
 
       exe subcommand -help
 
-    ("exit called" (status 1)) |}];
+    (command.ml.Exit_called (status 1)) |}];
 ;;
 
 let%test_unit _ = [
@@ -377,7 +377,7 @@ let%expect_test "[?verbose_on_parse_error]" =
 
       __exe_name__ -help
 
-    ("exit called" (status 1)) |}];
+    (command.ml.Exit_called (status 1)) |}];
   test ~verbose_on_parse_error:true ();
   [%expect {|
     Error parsing command line:
@@ -388,11 +388,11 @@ let%expect_test "[?verbose_on_parse_error]" =
 
       __exe_name__ -help
 
-    ("exit called" (status 1)) |}];
+    (command.ml.Exit_called (status 1)) |}];
   test ~verbose_on_parse_error:false ();
   [%expect {|
     Fail!
-    ("exit called" (status 1)) |}];
+    (command.ml.Exit_called (status 1)) |}];
 ;;
 
 let%expect_test "illegal flag names" =
@@ -446,15 +446,7 @@ let%expect_test "escape flag type" =
       [-help]                     print this help text and exit
                                   (alias: -?)
 
-    Error parsing command line:
-
-      ("exit called" (status 0))
-
-    For usage information, run
-
-      __exe_name__ -help
-
-    ("exit called" (status 1)) |}];
+    (command.ml.Exit_called (status 0)) |}];
   test [];
   [%expect {|
     (args
