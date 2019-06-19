@@ -59,9 +59,6 @@ void* malloc_exn(size_t size)
   return ptr;
 }
 
-typedef value caml_generated_constant[1];
-extern caml_generated_constant caml_exn_Invalid_argument;
-
 const char* string_ocaml_to_c(value s_v)
 {
   int length;
@@ -70,7 +67,7 @@ const char* string_ocaml_to_c(value s_v)
   assert(Is_string(s_v));
 
   if(!caml_string_is_c_safe(s_v)) {
-    caml_raise_with_arg((value) caml_exn_Invalid_argument, s_v);
+    caml_invalid_argument_value(s_v);
   }
   length = caml_string_length(s_v);
   s = malloc_exn(length + 1);
