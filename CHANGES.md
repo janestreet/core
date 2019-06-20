@@ -26,6 +26,10 @@ and Core\_kernel's
   option. Make both `bind_to_interface` and `get_bind_to_interface` use new type
   `Bound_interface_name.t` for its argument/return value.
 
+# v0.12.1
+
+- Fix linking of Core in bytecode executables
+
 ## v0.11
 
 - Fix a segfault in `Time`. (fixes #102)
