@@ -124,7 +124,7 @@ let%expect_test "[choose_one] duplicate name" =
       [ flag "-foo" (optional int) ~doc:""
       ; flag "-foo" (optional int) ~doc:""
       ]
-      ~if_nothing_chosen:`Raise);
+      ~if_nothing_chosen:Raise);
   [%expect {|
     (raised (
       "Command.Spec.choose_one called with duplicate name"
@@ -133,23 +133,24 @@ let%expect_test "[choose_one] duplicate name" =
 ;;
 
 let%expect_test "[choose_one]" =
-  let test ?default arguments =
+  let test (type b) ~(if_nothing_chosen : (_, b) Command.Param.If_nothing_chosen.t) arguments =
     Command.run ~argv:("__exe_name__" :: arguments)
       (Command.basic ~summary:""
          (let open Command.Let_syntax in
           let%map_open arg =
             choose_one
-              ~if_nothing_chosen:
-                (match default with
-                 | Some x -> `Default_to x
-                 | None -> `Raise)
+              ~if_nothing_chosen
               (List.map [ "-foo"; "-bar" ] ~f:(fun name ->
                  flag name (no_arg_some name) ~doc:"" ))
           in
           fun () ->
-            print_s [%message (arg : string)]))
+            match if_nothing_chosen with
+            | Default_to _ -> print_s [%message (arg : string)]
+            | Raise ->
+              print_s [%message (arg : string)]
+            | Return_none -> print_s [%message (arg : string option)]))
   in
-  test [];
+  test ~if_nothing_chosen:Raise [];
   [%expect {|
     Error parsing command line:
 
@@ -160,13 +161,17 @@ let%expect_test "[choose_one]" =
       __exe_name__ -help
 
     (command.ml.Exit_called (status 1)) |}];
-  test [] ~default:"default";
+  test [] ~if_nothing_chosen:Return_none;
+  [%expect {| (arg ()) |}];
+  test ~if_nothing_chosen:Return_none [ "-bar" ];
+  [%expect {| (arg (-bar)) |}];
+  test [] ~if_nothing_chosen:(Default_to "default");
   [%expect {| (arg default) |}];
-  test [ "-foo" ];
+  test ~if_nothing_chosen:Raise [ "-foo" ];
   [%expect {| (arg -foo) |}];
-  test [ "-bar" ];
+  test ~if_nothing_chosen:Raise [ "-bar" ];
   [%expect {| (arg -bar) |}];
-  test [ "-foo"; "-bar" ];
+  test ~if_nothing_chosen:Raise [ "-foo"; "-bar" ];
   [%expect {|
     Error parsing command line:
 
@@ -185,7 +190,7 @@ let%expect_test "nested [choose_one]" =
       (Command.basic ~summary:""
          (let open Command.Let_syntax in
           let%map_open arg =
-            choose_one ~if_nothing_chosen:`Raise
+            choose_one ~if_nothing_chosen:Raise
               [ (let%map foo = flag "foo" no_arg ~doc:""
                  and bar = flag "bar" no_arg ~doc:""
                  in
