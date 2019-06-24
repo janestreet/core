@@ -253,7 +253,8 @@ let%test_module _ =
         *)
         assert (
           Int.(
-            abs (x - y) <= Float.to_int (Calibrator.Private.nanos_per_cycle calibrator)))
+            abs (x - y) <= Float.to_int (Calibrator.Private.nanos_per_cycle calibrator))
+        )
       done
     ;;
 

@@ -6,8 +6,7 @@ let%test_unit _ =
   lock_exn l;
   unlock_exn l;
   match try_lock l with
-  | Ok `Not_acquired
-  | Error _ -> assert false
+  | Ok `Not_acquired | Error _ -> assert false
   | Ok `Acquired -> unlock_exn l
 ;;
 

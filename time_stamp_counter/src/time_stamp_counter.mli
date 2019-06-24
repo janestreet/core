@@ -83,8 +83,7 @@ include Comparisons.S with type t := t
     the [t] parameter.  In all the functions below that take an optional [Calibrator.t]
     argument, the internal instance is used when no calibrator is explicitly specified.
 *)
-module Calibrator :
-sig
+module Calibrator : sig
   type tsc
   type t [@@deriving bin_io, sexp]
 
@@ -163,6 +162,7 @@ val zero : t
 
     While the [Async] scheduler is running, this value is recalibrated regularly. *)
 val calibrator : Calibrator.t Lazy.t
+
 
 (**
 

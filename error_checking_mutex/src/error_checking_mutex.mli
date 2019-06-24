@@ -15,7 +15,7 @@ val lock : t -> unit
 (** [try_lock] is like [lock], but always returns immediately.  If the calling thread or
     another one already has the mutex it returns [`Already_held_by_me_or_other], otherwise
     it locks it and returns [`Acquired]. *)
-val try_lock : t -> [`Already_held_by_me_or_other | `Acquired]
+val try_lock : t -> [ `Already_held_by_me_or_other | `Acquired ]
 
 (** [unlock mtx] unlocks [mtx].
 

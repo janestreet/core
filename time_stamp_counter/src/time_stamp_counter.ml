@@ -107,16 +107,14 @@ module Calibrator = struct
   type float_fields =
     { (* the most recent observations and regression results *)
       mutable time : float
-    ; mutable sec_per_cycle :
-        float
+    ; mutable sec_per_cycle : float
     (* mutable sec_error_intercept      : float; *)
 
     (* this time value is monotonically increasing *)
     ; mutable monotonic_time : float
     ; mutable monotonic_sec_per_cycle : float (* for linear regression *)
     ; mutable ewma_time_tsc : float
-    ; mutable ewma_tsc_square :
-        float
+    ; mutable ewma_tsc_square : float
     ; mutable ewma_time : float
     ; mutable ewma_tsc : float (* for computing time in nanos *)
     ; mutable nanos_per_cycle : float
@@ -214,20 +212,20 @@ module Calibrator = struct
       if am_initializing then initial_alpha else alpha_for_interval time_diff
     in
     (* update current times *)
-    (t.floats).time <- time;
+    t.floats.time <- time;
     t.tsc <- tsc;
     (* update ewma and regression. *)
-    (t.floats).ewma_time_tsc
+    t.floats.ewma_time_tsc
     <- ewma ~alpha ~old:t.floats.ewma_time_tsc ~add:(tsc_diff *. time_diff);
-    (t.floats).ewma_tsc_square
+    t.floats.ewma_tsc_square
     <- ewma ~alpha ~old:t.floats.ewma_tsc_square ~add:(tsc_diff *. tsc_diff);
-    (t.floats).ewma_tsc <- ewma ~alpha ~old:t.floats.ewma_tsc ~add:tsc_diff;
-    (t.floats).ewma_time <- ewma ~alpha ~old:t.floats.ewma_time ~add:time_diff;
+    t.floats.ewma_tsc <- ewma ~alpha ~old:t.floats.ewma_tsc ~add:tsc_diff;
+    t.floats.ewma_time <- ewma ~alpha ~old:t.floats.ewma_time ~add:time_diff;
     (* linear regression *)
-    (t.floats).sec_per_cycle <- t.floats.ewma_time_tsc /. t.floats.ewma_tsc_square;
+    t.floats.sec_per_cycle <- t.floats.ewma_time_tsc /. t.floats.ewma_tsc_square;
     (* t.sec_error_intercept <- t.ewma_time -. t.sec_per_cycle *. t.ewma_tsc; *)
     (* monotonic predicted time and slope. *)
-    (t.floats).monotonic_time <- estimated_time;
+    t.floats.monotonic_time <- estimated_time;
     if not am_initializing
     then (
       let catchup_sec_per_cycle =
@@ -242,7 +240,7 @@ module Calibrator = struct
            Note that [time_diff_est = t.time - t.monotonic_time]. *)
         t.floats.sec_per_cycle +. (time_diff_est /. catchup_cycles)
       in
-      (t.floats).monotonic_sec_per_cycle
+      t.floats.monotonic_sec_per_cycle
       <- (if Float.is_positive time_diff_est
           then
             0.
@@ -271,10 +269,10 @@ module Calibrator = struct
          |> iround_up_and_add tsc ~if_iround_up_fails:Int63.zero);
     (* Precompute values required for [tsc_to_nanos_since_epoch]. *)
     t.time_nanos <- Float.int63_round_nearest_exn (t.floats.time *. 1E9);
-    (t.floats).nanos_per_cycle <- t.floats.sec_per_cycle *. 1E9;
+    t.floats.nanos_per_cycle <- t.floats.sec_per_cycle *. 1E9;
     t.monotonic_time_nanos
     <- Float.int63_round_nearest_exn (t.floats.monotonic_time *. 1E9);
-    (t.floats).monotonic_nanos_per_cycle <- t.floats.monotonic_sec_per_cycle *. 1E9
+    t.floats.monotonic_nanos_per_cycle <- t.floats.monotonic_sec_per_cycle *. 1E9
   ;;
 
   let now_float () =
