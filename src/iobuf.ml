@@ -20,6 +20,9 @@ module T = struct
     } [@@deriving fields, sexp_of]
 end
 open T
+
+type t_repr = T.t
+
 type (-'read_write, +'seek) t = T.t [@@deriving sexp_of]
 type    seek = Iobuf_intf.   seek [@@deriving sexp_of]
 type no_seek = Iobuf_intf.no_seek [@@deriving sexp_of]

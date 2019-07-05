@@ -17,6 +17,7 @@ module Make () = struct
 
   open Iobuf
 
+  type nonrec t_repr = t_repr
   type nonrec ('d, 'w) t = ('d, 'w) Hexdump.t [@@deriving sexp_of]
   type nonrec    seek =    seek [@@deriving sexp_of]
   type nonrec no_seek = no_seek [@@deriving sexp_of]
@@ -932,6 +933,8 @@ module Make () = struct
       debug "copy" [src] src [%sexp_of: (_, _) t] sexp_of_unit
         (fun () -> Expert.set_bounds_and_buffer ~src ~dst)
     ;;
+
+
   end
 
   type nonrec ok_or_eof = ok_or_eof = Ok | Eof [@@deriving compare, sexp_of]

@@ -27,6 +27,10 @@ open Iobuf_intf
 type nonrec seek    = seek    [@@deriving sexp_of]
 type nonrec no_seek = no_seek [@@deriving sexp_of]
 
+(** This type is a compiler witness that 'rw and 'seek do not affect layout; it enables
+    wider use of unboxed GADTs. *)
+type t_repr
+
 (** The first type parameter controls whether the iobuf can be written to.  The second
     type parameter controls whether the window and limits can be changed.
 
@@ -39,7 +43,7 @@ type nonrec no_seek = no_seek [@@deriving sexp_of]
 
     There is no [t_of_sexp].  One should use [Iobuf.Hexdump.t_of_sexp] or [@sexp.opaque]
     as desired. *)
-type (-'data_perm_read_write, +'seek_permission) t
+type (-'data_perm_read_write, +'seek_permission) t = private t_repr
 
 include Invariant.S2 with type ('rw, 'seek) t := ('rw, 'seek) t
 

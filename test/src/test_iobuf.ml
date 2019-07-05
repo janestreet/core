@@ -94,6 +94,7 @@ sig end =
     type nonrec ('d, 'w) t = ('d, 'w) Hexdump.t [@@deriving sexp_of]
     type nonrec    seek =    seek [@@deriving sexp_of]
     type nonrec no_seek = no_seek [@@deriving sexp_of]
+    type nonrec t_repr = t_repr
     module type Bound = Bound
 
     (* see iobuf_view_tests.ml for expect-tests of these *)
