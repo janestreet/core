@@ -2,10 +2,19 @@
 
 open! Import
 
+[%%if ocaml_version < (4, 09, 0)]
+
 (** The command line arguments given to the process.  The first element is the
     command name used to invoke the program.  The following elements are the
     command-line arguments given to the program. *)
 val argv : string array
+[%%else]
+
+(** The command line arguments given to the process.  The first element is the
+    command name used to invoke the program.  The following elements are the
+    command-line arguments given to the program. *)
+external argv : string array = "%sys_argv"
+[%%endif]
 
 (** The name of the file containing the executable currently running. *)
 val executable_name : string
@@ -181,6 +190,10 @@ val home_directory : unit -> string
     ]}
 *)
 external opaque_identity : 'a -> 'a = "%opaque"
+
+(** [override_argv new_argv] replace the contents of [argv] to be [new_argv]  *)
+val override_argv : string array -> unit
+
 
 
 (**/**)

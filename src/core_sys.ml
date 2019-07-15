@@ -56,7 +56,11 @@ let is_file_exn = stat_check_exn
 
 include struct
   open Caml.Sys
+  [%%if ocaml_version < (4, 09, 0)]
   let argv = argv
+  [%%else]
+  external argv : string array = "%sys_argv"
+  [%%endif]
   let executable_name = executable_name
   let remove = remove
   let rename = rename
@@ -153,3 +157,18 @@ external opaque_identity : 'a -> 'a = "%opaque"
 module Private = struct
   let unix_quote = unix_quote
 end
+
+[%%if ocaml_version < (4, 09, 0)]
+let override_argv args =
+  let len = Array.length args in
+  assert (len <= Array.length Sys.argv);
+  Array.blit ~src:args ~src_pos:0 ~dst:Sys.argv ~dst_pos:0 ~len;
+  (Caml.Obj.truncate [@ocaml.alert "-deprecated"]) (Obj.repr Sys.argv) len;
+  Arg.current := 0;
+;;
+[%%else]
+external caml_sys_modify_argv : string array -> unit = "caml_sys_modify_argv";;
+let override_argv new_argv =
+  caml_sys_modify_argv new_argv;
+  Arg.current := 0
+[%%endif]

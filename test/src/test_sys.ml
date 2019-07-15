@@ -20,3 +20,14 @@ let%test _ =
 ;;
 
 let%test _ = let size = c_int_size () in size >= 16 && size <= Sys.word_size
+
+
+let%expect_test _ =
+  let old_sys_argv = Sys.argv in
+  Sys.override_argv [|"THIS";"IS";"A";"TEST"|];
+  print_s [%sexp (Sys.argv : string array)];
+  Sys.override_argv old_sys_argv;
+  print_s [%sexp ([%equal: string array] Sys.argv old_sys_argv : bool)];
+  [%expect {|
+    (THIS IS A TEST)
+    true |}]

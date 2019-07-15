@@ -193,12 +193,13 @@ sig end =
     (* [create] with random capacity. *)
     let%test_module _ =
       (module struct
-        let n = Random.int 100_000 + 1 in
-        assert (n > 0);
-        let t = create ~len:n in
-        assert (capacity t = n);
-        assert (length t = n);
-        assert (not (is_empty t));
+        let () =
+          let n = Random.int 100_000 + 1 in
+          assert (n > 0);
+          let t = create ~len:n in
+          assert (capacity t = n);
+          assert (length t = n);
+          assert (not (is_empty t));
       end)
 
     (* [create] with user-supplied capacity. *)
