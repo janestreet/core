@@ -131,7 +131,7 @@ let invariant _ _ t =
 let bad_range ~pos ~len t =
   fail t "Iobuf got invalid range" (`pos pos, `len len)
     [%sexp_of: [ `pos of int ] * [ `len of int ]];
-[@@inline never]
+[@@cold]
 ;;
 
 let check_range t ~pos ~len =

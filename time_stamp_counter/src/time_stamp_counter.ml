@@ -333,11 +333,11 @@ module Calibrator = struct
   let t = lazy (create ())
   let cpu_mhz = Ok (fun t -> 1. /. (t.floats.sec_per_cycle *. 1E6))
 
-  (* performance hack: [@inline never] so [time] is always unboxed. [now_float] and
+  (* performance hack: [@cold] so [time] is always unboxed. [now_float] and
      [calibrate_using] need to be inlined into the same function for unboxed [time].
      Preventing [calibrate] from being inlined makes the compiler's inlining decision
      more predictable. *)
-  let[@inline never] calibrate t =
+  let[@cold] calibrate t =
     calibrate_using t ~tsc:(now ()) ~time:(now_float ()) ~am_initializing:false
   ;;
 
