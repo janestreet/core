@@ -1,5 +1,5 @@
 open Core
-open Core_bench.Std
+open Core_bench
 
 let zone = Time.Zone.find_exn "Europe/London" ;;
 

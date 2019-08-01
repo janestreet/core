@@ -1,6 +1,6 @@
 open Core
 
-module Bench = Core_bench.Std.Bench
+module Bench = Core_bench.Bench
 module Test = Bench.Test
 
 let size = 10_000

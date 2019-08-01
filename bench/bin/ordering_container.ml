@@ -1,5 +1,5 @@
 open Core
-open Core_bench.Std
+open Core_bench
 module Heap = Pairing_heap
 
 module Int = struct

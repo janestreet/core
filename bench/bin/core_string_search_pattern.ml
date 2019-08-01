@@ -1,5 +1,5 @@
 open Core
-open Core_bench.Std
+open Core_bench
 
 let rec x k =
   if k < 0 then "" else
