@@ -30,7 +30,7 @@ let create_arg_type ?key of_string =
 
 let arg_type = create_arg_type Fn.id
 
-external realpath : string -> string = "unix_realpath"
+external realpath : string -> string = "core_unix_realpath"
 
 let prng = Random.State.make_self_init ~allow_in_tests:true ()
 

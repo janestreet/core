@@ -292,21 +292,21 @@ module Clock = struct
 
   (* These functions should be in Unix, but due to the dependency on Time,
      this is not possible (cyclic dependency). *)
-  external get_time : t -> float = "unix_clock_gettime"
+  external get_time : t -> float = "core_unix_clock_gettime"
   let get_time t = Time.Span.of_sec (get_time t)
 
-  external set_time : t -> float -> unit = "unix_clock_settime"
+  external set_time : t -> float -> unit = "core_unix_clock_settime"
   let set_time t s = set_time t (Time.Span.to_sec s)
 
-  external get_resolution : t -> float = "unix_clock_getres"
+  external get_resolution : t -> float = "core_unix_clock_getres"
   let get_resolution t = Time.Span.of_sec (get_resolution t)
 
-  external get_process_clock : unit -> t = "unix_clock_process_cputime_id_stub"
+  external get_process_clock : unit -> t = "core_unix_clock_process_cputime_id_stub"
 
-  external get_thread_clock : unit -> t = "unix_clock_thread_cputime_id_stub"
+  external get_thread_clock : unit -> t = "core_unix_clock_thread_cputime_id_stub"
 
   [%%ifdef JSC_THREAD_CPUTIME]
-  external get : Thread.t -> t = "unix_pthread_getcpuclockid"
+  external get : Thread.t -> t = "core_unix_pthread_getcpuclockid"
 
   let get               = Ok get
   [%%else]
@@ -335,18 +335,18 @@ module Timerfd = struct
   end = struct
     type t = Int63.t [@@deriving bin_io, compare, sexp]
 
-    external realtime : unit -> Int63.t = "linux_timerfd_CLOCK_REALTIME"
+    external realtime : unit -> Int63.t = "core_linux_timerfd_CLOCK_REALTIME"
     let realtime = realtime ()
 
-    external monotonic : unit -> Int63.t = "linux_timerfd_CLOCK_MONOTONIC"
+    external monotonic : unit -> Int63.t = "core_linux_timerfd_CLOCK_MONOTONIC"
     let monotonic = monotonic ()
   end
 
   module Flags = struct
-    external nonblock : unit -> Int63.t = "linux_timerfd_TFD_NONBLOCK"
+    external nonblock : unit -> Int63.t = "core_linux_timerfd_TFD_NONBLOCK"
     let nonblock = nonblock ()
 
-    external cloexec  : unit -> Int63.t = "linux_timerfd_TFD_CLOEXEC"
+    external cloexec  : unit -> Int63.t = "core_linux_timerfd_TFD_CLOEXEC"
     let cloexec = cloexec ()
 
     include Flags.Make (struct
@@ -365,7 +365,7 @@ module Timerfd = struct
 
   let to_file_descr t = t
 
-  external timerfd_create : Clock.t -> Flags.t -> int = "linux_timerfd_create"
+  external timerfd_create : Clock.t -> Flags.t -> int = "core_linux_timerfd_create"
 
   (* At Jane Street, we link with [--wrap timerfd_create] so that we can use
      our own wrapper around [timerfd_create].  This allows us to compile an executable on
@@ -394,7 +394,7 @@ module Timerfd = struct
     -> initial  : Int63.t
     -> interval : Int63.t
     -> Syscall_result.Unit.t
-    = "linux_timerfd_settime" [@@noalloc]
+    = "core_linux_timerfd_settime" [@@noalloc]
 
   let timerfd_settime t ~absolute ~initial ~interval =
     (* We could accept [interval < 0] or [initial < 0 when absolute], but then the
@@ -454,7 +454,7 @@ module Timerfd = struct
     ; interval   : Time_ns.Span.t
     }
 
-  external timerfd_gettime : t -> repeat = "linux_timerfd_gettime"
+  external timerfd_gettime : t -> repeat = "core_linux_timerfd_gettime"
 
   let get t =
     let spec = timerfd_gettime t in
@@ -482,9 +482,9 @@ type file_descr = Core_unix.File_descr.t
 
 module Eventfd = struct
   module Flags = struct
-    external cloexec   : unit -> Int63.t = "linux_eventfd_EFD_CLOEXEC"
-    external nonblock  : unit -> Int63.t = "linux_eventfd_EFD_NONBLOCK"
-    external semaphore : unit -> Int63.t = "linux_eventfd_EFD_SEMAPHORE"
+    external cloexec   : unit -> Int63.t = "core_linux_eventfd_EFD_CLOEXEC"
+    external nonblock  : unit -> Int63.t = "core_linux_eventfd_EFD_NONBLOCK"
+    external semaphore : unit -> Int63.t = "core_linux_eventfd_EFD_SEMAPHORE"
 
     let cloexec   = cloexec ()
     let nonblock  = nonblock ()
@@ -505,9 +505,9 @@ module Eventfd = struct
 
   type t = File_descr.t [@@deriving compare, sexp_of]
 
-  external create : Int32.t -> Flags.t -> t  = "linux_eventfd"
-  external read   : t -> Int64.t             = "linux_eventfd_read"
-  external write  : t -> Int64.t -> unit     = "linux_eventfd_write"
+  external create : Int32.t -> Flags.t -> t  = "core_linux_eventfd"
+  external read   : t -> Int64.t             = "core_linux_eventfd_read"
+  external write  : t -> Int64.t -> unit     = "core_linux_eventfd_write"
 
   let create =
     let create ?(flags=Flags.empty) init = create init flags in
@@ -518,7 +518,7 @@ end
 
 external sendfile
   : sock : file_descr -> fd : file_descr -> pos : int -> len : int -> int
-  = "linux_sendfile_stub"
+  = "core_linux_sendfile_stub"
 ;;
 
 let sendfile ?(pos = 0) ?len ~fd sock =
@@ -552,7 +552,7 @@ end
 module Sysinfo = struct
   include Sysinfo0
 
-  external raw_sysinfo : unit -> Raw_sysinfo.t = "linux_sysinfo"
+  external raw_sysinfo : unit -> Raw_sysinfo.t = "core_linux_sysinfo"
 
   let sysinfo = Ok (fun () ->
     let raw = raw_sysinfo () in
@@ -575,14 +575,14 @@ module Sysinfo = struct
 end
 
 external gettcpopt_bool
-  : file_descr -> tcp_bool_option -> bool = "linux_gettcpopt_bool_stub"
+  : file_descr -> tcp_bool_option -> bool = "core_linux_gettcpopt_bool_stub"
 
 external settcpopt_bool
-  : file_descr -> tcp_bool_option -> bool -> unit = "linux_settcpopt_bool_stub"
+  : file_descr -> tcp_bool_option -> bool -> unit = "core_linux_settcpopt_bool_stub"
 
 external unsafe_send_nonblocking_no_sigpipe
   : file_descr -> pos : int -> len : int -> Bytes.t -> int
-  = "linux_send_nonblocking_no_sigpipe_stub"
+  = "core_linux_send_nonblocking_no_sigpipe_stub"
 
 let unsafe_send_nonblocking_no_sigpipe fd ~pos ~len buf =
   let res = unsafe_send_nonblocking_no_sigpipe fd ~pos ~len buf in
@@ -591,7 +591,7 @@ let unsafe_send_nonblocking_no_sigpipe fd ~pos ~len buf =
 
 external unsafe_send_no_sigpipe
   : file_descr -> pos : int -> len : int -> Bytes.t -> int
-  = "linux_send_no_sigpipe_stub"
+  = "core_linux_send_no_sigpipe_stub"
 
 let check_send_args ?pos ?len buf =
   let str_len = Bytes.length buf in
@@ -625,7 +625,7 @@ let send_no_sigpipe sock ?pos ?len buf =
 
 external unsafe_sendmsg_nonblocking_no_sigpipe
   : file_descr -> string Core_unix.IOVec.t array -> int -> int
-  = "linux_sendmsg_nonblocking_no_sigpipe_stub"
+  = "core_linux_sendmsg_nonblocking_no_sigpipe_stub"
 
 let unsafe_sendmsg_nonblocking_no_sigpipe fd iovecs count =
   let res = unsafe_sendmsg_nonblocking_no_sigpipe fd iovecs count in
@@ -646,11 +646,11 @@ let sendmsg_nonblocking_no_sigpipe sock ?count iovecs =
   in
   unsafe_sendmsg_nonblocking_no_sigpipe sock iovecs count
 
-external pr_set_pdeathsig : Signal.t -> unit = "linux_pr_set_pdeathsig_stub"
-external pr_get_pdeathsig : unit -> Signal.t = "linux_pr_get_pdeathsig_stub"
+external pr_set_pdeathsig : Signal.t -> unit = "core_linux_pr_set_pdeathsig_stub"
+external pr_get_pdeathsig : unit -> Signal.t = "core_linux_pr_get_pdeathsig_stub"
 
-external pr_set_name_first16 : string -> unit = "linux_pr_set_name"
-external pr_get_name : unit -> string = "linux_pr_get_name"
+external pr_set_name_first16 : string -> unit = "core_linux_pr_set_name"
+external pr_get_name : unit -> string = "core_linux_pr_get_name"
 
 let file_descr_realpath fd =
   Core_filename.realpath ("/proc/self/fd/" ^ File_descr.to_string fd)
@@ -659,7 +659,7 @@ let out_channel_realpath oc = file_descr_realpath (Unix.descr_of_out_channel oc)
 let in_channel_realpath ic = file_descr_realpath (Unix.descr_of_in_channel ic)
 
 external raw_sched_setaffinity
-  : pid : int -> cpuset : int list -> unit = "linux_sched_setaffinity"
+  : pid : int -> cpuset : int list -> unit = "core_linux_sched_setaffinity"
 
 let sched_setaffinity ?pid ~cpuset () =
   let pid = match pid with None -> 0 | Some pid -> Pid.to_int pid in
@@ -667,7 +667,7 @@ let sched_setaffinity ?pid ~cpuset () =
 ;;
 
 external raw_sched_getaffinity
-  : pid : int -> int list = "linux_sched_getaffinity"
+  : pid : int -> int list = "core_linux_sched_getaffinity"
 
 let sched_getaffinity ?pid () =
   let pid = match pid with None -> 0 | Some pid -> Pid.to_int pid in
@@ -675,11 +675,11 @@ let sched_getaffinity ?pid () =
 ;;
 
 (* defined in unix_stubs.c *)
-external gettid : unit -> int = "unix_gettid"
+external gettid : unit -> int = "core_unix_gettid"
 
-external setpriority : Priority.t -> unit = "linux_setpriority"
+external setpriority : Priority.t -> unit = "core_linux_setpriority"
 
-external getpriority : unit -> Priority.t = "linux_getpriority"
+external getpriority : unit -> Priority.t = "core_linux_getpriority"
 
 let sched_setaffinity_this_thread ~cpuset =
   sched_setaffinity ~pid:(Pid.of_int (gettid ())) ~cpuset ()
@@ -700,7 +700,7 @@ let cores =
     if num_cores > 0 then num_cores
     else failwith "Linux_ext.cores: failed to parse /proc/cpuinfo")
 
-external get_terminal_size : File_descr.t -> int * int = "linux_get_terminal_size"
+external get_terminal_size : File_descr.t -> int * int = "core_linux_get_terminal_size"
 
 let get_terminal_size = function
   | `Fd fd -> get_terminal_size fd
@@ -711,12 +711,12 @@ let get_terminal_size = function
       ~f:get_terminal_size
 
 external get_ipv4_address_for_interface : string -> string =
-  "linux_get_ipv4_address_for_interface" ;;
+  "core_linux_get_ipv4_address_for_interface" ;;
 
 (* The C-stub is a simple pass-through of the linux SO_BINDTODEVICE semantics, wherein an
    empty string removes any binding *)
 external bind_to_interface' : File_descr.t -> string -> unit =
-  "linux_bind_to_interface" ;;
+  "core_linux_bind_to_interface" ;;
 
 let bind_to_interface fd ifname =
   let name =
@@ -728,7 +728,7 @@ let bind_to_interface fd ifname =
 ;;
 
 external get_bind_to_interface' : File_descr.t -> string =
-  "linux_get_bind_to_interface" ;;
+  "core_linux_get_bind_to_interface" ;;
 
 let get_bind_to_interface fd =
   match get_bind_to_interface' fd with
@@ -737,14 +737,14 @@ let get_bind_to_interface fd =
 
 module Epoll = struct
 
-  external flag_epollin      : unit -> Int63.t  = "linux_epoll_EPOLLIN_flag"
-  external flag_epollout     : unit -> Int63.t  = "linux_epoll_EPOLLOUT_flag"
-  (* external flag_epollrdhup   : unit -> Int63.t  = "linux_epoll_EPOLLRDHUP_flag" *)
-  external flag_epollpri     : unit -> Int63.t  = "linux_epoll_EPOLLPRI_flag"
-  external flag_epollerr     : unit -> Int63.t  = "linux_epoll_EPOLLERR_flag"
-  external flag_epollhup     : unit -> Int63.t  = "linux_epoll_EPOLLHUP_flag"
-  external flag_epollet      : unit -> Int63.t  = "linux_epoll_EPOLLET_flag"
-  external flag_epolloneshot : unit -> Int63.t  = "linux_epoll_EPOLLONESHOT_flag"
+  external flag_epollin      : unit -> Int63.t  = "core_linux_epoll_EPOLLIN_flag"
+  external flag_epollout     : unit -> Int63.t  = "core_linux_epoll_EPOLLOUT_flag"
+  (* external flag_epollrdhup   : unit -> Int63.t  = "core_linux_epoll_EPOLLRDHUP_flag" *)
+  external flag_epollpri     : unit -> Int63.t  = "core_linux_epoll_EPOLLPRI_flag"
+  external flag_epollerr     : unit -> Int63.t  = "core_linux_epoll_EPOLLERR_flag"
+  external flag_epollhup     : unit -> Int63.t  = "core_linux_epoll_EPOLLHUP_flag"
+  external flag_epollet      : unit -> Int63.t  = "core_linux_epoll_EPOLLET_flag"
+  external flag_epolloneshot : unit -> Int63.t  = "core_linux_epoll_EPOLLONESHOT_flag"
 
   module Flags = Epoll_flags (struct
       let in_     = flag_epollin ()
@@ -757,7 +757,7 @@ module Epoll = struct
       let oneshot = flag_epolloneshot ()
     end)
 
-  external epoll_create : unit -> File_descr.t = "linux_epoll_create"
+  external epoll_create : unit -> File_descr.t = "core_linux_epoll_create"
 
   (* Some justification for the below interface: Unlike select() and poll(), epoll() fills
      in an array of ready events, analogous to a read() call where you pass in a buffer to
@@ -771,13 +771,13 @@ module Epoll = struct
   type ready_events = Bigstring.t
 
   external epoll_sizeof_epoll_event
-    : unit -> int = "linux_epoll_sizeof_epoll_event" [@@noalloc]
+    : unit -> int = "core_linux_epoll_sizeof_epoll_event" [@@noalloc]
 
   external epoll_offsetof_readyfd
-    : unit -> int = "linux_epoll_offsetof_readyfd" [@@noalloc]
+    : unit -> int = "core_linux_epoll_offsetof_readyfd" [@@noalloc]
 
   external epoll_offsetof_readyflags
-    : unit -> int = "linux_epoll_offsetof_readyflags" [@@noalloc]
+    : unit -> int = "core_linux_epoll_offsetof_readyflags" [@@noalloc]
 
   let sizeof_epoll_event  = epoll_sizeof_epoll_event ()
   let offsetof_readyfd    = epoll_offsetof_readyfd ()
@@ -785,15 +785,15 @@ module Epoll = struct
 
   external epoll_ctl_add
     : File_descr.t -> File_descr.t -> Flags.t -> unit
-    = "linux_epoll_ctl_add"
+    = "core_linux_epoll_ctl_add"
 
   external epoll_ctl_mod
     : File_descr.t -> File_descr.t -> Flags.t -> unit
-    = "linux_epoll_ctl_mod"
+    = "core_linux_epoll_ctl_mod"
 
   external epoll_ctl_del
     : File_descr.t -> File_descr.t -> unit
-    = "linux_epoll_ctl_del"
+    = "core_linux_epoll_ctl_del"
 
   module Table = Bounded_int_table
 
@@ -941,7 +941,7 @@ module Epoll = struct
     Table.remove t.flags_by_fd fd
   ;;
 
-  external epoll_wait : File_descr.t -> ready_events -> int -> int = "linux_epoll_wait"
+  external epoll_wait : File_descr.t -> ready_events -> int -> int = "core_linux_epoll_wait"
 
   let wait_internal t ~timeout_ms =
     let t = in_use_exn t in
@@ -1010,7 +1010,7 @@ module Epoll = struct
 
   (* external epoll_pwait
    *   : File_descr.t -> Events_buffer.raw -> int -> int list -> int
-   *   = "linux_epoll_pwait"
+   *   = "core_linux_epoll_pwait"
    *
    * let pwait t ~timeout sigs =
    *   let millis = Float.iround_exn ~dir:`Zero ( Span.to_ms timeout ) in
@@ -1048,8 +1048,8 @@ let settcpopt_bool                 = Ok settcpopt_bool
 
 module Extended_file_attributes = struct
   module Flags = struct
-    external only_create : unit -> Int63.t = "linux_xattr_XATTR_CREATE_flag"
-    external only_replace : unit -> Int63.t = "linux_xattr_XATTR_REPLACE_flag"
+    external only_create : unit -> Int63.t = "core_linux_xattr_XATTR_CREATE_flag"
+    external only_replace : unit -> Int63.t = "core_linux_xattr_XATTR_REPLACE_flag"
     let set = Int63.zero
   end
 
@@ -1071,8 +1071,8 @@ module Extended_file_attributes = struct
     [@@deriving sexp_of]
   end
 
-  external getxattr : string -> string -> Get_attr_result.t = "linux_getxattr"
-  external setxattr : string -> string -> string -> Int63.t -> Set_attr_result.t = "linux_setxattr"
+  external getxattr : string -> string -> Get_attr_result.t = "core_linux_getxattr"
+  external setxattr : string -> string -> string -> Int63.t -> Set_attr_result.t = "core_linux_setxattr"
 
   let getxattr ~path ~name =
     getxattr path name

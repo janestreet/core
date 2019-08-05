@@ -12,7 +12,12 @@ val argv : string array
 
 (** The command line arguments given to the process.  The first element is the
     command name used to invoke the program.  The following elements are the
-    command-line arguments given to the program. *)
+    command-line arguments given to the program.
+
+    Even though this looks like a value, it's actually a mutable variable (can be set
+    to another array by [override_argv]). The value of the variable is read every time
+    you use [argv]. So writing [let argv = argv] can change the meaning of the program.
+*)
 external argv : string array = "%sys_argv"
 [%%endif]
 
@@ -191,7 +196,10 @@ val home_directory : unit -> string
 *)
 external opaque_identity : 'a -> 'a = "%opaque"
 
-(** [override_argv new_argv] replace the contents of [argv] to be [new_argv]  *)
+(** [override_argv new_argv] replace the contents of [argv] to be [new_argv].
+
+    Note that on OCaml >=4.09 this does not affect [Base.Sys.argv].
+    We hope to fix that before we switch to 4.09. *)
 val override_argv : string array -> unit
 
 

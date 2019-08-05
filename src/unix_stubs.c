@@ -74,7 +74,7 @@ CAMLprim value core_code_of_unix_error(value error)
   return Val_int(code_of_unix_error(error));
 }
 
-CAMLprim value unix_error_stub(value v_errcode, value v_cmdname, value cmd_arg)
+CAMLprim value core_unix_error_stub(value v_errcode, value v_cmdname, value cmd_arg)
 {
   unix_error(Int_val(v_errcode), String_val(v_cmdname), cmd_arg);
   return Val_unit;
@@ -122,7 +122,7 @@ UNIX_INT63_CONST(O_SYNC)
 UNIX_INT63_CONST(O_TRUNC)
 UNIX_INT63_CONST(O_WRONLY)
 
-CAMLprim value unix_fcntl (value fd, value v_cmd, value v_arg) {
+CAMLprim value core_unix_fcntl (value fd, value v_cmd, value v_arg) {
   int63 result;
   int cmd  = Int63_val(v_cmd); /* extract before blocking section */
   long arg = Int63_val(v_arg); /* extract before blocking section */
@@ -142,7 +142,7 @@ int core_unix_close_durably(int fd)
 }
 
 
-void close_on_exec(int fd)
+void core_unix_close_on_exec(int fd)
 {
   int flags;
 
@@ -174,7 +174,7 @@ static inline char * core_copy_to_c_string(value v_str)
   return p;
 }
 
-CAMLprim value core_setpwent(value v_unit)
+CAMLprim value core_unix_setpwent(value v_unit)
 {
   CAMLparam1(v_unit);
   caml_enter_blocking_section();
@@ -183,7 +183,7 @@ CAMLprim value core_setpwent(value v_unit)
   CAMLreturn(Val_unit);
 }
 
-CAMLprim value core_endpwent(value v_unit)
+CAMLprim value core_unix_endpwent(value v_unit)
 {
   CAMLparam1(v_unit);
   caml_enter_blocking_section();
@@ -192,7 +192,7 @@ CAMLprim value core_endpwent(value v_unit)
   CAMLreturn(Val_unit);
 }
 
-CAMLprim value core_getpwent(value v_unit)
+CAMLprim value core_unix_getpwent(value v_unit)
 {
   CAMLparam1(v_unit);
   CAMLlocal1(res);
@@ -271,7 +271,7 @@ CAMLprim value core_unix_flock(value v_fd, value v_lock_type)
 
 /* Filesystem functions */
 
-CAMLprim value unix_mknod_stub(
+CAMLprim value core_unix_mknod_stub(
   value v_pathname, value v_mode, value v_perm, value v_major, value v_minor)
 {
   CAMLparam1(v_pathname);
@@ -315,7 +315,7 @@ CAMLprim value unix_mknod_stub(
 
 typedef struct dirent directory_entry;
 
-CAMLprim value unix_sync(value v_unit)
+CAMLprim value core_unix_sync(value v_unit)
 {
   caml_enter_blocking_section();
     sync();
@@ -323,7 +323,7 @@ CAMLprim value unix_sync(value v_unit)
   return v_unit;
 }
 
-CAMLprim value unix_fsync(value v_fd)
+CAMLprim value core_unix_fsync(value v_fd)
 {
   int ret;
   caml_enter_blocking_section();
@@ -334,7 +334,7 @@ CAMLprim value unix_fsync(value v_fd)
 }
 
 #if defined(_POSIX_SYNCHRONIZED_IO) && (_POSIX_SYNCHRONIZED_IO > 0)
-CAMLprim value unix_fdatasync(value v_fd)
+CAMLprim value core_unix_fdatasync(value v_fd)
 {
   int ret;
   caml_enter_blocking_section();
@@ -345,13 +345,13 @@ CAMLprim value unix_fdatasync(value v_fd)
 }
 #else
 #warning "_POSIX_SYNCHRONIZED_IO undefined or <= 0; aliasing unix_fdatasync to unix_fsync"
-CAMLprim value unix_fdatasync(value v_fd)
+CAMLprim value core_unix_fdatasync(value v_fd)
 {
-  return unix_fsync(v_fd);
+  return core_unix_fsync(v_fd);
 }
 #endif
 
-CAMLprim value unix_dirfd(value v_dh)
+CAMLprim value core_unix_dirfd(value v_dh)
 {
   int ret = 0;
   if (DIR_Val(v_dh) == NULL)
@@ -361,7 +361,7 @@ CAMLprim value unix_dirfd(value v_dh)
   return Val_int(ret);
 }
 
-CAMLprim value unix_readdir_ino_stub(value v_dh)
+CAMLprim value core_unix_readdir_ino_stub(value v_dh)
 {
   DIR *d;
   directory_entry * e;
@@ -384,7 +384,7 @@ CAMLprim value unix_readdir_ino_stub(value v_dh)
   }
 }
 
-CAMLprim value unix_read_assume_fd_is_nonblocking_stub(
+CAMLprim value core_unix_read_assume_fd_is_nonblocking_stub(
   value v_fd, value v_buf, value v_pos, value v_len)
 {
   unsigned char *buf = Bytes_val(v_buf) + Long_val(v_pos);
@@ -393,7 +393,7 @@ CAMLprim value unix_read_assume_fd_is_nonblocking_stub(
   return Val_long(ret);
 }
 
-CAMLprim value unix_write_assume_fd_is_nonblocking_stub(
+CAMLprim value core_unix_write_assume_fd_is_nonblocking_stub(
   value v_fd, value v_buf, value v_pos, value v_len)
 {
   /* note that [v_buf] is a [Bytes.t] in practice */
@@ -403,7 +403,7 @@ CAMLprim value unix_write_assume_fd_is_nonblocking_stub(
   return Val_long(ret);
 }
 
-CAMLprim value unix_writev_assume_fd_is_nonblocking_stub(
+CAMLprim value core_unix_writev_assume_fd_is_nonblocking_stub(
   value v_fd, value v_iovecs, value v_count)
 {
   int count = Int_val(v_count);
@@ -425,7 +425,7 @@ CAMLprim value unix_writev_assume_fd_is_nonblocking_stub(
   return Val_long(ret);
 }
 
-CAMLprim value unix_writev_stub(value v_fd, value v_iovecs, value v_count)
+CAMLprim value core_unix_writev_stub(value v_fd, value v_iovecs, value v_count)
 {
   int i, count = Int_val(v_count), len = 0;
   ssize_t ret;
@@ -501,7 +501,7 @@ static inline void decode_sigset(value vset, sigset_t * set)
   }
 }
 
-CAMLprim value unix_pselect_stub(
+CAMLprim value core_unix_pselect_stub(
   value v_rfds, value v_wfds, value v_efds, value v_timeout, value v_sigmask)
 {
   fd_set rfds, wfds, efds;
@@ -549,7 +549,7 @@ CAMLprim value unix_pselect_stub(
 #ifdef JSC_POSIX_TIMERS
 #define clockid_t_val(v_cl) ((clockid_t) Nativeint_val(v_cl))
 
-CAMLprim value unix_clock_gettime(value v_cl)
+CAMLprim value core_unix_clock_gettime(value v_cl)
 {
   struct timespec ts;
   if (clock_gettime(clockid_t_val(v_cl), &ts))
@@ -557,7 +557,7 @@ CAMLprim value unix_clock_gettime(value v_cl)
   return caml_copy_double(timespec_to_double(ts));
 }
 
-CAMLprim value unix_clock_settime(value v_cl, value v_t)
+CAMLprim value core_unix_clock_settime(value v_cl, value v_t)
 {
   struct timespec ts = timespec_of_double(Double_val(v_t));
   if (clock_settime(clockid_t_val(v_cl), &ts))
@@ -565,7 +565,7 @@ CAMLprim value unix_clock_settime(value v_cl, value v_t)
   return Val_unit;
 }
 
-CAMLprim value unix_clock_getres(value v_cl)
+CAMLprim value core_unix_clock_getres(value v_cl)
 {
   struct timespec ts;
   if (clock_getres(clockid_t_val(v_cl), &ts))
@@ -585,7 +585,7 @@ static inline pthread_t pthread_t_val(value __unused v_tid)
 }
 
 #if defined(JSC_THREAD_CPUTIME)
-CAMLprim value unix_pthread_getcpuclockid(value v_tid)
+CAMLprim value core_unix_pthread_getcpuclockid(value v_tid)
 {
   clockid_t c;
   if (pthread_getcpuclockid(pthread_t_val(v_tid), &c))
@@ -602,12 +602,12 @@ CAMLprim value unix_pthread_getcpuclockid(value v_tid)
 #define CLOCK CLOCK_REALTIME
 #endif
 
-CAMLprim value unix_clock_process_cputime_id_stub(value __unused v_unit)
+CAMLprim value core_unix_clock_process_cputime_id_stub(value __unused v_unit)
 {
   return caml_copy_nativeint(CLOCK);
 }
 
-CAMLprim value unix_clock_thread_cputime_id_stub(value __unused v_unit)
+CAMLprim value core_unix_clock_thread_cputime_id_stub(value __unused v_unit)
 {
   return caml_copy_nativeint(CLOCK);
 }
@@ -666,7 +666,7 @@ static value Val_rlim_t(rlim_t lim)
   return v_rl;
 }
 
-CAMLprim value unix_getrlimit(value v_resource)
+CAMLprim value core_unix_getrlimit(value v_resource)
 {
   CAMLparam0();
   CAMLlocal2(v_cur, v_max);
@@ -682,7 +682,7 @@ CAMLprim value unix_getrlimit(value v_resource)
   CAMLreturn(v_limits);
 }
 
-CAMLprim value unix_setrlimit(value v_resource, value v_limits)
+CAMLprim value core_unix_setrlimit(value v_resource, value v_limits)
 {
   struct rlimit rl;
   int resource = resource_val(v_resource);
@@ -753,7 +753,7 @@ struct in_addr core_unix_get_in_addr_for_interface(value v_interface)
 
 /* Resource usage */
 
-CAMLprim value unix_getrusage(value v_who)
+CAMLprim value core_unix_getrusage(value v_who)
 {
   CAMLparam0();
   CAMLlocal1(v_usage);
@@ -786,7 +786,7 @@ CAMLprim value unix_getrusage(value v_who)
 
 /* System configuration */
 
-CAMLprim value unix_sysconf(value v_name)
+CAMLprim value core_unix_sysconf(value v_name)
 {
   int name;
   long ret;
@@ -840,7 +840,7 @@ CAMLprim value unix_sysconf(value v_name)
 #endif
 
 #ifdef __GLIBC__
-CAMLprim value unix_realpath(value v_path)
+CAMLprim value core_unix_realpath(value v_path)
 {
   const char *path = String_val(v_path);
   char *res = realpath(path, NULL);
@@ -852,7 +852,7 @@ CAMLprim value unix_realpath(value v_path)
   }
 }
 #else
-CAMLprim value unix_realpath(value v_path)
+CAMLprim value core_unix_realpath(value v_path)
 {
   char *path = String_val(v_path);
   /* [realpath] is inherently broken without GNU-extension, and this
@@ -882,7 +882,7 @@ static inline void init_mktemp(char *loc, char *buf, value v_path)
   buf[i++] = '\0';
 }
 
-CAMLprim value unix_mkstemp(value v_path)
+CAMLprim value core_unix_mkstemp(value v_path)
 {
   CAMLparam1(v_path);
   CAMLlocal1(v_res_path);
@@ -913,7 +913,7 @@ CAMLprim value unix_mkstemp(value v_path)
   CAMLreturn(v_res);
 }
 
-CAMLprim value unix_mkdtemp(value v_path)
+CAMLprim value core_unix_mkdtemp(value v_path)
 {
   CAMLparam1(v_path);
   char *loc = "mkdtemp";
@@ -930,7 +930,7 @@ CAMLprim value unix_mkdtemp(value v_path)
 
 /* Signal handling */
 
-CAMLprim value unix_abort(value v_unit)
+CAMLprim value core_unix_abort(value v_unit)
 {
   abort();
   return v_unit;
@@ -939,7 +939,7 @@ CAMLprim value unix_abort(value v_unit)
 
 /* User id, group id management */
 
-CAMLprim value unix_initgroups(value v_user, value v_group)
+CAMLprim value core_unix_initgroups(value v_user, value v_group)
 {
   int ret, user_len = caml_string_length(v_user) + 1;
   char *c_user = caml_stat_alloc(user_len);
@@ -953,7 +953,7 @@ CAMLprim value unix_initgroups(value v_user, value v_group)
   return Val_unit;
 }
 
-CAMLprim value unix_getgrouplist(value v_user, value v_group)
+CAMLprim value core_unix_getgrouplist(value v_user, value v_group)
 {
   int n;
   int ngroups = NGROUPS_MAX;
@@ -983,7 +983,7 @@ CAMLprim value unix_getgrouplist(value v_user, value v_group)
 
 /* Globbing and shell string expansion */
 
-CAMLprim value unix_fnmatch_make_flags(value v_flags)
+CAMLprim value core_unix_fnmatch_make_flags(value v_flags)
 {
   int flags = 0, i = Wosize_val(v_flags);
   while (--i >= 0) {
@@ -999,7 +999,7 @@ CAMLprim value unix_fnmatch_make_flags(value v_flags)
   return caml_copy_int32(flags);
 }
 
-CAMLprim value unix_fnmatch(value v_flags, value v_glob, value v_str)
+CAMLprim value core_unix_fnmatch(value v_flags, value v_glob, value v_str)
 {
   int flags = Int32_val(v_flags);
   const char *glob = String_val(v_glob);
@@ -1014,7 +1014,7 @@ CAMLprim value unix_fnmatch(value v_flags, value v_glob, value v_str)
 
 #if defined(JSC_WORDEXP)
 
-CAMLprim value unix_wordexp_make_flags(value v_flags)
+CAMLprim value core_unix_wordexp_make_flags(value v_flags)
 {
   int flags = 0, i = Wosize_val(v_flags);
   while (--i >= 0) {
@@ -1027,7 +1027,7 @@ CAMLprim value unix_wordexp_make_flags(value v_flags)
   return caml_copy_int32(flags);
 }
 
-CAMLprim value unix_wordexp(value v_flags, value v_str)
+CAMLprim value core_unix_wordexp(value v_flags, value v_str)
 {
   CAMLparam0();
   CAMLlocal1(v_res);
@@ -1063,7 +1063,7 @@ CAMLprim value unix_wordexp(value v_flags, value v_str)
 
 /* System information */
 
-CAMLprim value unix_uname(value v_unit __unused)
+CAMLprim value core_unix_uname(value v_unit __unused)
 {
   CAMLparam0();
   CAMLlocal1(v_utsname);
@@ -1081,7 +1081,7 @@ CAMLprim value unix_uname(value v_unit __unused)
 
 /* Additional IP functionality */
 
-CAMLprim value unix_if_indextoname(value v_index)
+CAMLprim value core_unix_if_indextoname(value v_index)
 {
   char name[IF_NAMESIZE];
   if (if_indextoname((unsigned int) Int_val(v_index), name) == NULL)
@@ -1200,19 +1200,19 @@ extern value unix_setsockopt_aux(
   enum option_type ty, int level, int option,
   value v_socket, value v_status);
 
-CAMLprim value unix_mcast_get_ttl(value v_socket)
+CAMLprim value core_unix_mcast_get_ttl(value v_socket)
 {
   return
     unix_getsockopt_aux("getsockopt", TYPE_INT, IPPROTO_IP, IP_MULTICAST_TTL, v_socket);
 }
 
-CAMLprim value unix_mcast_set_ttl(value v_socket, value v_ttl)
+CAMLprim value core_unix_mcast_set_ttl(value v_socket, value v_ttl)
 {
   return
     unix_setsockopt_aux( "setsockopt", TYPE_INT, IPPROTO_IP, IP_MULTICAST_TTL, v_socket, v_ttl);
 }
 
-CAMLprim value unix_mcast_set_ifname(value v_socket, value v_ifname)
+CAMLprim value core_unix_mcast_set_ifname(value v_socket, value v_ifname)
 {
   struct in_addr addr;
 
@@ -1230,13 +1230,13 @@ CAMLprim value unix_mcast_set_ifname(value v_socket, value v_ifname)
                         Val_int(addr.s_addr));
 }
 
-CAMLprim value unix_mcast_get_loop(value v_socket)
+CAMLprim value core_unix_mcast_get_loop(value v_socket)
 {
   return
     unix_getsockopt_aux("getsockopt", TYPE_BOOL, IPPROTO_IP, IP_MULTICAST_LOOP, v_socket);
 }
 
-CAMLprim value unix_mcast_set_loop(value v_socket, value v_loop)
+CAMLprim value core_unix_mcast_set_loop(value v_socket, value v_loop)
 {
   return
     unix_setsockopt_aux( "setsockopt", TYPE_BOOL, IPPROTO_IP, IP_MULTICAST_LOOP, v_socket, v_loop);
@@ -1247,7 +1247,7 @@ CAMLprim value unix_mcast_set_loop(value v_socket, value v_loop)
 #if defined(_POSIX_PRIORITY_SCHEDULING) && (_POSIX_PRIORITY_SCHEDULING+0 > 0)
 static int sched_policy_table[] = { SCHED_FIFO, SCHED_RR, SCHED_OTHER };
 
-CAMLprim value unix_sched_setscheduler(
+CAMLprim value core_unix_sched_setscheduler(
   value v_pid, value v_policy, value v_priority)
 {
   struct sched_param sched_param;
@@ -1265,7 +1265,7 @@ CAMLprim value unix_sched_setscheduler(
 }
 #else
 #warning "_POSIX_PRIORITY_SCHEDULING not present; sched_setscheduler undefined"
-CAMLprim value unix_sched_setscheduler(
+CAMLprim value core_unix_sched_setscheduler(
   value __unused v_pid, value __unused v_policy, value __unused v_priority)
 {  invalid_argument("sched_setscheduler unimplemented"); }
 #endif
@@ -1273,7 +1273,7 @@ CAMLprim value unix_sched_setscheduler(
 
 /* Priority */
 
-CAMLprim value unix_nice(value v_inc)
+CAMLprim value core_unix_nice(value v_inc)
 {
   int new_nice;
   errno = 0;
@@ -1282,7 +1282,7 @@ CAMLprim value unix_nice(value v_inc)
   else return Val_int(new_nice);
 }
 
-CAMLprim value unix_unsetenv(value var)
+CAMLprim value core_unix_unsetenv(value var)
 {
   if (unsetenv(String_val(var)) != 0) uerror("unsetenv", var);
   return Val_unit;
@@ -1291,7 +1291,7 @@ CAMLprim value unix_unsetenv(value var)
 
 static int mman_mcl_flags_table[] = { MCL_CURRENT, MCL_FUTURE };
 
-CAMLprim value unix_mlockall(value v_flags)
+CAMLprim value core_unix_mlockall(value v_flags)
 {
   CAMLparam1(v_flags);
   size_t i, mask;
@@ -1305,7 +1305,7 @@ CAMLprim value unix_mlockall(value v_flags)
   CAMLreturn(Val_unit);
 }
 
-CAMLprim value unix_munlockall()
+CAMLprim value core_unix_munlockall()
 {
   if (munlockall() < 0)
     uerror("munlockall", Nothing);
@@ -1328,7 +1328,7 @@ static value alloc_tm(struct tm *tm)
   return res;
 }
 
-CAMLprim value unix_strptime(value v_fmt, value v_s)
+CAMLprim value core_unix_strptime(value v_fmt, value v_s)
 {
   CAMLparam2(v_s, v_fmt);
 
@@ -1368,7 +1368,7 @@ CAMLprim value core_unix_remove(value v_path)
 
 #if defined(GET_THREAD_ID)
 
-CAMLprim value unix_gettid(value v_unit __unused)
+CAMLprim value core_unix_gettid(value v_unit __unused)
 {
   return Val_long(GET_THREAD_ID);
 }

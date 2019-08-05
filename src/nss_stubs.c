@@ -56,7 +56,7 @@ static value gr_entry_alloc (struct group *entry)
 
 /*$ generate gr gid */
 
-CAMLprim value core_getgrgid_r(value v_gid, value v_buf)
+CAMLprim value core_unix_getgrgid_r(value v_gid, value v_buf)
 {
   CAMLparam2(v_gid, v_buf);
   CAMLlocal1(res);
@@ -87,7 +87,7 @@ CAMLprim value core_getgrgid_r(value v_gid, value v_buf)
 
 /*$ generate pw uid */
 
-CAMLprim value core_getpwuid_r(value v_uid, value v_buf)
+CAMLprim value core_unix_getpwuid_r(value v_uid, value v_buf)
 {
   CAMLparam2(v_uid, v_buf);
   CAMLlocal1(res);
@@ -118,7 +118,7 @@ CAMLprim value core_getpwuid_r(value v_uid, value v_buf)
 
 /*$ generate pw nam */
 
-CAMLprim value core_getpwnam_r(value v_nam, value v_buf)
+CAMLprim value core_unix_getpwnam_r(value v_nam, value v_buf)
 {
   CAMLparam2(v_nam, v_buf);
   CAMLlocal1(res);
@@ -149,7 +149,7 @@ CAMLprim value core_getpwnam_r(value v_nam, value v_buf)
 
 /*$ generate gr nam */
 
-CAMLprim value core_getgrnam_r(value v_nam, value v_buf)
+CAMLprim value core_unix_getgrnam_r(value v_nam, value v_buf)
 {
   CAMLparam2(v_nam, v_buf);
   CAMLlocal1(res);

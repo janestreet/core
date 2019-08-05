@@ -78,27 +78,27 @@ end
 
 let sprintf = Printf.sprintf
 
-external sync : unit -> unit = "unix_sync"
-external fsync : Unix.file_descr -> unit = "unix_fsync"
-external fdatasync : Unix.file_descr -> unit = "unix_fdatasync"
+external sync : unit -> unit = "core_unix_sync"
+external fsync : Unix.file_descr -> unit = "core_unix_fsync"
+external fdatasync : Unix.file_descr -> unit = "core_unix_fdatasync"
 
-external dirfd : Unix.dir_handle -> File_descr.t = "unix_dirfd"
+external dirfd : Unix.dir_handle -> File_descr.t = "core_unix_dirfd"
 
 external readdir_ino
-  : Unix.dir_handle -> string * nativeint = "unix_readdir_ino_stub"
+  : Unix.dir_handle -> string * nativeint = "core_unix_readdir_ino_stub"
 
 let readdir_ino_opt dh =
   match readdir_ino dh with
   | entry                 -> Some entry
   | exception End_of_file -> None
 
-external unsetenv : string -> unit = "unix_unsetenv"
+external unsetenv : string -> unit = "core_unix_unsetenv"
 
 external exit_immediately : int -> _ = "caml_sys_exit"
 
 external unsafe_read_assume_fd_is_nonblocking
   : File_descr.t -> Bytes.t -> pos : int -> len : int -> int
-  = "unix_read_assume_fd_is_nonblocking_stub"
+  = "core_unix_read_assume_fd_is_nonblocking_stub"
 
 let check_bytes_args ~loc str ~pos ~len =
   if pos < 0 then invalid_arg (loc ^ ": pos < 0");
@@ -127,7 +127,7 @@ let read_assume_fd_is_nonblocking fd ?pos ?len buf =
 
 external unsafe_write_assume_fd_is_nonblocking
   : File_descr.t -> Bytes.t -> pos : int -> len : int -> int
-  = "unix_write_assume_fd_is_nonblocking_stub"
+  = "core_unix_write_assume_fd_is_nonblocking_stub"
 ;;
 
 let write_assume_fd_is_nonblocking fd ?pos ?len buf =
@@ -141,7 +141,7 @@ let write_assume_fd_is_nonblocking fd ?pos ?len buf =
 (* Filesystem functions *)
 
 external mknod
-  : string -> Unix.file_kind -> int -> int -> int -> unit = "unix_mknod_stub"
+  : string -> Unix.file_kind -> int -> int -> int -> unit = "core_unix_mknod_stub"
 
 let mknod
       ?(file_kind = Unix.S_REG) ?(perm = 0o600) ?(major = 0) ?(minor = 0)
@@ -214,8 +214,8 @@ module RLimit = struct
     | Num_file_descriptors | Stack | Virtual_memory as resource ->
       resource
 
-  external get : resource -> t = "unix_getrlimit"
-  external set : resource -> t -> unit = "unix_setrlimit"
+  external get : resource -> t = "core_unix_getrlimit"
+  external set : resource -> t -> unit = "core_unix_setrlimit"
 
   let get resource =
     improve (fun () -> get resource)
@@ -254,7 +254,7 @@ module Resource_usage = struct
   }
   [@@deriving sexp, fields]
 
-  external getrusage : int -> t = "unix_getrusage"
+  external getrusage : int -> t = "core_unix_getrusage"
 
   let get who = getrusage (match who with `Self -> 0 | `Children -> 1)
 
@@ -299,7 +299,7 @@ type sysconf =
   | CLK_TCK
 [@@deriving sexp]
 
-external sysconf : sysconf -> int64 option = "unix_sysconf"
+external sysconf : sysconf -> int64 option = "core_unix_sysconf"
 let sysconf_exn conf = match sysconf conf with
   | None ->
     raise_s [%message
@@ -409,7 +409,7 @@ let get_iovec_count loc iovecs = function
 
 external unsafe_writev_assume_fd_is_nonblocking
   : File_descr.t -> string IOVec.t array -> int -> int
-  = "unix_writev_assume_fd_is_nonblocking_stub"
+  = "core_unix_writev_assume_fd_is_nonblocking_stub"
 ;;
 
 let writev_assume_fd_is_nonblocking fd ?count iovecs =
@@ -418,7 +418,7 @@ let writev_assume_fd_is_nonblocking fd ?count iovecs =
 ;;
 
 external unsafe_writev
-  : File_descr.t -> string IOVec.t array -> int -> int = "unix_writev_stub"
+  : File_descr.t -> string IOVec.t array -> int -> int = "core_unix_writev_stub"
 ;;
 
 let writev fd ?count iovecs =
@@ -433,22 +433,22 @@ external pselect
   -> float
   -> int list
   -> File_descr.t list * File_descr.t list * File_descr.t list
-  = "unix_pselect_stub"
+  = "core_unix_pselect_stub"
 ;;
 
 (* Temporary file and directory creation *)
-external mkstemp : string -> string * File_descr.t = "unix_mkstemp"
-external mkdtemp : string -> string = "unix_mkdtemp"
+external mkstemp : string -> string * File_descr.t = "core_unix_mkstemp"
+external mkdtemp : string -> string = "core_unix_mkdtemp"
 
 (* Signal handling *)
 
-external abort : unit -> 'a = "unix_abort" [@@noalloc]
+external abort : unit -> 'a = "core_unix_abort" [@@noalloc]
 
 (* User id, group id management *)
 
-external initgroups : string -> int -> unit = "unix_initgroups"
+external initgroups : string -> int -> unit = "core_unix_initgroups"
 
-external getgrouplist : string -> int -> int array = "unix_getgrouplist"
+external getgrouplist : string -> int -> int array = "core_unix_getgrouplist"
 
 (** Globbing and shell word expansion *)
 
@@ -474,7 +474,7 @@ module Fnmatch_flags = struct
 
   type t = int32 [@@deriving sexp]
 
-  external internal_make : int array -> t = "unix_fnmatch_make_flags"
+  external internal_make : int array -> t = "core_unix_fnmatch_make_flags"
 
   let make = function
     | None | Some [] -> Int32.zero
@@ -483,7 +483,7 @@ module Fnmatch_flags = struct
 end
 
 external fnmatch
-  : Fnmatch_flags.t -> pat : string -> string -> bool = "unix_fnmatch"
+  : Fnmatch_flags.t -> pat : string -> string -> bool = "core_unix_fnmatch"
 ;;
 
 let fnmatch ?flags ~pat fname = fnmatch (Fnmatch_flags.make flags) ~pat fname
@@ -501,7 +501,7 @@ module Wordexp_flags = struct
 
   type t = int32 [@@deriving sexp]
 
-  external internal_make : int array -> t = "unix_wordexp_make_flags"
+  external internal_make : int array -> t = "core_unix_wordexp_make_flags"
 
   let make = function
     | None | Some [] -> Int32.zero
@@ -509,7 +509,7 @@ module Wordexp_flags = struct
   ;;
 end
 
-external wordexp : Wordexp_flags.t -> string -> string array = "unix_wordexp"
+external wordexp : Wordexp_flags.t -> string -> string array = "core_unix_wordexp"
 
 let wordexp = Ok (fun ?flags str -> wordexp (Wordexp_flags.make flags) str)
 
@@ -532,7 +532,7 @@ module Utsname = struct
   [@@deriving fields, sexp, compare]
 end
 
-external uname : unit -> Utsname.t = "unix_uname"
+external uname : unit -> Utsname.t = "core_unix_uname"
 
 module Scheduler = struct
   module Policy = struct
@@ -550,7 +550,7 @@ module Scheduler = struct
 
   external set
     : pid : int -> policy : Policy.Ordered.t -> priority : int -> unit
-    = "unix_sched_setscheduler"
+    = "core_unix_sched_setscheduler"
   ;;
 
   let set ~pid ~policy ~priority =
@@ -564,7 +564,7 @@ module Scheduler = struct
 end
 
 module Priority = struct
-  external nice : int -> int = "unix_nice"
+  external nice : int -> int = "core_unix_nice"
 end
 
 module Mman = struct
@@ -576,8 +576,8 @@ module Mman = struct
       | Future
     [@@deriving sexp]
   end
-  external unix_mlockall   : Mcl_flags.t array -> unit = "unix_mlockall" ;;
-  external unix_munlockall : unit -> unit = "unix_munlockall" ;;
+  external unix_mlockall   : Mcl_flags.t array -> unit = "core_unix_mlockall" ;;
+  external unix_munlockall : unit -> unit = "core_unix_munlockall" ;;
 
   let mlockall flags = unix_mlockall (List.to_array flags) ;;
   let munlockall = unix_munlockall ;;
@@ -614,7 +614,7 @@ module Syscall_result = Syscall_result
 
 exception Unix_error = Unix.Unix_error
 
-external unix_error : int -> string -> string -> _ = "unix_error_stub"
+external unix_error : int -> string -> string -> _ = "core_unix_error_stub"
 let error_message = Unix.error_message
 let handle_unix_error f = Unix.handle_unix_error f ()
 let environment = Unix.environment
@@ -1010,7 +1010,7 @@ let getppid_exn () =
 module Thread_id = Int
 
 [%%if JSC_THREAD_ID_METHOD > 0]
-external gettid : unit -> Thread_id.t = "unix_gettid"
+external gettid : unit -> Thread_id.t = "core_unix_gettid"
 let gettid = Ok gettid
 [%%else]
 let gettid = Or_error.unimplemented "gettid is not supported on this system"
@@ -1438,7 +1438,7 @@ end
 
 let fcntl_getfl, fcntl_setfl =
   let module M = struct
-    external unix_fcntl : Unix.file_descr -> Int63.t -> Int63.t -> Int63.t = "unix_fcntl"
+    external unix_fcntl : Unix.file_descr -> Int63.t -> Int63.t -> Int63.t = "core_unix_fcntl"
     external getfl : unit -> Int63.t = "unix_F_GETFL"
     external setfl : unit -> Int63.t = "unix_F_SETFL"
     let getfl = getfl ()
@@ -1827,7 +1827,7 @@ let sleep  = Unix.sleep
 let times  = Unix.times
 let utimes = Unix.utimes
 
-external strptime : fmt:string -> string -> Unix.tm = "unix_strptime"
+external strptime : fmt:string -> string -> Unix.tm = "core_unix_strptime"
 
 type interval_timer = Unix.interval_timer =
   | ITIMER_REAL
@@ -1933,9 +1933,9 @@ module Passwd = struct
       pw_shell : string;
     }
 
-    external core_setpwent : unit -> unit = "core_setpwent" ;;
-    external core_endpwent : unit -> unit = "core_endpwent" ;;
-    external core_getpwent : unit -> passwd_entry = "core_getpwent" ;;
+    external core_setpwent : unit -> unit = "core_unix_setpwent" ;;
+    external core_endpwent : unit -> unit = "core_unix_endpwent" ;;
+    external core_getpwent : unit -> passwd_entry = "core_unix_getpwent" ;;
     let setpwent = core_setpwent ;;
 
     let getpwent_exn () = of_unix (core_getpwent ()) ;;
@@ -1943,9 +1943,9 @@ module Passwd = struct
     let endpwent = core_endpwent ;;
 
     external getpwnam_r :
-      bigstring -> bigstring -> passwd_entry = "core_getpwnam_r"
+      bigstring -> bigstring -> passwd_entry = "core_unix_getpwnam_r"
     external getpwuid_r :
-      int -> bigstring -> passwd_entry = "core_getpwuid_r"
+      int -> bigstring -> passwd_entry = "core_unix_getpwuid_r"
   end ;;
 
   exception Getbyname of string [@@deriving sexp]
@@ -2013,8 +2013,8 @@ module Group = struct
       gr_gid : file_perm;
       gr_mem : string array;
     }
-    external getgrnam_r : bigstring -> bigstring -> group_entry = "core_getgrnam_r"
-    external getgrgid_r : int -> bigstring -> group_entry = "core_getgrgid_r"
+    external getgrnam_r : bigstring -> bigstring -> group_entry = "core_unix_getgrnam_r"
+    external getgrgid_r : int -> bigstring -> group_entry = "core_unix_getgrgid_r"
   end
 
   exception Getbyname of string [@@deriving sexp]
@@ -2578,7 +2578,7 @@ let (getsockopt_float, setsockopt_float) =
 
 (* Additional IP functionality *)
 
-external if_indextoname : int -> string = "unix_if_indextoname"
+external if_indextoname : int -> string = "core_unix_if_indextoname"
 
 module Mcast_action = struct
   (* Keep this in sync with the VAL_MCAST_ACTION_* #defines in unix_stubs.c *)
@@ -2605,15 +2605,15 @@ let mcast_leave ?ifname fd sockaddr =
   mcast_modify Mcast_action.Drop ?ifname fd sockaddr
 ;;
 
-external get_mcast_ttl : File_descr.t -> int = "unix_mcast_get_ttl"
+external get_mcast_ttl : File_descr.t -> int = "core_unix_mcast_get_ttl"
 
-external set_mcast_ttl : File_descr.t -> int -> unit = "unix_mcast_set_ttl"
+external set_mcast_ttl : File_descr.t -> int -> unit = "core_unix_mcast_set_ttl"
 
-external get_mcast_loop : File_descr.t -> bool = "unix_mcast_get_loop"
+external get_mcast_loop : File_descr.t -> bool = "core_unix_mcast_get_loop"
 
-external set_mcast_loop : File_descr.t -> bool -> unit = "unix_mcast_set_loop"
+external set_mcast_loop : File_descr.t -> bool -> unit = "core_unix_mcast_set_loop"
 
-external set_mcast_ifname : File_descr.t -> string -> unit = "unix_mcast_set_ifname"
+external set_mcast_ifname : File_descr.t -> string -> unit = "core_unix_mcast_set_ifname"
 
 let open_connection addr =
   improve (fun () -> Unix.open_connection addr) (fun () -> [addr_r addr])

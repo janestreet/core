@@ -199,7 +199,7 @@ module Syscall_result :
   module type of Syscall_result with type 'a t = 'a Syscall_result.t
 
 (** @raise Unix_error with a given errno, function name and argument *)
-external unix_error : int -> string -> string -> _ = "unix_error_stub"
+val unix_error : int -> string -> string -> _
 
 val error_message : Error.t -> string
 [@@deprecated "[since 2016-10] use [Unix.Error.message] instead"]
@@ -1977,18 +1977,18 @@ end
 
 (** {2 I/O functions} *)
 
-external dirfd : dir_handle -> File_descr.t = "unix_dirfd"
+val dirfd : dir_handle -> File_descr.t
 
 (** Extract a file descriptor from a directory handle. *)
 
-external sync : unit -> unit = "unix_sync"
+val sync : unit -> unit
 (** Synchronize all filesystem buffers with disk. *)
 
-external fsync : File_descr.t -> unit = "unix_fsync"
+val fsync : File_descr.t -> unit
 
 (** Synchronize the kernel buffers of a given file descriptor with disk,
     but do not necessarily write file attributes. *)
-external fdatasync : File_descr.t -> unit = "unix_fdatasync"
+val fdatasync : File_descr.t -> unit
 
 (** [readdir_ino_opt dh] return the next entry in a directory (([(filename, inode)]).  Returns
     [None] when the end of the directory has been reached. *)
@@ -1996,8 +1996,7 @@ val readdir_ino_opt : dir_handle -> (string * nativeint) option
 
 (** Same as [readdir_ino_opt] except that it signals the end of the directory by raising
     [End_of_file]. *)
-external readdir_ino
-  : dir_handle -> string * nativeint = "unix_readdir_ino_stub"
+val readdir_ino : dir_handle -> string * nativeint
 [@@deprecated "[since 2016-08] use readdir_ino_opt instead"]
 
 val read_assume_fd_is_nonblocking
@@ -2052,14 +2051,13 @@ val writev : File_descr.t -> ?count : int -> string IOVec.t array -> int
     @raise Unix_error on Unix-errors.
 *)
 
-external pselect
+val pselect
   :  File_descr.t list
   -> File_descr.t list
   -> File_descr.t list
   -> float
   -> int list
   -> File_descr.t list * File_descr.t list * File_descr.t list
-  = "unix_pselect_stub"
 (** [pselect rfds wfds efds timeout sigmask] like {!Core_unix.select} but
     also allows one to wait for the arrival of signals. *)
 
@@ -2146,7 +2144,7 @@ type sysconf =
 [@@deriving sexp]
 
 (** Wrapper over [sysconf] function in C. *)
-external sysconf : sysconf -> int64 option = "unix_sysconf"
+val sysconf : sysconf -> int64 option
 
 val sysconf_exn : sysconf -> int64
 
@@ -2177,11 +2175,11 @@ val mkdtemp : string -> string
     caught and the signal handler does not return.  If the SIGABRT signal is
     blocked or ignored, the abort() function will still override it.
 *)
-external abort : unit -> _ = "unix_abort" [@@noalloc]
+val abort : unit -> _
 
 (** {2 User id, group id} *)
 
-external initgroups : string -> int -> unit = "unix_initgroups"
+val initgroups : string -> int -> unit
 
 (** [getgrouplist user group] returns the list of groups to which [user] belongs.
     See 'man getgrouplist'. *)
@@ -2289,7 +2287,7 @@ module Scheduler : sig
 end
 
 module Priority : sig
-  external nice : int -> int = "unix_nice"
+  val nice : int -> int
 end
 
 (** For keeping your memory in RAM, i.e. preventing it from being swapped out. *)
