@@ -1,7 +1,9 @@
 open Core
 
-let () = Iobuf.Poke.char (Iobuf.read_only (Iobuf.create ~len:1)) 'c' ;;
-[%%expect{|
+let () = Iobuf.Poke.char (Iobuf.read_only (Iobuf.create ~len:1)) 'c'
+
+[%%expect
+  {|
 Line _, characters 25-64:
 Error: This expression has type (read, 'a) Iobuf.t
        but an expression was expected of type (read_write, 'b) Iobuf.t

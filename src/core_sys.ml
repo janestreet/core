@@ -56,11 +56,8 @@ let is_file_exn = stat_check_exn
 
 include struct
   open Caml.Sys
-  [%%if ocaml_version < (4, 09, 0)]
+  let get_argv () = argv
   let argv = argv
-  [%%else]
-  external argv : string array = "%sys_argv"
-  [%%endif]
   let executable_name = executable_name
   let remove = remove
   let rename = rename

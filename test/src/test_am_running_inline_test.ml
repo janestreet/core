@@ -5,5 +5,5 @@ let%expect_test _ =
   |> Unix.Exit_or_signal.or_error
   |> ok_exn;
   [%expect {|
-    true |}];
+    true |}]
 ;;

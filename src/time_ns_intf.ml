@@ -24,7 +24,16 @@ module type Span = sig
     end
     module V2 : sig
       type nonrec t = t [@@deriving hash]
-      include Stable_int63able with type t := t
+      type nonrec comparator_witness = comparator_witness
+
+      include
+        Stable_int63able
+        with type t := t
+        with type comparator_witness := comparator_witness
+      include
+        Comparable.Stable.V1.S
+        with type comparable := t
+        with type comparator_witness := comparator_witness
     end
   end
 
@@ -220,8 +229,13 @@ module type Time_ns = sig
       end
       module V2 : sig
         type t = Span.t [@@deriving hash]
+        type nonrec comparator_witness = Span.comparator_witness
         include Stable_int63able with type t := t
-          with type comparator_witness = Time_ns.Stable.Span.V2.comparator_witness
+          with type comparator_witness := comparator_witness
+        include
+          Comparable.Stable.V1.S
+          with type comparable := t
+          with type comparator_witness := comparator_witness
       end
       module Option : sig
         module V1 : Stable_int63able with type t = Span.Option.t

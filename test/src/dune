@@ -1,4 +1,4 @@
 (library (name core_test)
  (libraries async bignum.bigint core expect_test_helpers
   expect_test_helpers_kernel core_kernel.version_util)
- (preprocess (pps ppx_jane)))
+ (preprocess (pps ppx_jane -allow-unannotated-ignores)))

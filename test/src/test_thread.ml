@@ -15,5 +15,5 @@ let%expect_test "[sexp_of_t]" =
   print_s [%sexp (t : t)];
   let%bind () = [%expect {|
     (thread (id 2)) |}] in
-  return ();
+  return ()
 ;;

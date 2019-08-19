@@ -4,10 +4,12 @@ open Expect_test_helpers
 open Deferred.Let_syntax
 
 let run_scenario instructions =
-  run "env"
-    ("OCAMLRUNPARAM="  (* disable backtraces *)
-     :: "../bin/command_shape_test_parent.exe"
-     :: [%of_sexp: string list] (Sexp.of_string instructions))
+  run
+    "env"
+    ((* disable backtraces *)
+      "OCAMLRUNPARAM="
+      :: "../bin/command_shape_test_parent.exe"
+      :: [%of_sexp: string list] (Sexp.of_string instructions))
 ;;
 
 (* All valid permutations of writing and closing both stdout and stderr. *)

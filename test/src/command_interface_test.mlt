@@ -20,7 +20,7 @@ end
 module Command :
   Applicative.Let_syntax
   with type 'a t := 'a Command.Param.t
-  with module Open_on_rhs_intf := Open_on_rhs_intf
-  = Command
+  with module Open_on_rhs_intf := Open_on_rhs_intf =
+  Command
 
 [%%expect]

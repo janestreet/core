@@ -6,15 +6,17 @@ open Expect_test_helpers_kernel
 
 let%test_module _ =
   (module struct
-
     let%expect_test _ =
-      print_and_check_container_sexps [%here] (module Time) [
-        Time.epoch;
-        Time.of_string "1955-11-12 18:38:00-08:00";
-        Time.of_string "1985-10-26 21:00:00-08:00";
-        Time.of_string "2015-10-21 19:28:00-08:00";
-      ];
-      [%expect {|
+      print_and_check_container_sexps
+        [%here]
+        (module Time)
+        [ Time.epoch
+        ; Time.of_string "1955-11-12 18:38:00-08:00"
+        ; Time.of_string "1985-10-26 21:00:00-08:00"
+        ; Time.of_string "2015-10-21 19:28:00-08:00"
+        ];
+      [%expect
+        {|
         (Set (
           (1955-11-12 21:38:00.000000-05:00)
           (1969-12-31 19:00:00.000000-05:00)
@@ -34,16 +36,19 @@ let%test_module _ =
           ((1955-11-12 21:38:00.000000-05:00) 1)
           ((1969-12-31 19:00:00.000000-05:00) 0)
           ((1985-10-27 01:00:00.000000-04:00) 2)
-          ((2015-10-21 23:28:00.000000-04:00) 3))) |}];
+          ((2015-10-21 23:28:00.000000-04:00) 3))) |}]
     ;;
 
     let%expect_test _ =
-      print_and_check_container_sexps [%here] (module Time.Ofday) [
-        Time.Ofday.start_of_day;
-        Time.Ofday.of_string "12:00:00";
-        Time.Ofday.of_string "23:59:59.999999";
-      ];
-      [%expect {|
+      print_and_check_container_sexps
+        [%here]
+        (module Time.Ofday)
+        [ Time.Ofday.start_of_day
+        ; Time.Ofday.of_string "12:00:00"
+        ; Time.Ofday.of_string "23:59:59.999999"
+        ];
+      [%expect
+        {|
         (Set (00:00:00.000000 12:00:00.000000 23:59:59.999999))
         (Map (
           (00:00:00.000000 0)
@@ -53,21 +58,24 @@ let%test_module _ =
         (Table (
           (00:00:00.000000 0)
           (12:00:00.000000 1)
-          (23:59:59.999999 2))) |}];
+          (23:59:59.999999 2))) |}]
     ;;
 
     let%expect_test _ =
-      print_and_check_container_sexps [%here] (module Time.Span) [
-        Time.Span.zero;
-        Time.Span.nanosecond;
-        Time.Span.microsecond;
-        Time.Span.millisecond;
-        Time.Span.second;
-        Time.Span.minute;
-        Time.Span.hour;
-        Time.Span.day;
-      ];
-      [%expect {|
+      print_and_check_container_sexps
+        [%here]
+        (module Time.Span)
+        [ Time.Span.zero
+        ; Time.Span.nanosecond
+        ; Time.Span.microsecond
+        ; Time.Span.millisecond
+        ; Time.Span.second
+        ; Time.Span.minute
+        ; Time.Span.hour
+        ; Time.Span.day
+        ];
+      [%expect
+        {|
         (Set (0s 1ns 1us 1ms 1s 1m 1h 1d))
         (Map (
           (0s  0)
@@ -87,12 +95,13 @@ let%test_module _ =
           (1s  4)
           (1m  5)
           (1h  6)
-          (1d  7))) |}];
+          (1d  7))) |}]
     ;;
 
     let%expect_test _ =
       print_and_check_container_sexps [%here] (module Month) Month.all;
-      [%expect {|
+      [%expect
+        {|
         (Set (Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec))
         (Map (
           (Jan 0)
@@ -120,11 +129,11 @@ let%test_module _ =
           (Sep 8)
           (Oct 9)
           (Nov 10)
-          (Dec 11))) |}];
+          (Dec 11))) |}]
     ;;
-
   end)
+;;
 
 (* This ensures that Time_intf.S fits inside the intersection of Time and Time_ns. *)
-include ((Time    : Time_common.S) : sig end)
+include ((Time : Time_common.S) : sig end)
 include ((Time_ns : Time_common.S) : sig end)

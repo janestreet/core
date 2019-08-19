@@ -1,6 +1,5 @@
 open Core
 open Expect_test_helpers_kernel
-
 open Time
 open Exposed_for_tests
 
@@ -9,7 +8,7 @@ let of_sec_since_epoch sec = of_span_since_epoch (Span.of_sec sec)
 let%expect_test "[to_string_iso8601] in zulu" =
   let s = to_string_iso8601_basic ~zone:Zone.utc (of_sec_since_epoch 12.345678) in
   printf !"%s" s;
-  [%expect {| 1970-01-01T00:00:12.345678Z |}];
+  [%expect {| 1970-01-01T00:00:12.345678Z |}]
 ;;
 
 let%expect_test "[to_string_iso8601] in local (which is set to NYC in tests)" =
@@ -17,7 +16,7 @@ let%expect_test "[to_string_iso8601] in local (which is set to NYC in tests)" =
     to_string_iso8601_basic ~zone:(Lazy.force Zone.local) (of_sec_since_epoch 12.345678)
   in
   printf !"%s" s;
-  [%expect {| 1969-12-31T19:00:12.345678-05:00 |}];
+  [%expect {| 1969-12-31T19:00:12.345678-05:00 |}]
 ;;
 
 let%test_module "ensure_colon_in_offset" =
@@ -26,30 +25,33 @@ let%test_module "ensure_colon_in_offset" =
       let open Quickcheck.Let_syntax in
       let%bind len = length in
       String.gen_with_length len Char.gen_digit
+    ;;
 
     let%test_unit "add colon" =
       let quickcheck_generator = gen_digit_string ~length:(Int.gen_incl 3 4) in
       Quickcheck.test quickcheck_generator ~sexp_of:String.sexp_of_t ~f:(fun digits ->
         assert (not (String.mem digits ':'));
         let output = ensure_colon_in_offset digits in
-        assert (Int.(=) (String.count output ~f:(Char.(=) ':')) 1);
+        assert (Int.( = ) (String.count output ~f:(Char.( = ) ':')) 1);
         let prefix, suffix = String.lsplit2_exn output ~on:':' in
-        assert (String.(<>) prefix "");
-        assert (Int.(>=) (String.length suffix) (String.length prefix))
-      )
+        assert (String.( <> ) prefix "");
+        assert (Int.( >= ) (String.length suffix) (String.length prefix)))
+    ;;
 
     let gen_offset_with_colon =
       let open Quickcheck.Generator in
       let gen_prefix = gen_digit_string ~length:(Int.gen_incl 1 2) in
       let gen_suffix = gen_digit_string ~length:(return 2) in
-      (tuple2 gen_prefix gen_suffix)
-      >>| (fun (a, b) -> String.concat [a; ":"; b])
+      tuple2 gen_prefix gen_suffix >>| fun (a, b) -> String.concat [ a; ":"; b ]
+    ;;
 
     let%test_unit "do not add colon" =
       Quickcheck.test gen_offset_with_colon ~sexp_of:String.sexp_of_t ~f:(fun offset ->
-        assert (Int.(=) (String.count offset ~f:(Char.(=) ':')) 1);
+        assert (Int.( = ) (String.count offset ~f:(Char.( = ) ':')) 1);
         assert (String.equal offset (ensure_colon_in_offset offset)))
+    ;;
   end)
+;;
 
 let%test_unit _ =
   let unzoned_sexp = Sexp.of_string "(2015-07-03 16:27:00)" in
@@ -58,127 +60,141 @@ let%test_unit _ =
   set_sexp_zone (Zone.of_utc_offset ~hours:8);
   let in_plus8 = t_of_sexp unzoned_sexp in
   set_sexp_zone (Lazy.force Zone.local);
-  [%test_result: Span.t]
-    ~expect:(Span.of_hr 8.)
-    (diff in_utc in_plus8)
+  [%test_result: Span.t] ~expect:(Span.of_hr 8.) (diff in_utc in_plus8)
+;;
 
 let%test _ =
-  Set.equal (Set.of_list [epoch])
-    (Set.t_of_sexp (Sexp.List [Float.sexp_of_t (to_span_since_epoch epoch |> Span.to_sec)]))
+  Set.equal
+    (Set.of_list [ epoch ])
+    (Set.t_of_sexp
+       (Sexp.List [ Float.sexp_of_t (to_span_since_epoch epoch |> Span.to_sec) ]))
 ;;
 
 let%test_unit _ =
   let expected_next_multiple ~base ~after ~interval =
-    let rec loop at =
-      if (>) at after then
-        at
-      else
-        loop (add at interval)
-    in
+    let rec loop at = if at > after then at else loop (add at interval) in
     loop base
   in
-  List.iter ~f:(fun (since_base, interval) ->
-    let base = epoch in
-    let sec = Span.of_sec in
-    let interval = sec interval in
-    let after = add base (sec since_base) in
-    let actual_next_multiple = next_multiple ~base ~after ~interval () in
-    let expected_next_multiple = expected_next_multiple ~base ~after ~interval in
-    let relativize time = diff time base in
-    let times_are_close t1 t2 = Float.(<) (Float.abs (Span.to_us (diff t1 t2))) 1. in
-    if not (times_are_close actual_next_multiple expected_next_multiple) then
-      failwiths "Time.next_multiple" (since_base, interval,
-                                      relativize expected_next_multiple,
-                                      relativize actual_next_multiple)
-        ([%sexp_of: float * Span.t * Span.t * Span.t]))
-    [
-      0.    , 1.;
-      0.1   , 1.;
-      0.9   , 1.;
-      1.    , 1.;
-      1.1   , 1.;
-      1.9   , 1.;
-      1000.1, 1.;
-      (-1.) , 1.;
-      (-1.) , 0.1;
-      1.    , 0.2;
-      1E-5  , 1E-6;
+  List.iter
+    ~f:(fun (since_base, interval) ->
+      let base = epoch in
+      let sec = Span.of_sec in
+      let interval = sec interval in
+      let after = add base (sec since_base) in
+      let actual_next_multiple = next_multiple ~base ~after ~interval () in
+      let expected_next_multiple = expected_next_multiple ~base ~after ~interval in
+      let relativize time = diff time base in
+      let times_are_close t1 t2 = Float.( < ) (Float.abs (Span.to_us (diff t1 t2))) 1. in
+      if not (times_are_close actual_next_multiple expected_next_multiple)
+      then
+        failwiths
+          "Time.next_multiple"
+          ( since_base
+          , interval
+          , relativize expected_next_multiple
+          , relativize actual_next_multiple )
+          [%sexp_of: float * Span.t * Span.t * Span.t])
+    [ 0., 1.
+    ; 0.1, 1.
+    ; 0.9, 1.
+    ; 1., 1.
+    ; 1.1, 1.
+    ; 1.9, 1.
+    ; 1000.1, 1.
+    ; -1., 1.
+    ; -1., 0.1
+    ; 1., 0.2
+    ; 1E-5, 1E-6
     ]
 ;;
 
 let%test_module "of_tm" =
   (module struct
     let unix_epoch_t =
-      of_date_ofday ~zone:Zone.utc
+      of_date_ofday
+        ~zone:Zone.utc
         (Date.create_exn ~y:1970 ~m:Jan ~d:1)
         (Ofday.create ())
+    ;;
 
     let%test_unit _ =
-      [%test_result: t] ~expect:unix_epoch_t
+      [%test_result: t]
+        ~expect:unix_epoch_t
         (of_tm ~zone:(Lazy.force Zone.local) (Unix.localtime 0.))
+    ;;
 
     let%test_unit _ =
-      [%test_result: t] ~expect:unix_epoch_t
-        (of_tm ~zone:Zone.utc (Unix.gmtime 0.))
+      [%test_result: t] ~expect:unix_epoch_t (of_tm ~zone:Zone.utc (Unix.gmtime 0.))
+    ;;
   end)
+;;
 
 let%test_module "format" =
   (module struct
     let hkg = Time.Zone.find_exn "Asia/Hong_Kong"
     let ldn = Time.Zone.find_exn "Europe/London"
     let nyc = Time.Zone.find_exn "America/New_York"
-
-    let zones = [hkg; ldn; nyc]
+    let zones = [ hkg; ldn; nyc ]
 
     let test_time time =
       print_endline (Time.to_string_abs time ~zone:Zone.utc);
       List.iter zones ~f:(fun zone ->
         print_endline (format time ~zone "%F %T" ^ " -- " ^ Time.Zone.name zone))
+    ;;
 
-    let time1 = of_string_abs ("2015-01-01 10:00:00 Europe/London")
-    let time2 = of_string_abs ("2015-06-06 10:00:00 Europe/London")
+    let time1 = of_string_abs "2015-01-01 10:00:00 Europe/London"
+    let time2 = of_string_abs "2015-06-06 10:00:00 Europe/London"
 
     let%expect_test _ =
       test_time time1;
-      [%expect {|
+      [%expect
+        {|
         2015-01-01 10:00:00.000000Z
         2015-01-01 18:00:00 -- Asia/Hong_Kong
         2015-01-01 10:00:00 -- Europe/London
         2015-01-01 05:00:00 -- America/New_York |}]
+    ;;
 
     let%expect_test _ =
       test_time time2;
-      [%expect {|
+      [%expect
+        {|
         2015-06-06 09:00:00.000000Z
         2015-06-06 17:00:00 -- Asia/Hong_Kong
         2015-06-06 10:00:00 -- Europe/London
         2015-06-06 05:00:00 -- America/New_York |}]
+    ;;
 
     let list_of_transition = function
-      | None           -> []
-      | Some (time, _) -> [time]
+      | None -> []
+      | Some (time, _) -> [ time ]
+    ;;
 
     let transitions_of_time time zone =
-      List.concat_map ~f:list_of_transition [
-        Zone.prev_clock_shift zone ~at_or_before:time;
-        Zone.next_clock_shift zone ~strictly_after:time;
-      ]
+      List.concat_map
+        ~f:list_of_transition
+        [ Zone.prev_clock_shift zone ~at_or_before:time
+        ; Zone.next_clock_shift zone ~strictly_after:time
+        ]
+    ;;
 
     let times_around time =
-      List.map [-2.;-1.;+0.;+1.;+2.] ~f:(fun min ->
+      List.map [ -2.; -1.; 0.; 1.; 2. ] ~f:(fun min ->
         Time.add time (Time.Span.of_min min))
+    ;;
 
-    let test_transition time =
-      List.iter (times_around time) ~f:test_time
+    let test_transition time = List.iter (times_around time) ~f:test_time
 
     let test_transitions time zone =
       List.iter (transitions_of_time time zone) ~f:(fun time ->
         print_endline "";
         test_transition time)
+    ;;
 
     let%expect_test _ =
       test_transitions time1 ldn;
-      [%expect {|
+      [%expect
+        {|
         2014-10-26 00:58:00.000000Z
         2014-10-26 08:58:00 -- Asia/Hong_Kong
         2014-10-26 01:58:00 -- Europe/London
@@ -220,10 +236,12 @@ let%test_module "format" =
         2015-03-29 09:02:00 -- Asia/Hong_Kong
         2015-03-29 02:02:00 -- Europe/London
         2015-03-28 21:02:00 -- America/New_York |}]
+    ;;
 
     let%expect_test _ =
       test_transitions time1 nyc;
-      [%expect {|
+      [%expect
+        {|
         2014-11-02 05:58:00.000000Z
         2014-11-02 13:58:00 -- Asia/Hong_Kong
         2014-11-02 05:58:00 -- Europe/London
@@ -265,53 +283,69 @@ let%test_module "format" =
         2015-03-08 15:02:00 -- Asia/Hong_Kong
         2015-03-08 07:02:00 -- Europe/London
         2015-03-08 03:02:00 -- America/New_York |}]
+    ;;
   end)
+;;
 
 let%test_module "parse" =
   (module struct
     let unix_epoch_t =
-      of_date_ofday ~zone:Zone.utc
+      of_date_ofday
+        ~zone:Zone.utc
         (Date.create_exn ~y:1970 ~m:Jan ~d:1)
         (Ofday.create ())
+    ;;
 
     let%test_unit _ =
-      [%test_result: t] ~expect:unix_epoch_t
+      [%test_result: t]
+        ~expect:unix_epoch_t
         (parse ~zone:Zone.utc ~fmt:"%Y-%m-%d %H:%M:%S" "1970-01-01 00:00:00")
+    ;;
 
     let%test_unit _ =
-      [%test_result: t] ~expect:unix_epoch_t
+      [%test_result: t]
+        ~expect:unix_epoch_t
         (parse
            ~zone:(Zone.find_exn "Asia/Hong_Kong")
            ~fmt:"%Y-%m-%d %H:%M:%S"
            "1970-01-01 08:00:00")
+    ;;
   end)
+;;
 
 let%expect_test "accept float instead of time/span/ofday for hash tables and hash sets" =
   let module Of_string (M : Sexpable.S1) = struct
     type t = string M.t [@@deriving sexp]
-  end in
+  end
+  in
   let test (module M : Sexpable) string =
     print_s (M.sexp_of_t (M.t_of_sexp (Sexp.of_string string)))
   in
   test (module Time.Hash_set) {| (0 0.05 946746000 1381152600) |};
-  [%expect {|
+  [%expect
+    {|
     ((1969-12-31 19:00:00.000000-05:00)
      (1969-12-31 19:00:00.050000-05:00)
      (2000-01-01 12:00:00.000000-05:00)
      (2013-10-07 09:30:00.000000-04:00)) |}];
-  test (module Of_string (Time.Table)) {|
+  test
+    (module Of_string (Time.Table))
+    {|
     ((0          "arbitrary value")
      (0.05       "arbitrary value")
      (946746000  "arbitrary value")
      (1381152600 "arbitrary value")) |};
-  [%expect {|
+  [%expect
+    {|
     (((1969-12-31 19:00:00.000000-05:00) "arbitrary value")
      ((1969-12-31 19:00:00.050000-05:00) "arbitrary value")
      ((2000-01-01 12:00:00.000000-05:00) "arbitrary value")
      ((2013-10-07 09:30:00.000000-04:00) "arbitrary value")) |}];
   test (module Time.Span.Hash_set) {| (0 1E-09 1E-06 0.001 1 60 3600 86400) |};
   [%expect {| (0s 1ns 1us 1ms 1s 1m 1h 1d) |}];
-  test (module Of_string (Time.Span.Table)) {|
+  test
+    (module Of_string (Time.Span.Table))
+    {|
     ((0     "arbitrary value")
      (1E-09 "arbitrary value")
      (1E-06 "arbitrary value")
@@ -320,7 +354,8 @@ let%expect_test "accept float instead of time/span/ofday for hash tables and has
      (60    "arbitrary value")
      (3600  "arbitrary value")
      (86400 "arbitrary value")) |};
-  [%expect {|
+  [%expect
+    {|
     ((0s  "arbitrary value")
      (1ns "arbitrary value")
      (1us "arbitrary value")
@@ -331,16 +366,19 @@ let%expect_test "accept float instead of time/span/ofday for hash tables and has
      (1d  "arbitrary value")) |}];
   test (module Time.Ofday.Hash_set) {| (0 0.05 34200 43200) |};
   [%expect {| (00:00:00.000000 00:00:00.050000 09:30:00.000000 12:00:00.000000) |}];
-  test (module Of_string (Time.Ofday.Table)) {|
+  test
+    (module Of_string (Time.Ofday.Table))
+    {|
     ((0     "arbitrary value")
      (0.05  "arbitrary value")
      (34200 "arbitrary value")
      (43200 "arbitrary value")) |};
-  [%expect {|
+  [%expect
+    {|
     ((00:00:00.000000 "arbitrary value")
      (00:00:00.050000 "arbitrary value")
      (09:30:00.000000 "arbitrary value")
-     (12:00:00.000000 "arbitrary value")) |}];
+     (12:00:00.000000 "arbitrary value")) |}]
 ;;
 
 let%test_module "Time robustly compare" =
@@ -351,46 +389,44 @@ let%test_module "Time robustly compare" =
     let%test_unit _ =
       for i = 0 to 100 do
         let time = of_sec_since_epoch (Float.of_int i /. 17.) in
-        assert ((=.) time (sexp_of_t time |> t_of_sexp))
+        assert (time =. (sexp_of_t time |> t_of_sexp))
       done
+    ;;
   end)
+;;
 
 let%expect_test "in tests, [to_string] uses NYC's time zone" =
   printf "%s" (to_string epoch);
-  [%expect {| 1969-12-31 19:00:00.000000-05:00 |}];
+  [%expect {| 1969-12-31 19:00:00.000000-05:00 |}]
 ;;
 
 let%expect_test "in tests, [sexp_of_t] uses NYC's time zone" =
   printf !"%{Sexp}" [%sexp (epoch : t)];
-  [%expect {| (1969-12-31 19:00:00.000000-05:00) |}];
+  [%expect {| (1969-12-31 19:00:00.000000-05:00) |}]
 ;;
 
 module Ofday_zoned = struct
   open Time.Ofday.Zoned
 
-  let (=) = [%compare.equal : With_nonchronological_compare.t]
+  let ( = ) = [%compare.equal: With_nonchronological_compare.t]
 
   let%test_unit _ =
-    List.iter
-      [ "12:00 nyc";
-        "12:00 America/New_York";
-      ] ~f:(fun string ->
-        let t = of_string string in
-        assert (t = of_string (to_string t));
-        assert (t = t_of_sexp (sexp_of_t t)))
+    List.iter [ "12:00 nyc"; "12:00 America/New_York" ] ~f:(fun string ->
+      let t = of_string string in
+      assert (t = of_string (to_string t));
+      assert (t = t_of_sexp (sexp_of_t t)))
   ;;
 end
 
 let%expect_test "our gmtime matches Unix.gmtime" =
   let unix_date_ofday (sec_since_epoch : float) =
-    let parts  = Float.modf sec_since_epoch in
-    let sec    = Float.Parts.integral parts in
+    let parts = Float.modf sec_since_epoch in
+    let sec = Float.Parts.integral parts in
     let subsec = Float.Parts.fractional parts in
     let sec, subsec =
-      if Float.(<) subsec 0. then (sec -. 1., 1. +. subsec)
-      else (sec, subsec)
+      if Float.( < ) subsec 0. then sec -. 1., 1. +. subsec else sec, subsec
     in
-    let tm     = Unix.gmtime sec in
+    let tm = Unix.gmtime sec in
     let unix_date =
       Date.create_exn
         ~y:(tm.tm_year + 1900)
@@ -398,43 +434,47 @@ let%expect_test "our gmtime matches Unix.gmtime" =
         ~d:tm.tm_mday
     in
     let integral_ofday =
-      ((tm.tm_hour * 60 * 60)
-       + (tm.tm_min * 60)
-       + tm.tm_sec)
-      |> Float.of_int
+      (tm.tm_hour * 60 * 60) + (tm.tm_min * 60) + tm.tm_sec |> Float.of_int
     in
     let unix_ofday =
       (* put back the subseconds *)
-      integral_ofday +. (Float.abs subsec)
+      integral_ofday +. Float.abs subsec
       |> Time.Span.of_sec
       |> Time.Ofday.of_span_since_start_of_day_exn
     in
-    (unix_date, unix_ofday)
+    unix_date, unix_ofday
   in
   let generator =
     let open Quickcheck.Generator.Let_syntax in
     let one_hundred_years = 86_400 * 365 * 100 * 1_000 * 1_000 in
-    let upper_bound       = one_hundred_years in
-    let lower_bound       = Int.neg one_hundred_years in
-    let%map mics          = Int.gen_incl lower_bound upper_bound in
+    let upper_bound = one_hundred_years in
+    let lower_bound = Int.neg one_hundred_years in
+    let%map mics = Int.gen_incl lower_bound upper_bound in
     Float.of_int mics /. (1_000. *. 1_000.)
   in
   let gmtime time = Time.to_date_ofday ~zone:Time.Zone.utc time in
-  Quickcheck.test generator
+  Quickcheck.test
+    generator
     ~sexp_of:[%sexp_of: float]
     ~trials:100_000
     ~examples:[ 0.; 100.; -100.; 86_400.; -86_400.; 90_000.; -90_000. ]
     ~f:(fun sec_since_epoch ->
       let time = Time.of_span_since_epoch (Time.Span.of_sec sec_since_epoch) in
-      let (my_date, my_ofday) = gmtime time in
-      let (unix_date, unix_ofday) = unix_date_ofday sec_since_epoch in
-      let results = ((my_date, my_ofday), (unix_date, unix_ofday)) in
-      if not (Tuple.T2.equal ~eq1:Date.equal ~eq2:Time.Ofday.equal
-                (fst results) (snd results))
-      then raise_s [%message "our gmtime doesn't match Unix.gmtime"
-                               (sec_since_epoch: float)
-                               (results : ((Date.t * Time.Ofday.t)
-                                           * (Date.t * Time.Ofday.t)))])
+      let my_date, my_ofday = gmtime time in
+      let unix_date, unix_ofday = unix_date_ofday sec_since_epoch in
+      let results = (my_date, my_ofday), (unix_date, unix_ofday) in
+      if not
+           (Tuple.T2.equal
+              ~eq1:Date.equal
+              ~eq2:Time.Ofday.equal
+              (fst results)
+              (snd results))
+      then
+        raise_s
+          [%message
+            "our gmtime doesn't match Unix.gmtime"
+              (sec_since_epoch : float)
+              (results : (Date.t * Time.Ofday.t) * (Date.t * Time.Ofday.t))])
 ;;
 
 (* we expose the private type of Timish things to help the compiler optimize things
@@ -450,7 +490,9 @@ let%expect_test "time/span/ofday can be cast to their underlying type" =
 let%expect_test "end-of-day constants" =
   let zones = List.map !Time.Zone.likely_machine_zones ~f:Time.Zone.find_exn in
   let test_round_trip zone date ofday ~expect =
-    require_equal [%here] (module Date)
+    require_equal
+      [%here]
+      (module Date)
       (Time.of_date_ofday ~zone date ofday |> Time.to_date ~zone)
       expect
       ~message:(Time.Zone.name zone)
@@ -458,16 +500,18 @@ let%expect_test "end-of-day constants" =
   let test date_string =
     let date = Date.of_string date_string in
     List.iter zones ~f:(fun zone ->
-      test_round_trip zone date Time.Ofday.approximate_end_of_day
-        ~expect:date;
-      test_round_trip zone date Time.Ofday.start_of_next_day
-        ~expect:(Date.add_days date 1));
+      test_round_trip zone date Time.Ofday.approximate_end_of_day ~expect:date;
+      test_round_trip
+        zone
+        date
+        Time.Ofday.start_of_next_day
+        ~expect:(Date.add_days date 1))
   in
   test "1970-01-01";
   test "2013-10-07";
   test "2099-12-31";
   test "2121-04-01";
-  [%expect {||}];
+  [%expect {||}]
 ;;
 
 module Specialize_to_int (Poly : Stable1) = struct
@@ -487,23 +531,22 @@ let%test_module "Time.Stable" =
       ; "2222-11-22" (* far future date *)
       ]
       |> List.map ~f:Date.of_string
+    ;;
 
     let ofday_examples =
       (* significant day-boundary defined constants *)
       [ Ofday.start_of_day
       ; Ofday.approximate_end_of_day
-      ; Ofday.start_of_next_day
-      (* noon *)
-      ; Ofday.create ~hr:12 ()
-      (* single units, down to microseconds *)
-      ; Ofday.create ~us: 1 ()
-      ; Ofday.create ~ms: 1 ()
+      ; Ofday.start_of_next_day (* noon *)
+      ; Ofday.create ~hr:12 () (* single units, down to microseconds *)
+      ; Ofday.create ~us:1 ()
+      ; Ofday.create ~ms:1 ()
       ; Ofday.create ~sec:1 ()
       ; Ofday.create ~min:1 ()
-      ; Ofday.create ~hr: 1 ()
-      (* some value in each unit, down to microseconds *)
+      ; Ofday.create ~hr:1 () (* some value in each unit, down to microseconds *)
       ; Ofday.create ~hr:13 ~min:42 ~sec:23 ~ms:622 ~us:933 ()
       ]
+    ;;
 
     (* We construct and test lots of values because the stability of Time conversions is
        complex, and depends a lot on how comprehensive these tests are. *)
@@ -524,25 +567,21 @@ let%test_module "Time.Stable" =
         |> List.dedup_and_sort ~compare:Time.compare
       in
       constructed_examples @ pseudo_random_examples
+    ;;
 
     let set_examples =
-      [ Set.empty ]
-      @
-      List.map examples ~f:Set.singleton
-      @
-      [ Set.of_list examples ]
+      [ Set.empty ] @ List.map examples ~f:Set.singleton @ [ Set.of_list examples ]
+    ;;
 
     let map_examples =
       [ Map.empty ]
-      @
-      List.mapi examples ~f:(fun i example ->
-        Map.singleton example i)
-      @
-      [ Map.of_alist_exn (List.mapi examples ~f:(fun i example ->
-          (example, i))) ]
+      @ List.mapi examples ~f:(fun i example -> Map.singleton example i)
+      @ [ Map.of_alist_exn (List.mapi examples ~f:(fun i example -> example, i)) ]
+    ;;
 
     module type S = sig
       type t [@@deriving bin_io, compare, sexp]
+
       val examples : t list
       val quickcheck_generator : t Quickcheck.Generator.t
     end
@@ -556,15 +595,18 @@ let%test_module "Time.Stable" =
            print them out, as we don't want to read thousands of examples, so we won't
            know if their representation changes, but at least we will know they
            round-trip. *)
-        quickcheck [%here] M.quickcheck_generator ~sexp_of:M.sexp_of_t ~f:(fun example ->
-          require_does_not_raise [%here] (fun () ->
-            let sexp            = M.sexp_of_t example in
-            let sexp_round_trip = M.t_of_sexp sexp    in
-            require_compare_equal [%here] (module M) example sexp_round_trip;
-            let string           = Binable.to_string (module M) example in
-            let binio_round_trip = Binable.of_string (module M) string  in
-            require_compare_equal [%here] (module M) example binio_round_trip;
-          )))
+        quickcheck
+          [%here]
+          M.quickcheck_generator
+          ~sexp_of:M.sexp_of_t
+          ~f:(fun example ->
+            require_does_not_raise [%here] (fun () ->
+              let sexp = M.sexp_of_t example in
+              let sexp_round_trip = M.t_of_sexp sexp in
+              require_compare_equal [%here] (module M) example sexp_round_trip;
+              let string = Binable.to_string (module M) example in
+              let binio_round_trip = Binable.of_string (module M) string in
+              require_compare_equal [%here] (module M) example binio_round_trip)))
     ;;
 
     module For_time = struct
@@ -574,49 +616,55 @@ let%test_module "Time.Stable" =
       let quickcheck_generator =
         (* If we add another digit, the times start to exceed the range of [gmtime] and
            sexp conversion raises. *)
-        Int64.gen_uniform_incl
-          (-10_000_000_000_000_000L)
-          (+10_000_000_000_000_000L)
+        Int64.gen_uniform_incl (-10_000_000_000_000_000L) 10_000_000_000_000_000L
         (* We generate in units of microseconds because our current sexp representation is
            no more precise than that. *)
         |> Quickcheck.Generator.map ~f:(fun int64 ->
           Time.of_span_since_epoch (Span.of_us (Int64.to_float int64)))
+      ;;
     end
 
     module For_set = struct
-      let compare x y =
-        List.compare For_time.compare
-          (Set.to_list x)
-          (Set.to_list y)
-
+      let compare x y = List.compare For_time.compare (Set.to_list x) (Set.to_list y)
       let examples = set_examples
 
       let quickcheck_generator =
-        Quickcheck.Generator.map (List.quickcheck_generator For_time.quickcheck_generator) ~f:Time.Set.of_list
+        Quickcheck.Generator.map
+          (List.quickcheck_generator For_time.quickcheck_generator)
+          ~f:Time.Set.of_list
+      ;;
     end
 
     module For_map = struct
       let compare x y =
-        List.compare (Tuple2.compare ~cmp1:For_time.compare ~cmp2:Int.compare)
+        List.compare
+          (Tuple2.compare ~cmp1:For_time.compare ~cmp2:Int.compare)
           (Map.to_alist x)
           (Map.to_alist y)
+      ;;
 
       let examples = map_examples
 
       let quickcheck_generator =
-        List.quickcheck_generator (Quickcheck.Generator.tuple2 For_time.quickcheck_generator Int.quickcheck_generator)
+        List.quickcheck_generator
+          (Quickcheck.Generator.tuple2
+             For_time.quickcheck_generator
+             Int.quickcheck_generator)
         |> Quickcheck.Generator.filter_map ~f:(fun alist ->
           match Time.Map.of_alist alist with
-          | `Ok map          -> Some map
+          | `Ok map -> Some map
           | `Duplicate_key _ -> None)
+      ;;
     end
 
     let%expect_test "V1" =
-      test_stability (module struct
-        include Time.Stable.V1
-        include For_time
-      end);
-      [%expect {|
+      test_stability
+        (module struct
+          include Time.Stable.V1
+          include For_time
+        end);
+      [%expect
+        {|
         (bin_shape_digest 1fd923acb2dd9c5d401ad5b08b1d40cd)
         ((sexp (1912-06-23 00:00:00.000000-05:00))
          (bin_io "\000\000\000\140\241\012\219\193"))
@@ -741,11 +789,13 @@ let%test_module "Time.Stable" =
       let test string =
         require_does_not_raise [%here] (fun () ->
           print_s
-            [%sexp (Time.Stable.V1.t_of_sexp (Sexp.of_string string) : Time.Stable.V1.t)])
+            [%sexp
+              (Time.Stable.V1.t_of_sexp (Sexp.of_string string) : Time.Stable.V1.t)])
       in
       test "(2012-04-09 12:00:00.000000-04:00:00)";
       test "(2012-04-09 12:00:00.000000 America/New_York)";
-      [%expect {|
+      [%expect
+        {|
         (2012-04-09 12:00:00.000000-04:00)
         (2012-04-09 12:00:00.000000-04:00) |}];
       (* test that t_of_sexp accepts leap seconds
@@ -756,17 +806,20 @@ let%test_module "Time.Stable" =
       *)
       test "(2012-04-09 05:14:60.000000-04:00)";
       test "(2012-04-09 05:14:60.123456-04:00)";
-      [%expect {|
+      [%expect
+        {|
         (2012-04-09 05:15:00.000000-04:00)
         (2012-04-09 05:15:00.000000-04:00) |}]
     ;;
 
     let%expect_test "V1.Set" =
-      test_stability (module struct
-        include Time.Stable.V1.Set
-        include For_set
-      end);
-      [%expect {|
+      test_stability
+        (module struct
+          include Time.Stable.V1.Set
+          include For_set
+        end);
+      [%expect
+        {|
         (bin_shape_digest 4e7cbf6fe56bd628b963b7f8259e58bf)
         ((sexp ()) (bin_io "\000"))
         ((sexp ((1912-06-23 00:00:00.000000-05:00)))
@@ -977,15 +1030,17 @@ let%test_module "Time.Stable" =
            (2222-11-22 23:59:59.999999-05:00)
            (2222-11-23 00:00:00.000000-05:00)))
          (bin_io
-          "E\024\178\006\206\003\227\001\194\214\020?\176\186\239\249\193\235\t\006\187\165\003\244\1930\166\220n\190\254\239\193\1383\ni9\245\229\193\250}J\158\002\242\229\193\232\236m\203!X\225\193\000\000\000\140\241\012\219\193\252\255\255\139\241\012\219\193\158\239\255\139\241\012\219\193\000\000\192\139\241\012\219\193\000\000\000}\241\012\219\193\000\000\000\b\238\012\219\193\000\000\000\\\199\012\219\193\222!\024\\\193\012\219\193\004\000\000,\157\012\219\193\000\000\000,\157\012\219\193\208\138[_\127\175\192\193\000\000\000\000\000\148\209@\1901\004\000\000\148\209@\211Mb\016\000\148\209@\000\000\000\000@\148\209@\000\000\000\000\000\163\209@\000\000\000\000\000\024\213@\000\000\000\000\000\226\237@\234\151\136\247\249p\240@\145\243\254\255\255|\249@\000\000\000\000\000}\249@\000\000\000(\0286\204A\b\000\000(\0286\204A\197 \000(\0286\204A\000\000\128(\0286\204A\000\000\000F\0286\204A\000\000\0000#6\204A\000\000\000\136p6\204AE\188\207\135|6\204A\248\255\255\231\1966\204A\000\000\000\232\1966\204A\b\000\000\232\1966\204A\197 \000\232\1966\204A\000\000\128\232\1966\204A\000\000\000\006\1976\204A\000\000\000\240\2036\204A\000\000\000H\0257\204AE\188\207G%7\204A\248\255\255\167m7\204A\000\000\000\168m7\204A\000\000\000p\140\148\212A\004\000\000p\140\148\212Ab\016\000p\140\148\212A\000\000@p\140\148\212A\000\000\000\127\140\148\212A\000\000\000\244\143\148\212A\000\000\000\160\182\148\212A\"\222\231\159\188\148\212A\252\255\255\207\224\148\212A\000\000\000\208\224\148\212A\220\181G6O\182\225A\020U\004)9\006\246A\000\000\000\181\189\186\253A\001\000\000\181\189\186\253A\025\004\000\181\189\186\253A\000\000\016\181\189\186\253A\000\000\192\184\189\186\253A\000\000\000\150\190\186\253A\000\000\000A\200\186\253A\137\247\249\192\201\186\253A\255\255\255\204\210\186\253A\000\000\000\205\210\186\253A")) |}];
+          "E\024\178\006\206\003\227\001\194\214\020?\176\186\239\249\193\235\t\006\187\165\003\244\1930\166\220n\190\254\239\193\1383\ni9\245\229\193\250}J\158\002\242\229\193\232\236m\203!X\225\193\000\000\000\140\241\012\219\193\252\255\255\139\241\012\219\193\158\239\255\139\241\012\219\193\000\000\192\139\241\012\219\193\000\000\000}\241\012\219\193\000\000\000\b\238\012\219\193\000\000\000\\\199\012\219\193\222!\024\\\193\012\219\193\004\000\000,\157\012\219\193\000\000\000,\157\012\219\193\208\138[_\127\175\192\193\000\000\000\000\000\148\209@\1901\004\000\000\148\209@\211Mb\016\000\148\209@\000\000\000\000@\148\209@\000\000\000\000\000\163\209@\000\000\000\000\000\024\213@\000\000\000\000\000\226\237@\234\151\136\247\249p\240@\145\243\254\255\255|\249@\000\000\000\000\000}\249@\000\000\000(\0286\204A\b\000\000(\0286\204A\197 \000(\0286\204A\000\000\128(\0286\204A\000\000\000F\0286\204A\000\000\0000#6\204A\000\000\000\136p6\204AE\188\207\135|6\204A\248\255\255\231\1966\204A\000\000\000\232\1966\204A\b\000\000\232\1966\204A\197 \000\232\1966\204A\000\000\128\232\1966\204A\000\000\000\006\1976\204A\000\000\000\240\2036\204A\000\000\000H\0257\204AE\188\207G%7\204A\248\255\255\167m7\204A\000\000\000\168m7\204A\000\000\000p\140\148\212A\004\000\000p\140\148\212Ab\016\000p\140\148\212A\000\000@p\140\148\212A\000\000\000\127\140\148\212A\000\000\000\244\143\148\212A\000\000\000\160\182\148\212A\"\222\231\159\188\148\212A\252\255\255\207\224\148\212A\000\000\000\208\224\148\212A\220\181G6O\182\225A\020U\004)9\006\246A\000\000\000\181\189\186\253A\001\000\000\181\189\186\253A\025\004\000\181\189\186\253A\000\000\016\181\189\186\253A\000\000\192\184\189\186\253A\000\000\000\150\190\186\253A\000\000\000A\200\186\253A\137\247\249\192\201\186\253A\255\255\255\204\210\186\253A\000\000\000\205\210\186\253A")) |}]
     ;;
 
     let%expect_test "V1.Map" =
-      test_stability (module struct
-        include Specialize_to_int (Time.Stable.V1.Map)
-        include For_map
-      end);
-      [%expect {|
+      test_stability
+        (module struct
+          include Specialize_to_int (Time.Stable.V1.Map)
+          include For_map
+        end);
+      [%expect
+        {|
         (bin_shape_digest 31404094f08cdbe1f9fca07a1a1e5303)
         ((sexp ()) (bin_io "\000"))
         ((sexp (((1912-06-23 00:00:00.000000-05:00) 0)))
@@ -1197,17 +1252,19 @@ let%test_module "Time.Stable" =
            ((2222-11-22 23:59:59.999999-05:00)    57)
            ((2222-11-23 00:00:00.000000-05:00)    58)))
          (bin_io
-          "E\024\178\006\206\003\227\001\194;\214\020?\176\186\239\249\193<\235\t\006\187\165\003\244\193=0\166\220n\190\254\239\193>\1383\ni9\245\229\193?\250}J\158\002\242\229\193@\232\236m\203!X\225\193A\000\000\000\140\241\012\219\193\000\252\255\255\139\241\012\219\193\001\158\239\255\139\241\012\219\193\002\000\000\192\139\241\012\219\193\003\000\000\000}\241\012\219\193\004\000\000\000\b\238\012\219\193\005\000\000\000\\\199\012\219\193\006\222!\024\\\193\012\219\193\007\004\000\000,\157\012\219\193\b\000\000\000,\157\012\219\193\t\208\138[_\127\175\192\193B\000\000\000\000\000\148\209@\n\1901\004\000\000\148\209@\011\211Mb\016\000\148\209@\012\000\000\000\000@\148\209@\r\000\000\000\000\000\163\209@\014\000\000\000\000\000\024\213@\015\000\000\000\000\000\226\237@\016\234\151\136\247\249p\240@\017\145\243\254\255\255|\249@\018\000\000\000\000\000}\249@\019\000\000\000(\0286\204A\020\b\000\000(\0286\204A\021\197 \000(\0286\204A\022\000\000\128(\0286\204A\023\000\000\000F\0286\204A\024\000\000\0000#6\204A\025\000\000\000\136p6\204A\026E\188\207\135|6\204A\027\248\255\255\231\1966\204A\028\000\000\000\232\1966\204A\029\b\000\000\232\1966\204A\030\197 \000\232\1966\204A\031\000\000\128\232\1966\204A \000\000\000\006\1976\204A!\000\000\000\240\2036\204A\"\000\000\000H\0257\204A#E\188\207G%7\204A$\248\255\255\167m7\204A%\000\000\000\168m7\204A&\000\000\000p\140\148\212A'\004\000\000p\140\148\212A(b\016\000p\140\148\212A)\000\000@p\140\148\212A*\000\000\000\127\140\148\212A+\000\000\000\244\143\148\212A,\000\000\000\160\182\148\212A-\"\222\231\159\188\148\212A.\252\255\255\207\224\148\212A/\000\000\000\208\224\148\212A0\220\181G6O\182\225AC\020U\004)9\006\246AD\000\000\000\181\189\186\253A1\001\000\000\181\189\186\253A2\025\004\000\181\189\186\253A3\000\000\016\181\189\186\253A4\000\000\192\184\189\186\253A5\000\000\000\150\190\186\253A6\000\000\000A\200\186\253A7\137\247\249\192\201\186\253A8\255\255\255\204\210\186\253A9\000\000\000\205\210\186\253A:")) |}];
+          "E\024\178\006\206\003\227\001\194;\214\020?\176\186\239\249\193<\235\t\006\187\165\003\244\193=0\166\220n\190\254\239\193>\1383\ni9\245\229\193?\250}J\158\002\242\229\193@\232\236m\203!X\225\193A\000\000\000\140\241\012\219\193\000\252\255\255\139\241\012\219\193\001\158\239\255\139\241\012\219\193\002\000\000\192\139\241\012\219\193\003\000\000\000}\241\012\219\193\004\000\000\000\b\238\012\219\193\005\000\000\000\\\199\012\219\193\006\222!\024\\\193\012\219\193\007\004\000\000,\157\012\219\193\b\000\000\000,\157\012\219\193\t\208\138[_\127\175\192\193B\000\000\000\000\000\148\209@\n\1901\004\000\000\148\209@\011\211Mb\016\000\148\209@\012\000\000\000\000@\148\209@\r\000\000\000\000\000\163\209@\014\000\000\000\000\000\024\213@\015\000\000\000\000\000\226\237@\016\234\151\136\247\249p\240@\017\145\243\254\255\255|\249@\018\000\000\000\000\000}\249@\019\000\000\000(\0286\204A\020\b\000\000(\0286\204A\021\197 \000(\0286\204A\022\000\000\128(\0286\204A\023\000\000\000F\0286\204A\024\000\000\0000#6\204A\025\000\000\000\136p6\204A\026E\188\207\135|6\204A\027\248\255\255\231\1966\204A\028\000\000\000\232\1966\204A\029\b\000\000\232\1966\204A\030\197 \000\232\1966\204A\031\000\000\128\232\1966\204A \000\000\000\006\1976\204A!\000\000\000\240\2036\204A\"\000\000\000H\0257\204A#E\188\207G%7\204A$\248\255\255\167m7\204A%\000\000\000\168m7\204A&\000\000\000p\140\148\212A'\004\000\000p\140\148\212A(b\016\000p\140\148\212A)\000\000@p\140\148\212A*\000\000\000\127\140\148\212A+\000\000\000\244\143\148\212A,\000\000\000\160\182\148\212A-\"\222\231\159\188\148\212A.\252\255\255\207\224\148\212A/\000\000\000\208\224\148\212A0\220\181G6O\182\225AC\020U\004)9\006\246AD\000\000\000\181\189\186\253A1\001\000\000\181\189\186\253A2\025\004\000\181\189\186\253A3\000\000\016\181\189\186\253A4\000\000\192\184\189\186\253A5\000\000\000\150\190\186\253A6\000\000\000A\200\186\253A7\137\247\249\192\201\186\253A8\255\255\255\204\210\186\253A9\000\000\000\205\210\186\253A:")) |}]
     ;;
 
     (* [With_utc_sexp] *)
 
     let%expect_test "With_utc_sexp.V1" =
-      test_stability (module struct
-        include Time.Stable.With_utc_sexp.V1
-        include For_time
-      end);
-      [%expect {|
+      test_stability
+        (module struct
+          include Time.Stable.With_utc_sexp.V1
+          include For_time
+        end);
+      [%expect
+        {|
         (bin_shape_digest 1fd923acb2dd9c5d401ad5b08b1d40cd)
         ((sexp (1912-06-23 05:00:00.000000Z))
          (bin_io "\000\000\000\140\241\012\219\193"))
@@ -1307,15 +1364,17 @@ let%test_module "Time.Stable" =
         ((sexp (1896-03-25 14:54:28.564831Z)) (bin_io "\232\236m\203!X\225\193"))
         ((sexp (1952-04-04 23:31:13.284826Z)) (bin_io "\208\138[_\127\175\192\193"))
         ((sexp (2045-05-01 20:40:18.240950Z)) (bin_io "\220\181G6O\182\225A"))
-        ((sexp (2157-05-07 03:33:36.270771Z)) (bin_io "\020U\004)9\006\246A")) |}];
+        ((sexp (2157-05-07 03:33:36.270771Z)) (bin_io "\020U\004)9\006\246A")) |}]
     ;;
 
     let%expect_test "With_utc_sexp.V1.Set" =
-      test_stability (module struct
-        include Time.Stable.With_utc_sexp.V1.Set
-        include For_set
-      end);
-      [%expect {|
+      test_stability
+        (module struct
+          include Time.Stable.With_utc_sexp.V1.Set
+          include For_set
+        end);
+      [%expect
+        {|
         (bin_shape_digest 4e7cbf6fe56bd628b963b7f8259e58bf)
         ((sexp ()) (bin_io "\000"))
         ((sexp ((1912-06-23 05:00:00.000000Z)))
@@ -1519,15 +1578,17 @@ let%test_module "Time.Stable" =
            (2222-11-23 04:59:59.999999Z)
            (2222-11-23 05:00:00.000000Z)))
          (bin_io
-          "E\024\178\006\206\003\227\001\194\214\020?\176\186\239\249\193\235\t\006\187\165\003\244\1930\166\220n\190\254\239\193\1383\ni9\245\229\193\250}J\158\002\242\229\193\232\236m\203!X\225\193\000\000\000\140\241\012\219\193\252\255\255\139\241\012\219\193\158\239\255\139\241\012\219\193\000\000\192\139\241\012\219\193\000\000\000}\241\012\219\193\000\000\000\b\238\012\219\193\000\000\000\\\199\012\219\193\222!\024\\\193\012\219\193\004\000\000,\157\012\219\193\000\000\000,\157\012\219\193\208\138[_\127\175\192\193\000\000\000\000\000\148\209@\1901\004\000\000\148\209@\211Mb\016\000\148\209@\000\000\000\000@\148\209@\000\000\000\000\000\163\209@\000\000\000\000\000\024\213@\000\000\000\000\000\226\237@\234\151\136\247\249p\240@\145\243\254\255\255|\249@\000\000\000\000\000}\249@\000\000\000(\0286\204A\b\000\000(\0286\204A\197 \000(\0286\204A\000\000\128(\0286\204A\000\000\000F\0286\204A\000\000\0000#6\204A\000\000\000\136p6\204AE\188\207\135|6\204A\248\255\255\231\1966\204A\000\000\000\232\1966\204A\b\000\000\232\1966\204A\197 \000\232\1966\204A\000\000\128\232\1966\204A\000\000\000\006\1976\204A\000\000\000\240\2036\204A\000\000\000H\0257\204AE\188\207G%7\204A\248\255\255\167m7\204A\000\000\000\168m7\204A\000\000\000p\140\148\212A\004\000\000p\140\148\212Ab\016\000p\140\148\212A\000\000@p\140\148\212A\000\000\000\127\140\148\212A\000\000\000\244\143\148\212A\000\000\000\160\182\148\212A\"\222\231\159\188\148\212A\252\255\255\207\224\148\212A\000\000\000\208\224\148\212A\220\181G6O\182\225A\020U\004)9\006\246A\000\000\000\181\189\186\253A\001\000\000\181\189\186\253A\025\004\000\181\189\186\253A\000\000\016\181\189\186\253A\000\000\192\184\189\186\253A\000\000\000\150\190\186\253A\000\000\000A\200\186\253A\137\247\249\192\201\186\253A\255\255\255\204\210\186\253A\000\000\000\205\210\186\253A")) |}];
+          "E\024\178\006\206\003\227\001\194\214\020?\176\186\239\249\193\235\t\006\187\165\003\244\1930\166\220n\190\254\239\193\1383\ni9\245\229\193\250}J\158\002\242\229\193\232\236m\203!X\225\193\000\000\000\140\241\012\219\193\252\255\255\139\241\012\219\193\158\239\255\139\241\012\219\193\000\000\192\139\241\012\219\193\000\000\000}\241\012\219\193\000\000\000\b\238\012\219\193\000\000\000\\\199\012\219\193\222!\024\\\193\012\219\193\004\000\000,\157\012\219\193\000\000\000,\157\012\219\193\208\138[_\127\175\192\193\000\000\000\000\000\148\209@\1901\004\000\000\148\209@\211Mb\016\000\148\209@\000\000\000\000@\148\209@\000\000\000\000\000\163\209@\000\000\000\000\000\024\213@\000\000\000\000\000\226\237@\234\151\136\247\249p\240@\145\243\254\255\255|\249@\000\000\000\000\000}\249@\000\000\000(\0286\204A\b\000\000(\0286\204A\197 \000(\0286\204A\000\000\128(\0286\204A\000\000\000F\0286\204A\000\000\0000#6\204A\000\000\000\136p6\204AE\188\207\135|6\204A\248\255\255\231\1966\204A\000\000\000\232\1966\204A\b\000\000\232\1966\204A\197 \000\232\1966\204A\000\000\128\232\1966\204A\000\000\000\006\1976\204A\000\000\000\240\2036\204A\000\000\000H\0257\204AE\188\207G%7\204A\248\255\255\167m7\204A\000\000\000\168m7\204A\000\000\000p\140\148\212A\004\000\000p\140\148\212Ab\016\000p\140\148\212A\000\000@p\140\148\212A\000\000\000\127\140\148\212A\000\000\000\244\143\148\212A\000\000\000\160\182\148\212A\"\222\231\159\188\148\212A\252\255\255\207\224\148\212A\000\000\000\208\224\148\212A\220\181G6O\182\225A\020U\004)9\006\246A\000\000\000\181\189\186\253A\001\000\000\181\189\186\253A\025\004\000\181\189\186\253A\000\000\016\181\189\186\253A\000\000\192\184\189\186\253A\000\000\000\150\190\186\253A\000\000\000A\200\186\253A\137\247\249\192\201\186\253A\255\255\255\204\210\186\253A\000\000\000\205\210\186\253A")) |}]
     ;;
 
     let%expect_test "With_utc_sexp.V1.Map" =
-      test_stability (module struct
-        include Specialize_to_int (Time.Stable.With_utc_sexp.V1.Map)
-        include For_map
-      end);
-      [%expect {|
+      test_stability
+        (module struct
+          include Specialize_to_int (Time.Stable.With_utc_sexp.V1.Map)
+          include For_map
+        end);
+      [%expect
+        {|
         (bin_shape_digest 31404094f08cdbe1f9fca07a1a1e5303)
         ((sexp ()) (bin_io "\000"))
         ((sexp (((1912-06-23 05:00:00.000000Z) 0)))
@@ -1739,15 +1800,17 @@ let%test_module "Time.Stable" =
            ((2222-11-23 04:59:59.999999Z) 57)
            ((2222-11-23 05:00:00.000000Z) 58)))
          (bin_io
-          "E\024\178\006\206\003\227\001\194;\214\020?\176\186\239\249\193<\235\t\006\187\165\003\244\193=0\166\220n\190\254\239\193>\1383\ni9\245\229\193?\250}J\158\002\242\229\193@\232\236m\203!X\225\193A\000\000\000\140\241\012\219\193\000\252\255\255\139\241\012\219\193\001\158\239\255\139\241\012\219\193\002\000\000\192\139\241\012\219\193\003\000\000\000}\241\012\219\193\004\000\000\000\b\238\012\219\193\005\000\000\000\\\199\012\219\193\006\222!\024\\\193\012\219\193\007\004\000\000,\157\012\219\193\b\000\000\000,\157\012\219\193\t\208\138[_\127\175\192\193B\000\000\000\000\000\148\209@\n\1901\004\000\000\148\209@\011\211Mb\016\000\148\209@\012\000\000\000\000@\148\209@\r\000\000\000\000\000\163\209@\014\000\000\000\000\000\024\213@\015\000\000\000\000\000\226\237@\016\234\151\136\247\249p\240@\017\145\243\254\255\255|\249@\018\000\000\000\000\000}\249@\019\000\000\000(\0286\204A\020\b\000\000(\0286\204A\021\197 \000(\0286\204A\022\000\000\128(\0286\204A\023\000\000\000F\0286\204A\024\000\000\0000#6\204A\025\000\000\000\136p6\204A\026E\188\207\135|6\204A\027\248\255\255\231\1966\204A\028\000\000\000\232\1966\204A\029\b\000\000\232\1966\204A\030\197 \000\232\1966\204A\031\000\000\128\232\1966\204A \000\000\000\006\1976\204A!\000\000\000\240\2036\204A\"\000\000\000H\0257\204A#E\188\207G%7\204A$\248\255\255\167m7\204A%\000\000\000\168m7\204A&\000\000\000p\140\148\212A'\004\000\000p\140\148\212A(b\016\000p\140\148\212A)\000\000@p\140\148\212A*\000\000\000\127\140\148\212A+\000\000\000\244\143\148\212A,\000\000\000\160\182\148\212A-\"\222\231\159\188\148\212A.\252\255\255\207\224\148\212A/\000\000\000\208\224\148\212A0\220\181G6O\182\225AC\020U\004)9\006\246AD\000\000\000\181\189\186\253A1\001\000\000\181\189\186\253A2\025\004\000\181\189\186\253A3\000\000\016\181\189\186\253A4\000\000\192\184\189\186\253A5\000\000\000\150\190\186\253A6\000\000\000A\200\186\253A7\137\247\249\192\201\186\253A8\255\255\255\204\210\186\253A9\000\000\000\205\210\186\253A:")) |}];
+          "E\024\178\006\206\003\227\001\194;\214\020?\176\186\239\249\193<\235\t\006\187\165\003\244\193=0\166\220n\190\254\239\193>\1383\ni9\245\229\193?\250}J\158\002\242\229\193@\232\236m\203!X\225\193A\000\000\000\140\241\012\219\193\000\252\255\255\139\241\012\219\193\001\158\239\255\139\241\012\219\193\002\000\000\192\139\241\012\219\193\003\000\000\000}\241\012\219\193\004\000\000\000\b\238\012\219\193\005\000\000\000\\\199\012\219\193\006\222!\024\\\193\012\219\193\007\004\000\000,\157\012\219\193\b\000\000\000,\157\012\219\193\t\208\138[_\127\175\192\193B\000\000\000\000\000\148\209@\n\1901\004\000\000\148\209@\011\211Mb\016\000\148\209@\012\000\000\000\000@\148\209@\r\000\000\000\000\000\163\209@\014\000\000\000\000\000\024\213@\015\000\000\000\000\000\226\237@\016\234\151\136\247\249p\240@\017\145\243\254\255\255|\249@\018\000\000\000\000\000}\249@\019\000\000\000(\0286\204A\020\b\000\000(\0286\204A\021\197 \000(\0286\204A\022\000\000\128(\0286\204A\023\000\000\000F\0286\204A\024\000\000\0000#6\204A\025\000\000\000\136p6\204A\026E\188\207\135|6\204A\027\248\255\255\231\1966\204A\028\000\000\000\232\1966\204A\029\b\000\000\232\1966\204A\030\197 \000\232\1966\204A\031\000\000\128\232\1966\204A \000\000\000\006\1976\204A!\000\000\000\240\2036\204A\"\000\000\000H\0257\204A#E\188\207G%7\204A$\248\255\255\167m7\204A%\000\000\000\168m7\204A&\000\000\000p\140\148\212A'\004\000\000p\140\148\212A(b\016\000p\140\148\212A)\000\000@p\140\148\212A*\000\000\000\127\140\148\212A+\000\000\000\244\143\148\212A,\000\000\000\160\182\148\212A-\"\222\231\159\188\148\212A.\252\255\255\207\224\148\212A/\000\000\000\208\224\148\212A0\220\181G6O\182\225AC\020U\004)9\006\246AD\000\000\000\181\189\186\253A1\001\000\000\181\189\186\253A2\025\004\000\181\189\186\253A3\000\000\016\181\189\186\253A4\000\000\192\184\189\186\253A5\000\000\000\150\190\186\253A6\000\000\000A\200\186\253A7\137\247\249\192\201\186\253A8\255\255\255\204\210\186\253A9\000\000\000\205\210\186\253A:")) |}]
     ;;
 
     let%expect_test "With_utc_sexp.V2" =
-      test_stability (module struct
-        include Time.Stable.With_utc_sexp.V2
-        include For_time
-      end);
-      [%expect {|
+      test_stability
+        (module struct
+          include Time.Stable.With_utc_sexp.V2
+          include For_time
+        end);
+      [%expect
+        {|
         (bin_shape_digest 1fd923acb2dd9c5d401ad5b08b1d40cd)
         ((sexp (1912-06-23 05:00:00.000000Z))
          (bin_io "\000\000\000\140\241\012\219\193"))
@@ -1847,15 +1910,17 @@ let%test_module "Time.Stable" =
         ((sexp (1896-03-25 14:54:28.564831Z)) (bin_io "\232\236m\203!X\225\193"))
         ((sexp (1952-04-04 23:31:13.284826Z)) (bin_io "\208\138[_\127\175\192\193"))
         ((sexp (2045-05-01 20:40:18.240950Z)) (bin_io "\220\181G6O\182\225A"))
-        ((sexp (2157-05-07 03:33:36.270771Z)) (bin_io "\020U\004)9\006\246A")) |}];
+        ((sexp (2157-05-07 03:33:36.270771Z)) (bin_io "\020U\004)9\006\246A")) |}]
     ;;
 
     let%expect_test "With_utc_sexp.V2.Set" =
-      test_stability (module struct
-        include Time.Stable.With_utc_sexp.V2.Set
-        include For_set
-      end);
-      [%expect {|
+      test_stability
+        (module struct
+          include Time.Stable.With_utc_sexp.V2.Set
+          include For_set
+        end);
+      [%expect
+        {|
         (bin_shape_digest 4e7cbf6fe56bd628b963b7f8259e58bf)
         ((sexp ()) (bin_io "\000"))
         ((sexp ((1912-06-23 05:00:00.000000Z)))
@@ -2059,15 +2124,17 @@ let%test_module "Time.Stable" =
            (2222-11-23 04:59:59.999999Z)
            (2222-11-23 05:00:00.000000Z)))
          (bin_io
-          "E\024\178\006\206\003\227\001\194\214\020?\176\186\239\249\193\235\t\006\187\165\003\244\1930\166\220n\190\254\239\193\1383\ni9\245\229\193\250}J\158\002\242\229\193\232\236m\203!X\225\193\000\000\000\140\241\012\219\193\252\255\255\139\241\012\219\193\158\239\255\139\241\012\219\193\000\000\192\139\241\012\219\193\000\000\000}\241\012\219\193\000\000\000\b\238\012\219\193\000\000\000\\\199\012\219\193\222!\024\\\193\012\219\193\004\000\000,\157\012\219\193\000\000\000,\157\012\219\193\208\138[_\127\175\192\193\000\000\000\000\000\148\209@\1901\004\000\000\148\209@\211Mb\016\000\148\209@\000\000\000\000@\148\209@\000\000\000\000\000\163\209@\000\000\000\000\000\024\213@\000\000\000\000\000\226\237@\234\151\136\247\249p\240@\145\243\254\255\255|\249@\000\000\000\000\000}\249@\000\000\000(\0286\204A\b\000\000(\0286\204A\197 \000(\0286\204A\000\000\128(\0286\204A\000\000\000F\0286\204A\000\000\0000#6\204A\000\000\000\136p6\204AE\188\207\135|6\204A\248\255\255\231\1966\204A\000\000\000\232\1966\204A\b\000\000\232\1966\204A\197 \000\232\1966\204A\000\000\128\232\1966\204A\000\000\000\006\1976\204A\000\000\000\240\2036\204A\000\000\000H\0257\204AE\188\207G%7\204A\248\255\255\167m7\204A\000\000\000\168m7\204A\000\000\000p\140\148\212A\004\000\000p\140\148\212Ab\016\000p\140\148\212A\000\000@p\140\148\212A\000\000\000\127\140\148\212A\000\000\000\244\143\148\212A\000\000\000\160\182\148\212A\"\222\231\159\188\148\212A\252\255\255\207\224\148\212A\000\000\000\208\224\148\212A\220\181G6O\182\225A\020U\004)9\006\246A\000\000\000\181\189\186\253A\001\000\000\181\189\186\253A\025\004\000\181\189\186\253A\000\000\016\181\189\186\253A\000\000\192\184\189\186\253A\000\000\000\150\190\186\253A\000\000\000A\200\186\253A\137\247\249\192\201\186\253A\255\255\255\204\210\186\253A\000\000\000\205\210\186\253A")) |}];
+          "E\024\178\006\206\003\227\001\194\214\020?\176\186\239\249\193\235\t\006\187\165\003\244\1930\166\220n\190\254\239\193\1383\ni9\245\229\193\250}J\158\002\242\229\193\232\236m\203!X\225\193\000\000\000\140\241\012\219\193\252\255\255\139\241\012\219\193\158\239\255\139\241\012\219\193\000\000\192\139\241\012\219\193\000\000\000}\241\012\219\193\000\000\000\b\238\012\219\193\000\000\000\\\199\012\219\193\222!\024\\\193\012\219\193\004\000\000,\157\012\219\193\000\000\000,\157\012\219\193\208\138[_\127\175\192\193\000\000\000\000\000\148\209@\1901\004\000\000\148\209@\211Mb\016\000\148\209@\000\000\000\000@\148\209@\000\000\000\000\000\163\209@\000\000\000\000\000\024\213@\000\000\000\000\000\226\237@\234\151\136\247\249p\240@\145\243\254\255\255|\249@\000\000\000\000\000}\249@\000\000\000(\0286\204A\b\000\000(\0286\204A\197 \000(\0286\204A\000\000\128(\0286\204A\000\000\000F\0286\204A\000\000\0000#6\204A\000\000\000\136p6\204AE\188\207\135|6\204A\248\255\255\231\1966\204A\000\000\000\232\1966\204A\b\000\000\232\1966\204A\197 \000\232\1966\204A\000\000\128\232\1966\204A\000\000\000\006\1976\204A\000\000\000\240\2036\204A\000\000\000H\0257\204AE\188\207G%7\204A\248\255\255\167m7\204A\000\000\000\168m7\204A\000\000\000p\140\148\212A\004\000\000p\140\148\212Ab\016\000p\140\148\212A\000\000@p\140\148\212A\000\000\000\127\140\148\212A\000\000\000\244\143\148\212A\000\000\000\160\182\148\212A\"\222\231\159\188\148\212A\252\255\255\207\224\148\212A\000\000\000\208\224\148\212A\220\181G6O\182\225A\020U\004)9\006\246A\000\000\000\181\189\186\253A\001\000\000\181\189\186\253A\025\004\000\181\189\186\253A\000\000\016\181\189\186\253A\000\000\192\184\189\186\253A\000\000\000\150\190\186\253A\000\000\000A\200\186\253A\137\247\249\192\201\186\253A\255\255\255\204\210\186\253A\000\000\000\205\210\186\253A")) |}]
     ;;
 
     let%expect_test "With_utc_sexp.V2.Map" =
-      test_stability (module struct
-        include Specialize_to_int (Time.Stable.With_utc_sexp.V2.Map)
-        include For_map
-      end);
-      [%expect {|
+      test_stability
+        (module struct
+          include Specialize_to_int (Time.Stable.With_utc_sexp.V2.Map)
+          include For_map
+        end);
+      [%expect
+        {|
         (bin_shape_digest 31404094f08cdbe1f9fca07a1a1e5303)
         ((sexp ()) (bin_io "\000"))
         ((sexp (((1912-06-23 05:00:00.000000Z) 0)))
@@ -2279,17 +2346,19 @@ let%test_module "Time.Stable" =
            ((2222-11-23 04:59:59.999999Z) 57)
            ((2222-11-23 05:00:00.000000Z) 58)))
          (bin_io
-          "E\024\178\006\206\003\227\001\194;\214\020?\176\186\239\249\193<\235\t\006\187\165\003\244\193=0\166\220n\190\254\239\193>\1383\ni9\245\229\193?\250}J\158\002\242\229\193@\232\236m\203!X\225\193A\000\000\000\140\241\012\219\193\000\252\255\255\139\241\012\219\193\001\158\239\255\139\241\012\219\193\002\000\000\192\139\241\012\219\193\003\000\000\000}\241\012\219\193\004\000\000\000\b\238\012\219\193\005\000\000\000\\\199\012\219\193\006\222!\024\\\193\012\219\193\007\004\000\000,\157\012\219\193\b\000\000\000,\157\012\219\193\t\208\138[_\127\175\192\193B\000\000\000\000\000\148\209@\n\1901\004\000\000\148\209@\011\211Mb\016\000\148\209@\012\000\000\000\000@\148\209@\r\000\000\000\000\000\163\209@\014\000\000\000\000\000\024\213@\015\000\000\000\000\000\226\237@\016\234\151\136\247\249p\240@\017\145\243\254\255\255|\249@\018\000\000\000\000\000}\249@\019\000\000\000(\0286\204A\020\b\000\000(\0286\204A\021\197 \000(\0286\204A\022\000\000\128(\0286\204A\023\000\000\000F\0286\204A\024\000\000\0000#6\204A\025\000\000\000\136p6\204A\026E\188\207\135|6\204A\027\248\255\255\231\1966\204A\028\000\000\000\232\1966\204A\029\b\000\000\232\1966\204A\030\197 \000\232\1966\204A\031\000\000\128\232\1966\204A \000\000\000\006\1976\204A!\000\000\000\240\2036\204A\"\000\000\000H\0257\204A#E\188\207G%7\204A$\248\255\255\167m7\204A%\000\000\000\168m7\204A&\000\000\000p\140\148\212A'\004\000\000p\140\148\212A(b\016\000p\140\148\212A)\000\000@p\140\148\212A*\000\000\000\127\140\148\212A+\000\000\000\244\143\148\212A,\000\000\000\160\182\148\212A-\"\222\231\159\188\148\212A.\252\255\255\207\224\148\212A/\000\000\000\208\224\148\212A0\220\181G6O\182\225AC\020U\004)9\006\246AD\000\000\000\181\189\186\253A1\001\000\000\181\189\186\253A2\025\004\000\181\189\186\253A3\000\000\016\181\189\186\253A4\000\000\192\184\189\186\253A5\000\000\000\150\190\186\253A6\000\000\000A\200\186\253A7\137\247\249\192\201\186\253A8\255\255\255\204\210\186\253A9\000\000\000\205\210\186\253A:")) |}];
+          "E\024\178\006\206\003\227\001\194;\214\020?\176\186\239\249\193<\235\t\006\187\165\003\244\193=0\166\220n\190\254\239\193>\1383\ni9\245\229\193?\250}J\158\002\242\229\193@\232\236m\203!X\225\193A\000\000\000\140\241\012\219\193\000\252\255\255\139\241\012\219\193\001\158\239\255\139\241\012\219\193\002\000\000\192\139\241\012\219\193\003\000\000\000}\241\012\219\193\004\000\000\000\b\238\012\219\193\005\000\000\000\\\199\012\219\193\006\222!\024\\\193\012\219\193\007\004\000\000,\157\012\219\193\b\000\000\000,\157\012\219\193\t\208\138[_\127\175\192\193B\000\000\000\000\000\148\209@\n\1901\004\000\000\148\209@\011\211Mb\016\000\148\209@\012\000\000\000\000@\148\209@\r\000\000\000\000\000\163\209@\014\000\000\000\000\000\024\213@\015\000\000\000\000\000\226\237@\016\234\151\136\247\249p\240@\017\145\243\254\255\255|\249@\018\000\000\000\000\000}\249@\019\000\000\000(\0286\204A\020\b\000\000(\0286\204A\021\197 \000(\0286\204A\022\000\000\128(\0286\204A\023\000\000\000F\0286\204A\024\000\000\0000#6\204A\025\000\000\000\136p6\204A\026E\188\207\135|6\204A\027\248\255\255\231\1966\204A\028\000\000\000\232\1966\204A\029\b\000\000\232\1966\204A\030\197 \000\232\1966\204A\031\000\000\128\232\1966\204A \000\000\000\006\1976\204A!\000\000\000\240\2036\204A\"\000\000\000H\0257\204A#E\188\207G%7\204A$\248\255\255\167m7\204A%\000\000\000\168m7\204A&\000\000\000p\140\148\212A'\004\000\000p\140\148\212A(b\016\000p\140\148\212A)\000\000@p\140\148\212A*\000\000\000\127\140\148\212A+\000\000\000\244\143\148\212A,\000\000\000\160\182\148\212A-\"\222\231\159\188\148\212A.\252\255\255\207\224\148\212A/\000\000\000\208\224\148\212A0\220\181G6O\182\225AC\020U\004)9\006\246AD\000\000\000\181\189\186\253A1\001\000\000\181\189\186\253A2\025\004\000\181\189\186\253A3\000\000\016\181\189\186\253A4\000\000\192\184\189\186\253A5\000\000\000\150\190\186\253A6\000\000\000A\200\186\253A7\137\247\249\192\201\186\253A8\255\255\255\204\210\186\253A9\000\000\000\205\210\186\253A:")) |}]
     ;;
 
     (* [With_t_of_sexp_abs] *)
 
     let%expect_test "With_t_of_sexp_abs.V1" =
-      test_stability (module struct
-        include Time.Stable.With_t_of_sexp_abs.V1
-        include For_time
-      end);
-      [%expect {|
+      test_stability
+        (module struct
+          include Time.Stable.With_t_of_sexp_abs.V1
+          include For_time
+        end);
+      [%expect
+        {|
         (bin_shape_digest 1fd923acb2dd9c5d401ad5b08b1d40cd)
         ((sexp (1912-06-23 00:00:00.000000-05:00))
          (bin_io "\000\000\000\140\241\012\219\193"))
@@ -2413,13 +2482,15 @@ let%test_module "Time.Stable" =
       show_raise (fun () ->
         Time.Stable.With_t_of_sexp_abs.V1.t_of_sexp
           (Sexp.of_string "(2000-01-01 00:00:00.000000)"));
-      [%expect {|
+      [%expect
+        {|
         (raised (
           Of_sexp_error
           "Time.t_of_sexp: (time.ml.Make.Time_of_string \"2000-01-01 00:00:00.000000\"\n  (core_time.ml.Make.Time_string_not_absolute \"2000-01-01 00:00:00.000000\"))"
-          (invalid_sexp (2000-01-01 00:00:00.000000)))) |}];
+          (invalid_sexp (2000-01-01 00:00:00.000000)))) |}]
     ;;
   end)
+;;
 
 let%test_module "Time.Stable.Span" =
   (module struct
@@ -2432,20 +2503,20 @@ let%test_module "Time.Stable.Span" =
       ; Span.hour
       ; Span.day
       ]
+    ;;
 
-    let examples =
-      [ Span.zero ]
-      @ units @
-      [ List.sum (module Span) units ~f:ident ]
+    let examples = [ Span.zero ] @ units @ [ List.sum (module Span) units ~f:ident ]
 
     let%expect_test "V1" =
-      print_and_check_stable_type [%here]
+      print_and_check_stable_type
+        [%here]
         (* V1 round-trips imprecisely in some cases, so we document them and note that
            they are still reasonably close. *)
         ~cr:Comment
         (module Time.Stable.Span.V1)
         examples;
-      [%expect {|
+      [%expect
+        {|
         (bin_shape_digest 1fd923acb2dd9c5d401ad5b08b1d40cd)
         ((sexp   0s)
          (bin_io "\000\000\000\000\000\000\000\000"))
@@ -2474,14 +2545,13 @@ let%test_module "Time.Stable.Span" =
         ("sexp serialization failed to round-trip"
           (original       1.04237d)
           (sexp           1.04237d)
-          (sexp_roundtrip 1.04237d)) |}];
+          (sexp_roundtrip 1.04237d)) |}]
     ;;
 
     let%expect_test "V2" =
-      print_and_check_stable_type [%here]
-        (module Time.Stable.Span.V2)
-        examples;
-      [%expect {|
+      print_and_check_stable_type [%here] (module Time.Stable.Span.V2) examples;
+      [%expect
+        {|
         (bin_shape_digest 1fd923acb2dd9c5d401ad5b08b1d40cd)
         ((sexp   0s)
          (bin_io "\000\000\000\000\000\000\000\000"))
@@ -2500,32 +2570,35 @@ let%test_module "Time.Stable.Span" =
         ((sexp   1d)
          (bin_io "\000\000\000\000\000\024\245@"))
         ((sexp   1.0423726967708449d)
-         (bin_io ")\160\025\004\208\252\245@")) |}];
+         (bin_io ")\160\025\004\208\252\245@")) |}]
     ;;
   end)
+;;
 
 let%test_module "Time.Stable.Ofday" =
   (module struct
     let examples =
       [ Ofday.start_of_day
       ; Ofday.create ~hr:12 ()
-      ; Ofday.create ~hr:23 ~min:59 ~sec:29 ~ms:999 ~us:999 ()
-      (* individual units *)
-      ; Ofday.create ~us: 1 ()
-      ; Ofday.create ~ms: 1 ()
+      ; Ofday.create ~hr:23 ~min:59 ~sec:29 ~ms:999 ~us:999 () (* individual units *)
+      ; Ofday.create ~us:1 ()
+      ; Ofday.create ~ms:1 ()
       ; Ofday.create ~sec:1 ()
       ; Ofday.create ~min:1 ()
-      ; Ofday.create ~hr: 1 ()
+      ; Ofday.create ~hr:1 ()
       ]
+    ;;
 
     let%expect_test "V1" =
-      print_and_check_stable_type [%here]
+      print_and_check_stable_type
+        [%here]
         (* V1 round-trips imprecisely in some cases, so we document them and note that
            they are still reasonably close. *)
         ~cr:Comment
         (module Time.Stable.Ofday.V1)
         examples;
-      [%expect {|
+      [%expect
+        {|
         (bin_shape_digest 1fd923acb2dd9c5d401ad5b08b1d40cd)
         ((sexp   00:00:00.000000)
          (bin_io "\000\000\000\000\000\000\000\000"))
@@ -2547,25 +2620,25 @@ let%test_module "Time.Stable.Ofday" =
         ((sexp   00:01:00.000000)
          (bin_io "\000\000\000\000\000\000N@"))
         ((sexp   01:00:00.000000)
-         (bin_io "\000\000\000\000\000 \172@")) |}];
+         (bin_io "\000\000\000\000\000 \172@")) |}]
     ;;
 
     let zoned_examples =
       let zone_new_york = Zone.find_exn "America/New_York" in
-      List.map examples ~f:(fun example ->
-        Ofday.Zoned.create example Zone.utc)
-      @
-      List.map examples ~f:(fun example ->
-        Ofday.Zoned.create example zone_new_york)
+      List.map examples ~f:(fun example -> Ofday.Zoned.create example Zone.utc)
+      @ List.map examples ~f:(fun example -> Ofday.Zoned.create example zone_new_york)
+    ;;
 
     let%expect_test "Zoned.V1" =
-      print_and_check_stable_type [%here]
+      print_and_check_stable_type
+        [%here]
         (* V1 round-trips imprecisely in some cases, so we document them and note that
            they are still reasonably close. *)
         ~cr:Comment
         (module Time.Stable.Ofday.Zoned.V1)
         zoned_examples;
-      [%expect {|
+      [%expect
+        {|
         (bin_shape_digest 490573c3397b4fe37e8ade0086fb4759)
         ((sexp (00:00:00.000000 UTC))
          (bin_io "\000\000\000\000\000\000\000\000\003UTC"))
@@ -2601,24 +2674,21 @@ let%test_module "Time.Stable.Ofday" =
         ((sexp (00:01:00.000000 America/New_York))
          (bin_io "\000\000\000\000\000\000N@\016America/New_York"))
         ((sexp (01:00:00.000000 America/New_York))
-         (bin_io "\000\000\000\000\000 \172@\016America/New_York")) |}];
+         (bin_io "\000\000\000\000\000 \172@\016America/New_York")) |}]
     ;;
   end)
+;;
 
 let%test_module "Time.Stable.Zone" =
   (module struct
     let examples =
-      [ Zone.utc
-      ; Zone.find_exn "hkg"
-      ; Zone.find_exn "ldn"
-      ; Zone.find_exn "nyc"
-      ]
+      [ Zone.utc; Zone.find_exn "hkg"; Zone.find_exn "ldn"; Zone.find_exn "nyc" ]
+    ;;
 
     let%expect_test "V1" =
-      print_and_check_stable_type [%here]
-        (module Time.Stable.Zone.V1)
-        examples;
-      [%expect {|
+      print_and_check_stable_type [%here] (module Time.Stable.Zone.V1) examples;
+      [%expect
+        {|
         (bin_shape_digest d9a8da25d5656b016fb4dbdc2e4197fb)
         ((sexp   UTC)
          (bin_io "\003UTC"))
@@ -2627,61 +2697,55 @@ let%test_module "Time.Stable.Zone" =
         ((sexp   Europe/London)
          (bin_io "\rEurope/London"))
         ((sexp   America/New_York)
-         (bin_io "\016America/New_York")) |}];
+         (bin_io "\016America/New_York")) |}]
     ;;
   end)
+;;
 
 let%expect_test "Span.randomize" =
-  let span = Span.of_sec 1.  in
+  let span = Span.of_sec 1. in
   let upper_bound = Span.of_sec 1.3 in
   let lower_bound = Span.of_sec 0.7 in
   let percent = Percent.of_mult 0.3 in
   let rec loop ~count ~trials =
     let open Int.O in
     if count >= trials
-    then begin
-      print_s [%message "succeeded" (count : int)]
-    end
-    else begin
+    then print_s [%message "succeeded" (count : int)]
+    else (
       let rand = Span.randomize span ~percent in
-      if (Span.( < ) rand lower_bound || Span.( > ) rand upper_bound)
-      then begin
-        print_cr [%here] [%message
-          "out of bounds"
-            (percent     : Percent.t)
-            (rand        : Span.t)
-            (lower_bound : Span.t)
-            (upper_bound : Span.t)]
-      end
-      else begin
-        loop ~count:(count + 1) ~trials
-      end
-    end
+      if Span.( < ) rand lower_bound || Span.( > ) rand upper_bound
+      then
+        print_cr
+          [%here]
+          [%message
+            "out of bounds"
+              (percent : Percent.t)
+              (rand : Span.t)
+              (lower_bound : Span.t)
+              (upper_bound : Span.t)]
+      else loop ~count:(count + 1) ~trials)
   in
   loop ~count:0 ~trials:1_000;
-  [%expect {| (succeeded (count 1000)) |}];
+  [%expect {| (succeeded (count 1000)) |}]
 ;;
 
 let%expect_test "Span.to_short_string" =
   let examples =
-    let magnitudes = [1.; Float.pi; 10.6] in
+    let magnitudes = [ 1.; Float.pi; 10.6 ] in
     let pos_examples =
       List.concat_map magnitudes ~f:(fun magnitude ->
         List.map Unit_of_time.all ~f:(fun unit_of_time ->
           Span.scale (Span.of_unit_of_time unit_of_time) magnitude))
     in
     let signed_examples =
-      List.concat_map pos_examples ~f:(fun span ->
-        [span; Span.neg span])
+      List.concat_map pos_examples ~f:(fun span -> [ span; Span.neg span ])
     in
     Span.zero :: signed_examples
   in
-  let alist =
-    List.map examples ~f:(fun span ->
-      (span, Span.to_short_string span))
-  in
+  let alist = List.map examples ~f:(fun span -> span, Span.to_short_string span) in
   print_s [%sexp (alist : (Span.t * string) list)];
-  [%expect {|
+  [%expect
+    {|
     ((0s                           0ns)
      (1ns                          1ns)
      (-1ns                         -1ns)
@@ -2724,32 +2788,26 @@ let%expect_test "Span.to_short_string" =
      (10h36m                       10h)
      (-10h36m                      -10h)
      (10d14h24m                    10d)
-     (-10d14h24m                   -10d)) |}];
+     (-10d14h24m                   -10d)) |}]
 ;;
 
 let%expect_test "times with implicit zones" =
-  let test f =
-    show_raise (fun () ->
-      print_endline (Time.to_string (f ())))
-  in
+  let test f = show_raise (fun () -> print_endline (Time.to_string (f ()))) in
   test (fun () ->
     Time.Stable.With_utc_sexp.V2.t_of_sexp (Sexp.of_string "(2013-10-07 09:30)"));
   [%expect {|
     2013-10-07 05:30:00.000000-04:00
     "did not raise" |}];
-  test (fun () ->
-    Time.Stable.V1.t_of_sexp (Sexp.of_string "(2013-10-07 09:30)"));
+  test (fun () -> Time.Stable.V1.t_of_sexp (Sexp.of_string "(2013-10-07 09:30)"));
   [%expect {|
     2013-10-07 09:30:00.000000-04:00
     "did not raise" |}];
-  test (fun () ->
-    Time.t_of_sexp (Sexp.Atom "2013-10-07 09:30"));
+  test (fun () -> Time.t_of_sexp (Sexp.Atom "2013-10-07 09:30"));
   [%expect {|
     2013-10-07 09:30:00.000000-04:00
     "did not raise" |}];
-  test (fun () ->
-    Time.of_string "2013-10-07 09:30");
+  test (fun () -> Time.of_string "2013-10-07 09:30");
   [%expect {|
     2013-10-07 09:30:00.000000-04:00
-    "did not raise" |}];
+    "did not raise" |}]
 ;;

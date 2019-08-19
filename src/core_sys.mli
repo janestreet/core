@@ -2,24 +2,19 @@
 
 open! Import
 
-[%%if ocaml_version < (4, 09, 0)]
+(** The command line arguments given to the process.  The first element is the command
+    name used to invoke the program.  The following elements are the command-line
+    arguments given to the program.
 
-(** The command line arguments given to the process.  The first element is the
-    command name used to invoke the program.  The following elements are the
-    command-line arguments given to the program. *)
+    [get_argv] is a function because the external function [caml_sys_modify_argv] can
+    replace the array starting in OCaml 4.09. *)
+val get_argv : unit -> string array
+
+(** A single result from [get_argv ()]. *)
 val argv : string array
-[%%else]
-
-(** The command line arguments given to the process.  The first element is the
-    command name used to invoke the program.  The following elements are the
-    command-line arguments given to the program.
-
-    Even though this looks like a value, it's actually a mutable variable (can be set
-    to another array by [override_argv]). The value of the variable is read every time
-    you use [argv]. So writing [let argv = argv] can change the meaning of the program.
-*)
-external argv : string array = "%sys_argv"
-[%%endif]
+[@@deprecated
+  "[since 2019-08] Use [Sys.get_argv] instead, which has the correct behavior when \
+   [caml_sys_modify_argv] is called."]
 
 (** The name of the file containing the executable currently running. *)
 val executable_name : string

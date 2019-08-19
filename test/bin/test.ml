@@ -15,6 +15,10 @@ and flatten = function
   | TestLabel (s,test) -> TestLabel (s,flatten test)
   | TestList l -> TestList (List.rev (flatten_list [] l))
 
+
+
+
+
 let all () =
   flatten
     (TestList

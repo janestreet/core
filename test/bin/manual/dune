@@ -1,2 +1,2 @@
 (executables (names backtrace getgrgid_thread_safety) (libraries core)
- (preprocess (pps ppx_jane)))
+ (preprocess (pps ppx_jane -allow-unannotated-ignores)))

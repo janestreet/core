@@ -11,4 +11,4 @@
   pthread_np_stubs recvmmsg signal_stubs timespec unix_stubs unix_time_stubs
   nss_stubs)
  (preprocessor_deps config.h)
- (preprocess (pps ppx_jane -check-doc-comments)))
+ (preprocess (pps ppx_jane -allow-unannotated-ignores -check-doc-comments)))

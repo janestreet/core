@@ -5,139 +5,160 @@ let string =
   "`Boston is populous' is about Boston and contains `Boston'; ``Boston' is disyllabic' \
    is about `Boston' and contains ``Boston''.  ``Boston'' designates `Boston', which in \
    turn designates Boston.  To mention Boston we use `Boston' or a synonym, and to \
-   mention `Boston' we use ``Boston'' or a synonym.  ``Boston'' contains six letters and \
-   just one pair of quotation marks; `Boston' contains six letters and no quotation \
+   mention `Boston' we use ``Boston'' or a synonym.  ``Boston'' contains six letters \
+   and just one pair of quotation marks; `Boston' contains six letters and no quotation \
    marks; and Boston contains some 800,000 people."
+;;
 
 let iobuf = Iobuf.of_string string
 
 (* set limits and window *)
 let () =
-  Iobuf.advance iobuf      60;
-  Iobuf.resize  iobuf ~len:67;
-  Iobuf.narrow  iobuf;
-  Iobuf.advance iobuf       1;
-  Iobuf.resize  iobuf ~len:22
+  Iobuf.advance iobuf 60;
+  Iobuf.resize iobuf ~len:67;
+  Iobuf.narrow iobuf;
+  Iobuf.advance iobuf 1;
+  Iobuf.resize iobuf ~len:22
+;;
 
 let iobuf = iobuf |> Iobuf.no_seek |> Iobuf.read_only
 
-module T = struct type ('a, 'b) t = ('a, 'b) Iobuf.t end
+module T = struct
+  type ('a, 'b) t = ('a, 'b) Iobuf.t
+end
 
 let%test_module "Window" =
-  (module (struct
-    open Iobuf.Window
+  (module (
+   struct
+     open Iobuf.Window
+     include T
 
-    include T
+     module Hexdump = struct
+       open Hexdump
+       include T
 
-    module Hexdump = struct
-      open Hexdump
+       let sexp_of_t = sexp_of_t
 
-      include T
-
-      let sexp_of_t = sexp_of_t
-
-      let%expect_test "sexp_of_t" =
-        print_s [%sexp (iobuf : (_, _) t)];
-        [%expect {|
+       let%expect_test "sexp_of_t" =
+         print_s [%sexp (iobuf : (_, _) t)];
+         [%expect
+           {|
           ("00000000  60 42 6f 73 74 6f 6e 27  20 69 73 20 64 69 73 79  |`Boston' is disy|"
            "00000010  6c 6c 61 62 69 63                                 |llabic|") |}]
+       ;;
 
-      let to_string_hum = to_string_hum
+       let to_string_hum = to_string_hum
 
-      let%expect_test "to_string_hum" =
-        print_endline (to_string_hum iobuf);
-        [%expect {|
+       let%expect_test "to_string_hum" =
+         print_endline (to_string_hum iobuf);
+         [%expect
+           {|
           00000000  60 42 6f 73 74 6f 6e 27  20 69 73 20 64 69 73 79  |`Boston' is disy|
           00000010  6c 6c 61 62 69 63                                 |llabic| |}]
+       ;;
 
-      let to_sequence = to_sequence
+       let to_sequence = to_sequence
 
-      let%expect_test "to_sequence" =
-        print_s [%sexp (to_sequence iobuf |> Sequence.to_list : string list)];
-        [%expect {|
+       let%expect_test "to_sequence" =
+         print_s [%sexp (to_sequence iobuf |> Sequence.to_list : string list)];
+         [%expect
+           {|
           ("00000000  60 42 6f 73 74 6f 6e 27  20 69 73 20 64 69 73 79  |`Boston' is disy|"
            "00000010  6c 6c 61 62 69 63                                 |llabic|") |}]
+       ;;
 
-      module Pretty = struct
-        include T
+       module Pretty = struct
+         include T
 
-        let sexp_of_t = Pretty.sexp_of_t
+         let sexp_of_t = Pretty.sexp_of_t
 
-        let%expect_test "sexp_of_t" =
-          print_s [%sexp (iobuf : (_,_) t)];
-          [%expect {| "`Boston' is disyllabic" |}]
-      end
-    end
-  end : module type of Iobuf.Window))
+         let%expect_test "sexp_of_t" =
+           print_s [%sexp (iobuf : (_, _) t)];
+           [%expect {| "`Boston' is disyllabic" |}]
+         ;;
+       end
+     end
+   end :
+     module type of Iobuf.Window))
+;;
 
 let%test_module "Limits" =
-  (module (struct
-    open Iobuf.Limits
+  (module (
+   struct
+     open Iobuf.Limits
+     include T
 
-    include T
+     module Hexdump = struct
+       open Hexdump
+       include T
 
-    module Hexdump = struct
-      open Hexdump
+       let sexp_of_t = sexp_of_t
 
-      include T
-
-      let sexp_of_t = sexp_of_t
-
-      let%expect_test "sexp_of_t" =
-        print_s [%sexp (iobuf : (_, _) t)];
-        [%expect {|
+       let%expect_test "sexp_of_t" =
+         print_s [%sexp (iobuf : (_, _) t)];
+         [%expect
+           {|
           ("00000000  60 60 42 6f 73 74 6f 6e  27 20 69 73 20 64 69 73  |``Boston' is dis|"
            "00000010  79 6c 6c 61 62 69 63 27  20 69 73 20 61 62 6f 75  |yllabic' is abou|"
            "00000020  74 20 60 42 6f 73 74 6f  6e 27 20 61 6e 64 20 63  |t `Boston' and c|"
            "00000030  6f 6e 74 61 69 6e 73 20  60 60 42 6f 73 74 6f 6e  |ontains ``Boston|"
            "00000040  27 27 2e                                          |''.|") |}]
+       ;;
 
-      let to_string_hum = to_string_hum
+       let to_string_hum = to_string_hum
 
-      let%expect_test "to_string_hum" =
-        print_endline (to_string_hum iobuf);
-        [%expect {|
+       let%expect_test "to_string_hum" =
+         print_endline (to_string_hum iobuf);
+         [%expect
+           {|
           00000000  60 60 42 6f 73 74 6f 6e  27 20 69 73 20 64 69 73  |``Boston' is dis|
           00000010  79 6c 6c 61 62 69 63 27  20 69 73 20 61 62 6f 75  |yllabic' is abou|
           00000020  74 20 60 42 6f 73 74 6f  6e 27 20 61 6e 64 20 63  |t `Boston' and c|
           00000030  6f 6e 74 61 69 6e 73 20  60 60 42 6f 73 74 6f 6e  |ontains ``Boston|
           00000040  27 27 2e                                          |''.| |}]
+       ;;
 
-      let to_sequence = to_sequence
+       let to_sequence = to_sequence
 
-      let%expect_test "to_sequence" =
-        print_s [%sexp (to_sequence iobuf |> Sequence.to_list : string list)];
-        [%expect {|
+       let%expect_test "to_sequence" =
+         print_s [%sexp (to_sequence iobuf |> Sequence.to_list : string list)];
+         [%expect
+           {|
           ("00000000  60 60 42 6f 73 74 6f 6e  27 20 69 73 20 64 69 73  |``Boston' is dis|"
            "00000010  79 6c 6c 61 62 69 63 27  20 69 73 20 61 62 6f 75  |yllabic' is abou|"
            "00000020  74 20 60 42 6f 73 74 6f  6e 27 20 61 6e 64 20 63  |t `Boston' and c|"
            "00000030  6f 6e 74 61 69 6e 73 20  60 60 42 6f 73 74 6f 6e  |ontains ``Boston|"
            "00000040  27 27 2e                                          |''.|") |}]
+       ;;
 
+       module Pretty = struct
+         include T
 
-      module Pretty = struct
-        include T
+         let sexp_of_t = Pretty.sexp_of_t
 
-        let sexp_of_t = Pretty.sexp_of_t
-
-        let%expect_test "sexp_of_t" =
-          print_s [%sexp (iobuf : (_,_) t)];
-          [%expect {| "``Boston' is disyllabic' is about `Boston' and contains ``Boston''." |}]
-      end
-    end
-  end : module type of Iobuf.Limits))
+         let%expect_test "sexp_of_t" =
+           print_s [%sexp (iobuf : (_, _) t)];
+           [%expect
+             {| "``Boston' is disyllabic' is about `Boston' and contains ``Boston''." |}]
+         ;;
+       end
+     end
+   end :
+     module type of Iobuf.Limits))
+;;
 
 let%test_module "Hexdump" =
-  (module (struct
-    open Iobuf.Hexdump
+  (module (
+   struct
+     open Iobuf.Hexdump
+     include T
 
-    include T
+     let sexp_of_t = sexp_of_t
 
-    let sexp_of_t = sexp_of_t
-
-    let%expect_test "sexp_of_t" =
-      print_s [%sexp (iobuf : (_, _) t)];
-      [%expect {|
+     let%expect_test "sexp_of_t" =
+       print_s [%sexp (iobuf : (_, _) t)];
+       [%expect
+         {|
           ((window (
              "00000001  60 42 6f 73 74 6f 6e 27  20 69 73 20 64 69 73 79  |`Boston' is disy|"
              "00000011  6c 6c 61 62 69 63                                 |llabic|"))
@@ -147,12 +168,14 @@ let%test_module "Hexdump" =
              "00000020  74 20 60 42 6f 73 74 6f  6e 27 20 61 6e 64 20 63  |t `Boston' and c|"
              "00000030  6f 6e 74 61 69 6e 73 20  60 60 42 6f 73 74 6f 6e  |ontains ``Boston|"
              "00000040  27 27 2e                                          |''.|"))) |}]
+     ;;
 
-    let to_sequence = to_sequence
+     let to_sequence = to_sequence
 
-    let%expect_test "to_sequence" =
-      print_s [%sexp (Sequence.to_list (to_sequence iobuf) : string list)];
-      [%expect {|
+     let%expect_test "to_sequence" =
+       print_s [%sexp (Sequence.to_list (to_sequence iobuf) : string list)];
+       [%expect
+         {|
           (Window
            "  00000001  60 42 6f 73 74 6f 6e 27  20 69 73 20 64 69 73 79  |`Boston' is disy|"
            "  00000011  6c 6c 61 62 69 63                                 |llabic|"
@@ -162,12 +185,14 @@ let%test_module "Hexdump" =
            "  00000020  74 20 60 42 6f 73 74 6f  6e 27 20 61 6e 64 20 63  |t `Boston' and c|"
            "  00000030  6f 6e 74 61 69 6e 73 20  60 60 42 6f 73 74 6f 6e  |ontains ``Boston|"
            "  00000040  27 27 2e                                          |''.|") |}]
+     ;;
 
-    let to_string_hum = to_string_hum
+     let to_string_hum = to_string_hum
 
-    let%expect_test "to_string_hum" =
-      print_endline (to_string_hum iobuf);
-      [%expect {|
+     let%expect_test "to_string_hum" =
+       print_endline (to_string_hum iobuf);
+       [%expect
+         {|
           Window
             00000001  60 42 6f 73 74 6f 6e 27  20 69 73 20 64 69 73 79  |`Boston' is disy|
             00000011  6c 6c 61 62 69 63                                 |llabic|
@@ -177,26 +202,27 @@ let%test_module "Hexdump" =
             00000020  74 20 60 42 6f 73 74 6f  6e 27 20 61 6e 64 20 63  |t `Boston' and c|
             00000030  6f 6e 74 61 69 6e 73 20  60 60 42 6f 73 74 6f 6e  |ontains ``Boston|
             00000040  27 27 2e                                          |''.| |}]
-
-
-  end : module type of Iobuf.Hexdump))
+     ;;
+   end :
+     module type of Iobuf.Hexdump))
+;;
 
 let%test_module "Debug" =
-  (module (struct
-    open Iobuf.Debug
+  (module (
+   struct
+     open Iobuf.Debug
+     include T
 
-    include T
+     module Hexdump = struct
+       open Hexdump
+       include T
 
-    module Hexdump = struct
-      open Hexdump
+       let sexp_of_t = sexp_of_t
 
-      include T
-
-      let sexp_of_t = sexp_of_t
-
-      let%expect_test "sexp_of_t" =
-        print_s [%sexp (iobuf : (_, _) t)];
-        [%expect {|
+       let%expect_test "sexp_of_t" =
+         print_s [%sexp (iobuf : (_, _) t)];
+         [%expect
+           {|
           ((window (
              "0000003d  60 42 6f 73 74 6f 6e 27  20 69 73 20 64 69 73 79  |`Boston' is disy|"
              "0000004d  6c 6c 61 62 69 63                                 |llabic|"))
@@ -236,12 +262,14 @@ let%test_module "Debug" =
              "000001a0  20 6d 61 72 6b 73 3b 20  61 6e 64 20 42 6f 73 74  | marks; and Bost|"
              "000001b0  6f 6e 20 63 6f 6e 74 61  69 6e 73 20 73 6f 6d 65  |on contains some|"
              "000001c0  20 38 30 30 2c 30 30 30  20 70 65 6f 70 6c 65 2e  | 800,000 people.|"))) |}]
+       ;;
 
-      let to_sequence = to_sequence
+       let to_sequence = to_sequence
 
-      let%expect_test "to_sequence" =
-        print_s [%sexp (Sequence.to_list (to_sequence iobuf) : string list)];
-        [%expect {|
+       let%expect_test "to_sequence" =
+         print_s [%sexp (Sequence.to_list (to_sequence iobuf) : string list)];
+         [%expect
+           {|
           (Window
            "  0000003d  60 42 6f 73 74 6f 6e 27  20 69 73 20 64 69 73 79  |`Boston' is disy|"
            "  0000004d  6c 6c 61 62 69 63                                 |llabic|"
@@ -281,12 +309,14 @@ let%test_module "Debug" =
            "  000001a0  20 6d 61 72 6b 73 3b 20  61 6e 64 20 42 6f 73 74  | marks; and Bost|"
            "  000001b0  6f 6e 20 63 6f 6e 74 61  69 6e 73 20 73 6f 6d 65  |on contains some|"
            "  000001c0  20 38 30 30 2c 30 30 30  20 70 65 6f 70 6c 65 2e  | 800,000 people.|") |}]
+       ;;
 
-      let to_string_hum = to_string_hum
+       let to_string_hum = to_string_hum
 
-      let%expect_test "to_string_hum" =
-        print_endline (to_string_hum iobuf);
-        [%expect {|
+       let%expect_test "to_string_hum" =
+         print_endline (to_string_hum iobuf);
+         [%expect
+           {|
           Window
             0000003d  60 42 6f 73 74 6f 6e 27  20 69 73 20 64 69 73 79  |`Boston' is disy|
             0000004d  6c 6c 61 62 69 63                                 |llabic|
@@ -326,7 +356,8 @@ let%test_module "Debug" =
             000001a0  20 6d 61 72 6b 73 3b 20  61 6e 64 20 42 6f 73 74  | marks; and Bost|
             000001b0  6f 6e 20 63 6f 6e 74 61  69 6e 73 20 73 6f 6d 65  |on contains some|
             000001c0  20 38 30 30 2c 30 30 30  20 70 65 6f 70 6c 65 2e  | 800,000 people.| |}]
-
-
-    end
-  end : module type of Iobuf.Debug))
+       ;;
+     end
+   end :
+     module type of Iobuf.Debug))
+;;
