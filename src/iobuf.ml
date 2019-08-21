@@ -71,6 +71,8 @@ module Hi_bound = struct
 end
 
 let length t = t.hi - t.lo
+let length_lo t = t.lo - t.lo_min
+let length_hi t = t.hi_max - t.hi
 
 let is_empty t = length t = 0
 

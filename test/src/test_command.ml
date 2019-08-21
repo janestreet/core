@@ -494,24 +494,26 @@ let%expect_test "illegal flag names" =
       Failure "invalid flag name (contains whitespace): \"has whitespace\"")) |}]
 ;;
 
+let run_command param ~args =
+  Command.run ~argv:("__exe_name__" :: args) (Command.basic ~summary:"" param)
+;;
+
 let%expect_test "escape flag type" =
   let test args =
-    Command.run
-      ~argv:("__exe_name__" :: args)
-      (Command.basic
-         ~summary:""
-         (let%map_open.Command.Let_syntax dash_dash =
-            flag "--" escape ~doc:"... escape flag"
-          and also_an_escape_flag =
-            flag "-also-an-escape-flag" escape ~doc:"... escape flag"
-          and other_flag = flag "-other-flag" no_arg ~doc:"" in
-          fun () ->
-            print_s
-              [%message
-                "args"
-                  (dash_dash : string list option)
-                  (also_an_escape_flag : string list option)
-                  (other_flag : bool)]))
+    run_command
+      ~args
+      (let%map_open.Command.Let_syntax dash_dash =
+         flag "--" escape ~doc:"... escape flag"
+       and also_an_escape_flag =
+         flag "-also-an-escape-flag" escape ~doc:"... escape flag"
+       and other_flag = flag "-other-flag" no_arg ~doc:"" in
+       fun () ->
+         print_s
+           [%message
+             "args"
+               (dash_dash : string list option)
+               (also_an_escape_flag : string list option)
+               (other_flag : bool)])
   in
   test [ "-help" ];
   [%expect
@@ -564,4 +566,40 @@ let%expect_test "escape flag type" =
       (dash_dash ())
       (also_an_escape_flag ((-other-flag --)))
       (other_flag false)) |}]
+;;
+
+let ignored_flags names =
+  let open Command.Param in
+  all_unit
+    (List.map names ~f:(fun name ->
+       flag name no_arg ~doc:"" |> map ~f:(ignore : bool -> unit)))
+;;
+
+let%expect_test "[and_arg_names]" =
+  let test names =
+    run_command
+      ~args:[]
+      (let%map_open.Command.Let_syntax (), arg_names =
+         and_arg_names (ignored_flags names)
+       in
+       fun () -> print_s [%message (arg_names : string list)])
+  in
+  test [];
+  [%expect {| (arg_names ()) |}];
+  test [ "foo" ];
+  [%expect {| (arg_names (-foo)) |}];
+  test [ "foo"; "bar" ];
+  [%expect {| (arg_names (-bar -foo)) |}]
+;;
+
+let%expect_test "[and_arg_name]" =
+  let test names =
+    show_raise (fun () -> Command.Param.and_arg_name (ignored_flags names))
+  in
+  test [];
+  [%expect {| (raised ("[and_arg_name] expects exactly one name, got" ())) |}];
+  test [ "foo" ];
+  [%expect {| "did not raise" |}];
+  test [ "foo"; "bar" ];
+  [%expect {| (raised ("[and_arg_name] expects exactly one name, got" (-bar -foo))) |}]
 ;;

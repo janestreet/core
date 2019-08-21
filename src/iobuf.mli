@@ -139,6 +139,24 @@ val capacity : (_, _) t -> int
 (** [length t] returns the size of [t]'s window. *)
 val length : (_, _) t -> int
 
+(** [length_lo t] returns the length that [t]'s window would have after calling [flip_lo],
+    without actually changing the window. This is the number of bytes between the lower
+    limit and the start of the window.
+
+    When you're writing to the window, you can think of this as the number of bytes
+    already written. When reading from the window, this can mean the number of bytes
+    already consumed.
+
+    This is equivalent to: {[ Iobuf.Expert.(lo t - lo_min t)]}. *)
+val length_lo : (_, _) t -> int
+
+(** [length_hi t] returns the length that [t]'s window would have after calling [flip_hi],
+    without actually changing the window. This is the number of bytes between the end of
+    the window and the upper limit of the buffer.
+
+    This is equivalent to: {[ Iobuf.Expert.(hi_max t - hi t) ]}. *)
+val length_hi : (_, _) t -> int
+
 (** [is_empty t] is [length t = 0]. *)
 val is_empty : (_, _) t -> bool
 

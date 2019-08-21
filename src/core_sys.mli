@@ -191,10 +191,16 @@ val home_directory : unit -> string
 *)
 external opaque_identity : 'a -> 'a = "%opaque"
 
-(** [override_argv new_argv] replace the contents of [argv] to be [new_argv].
+(** [override_argv new_argv] makes subsequent calls to {!get_argv} return [new_argv].
 
-    Note that on OCaml >=4.09 this does not affect [Base.Sys.argv].
-    We hope to fix that before we switch to 4.09. *)
+    Prior to OCaml version 4.09, this function has two noteworthy behaviors:
+
+    - it may raise if the length of [new_argv] is greater than the length of [argv] before
+      the call;
+    - it re-uses and mutates the previous [argv] value instead of using the new one; and
+    - it even mutates its length, which can be observed by inspecting the array returned
+      by an earlier call to {!get_argv}.
+*)
 val override_argv : string array -> unit
 
 

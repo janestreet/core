@@ -86,6 +86,15 @@ module Make () = struct
   let length t =
     debug "length" [t] t [%sexp_of: (_, _) t] sexp_of_int (fun () -> length t)
   ;;
+
+  let length_lo t =
+    debug "length_lo" [t] t [%sexp_of: (_, _) t] sexp_of_int (fun () -> length_lo t)
+  ;;
+
+  let length_hi t =
+    debug "length_hi" [t] t [%sexp_of: (_, _) t] sexp_of_int (fun () -> length_hi t)
+  ;;
+
   let is_empty t =
     debug "is_empty" [t] t [%sexp_of: (_, _) t] sexp_of_bool (fun () -> is_empty t)
   ;;

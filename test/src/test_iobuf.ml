@@ -199,6 +199,8 @@ struct
   let create = create
   let capacity = capacity
   let length = length
+  let length_lo = length_lo
+  let length_hi = length_hi
   let is_empty = is_empty
 
   (* [create] with random capacity. *)
@@ -228,6 +230,37 @@ struct
   (* [create] with invalid capacity. *)
   let%test_unit _ =
     assert (is_error (try_with (fun () -> ignore (create ~len:(-1) : (_, _) t))))
+  ;;
+
+  let%test_module "lengths" =
+    (module struct
+      let%expect_test "length" =
+        let print_lengths t =
+          printf
+            "%d + %d + %d = %d\n"
+            (length_lo t)
+            (length t)
+            (length_hi t)
+            (capacity t)
+        in
+        let t = create ~len:5 in
+        print_lengths t;
+        [%expect {| 0 + 5 + 0 = 5 |}];
+        advance t 1;
+        print_lengths t;
+        [%expect {| 1 + 4 + 0 = 5 |}];
+        flip_lo t;
+        print_lengths t;
+        [%expect {| 0 + 1 + 4 = 5 |}];
+        resize t ~len:3;
+        advance t 1;
+        print_lengths t;
+        [%expect {| 1 + 2 + 2 = 5 |}];
+        flip_hi t;
+        print_lengths t;
+        [%expect {| 3 + 2 + 0 = 5 |}]
+      ;;
+    end)
   ;;
 
   module Accessors (Accessors : sig
