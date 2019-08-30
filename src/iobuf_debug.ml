@@ -1435,4 +1435,7 @@ module Make () = struct
           (fun () -> bin_prot writer t a ~pos)
     end
   end
+
+  let memcmp a b =
+    debug "memcmp" [a] (b) [%sexp_of: (_, _) t] [%sexp_of: int] (fun () -> memcmp a b)
 end

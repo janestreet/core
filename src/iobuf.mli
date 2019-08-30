@@ -171,6 +171,11 @@ val narrow_lo : (_, seek) t -> unit
 (** [narrow_hi t] sets [t]'s upper limit to the end of the current window. *)
 val narrow_hi : (_, seek) t -> unit
 
+(** {2 Comparison} *)
+
+(** [memcmp a b] first compares the length of [a] and [b]'s windows and then compares the
+    bytes in the windows for equivalence. *)
+val memcmp : (_, _) t -> (_, _) t -> int
 
 (** {2 Changing the window} *)
 

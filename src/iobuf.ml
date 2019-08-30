@@ -1670,3 +1670,11 @@ module Debug  = For_hexdump.Window_and_limits_and_buffer
 include For_hexdump.Window_and_limits
 
 let to_string_hum = Hexdump.to_string_hum
+
+let memcmp a b =
+  let len = length a in
+  let c = Int.compare len (length b) in
+  if c <> 0
+  then c
+  else Bigstring.memcmp ~pos1:a.lo a.buf ~pos2:b.lo b.buf ~len
+

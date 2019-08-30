@@ -2388,6 +2388,23 @@ struct
       let is_safe = false
     end)
 
+  let memcmp = memcmp
+
+  let%test_unit _ = assert (memcmp (Iobuf.create ~len:0) (Iobuf.create ~len:0) = 0)
+  let%test_unit _ = assert (memcmp (Iobuf.create ~len:0) (Iobuf.create ~len:1) = -1)
+  let%test_unit _ = assert (memcmp (Iobuf.create ~len:1) (Iobuf.create ~len:0) = 1)
+
+  let%test_unit _ =
+    let a = Iobuf.of_string "abc" in
+    assert (memcmp a a = 0)
+  ;;
+
+  let%test_unit _ =
+    let a = Iobuf.of_string "abc" in
+    let b = Iobuf.of_string "abd" in
+    assert (memcmp a b = -1)
+  ;;
+
   (* The signature here is to remind us to add a unit test whenever we add a function to
      [Iobuf]. *)
 end :

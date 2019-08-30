@@ -122,7 +122,7 @@ let () =
     Command.basic
       ~summary:"This puts a lock file [lockfile] in the directory test-lock-file under \
                 heavy contention" (
-      let%map_open.Command.Let_syntax
+      let%map_open.Command
         which_lock =
         flag ~doc:"Nfs|Local|Mkdir|Flock which lock protocol to use"
           "which" (required (

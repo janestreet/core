@@ -316,7 +316,7 @@ let%expect_test "parse error with subcommand" =
          [ ( "subcommand"
            , Command.basic
                ~summary:""
-               (let%map_open.Command.Let_syntax required_flag =
+               (let%map_open.Command required_flag =
                   flag "required-flag" (required string) ~doc:""
                 in
                 fun () -> print_s [%message (required_flag : string)]) )
@@ -478,7 +478,7 @@ let%expect_test "illegal flag names" =
     show_raise (fun () ->
       Command.basic
         ~summary:""
-        (let%map_open.Command.Let_syntax bool = flag name no_arg ~doc:"" in
+        (let%map_open.Command bool = flag name no_arg ~doc:"" in
          fun () -> ignore (bool : bool)))
   in
   test "-no-spaces";
@@ -502,8 +502,7 @@ let%expect_test "escape flag type" =
   let test args =
     run_command
       ~args
-      (let%map_open.Command.Let_syntax dash_dash =
-         flag "--" escape ~doc:"... escape flag"
+      (let%map_open.Command dash_dash = flag "--" escape ~doc:"... escape flag"
        and also_an_escape_flag =
          flag "-also-an-escape-flag" escape ~doc:"... escape flag"
        and other_flag = flag "-other-flag" no_arg ~doc:"" in
@@ -579,9 +578,7 @@ let%expect_test "[and_arg_names]" =
   let test names =
     run_command
       ~args:[]
-      (let%map_open.Command.Let_syntax (), arg_names =
-         and_arg_names (ignored_flags names)
-       in
+      (let%map_open.Command (), arg_names = and_arg_names (ignored_flags names) in
        fun () -> print_s [%message (arg_names : string list)])
   in
   test [];
