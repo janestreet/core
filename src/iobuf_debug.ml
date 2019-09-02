@@ -223,10 +223,10 @@ module Make () = struct
       [%sexp_of: string]
       (fun () -> to_string_hum ?max_lines t)
 
-  let to_bytes t =
+  let to_bytes ?len t =
     debug "to_bytes" [t]
-      t [%sexp_of: (_, _) t] [%sexp_of: Bytes.t]
-      (fun () -> to_bytes t)
+      (`len len) [%sexp_of: [ `len of int option ]] [%sexp_of: Bytes.t]
+      (fun () -> to_bytes ?len t)
   ;;
 
   let advance t i = debug "advance" [t] i sexp_of_int sexp_of_unit (fun () -> advance t i)

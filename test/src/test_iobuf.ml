@@ -626,6 +626,11 @@ struct
         assert (Bytes.equal bytes (to_bytes (of_bytes bytes))))
     ;;
 
+    let%expect_test "to_bytes with length" =
+      printf !"%{Bytes}" (to_bytes ~len:2 (of_string "abc"));
+      [%expect {| ab |}]
+    ;;
+
     let of_bigstring = of_bigstring
 
     let%test_unit _ =

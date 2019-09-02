@@ -278,19 +278,20 @@ let create ~len =
   of_bigstring (Bigstring.create len);
 ;;
 
-let to_string ?len t =
-  let len =
-    match len with
-    | Some len -> check_range t ~pos:0 ~len; len
-    | None -> length t
-  in
-  Bigstring.to_string t.buf ~pos:t.lo ~len
-
 let of_string s = of_bigstring (Bigstring.of_string s)
+let of_bytes  s = of_bigstring (Bigstring.of_bytes  s)
 
-let to_bytes t = Bigstring.to_bytes t.buf ~pos:t.lo ~len:(length t)
+let to_stringlike ~(convert : ?pos:int -> ?len:int -> Bigstring.t -> 'a) =
+  stage (fun ?len t : 'a ->
+    let len =
+      match len with
+      | Some len -> check_range t ~pos:0 ~len; len
+      | None -> length t
+    in
+    convert t.buf ~pos:t.lo ~len)
 
-let of_bytes s = of_bigstring (Bigstring.of_bytes s)
+let to_string = to_stringlike ~convert:Bigstring.to_string |> unstage
+let to_bytes  = to_stringlike ~convert:Bigstring.to_bytes  |> unstage
 
 (* We used to do it like {v
 

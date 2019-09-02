@@ -270,7 +270,7 @@ val to_string : ?len:int -> ([> read], _) t -> string
 val to_string_hum : ?max_lines:int -> (_, _) t -> string
 
 (** [to_bytes t] returns the bytes in [t] as a bytes.  It does not alter the window. *)
-val to_bytes : (_, _) t -> Bytes.t
+val to_bytes : ?len:int -> (_, _) t -> Bytes.t
 
 (** [of_bytes b] returns a new iobuf whose contents is [b]. *)
 val of_bytes : Bytes.t -> (_, _) t
