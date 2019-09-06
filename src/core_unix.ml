@@ -2601,8 +2601,8 @@ let mcast_join ?ifname ?source fd sockaddr =
   mcast_modify Mcast_action.Add ?ifname ?source fd sockaddr
 ;;
 
-let mcast_leave ?ifname fd sockaddr =
-  mcast_modify Mcast_action.Drop ?ifname fd sockaddr
+let mcast_leave ?ifname ?source fd sockaddr =
+  mcast_modify Mcast_action.Drop ?ifname ?source fd sockaddr
 ;;
 
 external get_mcast_ttl : File_descr.t -> int = "core_unix_mcast_get_ttl"

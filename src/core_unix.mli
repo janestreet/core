@@ -2229,8 +2229,9 @@ val uname : unit -> Utsname.t
     [Unix_error]. *)
 val if_indextoname : int -> string
 
-(** [mcast_join ?ifname sock addr] join a multicast group at [addr] with socket [sock],
-    from source at [source] if specified, optionally using network interface [ifname].
+(** [mcast_join ?ifname ?source sock addr] join a multicast group at [addr] with socket
+    [sock], from source at [source] if specified, optionally using network interface
+    [ifname].
 
     @param ifname default = any interface
 *)
@@ -2241,12 +2242,18 @@ val mcast_join
   -> sockaddr
   -> unit
 
-(** [mcast_leave ?ifname sock addr] leaves a multicast group at [addr] with socket [sock],
-    optionally using network interface [ifname].
+(** [mcast_leave ?ifname ?source sock addr] leaves a multicast group at [addr] with socket
+    [sock], from source at [source] if specified, optionally using network interface
+    [ifname].
 
     @param ifname default = any interface
 *)
-val mcast_leave : ?ifname : string -> File_descr.t -> sockaddr -> unit
+val mcast_leave
+  : ?ifname : string
+  -> ?source : Inet_addr.t
+  -> File_descr.t
+  -> sockaddr
+  -> unit
 
 
 (** [get_mcast_ttl sock] reads the time-to-live value of outgoing multicast packets for

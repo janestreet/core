@@ -1139,15 +1139,28 @@ CAMLprim value core_unix_mcast_modify (value v_action,
 #else
         struct ip_mreq_source mreq_source;
 
-        assert(v_action == VAL_MCAST_ACTION_ADD);
+        int optname;
+
+        switch (v_action) {
+          case VAL_MCAST_ACTION_ADD:
+            optname = IP_ADD_SOURCE_MEMBERSHIP;
+            break;
+
+          case VAL_MCAST_ACTION_DROP:
+            optname = IP_DROP_SOURCE_MEMBERSHIP;
+            break;
+
+          default:
+            caml_failwith("core_unix_mcast_modify: invalid SSM action");
+        }
+
         assert(Tag_val(v_source_opt) == 0 && Wosize_val(v_source_opt) == 1);
 
         mreq_source.imr_multiaddr  = mreq.imr_multiaddr;
         mreq_source.imr_interface  = mreq.imr_interface;
         mreq_source.imr_sourceaddr = GET_INET_ADDR(Field(v_source_opt, 0));
 
-        ret = setsockopt(fd, IPPROTO_IP, IP_ADD_SOURCE_MEMBERSHIP, &mreq_source,
-                         sizeof(mreq_source));
+        ret = setsockopt(fd, IPPROTO_IP, optname, &mreq_source, sizeof(mreq_source));
 #endif
       } else {
         int optname;
