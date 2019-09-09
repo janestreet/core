@@ -416,6 +416,16 @@ module Blit : sig
     -> ?len : int
     -> ([> read], no_seek) t
     -> (_, _) t
+
+  (** Copies as much as possible (returning the number of bytes copied) without running
+      out of either buffer's window. *)
+  val blit_maximal
+    : src : [> read] t_no_seek
+    -> ?src_pos : int
+    -> dst : [> write] t_no_seek
+    -> ?dst_pos : int
+    -> unit
+    -> int
 end
 
 (** [Blit_consume] copies between iobufs and advances [src] but does not advance [dst]. *)
@@ -447,6 +457,12 @@ module Blit_consume : sig
     :  ?len : int
     -> ([> read], seek) t
     -> (_, _) t
+  val blit_maximal
+    :  src      : ([> read],  seek)    t
+    -> dst      : ([> write], no_seek) t
+    -> ?dst_pos : int
+    -> unit
+    -> int
 end
 
 (** [Blit_fill] copies between iobufs and advances [dst] but does not advance [src]. *)
@@ -470,6 +486,12 @@ module Blit_fill : sig
     -> dst     : ([> write], seek)    t
     -> len     : int
     -> unit
+  val blit_maximal
+    :  src      : ([> read],  no_seek) t
+    -> ?src_pos : int
+    -> dst      : ([> write], seek)    t
+    -> unit
+    -> int
 end
 
 (** [Blit_consume_and_fill] copies between iobufs and advances both [src] and [dst]. *)
@@ -490,6 +512,10 @@ module Blit_consume_and_fill : sig
     -> dst : ([> write], seek) t
     -> len : int
     -> unit
+  val blit_maximal
+    :  src : ([> read],  seek) t
+    -> dst : ([> write], seek) t
+    -> int
 end
 
 (** {2 I/O} *)

@@ -942,6 +942,11 @@ module Blit = struct
   include Test_blit.Make_and_test (Char_elt) (T_dst)
   (* Workaround the inability of the compiler to inline in the presence of functors. *)
   let unsafe_blit = T_dst.unsafe_blit
+
+  let blit_maximal ~src ?(src_pos = 0) ~dst ?(dst_pos = 0) () =
+    let len = min (length src - src_pos) (length dst - dst_pos) in
+    blit ~src ~src_pos ~dst ~dst_pos ~len;
+    len
 end
 
 module Blit_consume = struct
@@ -960,6 +965,11 @@ module Blit_consume = struct
   let subo ?len src =
     let len = match len with None -> length src | Some len -> len in
     sub src ~len
+
+  let blit_maximal ~src ~dst ?(dst_pos = 0) () =
+    let len = min (length src) (length dst - dst_pos) in
+    blit ~src ~dst ~dst_pos ~len;
+    len
 end
 
 module Blit_fill = struct
@@ -971,6 +981,11 @@ module Blit_fill = struct
     unsafe_advance dst len
   let blito ~src ?(src_pos = 0) ?(src_len = length src - src_pos) ~dst () =
     blit ~src ~src_pos ~dst ~len:src_len
+
+  let blit_maximal ~src ?(src_pos = 0) ~dst () =
+    let len = min (length src - src_pos) (length dst) in
+    blit ~src ~src_pos ~dst ~len;
+    len
 end
 
 module Blit_consume_and_fill = struct
@@ -988,6 +1003,15 @@ module Blit_consume_and_fill = struct
     end
   let blito ~src ?(src_len = length src) ~dst () =
     blit ~src ~dst ~len:src_len
+
+  let blit_maximal ~src ~dst =
+    let len = min (length src) (length dst) in
+    (* [len] is naturally validated to be correct; don't double-check it.
+       Sadly, we can't do this for the other [Blit_*] modules, as they can have
+       invalid [src_pos]/[dst_pos] values which a) have to be checked on their own
+       and b) can lead to the construction of unsafe [len] values. *)
+    unsafe_blit ~src ~dst ~len;
+    len
 end
 
 let bin_prot_length_prefix_bytes = 4
@@ -1678,4 +1702,3 @@ let memcmp a b =
   if c <> 0
   then c
   else Bigstring.memcmp ~pos1:a.lo a.buf ~pos2:b.lo b.buf ~len
-

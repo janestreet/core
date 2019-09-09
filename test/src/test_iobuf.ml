@@ -1,6 +1,7 @@
 open! Core
 open Poly
 open! Iobuf
+open Expect_test_helpers_kernel
 
 let arch_sixtyfour = Sys.word_size = 64
 let is_error = Result.is_error
@@ -1734,6 +1735,7 @@ struct
       let blit = blit
       let blito = blito
       let unsafe_blit = unsafe_blit
+      let blit_maximal = blit_maximal
 
       let blit_via_blito ~src ~dst ~len =
         blito () ~src ~dst ?src_len:(if len = length src then None else Some len)
@@ -1756,6 +1758,23 @@ struct
           assert (String.equal s (Consume.stringo t2));
           assert (is_empty t2))
       ;;
+
+      let%expect_test "blit_maximal" =
+        let long = of_string (String.make 10 '.') in
+        let short = of_string "ABCD" in
+        require_equal [%here] (module Int) 4 (blit_maximal ~src:short ~dst:long);
+        require_equal [%here] (module Int) 0 (blit_maximal ~src:short ~dst:long);
+        Iobuf.reset short;
+        print_s [%sexp (long : (_, _) Iobuf.Limits.Hexdump.Pretty.t)];
+        [%expect {| ABCD...... |}];
+        require_equal [%here] (module Int) 4 (blit_maximal ~src:short ~dst:long);
+        Iobuf.reset short;
+        print_s [%sexp (long : (_, _) Iobuf.Limits.Hexdump.Pretty.t)];
+        [%expect {| ABCDABCD.. |}];
+        require_equal [%here] (module Int) 2 (blit_maximal ~src:short ~dst:long);
+        print_s [%sexp (long : (_, _) Iobuf.Limits.Hexdump.Pretty.t)];
+        [%expect {| ABCDABCDAB |}]
+      ;;
     end
 
     module Blit_fill = struct
@@ -1764,6 +1783,7 @@ struct
       let blit = blit
       let blito = blito
       let unsafe_blit = unsafe_blit
+      let blit_maximal = blit_maximal
 
       let blit_via_blito ~src ~src_pos ~dst ~len =
         blito
@@ -1795,6 +1815,21 @@ struct
           [%test_result: string] (to_string t2) ~expect:"qwertyuiop";
           [%test_result: string] (to_string t3) ~expect:"!@#$%^&*()")
       ;;
+
+      let%expect_test "blit_maximal" =
+        let long = of_string (String.make 10 '.') in
+        let short = of_string "ABCD" in
+        let t here expected actual =
+          require_equal here (module Int) expected actual;
+          print_s [%sexp (long : (_, _) Iobuf.Limits.Hexdump.Pretty.t)]
+        in
+        t [%here] 4 (blit_maximal ~src:short ~dst:long ());
+        [%expect {| ABCD...... |}];
+        t [%here] 3 (blit_maximal ~src:short ~src_pos:1 ~dst:long ());
+        [%expect {| ABCDBCD... |}];
+        t [%here] 3 (blit_maximal ~src:short ~dst:long ());
+        [%expect {| ABCDBCDABC |}]
+      ;;
     end
 
     module Blit_consume = struct
@@ -1803,6 +1838,7 @@ struct
       let blit = blit
       let blito = blito
       let unsafe_blit = unsafe_blit
+      let blit_maximal = blit_maximal
 
       let blit_via_blito ~src ~dst ~dst_pos ~len =
         blito
@@ -1861,6 +1897,30 @@ struct
           [%test_result: string] (to_string t2) ~expect:"!@#$%^&*()";
           [%test_result: string] (to_string t3) ~expect:"asdf")
       ;;
+
+      let%expect_test "blit_maximal" =
+        let long = of_string "ABCDEFGHIJ" in
+        let short = of_string "...." in
+        let t here expected actual =
+          require_equal here (module Int) expected actual;
+          print_s
+            [%message
+              (long : (_, _) Iobuf.Window.Hexdump.Pretty.t)
+                (short : (_, _) Iobuf.Window.Hexdump.Pretty.t)]
+        in
+        t [%here] 4 (blit_maximal ~src:long ~dst:short ());
+        [%expect {|
+          ((long  EFGHIJ)
+           (short ABCD)) |}];
+        t [%here] 3 (blit_maximal ~src:long ~dst_pos:1 ~dst:short ());
+        [%expect {|
+          ((long  HIJ)
+           (short AEFG)) |}];
+        t [%here] 3 (blit_maximal ~src:long ~dst:short ());
+        [%expect {|
+          ((long  "")
+           (short HIJG)) |}]
+      ;;
     end
 
     module Blit = struct
@@ -1871,6 +1931,7 @@ struct
       let blit = blit
       let blito = blito
       let unsafe_blit = unsafe_blit
+      let blit_maximal = blit_maximal
 
       let blit_via_blito ~src ~src_pos ~dst ~dst_pos ~len =
         blito
@@ -1934,6 +1995,30 @@ struct
           [%test_result: string] (to_string t1) ~expect:"qwertyuiop";
           [%test_result: string] (to_string t2) ~expect:"!@#$%^&*()";
           [%test_result: string] (to_string t3) ~expect:"asdf")
+      ;;
+
+      let%expect_test "blit_maximal" =
+        let long = of_string (String.make 10 '.') in
+        let short = of_string "ABCD" in
+        let t here expected actual =
+          require_equal here (module Int) expected actual;
+          print_s
+            [%message
+              (long : (_, _) Iobuf.Window.Hexdump.Pretty.t)
+                (short : (_, _) Iobuf.Window.Hexdump.Pretty.t)]
+        in
+        t [%here] 4 (blit_maximal ~src:short ~dst:long ());
+        [%expect {|
+          ((long  ABCD......)
+           (short ABCD)) |}];
+        t [%here] 3 (blit_maximal ~src:short ~dst_pos:7 ~dst:long ());
+        [%expect {|
+          ((long  ABCD...ABC)
+           (short ABCD)) |}];
+        t [%here] 1 (blit_maximal ~src:short ~src_pos:3 ~dst:long ());
+        [%expect {|
+          ((long  DBCD...ABC)
+           (short ABCD)) |}]
       ;;
     end
 

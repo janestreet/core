@@ -794,6 +794,13 @@ module Make () = struct
            t)
     ;;
 
+    let blit_maximal ~src ?src_pos ~dst ?dst_pos () =
+      debug_blit "Blit.blit_maximal" ~src ~dst
+        (`src_pos src_pos, `dst_pos dst_pos)
+        ([%sexp_of: [`src_pos of int option] *
+                    [`dst_pos of int option]])
+        ([%sexp_of: int])
+        (fun () -> blit_maximal ~src ?src_pos ~dst ?dst_pos ())
   end
 
   module Blit_consume = struct
@@ -843,6 +850,12 @@ module Make () = struct
            t)
     ;;
 
+    let blit_maximal ~src ~dst ?dst_pos () =
+      debug_blit "Blit_consume.blit_maximal" ~src ~dst
+        (`dst_pos dst_pos)
+        ([%sexp_of: [`dst_pos of int option]])
+        ([%sexp_of: int])
+        (fun () -> blit_maximal ~src ~dst ?dst_pos ())
   end
 
   module Blit_fill = struct
@@ -872,6 +885,13 @@ module Make () = struct
         (fun () -> blito ~src ?src_pos ?src_len ~dst ())
     ;;
 
+
+    let blit_maximal ~src ?src_pos ~dst () =
+      debug_blit "Blit_fill.blit_maximal" ~src ~dst
+        (`src_pos src_pos)
+        ([%sexp_of: [`src_pos of int option]])
+        ([%sexp_of: int])
+        (fun () -> blit_maximal ~src ~dst ?src_pos ())
   end
 
   module Blit_consume_and_fill = struct
@@ -901,6 +921,12 @@ module Make () = struct
         (fun () -> blito ~src ?src_len ~dst ())
     ;;
 
+    let blit_maximal ~src ~dst =
+      debug_blit "Blit_consume_and_fill.blit_maximal" ~src ~dst
+        ()
+        ([%sexp_of: unit])
+        ([%sexp_of: int])
+        (fun () -> blit_maximal ~src ~dst)
   end
 
   module Expert = struct
