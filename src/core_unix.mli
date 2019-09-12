@@ -1314,7 +1314,10 @@ module Inet_addr : sig
   val inet4_addr_to_int63_exn : t -> Int63.t
 
   module Stable : sig
-    module V1 : Stable with type t = t
+    module V1 : sig
+      type nonrec t = t [@@deriving hash]
+      include Stable with type t := t
+    end
   end
 end
 
