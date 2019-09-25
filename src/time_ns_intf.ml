@@ -105,6 +105,10 @@ module type Ofday = sig
     module Stable : sig
       module V1 : Stable_int63able with type t = t
     end
+
+    (** Returns [some] if the given span is a valid time since start of day, and [none]
+        otherwise. *)
+    val of_span_since_start_of_day : Time_ns.Span.t -> t
   end
 end
 

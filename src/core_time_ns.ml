@@ -322,12 +322,18 @@ module Ofday = struct
 
     let value t ~default =
       match is_some t with
-      | true  -> of_span_since_start_of_day_exn (Span.Option.unchecked_value t)
+      | true  -> of_span_since_start_of_day_unchecked (Span.Option.unchecked_value t)
       | false -> default
 
-    let value_exn t = of_span_since_start_of_day_exn (Span.Option.value_exn t)
+    let of_span_since_start_of_day span =
+      if span_since_start_of_day_is_valid span
+      then Span.Option.some span
+      else none
 
-    let unchecked_value t = of_span_since_start_of_day_exn (Span.Option.unchecked_value t)
+    let value_exn t = of_span_since_start_of_day_unchecked (Span.Option.value_exn t)
+
+    let unchecked_value t =
+      of_span_since_start_of_day_unchecked (Span.Option.unchecked_value t)
 
     let of_option = function None -> none | Some t -> some t
     let to_option t = if is_none t then None else Some (value_exn t)

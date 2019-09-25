@@ -2356,10 +2356,68 @@ let%test_module "Time_ns.Option" =
       end)
     ;;
 
-    let%expect_test _ =
+    let%expect_test "value_exn none" =
       require_does_raise [%here] ~hide_positions:true (fun () -> value_exn none);
       [%expect
         {| (lib/core/src/core_time_ns.ml:LINE:COL "Span.Option.value_exn none") |}]
+    ;;
+  end)
+;;
+
+let%test_module "Time_ns.Ofday.Option" =
+  (module struct
+    open Time_ns.Ofday.Option
+
+    let%test_module "round trip" =
+      (module struct
+        let roundtrip t = value_exn (some t)
+
+        let%expect_test "start_of_day" =
+          require_equal
+            [%here]
+            (module Time_ns.Ofday)
+            (roundtrip Time_ns.Ofday.start_of_day)
+            Time_ns.Ofday.start_of_day;
+          [%expect {| |}]
+        ;;
+
+        let%expect_test "now" =
+          (* Even though this depends on the local zone, it should always work. *)
+          let t = Time_ns.Ofday.now ~zone:(force Time.Zone.local) in
+          require_equal [%here] (module Time_ns.Ofday) (roundtrip t) t;
+          [%expect {| |}]
+        ;;
+      end)
+    ;;
+
+    let%expect_test "value_exn none" =
+      require_does_raise [%here] ~hide_positions:true (fun () -> value_exn none);
+      [%expect
+        {| (lib/core/src/core_time_ns.ml:LINE:COL "Span.Option.value_exn none") |}]
+    ;;
+
+    let%expect_test "of_span_since_start_of_day" =
+      let convert_and_print v =
+        print_s ([%sexp_of: t] (Time_ns.Ofday.Option.of_span_since_start_of_day v))
+      in
+      convert_and_print Time_ns.Span.min_value_representable;
+      convert_and_print Time_ns.Span.min_value_for_1us_rounding;
+      [%expect {|
+        ()
+        () |}];
+      convert_and_print Time_ns.Span.max_value_representable;
+      convert_and_print Time_ns.Span.max_value_for_1us_rounding;
+      [%expect {|
+        ()
+        () |}];
+      convert_and_print Time_ns.Span.zero;
+      convert_and_print Time_ns.Span.(day / 2.0);
+      convert_and_print Time_ns.Span.day;
+      [%expect
+        {|
+        (00:00:00.000000000)
+        (12:00:00.000000000)
+        (24:00:00.000000000) |}]
     ;;
   end)
 ;;
