@@ -2033,6 +2033,7 @@ struct
       let reinitialize_of_bigstring = Expert.reinitialize_of_bigstring
       let set_bounds_and_buffer = Expert.set_bounds_and_buffer
       let set_bounds_and_buffer_sub = Expert.set_bounds_and_buffer_sub
+      let protect_window = Expert.protect_window
 
       let%test_unit _ =
         let to_bigstring_shared_via_iovec ?pos ?len iobuf =
@@ -2078,6 +2079,25 @@ struct
         let dst = Iobuf.create ~len:0 in
         Expert.set_bounds_and_buffer ~src ~dst;
         src = dst
+      ;;
+
+      let%expect_test "protect window" =
+        let buf =
+          of_string
+            "in-nothing in-long-window in-short-window in-long-window in-nothing"
+        in
+        Iobuf.advance buf 11;
+        Iobuf.resize buf ~len:(Iobuf.length buf - 11);
+        print_s [%sexp (buf : (_, _) Iobuf.Window.Hexdump.Pretty.t)];
+        [%expect {| "in-long-window in-short-window in-long-window" |}];
+        let buf = no_seek buf in
+        protect_window buf ~f:(fun buf ->
+          Iobuf.advance buf 15;
+          Iobuf.resize buf ~len:(Iobuf.length buf - 15);
+          print_s [%sexp (buf : (_, _) Iobuf.Window.Hexdump.Pretty.t)];
+          [%expect {| in-short-window |}]);
+        print_s [%sexp (buf : (_, _) Iobuf.Window.Hexdump.Pretty.t)];
+        [%expect {| "in-long-window in-short-window in-long-window" |}]
       ;;
     end
 

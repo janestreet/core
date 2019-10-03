@@ -272,6 +272,7 @@ let protect_window_and_bounds_1 t x ~f =
     raise exn
 ;;
 
+
 let create ~len =
   if len < 0 then
     failwiths "Iobuf.create got negative len" len [%sexp_of: int];
@@ -289,6 +290,7 @@ let to_stringlike ~(convert : ?pos:int -> ?len:int -> Bigstring.t -> 'a) =
       | None -> length t
     in
     convert t.buf ~pos:t.lo ~len)
+;;
 
 let to_string = to_stringlike ~convert:Bigstring.to_string |> unstage
 let to_bytes  = to_stringlike ~convert:Bigstring.to_bytes  |> unstage
@@ -1108,6 +1110,20 @@ module Expert = struct
   let set_bounds_and_buffer ~src ~dst = set_bounds_and_buffer ~src ~dst
   let set_bounds_and_buffer_sub ~pos ~len ~src ~dst =
     (set_bounds_and_buffer_sub [@inlined]) ~pos ~len ~src ~dst
+
+  let protect_window t ~f =
+    let lo = t.lo in
+    let hi = t.hi in
+    try
+      let result = f t in
+      t.lo <- lo;
+      t.hi <- hi;
+      result
+    with exn ->
+      t.lo <- lo;
+      t.hi <- hi;
+      raise exn
+  ;;
 end
 
 type ok_or_eof = Ok | Eof [@@deriving compare, sexp_of]

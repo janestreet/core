@@ -2276,6 +2276,12 @@ module Cidr = struct
   let base_address t =
     Inet_addr.inet4_addr_of_int32 t.address
 
+  let broadcast_address t =
+    let inverted_netmask =
+      Int32.shift_left 0xffffffffl (32 - t.bits) |> Int32.bit_not
+    in
+    Inet_addr.inet4_addr_of_int32 (Int32.bit_or t.address inverted_netmask)
+
   let netmask_of_bits t =
     Int32.shift_left 0xffffffffl (32 - t.bits) |> Inet_addr.inet4_addr_of_int32
 

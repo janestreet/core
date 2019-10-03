@@ -192,6 +192,7 @@ module Make () = struct
       (fun () -> protect_window_and_bounds_1 t x ~f)
   ;;
 
+
   let of_string s =
     debug "of_string" []
       s [%sexp_of: string] [%sexp_of: (_, _) t]
@@ -222,6 +223,7 @@ module Make () = struct
       [%sexp_of: [`max_lines of int option]]
       [%sexp_of: string]
       (fun () -> to_string_hum ?max_lines t)
+  ;;
 
   let to_bytes ?len t =
     debug "to_bytes" [t]
@@ -969,6 +971,10 @@ module Make () = struct
         (fun () -> Expert.set_bounds_and_buffer ~src ~dst)
     ;;
 
+    let protect_window t ~f =
+      debug "protect_window" [t] t [%sexp_of: (_, _) t] [%sexp_of: _]
+        (fun () -> Expert.protect_window t ~f)
+    ;;
 
   end
 

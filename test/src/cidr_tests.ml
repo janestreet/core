@@ -165,6 +165,20 @@ let%expect_test _ = is_multicast "239.255.255.255"
 let%expect_test _ = is_multicast "240.0.0.0" ~expected:false
 let%expect_test _ = is_multicast "240.0.0.1" ~expected:false
 let%expect_test _ = is_multicast "255.255.255.255" ~expected:false
+
+(* [broadcast_address] tests *)
+let%expect_test "broadcast_address" =
+  let check s =
+    print_endline (Inet_addr.to_string (broadcast_address (Cidr.of_string s)))
+  in
+  check "192.168.0.0/24";
+  [%expect {| 192.168.0.255 |}];
+  check "10.10.10.10/28";
+  [%expect {| 10.10.10.15 |}];
+  check "10.1.2.3/8";
+  [%expect {| 10.255.255.255 |}]
+;;
+
 (* [all_matching_addresses] tests *)
 let%expect_test _ = test_all_matching_addresses "172.16.0.8/32" [ "172.16.0.8" ]
 
