@@ -188,6 +188,12 @@ module type Time_ns = sig
   val t_of_sexp_abs : Sexp.t -> t
   val sexp_of_t_abs : t -> zone:Zone.t -> Sexp.t
 
+  (** Conversion functions that involved Ofday.Zoned.t, exactly analogous to the
+      conversion functions that involve Ofday.t *)
+  val of_date_ofday_zoned : Date.t -> Ofday.Zoned.t -> t
+  val to_date_ofday_zoned : t -> zone:Time.Zone.t -> Date.t * Ofday.Zoned.t
+  val to_ofday_zoned : t -> zone:Time.Zone.t -> Ofday.Zoned.t
+
   val to_string_fix_proto : [ `Utc | `Local ] -> t -> string
   val of_string_fix_proto : [ `Utc | `Local ] -> string -> t
 

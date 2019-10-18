@@ -2727,3 +2727,52 @@ let%expect_test "times with implicit zones" =
     2013-10-07 09:30:00.000000000-04:00
     "did not raise" |}]
 ;;
+
+let%test_unit "ofday_zoned conversion consistency" =
+  let quickcheck_generator =
+    Int.gen_uniform_incl Int.min_value Int.max_value
+    |> Quickcheck.Generator.map ~f:(fun int ->
+      Time_ns.of_span_since_epoch (Time_ns.Span.of_int_ns int))
+  in
+  let utc = Time.Zone.utc in
+  let nyc = Time.Zone.find_exn "America/New_York" in
+  let hkg = Time.Zone.find_exn "Asia/Hong_Kong" in
+  require_does_not_raise [%here] (fun () ->
+    Quickcheck.test quickcheck_generator ~trials:100 ~f:(fun time ->
+      let date_utc = Time_ns.to_date time ~zone:utc in
+      let date_nyc = Time_ns.to_date time ~zone:nyc in
+      let date_hkg = Time_ns.to_date time ~zone:hkg in
+      let ofday_utc = Time_ns.to_ofday time ~zone:utc in
+      let ofday_nyc = Time_ns.to_ofday time ~zone:nyc in
+      let ofday_hkg = Time_ns.to_ofday time ~zone:hkg in
+      let ofday_zoned_utc = Time_ns.to_ofday_zoned time ~zone:utc in
+      let ofday_zoned_nyc = Time_ns.to_ofday_zoned time ~zone:nyc in
+      let ofday_zoned_hkg = Time_ns.to_ofday_zoned time ~zone:hkg in
+      let date_utc2, ofday_zoned_utc2 = Time_ns.to_date_ofday_zoned time ~zone:utc in
+      let date_nyc2, ofday_zoned_nyc2 = Time_ns.to_date_ofday_zoned time ~zone:nyc in
+      let date_hkg2, ofday_zoned_hkg2 = Time_ns.to_date_ofday_zoned time ~zone:hkg in
+      let time_utc = Time_ns.of_date_ofday_zoned date_utc ofday_zoned_utc in
+      let time_nyc = Time_ns.of_date_ofday_zoned date_nyc ofday_zoned_nyc in
+      let time_hkg = Time_ns.of_date_ofday_zoned date_hkg ofday_zoned_hkg in
+      assert (Time.Zone.( = ) (Time_ns.Ofday.Zoned.zone ofday_zoned_utc) utc);
+      assert (Time.Zone.( = ) (Time_ns.Ofday.Zoned.zone ofday_zoned_nyc) nyc);
+      assert (Time.Zone.( = ) (Time_ns.Ofday.Zoned.zone ofday_zoned_hkg) hkg);
+      assert (
+        Time_ns.Ofday.( = ) (Time_ns.Ofday.Zoned.ofday ofday_zoned_utc) ofday_utc);
+      assert (
+        Time_ns.Ofday.( = ) (Time_ns.Ofday.Zoned.ofday ofday_zoned_nyc) ofday_nyc);
+      assert (
+        Time_ns.Ofday.( = ) (Time_ns.Ofday.Zoned.ofday ofday_zoned_hkg) ofday_hkg);
+      assert (
+        Time_ns.Ofday.( = ) (Time_ns.Ofday.Zoned.ofday ofday_zoned_utc2) ofday_utc);
+      assert (
+        Time_ns.Ofday.( = ) (Time_ns.Ofday.Zoned.ofday ofday_zoned_nyc2) ofday_nyc);
+      assert (
+        Time_ns.Ofday.( = ) (Time_ns.Ofday.Zoned.ofday ofday_zoned_hkg2) ofday_hkg);
+      assert (Date.( = ) date_utc2 date_utc);
+      assert (Date.( = ) date_nyc2 date_nyc);
+      assert (Date.( = ) date_hkg2 date_hkg);
+      assert (Time_ns.( = ) time_utc time);
+      assert (Time_ns.( = ) time_nyc time);
+      assert (Time_ns.( = ) time_hkg time)))
+;;

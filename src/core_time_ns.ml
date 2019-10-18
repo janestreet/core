@@ -407,6 +407,17 @@ let sexp_of_t_abs t ~zone =
 
 let sexp_of_t t = sexp_of_t_abs ~zone:(get_sexp_zone ()) t
 
+let of_date_ofday_zoned date ofday_zoned =
+  Ofday.Zoned.to_time_ns ofday_zoned date
+
+let to_date_ofday_zoned t ~zone =
+  let (date,ofday) = to_date_ofday t ~zone in
+  (date, Ofday.Zoned.create ofday zone)
+
+let to_ofday_zoned t ~zone =
+  let ofday = to_ofday t ~zone in
+  Ofday.Zoned.create ofday zone
+
 module Stable0 = struct
   module V1 = struct
     module T = struct

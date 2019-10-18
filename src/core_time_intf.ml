@@ -93,6 +93,12 @@ module type S = sig
       [Time.t].  Note that the [tm_wday], [tm_yday], and [tm_isdst] fields are ignored. *)
   val of_tm : Core_unix.tm -> zone:Zone.t -> t
 
+  (** Conversion functions that involved Ofday.Zoned.t, exactly analogous to the
+      conversion functions that involve Ofday.t *)
+  val of_date_ofday_zoned : Date.t -> Ofday.Zoned.t -> t
+  val to_date_ofday_zoned : t -> zone:Time.Zone.t -> Date.t * Ofday.Zoned.t
+  val to_ofday_zoned : t -> zone:Time.Zone.t -> Ofday.Zoned.t
+
   val to_string_fix_proto : [`Utc | `Local] -> t -> string
   val of_string_fix_proto : [`Utc | `Local] -> string -> t
 

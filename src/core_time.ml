@@ -149,6 +149,17 @@ module Make
     of_date_ofday ~zone date ofday
   ;;
 
+  let of_date_ofday_zoned date ofday_zoned =
+    Ofday.Zoned.to_time ofday_zoned date
+
+  let to_date_ofday_zoned t ~zone =
+    let (date,ofday) = to_date_ofday t ~zone in
+    (date, Ofday.Zoned.create ofday zone)
+
+  let to_ofday_zoned t ~zone =
+    let ofday = to_ofday t ~zone in
+    Ofday.Zoned.create ofday zone
+
   let of_string_fix_proto utc str =
     try
       let expect_length = 21 in  (* = 8 + 1 + 12 *)

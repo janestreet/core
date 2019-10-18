@@ -2811,3 +2811,46 @@ let%expect_test "times with implicit zones" =
     2013-10-07 09:30:00.000000-04:00
     "did not raise" |}]
 ;;
+
+let%test_unit "ofday_zoned conversion consistency" =
+  let quickcheck_generator =
+    Int64.gen_uniform_incl (-10_000_000_000_000_000L) 10_000_000_000_000_000L
+    |> Quickcheck.Generator.map ~f:(fun int64 ->
+      Time.of_span_since_epoch (Span.of_us (Int64.to_float int64)))
+  in
+  let utc = Zone.utc in
+  let nyc = Zone.find_exn "America/New_York" in
+  let hkg = Zone.find_exn "Asia/Hong_Kong" in
+  require_does_not_raise [%here] (fun () ->
+    Quickcheck.test quickcheck_generator ~trials:100 ~f:(fun time ->
+      let date_utc = Time.to_date time ~zone:utc in
+      let date_nyc = Time.to_date time ~zone:nyc in
+      let date_hkg = Time.to_date time ~zone:hkg in
+      let ofday_utc = Time.to_ofday time ~zone:utc in
+      let ofday_nyc = Time.to_ofday time ~zone:nyc in
+      let ofday_hkg = Time.to_ofday time ~zone:hkg in
+      let ofday_zoned_utc = Time.to_ofday_zoned time ~zone:utc in
+      let ofday_zoned_nyc = Time.to_ofday_zoned time ~zone:nyc in
+      let ofday_zoned_hkg = Time.to_ofday_zoned time ~zone:hkg in
+      let date_utc2, ofday_zoned_utc2 = Time.to_date_ofday_zoned time ~zone:utc in
+      let date_nyc2, ofday_zoned_nyc2 = Time.to_date_ofday_zoned time ~zone:nyc in
+      let date_hkg2, ofday_zoned_hkg2 = Time.to_date_ofday_zoned time ~zone:hkg in
+      let time_utc = Time.of_date_ofday_zoned date_utc ofday_zoned_utc in
+      let time_nyc = Time.of_date_ofday_zoned date_nyc ofday_zoned_nyc in
+      let time_hkg = Time.of_date_ofday_zoned date_hkg ofday_zoned_hkg in
+      assert (Zone.( = ) (Ofday.Zoned.zone ofday_zoned_utc) utc);
+      assert (Zone.( = ) (Ofday.Zoned.zone ofday_zoned_nyc) nyc);
+      assert (Zone.( = ) (Ofday.Zoned.zone ofday_zoned_hkg) hkg);
+      assert (Ofday.( = ) (Ofday.Zoned.ofday ofday_zoned_utc) ofday_utc);
+      assert (Ofday.( = ) (Ofday.Zoned.ofday ofday_zoned_nyc) ofday_nyc);
+      assert (Ofday.( = ) (Ofday.Zoned.ofday ofday_zoned_hkg) ofday_hkg);
+      assert (Ofday.( = ) (Ofday.Zoned.ofday ofday_zoned_utc2) ofday_utc);
+      assert (Ofday.( = ) (Ofday.Zoned.ofday ofday_zoned_nyc2) ofday_nyc);
+      assert (Ofday.( = ) (Ofday.Zoned.ofday ofday_zoned_hkg2) ofday_hkg);
+      assert (Date.( = ) date_utc2 date_utc);
+      assert (Date.( = ) date_nyc2 date_nyc);
+      assert (Date.( = ) date_hkg2 date_hkg);
+      assert (Time.( = ) time_utc time);
+      assert (Time.( = ) time_nyc time);
+      assert (Time.( = ) time_hkg time)))
+;;
