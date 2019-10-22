@@ -938,6 +938,12 @@ module Make () = struct
     let lo     = Expert.lo
     let lo_min = Expert.lo_min
 
+    let set_buf    = Expert.set_buf
+    let set_hi_max = Expert.set_hi_max
+    let set_hi     = Expert.set_hi
+    let set_lo     = Expert.set_lo
+    let set_lo_min = Expert.set_lo_min
+
     let to_bigstring_shared ?pos ?len t =
       debug "to_bigstring_shared" [t] (`pos pos, `len len)
         [%sexp_of: [`pos of int option] * [`len of int option]]

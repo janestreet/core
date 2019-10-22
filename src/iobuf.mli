@@ -600,6 +600,13 @@ module Expert: sig
   val lo     : (_, _) t -> int
   val lo_min : (_, _) t -> int
 
+  (** These setters directly set fields in [t] without checking any invariants. *)
+  val set_buf    : (_, _) t -> Bigstring.t -> unit
+  val set_hi_max : (_, _) t -> int -> unit
+  val set_hi     : (_, _) t -> int -> unit
+  val set_lo     : (_, _) t -> int -> unit
+  val set_lo_min : (_, _) t -> int -> unit
+
   (** [to_bigstring_shared t] and [to_iobuf_shared t] allocate new wrappers around the
       storage of [buf t], relative to [t]'s current bounds.
 

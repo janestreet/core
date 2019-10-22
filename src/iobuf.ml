@@ -1059,6 +1059,12 @@ module Expert = struct
   let lo t     = t.lo
   let lo_min t = t.lo_min
 
+  let set_buf t     buf    = t.buf    <- buf
+  let set_hi_max t  hi_max = t.hi_max <- hi_max
+  let set_hi t      hi     = t.hi     <- hi
+  let set_lo t      lo     = t.lo     <- lo
+  let set_lo_min t  lo_min = t.lo_min <- lo_min
+
   let to_bigstring_shared ?pos ?len t =
     let pos, len =
       Ordered_collection_common.get_pos_len_exn () ?pos ?len
