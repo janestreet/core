@@ -7,16 +7,24 @@ type t [@@deriving sexp_of]
 
 (** {6 Thread creation and termination} *)
 
-val create : ('a -> 'b) -> 'a -> t
-(** [Thread.create funct arg] creates a new thread of control, in which the
-    function application [funct arg] is executed concurrently with the other
-    threads of the program. The application of [Thread.create] returns the
-    handle of the newly created thread. The new thread terminates when the
-    application [funct arg] returns, either normally or by raising an uncaught
-    exception. In the latter case, the exception is printed on standard error,
-    but not propagated back to the parent thread. Similarly, the result of the
-    application [funct arg] is discarded and not directly accessible to the
-    parent thread. *)
+val create
+  :  on_uncaught_exn:[ `Kill_whole_process | `Print_to_stderr ]
+  -> ('a -> unit)
+  -> 'a
+  -> t
+(** [Thread.create funct arg] creates a new thread of control, in which the function
+    application [funct arg] is executed concurrently with the other threads of the
+    program. The application of [Thread.create] returns the handle of the newly created
+    thread.
+
+    The new thread terminates when the application [funct arg] returns, either normally or
+    by raising an uncaught exception.
+
+    In the latter case, behavior is controlled by [on_uncaught_exn]. If [`Print_to_stderr]
+    is selected, the exception is printed on standard error, but not propagated back to
+    the parent thread.  If [`Kill_whole_process] is selected, the exception is printed to
+    stderr and then the process exits with code 1 (after having run [at_exit] callbacks,
+    etc.). *)
 
 val self : unit -> t
 (** Return the thread currently executing. *)

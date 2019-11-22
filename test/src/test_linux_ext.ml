@@ -164,6 +164,7 @@ let%test_module _ =
           let r_len = 1_000 in
           let read =
             Thread.create
+              ~on_uncaught_exn:`Print_to_stderr
               (fun () ->
                  let nr = Bigstring.read r (Bigstring.create r_len) ~pos:0 ~len:r_len in
                  assert (nr > 0 && nr <= r_len);

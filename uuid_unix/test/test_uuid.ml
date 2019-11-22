@@ -27,8 +27,18 @@ module Test = struct
   let thread_test () =
     let res1 = ref [] in
     let res2 = ref [] in
-    let thread1 = Thread.create (fun () -> res1 := generate test_size) () in
-    let thread2 = Thread.create (fun () -> res2 := generate test_size) () in
+    let thread1 =
+      Thread.create
+        (fun () -> res1 := generate test_size)
+        ~on_uncaught_exn:`Print_to_stderr
+        ()
+    in
+    let thread2 =
+      Thread.create
+        (fun () -> res2 := generate test_size)
+        ~on_uncaught_exn:`Print_to_stderr
+        ()
+    in
     Thread.join thread1;
     Thread.join thread2;
     no_collisions (List.rev_append !res1 !res2)

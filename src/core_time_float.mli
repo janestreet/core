@@ -75,7 +75,7 @@ module Stable : sig
   end
 
   module Zone : sig
-    module V1 : Stable_without_comparator with type t = Core_zone.Stable.V1.t
+    module V1 : Stable_without_comparator with type t = Timezone.Stable.V1.t
 
     module Full_data : sig
       module V1 : Stable_without_comparator

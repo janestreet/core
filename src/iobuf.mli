@@ -367,9 +367,14 @@ module Poke : sig
   (** [decimal t ~pos i] returns the number of bytes written at [pos]. *)
   val decimal : (read_write, 'w) t -> pos:int -> int -> int
 
+  (** As [bin_prot] but returns the number of bytes written. *)
+  val bin_prot_size
+    : 'a Bin_prot.Type_class.writer -> (read_write, _) t -> pos:int -> 'a -> int
+
   include Accessors_write
     with type ('a, 'd, 'w) t = (read_write, 'w) t -> pos:int -> 'a -> unit
     with type 'a bin_prot := 'a Bin_prot.Type_class.writer
+
 end
 
 (** [Unsafe] has submodules that are like their corresponding module, except with no range
@@ -633,4 +638,27 @@ module Expert: sig
       bounds. Mixing this with functions like [set_bounds_and_buffer] or [narrow] is
       unsafe; you should not modify anyything but the window inside [f]. *)
   val protect_window : ('rw, _) t -> f:(('rw, seek) t -> 'a) -> 'a
+
+  (** [fillf_float t ~c_format float] attempts to fill a string representation of a float
+      into an iobuf at the current position. The representation is specified by standard C
+      [printf] formatting codes.
+
+      The highest available byte of the window is unusable and will be set to 0 in the
+      case that a properly formatted string would otherwise fully fill the window.
+
+      If there is enough room in (window - 1) to format the float as specified then [`Ok]
+      is returned and the window is advanced past the written bytes.
+
+      If there is not enough room in (window - 1) to format as specified then [`Truncated]
+      is returned.
+
+      If C [snprintf] indicates a format error then [`Format_error] is returned.
+
+      Operation is unsafe if a format code not intended for a double precision float is
+      used (e.g., %s) or if more than one format specifier is provided, etc. *)
+  val fillf_float
+    : (read_write, seek) t
+    -> c_format:string
+    -> float
+    -> [ `Ok | `Truncated | `Format_error ]
 end

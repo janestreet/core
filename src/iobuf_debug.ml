@@ -730,6 +730,11 @@ module Make () = struct
       debug "Poke.bin_prot" [t] (`pos pos) [%sexp_of: [ `pos of int ]]
         [%sexp_of: unit]
         (fun () -> bin_prot writer t a ~pos)
+
+    let bin_prot_size writer t ~pos a =
+      debug "Poke.bin_prot_size" [t] (`pos pos) [%sexp_of: [ `pos of int ]]
+        [%sexp_of: int]
+        (fun () -> bin_prot_size writer t a ~pos)
   end
 
   let consume_bin_prot t r =
@@ -944,6 +949,8 @@ module Make () = struct
     let set_lo     = Expert.set_lo
     let set_lo_min = Expert.set_lo_min
 
+    let fillf_float = Expert.fillf_float
+
     let to_bigstring_shared ?pos ?len t =
       debug "to_bigstring_shared" [t] (`pos pos, `len len)
         [%sexp_of: [`pos of int option] * [`len of int option]]
@@ -982,6 +989,11 @@ module Make () = struct
         (fun () -> Expert.protect_window t ~f)
     ;;
 
+    let fillf_float t ~c_format value =
+      debug "fillf_float" [t] (`c_format c_format, `value value)
+        [%sexp_of: [ `c_format of string ] * [ `value of float ]]
+        [%sexp_of: [ `Ok | `Truncated | `Format_error ]]
+        (fun () -> fillf_float t ~c_format value)
   end
 
   type nonrec ok_or_eof = ok_or_eof = Ok | Eof [@@deriving compare, sexp_of]
@@ -1471,6 +1483,11 @@ module Make () = struct
         debug "Unsafe.Poke.bin_prot" [t] (`pos pos) [%sexp_of: [ `pos of int ]]
           [%sexp_of: unit]
           (fun () -> bin_prot writer t a ~pos)
+
+      let bin_prot_size writer t ~pos a =
+        debug "Unsafe.Poke.bin_prot_size" [t] (`pos pos) [%sexp_of: [ `pos of int ]]
+          [%sexp_of: int]
+          (fun () -> bin_prot_size writer t a ~pos)
     end
   end
 

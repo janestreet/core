@@ -8,15 +8,17 @@ let sexp_of_t t = [%message "thread" ~id:(id t : int)]
 
 let create_should_raise = ref false
 
-let create f arg =
+let create ~on_uncaught_exn f arg =
   if !create_should_raise
   then raise_s [%message "Thread.create requested to raise"];
   threads_have_been_created := true;
-  let f arg =
-    try f arg
-    with x ->
-      Printf.eprintf "%s\n%!" (Exn.to_string x);
-      raise x
+  let f arg : unit =
+    let exit =
+      match on_uncaught_exn with
+      | `Print_to_stderr -> false
+      | `Kill_whole_process -> true
+    in
+    Exn.handle_uncaught ~exit (fun () -> f arg)
   in
   create f arg
 ;;

@@ -884,7 +884,9 @@ module Poke = struct
       ~len:(match len with None -> Bigstring.length src - str_pos | Some len -> len)
   ;;
 
-  let bin_prot writer t ~pos a = write_bin_prot writer t ~pos a |> (ignore : int -> unit)
+  let bin_prot_size = write_bin_prot
+
+  let bin_prot writer t ~pos a = ignore (bin_prot_size writer t ~pos a : int)
 
   open Bigstring
 
@@ -1113,9 +1115,8 @@ module Expert = struct
       -> unit
     = Fields.Direct.set_all_mutable_fields
 
-  let set_bounds_and_buffer ~src ~dst = set_bounds_and_buffer ~src ~dst
-  let set_bounds_and_buffer_sub ~pos ~len ~src ~dst =
-    (set_bounds_and_buffer_sub [@inlined]) ~pos ~len ~src ~dst
+  let set_bounds_and_buffer = set_bounds_and_buffer
+  let set_bounds_and_buffer_sub = set_bounds_and_buffer_sub
 
   let protect_window t ~f =
     let lo = t.lo in
@@ -1129,6 +1130,33 @@ module Expert = struct
       t.lo <- lo;
       t.hi <- hi;
       raise exn
+  ;;
+
+  external unsafe_pokef_float
+    :  (read_write, _) t
+    -> c_format:string
+    -> max_length:int
+    -> (float[@unboxed])
+    -> int
+    = "iobuf_unsafe_pokef_double_bytecode" "iobuf_unsafe_pokef_double"
+  [@@noalloc]
+
+  let fillf_float t ~c_format value =
+    let limit = length t in
+    let result =
+      unsafe_pokef_float
+        t
+        ~c_format
+        ~max_length:(length t)
+        value
+    in
+    if result >= limit
+    then `Truncated
+    else if result < 0
+    then `Format_error
+    else (
+      unsafe_advance t result;
+      `Ok)
   ;;
 end
 
@@ -1366,6 +1394,7 @@ module Unsafe = struct
   end
 
   module Fill = struct
+
     type ('a, 'd, 'w) t = ('a, 'd, 'w) Fill.t
 
     (* copy with unsafe pos *)
@@ -1568,6 +1597,7 @@ module Unsafe = struct
     ;;
 
     let bin_prot = Poke.bin_prot
+    let bin_prot_size = Poke.bin_prot_size
 
     open Bigstring
 

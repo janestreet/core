@@ -279,7 +279,7 @@ module Ofday = struct
         module Bin_repr = struct
           type t =
             { ofday : Time_ns.Stable.Ofday.V1.t;
-              zone  : Core_zone.Stable.V1.t;
+              zone  : Timezone.Stable.V1.t;
             } [@@deriving bin_io]
         end
 
@@ -293,7 +293,7 @@ module Ofday = struct
               create repr.ofday repr.zone
           end)
 
-        type sexp_repr = Time_ns.Stable.Ofday.V1.t * Core_zone.Stable.V1.t
+        type sexp_repr = Time_ns.Stable.Ofday.V1.t * Timezone.Stable.V1.t
         [@@deriving sexp]
 
         let sexp_of_t t = [%sexp_of: sexp_repr] (ofday t, zone t)

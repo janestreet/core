@@ -19,7 +19,7 @@ module type S = sig
   module Zone  : sig
     include module type of struct include Time.Zone end [@ocaml.remove_aliases]
 
-    include Core_zone.Extend_zone with type t := t
+    include Timezone.Extend_zone with type t := t
 
     val arg_type : t Core_kernel.Command.Arg_type.t
   end

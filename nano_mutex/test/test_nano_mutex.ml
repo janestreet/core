@@ -19,6 +19,7 @@ let%test_unit _ =
         let am_holding_lock = ref false in
         let one_thread () =
           Thread.create
+            ~on_uncaught_exn:`Print_to_stderr
             (fun () ->
                for _ = 1 to num_iterations do
                  lock_exn l;

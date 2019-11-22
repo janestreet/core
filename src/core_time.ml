@@ -61,8 +61,7 @@ module Make
   module Zone = struct
     include Time.Zone
 
-    include (Core_zone : Core_zone.Extend_zone with type t := t)
-
+    include (Timezone : Timezone.Extend_zone with type t := t)
     let arg_type = Core_kernel.Command.Arg_type.create of_string
   end
 

@@ -1126,6 +1126,21 @@ struct
             (Int.to_string x)
             (Iobuf.to_string (Iobuf.sub_shared ~pos t) ~len))
       ;;
+
+      let bin_prot_size = Poke.bin_prot_size
+
+      let%expect_test "bin prot size" =
+        let buf = of_string (String.make 32 'Z') in
+        let string = "a string here" in
+        let len = bin_prot_size String.bin_writer_t buf ~pos:3 string in
+        let expected = String.bin_size_t string in
+        assert (len = expected);
+        print_s [%sexp (buf : (_, _) Iobuf.Window.Hexdump.Pretty.t)];
+        [%expect
+          {|
+            ("00000000  5a 5a 5a 0d 61 20 73 74  72 69 6e 67 20 68 65 72  |ZZZ.a string her|"
+             "00000010  65 5a 5a 5a 5a 5a 5a 5a  5a 5a 5a 5a 5a 5a 5a 5a  |eZZZZZZZZZZZZZZZ|") |}]
+      ;;
     end
 
     let%test_unit _ =
@@ -2039,6 +2054,7 @@ struct
       let set_bounds_and_buffer = Expert.set_bounds_and_buffer
       let set_bounds_and_buffer_sub = Expert.set_bounds_and_buffer_sub
       let protect_window = Expert.protect_window
+      let fillf_float = Expert.fillf_float
 
       let%test_unit _ =
         let to_bigstring_shared_via_iovec ?pos ?len iobuf =
@@ -2103,6 +2119,22 @@ struct
           [%expect {| in-short-window |}]);
         print_s [%sexp (buf : (_, _) Iobuf.Window.Hexdump.Pretty.t)];
         [%expect {| "in-long-window in-short-window in-long-window" |}]
+      ;;
+
+      let%expect_test "fillf_float.Ok" =
+        let t = Iobuf.create ~len:32 in
+        assert (fillf_float t ~c_format:"%f" Float.pi = `Ok);
+        Iobuf.flip_lo t;
+        print_endline (to_string t);
+        [%expect {| 3.141593 |}]
+      ;;
+
+      let%expect_test "fillf_float.Truncated" =
+        let t = Iobuf.create ~len:5 in
+        assert (fillf_float t ~c_format:"%f" Float.pi = `Truncated);
+        Iobuf.flip_lo t;
+        print_endline (to_string t);
+        [%expect {| |}]
       ;;
     end
 
@@ -2287,6 +2319,7 @@ struct
                      (sendto t send_fd addr)
                      ~syscall_name:sendto_name);
                  [%test_pred: (_, _) Iobuf.Hexdump.t] Iobuf.is_empty t))
+            ~on_uncaught_exn:`Print_to_stderr
             ()
         in
         iter_examples ~f:(fun t string ~pos:_ ->

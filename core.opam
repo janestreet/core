@@ -15,6 +15,7 @@ depends: [
   "jst-config"
   "ppx_jane"
   "sexplib"
+  "timezone"
   "base-threads"
   "dune"         {>= "1.5.1"}
   "spawn"        {>= "v0.12"}

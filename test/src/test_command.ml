@@ -600,3 +600,77 @@ let%expect_test "[and_arg_name]" =
   test [ "foo"; "bar" ];
   [%expect {| (raised ("[and_arg_name] expects exactly one name, got" (-bar -foo))) |}]
 ;;
+
+let truncate_long_lines output =
+  String.split output ~on:'\n'
+  |> List.map ~f:(fun line ->
+    if String.length line > 80 then String.prefix line 80 ^ " ..." else line)
+  |> String.concat ~sep:"\n"
+;;
+
+let%expect_test "double-dash built-in flags" =
+  let command =
+    let group name cmd = Command.group ~summary:"" [ name, cmd ] in
+    Command.basic
+      ~summary:""
+      (let%map_open.Command () = return () in
+       fun () -> print_endline "hello world")
+    |> group "bird"
+    |> group "blue"
+  in
+  let run_test_command args =
+    Command.run ~argv:("__exe_name__" :: args) command;
+    [%expect.output]
+  in
+  let run_with_both_flags args flag =
+    let output1 = run_test_command (args @ [ "-" ^ flag ]) in
+    let output2 = run_test_command (args @ [ "--" ^ flag ]) in
+    print_string (truncate_long_lines output1);
+    require_compare_equal [%here] (module String) output1 output2
+  in
+  run_with_both_flags [] "help";
+  [%expect
+    {|
+      __exe_name__ SUBCOMMAND
+
+    === subcommands ===
+
+      blue
+      version  print version information
+      help     explain a given subcommand (perhaps recursively)
+
+    (command.ml.Exit_called (status 0)) |}];
+  run_with_both_flags [] "build-info";
+  [%expect
+    {|
+    ((username"")(hostname"")(kernel"")(build_time(1969-12-31 19:00:00.000000-05:00) ...
+    (command.ml.Exit_called (status 0)) |}];
+  run_with_both_flags [] "version";
+  [%expect {|
+    NO_VERSION_UTIL
+    (command.ml.Exit_called (status 0)) |}];
+  run_with_both_flags [ "blue" ] "help";
+  [%expect
+    {|
+      __exe_name__ blue SUBCOMMAND
+
+    === subcommands ===
+
+      bird
+      help  explain a given subcommand (perhaps recursively)
+
+    (command.ml.Exit_called (status 0))|}];
+  run_with_both_flags [ "blue"; "bird" ] "help";
+  [%expect
+    {|
+      __exe_name__ blue bird
+
+    === flags ===
+
+      [-help]  print this help text and exit
+               (alias: -?)
+
+    (command.ml.Exit_called (status 0))|}];
+  run_test_command [ "blue"; "bird" ] |> print_string;
+  [%expect {| hello world |}]
+;;

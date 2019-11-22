@@ -12,6 +12,8 @@
 #include <caml/bigarray.h>
 
 #include <errno.h>
+#include <assert.h>
+#include <stdio.h>
 
 #ifdef JSC_RECVMMSG
 
@@ -136,3 +138,25 @@ iobuf_recvmmsg_assume_fd_is_nonblocking_stub
 }
 
 #endif  /* JSC_RECVMMSG */
+
+/* direct sprintf formatting */
+
+CAMLprim value
+iobuf_unsafe_pokef_double
+(value v_iobuf, value v_fmt, value v_limit, double d_val)
+{
+  value v_lo;
+  char* buf;
+  int offset;
+
+  v_lo = Field(v_iobuf, iobuf_lo);
+  buf = get_bstr(Field(v_iobuf, iobuf_buf), v_lo);
+  offset = snprintf(buf, Int_val(v_limit), String_val(v_fmt), d_val);
+
+  return Val_int(offset);
+}
+
+CAMLprim value iobuf_unsafe_pokef_double_bytecode(value* vals, value nvals) {
+  assert(nvals = 4);
+  return iobuf_unsafe_pokef_double(vals[0], vals[1], vals[2], Double_val(vals[3]));
+}

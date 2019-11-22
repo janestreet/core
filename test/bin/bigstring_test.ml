@@ -116,11 +116,13 @@ let socketpair () =
 let fdpair_test ~n fdpair sender receiver bs =
   try
     let (read,write) = fdpair () in
-    let sth = Thread.create
-                (fun () ->
-                   try sender bs write
-                   with e -> eprintf "ERROR: %s" (Exn.to_string e))
-                ()
+    let sth =
+      Thread.create
+        ~on_uncaught_exn:`Print_to_stderr
+        (fun () ->
+           try sender bs write
+           with e -> eprintf "ERROR: %s" (Exn.to_string e))
+        ()
     in
     receiver ~n bs read;
     Thread.join sth;
