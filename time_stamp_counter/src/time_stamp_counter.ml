@@ -385,12 +385,7 @@ end
 [%%endif]
 
 module Span = struct
-  include (
-    Int63 :
-      module type of struct
-      include Int63
-    end
-    with module Private := Int63.Private)
+  include Int63
 
   module Private = struct
     let of_int63 t = t

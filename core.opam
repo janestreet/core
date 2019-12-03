@@ -17,7 +17,7 @@ depends: [
   "sexplib"
   "timezone"
   "base-threads"
-  "dune"         {>= "1.5.1"}
+  "dune"         {>= "2.0.0"}
   "spawn"        {>= "v0.12"}
 ]
 synopsis: "Industrial strength alternative to OCaml's standard library"
