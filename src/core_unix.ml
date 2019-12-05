@@ -2070,7 +2070,7 @@ module Inet_addr0 = struct
       module T1 = struct
         include T0
         include Sexpable.Of_stringable (T0)
-        include Binable.Of_stringable  (T0)
+        include (Binable.Of_stringable_without_uuid [@alert "-legacy"])  (T0)
       end
       include T1
       include Comparable.Make(T1)

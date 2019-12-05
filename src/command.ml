@@ -14,10 +14,12 @@ module Path = Private.Path
 
 module For_unix = Private.For_unix (struct
     module Signal = Signal
-    module Sys = Core_sys
     module Thread = Core_thread
     module Time = Time
-    module Unix = Unix
+    module Unix = struct
+      include Unix
+      let unsafe_getenv = Core_sys.unsafe_getenv
+    end
     module Version_util = Version_util
   end)
 

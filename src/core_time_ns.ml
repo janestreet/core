@@ -283,7 +283,7 @@ module Ofday = struct
             } [@@deriving bin_io]
         end
 
-        include Binable.Of_binable (Bin_repr) (struct
+        include (Binable.Of_binable_without_uuid [@alert "-legacy"]) (Bin_repr) (struct
             type nonrec t = t
 
             let to_binable t : Bin_repr.t =
