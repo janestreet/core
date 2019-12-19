@@ -39,7 +39,7 @@ let redirect_fd ~mode ~src ~dst =
   | `Do_not_redirect -> ()
   | #Fd_redirection.do_redirect as src ->
     let redirect src =
-      Unix.dup2 ~src ~dst;
+      Unix.dup2 ~src ~dst ();
       Unix.close src;
     in
     let open_dev_null () = Unix.openfile "/dev/null" ~mode:[mode] ~perm:0o777 in

@@ -2309,7 +2309,7 @@ struct
           Thread.create
             (fun () ->
                let send_fd =
-                 Unix.(socket ~domain:PF_INET ~kind:SOCK_DGRAM ~protocol:0)
+                 Unix.(socket ~domain:PF_INET ~kind:SOCK_DGRAM ~protocol:0 ())
                in
                iter_examples ~f:(fun t string ~pos:_ ->
                  Fill.stringo t string;
@@ -2330,7 +2330,7 @@ struct
     ;;
 
     let sends_with_recvfrom recvfrom =
-      let fd = Unix.(socket ~domain:PF_INET ~kind:SOCK_DGRAM ~protocol:0) in
+      let fd = Unix.(socket ~domain:PF_INET ~kind:SOCK_DGRAM ~protocol:0 ()) in
       Unix.(setsockopt fd SO_REUSEADDR true);
       Unix.(bind fd ~addr:(ADDR_INET (Inet_addr.bind_any, 0)));
       Unix.set_nonblock fd;

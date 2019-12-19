@@ -21,7 +21,7 @@ let test =
 
     "mcast_sockopts" >::
     (fun () ->
-       let sock = Unix.socket ~domain:Unix.PF_INET ~kind:Unix.SOCK_DGRAM ~protocol:0 in
+       let sock = Unix.socket ~domain:Unix.PF_INET ~kind:Unix.SOCK_DGRAM ~protocol:0 () in
        Unix.set_mcast_ttl sock 2;
        assert ((Unix.get_mcast_ttl sock) = 2);
        Unix.set_mcast_ttl sock 4;

@@ -803,11 +803,19 @@ val access_exn
 
 (** Return a new file descriptor referencing the same file as
     the given descriptor. *)
-val dup : File_descr.t -> File_descr.t
+val dup
+  : ?close_on_exec:bool  (** default: false *)
+  -> File_descr.t
+  -> File_descr.t
 
 (** [dup2 ~src ~dst] duplicates [src] to [dst], closing [dst] if already
     opened. *)
-val dup2 : src:File_descr.t -> dst:File_descr.t -> unit
+val dup2
+  : ?close_on_exec:bool (** default: false *)
+  -> src:File_descr.t
+  -> dst:File_descr.t
+  -> unit
+  -> unit
 
 (** Set the ``non-blocking'' flag on the given descriptor.
     When the non-blocking flag is set, reading on a descriptor
@@ -879,7 +887,10 @@ val closedir : dir_handle -> unit
 (** Create a pipe. The first component of the result is opened
     for reading, that's the exit to the pipe. The second component is
     opened for writing, that's the entrance to the pipe. *)
-val pipe : unit -> File_descr.t * File_descr.t
+val pipe
+  : ?close_on_exec:bool (** default: false *)
+  -> unit
+  -> File_descr.t * File_descr.t
 
 (** Create a named pipe with the given permissions. *)
 val mkfifo : string -> perm:file_perm -> unit
@@ -1421,19 +1432,30 @@ val domain_of_sockaddr : sockaddr -> socket_domain
 (** Create a new socket in the given domain, and with the
     given kind. The third argument is the protocol type; 0 selects
     the default protocol for that kind of sockets. *)
-val socket : domain:socket_domain -> kind:socket_type -> protocol:int -> File_descr.t
+val socket
+  : ?close_on_exec:bool (** default: false *)
+  -> domain:socket_domain
+  -> kind:socket_type
+  -> protocol:int
+  -> unit
+  -> File_descr.t
 
 (** Create a pair of unnamed sockets, connected together. *)
 val socketpair
-  :  domain:socket_domain
+  : ?close_on_exec:bool (** default: false *)
+  -> domain:socket_domain
   -> kind:socket_type
   -> protocol:int
+  -> unit
   -> File_descr.t * File_descr.t
 
 (** Accept connections on the given socket. The returned descriptor
     is a socket connected to the client; the returned address is
     the address of the connecting client. *)
-val accept : File_descr.t -> File_descr.t * sockaddr
+val accept
+  : ?close_on_exec:bool  (** default: false *)
+  -> File_descr.t
+  -> File_descr.t * sockaddr
 
 (** Bind a socket to an address. *)
 val bind : File_descr.t -> addr:sockaddr -> unit
@@ -2164,7 +2186,8 @@ val sysconf_exn : sysconf -> int64
     the name unique.  Unlike C's [mkstemp], [prefix] should not include six X's at the
     end.
 
-    The file descriptor will have close-on-exec flag set if O_CLOEXEC flag is supported.
+    The file descriptor will have close-on-exec flag set, atomically when the O_CLOEXEC
+    flag is supported.
 
     @raise Unix_error on errors.
 *)

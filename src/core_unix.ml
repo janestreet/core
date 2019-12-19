@@ -8,10 +8,6 @@ open! Import
 
 module Time_ns = Core_kernel.Core_kernel_private.Time_ns_alternate_sexp
 
-(* 4.05 adds a [?cloexec] argument to all functions. It cannot be ignored for the
-   functions with labels, so to keep the code compatible with all supported versions of
-   OCaml, we sometimes use the non-labelled versions. *)
-module UnixNoLabels = Unix
 module Unix = UnixLabels
 
 let ( ^/ ) = Core_filename.concat
@@ -590,6 +586,7 @@ let len_r len = ("len", Int.sexp_of_t len)
 let uid_r uid = ("uid", Int.sexp_of_t uid)
 let gid_r gid = ("gid", Int.sexp_of_t gid)
 let fd_r fd = ("fd", File_descr.sexp_of_t fd)
+let close_on_exec_r boolopt = ("close_on_exec", [%sexp (boolopt : bool option)])
 let dir_handle_r handle =
   let fd =
     try File_descr.sexp_of_t (dirfd handle)
@@ -1318,12 +1315,16 @@ let access_exn filename perm = Result.ok_exn (access filename perm)
 external remove : string -> unit = "core_unix_remove"
 let remove = unary_filename remove
 
-let dup = unary_fd Unix.dup
+let dup ?close_on_exec fd =
+  improve
+    (fun () -> Unix.dup ?cloexec:close_on_exec fd)
+    (fun () -> [fd_r fd; close_on_exec_r close_on_exec])
 
-let dup2 ~src ~dst =
-  improve (fun () -> UnixNoLabels.dup2 src dst)
+let dup2 ?close_on_exec ~src ~dst () =
+  improve (fun () -> Unix.dup2 ?cloexec:close_on_exec ~src ~dst)
     (fun () -> [("src", File_descr.sexp_of_t src);
-                ("dst", File_descr.sexp_of_t dst)])
+                ("dst", File_descr.sexp_of_t dst);
+                close_on_exec_r close_on_exec])
 ;;
 
 let set_nonblock = unary_fd Unix.set_nonblock
@@ -1498,7 +1499,7 @@ let closedir = (* Non-intr *)
   unary_dir_handle (fun dh ->
     try Unix.closedir dh with | Invalid_argument _ -> ())
 
-let pipe () = UnixNoLabels.pipe ()
+let pipe ?close_on_exec () = Unix.pipe ?cloexec:close_on_exec ()
 
 let mkfifo name ~perm =
   improve (fun () -> Unix.mkfifo name ~perm)
@@ -2412,22 +2413,23 @@ let domain_of_sockaddr = Unix.domain_of_sockaddr
 
 let addr_r addr = ("addr", sexp_of_sockaddr addr)
 
-let socket_or_pair f ~domain ~kind ~protocol =
-  improve (fun () -> f domain kind protocol)
+let socket_or_pair f ?close_on_exec ~domain ~kind ~protocol () =
+  improve (fun () -> f ?cloexec:close_on_exec ~domain ~kind ~protocol)
     (fun () -> [("domain", sexp_of_socket_domain domain);
                 ("kind", sexp_of_socket_type kind);
-                ("protocol", Int.sexp_of_t protocol)])
+                ("protocol", Int.sexp_of_t protocol);
+                close_on_exec_r close_on_exec])
 ;;
 
-let socket =
-  socket_or_pair
-    (fun domain kind protocol -> UnixNoLabels.socket domain kind protocol)
-let socketpair =
-  socket_or_pair
-    (fun domain kind protocol -> UnixNoLabels.socketpair domain kind protocol)
+let socket = socket_or_pair Unix.socket
+let socketpair = socket_or_pair Unix.socketpair
 
-let accept fd =
-  let fd, addr = unary_fd Unix.accept fd in
+let accept ?close_on_exec fd =
+  let fd, addr =
+    improve
+      (fun () -> Unix.accept ?cloexec:close_on_exec fd)
+      (fun () -> [fd_r fd; close_on_exec_r close_on_exec])
+  in
   let addr =
     match addr with
     | ADDR_UNIX _ -> ADDR_UNIX ""

@@ -23,7 +23,7 @@ let%test_module _ =
       match unsafe_recvmmsg_assume_fd_is_nonblocking with
       | Error _ -> ()
       | Ok unsafe_recvmmsg_assume_fd_is_nonblocking ->
-        let fd = Unix.socket ~domain:PF_INET ~kind:SOCK_DGRAM ~protocol:0 in
+        let fd = Unix.socket ~domain:PF_INET ~kind:SOCK_DGRAM ~protocol:0 () in
         expect_invalid_argument ?msg (fun () ->
           unsafe_recvmmsg_assume_fd_is_nonblocking fd [||] count None [||])
     ;;

@@ -111,7 +111,7 @@ let really_read_test ~n bs fd =
 ;;
 
 let socketpair () =
-  Unix.socketpair ~domain:Unix.PF_UNIX ~kind:Unix.SOCK_STREAM ~protocol:0
+  Unix.socketpair ~domain:Unix.PF_UNIX ~kind:Unix.SOCK_STREAM ~protocol:0 ()
 
 let fdpair_test ~n fdpair sender receiver bs =
   try

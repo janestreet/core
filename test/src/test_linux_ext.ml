@@ -74,7 +74,7 @@ let%test_module _ =
     module Flags = Epoll.Flags
 
     let udp_listener ~port =
-      let sock = Unix.socket ~domain:Unix.PF_INET ~kind:Unix.SOCK_DGRAM ~protocol:0 in
+      let sock = Unix.socket ~domain:Unix.PF_INET ~kind:Unix.SOCK_DGRAM ~protocol:0 () in
       let iaddr = Unix.ADDR_INET (Unix.Inet_addr.localhost, port) in
       Unix.setsockopt sock Unix.SO_REUSEADDR true;
       Unix.bind sock ~addr:iaddr;
@@ -201,7 +201,9 @@ let with_epoll ~f =
     ((Or_error.ok_exn Epoll.create) ~num_file_descrs:1024 ~max_ready_events:256)
 ;;
 
-let make_socket () = Unix.socket ~domain:Unix.PF_INET ~kind:Unix.SOCK_DGRAM ~protocol:0
+let make_socket () =
+  Unix.socket ~domain:Unix.PF_INET ~kind:Unix.SOCK_DGRAM ~protocol:0 ()
+;;
 
 let%expect_test "[Epoll.set] has allocation limits" =
   with_epoll ~f:(fun epset ->
