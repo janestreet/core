@@ -420,7 +420,7 @@ let to_ofday_zoned t ~zone =
 
 module Stable0 = struct
   module V1 = struct
-    module T = struct
+    module T0 = struct
       (* We use the unstable sexp here, and rely on comprehensive tests of the stable
          conversion to make sure we don't change it. *)
       type nonrec t = t [@@deriving bin_io, compare, sexp, hash]
@@ -428,9 +428,13 @@ module Stable0 = struct
       let of_int63_exn t = of_span_since_epoch (Span.of_int63_ns t)
       let to_int63 t = to_int63_ns_since_epoch t
     end
+    module T = struct
+      include T0
+      module Comparator = Comparator.Stable.V1.Make (T0)
+      include Comparator
+    end
     include T
-    module Comparator = Comparator.Stable.V1.Make (T)
-    include Comparator
+    include Comparable.Stable.V1.Make (T)
   end
 end
 include Stable0.V1.Comparator
@@ -520,6 +524,7 @@ module Stable = struct
   end
   include Stable0
   module Alternate_sexp = Core_kernel.Time_ns.Stable.Alternate_sexp
+
 end
 
 (*

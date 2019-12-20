@@ -220,9 +220,16 @@ module type Time_ns = sig
   val pause_forever : unit -> never_returns
 
   module Stable : sig
-    module V1 : Stable_int63able
-      with type t = t
-       and type comparator_witness = comparator_witness
+    module V1 : sig
+      include Stable_int63able
+        with type t = t
+         and type comparator_witness = comparator_witness
+
+      include
+        Comparable.Stable.V1.S
+        with type comparable := t
+        with type comparator_witness := comparator_witness
+    end
 
     (** Provides a sexp representation that is independent of the time zone of the machine
         writing it. *)
