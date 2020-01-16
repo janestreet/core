@@ -230,10 +230,10 @@ let () =
     )
 
 let () =
-  add "add_weekdays"
+  add "add_weekdays_rounding_forward"
     (fun () ->
        let test lbl d1 n d2 =
-         lbl @? (Date.add_weekdays
+         lbl @? (Date.add_weekdays_rounding_forward
                    (Date.of_string d1) n = Date.of_string d2)
        in
        test "one" "2009-01-01" 1 "2009-01-02";
@@ -247,7 +247,24 @@ let () =
 ;;
 
 let () =
-  add "add_business_days"
+  add "add_weekdays_rounding_backward"
+    (fun () ->
+       let test lbl d1 n d2 =
+         lbl @? (Date.add_weekdays_rounding_backward
+                   (Date.of_string d1) n = Date.of_string d2)
+       in
+       test "one" "2009-01-01" 1 "2009-01-02";
+       test "one_weekend" "2009-01-02" 1 "2009-01-05";
+       test "neg_one" "2009-01-02" (-1) "2009-01-01";
+       test "neg_one_weekend" "2009-01-05" (-1) "2009-01-02";
+       test "neg_two_weekend" "2009-01-06" (-2) "2009-01-02";
+       test "non_leap_weekend" "2009-02-27" 1 "2009-03-02";
+       test "leap_weekend" "2008-02-28" 2 "2008-03-03";
+    )
+;;
+
+let () =
+  add "add_business_days_rounding_forward"
     (fun () ->
        let test lbl d1 n d2 =
          let is_holiday d =
@@ -257,10 +274,36 @@ let () =
              "2009-03-02";
            ] ~f:Date.of_string) d
          in
-         let res = Date.add_business_days ~is_holiday (Date.of_string d1) n in
+         let res = Date.add_business_days_rounding_forward ~is_holiday (Date.of_string d1) n in
          lbl @? (res = Date.of_string d2)
        in
        test "one" "2009-01-01" 1 "2009-01-05";
+       test "one_weekend" "2009-01-02" 1 "2009-01-05";
+       test "neg_one" "2009-01-02" (-1) "2008-12-31";
+       test "neg_one_weekend" "2009-01-05" (-1) "2009-01-02";
+       test "neg_two_weekend" "2009-01-06" (-2) "2009-01-02";
+       test "non_leap_weekend" "2009-02-27" 1 "2009-03-03";
+       test "leap_weekend" "2008-02-28" 2 "2008-03-03";
+    )
+;;
+
+let () =
+  add "add_business_days_rounding_backward"
+    (fun () ->
+       let test lbl d1 n d2 =
+         let is_holiday d =
+           List.mem ~equal:Date.equal (List.map [
+             "2009-01-01";
+             "2009-03-01";
+             "2009-03-02";
+           ] ~f:Date.of_string) d
+         in
+         let res =
+           Date.add_business_days_rounding_backward ~is_holiday (Date.of_string d1) n
+         in
+         lbl @? (res = Date.of_string d2)
+       in
+       test "one" "2009-01-01" 1 "2009-01-02";
        test "one_weekend" "2009-01-02" 1 "2009-01-05";
        test "neg_one" "2009-01-02" (-1) "2008-12-31";
        test "neg_one_weekend" "2009-01-05" (-1) "2009-01-02";
