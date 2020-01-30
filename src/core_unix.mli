@@ -685,7 +685,10 @@ type lock_command =
 (** [lockf fd cmd size] place a lock on a file_descr that prevents any other process from
     calling lockf successfully on the same file.  Due to a limitation in the current
     implementation the length will be converted to a native int, potentially throwing an
-    exception if it is too large. *)
+    exception if it is too large.
+
+    Note that, despite the name, this function does not call the UNIX lockf() system call;
+    rather it calls fcntl() with one of F_SETLK, F_SETLKW, or F_GETLK. *)
 val lockf : File_descr.t -> mode:lock_command -> len:Int64.t -> unit
 
 module Flock_command : sig
@@ -697,8 +700,15 @@ module Flock_command : sig
 end
 
 (** [flock fd cmd] places or releases a lock on the fd as per the flock C call of the same
-    name. *)
-val flock : File_descr.t -> Flock_command.t -> bool
+    name. The request is "nonblocking" (LOCK_NB in C), meaning that if the lock cannot be
+    granted immediately, the return value is false. However, the system call still blocks
+    until the lock status can be ascertained. [true] is returned if the lock was granted.
+*)
+val flock : File_descr.t  -> Flock_command.t -> bool
+
+(** [flock_blocking fd cmd] places or releases a lock on the fd as per the flock C call.
+    The function does not return until a lock can be granted. *)
+val flock_blocking : File_descr.t  -> Flock_command.t -> unit
 
 (** Return [true] if the given file descriptor refers to a terminal or
     console window, [false] otherwise. *)

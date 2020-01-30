@@ -224,9 +224,10 @@ CAMLprim value core_unix_getpwent(value v_unit)
 
 #define FLOCK_BUF_LENGTH 80
 
-CAMLprim value core_unix_flock(value v_fd, value v_lock_type)
+CAMLprim value core_unix_flock(value v_blocking, value v_fd, value v_lock_type)
 {
   CAMLparam2(v_fd, v_lock_type);
+  int blocking = Bool_val(v_blocking);
   int fd = Int_val(v_fd);
   int lock_type = Int_val(v_lock_type);
   int operation;
@@ -250,8 +251,9 @@ CAMLprim value core_unix_flock(value v_fd, value v_lock_type)
       caml_invalid_argument(error);
   };
 
-  /* always try a non-blocking lock */
-  operation = operation | LOCK_NB;
+  if (!blocking) {
+      operation |= LOCK_NB;
+  }
 
   caml_enter_blocking_section();
   res = flock(fd, operation);

@@ -1191,7 +1191,11 @@ end = struct
   let unlock = 2
 end
 
-external flock : File_descr.t -> Flock_command.t -> bool = "core_unix_flock"
+external real_flock : blocking:bool -> File_descr.t -> Flock_command.t -> bool = "core_unix_flock"
+
+let flock = real_flock ~blocking:false
+let flock_blocking fd command =
+  assert (real_flock ~blocking:true fd command)
 
 let lseek fd pos ~mode =
   improve (fun () -> Unix.LargeFile.lseek fd pos ~mode)
