@@ -6,6 +6,11 @@ open! Command
 open! Command.Private
 module Expect_test_config = Core.Expect_test_config
 
+let run ~argv ?verbose_on_parse_error command =
+  try Command.run ~argv ?verbose_on_parse_error command with
+  | exn -> print_s [%message "raised" ~_:(exn : Exn.t)]
+;;
+
 let%test_module "word wrap" =
   (module struct
     let word_wrap = Format.V1.word_wrap
@@ -202,7 +207,7 @@ let%expect_test "[choose_one]" =
         ~(if_nothing_chosen : (_, b) Command.Param.If_nothing_chosen.t)
         arguments
     =
-    Command.run
+    run
       ~argv:("__exe_name__" :: arguments)
       (Command.basic
          ~summary:""
@@ -230,7 +235,7 @@ let%expect_test "[choose_one]" =
 
       __exe_name__ -help
 
-    (command.ml.Exit_called (status 1)) |}];
+    (raised (command.ml.Exit_called (status 1))) |}];
   test [] ~if_nothing_chosen:Return_none;
   [%expect {| (arg ()) |}];
   test ~if_nothing_chosen:Return_none [ "-bar" ];
@@ -252,12 +257,12 @@ let%expect_test "[choose_one]" =
 
       __exe_name__ -help
 
-    (command.ml.Exit_called (status 1)) |}]
+    (raised (command.ml.Exit_called (status 1))) |}]
 ;;
 
 let%expect_test "nested [choose_one]" =
   let test arguments =
-    Command.run
+    run
       ~argv:("__exe_name__" :: arguments)
       (Command.basic
          ~summary:""
@@ -288,7 +293,7 @@ let%expect_test "nested [choose_one]" =
 
       __exe_name__ -help
 
-    (command.ml.Exit_called (status 1)) |}];
+    (raised (command.ml.Exit_called (status 1))) |}];
   test [ "-foo"; "-baz" ];
   [%expect
     {|
@@ -300,7 +305,7 @@ let%expect_test "nested [choose_one]" =
 
       __exe_name__ -help
 
-    (command.ml.Exit_called (status 1)) |}];
+    (raised (command.ml.Exit_called (status 1))) |}];
   test [ "-foo" ];
   [%expect {| (arg (Foo_bar (true false))) |}];
   test [ "-bar" ];
@@ -309,7 +314,7 @@ let%expect_test "nested [choose_one]" =
 
 let%expect_test "parse error with subcommand" =
   let test arguments =
-    Command.run
+    run
       ~argv:("exe" :: "subcommand" :: arguments)
       (Command.group
          ~summary:""
@@ -333,7 +338,7 @@ let%expect_test "parse error with subcommand" =
 
       exe subcommand -help
 
-    (command.ml.Exit_called (status 1)) |}];
+    (raised (command.ml.Exit_called (status 1))) |}];
   test [ "-foo" ];
   [%expect
     {|
@@ -345,7 +350,7 @@ let%expect_test "parse error with subcommand" =
 
       exe subcommand -help
 
-    (command.ml.Exit_called (status 1)) |}]
+    (raised (command.ml.Exit_called (status 1))) |}]
 ;;
 
 let%test_unit _ =
@@ -431,7 +436,7 @@ let%test_unit "multiple runs" =
 
 let%expect_test "[?verbose_on_parse_error]" =
   let test ?verbose_on_parse_error () =
-    Command.run
+    run
       ~argv:[ "__exe_name__" ]
       ?verbose_on_parse_error
       (Command.basic
@@ -454,7 +459,7 @@ let%expect_test "[?verbose_on_parse_error]" =
 
       __exe_name__ -help
 
-    (command.ml.Exit_called (status 1)) |}];
+    (raised (command.ml.Exit_called (status 1))) |}];
   test ~verbose_on_parse_error:true ();
   [%expect
     {|
@@ -466,11 +471,11 @@ let%expect_test "[?verbose_on_parse_error]" =
 
       __exe_name__ -help
 
-    (command.ml.Exit_called (status 1)) |}];
+    (raised (command.ml.Exit_called (status 1))) |}];
   test ~verbose_on_parse_error:false ();
   [%expect {|
     Fail!
-    (command.ml.Exit_called (status 1)) |}]
+    (raised (command.ml.Exit_called (status 1))) |}]
 ;;
 
 let%expect_test "illegal flag names" =
@@ -495,7 +500,7 @@ let%expect_test "illegal flag names" =
 ;;
 
 let run_command param ~args =
-  Command.run ~argv:("__exe_name__" :: args) (Command.basic ~summary:"" param)
+  run ~argv:("__exe_name__" :: args) (Command.basic ~summary:"" param)
 ;;
 
 let%expect_test "escape flag type" =
@@ -619,7 +624,7 @@ let%expect_test "double-dash built-in flags" =
     |> group "blue"
   in
   let run_test_command args =
-    Command.run ~argv:("__exe_name__" :: args) command;
+    run ~argv:("__exe_name__" :: args) command;
     [%expect.output]
   in
   let run_with_both_flags args flag =
