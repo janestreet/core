@@ -1233,7 +1233,7 @@ module Passwd : sig
       dir : string;
       shell : string;
     }
-  [@@deriving compare, sexp]
+  [@@deriving compare, fields, sexp]
 
   val getbyname : string -> t option
   val getbyname_exn : string -> t

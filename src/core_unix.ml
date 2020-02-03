@@ -1910,7 +1910,7 @@ module Passwd = struct
       dir : string;
       shell : string;
     }
-  [@@deriving compare, sexp]
+  [@@deriving compare, fields, sexp]
 
   let of_unix u =
     let module U = Unix in
