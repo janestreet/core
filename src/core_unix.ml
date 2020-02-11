@@ -2627,6 +2627,13 @@ external set_mcast_loop : File_descr.t -> bool -> unit = "core_unix_mcast_set_lo
 
 external set_mcast_ifname : File_descr.t -> string -> unit = "core_unix_mcast_set_ifname"
 
+let set_mcast_ifname fd ifname =
+  (* Improve the error info in the common case.  (It's inconvenient for the C stub to fill
+     in the interface name, but it's easy here.) *)
+  try set_mcast_ifname fd ifname with
+  | Unix_error (message, errno, "") -> raise (Unix_error (message, errno, ifname))
+;;
+
 let open_connection addr =
   improve (fun () -> Unix.open_connection addr) (fun () -> [addr_r addr])
 ;;

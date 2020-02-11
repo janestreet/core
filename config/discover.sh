@@ -13,7 +13,7 @@ OUTFILE="$2"
 shift 2
 
 if [ ! -e setup.data ]; then
-    echo "setup.data missing, run ./configure first."
+    echo "setup.data missing, run ./detect.sh first."
     exit 2
 fi
 

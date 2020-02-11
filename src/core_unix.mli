@@ -253,7 +253,7 @@ module Exit_or_signal : sig
 
   type t = (unit, error) Result.t [@@deriving compare, sexp]
 
-  (** [of_unix] assumes that any signal numbers in the incoming value are O'Caml internal
+  (** [of_unix] assumes that any signal numbers in the incoming value are OCaml internal
       signal numbers. *)
   val of_unix : Unix.process_status -> t
 
@@ -266,7 +266,7 @@ module Exit_or_signal_or_stop : sig
 
   type t = (unit, error) Result.t [@@deriving sexp]
 
-  (** [of_unix] assumes that any signal numbers in the incoming value are O'Caml internal
+  (** [of_unix] assumes that any signal numbers in the incoming value are OCaml internal
       signal numbers. *)
   val of_unix : Unix.process_status -> t
 
