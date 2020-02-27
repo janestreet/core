@@ -1577,6 +1577,7 @@ end = struct
 
   let get_path prog_search_path =
     (match prog_search_path with
+     | Some [] -> invalid_arg "Core.Unix.create_process: empty prog_search_path"
      | Some dirs -> dirs
      | None -> Core_sys.getenv "PATH"
                |> Option.value_map ~f:(String.split ~on:':') ~default:["/bin"; "/usr/bin"]

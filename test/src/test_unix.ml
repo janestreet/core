@@ -345,10 +345,15 @@ let%test_module "the search path passed to [create_process_env] has an effect" =
   (module struct
     let call_ls = Unix.create_process_env ~prog:"ls" ~args:[] ~env:(`Extend [])
 
-    let%test _ = Or_error.is_ok @@ Or_error.try_with (fun () -> call_ls ())
+    let%expect_test "default search path" =
+      require_does_not_raise [%here] (fun () ->
+        ignore (Sys.opaque_identity (call_ls ())))
+    ;;
 
-    let%test _ =
-      Or_error.is_error @@ Or_error.try_with (fun () -> call_ls ~prog_search_path:[] ())
+    let%expect_test "empty search path" =
+      require_does_raise [%here] (fun () -> call_ls ~prog_search_path:[] ());
+      [%expect
+        {| (Invalid_argument "Core.Unix.create_process: empty prog_search_path") |}]
     ;;
   end)
 ;;
