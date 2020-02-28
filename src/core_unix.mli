@@ -296,10 +296,11 @@ type env = [ `Replace of (string * string) list
     environment variable for [prog].  If [env] is supplied, it determines the environment
     when [prog] is executed.
 
-    The first element in [argv] should be the program itself; the correct way to call
-    [exec] is:
+    While not strictly necessary, by convention, the first element in [argv] should be the
+    name of the file being executed, e.g.:
 
-    {[    exec ~prog ~argv:[ prog; arg1; arg2; ...] ()    ]} *)
+    {[ exec ~prog ~argv:[ prog; arg1; arg2; ...] () ]}
+*)
 val exec
   :  prog:string
   -> argv:string list
@@ -309,8 +310,8 @@ val exec
   -> never_returns
 
 (** [fork_exec ~prog ~argv ?use_path ?env ()] forks and execs [prog] with [argv] in the
-    child process, returning the child PID to the parent. As in [exec], the first element
-    in [argv] should be the program itself. *)
+    child process, returning the child PID to the parent. As in [exec], by convention, the
+    0th element in [argv] should be the program itself. *)
 val fork_exec
   :  prog:string
   -> argv:string list
