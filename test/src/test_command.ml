@@ -197,32 +197,40 @@ let%expect_test "[choose_one] duplicate name" =
     {|
     (raised (
       "Command.Spec.choose_one called with duplicate name"
-      -foo
+      (-foo)
       lib/core_kernel/src/command.ml:LINE:COL)) |}]
 ;;
 
+let run_command param ~args =
+  run ~argv:("__exe_name__" :: args) (Command.basic ~summary:"" param)
+;;
+
+let%expect_test "[choose_one] any flagless params" =
+  let param =
+    lazy
+      (let open Param in
+       choose_one [ return None; return (Some 1) ] ~if_nothing_chosen:Return_none)
+  in
+  show_raise (fun () -> force param);
+  [%expect {| (raised "[choose_one] expects choices to read command-line arguments.") |}]
+;;
+
 let%expect_test "[choose_one]" =
-  let test
-        (type b)
-        ~(if_nothing_chosen : (_, b) Command.Param.If_nothing_chosen.t)
-        arguments
-    =
-    run
-      ~argv:("__exe_name__" :: arguments)
-      (Command.basic
-         ~summary:""
-         (let open Command.Let_syntax in
-          let%map_open arg =
-            choose_one
-              ~if_nothing_chosen
-              (List.map [ "-foo"; "-bar" ] ~f:(fun name ->
-                 flag name (no_arg_some name) ~doc:""))
-          in
-          fun () ->
-            match if_nothing_chosen with
-            | Default_to _ -> print_s [%message (arg : string)]
-            | Raise -> print_s [%message (arg : string)]
-            | Return_none -> print_s [%message (arg : string option)]))
+  let test (type b) ~(if_nothing_chosen : (_, b) Command.Param.If_nothing_chosen.t) args =
+    run_command
+      ~args
+      (let open Command.Let_syntax in
+       let%map_open arg =
+         choose_one
+           ~if_nothing_chosen
+           (List.map [ "-foo"; "-bar" ] ~f:(fun name ->
+              flag name (no_arg_some name) ~doc:""))
+       in
+       fun () ->
+         match if_nothing_chosen with
+         | Default_to _ -> print_s [%message (arg : string)]
+         | Raise -> print_s [%message (arg : string)]
+         | Return_none -> print_s [%message (arg : string option)])
   in
   test ~if_nothing_chosen:Raise [];
   [%expect
@@ -261,26 +269,23 @@ let%expect_test "[choose_one]" =
 ;;
 
 let%expect_test "nested [choose_one]" =
-  let test arguments =
-    run
-      ~argv:("__exe_name__" :: arguments)
-      (Command.basic
-         ~summary:""
-         (let open Command.Let_syntax in
-          let%map_open arg =
-            choose_one
-              ~if_nothing_chosen:Raise
-              [ (let%map foo = flag "foo" no_arg ~doc:""
-                 and bar = flag "bar" no_arg ~doc:"" in
-                 if foo || bar then Some (`Foo_bar (foo, bar)) else None)
-              ; (let%map baz = flag "baz" no_arg ~doc:""
-                 and qux = flag "qux" no_arg ~doc:"" in
-                 if baz || qux then Some (`Baz_qux (baz, qux)) else None)
-              ]
-          in
-          fun () ->
-            print_s
-              [%message (arg : [ `Foo_bar of bool * bool | `Baz_qux of bool * bool ])]))
+  let test args =
+    run_command
+      ~args
+      (let open Command.Let_syntax in
+       let%map_open arg =
+         choose_one
+           ~if_nothing_chosen:Raise
+           [ (let%map foo = flag "foo" no_arg ~doc:""
+              and bar = flag "bar" no_arg ~doc:"" in
+              if foo || bar then Some (`Foo_bar (foo, bar)) else None)
+           ; (let%map baz = flag "baz" no_arg ~doc:""
+              and qux = flag "qux" no_arg ~doc:"" in
+              if baz || qux then Some (`Baz_qux (baz, qux)) else None)
+           ]
+       in
+       fun () ->
+         print_s [%message (arg : [ `Foo_bar of bool * bool | `Baz_qux of bool * bool ])])
   in
   test [];
   [%expect
@@ -366,7 +371,7 @@ let%test_unit _ =
 
 let%expect_test "choose_one strings" =
   let open Param in
-  let to_string = Spec.to_string_for_choose_one in
+  let to_string param = Spec.to_string_for_choose_one param in
   print_string (to_string (flag "-a" no_arg ~doc:""));
   [%expect {| -a |}];
   print_string
@@ -497,10 +502,6 @@ let%expect_test "illegal flag names" =
     {|
     (raised (
       Failure "invalid flag name (contains whitespace): \"has whitespace\"")) |}]
-;;
-
-let run_command param ~args =
-  run ~argv:("__exe_name__" :: args) (Command.basic ~summary:"" param)
 ;;
 
 let%expect_test "escape flag type" =
