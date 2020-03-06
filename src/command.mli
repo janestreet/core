@@ -25,6 +25,11 @@ include (module type of Core_kernel.Command
     [verbose_on_parse_error] controls whether to print a line suggesting the user try the
     "-help" flag when an exception is raised while parsing the arguments.  By default it
     is true.
+
+    [when_parsing_succeeds] is invoked after argument parsing has completed successfully,
+    but before the main function of the associated command has run. One use-case is for
+    performing logging when a command is being invoked, where there's no reason to log
+    incorrect invocations or -help calls.
 *)
 val run
   :  ?verbose_on_parse_error : bool
@@ -32,6 +37,7 @@ val run
   -> ?build_info : string
   -> ?argv       : string list
   -> ?extend     : (string list -> string list)
+  -> ?when_parsing_succeeds:(unit -> unit)
   -> t
   -> unit
 

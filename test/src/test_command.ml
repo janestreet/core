@@ -6,8 +6,8 @@ open! Command
 open! Command.Private
 module Expect_test_config = Core.Expect_test_config
 
-let run ~argv ?verbose_on_parse_error command =
-  try Command.run ~argv ?verbose_on_parse_error command with
+let run ~argv ?when_parsing_succeeds ?verbose_on_parse_error command =
+  try Command.run ~argv ?when_parsing_succeeds ?verbose_on_parse_error command with
   | exn -> print_s [%message "raised" ~_:(exn : Exn.t)]
 ;;
 
@@ -196,7 +196,7 @@ let%expect_test "[choose_one] duplicate name" =
   [%expect
     {|
     (raised (
-      "Command.Spec.choose_one called with duplicate name"
+      "[Command.Spec.choose_one] called with duplicate name"
       (-foo)
       lib/core_kernel/src/command.ml:LINE:COL)) |}]
 ;;
@@ -237,7 +237,9 @@ let%expect_test "[choose_one]" =
     {|
     Error parsing command line:
 
-      Must pass one of these: -foo; -bar
+      Must pass one of these:
+        -bar
+        -foo
 
     For usage information, run
 
@@ -259,7 +261,9 @@ let%expect_test "[choose_one]" =
     {|
     Error parsing command line:
 
-      Cannot pass both -bar and -foo
+      Cannot pass more than one of these:
+        -foo
+        -bar
 
     For usage information, run
 
@@ -292,7 +296,9 @@ let%expect_test "nested [choose_one]" =
     {|
     Error parsing command line:
 
-      Must pass one of these: -bar,-foo; -baz,-qux
+      Must pass one of these:
+        -bar,-foo
+        -baz,-qux
 
     For usage information, run
 
@@ -304,7 +310,9 @@ let%expect_test "nested [choose_one]" =
     {|
     Error parsing command line:
 
-      Cannot pass both -baz,-qux and -bar,-foo
+      Cannot pass more than one of these:
+        -baz,-qux
+        -bar,-foo
 
     For usage information, run
 
@@ -679,4 +687,49 @@ let%expect_test "double-dash built-in flags" =
     (command.ml.Exit_called (status 0))|}];
   run_test_command [ "blue"; "bird" ] |> print_string;
   [%expect {| hello world |}]
+;;
+
+let%expect_test "when_parsing_succeeds" =
+  let command =
+    Command.basic
+      ~summary:""
+      (let%map_open.Command input = flag "input" (required string) ~doc:"input" in
+       fun () -> print_endline input)
+  in
+  let run args =
+    run
+      ~when_parsing_succeeds:(fun () -> print_endline "Parsing Succeeded")
+      ~argv:("__exe_name__" :: args)
+      command
+  in
+  run [ "-input"; "test" ];
+  [%expect {|
+    Parsing Succeeded
+    test |}];
+  run [ "-help" ];
+  [%expect
+    {|
+      __exe_name__
+
+    === flags ===
+
+      -input _       input
+      [-build-info]  print info about this build and exit
+      [-version]     print the version of this build and exit
+      [-help]        print this help text and exit
+                     (alias: -?)
+
+    (command.ml.Exit_called (status 0)) |}];
+  run [];
+  [%expect
+    {|
+    Error parsing command line:
+
+      missing required flag: -input
+
+    For usage information, run
+
+      __exe_name__ -help
+
+    (raised (command.ml.Exit_called (status 1))) |}]
 ;;

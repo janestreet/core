@@ -41,6 +41,7 @@ module Span = struct
   module Option = struct
     type span = t [@@deriving sexp]
     type t = Int63.t [@@deriving bin_io, compare, hash, typerep] (* nanoseconds or none *)
+
     let none = Int63.min_value
     let is_none t = Int63.(t = none)
     let is_some t = Int63.(t <> none)
@@ -61,6 +62,34 @@ module Span = struct
 
     let of_option = function None -> none | Some t -> some t
     let to_option t = if is_none t then None else Some (of_int63_ns t)
+
+    module For_quickcheck = struct
+      module Some = struct
+        type t = span
+
+        let quickcheck_generator =
+          Quickcheck.Generator.filter quickcheck_generator ~f:some_is_representable
+
+        let quickcheck_observer = quickcheck_observer
+
+        let quickcheck_shrinker =
+          Base_quickcheck.Shrinker.filter quickcheck_shrinker ~f:some_is_representable
+      end
+
+      type t = Some.t option [@@deriving quickcheck]
+    end
+
+    let quickcheck_generator =
+      Quickcheck.Generator.map For_quickcheck.quickcheck_generator ~f:of_option
+
+    let quickcheck_observer  =
+      Quickcheck.Observer.unmap For_quickcheck.quickcheck_observer ~f:to_option
+
+    let quickcheck_shrinker  =
+      Quickcheck.Shrinker.map
+        For_quickcheck.quickcheck_shrinker
+        ~f:of_option
+        ~f_inverse:to_option
 
     module Optional_syntax = struct
       module Optional_syntax = struct
@@ -442,7 +471,7 @@ include Stable0.V1.Comparator
 module Option = struct
   type time = t [@@deriving sexp, compare]
 
-  type t = Span.Option.t [@@deriving bin_io, compare, hash, typerep]
+  type t = Span.Option.t [@@deriving bin_io, compare, hash, typerep, quickcheck]
 
   let none = Span.Option.none
   let some time = Span.Option.some (to_span_since_epoch time)

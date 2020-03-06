@@ -158,6 +158,7 @@ module type Time_ns = sig
       should mainly be used to avoid allocations. *)
   module Option : sig
     include Option with type value := t
+    include Quickcheck.S with type t := t
     module Stable : sig
       module V1 : Stable_int63able with type t = t
     end
