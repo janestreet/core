@@ -47,10 +47,13 @@ module Span = struct
     let is_some t = Int63.(t <> none)
     let some_is_representable span = is_some (to_int63_ns span)
 
+    let[@cold] raise_some_error span =
+      raise_s [%message [%here] "Span.Option.some value not representable" (span : span)]
+
     let some span =
       if some_is_representable span
       then to_int63_ns span
-      else raise_s [%message [%here] "Span.Option.some value not representable"]
+      else raise_some_error span
 
     let value t ~default = if is_none t then default else of_int63_ns t
     let unchecked_value t = of_int63_ns t

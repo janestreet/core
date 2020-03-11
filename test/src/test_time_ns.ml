@@ -1861,8 +1861,9 @@ let%test_module "Time_ns.Span.Option" =
         some (Time_ns.Span.of_int63_ns (Time_ns.Span.Option.Stable.V1.to_int63 none)));
       [%expect
         {|
-        (lib/core/src/core_time_ns.ml:LINE:COL
-         "Span.Option.some value not representable") |}]
+          (lib/core/src/core_time_ns.ml:LINE:COL
+           "Span.Option.some value not representable"
+           (span -53375d23h53m38.427387904s)) |}]
     ;;
   end)
 ;;
