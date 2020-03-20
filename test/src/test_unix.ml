@@ -126,7 +126,12 @@ let%test_module _ =
       let sexp1 = sexp_of_t t in
       let sexp2 = Sexp.of_string string in
       if Sexp.( <> ) sexp1 sexp2
-      then failwiths "unequal sexps" (sexp1, sexp2) [%sexp_of: Sexp.t * Sexp.t]
+      then
+        failwiths
+          ~here:[%here]
+          "unequal sexps"
+          (sexp1, sexp2)
+          [%sexp_of: Sexp.t * Sexp.t]
     ;;
 
     let%test_unit _ = check rdonly "(rdonly)"
@@ -303,7 +308,7 @@ let%test_module "" =
       List.iter all ~f:(fun t ->
         let x = to_int t in
         if Int.( <> ) (Int.ceil_pow2 x) x
-        then failwiths "Flag is not a power of 2" t sexp_of_t)
+        then failwiths ~here:[%here] "Flag is not a power of 2" t sexp_of_t)
     ;;
 
     let%test_unit _ =

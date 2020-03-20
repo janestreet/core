@@ -40,6 +40,7 @@ let%test_unit _ =
       with
       | exn ->
         failwiths
+          ~here:[%here]
           "test failed"
           (num_threads, num_iterations, pause_for, exn)
           [%sexp_of: int * int * float * exn])

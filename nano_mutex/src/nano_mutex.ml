@@ -88,7 +88,7 @@ let invariant t =
        there is an agreed-upon winner in the race to create a blocker. *)
     if t.num_using_blocker = 0 then assert (Option.is_none t.blocker)
   with
-  | exn -> failwiths "invariant failed" (exn, t) [%sexp_of: exn * t]
+  | exn -> failwiths ~here:[%here] "invariant failed" (exn, t) [%sexp_of: exn * t]
 ;;
 
 let equal (t : t) t' = phys_equal t t'

@@ -14,7 +14,7 @@ let is_error t = Int.O.(t <  0)
 
 let error_code_exn t =
   if is_ok t
-  then failwiths "Syscall_result.error_code_exn received success value"
+  then failwiths ~here:[%here] "Syscall_result.error_code_exn received success value"
          t [%sexp_of : int]
   else -t
 ;;
@@ -85,12 +85,12 @@ module Make (M : Arg) () = struct
     if is_ok t then
       M.of_int_exn t
     else
-      failwiths "Syscall_result.ok_exn received error value" t sexp_of_t
+      failwiths ~here:[%here] "Syscall_result.ok_exn received error value" t sexp_of_t
   ;;
 
   let error_code_exn t =
     if is_ok t then
-      failwiths "Syscall_result.error_code_exn received success value"
+      failwiths ~here:[%here] "Syscall_result.error_code_exn received success value"
         t sexp_of_t
     else
       -t
@@ -99,7 +99,7 @@ module Make (M : Arg) () = struct
 
   let reinterpret_error_exn t =
     if is_ok t then
-      failwiths "Syscall_result.cast_error_exn received success value"
+      failwiths ~here:[%here] "Syscall_result.cast_error_exn received success value"
         t sexp_of_t
     else
       t

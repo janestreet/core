@@ -146,6 +146,7 @@ struct
             try f (create ~len:capacity) string ~pos with
             | e ->
               failwiths
+                ~here:[%here]
                 "iter_examples"
                 ({ string; len; capacity; pos }, e)
                 [%sexp_of: iter_examples_state * exn])
@@ -188,6 +189,7 @@ struct
         try f ?pos ?len ~pos' ~len' ~is_valid () with
         | e ->
           failwiths
+            ~here:[%here]
             "iter_slices"
             ({ pos; len; pos'; len'; is_valid }, e, Backtrace.Exn.most_recent ())
             [%sexp_of: iter_slices_state * exn * Backtrace.t]))
@@ -1191,6 +1193,7 @@ struct
               (sub_string str ~pos:pos' ~len:len')
           | _, _ ->
             failwiths
+              ~here:[%here]
               "test_peek_to"
               ((consume_result, `is_valid is_valid), Backtrace.Exn.most_recent ())
               [%sexp_of: (unit Or_error.t * [ `is_valid of bool ]) * Backtrace.t]));
@@ -1479,6 +1482,7 @@ struct
               (sub_string str ~pos:pos' ~len:len')
           | _, _ ->
             failwiths
+              ~here:[%here]
               "test_consume_to"
               (consume_result, is_valid, Backtrace.Exn.most_recent ())
               [%sexp_of: unit Or_error.t * bool * Backtrace.t]));

@@ -947,7 +947,7 @@ let wait_gen
   match f waitpid_result with
   | Some a -> a
   | None ->
-    failwiths "waitpid syscall returned invalid result for mode"
+    failwiths ~here:[%here] "waitpid syscall returned invalid result for mode"
       (pid, mode, waitpid_result)
       ([%sexp_of: int * mode * waitpid_result])
 ;;
@@ -983,7 +983,7 @@ let waitpid pid =
 let waitpid_exn pid =
   let exit_or_signal = waitpid pid in
   if Result.is_error exit_or_signal then
-    failwiths "child process didn't exit with status 0"
+    failwiths ~here:[%here] "child process didn't exit with status 0"
       (`Child_pid pid, exit_or_signal)
       ([%sexp_of: [ `Child_pid of Pid.t ] * Exit_or_signal.t])
 ;;

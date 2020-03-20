@@ -19,6 +19,7 @@ let%test_module "[Timerfd]" =
       if Syscall_result.Unit.is_ok result
       then
         failwiths
+          ~here:[%here]
           "unsafe_timerfd_settime unexpectedly succeeded"
           result
           [%sexp_of: Syscall_result.Unit.t];

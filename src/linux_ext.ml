@@ -422,7 +422,7 @@ module Timerfd = struct
 
   let set_at t at =
     if Time_ns.( <= ) at Time_ns.epoch
-    then failwiths "Timerfd.set_at got time before epoch" at [%sexp_of: Time_ns.t];
+    then failwiths ~here:[%here] "Timerfd.set_at got time before epoch" at [%sexp_of: Time_ns.t];
     timerfd_settime t
       ~absolute:true
       ~initial:(Time_ns.to_int63_ns_since_epoch at)
@@ -437,7 +437,7 @@ module Timerfd = struct
 
   let set_repeating ?after t interval =
     if Time_ns.Span.( <= ) interval Time_ns.Span.zero
-    then failwiths "Timerfd.set_repeating got invalid interval" interval
+    then failwiths ~here:[%here] "Timerfd.set_repeating got invalid interval" interval
            [%sexp_of: Time_ns.Span.t];
     let interval = Time_ns.Span.to_int63_ns interval in
     timerfd_settime t
@@ -883,12 +883,12 @@ module Epoll = struct
           ~num_ready_events:(check (fun num_ready -> assert (num_ready >= 0)))
           ~ready_events:ignore
       with exn ->
-        failwiths "Epoll.invariant failed" (exn, t) [%sexp_of: exn * in_use]
+        failwiths ~here:[%here] "Epoll.invariant failed" (exn, t) [%sexp_of: exn * in_use]
   ;;
 
   let create ~num_file_descrs ~max_ready_events =
     if max_ready_events < 0 then
-      failwiths "Epoll.create got nonpositive max_ready_events" max_ready_events
+      failwiths ~here:[%here] "Epoll.create got nonpositive max_ready_events" max_ready_events
         ([%sexp_of: int]);
     ref (`In_use
            { epollfd = epoll_create ();

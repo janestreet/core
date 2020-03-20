@@ -388,12 +388,12 @@ module Int = struct
       (* If [hi] and [lo] are far enough apart (e.g. if [lo <= 0] and
          [hi = Int.max_value]), [len] will overlow. *)
       if len < 0 then
-        failwiths "interval length not representable" t [%sexp_of: t];
+        failwiths ~here:[%here] "interval length not representable" t [%sexp_of: t];
       len
 
   let get t i =
     let fail () =
-      failwiths "index out of bounds" (i, t)
+      failwiths ~here:[%here] "index out of bounds" (i, t)
         [%sexp_of: int * t]
     in
     match t with
