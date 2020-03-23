@@ -686,7 +686,19 @@ let%expect_test "double-dash built-in flags" =
 
     (command.ml.Exit_called (status 0))|}];
   run_test_command [ "blue"; "bird" ] |> print_string;
-  [%expect {| hello world |}]
+  [%expect {| hello world |}];
+  run_test_command [ "blue"; "bird"; "--" ] |> print_string;
+  [%expect
+    {|
+    Error parsing command line:
+
+      unknown flag --
+
+    For usage information, run
+
+      __exe_name__ blue bird -help
+
+    (raised (command.ml.Exit_called (status 1))) |}]
 ;;
 
 let%expect_test "when_parsing_succeeds" =
