@@ -35,8 +35,8 @@ let fail t message a sexp_of_a =
   (* Immediately convert the iobuf to sexp.  Otherwise, the iobuf could be modified before
      conversion and printing.  Since we plan to use iobufs for pooled network buffers in
      practice, this could be very confusing when debugging production systems. *)
-  failwiths ~here:[%here] message (a, [%sexp_of: (_, _) t] t)
-    (Tuple.T2.sexp_of_t sexp_of_a ident)
+  Error.raise (Error.create message (a, [%sexp_of: (_, _) t] t)
+                 (Tuple.T2.sexp_of_t sexp_of_a ident))
 
 module Lo_bound = struct
   let stale t iobuf =
@@ -149,8 +149,8 @@ let of_bigstring ?pos ?len buf =
     | None -> 0
     | Some pos ->
       if pos < 0 || pos > str_len then
-        failwiths ~here:[%here] "Iobuf.of_bigstring got invalid pos" (pos, `str_len str_len)
-          ([%sexp_of: int * [ `str_len of int ]]);
+        raise_s
+          [%sexp "Iobuf.of_bigstring got invalid pos", (pos : int), ~~(str_len : int)];
       pos
   in
   let len =
@@ -159,8 +159,8 @@ let of_bigstring ?pos ?len buf =
     | Some len ->
       let max_len = str_len - pos in
       if len < 0 || len > max_len then
-        failwiths ~here:[%here] "Iobuf.of_bigstring got invalid len" (len, `max_len max_len)
-          ([%sexp_of: int * [ `max_len of int ]]);
+        raise_s
+          [%sexp "Iobuf.of_bigstring got invalid pos", (len : int), ~~(max_len : int)];
       len
   in
   let lo = pos in
@@ -274,8 +274,7 @@ let protect_window_and_bounds_1 t x ~f =
 
 
 let create ~len =
-  if len < 0 then
-    failwiths ~here:[%here] "Iobuf.create got negative len" len [%sexp_of: int];
+  if len < 0 then raise_s [%sexp "Iobuf.create got negative len", (len : int)];
   of_bigstring (Bigstring.create len);
 ;;
 
@@ -1214,8 +1213,8 @@ module Recvmmsg_context = struct
     if Array.for_all ts ~f:(fun t -> length t = capacity t) then
       unsafe_ctx ts
     else
-      failwiths ~here:[%here] "Recvmmsg_context.create: all buffers must be reset" ts
-        [%sexp_of: (_, _) t array]
+      raise_s [%sexp "Recvmmsg_context.create: all buffers must be reset"
+                   , (ts : (_, _) t array)]
   ;;
 
   (* we retain a reference to the underlying bigstrings, in the event that callers

@@ -128,14 +128,6 @@ struct
   (* [large_int] creates an int that is not representable on 32-bit systems. *)
   let large_int a b c d = (a lsl 48) lor (b lsl 32) lor (c lsl 16) lor d
 
-  type iter_examples_state =
-    { string : string
-    ; len : int
-    ; capacity : int
-    ; pos : int
-    }
-  [@@deriving sexp]
-
   let iter_examples ~f =
     List.iter strings ~f:(fun string ->
       let len = String.length string in
@@ -145,11 +137,11 @@ struct
           then (
             try f (create ~len:capacity) string ~pos with
             | e ->
-              failwiths
-                ~here:[%here]
-                "iter_examples"
-                ({ string; len; capacity; pos }, e)
-                [%sexp_of: iter_examples_state * exn])
+              raise_s
+                [%sexp
+                  "iter_examples"
+                , { string : string; len : int; capacity : int; pos : int }
+                , (e : exn)])
         done
       done)
   ;;
@@ -188,11 +180,12 @@ struct
             [%sexp_of: iter_slices_state];
         try f ?pos ?len ~pos' ~len' ~is_valid () with
         | e ->
-          failwiths
-            ~here:[%here]
-            "iter_slices"
-            ({ pos; len; pos'; len'; is_valid }, e, Backtrace.Exn.most_recent ())
-            [%sexp_of: iter_slices_state * exn * Backtrace.t]))
+          raise_s
+            [%sexp
+              "iter_slices"
+            , ({ pos; len; pos'; len'; is_valid } : iter_slices_state)
+            , (e : exn)
+            , (Backtrace.Exn.most_recent () : Backtrace.t)]))
   ;;
 
   let invariant = invariant
@@ -1192,11 +1185,12 @@ struct
               (String.sub string ~pos:pos' ~len:len')
               (sub_string str ~pos:pos' ~len:len')
           | _, _ ->
-            failwiths
-              ~here:[%here]
-              "test_peek_to"
-              ((consume_result, `is_valid is_valid), Backtrace.Exn.most_recent ())
-              [%sexp_of: (unit Or_error.t * [ `is_valid of bool ]) * Backtrace.t]));
+            raise_s
+              [%sexp
+                "test_peek_to"
+              , (consume_result : unit Or_error.t)
+              , ~~(is_valid : bool)
+              , (Backtrace.Exn.most_recent () : Backtrace.t)]));
       let t = Iobuf.of_string "012345678" in
       let dst = of_string "abcdefhij" in
       blito ~src:t ~src_len:3 ~dst ~dst_pos:3 ();
@@ -1481,11 +1475,12 @@ struct
               (String.sub string ~pos:pos' ~len:len')
               (sub_string str ~pos:pos' ~len:len')
           | _, _ ->
-            failwiths
-              ~here:[%here]
-              "test_consume_to"
-              (consume_result, is_valid, Backtrace.Exn.most_recent ())
-              [%sexp_of: unit Or_error.t * bool * Backtrace.t]));
+            raise_s
+              [%sexp
+                "test_consume_to"
+              , (consume_result : unit Or_error.t)
+              , ~~(is_valid : bool)
+              , (Backtrace.Exn.most_recent () : Backtrace.t)]));
       let t = Iobuf.of_string "012345678" in
       let dst = of_string "abcdefhij" in
       blito ~src:t ~src_len:3 ~dst ~dst_pos:3 ();
