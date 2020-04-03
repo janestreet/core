@@ -15,19 +15,20 @@
     get the atomic test-and-set used in the core of our implementation without needing any
     primitive locking, essentially because we're protected by the OCaml global lock.
 
-    Here are some benchmarks comparing various mutexes available in OCaml:
+    Here are some benchmarks comparing various mutexes available in OCaml
+    (run in 2020-03):
 
     {v
-      |-------------------------------------------------------------|
-      |                       Name | Run time | S. dev. | Allocated |
-      |----------------------------+----------+---------+-----------+
-      |          Caml.Mutex create |   247 ns |    0 ns |         3 |
-      |     Caml.Mutex lock/unlock |    49 ns |    0 ns |         0 |
-      |          Core.Mutex create |   698 ns |    0 ns |         3 |
-      |     Core.Mutex lock/unlock |    49 ns |    0 ns |         0 |
-      |          Nano_mutex create |    10 ns |    0 ns |         4 |
-      |     Nano_mutex lock/unlock |    28 ns |    0 ns |         0 |
-      |-------------------------------------------------------------|
+      |----------------------------------|----------|---------|
+      | Name                             | Time/Run | mWd/Run |
+      |----------------------------------|----------|---------|
+      | Caml.Mutex create                |  42.1 ns |   3.00w |
+      | Caml.Mutex lock/unlock           |  23.6 ns |         |
+      | Error_checking_mutex create      |  47.2 ns |   3.00w |
+      | Error_checking_mutex lock/unlock |  25.6 ns |         |
+      | Nano_mutex create                |   4.4 ns |   4.00w |
+      | Nano_mutex lock/unlock           |  12.3 ns |         |
+      |-------------------------------------------------------|
     v}
 
     The benchmark code is in core/extended/lib_test/bench_nano_mutex.ml.

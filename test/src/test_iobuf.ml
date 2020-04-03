@@ -2297,40 +2297,51 @@ struct
     ;;
 
     let sendto_and_recvfrom recvfrom recv_fd sendto ~sendto_name =
-      let port =
+      let port, recv_addr =
         match Unix.getsockname recv_fd with
-        | Unix.ADDR_INET (_, port) -> port
+        | Unix.ADDR_INET (recv_addr, port) -> port, recv_addr
         | _ -> assert false
       in
-      let addr = Unix.(ADDR_INET (Inet_addr.localhost, port)) in
+      let send_addr = Unix.(ADDR_INET (Inet_addr.localhost, port)) in
       Result.iter sendto ~f:(fun sendto ->
-        let sender =
-          Thread.create
-            (fun () ->
-               let send_fd =
-                 Unix.(socket ~domain:PF_INET ~kind:SOCK_DGRAM ~protocol:0 ())
-               in
-               iter_examples ~f:(fun t string ~pos:_ ->
-                 Fill.stringo t string;
-                 Iobuf.flip_lo t;
-                 retry_until_ready (fun () ->
-                   Unix.Syscall_result.Unit.ok_or_unix_error_exn
-                     (sendto t send_fd addr)
-                     ~syscall_name:sendto_name);
-                 [%test_pred: (_, _) Iobuf.Hexdump.t] Iobuf.is_empty t))
-            ~on_uncaught_exn:`Print_to_stderr
-            ()
-        in
-        iter_examples ~f:(fun t string ~pos:_ ->
-          ignore (retry_until_ready (fun () -> recvfrom t recv_fd) : Unix.sockaddr);
-          Iobuf.flip_lo t;
-          [%test_result: string] ~expect:string (Iobuf.to_string t));
-        Thread.join sender)
+        try
+          let sender =
+            Thread.create
+              (fun () ->
+                 let send_fd =
+                   Unix.(socket ~domain:PF_INET ~kind:SOCK_DGRAM ~protocol:0 ())
+                 in
+                 iter_examples ~f:(fun t string ~pos:_ ->
+                   Fill.stringo t string;
+                   Iobuf.flip_lo t;
+                   retry_until_ready (fun () ->
+                     Unix.Syscall_result.Unit.ok_or_unix_error_exn
+                       (sendto t send_fd send_addr)
+                       ~syscall_name:sendto_name);
+                   [%test_pred: (_, _) Iobuf.Hexdump.t] Iobuf.is_empty t))
+              ~on_uncaught_exn:`Print_to_stderr
+              ()
+          in
+          iter_examples ~f:(fun t string ~pos:_ ->
+            ignore
+              (retry_until_ready (fun () -> recvfrom t recv_fd) : Unix.sockaddr);
+            Iobuf.flip_lo t;
+            [%test_result: string] ~expect:string (Iobuf.to_string t));
+          Thread.join sender
+        with
+        | exn ->
+          raise_s
+            [%message
+              "sendto_and_recvfrom"
+                (sendto_name : string)
+                (recv_addr : Unix.Inet_addr.t)
+                (port : int)
+                (send_addr : Unix.sockaddr)
+                (exn : exn)])
     ;;
 
     let sends_with_recvfrom recvfrom =
       let fd = Unix.(socket ~domain:PF_INET ~kind:SOCK_DGRAM ~protocol:0 ()) in
-      Unix.(setsockopt fd SO_REUSEADDR true);
       Unix.(bind fd ~addr:(ADDR_INET (Inet_addr.bind_any, 0)));
       Unix.set_nonblock fd;
       sendto_and_recvfrom
