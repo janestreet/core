@@ -87,21 +87,8 @@ let%test_module "[Poke]" =
   end)
 ;;
 
-let log string a sexp_of_a =
-  Printf.eprintf "%s\n%!" (Sexp.to_string_hum ([%sexp_of: string * a] (string, a)))
-;;
-
-module type Iobuf = module type of Iobuf
-
-module Test (Iobuf : sig
-    include Iobuf
-
-    val show_messages : bool ref
-  end) : sig end = (
+module Test () : sig end = (
 struct
-  let show_messages = Iobuf.show_messages
-  let () = show_messages := false
-
   open Iobuf
 
   type nonrec ('d, 'w) t = ('d, 'w) Hexdump.t [@@deriving sexp_of]
@@ -172,12 +159,6 @@ struct
         let pos' = Option.value pos ~default:0 in
         let len' = Option.value len ~default:(n - pos') in
         let is_valid = pos' >= 0 && pos' <= n && len' >= 0 && len' <= n - pos' in
-        if !show_messages && false
-        then
-          log
-            "iter_slice"
-            { pos; len; pos'; len'; is_valid }
-            [%sexp_of: iter_slices_state];
         try f ?pos ?len ~pos' ~len' ~is_valid () with
         | e ->
           raise_s
@@ -2566,19 +2547,9 @@ struct
   (* The signature here is to remind us to add a unit test whenever we add a function to
      [Iobuf]. *)
 end :
-  Iobuf)
+  module type of Iobuf)
 
-let%test_module _ = (module Test (Iobuf_debug.Make ()))
-
-(* Ensure against bugs in [Iobuf_debug].  The above tests [Iobuf_debug], with invariants
-   checked, and this tests the straight [Iobuf] module. *)
-let%test_module _ =
-  (module Test (struct
-       include Iobuf
-
-       let show_messages = ref true
-     end))
-;;
+let%test_module _ = (module Test ())
 
 let%test_module "allocation" =
   (module struct
