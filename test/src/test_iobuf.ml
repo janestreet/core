@@ -302,6 +302,75 @@ struct
       done
     ;;
 
+    let%test_module "duplication tests" =
+      (module struct
+        let equal_in_window t t' =
+          assert (length t = length t');
+          assert (String.equal (to_string t) (to_string t'));
+          assert (not (phys_equal (Expert.buf t) (Expert.buf t')))
+        ;;
+
+        type assertion =
+          { in_window : string
+          ; in_limits : string
+          ; buf : string
+          }
+
+        let run_scenario dup ~expect_t ~expect_a ~expect_b ~expect_c ~expect_d =
+          (* Use a [t] where the full window does not encompass the entire buffer *)
+          let t = of_bigstring (Bigstring.of_string "0123456") ~pos:1 ~len:5 in
+          (* Test with full window *)
+          let a = dup t in
+          equal_in_window t a;
+          resize t ~len:3;
+          advance t 1;
+          (* Test with new window *)
+          let b = dup t in
+          equal_in_window t b;
+          Poke.char t ~pos:0 '_';
+          (* Modifying t buffer should not affect those copied before *)
+          let c = dup t in
+          equal_in_window t c;
+          (* Modifying duplicate buffer only affects that instance *)
+          let d = dup t in
+          Poke.char d ~pos:0 'X';
+          let check_contents t { in_window; in_limits; buf } =
+            assert (String.equal (to_string t) in_window);
+            reset t;
+            assert (String.equal (to_string t) in_limits);
+            assert (String.equal (Bigstring.to_string (Expert.buf t)) buf)
+          in
+          check_contents t expect_t;
+          check_contents a expect_a;
+          check_contents b expect_b;
+          check_contents c expect_c;
+          check_contents d expect_d
+        ;;
+
+        (* [copy t] *)
+        let%test_unit _ =
+          run_scenario
+            copy
+            ~expect_t:{ in_window = "_3"; in_limits = "1_345"; buf = "01_3456" }
+            ~expect_a:{ in_window = "12345"; in_limits = "12345"; buf = "12345" }
+            ~expect_b:{ in_window = "23"; in_limits = "23"; buf = "23" }
+            ~expect_c:{ in_window = "_3"; in_limits = "_3"; buf = "_3" }
+            ~expect_d:{ in_window = "X3"; in_limits = "X3"; buf = "X3" }
+        ;;
+
+        (* [clone t] *)
+        let%test_unit _ =
+          run_scenario
+            clone
+            ~expect_t:{ in_window = "_3"; in_limits = "1_345"; buf = "01_3456" }
+            ~expect_a:{ in_window = "12345"; in_limits = "12345"; buf = "0123456" }
+            ~expect_b:{ in_window = "23"; in_limits = "12345"; buf = "0123456" }
+            ~expect_c:{ in_window = "_3"; in_limits = "1_345"; buf = "01_3456" }
+            ~expect_d:{ in_window = "X3"; in_limits = "1X345"; buf = "01X3456" }
+        ;;
+      end)
+    ;;
+
     module Lo_bound = struct
       type t = Lo_bound.t [@@deriving compare]
 
@@ -425,6 +494,8 @@ struct
 
     let compact = compact
     let sub_shared = sub_shared
+    let copy = copy
+    let clone = clone
     let set_bounds_and_buffer_sub = set_bounds_and_buffer_sub
     let set_bounds_and_buffer = set_bounds_and_buffer
     let narrow = narrow

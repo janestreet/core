@@ -185,6 +185,12 @@ let sub_shared ?(pos = 0) ?len t =
   }
 ;;
 
+let copy t = of_bigstring (Bigstring.sub t.buf ~pos:t.lo ~len:(length t))
+
+let clone { buf; lo_min; lo; hi; hi_max } =
+  { buf = Bigstring.copy buf; lo_min; lo; hi; hi_max }
+;;
+
 let set_bounds_and_buffer_sub ~pos ~len ~src ~dst =
   check_range src ~pos ~len;
   let lo = src.lo + pos in

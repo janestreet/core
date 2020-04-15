@@ -84,6 +84,15 @@ val of_string : string -> (_, _) t
     permissions, but allows arbitrary seek permissions on the resulting iobuf. *)
 val sub_shared : ?pos:int -> ?len:int -> ('d, _) t -> ('d, _) t
 
+(** [copy t] returns a new iobuf whose contents are the same as those in the window of
+    [t]. *)
+val copy : (_, _) t -> (_, _) t
+
+(** [clone t] returns a new iobuf that is a deep-copy of [t] including an exact copy of
+    the underlying buffer and bounds. This means data outside the window is copied as
+    well. *)
+val clone : (_, _) t -> (_, _) t
+
 (** [set_bounds_and_buffer ~src ~dst] copies bounds metadata (i.e., limits and window) and
     shallowly copies the buffer (data pointer) from [src] to [dst].  It does not access
     data, but does allow access through [dst].  This makes [dst] an alias of [src].
