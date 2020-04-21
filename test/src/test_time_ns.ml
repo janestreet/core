@@ -1,6 +1,6 @@
 open! Core
 open! Int.Replace_polymorphic_compare
-open Expect_test_helpers_kernel
+open Expect_test_helpers_core
 
 let%expect_test "zoned strings near min and max representable value" =
   let test zone nanos string =

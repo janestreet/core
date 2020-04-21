@@ -1,5 +1,5 @@
 open! Core
-open! Expect_test_helpers_kernel
+open! Expect_test_helpers_core
 
 let%expect_test "list_intersect" =
   let i = Interval.create in

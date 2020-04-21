@@ -1,5 +1,5 @@
 open! Core_kernel
-open! Expect_test_helpers_kernel
+open! Expect_test_helpers_core
 module Mutex = Error_checking_mutex
 
 let try_with_mutex f =

@@ -1,7 +1,7 @@
 open! Core
 open Poly
 open! Iobuf
-open Expect_test_helpers_kernel
+open Expect_test_helpers_core
 
 let arch_sixtyfour = Sys.word_size = 64
 let is_error = Result.is_error
@@ -2624,7 +2624,8 @@ let%test_module _ = (module Test ())
 
 let%test_module "allocation" =
   (module struct
-    open Expect_test_helpers
+    open Expect_test_helpers_core
+    open Expect_test_helpers_async
 
     let%expect_test "set_bounds_and_buffer_sub" =
       let src = Iobuf.of_string "123abcDEF" in

@@ -1,5 +1,5 @@
 open! Core
-open! Expect_test_helpers_kernel
+open! Expect_test_helpers_core
 
 let string =
   "`Boston is populous' is about Boston and contains `Boston'; ``Boston' is disyllabic' \

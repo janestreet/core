@@ -1,7 +1,8 @@
 open! Core
 open! Async
 open! Import
-open! Expect_test_helpers
+open! Expect_test_helpers_core
+open! Expect_test_helpers_async
 
 let%expect_test "[sexp_of_t]" =
   let t = Thread.create ignore () ~on_uncaught_exn:`Print_to_stderr in

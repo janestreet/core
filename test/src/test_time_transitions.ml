@@ -3,7 +3,7 @@
    the behavior is correct and consistent during cache hits and cache misses of various
    sorts. *)
 open! Core
-open Expect_test_helpers_kernel
+open Expect_test_helpers_core
 
 module Examples = struct
   (* a set of time zone transitions to keep in mind when reading below *)

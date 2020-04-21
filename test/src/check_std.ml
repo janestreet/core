@@ -2,7 +2,7 @@
    check a property of the module as it is exported in Core. *)
 
 open Core
-open Expect_test_helpers_kernel
+open Expect_test_helpers_core
 
 let%test_module _ =
   (module struct

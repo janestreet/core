@@ -1,5 +1,5 @@
 open! Core
-open! Expect_test_helpers_kernel
+open! Expect_test_helpers_core
 module Inet_addr = Unix.Inet_addr
 module Cidr = Unix.Cidr
 open Cidr

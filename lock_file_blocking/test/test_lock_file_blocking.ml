@@ -33,7 +33,7 @@ let%test_module "[Nfs]" = (module struct
   let () = unlock_exn path
 end)
 
-open Expect_test_helpers_kernel
+open Expect_test_helpers_core
 
 let%expect_test "Symlink lock protocol" =
   let lock_path = Filename.temp_file "lock_file" "unit_test" in

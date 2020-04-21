@@ -1,7 +1,7 @@
 open! Core
 open Poly
 open! Unix
-open! Expect_test_helpers_kernel
+open! Expect_test_helpers_core
 
 let%expect_test "[File_descr.sexp_of_t]" =
   print_s

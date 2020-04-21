@@ -1,5 +1,5 @@
 open Core
-open Expect_test_helpers_kernel
+open Expect_test_helpers_core
 open Time
 open Exposed_for_tests
 

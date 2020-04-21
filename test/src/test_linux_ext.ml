@@ -2,7 +2,7 @@ open Core
 open Poly
 open Unix
 open Linux_ext
-open Expect_test_helpers_kernel
+open Expect_test_helpers_core
 
 let%test_module "[Timerfd]" =
   (module struct
