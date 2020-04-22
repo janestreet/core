@@ -84,6 +84,16 @@ let%expect_test "filename validation in [remove]" =
   [%expect {| (raised (Invalid_argument "tmp-file-to-remove\000corrupted-filename")) |}]
 ;;
 
+let%expect_test "expand ~base works" =
+  let base = lazy [ "A=1"; "B=2"; "C=3" ] in
+  print_s [%sexp (Unix.Env.expand ~base (`Replace [ "C", "2" ]) : string list)];
+  [%expect {| (C=2) |}];
+  print_s
+    [%sexp
+      (Unix.Env.expand ~base (`Override [ "A", None; "B", Some "4" ]) : string list)];
+  [%expect {| (C=3 B=4) |}]
+;;
+
 let%test_unit "fork_exec ~env last binding takes precedence" =
   protectx
     ~finally:remove

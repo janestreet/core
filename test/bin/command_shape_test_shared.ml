@@ -42,7 +42,7 @@ let parent_cmd =
         ~data:(sprintf !"%{sexp:t list}" instructions);
       match
         Or_error.try_with (fun () ->
-          Command.Shape.Fully_forced.create (Command.shape cmd))
+          Command.Shape.fully_forced (Command.shape cmd))
       with
       | Ok (_ : Command.Shape.Fully_forced.t) -> assert false
       | Error e ->

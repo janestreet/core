@@ -274,22 +274,37 @@ module Exit_or_signal_or_stop : sig
   val or_error : t -> unit Or_error.t
 end
 
-(** [env] is used to control the environment of a child process, and can take four forms.
-    [`Replace_raw] replaces the entire environment with strings in the Unix style, like
-    ["VARIABLE_NAME=value"].  [`Replace] has the same effect as [`Replace_raw], but using
-    bindings represented as ["VARIABLE_NAME", "value"].  [`Extend] adds entries to the
-    existing environment rather than replacing the whole environment. [`Override] is
-    similar to [`Extend] but allows unsetting variables too.
+module Env : sig
+  (** [t] is used to control the environment of a child process, and can take four forms.
+      [`Replace_raw] replaces the entire environment with strings in the Unix style, like
+      ["VARIABLE_NAME=value"].  [`Replace] has the same effect as [`Replace_raw], but using
+      bindings represented as ["VARIABLE_NAME", "value"].  [`Extend] adds entries to the
+      existing environment rather than replacing the whole environment. [`Override] is
+      similar to [`Extend] but allows unsetting variables too.
 
-    If [env] contains multiple bindings for the same variable, the last takes precedence.
-    In the case of [`Extend], bindings in [env] take precedence over the existing
-    environment. *)
-type env = [ `Replace of (string * string) list
+      If [env] contains multiple bindings for the same variable, the last takes precedence.
+      In the case of [`Extend], bindings in [env] take precedence over the existing
+      environment. *)
+  type t = [ `Replace of (string * string) list
            | `Extend of (string * string) list
            | `Override of (string * string option) list
            | `Replace_raw of string list
            ]
-[@@deriving sexp]
+  [@@deriving sexp]
+
+  (** [expand ?base t] returns the environment resulting from applying the changes
+      described by [t] on the given base environment, defaulting to current
+      environment. It can be useful to use the type [t] on functions that only take the
+      full environment, like [Spawn.spawn] or [open_process_full]. It can also be
+      useful, when passing a base, to combine multiple [t] by applying them in succession.
+  *)
+  val expand : ?base:string list Lazy.t -> t -> string list
+
+  (** [expand_array t] is a shorthand for [Array.of_list (expand t)]. *)
+  val expand_array : ?base:string list Lazy.t -> t -> string array
+end
+
+type env = Env.t [@@deriving sexp]
 
 (** [exec ~prog ~argv ?search_path ?env] execs [prog] with [argv].  If [use_path = true]
     (the default) and [prog] doesn't contain a slash, then [exec] searches the [PATH]

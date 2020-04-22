@@ -16,6 +16,11 @@ val realpath : string -> string
 val open_temp_file
   : ?perm: int -> ?in_dir: string -> string -> string -> string * Out_channel.t
 
+(** Similar to {!Core_filename.open_temp_file}, but returns a Unix file descriptor
+    open in read&write mode instead of an [Out_channel.t]. *)
+val open_temp_file_fd
+  : ?perm: int -> ?in_dir: string -> string -> string -> string * Unix.file_descr
+
 (** [temp_file ?perm ?in_dir_name prefix suffix]
 
     Returns the name of a fresh temporary file in the temporary directory. The base name

@@ -13,8 +13,6 @@ let run ~argv ?when_parsing_succeeds ?verbose_on_parse_error command =
 
 let%test_module "word wrap" =
   (module struct
-    let word_wrap = Format.V1.word_wrap
-
     let%test _ = word_wrap "" 10 = []
 
     let short_word = "abcd"

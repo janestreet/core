@@ -826,44 +826,55 @@ let execvpe ~prog ~argv ~env =
     (fun () -> [prog_r prog; args_r argv; env_r env])
 ;;
 
-type env =
-  [ `Replace of (string * string) list
-  | `Extend of (string * string) list
-  | `Override of (string * string option) list
-  | `Replace_raw of string list
-  ]
-[@@deriving sexp]
+module Env = struct
+  type t =
+    [ `Replace of (string * string) list
+    | `Extend of (string * string) list
+    | `Override of (string * string option) list
+    | `Replace_raw of string list
+    ]
+  [@@deriving sexp]
 
-let env_map env =
-  let current () =
-    List.map (Array.to_list (Unix.environment ()))
-      ~f:(fun s -> String.lsplit2_exn s ~on:'=')
-  in
-  let map_of_list list = String.Map.of_alist_reduce list ~f:(fun _ x -> x) in
-  match env with
-  | `Replace env -> map_of_list env
-  | `Extend extend -> map_of_list (current () @ extend)
-  | `Override overrides ->
-    List.fold_left overrides ~init:(map_of_list (current ()))
-      ~f:(fun acc (key, v) ->
-        match v with
-        | None -> Map.remove acc key
-        | Some data -> Map.set acc ~key ~data)
-;;
+  let current ~base () =
+    let base =
+      match base with
+      | Some v -> force v
+      | None -> Array.to_list (Unix.environment ())
+    in
+    List.map base ~f:(fun s -> String.lsplit2_exn s ~on:'=')
+  ;;
 
-let env_assignments env =
-  match env with
-  | `Replace_raw env -> env
-  | `Replace _
-  | `Extend  _
-  | `Override _ as env ->
-    Map.fold (env_map env) ~init:[]
-      ~f:(fun ~key ~data acc -> (key ^ "=" ^ data) :: acc)
-;;
+  let env_map ~base env =
+    let map_of_list list = String.Map.of_alist_reduce list ~f:(fun _ x -> x) in
+    match env with
+    | `Replace env -> map_of_list env
+    | `Extend extend -> map_of_list (current ~base () @ extend)
+    | `Override overrides ->
+      List.fold_left overrides ~init:(map_of_list (current ~base ()))
+        ~f:(fun acc (key, v) ->
+          match v with
+          | None -> Map.remove acc key
+          | Some data -> Map.set acc ~key ~data)
+  ;;
+
+  let expand ?base env =
+    match env with
+    | `Replace_raw env -> env
+    | `Replace _
+    | `Extend  _
+    | `Override _ as env ->
+      Map.fold (env_map ~base env) ~init:[]
+        ~f:(fun ~key ~data acc -> (key ^ "=" ^ data) :: acc)
+  ;;
+
+  let expand_array ?base env = Array.of_list (expand ?base env)
+end
+
+type env = Env.t [@@deriving sexp]
 
 let exec ~prog ~argv ?(use_path = true) ?env () =
   let argv = Array.of_list argv in
-  let env = Option.map env ~f:(Fn.compose Array.of_list env_assignments) in
+  let env = Option.map env ~f:Env.expand_array in
   match use_path, env with
   | false, None -> execv ~prog ~argv
   | false, Some env -> execve ~prog ~argv ~env
@@ -1656,7 +1667,7 @@ end = struct
 end
 
 let create_process_env ?working_dir ?prog_search_path ?argv0 ~prog ~args ~env () =
-  let env_assignments = env_assignments env in
+  let env_assignments = Env.expand env in
   Execvp_emulation.run
     ~prog
     ~args
