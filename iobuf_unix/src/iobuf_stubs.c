@@ -1,7 +1,8 @@
 #include "config.h"
 #include "iobuf.h"
 #include "unix_utils.h"
-#include "socketaddr.h"
+
+#include <arpa/inet.h>
 
 #include <caml/mlvalues.h>
 #include <caml/memory.h>
@@ -10,6 +11,7 @@
 #include <caml/callback.h>
 #include <caml/fail.h>
 #include <caml/bigarray.h>
+
 
 #include <errno.h>
 #include <assert.h>

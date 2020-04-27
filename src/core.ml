@@ -33,8 +33,6 @@ module Date                   = Core_date
 module Filename               = Core_filename
 module Interval               = Interval
 module Interval_intf          = Interval_intf
-module Iobuf                  = Iobuf
-module Iobuf_intf             = Iobuf_intf
 module Linux_ext              = Linux_ext
 module Digest                 = Md5 [@@ocaml.deprecated "[since 2017-05] Use Md5 instead."]
 (* When we moved [Mutex] out of [Core], we added this declaration of [Mutex] to prevent a
