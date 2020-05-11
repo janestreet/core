@@ -84,18 +84,6 @@ let span_gen =
   Quickcheck.Generator.map Int63.quickcheck_generator ~f:Time_ns.Span.of_int63_ns
 ;;
 
-let span_option_gen =
-  let open Quickcheck.Generator in
-  weighted_union
-    [ 1., singleton Time_ns.Span.Option.none
-    ; ( 10.
-      , filter_map span_gen ~f:(fun span ->
-          if Time_ns.Span.Option.some_is_representable span
-          then Some (Time_ns.Span.Option.some span)
-          else None) )
-    ]
-;;
-
 let span_examples =
   let scales_of unit_of_time =
     match (unit_of_time : Unit_of_time.t) with
@@ -1190,7 +1178,7 @@ let%test_module "Time_ns.Span.Option.Stable.V2" =
         [%here]
         ~sexp_of:[%sexp_of: Time_ns.Span.Option.t]
         ~examples:span_option_examples
-        span_option_gen
+        Time_ns.Span.Option.quickcheck_generator
         ~f:(fun span ->
           let rt = V.t_of_sexp (V.sexp_of_t span) in
           require_equal [%here] (module Time_ns.Span.Option) span rt;
@@ -1613,23 +1601,21 @@ let%test_module "Time_ns.Ofday.Option.Stable.V1" =
     ;;
 
     let%expect_test "roundtrip quickcheck" =
-      let generator =
-        Int63.gen_incl
-          (V.to_int63 (Time_ns.Ofday.Option.some Time_ns.Ofday.start_of_day))
-          (V.to_int63 (Time_ns.Ofday.Option.some Time_ns.Ofday.start_of_next_day))
-        |> Quickcheck.Generator.map ~f:V.of_int63_exn
-      in
-      quickcheck [%here] generator ~sexp_of:V.sexp_of_t ~f:(fun ofday_option ->
-        require_compare_equal
-          [%here]
-          (module V)
-          ofday_option
-          (V.of_int63_exn (V.to_int63 ofday_option));
-        require_compare_equal
-          [%here]
-          (module V)
-          ofday_option
-          (V.t_of_sexp (V.sexp_of_t ofday_option)));
+      quickcheck
+        [%here]
+        Time_ns.Ofday.Option.quickcheck_generator
+        ~sexp_of:V.sexp_of_t
+        ~f:(fun ofday_option ->
+          require_compare_equal
+            [%here]
+            (module V)
+            ofday_option
+            (V.of_int63_exn (V.to_int63 ofday_option));
+          require_compare_equal
+            [%here]
+            (module V)
+            ofday_option
+            (V.t_of_sexp (V.sexp_of_t ofday_option)));
       [%expect {| |}]
     ;;
   end)

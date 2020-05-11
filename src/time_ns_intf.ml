@@ -42,6 +42,7 @@ module type Span = sig
       avoid allocations. *)
   module Option : sig
     include Option with type value := t
+    include Quickcheck.S with type t := t
     module Stable : sig
       module V1 : Stable_int63able with type t = t
       module V2 : Stable_int63able with type t = t
@@ -102,6 +103,7 @@ module type Ofday = sig
 
   module Option : sig
     include Option with type value := t
+    include Quickcheck.S with type t := t
     module Stable : sig
       module V1 : Stable_int63able with type t = t
     end

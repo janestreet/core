@@ -370,6 +370,28 @@ module Ofday = struct
     let of_option = function None -> none | Some t -> some t
     let to_option t = if is_none t then None else Some (value_exn t)
 
+
+    (* Can't use the quickcheck generator and shrinker inherited from [Span.Option]
+       because they may produce spans whose representation is larger than
+       [start_of_next_day] *)
+    let quickcheck_generator : t Quickcheck.Generator.t =
+      Quickcheck.Generator.map ~f:of_option
+        (Option.quickcheck_generator
+           (Quickcheck.Generator.filter
+              ~f:some_is_representable
+              Time_ns.Ofday.quickcheck_generator))
+    ;;
+
+    let quickcheck_shrinker : t Quickcheck.Shrinker.t =
+      Quickcheck.Shrinker.map ~f:of_option ~f_inverse:to_option
+        (Option.quickcheck_shrinker
+           (Base_quickcheck.Shrinker.filter
+              ~f:some_is_representable
+              Time_ns.Ofday.quickcheck_shrinker))
+    ;;
+
+    let quickcheck_observer = Span.Option.quickcheck_observer
+
     module Optional_syntax = struct
       module Optional_syntax = struct
         let is_none         = is_none
