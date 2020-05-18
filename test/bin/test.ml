@@ -25,8 +25,6 @@ let all () =
        [
          Avltree_test.test;
          Bag_test.test;
-         Bigbuffer_test.test;
-         Bigstring_test.test;
          Blang_test.test;
          Common_test.test;
          Comparable_test.test;

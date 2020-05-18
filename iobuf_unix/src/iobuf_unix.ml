@@ -12,28 +12,28 @@ type ok_or_eof =
 [@@deriving compare, sexp_of]
 
 let input t ch =
-  match Bigstring.input ch (Expert.buf t) ~pos:(Expert.lo t) ~len:(length t) with
+  match Bigstring_unix.input ch (Expert.buf t) ~pos:(Expert.lo t) ~len:(length t) with
   | n ->
     unsafe_advance t n;
     Ok
-  | exception Bigstring.IOError (n, End_of_file) ->
+  | exception Bigstring_unix.IOError (n, End_of_file) ->
     unsafe_advance t n;
     Eof
 ;;
 
 let read t fd =
-  match Bigstring.read fd (Expert.buf t) ~pos:(Expert.lo t) ~len:(length t) with
+  match Bigstring_unix.read fd (Expert.buf t) ~pos:(Expert.lo t) ~len:(length t) with
   | n ->
     unsafe_advance t n;
     Ok
-  | exception Bigstring.IOError (n, End_of_file) ->
+  | exception Bigstring_unix.IOError (n, End_of_file) ->
     unsafe_advance t n;
     Eof
 ;;
 
 let read_assume_fd_is_nonblocking t fd =
   let nread =
-    Bigstring.read_assume_fd_is_nonblocking
+    Bigstring_unix.read_assume_fd_is_nonblocking
       fd
       (Expert.buf t)
       ~pos:(Expert.lo t)
@@ -46,7 +46,7 @@ let read_assume_fd_is_nonblocking t fd =
 
 let pread_assume_fd_is_nonblocking t fd ~offset =
   let nread =
-    Bigstring.pread_assume_fd_is_nonblocking
+    Bigstring_unix.pread_assume_fd_is_nonblocking
       fd
       ~offset
       (Expert.buf t)
@@ -58,7 +58,7 @@ let pread_assume_fd_is_nonblocking t fd ~offset =
 
 let recvfrom_assume_fd_is_nonblocking t fd =
   let nread, sockaddr =
-    Bigstring.recvfrom_assume_fd_is_nonblocking
+    Bigstring_unix.recvfrom_assume_fd_is_nonblocking
       fd
       (Expert.buf t)
       ~pos:(Expert.lo t)
@@ -158,7 +158,7 @@ let unsafe_sent t result =
 (* Don't use [Or_error.map].  The natural usage results in a partially applied function,
    which is slower to call. *)
 let send_nonblocking_no_sigpipe () =
-  match Bigstring.send_nonblocking_no_sigpipe with
+  match Bigstring_unix.send_nonblocking_no_sigpipe with
   | Error _ as e -> e
   | Ok send ->
     Ok
@@ -167,7 +167,7 @@ let send_nonblocking_no_sigpipe () =
 ;;
 
 let sendto_nonblocking_no_sigpipe () =
-  match Bigstring.sendto_nonblocking_no_sigpipe with
+  match Bigstring_unix.sendto_nonblocking_no_sigpipe with
   | Error _ as e -> e
   | Ok sendto ->
     Ok
@@ -176,12 +176,16 @@ let sendto_nonblocking_no_sigpipe () =
 ;;
 
 let output t ch =
-  let nwritten = Bigstring.output ch (Expert.buf t) ~pos:(Expert.lo t) ~len:(length t) in
+  let nwritten =
+    Bigstring_unix.output ch (Expert.buf t) ~pos:(Expert.lo t) ~len:(length t)
+  in
   unsafe_advance t nwritten
 ;;
 
 let write t fd =
-  let nwritten = Bigstring.write fd (Expert.buf t) ~pos:(Expert.lo t) ~len:(length t) in
+  let nwritten =
+    Bigstring_unix.write fd (Expert.buf t) ~pos:(Expert.lo t) ~len:(length t)
+  in
   unsafe_advance t nwritten
 ;;
 
@@ -189,7 +193,7 @@ let write_assume_fd_is_nonblocking t fd =
   (* This is safe because of the invariant of [t] that the window is within the buffer
      (unless the user has violated the invariant with an unsafe operation). *)
   let nwritten =
-    Bigstring.unsafe_write_assume_fd_is_nonblocking
+    Bigstring_unix.unsafe_write_assume_fd_is_nonblocking
       fd
       (Expert.buf t)
       ~pos:(Expert.lo t)
@@ -200,7 +204,7 @@ let write_assume_fd_is_nonblocking t fd =
 
 let pwrite_assume_fd_is_nonblocking t fd ~offset =
   let nwritten =
-    Bigstring.pwrite_assume_fd_is_nonblocking
+    Bigstring_unix.pwrite_assume_fd_is_nonblocking
       fd
       ~offset
       (Expert.buf t)

@@ -1,9 +1,7 @@
-module Bigstring_in_this_directory = Bigstring
-open! Import
-module Bigstring = Bigstring_in_this_directory
-module Time_ns = Core_time_ns
+open! Core
 
-module File_descr = Core_unix.File_descr
+module File_descr = Unix.File_descr
+module Syscall_result = Unix.Syscall_result
 
 module Sysinfo0 = struct
   type t =
@@ -89,6 +87,16 @@ end = struct
   let equal (t : t) t' = t = t'
 end
 
+module Peer_credentials = struct
+  (* C code depends on the layout of the type *)
+  type t =
+    { pid : Pid.t
+    ; uid : int
+    ; gid : int
+    }
+  [@@deriving sexp_of]
+end
+
 (* These module contains definitions that get used when the necessary features are not
    enabled. We put these somewhere where they'll always be compiled, to prevent them from
    getting out of sync with the real implementations. *)
@@ -123,6 +131,7 @@ module Null_toplevel = struct
   let sendfile                       = u "Linux_ext.sendfile"
   let sendmsg_nonblocking_no_sigpipe = u "Linux_ext.sendmsg_nonblocking_no_sigpipe"
   let settcpopt_bool                 = u "Linux_ext.settcpopt_bool"
+  let peer_credentials               = u "Linux_ext.peer_credentials"
 
   module Epoll = struct
     module Flags = Epoll_flags (struct
@@ -169,6 +178,7 @@ module Null : Linux_ext_intf.S = struct
     [@@deriving sexp_of]
   end
 
+  module Peer_credentials = Peer_credentials
   module Priority = Priority
 
   module Clock = struct
@@ -379,7 +389,7 @@ module Timerfd = struct
     in
     match Result.try_with (fun () -> create Clock.realtime) with
     | Ok t -> (Unix.close t; Ok create)
-    | Error (Unix.Unix_error (Unix.ENOSYS, _, _)) ->
+    | Error (Unix.Unix_error (ENOSYS, _, _)) ->
       Or_error.unimplemented "Linux_ext.Timerfd.create"
     | Error _ ->
       (* [timerfd_create] is implemented but fails with the arguments we used above.
@@ -478,7 +488,7 @@ module Timerfd = Null.Timerfd
 
 [%%ifdef JSC_LINUX_EXT]
 
-type file_descr = Core_unix.File_descr.t
+type file_descr = Unix.File_descr.t
 
 module Eventfd = struct
   module Flags = struct
@@ -525,7 +535,7 @@ let sendfile ?(pos = 0) ?len ~fd sock =
   let len =
     match len with
     | Some len -> len
-    | None -> (Unix.fstat fd).Unix.st_size - pos
+    | None -> Int64.to_int_exn (Int64.( - ) (Unix.fstat fd).st_size (Int64.of_int pos))
   in
   sendfile ~sock ~fd ~pos ~len
 
@@ -580,6 +590,8 @@ external gettcpopt_bool
 external settcpopt_bool
   : file_descr -> tcp_bool_option -> bool -> unit = "core_linux_settcpopt_bool_stub"
 
+external peer_credentials : file_descr -> Peer_credentials.t = "core_linux_peer_credentials"
+
 external unsafe_send_nonblocking_no_sigpipe
   : file_descr -> pos : int -> len : int -> Bytes.t -> int
   = "core_linux_send_nonblocking_no_sigpipe_stub"
@@ -624,7 +636,7 @@ let send_no_sigpipe sock ?pos ?len buf =
   unsafe_send_no_sigpipe sock ~pos ~len buf
 
 external unsafe_sendmsg_nonblocking_no_sigpipe
-  : file_descr -> string Core_unix.IOVec.t array -> int -> int
+  : file_descr -> string Unix.IOVec.t array -> int -> int
   = "core_linux_sendmsg_nonblocking_no_sigpipe_stub"
 
 let unsafe_sendmsg_nonblocking_no_sigpipe fd iovecs count =
@@ -653,7 +665,7 @@ external pr_set_name_first16 : string -> unit = "core_linux_pr_set_name"
 external pr_get_name : unit -> string = "core_linux_pr_get_name"
 
 let file_descr_realpath fd =
-  Core_filename.realpath ("/proc/self/fd/" ^ File_descr.to_string fd)
+  Filename.realpath ("/proc/self/fd/" ^ File_descr.to_string fd)
 
 let out_channel_realpath oc = file_descr_realpath (Unix.descr_of_out_channel oc)
 let in_channel_realpath ic = file_descr_realpath (Unix.descr_of_in_channel ic)
@@ -706,7 +718,7 @@ let get_terminal_size = function
   | `Fd fd -> get_terminal_size fd
   | `Controlling ->
     protectx
-      (Unix.openfile "/dev/tty" [ O_RDWR ] 0)
+      (Unix.openfile "/dev/tty" ~mode:[ O_RDWR ] ~perm:0)
       ~finally:Unix.close
       ~f:get_terminal_size
 
@@ -1045,6 +1057,7 @@ let send_nonblocking_no_sigpipe    = Ok send_nonblocking_no_sigpipe
 let sendfile                       = Ok sendfile
 let sendmsg_nonblocking_no_sigpipe = Ok sendmsg_nonblocking_no_sigpipe
 let settcpopt_bool                 = Ok settcpopt_bool
+let peer_credentials               = Ok peer_credentials
 
 module Extended_file_attributes = struct
   module Flags = struct

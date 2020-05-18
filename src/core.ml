@@ -10,8 +10,6 @@
     modules are entirely new, like:
 
     - [Command], a richly featured tool for creating command-line programs.
-    - [Iobuf], which lets you use contiguous ranges of bytes for I/O purposes.
-    - [Linux_ext], providing a wrapper around Linux-specific system calls.
     - [Signal], for handling Unix signals like SIGHUP and SIGKILL.
 
     A few modules in Core don't have any platform-specific functionality but haven't yet
@@ -22,18 +20,16 @@
 *)
 (**/**)
 
-include Core_kernel.Core_kernel_private.Std_kernel
+include Core_kernel
 (**/**)
 
-module Bigstring              = Bigstring
-module Caml                   = Caml
-module Command                = Command
+module Caml                   = Core_caml
+module Command                = Core_command
 module Core_stable            = Stable
 module Date                   = Core_date
 module Filename               = Core_filename
 module Interval               = Interval
 module Interval_intf          = Interval_intf
-module Linux_ext              = Linux_ext
 module Digest                 = Md5 [@@ocaml.deprecated "[since 2017-05] Use Md5 instead."]
 (* When we moved [Mutex] out of [Core], we added this declaration of [Mutex] to prevent a
    mistake in which code that used to use [Core.Mutex] is unintentionally and silently

@@ -1,8 +1,6 @@
 (** String type based on [Bigarray], for use in I/O and C-bindings, extending
     {{!Core_kernel.Bigstring}[Core_kernel.Bigstring]}. *)
-
-open! Import
-open Unix
+open! Core
 
 include module type of struct include Core_kernel.Bigstring end
 
@@ -16,7 +14,7 @@ exception IOError of int * exn
 
 val read
   :  ?min_len : int (** default = 0 *)
-  -> file_descr
+  -> Unix.File_descr.t
   -> ?pos : int (** default = 0 *)
   -> ?len : int (** default = [length bstr - pos] *)
   -> t
@@ -37,7 +35,7 @@ val read
     read. *)
 
 val really_read
-  :  file_descr
+  :  Unix.File_descr.t
   -> ?pos : int (** default = 0 *)
   -> ?len : int (** default = [length bstr - pos] *)
   -> t
@@ -49,7 +47,7 @@ val really_read
     Raises [IOError] in the case of input errors, or on EOF. *)
 
 val really_recv
-  :  file_descr
+  :  Unix.File_descr.t
   -> ?pos : int (** default = 0 *)
   -> ?len : int (** default = [length bstr - pos] *)
   -> t
@@ -62,11 +60,11 @@ val really_recv
     in the case of input errors, or on EOF. *)
 
 val recvfrom_assume_fd_is_nonblocking
-  :  file_descr
+  :  Unix.File_descr.t
   -> ?pos : int (** default = 0 *)
   -> ?len : int (** default = [length bstr - pos] *)
   -> t
-  -> int * sockaddr
+  -> int * Unix.sockaddr
 (** [recvfrom_assume_fd_is_nonblocking sock ?pos ?len bstr] reads up to [len] bytes into
     bigstring [bstr] starting at position [pos] from socket [sock] without yielding to
     other OCaml-threads.
@@ -77,11 +75,11 @@ val recvfrom_assume_fd_is_nonblocking
     designated range is out of bounds. *)
 
 val read_assume_fd_is_nonblocking
-  :  file_descr
+  :  Unix.File_descr.t
   -> ?pos : int (** default = 0 *)
   -> ?len : int (** default = [length bstr - pos] *)
   -> t
-  -> Syscall_result.Int.t
+  -> Unix.Syscall_result.Int.t
 (** [read_assume_fd_is_nonblocking fd ?pos ?len bstr] reads up to [len] bytes into
     bigstring [bstr] starting at position [pos] from file descriptor [fd] without yielding
     to other OCaml-threads.  Returns the number of bytes actually read.
@@ -89,7 +87,7 @@ val read_assume_fd_is_nonblocking
     Raises [Invalid_argument] if the designated range is out of bounds. *)
 
 val pread_assume_fd_is_nonblocking
-  :  file_descr
+  :  Unix.File_descr.t
   -> offset : int
   -> ?pos : int (** default = 0 *)
   -> ?len : int (** default = [length bstr - pos] *)
@@ -142,7 +140,7 @@ val really_input
 (** {2 Output functions} *)
 
 val really_write
-  :  file_descr
+  :  Unix.File_descr.t
   -> ?pos : int (** default = 0 *)
   -> ?len : int (** default = [length bstr - pos] *)
   -> t
@@ -154,7 +152,7 @@ val really_write
     in the case of output errors. *)
 
 val really_send_no_sigpipe
-  : (file_descr
+  : (Unix.File_descr.t
      -> ?pos : int (** default = 0 *)
      -> ?len : int (** default = [length bstr - pos] *)
      -> t
@@ -170,11 +168,11 @@ val really_send_no_sigpipe
     returns an [Error] value indicating that it is unimplemented. *)
 
 val send_nonblocking_no_sigpipe
-  : (file_descr
+  : (Unix.File_descr.t
      -> ?pos : int (** default = 0 *)
      -> ?len : int (** default = [length bstr - pos] *)
      -> t
-     -> Syscall_result.Int.t
+     -> Unix.Syscall_result.Int.t
     ) Or_error.t
 (** [send_nonblocking_no_sigpipe sock ?pos ?len bstr] tries to send [len] bytes in
     bigstring [bstr] starting at position [pos] to socket [sock]. Returns [bytes_written].
@@ -182,12 +180,12 @@ val send_nonblocking_no_sigpipe
     Raises [Invalid_argument] if the designated range is out of bounds. *)
 
 val sendto_nonblocking_no_sigpipe
-  : (file_descr
+  : (Unix.File_descr.t
      -> ?pos : int (** default = 0 *)
      -> ?len : int (** default = [length bstr - pos] *)
      -> t
-     -> sockaddr
-     -> Syscall_result.Int.t
+     -> Unix.sockaddr
+     -> Unix.Syscall_result.Int.t
     ) Or_error.t
 (** [sendto_nonblocking_no_sigpipe sock ?pos ?len bstr sockaddr] tries to send [len] bytes
     in bigstring [bstr] starting at position [pos] to socket [sock] using address
@@ -196,7 +194,7 @@ val sendto_nonblocking_no_sigpipe
     Raises [Invalid_argument] if the designated range is out of bounds. *)
 
 val write
-  :  file_descr
+  :  Unix.File_descr.t
   -> ?pos : int (** default = 0 *)
   -> ?len : int (** default = [length bstr - pos] *)
   -> t
@@ -208,7 +206,7 @@ val write
     [Unix_error] in the case of output errors. *)
 
 val pwrite_assume_fd_is_nonblocking
-  :  file_descr
+  :  Unix.File_descr.t
   -> offset : int
   -> ?pos : int (** default = 0 *)
   -> ?len : int (** default = [length bstr - pos] *)
@@ -224,7 +222,7 @@ val pwrite_assume_fd_is_nonblocking
     [Unix_error] in the case of output errors. *)
 
 val write_assume_fd_is_nonblocking
-  :  file_descr
+  :  Unix.File_descr.t
   -> ?pos : int (** default = 0 *)
   -> ?len : int (** default = [length bstr - pos] *)
   -> t
@@ -237,9 +235,9 @@ val write_assume_fd_is_nonblocking
     [Unix_error] in the case of output errors. *)
 
 val writev
-  :  file_descr
+  :  Unix.File_descr.t
   -> ?count : int (** default = [Array.length iovecs] *)
-  -> t Core_unix.IOVec.t array
+  -> t Unix.IOVec.t array
   -> int
 (** [writev fd ?count iovecs] writes [count] [iovecs] of bigstrings to file descriptor
     [fd]. Returns the number of bytes written.
@@ -248,9 +246,9 @@ val writev
     of output errors. *)
 
 val writev_assume_fd_is_nonblocking
-  :  file_descr
+  :  Unix.File_descr.t
   -> ?count : int (** default = [Array.length iovecs] *)
-  -> t Core_unix.IOVec.t array
+  -> t Unix.IOVec.t array
   -> int
 (** [writev_assume_fd_is_nonblocking fd ?count iovecs] writes [count] [iovecs] of
     bigstrings to file descriptor [fd] without yielding to other OCaml-threads. Returns
@@ -260,19 +258,19 @@ val writev_assume_fd_is_nonblocking
     [Unix_error] in the case of output errors. *)
 
 val recvmmsg_assume_fd_is_nonblocking
-  : (file_descr
+  : (Unix.File_descr.t
      -> ?count : int (** default = [Array.length iovecs] *)
-     -> ?srcs : sockaddr array
-     -> t Core_unix.IOVec.t array
+     -> ?srcs : Unix.sockaddr array
+     -> t Unix.IOVec.t array
      -> lens : int array
      -> int
     ) Or_error.t
 
 val unsafe_recvmmsg_assume_fd_is_nonblocking
-  :  (file_descr
-      -> t Core_unix.IOVec.t array
+  :  (Unix.File_descr.t
+      -> t Unix.IOVec.t array
       -> int
-      -> sockaddr array option
+      -> Unix.sockaddr array option
       -> int array
       -> int
      ) Or_error.t
@@ -300,9 +298,9 @@ val unsafe_recvmmsg_assume_fd_is_nonblocking
     [Unix_error] in the case of output errors. *)
 
 val sendmsg_nonblocking_no_sigpipe
-  : (file_descr
+  : (Unix.File_descr.t
      -> ?count : int (** default = [Array.length iovecs] *)
-     -> t Core_unix.IOVec.t array
+     -> t Unix.IOVec.t array
      -> int option
     ) Or_error.t
 (** [sendmsg_nonblocking_no_sigpipe sock ?count iovecs] sends [count] [iovecs] of
@@ -355,39 +353,39 @@ val really_output
 (** {2 Unsafe functions} *)
 
 external unsafe_read_assume_fd_is_nonblocking
-  : file_descr -> pos : int -> len : int -> t -> Syscall_result.Int.t
+  : Unix.File_descr.t -> pos : int -> len : int -> t -> Unix.Syscall_result.Int.t
   = "bigstring_read_assume_fd_is_nonblocking_stub"
 (** [unsafe_read_assume_fd_is_nonblocking fd ~pos ~len bstr] is similar to
     {!Bigstring.read_assume_fd_is_nonblocking}, but does not perform any bounds checks.
     Will crash on bounds errors! *)
 
 external unsafe_write
-  : file_descr -> pos : int -> len : int -> t -> int
+  : Unix.File_descr.t -> pos : int -> len : int -> t -> int
   = "bigstring_write_stub"
 (** [unsafe_write fd ~pos ~len bstr] is similar to {!Bigstring.write}, but does not
     perform any bounds checks.  Will crash on bounds errors! *)
 
 external unsafe_write_assume_fd_is_nonblocking
-  : file_descr -> pos : int -> len : int -> t -> int
+  : Unix.File_descr.t -> pos : int -> len : int -> t -> int
   = "bigstring_write_assume_fd_is_nonblocking_stub"
 (** [unsafe_write_assume_fd_is_nonblocking fd ~pos ~len bstr] is similar to
     {!Bigstring.write_assume_fd_is_nonblocking}, but does not perform any bounds checks.
     Will crash on bounds errors! *)
 
 external unsafe_read
-  : min_len : int -> file_descr -> pos : int -> len : int -> t -> int
+  : min_len : int -> Unix.File_descr.t -> pos : int -> len : int -> t -> int
   = "bigstring_read_stub"
 (** [unsafe_read ~min_len fd ~pos ~len bstr] is similar to {!Bigstring.read}, but does not
     perform any bounds checks.  Will crash on bounds errors! *)
 
 external unsafe_really_recv
-  : file_descr -> pos : int -> len : int -> t -> unit
+  : Unix.File_descr.t -> pos : int -> len : int -> t -> unit
   = "bigstring_really_recv_stub"
 (** [unsafe_really_recv sock ~pos ~len bstr] is similar to {!Bigstring.really_recv}, but
     does not perform any bounds checks.  Will crash on bounds errors! *)
 
 external unsafe_really_write
-  : file_descr -> pos : int -> len : int -> t -> unit
+  : Unix.File_descr.t -> pos : int -> len : int -> t -> unit
   = "bigstring_really_write_stub"
 (** [unsafe_really_write fd ~pos ~len bstr] is similar to {!Bigstring.write}, but does not
     perform any bounds checks.  Will crash on bounds errors! *)
@@ -395,17 +393,17 @@ external unsafe_really_write
 (** [unsafe_really_send_no_sigpipe sock ~pos ~len bstr] is similar to {!Bigstring.send},
     but does not perform any bounds checks.  Will crash on bounds errors! *)
 val unsafe_really_send_no_sigpipe
-  : (file_descr -> pos : int -> len : int -> t -> unit) Or_error.t
+  : (Unix.File_descr.t -> pos : int -> len : int -> t -> unit) Or_error.t
 
 (** [unsafe_send_nonblocking_no_sigpipe sock ~pos ~len bstr] is similar to
     {!Bigstring.send_nonblocking_no_sigpipe}, but does not perform any bounds checks.
     Will crash on bounds errors! *)
 val unsafe_send_nonblocking_no_sigpipe
-  : (file_descr -> pos : int -> len : int -> t -> Syscall_result.Int.t)
+  : (Unix.File_descr.t -> pos : int -> len : int -> t -> Unix.Syscall_result.Int.t)
       Or_error.t
 
 external unsafe_writev
-  : file_descr -> t Core_unix.IOVec.t array -> int -> int
+  : Unix.File_descr.t -> t Unix.IOVec.t array -> int -> int
   = "bigstring_writev_stub"
 (** [unsafe_writev fd iovecs count] is similar to {!Bigstring.writev}, but does not
     perform any bounds checks.  Will crash on bounds errors! *)
@@ -414,7 +412,7 @@ external unsafe_writev
     {!Bigstring.sendmsg_nonblocking_no_sigpipe}, but does not perform any bounds checks.
     Will crash on bounds errors! *)
 val unsafe_sendmsg_nonblocking_no_sigpipe
-  : (file_descr -> t Core_unix.IOVec.t array -> int -> int option) Or_error.t
+  : (Unix.File_descr.t -> t Unix.IOVec.t array -> int -> int option) Or_error.t
 
 external unsafe_input
   : min_len : int -> In_channel.t -> pos : int -> len : int -> t -> int
@@ -430,7 +428,7 @@ external unsafe_output
 
 (** {2 Memory mapping} *)
 
-val map_file : shared : bool -> Unix.file_descr -> int -> t
+val map_file : shared : bool -> Unix.File_descr.t -> int -> t
 (** [map_file shared fd n] memory-maps [n] characters of the data associated with
     descriptor [fd] to a bigstring.  Iff [shared] is [true], all changes to the bigstring
     will be reflected in the file.

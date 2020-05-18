@@ -370,6 +370,22 @@ CAMLprim value core_linux_get_bind_to_interface(value v_fd)
   return caml_copy_string(buf);
 }
 
+CAMLprim value core_linux_peer_credentials(value v_fd)
+{
+  CAMLparam0();
+  CAMLlocal1(res);
+  struct ucred scred = {0};
+  socklen_t len = sizeof(struct ucred);
+  if (getsockopt(Long_val(v_fd), SOL_SOCKET, SO_PEERCRED, &scred, &len) < 0) {
+    uerror("getsockopt SO_PEERCRED", Nothing);
+  }
+  res = caml_alloc_small(3, 0);
+  Field(res, 0) = Val_long(scred.pid);
+  Field(res, 1) = Val_long(scred.uid);
+  Field(res, 2) = Val_long(scred.gid);
+  CAMLreturn(res);
+}
+
 /** Core epoll methods **/
 
 #define EPOLL_FLAG(FLAG) DEFINE_INT63_CONSTANT (core_linux_epoll_##FLAG##_flag, FLAG)

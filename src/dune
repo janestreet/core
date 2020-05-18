@@ -4,10 +4,12 @@
 
 (library (name core) (public_name core)
  (libraries core_kernel.caml_unix core_kernel core_kernel.base_for_tests
-  core_kernel.bounded_int_table error_checking_mutex core_kernel.flags
-  sexplib.unix spawn timezone threads core_kernel.version_util)
+  error_checking_mutex core_kernel.flags sexplib.unix spawn timezone threads
+  core_kernel.version_util)
  (c_flags (:standard -D_LARGEFILE64_SOURCE) ()) (install_c_headers config)
- (c_names bigstring_stubs linux_ext_stubs ocaml_utils_stubs pthread_np_stubs
-  recvmmsg signal_stubs timespec unix_stubs unix_time_stubs nss_stubs)
+ (c_names ocaml_utils_stubs pthread_np_stubs signal_stubs timespec unix_stubs
+  unix_time_stubs nss_stubs)
  (preprocessor_deps config.h)
  (preprocess (pps ppx_jane -allow-unannotated-ignores -check-doc-comments)))
+
+(install (section lib) (files (socketaddr.h as socketaddr.h)))

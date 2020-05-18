@@ -1,5 +1,5 @@
-open! Import
-open Core_unix
+open! Core
+open Core.Unix
 
 module type S = sig
 
@@ -131,6 +131,28 @@ module type S = sig
        -> ?count : int
        -> string IOVec.t array
        -> int option) Or_error.t
+
+
+  (** {2 Non-portable socket functionality} *)
+
+  module Peer_credentials : sig
+    type t =
+      { pid : Pid.t
+      ; uid : int
+      ; gid : int
+      }
+    [@@deriving sexp_of]
+  end
+
+  (** [peer_credential fd] takes a file descriptor of a unix socket. It returns the pid
+      and real ids of the process on the other side, as described in [man 7 socket] entry
+      for SO_PEERCRED.
+      This is useful in particular in the presence of pid namespace, as the returned pid
+      will be a pid in the current namespace, not the namespace of the other process.
+
+      Raises [Unix_error] if something goes wrong (file descriptor doesn't satisfy the
+      conditions above, no process on the other side of the socket, etc.). *)
+  val peer_credentials : (File_descr.t -> Peer_credentials.t) Or_error.t
 
   (** {2 Clock functions} *)
 

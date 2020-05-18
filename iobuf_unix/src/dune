@@ -1,6 +1,7 @@
 (library (name iobuf_unix) (public_name core.iobuf_unix)
- (libraries core core_kernel.iobuf) (preprocessor_deps config.h)
- (c_names iobuf_stubs) (preprocess (pps ppx_jane)))
+ (libraries bigstring_unix core core_kernel.iobuf)
+ (preprocessor_deps config.h) (c_names iobuf_stubs)
+ (preprocess (pps ppx_jane)))
 
 (rule (targets config.h) (deps)
  (action (bash "cp %{lib:jst-config:config.h} .")))

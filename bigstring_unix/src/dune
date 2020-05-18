@@ -1,0 +1,9 @@
+(library (name bigstring_unix) (public_name core.bigstring_unix)
+ (libraries core) (c_names bigstring_unix_stubs recvmmsg)
+ (preprocessor_deps config.h) (preprocess (pps ppx_jane)))
+
+(rule (targets config.h) (deps)
+ (action (bash "cp %{lib:jst-config:config.h} .")))
+
+(rule (targets socketaddr.h) (deps)
+ (action (bash "cp %{lib:core:socketaddr.h} .")))

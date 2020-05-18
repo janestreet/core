@@ -167,13 +167,17 @@ let%test_module _ =
             Thread.create
               ~on_uncaught_exn:`Print_to_stderr
               (fun () ->
-                 let nr = Bigstring.read r (Bigstring.create r_len) ~pos:0 ~len:r_len in
+                 let nr =
+                   Bigstring_unix.read r (Bigstring.create r_len) ~pos:0 ~len:r_len
+                 in
                  assert (nr > 0 && nr <= r_len);
                  Unix.close r)
               ()
           in
           let nw =
-            Bigstring.writev w [| Unix.IOVec.of_bigstring (Bigstring.create w_len) |]
+            Bigstring_unix.writev
+              w
+              [| Unix.IOVec.of_bigstring (Bigstring.create w_len) |]
           in
           assert (nw > 0 && nw < w_len);
           Thread.join read;
@@ -217,7 +221,8 @@ let%expect_test "[Epoll.set] has allocation limits" =
 let%expect_test "[Epoll.find] does not allocate when not present" =
   with_epoll ~f:(fun epset ->
     let sock1 = make_socket () in
-    require_no_allocation [%here] (fun () -> ignore (Epoll.find epset sock1)));
+    require_no_allocation [%here] (fun () ->
+      ignore (Epoll.find epset sock1 : _ option)));
   [%expect {| |}]
 ;;
 
@@ -226,16 +231,16 @@ let%expect_test "[Epoll.find] has allocation limits when present" =
     let sock1 = make_socket () in
     Epoll.set epset sock1 Flags.in_;
     require_allocation_does_not_exceed (Minor_words 2) [%here] (fun () ->
-      ignore (Epoll.find epset sock1)));
+      ignore (Epoll.find epset sock1 : _ option)));
   [%expect {| |}]
 ;;
 
 let%expect_test "[Epoll.remove] does not allocate" =
   with_epoll ~f:(fun epset ->
     let sock1 = make_socket () in
-    require_no_allocation [%here] (fun () -> ignore (Epoll.remove epset sock1));
+    require_no_allocation [%here] (fun () -> ignore (Epoll.remove epset sock1 : unit));
     Epoll.set epset sock1 Flags.in_;
-    require_no_allocation [%here] (fun () -> ignore (Epoll.remove epset sock1)));
+    require_no_allocation [%here] (fun () -> ignore (Epoll.remove epset sock1 : unit)));
   [%expect {| |}]
 ;;
 
@@ -438,4 +443,54 @@ let%test_module "getxattr and setxattr" =
        some-file-that-doesnt-exist) |}]
     ;;
   end)
+;;
+
+let with_listening_server_unix_socket fname ~f =
+  let with_cwd dir ~f =
+    let old = Unix.getcwd () in
+    Unix.chdir dir;
+    Exn.protect ~finally:(fun () -> Unix.chdir old) ~f
+  in
+  (* work around socket path length restriction *)
+  with_cwd (Filename.dirname fname) ~f:(fun () ->
+    let fname = Filename.basename fname in
+    let server_sock = Unix.socket ~domain:PF_UNIX ~kind:SOCK_STREAM ~protocol:0 () in
+    Unix.bind server_sock ~addr:(ADDR_UNIX fname);
+    let thread =
+      Thread.create
+        ~on_uncaught_exn:`Print_to_stderr
+        (fun () -> Unix.listen server_sock ~backlog:10)
+        ()
+    in
+    f fname;
+    Thread.join thread)
+;;
+
+let%test_unit "peer_credentials" =
+  match Linux_ext.peer_credentials with
+  | Error _ -> ()
+  | Ok peer_credentials ->
+    protectx (Filename.temp_file "linux_ext" "") ~finally:Unix.unlink ~f:(fun fname ->
+      (let fd = Unix.openfile fname ~mode:[ O_RDONLY ] in
+       try
+         ignore (peer_credentials fd : Peer_credentials.t);
+         failwith "peer credential on non socket should have raised"
+       with
+       | Unix.Unix_error (ENOTSOCK, _, _) -> ());
+      with_listening_server_unix_socket (fname ^ ".peercredsocket") ~f:(fun fname ->
+        let client_sock =
+          Unix.socket ~domain:PF_UNIX ~kind:SOCK_STREAM ~protocol:0 ()
+        in
+        let rec connect count =
+          try Unix.connect client_sock ~addr:(ADDR_UNIX fname) with
+          | Unix_error (ECONNREFUSED, _, _) when count < 100 ->
+            (* the server might not have listened yet *)
+            ignore (Unix.nanosleep 0.1 : float);
+            connect (count + 1)
+        in
+        connect 0;
+        let p = peer_credentials client_sock in
+        [%test_eq: Pid.t] p.pid (Unix.getpid ());
+        [%test_eq: int] p.uid (Unix.getuid ());
+        [%test_eq: int] p.gid (Unix.getgid ())))
 ;;

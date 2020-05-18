@@ -284,7 +284,7 @@ let create_sample_file ?(int_size = 2) ?(be = false) ~msgcount =
       in
       unsafe_set_int bstr ~pos:0 len;
       Bigstring.From_string.blito ~src:s ~dst:bstr ~dst_pos:int_size ();
-      really_write fd ~len:(len + int_size) bstr)
+      Bigstring_unix.really_write fd ~len:(len + int_size) bstr)
     else (
       let fill_int =
         match int_size with

@@ -1,2 +1,3 @@
-(library (name iobuf_unix_test) (libraries iobuf_unix iobuf_test)
+(library (name iobuf_unix_test)
+ (libraries bigstring_unix iobuf_unix iobuf_test)
  (preprocess (pps ppx_jane)))
