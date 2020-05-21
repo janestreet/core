@@ -1,4 +1,3 @@
 (library (name bistring_unix_test)
- (libraries bigbuffer_blocking bigstring_unix
-  expect_test_helpers_core.expect_test_helpers_base quickcheck_deprecated)
+ (libraries bigbuffer_blocking bigstring_unix quickcheck_deprecated)
  (preprocess (pps ppx_jane)))
