@@ -47,6 +47,5 @@ let all () =
          Zone_test.test;
          Core_unix_test.test;
          Union_find_test.test;
-         Ofday_unit_tests_v1.test ();
          Validate_test.test;
        ])
