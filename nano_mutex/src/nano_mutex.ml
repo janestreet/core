@@ -47,11 +47,27 @@ end = struct
   let signal t = Condition.signal t.condition
 end
 
+module Thread_id_option : sig
+  type t [@@deriving equal, sexp_of]
+
+  val none : t
+  val some : int -> t
+  val is_none : t -> bool
+  val is_some : t -> bool
+end = struct
+  type t = int [@@deriving equal, sexp_of]
+
+  let none = -1
+  let[@inline always] is_none t = t = none
+  let[@inline always] is_some t = t <> none
+  let[@inline always] some int = int
+  let sexp_of_t t = if t = none then [%sexp "None"] else [%sexp (t : t)]
+end
+
 (* We represent a nano mutex using an OCaml record.  The [id_of_thread_holding_lock] field
    represents whether the mutex is locked or not, and if it is locked, which thread holds
-   the lock.  We do not use an [int option] for performance reasons (doing so slows down
-   lock+unlock by a factor of almost two).  Instead, we have [id_of_thread_holding_lock =
-   bogus_thread_id] when the mutex is unlocked.
+   the lock.  We use [Thread_id_option] instead of [int option] for performance reasons
+   (using [int option] slows down lock+unlock by a factor of almost two).
 
    The mutex record has an optional [blocker] field for use when the mutex is contended.
    We use the OS-level condition variable in [blocker] to [wait] in a thread that desires
@@ -71,7 +87,7 @@ end
  * Performance -- do not spin trying to acquire the lock.  This is accomplished by
    waiting on a condition variable if a lock is contended. *)
 type t =
-  { mutable id_of_thread_holding_lock : int
+  { mutable id_of_thread_holding_lock : Thread_id_option.t
   ; mutable num_using_blocker : int
   ; mutable blocker : Blocker.t option
   }
@@ -92,15 +108,22 @@ let invariant t =
 ;;
 
 let equal (t : t) t' = phys_equal t t'
-let bogus_thread_id = -1
 
 let create () =
-  { id_of_thread_holding_lock = bogus_thread_id; num_using_blocker = 0; blocker = None }
+  { id_of_thread_holding_lock = Thread_id_option.none
+  ; num_using_blocker = 0
+  ; blocker = None
+  }
 ;;
 
-let is_locked t = t.id_of_thread_holding_lock <> bogus_thread_id
+let is_locked t = Thread_id_option.is_some t.id_of_thread_holding_lock
 let current_thread_id () = Thread.id (Thread.self ())
-let current_thread_has_lock t = t.id_of_thread_holding_lock = current_thread_id ()
+
+let current_thread_has_lock t =
+  Thread_id_option.equal
+    t.id_of_thread_holding_lock
+    (current_thread_id () |> Thread_id_option.some)
+;;
 
 let recursive_lock_error t =
   Error.create
@@ -113,14 +136,14 @@ let try_lock t =
   (* The following code relies on an atomic test-and-set of [id_of_thread_holding_lock],
      so that there is a definitive winner in a race between multiple lockers and everybody
      agrees who acquired the lock. *)
-  let current_thread_id = current_thread_id () in
+  let current_thread_id = current_thread_id () |> Thread_id_option.some in
   (* BEGIN ATOMIC *)
-  if t.id_of_thread_holding_lock = bogus_thread_id
+  if Thread_id_option.is_none t.id_of_thread_holding_lock
   then (
     t.id_of_thread_holding_lock <- current_thread_id;
     (* END ATOMIC *)
     Ok `Acquired)
-  else if current_thread_id = t.id_of_thread_holding_lock
+  else if Thread_id_option.equal current_thread_id t.id_of_thread_holding_lock
   then Error (recursive_lock_error t)
   else Ok `Not_acquired
 ;;
@@ -194,14 +217,14 @@ let rec lock t =
      Other threads can change [t.id_of_thread_holding_lock] concurrently with this code.
      However, no other thread can set it to our [current_thread_id], since threads only
      ever set [t.id_of_thread_holding_lock] to their current thread id, or clear it. *)
-  let current_thread_id = current_thread_id () in
+  let current_thread_id = current_thread_id () |> Thread_id_option.some in
   (* BEGIN ATOMIC *)
-  if t.id_of_thread_holding_lock = bogus_thread_id
+  if Thread_id_option.is_none t.id_of_thread_holding_lock
   then (
     t.id_of_thread_holding_lock <- current_thread_id;
     (* END ATOMIC *)
     Ok ())
-  else if current_thread_id = t.id_of_thread_holding_lock
+  else if Thread_id_option.equal current_thread_id t.id_of_thread_holding_lock
   then Error (recursive_lock_error t)
   else (
     with_blocker t (fun blocker -> if is_locked t then Blocker.wait blocker);
@@ -222,11 +245,13 @@ let unlock t =
      winner in a race between multiple unlockers, so that one unlock succeeds and the
      rest fail. *)
   (* BEGIN ATOMIC *)
-  if t.id_of_thread_holding_lock <> bogus_thread_id
+  if Thread_id_option.is_some t.id_of_thread_holding_lock
   then
-    if t.id_of_thread_holding_lock = current_thread_id
+    if Thread_id_option.equal
+         t.id_of_thread_holding_lock
+         (current_thread_id |> Thread_id_option.some)
     then (
-      t.id_of_thread_holding_lock <- bogus_thread_id;
+      t.id_of_thread_holding_lock <- Thread_id_option.none;
       (* END ATOMIC *)
       if Option.is_some t.blocker then with_blocker t Blocker.signal;
       Ok ())

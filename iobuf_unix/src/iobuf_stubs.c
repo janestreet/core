@@ -22,6 +22,11 @@
 /* Using the Abstract_tag, expose a version of recvmmsg that allows
    for the reuse of the mmsghdr and associated iovecs. */
 
+#if defined(__FreeBSD__) || defined(__NetBSD__)
+#include <sys/types.h>
+#include <sys/socket.h>
+#endif
+
 typedef struct _recvmmsg_ctx
 {
   struct mmsghdr * hdrs;
