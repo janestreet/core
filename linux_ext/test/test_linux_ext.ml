@@ -446,24 +446,16 @@ let%test_module "getxattr and setxattr" =
 ;;
 
 let with_listening_server_unix_socket fname ~f =
-  let with_cwd dir ~f =
-    let old = Unix.getcwd () in
-    Unix.chdir dir;
-    Exn.protect ~finally:(fun () -> Unix.chdir old) ~f
+  let server_sock = Unix.socket ~domain:PF_UNIX ~kind:SOCK_STREAM ~protocol:0 () in
+  Unix.bind server_sock ~addr:(ADDR_UNIX fname);
+  let thread =
+    Thread.create
+      ~on_uncaught_exn:`Print_to_stderr
+      (fun () -> Unix.listen server_sock ~backlog:10)
+      ()
   in
-  (* work around socket path length restriction *)
-  with_cwd (Filename.dirname fname) ~f:(fun () ->
-    let fname = Filename.basename fname in
-    let server_sock = Unix.socket ~domain:PF_UNIX ~kind:SOCK_STREAM ~protocol:0 () in
-    Unix.bind server_sock ~addr:(ADDR_UNIX fname);
-    let thread =
-      Thread.create
-        ~on_uncaught_exn:`Print_to_stderr
-        (fun () -> Unix.listen server_sock ~backlog:10)
-        ()
-    in
-    f fname;
-    Thread.join thread)
+  f fname;
+  Thread.join thread
 ;;
 
 let%test_unit "peer_credentials" =

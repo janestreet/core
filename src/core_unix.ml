@@ -2453,13 +2453,40 @@ let accept ?close_on_exec fd =
   in
   fd, addr
 
+let with_socket_length_restriction_workaround f fd ~addr =
+  match addr with
+  | ADDR_INET _ -> f fd ~addr
+  | ADDR_UNIX path ->
+    try f fd ~addr
+    with Unix_error (ENAMETOOLONG, orig1, orig2) as orig_exn ->
+    (* Try to workaround this limit on linux by using /proc. The limit on ENAMETOOLONG is
+       system specific anyway, so that seems fine.
+       We must let EINTR through, as this error can happen at any time, and it's not
+       reasonable to transform EINTR, which is transient and should be retried, into
+       ENAMETOOLONG which is not transient. *)
+    match close (openfile ~mode:[ O_CLOEXEC; O_RDONLY ] "/proc/self/fd") with
+    | exception Unix_error (EINTR, _, _) -> raise (Unix_error (EINTR, orig1, orig2))
+    | exception Unix_error _ -> raise orig_exn
+    | () ->
+      (* We let the errors of openfile through: resolution of the directory should lead to
+         the same errors as if we didn't run into the connect/bind limit (ENOENT, ENOTDIR,
+         EACCESS, etc). The function name in the error would be "open" instead of
+         "connect", but that seems fine. *)
+      Exn.protectx
+        (openfile ~mode:[ O_CLOEXEC; O_RDONLY ] (Filename.dirname path))
+        ~finally:close
+        ~f:(fun dirfd ->
+          let path = sprintf "/proc/self/fd/%d/%s" (File_descr.to_int dirfd) (Filename.basename path) in
+          f fd ~addr:(ADDR_UNIX path))
+;;
+
 let bind fd ~addr =
-  improve (fun () -> Unix.bind fd ~addr)
+  improve (fun () -> with_socket_length_restriction_workaround Unix.bind fd ~addr)
     (fun () -> [fd_r fd; addr_r addr])
 ;;
 
 let connect fd ~addr =
-  improve (fun () -> Unix.connect fd ~addr)
+  improve (fun () -> with_socket_length_restriction_workaround Unix.connect fd ~addr)
     (fun () -> [fd_r fd; addr_r addr])
 ;;
 

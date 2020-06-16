@@ -372,3 +372,18 @@ let%test_module "the search path passed to [create_process_env] has an effect" =
     ;;
   end)
 ;;
+
+let%expect_test "unix socket path limit workaround" =
+  if Sys.file_exists_exn "/proc"
+  then
+    Exn.protectx
+      (Filename.temp_dir ("dir" ^ String.make 120 'r') "")
+      ~finally:Unix.rmdir
+      ~f:(fun dir ->
+        let sock = Unix.socket ~domain:PF_UNIX ~kind:SOCK_STREAM ~protocol:0 () in
+        Unix.bind sock ~addr:(ADDR_UNIX (dir ^/ "socket"));
+        Unix.set_nonblock sock;
+        Unix.listen sock ~backlog:10 (* would fail if bind didn't work *);
+        Unix.close sock;
+        Unix.unlink (dir ^/ "socket"))
+;;
