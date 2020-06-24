@@ -420,7 +420,11 @@ module Span = struct
 
   [%%endif]
 
-  let to_time_span t ~calibrator = Time.Span.of_ns (Int63.to_float (to_ns t ~calibrator))
+  let to_time_ns_span t ~calibrator = Time_ns.Span.of_int63_ns (to_ns t ~calibrator)
+
+  let of_time_ns_span span ~calibrator =
+    of_ns (Time_ns.Span.to_int63_ns span) ~calibrator
+  ;;
 end
 
 let calibrator = Calibrator.t

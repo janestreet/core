@@ -124,10 +124,10 @@ module Span : sig
   val ( + ) : t -> t -> t
   val ( - ) : t -> t -> t
 
-
-  val to_time_span : t -> calibrator:Calibrator.t -> Time.Span.t
   val to_ns : t -> calibrator:Calibrator.t -> Int63.t
   val of_ns : Int63.t -> calibrator:Calibrator.t -> t
+  val to_time_ns_span : t -> calibrator:Calibrator.t -> Time_ns.Span.t
+  val of_time_ns_span : Time_ns.Span.t -> calibrator:Calibrator.t -> t
 
   (**/**)
 
