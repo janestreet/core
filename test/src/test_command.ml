@@ -533,13 +533,12 @@ let%expect_test "escape flag type" =
 
     === flags ===
 
-      [-- ...]                    escape flag
-      [-also-an-escape-flag ...]  escape flag
-      [-other-flag]
-      [-build-info]               print info about this build and exit
-      [-version]                  print the version of this build and exit
-      [-help]                     print this help text and exit
-                                  (alias: -?)
+      [-- ...]                   . escape flag
+      [-also-an-escape-flag ...] . escape flag
+      [-other-flag]              .
+      [-build-info]              . print info about this build and exit
+      [-version]                 . print the version of this build and exit
+      [-help], -?                . print this help text and exit
 
     (command.ml.Exit_called (status 0)) |}];
   test [];
@@ -647,9 +646,9 @@ let%expect_test "double-dash built-in flags" =
 
     === subcommands ===
 
-      blue
-      version  print version information
-      help     explain a given subcommand (perhaps recursively)
+      blue                       .
+      version                    . print version information
+      help                       . explain a given subcommand (perhaps recursively)
 
     (command.ml.Exit_called (status 0)) |}];
   run_with_both_flags [] "build-info";
@@ -668,8 +667,8 @@ let%expect_test "double-dash built-in flags" =
 
     === subcommands ===
 
-      bird
-      help  explain a given subcommand (perhaps recursively)
+      bird                       .
+      help                       . explain a given subcommand (perhaps recursively)
 
     (command.ml.Exit_called (status 0))|}];
   run_with_both_flags [ "blue"; "bird" ] "help";
@@ -679,8 +678,7 @@ let%expect_test "double-dash built-in flags" =
 
     === flags ===
 
-      [-help]  print this help text and exit
-               (alias: -?)
+      [-help], -?                . print this help text and exit
 
     (command.ml.Exit_called (status 0))|}];
   run_test_command [ "blue"; "bird" ] |> print_string;
@@ -723,11 +721,10 @@ let%expect_test "when_parsing_succeeds" =
 
     === flags ===
 
-      -input _       input
-      [-build-info]  print info about this build and exit
-      [-version]     print the version of this build and exit
-      [-help]        print this help text and exit
-                     (alias: -?)
+      -input _                   . input
+      [-build-info]              . print info about this build and exit
+      [-version]                 . print the version of this build and exit
+      [-help], -?                . print this help text and exit
 
     (command.ml.Exit_called (status 0)) |}];
   run [];
