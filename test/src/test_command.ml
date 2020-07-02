@@ -217,8 +217,7 @@ let%expect_test "[choose_one]" =
   let test (type b) ~(if_nothing_chosen : (_, b) Command.Param.If_nothing_chosen.t) args =
     run_command
       ~args
-      (let open Command.Let_syntax in
-       let%map_open arg =
+      (let%map_open.Command arg =
          choose_one
            ~if_nothing_chosen
            (List.map [ "-foo"; "-bar" ] ~f:(fun name ->
@@ -272,20 +271,20 @@ let%expect_test "[choose_one]" =
 
 let%expect_test "nested [choose_one]" =
   let test args =
+    let arg =
+      Command.Param.choose_one
+        ~if_nothing_chosen:Raise
+        [ (let%map_open.Command foo = flag "foo" no_arg ~doc:""
+           and bar = flag "bar" no_arg ~doc:"" in
+           if foo || bar then Some (`Foo_bar (foo, bar)) else None)
+        ; (let%map_open.Command baz = flag "baz" no_arg ~doc:""
+           and qux = flag "qux" no_arg ~doc:"" in
+           if baz || qux then Some (`Baz_qux (baz, qux)) else None)
+        ]
+    in
     run_command
       ~args
-      (let open Command.Let_syntax in
-       let%map_open arg =
-         choose_one
-           ~if_nothing_chosen:Raise
-           [ (let%map foo = flag "foo" no_arg ~doc:""
-              and bar = flag "bar" no_arg ~doc:"" in
-              if foo || bar then Some (`Foo_bar (foo, bar)) else None)
-           ; (let%map baz = flag "baz" no_arg ~doc:""
-              and qux = flag "qux" no_arg ~doc:"" in
-              if baz || qux then Some (`Baz_qux (baz, qux)) else None)
-           ]
-       in
+      (let%map_open.Command arg = arg in
        fun () ->
          print_s [%message (arg : [ `Foo_bar of bool * bool | `Baz_qux of bool * bool ])])
   in
@@ -452,9 +451,8 @@ let%expect_test "[?verbose_on_parse_error]" =
       ?verbose_on_parse_error
       (Command.basic
          ~summary:""
-         (let open Command.Let_syntax in
-          let%map_open () =
-            let%map () = return () in
+         (let%map_open.Command () =
+            let%map.Command () = return () in
             raise_s [%message "Fail!"]
           in
           fun () -> ()))

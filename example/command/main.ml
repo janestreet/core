@@ -3,10 +3,8 @@ open Core
 (* BEGIN -- useful utilities *)
 
 let flag_prompt_if_missing name of_string ~doc =
-  let open Command.Param in
-  let arg = Arg_type.create of_string in
-  let open Command.Let_syntax in
-  let%map_open value = flag ("-" ^ name) (optional arg) ~doc in
+  let arg = Command.Param.Arg_type.create of_string in
+  let%map_open.Command value = flag ("-" ^ name) (optional arg) ~doc in
   match value with
   | Some v -> v
   | None ->
@@ -37,9 +35,9 @@ module Sing = struct
   let command =
     Command.basic
       ~summary:"sing a song"
-      (let open Command.Let_syntax in
-       (* flags *)
-       let%map_open slow = flag "slow" ~aliases:[ "AA"; "-BB" ] no_arg ~doc:" sing slow"
+      (* flags *)
+      (let%map_open.Command slow =
+         flag "slow" ~aliases:[ "AA"; "-BB" ] no_arg ~doc:" sing slow"
        and loudness =
          flag "-loudness" (optional int) ~doc:"N how loud to sing (number of decibels)"
        and date = flag "-date" (optional date) ~doc:"DATE the date"
@@ -72,8 +70,7 @@ module Hg_log = struct
   let command =
     Command.basic
       ~summary:"show a point in hg history"
-      (let open Command.Let_syntax in
-       let%map_open revision = revision_flag
+      (let%map_open.Command revision = revision_flag
        and print =
          flag "-print" no_arg ~doc:" display all changes (not just a summary)"
        in
@@ -85,8 +82,7 @@ module Hg_cat = struct
   let command =
     Command.basic
       ~summary:"cat a file from hg history"
-      (let open Command.Let_syntax in
-       let%map_open revision = revision_flag
+      (let%map_open.Command revision = revision_flag
        and file = anon ("FILE" %: string) in
        fun () -> ignore (revision, file))
   ;;
@@ -100,9 +96,7 @@ module Cat = struct
   let command =
     Command.async
       ~summary:"example async command: cat a file to stdout"
-      (let open Command.Let_syntax in
-       let%map_open path = anon ("FILE" %: string) in
-       let open Deferred.Let_syntax in
+      (let%map_open.Command path = anon ("FILE" %: string) in
        fun () ->
          let%bind _ =
            Reader.with_file path ~f:(fun r ->
@@ -117,8 +111,7 @@ module Prompting = struct
   let command =
     Command.basic
       ~summary:"command demonstrating prompt-if-missing flags"
-      (let open Command.Let_syntax in
-       let%map_open revision = flag "-rev" (required string) ~doc:" print stuff"
+      (let%map_open.Command revision = flag "-rev" (required string) ~doc:" print stuff"
        and id = flag_prompt_if_missing "id" Fn.id ~doc:" whatever" in
        fun () ->
          print_endline "MAIN STARTED";
@@ -136,8 +129,7 @@ module Composite = struct
   [@@deriving fields, sexp]
 
   let t_param =
-    let open Command.Let_syntax in
-    let%map_open foo = flag "foo" (required int) ~doc:"N foo factor"
+    let%map_open.Command foo = flag "foo" (required int) ~doc:"N foo factor"
     and bar = flag "bar" (optional string) ~doc:"B error bar (optional)"
     and baz = flag "baz" (listed float) ~doc:"X whatever (listed)" in
     { foo; bar; baz }
@@ -146,8 +138,7 @@ module Composite = struct
   let command =
     Command.basic
       ~summary:"example using a composite record param"
-      (let open Command.Let_syntax in
-       let%map_open t = t_param in
+      (let%map_open.Command t = t_param in
        fun () -> print_endline (Sexp.to_string_hum (sexp_of_t t)))
   ;;
 end
@@ -156,8 +147,7 @@ module Complex_anons = struct
   let command =
     Command.basic
       ~summary:"command with complex anonymous argument structure"
-      (let open Command.Let_syntax in
-       let%map_open a = anon ("A" %: string)
+      (let%map_open.Command a = anon ("A" %: string)
        and b = anon ("B" %: string)
        and rest =
          anon
@@ -184,8 +174,7 @@ module Goodies = struct
   let command =
     Command.basic
       ~summary:"demo of how to get various backdoor values"
-      (let open Command.Let_syntax in
-       let%map_open help = help
+      (let%map_open.Command help = help
        and path = path
        and args = args
        and _ = flag "t" (optional string) ~doc:""
@@ -204,8 +193,7 @@ module Long_flag_description = struct
   let command =
     Command.basic
       ~summary:"demo of word wrap for long flag descriptions"
-      (let open Command.Let_syntax in
-       let%map_open foo =
+      (let%map_open.Command foo =
          flag
            "-foo"
            no_arg
