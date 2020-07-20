@@ -822,13 +822,13 @@ CAMLprim value core_unix_sysconf(value v_name)
   ret = sysconf(name);
   if (ret == -1) {
     if (errno == 0) {
-      return core_Val_none;
+      return Val_none;
     }
     else {
       uerror("sysconf", Nothing);
     }
   }
-  return core_Val_some(caml_copy_int64(ret));
+  return caml_alloc_some(caml_copy_int64(ret));
 }
 
 /* Pathname resolution */

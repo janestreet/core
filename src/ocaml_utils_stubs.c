@@ -14,7 +14,6 @@ int strcmp_not_a_macro(const char* s1, const char* s2)
 #include <stdint.h>
 #include <stdio.h>
 #include "ocaml_utils.h"
-#include "ocaml_utils_macros.h"
 
 /* Exceptions */
 

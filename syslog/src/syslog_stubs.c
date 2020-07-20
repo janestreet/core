@@ -6,8 +6,7 @@
 #include <caml/signals.h>
 #include <caml/fail.h>
 
-#define Val_none Val_int(0)
-#define Some_val(v) Field(v, 0)
+#include "ocaml_utils.h"
 
 static int log_open_options[] = {
   /* THESE MUST STAY IN THE SAME ORDER AS IN syslog.ml!!! */
