@@ -111,6 +111,7 @@ module Null_toplevel = struct
   let cores                          = u "Linux_ext.cores"
   let file_descr_realpath            = u "Linux_ext.file_descr_realpath"
   let get_ipv4_address_for_interface = u "Linux_ext.get_ipv4_address_for_interface"
+  let get_mac_address                = u "Linux_ext.get_mac_address"
   let bind_to_interface              = u "Linux_ext.bind_to_interface"
   let get_bind_to_interface          = u "Linux_ext.get_bind_to_interface"
   let get_terminal_size              = u "Linux_ext.get_terminal_size"
@@ -179,6 +180,7 @@ module Null : Linux_ext_intf.S = struct
   end
 
   module Peer_credentials = Peer_credentials
+
   module Priority = Priority
 
   module Clock = struct
@@ -725,6 +727,9 @@ let get_terminal_size = function
 external get_ipv4_address_for_interface : string -> string =
   "core_linux_get_ipv4_address_for_interface" ;;
 
+external get_mac_address : ifname : string -> string =
+  "core_linux_get_mac_address" ;;
+
 (* The C-stub is a simple pass-through of the linux SO_BINDTODEVICE semantics, wherein an
    empty string removes any binding *)
 external bind_to_interface' : File_descr.t -> string -> unit =
@@ -1037,6 +1042,7 @@ end
 let cores                          = Ok cores
 let file_descr_realpath            = Ok file_descr_realpath
 let get_ipv4_address_for_interface = Ok get_ipv4_address_for_interface
+let get_mac_address                = Ok get_mac_address
 let bind_to_interface              = Ok bind_to_interface
 let get_bind_to_interface          = Ok get_bind_to_interface
 let get_terminal_size              = Ok get_terminal_size

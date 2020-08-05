@@ -370,6 +370,7 @@ module type Interval = sig
       module Time    : Stable with type t = Time.   t
       module Time_ns : Stable with type t = Time_ns.t
       module Ofday   : Stable with type t = Ofday.  t
+      module Ofday_ns : Stable with type t = Ofday_ns.t
 
       (**/**)
       (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:

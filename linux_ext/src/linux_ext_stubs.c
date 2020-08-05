@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/ether.h>
 #include <netinet/tcp.h>
 #include <net/if.h>
 #include <time.h>
@@ -44,6 +45,7 @@
 
 extern int core_unix_close_durably(int fd);
 extern struct in_addr core_unix_get_in_addr_for_interface(value v_interface);
+extern struct ifreq core_build_ifaddr_request(const char *interface);
 
 CAMLprim value
 core_linux_sendfile_stub(value v_sock, value v_fd, value v_pos, value v_len)
@@ -313,6 +315,46 @@ CAMLprim value core_linux_get_ipv4_address_for_interface(value v_interface)
   return caml_copy_string(inet_ntoa(addr));
 }
 
+CAMLprim value core_linux_get_mac_address(value v_interface)
+{
+  CAMLparam1(v_interface);
+  int fd = -1;
+  char* error = NULL;
+  struct ifreq ifr = core_build_ifaddr_request(String_val(v_interface));
+
+  /* Note that [v_interface] is invalid past this point. */
+  caml_enter_blocking_section();
+
+  fd = socket(AF_INET, SOCK_DGRAM, 0);
+
+  if (fd == -1)
+    error = "core_linux_get_mac_address: couldn't allocate socket";
+  else {
+    if (ioctl(fd, SIOCGIFHWADDR, &ifr) < 0)
+      error = "core_linux_get_mac_address: ioctl(fd, SIOCGIFHWADDR, ...) failed";
+
+    (void) core_unix_close_durably(fd);
+  }
+
+  caml_leave_blocking_section();
+
+  if (error == NULL) {
+    char buf[18];
+    struct ether_addr * ea = (struct ether_addr *) &ifr.ifr_hwaddr.sa_data;
+    /* While [ether_ntoa] seems promising, it has an unusual interpretation of the
+       canonical representation of mac addresses.  It drops leading zeros and does not
+       zero pad. */
+    snprintf (buf, 18, "%02x:%02x:%02x:%02x:%02x:%02x",
+           ea->ether_addr_octet[0], ea->ether_addr_octet[1],
+           ea->ether_addr_octet[2], ea->ether_addr_octet[3],
+           ea->ether_addr_octet[4], ea->ether_addr_octet[5]);
+    CAMLreturn(caml_copy_string(buf));
+  }
+
+  uerror(error, Nothing);
+  assert(0);  /* [uerror] should never return. */
+}
+
 /*
  * This linux specific socket option is in use for applications that require it
  * for security reasons. Taking a string argument, it does not fit the sockopt stubs used
@@ -369,6 +411,7 @@ CAMLprim value core_linux_get_bind_to_interface(value v_fd)
 
   return caml_copy_string(buf);
 }
+
 
 CAMLprim value core_linux_peer_credentials(value v_fd)
 {

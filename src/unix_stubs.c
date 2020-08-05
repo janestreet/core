@@ -697,7 +697,7 @@ CAMLprim value core_unix_setrlimit(value v_resource, value v_limits)
 
 /* Populating the ifreq structure is wiley and we do it in a couple
    of places, so lets factor it out here for safety. */
-static struct ifreq build_ifaddr_request(const char *interface)
+struct ifreq core_build_ifaddr_request(const char *interface)
 {
   struct ifreq ifr;
   memset(&ifr, 0, sizeof(ifr));
@@ -716,7 +716,7 @@ struct in_addr core_unix_get_in_addr_for_interface(value v_interface)
 {
   int fd = -1;
   char* error = NULL;
-  struct ifreq ifr = build_ifaddr_request(String_val(v_interface));
+  struct ifreq ifr = core_build_ifaddr_request(String_val(v_interface));
 
   /* Note that [v_interface] is invalid past this point. */
   caml_enter_blocking_section();
@@ -1122,7 +1122,7 @@ CAMLprim value core_unix_mcast_modify (value v_action,
         struct ifreq ifreq;
 
         assert(Tag_val(v_ifname_opt) == 0 && Wosize_val(v_ifname_opt) == 1);
-        ifreq = build_ifaddr_request(String_val(Field(v_ifname_opt,0)));
+        ifreq = core_build_ifaddr_request(String_val(Field(v_ifname_opt,0)));
 
         if (ioctl(fd, SIOCGIFADDR, &ifreq) < 0)
           uerror("core_unix_mcast_modify: ioctl", Nothing);

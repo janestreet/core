@@ -391,6 +391,10 @@ module type S = sig
       throws an exception if no IP address is configured. *)
   val get_ipv4_address_for_interface : (string -> string) Or_error.t
 
+  (** [get_mac_address] returns the mac address of [ifname] in the canonical form, e.g.
+      "aa:bb:cc:12:34:56". *)
+  val get_mac_address : (ifname : string -> string) Or_error.t
+
   (** [bind_to_interface fd (Only "eth0")] restricts packets from being
       received/sent on the given file descriptor [fd] on any interface other than "eth0".
       Use [bind_to_interface fd Any] to allow traffic on any interface.  The bindings are
@@ -417,6 +421,7 @@ module type S = sig
       descriptors.
 
       See the man pages for a full description of the epoll facility. *)
+
   module Epoll : sig
 
     module Flags : sig
@@ -590,4 +595,5 @@ module type S = sig
           -> unit
           -> Set_attr_result.t) Or_error.t
   end
+
 end

@@ -76,6 +76,14 @@ module Stable = struct
       include Comparator.Stable.V1.Make (T)
     end
 
+    module Ofday_ns = struct
+      module T = struct
+        type t = Core_time_ns.Stable.Ofday.V1.t interval [@@deriving sexp, bin_io, compare]
+      end
+      include T
+      include Comparator.Stable.V1.Make (T)
+    end
+
     module Private = struct
       include T
       let to_float t = t

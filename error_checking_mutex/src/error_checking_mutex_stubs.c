@@ -77,7 +77,8 @@ CAMLprim value unix_create_error_checking_mutex(value __unused v_unit)
     pthread_mutex_init(mtx, &attrs), "Mutex.create_error_checking");
   pthread_mutexattr_destroy(&attrs);
   v_res =
-    caml_alloc_custom(&caml_mutex_ops, sizeof(pthread_mutex_t *), 1, 1000);
+    caml_alloc_custom_mem(&caml_mutex_ops, sizeof(pthread_mutex_t *),
+                          sizeof(pthread_mutex_t));
   Mutex_val(v_res) = mtx;
   return v_res;
 }
