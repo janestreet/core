@@ -513,8 +513,7 @@ let%expect_test "escape flag type" =
     run_command
       ~args
       (let%map_open.Command dash_dash = flag "--" escape ~doc:"... escape flag"
-       and also_an_escape_flag =
-         flag "-also-an-escape-flag" escape ~doc:"... escape flag"
+       and also_an_escape_flag = flag "-also-an-escape-flag" escape ~doc:"... escape flag"
        and other_flag = flag "-other-flag" no_arg ~doc:"" in
        fun () ->
          print_s

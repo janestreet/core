@@ -1,5 +1,4 @@
-[%%import
-  "config.h"]
+[%%import "config.h"]
 
 open! Core
 open! Import
@@ -8,8 +7,7 @@ open! Time_stamp_counter.Private
 
 let%test_module _ =
   (module struct
-    [%%ifdef
-      JSC_ARCH_SIXTYFOUR]
+    [%%ifdef JSC_ARCH_SIXTYFOUR]
 
     let%expect_test "time moves backwards" =
       (* even if the system time goes backwards, we don't acknowledge this change. *)
@@ -253,8 +251,7 @@ let%test_module _ =
         *)
         assert (
           Int.(
-            abs (x - y) <= Float.to_int (Calibrator.Private.nanos_per_cycle calibrator))
-        )
+            abs (x - y) <= Float.to_int (Calibrator.Private.nanos_per_cycle calibrator)))
       done
     ;;
 

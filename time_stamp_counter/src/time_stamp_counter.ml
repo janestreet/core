@@ -67,8 +67,7 @@
    computationally more expensive and we use a simpler linear approximation.
 *)
 
-[%%import
-  "config.h"]
+[%%import "config.h"]
 
 open! Core
 open Poly
@@ -95,8 +94,7 @@ let of_int63 t = t
 let to_int63 t = t
 let zero = Int63.zero
 
-[%%ifdef
-  JSC_ARCH_SIXTYFOUR]
+[%%ifdef JSC_ARCH_SIXTYFOUR]
 
 (* noalloc on x86_64 only *)
 external now : unit -> tsc = "tsc_get" [@@noalloc]
@@ -202,15 +200,14 @@ module Calibrator = struct
 
   let[@inline] calibrate_using t ~tsc ~time ~am_initializing =
     let estimated_time =
-      0. +. (* performance hack: stops float boxing *)
+      0.
+      +. (* performance hack: stops float boxing *)
       tsc_to_seconds_since_epoch t tsc
     in
     let time_diff_est = time -. estimated_time in
     let time_diff = time -. t.floats.time in
     let tsc_diff = Int63.to_float (diff tsc t.tsc) in
-    let alpha =
-      if am_initializing then initial_alpha else alpha_for_interval time_diff
-    in
+    let alpha = if am_initializing then initial_alpha else alpha_for_interval time_diff in
     (* update current times *)
     t.floats.time <- time;
     t.tsc <- tsc;
@@ -275,9 +272,7 @@ module Calibrator = struct
     t.floats.monotonic_nanos_per_cycle <- t.floats.monotonic_sec_per_cycle *. 1E9
   ;;
 
-  let now_float () =
-    1E-9 *. Int.to_float (Time_ns.to_int_ns_since_epoch (Time_ns.now ()))
-  ;;
+  let now_float () = 1E-9 *. Int.to_float (Time_ns.to_int_ns_since_epoch (Time_ns.now ()))
 
   let initialize t samples =
     List.iter samples ~f:(fun (tsc, time) ->
@@ -392,8 +387,7 @@ module Span = struct
     let to_int63 t = t
   end
 
-  [%%ifdef
-    JSC_ARCH_SIXTYFOUR]
+  [%%ifdef JSC_ARCH_SIXTYFOUR]
 
   let to_ns t ~(calibrator : Calibrator.t) =
     Float.int63_round_nearest_exn (Int63.to_float t *. calibrator.floats.nanos_per_cycle)
@@ -421,10 +415,7 @@ module Span = struct
   [%%endif]
 
   let to_time_ns_span t ~calibrator = Time_ns.Span.of_int63_ns (to_ns t ~calibrator)
-
-  let of_time_ns_span span ~calibrator =
-    of_ns (Time_ns.Span.to_int63_ns span) ~calibrator
-  ;;
+  let of_time_ns_span span ~calibrator = of_ns (Time_ns.Span.to_int63_ns span) ~calibrator
 end
 
 let calibrator = Calibrator.t

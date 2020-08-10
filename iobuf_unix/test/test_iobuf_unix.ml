@@ -251,11 +251,7 @@ let sends_with_recvfrom recvfrom =
     (Or_error.map (send_nonblocking_no_sigpipe ()) ~f:(fun send t fd addr ->
        Unix.connect fd ~addr;
        send t fd));
-  sendto_and_recvfrom
-    recvfrom
-    fd
-    ~sendto_name:"sendto"
-    (sendto_nonblocking_no_sigpipe ())
+  sendto_and_recvfrom recvfrom fd ~sendto_name:"sendto" (sendto_nonblocking_no_sigpipe ())
 ;;
 
 let%test_unit _ = sends_with_recvfrom recvfrom_assume_fd_is_nonblocking

@@ -379,11 +379,7 @@ let%test_module "Time_ns.Span.to_string,of_string" =
         let float_str = sprintf "%.25f" float in
         let test here ~suffix ~factor ~tolerance =
           let span_str = float_str ^ suffix in
-          approx_equal
-            here
-            (Time_ns.Span.of_string span_str)
-            (float *. factor)
-            ~tolerance
+          approx_equal here (Time_ns.Span.of_string span_str) (float *. factor) ~tolerance
         in
         test [%here] ~suffix:"ns" ~factor:1. ~tolerance:0;
         test [%here] ~suffix:"us" ~factor:1_000. ~tolerance:1;
@@ -1515,11 +1511,7 @@ let%test_module "Time_ns.Stable.Ofday.V1" =
           (module V)
           ofday
           (V.of_int63_exn (V.to_int63 ofday));
-        require_compare_equal
-          [%here]
-          (module V)
-          ofday
-          (V.t_of_sexp (V.sexp_of_t ofday)));
+        require_compare_equal [%here] (module V) ofday (V.t_of_sexp (V.sexp_of_t ofday)));
       [%expect {| |}]
     ;;
   end)
@@ -2095,8 +2087,7 @@ let%test_module "Time_ns" =
           ofday
           (Ofday.of_string expect)
           ~if_false_then_print_s:
-            (lazy
-              [%message "to_ofday" (time_ns : t) (ofday : Ofday.t) (expect : string)])
+            (lazy [%message "to_ofday" (time_ns : t) (ofday : Ofday.t) (expect : string)])
       in
       let examples =
         [ epoch, "19:00:00"
@@ -2345,8 +2336,7 @@ let%test_module "Time_ns.Option" =
 
     let%expect_test "value_exn none" =
       require_does_raise [%here] ~hide_positions:true (fun () -> value_exn none);
-      [%expect
-        {| (lib/core/src/core_time_ns.ml:LINE:COL "Span.Option.value_exn none") |}]
+      [%expect {| (lib/core/src/core_time_ns.ml:LINE:COL "Span.Option.value_exn none") |}]
     ;;
   end)
 ;;
@@ -2379,8 +2369,7 @@ let%test_module "Time_ns.Ofday.Option" =
 
     let%expect_test "value_exn none" =
       require_does_raise [%here] ~hide_positions:true (fun () -> value_exn none);
-      [%expect
-        {| (lib/core/src/core_time_ns.ml:LINE:COL "Span.Option.value_exn none") |}]
+      [%expect {| (lib/core/src/core_time_ns.ml:LINE:COL "Span.Option.value_exn none") |}]
     ;;
 
     let%expect_test "of_span_since_start_of_day" =

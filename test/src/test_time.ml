@@ -112,10 +112,7 @@ let%test_unit _ =
 let%test_module "of_tm" =
   (module struct
     let unix_epoch_t =
-      of_date_ofday
-        ~zone:Zone.utc
-        (Date.create_exn ~y:1970 ~m:Jan ~d:1)
-        (Ofday.create ())
+      of_date_ofday ~zone:Zone.utc (Date.create_exn ~y:1970 ~m:Jan ~d:1) (Ofday.create ())
     ;;
 
     let%test_unit _ =
@@ -291,10 +288,7 @@ let%test_module "format" =
 let%test_module "parse" =
   (module struct
     let unix_epoch_t =
-      of_date_ofday
-        ~zone:Zone.utc
-        (Date.create_exn ~y:1970 ~m:Jan ~d:1)
-        (Ofday.create ())
+      of_date_ofday ~zone:Zone.utc (Date.create_exn ~y:1970 ~m:Jan ~d:1) (Ofday.create ())
     ;;
 
     let%test_unit _ =

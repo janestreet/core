@@ -18,9 +18,7 @@ module Test = struct
   ;;
 
   let generate (n : int) =
-    let rec loop acc n =
-      if Int.( = ) n 0 then acc else loop (create () :: acc) (n - 1)
-    in
+    let rec loop acc n = if Int.( = ) n 0 then acc else loop (create () :: acc) (n - 1) in
     loop [] n
   ;;
 

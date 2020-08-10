@@ -150,8 +150,8 @@ let%test_module _ =
           Unix.close (timerfd :> Unix.File_descr.t))
     ;;
 
-    let%test_unit "epoll detects an error on the write side of a pipe when the read \
-                   side of the pipe closes\n\
+    let%test_unit "epoll detects an error on the write side of a pipe when the read side \
+                   of the pipe closes\n\
                    after a partial read"
       =
       let saw_sigpipe = ref false in
@@ -175,9 +175,7 @@ let%test_module _ =
               ()
           in
           let nw =
-            Bigstring_unix.writev
-              w
-              [| Unix.IOVec.of_bigstring (Bigstring.create w_len) |]
+            Bigstring_unix.writev w [| Unix.IOVec.of_bigstring (Bigstring.create w_len) |]
           in
           assert (nw > 0 && nw < w_len);
           Thread.join read;
@@ -206,9 +204,7 @@ let with_epoll ~f =
     ((Or_error.ok_exn Epoll.create) ~num_file_descrs:1024 ~max_ready_events:256)
 ;;
 
-let make_socket () =
-  Unix.socket ~domain:Unix.PF_INET ~kind:Unix.SOCK_DGRAM ~protocol:0 ()
-;;
+let make_socket () = Unix.socket ~domain:Unix.PF_INET ~kind:Unix.SOCK_DGRAM ~protocol:0 ()
 
 let%expect_test "[Epoll.set] has allocation limits" =
   with_epoll ~f:(fun epset ->
@@ -221,8 +217,7 @@ let%expect_test "[Epoll.set] has allocation limits" =
 let%expect_test "[Epoll.find] does not allocate when not present" =
   with_epoll ~f:(fun epset ->
     let sock1 = make_socket () in
-    require_no_allocation [%here] (fun () ->
-      ignore (Epoll.find epset sock1 : _ option)));
+    require_no_allocation [%here] (fun () -> ignore (Epoll.find epset sock1 : _ option)));
   [%expect {| |}]
 ;;
 
@@ -296,8 +291,8 @@ let%test_unit "Eventfd.write updates the counter, and Eventfd.read clears it on 
   [%test_result: Int64.t option] ~expect:None (nonblock_read fd)
 ;;
 
-let%test_unit "Eventfd.read will not block until the counter is decremented to zero on \
-               a semaphore fd"
+let%test_unit "Eventfd.read will not block until the counter is decremented to zero on a \
+               semaphore fd"
   =
   let fd = create ~flags:Eventfd.Flags.(nonblock + semaphore) 10l in
   let count = ref 10L in

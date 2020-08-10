@@ -89,8 +89,7 @@ let%expect_test "expand ~base works" =
   print_s [%sexp (Unix.Env.expand ~base (`Replace [ "C", "2" ]) : string list)];
   [%expect {| (C=2) |}];
   print_s
-    [%sexp
-      (Unix.Env.expand ~base (`Override [ "A", None; "B", Some "4" ]) : string list)];
+    [%sexp (Unix.Env.expand ~base (`Override [ "A", None; "B", Some "4" ]) : string list)];
   [%expect {| (C=3 B=4) |}]
 ;;
 
@@ -137,11 +136,7 @@ let%test_module _ =
       let sexp2 = Sexp.of_string string in
       if Sexp.( <> ) sexp1 sexp2
       then
-        failwiths
-          ~here:[%here]
-          "unequal sexps"
-          (sexp1, sexp2)
-          [%sexp_of: Sexp.t * Sexp.t]
+        failwiths ~here:[%here] "unequal sexps" (sexp1, sexp2) [%sexp_of: Sexp.t * Sexp.t]
     ;;
 
     let%test_unit _ = check rdonly "(rdonly)"
@@ -361,8 +356,7 @@ let%test_module "the search path passed to [create_process_env] has an effect" =
     let call_ls = Unix.create_process_env ~prog:"ls" ~args:[] ~env:(`Extend [])
 
     let%expect_test "default search path" =
-      require_does_not_raise [%here] (fun () ->
-        ignore (Sys.opaque_identity (call_ls ())))
+      require_does_not_raise [%here] (fun () -> ignore (Sys.opaque_identity (call_ls ())))
     ;;
 
     let%expect_test "empty search path" =

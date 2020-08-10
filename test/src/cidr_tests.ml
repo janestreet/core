@@ -89,12 +89,8 @@ let%expect_test _ = invariant ~expected:(Error ()) "sandwich/16"
 let%expect_test _ = invariant ~expected:(Error ()) "sandwich"
 let%expect_test _ = invariant ~expected:(Error ()) "172.52.43/16"
 let%expect_test _ = invariant ~expected:(Error ()) "172.52.493/16"
-
 (* Basic match tests *)
-let%expect_test _ =
-  match_strings "127.0.0.1/32" (Inet_addr.to_string Inet_addr.localhost)
-;;
-
+let%expect_test _ = match_strings "127.0.0.1/32" (Inet_addr.to_string Inet_addr.localhost)
 let%expect_test _ = match_strings "127.0.0.0/8" (Inet_addr.to_string Inet_addr.localhost)
 let%expect_test _ = match_strings "0.0.0.0/32" (Inet_addr.to_string Inet_addr.bind_any)
 let%expect_test _ = match_strings "0.0.0.0/0" (Inet_addr.to_string Inet_addr.bind_any)
@@ -144,11 +140,7 @@ let%expect_test _ = is_subset_strings "10.1.2.123/32" ~of_:"10.1.2.0/24"
 let%expect_test _ = is_subset_strings "10.0.0.0/8" ~of_:"5.0.0.0/8" ~expected:false
 let%expect_test _ = is_subset_strings "10.1.2.0/24" ~of_:"11.0.0.0/8" ~expected:false
 let%expect_test _ = is_subset_strings "10.1.2.0/24" ~of_:"10.0.0.0/16" ~expected:false
-
-let%expect_test _ =
-  is_subset_strings "10.1.2.123/32" ~of_:"10.1.2.124/32" ~expected:false
-;;
-
+let%expect_test _ = is_subset_strings "10.1.2.123/32" ~of_:"10.1.2.124/32" ~expected:false
 let%expect_test _ = is_subset_strings "10.0.0.0/8" ~of_:"10.0.0.0/9" ~expected:false
 (* Multicast tests *)
 let%expect_test _ = is_multicast "0.0.0.0" ~expected:false

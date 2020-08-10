@@ -1,5 +1,4 @@
-[%%import
-  "config.h"]
+[%%import "config.h"]
 
 open! Core
 open! Iobuf
@@ -68,8 +67,7 @@ let recvfrom_assume_fd_is_nonblocking t fd =
   sockaddr
 ;;
 
-[%%ifdef
-  JSC_RECVMMSG]
+[%%ifdef JSC_RECVMMSG]
 
 (* Allocate and pre-populate the [struct mmsghdr]s and associated [struct iovec]s. Reusing
    this context reduces the cost of calls to [recvmmsg] considerably if the iobuf array is
@@ -99,9 +97,7 @@ module Recvmmsg_context = struct
     ; ctx : ctx
     }
 
-  let create iobufs =
-    { iobufs; bstrs = Array.map iobufs ~f:Expert.buf; ctx = ctx iobufs }
-  ;;
+  let create iobufs = { iobufs; bstrs = Array.map iobufs ~f:Expert.buf; ctx = ctx iobufs }
 end
 
 external unsafe_recvmmsg_assume_fd_is_nonblocking

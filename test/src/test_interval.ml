@@ -316,11 +316,7 @@ let%test_module "vs array" =
       @@ binary_search (create 4 80) ~compare:Int.compare `First_strictly_greater_than 18;
       [%expect {| (19) |}];
       pr
-      @@ binary_search
-           (create 25 80)
-           ~compare:Int.compare
-           `First_strictly_greater_than
-           18;
+      @@ binary_search (create 25 80) ~compare:Int.compare `First_strictly_greater_than 18;
       [%expect {| (25) |}];
       pr
       @@ binary_search
