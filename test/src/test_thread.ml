@@ -10,10 +10,10 @@ let%expect_test "[sexp_of_t]" =
   (* We expect thread id [2] to be deterministically printed because we inline test each
      file on its own, and there is no top-level effect that will create a thread prior to
      this. *)
-  let%bind () = [%expect {| (thread (id 2)) |}] in
+  [%expect {| (thread (id 2)) |}];
   Thread.join t;
   print_s [%sexp (t : Thread.t)];
-  let%bind () = [%expect {| (thread (id 2)) |}] in
+  [%expect {| (thread (id 2)) |}];
   return ()
 ;;
 
@@ -33,7 +33,8 @@ let%expect_test "~on_uncaught_exn:`Print_to_stderr" =
     --- STDERR ---
     Uncaught exception:
 
-      (Failure "exception thrown out of thread_main") |}]
+      (Failure "exception thrown out of thread_main") |}];
+  return ()
 ;;
 
 let%expect_test "~on_uncaught_exn:`Kill_whole_process" =
@@ -50,7 +51,8 @@ let%expect_test "~on_uncaught_exn:`Kill_whole_process" =
     --- STDERR ---
     Uncaught exception:
 
-      (Failure "exception thrown out of thread_main") |}]
+      (Failure "exception thrown out of thread_main") |}];
+  return ()
 ;;
 
 let%expect_test "Caml.Thread.create's behaviour with exceptions, for comparison" =
@@ -63,5 +65,6 @@ let%expect_test "Caml.Thread.create's behaviour with exceptions, for comparison"
     Caml.at_exit callback ran
     Core.at_exit callback ran
     --- STDERR ---
-    Thread 1 killed on uncaught exception Failure("exception thrown out of thread_main") |}]
+    Thread 1 killed on uncaught exception Failure("exception thrown out of thread_main") |}];
+  return ()
 ;;

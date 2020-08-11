@@ -45,11 +45,9 @@ module Test = struct
   let%test _ = no_collisions (generate test_size)
   let%test _ = thread_test ()
 
-  let%expect_test "UUIDs are shown as [nil] in tests" =
-    print_endline (to_string_hum (create ()));
-    [%expect {| 00000000-0000-0000-0000-000000000000 |}];
+  let%expect_test "UUIDs are hidden in tests" =
     print_s [%sexp (create () : t)];
-    [%expect {| 00000000-0000-0000-0000-000000000000 |}]
+    [%expect {| <uuid-omitted-in-test> |}]
   ;;
 end
 
@@ -66,14 +64,27 @@ let%expect_test "[Stable.V1.t_of_sexp] does not validate its input" =
   [%expect {| |}]
 ;;
 
-let%expect_test "[Unstable.sexp_of_t] on a valid input" =
+let%expect_test "[Unstable.t_of_sexp] on a valid input" =
   require_does_not_raise [%here] (fun () ->
-    ignore ([%of_sexp: Unstable.t] [%sexp (create () : t)] : t));
+    ignore ([%of_sexp: Unstable.t] [%sexp "1f7f8c2e-d297-11ea-aafd-aa0000ef6338"] : t));
   [%expect {| |}]
 ;;
 
-let%expect_test "[Stable.V1.sexp_of_t] on a valid input" =
+let%expect_test "[Stable.V1.t_of_sexp] on a valid input" =
   require_does_not_raise [%here] (fun () ->
-    ignore ([%of_sexp: Stable.V1.t] [%sexp (create () : t)] : t));
+    ignore ([%of_sexp: Stable.V1.t] [%sexp "1f7f8c2e-d297-11ea-aafd-aa0000ef6338"] : t));
   [%expect {| |}]
 ;;
+
+let roundtrips (module M : Stable_without_comparator with type t = t) =
+  Quickcheck.test [%quickcheck.generator: t] ~f:(fun t ->
+    let sexp_roundtrip = t |> M.sexp_of_t |> M.t_of_sexp in
+    [%test_result: t] sexp_roundtrip ~expect:t;
+    let bin_prot_roundtrip =
+      t |> Binable.to_string (module M) |> Binable.of_string (module M)
+    in
+    [%test_result: t] bin_prot_roundtrip ~expect:t)
+;;
+
+let%test_unit "[Unstable] round-trips" = roundtrips (module Unstable)
+let%test_unit "[Stable.V1] round-trips" = roundtrips (module Stable.V1)
