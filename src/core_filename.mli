@@ -8,7 +8,7 @@ include module type of Core_kernel.Filename
     @raise Unix_error on errors. *)
 val realpath : string -> string
 
-(** Same as {!Core_filename.temp_file}, but returns both the name of a fresh
+(** Same as {!temp_file}, but returns both the name of a fresh
     temporary file, and an output channel opened (atomically) on
     this file.  This function is more secure than [temp_file]: there
     is no risk that the temporary file will be modified (e.g. replaced
