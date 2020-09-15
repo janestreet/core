@@ -30,6 +30,8 @@ include (module type of Core_kernel.Command
     but before the main function of the associated command has run. One use-case is for
     performing logging when a command is being invoked, where there's no reason to log
     incorrect invocations or -help calls.
+
+    [complete_subcommands] can be used to override the completion mechanism.
 *)
 val run
   :  ?verbose_on_parse_error : bool
@@ -38,6 +40,7 @@ val run
   -> ?argv       : string list
   -> ?extend     : (string list -> string list)
   -> ?when_parsing_succeeds:(unit -> unit)
+  -> ?complete_subcommands:(string list list -> string list option)
   -> t
   -> unit
 

@@ -9,7 +9,7 @@
     to Unix sockets and file descriptors, or support for floating-point numbers. Other
     modules are entirely new, like:
 
-    - [Command], a richly featured tool for creating command-line programs.
+    - [Unix], for interacting with Unix processes and file descriptors.
     - [Signal], for handling Unix signals like SIGHUP and SIGKILL.
 
     A few modules in Core don't have any platform-specific functionality but haven't yet

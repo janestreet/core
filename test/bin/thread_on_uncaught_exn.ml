@@ -18,7 +18,7 @@ let core_command =
     [%map_open.Command
       let on_uncaught_exn =
         let arg_type =
-          Command.Arg_type.of_alist_exn
+          Command.Arg_type.of_alist_exn ~list_values_in_help:false
             [ "print-to-stderr", `Print_to_stderr
             ; "kill-whole-process", `Kill_whole_process
             ]
