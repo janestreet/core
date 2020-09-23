@@ -737,3 +737,30 @@ let%expect_test "when_parsing_succeeds" =
 
     (raised (command.ml.Exit_called (status 1))) |}]
 ;;
+
+let%expect_test "lazy Arg_type" =
+  let arg_type =
+    Command.Arg_type.of_lazy
+      (lazy
+        (print_s [%message "I got forced!"];
+         Command.Param.bool))
+  in
+  let param =
+    let open Command.Param in
+    anon ("BOOL" %: arg_type)
+  in
+  let parse = Command_test_helpers.parse_command_line param |> unstage in
+  (* Until we actually apply the parameter, we shouldn't force it. *)
+  [%expect {| |}];
+  (* First time, it should print. *)
+  parse [ "true" ];
+  [%expect {| "I got forced!" |}];
+  (* Subsequent times, it should not print. *)
+  parse [ "false" ];
+  [%expect {| |}];
+  (* Completions should still work. *)
+  Command_test_helpers.complete param ~args:[ "t" ];
+  [%expect {|
+    true
+    (command.ml.Exit_called (status 0)) |}]
+;;
