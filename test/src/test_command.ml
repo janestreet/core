@@ -738,6 +738,116 @@ let%expect_test "when_parsing_succeeds" =
     (raised (command.ml.Exit_called (status 1))) |}]
 ;;
 
+module Simple_group = struct
+  let basic =
+    Command.basic
+      ~summary:"dummy"
+      (let%map_open.Command (false | true) = anon ("for-completion" %: bool) in
+       fun () -> ())
+  ;;
+
+  let group = Command.group ~summary:"dummy group" [ "basic", basic ]
+  let command = Command.group ~summary:"top level" [ "group", group ]
+end
+
+let%expect_test "special debug flags shouldn't offer autocomplete suggestions" =
+  let exit_called = "(command.ml.Exit_called (status 0))" in
+  let render_output s =
+    String.split_lines s |> List.filter ~f:(Fn.non (String.equal exit_called))
+  in
+  let test command ~all_prefixes_of_subcommand:subcommand =
+    let results =
+      let%map.List subcommand =
+        List.init (List.length subcommand + 1) ~f:(List.take subcommand)
+      and flag = [ "-build-info"; "-help"; "-version" ] in
+      let args = List.concat [ subcommand; [ flag; "" ] ] in
+      Command_test_helpers.complete_command command ~args;
+      subcommand, flag, render_output [%expect.output]
+    in
+    Ascii_table.to_string_noattr
+      (let open Ascii_table.Column in
+       [ create "subcommand" (fun (x, _, _) -> String.concat x ~sep:" ")
+       ; create "flag" (fun (_, x, _) -> x)
+       ; create "alternatives" (fun (_, _, x) -> String.concat x ~sep:", ")
+       ])
+      results
+    |> print_string
+  in
+  test Simple_group.basic ~all_prefixes_of_subcommand:[];
+  [%expect
+    {|
+    ┌────────────┬─────────────┬──────────────┐
+    │ subcommand │ flag        │ alternatives │
+    ├────────────┼─────────────┼──────────────┤
+    │            │ -build-info │ false, true  │
+    │            │ -help       │ false, true  │
+    │            │ -version    │ false, true  │
+    └────────────┴─────────────┴──────────────┘ |}];
+  test Simple_group.group ~all_prefixes_of_subcommand:[ "basic" ];
+  [%expect
+    {|
+    ┌────────────┬─────────────┬──────────────────────┐
+    │ subcommand │ flag        │ alternatives         │
+    ├────────────┼─────────────┼──────────────────────┤
+    │            │ -build-info │ basic, help, version │
+    │            │ -help       │ basic, help, version │
+    │            │ -version    │ basic, help, version │
+    │ basic      │ -build-info │                      │
+    │ basic      │ -help       │ false, true          │
+    │ basic      │ -version    │                      │
+    └────────────┴─────────────┴──────────────────────┘ |}];
+  test Simple_group.command ~all_prefixes_of_subcommand:[ "group"; "basic" ];
+  [%expect
+    {|
+    ┌─────────────┬─────────────┬──────────────────────┐
+    │ subcommand  │ flag        │ alternatives         │
+    ├─────────────┼─────────────┼──────────────────────┤
+    │             │ -build-info │ group, help, version │
+    │             │ -help       │ group, help, version │
+    │             │ -version    │ group, help, version │
+    │ group       │ -build-info │                      │
+    │ group       │ -help       │ basic, help          │
+    │ group       │ -version    │                      │
+    │ group basic │ -build-info │                      │
+    │ group basic │ -help       │ false, true          │
+    │ group basic │ -version    │                      │
+    └─────────────┴─────────────┴──────────────────────┘ |}]
+;;
+
+let%expect_test "special cased help before group member" =
+  (* We treat this as equivalent to [group basic -help]. *)
+  Command.run ~argv:[ "binary"; "-help"; "group"; "basic" ] Simple_group.command;
+  [%expect
+    {|
+    dummy
+
+      binary group basic FOR-COMPLETION
+
+    === flags ===
+
+      [-help], -?                . print this help text and exit
+
+    (command.ml.Exit_called (status 0)) |}];
+  (* A corner case of parsing--make sure that we don't break horribly on this command
+     line, though we do see it as unclear. *)
+  require_does_raise [%here] (fun () ->
+    Command.run ~argv:[ "binary"; "-help"; "-help"; "group" ] Simple_group.command);
+  [%expect
+    {|
+    top level
+
+      binary SUBCOMMAND
+
+    === subcommands ===
+
+      group                      . dummy group
+      version                    . print version information
+      help                       . explain a given subcommand (perhaps recursively)
+
+    unknown subcommand -help
+    (command.ml.Exit_called (status 1)) |}]
+;;
+
 let%expect_test "lazy Arg_type" =
   let arg_type =
     Command.Arg_type.of_lazy

@@ -34,6 +34,15 @@ external realpath : string -> string = "core_unix_realpath"
 
 let prng = Random.State.make_self_init ~allow_in_tests:true ()
 
+(* We want [random_bits ()] to be thread-safe.
+
+   We think it's currently safe because [Random.State.bits] does no allocation.
+   (note even [Random.State.t] is implemented as a [lazy], this lazy will always be
+   forced because [make_self_init] constructs it with [Lazy.from_val])
+*)
+let random_bits () =
+  Random.State.bits prng
+
 (* try up to 1000 times to not get a Sys_error when opening a temp
    file / name: *)
 let retry ?(in_dir=temp_dir_name) ~f prefix suffix =
@@ -46,7 +55,7 @@ let retry ?(in_dir=temp_dir_name) ~f prefix suffix =
   let suffix = escape suffix in
   let rec try_name counter =
     let name =
-      let rnd = Random.State.bits prng land 0xFF_FFFF in
+      let rnd = random_bits () land 0xFF_FFFF in
       (Printf.sprintf "%s.tmp.%06x%s" prefix rnd suffix)
     in
     let name = concat in_dir name in
@@ -61,6 +70,8 @@ let retry ?(in_dir=temp_dir_name) ~f prefix suffix =
    can override the temporary directory you are working in.  They also try the
    exact filename specified by the user before reverting to the "try with"
    machinery.
+   Another difference is that we allocate the [prng] eagerly at program startup
+   instead of using [lazy].
 *)
 
 let temp_dir ?(perm=0o700) ?in_dir prefix suffix =
