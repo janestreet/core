@@ -171,30 +171,38 @@ let sendto_nonblocking_no_sigpipe () =
          unsafe_sent t (sendto fd (Expert.buf t) ~pos:(Expert.lo t) ~len:(length t) addr))
 ;;
 
-let output t ch =
-  let nwritten =
+module Peek = struct
+  let output t ch =
     Bigstring_unix.output ch (Expert.buf t) ~pos:(Expert.lo t) ~len:(length t)
-  in
-  unsafe_advance t nwritten
-;;
+  ;;
 
-let write t fd =
-  let nwritten =
+  let write t fd =
     Bigstring_unix.write fd (Expert.buf t) ~pos:(Expert.lo t) ~len:(length t)
-  in
-  unsafe_advance t nwritten
-;;
+  ;;
 
-let write_assume_fd_is_nonblocking t fd =
-  (* This is safe because of the invariant of [t] that the window is within the buffer
-     (unless the user has violated the invariant with an unsafe operation). *)
-  let nwritten =
+  let write_assume_fd_is_nonblocking t fd =
+    (* This is safe because of the invariant of [t] that the window is within the buffer
+       (unless the user has violated the invariant with an unsafe operation). *)
     Bigstring_unix.unsafe_write_assume_fd_is_nonblocking
       fd
       (Expert.buf t)
       ~pos:(Expert.lo t)
       ~len:(length t)
-  in
+  ;;
+end
+
+let output t ch =
+  let nwritten = Peek.output t ch in
+  unsafe_advance t nwritten
+;;
+
+let write t fd =
+  let nwritten = Peek.write t fd in
+  unsafe_advance t nwritten
+;;
+
+let write_assume_fd_is_nonblocking t fd =
+  let nwritten = Peek.write_assume_fd_is_nonblocking t fd in
   unsafe_advance t nwritten
 ;;
 

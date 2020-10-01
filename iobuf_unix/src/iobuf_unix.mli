@@ -69,7 +69,17 @@ val sendto_nonblocking_no_sigpipe
       -> Unix.Syscall_result.Unit.t)
        Or_error.t
 
+(** Write from the iobuf to the specified channel without changing the iobuf
+    window.  Returns the number of bytes written. *)
+module Peek : sig
+  val output : ([> read ], _) t -> Out_channel.t -> int
+  val write : ([> read ], _) t -> Unix.File_descr.t -> int
+  val write_assume_fd_is_nonblocking : ([> read ], _) t -> Unix.File_descr.t -> int
+end
+
+(** As [Peek], but advances the window by the number of bytes written. *)
 val output : ([> read ], seek) t -> Out_channel.t -> unit
+
 val write : ([> read ], seek) t -> Unix.File_descr.t -> unit
 val write_assume_fd_is_nonblocking : ([> read ], seek) t -> Unix.File_descr.t -> unit
 

@@ -59,9 +59,10 @@ module Io_test (Ch : sig
     val create_out : Unix.File_descr.t -> out_
     val close_out : out_ -> unit
     val write : ([> read ], seek) Iobuf.t -> out_ -> unit
+    val peek_write : ([> read ], _) Iobuf.t -> out_ -> int
   end) =
 struct
-  let%test_unit _ =
+  let%test_unit "write + read" =
     iter_examples ~f:(fun t string ~pos ->
       let len = String.length string in
       let file, fd = Unix.mkstemp "iobuf_test" in
@@ -92,6 +93,23 @@ struct
            | Ok -> assert false);
           Ch.close_in ch))
   ;;
+
+  let%test_unit "peek_write" =
+    iter_examples ~f:(fun t string ~pos ->
+      let len = String.length string in
+      let file, fd = Unix.mkstemp "iobuf_test" in
+      protect
+        ~finally:(fun () -> Unix.unlink file)
+        ~f:(fun () ->
+          let ch = Ch.create_out fd in
+          Poke.stringo t string ~pos;
+          advance t pos;
+          resize t ~len;
+          let written = Ch.peek_write (Iobuf.no_seek (Iobuf.read_only t)) ch in
+          [%test_result: int] written ~expect:len;
+          Ch.close_out ch;
+          [%test_result: string] (In_channel.read_all file) ~expect:string))
+  ;;
 end
 
 let output = output
@@ -108,6 +126,7 @@ include Io_test (struct
     let create_out = Unix.out_channel_of_descr
     let close_out = Out_channel.close
     let write = output
+    let peek_write = Peek.output
     let read = input
   end)
 
@@ -123,6 +142,7 @@ include Io_test (struct
     let create_out = Fn.id
     let close_out = close_in
     let read = read
+    let peek_write = Peek.write
     let write = write
   end)
 
