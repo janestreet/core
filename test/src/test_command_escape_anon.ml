@@ -1,7 +1,6 @@
 open! Core
 open! Import
 
-
 module Foobar = struct
   type t =
     | Foo

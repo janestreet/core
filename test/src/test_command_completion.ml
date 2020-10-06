@@ -62,3 +62,68 @@ let%expect_test "completion after [-help]" =
     true
     (command.ml.Exit_called (status 0)) |}]
 ;;
+
+let%expect_test "special debug flags shouldn't offer autocomplete suggestions" =
+  let module Simple_group = Test_command_completion_shared.Simple_group in
+  let exit_called = "(command.ml.Exit_called (status 0))" in
+  let render_output s =
+    String.split_lines s |> List.filter ~f:(Fn.non (String.equal exit_called))
+  in
+  let test command ~all_prefixes_of_subcommand:subcommand =
+    let results =
+      let%map.List subcommand =
+        List.init (List.length subcommand + 1) ~f:(List.take subcommand)
+      and flag = [ "-build-info"; "-help"; "-version" ] in
+      let args = List.concat [ subcommand; [ flag; "" ] ] in
+      Command_test_helpers.complete_command command ~args;
+      subcommand, flag, render_output [%expect.output]
+    in
+    Ascii_table.to_string_noattr
+      (let open Ascii_table.Column in
+       [ create "subcommand" (fun (x, _, _) -> String.concat x ~sep:" ")
+       ; create "flag" (fun (_, x, _) -> x)
+       ; create "alternatives" (fun (_, _, x) -> String.concat x ~sep:", ")
+       ])
+      results
+    |> print_string
+  in
+  test Simple_group.basic ~all_prefixes_of_subcommand:[];
+  [%expect
+    {|
+    ┌────────────┬─────────────┬──────────────┐
+    │ subcommand │ flag        │ alternatives │
+    ├────────────┼─────────────┼──────────────┤
+    │            │ -build-info │ false, true  │
+    │            │ -help       │ false, true  │
+    │            │ -version    │ false, true  │
+    └────────────┴─────────────┴──────────────┘ |}];
+  test Simple_group.group ~all_prefixes_of_subcommand:[ "basic" ];
+  [%expect
+    {|
+    ┌────────────┬─────────────┬──────────────────────┐
+    │ subcommand │ flag        │ alternatives         │
+    ├────────────┼─────────────┼──────────────────────┤
+    │            │ -build-info │ basic, help, version │
+    │            │ -help       │ basic, help, version │
+    │            │ -version    │ basic, help, version │
+    │ basic      │ -build-info │                      │
+    │ basic      │ -help       │ false, true          │
+    │ basic      │ -version    │                      │
+    └────────────┴─────────────┴──────────────────────┘ |}];
+  test Simple_group.command ~all_prefixes_of_subcommand:[ "group"; "basic" ];
+  [%expect
+    {|
+    ┌─────────────┬─────────────┬──────────────────────┐
+    │ subcommand  │ flag        │ alternatives         │
+    ├─────────────┼─────────────┼──────────────────────┤
+    │             │ -build-info │ group, help, version │
+    │             │ -help       │ group, help, version │
+    │             │ -version    │ group, help, version │
+    │ group       │ -build-info │                      │
+    │ group       │ -help       │ basic, help          │
+    │ group       │ -version    │                      │
+    │ group basic │ -build-info │                      │
+    │ group basic │ -help       │ false, true          │
+    │ group basic │ -version    │                      │
+    └─────────────┴─────────────┴──────────────────────┘ |}]
+;;
