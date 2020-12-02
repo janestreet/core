@@ -1,4 +1,7 @@
-# Error_checking_mutex
+---
+title: "Error_checking_mutex"
+uuid: 51996f53-5801-3c18-7ccb-38dafd2850e2
+---
 
 An error checking mutex is like the OCaml standard library's `Mutex`,
 but locking and unlocking perform additional checks that can raise.
