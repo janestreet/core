@@ -6,7 +6,7 @@ include Core_time_intf.S
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving hash]
+    type nonrec t = t [@@deriving hash, typerep]
     type nonrec comparator_witness = comparator_witness
     include Stable_comparable.V1
       with type t := t
@@ -55,7 +55,7 @@ module Stable : sig
       include Stable_without_comparator with type t := t
     end
     module V3 : sig
-      type t = Time.Stable.Span.V3.t [@@deriving hash]
+      type t = Time.Stable.Span.V3.t [@@deriving hash, typerep]
       include Stable_without_comparator with type t := t
     end
   end

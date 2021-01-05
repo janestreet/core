@@ -177,7 +177,7 @@ module RLimit = struct
     | Stack
     | Virtual_memory
     | Nice
-  [@@deriving sexp] ;;
+  [@@deriving sexp]
 
   let core_file_size       = Core_file_size
   let cpu_seconds          = Cpu_seconds
@@ -1471,27 +1471,43 @@ let fcntl_getfl, fcntl_setfl =
   fcntl_getfl, fcntl_setfl
 ;;
 
-let mkdir ?(perm=0o777) dirname =
-  improve (fun () -> Unix.mkdir dirname ~perm)
-    (fun () -> [dirname_r dirname; file_perm_r perm])
-;;
+module Mkdir : sig
+  val mkdir : ?perm:file_perm -> string -> unit
+  val mkdir_p : ?perm:file_perm -> string -> unit
+end = struct
 
-let rec mkdir_p ?perm dir =
-  let mkdir_idempotent ?perm dir =
-    match mkdir ?perm dir with
+  let[@inline always] improve_mkdir mkdir dirname ~perm =
+    improve (fun () -> mkdir dirname ~perm)
+      (fun () -> [dirname_r dirname; file_perm_r perm])
+
+  let mkdir = improve_mkdir Unix.mkdir
+  ;;
+
+  let mkdir_idempotent dirname ~perm =
+    match Unix.mkdir dirname ~perm with
     | () -> ()
     (* [mkdir] on MacOSX returns [EISDIR] instead of [EEXIST] if the directory already
        exists. *)
-    | exception Unix_error ((EEXIST | EISDIR), _, _) -> ()
-  in
-  match mkdir_idempotent ?perm dir with
-  | () -> ()
-  | exception ((Unix_error (ENOENT, _, _)) as exn) ->
-    let parent = Filename.dirname dir in
-    if Filename.(=) parent dir then raise exn
-    else
-      (mkdir_p ?perm parent;
-       mkdir_idempotent ?perm dir)
+    | exception Unix_error ((EEXIST | EISDIR), _, _) ->
+      ()
+
+  let mkdir_idempotent = improve_mkdir mkdir_idempotent
+
+  let rec mkdir_p dir ~perm =
+    match mkdir_idempotent ~perm dir with
+    | () -> ()
+    | exception ((Unix_error (ENOENT, _, _)) as exn) ->
+      let parent = Filename.dirname dir in
+      if Filename.(=) parent dir then raise exn
+      else
+        (mkdir_p ~perm parent;
+         mkdir_idempotent ~perm dir)
+
+  let mkdir ?(perm = 0o777) dir = mkdir ~perm dir
+  let mkdir_p ?(perm = 0o777) dir = mkdir_p ~perm dir
+
+end
+include Mkdir
 
 let rmdir = unary_dirname Unix.rmdir
 let chdir = unary_dirname Unix.chdir

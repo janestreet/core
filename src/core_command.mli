@@ -40,7 +40,7 @@ val run
   -> ?argv       : string list
   -> ?extend     : (string list -> string list)
   -> ?when_parsing_succeeds:(unit -> unit)
-  -> ?complete_subcommands:(string list list -> string list option)
+  -> ?complete_subcommands:(path:string list -> part:string -> string list list -> string list option)
   -> t
   -> unit
 

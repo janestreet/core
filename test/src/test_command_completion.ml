@@ -127,3 +127,44 @@ let%expect_test "special debug flags shouldn't offer autocomplete suggestions" =
     │ group basic │ -version    │                      │
     └─────────────┴─────────────┴──────────────────────┘ |}]
 ;;
+
+let%expect_test "demo [complete_subcommands]" =
+  let module Simple_group = Test_command_completion_shared.Simple_group in
+  let test ?complete_subcommands ~args command =
+    Command_test_helpers.complete_command command ?complete_subcommands ~args
+  in
+  test Simple_group.command ?complete_subcommands:None ~args:[ "g" ];
+  [%expect {|
+    group
+    (command.ml.Exit_called (status 0)) |}];
+  let complete_subcommands ~path ~part choices =
+    print_s
+      [%message
+        "offered choices"
+          (choices : string list list)
+          (path : string list)
+          (part : string)];
+    Some [ "we"; "just"; "give"; "back"; "what"; "was"; "returned" ]
+  in
+  test
+    Simple_group.command
+    ~complete_subcommands
+    ~args:[ "we-can-put-anything-here-command-doesn't-seem-to-care" ];
+  [%expect
+    {|
+    ("offered choices"
+      (choices (
+        (group basic)
+        (group help)
+        (version)
+        (help)))
+      (path (__exe_name__))
+      (part we-can-put-anything-here-command-doesn't-seem-to-care))
+    we just give back what was returned
+    (command.ml.Exit_called (status 0)) |}];
+  test
+    Simple_group.command
+    ~complete_subcommands
+    ~args:[ "will-not"; "offer-completions" ];
+  [%expect {| (command.ml.Exit_called (status 0)) |}]
+;;
