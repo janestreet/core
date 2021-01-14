@@ -89,6 +89,10 @@ val command_exn : string -> unit
 *)
 val quote : string -> string
 
+(** Converts a list of tokens to a command line fragment that can be passed to the shell
+    of the current system. Each token is escaped as appropriate using [quote]. *)
+val concat_quoted : string list -> string
+
 (** Change the current working directory of the process. *)
 val chdir : string -> unit
 

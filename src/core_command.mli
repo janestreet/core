@@ -2,7 +2,7 @@ open! Import
 
 include (module type of Core_kernel.Command
           with module Shape := Command.Shape
-          with module Deprecated := Command.Deprecated)
+          with module Deprecated := Command.Deprecated) (** @inline *)
 
 (** Runs a command against [Sys.argv], or [argv] if it is specified.
 

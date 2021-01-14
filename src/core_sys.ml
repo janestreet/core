@@ -119,12 +119,13 @@ let unix_quote x =
   else Filename.quote x
 ;;
 
-
 let quote =
   match Caml.Sys.os_type with
   | "Unix" -> unix_quote
   | _ -> Filename.quote
 ;;
+
+let concat_quoted split_command = List.map ~f:quote split_command |> String.concat ~sep:" "
 
 let fold_dir ~init ~f directory = Array.fold (readdir directory) ~f ~init
 
@@ -132,7 +133,7 @@ let ls_dir directory = Array.to_list (readdir directory)
 
 (* This function takes six units to cause ocaml to call a different
    function when executing bytecode:
-   http://caml.inria.fr/pub/docs/manual-ocaml/intfc.html#sec400
+   http://caml.inria.fr/pub/docs/manual-ocaml/intfc.html#ss:c-prim-impl
 *)
 external executing_bytecode
   : unit -> unit -> unit -> unit -> unit -> unit -> bool

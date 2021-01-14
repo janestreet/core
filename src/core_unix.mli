@@ -1096,12 +1096,21 @@ type process_times =
 [@@deriving sexp]
 
 module Clock : sig
+
+  type underlying
+  (** Opaque representation of C [clockid_t]. *)
+
   (** Supported clocks. See clock_gettime(3) man pages for semantics. *)
   type t =
     | Realtime
     | Monotonic
     | Process_cpu
     | Process_thread
+    | Custom of underlying
+
+  (** See [clock_getcpuclockid(3)]. *)
+  val get_cpuclock_for : (Pid.t -> underlying) Or_error.t
+
 
   (** Return the resolution of the given clock in nanoseconds. *)
   val getres : (t -> Int63.t) Or_error.t

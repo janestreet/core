@@ -1802,29 +1802,42 @@ type process_times =
 [@@deriving sexp]
 
 module Clock = struct
+  type underlying = int
+
   type t =
     | Realtime
     | Monotonic
     | Process_cpu
     | Process_thread
+    | Custom of underlying
 
   [%%ifdef JSC_POSIX_TIMERS]
 
   [%%ifdef JSC_ARCH_SIXTYFOUR]
   external getres : t -> Int63.t = "caml_clock_getres" [@@noalloc]
   external gettime : t -> Int63.t = "caml_clock_gettime" [@@noalloc]
+
+  (* [clockid_t] is a linux int, i.e. 32 bits. The values we return are very likely going
+     to be totally fine in a 31-bit int, but I don't want to find out not the hard way,
+     and I don't see a lot of value in providing a 32-bit implementation, so it's easier to punt. *)
+
+  external get_cpuclock_for : Pid.t -> underlying = "caml_clock_getcpuclockid"
+  let get_cpuclock_for = Ok get_cpuclock_for
   [%%else]
   external getres : t -> Int63.t = "caml_clock_getres"
   external gettime : t -> Int63.t = "caml_clock_gettime"
+  let get_cpuclock_for =  Or_error.unimplemented "Unix.Clock.get_cpuclock_for"
   [%%endif]
 
   let getres            = Ok getres
   let gettime           = Ok gettime
 
+
   [%%else]
 
   let getres            = Or_error.unimplemented "Unix.Clock.getres"
   let gettime           = Or_error.unimplemented "Unix.Clock.gettime"
+  let get_cpuclock_for =  Or_error.unimplemented "Unix.Clock.get_cpuclock_for"
 
   [%%endif]
 end

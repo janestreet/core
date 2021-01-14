@@ -27,26 +27,54 @@
 
 #ifdef JSC_POSIX_TIMERS
 
-clockid_t caml_clockid_t_of_caml (value clock_type) {
-  switch (Int_val(clock_type)) {
+
+static inline clockid_t clockid_t_of_val (value clock_type) {
+  if (Is_block(clock_type)) {
+    return Long_val(Field(clock_type, 0));
+  }
+
+  switch (Long_val(clock_type)) {
     case 0: return CLOCK_REALTIME;
     case 1: return CLOCK_MONOTONIC;
     case 2: return CLOCK_PROCESS_CPUTIME_ID;
     case 3: return CLOCK_THREAD_CPUTIME_ID;
   };
 
+
   caml_failwith ("invalid Clock.t");
+}
+
+static inline value val_underlying_of_clockid_t(clockid_t clock) {
+  return Val_long(clock);
+}
+
+
+CAMLprim value caml_clock_getcpuclockid(value v_pid) {
+  pid_t pid = Long_val(v_pid);
+
+  clockid_t clock;
+
+  int ret = clock_getcpuclockid(pid, &clock);
+
+  /*  HEADS UP: error returns are *not* negated here, quite surprisingly. Check the man
+      page. Error codes are positive here. */
+
+  if (ret != 0) {
+    unix_error(ret, "clock_getcpuclockid", Nothing);
+  }
+
+  return val_underlying_of_clockid_t(clock);
 }
 
 value caml_clock_getres (value clock_type) {
   struct timespec tp;
-  clock_getres (caml_clockid_t_of_caml (clock_type), &tp);
+  clock_getres (clockid_t_of_val (clock_type), &tp);
   return (caml_alloc_int63 (((int64_t)tp.tv_sec * 1000 * 1000 * 1000) + (int64_t)tp.tv_nsec));
 }
 
 value caml_clock_gettime (value clock_type) {
   struct timespec tp;
-  clock_gettime (caml_clockid_t_of_caml (clock_type), &tp);
+  clock_gettime (clockid_t_of_val (clock_type), &tp);
   return (caml_alloc_int63 (((int64_t)tp.tv_sec * 1000 * 1000 * 1000) + (int64_t)tp.tv_nsec));
 }
 

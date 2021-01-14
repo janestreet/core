@@ -125,11 +125,12 @@ let current_thread_has_lock t =
     (current_thread_id () |> Thread_id_option.some)
 ;;
 
-let recursive_lock_error t =
-  Error.create
-    "attempt to lock mutex by thread already holding it"
-    (current_thread_id (), t)
-    [%sexp_of: int * t]
+let[@cold] error_recursive_lock t =
+  Error
+    (Error.create
+       "attempt to lock mutex by thread already holding it"
+       (current_thread_id (), t)
+       [%sexp_of: int * t])
 ;;
 
 let try_lock t =
@@ -144,7 +145,7 @@ let try_lock t =
     (* END ATOMIC *)
     Ok `Acquired)
   else if Thread_id_option.equal current_thread_id t.id_of_thread_holding_lock
-  then Error (recursive_lock_error t)
+  then error_recursive_lock t
   else Ok `Not_acquired
 ;;
 
@@ -225,7 +226,7 @@ let rec lock t =
     (* END ATOMIC *)
     Ok ())
   else if Thread_id_option.equal current_thread_id t.id_of_thread_holding_lock
-  then Error (recursive_lock_error t)
+  then error_recursive_lock t
   else (
     with_blocker t (fun blocker -> if is_locked t then Blocker.wait blocker);
     lock t)
@@ -238,6 +239,22 @@ type message =
   ; mutex : t
   }
 [@@deriving sexp_of]
+
+let[@cold] error_attempt_to_unlock_mutex_held_by_another_thread t =
+  Error
+    (Error.create
+       "attempt to unlock mutex held by another thread"
+       { current_thread_id = current_thread_id (); mutex = t }
+       [%sexp_of: message])
+;;
+
+let[@cold] error_attempt_to_unlock_an_unlocked_mutex t =
+  Error
+    (Error.create
+       "attempt to unlock an unlocked mutex"
+       { current_thread_id = current_thread_id (); mutex = t }
+       [%sexp_of: message])
+;;
 
 let unlock t =
   let current_thread_id = current_thread_id () in
@@ -255,18 +272,8 @@ let unlock t =
       (* END ATOMIC *)
       if Option.is_some t.blocker then with_blocker t Blocker.signal;
       Ok ())
-    else
-      Error
-        (Error.create
-           "attempt to unlock mutex held by another thread"
-           { current_thread_id; mutex = t }
-           [%sexp_of: message])
-  else
-    Error
-      (Error.create
-         "attempt to unlock an unlocked mutex"
-         { current_thread_id; mutex = t }
-         [%sexp_of: message])
+    else error_attempt_to_unlock_mutex_held_by_another_thread t
+  else error_attempt_to_unlock_an_unlocked_mutex t
 ;;
 
 let unlock_exn t = ok_exn (unlock t)

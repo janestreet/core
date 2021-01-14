@@ -381,3 +381,19 @@ let%expect_test "unix socket path limit workaround" =
         Unix.close sock;
         Unix.unlink (dir ^/ "socket"))
 ;;
+
+let%expect_test ("Clock.get_cpuclock_for"[@tags "64-bits-only"]) =
+  let get_cpuclock_for = ok_exn Unix.Clock.get_cpuclock_for in
+  let gettime = ok_exn Unix.Clock.gettime in
+  (* This pid is too large to be real  *)
+  let bad_pid = Pid.of_int 100_000_000 in
+  require_does_raise [%here] (fun () -> get_cpuclock_for bad_pid);
+  [%expect {|
+    (Unix.Unix_error "No such process" clock_getcpuclockid "") |}];
+  let clock = get_cpuclock_for (Unix.getpid ()) in
+  let cputime = gettime (Custom clock) in
+  (* Testing cpu clocks are hard, but this doesn't crash, and we've definitely accrued cpu
+     time. *)
+  require [%here] Int63.(cputime > zero);
+  [%expect {| |}]
+;;
