@@ -2547,6 +2547,7 @@ type socket_bool_option = Unix.socket_bool_option =
   | SO_ACCEPTCONN
   | TCP_NODELAY
   | IPV6_ONLY
+  | SO_REUSEPORT [@if ocaml_version >= (4, 12, 0)]
 [@@deriving sexp]
 
 type socket_int_option = Unix.socket_int_option =
