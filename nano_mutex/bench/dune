@@ -1,3 +1,3 @@
 (executables (names bench_nano_mutex)
  (libraries core core_bench error_checking_mutex nano_mutex)
- (preprocess (pps ppx_jane -allow-unannotated-ignores)))
+ (preprocess (pps ppx_jane)))

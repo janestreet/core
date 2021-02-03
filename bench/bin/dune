@@ -4,4 +4,4 @@
   time_to_string zone_next_clock_shift)
  (libraries core core_bench core_kernel.pairing_heap pcre re2
   shell.string_extended)
- (preprocess (pps ppx_jane -allow-unannotated-ignores)))
+ (preprocess (pps ppx_jane)))

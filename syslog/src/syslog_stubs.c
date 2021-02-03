@@ -44,9 +44,6 @@ CAMLprim value core_syslog_level_to_int(value v_level) {
   return Val_int(log_levels[Int_val(v_level)]);
 }
 
-/* XXX: WARNING: this function leaks memory if v_ident is not None!
-   No way around that if syslog is called in a multi-threaded environment!
-   Therefore it shouldn't be called too often.  What for, anyway? */
 CAMLprim value core_syslog_openlog(value v_ident, value v_open_option, value v_facility) {
   char *ident = NULL; /* default to argv[0], as per syslog(3) */
   if (v_ident != Val_none) {

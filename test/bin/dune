@@ -7,4 +7,4 @@
   thread_on_uncaught_exn)
  (libraries bin_prot core oUnit ppx_inline_test.runtime-lib
   quickcheck_deprecated sexplib variantslib)
- (preprocess (pps ppx_jane -allow-unannotated-ignores)))
+ (preprocess (pps ppx_jane)))

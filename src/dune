@@ -9,7 +9,6 @@
  (c_flags (:standard -D_LARGEFILE64_SOURCE) ()) (install_c_headers config)
  (c_names ocaml_utils_stubs pthread_np_stubs signal_stubs timespec unix_stubs
   unix_time_stubs nss_stubs)
- (preprocessor_deps config.h)
- (preprocess (pps ppx_jane -allow-unannotated-ignores -check-doc-comments)))
+ (preprocessor_deps config.h) (preprocess (pps ppx_jane)))
 
 (install (section lib) (files (socketaddr.h as socketaddr.h)))

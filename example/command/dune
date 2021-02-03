@@ -1,3 +1,2 @@
 (executables (names main main_no_recur)
- (libraries async core fieldslib sexplib)
- (preprocess (pps ppx_jane -allow-unannotated-ignores)))
+ (libraries async core fieldslib sexplib) (preprocess (pps ppx_jane)))

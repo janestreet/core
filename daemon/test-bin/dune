@@ -2,4 +2,4 @@
  (action (bash ./daemonize_test.exe)))
 
 (executables (names daemonize_test) (libraries daemon)
- (preprocess (pps ppx_jane -allow-unannotated-ignores)))
+ (preprocess (pps ppx_jane)))
