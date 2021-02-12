@@ -104,7 +104,8 @@ let span_examples =
 
 let span_option_examples =
   Time_ns.Span.Option.none
-  :: List.filter_map span_examples ~f:(fun span ->
+  ::
+  List.filter_map span_examples ~f:(fun span ->
     if Time_ns.Span.Option.some_is_representable span
     then Some (Time_ns.Span.Option.some span)
     else None)

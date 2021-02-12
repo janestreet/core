@@ -15,8 +15,9 @@ let%test _ =
   let argv = get_argv () in
   [%equal: [ `Native | `Bytecode ]]
     (execution_mode ())
-    (if String.is_suffix argv.(0) ~suffix:".exe"
-     || String.is_suffix argv.(0) ~suffix:".native"
+    (if
+      String.is_suffix argv.(0) ~suffix:".exe"
+      || String.is_suffix argv.(0) ~suffix:".native"
      then `Native
      else `Bytecode)
 ;;
