@@ -1,0 +1,2 @@
+(library (name interval_lib) (public_name core.interval_lib) (libraries core)
+ (preprocess (pps ppx_jane)))

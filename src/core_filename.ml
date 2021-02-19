@@ -1,4 +1,5 @@
 open! Import
+module Sys = Core_sys
 
 include Core_kernel.Filename
 
@@ -12,9 +13,9 @@ let create_arg_type ?key of_string =
       let completions = In_channel.input_lines chan_in in
       ignore (Unix.close_process_in chan_in);
       List.map (List.sort ~compare:String.compare completions) ~f:(fun comp ->
-        if Caml.Sys.is_directory comp
-        then comp ^ "/"
-        else comp)
+        match Sys.is_directory comp with
+        | `Yes -> comp ^ "/"
+        | `No | `Unknown -> comp)
     in
     match completions with
     | [dir] when String.is_suffix dir ~suffix:"/" ->

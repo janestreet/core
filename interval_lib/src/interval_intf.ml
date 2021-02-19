@@ -1,6 +1,5 @@
-open! Import
-open Import_time
-module Time_ns = Core_time_ns
+open! Core
+
 module Zone = Time.Zone
 
 module type Gen = sig

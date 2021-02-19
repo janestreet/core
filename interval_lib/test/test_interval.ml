@@ -1,6 +1,8 @@
 open! Core
 open! Expect_test_helpers_core
 
+module Interval = Interval_lib.Interval
+
 let%expect_test "list_intersect" =
   let i = Interval.create in
   let x = Interval.list_intersect [ i 4 7; i 9 15 ] [ i 2 4; i 5 10; i 14 20 ] in

@@ -1,0 +1,3 @@
+(library (name interval_lib_test)
+ (libraries expect_test_helpers_core interval_lib)
+ (preprocess (pps ppx_jane)))

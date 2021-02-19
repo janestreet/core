@@ -1,8 +1,6 @@
 
-open! Import
+open! Core
 open! Int.Replace_polymorphic_compare
-
-module Core_time = Import_time.Time
 
 module Stable = struct
   module V1 = struct
@@ -53,7 +51,7 @@ module Stable = struct
 
     module Time = struct
       module T = struct
-        type t = Core_time.Stable.V1.t interval [@@deriving sexp, bin_io, compare]
+        type t = Core.Time.Stable.V1.t interval [@@deriving sexp, bin_io, compare]
       end
       include T
       include Comparator.Stable.V1.Make (T)
@@ -62,7 +60,7 @@ module Stable = struct
     module Time_ns = struct
       module T = struct
         type t =
-          Core_time_ns.Stable.V1.t interval [@@deriving sexp, bin_io, compare]
+          Core.Time_ns.Stable.V1.t interval [@@deriving sexp, bin_io, compare]
       end
       include T
       include Comparator.Stable.V1.Make (T)
@@ -70,7 +68,7 @@ module Stable = struct
 
     module Ofday = struct
       module T = struct
-        type t = Core_time.Stable.Ofday.V1.t interval [@@deriving sexp, bin_io, compare, hash]
+        type t = Core.Time.Stable.Ofday.V1.t interval [@@deriving sexp, bin_io, compare, hash]
       end
       include T
       include Comparator.Stable.V1.Make (T)
@@ -78,7 +76,7 @@ module Stable = struct
 
     module Ofday_ns = struct
       module T = struct
-        type t = Core_time_ns.Stable.Ofday.V1.t interval [@@deriving sexp, bin_io, compare]
+        type t = Core.Time_ns.Stable.Ofday.V1.t interval [@@deriving sexp, bin_io, compare]
       end
       include T
       include Comparator.Stable.V1.Make (T)
@@ -382,8 +380,8 @@ module type S_time = Interval_intf.S_time
   with type 'a poly_set := 'a Set.t
 
 module Float    = Make (Float)
-module Ofday    = Make (Core_time.Ofday)
-module Ofday_ns = Make (Core_time_ns.Ofday)
+module Ofday    = Make (Core.Time.Ofday)
+module Ofday_ns = Make (Core.Time_ns.Ofday)
 
 module Int = struct
   include Make(Int)
@@ -554,5 +552,5 @@ module Make_time (Time : Time_bound) = struct
     create open_time close_time
 end
 
-module Time    = Make_time(Core_time)
-module Time_ns = Make_time(Core_time_ns)
+module Time    = Make_time(Core.Time)
+module Time_ns = Make_time(Core.Time_ns)

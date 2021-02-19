@@ -28,8 +28,6 @@ module Command                = Core_command
 module Core_stable            = Stable
 module Date                   = Core_date
 module Filename               = Core_filename
-module Interval               = Interval
-module Interval_intf          = Interval_intf
 module Digest                 = Md5 [@@ocaml.deprecated "[since 2017-05] Use Md5 instead."]
 (* When we moved [Mutex] out of [Core], we added this declaration of [Mutex] to prevent a
    mistake in which code that used to use [Core.Mutex] is unintentionally and silently

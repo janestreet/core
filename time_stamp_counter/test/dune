@@ -2,4 +2,4 @@
  (preprocessor_deps config.h) (preprocess (pps ppx_jane)))
 
 (rule (targets config.h) (deps)
- (action (bash "cp cp %{lib:jst-config:config.h} .")))
+ (action (bash "cp %{lib:jst-config:config.h} .")))
