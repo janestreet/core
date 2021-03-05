@@ -26,7 +26,6 @@ include Core_kernel
 module Caml                   = Core_caml
 module Command                = Core_command
 module Core_stable            = Stable
-module Date                   = Core_date
 module Filename               = Core_filename
 module Digest                 = Md5 [@@ocaml.deprecated "[since 2017-05] Use Md5 instead."]
 (* When we moved [Mutex] out of [Core], we added this declaration of [Mutex] to prevent a

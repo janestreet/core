@@ -1,6 +1,6 @@
 open! Core
-open! Import
 open! Date
+open! Date_unix
 
 let%test_unit "parse" =
   [%test_result: t]
@@ -34,11 +34,7 @@ let%test_module "week_number" =
           in
           loop (result :: acc) (add_days d 1))
       in
-      loop [] start_date
-      |> Or_error.combine_errors_unit
-      |> function
-      | Result.Ok () -> ()
-      | Result.Error e -> Error.raise e
+      loop [] start_date |> Or_error.combine_errors_unit |> ok_exn
     ;;
   end)
 ;;

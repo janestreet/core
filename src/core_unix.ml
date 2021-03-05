@@ -1750,6 +1750,15 @@ let close_process_full c =
   Exit_or_signal.of_unix (Unix.close_process_full (c.C.stdout, c.C.stdin, c.C.stderr))
 ;;
 
+external setpgid : int -> int -> unit = "core_unix_setpgid"
+external getpgid : int -> int = "core_unix_getpgid"
+
+let setpgid ~of_ ~to_ =
+  setpgid (Pid.to_int of_) (Pid.to_int to_)
+
+let getpgid pid =
+  Pid.of_int (getpgid (Pid.to_int pid))
+
 let symlink ~target ~link_name =
   improve (fun () -> Unix.symlink ?to_dir:None ~src:target ~dst:link_name)
     (fun () -> [("target", atom target); ("link_name", atom link_name)])

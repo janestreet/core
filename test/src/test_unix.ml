@@ -181,7 +181,37 @@ let%test_unit "record format hasn't changed" =
        "%F %T; wday=%u; yday=%j")
 ;;
 
-let%test _ =
+module Unix_tm_for_testing = struct
+  type t = Unix.tm =
+    { tm_sec : int
+    ; tm_min : int
+    ; tm_hour : int
+    ; tm_mday : int
+    ; tm_mon : int
+    ; tm_year : int
+    ; tm_wday : int
+    ; tm_yday : int
+    ; tm_isdst : bool
+    }
+  [@@deriving fields, sexp_of]
+
+  let equal t1 t2 =
+    let eq_int f = Field.get f t1 = Field.get f t2 in
+    let eq_bool f = Bool.( = ) (Field.get f t1) (Field.get f t2) in
+    Fields.for_all
+      ~tm_sec:eq_int
+      ~tm_min:eq_int
+      ~tm_hour:eq_int
+      ~tm_mday:eq_int
+      ~tm_mon:eq_int
+      ~tm_year:eq_int
+      ~tm_wday:eq_int
+      ~tm_yday:eq_int
+      ~tm_isdst:eq_bool
+  ;;
+end
+
+let%expect_test "strptime match" =
   let res = strptime ~fmt:"%Y-%m-%d %H:%M:%S" "2012-05-23 10:14:23" in
   let res =
     (* fill in optional fields if they are missing *)
@@ -189,8 +219,11 @@ let%test _ =
     let tm_yday = if res.Unix.tm_yday = 0 then 143 else res.Unix.tm_yday in
     { res with Unix.tm_wday; tm_yday }
   in
-  res
-  = { Unix.tm_sec = 23
+  require_equal
+    [%here]
+    (module Unix_tm_for_testing)
+    res
+    { Unix.tm_sec = 23
     ; tm_min = 14
     ; tm_hour = 10
     ; tm_mday = 23
@@ -202,12 +235,24 @@ let%test _ =
     }
 ;;
 
-let%test _ =
-  try
-    ignore (strptime ~fmt:"%Y-%m-%d" "2012-05-");
-    false
-  with
-  | _ -> true
+let%expect_test "strptime match failed" =
+  require_does_raise [%here] (fun () -> strptime ~fmt:"%Y-%m-%d" "2012-05-");
+  [%expect {| (Failure "unix_strptime: match failed") |}]
+;;
+
+let%expect_test "strptime trailing input" =
+  print_s [%sexp (strptime ~fmt:"%Y-%m-%d" "2012-05-23 10:14:23" : Unix_tm_for_testing.t)];
+  [%expect
+    {|
+    ((tm_sec   0)
+     (tm_min   0)
+     (tm_hour  0)
+     (tm_mday  23)
+     (tm_mon   4)
+     (tm_year  112)
+     (tm_wday  3)
+     (tm_yday  143)
+     (tm_isdst false)) |}]
 ;;
 
 module Inet_addr = struct
@@ -396,4 +441,23 @@ let%expect_test ("Clock.get_cpuclock_for"[@tags "64-bits-only"]) =
      time. *)
   require [%here] Int63.(cputime > zero);
   [%expect {| |}]
+;;
+
+let%test_unit "PGID set by setpgid is inherited by child" =
+  protectx ~finally:remove (Filename.temp_file "test" "setpgid") ~f:(fun temp_file ->
+    let parent_pid = getpid () in
+    setpgid ~of_:parent_pid ~to_:parent_pid;
+    match fork () with
+    | `In_the_child ->
+      let child_pid = getpid () in
+      let oc = Out_channel.create temp_file in
+      Out_channel.output_string oc (Pid.to_string (getpgid child_pid));
+      Out_channel.close oc;
+      exit_immediately 0
+    | `In_the_parent child_pid ->
+      waitpid_exn child_pid;
+      let ic = In_channel.create temp_file in
+      let child_pgid = In_channel.input_all ic |> String.strip |> Pid.of_string in
+      In_channel.close ic;
+      [%test_result: Pid.t] ~expect:parent_pid child_pgid)
 ;;

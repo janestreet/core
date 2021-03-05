@@ -1636,3 +1636,21 @@ CAMLprim value core_unix_inet4_addr_to_int63_exn(value v) {
   addr = GET_INET_ADDR(v);
   CAMLreturn(caml_alloc_int63(htonl(addr.s_addr)));
 }
+
+/* Process groups */
+
+CAMLprim value core_unix_setpgid(value pid, value pgid) {
+  CAMLparam2(pid, pgid);
+  int retval;
+  retval = setpgid(Int_val(pid), Int_val(pgid));
+  if (retval) uerror("setpgid", Nothing);
+  CAMLreturn(Val_unit);
+}
+
+CAMLprim value core_unix_getpgid(value pid) {
+  CAMLparam1(pid);
+  int pgid;
+  pgid = getpgid(Int_val(pid));
+  if (pgid == -1) uerror("getpgid", Nothing);
+  CAMLreturn(Val_int(pgid));
+}

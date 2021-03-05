@@ -1,10 +1,7 @@
-open! Import
+open! Core
 
-module Date = Core_kernel.Date
-
-module type Core_date = sig
-  type t = Date.t
-  include module type of Date with type t := t
+module type Date_unix = sig
+  type t := Core_kernel.Date.t
 
   (** This formats a date using the format patterns available in [strftime]. *)
   val format : t -> string -> string
@@ -12,5 +9,5 @@ module type Core_date = sig
   (** This parses a date using the format patterns available in [strptime]. *)
   val parse : fmt:string -> string -> t
 
-  val of_tm : Core_unix.tm -> t
+  val of_tm : Unix.tm -> t
 end

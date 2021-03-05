@@ -393,6 +393,12 @@ val getppid : unit -> Pid.t option
 *)
 val getppid_exn : unit -> Pid.t
 
+(** Set process group ID of a process. *)
+val setpgid : of_:Pid.t -> to_:Pid.t -> unit
+
+(** Return process group ID of a process. *)
+val getpgid : Pid.t -> Pid.t
+
 module Thread_id : sig
   type t [@@deriving sexp_of, bin_io]
   include Comparable.S with type t := t
