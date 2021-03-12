@@ -1,3 +1,4 @@
 (executables (names bench_nano_mutex)
- (libraries core core_bench error_checking_mutex nano_mutex)
+ (libraries core_kernel.caml_threads core core_bench error_checking_mutex
+  nano_mutex)
  (preprocess (pps ppx_jane)))

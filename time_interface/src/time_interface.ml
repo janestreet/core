@@ -1,59 +1,55 @@
 (** This module type is basically the intersection of the module types of [Core.Time]
     and [Core.Time_ns].  We verify that that relation holds in check_std.ml. *)
 
-open! Import
-open! Import_time
+open! Core
 
 module type S = sig
   type t
 
-  include Binable.S    with type t := t
+  include Binable.S with type t := t
   include Comparable.S with type t := t
-  include Hashable.S   with type t := t
-  include Sexpable.S   with type t := t
+  include Hashable.S with type t := t
+  include Sexpable.S with type t := t
   include Stringable.S with type t := t
 
   module Span : sig
     type t
 
-    include Binable.S            with type t := t
-    include Comparable.S         with type t := t
+    include Binable.S with type t := t
+    include Comparable.S with type t := t
     include Comparable.With_zero with type t := t
-    include Hashable.S           with type t := t
-    include Sexpable.S           with type t := t
-    include Stringable.S         with type t := t
+    include Hashable.S with type t := t
+    include Sexpable.S with type t := t
+    include Stringable.S with type t := t
 
-    val nanosecond  : t
+    val nanosecond : t
     val microsecond : t
     val millisecond : t
-    val second      : t
-    val minute      : t
-    val hour        : t
-    val day         : t
-
-    val of_ns  : float -> t
-    val of_us  : float -> t
-    val of_ms  : float -> t
+    val second : t
+    val minute : t
+    val hour : t
+    val day : t
+    val of_ns : float -> t
+    val of_us : float -> t
+    val of_ms : float -> t
     val of_sec : float -> t
     val of_min : float -> t
-    val of_hr  : float -> t
+    val of_hr : float -> t
     val of_day : float -> t
-
-    val to_ns  : t -> float
-    val to_us  : t -> float
-    val to_ms  : t -> float
+    val to_ns : t -> float
+    val to_us : t -> float
+    val to_ms : t -> float
     val to_sec : t -> float
     val to_min : t -> float
-    val to_hr  : t -> float
+    val to_hr : t -> float
     val to_day : t -> float
-
-    val zero   : t
-    val ( + )  : t -> t -> t
-    val ( - )  : t -> t -> t
-    val abs    : t -> t
-    val neg    : t -> t
-    val scale  : t -> float -> t
-    val ( / )  : t -> float -> t
+    val zero : t
+    val ( + ) : t -> t -> t
+    val ( - ) : t -> t -> t
+    val abs : t -> t
+    val neg : t -> t
+    val scale : t -> float -> t
+    val ( / ) : t -> float -> t
     val ( // ) : t -> t -> float
 
     (** The only condition [to_proportional_float] is supposed to satisfy is that for all
@@ -61,15 +57,16 @@ module type S = sig
     val to_proportional_float : t -> float
 
     val to_short_string : t -> string
+
     val to_string_hum
-      :  ?delimiter    :char
-      -> ?decimals     :int
+      :  ?delimiter:char
+      -> ?decimals:int
       -> ?align_decimal:bool
-      -> ?unit_of_time :Unit_of_time.t
-      -> t -> string
+      -> ?unit_of_time:Unit_of_time.t
+      -> t
+      -> string
 
     val randomize : t -> percent:Percent.t -> t
-
     val to_unit_of_time : t -> Unit_of_time.t
     val of_unit_of_time : Unit_of_time.t -> t
   end
@@ -77,10 +74,10 @@ module type S = sig
   module Ofday : sig
     type t
 
-    include Binable      with type t := t
+    include Binable with type t := t
     include Comparable.S with type t := t
-    include Hashable.S   with type t := t
-    include Sexpable.S   with type t := t
+    include Hashable.S with type t := t
+    include Sexpable.S with type t := t
 
     val start_of_day : t
   end
@@ -91,10 +88,8 @@ module type S = sig
   val sub : t -> Span.t -> t
   val diff : t -> t -> Span.t
   val abs_diff : t -> t -> Span.t
-
   val to_string_fix_proto : [ `Local | `Utc ] -> t -> string
   val of_string_fix_proto : [ `Local | `Utc ] -> string -> t
-
   val to_string_abs : t -> zone:Time.Zone.t -> string
   val of_string_abs : string -> t
 

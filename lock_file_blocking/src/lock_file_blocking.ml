@@ -380,7 +380,7 @@ end
 module Flock = struct
 
   type t = {
-    fd : Caml.Unix.file_descr;
+    fd : Caml_unix.file_descr;
     mutable unlocked : bool;
   }
 

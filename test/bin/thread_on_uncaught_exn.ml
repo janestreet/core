@@ -37,11 +37,11 @@ let core_command =
 let caml_command =
   let main () =
     main
-      ~create_thread:Caml.Thread.create
-      ~join_thread:Caml.Thread.join
+      ~create_thread:Caml_threads.Thread.create
+      ~join_thread:Caml_threads.Thread.join
   in
   Command.basic
-    ~summary:"Test Caml.Thread.create's behaviour when exns are thrown"
+    ~summary:"Test Caml_threads.Thread.create's behaviour when exns are thrown"
     (Command.Param.return main)
 
 let command =

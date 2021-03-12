@@ -31,7 +31,7 @@ let () =
   Bench.bench
     (List.map ~f:(fun (name, thunk) -> Bench.Test.create ~name thunk)
        (
-         make ~name:"Caml.Mutex" (module Caml.Mutex : Mutex)
+         make ~name:"Caml_threads.Mutex" (module Caml_threads.Mutex : Mutex)
          @ make ~name:"Error_checking_mutex" (module Error_checking_mutex : Mutex)
          @ make ~name:"Nano_mutex" (module Nano_mutex : Mutex)
        ))

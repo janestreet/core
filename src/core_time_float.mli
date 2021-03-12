@@ -47,15 +47,15 @@ module Stable : sig
 
   module Span : sig
     module V1 : sig
-      type t = Time.Stable.Span.V1.t [@@deriving hash]
+      type t = Time.Stable.Span.V1.t [@@deriving hash, equal]
       include Stable_without_comparator with type t := t
     end
     module V2 : sig
-      type t = Time.Stable.Span.V2.t [@@deriving hash]
+      type t = Time.Stable.Span.V2.t [@@deriving hash, equal]
       include Stable_without_comparator with type t := t
     end
     module V3 : sig
-      type t = Time.Stable.Span.V3.t [@@deriving hash, typerep]
+      type t = Time.Stable.Span.V3.t [@@deriving hash, typerep, equal]
       include Stable_without_comparator with type t := t
     end
   end

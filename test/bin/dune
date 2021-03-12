@@ -5,6 +5,6 @@
  (names am_running_inline_test command_shape_test_child
   command_shape_test_parent command_env_test test_runner
   thread_on_uncaught_exn)
- (libraries bin_prot core oUnit ppx_inline_test.runtime-lib
-  quickcheck_deprecated sexplib variantslib)
+ (libraries bin_prot core_kernel.caml_threads core oUnit
+  ppx_inline_test.runtime-lib quickcheck_deprecated sexplib variantslib)
  (preprocess (pps ppx_jane)))

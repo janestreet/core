@@ -67,7 +67,7 @@ module File_descr = struct
   include (Hashable.Make_plain_and_derive_hash_fold_t (M))
 
   (* Given that [to_int] and [of_int] are set to "%identity", this is considerably more
-     direct.  It's unfortunate, but despite [Caml.Unix] using [type t = int] in the
+     direct.  It's unfortunate, but despite [Caml_unix] using [type t = int] in the
      implementation, [Unix.file_descr] is abstract and cannot be tagged [@@immediate]. *)
   let equal (t1 : t) t2 = phys_equal t1 t2
 end

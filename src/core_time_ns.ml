@@ -15,7 +15,7 @@ module Span = struct
   module Stable = struct
     module V1 = struct
       module T = struct
-        type nonrec t = Time_ns.Span.t [@@deriving bin_io, compare, hash]
+        type nonrec t = Time_ns.Span.t [@@deriving bin_io, compare, hash, equal]
 
         let sexp_of_t t = Time.Stable.Span.V1.sexp_of_t (to_span_float_round_nearest t)
         let t_of_sexp s = of_span_float_round_nearest (Time.Stable.Span.V1.t_of_sexp s)

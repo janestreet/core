@@ -48,7 +48,7 @@ let%test_module "recvmmsg smoke" =
   (module struct
     module IOVec = Unix.IOVec
     module Inet_addr = Unix.Inet_addr
-    open Caml.Unix
+    open Caml_unix
 
     let count = 10
     let fd = socket PF_INET SOCK_DGRAM 0

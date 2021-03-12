@@ -23,9 +23,24 @@
 include Core_kernel
 (**/**)
 
-module Caml                   = Core_caml
+module Caml = struct
+  include Caml
+  (* When we removed [Core.Caml]'s extensions of [Core_kernel.Caml], we added
+     the declarations below to force code to switch to the new names, and avoid
+     silently incorrectly using something else in scope. *)
+  module Condition  = struct end [@@deprecated "[since 2021-02] Use [Caml_threads.Condition]"]
+  module Mutex      = struct end [@@deprecated "[since 2021-02] Use [Caml_threads.Mutex]"]
+  module Thread     = struct end [@@deprecated "[since 2021-02] Use [Caml_threads.Thread]"]
+  module Unix       = struct end [@@deprecated "[since 2021-02] Use [Caml_unix]"]
+  module UnixLabels = struct end [@@deprecated "[since 2021-02] Use [UnixLabels]"]
+end
 module Command                = Core_command
-module Core_stable            = Stable
+module Core_stable            = struct
+  include Core_kernel_stable
+  module Time = struct end [@@deprecated "[since 2021-02] Use [Time_unix.Stable]"]
+  module Time_ns = struct end [@@deprecated "[since 2021-02] Use [Time_ns_unix.Stable]"]
+  module Unix = struct end [@@deprecated "[since 2021-02] Use [Core_unix.Stable]"]
+end
 module Filename               = Core_filename
 module Digest                 = Md5 [@@ocaml.deprecated "[since 2017-05] Use Md5 instead."]
 (* When we moved [Mutex] out of [Core], we added this declaration of [Mutex] to prevent a
@@ -36,7 +51,6 @@ module Signal                 = Signal
 module Sys                    = Core_sys
 module Thread                 = Core_thread
 module Time                   = Core_time_float
-module Time_common            = Time_common
 module Time_ns                = Core_time_ns
 module Unix                   = Core_unix
 module Version_util           = Version_util
@@ -44,3 +58,4 @@ module Version_util           = Version_util
 (* Can't go in Common for circular-reference reasons *)
 let sec = Time.Span.of_sec
 let ( ^/ ) = Core_filename.concat
+

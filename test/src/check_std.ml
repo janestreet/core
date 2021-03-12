@@ -135,5 +135,5 @@ let%test_module _ =
 ;;
 
 (* This ensures that Time_intf.S fits inside the intersection of Time and Time_ns. *)
-include ((Time : Time_common.S) : sig end)
-include ((Time_ns : Time_common.S) : sig end)
+include ((Time : Time_interface.S) : sig end)
+include ((Time_ns : Time_interface.S) : sig end)

@@ -1,0 +1,2 @@
+(library (name core_unix) (public_name core.core_unix) (libraries core)
+ (preprocess (pps ppx_jane)))

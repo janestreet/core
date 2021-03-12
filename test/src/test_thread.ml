@@ -55,7 +55,7 @@ let%expect_test "~on_uncaught_exn:`Kill_whole_process" =
   return ()
 ;;
 
-let%expect_test "Caml.Thread.create's behaviour with exceptions, for comparison" =
+let%expect_test "Caml_threads.Thread.create's behaviour with exceptions, for comparison" =
   let%bind () = run thread_on_uncaught_exn_exe [ "caml" ] in
   [%expect
     {|

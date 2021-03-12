@@ -2238,7 +2238,7 @@ val mkstemp : string -> string * File_descr.t
     a suffix of [.tmp.] followed by six random characters to make the name unique.
 
     @raise Unix_error on errors.
-    k*)
+*)
 val mkdtemp : string -> string
 
 (** {2 Signal handling} *)

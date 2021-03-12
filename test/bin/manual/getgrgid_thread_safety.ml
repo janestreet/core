@@ -1,3 +1,5 @@
+module Thread = Caml_threads.Thread
+
 (**
    This test reproduces a segfault in stdlib implementation of [getgrgid] in OCaml 4.07.
    Usually it segfaults in several seconds, but sometimes it can takes tens of seconds.

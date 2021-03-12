@@ -19,16 +19,16 @@
     (run in 2020-03):
 
     {v
-      |----------------------------------|----------|---------|
+      |----------------------------------+----------+---------|
       | Name                             | Time/Run | mWd/Run |
-      |----------------------------------|----------|---------|
-      | Caml.Mutex create                |  42.1 ns |   3.00w |
-      | Caml.Mutex lock/unlock           |  23.6 ns |         |
-      | Error_checking_mutex create      |  47.2 ns |   3.00w |
-      | Error_checking_mutex lock/unlock |  25.6 ns |         |
-      | Nano_mutex create                |   4.4 ns |   4.00w |
-      | Nano_mutex lock/unlock           |  12.3 ns |         |
-      |-------------------------------------------------------|
+      |----------------------------------+----------+---------|
+      | Caml_threads.Mutex create        | 42.1 ns  | 3.00w   |
+      | Caml_threads.Mutex lock/unlock   | 23.6 ns  |         |
+      | Error_checking_mutex create      | 47.2 ns  | 3.00w   |
+      | Error_checking_mutex lock/unlock | 25.6 ns  |         |
+      | Nano_mutex create                | 4.4 ns   | 4.00w   |
+      | Nano_mutex lock/unlock           | 12.3 ns  |         |
+      |----------------------------------+----------+---------|
     v}
 
     The benchmark code is in core/extended/lib_test/bench_nano_mutex.ml.
@@ -44,13 +44,13 @@
     Here is a table comparing how the various mutexes behave:
 
     {v
-      |--------------------+------------+------------+------------+
-      |                    | Caml.Mutex | Core.Mutex | Nano_mutex |
-      |--------------------+------------+------------+------------+
-      | recursive lock     | undefined  | error      | error      |
-      | unlocking unlocked | undefined  | error      | error      |
-      | t1:lock  t2:unlock | undefined  | error      | error      |
-      |--------------------+------------+------------+------------+
+      |--------------------+--------------------+----------------------+------------|
+      |                    | Caml_threads.Mutex | Error_checking_mutex | Nano_mutex |
+      |--------------------+--------------------+----------------------+------------|
+      | recursive lock     | undefined          | error                | error      |
+      | unlocking unlocked | undefined          | error                | error      |
+      | t1:lock  t2:unlock | undefined          | error                | error      |
+      |--------------------+--------------------+----------------------+------------|
     v}
 *)
 
