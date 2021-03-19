@@ -12,13 +12,14 @@ build: [
 depends: [
   "ocaml" {>= "4.08.0"}
   "core_kernel"
+  "expect_test_helpers_core"
   "jst-config"
   "ppx_jane"
   "sexplib"
   "timezone"
   "base-threads"
-  "dune"         {>= "2.0.0"}
-  "spawn"        {>= "v0.12"}
+  "dune"                     {>= "2.0.0"}
+  "spawn"                    {>= "v0.12"}
 ]
 synopsis: "Industrial strength alternative to OCaml's standard library"
 description: "

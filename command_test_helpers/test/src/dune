@@ -1,0 +1,5 @@
+(library (name command_test_helpers_test)
+ (public_name core.command_test_helpers_test)
+ (libraries command_test_helpers core_kernel.composition_infix
+  expect_test_helpers_core)
+ (preprocess (pps ppx_jane)))
