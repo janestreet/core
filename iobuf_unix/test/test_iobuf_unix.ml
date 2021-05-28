@@ -1,6 +1,8 @@
 open! Core
 open! Iobuf
 open! Iobuf_unix
+module Unix = Core_unix
+module Thread = Core_thread
 
 type nonrec ('d, 'w) t = ('d, 'w) Hexdump.t [@@deriving sexp_of]
 

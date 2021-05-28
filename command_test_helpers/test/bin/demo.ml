@@ -10,4 +10,4 @@ let command =
      fun () -> print_s [%message a b])
 ;;
 
-let () = Command.run (group [ "do", group [ "the", group [ "thing", command ] ] ])
+let () = Command_unix.run (group [ "do", group [ "the", group [ "thing", command ] ] ])

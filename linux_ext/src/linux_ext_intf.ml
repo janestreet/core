@@ -1,5 +1,6 @@
 open! Core
-open Core.Unix
+open Core_unix
+module Thread = Core_thread
 
 module type S = sig
 

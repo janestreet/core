@@ -1,4 +1,5 @@
 open! Core
+module Unix = Core_unix
 
 let%expect_test _ =
   Unix.system "../bin/am_running_inline_test.exe"

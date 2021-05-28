@@ -1,0 +1,4 @@
+(library (name core_thread_test)
+ (libraries async core core_thread expect_test_helpers_async
+  expect_test_helpers_core)
+ (preprocess (pps ppx_jane)))

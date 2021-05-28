@@ -1,4 +1,5 @@
 open Core
+module Unix = Core_unix
 
 (* Currently this test doesn't always pass for Nfs lock: it detects both a safety bug
    where we're cleaning up someone else's lock and a liveness bug
@@ -9,14 +10,14 @@ let maybe_die () =
   match Unix.access "die" [`Read] with
   | Error _exn -> ()
   | Ok () ->
-    Signal.send_exn Signal.kill (`Pid (Unix.getpid ()))
+    Signal_unix.send_exn Signal.kill (`Pid (Unix.getpid ()))
 
 let nfs_critical_section path ~f =
   let rec obtain () =
     maybe_die ();
     match Lock_file_blocking.Nfs.create path with
     | Error _e ->
-      ignore (Core.Unix.nanosleep 0.0003);
+      ignore (Core_unix.nanosleep 0.0003);
       obtain ()
     | Ok () -> ()
   in
@@ -29,7 +30,7 @@ let critical_section (type a) ~lock ~unlock ~(f : unit -> a) : a =
     maybe_die ();
     match lock () with
     | `Somebody_else_took_it ->
-      ignore (Core.Unix.nanosleep 0.0003);
+      ignore (Core_unix.nanosleep 0.0003);
       obtain ()
     | `We_took_it lock -> lock
   in
@@ -44,7 +45,7 @@ let local_critical_section path ~f =
     maybe_die ();
     match Lock_file_blocking.create path with
     | false ->
-      ignore (Core.Unix.nanosleep 0.0003);
+      ignore (Core_unix.nanosleep 0.0003);
       obtain ()
     | true -> ()
   in
@@ -106,7 +107,7 @@ let go ~which_lock () =
            Unix.mkdir "die";
            raise exn
          | _ -> ());
-        ignore (Core.Unix.nanosleep 0.002);
+        ignore (Core_unix.nanosleep 0.002);
         maybe_die ();
         Unix.rmdir "zoo";
         Unix.unlink pid
@@ -118,7 +119,7 @@ let go ~which_lock () =
 ;;
 
 let () =
-  Command.run (
+  Command_unix.run (
     Command.basic
       ~summary:"This puts a lock file [lockfile] in the directory test-lock-file under \
                 heavy contention" (

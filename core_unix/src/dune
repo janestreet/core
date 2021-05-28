@@ -1,2 +1,12 @@
-(library (name core_unix) (public_name core.core_unix) (libraries core)
- (preprocess (pps ppx_jane)))
+(library (name core_unix) (public_name core.core_unix)
+ (libraries core error_checking_mutex core_kernel.flags sexplib.unix
+  signal_unix spawn)
+ (c_flags (:standard -D_LARGEFILE64_SOURCE) ())
+ (c_names nss_stubs timespec core_unix_stubs core_unix_time_stubs)
+ (preprocessor_deps config.h) (preprocess (pps ppx_jane)))
+
+(rule (targets config.h thread_id.h) (deps)
+ (action
+  (bash "cp %{lib:jst-config:config.h} %{lib:jst-config:thread_id.h} .")))
+
+(install (section lib) (files (socketaddr.h as socketaddr.h)))

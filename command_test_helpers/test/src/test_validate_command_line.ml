@@ -9,7 +9,7 @@ let exec path_to_exe child_subcommand =
 ;;
 
 let validate command ?on_exec args () =
-  Command_test_helpers.validate_command_line ?on_exec (Command.shape command)
+  Command_test_helpers.validate_command_line ?on_exec (Command_unix.shape command)
   |> Or_error.bind ~f:(fun f -> f args)
 ;;
 
@@ -75,7 +75,7 @@ let%expect_test "exec" =
     {|
     (Unix.Unix_error
      "Permission denied"
-     Core.Unix.create_process
+     Core_unix.create_process
      "((prog /dev/null) (args ()) (env (Extend ((COMMAND_OUTPUT_HELP_SEXP \"(1 2 3)\")))))") |}];
   require_error
     (validate

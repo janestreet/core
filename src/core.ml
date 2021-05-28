@@ -34,25 +34,25 @@ module Caml = struct
   module Unix       = struct end [@@deprecated "[since 2021-02] Use [Caml_unix]"]
   module UnixLabels = struct end [@@deprecated "[since 2021-02] Use [UnixLabels]"]
 end
-module Command                = Core_command
+module Command                = Core_kernel_command_plus_deprecations
 module Core_stable            = struct
   include Core_kernel_stable
   module Time = struct end [@@deprecated "[since 2021-02] Use [Time_unix.Stable]"]
   module Time_ns = struct end [@@deprecated "[since 2021-02] Use [Time_ns_unix.Stable]"]
   module Unix = struct end [@@deprecated "[since 2021-02] Use [Core_unix.Stable]"]
 end
-module Filename               = Core_filename
+module Filename               = Core_kernel_filename_plus_deprecations
 module Digest                 = Md5 [@@ocaml.deprecated "[since 2017-05] Use Md5 instead."]
 (* When we moved [Mutex] out of [Core], we added this declaration of [Mutex] to prevent a
    mistake in which code that used to use [Core.Mutex] is unintentionally and silently
    switched to the stdlib's [Mutex] module. *)
 module Mutex = struct end [@@deprecated "[since 2019-02] Use [Error_checking_mutex]"]
-module Signal                 = Signal
+module Signal                 = Core_kernel_signal_plus_deprecations
 module Sys                    = Core_sys
-module Thread                 = Core_thread
-module Time                   = Core_time_float
-module Time_ns                = Core_time_ns
-module Unix                   = Core_unix
+module Thread                 = struct end [@@deprecated "[since 2021-04] Use [Core_thread]"]
+module Time                   = Core_kernel_time_plus_deprecations
+module Time_ns                = Core_kernel_time_ns_plus_deprecations
+module Unix                   = struct end [@@deprecated "[since 2021-04] Use [Core_unix]"]
 module Version_util           = Version_util
 
 (* Can't go in Common for circular-reference reasons *)

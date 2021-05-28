@@ -1,5 +1,7 @@
 open! Core
 open! Nano_mutex
+module Unix = Core_unix
+module Thread = Core_thread
 
 let%test_unit _ =
   let l = create () in

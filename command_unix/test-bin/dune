@@ -1,0 +1,3 @@
+(executables
+ (names command_shape_test_child command_shape_test_parent command_env_test)
+ (libraries command_unix core core_unix) (preprocess (pps ppx_jane)))

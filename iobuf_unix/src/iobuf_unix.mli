@@ -1,5 +1,6 @@
 open! Core
 open! Iobuf
+module Unix := Core_unix
 
 type ok_or_eof =
   | Ok

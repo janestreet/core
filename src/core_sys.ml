@@ -4,7 +4,7 @@ module LargeFile = Unix.LargeFile
 
 let getenv_f ~f var = try Some (f var) with Not_found_s _ | Caml.Not_found -> None
 
-let getenv        = getenv_f ~f:Sys.getenv
+let getenv        = getenv_f ~f:Caml.Sys.getenv
 let unsafe_getenv = getenv_f ~f:Unix.unsafe_getenv
 
 let getenv_exn_f ~f_str ~f var =

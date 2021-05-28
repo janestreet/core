@@ -1,8 +1,10 @@
 open Core
 open Poly
+module Unix = Core_unix
 open Unix
 open Linux_ext
 open Expect_test_helpers_core
+module Thread = Core_thread
 
 let%test_module "[Timerfd]" =
   (module struct
@@ -327,7 +329,7 @@ let%test_unit "get_terminal_size" =
   | Ok f ->
     let with_tmp_fd f =
       protectx
-        (Filename.temp_file "get_terminal_size" "")
+        (Filename_unix.temp_file "get_terminal_size" "")
         ~finally:Unix.unlink
         ~f:(fun fname ->
           protectx
@@ -457,27 +459,30 @@ let%test_unit "peer_credentials" =
   match Linux_ext.peer_credentials with
   | Error _ -> ()
   | Ok peer_credentials ->
-    protectx (Filename.temp_file "linux_ext" "") ~finally:Unix.unlink ~f:(fun fname ->
-      (let fd = Unix.openfile fname ~mode:[ O_RDONLY ] in
-       try
-         ignore (peer_credentials fd : Peer_credentials.t);
-         failwith "peer credential on non socket should have raised"
-       with
-       | Unix.Unix_error (ENOTSOCK, _, _) -> ());
-      with_listening_server_unix_socket (fname ^ ".peercredsocket") ~f:(fun fname ->
-        let client_sock =
-          Unix.socket ~domain:PF_UNIX ~kind:SOCK_STREAM ~protocol:0 ()
-        in
-        let rec connect count =
-          try Unix.connect client_sock ~addr:(ADDR_UNIX fname) with
-          | Unix_error (ECONNREFUSED, _, _) when count < 100 ->
-            (* the server might not have listened yet *)
-            ignore (Unix.nanosleep 0.1 : float);
-            connect (count + 1)
-        in
-        connect 0;
-        let p = peer_credentials client_sock in
-        [%test_eq: Pid.t] p.pid (Unix.getpid ());
-        [%test_eq: int] p.uid (Unix.getuid ());
-        [%test_eq: int] p.gid (Unix.getgid ())))
+    protectx
+      (Filename_unix.temp_file "linux_ext" "")
+      ~finally:Unix.unlink
+      ~f:(fun fname ->
+        (let fd = Unix.openfile fname ~mode:[ O_RDONLY ] in
+         try
+           ignore (peer_credentials fd : Peer_credentials.t);
+           failwith "peer credential on non socket should have raised"
+         with
+         | Unix.Unix_error (ENOTSOCK, _, _) -> ());
+        with_listening_server_unix_socket (fname ^ ".peercredsocket") ~f:(fun fname ->
+          let client_sock =
+            Unix.socket ~domain:PF_UNIX ~kind:SOCK_STREAM ~protocol:0 ()
+          in
+          let rec connect count =
+            try Unix.connect client_sock ~addr:(ADDR_UNIX fname) with
+            | Unix_error (ECONNREFUSED, _, _) when count < 100 ->
+              (* the server might not have listened yet *)
+              ignore (Unix.nanosleep 0.1 : float);
+              connect (count + 1)
+          in
+          connect 0;
+          let p = peer_credentials client_sock in
+          [%test_eq: Pid.t] p.pid (Unix.getpid ());
+          [%test_eq: int] p.uid (Unix.getuid ());
+          [%test_eq: int] p.gid (Unix.getgid ())))
 ;;

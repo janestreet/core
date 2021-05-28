@@ -1,6 +1,7 @@
 [%%import "config.h"]
 
 open! Core
+module Unix = Core_unix
 
 module Syscall_result = Unix.Syscall_result
 

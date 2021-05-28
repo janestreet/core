@@ -1,5 +1,6 @@
 open! Core
 open! Import
+module Unix = Core_unix
 
 let ssh_client_var = "SSH_CLIENT"
 

@@ -123,6 +123,7 @@ module Span : sig
 
   val ( + ) : t -> t -> t
   val ( - ) : t -> t -> t
+  val zero : t
 
   val to_ns : t -> calibrator:Calibrator.t -> Int63.t
   val of_ns : Int63.t -> calibrator:Calibrator.t -> t

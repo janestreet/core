@@ -1,7 +1,8 @@
 open! Core
 open! Import
 open Poly;;
-open Quickcheck_deprecated;;
+open Quickcheck_deprecated
+module Unix = Core_unix;;
 
 let assert_failure here string =
   raise_s [%sexp (here : Source_code_position.t), (string : string)]
@@ -90,7 +91,7 @@ let really_output outc bs =
 (** takes a bigstring, writes it to a file, then opens it as an inchannel and passes it to
     the test function *)
 let inchan_test ~n test orig =
-  let (fname,outc) = Filename.open_temp_file "bigstring_test" ".txt" in
+  let (fname,outc) = Filename_unix.open_temp_file "bigstring_test" ".txt" in
   protect ~f:(fun () ->
     really_output outc orig;
     Out_channel.close outc;

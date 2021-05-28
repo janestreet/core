@@ -1,3 +1,4 @@
 (library (name bistring_unix_test)
- (libraries bigbuffer_blocking bigstring_unix quickcheck_deprecated)
+ (libraries bigbuffer_blocking bigstring_unix core_thread filename_unix
+  quickcheck_deprecated)
  (preprocess (pps ppx_jane)))

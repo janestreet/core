@@ -1,0 +1,3 @@
+(executables (names main main_no_recur)
+ (libraries async command_unix core fieldslib sexplib)
+ (preprocess (pps ppx_jane)))

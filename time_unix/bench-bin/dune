@@ -1,0 +1,2 @@
+(executables (names zone_next_clock_shift)
+ (libraries command_unix core_bench time_unix) (preprocess (pps ppx_jane)))

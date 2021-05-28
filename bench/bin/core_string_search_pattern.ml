@@ -56,7 +56,7 @@ let slow_create needle =
 
 let () =
 
-  Command.run (
+  Command_unix.run (
     Bench.make_command (
       (*
          List.init 13 ~f:(fun k ->

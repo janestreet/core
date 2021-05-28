@@ -1,0 +1,3 @@
+(library (name core_unix_test)
+ (libraries async core core_unix expect_test_helpers_core filename_unix)
+ (preprocess (pps ppx_jane)))

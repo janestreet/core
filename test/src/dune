@@ -1,5 +1,3 @@
 (library (name core_test)
- (libraries textutils.ascii_table async bignum.bigint command_test_helpers
-  core expect_test_helpers_async expect_test_helpers_core time_interface
-  core_kernel.version_util)
+ (libraries core expect_test_helpers_core core_kernel.version_util core_unix)
  (preprocess (pps ppx_jane)))

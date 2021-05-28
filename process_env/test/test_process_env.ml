@@ -2,6 +2,7 @@ open! Core
 open Poly
 open! Process_env
 open! Process_env.Private
+module Unix = Core_unix
 
 let%test_module "process ssh client env" =
   (module struct

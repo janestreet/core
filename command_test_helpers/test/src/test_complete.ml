@@ -1,5 +1,6 @@
 open! Core
 open! Import
+module Unix = Core_unix
 
 let%expect_test "simple" =
   let param =

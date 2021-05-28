@@ -1,5 +1,6 @@
 open Core
 open Poly
+module Unix = Core_unix
 
 let rec sleep x = if x <= 0. then () else sleep (Unix.nanosleep x)
 

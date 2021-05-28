@@ -1,0 +1,3 @@
+(executables (names thread_on_uncaught_exn)
+ (libraries core_kernel.caml_threads command_unix core core_thread)
+ (preprocess (pps ppx_jane)))

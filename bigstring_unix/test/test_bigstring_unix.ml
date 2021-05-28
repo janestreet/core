@@ -1,6 +1,7 @@
 open! Core
 open! Import
 open! Bigstring_unix
+module Unix = Core_unix
 
 let arch_sixtyfour = Sys.word_size = 64
 

@@ -1,1 +1,2 @@
-(executables (names demo) (libraries core) (preprocess (pps ppx_jane)))
+(executables (names demo) (libraries command_unix core)
+ (preprocess (pps ppx_jane)))

@@ -1,5 +1,5 @@
 open! Core_kernel
-module Unix = Core.Unix
+module Unix = Core_unix
 
 let gethostname = Memo.unit Unix.gethostname
 

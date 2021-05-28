@@ -1,4 +1,5 @@
 open! Core
+module Unix := Core_unix
 
 val fdpair_test
   :  n:string

@@ -1,5 +1,6 @@
 open! Core
 open! Import
+module Unix = Core_unix
 
 let default_command_name = "CMD"
 
@@ -21,7 +22,7 @@ let parse_command_line_raw ~path ~summary param args =
            (let%map_open.Command x = param in
             fun () -> value := Some x))
   in
-  Command.run ~argv command;
+  Command_unix.run ~argv command;
   match !value with
   | None -> Error `Aborted_command_line_parsing__exit_code_already_printed
   | Some x -> Ok x
@@ -172,7 +173,7 @@ module Validate_command_line = struct
     Ok
       (fun args ->
          Or_error.try_with (fun () ->
-           Command.run command ~argv:(default_command_name :: args)))
+           Command_unix.run command ~argv:(default_command_name :: args)))
   ;;
 end
 
@@ -194,7 +195,7 @@ let complete_command ?complete_subcommands ?which_arg cmd ~args =
     | None -> List.length args
   in
   with_env ~var:"COMP_CWORD" ~value:(Int.to_string which_arg) ~f:(fun () ->
-    Command.run ?complete_subcommands ~argv:("__exe_name__" :: args) cmd)
+    Command_unix.run ?complete_subcommands ~argv:("__exe_name__" :: args) cmd)
 ;;
 
 let complete ?which_arg param ~args =

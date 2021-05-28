@@ -8,6 +8,11 @@ Much functionality in `Time_unix` doesn't actually need to depend
 on `Core_unix`.  We hope to over time move such functionality into
 `Core.Time`.
 
+Idiomatic usage is to put a module alias in `import.ml` or near the
+top of a file:
+
+    module Time = Time_unix
+
 For stable types, idiomatic usage is to add an alias to the stable
 submodule:
 

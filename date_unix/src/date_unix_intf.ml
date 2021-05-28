@@ -1,4 +1,5 @@
 open! Core
+module Unix = Core_unix
 
 module type Date_unix = sig
   type t := Core_kernel.Date.t

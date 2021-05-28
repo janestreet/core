@@ -51,7 +51,7 @@ module Stable = struct
 
     module Time = struct
       module T = struct
-        type t = Core.Time.Stable.V1.t interval [@@deriving sexp, bin_io, compare]
+        type t = Time_unix.Stable.V1.t interval [@@deriving sexp, bin_io, compare]
       end
       include T
       include Comparator.Stable.V1.Make (T)
@@ -60,7 +60,7 @@ module Stable = struct
     module Time_ns = struct
       module T = struct
         type t =
-          Core.Time_ns.Stable.V1.t interval [@@deriving sexp, bin_io, compare]
+          Time_ns_unix.Stable.V1.t interval [@@deriving sexp, bin_io, compare]
       end
       include T
       include Comparator.Stable.V1.Make (T)
@@ -552,5 +552,5 @@ module Make_time (Time : Time_bound) = struct
     create open_time close_time
 end
 
-module Time    = Make_time(Core.Time)
-module Time_ns = Make_time(Core.Time_ns)
+module Time    = Make_time(Time_unix)
+module Time_ns = Make_time(Time_ns_unix)

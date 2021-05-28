@@ -42,9 +42,6 @@ let all () =
          Core_string_test.test;
          PMap_test.test;
          PSet_test.test;
-         Time_test.test;
-         Zone_test.test;
-         Core_unix_test.test;
          Union_find_test.test;
          Validate_test.test;
        ])

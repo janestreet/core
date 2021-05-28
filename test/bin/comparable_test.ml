@@ -1,5 +1,6 @@
 open OUnit;;
 open Core
+open struct module Time = Time_unix end
 
 module F
     (M : sig

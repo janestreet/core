@@ -1,5 +1,6 @@
 open! Core
 open! Expect_test_helpers_core
+module Time = Time_unix
 
 module Interval = Interval_lib.Interval
 

@@ -1,4 +1,7 @@
 open! Core
+module Unix = Core_unix
+module Thread = Core_thread
+module Time_ns = Time_ns_unix
 
 module File_descr = Unix.File_descr
 module Syscall_result = Unix.Syscall_result
@@ -667,7 +670,7 @@ external pr_set_name_first16 : string -> unit = "core_linux_pr_set_name"
 external pr_get_name : unit -> string = "core_linux_pr_get_name"
 
 let file_descr_realpath fd =
-  Filename.realpath ("/proc/self/fd/" ^ File_descr.to_string fd)
+  Filename_unix.realpath ("/proc/self/fd/" ^ File_descr.to_string fd)
 
 let out_channel_realpath oc = file_descr_realpath (Unix.descr_of_out_channel oc)
 let in_channel_realpath ic = file_descr_realpath (Unix.descr_of_in_channel ic)

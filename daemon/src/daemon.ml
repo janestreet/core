@@ -1,6 +1,7 @@
 open! Core
 open Poly
 open! Import
+module Unix = Core_unix
 
 
 let check_threads ~allow_threads_to_have_been_created =

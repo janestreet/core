@@ -1,14 +1,15 @@
 open! Core
 open! Lock_file_blocking
+module Unix = Core_unix
 
 let%test_module _ = (module struct
-  let lock_file = Filename.temp_file "lock_file" "unit_test"
+  let lock_file = Filename_unix.temp_file "lock_file" "unit_test"
   let () = Unix.unlink lock_file
   let%test _ = create lock_file
   let%test _ = not (create lock_file)
   let%test _ = is_locked lock_file
 
-  let nolock_file = Filename.temp_file "nolock_file" "unit_test"
+  let nolock_file = Filename_unix.temp_file "nolock_file" "unit_test"
   let () =
     Unix.unlink nolock_file;
     (* Create an empty file. *)
@@ -24,7 +25,7 @@ let%test_module "[Nfs]" = (module struct
   open! Nfs
 
   let create_bool path = match create path with Ok () -> true | Error _ -> false
-  let path = Filename.temp_file "lock_file" "unit_test"
+  let path = Filename_unix.temp_file "lock_file" "unit_test"
   let () = Unix.unlink path
   let%test _ = create_bool path
   let%test _ = not (create_bool path)
@@ -36,7 +37,7 @@ end)
 open Expect_test_helpers_core
 
 let%expect_test "Symlink lock protocol" =
-  let lock_path = Filename.temp_file "lock_file" "unit_test" in
+  let lock_path = Filename_unix.temp_file "lock_file" "unit_test" in
   let () = Unix.unlink lock_path in
   let lock_expect_success ~metadata =
     match Symlink.lock_exn ~lock_path ~metadata with

@@ -2,6 +2,7 @@
 
 open! Core
 open! Iobuf
+module Unix = Core_unix
 module File_descr = Unix.File_descr
 module Syscall_result = Unix.Syscall_result
 

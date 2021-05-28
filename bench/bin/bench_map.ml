@@ -137,4 +137,4 @@ let command =
   ]
 ;;
 
-let () = Command.run command
+let () = Command_unix.run command

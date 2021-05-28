@@ -1,6 +1,7 @@
 (** String type based on [Bigarray], for use in I/O and C-bindings, extending
     {{!Core_kernel.Bigstring}[Core_kernel.Bigstring]}. *)
 open! Core
+module Unix := Core_unix
 
 include module type of struct include Core_kernel.Bigstring end
 

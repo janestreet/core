@@ -1,14 +1,5 @@
-(rule (targets config.h thread_id.h) (deps)
- (action
-  (bash "cp %{lib:jst-config:config.h} %{lib:jst-config:thread_id.h} .")))
-
 (library (name core) (public_name core)
  (libraries core_kernel.caml_unix core_kernel core_kernel.base_for_tests
-  error_checking_mutex core_kernel.flags sexplib.unix spawn timezone threads
-  core_kernel.version_util)
- (c_flags (:standard -D_LARGEFILE64_SOURCE) ()) (install_c_headers config)
- (c_names ocaml_utils_stubs pthread_np_stubs signal_stubs timespec unix_stubs
-  unix_time_stubs nss_stubs)
- (preprocessor_deps config.h) (preprocess (pps ppx_jane)))
-
-(install (section lib) (files (socketaddr.h as socketaddr.h)))
+  threads core_kernel.version_util)
+ (c_flags (:standard -D_LARGEFILE64_SOURCE) ()) (c_names ocaml_utils_stubs)
+ (preprocess (pps ppx_jane)))

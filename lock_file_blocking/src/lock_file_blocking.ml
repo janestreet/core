@@ -1,6 +1,7 @@
 open! Core
 open! Import
 open! Int.Replace_polymorphic_compare
+module Unix = Core_unix
 
 [%%import "config.h"]
 
@@ -260,7 +261,7 @@ module Nfs = struct
             && (pid_start_matches_lock my_pid)
           in
           let locking_pid_exists () =
-            (Signal.can_send_to locking_pid)
+            (Signal_unix.can_send_to locking_pid)
             && (pid_start_matches_lock locking_pid)
           in
           if (unlock_myself && (is_locked_by_me ())) || not (locking_pid_exists ())
@@ -349,7 +350,7 @@ end
    programs that use locks will break anyway if their directory is renamed. *)
 let canonicalize_dirname path =
   let dir, name = Filename.dirname path, Filename.basename path in
-  let dir = Filename.realpath dir in
+  let dir = Filename_unix.realpath dir in
   dir ^/ name
 
 module Mkdir = struct
@@ -358,7 +359,7 @@ module Mkdir = struct
   let lock_exn ~lock_path =
     let lock_path = canonicalize_dirname lock_path in
     match Unix.mkdir lock_path with
-    | exception (Core.Unix.Unix_error (EEXIST, _, _)) -> `Somebody_else_took_it
+    | exception (Core_unix.Unix_error (EEXIST, _, _)) -> `Somebody_else_took_it
     | () -> `We_took_it (Locked { lock_path })
 
   let unlock_exn (Locked { lock_path }) = Unix.rmdir lock_path
@@ -370,7 +371,7 @@ module Symlink = struct
   let lock_exn ~lock_path ~metadata =
     let lock_path = canonicalize_dirname lock_path in
     match Unix.symlink ~link_name:lock_path ~target:metadata with
-    | exception (Core.Unix.Unix_error (EEXIST, _, _)) ->
+    | exception (Core_unix.Unix_error (EEXIST, _, _)) ->
       `Somebody_else_took_it (Or_error.try_with (fun () -> Unix.readlink lock_path))
     | () -> `We_took_it (Locked { lock_path })
 
@@ -386,20 +387,20 @@ module Flock = struct
 
   let lock_exn ~lock_path =
     let fd =
-      Core.Unix.openfile ~perm:0o664 ~mode:[O_CREAT; O_WRONLY; O_CLOEXEC] lock_path
+      Core_unix.openfile ~perm:0o664 ~mode:[O_CREAT; O_WRONLY; O_CLOEXEC] lock_path
     in
     match flock fd with
     | false ->
-      Core.Unix.close ~restart:true fd;
+      Core_unix.close ~restart:true fd;
       `Somebody_else_took_it
     | true -> `We_took_it { fd; unlocked = false }
     | exception exn ->
-      Core.Unix.close ~restart:true fd;
+      Core_unix.close ~restart:true fd;
       raise exn
 
   let unlock_exn t =
     if t.unlocked
     then raise_s [%sexp "Lock_file_blocking.Flock.unlock_exn called twice"];
     t.unlocked <- true;
-    Core.Unix.close ~restart:true t.fd;
+    Core_unix.close ~restart:true t.fd;
 end

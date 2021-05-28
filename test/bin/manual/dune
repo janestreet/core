@@ -1,2 +1,1 @@
-(executables (names backtrace getgrgid_thread_safety)
- (libraries core_kernel.caml_threads core) (preprocess (pps ppx_jane)))
+(executables (names backtrace) (libraries core) (preprocess (pps ppx_jane)))
