@@ -1,2 +1,2 @@
-(executables (names gettid getifaddrs) (libraries async command_unix core)
- (preprocess (pps ppx_jane)))
+(executables (names gettid getifaddrs)
+ (libraries async command_unix core_kernel.core) (preprocess (pps ppx_jane)))

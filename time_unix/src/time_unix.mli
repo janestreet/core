@@ -1,6 +1,6 @@
 open! Core
 open! Import
-module Time := Core_kernel.Time
+module Time := Core.Time
 include Time_functor_intf.S with module Time0 := Time and module Time := Time
 
 module Stable : sig

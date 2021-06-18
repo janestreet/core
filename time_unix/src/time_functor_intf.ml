@@ -14,7 +14,7 @@ module type S = sig
   module Span : sig
     include module type of Time.Span
 
-    val arg_type : t Core_kernel.Command.Arg_type.t
+    val arg_type : t Core.Command.Arg_type.t
   end
 
   module Zone : sig
@@ -24,7 +24,7 @@ module type S = sig
 
     include Timezone.Extend_zone with type t := t
 
-    val arg_type : t Core_kernel.Command.Arg_type.t
+    val arg_type : t Core.Command.Arg_type.t
   end
 
   module Ofday : sig
@@ -32,7 +32,7 @@ module type S = sig
       include Time.Ofday
     end [@ocaml.remove_aliases]
 
-    val arg_type : t Core_kernel.Command.Arg_type.t
+    val arg_type : t Core.Command.Arg_type.t
 
     module Zoned : sig
       (** Sexps look like "(12:01 nyc)"
@@ -46,7 +46,7 @@ module type S = sig
       (** Strings look like "12:01 nyc" *)
       include Stringable with type t := t
 
-      val arg_type : t Core_kernel.Command.Arg_type.t
+      val arg_type : t Core.Command.Arg_type.t
       val create : Time.Ofday.t -> Zone.t -> t
       val create_local : Time.Ofday.t -> t
       val ofday : t -> Time.Ofday.t
@@ -75,7 +75,7 @@ module type S = sig
      and module Ofday := Time.Ofday
      and module Span := Time.Span
 
-  val arg_type : t Core_kernel.Command.Arg_type.t
+  val arg_type : t Core.Command.Arg_type.t
 
   (** String conversions use the local timezone by default. Sexp conversions use
       [get_sexp_zone ()] by default, which can be overridden by calling [set_sexp_zone].
@@ -180,8 +180,15 @@ module type S = sig
       %M - minute
       %S - second
     v}
-  *)
-  val parse : string -> fmt:string -> zone:Zone.t -> t
+
+      Raise if [allow_trailing_input] is false and [fmt] does not consume all of the
+      input. *)
+  val parse
+    :  ?allow_trailing_input:bool (** default = false *)
+    -> string
+    -> fmt:string
+    -> zone:Zone.t
+    -> t
 
   module Exposed_for_tests : sig
     val ensure_colon_in_offset : string -> string

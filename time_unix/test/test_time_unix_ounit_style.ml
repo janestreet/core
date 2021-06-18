@@ -9,7 +9,7 @@ module Span = Time.Span
 let ( @? ) name bool = if not bool then failwith name
 
 let teq t1 t2 =
-  if Sys.word_size = 64
+  if Sys.word_size_in_bits = 64
   then
     Float.iround ~dir:`Zero (Time.Span.to_sec (Time.to_span_since_epoch t1) *. 1000.)
     = Float.iround ~dir:`Zero (Time.Span.to_sec (Time.to_span_since_epoch t2) *. 1000.)
@@ -184,7 +184,7 @@ module Old_date_impl = struct
   ;;
 
   let exhaustive_date_range =
-    if Sys.c_int_size () < 64
+    if Sys_unix.c_int_size () < 64
     then Date.create_exn ~y:1970 ~m:Month.Jan ~d:1, 365 * 68
     else Date.create_exn ~y:1900 ~m:Month.Jan ~d:1, 365 * 100
   ;;

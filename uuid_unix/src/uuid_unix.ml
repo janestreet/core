@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 module Unix = Core_unix
 
 let gethostname = Memo.unit Unix.gethostname

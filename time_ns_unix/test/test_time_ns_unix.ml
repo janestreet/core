@@ -29,7 +29,7 @@ let%expect_test "Time_ns.to_date_ofday" =
   [%expect {| |}]
 ;;
 
-let%test_module "Core_kernel.Time_ns.Utc.to_date_and_span_since_start_of_day" =
+let%test_module "Core.Time_ns.Utc.to_date_and_span_since_start_of_day" =
   (module struct
     (* move 1ms off min and max values because [Time_ns]'s boundary checking in functions
        that convert to/from float apparently has some fuzz issues. *)
@@ -60,7 +60,7 @@ let%test_module "Core_kernel.Time_ns.Utc.to_date_and_span_since_start_of_day" =
           match Word_size.word_size with
           | W64 ->
             let kernel_date, kernel_span_since_start_of_day =
-              Core_kernel.Time_ns.Utc.to_date_and_span_since_start_of_day time_ns
+              Core.Time_ns.Utc.to_date_and_span_since_start_of_day time_ns
             in
             let kernel_ofday =
               Time_ns.Ofday.of_span_since_start_of_day_exn kernel_span_since_start_of_day
@@ -1503,10 +1503,10 @@ let%test_module "Time_ns.Stable.Ofday.V1" =
 
     let%expect_test "roundtrip quickcheck" =
       let generator =
-        Core_kernel.Int63.gen_incl
+        Core.Int63.gen_incl
           (V.to_int63 Time_ns.Ofday.start_of_day)
           (V.to_int63 Time_ns.Ofday.start_of_next_day)
-        |> Core_kernel.Quickcheck.Generator.map ~f:V.of_int63_exn
+        |> Core.Quickcheck.Generator.map ~f:V.of_int63_exn
       in
       quickcheck [%here] generator ~sexp_of:V.sexp_of_t ~f:(fun ofday ->
         require_compare_equal
@@ -1660,10 +1660,10 @@ let%test_module "Time_ns.Span" =
         {|
         ("Time_ns.Span does not support this span"
          51240d
-         lib/core_kernel/src/span_ns.ml:LINE:COL)
+         lib/core/src/span_ns.ml:LINE:COL)
         ("Time_ns.Span does not support this span"
          -51240d
-         lib/core_kernel/src/span_ns.ml:LINE:COL) |}]
+         lib/core/src/span_ns.ml:LINE:COL) |}]
     ;;
 
     let%expect_test "Span.to_string_hum" =
@@ -1749,7 +1749,7 @@ let%test_module "Time_ns.Span" =
               [%message
                 "round-trip does not have microsecond precision"
                   (span : Time.Span.t)
-                  (span_ns : Core_kernel.Time_ns.Span.t)
+                  (span_ns : Core.Time_ns.Span.t)
                   (round_trip : Time.Span.t)
                   (precision : Time.Span.t)]));
       [%expect {| |}]
@@ -1816,10 +1816,10 @@ let%test_module "Time_ns.Span" =
             (lazy
               [%message
                 "round-trip does not have microsecond precision"
-                  (span_ns : Core_kernel.Time_ns.Span.t)
+                  (span_ns : Core.Time_ns.Span.t)
                   (span : Time.Span.t)
-                  (round_trip : Core_kernel.Time_ns.Span.t)
-                  (precision : Core_kernel.Time_ns.Span.t)]));
+                  (round_trip : Core.Time_ns.Span.t)
+                  (precision : Core.Time_ns.Span.t)]));
       [%expect {||}]
     ;;
 

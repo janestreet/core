@@ -917,6 +917,26 @@ val rewinddir : dir_handle -> unit
 (** Close a directory descriptor. *)
 val closedir : dir_handle -> unit
 
+module Readdir_detailed : sig
+  type t =
+    { name : string
+    ; inode : Nativeint.t
+    ; kind : file_kind option
+    (** Some OS/filesystems provide the file type of the directory entry, some don't, some
+        do based on mount options. Code should not require the file type to be present,
+        merely use it as a way to increase speed or reduce race conditions. *)
+    }
+  [@@deriving sexp_of]
+end
+
+(** [readdir_detailed_opt dh] return the next entry in a directory.  Returns [None] when
+    the end of the directory has been reached. *)
+val readdir_detailed_opt : dir_handle -> Readdir_detailed.t option
+
+(** [ls_dir_detailed path] returns the information from [readdir_detailed_opt] with an
+    interface similar to that of [Sys_unix.ls_dir]. *)
+val ls_dir_detailed : string -> Readdir_detailed.t list
+
 (** {6 Pipes and redirections} *)
 
 (** Create a pipe. The first component of the result is opened
@@ -1069,7 +1089,7 @@ module Select_fds : sig
   val empty : t
 end
 
-type select_timeout = [ `Never | `Immediately | `After of Core_kernel.Time_ns.Span.t ]
+type select_timeout = [ `Never | `Immediately | `After of Core.Time_ns.Span.t ]
 [@@deriving sexp_of]
 
 (** Wait until some input/output operations become possible on some channels.  The three
@@ -1173,8 +1193,11 @@ val mktime : tm -> float * tm
 val strftime : tm -> string -> string
 
 (** Given a format string, convert a corresponding string to a date and time
-    See 'man strptime' for format options. *)
-val strptime : fmt:string -> string -> Unix.tm
+    See 'man strptime' for format options.
+
+    Raise if [allow_trailing_input] is false and [fmt] does not consume all of the
+    input. *)
+val strptime : ?allow_trailing_input:bool (** default = false *) -> fmt:string -> string -> Unix.tm
 
 (** Schedule a [SIGALRM] signal after the given number of seconds. *)
 val alarm : int -> int
@@ -1318,7 +1341,7 @@ end
 module Inet_addr : sig
   type t = Unix.inet_addr [@@deriving bin_io, compare, hash, sexp_of]
 
-  val arg_type : t Core_kernel.Command.Arg_type.t
+  val arg_type : t Core.Command.Arg_type.t
 
   (** [t_of_sexp] is deprecated because it used to block to do a DNS lookup, and we don't
       want a sexp converter to do that.  As we transition away, one can use
@@ -1371,7 +1394,7 @@ module Inet_addr : sig
   module Stable : sig
     module V1 : sig
       type nonrec t = t [@@deriving hash]
-      include Stable with type t := t
+      include Stable with type t := t and type comparator_witness = comparator_witness
     end
   end
 end
@@ -1384,7 +1407,7 @@ end
 module Cidr : sig
   type t [@@deriving sexp, bin_io]
 
-  val arg_type : t Core_kernel.Command.Arg_type.t
+  val arg_type : t Core.Command.Arg_type.t
 
   (** [of_string] Generates a Cidr.t based on a string like ["10.0.0.0/8"].  Addresses are
       not expanded, i.e. ["10/8"] is invalid. *)
@@ -2063,15 +2086,6 @@ val fsync : File_descr.t -> unit
 (** Synchronize the kernel buffers of a given file descriptor with disk,
     but do not necessarily write file attributes. *)
 val fdatasync : File_descr.t -> unit
-
-(** [readdir_ino_opt dh] return the next entry in a directory (([(filename, inode)]).  Returns
-    [None] when the end of the directory has been reached. *)
-val readdir_ino_opt : dir_handle -> (string * nativeint) option
-
-(** Same as [readdir_ino_opt] except that it signals the end of the directory by raising
-    [End_of_file]. *)
-val readdir_ino : dir_handle -> string * nativeint
-[@@deprecated "[since 2016-08] use readdir_ino_opt instead"]
 
 val read_assume_fd_is_nonblocking
   : File_descr.t -> ?pos : int -> ?len : int -> Bytes.t -> int

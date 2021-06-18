@@ -1,8 +1,0 @@
-(alias (name runtest) (deps test_runner.exe)
- (action (bash ./test_runner.exe)))
-
-(executables (names am_running_inline_test test_runner)
- (libraries bin_prot core_kernel.caml_threads command_unix core oUnit
-  ppx_inline_test.runtime-lib quickcheck_deprecated sexplib time_unix
-  variantslib)
- (preprocess (pps ppx_jane)))

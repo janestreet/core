@@ -14,7 +14,7 @@ module type Span = sig
 
   include Comparable.With_zero with type t := t
 
-  val arg_type : t Core_kernel.Command.Arg_type.t
+  val arg_type : t Core.Command.Arg_type.t
 
   include Robustly_comparable with type t := t
 
@@ -60,7 +60,7 @@ module type Ofday = sig
     include Time_ns.Ofday
   end
 
-  val arg_type : t Core_kernel.Command.Arg_type.t
+  val arg_type : t Core.Command.Arg_type.t
   val now : zone:Time.Zone.t -> t
 
   val to_ofday : t -> Time.Ofday.t
@@ -90,7 +90,7 @@ module type Ofday = sig
     (** Strings look like "12:01 nyc" *)
     include Stringable with type t := t
 
-    val arg_type : t Core_kernel.Command.Arg_type.t
+    val arg_type : t Core.Command.Arg_type.t
     val create : Time_ns.Ofday.t -> Time.Zone.t -> t
     val create_local : Time_ns.Ofday.t -> t
     val ofday : t -> Time_ns.Ofday.t
@@ -152,7 +152,7 @@ end
     we're unlikely to flip everything to [Time_ns.t] in the short term (see comment at the
     end of [time_ns.ml]).
 
-    See {!Core_kernel.Time_ns} for additional low level documentation. *)
+    See {!Core.Time_ns} for additional low level documentation. *)
 module type Time_ns_unix = sig
   include module type of struct
     include Time_ns
@@ -163,7 +163,7 @@ module type Time_ns_unix = sig
 
   module Span : Span
 
-  val arg_type : t Core_kernel.Command.Arg_type.t
+  val arg_type : t Core.Command.Arg_type.t
 
   (** [Option.t] is like [t option], except that the value is immediate.  This module
       should mainly be used to avoid allocations. *)

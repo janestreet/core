@@ -2525,17 +2525,38 @@ let%bench "to_string (epoch)" = to_string epoch
 let%bench "to_string (w/ dst)" = to_string dst_t
 let%bench "to_string (w/o dst)" = to_string no_dst_t
 
+let to_string_utc = to_string_utc
+
+let%bench "to_string_utc (epoch)" = to_string_utc epoch
+let%bench "to_string_utc (w/ dst)" = to_string_utc dst_t
+let%bench "to_string_utc (w/o dst)" = to_string_utc no_dst_t
+
 let of_string = of_string
 
 let%bench "of_string (epoch)" = of_string string_of_epoch
 let%bench "of_string (w/ dst)" = of_string string_of_dst_t
 let%bench "of_string (w/o dst)" = of_string string_of_no_dst_t
 
+let of_string_with_utc_offset = of_string_with_utc_offset
+
+let%bench "of_string_with_utc_offset (epoch)" = of_string_with_utc_offset string_of_epoch
+let%bench "of_string_with_utc_offset (w/ dst)" = of_string_with_utc_offset string_of_dst_t
+
+let%bench "of_string_with_utc_offset (w/o dst)" =
+  of_string_with_utc_offset string_of_no_dst_t
+;;
+
 let to_sec_string = to_sec_string
 
 let%bench "to_sec_string (utc)" = to_sec_string ~zone:Zone.utc epoch
 let%bench "to_sec_string (w/ dst)" = to_sec_string ~zone dst_t
 let%bench "to_sec_string (w/o dst)" = to_sec_string ~zone no_dst_t
+
+let to_sec_string_with_zone = to_sec_string_with_zone
+
+let%bench "to_sec_string_with_zone (utc)" = to_sec_string_with_zone ~zone:Zone.utc epoch
+let%bench "to_sec_string_with_zone (w/ dst)" = to_sec_string_with_zone ~zone dst_t
+let%bench "to_sec_string_with_zone (w/o dst)" = to_sec_string_with_zone ~zone no_dst_t
 
 let of_localized_string = of_localized_string
 

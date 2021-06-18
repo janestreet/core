@@ -45,7 +45,7 @@ val temp_dir : ?perm:int -> ?in_dir: string -> string -> string -> string
 val create_arg_type
   :  ?key:'a Univ_map.Multi.Key.t
   -> (string -> 'a)
-  -> 'a Core_kernel.Command.Arg_type.t
+  -> 'a Core.Command.Arg_type.t
 
 (** [arg_type] is [create_arg_type Fn.id] *)
-val arg_type : string Core_kernel.Command.Arg_type.t
+val arg_type : string Core.Command.Arg_type.t

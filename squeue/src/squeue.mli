@@ -1,6 +1,6 @@
 (** Thread-safe queue module, using locks. *)
 
-open! Core_kernel
+open! Core
 open! Import
 
 type 'a t [@@deriving sexp_of]

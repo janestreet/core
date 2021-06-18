@@ -1,3 +1,4 @@
 (library (name error_checking_mutex_test)
- (libraries error_checking_mutex expect_test_helpers_core)
+ (libraries core_kernel.caml_threads error_checking_mutex
+  expect_test_helpers_core)
  (preprocess (pps ppx_jane)))

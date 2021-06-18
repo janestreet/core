@@ -17,4 +17,6 @@ let format date pat =
   Time.format time pat ~zone
 ;;
 
-let parse ~fmt s = Unix.strptime ~fmt s |> of_tm
+let parse ?allow_trailing_input ~fmt s =
+  Unix.strptime ?allow_trailing_input ~fmt s |> of_tm
+;;

@@ -53,12 +53,10 @@
 *)
 
 
-[%%import "config.h"]
-
-open! Core_kernel
+open! Core
 open! Import
 
-type t = private Int63.t [@@deriving bin_io, compare, sexp]
+type t = private Int63.t [@@deriving bin_io, compare, sexp, typerep]
 
 include Comparisons.S with type t := t
 
@@ -141,16 +139,7 @@ module Span : sig
   end
 end
 
-[%%ifdef JSC_ARCH_SIXTYFOUR]
-
-external now : unit -> t = "tsc_get" [@@noalloc]
-
-[%%else]
-
-external now : unit -> t = "tsc_get"
-
-[%%endif]
-
+val now : unit -> t
 val diff : t -> t -> Span.t
 val add : t -> Span.t -> t
 val to_int63 : t -> Int63.t

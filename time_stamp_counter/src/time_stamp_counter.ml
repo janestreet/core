@@ -83,7 +83,7 @@ let () =
 let ewma ~alpha ~old ~add = ((1. -. alpha) *. old) +. (alpha *. add)
 
 
-type t = Int63.t [@@deriving bin_io, compare, sexp]
+type t = Int63.t [@@deriving bin_io, compare, sexp, typerep]
 type tsc = t [@@deriving bin_io, compare, sexp]
 
 include (Int63 : Comparisons.S with type t := t)
@@ -97,7 +97,7 @@ let zero = Int63.zero
 [%%ifdef JSC_ARCH_SIXTYFOUR]
 
 (* noalloc on x86_64 only *)
-external now : unit -> tsc = "tsc_get" [@@noalloc]
+let now () = Ocaml_intrinsics.Perfmon.rdtsc () |> Int63.of_int64_trunc
 
 module Calibrator = struct
   (* performance hack: prevent writes to this record from boxing floats by making all

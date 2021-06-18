@@ -1,0 +1,7 @@
+(library (name unix_pseudo_terminal) (public_name core.unix_pseudo_terminal)
+ (libraries core_kernel.caml_unix core_kernel.core)
+ (c_names unix_pseudo_terminal_stubs) (preprocessor_deps config_ext.h)
+ (preprocess (pps ppx_jane)))
+
+(rule (targets config_ext.h) (deps (:first_dep discover.sh))
+ (action (bash "./%{first_dep} config_ext.h %{lib:jst-config:config.h}")))

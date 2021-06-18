@@ -1,1 +1,2 @@
-open! Core_kernel
+open! Core
+module Mutex = Caml_threads.Mutex

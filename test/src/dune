@@ -1,3 +1,0 @@
-(library (name core_test)
- (libraries core expect_test_helpers_core core_kernel.version_util core_unix)
- (preprocess (pps ppx_jane)))

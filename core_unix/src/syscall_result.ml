@@ -144,4 +144,4 @@ module Unit = Make (struct
   end) ()
 
 let unit = Unit.create_ok ()
-let ignore_ok_value t = Core_kernel.Int.min t 0
+let ignore_ok_value t = Core.Int.min t 0

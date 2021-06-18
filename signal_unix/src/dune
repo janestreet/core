@@ -1,2 +1,3 @@
-(library (name signal_unix) (public_name core.signal_unix) (libraries core)
+(library (name signal_unix) (public_name core.signal_unix)
+ (libraries core_kernel.caml_unix core_kernel.core)
  (c_names signal_unix_stubs) (preprocess (pps ppx_jane)))

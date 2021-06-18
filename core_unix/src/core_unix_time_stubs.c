@@ -134,7 +134,7 @@ CAMLprim value core_time_ns_strftime(value v_tm, value v_fmt)
   tm.tm_wday = Int_val(Field(v_tm, 6));
   tm.tm_yday = Int_val(Field(v_tm, 7));
   tm.tm_isdst = Bool_val(Field(v_tm, 8));
-  return core_kernel_time_ns_format_tm(&tm, v_fmt);
+  return core_time_ns_format_tm(&tm, v_fmt);
 }
 
 CAMLprim value core_time_ns_nanosleep(value v_seconds)

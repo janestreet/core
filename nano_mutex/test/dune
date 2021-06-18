@@ -1,2 +1,3 @@
-(library (name nano_mutex_test) (libraries core core_unix nano_mutex)
+(library (name nano_mutex_test)
+ (libraries core_kernel.core core_unix nano_mutex)
  (preprocess (pps ppx_jane)))

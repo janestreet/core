@@ -225,7 +225,7 @@ module Nfs = struct
       failwithf
         "Lock_file.Nfs.unlock_safely_exn: unable to unlock %s: %s" lock_path s ()
     in
-    match Sys.file_exists ~follow_symlinks:false lock_path with
+    match Sys_unix.file_exists ~follow_symlinks:false lock_path with
     | `Unknown -> error (sprintf "unable to read %s" lock_path)
     | `No      -> ()
     | `Yes     ->

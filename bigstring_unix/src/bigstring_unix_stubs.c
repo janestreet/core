@@ -185,11 +185,27 @@ CAMLprim value bigstring_pread_assume_fd_is_nonblocking_stub(
 
 /* Input of bigstrings from sockets */
 
+CAMLprim value bigstring_recv_peek_assume_fd_is_nonblocking_stub(
+  value v_sock, value v_pos, value v_len, value v_bstr)
+{
+  CAMLparam4(v_sock, v_pos, v_len, v_bstr);
+  size_t len = Long_val(v_len);
+  if (len == 0) CAMLreturn (Val_long (0));
+  else {
+      char *bstr = get_bstr(v_bstr, v_pos);
+      int sock = Int_val(v_sock);
+      ssize_t n_read;
+      n_read = recv(sock, bstr, len, MSG_PEEK);
+      if (n_read == -1) uerror("bigstring_recv_peek_assume_fd_is_nonblocking", Nothing);
+      CAMLreturn (Val_long(n_read));
+  }
+}
+
 CAMLprim value bigstring_really_recv_stub(
   value v_sock, value v_pos, value v_len, value v_bstr)
 {
   size_t len = Long_val(v_len);
-  if (len == 0) return Val_unit;
+  if (len == 0) return Val_long(0);
   else {
     CAMLparam1(v_bstr);
       char *bstr = get_bstr(v_bstr, v_pos);

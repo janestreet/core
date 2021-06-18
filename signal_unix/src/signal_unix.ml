@@ -1,6 +1,6 @@
 open! Core
 open! Import
-open Core_kernel.Signal
+open Core.Signal
 
 external ml_caml_to_nonportable_signal_number : t -> int =
   "ml_caml_to_nonportable_signal_number"

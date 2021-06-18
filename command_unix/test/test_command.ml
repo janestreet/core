@@ -196,7 +196,7 @@ let%expect_test "[choose_one] duplicate name" =
     (raised (
       "[Command.Spec.choose_one] called with duplicate name"
       (-foo)
-      lib/core_kernel/src/command.ml:LINE:COL)) |}]
+      lib/core/src/command.ml:LINE:COL)) |}]
 ;;
 
 let run_command param ~args =

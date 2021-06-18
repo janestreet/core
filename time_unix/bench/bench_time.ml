@@ -92,8 +92,8 @@ open Constants
    functions it's often as easy to write a benchmark as it is to write a comment
    justifying the lack of benchmark, so we don't insist that every benchmark is obviously
    valuable in order for it to be included. *)
-(* Many of these benchmarks duplicate the corresponding benchmarks in Core_kernel -- this
-   is intentional, because we want to ensure that whatever mechanism we use to share code
+(* Many of these benchmarks duplicate the corresponding benchmarks in Core -- this is
+   intentional, because we want to ensure that whatever mechanism we use to share code
    between them doesn't differentially slow one of them down. *)
 open Time
 
@@ -1236,9 +1236,17 @@ let to_string = to_string
 
 let%bench "to_string" = to_string example
 
+let to_string_utc = to_string_utc
+
+let%bench "to_string_utc" = to_string_utc example
+
 let of_string = of_string
 
 let%bench "of_string" = of_string example_string
+
+let of_string_with_utc_offset = of_string_with_utc_offset
+
+let%bench "of_string_with_utc_offset" = of_string_with_utc_offset example_string
 
 let to_filename_string = to_filename_string
 
@@ -1255,6 +1263,10 @@ let%bench "to_string_trimmed" = to_string_trimmed ~zone:utc example
 let to_sec_string = to_sec_string
 
 let%bench "to_sec_string" = to_sec_string ~zone:utc example
+
+let to_sec_string_with_zone = to_sec_string_with_zone
+
+let%bench "to_sec_string_with_zone" = to_sec_string_with_zone ~zone:utc example
 
 let of_localized_string = of_localized_string
 

@@ -1,9 +1,9 @@
 (** String type based on [Bigarray], for use in I/O and C-bindings, extending
-    {{!Core_kernel.Bigstring}[Core_kernel.Bigstring]}. *)
+    {{!Core.Bigstring}[Core.Bigstring]}. *)
 open! Core
 module Unix := Core_unix
 
-include module type of struct include Core_kernel.Bigstring end
+include module type of struct include Core.Bigstring end
 
 (** Type of I/O errors.
 
@@ -59,6 +59,19 @@ val really_recv
 
     Raises [Invalid_argument] if the designated range is out of bounds.  Raises [IOError]
     in the case of input errors, or on EOF. *)
+
+val recv_peek_assume_fd_is_nonblocking
+  :  Unix.File_descr.t
+  -> ?pos : int (** default = 0 *)
+  -> len : int
+  -> t
+  -> int
+(** [recv_peek_assume_fd_is_nonblocking sock ?pos ~len bstr] peeks [len] bytes from socket
+    [sock], and writes them to bigstring [bstr] starting at position [pos].  If [len] is
+    zero, the function returns immediately without performing the underlying system call.
+
+    Raises [Invalid_argument] if the designated range is out of bounds.  Raises [Unix_error]
+    in the case of input errors *)
 
 val recvfrom_assume_fd_is_nonblocking
   :  Unix.File_descr.t

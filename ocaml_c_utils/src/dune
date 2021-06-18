@@ -1,0 +1,3 @@
+(library (name ocaml_c_utils) (public_name core.ocaml_c_utils)
+ (libraries jane-street-headers) (preprocess no_preprocessing)
+ (c_flags :standard -D_LARGEFILE64_SOURCE) (c_names ocaml_c_utils_stubs))

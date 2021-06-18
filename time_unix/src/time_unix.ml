@@ -1,6 +1,18 @@
 open! Core
 open! Import
-module Time = Core_kernel.Time
+module Time = Core.Time
+
+include (
+  Time :
+    (module type of struct
+      include Time
+    end
+    with module Map := Time.Map
+    with module Set := Time.Set
+                       (* We disable deprecations because we need to elide deprecated
+                          submodules. *)
+                       [@ocaml.warning "-3"]))
+
 module T = Time_functor.Make (Time) (Time)
 
 (* Previous versions rendered hash-based containers using float serialization rather than
@@ -33,6 +45,8 @@ module Ofday = struct
 end
 
 module Zone = struct
+  include Time.Zone
+
   include (
     T.Zone :
       module type of struct
@@ -40,8 +54,6 @@ module Zone = struct
     end
     with module Index := T.Zone.Index
     with type t := T.Zone.t)
-
-  include Time.Zone
 end
 
 module Stable = struct
@@ -151,16 +163,6 @@ include (
   with type underlying := T.underlying
   with type t := T.t
   with type comparator_witness := T.comparator_witness)
-
-include (
-  Time :
-    module type of struct
-    include Time
-  end
-  with module Ofday := Time.Ofday
-  with module Span := Time.Span
-  with module Zone := Time.Zone
-  with module Stable := Time.Stable)
 
 let to_string = T.to_string
 let of_string = T.of_string

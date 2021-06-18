@@ -9,9 +9,9 @@
 
    The reality under the covers isn't as simple for a three reasons:
 
-   - We want as much Time functionality available to Core_kernel as possible, and
-     Core_kernel modules shouldn't rely on Unix functions.  Some functions in Time
-     require Unix, which creates one split.
+   - We want as much Time functionality available to Core as possible, and Core modules
+     shouldn't rely on Unix functions.  Some functions in Time require Unix, which creates
+     one split.
 
    - We want some functionality to be functorized so that code can be shared
      between Time and Time_ns.
@@ -20,17 +20,17 @@
      Time.now, but Time also wants to expose Time.to_date_ofday, which relies on Ofday.
      We use a stack of modules to break the cycle.
 
-   This leads to the following modules within Core_kernel and Core:
+   This leads to the following modules within Core:
 
-   Core_kernel.Span  - the core type of span
-   Core_kernel.Ofday - the core type of ofday, which is really a constrained span
-   Core_kernel.Date  - the core type of date
-   Core_kernel.Zone  - the base functor for creating a Zone type
-   Core_kernel.Time_float0 - contains the base Time.t type and lays out the basic
+   Core.Span  - the core type of span
+   Core.Ofday - the core type of ofday, which is really a constrained span
+   Core.Date  - the core type of date
+   Core.Zone  - the base functor for creating a Zone type
+   Core.Time_float0 - contains the base Time.t type and lays out the basic
    relationship between Time, Span, Ofday, and Zone
-   Core_kernel.Time_float  - ties Time, Span, Ofday, Zone, and Date together and provides
+   Core.Time_float  - ties Time, Span, Ofday, Zone, and Date together and provides
    the higher level functions for them that don't rely on Unix
-   Core_kernel.Time    - re-exposes Time_float
+   Core.Time    - re-exposes Time_float
 
    Core.Zone_cache   - implements a caching layer between the Unix filesystem and Zones
    Core.Core_date    - adds the Unix dependent functions to Date
@@ -52,20 +52,20 @@ struct
   module Span = struct
     include Time.Span
 
-    let arg_type = Core_kernel.Command.Arg_type.create of_string
+    let arg_type = Core.Command.Arg_type.create of_string
   end
 
   module Zone = struct
     include Time.Zone
     include (Timezone : Timezone.Extend_zone with type t := t)
 
-    let arg_type = Core_kernel.Command.Arg_type.create of_string
+    let arg_type = Core.Command.Arg_type.create of_string
   end
 
   module Ofday = struct
     include Time.Ofday
 
-    let arg_type = Core_kernel.Command.Arg_type.create of_string
+    let arg_type = Core.Command.Arg_type.create of_string
     let now ~zone = Time.to_ofday ~zone (Time.now ())
 
     module Zoned = struct
@@ -99,7 +99,7 @@ struct
         String.concat [ Time.Ofday.to_string t.ofday; " "; Zone.to_string t.zone ]
       ;;
 
-      let arg_type = Core_kernel.Command.Arg_type.create of_string
+      let arg_type = Core.Command.Arg_type.create of_string
 
       module With_nonchronological_compare = struct
         type nonrec t = t [@@deriving bin_io, compare, equal, sexp, hash]
@@ -196,7 +196,9 @@ struct
     Unix.strftime (Unix.gmtime epoch_time) s
   ;;
 
-  let parse s ~fmt ~zone = Unix.strptime ~fmt s |> of_tm ~zone
+  let parse ?allow_trailing_input s ~fmt ~zone =
+    Unix.strptime ?allow_trailing_input ~fmt s |> of_tm ~zone
+  ;;
 
   let pause_for span =
     let time_remaining =
@@ -258,7 +260,7 @@ struct
 
   let of_string_abs s = of_string_gen ~if_no_timezone:`Fail s
   let of_string s = of_string_gen ~if_no_timezone:`Local s
-  let arg_type = Core_kernel.Command.Arg_type.create of_string_abs
+  let arg_type = Core.Command.Arg_type.create of_string_abs
 
   include Pretty_printer.Register (struct
       type nonrec t = t

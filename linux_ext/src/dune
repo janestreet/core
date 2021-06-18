@@ -1,6 +1,6 @@
 (library (name linux_ext) (public_name core.linux_ext)
- (libraries core_kernel.bounded_int_table core core_thread filename_unix
-  time_ns_unix)
+ (libraries core_kernel.bounded_int_table core_kernel.core core_thread
+  filename_unix time_ns_unix)
  (c_names linux_ext_stubs) (preprocessor_deps config.h)
  (preprocess (pps ppx_jane)))
 

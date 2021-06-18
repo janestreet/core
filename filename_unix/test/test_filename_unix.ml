@@ -3,7 +3,7 @@ open! Import
 
 let%expect_test "temporary file names contain [.tmp.]" =
   let file = Filename_unix.temp_file "foo" "" in
-  Sys.remove file;
+  Sys_unix.remove file;
   require
     [%here]
     (String.equal ".tmp." (String.sub file ~pos:(String.length file - 11) ~len:5))

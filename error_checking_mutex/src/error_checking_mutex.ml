@@ -1,6 +1,6 @@
 (* Error-checking mutexes. *)
 
-open! Core_kernel
+open! Core
 open! Import
 include Mutex
 

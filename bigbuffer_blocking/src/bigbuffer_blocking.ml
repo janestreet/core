@@ -1,7 +1,7 @@
 open! Core
 open! Import
-open! Core_kernel.Bigbuffer
-open! Core_kernel.Core_kernel_private.Bigbuffer_internal
+open! Core.Bigbuffer
+open! Core.Core_private.Bigbuffer_internal
 
 let add_channel buf ic len =
   let buf = __internal buf in

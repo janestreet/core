@@ -1,9 +1,9 @@
 open! Core
 open! Import
-open Core_kernel.Filename
+open Core.Filename
 
 let create_arg_type ?key of_string =
-  Core_kernel.Command.Arg_type.create ?key of_string ~complete:(fun _ ~part ->
+  Core.Command.Arg_type.create ?key of_string ~complete:(fun _ ~part ->
     let completions =
       (* `compgen -f` handles some fiddly things nicely, e.g. completing "foo" and
          "foo/" appropriately. *)
@@ -12,7 +12,7 @@ let create_arg_type ?key of_string =
       let completions = In_channel.input_lines chan_in in
       ignore (Unix.close_process_in chan_in);
       List.map (List.sort ~compare:String.compare completions) ~f:(fun comp ->
-        match Sys.is_directory comp with
+        match Sys_unix.is_directory comp with
         | `Yes -> comp ^ "/"
         | `No | `Unknown -> comp)
     in

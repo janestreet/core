@@ -3,7 +3,7 @@ open! Import
 open! Bigstring_unix
 module Unix = Core_unix
 
-let arch_sixtyfour = Sys.word_size = 64
+let arch_sixtyfour = Sys.word_size_in_bits = 64
 
 let%test_module _ =
   (module struct

@@ -383,8 +383,8 @@ module type Interval = sig
 
         val to_float : float t -> Float.t
         val to_int : int t -> Int.t
-        val to_ofday : Core_kernel.Time.Ofday.t t -> Ofday.t
-        val to_time : Core_kernel.Time.t t -> Time.t
+        val to_ofday : Core.Time.Ofday.t t -> Ofday.t
+        val to_time : Core.Time.t t -> Time.t
       end
     end
   end

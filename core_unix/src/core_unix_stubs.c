@@ -363,25 +363,41 @@ CAMLprim value core_unix_dirfd(value v_dh)
   return Val_int(ret);
 }
 
-CAMLprim value core_unix_readdir_ino_stub(value v_dh)
+CAMLprim value core_unix_readdir_detailed_stub(value v_dh)
 {
   DIR *d;
   directory_entry * e;
   d = DIR_Val(v_dh);
-  if (d == (DIR *) NULL) unix_error(EBADF, "readdir_ino", Nothing);
+  if (d == (DIR *) NULL) unix_error(EBADF, "readdir_detailed", Nothing);
   caml_enter_blocking_section();
     e = readdir((DIR *) d);
   caml_leave_blocking_section();
   if (e == (directory_entry *) NULL) caml_raise_end_of_file();
   else {
     CAMLparam0();
-    CAMLlocal2(v_name, v_ino);
+    CAMLlocal3(v_name, v_ino, v_type);
     value v_res;
     v_name = caml_copy_string(e->d_name);
     v_ino = caml_copy_nativeint(e->d_ino);
-    v_res = caml_alloc_small(2, 0);
+#ifdef JSC_READDIR_DTYPE
+    switch (e->d_type) {
+    /* keep in sync with ocaml code */
+    case DT_BLK: { v_type = Val_int(0); break; }
+    case DT_CHR: { v_type = Val_int(1); break; }
+    case DT_DIR: { v_type = Val_int(2); break; }
+    case DT_FIFO: { v_type = Val_int(3); break; }
+    case DT_LNK: { v_type = Val_int(4); break; }
+    case DT_REG: { v_type = Val_int(5); break; }
+    case DT_SOCK: { v_type = Val_int(6); break; }
+    default: { v_type = Val_int(7); break; }
+    }
+#else
+    v_type = Val_int(7);
+#endif
+    v_res = caml_alloc_small(3, 0);
     Field(v_res, 0) = v_name;
     Field(v_res, 1) = v_ino;
+    Field(v_res, 2) = v_type;
     CAMLreturn(v_res);
   }
 }
@@ -1315,9 +1331,9 @@ static value alloc_tm(struct tm *tm)
   return res;
 }
 
-CAMLprim value core_unix_strptime(value v_fmt, value v_s)
+CAMLprim value core_unix_strptime(value v_allow_trailing_input, value v_fmt, value v_s)
 {
-  CAMLparam2(v_s, v_fmt);
+  CAMLparam3(v_allow_trailing_input, v_fmt, v_s);
 
   struct tm tm;
   tm.tm_sec  = 0;
@@ -1330,8 +1346,14 @@ CAMLprim value core_unix_strptime(value v_fmt, value v_s)
   tm.tm_yday = 0;
   tm.tm_isdst = 0;
 
-  if (strptime(String_val(v_s), String_val(v_fmt), &tm) == NULL)
+  char *end_of_consumed_input = strptime(String_val(v_s), String_val(v_fmt), &tm);
+
+  if (end_of_consumed_input == NULL)
     caml_failwith("unix_strptime: match failed");
+
+  if (!Bool_val(v_allow_trailing_input)
+      && end_of_consumed_input < String_val(v_s) + caml_string_length(v_s))
+    caml_failwith("unix_strptime: did not consume entire input");
 
   CAMLreturn(alloc_tm(&tm));
 }

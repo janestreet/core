@@ -241,7 +241,10 @@ let%expect_test "strptime match failed" =
 ;;
 
 let%expect_test "strptime trailing input" =
-  print_s [%sexp (strptime ~fmt:"%Y-%m-%d" "2012-05-23 10:14:23" : Unix_tm_for_testing.t)];
+  print_s
+    [%sexp
+      (strptime ~allow_trailing_input:true ~fmt:"%Y-%m-%d" "2012-05-23 10:14:23"
+       : Unix_tm_for_testing.t)];
   [%expect
     {|
     ((tm_sec   0)
@@ -252,7 +255,9 @@ let%expect_test "strptime trailing input" =
      (tm_year  112)
      (tm_wday  3)
      (tm_yday  143)
-     (tm_isdst false)) |}]
+     (tm_isdst false)) |}];
+  require_does_raise [%here] (fun () -> strptime ~fmt:"%Y-%m-%d" "2012-05-23 10:14:23");
+  [%expect {| (Failure "unix_strptime: did not consume entire input") |}]
 ;;
 
 module Inet_addr = struct
@@ -413,7 +418,7 @@ let%test_module "the search path passed to [create_process_env] has an effect" =
 ;;
 
 let%expect_test "unix socket path limit workaround" =
-  if Sys.file_exists_exn "/proc"
+  if Sys_unix.file_exists_exn "/proc"
   then
     Exn.protectx
       (Filename_unix.temp_dir ("dir" ^ String.make 120 'r') "")
@@ -473,7 +478,7 @@ let with_large_file f =
                /dev/null 2>/dev/null"
               filename));
       ignore (f filename))
-    ~finally:(fun () -> Sys.remove filename);
+    ~finally:(fun () -> Sys_unix.remove filename);
   true
 ;;
 
@@ -491,4 +496,14 @@ let%expect_test "mcast_sockopts" =
   Unix.set_mcast_loop sock false;
   assert (not (Unix.get_mcast_loop sock));
   Unix.close sock
+;;
+
+let%test_unit "readdir_detailed" =
+  let cwd = Sys_unix.getcwd () in
+  let cwd_dir, cwd_base = Filename.split cwd in
+  let l = Unix.ls_dir_detailed cwd_dir in
+  let x = List.find_exn l ~f:(fun d -> d.name = cwd_base) in
+  match x.kind with
+  | None | Some S_DIR -> ()
+  | Some _ -> assert false
 ;;

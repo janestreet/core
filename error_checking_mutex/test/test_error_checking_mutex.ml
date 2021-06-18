@@ -1,6 +1,7 @@
-open! Core_kernel
+open! Core
 open! Expect_test_helpers_core
 module Mutex = Error_checking_mutex
+module Thread = Caml_threads.Thread
 
 let try_with_mutex f =
   let mtx = Mutex.create () in

@@ -7,7 +7,7 @@ module Syscall_result = Unix.Syscall_result
 
 open Bigarray
 
-include Core_kernel.Bigstring
+include Core.Bigstring
 
 exception IOError of int * exn [@@deriving sexp]
 
@@ -60,10 +60,18 @@ external unsafe_really_recv
   : Unix.File_descr.t -> pos : int -> len : int -> t -> unit
   = "bigstring_really_recv_stub"
 
+external unsafe_recv_peek_assume_fd_is_nonblocking
+  : Unix.File_descr.t -> pos : int -> len : int -> t -> int
+  = "bigstring_recv_peek_assume_fd_is_nonblocking_stub"
+
 let really_recv sock ?(pos = 0) ?len bstr =
   let len = get_opt_len bstr ~pos len in
   check_args ~loc:"really_recv" ~pos ~len bstr;
   unsafe_really_recv sock ~pos ~len bstr
+
+let recv_peek_assume_fd_is_nonblocking sock ?(pos = 0) ~len bstr =
+  check_args ~loc:"recv_peek_assume_fd_is_nonblocking" ~pos ~len bstr;
+  unsafe_recv_peek_assume_fd_is_nonblocking sock ~pos ~len bstr
 
 external unsafe_recvfrom_assume_fd_is_nonblocking
   : Unix.File_descr.t -> pos : int -> len : int -> t -> int * Unix.sockaddr

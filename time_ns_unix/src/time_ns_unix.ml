@@ -2,15 +2,15 @@ open! Core
 open! Int.Replace_polymorphic_compare
 module Unix = Core_unix
 module Time = Time_unix
+include Time_ns
 module Zone = Time.Zone
 
-(* To break the dependency in the public release *)
-module Time_ns = Core_kernel.Time_ns
-
 module Span = struct
-  open Time_ns.Span
+  include Time_ns.Span
 
-  let arg_type = Core_kernel.Command.Arg_type.create of_string
+  let hash t = Int63.hash (Time_ns.Span.to_int63_ns t)
+  let compare = compare
+  let arg_type = Core.Command.Arg_type.create of_string
 
   module Stable = struct
     module V1 = struct
@@ -29,15 +29,6 @@ module Span = struct
 
     module V2 = Time_ns.Stable.Span.V2
   end
-
-  module T = struct
-    include Time_ns.Span
-
-    let hash t = Int63.hash (Time_ns.Span.to_int63_ns t)
-    let compare = compare
-  end
-
-  include T
 
   module Option = struct
     type span = t [@@deriving sexp]
@@ -182,18 +173,9 @@ module Span = struct
           end)
       end)
 
-    include (Int63 : Core_kernel.Comparisons.S with type t := t)
+    include (Int63 : Core.Comparisons.S with type t := t)
   end
 end
-
-include (
-  Time_ns :
-    module type of struct
-    include Time_ns
-  end
-  with module Span := Time_ns.Span
-   and module Ofday := Time_ns.Ofday
-   and module Stable := Time_ns.Stable)
 
 let nanosleep t = Span.of_sec (Unix.nanosleep (Span.to_sec t))
 
@@ -238,7 +220,7 @@ let of_string_gen ~if_no_timezone s =
 
 let of_string_abs s = of_string_gen ~if_no_timezone:`Fail s
 let of_string s = of_string_gen ~if_no_timezone:`Local s
-let arg_type = Core_kernel.Command.Arg_type.create of_string_abs
+let arg_type = Core.Command.Arg_type.create of_string_abs
 
 (* Does not represent extra hours due to DST (daylight saving time) (because DST makes
    adjustments in terms of wall clock time) or leap seconds (which aren't represented in
@@ -246,7 +228,7 @@ let arg_type = Core_kernel.Command.Arg_type.create of_string_abs
 module Ofday = struct
   include Time_ns.Ofday
 
-  let arg_type = Core_kernel.Command.Arg_type.create of_string
+  let arg_type = Core.Command.Arg_type.create of_string
 
   let of_ofday_float_round_nearest_microsecond core =
     of_span_since_start_of_day_exn
@@ -271,15 +253,15 @@ module Ofday = struct
       (Span.to_span_float_round_nearest (to_span_since_start_of_day t))
   ;;
 
-  let now ~zone = of_time (now ()) ~zone
+  let now ~zone = of_time (Time_ns.now ()) ~zone
 
   (* Legacy conversions that round to the nearest microsecond *)
   let to_ofday = to_ofday_float_round_nearest_microsecond
   let of_ofday = of_ofday_float_round_nearest_microsecond
 
-  (* This module is in [Core] instead of [Core_kernel] because to sexp a [Zone.t], we need
-     to read a time zone database to work out DST transitions. We do not have a portable
-     way to do that, and currently only support the operation on Unix via Core. *)
+  (* This module is in [Time_ns_unix] instead of [Core] because to sexp a [Zone.t], we
+     need to read a time zone database to work out DST transitions. We do not have a
+     portable way to do that, and currently only support the operation on Unix. *)
   module Zoned = struct
     type t =
       { ofday : Time_ns.Ofday.t
@@ -311,7 +293,7 @@ module Ofday = struct
       String.concat [ Time_ns.Ofday.to_string t.ofday; " "; Zone.to_string t.zone ]
     ;;
 
-    let arg_type = Core_kernel.Command.Arg_type.create of_string
+    let arg_type = Core.Command.Arg_type.create of_string
 
     module With_nonchronological_compare = struct
       type nonrec t = t [@@deriving bin_io, compare, equal, sexp, hash]
@@ -403,7 +385,7 @@ module Ofday = struct
     let quickcheck_generator : t Quickcheck.Generator.t =
       Quickcheck.Generator.map
         ~f:of_option
-        (Option.quickcheck_generator
+        (Core.Option.quickcheck_generator
            (Quickcheck.Generator.filter
               ~f:some_is_representable
               Time_ns.Ofday.quickcheck_generator))
@@ -413,7 +395,7 @@ module Ofday = struct
       Quickcheck.Shrinker.map
         ~f:of_option
         ~f_inverse:to_option
-        (Option.quickcheck_shrinker
+        (Core.Option.quickcheck_shrinker
            (Base_quickcheck.Shrinker.filter
               ~f:some_is_representable
               Time_ns.Ofday.quickcheck_shrinker))
@@ -457,7 +439,7 @@ module Ofday = struct
           end)
       end)
 
-    include (Span.Option : Core_kernel.Comparisons.S with type t := t)
+    include (Span.Option : Core.Comparisons.S with type t := t)
   end
 end
 
@@ -588,7 +570,7 @@ module Option = struct
     end)
 
   (* bring back the efficient implementation of comparison operators *)
-  include (Span.Option : Core_kernel.Comparisons.S with type t := t)
+  include (Span.Option : Core.Comparisons.S with type t := t)
 end
 
 (* Note: This is FIX standard millisecond precision. You should use
@@ -609,7 +591,7 @@ include Identifiable.Make_using_comparator (struct
   end)
 
 (* bring back the efficient implementation of comparison operators *)
-include (Core_kernel.Time_ns : Core_kernel.Comparisons.S with type t := t)
+include (Core.Time_ns : Core.Comparisons.S with type t := t)
 
 module Stable = struct
   module Option = Option.Stable
@@ -626,7 +608,7 @@ module Stable = struct
   end
 
   include Stable0
-  module Alternate_sexp = Core_kernel.Time_ns.Stable.Alternate_sexp
+  module Alternate_sexp = Core.Time_ns.Stable.Alternate_sexp
 end
 
 (*

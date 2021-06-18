@@ -7,7 +7,7 @@
 open! Core
 open! Import
 
-module Time_ns = Core_kernel.Core_kernel_private.Time_ns_alternate_sexp
+module Time_ns = Core.Core_private.Time_ns_alternate_sexp
 
 let ( ^/ ) = Filename.concat
 
@@ -78,14 +78,6 @@ external fsync : Unix.file_descr -> unit = "core_unix_fsync"
 external fdatasync : Unix.file_descr -> unit = "core_unix_fdatasync"
 
 external dirfd : Unix.dir_handle -> File_descr.t = "core_unix_dirfd"
-
-external readdir_ino
-  : Unix.dir_handle -> string * nativeint = "core_unix_readdir_ino_stub"
-
-let readdir_ino_opt dh =
-  match readdir_ino dh with
-  | entry                 -> Some entry
-  | exception End_of_file -> None
 
 external unsetenv : string -> unit = "core_unix_unsetenv"
 
@@ -1529,6 +1521,51 @@ let closedir = (* Non-intr *)
   unary_dir_handle (fun dh ->
     try Unix.closedir dh with | Invalid_argument _ -> ())
 
+module Readdir_detailed = struct
+  type t =
+    { name : string
+    ; inode : Nativeint.t
+    ; kind : file_kind option
+    }
+  [@@deriving sexp_of]
+end
+
+external readdir_detailed
+  : Unix.dir_handle -> string * nativeint * int = "core_unix_readdir_detailed_stub"
+
+let readdir_kind : int -> Unix.file_kind option = function
+  (* keep in sync with C code *)
+  | 0 -> Some S_BLK
+  | 1 -> Some S_CHR
+  | 2 -> Some S_DIR
+  | 3 -> Some S_FIFO
+  | 4 -> Some S_LNK
+  | 5 -> Some S_REG
+  | 6 -> Some S_SOCK
+  | _ -> None
+
+let readdir_detailed_opt dh : Readdir_detailed.t option =
+  match readdir_detailed dh with
+  | (name, inode, kind)  -> Some { name; inode; kind = readdir_kind kind }
+  | exception End_of_file -> None
+
+let ls_dir_detailed path =
+  Exn.protectx (opendir ~restart:true path)
+    ~finally:closedir
+    ~f:(fun fd ->
+      let acc = ref [] in
+      while
+        match readdir_detailed_opt fd with
+        | exception Unix_error (EINTR, _, _) -> true
+        | None -> false
+        | Some r ->
+          (match r.name with
+           | "." | ".." -> ()
+           | _ -> acc := r :: !acc);
+          true
+      do () done;
+      !acc)
+
 let pipe ?close_on_exec () = Unix.pipe ?cloexec:close_on_exec ()
 
 let mkfifo name ~perm =
@@ -1881,7 +1918,8 @@ let sleep  = Unix.sleep
 let times  = Unix.times
 let utimes = Unix.utimes
 
-external strptime : fmt:string -> string -> Unix.tm = "core_unix_strptime"
+external strptime : allow_trailing_input:bool -> fmt:string -> string -> Unix.tm = "core_unix_strptime"
+let strptime ?(allow_trailing_input = false) ~fmt s = strptime ~allow_trailing_input ~fmt s
 
 type interval_timer = Unix.interval_timer =
   | ITIMER_REAL
@@ -1917,7 +1955,7 @@ let getgroups = Unix.getgroups
 let with_buffer_increased_on_ERANGE f =
   fun x ->
   let rec go n =
-    match f x (Core_kernel.Bigstring.create n) with
+    match f x (Core.Bigstring.create n) with
     | exception Unix_error (ERANGE, _, _) ->
       (* Using 4 instead of 2 here as a multiple ~doubles the memory usage, but it
          ~halves the number of calls. The number of calls is likely to be the more
@@ -1944,7 +1982,7 @@ let string_to_zero_terminated_bigstring s =
       "NUL bytes are not allowed in the group and user names, \
        but found one in %S"
       s;
-  Core_kernel.Bigstring.of_string (s ^ "\000")
+  Core.Bigstring.of_string (s ^ "\000")
 
 let make_by' f make_exn =
   make_by (with_buffer_increased_on_ERANGE f) make_exn
@@ -2180,7 +2218,7 @@ module Inet_addr0 = struct
       ;;
     end)
 
-  let arg_type = Core_kernel.Command.Arg_type.create of_string
+  let arg_type = Core.Command.Arg_type.create of_string
 end
 
 module Host = struct
@@ -2366,7 +2404,7 @@ module Cidr = struct
       include Stable.V1.T2
     end)
 
-  let arg_type = Core_kernel.Command.Arg_type.create of_string
+  let arg_type = Core.Command.Arg_type.create of_string
 end
 
 module Protocol = struct

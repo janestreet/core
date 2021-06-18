@@ -1,2 +1,2 @@
-(library (name syslog) (public_name core.syslog) (libraries core)
+(library (name syslog) (public_name core.syslog) (libraries core_kernel.core)
  (c_names syslog_stubs) (preprocess (pps ppx_jane)))

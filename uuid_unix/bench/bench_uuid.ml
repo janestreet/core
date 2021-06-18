@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 
 let%bench "Uuid_unix.create" = Uuid_unix.create ()
 

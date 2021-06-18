@@ -16,7 +16,7 @@ let%test_unit _ =
   List.iter
     ([ 2, 100, 0.; 10, 100, 0.; 10, 100, 0.001 ]
      @
-     if Sys.word_size = 32
+     if Sys.word_size_in_bits = 32
      then [] (* not enough address space when the stack limit is high *)
      else [ 100, 10, 0.001 ])
     ~f:(fun (num_threads, num_iterations, pause_for) ->
