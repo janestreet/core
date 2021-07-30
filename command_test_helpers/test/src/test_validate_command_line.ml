@@ -8,8 +8,8 @@ let exec path_to_exe child_subcommand =
   Command.exec ~summary:"" ~path_to_exe ~child_subcommand ()
 ;;
 
-let validate command ?on_exec args () =
-  Command_test_helpers.validate_command_line ?on_exec (Command_unix.shape command)
+let validate command args () =
+  Command_test_helpers.validate_command_line (Command_unix.shape command)
   |> Or_error.bind ~f:(fun f -> f args)
 ;;
 
@@ -61,44 +61,10 @@ let%expect_test "exec" =
   let extract_exec_error =
     Parsexp.Single.parse_string_exn >> [%of_sexp: string * Sexp.t] >> fst
   in
-  let demo = exec (`Relative_to_me "../bin/demo.exe") [ "do"; "the" ] in
   let dev_null = exec (`Absolute "/dev/null") [] in
-  require_error (validate dev_null [] ~on_exec:Fail);
+  require_error (validate dev_null []);
   print_endline (extract_exec_error [%expect.output]);
-  [%expect {| Got [Exec _] when [on_exec = Fail] |}];
-  require_error
-    (validate
-       dev_null
-       []
-       ~on_exec:Trust_me__I_understand_the_consequences_of_external_dependencies);
-  [%expect
-    {|
-    (Unix.Unix_error
-     "Permission denied"
-     Core_unix.create_process
-     "((prog /dev/null) (args ()) (env (Extend ((COMMAND_OUTPUT_HELP_SEXP \"(1 2 3)\")))))") |}];
-  require_error
-    (validate
-       demo
-       [ "thing" ]
-       ~on_exec:Trust_me__I_understand_the_consequences_of_external_dependencies);
-  [%expect
-    {|
-    Error parsing command line:
-
-      missing anonymous argument: A
-
-    For usage information, run
-
-      CMD thing -help
-
-    (command.ml.Exit_called (status 1)) |}];
-  require_ok
-    (validate
-       demo
-       [ "thing"; "A"; "B" ]
-       ~on_exec:Trust_me__I_understand_the_consequences_of_external_dependencies);
-  [%expect {| |}];
+  [%expect {| [Exec _] is forbidden to avoid unexpected external dependencies. |}];
   ignore ()
 ;;
 

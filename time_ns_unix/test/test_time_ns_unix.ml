@@ -2757,3 +2757,13 @@ let%test_unit "ofday_zoned conversion consistency" =
       assert (Time_ns.( = ) time_nyc time);
       assert (Time_ns.( = ) time_hkg time)))
 ;;
+
+let%expect_test "[Time_ns_unix.t_sexp_grammar]" =
+  require_ok [%here] (Sexp_grammar_validation.validate_grammar (module Time_ns_unix));
+  [%expect
+    {|
+    (Union
+     (String
+      (List (Cons String (Cons String Empty)))
+      (List (Cons String (Cons String (Cons String Empty)))))) |}]
+;;

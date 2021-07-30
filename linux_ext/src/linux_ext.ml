@@ -160,6 +160,7 @@ module Null_toplevel = struct
     let set _ _ _                 = assert false
     let remove _ _                = assert false
     let iter _ ~f:_               = assert false
+    let fold _ ~init:_ ~f:_       = assert false
     let wait _ ~timeout:_         = assert false
     let wait_timeout_after _ _    = assert false
     let iter_ready _ ~f:_         = assert false
@@ -264,6 +265,7 @@ module Null : Linux_ext_intf.S = struct
     let set_at _                 _ = assert false
     let set_after _              _ = assert false
     let set_repeating ?after:_ _ _ = assert false
+    let set_repeating_at _     _ _ = assert false
     let clear                    _ = assert false
     let get                      _ = assert false
 
@@ -442,6 +444,7 @@ module Timerfd = struct
       ~absolute:true
       ~initial:(Time_ns.to_int63_ns_since_epoch at)
       ~interval:Int63.zero
+  ;;
 
   let set_after t span =
     timerfd_settime t
@@ -458,6 +461,19 @@ module Timerfd = struct
     timerfd_settime t
       ~absolute:false
       ~initial:(Option.value_map after ~f:initial_of_span ~default:interval)
+      ~interval
+  ;;
+
+  let set_repeating_at t at (interval : Time_ns.Span.t) =
+    if Time_ns.( <= ) at Time_ns.epoch
+    then failwiths ~here:[%here] "Timerfd.set_repeating_at got time before epoch" at [%sexp_of: Time_ns.t];
+    if Time_ns.Span.( <= ) interval Time_ns.Span.zero
+    then failwiths ~here:[%here] "Timerfd.set_repeating_at got invalid interval" interval
+           [%sexp_of: Time_ns.Span.t];
+    let interval = Time_ns.Span.to_int63_ns interval in
+    timerfd_settime t
+      ~absolute:true
+      ~initial:(Time_ns.to_int63_ns_since_epoch at)
       ~interval
   ;;
 
@@ -945,6 +961,10 @@ module Epoll = struct
     Table.iteri t.flags_by_fd ~f:(fun ~key:file_descr ~data:flags ->
       f file_descr flags)
   ;;
+
+  let fold t ~init ~f =
+    let t = in_use_exn t in
+    Table.fold t.flags_by_fd ~init ~f:(fun ~key ~data -> f key data)
 
   let set t fd flags =
     let t = in_use_exn t in

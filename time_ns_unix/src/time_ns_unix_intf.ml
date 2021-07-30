@@ -189,6 +189,11 @@ module type Time_ns_unix = sig
       appropriate time zone. *)
   include Identifiable with type t := t
 
+  include sig
+    type t [@@deriving sexp_grammar]
+  end
+  with type t := t
+
   module Zone : module type of Time.Zone with type t = Time.Zone.t
 
   (** These functions are identical to those in [Time] and get/set the same variable. *)

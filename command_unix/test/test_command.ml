@@ -582,19 +582,23 @@ let ignored_flags names =
        flag name no_arg ~doc:"" |> map ~f:(ignore : bool -> unit)))
 ;;
 
-let%expect_test "[and_arg_names]" =
-  let test names =
-    run_command
-      ~args:[]
-      (let%map_open.Command (), arg_names = and_arg_names (ignored_flags names) in
-       fun () -> print_s [%message (arg_names : string list)])
+let%expect_test "[arg_names],[and_arg_names]" =
+  let print arg_names = print_s [%message (arg_names : string list)] in
+  let test ~f =
+    let test1 names =
+      f
+        (let%map_open.Command (), arg_names = and_arg_names (ignored_flags names) in
+         fun () -> print arg_names)
+    in
+    test1 [];
+    [%expect {| (arg_names ()) |}];
+    test1 [ "foo" ];
+    [%expect {| (arg_names (-foo)) |}];
+    test1 [ "foo"; "bar" ];
+    [%expect {| (arg_names (-bar -foo)) |}]
   in
-  test [];
-  [%expect {| (arg_names ()) |}];
-  test [ "foo" ];
-  [%expect {| (arg_names (-foo)) |}];
-  test [ "foo"; "bar" ];
-  [%expect {| (arg_names (-bar -foo)) |}]
+  test ~f:(fun param -> print (Command.Param.arg_names param));
+  test ~f:(fun param -> run_command param ~args:[])
 ;;
 
 let%expect_test "[and_arg_name]" =
@@ -651,7 +655,7 @@ let%expect_test "double-dash built-in flags" =
   run_with_both_flags [] "build-info";
   [%expect
     {|
-    ((username"")(hostname"")(kernel"")(build_time(1969-12-31 19:00:00.000000-05:00) ...
+    ((build_time(1969-12-31 19:00:00.000000-05:00))(x_library_inlining false)(portab ...
     (command.ml.Exit_called (status 0)) |}];
   run_with_both_flags [] "version";
   [%expect {|

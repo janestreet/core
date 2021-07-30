@@ -465,6 +465,16 @@ let t_of_sexp_gen ~if_no_timezone sexp =
 let t_of_sexp sexp = t_of_sexp_gen sexp ~if_no_timezone:(`Use_this_one (get_sexp_zone ()))
 let t_of_sexp_abs sexp = t_of_sexp_gen sexp ~if_no_timezone:`Fail
 
+let t_sexp_grammar : t Sexplib.Sexp_grammar.t =
+  { untyped =
+      Union
+        [ String
+        ; List (Cons (String, Cons (String, Empty)))
+        ; List (Cons (String, Cons (String, Cons (String, Empty))))
+        ]
+  }
+;;
+
 let sexp_of_t_abs t ~zone =
   Sexp.List (List.map (Time_ns.to_string_abs_parts ~zone t) ~f:(fun s -> Sexp.Atom s))
 ;;

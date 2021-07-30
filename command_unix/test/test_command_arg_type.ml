@@ -5,7 +5,7 @@ type t =
   | Foo
   | Bar
   | Baz
-[@@deriving sexp_of, variants]
+[@@deriving sexp_of, variants, enumerate]
 
 let arg_type ~case_sensitive =
   let f acc (variant : t Variant.t) = (variant.name, variant.constructor) :: acc in
@@ -99,3 +99,117 @@ let%expect_test "[of_alist_exn] duplicate keys" =
             (b B)
             (c c))))) |}]
 ;;
+
+module Enumerable_stringable = struct
+  module T = struct
+    type nonrec t =
+      | A
+      | B
+      | C
+    [@@deriving enumerate, sexp_of]
+
+    let to_string = function
+      | A -> "alpha"
+      | B -> "bravo"
+      | C -> "charlie"
+    ;;
+  end
+
+  include T
+
+  let arg_type = Command.Arg_type.enumerated (module T)
+
+  let parse str =
+    print_s [%sexp (Command.Arg_type.For_testing.parse arg_type str : t Or_error.t)]
+  ;;
+
+  let%expect_test "basic test" =
+    parse "alpha";
+    [%expect {| (Ok A) |}];
+    parse "bravo";
+    [%expect {| (Ok B) |}];
+    parse "charlie";
+    [%expect {| (Ok C) |}];
+    parse (Sexp.to_string [%sexp (A : t)]);
+    [%expect {| (Error (Failure "valid arguments: {alpha,bravo,charlie}")) |}]
+  ;;
+
+  let%expect_test "help text" =
+    let command =
+      Command.basic
+        ~summary:"this displays the help text for enumerated arg types: stringing"
+        (let%map_open.Command (_ : t) = anon ("T" %: arg_type)
+         and (_ : t) = flag "f" (required arg_type) ~doc:"demo" in
+         fun () -> ())
+    in
+    Command_unix.run ~argv:[ "prog"; "-help" ] command;
+    [%expect
+      {|
+      this displays the help text for enumerated arg types: stringing
+
+        prog T
+
+      === flags ===
+
+        -f demo                    . (can be: alpha, bravo, charlie)
+        [-build-info]              . print info about this build and exit
+        [-version]                 . print the version of this build and exit
+        [-help], -?                . print this help text and exit
+
+      (command.ml.Exit_called (status 0)) |}]
+  ;;
+end
+
+module Enumerable_sexpable = struct
+  module T = struct
+    type nonrec t =
+      | A of t
+      | B of bool
+      | C
+    [@@deriving enumerate, sexp_of]
+  end
+
+  include T
+
+  let arg_type = Command.Arg_type.enumerated_sexpable (module T)
+
+  let parse str =
+    print_s [%sexp (Command.Arg_type.For_testing.parse arg_type str : t Or_error.t)]
+  ;;
+
+  let%expect_test "basic test" =
+    parse "B";
+    [%expect
+      {|
+      (Error (
+        Failure "valid arguments: {(A Bar),(A Baz),(A Foo),(B false),(B true),C}")) |}];
+    parse "C";
+    [%expect {| (Ok C) |}]
+  ;;
+
+  let%expect_test "help text" =
+    let command =
+      Command.basic
+        ~summary:"this displays the help text for enumerated arg types: sexping"
+        (let%map_open.Command (_ : t) = anon ("T" %: arg_type)
+         and (_ : t) = flag "f" (required arg_type) ~doc:"demo" in
+         fun () -> ())
+    in
+    Command_unix.run ~argv:[ "prog"; "-help" ] command;
+    [%expect
+      {|
+      this displays the help text for enumerated arg types: sexping
+
+        prog T
+
+      === flags ===
+
+        -f demo                    . (can be: (A Bar), (A Baz), (A Foo), (B false), (B
+                                     true), C)
+        [-build-info]              . print info about this build and exit
+        [-version]                 . print the version of this build and exit
+        [-help], -?                . print this help text and exit
+
+      (command.ml.Exit_called (status 0)) |}]
+  ;;
+end

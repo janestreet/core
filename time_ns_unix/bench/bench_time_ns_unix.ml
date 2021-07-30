@@ -1987,7 +1987,7 @@ module Ofday = struct
   end
 end
 
-type nonrec t = t [@@deriving bin_io, quickcheck, typerep]
+type nonrec t = t [@@deriving bin_io, quickcheck, sexp_grammar, typerep]
 type nonrec comparator_witness = comparator_witness
 
 let arg_type = arg_type

@@ -21,21 +21,12 @@ val parse_command_line
   -> (?on_error:(unit -> unit) -> ?on_success:('a -> unit) -> string list -> unit)
        Staged.t
 
-module On_exec : sig
-  (** We don't follow execs unless the caller promises it's safe.
-
-      Tests should only depend in binaries that will be available and unchanged forever.
-      Typically, that means binaries built in the repo. *)
-
-  type t =
-    | Fail
-    | Trust_me__I_understand_the_consequences_of_external_dependencies
-  [@@deriving compare, sexp_of]
-end
-
 (** [validate_command_line shape] provides a function [f] s.t. [f args] is best-effort
     check of [args] against the command described by [shape], without actual execution of
     that command.
+
+    [validate_command_line] raises if any subcommand of [shape] would exec another command
+    binary. This prevents us from introducing unexpected external dependencies into tests.
 
     What we check:
 
@@ -59,10 +50,7 @@ end
     4. [full_flag_required].  We assume every flag can be passed by prefix.
 
 *)
-val validate_command_line
-  :  ?on_exec:On_exec.t (** default: [Fail] *)
-  -> Command.Shape.t
-  -> (string list -> unit Or_error.t) Or_error.t
+val validate_command_line : Command.Shape.t -> (string list -> unit Or_error.t) Or_error.t
 
 (** [complete ?which_arg param ~args] prints the completion suggestions to stderr.
 

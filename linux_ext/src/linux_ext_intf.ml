@@ -261,10 +261,15 @@ module type S = sig
         clear a timerfd, use [Timerfd.clear].
 
         [set_repeating ?after t interval] sets [t] to fire every [interval] starting after
-        [after] (default is [interval]), raising if [interval <= 0]. *)
-    val set_at        :                          t -> Time_ns.t      -> unit
-    val set_after     :                          t -> Time_ns.Span.t -> unit
-    val set_repeating : ?after:Time_ns.Span.t -> t -> Time_ns.Span.t -> unit
+        [after] (default is [interval]), raising if [interval <= 0].
+
+        [set_repeating_at t start interval] sets [t] to fire every [interval] starting at
+        [start] and raising if [interval <= 0].  A [start] time in the past will cause the
+        timer to start immediately. *)
+    val set_at           :                          t -> Time_ns.t                   -> unit
+    val set_after        :                          t -> Time_ns.Span.t              -> unit
+    val set_repeating    : ?after:Time_ns.Span.t -> t -> Time_ns.Span.t              -> unit
+    val set_repeating_at :                          t -> Time_ns.t -> Time_ns.Span.t -> unit
 
     (** [clear t] causes [t] to not fire anymore. *)
     val clear : t -> unit
@@ -491,6 +496,7 @@ module type S = sig
     val set      : t -> File_descr.t -> Flags.t -> unit
     val remove   : t -> File_descr.t -> unit
     val iter     : t -> f:(File_descr.t -> Flags.t -> unit) -> unit
+    val fold     : t -> init:'a -> f:(File_descr.t -> Flags.t -> 'a -> 'a) -> 'a
 
     (** [wait t ~timeout] blocks until at least one file descriptor in [t] is ready for
         one of the events it is being watched for, or [timeout] passes.  [wait] side

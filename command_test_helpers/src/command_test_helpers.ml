@@ -36,15 +36,6 @@ let parse_command_line ?path ?(summary = default_command_name ^ " SUMMARY") para
     | Ok x -> on_success x)
 ;;
 
-module On_exec = struct
-  type t =
-    | Fail
-    | Trust_me__I_understand_the_consequences_of_external_dependencies
-  [@@deriving compare, sexp_of]
-
-  let default = Fail
-end
-
 module Validate_command_line = struct
   let unit_anon = Command.Anons.map_anons ~f:ignore
 
@@ -140,16 +131,14 @@ module Validate_command_line = struct
           fun () -> ()))
   ;;
 
-  let command_of_shape ?(on_exec = On_exec.default) (shape : Command.Shape.t) =
+  let command_of_shape (shape : Command.Shape.t) =
     let rec of_shape : Command.Shape.t -> _ = function
       | Basic base_info -> param_of_basic base_info
-      | Exec (exec_info, get_shape) ->
-        (match on_exec with
-         | Trust_me__I_understand_the_consequences_of_external_dependencies ->
-           of_shape (get_shape ())
-         | Fail ->
-           let s = "Got [Exec _] when [on_exec = Fail]" in
-           error_s [%message s (exec_info : Command.Shape.Exec_info.t)])
+      | Exec (exec_info, _) ->
+        error_s
+          [%message
+            "[Exec _] is forbidden to avoid unexpected external dependencies."
+              (exec_info : Command.Shape.Exec_info.t)]
       | Group group_info -> of_group group_info
       | Lazy shape -> of_shape (force shape)
     and of_group ({ summary; readme; subcommands } : _ Command.Shape.Group_info.t) =
@@ -168,8 +157,8 @@ module Validate_command_line = struct
     of_shape shape
   ;;
 
-  let f ?on_exec shape =
-    let%bind.Or_error command = command_of_shape ?on_exec shape in
+  let f shape =
+    let%bind.Or_error command = command_of_shape shape in
     Ok
       (fun args ->
          Or_error.try_with (fun () ->
