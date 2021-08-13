@@ -1622,6 +1622,7 @@ val sendto_substring
 
 (** {6 Socket options} *)
 
+[%%if ocaml_version >= (4, 12, 0)]
 
 (** The socket options that can be consulted with {!UnixLabels.getsockopt}
     and modified with {!UnixLabels.setsockopt}.  These options have a boolean
@@ -1636,7 +1637,24 @@ type socket_bool_option =
   | SO_ACCEPTCONN          (** Report whether socket listening is enabled *)
   | TCP_NODELAY            (** Control the Nagle algorithm for TCP sockets *)
   | IPV6_ONLY              (** Forbid binding an IPv6 socket to an IPv4 address *)
+  | SO_REUSEPORT
 [@@deriving sexp]
+
+[%%else]
+
+type socket_bool_option =
+    SO_DEBUG
+  | SO_BROADCAST
+  | SO_REUSEADDR
+  | SO_KEEPALIVE
+  | SO_DONTROUTE
+  | SO_OOBINLINE
+  | SO_ACCEPTCONN
+  | TCP_NODELAY
+  | IPV6_ONLY
+[@@deriving sexp]
+
+[%%endif]
 
 (** The socket options that can be consulted with {!UnixLabels.getsockopt_int}
     and modified with {!UnixLabels.setsockopt_int}.  These options have an

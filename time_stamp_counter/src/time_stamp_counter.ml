@@ -97,7 +97,7 @@ let zero = Int63.zero
 [%%ifdef JSC_ARCH_SIXTYFOUR]
 
 (* noalloc on x86_64 only *)
-let now () = Ocaml_intrinsics.Perfmon.rdtsc () |> Int63.of_int64_trunc
+let now () = Ocaml_intrinsics.Perfmon.rdtsc () |> Stdlib.Int64.to_int |> Int63.of_int
 
 module Calibrator = struct
   (* performance hack: prevent writes to this record from boxing floats by making all

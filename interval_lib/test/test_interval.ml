@@ -1,7 +1,5 @@
 open! Core
 open! Expect_test_helpers_core
-module Time = Time_unix
-
 module Interval = Interval_lib.Interval
 
 let%expect_test "list_intersect" =
@@ -15,25 +13,25 @@ let%expect_test "list_intersect" =
      (14 15)) |}]
 ;;
 
+let make_stable_unit_tests_v1 ~coerce ~non_empty =
+  let module V = Base.Variant in
+  let c f tests variant = f variant @ tests in
+  Interval.Stable.V1.Private.Variants.fold
+    ~init:[]
+    ~interval:
+      (c (fun interval ->
+         assert (interval.V.rank = 0);
+         List.map non_empty ~f:(fun ((lbound, ubound), sexp, bin_io) ->
+           coerce (interval.V.constructor lbound ubound), sexp, bin_io)))
+    ~empty:
+      (c (fun empty ->
+         assert (empty.V.rank = 1);
+         [ coerce empty.V.constructor, "()", "\001" ]))
+;;
+
 let%test_module _ =
   (module struct
     open Interval.Stable
-
-    let make_tests_v1 coerce ~non_empty =
-      let module V = Base.Variant in
-      let c f tests variant = f variant @ tests in
-      V1.Private.Variants.fold
-        ~init:[]
-        ~interval:
-          (c (fun interval ->
-             assert (interval.V.rank = 0);
-             List.map non_empty ~f:(fun ((lbound, ubound), sexp, bin_io) ->
-               coerce (interval.V.constructor lbound ubound), sexp, bin_io)))
-        ~empty:
-          (c (fun empty ->
-             assert (empty.V.rank = 1);
-             [ coerce empty.V.constructor, "()", "\001" ]))
-    ;;
 
     let%test_module "Interval.V1.Float" =
       (module Stable_unit_test.Make (struct
@@ -44,8 +42,8 @@ let%test_module _ =
            module V = V1.Private.Variants
 
            let tests =
-             make_tests_v1
-               V1.Private.to_float
+             make_stable_unit_tests_v1
+               ~coerce:V1.Private.to_float
                ~non_empty:
                  [ ( (1.5, 120.)
                    , "(1.5 120)"
@@ -62,50 +60,11 @@ let%test_module _ =
            let equal = [%compare.equal: t]
 
            let tests =
-             make_tests_v1
-               V1.Private.to_int
+             make_stable_unit_tests_v1
+               ~coerce:V1.Private.to_int
                ~non_empty:[ (-5, 789), "(-5 789)", "\000\255\251\254\021\003" ]
            ;;
          end))
-    ;;
-
-    let%test_module "Interval.V1.Time" =
-      (module struct
-        module Arg = struct
-          include V1.Time
-
-          let equal = [%compare.equal: t]
-          let zone = Time.Zone.find_exn "America/New_York"
-
-          let tests =
-            let t1 =
-              Time.of_date_ofday
-                ~zone
-                (Date.create_exn ~y:2013 ~m:Month.Aug ~d:6)
-                (Time.Ofday.create ~hr:7 ~min:30 ~sec:7 ~ms:12 ~us:5 ())
-            in
-            let t2 =
-              Time.of_date_ofday
-                ~zone
-                (Date.create_exn ~y:2014 ~m:Month.Sep ~d:8)
-                (Time.Ofday.create ~hr:10 ~min:10 ~sec:0 ~ms:22 ~us:0 ())
-            in
-            make_tests_v1
-              V1.Private.to_time
-              ~non_empty:
-                [ ( (t1, t2)
-                  , "((2013-08-06 07:30:07.012005-04:00) (2014-09-08 \
-                     10:10:00.022000-04:00))"
-                  , "\000\177\196\192\1437\128\212Ash\001.n\003\213A" )
-                ]
-          ;;
-        end
-
-        (* Bypass sexp serialization tests because [Time.sexp_of_t] gives different
-           results depending on the local zone. *)
-        include Stable_unit_test.Make_sexp_deserialization_test (Arg)
-        include Stable_unit_test.Make_bin_io_test (Arg)
-      end)
     ;;
 
     let%test_module "Interval.V1.Ofday" =
@@ -117,8 +76,8 @@ let%test_module _ =
            let tests =
              let t1 = Time.Ofday.create ~hr:7 ~min:30 ~sec:7 ~ms:12 ~us:5 () in
              let t2 = Time.Ofday.create ~hr:9 ~min:45 ~sec:8 ~ms:0 ~us:1 () in
-             make_tests_v1
-               V1.Private.to_ofday
+             make_stable_unit_tests_v1
+               ~coerce:V1.Private.to_ofday
                ~non_empty:
                  [ ( (t1, t2)
                    , "(07:30:07.012005 09:45:08.000001)"
@@ -137,13 +96,12 @@ let%test_module "vs array" =
     module Obs = Quickcheck.Observer
 
     let interval_of_length n =
-      let open Gen.Monad_infix in
+      let open Gen.Let_syntax in
       if n = 0
       then Gen.singleton empty
       else (
         let range = n - 1 in
-        Int.gen_incl Int.min_value (Int.max_value - range)
-        >>| fun lo ->
+        let%map lo = Int.gen_incl Int.min_value (Int.max_value - range) in
         let hi = lo + range in
         create lo hi)
     ;;

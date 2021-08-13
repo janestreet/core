@@ -59,14 +59,6 @@ val join : t -> unit
 (** [join th] suspends the execution of the calling thread
     until the thread [th] has terminated. *)
 
-val wait_read : Unix.file_descr -> unit
-(** See {!Thread.wait_write}.*)
-
-val wait_write : Unix.file_descr -> unit
-(** Suspend the execution of the calling thread until at least
-    one character is available for reading ({!Thread.wait_read}) or
-    one character can be written without blocking ([wait_write])
-    on the given Unix file descriptor. *)
 
 val wait_timed_read : Unix.file_descr -> float -> bool
 (** See {!Thread.wait_timed_write}.*)

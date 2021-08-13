@@ -1,6 +1,5 @@
 open! Core
 open! Import
-open Poly
 open! Unix
 
 let%expect_test "[File_descr.sexp_of_t]" =
@@ -54,7 +53,7 @@ let%expect_test "[mkdtemp] dir name contains [.tmp.]" =
   rmdir dir;
   require
     [%here]
-    (".tmp." = String.sub dir ~pos:(String.length dir - 11) ~len:5)
+    (String.is_substring (Filename.basename dir) ~substring:".tmp.")
     ~if_false_then_print_s:(lazy [%message (dir : string)]);
   [%expect {| |}]
 ;;
@@ -65,7 +64,7 @@ let%expect_test "[mkstemp] file name contains [.tmp.]" =
   close fd;
   require
     [%here]
-    (".tmp." = String.sub file ~pos:(String.length file - 11) ~len:5)
+    (String.is_substring (Filename.basename file) ~substring:".tmp.")
     ~if_false_then_print_s:(lazy [%message (file : string)]);
   [%expect {| |}]
 ;;
@@ -502,8 +501,15 @@ let%test_unit "readdir_detailed" =
   let cwd = Sys_unix.getcwd () in
   let cwd_dir, cwd_base = Filename.split cwd in
   let l = Unix.ls_dir_detailed cwd_dir in
-  let x = List.find_exn l ~f:(fun d -> d.name = cwd_base) in
-  match x.kind with
-  | None | Some S_DIR -> ()
-  | Some _ -> assert false
+  match List.find l ~f:(fun d -> String.( = ) d.name cwd_base) with
+  | None ->
+    raise_s
+      [%sexp
+        "couldn't find file in directory"
+      , `dir_contents (l : Readdir_detailed.t list)
+      , `basename (cwd_base : string)]
+  | Some x ->
+    (match x.kind with
+     | None | Some S_DIR -> ()
+     | Some _ -> assert false)
 ;;

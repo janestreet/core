@@ -368,11 +368,18 @@ CAMLprim value core_unix_readdir_detailed_stub(value v_dh)
   DIR *d;
   directory_entry * e;
   d = DIR_Val(v_dh);
-  if (d == (DIR *) NULL) unix_error(EBADF, "readdir_detailed", Nothing);
+  if (d == NULL) unix_error(EBADF, "readdir_detailed", Nothing);
   caml_enter_blocking_section();
-    e = readdir((DIR *) d);
+  errno = 0; /* so we can tell the difference between EOF and error below */
+  e = readdir(d);
   caml_leave_blocking_section();
-  if (e == (directory_entry *) NULL) caml_raise_end_of_file();
+  if (e == NULL) {
+    if (errno == 0) {
+      caml_raise_end_of_file();
+    } else {
+      uerror("readdir_detailed", Nothing);
+    }
+  }
   else {
     CAMLparam0();
     CAMLlocal3(v_name, v_ino, v_type);

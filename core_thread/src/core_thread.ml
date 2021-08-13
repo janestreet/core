@@ -3,7 +3,7 @@ open! Import
 
 let threads_have_been_created = ref false
 
-include Caml_threads.Thread
+include Caml_threads.Thread [@@ocaml.alert "-deprecated"]
 
 let sexp_of_t t = [%message "thread" ~id:(id t : int)]
 

@@ -1,5 +1,6 @@
 (library (name time_stamp_counter_test)
- (libraries core_kernel.core time_stamp_counter time_unix)
+ (libraries core_kernel.core expect_test_helpers_core time_stamp_counter
+  time_unix)
  (preprocessor_deps config.h) (preprocess (pps ppx_jane)))
 
 (rule (targets config.h) (deps)

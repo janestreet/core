@@ -2639,6 +2639,21 @@ let sendto_substring fd ~buf ~pos ~len ~mode ~addr =
         ("addr", sexp_of_sockaddr addr)])
 ;;
 
+[%%if ocaml_version >= (4, 12, 0)]
+type socket_bool_option = Unix.socket_bool_option =
+  | SO_DEBUG
+  | SO_BROADCAST
+  | SO_REUSEADDR
+  | SO_KEEPALIVE
+  | SO_DONTROUTE
+  | SO_OOBINLINE
+  | SO_ACCEPTCONN
+  | TCP_NODELAY
+  | IPV6_ONLY
+  | SO_REUSEPORT
+[@@deriving sexp]
+[%%else]
+
 type socket_bool_option = Unix.socket_bool_option =
   | SO_DEBUG
   | SO_BROADCAST
@@ -2650,6 +2665,9 @@ type socket_bool_option = Unix.socket_bool_option =
   | TCP_NODELAY
   | IPV6_ONLY
 [@@deriving sexp]
+
+[%%endif]
+
 
 type socket_int_option = Unix.socket_int_option =
   | SO_SNDBUF

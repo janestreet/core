@@ -82,7 +82,7 @@ module Validate_command_line = struct
       | true, { at_least_once = true; at_most_once = true } ->
         make_flag Command.Flag.required
       | true, { at_least_once = true; at_most_once = false } ->
-        make_flag Command.Flag.one_or_more
+        make_flag Command.Flag.one_or_more_as_pair
       | true, { at_least_once = false; at_most_once = false } ->
         make_flag Command.Flag.listed
       | true, { at_least_once = false; at_most_once = true } ->

@@ -278,6 +278,12 @@ let%test_module _ =
       done
     ;;
 
+    let%expect_test "Test allocation" =
+      ignore
+        (Expect_test_helpers_core.require_no_allocation [%here] (fun () -> now ()) : t);
+      [%expect {|  |}]
+    ;;
+
     [%%endif]
   end)
 ;;

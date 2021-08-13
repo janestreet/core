@@ -14,3 +14,6 @@ Idiomatic usage of this library in an `.ml` file is:
 Idiomatic usage of this library in an `.mli` file is:
 
     module Interval := Interval_lib.Interval
+
+See `Interval_unix` for Unix specific intervals, like `Time_unix` and
+`Time_ns_unix` based intervals.

@@ -1,9 +1,8 @@
 open! Core
 
-module Zone = Time.Zone
-
 module type Gen = sig
   type 'a t
+
 
   (** [bound] is the type of points in the interval (and therefore of the bounds).
       [bound] is instantiated in two different ways below: in [module type S] as a
@@ -15,9 +14,7 @@ module type Gen = sig
   val create : 'a bound -> 'a bound -> 'a t
 
   val empty : 'a t
-
   val intersect : 'a t -> 'a t -> 'a t
-
   val is_empty : 'a t -> bool
 
   val is_empty_or_singleton : 'a t -> bool
@@ -27,8 +24,7 @@ module type Gen = sig
   val bounds : 'a t -> ('a bound * 'a bound) option
   val lbound : 'a t -> 'a bound option
   val ubound : 'a t -> 'a bound option
-
-  val bounds_exn : 'a t -> ('a bound * 'a bound)
+  val bounds_exn : 'a t -> 'a bound * 'a bound
   val lbound_exn : 'a t -> 'a bound
   val ubound_exn : 'a t -> 'a bound
 
@@ -52,8 +48,10 @@ module type Gen = sig
 
   val contains : 'a t -> 'a bound -> bool
 
-  val compare_value : 'a t -> 'a bound ->
-    [ `Below | `Within | `Above | `Interval_is_empty ]
+  val compare_value
+    :  'a t
+    -> 'a bound
+    -> [ `Below | `Within | `Above | `Interval_is_empty ]
 
   (** [bound t x] returns [None] iff [is_empty t].  If [bounds t = Some (a, b)], then
       [bound] returns [Some y] where [y] is the element of [t] closest to [x].  I.e.:
@@ -66,10 +64,12 @@ module type Gen = sig
   *)
   val bound : 'a t -> 'a bound -> 'a bound option
 
+
   (** [is_superset i1 of_:i2] is whether i1 contains i2. The empty interval is
       contained in every interval. *)
   val is_superset : 'a t -> of_:'a t -> bool
-  val is_subset   : 'a t -> of_:'a t -> bool
+
+  val is_subset : 'a t -> of_:'a t -> bool
 
   (** [map t ~f] returns [create (f l) (f u)] if [bounds t = Some (l, u)], and [empty] if
       [t] is empty.  Note that if [f l > f u], the result of [map] is [empty], by the
@@ -117,8 +117,10 @@ end
 module type Gen_set = sig
   type 'a t
   type 'a bound
-  type 'a interval
+
   (** An interval set is a set of nonempty disjoint intervals. *)
+  type 'a interval
+
 
   (** [create] creates an interval set containing intervals whose lower and upper bounds
       are given by the pairs passed to the function. It is an error if the pairs overlap.
@@ -134,13 +136,13 @@ module type Gen_set = sig
   (** [contains_set] returns true iff for every interval in the contained set, there
       exists an interval in the container set that is its superset.
   *)
-  val contains_set : container:('a t) -> contained:('a t) -> bool
+  val contains_set : container:'a t -> contained:'a t -> bool
 
   (** The largest and smallest element of the interval set, respectively.  Raises
       Invalid_argument on empty sets. *)
   val ubound_exn : 'a t -> 'a bound
-  val lbound_exn : 'a t -> 'a bound
 
+  val lbound_exn : 'a t -> 'a bound
   val ubound : 'a t -> 'a bound option
   val lbound : 'a t -> 'a bound option
 end
@@ -149,24 +151,22 @@ module type S = sig
   type t [@@deriving bin_io, sexp, compare, hash]
   type bound
 
-  include Gen
-    with type 'a t := t
-    with type 'a bound := bound (** @inline *)
+  include Gen with type 'a t := t with type 'a bound := bound (** @inline *)
 
   (** [create] has the same type as in [Gen], but adding it here prevents a type-checker
       issue with nongeneralizable type variables. *)
   val create : bound -> bound -> t
 
   type 'a poly_t
+
   val to_poly : t -> bound poly_t
 
   type 'a poly_set
+
   module Set : sig
     type t [@@deriving bin_io, sexp]
-    include Gen_set
-      with type 'a t := t
-      with type 'a bound := bound
-    (** @inline *)
+
+    include Gen_set with type 'a t := t with type 'a bound := bound (** @inline *)
 
     val to_poly : t -> bound poly_set
   end
@@ -179,61 +179,16 @@ module type S1 = sig
       signatures (like [bin_read_t] and [t_of_sexp]). *)
   type 'a t [@@deriving bin_io, sexp, compare, hash]
 
-  include Gen
-    with type 'a t := 'a t
-    with type 'a bound := 'a (** @inline *)
+  include Gen with type 'a t := 'a t with type 'a bound := 'a (** @inline *)
 
   module Set : sig
     type 'a t [@@deriving bin_io, sexp]
-    include Gen_set
-      with type 'a t := 'a t
-      with type 'a bound := 'a
-      (** @inline *)
+
+    include Gen_set with type 'a t := 'a t with type 'a bound := 'a (** @inline *)
   end
   with type 'a interval := 'a t
 end
 
-module type S_time = sig
-  module Time : sig
-    type t
-    module Ofday : sig
-      type t
-    end
-  end
-
-  include S with type bound = Time.t (** @open *)
-
-
-  (** [create_ending_after ?zone (od1, od2) ~now] returns the smallest interval [(t1 t2)]
-      with minimum [t2] such that [t2 >= now], [to_ofday t1 = od1], and [to_ofday t2 =
-      od2]. If a zone is specified, it is used to translate [od1] and [od2] into times,
-      otherwise the machine's time zone is used.
-
-      It is not guaranteed that the interval will contain [now]: for instance if it's
-      11:15am, [od1] is 12pm, and [od2] is 2pm, the returned interval will be 12pm-2pm
-      today, which obviously doesn't include 11:15am. In general [contains (t1 t2) now]
-      will only be true when now is between [to_ofday od1] and [to_ofday od2].
-
-      You might want to use this function if, for example, there's a daily meeting from
-      10:30am-11:30am and you want to find the next instance of the meeting, relative to
-      now. *)
-  val create_ending_after :
-    ?zone:Zone.t -> Time.Ofday.t * Time.Ofday.t -> now:Time.t -> t
-
-  (** [create_ending_before ?zone (od1, od2) ~ubound] returns the smallest interval [(t1
-      t2)] with maximum [t2] such that [t2 <= ubound], [to_ofday t1 = od1], and [to_ofday
-      t2 = od2]. If a zone is specified, it is used to translate [od1] and [od2] into
-      times, otherwise the machine's time zone is used.
-
-
-      You might want to use this function if, for example, there's a lunch hour from
-      noon to 1pm and you want to find the first instance of that lunch hour (an interval)
-      before [ubound]. The result will either be on the same day as [ubound], if
-      [to_ofday ubound] is after 1pm, or the day before, if [to_ofday ubound] is any
-      earlier. *)
-  val create_ending_before :
-    ?zone:Zone.t -> Time.Ofday.t * Time.Ofday.t -> ubound:Time.t -> t
-end
 
 (** Module for simple closed intervals over arbitrary types. Used by calling the
     {{!module:Core.Interval.Make}[Make]} functor with a type that satisfies
@@ -249,7 +204,6 @@ end
     See the documentation of {{!module:Core.Interval.Make}[Interval.Make]} for a more
     detailed usage example. *)
 module type Interval = sig
-
   (**
      {2 Intervals using polymorphic compare}
 
@@ -257,7 +211,8 @@ module type Interval = sig
      polymorphic compare. Using this with types that are not (like sets) will lead to crazy
      results.
   *)
-  include S1 (** @inline *)
+  include S1
+  (** @inline *)
 
   (** {2 Type-specialized intervals}
 
@@ -278,38 +233,26 @@ module type Interval = sig
   *)
 
   module type S1 = S1
-
-  module type S = S
-    with type 'a poly_t := 'a t
-    with type 'a poly_set := 'a Set.t
-
-  (**
-     [S_time] is a signature that's used below to define the interfaces for [Time] and
-     [Time_ns] without duplication.
-  *)
-  module type S_time = S_time
-    with type 'a poly_t := 'a t
-    with type 'a poly_set := 'a Set.t
+  module type S = S with type 'a poly_t := 'a t with type 'a poly_set := 'a Set.t
+  module type S_time = sig end [@@deprecated "[since 2021-08] Use [Interval_unix]"]
 
   (** {3 Specialized interval types} *)
 
-  module Ofday    : S with type bound = Time.Ofday.t
+  module Ofday : S with type bound = Time.Ofday.t
   module Ofday_ns : S with type bound = Time_ns.Ofday.t
-
-  module Time    : S_time with module Time := Time
-                           and type t = Time.t t
-  module Time_ns : S_time with module Time := Time_ns
-                           and type t = Time_ns.t t
+  module Time : sig end [@@deprecated "[since 2021-08] Use [Interval_unix]"]
+  module Time_ns : sig end [@@deprecated "[since 2021-08] Use [Interval_unix]"]
 
   module Float : S with type bound = Float.t
 
   module Int : sig
     include S with type bound = Int.t (** @open *)
 
-    include Container.S0        with type t := t with type elt := bound
+    include Container.S0 with type t := t with type elt := bound
     include Binary_searchable.S with type t := t with type elt := bound
 
     (**/**)
+
     (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
 
       https://opensource.janestreet.com/standards/#private-submodules *)
@@ -352,9 +295,9 @@ module type Interval = sig
   *)
   module Make (Bound : sig
       type t [@@deriving bin_io, sexp, hash]
+
       include Comparable.S with type t := t
-    end)
-    : S with type bound = Bound.t
+    end) : S with type bound = Bound.t
 
   (**
      [Stable] is used to build stable protocols. It ensures backwards compatibility by
@@ -364,18 +307,22 @@ module type Interval = sig
   module Stable : sig
     module V1 : sig
       type nonrec 'a t = 'a t [@@deriving bin_io, compare, sexp]
-      module Float   : Stable with type t = Float.  t
-      module Int     : Stable with type t = Int.    t
-      module Time    : Stable with type t = Time.   t
-      module Time_ns : Stable with type t = Time_ns.t
-      module Ofday   : Stable with type t = Ofday.  t
+
+      module Float : Stable with type t = Float.t
+      module Int : Stable with type t = Int.t
+      module Time : sig end [@@deprecated "[since 2021-08] Use [Interval_unix]"]
+      module Time_ns : sig end [@@deprecated "[since 2021-08] Use [Interval_unix]"]
+      module Ofday : Stable with type t = Ofday.t
       module Ofday_ns : Stable with type t = Ofday_ns.t
 
       (**/**)
+
       (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
 
         https://opensource.janestreet.com/standards/#private-submodules *)
       module Private : sig
+        type 'a interval := 'a t
+
         type 'a t =
           | Interval of 'a * 'a
           | Empty
@@ -384,8 +331,24 @@ module type Interval = sig
         val to_float : float t -> Float.t
         val to_int : int t -> Int.t
         val to_ofday : Core.Time.Ofday.t t -> Ofday.t
-        val to_time : Core.Time.t t -> Time.t
+
+        (** Used in testing Interval_unix.Time.t. Using Core.Time.t interval is
+            fine because it is equal to Interval_unix.Time.t. *)
+        val to_time : Core.Time.t t -> Core.Time.t interval
       end
     end
+  end
+
+  (**/**)
+
+  (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
+
+    https://opensource.janestreet.com/standards/#private-submodules *)
+  module Private : sig
+    module Make (Bound : sig
+        type t [@@deriving bin_io, sexp, hash]
+
+        include Comparable.S with type t := t
+      end) : S with type bound = Bound.t and type t = Bound.t t
   end
 end
