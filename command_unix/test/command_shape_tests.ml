@@ -8,8 +8,7 @@ let run_scenario instructions =
     "env"
     ((* disable backtraces *)
       "OCAMLRUNPARAM=b=0"
-      ::
-      "../test-bin/command_shape_test_parent.exe"
+      :: "../test-bin/command_shape_test_parent.exe"
       :: [%of_sexp: string list] (Sexp.of_string instructions))
 ;;
 

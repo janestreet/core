@@ -106,8 +106,7 @@ let span_examples =
 
 let span_option_examples =
   Time_ns.Span.Option.none
-  ::
-  List.filter_map span_examples ~f:(fun span ->
+  :: List.filter_map span_examples ~f:(fun span ->
     if Time_ns.Span.Option.some_is_representable span
     then Some (Time_ns.Span.Option.some span)
     else None)
@@ -204,7 +203,7 @@ let%test_module "Time_ns.Span.to_string,of_string" =
       [%expect {||}]
     ;;
 
-    let%expect_test ("of_string: no allocation"[@tags "64-bits-only"]) =
+    let%expect_test ("of_string: no allocation" [@tags "64-bits-only"]) =
       let test string =
         ignore
           (require_no_allocation [%here] (fun () -> Time_ns.Span.of_string string)

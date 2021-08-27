@@ -2317,13 +2317,18 @@ val wordexp
 (** {2 System information} *)
 
 module Utsname : sig
-  type t [@@deriving sexp, compare]
+  type t [@@deriving sexp_of, compare]
 
   val sysname : t -> string
   val nodename : t -> string
   val release : t -> string
   val version : t -> string
   val machine : t -> string
+
+  module Stable : sig
+    module V1 : Stable_without_comparator
+      with type t = t
+  end
 end
 
 (** See man page for uname. *)
@@ -2480,5 +2485,6 @@ module Stable : sig
   module Inet_addr = Inet_addr.Stable
   module Cidr = Cidr.Stable
   module Signal = Signal.Stable
+  module Utsname = Utsname.Stable
 end
 

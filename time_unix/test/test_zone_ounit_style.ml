@@ -172,16 +172,14 @@ let add_random_localtime_tests state =
       in
       "date"
       @?
-      if
-        Localtime_test_data.(
-          test_data.localtime_date_string = test_data.our_date_string)
+      if Localtime_test_data.(
+        test_data.localtime_date_string = test_data.our_date_string)
       then true
       else failwith (Sexp.to_string (Localtime_test_data.sexp_of_t test_data));
       "ofday"
       @?
-      if
-        Localtime_test_data.(
-          test_data.localtime_ofday_string = test_data.our_ofday_string)
+      if Localtime_test_data.(
+        test_data.localtime_ofday_string = test_data.our_ofday_string)
       then true
       else failwith (Sexp.to_string (Localtime_test_data.sexp_of_t test_data))))
 ;;

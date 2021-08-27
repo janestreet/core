@@ -460,13 +460,12 @@ let%expect_test "our gmtime matches Unix.gmtime" =
       let my_date, my_ofday = gmtime time in
       let unix_date, unix_ofday = unix_date_ofday sec_since_epoch in
       let results = (my_date, my_ofday), (unix_date, unix_ofday) in
-      if
-        not
-          (Tuple.T2.equal
-             ~eq1:Date.equal
-             ~eq2:Time.Ofday.equal
-             (fst results)
-             (snd results))
+      if not
+           (Tuple.T2.equal
+              ~eq1:Date.equal
+              ~eq2:Time.Ofday.equal
+              (fst results)
+              (snd results))
       then
         raise_s
           [%message

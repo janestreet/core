@@ -431,7 +431,7 @@ let%expect_test "unix socket path limit workaround" =
         Unix.unlink (dir ^/ "socket"))
 ;;
 
-let%expect_test ("Clock.get_cpuclock_for"[@tags "64-bits-only"]) =
+let%expect_test ("Clock.get_cpuclock_for" [@tags "64-bits-only"]) =
   let get_cpuclock_for = ok_exn Unix.Clock.get_cpuclock_for in
   let gettime = ok_exn Unix.Clock.gettime in
   (* This pid is too large to be real  *)

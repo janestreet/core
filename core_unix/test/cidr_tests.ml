@@ -220,7 +220,6 @@ let%expect_test _ = diff "0.0.0.0/16" "0.0.0.0/0"
 let%expect_test _ = diff "0.0.0.0/8" "0.0.0.0/0"
 let%expect_test _ = same "0.0.0.0/0" "0.0.0.0/0"
 (* normalize base addresses *)
-
 let%expect_test _ = diff "0.0.0.0/32" "0.0.0.1/32"
 let%expect_test _ = same "0.0.0.0/31" "0.0.0.1/31"
 let%expect_test _ = diff "0.0.0.0/25" "0.0.0.255/25"

@@ -8,11 +8,7 @@ let exec path_to_exe child_subcommand =
   Command.exec ~summary:"" ~path_to_exe ~child_subcommand ()
 ;;
 
-let validate command args () =
-  Command_test_helpers.validate_command_line (Command_unix.shape command)
-  |> Or_error.bind ~f:(fun f -> f args)
-;;
-
+let validate command args () = Command_test_helpers.validate_command command args
 let require_ok ?cr f = require_does_not_raise ?cr [%here] (f >> ok_exn)
 let require_error ?cr f = require_does_raise ?cr [%here] (f >> ok_exn)
 
@@ -57,13 +53,16 @@ let%expect_test "subcommand" =
 ;;
 
 let%expect_test "exec" =
-  let extract_exec_error =
-    Parsexp.Single.parse_string_exn >> [%of_sexp: string * Sexp.t] >> fst
-  in
   let dev_null = exec (`Absolute "/dev/null") [] in
   require_error (validate dev_null []);
-  print_endline (extract_exec_error [%expect.output]);
-  [%expect {| [Exec _] is forbidden to avoid unexpected external dependencies. |}];
+  [%expect
+    {|
+    ("Cannot validate [Exec _] commands" (
+      exec_info (
+        (summary     "")
+        (working_dir ELIDED-IN-TEST)
+        (path_to_exe /dev/null)
+        (child_subcommand ())))) |}];
   ignore ()
 ;;
 
@@ -165,11 +164,18 @@ let%expect_test "anons" =
            Fn.id))
        [ "not a valid int" ])
     ~cr:Comment;
-  (* Validating by reconstruction cannot test arg type, only arity *)
   [%expect
     {|
-    (* require-failed: lib/command_test_helpers/test/src/test_validate_command_line.ml:LINE:COL. *)
-    "did not raise" |}];
+    Error parsing command line:
+
+      failed to parse A value "not a valid int"
+      (Failure "Int.of_string: \"not a valid int\"")
+
+    For usage information, run
+
+      CMD -help
+
+    (command.ml.Exit_called (status 1)) |}];
   ignore ()
 ;;
 
@@ -216,11 +222,18 @@ let%expect_test "flags" =
 
     (command.ml.Exit_called (status 1)) |}];
   require_error (test_flags [ "-b"; "_" ]) ~cr:Comment;
-  (* Validating by reconstruction cannot test arg type, only arity *)
   [%expect
     {|
-    (* require-failed: lib/command_test_helpers/test/src/test_validate_command_line.ml:LINE:COL. *)
-    "did not raise" |}];
+    Error parsing command line:
+
+      failed to parse -b value "_".
+      (Failure "Int.of_string: \"_\"")
+
+    For usage information, run
+
+      CMD -help
+
+    (command.ml.Exit_called (status 1)) |}];
   require_ok (test_flags [ "-b"; "1" ]);
   [%expect {| |}];
   require_error (test_flags [ "-b" ]);
@@ -236,18 +249,25 @@ let%expect_test "flags" =
 
     (command.ml.Exit_called (status 1)) |}];
   require_error (test_flags [ "-b"; "-b" ]) ~cr:Comment;
-  (* Validating by reconstruction cannot test arg type, only arity *)
-  [%expect
-    {|
-    (* require-failed: lib/command_test_helpers/test/src/test_validate_command_line.ml:LINE:COL. *)
-    "did not raise" |}];
-  require_error (test_flags [ "-b"; "-b"; "_" ]);
-  (* Wrong error raised: Validating by reconstruction cannot test arg type, only arity *)
   [%expect
     {|
     Error parsing command line:
 
-      too many anonymous arguments
+      failed to parse -b value "-b".
+      (Failure "Int.of_string: \"-b\"")
+
+    For usage information, run
+
+      CMD -help
+
+    (command.ml.Exit_called (status 1)) |}];
+  require_error (test_flags [ "-b"; "-b"; "_" ]);
+  [%expect
+    {|
+    Error parsing command line:
+
+      failed to parse -b value "-b".
+      (Failure "Int.of_string: \"-b\"")
 
     For usage information, run
 
@@ -297,12 +317,11 @@ let%expect_test "flags" =
       [ flag ~doc:"" "--" escape |> map ~f:(Option.map ~f:(List.map ~f:Int.of_string)) ]
   in
   require_error (test_escape [ "--"; "foo" ]);
-  (* Wrong error raised: Validation by reconstruction cannot handle side-effects like escape args *)
   [%expect
     {|
     Error parsing command line:
 
-      too many anonymous arguments
+      (Failure "Int.of_string: \"foo\"")
 
     For usage information, run
 
@@ -310,19 +329,7 @@ let%expect_test "flags" =
 
     (command.ml.Exit_called (status 1)) |}];
   require_ok (test_escape [ "--"; "1" ]) ~cr:Comment;
-  (* Validation by reconstruction cannot handle side-effects like escape args *)
-  [%expect
-    {|
-    Error parsing command line:
-
-      too many anonymous arguments
-
-    For usage information, run
-
-      CMD -help
-
-    (* require-failed: lib/command_test_helpers/test/src/test_validate_command_line.ml:LINE:COL. *)
-    ("unexpectedly raised" (command.ml.Exit_called (status 1))) |}];
+  [%expect {| |}];
   let test_alias_excluded_from_help = test [] in
   require_ok (test_alias_excluded_from_help [ "--help" ]);
   [%expect
@@ -340,11 +347,17 @@ let%expect_test "flags" =
     test [ unit_flag "-foo" (required int) ~full_flag_required:() ]
   in
   require_error (test_full_flag_required [ "-f"; "1" ]) ~cr:Comment;
-  (* Validating by reconstruction cannot test full-flag-required *)
   [%expect
     {|
-    (* require-failed: lib/command_test_helpers/test/src/test_validate_command_line.ml:LINE:COL. *)
-    "did not raise" |}];
+    Error parsing command line:
+
+      unknown flag -f
+
+    For usage information, run
+
+      CMD -help
+
+    (command.ml.Exit_called (status 1)) |}];
   let test_num_occurrences f =
     let test = test [ unit_flag "-a" (f int) ] in
     List.init 3 ~f:(List.init ~f:(const [ "-a"; "1" ]) >> List.concat)
@@ -397,5 +410,16 @@ let%expect_test "flags" =
       CMD -help
 
     (command.ml.Exit_called (status 1)) |}];
+  ()
+;;
+
+let%expect_test "does not execute function" =
+  let command =
+    basic
+      (let%map_open.Command s = flag "-print" (required string) ~doc:"" in
+       fun () -> print_endline s)
+  in
+  validate command [ "-print"; "don't print me" ] () |> ok_exn;
+  [%expect {||}];
   ()
 ;;

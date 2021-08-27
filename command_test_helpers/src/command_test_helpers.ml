@@ -10,7 +10,7 @@ let parse_command_line_raw ~path ~summary param args =
     | None | Some [] -> default_command_name, []
     | Some (hd :: tl) -> hd, tl
   in
-  let argv = name :: path @ args in
+  let argv = (name :: path) @ args in
   let value = ref None in
   let command =
     List.fold_right
@@ -166,6 +166,72 @@ module Validate_command_line = struct
   ;;
 end
 
+module Validate_command = struct
+  let rec error_if_would_exec (shape : Command.Shape.t) args =
+    match shape with
+    | Basic (_ : Command.Shape.Base_info.t) -> None
+    | Exec (exec_info, (_ : unit -> Command.Shape.t)) ->
+      let exec_info =
+        (* We elide the working dir unconditionally because this is only called in
+           tests. But show the [exec_info] in case people don't know where their execs
+           are. *)
+        { exec_info with working_dir = "ELIDED-IN-TEST" }
+      in
+      Some
+        (Error.create_s
+           [%message
+             "Cannot validate [Exec _] commands" (exec_info : Command.Shape.Exec_info.t)])
+    | Group group_info ->
+      (match args with
+       | [] -> None
+       | arg :: args ->
+         (match Command.Shape.Group_info.find_subcommand group_info arg with
+          | Ok shape -> error_if_would_exec shape args
+          | Error (_ : Error.t) -> None))
+    | Lazy lazy_shape -> error_if_would_exec (force lazy_shape) args
+  ;;
+
+  let built_in_args =
+    lazy
+      (let multi_dash_allowed =
+         let one_or_two_dashes_allowed x = [ "-" ^ x; "--" ^ x ] in
+         let%bind.List arg = [ "help"; "build-info"; "version" ] in
+         one_or_two_dashes_allowed arg
+       in
+       "-?" :: multi_dash_allowed |> String.Set.of_list)
+  ;;
+
+  let raise_built_in_args_out_of_sync () =
+    (* 2021-07: The state of [Command] is such that we cannot easily enumerate
+       [built_in_args] even from inside the [Command] code. *)
+    raise_s
+      [%message
+        "BUG: Unexpected non-local exit from command parsing. Ask a \
+         [Command_test_helpers] dev if [built_in_args] is out of sync."]
+  ;;
+
+  let is_built_in_command_that_exits_before_parsing_succeeds args =
+    List.exists args ~f:(Set.mem (force built_in_args))
+  ;;
+
+  let f command args =
+    match error_if_would_exec (Command_unix.shape command) args with
+    | Some error -> Error error
+    | None ->
+      Or_error.try_with (fun () ->
+        with_return (fun { return } ->
+          Command_unix.run
+            command
+            ~argv:(default_command_name :: args)
+            ~when_parsing_succeeds:return;
+          (* We expect either to have succeeded or raised by now, unless... *)
+          match is_built_in_command_that_exits_before_parsing_succeeds args with
+          | true -> ()
+          | false -> raise_built_in_args_out_of_sync ()))
+  ;;
+end
+
+let validate_command = Validate_command.f
 let validate_command_line = Validate_command_line.f
 
 let with_env ~var ~value ~f =

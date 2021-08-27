@@ -21,6 +21,18 @@ val parse_command_line
   -> (?on_error:(unit -> unit) -> ?on_success:('a -> unit) -> string list -> unit)
        Staged.t
 
+(** [validate_command command] provides a function [f] s.t. [f args] will parse the args
+    against [command] without executing the body of [command] if parsing succeeds.
+
+    [f args] will raise if [args] goes through an [Exec _].
+
+    This will trigger any side-effects caused by parsing the args but it does
+    guarentee the the args provided are completely valid.
+
+    [validate_command command] does not work in top-level expect tests.
+*)
+val validate_command : Command.t -> string list -> unit Or_error.t
+
 (** [validate_command_line shape] provides a function [f] s.t. [f args] is best-effort
     check of [args] against the command described by [shape], without actual execution of
     that command.
@@ -48,7 +60,6 @@ val parse_command_line
     3. Aliases excluded from help.  E.g., [--help].
 
     4. [full_flag_required].  We assume every flag can be passed by prefix.
-
 *)
 val validate_command_line : Command.Shape.t -> (string list -> unit Or_error.t) Or_error.t
 

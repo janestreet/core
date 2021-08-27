@@ -509,14 +509,19 @@ let wordexp = Or_error.unimplemented "Unix.wordexp"
 (* System information *)
 
 module Utsname = struct
-  type t =
-    { sysname: string;
-      nodename: string;
-      release: string;
-      version: string;
-      machine: string;
-    }
-  [@@deriving fields, sexp, compare]
+  module Stable = struct
+    module V1 = struct
+      type t =
+        { sysname: string;
+          nodename: string;
+          release: string;
+          version: string;
+          machine: string;
+        }
+      [@@deriving fields, bin_io, sexp, compare]
+    end
+  end
+  include Stable.V1
 end
 
 external uname : unit -> Utsname.t = "core_unix_uname"
@@ -3103,4 +3108,5 @@ module Stable = struct
   module Inet_addr = Inet_addr.Stable
   module Cidr = Cidr.Stable
   module Signal = Signal.Stable
+  module Utsname = Utsname.Stable
 end

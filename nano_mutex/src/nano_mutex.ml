@@ -264,10 +264,9 @@ let unlock t =
   (* BEGIN ATOMIC *)
   if Thread_id_option.is_some t.id_of_thread_holding_lock
   then
-    if
-      Thread_id_option.equal
-        t.id_of_thread_holding_lock
-        (current_thread_id |> Thread_id_option.some)
+    if Thread_id_option.equal
+         t.id_of_thread_holding_lock
+         (current_thread_id |> Thread_id_option.some)
     then (
       t.id_of_thread_holding_lock <- Thread_id_option.none;
       (* END ATOMIC *)
