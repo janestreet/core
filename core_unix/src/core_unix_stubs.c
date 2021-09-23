@@ -725,7 +725,14 @@ struct ifreq core_build_ifaddr_request(const char *interface)
   struct ifreq ifr;
   memset(&ifr, 0, sizeof(ifr));
   ifr.ifr_addr.sa_family = AF_INET;
+#if __GNUC_PREREQ(8,0)
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wstringop-truncation"
+#endif
   strncpy(ifr.ifr_name, interface, sizeof(ifr.ifr_name));
+#if __GNUC_PREREQ(8,0)
+#  pragma GCC diagnostic pop
+#endif
 
   assert(sizeof(ifr.ifr_name) == IFNAMSIZ);
   if (ifr.ifr_name[IFNAMSIZ-1] != '\0')

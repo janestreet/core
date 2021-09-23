@@ -164,6 +164,6 @@ iobuf_unsafe_pokef_double
 }
 
 CAMLprim value iobuf_unsafe_pokef_double_bytecode(value* vals, value nvals) {
-  assert(nvals = 4);
+  assert(nvals == 4);
   return iobuf_unsafe_pokef_double(vals[0], vals[1], vals[2], Double_val(vals[3]));
 }

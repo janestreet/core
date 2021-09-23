@@ -367,6 +367,18 @@ module type S = sig
       than the number of cores available to the calling process. *)
   val cores : (unit -> int) Or_error.t
 
+  (** Parse a kernel %*pbl-format CPU list (e.g. [1,2,3,10-15]) into an [int list]. *)
+  val cpu_list_of_string_exn : string -> int list
+
+  (** [isolated_cpus ()] returns the list of cores marked as isolated. *)
+  val isolated_cpus : (unit -> int list) Or_error.t
+
+  (** [online_cpus ()] returns the list of cores online for scheduling. *)
+  val online_cpus : (unit -> int list) Or_error.t
+
+  (** [cpus_local_to_nic ~ifname] returns the list of cores NUMA-local to [ifname]. *)
+  val cpus_local_to_nic : (ifname : string -> int list) Or_error.t
+
   (** [get_terminal_size term] returns [(rows, cols)], the number of rows and columns of
       the controlling terminal (raises if no controlling terminal), or of the specified
       file descriptor (useful when writing to stdout, because stdout doesn't have to be
@@ -602,5 +614,4 @@ module type S = sig
           -> unit
           -> Set_attr_result.t) Or_error.t
   end
-
 end

@@ -2502,7 +2502,7 @@ let%test_module "Time.Stable.Span" =
       ]
     ;;
 
-    let examples = [ Span.zero ] @ units @ [ List.sum (module Span) units ~f:ident ]
+    let examples = [ Span.zero ] @ units @ [ List.sum (module Span) units ~f:Fn.id ]
 
     let%expect_test "V1" =
       print_and_check_stable_type

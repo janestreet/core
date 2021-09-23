@@ -100,6 +100,109 @@ module Peer_credentials = struct
   [@@deriving sexp_of]
 end
 
+(* This expands a kernel command-line cpu-list string, which is a comma-separated list
+   with elements:
+
+   {|
+   N        single value
+   N-M      closed range
+   N-M:A/S  groups of (A)mount in closed range with (S)tride
+   |}
+
+   See: https://www.kernel.org/doc/html/v4.14/admin-guide/kernel-parameters.html
+*)
+let cpu_list_of_string_exn str =
+  let parse_int_pair ~sep str =
+    try
+      (* NOTE: since we're dealing with CPUs, don't need to handle negatives. *)
+      String.lsplit2_exn str ~on:sep
+      |> Tuple2.map ~f:int_of_string
+    with
+    | _ ->
+      raise_s
+        [%message
+          "cpu_list_of_string_exn: expected separated integer pair"
+            (sep : char)
+            (str : string)]
+  in
+  let parse_range_pair str =
+    let first, last = parse_int_pair ~sep:'-' str in
+    if first > last
+    then
+      raise_s
+        [%message
+          "cpu_list_of_string_exn: range start is after end" (first : int) (last : int)]
+    else first, last
+  in
+  let parts = String.split ~on:',' str in
+  List.fold parts ~init:[] ~f:(fun acc part ->
+    (* first, see if we've got a ':' for a grouped range. *)
+    match String.lsplit2 part ~on:':', String.lsplit2 part ~on:'-' with
+    | None, None ->
+      (* Single value. *)
+      let cpu =
+        try int_of_string part with
+        | _ ->
+          raise_s
+            [%message "cpu_list_of_string_exn: expected integer" (part : string)]
+      in
+      acc @ [ cpu ]
+    | None, Some _range ->
+      (* Simple range. *)
+      let first, last = parse_range_pair part in
+      let rlist = List.init (last - first + 1) ~f:(Int.( + ) first) in
+      acc @ rlist
+    | Some (range, amt_stride), _ ->
+      let first, last = parse_range_pair range in
+      let amt, stride = parse_int_pair ~sep:'/' amt_stride in
+      if amt <= 0 || stride <= 0
+      then
+        (* A kernel won't treat these kindly, they're wrong and we'll
+           raise in this code. *)
+        raise_s
+          [%message
+            "cpu_list_of_string_exn: invalid grouped range stride or amount"
+              (amt : int)
+              (stride : int)]
+      else if amt >= stride
+      then (
+        (* odd, but valid: whole closed range. *)
+        let rlist = List.init (last - first + 1) ~f:(Int.( + ) first) in
+        acc @ rlist)
+      else (
+        (* This is probably simpler with procedural code, but
+           we'll do it functional-style :o).  *)
+        let n_sublists =
+          Float.round_up ((last - first + 1) // stride) |> Float.to_int
+        in
+        let starts = List.init n_sublists ~f:(fun li -> first + (li * stride)) in
+        let rlist =
+          List.concat_map starts ~f:(fun start ->
+            let group_end = Int.min (start + (amt - 1)) last in
+            List.init (group_end - start + 1) ~f:(Int.( + ) start))
+        in
+        acc @ rlist))
+  |> List.dedup_and_sort ~compare:Int.compare
+;;
+
+let cpu_list_of_file_exn file =
+  match In_channel.with_file file ~f:In_channel.input_lines |> List.hd with
+  | None -> []
+  | Some cpu_list -> cpu_list_of_string_exn cpu_list
+;;
+
+let isolated_cpus =
+  Memo.unit (fun () -> cpu_list_of_file_exn "/sys/devices/system/cpu/isolated")
+;;
+
+let online_cpus =
+  Memo.unit (fun () -> cpu_list_of_file_exn "/sys/devices/system/cpu/online")
+;;
+
+let cpus_local_to_nic ~ifname =
+  cpu_list_of_file_exn (sprintf "/sys/class/net/%s/device/local_cpulist" ifname)
+;;
+
 (* These module contains definitions that get used when the necessary features are not
    enabled. We put these somewhere where they'll always be compiled, to prevent them from
    getting out of sync with the real implementations. *)
@@ -111,31 +214,35 @@ module Null_toplevel = struct
   end
 
   let u = Or_error.unimplemented
-  let cores                          = u "Linux_ext.cores"
-  let file_descr_realpath            = u "Linux_ext.file_descr_realpath"
-  let get_ipv4_address_for_interface = u "Linux_ext.get_ipv4_address_for_interface"
-  let get_mac_address                = u "Linux_ext.get_mac_address"
-  let bind_to_interface              = u "Linux_ext.bind_to_interface"
-  let get_bind_to_interface          = u "Linux_ext.get_bind_to_interface"
-  let get_terminal_size              = u "Linux_ext.get_terminal_size"
-  let gettcpopt_bool                 = u "Linux_ext.gettcpopt_bool"
-  let setpriority                    = u "Linux_ext.setpriority"
-  let getpriority                    = u "Linux_ext.getpriority"
-  let in_channel_realpath            = u "Linux_ext.in_channel_realpath"
-  let out_channel_realpath           = u "Linux_ext.out_channel_realpath"
-  let pr_get_name                    = u "Linux_ext.pr_get_name"
-  let pr_get_pdeathsig               = u "Linux_ext.pr_get_pdeathsig"
-  let pr_set_name_first16            = u "Linux_ext.pr_set_name_first16"
-  let pr_set_pdeathsig               = u "Linux_ext.pr_set_pdeathsig"
-  let sched_setaffinity              = u "Linux_ext.sched_setaffinity"
-  let sched_getaffinity              = u "Linux_ext.sched_getaffinity"
-  let sched_setaffinity_this_thread  = u "Linux_ext.sched_setaffinity_this_thread"
-  let send_no_sigpipe                = u "Linux_ext.send_no_sigpipe"
-  let send_nonblocking_no_sigpipe    = u "Linux_ext.send_nonblocking_no_sigpipe"
-  let sendfile                       = u "Linux_ext.sendfile"
-  let sendmsg_nonblocking_no_sigpipe = u "Linux_ext.sendmsg_nonblocking_no_sigpipe"
-  let settcpopt_bool                 = u "Linux_ext.settcpopt_bool"
-  let peer_credentials               = u "Linux_ext.peer_credentials"
+  let cores                              = u "Linux_ext.cores"
+  let cpu_list_of_string_exn             = cpu_list_of_string_exn
+  let isolated_cpus                      = u "Linux_ext.isolated_cores"
+  let online_cpus                        = u "Linux_ext.online_cores"
+  let cpus_local_to_nic                  = u "Linux_ext.cpus_local_to_nic"
+  let file_descr_realpath                = u "Linux_ext.file_descr_realpath"
+  let get_ipv4_address_for_interface     = u "Linux_ext.get_ipv4_address_for_interface"
+  let get_mac_address                    = u "Linux_ext.get_mac_address"
+  let bind_to_interface                  = u "Linux_ext.bind_to_interface"
+  let get_bind_to_interface              = u "Linux_ext.get_bind_to_interface"
+  let get_terminal_size                  = u "Linux_ext.get_terminal_size"
+  let gettcpopt_bool                     = u "Linux_ext.gettcpopt_bool"
+  let setpriority                        = u "Linux_ext.setpriority"
+  let getpriority                        = u "Linux_ext.getpriority"
+  let in_channel_realpath                = u "Linux_ext.in_channel_realpath"
+  let out_channel_realpath               = u "Linux_ext.out_channel_realpath"
+  let pr_get_name                        = u "Linux_ext.pr_get_name"
+  let pr_get_pdeathsig                   = u "Linux_ext.pr_get_pdeathsig"
+  let pr_set_name_first16                = u "Linux_ext.pr_set_name_first16"
+  let pr_set_pdeathsig                   = u "Linux_ext.pr_set_pdeathsig"
+  let sched_setaffinity                  = u "Linux_ext.sched_setaffinity"
+  let sched_getaffinity                  = u "Linux_ext.sched_getaffinity"
+  let sched_setaffinity_this_thread      = u "Linux_ext.sched_setaffinity_this_thread"
+  let send_no_sigpipe                    = u "Linux_ext.send_no_sigpipe"
+  let send_nonblocking_no_sigpipe        = u "Linux_ext.send_nonblocking_no_sigpipe"
+  let sendfile                           = u "Linux_ext.sendfile"
+  let sendmsg_nonblocking_no_sigpipe     = u "Linux_ext.sendmsg_nonblocking_no_sigpipe"
+  let settcpopt_bool                     = u "Linux_ext.settcpopt_bool"
+  let peer_credentials                   = u "Linux_ext.peer_credentials"
 
   module Epoll = struct
     module Flags = Epoll_flags (struct
@@ -1063,6 +1170,9 @@ module Epoll = struct
 end
 
 let cores                          = Ok cores
+let isolated_cpus                  = Ok isolated_cpus
+let online_cpus                    = Ok online_cpus
+let cpus_local_to_nic              = Ok cpus_local_to_nic
 let file_descr_realpath            = Ok file_descr_realpath
 let get_ipv4_address_for_interface = Ok get_ipv4_address_for_interface
 let get_mac_address                = Ok get_mac_address

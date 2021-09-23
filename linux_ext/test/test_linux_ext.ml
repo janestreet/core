@@ -486,3 +486,44 @@ let%test_unit "peer_credentials" =
           [%test_eq: int] p.uid (Unix.getuid ());
           [%test_eq: int] p.gid (Unix.getgid ())))
 ;;
+
+let%expect_test "cpu_list_of_string_exn" =
+  let cpu_lines =
+    [ "0"
+    ; "0,2,10"
+    ; "0,2-5"
+    ; "5-2"
+    ; "0,2-5:6/2"
+    ; "0-15:1/2,9-15:1/2"
+    ; "3-"
+    ; "0-3:10/20"
+    ; "0-3:0/20"
+    ; "0-3:-2/0"
+    ; "0-3:0/0"
+    ]
+  in
+  List.iter cpu_lines ~f:(fun cpu_list ->
+    try
+      let cpulist = Linux_ext.cpu_list_of_string_exn cpu_list in
+      let strlist = List.map cpulist ~f:string_of_int |> String.concat ~sep:"," in
+      print_endline [%string "CPUs: %{strlist}"]
+    with
+    | e -> print_endline [%string "Error: %{e#Exn}"]);
+  [%expect
+    {|
+    CPUs: 0
+    CPUs: 0,2,10
+    CPUs: 0,2,3,4,5
+    Error: ("cpu_list_of_string_exn: range start is after end" (first 5) (last 2))
+    CPUs: 0,2,3,4,5
+    CPUs: 0,2,4,6,8,9,10,11,12,13,14,15
+    Error: ("cpu_list_of_string_exn: expected separated integer pair" (sep -) (str 3-))
+    CPUs: 0,1,2,3
+    Error: ("cpu_list_of_string_exn: invalid grouped range stride or amount" (amt 0)
+      (stride 20))
+    Error: ("cpu_list_of_string_exn: invalid grouped range stride or amount" (amt -2)
+      (stride 0))
+    Error: ("cpu_list_of_string_exn: invalid grouped range stride or amount" (amt 0)
+      (stride 0))
+    |}]
+;;
