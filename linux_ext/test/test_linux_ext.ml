@@ -489,7 +489,8 @@ let%test_unit "peer_credentials" =
 
 let%expect_test "cpu_list_of_string_exn" =
   let cpu_lines =
-    [ "0"
+    [ ""
+    ; "0"
     ; "0,2,10"
     ; "0,2-5"
     ; "5-2"
@@ -511,6 +512,7 @@ let%expect_test "cpu_list_of_string_exn" =
     | e -> print_endline [%string "Error: %{e#Exn}"]);
   [%expect
     {|
+    CPUs:
     CPUs: 0
     CPUs: 0,2,10
     CPUs: 0,2,3,4,5

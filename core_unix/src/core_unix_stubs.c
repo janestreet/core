@@ -725,18 +725,17 @@ struct ifreq core_build_ifaddr_request(const char *interface)
   struct ifreq ifr;
   memset(&ifr, 0, sizeof(ifr));
   ifr.ifr_addr.sa_family = AF_INET;
-
   if(strnlen(interface, IFNAMSIZ) >= IFNAMSIZ)
     caml_failwith("build_ifaddr_request: interface name string too long");
   else {
     assert(sizeof(ifr.ifr_name) == IFNAMSIZ);
-    /* -1 here makes no sense because we're filling the whole [ifr_name],
-       but we write it this way to avoid the silly stringop-truncation warning
-       introduced in GCC 8. */
+    /* -1 here makes it clear that we're not overwriting the null terminator character.
+       In particular GCC 8 complains with a stringop-truncation warning if
+       we overrite the whole ifr_name including the last byte.
+       The last byte is initialized to zero by the [memset] above.
+    */
     strncpy(ifr.ifr_name, interface, sizeof(ifr.ifr_name)-1);
-    ifr.ifr_name[sizeof(ifr.ifr_name)-1] = '\0';
   }
-
   return ifr;
 }
 

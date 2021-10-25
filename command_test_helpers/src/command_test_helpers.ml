@@ -4,7 +4,7 @@ module Unix = Core_unix
 
 let default_command_name = "CMD"
 
-let parse_command_line_raw ~path ~summary param args =
+let parse_command_line_raw ~path ~summary ?readme param args =
   let name, path =
     match path with
     | None | Some [] -> default_command_name, []
@@ -19,6 +19,7 @@ let parse_command_line_raw ~path ~summary param args =
       ~init:
         (Command.basic
            ~summary
+           ?readme
            (let%map_open.Command x = param in
             fun () -> value := Some x))
   in
@@ -28,12 +29,22 @@ let parse_command_line_raw ~path ~summary param args =
   | Some x -> Ok x
 ;;
 
-let parse_command_line ?path ?(summary = default_command_name ^ " SUMMARY") param =
+let parse_command_line ?path ?(summary = default_command_name ^ " SUMMARY") ?readme param =
   stage (fun ?(on_error = ignore) ?(on_success = ignore) args ->
-    let result = parse_command_line_raw ~path ~summary param args in
+    let result = parse_command_line_raw ~path ~summary ?readme param args in
     match result with
     | Error `Aborted_command_line_parsing__exit_code_already_printed -> on_error ()
     | Ok x -> on_success x)
+;;
+
+let cannot_validate_exec_error (exec_info : Command.Shape.Exec_info.t) =
+  let s =
+    "[Exec _] commands are not validated to avoid unexpected external dependencies."
+  in
+  (* Elide working dir unconditionally because this is only called in tests. But
+     show the [exec_info] in case people don't know where their execs are. *)
+  let exec_info = { exec_info with working_dir = "ELIDED-IN-TEST" } in
+  error_s [%message s (exec_info : Command.Shape.Exec_info.t)]
 ;;
 
 module Validate_command_line = struct
@@ -134,11 +145,7 @@ module Validate_command_line = struct
   let command_of_shape (shape : Command.Shape.t) =
     let rec of_shape : Command.Shape.t -> _ = function
       | Basic base_info -> param_of_basic base_info
-      | Exec (exec_info, _) ->
-        error_s
-          [%message
-            "[Exec _] is forbidden to avoid unexpected external dependencies."
-              (exec_info : Command.Shape.Exec_info.t)]
+      | Exec (exec_info, _) -> cannot_validate_exec_error exec_info
       | Group group_info -> of_group group_info
       | Lazy shape -> of_shape (force shape)
     and of_group ({ summary; readme; subcommands } : _ Command.Shape.Group_info.t) =
@@ -171,16 +178,7 @@ module Validate_command = struct
     match shape with
     | Basic (_ : Command.Shape.Base_info.t) -> None
     | Exec (exec_info, (_ : unit -> Command.Shape.t)) ->
-      let exec_info =
-        (* We elide the working dir unconditionally because this is only called in
-           tests. But show the [exec_info] in case people don't know where their execs
-           are. *)
-        { exec_info with working_dir = "ELIDED-IN-TEST" }
-      in
-      Some
-        (Error.create_s
-           [%message
-             "Cannot validate [Exec _] commands" (exec_info : Command.Shape.Exec_info.t)])
+      cannot_validate_exec_error exec_info |> Result.error
     | Group group_info ->
       (match args with
        | [] -> None

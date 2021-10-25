@@ -11,12 +11,14 @@ build: [
 ]
 depends: [
   "ocaml" {>= "4.08.0"}
+  "base"
   "core_kernel"
   "expect_test_helpers_core"
   "jane-street-headers"
   "jst-config"
   "ocaml_intrinsics"
   "ppx_jane"
+  "record_builder"
   "sexplib"
   "timezone"
   "base-threads"

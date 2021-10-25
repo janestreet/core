@@ -3,7 +3,8 @@
  (c_names unix_pseudo_terminal_stubs) (preprocessor_deps config_ext.h)
  (preprocess (pps ppx_jane)))
 
-(install (section lib) (files (config_ext.h as unix_pseudo_terminal/config_ext.h)))
+(install (section lib)
+ (files (config_ext.h as unix_pseudo_terminal/config_ext.h)))
 
 (rule (targets config_ext.h) (deps (:first_dep discover.sh))
  (action (bash "./%{first_dep} config_ext.h %{lib:jst-config:config.h}")))

@@ -213,3 +213,63 @@ module Enumerable_sexpable = struct
       (command.ml.Exit_called (status 0)) |}]
   ;;
 end
+
+module Prefixes = struct
+  module T = struct
+    type t =
+      | Unique_prefix
+      | Non_unique_alpha
+      | Non_unique_beta
+    [@@deriving compare, enumerate, sexp_of]
+  end
+
+  include T
+
+  let arg_type = Command.Arg_type.enumerated_sexpable (module T)
+
+  let fully_specified_arg_type =
+    Command.Arg_type.enumerated_sexpable ~accept_unique_prefixes:false (module T)
+  ;;
+
+  let test str =
+    let parse arg_type = Command.Arg_type.For_testing.parse arg_type str in
+    let partials_allowed = parse arg_type in
+    let no_partials_allowed = parse fully_specified_arg_type in
+    if [%compare.equal: t Or_error.t] partials_allowed no_partials_allowed
+    then print_s [%sexp (partials_allowed : t Or_error.t)]
+    else
+      print_s
+        [%message (partials_allowed : t Or_error.t) (no_partials_allowed : t Or_error.t)]
+  ;;
+
+  let%expect_test _ =
+    test "U";
+    [%expect
+      {|
+      ((partials_allowed (Ok Unique_prefix))
+       (no_partials_allowed (
+         Error (
+           Failure
+           "valid arguments: {Non_unique_alpha,Non_unique_beta,Unique_prefix}")))) |}];
+    test "this isn't any kind of prefix";
+    [%expect
+      {|
+      (Error (
+        Failure "valid arguments: {Non_unique_alpha,Non_unique_beta,Unique_prefix}")) |}];
+    test "Non_unique_";
+    [%expect
+      {|
+      (Error (
+        Failure "valid arguments: {Non_unique_alpha,Non_unique_beta,Unique_prefix}")) |}];
+    test "Non_unique_a";
+    [%expect
+      {|
+      ((partials_allowed (Ok Non_unique_alpha))
+       (no_partials_allowed (
+         Error (
+           Failure
+           "valid arguments: {Non_unique_alpha,Non_unique_beta,Unique_prefix}")))) |}];
+    test "Non_unique_beta";
+    [%expect {| (Ok Non_unique_beta) |}]
+  ;;
+end

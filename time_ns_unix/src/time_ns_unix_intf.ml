@@ -38,6 +38,8 @@ module type Span = sig
         Comparable.Stable.V1.S
         with type comparable := t
         with type comparator_witness := comparator_witness
+
+      include Stringable.S with type t := t
     end
   end
 
@@ -280,6 +282,8 @@ module type Time_ns_unix = sig
           Comparable.Stable.V1.S
           with type comparable := t
           with type comparator_witness := comparator_witness
+
+        include Stringable.S with type t := t
       end
 
       module Option : sig

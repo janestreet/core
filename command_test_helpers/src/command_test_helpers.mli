@@ -17,6 +17,7 @@ open! Import
 val parse_command_line
   :  ?path:string list
   -> ?summary:string
+  -> ?readme:(unit -> string)
   -> 'a Command.Param.t
   -> (?on_error:(unit -> unit) -> ?on_success:('a -> unit) -> string list -> unit)
        Staged.t

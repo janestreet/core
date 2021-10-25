@@ -134,7 +134,8 @@ let cpu_list_of_string_exn str =
           "cpu_list_of_string_exn: range start is after end" (first : int) (last : int)]
     else first, last
   in
-  let parts = String.split ~on:',' str in
+  (* Empty cpu-list is represented as an empty string. *)
+  let parts = if String.(str = "") then [] else String.split ~on:',' str in
   List.fold parts ~init:[] ~f:(fun acc part ->
     (* first, see if we've got a ':' for a grouped range. *)
     match String.lsplit2 part ~on:':', String.lsplit2 part ~on:'-' with
@@ -1076,10 +1077,17 @@ module Epoll = struct
   let set t fd flags =
     let t = in_use_exn t in
     let already_present = Table.mem t.flags_by_fd fd in
-    Table.set t.flags_by_fd ~key:fd ~data:flags;
-    if already_present
-    then epoll_ctl_mod t.epollfd fd flags
-    else epoll_ctl_add t.epollfd fd flags
+    (* Both [epoll_ctl_add] and [epoll_ctl_mod] may raise if the file descriptor does not
+       support polling. Perform these operations first and let them raise before modifying
+       the table to reflect the change in epoll state. *)
+    let () =
+      if already_present
+      then
+        epoll_ctl_mod t.epollfd fd flags
+      else
+        epoll_ctl_add t.epollfd fd flags
+    in
+    Table.set t.flags_by_fd ~key:fd ~data:flags
   ;;
 
   let remove t fd =

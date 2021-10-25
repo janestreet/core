@@ -815,6 +815,17 @@ module Span = struct
       let%bench "t_of_sexp (kd+)" = t_of_sexp sexp_of_pi_kilodays
       let%bench "t_of_sexp (d.)" = t_of_sexp sexp_of_decimal_pi_days
 
+      let to_string = to_string
+
+      let%bench "to_string (s)" = to_string second
+      let%bench "to_string (kd+)" = to_string pi_kilodays
+
+      let of_string = of_string
+
+      let%bench "of_string (s)" = of_string string_of_second
+      let%bench "of_string (kd+)" = of_string string_of_pi_kilodays
+      let%bench "of_string (d.)" = of_string string_of_decimal_pi_days
+
       let to_int63 = to_int63
 
       let%bench "to_int63" = to_int63 day
@@ -3272,6 +3283,17 @@ module Stable = struct
       let%bench "t_of_sexp (s)" = t_of_sexp sexp_of_second
       let%bench "t_of_sexp (kd+)" = t_of_sexp sexp_of_pi_kilodays
       let%bench "t_of_sexp (d.)" = t_of_sexp sexp_of_decimal_pi_days
+
+      let to_string = to_string
+
+      let%bench "to_string (s)" = to_string second
+      let%bench "to_string (kd+)" = to_string pi_kilodays
+
+      let of_string = of_string
+
+      let%bench "of_string (s)" = of_string string_of_second
+      let%bench "of_string (kd+)" = of_string string_of_pi_kilodays
+      let%bench "of_string (d.)" = of_string string_of_decimal_pi_days
 
       let to_int63 = to_int63
 
