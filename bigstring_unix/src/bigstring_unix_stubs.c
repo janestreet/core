@@ -263,35 +263,8 @@ CAMLprim value bigstring_recvfrom_assume_fd_is_nonblocking_stub(
 
 /* I/O of bigstrings from channels */
 
-typedef off_t file_offset;
-
-#define IO_BUFFER_SIZE 65536
-
-struct channel {
-  int fd;                       /* Unix file descriptor */
-  file_offset offset;           /* Absolute position of fd in the file */
-  char * end;                   /* Physical end of the buffer */
-  char * curr;                  /* Current position in the buffer */
-  char * max;                   /* Logical end of the buffer (for input) */
-  void * mutex;                 /* Placeholder for mutex (for systhreads) */
-  struct channel * next, * prev;/* Double chaining of channels (flush_all) */
-  int revealed;                 /* For Cash only */
-  int old_revealed;             /* For Cash only */
-  int refcount;                 /* For flush_all and for Cash */
-  int flags;                    /* Bitfield */
-  char buff[IO_BUFFER_SIZE];    /* The buffer itself */
-};
-
-CAMLextern void (*caml_channel_mutex_lock) (struct channel *);
-CAMLextern void (*caml_channel_mutex_unlock) (struct channel *);
-
-#define Channel(v) (*((struct channel **) (Data_custom_val(v))))
-
-#define Lock(channel) \
-    if (caml_channel_mutex_lock != NULL) (*caml_channel_mutex_lock)(channel)
-
-#define Unlock(channel) \
-    if (caml_channel_mutex_unlock != NULL) (*caml_channel_mutex_unlock)(channel)
+#define CAML_INTERNALS
+#include <caml/io.h>
 
 CAMLprim value bigstring_input_stub(
   value v_min_len, value v_chan, value v_pos, value v_len, value v_bstr)

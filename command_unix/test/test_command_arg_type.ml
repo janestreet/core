@@ -100,7 +100,7 @@ let%expect_test "[of_alist_exn] duplicate keys" =
             (c c))))) |}]
 ;;
 
-module Enumerable_stringable = struct
+module _ = struct
   module T = struct
     type nonrec t =
       | A
@@ -160,7 +160,7 @@ module Enumerable_stringable = struct
   ;;
 end
 
-module Enumerable_sexpable = struct
+module _ = struct
   module T = struct
     type nonrec t =
       | A of t
@@ -214,7 +214,7 @@ module Enumerable_sexpable = struct
   ;;
 end
 
-module Prefixes = struct
+module _ = struct
   module T = struct
     type t =
       | Unique_prefix

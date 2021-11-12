@@ -1576,6 +1576,12 @@ module Ofday = struct
   let%bench "to_millisecond_string (morning)" = to_millisecond_string morning
   let%bench "to_millisecond_string (evening)" = to_millisecond_string evening
 
+  let to_microsecond_string = to_microsecond_string
+
+  let%bench "to_microsecond_string (midnight)" = to_microsecond_string start_of_day
+  let%bench "to_microsecond_string (morning)" = to_microsecond_string morning
+  let%bench "to_microsecond_string (evening)" = to_microsecond_string evening
+
   let of_string_iso8601_extended = of_string_iso8601_extended
 
   let%bench "of_string_iso8601_extended (midnight)" =

@@ -6,7 +6,7 @@ module Thread = Core_thread
 
 let%test_unit "nil is valid" = Private.(is_valid_exn nil)
 
-module Test = struct
+module _ = struct
   let test_size = 100_000
 
   let no_collisions l =

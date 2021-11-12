@@ -2210,7 +2210,7 @@ let%test_module "Time_ns" =
   end)
 ;;
 
-module Ofday_zoned = struct
+module _ = struct
   open Time_ns.Ofday.Zoned
 
   let%expect_test _ =

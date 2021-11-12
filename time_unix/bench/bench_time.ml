@@ -1792,8 +1792,6 @@ module Stable = struct
   module With_t_of_sexp_abs = struct
     module V1 = struct
       open Stable.With_t_of_sexp_abs.V1
-      module Map = Map
-      module Set = Set
 
       type nonrec t = t [@@deriving bin_io]
       type nonrec comparator_witness = comparator_witness

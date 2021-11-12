@@ -39,8 +39,6 @@ let%test_module _ =
 
            let equal = [%compare.equal: t]
 
-           module V = V1.Private.Variants
-
            let tests =
              make_stable_unit_tests_v1
                ~coerce:V1.Private.to_float
@@ -93,7 +91,6 @@ let%test_module "vs array" =
   (module struct
     open Interval.Int
     module Gen = Quickcheck.Generator
-    module Obs = Quickcheck.Observer
 
     let interval_of_length n =
       let open Gen.Let_syntax in

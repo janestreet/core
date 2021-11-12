@@ -207,8 +207,6 @@ let%test_unit _ =
       Unix.close fd)
 ;;
 
-module Recvmmsg_context = Recvmmsg_context
-
 let send_nonblocking_no_sigpipe = send_nonblocking_no_sigpipe
 let sendto_nonblocking_no_sigpipe = sendto_nonblocking_no_sigpipe
 

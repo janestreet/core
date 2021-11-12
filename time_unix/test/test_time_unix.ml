@@ -402,7 +402,7 @@ let%expect_test "in tests, [sexp_of_t] uses NYC's time zone" =
   [%expect {| (1969-12-31 19:00:00.000000-05:00) |}]
 ;;
 
-module Ofday_zoned = struct
+module _ = struct
   open Time.Ofday.Zoned
 
   let ( = ) = [%compare.equal: With_nonchronological_compare.t]

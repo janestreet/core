@@ -61,7 +61,7 @@ let test command args =
     |> print_endline
 ;;
 
-module Subcommands = struct
+module _ = struct
   let test =
     let command = basic (Command.Param.return Fn.id) in
     group [ "foo1", group [ "bar1", command; "qux", command ]; "foo2", command ] |> test
@@ -111,7 +111,7 @@ module Subcommands = struct
   ;;
 end
 
-module Misc = struct
+module _ = struct
   let%expect_test "misc__check_command_doesn't_actually_run" =
     let command =
       basic
@@ -136,7 +136,7 @@ module Misc = struct
   ;;
 end
 
-module Params = struct
+module _ = struct
   open Command.Param
 
   let unit_flag ?aliases ?full_flag_required name arg_type =
@@ -168,7 +168,7 @@ module Params = struct
       -|(command.ml.Exit_called (status 1)) |}]
   ;;
 
-  module Prefixes = struct
+  module _ = struct
     let test_prefix = test [ unit_flag "-foobar" no_arg; unit_flag "-fubar" no_arg ]
 
     let%expect_test "params_prefixes__unambiguous_prefix" =
@@ -192,7 +192,7 @@ module Params = struct
     ;;
   end
 
-  module Arg_types = struct
+  module _ = struct
     let test_flags args = test [ unit_flag "-a" no_arg; unit_flag "-b" (listed int) ] args
 
     let%expect_test "params_arg_types__not_passing_nonrequired_flags" =
@@ -294,7 +294,7 @@ module Params = struct
     ;;
   end
 
-  module Aliases = struct
+  module _ = struct
     let test_alias = test [ unit_flag "-a" no_arg ~aliases:[ "-b" ] ]
 
     let%expect_test "params_aliases__original_flag_passed" =
@@ -338,7 +338,7 @@ module Params = struct
     ;;
   end
 
-  module Anonymous_flags_and_args = struct
+  module _ = struct
     let test_anons_vs_flag_args =
       let unit_anon f = anon (f ("A" %: int) |> map_anons ~f:ignore) in
       test [ unit_anon Fn.id; unit_flag "-a" (optional int); unit_flag "-b" no_arg ]
@@ -375,7 +375,7 @@ module Params = struct
     ;;
   end
 
-  module Escape = struct
+  module _ = struct
     let test_escape args =
       let escape =
         [ flag ~doc:"" "--" escape |> map ~f:(Option.map ~f:(List.map ~f:Int.of_string)) ]
@@ -422,7 +422,7 @@ module Params = struct
     ;;
   end
 
-  module Counting = struct
+  module _ = struct
     let print ~make_args n result =
       "$ CMD" :: make_args n |> String.concat ~sep:" " |> print_endline;
       print_endline result
@@ -436,7 +436,7 @@ module Params = struct
         args
     ;;
 
-    module Flags = struct
+    module _ = struct
       let make_args = List.init ~f:(const [ "-a"; "1" ]) >> List.concat
       let print = print ~make_args
 
@@ -519,7 +519,7 @@ module Params = struct
       ;;
     end
 
-    module Anonymous_args = struct
+    module _ = struct
       let make_args = List.init ~f:(Int.succ >> Int.to_string)
       let print = print ~make_args
 

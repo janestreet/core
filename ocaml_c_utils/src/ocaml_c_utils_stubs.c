@@ -1,5 +1,6 @@
 /* Various utility functions for C <-> Caml interoperability. */
 
+
 #include <string.h>
 
 int strcmp_not_a_macro(const char* s1, const char* s2)

@@ -281,7 +281,7 @@ module Null_toplevel = struct
     (* let pwait _ ~timeout:_ _      = assert false *)
   end
 end
-module Null : Linux_ext_intf.S = struct
+module _ : Linux_ext_intf.S = struct
   type nonrec tcp_bool_option = tcp_bool_option =
       TCP_CORK | TCP_QUICKACK
   [@@deriving sexp, bin_io]

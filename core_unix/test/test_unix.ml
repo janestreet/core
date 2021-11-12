@@ -259,7 +259,7 @@ let%expect_test "strptime trailing input" =
   [%expect {| (Failure "unix_strptime: did not consume entire input") |}]
 ;;
 
-module Inet_addr = struct
+module _ = struct
   open Inet_addr
 
   (* Can we convert ip addr to an int? *)
