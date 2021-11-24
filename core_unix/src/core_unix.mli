@@ -5,17 +5,7 @@ open! Core
 open! Import
 
 (** File descriptor. *)
-module File_descr : sig
-  type t = Unix.file_descr
-  [@@deriving sexp_of]
-
-  include Equal     .S with type t := t
-  include Hashable  .S_plain with type t := t
-  include Stringable.S with type t := t
-
-  val of_int : int -> t
-  val to_int : t -> int
-end
+module File_descr = File_descr
 
 (** {6 Error report} *)
 
@@ -508,7 +498,8 @@ val fcntl_getfl : File_descr.t -> Open_flags.t
 
 (** [fcntl_setfl fd flags] sets the flags for [fd] in the open-file-descriptor table via
     the system call [fcntl(fd, F_SETFL, flags)].  See "man fcntl".  As per the Linux man
-    page, on Linux this only allows [append] and [nonblock] to be set. *)
+    page, on Linux this only allows [append], [async], [direct], [noatime], and [nonblock]
+    to be set. *)
 val fcntl_setfl : File_descr.t -> Open_flags.t -> unit
 
 (** Close a file descriptor. *)

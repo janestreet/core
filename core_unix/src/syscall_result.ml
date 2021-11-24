@@ -142,6 +142,7 @@ module Unit = Make (struct
     let of_int_exn n = assert (n = 0)
     let to_int () = 0
   end) ()
+module File_descr = Make (File_descr) ()
 
 let unit = Unit.create_ok ()
 let ignore_ok_value t = Core.Int.min t 0

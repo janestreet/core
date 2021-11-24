@@ -21,6 +21,7 @@ module Make (M : Arg) () : S with type ok_value := M.t
 
 module Int  : S with type ok_value := int
 module Unit : S with type ok_value := unit
+module File_descr : S with type ok_value := File_descr.t
 
 val create_error : Unix_error.t -> _ t
 
