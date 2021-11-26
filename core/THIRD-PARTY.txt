@@ -1,0 +1,22 @@
+The repository contains 3rd-party code in the following locations and
+under the following licenses:
+
+- src/union_find.ml and src/union_find.mli: based on an implementation
+  by Henry Matthew Fluet, Suresh Jagannathan, and Stephen
+  Weeks. License can be found in MLton-license.txt
+
+- various files in src/ are based on INRIA's OCaml
+  distribution. Relicensed under MIT, as permitted under the
+  Caml License for Consortium members:
+
+     http://caml.inria.fr/consortium/license.en.html
+
+  See also the disclaimer INRIA-DISCLAIMER.txt.
+
+- strftime.js in src/ is based on https://github.com/samsonjs/strftime
+  License can be found at:
+
+     http://sjs.mit-license.org
+
+  See copy strftime.js-license.txt
+  

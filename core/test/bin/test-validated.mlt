@@ -1,0 +1,36 @@
+open! Core
+
+module Positive_int = Validated.Make (struct
+    type t = int [@@deriving sexp]
+
+    let here = [%here]
+
+    let validate t =
+      if Int.( > ) t 0 then Validate.pass else Validate.fail "must be positive"
+    ;;
+  end)
+
+module Negative_int = Validated.Make (struct
+    type t = int [@@deriving sexp]
+
+    let here = [%here]
+
+    let validate t =
+      if Int.( < ) t 0 then Validate.pass else Validate.fail "must be negative"
+    ;;
+  end)
+
+let (_ : (Positive_int.t, Negative_int.t) Type_equal.t) = T
+
+[%%expect
+  {|
+Line _, characters _-_:
+Error: This expression has type (Positive_int.t, Positive_int.t) Type_equal.t
+       but an expression was expected of type
+         (Positive_int.t, Negative_int.t) Type_equal.t
+       Type Positive_int.t = (int, Positive_int.witness) Validated.t
+       is not compatible with type
+         Negative_int.t = (int, Negative_int.witness) Validated.t
+       Type Positive_int.witness is not compatible with type
+         Negative_int.witness
+|}]

@@ -1,0 +1,16 @@
+#verbose true
+
+open! Core
+open! Quickcheck.Let_syntax
+
+let quickcheck_generator =
+  let%map_open x =
+    let%map a = of_list [ "a"; "b" ] in
+    a ^ a
+  in
+  x ^ x
+;;
+
+[%%expect {|
+val quickcheck_generator : string Base_quickcheck.Generator.t = <abstr>
+|}]

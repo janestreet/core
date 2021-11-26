@@ -1,0 +1,15 @@
+(rule (targets config.h) (deps)
+ (action (bash "cp %{lib:jst-config:config.h} .")))
+
+(library (name core) (public_name core) (install_c_headers time_ns_stubs)
+ (libraries base base_bigstring base_for_tests base_quickcheck bin_prot
+  base.caml fieldslib jane-street-headers base.md5 ppx_assert.runtime-lib
+  ppx_hash.runtime-lib ppx_inline_test.runtime-lib sexplib splittable_random
+  stdio time_now typerep validate variantslib)
+ (c_flags :standard -D_LARGEFILE64_SOURCE)
+ (c_names bigstring_stubs md5_stubs array_stubs gc_stubs time_ns_stubs
+  heap_block_stubs)
+ (preprocess (pps ppx_jane)) (preprocessor_deps config.h)
+ (js_of_ocaml (javascript_files strftime.js runtime.js)))
+
+(documentation)

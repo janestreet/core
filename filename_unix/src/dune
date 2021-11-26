@@ -1,4 +1,0 @@
-(library (name filename_unix) (public_name core.filename_unix)
- (libraries core_kernel.core sys_unix) (preprocess (pps ppx_jane))
- (c_flags (:standard -D_LARGEFILE64_SOURCE) ())
- (c_names filename_unix_stubs))

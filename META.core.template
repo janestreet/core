@@ -1,6 +1,0 @@
-# JBUILDER_GEN
-
-package "syntax" (
- version = "[deprecated]"
- error = "core.syntax is deprecated, use ppx_jane instead"
-)

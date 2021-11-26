@@ -1,6 +1,0 @@
-(library (name lock_file_blocking) (public_name core.lock_file_blocking)
- (libraries core_kernel.core filename_unix linux_ext sys_unix)
- (preprocessor_deps config.h) (preprocess (pps ppx_jane)))
-
-(rule (targets config.h) (deps)
- (action (bash "cp %{lib:jst-config:config.h} %{targets}")))

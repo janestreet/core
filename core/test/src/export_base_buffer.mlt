@@ -1,0 +1,72 @@
+open! Core
+
+module Buffer_is_from_base : module type of struct
+  include Base.Buffer
+end =
+  Buffer
+
+[%%expect]
+
+module Buffer_is_from_caml : module type of struct
+  include Caml.Buffer
+end =
+  Buffer
+
+[%%expect
+  {|
+Line _, characters _-_:
+Error: Signature mismatch:
+       ...
+       The value `add_int64_le' is required but not provided
+       File "buffer.mli", line 291, characters 0-37: Expected declaration
+       The value `add_int64_be' is required but not provided
+       File "buffer.mli", line 285, characters 0-37: Expected declaration
+       The value `add_int64_ne' is required but not provided
+       File "buffer.mli", line 279, characters 0-38: Expected declaration
+       The value `add_int32_le' is required but not provided
+       File "buffer.mli", line 273, characters 0-37: Expected declaration
+       The value `add_int32_be' is required but not provided
+       File "buffer.mli", line 267, characters 0-37: Expected declaration
+       The value `add_int32_ne' is required but not provided
+       File "buffer.mli", line 261, characters 0-37: Expected declaration
+       The value `add_int16_le' is required but not provided
+       File "buffer.mli", line 255, characters 0-35: Expected declaration
+       The value `add_int16_be' is required but not provided
+       File "buffer.mli", line 249, characters 0-35: Expected declaration
+       The value `add_int16_ne' is required but not provided
+       File "buffer.mli", line 243, characters 0-35: Expected declaration
+       The value `add_uint16_le' is required but not provided
+       File "buffer.mli", line 237, characters 0-36: Expected declaration
+       The value `add_uint16_be' is required but not provided
+       File "buffer.mli", line 231, characters 0-36: Expected declaration
+       The value `add_uint16_ne' is required but not provided
+       File "buffer.mli", line 225, characters 0-36: Expected declaration
+       The value `add_int8' is required but not provided
+       File "buffer.mli", line 219, characters 0-31: Expected declaration
+       The value `add_uint8' is required but not provided
+       File "buffer.mli", line 213, characters 0-32: Expected declaration
+       The value `of_seq' is required but not provided
+       File "buffer.mli", line 189, characters 0-28: Expected declaration
+       The value `add_seq' is required but not provided
+       File "buffer.mli", line 185, characters 0-37: Expected declaration
+       The value `to_seqi' is required but not provided
+       File "buffer.mli", line 180, characters 0-37: Expected declaration
+       The value `to_seq' is required but not provided
+       File "buffer.mli", line 175, characters 0-28: Expected declaration
+       The value `truncate' is required but not provided
+       File "buffer.mli", line 167, characters 0-31: Expected declaration
+       The value `output_buffer' is required but not provided
+       File "buffer.mli", line 163, characters 0-44: Expected declaration
+       The value `add_channel' is required but not provided
+       File "buffer.mli", line 156, characters 0-48: Expected declaration
+       The value `add_substitute' is required but not provided
+       File "buffer.mli", line 136, characters 0-62: Expected declaration
+       The value `add_utf_16be_uchar' is required but not provided
+       File "buffer.mli", line 113, characters 0-45: Expected declaration
+       The value `add_utf_16le_uchar' is required but not provided
+       File "buffer.mli", line 106, characters 0-45: Expected declaration
+       The value `add_utf_8_uchar' is required but not provided
+       File "buffer.mli", line 100, characters 0-42: Expected declaration
+       The value `to_bytes' is required but not provided
+       File "buffer.mli", line 58, characters 0-25: Expected declaration
+|}]

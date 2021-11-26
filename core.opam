@@ -10,25 +10,34 @@ build: [
   ["dune" "build" "-p" name "-j" jobs]
 ]
 depends: [
-  "ocaml" {>= "4.08.0"}
+  "ocaml" {>= "4.11.0"}
   "base"
-  "core_kernel"
-  "expect_test_helpers_core"
+  "base_bigstring"
+  "base_quickcheck"
+  "bin_prot"
+  "fieldslib"
   "jane-street-headers"
   "jst-config"
-  "ocaml_intrinsics"
+  "ppx_assert"
+  "ppx_base"
+  "ppx_hash"
+  "ppx_inline_test"
   "ppx_jane"
-  "record_builder"
+  "ppx_sexp_conv"
+  "ppx_sexp_message"
   "sexplib"
-  "timezone"
-  "base-threads"
-  "dune"                     {>= "2.0.0"}
-  "spawn"                    {>= "v0.12"}
+  "splittable_random"
+  "stdio"
+  "time_now"
+  "typerep"
+  "variantslib"
+  "dune"                {>= "2.0.0"}
 ]
 synopsis: "Industrial strength alternative to OCaml's standard library"
 description: "
 The Core suite of libraries is an industrial strength alternative to
 OCaml's standard library that was developed by Jane Street, the
 largest industrial user of OCaml.
+
+This is the system-independent part of Core. Unix-specific parts were moved to [core-unix].
 "
-depexts: ["linux-headers"] {os-distribution = "alpine"}

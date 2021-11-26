@@ -1,3 +1,0 @@
-(library (name error_checking_mutex) (public_name core.error_checking_mutex)
- (preprocess (pps ppx_jane)) (c_names error_checking_mutex_stubs)
- (libraries core_kernel.caml_threads core_kernel.core threads))

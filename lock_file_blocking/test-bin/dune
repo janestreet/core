@@ -1,3 +1,0 @@
-(executables (names test_lock_file_blocking)
- (libraries command_unix core_unix lock_file_blocking signal_unix)
- (preprocess (pps ppx_jane)))

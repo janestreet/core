@@ -1,4 +1,0 @@
-(library (name command_unix) (public_name core.command_unix)
- (libraries core_kernel.core core_thread sys_unix time_unix
-  core_kernel.version_util)
- (preprocess (pps ppx_jane)))

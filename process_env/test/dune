@@ -1,2 +1,0 @@
-(library (name process_env_test) (libraries core_kernel.core process_env)
- (preprocess (pps ppx_jane)))

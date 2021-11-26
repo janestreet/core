@@ -1,4 +1,0 @@
-(library (name command_test_helpers) (public_name core.command_test_helpers)
- (libraries command_unix core_kernel.composition_infix core_kernel.core
-  core_unix)
- (preprocess (pps ppx_jane)))

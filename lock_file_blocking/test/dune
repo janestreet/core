@@ -1,4 +1,0 @@
-(library (name lock_file_blocking_test)
- (libraries lock_file_blocking expect_test_helpers_core core_kernel.core
-  core_unix filename_unix)
- (preprocess (pps ppx_jane)))

@@ -1,0 +1,3 @@
+(library (name base_for_tests) (public_name core.base_for_tests)
+ (libraries base)
+ (preprocess (pps ppx_base ppx_inline_test ppx_sexp_conv ppx_sexp_message)))

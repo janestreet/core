@@ -1,4 +1,0 @@
-(library (name time_ns_unix_test)
- (libraries bignum.bigint expect_test_helpers_core sexp_grammar_validation
-  time_interface time_ns_unix)
- (preprocess (pps ppx_jane)))
