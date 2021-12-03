@@ -1,3 +1,0 @@
-(library (name linux_ext_test)
- (libraries bigstring_unix expect_test_helpers_core filename_unix linux_ext)
- (preprocess (pps ppx_jane)))

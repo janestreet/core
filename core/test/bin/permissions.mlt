@@ -1,0 +1,141 @@
+open Core
+
+(* Can't assign arbitrary types to ref *)
+type foo
+
+let r = Ref.Permissioned.create 0
+
+(* This is to force the [Core]'s cmi to be loaded so that error messages below look nicer
+   with OCaml 4.08. *)
+module type M = module type of Core
+
+let r' : (int, foo) Ref.Permissioned.t = r
+
+[%%expect
+  {|
+Line _, characters _-_:
+Error: This expression has type (int, [< 'b perms ] as 'a) Ref.Permissioned.t
+       but an expression was expected of type (int, foo) Ref.Permissioned.t
+       Type 'a = [< `Read | `Who_can_write of 'b ]
+       is not compatible with type foo
+|}]
+
+
+(* Can't set a ref if some version has been made immutable *)
+let r = Ref.Permissioned.create 0
+let r_immutable : (int, immutable) Ref.Permissioned.t = r
+let () = Ref.Permissioned.set r 1
+
+[%%expect
+  {|
+Line _, characters _-_:
+Error: This expression has type * (glob)
+       but an expression was expected of type
+         * (glob)
+       Type Perms.nobody perms = [ `Read | `Who_can_write of Perms.nobody ]
+       is not compatible with type 'a = [> `Who_can_write of Perms.me ]
+       Types for tag `Who_can_write are incompatible
+|}]
+
+(* Can't make a ref immutable if it's been set *)
+let r = Ref.Permissioned.create 0
+let () = Ref.Permissioned.set r 1
+let r_immutable : (int, immutable) Ref.Permissioned.t = r
+
+[%%expect
+  {|
+Line _, characters _-_:
+Error: This expression has type
+         * (glob)
+       but an expression was expected of type
+         (int, immutable) Ref.Permissioned.t
+       Type 'a = [< `Read | `Who_can_write of Perms.me > `Who_can_write ]
+       is not compatible with type
+         immutable = [ `Read | `Who_can_write of Perms.nobody ]
+       Types for tag `Who_can_write are incompatible
+|}]
+
+(* The following tests are not tests of things that we don't want to compile.  They
+   document reasons why we didn't use constraints in the usage of the new permission
+   types, and if they ever start compiling, we might want to revisit them.
+*)
+
+(* Constraints don't work with included signatures, part 1 *)
+module type Container = sig
+  type ('a, -'perm) t
+
+  val iter : ('a, [> read ]) t -> f:('a -> unit) -> unit
+end
+
+type ('a, -'perm) t constraint 'perm = [< _ perms ]
+
+module type Foo = Container with type ('a, 'perm) t := ('a, 'perm) t
+
+[%%expect
+  {|
+Line _, characters _-_:
+Error: In this `with' constraint, the new definition of t
+       does not match its original definition in the constrained signature:
+       Type declarations do not match:
+         type ('a, 'b) t = ('a, 'b) t
+           constraint 'b = \[< `Read | `Who_can_write of .* \] (regexp)
+       is not included in
+         type ('a, -'perm) t
+       Their constraints differ.
+       *: Expected declaration (glob)
+       *: Actual declaration (glob)
+|}]
+
+(* Constraints don't work with included signatures, part 2 *)
+module type Container = sig
+  type ('a, -'perm) t constraint 'perm = [< _ perms ]
+
+  val iter : ('a, [> read ]) t -> f:('a -> unit) -> unit
+end
+
+type ('a, -'perm) t constraint 'perm = [< _ perms ]
+
+module type Foo = Container with type ('a, 'perm) t := ('a, 'perm) t
+
+[%%expect
+  {|
+Line _, characters _-_:
+Error: In this `with' constraint, the new definition of t
+       does not match its original definition in the constrained signature:
+       Type declarations do not match:
+         type ('a, 'b) t = ('a, 'b) t
+           constraint 'b = \[< `Read | `Who_can_write of .* \] (regexp)
+       is not included in
+         type ('a, -'b) t constraint 'b = [< 'c perms ]
+       Their constraints differ.
+       *: Expected declaration (glob)
+       *: Actual declaration (glob)
+|}]
+
+(* Constraints don't work with type aliases, part 1 *)
+type -'perm t constraint 'perm = [< _ perms ]
+type 'perm alias = 'perm t
+
+[%%expect
+  {|
+Line _, characters _-_:
+Error: Constraints are not satisfied in this type.
+       Type
+       \[< `Read | `Who_can_write of .* \] t (regexp)
+       should be an instance of
+       \[< .* Core.perms \] t (regexp)
+|}]
+
+(* Constraints don't work with type aliases, part 2 *)
+type -'perm t constraint 'perm = [< _ perms ]
+type 'perm alias = 'perm t constraint 'perm = [< _ perms ]
+
+[%%expect
+  {|
+Line _, characters _-_:
+Error: Constraints are not satisfied in this type.
+       Type
+       \[< `Read | `Who_can_write of .* \] t (regexp)
+       should be an instance of
+       \[< .* Core.perms \] t (regexp)
+|}]

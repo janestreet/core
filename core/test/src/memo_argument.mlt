@@ -1,0 +1,109 @@
+#verbose true
+
+open! Core
+
+let add a b =
+  printf "Invoked add\n";
+  a + b
+;;
+
+[%%expect {|
+val add : int -> int -> int = <fun>
+|}]
+
+(* Note that the [general] call is rather error prone; it's easy to call it in a way that
+   looks benign, but actually does no useful work. Here is one innocent mistake, where the
+   function in question is curried. (The type gives you a hint that something is funny,
+   but it's equal to [int -> int -> int], so it can still be misused.) *)
+
+let add_memo_bad = Memo.general add
+
+[%%expect {|
+val add_memo_bad : (int, int -> int) Memo.fn = <fun>
+|}]
+
+(* If we call add_memo_bad a couple of times, we'll see that no memoization occurs. *)
+
+let _ = (add_memo_bad 1 2 : int)
+
+[%%expect {|
+- : int = 3
+Invoked add
+|}]
+
+let _ = (add_memo_bad 1 2 : int)
+
+[%%expect {|
+- : int = 3
+Invoked add
+|}]
+
+(* To properly memoize a multi-argument function, tuple up the arguments. *)
+
+let add_memo_tupled =
+  let add (x, y) = add x y in
+  Memo.general add
+;;
+
+[%%expect {|
+val add_memo_tupled : (int * int, int) Memo.fn = <fun>
+|}]
+
+let add_memo x y = add_memo_tupled (x, y)
+
+[%%expect {|
+val add_memo : int -> int -> int = <fun>
+|}]
+
+let _ = (add_memo 3 4 : int)
+
+[%%expect {|
+- : int = 7
+Invoked add
+|}]
+
+let _ = (add_memo 3 4 : int)
+
+[%%expect {|
+- : int = 7
+|}]
+
+let _ = (add_memo 3 5 : int)
+
+[%%expect {|
+- : int = 8
+Invoked add
+|}]
+
+(* But take care to avoid another mistake: supplying the argument when trying to memoize
+   will cause the memoized function to be recreated on each call, so again no memoization
+   occurs. *)
+
+let add_memo_tupled_bad (x, y) =
+  let add (x, y) = add x y in
+  Memo.general add (x, y)
+;;
+
+[%%expect {|
+val add_memo_tupled_bad : int * int -> int = <fun>
+|}]
+
+let add_memo_bad x y = add_memo_tupled_bad (x, y)
+
+[%%expect {|
+val add_memo_bad : int -> int -> int = <fun>
+|}]
+
+let _ = (add_memo_bad 1 2 : int)
+
+[%%expect {|
+- : int = 3
+Invoked add
+|}]
+
+let _ = (add_memo_bad 1 2 : int)
+
+[%%expect {|
+- : int = 3
+Invoked add
+|}]

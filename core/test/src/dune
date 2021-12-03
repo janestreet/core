@@ -1,0 +1,4 @@
+(library (name core_test)
+ (libraries base_test_helpers core expect_test_helpers_core core_kernel.fheap
+  core_kernel.version_util sexp_grammar_validation)
+ (preprocessor_deps ../../src/config.h) (preprocess (pps ppx_jane)))

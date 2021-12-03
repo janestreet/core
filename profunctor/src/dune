@@ -1,2 +1,0 @@
-(library (name profunctor) (public_name core.profunctor)
- (libraries base record_builder) (preprocess (pps ppx_jane)))

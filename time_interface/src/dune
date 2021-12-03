@@ -1,2 +1,0 @@
-(library (name time_interface) (public_name core.time_interface)
- (libraries core_kernel.core) (preprocess (pps ppx_jane)))

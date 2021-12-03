@@ -1,0 +1,102 @@
+open! Base
+
+let unstage = Staged.unstage
+
+(* Regression tests to ensure that [Validate.field], [Validate.field_folder], and
+   [Validate.field_direct_folder] continue to work with private record types. *)
+
+module Fold_with_private (M : sig
+    type t = private { a : int } [@@deriving fields]
+  end) : sig
+  val validate : M.t -> Validate.t
+end = struct
+  open M
+
+  let validate t =
+    let w f = Validate.field_folder f t in
+    Fields.fold ~init:[] ~a:(w (fun _ -> Validate.pass)) |> Validate.of_list
+  ;;
+end
+
+[%%expect {|
+|}]
+
+module Fold_regular (M : sig
+    type t = { a : int } [@@deriving fields]
+  end) : sig
+  val validate : M.t -> Validate.t
+end = struct
+  open M
+
+  let validate t =
+    let w f = Validate.field_folder f t in
+    Fields.fold ~init:[] ~a:(w (fun _ -> Validate.pass)) |> Validate.of_list
+  ;;
+end
+
+[%%expect {|
+|}]
+
+module Fold_direct_private (M : sig
+    type t = private { a : int } [@@deriving fields]
+  end) : sig
+  val validate : M.t -> Validate.t
+end = struct
+  open M
+
+  let validate t =
+    let w f = unstage (Validate.field_direct_folder f) in
+    Fields.Direct.fold t ~init:[] ~a:(w (fun _ -> Validate.pass)) |> Validate.of_list
+  ;;
+end
+
+[%%expect {|
+|}]
+
+module Fold_direct_regular (M : sig
+    type t = { a : int } [@@deriving fields]
+  end) : sig
+  val validate : M.t -> Validate.t
+end = struct
+  open M
+
+  let validate t =
+    let w f = unstage (Validate.field_direct_folder f) in
+    Fields.Direct.fold t ~init:[] ~a:(w (fun _ -> Validate.pass)) |> Validate.of_list
+  ;;
+end
+
+[%%expect {|
+|}]
+
+module Validate_field_private (M : sig
+    type t = private { a : int } [@@deriving fields]
+  end) : sig
+  val validate : M.t -> Validate.t
+end = struct
+  open M
+
+  let validate t =
+    let w check acc field = Validate.field check t field :: acc in
+    Fields.fold ~init:[] ~a:(w (fun _ -> Validate.pass)) |> Validate.of_list
+  ;;
+end
+
+[%%expect {|
+|}]
+
+module Validate_field (M : sig
+    type t = { a : int } [@@deriving fields]
+  end) : sig
+  val validate : M.t -> Validate.t
+end = struct
+  open M
+
+  let validate t =
+    let w check acc field = Validate.field check t field :: acc in
+    Fields.fold ~init:[] ~a:(w (fun _ -> Validate.pass)) |> Validate.of_list
+  ;;
+end
+
+[%%expect {|
+|}]

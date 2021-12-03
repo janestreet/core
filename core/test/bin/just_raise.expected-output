@@ -1,0 +1,5 @@
+Uncaught exception:
+  
+  (just_raise.ml.E 42)
+
+Raised at Bin_prefix_float_test__Just_raise in file "just_raise.ml", line 5, characters 9-21

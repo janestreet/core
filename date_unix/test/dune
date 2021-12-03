@@ -1,2 +1,0 @@
-(library (name date_unix_test) (libraries date_unix)
- (preprocess (pps ppx_jane)))

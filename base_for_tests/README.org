@@ -1,0 +1,5 @@
+* Base library for tests
+
+Base_for_tests provides helpers for generating tests for libraries
+using Base, especially for some functors in Base such as =Blit.Make=
+or =Binary_searchable.Make=.

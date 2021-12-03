@@ -1,0 +1,8 @@
+(executables
+ (names array_iter array_queue bench_hashtbl bench_map core_stack
+  core_string_search_pattern dequeue hashtbl_bench immediate_bench
+  ordering_container string_escaping time_to_string)
+ (libraries core_unix.command_unix core core_bench core_kernel.pairing_heap
+  core_kernel.pooled_hashtbl ppx_hash.runtime-lib pcre re2
+  shell.string_extended)
+ (preprocess (pps ppx_jane)))

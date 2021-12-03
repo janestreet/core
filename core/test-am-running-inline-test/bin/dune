@@ -1,0 +1,2 @@
+(executables (names am_running_inline_test) (libraries core)
+ (preprocess (pps ppx_jane)))
