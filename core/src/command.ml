@@ -1810,8 +1810,8 @@ module Base = struct
             | [ (_, value) ] ->
               (match if_nothing_chosen with
                | Default_to (_ : a) -> (value : b)
-               | Raise -> value
-               | Return_none -> Some value)
+               | Raise -> (value : b)
+               | Return_none -> (Some value : b))
             | [] ->
               (match if_nothing_chosen with
                | Default_to value -> value

@@ -380,6 +380,7 @@ module For_testing : sig
       { major_words_allocated : int
       ; minor_words_allocated : int
       }
+    [@@deriving sexp_of]
   end
 
   (** [measure_allocation f] measures the words allocated by running [f ()] *)
@@ -391,6 +392,7 @@ module For_testing : sig
       ; is_major : bool
       ; backtrace : string
       }
+    [@@deriving sexp_of]
   end
 
   (** [measure_and_log_allocation f] logs each allocation that [f ()] performs, as well as

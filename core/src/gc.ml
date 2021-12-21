@@ -401,6 +401,7 @@ module For_testing = struct
       { major_words_allocated : int
       ; minor_words_allocated : int
       }
+    [@@deriving sexp_of]
 
     let create ~major_words_allocated ~minor_words_allocated =
       { major_words_allocated; minor_words_allocated }
@@ -419,6 +420,7 @@ module For_testing = struct
       ; is_major : bool
       ; backtrace : string
       }
+    [@@deriving sexp_of]
   end
 
   [%%if ocaml_version >= (4, 11, 0)]
