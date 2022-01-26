@@ -31,6 +31,9 @@ module type S1 = sig
   (** Clears the queue. *)
   val clear : ('key, 'data) t -> unit
 
+  (** Makes a fresh copy of the queue with identical contents to the original. *)
+  val copy : ('key, 'data) t -> ('key, 'data) t
+
   (** {2 Finding elements} *)
 
   (** [mem q k] returns true iff there is some (k, v) in the queue. *)

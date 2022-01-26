@@ -8,9 +8,9 @@ module type Elt_plain = Elt_plain
 module type Elt = Elt
 module type Elt_binable = Elt_binable
 
-let to_comparator (type k cmp) ((module M) : (k, cmp) Set.comparator) = M.comparator
+let to_comparator (type k cmp) ((module M) : (k, cmp) Comparator.Module.t) = M.comparator
 
-let of_comparator (type k cmp) comparator : (k, cmp) Set.comparator =
+let of_comparator (type k cmp) comparator : (k, cmp) Comparator.Module.t =
   (module struct
     type t = k
     type comparator_witness = cmp

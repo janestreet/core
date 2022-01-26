@@ -320,3 +320,30 @@ let%expect_test "last" =
   print_s [%sexp (Hq.last_with_key hq : (string * int) option)];
   [%expect {| ((10 10)) |}]
 ;;
+
+let%expect_test "[copy] returns an identical but independent hash queue" =
+  let hq = Hq.create () in
+  let n = 10 in
+  for i = 1 to n do
+    Hq.enqueue_back_exn hq (Int.to_string i) i
+  done;
+  let copy = Hq.copy hq in
+  print_s [%sexp (Hq.to_list hq : int list)];
+  [%expect {| (1 2 3 4 5 6 7 8 9 10) |}];
+  print_s [%sexp (Hq.to_list copy : int list)];
+  [%expect {| (1 2 3 4 5 6 7 8 9 10) |}];
+  Hq.drop_front hq;
+  Hq.drop_back copy;
+  print_s [%sexp (Hq.to_list hq : int list)];
+  [%expect {| (2 3 4 5 6 7 8 9 10) |}];
+  print_s [%sexp (Hq.to_list copy : int list)];
+  [%expect {| (1 2 3 4 5 6 7 8 9) |}];
+  print_s [%sexp (Hq.lookup_and_move_to_front_exn hq "5" : int)];
+  [%expect {| 5 |}];
+  print_s [%sexp (Hq.lookup_and_move_to_back_exn copy "6" : int)];
+  [%expect {| 6 |}];
+  print_s [%sexp (Hq.to_list hq : int list)];
+  [%expect {| (5 2 3 4 6 7 8 9 10) |}];
+  print_s [%sexp (Hq.to_list copy : int list)];
+  [%expect {| (1 2 3 4 5 7 8 9 6) |}]
+;;

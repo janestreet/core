@@ -50,9 +50,9 @@ module Finished_or_unfinished = Base.Map.Finished_or_unfinished
 type ('k, 'cmp) comparator =
   (module Comparator.S with type t = 'k and type comparator_witness = 'cmp)
 
-let to_comparator (type k cmp) ((module M) : (k, cmp) Map.comparator) = M.comparator
+let to_comparator (type k cmp) ((module M) : (k, cmp) Comparator.Module.t) = M.comparator
 
-let of_comparator (type k cmp) comparator : (k, cmp) Map.comparator =
+let of_comparator (type k cmp) comparator : (k, cmp) Comparator.Module.t =
   (module struct
     type t = k
     type comparator_witness = cmp
@@ -255,6 +255,7 @@ end = struct
 
   let of_alist_reduce alist ~f = Using_comparator.of_alist_reduce ~comparator alist ~f
   let of_iteri ~iteri = Using_comparator.of_iteri ~comparator ~iteri
+  let of_iteri_exn ~iteri = Using_comparator.of_iteri_exn ~comparator ~iteri
 
   let t_of_sexp k_of_sexp v_of_sexp sexp =
     Using_comparator.t_of_sexp_direct ~comparator k_of_sexp v_of_sexp sexp
@@ -300,6 +301,7 @@ module Make_tree_S1 (Key : Comparator.S1) = struct
   let of_alist_fold a ~init ~f = of_alist_fold a ~init ~f ~comparator
   let of_alist_reduce a ~f = of_alist_reduce a ~f ~comparator
   let of_iteri ~iteri = of_iteri ~iteri ~comparator
+  let of_iteri_exn ~iteri = of_iteri_exn ~iteri ~comparator
   let of_key_set = Using_comparator.tree_of_key_set
   let to_tree t = t
   let invariants a = invariants a ~comparator
@@ -376,8 +378,8 @@ module Make_tree_S1 (Key : Comparator.S1) = struct
 
   let range_to_alist t ~min ~max = range_to_alist t ~min ~max ~comparator
   let closest_key a b c = closest_key a b c ~comparator
-  let nth a = nth a ~comparator
-  let nth_exn a = nth_exn a ~comparator
+  let nth = nth
+  let nth_exn = nth_exn
   let rank a b = rank a b ~comparator
 
   let to_sequence ?order ?keys_greater_or_equal_to ?keys_less_or_equal_to t =

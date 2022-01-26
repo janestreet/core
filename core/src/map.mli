@@ -113,6 +113,12 @@ val of_iteri
   -> iteri:(f:(key:'a -> data:'b -> unit) -> unit)
   -> [ `Ok of ('a, 'b, 'cmp) t | `Duplicate_key of 'a ]
 
+(** Like [of_iteri] except that it raises an exception if duplicate ['a] keys are found. *)
+val of_iteri_exn
+  :  ('a, 'cmp) comparator
+  -> iteri:(f:(key:'a -> data:'b -> unit) -> unit)
+  -> ('a, 'b, 'cmp) t
+
 (**
    {2 Trees}
 
@@ -357,6 +363,12 @@ module Merge_element : sig
   val right : ('a, 'right) t -> 'right option
   val left_value : ('left, 'a) t -> default:'left -> 'left
   val right_value : ('a, 'right) t -> default:'right -> 'right
+
+  val values
+    :  ('left, 'right) t
+    -> left_default:'left
+    -> right_default:'right
+    -> 'left * 'right
 end
 
 (** Iterates two maps side by side. The complexity of this function is O(M+N). If two

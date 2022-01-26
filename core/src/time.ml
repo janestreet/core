@@ -209,9 +209,15 @@ module Make (Time0 : Time0_intf.S) = struct
     date_cache.date
   ;;
 
+  let end_of_day = Ofday.prev Ofday.start_of_next_day |> Option.value_exn ~here:[%here]
+
   let to_ofday time ~zone =
     set_date_cache time ~zone;
-    Time0.diff time date_cache.effective_day_start |> Ofday.of_span_since_start_of_day_exn
+    let of_day =
+      Time0.diff time date_cache.effective_day_start
+      |> Ofday.of_span_since_start_of_day_exn
+    in
+    if Ofday.equal of_day Ofday.start_of_next_day then end_of_day else of_day
   ;;
 
   let to_date_ofday time ~zone = to_date time ~zone, to_ofday time ~zone

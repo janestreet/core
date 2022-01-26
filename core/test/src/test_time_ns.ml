@@ -1128,3 +1128,20 @@ let%expect_test "sub_saturating" =
       (diff            "1852-06-24 07:19:23.145224192Z")
       (saturating_diff "2116-02-20 23:53:38.427387903Z")) |}]
 ;;
+
+let%expect_test "[to_ofday] never returns 24:00" =
+  quickcheck_m
+    [%here]
+    (module struct
+      include struct
+        type t = Time_ns.t [@@deriving quickcheck]
+      end
+
+      include Time_ns.Stable.Alternate_sexp.V1
+    end)
+    ~f:(fun time ->
+      let ofday = Time_ns.to_ofday time ~zone:Time.Zone.utc in
+      [%test_pred: Time_ns.Ofday.t]
+        (fun ofday -> Time_ns.Ofday.( < ) ofday Time_ns.Ofday.start_of_next_day)
+        ofday)
+;;

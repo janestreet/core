@@ -161,8 +161,16 @@ include Quickcheckable.S with type t := t
 
 module Stable : sig
   (*_ old float based [bin_io] repr. *)
-  module V1 : Stable_module_types.S0_without_comparator with type t = t
+  module V1 : sig
+    type nonrec t = t [@@deriving hash]
+
+    include Stable_module_types.S0_without_comparator with type t := t
+  end
 
   (*_ new [Int63] based [bin_io] repr. *)
-  module V2 : Stable_module_types.S0_without_comparator with type t = t
+  module V2 : sig
+    type nonrec t = t [@@deriving hash]
+
+    include Stable_module_types.S0_without_comparator with type t := t
+  end
 end

@@ -357,6 +357,12 @@ module Make_backend (Table : Hashtbl_intf.Hashtbl) : S_backend = struct
 
     let drop_back ?n t = drop ?n t `back
     let drop_front ?n t = drop ?n t `front
+
+    let copy t =
+      let copied = create ~size:(length t) (Table.hashable t.table) in
+      iteri t ~f:(fun ~key ~data -> enqueue_back_exn copied key data);
+      copied
+    ;;
   end
 
   module type S = S0 with type ('key, 'data) hash_queue := ('key, 'data) Backend.t

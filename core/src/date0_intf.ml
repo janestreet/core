@@ -233,7 +233,7 @@ module type Date0 = sig
 
   module Stable : sig
     module V1 : sig
-      type nonrec t = t [@@immediate] [@@deriving hash, sexp_grammar]
+      type nonrec t = t [@@immediate] [@@deriving equal, hash, sexp_grammar]
 
       (** [to_int] and [of_int_exn] convert to/from the underlying integer
           representation. *)

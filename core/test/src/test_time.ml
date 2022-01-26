@@ -1383,3 +1383,39 @@ let%expect_test "times with implicit zones" =
      "2013-10-07 09:30"
      ("time has no time zone or UTC offset" "2013-10-07 09:30")) |}]
 ;;
+
+let%expect_test "quickcheck should generate serializable times" =
+  require_does_not_raise [%here] (fun () ->
+    quickcheck_m
+      [%here]
+      (module struct
+        type t = Time.t [@@deriving quickcheck]
+
+        let sexp_of_t = Time.Stable.With_utc_sexp.V2.sexp_of_t
+      end)
+      ~f:(fun time ->
+        let sexp = Time.Stable.With_utc_sexp.V2.sexp_of_t time in
+        let round_trip = Time.Stable.With_utc_sexp.V2.t_of_sexp sexp in
+        (* We aren't checking precision of round-trips, just that it doesn't raise. *)
+        ignore (round_trip : Time.t)));
+  [%expect {| |}]
+;;
+
+let%expect_test "regression test: [to_ofday] never returns 24:00" =
+  let zone = Time.Zone.utc in
+  quickcheck_m
+    ~cr:CR_soon
+    [%here]
+    (module struct
+      include Time.Stable.With_utc_sexp.V2
+
+      let quickcheck_generator = Time.quickcheck_generator
+      let quickcheck_shrinker = Time.quickcheck_shrinker
+    end)
+    ~f:(fun time ->
+      let ofday = Time.to_ofday time ~zone in
+      [%test_pred: Time.Ofday.t]
+        (fun ofday -> Time.Ofday.( < ) ofday Time.Ofday.start_of_next_day)
+        ofday);
+  [%expect {| |}]
+;;

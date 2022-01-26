@@ -83,8 +83,6 @@ struct
     let fold_range_inclusive x = simplify_accessor fold_range_inclusive x
     let range_to_alist x = simplify_accessor range_to_alist x
     let closest_key x = simplify_accessor closest_key x
-    let nth x = simplify_accessor nth x
-    let nth_exn x = simplify_accessor nth_exn x
     let rank x = simplify_accessor rank x
     let quickcheck_shrinker x = simplify_accessor quickcheck_shrinker x
     let key_set x = simplify_accessor key_set x
@@ -127,6 +125,7 @@ struct
     let of_alist_fold x = simplify_creator of_alist_fold x
     let of_alist_reduce x = simplify_creator of_alist_reduce x
     let of_iteri ~iteri = simplify_creator of_iteri ~iteri
+    let of_iteri_exn ~iteri = simplify_creator of_iteri_exn ~iteri
     let of_tree x = simplify_creator of_tree x
     let of_sequence x = simplify_creator of_sequence x
     let of_sequence_or_error x = simplify_creator of_sequence_or_error x
@@ -584,6 +583,7 @@ struct
   ;;
 
   let of_iteri ~iteri:_ = assert false
+  let of_iteri_exn ~iteri:_ = assert false
   let alist_iteri alist ~f = List.iter alist ~f:(fun (key, data) -> f ~key ~data)
 
   let%test _ =
@@ -597,6 +597,21 @@ struct
     match Map.of_iteri ~iteri:(alist_iteri [ Key.sample, 0; Key.sample, 1 ]) with
     | `Ok _ -> false
     | `Duplicate_key _ -> true
+  ;;
+
+  let%test_unit _ =
+    let alist = random_alist Key.samples in
+    ignore (Map.of_iteri_exn ~iteri:(alist_iteri alist) : _ Map.t_)
+  ;;
+
+  let%test _ =
+    try
+      ignore
+        (Map.of_iteri_exn ~iteri:(alist_iteri [ Key.sample, 0; Key.sample, 1 ])
+         : _ Map.t_);
+      false
+    with
+    | _ -> true
   ;;
 
   let of_increasing_sequence _ = assert false
