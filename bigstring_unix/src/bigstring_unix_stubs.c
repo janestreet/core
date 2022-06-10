@@ -46,7 +46,7 @@
 
 #include "ocaml_utils.h"
 #include "unix_utils.h"
-#include "socketaddr.h"
+#include <caml/socketaddr.h>
 #include <core_params.h>
 #include "recvmmsg.h"
 

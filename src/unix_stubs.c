@@ -1091,7 +1091,7 @@ CAMLprim value core_unix_if_indextoname(value v_index)
   else return caml_copy_string(name);
 }
 
-#include "socketaddr.h"
+#include <caml/socketaddr.h>
 
 /* Keep this in sync with the type Core_unix.Mcast_action.t */
 #define VAL_MCAST_ACTION_ADD  (Val_int(0))
