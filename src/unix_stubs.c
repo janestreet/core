@@ -1206,11 +1206,17 @@ enum option_type {
   TYPE_UNIX_ERROR = 4
 };
 
-extern value unix_getsockopt_aux(
+#include <caml/version.h>
+#if OCAML_VERSION_MAJOR < 5
+#define caml_unix_getsockopt_aux unix_getsockopt_aux
+#define caml_unix_setsockopt_aux unix_setsockopt_aux
+#endif
+
+extern value caml_unix_getsockopt_aux(
   char *name,
   enum option_type ty, int level, int option,
   value v_socket);
-extern value unix_setsockopt_aux(
+extern value caml_unix_setsockopt_aux(
   char *name,
   enum option_type ty, int level, int option,
   value v_socket, value v_status);
@@ -1218,13 +1224,13 @@ extern value unix_setsockopt_aux(
 CAMLprim value core_unix_mcast_get_ttl(value v_socket)
 {
   return
-    unix_getsockopt_aux("getsockopt", TYPE_INT, IPPROTO_IP, IP_MULTICAST_TTL, v_socket);
+    caml_unix_getsockopt_aux("getsockopt", TYPE_INT, IPPROTO_IP, IP_MULTICAST_TTL, v_socket);
 }
 
 CAMLprim value core_unix_mcast_set_ttl(value v_socket, value v_ttl)
 {
   return
-    unix_setsockopt_aux( "setsockopt", TYPE_INT, IPPROTO_IP, IP_MULTICAST_TTL, v_socket, v_ttl);
+    caml_unix_setsockopt_aux( "setsockopt", TYPE_INT, IPPROTO_IP, IP_MULTICAST_TTL, v_socket, v_ttl);
 }
 
 CAMLprim value core_unix_mcast_set_ifname(value v_socket, value v_ifname)
@@ -1238,7 +1244,7 @@ CAMLprim value core_unix_mcast_set_ifname(value v_socket, value v_ifname)
 
   /* Now setsockopt to publish on the interface using the address. */
   return
-    unix_setsockopt_aux("setsockopt",
+    caml_unix_setsockopt_aux("setsockopt",
                         TYPE_INT,
                         IPPROTO_IP, IP_MULTICAST_IF,
                         v_socket,
@@ -1248,13 +1254,13 @@ CAMLprim value core_unix_mcast_set_ifname(value v_socket, value v_ifname)
 CAMLprim value core_unix_mcast_get_loop(value v_socket)
 {
   return
-    unix_getsockopt_aux("getsockopt", TYPE_BOOL, IPPROTO_IP, IP_MULTICAST_LOOP, v_socket);
+    caml_unix_getsockopt_aux("getsockopt", TYPE_BOOL, IPPROTO_IP, IP_MULTICAST_LOOP, v_socket);
 }
 
 CAMLprim value core_unix_mcast_set_loop(value v_socket, value v_loop)
 {
   return
-    unix_setsockopt_aux( "setsockopt", TYPE_BOOL, IPPROTO_IP, IP_MULTICAST_LOOP, v_socket, v_loop);
+    caml_unix_setsockopt_aux( "setsockopt", TYPE_BOOL, IPPROTO_IP, IP_MULTICAST_LOOP, v_socket, v_loop);
 }
 
 /* Scheduling */
