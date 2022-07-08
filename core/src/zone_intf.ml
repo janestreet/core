@@ -123,7 +123,8 @@ module type S_stable = sig
   type t
 
   module Full_data : sig
-    module V1 : Stable_module_types.S0_without_comparator with type t = t
+    module V1 :
+      Stable_module_types.With_stable_witness.S0_without_comparator with type t = t
   end
 end
 

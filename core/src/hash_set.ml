@@ -5,9 +5,11 @@ include Base.Hash_set
 module type S_plain = S_plain with type 'a hash_set := 'a t
 module type S = S with type 'a hash_set := 'a t
 module type S_binable = S_binable with type 'a hash_set := 'a t
+module type S_stable = S_stable with type 'a hash_set := 'a t
 module type Elt_plain = Hashtbl.Key_plain
 module type Elt = Hashtbl.Key
 module type Elt_binable = Hashtbl.Key_binable
+module type Elt_stable = Hashtbl.Key_stable
 
 module Make_plain_with_hashable (T : sig
     module Elt : Elt_plain
@@ -70,6 +72,20 @@ struct
         t
       ;;
     end)
+
+  module Provide_stable_witness
+      (X : sig
+         type t [@@deriving stable_witness]
+       end
+       with type t := elt) =
+  struct
+    (* The binary representation of hash_set is used in the stable modules below, so it's
+       assumed to be stable (if the elt is stable) . *)
+    let stable_witness : t Stable_witness.t =
+      let (_ : elt Stable_witness.t) = X.stable_witness in
+      Stable_witness.assert_stable
+    ;;
+  end
 end
 
 module Make_with_hashable (T : sig
@@ -92,6 +108,16 @@ struct
   include Provide_bin_io (T.Elt)
 end
 
+module Make_stable_with_hashable (T : sig
+    module Elt : Elt_stable
+
+    val hashable : Elt.t Hashtbl.Hashable.t
+  end) =
+struct
+  include Make_binable_with_hashable (T)
+  include Provide_stable_witness (T.Elt)
+end
+
 module Make_plain (Elt : Elt_plain) = Make_plain_with_hashable (struct
     module Elt = Elt
 
@@ -106,6 +132,11 @@ end
 module Make_binable (Elt : Elt_binable) = struct
   include Make (Elt)
   include Provide_bin_io (Elt)
+end
+
+module Make_stable (Elt : Elt_stable) = struct
+  include Make_binable (Elt)
+  include Provide_stable_witness (Elt)
 end
 
 module Using_hashable = struct

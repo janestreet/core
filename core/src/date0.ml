@@ -11,7 +11,7 @@ module Stable = struct
   module V1 = struct
     module Without_comparable = struct
       module T : sig
-        type t [@@immediate] [@@deriving bin_io, equal, hash, typerep]
+        type t [@@immediate] [@@deriving bin_io, equal, hash, typerep, stable_witness]
 
         val create_exn : y:int -> m:Month.Stable.V1.t -> d:int -> t
         val year : t -> int
@@ -36,7 +36,11 @@ module Stable = struct
         *)
         type t = int
         [@@deriving
-          equal, hash, typerep, bin_shape ~basetype:"899ee3e0-490a-11e6-a10a-a3734f733566"]
+          equal
+        , hash
+        , typerep
+        , bin_shape ~basetype:"899ee3e0-490a-11e6-a10a-a3734f733566"
+        , stable_witness]
 
         let create0 ~year ~month ~day =
           (* create_exn's validation make sure that each value fits *)
@@ -274,8 +278,8 @@ module Stable = struct
     end
 
     include Without_comparable
-    include Comparable.Stable.V1.Make (Without_comparable)
-    include Hashable.Stable.V1.Make (Without_comparable)
+    include Comparable.Stable.V1.With_stable_witness.Make (Without_comparable)
+    include Hashable.Stable.V1.With_stable_witness.Make (Without_comparable)
   end
 
   module Option = struct
@@ -286,7 +290,8 @@ module Stable = struct
       , bin_shape ~basetype:"826a3e79-3321-451a-9707-ed6c03b84e2f"
       , compare
       , hash
-      , typerep]
+      , typerep
+      , stable_witness]
 
       let none = V1.(to_int invalid_value__for_internal_use_only)
       let is_none t = t = none
@@ -312,6 +317,14 @@ module Stable = struct
       let sexp_of_t t = to_option t |> Option.sexp_of_t V1.sexp_of_t
       let t_of_sexp sexp = (Option.t_of_sexp V1.t_of_sexp) sexp |> of_option
       let t_sexp_grammar = Sexplib.Sexp_grammar.coerce [%sexp_grammar: V1.t Option.t]
+
+      let of_int_exn t =
+        (* Don't just blindly convert from an integer. Use [V1.of_int_exn] to validate the
+           date. *)
+        if t = none then none else some (V1.of_int_exn t)
+      ;;
+
+      let to_int t = t
     end
   end
 end

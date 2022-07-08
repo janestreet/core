@@ -47,3 +47,41 @@ module type S4 = sig
     -> f4:('a4 -> 'b4)
     -> ('b1, 'b2, 'b3, 'b4) t
 end
+
+module With_stable_witness = struct
+  module type S0_without_comparator = sig
+    type t [@@deriving stable_witness]
+
+    include S0_without_comparator with type t := t
+  end
+
+  module type S0 = sig
+    type t [@@deriving stable_witness]
+
+    include S0 with type t := t
+  end
+
+  module type S1 = sig
+    type 'a t [@@deriving stable_witness]
+
+    include S1 with type 'a t := 'a t
+  end
+
+  module type S2 = sig
+    type ('a, 'b) t [@@deriving stable_witness]
+
+    include S2 with type ('a, 'b) t := ('a, 'b) t
+  end
+
+  module type S3 = sig
+    type ('a, 'b, 'c) t [@@deriving stable_witness]
+
+    include S3 with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
+  end
+
+  module type S4 = sig
+    type ('a, 'b, 'c, 'd) t [@@deriving stable_witness]
+
+    include S4 with type ('a, 'b, 'c, 'd) t := ('a, 'b, 'c, 'd) t
+  end
+end

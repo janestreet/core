@@ -242,17 +242,23 @@ module type Date0 = sig
       val of_int_exn : int -> t
 
       include
-        Stable_comparable.V1
+        Stable_comparable.With_stable_witness.V1
         with type t := t
         with type comparator_witness = comparator_witness
 
-      include Hashable.Stable.V1.S with type key := t
+      include Hashable.Stable.V1.With_stable_witness.S with type key := t
     end
 
     module Option : sig
       module V1 : sig
         type nonrec t = Option.t
-        [@@immediate] [@@deriving bin_io, compare, sexp, sexp_grammar]
+        [@@immediate] [@@deriving bin_io, compare, sexp, sexp_grammar, stable_witness]
+
+        (** [to_int] and [of_int_exn] convert to/from the underlying integer
+            representation. *)
+
+        val to_int : t -> int
+        val of_int_exn : int -> t
       end
     end
   end

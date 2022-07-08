@@ -7,7 +7,7 @@ module Stable = struct
   module V1 = struct
     exception Nan_or_inf [@@deriving sexp]
 
-    type t = float [@@deriving compare, hash, equal]
+    type t = float [@@deriving compare, hash, equal, stable_witness]
 
     let verify t =
       match Caml.classify_float t with

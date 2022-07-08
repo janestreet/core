@@ -43,19 +43,19 @@ exception Exit
     even if the two mutable objects are not the same physical object.
     Equality between functional values raises [Invalid_argument].
     Equality between cyclic data structures may not terminate. *)
-external ( = ) : 'a -> 'a -> bool = "%equal"
+external ( = ) : ('a[@local_opt]) -> ('a[@local_opt]) -> bool = "%equal"
 
 (** Negation of {!Poly.( = )}. *)
-external ( <> ) : 'a -> 'a -> bool = "%notequal"
+external ( <> ) : ('a[@local_opt]) -> ('a[@local_opt]) -> bool = "%notequal"
 
 (** See {!Poly.( >= )}. *)
-external ( < ) : 'a -> 'a -> bool = "%lessthan"
+external ( < ) : ('a[@local_opt]) -> ('a[@local_opt]) -> bool = "%lessthan"
 
 (** See {!Poly.( >= )}. *)
-external ( > ) : 'a -> 'a -> bool = "%greaterthan"
+external ( > ) : ('a[@local_opt]) -> ('a[@local_opt]) -> bool = "%greaterthan"
 
 (** See {!Poly.( >= )}. *)
-external ( <= ) : 'a -> 'a -> bool = "%lessequal"
+external ( <= ) : ('a[@local_opt]) -> ('a[@local_opt]) -> bool = "%lessequal"
 
 (** Structural ordering functions. These functions coincide with
     the usual orderings over integers, characters, strings, byte sequences
@@ -65,7 +65,7 @@ external ( <= ) : 'a -> 'a -> bool = "%lessequal"
     of [( = )], mutable structures are compared by contents.
     Comparison between functional values raises [Invalid_argument].
     Comparison between cyclic structures may not terminate. *)
-external ( >= ) : 'a -> 'a -> bool = "%greaterequal"
+external ( >= ) : ('a[@local_opt]) -> ('a[@local_opt]) -> bool = "%greaterequal"
 
 (** [compare x y] returns [0] if [x] is equal to [y],
     a negative integer if [x] is less than [y], and a positive integer
@@ -84,7 +84,7 @@ external ( >= ) : 'a -> 'a -> bool = "%greaterequal"
     The [compare] function can be used as the comparison function
     required by the {!Set.Make} and {!Map.Make} functors, as well as
     the {!List.sort} and {!Array.sort} functions. *)
-external compare : 'a -> 'a -> int = "%compare"
+external compare : ('a[@local_opt]) -> ('a[@local_opt]) -> int = "%compare"
 
 
 (** Return the smaller of the two arguments.
@@ -107,32 +107,32 @@ val max : 'a -> 'a -> 'a
     On non-mutable types, the behavior of [( == )] is
     implementation-dependent; however, it is guaranteed that
     [e1 == e2] implies [compare e1 e2 = 0]. *)
-external ( == ) : 'a -> 'a -> bool = "%eq"
+external ( == ) : ('a[@local_opt]) -> ('a[@local_opt]) -> bool = "%eq"
 [@@deprecated "[since 2014-10] Use [phys_equal]"]
 
 (** Negation of {!( == )}. *)
-external ( != ) : 'a -> 'a -> bool = "%noteq"
+external ( != ) : ('a[@local_opt]) -> ('a[@local_opt]) -> bool = "%noteq"
 [@@deprecated "[since 2014-10] Use [phys_equal]"]
 
 (** {6 Boolean operations} *)
 
 (** The boolean negation. *)
-external not : bool -> bool = "%boolnot"
+external not : (bool[@local_opt]) -> bool = "%boolnot"
 
 (** The boolean 'and'. Evaluation is sequential, left-to-right:
     in [e1 && e2], [e1] is evaluated first, and if it returns [false],
     [e2] is not evaluated at all. *)
-external ( && ) : bool -> bool -> bool = "%sequand"
+external ( && ) : (bool[@local_opt]) -> (bool[@local_opt]) -> bool = "%sequand"
 
-external ( & ) : bool -> bool -> bool = "%sequand"
+external ( & ) : (bool[@local_opt]) -> (bool[@local_opt]) -> bool = "%sequand"
 [@@ocaml.deprecated "[since 2010-01] {!Caml.( && )} should be used instead."]
 
 (** The boolean 'or'. Evaluation is sequential, left-to-right:
     in [e1 || e2], [e1] is evaluated first, and if it returns [true],
     [e2] is not evaluated at all. *)
-external ( || ) : bool -> bool -> bool = "%sequor"
+external ( || ) : (bool[@local_opt]) -> (bool[@local_opt]) -> bool = "%sequor"
 
-external ( or ) : bool -> bool -> bool = "%sequor"
+external ( or ) : (bool[@local_opt]) -> (bool[@local_opt]) -> bool = "%sequor"
 [@@ocaml.deprecated "[since 2010-01] {!Caml.( || )} should be used instead."]
 
 (** {6 Debugging} *)
@@ -214,30 +214,30 @@ external ( @@ ) : ('a -> 'b) -> 'a -> 'b = "%apply"
     They do not fail on overflow. *)
 
 (** Unary negation. You can also write [- e] instead of [~- e]. *)
-external ( ~- ) : int -> int = "%negint"
+external ( ~- ) : (int[@local_opt]) -> int = "%negint"
 
 (** Unary addition. You can also write [+ e] instead of [~+ e].
     @since 3.12.0
 *)
-external ( ~+ ) : int -> int = "%identity"
+external ( ~+ ) : (int[@local_opt]) -> int = "%identity"
 
 
 (** [succ x] is [x + 1]. *)
-external succ : int -> int = "%succint"
+external succ : (int[@local_opt]) -> int = "%succint"
 
 
 (** [pred x] is [x - 1]. *)
-external pred : int -> int = "%predint"
+external pred : (int[@local_opt]) -> int = "%predint"
 
 
 (** Integer addition. *)
-external ( + ) : int -> int -> int = "%addint"
+external ( + ) : (int[@local_opt]) -> (int[@local_opt]) -> int = "%addint"
 
 (** Integer subtraction. *)
-external ( - ) : int -> int -> int = "%subint"
+external ( - ) : (int[@local_opt]) -> (int[@local_opt]) -> int = "%subint"
 
 (** Integer multiplication. *)
-external ( * ) : int -> int -> int = "%mulint"
+external ( * ) : (int[@local_opt]) -> (int[@local_opt]) -> int = "%mulint"
 
 (** Integer division.
     Raise [Division_by_zero] if the second argument is 0.
@@ -245,7 +245,7 @@ external ( * ) : int -> int -> int = "%mulint"
     More precisely, if [x >= 0] and [y > 0], [x / y] is the greatest integer
     less than or equal to the real quotient of [x] by [y].  Moreover,
     [(- x) / y = x / (- y) = - (x / y)].  *)
-external ( / ) : int -> int -> int = "%divint"
+external ( / ) : (int[@local_opt]) -> (int[@local_opt]) -> int = "%divint"
 
 (** Integer remainder.  If [y] is not zero, the result
     of [x mod y] satisfies the following properties:
@@ -254,7 +254,7 @@ external ( / ) : int -> int -> int = "%divint"
     If [y = 0], [x mod y] raises [Division_by_zero].
     Note that [x mod y] is negative only if [x < 0].
     Raise [Division_by_zero] if [y] is zero. *)
-external ( mod ) : int -> int -> int = "%modint"
+external ( mod ) : (int[@local_opt]) -> (int[@local_opt]) -> int = "%modint"
 
 
 (** Return the absolute value of the argument.  Note that this may be
@@ -273,15 +273,15 @@ val min_int : int
 (** {7 Bitwise operations} *)
 
 (** Bitwise logical and. *)
-external ( land ) : int -> int -> int = "%andint"
+external ( land ) : (int[@local_opt]) -> (int[@local_opt]) -> int = "%andint"
 
 
 (** Bitwise logical or. *)
-external ( lor ) : int -> int -> int = "%orint"
+external ( lor ) : (int[@local_opt]) -> (int[@local_opt]) -> int = "%orint"
 
 
 (** Bitwise logical exclusive or. *)
-external ( lxor ) : int -> int -> int = "%xorint"
+external ( lxor ) : (int[@local_opt]) -> (int[@local_opt]) -> int = "%xorint"
 
 
 (** Bitwise logical negation. *)
@@ -292,20 +292,20 @@ val lnot : int -> int
     The result is unspecified if [m < 0] or [m >= bitsize],
     where [bitsize] is [32] on a 32-bit platform and
     [64] on a 64-bit platform. *)
-external ( lsl ) : int -> int -> int = "%lslint"
+external ( lsl ) : (int[@local_opt]) -> (int[@local_opt]) -> int = "%lslint"
 
 
 (** [n lsr m] shifts [n] to the right by [m] bits.
     This is a logical shift: zeroes are inserted regardless of
     the sign of [n].
     The result is unspecified if [m < 0] or [m >= bitsize]. *)
-external ( lsr ) : int -> int -> int = "%lsrint"
+external ( lsr ) : (int[@local_opt]) -> (int[@local_opt]) -> int = "%lsrint"
 
 
 (** [n asr m] shifts [n] to the right by [m] bits.
     This is an arithmetic shift: the sign bit of [n] is replicated.
     The result is unspecified if [m < 0] or [m >= bitsize]. *)
-external ( asr ) : int -> int -> int = "%asrint"
+external ( asr ) : (int[@local_opt]) -> (int[@local_opt]) -> int = "%asrint"
 
 
 (** {6 Floating-point arithmetic}
@@ -323,25 +323,41 @@ external ( asr ) : int -> int -> int = "%asrint"
 *)
 
 (** Unary negation. You can also write [-. e] instead of [~-. e]. *)
-external ( ~-. ) : float -> float = "%negfloat"
+external ( ~-. ) : (float[@local_opt]) -> (float[@local_opt]) = "%negfloat"
 
 (** Unary addition. You can also write [+. e] instead of [~+. e].
     @since 3.12.0
 *)
-external ( ~+. ) : float -> float = "%identity"
+external ( ~+. ) : (float[@local_opt]) -> (float[@local_opt]) = "%identity"
 
 
 (** Floating-point addition *)
-external ( +. ) : float -> float -> float = "%addfloat"
+external ( +. )
+  :  (float[@local_opt])
+  -> (float[@local_opt])
+  -> (float[@local_opt])
+  = "%addfloat"
 
 (** Floating-point subtraction *)
-external ( -. ) : float -> float -> float = "%subfloat"
+external ( -. )
+  :  (float[@local_opt])
+  -> (float[@local_opt])
+  -> (float[@local_opt])
+  = "%subfloat"
 
 (** Floating-point multiplication *)
-external ( *. ) : float -> float -> float = "%mulfloat"
+external ( *. )
+  :  (float[@local_opt])
+  -> (float[@local_opt])
+  -> (float[@local_opt])
+  = "%mulfloat"
 
 (** Floating-point division. *)
-external ( /. ) : float -> float -> float = "%divfloat"
+external ( /. )
+  :  (float[@local_opt])
+  -> (float[@local_opt])
+  -> (float[@local_opt])
+  = "%divfloat"
 
 (** Exponentiation. *)
 external ( ** ) : float -> float -> float = "caml_power_float" "pow"
@@ -487,21 +503,21 @@ external modf : float -> float * float = "caml_modf_float"
 [@@deprecated "[since 2014-10] Use [Float.modf]"]
 
 (** Same as {!Caml.float_of_int}. *)
-external float : int -> float = "%floatofint"
+external float : (int[@local_opt]) -> (float[@local_opt]) = "%floatofint"
 
 
 (** Convert an integer to floating-point. *)
-external float_of_int : int -> float = "%floatofint"
+external float_of_int : (int[@local_opt]) -> (float[@local_opt]) = "%floatofint"
 
 
 (** Same as {!Caml.int_of_float}. *)
-external truncate : float -> int = "%intoffloat"
+external truncate : (float[@local_opt]) -> int = "%intoffloat"
 [@@deprecated "[since 2014-10] Use [Float.iround_towards_zero_exn]"]
 
 (** Truncate the given floating-point number to an integer.
     The result is unspecified if the argument is [nan] or falls outside the
     range of representable integers. *)
-external int_of_float : float -> int = "%intoffloat"
+external int_of_float : (float[@local_opt]) -> int = "%intoffloat"
 
 
 (** Positive infinity. *)
@@ -627,18 +643,18 @@ external float_of_string : string -> float = "caml_float_of_string"
 [%%if flambda_backend]
 
 (** Return the first component of a pair. *)
-external fst : 'a * 'b -> 'a = "%field0_immut"
+external fst : ('a * 'b[@local_opt]) -> ('a[@local_opt]) = "%field0_immut"
 
 (** Return the second component of a pair. *)
-external snd : 'a * 'b -> 'b = "%field1_immut"
+external snd : ('a * 'b[@local_opt]) -> ('b[@local_opt]) = "%field1_immut"
 
 [%%else]
 
 (** Return the first component of a pair. *)
-external fst : 'a * 'b -> 'a = "%field0"
+external fst : ('a * 'b[@local_opt]) -> ('a[@local_opt]) = "%field0"
 
 (** Return the second component of a pair. *)
-external snd : 'a * 'b -> 'b = "%field1"
+external snd : ('a * 'b[@local_opt]) -> ('b[@local_opt]) = "%field1"
 
 [%%endif]
 
@@ -1060,23 +1076,23 @@ end
 type 'a ref = 'a Caml.ref = { mutable contents : 'a }
 
 (** Return a fresh reference containing the given value. *)
-external ref : 'a -> 'a ref = "%makemutable"
+external ref : 'a -> ('a ref[@local_opt]) = "%makemutable"
 
 (** [!r] returns the current contents of reference [r].
     Equivalent to [fun r -> r.contents]. *)
-external ( ! ) : 'a ref -> 'a = "%field0"
+external ( ! ) : ('a ref[@local_opt]) -> 'a = "%field0"
 
 (** [r := a] stores the value of [a] in reference [r].
     Equivalent to [fun r v -> r.contents <- v]. *)
-external ( := ) : 'a ref -> 'a -> unit = "%setfield0"
+external ( := ) : ('a ref[@local_opt]) -> 'a -> unit = "%setfield0"
 
 (** Increment the integer contained in the given reference.
     Equivalent to [fun r -> r := succ !r]. *)
-external incr : int ref -> unit = "%incr"
+external incr : (int ref[@local_opt]) -> unit = "%incr"
 
 (** Decrement the integer contained in the given reference.
     Equivalent to [fun r -> r := pred !r]. *)
-external decr : int ref -> unit = "%decr"
+external decr : (int ref[@local_opt]) -> unit = "%decr"
 
 (** Result type *)
 

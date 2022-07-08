@@ -145,7 +145,9 @@ end
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving bin_io, compare, sexp]
-    type nonrec t_frozen = t_frozen [@@deriving bin_io, compare, hash, sexp]
+    type nonrec t = t [@@deriving bin_io, stable_witness, compare, sexp]
+
+    type nonrec t_frozen = t_frozen
+    [@@deriving bin_io, stable_witness, compare, hash, sexp]
   end
 end

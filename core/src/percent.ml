@@ -4,7 +4,7 @@ open Std_internal
 module Stable = struct
   module V1 = struct
     type t = (float[@quickcheck.generator Float.gen_finite])
-    [@@deriving compare, hash, quickcheck, typerep]
+    [@@deriving compare, hash, quickcheck, typerep, stable_witness]
 
     let of_mult f = f
     let to_mult t = t
@@ -147,7 +147,7 @@ module Stable = struct
 
   module Option = struct
     module V1 = struct
-      type t = V1.t [@@deriving bin_io, compare, hash, typerep]
+      type t = V1.t [@@deriving bin_io, compare, hash, typerep, stable_witness]
 
       let none = Float.nan
       let is_none t = Float.is_nan t
@@ -202,10 +202,12 @@ include (
 struct
   include Float
 
+  let one_hundred_percent = 1.
   let ( // ) x y = of_mult x /. of_mult y
 end :
 sig
   val zero : t
+  val one_hundred_percent : t
   val ( * ) : t -> t -> t
   val ( + ) : t -> t -> t
   val ( - ) : t -> t -> t
@@ -235,5 +237,31 @@ module Always_percentage = struct
 
   let format x format = Format.format_float format (x *. 100.) ^ "%"
   let to_string x = sprintf "%.6G%%" (x * 100.)
+  let sexp_of_t t = Sexp.Atom (to_string t)
+end
+
+module Round_trippable = struct
+  type nonrec t = t [@@deriving sexp]
+
+  let to_string x =
+    let s = to_string x in
+    let y = of_string s in
+    if Float.(x = y) then s else Float.to_string x ^ "x"
+  ;;
+
+  let sexp_of_t t = Sexp.Atom (to_string t)
+end
+
+module Almost_round_trippable = struct
+  type nonrec t = t [@@deriving sexp]
+
+  let to_string x =
+    let s = to_string x in
+    let y = of_string s in
+    if Float.(x = y) || Float.(abs (x - y) / max (abs x) (abs y) < 1e-14)
+    then s
+    else sprintf "%.14g" x ^ "x"
+  ;;
+
   let sexp_of_t t = Sexp.Atom (to_string t)
 end

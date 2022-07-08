@@ -11,7 +11,7 @@ module Stable = struct
   module V1 = struct
     module T : sig
       type underlying = float
-      type t = private underlying [@@deriving bin_io, hash, typerep]
+      type t = private underlying [@@deriving bin_io, hash, typerep, stable_witness]
 
       include Comparable.S_common with type t := t
       include Robustly_comparable with type t := t
@@ -37,9 +37,13 @@ module Stable = struct
         include Float
 
         let sign = sign_exn
+
+        let stable_witness : t Stable_witness.t =
+          Stable_witness.Export.stable_witness_float
+        ;;
       end :
       sig
-        type t = underlying [@@deriving bin_io, hash, typerep]
+        type t = underlying [@@deriving bin_io, hash, typerep, stable_witness]
 
         include Comparable.S_common with type t := t
         include Comparable.With_zero with type t := t

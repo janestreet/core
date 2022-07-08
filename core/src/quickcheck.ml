@@ -5,6 +5,8 @@ module Float = Base.Float
 module Int = Base.Int
 module List = Base.List
 module Option = Base.Option
+module Set = Base.Set
+module Sexp = Base.Sexp
 
 module Polymorphic_types = struct
   type ('a, 'b) variant2 =
@@ -289,20 +291,27 @@ module Configure (Config : Quickcheck_config) = struct
         ~distinct_values
         ~compare
     =
-    let module S =
-      Caml.Set.Make (struct
-        type t = key
+    let module M = struct
+      type t = key
 
-        let compare = compare
-      end)
+      let (compare : t -> t -> int) = compare
+
+      let sexp_of_t =
+        match sexp_of with
+        | Some sexp_of -> sexp_of
+        | None -> sexp_of_opaque
+      ;;
+
+      include (val Comparator.make ~compare ~sexp_of_t)
+    end
     in
     let fail set =
       let expect_count = distinct_values in
-      let actual_count = S.cardinal set in
+      let actual_count = Set.length set in
       let values =
         match sexp_of with
         | None -> None
-        | Some sexp_of_elt -> Some [%sexp (S.elements set : elt list)]
+        | Some sexp_of_elt -> Some [%sexp (Set.to_list set : elt list)]
       in
       raise_s
         [%message
@@ -310,13 +319,13 @@ module Configure (Config : Quickcheck_config) = struct
             (trials : int)
             (expect_count : int)
             (actual_count : int)
-            (values : (Base.Sexp.t option[@sexp.option]))]
+            (values : (Sexp.t option[@sexp.option]))]
     in
     with_return (fun r ->
-      let set = ref S.empty in
+      let set = ref (Set.empty (module M)) in
       iter ?seed ?sizes ~trials gen ~f:(fun elt ->
-        set := S.add elt !set;
-        if S.cardinal !set >= distinct_values then r.return ());
+        set := Set.add !set elt;
+        if Set.length !set >= distinct_values then r.return ());
       fail !set)
   ;;
 

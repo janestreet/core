@@ -7,12 +7,12 @@ module type Extension = sig
   module Stable : sig
     (** [Info.t] is wire-compatible with [V2.t], but not [V1.t].  [V1] bin-prots a sexp of
         the underlying message, whereas [V2] bin-prots the underlying message. *)
-    module V1 : Stable_module_types.S0 with type t = t
+    module V1 : Stable_module_types.With_stable_witness.S0 with type t = t
 
     module V2 : sig
       type nonrec t = t [@@deriving hash]
 
-      include Stable_module_types.S0 with type t := t
+      include Stable_module_types.With_stable_witness.S0 with type t := t
     end
   end
 end

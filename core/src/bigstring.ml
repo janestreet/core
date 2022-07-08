@@ -7,14 +7,19 @@ module Stable = struct
     include Base_bigstring
 
     module Z : sig
-      type t = (char, int8_unsigned_elt, c_layout) Array1.t [@@deriving bin_io]
+      type t = (char, int8_unsigned_elt, c_layout) Array1.t
+      [@@deriving bin_io, stable_witness]
     end = struct
       type t = bigstring [@@deriving bin_io]
+
+      (* bigstring's serialization is intended to be stable.  We assert it here rather
+         than asserting it in two separate places for the bin_io and sexp definitions. *)
+      let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
     end
 
     include Z
 
-    type t_frozen = t [@@deriving bin_io]
+    type t_frozen = t [@@deriving bin_io, stable_witness]
   end
 end
 

@@ -18,10 +18,10 @@ module Sexp = struct
     type t = Base.Sexp.t =
       | Atom of string
       | List of t list
-    [@@deriving bin_io, compare, hash]
+    [@@deriving bin_io, compare, hash, stable_witness]
   end :
   sig
-    type t [@@deriving bin_io, compare, hash]
+    type t [@@deriving bin_io, compare, hash, stable_witness]
   end
   with type t := t)
 end
@@ -30,10 +30,13 @@ module Binable_exn = struct
   module Stable = struct
     module V1 = struct
       module T = struct
-        type t = exn [@@deriving sexp_of]
+        type t = exn [@@deriving sexp_of, stable_witness]
       end
 
       include T
+
+      let to_binable t = t |> [%sexp_of: t]
+      let of_binable = Exn.create_s
 
       include
         Binable.Stable.Of_binable.V1 [@alert "-legacy"]
@@ -41,9 +44,13 @@ module Binable_exn = struct
           (struct
             include T
 
-            let to_binable t = t |> [%sexp_of: t]
-            let of_binable = Exn.create_s
+            let to_binable = to_binable
+            let of_binable = of_binable
           end)
+
+      let stable_witness =
+        Stable_witness.of_serializable Sexp.stable_witness of_binable to_binable
+      ;;
     end
   end
 end
@@ -57,7 +64,7 @@ module Extend (Info : Base.Info.S) = struct
 
       module Source_code_position = struct
         module V1 = struct
-          type t = Source_code_position.Stable.V1.t [@@deriving bin_io]
+          type t = Source_code_position.Stable.V1.t [@@deriving bin_io, stable_witness]
 
           (* [sexp_of_t] as defined here is unstable; this is OK because there is no
              [t_of_sexp].  [sexp_of_t] is only used to produce a sexp that is never
@@ -77,7 +84,7 @@ module Extend (Info : Base.Info.S) = struct
           | Tag_arg of string * Sexp.t * t
           | Of_list of int option * t list
           | With_backtrace of t * string (* backtrace *)
-        [@@deriving bin_io, sexp_of]
+        [@@deriving bin_io, sexp_of, stable_witness]
       end
     end
 
@@ -96,15 +103,25 @@ module Extend (Info : Base.Info.S) = struct
       include T
       include Comparator.Stable.V1.Make (T)
 
+      let to_binable = Info.Internal_repr.of_info
+      let of_binable = Info.Internal_repr.to_info
+
       include
         Binable.Stable.Of_binable.V1 [@alert "-legacy"]
           (Internal_repr.Stable.V2)
           (struct
             type nonrec t = t
 
-            let to_binable = Info.Internal_repr.of_info
-            let of_binable = Info.Internal_repr.to_info
+            let to_binable = to_binable
+            let of_binable = of_binable
           end)
+
+      let stable_witness =
+        Stable_witness.of_serializable
+          Internal_repr.Stable.V2.stable_witness
+          of_binable
+          to_binable
+      ;;
     end
 
     module V1 = struct
@@ -127,15 +144,22 @@ module Extend (Info : Base.Info.S) = struct
       include T
       include Comparator.Stable.V1.Make (T)
 
+      let to_binable = sexp_of_t
+      let of_binable = t_of_sexp
+
       include
         Binable.Stable.Of_binable.V1 [@alert "-legacy"]
           (Sexp)
           (struct
             type nonrec t = t
 
-            let to_binable = sexp_of_t
-            let of_binable = t_of_sexp
+            let to_binable = to_binable
+            let of_binable = of_binable
           end)
+
+      let stable_witness =
+        Stable_witness.of_serializable Sexp.stable_witness of_binable to_binable
+      ;;
     end
   end
 

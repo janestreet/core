@@ -2,7 +2,7 @@ open! Import
 open! Typerep_lib.Std
 include Base.List
 
-type 'a t = 'a list [@@deriving bin_io, typerep]
+type 'a t = 'a list [@@deriving bin_io, typerep, stable_witness]
 
 module Assoc = struct
   include Assoc

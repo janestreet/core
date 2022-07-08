@@ -102,13 +102,12 @@ module type S = sig
 
   (** {6 converters} *)
 
+  (** conversions to and from [float] *)
+
   val of_ns : float -> t
   val of_us : float -> t
   val of_ms : float -> t
   val of_sec : float -> t
-  val of_int_sec : int -> t
-  val of_int32_seconds : Int32.t -> t
-  val of_int63_seconds : Int63.t -> t
   val of_min : float -> t
   val of_hr : float -> t
   val of_day : float -> t
@@ -119,6 +118,21 @@ module type S = sig
   val to_min : t -> float
   val to_hr : t -> float
   val to_day : t -> float
+
+  (** conversions from [int] *)
+
+  val of_int_ns : int -> t
+  val of_int_us : int -> t
+  val of_int_ms : int -> t
+  val of_int_sec : int -> t
+  val of_int_min : int -> t
+  val of_int_hr : int -> t
+  val of_int_day : int -> t
+
+  (** conversions from other size integer types for seconds *)
+
+  val of_int32_seconds : Int32.t -> t
+  val of_int63_seconds : Int63.t -> t
 
   (** [to_int63_seconds_round_down_exn t] returns the number of seconds represented by
       [t], rounded down, raising if the result is not representable as an [Int63.t]. *)

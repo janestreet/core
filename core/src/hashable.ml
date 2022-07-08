@@ -169,5 +169,44 @@ module Stable = struct
 
       let hashable = T.hashable
     end
+
+    module With_stable_witness = struct
+      module type S = sig
+        type key
+
+        module Table : sig
+          type 'a t = (key, 'a) Hashtbl.t [@@deriving sexp, bin_io, stable_witness]
+        end
+
+        module Hash_set : sig
+          type t = key Hash_set.t [@@deriving sexp, bin_io, stable_witness]
+        end
+
+        val hashable : key Hashtbl.Hashable.t
+      end
+
+      module Make (Key : Hashtbl.Key_stable) : S with type key := Key.t = struct
+        module Table = Hashtbl.Make_stable (Key)
+        module Hash_set = Hash_set.Make_stable (Key)
+
+        let hashable = Table.hashable
+      end
+
+      module Make_with_hashable (T : sig
+          module Key : Hashtbl.Key_stable
+
+          val hashable : Key.t Hashtbl_intf.Hashable.t
+        end) : S with type key := T.Key.t = struct
+        module Table = Hashtbl.Make_stable_with_hashable (T)
+
+        module Hash_set = Hash_set.Make_stable_with_hashable (struct
+            module Elt = T.Key
+
+            let hashable = T.hashable
+          end)
+
+        let hashable = T.hashable
+      end
+    end
   end
 end

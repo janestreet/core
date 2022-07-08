@@ -134,7 +134,7 @@ module Stable = struct
       | Not of 'a t
       | If of 'a t * 'a t * 'a t
       | Base of 'a
-    [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
+    [@@deriving bin_io, stable_witness, compare, equal, hash, sexp, sexp_grammar]
 
     (* the remainder of this signature consists of functions used in the definitions
        of sexp conversions that are also useful more generally *)
@@ -152,6 +152,11 @@ module Stable = struct
       | Not of 'a t
       | If of 'a t * 'a t * 'a t
       | Base of 'a
+
+    (* This type is assumed to be stable if the 'a is stable (see big comment above). *)
+    let stable_witness (_ : 'a Stable_witness.t) : 'a t Stable_witness.t =
+      Stable_witness.assert_stable
+    ;;
 
     include (
       T :

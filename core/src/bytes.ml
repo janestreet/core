@@ -5,7 +5,7 @@ module Stable = struct
   module V1 = struct
     include Base.Bytes
 
-    type t = bytes [@@deriving bin_io, quickcheck, typerep]
+    type t = bytes [@@deriving bin_io, quickcheck, typerep, stable_witness]
   end
 end
 

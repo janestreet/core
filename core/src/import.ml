@@ -41,6 +41,7 @@ include Base.Export
 include Stdio
 include Base_for_tests
 include Bin_prot.Std
+include Stable_witness.Export
 module Field = Fieldslib.Field
 
 module From_sexplib : sig

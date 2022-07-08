@@ -35,7 +35,7 @@ module Stable = struct
 
     module T : sig
       type underlying = float [@@deriving hash]
-      type t = private underlying [@@deriving bin_io, hash]
+      type t = private underlying [@@deriving bin_io, hash, stable_witness]
 
       include Like_a_float with type t := t
       include Robustly_comparable with type t := t
@@ -57,8 +57,8 @@ module Stable = struct
       val next : t -> t
       val prev : t -> t
     end = struct
-      type underlying = float [@@deriving hash]
-      type t = underlying [@@deriving hash]
+      type underlying = float [@@deriving hash, stable_witness]
+      type t = underlying [@@deriving hash, stable_witness]
 
       let next t = Float.one_ulp `Up t
       let prev t = Float.one_ulp `Down t
@@ -143,7 +143,6 @@ module Stable = struct
     let of_us x = T.of_float (x /. T.Constant.microseconds_per_second)
     let of_ms x = T.of_float (x /. T.Constant.milliseconds_per_second)
     let of_sec x = T.of_float x
-    let of_int_sec x = of_sec (Float.of_int x)
     let of_int32_seconds sec = of_sec (Int32.to_float sec)
 
     (* Note that [Int63.to_float] can lose precision, but only on inputs large enough that
@@ -153,6 +152,13 @@ module Stable = struct
     let of_min x = x ** T.Constant.minute
     let of_hr x = x ** T.Constant.hour
     let of_day x = x ** T.Constant.day
+    let of_int_ns x = of_ns (Float.of_int x)
+    let of_int_us x = of_us (Float.of_int x)
+    let of_int_ms x = of_ms (Float.of_int x)
+    let of_int_sec x = of_sec (Float.of_int x)
+    let of_int_min x = of_min (Float.of_int x)
+    let of_int_hr x = of_hr (Float.of_int x)
+    let of_int_day x = of_day (Float.of_int x)
 
     let divide_by_unit_of_time t unit_of_time =
       match (unit_of_time : Unit_of_time.t) with

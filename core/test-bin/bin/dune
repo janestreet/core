@@ -1,0 +1,1 @@
+(executables (names just_raise) (libraries core) (preprocess (pps ppx_jane)))

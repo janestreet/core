@@ -11,3 +11,12 @@ module type S = sig
 
   val of_int63_exn : Int63.t -> t
 end
+
+module With_stable_witness = struct
+  module type S = sig
+    include Stable_module_types.With_stable_witness.S0
+
+    val to_int63 : t -> Int63.t
+    val of_int63_exn : Int63.t -> t
+  end
+end

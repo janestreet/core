@@ -9,7 +9,7 @@ module Stable = struct
     module T = struct
       include Base.String
 
-      type t = string [@@deriving bin_io]
+      type t = string [@@deriving bin_io, stable_witness]
     end
 
     include T
@@ -17,8 +17,8 @@ module Stable = struct
     let to_string = Fn.id
     let of_string = Fn.id
 
-    include Comparable.Stable.V1.Make (T)
-    include Hashable.Stable.V1.Make (T)
+    include Comparable.Stable.V1.With_stable_witness.Make (T)
+    include Hashable.Stable.V1.With_stable_witness.Make (T)
   end
 end
 

@@ -30,7 +30,7 @@ let prev = Span.prev
 let to_span_since_epoch t = t
 let of_span_since_epoch s = s
 let to_int63_ns_since_epoch t : Int63.t = Span.to_int63_ns (to_span_since_epoch t)
-let of_int63_ns_since_epoch i = of_span_since_epoch (Span.of_int63_ns i)
+let[@inline] of_int63_ns_since_epoch i = of_span_since_epoch (Span.of_int63_ns i)
 let[@cold] overflow () = raise_s [%message "Time_ns: overflow"]
 let is_earlier t1 ~than:t2 = t1 < t2
 let is_later t1 ~than:t2 = t1 > t2
@@ -308,7 +308,13 @@ module Alternate_sexp = struct
       Utc.of_date_and_span_since_start_of_day date ofday
     ;;
 
-    let t_sexp_grammar = Sexplib.Sexp_grammar.coerce String.t_sexp_grammar
+    let t_sexp_grammar =
+      let open Sexplib in
+      Sexp_grammar.tag
+        (Sexp_grammar.coerce String.t_sexp_grammar : t Sexp_grammar.t)
+        ~key:Sexp_grammar.type_name_tag
+        ~value:(Atom "Core.Time_ns.Alternate_sexp.t")
+    ;;
 
     include Sexpable.Of_stringable (struct
         type nonrec t = t
@@ -328,13 +334,16 @@ module Alternate_sexp = struct
         (* see tests in lib/core/test/src/test_time_ns that ensure stability of this
            representation *)
         type nonrec t = t [@@deriving bin_io, compare, hash, sexp, sexp_grammar]
+
+        let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
+
         type nonrec comparator_witness = comparator_witness
 
         let comparator = comparator
       end
 
       include T
-      include Comparable.Stable.V1.Make (T)
+      include Comparable.Stable.V1.With_stable_witness.Make (T)
     end
   end
 end

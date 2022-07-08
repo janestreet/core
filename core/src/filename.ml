@@ -1,18 +1,18 @@
 module Stable = struct
   module V1 = struct
     include (
-      String :
+      String.Stable.V1 :
       sig
-        type t = string [@@deriving bin_io, compare, hash, sexp]
+        type t = string [@@deriving bin_io, compare, hash, sexp, stable_witness]
 
         include
-          Comparable.Stable.V1.S
+          Comparable.Stable.V1.With_stable_witness.S
           with type comparable := t
           with type comparator_witness = String.Stable.V1.comparator_witness
 
         val comparator : (t, comparator_witness) Comparator.t
 
-        include Hashable.Stable.V1.S with type key := t
+        include Hashable.Stable.V1.With_stable_witness.S with type key := t
       end)
   end
 end

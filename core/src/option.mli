@@ -16,7 +16,8 @@ val validate : none:unit Validate.check -> some:'a Validate.check -> 'a t Valida
 
 module Stable : sig
   module V1 : sig
-    type nonrec 'a t = 'a t [@@deriving bin_io, compare, equal, sexp]
+    type nonrec 'a t = 'a t
+    [@@deriving bin_io, compare, equal, sexp, sexp_grammar, stable_witness]
   end
 end
 

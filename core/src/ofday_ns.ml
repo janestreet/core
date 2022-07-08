@@ -66,11 +66,16 @@ module Stable = struct
   module V1 = struct
     include (
       Span.Stable.V2 :
-        Comparator.S
-      with type t = t
-       and type comparator_witness = Span.Stable.V2.comparator_witness)
+      sig
+        include
+          Comparator.S
+          with type t = t
+           and type comparator_witness = Span.Stable.V2.comparator_witness
 
-    type nonrec t = t [@@deriving compare, bin_io]
+        val stable_witness : t Stable_witness.t
+      end)
+
+    type nonrec t = t [@@deriving compare, bin_io, stable_witness]
 
     let to_string_with_unit =
       let ( / ) = Int63.( / ) in

@@ -12,7 +12,7 @@ module Stable = struct
           | Maybe of t
           | Concat of t list
           | Ad_hoc of string
-        [@@deriving bin_io, compare, sexp]
+        [@@deriving bin_io, compare, sexp, stable_witness]
 
         let%expect_test _ =
           print_endline [%bin_digest: t];
@@ -59,7 +59,7 @@ module Stable = struct
       type t =
         | Usage of string
         | Grammar of Grammar.V1.t
-      [@@deriving bin_io, compare, sexp]
+      [@@deriving bin_io, compare, sexp, stable_witness]
 
       let%expect_test _ =
         print_endline [%bin_digest: t];
@@ -77,7 +77,7 @@ module Stable = struct
         ; doc : string
         ; aliases : string list
         }
-      [@@deriving bin_io, compare, sexp]
+      [@@deriving bin_io, compare, sexp, stable_witness]
 
       let%expect_test _ =
         print_endline [%bin_digest: t];
@@ -96,7 +96,7 @@ module Stable = struct
         ; anons : Anons.V2.t
         ; flags : Flag_info.V1.t list
         }
-      [@@deriving bin_io, compare, fields, sexp]
+      [@@deriving bin_io, compare, fields, sexp, stable_witness]
 
       let%expect_test _ =
         print_endline [%bin_digest: t];
@@ -111,7 +111,7 @@ module Stable = struct
         ; usage : string
         ; flags : Flag_info.V1.t list
         }
-      [@@deriving bin_shape, sexp]
+      [@@deriving bin_shape, sexp, stable_witness]
 
       let to_latest { summary; readme; usage; flags } =
         { V2.summary; readme; anons = Usage usage; flags }
@@ -142,7 +142,7 @@ module Stable = struct
         ; readme : string option [@sexp.option]
         ; subcommands : (string * 'a) List.Stable.V1.t Lazy.Stable.V1.t
         }
-      [@@deriving bin_io, compare, sexp]
+      [@@deriving bin_io, compare, sexp, stable_witness]
 
       let%expect_test _ =
         print_endline [%bin_digest: a t];
@@ -164,7 +164,7 @@ module Stable = struct
         ; readme : string option [@sexp.option]
         ; subcommands : (string * 'a) List.Stable.V1.t
         }
-      [@@deriving bin_io, compare, sexp]
+      [@@deriving bin_io, compare, sexp, stable_witness]
 
       let%expect_test _ =
         print_endline [%bin_digest: a t];
@@ -198,7 +198,7 @@ module Stable = struct
         ; path_to_exe : string
         ; child_subcommand : string list
         }
-      [@@deriving bin_io, compare, sexp]
+      [@@deriving bin_io, compare, sexp, stable_witness]
 
       let%expect_test _ =
         print_endline [%bin_digest: t];
@@ -218,7 +218,7 @@ module Stable = struct
         ; working_dir : string
         ; path_to_exe : string
         }
-      [@@deriving bin_shape, sexp]
+      [@@deriving bin_shape, sexp, stable_witness]
 
       let to_v3 t : V3.t =
         { summary = t.summary
@@ -248,7 +248,7 @@ module Stable = struct
         ; (* [path_to_exe] must be absolute. *)
           path_to_exe : string
         }
-      [@@deriving bin_shape, sexp]
+      [@@deriving bin_shape, sexp, stable_witness]
 
       let to_v2 t : V2.t =
         { summary = t.summary
@@ -276,7 +276,7 @@ module Stable = struct
         | Basic of Base_info.V2.t
         | Group of t Group_info.V2.t
         | Exec of Exec_info.V3.t * t
-      [@@deriving bin_io, compare, sexp]
+      [@@deriving bin_io, compare, sexp, stable_witness]
 
       let%expect_test _ =
         print_endline [%bin_digest: t];
@@ -294,7 +294,7 @@ module Stable = struct
         | Group of t Group_info.V2.t
         | Exec of Exec_info.V3.t
         | Lazy of t Lazy.Stable.V1.t
-      [@@deriving bin_shape, sexp]
+      [@@deriving bin_shape, sexp, stable_witness]
 
       let%expect_test _ =
         print_endline [%bin_digest: t];
@@ -312,7 +312,7 @@ module Stable = struct
         | Base of Base_info.V2.t
         | Group of t Group_info.V1.t
         | Exec of Exec_info.V2.t
-      [@@deriving bin_shape, sexp]
+      [@@deriving bin_shape, sexp, stable_witness]
 
       let%expect_test _ =
         print_endline [%bin_digest: t];
@@ -338,7 +338,7 @@ module Stable = struct
         | Base of Base_info.V1.t
         | Group of t Group_info.V1.t
         | Exec of Exec_info.V1.t
-      [@@deriving bin_shape, sexp]
+      [@@deriving bin_shape, sexp, stable_witness]
 
       let%expect_test _ =
         print_endline [%bin_digest: t];
@@ -364,7 +364,7 @@ module Stable = struct
         | V1 of V1.t
         | V2 of V2.t
         | V3 of V3.t (* available at least since 2020-04 *)
-      [@@deriving bin_shape, sexp, variants]
+      [@@deriving bin_shape, sexp, variants, stable_witness]
 
       (* It's okay to change this one in place, as long as we wait long enough before
          dropping support for old versions. *)

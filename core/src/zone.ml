@@ -41,13 +41,20 @@ module Stable = struct
 
         include
           Binable.Of_binable_without_uuid [@alert "-legacy"]
-            (Int)
+            (Int.Stable.V1)
             (struct
               type t = int
 
               let to_binable = to_external
               let of_binable = of_external
             end)
+
+        let stable_witness =
+          Stable_witness.of_serializable
+            Int.Stable.V1.stable_witness
+            of_external
+            to_external
+        ;;
 
         include
           Sexpable.Of_sexpable
@@ -66,7 +73,7 @@ module Stable = struct
           ; is_dst : bool
           ; abbrv : string
           }
-        [@@deriving bin_io, sexp]
+        [@@deriving bin_io, sexp, stable_witness]
       end
 
       (* holds information about when leap seconds should be applied - unused
@@ -77,7 +84,7 @@ module Stable = struct
           { time_in_seconds_since_epoch : Int63.Stable.V1.t
           ; seconds : int
           }
-        [@@deriving bin_io, sexp]
+        [@@deriving bin_io, sexp, stable_witness]
       end
 
       module Transition = struct
@@ -85,21 +92,21 @@ module Stable = struct
           { start_time_in_seconds_since_epoch : Int63.Stable.V1.t
           ; new_regime : Regime.t
           }
-        [@@deriving bin_io, sexp]
+        [@@deriving bin_io, sexp, stable_witness]
       end
 
       type t =
         { name : string
         ; original_filename : string option
         ;
-          digest : Md5.As_binary_string.t option
+          digest : Md5.As_binary_string.Stable.V1.t option
         ; transitions : Transition.t array
         ; (* caches the index of the last transition we used to make lookups faster *)
           mutable last_regime_index : Index.t
         ; default_local_time_type : Regime.t
         ; leap_seconds : Leap_second.t list
         }
-      [@@deriving bin_io, sexp]
+      [@@deriving bin_io, sexp, stable_witness]
 
       (* this relies on zones with the same name having the same transitions *)
       let compare t1 t2 = String.compare t1.name t2.name

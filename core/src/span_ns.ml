@@ -102,6 +102,9 @@ let of_int63_ns i = i
 let of_int_us i = Int63.(of_int i * microsecond)
 let of_int_ms i = Int63.(of_int i * millisecond)
 let of_int_sec i = Int63.(of_int i * second)
+let of_int_min i = Int63.(of_int i * minute)
+let of_int_hr i = Int63.(of_int i * hour)
+let of_int_day i = Int63.(of_int i * day)
 let of_us f = round_nearest (f *. float microsecond)
 let of_ms f = round_nearest (f *. float millisecond)
 let of_sec f = round_nearest (f *. float second)
@@ -186,6 +189,7 @@ module Stable = struct
       module T0 = struct
         type nonrec t = t [@@deriving bin_io, compare, hash, equal]
 
+        let stable_witness : t Stable_witness.t = Int63.Stable.V1.stable_witness
         let of_int63_exn t = of_int63_ns t
         let to_int63 t = to_int63_ns t
 
@@ -648,7 +652,7 @@ module Stable = struct
     end
 
     include T
-    include Comparable.Stable.V1.Make (T)
+    include Comparable.Stable.V1.With_stable_witness.Make (T)
   end
 end
 

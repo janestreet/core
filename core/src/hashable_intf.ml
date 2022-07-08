@@ -115,6 +115,30 @@ module type Hashable = sig
 
           val hashable : Key.t Hashtbl.Hashable.t
         end) : S with type key := T.Key.t
+
+      module With_stable_witness : sig
+        module type S = sig
+          type key
+
+          module Table : sig
+            type 'a t = (key, 'a) Hashtbl.t [@@deriving sexp, bin_io, stable_witness]
+          end
+
+          module Hash_set : sig
+            type t = key Hash_set.t [@@deriving sexp, bin_io, stable_witness]
+          end
+
+          val hashable : key Hashtbl.Hashable.t
+        end
+
+        module Make (Key : Hashtbl.Key_stable) : S with type key := Key.t
+
+        module Make_with_hashable (T : sig
+            module Key : Hashtbl.Key_stable
+
+            val hashable : Key.t Hashtbl.Hashable.t
+          end) : S with type key := T.Key.t
+      end
     end
   end
 end

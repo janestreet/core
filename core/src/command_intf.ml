@@ -312,9 +312,6 @@ module type Command = sig
     (** [listed] flags may be passed zero or more times. *)
     val listed : 'a Arg_type.t -> 'a list t
 
-    val one_or_more : 'a Arg_type.t -> ('a * 'a list) t
-    [@@deprecated "[since 2021-07] Use [one_or_more_as_pair] or [one_or_more_as_list]"]
-
     (** [one_or_more_as_pair] flags must be passed one or more times. *)
     val one_or_more_as_pair : 'a Arg_type.t -> ('a * 'a list) t
 

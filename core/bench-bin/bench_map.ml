@@ -26,18 +26,18 @@ let iter2_naive () =
 ;;
 
 let add_with_set =
-  assert (not (Int.Map.mem map size));
+  assert (not (Map.mem map size));
   fun () -> ignore (Map.set map ~key:size ~data:size : _ Map.t)
 ;;
 
 let add_with_add =
-  assert (not (Int.Map.mem map size));
+  assert (not (Map.mem map size));
   fun () -> ignore (Map.add map ~key:size ~data:size : _ Base.Map.Or_duplicate.t)
 ;;
 
 let add_duplicate =
   let map = Map.set map ~key:size ~data:size in
-  assert (Int.Map.mem map size);
+  assert (Map.mem map size);
   fun () -> ignore (Map.add map ~key:size ~data:size : _ Base.Map.Or_duplicate.t)
 ;;
 

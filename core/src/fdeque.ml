@@ -333,6 +333,12 @@ module Stable = struct
           loop next empty 0
         ;;
       end)
+
+    (* The binary representation produced by Bin_prot.Utils.Make_iterable_binable1 is
+       assumed to be stable (if the 'a is stable). *)
+    let stable_witness (_ : 'a Stable_witness.t) : 'a t Stable_witness.t =
+      Stable_witness.assert_stable
+    ;;
   end
 end
 

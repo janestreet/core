@@ -1,5 +1,4 @@
 open! Import
-open Std_internal
 
 module type Span = sig
   (** [t] is immediate on 64bit boxes and so plays nicely with the GC write barrier. *)
@@ -165,7 +164,7 @@ end
 
 (** Time represented as an [Int63.t] number of nanoseconds since the epoch.
 
-    See {!Core.Time_ns} for important user documentation.
+    See {!Time_ns_unix} for important user documentation.
 
     Internally, arithmetic is not overflow-checked. Instead, overflows are silently
     ignored as for [int] arithmetic, unless specifically documented otherwise. Conversions
@@ -344,7 +343,8 @@ module type Time_ns = sig
 
     module Alternate_sexp : sig
       module V1 : sig
-        type t = Alternate_sexp.t [@@deriving bin_io, compare, hash, sexp, sexp_grammar]
+        type t = Alternate_sexp.t
+        [@@deriving bin_io, compare, hash, sexp, sexp_grammar, stable_witness]
 
         include
           Comparator.Stable.V1.S
@@ -352,7 +352,7 @@ module type Time_ns = sig
            and type comparator_witness = Alternate_sexp.comparator_witness
 
         include
-          Comparable.Stable.V1.S
+          Comparable.Stable.V1.With_stable_witness.S
           with type comparable := t
           with type comparator_witness := comparator_witness
       end
@@ -363,16 +363,16 @@ module type Time_ns = sig
       module Option : sig end [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
       module V2 : sig
-        type t = Span.t [@@deriving hash, equal]
+        type t = Span.t [@@deriving hash, equal, sexp_grammar]
         type nonrec comparator_witness = Span.comparator_witness
 
         include
-          Stable_int63able
+          Stable_int63able.With_stable_witness.S
           with type t := t
           with type comparator_witness := comparator_witness
 
         include
-          Comparable.Stable.V1.S
+          Comparable.Stable.V1.With_stable_witness.S
           with type comparable := t
           with type comparator_witness := comparator_witness
 
@@ -382,7 +382,7 @@ module type Time_ns = sig
 
     module Ofday : sig
       module V1 :
-        Stable_int63able
+        Stable_int63able.With_stable_witness.S
         with type t = Ofday.t
          and type comparator_witness = Ofday.comparator_witness
 

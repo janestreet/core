@@ -7,6 +7,16 @@ module type Stable1 = Stable_module_types.S1
 module type Stable2 = Stable_module_types.S2
 module type Stable3 = Stable_module_types.S3
 module type Stable4 = Stable_module_types.S4
+module type Stable_with_witness = Stable_module_types.With_stable_witness.S0
+module type Stable_int63able_with_witness = Stable_int63able.With_stable_witness.S
+
+module type Stable_without_comparator_with_witness =
+  Stable_module_types.With_stable_witness.S0_without_comparator
+
+module type Stable1_with_witness = Stable_module_types.With_stable_witness.S1
+module type Stable2_with_witness = Stable_module_types.With_stable_witness.S2
+module type Stable3_with_witness = Stable_module_types.With_stable_witness.S3
+module type Stable4_with_witness = Stable_module_types.With_stable_witness.S4
 
 module Make_stable = Make_stable
 include Stable_internal
@@ -53,7 +63,11 @@ module Source_code_position = Source_code_position.Stable
 module String = String.Stable
 module String_id = String_id.Stable
 module Time_ns = Time_ns.Stable
+
 module Time = Time_float.Stable
+[@@deprecated "[since 2021-11] Use [Time_float] or [Time_float_unix] instead"]
+
+module Time_float = Time_float.Stable
 module Unit = Unit.Stable
 module Unix = struct end [@@deprecated "[since 2021-02] Use [Core_unix.Stable]"]
 include Perms.Export

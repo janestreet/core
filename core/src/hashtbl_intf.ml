@@ -113,6 +113,12 @@ module type Key_binable = sig
   include Key with type t := t
 end
 
+module type Key_stable = sig
+  type t [@@deriving bin_io, sexp, stable_witness]
+
+  include Key_binable with type t := t
+end
+
 module type Creators = Hashtbl.Private.Creators_generic
 
 module type Accessors = sig
@@ -214,6 +220,12 @@ module type S_binable = sig
   include Binable.S1 with type 'v t := 'v t
 end
 
+module type S_stable = sig
+  include S_binable
+
+  type nonrec 'a t = 'a t [@@deriving stable_witness]
+end
+
 module type Hashtbl = sig
   include Hashtbl.S_without_submodules (** @inline *)
 
@@ -241,13 +253,16 @@ module type Hashtbl = sig
   module type Key_plain = Key_plain
   module type Key = Key
   module type Key_binable = Key_binable
+  module type Key_stable = Key_stable
   module type S_plain = S_plain with type ('a, 'b) hashtbl = ('a, 'b) t
   module type S = S with type ('a, 'b) hashtbl = ('a, 'b) t
   module type S_binable = S_binable with type ('a, 'b) hashtbl = ('a, 'b) t
+  module type S_stable = S_stable with type ('a, 'b) hashtbl = ('a, 'b) t
 
   module Make_plain (Key : Key_plain) : S_plain with type key = Key.t
   module Make (Key : Key) : S with type key = Key.t
   module Make_binable (Key : Key_binable) : S_binable with type key = Key.t
+  module Make_stable (Key : Key_stable) : S_stable with type key = Key.t
 
   module Make_plain_with_hashable (T : sig
       module Key : Key_plain
@@ -266,6 +281,12 @@ module type Hashtbl = sig
 
       val hashable : Key.t Hashable.t
     end) : S_binable with type key = T.Key.t
+
+  module Make_stable_with_hashable (T : sig
+      module Key : Key_stable
+
+      val hashable : Key.t Hashable.t
+    end) : S_stable with type key = T.Key.t
 
   module M (K : T.T) : sig
     type nonrec 'v t = (K.t, 'v) t

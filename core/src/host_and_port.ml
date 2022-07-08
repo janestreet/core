@@ -3,7 +3,7 @@ module Stable = struct
 
   module V1 = struct
     module Serializable = struct
-      type t = string * int [@@deriving sexp, bin_io]
+      type t = string * int [@@deriving sexp, bin_io, stable_witness]
     end
 
     module T0 = struct
@@ -29,6 +29,13 @@ module Stable = struct
             let to_binable = to_serializable
             let of_binable = of_serializable
           end)
+
+      let stable_witness =
+        Stable_witness.of_serializable
+          Serializable.stable_witness
+          of_serializable
+          to_serializable
+      ;;
 
       let%expect_test "stable" =
         print_endline [%bin_digest: t];
@@ -89,7 +96,7 @@ module Stable = struct
     end
 
     include T1
-    include Comparable.Stable.V1.Make (T1)
+    include Comparable.Stable.V1.With_stable_witness.Make (T1)
 
     let%test_unit "t_of_sexp" =
       [%test_result: t]

@@ -27,16 +27,6 @@ end
 
 (** {2 Extensions} *)
 
-(** [stable_dedup] Same as [dedup] but maintains the order of the list and doesn't allow
-    compare function to be specified (otherwise, the implementation in terms of Set.t
-    would hide a heavyweight functor instantiation at each call).
-
-    This function is deprecated because it uses polymorphic comparison under the hood
-    without being obvious to the caller. *)
-val stable_dedup : 'a t -> 'a t
-[@@deprecated
-  "[since 2021-08] Use [Set.stable_dedup_list] or [stable_dedup_staged] instead."]
-
 (** [stable_dedup_staged] is the same as [dedup_and_sort] but maintains the order of the
     list.  This function is staged because it instantiates a functor when [compare] is
     passed.
@@ -103,6 +93,7 @@ val zip_with_remainder
 
 module Stable : sig
   module V1 : sig
-    type nonrec 'a t = 'a t [@@deriving sexp, bin_io, compare]
+    type nonrec 'a t = 'a t
+    [@@deriving sexp, sexp_grammar, bin_io, compare, stable_witness]
   end
 end

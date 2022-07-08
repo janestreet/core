@@ -222,7 +222,7 @@ module type S = sig
 
   val of_string : string -> t
   [@@deprecated
-    "[since 2021-04] Use [of_string_with_utc_offset] or [Time_unix.of_string]"]
+    "[since 2021-04] Use [of_string_with_utc_offset] or [Time_float_unix.of_string]"]
 
   (** [of_string_with_utc_offset] requires its input to have an explicit
       UTC offset, e.g. [2000-01-01 12:34:56.789012-23], or use the UTC zone, "Z",
@@ -230,7 +230,7 @@ module type S = sig
   val of_string_with_utc_offset : string -> t
 
   val to_string : t -> string
-  [@@deprecated "[since 2021-04] Use [to_string_utc] or [Time_unix.to_string]"]
+  [@@deprecated "[since 2021-04] Use [to_string_utc] or [Time_float_unix.to_string]"]
 
   (** [to_string_utc] generates a time string with the UTC zone, "Z", e.g. [2000-01-01
       12:34:56.789012Z]. *)

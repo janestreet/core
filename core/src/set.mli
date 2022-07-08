@@ -25,24 +25,34 @@ module Tree : sig
   module Named = Tree.Named
 
   include
-    Creators_and_accessors2_with_comparator
+    Creators_and_accessors_generic
     with type ('a, 'b) set := ('a, 'b) t
     with type ('a, 'b) t := ('a, 'b) t
     with type ('a, 'b) tree := ('a, 'b) t
-    with type ('a, 'b) named := ('a, 'b) Named.t
+    with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) With_comparator.t
+    with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) With_comparator.t
+    with type 'a elt := 'a
+    with type 'c cmp := 'c
     with module Named := Named
 end
 
 module Using_comparator : sig
   include
-    Creators2_with_comparator
+    Creators_generic
     with type ('a, 'b) set := ('a, 'b) t
     with type ('a, 'b) t := ('a, 'b) t
     with type ('a, 'b) tree := ('a, 'b) Tree.t
+    with type 'a elt := 'a
+    with type 'c cmp := 'c
+    with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) With_comparator.t
 end
 
 (** Tests internal invariants of the set data structure.  Returns true on success. *)
 val invariants : (_, _) t -> bool
+
+(** Returns a first-class module that can be used to build other map/set/etc
+    with the same notion of comparison. *)
+val comparator_s : ('a, 'cmp) t -> ('a, 'cmp) Comparator.Module.t
 
 val comparator : ('a, 'cmp) t -> ('a, 'cmp) Comparator.t
 
@@ -178,18 +188,20 @@ val are_disjoint : ('a, 'cmp) t -> ('a, 'cmp) t -> bool
     "the set of" often makes the error message sound more natural.
 *)
 module Named : sig
-  type nonrec ('a, 'cmp) t = ('a, 'cmp) Named.t =
-    { set : ('a, 'cmp) t
+  type ('a, 'cmp) set := ('a, 'cmp) t
+
+  type 'a t = 'a Set.Named.t =
+    { set : 'a
     ; name : string
     }
 
   (** [is_subset t1 ~of_:t2] returns [Ok ()] if [t1] is a subset of [t2] and a
       human-readable error otherwise.  *)
-  val is_subset : ('a, 'cmp) t -> of_:('a, 'cmp) t -> unit Or_error.t
+  val is_subset : ('a, 'cmp) set t -> of_:('a, 'cmp) set t -> unit Or_error.t
 
   (** [equal t1 t2] returns [Ok ()] if [t1] is equal to [t2] and a human-readable
       error otherwise.  *)
-  val equal : ('a, 'cmp) t -> ('a, 'cmp) t -> unit Or_error.t
+  val equal : ('a, 'cmp) set t -> ('a, 'cmp) set t -> unit Or_error.t
 end
 
 (** The list or array given to [of_list] and [of_array] need not be sorted. *)
@@ -446,29 +458,29 @@ module Poly : sig
     type 'elt t = ('elt, Comparator.Poly.comparator_witness) Tree.t
     [@@deriving sexp, sexp_grammar]
 
-    type 'a named = ('a, Comparator.Poly.comparator_witness) Tree.Named.t
-
     include
-      Creators_and_accessors1
+      Creators_and_accessors_generic
       with type ('a, 'b) set := ('a, 'b) Tree.t
-      with type 'elt t := 'elt t
-      with type 'elt tree := 'elt t
-      with type 'a named := 'a named
-      with type comparator_witness := Comparator.Poly.comparator_witness
+      with type ('elt, 'cmp) t := 'elt t
+      with type ('elt, 'cmp) tree := 'elt t
+      with type 'c cmp := Comparator.Poly.comparator_witness
+      with type 'a elt := 'a
+      with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
+      with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
   end
 
   type 'elt t = ('elt, Comparator.Poly.comparator_witness) set
   [@@deriving bin_io, compare, sexp, sexp_grammar]
 
-  type 'a named = ('a, Comparator.Poly.comparator_witness) Named.t
-
   include
-    Creators_and_accessors1
+    Creators_and_accessors_generic
     with type ('a, 'b) set := ('a, 'b) set
-    with type 'elt t := 'elt t
-    with type 'elt tree := 'elt Tree.t
-    with type 'a named := 'a named
-    with type comparator_witness := Comparator.Poly.comparator_witness
+    with type ('elt, 'cmp) t := 'elt t
+    with type ('elt, 'cmp) tree := 'elt Tree.t
+    with type 'c cmp := Comparator.Poly.comparator_witness
+    with type 'a elt := 'a
+    with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
+    with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
 end
 with type ('a, 'b) set := ('a, 'b) t
 
@@ -564,5 +576,18 @@ module Stable : sig
 
     module Make (Elt : Stable_module_types.S0) :
       S with type elt := Elt.t with type elt_comparator_witness := Elt.comparator_witness
+
+    module With_stable_witness : sig
+      module type S = sig
+        include S
+
+        val stable_witness : t Stable_witness.t
+      end
+
+      module Make (Elt : Stable_module_types.With_stable_witness.S0) :
+        S
+        with type elt := Elt.t
+        with type elt_comparator_witness := Elt.comparator_witness
+    end
   end
 end

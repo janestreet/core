@@ -170,15 +170,22 @@ module Stable = struct
   module V1 = struct
     type nonrec t = t [@@deriving compare, hash]
 
+    let to_binable = bytes_float
+    let of_binable = of_bytes_float_exn
+
     include
       Binable0.Of_binable_without_uuid [@alert "-legacy"]
         (Float)
         (struct
           type nonrec t = t
 
-          let to_binable = bytes_float
-          let of_binable = of_bytes_float_exn
+          let to_binable = to_binable
+          let of_binable = of_binable
         end)
+
+    let stable_witness : t Stable_witness.t =
+      Stable_witness.of_serializable stable_witness_float of_binable to_binable
+    ;;
 
     include Of_sexp_v1_v2
 
@@ -230,15 +237,22 @@ module Stable = struct
   module V2 = struct
     type nonrec t = t [@@deriving compare, hash]
 
+    let to_binable = bytes_int63
+    let of_binable = of_bytes_int63
+
     include
       Binable0.Of_binable_without_uuid [@alert "-legacy"]
-        (Int63)
+        (Int63.Stable.V1)
         (struct
           type nonrec t = t
 
-          let to_binable = bytes_int63
-          let of_binable = of_bytes_int63
+          let to_binable = to_binable
+          let of_binable = of_binable
         end)
+
+    let stable_witness : t Stable_witness.t =
+      Stable_witness.of_serializable Int63.Stable.V1.stable_witness of_binable to_binable
+    ;;
 
     include Of_sexp_v1_v2
 

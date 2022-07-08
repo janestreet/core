@@ -5,11 +5,11 @@ module Stable = struct
     module T = struct
       include Base.Int
 
-      type t = int [@@deriving hash, bin_io, sexp]
+      type t = int [@@deriving hash, bin_io, sexp, stable_witness]
     end
 
     include T
-    include Comparable.Stable.V1.Make (T)
+    include Comparable.Stable.V1.With_stable_witness.Make (T)
   end
 end
 

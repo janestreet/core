@@ -65,7 +65,7 @@ let failwithf = Printf.failwithf
 (* This is an explicit module type instead of just given inline as the return signature of
    [Only_used_as_phantom_type1] to avoid an unused value warning with bin_io values. *)
 module type Sexpable_binable_comparable = sig
-  type 'a t = 'a [@@deriving bin_io, compare, hash, sexp, sexp_grammar]
+  type 'a t = 'a [@@deriving bin_io, compare, hash, sexp, sexp_grammar, stable_witness]
 end
 
 (* Override all bin_io, sexp, compare functions to raise exceptions *)
@@ -79,6 +79,7 @@ module Only_used_as_phantom_type1 (Name : sig
   let compare _ _ _ = failwithf "Unexpectedly called [%s.compare]" Name.name ()
   let hash_fold_t _ _ _ = failwithf "Unexpectedly called [%s.hash_fold_t]" Name.name ()
   let t_sexp_grammar _ = Sexplib.Sexp_grammar.coerce Base.Nothing.t_sexp_grammar
+  let stable_witness _ = Stable_witness.assert_stable
 
   include
     Binable.Of_binable1_without_uuid [@alert "-legacy"]
@@ -103,13 +104,14 @@ module Only_used_as_phantom_type0 (T : sig
 
     val name : string
   end) : sig
-  type t = T.t [@@deriving bin_io, compare, hash, sexp_poly]
+  type t = T.t [@@deriving bin_io, compare, hash, sexp_poly, stable_witness]
 end = struct
   module M = Only_used_as_phantom_type1 (T)
 
   type t = T.t M.t [@@deriving bin_io, compare, hash, sexp]
 
   let __t_of_sexp__ = t_of_sexp
+  let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
 end
 
 module Stable = struct
@@ -121,24 +123,31 @@ module Stable = struct
     module Read_write = Only_used_as_phantom_type0 (Types.Read_write)
     module Immutable = Only_used_as_phantom_type0 (Types.Immutable)
 
-    type nobody = Nobody.t [@@deriving bin_io, compare, hash, sexp]
-    type me = Me.t [@@deriving bin_io, compare, hash, sexp]
+    type nobody = Nobody.t [@@deriving bin_io, compare, hash, sexp, stable_witness]
+    type me = Me.t [@@deriving bin_io, compare, hash, sexp, stable_witness]
 
     module Upper_bound = struct
       module M = Only_used_as_phantom_type1 (Types.Upper_bound)
 
       type 'a t = 'a Types.Upper_bound.t M.t [@@deriving bin_io, compare, hash, sexp]
 
+      let stable_witness _ = Stable_witness.assert_stable
       let __t_of_sexp__ = t_of_sexp
     end
   end
 
   module Export = struct
-    type read = V1.Read.t [@@deriving bin_io, compare, hash, sexp]
-    type write = V1.Write.t [@@deriving compare, hash, sexp]
-    type immutable = V1.Immutable.t [@@deriving bin_io, compare, hash, sexp]
-    type read_write = V1.Read_write.t [@@deriving bin_io, compare, hash, sexp]
-    type 'a perms = 'a V1.Upper_bound.t [@@deriving bin_io, compare, hash, sexp]
+    type read = V1.Read.t [@@deriving bin_io, compare, hash, sexp, stable_witness]
+    type write = V1.Write.t [@@deriving compare, hash, sexp, stable_witness]
+
+    type immutable = V1.Immutable.t
+    [@@deriving bin_io, compare, hash, sexp, stable_witness]
+
+    type read_write = V1.Read_write.t
+    [@@deriving bin_io, compare, hash, sexp, stable_witness]
+
+    type 'a perms = 'a V1.Upper_bound.t
+    [@@deriving bin_io, compare, hash, sexp, stable_witness]
   end
 end
 

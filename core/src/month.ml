@@ -57,17 +57,24 @@ module Stable = struct
       | Dec -> 12
     ;;
 
+    let to_binable t = to_int t - 1
+    let of_binable i = of_int_exn (i + 1)
+
     include
       Binable.Stable.Of_binable.V1 [@alert "-legacy"]
-        (Int)
+        (Int.Stable.V1)
         (struct
           type nonrec t = t
 
-          let to_binable t = to_int t - 1
-          let of_binable i = of_int_exn (i + 1)
+          let to_binable = to_binable
+          let of_binable = of_binable
         end)
 
     include (val Comparator.Stable.V1.make ~compare ~sexp_of_t)
+
+    let stable_witness : t Stable_witness.t =
+      Stable_witness.of_serializable Int.Stable.V1.stable_witness of_binable to_binable
+    ;;
   end
 end
 

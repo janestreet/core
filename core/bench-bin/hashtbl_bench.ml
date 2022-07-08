@@ -269,7 +269,64 @@ end = struct
     ;;
 
     let choose = Table.choose
+
+    let () =
+      ( !! ) "choose" (fun size ->
+        let t = Example.t size in
+        stage (fun () -> ignore (choose t : (key * int) option)))
+    ;;
+
+    let choose_randomly = Table.choose_randomly
+
+    let () =
+      ( !! ) "choose_randomly" (fun size ->
+        let t = Example.t size in
+        stage (fun () -> ignore (choose t : (key * int) option)))
+    ;;
+
+    let choose_and_remove_to_clear_table t ~choose =
+      let rec loop () =
+        match choose t with
+        | Some (key, (_ : int)) ->
+          Table.remove t key;
+          loop ()
+        | None -> ()
+      in
+      loop ()
+    ;;
+
+    let () =
+      ( !! ) "copy + choose and remove to clear table" (fun size ->
+        let t = Example.t size in
+        stage (fun () ->
+          let t = Table.copy t in
+          choose_and_remove_to_clear_table t ~choose))
+    ;;
+
+    let () =
+      ( !! ) "copy + choose_randomly and remove to clear table" (fun size ->
+        let t = Example.t size in
+        stage (fun () ->
+          let t = Table.copy t in
+          choose_and_remove_to_clear_table t ~choose:choose_randomly))
+    ;;
+
     let choose_exn = Table.choose_exn
+
+    let () =
+      ( !! ) "choose_exn" (fun size ->
+        let t = Example.t size in
+        stage (fun () -> ignore (choose_exn t : key * int)))
+    ;;
+
+    let choose_randomly_exn = Table.choose_randomly_exn
+
+    let () =
+      ( !! ) "choose_randomly_exn" (fun size ->
+        let t = Example.t size in
+        stage (fun () -> ignore (choose_randomly_exn t : key * int)))
+    ;;
+
     let copy = Table.copy
 
     let () =
@@ -622,12 +679,9 @@ end = struct
         let r = Example.random size in
         let t = Example.t size in
         stage (fun () ->
-          update
-            t
-            (Example.random_key r `either)
-            ~f:(function
-              | None -> 0
-              | Some n -> n + 1);
+          update t (Example.random_key r `either) ~f:(function
+            | None -> 0
+            | Some n -> n + 1);
           remove t (Example.random_key r `either)))
     ;;
 

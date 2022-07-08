@@ -143,9 +143,13 @@ module Tree : sig
   type ('k, +'v, 'cmp) t = ('k, 'v, 'cmp) Tree.t [@@deriving sexp_of]
 
   include
-    Creators_and_accessors3_with_comparator
+    Creators_and_accessors_generic
     with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
     with type ('a, 'b, 'c) tree := ('a, 'b, 'c) t
+    with type 'cmp cmp := 'cmp
+    with type 'key key := 'key
+    with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) With_comparator.t
+    with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) With_comparator.t
 end
 
 val to_tree : ('k, 'v, 'cmp) t -> ('k, 'v, 'cmp) Tree.t
@@ -260,6 +264,35 @@ val of_sequence_reduce
   -> ('a * 'b) Sequence.t
   -> f:('b -> 'b -> 'b)
   -> ('a, 'b, 'cmp) t
+
+(** Constructs a map from a list of values, where [get_key] extracts a key from a value.
+*)
+val of_list_with_key
+  :  ('k, 'cmp) Comparator.Module.t
+  -> 'v list
+  -> get_key:('v -> 'k)
+  -> [ `Ok of ('k, 'v, 'cmp) t | `Duplicate_key of 'k ]
+
+(** Like [of_list_with_key]; returns [Error] on duplicate key. *)
+val of_list_with_key_or_error
+  :  ('k, 'cmp) Comparator.Module.t
+  -> 'v list
+  -> get_key:('v -> 'k)
+  -> ('k, 'v, 'cmp) t Or_error.t
+
+(** Like [of_list_with_key]; raises on duplicate key. *)
+val of_list_with_key_exn
+  :  ('k, 'cmp) Comparator.Module.t
+  -> 'v list
+  -> get_key:('v -> 'k)
+  -> ('k, 'v, 'cmp) t
+
+(** Like [of_list_with_key]; produces lists of all values associated with each key. *)
+val of_list_with_key_multi
+  :  ('k, 'cmp) Comparator.Module.t
+  -> 'v list
+  -> get_key:('v -> 'k)
+  -> ('k, 'v list, 'cmp) t
 
 (** Tests whether a map is empty or not. *)
 val is_empty : (_, _, _) t -> bool
@@ -592,6 +625,13 @@ val max_elt : ('k, 'v, _) t -> ('k * 'v) option
 
 val max_elt_exn : ('k, 'v, _) t -> 'k * 'v
 
+(** Swap the inner and outer keys of nested maps. If [transpose_keys m a = b], then
+    [find_exn (find_exn a i) j = find_exn (find_exn b j) i]. *)
+val transpose_keys
+  :  ('k2, 'cmp2) Comparator.Module.t
+  -> ('k1, ('k2, 'v, 'cmp2) t, 'cmp1) t
+  -> ('k2, ('k1, 'v, 'cmp1) t, 'cmp2) t
+
 (** The following functions have the same semantics as similar functions in
     {!Core.List}. *)
 
@@ -868,31 +908,45 @@ val quickcheck_shrinker
 
 module Using_comparator : sig
   include
-    Creators3_with_comparator
+    Creators_generic
     with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
     with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
+    with type 'k key := 'k
+    with type 'c cmp := 'c
+    with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) With_comparator.t
+    with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
 end
 
 module Poly : sig
   type ('a, +'b, 'c) map
 
   module Tree : sig
-    type ('k, +'v) t = ('k, 'v, Comparator.Poly.comparator_witness) Tree.t
-    [@@deriving sexp, sexp_grammar]
+    type comparator_witness = Comparator.Poly.comparator_witness
+    type ('k, +'v) t = ('k, 'v, comparator_witness) Tree.t [@@deriving sexp, sexp_grammar]
 
     include
-      Creators_and_accessors2
-      with type ('a, 'b) t := ('a, 'b) t
-      with type ('a, 'b) tree := ('a, 'b) t
+      Creators_and_accessors_generic
+      with type ('a, 'b, 'c) t := ('a, 'b) t
+      with type ('a, 'b, 'c) tree := ('a, 'b) t
+      with type 'k key := 'k
+      with type 'c cmp := comparator_witness
+      with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
+      with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
   end
 
-  type ('a, +'b) t = ('a, 'b, Comparator.Poly.comparator_witness) map
+  type comparator_witness = Comparator.Poly.comparator_witness
+
+  type ('a, +'b) t = ('a, 'b, comparator_witness) map
   [@@deriving bin_io, sexp, sexp_grammar, compare]
 
   include
-    Creators_and_accessors2
-    with type ('a, 'b) t := ('a, 'b) t
-    with type ('a, 'b) tree := ('a, 'b) Tree.t
+    Creators_and_accessors_generic
+    with type ('a, 'b, 'c) t := ('a, 'b) t
+    with type ('a, 'b, 'c) tree := ('a, 'b) Tree.t
+    with type 'k key := 'k
+    with type 'c cmp := comparator_witness
+    with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
+    with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
 end
 with type ('a, 'b, 'c) map = ('a, 'b, 'c) t
 
@@ -968,11 +1022,23 @@ module Stable : sig
 
     module Make (Key : Stable_module_types.S0) :
       S with type key := Key.t with type comparator_witness := Key.comparator_witness
+
+    module With_stable_witness : sig
+      module type S = sig
+        include S
+
+        val stable_witness : 'a Stable_witness.t -> 'a t Stable_witness.t
+      end
+
+      module Make (Key : Stable_module_types.With_stable_witness.S0) :
+        S with type key := Key.t with type comparator_witness := Key.comparator_witness
+    end
   end
 
   module Symmetric_diff_element : sig
     module V1 :
-      Stable_module_types.S2 with type ('a, 'b) t = ('a, 'b) Symmetric_diff_element.t
+      Stable_module_types.With_stable_witness.S2
+      with type ('a, 'b) t = ('a, 'b) Symmetric_diff_element.t
   end
 end
 

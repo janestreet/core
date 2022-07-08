@@ -3,7 +3,11 @@
 module type Round = Base.Int.Round
 
 module type Stable = sig
-  module V1 : Stable_comparable.V1
+  module V1 : sig
+    type t [@@deriving sexp_grammar]
+
+    include Stable_comparable.With_stable_witness.V1 with type t := t
+  end
 end
 
 module type Hexable = sig

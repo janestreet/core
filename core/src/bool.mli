@@ -23,6 +23,6 @@ include Quickcheckable.S with type t := t
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving compare, sexp, bin_io]
+    type nonrec t = t [@@deriving compare, sexp, bin_io, stable_witness]
   end
 end

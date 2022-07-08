@@ -1,0 +1,3 @@
+(library (name core_uncaught_exception_test)
+ (libraries async core expect_test_helpers_async)
+ (preprocess (pps ppx_jane)))

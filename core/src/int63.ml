@@ -32,7 +32,7 @@ end
 module Stable = struct
   module V1 = struct
     module T = struct
-      type t = Base.Int63.t [@@deriving hash, sexp]
+      type t = Base.Int63.t [@@deriving hash, sexp, sexp_grammar]
 
       include Bin
 
@@ -41,10 +41,14 @@ module Stable = struct
           Base.Comparable.S
         with type t := t
         with type comparator_witness = Base.Int63.comparator_witness)
+
+      (* This serialization is stable, since it either delegates to [int] or
+         [Int63_emul]. *)
+      let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
     end
 
     include T
-    include Comparable.Stable.V1.Make (T)
+    include Comparable.Stable.V1.With_stable_witness.Make (T)
   end
 end
 

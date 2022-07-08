@@ -4,6 +4,43 @@ open Expect_test_helpers_core
 
 let print t = List.iter (errors t) ~f:Caml.print_endline
 
+let%expect_test "empty" =
+  let res =
+    name_list
+      ""
+      [ name "ok1" pass
+      ; name "ok2" pass
+      ; name_list "sub" [ name "ok3" pass; name "ok4" pass ]
+      ]
+  in
+  print res;
+  [%expect {| |}]
+;;
+
+let%expect_test "nesting" =
+  let res =
+    name_list
+      "nesting"
+      [ name "ok" pass
+      ; name "top" (fail "fail")
+      ; name_list
+          "sub0"
+          [ name "sub1" (fail "fail")
+          ; name "sub2" (fail "fail")
+          ; name_list "sub3" [ name "sub4" (fail "fail"); name "sub5" (fail "fail") ]
+          ]
+      ]
+  in
+  print res;
+  [%expect
+    {|
+    (nesting.top fail)
+    (nesting.sub0.sub1 fail)
+    (nesting.sub0.sub2 fail)
+    (nesting.sub0.sub3.sub4 fail)
+    (nesting.sub0.sub3.sub5 fail) |}]
+;;
+
 let%expect_test "Validate.all" =
   print
     (all

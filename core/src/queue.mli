@@ -13,5 +13,5 @@ include module type of Base.Queue with type 'a t := 'a t (** @inline *)
 include Binary_searchable.S1 with type 'a t := 'a t
 
 module Stable : sig
-  module V1 : Stable_module_types.S1 with type 'a t = 'a t
+  module V1 : Stable_module_types.With_stable_witness.S1 with type 'a t = 'a t
 end

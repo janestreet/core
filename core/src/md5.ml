@@ -19,15 +19,24 @@ module As_binary_string = struct
       let sexp_of_t x = String.sexp_of_t (T.to_binary x)
       let t_of_sexp x = T.of_binary_exn (String.t_of_sexp x)
       let t_sexp_grammar = Sexplib.Sexp_grammar.coerce String.t_sexp_grammar
+      let to_binable = T.to_binary
+      let of_binable = T.of_binary_exn
 
       include Bin_prot.Utils.Make_binable_without_uuid [@alert "-legacy"] (struct
-          module Binable = String
+          module Binable = String.Stable.V1
 
           type t = Bin_prot.Md5.t
 
-          let to_binable = T.to_binary
-          let of_binable = T.of_binary_exn
+          let to_binable = to_binable
+          let of_binable = of_binable
         end)
+
+      let stable_witness : t Stable_witness.t =
+        Stable_witness.of_serializable
+          String.Stable.V1.stable_witness
+          of_binable
+          to_binable
+      ;;
     end
   end
 
@@ -42,15 +51,24 @@ module Stable = struct
 
     let hash_fold_t = hash_fold_t
     let hash = hash
+    let to_binable = Fn.id
+    let of_binable = Fn.id
 
     include Bin_prot.Utils.Make_binable_without_uuid [@alert "-legacy"] (struct
-        module Binable = Bin_prot.Md5
+        module Binable = Bin_prot.Md5.Stable.V1
 
         type t = Bin_prot.Md5.t
 
-        let to_binable = Fn.id
-        let of_binable = Fn.id
+        let to_binable = to_binable
+        let of_binable = of_binable
       end)
+
+    let stable_witness : t Stable_witness.t =
+      Stable_witness.of_serializable
+        Bin_prot.Md5.Stable.V1.stable_witness
+        of_binable
+        to_binable
+    ;;
   end
 
   let digest_string s = Md5_lib.string s

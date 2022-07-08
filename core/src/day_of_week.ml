@@ -13,7 +13,7 @@ module Stable = struct
         | Thu
         | Fri
         | Sat
-      [@@deriving bin_io, compare, hash, quickcheck]
+      [@@deriving bin_io, compare, hash, quickcheck, stable_witness]
 
       let to_string t =
         match t with
@@ -88,8 +88,8 @@ module Stable = struct
       include Hashable.Make_binable (T)
     end
 
-    include Comparable.Stable.V1.Make (Unstable)
-    include Hashable.Stable.V1.Make (Unstable)
+    include Comparable.Stable.V1.With_stable_witness.Make (Unstable)
+    include Hashable.Stable.V1.With_stable_witness.Make (Unstable)
   end
 end
 

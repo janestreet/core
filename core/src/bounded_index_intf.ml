@@ -14,14 +14,26 @@ module type S = sig
   val create_all : min:int -> max:int -> t list
 
   (** Accessors. *)
+
+  (** [zero_based_index t] is the function that code consuming a [t] most likely wants to
+      call. It is simply [index t - min_index t], meaning it returns an index [i] such
+      that [0 <= i <= (max_index t - min_index t)]. *)
+  val zero_based_index : t -> int
+
+  (** [index t] returns the index [t] was created with, i.e. a number between
+      [min_index t] and [max_index t]. *)
   val index : t -> int
 
   val min_index : t -> int
   val max_index : t -> int
 
+  (** [num_indexes t] returns the number of valid indexes in the range. Equal to
+      [max_index t - min_index t + 1]*)
+  val num_indexes : t -> int
+
   module Stable : sig
     module V1 :
-      Stable_comparable.V1
+      Stable_comparable.With_stable_witness.V1
       with type t = t
       with type comparator_witness = comparator_witness
   end

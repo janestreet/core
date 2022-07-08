@@ -108,7 +108,7 @@ val dequeue_back : 'a t -> ('a * 'a t) option
 val dequeue_back_exn : 'a t -> 'a * 'a t
 
 module Stable : sig
-  module V1 : Stable_module_types.S1 with type 'a t = 'a t
+  module V1 : Stable_module_types.With_stable_witness.S1 with type 'a t = 'a t
 end
 
 (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:

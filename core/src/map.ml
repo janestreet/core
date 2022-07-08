@@ -6,7 +6,7 @@ module Symmetric_diff_element = struct
   module Stable = struct
     module V1 = struct
       type ('k, 'v) t = 'k * [ `Left of 'v | `Right of 'v | `Unequal of 'v * 'v ]
-      [@@deriving bin_io, compare, sexp]
+      [@@deriving bin_io, compare, sexp, stable_witness]
 
       let%expect_test _ =
         print_endline [%bin_digest: (int, string) t];
@@ -120,9 +120,12 @@ end
 module Accessors = struct
   include (
     Map.Using_comparator :
-      Map.Accessors3
+      Map.Accessors_generic
+    with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
     with type ('a, 'b, 'c) t := ('a, 'b, 'c) Map.t
-    with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t)
+    with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
+    with type 'k key := 'k
+    with type 'c cmp := 'c)
 
   let validate ~name f t = Validate.alist ~name f (to_alist t)
   let validatei ~name f t = Validate.list ~name:(Fn.compose name fst) f (to_alist t)
@@ -153,17 +156,14 @@ sig
   type ('a, 'b, 'c) t = ('a, 'b, 'c) Map.t
 
   include
-    Map.Creators_generic
-    with type ('a, 'b, 'c) options := ('a, 'b, 'c) Map.With_first_class_module.t
+    Map.Creators_and_accessors_generic
+    with type ('a, 'b, 'c) create_options :=
+      ('a, 'b, 'c) Map.With_first_class_module.t
+    with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Map.Without_comparator.t
     with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
     with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
     with type 'k key := 'k key
     with type 'c cmp := 'c cmp
-
-  include
-    Map.Accessors3
-    with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
-    with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
 
   val validate
     :  name:('k -> string)
@@ -193,7 +193,6 @@ let of_hashtbl_exn m t = Using_comparator.of_hashtbl_exn ~comparator:(to_compara
 module Creators (Key : Comparator.S1) : sig
   type ('a, 'b, 'c) t_ = ('a Key.t, 'b, Key.comparator_witness) t
   type ('a, 'b, 'c) tree = ('a, 'b, Key.comparator_witness) Tree.t
-  type ('a, 'b, 'c) options = ('a, 'b, 'c) Without_comparator.t
 
   val t_of_sexp
     :  (Base.Sexp.t -> 'a Key.t)
@@ -207,10 +206,9 @@ module Creators (Key : Comparator.S1) : sig
     with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
     with type 'a key := 'a Key.t
     with type 'a cmp := Key.comparator_witness
-    with type ('a, 'b, 'c) options := ('a, 'b, 'c) options
+    with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
+    with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
 end = struct
-  type ('a, 'b, 'c) options = ('a, 'b, 'c) Without_comparator.t
-
   let comparator = Key.comparator
 
   type ('a, 'b, 'c) t_ = ('a Key.t, 'b, Key.comparator_witness) t
@@ -243,6 +241,23 @@ end = struct
   ;;
 
   let of_sequence_reduce seq ~f = Using_comparator.of_sequence_reduce ~comparator seq ~f
+
+  let of_list_with_key list ~get_key =
+    Using_comparator.of_list_with_key ~comparator list ~get_key
+  ;;
+
+  let of_list_with_key_or_error list ~get_key =
+    Using_comparator.of_list_with_key_or_error ~comparator list ~get_key
+  ;;
+
+  let of_list_with_key_exn list ~get_key =
+    Using_comparator.of_list_with_key_exn ~comparator list ~get_key
+  ;;
+
+  let of_list_with_key_multi list ~get_key =
+    Using_comparator.of_list_with_key_multi ~comparator list ~get_key
+  ;;
+
   let of_alist alist = Using_comparator.of_alist ~comparator alist
   let of_alist_or_error alist = Using_comparator.of_alist_or_error ~comparator alist
   let of_alist_exn alist = Using_comparator.of_alist_exn ~comparator alist
@@ -264,6 +279,7 @@ end = struct
   let of_key_set key_set ~f = Using_comparator.of_key_set key_set ~f
   let map_keys t ~f = Using_comparator.map_keys ~comparator t ~f
   let map_keys_exn t ~f = Using_comparator.map_keys_exn ~comparator t ~f
+  let transpose_keys t = Using_comparator.transpose_keys ~comparator t
 
   let quickcheck_generator gen_k gen_v =
     Using_comparator.quickcheck_generator ~comparator gen_k gen_v
@@ -300,6 +316,14 @@ module Make_tree_S1 (Key : Comparator.S1) = struct
   let of_alist_multi a = of_alist_multi a ~comparator
   let of_alist_fold a ~init ~f = of_alist_fold a ~init ~f ~comparator
   let of_alist_reduce a ~f = of_alist_reduce a ~f ~comparator
+  let of_list_with_key l ~get_key = of_list_with_key l ~get_key ~comparator
+
+  let of_list_with_key_or_error l ~get_key =
+    of_list_with_key_or_error l ~get_key ~comparator
+  ;;
+
+  let of_list_with_key_exn l ~get_key = of_list_with_key_exn l ~get_key ~comparator
+  let of_list_with_key_multi l ~get_key = of_list_with_key_multi l ~get_key ~comparator
   let of_iteri ~iteri = of_iteri ~iteri ~comparator
   let of_iteri_exn ~iteri = of_iteri_exn ~iteri ~comparator
   let of_key_set = Using_comparator.tree_of_key_set
@@ -399,6 +423,7 @@ module Make_tree_S1 (Key : Comparator.S1) = struct
   let key_set t = Using_comparator.key_set_of_tree ~comparator t
   let map_keys t ~f = map_keys t ~f ~comparator
   let map_keys_exn t ~f = map_keys_exn t ~f ~comparator
+  let transpose_keys t = transpose_keys ~comparator ~comparator t
   let quickcheck_generator k v = For_quickcheck.gen_tree ~comparator k v
   let quickcheck_observer k v = For_quickcheck.obs_tree k v
   let quickcheck_shrinker k v = For_quickcheck.shr_tree ~comparator k v
@@ -579,6 +604,22 @@ struct
       include Key
       include Key'
     end)
+
+  module Provide_stable_witness
+      (Key' : sig
+         type t [@@deriving stable_witness]
+       end
+       with type t := Key.t) =
+  struct
+    (* The binary representation of map is used in the stable modules below, so it's
+       assumed to be stable (if the key and data are stable) . *)
+    let stable_witness (type data) (_data_stable_witness : data Stable_witness.t)
+      : data t Stable_witness.t
+      =
+      let (_ : Key.t Stable_witness.t) = Key'.stable_witness in
+      Stable_witness.assert_stable
+    ;;
+  end
 end
 
 module Make_plain (Key : Key_plain) = Make_plain_using_comparator (struct
@@ -733,6 +774,19 @@ module Stable = struct
 
     include For_deriving
     module Make (Key : Stable_module_types.S0) = Make_binable_using_comparator (Key)
+
+    module With_stable_witness = struct
+      module type S = sig
+        include S
+
+        val stable_witness : 'a Stable_witness.t -> 'a t Stable_witness.t
+      end
+
+      module Make (Key_stable : Stable_module_types.With_stable_witness.S0) = struct
+        include Make (Key_stable)
+        include Provide_stable_witness (Key_stable)
+      end
+    end
   end
 
   module Symmetric_diff_element = Symmetric_diff_element.Stable

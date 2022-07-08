@@ -3,7 +3,7 @@ module Stable = struct
     type ('f, 's) t = ('f, 's) Base.Either.t =
       | First of 'f
       | Second of 's
-    [@@deriving bin_io, compare, hash, sexp, typerep]
+    [@@deriving bin_io, compare, hash, sexp, typerep, stable_witness]
 
     let map x ~f1 ~f2 =
       match x with

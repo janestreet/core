@@ -283,6 +283,28 @@ module type Comparable = sig
 
       module Make (X : Stable_module_types.S0) :
         S with type comparable := X.t with type comparator_witness := X.comparator_witness
+
+      module With_stable_witness : sig
+        module type S = sig
+          type comparable
+          type comparator_witness
+
+          module Map :
+            Map.Stable.V1.With_stable_witness.S
+            with type key := comparable
+            with type comparator_witness := comparator_witness
+
+          module Set :
+            Set.Stable.V1.With_stable_witness.S
+            with type elt := comparable
+            with type elt_comparator_witness := comparator_witness
+        end
+
+        module Make (X : Stable_module_types.With_stable_witness.S0) :
+          S
+          with type comparable := X.t
+          with type comparator_witness := X.comparator_witness
+      end
     end
   end
 end

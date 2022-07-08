@@ -258,6 +258,6 @@ module Stable : sig
       | Not of 'a t
       | If of 'a t * 'a t * 'a t
       | Base of 'a
-    [@@deriving sexp, sexp_grammar, bin_io, compare, equal, hash]
+    [@@deriving sexp, sexp_grammar, bin_io, stable_witness, compare, equal, hash]
   end
 end

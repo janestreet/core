@@ -250,5 +250,27 @@ module Stable = struct
       module Map = Map.Stable.V1.Make (X)
       module Set = Set.Stable.V1.Make (X)
     end
+
+    module With_stable_witness = struct
+      module type S = sig
+        type comparable
+        type comparator_witness
+
+        module Map :
+          Map.Stable.V1.With_stable_witness.S
+          with type key := comparable
+          with type comparator_witness := comparator_witness
+
+        module Set :
+          Set.Stable.V1.With_stable_witness.S
+          with type elt := comparable
+          with type elt_comparator_witness := comparator_witness
+      end
+
+      module Make (X : Stable_module_types.With_stable_witness.S0) = struct
+        module Map = Map.Stable.V1.With_stable_witness.Make (X)
+        module Set = Set.Stable.V1.With_stable_witness.Make (X)
+      end
+    end
   end
 end

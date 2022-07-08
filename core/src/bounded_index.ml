@@ -12,7 +12,7 @@ module Stable = struct
         ; min_index : int
         ; max_index : int
         }
-      [@@deriving bin_io, compare, hash]
+      [@@deriving bin_io, compare, hash, stable_witness]
 
       let create index ~min ~max =
         if index < min || index > max
@@ -47,8 +47,8 @@ module Stable = struct
           type nonrec t = t [@@deriving sexp_of, compare]
         end)
 
-      include Comparable.Stable.V1.Make (struct
-          type nonrec t = t [@@deriving sexp, compare, bin_io]
+      include Comparable.Stable.V1.With_stable_witness.Make (struct
+          type nonrec t = t [@@deriving sexp, compare, bin_io, stable_witness]
           type nonrec comparator_witness = comparator_witness
 
           let comparator = comparator
@@ -88,6 +88,8 @@ struct
   let index t = t.index
   let max_index t = t.max_index
   let min_index t = t.min_index
+  let zero_based_index t = index t - min_index t
+  let num_indexes t = max_index t - min_index t + 1
 
   include Sexpable.To_stringable (struct
       type nonrec t = t [@@deriving sexp]

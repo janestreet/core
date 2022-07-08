@@ -26,41 +26,6 @@ module type Data1 = sig
   type ('s, 'a) t [@@deriving sexp_of]
 end
 
-module type S = sig
-  type t [@@deriving sexp_of]
-
-  module Key : Key
-
-  type 'a data
-
-  include Invariant.S with type t := t
-
-  val empty : t
-  val singleton : 'a Key.t -> 'a data -> t
-  val is_empty : t -> bool
-  val set : t -> key:'a Key.t -> data:'a data -> t
-  val mem : t -> 'a Key.t -> bool
-  val mem_by_id : t -> Type_equal.Id.Uid.t -> bool
-  val find : t -> 'a Key.t -> 'a data option
-  val find_exn : t -> 'a Key.t -> 'a data
-  val add : t -> key:'a Key.t -> data:'a data -> [ `Ok of t | `Duplicate ]
-  val add_exn : t -> key:'a Key.t -> data:'a data -> t
-  val change : t -> 'a Key.t -> f:('a data option -> 'a data option) -> t
-  val change_exn : t -> 'a Key.t -> f:('a data -> 'a data) -> t
-  val update : t -> 'a Key.t -> f:('a data option -> 'a data) -> t
-  val remove : t -> 'a Key.t -> t
-  val remove_by_id : t -> Type_equal.Id.Uid.t -> t
-
-  module Packed : sig
-    type t = T : 'a Key.t * 'a data -> t
-  end
-
-  (** [to_alist t] returns all values in [t], in increasing order of key type-id name. *)
-  val to_alist : t -> Packed.t list
-
-  val of_alist_exn : Packed.t list -> t
-end
-
 module type S1 = sig
   (** The ['s] parameter is shared across all values stored in the map. *)
   type 's t [@@deriving sexp_of]
@@ -98,6 +63,44 @@ module type S1 = sig
 
   val to_alist : 's t -> 's Packed.t list
   val of_alist_exn : 's Packed.t list -> 's t
+  val type_equal : ('s t, 's Packed.t Type_equal.Id.Uid.Map.t) Type_equal.t
+end
+
+module type S = sig
+  type t [@@deriving sexp_of]
+
+  module Key : Key
+
+  type 'a data
+
+  include Invariant.S with type t := t
+
+  val empty : t
+  val singleton : 'a Key.t -> 'a data -> t
+  val is_empty : t -> bool
+  val set : t -> key:'a Key.t -> data:'a data -> t
+  val mem : t -> 'a Key.t -> bool
+  val mem_by_id : t -> Type_equal.Id.Uid.t -> bool
+  val find : t -> 'a Key.t -> 'a data option
+  val find_exn : t -> 'a Key.t -> 'a data
+  val add : t -> key:'a Key.t -> data:'a data -> [ `Ok of t | `Duplicate ]
+  val add_exn : t -> key:'a Key.t -> data:'a data -> t
+  val change : t -> 'a Key.t -> f:('a data option -> 'a data option) -> t
+  val change_exn : t -> 'a Key.t -> f:('a data -> 'a data) -> t
+  val update : t -> 'a Key.t -> f:('a data option -> 'a data) -> t
+  val remove : t -> 'a Key.t -> t
+  val remove_by_id : t -> Type_equal.Id.Uid.t -> t
+
+  module Packed : sig
+    type 's t1 = T : 'a Key.t * 'a data -> 's t1
+    type t = unit t1
+  end
+
+  (** [to_alist t] returns all values in [t], in increasing order of key type-id name. *)
+  val to_alist : t -> Packed.t list
+
+  val of_alist_exn : Packed.t list -> t
+  val type_equal : (t, Packed.t Type_equal.Id.Uid.Map.t) Type_equal.t
 end
 
 module type Univ_map = sig

@@ -43,6 +43,11 @@ module Serialization_v1 = struct
       let iter = iter
       let init ~len ~next = init len ~f:(fun _ -> next ())
     end)
+
+  let stable_witness (_ : 'a Stable_witness.t) : 'a t Stable_witness.t =
+    (* Serialization_v1 defines a stable serialization *)
+    Stable_witness.assert_stable
+  ;;
 end
 
 include Serialization_v1

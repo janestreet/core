@@ -28,7 +28,7 @@ module Stable : sig
     type nonrec comparator_witness = comparator_witness
 
     include
-      Stable_module_types.S0
+      Stable_module_types.With_stable_witness.S0
       with type t := t
       with type comparator_witness := comparator_witness
   end

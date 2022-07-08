@@ -25,6 +25,7 @@ module Stable = struct
       type nonrec t = t [@@deriving bin_io, compare, hash]
 
       let sexp_of_t t = [%sexp (to_string_abs_parts t ~zone:Zone.utc : string list)]
+      let stable_witness = Stable_witness.assert_stable
 
       let t_of_sexp sexp =
         try

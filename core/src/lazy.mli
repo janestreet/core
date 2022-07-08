@@ -8,5 +8,5 @@ type 'a t = 'a Base.Lazy.t
 include module type of Base.Lazy with type 'a t := 'a t (** @inline *)
 
 module Stable : sig
-  module V1 : Stable_module_types.S1 with type 'a t = 'a t
+  module V1 : Stable_module_types.With_stable_witness.S1 with type 'a t = 'a t
 end

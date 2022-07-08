@@ -7,7 +7,7 @@ module Stable = struct
         | Next_fit
         | First_fit
         | Best_fit
-      [@@deriving bin_io, compare, equal, hash, sexp]
+      [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
     end
   end
 
@@ -33,7 +33,7 @@ module Stable = struct
         ; top_heap_words : int
         ; stack_size : int
         }
-      [@@deriving bin_io, compare, equal, hash, sexp]
+      [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
     end
 
     module V2 = struct
@@ -56,7 +56,7 @@ module Stable = struct
         ; stack_size : int
         ; forced_major_collections : int
         }
-      [@@deriving bin_io, compare, equal, hash, sexp]
+      [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
     end
 
     [%%else]
@@ -80,7 +80,7 @@ module Stable = struct
         ; top_heap_words : int
         ; stack_size : int
         }
-      [@@deriving bin_io, compare, equal, hash, sexp]
+      [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
     end
 
     module V2 = struct
@@ -103,7 +103,7 @@ module Stable = struct
         ; stack_size : int
         ; forced_major_collections : int
         }
-      [@@deriving bin_io, compare, equal, hash, sexp]
+      [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
     end
 
     [%%endif]
@@ -126,7 +126,7 @@ module Stable = struct
         ; custom_minor_ratio : int
         ; custom_minor_max_size : int
         }
-      [@@deriving bin_io, compare, equal, sexp]
+      [@@deriving bin_io, compare, equal, sexp, stable_witness]
     end
   end
 end
@@ -354,18 +354,6 @@ let zero = Sys.opaque_identity (int_of_string "0")
 let rec keep_alive o = if zero <> 0 then keep_alive (Sys.opaque_identity o)
 
 module For_testing = struct
-  let prepare_heap_to_count_minor_allocation () =
-    (* We call [minor] to empty the minor heap, so that our allocation is unlikely to
-       trigger a minor gc. *)
-    minor ();
-    (* We allocate two words in case the [Gc.minor] finishes a major gc cycle, in which
-       case it requests a minor gc to occur at the next minor allocation.  We don't want
-       the subsequent minor allocation to trigger a minor GC, because there is a bug
-       (https://github.com/ocaml/ocaml/issues/7798) in the OCaml runtime that double
-       counts [Gc.minor_words] in that case. *)
-    ignore (Sys.opaque_identity (ref (Sys.opaque_identity 1)) : int ref)
-  ;;
-
   (* We disable inlining for this function so the GC stats and the call to [f] are never
      rearranged. *)
   let[@cold] measure_internal ~on_result f =
@@ -384,11 +372,7 @@ module For_testing = struct
   let is_zero_alloc (type a) (f : unit -> a) =
     (* Instead of using [Allocation_report.measure], and matching on the result, we use
        this construction, in order to have [is_zero_alloc] not allocate itself. This
-       enables [is_zero_alloc] to be used in a nested way.
-
-       This also means we cannot call [prepare_heap_to_count_minor_allocation]. This is
-       okay, since we do not need a precise count, we only need to check if the count is
-       zero or not. *)
+       enables [is_zero_alloc] to be used in a nested way. *)
     measure_internal
       f
       ~on_result:(fun ~major_words_allocated ~minor_words_allocated value ->
@@ -409,7 +393,6 @@ module For_testing = struct
   end
 
   let measure_allocation f =
-    prepare_heap_to_count_minor_allocation ();
     measure_internal f ~on_result:(fun ~major_words_allocated ~minor_words_allocated x ->
       x, Allocation_report.create ~major_words_allocated ~minor_words_allocated)
   ;;

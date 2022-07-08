@@ -1,10 +1,5 @@
 include List0 (** @inline *)
 
-(** [stable_dedup] Same as [dedup] but maintains the order of the list and doesn't allow
-    compare function to be specified (otherwise, the implementation in terms of Set.t
-    would hide a heavyweight functor instantiation at each call). *)
-let stable_dedup = Set.Poly.stable_dedup_list
-
 (* This function is staged to indicate that real work (the functor application) takes
    place after a partial application. *)
 let stable_dedup_staged (type a) ~(compare : a -> a -> int)
@@ -53,6 +48,8 @@ let slice a start stop =
 
 module Stable = struct
   module V1 = struct
-    type nonrec 'a t = 'a t [@@deriving sexp, bin_io, compare]
+    type nonrec 'a t = 'a t [@@deriving sexp, sexp_grammar, bin_io, compare]
+
+    let stable_witness = List0.stable_witness [@@alert "-for_internal_use_only"]
   end
 end

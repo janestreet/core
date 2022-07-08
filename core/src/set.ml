@@ -2,7 +2,6 @@ open! Import
 module List = List0
 open Set_intf
 module Merge_to_sequence_element = Merge_to_sequence_element
-module Named = Named
 
 module type Elt_plain = Elt_plain
 module type Elt = Elt
@@ -67,10 +66,12 @@ end
 module Accessors = struct
   include (
     Set.Using_comparator :
-      Set.Accessors2
+      Set.Accessors_generic
     with type ('a, 'b) t := ('a, 'b) Set.t
     with type ('a, 'b) tree := ('a, 'b) Tree.t
-    with type ('a, 'b) named := ('a, 'b) Set.Named.t)
+    with type 'c cmp := 'c
+    with type 'a elt := 'a
+    with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t)
 
   let to_map = Map.of_key_set
   let quickcheck_observer = quickcheck_observer
@@ -92,20 +93,16 @@ sig
   type ('a, 'b) t = ('a, 'b) Set.t [@@deriving sexp_of]
 
   include
-    Set.Creators_generic
-    with type ('a, 'b, 'c) options := ('a, 'b, 'c) Set.With_first_class_module.t
+    Set.Creators_and_accessors_generic
+    with type ('a, 'b, 'c) create_options :=
+      ('a, 'b, 'c) Set.With_first_class_module.t
+    with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Set.Without_comparator.t
     with type ('a, 'b) t := ('a, 'b) t
     with type ('a, 'b) set := ('a, 'b) t
     with type ('a, 'b) tree := ('a, 'b) Tree.t
     with type 'a cmp := 'a cmp
     with type 'a elt := 'a elt
-
-  include
-    Set.Accessors2
-    with type ('a, 'b) t := ('a, 'b) t
-    with type ('a, 'b) tree := ('a, 'b) Tree.t
-    with type ('a, 'b) named := ('a, 'b) Set.Named.t
-    with module Named := Named
+    with module Named = Set.Named
 end)
 
 type ('k, 'cmp) comparator =
@@ -137,6 +134,7 @@ end
 let to_map = Map.of_key_set
 let of_map_keys = Map.key_set
 let hash_fold_direct = Using_comparator.hash_fold_direct
+let comparator_s = Using_comparator.comparator_s
 let comparator = Using_comparator.comparator
 let of_hash_set m hset = Using_comparator.of_hash_set ~comparator:(to_comparator m) hset
 
@@ -158,7 +156,7 @@ module Creators (Elt : Comparator.S1) : sig
     with type ('a, 'b) set := ('a, 'b) t
     with type ('a, 'b) tree := ('a, 'b) tree
     with type 'a elt := 'a elt_
-    with type ('a, 'b, 'c) options := ('a, 'b, 'c) Without_comparator.t
+    with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
     with type 'a cmp := 'a cmp_
 end = struct
   open Using_comparator
@@ -302,7 +300,6 @@ struct
   include Make_tree_S1 (Elt_S1)
 
   type t = (Elt.t, Elt.comparator_witness) Tree.t
-  type named = (Elt.t, Elt.comparator_witness) Tree.Named.t
 
   let compare t1 t2 = compare_direct t1 t2
   let sexp_of_t t = Tree.sexp_of_t Elt.sexp_of_t [%sexp_of: _] t
@@ -339,7 +336,7 @@ let init_for_bin_prot ~len ~f ~comparator =
       ~comparator
       (fold set ~init:(Tree.empty ~comparator) ~f:(fun acc elt ->
          if Tree.mem acc elt ~comparator
-         then failwith "Set.bin_read_t: duplicate element in map"
+         then failwith "Set.bin_read_t: duplicate element in set"
          else Tree.add acc elt ~comparator))
 ;;
 
@@ -348,7 +345,6 @@ module Poly = struct
   include Creators (Elt)
 
   type nonrec 'a t = ('a, Elt.comparator_witness) t
-  type 'a named = ('a, Elt.comparator_witness) Named.t
 
   include Accessors
 
@@ -382,7 +378,6 @@ module Poly = struct
     include Make_tree_S1 (Comparator.Poly)
 
     type 'elt t = ('elt, Comparator.Poly.comparator_witness) tree
-    type 'a named = ('a, Elt.comparator_witness) Tree.Named.t
 
     let sexp_of_t sexp_of_elt t = Tree.sexp_of_t sexp_of_elt [%sexp_of: _] t
 
@@ -431,7 +426,6 @@ struct
 
   type ('a, 'b) set = ('a, 'b) t
   type t = (Elt.t, Elt.comparator_witness) set
-  type named = (Elt.t, Elt.comparator_witness) Named.t
 
   include Accessors
 
@@ -465,6 +459,20 @@ struct
       include Elt
       include Elt'
     end)
+
+  module Provide_stable_witness
+      (Elt' : sig
+         type t [@@deriving stable_witness]
+       end
+       with type t := Elt.t) =
+  struct
+    (* The binary representation of set is used in the stable modules below, so it's
+       assumed to be stable (if the elt is stable). *)
+    let stable_witness =
+      let (_ : Elt.t Stable_witness.t) = Elt'.stable_witness in
+      Stable_witness.assert_stable
+    ;;
+  end
 end
 
 module Make_plain (Elt : Elt_plain) = Make_plain_using_comparator (struct
@@ -598,5 +606,18 @@ module Stable = struct
 
     include For_deriving
     module Make (Elt : Stable_module_types.S0) = Make_binable_using_comparator (Elt)
+
+    module With_stable_witness = struct
+      module type S = sig
+        include S
+
+        val stable_witness : t Stable_witness.t
+      end
+
+      module Make (Elt_stable : Stable_module_types.With_stable_witness.S0) = struct
+        include Make_binable_using_comparator (Elt_stable)
+        include Provide_stable_witness (Elt_stable)
+      end
+    end
   end
 end

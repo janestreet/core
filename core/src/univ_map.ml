@@ -136,6 +136,8 @@ struct
   let of_alist_exn t =
     Uid.Map.of_alist_exn (List.map t ~f:(fun p -> Packed.type_id_uid p, p))
   ;;
+
+  let type_equal : ('s t, 's Packed.t Type_equal.Id.Uid.Map.t) Type_equal.t = T
 end
 
 module Make
@@ -174,17 +176,13 @@ struct
   let remove_by_id = M.remove_by_id
 
   module Packed = struct
-    type t = T : 'a Key.t * 'a Data.t -> t
+    type 's t1 = 's M.Packed.t = T : 'a Key.t * 'a Data.t -> 's t1
+    type t = unit t1
   end
 
-  let to_alist t =
-    List.map (M.to_alist t) ~f:(function M.Packed.T (key, data) -> Packed.T (key, data))
-  ;;
-
-  let of_alist_exn t =
-    M.of_alist_exn
-      (List.map t ~f:(function Packed.T (key, data) -> M.Packed.T (key, data)))
-  ;;
+  let to_alist = M.to_alist
+  let of_alist_exn = M.of_alist_exn
+  let type_equal : (t, Packed.t Type_equal.Id.Uid.Map.t) Type_equal.t = T
 end
 
 module Merge (Key : Key) (Input1_data : Data) (Input2_data : Data) (Output_data : Data) =

@@ -20,11 +20,11 @@ module type S = sig
       include Stringable.S with type t := t
 
       include
-        Stable_comparable.V1
+        Stable_comparable.With_stable_witness.V1
         with type t := t
         with type comparator_witness = comparator_witness
 
-      include Hashable.Stable.V1.S with type key := t
+      include Hashable.Stable.V1.With_stable_witness.S with type key := t
     end
   end
 end

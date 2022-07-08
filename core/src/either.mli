@@ -20,6 +20,6 @@ module Stable : sig
       | First of 'f
       | Second of 's
 
-    include Stable_module_types.S2 with type ('f, 's) t := ('f, 's) t
+    include Stable_module_types.With_stable_witness.S2 with type ('f, 's) t := ('f, 's) t
   end
 end

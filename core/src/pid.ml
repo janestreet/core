@@ -1,7 +1,7 @@
 module Stable = struct
   module V1 = struct
     module Without_containers = struct
-      type nonrec t = Int.Stable.V1.t [@@deriving compare]
+      type nonrec t = Int.Stable.V1.t [@@deriving compare, stable_witness]
 
       exception Pid_must_be_positive of Int.Stable.V1.t [@@deriving sexp]
 
@@ -30,7 +30,7 @@ module Stable = struct
       include (val Comparator.Stable.V1.make ~compare ~sexp_of_t)
     end
 
-    include Comparable.Stable.V1.Make (Without_containers)
+    include Comparable.Stable.V1.With_stable_witness.Make (Without_containers)
     include Without_containers
   end
 

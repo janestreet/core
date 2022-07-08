@@ -135,7 +135,7 @@ exception Expected_atom of Sexp.t [@@deriving sexp]
 
 let sexp_of_t_with_version t ~version = Sexp.Atom (to_string_with_version t ~version)
 let to_string s = to_string_with_version s ~version:2
-let sexp_of_t t = sexp_of_t_with_version t ~version:1
+let sexp_of_t t = sexp_of_t_with_version t ~version:2
 
 let t_of_sexp s =
   match s with

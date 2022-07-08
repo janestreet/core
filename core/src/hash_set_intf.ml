@@ -71,6 +71,12 @@ module type S_binable = sig
   include Binable.S with type t := t
 end
 
+module type S_stable = sig
+  include S_binable
+
+  val stable_witness : t Stable_witness.t
+end
+
 type ('key, 'z) create_options_with_hashable_required =
   ('key, unit, 'z) Hashtbl_intf.create_options_with_hashable
 
@@ -90,9 +96,11 @@ module type Hash_set = sig
   module type Elt_plain = Hashtbl.Key_plain
   module type Elt = Hashtbl.Key
   module type Elt_binable = Hashtbl.Key_binable
+  module type Elt_stable = Hashtbl.Key_stable
   module type S_plain = S_plain with type 'a hash_set := 'a t
   module type S = S with type 'a hash_set := 'a t
   module type S_binable = S_binable with type 'a hash_set := 'a t
+  module type S_stable = S_stable with type 'a hash_set := 'a t
 
   module Using_hashable : sig
     include
@@ -120,6 +128,7 @@ module type Hash_set = sig
   module Make_plain (Elt : Elt_plain) : S_plain with type elt = Elt.t
   module Make (Elt : Elt) : S with type elt = Elt.t
   module Make_binable (Elt : Elt_binable) : S_binable with type elt = Elt.t
+  module Make_stable (Elt : Elt_stable) : S_stable with type elt = Elt.t
 
   module Make_plain_with_hashable (T : sig
       module Elt : Elt_plain
@@ -138,6 +147,12 @@ module type Hash_set = sig
 
       val hashable : Elt.t Hashtbl.Hashable.t
     end) : S_binable with type elt = T.Elt.t
+
+  module Make_stable_with_hashable (T : sig
+      module Elt : Elt_stable
+
+      val hashable : Elt.t Hashtbl.Hashable.t
+    end) : S_stable with type elt = T.Elt.t
 
   include For_deriving with type 'a t := 'a t
 end

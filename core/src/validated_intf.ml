@@ -54,15 +54,46 @@ module type Raw_bin_io_compare_hash_sexp = sig
   include Raw_bin_io with type t := t
 end
 
-module type S = sig
+(** [S_allowing_substitution] is the same as [S], but allows writing interfaces like:
+
+    {[
+      type t [@@deriving bin_io, compare, ...]
+
+      include Validated.S_allowing_substitution with type t := t and type raw := my_raw_type
+    ]}
+
+    which is not possible with [S] due to the fact that it constrains [t].  The downside
+    is that you can no longer directly coerce [t] to be a [raw] but:
+
+    + You can use the [raw] function instead
+    + You can match on [type_equal] to do the coercion if you really need to (although
+    that's still a bit clunkier than a direct coercion would be)
+*)
+module type S_allowing_substitution = sig
   type ('raw, 'witness) validated
   type witness
   type raw
-  type t = (raw, witness) validated [@@deriving sexp]
+  type t [@@deriving sexp]
 
   val create : raw -> t Or_error.t
   val create_exn : raw -> t
   val raw : t -> raw
+  val create_stable_witness : raw Stable_witness.t -> t Stable_witness.t
+  val type_equal : (t, (raw, witness) validated) Type_equal.t
+end
+
+module type S = sig
+  type ('raw, 'witness) validated
+  type witness
+  type raw
+  type t = (raw, witness) validated
+
+  include
+    S_allowing_substitution
+    with type t := t
+     and type raw := raw
+     and type witness := witness
+     and type ('raw, 'witness) validated := ('raw, 'witness) validated
 end
 
 module type S_bin_io = sig
@@ -90,6 +121,10 @@ module type Validated = sig
 
   module type Raw = Raw
   module type S = S with type ('a, 'b) validated := ('a, 'b) t
+
+  module type S_allowing_substitution =
+    S_allowing_substitution with type ('a, 'b) validated := ('a, 'b) t
+
   module type S_bin_io = S_bin_io with type ('a, 'b) validated := ('a, 'b) t
 
   module type S_bin_io_compare_hash_sexp =

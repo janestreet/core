@@ -407,20 +407,6 @@ module For_testing : sig
   (** [is_zero_alloc f] runs [f ()] and returns [true] if it does not allocate, or [false]
       otherwise. [is_zero_alloc] does not allocate. *)
   val is_zero_alloc : (unit -> _) -> bool
-
-  (** [prepare_heap_to_count_minor_allocation] sets up the heap so that one can
-      subsequently measure minor allocation via:
-
-      {[
-        let minor_words_before = Gc.minor_words () in
-        (* ... do stuff ... *)
-        let minor_words_after = Gc.minor_words () in
-        let minor_words_allocated = minor_words_after - minor_words_before in
-      ]}
-
-      Without calling [prepare_heap_to_count_minor_allocation], the resulting count may be
-      inaccurate. *)
-  val prepare_heap_to_count_minor_allocation : unit -> unit
 end
 
 (** The [Expert] module contains functions that novice users should not use, due to their
@@ -530,21 +516,23 @@ module Stable : sig
     [%%if ocaml_version < (4, 12, 0)]
 
     module V1 : sig
-      type nonrec t = Stat.t [@@deriving bin_io, compare, equal, hash, sexp]
+      type nonrec t = Stat.t
+      [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
     end
 
     module V2 : sig
-      type nonrec t [@@deriving bin_io, compare, equal, hash, sexp]
+      type nonrec t [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
     end
 
     [%%else]
 
     module V1 : sig
-      type nonrec t [@@deriving bin_io, compare, equal, hash, sexp]
+      type nonrec t [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
     end
 
     module V2 : sig
-      type nonrec t = Stat.t [@@deriving bin_io, compare, equal, hash, sexp]
+      type nonrec t = Stat.t
+      [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
     end
 
     [%%endif]
@@ -552,13 +540,14 @@ module Stable : sig
 
   module Allocation_policy : sig
     module V1 : sig
-      type nonrec t = Allocation_policy.t [@@deriving bin_io, compare, equal, hash, sexp]
+      type nonrec t = Allocation_policy.t
+      [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
     end
   end
 
   module Control : sig
     module V1 : sig
-      type nonrec t = Control.t [@@deriving bin_io, compare, equal, sexp]
+      type nonrec t = Control.t [@@deriving bin_io, compare, equal, sexp, stable_witness]
     end
   end
 end

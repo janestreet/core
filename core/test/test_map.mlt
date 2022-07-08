@@ -1,0 +1,40 @@
+open Core
+
+let _ = Map.add
+
+[%%expect {|
+|}]
+
+let _ = String.Map.add
+
+[%%expect {|
+Line _, characters _-_:
+Error: Unbound value String.Map.add
+|}]
+
+module F (M : Map.S) = struct
+  let _ = M.add
+end
+
+[%%expect {|
+Line _, characters _-_:
+Error: Unbound value M.add
+|}]
+
+module F (M : Core.Map.S_binable) = struct
+  let _ = M.add
+end
+
+[%%expect {|
+Line _, characters _-_:
+Error: Unbound value M.add
+|}]
+
+module F (M : Core.Map.S_plain) = struct
+  let _ = M.add
+end
+
+[%%expect {|
+Line _, characters _-_:
+Error: Unbound value M.add
+|}]

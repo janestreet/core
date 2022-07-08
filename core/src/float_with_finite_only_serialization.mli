@@ -13,6 +13,7 @@ type t = float [@@deriving bin_io, sexp, sexp_grammar, compare, hash, equal]
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving bin_io, sexp, sexp_grammar, compare, hash, equal]
+    type nonrec t = t
+    [@@deriving bin_io, sexp, sexp_grammar, compare, hash, equal, stable_witness]
   end
 end

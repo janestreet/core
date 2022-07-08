@@ -12,7 +12,8 @@ struct
   module Stable = struct
     module V1 = struct
       module T = struct
-        type t = string [@@deriving compare, equal, hash, sexp, sexp_grammar, typerep]
+        type t = string
+        [@@deriving compare, equal, hash, sexp, sexp_grammar, typerep, stable_witness]
 
         let check_for_whitespace =
           let invalid s reason =
@@ -71,8 +72,8 @@ struct
       end
 
       include T_with_comparator
-      include Comparable.Stable.V1.Make (T_with_comparator)
-      include Hashable.Stable.V1.Make (T_with_comparator)
+      include Comparable.Stable.V1.With_stable_witness.Make (T_with_comparator)
+      include Hashable.Stable.V1.With_stable_witness.Make (T_with_comparator)
     end
   end
 

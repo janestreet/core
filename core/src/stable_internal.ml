@@ -1,6 +1,7 @@
 open! Import
 include Bin_prot.Std
 include Hash.Builtin
+include Stable_witness.Export
 
 include (
   Base :

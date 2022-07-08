@@ -7,6 +7,10 @@ module type Raw = Raw
 type ('raw, 'witness) t = 'raw
 
 module type S = S with type ('a, 'b) validated := ('a, 'b) t
+
+module type S_allowing_substitution =
+  S_allowing_substitution with type ('a, 'b) validated := ('a, 'b) t
+
 module type S_bin_io = S_bin_io with type ('a, 'b) validated := ('a, 'b) t
 
 module type S_bin_io_compare_hash_sexp =
@@ -39,6 +43,12 @@ module Make (Raw : Raw) = struct
 
   let t_of_sexp sexp = create_exn (Raw.t_of_sexp sexp)
   let raw t = t
+
+  let create_stable_witness raw_stable_witness =
+    Stable_witness.of_serializable raw_stable_witness create_exn raw
+  ;;
+
+  let type_equal = Type_equal.T
 end
 
 module Add_bin_io (Raw : sig

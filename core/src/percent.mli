@@ -49,6 +49,7 @@ val ( - ) : t -> t -> t
 val ( / ) : t -> t -> t
 val ( // ) : t -> t -> float
 val zero : t
+val one_hundred_percent : t
 val neg : t -> t
 val abs : t -> t
 
@@ -169,12 +170,13 @@ val sign_exn : t -> Sign.t
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving sexp, bin_io, compare, hash, equal, typerep]
+    type nonrec t = t
+    [@@deriving sexp, bin_io, compare, hash, equal, typerep, stable_witness]
   end
 
   module Option : sig
     module V1 : sig
-      type t = Option.t [@@deriving bin_io, compare, hash, sexp]
+      type t = Option.t [@@deriving bin_io, compare, hash, sexp, stable_witness]
     end
   end
 end
@@ -186,4 +188,22 @@ module Always_percentage : sig
 
   val to_string : t -> string
   val format : t -> Format.t -> string
+end
+
+(** Guaranteed to round trip via sexp or string, though the output may look ugly.  Tries
+    the default conversion first, and if it does not round trip accurately, falls back to
+    [Float.to_string] with the 'x' suffix added.  The standard [of_sexp] can read it just
+    fine. *)
+module Round_trippable : sig
+  type nonrec t = t [@@deriving sexp]
+
+  val to_string : t -> string
+end
+
+(** Similar to [Round_trippable], but allows a relative conversion error of up to 1e-14 if
+    it results in a more human-readable output. *)
+module Almost_round_trippable : sig
+  type nonrec t = t [@@deriving sexp]
+
+  val to_string : t -> string
 end

@@ -14,7 +14,7 @@ type t = Base.Source_code_position.t =
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
+    type nonrec t = t [@@deriving bin_io, compare, hash, sexp, stable_witness]
 
     include Comparator.Stable.V1.S with type t := t
   end

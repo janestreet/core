@@ -17,6 +17,6 @@ include Identifiable.S with type t := t and type comparator_witness := comparato
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving bin_io, compare, enumerate, hash, sexp]
+    type nonrec t = t [@@deriving bin_io, compare, enumerate, hash, sexp, stable_witness]
   end
 end

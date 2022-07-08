@@ -705,11 +705,6 @@ module Flag = struct
     arg_flag name arg_type read write Num_occurrences.at_least_once
   ;;
 
-  let[@deprecated "[since 2021-07] Use [one_or_more_as_pair] or [one_or_more_as_list]"] one_or_more
-    =
-    one_or_more_as_pair
-  ;;
-
   let one_or_more_as_list arg_type =
     one_or_more_as_pair arg_type |> map_flag ~f:(fun (x, xs) -> x :: xs)
   ;;
@@ -1231,7 +1226,7 @@ let lookup_expand = Shape.Private.lookup_expand
 
 let lookup_expand_with_aliases map prefix key_type =
   let alist =
-    List.concat_map (String.Map.data map) ~f:(fun flag ->
+    List.concat_map (Map.data map) ~f:(fun flag ->
       let { Flag.Internal.name
           ; aliases
           ; aliases_excluded_from_help
@@ -1267,7 +1262,7 @@ module Base = struct
     let subcommand_cmp_fst (a, _) (c, _) = help_screen_compare a c
 
     let flags_help ?(display_help_flags = true) t =
-      let flags = String.Map.data t.flags in
+      let flags = Map.data t.flags in
       let flags =
         if display_help_flags
         then flags
@@ -1278,7 +1273,7 @@ module Base = struct
   end
 
   let formatted_flags t =
-    String.Map.data t.flags
+    Map.data t.flags
     |> List.map ~f:Flag.Internal.align
     (* this sort puts optional flags after required ones *)
     |> List.sort ~compare:(fun a b -> String.compare a.name b.name)
@@ -1341,12 +1336,12 @@ module Base = struct
   let rec run_cmdline t env parser (cmdline : Cmdline.t) ~for_completion ~parse_flags =
     match cmdline with
     | Nil ->
-      List.iter (String.Map.data t.flags) ~f:(fun flag -> flag.check_available env);
+      List.iter (Map.data t.flags) ~f:(fun flag -> flag.check_available env);
       Anons.Parser.final_value parser env
     | Complete part ->
       if parse_flags && String.is_prefix part ~prefix:"-"
       then (
-        List.iter (String.Map.keys t.flags) ~f:(fun name ->
+        List.iter (Map.keys t.flags) ~f:(fun name ->
           if String.is_prefix name ~prefix:part then print_endline name);
         exit 0)
       else never_returns (Anons.Parser.complete parser env ~part)
@@ -1595,7 +1590,6 @@ module Base = struct
       let map_flag = map_flag
       let escape = escape
       let listed = listed
-      let one_or_more = one_or_more
       let one_or_more_as_pair = one_or_more_as_pair
       let one_or_more_as_list = one_or_more_as_list
       let no_arg = no_arg
@@ -2221,7 +2215,7 @@ module Deprecated = struct
   let summary = summary
 
   let rec get_flag_names = function
-    | Base base -> base.Base.flags |> String.Map.keys
+    | Base base -> base.Base.flags |> Map.keys
     | Lazy thunk -> get_flag_names (Lazy.force thunk)
     | Group _ | Exec _ -> assert false
   ;;
@@ -3004,7 +2998,6 @@ module Param = struct
     let no_arg_abort = no_arg_abort
     let no_arg_register = no_arg_register
     let no_arg_some = no_arg_some
-    let one_or_more = one_or_more
     let one_or_more_as_pair = one_or_more_as_pair
     let one_or_more_as_list = one_or_more_as_list
     let optional = optional

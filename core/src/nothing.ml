@@ -40,6 +40,7 @@ module Stable = struct
 
     let sexp_of_t = unreachable_code
     let t_of_sexp sexp = Sexplib.Conv_error.empty_type tp_loc sexp
+    let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
   end
 end
 

@@ -25,3 +25,15 @@ module type Stable3 = Stable_module_types.S3
 module type Stable4 = Stable_module_types.S4
 module type Stringable = Stringable.S
 module type Unit = Unit.S
+
+(* Versions of the stable module types that expose a stable_witness *)
+module type Stable_with_witness = Stable_module_types.With_stable_witness.S0
+module type Stable_int63able_with_witness = Stable_int63able.With_stable_witness.S
+
+module type Stable_without_comparator_with_witness =
+  Stable_module_types.With_stable_witness.S0_without_comparator
+
+module type Stable1_with_witness = Stable_module_types.With_stable_witness.S1
+module type Stable2_with_witness = Stable_module_types.With_stable_witness.S2
+module type Stable3_with_witness = Stable_module_types.With_stable_witness.S3
+module type Stable4_with_witness = Stable_module_types.With_stable_witness.S4
