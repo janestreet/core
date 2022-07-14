@@ -151,6 +151,37 @@ let dequeue_exn t side =
 
 let rev t = { t with front = t.back; back = t.front }
 
+let gen_with_length length quickcheck_generator = 
+  let open Quickcheck.Let_syntax in 
+  let%bind full_list = List.gen_with_length length quickcheck_generator in 
+  let front, back = List.split_n full_list (length/2) in 
+  return {front; back; length};
+;;
+
+let gen_non_empty quickcheck_generator =
+  let open Quickcheck.Let_syntax in 
+  let%bind length = Int.gen_uniform_incl 0 Int.max_value in 
+  gen_with_length length quickcheck_generator
+;;
+
+let gen_filtered seq =
+  let open Quickcheck.Let_syntax in 
+  let full_list = List.concat [seq.front; seq.back] in 
+  let%bind gen_filtered = List.gen_filtered full_list in 
+  let length = List.length full_list in 
+  let front, back = List.split_n gen_filtered (length/2) in 
+  return {front; back; length}
+;;
+
+let gen_permutations seq = 
+  let open Quickcheck.Let_syntax in 
+  let full_list = List.concat [seq.front; seq.back] in 
+  let%bind result = List.gen_permutations full_list in 
+  let length = List.length result in 
+  let front, back = List.split_n result (length/2) in 
+  return {front; back; length}
+;;
+
 module Arbitrary_order = struct
   let is_empty = is_empty
   let length = length

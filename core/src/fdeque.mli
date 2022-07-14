@@ -64,6 +64,14 @@ val of_list : 'a list -> 'a t
     Complexity: worst-case O(1). *)
 val rev : 'a t -> 'a t
 
+val gen_with_length : int -> 'a Quickcheck.Generator.t -> 'a t Quickcheck.Generator.t
+
+val gen_non_empty : 'a Quickcheck.Generator.t -> 'a t Quickcheck.Generator.t
+
+val gen_filtered: 'a t -> 'a t Quickcheck.Generator.t
+
+val gen_permutations: 'a t -> 'a t Quickcheck.Generator.t 
+
 (** [enqueue t side x] produces [t] updated with [x] added to its [side].
 
     Complexity: worst-case O(1). *)

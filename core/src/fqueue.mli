@@ -30,6 +30,14 @@ val top_exn : 'a t -> 'a [@@deprecated "[since 2019-11] Use [peek_exn] instead."
     O(1). *)
 val peek : 'a t -> 'a option
 
+val gen_with_length : int -> 'a Quickcheck.Generator.t -> 'a t Quickcheck.Generator.t
+
+val gen_non_empty : 'a Quickcheck.Generator.t -> 'a t Quickcheck.Generator.t
+
+val gen_filtered: 'a t -> 'a t Quickcheck.Generator.t
+
+val gen_permutations: 'a t -> 'a t Quickcheck.Generator.t 
+
 val top : 'a t -> 'a option [@@deprecated "[since 2019-11] Use [peek] instead."]
 
 (** [dequeue_exn t] removes and returns the front of [t], raising [Empty] if [t] is empty.
