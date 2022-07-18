@@ -45,24 +45,9 @@ CAMLprim value core_gc_major_collections(value unit __attribute__((unused)))
   return Val_long(caml_stat_major_collections);
 }
 
-CAMLprim value core_gc_heap_words(value unit __attribute__((unused)))
-{
-  return Val_long(caml_stat_heap_wsz);
-}
-
-CAMLprim value core_gc_heap_chunks(value unit __attribute__((unused)))
-{
-  return Val_long(caml_stat_heap_chunks);
-}
-
 CAMLprim value core_gc_compactions(value unit __attribute__((unused)))
 {
   return Val_long(caml_stat_compactions);
-}
-
-CAMLprim value core_gc_top_heap_words(value unit __attribute__((unused)))
-{
-  return Val_long(caml_stat_top_heap_wsz);
 }
 
 CAMLprim value core_gc_major_plus_minor_words(value unit __attribute__((unused)))

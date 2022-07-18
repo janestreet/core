@@ -13,14 +13,4 @@
 
 open! Import
 
-type ('a, 'b) t [@@deriving sexp_of]
-
-val create : unit -> _ t
-val set_key : ('a, _) t -> 'a Heap_block.t option -> unit
-val get_key : ('a, _) t -> 'a Heap_block.t option
-val set_data : (_, 'b) t -> 'b Heap_block.t option -> unit
-val get_data : (_, 'b) t -> 'b Heap_block.t option
-val is_key_some : _ t -> bool
-val is_key_none : _ t -> bool
-val is_data_some : _ t -> bool
-val is_data_none : _ t -> bool
+type ('a, 'b) t

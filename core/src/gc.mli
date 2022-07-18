@@ -124,13 +124,13 @@ type stat = Stat.t
 
 module Control : sig
   type t =
-    { mutable minor_heap_size : int
+    { minor_heap_size : int
     (** The size (in words) of the minor heap.  Changing this parameter will
         trigger a minor collection.
 
         Default: 262144 words / 1MB (32bit) / 2MB (64bit).
     *)
-    ; mutable major_heap_increment : int
+    ; major_heap_increment : int
     (** How much to add to the major heap when increasing it. If this
         number is less than or equal to 1000, it is a percentage of
         the current heap size (i.e. setting it to 100 will double the heap
@@ -139,7 +139,7 @@ module Control : sig
 
         Default: 15%.
     *)
-    ; mutable space_overhead : int
+    ; space_overhead : int
     (** The major GC speed is computed from this parameter.
         This is the memory that will be "wasted" because the GC does not
         immediately collect unreachable blocks.  It is expressed as a
@@ -148,7 +148,7 @@ module Control : sig
         blocks more eagerly) if [space_overhead] is smaller.
 
         Default: 80. *)
-    ; mutable verbose : int
+    ; verbose : int
     (** This value controls the GC messages on standard error output.
         It is a sum of some of the following flags, to print messages
         on the corresponding events:
@@ -164,7 +164,7 @@ module Control : sig
         - [0x200] Computation of compaction triggering condition.
 
         Default: 0. *)
-    ; mutable max_overhead : int
+    ; max_overhead : int
     (** Heap compaction is triggered when the estimated amount
         of "wasted" memory is more than [max_overhead] percent of the
         amount of live data.  If [max_overhead] is set to 0, heap
@@ -173,13 +173,13 @@ module Control : sig
         If [max_overhead >= 1000000], compaction is never triggered.
 
         Default: 500. *)
-    ; mutable stack_limit : int
+    ; stack_limit : int
     (** The maximum size of the stack (in words).  This is only
         relevant to the byte-code runtime, as the native code runtime
         uses the operating system's stack.
 
         Default: 1048576 words / 4MB (32bit) / 8MB (64bit). *)
-    ; mutable allocation_policy : int
+    ; allocation_policy : int
     (** The policy used for allocating in the heap.  Possible
         values are 0 and 1.  0 is the next-fit policy, which is
         quite fast but can result in fragmentation.  1 is the
