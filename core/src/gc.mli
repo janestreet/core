@@ -268,7 +268,6 @@ external promoted_words : unit -> int = "core_gc_promoted_words" [@@noalloc]
 external minor_collections : unit -> int = "core_gc_minor_collections" [@@noalloc]
 external major_collections : unit -> int = "core_gc_major_collections" [@@noalloc]
 external compactions : unit -> int = "core_gc_compactions" [@@noalloc]
-external top_heap_words : unit -> int = "core_gc_top_heap_words" [@@noalloc]
 
 (** This function returns [major_words () + minor_words ()].  It exists purely for speed
     (one call into C rather than two).  Like [major_words] and [minor_words],

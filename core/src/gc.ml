@@ -340,7 +340,6 @@ external promoted_words : unit -> int = "core_gc_promoted_words" [@@noalloc]
 external minor_collections : unit -> int = "core_gc_minor_collections" [@@noalloc]
 external major_collections : unit -> int = "core_gc_major_collections" [@@noalloc]
 external compactions : unit -> int = "core_gc_compactions" [@@noalloc]
-external top_heap_words : unit -> int = "core_gc_top_heap_words" [@@noalloc]
 external major_plus_minor_words : unit -> int = "core_gc_major_plus_minor_words"
 external allocated_words : unit -> int = "core_gc_allocated_words"
 
