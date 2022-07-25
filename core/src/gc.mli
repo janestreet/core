@@ -267,8 +267,6 @@ external major_words : unit -> int = "core_gc_major_words" [@@noalloc]
 external promoted_words : unit -> int = "core_gc_promoted_words" [@@noalloc]
 external minor_collections : unit -> int = "core_gc_minor_collections" [@@noalloc]
 external major_collections : unit -> int = "core_gc_major_collections" [@@noalloc]
-external heap_words : unit -> int = "core_gc_heap_words" [@@noalloc]
-external heap_chunks : unit -> int = "core_gc_heap_chunks" [@@noalloc]
 external compactions : unit -> int = "core_gc_compactions" [@@noalloc]
 external top_heap_words : unit -> int = "core_gc_top_heap_words" [@@noalloc]
 
