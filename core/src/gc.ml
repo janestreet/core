@@ -392,7 +392,6 @@ external major_collections : unit -> int = "core_gc_major_collections" [@@noallo
 external compactions : unit -> int = "core_gc_compactions" [@@noalloc]
 external major_plus_minor_words : unit -> int = "core_gc_major_plus_minor_words"
 external allocated_words : unit -> int = "core_gc_allocated_words"
-external run_memprof_callbacks : unit -> unit = "core_gc_run_memprof_callbacks"
 
 let zero = Sys.opaque_identity (int_of_string "0")
 
@@ -513,11 +512,9 @@ module For_testing = struct
         (* Memprof.stop does not guarantee that all memprof callbacks are run (some may be
            delayed if they happened during C code and there has been no allocation since),
            so we explictly flush them *)
-        run_memprof_callbacks ();
         Caml.Gc.Memprof.stop ();
         x
       | exception e ->
-        run_memprof_callbacks ();
         Caml.Gc.Memprof.stop ();
         raise e
     in
