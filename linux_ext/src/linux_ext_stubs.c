@@ -97,11 +97,17 @@ enum option_type {
   TYPE_UNIX_ERROR = 4
 };
 
-extern value unix_getsockopt_aux(
+#include <caml/version.h>
+#if OCAML_VERSION_MAJOR < 5
+#define caml_unix_getsockopt_aux unix_getsockopt_aux
+#define caml_unix_setsockopt_aux unix_setsockopt_aux
+#endif
+
+extern value caml_unix_getsockopt_aux(
   char *name,
   enum option_type ty, int level, int option,
   value v_socket);
-extern value unix_setsockopt_aux(
+extern value caml_unix_setsockopt_aux(
   char *name,
   enum option_type ty, int level, int option,
   value v_socket, value v_status);
@@ -110,7 +116,7 @@ CAMLprim value core_linux_gettcpopt_bool_stub(value v_socket, value v_option)
 {
   int option = linux_tcpopt_bool[Int_val(v_option)];
   return
-    unix_getsockopt_aux("getsockopt", TYPE_BOOL, SOL_TCP, option, v_socket);
+    caml_unix_getsockopt_aux("getsockopt", TYPE_BOOL, SOL_TCP, option, v_socket);
 }
 
 CAMLprim value
@@ -118,7 +124,7 @@ core_linux_settcpopt_bool_stub(value v_socket, value v_option, value v_status)
 {
   int option = linux_tcpopt_bool[Int_val(v_option)];
   return
-    unix_setsockopt_aux(
+    caml_unix_setsockopt_aux(
       "setsockopt", TYPE_BOOL, SOL_TCP, option, v_socket, v_status);
 }
 

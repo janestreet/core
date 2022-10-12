@@ -4,6 +4,3 @@
 
 (rule (targets config.h) (deps)
  (action (bash "cp %{lib:jst-config:config.h} .")))
-
-(rule (targets socketaddr.h) (deps)
- (action (bash "cp %{lib:core:socketaddr.h} .")))
