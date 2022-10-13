@@ -1,0 +1,49 @@
+name: Main workflow
+
+on:
+  pull_request:
+  push:
+  schedule:
+    - cron: '0 1 * * SAT'
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  Tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+        ocaml:
+          - ocaml-base-compiler.5.0.0~alpha0
+          - 4.14.0
+        include:
+          - {os: ubuntu-latest, ocaml: 4.13.1}
+          - {os: ubuntu-latest, ocaml: 4.12.1}
+          - {os: ubuntu-latest, ocaml: 4.11.2}
+        exclude:
+          - {os: windows-latest, ocaml: ocaml-base-compiler.5.0.0~alpha0}
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup OCaml ${{ matrix.ocaml }}
+        uses: ocaml/setup-ocaml@v2
+        with:
+          cache-prefix: v1-${{ matrix.os }}-${{ matrix.ocaml }}
+          dune-cache: true
+          ocaml-compiler: ${{ matrix.ocaml }}
+
+      - name: Build dependencies
+        run: opam install . --deps-only --with-test
+
+      - name: Build library
+        run: opam exec -- dune build
+
+      - name: Run test suite
+        run: opam exec -- dune runtest
