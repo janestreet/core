@@ -18,3 +18,10 @@ external raise : exn -> 'a = "%reraise"
 let __FUNCTION__ = "<__FUNCTION__ not supported before OCaml 4.12>"
 
 [%%endif]
+
+[%%if ocaml_version >= (5, 0, 0)]
+
+external ( & ) : bool -> bool -> bool = "%sequand"
+external ( or ) : bool -> bool -> bool = "%sequor"
+
+[%%endif]
