@@ -71,6 +71,21 @@ struct
   include Pretty_printer.Register (T)
 end
 
+module Make_plain_using_comparator (T : sig
+    type t [@@deriving compare, hash, sexp_of]
+
+    include Comparator.S with type t := t
+    include Stringable.S with type t := t
+
+    val module_name : string
+  end) =
+struct
+  include T
+  include Comparable.Make_plain_using_comparator (T)
+  include Hashable.Make_plain (T)
+  include Pretty_printer.Register (T)
+end
+
 module Make_using_comparator_and_derive_hash_fold_t (T : sig
     type t [@@deriving bin_io, compare, sexp]
 

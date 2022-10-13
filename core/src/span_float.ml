@@ -211,7 +211,9 @@ module Stable = struct
     include T
     include Constant
 
-    let randomize t ~percent = Span_helpers.randomize t ~percent ~scale
+    let randomize ?(state = Random.State.default) t ~percent =
+      Span_helpers.randomize t state ~percent ~scale
+    ;;
 
     let to_short_string t =
       let ({ sign; hr; min; sec; ms; us; ns } : Parts.t) = to_parts t in

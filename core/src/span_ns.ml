@@ -180,8 +180,32 @@ let to_unit_of_time t : Unit_of_time.t =
   else Nanosecond
 ;;
 
+let to_span_float_round_nearest t = Span_float.of_sec (to_sec t)
+let of_span_float_round_nearest s = of_sec (Span_float.to_sec s)
+
 module Stable = struct
-  module V1 = struct end
+  module V1 = struct
+    module T = struct
+      type nonrec t = t [@@deriving bin_io, compare, hash, equal]
+
+      let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
+
+      let sexp_of_t t =
+        Time_float.Stable.Span.V1.sexp_of_t (to_span_float_round_nearest t)
+      ;;
+
+      let t_of_sexp s =
+        of_span_float_round_nearest (Time_float.Stable.Span.V1.t_of_sexp s)
+      ;;
+
+      let of_int63_exn t = of_int63_ns t
+      let to_int63 t = to_int63_ns t
+    end
+
+    include T
+    include Comparator.Stable.V1.Make (T)
+  end
+
   module Option = struct end
 
   module V2 = struct
@@ -721,7 +745,9 @@ let random ?state () =
   - Int63.random ?state (neg min_value_for_1us_rounding + Int63.one)
 ;;
 
-let randomize t ~percent = Span_helpers.randomize t ~percent ~scale
+let randomize ?(state = Random.State.default) t ~percent =
+  Span_helpers.randomize t state ~percent ~scale
+;;
 
 let to_short_string t =
   let ({ sign; hr; min; sec; ms; us; ns } : Parts.t) = to_parts t in
@@ -756,8 +782,6 @@ include Comparable.Make_binable_using_comparator (struct
 module Replace_polymorphic_compare = T.Replace_polymorphic_compare
 include Replace_polymorphic_compare
 
-let to_span_float_round_nearest t = Span_float.of_sec (to_sec t)
-let of_span_float_round_nearest s = of_sec (Span_float.to_sec s)
 let half_microsecond = Int63.of_int 500
 let nearest_microsecond t = Int63.((to_int63_ns t + half_microsecond) /% of_int 1000)
 

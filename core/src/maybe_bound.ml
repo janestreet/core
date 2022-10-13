@@ -6,7 +6,7 @@ module Stable = struct
       | Incl of 'a
       | Excl of 'a
       | Unbounded
-    [@@deriving bin_io, compare, sexp, stable_witness]
+    [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
 
     let map x ~f =
       match x with
@@ -23,7 +23,7 @@ type 'a t = 'a Stable.V1.t =
   | Incl of 'a
   | Excl of 'a
   | Unbounded
-[@@deriving bin_io, compare, quickcheck, sexp]
+[@@deriving bin_io, compare, equal, hash, quickcheck, sexp]
 
 let compare_one_sided ~side compare_a t1 t2 =
   match t1, t2 with
@@ -57,13 +57,13 @@ let compare_one_sided ~side compare_a t1 t2 =
 ;;
 
 module As_lower_bound = struct
-  type nonrec 'a t = 'a t
+  type nonrec 'a t = 'a t [@@deriving equal, hash]
 
   let compare compare_a t1 t2 = compare_one_sided ~side:`Lower compare_a t1 t2
 end
 
 module As_upper_bound = struct
-  type nonrec 'a t = 'a t
+  type nonrec 'a t = 'a t [@@deriving equal, hash]
 
   let compare compare_a t1 t2 = compare_one_sided ~side:`Upper compare_a t1 t2
 end

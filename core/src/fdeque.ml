@@ -174,11 +174,11 @@ module Arbitrary_order = struct
   ;;
 
   let fold t ~init ~f =
-    List.fold t.front ~init ~f |> fun init -> List.fold t.back ~init ~f
+    (List.fold t.front ~init ~f |> fun init -> List.fold t.back ~init ~f) [@nontail]
   ;;
 
   let fold_result t ~init ~f = Container.fold_result ~fold ~init ~f t
-  let fold_until t ~init ~f = Container.fold_until ~fold ~init ~f t
+  let fold_until t ~init ~f ~finish = Container.fold_until ~fold ~init ~f t ~finish
 
   let find t ~f =
     match List.find t.front ~f with
@@ -227,7 +227,7 @@ struct
   let min_elt t ~compare = List.min_elt (to_list t) ~compare
   let max_elt t ~compare = List.max_elt (to_list t) ~compare
   let fold_result t ~init ~f = Container.fold_result ~fold ~init ~f t
-  let fold_until t ~init ~f = Container.fold_until ~fold ~init ~f t
+  let fold_until t ~init ~f ~finish = Container.fold_until ~fold ~init ~f t ~finish
 end
 
 module Front_to_back = struct

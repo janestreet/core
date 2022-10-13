@@ -1,4 +1,5 @@
 open! Core
+open Expect_test_helpers_core
 module Sexpable = Sexpable.Stable
 module Binable = Binable.Stable
 
@@ -153,16 +154,28 @@ let%test_module _ =
         ;;
       end)
 
-    (* Of_stringable *)
-    module _ = Stable_unit_test.Make (struct
-        type t = int
+    let%test_module "Of_stringable" =
+      (module struct
+        module M = struct
+          type t = int [@@deriving quickcheck]
 
-        include Sexpable.Of_stringable.V1 (Int)
-        include Binable.Of_stringable.V1 [@alert "-legacy"] (Int)
+          include Sexpable.Of_stringable.V1 (Int)
+          include Binable.Of_stringable.V1 [@alert "-legacy"] (Int)
+        end
 
-        let equal = Poly.( = )
-        let tests = int_tests
+        include Stable_unit_test.Make (struct
+            include M
+
+            let equal = Poly.( = )
+            let tests = int_tests
+          end)
+
+        let%expect_test "validate sexp grammar" =
+          require_ok [%here] (Sexp_grammar_validation.validate_grammar (module M));
+          [%expect {| String |}]
+        ;;
       end)
+    ;;
 
     module _ = struct
       module T = struct

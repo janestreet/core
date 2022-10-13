@@ -354,15 +354,15 @@ module Make_tree_S1 (Key : Comparator.S1) = struct
   let fold_until = fold_until
   let fold_right = fold_right
   let fold2 a b ~init ~f = fold2 a b ~init ~f ~comparator
-  let filter_keys a ~f = filter_keys a ~f ~comparator
-  let filter a ~f = filter a ~f ~comparator
-  let filteri a ~f = filteri a ~f ~comparator
-  let filter_map a ~f = filter_map a ~f ~comparator
-  let filter_mapi a ~f = filter_mapi a ~f ~comparator
-  let partition_mapi t ~f = partition_mapi t ~f ~comparator
-  let partition_map t ~f = partition_map t ~f ~comparator
-  let partitioni_tf t ~f = partitioni_tf t ~f ~comparator
-  let partition_tf t ~f = partition_tf t ~f ~comparator
+  let filter_keys a ~f = filter_keys a ~f
+  let filter a ~f = filter a ~f
+  let filteri a ~f = filteri a ~f
+  let filter_map a ~f = filter_map a ~f
+  let filter_mapi a ~f = filter_mapi a ~f
+  let partition_mapi t ~f = partition_mapi t ~f
+  let partition_map t ~f = partition_map t ~f
+  let partitioni_tf t ~f = partitioni_tf t ~f
+  let partition_tf t ~f = partition_tf t ~f
   let combine_errors t = combine_errors t ~comparator
   let compare_direct a b c = compare_direct a b c ~comparator
   let equal a b c = equal a b c ~comparator
@@ -419,6 +419,13 @@ module Make_tree_S1 (Key : Comparator.S1) = struct
   let binary_search_subrange t ~compare ~lower_bound ~upper_bound =
     binary_search_subrange ~comparator t ~compare ~lower_bound ~upper_bound
   ;;
+
+  module Make_applicative_traversals (A : Applicative.Lazy_applicative) = struct
+    module Traversals = Make_applicative_traversals (A)
+
+    let mapi = Traversals.mapi
+    let filter_mapi = Traversals.filter_mapi
+  end
 
   let key_set t = Using_comparator.key_set_of_tree ~comparator t
   let map_keys t ~f = map_keys t ~f ~comparator

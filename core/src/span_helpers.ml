@@ -1,13 +1,15 @@
 open! Import
 open Std_internal
 
-let randomize span ~percent ~scale =
+let randomize span random_state ~percent ~scale =
   let mult = Percent.to_mult percent in
   if Float.( < ) mult 0. || Float.( > ) mult 1.
   then
     raise_s
       [%message "Span.randomize: percent is out of range [0x, 1x]" (percent : Percent.t)];
-  let factor = Random.float_range (1. -. mult) (Float.one_ulp `Up (1. +. mult)) in
+  let factor =
+    Random.State.float_range random_state (1. -. mult) (Float.one_ulp `Up (1. +. mult))
+  in
   scale span factor
 ;;
 

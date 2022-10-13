@@ -362,7 +362,7 @@ module C = Container.Make (struct
         | [] -> acc
         | t :: ts -> loop acc t ts
       in
-      loop init t []
+      loop init t [] [@nontail]
     ;;
 
     let iter = `Define_using_fold

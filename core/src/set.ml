@@ -72,10 +72,6 @@ module Accessors = struct
     with type 'c cmp := 'c
     with type 'a elt := 'a
     with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t)
-
-  let to_map = Map.of_key_set
-  let quickcheck_observer = quickcheck_observer
-  let quickcheck_shrinker = quickcheck_shrinker
 end
 
 type 'a cmp = 'a
@@ -202,46 +198,10 @@ module Make_tree_S1 (Elt : Comparator.S1) = struct
   let comparator = Elt.comparator
   let empty = Tree.empty_without_value_restriction
   let singleton e = Tree.singleton ~comparator e
-  let invariants t = Tree.invariants t ~comparator
-  let length t = Tree.length t
-  let is_empty t = Tree.is_empty t
-  let elements t = Tree.elements t
-  let min_elt t = Tree.min_elt t
-  let min_elt_exn t = Tree.min_elt_exn t
-  let max_elt t = Tree.max_elt t
-  let max_elt_exn t = Tree.max_elt_exn t
-  let choose t = Tree.choose t
-  let choose_exn t = Tree.choose_exn t
-  let to_list t = Tree.to_list t
-  let to_array t = Tree.to_array t
-  let iter t ~f = Tree.iter t ~f
-  let iter2 a b ~f = Tree.iter2 a b ~f ~comparator
-  let exists t ~f = Tree.exists t ~f
-  let for_all t ~f = Tree.for_all t ~f
-  let count t ~f = Tree.count t ~f
-  let sum m t ~f = Tree.sum m t ~f
-  let find t ~f = Tree.find t ~f
-  let find_exn t ~f = Tree.find_exn t ~f
-  let find_map t ~f = Tree.find_map t ~f
-  let fold t ~init ~f = Tree.fold t ~init ~f
-  let fold_until t ~init ~f = Tree.fold_until t ~init ~f
-  let fold_right t ~init ~f = Tree.fold_right t ~init ~f
-  let fold_result t ~init ~f = Container.fold_result ~fold ~init ~f t
   let map t ~f = Tree.map t ~f ~comparator
-  let filter t ~f = Tree.filter t ~f ~comparator
   let filter_map t ~f = Tree.filter_map t ~f ~comparator
-  let partition_tf t ~f = Tree.partition_tf t ~f ~comparator
-  let mem t a = Tree.mem t a ~comparator
-  let add t a = Tree.add t a ~comparator
-  let remove t a = Tree.remove t a ~comparator
-  let union t1 t2 = Tree.union t1 t2 ~comparator
-  let inter t1 t2 = Tree.inter t1 t2 ~comparator
-  let diff t1 t2 = Tree.diff t1 t2 ~comparator
-  let symmetric_diff t1 t2 = Tree.symmetric_diff t1 t2 ~comparator
   let compare_direct t1 t2 = Tree.compare_direct ~comparator t1 t2
   let equal t1 t2 = Tree.equal t1 t2 ~comparator
-  let is_subset t ~of_ = Tree.is_subset t ~of_ ~comparator
-  let are_disjoint t1 t2 = Tree.are_disjoint t1 t2 ~comparator
   let of_list l = Tree.of_list l ~comparator
   let of_sequence s = Tree.of_sequence s ~comparator
   let of_hash_set h = Tree.of_hash_set h ~comparator
@@ -256,38 +216,9 @@ module Make_tree_S1 (Elt : Comparator.S1) = struct
   let of_sorted_array a = Tree.of_sorted_array a ~comparator
   let union_list l = Tree.union_list l ~comparator
   let stable_dedup_list xs = Tree.stable_dedup_list xs ~comparator
-  let group_by t ~equiv = Tree.group_by t ~equiv ~comparator
-  let split t a = Tree.split t a ~comparator
-  let nth t i = Tree.nth t i
-  let remove_index t i = Tree.remove_index t i ~comparator
-  let to_tree t = t
   let of_tree t = t
-
-  let to_sequence ?order ?greater_or_equal_to ?less_or_equal_to t =
-    Tree.to_sequence ~comparator ?order ?greater_or_equal_to ?less_or_equal_to t
-  ;;
-
-  let binary_search t ~compare how v = Tree.binary_search ~comparator t ~compare how v
-
-  let binary_search_segmented t ~segment_of how =
-    Tree.binary_search_segmented ~comparator t ~segment_of how
-  ;;
-
-  let merge_to_sequence ?order ?greater_or_equal_to ?less_or_equal_to t t' =
-    Tree.merge_to_sequence ~comparator ?order ?greater_or_equal_to ?less_or_equal_to t t'
-  ;;
-
   let of_map_keys = Tree.of_map_keys
-  let to_map t ~f = Tree.to_map ~comparator t ~f
-
-  module Named = struct
-    let is_subset t ~of_ = Tree.Named.is_subset t ~of_ ~comparator
-    let equal t1 t2 = Tree.Named.equal t1 t2 ~comparator
-  end
-
   let quickcheck_generator elt = For_quickcheck.gen_tree elt ~comparator
-  let quickcheck_observer elt = For_quickcheck.obs_tree elt
-  let quickcheck_shrinker elt = For_quickcheck.shr_tree elt ~comparator
 end
 
 module Make_tree_plain (Elt : sig
@@ -473,6 +404,9 @@ struct
       Stable_witness.assert_stable
     ;;
   end
+
+  let quickcheck_observer = quickcheck_observer
+  let quickcheck_shrinker = quickcheck_shrinker
 end
 
 module Make_plain (Elt : Elt_plain) = Make_plain_using_comparator (struct

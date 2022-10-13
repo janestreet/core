@@ -12,6 +12,7 @@ include Caml
    [[1] http://caml.inria.fr/mantis/view.php?id=6556
 *)
 external raise : exn -> 'a = "%reraise"
+external ignore : ('a[@local_opt]) -> unit = "%ignore"
 
 [%%if ocaml_version < (4, 12, 0)]
 

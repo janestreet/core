@@ -13,8 +13,8 @@ open Set_intf
     that they be passed sets with the same element type and the same comparator type. *)
 type ('elt, 'cmp) t = ('elt, 'cmp) Base.Set.t [@@deriving compare]
 
-type ('k, 'cmp) comparator =
-  (module Comparator.S with type t = 'k and type comparator_witness = 'cmp)
+type ('k, 'cmp) comparator = ('k, 'cmp) Comparator.Module.t
+[@@deprecated "[since 2022-07] use [Comparator.Module.t] instead"]
 
 module Tree : sig
   (** A [Tree.t] contains just the tree data structure that a set is based on, without
@@ -57,11 +57,11 @@ val comparator_s : ('a, 'cmp) t -> ('a, 'cmp) Comparator.Module.t
 val comparator : ('a, 'cmp) t -> ('a, 'cmp) Comparator.t
 
 (** Creates an empty set based on the provided comparator. *)
-val empty : ('a, 'cmp) comparator -> ('a, 'cmp) t
+val empty : ('a, 'cmp) Comparator.Module.t -> ('a, 'cmp) t
 
 (** Creates a set based on the provided comparator that contains only the provided
     element. *)
-val singleton : ('a, 'cmp) comparator -> 'a -> ('a, 'cmp) t
+val singleton : ('a, 'cmp) Comparator.Module.t -> 'a -> ('a, 'cmp) t
 
 (** Returns the cardinality of the set. [O(1)]. *)
 val length : (_, _) t -> int
@@ -87,7 +87,7 @@ val union : ('a, 'cmp) t -> ('a, 'cmp) t -> ('a, 'cmp) t
     required for the case where [list] is empty. [O(max(List.length list, n log n))],
     where [n] is the sum of sizes of the input sets.
 *)
-val union_list : ('a, 'cmp) comparator -> ('a, 'cmp) t list -> ('a, 'cmp) t
+val union_list : ('a, 'cmp) Comparator.Module.t -> ('a, 'cmp) t list -> ('a, 'cmp) t
 
 (** [inter t1 t2] computes the intersection of sets [t1] and [t2].  [O(length t1 +
     length t2)]. *)
@@ -121,33 +121,33 @@ val equal : ('a, 'cmp) t -> ('a, 'cmp) t -> bool
 
 (** [exists t ~f] returns [true] iff there exists an [a] in [t] for which [f a].  [O(n)],
     but returns as soon as it finds an [a] for which [f a]. *)
-val exists : ('a, _) t -> f:('a -> bool) -> bool
+val exists : ('a, _) t -> f:(('a -> bool)[@local]) -> bool
 
 (** [for_all t ~f] returns [true] iff for all [a] in [t], [f a].  [O(n)], but returns as
     soon as it finds an [a] for which [not (f a)]. *)
-val for_all : ('a, _) t -> f:('a -> bool) -> bool
+val for_all : ('a, _) t -> f:(('a -> bool)[@local]) -> bool
 
 (** [count t] returns the number of elements of [t] for which [f] returns [true].
     [O(n)]. *)
-val count : ('a, _) t -> f:('a -> bool) -> int
+val count : ('a, _) t -> f:(('a -> bool)[@local]) -> int
 
 (** [sum t] returns the sum of [f t] for each [t] in the set.
     [O(n)]. *)
 val sum
   :  (module Container.Summable with type t = 'sum)
   -> ('a, _) t
-  -> f:('a -> 'sum)
+  -> f:(('a -> 'sum)[@local])
   -> 'sum
 
 (** [find t f] returns an element of [t] for which [f] returns true, with no guarantee as
     to which element is returned.  [O(n)], but returns as soon as a suitable element is
     found. *)
-val find : ('a, _) t -> f:('a -> bool) -> 'a option
+val find : ('a, _) t -> f:(('a -> bool)[@local]) -> 'a option
 
 (** [find_map t f] returns [b] for some [a] in [t] for which [f a = Some b].  If no such
     [a] exists, then [find] returns [None].  [O(n)], but returns as soon as a suitable
     element is found. *)
-val find_map : ('a, _) t -> f:('a -> 'b option) -> 'b option
+val find_map : ('a, _) t -> f:(('a -> 'b option)[@local]) -> 'b option
 
 (** Like [find], but throws an exception on failure. *)
 val find_exn : ('a, _) t -> f:('a -> bool) -> 'a
@@ -205,12 +205,12 @@ module Named : sig
 end
 
 (** The list or array given to [of_list] and [of_array] need not be sorted. *)
-val of_list : ('a, 'cmp) comparator -> 'a list -> ('a, 'cmp) t
+val of_list : ('a, 'cmp) Comparator.Module.t -> 'a list -> ('a, 'cmp) t
 
-val of_sequence : ('a, 'cmp) comparator -> 'a Sequence.t -> ('a, 'cmp) t
-val of_array : ('a, 'cmp) comparator -> 'a array -> ('a, 'cmp) t
-val of_hash_set : ('a, 'cmp) comparator -> 'a Hash_set.t -> ('a, 'cmp) t
-val of_hashtbl_keys : ('a, 'cmp) comparator -> ('a, _) Hashtbl.t -> ('a, 'cmp) t
+val of_sequence : ('a, 'cmp) Comparator.Module.t -> 'a Sequence.t -> ('a, 'cmp) t
+val of_array : ('a, 'cmp) Comparator.Module.t -> 'a array -> ('a, 'cmp) t
+val of_hash_set : ('a, 'cmp) Comparator.Module.t -> 'a Hash_set.t -> ('a, 'cmp) t
+val of_hashtbl_keys : ('a, 'cmp) Comparator.Module.t -> ('a, _) Hashtbl.t -> ('a, 'cmp) t
 
 (** [to_list] and [to_array] produce sequences sorted in ascending order according to the
     comparator. *)
@@ -218,15 +218,18 @@ val to_list : ('a, _) t -> 'a list
 
 val to_array : ('a, _) t -> 'a array
 val to_tree : ('a, 'cmp) t -> ('a, 'cmp) Tree.t
-val of_tree : ('a, 'cmp) comparator -> ('a, 'cmp) Tree.t -> ('a, 'cmp) t
+val of_tree : ('a, 'cmp) Comparator.Module.t -> ('a, 'cmp) Tree.t -> ('a, 'cmp) t
 
 (** Create set from sorted array.  The input must be sorted (either in ascending or
     descending order as given by the comparator) and contain no duplicates, otherwise the
     result is an error.  The complexity of this function is [O(n)]. *)
-val of_sorted_array : ('a, 'cmp) comparator -> 'a array -> ('a, 'cmp) t Or_error.t
+val of_sorted_array
+  :  ('a, 'cmp) Comparator.Module.t
+  -> 'a array
+  -> ('a, 'cmp) t Or_error.t
 
 (** Similar to [of_sorted_array], but without checking the input array. *)
-val of_sorted_array_unchecked : ('a, 'cmp) comparator -> 'a array -> ('a, 'cmp) t
+val of_sorted_array_unchecked : ('a, 'cmp) Comparator.Module.t -> 'a array -> ('a, 'cmp) t
 
 (** [of_increasing_iterator_unchecked c ~len ~f] behaves like
     [of_sorted_array_unchecked c (Array.init len ~f)], with the additional
@@ -234,7 +237,7 @@ val of_sorted_array_unchecked : ('a, 'cmp) comparator -> 'a array -> ('a, 'cmp) 
     you to allocate an intermediate array.  [f] will be called with 0, 1, ... [len - 1],
     in order. *)
 val of_increasing_iterator_unchecked
-  :  ('a, 'cmp) comparator
+  :  ('a, 'cmp) Comparator.Module.t
   -> len:int
   -> f:(int -> 'a)
   -> ('a, 'cmp) t
@@ -243,28 +246,32 @@ val of_increasing_iterator_unchecked
     implementation relies crucially on sets, and because doing so allows one to avoid uses
     of polymorphic comparison by instantiating the functor at a different implementation
     of [Comparator] and using the resulting [stable_dedup_list]. *)
-val stable_dedup_list : ('a, _) comparator -> 'a list -> 'a list
+val stable_dedup_list : ('a, _) Comparator.Module.t -> 'a list -> 'a list
 
 (** [map c t ~f] returns a new set created by applying [f] to every element in [t]. The
     returned set is based on the provided [c]. [O(n log n)]. *)
-val map : ('b, 'cmp) comparator -> ('a, _) t -> f:('a -> 'b) -> ('b, 'cmp) t
+val map : ('b, 'cmp) Comparator.Module.t -> ('a, _) t -> f:('a -> 'b) -> ('b, 'cmp) t
 
 (** Like {!map}, except elements for which [f] returns [None] will be dropped.  *)
-val filter_map : ('b, 'cmp) comparator -> ('a, _) t -> f:('a -> 'b option) -> ('b, 'cmp) t
+val filter_map
+  :  ('b, 'cmp) Comparator.Module.t
+  -> ('a, _) t
+  -> f:('a -> 'b option)
+  -> ('b, 'cmp) t
 
 (** [filter t ~f] returns the subset of [t] for which [f] evaluates to true.  [O(n log
     n)]. *)
 val filter : ('a, 'cmp) t -> f:('a -> bool) -> ('a, 'cmp) t
 
 (** [fold t ~init ~f] folds over the elements of the set from smallest to largest. *)
-val fold : ('a, _) t -> init:'accum -> f:('accum -> 'a -> 'accum) -> 'accum
+val fold : ('a, _) t -> init:'accum -> f:(('accum -> 'a -> 'accum)[@local]) -> 'accum
 
 (** [fold_result ~init ~f] folds over the elements of the set from smallest to
     largest, short circuiting the fold if [f accum x] is an [Error _] *)
 val fold_result
   :  ('a, _) t
   -> init:'accum
-  -> f:('accum -> 'a -> ('accum, 'e) Result.t)
+  -> f:(('accum -> 'a -> ('accum, 'e) Result.t)[@local])
   -> ('accum, 'e) Result.t
 
 (** [fold_until t ~init ~f] is a short-circuiting version of [fold]. If [f]
@@ -273,17 +280,21 @@ val fold_result
 val fold_until
   :  ('a, _) t
   -> init:'accum
-  -> f:('accum -> 'a -> ('accum, 'final) Continue_or_stop.t)
-  -> finish:('accum -> 'final)
+  -> f:(('accum -> 'a -> ('accum, 'final) Continue_or_stop.t)[@local])
+  -> finish:(('accum -> 'final)[@local])
   -> 'final
 
 
 (** Like {!fold}, except that it goes from the largest to the smallest element. *)
-val fold_right : ('a, _) t -> init:'accum -> f:('a -> 'accum -> 'accum) -> 'accum
+val fold_right
+  :  ('a, _) t
+  -> init:'accum
+  -> f:(('a -> 'accum -> 'accum)[@local])
+  -> 'accum
 
 (** [iter t ~f] calls [f] on every element of [t], going in order from the smallest to
     largest.  *)
-val iter : ('a, _) t -> f:('a -> unit) -> unit
+val iter : ('a, _) t -> f:(('a -> unit)[@local]) -> unit
 
 (** Iterate two sets side by side.  Complexity is [O(m+n)] where [m] and [n] are the sizes
     of the two input sets.  As an example, with the inputs [0; 1] and [1; 2], [f] will be
@@ -291,7 +302,7 @@ val iter : ('a, _) t -> f:('a -> unit) -> unit
 val iter2
   :  ('a, 'cmp) t
   -> ('a, 'cmp) t
-  -> f:([ `Left of 'a | `Right of 'a | `Both of 'a * 'a ] -> unit)
+  -> f:(([ `Left of 'a | `Right of 'a | `Both of 'a * 'a ] -> unit)[@local])
   -> unit
 
 (** If [a, b = partition_tf set ~f] then [a] is the elements on which [f] produced [true],
@@ -433,7 +444,7 @@ val to_map : ('key, 'cmp) t -> f:('key -> 'data) -> ('key, 'data, 'cmp) Base.Map
 val of_map_keys : ('key, _, 'cmp) Base.Map.t -> ('key, 'cmp) t
 
 val quickcheck_generator
-  :  ('key, 'cmp) comparator
+  :  ('key, 'cmp) Comparator.Module.t
   -> 'key Quickcheck.Generator.t
   -> ('key, 'cmp) t Quickcheck.Generator.t
 
@@ -459,28 +470,26 @@ module Poly : sig
     [@@deriving sexp, sexp_grammar]
 
     include
-      Creators_and_accessors_generic
+      Creators_generic
       with type ('a, 'b) set := ('a, 'b) Tree.t
       with type ('elt, 'cmp) t := 'elt t
       with type ('elt, 'cmp) tree := 'elt t
       with type 'c cmp := Comparator.Poly.comparator_witness
       with type 'a elt := 'a
       with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
-      with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
   end
 
   type 'elt t = ('elt, Comparator.Poly.comparator_witness) set
   [@@deriving bin_io, compare, sexp, sexp_grammar]
 
   include
-    Creators_and_accessors_generic
+    Creators_generic
     with type ('a, 'b) set := ('a, 'b) set
     with type ('elt, 'cmp) t := 'elt t
     with type ('elt, 'cmp) tree := 'elt Tree.t
     with type 'c cmp := Comparator.Poly.comparator_witness
     with type 'a elt := 'a
     with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
-    with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
 end
 with type ('a, 'b) set := ('a, 'b) t
 

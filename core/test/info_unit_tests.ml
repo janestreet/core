@@ -41,7 +41,7 @@ let%test_module "Info.Stable.V2" =
            , "(Failure Error)"
            , "\002\001\002\000\007Failure\000\005Error" )
          ; ( Info.of_exn (Failure "Error") ~backtrace:(`This "backtrace")
-           , "((Failure Error)backtrace)"
+           , "((Failure Error)(backtrace))"
            , "\b\003\001\002\000\007Failure\000\005Error\tbacktrace" )
          ]
        ;;

@@ -85,23 +85,32 @@ module Foil : S = struct
     Exn.protect ~f ~finally:(fun () -> t.num_readers <- t.num_readers - 1)
   ;;
 
-  let for_all t ~f = read_wrap t (fun () -> List.for_all (to_list t) ~f)
-  let exists t ~f = read_wrap t (fun () -> List.exists (to_list t) ~f)
-  let find t ~f = read_wrap t (fun () -> List.find (to_list t) ~f)
-  let find_map t ~f = read_wrap t (fun () -> List.find_map (to_list t) ~f)
-  let iter t ~f = read_wrap t (fun () -> List.iter (to_list t) ~f)
-  let fold t ~init ~f = read_wrap t (fun () -> List.fold (to_list t) ~init ~f)
-  let count t ~f = read_wrap t (fun () -> List.count (to_list t) ~f)
-  let sum m t ~f = read_wrap t (fun () -> List.sum m (to_list t) ~f)
-  let mem t a ~equal = read_wrap t (fun () -> List.mem (to_list t) a ~equal)
-  let min_elt t ~compare = read_wrap t (fun () -> List.min_elt ~compare (to_list t))
-  let max_elt t ~compare = read_wrap t (fun () -> List.max_elt ~compare (to_list t))
+  let for_all t ~f = read_wrap t (fun () -> List.for_all (to_list t) ~f) [@nontail]
+  let exists t ~f = read_wrap t (fun () -> List.exists (to_list t) ~f) [@nontail]
+  let find t ~f = read_wrap t (fun () -> List.find (to_list t) ~f) [@nontail]
+  let find_map t ~f = read_wrap t (fun () -> List.find_map (to_list t) ~f) [@nontail]
+  let iter t ~f = read_wrap t (fun () -> List.iter (to_list t) ~f) [@nontail]
+  let fold t ~init ~f = read_wrap t (fun () -> List.fold (to_list t) ~init ~f) [@nontail]
+  let count t ~f = read_wrap t (fun () -> List.count (to_list t) ~f) [@nontail]
+  let sum m t ~f = read_wrap t (fun () -> List.sum m (to_list t) ~f) [@nontail]
+  let mem t a ~equal = read_wrap t (fun () -> List.mem (to_list t) a ~equal) [@nontail]
 
-  let fold_result t ~init ~f =
-    read_wrap t (fun () -> List.fold_result (to_list t) ~init ~f)
+  let min_elt t ~compare =
+    read_wrap t (fun () -> List.min_elt ~compare (to_list t)) [@nontail]
   ;;
 
-  let fold_until t ~init ~f = read_wrap t (fun () -> List.fold_until (to_list t) ~init ~f)
+  let max_elt t ~compare =
+    read_wrap t (fun () -> List.max_elt ~compare (to_list t)) [@nontail]
+  ;;
+
+  let fold_result t ~init ~f =
+    read_wrap t (fun () -> List.fold_result (to_list t) ~init ~f) [@nontail]
+  ;;
+
+  let fold_until t ~init ~f ~finish =
+    read_wrap t (fun () -> List.fold_until (to_list t) ~init ~f ~finish) [@nontail]
+  ;;
+
   let sexp_of_t sexp_of_a t = List.sexp_of_t sexp_of_a (to_list t)
   let t_of_sexp a_of_sexp s = of_list (List.t_of_sexp a_of_sexp s)
   let invariant _ _ = ()
@@ -263,6 +272,11 @@ module Both : S = struct
     val pair : 'a -> 'b -> ('a, 'b) m
     val opt_obs : ('a option, 'b option) m -> ('a, 'b) m option (* observe option *)
     val obs : ('a, 'a) m -> 'a (* observe *)
+
+    val obs_f
+      :  (f:('f[@local]) -> 'a, f:('f[@local]) -> 'a) m
+      -> f:('f[@local])
+      -> 'a (* observe with local closure *)
   end = struct
     type ('a, 'b) m = ('a, exn) Result.t * ('b, exn) Result.t
 
@@ -277,6 +291,14 @@ module Both : S = struct
             | e -> Error e))
     ;;
 
+    let app_f t ~f =
+      match t with
+      | Error e -> Error e
+      | Ok t ->
+        (try Ok (t ~f) with
+         | e -> Error e)
+    ;;
+
     let ( *@ ) (f, g) (x, y) = app f x, app g y
     let pair x y = Ok x, Ok y
     let pure x = pair x x
@@ -284,8 +306,8 @@ module Both : S = struct
     let force = function
       | Ok x, Ok y -> x, y
       | Error _, Error _ -> raise Both_raised
-      | Error _, Ok _ -> failwith "hero failure =/= foil success"
-      | Ok _, Error _ -> failwith "hero success =/= foil failure"
+      | Error exn, Ok _ -> raise_s [%message "hero failure =/= foil success" (exn : exn)]
+      | Ok _, Error exn -> raise_s [%message "hero success =/= foil failure" (exn : exn)]
     ;;
 
     let obs t =
@@ -293,6 +315,8 @@ module Both : S = struct
       assert (x = y);
       x
     ;;
+
+    let obs_f (x, y) ~f = obs (app_f x ~f, app_f y ~f)
 
     let opt_obs t =
       match force t with
@@ -327,22 +351,43 @@ module Both : S = struct
     pair Hero.t_of_sexp Foil.t_of_sexp *@ pure a_of_sexp *@ pure s
   ;;
 
-  let exists t ~f = obs (pair (Hero.exists ~f) (Foil.exists ~f) *@ t)
+  let exists t ~f = obs_f (pair Hero.exists Foil.exists *@ t) ~f
 
   let mem t a ~equal =
-    obs (pair (fun h -> Hero.mem h a ~equal) (fun f -> Foil.mem f a ~equal) *@ t)
+    obs_f
+      (pair
+         (fun h ~f:equal -> Hero.mem h a ~equal)
+         (fun f ~f:equal -> Foil.mem f a ~equal)
+       *@ t)
+      ~f:equal
   ;;
 
-  let find_map t ~f = obs (pair (Hero.find_map ~f) (Foil.find_map ~f) *@ t)
-  let find t ~f = obs (pair (Hero.find ~f) (Foil.find ~f) *@ t)
-  let for_all t ~f = obs (pair (Hero.for_all ~f) (Foil.for_all ~f) *@ t)
+  let find_map t ~f = obs_f (pair Hero.find_map Foil.find_map *@ t) ~f
+  let find t ~f = obs_f (pair Hero.find Foil.find *@ t) ~f
+  let for_all t ~f = obs_f (pair Hero.for_all Foil.for_all *@ t) ~f
   let is_empty t = obs (pair Hero.is_empty Foil.is_empty *@ t)
   let length t = obs (pair Hero.length Foil.length *@ t)
   let of_list xs = pair Hero.of_list Foil.of_list *@ pure xs
   let to_list t = obs (pair Hero.to_list Foil.to_list *@ t)
   let to_array t = obs (pair Hero.to_array Foil.to_array *@ t)
-  let min_elt t ~compare = obs (pair (Hero.min_elt ~compare) (Foil.min_elt ~compare) *@ t)
-  let max_elt t ~compare = obs (pair (Hero.max_elt ~compare) (Foil.max_elt ~compare) *@ t)
+
+  let min_elt t ~compare =
+    obs_f
+      (pair
+         (fun h ~f:compare -> Hero.min_elt h ~compare)
+         (fun f ~f:compare -> Foil.min_elt f ~compare)
+       *@ t)
+      ~f:compare
+  ;;
+
+  let max_elt t ~compare =
+    obs_f
+      (pair
+         (fun h ~f:compare -> Hero.max_elt h ~compare)
+         (fun f ~f:compare -> Foil.max_elt f ~compare)
+       *@ t)
+      ~f:compare
+  ;;
 
   (* punt: so as not to duplicate any effects in passed-in functions *)
   let fold _ = failwith "unimplemented"

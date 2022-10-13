@@ -92,7 +92,31 @@ module type Span = sig
   val arg_type : [ `Use_Time_ns_unix ] [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
   module Option : sig end [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
-  module Stable : sig end [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
+
+  module Stable : sig
+    module V1 : sig
+      type nonrec t = t [@@deriving hash, equal]
+
+      include Stable_int63able.With_stable_witness.S with type t := t
+    end
+
+    module V2 : sig
+      type nonrec t = t [@@deriving hash, equal, sexp_grammar]
+      type nonrec comparator_witness = comparator_witness
+
+      include
+        Stable_int63able.With_stable_witness.S
+        with type t := t
+        with type comparator_witness := comparator_witness
+
+      include
+        Comparable.Stable.V1.With_stable_witness.S
+        with type comparable := t
+        with type comparator_witness := comparator_witness
+
+      include Stringable.S with type t := t
+    end
+  end
 
   (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
 
@@ -359,7 +383,12 @@ module type Time_ns = sig
     end
 
     module Span : sig
-      module V1 : sig end [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
+      module V1 : sig
+        type nonrec t = Span.t [@@deriving hash, equal]
+
+        include Stable_int63able.With_stable_witness.S with type t := t
+      end
+
       module Option : sig end [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
       module V2 : sig

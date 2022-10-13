@@ -307,7 +307,7 @@ let%test_module "laws" =
 
         let set_of_base =
           Memo.general (fun t ->
-            Int.Set.filter (force universe) ~f:(fun e ->
+            Set.filter (force universe) ~f:(fun e ->
               match t with
               | Odd -> e mod 2 = 1
               | Even -> e mod 2 = 0
@@ -318,7 +318,7 @@ let%test_module "laws" =
         let run expression =
           let expect =
             Set.filter (force universe) ~f:(fun e ->
-              eval expression (fun base -> Int.Set.mem (set_of_base base) e))
+              eval expression (fun base -> Set.mem (set_of_base base) e))
           in
           try
             [%test_result: Int.Set.t] ~expect (eval_set ~universe set_of_base expression)

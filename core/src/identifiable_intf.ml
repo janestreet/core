@@ -105,6 +105,16 @@ module type Identifiable = sig
       val module_name : string
     end) : S with type t := M.t with type comparator_witness := M.comparator_witness
 
+  module Make_plain_using_comparator (M : sig
+      type t [@@deriving compare, hash, sexp_of]
+
+      include Comparator.S with type t := t
+      include Stringable.S with type t := t
+
+      (** for registering the pretty printer *)
+      val module_name : string
+    end) : S_plain with type t := M.t with type comparator_witness := M.comparator_witness
+
   module Make_using_comparator_and_derive_hash_fold_t (M : sig
       type t [@@deriving bin_io, compare, sexp]
 

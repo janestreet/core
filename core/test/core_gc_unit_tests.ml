@@ -130,3 +130,39 @@ let%expect_test "stat diff" =
      (fragments 0) (compactions 7) (top_heap_words 0) (stack_size 0)
      (forced_major_collections 0)) |}]
 ;;
+
+let empty_gc_stat =
+  { Gc.Stat.minor_words = 0.
+  ; promoted_words = 0.
+  ; major_words = 0.
+  ; minor_collections = 0
+  ; major_collections = 0
+  ; heap_words = 0
+  ; heap_chunks = 0
+  ; live_words = 0
+  ; live_blocks = 0
+  ; free_words = 0
+  ; free_blocks = 0
+  ; largest_free = 0
+  ; fragments = 0
+  ; compactions = 0
+  ; top_heap_words = 0
+  ; stack_size = 0
+  ; forced_major_collections = 0
+  }
+;;
+
+let%expect_test "stat add" =
+  let first = { empty_gc_stat with minor_words = 5.; heap_words = 10; compactions = 3 } in
+  let second =
+    { empty_gc_stat with minor_words = 3.; live_blocks = 7; compactions = 1 }
+  in
+  print_s [%sexp (Gc.Stat.add first second : Gc.Stat.t)];
+  [%expect
+    {|
+    ((minor_words 8) (promoted_words 0) (major_words 0) (minor_collections 0)
+     (major_collections 0) (heap_words 10) (heap_chunks 0) (live_words 0)
+     (live_blocks 7) (free_words 0) (free_blocks 0) (largest_free 0)
+     (fragments 0) (compactions 4) (top_heap_words 0) (stack_size 0)
+     (forced_major_collections 0)) |}]
+;;

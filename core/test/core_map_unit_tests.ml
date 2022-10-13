@@ -52,15 +52,6 @@ struct
     let invariants x = simplify_accessor invariants x
     let remove x = simplify_accessor remove x
     let mem x = simplify_accessor mem x
-    let filter x = simplify_accessor filter x
-    let filteri x = simplify_accessor filteri x
-    let filter_keys x = simplify_accessor filter_keys x
-    let filter_map x = simplify_accessor filter_map x
-    let filter_mapi x = simplify_accessor filter_mapi x
-    let partition_mapi x = simplify_accessor partition_mapi x
-    let partition_map x = simplify_accessor partition_map x
-    let partitioni_tf x = simplify_accessor partitioni_tf x
-    let partition_tf x = simplify_accessor partition_tf x
     let combine_errors x = simplify_accessor combine_errors x
     let compare_direct x = simplify_accessor compare_direct x
     let equal x = simplify_accessor equal x
@@ -577,7 +568,10 @@ struct
 
   let of_iteri ~iteri:_ = assert false
   let of_iteri_exn ~iteri:_ = assert false
-  let alist_iteri alist ~f = List.iter alist ~f:(fun (key, data) -> f ~key ~data)
+
+  let alist_iteri alist ~f =
+    List.iter alist ~f:(fun (key, data) -> f ~key ~data) [@nontail]
+  ;;
 
   let%test _ =
     let alist = random_alist Key.samples in
@@ -2165,6 +2159,11 @@ struct
     end)
   ;;
 
+  module Make_applicative_traversals (_ : Applicative.Lazy_applicative) = struct
+    let mapi _ = assert false
+    let filter_mapi _ = assert false
+  end
+
   let validate ~name:_ _ = assert false
 
   let%test_unit _ =
@@ -2254,7 +2253,7 @@ struct
   let%expect_test _ =
     let make alist =
       Map.of_iteri_exn ~iteri:(fun ~f ->
-        List.iter alist ~f:(fun (key, data) -> f ~key:(Key.of_int key) ~data))
+        List.iter alist ~f:(fun (key, data) -> f ~key:(Key.of_int key) ~data) [@nontail])
     in
     let test alist =
       let original = make alist |> Map.map ~f:make in

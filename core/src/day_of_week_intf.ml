@@ -11,7 +11,7 @@ module type Day_of_week = sig
     | Thu
     | Fri
     | Sat
-  [@@deriving bin_io, compare, hash, quickcheck, sexp]
+  [@@deriving bin_io, compare, hash, quickcheck, sexp, typerep]
 
   include Comparable.S_binable with type t := t
   include Hashable.S_binable with type t := t

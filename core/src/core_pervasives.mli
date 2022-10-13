@@ -599,7 +599,7 @@ val char_of_int : int -> char
     [f x; ()], except that the latter may generate a
     compiler warning; writing [ignore(f x)] instead
     avoids the warning. *)
-external ignore : 'a -> unit = "%ignore"
+external ignore : ('a[@local_opt]) -> unit = "%ignore"
 
 (** {6 String conversion functions} *)
 

@@ -67,7 +67,7 @@ module Make_backend (Table : Hashtbl_intf.Hashtbl) : S_backend = struct
 
     let read t f =
       t.num_readers <- t.num_readers + 1;
-      Exn.protect ~f ~finally:(fun () -> t.num_readers <- t.num_readers - 1)
+      Exn.protect ~f ~finally:(fun () -> t.num_readers <- t.num_readers - 1) [@nontail]
     ;;
 
     let ensure_can_modify t =
@@ -98,22 +98,25 @@ module Make_backend (Table : Hashtbl_intf.Hashtbl) : S_backend = struct
     let to_array t = Array.map (Doubly_linked.to_array t.queue) ~f:Key_value.value
 
     let for_all t ~f =
-      read t (fun () -> Doubly_linked.for_all t.queue ~f:(fun kv -> f kv.value))
+      read t (fun () ->
+        Doubly_linked.for_all t.queue ~f:(fun kv -> f kv.value) [@nontail]) [@nontail]
     ;;
 
     let exists t ~f =
-      read t (fun () -> Doubly_linked.exists t.queue ~f:(fun kv -> f kv.value))
+      read t (fun () -> Doubly_linked.exists t.queue ~f:(fun kv -> f kv.value) [@nontail]) 
+      [@nontail]
     ;;
 
     let find_map t ~f =
-      read t (fun () -> Doubly_linked.find_map t.queue ~f:(fun kv -> f kv.value))
+      read t (fun () ->
+        Doubly_linked.find_map t.queue ~f:(fun kv -> f kv.value) [@nontail]) [@nontail]
     ;;
 
     let find t ~f =
       read t (fun () ->
         Option.map
           (Doubly_linked.find t.queue ~f:(fun kv -> f kv.value))
-          ~f:Key_value.value)
+          ~f:Key_value.value) [@nontail]
     ;;
 
     let enqueue t back_or_front key value =
@@ -262,24 +265,25 @@ module Make_backend (Table : Hashtbl_intf.Hashtbl) : S_backend = struct
 
     let iteri t ~f =
       read t (fun () ->
-        Doubly_linked.iter t.queue ~f:(fun kv -> f ~key:kv.key ~data:kv.value))
+        Doubly_linked.iter t.queue ~f:(fun kv -> f ~key:kv.key ~data:kv.value) [@nontail]) 
+      [@nontail]
     ;;
 
-    let iter t ~f = iteri t ~f:(fun ~key:_ ~data -> f data)
+    let iter t ~f = iteri t ~f:(fun ~key:_ ~data -> f data) [@nontail]
 
     let foldi t ~init ~f =
       read t (fun () ->
         Doubly_linked.fold t.queue ~init ~f:(fun ac kv ->
-          f ac ~key:kv.key ~data:kv.value))
+          f ac ~key:kv.key ~data:kv.value) [@nontail]) [@nontail]
     ;;
 
-    let fold t ~init ~f = foldi t ~init ~f:(fun ac ~key:_ ~data -> f ac data)
+    let fold t ~init ~f = foldi t ~init ~f:(fun ac ~key:_ ~data -> f ac data) [@nontail]
     let count t ~f = Container.count ~fold t ~f
     let sum m t ~f = Container.sum m ~fold t ~f
     let min_elt t ~compare = Container.min_elt ~fold t ~compare
     let max_elt t ~compare = Container.max_elt ~fold t ~compare
     let fold_result t ~init ~f = Container.fold_result ~fold ~init ~f t
-    let fold_until t ~init ~f = Container.fold_until ~fold ~init ~f t
+    let fold_until t ~init ~f ~finish = Container.fold_until ~fold ~init ~f t ~finish
 
     let dequeue_all t ~f =
       let rec loop () =

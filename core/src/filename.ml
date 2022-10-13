@@ -3,7 +3,8 @@ module Stable = struct
     include (
       String.Stable.V1 :
       sig
-        type t = string [@@deriving bin_io, compare, hash, sexp, stable_witness]
+        type t = string
+        [@@deriving bin_io, compare, hash, sexp, sexp_grammar, stable_witness]
 
         include
           Comparable.Stable.V1.With_stable_witness.S
@@ -23,7 +24,7 @@ open! Std_internal
 include (
   String :
   sig
-    type t = string [@@deriving bin_io, compare, sexp]
+    type t = string [@@deriving bin_io, compare, sexp, sexp_grammar]
 
     include
       Comparable.S

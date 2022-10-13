@@ -50,6 +50,185 @@ let quickcheck here quickcheck_generator f =
         ])
 ;;
 
+let%expect_test "Time_ns.Span.Stable.V1" =
+  let module V = Time_ns.Span.Stable.V1 in
+  let make int64 = V.of_int63_exn (Int63.of_int64_exn int64) in
+  (* stable checks for values that round-trip *)
+  print_and_check_stable_int63able_type
+    [%here]
+    (module V)
+    [ make 0L
+    ; make 1_000L
+    ; make 1_000_000_000L
+    ; make 1_234_560_000_000L
+    ; make 71_623_008_000_000_000L
+    ; make 80_000_006_400_000_000L
+    ; make 1L
+    ];
+  [%expect
+    {|
+    (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
+    ((sexp   0s)
+     (bin_io "\000")
+     (int63  0))
+    ((sexp   0.001ms)
+     (bin_io "\254\232\003")
+     (int63  1_000))
+    ((sexp   1s)
+     (bin_io "\253\000\202\154;")
+     (int63  1_000_000_000))
+    ((sexp   20.576m)
+     (bin_io "\252\000\160\130q\031\001\000\000")
+     (int63  1_234_560_000_000))
+    ((sexp   828.97d)
+     (bin_io "\252\000\192\149\r\191t\254\000")
+     (int63  71_623_008_000_000_000))
+    ((sexp   925.926d)
+     (bin_io "\252\000@\128\251\1487\028\001")
+     (int63  80_000_006_400_000_000))
+    ((sexp   1e-06ms)
+     (bin_io "\001")
+     (int63  1)) |}];
+  (* stable checks for values that do not precisely round-trip *)
+  print_and_check_stable_int63able_type
+    [%here]
+    (module V)
+    ~cr:Comment
+    [ make 11_275_440_000L ];
+  [%expect
+    {|
+    (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
+    ((sexp   11.2754s)
+     (bin_io "\252\128\143\017\160\002\000\000\000")
+     (int63  11_275_440_000))
+    (* require-failed: lib/core/test/test_time_ns.ml:LINE:COL. *)
+    ("sexp serialization failed to round-trip"
+      (original       11.2754s)
+      (sexp           11.2754s)
+      (sexp_roundtrip 11.2754s)) |}];
+  (* make sure [of_int63_exn] allows all values *)
+  show_raise ~hide_positions:true (fun () -> V.of_int63_exn (Int63.succ Int63.min_value));
+  [%expect {| "did not raise" |}]
+;;
+
+let%test_module "Time_ns.Span.Stable.V2" =
+  (module struct
+    module V = Time_ns.Span.Stable.V2
+
+    let span_gen =
+      Quickcheck.Generator.map Int63.quickcheck_generator ~f:Time_ns.Span.of_int63_ns
+    ;;
+
+    let span_examples =
+      let scales_of unit_of_time =
+        match (unit_of_time : Unit_of_time.t) with
+        | Nanosecond | Millisecond | Microsecond -> [ 0; 1; 10; 100; 999 ]
+        | Second | Minute -> [ 0; 1; 10; 59 ]
+        | Hour -> [ 0; 1; 10; 23 ]
+        | Day -> [ 0; 1; 10; 100; 1_000; 10_000; 36_500 ]
+      in
+      let multiples_of unit_of_time =
+        let span = Time_ns.Span.of_unit_of_time unit_of_time in
+        List.map (scales_of unit_of_time) ~f:(fun scale ->
+          Time_ns.Span.scale_int span scale)
+      in
+      List.fold Unit_of_time.all ~init:[ Time_ns.Span.zero ] ~f:(fun spans unit_of_time ->
+        List.concat_map spans ~f:(fun span ->
+          List.map (multiples_of unit_of_time) ~f:(fun addend ->
+            Time_ns.Span.( + ) span addend)))
+    ;;
+
+    let%expect_test "round-trip" =
+      Expect_test_helpers_core.quickcheck
+        [%here]
+        ~sexp_of:Time_ns.Span.sexp_of_t
+        ~examples:span_examples
+        span_gen
+        ~f:(fun span ->
+          let rt = V.t_of_sexp (V.sexp_of_t span) in
+          require_equal [%here] (module Time_ns.Span) span rt;
+          let rt = V.of_int63_exn (V.to_int63 span) in
+          require_equal [%here] (module Time_ns.Span) span rt);
+      [%expect {| |}]
+    ;;
+
+    let%expect_test "stability" =
+      let make int64 = V.of_int63_exn (Int63.of_int64_exn int64) in
+      print_and_check_stable_int63able_type
+        [%here]
+        (module V)
+        [ make 0L
+        ; make 1L
+        ; make (-499L)
+        ; make 500L
+        ; make (-1_000L)
+        ; make 987_654_321L
+        ; make (-123_456_789_012L)
+        ; make 52_200_010_101_101L
+        ; make (-86_399_999_999_999L)
+        ; make 86_400_000_000_000L
+        ; make (-1_000_000_222_000_333L)
+        ; make 80_000_006_400_000_000L
+        ; make (-1_381_156_200_010_101_000L)
+        ; make 4_110_307_199_999_999_000L
+        ; make (Int63.to_int64 Int63.max_value)
+        ; make (Int63.to_int64 Int63.min_value)
+        ];
+      [%expect
+        {|
+        (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
+        ((sexp   0s)
+         (bin_io "\000")
+         (int63  0))
+        ((sexp   1ns)
+         (bin_io "\001")
+         (int63  1))
+        ((sexp   -499ns)
+         (bin_io "\254\r\254")
+         (int63  -499))
+        ((sexp   500ns)
+         (bin_io "\254\244\001")
+         (int63  500))
+        ((sexp   -1us)
+         (bin_io "\254\024\252")
+         (int63  -1_000))
+        ((sexp   987.654321ms)
+         (bin_io "\253\177h\222:")
+         (int63  987_654_321))
+        ((sexp   -2m3.456789012s)
+         (bin_io "\252\236\229fA\227\255\255\255")
+         (int63  -123_456_789_012))
+        ((sexp   14h30m10.101101ms)
+         (bin_io "\252m1\015\195y/\000\000")
+         (int63  52_200_010_101_101))
+        ((sexp   -23h59m59.999999999s)
+         (bin_io "\252\001\000\177nk\177\255\255")
+         (int63  -86_399_999_999_999))
+        ((sexp   1d)
+         (bin_io "\252\000\000O\145\148N\000\000")
+         (int63  86_400_000_000_000))
+        ((sexp   -11d13h46m40.222000333s)
+         (bin_io "\2523\011\254M\129r\252\255")
+         (int63  -1_000_000_222_000_333))
+        ((sexp   925d22h13m26.4s)
+         (bin_io "\252\000@\128\251\1487\028\001")
+         (int63  80_000_006_400_000_000))
+        ((sexp   -15985d14h30m10.101ms)
+         (bin_io "\252\248\206\017\247\192%\213\236")
+         (int63  -1_381_156_200_010_101_000))
+        ((sexp   47572d23h59m59.999999s)
+         (bin_io "\252\024\252\186\253\158\190\n9")
+         (int63  4_110_307_199_999_999_000))
+        ((sexp   53375d23h53m38.427387903s)
+         (bin_io "\252\255\255\255\255\255\255\255?")
+         (int63  4_611_686_018_427_387_903))
+        ((sexp   -53375d23h53m38.427387904s)
+         (bin_io "\252\000\000\000\000\000\000\000\192")
+         (int63  -4_611_686_018_427_387_904)) |}]
+    ;;
+  end)
+;;
+
 let%test_module "Time_ns.Alternate_sexp" =
   (module struct
     module Span = Time_ns.Span
@@ -118,6 +297,28 @@ let%test_module "Time_ns.Alternate_sexp" =
           (Time_ns.Alternate_sexp.t_of_sexp (Time_ns.Alternate_sexp.sexp_of_t time_ns))
           ~expect:time_ns);
       [%expect {| |}]
+    ;;
+
+    let%expect_test "validate sexp grammar" =
+      require_ok
+        [%here]
+        (Sexp_grammar_validation.validate_grammar
+           (module struct
+             include Time_ns.Alternate_sexp
+
+             let quickcheck_generator = quickcheck_generator
+             let quickcheck_shrinker = Quickcheck.Shrinker.empty ()
+
+             let quickcheck_observer =
+               Quickcheck.Observer.of_hash (module Time_ns.Alternate_sexp)
+             ;;
+           end));
+      [%expect
+        {|
+        (Tagged
+         ((key sexp_grammar.type_name)
+          (value Core.Time_ns.Alternate_sexp.t)
+          (grammar String))) |}]
     ;;
   end)
 ;;

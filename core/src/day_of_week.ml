@@ -13,7 +13,7 @@ module Stable = struct
         | Thu
         | Fri
         | Sat
-      [@@deriving bin_io, compare, hash, quickcheck, stable_witness]
+      [@@deriving bin_io, compare, hash, quickcheck, stable_witness, typerep]
 
       let to_string t =
         match t with

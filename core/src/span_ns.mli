@@ -2,7 +2,12 @@ open! Import
 include Time_ns_intf.Span
 
 module Stable : sig
-  module V1 : sig end [@@deprecated "[since 2021-02] Use [Time_ns_unix.Stable]"]
+  module V1 : sig
+    type nonrec t = t [@@deriving hash, equal]
+
+    include Stable_int63able.With_stable_witness.S with type t := t
+  end
+
   module Option : sig end [@@deprecated "[since 2021-02] Use [Time_ns_unix.Stable]"]
 
   module V2 : sig

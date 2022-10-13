@@ -114,7 +114,7 @@ module F (Underlying : Base) : S with type base = Underlying.t = struct
 
     let fold t ~init ~f =
       let rec go acc i = if i >= length t then acc else go (f acc (get t i)) (i + 1) in
-      go init 0
+      go init 0 [@nontail]
     ;;
 
     let iter =
@@ -131,7 +131,7 @@ module F (Underlying : Base) : S with type base = Underlying.t = struct
            let rec go acc i =
              if i >= length t then acc else go (f i acc (get_no_bounds_check t i)) (i + 1)
            in
-           go init 0)
+           go init 0 [@nontail])
     ;;
 
     let iteri =

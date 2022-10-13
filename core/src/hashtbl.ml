@@ -134,7 +134,6 @@ struct
   type key = T.Key.t
   type ('a, 'b) hashtbl = ('a, 'b) t
   type 'a t = (T.Key.t, 'a) hashtbl
-  type ('a, 'b) t__ = (T.Key.t, 'b) hashtbl
   type 'a key_ = T.Key.t
 
   include Creators (struct
@@ -146,18 +145,10 @@ struct
   include (
     Hashtbl :
     sig
-      include
-        Hashtbl.Accessors
-        with type ('a, 'b) t := ('a, 'b) t__
-        with type 'a key := 'a key_
-
-      include
-        Hashtbl.Multi with type ('a, 'b) t := ('a, 'b) t__ with type 'a key := 'a key_
-
       include Invariant.S2 with type ('a, 'b) t := ('a, 'b) hashtbl
     end)
 
-  let validate = validate
+  let equal = Hashtbl.equal
   let invariant invariant_key t = invariant ignore invariant_key t
   let sexp_of_t sexp_of_v t = Poly.sexp_of_t T.Key.sexp_of_t sexp_of_v t
 

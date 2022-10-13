@@ -1,6 +1,11 @@
 open! Import
 
-val randomize : 'span -> percent:Percent.t -> scale:('span -> float -> 'span) -> 'span
+val randomize
+  :  'span
+  -> Random.State.t
+  -> percent:Percent.t
+  -> scale:('span -> float -> 'span)
+  -> 'span
 
 val short_string
   :  sign:Sign.t

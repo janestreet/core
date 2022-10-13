@@ -2,7 +2,7 @@ open! Import
 open Std_internal
 
 module Stable = struct
-  module V1 = struct
+  module V2 = struct
     type t = (float[@quickcheck.generator Float.gen_finite])
     [@@deriving compare, hash, quickcheck, typerep, stable_witness]
 
@@ -80,10 +80,10 @@ module Stable = struct
 
       (* WARNING - PLEASE READ BEFORE EDITING THESE FUNCTIONS:
 
-         The string converters in Stable.V1 should never change.  If you are changing the
-         semantics of anything that affects the sexp or bin-io representation of values of
-         this type (this includes to_string and of_string) make a Stable.V2 and make your
-         changes there.  Thanks! *)
+         The string converters in Stable.V2/V1 should never change. If you are changing
+         the semantics of anything that affects the sexp or bin-io representation of
+         values of this type (this includes to_string and of_string) make a Stable.V3 and
+         make your changes there. Thanks! *)
       let to_string x =
         let x_abs = Float.abs x in
         let string float = sprintf "%.6G" float in
@@ -131,23 +131,52 @@ module Stable = struct
     include (Sexpable.Stable.Of_stringable.V1 (Stringable) : Sexpable.S with type t := t)
     include (Float : Binable with type t := t)
 
-    include Comparable.Make_binable (struct
-        type nonrec t = t [@@deriving compare, sexp_of, bin_io]
+    (* Mint a unique [bin_shape_t] that's distinct from the hidden underlying
+       representation of float. *)
+    let bin_shape_t =
+      Bin_prot.Shape.basetype
+        (Bin_prot.Shape.Uuid.of_string "1d1e76bc-ea4b-11eb-a16a-aa5b28d1f4d7")
+        [ bin_shape_t ]
+    ;;
 
-        (* Previous versions rendered comparable-based containers using float
-           serialization rather than percent serialization, so when reading
-           comparable-based containers in we accept either serialization. *)
-        let t_of_sexp sexp =
-          match Float.t_of_sexp sexp with
-          | float -> float
-          | exception _ -> t_of_sexp sexp
-        ;;
+    include Comparable.Make_binable (struct
+        type nonrec t = t [@@deriving bin_io, compare, sexp]
       end)
   end
 
+  module V1 = struct
+    module Bin_shape_same_as_float = struct
+      include V2
+
+      let bin_shape_t = Float.bin_shape_t
+
+      include Comparable.Make_binable (struct
+          type nonrec t = t [@@deriving compare, sexp_of, bin_io]
+
+          (* Previous versions rendered comparable-based containers using float
+             serialization rather than percent serialization, so when reading
+             comparable-based containers in we accept either serialization.
+          *)
+          let t_of_sexp sexp =
+            match Float.t_of_sexp sexp with
+            | float -> float
+            | exception _ -> t_of_sexp sexp
+          ;;
+        end)
+    end
+
+    include Bin_shape_same_as_float
+  end
+
   module Option = struct
-    module V1 = struct
-      type t = V1.t [@@deriving bin_io, compare, hash, typerep, stable_witness]
+    module V2 = struct
+      type t = V2.t [@@deriving bin_io, compare, hash, typerep, stable_witness]
+
+      let bin_shape_t =
+        Bin_prot.Shape.basetype
+          (Bin_prot.Shape.Uuid.of_string "f7aa04e8-da3e-11ec-b546-aa7328433b70")
+          [ bin_shape_t ]
+      ;;
 
       let none = Float.nan
       let is_none t = Float.is_nan t
@@ -173,18 +202,28 @@ module Stable = struct
       ;;
 
       let value t ~default = if is_some t then unchecked_value t else default
-      let sexp_of_t t = to_option t |> Option.sexp_of_t V1.sexp_of_t
-      let t_of_sexp sexp = (Option.t_of_sexp V1.t_of_sexp) sexp |> of_option
-      let t_sexp_grammar = Sexplib.Sexp_grammar.coerce [%sexp_grammar: V1.t Option.t]
+      let sexp_of_t t = to_option t |> Option.sexp_of_t V2.sexp_of_t
+      let t_of_sexp sexp = (Option.t_of_sexp V2.t_of_sexp) sexp |> of_option
+      let t_sexp_grammar = Sexplib.Sexp_grammar.coerce [%sexp_grammar: V2.t Option.t]
+    end
+
+    module V1 = struct
+      module Bin_shape_same_as_float = struct
+        include V2
+
+        let bin_shape_t = Float.bin_shape_t
+      end
+
+      include Bin_shape_same_as_float
     end
   end
 end
 
-include Stable.V1
+include Stable.V1.Bin_shape_same_as_float
 
 module Option = struct
   module Stable = Stable.Option
-  include Stable.V1
+  include Stable.V1.Bin_shape_same_as_float
 
   module Optional_syntax = struct
     module Optional_syntax = struct
@@ -223,7 +262,7 @@ sig
 end)
 
 include Comparable.With_zero (struct
-    include Stable.V1
+    include Stable.V1.Bin_shape_same_as_float
 
     let zero = zero
   end)

@@ -184,9 +184,6 @@ module type S_plain = sig
     with type ('key, 'data, 'z) create_options :=
       ('key, 'data, 'z) create_options_without_hashable
 
-  include Accessors with type ('a, 'b) t := ('a, 'b) t_ with type 'a key := 'a key_
-  include Multi with type ('a, 'b) t := ('a, 'b) t_ with type 'a key := 'a key_
-
   module Provide_of_sexp
       (Key : sig
          type t [@@deriving of_sexp]

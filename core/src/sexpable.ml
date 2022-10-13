@@ -79,7 +79,12 @@ module Stable = struct
   end
 
   module Of_stringable = struct
-    module V1 (M : Stringable.S) : S with type t := M.t = struct
+    module V1 (M : Stringable.S) : sig
+      type t [@@deriving sexp_grammar]
+
+      include S with type t := t
+    end
+    with type t := M.t = struct
       let t_of_sexp sexp =
         match sexp with
         | Sexplib.Sexp.Atom s ->
@@ -92,6 +97,10 @@ module Stable = struct
       ;;
 
       let sexp_of_t t = Sexplib.Sexp.Atom (M.to_string t)
+
+      let t_sexp_grammar : M.t Sexplib.Sexp_grammar.t =
+        Sexplib.Sexp_grammar.coerce string_sexp_grammar
+      ;;
     end
   end
 

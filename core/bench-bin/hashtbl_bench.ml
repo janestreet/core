@@ -116,7 +116,10 @@ end = struct
       stage (fun () -> ignore (Example.random_data r `either : int)))
   ;;
 
-  module _ : Hashtbl_intf.S = struct
+  module _ : sig
+    include Hashtbl_intf.S
+    include Hashtbl_intf.Accessors with type ('k, 'v) t := 'v t and type 'k key := key
+  end = struct
     type key = Table.key
     type ('k, 'v) hashtbl = ('k, 'v) Table.hashtbl
     type 'v t = 'v Table.t
@@ -258,7 +261,7 @@ end = struct
           ignore (group alist ~get_key:fst ~get_data:snd ~combine:( + ) : int t)))
     ;;
 
-    let sexp_of_key = Table.sexp_of_key
+    let sexp_of_key = Impl.sexp_of_key
 
     let () =
       ( !! ) "sexp_of_key + <rand key>" (fun size ->
@@ -268,7 +271,7 @@ end = struct
           ignore (sexp_of_key t (Example.random_key r `present) : Sexp.t)))
     ;;
 
-    let choose = Table.choose
+    let choose = Impl.choose
 
     let () =
       ( !! ) "choose" (fun size ->
@@ -276,7 +279,7 @@ end = struct
         stage (fun () -> ignore (choose t : (key * int) option)))
     ;;
 
-    let choose_randomly = Table.choose_randomly
+    let choose_randomly = Impl.choose_randomly
 
     let () =
       ( !! ) "choose_randomly" (fun size ->
@@ -288,7 +291,7 @@ end = struct
       let rec loop () =
         match choose t with
         | Some (key, (_ : int)) ->
-          Table.remove t key;
+          Impl.remove t key;
           loop ()
         | None -> ()
       in
@@ -299,7 +302,7 @@ end = struct
       ( !! ) "copy + choose and remove to clear table" (fun size ->
         let t = Example.t size in
         stage (fun () ->
-          let t = Table.copy t in
+          let t = Impl.copy t in
           choose_and_remove_to_clear_table t ~choose))
     ;;
 
@@ -307,11 +310,11 @@ end = struct
       ( !! ) "copy + choose_randomly and remove to clear table" (fun size ->
         let t = Example.t size in
         stage (fun () ->
-          let t = Table.copy t in
+          let t = Impl.copy t in
           choose_and_remove_to_clear_table t ~choose:choose_randomly))
     ;;
 
-    let choose_exn = Table.choose_exn
+    let choose_exn = Impl.choose_exn
 
     let () =
       ( !! ) "choose_exn" (fun size ->
@@ -319,7 +322,7 @@ end = struct
         stage (fun () -> ignore (choose_exn t : key * int)))
     ;;
 
-    let choose_randomly_exn = Table.choose_randomly_exn
+    let choose_randomly_exn = Impl.choose_randomly_exn
 
     let () =
       ( !! ) "choose_randomly_exn" (fun size ->
@@ -327,7 +330,7 @@ end = struct
         stage (fun () -> ignore (choose_randomly_exn t : key * int)))
     ;;
 
-    let copy = Table.copy
+    let copy = Impl.copy
 
     let () =
       ( !! ) "copy" (fun size ->
@@ -335,7 +338,7 @@ end = struct
         stage (fun () -> ignore (copy t : int t)))
     ;;
 
-    let clear = Table.clear
+    let clear = Impl.clear
 
     let () =
       ( !! ) "clear + copy" (fun size ->
@@ -343,7 +346,7 @@ end = struct
         stage (fun () -> clear (copy t)))
     ;;
 
-    let fold = Table.fold
+    let fold = Impl.fold
 
     let () =
       ( !! ) "fold" (fun size ->
@@ -352,7 +355,7 @@ end = struct
         stage (fun () -> fold t ~init:() ~f))
     ;;
 
-    let iter = Table.iter
+    let iter = Impl.iter
 
     let () =
       ( !! ) "iter" (fun size ->
@@ -360,7 +363,7 @@ end = struct
         stage (fun () -> iter t ~f:ignore))
     ;;
 
-    let iter_keys = Table.iter_keys
+    let iter_keys = Impl.iter_keys
 
     let () =
       ( !! ) "iter_keys" (fun size ->
@@ -368,7 +371,7 @@ end = struct
         stage (fun () -> iter_keys t ~f:ignore))
     ;;
 
-    let iteri = Table.iteri
+    let iteri = Impl.iteri
 
     let () =
       ( !! ) "iteri" (fun size ->
@@ -377,7 +380,7 @@ end = struct
         stage (fun () -> iteri t ~f))
     ;;
 
-    let exists = Table.exists
+    let exists = Impl.exists
 
     let () =
       ( !! ) "exists [true]" (fun size ->
@@ -402,7 +405,7 @@ end = struct
           ignore (exists t ~f:(fun data -> data = v) : bool)))
     ;;
 
-    let existsi = Table.existsi
+    let existsi = Impl.existsi
 
     let () =
       ( !! ) "existsi [true]" (fun size ->
@@ -427,7 +430,7 @@ end = struct
           ignore (existsi t ~f:(fun ~key ~data:_ -> Key.compare key k = 0) : bool)))
     ;;
 
-    let for_all = Table.for_all
+    let for_all = Impl.for_all
 
     let () =
       ( !! ) "for_all [true]" (fun size ->
@@ -452,7 +455,7 @@ end = struct
           ignore (for_all t ~f:(fun data -> data <> v) : bool)))
     ;;
 
-    let for_alli = Table.for_alli
+    let for_alli = Impl.for_alli
 
     let () =
       ( !! ) "for_alli [true]" (fun size ->
@@ -477,7 +480,7 @@ end = struct
           ignore (for_alli t ~f:(fun ~key ~data:_ -> Key.compare key k <> 0) : bool)))
     ;;
 
-    let count = Table.count
+    let count = Impl.count
 
     let () =
       ( !! ) "count [true]" (fun size ->
@@ -493,7 +496,7 @@ end = struct
         stage (fun () -> ignore (count t ~f : int)))
     ;;
 
-    let counti = Table.counti
+    let counti = Impl.counti
 
     let () =
       ( !! ) "counti [true]" (fun size ->
@@ -509,7 +512,7 @@ end = struct
         stage (fun () -> ignore (counti t ~f : int)))
     ;;
 
-    let is_empty = Table.is_empty
+    let is_empty = Impl.is_empty
 
     let () =
       ( !! ) "is_empty" (fun size ->
@@ -517,7 +520,7 @@ end = struct
         stage (fun () -> ignore (is_empty t : bool)))
     ;;
 
-    let length = Table.length
+    let length = Impl.length
 
     let () =
       ( !! ) "length" (fun size ->
@@ -525,7 +528,7 @@ end = struct
         stage (fun () -> ignore (length t : int)))
     ;;
 
-    let keys = Table.keys
+    let keys = Impl.keys
 
     let () =
       ( !! ) "keys" (fun size ->
@@ -533,7 +536,7 @@ end = struct
         stage (fun () -> ignore (keys t : Key.t list)))
     ;;
 
-    let data = Table.data
+    let data = Impl.data
 
     let () =
       ( !! ) "data" (fun size ->
@@ -541,23 +544,23 @@ end = struct
         stage (fun () -> ignore (data t : int list)))
     ;;
 
-    let mem = Table.mem
+    let mem = Impl.mem
 
     let () =
       ( !! ) "mem + <rand key> [true]" (fun size ->
         let r = Example.random size in
         let t = Example.t size in
-        stage (fun () -> ignore (Table.mem t (Example.random_key r `present) : bool)))
+        stage (fun () -> ignore (Impl.mem t (Example.random_key r `present) : bool)))
     ;;
 
     let () =
       ( !! ) "mem + <rand key> [false]" (fun size ->
         let r = Example.random size in
         let t = Example.t size in
-        stage (fun () -> ignore (Table.mem t (Example.random_key r `absent) : bool)))
+        stage (fun () -> ignore (Impl.mem t (Example.random_key r `absent) : bool)))
     ;;
 
-    let remove = Table.remove
+    let remove = Impl.remove
 
     let () =
       ( !! ) "copy + remove [all]" (fun size ->
@@ -568,7 +571,7 @@ end = struct
           List.iter keys ~f:(fun key -> remove t key)))
     ;;
 
-    let add_exn = Table.add_exn
+    let add_exn = Impl.add_exn
 
     let () =
       let ( !!! ) ~capacity ~resize =
@@ -601,7 +604,7 @@ end = struct
           if mem t key then remove t key else add_exn t ~key ~data:0))
     ;;
 
-    let set = Table.set
+    let set = Impl.set
 
     let () =
       ( !! ) "set or remove + mem + <rand key>" (fun size ->
@@ -621,7 +624,7 @@ end = struct
           remove t (Example.random_key r `either)))
     ;;
 
-    let add = Table.add
+    let add = Impl.add
 
     let () =
       ( !! ) "add or remove + mem + <rand key>" (fun size ->
@@ -644,8 +647,8 @@ end = struct
           remove t (Example.random_key r `either)))
     ;;
 
-    let add_multi = Table.add_multi
-    let remove_multi = Table.remove_multi
+    let add_multi = Impl.add_multi
+    let remove_multi = Impl.remove_multi
 
     let () =
       ( !! ) "add_multi + <rand key> + remove_multi + <rand key>" (fun size ->
@@ -656,7 +659,7 @@ end = struct
           remove_multi t (Example.random_key r `either)))
     ;;
 
-    let change = Table.change
+    let change = Impl.change
 
     let () =
       ( !! ) "change + <rand key> + <rand data>" (fun size ->
@@ -668,8 +671,8 @@ end = struct
           change t key ~f:(fun _ -> if data < size then Some data else None)))
     ;;
 
-    let update = Table.update
-    let update_and_return = Table.update_and_return
+    let update = Impl.update
+    let update_and_return = Impl.update_and_return
 
     (* [update] is in terms of [update_and_return] so there's no need for a separate
        benchmark *)
@@ -685,7 +688,7 @@ end = struct
           remove t (Example.random_key r `either)))
     ;;
 
-    let map = Table.map
+    let map = Impl.map
 
     let () =
       ( !! ) "map" (fun size ->
@@ -694,7 +697,7 @@ end = struct
         stage (fun () -> ignore (map t ~f : int t)))
     ;;
 
-    let mapi = Table.mapi
+    let mapi = Impl.mapi
 
     let () =
       ( !! ) "mapi" (fun size ->
@@ -703,7 +706,7 @@ end = struct
         stage (fun () -> ignore (mapi t ~f : int t)))
     ;;
 
-    let filter = Table.filter
+    let filter = Impl.filter
 
     let () =
       ( !! ) "filter [halve]" (fun size ->
@@ -712,7 +715,7 @@ end = struct
         stage (fun () -> ignore (filter t ~f : int t)))
     ;;
 
-    let filteri = Table.filteri
+    let filteri = Impl.filteri
 
     let () =
       ( !! ) "filteri [halve]" (fun size ->
@@ -721,7 +724,7 @@ end = struct
         stage (fun () -> ignore (filteri t ~f : int t)))
     ;;
 
-    let filter_keys = Table.filter_keys
+    let filter_keys = Impl.filter_keys
 
     let () =
       ( !! ) "filter_keys [halve]" (fun size ->
@@ -731,7 +734,7 @@ end = struct
         stage (fun () -> ignore (filter_keys t ~f : int t)))
     ;;
 
-    let filter_map = Table.filter_map
+    let filter_map = Impl.filter_map
 
     let () =
       ( !! ) "filter_map [halve]" (fun size ->
@@ -740,7 +743,7 @@ end = struct
         stage (fun () -> ignore (filter_map t ~f : int t)))
     ;;
 
-    let filter_mapi = Table.filter_mapi
+    let filter_mapi = Impl.filter_mapi
 
     let () =
       ( !! ) "filter_mapi [halve]" (fun size ->
@@ -749,7 +752,7 @@ end = struct
         stage (fun () -> ignore (filter_mapi t ~f : int t)))
     ;;
 
-    let partition_tf = Table.partition_tf
+    let partition_tf = Impl.partition_tf
 
     let () =
       ( !! ) "partition_tf [halve]" (fun size ->
@@ -758,7 +761,7 @@ end = struct
         stage (fun () -> ignore (partition_tf t ~f : int t * int t)))
     ;;
 
-    let partitioni_tf = Table.partitioni_tf
+    let partitioni_tf = Impl.partitioni_tf
 
     let () =
       ( !! ) "partitioni_tf [halve]" (fun size ->
@@ -767,7 +770,7 @@ end = struct
         stage (fun () -> ignore (partitioni_tf t ~f : int t * int t)))
     ;;
 
-    let partition_map = Table.partition_map
+    let partition_map = Impl.partition_map
 
     let () =
       ( !! ) "partition_map [halve]" (fun size ->
@@ -776,7 +779,7 @@ end = struct
         stage (fun () -> ignore (partition_map t ~f : int t * int t)))
     ;;
 
-    let partition_mapi = Table.partition_mapi
+    let partition_mapi = Impl.partition_mapi
 
     let () =
       ( !! ) "partition_mapi [halve]" (fun size ->
@@ -787,8 +790,8 @@ end = struct
         stage (fun () -> ignore (partition_mapi t ~f : int t * int t)))
     ;;
 
-    let find_or_add = Table.find_or_add
-    let find_and_remove = Table.find_and_remove
+    let find_or_add = Impl.find_or_add
+    let find_and_remove = Impl.find_and_remove
 
     let () =
       ( !! ) "find_or_add + <rand key> + find_and_remove + <rand key>" (fun size ->
@@ -800,7 +803,7 @@ end = struct
           ignore (find_and_remove t (Example.random_key r `either) : int option)))
     ;;
 
-    let findi_or_add = Table.findi_or_add
+    let findi_or_add = Impl.findi_or_add
 
     let () =
       ( !! ) "findi_or_add + <rand key> + find_and_remove + <rand key>" (fun size ->
@@ -812,7 +815,7 @@ end = struct
           ignore (find_and_remove t (Example.random_key r `either) : int option)))
     ;;
 
-    let find_exn = Table.find_exn
+    let find_exn = Impl.find_exn
 
     let () =
       ( !! ) "find_exn + <rand key>" (fun size ->
@@ -821,7 +824,7 @@ end = struct
         stage (fun () -> ignore (find_exn t (Example.random_key r `present) : int)))
     ;;
 
-    let find = Table.find
+    let find = Impl.find
 
     let () =
       ( !! ) "find + <rand key>" (fun size ->
@@ -830,7 +833,7 @@ end = struct
         stage (fun () -> ignore (find t (Example.random_key r `either) : int option)))
     ;;
 
-    let find_multi = Table.find_multi
+    let find_multi = Impl.find_multi
 
     let () =
       ( !! ) "find_multi + <rand key>" (fun size ->
@@ -840,7 +843,7 @@ end = struct
           ignore (find_multi t (Example.random_key r `either) : int list)))
     ;;
 
-    let find_and_call = Table.find_and_call
+    let find_and_call = Impl.find_and_call
 
     let () =
       ( !! ) "find_and_call + <rand key>" (fun size ->
@@ -853,7 +856,7 @@ end = struct
           ignore (find_and_call t key ~if_found ~if_not_found : int)))
     ;;
 
-    let findi_and_call = Table.findi_and_call
+    let findi_and_call = Impl.findi_and_call
 
     let () =
       ( !! ) "findi_and_call + <rand key>" (fun size ->
@@ -866,7 +869,7 @@ end = struct
           ignore (findi_and_call t key ~if_found ~if_not_found : int)))
     ;;
 
-    let find_and_call1 = Table.find_and_call1
+    let find_and_call1 = Impl.find_and_call1
 
     let () =
       ( !! ) "find_and_call1 + <rand key>" (fun size ->
@@ -879,7 +882,7 @@ end = struct
           ignore (find_and_call1 t key ~a:() ~if_found ~if_not_found : int)))
     ;;
 
-    let findi_and_call1 = Table.findi_and_call1
+    let findi_and_call1 = Impl.findi_and_call1
 
     let () =
       ( !! ) "findi_and_call1 + <rand key>" (fun size ->
@@ -892,7 +895,7 @@ end = struct
           ignore (findi_and_call1 t key ~a:() ~if_found ~if_not_found : int)))
     ;;
 
-    let find_and_call2 = Table.find_and_call2
+    let find_and_call2 = Impl.find_and_call2
 
     let () =
       ( !! ) "find_and_call2 + <rand key>" (fun size ->
@@ -905,7 +908,7 @@ end = struct
           ignore (find_and_call2 t key ~a:() ~b:() ~if_found ~if_not_found : int)))
     ;;
 
-    let findi_and_call2 = Table.findi_and_call2
+    let findi_and_call2 = Impl.findi_and_call2
 
     let () =
       ( !! ) "findi_and_call2 + <rand key>" (fun size ->
@@ -918,7 +921,7 @@ end = struct
           ignore (findi_and_call2 t key ~a:() ~b:() ~if_found ~if_not_found : int)))
     ;;
 
-    let merge = Table.merge
+    let merge = Impl.merge
 
     let () =
       let bench desc merge_fun =
@@ -935,7 +938,7 @@ end = struct
         | `Both (left, right) -> Some (left + right))
     ;;
 
-    let merge_into = Table.merge_into
+    let merge_into = Impl.merge_into
 
     let () =
       let bench desc merge_fun =
@@ -950,7 +953,7 @@ end = struct
       bench "keep" (fun ~key:_ x _ -> Set_to x)
     ;;
 
-    let filter_inplace = Table.filter_inplace
+    let filter_inplace = Impl.filter_inplace
 
     let () =
       ( !! ) "copy + filter_inplace [halve]" (fun size ->
@@ -959,7 +962,7 @@ end = struct
         stage (fun () -> filter_inplace (copy t) ~f))
     ;;
 
-    let filteri_inplace = Table.filteri_inplace
+    let filteri_inplace = Impl.filteri_inplace
 
     let () =
       ( !! ) "copy + filteri_inplace [halve]" (fun size ->
@@ -968,7 +971,7 @@ end = struct
         stage (fun () -> filteri_inplace (copy t) ~f))
     ;;
 
-    let filter_keys_inplace = Table.filter_keys_inplace
+    let filter_keys_inplace = Impl.filter_keys_inplace
 
     let () =
       ( !! ) "copy + filter_keys_inplace [true]" (fun size ->
@@ -984,7 +987,7 @@ end = struct
         stage (fun () -> filter_keys_inplace (copy t) ~f))
     ;;
 
-    let map_inplace = Table.map_inplace
+    let map_inplace = Impl.map_inplace
 
     let () =
       ( !! ) "copy + map_inplace" (fun size ->
@@ -993,7 +996,7 @@ end = struct
         stage (fun () -> map_inplace (copy t) ~f))
     ;;
 
-    let mapi_inplace = Table.mapi_inplace
+    let mapi_inplace = Impl.mapi_inplace
 
     let () =
       ( !! ) "copy + mapi_inplace" (fun size ->
@@ -1002,7 +1005,7 @@ end = struct
         stage (fun () -> mapi_inplace (copy t) ~f))
     ;;
 
-    let filter_map_inplace = Table.filter_map_inplace
+    let filter_map_inplace = Impl.filter_map_inplace
 
     let () =
       ( !! ) "copy + filter_map_inplace [halve]" (fun size ->
@@ -1011,7 +1014,7 @@ end = struct
         stage (fun () -> filter_map_inplace (copy t) ~f))
     ;;
 
-    let filter_mapi_inplace = Table.filter_mapi_inplace
+    let filter_mapi_inplace = Impl.filter_mapi_inplace
 
     let () =
       ( !! ) "copy + filter_mapi_inplace [halve]" (fun size ->
@@ -1020,7 +1023,7 @@ end = struct
         stage (fun () -> filter_mapi_inplace (copy t) ~f))
     ;;
 
-    let equal = Table.equal
+    let equal = Impl.equal
 
     let () =
       ( !! ) "equal [same]" (fun size ->
@@ -1029,7 +1032,7 @@ end = struct
         stage (fun () -> ignore (equal Int.equal t1 t2 : bool)))
     ;;
 
-    let similar = Table.similar
+    let similar = Impl.similar
 
     let () =
       ( !! ) "similar [same]" (fun size ->
@@ -1038,7 +1041,7 @@ end = struct
         stage (fun () -> ignore (similar Int.equal t1 t2 : bool)))
     ;;
 
-    let to_alist = Table.to_alist
+    let to_alist = Impl.to_alist
 
     let () =
       ( !! ) "to_alist" (fun size ->
@@ -1046,7 +1049,7 @@ end = struct
         stage (fun () -> ignore (to_alist t : (Key.t * int) list)))
     ;;
 
-    let validate = Table.validate
+    let validate = Impl.validate
 
     let () =
       ( !! ) "validate [pass]" (fun size ->
@@ -1056,7 +1059,7 @@ end = struct
         stage (fun () -> ignore (validate check t ~name : Validate.t)))
     ;;
 
-    let incr = Table.incr
+    let incr = Impl.incr
 
     let () =
       ( !! ) "incr + <rand key> [existing]" (fun size ->
@@ -1065,7 +1068,7 @@ end = struct
         stage (fun () -> incr t (Example.random_key r `present)))
     ;;
 
-    let decr = Table.decr
+    let decr = Impl.decr
 
     let () =
       ( !! ) "decr + <rand key> [existing]" (fun size ->

@@ -1,6 +1,6 @@
 open! Import
 
-type t = string [@@deriving bin_io, compare, hash, sexp]
+type t = string [@@deriving bin_io, compare, hash, sexp, sexp_grammar]
 
 include
   Comparable.S with type t := t with type comparator_witness = String.comparator_witness

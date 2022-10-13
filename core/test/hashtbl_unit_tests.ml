@@ -2381,7 +2381,7 @@ let%test_unit _ =
   in
   let t = Table.create () in
   for key = -10 to 10 do
-    Table.add_exn t ~key ~data:()
+    Hashtbl.add_exn t ~key ~data:()
   done;
   List.iter
     [ [%sexp_of: unit Table.t]; [%sexp_of: (int, unit) t] ]

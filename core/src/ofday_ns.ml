@@ -192,7 +192,14 @@ module Stable = struct
          | exn -> of_sexp_error_exn exn sexp)
     ;;
 
-    let t_sexp_grammar = String.t_sexp_grammar
+    let t_sexp_grammar =
+      let open Sexplib in
+      Sexp_grammar.tag
+        (Sexp_grammar.coerce String.t_sexp_grammar : t Sexp_grammar.t)
+        ~key:Sexp_grammar.type_name_tag
+        ~value:(Atom "Core.Time_ns.Ofday.t")
+    ;;
+
     let to_string (t : t) = to_string_with_unit t ~unit:`Nanosecond
     let sexp_of_t (t : t) = Sexp.Atom (to_string t)
     let to_int63 t = Span_ns.Stable.V2.to_int63 t

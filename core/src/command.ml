@@ -62,12 +62,74 @@ module Env = struct
   let set_with_default = Univ_map.With_default.set
 end
 
+module Parsing_outcome : sig
+  type 'a t =
+    { result : ('a, [ `Missing_required_flags of Error.t ]) Result.t
+    ; has_arg : bool
+    }
+
+  val return_no_arg : 'a -> 'a t
+  val return_with_arg : 'a -> 'a t
+  val error : has_arg:bool -> [ `Missing_required_flags of Error.t ] -> 'a t
+  val recover_from_missing_required_flags : 'a t -> 'a t t
+
+  val introduce_missing_required_flags
+    :  ('a, [ `Missing_required_flags of Error.t ]) Result.t t
+    -> 'a t
+
+  include Applicative.S with type 'a t := 'a t
+end = struct
+  type 'a t =
+    { result : ('a, [ `Missing_required_flags of Error.t ]) Result.t
+    ; has_arg : bool
+    }
+
+  let apply f x =
+    { result =
+        Result.combine
+          f.result
+          x.result
+          ~ok:(fun f x -> f x)
+          ~err:(fun (`Missing_required_flags err_1) (`Missing_required_flags _err_2) ->
+            `Missing_required_flags err_1)
+    ; has_arg = f.has_arg || x.has_arg
+    }
+  ;;
+
+  let recover_from_missing_required_flags t = { result = Ok t; has_arg = t.has_arg }
+
+  let introduce_missing_required_flags t =
+    { result = Result.join t.result; has_arg = t.has_arg }
+  ;;
+
+  let map { result; has_arg } ~f = { result = Result.map result ~f; has_arg }
+  let return_no_arg v = { result = Ok v; has_arg = false }
+  let return_with_arg v = { result = Ok v; has_arg = true }
+  let error ~has_arg err = { result = Error err; has_arg }
+
+  include Applicative.Make (struct
+      type nonrec 'a t = 'a t
+
+      let return = return_no_arg
+      let map = `Custom map
+      let apply = apply
+    end)
+end
+
 module Auto_complete = struct
   type t = Env.t -> part:string -> string list
+
+  module For_escape = struct
+    type t = Env.t -> part:string list -> string list
+  end
 end
 
 module Completer = struct
   type t = Auto_complete.t option
+
+  module For_escape = struct
+    type t = Auto_complete.For_escape.t option
+  end
 
   let run_and_exit t env ~part : never_returns =
     Option.iter t ~f:(fun completions ->
@@ -471,7 +533,7 @@ module Flag = struct
     | No_arg of (Env.t -> Env.t)
     | Print_info_and_quit of (Env.t -> string)
     | Arg of (Env.t -> string -> Env.t) * Completer.t
-    | Rest of (Env.t -> string list -> Env.t)
+    | Rest of (Env.t -> string list -> Env.t) * Completer.For_escape.t
 
   module Internal = struct
     type t =
@@ -576,7 +638,7 @@ module Flag = struct
 
   type 'a state =
     { action : action
-    ; read : Env.t -> 'a
+    ; read : Env.t -> 'a Parsing_outcome.t
     ; num_occurrences : Num_occurrences.t
     ; extra_doc : string option Lazy.t
     }
@@ -602,9 +664,13 @@ module Flag = struct
     }
   ;;
 
-  let map_flag t ~f input =
+  let map_flag (t : _ t) ~f input =
     let { action; read; num_occurrences; extra_doc } = t input in
-    { action; read = (fun env -> f (read env)); num_occurrences; extra_doc }
+    { action
+    ; read = (fun env -> Parsing_outcome.map (read env) ~f)
+    ; num_occurrences
+    ; extra_doc
+    }
   ;;
 
   let write_option name key env arg =
@@ -617,11 +683,15 @@ module Flag = struct
     let key = Env.Key.create ~name [%sexp_of: _] in
     let read env =
       match Env.find env key with
-      | Some v -> v
+      | Some v -> Parsing_outcome.return_with_arg v
       | None ->
         (match default with
-         | Some v -> v
-         | None -> die "missing required flag: %s" name ())
+         | Some v -> Parsing_outcome.return_no_arg v
+         | None ->
+           Parsing_outcome.error
+             ~has_arg:false
+             (`Missing_required_flags
+                (Error.of_string (sprintf "missing required flag: %s" name))))
     in
     let write env arg = write_option name key env arg in
     arg_flag name arg_type read write num_occurrences
@@ -635,14 +705,29 @@ module Flag = struct
 
   let optional arg_type name =
     let key = Env.Key.create ~name [%sexp_of: _] in
-    let read env = Env.find env key in
+    let read env =
+      match Env.find env key with
+      | None -> Parsing_outcome.return_no_arg None
+      | Some _ as value -> Parsing_outcome.return_with_arg value
+    in
     let write env arg = write_option name key env arg in
     arg_flag name arg_type read write Num_occurrences.at_most_once
   ;;
 
-  let no_arg_general ~key_value ~deprecated_hook name =
+  let no_arg_general ~is_required ~key_value ~deprecated_hook name =
     let key = Env.Key.create ~name [%sexp_of: unit] in
-    let read env = Env.mem env key in
+    let read env =
+      match Env.mem env key with
+      | true -> Parsing_outcome.return_with_arg true
+      | false ->
+        if is_required
+        then
+          Parsing_outcome.error
+            ~has_arg:false
+            (`Missing_required_flags
+               (Error.of_string (sprintf "missing required flag: %s" name)))
+        else Parsing_outcome.return_no_arg false
+    in
     let write env =
       if Env.mem env key
       then die "flag %s passed more than once" name ()
@@ -666,15 +751,33 @@ module Flag = struct
     in
     { read
     ; action = No_arg action
-    ; num_occurrences = Num_occurrences.at_most_once
+    ; num_occurrences =
+        (if is_required
+         then Num_occurrences.exactly_once
+         else Num_occurrences.at_most_once)
     ; extra_doc = Lazy.from_val None
     }
   ;;
 
-  let no_arg name = no_arg_general name ~key_value:None ~deprecated_hook:None
+  let no_arg name =
+    no_arg_general name ~is_required:false ~key_value:None ~deprecated_hook:None
+  ;;
+
+  let no_arg_required v name =
+    map_flag
+      (no_arg_general ~is_required:true ~key_value:None ~deprecated_hook:None)
+      ~f:(function
+        | true -> v
+        | false -> assert false)
+      name
+  ;;
 
   let no_arg_register ~key ~value name =
-    no_arg_general name ~key_value:(Some (key, value)) ~deprecated_hook:None
+    no_arg_general
+      name
+      ~is_required:false
+      ~key_value:(Some (key, value))
+      ~deprecated_hook:None
   ;;
 
   let no_arg_some value =
@@ -685,7 +788,11 @@ module Flag = struct
 
   let listed arg_type name =
     let key = Env.With_default.Key.create ~default:[] ~name [%sexp_of: _ list] in
-    let read env = List.rev (Env.With_default.find env key) in
+    let read env =
+      match List.rev (Env.With_default.find env key) with
+      | [] -> Parsing_outcome.return_no_arg []
+      | _ :: _ as value_list -> Parsing_outcome.return_with_arg value_list
+    in
     let write env arg = Env.With_default.change env key ~f:(fun list -> arg :: list) in
     arg_flag name arg_type read write Num_occurrences.any
   ;;
@@ -696,8 +803,12 @@ module Flag = struct
     in
     let read env =
       match Fqueue.to_list (Env.With_default.find env key) with
-      | first :: rest -> first, rest
-      | [] -> die "missing required flag: %s" name ()
+      | first :: rest -> Parsing_outcome.return_with_arg (first, rest)
+      | [] ->
+        Parsing_outcome.error
+          ~has_arg:false
+          (`Missing_required_flags
+             (Error.of_string (sprintf "missing required flag: %s" name)))
     in
     let write env arg =
       Env.With_default.change env key ~f:(fun q -> Fqueue.enqueue q arg)
@@ -709,10 +820,14 @@ module Flag = struct
     one_or_more_as_pair arg_type |> map_flag ~f:(fun (x, xs) -> x :: xs)
   ;;
 
-  let escape_general ~deprecated_hook name =
+  let escape_general ~complete ~deprecated_hook name =
     let key = Env.Key.create ~name [%sexp_of: string list] in
     let action env cmd_line = Env.set env ~key ~data:cmd_line in
-    let read env = Env.find env key in
+    let read env =
+      match Env.find env key with
+      | None -> Parsing_outcome.return_no_arg None
+      | Some _ as value -> Parsing_outcome.return_with_arg value
+    in
     let action =
       match deprecated_hook with
       | None -> action
@@ -721,7 +836,7 @@ module Flag = struct
           f x;
           action env x
     in
-    { action = Rest action
+    { action = Rest (action, complete)
     ; read
     ; num_occurrences = Num_occurrences.at_most_once
     ; extra_doc = Lazy.from_val None
@@ -731,19 +846,27 @@ module Flag = struct
   let no_arg_abort ~exit _name =
     { action = No_arg (fun _ -> never_returns (exit ()))
     ; num_occurrences = Num_occurrences.at_most_once
-    ; read = (fun _ -> ())
+    ; read =
+        (fun _ ->
+           (* We know that the flag wasn't passed here because if it was passed
+              then the [action] would have called [exit]. *)
+           Parsing_outcome.return_no_arg ())
     ; extra_doc = Lazy.from_val None
     }
   ;;
 
-  let escape name = escape_general ~deprecated_hook:None name
+  let escape name = escape_general ~complete:None ~deprecated_hook:None name
+
+  let escape_with_autocomplete ~complete name =
+    escape_general ~complete:(Some complete) ~deprecated_hook:None name
+  ;;
 
   module Deprecated = struct
     let no_arg ~hook name =
-      no_arg_general ~deprecated_hook:(Some hook) ~key_value:None name
+      no_arg_general ~is_required:false ~deprecated_hook:(Some hook) ~key_value:None name
     ;;
 
-    let escape ~hook = escape_general ~deprecated_hook:(Some hook)
+    let escape ~hook = escape_general ~complete:None ~deprecated_hook:(Some hook)
   end
 end
 
@@ -906,27 +1029,38 @@ module Anons = struct
   end
 
   module Parser : sig
-    type +'a t
+    module Basic : sig
+      type +'a t
 
-    val from_env : (Env.t -> 'a) -> 'a t
+      module For_opening : sig
+        val return : 'a -> 'a t
+        val ( <*> ) : ('a -> 'b) t -> 'a t -> 'b t
+        val ( >>| ) : 'a t -> ('a -> 'b) -> 'b t
+      end
+
+      val from_env : (Env.t -> 'a) -> 'a t
+    end
+
+    type +'a t = 'a Parsing_outcome.t Basic.t
+
     val one : name:string -> 'a Arg_type.t -> 'a t
     val maybe : 'a t -> 'a option t
     val sequence : 'a t -> 'a list t
     val stop_parsing : 'a t -> 'a t
-    val final_value : 'a t -> Env.t -> 'a
+    val final_value : 'a Basic.t -> Env.t -> 'a
 
     module Consume_result : sig
       type nonrec 'a t =
         { (* If emacs highlights [parser] as if it were a keyword, that's only because
              [parser] was a keyword in camlp4. [parser] is a regular name in OCaml. *)
-          parser : 'a t
+          parser : 'a Basic.t
         ; parse_flags : bool
         ; update_env : Env.t -> Env.t
         }
     end
 
-    val consume : 'a t -> string -> for_completion:bool -> 'a Consume_result.t
-    val complete : 'a t -> Env.t -> part:string -> never_returns
+    val consume : 'a Basic.t -> string -> for_completion:bool -> 'a Consume_result.t
+    val complete : 'a Basic.t -> Env.t -> part:string -> never_returns
 
     module For_opening : sig
       val return : 'a -> 'a t
@@ -934,66 +1068,87 @@ module Anons = struct
       val ( >>| ) : 'a t -> ('a -> 'b) -> 'b t
     end
   end = struct
-    type 'a t =
-      | Done of (Env.t -> 'a)
-      | More of 'a more
-      (* A [Test] will (generally) return a [Done _] value if there is no more input and
-         a [More] parser to use if there is any more input. *)
-      | Test of (more:bool -> 'a t)
-      (* If we're only completing, we can't pull values out, but we can still step through
-         [t]s (which may have completion set up). *)
-      | Only_for_completion of packed list
-      | Stop_parsing of 'a t
+    module Basic = struct
+      type 'a t =
+        | Done of (Env.t -> 'a)
+        | More of 'a more
+        (* A [Test] will (generally) return a [Done _] value if there is no more input and
+           a [More] parser to use if there is any more input. *)
+        | Test of (more:bool -> 'a t)
+        (* If we're only completing, we can't pull values out, but we can still step through
+           [t]s (which may have completion set up). *)
+        | Only_for_completion of packed list
+        | Stop_parsing of 'a t
 
-    and 'a more =
-      { name : string
-      ; parse : string -> for_completion:bool -> 'a parse_result
-      ; complete : Completer.t
-      }
+      and 'a more =
+        { name : string
+        ; parse : string -> for_completion:bool -> 'a parse_result
+        ; complete : Completer.t
+        }
 
-    and packed = Packed : 'a t -> packed
+      and packed = Packed : 'a t -> packed
 
-    and 'a parse_result =
-      { parser : 'a t
-      ; update_env : Env.t -> Env.t
-      }
+      and 'a parse_result =
+        { parser : 'a t
+        ; update_env : Env.t -> Env.t
+        }
 
-    let return a = Done (fun _ -> a)
-    let from_env f = Done f
+      let parse_more { name; parse; complete } ~f =
+        let parse arg ~for_completion =
+          let { parser; update_env } = parse arg ~for_completion in
+          { parser = f parser; update_env }
+        in
+        More { name; parse; complete }
+      ;;
+
+      let pack_for_completion = function
+        | Done _ -> [] (* won't complete or consume anything *)
+        | (More _ | Test _ | Stop_parsing _) as x -> [ Packed x ]
+        | Only_for_completion ps -> ps
+      ;;
+
+      let rec ( <*> ) t_left t_right =
+        match t_left, t_right with
+        (* [Done] *)
+        | Done f, Done x ->
+          Done
+            (fun env ->
+               let f_outcome = f env in
+               let x_outcome = x env in
+               f_outcome x_outcome)
+        (* next step [More] *)
+        | More more, _ -> parse_more more ~f:(fun tl -> tl <*> t_right)
+        | Done _, More more -> parse_more more ~f:(fun tr -> t_left <*> tr)
+        (* next step [Only_for_completion] *)
+        | Only_for_completion _, _ | Done _, Only_for_completion _ ->
+          Only_for_completion (pack_for_completion t_left @ pack_for_completion t_right)
+        (* next step [Stop_parsing] *)
+        | Stop_parsing tl, tr | (Done _ as tl), Stop_parsing tr -> Stop_parsing (tl <*> tr)
+        (* next step [Test] *)
+        | Test test, _ -> Test (fun ~more -> test ~more <*> t_right)
+        | Done _, Test test -> Test (fun ~more -> t_left <*> test ~more)
+      ;;
+
+      let return a = Done (fun _ -> a)
+      let ( >>| ) t f = return f <*> t
+      let from_env f = Done (fun env -> f env)
+
+      module For_opening = struct
+        let return = return
+        let ( <*> ) = ( <*> )
+        let ( >>| ) = ( >>| )
+      end
+    end
+
+    open Basic
+
+    type 'a t = 'a Parsing_outcome.t Basic.t
+
+    let ( >>| ) t f = t >>| Parsing_outcome.map ~f
+    let ( <*> ) t_left t_right = return Parsing_outcome.( <*> ) <*> t_left <*> t_right
+    let return a = return (Parsing_outcome.return a)
+    let return_with_arg a = Done (fun _ -> Parsing_outcome.return_with_arg a)
     let stop_parsing t = Stop_parsing t
-
-    let pack_for_completion = function
-      | Done _ -> [] (* won't complete or consume anything *)
-      | (More _ | Test _ | Stop_parsing _) as x -> [ Packed x ]
-      | Only_for_completion ps -> ps
-    ;;
-
-    let parse_more { name; parse; complete } ~f =
-      let parse arg ~for_completion =
-        let { parser; update_env } = parse arg ~for_completion in
-        { parser = f parser; update_env }
-      in
-      More { name; parse; complete }
-    ;;
-
-    let rec ( <*> ) t_left t_right =
-      match t_left, t_right with
-      (* [Done] *)
-      | Done f, Done x -> Done (fun env -> f env (x env))
-      (* next step [More] *)
-      | More more, _ -> parse_more more ~f:(fun tl -> tl <*> t_right)
-      | Done _, More more -> parse_more more ~f:(fun tr -> t_left <*> tr)
-      (* next step [Only_for_completion] *)
-      | Only_for_completion _, _ | Done _, Only_for_completion _ ->
-        Only_for_completion (pack_for_completion t_left @ pack_for_completion t_right)
-      (* next step [Stop_parsing] *)
-      | Stop_parsing tl, tr | (Done _ as tl), Stop_parsing tr -> Stop_parsing (tl <*> tr)
-      (* next step [Test] *)
-      | Test test, _ -> Test (fun ~more -> test ~more <*> t_right)
-      | Done _, Test test -> Test (fun ~more -> t_left <*> test ~more)
-    ;;
-
-    let ( >>| ) t f = return f <*> t
 
     let one_more ~name arg_type =
       let parse anon ~for_completion =
@@ -1006,7 +1161,7 @@ module Anons = struct
             { parser = Only_for_completion []; update_env = Fn.id }
           else die "failed to parse %s value %S\n%s" name anon (Exn.to_string exn) ()
         | Ok v ->
-          { parser = return v
+          { parser = return_with_arg v
           ; update_env =
               (fun env ->
                  Option.fold (Arg_type.key arg_type) ~init:env ~f:(fun env key ->
@@ -1021,10 +1176,20 @@ module Anons = struct
         (fun ~more ->
            if more
            then one_more ~name arg_type
-           else die "missing anonymous argument: %s" name ())
+           else
+             Done
+               (fun _ ->
+                  Parsing_outcome.error
+                    ~has_arg:false
+                    (`Missing_required_flags
+                       (Error.of_string (sprintf "missing anonymous argument: %s" name)))))
     ;;
 
-    let maybe t = Test (fun ~more -> if more then t >>| fun a -> Some a else return None)
+    let maybe t =
+      Test
+        (fun ~more ->
+           if more then return_with_arg (fun a -> Some a) <*> t else return None)
+    ;;
 
     let sequence t =
       let rec loop =
@@ -1040,20 +1205,26 @@ module Anons = struct
       | Done a -> a env
       | Stop_parsing t -> final_value t env
       | Test f -> final_value (f ~more:false) env
-      | More { name; _ } -> die "missing anonymous argument: %s" name ()
+      | More _ ->
+        (* this doesn't happen because all occurrences of [More] are protected
+           by [Test], which means there will always be an extra argument to give
+           before requesting the final value *)
+        assert false
       | Only_for_completion _ ->
         failwith "BUG: asked for final value when doing completion"
     ;;
 
     module Consume_result = struct
       type nonrec 'a t =
-        { parser : 'a t
+        { parser : 'a Basic.t
         ; parse_flags : bool
         ; update_env : Env.t -> Env.t
         }
     end
 
-    let rec consume : type a. a t -> string -> for_completion:bool -> a Consume_result.t =
+    let rec consume
+      : type a. a Basic.t -> string -> for_completion:bool -> a Consume_result.t
+      =
       fun t arg ~for_completion ->
       match t with
       | Done _ -> die "too many anonymous arguments" ()
@@ -1076,7 +1247,7 @@ module Anons = struct
            })
     ;;
 
-    let rec complete : type a. a t -> Env.t -> part:string -> never_returns =
+    let rec complete : type a. a Basic.t -> Env.t -> part:string -> never_returns =
       fun t env ~part ->
         match t with
         | Done _ -> exit 0
@@ -1254,7 +1425,7 @@ module Base = struct
     ; readme : (unit -> string) option
     ; flags : Flag.Internal.t String.Map.t
     ;
-      anons : unit -> ([ `Parse_args ] -> [ `Run_main ] -> unit) Anons.Parser.t
+      anons : unit -> ([ `Parse_args ] -> [ `Run_main ] -> unit) Anons.Parser.Basic.t
     ; usage : Anons.Grammar.t
     }
 
@@ -1328,9 +1499,11 @@ module Base = struct
          in
          env, rest
        | Complete part -> never_returns (Completer.run_and_exit comp env ~part))
-    | Rest f ->
-      if Cmdline.ends_in_complete args then exit 0;
-      f env (Cmdline.to_list args), Nil
+    | Rest (f, comp) ->
+      let arg_list = Cmdline.to_list args in
+      if Cmdline.ends_in_complete args
+      then never_returns (Completer.run_and_exit comp env ~part:arg_list);
+      f env arg_list, Nil
   ;;
 
   let rec run_cmdline t env parser (cmdline : Cmdline.t) ~for_completion ~parse_flags =
@@ -1411,14 +1584,10 @@ module Base = struct
     in
     match
       Result.try_with (fun () ->
-        run_cmdline
-          t
-          env
-          (t.anons ())
-          ~for_completion
-          ~parse_flags:true
-          args
-          `Parse_args)
+        let main =
+          run_cmdline t env (t.anons ()) ~for_completion ~parse_flags:true args
+        in
+        main `Parse_args)
     with
     | Ok thunk ->
       when_parsing_succeeds ();
@@ -1426,123 +1595,70 @@ module Base = struct
     | Error exn -> run_exn exn ~for_completion ~path ~verbose_on_parse_error
   ;;
 
-  module Spec = struct
-    type ('a, 'b) t =
-      { f : unit -> ('a -> 'b) Anons.Parser.t
+  module Param = struct
+    type +'a t =
+      { f : unit -> (unit -> 'a Parsing_outcome.t) Anons.Parser.Basic.t
       ; usage : unit -> Anons.Grammar.t
       ; flags : unit -> Flag.Internal.t list
       }
 
-    (* the (historical) reason that [param] is defined in terms of [t] rather than the
-       other way round is that the delayed evaluation mattered for sequencing of
-       read/write operations on ref cells in the old representation of flags *)
-    type 'a param = { param : 'm. ('a -> 'm, 'm) t }
+    open Anons.Parser.Basic.For_opening
 
-    open Anons.Parser.For_opening
+    let wrap_value v () = Parsing_outcome.return_no_arg v
 
-    let app t1 t2 ~f =
-      { f = (fun () -> return f <*> t1.f () <*> t2.f ())
-      ; flags = (fun () -> t2.flags () @ t1.flags ())
-      ; usage = (fun () -> Anons.Grammar.concat [ t1.usage (); t2.usage () ])
+    let apply f x =
+      { f =
+          (fun () ->
+             return (fun f x () ->
+               (* order of evaluation here affects in what order the users' callbacks
+                  are evaluated, so it's important to call [f] before [x] *)
+               let f_outcome = f () in
+               let x_outcome = x () in
+               Parsing_outcome.apply f_outcome x_outcome)
+             <*> f.f ()
+             <*> x.f ())
+      ; flags = (fun () -> x.flags () @ f.flags ())
+      ; usage = (fun () -> Anons.Grammar.concat [ f.usage (); x.usage () ])
       }
     ;;
 
-    (* So sad.  We can't define [apply] in terms of [app] because of the value
-       restriction. *)
-    let apply pf px =
-      { param =
-          { f =
-              (fun () ->
-                 return (fun mf mx k -> mf (fun f -> mx (fun x -> k (f x))))
-                 <*> pf.param.f ()
-                 <*> px.param.f ())
-          ; flags = (fun () -> px.param.flags () @ pf.param.flags ())
-          ; usage =
-              (fun () -> Anons.Grammar.concat [ pf.param.usage (); px.param.usage () ])
-          }
-      }
-    ;;
-
-    let ( ++ ) t1 t2 = app t1 t2 ~f:(fun f1 f2 x -> f2 (f1 x))
-    let ( +> ) t1 p2 = app t1 p2.param ~f:(fun f1 f2 x -> f2 (f1 x))
-    let ( +< ) t1 p2 = app p2.param t1 ~f:(fun f2 f1 x -> f1 (f2 x))
-
-    let step f =
-      { f = (fun () -> return f)
+    let empty_spec : 'm. ('m -> 'm) t =
+      { f = (fun () -> return (fun () -> Parsing_outcome.return_no_arg Fn.id))
       ; flags = (fun () -> [])
       ; usage = (fun () -> Anons.Grammar.zero)
       }
     ;;
 
-    let empty : 'm. ('m, 'm) t =
-      { f = (fun () -> return Fn.id)
-      ; flags = (fun () -> [])
-      ; usage = (fun () -> Anons.Grammar.zero)
+    let map x ~f =
+      { f =
+          (fun () ->
+             x.f ()
+             >>| fun x () ->
+             let x_outcome = x () in
+             Parsing_outcome.map x_outcome ~f)
+      ; flags = x.flags
+      ; usage = x.usage
       }
     ;;
-
-    let const v =
-      { param =
-          { f = (fun () -> return (fun k -> k v))
-          ; flags = (fun () -> [])
-          ; usage = (fun () -> Anons.Grammar.zero)
-          }
-      }
-    ;;
-
-    let map p ~f =
-      { param =
-          { f = (fun () -> p.param.f () >>| fun c k -> c (fun v -> k (f v)))
-          ; flags = p.param.flags
-          ; usage = p.param.usage
-          }
-      }
-    ;;
-
-    let wrap f t =
-      { f = (fun () -> t.f () >>| fun run main -> f ~run ~main)
-      ; flags = t.flags
-      ; usage = t.usage
-      }
-    ;;
-
-    let of_params params =
-      let t = params.param in
-      { f = (fun () -> t.f () >>| fun run main -> run Fn.id main)
-      ; flags = t.flags
-      ; usage = t.usage
-      }
-    ;;
-
-    let to_params (t : ('a, 'b) t) : ('a -> 'b) param =
-      { param =
-          { f = (fun () -> t.f () >>| fun f k -> k f); flags = t.flags; usage = t.usage }
-      }
-    ;;
-
-    let of_param p = p.param
-    let to_param t main = map (to_params t) ~f:(fun k -> k main)
 
     let lookup key =
-      { param =
-          { f = (fun () -> Anons.Parser.from_env (fun env m -> m (Env.find_exn env key)))
-          ; flags = (fun () -> [])
-          ; usage = (fun () -> Anons.Grammar.zero)
-          }
+      { f =
+          (fun () ->
+             Anons.Parser.Basic.from_env (fun env -> Env.find_exn env key) >>| wrap_value)
+      ; flags = (fun () -> [])
+      ; usage = (fun () -> Anons.Grammar.zero)
       }
     ;;
 
-    let path : Path.t param = lookup path_key
-    let args : string list param = lookup args_key
-    let help : string Lazy.t param = lookup help_key
+    let path : Path.t t = lookup path_key
+    let args : string list t = lookup args_key
+    let help : string Lazy.t t = lookup help_key
 
     (* This is only used internally, for the help command. *)
     let env =
-      { param =
-          { f = (fun () -> Anons.Parser.from_env (fun env m -> m env))
-          ; flags = (fun () -> [])
-          ; usage = (fun () -> Anons.Grammar.zero)
-          }
+      { f = (fun () -> Anons.Parser.Basic.from_env (fun env -> env) >>| wrap_value)
+      ; flags = (fun () -> [])
+      ; usage = (fun () -> Anons.Grammar.zero)
       }
     ;;
 
@@ -1553,8 +1669,6 @@ module Base = struct
 
     include struct
       open Anons
-
-      type 'a anons = 'a t
 
       let ( %: ) = ( %: )
       let map_anons = map_anons
@@ -1569,11 +1683,9 @@ module Base = struct
 
       let anon spec =
         Anons.Grammar.invariant spec.grammar;
-        { param =
-            { f = (fun () -> spec.p >>| fun v k -> k v)
-            ; flags = (fun () -> [])
-            ; usage = (fun () -> spec.grammar)
-            }
+        { f = (fun () -> spec.p >>| fun outcome () -> outcome)
+        ; flags = (fun () -> [])
+        ; usage = (fun () -> spec.grammar)
         }
       ;;
     end
@@ -1585,14 +1697,14 @@ module Base = struct
     include struct
       open Flag
 
-      type 'a flag = 'a t
-
       let map_flag = map_flag
       let escape = escape
+      let escape_with_autocomplete = escape_with_autocomplete
       let listed = listed
       let one_or_more_as_pair = one_or_more_as_pair
       let one_or_more_as_list = one_or_more_as_list
       let no_arg = no_arg
+      let no_arg_required = no_arg_required
       let no_arg_register = no_arg_register
       let no_arg_abort = no_arg_abort
       let no_arg_some = no_arg_some
@@ -1620,25 +1732,25 @@ module Base = struct
         let name_matching =
           if Option.is_some full_flag_required then `Full_match_required else `Prefix
         in
-        { param =
-            { f = (fun () -> Anons.Parser.from_env (fun env m -> m (read env)))
-            ; flags =
-                (fun () ->
-                   [ { name
-                     ; aliases
-                     ; aliases_excluded_from_help
-                     ; doc =
-                         (match force extra_doc with
-                          | Some extra_doc -> [%string "%{doc} %{extra_doc}"]
-                          | None -> doc)
-                     ; action
-                     ; num_occurrences
-                     ; check_available
-                     ; name_matching
-                     }
-                   ])
-            ; usage = (fun () -> Anons.Grammar.zero)
-            }
+        { f =
+            (fun () ->
+               Anons.Parser.Basic.from_env (fun env -> read env) >>| fun v () -> v)
+        ; flags =
+            (fun () ->
+               [ { name
+                 ; aliases
+                 ; aliases_excluded_from_help
+                 ; doc =
+                     (match force extra_doc with
+                      | Some extra_doc -> [%string "%{doc} %{extra_doc}"]
+                      | None -> doc)
+                 ; action
+                 ; num_occurrences
+                 ; check_available
+                 ; name_matching
+                 }
+               ])
+        ; usage = (fun () -> Anons.Grammar.zero)
         }
       ;;
 
@@ -1665,71 +1777,54 @@ module Base = struct
           (optional_with_default default arg_type)
           ~doc
       ;;
-
-      include Applicative.Make (struct
-          type nonrec 'a t = 'a param
-
-          let return = const
-          let apply = apply
-          let map = `Custom map
-        end)
-
-      let pair = both
     end
 
-    let flags_of_args_exn args =
-      List.fold args ~init:empty ~f:(fun acc (name, spec, doc) ->
-        let gen f flag_type =
-          step (fun m x ->
-            f x;
-            m)
-          +> flag name flag_type ~doc
-        in
-        let call f arg_type = gen (fun x -> Option.iter x ~f) (optional arg_type) in
-        let set r arg_type = call (fun x -> r := x) arg_type in
-        let set_bool r b = gen (fun passed -> if passed then r := b) no_arg in
-        acc
-        ++
-        match spec with
-        | Arg.Unit f -> gen (fun passed -> if passed then f ()) no_arg
-        | Arg.Set r -> set_bool r true
-        | Arg.Clear r -> set_bool r false
-        | Arg.String f -> call f string
-        | Arg.Set_string r -> set r string
-        | Arg.Int f -> call f int
-        | Arg.Set_int r -> set r int
-        | Arg.Float f -> call f float
-        | Arg.Set_float r -> set r float
-        | Arg.Bool f -> call f bool
-        | Arg.Symbol (syms, f) ->
-          let arg_type =
-            Arg_type.of_alist_exn
-              ~list_values_in_help:false
-              (List.map syms ~f:(fun sym -> sym, sym))
-          in
-          call f arg_type
-        | Arg.Rest f -> gen (fun x -> Option.iter x ~f:(List.iter ~f)) escape
-        | Arg.Tuple _ ->
-          failwith "Arg.Tuple is not supported by Command.Spec.flags_of_args_exn"
-        | ((Arg.Expand _) [@if ocaml_version >= (4, 05, 0)]) ->
-          failwith "Arg.Expand is not supported by Command.Spec.flags_of_args_exn"
-        | ((Arg.Rest_all _) [@if ocaml_version >= (4, 12, 0)]) ->
-          failwith "Arg.Rest_all is not supported by Command.Spec.flags_of_args_exn")
+    let return v =
+      { f = (fun () -> return (fun () -> Parsing_outcome.return_no_arg v))
+      ; flags = (fun () -> [])
+      ; usage = (fun () -> Anons.Grammar.zero)
+      }
     ;;
 
-    module Deprecated = struct
-      include Flag.Deprecated
-      include Anons.Deprecated
-    end
+    let recover_from_missing_required_flags t =
+      { t with
+        f =
+          (fun () ->
+             t.f ()
+             >>| fun f () ->
+             let outcome = f () in
+             Parsing_outcome.recover_from_missing_required_flags outcome)
+      }
+    ;;
 
-    let arg_names param =
-      let t = param.param in
+    let introduce_missing_required_flags t =
+      { t with
+        f =
+          (fun () ->
+             t.f ()
+             >>| fun f () ->
+             let outcome = f () in
+             Parsing_outcome.introduce_missing_required_flags outcome)
+      }
+    ;;
+
+    include Applicative.Make (struct
+        type nonrec 'a t = 'a t
+
+        let return = return
+        let apply = apply
+        let map = `Custom map
+      end)
+
+    let arg_names t =
       let flag_names = Map.keys (Flag.Internal.create (t.flags ())) in
       let anon_names = Anons.Grammar.names (t.usage ()) in
       List.concat [ flag_names; anon_names ]
     ;;
 
     module Choose_one = struct
+      type 'a param = 'a t
+
       module Choice_name : sig
         type t [@@deriving compare, sexp_of]
 
@@ -1738,6 +1833,7 @@ module Base = struct
         val to_string : t -> string
         val list_to_string : t list -> string
         val create_exn : 'a param -> t
+        val length : t -> int
       end = struct
         module T = struct
           type t = string list [@@deriving compare, sexp_of]
@@ -1765,6 +1861,7 @@ module Base = struct
         ;;
 
         let to_string = String.concat ~sep:","
+        let length = List.length
         let list_to_string ts = List.map ts ~f:to_string |> String.concat ~sep:"\n  "
       end
 
@@ -1775,13 +1872,43 @@ module Base = struct
           | Return_none : ('a, 'a option) t
       end
 
-      let choose_one
+      let choose_one_non_optional
             (type a b)
-            (ts : a option param list)
+            ?(new_behavior = true)
+            (ts : a param list)
             ~(if_nothing_chosen : (a, b) If_nothing_chosen.t)
         =
+        let fix_flag t =
+          if new_behavior
+          then (
+            let name_of_the_group = Choice_name.create_exn t in
+            let fix_num_occurrences flag =
+              { flag with
+                Flag.Internal.num_occurrences =
+                  { flag.Flag.Internal.num_occurrences with at_least_once = false }
+              }
+            and fix_doc flag =
+              if Choice_name.length name_of_the_group > 1
+              then
+                { flag with
+                  Flag.Internal.doc =
+                    sprintf
+                      "%s [all or none in \"%s\"]"
+                      flag.Flag.Internal.doc
+                      (Choice_name.to_string name_of_the_group)
+                }
+              else flag
+            in
+            { t with
+              flags =
+                (fun () ->
+                   List.map (t.flags ()) ~f:(fun flag_internal ->
+                     flag_internal |> fix_num_occurrences |> fix_doc))
+            })
+          else t
+        in
         match
-          List.map ts ~f:(fun t -> Choice_name.create_exn t, t)
+          List.map ts ~f:(fun t -> Choice_name.create_exn t, fix_flag t)
           |> Map.of_alist (module Choice_name)
         with
         | `Duplicate_key name ->
@@ -1791,36 +1918,95 @@ module Base = struct
             name
             [%sexp_of: Choice_name.t]
         | `Ok ts ->
-          Map.fold ts ~init:(return []) ~f:(fun ~key:name ~data:t init ->
-            map2 init t ~f:(fun init value ->
-              Option.fold value ~init ~f:(fun init value -> (name, value) :: init)))
-          |> map ~f:(function
-            | _ :: _ :: _ as passed ->
+          Map.fold ts ~init:(return []) ~f:(fun ~key:name ~data:t acc ->
+            map2
+              acc
+              (recover_from_missing_required_flags t)
+              ~f:(fun acc { result = value; has_arg } ->
+                match has_arg with
+                | false -> acc
+                | true -> (name, value) :: acc))
+          |> map ~f:(fun value_list ->
+            let arg_counter = List.length value_list in
+            let missing_flag_error fmt =
+              Printf.ksprintf
+                (fun msg () -> Error (`Missing_required_flags (Error.of_string msg)))
+                fmt
+            in
+            let more_than_one_error passed =
               die
                 !"Cannot pass more than one of these: \n\
                  \  %{Choice_name.list_to_string}"
                 (List.map passed ~f:fst)
                 ()
-            | [ (_, value) ] ->
-              (match if_nothing_chosen with
-               | Default_to (_ : a) -> (value : b)
-               | Raise -> (value : b)
-               | Return_none -> (Some value : b))
+            and success_list, error_list =
+              List.partition_map value_list ~f:(function
+                | name, Ok value -> First (name, value)
+                | name, Error err -> Second (name, err))
+            in
+            match success_list with
+            | _ :: _ :: _ as passed -> more_than_one_error passed
+            | [ (_, (value : a)) ] ->
+              if arg_counter > 1
+              then more_than_one_error value_list
+              else
+                Ok
+                  (match if_nothing_chosen with
+                   | Default_to (_ : a) -> (value : b)
+                   | Raise -> (value : b)
+                   | Return_none -> (Some value : b))
             | [] ->
-              (match if_nothing_chosen with
-               | Default_to value -> value
-               | Return_none -> None
-               | Raise ->
-                 die
-                   !"Must pass one of these:\n  %{Choice_name.list_to_string}"
-                   (Map.keys ts)
-                   ()))
+              (match error_list with
+               | [ (name, `Missing_required_flags err) ] ->
+                 Error
+                   (`Missing_required_flags
+                      (Error.of_string
+                         (sprintf
+                            "Not all flags in group \"%s\" are given: %s"
+                            (Choice_name.to_string name)
+                            (Error.to_string_hum err))))
+               | _ ->
+                 (match if_nothing_chosen with
+                  | Default_to value -> Ok value
+                  | Return_none -> Ok None
+                  | Raise ->
+                    missing_flag_error
+                      !"Must pass one of these:\n  %{Choice_name.list_to_string}"
+                      (Map.keys ts)
+                      ())))
+          |> introduce_missing_required_flags
+      ;;
+
+      let choose_one
+            (type a b)
+            (ts : a option param list)
+            ~(if_nothing_chosen : (a, b) If_nothing_chosen.t)
+        =
+        choose_one_non_optional
+          ~new_behavior:false
+          ~if_nothing_chosen
+          (List.map ts ~f:(fun t ->
+             recover_from_missing_required_flags t
+             |> map ~f:(fun { Parsing_outcome.result; has_arg = _ } ->
+               match result with
+               | Ok (Some value) -> Ok value
+               | Ok None ->
+                 Error
+                   (`Missing_required_flags
+                      (Error.of_string "missing required flag"))
+               | Error _ as err -> err)
+             |> introduce_missing_required_flags))
       ;;
     end
 
     module If_nothing_chosen = Choose_one.If_nothing_chosen
 
     let choose_one = Choose_one.choose_one
+
+    let choose_one_non_optional lst ~if_nothing_chosen =
+      Choose_one.choose_one_non_optional lst ~if_nothing_chosen
+    ;;
+
     let and_arg_names t = map t ~f:(fun value -> value, arg_names t)
 
     let and_arg_name t =
@@ -1831,6 +2017,143 @@ module Base = struct
           [%message
             "[and_arg_name] expects exactly one name, got" ~_:(names : string list)]
     ;;
+  end
+
+  module Spec = struct
+    type ('a, 'b) t = ('a -> 'b) Param.t
+    type 'a param = 'a Param.t
+
+    let apply = Param.apply
+    let ( ++ ) t1 t2 = Param.map2 t1 t2 ~f:(fun f1 f2 x -> f2 (f1 x))
+    let ( +> ) t1 p2 = Param.map2 t1 p2 ~f:(fun f1 p2 x -> (f1 x) p2)
+    let ( +< ) t1 p2 = Param.map2 p2 t1 ~f:(fun p2 f1 x -> f1 (x p2))
+    let step f = Param.return f
+
+    (* Ideally this would be [let empty = Param.return Fn.id], but unfortunately that
+       doesn't compile because of the value restriction *)
+    let empty = Param.empty_spec
+    let const x = Param.return x
+    let map = Param.map
+    let wrap f t = Param.map t ~f:(fun run main -> f ~run ~main)
+    let of_param p = map p ~f:(fun f k -> k f)
+    let to_param t m = map t ~f:(fun f -> f m)
+    let path : Path.t param = Param.path
+    let args : string list param = Param.args
+    let help : string Lazy.t param = Param.help
+
+    include struct
+      module Arg_type = Arg_type
+      include Arg_type.Export
+    end
+
+    include struct
+      open Anons
+
+      type 'a anons = 'a t
+
+      let ( %: ) = ( %: )
+      let map_anons = map_anons
+      let maybe = maybe
+      let maybe_with_default = maybe_with_default
+      let non_empty_sequence_as_list = non_empty_sequence_as_list
+      let non_empty_sequence_as_pair = non_empty_sequence_as_pair
+      let sequence = sequence
+      let t2 = t2
+      let t3 = t3
+      let t4 = t4
+      let anon = Param.anon
+    end
+
+    let escape_anon = Param.escape_anon
+
+    include struct
+      open Flag
+
+      type 'a flag = 'a t
+
+      let map_flag = map_flag
+      let escape = escape
+      let escape_with_autocomplete = escape_with_autocomplete
+      let listed = listed
+      let one_or_more_as_pair = one_or_more_as_pair
+      let one_or_more_as_list = one_or_more_as_list
+      let no_arg = no_arg
+      let no_arg_required = no_arg_required
+      let no_arg_register = no_arg_register
+      let no_arg_abort = no_arg_abort
+      let no_arg_some = no_arg_some
+      let optional = optional
+      let optional_with_default = optional_with_default
+      let required = required
+      let flag = Param.flag
+      let flag_optional_with_default_doc = Param.flag_optional_with_default_doc
+
+      include Applicative.Make (struct
+          type nonrec 'a t = 'a Param.t
+
+          let return = Param.return
+          let apply = apply
+          let map = `Custom map
+        end)
+
+      let pair = Param.both
+    end
+
+    let flags_of_args_exn args =
+      List.fold args ~init:empty ~f:(fun acc (name, spec, doc) ->
+        let gen f flag_type =
+          step (fun m x ->
+            f x;
+            m)
+          +> Param.flag name flag_type ~doc
+        in
+        let call f arg_type =
+          gen (fun x -> Option.iter x ~f) (Param.optional arg_type)
+        in
+        let set r arg_type = call (fun x -> r := x) arg_type in
+        let set_bool r b = gen (fun passed -> if passed then r := b) Param.no_arg in
+        acc
+        ++
+        match spec with
+        | Arg.Unit f -> gen (fun passed -> if passed then f ()) Param.no_arg
+        | Arg.Set r -> set_bool r true
+        | Arg.Clear r -> set_bool r false
+        | Arg.String f -> call f string
+        | Arg.Set_string r -> set r string
+        | Arg.Int f -> call f int
+        | Arg.Set_int r -> set r int
+        | Arg.Float f -> call f float
+        | Arg.Set_float r -> set r float
+        | Arg.Bool f -> call f bool
+        | Arg.Symbol (syms, f) ->
+          let arg_type =
+            Arg_type.of_alist_exn
+              ~list_values_in_help:false
+              (List.map syms ~f:(fun sym -> sym, sym))
+          in
+          call f arg_type
+        | Arg.Rest f -> gen (fun x -> Option.iter x ~f:(List.iter ~f)) Param.escape
+        | Arg.Tuple _ ->
+          failwith "Arg.Tuple is not supported by Command.Spec.flags_of_args_exn"
+        | ((Arg.Expand _) [@if ocaml_version >= (4, 05, 0)]) ->
+          failwith "Arg.Expand is not supported by Command.Spec.flags_of_args_exn"
+        | ((Arg.Rest_all _) [@if ocaml_version >= (4, 12, 0)]) ->
+          failwith "Arg.Rest_all is not supported by Command.Spec.flags_of_args_exn")
+    ;;
+
+    module Deprecated = struct
+      include Flag.Deprecated
+      include Anons.Deprecated
+    end
+
+    let arg_names = Param.arg_names
+
+    module If_nothing_chosen = Param.Choose_one.If_nothing_chosen
+
+    let choose_one = Param.choose_one
+    let choose_one_non_optional = Param.choose_one_non_optional
+    let and_arg_names = Param.and_arg_names
+    let and_arg_name = Param.and_arg_name
   end
 end
 
@@ -1956,15 +2279,17 @@ module Bailout_dump_flag = struct
   ;;
 end
 
-let basic_spec ~summary ?readme { Base.Spec.usage; flags; f } main =
+let basic ~summary ?readme { Base.Param.usage; flags; f } =
   let flags = flags () in
   let usage = usage () in
   let anons () =
-    let open Anons.Parser.For_opening in
+    let open Anons.Parser.Basic.For_opening in
     f ()
-    >>| fun k `Parse_args ->
-    let thunk = k main in
-    fun `Run_main -> thunk ()
+    >>| fun params `Parse_args ->
+    let outcome = params () in
+    match outcome.result with
+    | Error (`Missing_required_flags err) -> die "%s" (Error.to_string_hum err) ()
+    | Ok thunk -> fun `Run_main -> thunk ()
   in
   let flags = Flag.Internal.create flags in
   let base = { Base.summary; readme; usage; flags; anons } in
@@ -1980,7 +2305,10 @@ let basic_spec ~summary ?readme { Base.Spec.usage; flags; f } main =
   Base base
 ;;
 
-let basic = basic_spec
+let basic_spec ~summary ?readme spec main =
+  basic ~summary ?readme (Base.Spec.to_param spec main)
+;;
+
 let subs_key : (string * t) list Env.Key.t = Env.key_create "subcommands"
 
 let lazy_group ~summary ?readme ?preserve_subcommand_order ?body alist =
@@ -2103,19 +2431,18 @@ module Version_info (M : For_version_info) = struct
   let command ~version ~build_info =
     basic
       ~summary:"print version information"
-      Base.Spec.(
-        empty
-        +> flag "-version" no_arg ~doc:" print the version of this build"
-        +> flag "-build-info" no_arg ~doc:" print build info for this build")
-      (fun version_flag build_info_flag ->
-         if build_info_flag
-         then print_build_info ~build_info
-         else if version_flag
-         then print_version ~version
-         else (
-           print_build_info ~build_info;
-           print_version ~version);
-         exit 0)
+      Base.Param.(
+        return (fun version_flag build_info_flag ->
+          if build_info_flag
+          then print_build_info ~build_info
+          else if version_flag
+          then print_version ~version
+          else (
+            print_build_info ~build_info;
+            print_version ~version);
+          exit 0)
+        <*> flag "-version" no_arg ~doc:" print the version of this build"
+        <*> flag "-build-info" no_arg ~doc:" print build info for this build")
   ;;
 
   let rec add ~version ~build_info unversioned =
@@ -2543,49 +2870,53 @@ struct
   let help_subcommand ~summary ~readme =
     basic
       ~summary:"explain a given subcommand (perhaps recursively)"
-      Base.Spec.(
-        empty
-        +> flag "-recursive" no_arg ~doc:" show subcommands of subcommands, etc."
-        +> flag "-flags" no_arg ~doc:" show flags as well in recursive help"
-        +> flag "-expand-dots" no_arg ~doc:" expand subcommands in recursive help"
-        +> path
-        +> env
-        +> anon (maybe ("SUBCOMMAND" %: string)))
-      (fun recursive flags expand_dots path (env : Env.t) cmd_opt () ->
-         let subs =
-           match Env.find env subs_key with
-           | Some subs -> subs
-           | None -> assert false
-           (* maintained by [dispatch] *)
-         in
-         let path =
-           let path = Path.pop_help path in
-           Option.fold cmd_opt ~init:path ~f:(fun path subcommand ->
-             Path.append path ~subcommand)
-         in
-         let path, shape =
-           match cmd_opt with
-           | None ->
-             let subcommands = List.Assoc.map subs ~f:shape |> Lazy.from_val in
-             let readme = Option.map readme ~f:(fun readme -> readme ()) in
-             path, Shape.Group { readme; summary; subcommands }
-           | Some cmd ->
-             (match
-                lookup_expand (List.Assoc.map subs ~f:(fun x -> x, `Prefix)) cmd Subcommand
-              with
-              | Error e ->
-                die
-                  "unknown subcommand %s for command %s: %s"
-                  cmd
-                  (Path.to_string path)
-                  e
-                  ()
-              | Ok (possibly_expanded_name, t) ->
-                (* Fix the unexpanded value *)
-                let path = Path.replace_first ~from:cmd ~to_:possibly_expanded_name path in
-                path, shape t)
-         in
-         print_endline (help_for_shape shape path ~recursive ~flags ~expand_dots))
+      Base.Param.(
+        return (fun recursive flags expand_dots path (env : Env.t) cmd_opt () ->
+          let subs =
+            match Env.find env subs_key with
+            | Some subs -> subs
+            | None -> assert false
+            (* maintained by [dispatch] *)
+          in
+          let path =
+            let path = Path.pop_help path in
+            Option.fold cmd_opt ~init:path ~f:(fun path subcommand ->
+              Path.append path ~subcommand)
+          in
+          let path, shape =
+            match cmd_opt with
+            | None ->
+              let subcommands = List.Assoc.map subs ~f:shape |> Lazy.from_val in
+              let readme = Option.map readme ~f:(fun readme -> readme ()) in
+              path, Shape.Group { readme; summary; subcommands }
+            | Some cmd ->
+              (match
+                 lookup_expand
+                   (List.Assoc.map subs ~f:(fun x -> x, `Prefix))
+                   cmd
+                   Subcommand
+               with
+               | Error e ->
+                 die
+                   "unknown subcommand %s for command %s: %s"
+                   cmd
+                   (Path.to_string path)
+                   e
+                   ()
+               | Ok (possibly_expanded_name, t) ->
+                 (* Fix the unexpanded value *)
+                 let path =
+                   Path.replace_first ~from:cmd ~to_:possibly_expanded_name path
+                 in
+                 path, shape t)
+          in
+          print_endline (help_for_shape shape path ~recursive ~flags ~expand_dots))
+        <*> flag "-recursive" no_arg ~doc:" show subcommands of subcommands, etc."
+        <*> flag "-flags" no_arg ~doc:" show flags as well in recursive help"
+        <*> flag "-expand-dots" no_arg ~doc:" expand subcommands in recursive help"
+        <*> path
+        <*> env
+        <*> anon (maybe ("SUBCOMMAND" %: string)))
   ;;
 
   (* This script works in both bash (via readarray) and zsh (via read -A).  If you change
@@ -2613,8 +2944,8 @@ struct
   ;;
 
   let dump_help_sexp ~supported_versions t ~path_to_subcommand =
-    Int.Set.inter Sexpable.supported_versions supported_versions
-    |> Int.Set.max_elt
+    Set.inter Sexpable.supported_versions supported_versions
+    |> Set.max_elt
     |> function
     | None ->
       failwiths
@@ -2908,9 +3239,6 @@ struct
   ;;
 end
 
-(* NOTE: all that follows is simply namespace management boilerplate.  This will go away
-   once we re-work the internals of Command to use Applicative from the ground up. *)
-
 module Param = struct
   module type S = sig
     type +'a t
@@ -2954,73 +3282,19 @@ module Param = struct
       -> if_nothing_chosen:('a, 'b) If_nothing_chosen.t
       -> 'b t
 
+    val choose_one_non_optional
+      :  'a t list
+      -> if_nothing_chosen:('a, 'b) If_nothing_chosen.t
+      -> 'b t
+
     val and_arg_names : 'a t -> ('a * string list) t
     val and_arg_name : 'a t -> ('a * string) t
     val arg_names : 'a t -> string list
   end
 
-  module A = struct
-    type 'a t = 'a Spec.param
+  include Base.Param
 
-    include Applicative.Make (struct
-        type nonrec 'a t = 'a t
-
-        let return = Spec.const
-        let apply = Spec.apply
-        let map = `Custom Spec.map
-      end)
-  end
-
-  include A
-
-  let help = Spec.help
-  let path = Spec.path
-  let args = Spec.args
-  let flag = Spec.flag
-  let anon = Spec.anon
-  let choose_one = Spec.choose_one
-  let arg_names = Spec.arg_names
-  let and_arg_names = Spec.and_arg_names
-  let and_arg_name = Spec.and_arg_name
-  let flag_optional_with_default_doc = Spec.flag_optional_with_default_doc
-
-  module Arg_type = Arg_type
-  module If_nothing_chosen = Spec.If_nothing_chosen
-  include Arg_type.Export
-
-  include struct
-    open Flag
-
-    let escape = escape
-    let listed = listed
-    let map_flag = map_flag
-    let no_arg = no_arg
-    let no_arg_abort = no_arg_abort
-    let no_arg_register = no_arg_register
-    let no_arg_some = no_arg_some
-    let one_or_more_as_pair = one_or_more_as_pair
-    let one_or_more_as_list = one_or_more_as_list
-    let optional = optional
-    let optional_with_default = optional_with_default
-    let required = required
-  end
-
-  include struct
-    open Anons
-
-    let ( %: ) = ( %: )
-    let map_anons = map_anons
-    let maybe = maybe
-    let maybe_with_default = maybe_with_default
-    let non_empty_sequence_as_list = non_empty_sequence_as_list
-    let non_empty_sequence_as_pair = non_empty_sequence_as_pair
-    let sequence = sequence
-    let t2 = t2
-    let t3 = t3
-    let t4 = t4
-  end
-
-  let escape_anon = Spec.escape_anon
+  let path = map ~f:Path.parts_exe_basename path
 end
 
 module Let_syntax = struct
@@ -3036,9 +3310,8 @@ type 'result basic_command =
   summary:string -> ?readme:(unit -> string) -> (unit -> 'result) Param.t -> t
 
 let basic ~summary ?readme param =
-  let spec = Spec.of_params @@ Param.map param ~f:(fun run () () -> run ()) in
   let readme = Option.map readme ~f:(fun f () -> String.strip (f ())) in
-  basic ~summary ?readme spec ()
+  basic ~summary ?readme param
 ;;
 
 module Private = struct
@@ -3054,7 +3327,7 @@ module Private = struct
     include Spec
 
     let to_string_for_choose_one param =
-      Choose_one.Choice_name.(create_exn param |> to_string)
+      Base.Param.Choose_one.Choice_name.(create_exn param |> to_string)
     ;;
   end
 end

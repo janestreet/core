@@ -188,51 +188,54 @@ module Stat = struct
 
   [%%if ocaml_version < (4, 12, 0)]
 
-  let diff after before =
-    { minor_words = after.minor_words -. before.minor_words
-    ; promoted_words = after.promoted_words -. before.promoted_words
-    ; major_words = after.major_words -. before.major_words
-    ; minor_collections = after.minor_collections - before.minor_collections
-    ; major_collections = after.major_collections - before.major_collections
-    ; heap_words = after.heap_words - before.heap_words
-    ; heap_chunks = after.heap_chunks - before.heap_chunks
-    ; live_words = after.live_words - before.live_words
-    ; live_blocks = after.live_blocks - before.live_blocks
-    ; free_words = after.free_words - before.free_words
-    ; free_blocks = after.free_blocks - before.free_blocks
-    ; largest_free = after.largest_free - before.largest_free
-    ; fragments = after.fragments - before.fragments
-    ; compactions = after.compactions - before.compactions
-    ; top_heap_words = after.top_heap_words - before.top_heap_words
-    ; stack_size = after.stack_size - before.stack_size
+  let combine first second ~float_f ~int_f =
+    { minor_words = float_f first.minor_words second.minor_words
+    ; promoted_words = float_f first.promoted_words second.promoted_words
+    ; major_words = float_f first.major_words second.major_words
+    ; minor_collections = int_f first.minor_collections second.minor_collections
+    ; major_collections = int_f first.major_collections second.major_collections
+    ; heap_words = int_f first.heap_words second.heap_words
+    ; heap_chunks = int_f first.heap_chunks second.heap_chunks
+    ; live_words = int_f first.live_words second.live_words
+    ; live_blocks = int_f first.live_blocks second.live_blocks
+    ; free_words = int_f first.free_words second.free_words
+    ; free_blocks = int_f first.free_blocks second.free_blocks
+    ; largest_free = int_f first.largest_free second.largest_free
+    ; fragments = int_f first.fragments second.fragments
+    ; compactions = int_f first.compactions second.compactions
+    ; top_heap_words = int_f first.top_heap_words second.top_heap_words
+    ; stack_size = int_f first.stack_size second.stack_size
     }
   ;;
 
   [%%else]
 
-  let diff after before =
-    { minor_words = after.minor_words -. before.minor_words
-    ; promoted_words = after.promoted_words -. before.promoted_words
-    ; major_words = after.major_words -. before.major_words
-    ; minor_collections = after.minor_collections - before.minor_collections
-    ; major_collections = after.major_collections - before.major_collections
-    ; heap_words = after.heap_words - before.heap_words
-    ; heap_chunks = after.heap_chunks - before.heap_chunks
-    ; live_words = after.live_words - before.live_words
-    ; live_blocks = after.live_blocks - before.live_blocks
-    ; free_words = after.free_words - before.free_words
-    ; free_blocks = after.free_blocks - before.free_blocks
-    ; largest_free = after.largest_free - before.largest_free
-    ; fragments = after.fragments - before.fragments
-    ; compactions = after.compactions - before.compactions
-    ; top_heap_words = after.top_heap_words - before.top_heap_words
-    ; stack_size = after.stack_size - before.stack_size
+  let combine first second ~float_f ~int_f =
+    { minor_words = float_f first.minor_words second.minor_words
+    ; promoted_words = float_f first.promoted_words second.promoted_words
+    ; major_words = float_f first.major_words second.major_words
+    ; minor_collections = int_f first.minor_collections second.minor_collections
+    ; major_collections = int_f first.major_collections second.major_collections
+    ; heap_words = int_f first.heap_words second.heap_words
+    ; heap_chunks = int_f first.heap_chunks second.heap_chunks
+    ; live_words = int_f first.live_words second.live_words
+    ; live_blocks = int_f first.live_blocks second.live_blocks
+    ; free_words = int_f first.free_words second.free_words
+    ; free_blocks = int_f first.free_blocks second.free_blocks
+    ; largest_free = int_f first.largest_free second.largest_free
+    ; fragments = int_f first.fragments second.fragments
+    ; compactions = int_f first.compactions second.compactions
+    ; top_heap_words = int_f first.top_heap_words second.top_heap_words
+    ; stack_size = int_f first.stack_size second.stack_size
     ; forced_major_collections =
-        after.forced_major_collections - before.forced_major_collections
+        int_f first.forced_major_collections second.forced_major_collections
     }
   ;;
 
   [%%endif]
+
+  let add = combine ~float_f:Float.( + ) ~int_f:Int.( + )
+  let diff = combine ~float_f:Float.( - ) ~int_f:Int.( - )
 end
 
 module Control = struct

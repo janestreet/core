@@ -44,9 +44,25 @@ module Header : sig
      For the same reason we make sure not to call [Result.try_with (fun () -> ...)]
      inside [with_iteration] and do an explicit match statement instead. *)
 
-  val with_iteration_2 : t -> 'a -> 'b -> ('a -> 'b -> 'c) -> 'c
+  val with_iteration_2l
+    :  t
+    -> 'a
+    -> ('b[@local])
+    -> (('a -> ('b[@local]) -> 'c)[@local])
+    -> 'c
+
   val with_iteration_3 : t -> 'a -> 'b -> 'c -> ('a -> 'b -> 'c -> 'd) -> 'd
   val with_iteration_4 : t -> 'a -> 'b -> 'c -> 'd -> ('a -> 'b -> 'c -> 'd -> 'e) -> 'e
+
+  val with_iteration_4l
+    :  t
+    -> ('a[@local])
+    -> ('b[@local])
+    -> 'c
+    -> 'd
+    -> ((('a[@local]) -> ('b[@local]) -> 'c -> 'd -> 'e)[@local])
+    -> 'e
+
   val merge : t -> t -> [ `Same_already | `Merged ]
 end = struct
   type s =
@@ -81,7 +97,7 @@ end = struct
   let incr_pending_iters s = s.pending_iterations <- s.pending_iterations + 1
   let decr_pending_iters s = s.pending_iterations <- s.pending_iterations - 1
 
-  let with_iteration_2 t a b f =
+  let with_iteration_2l t a (b [@local]) f =
     let s = Union_find.get t in
     incr_pending_iters s;
     match f a b with
@@ -106,6 +122,18 @@ end = struct
   ;;
 
   let with_iteration_4 t a b c d f =
+    let s = Union_find.get t in
+    incr_pending_iters s;
+    match f a b c d with
+    | exception exn ->
+      decr_pending_iters s;
+      raise exn
+    | r ->
+      decr_pending_iters s;
+      r
+  ;;
+
+  let with_iteration_4l t (a [@local]) (b [@local]) c d f =
     let s = Union_find.get t in
     incr_pending_iters s;
     match f a b c d with
@@ -298,7 +326,7 @@ let of_list = function
   | [] -> create ()
   | x :: xs ->
     let first = Elt.create x in
-    let _last = List.fold xs ~init:first ~f:Elt.insert_after in
+    let _last = List.fold xs ~init:first ~f:(fun a b -> Elt.insert_after a b) in
     ref (Some first)
 ;;
 
@@ -377,7 +405,7 @@ let fold_elt_1 t ~init ~f a =
   match !t with
   | None -> init
   | Some first ->
-    Header.with_iteration_4 (Elt.header first) f a init first (fun f a init first ->
+    Header.with_iteration_4l (Elt.header first) f a init first (fun f a init first ->
       let rec loop f a acc first elt =
         let acc = f a acc elt in
         let next = Elt.next elt in
@@ -430,7 +458,7 @@ let iter t ~f =
   match !t with
   | None -> ()
   | Some first ->
-    Header.with_iteration_2 (Elt.header first) first f (fun first f ->
+    Header.with_iteration_2l (Elt.header first) first f (fun first f ->
       iter_loop first f first)
 ;;
 
@@ -450,7 +478,7 @@ let iteri t ~f =
   match !t with
   | None -> ()
   | Some first ->
-    Header.with_iteration_2 (Elt.header first) first f (fun first f ->
+    Header.with_iteration_2l (Elt.header first) first f (fun first f ->
       iteri_loop first f 0 first)
 ;;
 
@@ -461,7 +489,11 @@ let foldi t ~init ~f =
 module C = Container.Make (struct
     type nonrec 'a t = 'a t
 
-    let fold t ~init ~f = fold_elt_1 t ~init f ~f:(fun f acc elt -> f acc (Elt.value elt))
+    let fold t ~init ~f =
+      let r = fold_elt_1 t ~init f ~f:(fun f acc elt -> f acc (Elt.value elt)) in
+      r
+    ;;
+
     let iter = `Custom iter
     let length = `Custom length
   end)

@@ -17,6 +17,7 @@ include Stringable with type t := t
     serialization round-trips may cause multiple small drifts. *)
 include Sexpable with type t := t
 
+include Sexplib.Sexp_grammar.S with type t := t
 include Binable with type t := t
 include Comparable_binable with type t := t
 include Comparable.With_zero with type t := t
@@ -170,12 +171,45 @@ val sign_exn : t -> Sign.t
 
 module Stable : sig
   module V1 : sig
+    (** It is recommended to use [V2].
+
+        [V1.Bin_shape_same_as_float.t]'s sexp and bin-io representations are the same as
+        [V2.t]'s. There are only two differences:
+
+        - [V2] has a distinct [bin_shape_t] from [Float.bin_shape_t], to suggest that
+          changing a protocol type from a percent to a float (or vice-versa) is a breaking
+          change, semantically.
+        - [V2.{Map,Set}.t_of_sexp] no longer accept keys/elements formatted as floats
+          rather than as {Percent}s.
+
+        Usually existing code can upgrade in-place from [V1.Bin_shape_same_as_float] to
+        [V2], as long as no client code uses [bin_shape_t] dynamically.
+    *)
+    module Bin_shape_same_as_float : sig
+      type nonrec t = t
+      [@@deriving
+        sexp, sexp_grammar, bin_io, compare, hash, equal, typerep, stable_witness]
+    end
+
+    include module type of Bin_shape_same_as_float
+  end
+
+  module V2 : sig
     type nonrec t = t
-    [@@deriving sexp, bin_io, compare, hash, equal, typerep, stable_witness]
+    [@@deriving sexp, sexp_grammar, bin_io, compare, hash, equal, typerep, stable_witness]
   end
 
   module Option : sig
     module V1 : sig
+      (** See comment for [Stable.V1.Bin_shape_same_as_float]. *)
+      module Bin_shape_same_as_float : sig
+        type t = Option.t [@@deriving bin_io, compare, hash, sexp, stable_witness]
+      end
+
+      include module type of Bin_shape_same_as_float
+    end
+
+    module V2 : sig
       type t = Option.t [@@deriving bin_io, compare, hash, sexp, stable_witness]
     end
   end

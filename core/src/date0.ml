@@ -260,7 +260,13 @@ module Stable = struct
 
         let sexp_of_t t = Sexp.Atom (to_string t)
 
-        let t_sexp_grammar = Sexplib.Sexp_grammar.coerce Sexplib.Sexp.t_sexp_grammar
+        let t_sexp_grammar =
+          let open Sexplib in
+          Sexp_grammar.tag
+            (Sexp_grammar.coerce String.t_sexp_grammar : t Sexp_grammar.t)
+            ~key:Sexp_grammar.type_name_tag
+            ~value:(Atom "Core.Date.t")
+        ;;
       end
 
       include Sexpable

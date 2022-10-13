@@ -163,9 +163,15 @@ module type Command = sig
   module Auto_complete : sig
     (** In addition to the argument prefix, an auto-completion spec has access to any
         previously parsed arguments in the form of a heterogeneous map into which those
-        arguments may register themselves by providing a [Univ_map.Key] using the [~key]
-        argument to [Arg_type.create]. *)
+        arguments may register themselves by providing a [Univ_map.Multi.Key] using the
+        [~key] argument to [Arg_type.create]. *)
     type t = Univ_map.t -> part:string -> string list
+
+    module For_escape : sig
+      (** For the [escape] flag, it's more useful if the auto-completion spec has access
+          to all past arguments after the flag, hence the [part:string list] argument. *)
+      type t = Univ_map.t -> part:string list -> string list
+    end
   end
 
   (** Argument types. *)
@@ -330,6 +336,10 @@ module type Command = sig
         passed on the command line, and return [None] otherwise. *)
     val no_arg_some : 'a -> 'a option t
 
+    (** [no_arg_some value] is like [no_arg], but the argument is required.
+        This is useful in combination with [new_choose_one]. *)
+    val no_arg_required : 'a -> 'a t
+
     (** [no_arg_abort ~exit] is like [no_arg], but aborts command-line parsing by calling
         [exit].  This flag type is useful for "help"-style flags that just print something
         and exit. *)
@@ -341,6 +351,10 @@ module type Command = sig
 
         A standard choice of flag name to use with [escape] is ["--"]. *)
     val escape : string list option t
+
+    val escape_with_autocomplete
+      :  complete:Auto_complete.For_escape.t
+      -> string list option t
 
     (** [map_flag flag ~f] transforms the parsed result of [flag] by applying [f]. *)
     val map_flag : 'a t -> f:('a -> 'b) -> 'b t
@@ -553,6 +567,18 @@ module type Command = sig
           raises if none of [clauses] is [Some _]. *)
       val choose_one
         :  'a option t list
+        -> if_nothing_chosen:('a, 'b) If_nothing_chosen.t
+        -> 'b t
+
+
+      (** [choose_one_non_optional clauses ~if_nothing_chosen] expresses a sum type.
+          It raises if more than one of the [clauses] has any flags given on the
+          command-line, and returns the value parsed from the clause that's given.
+
+          When [if_nothing_chosen = Raise], it also raises if none of the [clauses] are
+          given. *)
+      val choose_one_non_optional
+        :  'a t list
         -> if_nothing_chosen:('a, 'b) If_nothing_chosen.t
         -> 'b t
 

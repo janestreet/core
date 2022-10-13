@@ -220,6 +220,8 @@ include Not_found
 
 (** {2 Top-level values} *)
 
+external phys_equal : ('a[@local_opt]) -> ('a[@local_opt]) -> bool = "%eq"
+
 type 'a _maybe_bound = 'a Maybe_bound.t =
   | Incl of 'a
   | Excl of 'a

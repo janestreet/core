@@ -159,7 +159,7 @@ let foldi' t dir ~init ~f =
         acc))
 ;;
 
-let fold' t dir ~init ~f = foldi' t dir ~init ~f:(fun _ acc v -> f acc v)
+let fold' t dir ~init ~f = foldi' t dir ~init ~f:(fun _ acc v -> f acc v) [@nontail]
 let iteri' t dir ~f = foldi' t dir ~init:() ~f:(fun i () v -> f i v)
 let iter' t dir ~f = foldi' t dir ~init:() ~f:(fun _ () v -> f v)
 let fold t ~init ~f = fold' t `front_to_back ~init ~f
@@ -178,13 +178,15 @@ let iteri_internal t ~f =
         loop ~real_i:(real_i + 1) ~stop_pos)
     in
     if actual_front <= actual_back
-    then loop ~real_i:actual_front ~stop_pos:(actual_back + 1)
+    then loop ~real_i:actual_front ~stop_pos:(actual_back + 1) [@nontail]
     else (
       loop ~real_i:actual_front ~stop_pos:t.arr_length;
-      loop ~real_i:0 ~stop_pos:(actual_back + 1)))
+      loop ~real_i:0 ~stop_pos:(actual_back + 1) [@nontail]))
 ;;
 
-let iter t ~f = iteri_internal t ~f:(fun arr i -> Option_array.get_some_exn arr i |> f)
+let iter t ~f =
+  iteri_internal t ~f:(fun arr i -> Option_array.get_some_exn arr i |> f) [@nontail]
+;;
 
 let clear t =
   if t.never_shrink

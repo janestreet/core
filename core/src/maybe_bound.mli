@@ -5,7 +5,7 @@ type 'a t = 'a Base.Maybe_bound.t =
   | Incl of 'a
   | Excl of 'a
   | Unbounded
-[@@deriving bin_io, quickcheck]
+[@@deriving bin_io, equal, hash, quickcheck]
 
 (** @inline *)
 include module type of struct
@@ -22,7 +22,7 @@ with type 'a t := 'a t
       Unbounded < ... < Incl 13 < Excl 13 < Incl 14 < Excl 14 < ...
     ]} *)
 module As_lower_bound : sig
-  type nonrec 'a t = 'a t [@@deriving compare]
+  type nonrec 'a t = 'a t [@@deriving compare, equal, hash]
 end
 
 (** Compares [t] values as upper bounds, where [Unbounded] is highest, [Incl x > Excl x],
@@ -34,9 +34,13 @@ end
       ... < Excl 13 < Incl 13 < Excl 14 < Incl 14 < ... < Unbounded
     ]} *)
 module As_upper_bound : sig
-  type nonrec 'a t = 'a t [@@deriving compare]
+  type nonrec 'a t = 'a t [@@deriving compare, equal, hash]
 end
 
 module Stable : sig
-  module V1 : Stable_module_types.With_stable_witness.S1 with type 'a t = 'a t
+  module V1 : sig
+    type nonrec 'a t = 'a t [@@deriving equal, hash]
+
+    include Stable_module_types.With_stable_witness.S1 with type 'a t := 'a t
+  end
 end

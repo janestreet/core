@@ -2,20 +2,52 @@ open! Core
 open! Expect_test_helpers_core
 open! Percent
 
-let%test_module "Percent.V1" =
-  (module Stable_unit_test.Make (struct
-       include Stable.V1
+module Stable_unit_test (T : sig
+    type t = Percent.t
 
-       let equal = equal
+    include Binable with type t := t
+    include Sexpable with type t := t
+  end) =
+  Stable_unit_test.Make (struct
+    include T
 
-       let tests =
-         [ of_mult 0.375, "37.5%", "\000\000\000\000\000\000\216?"
-         ; of_mult 4.5, "4.5x", "\000\000\000\000\000\000\018@"
-         ; of_mult 0.0002, "2bp", "-C\028\235\2266*?"
-         ; of_mult 0.000075, "0.75bp", "a2U0*\169\019?"
-         ]
-       ;;
-     end))
+    let equal = equal
+
+    let tests =
+      [ of_mult 0.375, "37.5%", "\000\000\000\000\000\000\216?"
+      ; of_mult 4.5, "4.5x", "\000\000\000\000\000\000\018@"
+      ; of_mult 0.0002, "2bp", "-C\028\235\2266*?"
+      ; of_mult 0.000075, "0.75bp", "a2U0*\169\019?"
+      ]
+    ;;
+  end)
+
+let%test_module "Percent.V1.Bin_shape_same_as_float" =
+  (module Stable_unit_test (Stable.V1.Bin_shape_same_as_float))
+;;
+
+let%test_module "Percent.V2" = (module Stable_unit_test (Stable.V2))
+let%test_module "Percent" = (module Stable_unit_test (Percent))
+
+let%expect_test "bin_digests" =
+  (* [V2] intentionally has a bin_digest distinct from float's: changing
+     a protocol to use float vs. percent is usually a breaking change.
+  *)
+  List.iter
+    [ "float", [%bin_digest: float]
+    ; "v1", [%bin_digest: Stable.V1.Bin_shape_same_as_float.t]
+    ; "option_v1", [%bin_digest: Stable.Option.V1.Bin_shape_same_as_float.t]
+    ; "v2", [%bin_digest: Stable.V2.t]
+    ; "option_v2", [%bin_digest: Stable.Option.V2.t]
+    ]
+    ~f:(fun (label, bin_digest) -> printf "%20s %s\n" label bin_digest);
+  [%expect
+    {|
+        float 1fd923acb2dd9c5d401ad5b08b1d40cd
+           v1 1fd923acb2dd9c5d401ad5b08b1d40cd
+    option_v1 1fd923acb2dd9c5d401ad5b08b1d40cd
+           v2 608ef16f40e15a75b1942a12465f47df
+    option_v2 7d0312ebcdefb728502ea27a959a389b |}]
 ;;
 
 let%expect_test "rounding" =
@@ -38,9 +70,9 @@ let%test_unit {|
     scales by 0.01, which can yield different results.
   |}
   =
-  let module V1 = Stable.V1 in
+  let module V2 = Stable.V2 in
   let t = of_percentage 3.638 in
-  [%test_result: int] (compare t (V1.t_of_sexp (V1.sexp_of_t t))) ~expect:(-1)
+  [%test_result: int] (compare t (V2.t_of_sexp (V2.sexp_of_t t))) ~expect:(-1)
 ;;
 
 let%test_unit _ =

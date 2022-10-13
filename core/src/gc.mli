@@ -107,6 +107,10 @@ module Stat : sig
 
   include Comparable.S_plain with type t := t
 
+  (** [add first second] computes [first+second] pointwise across each field; this helps
+      in aggregating statistics across processes. *)
+  val add : t -> t -> t
+
   (** [diff after before] computes [after-before] pointwise across each field; this helps
       show the effect (on all stats) of some code block. *)
   val diff : t -> t -> t
@@ -401,7 +405,7 @@ module For_testing : sig
       This function is only supported since OCaml 4.11. On prior versions, the function
       always returns an empty log. *)
   val measure_and_log_allocation
-    :  (unit -> 'a)
+    :  ((unit -> 'a)[@local])
     -> 'a * Allocation_report.t * Allocation_log.t list
 
   (** [is_zero_alloc f] runs [f ()] and returns [true] if it does not allocate, or [false]

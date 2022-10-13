@@ -160,17 +160,16 @@ end
 
 module Make_S_plain_tree (Elt : Comparator.S) = struct
   module type S = sig
-    type t = (Elt.t, Elt.comparator_witness) Tree.t [@@deriving compare, sexp_of]
+    type t = (Elt.t, Elt.comparator_witness) Tree.t [@@deriving compare, equal, sexp_of]
 
     include
-      Creators_and_accessors_generic
+      Creators_generic
       with type ('a, 'b) set := ('a, 'b) Tree.t
       with type ('a, 'b) t := t
       with type ('a, 'b) tree := t
       with type 'a elt := Elt.t
       with type 'c cmp := Elt.comparator_witness
       with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
-      with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
 
     module Provide_of_sexp
         (Elt : sig
@@ -190,17 +189,16 @@ module type S_plain = sig
     include Comparator.S with type t := t
   end
 
-  type t = (Elt.t, Elt.comparator_witness) Base.Set.t [@@deriving compare, sexp_of]
+  type t = (Elt.t, Elt.comparator_witness) Base.Set.t [@@deriving compare, equal, sexp_of]
 
   include
-    Creators_and_accessors_generic
+    Creators_generic
     with type ('a, 'b) set := ('a, 'b) Set.t
     with type ('a, 'b) t := t
     with type ('a, 'b) tree := (Elt.t, Elt.comparator_witness) Tree.t
     with type 'a elt := Elt.t
     with type 'c cmp := Elt.comparator_witness
     with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
-    with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
 
   module Provide_of_sexp
       (Elt : sig
@@ -221,6 +219,9 @@ module type S_plain = sig
     type t [@@deriving hash]
   end
   with type t := t
+
+  val quickcheck_observer : Elt.t Quickcheck.Observer.t -> t Quickcheck.Observer.t
+  val quickcheck_shrinker : Elt.t Quickcheck.Shrinker.t -> t Quickcheck.Shrinker.t
 end
 
 module type S = sig

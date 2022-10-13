@@ -1010,6 +1010,19 @@ module Access_options_with_comparator = struct
   let simplify_accessor f = f ~comparator:Int.comparator
 end
 
+module Access_options_with_poly_comparator = struct
+  type ('a, 'b, 'c) access_options =
+    ('a, Comparator.Poly.comparator_witness, 'c) With_comparator.t
+
+  let simplify_accessor f = f ~comparator:Comparator.Poly.comparator
+end
+
+module Access_options_with_int_comparator = struct
+  type ('a, 'b, 'c) access_options = (int, Int.comparator_witness, 'c) With_comparator.t
+
+  let simplify_accessor f = f ~comparator:Int.comparator
+end
+
 let%test_module "Set" =
   (module Unit_tests
        (Elt_poly)
@@ -1033,6 +1046,7 @@ let%test_module "Set.Poly" =
   (module Unit_tests
        (Elt_poly)
        (struct
+         include Set
          include Set.Poly
 
          type ('a, 'b) set = ('a, 'b) Set.t
@@ -1052,6 +1066,7 @@ let%test_module "Int.Set" =
   (module Unit_tests
        (Elt_int)
        (struct
+         include Set
          include Int.Set
          module Tree = Set.Make_tree (Int.Set.Elt)
 
@@ -1091,15 +1106,16 @@ let%test_module "Set.Poly.Tree" =
   (module Unit_tests
        (Elt_poly)
        (struct
+         include Set.Tree
          include Set.Poly.Tree
 
-         type ('a, 'b) set = 'a Set.Poly.Tree.t
+         type ('a, 'b) set = ('a, 'b) Set.Tree.t
          type ('a, 'b) t_ = 'a t
-         type ('a, 'b) tree = 'a t
+         type ('a, 'b) tree = ('a, 'b) Set.Tree.t
          type 'a cmp = Comparator.Poly.comparator_witness
 
          include Create_options_without_comparator
-         include Access_options_without_comparator
+         include Access_options_with_poly_comparator
 
          let kind = `Tree
          let is_poly = true
@@ -1110,16 +1126,18 @@ let%test_module "Int.Set.Tree" =
   (module Unit_tests
        (Elt_int)
        (struct
+         include Set.Tree
          include Set.Make_tree (Int.Set.Elt)
 
          type ('a, 'b) set = ('a, 'b) Set.Tree.t
          type ('a, 'b) t_ = t
-         type ('a, 'b) tree = t
+         type ('a, 'b) tree = ('a, 'b) Set.Tree.t
          type 'a cmp = Int.comparator_witness
 
          include Create_options_without_comparator
-         include Access_options_without_comparator
+         include Access_options_with_int_comparator
 
+         let equal ~comparator:_ = equal
          let kind = `Tree
          let is_poly = false
        end))
@@ -1153,7 +1171,7 @@ let%expect_test "bin_read_t raises on duplicate elements" =
       (module struct
         type t = int Set.Poly.t [@@deriving sexp_of]
 
-        let equal = Set.Poly.equal
+        let equal = Set.equal
       end)
       s1
       s2;

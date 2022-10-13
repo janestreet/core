@@ -308,20 +308,20 @@ module Alternate_sexp = struct
       Utc.of_date_and_span_since_start_of_day date ofday
     ;;
 
-    let t_sexp_grammar =
-      let open Sexplib in
-      Sexp_grammar.tag
-        (Sexp_grammar.coerce String.t_sexp_grammar : t Sexp_grammar.t)
-        ~key:Sexp_grammar.type_name_tag
-        ~value:(Atom "Core.Time_ns.Alternate_sexp.t")
-    ;;
-
     include Sexpable.Of_stringable (struct
         type nonrec t = t
 
         let to_string = to_string
         let of_string = of_string
       end)
+
+    let t_sexp_grammar =
+      let open Sexplib in
+      Sexp_grammar.tag
+        t_sexp_grammar
+        ~key:Sexp_grammar.type_name_tag
+        ~value:(Atom "Core.Time_ns.Alternate_sexp.t")
+    ;;
   end
 
   include T

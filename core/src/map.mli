@@ -41,40 +41,40 @@
 open! Import
 open Map_intf
 
-type ('key, +'value, 'cmp) t = ('key, 'value, 'cmp) Base.Map.t
+type (!'key, +!'value, !'cmp) t = ('key, 'value, 'cmp) Base.Map.t
 
-type ('k, 'cmp) comparator =
-  (module Comparator.S with type t = 'k and type comparator_witness = 'cmp)
+type ('k, 'cmp) comparator = ('k, 'cmp) Comparator.Module.t
+[@@deprecated "[since 2022-07] use [Comparator.Module.t] instead"]
 
 (** Test if invariants of internal AVL search tree hold. *)
 val invariants : (_, _, _) t -> bool
 
 val comparator : ('a, _, 'cmp) t -> ('a, 'cmp) Comparator.t
-val comparator_s : ('a, _, 'cmp) t -> ('a, 'cmp) comparator
+val comparator_s : ('a, _, 'cmp) t -> ('a, 'cmp) Comparator.Module.t
 
 (** The empty map. *)
-val empty : ('a, 'cmp) comparator -> ('a, 'b, 'cmp) t
+val empty : ('a, 'cmp) Comparator.Module.t -> ('a, 'b, 'cmp) t
 
 (** Map with one (key, data) pair. *)
-val singleton : ('a, 'cmp) comparator -> 'a -> 'b -> ('a, 'b, 'cmp) t
+val singleton : ('a, 'cmp) Comparator.Module.t -> 'a -> 'b -> ('a, 'b, 'cmp) t
 
 
 (** Creates map from an association list with unique keys. *)
 val of_alist
-  :  ('a, 'cmp) comparator
+  :  ('a, 'cmp) Comparator.Module.t
   -> ('a * 'b) list
   -> [ `Ok of ('a, 'b, 'cmp) t | `Duplicate_key of 'a ]
 
 (** Creates map from an association list with unique keys. Returns an error if duplicate
     ['a] keys are found. *)
 val of_alist_or_error
-  :  ('a, 'cmp) comparator
+  :  ('a, 'cmp) Comparator.Module.t
   -> ('a * 'b) list
   -> ('a, 'b, 'cmp) t Or_error.t
 
 (** Creates map from an association list with unique keys. Raises an exception if
     duplicate ['a] keys are found. *)
-val of_alist_exn : ('a, 'cmp) comparator -> ('a * 'b) list -> ('a, 'b, 'cmp) t
+val of_alist_exn : ('a, 'cmp) Comparator.Module.t -> ('a * 'b) list -> ('a, 'b, 'cmp) t
 
 (** [of_hashtbl_exn] creates a map from bindings present in a hash table.
     [of_hashtbl_exn] raises if there are distinct keys [a1] and [a2] in the table with
@@ -82,15 +82,21 @@ val of_alist_exn : ('a, 'cmp) comparator -> ('a * 'b) list -> ('a, 'b, 'cmp) t
     function is different than [comparator.compare]. In the common case, the comparison
     is the same, in which case [of_hashtbl_exn] does not raise, regardless of the keys
     present in the table. *)
-val of_hashtbl_exn : ('a, 'cmp) comparator -> ('a, 'b) Hashtbl.t -> ('a, 'b, 'cmp) t
+val of_hashtbl_exn
+  :  ('a, 'cmp) Comparator.Module.t
+  -> ('a, 'b) Hashtbl.t
+  -> ('a, 'b, 'cmp) t
 
 (** Creates map from an association list with possibly repeated keys. *)
-val of_alist_multi : ('a, 'cmp) comparator -> ('a * 'b) list -> ('a, 'b list, 'cmp) t
+val of_alist_multi
+  :  ('a, 'cmp) Comparator.Module.t
+  -> ('a * 'b) list
+  -> ('a, 'b list, 'cmp) t
 
 (** Combines an association list into a map, folding together bound values with common
     keys. *)
 val of_alist_fold
-  :  ('a, 'cmp) comparator
+  :  ('a, 'cmp) Comparator.Module.t
   -> ('a * 'b) list
   -> init:'c
   -> f:('c -> 'b -> 'c)
@@ -99,7 +105,7 @@ val of_alist_fold
 (** Combines an association list into a map, reducing together bound values with common
     keys. *)
 val of_alist_reduce
-  :  ('a, 'cmp) comparator
+  :  ('a, 'cmp) Comparator.Module.t
   -> ('a * 'b) list
   -> f:('b -> 'b -> 'b)
   -> ('a, 'b, 'cmp) t
@@ -109,14 +115,14 @@ val of_alist_reduce
     into a map: [of_iteri (module String) ~iteri:(Hashtbl.iteri table)]. It is faster than
     adding the elements one by one. *)
 val of_iteri
-  :  ('a, 'cmp) comparator
-  -> iteri:(f:(key:'a -> data:'b -> unit) -> unit)
+  :  ('a, 'cmp) Comparator.Module.t
+  -> iteri:((f:((key:'a -> data:'b -> unit)[@local]) -> unit)[@local])
   -> [ `Ok of ('a, 'b, 'cmp) t | `Duplicate_key of 'a ]
 
 (** Like [of_iteri] except that it raises an exception if duplicate ['a] keys are found. *)
 val of_iteri_exn
-  :  ('a, 'cmp) comparator
-  -> iteri:(f:(key:'a -> data:'b -> unit) -> unit)
+  :  ('a, 'cmp) Comparator.Module.t
+  -> iteri:((f:((key:'a -> data:'b -> unit)[@local]) -> unit)[@local])
   -> ('a, 'b, 'cmp) t
 
 (**
@@ -156,7 +162,7 @@ val to_tree : ('k, 'v, 'cmp) t -> ('k, 'v, 'cmp) Tree.t
 
 (** Creates a [t] from a [Tree.t] and a [Comparator.t].  This is an O(n) operation as it
     must discover the length of the [Tree.t]. *)
-val of_tree : ('k, 'cmp) comparator -> ('k, 'v, 'cmp) Tree.t -> ('k, 'v, 'cmp) t
+val of_tree : ('k, 'cmp) Comparator.Module.t -> ('k, 'v, 'cmp) Tree.t -> ('k, 'v, 'cmp) t
 
 (** {2 More interface} *)
 
@@ -165,14 +171,14 @@ val of_tree : ('k, 'cmp) comparator -> ('k, 'v, 'cmp) Tree.t -> ('k, 'v, 'cmp) t
     not contain any duplicate keys.  If either of these conditions does not hold, an error
     is returned.  *)
 val of_sorted_array
-  :  ('a, 'cmp) comparator
+  :  ('a, 'cmp) Comparator.Module.t
   -> ('a * 'b) array
   -> ('a, 'b, 'cmp) t Or_error.t
 
 (** Like [of_sorted_array] except it returns a map with broken invariants when an [Error]
     would have been returned. *)
 val of_sorted_array_unchecked
-  :  ('a, 'cmp) comparator
+  :  ('a, 'cmp) Comparator.Module.t
   -> ('a * 'b) array
   -> ('a, 'b, 'cmp) t
 
@@ -182,7 +188,7 @@ val of_sorted_array_unchecked
     you to allocate an intermediate array. [f] will be called with 0, 1, ... [len - 1],
     in order. *)
 val of_increasing_iterator_unchecked
-  :  ('a, 'cmp) comparator
+  :  ('a, 'cmp) Comparator.Module.t
   -> len:int
   -> f:(int -> 'a * 'b)
   -> ('a, 'b, 'cmp) t
@@ -193,7 +199,7 @@ val of_increasing_iterator_unchecked
     The sequence will be folded over once, and the additional time complexity is O(n).
 *)
 val of_increasing_sequence
-  :  ('k, 'cmp) comparator
+  :  ('k, 'cmp) Comparator.Module.t
   -> ('k * 'v) Sequence.t
   -> ('k, 'v, 'cmp) t Or_error.t
 
@@ -205,7 +211,7 @@ val of_increasing_sequence
     If your sequence is increasing, use {!of_increasing_sequence} for better performance.
 *)
 val of_sequence
-  :  ('k, 'cmp) comparator
+  :  ('k, 'cmp) Comparator.Module.t
   -> ('k * 'v) Sequence.t
   -> [ `Ok of ('k, 'v, 'cmp) t | `Duplicate_key of 'k ]
 
@@ -216,7 +222,7 @@ val of_sequence
     but does not allocate the intermediate list.
 *)
 val of_sequence_or_error
-  :  ('a, 'cmp) comparator
+  :  ('a, 'cmp) Comparator.Module.t
   -> ('a * 'b) Sequence.t
   -> ('a, 'b, 'cmp) t Or_error.t
 
@@ -226,7 +232,10 @@ val of_sequence_or_error
     [of_sequence_exn c seq] behaves like [of_alist_exn c (Sequence.to_list seq)] but
     does not allocate the intermediate list.
 *)
-val of_sequence_exn : ('a, 'cmp) comparator -> ('a * 'b) Sequence.t -> ('a, 'b, 'cmp) t
+val of_sequence_exn
+  :  ('a, 'cmp) Comparator.Module.t
+  -> ('a * 'b) Sequence.t
+  -> ('a, 'b, 'cmp) t
 
 (** Creates a map from an association sequence with possibly repeated keys. The values in
     the map for a given key appear in the same order as they did in the association
@@ -236,7 +245,7 @@ val of_sequence_exn : ('a, 'cmp) comparator -> ('a * 'b) Sequence.t -> ('a, 'b, 
     does not allocate the intermediate list.
 *)
 val of_sequence_multi
-  :  ('a, 'cmp) comparator
+  :  ('a, 'cmp) Comparator.Module.t
   -> ('a * 'b) Sequence.t
   -> ('a, 'b list, 'cmp) t
 
@@ -247,7 +256,7 @@ val of_sequence_multi
     but does not allocate the intermediate list.
 *)
 val of_sequence_fold
-  :  ('a, 'cmp) comparator
+  :  ('a, 'cmp) Comparator.Module.t
   -> ('a * 'b) Sequence.t
   -> init:'c
   -> f:('c -> 'b -> 'c)
@@ -260,7 +269,7 @@ val of_sequence_fold
     but does not allocate the intermediate list.
 *)
 val of_sequence_reduce
-  :  ('a, 'cmp) comparator
+  :  ('a, 'cmp) Comparator.Module.t
   -> ('a * 'b) Sequence.t
   -> f:('b -> 'b -> 'b)
   -> ('a, 'b, 'cmp) t
@@ -348,15 +357,15 @@ val mem : ('k, _, 'cmp) t -> 'k -> bool
 
 (** [iter_keys t ~f] calls [f] on every key in the map, going in order from the smallest
     to the largest keys.  *)
-val iter_keys : ('k, _, _) t -> f:('k -> unit) -> unit
+val iter_keys : ('k, _, _) t -> f:(('k -> unit)[@local]) -> unit
 
 (** [iter t ~f] calls [f] on every element in the map, going in order from the smallest
     to the largest keys.  *)
-val iter : (_, 'v, _) t -> f:('v -> unit) -> unit
+val iter : (_, 'v, _) t -> f:(('v -> unit)[@local]) -> unit
 
 (** [iteri t ~f] calls [f] on every key and element in the map, going in order from the
     smallest to the largest keys.  *)
-val iteri : ('k, 'v, _) t -> f:(key:'k -> data:'v -> unit) -> unit
+val iteri : ('k, 'v, _) t -> f:((key:'k -> data:'v -> unit)[@local]) -> unit
 
 module Continue_or_stop : sig
   type t = Base.Map.Continue_or_stop.t =
@@ -421,20 +430,20 @@ val mapi : ('k, 'v1, 'cmp) t -> f:(key:'k -> data:'v1 -> 'v2) -> ('k, 'v2, 'cmp)
 
 (** Convert map with keys of type ['k1] to a map with keys of type ['k2] using [f]. *)
 val map_keys
-  :  ('k2, 'cmp2) comparator
+  :  ('k2, 'cmp2) Comparator.Module.t
   -> ('k1, 'v, 'cmp1) t
   -> f:('k1 -> 'k2)
   -> [ `Ok of ('k2, 'v, 'cmp2) t | `Duplicate_key of 'k2 ]
 
 (** Like [map_keys], but raises on duplicate key. *)
 val map_keys_exn
-  :  ('k2, 'cmp2) comparator
+  :  ('k2, 'cmp2) Comparator.Module.t
   -> ('k1, 'v, 'cmp1) t
   -> f:('k1 -> 'k2)
   -> ('k2, 'v, 'cmp2) t
 
 (** Folds over keys and data in map in increasing order of key. *)
-val fold : ('k, 'v, _) t -> init:'a -> f:(key:'k -> data:'v -> 'a -> 'a) -> 'a
+val fold : ('k, 'v, _) t -> init:'a -> f:((key:'k -> data:'v -> 'a -> 'a)[@local]) -> 'a
 
 (** Folds over keys and data in the map in increasing order of [key], until the first
     time that [f] returns [Stop _]. If [f] returns [Stop final], this function returns
@@ -443,19 +452,25 @@ val fold : ('k, 'v, _) t -> init:'a -> f:(key:'k -> data:'v -> 'a -> 'a) -> 'a
 val fold_until
   :  ('k, 'v, _) t
   -> init:'acc
-  -> f:(key:'k -> data:'v -> 'acc -> ('acc, 'final) Container.Continue_or_stop.t)
-  -> finish:('acc -> 'final)
+  -> f:
+       ((key:'k -> data:'v -> 'acc -> ('acc, 'final) Container.Continue_or_stop.t)
+        [@local])
+  -> finish:(('acc -> 'final)[@local])
   -> 'final
 
 (** Folds over keys and data in map in decreasing order of key. *)
-val fold_right : ('k, 'v, _) t -> init:'a -> f:(key:'k -> data:'v -> 'a -> 'a) -> 'a
+val fold_right
+  :  ('k, 'v, _) t
+  -> init:'a
+  -> f:((key:'k -> data:'v -> 'a -> 'a)[@local])
+  -> 'a
 
 (** Folds over two maps side by side, like [iter2]. *)
 val fold2
   :  ('k, 'v1, 'cmp) t
   -> ('k, 'v2, 'cmp) t
   -> init:'a
-  -> f:(key:'k -> data:('v1, 'v2) Merge_element.t -> 'a -> 'a)
+  -> f:((key:'k -> data:('v1, 'v2) Merge_element.t -> 'a -> 'a)[@local])
   -> 'a
 
 (** [filter], [filteri], [filter_keys], [filter_map], and [filter_mapi] run in O(n * lg n)
@@ -635,9 +650,9 @@ val transpose_keys
 (** The following functions have the same semantics as similar functions in
     {!Core.List}. *)
 
-val for_all : ('k, 'v, _) t -> f:('v -> bool) -> bool
+val for_all : ('k, 'v, _) t -> f:(('v -> bool)[@local]) -> bool
 val for_alli : ('k, 'v, _) t -> f:(key:'k -> data:'v -> bool) -> bool
-val exists : ('k, 'v, _) t -> f:('v -> bool) -> bool
+val exists : ('k, 'v, _) t -> f:(('v -> bool)[@local]) -> bool
 val existsi : ('k, 'v, _) t -> f:(key:'k -> data:'v -> bool) -> bool
 val count : ('k, 'v, _) t -> f:('v -> bool) -> int
 val counti : ('k, 'v, _) t -> f:(key:'k -> data:'v -> bool) -> int
@@ -814,6 +829,21 @@ val binary_search_subrange
   -> upper_bound:'bound Maybe_bound.t
   -> ('k, 'v, 'cmp) t
 
+(** Creates traversals to reconstruct a map within an applicative. Uses
+    [Lazy_applicative] so that the map can be traversed within the applicative, rather
+    than needing to be traversed all at once, outside the applicative. *)
+module Make_applicative_traversals (A : Applicative.Lazy_applicative) : sig
+  val mapi
+    :  ('k, 'v1, 'cmp) t
+    -> f:(key:'k -> data:'v1 -> 'v2 A.t)
+    -> ('k, 'v2, 'cmp) t A.t
+
+  val filter_mapi
+    :  ('k, 'v1, 'cmp) t
+    -> f:(key:'k -> data:'v1 -> 'v2 option A.t)
+    -> ('k, 'v2, 'cmp) t A.t
+end
+
 
 (** Convert a set to a map. Runs in [O(length t)] time plus a call to [f] for each key to
     compute the associated data. *)
@@ -824,7 +854,7 @@ val key_set : ('key, _, 'cmp) t -> ('key, 'cmp) Base.Set.t
 
 
 val quickcheck_generator
-  :  ('k, 'cmp) comparator
+  :  ('k, 'cmp) Comparator.Module.t
   -> 'k Quickcheck.Generator.t
   -> 'v Quickcheck.Generator.t
   -> ('k, 'v, 'cmp) t Quickcheck.Generator.t
