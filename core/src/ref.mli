@@ -30,6 +30,6 @@ module Permissioned : sig
   val of_ref : 'a ref -> ('a, [< read_write ]) t
   val to_ref : ('a, [> read_write ]) t -> 'a ref
   val swap : ('a, [> read_write ]) t -> ('a, [> read_write ]) t -> unit
-  val replace : ('a, [> read_write ]) t -> ('a -> 'a) -> unit
-  val set_temporarily : ('a, [> read_write ]) t -> 'a -> f:(unit -> 'b) -> 'b
+  val replace : ('a, [> read_write ]) t -> (('a -> 'a)[@local]) -> unit
+  val set_temporarily : ('a, [> read_write ]) t -> 'a -> f:((unit -> 'b)[@local]) -> 'b
 end

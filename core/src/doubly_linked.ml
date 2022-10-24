@@ -681,6 +681,8 @@ let first_elt t = !t
 let last_elt t = Option.map ~f:Elt.prev !t
 let first t = Option.map ~f:Elt.value (first_elt t)
 let last t = Option.map ~f:Elt.value (last_elt t)
+let first_exn (t : 'a t) = Option.value_exn !t |> Elt.value
+let last_exn (t : 'a t) = Option.value_exn !t |> Elt.prev |> Elt.value
 
 let is_first t elt =
   match !t with

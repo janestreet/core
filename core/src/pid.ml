@@ -48,6 +48,16 @@ let of_string string = ensure (Int.of_string string)
 let to_string = Int.to_string
 let init = of_int 1
 
+include
+  Quickcheckable.Of_quickcheckable_filtered
+    (Int)
+    (struct
+      type nonrec t = t
+
+      let of_quickcheckable n = Option.some_if (n > 0) n
+      let to_quickcheckable = to_int
+    end)
+
 include Identifiable.Make_using_comparator (struct
     type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
     type nonrec comparator_witness = comparator_witness

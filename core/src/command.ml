@@ -1629,17 +1629,19 @@ module Base = struct
       }
     ;;
 
-    let map x ~f =
+    let map_outcome x ~f =
       { f =
           (fun () ->
              x.f ()
              >>| fun x () ->
              let x_outcome = x () in
-             Parsing_outcome.map x_outcome ~f)
+             f x_outcome)
       ; flags = x.flags
       ; usage = x.usage
       }
     ;;
+
+    let map x ~f = map_outcome x ~f:(Parsing_outcome.map ~f)
 
     let lookup key =
       { f =
@@ -1986,16 +1988,18 @@ module Base = struct
           ~new_behavior:false
           ~if_nothing_chosen
           (List.map ts ~f:(fun t ->
-             recover_from_missing_required_flags t
-             |> map ~f:(fun { Parsing_outcome.result; has_arg = _ } ->
+             map_outcome t ~f:(fun { Parsing_outcome.result; has_arg } ->
                match result with
-               | Ok (Some value) -> Ok value
+               | Ok (Some value) ->
+                 { Parsing_outcome.result = Ok value; has_arg = true }
                | Ok None ->
-                 Error
-                   (`Missing_required_flags
-                      (Error.of_string "missing required flag"))
-               | Error _ as err -> err)
-             |> introduce_missing_required_flags))
+                 { has_arg = false
+                 ; result =
+                     Error
+                       (`Missing_required_flags
+                          (Error.of_string "missing required flag"))
+                 }
+               | Error _ as result -> { has_arg; result })))
       ;;
     end
 

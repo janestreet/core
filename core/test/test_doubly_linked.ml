@@ -224,6 +224,12 @@ let%expect_test _ =
 ;;
 
 let%expect_test _ =
+  let t = of_list [ 1; 2 ] in
+  require_does_not_raise [%here] (fun _ -> [%test_result: int] ~expect:1 (first_exn t));
+  require_does_not_raise [%here] (fun _ -> [%test_result: int] ~expect:2 (last_exn t))
+;;
+
+let%expect_test _ =
   let l1 = of_list [ 1; 2; 3 ] in
   let l2 = copy l1 in
   transfer ~src:l2 ~dst:l1;

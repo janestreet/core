@@ -174,6 +174,10 @@ module type Date0 = sig
   val weekdays_between : min:t -> max:t -> t list
   val previous_weekday : t -> t
   val following_weekday : t -> t
+  val round_forward_to_weekday : t -> t
+  val round_backward_to_weekday : t -> t
+  val round_forward_to_business_day : t -> is_holiday:(t -> bool) -> t
+  val round_backward_to_business_day : t -> is_holiday:(t -> bool) -> t
 
   (** [first_strictly_after t ~on:day_of_week] returns the first occurrence of [day_of_week]
       strictly after [t]. *)

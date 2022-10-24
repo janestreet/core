@@ -1,10 +1,13 @@
 (** A ['a Set_once.t] is like an ['a option ref] that can only be set once.  A
     [Set_once.t] starts out as [None], the first [set] transitions it to [Some], and
-    subsequent [set]s fail. *)
+    subsequent [set]s fail.
+
+    Equality is determined only by the internal value and not the source code position
+    of where the value was set. *)
 
 open! Import
 
-type 'a t [@@deriving sexp_of]
+type 'a t [@@deriving compare, equal, sexp_of]
 
 (** Passes when unset. *)
 include Invariant.S1 with type 'a t := 'a t

@@ -69,6 +69,8 @@ module type S = sig
   val last_elt : 'a t -> 'a Elt.t option
   val first : 'a t -> 'a option
   val last : 'a t -> 'a option
+  val first_exn : 'a t -> 'a
+  val last_exn : 'a t -> 'a
 
   (** {2 Constant-time retrieval of next or previous element} *)
 

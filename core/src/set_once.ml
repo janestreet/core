@@ -3,10 +3,11 @@ module Stable = struct
 
   module T = struct
     type 'a t =
-      { mutable value : 'a option
+      { mutable value : 'a Option.t
       ; mutable set_at : Source_code_position.Stable.V1.t
+                         [@compare.ignore] [@equal.ignore]
       }
-    [@@deriving fields]
+    [@@deriving compare, equal, fields]
   end
 
   module V1 = struct
@@ -49,7 +50,7 @@ open! Import
 module Unstable = Stable.V1
 open Stable.T
 
-type 'a t = 'a Stable.T.t
+type 'a t = 'a Stable.T.t [@@deriving compare, equal]
 
 let sexp_of_t sexp_of_a { value; set_at } =
   match value with
