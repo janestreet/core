@@ -670,7 +670,7 @@ module _ = struct
 
   let%test_module "overflow silently" =
     (module struct
-      let doesn't_raise = Fn.non Exn.does_raise
+      let doesn't_raise = Fn.non (Exn.does_raise :> _ -> _)
 
       let%test "+ range up" =
         doesn't_raise (fun () -> max_value_for_1us_rounding + nanosecond)

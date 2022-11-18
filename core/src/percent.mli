@@ -190,8 +190,6 @@ module Stable : sig
       [@@deriving
         sexp, sexp_grammar, bin_io, compare, hash, equal, typerep, stable_witness]
     end
-
-    include module type of Bin_shape_same_as_float
   end
 
   module V2 : sig
@@ -205,8 +203,6 @@ module Stable : sig
       module Bin_shape_same_as_float : sig
         type t = Option.t [@@deriving bin_io, compare, hash, sexp, stable_witness]
       end
-
-      include module type of Bin_shape_same_as_float
     end
 
     module V2 : sig

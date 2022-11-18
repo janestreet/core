@@ -295,8 +295,9 @@ module type Command = sig
       val sexp_conv : ?complete:Auto_complete.t -> (Sexp.t -> 'a) -> 'a t
     end
 
+    val auto_complete : _ t -> Auto_complete.t
+
     module For_testing : sig
-      val complete : _ t -> Auto_complete.t
       val parse : 'a t -> string -> 'a Or_error.t
     end
   end

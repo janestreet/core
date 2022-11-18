@@ -212,8 +212,9 @@ module Arg_type : sig
     val sexp_conv : ?complete:Auto_complete.t -> (Sexp.t -> 'a) -> 'a t
   end
 
+  val auto_complete : _ t -> Auto_complete.t
+
   module For_testing : sig
-    val complete : _ t -> Auto_complete.t
     val parse : 'a t -> string -> 'a Or_error.t
   end
 end = struct
@@ -498,13 +499,13 @@ end = struct
     let sexp_conv = sexp_conv
   end
 
-  module For_testing = struct
-    let complete t =
-      match t.complete with
-      | Some f -> f
-      | None -> fun _ ~part:_ -> []
-    ;;
+  let auto_complete t =
+    match t.complete with
+    | Some f -> f
+    | None -> fun _ ~part:_ -> []
+  ;;
 
+  module For_testing = struct
     let parse t str = parse t str |> Or_error.of_exn_result
   end
 end
@@ -938,6 +939,7 @@ module Anons = struct
     val one : string -> t
     val many : t -> t
     val maybe : t -> t
+    val maybe_idempotent : t -> t
     val concat : t list -> t
     val ad_hoc : usage:string -> t
 
@@ -996,6 +998,13 @@ module Anons = struct
 
     let maybe = function
       | Zero -> Zero (* strange, but not non-sense *)
+      | t -> Maybe t
+    ;;
+
+    let maybe_idempotent = function
+      | Zero -> Zero (* strange, but not non-sense *)
+      | Maybe t -> Maybe t
+      | Many t -> Many t
       | t -> Maybe t
     ;;
 
@@ -1819,9 +1828,16 @@ module Base = struct
       end)
 
     let arg_names t =
-      let flag_names = Map.keys (Flag.Internal.create (t.flags ())) in
+      let flags = Flag.Internal.create (t.flags ()) in
+      let flag_names = Map.keys flags in
       let anon_names = Anons.Grammar.names (t.usage ()) in
       List.concat [ flag_names; anon_names ]
+    ;;
+
+    let required_arg_names t =
+      let flags = Flag.Internal.create (t.flags ()) in
+      List.filter_map (Map.to_alist flags) ~f:(fun (name, flag) ->
+        if flag.num_occurrences.at_least_once then Some name else None)
     ;;
 
     module Choose_one = struct
@@ -1835,16 +1851,23 @@ module Base = struct
         val to_string : t -> string
         val list_to_string : t list -> string
         val create_exn : 'a param -> t
-        val length : t -> int
+        val enumerate_required_flags : t -> except:string -> string option
       end = struct
         module T = struct
-          type t = string list [@@deriving compare, sexp_of]
+          type t =
+            { all_args : string list
+            ; required_args : string list
+            }
+          [@@deriving compare]
+
+          let sexp_of_t t = [%sexp (t.all_args : string list)]
         end
 
         include T
         include Comparator.Make (T)
 
         let create_exn param =
+          let required_args = required_arg_names param in
           let names = arg_names param in
           let names_with_commas = List.filter names ~f:(fun s -> String.contains s ',') in
           if not (List.is_empty names_with_commas)
@@ -1859,11 +1882,21 @@ module Base = struct
           | [] ->
             raise_s
               [%message "[choose_one] expects choices to read command-line arguments."]
-          | _ :: _ -> names
+          | _ :: _ -> { all_args = names; required_args }
         ;;
 
-        let to_string = String.concat ~sep:","
-        let length = List.length
+        let to_string t =
+          match t.required_args with
+          | [] -> String.concat ~sep:"," t.all_args
+          | _ :: _ -> String.concat ~sep:"," t.required_args
+        ;;
+
+        let enumerate_required_flags t ~except =
+          match List.filter t.required_args ~f:(fun x -> not (String.equal except x)) with
+          | [] -> None
+          | _ :: _ as l -> Some (String.concat ~sep:"," l)
+        ;;
+
         let list_to_string ts = List.map ts ~f:to_string |> String.concat ~sep:"\n  "
       end
 
@@ -1890,19 +1923,25 @@ module Base = struct
                   { flag.Flag.Internal.num_occurrences with at_least_once = false }
               }
             and fix_doc flag =
-              if Choice_name.length name_of_the_group > 1
-              then
-                { flag with
-                  Flag.Internal.doc =
-                    sprintf
-                      "%s [all or none in \"%s\"]"
-                      flag.Flag.Internal.doc
-                      (Choice_name.to_string name_of_the_group)
-                }
-              else flag
+              { flag with
+                Flag.Internal.doc =
+                  sprintf
+                    "%s%s"
+                    flag.Flag.Internal.doc
+                    (match
+                       Choice_name.enumerate_required_flags
+                         ~except:flag.name
+                         name_of_the_group
+                     with
+                     | None -> ""
+                     | Some group -> sprintf " [requires: \"%s\"]" group)
+              }
+            and make_anons_optional (anon : Anons.Grammar.t) =
+              Anons.Grammar.maybe_idempotent anon
             in
             { t with
-              flags =
+              usage = (fun () -> make_anons_optional (t.usage ()))
+            ; flags =
                 (fun () ->
                    List.map (t.flags ()) ~f:(fun flag_internal ->
                      flag_internal |> fix_num_occurrences |> fix_doc))
