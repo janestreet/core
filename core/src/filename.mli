@@ -117,7 +117,7 @@ val dirname : string -> string
 (** Returns the absolute path by prepending [relative_to] if the path is not already
     absolute.
 
-    Using the result of [Core_unix.getcwd] as [relative_to] is often a reasonable choice.
+    Using the result of [Sys_unix.getcwd] as [relative_to] is often a reasonable choice.
 
     Note that [to_absolute_exn] may return a non-canonical path (e.g. /foo/bar/../baz).
 
