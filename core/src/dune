@@ -1,5 +1,5 @@
 (rule (targets config.h) (deps)
- (action (bash "cp %{lib:jst-config:config.h} .")))
+ (action (bash "cp '%{lib:jst-config:config.h}' .")))
 
 (library (name core) (public_name core) (install_c_headers time_ns_stubs)
  (libraries base base_bigstring base_for_tests base_quickcheck bin_prot
