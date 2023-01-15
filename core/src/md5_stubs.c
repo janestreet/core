@@ -6,10 +6,14 @@
 #include <caml/signals.h>
 #include <core_params.h>
 #include <errno.h>
+#ifndef _MSC_VER
 #include <unistd.h>
+#endif
 
 #if __GNUC__ < 8
+#ifndef _MSC_VER
 #pragma GCC diagnostic ignored "-pedantic"
+#endif
 #endif
 #include <caml/md5.h>
 #include <caml/sys.h>
