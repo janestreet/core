@@ -4,12 +4,16 @@
 #include <caml/mlvalues.h>
 #include <caml/signals.h>
 #include <core_params.h>
+#ifndef _MSC_VER
 #include <errno.h>
+#endif
 #include <unistd.h>
 
 #define CAML_INTERNALS
 #if __GNUC__ < 8
+#ifndef _MSC_VER
 #pragma GCC diagnostic ignored "-pedantic"
+#endif
 #endif
 #include <caml/md5.h>
 #include <caml/sys.h>
