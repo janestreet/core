@@ -97,7 +97,7 @@ module Extend (Info : Base.Info.S) = struct
   module Stable = struct
     module V2 = struct
       module T = struct
-        type t = Info.t [@@deriving sexp, compare, hash]
+        type t = Info.t [@@deriving sexp, sexp_grammar, compare, hash]
       end
 
       include T

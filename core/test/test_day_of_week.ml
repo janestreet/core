@@ -38,3 +38,75 @@ let%test "num_days is inverse to shift" =
     let i = num_days ~from ~to_ in
     Int.(0 <= i && i < num_days_in_week) && shift from i = to_)
 ;;
+
+let%expect_test "validate sexp grammar" =
+  Sexp_grammar_validation.validate_grammar (module Day_of_week) |> require_ok [%here];
+  [%expect
+    {|
+    (Variant
+     ((case_sensitivity Case_insensitive)
+      (clauses
+       ((Tag
+         ((key sexp_grammar.completion-suggested)
+          (value false)
+          (grammar (No_tag ((name 0) (clause_kind Atom_clause))))))
+        (Tag
+         ((key sexp_grammar.completion-suggested)
+          (value false)
+          (grammar (No_tag ((name 1) (clause_kind Atom_clause))))))
+        (Tag
+         ((key sexp_grammar.completion-suggested)
+          (value false)
+          (grammar (No_tag ((name 2) (clause_kind Atom_clause))))))
+        (Tag
+         ((key sexp_grammar.completion-suggested)
+          (value false)
+          (grammar (No_tag ((name 3) (clause_kind Atom_clause))))))
+        (Tag
+         ((key sexp_grammar.completion-suggested)
+          (value false)
+          (grammar (No_tag ((name 4) (clause_kind Atom_clause))))))
+        (Tag
+         ((key sexp_grammar.completion-suggested)
+          (value false)
+          (grammar (No_tag ((name 5) (clause_kind Atom_clause))))))
+        (Tag
+         ((key sexp_grammar.completion-suggested)
+          (value false)
+          (grammar (No_tag ((name 6) (clause_kind Atom_clause))))))
+        (No_tag ((name SUN) (clause_kind Atom_clause)))
+        (No_tag ((name MON) (clause_kind Atom_clause)))
+        (No_tag ((name TUE) (clause_kind Atom_clause)))
+        (No_tag ((name WED) (clause_kind Atom_clause)))
+        (No_tag ((name THU) (clause_kind Atom_clause)))
+        (No_tag ((name FRI) (clause_kind Atom_clause)))
+        (No_tag ((name SAT) (clause_kind Atom_clause)))
+        (Tag
+         ((key sexp_grammar.completion-suggested)
+          (value false)
+          (grammar (No_tag ((name Sunday) (clause_kind Atom_clause))))))
+        (Tag
+         ((key sexp_grammar.completion-suggested)
+          (value false)
+          (grammar (No_tag ((name Monday) (clause_kind Atom_clause))))))
+        (Tag
+         ((key sexp_grammar.completion-suggested)
+          (value false)
+          (grammar (No_tag ((name Tuesday) (clause_kind Atom_clause))))))
+        (Tag
+         ((key sexp_grammar.completion-suggested)
+          (value false)
+          (grammar (No_tag ((name Wednesday) (clause_kind Atom_clause))))))
+        (Tag
+         ((key sexp_grammar.completion-suggested)
+          (value false)
+          (grammar (No_tag ((name Thursday) (clause_kind Atom_clause))))))
+        (Tag
+         ((key sexp_grammar.completion-suggested)
+          (value false)
+          (grammar (No_tag ((name Friday) (clause_kind Atom_clause))))))
+        (Tag
+         ((key sexp_grammar.completion-suggested)
+          (value false)
+          (grammar (No_tag ((name Saturday) (clause_kind Atom_clause)))))))))) |}]
+;;

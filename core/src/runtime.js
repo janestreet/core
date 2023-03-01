@@ -39,11 +39,6 @@ function core_gc_top_heap_words () { return 0 }
 //Provides: core_gc_run_memprof_callbacks
 function core_gc_run_memprof_callbacks () { return 0 }
 
-//Provides: core_heap_block_is_heap_block
-function core_heap_block_is_heap_block(x){
-  return +(x instanceof Array);
-}
-
 //Provides: core_md5_fd
 //Requires: caml_ml_open_descriptor_in, caml_md5_chan, caml_ml_close_channel
 function core_md5_fd(fd){

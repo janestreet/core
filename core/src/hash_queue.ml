@@ -293,7 +293,7 @@ module Make_backend (Table : Hashtbl_intf.Hashtbl) : S_backend = struct
           f v;
           loop ()
       in
-      loop ()
+      loop () [@nontail]
     ;;
 
     let remove t k =

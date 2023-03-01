@@ -32,9 +32,9 @@ module Int : sig
   include Blit.S with type t := t
 
   external unsafe_blit
-    :  src:t
+    :  src:(t[@local_opt])
     -> src_pos:int
-    -> dst:t
+    -> dst:(t[@local_opt])
     -> dst_pos:int
     -> len:int
     -> unit
@@ -48,9 +48,9 @@ module Float : sig
   include Blit.S with type t := t
 
   external unsafe_blit
-    :  src:t
+    :  src:(t[@local_opt])
     -> src_pos:int
-    -> dst:t
+    -> dst:(t[@local_opt])
     -> dst_pos:int
     -> len:int
     -> unit
@@ -92,9 +92,9 @@ module Permissioned : sig
     include Blit.S_permissions with type 'perms t := 'perms t
 
     external unsafe_blit
-      :  src:[> read ] t
+      :  src:([> read ] t[@local_opt])
       -> src_pos:int
-      -> dst:[> write ] t
+      -> dst:([> write ] t[@local_opt])
       -> dst_pos:int
       -> len:int
       -> unit
@@ -107,10 +107,36 @@ module Permissioned : sig
 
     include Blit.S_permissions with type 'perms t := 'perms t
 
+    external get
+      :  ([> read ] t[@local_opt])
+      -> (int[@local_opt])
+      -> float
+      = "%floatarray_safe_get"
+
+    external set
+      :  ([> write ] t[@local_opt])
+      -> (int[@local_opt])
+      -> (float[@local_opt])
+      -> unit
+      = "%floatarray_safe_set"
+
+    external unsafe_get
+      :  ([> read ] t[@local_opt])
+      -> (int[@local_opt])
+      -> float
+      = "%floatarray_unsafe_get"
+
+    external unsafe_set
+      :  ([> read ] t[@local_opt])
+      -> (int[@local_opt])
+      -> (float[@local_opt])
+      -> unit
+      = "%floatarray_unsafe_set"
+
     external unsafe_blit
-      :  src:[> read ] t
+      :  src:([> read ] t[@local_opt])
       -> src_pos:int
-      -> dst:[> write ] t
+      -> dst:([> write ] t[@local_opt])
       -> dst_pos:int
       -> len:int
       -> unit
@@ -148,7 +174,10 @@ module Permissioned : sig
       [to_sequence_immutable] does not need to copy [t] since it is immutable. *)
   val to_sequence_immutable : ('a, [> immutable ]) t -> 'a Sequence.t
 
-  include Container.S1_permissions with type ('a, 'perms) t := ('a, 'perms) t
+  include
+    Indexed_container.S1_with_creators_permissions
+    with type ('a, 'perms) t := ('a, 'perms) t
+
   include Blit.S1_permissions with type ('a, 'perms) t := ('a, 'perms) t
   include Binary_searchable.S1_permissions with type ('a, 'perms) t := ('a, 'perms) t
 
@@ -160,11 +189,34 @@ module Permissioned : sig
 
   (** counterparts of regular array functions above *)
 
-  external get : ('a, [> read ]) t -> int -> 'a = "%array_safe_get"
-  external set : ('a, [> write ]) t -> int -> 'a -> unit = "%array_safe_set"
-  external unsafe_get : ('a, [> read ]) t -> int -> 'a = "%array_unsafe_get"
-  external unsafe_set : ('a, [> write ]) t -> int -> 'a -> unit = "%array_unsafe_set"
+  external get
+    :  (('a, [> read ]) t[@local_opt])
+    -> (int[@local_opt])
+    -> 'a
+    = "%array_safe_get"
+
+  external set
+    :  (('a, [> write ]) t[@local_opt])
+    -> (int[@local_opt])
+    -> 'a
+    -> unit
+    = "%array_safe_set"
+
+  external unsafe_get
+    :  (('a, [> read ]) t[@local_opt])
+    -> (int[@local_opt])
+    -> 'a
+    = "%array_unsafe_get"
+
+  external unsafe_set
+    :  (('a, [> write ]) t[@local_opt])
+    -> (int[@local_opt])
+    -> 'a
+    -> unit
+    = "%array_unsafe_set"
+
   val create : len:int -> 'a -> ('a, [< _ perms ]) t
+  val create_local : len:int -> 'a -> (('a, [< _ perms ]) t[@local])
   val create_float_uninitialized : len:int -> (float, [< _ perms ]) t
   val init : int -> f:((int -> 'a)[@local]) -> ('a, [< _ perms ]) t
   val make_matrix : dimx:int -> dimy:int -> 'a -> (('a, [< _ perms ]) t, [< _ perms ]) t
@@ -187,6 +239,12 @@ module Permissioned : sig
     -> f:(('b -> 'a -> 'b * 'c)[@local])
     -> ('c, [< _ perms ]) t
 
+  val fold_map
+    :  ('a, [> read ]) t
+    -> init:'b
+    -> f:(('b -> 'a -> 'b * 'c)[@local])
+    -> 'b * ('c, [< _ perms ]) t
+
   val iteri : ('a, [> read ]) t -> f:((int -> 'a -> unit)[@local]) -> unit
   val foldi : ('a, [> read ]) t -> init:'b -> f:((int -> 'b -> 'a -> 'b)[@local]) -> 'b
 
@@ -196,11 +254,13 @@ module Permissioned : sig
     -> f:((int -> 'b -> 'a -> 'b * 'c)[@local])
     -> ('c, [< _ perms ]) t
 
-  val fold_right
+  val fold_mapi
     :  ('a, [> read ]) t
-    -> f:(('a -> 'b -> 'b)[@local] [@local])
     -> init:'b
-    -> 'b
+    -> f:((int -> 'b -> 'a -> 'b * 'c)[@local])
+    -> 'b * ('c, [< _ perms ]) t
+
+  val fold_right : ('a, [> read ]) t -> f:(('a -> 'b -> 'b)[@local]) -> init:'b -> 'b
 
   val sort
     :  ?pos:int

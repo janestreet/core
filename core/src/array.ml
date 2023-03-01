@@ -7,7 +7,7 @@ module Core_sequence = Sequence
 include (
   Base.Array :
   sig
-    type 'a t = 'a array [@@deriving sexp, compare, sexp_grammar]
+    type 'a t = 'a array [@@deriving sexp, compare, globalize, sexp_grammar]
   end)
 
 type 'a t = 'a array [@@deriving bin_io, quickcheck, typerep]
@@ -42,9 +42,9 @@ module T = struct
 
     module Unsafe_blit = struct
       external unsafe_blit
-        :  src:t_
+        :  src:(t_[@local_opt])
         -> src_pos:int
-        -> dst:t_
+        -> dst:(t_[@local_opt])
         -> dst_pos:int
         -> len:int
         -> unit
@@ -78,15 +78,37 @@ module T = struct
 
     module Unsafe_blit = struct
       external unsafe_blit
-        :  src:t_
+        :  src:(t_[@local_opt])
         -> src_pos:int
-        -> dst:t_
+        -> dst:(t_[@local_opt])
         -> dst_pos:int
         -> len:int
         -> unit
         = "core_array_unsafe_float_blit"
       [@@noalloc]
     end
+
+    external get : (t_[@local_opt]) -> (int[@local_opt]) -> float = "%floatarray_safe_get"
+
+    external set
+      :  (t_[@local_opt])
+      -> (int[@local_opt])
+      -> (float[@local_opt])
+      -> unit
+      = "%floatarray_safe_set"
+
+    external unsafe_get
+      :  (t_[@local_opt])
+      -> (int[@local_opt])
+      -> float
+      = "%floatarray_unsafe_get"
+
+    external unsafe_set
+      :  (t_[@local_opt])
+      -> (int[@local_opt])
+      -> (float[@local_opt])
+      -> unit
+      = "%floatarray_unsafe_set"
 
     include
       Test_blit.Make_and_test
@@ -113,18 +135,45 @@ end
 module type Permissioned = sig
   type ('a, -'perms) t
 
-  include Container.S1_permissions with type ('a, 'perms) t := ('a, 'perms) t
+  include
+    Indexed_container.S1_with_creators_permissions
+    with type ('a, 'perms) t := ('a, 'perms) t
+
   include Blit.S1_permissions with type ('a, 'perms) t := ('a, 'perms) t
   include Binary_searchable.S1_permissions with type ('a, 'perms) t := ('a, 'perms) t
 
-  external length : ('a, _) t -> int = "%array_length"
+  external length : (('a, _) t[@local_opt]) -> int = "%array_length"
   val is_empty : (_, _) t -> bool
-  external get : ('a, [> read ]) t -> int -> 'a = "%array_safe_get"
-  external set : ('a, [> write ]) t -> int -> 'a -> unit = "%array_safe_set"
-  external unsafe_get : ('a, [> read ]) t -> int -> 'a = "%array_unsafe_get"
-  external unsafe_set : ('a, [> write ]) t -> int -> 'a -> unit = "%array_unsafe_set"
+
+  external get
+    :  (('a, [> read ]) t[@local_opt])
+    -> (int[@local_opt])
+    -> 'a
+    = "%array_safe_get"
+
+  external set
+    :  (('a, [> write ]) t[@local_opt])
+    -> (int[@local_opt])
+    -> 'a
+    -> unit
+    = "%array_safe_set"
+
+  external unsafe_get
+    :  (('a, [> read ]) t[@local_opt])
+    -> (int[@local_opt])
+    -> 'a
+    = "%array_unsafe_get"
+
+  external unsafe_set
+    :  (('a, [> write ]) t[@local_opt])
+    -> (int[@local_opt])
+    -> 'a
+    -> unit
+    = "%array_unsafe_set"
+
   val create_float_uninitialized : len:int -> (float, [< _ perms ]) t
   val create : len:int -> 'a -> ('a, [< _ perms ]) t
+  val create_local : len:int -> 'a -> (('a, [< _ perms ]) t[@local])
   val init : int -> f:((int -> 'a)[@local]) -> ('a, [< _ perms ]) t
   val make_matrix : dimx:int -> dimy:int -> 'a -> (('a, [< _ perms ]) t, [< _ perms ]) t
 
@@ -141,33 +190,42 @@ module type Permissioned = sig
 
   val folding_map
     :  ('a, [> read ]) t
-    -> init:'b
-    -> f:(('b -> 'a -> 'b * 'c)[@local])
-    -> ('c, [< _ perms ]) t
+    -> init:'acc
+    -> f:(('acc -> 'a -> 'acc * 'b)[@local])
+    -> ('b, [< _ perms ]) t
 
   val fold_map
     :  ('a, [> read ]) t
-    -> init:'b
-    -> f:(('b -> 'a -> 'b * 'c)[@local])
-    -> 'b * ('c, [< _ perms ]) t
+    -> init:'acc
+    -> f:(('acc -> 'a -> 'acc * 'b)[@local])
+    -> 'acc * ('b, [< _ perms ]) t
 
   val mapi : ('a, [> read ]) t -> f:((int -> 'a -> 'b)[@local]) -> ('b, [< _ perms ]) t
   val iteri : ('a, [> read ]) t -> f:((int -> 'a -> unit)[@local]) -> unit
-  val foldi : ('a, [> read ]) t -> init:'b -> f:((int -> 'b -> 'a -> 'b)[@local]) -> 'b
+
+  val foldi
+    :  ('a, [> read ]) t
+    -> init:'acc
+    -> f:((int -> 'acc -> 'a -> 'acc)[@local])
+    -> 'acc
 
   val folding_mapi
     :  ('a, [> read ]) t
-    -> init:'b
-    -> f:((int -> 'b -> 'a -> 'b * 'c)[@local])
-    -> ('c, [< _ perms ]) t
+    -> init:'acc
+    -> f:((int -> 'acc -> 'a -> 'acc * 'b)[@local])
+    -> ('b, [< _ perms ]) t
 
   val fold_mapi
     :  ('a, [> read ]) t
-    -> init:'b
-    -> f:((int -> 'b -> 'a -> 'b * 'c)[@local])
-    -> 'b * ('c, [< _ perms ]) t
+    -> init:'acc
+    -> f:((int -> 'acc -> 'a -> 'acc * 'b)[@local])
+    -> 'acc * ('b, [< _ perms ]) t
 
-  val fold_right : ('a, [> read ]) t -> f:(('a -> 'b -> 'b)[@local]) -> init:'b -> 'b
+  val fold_right
+    :  ('a, [> read ]) t
+    -> f:(('a -> 'acc -> 'acc)[@local])
+    -> init:'acc
+    -> 'acc
 
   val sort
     :  ?pos:int
@@ -258,9 +316,9 @@ module type Permissioned = sig
   val fold2_exn
     :  ('a, [> read ]) t
     -> ('b, [> read ]) t
-    -> init:'c
-    -> f:(('c -> 'a -> 'b -> 'c)[@local])
-    -> 'c
+    -> init:'acc
+    -> f:(('acc -> 'a -> 'b -> 'acc)[@local])
+    -> 'acc
 
   val for_all2_exn
     :  ('a, [> read ]) t
@@ -338,9 +396,9 @@ module Permissioned : sig
     include Blit.S_permissions with type 'perms t := 'perms t
 
     external unsafe_blit
-      :  src:[> read ] t
+      :  src:([> read ] t[@local_opt])
       -> src_pos:int
-      -> dst:[> write ] t
+      -> dst:([> write ] t[@local_opt])
       -> dst_pos:int
       -> len:int
       -> unit
@@ -353,10 +411,36 @@ module Permissioned : sig
 
     include Blit.S_permissions with type 'perms t := 'perms t
 
+    external get
+      :  ([> read ] t[@local_opt])
+      -> (int[@local_opt])
+      -> float
+      = "%floatarray_safe_get"
+
+    external set
+      :  ([> write ] t[@local_opt])
+      -> (int[@local_opt])
+      -> (float[@local_opt])
+      -> unit
+      = "%floatarray_safe_set"
+
+    external unsafe_get
+      :  ([> read ] t[@local_opt])
+      -> (int[@local_opt])
+      -> float
+      = "%floatarray_unsafe_get"
+
+    external unsafe_set
+      :  ([> read ] t[@local_opt])
+      -> (int[@local_opt])
+      -> (float[@local_opt])
+      -> unit
+      = "%floatarray_unsafe_set"
+
     external unsafe_blit
-      :  src:[> read ] t
+      :  src:([> read ] t[@local_opt])
       -> src_pos:int
-      -> dst:[> write ] t
+      -> dst:([> write ] t[@local_opt])
       -> dst_pos:int
       -> len:int
       -> unit
@@ -397,14 +481,27 @@ module type S = sig
   type 'a t
 
   include Binary_searchable.S1 with type 'a t := 'a t
-  include Container.S1 with type 'a t := 'a t
+  include Indexed_container.S1_with_creators with type 'a t := 'a t
 
-  external length : 'a t -> int = "%array_length"
-  external get : 'a t -> int -> 'a = "%array_safe_get"
-  external set : 'a t -> int -> 'a -> unit = "%array_safe_set"
-  external unsafe_get : 'a t -> int -> 'a = "%array_unsafe_get"
-  external unsafe_set : 'a t -> int -> 'a -> unit = "%array_unsafe_set"
+  external length : ('a t[@local_opt]) -> int = "%array_length"
+  external get : ('a t[@local_opt]) -> (int[@local_opt]) -> 'a = "%array_safe_get"
+  external set : ('a t[@local_opt]) -> (int[@local_opt]) -> 'a -> unit = "%array_safe_set"
+
+  external unsafe_get
+    :  ('a t[@local_opt])
+    -> (int[@local_opt])
+    -> 'a
+    = "%array_unsafe_get"
+
+  external unsafe_set
+    :  ('a t[@local_opt])
+    -> (int[@local_opt])
+    -> 'a
+    -> unit
+    = "%array_unsafe_set"
+
   val create : len:int -> 'a -> 'a t
+  val create_local : len:int -> 'a -> ('a t[@local])
   val create_float_uninitialized : len:int -> float t
   val init : int -> f:((int -> 'a)[@local]) -> 'a t
   val make_matrix : dimx:int -> dimy:int -> 'a -> 'a t t
@@ -418,14 +515,25 @@ module type S = sig
 
   val of_list : 'a list -> 'a t
   val map : 'a t -> f:(('a -> 'b)[@local]) -> 'b t
-  val folding_map : 'a t -> init:'b -> f:(('b -> 'a -> 'b * 'c)[@local]) -> 'c t
-  val fold_map : 'a t -> init:'b -> f:(('b -> 'a -> 'b * 'c)[@local]) -> 'b * 'c t
+  val folding_map : 'a t -> init:'acc -> f:(('acc -> 'a -> 'acc * 'b)[@local]) -> 'b t
+  val fold_map : 'a t -> init:'acc -> f:(('acc -> 'a -> 'acc * 'b)[@local]) -> 'acc * 'b t
   val mapi : 'a t -> f:((int -> 'a -> 'b)[@local]) -> 'b t
   val iteri : 'a t -> f:((int -> 'a -> unit)[@local]) -> unit
   val foldi : 'a t -> init:'b -> f:((int -> 'b -> 'a -> 'b)[@local]) -> 'b
-  val folding_mapi : 'a t -> init:'b -> f:((int -> 'b -> 'a -> 'b * 'c)[@local]) -> 'c t
-  val fold_mapi : 'a t -> init:'b -> f:((int -> 'b -> 'a -> 'b * 'c)[@local]) -> 'b * 'c t
-  val fold_right : 'a t -> f:(('a -> 'b -> 'b)[@local]) -> init:'b -> 'b
+
+  val folding_mapi
+    :  'a t
+    -> init:'acc
+    -> f:((int -> 'acc -> 'a -> 'acc * 'b)[@local])
+    -> 'b t
+
+  val fold_mapi
+    :  'a t
+    -> init:'acc
+    -> f:((int -> 'acc -> 'a -> 'acc * 'b)[@local])
+    -> 'acc * 'b t
+
+  val fold_right : 'a t -> f:(('a -> 'acc -> 'acc)[@local]) -> init:'acc -> 'acc
   val sort : ?pos:int -> ?len:int -> 'a t -> compare:(('a -> 'a -> int)[@local]) -> unit
   val stable_sort : 'a t -> compare:('a -> 'a -> int) -> unit
   val is_sorted : 'a t -> compare:(('a -> 'a -> int)[@local]) -> bool
@@ -450,7 +558,14 @@ module type S = sig
   val counti : 'a t -> f:((int -> 'a -> bool)[@local]) -> int
   val iter2_exn : 'a t -> 'b t -> f:(('a -> 'b -> unit)[@local]) -> unit
   val map2_exn : 'a t -> 'b t -> f:(('a -> 'b -> 'c)[@local]) -> 'c t
-  val fold2_exn : 'a t -> 'b t -> init:'c -> f:(('c -> 'a -> 'b -> 'c)[@local]) -> 'c
+
+  val fold2_exn
+    :  'a t
+    -> 'b t
+    -> init:'acc
+    -> f:(('acc -> 'a -> 'b -> 'acc)[@local])
+    -> 'acc
+
   val for_all2_exn : 'a t -> 'b t -> f:(('a -> 'b -> bool)[@local]) -> bool
   val exists2_exn : 'a t -> 'b t -> f:(('a -> 'b -> bool)[@local]) -> bool
   val filter : 'a t -> f:(('a -> bool)[@local]) -> 'a t

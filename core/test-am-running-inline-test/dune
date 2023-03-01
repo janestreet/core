@@ -1,2 +1,0 @@
-(library (name core_test_am_running_inline_test) (libraries core core_unix)
- (preprocess (pps ppx_jane)))

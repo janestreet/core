@@ -17,8 +17,11 @@ module Step = struct
 
   type ('a, 's) t = ('a, 's) Step.t =
     | Done
-    | Skip of 's
-    | Yield of 'a * 's
+    | Skip of { state : 's }
+    | Yield of
+        { value : 'a
+        ; state : 's
+        }
   [@@deriving bin_io]
 end
 
@@ -54,17 +57,20 @@ let merge_all (module Heap : Heap) seqs ~compare =
   unfold_step
     ~init:
       (Merge_all_state.create
-         ~heap:(Heap.create ~compare:(Base.Comparable.lift compare ~f:fst))
+         ~heap:(Heap.create ~compare:(fun a b -> Base.Comparable.lift compare ~f:fst a b))
          ~not_yet_in_heap:seqs)
     ~f:(fun { heap; not_yet_in_heap } ->
       match not_yet_in_heap with
       | seq :: not_yet_in_heap ->
         (match Expert.next_step seq with
-         | Done -> Skip { not_yet_in_heap; heap }
-         | Skip seq -> Skip { not_yet_in_heap = seq :: not_yet_in_heap; heap }
-         | Yield (elt, seq) -> Skip { not_yet_in_heap; heap = Heap.add heap (elt, seq) })
+         | Done -> Skip { state = { not_yet_in_heap; heap } }
+         | Skip { state = seq } ->
+           Skip { state = { not_yet_in_heap = seq :: not_yet_in_heap; heap } }
+         | Yield { value = elt; state = seq } ->
+           Skip { state = { not_yet_in_heap; heap = Heap.add heap (elt, seq) } })
       | [] ->
         (match Heap.pop_min heap with
          | None -> Done
-         | Some ((elt, seq), heap) -> Yield (elt, { heap; not_yet_in_heap = [ seq ] })))
+         | Some ((elt, seq), heap) ->
+           Yield { value = elt; state = { heap; not_yet_in_heap = [ seq ] } }))
 ;;

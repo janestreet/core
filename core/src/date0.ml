@@ -20,6 +20,7 @@ module Stable = struct
         val days_in_month : year:int -> month:Month.t -> int
         val to_int : t -> int
         val of_int_exn : int -> t
+        val of_int_unchecked : int -> t
         val invalid_value__for_internal_use_only : t
       end = struct
         (* We used to store dates like this:
@@ -47,6 +48,7 @@ module Stable = struct
           (year lsl 16) lor (Month.to_int month lsl 8) lor day
         ;;
 
+        let of_int_unchecked t = t
         let year t = t lsr 16
         let month t = Month.of_int_exn ((t lsr 8) land 0xff)
         let day t = t land 0xff
@@ -304,7 +306,7 @@ module Stable = struct
       let is_some t = not (is_none t)
       let some_is_representable _ = true
       let some t = V1.to_int t
-      let unchecked_value = V1.of_int_exn
+      let unchecked_value = V1.of_int_unchecked
       let to_option t = if is_some t then Some (unchecked_value t) else None
 
       let of_option opt =
@@ -319,7 +321,7 @@ module Stable = struct
         else raise_s [%message [%here] "Date.Option.value_exn none"]
       ;;
 
-      let value t ~default = if is_some t then unchecked_value t else default
+      let value t ~default = Bool.select (is_none t) default (unchecked_value t)
       let sexp_of_t t = to_option t |> Option.sexp_of_t V1.sexp_of_t
       let t_of_sexp sexp = (Option.t_of_sexp V1.t_of_sexp) sexp |> of_option
       let t_sexp_grammar = Sexplib.Sexp_grammar.coerce [%sexp_grammar: V1.t Option.t]

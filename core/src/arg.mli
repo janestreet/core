@@ -4,7 +4,7 @@
 
 open! Import
 
-include module type of Caml.Arg (** @inline *)
+include module type of Stdlib.Arg (** @inline *)
 
 type t = key * spec * doc
 

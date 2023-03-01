@@ -29,24 +29,9 @@ module Bounded_index = Bounded_index
 module Buffer = Base.Buffer
 module Byte_units = Byte_units
 module Bytes = Bytes
-
-module Caml = struct
-  include Caml
-
-  (* When we removed [Core.Caml]'s extensions of [Core.Caml], we added
-     the declarations below to force code to switch to the new names, and avoid
-     silently incorrectly using something else in scope. *)
-  module Condition = struct end
-  [@@deprecated "[since 2021-02] Use [Caml_threads.Condition]"]
-
-  module Mutex = struct end [@@deprecated "[since 2021-02] Use [Caml_threads.Mutex]"]
-  module Thread = struct end [@@deprecated "[since 2021-02] Use [Caml_threads.Thread]"]
-  module Unix = struct end [@@deprecated "[since 2021-02] Use [Caml_unix]"]
-  module UnixLabels = struct end [@@deprecated "[since 2021-02] Use [UnixLabels]"]
-end
-
+module Caml = struct end [@@deprecated "[since 2023-01] use Stdlib instead of Caml"]
 module Char = Char
-module Command = Command
+module Command = Command_internal
 module Comparable = Comparable
 module Comparator = Comparator
 module Comparisons = Comparisons
@@ -137,7 +122,6 @@ module Percent = Percent
 module Perms = Perms
 module Pid = Pid
 module Poly = Poly
-module Polymorphic_compare = Poly [@@deprecated "[since 2018-11] use [Poly] instead"]
 
 module Popcount = Base.Popcount
 [@@warning "-3"]
@@ -227,7 +211,6 @@ type 'a _maybe_bound = 'a Maybe_bound.t =
   | Excl of 'a
   | Unbounded
 
-let am_running_inline_test = am_running_inline_test
 let am_running_test = am_running_test
 let does_raise = Exn.does_raise
 let sec = Time_float.Span.of_sec

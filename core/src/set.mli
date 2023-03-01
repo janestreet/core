@@ -150,7 +150,7 @@ val find : ('a, _) t -> f:(('a -> bool)[@local]) -> 'a option
 val find_map : ('a, _) t -> f:(('a -> 'b option)[@local]) -> 'b option
 
 (** Like [find], but throws an exception on failure. *)
-val find_exn : ('a, _) t -> f:('a -> bool) -> 'a
+val find_exn : ('a, _) t -> f:(('a -> bool)[@local]) -> 'a
 
 (** [nth t i] returns the [i]th smallest element of [t], in [O(log n)] time.  The
     smallest element has [i = 0].  Returns [None] if [i < 0] or [i >= length t]. *)
@@ -239,7 +239,7 @@ val of_sorted_array_unchecked : ('a, 'cmp) Comparator.Module.t -> 'a array -> ('
 val of_increasing_iterator_unchecked
   :  ('a, 'cmp) Comparator.Module.t
   -> len:int
-  -> f:(int -> 'a)
+  -> f:((int -> 'a)[@local])
   -> ('a, 'cmp) t
 
 (** [stable_dedup_list] is here rather than in the [List] module because the
@@ -250,18 +250,22 @@ val stable_dedup_list : ('a, _) Comparator.Module.t -> 'a list -> 'a list
 
 (** [map c t ~f] returns a new set created by applying [f] to every element in [t]. The
     returned set is based on the provided [c]. [O(n log n)]. *)
-val map : ('b, 'cmp) Comparator.Module.t -> ('a, _) t -> f:('a -> 'b) -> ('b, 'cmp) t
+val map
+  :  ('b, 'cmp) Comparator.Module.t
+  -> ('a, _) t
+  -> f:(('a -> 'b)[@local])
+  -> ('b, 'cmp) t
 
 (** Like {!map}, except elements for which [f] returns [None] will be dropped.  *)
 val filter_map
   :  ('b, 'cmp) Comparator.Module.t
   -> ('a, _) t
-  -> f:('a -> 'b option)
+  -> f:(('a -> 'b option)[@local])
   -> ('b, 'cmp) t
 
 (** [filter t ~f] returns the subset of [t] for which [f] evaluates to true.  [O(n log
     n)]. *)
-val filter : ('a, 'cmp) t -> f:('a -> bool) -> ('a, 'cmp) t
+val filter : ('a, 'cmp) t -> f:(('a -> bool)[@local]) -> ('a, 'cmp) t
 
 (** [fold t ~init ~f] folds over the elements of the set from smallest to largest. *)
 val fold : ('a, _) t -> init:'accum -> f:(('accum -> 'a -> 'accum)[@local]) -> 'accum
@@ -307,7 +311,7 @@ val iter2
 
 (** If [a, b = partition_tf set ~f] then [a] is the elements on which [f] produced [true],
     and [b] is the elements on which [f] produces [false]. *)
-val partition_tf : ('a, 'cmp) t -> f:('a -> bool) -> ('a, 'cmp) t * ('a, 'cmp) t
+val partition_tf : ('a, 'cmp) t -> f:(('a -> bool)[@local]) -> ('a, 'cmp) t * ('a, 'cmp) t
 
 (** Same as {!to_list}. *)
 val elements : ('a, _) t -> 'a list
@@ -330,10 +334,24 @@ val choose : ('a, _) t -> 'a option
 (** Like {!choose}, but throws an exception on an empty set. *)
 val choose_exn : ('a, _) t -> 'a
 
-(** [split t x] produces a triple [(t1, maybe_x, t2)] where [t1] is the set of elements
-    strictly less than [x], [maybe_x] is the member (if any) of [t] which compares equal
-    to [x], and [t2] is the set of elements strictly larger than [x]. *)
+(** [split t x] produces a triple [(t1, maybe_x, t2)].
+
+    [t1] is the set of elements strictly less than [x],
+    [maybe_x] is the member (if any) of [t] which compares equal to [x],
+    [t2] is the set of elements strictly larger than [x]. *)
 val split : ('a, 'cmp) t -> 'a -> ('a, 'cmp) t * 'a option * ('a, 'cmp) t
+
+(** [split_le_gt t x] produces a pair [(t1, t2)].
+
+    [t1] is the set of elements less than or equal to [x],
+    [t2] is the set of elements strictly larger than [x]. *)
+val split_le_gt : ('a, 'cmp) t -> 'a -> ('a, 'cmp) t * ('a, 'cmp) t
+
+(** [split_lt_ge t x] produces a pair [(t1, t2)].
+
+    [t1] is the set of elements strictly less than [x],
+    [t2] is the set of elements larger or equal to [x]. *)
+val split_lt_ge : ('a, 'cmp) t -> 'a -> ('a, 'cmp) t * ('a, 'cmp) t
 
 (** If [equiv] is an equivalence predicate, then [group_by set ~equiv] produces a list
     of equivalence classes (i.e., a set-theoretic quotient).  E.g.,
@@ -352,7 +370,7 @@ val split : ('a, 'cmp) t -> 'a -> ('a, 'cmp) t * 'a option * ('a, 'cmp) t
 
     [group_by] runs in O(n^2) time, so if you have a comparison function, it's usually
     much faster to use [Set.of_list]. *)
-val group_by : ('a, 'cmp) t -> equiv:('a -> 'a -> bool) -> ('a, 'cmp) t list
+val group_by : ('a, 'cmp) t -> equiv:(('a -> 'a -> bool)[@local]) -> ('a, 'cmp) t list
 
 (** [to_sequence t] converts the set [t] to a sequence of the elements between
     [greater_or_equal_to] and [less_or_equal_to] inclusive in the order indicated by
@@ -383,7 +401,7 @@ val to_sequence
     [compare] mutates [t]. *)
 val binary_search
   :  ('a, 'cmp) t
-  -> compare:('a -> 'key -> int)
+  -> compare:(('a -> 'key -> int)[@local])
   -> [ `Last_strictly_less_than (**        {v | < elt X |                       v} *)
      | `Last_less_than_or_equal_to (**     {v |      <= elt       X |           v} *)
      | `Last_equal_to (**                  {v           |   = elt X |           v} *)
@@ -411,7 +429,7 @@ val binary_search
     is also unspecified if [segment_of] mutates [t]. *)
 val binary_search_segmented
   :  ('a, 'cmp) t
-  -> segment_of:('a -> [ `Left | `Right ])
+  -> segment_of:(('a -> [ `Left | `Right ])[@local])
   -> [ `Last_on_left | `First_on_right ]
   -> 'a option
 
@@ -439,7 +457,10 @@ val merge_to_sequence
 (** Convert a set to or from a map.  [to_map] takes a function to produce data for each
     key.  Both functions run in O(n) time (assuming the function passed to [to_map] runs
     in constant time). *)
-val to_map : ('key, 'cmp) t -> f:('key -> 'data) -> ('key, 'data, 'cmp) Base.Map.t
+val to_map
+  :  ('key, 'cmp) t
+  -> f:(('key -> 'data)[@local])
+  -> ('key, 'data, 'cmp) Base.Map.t
 
 val of_map_keys : ('key, _, 'cmp) Base.Map.t -> ('key, 'cmp) t
 

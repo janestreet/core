@@ -90,7 +90,7 @@ module Test (Base : sig
       let%test _ = mem bcdefghi 'b'
       let%test _ = mem bcdefghi 'i'
       let%test _ = not (mem bcdefghi 'j')
-      let%test _ = count bcdefghi ~f:(String.mem "aeiou") = 2
+      let%test _ = count bcdefghi ~f:(fun c -> String.mem "aeiou" c) = 2
 
       let%test _ =
         sum (module Int) bcdefghi ~f:(fun c -> Char.to_int c - Char.to_int 'a')

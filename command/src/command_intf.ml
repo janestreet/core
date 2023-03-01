@@ -27,8 +27,8 @@
     {{!Core.Command.Spec}[Command.Spec] (DEPRECATED)} and should be used in all new
     code. *)
 
+open! Base
 open! Import
-open! Std_internal
 
 type env =
   [ `Replace of (string * string) list
@@ -38,8 +38,12 @@ type env =
   ]
 
 module type Version_util = sig
+  module Time : sig
+    type t [@@deriving sexp_of]
+  end
+
   val version_list : string list
-  val reprint_build_info : (Time_float.t -> Sexp.t) -> string
+  val reprint_build_info : (Time.t -> Sexp.t) -> string
 end
 
 (** [For_unix] is the subset of Core's interface that [Command] needs, in particular to
@@ -51,6 +55,12 @@ module type For_unix = sig
   type env_var
 
   module Version_util : Version_util
+
+  module Pid : sig
+    type t
+
+    val to_string : t -> string
+  end
 
   module Signal : sig
     type t
@@ -68,39 +78,19 @@ module type For_unix = sig
     val join : t -> unit
   end
 
-  module Time : sig
-    type t = Time_float.t [@@deriving sexp_of]
-  end
-
   module Unix : sig
     module File_descr : sig
       type t
     end
 
-    module Exit : sig
-      type error = [ `Exit_non_zero of int ]
-      type t = (unit, error) Result.t
-    end
-
-    module Exit_or_signal : sig
-      type error =
-        [ Exit.error
-        | `Signal of Signal.t
-        ]
-
-      type t = (unit, error) Result.t
-    end
-
     val getpid : unit -> Pid.t
     val close : ?restart:bool -> File_descr.t -> unit
-    val open_process_in : string -> In_channel.t
-    val close_process_in : In_channel.t -> Exit_or_signal.t
     val in_channel_of_descr : File_descr.t -> In_channel.t
     val putenv : key:env_var -> data:string -> unit
     val unsetenv : env_var -> unit
     val unsafe_getenv : env_var -> string option
 
-    type env =
+    type env :=
       [ `Replace of (env_var * string) list
       | `Extend of (env_var * string) list
       | `Override of (env_var * string option) list
@@ -113,7 +103,7 @@ module type For_unix = sig
       -> ?use_path:bool
       -> ?env:env
       -> unit
-      -> never_returns
+      -> Nothing.t
 
     module Process_info : sig
       type t =
@@ -134,14 +124,7 @@ module type For_unix = sig
       -> unit
       -> Process_info.t
 
-    type wait_on =
-      [ `Any
-      | `Group of Pid.t
-      | `My_group
-      | `Pid of Pid.t
-      ]
-
-    val wait : ?restart:bool -> wait_on -> Pid.t * Exit_or_signal.t
+    val wait : Pid.t -> unit
   end
 end
 
@@ -192,6 +175,10 @@ module type Command = sig
       -> (string -> 'a)
       -> 'a t
 
+    (** Apply the parse function to the given string the same way it would apply to an
+        argument, catching any exceptions thrown. *)
+    val parse : 'a t -> string -> 'a Or_error.t
+
     (** Transforms the result of a [t] using [f]. *)
     val map : ?key:'b Univ_map.Multi.Key.t -> 'a t -> f:('a -> 'b) -> 'b t
 
@@ -212,7 +199,7 @@ module type Command = sig
       (** Defaults to bash completion on the string prefix. This allows users to specify
           arbitrary auto-completion for [t]. *)
       -> ?key:'a Univ_map.Multi.Key.t
-      -> 'a String.Map.t
+      -> 'a Map.M(String).t
       -> 'a t
 
     (** Convenience wrapper for [of_map]. Raises on duplicate keys. *)
@@ -288,18 +275,11 @@ module type Command = sig
       val char : char t
       val float : float t
       val bool : bool t
-      val date : Date.t t
-      val percent : Percent.t t
-      val host_and_port : Host_and_port.t t
       val sexp : Sexp.t t
       val sexp_conv : ?complete:Auto_complete.t -> (Sexp.t -> 'a) -> 'a t
     end
 
     val auto_complete : _ t -> Auto_complete.t
-
-    module For_testing : sig
-      val parse : 'a t -> string -> 'a Or_error.t
-    end
   end
 
   (** Command-line flag specifications. *)
@@ -344,7 +324,7 @@ module type Command = sig
     (** [no_arg_abort ~exit] is like [no_arg], but aborts command-line parsing by calling
         [exit].  This flag type is useful for "help"-style flags that just print something
         and exit. *)
-    val no_arg_abort : exit:(unit -> never_returns) -> unit t
+    val no_arg_abort : exit:(unit -> Nothing.t) -> unit t
 
     (** [escape] flags may be passed at most once.  They cause the command line parser to
         abort and pass through all remaining command line arguments as the value of the
@@ -595,6 +575,10 @@ module type Command = sig
 
     include S (** @inline *)
 
+    (** If [None] is returned, then the param acts as a required flag that was omitted.
+        This is intended to be used with [choose_one_non_optional]. *)
+    val optional_to_required : 'a option t -> 'a t
+
     (** Values included for convenience so you can specify all command line parameters
         inside a single local open of [Param]. *)
 
@@ -602,6 +586,10 @@ module type Command = sig
     include module type of Arg_type.Export
     include module type of Flag with type 'a t := 'a Flag.t
     include module type of Anons with type 'a t := 'a Anons.t
+
+    (** [parse t cmdline] will attempt to parse [t] out of [cmdline]. Beware there is
+        nothing stopping effectful operations in [t] from being performed. *)
+    val parse : 'a t -> string list -> 'a Or_error.t
   end
 
   module Let_syntax : sig
@@ -836,7 +824,9 @@ module type Command = sig
         values will be run in the order that flags are passed on the command line.  In the
         [Command] module, using [flags_of_args_exn flags], they are evaluated in the order
         that the [Caml.Arg.t] values appear in [args].  *)
-    val flags_of_args_exn : Arg.t list -> ('a, 'a) t
+    val flags_of_args_exn
+      :  (Stdlib.Arg.key * Stdlib.Arg.spec * Stdlib.Arg.doc) list
+      -> ('a, 'a) t
     [@@deprecated "[since 2018-10] switch to Command.Param"]
 
     (** A specification of some number of anonymous arguments. *)
@@ -873,6 +863,11 @@ module type Command = sig
   (** Same general behavior as [basic_spec], but takes a command line specification built up
       using [Params] instead of [Spec]. *)
   val basic : unit basic_command
+
+  (** [basic_or_error] is like [basic], except that the main function it expects may
+      return an error, in which case it prints out the error message and shuts down with
+      exit code 1. *)
+  val basic_or_error : unit Or_error.t basic_command
 
   (** [group ~summary subcommand_alist] is a compound command with named subcommands, as
       found in [subcommand_alist].  [summary] is to contain a short one-line description of
@@ -947,11 +942,7 @@ module type Command = sig
   (** Extracts the summary string for a command. *)
   val summary : t -> string
 
-  module Shape : module type of struct
-    include Command_shape
-  end
-  with module Private := Command_shape.Private
-   and module Stable := Command_shape.Stable
+  module Shape = Shape
 
 
   (** call this instead of [Core.exit] if in command-related code that you want to run in
@@ -1021,7 +1012,7 @@ module type Command = sig
     end
 
     module Spec : sig
-      val flags_of_args_exn : (string * Arg.spec * string) list -> ('a, 'a) Spec.t
+      val flags_of_args_exn : (string * Stdlib.Arg.spec * string) list -> ('a, 'a) Spec.t
       val to_string_for_choose_one : _ Param.t -> string
     end
 
@@ -1077,9 +1068,5 @@ module type Command = sig
         -> is_expand_dots:bool
         -> unit
     end
-  end
-
-  module Stable : sig
-    module Shape = Command_shape.Stable
   end
 end

@@ -15,7 +15,7 @@ module Stable = struct
     [%%if ocaml_version < (4, 12, 0)]
 
     module V1 = struct
-      type t = Caml.Gc.stat =
+      type t = Stdlib.Gc.stat =
         { minor_words : float
         ; promoted_words : float
         ; major_words : float
@@ -84,7 +84,7 @@ module Stable = struct
     end
 
     module V2 = struct
-      type t = Caml.Gc.stat =
+      type t = Stdlib.Gc.stat =
         { minor_words : float
         ; promoted_words : float
         ; major_words : float
@@ -113,7 +113,7 @@ module Stable = struct
     module V1 = struct
       [@@@ocaml.warning "-3"]
 
-      type t = Caml.Gc.control =
+      type t = Stdlib.Gc.control =
         { mutable minor_heap_size : int
         ; mutable major_heap_increment : int
         ; mutable space_overhead : int
@@ -131,13 +131,13 @@ module Stable = struct
   end
 end
 
-include Caml.Gc
+include Stdlib.Gc
 
 module Stat = struct
   module T = struct
     [%%if ocaml_version < (4, 12, 0)]
 
-    type t = Caml.Gc.stat =
+    type t = Stdlib.Gc.stat =
       { minor_words : float
       ; promoted_words : float
       ; major_words : float
@@ -159,7 +159,7 @@ module Stat = struct
 
     [%%else]
 
-    type t = Caml.Gc.stat =
+    type t = Stdlib.Gc.stat =
       { minor_words : float
       ; promoted_words : float
       ; major_words : float
@@ -242,7 +242,7 @@ module Control = struct
   module T = struct
     [@@@ocaml.warning "-3"]
 
-    type t = Caml.Gc.control =
+    type t = Stdlib.Gc.control =
       { mutable minor_heap_size : int
       ; mutable major_heap_increment : int
       ; mutable space_overhead : int
@@ -350,6 +350,11 @@ external major_plus_minor_words : unit -> int = "core_gc_major_plus_minor_words"
 external allocated_words : unit -> int = "core_gc_allocated_words"
 external run_memprof_callbacks : unit -> unit = "core_gc_run_memprof_callbacks"
 
+let stat_size_lazy =
+  lazy (Obj.reachable_words (Obj.repr (Stdlib.Gc.quick_stat () : Stat.t)))
+;;
+
+let stat_size () = Lazy.force stat_size_lazy
 let zero = Sys.opaque_identity (int_of_string "0")
 
 (* The compiler won't optimize int_of_string away so it won't
@@ -415,11 +420,11 @@ module For_testing = struct
     let log : Allocation_log.t list ref = ref []
     and major_allocs = ref 0
     and minor_allocs = ref 0 in
-    let on_alloc ~is_major (info : Caml.Gc.Memprof.allocation) =
+    let on_alloc ~is_major (info : Stdlib.Gc.Memprof.allocation) =
       if is_major
       then major_allocs := !major_allocs + info.n_samples
       else minor_allocs := !minor_allocs + info.n_samples;
-      let backtrace = Caml.Printexc.raw_backtrace_to_string info.callstack in
+      let backtrace = Stdlib.Printexc.raw_backtrace_to_string info.callstack in
       (* Make backtraces easier to read by deleting everything below this function *)
       let backtrace =
         match String.substr_index backtrace ~pattern:"measure_and_log_allocation" with
@@ -439,12 +444,12 @@ module For_testing = struct
       None
     in
     let tracker =
-      { Caml.Gc.Memprof.null_tracker with
+      { Stdlib.Gc.Memprof.null_tracker with
         alloc_minor = on_alloc ~is_major:false
       ; alloc_major = on_alloc ~is_major:true
       }
     in
-    Caml.Gc.Memprof.start ~sampling_rate:1.0 tracker;
+    Stdlib.Gc.Memprof.start ~sampling_rate:1.0 tracker;
     (* Exn.protect, manually inlined to guarantee no allocations *)
     let result =
       match f () with
@@ -453,11 +458,11 @@ module For_testing = struct
            delayed if they happened during C code and there has been no allocation since),
            so we explictly flush them *)
         run_memprof_callbacks ();
-        Caml.Gc.Memprof.stop ();
+        Stdlib.Gc.Memprof.stop ();
         x
       | exception e ->
         run_memprof_callbacks ();
-        Caml.Gc.Memprof.stop ();
+        Stdlib.Gc.Memprof.stop ();
         raise e
     in
     ( result
@@ -479,7 +484,7 @@ end
 
 module Expert = struct
   let add_finalizer x f =
-    try Caml.Gc.finalise (fun x -> Exn.handle_uncaught_and_exit (fun () -> f x)) x with
+    try Stdlib.Gc.finalise (fun x -> Exn.handle_uncaught_and_exit (fun () -> f x)) x with
     | Invalid_argument _ ->
       (* The type of add_finalizer ensures that the only possible failure
          is due to [x] being static data. In this case, we simply drop the
@@ -493,7 +498,7 @@ module Expert = struct
      receives a heap block, which ensures that it will not raise, while
      [add_finalizer_exn] accepts any type, and so may raise. *)
   let add_finalizer_exn x f =
-    try Caml.Gc.finalise (fun x -> Exn.handle_uncaught_and_exit (fun () -> f x)) x with
+    try Stdlib.Gc.finalise (fun x -> Exn.handle_uncaught_and_exit (fun () -> f x)) x with
     | Invalid_argument _ ->
       ignore (Heap_block.create x : _ Heap_block.t option);
       (* If [Heap_block.create] succeeds then [x] is static data and so
@@ -502,7 +507,7 @@ module Expert = struct
   ;;
 
   let add_finalizer_last x f =
-    try Caml.Gc.finalise_last (fun () -> Exn.handle_uncaught_and_exit f) x with
+    try Stdlib.Gc.finalise_last (fun () -> Exn.handle_uncaught_and_exit f) x with
     | Invalid_argument _ ->
       (* The type of add_finalizer_last ensures that the only possible failure
          is due to [x] being static data. In this case, we simply drop the
@@ -512,7 +517,7 @@ module Expert = struct
   ;;
 
   let add_finalizer_last_exn x f =
-    try Caml.Gc.finalise_last (fun () -> Exn.handle_uncaught_and_exit f) x with
+    try Stdlib.Gc.finalise_last (fun () -> Exn.handle_uncaught_and_exit f) x with
     | Invalid_argument _ ->
       ignore (Heap_block.create x : _ Heap_block.t option);
       (* If [Heap_block.create] succeeds then [x] is static data and so
@@ -520,7 +525,7 @@ module Expert = struct
       ()
   ;;
 
-  let finalize_release = Caml.Gc.finalise_release
+  let finalize_release = Stdlib.Gc.finalise_release
 
   module Alarm = struct
     type t = alarm

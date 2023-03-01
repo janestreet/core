@@ -1,16 +1,13 @@
-module Stable = struct
-  module Shape = Command_shape.Stable
-end
 
+open! Base
 open! Import
-open! Std_internal
 include Command_intf
-module Shape = Command_shape
+module Shape = Shape
 
 (* in order to define expect tests, we want to raise rather than exit if the code is
    running in the test runner process *)
 let raise_instead_of_exit =
-  match Ppx_inline_test_lib.Runtime.testing with
+  match Ppx_inline_test_lib.testing with
   | `Testing `Am_test_runner -> true
   | `Testing `Am_child_of_test_runner | `Not_testing -> false
 ;;
@@ -20,12 +17,10 @@ exception Exit_called of { status : int } [@@deriving sexp_of]
 (* [raise_instead_of_exit]-respecting wrappers for [exit] and functions that call it *)
 include struct
   let exit status =
-    if raise_instead_of_exit then raise (Exit_called { status }) else exit status
+    if raise_instead_of_exit then raise (Exit_called { status }) else Stdlib.exit status
   ;;
 
   module Exn = struct
-    let to_string = Exn.to_string
-
     let handle_uncaught_and_exit f =
       if raise_instead_of_exit
       then (
@@ -41,7 +36,7 @@ let unparagraphs xs = String.concat ~sep:"\n\n" xs
 
 exception Failed_to_parse_command_line of string
 
-let die fmt = Printf.ksprintf (fun msg () -> raise (Failed_to_parse_command_line msg)) fmt
+let die fmt = ksprintf (fun msg () -> raise (Failed_to_parse_command_line msg)) fmt
 let help_screen_compare = Shape.Private.help_screen_compare
 
 (* universal maps are used to pass around values between different bits
@@ -57,7 +52,7 @@ let help_screen_compare = Shape.Private.help_screen_compare
 module Env = struct
   include Univ_map
 
-  let key_create name = Univ_map.Key.create ~name sexp_of_opaque
+  let key_create name = Univ_map.Key.create ~name Sexplib.Conv.sexp_of_opaque
   let multi_add = Univ_map.Multi.add
   let set_with_default = Univ_map.With_default.set
 end
@@ -131,7 +126,7 @@ module Completer = struct
     type t = Auto_complete.For_escape.t option
   end
 
-  let run_and_exit t env ~part : never_returns =
+  let run_and_exit t env ~part : Nothing.t =
     Option.iter t ~f:(fun completions ->
       List.iter ~f:print_endline (completions env ~part));
     exit 0
@@ -144,7 +139,7 @@ module Arg_type : sig
   val extra_doc : 'a t -> string option lazy_t
   val key : 'a t -> 'a Env.Multi.Key.t option
   val complete : 'a t -> Completer.t
-  val parse : 'a t -> string -> ('a, exn) result
+  val parse : 'a t -> string -> 'a Or_error.t
 
   val create
     :  ?complete:Auto_complete.t
@@ -161,7 +156,7 @@ module Arg_type : sig
     -> ?list_values_in_help:bool
     -> ?auto_complete:Auto_complete.t
     -> ?key:'a Env.Multi.Key.t
-    -> 'a String.Map.t
+    -> 'a Map.M(String).t
     -> 'a t
 
   val of_alist_exn
@@ -205,18 +200,11 @@ module Arg_type : sig
     val char : char t
     val float : float t
     val bool : bool t
-    val date : Date.t t
-    val percent : Percent.t t
-    val host_and_port : Host_and_port.t t
     val sexp : Sexp.t t
     val sexp_conv : ?complete:Auto_complete.t -> (Sexp.t -> 'a) -> 'a t
   end
 
   val auto_complete : _ t -> Auto_complete.t
-
-  module For_testing : sig
-    val parse : 'a t -> string -> 'a Or_error.t
-  end
 end = struct
   type 'a t =
     { parse : string -> 'a
@@ -226,7 +214,7 @@ end = struct
     }
   [@@deriving fields]
 
-  let parse t s = Result.try_with (fun () -> t.parse s)
+  let parse t s = Or_error.try_with (fun () -> t.parse s)
   let create' ?complete ?key parse ~extra_doc = { parse; key; complete; extra_doc }
 
   let create ?complete ?key of_string =
@@ -253,11 +241,11 @@ end = struct
   let int = create Int.of_string
   let char = create Char.of_string
   let float = create Float.of_string
-  let date = create Date.of_string
-  let percent = create Percent.of_string
-  let host_and_port = create Host_and_port.of_string
-  let sexp = create Sexp.of_string
-  let sexp_conv ?complete of_sexp = create ?complete (fun s -> of_sexp (Sexp.of_string s))
+  let sexp = create Parsexp.Single.parse_string_exn
+
+  let sexp_conv ?complete of_sexp =
+    create ?complete (fun s -> of_sexp (Parsexp.Single.parse_string_exn s))
+  ;;
 
   let associative
         ?(accept_unique_prefixes = true)
@@ -456,7 +444,9 @@ end = struct
           if not unique_values
           then fun (_ : string) -> true
           else (
-            let seen_already = prefixes |> List.map ~f:strip |> String.Set.of_list in
+            let seen_already =
+              prefixes |> List.map ~f:strip |> Set.of_list (module String)
+            in
             fun choice -> not (Set.mem seen_already (strip choice)))
         in
         let choices =
@@ -492,9 +482,6 @@ end = struct
     let char = char
     let float = float
     let bool = bool
-    let date = date
-    let percent = percent
-    let host_and_port = host_and_port
     let sexp = sexp
     let sexp_conv = sexp_conv
   end
@@ -504,10 +491,6 @@ end = struct
     | Some f -> f
     | None -> fun _ ~part:_ -> []
   ;;
-
-  module For_testing = struct
-    let parse t str = parse t str |> Or_error.of_exn_result
-  end
 end
 
 module Flag = struct
@@ -627,7 +610,9 @@ module Flag = struct
     ;;
 
     let create flags =
-      match String.Map.of_alist (List.map flags ~f:(fun flag -> flag.name, flag)) with
+      match
+        Map.of_alist (module String) (List.map flags ~f:(fun flag -> flag.name, flag))
+      with
       | `Duplicate_key flag -> failwithf "multiple flags named %s" flag ()
       | `Ok map ->
         List.concat_map flags ~f:(fun flag -> flag.name :: flag.aliases)
@@ -652,8 +637,13 @@ module Flag = struct
     ; action =
         (let update env arg =
            match Arg_type.parse arg_type arg with
-           | Error exn ->
-             die "failed to parse %s value %S.\n%s" name arg (Exn.to_string exn) ()
+           | Error error ->
+             die
+               "failed to parse %s value %S.\n%s"
+               name
+               arg
+               (Error.to_string_hum error)
+               ()
            | Ok arg ->
              let env = write env arg in
              (match Arg_type.key arg_type with
@@ -799,11 +789,9 @@ module Flag = struct
   ;;
 
   let one_or_more_as_pair arg_type name =
-    let key =
-      Env.With_default.Key.create ~default:Fqueue.empty ~name [%sexp_of: _ Fqueue.t]
-    in
+    let key = Env.With_default.Key.create ~default:[] ~name [%sexp_of: _ list] in
     let read env =
-      match Fqueue.to_list (Env.With_default.find env key) with
+      match List.rev (Env.With_default.find env key) with
       | first :: rest -> Parsing_outcome.return_with_arg (first, rest)
       | [] ->
         Parsing_outcome.error
@@ -811,9 +799,7 @@ module Flag = struct
           (`Missing_required_flags
              (Error.of_string (sprintf "missing required flag: %s" name)))
     in
-    let write env arg =
-      Env.With_default.change env key ~f:(fun q -> Fqueue.enqueue q arg)
-    in
+    let write env arg = Env.With_default.change env key ~f:(fun q -> arg :: q) in
     arg_flag name arg_type read write Num_occurrences.at_least_once
   ;;
 
@@ -845,7 +831,7 @@ module Flag = struct
   ;;
 
   let no_arg_abort ~exit _name =
-    { action = No_arg (fun _ -> never_returns (exit ()))
+    { action = No_arg (fun _ -> Nothing.unreachable_code (exit ()))
     ; num_occurrences = Num_occurrences.at_most_once
     ; read =
         (fun _ ->
@@ -898,7 +884,7 @@ end = struct
   let parts_exe_basename t =
     match List.rev t with
     | [] -> []
-    | hd :: tl -> Filename.basename hd :: tl
+    | hd :: tl -> Filename_base.basename hd :: tl
   ;;
 
   let to_string t = unwords (parts_exe_basename t)
@@ -1069,7 +1055,7 @@ module Anons = struct
     end
 
     val consume : 'a Basic.t -> string -> for_completion:bool -> 'a Consume_result.t
-    val complete : 'a Basic.t -> Env.t -> part:string -> never_returns
+    val complete : 'a Basic.t -> Env.t -> part:string -> Nothing.t
 
     module For_opening : sig
       val return : 'a -> 'a t
@@ -1162,13 +1148,14 @@ module Anons = struct
     let one_more ~name arg_type =
       let parse anon ~for_completion =
         match Arg_type.parse arg_type anon with
-        | Error exn ->
+        | Error error ->
           if for_completion
           then
             (* we don't *really* care about this value, so just put in a dummy value so
                completion can continue *)
             { parser = Only_for_completion []; update_env = Fn.id }
-          else die "failed to parse %s value %S\n%s" name anon (Exn.to_string exn) ()
+          else
+            die "failed to parse %s value %S\n%s" name anon (Error.to_string_hum error) ()
         | Ok v ->
           { parser = return_with_arg v
           ; update_env =
@@ -1256,7 +1243,7 @@ module Anons = struct
            })
     ;;
 
-    let rec complete : type a. a Basic.t -> Env.t -> part:string -> never_returns =
+    let rec complete : type a. a Basic.t -> Env.t -> part:string -> Nothing.t =
       fun t env ~part ->
         match t with
         | Done _ -> exit 0
@@ -1309,7 +1296,9 @@ module Anons = struct
     then failwithf "argument name %S has surrounding whitespace" str ();
     (* If the string contains special surrounding characters, don't do anything *)
     let has_special_chars =
-      let special_chars = Char.Set.of_list [ '<'; '>'; '['; ']'; '('; ')'; '{'; '}' ] in
+      let special_chars =
+        Set.of_list (module Char) [ '<'; '>'; '['; ']'; '('; ')'; '{'; '}' ]
+      in
       String.exists str ~f:(Set.mem special_chars)
     in
     if has_special_chars then str else String.uppercase str
@@ -1428,11 +1417,11 @@ let lookup_expand_with_aliases map prefix key_type =
   | Some (flag, _) -> failwithf "multiple flags named %s" flag ()
 ;;
 
-module Base = struct
+module Command_base = struct
   type t =
     { summary : string
     ; readme : (unit -> string) option
-    ; flags : Flag.Internal.t String.Map.t
+    ; flags : Flag.Internal.t Map.M(String).t
     ;
       anons : unit -> ([ `Parse_args ] -> [ `Run_main ] -> unit) Anons.Parser.Basic.t
     ; usage : Anons.Grammar.t
@@ -1507,11 +1496,11 @@ module Base = struct
              if Cmdline.ends_in_complete rest then env else raise e
          in
          env, rest
-       | Complete part -> never_returns (Completer.run_and_exit comp env ~part))
+       | Complete part -> Nothing.unreachable_code (Completer.run_and_exit comp env ~part))
     | Rest (f, comp) ->
       let arg_list = Cmdline.to_list args in
       if Cmdline.ends_in_complete args
-      then never_returns (Completer.run_and_exit comp env ~part:arg_list);
+      then Nothing.unreachable_code (Completer.run_and_exit comp env ~part:arg_list);
       f env arg_list, Nil
   ;;
 
@@ -1526,7 +1515,7 @@ module Base = struct
         List.iter (Map.keys t.flags) ~f:(fun name ->
           if String.is_prefix name ~prefix:part then print_endline name);
         exit 0)
-      else never_returns (Anons.Parser.complete parser env ~part)
+      else Nothing.unreachable_code (Anons.Parser.complete parser env ~part)
     | Cons (arg, args) ->
       let arg, args, arg_is_flag =
         match parse_flags with
@@ -1583,7 +1572,16 @@ module Base = struct
       exit 1
   ;;
 
-  let run t env ~when_parsing_succeeds ~path ~args ~verbose_on_parse_error ~help_text =
+  let run
+        t
+        env
+        ~when_parsing_succeeds
+        ~path
+        ~args
+        ~verbose_on_parse_error
+        ~help_text
+        ~on_failure
+    =
     let for_completion = Cmdline.ends_in_complete args in
     let env =
       env
@@ -1601,7 +1599,7 @@ module Base = struct
     | Ok thunk ->
       when_parsing_succeeds ();
       thunk `Run_main
-    | Error exn -> run_exn exn ~for_completion ~path ~verbose_on_parse_error
+    | Error exn -> on_failure exn ~for_completion ~path ~verbose_on_parse_error
   ;;
 
   module Param = struct
@@ -1819,6 +1817,23 @@ module Base = struct
       }
     ;;
 
+    let optional_to_required t =
+      { t with
+        f =
+          (fun () ->
+             t.f ()
+             >>| fun f () ->
+             let outcome = f () in
+             Parsing_outcome.introduce_missing_required_flags
+               (Parsing_outcome.map outcome ~f:(function
+                  | None ->
+                    Error
+                      (`Missing_required_flags
+                         (Error.of_string "[optional_to_required] got a [None] result"))
+                  | Some v -> Ok v)))
+      }
+    ;;
+
     include Applicative.Make (struct
         type nonrec 'a t = 'a t
 
@@ -1872,12 +1887,13 @@ module Base = struct
           let names_with_commas = List.filter names ~f:(fun s -> String.contains s ',') in
           if not (List.is_empty names_with_commas)
           then
-            failwiths
+            Error.create
               ~here:[%here]
               "For simplicity, [Command.Spec.choose_one] does not support names with \
                commas."
               names_with_commas
-              [%sexp_of: string list];
+              [%sexp_of: string list]
+            |> Error.raise;
           match names with
           | [] ->
             raise_s
@@ -1953,11 +1969,12 @@ module Base = struct
           |> Map.of_alist (module Choice_name)
         with
         | `Duplicate_key name ->
-          failwiths
+          Error.create
             ~here:[%here]
             "[Command.Spec.choose_one] called with duplicate name"
             name
             [%sexp_of: Choice_name.t]
+          |> Error.raise
         | `Ok ts ->
           Map.fold ts ~init:(return []) ~f:(fun ~key:name ~data:t acc ->
             map2
@@ -1970,7 +1987,7 @@ module Base = struct
           |> map ~f:(fun value_list ->
             let arg_counter = List.length value_list in
             let missing_flag_error fmt =
-              Printf.ksprintf
+              ksprintf
                 (fun msg () -> Error (`Missing_required_flags (Error.of_string msg)))
                 fmt
             in
@@ -2059,6 +2076,39 @@ module Base = struct
         raise_s
           [%message
             "[and_arg_name] expects exactly one name, got" ~_:(names : string list)]
+    ;;
+
+    let parse { flags; usage = _; f } args =
+      let cmdline = Cmdline.of_list args in
+      let result = ref None in
+      run
+        { summary = ""
+        ; readme = None
+        ; flags = flags () |> Flag.Internal.create
+        ; anons =
+            (fun () ->
+               let open Anons.Parser.Basic.For_opening in
+               f ()
+               >>| fun params `Parse_args `Run_main ->
+               let outcome = params () in
+               match outcome.result with
+               | Error (`Missing_required_flags err) -> result := Some (Error err)
+               | Ok x -> result := Some (Ok x))
+        ; usage = Anons.Grammar.zero
+        }
+        Univ_map.empty
+        ~when_parsing_succeeds:Fn.id
+        ~args:cmdline
+        ~path:Path.empty
+        ~verbose_on_parse_error:(Some true)
+        ~help_text:(lazy "No help for parsing")
+        ~on_failure:
+          (fun exn
+            ~for_completion:(_ : bool)
+            ~path:(_ : Path.t)
+            ~verbose_on_parse_error:(_ : bool option) ->
+            result := Some (Error (Error.of_exn exn)));
+      Option.value_exn ~here:[%here] !result
     ;;
   end
 
@@ -2157,30 +2207,30 @@ module Base = struct
         let set_bool r b = gen (fun passed -> if passed then r := b) Param.no_arg in
         acc
         ++
-        match spec with
-        | Arg.Unit f -> gen (fun passed -> if passed then f ()) Param.no_arg
-        | Arg.Set r -> set_bool r true
-        | Arg.Clear r -> set_bool r false
-        | Arg.String f -> call f string
-        | Arg.Set_string r -> set r string
-        | Arg.Int f -> call f int
-        | Arg.Set_int r -> set r int
-        | Arg.Float f -> call f float
-        | Arg.Set_float r -> set r float
-        | Arg.Bool f -> call f bool
-        | Arg.Symbol (syms, f) ->
+        match (spec : Stdlib.Arg.spec) with
+        | Unit f -> gen (fun passed -> if passed then f ()) Param.no_arg
+        | Set r -> set_bool r true
+        | Clear r -> set_bool r false
+        | String f -> call f string
+        | Set_string r -> set r string
+        | Int f -> call f int
+        | Set_int r -> set r int
+        | Float f -> call f float
+        | Set_float r -> set r float
+        | Bool f -> call f bool
+        | Symbol (syms, f) ->
           let arg_type =
             Arg_type.of_alist_exn
               ~list_values_in_help:false
               (List.map syms ~f:(fun sym -> sym, sym))
           in
           call f arg_type
-        | Arg.Rest f -> gen (fun x -> Option.iter x ~f:(List.iter ~f)) Param.escape
-        | Arg.Tuple _ ->
+        | Rest f -> gen (fun x -> Option.iter x ~f:(List.iter ~f)) Param.escape
+        | Tuple _ ->
           failwith "Arg.Tuple is not supported by Command.Spec.flags_of_args_exn"
-        | ((Arg.Expand _) [@if ocaml_version >= (4, 05, 0)]) ->
+        | ((Expand _) [@if ocaml_version >= (4, 05, 0)]) ->
           failwith "Arg.Expand is not supported by Command.Spec.flags_of_args_exn"
-        | ((Arg.Rest_all _) [@if ocaml_version >= (4, 12, 0)]) ->
+        | ((Rest_all _) [@if ocaml_version >= (4, 12, 0)]) ->
           failwith "Arg.Rest_all is not supported by Command.Spec.flags_of_args_exn")
     ;;
 
@@ -2217,7 +2267,7 @@ module Group = struct
 end
 
 let abs_path = Shape.Private.abs_path
-let comp_cword = Command_env_var.COMP_CWORD
+let comp_cword = Env_var.COMP_CWORD
 
 module Exec = struct
   type t =
@@ -2261,13 +2311,13 @@ module Proxy = struct
 end
 
 type t =
-  | Base of Base.t
+  | Base of Command_base.t
   | Group of t Group.t
   | Exec of Exec.t
   | Lazy of t Lazy.t
 
 let rec sexpable_shape : t -> Shape.Sexpable.t = function
-  | Base base -> Base (Base.shape base)
+  | Base base -> Base (Command_base.shape base)
   | Exec exec -> Exec (Exec.shape exec)
   | Group group -> Group (Group.shape ~subcommand_to_shape:sexpable_shape group)
   | Lazy thunk -> Lazy (Lazy.map ~f:sexpable_shape thunk)
@@ -2276,7 +2326,7 @@ let rec sexpable_shape : t -> Shape.Sexpable.t = function
 type ('main, 'result) basic_spec_command =
   summary:string
   -> ?readme:(unit -> string)
-  -> ('main, unit -> 'result) Base.Spec.t
+  -> ('main, unit -> 'result) Command_base.Spec.t
   -> 'main
   -> t
 
@@ -2302,7 +2352,7 @@ let extend_alist_exn alist key_type ~key data =
 
 module Bailout_dump_flag = struct
   let add base ~name ~aliases ~aliases_excluded_from_help ~text ~text_summary =
-    let flags = base.Base.flags in
+    let flags = base.Command_base.flags in
     let flags =
       extend_map_exn
         flags
@@ -2318,11 +2368,11 @@ module Bailout_dump_flag = struct
         ; name_matching = `Prefix
         }
     in
-    { base with Base.flags }
+    { base with flags }
   ;;
 end
 
-let basic ~summary ?readme { Base.Param.usage; flags; f } =
+let basic ~summary ?readme { Command_base.Param.usage; flags; f } =
   let flags = flags () in
   let usage = usage () in
   let anons () =
@@ -2335,7 +2385,7 @@ let basic ~summary ?readme { Base.Param.usage; flags; f } =
     | Ok thunk -> fun `Run_main -> thunk ()
   in
   let flags = Flag.Internal.create flags in
-  let base = { Base.summary; readme; usage; flags; anons } in
+  let base = { Command_base.summary; readme; usage; flags; anons } in
   let base =
     Bailout_dump_flag.add
       base
@@ -2343,13 +2393,13 @@ let basic ~summary ?readme { Base.Param.usage; flags; f } =
       ~aliases:[ "-?" ]
       ~aliases_excluded_from_help:[ "--help" ]
       ~text_summary:"this help text"
-      ~text:(fun env -> Lazy.force (Env.find_exn env Base.help_key))
+      ~text:(fun env -> Lazy.force (Env.find_exn env Command_base.help_key))
   in
   Base base
 ;;
 
 let basic_spec ~summary ?readme spec main =
-  basic ~summary ?readme (Base.Spec.to_param spec main)
+  basic ~summary ?readme (Command_base.Spec.to_param spec main)
 ;;
 
 let subs_key : (string * t) list Env.Key.t = Env.key_create "subcommands"
@@ -2360,7 +2410,7 @@ let lazy_group ~summary ?readme ?preserve_subcommand_order ?body alist =
       let alist =
         List.map alist ~f:(fun (name, t) -> normalize Key_type.Subcommand name, t)
       in
-      match String.Map.of_alist alist with
+      match Map.of_alist (module String) alist with
       | `Duplicate_key name -> failwithf "multiple subcommands named %s" name ()
       | `Ok map ->
         (match preserve_subcommand_order with
@@ -2377,20 +2427,20 @@ let group ~summary ?readme ?preserve_subcommand_order ?body alist =
 
 let exec ~summary ?readme ?(child_subcommand = []) ?env ~path_to_exe () =
   let working_dir =
-    Filename.dirname
+    Filename_base.dirname
     @@
     match path_to_exe with
-    | `Absolute _ | `Relative_to_me _ -> Caml.Sys.executable_name
-    | `Relative_to_argv0 _ -> Caml.Sys.argv.(0)
+    | `Absolute _ | `Relative_to_me _ -> Stdlib.Sys.executable_name
+    | `Relative_to_argv0 _ -> Stdlib.Sys.argv.(0)
   in
   let path_to_exe =
     match path_to_exe with
     | `Absolute p ->
-      if not (Filename.is_absolute p)
+      if not (Filename_base.is_absolute p)
       then failwith "Path passed to `Absolute must be absolute"
       else p
     | `Relative_to_me p | `Relative_to_argv0 p ->
-      if not (Filename.is_relative p)
+      if not (Filename_base.is_relative p)
       then failwith "Path passed to `Relative_to_me must be relative"
       else p
   in
@@ -2457,24 +2507,14 @@ and kind_of_sexpable
       }
 ;;
 
-module type For_version_info = sig
-  module Version_util : Version_util
-
-  module Time : sig
-    type t = Time_float.t [@@deriving sexp_of]
-  end
-end
-
-module Version_info (M : For_version_info) = struct
-  open M
-
+module Version_info (Version_util : Version_util) = struct
   let print_version ~version = print_endline (force version)
   let print_build_info ~build_info = print_endline (force build_info)
 
   let command ~version ~build_info =
     basic
       ~summary:"print version information"
-      Base.Param.(
+      Command_base.Param.(
         return (fun version_flag build_info_flag ->
           if build_info_flag
           then print_build_info ~build_info
@@ -2533,22 +2573,18 @@ module Version_info (M : For_version_info) = struct
   let default_build_info =
     lazy
       (* lazy to avoid loading all the time zone stuff at toplevel *)
-      (Version_util.reprint_build_info Time.sexp_of_t)
+      (Version_util.reprint_build_info Version_util.Time.sexp_of_t)
   ;;
 end
 
 let%test_module "Version_info" =
   (module struct
     module Version_info = Version_info (struct
-        module Version_util = struct
-          let version_list = [ "hg://some/path_0xdeadbeef"; "ssh://a/path_8badf00d" ]
-          let reprint_build_info to_sexp = Sexp.to_string (to_sexp Time_float.epoch)
-        end
+        let version_list = [ "hg://some/path_0xdeadbeef"; "ssh://a/path_8badf00d" ]
+        let reprint_build_info to_sexp = Sexp.to_string (to_sexp ())
 
         module Time = struct
-          type t = Time_float.t
-
-          let sexp_of_t t = Time_float.to_string_utc t |> Sexp.of_string
+          type t = unit [@@deriving sexp_of]
         end
       end)
 
@@ -2574,7 +2610,7 @@ let rec summary = function
 ;;
 
 module Spec = struct
-  include Base.Spec
+  include Command_base.Spec
 
   let path = map ~f:Path.parts_exe_basename path
 end
@@ -2585,7 +2621,7 @@ module Deprecated = struct
   let summary = summary
 
   let rec get_flag_names = function
-    | Base base -> base.Base.flags |> Map.keys
+    | Base base -> base.Command_base.flags |> Map.keys
     | Lazy thunk -> get_flag_names (Lazy.force thunk)
     | Group _ | Exec _ -> assert false
   ;;
@@ -2605,13 +2641,13 @@ module Deprecated = struct
           :: List.map
                ~f:(fun (flag, h) -> new_s ^ flag, h)
                (List.sort
-                  ~compare:Base.Deprecated.subcommand_cmp_fst
-                  (Base.Deprecated.flags_help ~display_help_flags:false base))
+                  ~compare:Command_base.Deprecated.subcommand_cmp_fst
+                  (Command_base.Deprecated.flags_help ~display_help_flags:false base))
         else [ base_help ]
       | Group { summary; subcommands; readme = _; body = _ } ->
         (s ^ cmd, summary)
         :: (Lazy.force subcommands
-            |> List.sort ~compare:Base.Deprecated.subcommand_cmp_fst
+            |> List.sort ~compare:Command_base.Deprecated.subcommand_cmp_fst
             |> List.concat_map ~f:(fun (cmd', t) -> help_recursive_rec ~cmd:cmd' t new_s))
       | Exec _ ->
         (* Command.exec does not support deprecated commands *)
@@ -2623,10 +2659,9 @@ end
 
 module For_unix (For_unix_with_string_env_var : For_unix with type env_var := string) =
 struct
-  module Version_info = Version_info (For_unix_with_string_env_var)
+  module Version_info = Version_info (For_unix_with_string_env_var.Version_util)
 
-  module For_unix_with_command_env_var : For_unix with type env_var := Command_env_var.t =
-  struct
+  module For_unix_with_command_env_var : For_unix with type env_var := Env_var.t = struct
     (* We force access to env vars to go through [Command_env_var] so that we can keep an
        accurate enumeration of the variables we use. *)
 
@@ -2635,20 +2670,13 @@ struct
     module Unix = struct
       include Unix
 
-      let putenv ~key ~data = putenv ~key:(Command_env_var.to_string key) ~data
-      let unsetenv key = unsetenv (Command_env_var.to_string key)
-      let unsafe_getenv key = unsafe_getenv (Command_env_var.to_string key)
-
-      type env =
-        [ `Replace of (Command_env_var.t * string) list
-        | `Extend of (Command_env_var.t * string) list
-        | `Override of (Command_env_var.t * string option) list
-        | `Replace_raw of string list
-        ]
+      let putenv ~key ~data = putenv ~key:(Env_var.to_string key) ~data
+      let unsetenv key = unsetenv (Env_var.to_string key)
+      let unsafe_getenv key = unsafe_getenv (Env_var.to_string key)
 
       let convert_env env =
         let convert_command_env_var_to_string list =
-          List.map list ~f:(fun (env_var, str) -> Command_env_var.to_string env_var, str)
+          List.map list ~f:(fun (env_var, str) -> Env_var.to_string env_var, str)
         in
         match env with
         | `Replace list -> `Replace (convert_command_env_var_to_string list)
@@ -2707,7 +2735,7 @@ struct
            this exec specifies a child subcommand. If it does, COMP_CWORD needs to be set
            higher to account for the arguments used to specify the child subcommand. *)
         set_comp_cword (n + List.length t.child_subcommand));
-      never_returns
+      Nothing.unreachable_code
         (For_unix_with_string_env_var.Unix.exec ?env ~prog ~argv:(prog :: args) ())
     ;;
   end
@@ -2720,20 +2748,22 @@ struct
          if the child process decides to wait for a read on one before closing the other.
          Buffering may hide this problem until output is "sufficiently large". *)
       let start_reading descr info =
-        let output = Set_once.create () in
+        let output = ref None in
         let thread =
           Thread.create
             ~on_uncaught_exn:`Print_to_stderr
             (fun () ->
-               Result.try_with (fun () ->
-                 descr |> Unix.in_channel_of_descr |> In_channel.input_all)
-               |> Set_once.set_exn output [%here])
+               let result =
+                 Result.try_with (fun () ->
+                   descr |> Unix.in_channel_of_descr |> In_channel.input_all)
+               in
+               output := Some result)
             ()
         in
-        stage (fun () ->
+        Staged.stage (fun () ->
           Thread.join thread;
           Unix.close descr;
-          match Set_once.get output with
+          match !output with
           | None -> raise_s [%message "BUG failed to read" (info : Info.t)]
           | Some (Ok output) -> output
           | Some (Error exn) -> raise exn)
@@ -2744,7 +2774,7 @@ struct
       (* We have to start both threads before joining any of them. *)
       let finish_stdout = start_reading process_info.stdout (Info.of_string "stdout") in
       let finish_stderr = start_reading process_info.stderr (Info.of_string "stderr") in
-      unstage finish_stdout (), unstage finish_stderr ()
+      Staged.unstage finish_stdout (), Staged.unstage finish_stderr ()
     ;;
 
     let of_external ~working_dir ~path_to_exe ~child_subcommand =
@@ -2754,14 +2784,16 @@ struct
           ~prog:(abs_path ~dir:working_dir path_to_exe)
           ~args:child_subcommand
           ~env:
-            (let help_sexp = supported_versions |> Int.Set.sexp_of_t |> Sexp.to_string in
+            (let help_sexp =
+               supported_versions |> Set.sexp_of_m__t (module Int) |> Sexp.to_string
+             in
              `Extend [ COMMAND_OUTPUT_HELP_SEXP, help_sexp ])
       in
       Unix.close process_info.stdin;
       let stdout, stderr = read_stdout_and_stderr process_info in
-      ignore (Unix.wait (`Pid process_info.pid) : Pid.t * Unix.Exit_or_signal.t);
+      Unix.wait process_info.pid;
       (* Now we've killed all the processes and threads we made. *)
-      match stdout |> Sexp.of_string |> Versioned.t_of_sexp |> of_versioned with
+      match stdout |> Sexplib.Sexp.of_string |> Versioned.t_of_sexp |> of_versioned with
       | exception exn ->
         raise_s
           [%message
@@ -2819,7 +2851,7 @@ struct
 
   let rec shape t : Shape.t =
     match t with
-    | Base b -> Basic (Base.shape b)
+    | Base b -> Basic (Command_base.shape b)
     | Group g -> Group (Group.shape ~subcommand_to_shape:shape g)
     | Exec ({ Exec.child_subcommand; path_to_exe; working_dir; _ } as e) ->
       Exec (Exec.shape e, shape_of_exe ~child_subcommand ~path_to_exe ~working_dir)
@@ -2838,14 +2870,12 @@ struct
         in
         filtered_subcommands
         |> List.stable_sort ~compare:(fun a b -> help_screen_compare (fst a) (fst b))
-        |> List.fold
-             ~init:acc
-             ~f:(fun (acc : Shape.Flag_info.t Fqueue.t) (subcommand, shape) ->
-               let path = Path.append path ~subcommand in
-               let name = string_of_path path in
-               let doc = Shape.get_summary shape in
-               let acc = Fqueue.enqueue acc { name; doc; aliases = [] } in
-               if recursive then loop path acc shape else acc)
+        |> List.fold ~init:acc ~f:(fun acc (subcommand, shape) ->
+          let path = Path.append path ~subcommand in
+          let name = string_of_path path in
+          let doc = Shape.get_summary shape in
+          let acc = { Shape.Flag_info.name; doc; aliases = [] } :: acc in
+          if recursive then loop path acc shape else acc)
       in
       match shape with
       | Exec (_, shape) ->
@@ -2862,11 +2892,11 @@ struct
           |> List.fold ~init:acc ~f:(fun acc fmt ->
             let path = Path.append path ~subcommand:fmt.name in
             let fmt = { fmt with name = string_of_path path } in
-            Fqueue.enqueue acc fmt)
+            fmt :: acc)
         else acc
       | Lazy thunk -> loop path acc (Lazy.force thunk)
     in
-    loop Path.empty Fqueue.empty shape |> Fqueue.to_list
+    loop Path.empty [] shape |> List.rev
   ;;
 
   let group_or_exec_help_text ~flags ~path ~summary ~readme ~format_list =
@@ -2913,7 +2943,7 @@ struct
   let help_subcommand ~summary ~readme =
     basic
       ~summary:"explain a given subcommand (perhaps recursively)"
-      Base.Param.(
+      Command_base.Param.(
         return (fun recursive flags expand_dots path (env : Env.t) cmd_opt () ->
           let subs =
             match Env.find env subs_key with
@@ -2967,7 +2997,7 @@ struct
      syntax). *)
   let dump_autocomplete_function () =
     let fname = sprintf "_jsautocom_%s" (Pid.to_string (Unix.getpid ())) in
-    let argv_0 = Caml.Sys.argv.(0) in
+    let argv_0 = Stdlib.Sys.argv.(0) in
     printf
       "function %s {\n\
       \  export COMP_CWORD\n\
@@ -2991,12 +3021,13 @@ struct
     |> Set.max_elt
     |> function
     | None ->
-      failwiths
+      Error.create
         ~here:[%here]
         "Couldn't choose a supported help output version for Command.exec from the given \
          supported versions."
         Sexpable.supported_versions
-        Int.Set.sexp_of_t
+        (Set.sexp_of_m__t (module Int))
+      |> Error.raise
     | Some version_to_use ->
       sexpable_shape t
       |> Sexpable.find ~path_to_subcommand
@@ -3011,7 +3042,9 @@ struct
     | [] -> failwith "missing executable name"
     | cmd :: args ->
       Option.iter (getenv_and_clear COMMAND_OUTPUT_HELP_SEXP) ~f:(fun version ->
-        let supported_versions = Sexp.of_string version |> Int.Set.t_of_sexp in
+        let supported_versions =
+          Sexplib.Sexp.of_string version |> Set.m__t_of_sexp (module Int)
+        in
         dump_help_sexp ~supported_versions t ~path_to_subcommand:args;
         exit 0);
       Option.iter (getenv_and_clear COMMAND_OUTPUT_INSTALLATION_BASH) ~f:(fun _ ->
@@ -3090,7 +3123,7 @@ struct
         lazy
           (help_for_shape (shape t) path ~recursive:false ~flags:true ~expand_dots:false)
       in
-      Base.run
+      Command_base.run
         base
         env
         ~path
@@ -3098,6 +3131,7 @@ struct
         ~verbose_on_parse_error
         ~help_text
         ~when_parsing_succeeds
+        ~on_failure:Command_base.run_exn
     | Exec exec ->
       let args = Cmdline.to_list (maybe_apply_extend args ~extend ~path) in
       Exec.exec_with_args ~args exec ~maybe_new_comp_cword
@@ -3208,7 +3242,7 @@ struct
         ?verbose_on_parse_error
         ?version
         ?build_info
-        ?(argv = Array.to_list Caml.Sys.argv)
+        ?(argv = Array.to_list Stdlib.Sys.argv)
         ?extend
         ?(when_parsing_succeeds = Fn.id)
         ?complete_subcommands
@@ -3335,7 +3369,7 @@ module Param = struct
     val arg_names : 'a t -> string list
   end
 
-  include Base.Param
+  include Command_base.Param
 
   let path = map ~f:Path.parts_exe_basename path
 end
@@ -3357,6 +3391,19 @@ let basic ~summary ?readme param =
   basic ~summary ?readme param
 ;;
 
+let basic_or_error ~summary ?readme param =
+  basic
+    ~summary
+    ?readme
+    (let%map run = param in
+     fun () ->
+       match run () with
+       | Ok () -> ()
+       | Error e ->
+         Stdio.prerr_endline (Error.to_string_hum e);
+         exit 1)
+;;
+
 module Private = struct
   let abs_path = abs_path
   let word_wrap = Shape.Private.word_wrap
@@ -3370,7 +3417,7 @@ module Private = struct
     include Spec
 
     let to_string_for_choose_one param =
-      Base.Param.Choose_one.Choice_name.(create_exn param |> to_string)
+      Command_base.Param.Choose_one.Choice_name.(create_exn param |> to_string)
     ;;
   end
 end

@@ -3,7 +3,7 @@ open Poly
 open! Import
 
 let%expect_test "[Pervasives.float_of_string] supports underscores" =
-  print_endline (Caml.string_of_float (Caml.float_of_string "1_234.567_8"));
+  print_endline (Stdlib.string_of_float (Stdlib.float_of_string "1_234.567_8"));
   [%expect {|
     1234.5678 |}]
 ;;
@@ -53,7 +53,8 @@ let%expect_test "[Sexp.of_float_style = `Underscores]" =
     ~f:(fun f ->
       check f;
       check (-.f));
-  [%expect
+  Expect_test_patterns.require_match
+    [%here]
     {|
     (0 0)
     (-0 -0)
@@ -78,7 +79,7 @@ let%expect_test "[Sexp.of_float_style = `Underscores]" =
     (INF INF)
     (-INF -INF)
     (NAN NAN)
-    ({-,}NAN {-,}NAN) (glob) |}]
+    ({-,}NAN {-,}NAN) (glob) |}
 ;;
 
 let%expect_test "Terse.sexp_of_t" =
@@ -368,7 +369,7 @@ let%expect_test ("iround does not force re-boxing" [@tags "x-library-inlining-se
   [%expect {| |}];
   require_no_float_boxing (fun t -> Float.iround_towards_zero_exn t.(0));
   [%expect {| |}];
-  require_no_float_boxing (fun t -> Caml.int_of_float t.(0));
+  require_no_float_boxing (fun t -> Stdlib.int_of_float t.(0));
   [%expect {| |}]
 ;;
 

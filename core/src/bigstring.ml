@@ -91,8 +91,7 @@ let read_bin_prot t ?pos ?len reader =
   | `Not_enough_data -> Or_error.error_string "not enough data"
 ;;
 
-let write_bin_prot t ?(pos = 0) writer v =
-  let data_len = writer.Bin_prot.Type_class.size v in
+let write_bin_prot_known_size t ?(pos = 0) write ~size:data_len v =
   let total_len = data_len + Bin_prot.Utils.size_header_length in
   if pos < 0
   then
@@ -106,7 +105,7 @@ let write_bin_prot t ?(pos = 0) writer v =
       [%sexp_of:
         [ `pos of int ] * [ `pos_after_writing of int ] * [ `bigstring_length of int ]];
   let pos_after_size_header = Bin_prot.Utils.bin_write_size_header t ~pos data_len in
-  let pos_after_data = writer.Bin_prot.Type_class.write t ~pos:pos_after_size_header v in
+  let pos_after_data = write t ~pos:pos_after_size_header v in
   if pos_after_data - pos <> total_len
   then
     failwiths
@@ -124,6 +123,11 @@ let write_bin_prot t ?(pos = 0) writer v =
         * [ `data_len of int ]
         * [ `total_len of int ]];
   pos_after_data
+;;
+
+let write_bin_prot t ?pos (writer : _ Bin_prot.Type_class.writer) v =
+  let size = writer.size v in
+  write_bin_prot_known_size t ?pos writer.write ~size v
 ;;
 
 (* Hex dump *)
@@ -149,15 +153,29 @@ let get_tail_padded_fixed_string ~padding t ~pos ~len () =
   to_string t ~pos ~len:(data_end - pos)
 ;;
 
-let set_tail_padded_fixed_string ~padding t ~pos ~len value =
+let get_tail_padded_fixed_string_local ~padding t ~pos ~len () =
+  
+    (let data_end =
+       last_nonmatch_plus_one ~buf:t ~min_pos:pos ~pos:(pos + len) ~char:padding
+     in
+     let len = data_end - pos in
+     let dst = Bytes.create_local len in
+     To_bytes.blit ~src:t ~src_pos:pos ~dst ~dst_pos:0 ~len;
+     Bytes.unsafe_to_string ~no_mutation_while_string_reachable:dst)
+;;
+
+let[@cold] set_padded_fixed_string_failed ~head_or_tail ~value ~len =
+  Printf.failwithf
+    "Bigstring.set_%s_padded_fixed_string: %S is longer than %d"
+    head_or_tail
+    ([%globalize: string] value)
+    len
+    ()
+;;
+
+let set_tail_padded_fixed_string ~padding t ~pos ~len (value [@local]) =
   let slen = String.length value in
-  if slen > len
-  then
-    Printf.failwithf
-      "Bigstring.set_tail_padded_fixed_string: %S is longer than %d"
-      value
-      len
-      ();
+  if slen > len then set_padded_fixed_string_failed ~head_or_tail:"tail" ~value ~len;
   From_string.blit ~src:value ~dst:t ~src_pos:0 ~dst_pos:pos ~len:slen;
   for i = pos + slen to pos + len - 1 do
     set t i padding
@@ -170,15 +188,9 @@ let rec first_nonmatch ~buf ~pos ~max_pos ~char =
   else pos
 ;;
 
-let set_head_padded_fixed_string ~padding t ~pos ~len value =
+let set_head_padded_fixed_string ~padding t ~pos ~len (value [@local]) =
   let slen = String.length value in
-  if slen > len
-  then
-    Printf.failwithf
-      "Bigstring.set_head_padded_fixed_string: %S is longer than %d"
-      value
-      len
-      ();
+  if slen > len then set_padded_fixed_string_failed ~head_or_tail:"head" ~value ~len;
   From_string.blit ~src:value ~dst:t ~src_pos:0 ~dst_pos:(pos + len - slen) ~len:slen;
   for i = pos to pos + len - slen - 1 do
     set t i padding
@@ -188,6 +200,15 @@ let set_head_padded_fixed_string ~padding t ~pos ~len value =
 let get_head_padded_fixed_string ~padding t ~pos ~len () =
   let data_begin = first_nonmatch ~buf:t ~pos ~max_pos:(pos + len - 1) ~char:padding in
   to_string t ~pos:data_begin ~len:(len - (data_begin - pos))
+;;
+
+let get_head_padded_fixed_string_local ~padding t ~pos ~len () =
+  
+    (let data_begin = first_nonmatch ~buf:t ~pos ~max_pos:(pos + len - 1) ~char:padding in
+     let len = len - (data_begin - pos) in
+     let dst = Bytes.create_local len in
+     To_bytes.blit ~src:t ~src_pos:data_begin ~dst ~dst_pos:0 ~len;
+     Bytes.unsafe_to_string ~no_mutation_while_string_reachable:dst)
 ;;
 
 let quickcheck_generator = Base_quickcheck.Generator.bigstring

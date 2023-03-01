@@ -64,7 +64,8 @@ CAMLprim value core_gc_allocated_words(value unit __attribute__((unused))) {
 
 CAMLprim value core_gc_run_memprof_callbacks(value unit
                                              __attribute__((unused))) {
-  value exn = caml_memprof_handle_postponed_exn();
-  caml_raise_if_exception(exn);
+  value res = caml_memprof_handle_postponed_exn();
+  if (Is_exception_result(res))
+    caml_raise(Extract_exception(res));
   return Val_unit;
 }

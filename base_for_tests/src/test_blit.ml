@@ -31,7 +31,7 @@ module type For_tests_gen = sig
   module Src : sig
     type 'a t
 
-    val length : _ t -> int
+    val length : (_ t[@local]) -> int
     val create_bool : len:int -> bool z t
     val get : 'a z t -> int -> 'a Elt.t
     val set : 'a z t -> int -> 'a Elt.t -> unit
@@ -40,7 +40,7 @@ module type For_tests_gen = sig
   module Dst : sig
     type 'a t
 
-    val length : _ t -> int
+    val length : (_ t[@local]) -> int
     val create_bool : len:int -> bool z t
     val get : 'a z t -> int -> 'a Elt.t
     val set : 'a z t -> int -> 'a Elt.t -> unit

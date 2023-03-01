@@ -14,9 +14,9 @@ let r' : (int, foo) Ref.Permissioned.t = r
 [%%expect
   {|
 Line _, characters _-_:
-Error: This expression has type (int, [< 'b perms ] as 'a) Ref.Permissioned.t
+Error: This expression has type (int, [< 'a perms ]) Ref.Permissioned.t
        but an expression was expected of type (int, foo) Ref.Permissioned.t
-       Type 'a = [< `Read | `Who_can_write of 'b ]
+       Type [< 'a perms ] = [< `Read | `Who_can_write of 'a ]
        is not compatible with type foo
 |}]
 
@@ -29,11 +29,12 @@ let () = Ref.Permissioned.set r 1
 [%%expect
   {|
 Line _, characters _-_:
-Error: This expression has type * (glob)
+Error: This expression has type (int, Perms.nobody perms) Ref.Permissioned.t
        but an expression was expected of type
-         * (glob)
+         (int, [> write ]) Ref.Permissioned.t
        Type Perms.nobody perms = [ `Read | `Who_can_write of Perms.nobody ]
-       is not compatible with type 'a = [> `Who_can_write of Perms.me ]
+       is not compatible with type
+         [> write ] = [> `Who_can_write of Perms.me ]
        Types for tag `Who_can_write are incompatible
 |}]
 
@@ -46,10 +47,12 @@ let r_immutable : (int, immutable) Ref.Permissioned.t = r
   {|
 Line _, characters _-_:
 Error: This expression has type
-         * (glob)
+         (int, [< Perms.me perms > `Who_can_write ]) Ref.Permissioned.t
        but an expression was expected of type
          (int, immutable) Ref.Permissioned.t
-       Type 'a = [< `Read | `Who_can_write of Perms.me > `Who_can_write ]
+       Type
+         [< Perms.me perms > `Who_can_write ] =
+           [< `Read | `Who_can_write of Perms.me > `Who_can_write ]
        is not compatible with type
          immutable = [ `Read | `Who_can_write of Perms.nobody ]
        Types for tag `Who_can_write are incompatible
@@ -77,13 +80,13 @@ Line _, characters _-_:
 Error: In this `with' constraint, the new definition of t
        does not match its original definition in the constrained signature:
        Type declarations do not match:
-         type ('a, 'b) t = ('a, 'b) t
-           constraint 'b = \[< `Read | `Who_can_write of .* \] (regexp)
+         type ('a, 'b) t = ('a, 'b) t constraint 'b = [< 'c perms ]
        is not included in
          type ('a, -'perm) t
-       Their constraints differ.
-       *: Expected declaration (glob)
-       *: Actual declaration (glob)
+       Their parameters differ
+       The type [< 'a perms ] is not equal to the type 'perm
+       File "permissions.mlt", line 75, characters 2-21: Expected declaration
+       File "permissions.mlt", line 82, characters 33-68: Actual declaration
 |}]
 
 (* Constraints don't work with included signatures, part 2 *)
@@ -104,29 +107,26 @@ Error: In this `with' constraint, the new definition of t
        does not match its original definition in the constrained signature:
        Type declarations do not match:
          type ('a, 'b) t = ('a, 'b) t
-           constraint 'b = \[< `Read | `Who_can_write of .* \] (regexp)
+           constraint 'b = [< `Read | `Who_can_write of 'c & 'd ]
        is not included in
          type ('a, -'b) t constraint 'b = [< 'c perms ]
-       Their constraints differ.
-       *: Expected declaration (glob)
-       *: Actual declaration (glob)
+       Their parameters differ
+       The type [< `Read | `Who_can_write of 'a & 'b ]
+       is not equal to the type [< 'a perms ]
+       Types for tag `Who_can_write are incompatible
+       File "permissions.mlt", line 101, characters 2-53:
+         Expected declaration
+       File "permissions.mlt", line 108, characters 33-68: Actual declaration
 |}]
 
-(* Constraints don't work with type aliases, part 1 *)
+(* Situation where constraints do work with type aliases *)
 type -'perm t constraint 'perm = [< _ perms ]
 type 'perm alias = 'perm t
 
-[%%expect
-  {|
-Line _, characters _-_:
-Error: Constraints are not satisfied in this type.
-       Type
-       \[< `Read | `Who_can_write of .* \] t (regexp)
-       should be an instance of
-       \[< .* Core.perms \] t (regexp)
+[%%expect {|
 |}]
 
-(* Constraints don't work with type aliases, part 2 *)
+(* Situation where constraints don't work with type aliases *)
 type -'perm t constraint 'perm = [< _ perms ]
 type 'perm alias = 'perm t constraint 'perm = [< _ perms ]
 
@@ -134,8 +134,6 @@ type 'perm alias = 'perm t constraint 'perm = [< _ perms ]
   {|
 Line _, characters _-_:
 Error: Constraints are not satisfied in this type.
-       Type
-       \[< `Read | `Who_can_write of .* \] t (regexp)
-       should be an instance of
-       \[< .* Core.perms \] t (regexp)
+       Type [< `Read | `Who_can_write of 'a & 'b ] alias
+       should be an instance of [< 'c perms ] alias
 |}]

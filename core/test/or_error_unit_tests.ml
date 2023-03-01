@@ -116,7 +116,7 @@ let%expect_test "[Expect_test_config]" =
   Ok ()
 ;;
 
-module Expect_test_config = Expect_test_config_with_unit_expect [@warning "-deprecated"]
+module Expect_test_config = Expect_test_config_with_unit_expect [@alert "-deprecated"]
 
 let%expect_test "[Expect_test_config_with_unit_expect]" =
   let open Let_syntax in

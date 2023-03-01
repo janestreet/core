@@ -14,7 +14,6 @@ module Floatable = Base.Floatable
 module Formatter = Base.Formatter
 module Hash = Base.Hash
 module Hasher = Base.Hasher
-module Indexed_container = Base.Indexed_container
 module Intable = Base.Intable
 module Int_conversions = Base.Int_conversions
 module Int_math = Base.Int_math
@@ -90,15 +89,14 @@ include (
 module Variant = Variantslib.Variant
 
 let with_return = With_return.with_return
-let am_running_inline_test = Ppx_inline_test_lib.Runtime.am_running_inline_test
 
 let am_running_test =
   try
-    ignore (Caml.Sys.getenv "TESTING_FRAMEWORK" : string);
+    ignore (Stdlib.Sys.getenv "TESTING_FRAMEWORK" : string);
     true
   with
   (* [Caml.*] never raises [Not_found_s] *)
-  | Caml.Not_found -> false
+  | Stdlib.Not_found -> false
 ;;
 
 type 'a identity = 'a

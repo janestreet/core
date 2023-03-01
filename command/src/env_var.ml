@@ -1,3 +1,6 @@
+open! Base
+open! Import
+
 type t =
   | COMMAND_OUTPUT_INSTALLATION_BASH
   | COMMAND_OUTPUT_HELP_SEXP

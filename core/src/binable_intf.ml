@@ -233,40 +233,4 @@ module type Binable = sig
 
   val of_string : 'a m -> string -> 'a
   val to_string : 'a m -> 'a -> string
-
-  module Of_binable = Of_binable_without_uuid
-  [@@alert "-legacy"]
-  [@@deprecated
-    "[since 2019-11] Use [Of_binable_with_uuid] if possible, otherwise use \
-     [Of_binable_without_uuid]."]
-
-  module Of_binable1 = Of_binable1_without_uuid
-  [@@alert "-legacy"]
-  [@@deprecated
-    "[since 2019-11] Use [Of_binable1_with_uuid] if possible, otherwise use \
-     [Of_binable1_without_uuid]."]
-
-  module Of_binable2 = Of_binable2_without_uuid
-  [@@alert "-legacy"]
-  [@@deprecated
-    "[since 2019-11] Use [Of_binable2_with_uuid] if possible, otherwise use \
-     [Of_binable2_without_uuid]."]
-
-  module Of_binable3 = Of_binable3_without_uuid
-  [@@alert "-legacy"]
-  [@@deprecated
-    "[since 2019-11] Use [Of_binable3_with_uuid] if possible, otherwise use \
-     [Of_binable3_without_uuid]."]
-
-  module Of_sexpable = Of_sexpable_without_uuid
-  [@@alert "-legacy"]
-  [@@deprecated
-    "[since 2019-11] Use [Of_sexpable_with_uuid] if possible, otherwise use \
-     [Of_sexpable_without_uuid]."]
-
-  module Of_stringable = Of_stringable_without_uuid
-  [@@alert "-legacy"]
-  [@@deprecated
-    "[since 2019-11] Use [Of_stringable_with_uuid] if possible, otherwise use \
-     [Of_stringable_without_uuid]."]
 end

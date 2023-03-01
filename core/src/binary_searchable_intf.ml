@@ -2,6 +2,16 @@
 
 open Base.Binary_searchable
 
+module type S0_permissions = sig
+  open Perms.Export
+
+  type elt
+  type -'perms t
+
+  val binary_search : ([> read ] t, elt, 'key) binary_search
+  val binary_search_segmented : ([> read ] t, elt) binary_search_segmented
+end
+
 module type S1_permissions = sig
   open Perms.Export
 
@@ -16,5 +26,6 @@ module type Binary_searchable = sig
     include Base.Binary_searchable
   end
 
+  module type S0_permissions = S0_permissions
   module type S1_permissions = S1_permissions
 end

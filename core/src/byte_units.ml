@@ -19,6 +19,9 @@ end
 
 include Infix
 
+let abs t = of_repr (Repr.abs (to_repr t))
+let neg t = of_repr (Repr.neg (to_repr t))
+let sign t = Repr.sign (to_repr t)
 let zero = of_repr Repr.zero
 let min_value = of_repr Repr.min_value
 let max_value = of_repr Repr.max_value
@@ -33,16 +36,16 @@ let of_bytes_int63 = of_repr
 let of_bytes_int64_exn b = of_repr (Repr.of_int64_exn b)
 let of_bytes_float_exn b = of_repr (Repr.of_float b)
 
-let[@deprecated
-  "[since 2019-01] Use [bytes_int_exn], [bytes_int63], [bytes_int64] or [bytes_float] \
-   as appropriate."] bytes
+let (bytes [@deprecated
+       "[since 2019-01] Use [bytes_int_exn], [bytes_int63], [bytes_int64] or \
+        [bytes_float] as appropriate."])
   =
   bytes_float
 ;;
 
-let[@deprecated
-  "[since 2019-01] Use [of_bytes_int], [of_bytes_int63], [of_bytes_int64_exn] or \
-   [of_bytes_float_exn] as appropriate."] of_bytes
+let (of_bytes [@deprecated
+       "[since 2019-01] Use [of_bytes_int], [of_bytes_int63], \
+        [of_bytes_int64_exn] or [of_bytes_float_exn] as appropriate."])
   =
   of_bytes_float_exn
 ;;
@@ -78,11 +81,11 @@ let of_exabytes t = Infix.( * ) exabyte t
 let of_words_int t = iscale word t
 let of_words_float_exn t = Infix.( * ) word t
 
-let[@deprecated "[since 2019-01] Use [words_int_exn] or [words_float]"] words =
+let (words [@deprecated "[since 2019-01] Use [words_int_exn] or [words_float]"]) =
   words_float
 ;;
 
-let[@deprecated "[since 2019-01] Use [of_words_int] or [of_words_float_exn]"] of_words =
+let (of_words [@deprecated "[since 2019-01] Use [of_words_int] or [of_words_float_exn]"]) =
   of_words_float_exn
 ;;
 
@@ -109,7 +112,7 @@ let of_string s =
   | 't' -> of_terabytes base
   | 'p' -> of_petabytes base
   | 'e' -> of_exabytes base
-  | 'w' -> of_words base
+  | 'w' -> of_words_float_exn base
   | ext ->
     invalid_argf "'%s' passed to Byte_units.of_string - illegal extension %c" s ext ()
 ;;
@@ -304,15 +307,15 @@ module Short = struct
     [%expect {| 977K |}];
     printf !"%{}" (of_bytes_int 10000000);
     [%expect {| 9.54M |}];
-    printf !"%{}" (of_bytes 10000000000.);
+    printf !"%{}" (of_bytes_float_exn 10000000000.);
     [%expect {| 9.31G |}];
-    printf !"%{}" (of_bytes 1000000000000.);
+    printf !"%{}" (of_bytes_float_exn 1000000000000.);
     [%expect {| 931G |}];
-    printf !"%{}" (of_bytes 100000000000000.);
+    printf !"%{}" (of_bytes_float_exn 100000000000000.);
     [%expect {| 90.9T |}];
-    printf !"%{}" (of_bytes 100000000000000000.);
+    printf !"%{}" (of_bytes_float_exn 100000000000000000.);
     [%expect {| 88.8P |}];
-    printf !"%{}" (of_bytes 3000000000000000000.);
+    printf !"%{}" (of_bytes_float_exn 3000000000000000000.);
     [%expect {| 2.60E |}];
     ()
   ;;
@@ -320,11 +323,11 @@ end
 
 let to_string_short = Short.to_string
 
-let[@deprecated
-  "[since 2019-01] Use [of_bytes], [of_kilobytes], [of_megabytes], etc as appropriate."] create
-                                                                                           units
-                                                                                           value
+let (create [@deprecated
+       "[since 2019-01] Use [of_bytes], [of_kilobytes], [of_megabytes], etc as \
+        appropriate."])
   =
+  fun units value ->
   match units with
   | `Bytes -> of_bytes_float_exn value
   | `Kilobytes -> of_kilobytes value

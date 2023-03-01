@@ -17,7 +17,7 @@
     and {!Pervasives.ref} are guaranteed to be heap-allocated and non-constant except when
     the length argument is [0]. *)
 
-open! Import
+open! Base
 
 type +'a t = private 'a [@@deriving sexp_of]
 

@@ -246,6 +246,10 @@ type control = Control.t
     statistics. *)
 external stat : unit -> stat = "caml_gc_stat"
 
+(** Creating a [Stat.t] can allocate on the minor heap. Return the expected number of
+    words allocated. **)
+val stat_size : unit -> int
+
 (** Same as [stat] except that [live_words], [live_blocks], [free_words],
     [free_blocks], [largest_free], and [fragments] are set to 0.  This
     function is much faster than [stat] because it does not need to go

@@ -89,7 +89,7 @@ let digest_bytes = Md5_lib.bytes
 
 external caml_sys_open
   :  string
-  -> Caml.open_flag list
+  -> Stdlib.open_flag list
   -> perm:int
   -> int
   = "caml_sys_open"
@@ -108,16 +108,16 @@ let digest_file_blocking path =
 let file = digest_file_blocking
 
 let digest_channel_blocking_without_releasing_runtime_lock channel ~len =
-  of_binary_exn (Caml.Digest.channel channel len)
+  of_binary_exn (Stdlib.Digest.channel channel len)
 ;;
 
 let channel channel len =
   digest_channel_blocking_without_releasing_runtime_lock channel ~len
 ;;
 
-let output_blocking t oc = Caml.Digest.output oc (to_binary t)
+let output_blocking t oc = Stdlib.Digest.output oc (to_binary t)
 let output oc t = output_blocking t oc
-let input_blocking ic = of_binary_exn (Caml.Digest.input ic)
+let input_blocking ic = of_binary_exn (Stdlib.Digest.input ic)
 let input = input_blocking
 let digest_subbytes = Md5_lib.subbytes
 let string = digest_string

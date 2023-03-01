@@ -70,9 +70,7 @@ include
       include Bin
     end)
 
-module Replace_polymorphic_compare : Comparable.Polymorphic_compare with type t := t =
-  Base.Int63
-
+module Replace_polymorphic_compare : Comparable.Comparisons with type t := t = Base.Int63
 include Base.Int63
 include Comparable.Validate_with_zero (Base.Int63)
 

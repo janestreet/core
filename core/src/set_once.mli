@@ -24,7 +24,7 @@ val get : 'a t -> 'a option
 val get_exn : 'a t -> Source_code_position.t -> 'a
 val is_none : _ t -> bool
 val is_some : _ t -> bool
-val iter : 'a t -> f:('a -> unit) -> unit
+val iter : 'a t -> f:(('a -> unit)[@local]) -> unit
 
 module Optional_syntax :
   Optional_syntax.S1 with type 'a t := 'a t with type 'a value := 'a identity

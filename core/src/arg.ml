@@ -1,5 +1,5 @@
 open! Import
-include Caml.Arg
+include Stdlib.Arg
 
 type t = key * spec * doc
 

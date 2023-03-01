@@ -89,9 +89,21 @@ module type Span = sig
   end
   [@@deprecated "[since 2018-04] use [Span.sexp_of_t] and [Span.t_of_sexp] instead"]
 
-  val arg_type : [ `Use_Time_ns_unix ] [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
+  val arg_type : t Command.Arg_type.t
 
-  module Option : sig end [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
+  (** [Span.Option.t] is like [Span.t option], except that the value is immediate on
+      architectures where [Int63.t] is immediate.  This module should mainly be used to
+      avoid allocations. *)
+  module Option : sig
+    include Immediate_option.S_int63 with type value := t
+    include Identifiable.S with type t := t
+    include Quickcheck.S with type t := t
+
+    module Stable : sig
+      module V1 : Stable_int63able.With_stable_witness.S with type t = t
+      module V2 : Stable_int63able.With_stable_witness.S with type t = t
+    end
+  end
 
   module Stable : sig
     module V1 : sig
@@ -362,7 +374,9 @@ module type Time_ns = sig
   end
 
   module Stable : sig
-    module V1 : sig end [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
+    module V1 : sig end
+    [@@deprecated "[since 2021-03] Use [Time_ns_unix] or [Time_ns.Alternate_sexp]"]
+
     module Option : sig end [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
     module Alternate_sexp : sig
@@ -462,14 +476,14 @@ module type Time_ns = sig
   val set_sexp_zone : [ `Use_Time_ns_unix ]
   [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
-  val sexp_of_t : [ `Use_Time_ns_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
+  val sexp_of_t : [ `Use_Time_ns_unix_or_Time_ns_alternate_sexp ]
+  [@@deprecated "[since 2021-03] Use [Time_ns_unix] or [Time_ns.Alternate_sexp]"]
 
   val sexp_of_t_abs : [ `Use_Time_ns_unix ]
   [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
-  val t_of_sexp : [ `Use_Time_ns_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
+  val t_of_sexp : [ `Use_Time_ns_unix_or_Time_ns_alternate_sexp ]
+  [@@deprecated "[since 2021-03] Use [Time_ns_unix] or [Time_ns.Alternate_sexp]"]
 
   val t_of_sexp_abs : [ `Use_Time_ns_unix ]
   [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]

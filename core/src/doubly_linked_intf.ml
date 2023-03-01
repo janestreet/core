@@ -99,7 +99,7 @@ module type S = sig
   val remove_first : 'a t -> 'a option
   val remove_last : 'a t -> 'a option
   val iteri : 'a t -> f:(int -> 'a -> unit) -> unit
-  val foldi : 'a t -> init:'b -> f:(int -> 'b -> 'a -> 'b) -> 'b
+  val foldi : 'a t -> init:'acc -> f:(int -> 'acc -> 'a -> 'acc) -> 'acc
 
   (** [fold_elt t ~init ~f] is the same as fold, except [f] is called with the ['a
       Elt.t]'s from the list instead of the contained ['a] values.
@@ -107,15 +107,15 @@ module type S = sig
       Note that like other iteration functions, it is an error to mutate [t] inside the
       fold. If you'd like to call [remove] on any of the ['a Elt.t]'s, use
       [filter_inplace]. *)
-  val fold_elt : 'a t -> init:'b -> f:('b -> 'a Elt.t -> 'b) -> 'b
+  val fold_elt : 'a t -> init:'acc -> f:('acc -> 'a Elt.t -> 'acc) -> 'acc
 
-  val foldi_elt : 'a t -> init:'b -> f:(int -> 'b -> 'a Elt.t -> 'b) -> 'b
+  val foldi_elt : 'a t -> init:'acc -> f:(int -> 'acc -> 'a Elt.t -> 'acc) -> 'acc
   val iter_elt : 'a t -> f:('a Elt.t -> unit) -> unit
   val iteri_elt : 'a t -> f:(int -> 'a Elt.t -> unit) -> unit
 
 
-  val fold_right : 'a t -> init:'b -> f:('a -> 'b -> 'b) -> 'b
-  val fold_right_elt : 'a t -> init:'b -> f:('a Elt.t -> 'b -> 'b) -> 'b
+  val fold_right : 'a t -> init:'acc -> f:('a -> 'acc -> 'acc) -> 'acc
+  val fold_right_elt : 'a t -> init:'acc -> f:('a Elt.t -> 'acc -> 'acc) -> 'acc
 
   (** [find_elt t ~f] finds the first element in [t] that satisfies [f], by testing each
       of element of [t] in turn until [f] succeeds. *)

@@ -10,7 +10,7 @@ module type S1 = sig
   (** A hash-queue, where the values are of type ['data]. *)
   type ('key, 'data) t [@@deriving sexp_of]
 
-  include Container.S1_phantom_invariant with type ('data, 'key) t := ('key, 'data) t
+  include Container.S1_phantom with type ('data, 'key) t := ('key, 'data) t
 
   (** [invariant t] checks the invariants of the queue. *)
 
@@ -148,7 +148,7 @@ module type S1 = sig
 
   (** [dequeue_all t ~f] dequeues every element of the queue and applies [f] to each one.
       The dequeue order is from front to back. *)
-  val dequeue_all : ('key, 'data) t -> f:('data -> unit) -> unit
+  val dequeue_all : ('key, 'data) t -> f:(('data -> unit)[@local]) -> unit
 
   (** [remove q k] removes the key-value pair with key [k] from the queue. *)
   val remove : ('key, 'data) t -> 'key -> [ `Ok | `No_such_key ]
@@ -176,9 +176,13 @@ module type S1 = sig
   (** {2 Iterating over elements} *)
 
   (** [iter t ~f] applies [f] to each key and element of the queue. *)
-  val iteri : ('key, 'data) t -> f:(key:'key -> data:'data -> unit) -> unit
+  val iteri : ('key, 'data) t -> f:((key:'key -> data:'data -> unit)[@local]) -> unit
 
-  val foldi : ('key, 'data) t -> init:'b -> f:('b -> key:'key -> data:'data -> 'b) -> 'b
+  val foldi
+    :  ('key, 'data) t
+    -> init:'acc
+    -> f:(('acc -> key:'key -> data:'data -> 'acc)[@local])
+    -> 'acc
 end
 
 module type S0 = sig

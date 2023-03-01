@@ -5,8 +5,11 @@ type 'a t = 'a Base.Sequence.t [@@deriving bin_io]
 module Step : sig
   type ('a, 's) t = ('a, 's) Base.Sequence.Step.t =
     | Done
-    | Skip of 's
-    | Yield of 'a * 's
+    | Skip of { state : 's }
+    | Yield of
+        { value : 'a
+        ; state : 's
+        }
   [@@deriving bin_io]
 
   include module type of struct

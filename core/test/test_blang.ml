@@ -363,6 +363,10 @@ let%expect_test "quickcheck generator obeys invariants" =
   [%expect {| |}]
 ;;
 
+(* If this test fails on `javascript-runtest`, then js-of-ocaml may have
+   a bug related to mutually recursive functions inside of loops, and
+   was able to see through the anti-tail-recursion hack in
+   `lib/sexp_grammar/src/sexp_grammar.ml`. *)
 let%expect_test "validate sexp grammar" =
   require_ok
     [%here]
@@ -372,8 +376,9 @@ let%expect_test "validate sexp grammar" =
        end));
   [%expect
     {|
-    (Recursive
-     (Tycon blang ((List Empty)))
+    (Tycon
+     blang
+     ((List Empty))
      ((
       (tycon blang)
       (tyvars (a))
@@ -391,20 +396,22 @@ let%expect_test "validate sexp grammar" =
                 (List_clause
                  (args
                   (Cons
-                   (Tycon blang ((Tyvar a)))
+                   (Recursive blang ((Tyvar a)))
                    (Cons
-                    (Tycon blang ((Tyvar a)))
-                    (Cons (Tycon blang ((Tyvar a))) Empty))))))))
+                    (Recursive blang ((Tyvar a)))
+                    (Cons (Recursive blang ((Tyvar a))) Empty))))))))
              (No_tag
               ((name and)
-               (clause_kind (List_clause (args (Many (Tycon blang ((Tyvar a)))))))))
+               (clause_kind
+                (List_clause (args (Many (Recursive blang ((Tyvar a)))))))))
              (No_tag
               ((name or)
-               (clause_kind (List_clause (args (Many (Tycon blang ((Tyvar a)))))))))
+               (clause_kind
+                (List_clause (args (Many (Recursive blang ((Tyvar a)))))))))
              (No_tag
               ((name not)
                (clause_kind
-                (List_clause (args (Cons (Tycon blang ((Tyvar a))) Empty)))))))))))))))) |}]
+                (List_clause (args (Cons (Recursive blang ((Tyvar a))) Empty)))))))))))))))) |}]
 ;;
 
 

@@ -52,7 +52,7 @@ let () =
       Hashable.Make (struct
         include Int
 
-        let hash x = Caml.Hashtbl.hash x
+        let hash x = Stdlib.Hashtbl.hash x
       end)
     in
     gen_test_int_replace_and_find n (I.Table.create ~size:(2 * n) ())
@@ -69,7 +69,7 @@ let () =
   in
   let caml_hashtbl_hash () =
     for i = 0 to n - 1 do
-      let (_ : int) = Caml.Hashtbl.hash i in
+      let (_ : int) = Stdlib.Hashtbl.hash i in
       ()
     done
   in

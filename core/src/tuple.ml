@@ -25,19 +25,20 @@ module T2 = struct
 
   [%%if flambda_backend]
 
-  external get1 : ('a, _) t -> 'a = "%field0_immut"
-  external get2 : (_, 'a) t -> 'a = "%field1_immut"
+  external get1 : (('a, _) t[@local_opt]) -> ('a[@local_opt]) = "%field0_immut"
+  external get2 : ((_, 'a) t[@local_opt]) -> ('a[@local_opt]) = "%field1_immut"
 
   [%%else]
 
-  external get1 : ('a, _) t -> 'a = "%field0"
-  external get2 : (_, 'a) t -> 'a = "%field1"
+  external get1 : (('a, _) t[@local_opt]) -> ('a[@local_opt]) = "%field0"
+  external get2 : ((_, 'a) t[@local_opt]) -> ('a[@local_opt]) = "%field1"
 
   [%%endif]
 
   let map (x, y) ~f = f x, f y
   let map_fst (x, y) ~f = f x, y
   let map_snd (x, y) ~f = x, f y
+  let map_both (x, y) ~f1 ~f2 = f1 x, f2 y
   let map2 (x1, y1) (x2, y2) ~f = f x1 x2, f y1 y2
 
   let compare ~cmp1 ~cmp2 (x, y) (x', y') =
@@ -75,17 +76,18 @@ module T3 = struct
   let map_fst (x, y, z) ~f = f x, y, z
   let map_snd (x, y, z) ~f = x, f y, z
   let map_trd (x, y, z) ~f = x, y, f z
+  let map_all (x, y, z) ~f1 ~f2 ~f3 = f1 x, f2 y, f3 z
   let map2 (x1, y1, z1) (x2, y2, z2) ~f = f x1 x2, f y1 y2, f z1 z2
 
   [%%if flambda_backend]
 
-  external get1 : ('a, _, _) t -> 'a = "%field0_immut"
-  external get2 : (_, 'a, _) t -> 'a = "%field1_immut"
+  external get1 : (('a, _, _) t[@local_opt]) -> ('a[@local_opt]) = "%field0_immut"
+  external get2 : ((_, 'a, _) t[@local_opt]) -> ('a[@local_opt]) = "%field1_immut"
 
   [%%else]
 
-  external get1 : ('a, _, _) t -> 'a = "%field0"
-  external get2 : (_, 'a, _) t -> 'a = "%field1"
+  external get1 : (('a, _, _) t[@local_opt]) -> ('a[@local_opt]) = "%field0"
+  external get2 : ((_, 'a, _) t[@local_opt]) -> ('a[@local_opt]) = "%field1"
 
   [%%endif]
 

@@ -89,10 +89,10 @@ let does_not_allocate f =
 ;;
 
 let%test_unit _ = does_not_allocate (fun x -> Int.popcount x)
-let%test_unit _ = does_not_allocate (fun x -> Int32.popcount (Caml.Int32.of_int x))
-let%test_unit _ = does_not_allocate (fun x -> Int64.popcount (Caml.Int64.of_int x))
+let%test_unit _ = does_not_allocate (fun x -> Int32.popcount (Stdlib.Int32.of_int x))
+let%test_unit _ = does_not_allocate (fun x -> Int64.popcount (Stdlib.Int64.of_int x))
 
 let%test_unit _ =
-  does_not_allocate (fun x -> Nativeint.popcount (Caml.Nativeint.of_int x))
+  does_not_allocate (fun x -> Nativeint.popcount (Stdlib.Nativeint.of_int x))
 ;;
 

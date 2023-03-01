@@ -40,7 +40,7 @@ let unix_quote x =
 ;;
 
 let quote =
-  match Caml.Sys.os_type with
+  match Stdlib.Sys.os_type with
   | "Unix" -> unix_quote
   | _ -> Filename.quote
 ;;
@@ -73,7 +73,7 @@ let rename = `Use_Sys_unix
 let unsafe_getenv = `Use_Sys_unix
 let unsafe_getenv_exn = `Use_Sys_unix
 
-exception Break = Caml.Sys.Break
+exception Break = Stdlib.Sys.Break
 
 module Private = struct
   let unix_quote = unix_quote

@@ -1,0 +1,22 @@
+open! Core
+open Array
+
+(* first test that we only allow global elements *)
+let local_id (x [@local]) = x;;
+
+let k = local_id 42 in
+Permissioned.create_local ~len:10 k
+
+[%%expect {|
+Line _, characters _-_:
+Error: This value escapes its region
+|}];;
+
+(* then check that the array is indeed local *)
+let arr = Permissioned.create_local ~len:10 42 in
+ref arr
+
+[%%expect {|
+Line _, characters _-_:
+Error: This value escapes its region
+|}]

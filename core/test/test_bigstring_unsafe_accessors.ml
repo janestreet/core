@@ -17,7 +17,7 @@ let%test _ =
     ~buf
     Int.to_string
     ~fget:unsafe_get_int16_le
-    ~fset:unsafe_set_int16_le
+    ~fset:(fun x ~pos value -> unsafe_set_int16_le x ~pos value)
     [ -32768; -1; 0; 1; 32767 ]
 ;;
 
@@ -35,7 +35,7 @@ let%test _ =
     ~buf
     Int.to_string
     ~fget:unsafe_get_int16_be
-    ~fset:unsafe_set_int16_be
+    ~fset:(fun t ~pos value -> unsafe_set_int16_be t ~pos value)
     [ -32768; -1; 0; 1; 32767 ]
 ;;
 
@@ -54,7 +54,7 @@ let%test (_ [@tags "64-bits-only"]) =
     ~buf
     Int.to_string
     ~fget:unsafe_get_int32_le
-    ~fset:unsafe_set_int32_le
+    ~fset:(fun t ~pos value -> unsafe_set_int32_le t ~pos value)
     [ Int64.to_int_exn (-2147483648L); -1; 0; 1; Int64.to_int_exn 2147483647L ]
 ;;
 
@@ -63,7 +63,7 @@ let%test (_ [@tags "64-bits-only"]) =
     ~buf
     Int.to_string
     ~fget:unsafe_get_int32_be
-    ~fset:unsafe_set_int32_be
+    ~fset:(fun t ~pos value -> unsafe_set_int32_be t ~pos value)
     [ Int64.to_int_exn (-2147483648L); -1; 0; 1; Int64.to_int_exn 2147483647L ]
 ;;
 
@@ -127,8 +127,8 @@ let%test _ =
   test_accessor
     ~buf
     Int64.to_string
-    ~fget:unsafe_get_int64_t_le
-    ~fset:unsafe_set_int64_t_le
+    ~fget:(fun t ~pos -> unsafe_get_int64_t_le t ~pos)
+    ~fset:(fun t ~pos v -> unsafe_set_int64_t_le t ~pos v)
     [ -0x8000_0000_0000_0000L
     ; -0x789A_BCDE_F012_3456L
     ; -0xFFL
@@ -144,8 +144,8 @@ let%test _ =
   test_accessor
     ~buf
     Int64.to_string
-    ~fget:unsafe_get_int64_t_be
-    ~fset:unsafe_set_int64_t_be
+    ~fget:(fun t ~pos -> unsafe_get_int64_t_be t ~pos)
+    ~fset:(fun t ~pos v -> unsafe_set_int64_t_be t ~pos v)
     [ -0x8000_0000_0000_0000L
     ; -0x789A_BCDE_F012_3456L
     ; -0xFFL
@@ -161,8 +161,8 @@ let%test _ =
   test_accessor
     ~buf
     Int64.to_string
-    ~fget:unsafe_get_int64_t_be
-    ~fset:unsafe_set_int64_t_be
+    ~fget:(fun t ~pos -> unsafe_get_int64_t_be t ~pos)
+    ~fset:(fun t ~pos v -> unsafe_set_int64_t_be t ~pos v)
     [ -0x8000_0000_0000_0000L
     ; -0x789A_BCDE_F012_3456L
     ; -0xFFL

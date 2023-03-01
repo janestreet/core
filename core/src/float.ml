@@ -19,12 +19,20 @@ let valid_float_lexem s =
 
 open! Import
 
-module T = struct
-  include Base.Float
+module Stable = struct
+  module V1 = struct
+    module T1 = struct
+      include Base.Float
 
-  type t = float [@@deriving bin_io, typerep]
+      type t = float [@@deriving bin_io, hash, sexp, stable_witness, typerep]
+    end
+
+    include T1
+    include Comparable.Stable.V1.With_stable_witness.Make (T1)
+  end
 end
 
+module T = Stable.V1
 include T
 include Hashable.Make_binable (T)
 include Comparable.Map_and_set_binable_using_comparator (T)
@@ -78,16 +86,16 @@ module Robust_compare = struct
     open Poly
 
     let robust_comparison_tolerance = T.robust_comparison_tolerance
-    let ( >=. ) x y = x >= Caml.( -. ) y robust_comparison_tolerance
+    let ( >=. ) x y = x >= Stdlib.( -. ) y robust_comparison_tolerance
     let ( <=. ) x y = y >=. x
     let ( =. ) x y = x >=. y && y >=. x
-    let ( >. ) x y = x > Caml.( +. ) y robust_comparison_tolerance
+    let ( >. ) x y = x > Stdlib.( +. ) y robust_comparison_tolerance
     let ( <. ) x y = y >. x
     let ( <>. ) x y = not (x =. y)
 
     let robustly_compare x y =
-      let d = Caml.( -. ) x y in
-      if d < Caml.( ~-. ) robust_comparison_tolerance
+      let d = Stdlib.( -. ) x y in
+      if d < Stdlib.( ~-. ) robust_comparison_tolerance
       then -1
       else if d > robust_comparison_tolerance
       then 1

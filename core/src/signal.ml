@@ -25,7 +25,7 @@ let equal (t : t) t' = t = t'
 
 include struct
   (* Please keep in sync with the list for to_string/sys_behavior *)
-  open Caml.Sys
+  open Stdlib.Sys
 
   let abrt = sigabrt
   let alrm = sigalrm
@@ -166,19 +166,22 @@ module Expert = struct
 
   module Behavior = struct
     let of_caml = function
-      | Caml.Sys.Signal_default -> `Default
+      | Stdlib.Sys.Signal_default -> `Default
       | Signal_ignore -> `Ignore
       | Signal_handle f -> `Handle f
     ;;
 
     let to_caml = function
-      | `Default -> Caml.Sys.Signal_default
+      | `Default -> Stdlib.Sys.Signal_default
       | `Ignore -> Signal_ignore
       | `Handle f -> Signal_handle (fun t -> Exn.handle_uncaught_and_exit (fun () -> f t))
     ;;
   end
 
-  let signal t behavior = Behavior.of_caml (Caml.Sys.signal t (Behavior.to_caml behavior))
+  let signal t behavior =
+    Behavior.of_caml (Stdlib.Sys.signal t (Behavior.to_caml behavior))
+  ;;
+
   let set t behavior = ignore (signal t behavior : behavior)
   let handle t f = set t (`Handle f)
 end

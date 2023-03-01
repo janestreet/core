@@ -23,6 +23,7 @@ depends: [
   "ppx_hash"
   "ppx_inline_test"
   "ppx_jane"
+  "ppx_optcomp"
   "ppx_sexp_conv"
   "ppx_sexp_message"
   "sexplib"
@@ -33,6 +34,7 @@ depends: [
   "variantslib"
   "dune"                {>= "2.0.0"}
 ]
+available: arch != "arm32" & arch != "x86_32"
 synopsis: "Industrial strength alternative to OCaml's standard library"
 description: "
 The Core suite of libraries is an industrial strength alternative to

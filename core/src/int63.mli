@@ -11,6 +11,15 @@ end
 
 (** @inline *)
 include
-  Int_intf.Extension_with_stable
-  with type t := t
-   and type comparator_witness := comparator_witness
+  Int_intf.Extension with type t := t and type comparator_witness := comparator_witness
+
+module Stable : sig
+  module V1 : sig
+    type nonrec t = t [@@immediate64] [@@deriving sexp_grammar]
+
+    include
+      Stable_comparable.With_stable_witness.V1
+      with type t := t
+       and type comparator_witness = comparator_witness
+  end
+end

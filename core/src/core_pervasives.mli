@@ -177,12 +177,12 @@ val __FUNCTION__ : string
     location of [expr] in the file currently being parsed by the
     compiler, with the standard error format of OCaml: "File %S, line
     %d, characters %d-%d" *)
-external __LOC_OF__ : 'a -> string * 'a = "%loc_LOC"
+external __LOC_OF__ : ('a[@local_opt]) -> (string * 'a[@local_opt]) = "%loc_LOC"
 
 (** [__LINE_OF__ expr] returns a pair [(line, expr)], where [line] is the
     line number at which the expression [expr] appears in the file
     currently being parsed by the compiler. *)
-external __LINE_OF__ : 'a -> int * 'a = "%loc_LINE"
+external __LINE_OF__ : ('a[@local_opt]) -> (int * 'a[@local_opt]) = "%loc_LINE"
 
 (** [__POS_OF__ expr] returns a pair [(expr,loc)], where [loc] is a
     tuple [(file,lnum,cnum,enum)] corresponding to the location at
@@ -190,7 +190,10 @@ external __LINE_OF__ : 'a -> int * 'a = "%loc_LINE"
     parsed by the compiler. [file] is the current filename, [lnum] the
     line number, [cnum] the character position in the line and [enum]
     the last character position in the line. *)
-external __POS_OF__ : 'a -> (string * int * int * int) * 'a = "%loc_POS"
+external __POS_OF__
+  :  ('a[@local_opt])
+  -> ((string * int * int * int) * 'a[@local_opt])
+  = "%loc_POS"
 
 (** {6 Composition operators} *)
 
@@ -198,13 +201,13 @@ external __POS_OF__ : 'a -> (string * int * int * int) * 'a = "%loc_POS"
     to [g (f (x))].
     @since 4.01
 *)
-external ( |> ) : 'a -> ('a -> 'b) -> 'b = "%revapply"
+external ( |> ) : 'a -> (('a -> 'b)[@local_opt]) -> 'b = "%revapply"
 
 (** Application operator: [g @@ f @@ x] is exactly equivalent to
     [g (f (x))].
     @since 4.01
 *)
-external ( @@ ) : ('a -> 'b) -> 'a -> 'b = "%apply"
+external ( @@ ) : (('a -> 'b)[@local_opt]) -> 'a -> 'b = "%apply"
 
 
 (** {6 Integer arithmetic} *)
@@ -450,6 +453,33 @@ external sinh : float -> float = "caml_sinh_float" "sinh"
 external tanh : float -> float = "caml_tanh_float" "tanh"
 [@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.tanh]"]
 
+(** Hyperbolic arc cosine.  The argument must fall within the range
+    [[1.0, inf]].
+    Result is in radians and is between [0.0] and [inf].
+
+    @since 4.13.0
+*)
+external acosh : float -> float = "caml_acosh_float" "caml_acosh"
+[@@unboxed] [@@noalloc] [@@deprecated "[since 2022-11] Use [Float.acosh]"]
+
+(** Hyperbolic arc sine.  The argument and result range over the entire
+    real line.
+    Result is in radians.
+
+    @since 4.13.0
+*)
+external asinh : float -> float = "caml_asinh_float" "caml_asinh"
+[@@unboxed] [@@noalloc] [@@deprecated "[since 2022-11] Use [Float.asinh]"]
+
+(** Hyperbolic arc tangent.  The argument must fall within the range
+    [[-1.0, 1.0]].
+    Result is in radians and ranges over the entire real line.
+
+    @since 4.13.0
+*)
+external atanh : float -> float = "caml_atanh_float" "caml_atanh"
+[@@unboxed] [@@noalloc] [@@deprecated "[since 2022-11] Use [Float.atanh]"]
+
 (** Round above to an integer value.
     [ceil f] returns the least integer value greater than or equal to [f].
     The result is returned as a float. *)
@@ -552,7 +582,7 @@ val epsilon_float : float
 
 (** The five classes of floating-point numbers, as determined by
     the {!Caml.classify_float} function. *)
-type fpclass = Caml.fpclass =
+type fpclass = Stdlib.fpclass =
   | FP_normal (** Normal number, none of the below *)
   | FP_subnormal (** Number very close to 0.0, has reduced precision *)
   | FP_zero (** Number is 0.0 or -0.0 *)
@@ -582,7 +612,7 @@ val ( ^ ) : string -> string -> string
 *)
 
 (** Return the ASCII code of the argument. *)
-external int_of_char : char -> int = "%identity"
+external int_of_char : (char[@local_opt]) -> int = "%identity"
 
 
 (** Return the character with the given ASCII code.
@@ -672,22 +702,22 @@ val ( @ ) : 'a list -> 'a list -> 'a list
     calls they invoke fail. *)
 
 (** The type of input channel. *)
-type in_channel = Caml.in_channel [@@deprecated "[since 2016-04] Use [In_channel.t]"]
+type in_channel = Stdlib.in_channel [@@deprecated "[since 2016-04] Use [In_channel.t]"]
 
 (** The type of output channel. *)
-type out_channel = Caml.out_channel [@@deprecated "[since 2016-04] Use [Out_channel.t]"]
+type out_channel = Stdlib.out_channel [@@deprecated "[since 2016-04] Use [Out_channel.t]"]
 
 (** The standard input for the process. *)
-val stdin : Caml.in_channel
+val stdin : Stdlib.in_channel
 [@@deprecated "[since 2016-04] Use [In_channel.stdin]"]
 
 
 (** The standard output for the process. *)
-val stdout : Caml.out_channel
+val stdout : Stdlib.out_channel
 
 
 (** The standard error output for the process. *)
-val stderr : Caml.out_channel
+val stderr : Stdlib.out_channel
 
 (** {7 Output functions on standard output} *)
 
@@ -783,7 +813,7 @@ val read_float : unit -> float
 
 (** Opening modes for {!Caml.open_out_gen} and
     {!Caml.open_in_gen}. *)
-type open_flag = Caml.open_flag =
+type open_flag = Stdlib.open_flag =
   | Open_rdonly (** open for reading. *)
   | Open_wronly (** open for writing. *)
   | Open_append (** open for appending: always write at end of file. *)
@@ -799,14 +829,14 @@ type open_flag = Caml.open_flag =
     on that file, positionned at the beginning of the file. The
     file is truncated to zero length if it already exists. It
     is created if it does not already exists. *)
-val open_out : string -> Caml.out_channel
+val open_out : string -> Stdlib.out_channel
 [@@deprecated "[since 2016-04] Use [Out_channel.create]"]
 
 (** Same as {!Caml.open_out}, but the file is opened in binary mode,
     so that no translation takes place during writes. On operating
     systems that do not distinguish between text mode and binary
     mode, this function behaves like {!Caml.open_out}. *)
-val open_out_bin : string -> Caml.out_channel
+val open_out_bin : string -> Stdlib.out_channel
 [@@deprecated "[since 2016-04] Use [Out_channel.create]"]
 
 (** [open_out_gen mode perm filename] opens the named file for writing,
@@ -815,14 +845,14 @@ val open_out_bin : string -> Caml.out_channel
     the file permissions, in case the file must be created.
     {!Caml.open_out} and {!Caml.open_out_bin} are special
     cases of this function. *)
-val open_out_gen : Caml.open_flag list -> int -> string -> Caml.out_channel
+val open_out_gen : Stdlib.open_flag list -> int -> string -> Stdlib.out_channel
 [@@deprecated "[since 2016-04] Use [Out_channel.create]"]
 
 (** Flush the buffer associated with the given output channel,
     performing all pending writes on that channel.
     Interactive programs must be careful about flushing standard
     output and standard error at the right time. *)
-val flush : Caml.out_channel -> unit
+val flush : Stdlib.out_channel -> unit
 [@@deprecated "[since 2016-04] Use [Out_channel.flush]"]
 
 (** Flush all open output channels; ignore errors. *)
@@ -830,33 +860,33 @@ val flush_all : unit -> unit
 [@@deprecated "[since 2016-04]"]
 
 (** Write the character on the given output channel. *)
-val output_char : Caml.out_channel -> char -> unit
+val output_char : Stdlib.out_channel -> char -> unit
 [@@deprecated "[since 2016-04] Use [Out_channel.output_char]"]
 
 (** Write the string on the given output channel. *)
-val output_string : Caml.out_channel -> string -> unit
+val output_string : Stdlib.out_channel -> string -> unit
 [@@deprecated "[since 2016-04] Use [Out_channel.output_string]"]
 
 (** Write the byte sequence on the given output channel. *)
-val output_bytes : Caml.out_channel -> bytes -> unit
+val output_bytes : Stdlib.out_channel -> bytes -> unit
 [@@deprecated "[since 2016-04] Core doesn't yet support bytes."]
 
 (** [output oc buf pos len] writes [len] characters from byte sequence [buf],
     starting at offset [pos], to the given output channel [oc].
     Raise [Invalid_argument "output"] if [pos] and [len] do not
     designate a valid range of [buf]. *)
-val output : Caml.out_channel -> bytes -> int -> int -> unit
+val output : Stdlib.out_channel -> bytes -> int -> int -> unit
 [@@deprecated "[since 2016-04] Core doesn't yet support bytes."]
 
 (** Same as [output] but take a string as argument instead of
     a byte sequence. *)
-val output_substring : Caml.out_channel -> string -> int -> int -> unit
+val output_substring : Stdlib.out_channel -> string -> int -> int -> unit
 [@@deprecated "[since 2016-04] Use [Out_channel.output]"]
 
 (** Write one 8-bit integer (as the single character with that code)
     on the given output channel. The given integer is taken modulo
     256. *)
-val output_byte : Caml.out_channel -> int -> unit
+val output_byte : Stdlib.out_channel -> int -> unit
 [@@deprecated "[since 2016-04] Use [Out_channel.output_byte]"]
 
 (** Write one integer in binary format (4 bytes, big-endian)
@@ -865,7 +895,7 @@ val output_byte : Caml.out_channel -> int -> unit
     The only reliable way to read it back is through the
     {!Caml.input_binary_int} function. The format is compatible across
     all machines for a given version of OCaml. *)
-val output_binary_int : Caml.out_channel -> int -> unit
+val output_binary_int : Stdlib.out_channel -> int -> unit
 [@@deprecated "[since 2016-04] Use [Out_channel.output_binary_int]"]
 
 (** Write the representation of a structured value of any type
@@ -874,26 +904,26 @@ val output_binary_int : Caml.out_channel -> int -> unit
     by the function {!Caml.input_value}. See the description of module
     {!Marshal} for more information. {!Caml.output_value} is equivalent
     to {!Marshal.to_channel} with an empty list of flags. *)
-val output_value : Caml.out_channel -> 'a -> unit
+val output_value : Stdlib.out_channel -> 'a -> unit
 [@@deprecated "[since 2016-04] Use [Out_channel.output_value]"]
 
 (** [seek_out chan pos] sets the current writing position to [pos]
     for channel [chan]. This works only for regular files. On
     files of other kinds (such as terminals, pipes and sockets),
     the behavior is unspecified. *)
-val seek_out : Caml.out_channel -> int -> unit
+val seek_out : Stdlib.out_channel -> int -> unit
 [@@deprecated "[since 2014-10] Use [Out_channel.seek]"]
 
 (** Return the current writing position for the given channel.  Does
     not work on channels opened with the [Open_append] flag (returns
     unspecified results). *)
-val pos_out : Caml.out_channel -> int
+val pos_out : Stdlib.out_channel -> int
 [@@deprecated "[since 2014-10] Use [Out_channel.pos]"]
 
 (** Return the size (number of characters) of the regular file
     on which the given channel is opened.  If the channel is opened
     on a file that is not a regular file, the result is meaningless. *)
-val out_channel_length : Caml.out_channel -> int
+val out_channel_length : Stdlib.out_channel -> int
 [@@deprecated "[since 2014-10] Use [Out_channel.length]"]
 
 (** Close the given channel, flushing all buffered write operations.
@@ -902,11 +932,11 @@ val out_channel_length : Caml.out_channel -> int
     which do nothing when applied to an already closed channel.
     Note that [close_out] may raise [Sys_error] if the operating
     system signals an error when flushing or closing. *)
-val close_out : Caml.out_channel -> unit
+val close_out : Stdlib.out_channel -> unit
 [@@deprecated "[since 2014-10] Use [Out_channel.close]"]
 
 (** Same as [close_out], but ignore all errors. *)
-val close_out_noerr : Caml.out_channel -> unit
+val close_out_noerr : Stdlib.out_channel -> unit
 [@@deprecated "[since 2016-04] Use [Out_channel.close] and catch exceptions"]
 
 (** [set_binary_mode_out oc true] sets the channel [oc] to binary
@@ -917,21 +947,21 @@ val close_out_noerr : Caml.out_channel -> unit
     end-of-lines will be translated from [\n] to [\r\n].
     This function has no effect under operating systems that
     do not distinguish between text mode and binary mode. *)
-val set_binary_mode_out : Caml.out_channel -> bool -> unit
+val set_binary_mode_out : Stdlib.out_channel -> bool -> unit
 [@@deprecated "[since 2016-04] Use [Out_channel.set_binary_mode]"]
 
 (** {7 General input functions} *)
 
 (** Open the named file for reading, and return a new input channel
     on that file, positionned at the beginning of the file. *)
-val open_in : string -> Caml.in_channel
+val open_in : string -> Stdlib.in_channel
 [@@deprecated "[since 2016-04] Use [In_channel.create]"]
 
 (** Same as {!Caml.open_in}, but the file is opened in binary mode,
     so that no translation takes place during reads. On operating
     systems that do not distinguish between text mode and binary
     mode, this function behaves like {!Caml.open_in}. *)
-val open_in_bin : string -> Caml.in_channel
+val open_in_bin : string -> Stdlib.in_channel
 [@@deprecated "[since 2016-04] Use [In_channel.create]"]
 
 (** [open_in_gen mode perm filename] opens the named file for reading,
@@ -939,12 +969,12 @@ val open_in_bin : string -> Caml.in_channel
     [mode] and [perm] specify the opening mode and file permissions.
     {!Caml.open_in} and {!Caml.open_in_bin} are special
     cases of this function. *)
-val open_in_gen : Caml.open_flag list -> int -> string -> Caml.in_channel
+val open_in_gen : Stdlib.open_flag list -> int -> string -> Stdlib.in_channel
 [@@deprecated "[since 2016-04] Use [In_channel.create]"]
 
 (** Read one character from the given input channel.
     Raise [End_of_file] if there are no more characters to read. *)
-val input_char : Caml.in_channel -> char
+val input_char : Stdlib.in_channel -> char
 [@@deprecated "[since 2016-04] Use [In_channel.input_char]"]
 
 (** Read characters from the given input channel, until a
@@ -952,7 +982,7 @@ val input_char : Caml.in_channel -> char
     all characters read, without the newline character at the end.
     Raise [End_of_file] if the end of the file is reached
     at the beginning of line. *)
-val input_line : Caml.in_channel -> string
+val input_line : Stdlib.in_channel -> string
 [@@deprecated "[since 2016-04] Use [In_channel.input_line]"]
 
 (** [input ic buf pos len] reads up to [len] characters from
@@ -970,7 +1000,7 @@ val input_line : Caml.in_channel -> string
     exactly [len] characters.)
     Exception [Invalid_argument "input"] is raised if [pos] and [len]
     do not designate a valid range of [buf]. *)
-val input : Caml.in_channel -> bytes -> int -> int -> int
+val input : Stdlib.in_channel -> bytes -> int -> int -> int
 [@@deprecated "[since 2016-04] Core doesn't yet support bytes."]
 
 (** [really_input ic buf pos len] reads [len] characters from channel [ic],
@@ -979,27 +1009,27 @@ val input : Caml.in_channel -> bytes -> int -> int -> int
     characters have been read.
     Raise [Invalid_argument "really_input"] if
     [pos] and [len] do not designate a valid range of [buf]. *)
-val really_input : Caml.in_channel -> bytes -> int -> int -> unit
+val really_input : Stdlib.in_channel -> bytes -> int -> int -> unit
 [@@deprecated "[since 2016-04] Core doesn't yet support bytes."]
 
 (** [really_input_string ic len] reads [len] characters from channel [ic]
     and returns them in a new string.
     Raise [End_of_file] if the end of file is reached before [len]
     characters have been read. *)
-val really_input_string : Caml.in_channel -> int -> string
+val really_input_string : Stdlib.in_channel -> int -> string
 [@@deprecated "[since 2016-04] Use [In_channel.really_input_exn ~pos:0]"]
 
 (** Same as {!Caml.input_char}, but return the 8-bit integer representing
     the character.
     Raise [End_of_file] if an end of file was reached. *)
-val input_byte : Caml.in_channel -> int
+val input_byte : Stdlib.in_channel -> int
 [@@deprecated "[since 2016-04] Use [In_channel.input_byte]"]
 
 (** Read an integer encoded in binary format (4 bytes, big-endian)
     from the given input channel. See {!Caml.output_binary_int}.
     Raise [End_of_file] if an end of file was reached while reading the
     integer. *)
-val input_binary_int : Caml.in_channel -> int
+val input_binary_int : Stdlib.in_channel -> int
 [@@deprecated "[since 2016-04] Use [In_channel.input_binary_int]"]
 
 (** Read the representation of a structured value, as produced
@@ -1007,17 +1037,17 @@ val input_binary_int : Caml.in_channel -> int
     This function is identical to {!Marshal.from_channel};
     see the description of module {!Marshal} for more information,
     in particular concerning the lack of type safety. *)
-val input_value : Caml.in_channel -> 'a
+val input_value : Stdlib.in_channel -> 'a
 [@@deprecated "[since 2016-04] Use [In_channel.unsafe_input_value]"]
 
 (** [seek_in chan pos] sets the current reading position to [pos]
     for channel [chan]. This works only for regular files. On
     files of other kinds, the behavior is unspecified. *)
-val seek_in : Caml.in_channel -> int -> unit
+val seek_in : Stdlib.in_channel -> int -> unit
 [@@deprecated "[since 2014-10] Use [In_channel.seek]"]
 
 (** Return the current reading position for the given channel. *)
-val pos_in : Caml.in_channel -> int
+val pos_in : Stdlib.in_channel -> int
 [@@deprecated "[since 2014-10] Use [In_channel.pos]"]
 
 (** Return the size (number of characters) of the regular file
@@ -1026,18 +1056,18 @@ val pos_in : Caml.in_channel -> int
     The returned size does not take into account the end-of-line
     translations that can be performed when reading from a channel
     opened in text mode. *)
-val in_channel_length : Caml.in_channel -> int
+val in_channel_length : Stdlib.in_channel -> int
 [@@deprecated "[since 2014-10] Use [In_channel.length]"]
 
 (** Close the given channel.  Input functions raise a [Sys_error]
     exception when they are applied to a closed input channel,
     except [close_in], which does nothing when applied to an already
     closed channel. *)
-val close_in : Caml.in_channel -> unit
+val close_in : Stdlib.in_channel -> unit
 [@@deprecated "[since 2014-10] Use [In_channel.close]"]
 
 (** Same as [close_in], but ignore all errors. *)
-val close_in_noerr : Caml.in_channel -> unit
+val close_in_noerr : Stdlib.in_channel -> unit
 [@@deprecated "[since 2016-04] Use [In_channel.close] and catch exceptions"]
 
 (** [set_binary_mode_in ic true] sets the channel [ic] to binary
@@ -1048,7 +1078,7 @@ val close_in_noerr : Caml.in_channel -> unit
     end-of-lines will be translated from [\r\n] to [\n].
     This function has no effect under operating systems that
     do not distinguish between text mode and binary mode. *)
-val set_binary_mode_in : Caml.in_channel -> bool -> unit
+val set_binary_mode_in : Stdlib.in_channel -> bool -> unit
 [@@deprecated "[since 2016-04] Use [In_channel.set_binary_mode]"]
 
 (** {7 Operations on large files} *)
@@ -1060,12 +1090,12 @@ val set_binary_mode_in : Caml.in_channel -> bool -> unit
     regular integers (type [int]), these alternate functions allow
     operating on files whose sizes are greater than [max_int]. *)
 module LargeFile : sig
-  val seek_out : Caml.out_channel -> int64 -> unit
-  val pos_out : Caml.out_channel -> int64
-  val out_channel_length : Caml.out_channel -> int64
-  val seek_in : Caml.in_channel -> int64 -> unit
-  val pos_in : Caml.in_channel -> int64
-  val in_channel_length : Caml.in_channel -> int64
+  val seek_out : Stdlib.out_channel -> int64 -> unit
+  val pos_out : Stdlib.out_channel -> int64
+  val out_channel_length : Stdlib.out_channel -> int64
+  val seek_in : Stdlib.in_channel -> int64 -> unit
+  val pos_in : Stdlib.in_channel -> int64
+  val in_channel_length : Stdlib.in_channel -> int64
 end
 [@@deprecated "[since 2016-04] Use [In_channel] and [Out_channel]"]
 
@@ -1073,7 +1103,7 @@ end
 
 (** The type of references (mutable indirection cells) containing
     a value of type ['a]. *)
-type 'a ref = 'a Caml.ref = { mutable contents : 'a }
+type 'a ref = 'a Stdlib.ref = { mutable contents : 'a }
 
 (** Return a fresh reference containing the given value. *)
 external ref : 'a -> ('a ref[@local_opt]) = "%makemutable"
@@ -1096,7 +1126,7 @@ external decr : (int ref[@local_opt]) -> unit = "%decr"
 
 (** Result type *)
 
-type ('a, 'b) result = ('a, 'b) Caml.result =
+type ('a, 'b) result = ('a, 'b) Stdlib.result =
   | Ok of 'a
   | Error of 'b
 
@@ -1190,8 +1220,8 @@ val string_of_format : ('a, 'b, 'c, 'd, 'e, 'f) format6 -> string
     {!Scanf.format_from_string} function.
 *)
 external format_of_string
-  :  ('a, 'b, 'c, 'd, 'e, 'f) format6
-  -> ('a, 'b, 'c, 'd, 'e, 'f) format6
+  :  (('a, 'b, 'c, 'd, 'e, 'f) format6[@local_opt])
+  -> (('a, 'b, 'c, 'd, 'e, 'f) format6[@local_opt])
   = "%identity"
 
 
@@ -1232,7 +1262,7 @@ val at_exit : (unit -> unit) -> unit
 
 val valid_float_lexem : string -> string [@@deprecated "[since 2015-11] Do not use."]
 
-val unsafe_really_input : Caml.in_channel -> bytes -> int -> int -> unit
+val unsafe_really_input : Stdlib.in_channel -> bytes -> int -> int -> unit
 [@@deprecated "[since 2015-11] Do not use."]
 
 val do_at_exit : unit -> unit [@@deprecated "[since 2015-11] Do not use."]

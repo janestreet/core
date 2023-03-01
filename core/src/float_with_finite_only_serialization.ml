@@ -10,7 +10,7 @@ module Stable = struct
     type t = float [@@deriving compare, hash, equal, stable_witness]
 
     let verify t =
-      match Caml.classify_float t with
+      match Stdlib.classify_float t with
       | FP_normal | FP_subnormal | FP_zero -> ()
       | FP_infinite | FP_nan -> raise Nan_or_inf
     ;;

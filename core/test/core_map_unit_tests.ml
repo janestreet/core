@@ -62,6 +62,8 @@ struct
     let merge x = simplify_accessor merge x
     let merge_skewed x = simplify_accessor merge_skewed x
     let split x = simplify_accessor split x
+    let split_le_gt x = simplify_accessor split_le_gt x
+    let split_lt_ge x = simplify_accessor split_lt_ge x
     let subrange x = simplify_accessor subrange x
     let fold_range_inclusive x = simplify_accessor fold_range_inclusive x
     let range_to_alist x = simplify_accessor range_to_alist x
@@ -605,8 +607,9 @@ struct
   let%test "of_increasing_sequence: vs of_alist_or_error" =
     let alist = random_alist Key.samples in
     let increasing_alist =
-      List.sort alist ~compare:(Comparable.lift ~f:fst Key.compare)
-      |> List.remove_consecutive_duplicates ~equal:(Comparable.lift ~f:fst Key.equal)
+      List.sort alist ~compare:(fun a b -> Comparable.lift ~f:fst Key.compare a b)
+      |> List.remove_consecutive_duplicates ~equal:(fun a b ->
+        Comparable.lift ~f:fst Key.equal a b)
     in
     let duplicates_alist =
       match increasing_alist with
@@ -843,7 +846,7 @@ struct
     (* Can't use require_does_raise because the exceptions differ on different key
        types. *)
     match Map.find_exn (Map.empty ()) Key.sample with
-    | exception (Not_found_s _ | Caml.Not_found) -> ()
+    | exception (Not_found_s _ | Stdlib.Not_found) -> ()
     | _ -> print_cr [%here] [%message "didn't raise"]
   ;;
 
@@ -1263,8 +1266,10 @@ struct
         let test l1 l2 expect =
           let map_of_alist l = Map.of_alist_exn (make_alist l) in
           let result =
-            Map.merge_skewed (map_of_alist l1) (map_of_alist l2) ~combine:(fun ~key:_ ->
-              Int.max)
+            Map.merge_skewed
+              (map_of_alist l1)
+              (map_of_alist l2)
+              ~combine:(fun ~key:_ x y -> Int.max x y)
             |> Map.to_alist ~key_order:`Increasing
           in
           [%test_result: (Key.t * int) list] result ~expect:(make_alist expect)
@@ -1918,22 +1923,43 @@ struct
 
   (* same testing as nth *)
   let split _ = assert false
+  let split_le_gt _ = assert false
+  let split_lt_ge _ = assert false
 
   let%test_unit _ =
     let check here map pivot =
-      let l, maybe, r = Map.split map pivot in
-      assert (Map.invariants l);
-      assert (Map.invariants r);
-      Map.iteri l ~f:(fun ~key ~data:_ -> assert (Key.( < ) key pivot));
-      Map.iteri r ~f:(fun ~key ~data:_ -> assert (Key.( > ) key pivot));
-      [%test_eq: (Key.t * int) option]
-        ~here:[ here ]
-        (Option.map ~f:(fun d -> pivot, d) (Map.find map pivot))
-        maybe;
-      [%test_eq: int]
-        ~here:[ here ]
-        (Map.length map)
-        (Map.length l + Map.length r + Option.length maybe)
+      let () =
+        let l, maybe, r = Map.split map pivot in
+        assert (Map.invariants l);
+        assert (Map.invariants r);
+        Map.iteri l ~f:(fun ~key ~data:_ -> assert (Key.( < ) key pivot));
+        Map.iteri r ~f:(fun ~key ~data:_ -> assert (Key.( > ) key pivot));
+        [%test_eq: (Key.t * int) option]
+          ~here:[ here ]
+          (Option.map ~f:(fun d -> pivot, d) (Map.find map pivot))
+          maybe;
+        [%test_eq: int]
+          ~here:[ here ]
+          (Map.length map)
+          (Map.length l + Map.length r + Option.length maybe)
+      in
+      let () =
+        let l, r = Map.split_le_gt map pivot in
+        assert (Map.invariants l);
+        assert (Map.invariants r);
+        Map.iteri l ~f:(fun ~key ~data:_ -> assert (Key.( <= ) key pivot));
+        Map.iteri r ~f:(fun ~key ~data:_ -> assert (Key.( > ) key pivot));
+        [%test_eq: int] ~here:[ here ] (Map.length map) (Map.length l + Map.length r)
+      in
+      let () =
+        let l, r = Map.split_lt_ge map pivot in
+        assert (Map.invariants l);
+        assert (Map.invariants r);
+        Map.iteri l ~f:(fun ~key ~data:_ -> assert (Key.( < ) key pivot));
+        Map.iteri r ~f:(fun ~key ~data:_ -> assert (Key.( >= ) key pivot));
+        [%test_eq: int] ~here:[ here ] (Map.length map) (Map.length l + Map.length r)
+      in
+      ()
     in
     let map = random_map Key.samples in
     check [%here] map Key.min;

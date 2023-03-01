@@ -10,7 +10,7 @@ module type Extension = sig
     module V1 : Stable_module_types.With_stable_witness.S0 with type t = t
 
     module V2 : sig
-      type nonrec t = t [@@deriving hash]
+      type nonrec t = t [@@deriving hash, sexp_grammar]
 
       include Stable_module_types.With_stable_witness.S0 with type t := t
     end

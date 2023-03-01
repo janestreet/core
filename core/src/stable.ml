@@ -36,6 +36,7 @@ module Either = Either.Stable
 module Error = Error.Stable
 module Fdeque = Fdeque.Stable
 module Filename = Filename.Stable
+module Float = Float.Stable
 module Float_with_finite_only_serialization = Float_with_finite_only_serialization.Stable
 module Fqueue = Fqueue.Stable
 module Gc = Gc.Stable
@@ -73,4 +74,5 @@ module Unix = struct end [@@deprecated "[since 2021-02] Use [Core_unix.Stable]"]
 include Perms.Export
 
 include Ppx_compare_lib.Builtin
+include Base.Exported_for_specific_uses.Globalize
 include Import.Not_found

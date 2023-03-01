@@ -1,6 +1,5 @@
-open! Core
+open! Base
 open Poly
-open! Import
 open! Univ_map
 
 let%test_module _ =
@@ -98,7 +97,7 @@ let%test_module _ =
     let%test_unit _ = test t1
     let%test_unit _ = test t2
     let%test_unit _ = test t3
-    let%test _ = sexp_of_t t3 = Sexp.of_string "((foo 13.25)(size 15))"
+    let%test _ = sexp_of_t t3 = Parsexp.Single.parse_string_exn "((foo 13.25)(size 15))"
 
     let%expect_test "[to_alist]" =
       let test ints =
@@ -116,7 +115,7 @@ let%test_module _ =
             let sexp_of_a = Type_equal.Id.to_sexp type_id in
             [%sexp (type_id_name : string), (a : a)])
         in
-        print_s [%sexp (sexps : Sexp.t list)]
+        Stdio.print_s [%sexp (sexps : Sexp.t list)]
       in
       test [];
       [%expect {| () |}];
@@ -124,13 +123,10 @@ let%test_module _ =
       [%expect {| ((key1 1)) |}];
       test [ 1; 2 ];
       [%expect {|
-        ((key1 1)
-         (key2 2)) |}];
+        ((key1 1) (key2 2)) |}];
       test [ 1; 2; 3 ];
       [%expect {|
-        ((key1 1)
-         (key2 2)
-         (key3 3)) |}]
+        ((key1 1) (key2 2) (key3 3)) |}]
     ;;
   end)
 ;;
@@ -157,7 +153,7 @@ let%expect_test "specified key module" =
         type 'a t = 'a [@@deriving sexp_of]
       end)
   in
-  print_s
+  Stdio.print_s
     [%sexp
       (Or_error.try_with (fun () ->
          U_incorrect.find
@@ -166,10 +162,9 @@ let%expect_test "specified key module" =
        : int option Or_error.t)];
   [%expect
     {|
-    (Error (
-      "[Key.type_id] must not provide different type ids when called on the same input"
-      (key Foo)
-      (type_id1 ((name foo) (uid <uid>)))
+    (Error
+     ("[Key.type_id] must not provide different type ids when called on the same input"
+      (key Foo) (type_id1 ((name foo) (uid <uid>)))
       (type_id2 ((name foo) (uid <uid>))))) |}];
   (* correct use *)
   let module Key_correct = struct
@@ -195,7 +190,7 @@ let%expect_test "specified key module" =
         type 'a t = 'a [@@deriving sexp_of]
       end)
   in
-  print_s
+  Stdio.print_s
     [%sexp
       (U_correct.find (U_correct.of_alist_exn [ T (Foo, 3); T (Bar, "three") ]) Foo
        : int option)];
@@ -241,7 +236,7 @@ let%expect_test "merge" =
       (Input2.of_alist_exn [ T (Foo, [ 4; 5; 6 ]); T (Baz, [ 'a'; 'b'; 'c' ]) ])
       ~f:{ f = (fun ~key merge_result -> Some { key; merge_result }) }
   in
-  print_s [%sexp (merged : Output.t)];
+  Stdio.print_s [%sexp (merged : Output.t)];
   [%expect
     {|
     ((bar ((key Bar) (merge_result (Left (three)))))
@@ -299,7 +294,7 @@ let%expect_test "merge1" =
       (Input2.of_alist_exn [ T (Foo, [ 4; 5; 6 ]); T (Baz, [ 'a'; 'b'; 'c' ]) ])
       ~f:{ f = (fun ~key merge_result -> Some { key; merge_result }) }
   in
-  print_s [%sexp (merged : _ Output.t)];
+  Stdio.print_s [%sexp (merged : _ Output.t)];
   [%expect
     {|
     ((bar ((key Bar) (merge_result (Left (three)))))

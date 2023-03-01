@@ -390,6 +390,8 @@ module Make_tree_S1 (Key : Comparator.S1) = struct
   let count = count
   let counti = counti
   let split a b = split a b ~comparator
+  let split_le_gt a b = split_le_gt a b ~comparator
+  let split_lt_ge a b = split_lt_ge a b ~comparator
   let append ~lower_part ~upper_part = append ~lower_part ~upper_part ~comparator
 
   let subrange t ~lower_bound ~upper_bound =

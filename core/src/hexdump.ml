@@ -84,8 +84,8 @@ module Of_indexable2 (T : Indexable2) = struct
         if line_index >= unabridged_lines
         then Done
         else if line_index = skip_from && max_lines < unabridged_lines
-        then Yield ("...", skip_to)
-        else Yield (line t ~pos ~len ~line_index, line_index + 1))
+        then Yield { value = "..."; state = skip_to }
+        else Yield { value = line t ~pos ~len ~line_index; state = line_index + 1 })
     ;;
 
     let to_string_hum ?max_lines ?pos ?len t =

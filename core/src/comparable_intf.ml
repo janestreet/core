@@ -1,7 +1,7 @@
 open! Import
 
 module type Infix = Base.Comparable.Infix
-module type Polymorphic_compare = Base.Comparable.Polymorphic_compare
+module type Comparisons = Base.Comparable.Comparisons
 module type With_compare = Base.Comparable.With_compare
 
 module type Validate = sig
@@ -33,7 +33,7 @@ end
 module type S_common = sig
   include Base.Comparable.S
   include Validate with type t := t
-  module Replace_polymorphic_compare : Polymorphic_compare with type t := t
+  module Replace_polymorphic_compare : Comparisons with type t := t
 end
 
 (** Usage example:
@@ -141,7 +141,7 @@ module type Comparable = sig
 
   module type Infix = Infix
   module type Map_and_set_binable = Map_and_set_binable
-  module type Polymorphic_compare = Polymorphic_compare
+  module type Comparisons = Comparisons
   module type S_plain = S_plain
   module type S = S
   module type S_binable = S_binable
@@ -172,9 +172,9 @@ module type Comparable = sig
       type t [@@deriving compare]
     end) : Infix with type t := T.t
 
-  module Polymorphic_compare (T : sig
+  module Comparisons (T : sig
       type t [@@deriving compare]
-    end) : Polymorphic_compare with type t := T.t
+    end) : Comparisons with type t := T.t
 
   (** {2 Make Functors}
 

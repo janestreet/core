@@ -1,0 +1,3 @@
+(library (name heap_block) (public_name core.heap_block) (libraries base)
+ (c_names heap_block_stubs) (js_of_ocaml (javascript_files runtime.js))
+ (preprocess (pps ppx_jane)))

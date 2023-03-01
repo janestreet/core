@@ -2,7 +2,7 @@ open! Base
 open! Validate
 open Expect_test_helpers_core
 
-let print t = List.iter (errors t) ~f:Caml.print_endline
+let print t = List.iter (errors t) ~f:Stdlib.print_endline
 
 let%expect_test "empty" =
   let res =

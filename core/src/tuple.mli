@@ -28,19 +28,20 @@ module T2 : sig
 
   [%%if flambda_backend]
 
-  external get1 : ('a, _) t -> 'a = "%field0_immut"
-  external get2 : (_, 'a) t -> 'a = "%field1_immut"
+  external get1 : (('a, _) t[@local_opt]) -> ('a[@local_opt]) = "%field0_immut"
+  external get2 : ((_, 'a) t[@local_opt]) -> ('a[@local_opt]) = "%field1_immut"
 
   [%%else]
 
-  external get1 : ('a, _) t -> 'a = "%field0"
-  external get2 : (_, 'a) t -> 'a = "%field1"
+  external get1 : (('a, _) t[@local_opt]) -> ('a[@local_opt]) = "%field0"
+  external get2 : ((_, 'a) t[@local_opt]) -> ('a[@local_opt]) = "%field1"
 
   [%%endif]
 
   val map : ('a, 'a) t -> f:('a -> 'b) -> ('b, 'b) t
   val map_fst : ('a, 'b) t -> f:('a -> 'c) -> ('c, 'b) t
   val map_snd : ('a, 'b) t -> f:('b -> 'c) -> ('a, 'c) t
+  val map_both : ('a, 'b) t -> f1:('a -> 'c) -> f2:('b -> 'd) -> ('c, 'd) t
   val map2 : ('a, 'a) t -> ('b, 'b) t -> f:('a -> 'b -> 'c) -> ('c, 'c) t
   val swap : ('a, 'b) t -> ('b, 'a) t
 end
@@ -71,13 +72,13 @@ module T3 : sig
 
   [%%if flambda_backend]
 
-  external get1 : ('a, _, _) t -> 'a = "%field0_immut"
-  external get2 : (_, 'a, _) t -> 'a = "%field1_immut"
+  external get1 : (('a, _, _) t[@local_opt]) -> ('a[@local_opt]) = "%field0_immut"
+  external get2 : ((_, 'a, _) t[@local_opt]) -> ('a[@local_opt]) = "%field1_immut"
 
   [%%else]
 
-  external get1 : ('a, _, _) t -> 'a = "%field0"
-  external get2 : (_, 'a, _) t -> 'a = "%field1"
+  external get1 : (('a, _, _) t[@local_opt]) -> ('a[@local_opt]) = "%field0"
+  external get2 : ((_, 'a, _) t[@local_opt]) -> ('a[@local_opt]) = "%field1"
 
   [%%endif]
 
@@ -86,6 +87,14 @@ module T3 : sig
   val map_fst : ('a, 'b, 'c) t -> f:('a -> 'd) -> ('d, 'b, 'c) t
   val map_snd : ('a, 'b, 'c) t -> f:('b -> 'd) -> ('a, 'd, 'c) t
   val map_trd : ('a, 'b, 'c) t -> f:('c -> 'd) -> ('a, 'b, 'd) t
+
+  val map_all
+    :  ('a, 'b, 'c) t
+    -> f1:('a -> 'd)
+    -> f2:('b -> 'e)
+    -> f3:('c -> 'f)
+    -> ('d, 'e, 'f) t
+
   val map2 : ('a, 'a, 'a) t -> ('b, 'b, 'b) t -> f:('a -> 'b -> 'c) -> ('c, 'c, 'c) t
 end
 

@@ -54,6 +54,17 @@ val write_bin_prot
   -> 'a
   -> int
 
+(** Same as [write_bin_prot], with the difference that [size] is pre-computed by the
+    caller. [size] is assumed to be the result of calling the bin prot sizer on the value
+    being written. *)
+val write_bin_prot_known_size
+  :  t
+  -> ?pos:int (** default is 0 *)
+  -> 'a Bin_prot.Write.writer
+  -> size:int
+  -> 'a
+  -> int
+
 (** The [read_bin_prot*] functions read from the region of [t] starting at [pos] of length
     [len].  They return the index in [t] immediately after the last byte read.  They raise
     if [pos] and [len] don't describe a region of [t]. *)
@@ -76,8 +87,8 @@ val read_bin_prot_verbose_errors
 (** [unsafe_destroy bstr] destroys the bigstring by deallocating its associated data or,
     if memory-mapped, unmapping the corresponding file, and setting all dimensions to
     zero.  This effectively frees the associated memory or address-space resources
-    instantaneously.  This feature helps working around a bug in the current OCaml
-    runtime, which does not correctly estimate how aggressively to reclaim such resources.
+    instantaneously.  This feature helps reclaim the resources sooner than they are
+    automatically reclaimed by the GC.
 
     This operation is safe unless you have passed the bigstring to another thread that is
     performing operations on it at the same time.  Access to the bigstring after this
@@ -114,12 +125,20 @@ val get_tail_padded_fixed_string
   -> unit
   -> string
 
+val get_tail_padded_fixed_string_local
+  :  padding:char
+  -> t
+  -> pos:int
+  -> len:int
+  -> unit
+  -> (string[@local])
+
 val set_tail_padded_fixed_string
   :  padding:char
   -> t
   -> pos:int
   -> len:int
-  -> string
+  -> (string[@local])
   -> unit
 
 val get_head_padded_fixed_string
@@ -130,12 +149,20 @@ val get_head_padded_fixed_string
   -> unit
   -> string
 
+val get_head_padded_fixed_string_local
+  :  padding:char
+  -> t
+  -> pos:int
+  -> len:int
+  -> unit
+  -> (string[@local])
+
 val set_head_padded_fixed_string
   :  padding:char
   -> t
   -> pos:int
   -> len:int
-  -> string
+  -> (string[@local])
   -> unit
 
 module Unstable : sig

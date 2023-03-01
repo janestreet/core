@@ -103,11 +103,11 @@ let%test_module ("gc" [@tags "no-js"]) =
 
 let%test_unit _ =
   let r = ref () in
-  let weak = Caml.Weak.create 1 in
-  Caml.Weak.set weak 0 (Some r);
-  Caml.Gc.compact ();
+  let weak = Stdlib.Weak.create 1 in
+  Stdlib.Weak.set weak 0 (Some r);
+  Stdlib.Gc.compact ();
   assert (
-    match Caml.Weak.get weak 0 with
+    match Stdlib.Weak.get weak 0 with
     | None -> false
     | Some _ -> true);
   keep_alive (r, r)

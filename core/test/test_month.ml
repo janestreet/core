@@ -52,3 +52,24 @@ let%test _ = shift Jan 16 = May
 let%test _ = shift Jan (-16) = Sep
 let%test _ = shift Sep 1 = Oct
 let%test _ = shift Sep (-1) = Aug
+
+let%expect_test "validate sexp grammar" =
+  Sexp_grammar_validation.validate_grammar (module Month) |> require_ok [%here];
+  [%expect
+    {|
+    (Variant
+     ((case_sensitivity Case_sensitive_except_first_character)
+      (clauses
+       ((No_tag ((name Jan) (clause_kind Atom_clause)))
+        (No_tag ((name Feb) (clause_kind Atom_clause)))
+        (No_tag ((name Mar) (clause_kind Atom_clause)))
+        (No_tag ((name Apr) (clause_kind Atom_clause)))
+        (No_tag ((name May) (clause_kind Atom_clause)))
+        (No_tag ((name Jun) (clause_kind Atom_clause)))
+        (No_tag ((name Jul) (clause_kind Atom_clause)))
+        (No_tag ((name Aug) (clause_kind Atom_clause)))
+        (No_tag ((name Sep) (clause_kind Atom_clause)))
+        (No_tag ((name Oct) (clause_kind Atom_clause)))
+        (No_tag ((name Nov) (clause_kind Atom_clause)))
+        (No_tag ((name Dec) (clause_kind Atom_clause))))))) |}]
+;;

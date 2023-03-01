@@ -132,3 +132,18 @@ val gen_subnormal : t Quickcheck.Generator.t
 
 (** [gen_zero] produces both zero values *)
 val gen_zero : t Quickcheck.Generator.t
+
+(** Note that [float] is already stable by itself, since as a primitive type it is an
+    integral part of the sexp / bin_io protocol. [Float.Stable] exists only to introduce
+    [Float.Stable.Set] and [Float.Stable.Map], and provide interface uniformity with other
+    stable types. *)
+module Stable : sig
+  module V1 : sig
+    type nonrec t = t [@@deriving equal, hash, sexp_grammar, typerep]
+
+    include
+      Stable_comparable.With_stable_witness.V1
+      with type t := t
+       and type comparator_witness = comparator_witness
+  end
+end

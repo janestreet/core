@@ -138,6 +138,9 @@ val words_float : t -> float
 val zero : t
 val min_value : t
 val max_value : t
+val sign : t -> Sign.t
+val abs : t -> t
+val neg : t -> t
 
 (** [scale t mul] scale the measure [t] by [mul] *)
 val scale : t -> float -> t

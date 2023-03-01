@@ -99,6 +99,8 @@ module Unit_tests (Elt : sig
     let quickcheck_generator = simplify_creator quickcheck_generator
     let symmetric_diff = simplify_accessor symmetric_diff
     let split = simplify_accessor split
+    let split_le_gt = simplify_accessor split_le_gt
+    let split_lt_ge = simplify_accessor split_lt_ge
     let diff = simplify_accessor diff
     let sexp_of_t_ t = [%sexp_of: int Elt.t list] (to_list t)
 
@@ -740,20 +742,21 @@ module Unit_tests (Elt : sig
   ;;
 
   let split _ = assert false
+  let split_le_gt _ = assert false
+  let split_lt_ge _ = assert false
 
   module Simple_int_set = struct
     type t = int list [@@deriving compare, sexp]
 
     let init i = List.init i ~f:Fn.id
+    let to_set = set_of_int_list
 
     let split t i =
       let l = List.filter t ~f:(Int.( > ) i) in
       let r = List.filter t ~f:(Int.( < ) i) in
       let x = if List.mem t i ~equal:Int.( = ) then Some (Elt.of_int i) else None in
-      l, x, r
+      to_set l, x, to_set r
     ;;
-
-    let to_set = set_of_int_list
   end
 
   let%test_unit _ =
@@ -761,11 +764,26 @@ module Unit_tests (Elt : sig
     let t = set_of_int_list (List.init n ~f:Fn.id) in
     let t' = Simple_int_set.init n in
     let check i =
-      let l, x, r = Set.split t (Elt.of_int i) in
       let l', x', r' = Simple_int_set.split t' i in
-      assert (Set.equal l (Simple_int_set.to_set l'));
-      [%test_eq: Elt.t option] x x';
-      assert (Set.equal r (Simple_int_set.to_set r'))
+      let () =
+        let l, x, r = Set.split t (Elt.of_int i) in
+        assert (Set.equal l l');
+        [%test_eq: Elt.t option] x x';
+        assert (Set.equal r r')
+      in
+      let () =
+        let l, r = Set.split_le_gt t (Elt.of_int i) in
+        let l' = Option.value_map x' ~default:l' ~f:(Set.add l') in
+        assert (Set.equal l l');
+        assert (Set.equal r r')
+      in
+      let () =
+        let l, r = Set.split_lt_ge t (Elt.of_int i) in
+        let r' = Option.value_map x' ~default:r' ~f:(Set.add r') in
+        assert (Set.equal l l');
+        assert (Set.equal r r')
+      in
+      ()
     in
     for i = 0 to n - 1 do
       check i

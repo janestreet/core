@@ -58,7 +58,7 @@ let old_map_merge t1 t2 ~f =
     in
     match f ~key z with
     | None -> t
-    | Some data -> Map.set t ~key ~data)
+    | Some data -> Map.set t ~key ~data) [@nontail]
 ;;
 
 let merge_test do_merge =

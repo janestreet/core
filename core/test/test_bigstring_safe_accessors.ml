@@ -823,8 +823,8 @@ let%expect_test "set_int64_t_le" =
   let pos = 8 in
   let set_and_print =
     generic_mk_set_and_print_for_test
-      ~set:Bigstring.set_int64_t_le
-      ~get:Bigstring.get_int64_t_le
+      ~set:(fun t ~pos v -> Bigstring.set_int64_t_le t ~pos v)
+      ~get:(fun t ~pos -> Bigstring.get_int64_t_le t ~pos)
       buf
       ~to_string:Int64.to_string
     |> Staged.unstage
@@ -864,8 +864,8 @@ let%expect_test "set_int64_t_be" =
   let pos = 8 in
   let set_and_print =
     generic_mk_set_and_print_for_test
-      ~set:Bigstring.set_int64_t_be
-      ~get:Bigstring.get_int64_t_be
+      ~set:(fun t ~pos v -> Bigstring.set_int64_t_be t ~pos v)
+      ~get:(fun t ~pos -> Bigstring.get_int64_t_be t ~pos)
       buf
       ~to_string:Int64.to_string
     |> Staged.unstage

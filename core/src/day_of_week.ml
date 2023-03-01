@@ -13,7 +13,7 @@ module Stable = struct
         | Thu
         | Fri
         | Sat
-      [@@deriving bin_io, compare, hash, quickcheck, stable_witness, typerep]
+      [@@deriving bin_io, compare, enumerate, hash, quickcheck, stable_witness, typerep]
 
       let to_string t =
         match t with
@@ -61,6 +61,17 @@ module Stable = struct
         | _ -> failwithf "Day_of_week.of_int_exn: %d" i ()
       ;;
 
+      let to_int t =
+        match t with
+        | Sun -> 0
+        | Mon -> 1
+        | Tue -> 2
+        | Wed -> 3
+        | Thu -> 4
+        | Fri -> 5
+        | Sat -> 6
+      ;;
+
       (* Be very generous with of_string.  We accept all possible capitalizations and the
          integer representations as well. *)
       let of_string s =
@@ -78,6 +89,30 @@ module Stable = struct
           let of_string = of_string
           let to_string = to_string
         end)
+
+      let t_sexp_grammar =
+        let open Sexplib0.Sexp_grammar in
+        let atom name = No_tag { name; clause_kind = Atom_clause } in
+        let unsuggested grammar =
+          Tag { key = completion_suggested; value = Atom "false"; grammar }
+        in
+        let int_clause t = unsuggested (atom (Int.to_string (to_int t))) in
+        let short_clause t = atom (to_string t) in
+        let long_clause t = unsuggested (atom (to_string_long t)) in
+        { untyped =
+            Lazy
+              (lazy
+                (Variant
+                   { case_sensitivity = Case_insensitive
+                   ; clauses =
+                       List.concat
+                         [ List.map all ~f:int_clause
+                         ; List.map all ~f:short_clause
+                         ; List.map all ~f:long_clause
+                         ]
+                   }))
+        }
+      ;;
     end
 
     include T
@@ -98,25 +133,9 @@ include Stable.V1.Unstable
 let weekdays = [ Mon; Tue; Wed; Thu; Fri ]
 let weekends = [ Sat; Sun ]
 
-(* written out to save overhead when loading modules.  The members of the set and the
-   ordering should never change, so speed wins over something more complex that proves
-   the order = the order in t at runtime *)
-let all = [ Sun; Mon; Tue; Wed; Thu; Fri; Sat ]
-
 let of_int i =
   try Some (of_int_exn i) with
   | _ -> None
-;;
-
-let to_int t =
-  match t with
-  | Sun -> 0
-  | Mon -> 1
-  | Tue -> 2
-  | Wed -> 3
-  | Thu -> 4
-  | Fri -> 5
-  | Sat -> 6
 ;;
 
 let iso_8601_weekday_number t =

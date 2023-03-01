@@ -1,5 +1,4 @@
-open! Import
-open Std_internal
+open! Base
 include Univ_map_intf
 module Uid = Type_equal.Id.Uid
 
@@ -24,7 +23,7 @@ struct
       [%sexp
         { name = (Type_equal.Id.name type_id : string)
         ; uid =
-            ((if am_running_inline_test
+            ((if Ppx_inline_test_lib.am_running
               then Sexp.Atom "<uid>"
               else Type_equal.Id.Uid.sexp_of_t (Type_equal.Id.uid type_id)) : Sexp.t)
         }]
@@ -67,7 +66,7 @@ struct
     ;;
   end
 
-  type 's t = 's Packed.t Uid.Map.t
+  type 's t = 's Packed.t Map.M(Uid).t
 
   let to_alist t = Map.data t |> List.sort ~compare:Packed.compare
 
@@ -88,8 +87,12 @@ struct
   let mem t key = mem_by_id t (uid_of_key key)
   let remove_by_id t id = Map.remove t id
   let remove t key = remove_by_id t (uid_of_key key)
-  let empty = Uid.Map.empty
-  let singleton key data = Uid.Map.singleton (uid_of_key key) (Packed.T (key, data))
+  let empty = Map.empty (module Uid)
+
+  let singleton key data =
+    Map.singleton (module Uid) (uid_of_key key) (Packed.T (key, data))
+  ;;
+
   let is_empty = Map.is_empty
 
   let find (type b) t (key : b Key.t) =
@@ -106,7 +109,7 @@ struct
   let find_exn t key =
     match find t key with
     | Some data -> data
-    | None -> failwithf "Univ_map.find_exn on unknown key %s" (name_of_key key) ()
+    | None -> Printf.failwithf "Univ_map.find_exn on unknown key %s" (name_of_key key) ()
   ;;
 
   let add t ~key ~data = if mem t key then `Duplicate else `Ok (set t ~key ~data)
@@ -114,13 +117,15 @@ struct
   let add_exn t ~key ~data =
     match add t ~key ~data with
     | `Ok t -> t
-    | `Duplicate -> failwithf "Univ_map.add_exn on existing key %s" (name_of_key key) ()
+    | `Duplicate ->
+      Printf.failwithf "Univ_map.add_exn on existing key %s" (name_of_key key) ()
   ;;
 
   let change_exn t key ~f:update =
     match find t key with
     | Some data -> set t ~key ~data:(update data)
-    | None -> failwithf "Univ_map.change_exn on unknown key %s" (name_of_key key) ()
+    | None ->
+      Printf.failwithf "Univ_map.change_exn on unknown key %s" (name_of_key key) ()
   ;;
 
   let change t key ~f:update =
@@ -134,10 +139,10 @@ struct
   let update t key ~f = change t key ~f:(fun data -> Some (f data))
 
   let of_alist_exn t =
-    Uid.Map.of_alist_exn (List.map t ~f:(fun p -> Packed.type_id_uid p, p))
+    Map.of_alist_exn (module Uid) (List.map t ~f:(fun p -> Packed.type_id_uid p, p))
   ;;
 
-  let type_equal : ('s t, 's Packed.t Type_equal.Id.Uid.Map.t) Type_equal.t = T
+  let type_equal : ('s t, 's Packed.t Map.M(Type_equal.Id.Uid).t) Type_equal.t = T
 end
 
 module Make
@@ -182,7 +187,7 @@ struct
 
   let to_alist = M.to_alist
   let of_alist_exn = M.of_alist_exn
-  let type_equal : (t, Packed.t Type_equal.Id.Uid.Map.t) Type_equal.t = T
+  let type_equal : (t, Packed.t Map.M(Type_equal.Id.Uid).t) Type_equal.t = T
 end
 
 module Merge (Key : Key) (Input1_data : Data) (Input2_data : Data) (Output_data : Data) =
