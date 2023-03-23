@@ -9,8 +9,8 @@ let require_same here (name1, string1) (name2, string2) =
       (lazy
         [%message
           "output differs unexpectedly"
-            ~_:(name1, string1 : string * string)
-            ~_:(name2, string2 : string * string)])
+            ~_:((name1, string1) : string * string)
+            ~_:((name2, string2) : string * string)])
 ;;
 
 let test_m (type a) here (module T : Hexdump.S with type t = a) ?max_lines ?pos ?len t =

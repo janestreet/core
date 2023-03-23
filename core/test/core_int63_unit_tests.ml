@@ -11,7 +11,6 @@ module Make_tests (Int : Base.Int.S) : sig end = struct
   let n2 = of_int64_exn (-2L)
   let n3 = of_int64_exn (-3L)
   let n10 = of_int64_exn (-10L)
-
   let%test_unit _ = [%test_eq: int64] (to_int64 (p2 + p2)) 4L
   let%test_unit _ = [%test_eq: int64] (to_int64 (max_value + p1)) (to_int64 min_value)
   let%test_unit _ = [%test_eq: int64] (to_int64 (max_value + max_value)) (-2L)

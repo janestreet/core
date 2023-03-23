@@ -61,11 +61,18 @@ module type Date0 = sig
   (** See {!week_number_and_year} for the meaning of week number.  *)
   val week_number : t -> int
 
+  (** [is_weekend] and [is_weekday] treat Saturday and Sunday as the weekend, and Monday
+      through Friday as weekdays.
+
+      Caveat: Not all cultures, countries, or businesses conform to this particular cycle
+      of weekend / weekday. *)
+
   val is_weekend : t -> bool
   val is_weekday : t -> bool
 
   (** Monday through Friday are business days, unless they're a holiday.
-      *)
+
+      See the caveat on [is_weekend] about varying weekend/weekday cycles. *)
   val is_business_day : t -> is_holiday:(t -> bool) -> bool
 
   (** [add_days t n] adds n days to [t] and returns the resulting date.
@@ -93,30 +100,42 @@ module type Date0 = sig
 
 
   (** [diff_weekdays t1 t2] returns the number of weekdays in the half-open interval
-      \[t2,t1) if t1 >= t2, and [- diff_weekdays t2 t1] otherwise. *)
+      \[t2,t1) if t1 >= t2, and [- diff_weekdays t2 t1] otherwise.
+
+      See the caveat on [is_weekend] about varying weekend/weekday cycles. *)
   val diff_weekdays : t -> t -> int
 
   (** [diff_weekend_days t1 t2] returns the number of days that are weekend days in the
       half-open interval \[t2,t1) if t1 >= t2, and [- diff_weekend_days t2 t1]
-      otherwise. *)
+      otherwise.
+
+      See the caveat on [is_weekend] about varying weekend/weekday cycles. *)
   val diff_weekend_days : t -> t -> int
 
   (** First rounds the given date backward to the previous weekday, if it is not already a
-      weekday. Then advances by the given number of weekdays, which may be negative. *)
+      weekday. Then advances by the given number of weekdays, which may be negative.
+
+      See the caveat on [is_weekend] about varying weekend/weekday cycles. *)
   val add_weekdays_rounding_backward : t -> int -> t
 
   (** First rounds the given date forward to the next weekday, if it is not already a
-      weekday. Then advances by the given number of weekdays, which may be negative. *)
+      weekday. Then advances by the given number of weekdays, which may be negative.
+
+      See the caveat on [is_weekend] about varying weekend/weekday cycles. *)
   val add_weekdays_rounding_forward : t -> int -> t
 
   (** First rounds the given date backward to the previous business day, i.e. weekday not
       satisfying [is_holiday], if it is not already a business day. Then advances by the
-      given number of business days, which may be negative. *)
+      given number of business days, which may be negative.
+
+      See the caveat on [is_weekend] about varying weekend/weekday cycles. *)
   val add_business_days_rounding_backward : t -> is_holiday:(t -> bool) -> int -> t
 
   (** First rounds the given date forward to the next business day, i.e. weekday not
       satisfying [is_holiday], if it is not already a business day. Then advances by the
-      given number of business days, which may be negative. *)
+      given number of business days, which may be negative.
+
+      See the caveat on [is_weekend] about varying weekend/weekday cycles. *)
   val add_business_days_rounding_forward : t -> is_holiday:(t -> bool) -> int -> t
 
   (** [add_weekdays t 0] returns the next weekday if [t] is a weekend and [t] otherwise.
@@ -125,7 +144,9 @@ module type Date0 = sig
       add. Beware, [add_weekdays sat 1] or [add_weekdays sun 1] both return the next
       [tue], not the next [mon]. You may want to use [following_weekday] if you want the
       next following weekday, [following_weekday (fri|sat|sun)] would all return the next
-      [mon]. *)
+      [mon].
+
+      See the caveat on [is_weekend] about varying weekend/weekday cycles. *)
   val add_weekdays : t -> int -> t
   [@@deprecated
     "[since 2019-12] use [add_weekdays_rounding_backward] or \
@@ -143,6 +164,8 @@ module type Date0 = sig
 
       If you don't want to skip Saturday or Sunday, use [add_days_skipping].
 
+
+      See the caveat on [is_weekend] about varying weekend/weekday cycles.
   *)
   val add_business_days : t -> is_holiday:(t -> bool) -> int -> t
   [@@deprecated
@@ -169,9 +192,16 @@ module type Date0 = sig
   (** the following returns a closed interval (endpoints included) *)
   val dates_between : min:t -> max:t -> t list
 
+  (** [business_dates_between ~min ~max ~is_holiday] returns the list of dates between
+      [min] and [max], inclusive, for which [is_business_day ~is_holiday].
+
+      See the caveat on [is_weekend] about varying weekend/weekday cycles. *)
   val business_dates_between : min:t -> max:t -> is_holiday:(t -> bool) -> t list
 
+
+  (** See the caveat on [is_weekend] about varying weekend/weekday cycles. *)
   val weekdays_between : min:t -> max:t -> t list
+
   val previous_weekday : t -> t
   val following_weekday : t -> t
   val round_forward_to_weekday : t -> t

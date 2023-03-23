@@ -45,9 +45,7 @@ let%expect_test ("[unsafe_destroy_and_resize], proxy failure" [@tags "no-js"]) =
   [%expect {| 10 |}];
   let _shared = Bigstring.sub_shared bigstring in
   require_does_raise [%here] (fun () ->
-    let (_ : Bigstring.t_frozen) =
-      Bigstring.unsafe_destroy_and_resize bigstring ~len:5
-    in
+    let (_ : Bigstring.t_frozen) = Bigstring.unsafe_destroy_and_resize bigstring ~len:5 in
     ());
   [%expect {| (Failure "bigstring_realloc: bigstring has proxy") |}]
 ;;

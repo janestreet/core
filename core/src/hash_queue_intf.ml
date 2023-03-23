@@ -110,6 +110,10 @@ module type S1 = sig
   (** [keys t] returns the keys in the order of the queue. *)
   val keys : ('key, 'data) t -> 'key list
 
+  (** [to_alist t] returns the elements of the queue with their keys in the order of the
+      queue. *)
+  val to_alist : ('key, 'data) t -> ('key * 'data) list
+
   (** [dequeue t front_or_back] returns the front or back element of the queue. *)
   val dequeue : ('key, 'data) t -> [ `back | `front ] -> 'data option
 
@@ -160,6 +164,19 @@ module type S1 = sig
 
   (** [replace q k v] changes the value of key [k] in the queue to [v]. *)
   val replace : ('key, 'data) t -> 'key -> 'data -> [ `Ok | `No_such_key ]
+
+  (** [replace_or_enqueue q back_or_front k v] changes the value of key [k] in the queue
+      to [v]. If the key [k] does not exist in the queue, it is added to the front or back
+      with the value [v]. *)
+  val replace_or_enqueue : ('key, 'data) t -> [ `back | `front ] -> 'key -> 'data -> unit
+
+  (** See {!replace_or_enqueue}. [replace_or_enqueue_front t k v] is the same as
+      [replace_or_enqueue t `front k v] *)
+  val replace_or_enqueue_front : ('key, 'data) t -> 'key -> 'data -> unit
+
+  (** See {!replace_or_enqueue}. [replace_or_enqueue_back t k v] is the same as
+      [replace_or_enqueue t `back k v] *)
+  val replace_or_enqueue_back : ('key, 'data) t -> 'key -> 'data -> unit
 
   val replace_exn : ('key, 'data) t -> 'key -> 'data -> unit
 

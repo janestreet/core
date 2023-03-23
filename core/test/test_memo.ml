@@ -29,14 +29,17 @@ let%test_module "lru" =
     let%test _ = f 0 = 0
     let%test _ = !count = 2
     let%test _ = f 3 = 3
+
     (* cache full *)
     let%test _ = !count = 3
     let%test _ = f 4 = 4
+
     (* evict 1 *)
     let%test _ = !count = 4
     let%test _ = f 0 = 0
     let%test _ = !count = 4
     let%test _ = f 1 = 1
+
     (* recompute 1 *)
     let%test _ = !count = 5
   end)

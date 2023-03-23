@@ -603,6 +603,7 @@ module Stable : sig
     end
 
     include For_deriving with type ('a, 'b) t := ('a, 'b) t
+    include For_deriving_stable with type ('a, 'b) t := ('a, 'b) t
 
     module Make (Elt : Stable_module_types.S0) :
       S with type elt := Elt.t with type elt_comparator_witness := Elt.comparator_witness

@@ -150,13 +150,10 @@ let%test_module _ =
 
     let int = 0
     let string = Binable.to_string (module Int) int
-
     let%test _ = does_raise (fun () -> Binable.of_string (module M1) string)
     let%test _ = M2.raw (Binable.of_string (module M2) string) = int
-
     let int = 1
     let string = Binable.to_string (module Int) int
-
     let%test _ = M1.raw (Binable.of_string (module M1) string) = int
     let%test _ = M2.raw (Binable.of_string (module M2) string) = int
   end)

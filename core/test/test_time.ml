@@ -820,7 +820,7 @@ let%test_module "Span.to_string/of_string" =
 let%expect_test "Span.to_parts + Span.create" =
   List.iter span_examples ~f:(fun span ->
     let parts = Time_float.Span.to_parts span in
-    Core.print_s [%sexp (span, parts : Time_float.Span.t * Time_float.Span.Parts.t)];
+    Core.print_s [%sexp ((span, parts) : Time_float.Span.t * Time_float.Span.Parts.t)];
     let ({ sign; hr; min; sec; ms; us; ns } : Time_float.Span.Parts.t) = parts in
     let round_trip = Time_float.Span.create ~sign ~hr ~min ~sec ~ms ~us ~ns () in
     let abs_diff = Time_float.Span.abs (Time_float.Span.( - ) span round_trip) in
@@ -893,7 +893,7 @@ let ofday_examples =
 let%expect_test "Ofday.to_parts + Ofday.create" =
   List.iter ofday_examples ~f:(fun ofday ->
     let parts = Time_float.Ofday.to_parts ofday in
-    Core.print_s [%sexp (ofday, parts : Time_float.Ofday.t * Time_float.Span.Parts.t)];
+    Core.print_s [%sexp ((ofday, parts) : Time_float.Ofday.t * Time_float.Span.Parts.t)];
     let ({ sign = _; hr; min; sec; ms; us; ns } : Time_float.Span.Parts.t) = parts in
     let round_trip = Time_float.Ofday.create ~hr ~min ~sec ~ms ~us ~ns () in
     let abs_diff = Time_float.Span.abs (Time_float.Ofday.diff ofday round_trip) in
@@ -1034,8 +1034,7 @@ let%expect_test "of_string_iso8601_extended" =
     require_does_not_raise [%here] (fun () ->
       printf
         "%s <-- %s\n"
-        (Time_float.Ofday.to_string
-           (Time_float.Ofday.of_string_iso8601_extended string))
+        (Time_float.Ofday.to_string (Time_float.Ofday.of_string_iso8601_extended string))
         string)
   in
   List.iter

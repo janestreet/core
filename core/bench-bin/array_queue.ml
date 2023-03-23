@@ -23,9 +23,7 @@ let enqueue_dequeue_mixed () =
       Queue.enqueue q i
     done;
     Array.iteri choices ~f:(fun i should_dequeue ->
-      if should_dequeue
-      then ignore (Queue.dequeue q : int option)
-      else Queue.enqueue q i)
+      if should_dequeue then ignore (Queue.dequeue q : int option) else Queue.enqueue q i)
 ;;
 
 let queue_pipeline () =

@@ -79,9 +79,7 @@ struct
 
   let create_all ~min ~max =
     Sequence.unfold ~init:min ~f:(fun index ->
-      if index < min || index > max
-      then None
-      else Some (create index ~min ~max, index + 1))
+      if index < min || index > max then None else Some (create index ~min ~max, index + 1))
     |> Sequence.to_list
   ;;
 

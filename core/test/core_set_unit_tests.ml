@@ -9,7 +9,6 @@ open Expect_test_helpers_core
 let%test_module _ =
   (module struct
     let ( = ) = Poly.( = )
-
     let%test _ = Set.Poly.stable_dedup_list [] = []
     let%test _ = Set.Poly.stable_dedup_list [ 5; 5; 5; 5; 5 ] = [ 5 ]
     let%test _ = Set.Poly.stable_dedup_list [ 5; 9; 3; 5; 2; 2 ] = [ 5; 9; 3; 2 ]
@@ -163,11 +162,8 @@ module Unit_tests (Elt : sig
   let of_hash_set _ = assert false
   let of_hashtbl_keys _ = assert false
   let mem _ = assert false
-
   let%test _ = List.for_all Elt.samples ~f:(fun e -> Set.mem set_nonempty e)
-
   let is_empty _ = assert false
-
   let%test _ = Set.is_empty set_empty
   let%test _ = not (Set.is_empty set_nonempty)
 
@@ -177,7 +173,6 @@ module Unit_tests (Elt : sig
   ;;
 
   let inter _ = assert false
-
   let%test _ = Set.is_empty (Set.inter set_empty set_nonempty)
   let%test _ = Set.is_empty (Set.inter set_nonempty set_empty)
 
@@ -201,7 +196,6 @@ module Unit_tests (Elt : sig
   ;;
 
   let is_subset _ ~of_:_ = assert false
-
   let%test _ = Set.is_subset set_empty ~of_:set_nonempty
   let%test _ = not (Set.is_subset set_nonempty ~of_:set_empty)
   let%test _ = Set.is_subset set_nonempty ~of_:set_nonempty
@@ -305,7 +299,6 @@ module Unit_tests (Elt : sig
   ;;
 
   let%test _ = is_list_ordered_ascending (Set.to_list set_nonempty)
-
   let to_array _ = assert false
 
   let%test _ =
@@ -619,7 +612,6 @@ module Unit_tests (Elt : sig
   ;;
 
   let to_map _ = assert false
-
   let%test_unit _ = assert (Map.is_empty (Set.to_map set_empty ~f:Elt.to_int))
 
   let%test_unit _ =

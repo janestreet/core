@@ -23,9 +23,10 @@ struct
       [%sexp
         { name = (Type_equal.Id.name type_id : string)
         ; uid =
-            ((if Ppx_inline_test_lib.am_running
-              then Sexp.Atom "<uid>"
-              else Type_equal.Id.Uid.sexp_of_t (Type_equal.Id.uid type_id)) : Sexp.t)
+            (if Ppx_inline_test_lib.am_running
+             then Sexp.Atom "<uid>"
+             else Type_equal.Id.Uid.sexp_of_t (Type_equal.Id.uid type_id)
+                  : Sexp.t)
         }]
     ;;
 
@@ -78,8 +79,7 @@ struct
 
   let invariant (t : _ t) =
     Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->
-      Map.iteri t ~f:(fun ~key ~data ->
-        assert (Uid.equal key (Packed.type_id_uid data))))
+      Map.iteri t ~f:(fun ~key ~data -> assert (Uid.equal key (Packed.type_id_uid data))))
   ;;
 
   let set t ~key ~data = Map.set t ~key:(uid_of_key key) ~data:(Packed.T (key, data))

@@ -274,6 +274,7 @@ let%test_module "diff_weekdays" =
     let%test _ = diff_weekdays (c 2014 Jan 12) (c 2014 Jan 1) = 8
     let%test _ = diff_weekdays (c 2014 Jan 13) (c 2014 Jan 1) = 8
     let%test _ = diff_weekdays (c 2014 Jan 14) (c 2014 Jan 1) = 9
+
     (* Wednesday minus future *)
     let%test _ = diff_weekdays (c 2014 Jan 1) (c 2014 Jan 2) = -1
     let%test _ = diff_weekdays (c 2014 Jan 1) (c 2014 Jan 3) = -2
@@ -283,6 +284,7 @@ let%test_module "diff_weekdays" =
     let%test _ = diff_weekdays (c 2014 Jan 1) (c 2014 Jan 7) = -4
     let%test _ = diff_weekdays (c 2014 Jan 1) (c 2014 Jan 8) = -5
     let%test _ = diff_weekdays (c 2014 Jan 1) (c 2014 Jan 9) = -6
+
     (* diff_weekend_days *)
     let%test _ = diff_weekend_days (c 2014 Jan 1) (c 2014 Jan 1) = 0
     let%test _ = diff_weekend_days (c 2014 Jan 2) (c 2014 Jan 1) = 0
@@ -519,7 +521,6 @@ let%test_module "first_strictly_after" =
     let sun1 = create_exn ~y:2013 ~m:Month.Apr ~d:7
     let mon2 = create_exn ~y:2013 ~m:Month.Apr ~d:8
     let tue2 = create_exn ~y:2013 ~m:Month.Apr ~d:9
-
     let%test _ = equal (first_strictly_after tue1 ~on:Day_of_week.Mon) mon2
     let%test _ = equal (first_strictly_after tue1 ~on:Day_of_week.Tue) tue2
     let%test _ = equal (first_strictly_after tue1 ~on:Day_of_week.Wed) wed1
@@ -600,4 +601,32 @@ let%test_unit _ =
     ~compare:Date.Option.compare
     ~trials:1_000
     ~distinct_values:100
+;;
+
+let%test_unit "compare" =
+  let slow_compare t1 t2 =
+    let n = Int.compare (Date.year t1) (Date.year t2) in
+    if Int.( <> ) n 0
+    then n
+    else (
+      let n = Month.compare (Date.month t1) (Date.month t2) in
+      if Int.( <> ) n 0 then n else Int.compare (Date.day t1) (Date.day t2))
+  in
+  let pairs =
+    let%bind.Quickcheck.Generator d0 = Date.quickcheck_generator in
+    let%map.Quickcheck.Generator d1 = Date.quickcheck_generator in
+    d0, d1
+  in
+  Quickcheck.iter pairs ~f:(fun (d0, d1) ->
+    let cmp0 = Date.compare d0 d1 in
+    let cmp1 = slow_compare d0 d1 in
+    if Int.( <> ) cmp0 cmp1
+    then
+      raise_s
+        [%message
+          "Date.compare gave unexpected result"
+            (cmp0 : int)
+            (cmp1 : int)
+            (d0 : Date.t)
+            (d1 : Date.t)])
 ;;

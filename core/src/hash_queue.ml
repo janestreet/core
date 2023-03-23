@@ -119,18 +119,22 @@ module Make_backend (Table : Hashtbl_intf.Hashtbl) : S_backend = struct
           ~f:Key_value.value) [@nontail]
     ;;
 
+    let enqueue_unchecked t back_or_front key value =
+      let contents = { Key_value.key; value } in
+      let elt =
+        match back_or_front with
+        | `back -> Doubly_linked.insert_last t.queue contents
+        | `front -> Doubly_linked.insert_first t.queue contents
+      in
+      Table.set t.table ~key ~data:elt
+    ;;
+
     let enqueue t back_or_front key value =
       ensure_can_modify t;
       if Table.mem t.table key
       then `Key_already_present
       else (
-        let contents = { Key_value.key; value } in
-        let elt =
-          match back_or_front with
-          | `back -> Doubly_linked.insert_last t.queue contents
-          | `front -> Doubly_linked.insert_first t.queue contents
-        in
-        Table.set t.table ~key ~data:elt;
+        enqueue_unchecked t back_or_front key value;
         `Ok)
     ;;
 
@@ -263,6 +267,10 @@ module Make_backend (Table : Hashtbl_intf.Hashtbl) : S_backend = struct
       List.map (Doubly_linked.to_list t.queue) ~f:Key_value.key
     ;;
 
+    let to_alist t =
+      List.map (Doubly_linked.to_list t.queue) ~f:(fun kv -> kv.key, kv.value)
+    ;;
+
     let iteri t ~f =
       read t (fun () ->
         Doubly_linked.iter t.queue ~f:(fun kv -> f ~key:kv.key ~data:kv.value) [@nontail]) 
@@ -273,8 +281,8 @@ module Make_backend (Table : Hashtbl_intf.Hashtbl) : S_backend = struct
 
     let foldi t ~init ~f =
       read t (fun () ->
-        Doubly_linked.fold t.queue ~init ~f:(fun ac kv ->
-          f ac ~key:kv.key ~data:kv.value) [@nontail]) [@nontail]
+        Doubly_linked.fold t.queue ~init ~f:(fun ac kv -> f ac ~key:kv.key ~data:kv.value) 
+        [@nontail]) [@nontail]
     ;;
 
     let fold t ~init ~f = foldi t ~init ~f:(fun ac ~key:_ ~data -> f ac data) [@nontail]
@@ -335,6 +343,16 @@ module Make_backend (Table : Hashtbl_intf.Hashtbl) : S_backend = struct
         (Elt.value elt).value <- v;
         `Ok
     ;;
+
+    let replace_or_enqueue t back_or_front key value =
+      ensure_can_modify t;
+      match Table.find t.table key with
+      | None -> enqueue_unchecked t back_or_front key value
+      | Some elt -> (Elt.value elt).value <- value
+    ;;
+
+    let replace_or_enqueue_front t key value = replace_or_enqueue t `front key value
+    let replace_or_enqueue_back t key value = replace_or_enqueue t `back key value
 
     let raise_replace_unknown_key t key =
       raise_s

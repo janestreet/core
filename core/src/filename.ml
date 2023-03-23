@@ -4,7 +4,7 @@ module Stable = struct
       String.Stable.V1 :
       sig
         type t = string
-        [@@deriving bin_io, compare, hash, sexp, sexp_grammar, stable_witness]
+        [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar, stable_witness]
 
         include
           Comparable.Stable.V1.With_stable_witness.S

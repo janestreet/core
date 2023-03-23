@@ -103,6 +103,7 @@ module Stable : sig
     type nonrec t = t =
       | Atom of string
       | List of t list
-    [@@deriving sexp, bin_io, hash, compare, sexp_grammar, stable_witness]
+    [@@deriving sexp, bin_io, hash, compare, equal, sexp_grammar, stable_witness]
+
   end
 end

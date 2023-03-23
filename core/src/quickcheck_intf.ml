@@ -116,10 +116,11 @@ module type Generator = sig
     -> 'f t
     -> [ `A of 'a | `B of 'b | `C of 'c | `D of 'd | `E of 'e | `F of 'f ] t
 
-  (** [geometric ~p init] produces a geometric distribution (think "radioactive decay")
-      that produces [init] with probability [p], and otherwise recursively chooses from
-      [geometric ~p (init+1)].  Must satisfy [0. < p && p <= 1.]. *)
-  val geometric : p:float -> int -> int t
+  (** [geometric init ~p] produces a geometric distribution (think "radioactive decay")
+      that produces [init] with probability [p], and otherwise effectively recursively
+      chooses from [geometric (init+1) ~p]. The implementation can be more efficient than
+      actual recursion. Must satisfy [0. <= p && p <= 1.]. *)
+  val geometric : int -> p:float -> int t
 
   (** [small_non_negative_int] produces a non-negative int of a tractable size, e.g.
       allocating a value of this size should not run out of memory. *)

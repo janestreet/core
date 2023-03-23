@@ -8,7 +8,6 @@ let%test_module _ =
     let name = Key.create ~name:"name" String.sexp_of_t
     let foo = Key.create ~name:"foo" Float.sexp_of_t
     let kids = Key.create ~name:"kids" (List.sexp_of_t sexp_of_t)
-
     let%test _ = is_empty empty
 
     let test_contains t ~key ~data =
@@ -92,7 +91,6 @@ let%test_module _ =
     let t1 = set t0 ~key:size ~data:9
     let t2 = set t1 ~key:foo ~data:13.25
     let t3 = set t2 ~key:size ~data:15
-
     let%test_unit _ = test t0
     let%test_unit _ = test t1
     let%test_unit _ = test t2
@@ -156,9 +154,7 @@ let%expect_test "specified key module" =
   Stdio.print_s
     [%sexp
       (Or_error.try_with (fun () ->
-         U_incorrect.find
-           (U_incorrect.of_alist_exn [ T (Foo, 3); T (Bar, "three") ])
-           Foo)
+         U_incorrect.find (U_incorrect.of_alist_exn [ T (Foo, 3); T (Bar, "three") ]) Foo)
        : int option Or_error.t)];
   [%expect
     {|

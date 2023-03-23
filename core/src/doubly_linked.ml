@@ -575,26 +575,21 @@ let compare compare_elt t1 t2 =
   | _, None -> 1
   | Some f1, Some f2 ->
     Header.with_iteration_3 (Elt.header f1) compare_elt f1 f2 (fun compare_elt f1 f2 ->
-      Header.with_iteration_3
-        (Elt.header f2)
-        compare_elt
-        f1
-        f2
-        (fun compare_elt f1 f2 ->
-           let rec loop compare_elt elt1 f1 elt2 f2 =
-             let compare_result = compare_elt (Elt.value elt1) (Elt.value elt2) in
-             if compare_result <> 0
-             then compare_result
-             else (
-               let next1 = Elt.next elt1 in
-               let next2 = Elt.next elt2 in
-               match phys_equal next1 f1, phys_equal next2 f2 with
-               | true, true -> 0
-               | true, false -> -1
-               | false, true -> 1
-               | false, false -> loop compare_elt next1 f1 next2 f2)
-           in
-           loop compare_elt f1 f1 f2 f2))
+      Header.with_iteration_3 (Elt.header f2) compare_elt f1 f2 (fun compare_elt f1 f2 ->
+        let rec loop compare_elt elt1 f1 elt2 f2 =
+          let compare_result = compare_elt (Elt.value elt1) (Elt.value elt2) in
+          if compare_result <> 0
+          then compare_result
+          else (
+            let next1 = Elt.next elt1 in
+            let next2 = Elt.next elt2 in
+            match phys_equal next1 f1, phys_equal next2 f2 with
+            | true, true -> 0
+            | true, false -> -1
+            | false, true -> 1
+            | false, false -> loop compare_elt next1 f1 next2 f2)
+        in
+        loop compare_elt f1 f1 f2 f2))
 ;;
 
 exception Transfer_src_and_dst_are_same_list

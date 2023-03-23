@@ -7,6 +7,7 @@ let%test_module "slice" =
     (*TEST = slice "hey" 0 0 = ""*)
     (* This is what I would expect *)
     let%test _ = slice "hey" 0 0 = "hey"
+
     (* But this is what we get! *)
     let%test _ = slice "hey" 0 1 = "h"
     let%test _ = slice "hey" 0 2 = "he"
@@ -55,7 +56,6 @@ let%test_module "Caseless Hash" =
 let%test_module "take_while" =
   (module struct
     let f = Char.is_digit
-
     let%test_unit _ = [%test_result: t] (take_while "123abc456" ~f) ~expect:"123"
     let%test_unit _ = [%test_result: t] (rtake_while "123abc456" ~f) ~expect:"456"
     let%test_unit _ = [%test_result: t] (take_while "123456" ~f) ~expect:"123456"

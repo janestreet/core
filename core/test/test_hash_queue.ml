@@ -98,6 +98,7 @@ let%expect_test _ =
   let add i = Hq.enqueue_back_exn hq (Int.to_string i) i in
   List.iter [ 1; 2; 3 ] ~f:add;
   assert ([%equal: string list] [ "1"; "2"; "3" ] (Hq.keys hq));
+  assert ([%equal: (string * int) list] [ "1", 1; "2", 2; "3", 3 ] (Hq.to_alist hq));
   require_does_raise [%here] (fun () -> Hq.iter hq ~f:(fun _ -> add 13));
   [%expect
     {| (Failure "It is an error to modify a Hash_queue.t while iterating over it.") |}];
@@ -315,4 +316,59 @@ let%expect_test "[copy] returns an identical but independent hash queue" =
   [%expect {| (5 2 3 4 6 7 8 9 10) |}];
   print_s [%sexp (Hq.to_list copy : int list)];
   [%expect {| (1 2 3 4 5 7 8 9 6) |}]
+;;
+
+let%expect_test "[replace_or_enqueue_back] adds a new element to the back when the key \
+                 does not exist"
+  =
+  let hq = Hq.create () in
+  Hq.replace_or_enqueue_back hq "key1" "value1";
+  Hq.replace_or_enqueue_back hq "key2" "value2";
+  print_s [%sexp (hq : string Hq.t)];
+  [%expect {|
+    ((key1 value1)
+     (key2 value2)) |}]
+;;
+
+let%expect_test "[replace_or_enqueue_front] adds a new element to the front when the key \
+                 does not exist"
+  =
+  let hq = Hq.create () in
+  Hq.replace_or_enqueue_front hq "key1" "value1";
+  Hq.replace_or_enqueue_front hq "key2" "value2";
+  print_s [%sexp (hq : string Hq.t)];
+  [%expect {|
+    ((key2 value2)
+     (key1 value1)) |}]
+;;
+
+let%expect_test "[replace_or_enqueue_front] replaces a value when the key already exists \
+                 and front was given"
+  =
+  let hq = Hq.create () in
+  Hq.replace_or_enqueue_front hq "key" "value1";
+  Hq.replace_or_enqueue_front hq "key" "value2";
+  print_s [%sexp (hq : string Hq.t)];
+  [%expect {| ((key value2)) |}]
+;;
+
+let%expect_test "[replace_or_enqueue_back] replaces a value when the key already exists \
+                 and back was given"
+  =
+  let hq = Hq.create () in
+  Hq.replace_or_enqueue_back hq "key" "value1";
+  Hq.replace_or_enqueue_back hq "key" "value2";
+  print_s [%sexp (hq : string Hq.t)];
+  [%expect {| ((key value2)) |}]
+;;
+
+let%expect_test "[replace_or_enqueue] raises with the correct message when the hash \
+                 queue is being read"
+  =
+  let hq = Hq.create () in
+  Hq.replace_or_enqueue_front hq "key1" "value1";
+  require_does_raise [%here] (fun () ->
+    Hq.iter hq ~f:(fun _ -> Hq.replace_or_enqueue_front hq "key2" "value2"));
+  [%expect
+    {| (Failure "It is an error to modify a Hash_queue.t while iterating over it.") |}]
 ;;

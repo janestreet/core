@@ -308,10 +308,6 @@ let%test_module "Time_ns.Alternate_sexp" =
 
              let quickcheck_generator = quickcheck_generator
              let quickcheck_shrinker = Quickcheck.Shrinker.empty ()
-
-             let quickcheck_observer =
-               Quickcheck.Observer.of_hash (module Time_ns.Alternate_sexp)
-             ;;
            end));
       [%expect
         {|
@@ -723,7 +719,6 @@ module _ = struct
           ;;
 
           let wrap_days_int = Int63.to_int_exn wrap_days
-
           let%test "scale_int63" = doesn't_raise (fun () -> scale_int63 day wrap_days)
           let%test "scale_int" = doesn't_raise (fun () -> scale_int day wrap_days_int)
           let%test "create" = doesn't_raise (fun () -> create () ~day:wrap_days_int)
@@ -752,7 +747,6 @@ module _ = struct
       ;;
 
       let scale (i : int) t = of_int63_ns (of_int i * to_int63_ns t)
-
       let%test_unit _ = eq (create ~us:2 ()) (scale 2 microsecond)
       let%test_unit _ = eq (create ~min:3 ()) (scale 3 minute)
       let%test_unit _ = eq (create ~ms:4 ()) (scale 4 millisecond)

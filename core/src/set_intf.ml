@@ -95,6 +95,20 @@ module type For_deriving = sig
     -> ('a, 'cmp) t Quickcheck.Shrinker.t
 end
 
+module type For_deriving_stable = sig
+  type ('a, 'b) t
+
+  module type Stable_witness_m = sig
+    include Comparator.S
+
+    val stable_witness : t Stable_witness.t
+  end
+
+  val stable_witness_m__t
+    :  (module Stable_witness_m with type t = 'a and type comparator_witness = 'cmp)
+    -> ('a, 'cmp) t Stable_witness.t
+end
+
 module Without_comparator = Set.Without_comparator
 module With_comparator = Set.With_comparator
 module With_first_class_module = Set.With_first_class_module

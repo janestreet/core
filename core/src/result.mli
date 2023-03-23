@@ -5,7 +5,7 @@ open! Import
 type ('a, 'b) t = ('a, 'b) Base.Result.t =
   | Ok of 'a
   | Error of 'b
-[@@deriving bin_io, compare, equal, hash, sexp]
+[@@deriving bin_io, compare, equal, globalize, hash, sexp]
 
 include module type of Base.Result with type ('a, 'b) t := ('a, 'b) t (** @inline *)
 

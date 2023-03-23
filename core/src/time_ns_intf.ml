@@ -424,10 +424,14 @@ module type Time_ns = sig
     end
 
     module Ofday : sig
-      module V1 :
-        Stable_int63able.With_stable_witness.S
-        with type t = Ofday.t
-         and type comparator_witness = Ofday.comparator_witness
+      module V1 : sig
+        type t = Ofday.t [@@deriving equal, hash]
+
+        include
+          Stable_int63able.With_stable_witness.S
+          with type t := t
+           and type comparator_witness = Ofday.comparator_witness
+      end
 
       module Option : sig end [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
       module Zoned : sig end [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]

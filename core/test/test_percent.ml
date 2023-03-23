@@ -402,21 +402,12 @@ let%expect_test "round-trippable sexp format" =
         ~g:Percent.of_percentage_slow_more_accurate;
       (* Also test that if we mix up simple [(to|of)_percentage] functions with their
          [slow_more_accurate] versions, the results are not off by more than two ulps. *)
-      assert_close
-        x
-        ~f:Percent.to_percentage_slow_more_accurate
-        ~g:Percent.of_percentage;
-      assert_close
-        x
-        ~f:Percent.to_percentage
-        ~g:Percent.of_percentage_slow_more_accurate;
+      assert_close x ~f:Percent.to_percentage_slow_more_accurate ~g:Percent.of_percentage;
+      assert_close x ~f:Percent.to_percentage ~g:Percent.of_percentage_slow_more_accurate;
       assert_close x ~f:Percent.to_percentage ~g:Percent.of_percentage);
     if Float.(abs y < max_finite_value /. 10000.)
     then (
-      assert_rt
-        y
-        ~f:Percent.to_bp_slow_more_accurate
-        ~g:Percent.of_bp_slow_more_accurate;
+      assert_rt y ~f:Percent.to_bp_slow_more_accurate ~g:Percent.of_bp_slow_more_accurate;
       assert_close x ~f:Percent.to_bp_slow_more_accurate ~g:Percent.of_bp;
       assert_close x ~f:Percent.to_bp ~g:Percent.of_bp_slow_more_accurate;
       assert_close x ~f:Percent.to_bp ~g:Percent.of_bp))

@@ -9,16 +9,13 @@ let%test_module _ =
   (module struct
     let binary_search = binary_search ~compare:Int.compare
     let t = of_array [| 1; 2; 3; 4 |]
-
     let%test _ = [%equal: int option] (binary_search t `First_equal_to 2) (Some 1)
     let%test _ = [%equal: int option] (binary_search t `First_equal_to 5) None
     let%test _ = [%equal: int option] (binary_search t `First_equal_to 0) None
     let%test _ = [%equal: int option] (binary_search t ~pos:2 `First_equal_to 2) None
     let%test _ = [%equal: int option] (binary_search t ~pos:2 `First_equal_to 3) (Some 2)
-
     let (_ : int option) = dequeue_front t
     let (_ : int option) = dequeue_front t
-
     let%test _ = [%equal: int option] (binary_search t `First_equal_to 2) None
     let%test _ = [%equal: int option] (binary_search t `First_equal_to 3) (Some 2)
     let%test _ = [%equal: int option] (binary_search t `First_equal_to 5) None

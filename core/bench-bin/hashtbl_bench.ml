@@ -267,8 +267,7 @@ end = struct
       ( !! ) "sexp_of_key + <rand key>" (fun size ->
         let r = Example.random size in
         let t = Example.t size in
-        stage (fun () ->
-          ignore (sexp_of_key t (Example.random_key r `present) : Sexp.t)))
+        stage (fun () -> ignore (sexp_of_key t (Example.random_key r `present) : Sexp.t)))
     ;;
 
     let choose = Impl.choose
@@ -839,8 +838,7 @@ end = struct
       ( !! ) "find_multi + <rand key>" (fun size ->
         let r = Example.random size in
         let t = Example.t_multi size in
-        stage (fun () ->
-          ignore (find_multi t (Example.random_key r `either) : int list)))
+        stage (fun () -> ignore (find_multi t (Example.random_key r `either) : int list)))
     ;;
 
     let find_and_call = Impl.find_and_call

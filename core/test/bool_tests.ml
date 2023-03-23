@@ -46,9 +46,7 @@ let%test_module "[of_string_hum]" =
           then (
             match Bool.of_string_hum string with
             | bool ->
-              print_cr
-                [%here]
-                [%message "did not raise" (string : string) (bool : bool)]
+              print_cr [%here] [%message "did not raise" (string : string) (bool : bool)]
             | exception _ -> ()))
       in
       List.iter ~f:test [ "abc"; "tru"; "truth"; "fals"; "falsey"; "0x0"; "01"; "123" ];

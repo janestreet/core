@@ -133,17 +133,7 @@ module Generator = struct
       ~f:(fun () x ~k -> weighted_union [ p, singleton x; 1. -. p, of_fun k ])
   ;;
 
-  let rec bounded_geometric ~p ~maximum init =
-    if init = maximum
-    then singleton maximum
-    else
-      weighted_union
-        [ p, singleton init
-        ; 1. -. p, of_fun (fun () -> bounded_geometric ~p ~maximum (init + 1))
-        ]
-  ;;
-
-  let geometric ~p init = bounded_geometric ~p ~maximum:Int.max_value init
+  let geometric = Generator.int_geometric
   let small_non_negative_int = small_positive_or_zero_int
   let small_positive_int = small_strictly_positive_int
   let list_with_length length t = list_with_length t ~length

@@ -567,6 +567,22 @@ module Provide_bin_io (Key : Key_bin_io.S) = Bin_prot.Utils.Make_iterable_binabl
     ;;
   end)
 
+module Provide_stable_witness (Key : sig
+    type t [@@deriving stable_witness]
+
+    include Comparator.S with type t := t
+  end) =
+struct
+  (* The binary representation of map is used in the stable modules below, so it's
+     assumed to be stable (if the key and data are stable) . *)
+  let stable_witness (type data) (_data_stable_witness : data Stable_witness.t)
+    : (Key.t, data, Key.comparator_witness) t Stable_witness.t
+    =
+    let (_ : Key.t Stable_witness.t) = Key.stable_witness in
+    Stable_witness.assert_stable
+  ;;
+end
+
 module Make_plain_using_comparator (Key : sig
     type t [@@deriving sexp_of]
 
@@ -619,16 +635,10 @@ struct
          type t [@@deriving stable_witness]
        end
        with type t := Key.t) =
-  struct
-    (* The binary representation of map is used in the stable modules below, so it's
-       assumed to be stable (if the key and data are stable) . *)
-    let stable_witness (type data) (_data_stable_witness : data Stable_witness.t)
-      : data t Stable_witness.t
-      =
-      let (_ : Key.t Stable_witness.t) = Key'.stable_witness in
-      Stable_witness.assert_stable
-    ;;
-  end
+    Provide_stable_witness (struct
+      include Key
+      include Key'
+    end)
 end
 
 module Make_plain (Key : Key_plain) = Make_plain_using_comparator (struct
@@ -721,9 +731,7 @@ module For_deriving = struct
 
   let quickcheck_generator_m__t
         (type k cmp)
-        (module Key : Quickcheck_generator_m
-          with type t = k
-           and type comparator_witness = cmp)
+        (module Key : Quickcheck_generator_m with type t = k and type comparator_witness = cmp)
         v_generator
     =
     quickcheck_generator (module Key) Key.quickcheck_generator v_generator
@@ -731,9 +739,7 @@ module For_deriving = struct
 
   let quickcheck_observer_m__t
         (type k cmp)
-        (module Key : Quickcheck_observer_m
-          with type t = k
-           and type comparator_witness = cmp)
+        (module Key : Quickcheck_observer_m with type t = k and type comparator_witness = cmp)
         v_observer
     =
     quickcheck_observer Key.quickcheck_observer v_observer
@@ -741,9 +747,7 @@ module For_deriving = struct
 
   let quickcheck_shrinker_m__t
         (type k cmp)
-        (module Key : Quickcheck_shrinker_m
-          with type t = k
-           and type comparator_witness = cmp)
+        (module Key : Quickcheck_shrinker_m with type t = k and type comparator_witness = cmp)
         v_shrinker
     =
     quickcheck_shrinker Key.quickcheck_shrinker v_shrinker
@@ -752,6 +756,22 @@ module For_deriving = struct
   module type For_deriving = Map.For_deriving
 
   include (Map : For_deriving with type ('a, 'b, 'c) t := ('a, 'b, 'c) t)
+end
+
+module For_deriving_stable = struct
+  module type Stable_witness_m = sig
+    include Comparator.S
+
+    val stable_witness : t Stable_witness.t
+  end
+
+  let stable_witness_m__t
+        (type k cmp)
+        (module Key : Stable_witness_m with type t = k and type comparator_witness = cmp)
+    =
+    let module M = Provide_stable_witness (Key) in
+    M.stable_witness
+  ;;
 end
 
 include For_deriving
@@ -782,6 +802,7 @@ module Stable = struct
     end
 
     include For_deriving
+    include For_deriving_stable
     module Make (Key : Stable_module_types.S0) = Make_binable_using_comparator (Key)
 
     module With_stable_witness = struct

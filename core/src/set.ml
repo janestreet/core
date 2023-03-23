@@ -345,6 +345,20 @@ module Provide_bin_io (Elt : Elt_bin_io.S) = Bin_prot.Utils.Make_iterable_binabl
     ;;
   end)
 
+module Provide_stable_witness (Elt : sig
+    type t [@@deriving stable_witness]
+
+    include Comparator.S with type t := t
+  end) =
+struct
+  (* The binary representation of set is used in the stable modules below, so it's
+     assumed to be stable (if the elt is stable). *)
+  let stable_witness : (Elt.t, Elt.comparator_witness) t Stable_witness.t =
+    let (_ : Elt.t Stable_witness.t) = Elt.stable_witness in
+    Stable_witness.assert_stable
+  ;;
+end
+
 module Make_plain_using_comparator (Elt : sig
     type t [@@deriving sexp_of]
 
@@ -396,14 +410,10 @@ struct
          type t [@@deriving stable_witness]
        end
        with type t := Elt.t) =
-  struct
-    (* The binary representation of set is used in the stable modules below, so it's
-       assumed to be stable (if the elt is stable). *)
-    let stable_witness =
-      let (_ : Elt.t Stable_witness.t) = Elt'.stable_witness in
-      Stable_witness.assert_stable
-    ;;
-  end
+    Provide_stable_witness (struct
+      include Elt
+      include Elt'
+    end)
 
   let quickcheck_observer = quickcheck_observer
   let quickcheck_shrinker = quickcheck_shrinker
@@ -494,27 +504,21 @@ module For_deriving = struct
 
   let quickcheck_generator_m__t
         (type t cmp)
-        (module Elt : Quickcheck_generator_m
-          with type t = t
-           and type comparator_witness = cmp)
+        (module Elt : Quickcheck_generator_m with type t = t and type comparator_witness = cmp)
     =
     quickcheck_generator (module Elt) Elt.quickcheck_generator
   ;;
 
   let quickcheck_observer_m__t
         (type t cmp)
-        (module Elt : Quickcheck_observer_m
-          with type t = t
-           and type comparator_witness = cmp)
+        (module Elt : Quickcheck_observer_m with type t = t and type comparator_witness = cmp)
     =
     quickcheck_observer Elt.quickcheck_observer
   ;;
 
   let quickcheck_shrinker_m__t
         (type t cmp)
-        (module Elt : Quickcheck_shrinker_m
-          with type t = t
-           and type comparator_witness = cmp)
+        (module Elt : Quickcheck_shrinker_m with type t = t and type comparator_witness = cmp)
     =
     quickcheck_shrinker Elt.quickcheck_shrinker
   ;;
@@ -522,6 +526,22 @@ module For_deriving = struct
   module type For_deriving = Set.For_deriving
 
   include (Set : For_deriving with type ('a, 'b) t := ('a, 'b) t)
+end
+
+module For_deriving_stable = struct
+  module type Stable_witness_m = sig
+    include Comparator.S
+
+    val stable_witness : t Stable_witness.t
+  end
+
+  let stable_witness_m__t
+        (type t cmp)
+        (module Elt : Stable_witness_m with type t = t and type comparator_witness = cmp)
+    =
+    let module M = Provide_stable_witness (Elt) in
+    M.stable_witness
+  ;;
 end
 
 include For_deriving
@@ -539,6 +559,7 @@ module Stable = struct
     end
 
     include For_deriving
+    include For_deriving_stable
     module Make (Elt : Stable_module_types.S0) = Make_binable_using_comparator (Elt)
 
     module With_stable_witness = struct

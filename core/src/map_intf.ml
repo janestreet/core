@@ -298,3 +298,18 @@ module type For_deriving = sig
     -> 'v Quickcheck.Shrinker.t
     -> ('k, 'v, 'cmp) t Quickcheck.Shrinker.t
 end
+
+module type For_deriving_stable = sig
+  type ('a, 'b, 'c) t
+
+  module type Stable_witness_m = sig
+    include Comparator.S
+
+    val stable_witness : t Stable_witness.t
+  end
+
+  val stable_witness_m__t
+    :  (module Stable_witness_m with type t = 'k and type comparator_witness = 'cmp)
+    -> 'v Stable_witness.t
+    -> ('k, 'v, 'cmp) t Stable_witness.t
+end

@@ -363,7 +363,6 @@ let%test_module "map functions" =
 
     let test_int = test (module Int) ~n:5
     let test_string = test (module String) ~n:5
-
     let%test_unit _ = test_int (map ~f:(( + ) 1)) [ 1; 11; 21; 31; 41 ]
     let%test_unit _ = test_string (map ~f:Int.to_string) [ "0"; "10"; "20"; "30"; "40" ]
     let%test_unit _ = test_int (mapi ~f:( * )) [ 0; 10; 40; 90; 160 ]

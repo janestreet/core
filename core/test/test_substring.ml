@@ -53,7 +53,6 @@ module Test (Base : sig
   let%test_module _ =
     (module struct
       let ell = create ~pos:1 ~len:3 (Base.of_string "hello")
-
       let%test _ = to_array ell = [| 'e'; 'l'; 'l' |]
       let%test _ = to_list ell = [ 'e'; 'l'; 'l' ]
       let%test _ = fold ell ~init:[] ~f:(fun acc x -> x :: acc) = [ 'l'; 'l'; 'e' ]
@@ -79,7 +78,6 @@ module Test (Base : sig
   let%test_module _ =
     (module struct
       let bcdefghi = create ~pos:1 ~len:8 (Base.of_string "abcdefghijklmno ")
-
       let%test _ = find bcdefghi ~f:Char.is_lowercase = Some 'b'
       let%test _ = find bcdefghi ~f:Char.is_whitespace = None
       let%test _ = exists bcdefghi ~f:(Char.equal 'h')
@@ -194,8 +192,7 @@ let%test_module "quickcheck" =
               let str = Substring.to_string sub in
               let via_str = Option.try_with (fun () -> f_str str n) in
               let via_sub =
-                Option.try_with (fun () -> f_sub sub n)
-                |> Option.map ~f:Substring.to_string
+                Option.try_with (fun () -> f_sub sub n) |> Option.map ~f:Substring.to_string
               in
               if Option.is_some via_str && Option.is_some via_sub
               then [%test_result: string option] ~expect:via_str via_sub))

@@ -11,7 +11,8 @@ module Stable = struct
   module V1 = struct
     module Without_comparable = struct
       module T : sig
-        type t [@@immediate] [@@deriving bin_io, equal, hash, typerep, stable_witness]
+        type t
+        [@@immediate] [@@deriving bin_io, compare, equal, hash, typerep, stable_witness]
 
         val create_exn : y:int -> m:Month.Stable.V1.t -> d:int -> t
         val year : t -> int
@@ -37,7 +38,8 @@ module Stable = struct
         *)
         type t = int
         [@@deriving
-          equal
+          compare
+        , equal
         , hash
         , typerep
         , bin_shape ~basetype:"899ee3e0-490a-11e6-a10a-a3734f733566"
@@ -272,16 +274,6 @@ module Stable = struct
       end
 
       include Sexpable
-
-      let compare t1 t2 =
-        let n = Int.compare (year t1) (year t2) in
-        if n <> 0
-        then n
-        else (
-          let n = Month.compare (month t1) (month t2) in
-          if n <> 0 then n else Int.compare (day t1) (day t2))
-      ;;
-
       include (val Comparator.Stable.V1.make ~compare ~sexp_of_t)
     end
 

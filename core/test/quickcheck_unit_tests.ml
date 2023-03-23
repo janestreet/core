@@ -140,7 +140,6 @@ module Test (S : sig
       let sexp_of = Unit.sexp_of_t
       let quickcheck_generator = Unit.quickcheck_generator
       let can_generate f = test_can_generate quickcheck_generator ~sexp_of ~f
-
       let%test_unit _ = can_generate (fun () -> true)
     end)
   ;;
@@ -150,7 +149,6 @@ module Test (S : sig
       let sexp_of = Bool.sexp_of_t
       let quickcheck_generator = Bool.quickcheck_generator
       let can_generate f = test_can_generate quickcheck_generator ~sexp_of ~f
-
       let%test_unit _ = can_generate (fun x -> x = true)
       let%test_unit _ = can_generate (fun x -> x = false)
     end)
@@ -335,7 +333,6 @@ module Test (S : sig
       let sexp_of = Char.sexp_of_t
       let quickcheck_generator = Char.quickcheck_generator
       let can_generate f = test_can_generate quickcheck_generator ~sexp_of ~f
-
       let%test_unit _ = can_generate Char.is_digit
       let%test_unit _ = can_generate Char.is_lowercase
       let%test_unit _ = can_generate Char.is_uppercase
@@ -359,11 +356,9 @@ module Test (S : sig
           let actual =
             let set = ref Char.Set.empty in
             with_return (fun return ->
-              Sequence.iter
-                (Quickcheck.random_sequence quickcheck_generator)
-                ~f:(fun t ->
-                  set := Set.add !set t;
-                  if Set.equal !set expect then return.return ()));
+              Sequence.iter (Quickcheck.random_sequence quickcheck_generator) ~f:(fun t ->
+                set := Set.add !set t;
+                if Set.equal !set expect then return.return ()));
             !set
           in
           [%test_result: Char.Set.t] actual ~expect

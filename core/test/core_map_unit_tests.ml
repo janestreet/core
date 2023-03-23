@@ -403,9 +403,7 @@ struct
   ;;
 
   let empty = Unit_test_follows
-
   let%test _ = equal_maps ~data_equal:( = ) ~caml_map:Caml_map.empty (Map.empty ())
-
   let singleton _ = assert false
 
   let%test _ =
@@ -494,7 +492,6 @@ struct
   ;;
 
   let of_alist_or_error _ = assert false
-
   let%test _ = Result.is_error (Map.of_alist_or_error [ Key.sample, 0; Key.sample, 1 ])
 
   let%test _ =
@@ -744,14 +741,11 @@ struct
   ;;
 
   let is_empty _ = assert false
-
   let%test _ = Map.is_empty (Map.empty ())
   let%test _ = not (Map.is_empty (Map.singleton Key.sample 0))
   let%test _ = not (Map.is_empty (random_map Key.samples))
-
   let of_tree _ = assert false
   let to_tree _ = assert false
-
   let%test _ = Map.is_empty (Map.of_tree (Map.to_tree (Map.empty ())))
 
   let%test _ =
@@ -851,7 +845,6 @@ struct
   ;;
 
   let%test _ = [%equal: int list] (Map.find_multi (Map.empty ()) Key.sample) []
-
   let fold_right _ = assert false
 
   let%test _ =
@@ -1349,7 +1342,6 @@ struct
   let for_alli _ = assert false
   let existsi _ = assert false
   let counti _ = assert false
-
   let%test _ = Map.for_all (Map.empty ()) ~f:(fun _ -> assert false)
   let%test _ = not (Map.exists (Map.empty ()) ~f:(fun _ -> assert false))
   let%test _ = Map.count (Map.empty ()) ~f:(fun _ -> assert false) = 0
@@ -2247,7 +2239,6 @@ struct
   ;;
 
   let key_set _ = assert false
-
   let%test_unit _ = assert (Set.is_empty (Map.key_set (Map.empty ())))
 
   let%test_unit _ =

@@ -461,8 +461,7 @@ end = struct
           | [ choice ] -> [ choice; choice ^ "," ]
           | choices -> choices
         in
-        List.map choices ~f:(fun choice ->
-          String.concat ~sep:"," (prefixes @ [ choice ])))
+        List.map choices ~f:(fun choice -> String.concat ~sep:"," (prefixes @ [ choice ])))
     in
     let of_string string =
       let string = strip string in
@@ -1006,10 +1005,10 @@ module Anons = struct
               then t2, t1 :: acc
               else
                 failwithf
-                  "the grammar %s for anonymous arguments is not supported because \
-                   there is the possibility for arguments (%s) following a variable \
-                   number of arguments (%s).  Supporting such grammars would \
-                   complicate the implementation significantly."
+                  "the grammar %s for anonymous arguments is not supported because there \
+                   is the possibility for arguments (%s) following a variable number of \
+                   arguments (%s).  Supporting such grammars would complicate the \
+                   implementation significantly."
                   (usage (Concat (List.rev (t2 :: t1 :: acc))))
                   (usage t2)
                   (usage t1)
@@ -2046,14 +2045,12 @@ module Command_base = struct
           (List.map ts ~f:(fun t ->
              map_outcome t ~f:(fun { Parsing_outcome.result; has_arg } ->
                match result with
-               | Ok (Some value) ->
-                 { Parsing_outcome.result = Ok value; has_arg = true }
+               | Ok (Some value) -> { Parsing_outcome.result = Ok value; has_arg = true }
                | Ok None ->
                  { has_arg = false
                  ; result =
                      Error
-                       (`Missing_required_flags
-                          (Error.of_string "missing required flag"))
+                       (`Missing_required_flags (Error.of_string "missing required flag"))
                  }
                | Error _ as result -> { has_arg; result })))
       ;;
@@ -2103,11 +2100,12 @@ module Command_base = struct
         ~verbose_on_parse_error:(Some true)
         ~help_text:(lazy "No help for parsing")
         ~on_failure:
-          (fun exn
+          (fun
+            exn
             ~for_completion:(_ : bool)
             ~path:(_ : Path.t)
-            ~verbose_on_parse_error:(_ : bool option) ->
-            result := Some (Error (Error.of_exn exn)));
+            ~verbose_on_parse_error:(_ : bool option)
+            -> result := Some (Error (Error.of_exn exn)));
       Option.value_exn ~here:[%here] !result
     ;;
   end
@@ -2200,9 +2198,7 @@ module Command_base = struct
             m)
           +> Param.flag name flag_type ~doc
         in
-        let call f arg_type =
-          gen (fun x -> Option.iter x ~f) (Param.optional arg_type)
-        in
+        let call f arg_type = gen (fun x -> Option.iter x ~f) (Param.optional arg_type) in
         let set r arg_type = call (fun x -> r := x) arg_type in
         let set_bool r b = gen (fun passed -> if passed then r := b) Param.no_arg in
         acc
@@ -2648,7 +2644,8 @@ module Deprecated = struct
         (s ^ cmd, summary)
         :: (Lazy.force subcommands
             |> List.sort ~compare:Command_base.Deprecated.subcommand_cmp_fst
-            |> List.concat_map ~f:(fun (cmd', t) -> help_recursive_rec ~cmd:cmd' t new_s))
+            |> List.concat_map ~f:(fun (cmd', t) -> help_recursive_rec ~cmd:cmd' t new_s)
+           )
       | Exec _ ->
         (* Command.exec does not support deprecated commands *)
         []

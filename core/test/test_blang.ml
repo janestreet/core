@@ -54,9 +54,11 @@ let%test_module "auto-simplification" =
     let%test _ = if_ a true_ c = orelse a c
     let%test _ = if_ a b false_ = andalso a b
     let%test _ = if_ a b true_ = if_ (not_ a) true_ b
+
     (* b/c (if a b c) = (if (not a) c b) *)
     let%test _ = if_ a b true_ = orelse (not_ a) b
     let%test _ = if_ a false_ c = if_ (not_ a) c false_
+
     (* b/c (if a b c) = (if (not a) c b) *)
     let%test _ = if_ a false_ c = andalso (not_ a) c
 
@@ -64,10 +66,8 @@ let%test_module "auto-simplification" =
       (module struct
         let%test _ = and_ [ a; b; c ] = andalso (andalso a b) c
         let%test _ = or_ [ a; b; c ] = orelse (orelse a b) c
-
         let test_and ts = and_ ts = List.fold ts ~init:true_ ~f:andalso
         let test_or ts = or_ ts = List.fold ts ~init:false_ ~f:orelse
-
         let%test _ = test_or []
         let%test _ = test_or [ a ]
         let%test _ = test_or [ true_ ]

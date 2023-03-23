@@ -38,7 +38,6 @@ module Test_gen (M : Indexable_gen_and_for_test) = struct
       ;;
 
       let ( = ) = Poly.equal
-
       let%test _ = binary_search ~compare [||] `First_equal_to s = None
       let%test _ = binary_search ~compare [| s |] `First_equal_to s = Some 0
       let%test _ = binary_search ~compare [| s |] `First_equal_to b = None

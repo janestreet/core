@@ -40,6 +40,7 @@ end
 
 module type String_id = sig
   module type S = S
+  module type S_with_extras = S_with_extras
 
   include S
 

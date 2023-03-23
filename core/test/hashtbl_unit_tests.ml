@@ -410,9 +410,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
                let _, t = map_and_table constructor in
                Hashtbl.clear t;
                Hashtbl.invariant ignore ignore t;
-               [%test_result: Data.t Key.Map.t]
-                 (to_map t)
-                 ~expect:Key.Map.empty)
+               [%test_result: Data.t Key.Map.t] (to_map t) ~expect:Key.Map.empty)
          ;;
 
          let copy = Hashtbl.copy
@@ -916,8 +914,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
              ~f:(fun constructor ->
                let map, t = map_and_table constructor in
                [%test_result: Data.t Key.Map.t]
-                 (to_map
-                    (Hashtbl.filter_mapi t ~f:Key_and_data.to_data_option))
+                 (to_map (Hashtbl.filter_mapi t ~f:Key_and_data.to_data_option))
                  ~expect:(Map.filter_mapi map ~f:Key_and_data.to_data_option))
          ;;
 
@@ -1047,9 +1044,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
              ~f:(fun constructor ->
                let map, t = map_and_table constructor in
                [%test_result: Data.t Key.Map.t * Data.t Key.Map.t]
-                 (let a, b =
-                    Hashtbl.partitioni_tf t ~f:Key_and_data.to_bool
-                  in
+                 (let a, b = Hashtbl.partitioni_tf t ~f:Key_and_data.to_bool in
                   to_map a, to_map b)
                  ~expect:(Map.partitioni_tf map ~f:Key_and_data.to_bool))
          ;;
@@ -1151,8 +1146,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
                     t
                     key
                     ~a
-                    ~if_found:(fun ~key ~data a ->
-                      Either.first (key, data), a)
+                    ~if_found:(fun ~key ~data a -> Either.first (key, data), a)
                     ~if_not_found:(fun key a -> Either.second key, a))
                  ~expect:
                    (match Map.find map key with
@@ -1224,8 +1218,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
              ~f:(fun (constructor1, constructor2) ->
                let map1, t1 = map_and_table constructor1 in
                let map2, t2 = map_and_table constructor2 in
-               let f ~key data2 data1_opt : _ Hashtbl_intf.Merge_into_action.t
-                 =
+               let f ~key data2 data1_opt : _ Hashtbl_intf.Merge_into_action.t =
                  match
                    Key_and_data.merge
                      ~key
@@ -1802,8 +1795,7 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_for_testing) = struct
          for_each "key" sexp_of_key sample_keys (fun key ->
            for_each "f result" [%sexp_of: data] sample_data (fun data ->
              test_mutate (fun t ->
-               ignore
-                 (Hashtbl.update_and_return t key ~f:(fun _ -> data) : _));
+               ignore (Hashtbl.update_and_return t key ~f:(fun _ -> data) : _));
              let callback _ = data in
              let test_result = [%test_result: int option] in
              test_caller ~callback ~test_result (fun t f ->
@@ -1903,8 +1895,7 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_for_testing) = struct
            [%sexp_of: int option]
            (option sample_data)
            (fun opt ->
-              test_mutate (fun t ->
-                Hashtbl.filter_map_inplace t ~f:(fun _ -> opt));
+              test_mutate (fun t -> Hashtbl.filter_map_inplace t ~f:(fun _ -> opt));
               let callback _ = opt in
               let test_result = [%test_result: (int * int) list] in
               test_caller ~callback ~test_result (fun t f ->
@@ -1925,8 +1916,7 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_for_testing) = struct
               let callback _ = opt in
               let test_result = [%test_result: (int * int) list] in
               test_caller ~callback ~test_result (fun t f ->
-                Hashtbl.filter_mapi_inplace t ~f:(fun ~key ~data ->
-                  f (key, data));
+                Hashtbl.filter_mapi_inplace t ~f:(fun ~key ~data -> f (key, data));
                 Hashtbl.to_alist t))
        ;;
 
@@ -1996,7 +1986,6 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_for_testing) = struct
        ;;
 
        let clear = Hashtbl.clear
-
        let%test_unit "clear" = test_mutate (fun t -> Hashtbl.clear t)
 
        (* functions that take callbacks *)
@@ -2030,8 +2019,7 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_for_testing) = struct
          let callback (a, b, c) = (a, b) :: c in
          let test_result = [%test_result: (int * int) list] in
          test_caller ~callback ~test_result (fun t f ->
-           Hashtbl.fold t ~init:[] ~f:(fun ~key ~data acc ->
-             f (key, data, acc)))
+           Hashtbl.fold t ~init:[] ~f:(fun ~key ~data acc -> f (key, data, acc)))
        ;;
 
        let iter = Hashtbl.iter
@@ -2246,8 +2234,7 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_for_testing) = struct
          for_each "f result" [%sexp_of: bool] bools (fun bool ->
            let callback _ = bool in
            let test_result = [%test_result: bool] in
-           test_caller ~callback ~test_result (fun t f ->
-             Hashtbl.for_all t ~f))
+           test_caller ~callback ~test_result (fun t f -> Hashtbl.for_all t ~f))
        ;;
 
        let count = Hashtbl.count
