@@ -114,7 +114,7 @@ static void check_bigstring_proxy(struct caml_ba_array *b) {
 void core_bigstring_destroy(value v, int flags) {
   int i;
   struct caml_ba_array *b = Caml_ba_array_val(v);
-  struct custom_operations *ops = Custom_ops_val(v);
+  const struct custom_operations *ops = Custom_ops_val(v);
   switch (b->flags & CAML_BA_MANAGED_MASK) {
   case CAML_BA_EXTERNAL:
     if ((flags & CORE_BIGSTRING_DESTROY_ALLOW_EXTERNAL) !=

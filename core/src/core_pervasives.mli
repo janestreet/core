@@ -124,16 +124,10 @@ external not : (bool[@local_opt]) -> bool = "%boolnot"
     [e2] is not evaluated at all. *)
 external ( && ) : (bool[@local_opt]) -> (bool[@local_opt]) -> bool = "%sequand"
 
-external ( & ) : (bool[@local_opt]) -> (bool[@local_opt]) -> bool = "%sequand"
-[@@ocaml.deprecated "[since 2010-01] {!Caml.( && )} should be used instead."]
-
 (** The boolean 'or'. Evaluation is sequential, left-to-right:
     in [e1 || e2], [e1] is evaluated first, and if it returns [true],
     [e2] is not evaluated at all. *)
 external ( || ) : (bool[@local_opt]) -> (bool[@local_opt]) -> bool = "%sequor"
-
-external ( or ) : (bool[@local_opt]) -> (bool[@local_opt]) -> bool = "%sequor"
-[@@ocaml.deprecated "[since 2010-01] {!Caml.( || )} should be used instead."]
 
 (** {6 Debugging} *)
 

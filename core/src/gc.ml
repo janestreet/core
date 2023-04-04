@@ -110,6 +110,8 @@ module Stable = struct
   end
 
   module Control = struct
+    [%%if ocaml_version < (5, 0, 0)]
+
     module V1 = struct
       [@@@ocaml.warning "-3"]
 
@@ -128,6 +130,29 @@ module Stable = struct
         }
       [@@deriving bin_io, compare, equal, sexp, stable_witness]
     end
+
+    [%%else]
+
+    module V1 = struct
+      [@@@ocaml.warning "-3"]
+
+      type t = Stdlib.Gc.control =
+        { minor_heap_size : int
+        ; major_heap_increment : int
+        ; space_overhead : int
+        ; verbose : int
+        ; max_overhead : int
+        ; stack_limit : int
+        ; allocation_policy : int
+        ; window_size : int
+        ; custom_major_ratio : int
+        ; custom_minor_ratio : int
+        ; custom_minor_max_size : int
+        }
+      [@@deriving bin_io, compare, equal, sexp, stable_witness]
+    end
+
+    [%%endif]
   end
 end
 
@@ -239,6 +264,8 @@ module Stat = struct
 end
 
 module Control = struct
+  [%%if ocaml_version < (5, 0, 0)]
+
   module T = struct
     [@@@ocaml.warning "-3"]
 
@@ -257,6 +284,29 @@ module Control = struct
       }
     [@@deriving compare, sexp_of, fields]
   end
+
+  [%%else]
+
+  module T = struct
+    [@@@ocaml.warning "-3"]
+
+    type t = Stdlib.Gc.control =
+      { minor_heap_size : int
+      ; major_heap_increment : int
+      ; space_overhead : int
+      ; verbose : int
+      ; max_overhead : int
+      ; stack_limit : int
+      ; allocation_policy : int
+      ; window_size : int
+      ; custom_major_ratio : int
+      ; custom_minor_ratio : int
+      ; custom_minor_max_size : int
+      }
+    [@@deriving compare, sexp_of, fields]
+  end
+
+  [%%endif]
 
   include T
   include Comparable.Make_plain (T)
@@ -342,13 +392,18 @@ external major_words : unit -> int = "core_gc_major_words" [@@noalloc]
 external promoted_words : unit -> int = "core_gc_promoted_words" [@@noalloc]
 external minor_collections : unit -> int = "core_gc_minor_collections" [@@noalloc]
 external major_collections : unit -> int = "core_gc_major_collections" [@@noalloc]
-external heap_words : unit -> int = "core_gc_heap_words" [@@noalloc]
-external heap_chunks : unit -> int = "core_gc_heap_chunks" [@@noalloc]
 external compactions : unit -> int = "core_gc_compactions" [@@noalloc]
-external top_heap_words : unit -> int = "core_gc_top_heap_words" [@@noalloc]
 external major_plus_minor_words : unit -> int = "core_gc_major_plus_minor_words"
 external allocated_words : unit -> int = "core_gc_allocated_words"
 external run_memprof_callbacks : unit -> unit = "core_gc_run_memprof_callbacks"
+
+[%%if ocaml_version < (5, 0, 0)]
+
+external heap_words : unit -> int = "core_gc_heap_words" [@@noalloc]
+external heap_chunks : unit -> int = "core_gc_heap_chunks" [@@noalloc]
+external top_heap_words : unit -> int = "core_gc_top_heap_words" [@@noalloc]
+
+[%%endif]
 
 let stat_size_lazy =
   lazy (Obj.reachable_words (Obj.repr (Stdlib.Gc.quick_stat () : Stat.t)))

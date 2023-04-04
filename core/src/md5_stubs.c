@@ -1,3 +1,4 @@
+#define CAML_INTERNALS
 #include <caml/alloc.h>
 #include <caml/bigarray.h>
 #include <caml/memory.h>
@@ -7,7 +8,6 @@
 #include <errno.h>
 #include <unistd.h>
 
-#define CAML_INTERNALS
 #if __GNUC__ < 8
 #pragma GCC diagnostic ignored "-pedantic"
 #endif

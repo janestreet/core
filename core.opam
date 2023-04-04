@@ -43,4 +43,3 @@ largest industrial user of OCaml.
 
 This is the system-independent part of Core. Unix-specific parts were moved to [core-unix].
 "
-conflicts: ["base-domains"]

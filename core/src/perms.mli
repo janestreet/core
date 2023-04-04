@@ -148,18 +148,21 @@ module Upper_bound : sig
 end
 
 module Export : sig
-  type read = Read.t [@@deriving bin_io, compare, hash, sexp, stable_witness]
+  type read = Read.t [@@deriving bin_io, compare, globalize, hash, sexp, stable_witness]
 
   (** We don't expose [bin_io] for [write] due to a naming conflict with the functions
       exported by [bin_io] for [read_write].  If you want [bin_io] for [write], use
       [Write.t]. *)
-  type write = Write.t [@@deriving compare, hash, sexp, stable_witness]
+  type write = Write.t [@@deriving compare, hash, globalize, sexp, stable_witness]
 
-  type immutable = Immutable.t [@@deriving bin_io, compare, hash, sexp, stable_witness]
-  type read_write = Read_write.t [@@deriving bin_io, compare, hash, sexp, stable_witness]
+  type immutable = Immutable.t
+  [@@deriving bin_io, compare, globalize, hash, sexp, stable_witness]
+
+  type read_write = Read_write.t
+  [@@deriving bin_io, compare, globalize, hash, sexp, stable_witness]
 
   type 'a perms = 'a Upper_bound.t
-  [@@deriving bin_io, compare, hash, sexp, stable_witness]
+  [@@deriving bin_io, compare, globalize, hash, sexp, stable_witness]
 end
 
 module Stable : sig
