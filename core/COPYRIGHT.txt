@@ -4,7 +4,7 @@ Copyright (C) 2008-
   New York, NY 10004
   USA
 
-  email: opensource@janestreet.com
+  email: opensource-contacts@janestreet.com
 
 The contents of some files in this distribution was derived from external
 sources with compatible licenses.  The original copyright and license

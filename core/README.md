@@ -31,7 +31,7 @@ to follow Core conventions for the use of comparators.
 
 Please report bugs and feature requests on
 [GitHub](https://github.com/janestreet/core). For everything else you
-can contact us at <opensource@janestreet.com>.
+can contact us at <opensource-contacts@janestreet.com>.
 
 You can find all of Jane Street's open-source libraries on
 [GitHub](https://github.com/janestreet).

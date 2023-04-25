@@ -10,7 +10,7 @@ build: [
   ["dune" "build" "-p" name "-j" jobs]
 ]
 depends: [
-  "ocaml" {>= "4.11.0"}
+  "ocaml" {>= "4.14.0"}
   "base"
   "base_bigstring"
   "base_quickcheck"
