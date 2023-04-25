@@ -1,4 +1,5 @@
 opam-version: "2.0"
+version: "v0.16.0"
 maintainer: "Jane Street developers"
 authors: ["Jane Street Group, LLC"]
 homepage: "https://github.com/janestreet/core"
@@ -10,28 +11,28 @@ build: [
   ["dune" "build" "-p" name "-j" jobs]
 ]
 depends: [
-  "ocaml" {>= "4.14.0"}
-  "base"
-  "base_bigstring"
-  "base_quickcheck"
-  "bin_prot"
-  "fieldslib"
-  "jane-street-headers"
-  "jst-config"
-  "ppx_assert"
-  "ppx_base"
-  "ppx_hash"
-  "ppx_inline_test"
-  "ppx_jane"
-  "ppx_optcomp"
-  "ppx_sexp_conv"
-  "ppx_sexp_message"
-  "sexplib"
-  "splittable_random"
-  "stdio"
-  "time_now"
-  "typerep"
-  "variantslib"
+  "ocaml"               {>= "4.14.0"}
+  "base"                {>= "v0.16" & < "v0.17"}
+  "base_bigstring"      {>= "v0.16" & < "v0.17"}
+  "base_quickcheck"     {>= "v0.16" & < "v0.17"}
+  "bin_prot"            {>= "v0.16" & < "v0.17"}
+  "fieldslib"           {>= "v0.16" & < "v0.17"}
+  "jane-street-headers" {>= "v0.16" & < "v0.17"}
+  "jst-config"          {>= "v0.16" & < "v0.17"}
+  "ppx_assert"          {>= "v0.16" & < "v0.17"}
+  "ppx_base"            {>= "v0.16" & < "v0.17"}
+  "ppx_hash"            {>= "v0.16" & < "v0.17"}
+  "ppx_inline_test"     {>= "v0.16" & < "v0.17"}
+  "ppx_jane"            {>= "v0.16" & < "v0.17"}
+  "ppx_optcomp"         {>= "v0.16" & < "v0.17"}
+  "ppx_sexp_conv"       {>= "v0.16" & < "v0.17"}
+  "ppx_sexp_message"    {>= "v0.16" & < "v0.17"}
+  "sexplib"             {>= "v0.16" & < "v0.17"}
+  "splittable_random"   {>= "v0.16" & < "v0.17"}
+  "stdio"               {>= "v0.16" & < "v0.17"}
+  "time_now"            {>= "v0.16" & < "v0.17"}
+  "typerep"             {>= "v0.16" & < "v0.17"}
+  "variantslib"         {>= "v0.16" & < "v0.17"}
   "dune"                {>= "2.0.0"}
 ]
 available: arch != "arm32" & arch != "x86_32"
