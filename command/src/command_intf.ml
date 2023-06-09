@@ -59,7 +59,7 @@ module type For_unix = sig
   module Pid : sig
     type t
 
-    val to_string : t -> string
+    val to_int : t -> int
   end
 
   module Signal : sig
@@ -1028,7 +1028,12 @@ module type Command = sig
         -> string
 
       val run
-        :  ?verbose_on_parse_error:bool
+        :  ?add_validate_parsing_flag:bool
+        (** When [add_validate_parsing_flag] is true a new flag `-validate-parsing` is
+            added to all subcommands. When this flag is passed the command will exit
+            immediately if parsing is succesfull and return 0. This flag does not take any
+            steps to stop side effects from occurring. *)
+        -> ?verbose_on_parse_error:bool
         -> ?version:string
         -> ?build_info:string
         -> ?argv:string list

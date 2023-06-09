@@ -57,6 +57,10 @@ module Env = struct
   let set_with_default = Univ_map.With_default.set
 end
 
+let key_internal_validate_parsing =
+  Env.Key.create ~name:"----internal-validate-parsing" [%sexp_of: unit]
+;;
+
 module Parsing_outcome : sig
   type 'a t =
     { result : ('a, [ `Missing_required_flags of Error.t ]) Result.t
@@ -1244,15 +1248,15 @@ module Anons = struct
 
     let rec complete : type a. a Basic.t -> Env.t -> part:string -> Nothing.t =
       fun t env ~part ->
-        match t with
-        | Done _ -> exit 0
-        | Test f -> complete (f ~more:true) env ~part
-        | More { complete; _ } -> Completer.run_and_exit complete env ~part
-        | Stop_parsing t -> complete t env ~part
-        | Only_for_completion t ->
-          (match t with
-           | [] -> exit 0
-           | Packed t :: _ -> complete t env ~part)
+      match t with
+      | Done _ -> exit 0
+      | Test f -> complete (f ~more:true) env ~part
+      | More { complete; _ } -> Completer.run_and_exit complete env ~part
+      | Stop_parsing t -> complete t env ~part
+      | Only_for_completion t ->
+        (match t with
+         | [] -> exit 0
+         | Packed t :: _ -> complete t env ~part)
     ;;
 
     module For_opening = struct
@@ -1507,7 +1511,8 @@ module Command_base = struct
     match cmdline with
     | Nil ->
       List.iter (Map.data t.flags) ~f:(fun flag -> flag.check_available env);
-      Anons.Parser.final_value parser env
+      ( `Only_validate_parsing (Env.mem env key_internal_validate_parsing)
+      , Anons.Parser.final_value parser env )
     | Complete part ->
       if parse_flags && String.is_prefix part ~prefix:"-"
       then (
@@ -1590,12 +1595,15 @@ module Command_base = struct
     in
     match
       Result.try_with (fun () ->
-        let main =
+        let is_using_validate_parsing, main =
           run_cmdline t env (t.anons ()) ~for_completion ~parse_flags:true args
         in
-        main `Parse_args)
+        is_using_validate_parsing, main `Parse_args)
     with
-    | Ok thunk ->
+    | Ok (`Only_validate_parsing true, (_thunk : _)) ->
+      when_parsing_succeeds ();
+      exit 0
+    | Ok (`Only_validate_parsing false, thunk) ->
       when_parsing_succeeds ();
       thunk `Run_main
     | Error exn -> on_failure exn ~for_completion ~path ~verbose_on_parse_error
@@ -2654,6 +2662,53 @@ module Deprecated = struct
   ;;
 end
 
+(* This script works in both bash (via readarray) and zsh (via read -A).  If you change
+   it, please test in both bash and zsh.  It does not work tcsh (different function
+   syntax). *)
+let autocomplete_function ~argv_0 ~pid =
+  let fname =
+    (* Note: we pad the pid to a deterministic length, as in 2023 it was determined that
+       if multiple invocations occurred at the same time of requesting these functions to
+       be written to the same file (e.g. 2 shells opening at /exactly/ the right time)
+       there would be bad extra bytes left over in the written file, so making it,
+       deterministic in length irrespective of the pid is important. Given that pids don't
+       exceed 65536, 10 digits should give us lots of breathing room. *)
+    sprintf "_jsautocom_%010d" pid
+  in
+  sprintf
+    "function %s {\n\
+    \  export COMP_CWORD\n\
+    \  COMP_WORDS[0]=%s\n\
+    \  if type readarray > /dev/null\n\
+    \  then readarray -t COMPREPLY < <(\"${COMP_WORDS[@]}\")\n\
+    \  else IFS=\"\n\
+     \" read -d \"\" -A COMPREPLY < <(\"${COMP_WORDS[@]}\")\n\
+    \  fi\n\
+     }\n\
+     complete -F %s %s\n\
+     %!"
+    fname
+    argv_0
+    fname
+    argv_0
+;;
+
+let%expect_test "Demonstrate [autocomplete_function]" =
+  autocomplete_function ~argv_0:"<argv_0>" ~pid:12345 |> print_endline;
+  [%expect
+    {|
+    function _jsautocom_0000012345 {
+      export COMP_CWORD
+      COMP_WORDS[0]=<argv_0>
+      if type readarray > /dev/null
+      then readarray -t COMPREPLY < <("${COMP_WORDS[@]}")
+      else IFS="
+    " read -d "" -A COMPREPLY < <("${COMP_WORDS[@]}")
+      fi
+    }
+    complete -F _jsautocom_0000012345 <argv_0> |}]
+;;
+
 module For_unix (For_unix_with_string_env_var : For_unix with type env_var := string) =
 struct
   module Version_info = Version_info (For_unix_with_string_env_var.Version_util)
@@ -2989,28 +3044,9 @@ struct
         <*> anon (maybe ("SUBCOMMAND" %: string)))
   ;;
 
-  (* This script works in both bash (via readarray) and zsh (via read -A).  If you change
-     it, please test in both bash and zsh.  It does not work tcsh (different function
-     syntax). *)
   let dump_autocomplete_function () =
-    let fname = sprintf "_jsautocom_%s" (Pid.to_string (Unix.getpid ())) in
-    let argv_0 = Stdlib.Sys.argv.(0) in
-    printf
-      "function %s {\n\
-      \  export COMP_CWORD\n\
-      \  COMP_WORDS[0]=%s\n\
-      \  if type readarray > /dev/null\n\
-      \  then readarray -t COMPREPLY < <(\"${COMP_WORDS[@]}\")\n\
-      \  else IFS=\"\n\
-       \" read -d \"\" -A COMPREPLY < <(\"${COMP_WORDS[@]}\")\n\
-      \  fi\n\
-       }\n\
-       complete -F %s %s\n\
-       %!"
-      fname
-      argv_0
-      fname
-      argv_0
+    autocomplete_function ~argv_0:Stdlib.Sys.argv.(0) ~pid:(Unix.getpid () |> Pid.to_int)
+    |> printf "%s"
   ;;
 
   let dump_help_sexp ~supported_versions t ~path_to_subcommand =
@@ -3064,6 +3100,42 @@ struct
     in
     Path.create ~path_to_exe:cmd, args, maybe_comp_cword
   ;;
+
+  module Only_validate_parsing = struct
+    let flag base =
+      let name = "-validate-parsing" in
+      let flags = base.Command_base.flags in
+      let flags =
+        extend_map_exn
+          flags
+          Key_type.Flag
+          ~key:name
+          { name
+          ; aliases_excluded_from_help = [ "--validate-parsing" ]
+          ; aliases = []
+          ; num_occurrences = Flag.Num_occurrences.at_most_once
+          ; check_available = ignore
+          ; action =
+              No_arg (fun env -> Env.set ~key:key_internal_validate_parsing ~data:() env)
+          ; doc = " validate arguments are parsed correctly and exit immediately"
+          ; name_matching = `Prefix
+          }
+      in
+      { base with flags }
+    ;;
+
+    let rec add = function
+      | Base base -> Base (flag base)
+      | Exec _ as t -> t
+      | Group { summary; readme; subcommands; body } ->
+        let subcommands =
+          Lazy.map subcommands ~f:(fun subcommands ->
+            List.map subcommands ~f:(fun (name, command) -> name, add command))
+        in
+        Group { summary; readme; subcommands; body }
+      | Lazy thunk -> Lazy (lazy (add (Lazy.force thunk)))
+    ;;
+  end
 
   let rec add_help_subcommands = function
     | Base _ as t -> t
@@ -3236,6 +3308,7 @@ struct
   ;;
 
   let run
+        ?(add_validate_parsing_flag = false)
         ?verbose_on_parse_error
         ?version
         ?build_info
@@ -3264,6 +3337,7 @@ struct
     Exn.handle_uncaught_and_exit (fun () ->
       let t = Version_info.add t ~version ~build_info in
       let t = add_help_subcommands t in
+      let t = if add_validate_parsing_flag then Only_validate_parsing.add t else t in
       let cmd, args = handle_environment t ~argv in
       let path, args, maybe_new_comp_cword = process_args ~cmd ~args in
       try

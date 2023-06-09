@@ -14,7 +14,8 @@ module type Hexable = sig
   type t
 
   module Hex : sig
-    type nonrec t = t [@@deriving bin_io, sexp, sexp_grammar, compare, hash, typerep]
+    type nonrec t = t
+    [@@deriving bin_io, sexp, sexp_grammar, compare ~localize, hash, typerep]
 
     include Base.Stringable.S with type t := t
 

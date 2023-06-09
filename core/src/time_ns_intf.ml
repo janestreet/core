@@ -91,6 +91,24 @@ module type Span = sig
 
   val arg_type : t Command.Arg_type.t
 
+  module O : sig
+    val ( / ) : t -> float -> t
+    val ( // ) : t -> t -> float
+    val ( + ) : t -> t -> t
+    val ( - ) : t -> t -> t
+
+    (** alias for [neg] *)
+    val ( ~- ) : t -> t
+
+    (** alias for [scale] *)
+    val ( *. ) : t -> float -> t
+
+    (** alias for [scale_int] *)
+    val ( * ) : t -> int -> t
+
+    include Comparisons.Infix with type t := t
+  end
+
   (** [Span.Option.t] is like [Span.t option], except that the value is immediate on
       architectures where [Int63.t] is immediate.  This module should mainly be used to
       avoid allocations. *)
@@ -213,7 +231,9 @@ module type Time_ns = sig
 
   include Comparisons.S with type t := t
 
-  (** Note that we expose a sexp format that is not the one exposed in [Core]. *)
+  (** Note that we expose a sexp format that is not the one exposed in [Time_ns_unix]. The
+      sexp is a single atom rendered as with [to_string_utc], except that all trailing
+      zeros are trimmed, rather than trimming in groups of three. *)
   module Alternate_sexp : sig
     type nonrec t = t [@@deriving compare, equal, hash, sexp, sexp_grammar]
 
@@ -371,6 +391,16 @@ module type Time_ns = sig
 
     (** The inverse of [to_date_and_span_since_start_of_day]. *)
     val of_date_and_span_since_start_of_day : Date0.t -> Span.t -> t
+  end
+
+  module O : sig
+    (** alias for [add] *)
+    val ( + ) : t -> Span.t -> t
+
+    (** alias for [diff] *)
+    val ( - ) : t -> t -> Span.t
+
+    include Comparisons.Infix with type t := t
   end
 
   module Stable : sig

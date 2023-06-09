@@ -35,6 +35,7 @@ end
     function and lets you avoid the functor instantiation when you already have such a
     module on hand. *)
 val stable_dedup_staged : compare:('a -> 'a -> int) -> ('a list -> 'a list) Staged.t
+[@@deprecated "[since 2023-04] Use [List.stable_dedup] instead."]
 
 (** Only raised in [exn_if_dup] below. *)
 exception

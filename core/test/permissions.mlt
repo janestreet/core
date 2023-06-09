@@ -83,7 +83,7 @@ Error: In this `with' constraint, the new definition of t
          type ('a, 'b) t = ('a, 'b) t constraint 'b = [< 'c perms ]
        is not included in
          type ('a, -'perm) t
-       Their parameters differ
+       Their parameters differ:
        The type [< 'a perms ] is not equal to the type 'perm
        File "permissions.mlt", line 75, characters 2-21: Expected declaration
        File "permissions.mlt", line 82, characters 33-68: Actual declaration
@@ -110,7 +110,7 @@ Error: In this `with' constraint, the new definition of t
            constraint 'b = [< `Read | `Who_can_write of 'c & 'd ]
        is not included in
          type ('a, -'b) t constraint 'b = [< 'c perms ]
-       Their parameters differ
+       Their parameters differ:
        The type [< `Read | `Who_can_write of 'a & 'b ]
        is not equal to the type [< 'a perms ]
        Types for tag `Who_can_write are incompatible

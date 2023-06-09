@@ -8,13 +8,13 @@ let%expect_test ("Byte_units.to_string_hum" [@tags "64-bits-only"]) =
   print_string (Byte_units.to_string_hum (Byte_units.of_bytes_int 1000));
   [%expect {| 1000B |}];
   print_string (Byte_units.to_string_hum (Byte_units.of_bytes_int 1500));
-  [%expect {| 1.46484K |}]
+  [%expect {| 1.46K |}]
 ;;
 
 let%test_module "{of,to}_string" =
   (module struct
     let f input expected_output =
-      let observed_output = to_string_hum (of_string input) in
+      let observed_output = to_string (of_string input) in
       let result = String.equal expected_output observed_output in
       if not result
       then eprintf "\n%s -> %s != %s\n%!" input expected_output observed_output;
@@ -39,9 +39,12 @@ let examples =
   ; Byte_units.of_bytes_int 100000
   ; Byte_units.of_bytes_int 1000000
   ; Byte_units.of_kilobytes 0.1
+  ; Byte_units.of_bytes_int 1023
   ; Byte_units.of_kilobytes 1.
+  ; Byte_units.of_kilobytes 1.0499
   ; Byte_units.of_kilobytes 1.1
   ; Byte_units.of_kilobytes 10.
+  ; Byte_units.of_kilobytes 99.99
   ; Byte_units.of_kilobytes 100.
   ; Byte_units.of_megabytes 1.
   ; Byte_units.of_megabytes 10.
@@ -64,7 +67,7 @@ let examples =
 
 let%expect_test "[List.sum] to ensure [Byte_units] satisfies [Container_intf.Summable]" =
   print_s [%sexp (List.sum (module Byte_units) examples ~f:Fn.id : t)];
-  [%expect {| 1.19025e+09G |}]
+  [%expect {| 1190247535.1G |}]
 ;;
 
 let print_all_byte_units fmt =
@@ -84,13 +87,16 @@ let%expect_test ("Byte_units.to_string" [@tags "no-js"]) =
     (Bytes 10) -> 10B
     (Bytes 100) -> 100B
     (Bytes 1_000) -> 1000B
-    (Bytes 10_000) -> 9.76562K
-    (Bytes 100_000) -> 97.6562K
-    (Bytes 1_000_000) -> 976.562K
+    (Bytes 10_000) -> 9.765625K
+    (Bytes 100_000) -> 97.65625K
+    (Bytes 1_000_000) -> 976.5625K
     (Bytes 102) -> 102B
+    (Bytes 1_023) -> 1023B
     (Bytes 1_024) -> 1K
-    (Bytes 1_126) -> 1.09961K
+    (Bytes 1_075) -> 1.049805K
+    (Bytes 1_126) -> 1.099609K
     (Bytes 10_240) -> 10K
+    (Bytes 102_390) -> 99.99023K
     (Bytes 102_400) -> 100K
     (Bytes 1_048_576) -> 1M
     (Bytes 10_485_760) -> 10M
@@ -101,13 +107,57 @@ let%expect_test ("Byte_units.to_string" [@tags "no-js"]) =
     (Bytes 1_099_511_627_776) -> 1024G
     (Bytes 10_995_116_277_760) -> 10240G
     (Bytes 109_951_162_777_600) -> 102400G
-    (Bytes 1_125_899_906_842_624) -> 1.04858e+06G
-    (Bytes 11_258_999_068_426_240) -> 1.04858e+07G
-    (Bytes 112_589_990_684_262_400) -> 1.04858e+08G
-    (Bytes 1_152_921_504_606_846_976) -> 1.07374e+09G
+    (Bytes 1_125_899_906_842_624) -> 1048576G
+    (Bytes 11_258_999_068_426_240) -> 10485760G
+    (Bytes 112_589_990_684_262_400) -> 104857600G
+    (Bytes 1_152_921_504_606_846_976) -> 1073741824G
     (Bytes -1) -> -1B
-    (Bytes -10_000) -> -9.76562K
-    (Bytes -10_000_000) -> -9.53674M |}]
+    (Bytes -10_000) -> -9.765625K
+    (Bytes -10_000_000) -> -9.536743164M |}]
+;;
+
+module Byte_units_with_to_string_hum = struct
+  include Byte_units
+
+  let to_string = to_string_hum
+end
+
+let%expect_test _ =
+  print_all_byte_units !"%{Byte_units_with_to_string_hum}";
+  [%expect
+    {|
+    (Bytes 0) -> 0B
+    (Bytes 1) -> 1B
+    (Bytes 10) -> 10B
+    (Bytes 100) -> 100B
+    (Bytes 1_000) -> 1000B
+    (Bytes 10_000) -> 9.77K
+    (Bytes 100_000) -> 97.7K
+    (Bytes 1_000_000) -> 977K
+    (Bytes 102) -> 102B
+    (Bytes 1_023) -> 1023B
+    (Bytes 1_024) -> 1K
+    (Bytes 1_075) -> 1.05K
+    (Bytes 1_126) -> 1.1K
+    (Bytes 10_240) -> 10K
+    (Bytes 102_390) -> 100K
+    (Bytes 102_400) -> 100K
+    (Bytes 1_048_576) -> 1M
+    (Bytes 10_485_760) -> 10M
+    (Bytes 104_857_600) -> 100M
+    (Bytes 1_073_741_824) -> 1G
+    (Bytes 10_737_418_240) -> 10G
+    (Bytes 107_374_182_400) -> 100G
+    (Bytes 1_099_511_627_776) -> 1T
+    (Bytes 10_995_116_277_760) -> 10T
+    (Bytes 109_951_162_777_600) -> 100T
+    (Bytes 1_125_899_906_842_624) -> 1P
+    (Bytes 11_258_999_068_426_240) -> 10P
+    (Bytes 112_589_990_684_262_400) -> 100P
+    (Bytes 1_152_921_504_606_846_976) -> 1024P
+    (Bytes -1) -> -1B
+    (Bytes -10_000) -> -9.77K
+    (Bytes -10_000_000) -> -9.54M |}]
 ;;
 
 let%expect_test "Byte_units.to_string_short" =
@@ -123,9 +173,12 @@ let%expect_test "Byte_units.to_string_short" =
     (Bytes 100_000) -> 97.7K
     (Bytes 1_000_000) -> 977K
     (Bytes 102) -> 102B
+    (Bytes 1_023) -> 1023B
     (Bytes 1_024) -> 1.00K
+    (Bytes 1_075) -> 1.05K
     (Bytes 1_126) -> 1.10K
     (Bytes 10_240) -> 10.0K
+    (Bytes 102_390) -> 100.0K
     (Bytes 102_400) -> 100K
     (Bytes 1_048_576) -> 1.00M
     (Bytes 10_485_760) -> 10.0M
@@ -157,13 +210,16 @@ let%expect_test ("Byte_units.sexp_of_t" [@tags "no-js"]) =
     (Bytes 10) -> 10B
     (Bytes 100) -> 100B
     (Bytes 1_000) -> 1000B
-    (Bytes 10_000) -> 9.76562K
-    (Bytes 100_000) -> 97.6562K
-    (Bytes 1_000_000) -> 976.562K
+    (Bytes 10_000) -> 9.765625K
+    (Bytes 100_000) -> 97.65625K
+    (Bytes 1_000_000) -> 976.5625K
     (Bytes 102) -> 102B
+    (Bytes 1_023) -> 1023B
     (Bytes 1_024) -> 1K
-    (Bytes 1_126) -> 1.09961K
+    (Bytes 1_075) -> 1.049805K
+    (Bytes 1_126) -> 1.099609K
     (Bytes 10_240) -> 10K
+    (Bytes 102_390) -> 99.99023K
     (Bytes 102_400) -> 100K
     (Bytes 1_048_576) -> 1M
     (Bytes 10_485_760) -> 10M
@@ -174,13 +230,13 @@ let%expect_test ("Byte_units.sexp_of_t" [@tags "no-js"]) =
     (Bytes 1_099_511_627_776) -> 1024G
     (Bytes 10_995_116_277_760) -> 10240G
     (Bytes 109_951_162_777_600) -> 102400G
-    (Bytes 1_125_899_906_842_624) -> 1.04858e+06G
-    (Bytes 11_258_999_068_426_240) -> 1.04858e+07G
-    (Bytes 112_589_990_684_262_400) -> 1.04858e+08G
-    (Bytes 1_152_921_504_606_846_976) -> 1.07374e+09G
+    (Bytes 1_125_899_906_842_624) -> 1048576G
+    (Bytes 11_258_999_068_426_240) -> 10485760G
+    (Bytes 112_589_990_684_262_400) -> 104857600G
+    (Bytes 1_152_921_504_606_846_976) -> 1073741824G
     (Bytes -1) -> -1B
-    (Bytes -10_000) -> -9.76562K
-    (Bytes -10_000_000) -> -9.53674M |}]
+    (Bytes -10_000) -> -9.765625K
+    (Bytes -10_000_000) -> -9.536743164M |}]
 ;;
 
 let%expect_test "Byte_units.Stable.V1.sexp_of_t" =
@@ -196,9 +252,12 @@ let%expect_test "Byte_units.Stable.V1.sexp_of_t" =
     (Bytes 100_000) -> (Kilobytes 97.65625)
     (Bytes 1_000_000) -> (Kilobytes 976.5625)
     (Bytes 102) -> (Bytes 102)
+    (Bytes 1_023) -> (Bytes 1023)
     (Bytes 1_024) -> (Kilobytes 1)
+    (Bytes 1_075) -> (Kilobytes 1.0498046875)
     (Bytes 1_126) -> (Kilobytes 1.099609375)
     (Bytes 10_240) -> (Kilobytes 10)
+    (Bytes 102_390) -> (Kilobytes 99.990234375)
     (Bytes 102_400) -> (Kilobytes 100)
     (Bytes 1_048_576) -> (Megabytes 1)
     (Bytes 10_485_760) -> (Megabytes 10)
@@ -231,9 +290,12 @@ let%expect_test "Byte_units.Stable.V2.sexp_of_t" =
     (Bytes 100_000) -> (Bytes 100_000)
     (Bytes 1_000_000) -> (Bytes 1_000_000)
     (Bytes 102) -> (Bytes 102)
+    (Bytes 1_023) -> (Bytes 1_023)
     (Bytes 1_024) -> (Bytes 1_024)
+    (Bytes 1_075) -> (Bytes 1_075)
     (Bytes 1_126) -> (Bytes 1_126)
     (Bytes 10_240) -> (Bytes 10_240)
+    (Bytes 102_390) -> (Bytes 102_390)
     (Bytes 102_400) -> (Bytes 102_400)
     (Bytes 1_048_576) -> (Bytes 1_048_576)
     (Bytes 10_485_760) -> (Bytes 10_485_760)
@@ -307,7 +369,7 @@ let%expect_test "Byte_units.Stable.V1.t_of_sexp" =
     1.5k -> (Bytes 1_536)
     12m -> (Bytes 12_582_912)
     123g -> (Bytes 132_070_244_352)
-    1.234t -> (Bytes 1_356_797_348_675)
+    1.234t -> (Bytes 1_356_797_348_676)
     0.5p -> (Bytes 562_949_953_421_312)
     1.9e -> (Bytes 2_190_550_858_753_009_152)
     (Bytes 1) -> (Bytes 1)
@@ -343,9 +405,12 @@ let%expect_test "Byte_units.Stable.V1" =
     ((sexp (Kilobytes 97.65625)) (bin_io "\000\000\000\000\000j\248@"))
     ((sexp (Kilobytes 976.5625)) (bin_io "\000\000\000\000\128\132.A"))
     ((sexp (Bytes 102)) (bin_io "\000\000\000\000\000\128Y@"))
+    ((sexp (Bytes 1023)) (bin_io "\000\000\000\000\000\248\143@"))
     ((sexp (Kilobytes 1)) (bin_io "\000\000\000\000\000\000\144@"))
+    ((sexp (Kilobytes 1.0498046875)) (bin_io "\000\000\000\000\000\204\144@"))
     ((sexp (Kilobytes 1.099609375)) (bin_io "\000\000\000\000\000\152\145@"))
     ((sexp (Kilobytes 10)) (bin_io "\000\000\000\000\000\000\196@"))
+    ((sexp (Kilobytes 99.990234375)) (bin_io "\000\000\000\000`\255\248@"))
     ((sexp (Kilobytes 100)) (bin_io "\000\000\000\000\000\000\249@"))
     ((sexp (Megabytes 1)) (bin_io "\000\000\000\000\000\0000A"))
     ((sexp (Megabytes 10)) (bin_io "\000\000\000\000\000\000dA"))
@@ -379,9 +444,12 @@ let%expect_test "Byte_units.Stable.V2" =
     ((sexp (Bytes 100_000)) (bin_io "\253\160\134\001\000"))
     ((sexp (Bytes 1_000_000)) (bin_io "\253@B\015\000"))
     ((sexp (Bytes 102)) (bin_io f))
+    ((sexp (Bytes 1_023)) (bin_io "\254\255\003"))
     ((sexp (Bytes 1_024)) (bin_io "\254\000\004"))
+    ((sexp (Bytes 1_075)) (bin_io "\2543\004"))
     ((sexp (Bytes 1_126)) (bin_io "\254f\004"))
     ((sexp (Bytes 10_240)) (bin_io "\254\000("))
+    ((sexp (Bytes 102_390)) (bin_io "\253\246\143\001\000"))
     ((sexp (Bytes 102_400)) (bin_io "\253\000\144\001\000"))
     ((sexp (Bytes 1_048_576)) (bin_io "\253\000\000\016\000"))
     ((sexp (Bytes 10_485_760)) (bin_io "\253\000\000\160\000"))
@@ -413,6 +481,7 @@ let%expect_test "Byte_units.Stable.V2" =
 (** Helper to ensure that our conversion functions round trip. *)
 let ensure_round_trippable
       (type via)
+      ?(max = Int63.max_value |> Int63.to_int64)
       (to_ : Byte_units.t -> via)
       (from : via -> Byte_units.t)
       ~tolerance
@@ -431,7 +500,7 @@ let ensure_round_trippable
       let b = Byte_units.bytes_float b in
       (a <=. b *. 1.005 || a *. 0.995 <=. b) && (b <=. a *. 1.005 || b *. 0.995 <=. a)
   in
-  Int63.gen_log_uniform_incl Int63.zero Int63.max_value
+  Int63.gen_log_uniform_incl Int63.zero (Int63.of_int64_exn max)
   |> Quickcheck.Generator.map ~f:Byte_units.of_bytes_int63
   |> Quickcheck.test ~f:(fun t ->
     [%test_eq: Byte_units.Stable.V2.t] ~equal t (from (to_ t)))
@@ -445,6 +514,14 @@ let%test_unit "Byte_units.to_string / Byte_units.of_string" =
 
 let%test_unit "Byte_units.to_string_hum / Byte_units.of_string" =
   ensure_round_trippable Byte_units.to_string_hum Byte_units.of_string ~tolerance:`Epsilon
+;;
+
+let%test_unit "Byte_units.to_string / Byte_units.of_string" =
+  ensure_round_trippable
+    Byte_units.to_string
+    Byte_units.of_string
+    ~tolerance:`Zero
+    ~max:1_000_000_000_000L
 ;;
 
 let%test_unit "Byte_units.to_string_short / Byte_units.of_string" =
@@ -461,13 +538,6 @@ let%test_unit "Byte_units.to_string / Byte_units.Stable.V1.t_of_sexp" =
     ~tolerance:`Epsilon
 ;;
 
-let%test_unit "Byte_units.to_string_hum / Byte_units.Stable.V1.t_of_sexp" =
-  ensure_round_trippable
-    Byte_units.to_string_hum
-    (Fn.flip Sexp.of_string_conv_exn Byte_units.Stable.V1.t_of_sexp)
-    ~tolerance:`Epsilon
-;;
-
 let%test_unit "Byte_units.to_string_short / Byte_units.Stable.V1.t_of_sexp" =
   ensure_round_trippable
     Byte_units.Short.to_string
@@ -478,13 +548,6 @@ let%test_unit "Byte_units.to_string_short / Byte_units.Stable.V1.t_of_sexp" =
 let%test_unit "Byte_units.to_string / Byte_units.Stable.V2.t_of_sexp" =
   ensure_round_trippable
     Byte_units.to_string
-    (Fn.flip Sexp.of_string_conv_exn Byte_units.Stable.V2.t_of_sexp)
-    ~tolerance:`Epsilon
-;;
-
-let%test_unit "Byte_units.to_string_hum / Byte_units.Stable.V2.t_of_sexp" =
-  ensure_round_trippable
-    Byte_units.to_string_hum
     (Fn.flip Sexp.of_string_conv_exn Byte_units.Stable.V2.t_of_sexp)
     ~tolerance:`Epsilon
 ;;

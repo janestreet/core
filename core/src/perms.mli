@@ -111,16 +111,16 @@ open! Import
 
 (** Every type in this module besides the following two represent permission sets; these
     two represent who is allowed to write in the [Write.t] and [Immutable.t] types. *)
-type nobody [@@deriving bin_io, compare, hash, sexp]
+type nobody [@@deriving bin_io, compare, equal, hash, sexp]
 
-type me [@@deriving bin_io, compare, hash, sexp]
+type me [@@deriving bin_io, compare, equal, hash, sexp]
 
 module Read : sig
-  type t = [ `Read ] [@@deriving bin_io, compare, hash, sexp]
+  type t = [ `Read ] [@@deriving bin_io, compare, equal, hash, sexp]
 end
 
 module Write : sig
-  type t = [ `Who_can_write of me ] [@@deriving bin_io, compare, hash, sexp]
+  type t = [ `Who_can_write of me ] [@@deriving bin_io, compare, equal, hash, sexp]
 end
 
 module Immutable : sig
@@ -128,7 +128,7 @@ module Immutable : sig
     [ Read.t
     | `Who_can_write of nobody
     ]
-  [@@deriving bin_io, compare, hash, sexp]
+  [@@deriving bin_io, compare, equal, hash, sexp]
 end
 
 module Read_write : sig
@@ -136,7 +136,7 @@ module Read_write : sig
     [ Read.t
     | Write.t
     ]
-  [@@deriving bin_io, compare, hash, sexp]
+  [@@deriving bin_io, compare, equal, hash, sexp]
 end
 
 module Upper_bound : sig
@@ -144,51 +144,55 @@ module Upper_bound : sig
     [ Read.t
     | `Who_can_write of 'a
     ]
-  [@@deriving bin_io, compare, hash, sexp]
+  [@@deriving bin_io, compare, equal, hash, sexp]
 end
 
 module Export : sig
-  type read = Read.t [@@deriving bin_io, compare, globalize, hash, sexp, stable_witness]
+  type read = Read.t
+  [@@deriving bin_io, compare, equal, globalize, hash, sexp, stable_witness, equal]
 
   (** We don't expose [bin_io] for [write] due to a naming conflict with the functions
       exported by [bin_io] for [read_write].  If you want [bin_io] for [write], use
       [Write.t]. *)
-  type write = Write.t [@@deriving compare, hash, globalize, sexp, stable_witness]
+  type write = Write.t [@@deriving compare, equal, hash, globalize, sexp, stable_witness]
 
   type immutable = Immutable.t
-  [@@deriving bin_io, compare, globalize, hash, sexp, stable_witness]
+  [@@deriving bin_io, compare, equal, globalize, hash, sexp, stable_witness]
 
   type read_write = Read_write.t
-  [@@deriving bin_io, compare, globalize, hash, sexp, stable_witness]
+  [@@deriving bin_io, compare, equal, globalize, hash, sexp, stable_witness]
 
   type 'a perms = 'a Upper_bound.t
-  [@@deriving bin_io, compare, globalize, hash, sexp, stable_witness]
+  [@@deriving bin_io, compare, equal, globalize, hash, sexp, stable_witness]
 end
 
 module Stable : sig
   module V1 : sig
-    type nonrec nobody = nobody [@@deriving bin_io, compare, hash, sexp, stable_witness]
-    type nonrec me = me [@@deriving bin_io, compare, hash, sexp, stable_witness]
+    type nonrec nobody = nobody
+    [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
+
+    type nonrec me = me [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
 
     module Read : sig
-      type t = Read.t [@@deriving bin_io, compare, hash, sexp, stable_witness]
+      type t = Read.t [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
     end
 
     module Write : sig
-      type t = Write.t [@@deriving bin_io, compare, hash, sexp, stable_witness]
+      type t = Write.t [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
     end
 
     module Immutable : sig
-      type t = Immutable.t [@@deriving bin_io, compare, hash, sexp, stable_witness]
+      type t = Immutable.t [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
     end
 
     module Read_write : sig
-      type t = Read_write.t [@@deriving bin_io, compare, hash, sexp, stable_witness]
+      type t = Read_write.t
+      [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
     end
 
     module Upper_bound : sig
       type 'a t = 'a Upper_bound.t
-      [@@deriving bin_io, compare, hash, sexp, stable_witness]
+      [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
     end
   end
 

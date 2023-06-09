@@ -182,7 +182,7 @@ end = struct
   let of_hash_set h = of_hash_set ~comparator h
   let of_hashtbl_keys h = of_hashtbl_keys ~comparator h
   let of_array a = of_array ~comparator a
-  let stable_dedup_list xs = stable_dedup_list ~comparator xs
+  let stable_dedup_list xs = stable_dedup_list ~comparator xs [@alert "-deprecated"]
   let map t ~f = map ~comparator t ~f
   let filter_map t ~f = filter_map ~comparator t ~f
 
@@ -215,7 +215,7 @@ module Make_tree_S1 (Elt : Comparator.S1) = struct
 
   let of_sorted_array a = Tree.of_sorted_array a ~comparator
   let union_list l = Tree.union_list l ~comparator
-  let stable_dedup_list xs = Tree.stable_dedup_list xs ~comparator
+  let stable_dedup_list xs = Tree.stable_dedup_list xs ~comparator [@alert "-deprecated"]
   let of_tree t = t
   let of_map_keys = Tree.of_map_keys
   let quickcheck_generator elt = For_quickcheck.gen_tree elt ~comparator

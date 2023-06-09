@@ -247,6 +247,7 @@ val of_increasing_iterator_unchecked
     of polymorphic comparison by instantiating the functor at a different implementation
     of [Comparator] and using the resulting [stable_dedup_list]. *)
 val stable_dedup_list : ('a, _) Comparator.Module.t -> 'a list -> 'a list
+[@@deprecated "[since 2023-04] Use [List.stable_dedup] instead."]
 
 (** [map c t ~f] returns a new set created by applying [f] to every element in [t]. The
     returned set is based on the provided [c]. [O(n log n)]. *)

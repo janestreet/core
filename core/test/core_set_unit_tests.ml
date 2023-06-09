@@ -6,15 +6,6 @@ module With_first_class_module = Set_intf.With_first_class_module
 module Named = Set.Named
 open Expect_test_helpers_core
 
-let%test_module _ =
-  (module struct
-    let ( = ) = Poly.( = )
-    let%test _ = Set.Poly.stable_dedup_list [] = []
-    let%test _ = Set.Poly.stable_dedup_list [ 5; 5; 5; 5; 5 ] = [ 5 ]
-    let%test _ = Set.Poly.stable_dedup_list [ 5; 9; 3; 5; 2; 2 ] = [ 5; 9; 3; 2 ]
-  end)
-;;
-
 module Unit_tests (Elt : sig
     type 'a t [@@deriving sexp, hash]
 

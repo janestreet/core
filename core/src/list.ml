@@ -16,7 +16,7 @@ let stable_dedup_staged (type a) ~(compare : a -> a -> int)
       let sexp_of_t _ = assert false
     end)
   in
-  Base.Staged.stage Set.stable_dedup_list
+  Base.Staged.stage Set.stable_dedup_list [@alert "-deprecated"]
 ;;
 
 let zip_with_remainder =

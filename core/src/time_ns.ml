@@ -1004,3 +1004,14 @@ let to_string_fix_proto = `Use_Time_ns_unix
 let validate_bound = `Use_Time_ns_unix
 let validate_lbound = `Use_Time_ns_unix
 let validate_ubound = `Use_Time_ns_unix
+
+module O = struct
+  let ( >= ) = ( >= )
+  let ( <= ) = ( <= )
+  let ( = ) = ( = )
+  let ( > ) = ( > )
+  let ( < ) = ( < )
+  let ( <> ) = ( <> )
+  let ( + ) = add
+  let ( - ) = diff
+end

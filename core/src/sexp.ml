@@ -2,10 +2,15 @@ open! Import
 
 module Stable = struct
   module V1 = struct
+    include struct
+      (* inherit previously derived values, rather than re-deriving from the type *)
+      type t = Base.Sexp.t [@@deriving compare, equal, hash]
+    end
+
     type t = Base.Sexp.t =
       | Atom of string
       | List of t list
-    [@@deriving bin_io, compare, equal, hash, stable_witness]
+    [@@deriving bin_io, stable_witness]
 
     let t_sexp_grammar = Sexplib.Sexp.t_sexp_grammar
     let t_of_sexp = Sexplib.Sexp.t_of_sexp

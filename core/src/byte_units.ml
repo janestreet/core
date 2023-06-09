@@ -13,8 +13,8 @@ module Infix = struct
   let ( + ) a b = of_repr (Repr.( + ) (to_repr a) (to_repr b))
   let ( // ) a b = Repr.( // ) (to_repr a) (to_repr b)
 
-  let ( / ) t s = of_repr (Repr.of_float (Repr.to_float (to_repr t) /. s))
-  let ( * ) t s = of_repr (Repr.of_float (Repr.to_float (to_repr t) *. s))
+  let ( / ) t s = of_repr (Float.int63_round_nearest_exn (Repr.to_float (to_repr t) /. s))
+  let ( * ) t s = of_repr (Float.int63_round_nearest_exn (Repr.to_float (to_repr t) *. s))
 end
 
 include Infix
@@ -215,17 +215,17 @@ module Stable = struct
       printf !"%{}" (of_bytes_int 1024);
       [%expect {| 1k |}];
       printf !"%{}" (of_bytes_int 1025);
-      [%expect {| 1.00098k |}];
+      [%expect {| 1.000977k |}];
       printf !"%{}" (of_bytes_int 1500);
-      [%expect {| 1.46484k |}];
+      [%expect {| 1.464844k |}];
       printf !"%{}" (of_bytes_int 10000);
-      [%expect {| 9.76562k |}];
+      [%expect {| 9.765625k |}];
       printf !"%{}" (of_bytes_int 100000);
-      [%expect {| 97.6562k |}];
+      [%expect {| 97.65625k |}];
       printf !"%{}" (of_bytes_int 1000000);
-      [%expect {| 976.562k |}];
+      [%expect {| 976.5625k |}];
       printf !"%{}" (of_bytes_int 10000000);
-      [%expect {| 9.53674m |}]
+      [%expect {| 9.536743164m |}]
     ;;
 
     let t_of_sexp sexp =
@@ -263,7 +263,7 @@ module Stable = struct
   end
 end
 
-let to_string_hum = T.to_string
+let to_string_hum = to_string_hum
 
 module Short = struct
   type nonrec t = t

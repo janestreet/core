@@ -833,6 +833,22 @@ let of_span_float_round_nearest_microsecond s =
 let min_value_representable = of_int63_ns Int63.min_value
 let max_value_representable = of_int63_ns Int63.max_value
 
+module O = struct
+  let ( / ) = ( / )
+  let ( // ) = ( // )
+  let ( + ) = ( + )
+  let ( - ) = ( - )
+  let ( >= ) = ( >= )
+  let ( <= ) = ( <= )
+  let ( = ) = ( = )
+  let ( > ) = ( > )
+  let ( < ) = ( < )
+  let ( <> ) = ( <> )
+  let ( ~- ) = neg
+  let ( *. ) = scale
+  let ( * ) = scale_int
+end
+
 module Private = struct
   let of_parts = of_parts
   let to_parts = to_parts

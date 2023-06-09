@@ -10,6 +10,7 @@ CAMLprim value core_array_unsafe_int_blit(value src, value src_pos, value dst,
      values are 64bits long. The value type will change its size
      accordingly and hence the following macro works.
    */
+
   /* Value casts here remove the volatile quantifier, because
      it can't apply to the entire address range and we need to use memmove.
 

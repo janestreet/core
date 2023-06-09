@@ -51,7 +51,14 @@ module Header : sig
     -> (('a -> ('b[@local]) -> 'c)[@local])
     -> 'c
 
-  val with_iteration_3 : t -> 'a -> 'b -> 'c -> ('a -> 'b -> 'c -> 'd) -> 'd
+  val with_iteration_3l
+    :  t
+    -> ('a[@local])
+    -> 'b
+    -> 'c
+    -> (('a[@local]) -> 'b -> 'c -> 'd)
+    -> 'd
+
   val with_iteration_4 : t -> 'a -> 'b -> 'c -> 'd -> ('a -> 'b -> 'c -> 'd -> 'e) -> 'e
 
   val with_iteration_4l
@@ -97,7 +104,7 @@ end = struct
   let incr_pending_iters s = s.pending_iterations <- s.pending_iterations + 1
   let decr_pending_iters s = s.pending_iterations <- s.pending_iterations - 1
 
-  let with_iteration_2l t a (b [@local]) f =
+  let with_iteration_2l t a b f =
     let s = Union_find.get t in
     incr_pending_iters s;
     match f a b with
@@ -109,7 +116,7 @@ end = struct
       r
   ;;
 
-  let with_iteration_3 t a b c f =
+  let with_iteration_3l t a b c f =
     let s = Union_find.get t in
     incr_pending_iters s;
     match f a b c with
@@ -346,15 +353,20 @@ let map t ~f =
   | None -> create ()
   | Some first ->
     let new_first = Elt.create (f (Elt.value first)) in
-    Header.with_iteration_3 (Elt.header first) f new_first first (fun f new_first first ->
-      let rec loop f acc first elt =
-        let acc = Elt.insert_after acc (f (Elt.value elt)) in
-        let next = Elt.next elt in
-        if not (phys_equal next first) then loop f acc first next
-      in
-      (* unroll and skip first elt *)
-      let next = Elt.next first in
-      if not (phys_equal next first) then loop f new_first first next);
+    Header.with_iteration_3l
+      (Elt.header first)
+      f
+      new_first
+      first
+      (fun f new_first first ->
+         let rec loop f acc first elt =
+           let acc = Elt.insert_after acc (f (Elt.value elt)) in
+           let next = Elt.next elt in
+           if not (phys_equal next first) then loop f acc first next
+         in
+         (* unroll and skip first elt *)
+         let next = Elt.next first in
+         if not (phys_equal next first) then loop f new_first first next);
     ref (Some new_first)
 ;;
 
@@ -363,15 +375,20 @@ let mapi t ~f =
   | None -> create ()
   | Some first ->
     let new_first = Elt.create (f 0 (Elt.value first)) in
-    Header.with_iteration_3 (Elt.header first) f new_first first (fun f new_first first ->
-      let rec loop f i acc first elt =
-        let acc = Elt.insert_after acc (f i (Elt.value elt)) in
-        let next = Elt.next elt in
-        if not (phys_equal next first) then loop f (i + 1) acc first next
-      in
-      (* unroll and skip first elt *)
-      let next = Elt.next first in
-      if not (phys_equal next first) then loop f 1 new_first first next);
+    Header.with_iteration_3l
+      (Elt.header first)
+      f
+      new_first
+      first
+      (fun f new_first first ->
+         let rec loop f i acc first elt =
+           let acc = Elt.insert_after acc (f i (Elt.value elt)) in
+           let next = Elt.next elt in
+           if not (phys_equal next first) then loop f (i + 1) acc first next
+         in
+         (* unroll and skip first elt *)
+         let next = Elt.next first in
+         if not (phys_equal next first) then loop f 1 new_first first next);
     ref (Some new_first)
 ;;
 
@@ -379,7 +396,7 @@ let fold_elt t ~init ~f =
   match !t with
   | None -> init
   | Some first ->
-    Header.with_iteration_3 (Elt.header first) f init first (fun f init first ->
+    Header.with_iteration_3l (Elt.header first) f init first (fun f init first ->
       let rec loop f acc first elt =
         let acc = f acc elt in
         let next = Elt.next elt in
@@ -392,7 +409,7 @@ let foldi_elt t ~init ~f =
   match !t with
   | None -> init
   | Some first ->
-    Header.with_iteration_3 (Elt.header first) f init first (fun f init first ->
+    Header.with_iteration_3l (Elt.header first) f init first (fun f init first ->
       let rec loop f i acc first elt =
         let acc = f i acc elt in
         let next = Elt.next elt in
@@ -535,7 +552,7 @@ let fold_right t ~init ~f =
   match !t with
   | None -> init
   | Some first ->
-    Header.with_iteration_3 (Elt.header first) f init first (fun f init first ->
+    Header.with_iteration_3l (Elt.header first) f init first (fun f init first ->
       let rec loop f acc elt =
         let prev = Elt.prev elt in
         let acc = f (Elt.value prev) acc in
@@ -548,7 +565,7 @@ let fold_right_elt t ~init ~f =
   match !t with
   | None -> init
   | Some first ->
-    Header.with_iteration_3 (Elt.header first) f init first (fun f init first ->
+    Header.with_iteration_3l (Elt.header first) f init first (fun f init first ->
       let rec loop f acc elt =
         let prev = Elt.prev elt in
         let acc = f prev acc in
@@ -574,8 +591,8 @@ let compare compare_elt t1 t2 =
   | None, _ -> -1
   | _, None -> 1
   | Some f1, Some f2 ->
-    Header.with_iteration_3 (Elt.header f1) compare_elt f1 f2 (fun compare_elt f1 f2 ->
-      Header.with_iteration_3 (Elt.header f2) compare_elt f1 f2 (fun compare_elt f1 f2 ->
+    Header.with_iteration_3l (Elt.header f1) compare_elt f1 f2 (fun compare_elt f1 f2 ->
+      Header.with_iteration_3l (Elt.header f2) compare_elt f1 f2 (fun compare_elt f1 f2 ->
         let rec loop compare_elt elt1 f1 elt2 f2 =
           let compare_result = compare_elt (Elt.value elt1) (Elt.value elt2) in
           if compare_result <> 0
@@ -807,7 +824,7 @@ let filter t ~f =
   (match !t with
    | None -> ()
    | Some first ->
-     Header.with_iteration_3 (Elt.header first) f new_t first (fun f new_t first ->
+     Header.with_iteration_3l (Elt.header first) f new_t first (fun f new_t first ->
        let rec loop f new_t first elt =
          if f (Elt.value elt)
          then insert_last new_t (Elt.value elt) |> (ignore : _ Elt.t -> unit);
@@ -823,7 +840,7 @@ let filteri t ~f =
   (match !t with
    | None -> ()
    | Some first ->
-     Header.with_iteration_3 (Elt.header first) f new_t first (fun f new_t first ->
+     Header.with_iteration_3l (Elt.header first) f new_t first (fun f new_t first ->
        let rec loop f i new_t first elt =
          if f i (Elt.value elt)
          then insert_last new_t (Elt.value elt) |> (ignore : _ Elt.t -> unit);
@@ -839,7 +856,7 @@ let filter_map t ~f =
   (match !t with
    | None -> ()
    | Some first ->
-     Header.with_iteration_3 (Elt.header first) f new_t first (fun f new_t first ->
+     Header.with_iteration_3l (Elt.header first) f new_t first (fun f new_t first ->
        let rec loop f new_t first elt =
          (match f (Elt.value elt) with
           | None -> ()
@@ -856,7 +873,7 @@ let filter_mapi t ~f =
   (match !t with
    | None -> ()
    | Some first ->
-     Header.with_iteration_3 (Elt.header first) f new_t first (fun f new_t first ->
+     Header.with_iteration_3l (Elt.header first) f new_t first (fun f new_t first ->
        let rec loop f i new_t first elt =
          (match f i (Elt.value elt) with
           | None -> ()
