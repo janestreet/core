@@ -538,6 +538,10 @@ val partition_tf
     including all errors otherwise. *)
 val combine_errors : ('k, 'v Or_error.t, 'cmp) t -> ('k, 'v, 'cmp) t Or_error.t
 
+(** Given a map of tuples, produces a tuple of maps. Equivalent to:
+    [map t ~f:fst, map t ~f:snd] *)
+val unzip : ('k, 'v1 * 'v2, 'cmp) t -> ('k, 'v1, 'cmp) t * ('k, 'v2, 'cmp) t
+
 (** Total ordering between maps.  The first argument is a total ordering used to compare
     data associated with equal keys in the two maps. *)
 val compare_direct : ('v -> 'v -> int) -> ('k, 'v, 'cmp) t -> ('k, 'v, 'cmp) t -> int

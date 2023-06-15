@@ -23,7 +23,7 @@ include Hexdump.S with type t := t
 (** [create length]
     @param max_mem_waiting_gc default = 256 M in OCaml <= 3.12, 1 G otherwise. As
     the total allocation of calls to [create] approach [max_mem_waiting_gc],
-    the pressure in the garbage collector to be more agressive will increase.
+    the pressure in the garbage collector to be more aggressive will increase.
     @return a new bigstring having [length].
     Content is undefined. *)
 val create : ?max_mem_waiting_gc:Byte_units0.t -> int -> t

@@ -67,3 +67,30 @@ let%expect_test "of_bigstring fails if the buffer is too long or too short" =
      (consumed         11)
      (bigstring_length 30)) |}]
 ;;
+
+let%test_unit "Core_bin_prot" =
+  let module Foo = struct
+    type t =
+      { a : int
+      ; b : float
+      ; c : string
+      }
+    [@@deriving bin_io, equal]
+
+    let create i = { a = i; b = float i; c = Int.to_string i }
+  end
+  in
+  let foo = Foo.create 1 in
+  assert (
+    Bin_prot.Writer.to_string Foo.bin_writer_t foo
+    |> Bin_prot.Reader.of_string Foo.bin_reader_t
+    |> Foo.equal foo);
+  assert (
+    Bin_prot.Writer.to_bytes Foo.bin_writer_t foo
+    |> Bin_prot.Reader.of_bytes Foo.bin_reader_t
+    |> Foo.equal foo);
+  assert (
+    Bin_prot.Writer.to_bigstring Foo.bin_writer_t foo
+    |> Bin_prot.Reader.of_bigstring Foo.bin_reader_t
+    |> Foo.equal foo)
+;;

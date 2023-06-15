@@ -40,7 +40,7 @@ include Quickcheckable.S with type t := t
 (** The value [nan] cannot be represented as an [Option.t] *)
 module Option : sig
   type value := t
-  type t = private float [@@deriving sexp_grammar]
+  type t = private float [@@deriving bin_io, sexp_grammar]
 
   include Immediate_option.S_without_immediate with type value := value and type t := t
 

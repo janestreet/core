@@ -527,6 +527,14 @@ end = struct
         stage (fun () -> ignore (length t : int)))
     ;;
 
+    let capacity = Impl.capacity
+
+    let () =
+      ( !! ) "capacity" (fun size ->
+        let t = Example.t size in
+        stage (fun () -> ignore (capacity t : int)))
+    ;;
+
     let keys = Impl.keys
 
     let () =

@@ -9,6 +9,7 @@ module Writer : sig
 
   val to_string : 'a t -> 'a -> string
   val to_bytes : 'a t -> 'a -> bytes
+  val to_bigstring : 'a t -> 'a -> Bigstring.t
 end
 
 module Reader : sig
@@ -19,4 +20,5 @@ module Reader : sig
 
   val of_string : 'a t -> string -> 'a
   val of_bytes : 'a t -> bytes -> 'a
+  val of_bigstring : 'a t -> Bigstring.t -> 'a
 end

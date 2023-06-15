@@ -564,6 +564,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
          ;;
 
          let length = Hashtbl.length
+         let capacity = Hashtbl.capacity
 
          let%test_unit _ =
            Qc.test
@@ -571,7 +572,8 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
              ~sexp_of:[%sexp_of: constructor]
              ~f:(fun constructor ->
                let map, t = map_and_table constructor in
-               [%test_result: int] (Hashtbl.length t) ~expect:(Map.length map))
+               [%test_result: int] (Hashtbl.length t) ~expect:(Map.length map);
+               assert (Hashtbl.capacity t >= Hashtbl.length t))
          ;;
 
          let is_empty = Hashtbl.is_empty
@@ -2337,6 +2339,7 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_for_testing) = struct
        let keys = Hashtbl.keys
        let data = Hashtbl.data
        let length = Hashtbl.length
+       let capacity = Hashtbl.capacity
        let is_empty = Hashtbl.is_empty
        let mem = Hashtbl.mem
        let find = Hashtbl.find

@@ -43,12 +43,12 @@ let exn_if_dup ~compare ?(context = "exn_if_dup") t ~to_sexp =
 ;;
 
 let slice a start stop =
-  Ordered_collection_common.slice ~length_fun:length ~sub_fun:sub a start stop
+  Ordered_collection_common.slice ~length_fun:(length :> _ -> _) ~sub_fun:sub a start stop
 ;;
 
 module Stable = struct
   module V1 = struct
-    type nonrec 'a t = 'a t [@@deriving sexp, sexp_grammar, bin_io, compare]
+    type nonrec 'a t = 'a t [@@deriving sexp, sexp_grammar, bin_io, compare, hash]
 
     let stable_witness = List0.stable_witness [@@alert "-for_internal_use_only"]
   end

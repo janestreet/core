@@ -95,6 +95,6 @@ val zip_with_remainder
 module Stable : sig
   module V1 : sig
     type nonrec 'a t = 'a t
-    [@@deriving sexp, sexp_grammar, bin_io, compare, stable_witness]
+    [@@deriving sexp, sexp_grammar, bin_io, compare, hash, stable_witness]
   end
 end

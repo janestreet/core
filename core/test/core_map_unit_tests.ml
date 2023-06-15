@@ -1001,6 +1001,18 @@ struct
     && Or_error.is_error err_m
   ;;
 
+  let unzip _ = assert false
+
+  let%test _ =
+    let open Some_keys in
+    let m0 =
+      Map.of_alist_exn [ k1, ("a", 2); k2, ("1", 0); k3, ("d", 7); k4, ("5", 3) ]
+    in
+    let m1, m2 = Map.unzip m0 in
+    Map.equal String.equal m1 (Map.of_alist_exn [ k1, "a"; k2, "1"; k3, "d"; k4, "5" ])
+    && Map.equal Int.equal m2 (Map.of_alist_exn [ k1, 2; k2, 0; k3, 7; k4, 3 ])
+  ;;
+
   let keys _ = assert false
   let data _ = assert false
   let to_alist ?key_order:_ _ = assert false

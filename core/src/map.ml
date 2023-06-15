@@ -364,6 +364,7 @@ module Make_tree_S1 (Key : Comparator.S1) = struct
   let partitioni_tf t ~f = partitioni_tf t ~f
   let partition_tf t ~f = partition_tf t ~f
   let combine_errors t = combine_errors t ~comparator
+  let unzip = unzip
   let compare_direct a b c = compare_direct a b c ~comparator
   let equal a b c = equal a b c ~comparator
   let keys = keys
