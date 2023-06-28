@@ -31,7 +31,11 @@ CAMLprim value core_gc_promoted_words(value unit __attribute__((unused))) {
 }
 
 CAMLprim value core_gc_minor_collections(value unit __attribute__((unused))) {
+#if OCAML_VERSION < 50100
   return Val_long(caml_stat_minor_collections);
+#else
+  return Val_long(atomic_load(&caml_minor_collections_count));
+#endif
 }
 
 CAMLprim value core_gc_major_collections(value unit __attribute__((unused))) {
