@@ -26,6 +26,10 @@ module Int () = struct
 
   let current = ref zero
   let create () = race_free_create_loop current succ
+
+  module For_testing = struct
+    let reset_counter () = current := zero
+  end
 end
 
 module Int63 () = struct
@@ -33,4 +37,8 @@ module Int63 () = struct
 
   let current = ref zero
   let create () = race_free_create_loop current succ
+
+  module For_testing = struct
+    let reset_counter () = current := zero
+  end
 end

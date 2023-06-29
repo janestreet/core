@@ -352,6 +352,102 @@ let%test_module "Time_ns.Utc.to_date_and_span_since_start_of_day" =
   end)
 ;;
 
+let%test_module "Time_ns.Span rounding" =
+  (module struct
+    open Time_ns.Span
+
+    let%test_unit "Span.round_down" =
+      [%test_result: t]
+        (round_down ~to_multiple_of:nanosecond nanosecond)
+        ~expect:nanosecond;
+      [%test_result: t] (round_down ~to_multiple_of:second nanosecond) ~expect:zero;
+      [%test_result: t] (round_down ~to_multiple_of:second second) ~expect:second;
+      [%test_result: t] (round_down ~to_multiple_of:second hour) ~expect:hour;
+      [%test_result: t] (round_down ~to_multiple_of:second (of_sec 1.6)) ~expect:second;
+      [%test_result: t] (round_down ~to_multiple_of:minute (of_sec 30.)) ~expect:zero;
+      [%test_result: t] (round_down ~to_multiple_of:hour (of_day 1.1)) ~expect:(of_hr 26.)
+    ;;
+
+    let%test_unit "Span.round_up" =
+      [%test_result: t]
+        (round_up ~to_multiple_of:nanosecond nanosecond)
+        ~expect:nanosecond;
+      [%test_result: t] (round_up ~to_multiple_of:second nanosecond) ~expect:second;
+      [%test_result: t] (round_up ~to_multiple_of:second second) ~expect:second;
+      [%test_result: t] (round_up ~to_multiple_of:second hour) ~expect:hour;
+      [%test_result: t] (round_up ~to_multiple_of:second (of_sec 1.6)) ~expect:(of_sec 2.);
+      [%test_result: t] (round_up ~to_multiple_of:minute (of_sec 30.)) ~expect:minute;
+      [%test_result: t] (round_up ~to_multiple_of:hour (of_day 1.1)) ~expect:(of_hr 27.)
+    ;;
+
+    let%test_unit "Span.round_nearest" =
+      [%test_result: t]
+        (round_nearest ~to_multiple_of:nanosecond nanosecond)
+        ~expect:nanosecond;
+      [%test_result: t] (round_nearest ~to_multiple_of:second nanosecond) ~expect:zero;
+      [%test_result: t] (round_nearest ~to_multiple_of:second second) ~expect:second;
+      [%test_result: t] (round_nearest ~to_multiple_of:second hour) ~expect:hour;
+      [%test_result: t]
+        (round_nearest ~to_multiple_of:second (of_sec 1.6))
+        ~expect:(of_sec 2.);
+      [%test_result: t] (round_nearest ~to_multiple_of:minute (of_sec 30.)) ~expect:minute;
+      [%test_result: t]
+        (round_nearest ~to_multiple_of:hour (of_day 1.1))
+        ~expect:(of_hr 26.)
+    ;;
+
+    let%expect_test "quickcheck rounding" =
+      quickcheck_m
+        [%here]
+        (module struct
+          type t = Time_ns.Span.t * Unit_of_time.t * Rounding_direction.t
+          [@@deriving sexp_of]
+
+          let quickcheck_shrinker = Quickcheck.Shrinker.empty ()
+
+          let quickcheck_generator =
+            let decade = Time_ns.Span.of_int_day 36525 in
+            Quickcheck.Generator.tuple3
+              (Time_ns.Span.gen_uniform_incl (Time_ns.Span.neg decade) decade)
+              (Quickcheck.Generator.of_list Unit_of_time.all)
+              (Quickcheck.Generator.of_list Rounding_direction.all)
+          ;;
+        end)
+        ~f:(fun (span, unit_of_time, dir) ->
+          let to_multiple_of = of_unit_of_time unit_of_time in
+          let rounded = round span ~dir ~to_multiple_of in
+          let expect =
+            match dir with
+            | Up -> round_up span ~to_multiple_of
+            | Down -> round_down span ~to_multiple_of
+            | Zero -> round_towards_zero span ~to_multiple_of
+            | Nearest -> round_nearest span ~to_multiple_of
+          in
+          let remainder_ns =
+            Int63.rem (to_int63_ns rounded) (to_int63_ns to_multiple_of)
+          in
+          let if_false_then_print_s =
+            [%lazy_message
+              "" (to_multiple_of : t) (rounded : t) (expect : t) (remainder_ns : Int63.t)]
+          in
+          require_equal
+            [%here]
+            (module Time_ns.Span)
+            rounded
+            expect
+            ~if_false_then_print_s;
+          require [%here] (abs (span - rounded) < to_multiple_of) ~if_false_then_print_s;
+          require [%here] (Int63.equal remainder_ns Int63.zero) ~if_false_then_print_s;
+          match dir with
+          | Up -> require [%here] (rounded >= span) ~if_false_then_print_s
+          | Down -> require [%here] (rounded <= span) ~if_false_then_print_s
+          | Zero -> require [%here] (abs rounded <= abs span) ~if_false_then_print_s
+          | Nearest -> ());
+      [%expect {| |}]
+    ;;
+  end)
+;;
+
 let succ time_ns =
   time_ns
   |> Time_ns.to_int63_ns_since_epoch

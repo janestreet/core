@@ -1,13 +1,14 @@
 open! Import
 open Std_internal
 open! Int63.O
+module Rounding_direction = Time_ns_intf.Rounding_direction
 
 let module_name = "Core.Time_ns.Span"
 
 type underlying = Int63.t
 
 let arch_sixtyfour = Int.equal Sys.word_size_in_bits 64
-let round_nearest = Float.int63_round_nearest_exn
+let round_nearest_ns = Float.int63_round_nearest_exn
 let float x = Int63.to_float x
 
 (* [Span] is basically a [Int63].  It even silently ignores overflow. *)
@@ -97,7 +98,7 @@ let of_parts { Parts.sign; hr; min; sec; ms; us; ns } =
   create ~sign ~hr ~min ~sec ~ms ~us ~ns ()
 ;;
 
-let of_ns f = round_nearest f
+let of_ns f = round_nearest_ns f
 let of_int63_ns i = i
 let of_int_us i = Int63.(of_int i * microsecond)
 let of_int_ms i = Int63.(of_int i * millisecond)
@@ -105,15 +106,15 @@ let of_int_sec i = Int63.(of_int i * second)
 let of_int_min i = Int63.(of_int i * minute)
 let of_int_hr i = Int63.(of_int i * hour)
 let of_int_day i = Int63.(of_int i * day)
-let of_us f = round_nearest (f *. float microsecond)
-let of_ms f = round_nearest (f *. float millisecond)
-let of_sec f = round_nearest (f *. float second)
-let of_min f = round_nearest (f *. float minute)
-let of_hr f = round_nearest (f *. float hour)
-let of_day f = round_nearest (f *. float day)
+let of_us f = round_nearest_ns (f *. float microsecond)
+let of_ms f = round_nearest_ns (f *. float millisecond)
+let of_sec f = round_nearest_ns (f *. float second)
+let of_min f = round_nearest_ns (f *. float minute)
+let of_hr f = round_nearest_ns (f *. float hour)
+let of_day f = round_nearest_ns (f *. float day)
 
 let of_sec_with_microsecond_precision sec =
-  let us = round_nearest (sec *. 1e6) in
+  let us = round_nearest_ns (sec *. 1e6) in
   of_int63_ns Int63.(us * of_int 1000)
 ;;
 
@@ -144,11 +145,11 @@ let ( + ) t u = Int63.( + ) t u
 let ( - ) t u = Int63.( - ) t u
 let abs = Int63.abs
 let neg = Int63.neg
-let scale t f = round_nearest (float t *. f)
+let scale t f = round_nearest_ns (float t *. f)
 let scale_int63 t i = Int63.( * ) t i
 let scale_int t i = scale_int63 t (Int63.of_int i)
 let div = Int63.( /% )
-let ( / ) t f = round_nearest (float t /. f)
+let ( / ) t f = round_nearest_ns (float t /. f)
 let ( // ) = Int63.( // )
 let to_proportional_float t = Int63.to_float t
 
@@ -182,6 +183,18 @@ let to_unit_of_time t : Unit_of_time.t =
 
 let to_span_float_round_nearest t = Span_float.of_sec (to_sec t)
 let of_span_float_round_nearest s = of_sec (Span_float.to_sec s)
+let round_up t ~to_multiple_of = Int63.round_up ~to_multiple_of t
+let round_down t ~to_multiple_of = Int63.round_down ~to_multiple_of t
+let round_nearest t ~to_multiple_of = Int63.round_nearest ~to_multiple_of t
+let round_towards_zero t ~to_multiple_of = Int63.round_towards_zero ~to_multiple_of t
+
+let round t ~dir ~to_multiple_of =
+  match (dir : Rounding_direction.t) with
+  | Nearest -> round_nearest t ~to_multiple_of
+  | Down -> round_down t ~to_multiple_of
+  | Up -> round_up t ~to_multiple_of
+  | Zero -> round_towards_zero t ~to_multiple_of
+;;
 
 module Stable0 = struct
   module V1 = struct

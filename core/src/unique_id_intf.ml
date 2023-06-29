@@ -18,4 +18,15 @@ module type Id = sig
   (** Always returns a value that is not equal to any other value created with
       [create]. *)
   val create : unit -> t
+
+  module For_testing : sig
+    (** Resets the counter to its default starting value. The nth call to [create] after
+        [reset_counter] has been called has the same ID value as the nth call to [create]
+        after the start of the program (before [reset_counter] has been called).
+
+        This should only be used in testing to set up a deterministic environment when
+        potentially running multiple tests in a row, because calling this will break the
+        guarantee that [create] always returns a unique value. *)
+    val reset_counter : unit -> unit
+  end
 end

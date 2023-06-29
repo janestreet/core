@@ -1,5 +1,14 @@
 open! Import
 
+module Rounding_direction = struct
+  type t =
+    | Down
+    | Nearest
+    | Up
+    | Zero
+  [@@deriving equal, enumerate, sexp_of]
+end
+
 module type Span = sig
   (** [t] is immediate on 64bit boxes and so plays nicely with the GC write barrier. *)
   type t = private Int63.t [@@deriving hash]
@@ -82,6 +91,16 @@ module type Span = sig
   val to_span_float_round_nearest_microsecond : t -> Span_float.t
   val of_span_float_round_nearest : Span_float.t -> t
   val of_span_float_round_nearest_microsecond : Span_float.t -> t
+
+  module Rounding_direction = Rounding_direction
+
+  (** These operations round the span to the nearest whole-number of the given factor. *)
+
+  val round_up : t -> to_multiple_of:t -> t
+  val round_down : t -> to_multiple_of:t -> t
+  val round_nearest : t -> to_multiple_of:t -> t
+  val round_towards_zero : t -> to_multiple_of:t -> t
+  val round : t -> dir:Rounding_direction.t -> to_multiple_of:t -> t
 
   (** Note that we expose a sexp format that is not the one exposed in [Core]. *)
   module Alternate_sexp : sig
