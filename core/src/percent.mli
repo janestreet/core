@@ -327,7 +327,7 @@ module Stable : sig
 
     module V3 : sig
       type t = Option.t
-      [@@deriving bin_io, compare, hash, sexp, sexp_grammar, stable_witness]
+      [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar, stable_witness]
     end
   end
 end

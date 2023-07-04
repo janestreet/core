@@ -2860,17 +2860,20 @@ struct
       match path_to_subcommand with
       | [] -> t
       | sub :: subs ->
-        (match t with
-         | Base _ -> failwithf "unexpected subcommand %S" sub ()
-         | Lazy thunk -> find (Lazy.force thunk) ~path_to_subcommand
-         | Exec { path_to_exe; working_dir; child_subcommand; _ } ->
-           find
-             (of_external ~working_dir ~path_to_exe ~child_subcommand)
-             ~path_to_subcommand:(sub :: (subs @ child_subcommand))
-         | Group g ->
-           (match List.Assoc.find (Lazy.force g.subcommands) ~equal:String.equal sub with
-            | None -> failwithf "unknown subcommand %S" sub ()
-            | Some t -> find t ~path_to_subcommand:subs))
+        if String.is_prefix sub ~prefix:"-"
+        then t
+        else (
+          match t with
+          | Base _ -> failwithf "unexpected subcommand %S" sub ()
+          | Lazy thunk -> find (Lazy.force thunk) ~path_to_subcommand
+          | Exec { path_to_exe; working_dir; child_subcommand; _ } ->
+            find
+              (of_external ~working_dir ~path_to_exe ~child_subcommand)
+              ~path_to_subcommand:(sub :: (subs @ child_subcommand))
+          | Group g ->
+            (match List.Assoc.find (Lazy.force g.subcommands) ~equal:String.equal sub with
+             | None -> failwithf "unknown subcommand %S" sub ()
+             | Some t -> find t ~path_to_subcommand:subs))
     ;;
   end
 

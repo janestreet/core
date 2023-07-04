@@ -552,7 +552,7 @@ module Stable = struct
     end
 
     module V3 = struct
-      type t = V3.t [@@deriving bin_io, compare, hash, typerep, stable_witness]
+      type t = V3.t [@@deriving bin_io, compare, equal, hash, typerep, stable_witness]
 
       let bin_shape_t =
         Bin_prot.Shape.basetype
