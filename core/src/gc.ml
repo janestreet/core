@@ -417,22 +417,25 @@ let zero = Sys.opaque_identity (int_of_string "0")
 let rec keep_alive o = if zero <> 0 then keep_alive (Sys.opaque_identity o)
 
 module For_testing = struct
+  type 'a globl = { g : 'a [@global] } [@@unboxed]
+
   (* We disable inlining for this function so the GC stats and the call to [f] are never
      rearranged. *)
-  let[@cold] measure_internal ~on_result f =
-    let minor_words_before = minor_words () in
-    let major_words_before = major_words () in
-    (* We wrap [f ()] with [Sys.opaque_identity] to prevent the return value from being
-       optimized away. *)
-    let x = Sys.opaque_identity (f ()) in
-    let minor_words_after = minor_words () in
-    let major_words_after = major_words () in
-    let major_words_allocated = major_words_after - major_words_before in
-    let minor_words_allocated = minor_words_after - minor_words_before in
-    on_result ~major_words_allocated ~minor_words_allocated x
+  let[@cold] measure_internal ~on_result (f : unit -> ('a[@local])) =
+    
+      (let minor_words_before = minor_words () in
+       let major_words_before = major_words () in
+       (* We wrap [f ()] with [Sys.opaque_identity] to prevent the return value from being
+          optimized away. *)
+       let x = Sys.opaque_identity (f ()) in
+       let minor_words_after = minor_words () in
+       let major_words_after = major_words () in
+       let major_words_allocated = major_words_after - major_words_before in
+       let minor_words_allocated = minor_words_after - minor_words_before in
+       on_result ~major_words_allocated ~minor_words_allocated x)
   ;;
 
-  let is_zero_alloc (type a) (f : unit -> a) =
+  let is_zero_alloc_local (type a) (f : unit -> (a[@local])) =
     (* Instead of using [Allocation_report.measure], and matching on the result, we use
        this construction, in order to have [is_zero_alloc] not allocate itself. This
        enables [is_zero_alloc] to be used in a nested way. *)
@@ -440,91 +443,114 @@ module For_testing = struct
       f
       ~on_result:(fun ~major_words_allocated ~minor_words_allocated value ->
         ignore (Sys.opaque_identity value : a);
-        major_words_allocated == 0 && minor_words_allocated == 0)
+        major_words_allocated == 0 && minor_words_allocated == 0) [@nontail]
   ;;
+
+  let is_zero_alloc (f [@local]) = is_zero_alloc_local (fun () -> { g = f () }) [@nontail]
 
   module Allocation_report = struct
     type t =
-      { major_words_allocated : int
-      ; minor_words_allocated : int
+      { major_words_allocated : int [@globalized]
+      ; minor_words_allocated : int [@globalized]
       }
-    [@@deriving sexp_of]
+    [@@deriving sexp_of, globalize]
 
     let create ~major_words_allocated ~minor_words_allocated =
-      { major_words_allocated; minor_words_allocated }
+       { major_words_allocated; minor_words_allocated }
     ;;
   end
 
+  let measure_allocation_local f =
+    
+      (measure_internal
+         f
+         ~on_result:(fun ~major_words_allocated ~minor_words_allocated x ->
+           
+             (x, Allocation_report.create ~major_words_allocated ~minor_words_allocated)))
+  ;;
+
   let measure_allocation f =
-    measure_internal f ~on_result:(fun ~major_words_allocated ~minor_words_allocated x ->
-      x, Allocation_report.create ~major_words_allocated ~minor_words_allocated)
+    let%tydi { g }, allocation_report =
+      measure_allocation_local (fun () -> { g = f () })
+    in
+    g, [%globalize: Allocation_report.t] allocation_report
   ;;
 
   module Allocation_log = struct
     type t =
-      { size_in_words : int
-      ; is_major : bool
+      { size_in_words : int [@globalized]
+      ; is_major : bool [@globalized]
       ; backtrace : string
       }
-    [@@deriving sexp_of]
+    [@@deriving sexp_of, globalize]
   end
 
   [%%if ocaml_version >= (4, 11, 0)]
 
+  let measure_and_log_allocation_local ((f : unit -> ('a[@local])) [@local]) =
+    
+      (let log : Allocation_log.t list ref = ref []
+       and major_allocs = ref 0
+       and minor_allocs = ref 0 in
+       let on_alloc ~is_major (info : Stdlib.Gc.Memprof.allocation) =
+         if is_major
+         then major_allocs := !major_allocs + info.n_samples
+         else minor_allocs := !minor_allocs + info.n_samples;
+         let backtrace = Stdlib.Printexc.raw_backtrace_to_string info.callstack in
+         (* Make backtraces easier to read by deleting everything below this function *)
+         let backtrace =
+           match String.substr_index backtrace ~pattern:"measure_and_log_allocation" with
+           | None ->
+             (* This case is possible: we may have logged allocations in another thread *)
+             backtrace
+           | Some p ->
+             String.sub ~pos:0 ~len:p backtrace
+             |> String.rstrip ~drop:(function
+               | '\n' -> false
+               | _ -> true)
+         in
+         let info : Allocation_log.t =
+           { size_in_words = info.n_samples; is_major; backtrace }
+         in
+         log := info :: !log;
+         None
+       in
+       let tracker =
+         { Stdlib.Gc.Memprof.null_tracker with
+           alloc_minor = on_alloc ~is_major:false
+         ; alloc_major = on_alloc ~is_major:true
+         }
+       in
+       Stdlib.Gc.Memprof.start ~sampling_rate:1.0 tracker;
+       (* Exn.protect, manually inlined to guarantee no allocations *)
+       let result =
+         match f () with
+         | x ->
+           (* Memprof.stop does not guarantee that all memprof callbacks are run (some may be
+              delayed if they happened during C code and there has been no allocation since),
+              so we explictly flush them *)
+           run_memprof_callbacks ();
+           Stdlib.Gc.Memprof.stop ();
+           x
+         | exception e ->
+           run_memprof_callbacks ();
+           Stdlib.Gc.Memprof.stop ();
+           raise e
+       in
+       ( result
+       , Allocation_report.create
+           ~major_words_allocated:!major_allocs
+           ~minor_words_allocated:!minor_allocs
+       , List.rev !log ))
+  ;;
+
   let measure_and_log_allocation f =
-    let log : Allocation_log.t list ref = ref []
-    and major_allocs = ref 0
-    and minor_allocs = ref 0 in
-    let on_alloc ~is_major (info : Stdlib.Gc.Memprof.allocation) =
-      if is_major
-      then major_allocs := !major_allocs + info.n_samples
-      else minor_allocs := !minor_allocs + info.n_samples;
-      let backtrace = Stdlib.Printexc.raw_backtrace_to_string info.callstack in
-      (* Make backtraces easier to read by deleting everything below this function *)
-      let backtrace =
-        match String.substr_index backtrace ~pattern:"measure_and_log_allocation" with
-        | None ->
-          (* This case is possible: we may have logged allocations in another thread *)
-          backtrace
-        | Some p ->
-          String.sub ~pos:0 ~len:p backtrace
-          |> String.rstrip ~drop:(function
-            | '\n' -> false
-            | _ -> true)
-      in
-      let info : Allocation_log.t =
-        { size_in_words = info.n_samples; is_major; backtrace }
-      in
-      log := info :: !log;
-      None
+    let { g }, allocation_report, log =
+      measure_and_log_allocation_local (fun () -> { g = f () })
     in
-    let tracker =
-      { Stdlib.Gc.Memprof.null_tracker with
-        alloc_minor = on_alloc ~is_major:false
-      ; alloc_major = on_alloc ~is_major:true
-      }
-    in
-    Stdlib.Gc.Memprof.start ~sampling_rate:1.0 tracker;
-    (* Exn.protect, manually inlined to guarantee no allocations *)
-    let result =
-      match f () with
-      | x ->
-        (* Memprof.stop does not guarantee that all memprof callbacks are run (some may be
-           delayed if they happened during C code and there has been no allocation since),
-           so we explictly flush them *)
-        run_memprof_callbacks ();
-        Stdlib.Gc.Memprof.stop ();
-        x
-      | exception e ->
-        run_memprof_callbacks ();
-        Stdlib.Gc.Memprof.stop ();
-        raise e
-    in
-    ( result
-    , Allocation_report.create
-        ~major_words_allocated:!major_allocs
-        ~minor_words_allocated:!minor_allocs
-    , List.rev !log )
+    ( g
+    , [%globalize: Allocation_report.t] allocation_report
+    , [%globalize: Allocation_log.t list] log )
   ;;
 
   [%%else]
@@ -534,7 +560,35 @@ module For_testing = struct
     x, report, []
   ;;
 
+  let measure_and_log_allocation_local = measure_and_log_allocation
+
   [%%endif]
+
+  let[@cold] require_no_allocation_local_failed here allocation_report allocation_log =
+    let allocation_report = [%globalize: Allocation_report.t] allocation_report in
+    let allocation_log = [%globalize: Allocation_log.t list] allocation_log in
+    raise_s
+      [%message
+        "allocation detected"
+          (here : Source_code_position.t)
+          (allocation_report : Allocation_report.t)
+          (allocation_log : Allocation_log.t list)]
+  ;;
+
+  let assert_no_allocation_local here f =
+    
+      (let result, allocation_report, allocation_log =
+         measure_and_log_allocation_local f
+       in
+       if allocation_report.major_words_allocated > 0
+       || allocation_report.minor_words_allocated > 0
+       then require_no_allocation_local_failed here allocation_report allocation_log;
+       result)
+  ;;
+
+  let assert_no_allocation here f =
+    (assert_no_allocation_local here (fun () -> { g = f () })).g
+  ;;
 end
 
 module Expert = struct

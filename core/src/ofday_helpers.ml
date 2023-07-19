@@ -202,7 +202,10 @@ let parse_iso8601_extended ?pos ?len str ~f =
     with
     | Result.Ok z -> z
     | Result.Error s ->
-      failwithf "Ofday.of_string_iso8601_extended: %s" (Error.to_string_mach s) ()
+      failwithf
+        "Ofday.of_string_iso8601_extended: %s"
+        (Error.to_string_mach (Error.globalize s))
+        ()
   in
   if len < 2
   then failwith "len < 2"

@@ -7,19 +7,17 @@
         let open Command.Let_syntax in
         Command.basic
           ~summary:"cook eggs"
-          [%map_open
-            let num_eggs =
-              flag "num-eggs" (required int) ~doc:"COUNT cook this many eggs"
-            and style =
-              flag "style" (required (Arg_type.create Egg_style.of_string))
-                ~doc:"OVER-EASY|SUNNY-SIDE-UP style of eggs"
-            and recipient =
-              anon ("recipient" %: string)
-            in
-            fun () ->
-              (* TODO: implement egg-cooking in ocaml *)
-              failwith "no eggs today"
-          ]
+          (let%map_open num_eggs =
+             flag "num-eggs" (required int) ~doc:"COUNT cook this many eggs"
+           and style =
+             flag "style" (required (Arg_type.create Egg_style.of_string))
+               ~doc:"OVER-EASY|SUNNY-SIDE-UP style of eggs"
+           and recipient =
+             anon ("recipient" %: string)
+           in
+           fun () ->
+             (* TODO: implement egg-cooking in ocaml *)
+             failwith "no eggs today")
         |> Command.run
     ]}
 
@@ -427,44 +425,31 @@ module type Command = sig
           {[
             let command =
               Command.basic ~summary:"..."
-                [%map_open
-                  let count  = anon ("COUNT" %: int)
-                  and port   = flag "port" (optional int) ~doc:"N listen on this port"
-                  and person = person_param
-                  in
-                  (* ... Command-line validation code, if any, goes here ... *)
-                  fun () ->
-                    (* The body of the command *)
-                    do_stuff count port person
-                ]
+                (let%map_open count = anon ("COUNT" %: int)
+                 and port = flag "port" (optional int) ~doc:"N listen on this port"
+                 and person = person_param
+                 in
+                 (* ... Command-line validation code, if any, goes here ... *)
+                 fun () ->
+                   (* The body of the command *)
+                   do_stuff count port person)
           ]}
 
           One can also use [[%map_open]] to define composite command line parameters, like
           [person_param] in the previous snippet:
+
           {[
             type person = { name : string; age : int }
 
             let person_param : person Command.Param.t =
-              [%map_open
-                let name = flag "name" (required string) ~doc:"X name of the person"
-                and age  = flag "age"  (required int)    ~doc:"N how many years old"
-                in
-                {name; age}
-              ]
+              (let%map_open name =
+                 flag "name" (required string) ~doc:"X name of the person"
+               and age = flag "age" (required int) ~doc:"N how many years old"
+               in
+               {name; age})
           ]}
 
           The right-hand sides of [[%map_open]] definitions have [Command.Param] in scope.
-
-          Alternatively, you can say:
-
-          {[
-            let open Foo.Let_syntax in
-            [%map_open
-              let x ...
-            ]
-          ]}
-
-          if [Foo] follows the same conventions as [Command.Param].
 
           See example/command/main.ml for more examples.
       *)

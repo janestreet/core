@@ -499,7 +499,12 @@ module For_testing : sig
   end
 
   (** [measure_allocation f] measures the words allocated by running [f ()] *)
-  val measure_allocation : (unit -> 'a) -> 'a * Allocation_report.t
+  val measure_allocation : ((unit -> 'a)[@local]) -> 'a * Allocation_report.t
+
+  (** Same as [measure_allocation], but for functions that return a local value. *)
+  val measure_allocation_local
+    :  ((unit -> ('a[@local]))[@local])
+    -> ('a * Allocation_report.t[@local])
 
   module Allocation_log : sig
     type t =
@@ -519,9 +524,27 @@ module For_testing : sig
     :  ((unit -> 'a)[@local])
     -> 'a * Allocation_report.t * Allocation_log.t list
 
+  (** Same as [measure_and_log_allocation], but for functions that return a local
+      value. *)
+  val measure_and_log_allocation_local
+    :  ((unit -> ('a[@local]))[@local])
+    -> ('a * Allocation_report.t * Allocation_log.t list[@local])
+
   (** [is_zero_alloc f] runs [f ()] and returns [true] if it does not allocate, or [false]
       otherwise. [is_zero_alloc] does not allocate. *)
-  val is_zero_alloc : (unit -> _) -> bool
+  val is_zero_alloc : ((unit -> _)[@local]) -> bool
+
+  (** Same as [is_zero_alloc], but for functions that return a local value. *)
+  val is_zero_alloc_local : ((unit -> (_[@local]))[@local]) -> bool
+
+  (** [assert_no_allocation [%here] f] raises if [f] allocates. *)
+  val assert_no_allocation : Source_code_position.t -> ((unit -> 'a)[@local]) -> 'a
+
+  (** Same as [assert_no_allocation], but for functions that return a local value. *)
+  val assert_no_allocation_local
+    :  Source_code_position.t
+    -> ((unit -> ('a[@local]))[@local])
+    -> ('a[@local])
 end
 
 (** The [Expert] module contains functions that novice users should not use, due to their

@@ -15,6 +15,7 @@ module Stable = struct
     let hash_fold_t _ t = unreachable_code t
     let hash = unreachable_code
     let compare a _ = unreachable_code a
+    let equal a _ = unreachable_code a
     let bin_size_t = unreachable_code
     let bin_write_t _buf ~pos:_ t = unreachable_code t
     let bin_writer_t = { Bin_prot.Type_class.size = bin_size_t; write = bin_write_t }

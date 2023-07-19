@@ -4,7 +4,7 @@ module type Round = Base.Int.Round
 
 module type Stable = sig
   module V1 : sig
-    type t [@@deriving sexp_grammar]
+    type t [@@deriving equal, hash, sexp_grammar]
 
     include Stable_comparable.With_stable_witness.V1 with type t := t
   end

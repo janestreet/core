@@ -364,7 +364,22 @@ module C = Container.Make (struct
       loop init t [] [@nontail]
     ;;
 
-    let iter = `Define_using_fold
+    (* Don't allocate *)
+    let rec iter t ~f =
+      match t with
+      | Base a -> f a
+      | True | False -> ()
+      | Not t -> iter t ~f
+      | And (t1, t2) | Or (t1, t2) ->
+        iter t1 ~f;
+        iter t2 ~f
+      | If (t1, t2, t3) ->
+        iter t1 ~f;
+        iter t2 ~f;
+        iter t3 ~f
+    ;;
+
+    let iter = `Custom iter
     let length = `Define_using_fold
   end)
 
