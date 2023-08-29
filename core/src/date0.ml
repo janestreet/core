@@ -12,7 +12,8 @@ module Stable = struct
     module Without_comparable = struct
       module T : sig
         type t
-        [@@immediate] [@@deriving bin_io, compare, equal, hash, typerep, stable_witness]
+        [@@immediate]
+        [@@deriving bin_io ~localize, compare, equal, hash, typerep, stable_witness]
 
         val create_exn : y:int -> m:Month.Stable.V1.t -> d:int -> t
         val year : t -> int
@@ -104,16 +105,19 @@ module Stable = struct
           { Bin_prot.Type_class.read = bin_read_t; vtag_read = __bin_read_t__ }
         ;;
 
-        let bin_size_t t =
+        let bin_size_t__local t =
           Int.bin_size_t (year t) + Month.bin_size_t (month t) + Int.bin_size_t (day t)
         ;;
 
-        let bin_write_t buf ~pos t =
+        let bin_size_t t = bin_size_t__local t
+
+        let bin_write_t__local buf ~pos t =
           let pos = Int.bin_write_t buf ~pos (year t) in
           let pos = Month.bin_write_t buf ~pos (month t) in
           Int.bin_write_t buf ~pos (day t)
         ;;
 
+        let bin_write_t buf ~pos t = bin_write_t__local buf ~pos t
         let bin_writer_t = { Bin_prot.Type_class.size = bin_size_t; write = bin_write_t }
 
         let bin_t =
@@ -286,7 +290,7 @@ module Stable = struct
     module V1 = struct
       type t = int
       [@@deriving
-        bin_io
+        bin_io ~localize
       , bin_shape ~basetype:"826a3e79-3321-451a-9707-ed6c03b84e2f"
       , compare
       , hash

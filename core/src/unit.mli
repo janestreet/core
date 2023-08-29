@@ -14,12 +14,21 @@ with type t := t
 include Identifiable.S with type t := t and type comparator_witness := comparator_witness
 include Quickcheckable.S with type t := t
 
+include sig
+  type t [@@deriving bin_io ~localize]
+end
+with type t := t
+
 module type S = sig end
 
 type m = (module S)
 
 module Stable : sig
-  module V1 : Stable_module_types.With_stable_witness.S0 with type t = t
+  module V1 : sig
+    type nonrec t = t [@@deriving bin_io ~localize]
+
+    include Stable_module_types.With_stable_witness.S0 with type t := t
+  end
 
   (** Zero-length bin_prot format.
 
@@ -27,5 +36,9 @@ module Stable : sig
       because there's an assumption that primitive types, which include [unit], are stable
       whether or not they say so, so we can't change the [unit] bin-io converter without
       breaking many stable types.  *)
-  module V2 : Stable_module_types.With_stable_witness.S0 with type t = t
+  module V2 : sig
+    type nonrec t = t [@@deriving bin_io ~localize]
+
+    include Stable_module_types.With_stable_witness.S0 with type t := t
+  end
 end

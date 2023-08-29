@@ -90,7 +90,7 @@ module Stable = struct
         ; anons : Anons.V2.t
         ; flags : Flag_info.V1.t list
         }
-      [@@deriving compare, fields, sexp, stable_witness]
+      [@@deriving compare, sexp, stable_witness]
     end
 
     module V1 = struct
@@ -372,7 +372,7 @@ module Num_occurrences = struct
     { at_least_once : bool
     ; at_most_once : bool
     }
-  [@@deriving compare, enumerate, fields, sexp_of]
+  [@@deriving compare, enumerate, sexp_of]
 
   let maybe_missing_prefix = "["
   let maybe_missing_suffix = "]"
@@ -428,7 +428,7 @@ module Flag_info = struct
     ; doc : string
     ; aliases : string list
     }
-  [@@deriving compare, fields, sexp]
+  [@@deriving compare, fields ~getters, sexp]
 
   let parse_name t =
     let num_occurrences, flag_name = Num_occurrences.of_help_string t.name in
@@ -631,7 +631,7 @@ module Base_info = struct
     ; anons : Anons.t
     ; flags : Flag_info.t list
     }
-  [@@deriving compare, fields, sexp]
+  [@@deriving compare, fields ~getters, sexp]
 
   let find_flag t prefix =
     match String.is_prefix prefix ~prefix:"-" with
@@ -663,7 +663,7 @@ module Group_info = struct
     ; readme : string option [@sexp.option]
     ; subcommands : (string * 'a) List.t Lazy.t
     }
-  [@@deriving compare, fields, sexp]
+  [@@deriving compare, fields ~getters, sexp]
 
   let find_subcommand t prefix =
     match String.is_prefix prefix ~prefix:"-" with
@@ -689,7 +689,7 @@ module Exec_info = struct
     ; path_to_exe : string
     ; child_subcommand : string list
     }
-  [@@deriving compare, fields, sexp]
+  [@@deriving compare, sexp]
 end
 
 module Fully_forced = struct

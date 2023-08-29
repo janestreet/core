@@ -2,12 +2,12 @@ open! Import
 open! Typerep_lib.Std
 include Base.List
 
-type 'a t = 'a list [@@deriving bin_io, typerep, stable_witness]
+type 'a t = 'a list [@@deriving bin_io ~localize, typerep, stable_witness]
 
 module Assoc = struct
   include Assoc
 
-  type ('a, 'b) t = ('a * 'b) list [@@deriving bin_io]
+  type ('a, 'b) t = ('a * 'b) list [@@deriving bin_io ~localize]
 
   let compare (type a b) compare_a compare_b = [%compare: (a * b) list]
 end

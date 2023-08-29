@@ -6,7 +6,7 @@ module Stable = struct
     open Sexplib.Std
 
     type 'a t = 'a lazy_t
-    [@@deriving bin_io, quickcheck, sexp, sexp_grammar, typerep, stable_witness]
+    [@@deriving bin_io ~localize, quickcheck, sexp, sexp_grammar, typerep, stable_witness]
 
     let map = Base.Lazy.map
     let compare = Base.Lazy.compare

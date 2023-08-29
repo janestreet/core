@@ -87,11 +87,17 @@ struct
      mutable. *)
   type 'a array = 'a Array.t
   [@@deriving
-    bin_io, compare ~localize, equal ~localize, globalize, sexp, sexp_grammar, typerep]
+    bin_io ~localize
+  , compare ~localize
+  , equal ~localize
+  , globalize
+  , sexp
+  , sexp_grammar
+  , typerep]
 
   type bool = Bool.t
   [@@deriving
-    bin_io
+    bin_io ~localize
   , compare ~localize
   , hash
   , equal ~localize
@@ -102,7 +108,7 @@ struct
 
   type char = Char.t
   [@@deriving
-    bin_io
+    bin_io ~localize
   , compare ~localize
   , hash
   , equal ~localize
@@ -113,7 +119,7 @@ struct
 
   type float = Float.t
   [@@deriving
-    bin_io
+    bin_io ~localize
   , compare ~localize
   , hash
   , equal ~localize
@@ -124,7 +130,7 @@ struct
 
   type int = Int.t
   [@@deriving
-    bin_io
+    bin_io ~localize
   , compare ~localize
   , hash
   , equal ~localize
@@ -135,7 +141,7 @@ struct
 
   type int32 = Int32.t
   [@@deriving
-    bin_io
+    bin_io ~localize
   , compare ~localize
   , hash
   , equal ~localize
@@ -146,7 +152,7 @@ struct
 
   type int64 = Int64.t
   [@@deriving
-    bin_io
+    bin_io ~localize
   , compare ~localize
   , hash
   , equal ~localize
@@ -156,11 +162,11 @@ struct
   , typerep]
 
   type 'a lazy_t = 'a Lazy.t
-  [@@deriving bin_io, compare ~localize, hash, sexp, sexp_grammar, typerep]
+  [@@deriving bin_io ~localize, compare ~localize, hash, sexp, sexp_grammar, typerep]
 
   type 'a list = 'a List.t
   [@@deriving
-    bin_io
+    bin_io ~localize
   , compare ~localize
   , hash
   , equal ~localize
@@ -171,7 +177,7 @@ struct
 
   type nativeint = Nativeint.t
   [@@deriving
-    bin_io
+    bin_io ~localize
   , compare ~localize
   , equal ~localize
   , globalize
@@ -182,7 +188,7 @@ struct
 
   type 'a option = 'a Option.t
   [@@deriving
-    bin_io
+    bin_io ~localize
   , compare ~localize
   , equal ~localize
   , globalize
@@ -193,7 +199,7 @@ struct
 
   type string = String.t
   [@@deriving
-    bin_io
+    bin_io ~localize
   , compare ~localize
   , equal ~localize
   , globalize
@@ -204,15 +210,27 @@ struct
 
   type bytes = Bytes.t
   [@@deriving
-    bin_io, compare ~localize, equal ~localize, globalize, sexp, sexp_grammar, typerep]
+    bin_io ~localize
+  , compare ~localize
+  , equal ~localize
+  , globalize
+  , sexp
+  , sexp_grammar
+  , typerep]
 
   type 'a ref = 'a Ref.t
   [@@deriving
-    bin_io, compare ~localize, equal ~localize, globalize, sexp, sexp_grammar, typerep]
+    bin_io ~localize
+  , compare ~localize
+  , equal ~localize
+  , globalize
+  , sexp
+  , sexp_grammar
+  , typerep]
 
   type unit = Unit.t
   [@@deriving
-    bin_io
+    bin_io ~localize
   , compare ~localize
   , equal ~localize
   , globalize
@@ -223,7 +241,7 @@ struct
 
   (* Bin_prot has optimized functions for float arrays *)
   include struct
-    type float_array = float array [@@deriving bin_io]
+    type float_array = float array [@@deriving bin_io ~localize]
   end [@alert "-deprecated"]
 
   include (
@@ -239,11 +257,17 @@ end :
 sig
   type 'a array
   [@@deriving
-    bin_io, compare ~localize, equal ~localize, globalize, sexp, sexp_grammar, typerep]
+    bin_io ~localize
+  , compare ~localize
+  , equal ~localize
+  , globalize
+  , sexp
+  , sexp_grammar
+  , typerep]
 
   type bool
   [@@deriving
-    bin_io
+    bin_io ~localize
   , compare ~localize
   , equal ~localize
   , globalize
@@ -254,7 +278,7 @@ sig
 
   type char
   [@@deriving
-    bin_io
+    bin_io ~localize
   , compare ~localize
   , equal ~localize
   , globalize
@@ -265,7 +289,7 @@ sig
 
   type float
   [@@deriving
-    bin_io
+    bin_io ~localize
   , compare ~localize
   , equal ~localize
   , globalize
@@ -276,7 +300,7 @@ sig
 
   type int
   [@@deriving
-    bin_io
+    bin_io ~localize
   , compare ~localize
   , equal ~localize
   , globalize
@@ -287,7 +311,7 @@ sig
 
   type int32
   [@@deriving
-    bin_io
+    bin_io ~localize
   , compare ~localize
   , equal ~localize
   , globalize
@@ -298,7 +322,7 @@ sig
 
   type int64
   [@@deriving
-    bin_io
+    bin_io ~localize
   , compare ~localize
   , equal ~localize
   , globalize
@@ -308,11 +332,11 @@ sig
   , typerep]
 
   type 'a lazy_t
-  [@@deriving bin_io, compare ~localize, hash, sexp, sexp_grammar, typerep]
+  [@@deriving bin_io ~localize, compare ~localize, hash, sexp, sexp_grammar, typerep]
 
   type 'a list
   [@@deriving
-    bin_io
+    bin_io ~localize
   , compare ~localize
   , equal ~localize
   , globalize
@@ -323,7 +347,7 @@ sig
 
   type nativeint
   [@@deriving
-    bin_io
+    bin_io ~localize
   , compare ~localize
   , equal ~localize
   , globalize
@@ -334,7 +358,7 @@ sig
 
   type 'a option
   [@@deriving
-    bin_io
+    bin_io ~localize
   , compare ~localize
   , equal ~localize
   , globalize
@@ -345,7 +369,7 @@ sig
 
   type string
   [@@deriving
-    bin_io
+    bin_io ~localize
   , compare ~localize
   , equal ~localize
   , globalize
@@ -356,15 +380,27 @@ sig
 
   type bytes
   [@@deriving
-    bin_io, compare ~localize, equal ~localize, globalize, sexp, sexp_grammar, typerep]
+    bin_io ~localize
+  , compare ~localize
+  , equal ~localize
+  , globalize
+  , sexp
+  , sexp_grammar
+  , typerep]
 
   type 'a ref
   [@@deriving
-    bin_io, compare ~localize, equal ~localize, globalize, sexp, sexp_grammar, typerep]
+    bin_io ~localize
+  , compare ~localize
+  , equal ~localize
+  , globalize
+  , sexp
+  , sexp_grammar
+  , typerep]
 
   type unit
   [@@deriving
-    bin_io
+    bin_io ~localize
   , compare ~localize
   , equal ~localize
   , globalize

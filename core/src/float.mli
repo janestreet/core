@@ -7,7 +7,7 @@ include module type of struct
   include Base.Float
 end
 
-type t = float [@@deriving typerep]
+type t = float [@@deriving typerep, bin_io ~localize]
 
 module Robust_compare : sig
   module type S = sig
@@ -40,7 +40,7 @@ end
 module Robustly_comparable : Robust_compare.S
 
 module Terse : sig
-  type nonrec t = t [@@deriving bin_io]
+  type nonrec t = t [@@deriving bin_io ~localize]
 
   include module type of struct
     include Base.Float.Terse

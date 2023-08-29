@@ -216,7 +216,7 @@ end = struct
     ; key : 'a Univ_map.Multi.Key.t option
     ; extra_doc : string option Lazy.t
     }
-  [@@deriving fields]
+  [@@deriving fields ~getters]
 
   let parse t s = Or_error.try_with (fun () -> t.parse s)
   let create' ?complete ?key parse ~extra_doc = { parse; key; complete; extra_doc }
@@ -502,7 +502,7 @@ module Flag = struct
       { at_least_once : bool
       ; at_most_once : bool
       }
-    [@@deriving compare, enumerate, fields, sexp_of]
+    [@@deriving compare, enumerate, sexp_of]
 
     let to_help_string = Shape.Num_occurrences.to_help_string
 

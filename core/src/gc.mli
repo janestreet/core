@@ -58,7 +58,7 @@ module Stat : sig
     ; top_heap_words : int (** Maximum size reached by the major heap, in words. *)
     ; stack_size : int (** Current size of the stack, in words. *)
     }
-  [@@deriving bin_io, sexp, fields]
+  [@@deriving bin_io, sexp]
 
   [%%else]
 
@@ -101,7 +101,13 @@ module Stat : sig
     (** Number of forced full major collection cycles completed since the program
         was started. *)
     }
-  [@@deriving sexp_of, fields]
+  [@@deriving
+    sexp_of
+  , fields
+      ~getters
+      ~fields
+      ~iterators:(create, fold, iter, map, to_list)
+      ~direct_iterators:to_list]
 
   [%%endif]
 
@@ -231,7 +237,7 @@ module Control : sig
         Default: 8192 bytes.
         @since 4.08.0 *)
     }
-  [@@deriving sexp_of, fields]
+  [@@deriving sexp_of, fields ~iterators:to_list]
 
   [%%else]
 
@@ -329,7 +335,7 @@ module Control : sig
         Default: 8192 bytes.
         @since 4.08.0 *)
     }
-  [@@deriving sexp_of, fields]
+  [@@deriving sexp_of]
 
   [%%endif]
 

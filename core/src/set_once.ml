@@ -7,7 +7,7 @@ module Stable = struct
       ; mutable set_at : Source_code_position.Stable.V1.t
                          [@compare.ignore] [@equal.ignore]
       }
-    [@@deriving compare, equal, fields]
+    [@@deriving compare, equal]
   end
 
   module V1 = struct

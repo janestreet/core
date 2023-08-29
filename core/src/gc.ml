@@ -180,7 +180,7 @@ module Stat = struct
       ; top_heap_words : int
       ; stack_size : int
       }
-    [@@deriving compare, hash, bin_io, sexp, fields]
+    [@@deriving compare, hash, bin_io, sexp]
 
     [%%else]
 
@@ -203,7 +203,16 @@ module Stat = struct
       ; stack_size : int
       ; forced_major_collections : int
       }
-    [@@deriving compare, hash, sexp_of, fields]
+    [@@deriving
+      compare
+    , hash
+    , sexp_of
+    , fields
+        ~getters
+        ~setters
+        ~fields
+        ~iterators:(create, fold, iter, map, to_list)
+        ~direct_iterators:to_list]
 
     [%%endif]
   end
@@ -282,7 +291,8 @@ module Control = struct
       ; custom_minor_ratio : int
       ; custom_minor_max_size : int
       }
-    [@@deriving compare, sexp_of, fields]
+    [@@deriving
+      compare, sexp_of, fields ~getters ~setters ~fields ~iterators:(map, to_list)]
   end
 
   [%%else]
@@ -303,7 +313,8 @@ module Control = struct
       ; custom_minor_ratio : int
       ; custom_minor_max_size : int
       }
-    [@@deriving compare, sexp_of, fields]
+    [@@deriving
+      compare, sexp_of, fields ~getters ~setters ~fields ~iterators:(map, to_list)]
   end
 
   [%%endif]

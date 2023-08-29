@@ -27,7 +27,7 @@ module T : sig
     | Not of 'a t
     | If of 'a t * 'a t * 'a t
     | Base of 'a
-  [@@deriving bin_io, compare, equal, hash, typerep]
+  [@@deriving bin_io ~localize, compare, equal, hash, typerep]
 
   val invariant : 'a t -> unit
   val true_ : 'a t
@@ -46,7 +46,7 @@ end = struct
     | Not of 'a t
     | If of 'a t * 'a t * 'a t
     | Base of 'a
-  [@@deriving bin_io, compare, equal, hash, typerep]
+  [@@deriving bin_io ~localize, compare, equal, hash, typerep]
 
   let invariant =
     let subterms = function
@@ -134,7 +134,8 @@ module Stable = struct
       | Not of 'a t
       | If of 'a t * 'a t * 'a t
       | Base of 'a
-    [@@deriving bin_io, stable_witness, compare, equal, hash, sexp, sexp_grammar]
+    [@@deriving
+      bin_io ~localize, stable_witness, compare, equal, hash, sexp, sexp_grammar]
 
     (* the remainder of this signature consists of functions used in the definitions
        of sexp conversions that are also useful more generally *)
@@ -161,7 +162,7 @@ module Stable = struct
     include (
       T :
       sig
-        type 'a t [@@deriving bin_io, compare, equal, hash]
+        type 'a t [@@deriving bin_io ~localize, compare, equal, hash]
       end
       with type 'a t := 'a t)
 

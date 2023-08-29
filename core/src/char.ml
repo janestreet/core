@@ -1,6 +1,6 @@
 open! Import
 
-type t = char [@@deriving typerep]
+type t = char [@@deriving typerep, bin_io ~localize]
 
 include
   Identifiable.Extend
@@ -22,7 +22,7 @@ module Caseless = struct
   module T = struct
     include Caseless
 
-    type t = char [@@deriving bin_io]
+    type t = char [@@deriving bin_io ~localize]
   end
 
   include T

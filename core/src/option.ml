@@ -1,7 +1,7 @@
 open! Import
 include Base.Option
 
-type 'a t = 'a option [@@deriving bin_io, typerep, stable_witness]
+type 'a t = 'a option [@@deriving bin_io ~localize, typerep, stable_witness]
 
 include Comparator.Derived (struct
     type nonrec 'a t = 'a t [@@deriving sexp_of, compare]
@@ -21,7 +21,8 @@ let quickcheck_shrinker = Base_quickcheck.Shrinker.option
 module Stable = struct
   module V1 = struct
     type nonrec 'a t = 'a t
-    [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar, stable_witness]
+    [@@deriving
+      bin_io ~localize, compare, equal, hash, sexp, sexp_grammar, stable_witness]
   end
 end
 

@@ -10,7 +10,7 @@ type t = Base.Source_code_position.t =
   ; pos_bol : int
   ; pos_cnum : int
   }
-[@@deriving bin_io, compare, fields, hash, sexp]
+[@@deriving bin_io, compare, fields ~getters, hash, sexp]
 
 module Stable : sig
   module V1 : sig

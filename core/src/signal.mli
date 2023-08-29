@@ -180,6 +180,7 @@ module Expert : sig
     | `Ignore
     | `Handle of t -> unit
     ]
+  [@@deriving sexp_of]
 
   (** [signal t] sets the behavior of the system on receipt of signal [t] and returns the
       behavior previously associated with [t].  If [t] is not available on your system,

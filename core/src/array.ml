@@ -10,7 +10,7 @@ include (
     type 'a t = 'a array [@@deriving sexp, compare ~localize, globalize, sexp_grammar]
   end)
 
-type 'a t = 'a array [@@deriving bin_io, quickcheck, typerep]
+type 'a t = 'a array [@@deriving bin_io ~localize, quickcheck, typerep]
 
 module Private = Base.Array.Private
 
@@ -38,7 +38,7 @@ module T = struct
      the section entitled "Fast, Slow and Incorrect Array blits" of
      https://web.archive.org/web/20130220000229/http://janestreet.github.com/ocaml-perf-notes.html *)
   module Int = struct
-    type t_ = int array [@@deriving bin_io, compare, sexp]
+    type t_ = int array [@@deriving bin_io ~localize, compare, sexp]
 
     module Unsafe_blit = struct
       external unsafe_blit
@@ -74,7 +74,7 @@ module T = struct
   end
 
   module Float = struct
-    type t_ = float array [@@deriving bin_io, compare, sexp]
+    type t_ = float array [@@deriving bin_io ~localize, compare, sexp]
 
     module Unsafe_blit = struct
       external unsafe_blit
@@ -395,10 +395,10 @@ module type Permissioned = sig
 end
 
 module Permissioned : sig
-  type ('a, -'perms) t [@@deriving bin_io, compare, sexp]
+  type ('a, -'perms) t [@@deriving bin_io ~localize, compare, sexp]
 
   module Int : sig
-    type nonrec -'perms t = (int, 'perms) t [@@deriving bin_io, compare, sexp]
+    type nonrec -'perms t = (int, 'perms) t [@@deriving bin_io ~localize, compare, sexp]
 
     include Blit.S_permissions with type 'perms t := 'perms t
 
@@ -414,7 +414,7 @@ module Permissioned : sig
   end
 
   module Float : sig
-    type nonrec -'perms t = (float, 'perms) t [@@deriving bin_io, compare, sexp]
+    type nonrec -'perms t = (float, 'perms) t [@@deriving bin_io ~localize, compare, sexp]
 
     include Blit.S_permissions with type 'perms t := 'perms t
 
@@ -461,18 +461,18 @@ module Permissioned : sig
 
   include Permissioned with type ('a, 'perms) t := ('a, 'perms) t
 end = struct
-  type ('a, -'perms) t = 'a array [@@deriving bin_io, compare, sexp, typerep]
+  type ('a, -'perms) t = 'a array [@@deriving bin_io ~localize, compare, sexp, typerep]
 
   module Int = struct
     include T.Int
 
-    type -'perms t = t_ [@@deriving bin_io, compare, sexp]
+    type -'perms t = t_ [@@deriving bin_io ~localize, compare, sexp]
   end
 
   module Float = struct
     include T.Float
 
-    type -'perms t = t_ [@@deriving bin_io, compare, sexp]
+    type -'perms t = t_ [@@deriving bin_io ~localize, compare, sexp]
   end
 
   let to_array_id = Fn.id
@@ -628,13 +628,13 @@ let max_length = Sys.max_array_length
 module Int = struct
   include T.Int
 
-  type t = t_ [@@deriving bin_io, compare, sexp]
+  type t = t_ [@@deriving bin_io ~localize, compare, sexp]
 end
 
 module Float = struct
   include T.Float
 
-  type t = t_ [@@deriving bin_io, compare, sexp]
+  type t = t_ [@@deriving bin_io ~localize, compare, sexp]
 end
 
 module _ (M : S) : sig

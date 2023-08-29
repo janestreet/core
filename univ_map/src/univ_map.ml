@@ -142,6 +142,8 @@ struct
     Map.of_alist_exn (module Uid) (List.map t ~f:(fun p -> Packed.type_id_uid p, p))
   ;;
 
+  let find_packed_by_id = Map.find
+  let find_packed_by_id_exn = Map.find_exn
   let type_equal : ('s t, 's Packed.t Map.M(Type_equal.Id.Uid).t) Type_equal.t = T
 end
 
@@ -187,6 +189,8 @@ struct
 
   let to_alist = M.to_alist
   let of_alist_exn = M.of_alist_exn
+  let find_packed_by_id = M.find_packed_by_id
+  let find_packed_by_id_exn = M.find_packed_by_id_exn
   let type_equal : (t, Packed.t Map.M(Type_equal.Id.Uid).t) Type_equal.t = T
 end
 

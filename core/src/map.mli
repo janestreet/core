@@ -664,11 +664,11 @@ val transpose_keys
 (** The following functions have the same semantics as similar functions in
     {!Core.List}. *)
 
-val for_all : ('k, 'v, _) t -> f:(('v -> bool)[@local]) -> bool
+val for_all : (_, 'v, _) t -> f:(('v -> bool)[@local]) -> bool
 val for_alli : ('k, 'v, _) t -> f:((key:'k -> data:'v -> bool)[@local]) -> bool
-val exists : ('k, 'v, _) t -> f:(('v -> bool)[@local]) -> bool
+val exists : (_, 'v, _) t -> f:(('v -> bool)[@local]) -> bool
 val existsi : ('k, 'v, _) t -> f:((key:'k -> data:'v -> bool)[@local]) -> bool
-val count : ('k, 'v, _) t -> f:(('v -> bool)[@local]) -> int
+val count : (_, 'v, _) t -> f:(('v -> bool)[@local]) -> int
 val counti : ('k, 'v, _) t -> f:((key:'k -> data:'v -> bool)[@local]) -> int
 
 (** [split t key] returns a map of keys strictly less than [key], the mapping of [key] if

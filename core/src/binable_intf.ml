@@ -81,6 +81,7 @@ module type Binable0 = sig
       are exported only for backwards compatibility. *)
   module type S = S
 
+  module type S_local = S_local
   module type S_only_functions = S_only_functions
   module type S1 = S1
   module type S2 = S2

@@ -3,7 +3,7 @@
 type ('f, 's) t = ('f, 's) Base.Either.t =
   | First of 'f
   | Second of 's
-[@@deriving bin_io, typerep]
+[@@deriving bin_io ~localize, typerep]
 
 (** @inline *)
 include module type of struct
@@ -19,6 +19,7 @@ module Stable : sig
     type nonrec ('f, 's) t = ('f, 's) t =
       | First of 'f
       | Second of 's
+    [@@deriving bin_io ~localize]
 
     include Stable_module_types.With_stable_witness.S2 with type ('f, 's) t := ('f, 's) t
   end

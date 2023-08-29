@@ -1,7 +1,7 @@
 (** This module extends {{!Base.Option}[Base.Option]} with bin_io, quickcheck, and support
     for ppx_optional. *)
 
-type 'a t = 'a Base.Option.t [@@deriving bin_io, typerep]
+type 'a t = 'a Base.Option.t [@@deriving bin_io ~localize, typerep]
 
 (** @inline *)
 include module type of struct
@@ -17,7 +17,8 @@ val validate : none:unit Validate.check -> some:'a Validate.check -> 'a t Valida
 module Stable : sig
   module V1 : sig
     type nonrec 'a t = 'a t
-    [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar, stable_witness]
+    [@@deriving
+      bin_io ~localize, compare, equal, hash, sexp, sexp_grammar, stable_witness]
   end
 end
 

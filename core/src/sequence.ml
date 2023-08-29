@@ -49,7 +49,7 @@ let merge_all (module Heap : Heap) seqs ~compare =
       { heap : ('a * 'a Base.Sequence.t) Heap.t
       ; not_yet_in_heap : 'a Base.Sequence.t list
       }
-    [@@deriving fields]
+    [@@deriving fields ~iterators:create]
 
     let create = Fields.create
   end

@@ -9,7 +9,7 @@ type underlying = Int63.t
 
 let arch_sixtyfour = Int.equal Sys.word_size_in_bits 64
 let round_nearest_ns = Float.int63_round_nearest_exn
-let float x = Int63.to_float x
+let[@inline] float x = Int63.to_float x
 
 (* [Span] is basically a [Int63].  It even silently ignores overflow. *)
 module T = struct
@@ -45,6 +45,18 @@ let second = Int63.(of_int 1000 * millisecond)
 let minute = Int63.(of_int 60 * second)
 let hour = Int63.(of_int 60 * minute)
 let day = Int63.(of_int 24 * hour)
+let float_microsecond = float microsecond
+let float_millisecond = float millisecond
+let float_second = float second
+let float_minute = float minute
+let float_hour = float hour
+let float_day = float day
+let ns_per_us = 1. /. float_microsecond
+let ns_per_ms = 1. /. float_millisecond
+let ns_per_sec = 1. /. float_second
+let ns_per_min = 1. /. float_minute
+let ns_per_hr = 1. /. float_hour
+let ns_per_day = 1. /. float_day
 
 (* Beyond [min_value_for_1us_rounding..max_value_for_1us_rounding], not every microsecond
    can be represented as a [float] number of seconds. (In fact, it is around 135y, but we
@@ -106,12 +118,12 @@ let of_int_sec i = Int63.(of_int i * second)
 let of_int_min i = Int63.(of_int i * minute)
 let of_int_hr i = Int63.(of_int i * hour)
 let of_int_day i = Int63.(of_int i * day)
-let of_us f = round_nearest_ns (f *. float microsecond)
-let of_ms f = round_nearest_ns (f *. float millisecond)
-let of_sec f = round_nearest_ns (f *. float second)
-let of_min f = round_nearest_ns (f *. float minute)
-let of_hr f = round_nearest_ns (f *. float hour)
-let of_day f = round_nearest_ns (f *. float day)
+let of_us f = round_nearest_ns (f *. float_microsecond)
+let of_ms f = round_nearest_ns (f *. float_millisecond)
+let of_sec f = round_nearest_ns (f *. float_second)
+let of_min f = round_nearest_ns (f *. float_minute)
+let of_hr f = round_nearest_ns (f *. float_hour)
+let of_day f = round_nearest_ns (f *. float_day)
 
 let of_sec_with_microsecond_precision sec =
   let us = round_nearest_ns (sec *. 1e6) in
@@ -120,15 +132,20 @@ let of_sec_with_microsecond_precision sec =
 
 let of_int63_seconds x = x * second
 let of_int32_seconds x = of_int63_seconds (Int63.of_int32 x)
-
 let to_ns t = float t
 let to_int63_ns t = t
-let to_us t = float t /. float microsecond
-let to_ms t = float t /. float millisecond
-let to_sec t = float t /. float second
-let to_min t = float t /. float minute
-let to_hr t = float t /. float hour
-let to_day t = float t /. float day
+let[@inline] to_us t = float t /. float_microsecond
+let[@inline] to_ms t = float t /. float_millisecond
+let[@inline] to_sec t = float t /. float_second
+let[@inline] to_min t = float t /. float_minute
+let[@inline] to_hr t = float t /. float_hour
+let[@inline] to_day t = float t /. float_day
+let[@inline] to_us_approx t = float t *. ns_per_us
+let[@inline] to_ms_approx t = float t *. ns_per_ms
+let[@inline] to_sec_approx t = float t *. ns_per_sec
+let[@inline] to_min_approx t = float t *. ns_per_min
+let[@inline] to_hr_approx t = float t *. ns_per_hr
+let[@inline] to_day_approx t = float t *. ns_per_day
 let to_int_us t = Int63.(to_int_exn (t / microsecond))
 let to_int_ms t = Int63.(to_int_exn (t / millisecond))
 let to_int_sec t = Int63.(to_int_exn (t / second))

@@ -8,9 +8,9 @@ module Stable = struct
 
     module Z : sig
       type t = (char, int8_unsigned_elt, c_layout) Array1.t
-      [@@deriving bin_io, stable_witness]
+      [@@deriving bin_io ~localize, stable_witness]
     end = struct
-      type t = bigstring [@@deriving bin_io]
+      type t = bigstring [@@deriving bin_io ~localize]
 
       (* bigstring's serialization is intended to be stable.  We assert it here rather
          than asserting it in two separate places for the bin_io and sexp definitions. *)
@@ -19,7 +19,7 @@ module Stable = struct
 
     include Z
 
-    type t_frozen = t [@@deriving bin_io, stable_witness]
+    type t_frozen = t [@@deriving bin_io ~localize, stable_witness]
   end
 end
 

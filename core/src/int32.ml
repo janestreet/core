@@ -1,12 +1,11 @@
 open! Import
 
-include
-  Identifiable.Extend
-    (Base.Int32)
-    (struct
-      type t = int32 [@@deriving bin_io]
-    end)
+module Binable = struct
+  type t = int32 [@@deriving bin_io ~localize]
+end
 
+include Binable
+include Identifiable.Extend (Base.Int32) (Binable)
 include Base.Int32
 include Comparable.Validate_with_zero (Base.Int32)
 
@@ -15,7 +14,7 @@ type t = int32 [@@deriving typerep]
 module Hex = struct
   include Hex
 
-  type nonrec t = t [@@deriving typerep, bin_io]
+  type nonrec t = t [@@deriving typerep, bin_io ~localize]
 end
 
 let quickcheck_generator = Base_quickcheck.Generator.int32

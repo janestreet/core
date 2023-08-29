@@ -24,7 +24,7 @@ module Stable = struct
     module T1 = struct
       include Base.Float
 
-      type t = float [@@deriving bin_io, hash, sexp, stable_witness, typerep]
+      type t = float [@@deriving bin_io ~localize, hash, sexp, stable_witness, typerep]
     end
 
     include T1
@@ -116,7 +116,7 @@ module O = struct
 end
 
 module Terse = struct
-  type nonrec t = t [@@deriving bin_io]
+  type nonrec t = t [@@deriving bin_io ~localize]
 
   include (
     Base.Float.Terse :

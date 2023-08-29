@@ -5,7 +5,7 @@ module Stable = struct
     module T = struct
       include Base.Int
 
-      type t = int [@@deriving hash, bin_io, sexp, stable_witness]
+      type t = int [@@deriving hash, bin_io ~localize, sexp, stable_witness]
     end
 
     include T
@@ -13,13 +13,12 @@ module Stable = struct
   end
 end
 
-include
-  Identifiable.Extend
-    (Base.Int)
-    (struct
-      type t = int [@@deriving bin_io]
-    end)
+module Binable = struct
+  type t = int [@@deriving bin_io ~localize]
+end
 
+include Binable
+include Identifiable.Extend (Base.Int) (Binable)
 module Replace_polymorphic_compare = Base.Int
 include Base.Int
 include Comparable.Validate_with_zero (Base.Int)
@@ -33,7 +32,7 @@ type t = int [@@deriving typerep]
 module Hex = struct
   include Hex
 
-  type nonrec t = t [@@deriving typerep, bin_io]
+  type nonrec t = t [@@deriving typerep, bin_io ~localize]
 end
 
 let quickcheck_generator = Base_quickcheck.Generator.int

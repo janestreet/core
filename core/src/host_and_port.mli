@@ -16,6 +16,7 @@ val port : t -> int
 val tuple : t -> string * int
 
 include Identifiable with type t := t
+include Sexplib.Sexp_grammar.S with type t := t
 
 module Stable : sig
   module V1 : sig

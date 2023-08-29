@@ -22,6 +22,15 @@ module type Span = sig
   val to_int_ms : t -> int
   val to_int_sec : t -> int
 
+  (** Approximations of float conversions using multiplication instead of division. *)
+
+  val to_us_approx : t -> float
+  val to_ms_approx : t -> float
+  val to_sec_approx : t -> float
+  val to_min_approx : t -> float
+  val to_hr_approx : t -> float
+  val to_day_approx : t -> float
+
   (** The minimum representable time span. *)
   val min_value_representable : t
 
@@ -474,7 +483,7 @@ module type Time_ns = sig
 
     module Ofday : sig
       module V1 : sig
-        type t = Ofday.t [@@deriving equal, hash]
+        type t = Ofday.t [@@deriving equal, hash, sexp_grammar]
 
         include
           Stable_int63able.With_stable_witness.S

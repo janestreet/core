@@ -161,8 +161,9 @@ module Expert = struct
   type behavior =
     [ `Default
     | `Ignore
-    | `Handle of t -> unit
+    | `Handle of (t -> unit[@sexp.opaque])
     ]
+  [@@deriving sexp_of]
 
   module Behavior = struct
     let of_caml = function

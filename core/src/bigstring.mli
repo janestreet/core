@@ -166,15 +166,15 @@ val set_head_padded_fixed_string
   -> unit
 
 module Unstable : sig
-  type nonrec t = t [@@deriving bin_io, compare, sexp_of]
-  type nonrec t_frozen = t_frozen [@@deriving bin_io, compare, hash, sexp_of]
+  type nonrec t = t [@@deriving bin_io ~localize, compare, sexp_of]
+  type nonrec t_frozen = t_frozen [@@deriving bin_io ~localize, compare, hash, sexp_of]
 end
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving bin_io, stable_witness, compare, sexp]
+    type nonrec t = t [@@deriving bin_io ~localize, stable_witness, compare, sexp]
 
     type nonrec t_frozen = t_frozen
-    [@@deriving bin_io, stable_witness, compare, hash, sexp]
+    [@@deriving bin_io ~localize, stable_witness, compare, hash, sexp]
   end
 end

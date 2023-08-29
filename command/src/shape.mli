@@ -31,7 +31,7 @@ module Num_occurrences : sig
     { at_least_once : bool
     ; at_most_once : bool
     }
-  [@@deriving compare, enumerate, fields, sexp_of]
+  [@@deriving compare, enumerate, sexp_of]
 
   val to_help_string : t -> flag_name:string -> string
 end
@@ -42,7 +42,7 @@ module Flag_info : sig
     ; doc : string
     ; aliases : string list
     }
-  [@@deriving compare, fields, sexp_of]
+  [@@deriving compare, fields ~getters, sexp_of]
 
   (** [flag_name] infers the string which one would pass on the command line. It is not
       the same as the raw [name] field, which additionally encodes [num_occurrences] and
@@ -73,7 +73,7 @@ module Base_info : sig
     ; anons : Anons.t
     ; flags : Flag_info.t list
     }
-  [@@deriving compare, fields, sexp_of]
+  [@@deriving compare, fields ~getters, sexp_of]
 
   (** [find_flag t prefix] looks up the flag, if any, to which [prefix] refers.
 
@@ -96,7 +96,7 @@ module Group_info : sig
     ; readme : string option
     ; subcommands : (string, 'a) List.Assoc.t Lazy.t
     }
-  [@@deriving compare, fields, sexp_of]
+  [@@deriving compare, fields ~getters, sexp_of]
 
   val find_subcommand : 'a t -> string -> 'a Or_error.t
   val map : 'a t -> f:('a -> 'b) -> 'b t
@@ -113,7 +113,7 @@ module Exec_info : sig
     ; path_to_exe : string
     ; child_subcommand : string list
     }
-  [@@deriving compare, fields, sexp_of]
+  [@@deriving compare, sexp_of]
 
   val t_of_sexp : Sexp.t -> t
   [@@deprecated "[since 2020-04] Use [Command.Stable.Shape.Exec_info]."]

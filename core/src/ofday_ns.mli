@@ -3,7 +3,7 @@ include Time_ns_intf.Ofday with module Span := Span_ns
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving equal, hash]
+    type nonrec t = t [@@deriving equal, hash, sexp_grammar]
 
     include
       Stable_int63able.With_stable_witness.S

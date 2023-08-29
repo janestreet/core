@@ -1,12 +1,11 @@
 open! Import
 
-include
-  Identifiable.Extend
-    (Base.Nativeint)
-    (struct
-      type t = nativeint [@@deriving bin_io]
-    end)
+module Binable = struct
+  type t = nativeint [@@deriving bin_io ~localize]
+end
 
+include Binable
+include Identifiable.Extend (Base.Nativeint) (Binable)
 include Base.Nativeint
 include Comparable.Validate_with_zero (Base.Nativeint)
 
@@ -15,7 +14,7 @@ type t = nativeint [@@deriving typerep]
 module Hex = struct
   include Hex
 
-  type nonrec t = t [@@deriving typerep, bin_io]
+  type nonrec t = t [@@deriving typerep, bin_io ~localize]
 end
 
 let quickcheck_generator = Base_quickcheck.Generator.nativeint

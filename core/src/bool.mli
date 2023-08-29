@@ -1,6 +1,6 @@
 (** This module extends {{!Base.Bool}[Base.Bool]}. *)
 
-type t = bool [@@deriving bin_io, typerep]
+type t = bool [@@deriving bin_io ~localize, typerep]
 
 include module type of Base.Bool with type t := t
 
@@ -23,6 +23,6 @@ include Quickcheckable.S with type t := t
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving compare, sexp, bin_io, stable_witness]
+    type nonrec t = t [@@deriving compare, sexp, bin_io ~localize, stable_witness]
   end
 end

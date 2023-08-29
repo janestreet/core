@@ -104,7 +104,7 @@ let%expect_test "try_with" =
     ("" ("Exception raised during validation" (Failure "this function raises"))) |}]
 ;;
 
-type t = { x : bool } [@@deriving fields]
+type t = { x : bool } [@@deriving fields ~direct_iterators:fold]
 
 let%expect_test "typical use of Validate.field_direct_folder doesn't allocate on success" =
   let validate_x = Staged.unstage (Validate.field_direct_folder Validate.pass_bool) in

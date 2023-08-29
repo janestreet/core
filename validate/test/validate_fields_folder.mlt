@@ -6,7 +6,7 @@ let unstage = Staged.unstage
    [Validate.field_direct_folder] continue to work with private record types. *)
 
 module Fold_with_private (M : sig
-    type t = private { a : int } [@@deriving fields]
+    type t = private { a : int } [@@deriving fields ~iterators:fold]
   end) : sig
   val validate : M.t -> Validate.t
 end = struct
@@ -22,7 +22,7 @@ end
 |}]
 
 module Fold_regular (M : sig
-    type t = { a : int } [@@deriving fields]
+    type t = { a : int } [@@deriving fields ~iterators:fold]
   end) : sig
   val validate : M.t -> Validate.t
 end = struct
@@ -38,7 +38,7 @@ end
 |}]
 
 module Fold_direct_private (M : sig
-    type t = private { a : int } [@@deriving fields]
+    type t = private { a : int } [@@deriving fields ~direct_iterators:fold]
   end) : sig
   val validate : M.t -> Validate.t
 end = struct
@@ -54,7 +54,7 @@ end
 |}]
 
 module Fold_direct_regular (M : sig
-    type t = { a : int } [@@deriving fields]
+    type t = { a : int } [@@deriving fields ~direct_iterators:fold]
   end) : sig
   val validate : M.t -> Validate.t
 end = struct
@@ -70,7 +70,7 @@ end
 |}]
 
 module Validate_field_private (M : sig
-    type t = private { a : int } [@@deriving fields]
+    type t = private { a : int } [@@deriving fields ~iterators:fold]
   end) : sig
   val validate : M.t -> Validate.t
 end = struct
@@ -86,7 +86,7 @@ end
 |}]
 
 module Validate_field (M : sig
-    type t = { a : int } [@@deriving fields]
+    type t = { a : int } [@@deriving fields ~iterators:fold]
   end) : sig
   val validate : M.t -> Validate.t
 end = struct

@@ -4,7 +4,7 @@ include module type of struct
   include Base.List
 end
 
-type 'a t = 'a Base.List.t [@@deriving bin_io, typerep]
+type 'a t = 'a Base.List.t [@@deriving bin_io ~localize, typerep]
 
 include Comparator.Derived with type 'a t := 'a t
 include Quickcheckable.S1 with type 'a t := 'a t
@@ -25,7 +25,7 @@ module Assoc : sig
     include Base.List.Assoc
   end
 
-  type ('a, 'b) t = ('a, 'b) Base.List.Assoc.t [@@deriving bin_io]
+  type ('a, 'b) t = ('a, 'b) Base.List.Assoc.t [@@deriving bin_io ~localize]
 
   val compare : ('a -> 'a -> int) -> ('b -> 'b -> int) -> ('a, 'b) t -> ('a, 'b) t -> int
   [@@deprecated

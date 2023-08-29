@@ -5,7 +5,7 @@ include module type of struct
   include Base.String
 end
 
-type t = string [@@deriving bin_io, typerep]
+type t = string [@@deriving bin_io ~localize, typerep]
 
 (** [Caseless] compares and hashes strings ignoring case, so that for example
     [Caseless.equal "OCaml" "ocaml"] and [Caseless.("apple" < "Banana")] are [true], and
@@ -20,7 +20,7 @@ module Caseless : sig
     include Caseless
   end
 
-  type nonrec t = t [@@deriving bin_io, hash, sexp]
+  type nonrec t = t [@@deriving bin_io ~localize, hash, sexp]
 
 
   include Comparable.S_binable with type t := t
@@ -67,7 +67,7 @@ val gen_with_length : int -> char Quickcheck.Generator.t -> t Quickcheck.Generat
     uniformity with other stable types. *)
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving equal, hash, sexp_grammar]
+    type nonrec t = t [@@deriving bin_io ~localize, equal, hash, sexp_grammar]
 
     include Base.Stringable.S with type t := t
 

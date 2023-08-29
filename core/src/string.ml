@@ -9,7 +9,7 @@ module Stable = struct
     module T = struct
       include Base.String
 
-      type t = string [@@deriving bin_io, stable_witness]
+      type t = string [@@deriving bin_io ~localize, stable_witness]
     end
 
     include T
@@ -26,7 +26,7 @@ module Caseless = struct
   module T = struct
     include Caseless
 
-    type t = string [@@deriving bin_io]
+    type t = string [@@deriving bin_io ~localize]
   end
 
   include T
@@ -34,7 +34,7 @@ module Caseless = struct
   include Hashable.Make_binable (T)
 end
 
-type t = string [@@deriving typerep]
+type t = string [@@deriving bin_io ~localize, typerep]
 
 include
   Identifiable.Extend

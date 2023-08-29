@@ -9,10 +9,10 @@ include module type of struct
   include Base.List
 end
 
-type 'a t = 'a list [@@deriving bin_io, typerep]
+type 'a t = 'a list [@@deriving bin_io ~localize, typerep]
 
 module Assoc : sig
-  type ('a, 'b) t = ('a, 'b) Base.List.Assoc.t [@@deriving bin_io]
+  type ('a, 'b) t = ('a, 'b) Base.List.Assoc.t [@@deriving bin_io ~localize]
 
   val compare : [%compare: 'a] -> [%compare: 'b] -> [%compare: ('a, 'b) t]
   [@@deprecated
@@ -95,6 +95,6 @@ val zip_with_remainder
 module Stable : sig
   module V1 : sig
     type nonrec 'a t = 'a t
-    [@@deriving sexp, sexp_grammar, bin_io, compare, hash, stable_witness]
+    [@@deriving sexp, sexp_grammar, bin_io ~localize, compare, hash, stable_witness]
   end
 end

@@ -748,17 +748,17 @@ let gen_uniform_incl lo hi =
 ;;
 
 let quickcheck_generator =
-  (* We generate spans up to (slightly more than) a millenium, positive or negative. This
+  (* We generate spans up to (slightly more than) a millennium, positive or negative. This
      is based on the Gregorian calendar, in which years average 365.2425 days when
-     accounting for leap days. Covering a two-millenium span is more than enough for most
+     accounting for leap days. Covering a two-millennium span is more than enough for most
      practical purposes, certainly more than enough to cover the representable range of
      [Span_ns], and results in finite spans and times that can be serialized.
 
      We generate by filtering the default generator so that spans are still skewed toward
      small values, even though the bounds are large. *)
-  let millenium = of_day (Float.round_up (365.2425 *. 1000.)) in
+  let millennium = of_day (Float.round_up (365.2425 *. 1000.)) in
   Quickcheck.Generator.filter quickcheck_generator ~f:(fun t ->
-    neg millenium <= t && t <= millenium)
+    neg millennium <= t && t <= millennium)
 ;;
 
 include Pretty_printer.Register (struct

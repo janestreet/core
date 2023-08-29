@@ -2,7 +2,7 @@ open! Import
 
 module Stable = struct
   module V1 = struct
-    type t = bool [@@deriving compare, sexp, bin_io, stable_witness]
+    type t = bool [@@deriving compare, sexp, bin_io ~localize, stable_witness]
   end
 end
 

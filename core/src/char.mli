@@ -3,7 +3,7 @@
     data.
 *)
 
-type t = char [@@deriving typerep]
+type t = char [@@deriving typerep, bin_io ~localize]
 
 (** {2 The signature included from [Base.Char]} *)
 
@@ -20,7 +20,7 @@ with type t := t
     [Caseless.Map], [Caseless.Table] lookup and [Caseless.Set] membership is
     case-insensitive. *)
 module Caseless : sig
-  type nonrec t = t [@@deriving bin_io, hash, sexp]
+  type nonrec t = t [@@deriving bin_io ~localize, hash, sexp]
 
   include Comparable.S_binable with type t := t
   include Hashable.S_binable with type t := t

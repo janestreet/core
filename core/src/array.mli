@@ -7,7 +7,7 @@ open Perms.Export
 
 (** {2 The [Array] type} *)
 
-type 'a t = 'a Base.Array.t [@@deriving bin_io, quickcheck, typerep]
+type 'a t = 'a Base.Array.t [@@deriving bin_io ~localize, quickcheck, typerep]
 
 (** {2 The signature included from [Base.Array]} *)
 
@@ -27,7 +27,7 @@ with type 'a t := 'a t
 *)
 
 module Int : sig
-  type nonrec t = int t [@@deriving bin_io, compare, sexp]
+  type nonrec t = int t [@@deriving bin_io ~localize, compare, sexp]
 
   include Blit.S with type t := t
 
@@ -43,7 +43,7 @@ module Int : sig
 end
 
 module Float : sig
-  type nonrec t = float t [@@deriving bin_io, compare, sexp]
+  type nonrec t = float t [@@deriving bin_io ~localize, compare, sexp]
 
   include Blit.S with type t := t
 
@@ -84,10 +84,10 @@ module Permissioned : sig
       information about the length of an array can leak out even if you only have write
       permissions since you can catch out-of-bounds errors.
   *)
-  type ('a, -'perms) t [@@deriving bin_io, compare, sexp]
+  type ('a, -'perms) t [@@deriving bin_io ~localize, compare, sexp]
 
   module Int : sig
-    type nonrec -'perms t = (int, 'perms) t [@@deriving bin_io, compare, sexp]
+    type nonrec -'perms t = (int, 'perms) t [@@deriving bin_io ~localize, compare, sexp]
 
     include Blit.S_permissions with type 'perms t := 'perms t
 
@@ -103,7 +103,7 @@ module Permissioned : sig
   end
 
   module Float : sig
-    type nonrec -'perms t = (float, 'perms) t [@@deriving bin_io, compare, sexp]
+    type nonrec -'perms t = (float, 'perms) t [@@deriving bin_io ~localize, compare, sexp]
 
     include Blit.S_permissions with type 'perms t := 'perms t
 

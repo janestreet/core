@@ -54,6 +54,12 @@ module type Raw_bin_io_compare_hash_sexp = sig
   include Raw_bin_io with type t := t
 end
 
+module type Raw_bin_io_compare_globalize_hash_sexp = sig
+  type t [@@deriving globalize]
+
+  include Raw_bin_io_compare_hash_sexp with type t := t
+end
+
 (** [S_allowing_substitution] is the same as [S], but allows writing interfaces like:
 
     {[
@@ -78,6 +84,7 @@ module type S_allowing_substitution = sig
   val create : raw -> t Or_error.t
   val create_exn : raw -> t
   val raw : t -> raw
+  val raw_local : (t[@local]) -> (raw[@local])
   val create_stable_witness : raw Stable_witness.t -> t Stable_witness.t
   val type_equal : (t, (raw, witness) validated) Type_equal.t
 end
@@ -114,10 +121,20 @@ module type S_bin_io_compare_hash_sexp = sig
   with type t := t
 end
 
+module type S_bin_io_compare_globalize_hash_sexp = sig
+  include S_bin_io_compare_hash_sexp
+
+  include sig
+    type t = (raw, witness) validated [@@deriving globalize]
+  end
+  with type t := t
+end
+
 module type Validated = sig
   type ('raw, 'witness) t = private 'raw
 
   val raw : ('raw, _) t -> 'raw
+  val raw_local : (('raw, _) t[@local]) -> ('raw[@local])
 
   module type Raw = Raw
   module type S = S with type ('a, 'b) validated := ('a, 'b) t
@@ -130,12 +147,19 @@ module type Validated = sig
   module type S_bin_io_compare_hash_sexp =
     S_bin_io_compare_hash_sexp with type ('a, 'b) validated := ('a, 'b) t
 
+  module type S_bin_io_compare_globalize_hash_sexp =
+    S_bin_io_compare_globalize_hash_sexp with type ('a, 'b) validated := ('a, 'b) t
+
   module Make (Raw : Raw) : S with type raw := Raw.t
   module Make_binable (Raw : Raw_bin_io) : S_bin_io with type raw := Raw.t
 
   (** [Make_bin_io_compare_hash_sexp] is useful for stable types. *)
   module Make_bin_io_compare_hash_sexp (Raw : Raw_bin_io_compare_hash_sexp) :
     S_bin_io_compare_hash_sexp with type raw := Raw.t
+
+  module Make_bin_io_compare_globalize_hash_sexp
+      (Raw : Raw_bin_io_compare_globalize_hash_sexp) :
+    S_bin_io_compare_globalize_hash_sexp with type raw := Raw.t
 
   module Add_bin_io (Raw : sig
       type t [@@deriving bin_io]

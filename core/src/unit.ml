@@ -6,7 +6,7 @@ module Stable = struct
 
   module V1 = struct
     module T = struct
-      type t = unit [@@deriving bin_io, compare, sexp, stable_witness]
+      type t = unit [@@deriving bin_io ~localize, compare, sexp, stable_witness]
     end
 
     include T
@@ -37,7 +37,9 @@ module Stable = struct
 
     let bin_shape_t = Bin_prot.Shape.(basetype (Uuid.of_string bin_name)) []
     let bin_size_t () = 0
+    let bin_size_t__local () = 0
     let bin_write_t (_ : Bin_prot.Common.buf) ~pos () = pos
+    let bin_write_t__local (_ : Bin_prot.Common.buf) ~pos () = pos
     let bin_writer_t = { Bin_prot.Type_class.size = bin_size_t; write = bin_write_t }
 
     let bin_t =
@@ -65,7 +67,7 @@ include
 
 include Base.Unit
 
-type t = unit [@@deriving typerep]
+type t = unit [@@deriving typerep, bin_io ~localize]
 
 let quickcheck_generator = Base_quickcheck.Generator.unit
 let quickcheck_observer = Base_quickcheck.Observer.unit

@@ -1436,3 +1436,108 @@ let%expect_test "[to_ofday] never returns 24:00" =
         (fun ofday -> Time_ns.Ofday.( < ) ofday Time_ns.Ofday.start_of_next_day)
         ofday)
 ;;
+
+let%expect_test "approximate conversions" =
+  let open Time_ns.Span in
+  let test to_precise to_approx =
+    (* show that conversion can be imprecise *)
+    quickcheck_m
+      [%here]
+      ~cr:Comment
+      (module Time_ns.Span)
+      ~f:(fun span ->
+        let precise = to_precise span in
+        let approx = to_approx span in
+        if Float.( <> ) precise approx
+        then (
+          let diff = approx -. precise in
+          print_cr
+            [%here]
+            ~cr:Comment
+            [%message
+              "result can be imprecise"
+                (span : Time_ns.Span.t)
+                (precise : float)
+                (approx : float)
+                (diff : float)]));
+    (* check that imprecision is at most 1 ULP *)
+    quickcheck_m
+      [%here]
+      (module Time_ns.Span)
+      ~f:(fun span ->
+        let precise = to_precise span in
+        let approx = to_approx span in
+        if Float.( > ) approx (Float.one_ulp `Up precise)
+        || Float.( < ) approx (Float.one_ulp `Down precise)
+        then (
+          let diff = approx -. precise in
+          print_cr
+            [%here]
+            [%message
+              "imprecision can exceed 1 ULP"
+                (span : Time_ns.Span.t)
+                (precise : float)
+                (approx : float)
+                (diff : float)]))
+  in
+  test to_us to_us_approx;
+  [%expect
+    {|
+    ("quickcheck: test failed" (input -225.617us))
+    (* require-failed: lib/core/test/test_time_ns.ml:LINE:COL. *)
+    ("result can be imprecise"
+      (span    -225.617us)
+      (precise -225.617)
+      (approx  -225.61700000000002)
+      (diff    -2.8421709430404007E-14)) |}];
+  test to_ms to_ms_approx;
+  [%expect
+    {|
+    ("quickcheck: test failed" (input -627d5h39m8.208643064s))
+    (* require-failed: lib/core/test/test_time_ns.ml:LINE:COL. *)
+    ("result can be imprecise"
+      (span    -627d5h39m8.208643064s)
+      (precise -54193148208.643066)
+      (approx  -54193148208.643059)
+      (diff    7.62939453125E-06)) |}];
+  test to_sec to_sec_approx;
+  [%expect
+    {|
+    ("quickcheck: test failed" (input -15.508265059s))
+    (* require-failed: lib/core/test/test_time_ns.ml:LINE:COL. *)
+    ("result can be imprecise"
+      (span    -15.508265059s)
+      (precise -15.508265059)
+      (approx  -15.508265059000001)
+      (diff    -1.7763568394002505E-15)) |}];
+  test to_min to_min_approx;
+  [%expect
+    {|
+    ("quickcheck: test failed" (input 44.923us))
+    (* require-failed: lib/core/test/test_time_ns.ml:LINE:COL. *)
+    ("result can be imprecise"
+      (span    44.923us)
+      (precise 7.4871666666666662E-07)
+      (approx  7.4871666666666673E-07)
+      (diff    1.0587911840678754E-22)) |}];
+  test to_hr to_hr_approx;
+  [%expect
+    {|
+    ("quickcheck: test failed" (input 76.753us))
+    (* require-failed: lib/core/test/test_time_ns.ml:LINE:COL. *)
+    ("result can be imprecise"
+      (span    76.753us)
+      (precise 2.1320277777777777E-08)
+      (approx  2.132027777777778E-08)
+      (diff    3.3087224502121107E-24)) |}];
+  test to_day to_day_approx;
+  [%expect
+    {|
+    ("quickcheck: test failed" (input -225.617us))
+    (* require-failed: lib/core/test/test_time_ns.ml:LINE:COL. *)
+    ("result can be imprecise"
+      (span    -225.617us)
+      (precise -2.6113078703703705E-09)
+      (approx  -2.61130787037037E-09)
+      (diff    4.1359030627651384E-25)) |}]
+;;

@@ -16,7 +16,11 @@ module type S_bin_io = S_bin_io with type ('a, 'b) validated := ('a, 'b) t
 module type S_bin_io_compare_hash_sexp =
   S_bin_io_compare_hash_sexp with type ('a, 'b) validated := ('a, 'b) t
 
+module type S_bin_io_compare_globalize_hash_sexp =
+  S_bin_io_compare_globalize_hash_sexp with type ('a, 'b) validated := ('a, 'b) t
+
 let raw t = t
+let raw_local t = t
 
 module Make (Raw : Raw) = struct
   type witness
@@ -43,6 +47,7 @@ module Make (Raw : Raw) = struct
 
   let t_of_sexp sexp = create_exn (Raw.t_of_sexp sexp)
   let raw t = t
+  let raw_local t = t
 
   let create_stable_witness raw_stable_witness =
     Stable_witness.of_serializable raw_stable_witness create_exn raw
@@ -80,6 +85,25 @@ module Add_compare (Raw : sig
     (_ : S with type raw := Raw.t) =
 struct
   let compare t1 t2 = [%compare: Raw.t] (raw t1) (raw t2)
+end
+
+(* We don't expose [Validated.Add_globalize] because it can be used in a way that can
+   create an unvalidated [Validated.t]:
+
+   {[
+     let backdoor (example_validated : Validated.t) (unvalidated : Your_raw.t) : Validated.t =
+       let module M = Add_globalize (struct type include Your_raw let globalize _ = unvalidated end) (Your_validated) in
+       M.globalize example_validated
+     ;;
+   ]} *)
+module Add_globalize (Raw : sig
+    type t [@@deriving globalize]
+
+    include Raw with type t := t
+  end)
+    (_ : S with type raw := Raw.t) =
+struct
+  let globalize t = Raw.globalize t
 end
 
 module Add_hash (Raw : sig
@@ -125,4 +149,12 @@ struct
       type t [@@deriving hash]
     end
     with type t := t)
+end
+
+module Make_bin_io_compare_globalize_hash_sexp
+    (Raw : Raw_bin_io_compare_globalize_hash_sexp) =
+struct
+  module T1 = Make_bin_io_compare_hash_sexp (Raw)
+  include T1
+  include Add_globalize (Raw) (T1)
 end
