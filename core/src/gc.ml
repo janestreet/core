@@ -433,7 +433,7 @@ module For_testing = struct
   (* We disable inlining for this function so the GC stats and the call to [f] are never
      rearranged. *)
   let[@cold] measure_internal ~on_result (f : unit -> ('a[@local])) =
-    
+    [%ocaml.local]
       (let minor_words_before = minor_words () in
        let major_words_before = major_words () in
        (* We wrap [f ()] with [Sys.opaque_identity] to prevent the return value from being
@@ -467,16 +467,16 @@ module For_testing = struct
     [@@deriving sexp_of, globalize]
 
     let create ~major_words_allocated ~minor_words_allocated =
-       { major_words_allocated; minor_words_allocated }
+      [%ocaml.local] { major_words_allocated; minor_words_allocated }
     ;;
   end
 
   let measure_allocation_local f =
-    
+    [%ocaml.local]
       (measure_internal
          f
          ~on_result:(fun ~major_words_allocated ~minor_words_allocated x ->
-         
+         [%ocaml.local]
            (x, Allocation_report.create ~major_words_allocated ~minor_words_allocated)))
   ;;
 
@@ -499,7 +499,7 @@ module For_testing = struct
   [%%if ocaml_version >= (4, 11, 0)]
 
   let measure_and_log_allocation_local ((f : unit -> ('a[@local])) [@local]) =
-    
+    [%ocaml.local]
       (let log : Allocation_log.t list ref = ref []
        and major_allocs = ref 0
        and minor_allocs = ref 0 in
@@ -587,7 +587,7 @@ module For_testing = struct
   ;;
 
   let assert_no_allocation_local here f =
-    
+    [%ocaml.local]
       (let result, allocation_report, allocation_log =
          measure_and_log_allocation_local f
        in

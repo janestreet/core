@@ -153,7 +153,7 @@ let get_tail_padded_fixed_string ~padding t ~pos ~len () =
 ;;
 
 let get_tail_padded_fixed_string_local ~padding t ~pos ~len () =
-  
+  [%ocaml.local]
     (let data_end =
        last_nonmatch_plus_one ~buf:t ~min_pos:pos ~pos:(pos + len) ~char:padding
      in
@@ -202,7 +202,7 @@ let get_head_padded_fixed_string ~padding t ~pos ~len () =
 ;;
 
 let get_head_padded_fixed_string_local ~padding t ~pos ~len () =
-  
+  [%ocaml.local]
     (let data_begin = first_nonmatch ~buf:t ~pos ~max_pos:(pos + len - 1) ~char:padding in
      let len = len - (data_begin - pos) in
      let dst = Bytes.create_local len in
