@@ -4,7 +4,6 @@ include module type of struct
   include Base.Ordered_collection_common
 end
 
-
 val normalize : length_fun:('a -> int) -> 'a -> int -> int
 
 val slice

@@ -449,13 +449,13 @@ module Flag_info = struct
   let num_occurrences t =
     parse_name t
     |> Or_error.map ~f:(fun (num_occurrences, (_ : bool), (_ : string)) ->
-      num_occurrences)
+         num_occurrences)
   ;;
 
   let requires_arg t =
     parse_name t
     |> Or_error.map ~f:(fun ((_ : Num_occurrences.t), requires_arg, (_ : string)) ->
-      requires_arg)
+         requires_arg)
   ;;
 
   let help_screen_compare a b =
@@ -519,11 +519,7 @@ module Flag_help_display = struct
     let indentation = "  "
     let indent_and_newline x = List.concat [ [ indentation ]; x; [ "\n" ] ]
     let spacing_dot = ". "
-
-    let dot_indentation_offset =
-      27
-    ;;
-
+    let dot_indentation_offset = 27
     let documentation_start_column = dot_indentation_offset + String.length indentation
     let lhs_width = documentation_start_column
     let lhs_pad_width = dot_indentation_offset + String.length indentation

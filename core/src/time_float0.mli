@@ -12,9 +12,9 @@ with module Stable := Ofday_float.Stable
 
 include
   Time0_intf.S
-  with type underlying = float
-   and module Span := Span
-   and module Ofday := Ofday
+    with type underlying = float
+     and module Span := Span
+     and module Ofday := Ofday
 
 module Stable : sig
   module Span = Span_float.Stable

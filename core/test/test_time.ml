@@ -448,18 +448,18 @@ let%test_module "Span.to_string/of_string" =
         ~sexp_of:Time_float.Span.sexp_of_t
         ~examples:near_powers_of_10
         ~f:(fun span ->
-          let string = Time_float.Span.to_string span in
-          let round_trip = Time_float.Span.of_string string in
-          require
-            [%here]
-            (Time_float.Span.equal round_trip span)
-            ~if_false_then_print_s:
-              (lazy
-                [%message
-                  "string round-trip is not precise"
-                    (span : Time_float.Span.t)
-                    (string : string)
-                    (round_trip : Time_float.Span.t)]));
+        let string = Time_float.Span.to_string span in
+        let round_trip = Time_float.Span.of_string string in
+        require
+          [%here]
+          (Time_float.Span.equal round_trip span)
+          ~if_false_then_print_s:
+            (lazy
+              [%message
+                "string round-trip is not precise"
+                  (span : Time_float.Span.t)
+                  (string : string)
+                  (round_trip : Time_float.Span.t)]));
       [%expect {| |}]
     ;;
 
@@ -488,27 +488,27 @@ let%test_module "Span.to_string/of_string" =
         string_with_underscores_gen
         ~sexp_of:String.sexp_of_t
         ~f:(fun string_with_underscores ->
-          require_does_not_raise [%here] (fun () ->
-            let span = Time_float.Span.of_string string_with_underscores in
-            let string_without_underscores = Time_float.Span.to_string span in
-            let round_trip = Time_float.Span.of_string string_without_underscores in
-            require_equal
-              [%here]
-              (module Time_float.Span)
-              span
-              round_trip
-              ~if_false_then_print_s:(lazy [%message string_without_underscores]);
-            let string_with_underscores_removed =
-              String.filter string_with_underscores ~f:(function
-                | '_' -> false
-                | _ -> true)
-            in
-            require_equal
-              [%here]
-              (module String)
-              string_without_underscores
-              string_with_underscores_removed
-              ~if_false_then_print_s:(lazy [%sexp (span : Time_float.Span.t)])));
+        require_does_not_raise [%here] (fun () ->
+          let span = Time_float.Span.of_string string_with_underscores in
+          let string_without_underscores = Time_float.Span.to_string span in
+          let round_trip = Time_float.Span.of_string string_without_underscores in
+          require_equal
+            [%here]
+            (module Time_float.Span)
+            span
+            round_trip
+            ~if_false_then_print_s:(lazy [%message string_without_underscores]);
+          let string_with_underscores_removed =
+            String.filter string_with_underscores ~f:(function
+              | '_' -> false
+              | _ -> true)
+          in
+          require_equal
+            [%here]
+            (module String)
+            string_without_underscores
+            string_with_underscores_removed
+            ~if_false_then_print_s:(lazy [%sexp (span : Time_float.Span.t)])));
       [%expect {| |}]
     ;;
 
@@ -542,9 +542,9 @@ let%test_module "Span.to_string/of_string" =
       float_gen_uniform_exponent ~min_exponent ~max_exponent
       |> Quickcheck.Generator.map ~f:Time_float.Span.of_sec
       |> Quickcheck.Generator.filter ~f:(fun span ->
-        let magnitude = Time_float.Span.abs span in
-        Time_float.Span.( > ) magnitude magnitude_low
-        && Time_float.Span.( < ) magnitude magnitude_high)
+           let magnitude = Time_float.Span.abs span in
+           Time_float.Span.( > ) magnitude magnitude_low
+           && Time_float.Span.( < ) magnitude magnitude_high)
     ;;
 
     let test_part_magnitudes ~magnitude_low ~magnitude_high ~allow_abnormal_frac =
@@ -574,7 +574,7 @@ let%test_module "Span.to_string/of_string" =
         let magnitudes_and_units =
           String.to_list string
           |> List.group ~break:(fun a b ->
-            Bool.( <> ) (is_float_char a) (is_float_char b))
+               Bool.( <> ) (is_float_char a) (is_float_char b))
           |> List.map ~f:String.of_char_list
         in
         parts_of_list magnitudes_and_units
@@ -597,21 +597,21 @@ let%test_module "Span.to_string/of_string" =
         quickcheck_generator
         ~sexp_of:Time_float.Span.sexp_of_t
         ~f:(fun span ->
-          let seconds = Time_float.Span.to_sec span in
-          let ulp = Float.one_ulp `Up seconds -. seconds in
-          let string = Time_float.Span.to_string span in
-          require
-            [%here]
-            (Time_float.Span.of_string string = span)
-            ~if_false_then_print_s:
-              (lazy
-                [%message
-                  "span failed to round-trip string conversion"
-                    (string : string)
-                    (seconds : float)]);
-          let parts = parts_of_string string in
-          let is_abnormal =
-            (* Spans with a ULP over half a minute start to have abnormal parts like
+        let seconds = Time_float.Span.to_sec span in
+        let ulp = Float.one_ulp `Up seconds -. seconds in
+        let string = Time_float.Span.to_string span in
+        require
+          [%here]
+          (Time_float.Span.of_string string = span)
+          ~if_false_then_print_s:
+            (lazy
+              [%message
+                "span failed to round-trip string conversion"
+                  (string : string)
+                  (seconds : float)]);
+        let parts = parts_of_string string in
+        let is_abnormal =
+          (* Spans with a ULP over half a minute start to have abnormal parts like
                "60s".  This is an artifact of our [to_string] algorithm and how it uses
                smaller units of time to correct for rounding error in the larger ones;
                once the rounding error is over half the size of the previous unit, the
@@ -621,49 +621,49 @@ let%test_module "Span.to_string/of_string" =
                rarely used, we tolerate the abnormality, but only in the very last
                part. Additionally, we very occasionally have remainders that are >900us,
                but we print 1 decimal place and end up printing 1000us instead of 1ms *)
-            List.fold parts ~init:false ~f:(fun has_abnormal (magnitude, unit_of_time) ->
-              let open Float.O in
-              require
-                [%here]
-                (not has_abnormal)
-                ~if_false_then_print_s:
-                  (lazy [%message "abnormal span part not last" (string : string)]);
-              require
-                [%here]
-                (magnitude > 0.)
-                ~if_false_then_print_s:
-                  (lazy
-                    [%message
-                      "magnitude is negative"
-                        (string : string)
-                        (magnitude : float)
-                        (unit_of_time : Unit_of_time.t)]);
-              Option.value_map
-                ~default:false
-                (upper_bound unit_of_time)
-                ~f:(fun upper_bound ->
-                  (* we tolerate one abnormality where the very last part is exactly at
+          List.fold parts ~init:false ~f:(fun has_abnormal (magnitude, unit_of_time) ->
+            let open Float.O in
+            require
+              [%here]
+              (not has_abnormal)
+              ~if_false_then_print_s:
+                (lazy [%message "abnormal span part not last" (string : string)]);
+            require
+              [%here]
+              (magnitude > 0.)
+              ~if_false_then_print_s:
+                (lazy
+                  [%message
+                    "magnitude is negative"
+                      (string : string)
+                      (magnitude : float)
+                      (unit_of_time : Unit_of_time.t)]);
+            Option.value_map
+              ~default:false
+              (upper_bound unit_of_time)
+              ~f:(fun upper_bound ->
+              (* we tolerate one abnormality where the very last part is exactly at
                      the upper bound *)
-                  if magnitude = upper_bound
-                  then true
-                  else (
-                    require
-                      [%here]
-                      (magnitude < upper_bound)
-                      ~if_false_then_print_s:
-                        (lazy
-                          [%message
-                            "magnitude out of bounds"
-                              (string : string)
-                              (seconds : float)
-                              (ulp : float)
-                              (magnitude : float)
-                              (upper_bound : float)
-                              (unit_of_time : Unit_of_time.t)]);
-                    false)))
-          in
-          incr test_count;
-          if is_abnormal then incr abnormal_count);
+              if magnitude = upper_bound
+              then true
+              else (
+                require
+                  [%here]
+                  (magnitude < upper_bound)
+                  ~if_false_then_print_s:
+                    (lazy
+                      [%message
+                        "magnitude out of bounds"
+                          (string : string)
+                          (seconds : float)
+                          (ulp : float)
+                          (magnitude : float)
+                          (upper_bound : float)
+                          (unit_of_time : Unit_of_time.t)]);
+                false)))
+        in
+        incr test_count;
+        if is_abnormal then incr abnormal_count);
       let abnormal_frac = Float.of_int !abnormal_count /. Float.of_int !test_count in
       if Float.(abnormal_frac > allow_abnormal_frac)
       then
@@ -885,7 +885,7 @@ let%expect_test "Span.to_parts + Span.create" =
 let ofday_examples =
   List.filter_map span_examples ~f:(fun span ->
     if Time_float.Span.( >= ) span Time_float.Span.zero
-    && Time_float.Span.( < ) span Time_float.Span.day
+       && Time_float.Span.( < ) span Time_float.Span.day
     then Some (Time_float.Ofday.of_span_since_start_of_day_exn span)
     else None)
 ;;
@@ -1046,28 +1046,28 @@ let%expect_test "of_string_iso8601_extended" =
     ; "12:34:56.789"
     ; "12:34:56.789123"
     ; "12:34:56.789123456"
-      ; (* lower boundary case *)
+    ; (* lower boundary case *)
       "00"
     ; "00:00"
     ; "00:00:00"
     ; "00:00:00.000"
     ; "00:00:00.000000"
     ; "00:00:00.000000000"
-      ; (* upper boundary case *)
+    ; (* upper boundary case *)
       "23"
     ; "23:59"
     ; "23:59:59"
     ; "23:59:59.999"
     ; "23:59:59.999999"
     ; "23:59:59.999999999"
-      ; (* midnight tomorrow *)
+    ; (* midnight tomorrow *)
       "24"
     ; "24:00"
     ; "24:00:00"
     ; "24:00:00.000"
     ; "24:00:00.000000"
     ; "24:00:00.000000000"
-      ; (* leap second *)
+    ; (* leap second *)
       "12:59:60"
     ; "12:59:60.789"
     ; "12:59:60.789123"
@@ -1127,7 +1127,7 @@ let%expect_test "of_string_iso8601_extended" =
     ; "12:345"
     ; "12:34:"
     ; "12:34:5"
-      ; (* numerical bounds *)
+    ; (* numerical bounds *)
       "25:00"
     ; "00:60"
     ; "00:59:61"
@@ -1283,44 +1283,44 @@ module _ = struct
 
     let%test_module "Span.V1" =
       (module Stable_unit_test.Make (struct
-           include V1
+        include V1
 
-           let equal t1 t2 = Int.( = ) 0 (compare t1 t2)
+        let equal t1 t2 = Int.( = ) 0 (compare t1 t2)
 
-           let tests =
-             let span = of_sec in
-             [ span 99e-12, "9.9e-08ms", "\018\006\211\115\129\054\219\061"
-             ; span 1.2e-9, "1.2e-06ms", "\076\206\097\227\167\157\020\062"
-             ; span 0.000001, "0.001ms", "\141\237\181\160\247\198\176\062"
-             ; span 0.707, "707ms", "\057\180\200\118\190\159\230\063"
-             ; span 42., "42s", "\000\000\000\000\000\000\069\064"
-             ; span 1234.56, "20.576m", "\010\215\163\112\061\074\147\064"
-             ; span 39_996., "11.11h", "\000\000\000\000\128\135\227\064"
-             ; span 80000006.4, "925.926d", "\154\153\153\025\208\018\147\065"
-             ]
-           ;;
-         end))
+        let tests =
+          let span = of_sec in
+          [ span 99e-12, "9.9e-08ms", "\018\006\211\115\129\054\219\061"
+          ; span 1.2e-9, "1.2e-06ms", "\076\206\097\227\167\157\020\062"
+          ; span 0.000001, "0.001ms", "\141\237\181\160\247\198\176\062"
+          ; span 0.707, "707ms", "\057\180\200\118\190\159\230\063"
+          ; span 42., "42s", "\000\000\000\000\000\000\069\064"
+          ; span 1234.56, "20.576m", "\010\215\163\112\061\074\147\064"
+          ; span 39_996., "11.11h", "\000\000\000\000\128\135\227\064"
+          ; span 80000006.4, "925.926d", "\154\153\153\025\208\018\147\065"
+          ]
+        ;;
+      end))
     ;;
 
     let%test_module "Span.V2" =
       (module Stable_unit_test.Make (struct
-           include V2
+        include V2
 
-           let equal t1 t2 = Int.( = ) 0 (compare t1 t2)
+        let equal t1 t2 = Int.( = ) 0 (compare t1 t2)
 
-           let tests =
-             let span = of_sec in
-             [ span 99e-12, "0.098999999999999991ns", "\018\006\211\115\129\054\219\061"
-             ; span 1.2e-9, "1.2ns", "\076\206\097\227\167\157\020\062"
-             ; span 0.000001, "1us", "\141\237\181\160\247\198\176\062"
-             ; span 0.707, "707ms", "\057\180\200\118\190\159\230\063"
-             ; span 42., "42s", "\000\000\000\000\000\000\069\064"
-             ; span 1234.56, "20.576m", "\010\215\163\112\061\074\147\064"
-             ; span 39_996., "11.11h", "\000\000\000\000\128\135\227\064"
-             ; span 80000006.4, "925.926d", "\154\153\153\025\208\018\147\065"
-             ]
-           ;;
-         end))
+        let tests =
+          let span = of_sec in
+          [ span 99e-12, "0.098999999999999991ns", "\018\006\211\115\129\054\219\061"
+          ; span 1.2e-9, "1.2ns", "\076\206\097\227\167\157\020\062"
+          ; span 0.000001, "1us", "\141\237\181\160\247\198\176\062"
+          ; span 0.707, "707ms", "\057\180\200\118\190\159\230\063"
+          ; span 42., "42s", "\000\000\000\000\000\000\069\064"
+          ; span 1234.56, "20.576m", "\010\215\163\112\061\074\147\064"
+          ; span 39_996., "11.11h", "\000\000\000\000\128\135\227\064"
+          ; span 80000006.4, "925.926d", "\154\153\153\025\208\018\147\065"
+          ]
+        ;;
+      end))
     ;;
   end
 

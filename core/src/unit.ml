@@ -1,6 +1,5 @@
 module Stable = struct
   open Stable_witness.Export
-
   open Base.Export
   open Bin_prot.Std
 

@@ -15,7 +15,6 @@ end = struct
   let of_repr = Fn.id
   let to_repr = Fn.id
 
-
   let to_string n =
     let open Repr in
     let kib = of_int 1024 in

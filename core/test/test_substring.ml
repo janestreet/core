@@ -3,11 +3,11 @@ open Poly
 open! Import
 
 module Test (Base : sig
-    type t
+  type t
 
-    val of_string : string -> t
-  end)
-    (Substring : Substring.S with type base = Base.t) : sig end = struct
+  val of_string : string -> t
+end)
+(Substring : Substring.S with type base = Base.t) : sig end = struct
   open Substring
 
   let%test_module "get" =
@@ -139,18 +139,18 @@ let%test_module "quickcheck" =
         ~sexp_of:sexp_of_substring_for_test
         Substring.quickcheck_generator
         ~f:(fun sub ->
-          let base_len = Bytes.length (Substring.base sub) in
-          (* whole substring of nontrivial string *)
-          base_len > 0 && Substring.length sub = base_len);
+        let base_len = Bytes.length (Substring.base sub) in
+        (* whole substring of nontrivial string *)
+        base_len > 0 && Substring.length sub = base_len);
       Quickcheck.test_can_generate
         ~sexp_of:sexp_of_substring_for_test
         Substring.quickcheck_generator
         ~f:(fun sub ->
-          let pos = Substring.pos sub in
-          let len = Substring.length sub in
-          (* non-triviality: contains at least one character and excludes at least one
+        let pos = Substring.pos sub in
+        let len = Substring.length sub in
+        (* non-triviality: contains at least one character and excludes at least one
              character from each end *)
-          pos > 0 && len > 0 && pos + len < Bytes.length (Substring.base sub));
+        pos > 0 && len > 0 && pos + len < Bytes.length (Substring.base sub));
       [%expect ""]
     ;;
 
@@ -159,13 +159,13 @@ let%test_module "quickcheck" =
         ~sexp_of:sexp_of_substring_for_test
         Substring.quickcheck_generator
         ~f:(fun sub ->
-          [%test_result: bytes]
-            ~expect:
-              (Bytes.sub
-                 (Substring.base sub)
-                 ~pos:(Substring.pos sub)
-                 ~len:(Substring.length sub))
-            (Bytes.of_string (Substring.to_string sub)))
+        [%test_result: bytes]
+          ~expect:
+            (Bytes.sub
+               (Substring.base sub)
+               ~pos:(Substring.pos sub)
+               ~len:(Substring.length sub))
+          (Bytes.of_string (Substring.to_string sub)))
     ;;
 
     let%expect_test "prefixes and suffixes" =
@@ -189,13 +189,13 @@ let%test_module "quickcheck" =
             ~sexp_of:[%sexp_of: substring_for_test * int]
             sub_and_n
             ~f:(fun (sub, n) ->
-              let str = Substring.to_string sub in
-              let via_str = Option.try_with (fun () -> f_str str n) in
-              let via_sub =
-                Option.try_with (fun () -> f_sub sub n) |> Option.map ~f:Substring.to_string
-              in
-              if Option.is_some via_str && Option.is_some via_sub
-              then [%test_result: string option] ~expect:via_str via_sub))
+            let str = Substring.to_string sub in
+            let via_str = Option.try_with (fun () -> f_str str n) in
+            let via_sub =
+              Option.try_with (fun () -> f_sub sub n) |> Option.map ~f:Substring.to_string
+            in
+            if Option.is_some via_str && Option.is_some via_sub
+            then [%test_result: string option] ~expect:via_str via_sub))
     ;;
   end)
 ;;

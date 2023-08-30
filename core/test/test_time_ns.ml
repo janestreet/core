@@ -145,10 +145,10 @@ let%test_module "Time_ns.Span.Stable.V2" =
         ~examples:span_examples
         span_gen
         ~f:(fun span ->
-          let rt = V.t_of_sexp (V.sexp_of_t span) in
-          require_equal [%here] (module Time_ns.Span) span rt;
-          let rt = V.of_int63_exn (V.to_int63 span) in
-          require_equal [%here] (module Time_ns.Span) span rt);
+        let rt = V.t_of_sexp (V.sexp_of_t span) in
+        require_equal [%here] (module Time_ns.Span) span rt;
+        let rt = V.of_int63_exn (V.to_int63 span) in
+        require_equal [%here] (module Time_ns.Span) span rt);
       [%expect {| |}]
     ;;
 
@@ -327,7 +327,7 @@ let%test_module "Time_ns.Utc.to_date_and_span_since_start_of_day" =
           Core.Time_ns.Utc.to_date_and_span_since_start_of_day time_ns
         in
         if Time_ns.Span.( < ) span_since_start_of_day Time_ns.Span.zero
-        || Time_ns.Span.( >= ) span_since_start_of_day Time_ns.Span.day
+           || Time_ns.Span.( >= ) span_since_start_of_day Time_ns.Span.day
         then
           raise_s
             [%message
@@ -527,28 +527,28 @@ let%test_module "Ofday" =
         ; "12:34:56.789"
         ; "12:34:56.789123"
         ; "12:34:56.789123456"
-          ; (* lower boundary case *)
+        ; (* lower boundary case *)
           "00"
         ; "00:00"
         ; "00:00:00"
         ; "00:00:00.000"
         ; "00:00:00.000000"
         ; "00:00:00.000000000"
-          ; (* upper boundary case *)
+        ; (* upper boundary case *)
           "23"
         ; "23:59"
         ; "23:59:59"
         ; "23:59:59.999"
         ; "23:59:59.999999"
         ; "23:59:59.999999999"
-          ; (* midnight tomorrow *)
+        ; (* midnight tomorrow *)
           "24"
         ; "24:00"
         ; "24:00:00"
         ; "24:00:00.000"
         ; "24:00:00.000000"
         ; "24:00:00.000000000"
-          ; (* leap second *)
+        ; (* leap second *)
           "12:59:60"
         ; "12:59:60.789"
         ; "12:59:60.789123"
@@ -605,7 +605,7 @@ let%test_module "Ofday" =
         ; "12:345"
         ; "12:34:"
         ; "12:34:5"
-          ; (* numerical bounds *)
+        ; (* numerical bounds *)
           "25:00"
         ; "00:60"
         ; "00:59:61"
@@ -877,7 +877,7 @@ module _ = struct
         print_s
           [%sexp
             (to_parts (create ~sign:Neg ~hr:2 ~min:3 ~sec:4 ~ms:5 ~us:6 ~ns:7 ())
-             : Parts.t)];
+              : Parts.t)];
         [%expect
           {|
         ((sign Neg)
@@ -1140,13 +1140,13 @@ let%expect_test "Ofday.to_microsecond_string" =
   ; Time_ns.Ofday.start_of_next_day
   ]
   |> List.iter ~f:(fun ofday ->
-    let string = Time_ns.Ofday.to_microsecond_string ofday in
-    print_endline string;
-    require_equal
-      [%here]
-      (module Time_ns.Ofday)
-      (Time_ns.Ofday.of_string string)
-      (round ofday));
+       let string = Time_ns.Ofday.to_microsecond_string ofday in
+       print_endline string;
+       require_equal
+         [%here]
+         (module Time_ns.Ofday)
+         (Time_ns.Ofday.of_string string)
+         (round ofday));
   [%expect
     {|
     00:00:00.000000
@@ -1468,7 +1468,7 @@ let%expect_test "approximate conversions" =
         let precise = to_precise span in
         let approx = to_approx span in
         if Float.( > ) approx (Float.one_ulp `Up precise)
-        || Float.( < ) approx (Float.one_ulp `Down precise)
+           || Float.( < ) approx (Float.one_ulp `Down precise)
         then (
           let diff = approx -. precise in
           print_cr

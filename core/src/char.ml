@@ -14,9 +14,9 @@ include
 include (
   Base.Char :
     module type of struct
-    include Base.Char
-  end
-  with type t := t)
+      include Base.Char
+    end
+    with type t := t)
 
 module Caseless = struct
   module T = struct

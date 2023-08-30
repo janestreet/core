@@ -97,7 +97,7 @@ let max_time_value_for_1us_rounding =
 
 let check_before_conversion_for_1us_rounding time =
   if Time_float.( < ) time min_time_value_for_1us_rounding
-  || Time_float.( > ) time max_time_value_for_1us_rounding
+     || Time_float.( > ) time max_time_value_for_1us_rounding
   then
     failwiths
       ~here:[%here]
@@ -309,11 +309,11 @@ module Alternate_sexp = struct
     ;;
 
     include Sexpable.Of_stringable (struct
-        type nonrec t = t
+      type nonrec t = t
 
-        let to_string = to_string
-        let of_string = of_string
-      end)
+      let to_string = to_string
+      let of_string = of_string
+    end)
 
     let t_sexp_grammar =
       let open Sexplib in
@@ -381,7 +381,7 @@ module To_and_of_string : sig
   val utc_offset : t -> zone:Zone.t -> Span.t
 
   val of_string : string -> t
-  [@@deprecated "[since 2021-04] Use [of_string_with_utc_offset]"]
+    [@@deprecated "[since 2021-04] Use [of_string_with_utc_offset]"]
 
   val of_string_with_utc_offset : string -> t
   val to_string : t -> string [@@deprecated "[since 2021-04] Use [to_string_utc]"]
@@ -864,8 +864,8 @@ end = struct
   let ensure_colon_in_offset offset =
     let offset_length = String.length offset in
     if Int.( <= ) offset_length 2
-    && Char.is_digit offset.[0]
-    && Char.is_digit offset.[offset_length - 1]
+       && Char.is_digit offset.[0]
+       && Char.is_digit offset.[offset_length - 1]
     then offset ^ ":00"
     else if Char.( = ) offset.[1] ':' || Char.( = ) offset.[2] ':'
     then offset
@@ -955,23 +955,23 @@ module _ = struct
 
   let () =
     Duration.format
-    := (module struct
-      let duration_of_span s = s |> Span.to_int63_ns |> Duration.of_nanoseconds
-      let span_of_duration d = d |> Duration.to_nanoseconds |> Span.of_int63_ns
-      let of_string string = string |> Span.of_string |> duration_of_span
+      := (module struct
+           let duration_of_span s = s |> Span.to_int63_ns |> Duration.of_nanoseconds
+           let span_of_duration d = d |> Duration.to_nanoseconds |> Span.of_int63_ns
+           let of_string string = string |> Span.of_string |> duration_of_span
 
-      let to_string_with_same_unit durations =
-        let spans = durations |> List.map ~f:span_of_duration in
-        let unit_of_time =
-          spans
-          |> List.max_elt ~compare:Span.compare
-          |> Option.value_map
-               ~f:Span.to_unit_of_time
-               ~default:Unit_of_time.Nanosecond
-        in
-        spans |> List.map ~f:(Span.to_string_hum ~unit_of_time ~align_decimal:true)
-      ;;
-    end)
+           let to_string_with_same_unit durations =
+             let spans = durations |> List.map ~f:span_of_duration in
+             let unit_of_time =
+               spans
+               |> List.max_elt ~compare:Span.compare
+               |> Option.value_map
+                    ~f:Span.to_unit_of_time
+                    ~default:Unit_of_time.Nanosecond
+             in
+             spans |> List.map ~f:(Span.to_string_hum ~unit_of_time ~align_decimal:true)
+           ;;
+         end)
   ;;
 end
 

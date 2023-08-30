@@ -841,12 +841,12 @@ let%expect_test "read_int63_decimal" =
     230_584_300_921_369_393
     230_584_300_921_369_395 |}];
   let test_failure
-        ?(pos = 0)
-        ?decimals
-        ?(scale = Int63.of_int 60_000)
-        ?(round_ties = Round.Toward_positive_infinity)
-        ?(allow_underscore = true)
-        string
+    ?(pos = 0)
+    ?decimals
+    ?(scale = Int63.of_int 60_000)
+    ?(round_ties = Round.Toward_positive_infinity)
+    ?(allow_underscore = true)
+    string
     =
     let decimals = Option.value decimals ~default:(String.length string - pos) in
     require_does_raise [%here] (fun () : Int63.t ->

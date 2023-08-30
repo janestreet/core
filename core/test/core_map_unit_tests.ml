@@ -2,9 +2,6 @@
    and then instantiates that functor to create unit tests for [Map], [Map.Poly], and
    [Int.Map]. *)
 
-
-
-
 module Caml_map = Map
 open! Core
 open Expect_test_helpers_core
@@ -13,28 +10,28 @@ module With_first_class_module = Map_intf.With_first_class_module
 module Without_comparator = Map_intf.Without_comparator
 
 module Unit_tests (Key : sig
-    type 'a t [@@deriving sexp, compare, hash]
+  type 'a t [@@deriving sexp, compare, hash]
 
-    val of_int : int -> int t
-    val to_int : int t -> int
-  end) (Map : sig
-          type ('a, 'b, 'c) t_
-          type ('a, 'b, 'c) tree
-          type ('a, 'b, 'c) create_options
-          type ('a, 'b, 'c) access_options
+  val of_int : int -> int t
+  val to_int : int t -> int
+end) (Map : sig
+  type ('a, 'b, 'c) t_
+  type ('a, 'b, 'c) tree
+  type ('a, 'b, 'c) create_options
+  type ('a, 'b, 'c) access_options
 
-          include
-            Map_intf.Creators_and_accessors_generic
-            with type ('a, 'b, 'c) t := ('a, 'b, 'c) t_
-            with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
-            with type 'a key := 'a Key.t
-            with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) create_options
-            with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) access_options
+  include
+    Map_intf.Creators_and_accessors_generic
+      with type ('a, 'b, 'c) t := ('a, 'b, 'c) t_
+      with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
+      with type 'a key := 'a Key.t
+      with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) create_options
+      with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) access_options
 
-          val simplify_creator : (int, Int.comparator_witness, 'c) create_options -> 'c
-          val simplify_accessor : (int, Int.comparator_witness, 'c) access_options -> 'c
-          val kind : [ `Map | `Tree ]
-        end) : Map_intf.Creators_and_accessors_generic =
+  val simplify_creator : (int, Int.comparator_witness, 'c) create_options -> 'c
+  val simplify_accessor : (int, Int.comparator_witness, 'c) access_options -> 'c
+  val kind : [ `Map | `Tree ]
+end) : Map_intf.Creators_and_accessors_generic =
 (* The result signature doesn't actually mean anything -- the values are required so
    that implementors are reminded to add a unit test for each one. *)
 struct
@@ -515,7 +512,7 @@ struct
         (Map.of_hashtbl_exn
            (List.map Key.samples ~f:(fun key -> key, Key.to_int key)
             |> Hashtbl.Poly.of_alist_exn)
-         : _ Map.t_))
+          : _ Map.t_))
   ;;
 
   let%expect_test _ =
@@ -524,8 +521,8 @@ struct
         let i = ref 0 in
         { hash =
             (fun _ ->
-               incr i;
-               !i)
+              incr i;
+              !i)
         ; compare = (fun _ _ -> 1)
         ; sexp_of_t = Key.sexp_of_t
         }
@@ -606,7 +603,7 @@ struct
     let increasing_alist =
       List.sort alist ~compare:(fun a b -> Comparable.lift ~f:fst Key.compare a b)
       |> List.remove_consecutive_duplicates ~equal:(fun a b ->
-        Comparable.lift ~f:fst Key.equal a b)
+           Comparable.lift ~f:fst Key.equal a b)
     in
     let duplicates_alist =
       match increasing_alist with
@@ -2525,115 +2522,115 @@ end
 
 let%test_module "Map" =
   (module Unit_tests
-       (Key_poly)
-       (struct
-         include Map
+            (Key_poly)
+            (struct
+              include Map
 
-         type ('a, 'b, 'c) t_ = ('a, 'b, 'c) t
-         type ('a, 'b, 'c) tree = ('a, 'b, 'c) Tree.t
-         type 'cmp cmp = 'cmp
+              type ('a, 'b, 'c) t_ = ('a, 'b, 'c) t
+              type ('a, 'b, 'c) tree = ('a, 'b, 'c) Tree.t
+              type 'cmp cmp = 'cmp
 
-         include Create_options_with_first_class_module
-         include Access_options_without_comparator
+              include Create_options_with_first_class_module
+              include Access_options_without_comparator
 
-         let kind = `Map
-       end))
+              let kind = `Map
+            end))
 ;;
 
 let%test_module "Map.Poly" =
   (module Unit_tests
-       (Key_poly)
-       (struct
-         include Map.Poly
+            (Key_poly)
+            (struct
+              include Map.Poly
 
-         type ('a, 'b, 'c) t_ = ('a, 'b) t
-         type ('a, 'b, 'c) tree = ('a, 'b) Tree.t
-         type 'cmp cmp = comparator_witness
+              type ('a, 'b, 'c) t_ = ('a, 'b) t
+              type ('a, 'b, 'c) tree = ('a, 'b) Tree.t
+              type 'cmp cmp = comparator_witness
 
-         include Create_options_without_comparator
-         include Access_options_without_comparator
+              include Create_options_without_comparator
+              include Access_options_without_comparator
 
-         let kind = `Map
-       end))
+              let kind = `Map
+            end))
 ;;
 
 let%test_module "Int.Map" =
   (module Unit_tests
-       (Key_int)
-       (struct
-         include Int.Map
-         module Tree = Map.Make_tree (Int.Map.Key)
+            (Key_int)
+            (struct
+              include Int.Map
+              module Tree = Map.Make_tree (Int.Map.Key)
 
-         type ('a, 'b, 'c) t_ = 'b t
-         type ('a, 'b, 'c) tree = 'b Tree.t
-         type 'cmp cmp = Int.comparator_witness
+              type ('a, 'b, 'c) t_ = 'b t
+              type ('a, 'b, 'c) tree = 'b Tree.t
+              type 'cmp cmp = Int.comparator_witness
 
-         include Create_options_without_comparator
-         include Access_options_without_comparator
+              include Create_options_without_comparator
+              include Access_options_without_comparator
 
-         let kind = `Map
+              let kind = `Map
 
-         include (
-           Core.Map :
-             Map_intf.Accessors_generic
-           with type ('k, 'v, 'c) t := 'v t
-           with type ('k, 'v, 'c) tree := 'v Tree.t
-           with type 'k key := int
-           with type 'c cmp := Int.comparator_witness
-           with type ('k, 'v, 'c) access_options :=
-             ('k, 'v, 'c) Without_comparator.t)
-       end))
+              include (
+                Core.Map :
+                  Map_intf.Accessors_generic
+                    with type ('k, 'v, 'c) t := 'v t
+                    with type ('k, 'v, 'c) tree := 'v Tree.t
+                    with type 'k key := int
+                    with type 'c cmp := Int.comparator_witness
+                    with type ('k, 'v, 'c) access_options :=
+                      ('k, 'v, 'c) Without_comparator.t)
+            end))
 ;;
 
 let%test_module "Map.Tree" =
   (module Unit_tests
-       (Key_poly)
-       (struct
-         include Map.Tree
+            (Key_poly)
+            (struct
+              include Map.Tree
 
-         type ('a, 'b, 'c) t_ = ('a, 'b, 'c) t
-         type ('a, 'b, 'c) tree = ('a, 'b, 'c) t
-         type 'cmp cmp = 'cmp
+              type ('a, 'b, 'c) t_ = ('a, 'b, 'c) t
+              type ('a, 'b, 'c) tree = ('a, 'b, 'c) t
+              type 'cmp cmp = 'cmp
 
-         include Create_options_with_comparator
-         include Access_options_with_comparator
+              include Create_options_with_comparator
+              include Access_options_with_comparator
 
-         let kind = `Tree
-       end))
+              let kind = `Tree
+            end))
 ;;
 
 let%test_module "Map.Poly.Tree" =
   (module Unit_tests
-       (Key_poly)
-       (struct
-         include Map.Poly.Tree
+            (Key_poly)
+            (struct
+              include Map.Poly.Tree
 
-         type ('a, 'b, 'c) t_ = ('a, 'b) t
-         type ('a, 'b, 'c) tree = ('a, 'b) t
-         type 'cmp cmp = comparator_witness
+              type ('a, 'b, 'c) t_ = ('a, 'b) t
+              type ('a, 'b, 'c) tree = ('a, 'b) t
+              type 'cmp cmp = comparator_witness
 
-         include Create_options_without_comparator
-         include Access_options_without_comparator
+              include Create_options_without_comparator
+              include Access_options_without_comparator
 
-         let kind = `Tree
-       end))
+              let kind = `Tree
+            end))
 ;;
 
 let%test_module "Int.Map.Tree" =
   (module Unit_tests
-       (Key_int)
-       (struct
-         include Map.Make_tree (Int.Map.Key)
+            (Key_int)
+            (struct
+              include Map.Make_tree (Int.Map.Key)
 
-         type ('a, 'b, 'c) t_ = 'b t
-         type ('a, 'b, 'c) tree = 'b t
-         type 'cmp cmp = Int.comparator_witness
+              type ('a, 'b, 'c) t_ = 'b t
+              type ('a, 'b, 'c) tree = 'b t
+              type 'cmp cmp = Int.comparator_witness
 
-         include Create_options_without_comparator
-         include Access_options_without_comparator
+              include Create_options_without_comparator
+              include Access_options_without_comparator
 
-         let kind = `Tree
-       end))
+              let kind = `Tree
+            end))
 ;;
 
 let%test_unit _ = Core.Map.find_or_error (Int.Map.singleton 1 ()) 1 |> Or_error.ok_exn

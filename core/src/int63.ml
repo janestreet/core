@@ -39,8 +39,8 @@ module Stable = struct
       include (
         Base.Int63 :
           Base.Comparable.S
-        with type t := t
-        with type comparator_witness = Base.Int63.comparator_witness)
+            with type t := t
+            with type comparator_witness = Base.Int63.comparator_witness)
 
       (* This serialization is stable, since it either delegates to [int] or
          [Int63_emul]. *)

@@ -192,7 +192,6 @@ include Monad with type 'a t := 'a t
     for which [Base v] is a subexpression of [t] *)
 val values : 'a t -> 'a list
 
-
 (** [eval t f] evaluates the proposition [t] relative to an environment
     [f] that assigns truth values to base propositions. *)
 val eval : 'a t -> (('a -> bool)[@local]) -> bool

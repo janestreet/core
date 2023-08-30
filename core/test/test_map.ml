@@ -96,7 +96,7 @@ let%expect_test _ =
     end)
     ([ []; [ 1 ]; [ 1; 2 ]; [ 1; 2; 3 ] ]
      |> List.map ~f:(fun xs ->
-       Map.of_alist_exn (module Int) (xs |> List.map ~f:(fun x -> x, x + 1))));
+          Map.of_alist_exn (module Int) (xs |> List.map ~f:(fun x -> x, x + 1))));
   [%expect
     {|
     (bin_shape_digest ed73a010af8ffc32cab7411d6be2d676)

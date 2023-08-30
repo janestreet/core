@@ -86,7 +86,7 @@ module Stable = struct
               Union
                 [ (* handles the host:port string case *)
                   String
-                  ; (* handles the list (host port) case  *)
+                ; (* handles the list (host port) case  *)
                   List (Cons (String, Cons (Integer, Empty)))
                 ]
           }
@@ -129,11 +129,11 @@ let port t = t.port
 let tuple t = to_serializable t
 
 include Pretty_printer.Register (struct
-    type nonrec t = t
+  type nonrec t = t
 
-    let to_string = to_string
-    let module_name = "Core.Host_and_port"
-  end)
+  let to_string = to_string
+  let module_name = "Core.Host_and_port"
+end)
 
 include (Hashable.Make_binable (Latest) : Hashable.S_binable with type t := t)
 include Comparable.Make_binable_using_comparator (Latest)

@@ -1,5 +1,3 @@
-
-
 (** A double-ended queue that can shrink and expand on both ends.
 
     An index is assigned to an element when it enters the queue, and the index of an
@@ -17,8 +15,6 @@ open! Import
 type 'a t [@@deriving bin_io, sexp, sexp_grammar]
 
 include Binary_searchable.S1 with type 'a t := 'a t
-
-
 include Container.S1 with type 'a t := 'a t
 
 (** [create ?initial_length ?never_shrink ()] creates a new [t]. [initial_length] is the
@@ -35,7 +31,6 @@ val create
   -> ?never_shrink:bool
   -> unit
   -> _ t
-
 
 (** [of_array arr] creates a dequeue containing the elements of [arr].  The first element
     of the array will be at the front of the dequeue. *)

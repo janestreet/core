@@ -22,11 +22,9 @@ module Caseless : sig
 
   type nonrec t = t [@@deriving bin_io ~localize, hash, sexp]
 
-
   include Comparable.S_binable with type t := t
   include Hashable.S_binable with type t := t
 end
-
 
 (** [slice t start stop] returns a new string including elements [t.(start)] through
     [t.(stop-1)], normalized Python-style with the exception that [stop = 0] is treated as
@@ -73,10 +71,9 @@ module Stable : sig
 
     include
       Stable_comparable.With_stable_witness.V1
-      with type t := t
-      with type comparator_witness = comparator_witness
+        with type t := t
+        with type comparator_witness = comparator_witness
 
     include Hashable.Stable.V1.With_stable_witness.S with type key := t
   end
 end
-

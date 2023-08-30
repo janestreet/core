@@ -208,8 +208,8 @@ module Arbitrary_order = struct
 end
 
 module Make_container (F : sig
-    val to_list : 'a t -> 'a list
-  end) =
+  val to_list : 'a t -> 'a list
+end) =
 struct
   let to_list = F.to_list
   let is_empty = is_empty
@@ -247,8 +247,8 @@ module Front_to_back = struct
   ;;
 
   include Make_container (struct
-      let to_list = to_list
-    end)
+    let to_list = to_list
+  end)
 end
 
 module Back_to_front = struct
@@ -268,8 +268,8 @@ module Back_to_front = struct
   ;;
 
   include Make_container (struct
-      let to_list = to_list
-    end)
+    let to_list = to_list
+  end)
 end
 
 include Front_to_back
@@ -277,20 +277,20 @@ include Front_to_back
 let singleton x = of_list [ x ]
 
 include Monad.Make (struct
-    type nonrec 'a t = 'a t
+  type nonrec 'a t = 'a t
 
-    let bind t ~f =
-      fold t ~init:empty ~f:(fun t elt -> fold (f elt) ~init:t ~f:enqueue_back)
-    ;;
+  let bind t ~f =
+    fold t ~init:empty ~f:(fun t elt -> fold (f elt) ~init:t ~f:enqueue_back)
+  ;;
 
-    let return = singleton
+  let return = singleton
 
-    let map =
-      `Custom
-        (fun t ~f ->
-           { front = List.map t.front ~f; back = List.map t.back ~f; length = t.length })
-    ;;
-  end)
+  let map =
+    `Custom
+      (fun t ~f ->
+        { front = List.map t.front ~f; back = List.map t.back ~f; length = t.length })
+  ;;
+end)
 
 let compare cmp t1 t2 = List.compare cmp (to_list t1) (to_list t2)
 let equal eq t1 t2 = List.equal eq (to_list t1) (to_list t2)
@@ -310,29 +310,29 @@ module Stable = struct
     let map = map
 
     include Bin_prot.Utils.Make_iterable_binable1 (struct
-        type nonrec 'a t = 'a t
-        type 'a el = 'a [@@deriving bin_io]
+      type nonrec 'a t = 'a t
+      type 'a el = 'a [@@deriving bin_io]
 
-        let caller_identity =
-          Bin_prot.Shape.Uuid.of_string "83f96982-4992-11e6-919d-fbddcfdca576"
-        ;;
+      let caller_identity =
+        Bin_prot.Shape.Uuid.of_string "83f96982-4992-11e6-919d-fbddcfdca576"
+      ;;
 
-        let module_name = Some "Core.Fdeque"
-        let length = length
-        let iter t ~f = List.iter (to_list t) ~f
+      let module_name = Some "Core.Fdeque"
+      let length = length
+      let iter t ~f = List.iter (to_list t) ~f
 
-        let init ~len ~next =
-          let rec loop next acc n =
-            if len = n
-            then acc
-            else (
-              assert (n = length acc);
-              let x = next () in
-              loop next (enqueue_back acc x) (n + 1))
-          in
-          loop next empty 0
-        ;;
-      end)
+      let init ~len ~next =
+        let rec loop next acc n =
+          if len = n
+          then acc
+          else (
+            assert (n = length acc);
+            let x = next () in
+            loop next (enqueue_back acc x) (n + 1))
+        in
+        loop next empty 0
+      ;;
+    end)
 
     (* The binary representation produced by Bin_prot.Utils.Make_iterable_binable1 is
        assumed to be stable (if the 'a is stable). *)

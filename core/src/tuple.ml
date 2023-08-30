@@ -51,10 +51,10 @@ module T2 = struct
   let swap (a, b) = b, a
 
   include Comparator.Derived2 (struct
-      type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of]
+    type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of]
 
-      let compare cmp1 cmp2 = compare ~cmp1 ~cmp2
-    end)
+    let compare cmp1 cmp2 = compare ~cmp1 ~cmp2
+  end)
 end
 
 module T3 = struct
@@ -186,6 +186,6 @@ module Hashable_t (S1 : Hashable_sexpable) (S2 : Hashable_sexpable) =
   Hasher
     (Hasher_sexpable_of_hashable_sexpable
        (S1))
-    (Hasher_sexpable_of_hashable_sexpable (S2))
+       (Hasher_sexpable_of_hashable_sexpable (S2))
 
 module Hashable = Hashable_t

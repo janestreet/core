@@ -50,11 +50,11 @@ include
 include Comparable.Validate (Base.String)
 
 include Hexdump.Of_indexable (struct
-    type t = string
+  type t = string
 
-    let length = length
-    let get = get
-  end)
+  let length = length
+  let get = get
+end)
 
 let quickcheck_generator = Base_quickcheck.Generator.string
 let quickcheck_observer = Base_quickcheck.Observer.string

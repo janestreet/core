@@ -3,8 +3,8 @@ module type V1 = sig
 
   include
     Comparable.Stable.V1.S
-    with type comparable := t
-    with type comparator_witness := comparator_witness
+      with type comparable := t
+      with type comparator_witness := comparator_witness
 end
 
 module With_stable_witness = struct
@@ -13,7 +13,7 @@ module With_stable_witness = struct
 
     include
       Comparable.Stable.V1.With_stable_witness.S
-      with type comparable := t
-      with type comparator_witness := comparator_witness
+        with type comparable := t
+        with type comparator_witness := comparator_witness
   end
 end

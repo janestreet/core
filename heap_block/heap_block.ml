@@ -3,7 +3,7 @@ open! Base
 type 'a t = 'a [@@deriving sexp_of]
 
 external is_heap_block : Stdlib.Obj.t -> bool = "core_heap_block_is_heap_block"
-[@@noalloc]
+  [@@noalloc]
 
 let is_ok v = is_heap_block (Stdlib.Obj.repr v)
 let create v = if is_ok v then Some v else None

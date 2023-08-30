@@ -9,9 +9,9 @@ type 'a t = 'a Base.Maybe_bound.t =
 
 (** @inline *)
 include module type of struct
-  include Base.Maybe_bound
-end
-with type 'a t := 'a t
+    include Base.Maybe_bound
+  end
+  with type 'a t := 'a t
 
 (** Compares [t] values as lower bounds, where [Unbounded] is lowest, [Incl x < Excl x],
     and other cases of [Incl] and/or [Excl] are compared based on ['a].  If

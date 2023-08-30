@@ -57,11 +57,11 @@ module Make (Raw : Raw) = struct
 end
 
 module Add_bin_io (Raw : sig
-    type t [@@deriving bin_io]
+  type t [@@deriving bin_io]
 
-    include Raw_bin_io with type t := t
-  end)
-    (Validated : S with type raw := Raw.t) =
+  include Raw_bin_io with type t := t
+end)
+(Validated : S with type raw := Raw.t) =
 struct
   include
     Binable.Of_binable_without_uuid [@alert "-legacy"]
@@ -78,11 +78,11 @@ struct
 end
 
 module Add_compare (Raw : sig
-    type t [@@deriving compare]
+  type t [@@deriving compare]
 
-    include Raw with type t := t
-  end)
-    (_ : S with type raw := Raw.t) =
+  include Raw with type t := t
+end)
+(_ : S with type raw := Raw.t) =
 struct
   let compare t1 t2 = [%compare: Raw.t] (raw t1) (raw t2)
 end
@@ -97,32 +97,32 @@ end
      ;;
    ]} *)
 module Add_globalize (Raw : sig
-    type t [@@deriving globalize]
+  type t [@@deriving globalize]
 
-    include Raw with type t := t
-  end)
-    (_ : S with type raw := Raw.t) =
+  include Raw with type t := t
+end)
+(_ : S with type raw := Raw.t) =
 struct
   let globalize t = Raw.globalize t
 end
 
 module Add_hash (Raw : sig
-    type t [@@deriving hash]
+  type t [@@deriving hash]
 
-    include Raw with type t := t
-  end)
-    (Validated : S with type raw := Raw.t) =
+  include Raw with type t := t
+end)
+(Validated : S with type raw := Raw.t) =
 struct
   let hash_fold_t state t = Raw.hash_fold_t state (Validated.raw t)
   let hash t = Raw.hash (Validated.raw t)
 end
 
 module Add_typerep (Raw : sig
-    type t [@@deriving typerep]
+  type t [@@deriving typerep]
 
-    include Raw with type t := t
-  end)
-    (_ : S with type raw := Raw.t) =
+  include Raw with type t := t
+end)
+(_ : S with type raw := Raw.t) =
 struct
   type t = Raw.t [@@deriving typerep]
 end
@@ -134,10 +134,10 @@ module Make_binable (Raw : Raw_bin_io) = struct
 end
 
 module Make_bin_io_compare_hash_sexp (Raw : sig
-    type t [@@deriving compare, hash]
+  type t [@@deriving compare, hash]
 
-    include Raw_bin_io with type t := t
-  end) =
+  include Raw_bin_io with type t := t
+end) =
 struct
   module T = Make_binable (Raw)
   include T
@@ -145,14 +145,14 @@ struct
 
   include (
     Add_hash (Raw) (T) :
-    sig
-      type t [@@deriving hash]
-    end
-    with type t := t)
+        sig
+          type t [@@deriving hash]
+        end
+        with type t := t)
 end
 
 module Make_bin_io_compare_globalize_hash_sexp
-    (Raw : Raw_bin_io_compare_globalize_hash_sexp) =
+  (Raw : Raw_bin_io_compare_globalize_hash_sexp) =
 struct
   module T1 = Make_bin_io_compare_hash_sexp (Raw)
   include T1

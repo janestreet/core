@@ -58,7 +58,6 @@ val empty : ('a, 'cmp) Comparator.Module.t -> ('a, 'b, 'cmp) t
 (** Map with one (key, data) pair. *)
 val singleton : ('a, 'cmp) Comparator.Module.t -> 'a -> 'b -> ('a, 'b, 'cmp) t
 
-
 (** Creates map from an association list with unique keys. *)
 val of_alist
   :  ('a, 'cmp) Comparator.Module.t
@@ -149,12 +148,12 @@ module Tree : sig
 
   include
     Creators_and_accessors_generic
-    with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
-    with type ('a, 'b, 'c) tree := ('a, 'b, 'c) t
-    with type 'cmp cmp := 'cmp
-    with type 'key key := 'key
-    with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) With_comparator.t
-    with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) With_comparator.t
+      with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
+      with type ('a, 'b, 'c) tree := ('a, 'b, 'c) t
+      with type 'cmp cmp := 'cmp
+      with type 'key key := 'key
+      with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) With_comparator.t
+      with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) With_comparator.t
 end
 
 val to_tree : ('k, 'v, 'cmp) t -> ('k, 'v, 'cmp) Tree.t
@@ -460,7 +459,7 @@ val fold_until
   -> init:'acc
   -> f:
        ((key:'k -> data:'v -> 'acc -> ('acc, 'final) Container.Continue_or_stop.t)
-        [@local])
+       [@local])
   -> finish:(('acc -> 'final)[@local])
   -> 'final
 
@@ -874,7 +873,6 @@ module Make_applicative_traversals (A : Applicative.Lazy_applicative) : sig
     -> ('k, 'v2, 'cmp) t A.t
 end
 
-
 (** Convert a set to a map. Runs in [O(length t)] time plus a call to [f] for each key to
     compute the associated data. *)
 val of_key_set
@@ -884,7 +882,6 @@ val of_key_set
 
 (** Converts a map to a set of its keys. Runs in [O(length t)] time. *)
 val key_set : ('key, _, 'cmp) t -> ('key, 'cmp) Base.Set.t
-
 
 val quickcheck_generator
   :  ('k, 'cmp) Comparator.Module.t
@@ -972,12 +969,12 @@ val quickcheck_shrinker
 module Using_comparator : sig
   include
     Creators_generic
-    with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
-    with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
-    with type 'k key := 'k
-    with type 'c cmp := 'c
-    with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) With_comparator.t
-    with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
+      with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
+      with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
+      with type 'k key := 'k
+      with type 'c cmp := 'c
+      with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) With_comparator.t
+      with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
 end
 
 module Poly : sig
@@ -989,12 +986,12 @@ module Poly : sig
 
     include
       Creators_and_accessors_generic
-      with type ('a, 'b, 'c) t := ('a, 'b) t
-      with type ('a, 'b, 'c) tree := ('a, 'b) t
-      with type 'k key := 'k
-      with type 'c cmp := comparator_witness
-      with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
-      with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
+        with type ('a, 'b, 'c) t := ('a, 'b) t
+        with type ('a, 'b, 'c) tree := ('a, 'b) t
+        with type 'k key := 'k
+        with type 'c cmp := comparator_witness
+        with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
+        with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
   end
 
   type comparator_witness = Comparator.Poly.comparator_witness
@@ -1004,12 +1001,12 @@ module Poly : sig
 
   include
     Creators_and_accessors_generic
-    with type ('a, 'b, 'c) t := ('a, 'b) t
-    with type ('a, 'b, 'c) tree := ('a, 'b) Tree.t
-    with type 'k key := 'k
-    with type 'c cmp := comparator_witness
-    with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
-    with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
+      with type ('a, 'b, 'c) t := ('a, 'b) t
+      with type ('a, 'b, 'c) tree := ('a, 'b) Tree.t
+      with type 'k key := 'k
+      with type 'c cmp := comparator_witness
+      with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
+      with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
 end
 with type ('a, 'b, 'c) map = ('a, 'b, 'c) t
 
@@ -1023,47 +1020,47 @@ module type S_binable = S_binable
 module Make_plain (Key : Key_plain) : S_plain with type Key.t = Key.t
 
 module Make_plain_using_comparator (Key : sig
-    type t [@@deriving sexp_of]
+  type t [@@deriving sexp_of]
 
-    include Comparator.S with type t := t
-  end) :
+  include Comparator.S with type t := t
+end) :
   S_plain
-  with type Key.t = Key.t
-  with type Key.comparator_witness = Key.comparator_witness
+    with type Key.t = Key.t
+    with type Key.comparator_witness = Key.comparator_witness
 
 module Make (Key : Key) : S with type Key.t = Key.t
 
 module Make_using_comparator (Key : sig
-    type t [@@deriving sexp]
+  type t [@@deriving sexp]
 
-    include Comparator.S with type t := t
-  end) : S with type Key.t = Key.t with type Key.comparator_witness = Key.comparator_witness
+  include Comparator.S with type t := t
+end) : S with type Key.t = Key.t with type Key.comparator_witness = Key.comparator_witness
 
 module Make_binable (Key : Key_binable) : S_binable with type Key.t = Key.t
 
 module Make_binable_using_comparator (Key : sig
-    type t [@@deriving bin_io, sexp]
+  type t [@@deriving bin_io, sexp]
 
-    include Comparator.S with type t := t
-  end) :
+  include Comparator.S with type t := t
+end) :
   S_binable
-  with type Key.t = Key.t
-  with type Key.comparator_witness = Key.comparator_witness
+    with type Key.t = Key.t
+    with type Key.comparator_witness = Key.comparator_witness
 
 module Key_bin_io = Key_bin_io
 include For_deriving with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
 
 module Make_tree_plain (Key : sig
-    type t [@@deriving sexp_of]
+  type t [@@deriving sexp_of]
 
-    include Comparator.S with type t := t
-  end) : Make_S_plain_tree(Key).S
+  include Comparator.S with type t := t
+end) : Make_S_plain_tree(Key).S
 
 module Make_tree (Key : sig
-    type t [@@deriving sexp]
+  type t [@@deriving sexp]
 
-    include Comparator.S with type t := t
-  end) : sig
+  include Comparator.S with type t := t
+end) : sig
   include Make_S_plain_tree(Key).S
   include Sexpable.S1 with type 'a t := 'a t
 end
@@ -1102,7 +1099,6 @@ module Stable : sig
   module Symmetric_diff_element : sig
     module V1 :
       Stable_module_types.With_stable_witness.S2
-      with type ('a, 'b) t = ('a, 'b) Symmetric_diff_element.t
+        with type ('a, 'b) t = ('a, 'b) Symmetric_diff_element.t
   end
 end
-

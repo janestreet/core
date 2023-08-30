@@ -42,10 +42,10 @@ module Replace_polymorphic_compare : Comparisons.S with type t := t = T
 let validate_ordinary t =
   Validate.of_error_opt
     (let module C = Class in
-     match classify t with
-     | C.Normal | C.Subnormal | C.Zero -> None
-     | C.Infinite -> Some "value is infinite"
-     | C.Nan -> Some "value is NaN")
+    match classify t with
+    | C.Normal | C.Subnormal | C.Zero -> None
+    | C.Infinite -> Some "value is infinite"
+    | C.Nan -> Some "value is NaN")
 ;;
 
 module V = struct
@@ -76,8 +76,8 @@ module Robust_compare = struct
   end
 
   module Make (T : sig
-      val robust_comparison_tolerance : float
-    end) : S = struct
+    val robust_comparison_tolerance : float
+  end) : S = struct
     (* We have test in the tree that rely on these functions not allocating, even without
        X_LIBRARY_INLING. The only way to ensure that these don't create temporary boxed
        floats without X_LIBRARY_INLING is for this code to see the float operations as
@@ -105,8 +105,8 @@ module Robust_compare = struct
 end
 
 module Robustly_comparable = Robust_compare.Make (struct
-    let robust_comparison_tolerance = 1E-7
-  end)
+  let robust_comparison_tolerance = 1E-7
+end)
 
 include Robustly_comparable
 
@@ -121,9 +121,9 @@ module Terse = struct
   include (
     Base.Float.Terse :
       module type of struct
-      include Base.Float.Terse
-    end
-    with type t := t)
+        include Base.Float.Terse
+      end
+      with type t := t)
 end
 
 let robust_sign t : Sign.t = if t >. 0. then Pos else if t <. 0. then Neg else Zero

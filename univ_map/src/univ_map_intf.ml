@@ -131,7 +131,7 @@ module type Univ_map = sig
     type f =
       { f :
           'a.
-            key:'a Key.t
+          key:'a Key.t
           -> [ `Left of 'a Input1_data.t
              | `Right of 'a Input2_data.t
              | `Both of 'a Input1_data.t * 'a Input2_data.t
@@ -148,14 +148,14 @@ module type Univ_map = sig
   end
 
   module Merge1
-      (Key : Key)
-      (Input1_data : Data1)
-      (Input2_data : Data1)
-      (Output_data : Data1) : sig
+    (Key : Key)
+    (Input1_data : Data1)
+    (Input2_data : Data1)
+    (Output_data : Data1) : sig
     type ('s1, 's2, 's3) f =
       { f :
           'a.
-            key:'a Key.t
+          key:'a Key.t
           -> [ `Left of ('s1, 'a) Input1_data.t
              | `Right of ('s2, 'a) Input2_data.t
              | `Both of ('s1, 'a) Input1_data.t * ('s2, 'a) Input2_data.t

@@ -4,8 +4,8 @@ include Base.Option
 type 'a t = 'a option [@@deriving bin_io ~localize, typerep, stable_witness]
 
 include Comparator.Derived (struct
-    type nonrec 'a t = 'a t [@@deriving sexp_of, compare]
-  end)
+  type nonrec 'a t = 'a t [@@deriving sexp_of, compare]
+end)
 
 let validate ~none ~some t =
   let module V = Validate in

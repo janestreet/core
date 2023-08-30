@@ -42,8 +42,8 @@ let protect f v =
 let try_with f =
   protect
     (fun () ->
-       f ();
-       pass)
+      f ();
+      pass)
     ()
 ;;
 
@@ -59,7 +59,7 @@ let result_fail t =
     "validation errors"
     (List.map t ~f:(fun { path; error } -> path_string path, error))
     [%sexp_of: (string * Error.t) List.t]
-[@@cold]
+  [@@cold]
 ;;
 
 (** [result] is carefully implemented so that it can be inlined -- calling [result_fail],

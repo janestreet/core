@@ -17,8 +17,8 @@ let to_string ~f t =
 ;;
 
 include Comparator.Derived (struct
-    type nonrec 'a t = 'a t [@@deriving sexp_of, compare]
-  end)
+  type nonrec 'a t = 'a t [@@deriving sexp_of, compare]
+end)
 
 let quickcheck_generator = Base_quickcheck.Generator.list
 let gen_non_empty = Base_quickcheck.Generator.list_non_empty

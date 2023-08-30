@@ -250,8 +250,7 @@ let add_substitute buf f s =
         add_char buf '\\';
         add_char buf current;
         subst current (i + 1)
-      | '\\' as current ->
-        subst current (i + 1)
+      | '\\' as current -> subst current (i + 1)
       | current ->
         add_char buf current;
         subst current (i + 1))

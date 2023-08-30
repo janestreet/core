@@ -116,11 +116,11 @@ end
 
 module Of_indexable1 (T : Indexable1) = struct
   module M = Of_indexable2 (struct
-      type ('a, _) t = 'a T.t
+    type ('a, _) t = 'a T.t
 
-      let length = T.length
-      let get = T.get
-    end)
+    let length = T.length
+    let get = T.get
+  end)
 
   module Hexdump = struct
     include T
@@ -139,11 +139,11 @@ end
 
 module Of_indexable (T : Indexable) = struct
   module M = Of_indexable1 (struct
-      type _ t = T.t
+    type _ t = T.t
 
-      let length = T.length
-      let get = T.get
-    end)
+    let length = T.length
+    let get = T.get
+  end)
 
   module Hexdump = struct
     include T

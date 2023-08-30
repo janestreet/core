@@ -112,8 +112,6 @@ module type S = sig
   val foldi_elt : 'a t -> init:'acc -> f:(int -> 'acc -> 'a Elt.t -> 'acc) -> 'acc
   val iter_elt : 'a t -> f:('a Elt.t -> unit) -> unit
   val iteri_elt : 'a t -> f:(int -> 'a Elt.t -> unit) -> unit
-
-
   val fold_right : 'a t -> init:'acc -> f:('a -> 'acc -> 'acc) -> 'acc
   val fold_right_elt : 'a t -> init:'acc -> f:('a Elt.t -> 'acc -> 'acc) -> 'acc
 
@@ -179,7 +177,6 @@ module type S = sig
       not be traversed. Deleting the element currently being visited is an error that is
       not detected (presumably leading to an infinite loop). *)
   val unchecked_iter : 'a t -> f:('a -> unit) -> unit
-
 
   (** A sequence of values from the doubly-linked list. It makes an intermediate copy of
       the list so that the returned sequence is immune to any subsequent mutation of the

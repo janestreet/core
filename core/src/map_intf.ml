@@ -10,7 +10,6 @@
     matches [Creators3_with_comparator] but [Accessors3] (without comparator).
 *)
 
-
 open! Import
 module Binable = Binable0
 module Map = Base.Map
@@ -76,9 +75,9 @@ module type Accessors_generic = sig
     : ( 'k
       , 'cmp
       , 'k key Quickcheck.Shrinker.t
-      -> 'v Quickcheck.Shrinker.t
-      -> ('k, 'v, 'cmp) t Quickcheck.Shrinker.t )
-        access_options
+        -> 'v Quickcheck.Shrinker.t
+        -> ('k, 'v, 'cmp) t Quickcheck.Shrinker.t )
+      access_options
 end
 
 module type Creators_generic = sig
@@ -97,9 +96,9 @@ module type Creators_generic = sig
     : ( 'k
       , 'cmp
       , 'k key Quickcheck.Generator.t
-      -> 'v Quickcheck.Generator.t
-      -> ('k, 'v, 'cmp) t Quickcheck.Generator.t )
-        create_options
+        -> 'v Quickcheck.Generator.t
+        -> ('k, 'v, 'cmp) t Quickcheck.Generator.t )
+      create_options
 end
 
 module type Creators_and_accessors_generic = sig
@@ -112,20 +111,20 @@ module type Creators_and_accessors_generic = sig
 
   include
     Creators_generic
-    with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
-    with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
-    with type 'a key := 'a key
-    with type 'a cmp := 'a cmp
-    with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) create_options
-    with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) access_options
+      with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
+      with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
+      with type 'a key := 'a key
+      with type 'a cmp := 'a cmp
+      with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) create_options
+      with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) access_options
 
   include
     Accessors_generic
-    with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
-    with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
-    with type 'a key := 'a key
-    with type 'a cmp := 'a cmp
-    with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) access_options
+      with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
+      with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
+      with type 'a key := 'a key
+      with type 'a cmp := 'a cmp
+      with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) access_options
 end
 
 module Make_S_plain_tree (Key : Comparator.S) = struct
@@ -134,18 +133,18 @@ module Make_S_plain_tree (Key : Comparator.S) = struct
 
     include
       Creators_and_accessors_generic
-      with type ('a, 'b, 'c) t := 'b t
-      with type ('a, 'b, 'c) tree := 'b t
-      with type 'a key := Key.t
-      with type 'a cmp := Key.comparator_witness
-      with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
-      with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
+        with type ('a, 'b, 'c) t := 'b t
+        with type ('a, 'b, 'c) tree := 'b t
+        with type 'a key := Key.t
+        with type 'a cmp := Key.comparator_witness
+        with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
+        with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
 
     module Provide_of_sexp
-        (K : sig
-           type t [@@deriving of_sexp]
-         end
-         with type t := Key.t) : sig
+      (K : sig
+        type t [@@deriving of_sexp]
+      end
+      with type t := Key.t) : sig
       type _ t [@@deriving of_sexp]
     end
     with type 'a t := 'a t
@@ -164,29 +163,29 @@ module type S_plain = sig
 
   include
     Creators_generic
-    with type ('a, 'b, 'c) t := 'b t
-    with type ('a, 'b, 'c) tree := (Key.t, 'b, Key.comparator_witness) Tree.t
-    with type 'k key := Key.t
-    with type 'c cmp := Key.comparator_witness
-    with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
-    with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
+      with type ('a, 'b, 'c) t := 'b t
+      with type ('a, 'b, 'c) tree := (Key.t, 'b, Key.comparator_witness) Tree.t
+      with type 'k key := Key.t
+      with type 'c cmp := Key.comparator_witness
+      with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
+      with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
 
   val map : 'a t -> f:(('a -> 'b)[@local]) -> 'b t
 
   module Provide_of_sexp
-      (Key : sig
-         type t [@@deriving of_sexp]
-       end
-       with type t := Key.t) : sig
+    (Key : sig
+      type t [@@deriving of_sexp]
+    end
+    with type t := Key.t) : sig
     type _ t [@@deriving of_sexp]
   end
   with type 'a t := 'a t
 
   module Provide_bin_io
-      (Key : sig
-         type t [@@deriving bin_io]
-       end
-       with type t := Key.t) : Binable.S1 with type 'a t := 'a t
+    (Key : sig
+      type t [@@deriving bin_io]
+    end
+    with type t := Key.t) : Binable.S1 with type 'a t := 'a t
 
   module Provide_hash (Key : Hasher.S with type t := Key.t) : sig
     type 'a t [@@deriving hash]
@@ -202,9 +201,9 @@ module type S_plain = sig
     : ( 'k
       , 'cmp
       , Key.t Quickcheck.Shrinker.t
-      -> 'v Quickcheck.Shrinker.t
-      -> 'v t Quickcheck.Shrinker.t )
-        Without_comparator.t
+        -> 'v Quickcheck.Shrinker.t
+        -> 'v t Quickcheck.Shrinker.t )
+      Without_comparator.t
 end
 
 module type S = sig

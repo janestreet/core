@@ -168,7 +168,7 @@ let%expect_test "insert and remove" =
          (List.fold elts ~init:elt ~f:(fun prev_elt elt ->
             require_equal [%here] (module Elt_option) (prev t elt) (Some prev_elt);
             elt)
-          : Elt.t));
+           : Elt.t));
     match List.rev elts with
     | [] -> ()
     | elt :: elts ->
@@ -181,7 +181,7 @@ let%expect_test "insert and remove" =
         (List.fold elts ~init:elt ~f:(fun next_elt elt ->
            assert (Option.equal Elt.equal (next t elt) (Some next_elt));
            elt)
-         : Elt.t)
+          : Elt.t)
   in
   let elt1 = insert_first t () in
   is_elts [ elt1 ];
@@ -339,9 +339,9 @@ let%test_module "move/set functions" =
     let%test_unit _ =
       test
         (fun _ a ->
-           Elt.set a.(0) 5;
-           Elt.set a.(4) 6;
-           Elt.set a.(0) 7)
+          Elt.set a.(0) 5;
+          Elt.set a.(4) 6;
+          Elt.set a.(0) 7)
         [ 7; 1; 2; 3; 6 ]
     ;;
   end)
@@ -434,13 +434,13 @@ let%test_module "inplace functions" =
 let%test_module "partition functions" =
   (module struct
     let test
-          (type a b)
-          (module M1 : Testable with type t = a)
-          (module M2 : Testable with type t = b)
-          ~n
-          k
-          (expected1 : a list)
-          (expected2 : b list)
+      (type a b)
+      (module M1 : Testable with type t = a)
+      (module M2 : Testable with type t = b)
+      ~n
+      k
+      (expected1 : a list)
+      (expected2 : b list)
       =
       let t = create () in
       for i = 0 to n - 1 do

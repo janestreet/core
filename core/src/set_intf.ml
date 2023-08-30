@@ -123,7 +123,7 @@ module type Accessors_generic = sig
       , 'cmp
       , ('a, 'cmp) t -> f:(('a elt -> 'b)[@local]) -> ('a elt, 'b, 'cmp cmp) Base.Map.t
       )
-        access_options
+      access_options
 
   val quickcheck_observer
     :  'a elt Quickcheck.Observer.t
@@ -133,7 +133,7 @@ module type Accessors_generic = sig
     : ( 'a
       , 'cmp
       , 'a elt Quickcheck.Shrinker.t -> ('a, 'cmp) t Quickcheck.Shrinker.t )
-        access_options
+      access_options
 end
 
 module type Creators_generic = sig
@@ -149,7 +149,7 @@ module type Creators_generic = sig
     : ( 'a
       , 'cmp
       , 'a elt Quickcheck.Generator.t -> ('a, 'cmp) t Quickcheck.Generator.t )
-        create_options
+      create_options
 end
 
 module type Creators_and_accessors_generic = sig
@@ -160,17 +160,17 @@ module type Creators_and_accessors_generic = sig
 
   include
     Accessors_generic
-    with type ('a, 'b) t := ('a, 'b) t
-    with type ('a, 'b) tree := ('a, 'b) tree
-    with type 'a elt := 'a elt
-    with type 'cmp cmp := 'cmp cmp
+      with type ('a, 'b) t := ('a, 'b) t
+      with type ('a, 'b) tree := ('a, 'b) tree
+      with type 'a elt := 'a elt
+      with type 'cmp cmp := 'cmp cmp
 
   include
     Creators_generic
-    with type ('a, 'b) t := ('a, 'b) t
-    with type ('a, 'b) tree := ('a, 'b) tree
-    with type 'a elt := 'a elt
-    with type 'cmp cmp := 'cmp cmp
+      with type ('a, 'b) t := ('a, 'b) t
+      with type ('a, 'b) tree := ('a, 'b) tree
+      with type 'a elt := 'a elt
+      with type 'cmp cmp := 'cmp cmp
 end
 
 module Make_S_plain_tree (Elt : Comparator.S) = struct
@@ -179,18 +179,18 @@ module Make_S_plain_tree (Elt : Comparator.S) = struct
 
     include
       Creators_generic
-      with type ('a, 'b) set := ('a, 'b) Tree.t
-      with type ('a, 'b) t := t
-      with type ('a, 'b) tree := t
-      with type 'a elt := Elt.t
-      with type 'c cmp := Elt.comparator_witness
-      with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
+        with type ('a, 'b) set := ('a, 'b) Tree.t
+        with type ('a, 'b) t := t
+        with type ('a, 'b) tree := t
+        with type 'a elt := Elt.t
+        with type 'c cmp := Elt.comparator_witness
+        with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
 
     module Provide_of_sexp
-        (Elt : sig
-           type t [@@deriving of_sexp]
-         end
-         with type t := Elt.t) : sig
+      (Elt : sig
+        type t [@@deriving of_sexp]
+      end
+      with type t := Elt.t) : sig
       type t [@@deriving of_sexp]
     end
     with type t := t
@@ -208,27 +208,27 @@ module type S_plain = sig
 
   include
     Creators_generic
-    with type ('a, 'b) set := ('a, 'b) Set.t
-    with type ('a, 'b) t := t
-    with type ('a, 'b) tree := (Elt.t, Elt.comparator_witness) Tree.t
-    with type 'a elt := Elt.t
-    with type 'c cmp := Elt.comparator_witness
-    with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
+      with type ('a, 'b) set := ('a, 'b) Set.t
+      with type ('a, 'b) t := t
+      with type ('a, 'b) tree := (Elt.t, Elt.comparator_witness) Tree.t
+      with type 'a elt := Elt.t
+      with type 'c cmp := Elt.comparator_witness
+      with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
 
   module Provide_of_sexp
-      (Elt : sig
-         type t [@@deriving of_sexp]
-       end
-       with type t := Elt.t) : sig
+    (Elt : sig
+      type t [@@deriving of_sexp]
+    end
+    with type t := Elt.t) : sig
     type t [@@deriving of_sexp]
   end
   with type t := t
 
   module Provide_bin_io
-      (Elt : sig
-         type t [@@deriving bin_io]
-       end
-       with type t := Elt.t) : Binable.S with type t := t
+    (Elt : sig
+      type t [@@deriving bin_io]
+    end
+    with type t := Elt.t) : Binable.S with type t := t
 
   module Provide_hash (Elt : Hasher.S with type t := Elt.t) : sig
     type t [@@deriving hash]

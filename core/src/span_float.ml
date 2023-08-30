@@ -67,18 +67,18 @@ module Stable = struct
          (1) all values serialize the same way in both representations, or
          (2) you add a new Time.Span version to stable.ml *)
       include (
-      struct
-        include Float
+        struct
+          include Float
 
-        let sign = sign_exn
-      end :
-        Like_a_float with type t := t)
+          let sign = sign_exn
+        end :
+          Like_a_float with type t := t)
 
       (* due to precision limitations in float we can't expect better than microsecond
          precision *)
       include Float.Robust_compare.Make (struct
-          let robust_comparison_tolerance = 1E-6
-        end)
+        let robust_comparison_tolerance = 1E-6
+      end)
 
       (* this prevents any worry about having these very common names redefined below and
          makes their usage within this module safer.  Constant is included at the very
@@ -97,7 +97,6 @@ module Stable = struct
         let hour = of_float (60. *. 60.)
         let day = of_float (24. *. 60. *. 60.)
       end
-
 
       let to_parts t : Parts.t =
         let sign = Float.sign_exn t in
@@ -183,15 +182,15 @@ module Stable = struct
     ;;
 
     let create
-          ?(sign = Sign.Pos)
-          ?(day = 0)
-          ?(hr = 0)
-          ?(min = 0)
-          ?(sec = 0)
-          ?(ms = 0)
-          ?(us = 0)
-          ?(ns = 0)
-          ()
+      ?(sign = Sign.Pos)
+      ?(day = 0)
+      ?(hr = 0)
+      ?(min = 0)
+      ?(sec = 0)
+      ?(ms = 0)
+      ?(us = 0)
+      ?(ns = 0)
+      ()
       =
       let ( + ) = T.( + ) in
       let t =
@@ -272,7 +271,7 @@ module Stable = struct
 
     let string ~is_v2 suffix float =
       if is_v2
-      (* This is the same float-to-string conversion used in [Float.sexp_of_t].  It's like
+         (* This is the same float-to-string conversion used in [Float.sexp_of_t].  It's like
          [Float.to_string], but may leave off trailing period. *)
       then !Sexplib.Conv.default_string_of_float float ^ suffix
       else sprintf "%g%s" float suffix
@@ -655,7 +654,7 @@ module Stable = struct
         if not (Float.is_finite float)
         then
           if (* We print specific special strings for non-finite floats *)
-            Float.is_nan float
+             Float.is_nan float
           then "NANs"
           else if Float.is_negative float
           then "-INFs"
@@ -712,11 +711,11 @@ include Stable.V3
 let to_proportional_float = to_float
 
 let to_string_hum
-      ?(delimiter = '_')
-      ?(decimals = 3)
-      ?(align_decimal = false)
-      ?unit_of_time
-      t
+  ?(delimiter = '_')
+  ?(decimals = 3)
+  ?(align_decimal = false)
+  ?unit_of_time
+  t
   =
   let float, suffix =
     match Option.value unit_of_time ~default:(to_unit_of_time t) with
@@ -762,24 +761,24 @@ let quickcheck_generator =
 ;;
 
 include Pretty_printer.Register (struct
-    type nonrec t = t
+  type nonrec t = t
 
-    let to_string = to_string
-    let module_name = "Core.Time.Span"
-  end)
+  let to_string = to_string
+  let module_name = "Core.Time.Span"
+end)
 
 include Hashable.Make_binable (struct
-    type nonrec t = t [@@deriving bin_io, compare, hash, sexp_of]
+  type nonrec t = t [@@deriving bin_io, compare, hash, sexp_of]
 
-    (* Previous versions rendered hash-based containers using float serialization rather
+  (* Previous versions rendered hash-based containers using float serialization rather
        than time serialization, so when reading hash-based containers in we accept either
        serialization. *)
-    let t_of_sexp sexp =
-      match Float.t_of_sexp sexp with
-      | float -> of_float float
-      | exception _ -> t_of_sexp sexp
-    ;;
-  end)
+  let t_of_sexp sexp =
+    match Float.t_of_sexp sexp with
+    | float -> of_float float
+    | exception _ -> t_of_sexp sexp
+  ;;
+end)
 
 module C = struct
   type t = T.t [@@deriving bin_io]
@@ -806,10 +805,10 @@ module Map = Map.Make_binable_using_comparator (C)
 module Set = Set.Make_binable_using_comparator (C)
 
 include Comparable.With_zero (struct
-    type nonrec t = t [@@deriving compare, sexp_of]
+  type nonrec t = t [@@deriving compare, sexp_of]
 
-    let zero = zero
-  end)
+  let zero = zero
+end)
 
 module Private = struct
   let suffix_of_unit_of_time = suffix_of_unit_of_time

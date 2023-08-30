@@ -384,8 +384,8 @@ module Make (Time0 : Time0_intf.S) = struct
   let ensure_colon_in_offset offset =
     let offset_length = String.length offset in
     if Int.( <= ) offset_length 2
-    && Char.is_digit offset.[0]
-    && Char.is_digit offset.[offset_length - 1]
+       && Char.is_digit offset.[0]
+       && Char.is_digit offset.[offset_length - 1]
     then offset ^ ":00"
     else if Char.( = ) offset.[1] ':' || Char.( = ) offset.[2] ':'
     then offset

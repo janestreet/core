@@ -6,8 +6,8 @@ include module type of Base.Bool with type t := t
 
 include
   Identifiable.S
-  with type t := t
-   and type comparator_witness := Base.Bool.comparator_witness
+    with type t := t
+     and type comparator_witness := Base.Bool.comparator_witness
 
 (**
    Human readable parsing. Accepted inputs are (case insensitive):

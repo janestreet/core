@@ -6,9 +6,9 @@ type 'a t = ('a, Error.t) Result.t [@@deriving bin_io]
 
 (** @inline *)
 include module type of struct
-  include Base.Or_error
-end
-with type 'a t := 'a t
+    include Base.Or_error
+  end
+  with type 'a t := 'a t
 
 module Expect_test_config : Expect_test_config_types.S with type 'a IO.t = 'a t
 

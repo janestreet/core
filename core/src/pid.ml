@@ -59,11 +59,11 @@ include
     end)
 
 include Identifiable.Make_using_comparator (struct
-    type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
-    type nonrec comparator_witness = comparator_witness
+  type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
+  type nonrec comparator_witness = comparator_witness
 
-    let comparator = comparator
-    let of_string = of_string
-    let to_string = to_string
-    let module_name = "Core.Pid"
-  end)
+  let comparator = comparator
+  let of_string = of_string
+  let to_string = to_string
+  let module_name = "Core.Pid"
+end)

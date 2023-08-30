@@ -96,20 +96,20 @@ include (
     Hashable.S_binable with type t := t)
 
 include Comparable.Make_binable_using_comparator (struct
-    include T
+  include T
 
-    (* In 108.06a and earlier, months in sexps of Maps and Sets were raw ints.  From 108.07
+  (* In 108.06a and earlier, months in sexps of Maps and Sets were raw ints.  From 108.07
        through 109.13, the output format remained raw as before, but both the raw and
        pretty format were accepted as input.  From 109.14 on, the output format was
        changed from raw to pretty, while continuing to accept both formats.  Once we believe
        most programs are beyond 109.14, we will switch the input format to no longer accept
        raw. *)
-    let t_of_sexp sexp =
-      match Option.try_with (fun () -> Int.t_of_sexp sexp) with
-      | Some i -> of_int_exn (i + 1)
-      | None -> T.t_of_sexp sexp
-    ;;
-  end)
+  let t_of_sexp sexp =
+    match Option.try_with (fun () -> Int.t_of_sexp sexp) with
+    | Some i -> of_int_exn (i + 1)
+    | None -> T.t_of_sexp sexp
+  ;;
+end)
 
 (* Replace the overriden sexp converters from [Comparable.Make_binable] with the ordinary
    symbolic converters. *)
@@ -131,13 +131,13 @@ let of_string =
   let table =
     lazy
       (let module T = String.Table in
-       let table = T.create ~size:num_months () in
-       Array.iteri (Lazy.force all_strings) ~f:(fun i s ->
-         let t = of_int_exn (i + 1) in
-         Hashtbl.set table ~key:s ~data:t;
-         Hashtbl.set table ~key:(String.lowercase s) ~data:t;
-         Hashtbl.set table ~key:(String.uppercase s) ~data:t);
-       table)
+      let table = T.create ~size:num_months () in
+      Array.iteri (Lazy.force all_strings) ~f:(fun i s ->
+        let t = of_int_exn (i + 1) in
+        Hashtbl.set table ~key:s ~data:t;
+        Hashtbl.set table ~key:(String.lowercase s) ~data:t;
+        Hashtbl.set table ~key:(String.uppercase s) ~data:t);
+      table)
   in
   fun str ->
     match Hashtbl.find (Lazy.force table) str with

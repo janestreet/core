@@ -262,8 +262,7 @@ let%test_module _ =
       require_self_consistent M.typerep_of_t [ { M.foo = () } ];
       check_n M.typerep_of_t [ { M.foo = () } ] |> require_boxed ~cr:CR_someday;
       check_u M.typerep_of_t [ { M.foo = () } ] |> require_maybe_boxed;
-      [%expect
-        {|
+      [%expect {|
         "Boxed container types should never be immediate" |}]
     ;;
 
@@ -385,8 +384,7 @@ let%test_module _ =
       require_self_consistent M.typerep_of_t [ M.Foo () ];
       check_n M.typerep_of_t [ M.Foo () ] |> require_boxed ~cr:CR_someday;
       check_u M.typerep_of_t [ M.Foo () ] |> require_maybe_boxed;
-      [%expect
-        {|
+      [%expect {|
         "Boxed container types should never be immediate" |}]
     ;;
 

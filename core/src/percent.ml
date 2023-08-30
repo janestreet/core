@@ -139,15 +139,15 @@ module Stable = struct
         ; "1.47651E+10"
         ]
         ~f:(fun s ->
-          printf "== %s ==\n" s;
-          let x = Float.of_string s in
-          List.iter [ -40; -10; -2; -1; 0; 1; 2; 10; 40 ] ~f:(fun by ->
-            let s1 = shift_decimal_point s ~by in
-            printf "%s\n" s1;
-            let x1 = Float.of_string s1 in
-            let x2 = x *. (10. ** float by) in
-            assert (Float.(x1 = x2 || abs ((x1 - x2) / x1) < 1e-6) : bool));
-          printf "--------------------------------------------------\n");
+        printf "== %s ==\n" s;
+        let x = Float.of_string s in
+        List.iter [ -40; -10; -2; -1; 0; 1; 2; 10; 40 ] ~f:(fun by ->
+          let s1 = shift_decimal_point s ~by in
+          printf "%s\n" s1;
+          let x1 = Float.of_string s1 in
+          let x2 = x *. (10. ** float by) in
+          assert (Float.(x1 = x2 || abs ((x1 - x2) / x1) < 1e-6) : bool));
+        printf "--------------------------------------------------\n");
       (* Note "-0.000e13" is not adjusted *)
       [%expect
         {|
@@ -311,14 +311,14 @@ module Stable = struct
 
     include (
       Stringable :
-      sig
-        type t
+        sig
+          type t
 
-        val to_string : t -> string
-        val of_string : string -> t
-        val of_string_allow_nan_and_inf : string -> t
-      end
-      with type t := t)
+          val to_string : t -> string
+          val of_string : string -> t
+          val of_string_allow_nan_and_inf : string -> t
+        end
+        with type t := t)
 
     let t_sexp_grammar = Sexplib.Sexp_grammar.coerce String.t_sexp_grammar
 
@@ -336,8 +336,8 @@ module Stable = struct
     ;;
 
     include Comparable.Make_binable (struct
-        type nonrec t = t [@@deriving bin_io, compare, sexp]
-      end)
+      type nonrec t = t [@@deriving bin_io, compare, sexp]
+    end)
 
     module Always_percentage = struct
       type nonrec t = t [@@deriving sexp, bin_io]
@@ -464,14 +464,14 @@ module Stable = struct
 
     include (
       Stringable :
-      sig
-        type t
+        sig
+          type t
 
-        val to_string : t -> string
-        val of_string : string -> t
-        val of_string_allow_nan_and_inf : string -> t
-      end
-      with type t := t)
+          val to_string : t -> string
+          val of_string : string -> t
+          val of_string_allow_nan_and_inf : string -> t
+        end
+        with type t := t)
 
     let t_sexp_grammar = Sexplib.Sexp_grammar.coerce String.t_sexp_grammar
 
@@ -487,11 +487,11 @@ module Stable = struct
     ;;
 
     include Comparable.Make_binable_using_comparator (struct
-        type nonrec t = t [@@deriving bin_io, compare, sexp]
-        type comparator_witness = V3.comparator_witness
+      type nonrec t = t [@@deriving bin_io, compare, sexp]
+      type comparator_witness = V3.comparator_witness
 
-        let comparator = V3.comparator
-      end)
+      let comparator = V3.comparator
+    end)
 
     type comparator_witness = V3.comparator_witness
   end
@@ -503,21 +503,21 @@ module Stable = struct
       let bin_shape_t = Float.bin_shape_t
 
       include Comparable.Make_binable_using_comparator (struct
-          type nonrec t = t [@@deriving compare, sexp_of, bin_io]
-          type comparator_witness = V3.comparator_witness
+        type nonrec t = t [@@deriving compare, sexp_of, bin_io]
+        type comparator_witness = V3.comparator_witness
 
-          let comparator = V3.comparator
+        let comparator = V3.comparator
 
-          (* Previous versions rendered comparable-based containers using float
+        (* Previous versions rendered comparable-based containers using float
              serialization rather than percent serialization, so when reading
              comparable-based containers in we accept either serialization.
           *)
-          let t_of_sexp sexp =
-            match Float.t_of_sexp sexp with
-            | float -> float
-            | exception _ -> t_of_sexp sexp
-          ;;
-        end)
+        let t_of_sexp sexp =
+          match Float.t_of_sexp sexp with
+          | float -> float
+          | exception _ -> t_of_sexp sexp
+        ;;
+      end)
     end
 
     include Bin_shape_same_as_float
@@ -614,34 +614,34 @@ let apply t f = t *. f
 let scale t f = t *. f
 
 include (
-struct
-  include Float
+  struct
+    include Float
 
-  let one_hundred_percent = 1.
-  let ( // ) x y = of_mult x /. of_mult y
-end :
-sig
-  val zero : t
-  val one_hundred_percent : t
-  val ( * ) : t -> t -> t
-  val ( + ) : t -> t -> t
-  val ( - ) : t -> t -> t
-  val ( / ) : t -> t -> t
-  val ( // ) : t -> t -> float
-  val abs : t -> t
-  val neg : t -> t
-  val is_nan : t -> bool
-  val is_inf : t -> bool
-  val sign_exn : t -> Sign.t
+    let one_hundred_percent = 1.
+    let ( // ) x y = of_mult x /. of_mult y
+  end :
+    sig
+      val zero : t
+      val one_hundred_percent : t
+      val ( * ) : t -> t -> t
+      val ( + ) : t -> t -> t
+      val ( - ) : t -> t -> t
+      val ( / ) : t -> t -> t
+      val ( // ) : t -> t -> float
+      val abs : t -> t
+      val neg : t -> t
+      val is_nan : t -> bool
+      val is_inf : t -> bool
+      val sign_exn : t -> Sign.t
 
-  include Robustly_comparable with type t := t
-end)
+      include Robustly_comparable with type t := t
+    end)
 
 include Comparable.With_zero (struct
-    include Stable.V1.Bin_shape_same_as_float
+  include Stable.V1.Bin_shape_same_as_float
 
-    let zero = zero
-  end)
+  let zero = zero
+end)
 
 let validate = Float.validate_ordinary
 let of_string_allow_nan_and_inf s = Stringable.of_string_allow_nan_and_inf s

@@ -3,7 +3,6 @@
 
 open! Import
 
-
 (** Parses a given time-of-day string. If the string is invalid, raises. If the string is
     valid, calls [f] with the string, the parsed numbers of hours, minutes, and seconds,
     and the position and length of the substring representing subseconds, which can be

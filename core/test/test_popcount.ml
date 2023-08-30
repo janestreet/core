@@ -95,4 +95,3 @@ let%test_unit _ = does_not_allocate (fun x -> Int64.popcount (Stdlib.Int64.of_in
 let%test_unit _ =
   does_not_allocate (fun x -> Nativeint.popcount (Stdlib.Nativeint.of_int x))
 ;;
-

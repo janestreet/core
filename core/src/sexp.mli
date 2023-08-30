@@ -18,9 +18,9 @@ include Stringable.S with type t := t
 include Quickcheckable.S with type t := t
 
 include module type of struct
-  include Sexplib.Sexp
-end
-with type t := t
+    include Sexplib.Sexp
+  end
+  with type t := t
 
 exception Of_sexp_error of exn * t
 

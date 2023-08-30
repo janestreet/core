@@ -50,7 +50,7 @@ let () =
              ; Bench.Test.create
                  ~name:("re2_compile_" ^ needle_length)
                  (compile_re2 needle)
-                 (* ; Bench.Test.create ~name:("pcre_compile_" ^ needle_length) (compile_pcre x) *)
+               (* ; Bench.Test.create ~name:("pcre_compile_" ^ needle_length) (compile_pcre x) *)
              ]))
         @ List.concat
             (List.map [ 3; 9 (* 12 *) ] ~f:(fun k ->

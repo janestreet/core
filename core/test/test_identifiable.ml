@@ -30,9 +30,9 @@ let%test_module _ =
 
       let incr ?(by = 1) t counter =
         t
-        := Core.Map.update !t counter ~f:(function
-          | None -> by
-          | Some i -> i + by)
+          := Core.Map.update !t counter ~f:(function
+               | None -> by
+               | Some i -> i + by)
       ;;
 
       let check location =
@@ -55,8 +55,8 @@ let%test_module _ =
       [@@deriving bin_io, compare, hash, sexp]
 
       include Sexpable.To_stringable (struct
-          type nonrec t = t [@@deriving sexp]
-        end)
+        type nonrec t = t [@@deriving sexp]
+      end)
 
       let incr ?by counter = Counts.incr Counts.actual counter ?by
 

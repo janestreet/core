@@ -115,7 +115,6 @@ end = struct
   let never_with_name name = create_with_name name Never None
   let never typename = create typename Never None
   let unknown typename = create typename Unknown None
-
   let option = create_with_name "option" Sometimes (Allowed_ints.From_zero_to 0)
   let list = create_with_name "list" Sometimes (Allowed_ints.From_zero_to 0)
 
@@ -133,7 +132,6 @@ end = struct
     let tuple3 = never_with_name "tuple3"
     let tuple4 = never_with_name "tuple4"
     let tuple5 = never_with_name "tuple5"
-
     let function_ = never_with_name "function"
   end
 end
@@ -149,8 +147,8 @@ module Computation_impl = struct
   type nonrec 'a t = 'a t
 
   include Type_generic.Variant_and_record_intf.M (struct
-      type nonrec 'a t = 'a t
-    end)
+    type nonrec 'a t = 'a t
+  end)
 
   include Never_values
 
@@ -275,8 +273,8 @@ let of_typerep typerep =
 ;;
 
 module For_all_parameters (M : sig
-    val immediacy : Immediacy.t
-  end) =
+  val immediacy : Immediacy.t
+end) =
 struct
   let witness typerep1 typerep2 =
     let t1 = of_typerep typerep1 in
@@ -365,8 +363,8 @@ module Always = struct
   type nonrec 'a t = 'a t
 
   include For_all_parameters (struct
-      let immediacy = Always
-    end)
+    let immediacy = Always
+  end)
 
   let of_typerep typerep =
     let t = of_typerep typerep in
@@ -390,8 +388,8 @@ module Sometimes = struct
   type nonrec 'a t = 'a t
 
   include For_all_parameters (struct
-      let immediacy = Sometimes
-    end)
+    let immediacy = Sometimes
+  end)
 
   let of_typerep typerep =
     let t = of_typerep typerep in
@@ -415,8 +413,8 @@ module Never = struct
   type nonrec 'a t = 'a t
 
   include For_all_parameters (struct
-      let immediacy = Never
-    end)
+    let immediacy = Never
+  end)
 
   let of_typerep typerep =
     let t = of_typerep typerep in

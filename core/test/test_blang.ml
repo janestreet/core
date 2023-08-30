@@ -7,25 +7,25 @@ let orelse = O.( || )
 
 let%test_module "Stable.V1" =
   (module Stable_unit_test.Make (struct
-       type t = string Stable.V1.t [@@deriving bin_io, equal, sexp]
+    type t = string Stable.V1.t [@@deriving bin_io, equal, sexp]
 
-       let test_blang =
-         if_
-           (base "foo")
-           (not_ (or_ [ base "bara"; base "barb" ]))
-           (not_ (and_ [ base "baza"; base "bazb" ]))
-       ;;
+    let test_blang =
+      if_
+        (base "foo")
+        (not_ (or_ [ base "bara"; base "barb" ]))
+        (not_ (and_ [ base "baza"; base "bazb" ]))
+    ;;
 
-       let test_sexp = "(if foo (not (or bara barb)) (not (and baza bazb)))"
+    let test_sexp = "(if foo (not (or bara barb)) (not (and baza bazb)))"
 
-       let test_bin =
-         "\005\006\003foo\004\003\006\004bara\006\004barb\004\002\006\004baza\006\004bazb"
-       ;;
+    let test_bin =
+      "\005\006\003foo\004\003\006\004bara\006\004barb\004\002\006\004baza\006\004bazb"
+    ;;
 
-       let tests =
-         [ test_blang, test_sexp, test_bin; true_, "true", "\000"; false_, "false", "\001" ]
-       ;;
-     end))
+    let tests =
+      [ test_blang, test_sexp, test_bin; true_, "true", "\000"; false_, "false", "\001" ]
+    ;;
+  end))
 ;;
 
 let%test_module "auto-simplification" =
@@ -413,7 +413,6 @@ let%expect_test "validate sexp grammar" =
                (clause_kind
                 (List_clause (args (Cons (Recursive blang ((Tyvar a))) Empty)))))))))))))))) |}]
 ;;
-
 
 module _ = struct
   let a, b, c, d = base "a", base "b", base "c", base "d"

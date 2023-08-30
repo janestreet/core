@@ -62,8 +62,6 @@ module type S1 = sig
     type nonrec 'a t = 'a t [@@deriving sexp_of]
 
     val to_string_hum : ?max_lines:int -> ?pos:int -> ?len:int -> _ t -> string
-
-
     val to_sequence : ?max_lines:int -> ?pos:int -> ?len:int -> _ t -> string Sequence.t
 
     module Pretty : sig

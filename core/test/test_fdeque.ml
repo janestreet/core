@@ -148,7 +148,7 @@ let%test_unit "Arbitrary_order doesn't drop elements" =
     |> of_list
     |> Arbitrary_order.to_sequence
     |> Sequence.fold ~init:Int.Map.empty ~f:(fun acc key ->
-      Map.update acc key ~f:(fun existing -> 1 + Option.value ~default:0 existing))
+         Map.update acc key ~f:(fun existing -> 1 + Option.value ~default:0 existing))
   in
   [%test_result: int Int.Map.t] ~expect arbitrary_order_elements
 ;;

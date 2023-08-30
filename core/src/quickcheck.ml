@@ -256,15 +256,15 @@ module Configure (Config : Quickcheck_config) = struct
   ;;
 
   let test_or_error
-        ?seed
-        ?sizes
-        ?trials
-        ?shrinker
-        ?shrink_attempts
-        ?sexp_of
-        ?examples
-        gen
-        ~f
+    ?seed
+    ?sizes
+    ?trials
+    ?shrinker
+    ?shrink_attempts
+    ?sexp_of
+    ?examples
+    gen
+    ~f
     =
     let config = make_config ~seed ~sizes ~trials ~shrink_attempts in
     let test_m = make_test_m ~gen ~shrinker ~sexp_of in
@@ -272,14 +272,14 @@ module Configure (Config : Quickcheck_config) = struct
   ;;
 
   let test_distinct_values
-        (type key)
-        ?seed
-        ?sizes
-        ?sexp_of
-        gen
-        ~trials
-        ~distinct_values
-        ~compare
+    (type key)
+    ?seed
+    ?sizes
+    ?sexp_of
+    gen
+    ~trials
+    ~distinct_values
+    ~compare
     =
     let module M = struct
       type t = key
@@ -320,12 +320,12 @@ module Configure (Config : Quickcheck_config) = struct
   ;;
 
   let test_can_generate
-        ?seed
-        ?sizes
-        ?(trials = default_can_generate_trial_count)
-        ?sexp_of
-        gen
-        ~f
+    ?seed
+    ?sizes
+    ?(trials = default_can_generate_trial_count)
+    ?sexp_of
+    gen
+    ~f
     =
     let r = ref [] in
     let f_and_enqueue return x = if f x then return `Can_generate else r := x :: !r in
@@ -344,21 +344,18 @@ module Configure (Config : Quickcheck_config) = struct
 end
 
 include Configure (struct
-    let default_seed = `Deterministic "an arbitrary but deterministic string"
+  let default_seed = `Deterministic "an arbitrary but deterministic string"
 
-    let default_trial_count =
-      match Word_size.word_size with
-      | W64 -> 10_000
-      | W32 -> 1_000
-    ;;
+  let default_trial_count =
+    match Word_size.word_size with
+    | W64 -> 10_000
+    | W32 -> 1_000
+  ;;
 
-    let default_can_generate_trial_count = 10_000
-    let default_shrink_attempts = `Limit 1000
-
-    let default_sizes =
-      Sequence.cycle_list_exn (List.range 0 30 ~stop:`inclusive)
-    ;;
-  end)
+  let default_can_generate_trial_count = 10_000
+  let default_shrink_attempts = `Limit 1000
+  let default_sizes = Sequence.cycle_list_exn (List.range 0 30 ~stop:`inclusive)
+end)
 
 module type S = S
 module type S1 = S1

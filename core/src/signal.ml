@@ -2,12 +2,12 @@ open! Import
 
 include (
   Int :
-  sig
-    type t = int [@@deriving bin_io]
+    sig
+      type t = int [@@deriving bin_io]
 
-    include Comparable.S with type t := t
-    include Hashable.S with type t := t
-  end)
+      include Comparable.S with type t := t
+      include Hashable.S with type t := t
+    end)
 
 let of_caml_int t = t
 let to_caml_int t = t
@@ -62,8 +62,7 @@ exception Invalid_signal_mnemonic_or_number of string [@@deriving sexp]
 
 let to_string_with_version, of_string, default_sys_behavior =
   let known =
-    [
-      "sigabrt", abrt, `Dump_core, 1
+    [ "sigabrt", abrt, `Dump_core, 1
     ; "sigalrm", alrm, `Terminate, 1
     ; "sigbus", bus, `Dump_core, 2
     ; "sigchld", chld, `Ignore, 1

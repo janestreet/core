@@ -111,10 +111,10 @@ end
 *)
 
 module Make (T1 : sig
-    type t
-  end) (T2 : sig
-          type t
-        end) : sig
+  type t
+end) (T2 : sig
+  type t
+end) : sig
   type t = T1.t * T2.t
 end
 
@@ -123,7 +123,6 @@ module Comparator (S1 : Comparator.S) (S2 : Comparator.S) :
 
 module type Comparable_sexpable = sig
   type t [@@deriving sexp]
-
 
   include Comparable.S with type t := t
 end
@@ -137,8 +136,8 @@ module Comparable_plain (S1 : Comparable.S_plain) (S2 : Comparable.S_plain) : si
 
   include
     Comparable.S_plain
-    with type t := Make(S1)(S2).t
-    with type comparator_witness := comparator_witness
+      with type t := Make(S1)(S2).t
+      with type comparator_witness := comparator_witness
 end
 
 module Comparable (S1 : Comparable_sexpable) (S2 : Comparable_sexpable) :
@@ -187,7 +186,7 @@ module Sexpable (S1 : Sexpable.S) (S2 : Sexpable.S) :
 module Binable (B1 : Binable.S) (B2 : Binable.S) : Binable.S with type t := Make(B1)(B2).t
 
 module Hasher (H1 : sig
-    type t [@@deriving compare, hash, sexp]
-  end) (H2 : sig
-          type t [@@deriving compare, hash, sexp]
-        end) : Hashable_sexpable with type t := Make(H1)(H2).t
+  type t [@@deriving compare, hash, sexp]
+end) (H2 : sig
+  type t [@@deriving compare, hash, sexp]
+end) : Hashable_sexpable with type t := Make(H1)(H2).t

@@ -60,19 +60,19 @@ let%test_module "random" =
       open G.Monad_infix
 
       module Q = Quickcheck.Configure (struct
-          include Quickcheck
+        include Quickcheck
 
-          let default_trial_count = 1_000
-          let default_sizes = Sequence.cycle_list_exn (List.range 0 10 ~stop:`inclusive)
+        let default_trial_count = 1_000
+        let default_sizes = Sequence.cycle_list_exn (List.range 0 10 ~stop:`inclusive)
 
-          let default_seed =
-            `Deterministic
-              (sprintf
-                 "%s values with %s operators."
-                 (String.capitalize T.module_name)
-                 (String.capitalize Math.module_name))
-          ;;
-        end)
+        let default_seed =
+          `Deterministic
+            (sprintf
+               "%s values with %s operators."
+               (String.capitalize T.module_name)
+               (String.capitalize Math.module_name))
+        ;;
+      end)
 
       let%test_unit "duplicates" =
         Q.test_distinct_values
@@ -131,9 +131,9 @@ let%test_module "random" =
           ~sexp_of:[%sexp_of: t list]
           (List.quickcheck_generator quickcheck_generator)
           ~f:(fun list ->
-            let q = Queue.create () in
-            List.iter list ~f:(Queue.enqueue q);
-            [%test_result: t list] (Queue.to_list q) ~expect:list)
+          let q = Queue.create () in
+          List.iter list ~f:(Queue.enqueue q);
+          [%test_result: t list] (Queue.to_list q) ~expect:list)
       ;;
 
       let%test_unit "sum vs fold" =
@@ -212,7 +212,7 @@ let%test_module "random" =
           ~sexp_of:[%sexp_of: t list]
           (List.quickcheck_generator quickcheck_generator)
           ~f:(fun list ->
-            [%test_result: t list] (Array.to_list (List.to_array list)) ~expect:list)
+          [%test_result: t list] (Array.to_list (List.to_array list)) ~expect:list)
       ;;
 
       let%test_unit "max_elt vs min_elt" =
@@ -256,7 +256,7 @@ let%test_module "random" =
           ~sexp_of:[%sexp_of: t list]
           (List.quickcheck_generator quickcheck_generator)
           ~f:(fun list ->
-            [%test_result: t list] (List.bind list ~f:List.return) ~expect:list)
+          [%test_result: t list] (List.bind list ~f:List.return) ~expect:list)
       ;;
 
       let%test_unit ("monad associativity" [@tags "no-js"]) =
@@ -284,7 +284,7 @@ let%test_module "random" =
           ~sexp_of:[%sexp_of: t list]
           (List.quickcheck_generator quickcheck_generator)
           ~f:(fun list ->
-            [%test_eq: unit list] (List.ignore_m list) (List.map list ~f:ignore))
+          [%test_eq: unit list] (List.ignore_m list) (List.map list ~f:ignore))
       ;;
 
       let%test_unit "of_list + to_list" =
@@ -467,7 +467,7 @@ let%test_module "random" =
           ~sexp_of:[%sexp_of: t list]
           (List.quickcheck_generator quickcheck_generator)
           ~f:(fun list ->
-            [%test_result: t list] (List.filter list ~f:(const true)) ~expect:list)
+          [%test_result: t list] (List.filter list ~f:(const true)) ~expect:list)
       ;;
 
       let%test_unit "filter vs rev_filter" =
@@ -612,9 +612,9 @@ let%test_module "random" =
           ~sexp_of:[%sexp_of: t list]
           (List.quickcheck_generator quickcheck_generator)
           ~f:(fun list ->
-            [%test_eq: t option]
-              (List.hd list)
-              (Option.try_with (fun () -> List.hd_exn list)))
+          [%test_eq: t option]
+            (List.hd list)
+            (Option.try_with (fun () -> List.hd_exn list)))
       ;;
 
       let%test_unit "tl vs tl_exn" =
@@ -622,9 +622,9 @@ let%test_module "random" =
           ~sexp_of:[%sexp_of: t list]
           (List.quickcheck_generator quickcheck_generator)
           ~f:(fun list ->
-            [%test_eq: t list option]
-              (List.tl list)
-              (Option.try_with (fun () -> List.tl_exn list)))
+          [%test_eq: t list option]
+            (List.tl list)
+            (Option.try_with (fun () -> List.tl_exn list)))
       ;;
 
       let%test_unit "find vs find_exn" =

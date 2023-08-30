@@ -8,9 +8,9 @@ type 'a t = 'a Base.Ref.t = { mutable contents : 'a }
 
 (** @inline *)
 include module type of struct
-  include Base.Ref
-end
-with type 'a t := 'a t
+    include Base.Ref
+  end
+  with type 'a t := 'a t
 
 module Permissioned : sig
   type (!'a, -'perms) t [@@deriving sexp, bin_io ~localize]

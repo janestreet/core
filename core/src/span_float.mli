@@ -5,7 +5,6 @@ module Stable : sig
   (** [V1]'s sexps use single-unit format and support units from [d] to [ms]; it does not
       support [us] or [ns]. [V1]'s sexp conversions do not round-trip precisely. *)
   module V1 : sig
-
     type nonrec t = t
     [@@deriving sexp, sexp_grammar, bin_io, compare, hash, equal, stable_witness]
   end

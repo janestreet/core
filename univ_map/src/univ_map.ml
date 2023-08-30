@@ -3,9 +3,9 @@ include Univ_map_intf
 module Uid = Type_equal.Id.Uid
 
 module Make1
-    (Key : Key) (Data : sig
-                   type ('s, 'a) t [@@deriving sexp_of]
-                 end) =
+  (Key : Key) (Data : sig
+    type ('s, 'a) t [@@deriving sexp_of]
+  end) =
 struct
   (* A wrapper for the [Key] module that adds a dynamic check to [Key.type_id].
 
@@ -26,7 +26,7 @@ struct
             (if Ppx_inline_test_lib.am_running
              then Sexp.Atom "<uid>"
              else Type_equal.Id.Uid.sexp_of_t (Type_equal.Id.uid type_id)
-                  : Sexp.t)
+              : Sexp.t)
         }]
     ;;
 
@@ -148,9 +148,9 @@ struct
 end
 
 module Make
-    (Key : Key) (Data : sig
-                   type 'a t [@@deriving sexp_of]
-                 end) =
+  (Key : Key) (Data : sig
+    type 'a t [@@deriving sexp_of]
+  end) =
 struct
   module M =
     Make1
@@ -199,7 +199,7 @@ struct
   type f =
     { f :
         'a.
-          key:'a Key.t
+        key:'a Key.t
         -> [ `Left of 'a Input1_data.t
            | `Right of 'a Input2_data.t
            | `Both of 'a Input1_data.t * 'a Input2_data.t
@@ -228,15 +228,15 @@ struct
 end
 
 module Merge1
-    (Key : Key)
-    (Input1_data : Data1)
-    (Input2_data : Data1)
-    (Output_data : Data1) =
+  (Key : Key)
+  (Input1_data : Data1)
+  (Input2_data : Data1)
+  (Output_data : Data1) =
 struct
   type ('s1, 's2, 's3) f =
     { f :
         'a.
-          key:'a Key.t
+        key:'a Key.t
         -> [ `Left of ('s1, 'a) Input1_data.t
            | `Right of ('s2, 'a) Input2_data.t
            | `Both of ('s1, 'a) Input1_data.t * ('s2, 'a) Input2_data.t
@@ -247,10 +247,10 @@ struct
   module Output = Make1 (Key) (Output_data)
 
   let merge
-        (type s1 s2)
-        (t1 : s1 Make1(Key)(Input1_data).t)
-        (t2 : s2 Make1(Key)(Input2_data).t)
-        ~f:{ f }
+    (type s1 s2)
+    (t1 : s1 Make1(Key)(Input1_data).t)
+    (t2 : s2 Make1(Key)(Input2_data).t)
+    ~f:{ f }
     =
     let f ~key merge_result =
       Option.map (f ~key merge_result) ~f:(fun data -> Output.Packed.T (key, data))
@@ -279,7 +279,7 @@ include (
     (struct
       type 'a t = 'a [@@deriving sexp_of]
     end) :
-    S with type 'a data = 'a and module Key := Type_id_key)
+      S with type 'a data = 'a and module Key := Type_id_key)
 
 module Key = Type_equal.Id
 

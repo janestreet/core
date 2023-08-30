@@ -46,27 +46,27 @@ let%expect_test "ppx_quickcheck" =
   List.iter
     ~f:(fun predicate -> Quickcheck.test_can_generate M.quickcheck_generator ~f:predicate)
     [ (function
-        | M.A -> true
-        | _ -> false)
+       | M.A -> true
+       | _ -> false)
     ; (function
-        | M.B _ -> true
-        | _ -> false)
+       | M.B _ -> true
+       | _ -> false)
     ; (function
-        | M.C _ -> true
-        | _ -> false)
+       | M.C _ -> true
+       | _ -> false)
     ; (function
-        | M.D _ -> true
-        | _ -> false)
+       | M.D _ -> true
+       | _ -> false)
     ; (function
-        | M.E _ -> true
-        | _ -> false)
+       | M.E _ -> true
+       | _ -> false)
     ];
   [%expect {| |}]
 ;;
 
 module Test (S : sig
-    val default_seed : Quickcheck.seed
-  end) : sig end = struct
+  val default_seed : Quickcheck.seed
+end) : sig end = struct
   let int_middle_bits =
     match Word_size.word_size with
     | W64 -> Int.of_string "0x0000_ffff_ffff_0000"
@@ -74,9 +74,9 @@ module Test (S : sig
   ;;
 
   module Q = Quickcheck.Configure (struct
-      include Quickcheck
-      include S
-    end)
+    include Quickcheck
+    include S
+  end)
 
   open Q
   module G = Quickcheck.Generator
@@ -745,14 +745,14 @@ let%test_module _ = (module Test (Quickcheck))
 
 let%test_module _ =
   (module Test (struct
-       let default_seed = `Deterministic "foo"
-     end))
+    let default_seed = `Deterministic "foo"
+  end))
 ;;
 
 let%test_module _ =
   (module Test (struct
-       let default_seed = `Deterministic "bar"
-     end))
+    let default_seed = `Deterministic "bar"
+  end))
 ;;
 
 (* let%test_module _ = (module Test (struct let default_seed = `Deterministic "baz" end))

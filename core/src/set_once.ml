@@ -5,7 +5,7 @@ module Stable = struct
     type 'a t =
       { mutable value : 'a Option.t
       ; mutable set_at : Source_code_position.Stable.V1.t
-                         [@compare.ignore] [@equal.ignore]
+           [@compare.ignore] [@equal.ignore]
       }
     [@@deriving compare, equal]
   end

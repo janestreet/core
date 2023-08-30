@@ -7,8 +7,6 @@ type t = Span.t (* since wall-clock midnight *) [@@deriving typerep]
 include (Span : Robustly_comparable.S with type t := t)
 
 let to_parts t = Span.to_parts t
-
-
 let start_of_day : t = Span.zero
 let start_of_next_day : t = Span.day
 let approximate_end_of_day = Span.( - ) start_of_next_day Span.nanosecond
@@ -67,8 +65,8 @@ module Stable = struct
     include (
       Span.Stable.V2 :
         Comparator.S
-      with type t := t
-       and type comparator_witness = Span.Stable.V2.comparator_witness)
+          with type t := t
+           and type comparator_witness = Span.Stable.V2.comparator_witness)
 
     let to_string_with_unit =
       let ( / ) = Int63.( / ) in
@@ -203,22 +201,22 @@ end
 include (
   Stable.V1 :
     Comparator.S
-  with type t := t
-   and type comparator_witness = Stable.V1.comparator_witness)
-
-include Identifiable.Make_using_comparator (struct
-    type t = Stable.V1.t [@@deriving bin_io, compare, hash, sexp]
-
-    include (
-      Stable.V1 :
-        Comparator.S
       with type t := t
        and type comparator_witness = Stable.V1.comparator_witness)
 
-    include (Stable.V1 : Stringable.S with type t := t)
+include Identifiable.Make_using_comparator (struct
+  type t = Stable.V1.t [@@deriving bin_io, compare, hash, sexp]
 
-    let module_name = "Core.Time_ns.Ofday"
-  end)
+  include (
+    Stable.V1 :
+      Comparator.S
+        with type t := t
+         and type comparator_witness = Stable.V1.comparator_witness)
+
+  include (Stable.V1 : Stringable.S with type t := t)
+
+  let module_name = "Core.Time_ns.Ofday"
+end)
 
 let t_sexp_grammar = Sexplib.Sexp_grammar.coerce Stable.V1.t_sexp_grammar
 let to_microsecond_string t = Stable.V1.to_string_with_unit t ~unit:`Microsecond

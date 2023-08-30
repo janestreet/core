@@ -208,14 +208,14 @@ module Unsafe = struct
      less than [Int63.max_value / 10] (to avoid internal overflow during the algorithm
      when multiplying by 10), and that [round_at >= 0] and [round_at < divisor]. *)
   let read_int63_decimal_rounded
-        string
-        ~pos:start
-        ~decimals
-        ~scale
-        ~divisor
-        ~round_at
-        ~round_exact
-        ~allow_underscore
+    string
+    ~pos:start
+    ~decimals
+    ~scale
+    ~divisor
+    ~round_at
+    ~round_exact
+    ~allow_underscore
     =
     let open Int63.O in
     let until = Int.( + ) start decimals in

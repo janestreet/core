@@ -93,28 +93,28 @@ val string : string -> t [@@ocaml.deprecated "[since 2017-07] use [Md5.digest_st
 val bytes : bytes -> t [@@ocaml.deprecated "[since 2017-07] use [Md5.digest_bytes]."]
 
 val subbytes : bytes -> int -> int -> t
-[@@ocaml.deprecated "[since 2017-07] use [Md5.digest_subbytes]."]
+  [@@ocaml.deprecated "[since 2017-07] use [Md5.digest_subbytes]."]
 
 val from_hex : string -> t [@@ocaml.deprecated "[since 2017-07] use [of_hex_exn]."]
 
 val file : string -> t
-[@@ocaml.deprecated
-  "[since 2017-07] blocking functions should be avoided. Use [file_blocking] if you \
-   really want this."]
+  [@@ocaml.deprecated
+    "[since 2017-07] blocking functions should be avoided. Use [file_blocking] if you \
+     really want this."]
 
 val channel : in_channel -> int -> t
-[@@ocaml.deprecated
-  "[since 2017-07] blocking functions should be avoided. Use [channel_blocking] if you \
-   really want this."]
+  [@@ocaml.deprecated
+    "[since 2017-07] blocking functions should be avoided. Use [channel_blocking] if you \
+     really want this."]
 
 val output : out_channel -> t -> unit
-[@@ocaml.deprecated
-  "[since 2017-07] Use [to_binary] together with [Out_channel.output_string]"]
+  [@@ocaml.deprecated
+    "[since 2017-07] Use [to_binary] together with [Out_channel.output_string]"]
 
 val input : in_channel -> t
-[@@ocaml.deprecated
-  "[since 2017-07] blocking functions should be avoided. Use [input_blocking] if you \
-   really want this."]
+  [@@ocaml.deprecated
+    "[since 2017-07] blocking functions should be avoided. Use [input_blocking] if you \
+     really want this."]
 
 (** [digest_bin_prot w x] digests the serialization of [x] by [w].
     It is a cheap way (in dev time) to compute the digest of an ocaml value, for a

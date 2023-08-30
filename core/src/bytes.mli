@@ -6,9 +6,9 @@ type t = bytes [@@deriving bin_io ~localize, typerep]
 
 (** @inline *)
 include module type of struct
-  include Base.Bytes
-end
-with type t := t
+    include Base.Bytes
+  end
+  with type t := t
 
 include Hexdump.S with type t := t
 include Quickcheckable.S with type t := t
@@ -29,8 +29,7 @@ module Stable : sig
 
     include
       Stable_module_types.With_stable_witness.S0
-      with type t := t
-      with type comparator_witness := comparator_witness
+        with type t := t
+        with type comparator_witness := comparator_witness
   end
 end
-

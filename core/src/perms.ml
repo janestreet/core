@@ -71,8 +71,8 @@ end
 
 (* Override all bin_io, sexp, compare functions to raise exceptions *)
 module Only_used_as_phantom_type1 (Name : sig
-    val name : string
-  end) : Sexpable_binable_comparable = struct
+  val name : string
+end) : Sexpable_binable_comparable = struct
   type 'a t = 'a
 
   let sexp_of_t _ _ = failwithf "Unexpectedly called [%s.sexp_of_t]" Name.name ()
@@ -103,10 +103,10 @@ module Only_used_as_phantom_type1 (Name : sig
 end
 
 module Only_used_as_phantom_type0 (T : sig
-    type t [@@deriving bin_io, compare, equal, hash, sexp]
+  type t [@@deriving bin_io, compare, equal, hash, sexp]
 
-    val name : string
-  end) : sig
+  val name : string
+end) : sig
   type t = T.t
   [@@deriving bin_io, compare, equal, globalize, hash, sexp_poly, stable_witness]
 end = struct

@@ -3,12 +3,12 @@ open Std_internal
 include String_id_intf
 
 module Make_with_validate_without_pretty_printer_with_bin_shape (M : sig
-    val module_name : string
-    val validate : string -> unit Or_error.t
-    val include_default_validation : bool
-    val caller_identity : Bin_prot.Shape.Uuid.t option
-  end)
-    () =
+  val module_name : string
+  val validate : string -> unit Or_error.t
+  val include_default_validation : bool
+  val caller_identity : Bin_prot.Shape.Uuid.t option
+end)
+() =
 struct
   module Stable = struct
     module V1 = struct
@@ -103,11 +103,11 @@ struct
 end
 
 module Make_with_validate_without_pretty_printer (M : sig
-    val module_name : string
-    val validate : string -> unit Or_error.t
-    val include_default_validation : bool
-  end)
-    () =
+  val module_name : string
+  val validate : string -> unit Or_error.t
+  val include_default_validation : bool
+end)
+() =
 struct
   include
     Make_with_validate_without_pretty_printer_with_bin_shape
@@ -120,9 +120,9 @@ struct
 end
 
 module Make_without_pretty_printer (M : sig
-    val module_name : string
-  end)
-    () =
+  val module_name : string
+end)
+() =
 struct
   include
     Make_with_validate_without_pretty_printer
@@ -135,42 +135,42 @@ struct
 end
 
 module Make_with_validate (M : sig
-    val module_name : string
-    val validate : string -> unit Or_error.t
-    val include_default_validation : bool
-  end)
-    () =
+  val module_name : string
+  val validate : string -> unit Or_error.t
+  val include_default_validation : bool
+end)
+() =
 struct
   include Make_with_validate_without_pretty_printer (M) ()
 
   include Pretty_printer.Register (struct
-      type nonrec t = t
+    type nonrec t = t
 
-      let module_name = M.module_name
-      let to_string = to_string
-    end)
+    let module_name = M.module_name
+    let to_string = to_string
+  end)
 end
 
 module Make (M : sig
-    val module_name : string
-  end)
-    () =
+  val module_name : string
+end)
+() =
 struct
   include Make_without_pretty_printer (M) ()
 
   include Pretty_printer.Register (struct
-      type nonrec t = t
+    type nonrec t = t
 
-      let module_name = M.module_name
-      let to_string = to_string
-    end)
+    let module_name = M.module_name
+    let to_string = to_string
+  end)
 end
 
 module Make_with_distinct_bin_shape (M : sig
-    val module_name : string
-    val caller_identity : Bin_prot.Shape.Uuid.t
-  end)
-    () =
+  val module_name : string
+  val caller_identity : Bin_prot.Shape.Uuid.t
+end)
+() =
 struct
   include
     Make_with_validate_without_pretty_printer_with_bin_shape
@@ -183,11 +183,11 @@ struct
       ()
 
   include Pretty_printer.Register (struct
-      type nonrec t = t
+    type nonrec t = t
 
-      let module_name = M.module_name
-      let to_string = to_string
-    end)
+    let module_name = M.module_name
+    let to_string = to_string
+  end)
 end
 
 include

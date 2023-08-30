@@ -6,7 +6,7 @@ let suffixes char =
   let sprintf = Printf.sprintf in
   [ sprintf "%c" char; sprintf "%cM" char; sprintf "%c.M" char; sprintf "%c.M." char ]
   |> List.concat_map ~f:(fun suffix ->
-    [ String.lowercase suffix; String.uppercase suffix ])
+       [ String.lowercase suffix; String.uppercase suffix ])
 ;;
 
 let am_suffixes = lazy (suffixes 'A')
@@ -112,9 +112,9 @@ let parse string ~f =
         ( pos + 3
         , read_2_digit_int string ~pos
         , match maybe_seconds with
-        | `Minutes_and_maybe_seconds -> true
-        | `Minutes_but_not_seconds ->
-          invalid_string string ~reason:"expected end of string after minutes" )
+          | `Minutes_and_maybe_seconds -> true
+          | `Minutes_but_not_seconds ->
+            invalid_string string ~reason:"expected end of string after minutes" )
         (* e.g. "12:00" *)
       else if pos + 2 = until
       then pos + 2, read_2_digit_int string ~pos, false

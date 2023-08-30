@@ -23,16 +23,16 @@ include Stable.V1
 include (
   Base.Sexp :
     module type of struct
-    include Base.Sexp
-  end
-  with type t := t)
+      include Base.Sexp
+    end
+    with type t := t)
 
 include (
   Sexplib.Sexp :
     module type of struct
-    include Sexplib.Sexp
-  end
-  with type t := t)
+      include Sexplib.Sexp
+    end
+    with type t := t)
 
 module O = struct
   type sexp = Base.Sexp.t =

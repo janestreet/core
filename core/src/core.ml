@@ -7,8 +7,6 @@
     functionality. *)
 
 open! Import
-
-
 module Applicative = Applicative
 module Arg = Arg
 module Array = Array
@@ -145,7 +143,6 @@ module Set = Set
 module Set_intf = Set_intf
 module Set_once = Set_once
 module Sexp_maybe = Sexp.Sexp_maybe
-
 module Sexp = Sexp
 module Sexpable = Sexpable
 module Sign = Sign
@@ -231,11 +228,9 @@ module Core_private = struct
   module Time_zone = Zone
   module Ofday_helpers = Ofday_helpers
   module Span_float = Span_float
-
   module Bigbuffer_internal = Bigbuffer_internal
   module Stable_internal = Stable_internal
   module Std_internal = Std_internal
-
   module Time_ns_alternate_sexp = Time_ns_alternate_sexp
 end
 

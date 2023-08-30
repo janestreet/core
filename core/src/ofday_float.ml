@@ -33,23 +33,23 @@ module Stable = struct
       type underlying = Float.t
 
       include (
-      struct
-        include Float
+        struct
+          include Float
 
-        let sign = sign_exn
+          let sign = sign_exn
 
-        let stable_witness : t Stable_witness.t =
-          Stable_witness.Export.stable_witness_float
-        ;;
-      end :
-      sig
-        type t = underlying [@@deriving bin_io, hash, typerep, stable_witness]
+          let stable_witness : t Stable_witness.t =
+            Stable_witness.Export.stable_witness_float
+          ;;
+        end :
+          sig
+            type t = underlying [@@deriving bin_io, hash, typerep, stable_witness]
 
-        include Comparable.S_common with type t := t
-        include Comparable.With_zero with type t := t
-        include Robustly_comparable with type t := t
-        include Floatable with type t := t
-      end)
+            include Comparable.S_common with type t := t
+            include Comparable.With_zero with type t := t
+            include Robustly_comparable with type t := t
+            include Floatable with type t := t
+          end)
 
       (* IF THIS REPRESENTATION EVER CHANGES, ENSURE THAT EITHER
          (1) all values serialize the same way in both representations, or
@@ -58,8 +58,8 @@ module Stable = struct
       (* due to precision limitations in float we can't expect better than microsecond
          precision *)
       include Float.Robust_compare.Make (struct
-          let robust_comparison_tolerance = 1E-6
-        end)
+        let robust_comparison_tolerance = 1E-6
+      end)
 
       let to_span_since_start_of_day t = Span.of_sec t
 
@@ -213,11 +213,11 @@ module Stable = struct
     let to_string t = to_string_gen ~drop_ms:false ~drop_us:false ~trim:false t
 
     include Pretty_printer.Register (struct
-        type nonrec t = t
+      type nonrec t = t
 
-        let to_string = to_string
-        let module_name = "Core.Time.Ofday"
-      end)
+      let to_string = to_string
+      let module_name = "Core.Time.Ofday"
+    end)
 
     let create_from_parsed string ~hr ~min ~sec ~subsec_pos ~subsec_len =
       let subsec =
@@ -276,17 +276,17 @@ let quickcheck_observer =
 let quickcheck_shrinker = Quickcheck.Shrinker.empty ()
 
 include Hashable.Make_binable (struct
-    type nonrec t = t [@@deriving bin_io, compare, hash, sexp_of]
+  type nonrec t = t [@@deriving bin_io, compare, hash, sexp_of]
 
-    (* Previous versions rendered hash-based containers using float serialization rather
+  (* Previous versions rendered hash-based containers using float serialization rather
        than time serialization, so when reading hash-based containers in we accept either
        serialization. *)
-    let t_of_sexp sexp =
-      match Float.t_of_sexp sexp with
-      | float -> of_float float
-      | exception _ -> t_of_sexp sexp
-    ;;
-  end)
+  let t_of_sexp sexp =
+    match Float.t_of_sexp sexp with
+    | float -> of_float float
+    | exception _ -> t_of_sexp sexp
+  ;;
+end)
 
 module C = struct
   type t = T.t [@@deriving bin_io]

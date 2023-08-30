@@ -5,13 +5,13 @@ module T = struct
   include Base.Ref
 
   include (
-  struct
-    type 'a t = 'a ref [@@deriving bin_io ~localize, quickcheck, typerep]
-  end :
-  sig
-    type 'a t = 'a ref [@@deriving bin_io ~localize, quickcheck, typerep]
-  end
-  with type 'a t := 'a t)
+    struct
+      type 'a t = 'a ref [@@deriving bin_io ~localize, quickcheck, typerep]
+    end :
+      sig
+        type 'a t = 'a ref [@@deriving bin_io ~localize, quickcheck, typerep]
+      end
+      with type 'a t := 'a t)
 end
 
 include T

@@ -121,11 +121,11 @@ module Accessors = struct
   include (
     Map.Using_comparator :
       Map.Accessors_generic
-    with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
-    with type ('a, 'b, 'c) t := ('a, 'b, 'c) Map.t
-    with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
-    with type 'k key := 'k
-    with type 'c cmp := 'c)
+        with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
+        with type ('a, 'b, 'c) t := ('a, 'b, 'c) Map.t
+        with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
+        with type 'k key := 'k
+        with type 'c cmp := 'c)
 
   let validate ~name f t = Validate.alist ~name f (to_alist t)
   let validatei ~name f t = Validate.list ~name:(Fn.compose name fst) f (to_alist t)
@@ -144,37 +144,37 @@ type 'k key = 'k
 type 'c cmp = 'c
 
 include (
-struct
-  include Map
+  struct
+    include Map
 
-  let validate ~name f t = Validate.alist ~name f (to_alist t)
-  let validatei ~name f t = Validate.list ~name:(Fn.compose name fst) f (to_alist t)
-  let of_tree m = Map.Using_comparator.of_tree ~comparator:(to_comparator m)
-  let to_tree = Map.Using_comparator.to_tree
-end :
-sig
-  type ('a, 'b, 'c) t = ('a, 'b, 'c) Map.t
+    let validate ~name f t = Validate.alist ~name f (to_alist t)
+    let validatei ~name f t = Validate.list ~name:(Fn.compose name fst) f (to_alist t)
+    let of_tree m = Map.Using_comparator.of_tree ~comparator:(to_comparator m)
+    let to_tree = Map.Using_comparator.to_tree
+  end :
+    sig
+      type ('a, 'b, 'c) t = ('a, 'b, 'c) Map.t
 
-  include
-    Map.Creators_and_accessors_generic
-    with type ('a, 'b, 'c) create_options :=
-      ('a, 'b, 'c) Map.With_first_class_module.t
-    with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Map.Without_comparator.t
-    with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
-    with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
-    with type 'k key := 'k key
-    with type 'c cmp := 'c cmp
+      include
+        Map.Creators_and_accessors_generic
+          with type ('a, 'b, 'c) create_options :=
+            ('a, 'b, 'c) Map.With_first_class_module.t
+          with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Map.Without_comparator.t
+          with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
+          with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
+          with type 'k key := 'k key
+          with type 'c cmp := 'c cmp
 
-  val validate
-    :  name:('k -> string)
-    -> 'v Validate.check
-    -> ('k, 'v, _) t Validate.check
+      val validate
+        :  name:('k -> string)
+        -> 'v Validate.check
+        -> ('k, 'v, _) t Validate.check
 
-  val validatei
-    :  name:('k key -> string)
-    -> ('k key * 'v) Validate.check
-    -> ('k, 'v, _) t Validate.check
-end)
+      val validatei
+        :  name:('k key -> string)
+        -> ('k key * 'v) Validate.check
+        -> ('k, 'v, _) t Validate.check
+    end)
 
 module Empty_without_value_restriction = Using_comparator.Empty_without_value_restriction
 
@@ -202,12 +202,12 @@ module Creators (Key : Comparator.S1) : sig
 
   include
     Creators_generic
-    with type ('a, 'b, 'c) t := ('a, 'b, 'c) t_
-    with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
-    with type 'a key := 'a Key.t
-    with type 'a cmp := Key.comparator_witness
-    with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
-    with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
+      with type ('a, 'b, 'c) t := ('a, 'b, 'c) t_
+      with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
+      with type 'a key := 'a Key.t
+      with type 'a cmp := Key.comparator_witness
+      with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
+      with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
 end = struct
   let comparator = Key.comparator
 
@@ -440,10 +440,10 @@ module Make_tree_S1 (Key : Comparator.S1) = struct
 end
 
 module Make_tree_plain (Key : sig
-    type t [@@deriving sexp_of]
+  type t [@@deriving sexp_of]
 
-    include Comparator.S with type t := t
-  end) =
+  include Comparator.S with type t := t
+end) =
 struct
   module Key_S1 = Comparator.S_to_S1 (Key)
   include Make_tree_S1 (Key_S1)
@@ -453,20 +453,20 @@ struct
   let sexp_of_t sexp_of_v t = sexp_of_t Key.sexp_of_t sexp_of_v [%sexp_of: _] t
 
   module Provide_of_sexp
-      (X : sig
-         type t [@@deriving of_sexp]
-       end
-       with type t := Key.t) =
+    (X : sig
+      type t [@@deriving of_sexp]
+    end
+    with type t := Key.t) =
   struct
     let t_of_sexp v_of_sexp sexp = t_of_sexp X.t_of_sexp v_of_sexp sexp
   end
 end
 
 module Make_tree (Key : sig
-    type t [@@deriving sexp]
+  type t [@@deriving sexp]
 
-    include Comparator.S with type t := t
-  end) =
+  include Comparator.S with type t := t
+end) =
 struct
   include Make_tree_plain (Key)
   include Provide_of_sexp (Key)
@@ -504,23 +504,23 @@ module Poly = struct
   ;;
 
   include Bin_prot.Utils.Make_iterable_binable2 (struct
-      type nonrec ('a, 'b) t = ('a, 'b) t
-      type ('a, 'b) el = 'a * 'b [@@deriving bin_io]
+    type nonrec ('a, 'b) t = ('a, 'b) t
+    type ('a, 'b) el = 'a * 'b [@@deriving bin_io]
 
-      let _ = bin_el
+    let _ = bin_el
 
-      let caller_identity =
-        Bin_prot.Shape.Uuid.of_string "b7d7b1a0-4992-11e6-8a32-bbb221fa025c"
-      ;;
+    let caller_identity =
+      Bin_prot.Shape.Uuid.of_string "b7d7b1a0-4992-11e6-8a32-bbb221fa025c"
+    ;;
 
-      let module_name = Some "Core.Map"
-      let length = length
-      let iter t ~f = iteri t ~f:(fun ~key ~data -> f (key, data))
+    let module_name = Some "Core.Map"
+    let length = length
+    let iter t ~f = iteri t ~f:(fun ~key ~data -> f (key, data))
 
-      let init ~len ~next =
-        init_for_bin_prot ~len ~f:(fun _ -> next ()) ~comparator:Comparator.Poly.comparator
-      ;;
-    end)
+    let init ~len ~next =
+      init_for_bin_prot ~len ~f:(fun _ -> next ()) ~comparator:Comparator.Poly.comparator
+    ;;
+  end)
 
   module Tree = struct
     include Make_tree_S1 (Comparator.Poly)
@@ -548,31 +548,31 @@ module type S_binable = S_binable
 module Key_bin_io = Key_bin_io
 
 module Provide_bin_io (Key : Key_bin_io.S) = Bin_prot.Utils.Make_iterable_binable1 (struct
-    module Key = Key
+  module Key = Key
 
-    type nonrec 'v t = (Key.t, 'v, Key.comparator_witness) t
-    type 'v el = Key.t * 'v [@@deriving bin_io]
+  type nonrec 'v t = (Key.t, 'v, Key.comparator_witness) t
+  type 'v el = Key.t * 'v [@@deriving bin_io]
 
-    let _ = bin_el
+  let _ = bin_el
 
-    let caller_identity =
-      Bin_prot.Shape.Uuid.of_string "dfb300f8-4992-11e6-9c15-73a2ac6b815c"
-    ;;
+  let caller_identity =
+    Bin_prot.Shape.Uuid.of_string "dfb300f8-4992-11e6-9c15-73a2ac6b815c"
+  ;;
 
-    let module_name = Some "Core.Map"
-    let length = length
-    let iter t ~f = iteri t ~f:(fun ~key ~data -> f (key, data))
+  let module_name = Some "Core.Map"
+  let length = length
+  let iter t ~f = iteri t ~f:(fun ~key ~data -> f (key, data))
 
-    let init ~len ~next =
-      init_for_bin_prot ~len ~f:(fun _ -> next ()) ~comparator:Key.comparator
-    ;;
-  end)
+  let init ~len ~next =
+    init_for_bin_prot ~len ~f:(fun _ -> next ()) ~comparator:Key.comparator
+  ;;
+end)
 
 module Provide_stable_witness (Key : sig
-    type t [@@deriving stable_witness]
+  type t [@@deriving stable_witness]
 
-    include Comparator.S with type t := t
-  end) =
+  include Comparator.S with type t := t
+end) =
 struct
   (* The binary representation of map is used in the stable modules below, so it's
      assumed to be stable (if the key and data are stable) . *)
@@ -585,10 +585,10 @@ struct
 end
 
 module Make_plain_using_comparator (Key : sig
-    type t [@@deriving sexp_of]
+  type t [@@deriving sexp_of]
 
-    include Comparator.S with type t := t
-  end) =
+  include Comparator.S with type t := t
+end) =
 struct
   module Key = Key
   module Key_S1 = Comparator.S_to_S1 (Key)
@@ -607,10 +607,10 @@ struct
   ;;
 
   module Provide_of_sexp
-      (Key : sig
-         type t [@@deriving of_sexp]
-       end
-       with type t := Key.t) =
+    (Key : sig
+      type t [@@deriving of_sexp]
+    end
+    with type t := Key.t) =
   struct
     let t_of_sexp v_of_sexp sexp = t_of_sexp Key.t_of_sexp v_of_sexp sexp
   end
@@ -622,36 +622,36 @@ struct
   end
 
   module Provide_bin_io
-      (Key' : sig
-         type t [@@deriving bin_io]
-       end
-       with type t := Key.t) =
-    Provide_bin_io (struct
-      include Key
-      include Key'
-    end)
+    (Key' : sig
+      type t [@@deriving bin_io]
+    end
+    with type t := Key.t) =
+  Provide_bin_io (struct
+    include Key
+    include Key'
+  end)
 
   module Provide_stable_witness
-      (Key' : sig
-         type t [@@deriving stable_witness]
-       end
-       with type t := Key.t) =
-    Provide_stable_witness (struct
-      include Key
-      include Key'
-    end)
+    (Key' : sig
+      type t [@@deriving stable_witness]
+    end
+    with type t := Key.t) =
+  Provide_stable_witness (struct
+    include Key
+    include Key'
+  end)
 end
 
 module Make_plain (Key : Key_plain) = Make_plain_using_comparator (struct
-    include Key
-    include Comparator.Make (Key)
-  end)
+  include Key
+  include Comparator.Make (Key)
+end)
 
 module Make_using_comparator (Key_sexp : sig
-    type t [@@deriving sexp]
+  type t [@@deriving sexp]
 
-    include Comparator.S with type t := t
-  end) =
+  include Comparator.S with type t := t
+end) =
 struct
   include Make_plain_using_comparator (Key_sexp)
   module Key = Key_sexp
@@ -664,15 +664,15 @@ struct
 end
 
 module Make (Key : Key) = Make_using_comparator (struct
-    include Key
-    include Comparator.Make (Key)
-  end)
+  include Key
+  include Comparator.Make (Key)
+end)
 
 module Make_binable_using_comparator (Key_bin_sexp : sig
-    type t [@@deriving bin_io, sexp]
+  type t [@@deriving bin_io, sexp]
 
-    include Comparator.S with type t := t
-  end) =
+  include Comparator.S with type t := t
+end) =
 struct
   include Make_using_comparator (Key_bin_sexp)
   module Key = Key_bin_sexp
@@ -680,9 +680,9 @@ struct
 end
 
 module Make_binable (Key : Key_binable) = Make_binable_using_comparator (struct
-    include Key
-    include Comparator.Make (Key)
-  end)
+  include Key
+  include Comparator.Make (Key)
+end)
 
 module For_deriving = struct
   module M = Map.M
@@ -731,25 +731,25 @@ module For_deriving = struct
   end
 
   let quickcheck_generator_m__t
-        (type k cmp)
-        (module Key : Quickcheck_generator_m with type t = k and type comparator_witness = cmp)
-        v_generator
+    (type k cmp)
+    (module Key : Quickcheck_generator_m with type t = k and type comparator_witness = cmp)
+    v_generator
     =
     quickcheck_generator (module Key) Key.quickcheck_generator v_generator
   ;;
 
   let quickcheck_observer_m__t
-        (type k cmp)
-        (module Key : Quickcheck_observer_m with type t = k and type comparator_witness = cmp)
-        v_observer
+    (type k cmp)
+    (module Key : Quickcheck_observer_m with type t = k and type comparator_witness = cmp)
+    v_observer
     =
     quickcheck_observer Key.quickcheck_observer v_observer
   ;;
 
   let quickcheck_shrinker_m__t
-        (type k cmp)
-        (module Key : Quickcheck_shrinker_m with type t = k and type comparator_witness = cmp)
-        v_shrinker
+    (type k cmp)
+    (module Key : Quickcheck_shrinker_m with type t = k and type comparator_witness = cmp)
+    v_shrinker
     =
     quickcheck_shrinker Key.quickcheck_shrinker v_shrinker
   ;;
@@ -767,8 +767,8 @@ module For_deriving_stable = struct
   end
 
   let stable_witness_m__t
-        (type k cmp)
-        (module Key : Stable_witness_m with type t = k and type comparator_witness = cmp)
+    (type k cmp)
+    (module Key : Stable_witness_m with type t = k and type comparator_witness = cmp)
     =
     let module M = Provide_stable_witness (Key) in
     M.stable_witness

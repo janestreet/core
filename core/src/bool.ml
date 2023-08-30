@@ -22,9 +22,9 @@ module Replace_polymorphic_compare = Base.Bool
 include (
   Base.Bool :
     module type of struct
-    include Base.Bool
-  end
-  with type t := t)
+      include Base.Bool
+    end
+    with type t := t)
 
 include Comparable.Validate (Base.Bool)
 
@@ -34,9 +34,9 @@ let of_string_hum =
       (let table = String.Caseless.Table.create () in
        [ false, [ "false"; "no"; "0" ]; true, [ "true"; "yes"; "1" ] ]
        |> List.iter ~f:(fun (bool, strings) ->
-         List.iter strings ~f:(fun string ->
-           Hashtbl.set table ~key:string ~data:bool;
-           Hashtbl.set table ~key:(String.prefix string 1) ~data:bool));
+            List.iter strings ~f:(fun string ->
+              Hashtbl.set table ~key:string ~data:bool;
+              Hashtbl.set table ~key:(String.prefix string 1) ~data:bool));
        table)
   in
   let raise_invalid input =

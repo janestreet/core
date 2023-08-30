@@ -9,13 +9,12 @@ let fprintf = Stdio.Out_channel.fprintf
 let kfprintf = Stdio.Out_channel.kfprintf
 let printf = Stdio.Out_channel.printf
 
-
 (** print to stderr; exit 1 *)
 let exitf fmt =
   ksprintf
     (fun s () ->
-       eprintf "%s\n%!" s;
-       exit 1)
+      eprintf "%s\n%!" s;
+      exit 1)
     fmt
 ;;
 
@@ -27,10 +26,10 @@ let collect_to_string f =
   let printf fmt =
     kbprintf
       (fun buf ->
-         if !done_
-         then (
-           Buffer.reset buf;
-           raise_s [%message "[printf] used after [collect_to_string] returned"]))
+        if !done_
+        then (
+          Buffer.reset buf;
+          raise_s [%message "[printf] used after [collect_to_string] returned"]))
       buf
       fmt
   in

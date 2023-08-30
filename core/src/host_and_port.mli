@@ -11,8 +11,6 @@ type t =
 val create : host:string -> port:int -> t
 val host : t -> string
 val port : t -> int
-
-
 val tuple : t -> string * int
 
 include Identifiable with type t := t
@@ -27,8 +25,8 @@ module Stable : sig
 
     include
       Stable_comparable.With_stable_witness.V1
-      with type t := t
-       and type comparator_witness = comparator_witness
+        with type t := t
+         and type comparator_witness = comparator_witness
   end
 end
 

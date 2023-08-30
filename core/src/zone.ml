@@ -98,8 +98,7 @@ module Stable = struct
       type t =
         { name : string
         ; original_filename : string option
-        ;
-          digest : Md5.As_binary_string.Stable.V1.t option
+        ; digest : Md5.As_binary_string.Stable.V1.t option
         ; transitions : Transition.t array
         ; (* caches the index of the last transition we used to make lookups faster *)
           mutable last_regime_index : Index.t
@@ -467,21 +466,21 @@ let index_of_seconds_since_epoch t ~mode seconds =
   let index =
     let index = t.last_regime_index in
     if not (index_lower_bound_contains_seconds_since_epoch t index ~mode seconds)
-    (* time is before cached index; try previous index *)
+       (* time is before cached index; try previous index *)
     then (
       let index = index - 1 in
       if not (index_lower_bound_contains_seconds_since_epoch t index ~mode seconds)
-      (* time is before previous index; fall back on binary search *)
+         (* time is before previous index; fall back on binary search *)
       then
         binary_search_index_of_seconds_since_epoch t ~mode seconds
         (* time is before cached index and not before previous, so within previous *)
       else index)
     else if not (index_upper_bound_contains_seconds_since_epoch t index ~mode seconds)
-    (* time is after cached index; try next index *)
+            (* time is after cached index; try next index *)
     then (
       let index = index + 1 in
       if not (index_upper_bound_contains_seconds_since_epoch t index ~mode seconds)
-      (* time is after next index; fall back on binary search *)
+         (* time is after next index; fall back on binary search *)
       then
         binary_search_index_of_seconds_since_epoch t ~mode seconds
         (* time is after cached index and not after next, so within next *)

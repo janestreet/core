@@ -4,7 +4,6 @@
 
 open! Import
 
-
 (** {2 Write digit functions}
 
     [write_int63 bytes ~pos ~digits int63] writes the string representation of [int63],

@@ -6,6 +6,6 @@ open! Import
 type 'a t = 'a Base.Option_array.t [@@deriving bin_io, sexp]
 
 include module type of struct
-  include Base.Option_array
-end
-with type 'a t := 'a t
+    include Base.Option_array
+  end
+  with type 'a t := 'a t

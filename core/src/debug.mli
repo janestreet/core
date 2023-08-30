@@ -43,7 +43,6 @@ module Make () : sig
   (** If true, you get a message on stderr every time [debug] is called. *)
   val show_messages : bool ref
 
-
   (** We avoid labels so that the applications are more concise -- see example above. *)
   val debug
     :  't Invariant.t

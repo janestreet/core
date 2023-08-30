@@ -87,9 +87,9 @@ let operation_printed_crs = ref false
 let () =
   let old = !on_print_cr in
   on_print_cr
-  := fun cr ->
-    operation_printed_crs := true;
-    old cr
+    := fun cr ->
+         operation_printed_crs := true;
+         old cr
 ;;
 
 module Operation_sequence = struct

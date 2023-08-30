@@ -1,6 +1,5 @@
 module Unit_test = Stable_unit_test.Make
 
-
 module type Stable = Stable_module_types.S0
 module type Stable_without_comparator = Stable_module_types.S0_without_comparator
 module type Stable1 = Stable_module_types.S1
@@ -72,7 +71,6 @@ module Time_float = Time_float.Stable
 module Unit = Unit.Stable
 module Unix = struct end [@@deprecated "[since 2021-02] Use [Core_unix.Stable]"]
 include Perms.Export
-
 include Ppx_compare_lib.Builtin
 include Base.Exported_for_specific_uses.Globalize
 include Import.Not_found

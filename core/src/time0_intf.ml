@@ -34,8 +34,8 @@ module type S = sig
 
   include
     Comparable.S_common
-    with type t := t
-     and module Replace_polymorphic_compare := Replace_polymorphic_compare
+      with type t := t
+       and module Replace_polymorphic_compare := Replace_polymorphic_compare
 
   (** Equivalent to a [Date.t] and an [Ofday.t] with no time zone. A [Date_and_ofday.t]
       does not correspond to a single, unambiguous point in time. *)

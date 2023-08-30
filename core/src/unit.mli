@@ -7,17 +7,17 @@ type t = unit [@@deriving typerep]
 
 (** @inline *)
 include module type of struct
-  include Base.Unit
-end
-with type t := t
+    include Base.Unit
+  end
+  with type t := t
 
 include Identifiable.S with type t := t and type comparator_witness := comparator_witness
 include Quickcheckable.S with type t := t
 
 include sig
-  type t [@@deriving bin_io ~localize]
-end
-with type t := t
+    type t [@@deriving bin_io ~localize]
+  end
+  with type t := t
 
 module type S = sig end
 

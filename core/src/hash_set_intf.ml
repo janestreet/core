@@ -33,25 +33,25 @@ module type S_plain = sig
 
   include
     Creators_generic
-    with type 'a t := t
-    with type 'a elt := elt
-    with type ('a, 'z) create_options :=
-      ('a, 'z) create_options_without_first_class_module
+      with type 'a t := t
+      with type 'a elt := elt
+      with type ('a, 'z) create_options :=
+        ('a, 'z) create_options_without_first_class_module
 
   module Provide_of_sexp
-      (X : sig
-         type t [@@deriving of_sexp]
-       end
-       with type t := elt) : sig
+    (X : sig
+      type t [@@deriving of_sexp]
+    end
+    with type t := elt) : sig
     type t [@@deriving of_sexp]
   end
   with type t := t
 
   module Provide_bin_io
-      (X : sig
-         type t [@@deriving bin_io]
-       end
-       with type t := elt) : sig
+    (X : sig
+      type t [@@deriving bin_io]
+    end
+    with type t := elt) : sig
     type t [@@deriving bin_io]
   end
   with type t := t
@@ -61,9 +61,9 @@ module type S = sig
   include S_plain
 
   include sig
-    type t [@@deriving of_sexp]
-  end
-  with type t := t
+      type t [@@deriving of_sexp]
+    end
+    with type t := t
 end
 
 module type S_binable = sig
@@ -105,10 +105,10 @@ module type Hash_set = sig
   module Using_hashable : sig
     include
       Creators_generic
-      with type 'a t := 'a t
-      with type 'a elt = 'a
-      with type ('key, 'z) create_options :=
-        ('key, 'z) create_options_with_hashable_required
+        with type 'a t := 'a t
+        with type 'a elt = 'a
+        with type ('key, 'z) create_options :=
+          ('key, 'z) create_options_with_hashable_required
   end
 
   (** A hash set that uses polymorphic comparison. *)
@@ -117,10 +117,10 @@ module type Hash_set = sig
 
     include
       Creators_generic
-      with type 'a t := 'a t
-      with type 'a elt = 'a
-      with type ('key, 'z) create_options :=
-        ('key, 'z) create_options_without_first_class_module
+        with type 'a t := 'a t
+        with type 'a elt = 'a
+        with type ('key, 'z) create_options :=
+          ('key, 'z) create_options_without_first_class_module
 
     include Accessors with type 'a t := 'a t with type 'a elt := 'a elt
   end
@@ -131,28 +131,28 @@ module type Hash_set = sig
   module Make_stable (Elt : Elt_stable) : S_stable with type elt = Elt.t
 
   module Make_plain_with_hashable (T : sig
-      module Elt : Elt_plain
+    module Elt : Elt_plain
 
-      val hashable : Elt.t Hashtbl.Hashable.t
-    end) : S_plain with type elt = T.Elt.t
+    val hashable : Elt.t Hashtbl.Hashable.t
+  end) : S_plain with type elt = T.Elt.t
 
   module Make_with_hashable (T : sig
-      module Elt : Elt
+    module Elt : Elt
 
-      val hashable : Elt.t Hashtbl.Hashable.t
-    end) : S with type elt = T.Elt.t
+    val hashable : Elt.t Hashtbl.Hashable.t
+  end) : S with type elt = T.Elt.t
 
   module Make_binable_with_hashable (T : sig
-      module Elt : Elt_binable
+    module Elt : Elt_binable
 
-      val hashable : Elt.t Hashtbl.Hashable.t
-    end) : S_binable with type elt = T.Elt.t
+    val hashable : Elt.t Hashtbl.Hashable.t
+  end) : S_binable with type elt = T.Elt.t
 
   module Make_stable_with_hashable (T : sig
-      module Elt : Elt_stable
+    module Elt : Elt_stable
 
-      val hashable : Elt.t Hashtbl.Hashable.t
-    end) : S_stable with type elt = T.Elt.t
+    val hashable : Elt.t Hashtbl.Hashable.t
+  end) : S_stable with type elt = T.Elt.t
 
   include For_deriving with type 'a t := 'a t
 end

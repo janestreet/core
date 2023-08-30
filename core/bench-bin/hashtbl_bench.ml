@@ -196,7 +196,7 @@ end = struct
         stage (fun () ->
           ignore
             (of_alist_report_all_dups alist
-             : [ `Ok of int t | `Duplicate_keys of key list ])))
+              : [ `Ok of int t | `Duplicate_keys of key list ])))
     ;;
 
     let of_alist_multi = Table.of_alist_multi
@@ -215,7 +215,7 @@ end = struct
         stage (fun () ->
           ignore
             (create_mapped alist ~get_key:fst ~get_data:snd
-             : [ `Ok of int t | `Duplicate_keys of key list ])))
+              : [ `Ok of int t | `Duplicate_keys of key list ])))
     ;;
 
     let create_with_key = Table.create_with_key
@@ -227,7 +227,7 @@ end = struct
         stage (fun () ->
           ignore
             (create_with_key data ~get_key:(Array.get key_array)
-             : [ `Ok of int t | `Duplicate_keys of key list ])))
+              : [ `Ok of int t | `Duplicate_keys of key list ])))
     ;;
 
     let create_with_key_exn = Table.create_with_key_exn
@@ -249,7 +249,7 @@ end = struct
         stage (fun () ->
           ignore
             (create_with_key_or_error data ~get_key:(Array.get key_array)
-             : int t Or_error.t)))
+              : int t Or_error.t)))
     ;;
 
     let group = Table.group
@@ -1177,7 +1177,7 @@ let benchmarks ~regex ~sizes =
   let module P = Bench_pooled (Config) in
   H.benchmarks @ P.benchmarks
   |> List.sort ~compare:(fun test1 test2 ->
-    String.compare (Bench.Test.name test1) (Bench.Test.name test2))
+       String.compare (Bench.Test.name test1) (Bench.Test.name test2))
 ;;
 
 module Top_level = struct

@@ -17,8 +17,8 @@ include Stable.V1
 include Base.Either
 
 include Comparator.Derived2 (struct
-    type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of, compare]
-  end)
+  type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of, compare]
+end)
 
 let quickcheck_generator = Base_quickcheck.Generator.either
 let quickcheck_observer = Base_quickcheck.Observer.either

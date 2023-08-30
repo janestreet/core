@@ -45,13 +45,13 @@ module type Identifiable = sig
   module type S_sexp_grammar = S_sexp_grammar
 
   module Make_plain (M : sig
-      type t [@@deriving compare, hash, sexp_of]
+    type t [@@deriving compare, hash, sexp_of]
 
-      include Stringable.S with type t := t
+    include Stringable.S with type t := t
 
-      (** for registering the pretty printer *)
-      val module_name : string
-    end) : S_plain with type t := M.t
+    (** for registering the pretty printer *)
+    val module_name : string
+  end) : S_plain with type t := M.t
 
   (** Used for making an Identifiable module. Here's an example:
 
@@ -68,62 +68,62 @@ module type Identifiable = sig
       ]}
   *)
   module Make (M : sig
-      type t [@@deriving bin_io, compare, hash, sexp]
+    type t [@@deriving bin_io, compare, hash, sexp]
 
-      include Stringable.S with type t := t
+    include Stringable.S with type t := t
 
-      (** for registering the pretty printer *)
-      val module_name : string
-    end) : S with type t := M.t
+    (** for registering the pretty printer *)
+    val module_name : string
+  end) : S with type t := M.t
 
   module Make_with_sexp_grammar (M : sig
-      type t [@@deriving bin_io, compare, hash, sexp, sexp_grammar]
+    type t [@@deriving bin_io, compare, hash, sexp, sexp_grammar]
 
-      include Stringable.S with type t := t
+    include Stringable.S with type t := t
 
-      (** for registering the pretty printer *)
-      val module_name : string
-    end) : S_sexp_grammar with type t := M.t
+    (** for registering the pretty printer *)
+    val module_name : string
+  end) : S_sexp_grammar with type t := M.t
 
   module Make_and_derive_hash_fold_t (M : sig
-      type t [@@deriving bin_io, compare, sexp]
+    type t [@@deriving bin_io, compare, sexp]
 
-      include Stringable.S with type t := t
+    include Stringable.S with type t := t
 
-      val hash : t -> int
+    val hash : t -> int
 
-      (** for registering the pretty printer *)
-      val module_name : string
-    end) : S with type t := M.t
+    (** for registering the pretty printer *)
+    val module_name : string
+  end) : S with type t := M.t
 
   module Make_using_comparator (M : sig
-      type t [@@deriving bin_io, compare, hash, sexp]
+    type t [@@deriving bin_io, compare, hash, sexp]
 
-      include Comparator.S with type t := t
-      include Stringable.S with type t := t
+    include Comparator.S with type t := t
+    include Stringable.S with type t := t
 
-      val module_name : string
-    end) : S with type t := M.t with type comparator_witness := M.comparator_witness
+    val module_name : string
+  end) : S with type t := M.t with type comparator_witness := M.comparator_witness
 
   module Make_plain_using_comparator (M : sig
-      type t [@@deriving compare, hash, sexp_of]
+    type t [@@deriving compare, hash, sexp_of]
 
-      include Comparator.S with type t := t
-      include Stringable.S with type t := t
+    include Comparator.S with type t := t
+    include Stringable.S with type t := t
 
-      (** for registering the pretty printer *)
-      val module_name : string
-    end) : S_plain with type t := M.t with type comparator_witness := M.comparator_witness
+    (** for registering the pretty printer *)
+    val module_name : string
+  end) : S_plain with type t := M.t with type comparator_witness := M.comparator_witness
 
   module Make_using_comparator_and_derive_hash_fold_t (M : sig
-      type t [@@deriving bin_io, compare, sexp]
+    type t [@@deriving bin_io, compare, sexp]
 
-      include Comparator.S with type t := t
-      include Stringable.S with type t := t
+    include Comparator.S with type t := t
+    include Stringable.S with type t := t
 
-      val hash : t -> int
-      val module_name : string
-    end) : S with type t := M.t with type comparator_witness := M.comparator_witness
+    val hash : t -> int
+    val module_name : string
+  end) : S with type t := M.t with type comparator_witness := M.comparator_witness
 
   module Extend (M : Base.Identifiable.S) (B : Binable0.S with type t = M.t) :
     S with type t := M.t with type comparator_witness := M.comparator_witness

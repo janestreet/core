@@ -6,9 +6,9 @@ module Core_sequence = Sequence
 
 include (
   Base.Array :
-  sig
-    type 'a t = 'a array [@@deriving sexp, compare ~localize, globalize, sexp_grammar]
-  end)
+    sig
+      type 'a t = 'a array [@@deriving sexp, compare ~localize, globalize, sexp_grammar]
+    end)
 
 type 'a t = 'a array [@@deriving bin_io ~localize, quickcheck, typerep]
 
@@ -49,7 +49,7 @@ module T = struct
         -> len:int
         -> unit
         = "core_array_unsafe_int_blit"
-      [@@noalloc]
+        [@@noalloc]
     end
 
     include
@@ -85,7 +85,7 @@ module T = struct
         -> len:int
         -> unit
         = "core_array_unsafe_float_blit"
-      [@@noalloc]
+        [@@noalloc]
     end
 
     external get : (t_[@local_opt]) -> (int[@local_opt]) -> float = "%floatarray_safe_get"
@@ -137,7 +137,7 @@ module type Permissioned = sig
 
   include
     Indexed_container.S1_with_creators_permissions
-    with type ('a, 'perms) t := ('a, 'perms) t
+      with type ('a, 'perms) t := ('a, 'perms) t
 
   include Blit.S1_permissions with type ('a, 'perms) t := ('a, 'perms) t
   include Binary_searchable.S1_permissions with type ('a, 'perms) t := ('a, 'perms) t
@@ -410,7 +410,7 @@ module Permissioned : sig
       -> len:int
       -> unit
       = "core_array_unsafe_int_blit"
-    [@@noalloc]
+      [@@noalloc]
   end
 
   module Float : sig
@@ -452,7 +452,7 @@ module Permissioned : sig
       -> len:int
       -> unit
       = "core_array_unsafe_float_blit"
-    [@@noalloc]
+      [@@noalloc]
   end
 
   val of_array_id : 'a array -> ('a, [< read_write ]) t

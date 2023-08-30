@@ -99,10 +99,10 @@ let%test_module _ =
     let does_raise = Exn.does_raise
 
     module M = Make (struct
-        let here = [%here]
+      let here = [%here]
 
-        include Positive_int
-      end)
+      include Positive_int
+    end)
 
     open M
 
@@ -135,18 +135,18 @@ let%test_module _ =
     ;;
 
     module M1 = Make_binable (struct
-        let here = [%here]
-        let validate_binio_deserialization = true
+      let here = [%here]
+      let validate_binio_deserialization = true
 
-        include Positive_int
-      end)
+      include Positive_int
+    end)
 
     module M2 = Make_binable (struct
-        let here = [%here]
-        let validate_binio_deserialization = false
+      let here = [%here]
+      let validate_binio_deserialization = false
 
-        include Positive_int
-      end)
+      include Positive_int
+    end)
 
     let int = 0
     let string = Binable.to_string (module Int) int

@@ -45,15 +45,15 @@ module type Span = sig
 
   (** An alias for [min_value_for_1us_rounding]. *)
   val min_value : t
-  [@@deprecated
-    "[since 2019-02] use [min_value_representable] or [min_value_for_1us_rounding] \
-     instead"]
+    [@@deprecated
+      "[since 2019-02] use [min_value_representable] or [min_value_for_1us_rounding] \
+       instead"]
 
   (** An alias for [max_value_for_1us_rounding]. *)
   val max_value : t
-  [@@deprecated
-    "[since 2019-02] use [max_value_representable] or [max_value_for_1us_rounding] \
-     instead"]
+    [@@deprecated
+      "[since 2019-02] use [max_value_representable] or [max_value_for_1us_rounding] \
+       instead"]
 
   (** overflows silently *)
   val scale_int : t -> int -> t
@@ -82,15 +82,14 @@ module type Span = sig
       Around 135y magnitudes [to_span] and [of_span] raise.
   *)
   val to_span : t -> Span_float.t
-  [@@deprecated
-    "[since 2019-01] use [to_span_float_round_nearest] or \
-     [to_span_float_round_nearest_microsecond]"]
-
+    [@@deprecated
+      "[since 2019-01] use [to_span_float_round_nearest] or \
+       [to_span_float_round_nearest_microsecond]"]
 
   val of_span : Span_float.t -> t
-  [@@deprecated
-    "[since 2019-01] use [of_span_float_round_nearest] or \
-     [of_span_float_round_nearest_microsecond]"]
+    [@@deprecated
+      "[since 2019-01] use [of_span_float_round_nearest] or \
+       [of_span_float_round_nearest_microsecond]"]
 
   (** [*_round_nearest] vs [*_round_nearest_microsecond]: If you don't know that you need
       microsecond precision, use the [*_round_nearest] version.
@@ -164,13 +163,13 @@ module type Span = sig
 
       include
         Stable_int63able.With_stable_witness.S
-        with type t := t
-        with type comparator_witness := comparator_witness
+          with type t := t
+          with type comparator_witness := comparator_witness
 
       include
         Comparable.Stable.V1.With_stable_witness.S
-        with type comparable := t
-        with type comparator_witness := comparator_witness
+          with type comparable := t
+          with type comparator_witness := comparator_witness
 
       include Stringable.S with type t := t
     end
@@ -210,7 +209,6 @@ module type Ofday = sig
       not in the same 24-hour day. Daylight savings shifts are not accounted for. *)
   val add_exn : t -> Span.t -> t
 
-
   (** [sub_exn t span] shifts the time of day [t] back by [span]. It raises if the result
       is not in the same 24-hour day. Daylight savings shifts are not accounted for. *)
   val sub_exn : t -> Span.t -> t
@@ -229,16 +227,16 @@ module type Ofday = sig
   val now : [ `Use_Time_ns_unix ] [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
   val of_ofday_float_round_nearest : [ `Use_Time_ns_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
+    [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
   val of_ofday_float_round_nearest_microsecond : [ `Use_Time_ns_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
+    [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
   val to_ofday_float_round_nearest : [ `Use_Time_ns_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
+    [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
   val to_ofday_float_round_nearest_microsecond : [ `Use_Time_ns_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
+    [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
   module Option : sig end [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
   module Zoned : sig end [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
@@ -272,8 +270,8 @@ module type Time_ns = sig
     Time_intf.Shared with type t := t with module Span := Span with module Ofday := Ofday
 
   val of_string : string -> t
-  [@@deprecated
-    "[since 2021-04] Use [of_string_with_utc_offset] or [Time_ns_unix.of_string]"]
+    [@@deprecated
+      "[since 2021-04] Use [of_string_with_utc_offset] or [Time_ns_unix.of_string]"]
 
   (** [of_string_with_utc_offset] requires its input to have an explicit
       UTC offset, e.g. [2000-01-01 12:34:56.789012-23], or use the UTC zone, "Z",
@@ -281,7 +279,7 @@ module type Time_ns = sig
   val of_string_with_utc_offset : string -> t
 
   val to_string : t -> string
-  [@@deprecated "[since 2021-04] Use [to_string_utc] or [Time_ns_unix.to_string]"]
+    [@@deprecated "[since 2021-04] Use [to_string_utc] or [Time_ns_unix.to_string]"]
 
   (** [to_string_utc] generates a time string with the UTC zone, "Z", e.g. [2000-01-01
       12:34:56.789012Z]. *)
@@ -304,15 +302,15 @@ module type Time_ns = sig
 
   (** An alias for [min_value_for_1us_rounding]. *)
   val min_value : t
-  [@@deprecated
-    "[since 2019-02] use [min_value_representable] or [min_value_for_1us_rounding] \
-     instead"]
+    [@@deprecated
+      "[since 2019-02] use [min_value_representable] or [min_value_for_1us_rounding] \
+       instead"]
 
   (** An alias for [max_value_for_1us_rounding]. *)
   val max_value : t
-  [@@deprecated
-    "[since 2019-02] use [max_value_representable] or [max_value_for_1us_rounding] \
-     instead"]
+    [@@deprecated
+      "[since 2019-02] use [max_value_representable] or [max_value_for_1us_rounding] \
+       instead"]
 
   (** The current time. *)
   val now : unit -> t
@@ -393,14 +391,14 @@ module type Time_ns = sig
   val random : ?state:Random.State.t -> unit -> t
 
   val of_time : Time_float.t -> t
-  [@@deprecated
-    "[since 2019-01] use [of_time_float_round_nearest] or \
-     [of_time_float_round_nearest_microsecond]"]
+    [@@deprecated
+      "[since 2019-01] use [of_time_float_round_nearest] or \
+       [of_time_float_round_nearest_microsecond]"]
 
   val to_time : t -> Time_float.t
-  [@@deprecated
-    "[since 2019-01] use [to_time_float_round_nearest] or \
-     [to_time_float_round_nearest_microsecond]"]
+    [@@deprecated
+      "[since 2019-01] use [to_time_float_round_nearest] or \
+       [to_time_float_round_nearest_microsecond]"]
 
   (** [*_round_nearest] vs [*_round_nearest_microsecond]: If you don't know that you need
       microsecond precision, use the [*_round_nearest] version.
@@ -444,13 +442,13 @@ module type Time_ns = sig
 
         include
           Comparator.Stable.V1.S
-          with type t := t
-           and type comparator_witness = Alternate_sexp.comparator_witness
+            with type t := t
+             and type comparator_witness = Alternate_sexp.comparator_witness
 
         include
           Comparable.Stable.V1.With_stable_witness.S
-          with type comparable := t
-          with type comparator_witness := comparator_witness
+            with type comparable := t
+            with type comparator_witness := comparator_witness
       end
     end
 
@@ -469,13 +467,13 @@ module type Time_ns = sig
 
         include
           Stable_int63able.With_stable_witness.S
-          with type t := t
-          with type comparator_witness := comparator_witness
+            with type t := t
+            with type comparator_witness := comparator_witness
 
         include
           Comparable.Stable.V1.With_stable_witness.S
-          with type comparable := t
-          with type comparator_witness := comparator_witness
+            with type comparable := t
+            with type comparator_witness := comparator_witness
 
         include Stringable.S with type t := t
       end
@@ -487,8 +485,8 @@ module type Time_ns = sig
 
         include
           Stable_int63able.With_stable_witness.S
-          with type t := t
-           and type comparator_witness = Ofday.comparator_witness
+            with type t := t
+             and type comparator_witness = Ofday.comparator_witness
       end
 
       module Option : sig end [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
@@ -511,60 +509,60 @@ module type Time_ns = sig
   val arg_type : [ `Use_Time_ns_unix ] [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
   val comparator : [ `Use_Time_ns_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
+    [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
   val get_sexp_zone : [ `Use_Time_ns_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
+    [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
   val interruptible_pause : [ `Use_Time_ns_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
+    [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
   val of_date_ofday_zoned : [ `Use_Time_ns_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
+    [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
   val of_string_abs : [ `Use_Time_ns_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
+    [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
   val of_string_fix_proto : [ `Use_Time_ns_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
+    [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
   val pause : [ `Use_Time_ns_unix ] [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
   val pause_forever : [ `Use_Time_ns_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
+    [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
   val pp : [ `Use_Time_ns_unix ] [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
   val set_sexp_zone : [ `Use_Time_ns_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
+    [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
   val sexp_of_t : [ `Use_Time_ns_unix_or_Time_ns_alternate_sexp ]
-  [@@deprecated "[since 2021-03] Use [Time_ns_unix] or [Time_ns.Alternate_sexp]"]
+    [@@deprecated "[since 2021-03] Use [Time_ns_unix] or [Time_ns.Alternate_sexp]"]
 
   val sexp_of_t_abs : [ `Use_Time_ns_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
+    [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
   val t_of_sexp : [ `Use_Time_ns_unix_or_Time_ns_alternate_sexp ]
-  [@@deprecated "[since 2021-03] Use [Time_ns_unix] or [Time_ns.Alternate_sexp]"]
+    [@@deprecated "[since 2021-03] Use [Time_ns_unix] or [Time_ns.Alternate_sexp]"]
 
   val t_of_sexp_abs : [ `Use_Time_ns_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
+    [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
   val to_date_ofday_zoned : [ `Use_Time_ns_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
+    [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
   val to_ofday_zoned : [ `Use_Time_ns_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
+    [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
   val to_string_fix_proto : [ `Use_Time_ns_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
+    [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
   val validate_bound : [ `Use_Time_ns_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
+    [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
   val validate_lbound : [ `Use_Time_ns_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
+    [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
   val validate_ubound : [ `Use_Time_ns_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
+    [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 end

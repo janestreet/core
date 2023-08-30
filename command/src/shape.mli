@@ -21,7 +21,7 @@ module Anons : sig
 
   type t =
     | Usage of string
-    (** When exec'ing an older binary whose help sexp doesn't expose the grammar. *)
+        (** When exec'ing an older binary whose help sexp doesn't expose the grammar. *)
     | Grammar of Grammar.t
   [@@deriving compare, sexp_of]
 end
@@ -56,7 +56,7 @@ module Flag_info : sig
   val requires_arg : t -> bool Or_error.t
 
   val t_of_sexp : Sexp.t -> t
-  [@@deprecated "[since 2020-04] Use [Command.Stable.Shape.Flag_info]."]
+    [@@deprecated "[since 2020-04] Use [Command.Stable.Shape.Flag_info]."]
 end
 
 module Flag_help_display : sig
@@ -87,7 +87,7 @@ module Base_info : sig
   val get_usage : t -> string
 
   val t_of_sexp : Sexp.t -> t
-  [@@deprecated "[since 2020-04] Use [Command.Stable.Shape.Base_info]."]
+    [@@deprecated "[since 2020-04] Use [Command.Stable.Shape.Base_info]."]
 end
 
 module Group_info : sig
@@ -102,7 +102,7 @@ module Group_info : sig
   val map : 'a t -> f:('a -> 'b) -> 'b t
 
   val t_of_sexp : (Sexp.t -> 'a) -> Sexp.t -> 'a t
-  [@@deprecated "[since 2020-04] Use [Command.Stable.Shape.Group_info]."]
+    [@@deprecated "[since 2020-04] Use [Command.Stable.Shape.Group_info]."]
 end
 
 module Exec_info : sig
@@ -116,7 +116,7 @@ module Exec_info : sig
   [@@deriving compare, sexp_of]
 
   val t_of_sexp : Sexp.t -> t
-  [@@deprecated "[since 2020-04] Use [Command.Stable.Shape.Exec_info]."]
+    [@@deprecated "[since 2020-04] Use [Command.Stable.Shape.Exec_info]."]
 end
 
 (** Fully forced shapes are comparable and serializable. *)
@@ -130,7 +130,7 @@ module Fully_forced : sig
   val expanded_subcommands : t -> string list list
 
   val t_of_sexp : Sexp.t -> t
-  [@@deprecated "[since 2020-04] Use [Command.Stable.Shape.Fully_forced]."]
+    [@@deprecated "[since 2020-04] Use [Command.Stable.Shape.Fully_forced]."]
 end
 
 type t =

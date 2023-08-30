@@ -2,16 +2,16 @@ open! Base
 
 include (
   String :
-  sig
-    type t = string [@@deriving compare, hash, sexp, sexp_grammar]
+    sig
+      type t = string [@@deriving compare, hash, sexp, sexp_grammar]
 
-    include
-      Comparable.S
-      with type t := t
-      with type comparator_witness = String.comparator_witness
+      include
+        Comparable.S
+          with type t := t
+          with type comparator_witness = String.comparator_witness
 
-    val comparator : (t, comparator_witness) Comparator.t
-  end)
+      val comparator : (t, comparator_witness) Comparator.t
+    end)
 
 include struct
   open Stdlib.Filename

@@ -45,7 +45,6 @@ val add_bin_prot : t -> 'a Bin_prot.Type_class.writer -> 'a -> unit
     parenthesized variable cannot be found. *)
 val add_substitute : t -> (string -> string) -> string -> unit
 
-
 (** *)
 
 module Format : sig

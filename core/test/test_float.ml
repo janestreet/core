@@ -51,8 +51,8 @@ let%expect_test "[Sexp.of_float_style = `Underscores]" =
     ; Float.nan
     ]
     ~f:(fun f ->
-      check f;
-      check (-.f));
+    check f;
+    check (-.f));
   Expect_test_patterns.require_match
     [%here]
     {|

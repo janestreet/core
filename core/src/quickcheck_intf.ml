@@ -272,7 +272,6 @@ module type Observer = sig
       depending on whether they satisfy [f]. *)
   val doubleton : ('a -> bool) -> 'a t
 
-
   (** [enum n ~f] maps values to [n] buckets, where [f] produces the index for a bucket
       from [0] to [n-1] for each value. *)
   val enum : int -> f:('a -> int) -> 'a t
@@ -633,13 +632,13 @@ module type Syntax = sig
 
   module Open_on_rhs :
     Generator
-    with type 'a t := 'a Generator.t
-     and module Let_syntax := Generator.Let_syntax
+      with type 'a t := 'a Generator.t
+       and module Let_syntax := Generator.Let_syntax
 
   include
     Monad.Syntax
-    with type 'a t := 'a Generator.t
-     and module Let_syntax.Let_syntax.Open_on_rhs = Open_on_rhs
+      with type 'a t := 'a Generator.t
+       and module Let_syntax.Let_syntax.Open_on_rhs = Open_on_rhs
 end
 
 module type Quickcheck = sig

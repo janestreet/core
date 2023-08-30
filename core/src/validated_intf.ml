@@ -97,37 +97,37 @@ module type S = sig
 
   include
     S_allowing_substitution
-    with type t := t
-     and type raw := raw
-     and type witness := witness
-     and type ('raw, 'witness) validated := ('raw, 'witness) validated
+      with type t := t
+       and type raw := raw
+       and type witness := witness
+       and type ('raw, 'witness) validated := ('raw, 'witness) validated
 end
 
 module type S_bin_io = sig
   include S
 
   include sig
-    type t = (raw, witness) validated [@@deriving bin_io]
-  end
-  with type t := t
+      type t = (raw, witness) validated [@@deriving bin_io]
+    end
+    with type t := t
 end
 
 module type S_bin_io_compare_hash_sexp = sig
   include S
 
   include sig
-    type t = (raw, witness) validated [@@deriving bin_io, compare, hash]
-  end
-  with type t := t
+      type t = (raw, witness) validated [@@deriving bin_io, compare, hash]
+    end
+    with type t := t
 end
 
 module type S_bin_io_compare_globalize_hash_sexp = sig
   include S_bin_io_compare_hash_sexp
 
   include sig
-    type t = (raw, witness) validated [@@deriving globalize]
-  end
-  with type t := t
+      type t = (raw, witness) validated [@@deriving globalize]
+    end
+    with type t := t
 end
 
 module type Validated = sig
@@ -158,45 +158,45 @@ module type Validated = sig
     S_bin_io_compare_hash_sexp with type raw := Raw.t
 
   module Make_bin_io_compare_globalize_hash_sexp
-      (Raw : Raw_bin_io_compare_globalize_hash_sexp) :
+    (Raw : Raw_bin_io_compare_globalize_hash_sexp) :
     S_bin_io_compare_globalize_hash_sexp with type raw := Raw.t
 
   module Add_bin_io (Raw : sig
-      type t [@@deriving bin_io]
+    type t [@@deriving bin_io]
 
-      include Raw_bin_io with type t := t
-    end)
-      (Validated : S with type raw := Raw.t) : sig
+    include Raw_bin_io with type t := t
+  end)
+  (Validated : S with type raw := Raw.t) : sig
     type t [@@deriving bin_io]
   end
   with type t := Validated.t
 
   module Add_compare (Raw : sig
-      type t [@@deriving compare]
+    type t [@@deriving compare]
 
-      include Raw with type t := t
-    end)
-      (Validated : S with type raw := Raw.t) : sig
+    include Raw with type t := t
+  end)
+  (Validated : S with type raw := Raw.t) : sig
     type t [@@deriving compare]
   end
   with type t := Validated.t
 
   module Add_hash (Raw : sig
-      type t [@@deriving hash]
+    type t [@@deriving hash]
 
-      include Raw with type t := t
-    end)
-      (Validated : S with type raw := Raw.t) : sig
+    include Raw with type t := t
+  end)
+  (Validated : S with type raw := Raw.t) : sig
     type t [@@deriving hash]
   end
   with type t := Validated.t
 
   module Add_typerep (Raw : sig
-      type t [@@deriving typerep]
+    type t [@@deriving typerep]
 
-      include Raw with type t := t
-    end)
-      (Validated : S with type raw := Raw.t) : sig
+    include Raw with type t := t
+  end)
+  (Validated : S with type raw := Raw.t) : sig
     type t [@@deriving typerep]
   end
   with type t := Validated.t

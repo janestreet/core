@@ -33,7 +33,6 @@ end = struct
   [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
 end
 
-
 module _ = struct
   type t0 = float Hashtbl.M(Int).t [@@deriving sexp]
   type 'a t1 = 'a Hashtbl.M(Bool).t [@@deriving sexp]

@@ -3,12 +3,12 @@ include Base.Sys
 
 let unix_quote x =
   if (not (String.is_empty x))
-  && String.for_all x ~f:(function
-       | 'a' .. 'z'
-       | 'A' .. 'Z'
-       | '0' .. '9'
-       | '_' | '-' | ':' | '.' | '/' | ',' | '+' | '=' | '%' | '@' -> true
-       | _ -> false)
+     && String.for_all x ~f:(function
+          | 'a' .. 'z'
+          | 'A' .. 'Z'
+          | '0' .. '9'
+          | '_' | '-' | ':' | '.' | '/' | ',' | '+' | '=' | '%' | '@' -> true
+          | _ -> false)
   then (
     (* Shell keywords, as output by [compgen -k] for bash, [man dash] for dash, and [PATH=
        type -m '*' | grep reserved] for zsh, except for keywords that have special

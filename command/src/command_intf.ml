@@ -186,15 +186,15 @@ module type Command = sig
     (** An auto-completing [Arg_type] over a finite set of values. *)
     val of_map
       :  ?accept_unique_prefixes:bool
-      (** Defaults to [true]. Automatically parses a prefix of a valid key if it's
+           (** Defaults to [true]. Automatically parses a prefix of a valid key if it's
           unambiguous. *)
       -> ?case_sensitive:bool
-      (** Defaults to [true]. If [false], map keys must all be distinct when lowercased.*)
+           (** Defaults to [true]. If [false], map keys must all be distinct when lowercased.*)
       -> ?list_values_in_help:bool
-      (** Defaults to [true]. If you set it to false the accepted values won't be listed
+           (** Defaults to [true]. If you set it to false the accepted values won't be listed
           in the command help. *)
       -> ?auto_complete:Auto_complete.t
-      (** Defaults to bash completion on the string prefix. This allows users to specify
+           (** Defaults to bash completion on the string prefix. This allows users to specify
           arbitrary auto-completion for [t]. *)
       -> ?key:'a Univ_map.Multi.Key.t
       -> 'a Map.M(String).t
@@ -204,7 +204,7 @@ module type Command = sig
     val of_alist_exn
       :  ?accept_unique_prefixes:bool
       -> ?case_sensitive:bool
-      (** Defaults to [true]. If [false], map keys must all be distinct when lowercased.*)
+           (** Defaults to [true]. If [false], map keys must all be distinct when lowercased.*)
       -> ?list_values_in_help:bool (** default: true *)
       -> ?auto_complete:Auto_complete.t
       -> ?key:'a Univ_map.Multi.Key.t
@@ -216,7 +216,7 @@ module type Command = sig
     val enumerated
       :  ?accept_unique_prefixes:bool
       -> ?case_sensitive:bool
-      (** Defaults to [true]. If [false], map keys must all be distinct when lowercased.*)
+           (** Defaults to [true]. If [false], map keys must all be distinct when lowercased.*)
       -> ?list_values_in_help:bool (** default: true *)
       -> ?auto_complete:Auto_complete.t
       -> ?key:'a Univ_map.Multi.Key.t
@@ -229,13 +229,12 @@ module type Command = sig
     val enumerated_sexpable
       :  ?accept_unique_prefixes:bool
       -> ?case_sensitive:bool
-      (** Defaults to [true]. If [false], map keys must all be distinct when lowercased.*)
+           (** Defaults to [true]. If [false], map keys must all be distinct when lowercased.*)
       -> ?list_values_in_help:bool (** default: true *)
       -> ?auto_complete:Auto_complete.t
       -> ?key:'a Univ_map.Multi.Key.t
       -> (module Enumerable_sexpable with type t = 'a)
       -> 'a t
-
 
     (** [comma_separated t] accepts comma-separated lists of arguments parsed by [t].
 
@@ -259,7 +258,6 @@ module type Command = sig
 
     (** Values to include in other namespaces. *)
     module Export : sig
-
       val string : string t
 
       (** Beware that an anonymous argument of type [int] cannot be specified as negative,
@@ -364,7 +362,6 @@ module type Command = sig
         raised if [anons] matches anything other than a fixed number of anonymous arguments.
     *)
     val sequence : 'a t -> 'a list t
-
 
     (** [non_empty_sequence_as_pair anons] and [non_empty_sequence_as_list anons] are like
         [sequence anons] except that an exception will be raised if there is not at least
@@ -536,7 +533,6 @@ module type Command = sig
         -> if_nothing_chosen:('a, 'b) If_nothing_chosen.t
         -> 'b t
 
-
       (** [choose_one_non_optional clauses ~if_nothing_chosen] expresses a sum type.
           It raises if more than one of the [clauses] has any flags given on the
           command-line, and returns the value parsed from the clause that's given.
@@ -614,13 +610,13 @@ module type Command = sig
 
     (** Superceded by [return], preserved for backwards compatibility. *)
     val const : 'a -> 'a Param.t
-    [@@deprecated
-      "[since 2018-10] use [Command.Param.return] instead of [Command.Spec.const]"]
+      [@@deprecated
+        "[since 2018-10] use [Command.Param.return] instead of [Command.Spec.const]"]
 
     (** Superceded by [both], preserved for backwards compatibility. *)
     val pair : 'a Param.t -> 'b Param.t -> ('a * 'b) Param.t
-    [@@deprecated
-      "[since 2018-10] use [Command.Param.both] instead of [Command.Spec.pair]"]
+      [@@deprecated
+        "[since 2018-10] use [Command.Param.both] instead of [Command.Spec.pair]"]
 
     (** {2 Command specifications} *)
 
@@ -791,10 +787,7 @@ module type Command = sig
     val wrap : (run:('m1 -> 'r1) -> main:'m2 -> 'r2) -> ('m1, 'r1) t -> ('m2, 'r2) t
 
     module Arg_type : module type of Arg_type with type 'a t = 'a Arg_type.t
-
-
     include module type of Arg_type.Export
-
 
     (** A flag specification. *)
     type 'a flag = 'a Flag.t
@@ -812,7 +805,7 @@ module type Command = sig
     val flags_of_args_exn
       :  (Stdlib.Arg.key * Stdlib.Arg.spec * Stdlib.Arg.doc) list
       -> ('a, 'a) t
-    [@@deprecated "[since 2018-10] switch to Command.Param"]
+      [@@deprecated "[since 2018-10] switch to Command.Param"]
 
     (** A specification of some number of anonymous arguments. *)
     type 'a anons = 'a Anons.t
@@ -882,7 +875,6 @@ module type Command = sig
     -> (string * t) list Lazy.t
     -> t
 
-
   (** [exec ~summary ~path_to_exe] runs [exec] on the executable at [path_to_exe]. If
       [path_to_exe] is [`Absolute path] then [path] is executed without any further
       qualification.  If it is [`Relative_to_me path] then [Filename.dirname
@@ -928,7 +920,6 @@ module type Command = sig
   val summary : t -> string
 
   module Shape = Shape
-
 
   (** call this instead of [Core.exit] if in command-related code that you want to run in
       tests.  For example, in the body of [Command.Param.no_arg_abort] *)
@@ -1014,7 +1005,7 @@ module type Command = sig
 
       val run
         :  ?add_validate_parsing_flag:bool
-        (** When [add_validate_parsing_flag] is true a new flag `-validate-parsing` is
+             (** When [add_validate_parsing_flag] is true a new flag `-validate-parsing` is
             added to all subcommands. When this flag is passed the command will exit
             immediately if parsing is succesfull and return 0. This flag does not take any
             steps to stop side effects from occurring. *)
@@ -1026,7 +1017,7 @@ module type Command = sig
         -> ?when_parsing_succeeds:(unit -> unit)
         -> ?complete_subcommands:
              (path:string list -> part:string -> string list list -> string list option)
-        (** [complete_subcommands ~path ~part options] allows users to provide a custom
+             (** [complete_subcommands ~path ~part options] allows users to provide a custom
             tab completion handler to an invocation of [run]. By default, completion is
             performed via standard bash completion.
 

@@ -1,4 +1,3 @@
-
 (* We do not [include Base] here, and instead import modules that [Core] doesn't extend,
    because we want code in [Core] to be clear when it references a [Base] module that
    [Core] is overriding. *)
@@ -71,20 +70,20 @@ include From_sexplib
    other ppx's treat [sexp_opaque] correctly, by ignoring it and processing the underlying
    type. *)
 include (
-struct
-  type 'a sexp_opaque = 'a [@@deriving bin_io, compare, hash, typerep]
-end :
-sig
-  type 'a sexp_opaque [@@deriving bin_io, compare, hash, typerep]
-end
-with type 'a sexp_opaque := 'a)
+  struct
+    type 'a sexp_opaque = 'a [@@deriving bin_io, compare, hash, typerep]
+  end :
+    sig
+      type 'a sexp_opaque [@@deriving bin_io, compare, hash, typerep]
+    end
+    with type 'a sexp_opaque := 'a)
 
 include (
   Typerep_lib.Std :
     module type of struct
-    include Typerep_lib.Std
-  end
-  with module Type_equal := Typerep_lib.Std.Type_equal)
+      include Typerep_lib.Std
+    end
+    with module Type_equal := Typerep_lib.Std.Type_equal)
 
 module Variant = Variantslib.Variant
 
@@ -104,8 +103,8 @@ type 'a identity = 'a
 module Not_found = struct
   exception
     Not_found = Not_found
-                [@deprecated
-                  {|[since 2018-02] Instead of raising [Not_found], consider using [raise_s] with an
+      [@deprecated
+        {|[since 2018-02] Instead of raising [Not_found], consider using [raise_s] with an
 informative error message.  If code needs to distinguish [Not_found] from other
 exceptions, please change it to handle both [Not_found] and [Not_found_s].  Then, instead
 of raising [Not_found], raise [Not_found_s] with an informative error message.|}]

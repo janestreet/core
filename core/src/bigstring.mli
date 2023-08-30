@@ -1,12 +1,9 @@
 (** String type based on [Bigarray], for use in I/O and C-bindings. *)
 
 open! Import
-
-
 open Bigarray
 
 (** {2 Types and exceptions} *)
-
 
 (** Type of bigstrings *)
 type t = (char, int8_unsigned_elt, c_layout) Array1.t

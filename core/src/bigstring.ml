@@ -42,7 +42,6 @@ let sub_shared ?(pos = 0) ?len (bstr : t) =
 (* Destruction *)
 
 external unsafe_destroy : t -> unit = "bigstring_destroy_stub"
-
 external unsafe_destroy_and_resize : t -> len:int -> t = "bigstring_realloc"
 
 (* Reading / writing bin-prot *)
@@ -133,11 +132,11 @@ let write_bin_prot t ?pos (writer : _ Bin_prot.Type_class.writer) v =
 (* Hex dump *)
 
 include Hexdump.Of_indexable (struct
-    type nonrec t = t
+  type nonrec t = t
 
-    let length = length
-    let get = get
-  end)
+  let length = length
+  let get = get
+end)
 
 let rec last_nonmatch_plus_one ~buf ~min_pos ~pos ~char =
   let pos' = pos - 1 in

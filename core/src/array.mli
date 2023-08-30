@@ -13,9 +13,9 @@ type 'a t = 'a Base.Array.t [@@deriving bin_io ~localize, quickcheck, typerep]
 
 (** @inline *)
 include module type of struct
-  include Base.Array
-end
-with type 'a t := 'a t
+    include Base.Array
+  end
+  with type 'a t := 'a t
 
 (** {2 Extensions}
 
@@ -39,7 +39,7 @@ module Int : sig
     -> len:int
     -> unit
     = "core_array_unsafe_int_blit"
-  [@@noalloc]
+    [@@noalloc]
 end
 
 module Float : sig
@@ -55,7 +55,7 @@ module Float : sig
     -> len:int
     -> unit
     = "core_array_unsafe_float_blit"
-  [@@noalloc]
+    [@@noalloc]
 end
 
 (** [normalize array index] returns a new index into the array such that if the index is
@@ -99,7 +99,7 @@ module Permissioned : sig
       -> len:int
       -> unit
       = "core_array_unsafe_int_blit"
-    [@@noalloc]
+      [@@noalloc]
   end
 
   module Float : sig
@@ -141,7 +141,7 @@ module Permissioned : sig
       -> len:int
       -> unit
       = "core_array_unsafe_float_blit"
-    [@@noalloc]
+      [@@noalloc]
   end
 
   (** [of_array_id] and [to_array_id] return the same underlying array.  On the other
@@ -176,7 +176,7 @@ module Permissioned : sig
 
   include
     Indexed_container.S1_with_creators_permissions
-    with type ('a, 'perms) t := ('a, 'perms) t
+      with type ('a, 'perms) t := ('a, 'perms) t
 
   include Blit.S1_permissions with type ('a, 'perms) t := ('a, 'perms) t
   include Binary_searchable.S1_permissions with type ('a, 'perms) t := ('a, 'perms) t

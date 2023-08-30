@@ -19,13 +19,13 @@ module Stable : sig
 
     include
       Stable_int63able.With_stable_witness.S
-      with type t := t
-      with type comparator_witness := comparator_witness
+        with type t := t
+        with type comparator_witness := comparator_witness
 
     include
       Comparable.Stable.V1.With_stable_witness.S
-      with type comparable := t
-      with type comparator_witness := comparator_witness
+        with type comparable := t
+        with type comparator_witness := comparator_witness
 
     include Stringable.S with type t := t
   end

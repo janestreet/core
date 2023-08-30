@@ -23,13 +23,13 @@ module As_binary_string = struct
       let of_binable = T.of_binary_exn
 
       include Bin_prot.Utils.Make_binable_without_uuid [@alert "-legacy"] (struct
-          module Binable = String.Stable.V1
+        module Binable = String.Stable.V1
 
-          type t = Bin_prot.Md5.t
+        type t = Bin_prot.Md5.t
 
-          let to_binable = to_binable
-          let of_binable = of_binable
-        end)
+        let to_binable = to_binable
+        let of_binable = of_binable
+      end)
 
       let stable_witness : t Stable_witness.t =
         Stable_witness.of_serializable
@@ -55,13 +55,13 @@ module Stable = struct
     let of_binable = Fn.id
 
     include Bin_prot.Utils.Make_binable_without_uuid [@alert "-legacy"] (struct
-        module Binable = Bin_prot.Md5.Stable.V1
+      module Binable = Bin_prot.Md5.Stable.V1
 
-        type t = Bin_prot.Md5.t
+      type t = Bin_prot.Md5.t
 
-        let to_binable = to_binable
-        let of_binable = of_binable
-      end)
+      let to_binable = to_binable
+      let of_binable = of_binable
+    end)
 
     let stable_witness : t Stable_witness.t =
       Stable_witness.of_serializable

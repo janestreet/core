@@ -66,8 +66,6 @@ val zero : t
 val one_hundred_percent : t
 val neg : t -> t
 val abs : t -> t
-
-
 val is_zero : t -> bool
 val is_nan : t -> bool
 val is_inf : t -> bool
@@ -294,8 +292,8 @@ module Stable : sig
 
     include
       Comparable_binable
-      with type t := t
-       and type comparator_witness := comparator_witness
+        with type t := t
+         and type comparator_witness := comparator_witness
 
     val to_string : t -> string
     val of_string : string -> t

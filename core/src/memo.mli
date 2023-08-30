@@ -71,8 +71,7 @@ val general
 *)
 val recursive
   :  hashable:'a Hashtbl.Hashable.t
-  -> ?cache_size_bound:
-       int
+  -> ?cache_size_bound:int
   -> (('a -> 'b) -> 'a -> 'b)
   -> ('a, 'b) fn
 
@@ -84,6 +83,3 @@ val of_comparable
   :  (module Comparable.S_plain with type t = 'a)
   -> ('a -> 'b)
   -> ('a, 'b) fn
-
-
-

@@ -6,10 +6,10 @@ let enqueue_tests =
     Bench.Test.create
       ~name:("enqueue " ^ Int.to_string n)
       (fun () ->
-         let q = Queue.create () in
-         for i = 1 to n do
-           Queue.enqueue q i
-         done))
+        let q = Queue.create () in
+        for i = 1 to n do
+          Queue.enqueue q i
+        done))
 ;;
 
 (* top unit argument is a cheap guard *)
@@ -58,8 +58,8 @@ let blit_transfer_tests =
     [ Bench.Test.create
         ~name:(String.concat [ "blit_transfer "; Int.to_string len ])
         (fun () ->
-           Queue.blit_transfer ~src ~dst ();
-           Queue.blit_transfer ~src:dst ~dst:src ())
+          Queue.blit_transfer ~src ~dst ();
+          Queue.blit_transfer ~src:dst ~dst:src ())
     ])
 ;;
 
@@ -83,13 +83,13 @@ let tests =
       ~name:"Linked_queue.enqueue + dequeue"
       ~args
       (fun num_elts ->
-         let t = Linked_queue.create () in
-         for _ = 1 to num_elts do
-           Linked_queue.enqueue t ()
-         done;
-         stage (fun () ->
-           Linked_queue.enqueue t ();
-           Linked_queue.dequeue_exn t))
+      let t = Linked_queue.create () in
+      for _ = 1 to num_elts do
+        Linked_queue.enqueue t ()
+      done;
+      stage (fun () ->
+        Linked_queue.enqueue t ();
+        Linked_queue.dequeue_exn t))
   ; Bench.Test.create_indexed ~name:"Deque.enqueue + dequeue" ~args (fun num_elts ->
       let t = Deque.create () in
       for _ = 1 to num_elts do

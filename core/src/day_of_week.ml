@@ -85,11 +85,11 @@ module Stable = struct
       (* this is in T rather than outside so that the later functor application to build maps
          uses this sexp representation *)
       include Sexpable.Stable.Of_stringable.V1 (struct
-          type nonrec t = t
+        type nonrec t = t
 
-          let of_string = of_string
-          let to_string = to_string
-        end)
+        let of_string = of_string
+        let to_string = to_string
+      end)
 
       let t_sexp_grammar =
         let open Sexplib0.Sexp_grammar in

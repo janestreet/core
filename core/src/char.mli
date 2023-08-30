@@ -9,9 +9,9 @@ type t = char [@@deriving typerep, bin_io ~localize]
 
 (** @inline *)
 include module type of struct
-  include Base.Char
-end
-with type t := t
+    include Base.Char
+  end
+  with type t := t
 
 (** {2 Extensions} *)
 

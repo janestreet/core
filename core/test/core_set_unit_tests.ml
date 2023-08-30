@@ -7,31 +7,31 @@ module Named = Set.Named
 open Expect_test_helpers_core
 
 module Unit_tests (Elt : sig
-    type 'a t [@@deriving sexp, hash]
+  type 'a t [@@deriving sexp, hash]
 
-    val of_int : int -> int t
-    val to_int : int t -> int
-  end) (Set : sig
-          type ('a, 'b) t_
-          type ('a, 'b) set
-          type ('a, 'b) tree
-          type ('a, 'b, 'c) create_options
-          type ('a, 'b, 'c) access_options
+  val of_int : int -> int t
+  val to_int : int t -> int
+end) (Set : sig
+  type ('a, 'b) t_
+  type ('a, 'b) set
+  type ('a, 'b) tree
+  type ('a, 'b, 'c) create_options
+  type ('a, 'b, 'c) access_options
 
-          include
-            Set_intf.Creators_and_accessors_generic
-            with type ('a, 'b) t := ('a, 'b) t_
-            with type ('a, 'b) set := ('a, 'b) set
-            with type ('a, 'b) tree := ('a, 'b) tree
-            with type 'a elt := 'a Elt.t
-            with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) create_options
-            with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) access_options
+  include
+    Set_intf.Creators_and_accessors_generic
+      with type ('a, 'b) t := ('a, 'b) t_
+      with type ('a, 'b) set := ('a, 'b) set
+      with type ('a, 'b) tree := ('a, 'b) tree
+      with type 'a elt := 'a Elt.t
+      with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) create_options
+      with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) access_options
 
-          val simplify_creator : (int, Int.comparator_witness, 'c) create_options -> 'c
-          val simplify_accessor : (int, Int.comparator_witness, 'c) access_options -> 'c
-          val kind : [ `Set | `Tree ]
-          val is_poly : bool
-        end) : Set_intf.Creators_and_accessors_generic = struct
+  val simplify_creator : (int, Int.comparator_witness, 'c) create_options -> 'c
+  val simplify_accessor : (int, Int.comparator_witness, 'c) access_options -> 'c
+  val kind : [ `Set | `Tree ]
+  val is_poly : bool
+end) : Set_intf.Creators_and_accessors_generic = struct
   module Set = struct
     include Set
 
@@ -179,11 +179,11 @@ module Unit_tests (Elt : sig
       (Quickcheck.Generator.tuple2 gen_set gen_set)
       ~sexp_of:[%sexp_of: Set.t * Set.t]
       ~f:(fun (s1, s2) ->
-        [%test_result: Set.t]
-          (Set.inter s1 s2)
-          ~expect:
-            (Set.fold s1 ~init:(Set.empty ()) ~f:(fun inter elt ->
-               if Set.mem s2 elt then Set.add inter elt else inter)))
+      [%test_result: Set.t]
+        (Set.inter s1 s2)
+        ~expect:
+          (Set.fold s1 ~init:(Set.empty ()) ~f:(fun inter elt ->
+             if Set.mem s2 elt then Set.add inter elt else inter)))
   ;;
 
   let is_subset _ ~of_:_ = assert false
@@ -198,9 +198,9 @@ module Unit_tests (Elt : sig
       (Quickcheck.Generator.tuple2 gen_set gen_set)
       ~sexp_of:[%sexp_of: Set.t * Set.t]
       ~f:(fun (superset, subset) ->
-        [%test_result: bool]
-          (Set.is_subset subset ~of_:superset)
-          ~expect:(Set.for_all subset ~f:(Set.mem superset)))
+      [%test_result: bool]
+        (Set.is_subset subset ~of_:superset)
+        ~expect:(Set.for_all subset ~f:(Set.mem superset)))
   ;;
 
   let are_disjoint _ _ = assert false
@@ -210,9 +210,9 @@ module Unit_tests (Elt : sig
       (Quickcheck.Generator.tuple2 gen_set gen_set)
       ~sexp_of:[%sexp_of: Set.t * Set.t]
       ~f:(fun (s1, s2) ->
-        [%test_result: bool]
-          (Set.are_disjoint s1 s2)
-          ~expect:(Set.is_empty (Set.inter s1 s2)))
+      [%test_result: bool]
+        (Set.are_disjoint s1 s2)
+        ~expect:(Set.is_empty (Set.inter s1 s2)))
   ;;
 
   module Named = struct
@@ -486,38 +486,38 @@ module Unit_tests (Elt : sig
         Quickcheck.test
           Merge_to_sequence_args.quickcheck_generator
           ~f:(fun { order; greater_or_equal_to; less_or_equal_to; x; y } ->
-            let open Set_intf.Merge_to_sequence_element in
-            let value = function
-              | Left x | Right x | Both (x, _) -> Elt.to_int x
-            in
-            let expect =
-              List.concat
-                [ List.map ~f:(fun x -> Both (x, x)) (Set.to_list (Set.inter x y))
-                ; List.map ~f:(fun x -> Left x) (Set.to_list (Set.diff x y))
-                ; List.map ~f:(fun x -> Right x) (Set.to_list (Set.diff y x))
-                ]
-            in
-            let expect =
-              Option.fold greater_or_equal_to ~init:expect ~f:(fun elts min ->
-                let min = Elt.to_int min in
-                List.filter elts ~f:(fun x -> Int.( >= ) (value x) min))
-            in
-            let expect =
-              Option.fold less_or_equal_to ~init:expect ~f:(fun elts max ->
-                let max = Elt.to_int max in
-                List.filter elts ~f:(fun x -> Int.( <= ) (value x) max))
-            in
-            let expect =
-              match order with
-              | None | Some `Increasing ->
-                List.sort expect ~compare:(fun a b -> Int.compare (value a) (value b))
-              | Some `Decreasing ->
-                List.sort expect ~compare:(fun a b -> Int.compare (value b) (value a))
-            in
-            [%test_result: (Elt.t, Elt.t) Merge_to_sequence_element.t list]
-              (Sequence.to_list
-                 (Set.merge_to_sequence ?order ?greater_or_equal_to ?less_or_equal_to x y))
-              ~expect)
+          let open Set_intf.Merge_to_sequence_element in
+          let value = function
+            | Left x | Right x | Both (x, _) -> Elt.to_int x
+          in
+          let expect =
+            List.concat
+              [ List.map ~f:(fun x -> Both (x, x)) (Set.to_list (Set.inter x y))
+              ; List.map ~f:(fun x -> Left x) (Set.to_list (Set.diff x y))
+              ; List.map ~f:(fun x -> Right x) (Set.to_list (Set.diff y x))
+              ]
+          in
+          let expect =
+            Option.fold greater_or_equal_to ~init:expect ~f:(fun elts min ->
+              let min = Elt.to_int min in
+              List.filter elts ~f:(fun x -> Int.( >= ) (value x) min))
+          in
+          let expect =
+            Option.fold less_or_equal_to ~init:expect ~f:(fun elts max ->
+              let max = Elt.to_int max in
+              List.filter elts ~f:(fun x -> Int.( <= ) (value x) max))
+          in
+          let expect =
+            match order with
+            | None | Some `Increasing ->
+              List.sort expect ~compare:(fun a b -> Int.compare (value a) (value b))
+            | Some `Decreasing ->
+              List.sort expect ~compare:(fun a b -> Int.compare (value b) (value a))
+          in
+          [%test_result: (Elt.t, Elt.t) Merge_to_sequence_element.t list]
+            (Sequence.to_list
+               (Set.merge_to_sequence ?order ?greater_or_equal_to ?less_or_equal_to x y))
+            ~expect)
       ;;
     end)
   ;;
@@ -640,9 +640,9 @@ module Unit_tests (Elt : sig
       (Quickcheck.Generator.tuple2 gen_set gen_set)
       ~sexp_of:[%sexp_of: Set.t_ * Set.t_]
       ~f:(fun (s1, s2) ->
-        let expect = symmetric_diff_spec s1 s2 in
-        let actual = symmetric_diff_set s1 s2 in
-        assert (Set.equal actual expect))
+      let expect = symmetric_diff_spec s1 s2 in
+      let actual = symmetric_diff_set s1 s2 in
+      assert (Set.equal actual expect))
   ;;
 
   let%test _ =
@@ -924,7 +924,6 @@ module Unit_tests (Elt : sig
       (Set.compare (set_of_list [ 0; 1; 2; 3 ]) (set_of_list [ 1; 1; 2; 3 ]) <> 0)
   ;;
 
-
   let to_tree _ = assert false
   let remove_index _ = assert false
   let nth _ = assert false
@@ -1026,122 +1025,122 @@ end
 
 let%test_module "Set" =
   (module Unit_tests
-       (Elt_poly)
-       (struct
-         include Set
+            (Elt_poly)
+            (struct
+              include Set
 
-         type ('a, 'b) t_ = ('a, 'b) t
-         type ('a, 'b) set = ('a, 'b) t
-         type ('a, 'b) tree = ('a, 'b) Tree.t
-         type 'a cmp = 'a
+              type ('a, 'b) t_ = ('a, 'b) t
+              type ('a, 'b) set = ('a, 'b) t
+              type ('a, 'b) tree = ('a, 'b) Tree.t
+              type 'a cmp = 'a
 
-         include Create_options_with_first_class_module
-         include Access_options_without_comparator
+              include Create_options_with_first_class_module
+              include Access_options_without_comparator
 
-         let kind = `Set
-         let is_poly = false
-       end))
+              let kind = `Set
+              let is_poly = false
+            end))
 ;;
 
 let%test_module "Set.Poly" =
   (module Unit_tests
-       (Elt_poly)
-       (struct
-         include Set
-         include Set.Poly
+            (Elt_poly)
+            (struct
+              include Set
+              include Set.Poly
 
-         type ('a, 'b) set = ('a, 'b) Set.t
-         type ('a, 'b) t_ = 'a t
-         type ('a, 'b) tree = 'a Tree.t
-         type 'a cmp = Comparator.Poly.comparator_witness
+              type ('a, 'b) set = ('a, 'b) Set.t
+              type ('a, 'b) t_ = 'a t
+              type ('a, 'b) tree = 'a Tree.t
+              type 'a cmp = Comparator.Poly.comparator_witness
 
-         include Create_options_without_comparator
-         include Access_options_without_comparator
+              include Create_options_without_comparator
+              include Access_options_without_comparator
 
-         let kind = `Set
-         let is_poly = true
-       end))
+              let kind = `Set
+              let is_poly = true
+            end))
 ;;
 
 let%test_module "Int.Set" =
   (module Unit_tests
-       (Elt_int)
-       (struct
-         include Set
-         include Int.Set
-         module Tree = Set.Make_tree (Int.Set.Elt)
+            (Elt_int)
+            (struct
+              include Set
+              include Int.Set
+              module Tree = Set.Make_tree (Int.Set.Elt)
 
-         type ('a, 'b) set = ('a, 'b) Set.t
-         type ('a, 'b) t_ = t
-         type ('a, 'b) tree = Tree.t
-         type 'a cmp = Int.comparator_witness
+              type ('a, 'b) set = ('a, 'b) Set.t
+              type ('a, 'b) t_ = t
+              type ('a, 'b) tree = Tree.t
+              type 'a cmp = Int.comparator_witness
 
-         include Create_options_without_comparator
-         include Access_options_without_comparator
+              include Create_options_without_comparator
+              include Access_options_without_comparator
 
-         let kind = `Set
-         let is_poly = false
-       end))
+              let kind = `Set
+              let is_poly = false
+            end))
 ;;
 
 let%test_module "Set.Tree" =
   (module Unit_tests
-       (Elt_poly)
-       (struct
-         include Set.Tree
+            (Elt_poly)
+            (struct
+              include Set.Tree
 
-         type ('a, 'b) set = ('a, 'b) Set.Tree.t
-         type ('a, 'b) t_ = ('a, 'b) t
-         type ('a, 'b) tree = ('a, 'b) t
-         type 'a cmp = 'a
+              type ('a, 'b) set = ('a, 'b) Set.Tree.t
+              type ('a, 'b) t_ = ('a, 'b) t
+              type ('a, 'b) tree = ('a, 'b) t
+              type 'a cmp = 'a
 
-         include Create_options_with_comparator
-         include Access_options_with_comparator
+              include Create_options_with_comparator
+              include Access_options_with_comparator
 
-         let kind = `Tree
-         let is_poly = false
-       end))
+              let kind = `Tree
+              let is_poly = false
+            end))
 ;;
 
 let%test_module "Set.Poly.Tree" =
   (module Unit_tests
-       (Elt_poly)
-       (struct
-         include Set.Tree
-         include Set.Poly.Tree
+            (Elt_poly)
+            (struct
+              include Set.Tree
+              include Set.Poly.Tree
 
-         type ('a, 'b) set = ('a, 'b) Set.Tree.t
-         type ('a, 'b) t_ = 'a t
-         type ('a, 'b) tree = ('a, 'b) Set.Tree.t
-         type 'a cmp = Comparator.Poly.comparator_witness
+              type ('a, 'b) set = ('a, 'b) Set.Tree.t
+              type ('a, 'b) t_ = 'a t
+              type ('a, 'b) tree = ('a, 'b) Set.Tree.t
+              type 'a cmp = Comparator.Poly.comparator_witness
 
-         include Create_options_without_comparator
-         include Access_options_with_poly_comparator
+              include Create_options_without_comparator
+              include Access_options_with_poly_comparator
 
-         let kind = `Tree
-         let is_poly = true
-       end))
+              let kind = `Tree
+              let is_poly = true
+            end))
 ;;
 
 let%test_module "Int.Set.Tree" =
   (module Unit_tests
-       (Elt_int)
-       (struct
-         include Set.Tree
-         include Set.Make_tree (Int.Set.Elt)
+            (Elt_int)
+            (struct
+              include Set.Tree
+              include Set.Make_tree (Int.Set.Elt)
 
-         type ('a, 'b) set = ('a, 'b) Set.Tree.t
-         type ('a, 'b) t_ = t
-         type ('a, 'b) tree = ('a, 'b) Set.Tree.t
-         type 'a cmp = Int.comparator_witness
+              type ('a, 'b) set = ('a, 'b) Set.Tree.t
+              type ('a, 'b) t_ = t
+              type ('a, 'b) tree = ('a, 'b) Set.Tree.t
+              type 'a cmp = Int.comparator_witness
 
-         include Create_options_without_comparator
-         include Access_options_with_int_comparator
+              include Create_options_without_comparator
+              include Access_options_with_int_comparator
 
-         let equal ~comparator:_ = equal
-         let kind = `Tree
-         let is_poly = false
-       end))
+              let equal ~comparator:_ = equal
+              let kind = `Tree
+              let is_poly = false
+            end))
 ;;
 
 let%expect_test "t_of_sexp raises on duplicate elements" =

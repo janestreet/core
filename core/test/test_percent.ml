@@ -3,59 +3,59 @@ open! Expect_test_helpers_core
 open! Percent
 
 module Stable_unit_test (T : sig
-    type t = Percent.t
+  type t = Percent.t
 
-    include Binable with type t := t
-    include Sexpable with type t := t
-  end) (Version : sig
-          val v : int
-        end) =
-  Stable_unit_test.Make (struct
-    include T
+  include Binable with type t := t
+  include Sexpable with type t := t
+end) (Version : sig
+  val v : int
+end) =
+Stable_unit_test.Make (struct
+  include T
 
-    let equal = equal
+  let equal = equal
 
-    let tests =
-      [ of_mult 0.375, "37.5%", "\000\000\000\000\000\000\216?"
-      ; of_mult 4.5, "4.5x", "\000\000\000\000\000\000\018@"
-      ; of_mult 0.0002, "2bp", "-C\028\235\2266*?"
-      ; ( of_mult 0.000075
-        , (if Int.(Version.v < 3) then "0.75bp" else "7.5E-1bp")
-        , "a2U0*\169\019?" )
-      ]
-    ;;
-  end)
+  let tests =
+    [ of_mult 0.375, "37.5%", "\000\000\000\000\000\000\216?"
+    ; of_mult 4.5, "4.5x", "\000\000\000\000\000\000\018@"
+    ; of_mult 0.0002, "2bp", "-C\028\235\2266*?"
+    ; ( of_mult 0.000075
+      , (if Int.(Version.v < 3) then "0.75bp" else "7.5E-1bp")
+      , "a2U0*\169\019?" )
+    ]
+  ;;
+end)
 
 let%test_module "Percent.V1.Bin_shape_same_as_float" =
   (module Stable_unit_test
-       (Stable.V1.Bin_shape_same_as_float)
-       (struct
-         let v = 1
-       end))
+            (Stable.V1.Bin_shape_same_as_float)
+            (struct
+              let v = 1
+            end))
 ;;
 
 let%test_module "Percent.V3" =
   (module Stable_unit_test
-       (Stable.V3)
-       (struct
-         let v = 3
-       end))
+            (Stable.V3)
+            (struct
+              let v = 3
+            end))
 ;;
 
 let%test_module "Percent.V2" =
   (module Stable_unit_test
-       (Stable.V2)
-       (struct
-         let v = 2
-       end))
+            (Stable.V2)
+            (struct
+              let v = 2
+            end))
 ;;
 
 let%test_module "Percent" =
   (module Stable_unit_test
-       (Percent)
-       (struct
-         let v = 2
-       end))
+            (Percent)
+            (struct
+              let v = 2
+            end))
 ;;
 
 let%expect_test "bin_digests" =
@@ -433,13 +433,13 @@ let%expect_test "Percent.Map serialization" =
 let%expect_test "nans and infs" =
   [ Float.nan; Float.infinity; Float.neg_infinity ]
   |> List.iter ~f:(fun p ->
-    let p = Percent.of_mult p in
-    let s1 = Percent.to_string p in
-    let s2 = Percent.Stable.V3.to_string p in
-    printf "%s | %s\n" s1 s2;
-    let p1 = Percent.of_string_allow_nan_and_inf s1 in
-    let p2 = Percent.Stable.V3.of_string_allow_nan_and_inf s2 in
-    assert (Percent.((is_nan p1 && is_nan p2) || p1 = p2)));
+       let p = Percent.of_mult p in
+       let s1 = Percent.to_string p in
+       let s2 = Percent.Stable.V3.to_string p in
+       printf "%s | %s\n" s1 s2;
+       let p1 = Percent.of_string_allow_nan_and_inf s1 in
+       let p2 = Percent.Stable.V3.of_string_allow_nan_and_inf s2 in
+       assert (Percent.((is_nan p1 && is_nan p2) || p1 = p2)));
   [%expect {|
     NANbp | NANx
     INFx | INFx
@@ -459,9 +459,9 @@ let%expect_test "nans and infs" =
   ; "-Inf%"
   ]
   |> List.iter ~f:(fun s ->
-    let p1 = Percent.of_string_allow_nan_and_inf s in
-    let p2 = Percent.Stable.V3.of_string_allow_nan_and_inf s in
-    assert (Percent.((is_nan p1 && is_nan p2) || p1 = p2)))
+       let p1 = Percent.of_string_allow_nan_and_inf s in
+       let p2 = Percent.Stable.V3.of_string_allow_nan_and_inf s in
+       assert (Percent.((is_nan p1 && is_nan p2) || p1 = p2)))
 ;;
 
 let%expect_test "slow_more_accurate" =
@@ -497,7 +497,7 @@ let%expect_test "slow_more_accurate" =
   for i = 0 to 100 do
     let p = Percent.of_mult (float i /. 100.) in
     if Float.( <> ) (Percent.to_percentage p) (Percent.to_percentage_slow_more_accurate p)
-    && Float.( <> ) (Percent.to_bp p) (Percent.to_bp_slow_more_accurate p)
+       && Float.( <> ) (Percent.to_bp p) (Percent.to_bp_slow_more_accurate p)
     then printf !"%{Float} %{Float}\n" (Percent.to_percentage p) (Percent.to_bp p)
   done;
   [%expect
@@ -529,11 +529,11 @@ let%expect_test "parse errors" =
     ; "-infinity%"
     ]
     ~f:(fun s ->
-      let s1 =
-        try Percent.of_string s |> Percent.to_string_round_trippable with
-        | exn -> Exn.to_string_mach exn
-      in
-      printf "%s\n====\n" s1);
+    let s1 =
+      try Percent.of_string s |> Percent.to_string_round_trippable with
+      | exn -> Exn.to_string_mach exn
+    in
+    printf "%s\n====\n" s1);
   [%expect
     {|
     (Failure"Percent.of_string: must end in x, %, or bp: +34.27")

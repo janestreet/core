@@ -7,75 +7,75 @@ module Stable = struct
   module Of_binable = struct
     module V1 (Binable : Minimal.S) (M : Conv_without_uuid with type binable := Binable.t) :
       S with type t := M.t = Bin_prot.Utils.Make_binable_without_uuid (struct
-        module Binable = Binable
-        include M
-      end)
+      module Binable = Binable
+      include M
+    end)
     [@@alert "-legacy"]
 
     module V2 (Binable : Minimal.S) (M : Conv with type binable := Binable.t) :
       S with type t := M.t = Bin_prot.Utils.Make_binable_with_uuid (struct
-        module Binable = Binable
-        include M
-      end)
+      module Binable = Binable
+      include M
+    end)
   end
 
   module Of_binable1 = struct
     module V1
-        (Binable : Minimal.S1)
-        (M : Conv1_without_uuid with type 'a binable := 'a Binable.t) :
+      (Binable : Minimal.S1)
+      (M : Conv1_without_uuid with type 'a binable := 'a Binable.t) :
       S1 with type 'a t := 'a M.t = Bin_prot.Utils.Make_binable1_without_uuid (struct
-        module Binable = Binable
-        include M
-      end)
+      module Binable = Binable
+      include M
+    end)
     [@@alert "-legacy"]
 
     module V2 (Binable : Minimal.S1) (M : Conv1 with type 'a binable := 'a Binable.t) :
       S1 with type 'a t := 'a M.t = Bin_prot.Utils.Make_binable1_with_uuid (struct
-        module Binable = Binable
-        include M
-      end)
+      module Binable = Binable
+      include M
+    end)
   end
 
   module Of_binable2 = struct
     module V1
-        (Binable : Minimal.S2)
-        (M : Conv2_without_uuid with type ('a, 'b) binable := ('a, 'b) Binable.t) :
+      (Binable : Minimal.S2)
+      (M : Conv2_without_uuid with type ('a, 'b) binable := ('a, 'b) Binable.t) :
       S2 with type ('a, 'b) t := ('a, 'b) M.t =
-      Bin_prot.Utils.Make_binable2_without_uuid (struct
-        module Binable = Binable
-        include M
-      end)
+    Bin_prot.Utils.Make_binable2_without_uuid (struct
+      module Binable = Binable
+      include M
+    end)
     [@@alert "-legacy"]
 
     module V2
-        (Binable : Minimal.S2)
-        (M : Conv2 with type ('a, 'b) binable := ('a, 'b) Binable.t) :
+      (Binable : Minimal.S2)
+      (M : Conv2 with type ('a, 'b) binable := ('a, 'b) Binable.t) :
       S2 with type ('a, 'b) t := ('a, 'b) M.t =
-      Bin_prot.Utils.Make_binable2_with_uuid (struct
-        module Binable = Binable
-        include M
-      end)
+    Bin_prot.Utils.Make_binable2_with_uuid (struct
+      module Binable = Binable
+      include M
+    end)
   end
 
   module Of_binable3 = struct
     module V1
-        (Binable : Minimal.S3)
-        (M : Conv3_without_uuid with type ('a, 'b, 'c) binable := ('a, 'b, 'c) Binable.t) :
+      (Binable : Minimal.S3)
+      (M : Conv3_without_uuid with type ('a, 'b, 'c) binable := ('a, 'b, 'c) Binable.t) :
       S3 with type ('a, 'b, 'c) t := ('a, 'b, 'c) M.t =
-      Bin_prot.Utils.Make_binable3_without_uuid (struct
-        module Binable = Binable
-        include M
-      end)
+    Bin_prot.Utils.Make_binable3_without_uuid (struct
+      module Binable = Binable
+      include M
+    end)
     [@@alert "-legacy"]
 
     module V2
-        (Binable : Minimal.S3)
-        (M : Conv3 with type ('a, 'b, 'c) binable := ('a, 'b, 'c) Binable.t) :
+      (Binable : Minimal.S3)
+      (M : Conv3 with type ('a, 'b, 'c) binable := ('a, 'b, 'c) Binable.t) :
       S3 with type ('a, 'b, 'c) t := ('a, 'b, 'c) M.t =
-      Bin_prot.Utils.Make_binable3_with_uuid (struct
-        module Binable = Binable
-        include M
-      end)
+    Bin_prot.Utils.Make_binable3_with_uuid (struct
+      module Binable = Binable
+      include M
+    end)
   end
 
   module Of_sexpable = struct
@@ -113,51 +113,49 @@ module Stable = struct
 
   module Of_stringable = struct
     module V1 (M : Stringable.S) = Bin_prot.Utils.Make_binable_without_uuid (struct
-        module Binable = struct
-          type t = string [@@deriving bin_io]
-        end
+      module Binable = struct
+        type t = string [@@deriving bin_io]
+      end
 
-        type t = M.t
+      type t = M.t
 
-        let to_binable = M.to_string
+      let to_binable = M.to_string
 
-        (* Wrap exception for improved diagnostics. *)
-        exception Of_binable of string * exn [@@deriving sexp]
+      (* Wrap exception for improved diagnostics. *)
+      exception Of_binable of string * exn [@@deriving sexp]
 
-        let of_binable s =
-          try M.of_string s with
-          | x -> raise (Of_binable (s, x))
-        ;;
-      end)
+      let of_binable s =
+        try M.of_string s with
+        | x -> raise (Of_binable (s, x))
+      ;;
+    end)
     [@@alert "-legacy"]
 
     module V2 (M : Conv_stringable) = Bin_prot.Utils.Make_binable_with_uuid (struct
-        module Binable = struct
-          type t = string [@@deriving bin_io]
-        end
+      module Binable = struct
+        type t = string [@@deriving bin_io]
+      end
 
-        type t = M.t
+      type t = M.t
 
-        let to_binable = M.to_string
+      let to_binable = M.to_string
 
-        (* Wrap exception for improved diagnostics. *)
-        exception Of_binable of string * exn [@@deriving sexp]
+      (* Wrap exception for improved diagnostics. *)
+      exception Of_binable of string * exn [@@deriving sexp]
 
-        let of_binable s =
-          try M.of_string s with
-          | x -> raise (Of_binable (s, x))
-        ;;
+      let of_binable s =
+        try M.of_string s with
+        | x -> raise (Of_binable (s, x))
+      ;;
 
-        let caller_identity = M.caller_identity
-      end)
+      let caller_identity = M.caller_identity
+    end)
   end
 end
 
 open Bigarray
 
 type bigstring = (char, int8_unsigned_elt, c_layout) Array1.t
-
-
 type 'a m = (module S with type t = 'a)
 
 let of_bigstring (type a) m bigstring =

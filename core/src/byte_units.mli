@@ -19,8 +19,8 @@ open! Import
 type t [@@deriving sexp_of] [@@immediate64]
 
 val create : [ `Bytes | `Kilobytes | `Megabytes | `Gigabytes | `Words ] -> float -> t
-[@@deprecated
-  "[since 2019-01] Use [of_bytes], [of_kilobytes], [of_megabytes], etc as appropriate."]
+  [@@deprecated
+    "[since 2019-01] Use [of_bytes], [of_kilobytes], [of_megabytes], etc as appropriate."]
 
 include Comparable.S_plain with type t := t
 include Hashable.S_plain with type t := t
@@ -28,9 +28,9 @@ include Stringable.S with type t := t
 
 (** This is a deprecated alias for [of_bytes_float_exn]. *)
 val of_bytes : float -> t
-[@@deprecated
-  "[since 2019-01] Use [of_bytes_int], [of_bytes_int63], [of_bytes_int64_exn] or \
-   [of_bytes_float_exn] as appropriate."]
+  [@@deprecated
+    "[since 2019-01] Use [of_bytes_int], [of_bytes_int63], [of_bytes_int64_exn] or \
+     [of_bytes_float_exn] as appropriate."]
 
 val of_bytes_int : int -> t
 val of_bytes_int63 : Int63.t -> t
@@ -69,7 +69,7 @@ val of_exabytes : float -> t
 
 (** Do not use, consider using [of_words_int] instead. Alias for [of_words_float_exn]. *)
 val of_words : float -> t
-[@@deprecated "[since 2019-01] Use [of_words_int] or [of_words_float_exn] instead."]
+  [@@deprecated "[since 2019-01] Use [of_words_int] or [of_words_float_exn] instead."]
 
 (** create of [Byte_units] based on the number of machine words. *)
 val of_words_int : int -> t
@@ -87,7 +87,7 @@ val of_words_float_exn : float -> t
 val to_string_hum : t -> string
 
 val to_string_short : t -> string
-[@@deprecated "[since 2020-06] Use [Short.to_string] instead."]
+  [@@deprecated "[since 2020-06] Use [Short.to_string] instead."]
 
 module Short : sig
   type nonrec t = t [@@deriving sexp_of]
@@ -105,9 +105,9 @@ end
 
 (** This is a deprecated alias for [bytes_float]. *)
 val bytes : t -> float
-[@@deprecated
-  "[since 2019-01] Use [bytes_int_exn], [bytes_int63], [bytes_int64] or [bytes_float] \
-   as appropriate."]
+  [@@deprecated
+    "[since 2019-01] Use [bytes_int_exn], [bytes_int63], [bytes_int64] or [bytes_float] \
+     as appropriate."]
 
 (** This will raise if and only if the value of this [Byte_units.t] can not be represented
     as an int.
@@ -128,7 +128,7 @@ val exabytes : t -> float
 
 (** Do not use, consider using [words_int_exn] instead. Alias for [words_float] *)
 val words : t -> float
-[@@deprecated "[since 2019-01] Use [words_int_exn] or [words_float] instead."]
+  [@@deprecated "[since 2019-01] Use [words_int_exn] or [words_float] instead."]
 
 (** In JS and on 32-bit OCaml this will raise if and only if the number of bytes is outside
     of \[-2^32,2^32). *)

@@ -91,8 +91,8 @@ let%test_module _ =
       && i = conv.value_as_int_exn v
       && phys_equal v (conv.int_as_value_exn i)
       && (match conv.value_as_int v with
-        | Some i' -> i = i'
-        | None -> false)
+          | Some i' -> i = i'
+          | None -> false)
       &&
       match conv.int_as_value i with
       | Some v' -> phys_equal v v'
@@ -108,8 +108,8 @@ let%test_module _ =
         (not (is_immediate v))
         && (not (conv.value_is_int v))
         && (match conv.value_as_int v with
-          | Some _ -> false
-          | None -> true)
+            | Some _ -> false
+            | None -> true)
         && Exn.does_raise (fun () -> conv.value_as_int_exn v))
     ;;
 
@@ -117,8 +117,8 @@ let%test_module _ =
       List.for_all test_cases ~f:(fun i ->
         (not (conv.int_is_value i))
         && (match conv.int_as_value i with
-          | Some _ -> false
-          | None -> true)
+            | Some _ -> false
+            | None -> true)
         && Exn.does_raise (fun () -> conv.int_as_value_exn i))
     ;;
 
@@ -372,8 +372,7 @@ let%test_module _ =
         [%here]
         (test_inconvertible_ints conv no_int_but_zero_converts)
         ~if_false_then_print_s:(lazy [%message "non-zero should not convert"]);
-      [%expect
-        {|
+      [%expect {|
         "zero should convert" |}]
     ;;
 
@@ -444,8 +443,7 @@ let%test_module _ =
         [%here]
         (test_inconvertible_ints conv no_int_but_zero_converts)
         ~if_false_then_print_s:(lazy [%message "non-zero should not convert"]);
-      [%expect
-        {|
+      [%expect {|
         "zero should convert" |}]
     ;;
 

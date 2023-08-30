@@ -68,15 +68,15 @@ let max_value_for_1us_rounding = Int63.(of_int 135 * of_int 365 * day)
 let min_value_for_1us_rounding = Int63.neg max_value_for_1us_rounding
 
 let create
-      ?sign:(sign_ = Sign.Pos (* rebind so not shadowed by [open Int63] below *))
-      ?day:(days = 0)
-      ?(hr = 0)
-      ?min:(minutes = 0)
-      ?(sec = 0)
-      ?(ms = 0)
-      ?(us = 0)
-      ?(ns = 0)
-      ()
+  ?sign:(sign_ = Sign.Pos (* rebind so not shadowed by [open Int63] below *))
+  ?day:(days = 0)
+  ?(hr = 0)
+  ?min:(minutes = 0)
+  ?(sec = 0)
+  ?(ms = 0)
+  ?(us = 0)
+  ?(ns = 0)
+  ()
   =
   let open Int63 in
   let t =
@@ -539,12 +539,12 @@ module Stable0 = struct
           ;;
 
           let negative_part
-                string
-                ~neg_integer
-                ~decimal_pos
-                ~end_pos
-                ~unit_of_time
-                ~round_ties_before_negating
+            string
+            ~neg_integer
+            ~decimal_pos
+            ~end_pos
+            ~unit_of_time
+            ~round_ties_before_negating
             =
             let open Int.O in
             let scale = to_int63_ns (of_unit_of_time unit_of_time) in
@@ -723,10 +723,10 @@ module Alternate_sexp = struct
 end
 
 include Comparable.With_zero (struct
-    type nonrec t = t [@@deriving compare, sexp]
+  type nonrec t = t [@@deriving compare, sexp]
 
-    let zero = zero
-  end)
+  let zero = zero
+end)
 
 (* Functions required by [Robustly_comparable]: allows for [robust_comparison_tolerance]
    granularity.
@@ -745,11 +745,11 @@ let robustly_compare t u = if t <. u then -1 else if t >. u then 1 else 0
 (* We don't just convert to [Time.Span.t] and use the conversion there because our
    [to_span] conversion is limited to microsecond precision. *)
 let to_string_hum
-      ?(delimiter = '_')
-      ?(decimals = 3)
-      ?(align_decimal = false)
-      ?unit_of_time
-      t
+  ?(delimiter = '_')
+  ?(decimals = 3)
+  ?(align_decimal = false)
+  ?unit_of_time
+  t
   =
   let float, suffix =
     match Option.value unit_of_time ~default:(to_unit_of_time t) with
@@ -790,24 +790,24 @@ let gen_incl = Int63.gen_incl
 let gen_uniform_incl = Int63.gen_uniform_incl
 
 include Pretty_printer.Register (struct
-    type nonrec t = t
+  type nonrec t = t
 
-    let to_string = to_string
-    let module_name = module_name
-  end)
+  let to_string = to_string
+  let module_name = module_name
+end)
 
 include Hashable.Make_binable (struct
-    type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
-  end)
+  type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
+end)
 
 type comparator_witness = Stable.V2.comparator_witness
 
 include Comparable.Make_binable_using_comparator (struct
-    type nonrec t = t [@@deriving bin_io, compare, sexp]
-    type nonrec comparator_witness = comparator_witness
+  type nonrec t = t [@@deriving bin_io, compare, sexp]
+  type nonrec comparator_witness = comparator_witness
 
-    let comparator = Stable.V2.comparator
-  end)
+  let comparator = Stable.V2.comparator
+end)
 
 (* re-include [Replace_polymorphic_compare] and its comparisons to shadow the
    un-inlineable ones from [Comparable] *)
@@ -846,7 +846,7 @@ let max_span_float_value_for_1us_rounding =
 
 let of_span_float_round_nearest_microsecond s =
   if Span_float.( > ) s max_span_float_value_for_1us_rounding
-  || Span_float.( < ) s min_span_float_value_for_1us_rounding
+     || Span_float.( < ) s min_span_float_value_for_1us_rounding
   then
     failwiths
       ~here:[%here]
@@ -1038,14 +1038,14 @@ module Option = struct
   let t_of_sexp = Stable.V2.t_of_sexp
 
   include Identifiable.Make (struct
-      type nonrec t = t [@@deriving sexp, compare, bin_io, hash]
+    type nonrec t = t [@@deriving sexp, compare, bin_io, hash]
 
-      let module_name = "Core.Time_ns.Span.Option"
+    let module_name = "Core.Time_ns.Span.Option"
 
-      include Sexpable.To_stringable (struct
-          type nonrec t = t [@@deriving sexp]
-        end)
+    include Sexpable.To_stringable (struct
+      type nonrec t = t [@@deriving sexp]
     end)
+  end)
 
   include (Int63 : Comparisons.S with type t := t)
 end

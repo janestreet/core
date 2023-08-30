@@ -13,19 +13,19 @@ let%expect_test "uncaught exception at module init" =
     within_temp_dir
       ~links:[ "../bin/just_raise.exe", `In_path_as, prog ]
       (fun () ->
-         let%bind (exit_status : int) = Sys.command (Sys.quote prog) in
-         let output = [%expect.output] in
-         print_endline [%string "%{prog} exited with status %{exit_status#Int}"];
-         print_endline "";
-         output
-         |> String.split_lines
-         |> List.map ~f:(fun line ->
-           if is_backtrace_line line then "<backtrace lines elided>" else line)
-         (* Don't depend on backtrace contents, which are unstable. *)
-         |> List.remove_consecutive_duplicates ~equal:String.equal
-         (* Don't depend on backtrace line count. *)
-         |> List.iter ~f:print_endline;
-         return ())
+        let%bind (exit_status : int) = Sys.command (Sys.quote prog) in
+        let output = [%expect.output] in
+        print_endline [%string "%{prog} exited with status %{exit_status#Int}"];
+        print_endline "";
+        output
+        |> String.split_lines
+        |> List.map ~f:(fun line ->
+             if is_backtrace_line line then "<backtrace lines elided>" else line)
+        (* Don't depend on backtrace contents, which are unstable. *)
+        |> List.remove_consecutive_duplicates ~equal:String.equal
+        (* Don't depend on backtrace line count. *)
+        |> List.iter ~f:print_endline;
+        return ())
   in
   [%expect
     {|

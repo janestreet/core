@@ -208,9 +208,9 @@ module type S0 = sig
 
   include
     S1
-    with type 'key create_key := key
-    with type 'key create_arg := unit
-    with type ('key, 'data) t := ('key, 'data) hash_queue
+      with type 'key create_key := key
+      with type 'key create_arg := unit
+      with type ('key, 'data) t := ('key, 'data) hash_queue
 
   type 'data t = (key, 'data) hash_queue [@@deriving sexp_of]
 end
@@ -218,18 +218,18 @@ end
 module type S_backend = sig
   include
     S1
-    with type 'key create_arg := 'key Hashtbl.Hashable.t
-    with type 'key create_key := 'key
+      with type 'key create_arg := 'key Hashtbl.Hashable.t
+      with type 'key create_key := 'key
 
   module type S = S0 with type ('key, 'data) hash_queue := ('key, 'data) t
 
   module Make (Key : Key) : S with type key = Key.t
 
   module Make_with_hashable (T : sig
-      module Key : Key
+    module Key : Key
 
-      val hashable : Key.t Hashtbl.Hashable.t
-    end) : S with type key = T.Key.t
+    val hashable : Key.t Hashtbl.Hashable.t
+  end) : S with type key = T.Key.t
 end
 
 (** A hash-queue is a combination of a queue and a hashtable that

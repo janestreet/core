@@ -149,8 +149,8 @@ module For_indexed_container = struct
 
     include
       Generic_permissions
-      with type 'a elt := 'a elt
-       and type ('a, 'b, 'c) t := ('a, 'b, 'c) t
+        with type 'a elt := 'a elt
+         and type ('a, 'b, 'c) t := ('a, 'b, 'c) t
 
     val init : int -> f:((int -> 'a elt)[@local]) -> ('a, 'p, [< _ perms ]) t
 
@@ -202,8 +202,8 @@ module _ : module type of Container = struct
 
       include
         Generic_with_creators_permissions
-        with type ('a, 'phantom, _) t := ('a, 'phantom) t
-         and type ('a, 'phantom, _) concat := ('a, 'phantom) concat
+          with type ('a, 'phantom, _) t := ('a, 'phantom) t
+           and type ('a, 'phantom, _) concat := ('a, 'phantom) concat
     end
   end
 
@@ -253,9 +253,9 @@ module _ : module type of Container = struct
 
       include
         Generic_with_creators_permissions
-        with type 'a elt := 'a
-         and type ('a, _, 'p) t := ('a, 'p) t
-         and type ('a, _, 'p) concat := ('a, 'p) t
+          with type 'a elt := 'a
+           and type ('a, _, 'p) t := ('a, 'p) t
+           and type ('a, _, 'p) concat := ('a, 'p) t
     end
   end
 
@@ -289,8 +289,8 @@ module _ : module type of Indexed_container = struct
 
       include
         Generic_with_creators_permissions
-        with type ('a, 'phantom, _) t := ('a, 'phantom) t
-         and type ('a, 'phantom, _) concat := ('a, 'phantom) concat
+          with type ('a, 'phantom, _) t := ('a, 'phantom) t
+           and type ('a, 'phantom, _) concat := ('a, 'phantom) concat
     end
   end
 
@@ -307,8 +307,8 @@ module _ : module type of Indexed_container = struct
 
       include
         Generic_permissions
-        with type 'a elt := 'a
-         and type ('a, _, 'perms) t := ('a, 'perms) t
+          with type 'a elt := 'a
+           and type ('a, _, 'perms) t := ('a, 'perms) t
     end
   end
 
@@ -326,9 +326,9 @@ module _ : module type of Indexed_container = struct
 
       include
         Generic_with_creators_permissions
-        with type 'a elt := 'a
-         and type ('a, _, 'p) t := ('a, 'p) t
-         and type ('a, _, 'p) concat := ('a, 'p) t
+          with type 'a elt := 'a
+           and type ('a, _, 'p) t := ('a, 'p) t
+           and type ('a, _, 'p) concat := ('a, 'p) t
     end
   end
 

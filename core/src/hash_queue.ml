@@ -7,8 +7,8 @@ module type S_backend = S_backend
 module Make_backend (Table : Hashtbl_intf.Hashtbl) : S_backend = struct
   module type Backend =
     S1
-    with type 'key create_arg := 'key Hashtbl.Hashable.t
-    with type 'key create_key := 'key
+      with type 'key create_arg := 'key Hashtbl.Hashable.t
+      with type 'key create_key := 'key
 
   module Backend : Backend = struct
     module Key_value = struct
@@ -47,7 +47,7 @@ module Make_backend (Table : Hashtbl_intf.Hashtbl) : S_backend = struct
       (* Look at each element in the queue, checking:
        *   - every element in the queue is in the hash table
        *   - there are no duplicate keys
-      *)
+       *)
       let keys = Table.create ~size:(Table.length t.table) (Table.hashable_s t.table) in
       Doubly_linked.iter t.queue ~f:(fun kv ->
         let key = kv.key in
@@ -390,10 +390,10 @@ module Make_backend (Table : Hashtbl_intf.Hashtbl) : S_backend = struct
   module type S = S0 with type ('key, 'data) hash_queue := ('key, 'data) Backend.t
 
   module Make_with_hashable (T : sig
-      module Key : Key
+    module Key : Key
 
-      val hashable : Key.t Hashtbl.Hashable.t
-    end) : S with type key = T.Key.t = struct
+    val hashable : Key.t Hashtbl.Hashable.t
+  end) : S with type key = T.Key.t = struct
     include (Backend : Backend with type ('k, 'd) t := ('k, 'd) Backend.t)
 
     type key = T.Key.t
@@ -404,10 +404,10 @@ module Make_backend (Table : Hashtbl_intf.Hashtbl) : S_backend = struct
   end
 
   module Make (Key : Key) : S with type key = Key.t = Make_with_hashable (struct
-      module Key = Key
+    module Key = Key
 
-      let hashable = Table.Hashable.of_key (module Key)
-    end)
+    let hashable = Table.Hashable.of_key (module Key)
+  end)
 
   include Backend
 end

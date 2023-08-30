@@ -12,10 +12,10 @@ module type Elt_binable = Hashtbl.Key_binable
 module type Elt_stable = Hashtbl.Key_stable
 
 module Make_plain_with_hashable (T : sig
-    module Elt : Elt_plain
+  module Elt : Elt_plain
 
-    val hashable : Elt.t Hashtbl.Hashable.t
-  end) =
+  val hashable : Elt.t Hashtbl.Hashable.t
+end) =
 struct
   type elt = T.Elt.t
   type nonrec t = elt t
@@ -23,61 +23,61 @@ struct
   let equal = equal
 
   include Creators (struct
-      type 'a t = T.Elt.t
+    type 'a t = T.Elt.t
 
-      let hashable = T.hashable
-    end)
+    let hashable = T.hashable
+  end)
 
   let sexp_of_t t = Poly.sexp_of_t T.Elt.sexp_of_t t
 
   module Provide_of_sexp
-      (X : sig
-         type t [@@deriving of_sexp]
-       end
-       with type t := elt) =
+    (X : sig
+      type t [@@deriving of_sexp]
+    end
+    with type t := elt) =
   struct
     let t_of_sexp sexp = t_of_sexp X.t_of_sexp sexp
   end
 
   module Provide_bin_io
-      (X : sig
-         type t [@@deriving bin_io]
-       end
-       with type t := elt) =
-    Bin_prot.Utils.Make_iterable_binable (struct
-      module Elt = struct
-        include T.Elt
-        include X
-      end
+    (X : sig
+      type t [@@deriving bin_io]
+    end
+    with type t := elt) =
+  Bin_prot.Utils.Make_iterable_binable (struct
+    module Elt = struct
+      include T.Elt
+      include X
+    end
 
-      type nonrec t = t
-      type el = Elt.t [@@deriving bin_io]
+    type nonrec t = t
+    type el = Elt.t [@@deriving bin_io]
 
-      let _ = bin_el
+    let _ = bin_el
 
-      let caller_identity =
-        Bin_prot.Shape.Uuid.of_string "ad381672-4992-11e6-9e36-b76dc8cd466f"
-      ;;
+    let caller_identity =
+      Bin_prot.Shape.Uuid.of_string "ad381672-4992-11e6-9e36-b76dc8cd466f"
+    ;;
 
-      let module_name = Some "Core.Hash_set"
-      let length = length
-      let iter = iter
+    let module_name = Some "Core.Hash_set"
+    let length = length
+    let iter = iter
 
-      let init ~len ~next =
-        let t = create ~size:len () in
-        for _i = 0 to len - 1 do
-          let v = next () in
-          add t v
-        done;
-        t
-      ;;
-    end)
+    let init ~len ~next =
+      let t = create ~size:len () in
+      for _i = 0 to len - 1 do
+        let v = next () in
+        add t v
+      done;
+      t
+    ;;
+  end)
 
   module Provide_stable_witness
-      (X : sig
-         type t [@@deriving stable_witness]
-       end
-       with type t := elt) =
+    (X : sig
+      type t [@@deriving stable_witness]
+    end
+    with type t := elt) =
   struct
     (* The binary representation of hash_set is used in the stable modules below, so it's
        assumed to be stable (if the elt is stable) . *)
@@ -89,40 +89,40 @@ struct
 end
 
 module Make_with_hashable (T : sig
-    module Elt : Elt
+  module Elt : Elt
 
-    val hashable : Elt.t Hashtbl.Hashable.t
-  end) =
+  val hashable : Elt.t Hashtbl.Hashable.t
+end) =
 struct
   include Make_plain_with_hashable (T)
   include Provide_of_sexp (T.Elt)
 end
 
 module Make_binable_with_hashable (T : sig
-    module Elt : Elt_binable
+  module Elt : Elt_binable
 
-    val hashable : Elt.t Hashtbl.Hashable.t
-  end) =
+  val hashable : Elt.t Hashtbl.Hashable.t
+end) =
 struct
   include Make_with_hashable (T)
   include Provide_bin_io (T.Elt)
 end
 
 module Make_stable_with_hashable (T : sig
-    module Elt : Elt_stable
+  module Elt : Elt_stable
 
-    val hashable : Elt.t Hashtbl.Hashable.t
-  end) =
+  val hashable : Elt.t Hashtbl.Hashable.t
+end) =
 struct
   include Make_binable_with_hashable (T)
   include Provide_stable_witness (T.Elt)
 end
 
 module Make_plain (Elt : Elt_plain) = Make_plain_with_hashable (struct
-    module Elt = Elt
+  module Elt = Elt
 
-    let hashable = Hashtbl.Hashable.of_key (module Elt)
-  end)
+  let hashable = Hashtbl.Hashable.of_key (module Elt)
+end)
 
 module Make (Elt : Elt) = struct
   include Make_plain (Elt)

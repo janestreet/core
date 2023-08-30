@@ -480,11 +480,11 @@ let%expect_test "Byte_units.Stable.V2" =
 
 (** Helper to ensure that our conversion functions round trip. *)
 let ensure_round_trippable
-      (type via)
-      ?(max = Int63.max_value |> Int63.to_int64)
-      (to_ : Byte_units.t -> via)
-      (from : via -> Byte_units.t)
-      ~tolerance
+  (type via)
+  ?(max = Int63.max_value |> Int63.to_int64)
+  (to_ : Byte_units.t -> via)
+  (from : via -> Byte_units.t)
+  ~tolerance
   =
   let equal a b =
     let open Float.Robustly_comparable in
@@ -503,7 +503,7 @@ let ensure_round_trippable
   Int63.gen_log_uniform_incl Int63.zero (Int63.of_int64_exn max)
   |> Quickcheck.Generator.map ~f:Byte_units.of_bytes_int63
   |> Quickcheck.test ~f:(fun t ->
-    [%test_eq: Byte_units.Stable.V2.t] ~equal t (from (to_ t)))
+       [%test_eq: Byte_units.Stable.V2.t] ~equal t (from (to_ t)))
 ;;
 
 (** Quick check to excercise various round-trip relations *)

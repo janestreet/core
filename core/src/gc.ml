@@ -205,14 +205,14 @@ module Stat = struct
       }
     [@@deriving
       compare
-    , hash
-    , sexp_of
-    , fields
-        ~getters
-        ~setters
-        ~fields
-        ~iterators:(create, fold, iter, map, to_list)
-        ~direct_iterators:to_list]
+      , hash
+      , sexp_of
+      , fields
+          ~getters
+          ~setters
+          ~fields
+          ~iterators:(create, fold, iter, map, to_list)
+          ~direct_iterators:to_list]
 
     [%%endif]
   end
@@ -338,19 +338,19 @@ module Allocation_policy = struct
 end
 
 let tune
-      ?logger
-      ?minor_heap_size
-      ?major_heap_increment
-      ?space_overhead
-      ?verbose
-      ?max_overhead
-      ?stack_limit
-      ?allocation_policy
-      ?window_size
-      ?custom_major_ratio
-      ?custom_minor_ratio
-      ?custom_minor_max_size
-      ()
+  ?logger
+  ?minor_heap_size
+  ?major_heap_increment
+  ?space_overhead
+  ?verbose
+  ?max_overhead
+  ?stack_limit
+  ?allocation_policy
+  ?window_size
+  ?custom_major_ratio
+  ?custom_minor_ratio
+  ?custom_minor_max_size
+  ()
   =
   let old_control_params = get () in
   let f opt to_string field =
@@ -453,8 +453,8 @@ module For_testing = struct
     measure_internal
       f
       ~on_result:(fun ~major_words_allocated ~minor_words_allocated value ->
-        ignore (Sys.opaque_identity value : a);
-        major_words_allocated == 0 && minor_words_allocated == 0) [@nontail]
+      ignore (Sys.opaque_identity value : a);
+      major_words_allocated == 0 && minor_words_allocated == 0) [@nontail]
   ;;
 
   let is_zero_alloc (f [@local]) = is_zero_alloc_local (fun () -> { g = f () }) [@nontail]
@@ -476,8 +476,8 @@ module For_testing = struct
       (measure_internal
          f
          ~on_result:(fun ~major_words_allocated ~minor_words_allocated x ->
-           
-             (x, Allocation_report.create ~major_words_allocated ~minor_words_allocated)))
+         
+           (x, Allocation_report.create ~major_words_allocated ~minor_words_allocated)))
   ;;
 
   let measure_allocation f =
@@ -517,8 +517,8 @@ module For_testing = struct
            | Some p ->
              String.sub ~pos:0 ~len:p backtrace
              |> String.rstrip ~drop:(function
-               | '\n' -> false
-               | _ -> true)
+                  | '\n' -> false
+                  | _ -> true)
          in
          let info : Allocation_log.t =
            { size_in_words = info.n_samples; is_major; backtrace }
@@ -592,7 +592,7 @@ module For_testing = struct
          measure_and_log_allocation_local f
        in
        if allocation_report.major_words_allocated > 0
-       || allocation_report.minor_words_allocated > 0
+          || allocation_report.minor_words_allocated > 0
        then require_no_allocation_local_failed here allocation_report allocation_log;
        result)
   ;;

@@ -1,11 +1,11 @@
 open! Core
 
 let bin_prot_test
-      (type a)
-      gen
-      ~(bin : a Bin_prot.Type_class.t)
-      ~compare:compare_a
-      ~sexp_of:sexp_of_a
+  (type a)
+  gen
+  ~(bin : a Bin_prot.Type_class.t)
+  ~compare:compare_a
+  ~sexp_of:sexp_of_a
   =
   Quickcheck.test gen ~f:(fun a ->
     let size = bin.writer.size a in
@@ -19,10 +19,10 @@ let bin_prot_test
 ;;
 
 module Make (M : sig
-    type t = unit [@@deriving bin_io]
+  type t = unit [@@deriving bin_io]
 
-    val expected_size : int
-  end) =
+  val expected_size : int
+end) =
 struct
   let%test_unit "size" = [%test_result: int] (M.bin_size_t ()) ~expect:M.expected_size
 
@@ -60,20 +60,20 @@ struct
 end
 
 include Make (struct
-    include Unit.Stable.V1
+  include Unit.Stable.V1
 
-    let expected_size = 1
-  end)
+  let expected_size = 1
+end)
 
 include Make (struct
-    include Unit.Stable.V2
+  include Unit.Stable.V2
 
-    let expected_size = 0
-  end)
+  let expected_size = 0
+end)
 
 (* Should work like V1 *)
 include Make (struct
-    type t = unit [@@deriving bin_io]
+  type t = unit [@@deriving bin_io]
 
-    let expected_size = 1
-  end)
+  let expected_size = 1
+end)

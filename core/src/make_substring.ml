@@ -120,26 +120,26 @@ module F (Underlying : Base) : S with type base = Underlying.t = struct
     let iter =
       `Custom
         (fun t ~f ->
-           for i = 0 to length t - 1 do
-             f (get t i)
-           done)
+          for i = 0 to length t - 1 do
+            f (get t i)
+          done)
     ;;
 
     let foldi =
       `Custom
         (fun t ~init ~f ->
-           let rec go acc i =
-             if i >= length t then acc else go (f i acc (get_no_bounds_check t i)) (i + 1)
-           in
-           go init 0 [@nontail])
+          let rec go acc i =
+            if i >= length t then acc else go (f i acc (get_no_bounds_check t i)) (i + 1)
+          in
+          go init 0 [@nontail])
     ;;
 
     let iteri =
       `Custom
         (fun t ~f ->
-           for i = 0 to length t - 1 do
-             f i (get_no_bounds_check t i)
-           done)
+          for i = 0 to length t - 1 do
+            f i (get_no_bounds_check t i)
+          done)
     ;;
 
     let length = `Custom length
@@ -174,8 +174,7 @@ module F (Underlying : Base) : S with type base = Underlying.t = struct
 
   let wrap_sub_n t n ~name ~pos ~len ~on_error =
     if n < 0
-    then
-      invalid_arg (name ^ " expecting nonnegative argument")
+    then invalid_arg (name ^ " expecting nonnegative argument")
     else (
       try sub t ~pos ~len with
       | _ -> on_error)
@@ -251,7 +250,7 @@ module F (Underlying : Base) : S with type base = Underlying.t = struct
       (List.fold ts ~init:0 ~f:(fun dst_pos t ->
          blit_dst t ~dst ~dst_pos;
          dst_pos + length t)
-       : int);
+        : int);
     dst
   ;;
 

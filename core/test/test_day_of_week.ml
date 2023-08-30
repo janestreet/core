@@ -6,21 +6,21 @@ let num_days_in_week = 7
 
 let%test_module "Day_of_week.V1" =
   (module Stable_unit_test.Make (struct
-       include Stable.V1
+    include Stable.V1
 
-       let equal = [%compare.equal: t]
+    let equal = [%compare.equal: t]
 
-       let tests =
-         [ Sun, "SUN", "\000"
-         ; Mon, "MON", "\001"
-         ; Tue, "TUE", "\002"
-         ; Wed, "WED", "\003"
-         ; Thu, "THU", "\004"
-         ; Fri, "FRI", "\005"
-         ; Sat, "SAT", "\006"
-         ]
-       ;;
-     end))
+    let tests =
+      [ Sun, "SUN", "\000"
+      ; Mon, "MON", "\001"
+      ; Tue, "TUE", "\002"
+      ; Wed, "WED", "\003"
+      ; Thu, "THU", "\004"
+      ; Fri, "FRI", "\005"
+      ; Sat, "SAT", "\006"
+      ]
+    ;;
+  end))
 ;;
 
 let%test _ = List.is_sorted all ~compare

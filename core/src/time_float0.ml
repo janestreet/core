@@ -9,21 +9,21 @@ module Absolute = struct
 
   include (
     Float :
-    sig
-      type t = float [@@deriving bin_io, hash, typerep]
+      sig
+        type t = float [@@deriving bin_io, hash, typerep]
 
-      include Comparable.S_common with type t := t
+        include Comparable.S_common with type t := t
 
-      include module type of struct
-        include Float.O
-      end
-    end)
+        include module type of struct
+          include Float.O
+        end
+      end)
 
   (* due to precision limitations in float we can't expect better than microsecond
      precision *)
   include Float.Robust_compare.Make (struct
-      let robust_comparison_tolerance = 1E-6
-    end)
+    let robust_comparison_tolerance = 1E-6
+  end)
 
   let diff t1 t2 = Span.of_sec (t1 - t2)
   let add t span = t +. Span.to_sec span
@@ -61,7 +61,7 @@ module Date_and_ofday = struct
        Fri Dec 31 23:59:59 UTC 9999 *)
     let gmtime_upper_bound = 253_402_300_799. in
     if Float.( >= ) sec_since_epoch (gmtime_upper_bound +. 1.)
-    || Float.( < ) sec_since_epoch gmtime_lower_bound
+       || Float.( < ) sec_since_epoch gmtime_lower_bound
     then failwithf "Time.gmtime: out of range (%f)" sec_since_epoch ()
   ;;
 

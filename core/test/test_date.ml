@@ -588,10 +588,10 @@ let%test_unit _ =
     Date.Option.quickcheck_generator
     ~sexp_of:Date.Option.sexp_of_t
     ~f:(fun t ->
-      Date.Option.between
-        t
-        ~low:(Date.Option.some (Date.of_string "1900-01-01"))
-        ~high:(Date.Option.some (Date.of_string "2100-01-01")))
+    Date.Option.between
+      t
+      ~low:(Date.Option.some (Date.of_string "1900-01-01"))
+      ~high:(Date.Option.some (Date.of_string "2100-01-01")))
 ;;
 
 let%test_unit _ =

@@ -40,11 +40,11 @@ module Stable = struct
         type t = int
         [@@deriving
           compare
-        , equal
-        , hash
-        , typerep
-        , bin_shape ~basetype:"899ee3e0-490a-11e6-a10a-a3734f733566"
-        , stable_witness]
+          , equal
+          , hash
+          , typerep
+          , bin_shape ~basetype:"899ee3e0-490a-11e6-a10a-a3734f733566"
+          , stable_witness]
 
         let create0 ~year ~month ~day =
           (* create_exn's validation make sure that each value fits *)
@@ -137,7 +137,6 @@ module Stable = struct
       end
 
       include T
-
 
       (** YYYY-MM-DD *)
       let to_string_iso8601_extended t =
@@ -291,11 +290,11 @@ module Stable = struct
       type t = int
       [@@deriving
         bin_io ~localize
-      , bin_shape ~basetype:"826a3e79-3321-451a-9707-ed6c03b84e2f"
-      , compare
-      , hash
-      , typerep
-      , stable_witness]
+        , bin_shape ~basetype:"826a3e79-3321-451a-9707-ed6c03b84e2f"
+        , compare
+        , hash
+        , typerep
+        , stable_witness]
 
       let none = V1.(to_int invalid_value__for_internal_use_only)
       let is_none t = t = none
@@ -353,11 +352,11 @@ include (
     Hashable.S_binable with type t := t)
 
 include Pretty_printer.Register (struct
-    type nonrec t = t
+  type nonrec t = t
 
-    let module_name = "Core.Date"
-    let to_string = to_string
-  end)
+  let module_name = "Core.Date"
+  let to_string = to_string
+end)
 
 let unix_epoch = create_exn ~y:1970 ~m:Jan ~d:1
 
@@ -678,6 +677,6 @@ module Option = struct
   ;;
 
   include Comparable.Make_plain (struct
-      type nonrec t = t [@@deriving compare, sexp_of]
-    end)
+    type nonrec t = t [@@deriving compare, sexp_of]
+  end)
 end
