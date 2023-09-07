@@ -1461,6 +1461,8 @@ module Command_base = struct
   let path_key = Env.key_create "path"
   let args_key = Env.key_create "args"
   let help_key = Env.key_create "help"
+  let normalized_path = ref None
+  let normalized_args = ref None
 
   let indent_by_2 str =
     String.split ~on:'\n' str
@@ -1472,6 +1474,18 @@ module Command_base = struct
     match lookup_expand_with_aliases t.flags arg Flag with
     | Error msg -> die "%s" msg ()
     | Ok (flag_name, flag) -> flag_name, flag.action
+  ;;
+
+  let get_complete_flag_name t arg (args : Cmdline.t) =
+    let flag, action = get_flag_and_action t arg in
+    match action with
+    | Print_info_and_quit _info -> [ flag ]
+    | No_arg _f -> [ flag ]
+    | Arg (_f, _comp) ->
+      (match args with
+       | Cons (arg, _rest) -> [ flag; arg ]
+       | Nil | Complete _ -> [])
+    | Rest (_f, _comp) -> flag :: Cmdline.to_list args
   ;;
 
   let run_flag t env arg (args : Cmdline.t) =
@@ -1505,12 +1519,21 @@ module Command_base = struct
       f env arg_list, Nil
   ;;
 
-  let rec run_cmdline t env parser (cmdline : Cmdline.t) ~for_completion ~parse_flags =
+  let rec run_cmdline
+    t
+    env
+    parser
+    (cmdline : Cmdline.t)
+    ~for_completion
+    ~parse_flags
+    ~normalized_args
+    =
     match cmdline with
     | Nil ->
       List.iter (Map.data t.flags) ~f:(fun flag -> flag.check_available env);
       ( `Only_validate_parsing (Env.mem env key_internal_validate_parsing)
-      , Anons.Parser.final_value parser env )
+      , Anons.Parser.final_value parser env
+      , List.concat (List.rev normalized_args) )
     | Complete part ->
       if parse_flags && String.is_prefix part ~prefix:"-"
       then (
@@ -1533,8 +1556,9 @@ module Command_base = struct
       in
       (match arg_is_flag with
        | true ->
+         let normalized_args = get_complete_flag_name t arg args :: normalized_args in
          let env, args = run_flag t env arg args in
-         run_cmdline t env parser args ~parse_flags ~for_completion
+         run_cmdline ~normalized_args t env parser args ~parse_flags ~for_completion
        | false ->
          let parse_flags1 = parse_flags in
          let ({ parser; parse_flags = parse_flags2; update_env }
@@ -1544,7 +1568,14 @@ module Command_base = struct
          in
          let env = update_env env in
          let parse_flags = parse_flags1 && parse_flags2 in
-         run_cmdline t env parser ~parse_flags args ~for_completion)
+         run_cmdline
+           ~normalized_args:([ arg ] :: normalized_args)
+           t
+           env
+           parser
+           ~parse_flags
+           args
+           ~for_completion)
   ;;
 
   let run_exn exn ~for_completion ~path ~verbose_on_parse_error =
@@ -1593,9 +1624,18 @@ module Command_base = struct
     in
     match
       Result.try_with (fun () ->
-        let is_using_validate_parsing, main =
-          run_cmdline t env (t.anons ()) ~for_completion ~parse_flags:true args
+        let is_using_validate_parsing, main, parsed_normalized_args =
+          run_cmdline
+            t
+            env
+            (t.anons ())
+            ~for_completion
+            ~parse_flags:true
+            ~normalized_args:[]
+            args
         in
+        normalized_path := Some path;
+        normalized_args := Some parsed_normalized_args;
         is_using_validate_parsing, main `Parse_args)
     with
     | Ok (`Only_validate_parsing true, (_thunk : _)) ->
@@ -3475,6 +3515,11 @@ let basic_or_error ~summary ?readme param =
          Stdio.prerr_endline (Error.to_string_hum e);
          exit 1)
 ;;
+
+module For_telemetry = struct
+  let normalized_path () = Option.map !Command_base.normalized_path ~f:Path.parts
+  let normalized_args () = !Command_base.normalized_args
+end
 
 module Private = struct
   let abs_path = abs_path

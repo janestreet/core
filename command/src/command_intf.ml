@@ -925,6 +925,27 @@ module type Command = sig
       tests.  For example, in the body of [Command.Param.no_arg_abort] *)
   val exit : int -> _
 
+  module For_telemetry : sig
+    (** Returns the command and the list of subcommands. Arguments to the [Command.t] are
+        not included.
+
+        If a subcommand was specified as a unique prefix [normalized_path] will contain
+        the full subcommand name.
+
+        If the entry point to the program was not through [Command] returns [None].
+    *)
+    val normalized_path : unit -> string list option
+
+    (** Returns the full list of arguments that were parsed by [Command].
+
+        If a flag name was specified as a unique prefix [normalized_args] will contain the
+        full flag name.
+
+        If the entry point to the program was not through [Command] returns [None].
+    *)
+    val normalized_args : unit -> string list option
+  end
+
   (** [Deprecated] should be used only by [Deprecated_command].  At some point
       it will go away. *)
   module Deprecated : sig
