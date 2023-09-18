@@ -168,6 +168,29 @@ struct
   end)
 end
 
+module Extend_plain
+  (M : Base.Comparable.S) (X : sig
+    type t = M.t [@@deriving sexp_of]
+  end) =
+struct
+  module T = struct
+    include M
+
+    include (
+      X :
+        sig
+          type t = M.t [@@deriving sexp_of]
+        end
+        with type t := t)
+  end
+
+  include T
+  include Validate (T)
+  module Replace_polymorphic_compare : Comparisons with type t := t = M
+  module Map = Map.Make_plain_using_comparator (T)
+  module Set = Set.Make_plain_using_comparator (T)
+end
+
 module Extend
   (M : Base.Comparable.S) (X : sig
     type t = M.t [@@deriving sexp]

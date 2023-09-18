@@ -223,6 +223,18 @@ module type Ofday = sig
   val every : Span.t -> start:t -> stop:t -> t list Or_error.t
 
   val to_microsecond_string : t -> string
+
+  module Stable : sig
+    module V1 : sig
+      type nonrec t = t [@@deriving equal, hash, sexp_grammar]
+
+      include
+        Stable_int63able.With_stable_witness.S
+          with type t := t
+           and type comparator_witness = comparator_witness
+    end
+  end
+
   val arg_type : [ `Use_Time_ns_unix ] [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
   val now : [ `Use_Time_ns_unix ] [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 

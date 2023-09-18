@@ -8,12 +8,12 @@ module Id = struct
     include Base.Type_equal.Id.Uid
 
     include
-      Comparable.Extend
+      Comparable.Extend_plain
         (Upstream)
         (struct
-          type t = Base.Type_equal.Id.Uid.t [@@deriving sexp]
+          type t = Base.Type_equal.Id.Uid.t [@@deriving sexp_of]
         end)
 
-    include Hashable.Make (Upstream)
+    include Hashable.Make_plain (Upstream)
   end
 end

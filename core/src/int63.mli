@@ -15,7 +15,7 @@ include
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@immediate64] [@@deriving sexp_grammar]
+    type nonrec t = t [@@immediate64] [@@deriving hash, sexp_grammar]
 
     include
       Stable_comparable.With_stable_witness.V1

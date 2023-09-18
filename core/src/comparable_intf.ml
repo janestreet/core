@@ -218,6 +218,11 @@ module type Comparable = sig
     include Comparator.S with type t := t
   end) : S_binable with type t := T.t with type comparator_witness := T.comparator_witness
 
+  module Extend_plain
+    (M : Base.Comparable.S) (X : sig
+      type t = M.t [@@deriving sexp_of]
+    end) : S_plain with type t := M.t with type comparator_witness := M.comparator_witness
+
   module Extend
     (M : Base.Comparable.S) (X : sig
       type t = M.t [@@deriving sexp]
