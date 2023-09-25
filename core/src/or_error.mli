@@ -20,5 +20,9 @@ module Stable : sig
       and [Error.Stable]. *)
   module V1 : Stable_module_types.With_stable_witness.S1 with type 'a t = 'a t
 
-  module V2 : Stable_module_types.With_stable_witness.S1 with type 'a t = 'a t
+  module V2 : sig
+    type nonrec 'a t = 'a t [@@deriving sexp_grammar]
+
+    include Stable_module_types.With_stable_witness.S1 with type 'a t := 'a t
+  end
 end

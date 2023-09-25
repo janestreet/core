@@ -313,7 +313,7 @@ module type Command = sig
         passed on the command line, and return [None] otherwise. *)
     val no_arg_some : 'a -> 'a option t
 
-    (** [no_arg_some value] is like [no_arg], but the argument is required.
+    (** [no_arg_required value] is like [no_arg], but the argument is required.
         This is useful in combination with [choose_one_non_optional]. *)
     val no_arg_required : 'a -> 'a t
 

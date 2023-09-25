@@ -23,7 +23,7 @@ module Stable = struct
 
   module V2 = struct
     type 'a t = ('a, Error.Stable.V2.t) Result.Stable.V1.t
-    [@@deriving bin_io, compare, sexp, stable_witness]
+    [@@deriving bin_io, compare, sexp, sexp_grammar, stable_witness]
 
     let map x ~f = Result.Stable.V1.map x ~f1:f ~f2:Fn.id
   end

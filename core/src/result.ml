@@ -6,7 +6,8 @@ module Stable = struct
     type ('a, 'b) t = ('a, 'b) Result.t =
       | Ok of 'a
       | Error of 'b
-    [@@deriving bin_io ~localize, compare, globalize, hash, sexp, stable_witness]
+    [@@deriving
+      bin_io ~localize, compare, globalize, hash, sexp, sexp_grammar, stable_witness]
 
     let map x ~f1 ~f2 =
       match x with

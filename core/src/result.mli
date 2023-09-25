@@ -14,7 +14,7 @@ module Stable : sig
     type nonrec ('ok, 'err) t = ('ok, 'err) t =
       | Ok of 'ok
       | Error of 'err
-    [@@deriving bin_io ~localize]
+    [@@deriving bin_io ~localize, sexp_grammar]
 
     include
       Stable_module_types.With_stable_witness.S2 with type ('ok, 'err) t := ('ok, 'err) t
