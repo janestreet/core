@@ -242,6 +242,7 @@ module F (Underlying : Base) : S with type base = Underlying.t = struct
   ;;
 
   let to_bigstring = make Bigstring.create Underlying.blit_to_bigstring
+  let sexp_of_t x = Sexp.Atom (to_string x)
 
   let concat_gen create_dst blit_dst ts =
     let len = List.fold ts ~init:0 ~f:(fun len t -> len + length t) in

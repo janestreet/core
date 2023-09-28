@@ -670,6 +670,18 @@ val existsi : ('k, 'v, _) t -> f:((key:'k -> data:'v -> bool)[@local]) -> bool
 val count : (_, 'v, _) t -> f:(('v -> bool)[@local]) -> int
 val counti : ('k, 'v, _) t -> f:((key:'k -> data:'v -> bool)[@local]) -> int
 
+val sum
+  :  (module Container.Summable with type t = 'a)
+  -> (_, 'v, _) t
+  -> f:(('v -> 'a)[@local])
+  -> 'a
+
+val sumi
+  :  (module Container.Summable with type t = 'a)
+  -> ('k, 'v, _) t
+  -> f:((key:'k -> data:'v -> 'a)[@local])
+  -> 'a
+
 (** [split t key] returns a map of keys strictly less than [key], the mapping of [key] if
     any, and a map of keys strictly greater than [key].
 

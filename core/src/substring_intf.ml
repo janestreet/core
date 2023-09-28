@@ -6,7 +6,8 @@ module type S = sig
   (** The type of strings that type [t] is a substring of. *)
   type base
 
-  type t [@@deriving quickcheck]
+  (** [sexp_of_t] is equivalent to [String.sexp_of_t (to_string t)] *)
+  type t [@@deriving sexp_of, quickcheck]
 
   include Indexed_container.S0 with type t := t with type elt := char
 

@@ -168,6 +168,21 @@ let%test_module "quickcheck" =
           (Bytes.of_string (Substring.to_string sub)))
     ;;
 
+    let%expect_test "sexp_of_t" =
+      Quickcheck.test
+        ~sexp_of:sexp_of_substring_for_test
+        Substring.quickcheck_generator
+        ~f:(fun sub ->
+        [%test_result: Sexp.t]
+          ~expect:
+            (Bytes.sub
+               (Substring.base sub)
+               ~pos:(Substring.pos sub)
+               ~len:(Substring.length sub)
+             |> Bytes.sexp_of_t)
+          (Substring.sexp_of_t sub))
+    ;;
+
     let%expect_test "prefixes and suffixes" =
       let sub_and_n =
         let open Quickcheck.Let_syntax in

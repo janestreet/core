@@ -1348,6 +1348,8 @@ struct
   let for_all _ = assert false
   let exists _ = assert false
   let count _ = assert false
+  let sum _ = assert false
+  let sumi _ = assert false
   let for_alli _ = assert false
   let existsi _ = assert false
   let counti _ = assert false
