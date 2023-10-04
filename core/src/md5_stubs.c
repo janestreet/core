@@ -5,10 +5,10 @@
 #include <caml/mlvalues.h>
 #include <caml/signals.h>
 #include <core_params.h>
-#ifndef _MSC_VER
 #include <errno.h>
-#endif
+#ifndef _MSC_VER
 #include <unistd.h>
+#endif
 
 #if __GNUC__ < 8
 #ifndef _MSC_VER

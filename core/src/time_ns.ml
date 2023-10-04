@@ -348,9 +348,64 @@ module Alternate_sexp = struct
   end
 end
 
+module Option0 = struct
+  type time = t [@@deriving compare]
+  type t = Span.Option.t [@@deriving bin_io, compare, hash, typerep, quickcheck]
+
+  let none = Span.Option.none
+  let some time = Span.Option.some (to_span_since_epoch time)
+  let is_none = Span.Option.is_none
+  let is_some = Span.Option.is_some
+
+  let some_is_representable time =
+    Span.Option.some_is_representable (to_span_since_epoch time)
+  ;;
+
+  let value t ~default =
+    of_span_since_epoch (Span.Option.value ~default:(to_span_since_epoch default) t)
+  ;;
+
+  let value_exn t =
+    if is_some t
+    then of_span_since_epoch (Span.Option.unchecked_value t)
+    else raise_s [%message [%here] "Time_ns.Option.value_exn none"]
+  ;;
+
+  let unchecked_value t = of_span_since_epoch (Span.Option.unchecked_value t)
+
+  let of_option = function
+    | None -> none
+    | Some t -> some t
+  ;;
+
+  let to_option t = if is_none t then None else Some (value_exn t)
+
+  module Optional_syntax = struct
+    module Optional_syntax = struct
+      let is_none = is_none
+      let unsafe_value = unchecked_value
+    end
+  end
+
+  module Stable = struct
+    module V1 = struct
+      type nonrec t = t [@@deriving compare, bin_io]
+
+      let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
+      let to_int63 t = Span.Option.Stable.V1.to_int63 t
+      let of_int63_exn t = Span.Option.Stable.V1.of_int63_exn t
+    end
+  end
+
+  let sexp_of_t = `Use_Time_ns_unix
+
+  (* bring back the efficient implementation of comparison operators *)
+  include (Span.Option : Comparisons.S with type t := t)
+end
+
 module Stable = struct
   module V1 = struct end
-  module Option = struct end
+  module Option = Option0.Stable
   module Alternate_sexp = Alternate_sexp.Stable
   module Span = Span.Stable
   module Ofday = Ofday.Stable
@@ -975,10 +1030,10 @@ module _ = struct
   ;;
 end
 
+module Option = Option0
 module Hash_queue = struct end
 module Hash_set = struct end
 module Map = struct end
-module Option = struct end
 module Set = struct end
 module Table = struct end
 module Zone = struct end

@@ -278,6 +278,30 @@ module type Time_ns = sig
     include Comparable.S with type t := t
   end
 
+  (** [Option.t] is like [t option], except that the value is immediate.  This module
+      should mainly be used to avoid allocations. *)
+  module Option : sig
+    type value := t
+    type t = private Span.Option.t [@@deriving compare, bin_io]
+
+    include Immediate_option.S_int63 with type value := value with type t := t
+    include Quickcheck.S with type t := t
+
+    module Stable : sig
+      module V1 : sig
+        type nonrec t = t [@@deriving compare, bin_io, stable_witness]
+
+        val to_int63 : t -> Int63.t
+        val of_int63_exn : Int63.t -> t
+      end
+    end
+
+    val sexp_of_t : [ `Use_Time_ns_unix ]
+      [@@deprecated "[since 2023-09] Use [Time_ns_unix.Option]"]
+
+    include Comparisons.S with type t := t
+  end
+
   include
     Time_intf.Shared with type t := t with module Span := Span with module Ofday := Ofday
 
@@ -445,7 +469,14 @@ module type Time_ns = sig
     module V1 : sig end
     [@@deprecated "[since 2021-03] Use [Time_ns_unix] or [Time_ns.Alternate_sexp]"]
 
-    module Option : sig end [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
+    module Option : sig
+      module V1 : sig
+        type nonrec t = Option.t [@@deriving compare, bin_io, stable_witness]
+
+        val to_int63 : t -> Int63.t
+        val of_int63_exn : Int63.t -> t
+      end
+    end
 
     module Alternate_sexp : sig
       module V1 : sig
@@ -509,7 +540,6 @@ module type Time_ns = sig
   module Hash_queue : sig end [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
   module Hash_set : sig end [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
   module Map : sig end [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
-  module Option : sig end [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
   module Replace_polymorphic_compare : sig end
   [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
