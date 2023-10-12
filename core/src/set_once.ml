@@ -15,14 +15,10 @@ module Stable = struct
       type 'a t = 'a option ref [@@deriving bin_io, sexp]
     end
 
-    module T = struct
-      type 'a t = 'a T.t
-
-      let of_format (v1 : 'a Format.t) : 'a t = { value = !v1; set_at = [%here] }
-      let to_format (t : 'a t) : 'a Format.t = ref t.value
-    end
-
     include T
+
+    let of_format (v1 : 'a Format.t) : 'a t = { value = !v1; set_at = [%here] }
+    let to_format (t : 'a t) : 'a Format.t = ref t.value
 
     include
       Binable.Of_binable1_without_uuid [@alert "-legacy"]
