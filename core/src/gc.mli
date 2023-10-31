@@ -515,7 +515,7 @@ module For_testing : sig
       ; is_major : bool
       ; backtrace : string
       }
-    [@@deriving sexp_of]
+    [@@deriving sexp_of, globalize]
   end
 
   (** [measure_and_log_allocation f] logs each allocation that [f ()] performs, as well as
@@ -613,7 +613,7 @@ module Expert : sig
 
   (** Same as {!add_finalizer} except that the function is not called until the value has
       become unreachable for the last time.  This means that the finalization function
-      does not recieve the value as an argument.  Every weak pointer and ephemeron that
+      does not receive the value as an argument.  Every weak pointer and ephemeron that
       contained this value as key or data is unset before running the finalization
       function. *)
   val add_finalizer_last : 'a Heap_block.t -> (unit -> unit) -> unit

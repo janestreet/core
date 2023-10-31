@@ -176,7 +176,9 @@ module type Shared = sig
       reliably round trip. *)
   val to_string_trimmed : t -> zone:Zone.t -> string
 
-  (** Same as [to_string_abs], but without milliseconds and the timezone *)
+  (** Same as [to_string_abs], but without milliseconds and the timezone. May raise if
+      [zone] offsets move the apparent value beyond [min_value_representable] and
+      [max_value_representable]. *)
   val to_sec_string : t -> zone:Zone.t -> string
 
   (** Same as [to_sec_string] but includes timezone *)

@@ -6,7 +6,8 @@ module Stable = struct
       | Incl of 'a
       | Excl of 'a
       | Unbounded
-    [@@deriving bin_io ~localize, compare, equal, hash, sexp, stable_witness]
+    [@@deriving
+      bin_io ~localize, compare, equal, hash, sexp, sexp_grammar, stable_witness]
 
     let map x ~f =
       match x with

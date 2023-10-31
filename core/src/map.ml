@@ -258,6 +258,14 @@ end = struct
     Using_comparator.of_list_with_key_multi ~comparator list ~get_key
   ;;
 
+  let of_list_with_key_fold list ~get_key ~init ~f =
+    Using_comparator.of_list_with_key_fold ~comparator list ~get_key ~init ~f
+  ;;
+
+  let of_list_with_key_reduce list ~get_key ~f =
+    Using_comparator.of_list_with_key_reduce ~comparator list ~get_key ~f
+  ;;
+
   let of_alist alist = Using_comparator.of_alist ~comparator alist
   let of_alist_or_error alist = Using_comparator.of_alist_or_error ~comparator alist
   let of_alist_exn alist = Using_comparator.of_alist_exn ~comparator alist
@@ -324,6 +332,15 @@ module Make_tree_S1 (Key : Comparator.S1) = struct
 
   let of_list_with_key_exn l ~get_key = of_list_with_key_exn l ~get_key ~comparator
   let of_list_with_key_multi l ~get_key = of_list_with_key_multi l ~get_key ~comparator
+
+  let of_list_with_key_fold l ~get_key ~init ~f =
+    of_list_with_key_fold l ~get_key ~init ~f ~comparator
+  ;;
+
+  let of_list_with_key_reduce l ~get_key ~f =
+    of_list_with_key_reduce l ~get_key ~f ~comparator
+  ;;
+
   let of_iteri ~iteri = of_iteri ~iteri ~comparator
   let of_iteri_exn ~iteri = of_iteri_exn ~iteri ~comparator
   let of_key_set = Using_comparator.tree_of_key_set

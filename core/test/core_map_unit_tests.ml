@@ -119,6 +119,8 @@ struct
     let of_list_with_key_or_error x = simplify_creator of_list_with_key_or_error x
     let of_list_with_key_exn x = simplify_creator of_list_with_key_exn x
     let of_list_with_key_multi x = simplify_creator of_list_with_key_multi x
+    let of_list_with_key_fold x = simplify_creator of_list_with_key_fold x
+    let of_list_with_key_reduce x = simplify_creator of_list_with_key_reduce x
     let map_keys_exn x = simplify_creator map_keys_exn x
     let transpose_keys x = simplify_creator (simplify_accessor transpose_keys) x
     let quickcheck_generator x = simplify_creator quickcheck_generator x
@@ -720,10 +722,22 @@ struct
   ;;
 
   let of_list_with_key_multi _ = assert false
+  let of_list_with_key_fold _ = assert false
+  let of_list_with_key_reduce _ = assert false
 
   let%expect_test _ =
     let input = random_alist Key.samples in
     let list_multi = Map.of_list_with_key_multi input ~get_key:fst in
+    let list_fold =
+      Map.of_list_with_key_fold input ~get_key:fst ~init:[] ~f:(fun acc x -> x :: acc)
+      |> Map.map ~f:List.rev
+    in
+    let list_reduce =
+      Map.of_list_with_key_reduce
+        (List.map input ~f:List.return)
+        ~get_key:(fun x -> x |> List.hd_exn |> fst)
+        ~f:(fun x y -> x @ y)
+    in
     let expect =
       Map.of_alist_multi (List.map input ~f:(fun (key, data) -> key, (key, data)))
     in
@@ -734,7 +748,9 @@ struct
       let sexp_of_t = Map.sexp_of_t [%sexp_of: int] [%sexp_of: (Key.t * int) list]
     end
     in
-    Expect_test_helpers_core.require_equal [%here] (module T) list_multi expect
+    Expect_test_helpers_core.require_equal [%here] (module T) list_multi expect;
+    Expect_test_helpers_core.require_equal [%here] (module T) list_reduce expect;
+    Expect_test_helpers_core.require_equal [%here] (module T) list_fold expect
   ;;
 
   let is_empty _ = assert false

@@ -65,7 +65,7 @@ module type Generator = sig
       [of_list [ v1 ; ... ; vN ] = union [ singleton v1 ; ... ; singleton vN ]] *)
   val of_list : 'a list -> 'a t
 
-  (** Combine arbitary generators, weighted equally.
+  (** Combine arbitrary generators, weighted equally.
 
       [ union [ g1 ; ... ; gN ] = weighted_union [ (1.0, g1) ; ... ; (1.0, gN) ] ] *)
   val union : 'a t list -> 'a t

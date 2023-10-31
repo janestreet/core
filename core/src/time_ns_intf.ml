@@ -273,7 +273,7 @@ module type Time_ns = sig
       sexp is a single atom rendered as with [to_string_utc], except that all trailing
       zeros are trimmed, rather than trimming in groups of three. *)
   module Alternate_sexp : sig
-    type nonrec t = t [@@deriving compare, equal, hash, sexp, sexp_grammar]
+    type nonrec t = t [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
 
     include Comparable.S with type t := t
   end
@@ -397,7 +397,17 @@ module type Time_ns = sig
 
       Supplying [~can_equal_after:true] allows the result to satisfy [time >= after].
 
-      Overflows silently. *)
+      This function is useful for finding linear time intervals, like every 30 minutes or
+      every 24 hours. This is different from rounding to apparent clock-face internvals,
+      like "every hour at :00 and :30" or "every day at noon", because time zone and
+      daylight savings transitions may cause linear intervals and apparent clock-face
+      intervals to differ.
+
+      Time zone offsets (in the tzdata time zone database, at least) are expressed in
+      seconds, so rounding to units of seconds or smaller is not affected by time zones.
+      The [round*] functions below provide some straightforward cases. For other small
+      units that evenly divide into a second, call with [base = epoch], [after] as the
+      time to round, and [interval] as the unit span you are rounding to. *)
   val next_multiple
     :  ?can_equal_after:bool (** default is [false] *)
     -> base:t
@@ -415,7 +425,18 @@ module type Time_ns = sig
       where [k >= 0] and [time < before].  It is an error if [interval <= 0].
 
       Supplying [~can_equal_before:true] allows the result to satisfy [time <= before].
-  *)
+
+      This function is useful for finding linear time intervals, like every 30 minutes or
+      every 24 hours. This is different from rounding to apparent clock-face internvals,
+      like "every hour at :00 and :30" or "every day at noon", because time zone and
+      daylight savings transitions may cause linear intervals and apparent clock-face
+      intervals to differ.
+
+      Time zone offsets (in the tzdata time zone database, at least) are expressed in
+      seconds, so rounding to units of seconds or smaller is not affected by time zones.
+      The [round*] functions below provide some straightforward cases. For other small
+      units that evenly divide into a second, call with [base = epoch], [after] as the
+      time to round, and [interval] as the unit span you are rounding to. *)
   val prev_multiple
     :  ?can_equal_before:bool (** default is [false] *)
     -> base:t
@@ -423,6 +444,24 @@ module type Time_ns = sig
     -> interval:Span.t
     -> unit
     -> t
+
+  (** [round_up_to_us t] returns [t] rounded up to the next microsecond. *)
+  val round_up_to_us : t -> t
+
+  (** [round_up_to_ms t] returns [t] rounded up to the next millisecond. *)
+  val round_up_to_ms : t -> t
+
+  (** [round_up_to_sec t] returns [t] rounded up to the next second. *)
+  val round_up_to_sec : t -> t
+
+  (** [round_down_to_us t] returns [t] rounded down to the previous microsecond. *)
+  val round_down_to_us : t -> t
+
+  (** [round_down_to_ms t] returns [t] rounded down to the previous millisecond. *)
+  val round_down_to_ms : t -> t
+
+  (** [round_down_to_sec t] returns [t] rounded down to the previous second. *)
+  val round_down_to_sec : t -> t
 
   val random : ?state:Random.State.t -> unit -> t
 

@@ -117,17 +117,17 @@ let of_time_float_round_nearest_microsecond time =
     (Span.of_span_float_round_nearest_microsecond (Time_float.to_span_since_epoch time))
 ;;
 
-let[@cold] raise_next_multiple_got_nonpositive_interval interval =
+let[@cold] raise_next_multiple_got_nonpositive_interval ~calling_function_name interval =
   failwiths
     ~here:[%here]
-    "Time_ns.next_multiple got nonpositive interval"
+    ("Time_ns." ^ calling_function_name ^ " got nonpositive interval")
     interval
     [%sexp_of: Span.t]
 ;;
 
-let next_multiple_internal ~can_equal_after ~base ~after ~interval =
+let next_multiple_internal ~calling_function_name ~can_equal_after ~base ~after ~interval =
   if Span.( <= ) interval Span.zero
-  then raise_next_multiple_got_nonpositive_interval interval;
+  then raise_next_multiple_got_nonpositive_interval ~calling_function_name interval;
   let base_to_after = diff after base in
   if Span.( < ) base_to_after Span.zero
   then base (* [after < base], choose [k = 0]. *)
@@ -136,16 +136,79 @@ let next_multiple_internal ~can_equal_after ~base ~after ~interval =
     if next > after || (can_equal_after && next = after) then next else add next interval)
 ;;
 
-let next_multiple ?(can_equal_after = false) ~base ~after ~interval () =
-  next_multiple_internal ~can_equal_after ~base ~after ~interval
-;;
-
-let prev_multiple ?(can_equal_before = false) ~base ~before ~interval () =
+let prev_multiple_internal
+  ~calling_function_name
+  ~can_equal_before
+  ~base
+  ~before
+  ~interval
+  =
   next_multiple_internal
+    ~calling_function_name
     ~can_equal_after:(not can_equal_before)
     ~base
     ~after:(sub before interval)
     ~interval
+;;
+
+let next_multiple ?(can_equal_after = false) ~base ~after ~interval () =
+  next_multiple_internal
+    ~calling_function_name:"next_multiple"
+    ~can_equal_after
+    ~base
+    ~after
+    ~interval
+;;
+
+let prev_multiple ?(can_equal_before = false) ~base ~before ~interval () =
+  prev_multiple_internal
+    ~calling_function_name:"prev_multiple"
+    ~can_equal_before
+    ~base
+    ~before
+    ~interval
+;;
+
+let round_up t ~interval ~calling_function_name =
+  next_multiple_internal
+    ~calling_function_name
+    ~can_equal_after:true
+    ~base:epoch
+    ~after:t
+    ~interval
+;;
+
+let round_down t ~interval ~calling_function_name =
+  prev_multiple_internal
+    ~calling_function_name
+    ~can_equal_before:true
+    ~base:epoch
+    ~before:t
+    ~interval
+;;
+
+let round_up_to_us t =
+  round_up t ~interval:Span.microsecond ~calling_function_name:"round_up_to_us"
+;;
+
+let round_up_to_ms t =
+  round_up t ~interval:Span.millisecond ~calling_function_name:"round_up_to_ms"
+;;
+
+let round_up_to_sec t =
+  round_up t ~interval:Span.second ~calling_function_name:"round_up_to_sec"
+;;
+
+let round_down_to_us t =
+  round_down t ~interval:Span.microsecond ~calling_function_name:"round_down_to_us"
+;;
+
+let round_down_to_ms t =
+  round_down t ~interval:Span.millisecond ~calling_function_name:"round_down_to_ms"
+;;
+
+let round_down_to_sec t =
+  round_down t ~interval:Span.second ~calling_function_name:"round_down_to_sec"
 ;;
 
 let random ?state () = Span.random ?state ()
@@ -191,7 +254,7 @@ end
 
 module Alternate_sexp = struct
   module T = struct
-    type nonrec t = t [@@deriving compare, hash]
+    type nonrec t = t [@@deriving bin_io, compare, hash]
 
     module Ofday_as_span = struct
       open Int.O
