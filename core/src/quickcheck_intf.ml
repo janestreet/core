@@ -20,8 +20,8 @@ module type Generator = sig
 
   type +'a t = 'a Generator.t
 
-  val create : (size:int -> random:Splittable_random.State.t -> 'a) -> 'a t
-  val generate : 'a t -> size:int -> random:Splittable_random.State.t -> 'a
+  val create : (size:int -> random:Splittable_random.t -> 'a) -> 'a t
+  val generate : 'a t -> size:int -> random:Splittable_random.t -> 'a
 
   (** Generators form a monad.  [t1 >>= fun x -> t2] replaces each value [x] in [t1] with
       the values in [t2]; each value's probability is the product of its probability in

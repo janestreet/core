@@ -2,7 +2,7 @@ open! Import
 
 module Stable = struct
   module V1 = struct
-    type t = Base.Nothing.t = |
+    type t = Base.Nothing.t = | [@@deriving sexp_grammar]
 
     module Shape = struct
       type t [@@deriving bin_shape]

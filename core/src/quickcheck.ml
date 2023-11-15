@@ -194,8 +194,8 @@ module Configure (Config : Quickcheck_config) = struct
 
   let random_state_of_seed seed =
     match seed with
-    | `Nondeterministic -> Splittable_random.State.create (force nondeterministic_state)
-    | `Deterministic str -> Splittable_random.State.of_int ([%hash: string] str)
+    | `Nondeterministic -> Splittable_random.create (force nondeterministic_state)
+    | `Deterministic str -> Splittable_random.of_int ([%hash: string] str)
   ;;
 
   let make_seed seed : Test.Config.Seed.t =

@@ -283,7 +283,7 @@ module type Date0 = sig
       module V1 : sig
         type nonrec t = Option.t
         [@@immediate]
-        [@@deriving bin_io ~localize, compare, sexp, sexp_grammar, stable_witness]
+        [@@deriving bin_io ~localize, compare, equal, sexp, sexp_grammar, stable_witness]
 
         (** [to_int] and [of_int_exn] convert to/from the underlying integer
             representation. *)

@@ -292,6 +292,7 @@ module Stable = struct
         bin_io ~localize
         , bin_shape ~basetype:"826a3e79-3321-451a-9707-ed6c03b84e2f"
         , compare
+        , equal
         , hash
         , typerep
         , stable_witness]
