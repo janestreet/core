@@ -38,7 +38,7 @@
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
 #include <sys/endian.h>
 #else
-#ifndef _MSC_VER
+#ifndef _WIN32
 #include <endian.h>
 #endif
 #endif
