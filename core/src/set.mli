@@ -13,9 +13,6 @@ open Set_intf
     that they be passed sets with the same element type and the same comparator type. *)
 type ('elt, 'cmp) t = ('elt, 'cmp) Base.Set.t [@@deriving compare]
 
-type ('k, 'cmp) comparator = ('k, 'cmp) Comparator.Module.t
-[@@deprecated "[since 2022-07] use [Comparator.Module.t] instead"]
-
 module Tree : sig
   (** A [Tree.t] contains just the tree data structure that a set is based on, without
       including the comparator.  Accordingly, any operation on a [Tree.t] must also take

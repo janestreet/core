@@ -229,7 +229,7 @@ let%test_module "Time_ns.Span.Stable.V2" =
   end)
 ;;
 
-let%test_module "Time_ns.Alternate_sexp" =
+let%test_module "Time_ns.Alternate_sexp and Time_ns.Option.Alternate_sexp" =
   (module struct
     module Span = Time_ns.Span
 
@@ -286,7 +286,36 @@ let%test_module "Time_ns.Alternate_sexp" =
         "2001-01-01 16:23:42Z"
         "2013-10-07 09:14:47.999749999Z"
         "2013-10-07 09:14:47.99975Z"
-        "2013-10-07 09:14:47.999750001Z" |}]
+        "2013-10-07 09:14:47.999750001Z" |}];
+      let option_examples =
+        Time_ns.Option.none :: List.map examples ~f:Time_ns.Option.some
+      in
+      List.iter option_examples ~f:(fun time_ns_opt ->
+        print_s [%sexp (time_ns_opt : Time_ns.Option.Alternate_sexp.t)];
+        let round_trip =
+          Time_ns.Option.Alternate_sexp.t_of_sexp
+            (Time_ns.Option.Alternate_sexp.sexp_of_t time_ns_opt)
+        in
+        require
+          [%here]
+          (Time_ns.Option.equal time_ns_opt round_trip)
+          ~if_false_then_print_s:
+            (lazy
+              [%message
+                "Time_ns.Option.Alternate_sexp round-trip failed"
+                  (time_ns_opt : Time_ns.Option.Alternate_sexp.t)
+                  (round_trip : Time_ns.Option.Alternate_sexp.t)]));
+      [%expect
+        {|
+        ()
+        ("1835-02-03 00:00:00Z")
+        ("2104-11-29 00:00:00Z")
+        ("1970-01-01 00:00:00Z")
+        ("2001-01-01 00:00:00Z")
+        ("2001-01-01 16:23:42Z")
+        ("2013-10-07 09:14:47.999749999Z")
+        ("2013-10-07 09:14:47.99975Z")
+        ("2013-10-07 09:14:47.999750001Z") |}]
     ;;
 
     let%expect_test "round-trip" =
@@ -462,10 +491,8 @@ let pred time_ns =
   |> Time_ns.of_int63_ns_since_epoch
 ;;
 
-let%expect_test "Stable.Alternate_sexp.V1" =
-  print_and_check_stable_type
-    [%here]
-    (module Time_ns.Stable.Alternate_sexp.V1)
+let%expect_test "Stable.Alternate_sexp.V1 and Stable.Option.Alternate_sexp.V1" =
+  let times =
     [ Time_ns.min_value_for_1us_rounding
     ; Time_ns.min_value_for_1us_rounding |> succ
     ; Time_ns.min_value_for_1us_rounding |> succ |> succ
@@ -478,7 +505,9 @@ let%expect_test "Stable.Alternate_sexp.V1" =
     ; Time_ns.max_value_for_1us_rounding |> pred |> pred
     ; Time_ns.max_value_for_1us_rounding |> pred
     ; Time_ns.max_value_for_1us_rounding
-    ];
+    ]
+  in
+  print_and_check_stable_type [%here] (module Time_ns.Stable.Alternate_sexp.V1) times;
   [%expect
     {|
     (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
@@ -505,7 +534,35 @@ let%expect_test "Stable.Alternate_sexp.V1" =
     ((sexp   "2104-11-28 23:59:59.999999999Z")
      (bin_io "\252\255\255\244\016].\021;"))
     ((sexp   "2104-11-29 00:00:00Z")
-     (bin_io "\252\000\000\245\016].\021;")) |}]
+     (bin_io "\252\000\000\245\016].\021;")) |}];
+  let option_times = Time_ns.Option.none :: List.map times ~f:Time_ns.Option.some in
+  print_and_check_stable_type
+    [%here]
+    (module Time_ns.Stable.Option.Alternate_sexp.V1)
+    option_times;
+  [%expect
+    {|
+    (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
+    ((sexp ()) (bin_io "\252\000\000\000\000\000\000\000\192"))
+    ((sexp ("1835-02-03 00:00:00Z"))
+     (bin_io "\252\000\000\011\239\162\209\234\196"))
+    ((sexp ("1835-02-03 00:00:00.000000001Z"))
+     (bin_io "\252\001\000\011\239\162\209\234\196"))
+    ((sexp ("1835-02-03 00:00:00.000000002Z"))
+     (bin_io "\252\002\000\011\239\162\209\234\196"))
+    ((sexp ("1969-12-31 23:59:59.999999999Z")) (bin_io "\255\255"))
+    ((sexp ("1970-01-01 00:00:00Z")) (bin_io "\000"))
+    ((sexp ("1970-01-01 00:00:00.000000001Z")) (bin_io "\001"))
+    ((sexp ("2001-09-09 01:46:39.999999999Z"))
+     (bin_io "\252\255\255c\167\179\182\224\r"))
+    ((sexp ("2001-09-09 01:46:40Z")) (bin_io "\252\000\000d\167\179\182\224\r"))
+    ((sexp ("2001-09-09 01:46:40.000000001Z"))
+     (bin_io "\252\001\000d\167\179\182\224\r"))
+    ((sexp ("2104-11-28 23:59:59.999999998Z"))
+     (bin_io "\252\254\255\244\016].\021;"))
+    ((sexp ("2104-11-28 23:59:59.999999999Z"))
+     (bin_io "\252\255\255\244\016].\021;"))
+    ((sexp ("2104-11-29 00:00:00Z")) (bin_io "\252\000\000\245\016].\021;")) |}]
 ;;
 
 let%test_module "Ofday" =

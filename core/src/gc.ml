@@ -408,7 +408,8 @@ external major_plus_minor_words : unit -> int = "core_gc_major_plus_minor_words"
 external allocated_words : unit -> int = "core_gc_allocated_words"
 external run_memprof_callbacks : unit -> unit = "core_gc_run_memprof_callbacks"
 
-[%%if ocaml_version < (5, 0, 0)]
+[%%import "gc_stubs.h"]
+[%%if ocaml_version < (5, 0, 0) || OCAML_5_HAS_OCAML_4_GC]
 
 external heap_words : unit -> int = "core_gc_heap_words" [@@noalloc]
 external heap_chunks : unit -> int = "core_gc_heap_chunks" [@@noalloc]

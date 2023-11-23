@@ -300,6 +300,14 @@ module type Time_ns = sig
       [@@deprecated "[since 2023-09] Use [Time_ns_unix.Option]"]
 
     include Comparisons.S with type t := t
+
+    (** Just like [Time_ns.Alternate_sexp], this is different from the sexp format exposed
+        in [Time_ns_unix].  See the comment above. *)
+    module Alternate_sexp : sig
+      type nonrec t = t [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
+
+      include Comparable.S with type t := t
+    end
   end
 
   include
@@ -514,6 +522,23 @@ module type Time_ns = sig
 
         val to_int63 : t -> Int63.t
         val of_int63_exn : Int63.t -> t
+      end
+
+      module Alternate_sexp : sig
+        module V1 : sig
+          type nonrec t = Option.Alternate_sexp.t
+          [@@deriving bin_io, compare, hash, sexp, sexp_grammar, stable_witness]
+
+          include
+            Comparator.Stable.V1.S
+              with type t := t
+               and type comparator_witness = Option.Alternate_sexp.comparator_witness
+
+          include
+            Comparable.Stable.V1.With_stable_witness.S
+              with type comparable := t
+              with type comparator_witness := comparator_witness
+        end
       end
     end
 

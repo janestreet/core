@@ -120,7 +120,7 @@ let of_int_hr i = Int63.(of_int i * hour)
 let of_int_day i = Int63.(of_int i * day)
 let of_us f = round_nearest_ns (f *. float_microsecond)
 let of_ms f = round_nearest_ns (f *. float_millisecond)
-let of_sec f = round_nearest_ns (f *. float_second)
+let[@inline] of_sec f = round_nearest_ns (f *. float_second)
 let of_min f = round_nearest_ns (f *. float_minute)
 let of_hr f = round_nearest_ns (f *. float_hour)
 let of_day f = round_nearest_ns (f *. float_day)
@@ -199,7 +199,7 @@ let to_unit_of_time t : Unit_of_time.t =
 ;;
 
 let to_span_float_round_nearest t = Span_float.of_sec (to_sec t)
-let of_span_float_round_nearest s = of_sec (Span_float.to_sec s)
+let[@inline] of_span_float_round_nearest s = of_sec (Span_float.to_sec s)
 let round_up t ~to_multiple_of = Int63.round_up ~to_multiple_of t
 let round_down t ~to_multiple_of = Int63.round_down ~to_multiple_of t
 let round_nearest t ~to_multiple_of = Int63.round_nearest ~to_multiple_of t

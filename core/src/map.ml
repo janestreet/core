@@ -47,19 +47,8 @@ module Merge_element = Base.Map.Merge_element
 module Continue_or_stop = Base.Map.Continue_or_stop
 module Finished_or_unfinished = Base.Map.Finished_or_unfinished
 
-type ('k, 'cmp) comparator =
-  (module Comparator.S with type t = 'k and type comparator_witness = 'cmp)
-
-let to_comparator (type k cmp) ((module M) : (k, cmp) Comparator.Module.t) = M.comparator
-
-let of_comparator (type k cmp) comparator : (k, cmp) Comparator.Module.t =
-  (module struct
-    type t = k
-    type comparator_witness = cmp
-
-    let comparator = comparator
-  end)
-;;
+let to_comparator = Comparator.of_module
+let of_comparator = Comparator.to_module
 
 module For_quickcheck = struct
   let gen_tree ~comparator k_gen v_gen =

@@ -335,7 +335,7 @@ module Control : sig
         Default: 8192 bytes.
         @since 4.08.0 *)
     }
-  [@@deriving sexp_of]
+  [@@deriving sexp_of, fields ~iterators:to_list]
 
   [%%endif]
 
@@ -384,7 +384,8 @@ external minor_collections : unit -> int = "core_gc_minor_collections" [@@noallo
 external major_collections : unit -> int = "core_gc_major_collections" [@@noalloc]
 external compactions : unit -> int = "core_gc_compactions" [@@noalloc]
 
-[%%if ocaml_version < (5, 0, 0)]
+[%%import "gc_stubs.h"]
+[%%if ocaml_version < (5, 0, 0) || OCAML_5_HAS_OCAML_4_GC]
 
 external heap_words : unit -> int = "core_gc_heap_words" [@@noalloc]
 external heap_chunks : unit -> int = "core_gc_heap_chunks" [@@noalloc]

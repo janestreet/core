@@ -4,6 +4,12 @@
 #include <caml/memory.h>
 #include <caml/memprof.h>
 #include <caml/version.h>
+#include <stdbool.h>
+#include "gc_stubs.h"
+
+#if OCAML_VERSION >= 50100 && !OCAML_5_HAS_OCAML_4_GC
+#define HAS_OCAML_5_GC
+#endif
 
 static intnat minor_words(void) {
   return (intnat)(caml_stat_minor_words +
@@ -35,9 +41,9 @@ CAMLprim value core_gc_promoted_words(value unit) {
 
 CAMLprim value core_gc_minor_collections(value unit) {
   (void)unit;
-// In OCaml 5.1.0, the number of minor collections is an atomic global state
-// variable.
-#if OCAML_VERSION < 50100
+  // In OCaml 5.1.0, the number of minor collections is an atomic global state
+  // variable.
+#ifndef HAS_OCAML_5_GC
   return Val_long(caml_stat_minor_collections);
 #else
   return Val_long(atomic_load(&caml_minor_collections_count));
@@ -75,7 +81,7 @@ CAMLprim value core_gc_run_memprof_callbacks(value unit) {
   return Val_unit;
 }
 
-#if OCAML_VERSION < 50000
+#if OCAML_VERSION < 50000 || OCAML_VERSION >= 50100 && OCAML_5_HAS_OCAML_4_GC
 
 CAMLprim value core_gc_heap_words(value unit) {
   (void)unit;

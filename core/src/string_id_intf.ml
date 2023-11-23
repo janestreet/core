@@ -82,12 +82,12 @@ module type String_id = sig
     val validate : string -> unit Or_error.t
 
     (** By default, String_id performs some validation of its own in addition to calling
-          [validate], namely:
+             [validate], namely:
 
-          - The string cannot be empty;
-          - The string may not have whitespace at the beginning or the end.
+             - The string cannot be empty;
+             - The string may not have whitespace at the beginning or the end.
 
-          You can turn this validation off using this flag. *)
+             You can turn this validation off using this flag. *)
     val include_default_validation : bool
   end)
   () : S_with_extras

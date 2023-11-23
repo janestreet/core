@@ -122,11 +122,6 @@ module Percent = Percent
 module Perms = Perms
 module Pid = Pid
 module Poly = Poly
-
-module Popcount = Base.Popcount
-[@@warning "-3"]
-[@@deprecated "[since 2018-10] use [popcount] functions in individual int modules"]
-
 module Pretty_printer = Pretty_printer
 module Printexc = Printexc
 module Printf = Printf

@@ -61,6 +61,7 @@ module type S1 = sig
     type 's t = T : 'a Key.t * ('s, 'a) data -> 's t
   end
 
+  val key_id_set : 's t -> Set.M(Type_equal.Id.Uid).t
   val to_alist : 's t -> 's Packed.t list
   val of_alist_exn : 's Packed.t list -> 's t
   val find_packed_by_id : 's t -> Type_equal.Id.Uid.t -> 's Packed.t option
@@ -97,6 +98,8 @@ module type S = sig
     type 's t1 = T : 'a Key.t * 'a data -> 's t1
     type t = unit t1
   end
+
+  val key_id_set : t -> Set.M(Type_equal.Id.Uid).t
 
   (** [to_alist t] returns all values in [t], in increasing order of key type-id name. *)
   val to_alist : t -> Packed.t list

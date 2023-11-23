@@ -137,6 +137,7 @@ struct
   ;;
 
   let update t key ~f = change t key ~f:(fun data -> Some (f data))
+  let key_id_set t = Set.of_list (module Uid) (Map.keys t)
 
   let of_alist_exn t =
     Map.of_alist_exn (module Uid) (List.map t ~f:(fun p -> Packed.type_id_uid p, p))
@@ -187,6 +188,7 @@ struct
     type t = unit t1
   end
 
+  let key_id_set = M.key_id_set
   let to_alist = M.to_alist
   let of_alist_exn = M.of_alist_exn
   let find_packed_by_id = M.find_packed_by_id

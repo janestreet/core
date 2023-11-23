@@ -10,8 +10,12 @@
  (c_flags :standard -D_LARGEFILE64_SOURCE)
  (c_names bigstring_stubs md5_stubs array_stubs gc_stubs time_ns_stubs)
  (ocamlopt_flags :standard (:include ocamlopt-flags))
- (preprocess (pps ppx_jane ppx_optcomp)) (preprocessor_deps config.h)
+ (preprocess (pps ppx_jane ppx_optcomp))
+ (preprocessor_deps config.h gc_stubs.h)
  (js_of_ocaml (javascript_files strftime.js runtime.js)))
+
+(rule (targets gc_stubs.h) (deps)
+ (action (bash "echo \"#define OCAML_5_HAS_OCAML_4_GC false\" > %{targets}")))
 
 (documentation)
 

@@ -19,11 +19,6 @@ module Int_math = Base.Int_math
 module Invariant = Base.Invariant
 module Monad = Base.Monad
 module Poly = Base.Poly
-
-module Popcount = Base.Popcount
-[@@warning "-3"]
-[@@deprecated "[since 2018-10] use [popcount] functions in individual int modules"]
-
 module Pretty_printer = Base.Pretty_printer
 module Random = Base.Random
 module Staged = Base.Staged

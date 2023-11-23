@@ -106,7 +106,7 @@ let check_before_conversion_for_1us_rounding time =
       [%sexp_of: Time_float.Stable.With_utc_sexp.V2.t]
 ;;
 
-let of_time_float_round_nearest time =
+let[@inline] of_time_float_round_nearest time =
   of_span_since_epoch
     (Span.of_span_float_round_nearest (Time_float.to_span_since_epoch time))
 ;;
@@ -450,6 +450,44 @@ module Option0 = struct
     end
   end
 
+  module Alternate_sexp = struct
+    module T = struct
+      type nonrec t = t [@@deriving bin_io, compare, hash]
+
+      let sexp_of_t t = [%sexp_of: Alternate_sexp.t option] (to_option t)
+      let t_of_sexp s = of_option ([%of_sexp: Alternate_sexp.t option] s)
+
+      let t_sexp_grammar =
+        Sexplib.Sexp_grammar.coerce [%sexp_grammar: Alternate_sexp.t option]
+      ;;
+    end
+
+    include T
+    include Comparable.Make (T)
+
+    module Stable = struct
+      module V1 = struct
+        module T = struct
+          type nonrec t = t [@@deriving bin_io, compare, hash, sexp, sexp_grammar]
+
+          let stable_witness : t Stable_witness.t =
+            Stable_witness.of_serializable
+              [%stable_witness: Alternate_sexp.Stable.V1.t option]
+              of_option
+              to_option
+          ;;
+
+          type nonrec comparator_witness = comparator_witness
+
+          let comparator = comparator
+        end
+
+        include T
+        include Comparable.Stable.V1.With_stable_witness.Make (T)
+      end
+    end
+  end
+
   module Stable = struct
     module V1 = struct
       type nonrec t = t [@@deriving compare, bin_io]
@@ -458,6 +496,8 @@ module Option0 = struct
       let to_int63 t = Span.Option.Stable.V1.to_int63 t
       let of_int63_exn t = Span.Option.Stable.V1.of_int63_exn t
     end
+
+    module Alternate_sexp = Alternate_sexp.Stable
   end
 
   let sexp_of_t = `Use_Time_ns_unix

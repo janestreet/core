@@ -43,9 +43,6 @@ open Map_intf
 
 type (!'key, +!'value, !'cmp) t = ('key, 'value, 'cmp) Base.Map.t
 
-type ('k, 'cmp) comparator = ('k, 'cmp) Comparator.Module.t
-[@@deprecated "[since 2022-07] use [Comparator.Module.t] instead"]
-
 (** Test if invariants of internal AVL search tree hold. *)
 val invariants : (_, _, _) t -> bool
 
