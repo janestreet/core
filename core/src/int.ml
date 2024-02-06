@@ -29,6 +29,12 @@ let sign = Sign.of_int
 
 type t = int [@@deriving typerep]
 
+module Binary = struct
+  include Binary
+
+  type nonrec t = t [@@deriving typerep, bin_io ~localize]
+end
+
 module Hex = struct
   include Hex
 

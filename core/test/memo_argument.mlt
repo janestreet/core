@@ -7,7 +7,8 @@ let add a b =
   a + b
 ;;
 
-[%%expect {|
+[%%expect
+  {|
 val add : int -> int -> int = <fun>
 |}]
 
@@ -18,7 +19,8 @@ val add : int -> int -> int = <fun>
 
 let add_memo_bad = Memo.general add
 
-[%%expect {|
+[%%expect
+  {|
 val add_memo_bad : (int, int -> int) Memo.fn = <fun>
 |}]
 
@@ -26,14 +28,16 @@ val add_memo_bad : (int, int -> int) Memo.fn = <fun>
 
 let _ = (add_memo_bad 1 2 : int)
 
-[%%expect {|
+[%%expect
+  {|
 - : int = 3
 Invoked add
 |}]
 
 let _ = (add_memo_bad 1 2 : int)
 
-[%%expect {|
+[%%expect
+  {|
 - : int = 3
 Invoked add
 |}]
@@ -45,32 +49,37 @@ let add_memo_tupled =
   Memo.general add
 ;;
 
-[%%expect {|
+[%%expect
+  {|
 val add_memo_tupled : (int * int, int) Memo.fn = <fun>
 |}]
 
 let add_memo x y = add_memo_tupled (x, y)
 
-[%%expect {|
+[%%expect
+  {|
 val add_memo : int -> int -> int = <fun>
 |}]
 
 let _ = (add_memo 3 4 : int)
 
-[%%expect {|
+[%%expect
+  {|
 - : int = 7
 Invoked add
 |}]
 
 let _ = (add_memo 3 4 : int)
 
-[%%expect {|
+[%%expect
+  {|
 - : int = 7
 |}]
 
 let _ = (add_memo 3 5 : int)
 
-[%%expect {|
+[%%expect
+  {|
 - : int = 8
 Invoked add
 |}]
@@ -84,26 +93,30 @@ let add_memo_tupled_bad (x, y) =
   Memo.general add (x, y)
 ;;
 
-[%%expect {|
+[%%expect
+  {|
 val add_memo_tupled_bad : int * int -> int = <fun>
 |}]
 
 let add_memo_bad x y = add_memo_tupled_bad (x, y)
 
-[%%expect {|
+[%%expect
+  {|
 val add_memo_bad : int -> int -> int = <fun>
 |}]
 
 let _ = (add_memo_bad 1 2 : int)
 
-[%%expect {|
+[%%expect
+  {|
 - : int = 3
 Invoked add
 |}]
 
 let _ = (add_memo_bad 1 2 : int)
 
-[%%expect {|
+[%%expect
+  {|
 - : int = 3
 Invoked add
 |}]

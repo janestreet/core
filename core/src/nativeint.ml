@@ -11,6 +11,12 @@ include Comparable.Validate_with_zero (Base.Nativeint)
 
 type t = nativeint [@@deriving typerep]
 
+module Binary = struct
+  include Binary
+
+  type nonrec t = t [@@deriving typerep, bin_io ~localize]
+end
+
 module Hex = struct
   include Hex
 

@@ -194,7 +194,7 @@ val values : 'a t -> 'a list
 
 (** [eval t f] evaluates the proposition [t] relative to an environment
     [f] that assigns truth values to base propositions. *)
-val eval : 'a t -> (('a -> bool)[@local]) -> bool
+val eval : 'a t -> ('a -> bool) -> bool
 
 (** [eval_set ~universe set_of_base expression] returns the subset of elements [e] in
     [universe] that satisfy [eval expression (fun base -> Set.mem (set_of_base base) e)].
@@ -208,7 +208,7 @@ val eval : 'a t -> (('a -> bool)[@local]) -> bool
     of [set1] and [set2]. *)
 val eval_set
   :  universe:('elt, 'comparator) Set.t Lazy.t
-  -> (('a -> ('elt, 'comparator) Set.t)[@local])
+  -> ('a -> ('elt, 'comparator) Set.t)
   -> 'a t
   -> ('elt, 'comparator) Set.t
 
@@ -232,7 +232,7 @@ val eval_set
         eval t f = eval (specialize t g) f
     ]}
 *)
-val specialize : 'a t -> (('a -> [ `Known of bool | `Unknown ])[@local]) -> 'a t
+val specialize : 'a t -> ('a -> [ `Known of bool | `Unknown ]) -> 'a t
 
 module type Monadic = sig
   module M : Monad.S

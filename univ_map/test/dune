@@ -1,2 +1,5 @@
-(library (name univ_map_test) (libraries base stdio univ_map)
- (preprocess (pps ppx_jane)))
+(library
+ (name univ_map_test)
+ (libraries base stdio univ_map)
+ (preprocess
+  (pps ppx_jane)))

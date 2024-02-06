@@ -25,7 +25,7 @@ module type Sequence = sig
   type elt
 
   val create : len:int -> t
-  val length : (t[@local]) -> int
+  val length : t -> int
   val get : t -> int -> elt
   val set : t -> int -> elt -> unit
 end
@@ -37,7 +37,7 @@ module type Sequence1 = sig
 
   (** [Make1*] guarantees to only call [create_like ~len t] with [len > 0] if [length t >
       0]. *)
-  val length : (_ t[@local]) -> int
+  val length : _ t -> int
 
   (** [create_bool], [get], and [set] are just used for unit tests.  [z] is needed for
       [Flat_tuple_array], [elt] is needed for [Option_array]. *)

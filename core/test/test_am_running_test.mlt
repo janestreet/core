@@ -2,6 +2,7 @@ open! Core
 
 let () = print_s [%message (am_running_test : bool)]
 
-[%%expect {|
+[%%expect
+  {|
 (am_running_test false)
 |}]

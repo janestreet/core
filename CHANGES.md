@@ -1,3 +1,12 @@
+* Added `Utf8`, `Utf16le`, `Utf16be`, `Utf32le` and `Utf32be` submodules to `Uchar` and `String` for Unicode
+encoding support.
+
+* Add a `Binary` submodule to `Int`, `Int32`, etc, which provide `to_string` and `sexp_of_t`
+with syntax matching the ocaml binary int literal syntax.
+
+* Add Quickcheck generator to `Uchar.t` and add Quickcheck generators to `String` for
+generating valid Unicode strings in different encodings.
+
 ## Release v0.16.0
 
 Changes that affect multiple modules:

@@ -18,12 +18,9 @@ include Hexdump.S with type t := t
 (** {2 Creation and string conversion} *)
 
 (** [create length]
-    @param max_mem_waiting_gc default = 256 M in OCaml <= 3.12, 1 G otherwise. As
-    the total allocation of calls to [create] approach [max_mem_waiting_gc],
-    the pressure in the garbage collector to be more aggressive will increase.
     @return a new bigstring having [length].
     Content is undefined. *)
-val create : ?max_mem_waiting_gc:Byte_units0.t -> int -> t
+val create : int -> t
 
 (** [sub_shared ?pos ?len bstr] @return the sub-bigstring in [bstr]
     that starts at position [pos] and has length [len].  The sub-bigstring
@@ -128,14 +125,14 @@ val get_tail_padded_fixed_string_local
   -> pos:int
   -> len:int
   -> unit
-  -> (string[@local])
+  -> string
 
 val set_tail_padded_fixed_string
   :  padding:char
   -> t
   -> pos:int
   -> len:int
-  -> (string[@local])
+  -> string
   -> unit
 
 val get_head_padded_fixed_string
@@ -152,14 +149,14 @@ val get_head_padded_fixed_string_local
   -> pos:int
   -> len:int
   -> unit
-  -> (string[@local])
+  -> string
 
 val set_head_padded_fixed_string
   :  padding:char
   -> t
   -> pos:int
   -> len:int
-  -> (string[@local])
+  -> string
   -> unit
 
 module Unstable : sig

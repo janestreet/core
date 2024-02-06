@@ -380,7 +380,7 @@ module type Shrinker = sig
       nothing.  This default strikes a balance between performance and precision.
       Individual tests can use different shrinking behavior as necessary.
 
-      See lib/core/example/quickcheck/shrinker_example.ml for some example shrinkers.
+      See lib/base_quickcheck/examples/shrinker_example.ml for some example shrinkers.
   *)
 
   type 'a t = 'a Shrinker.t

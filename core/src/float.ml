@@ -24,7 +24,8 @@ module Stable = struct
     module T1 = struct
       include Base.Float
 
-      type t = float [@@deriving bin_io ~localize, hash, sexp, stable_witness, typerep]
+      type t = float
+      [@@deriving bin_io ~localize, hash, sexp, stable_witness, typerep, globalize]
     end
 
     include T1

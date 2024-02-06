@@ -118,36 +118,36 @@ val equal : ('a, 'cmp) t -> ('a, 'cmp) t -> bool
 
 (** [exists t ~f] returns [true] iff there exists an [a] in [t] for which [f a].  [O(n)],
     but returns as soon as it finds an [a] for which [f a]. *)
-val exists : ('a, _) t -> f:(('a -> bool)[@local]) -> bool
+val exists : ('a, _) t -> f:('a -> bool) -> bool
 
 (** [for_all t ~f] returns [true] iff for all [a] in [t], [f a].  [O(n)], but returns as
     soon as it finds an [a] for which [not (f a)]. *)
-val for_all : ('a, _) t -> f:(('a -> bool)[@local]) -> bool
+val for_all : ('a, _) t -> f:('a -> bool) -> bool
 
 (** [count t] returns the number of elements of [t] for which [f] returns [true].
     [O(n)]. *)
-val count : ('a, _) t -> f:(('a -> bool)[@local]) -> int
+val count : ('a, _) t -> f:('a -> bool) -> int
 
 (** [sum t] returns the sum of [f t] for each [t] in the set.
     [O(n)]. *)
 val sum
   :  (module Container.Summable with type t = 'sum)
   -> ('a, _) t
-  -> f:(('a -> 'sum)[@local])
+  -> f:('a -> 'sum)
   -> 'sum
 
 (** [find t f] returns an element of [t] for which [f] returns true, with no guarantee as
     to which element is returned.  [O(n)], but returns as soon as a suitable element is
     found. *)
-val find : ('a, _) t -> f:(('a -> bool)[@local]) -> 'a option
+val find : ('a, _) t -> f:('a -> bool) -> 'a option
 
 (** [find_map t f] returns [b] for some [a] in [t] for which [f a = Some b].  If no such
     [a] exists, then [find] returns [None].  [O(n)], but returns as soon as a suitable
     element is found. *)
-val find_map : ('a, _) t -> f:(('a -> 'b option)[@local]) -> 'b option
+val find_map : ('a, _) t -> f:('a -> 'b option) -> 'b option
 
 (** Like [find], but throws an exception on failure. *)
-val find_exn : ('a, _) t -> f:(('a -> bool)[@local]) -> 'a
+val find_exn : ('a, _) t -> f:('a -> bool) -> 'a
 
 (** [nth t i] returns the [i]th smallest element of [t], in [O(log n)] time.  The
     smallest element has [i = 0].  Returns [None] if [i < 0] or [i >= length t]. *)
@@ -236,7 +236,7 @@ val of_sorted_array_unchecked : ('a, 'cmp) Comparator.Module.t -> 'a array -> ('
 val of_increasing_iterator_unchecked
   :  ('a, 'cmp) Comparator.Module.t
   -> len:int
-  -> f:((int -> 'a)[@local])
+  -> f:(int -> 'a)
   -> ('a, 'cmp) t
 
 (** [stable_dedup_list] is here rather than in the [List] module because the
@@ -248,32 +248,28 @@ val stable_dedup_list : ('a, _) Comparator.Module.t -> 'a list -> 'a list
 
 (** [map c t ~f] returns a new set created by applying [f] to every element in [t]. The
     returned set is based on the provided [c]. [O(n log n)]. *)
-val map
-  :  ('b, 'cmp) Comparator.Module.t
-  -> ('a, _) t
-  -> f:(('a -> 'b)[@local])
-  -> ('b, 'cmp) t
+val map : ('b, 'cmp) Comparator.Module.t -> ('a, _) t -> f:('a -> 'b) -> ('b, 'cmp) t
 
 (** Like {!map}, except elements for which [f] returns [None] will be dropped.  *)
 val filter_map
   :  ('b, 'cmp) Comparator.Module.t
   -> ('a, _) t
-  -> f:(('a -> 'b option)[@local])
+  -> f:('a -> 'b option)
   -> ('b, 'cmp) t
 
 (** [filter t ~f] returns the subset of [t] for which [f] evaluates to true.  [O(n log
     n)]. *)
-val filter : ('a, 'cmp) t -> f:(('a -> bool)[@local]) -> ('a, 'cmp) t
+val filter : ('a, 'cmp) t -> f:('a -> bool) -> ('a, 'cmp) t
 
 (** [fold t ~init ~f] folds over the elements of the set from smallest to largest. *)
-val fold : ('a, _) t -> init:'accum -> f:(('accum -> 'a -> 'accum)[@local]) -> 'accum
+val fold : ('a, _) t -> init:'accum -> f:('accum -> 'a -> 'accum) -> 'accum
 
 (** [fold_result ~init ~f] folds over the elements of the set from smallest to
     largest, short circuiting the fold if [f accum x] is an [Error _] *)
 val fold_result
   :  ('a, _) t
   -> init:'accum
-  -> f:(('accum -> 'a -> ('accum, 'e) Result.t)[@local])
+  -> f:('accum -> 'a -> ('accum, 'e) Result.t)
   -> ('accum, 'e) Result.t
 
 (** [fold_until t ~init ~f] is a short-circuiting version of [fold]. If [f]
@@ -282,20 +278,16 @@ val fold_result
 val fold_until
   :  ('a, _) t
   -> init:'accum
-  -> f:(('accum -> 'a -> ('accum, 'final) Continue_or_stop.t)[@local])
-  -> finish:(('accum -> 'final)[@local])
+  -> f:('accum -> 'a -> ('accum, 'final) Continue_or_stop.t)
+  -> finish:('accum -> 'final)
   -> 'final
 
 (** Like {!fold}, except that it goes from the largest to the smallest element. *)
-val fold_right
-  :  ('a, _) t
-  -> init:'accum
-  -> f:(('a -> 'accum -> 'accum)[@local])
-  -> 'accum
+val fold_right : ('a, _) t -> init:'accum -> f:('a -> 'accum -> 'accum) -> 'accum
 
 (** [iter t ~f] calls [f] on every element of [t], going in order from the smallest to
     largest.  *)
-val iter : ('a, _) t -> f:(('a -> unit)[@local]) -> unit
+val iter : ('a, _) t -> f:('a -> unit) -> unit
 
 (** Iterate two sets side by side.  Complexity is [O(m+n)] where [m] and [n] are the sizes
     of the two input sets.  As an example, with the inputs [0; 1] and [1; 2], [f] will be
@@ -303,12 +295,12 @@ val iter : ('a, _) t -> f:(('a -> unit)[@local]) -> unit
 val iter2
   :  ('a, 'cmp) t
   -> ('a, 'cmp) t
-  -> f:(([ `Left of 'a | `Right of 'a | `Both of 'a * 'a ] -> unit)[@local])
+  -> f:([ `Left of 'a | `Right of 'a | `Both of 'a * 'a ] -> unit)
   -> unit
 
 (** If [a, b = partition_tf set ~f] then [a] is the elements on which [f] produced [true],
     and [b] is the elements on which [f] produces [false]. *)
-val partition_tf : ('a, 'cmp) t -> f:(('a -> bool)[@local]) -> ('a, 'cmp) t * ('a, 'cmp) t
+val partition_tf : ('a, 'cmp) t -> f:('a -> bool) -> ('a, 'cmp) t * ('a, 'cmp) t
 
 (** Same as {!to_list}. *)
 val elements : ('a, _) t -> 'a list
@@ -367,7 +359,7 @@ val split_lt_ge : ('a, 'cmp) t -> 'a -> ('a, 'cmp) t * ('a, 'cmp) t
 
     [group_by] runs in O(n^2) time, so if you have a comparison function, it's usually
     much faster to use [Set.of_list]. *)
-val group_by : ('a, 'cmp) t -> equiv:(('a -> 'a -> bool)[@local]) -> ('a, 'cmp) t list
+val group_by : ('a, 'cmp) t -> equiv:('a -> 'a -> bool) -> ('a, 'cmp) t list
 
 (** [to_sequence t] converts the set [t] to a sequence of the elements between
     [greater_or_equal_to] and [less_or_equal_to] inclusive in the order indicated by
@@ -398,7 +390,7 @@ val to_sequence
     [compare] mutates [t]. *)
 val binary_search
   :  ('a, 'cmp) t
-  -> compare:(('a -> 'key -> int)[@local])
+  -> compare:('a -> 'key -> int)
   -> [ `Last_strictly_less_than (**        {v | < elt X |                       v} *)
      | `Last_less_than_or_equal_to (**     {v |      <= elt       X |           v} *)
      | `Last_equal_to (**                  {v           |   = elt X |           v} *)
@@ -426,7 +418,7 @@ val binary_search
     is also unspecified if [segment_of] mutates [t]. *)
 val binary_search_segmented
   :  ('a, 'cmp) t
-  -> segment_of:(('a -> [ `Left | `Right ])[@local])
+  -> segment_of:('a -> [ `Left | `Right ])
   -> [ `Last_on_left | `First_on_right ]
   -> 'a option
 
@@ -454,10 +446,7 @@ val merge_to_sequence
 (** Convert a set to or from a map.  [to_map] takes a function to produce data for each
     key.  Both functions run in O(n) time (assuming the function passed to [to_map] runs
     in constant time). *)
-val to_map
-  :  ('key, 'cmp) t
-  -> f:(('key -> 'data)[@local])
-  -> ('key, 'data, 'cmp) Base.Map.t
+val to_map : ('key, 'cmp) t -> f:('key -> 'data) -> ('key, 'data, 'cmp) Base.Map.t
 
 val of_map_keys : ('key, _, 'cmp) Base.Map.t -> ('key, 'cmp) t
 

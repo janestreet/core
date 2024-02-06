@@ -160,7 +160,7 @@ module type S = sig
   val mapi_inplace : 'a t -> f:(int -> 'a -> 'a) -> unit
 
   (** [filter_inplace t ~f] removes all elements of [t] that don't satisfy [f]. *)
-  val filter_inplace : 'a t -> f:(('a -> bool)[@local]) -> unit
+  val filter_inplace : 'a t -> f:('a -> bool) -> unit
 
   val filteri_inplace : 'a t -> f:(int -> 'a -> bool) -> unit
 

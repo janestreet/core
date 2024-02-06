@@ -1,5 +1,18 @@
 open! Import
 
+module Stable = struct
+  module V1 = struct
+    module T = struct
+      include Base.Char
+
+      type t = char [@@deriving bin_io, sexp, sexp_grammar, stable_witness, typerep]
+    end
+
+    include T
+    include Comparable.Stable.V1.With_stable_witness.Make (T)
+  end
+end
+
 type t = char [@@deriving typerep, bin_io ~localize]
 
 include

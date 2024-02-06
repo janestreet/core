@@ -40,23 +40,40 @@ module Stat : sig
     ; major_collections : int
         (** Number of major collection cycles completed since the program
         was started. *)
-    ; heap_words : int (** Total size of the major heap, in words. *)
+    ; heap_words : int
+        (** Total size of the major heap, in words.
+        This metric is currently not available when using the OCaml 5 runtime: the field
+        value is always [0]. *)
     ; heap_chunks : int
-        (** Number of contiguous pieces of memory that make up the major heap. *)
+        (** Number of contiguous pieces of memory that make up the major heap.
+        This metric is currently not available when using the OCaml 5 runtime: the field
+        value is always [0]. *)
     ; live_words : int
         (** Number of words of live data in the major heap, including the header
         words. *)
     ; live_blocks : int (** Number of live blocks in the major heap. *)
     ; free_words : int (** Number of words in the free list. *)
-    ; free_blocks : int (** Number of blocks in the free list. *)
-    ; largest_free : int (** Size (in words) of the largest block in the free list. *)
+    ; free_blocks : int
+        (** Number of blocks in the free list.
+        This metric is currently not available when using the OCaml 5 runtime: the field
+        value is always [0]. *)
+    ; largest_free : int
+        (** Size (in words) of the largest block in the free list.
+        This metric is currently not available when using the OCaml 5 runtime: the field
+        value is always [0]. *)
     ; fragments : int
         (** Number of wasted words due to fragmentation.  These are
         1-words free blocks placed between two live blocks.  They
         are not available for allocation. *)
     ; compactions : int (** Number of heap compactions since the program was started. *)
-    ; top_heap_words : int (** Maximum size reached by the major heap, in words. *)
-    ; stack_size : int (** Current size of the stack, in words. *)
+    ; top_heap_words : int
+        (** Maximum size reached by the major heap, in words.
+        This metric is currently not available when using the OCaml 5 runtime: the field
+        value is always [0]. *)
+    ; stack_size : int
+        (** Current size of the stack, in words.
+        This metric is currently not available when using the OCaml 5 runtime: the field
+        value is always [0]. *)
     }
   [@@deriving bin_io, sexp]
 
@@ -243,8 +260,12 @@ module Control : sig
 
   type t =
     { minor_heap_size : int
-        (** The size (in words) of the minor heap.  Changing this parameter will
-        trigger a minor collection.
+        (** The size (in words) of the minor heap.  Changing
+        this parameter will trigger a minor collection.
+
+        Under the OCaml 5 runtime: the total size of the minor heap used by the program
+        can be obtained by summing the the heap sizes of the active domains.
+
         Default: 262144 words / 1MB (32bit) / 2MB (64bit).
     *)
     ; major_heap_increment : int
@@ -262,7 +283,8 @@ module Control : sig
         percentage of the memory used for live data.
         The GC will work more (use more CPU time and collect
         blocks more eagerly) if [space_overhead] is smaller.
-        Default: 80. *)
+        Default: 80 for the OCaml 4 runtime, 120 for the OCaml 5 runtime
+        (the latter subject to change). *)
     ; verbose : int
         (** This value controls the GC messages on standard error output.
         It is a sum of some of the following flags, to print messages
@@ -277,6 +299,7 @@ module Control : sig
         - [0x080] Calling of finalisation functions.
         - [0x100] Bytecode executable search at start-up.
         - [0x200] Computation of compaction triggering condition.
+        - [0x400] Output GC statistics at program exit (OCaml 5 runtime only).
           Default: 0. *)
     ; max_overhead : int
         (** Heap compaction is triggered when the estimated amount
@@ -350,8 +373,12 @@ type control = Control.t
     See the documentation of ocamlrun. *)
 
 (** Return the current values of the memory management counters in a
-    [stat] record.  This function examines every heap block to get the
-    statistics. *)
+    [stat] record that represent the program's total memory stats.
+
+    OCaml 4 runtime: This function examines every heap block to get the
+    statistics.
+
+    OCaml 5 runtime: This function causes a full major collection. *)
 external stat : unit -> stat = "caml_gc_stat"
 
 (** Creating a [Stat.t] can allocate on the minor heap. Return the expected number of
@@ -359,18 +386,35 @@ external stat : unit -> stat = "caml_gc_stat"
 val stat_size : unit -> int
 
 (** Same as [stat] except that [live_words], [live_blocks], [free_words],
-    [free_blocks], [largest_free], and [fragments] are set to 0.  This
-    function is much faster than [stat] because it does not need to go
-    through the heap. *)
+    [free_blocks], [largest_free], and [fragments] are set to 0.
+
+    OCaml 4 runtime: This function is much faster than [stat] because it does not need to
+    go through the heap.
+
+    OCaml 5 runtime: Due to per-domain buffers it may only represent the state of the
+    program's total memory usage since the last minor collection. As a result returned
+    values are representing an approximation of the gc statistics.
+
+    This function is much
+    faster than [stat] because it does not need to trigger a full major collection. *)
 external quick_stat : unit -> stat = "caml_gc_quick_stat"
 
-(** Return [(minor_words, promoted_words, major_words)].  This function
-    is as fast at [quick_stat]. *)
+(** Return [(minor_words, promoted_words, major_words)] (on the OCaml 5 runtime, for the
+    current domain or potentially previous domains).  This function is as fast as
+    [quick_stat].
+
+    Note: on the OCaml 5 runtime, [quick_stat] and [counters] might not return the same
+    value, even if there's only a single domain.
+    If there's only one domain running then [counters] returns the exact number of minor
+    words, promoted words and major words allocated so far.
+*)
 external counters : unit -> float * float * float = "caml_gc_counters"
 
-(** The following functions return the same as [(Gc.quick_stat ()).Stat.f], avoiding any
-    allocation (of the [stat] record or a float).  On 32-bit machines the [int] may
-    overflow.
+(** On 32-bit machines the [int]s returned by the following functions may overflow. *)
+
+(** Number of words allocated in the minor heap by this domain (or, on the OCaml
+    5 runtime, potentially previous domains). This number is accurate in byte-code
+    programs, but only an approximation in programs compiled to native code.
 
     Note that [minor_words] does not allocate, but we do not annotate it as [noalloc]
     because we want the compiler to save the value of the allocation pointer register
@@ -382,16 +426,10 @@ external major_words : unit -> int = "core_gc_major_words" [@@noalloc]
 external promoted_words : unit -> int = "core_gc_promoted_words" [@@noalloc]
 external minor_collections : unit -> int = "core_gc_minor_collections" [@@noalloc]
 external major_collections : unit -> int = "core_gc_major_collections" [@@noalloc]
-external compactions : unit -> int = "core_gc_compactions" [@@noalloc]
-
-[%%import "gc_stubs.h"]
-[%%if ocaml_version < (5, 0, 0) || OCAML_5_HAS_OCAML_4_GC]
-
-external heap_words : unit -> int = "core_gc_heap_words" [@@noalloc]
-external heap_chunks : unit -> int = "core_gc_heap_chunks" [@@noalloc]
-external top_heap_words : unit -> int = "core_gc_top_heap_words" [@@noalloc]
-
-[%%endif]
+val compactions : unit -> int
+val heap_words : unit -> int
+val heap_chunks : unit -> int
+val top_heap_words : unit -> int
 
 (** This function returns [major_words () + minor_words ()].  It exists purely for speed
     (one call into C rather than two).  Like [major_words] and [minor_words],
@@ -503,12 +541,10 @@ module For_testing : sig
   end
 
   (** [measure_allocation f] measures the words allocated by running [f ()] *)
-  val measure_allocation : ((unit -> 'a)[@local]) -> 'a * Allocation_report.t
+  val measure_allocation : (unit -> 'a) -> 'a * Allocation_report.t
 
   (** Same as [measure_allocation], but for functions that return a local value. *)
-  val measure_allocation_local
-    :  ((unit -> ('a[@local]))[@local])
-    -> ('a * Allocation_report.t[@local])
+  val measure_allocation_local : (unit -> 'a) -> 'a * Allocation_report.t
 
   module Allocation_log : sig
     type t =
@@ -525,30 +561,27 @@ module For_testing : sig
       This function is only supported since OCaml 4.11. On prior versions, the function
       always returns an empty log. *)
   val measure_and_log_allocation
-    :  ((unit -> 'a)[@local])
+    :  (unit -> 'a)
     -> 'a * Allocation_report.t * Allocation_log.t list
 
   (** Same as [measure_and_log_allocation], but for functions that return a local
       value. *)
   val measure_and_log_allocation_local
-    :  ((unit -> ('a[@local]))[@local])
-    -> ('a * Allocation_report.t * Allocation_log.t list[@local])
+    :  (unit -> 'a)
+    -> 'a * Allocation_report.t * Allocation_log.t list
 
   (** [is_zero_alloc f] runs [f ()] and returns [true] if it does not allocate, or [false]
       otherwise. [is_zero_alloc] does not allocate. *)
-  val is_zero_alloc : ((unit -> _)[@local]) -> bool
+  val is_zero_alloc : (unit -> _) -> bool
 
   (** Same as [is_zero_alloc], but for functions that return a local value. *)
-  val is_zero_alloc_local : ((unit -> (_[@local]))[@local]) -> bool
+  val is_zero_alloc_local : (unit -> _) -> bool
 
   (** [assert_no_allocation [%here] f] raises if [f] allocates. *)
-  val assert_no_allocation : Source_code_position.t -> ((unit -> 'a)[@local]) -> 'a
+  val assert_no_allocation : Source_code_position.t -> (unit -> 'a) -> 'a
 
   (** Same as [assert_no_allocation], but for functions that return a local value. *)
-  val assert_no_allocation_local
-    :  Source_code_position.t
-    -> ((unit -> ('a[@local]))[@local])
-    -> ('a[@local])
+  val assert_no_allocation_local : Source_code_position.t -> (unit -> 'a) -> 'a
 end
 
 (** The [Expert] module contains functions that novice users should not use, due to their

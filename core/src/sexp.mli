@@ -5,7 +5,8 @@ open! Import
 type t = Base.Sexp.t =
   | Atom of string
   | List of t list
-[@@deriving bin_io, globalize, hash, sexp, sexp_grammar]
+[@@deriving
+  bin_io, compare ~localize, equal ~localize, globalize, hash, sexp, sexp_grammar]
 
 module O : sig
   type sexp = Base.Sexp.t =
@@ -103,6 +104,7 @@ module Stable : sig
     type nonrec t = t =
       | Atom of string
       | List of t list
-    [@@deriving sexp, bin_io, hash, compare, equal, sexp_grammar, stable_witness]
+    [@@deriving
+      sexp, bin_io, hash, compare ~localize, equal ~localize, sexp_grammar, stable_witness]
   end
 end

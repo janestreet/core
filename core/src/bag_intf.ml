@@ -56,7 +56,7 @@ module type S = sig
   val clear : 'a t -> unit
 
   (** [filter_inplace t ~f] removes all the elements from [t] that don't satisfy [f]. *)
-  val filter_inplace : 'a t -> f:(('a -> bool)[@local]) -> unit
+  val filter_inplace : 'a t -> f:('a -> bool) -> unit
 
   (** [iter_elt t ~f] calls [f] on each element of the bag. *)
   val iter_elt : 'a t -> f:('a Elt.t -> unit) -> unit

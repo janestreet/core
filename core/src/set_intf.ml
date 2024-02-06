@@ -121,8 +121,7 @@ module type Accessors_generic = sig
   val to_map
     : ( 'a
       , 'cmp
-      , ('a, 'cmp) t -> f:(('a elt -> 'b)[@local]) -> ('a elt, 'b, 'cmp cmp) Base.Map.t
-      )
+      , ('a, 'cmp) t -> f:('a elt -> 'b) -> ('a elt, 'b, 'cmp cmp) Base.Map.t )
       access_options
 
   val quickcheck_observer

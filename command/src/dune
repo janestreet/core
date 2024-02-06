@@ -1,3 +1,6 @@
-(library (name command) (public_name core.command)
+(library
+ (name command)
+ (public_name core.command)
  (libraries base filename_base stdio univ_map)
- (preprocess (pps ppx_jane ppx_optcomp)))
+ (preprocess
+  (pps ppx_jane ppx_optcomp)))

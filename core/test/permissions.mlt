@@ -123,7 +123,8 @@ Error: In this `with' constraint, the new definition of t
 type -'perm t constraint 'perm = [< _ perms ]
 type 'perm alias = 'perm t
 
-[%%expect {|
+[%%expect
+  {|
 |}]
 
 (* Situation where constraints don't work with type aliases *)

@@ -74,6 +74,12 @@ module Replace_polymorphic_compare : Comparable.Comparisons with type t := t = B
 include Base.Int63
 include Comparable.Validate_with_zero (Base.Int63)
 
+module Binary = struct
+  include Binary
+
+  type nonrec t = t [@@deriving typerep, bin_io]
+end
+
 module Hex = struct
   include Hex
 

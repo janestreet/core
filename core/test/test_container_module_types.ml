@@ -14,57 +14,51 @@ module For_container = struct
 
     val length : (_, _, [> read ]) t -> int
     val is_empty : (_, _, [> read ]) t -> bool
-
-    val mem
-      :  ('a, _, [> read ]) t
-      -> 'a elt
-      -> equal:(('a elt -> 'a elt -> bool)[@local])
-      -> bool
-
-    val iter : ('a, _, [> read ]) t -> f:(('a elt -> unit)[@local]) -> unit
+    val mem : ('a, _, [> read ]) t -> 'a elt -> equal:('a elt -> 'a elt -> bool) -> bool
+    val iter : ('a, _, [> read ]) t -> f:('a elt -> unit) -> unit
 
     val fold
       :  ('a, _, [> read ]) t
       -> init:'accum
-      -> f:(('accum -> 'a elt -> 'accum)[@local])
+      -> f:('accum -> 'a elt -> 'accum)
       -> 'accum
 
     val fold_result
       :  ('a, _, [> read ]) t
       -> init:'accum
-      -> f:(('accum -> 'a elt -> ('accum, 'e) Result.t)[@local])
+      -> f:('accum -> 'a elt -> ('accum, 'e) Result.t)
       -> ('accum, 'e) Result.t
 
     val fold_until
       :  ('a, _, [> read ]) t
       -> init:'accum
-      -> f:(('accum -> 'a elt -> ('accum, 'final) Continue_or_stop.t)[@local])
-      -> finish:(('accum -> 'final)[@local])
+      -> f:('accum -> 'a elt -> ('accum, 'final) Continue_or_stop.t)
+      -> finish:('accum -> 'final)
       -> 'final
 
-    val exists : ('a, _, [> read ]) t -> f:(('a elt -> bool)[@local]) -> bool
-    val for_all : ('a, _, [> read ]) t -> f:(('a elt -> bool)[@local]) -> bool
-    val count : ('a, _, [> read ]) t -> f:(('a elt -> bool)[@local]) -> int
+    val exists : ('a, _, [> read ]) t -> f:('a elt -> bool) -> bool
+    val for_all : ('a, _, [> read ]) t -> f:('a elt -> bool) -> bool
+    val count : ('a, _, [> read ]) t -> f:('a elt -> bool) -> int
 
     val sum
       :  (module Container.Summable with type t = 'sum)
       -> ('a, _, [> read ]) t
-      -> f:(('a elt -> 'sum)[@local])
+      -> f:('a elt -> 'sum)
       -> 'sum
 
-    val find : ('a, _, [> read ]) t -> f:(('a elt -> bool)[@local]) -> 'a elt option
-    val find_map : ('a, _, [> read ]) t -> f:(('a elt -> 'b option)[@local]) -> 'b option
+    val find : ('a, _, [> read ]) t -> f:('a elt -> bool) -> 'a elt option
+    val find_map : ('a, _, [> read ]) t -> f:('a elt -> 'b option) -> 'b option
     val to_list : ('a, _, [> read ]) t -> 'a elt list
     val to_array : ('a, _, [> read ]) t -> 'a elt array
 
     val min_elt
       :  ('a, _, [> read ]) t
-      -> compare:(('a elt -> 'a elt -> int)[@local])
+      -> compare:('a elt -> 'a elt -> int)
       -> 'a elt option
 
     val max_elt
       :  ('a, _, [> read ]) t
-      -> compare:(('a elt -> 'a elt -> int)[@local])
+      -> compare:('a elt -> 'a elt -> int)
       -> 'a elt option
   end
 
@@ -82,35 +76,27 @@ module For_container = struct
       -> ('a, 'p, [< _ perms ]) t
 
     val concat : (('a, 'p, [> read ]) t, 'p, [> read ]) concat -> ('a, 'p, [< _ perms ]) t
-
-    val map
-      :  ('a, 'p, [> read ]) t
-      -> f:(('a elt -> 'b elt)[@local])
-      -> ('b, 'p, [< _ perms ]) t
-
-    val filter
-      :  ('a, 'p, [> read ]) t
-      -> f:(('a elt -> bool)[@local])
-      -> ('a, 'p, [< _ perms ]) t
+    val map : ('a, 'p, [> read ]) t -> f:('a elt -> 'b elt) -> ('b, 'p, [< _ perms ]) t
+    val filter : ('a, 'p, [> read ]) t -> f:('a elt -> bool) -> ('a, 'p, [< _ perms ]) t
 
     val filter_map
       :  ('a, 'p, [> read ]) t
-      -> f:(('a elt -> 'b elt option)[@local])
+      -> f:('a elt -> 'b elt option)
       -> ('b, 'p, [< _ perms ]) t
 
     val concat_map
       :  ('a, 'p, [> read ]) t
-      -> f:(('a elt -> ('b, 'p, [> read ]) t)[@local])
+      -> f:('a elt -> ('b, 'p, [> read ]) t)
       -> ('b, 'p, [< _ perms ]) t
 
     val partition_tf
       :  ('a, 'p, [> read ]) t
-      -> f:(('a elt -> bool)[@local])
+      -> f:('a elt -> bool)
       -> ('a, 'p, [< _ perms ]) t * ('a, 'p, [< _ perms ]) t
 
     val partition_map
       :  ('a, 'p, [> read ]) t
-      -> f:(('a elt -> ('b elt, 'c elt) Either.t)[@local])
+      -> f:('a elt -> ('b elt, 'c elt) Either.t)
       -> ('b, 'p, [< _ perms ]) t * ('c, 'p, [< _ perms ]) t
   end
 end
@@ -125,23 +111,20 @@ module For_indexed_container = struct
     val foldi
       :  ('a, 'p, [> read ]) t
       -> init:'acc
-      -> f:((int -> 'acc -> 'a elt -> 'acc)[@local])
+      -> f:(int -> 'acc -> 'a elt -> 'acc)
       -> 'acc
 
-    val iteri : ('a, 'p, [> read ]) t -> f:((int -> 'a elt -> unit)[@local]) -> unit
-    val existsi : ('a, 'p, [> read ]) t -> f:((int -> 'a elt -> bool)[@local]) -> bool
-    val for_alli : ('a, 'p, [> read ]) t -> f:((int -> 'a elt -> bool)[@local]) -> bool
-    val counti : ('a, 'p, [> read ]) t -> f:((int -> 'a elt -> bool)[@local]) -> int
+    val iteri : ('a, 'p, [> read ]) t -> f:(int -> 'a elt -> unit) -> unit
+    val existsi : ('a, 'p, [> read ]) t -> f:(int -> 'a elt -> bool) -> bool
+    val for_alli : ('a, 'p, [> read ]) t -> f:(int -> 'a elt -> bool) -> bool
+    val counti : ('a, 'p, [> read ]) t -> f:(int -> 'a elt -> bool) -> int
 
     val findi
       :  ('a, 'p, [> read ]) t
-      -> f:((int -> 'a elt -> bool)[@local])
+      -> f:(int -> 'a elt -> bool)
       -> (int * 'a elt) option
 
-    val find_mapi
-      :  ('a, 'p, [> read ]) t
-      -> f:((int -> 'a elt -> 'b option)[@local])
-      -> 'b option
+    val find_mapi : ('a, 'p, [> read ]) t -> f:(int -> 'a elt -> 'b option) -> 'b option
   end
 
   module type Generic_with_creators_permissions = sig
@@ -152,26 +135,26 @@ module For_indexed_container = struct
         with type 'a elt := 'a elt
          and type ('a, 'b, 'c) t := ('a, 'b, 'c) t
 
-    val init : int -> f:((int -> 'a elt)[@local]) -> ('a, 'p, [< _ perms ]) t
+    val init : int -> f:(int -> 'a elt) -> ('a, 'p, [< _ perms ]) t
 
     val mapi
       :  ('a, 'p, [> read ]) t
-      -> f:((int -> 'a elt -> 'b elt)[@local])
+      -> f:(int -> 'a elt -> 'b elt)
       -> ('b, 'p, [< _ perms ]) t
 
     val filteri
       :  ('a, 'p, [> read ]) t
-      -> f:((int -> 'a elt -> bool)[@local])
+      -> f:(int -> 'a elt -> bool)
       -> ('a, 'p, [< _ perms ]) t
 
     val filter_mapi
       :  ('a, 'p, [> read ]) t
-      -> f:((int -> 'a elt -> 'b elt option)[@local])
+      -> f:(int -> 'a elt -> 'b elt option)
       -> ('b, 'p, [< _ perms ]) t
 
     val concat_mapi
       :  ('a, 'p, [> read ]) t
-      -> f:((int -> 'a elt -> ('b, 'p, [> read ]) t)[@local])
+      -> f:(int -> 'a elt -> ('b, 'p, [> read ]) t)
       -> ('b, 'p, [< _ perms ]) t
   end
 end

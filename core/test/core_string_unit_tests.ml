@@ -59,3 +59,29 @@ let%test_unit "String.Caseless.compare is consistent with String.compare of lowe
       (String.Caseless.compare x y)
       ~expect:(String.compare (String.lowercase x) (String.lowercase y)))
 ;;
+
+let%expect_test "Test unicode string quickcheck generators" =
+  let test (module Utf : String.Utf) =
+    let test_can_generate =
+      Quickcheck.test_can_generate
+        [%quickcheck.generator: Utf.t]
+        ~sexp_of:[%sexp_of: Utf.t]
+    in
+    test_can_generate ~f:(fun utf -> String.is_empty (Utf.to_string utf));
+    test_can_generate ~f:(fun utf -> String.length (Utf.to_string utf) > 10);
+    Quickcheck.test_distinct_values
+      [%quickcheck.generator: Utf.t]
+      ~sexp_of:[%sexp_of: Utf.t]
+      ~trials:1_000
+      ~distinct_values:500
+      ~compare:Utf.compare;
+    Quickcheck.iter [%quickcheck.generator: Utf.t] ~f:(fun utf ->
+      assert (Utf.is_valid (Utf.to_string utf)))
+  in
+  test (module String.Utf8);
+  test (module String.Utf16le);
+  test (module String.Utf16be);
+  test (module String.Utf32le);
+  test (module String.Utf32be);
+  [%expect {| |}]
+;;

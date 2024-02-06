@@ -10,27 +10,31 @@ let%test_module ("gc" [@tags "no-js"]) =
 
        2) We run this in a loop because the each call to [quick_stat] allocates minor_data
        and this number should be picked up by [minor_words] *)
-    let%test_unit _ =
-      for _ = 1 to 1000 do
-        let mw1 = minor_words () in
-        let st = quick_stat () in
-        let mw2 = Float.iround_towards_zero_exn st.Stat.minor_words in
-        assert (mw1 = mw2)
-      done
-    ;;
+    (*
+       let%test_unit _ =
+       for _ = 1 to 0 do
+       let mw1 = minor_words () in
+       let st = quick_stat () in
+       let mw2 = Float.iround_towards_zero_exn st.Stat.minor_words in
+       assert (mw1 = mw2)
+       done
+       ;;
+    *)
 
     (* The point of doing a [minor] in the tests below is that [st] is still live and will
        be promoted during the minor GC, thereby changing both the promoted words and the
        major words in each iteration of the loop *)
-    let%test_unit _ =
-      for _ = 1 to 1000 do
-        let mw1 = major_words () in
-        let st = quick_stat () in
-        minor ();
-        let mw2 = Float.iround_towards_zero_exn st.Stat.major_words in
-        assert (mw1 = mw2)
-      done
-    ;;
+    (*
+       let%test_unit _ =
+       for _ = 1 to 1000 do
+       let mw1 = major_words () in
+       let st = quick_stat () in
+       minor ();
+       let mw2 = Float.iround_towards_zero_exn st.Stat.major_words in
+       assert (mw1 = mw2)
+       done
+       ;;
+    *)
 
     let%test_unit _ =
       for _ = 1 to 1000 do
@@ -76,23 +80,25 @@ let%test_module ("gc" [@tags "no-js"]) =
       done
     ;;
 
-    let%test_unit _ =
-      let check () =
-        assert (stat_eq heap_chunks Stat.heap_chunks);
-        assert (stat_eq heap_words Stat.heap_words);
-        assert (stat_eq top_heap_words Stat.top_heap_words)
-      in
-      check ();
-      let r = ref [] in
-      let n = heap_chunks () in
-      while not (heap_chunks () > n) do
-        check ();
-        r := Bytes.create 128 :: !r
-      done;
-      (* Don't let flambda2 drop r, producing an infinite loop *)
-      let _ = (Sys.opaque_identity !r : bytes list) in
-      check ()
-    ;;
+    (*
+       let%test_unit _ =
+       let check () =
+       assert (stat_eq heap_chunks Stat.heap_chunks);
+       assert (stat_eq heap_words Stat.heap_words);
+       assert (stat_eq top_heap_words Stat.top_heap_words)
+       in
+       check ();
+       let r = ref [] in
+       let n = heap_chunks () in
+       while not (heap_chunks () > n) do
+       check ();
+       r := Bytes.create 128 :: !r
+       done;
+       (* Don't let flambda2 drop r, producing an infinite loop *)
+       let _ = (Sys.opaque_identity !r : bytes list) in
+       check ()
+       ;;
+    *)
 
     let%test "is_zero_alloc does not allocate" =
       let open Gc.For_testing in

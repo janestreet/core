@@ -3,7 +3,7 @@ open! Import
 include Make_substring.F (struct
   type t = Bigstring.t [@@deriving quickcheck]
 
-  let create = Bigstring.create ?max_mem_waiting_gc:None
+  let create = Bigstring.create
   let length = Bigstring.length
   let get = Bigstring.get
 

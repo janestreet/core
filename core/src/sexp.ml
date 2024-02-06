@@ -4,7 +4,8 @@ module Stable = struct
   module V1 = struct
     include struct
       (* inherit previously derived values, rather than re-deriving from the type *)
-      type t = Base.Sexp.t [@@deriving compare, equal, globalize, hash]
+      type t = Base.Sexp.t
+      [@@deriving compare ~localize, equal ~localize, globalize, hash]
     end
 
     type t = Base.Sexp.t =

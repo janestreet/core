@@ -10,6 +10,20 @@ module type Stable = sig
   end
 end
 
+module type Binaryable = sig
+  type t
+
+  module Binary : sig
+    type nonrec t = t [@@deriving bin_io, sexp_of, compare ~localize, hash, typerep]
+
+    val to_string : t -> string
+    val to_string_hum : ?delimiter:char -> t -> string
+  end
+
+  (*_ Ensure that this module is an extension of [Base.Int.Binary]. *)
+  include Base.Int.Binaryable with type t := t and module Binary := Binary
+end
+
 module type Hexable = sig
   type t
 
@@ -29,6 +43,7 @@ end
 module type Extension = sig
   type t [@@deriving bin_io, typerep]
 
+  include Binaryable with type t := t
   include Hexable with type t := t
   include Identifiable.S with type t := t
   include Comparable.Validate_with_zero with type t := t

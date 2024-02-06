@@ -138,7 +138,7 @@ val gen_zero : t Quickcheck.Generator.t
     stable types. *)
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving equal, hash, sexp_grammar, typerep]
+    type nonrec t = t [@@deriving equal, hash, sexp_grammar, typerep, globalize]
 
     include
       Stable_comparable.With_stable_witness.V1

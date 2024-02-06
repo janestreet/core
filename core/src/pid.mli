@@ -2,7 +2,7 @@
 
 open! Import
 
-type t [@@deriving bin_io, hash, sexp, quickcheck]
+type t [@@deriving bin_io, hash, sexp, quickcheck] [@@immediate]
 
 include Identifiable.S with type t := t
 

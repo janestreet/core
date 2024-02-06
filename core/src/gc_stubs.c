@@ -7,8 +7,18 @@
 #include <stdbool.h>
 #include "gc_stubs.h"
 
-#if OCAML_VERSION >= 50100 && !OCAML_5_HAS_OCAML_4_GC
+#if OCAML_VERSION >= 50100 && (!OCAML_5_MINUS || defined CAML_RUNTIME_5)
+#include <caml/shared_heap.h>
+#include <caml/minor_gc.h>
 #define HAS_OCAML_5_GC
+#endif
+
+// These stubs are only available to gc.ml, which branches based on
+// %runtime5, so we expect the various [caml_failwith] cases to be
+// unreachable.
+
+#ifdef CAML_RUNTIME_5
+#define HAS_COMPACTIONS_COUNT
 #endif
 
 static intnat minor_words(void) {
@@ -57,7 +67,15 @@ CAMLprim value core_gc_major_collections(value unit) {
 
 CAMLprim value core_gc_compactions(value unit) {
   (void)unit;
+  // In OCaml 5-trunk, the number of collections is an atomic global state
+  // variable.
+#ifdef HAS_COMPACTIONS_COUNT
+  return Val_long(atomic_load(&caml_compactions_count));
+#elif defined HAS_OCAML_5_GC
+  caml_failwith("core_gc_compactions: not yet supported in OCaml 5.");
+#else
   return Val_long(caml_stat_compactions);
+#endif
 }
 
 CAMLprim value core_gc_major_plus_minor_words(value unit) {
@@ -81,21 +99,29 @@ CAMLprim value core_gc_run_memprof_callbacks(value unit) {
   return Val_unit;
 }
 
-#if OCAML_VERSION < 50000 || OCAML_VERSION >= 50100 && OCAML_5_HAS_OCAML_4_GC
-
 CAMLprim value core_gc_heap_words(value unit) {
   (void)unit;
+#ifdef HAS_OCAML_5_GC
+  caml_failwith("core_gc_heap_words: not supported in OCaml 5.");
+#else
   return Val_long(caml_stat_heap_wsz);
+#endif
 }
 
 CAMLprim value core_gc_heap_chunks(value unit) {
   (void)unit;
+#ifdef HAS_OCAML_5_GC
+  caml_failwith("core_gc_heap_chunks: not supported in OCaml 5.");
+#else
   return Val_long(caml_stat_heap_chunks);
+#endif
 }
 
 CAMLprim value core_gc_top_heap_words(value unit) {
   (void)unit;
+#ifdef HAS_OCAML_5_GC
+  caml_failwith("core_gc_top_heap_words: not supported in OCaml 5.");
+#else
   return Val_long(caml_stat_top_heap_wsz);
-}
-
 #endif
+}

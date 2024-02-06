@@ -27,12 +27,7 @@ module T = Stable.V1
 include T
 module Unstable = T
 
-let create ?max_mem_waiting_gc size =
-  let max_mem_waiting_gc_in_bytes =
-    Option.map max_mem_waiting_gc ~f:Byte_units0.bytes_int_exn
-  in
-  create ?max_mem_waiting_gc_in_bytes size
-;;
+let create size = create size
 
 let sub_shared ?(pos = 0) ?len (bstr : t) =
   let len = get_opt_len bstr ~pos len in
@@ -153,14 +148,13 @@ let get_tail_padded_fixed_string ~padding t ~pos ~len () =
 ;;
 
 let get_tail_padded_fixed_string_local ~padding t ~pos ~len () =
-  
-    (let data_end =
-       last_nonmatch_plus_one ~buf:t ~min_pos:pos ~pos:(pos + len) ~char:padding
-     in
-     let len = data_end - pos in
-     let dst = Bytes.create_local len in
-     To_bytes.blit ~src:t ~src_pos:pos ~dst ~dst_pos:0 ~len;
-     Bytes.unsafe_to_string ~no_mutation_while_string_reachable:dst)
+  let data_end =
+    last_nonmatch_plus_one ~buf:t ~min_pos:pos ~pos:(pos + len) ~char:padding
+  in
+  let len = data_end - pos in
+  let dst = Bytes.create_local len in
+  To_bytes.blit ~src:t ~src_pos:pos ~dst ~dst_pos:0 ~len;
+  Bytes.unsafe_to_string ~no_mutation_while_string_reachable:dst
 ;;
 
 let[@cold] set_padded_fixed_string_failed ~head_or_tail ~value ~len =
@@ -172,7 +166,7 @@ let[@cold] set_padded_fixed_string_failed ~head_or_tail ~value ~len =
     ()
 ;;
 
-let set_tail_padded_fixed_string ~padding t ~pos ~len (value [@local]) =
+let set_tail_padded_fixed_string ~padding t ~pos ~len value =
   let slen = String.length value in
   if slen > len then set_padded_fixed_string_failed ~head_or_tail:"tail" ~value ~len;
   From_string.blit ~src:value ~dst:t ~src_pos:0 ~dst_pos:pos ~len:slen;
@@ -187,7 +181,7 @@ let rec first_nonmatch ~buf ~pos ~max_pos ~char =
   else pos
 ;;
 
-let set_head_padded_fixed_string ~padding t ~pos ~len (value [@local]) =
+let set_head_padded_fixed_string ~padding t ~pos ~len value =
   let slen = String.length value in
   if slen > len then set_padded_fixed_string_failed ~head_or_tail:"head" ~value ~len;
   From_string.blit ~src:value ~dst:t ~src_pos:0 ~dst_pos:(pos + len - slen) ~len:slen;
@@ -202,12 +196,11 @@ let get_head_padded_fixed_string ~padding t ~pos ~len () =
 ;;
 
 let get_head_padded_fixed_string_local ~padding t ~pos ~len () =
-  
-    (let data_begin = first_nonmatch ~buf:t ~pos ~max_pos:(pos + len - 1) ~char:padding in
-     let len = len - (data_begin - pos) in
-     let dst = Bytes.create_local len in
-     To_bytes.blit ~src:t ~src_pos:data_begin ~dst ~dst_pos:0 ~len;
-     Bytes.unsafe_to_string ~no_mutation_while_string_reachable:dst)
+  let data_begin = first_nonmatch ~buf:t ~pos ~max_pos:(pos + len - 1) ~char:padding in
+  let len = len - (data_begin - pos) in
+  let dst = Bytes.create_local len in
+  To_bytes.blit ~src:t ~src_pos:data_begin ~dst ~dst_pos:0 ~len;
+  Bytes.unsafe_to_string ~no_mutation_while_string_reachable:dst
 ;;
 
 let quickcheck_generator = Base_quickcheck.Generator.bigstring

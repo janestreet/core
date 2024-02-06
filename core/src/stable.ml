@@ -26,6 +26,7 @@ module Blang = Blang.Stable
 module Bool = Bool.Stable
 module Byte_units = Byte_units.Stable
 module Bytes = Bytes.Stable
+module Char = Char.Stable
 module Comparable = Comparable.Stable
 module Comparator = Comparator.Stable
 module Date = Date.Stable
@@ -68,6 +69,7 @@ module Time = Time_float.Stable
 [@@deprecated "[since 2021-11] Use [Time_float] or [Time_float_unix] instead"]
 
 module Time_float = Time_float.Stable
+module Uchar = Uchar.Stable
 module Unit = Unit.Stable
 module Unix = struct end [@@deprecated "[since 2021-02] Use [Core_unix.Stable]"]
 include Perms.Export

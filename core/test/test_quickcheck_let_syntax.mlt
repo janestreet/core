@@ -11,6 +11,7 @@ let quickcheck_generator =
   x ^ x
 ;;
 
-[%%expect {|
+[%%expect
+  {|
 val quickcheck_generator : string Base_quickcheck.Generator.t = <abstr>
 |}]

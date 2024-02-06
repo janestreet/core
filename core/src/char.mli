@@ -43,3 +43,14 @@ val gen_whitespace : t Quickcheck.Generator.t
 (** Generates characters between the given inclusive bounds in ASCII order. Raises if
     bounds are in decreasing order. *)
 val gen_uniform_inclusive : t -> t -> t Quickcheck.Generator.t
+
+module Stable : sig
+  module V1 : sig
+    type nonrec t = t [@@deriving equal, hash, sexp_grammar, typerep]
+
+    include
+      Stable_comparable.With_stable_witness.V1
+        with type t := t
+         and type comparator_witness = comparator_witness
+  end
+end
