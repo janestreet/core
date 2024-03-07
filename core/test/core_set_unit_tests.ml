@@ -1111,7 +1111,7 @@ let%test_module "Set.Poly.Tree" =
 
               type ('a, 'b) set = ('a, 'b) Set.Tree.t
               type ('a, 'b) t_ = 'a t
-              type ('a, 'b) tree = ('a, 'b) Set.Tree.t
+              type ('a, 'b) tree = 'a t
               type 'a cmp = Comparator.Poly.comparator_witness
 
               include Create_options_without_comparator
@@ -1131,7 +1131,7 @@ let%test_module "Int.Set.Tree" =
 
               type ('a, 'b) set = ('a, 'b) Set.Tree.t
               type ('a, 'b) t_ = t
-              type ('a, 'b) tree = ('a, 'b) Set.Tree.t
+              type ('a, 'b) tree = t
               type 'a cmp = Int.comparator_witness
 
               include Create_options_without_comparator

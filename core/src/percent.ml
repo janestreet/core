@@ -4,7 +4,7 @@ open Std_internal
 module Stable = struct
   module V3 = struct
     type t = (float[@quickcheck.generator Float.gen_finite])
-    [@@deriving compare, hash, quickcheck, typerep, stable_witness]
+    [@@deriving compare, globalize, hash, quickcheck, typerep, stable_witness]
 
     (* For [s] which is a string representation of a finite float, in either decimal or
        scientific notation, shift the decimal point or adjust the scientific notation

@@ -396,7 +396,7 @@ module Alternate_sexp = struct
       module T = struct
         (* see tests in lib/core/test/src/test_time_ns that ensure stability of this
            representation *)
-        type nonrec t = t [@@deriving bin_io, compare, hash, sexp, sexp_grammar]
+        type nonrec t = t [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
 
         let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
 

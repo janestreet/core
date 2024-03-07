@@ -545,7 +545,7 @@ module type Time_ns = sig
     module Alternate_sexp : sig
       module V1 : sig
         type t = Alternate_sexp.t
-        [@@deriving bin_io, compare, hash, sexp, sexp_grammar, stable_witness]
+        [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar, stable_witness]
 
         include
           Comparator.Stable.V1.S

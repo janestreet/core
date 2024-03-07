@@ -144,7 +144,7 @@ let get_tail_padded_fixed_string ~padding t ~pos ~len () =
   let data_end =
     last_nonmatch_plus_one ~buf:t ~min_pos:pos ~pos:(pos + len) ~char:padding
   in
-  to_string t ~pos ~len:(data_end - pos)
+  get_string t ~pos ~len:(data_end - pos)
 ;;
 
 let get_tail_padded_fixed_string_local ~padding t ~pos ~len () =
@@ -152,9 +152,7 @@ let get_tail_padded_fixed_string_local ~padding t ~pos ~len () =
     last_nonmatch_plus_one ~buf:t ~min_pos:pos ~pos:(pos + len) ~char:padding
   in
   let len = data_end - pos in
-  let dst = Bytes.create_local len in
-  To_bytes.blit ~src:t ~src_pos:pos ~dst ~dst_pos:0 ~len;
-  Bytes.unsafe_to_string ~no_mutation_while_string_reachable:dst
+  Local.get_string t ~pos ~len
 ;;
 
 let[@cold] set_padded_fixed_string_failed ~head_or_tail ~value ~len =
@@ -192,15 +190,13 @@ let set_head_padded_fixed_string ~padding t ~pos ~len value =
 
 let get_head_padded_fixed_string ~padding t ~pos ~len () =
   let data_begin = first_nonmatch ~buf:t ~pos ~max_pos:(pos + len - 1) ~char:padding in
-  to_string t ~pos:data_begin ~len:(len - (data_begin - pos))
+  get_string t ~pos:data_begin ~len:(len - (data_begin - pos))
 ;;
 
 let get_head_padded_fixed_string_local ~padding t ~pos ~len () =
   let data_begin = first_nonmatch ~buf:t ~pos ~max_pos:(pos + len - 1) ~char:padding in
   let len = len - (data_begin - pos) in
-  let dst = Bytes.create_local len in
-  To_bytes.blit ~src:t ~src_pos:data_begin ~dst ~dst_pos:0 ~len;
-  Bytes.unsafe_to_string ~no_mutation_while_string_reachable:dst
+  Local.get_string t ~pos:data_begin ~len
 ;;
 
 let quickcheck_generator = Base_quickcheck.Generator.bigstring

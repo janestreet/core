@@ -10,94 +10,110 @@ open! Core
 module For_container = struct
   module type Generic_permissions = sig
     type 'a elt
-    type ('a, 'phantom, -'permissions) t
+    type ('a, 'phantom1, 'phantom2, -'permissions) t
 
-    val length : (_, _, [> read ]) t -> int
-    val is_empty : (_, _, [> read ]) t -> bool
-    val mem : ('a, _, [> read ]) t -> 'a elt -> equal:('a elt -> 'a elt -> bool) -> bool
-    val iter : ('a, _, [> read ]) t -> f:('a elt -> unit) -> unit
+    val length : (_, _, _, [> read ]) t -> int
+    val is_empty : (_, _, _, [> read ]) t -> bool
+
+    val mem
+      :  ('a, _, _, [> read ]) t
+      -> 'a elt
+      -> equal:('a elt -> 'a elt -> bool)
+      -> bool
+
+    val iter : ('a, _, _, [> read ]) t -> f:('a elt -> unit) -> unit
 
     val fold
-      :  ('a, _, [> read ]) t
+      :  ('a, _, _, [> read ]) t
       -> init:'accum
       -> f:('accum -> 'a elt -> 'accum)
       -> 'accum
 
     val fold_result
-      :  ('a, _, [> read ]) t
+      :  ('a, _, _, [> read ]) t
       -> init:'accum
       -> f:('accum -> 'a elt -> ('accum, 'e) Result.t)
       -> ('accum, 'e) Result.t
 
     val fold_until
-      :  ('a, _, [> read ]) t
+      :  ('a, _, _, [> read ]) t
       -> init:'accum
       -> f:('accum -> 'a elt -> ('accum, 'final) Continue_or_stop.t)
       -> finish:('accum -> 'final)
       -> 'final
 
-    val exists : ('a, _, [> read ]) t -> f:('a elt -> bool) -> bool
-    val for_all : ('a, _, [> read ]) t -> f:('a elt -> bool) -> bool
-    val count : ('a, _, [> read ]) t -> f:('a elt -> bool) -> int
+    val exists : ('a, _, _, [> read ]) t -> f:('a elt -> bool) -> bool
+    val for_all : ('a, _, _, [> read ]) t -> f:('a elt -> bool) -> bool
+    val count : ('a, _, _, [> read ]) t -> f:('a elt -> bool) -> int
 
     val sum
       :  (module Container.Summable with type t = 'sum)
-      -> ('a, _, [> read ]) t
+      -> ('a, _, _, [> read ]) t
       -> f:('a elt -> 'sum)
       -> 'sum
 
-    val find : ('a, _, [> read ]) t -> f:('a elt -> bool) -> 'a elt option
-    val find_map : ('a, _, [> read ]) t -> f:('a elt -> 'b option) -> 'b option
-    val to_list : ('a, _, [> read ]) t -> 'a elt list
-    val to_array : ('a, _, [> read ]) t -> 'a elt array
+    val find : ('a, _, _, [> read ]) t -> f:('a elt -> bool) -> 'a elt option
+    val find_map : ('a, _, _, [> read ]) t -> f:('a elt -> 'b option) -> 'b option
+    val to_list : ('a, _, _, [> read ]) t -> 'a elt list
+    val to_array : ('a, _, _, [> read ]) t -> 'a elt array
 
     val min_elt
-      :  ('a, _, [> read ]) t
+      :  ('a, _, _, [> read ]) t
       -> compare:('a elt -> 'a elt -> int)
       -> 'a elt option
 
     val max_elt
-      :  ('a, _, [> read ]) t
+      :  ('a, _, _, [> read ]) t
       -> compare:('a elt -> 'a elt -> int)
       -> 'a elt option
   end
 
   module type Generic_with_creators_permissions = sig
-    type (_, _, _) concat
+    type (_, _, _, _) concat
 
     include Generic_permissions
 
-    val of_list : 'a elt list -> ('a, 'p, [< _ perms ]) t
-    val of_array : 'a elt array -> ('a, 'p, [< _ perms ]) t
+    val of_list : 'a elt list -> ('a, 'p1, 'p2, [< _ perms ]) t
+    val of_array : 'a elt array -> ('a, 'p1, 'p2, [< _ perms ]) t
 
     val append
-      :  ('a, 'p, [> read ]) t
-      -> ('a, 'p, [> read ]) t
-      -> ('a, 'p, [< _ perms ]) t
+      :  ('a, 'p1, 'p2, [> read ]) t
+      -> ('a, 'p1, 'p2, [> read ]) t
+      -> ('a, 'p1, 'p2, [< _ perms ]) t
 
-    val concat : (('a, 'p, [> read ]) t, 'p, [> read ]) concat -> ('a, 'p, [< _ perms ]) t
-    val map : ('a, 'p, [> read ]) t -> f:('a elt -> 'b elt) -> ('b, 'p, [< _ perms ]) t
-    val filter : ('a, 'p, [> read ]) t -> f:('a elt -> bool) -> ('a, 'p, [< _ perms ]) t
+    val concat
+      :  (('a, 'p1, 'p2, [> read ]) t, 'p1, 'p2, [> read ]) concat
+      -> ('a, 'p1, 'p2, [< _ perms ]) t
+
+    val map
+      :  ('a, 'p1, 'p2, [> read ]) t
+      -> f:('a elt -> 'b elt)
+      -> ('b, 'p1, 'p2, [< _ perms ]) t
+
+    val filter
+      :  ('a, 'p1, 'p2, [> read ]) t
+      -> f:('a elt -> bool)
+      -> ('a, 'p1, 'p2, [< _ perms ]) t
 
     val filter_map
-      :  ('a, 'p, [> read ]) t
+      :  ('a, 'p1, 'p2, [> read ]) t
       -> f:('a elt -> 'b elt option)
-      -> ('b, 'p, [< _ perms ]) t
+      -> ('b, 'p1, 'p2, [< _ perms ]) t
 
     val concat_map
-      :  ('a, 'p, [> read ]) t
-      -> f:('a elt -> ('b, 'p, [> read ]) t)
-      -> ('b, 'p, [< _ perms ]) t
+      :  ('a, 'p1, 'p2, [> read ]) t
+      -> f:('a elt -> ('b, 'p1, 'p2, [> read ]) t)
+      -> ('b, 'p1, 'p2, [< _ perms ]) t
 
     val partition_tf
-      :  ('a, 'p, [> read ]) t
+      :  ('a, 'p1, 'p2, [> read ]) t
       -> f:('a elt -> bool)
-      -> ('a, 'p, [< _ perms ]) t * ('a, 'p, [< _ perms ]) t
+      -> ('a, 'p1, 'p2, [< _ perms ]) t * ('a, 'p1, 'p2, [< _ perms ]) t
 
     val partition_map
-      :  ('a, 'p, [> read ]) t
+      :  ('a, 'p1, 'p2, [> read ]) t
       -> f:('a elt -> ('b elt, 'c elt) Either.t)
-      -> ('b, 'p, [< _ perms ]) t * ('c, 'p, [< _ perms ]) t
+      -> ('b, 'p1, 'p2, [< _ perms ]) t * ('c, 'p1, 'p2, [< _ perms ]) t
   end
 end
 
@@ -109,22 +125,25 @@ module For_indexed_container = struct
         0 is added as the first argument to [f]. *)
 
     val foldi
-      :  ('a, 'p, [> read ]) t
+      :  ('a, 'p1, 'p2, [> read ]) t
       -> init:'acc
       -> f:(int -> 'acc -> 'a elt -> 'acc)
       -> 'acc
 
-    val iteri : ('a, 'p, [> read ]) t -> f:(int -> 'a elt -> unit) -> unit
-    val existsi : ('a, 'p, [> read ]) t -> f:(int -> 'a elt -> bool) -> bool
-    val for_alli : ('a, 'p, [> read ]) t -> f:(int -> 'a elt -> bool) -> bool
-    val counti : ('a, 'p, [> read ]) t -> f:(int -> 'a elt -> bool) -> int
+    val iteri : ('a, 'p1, 'p2, [> read ]) t -> f:(int -> 'a elt -> unit) -> unit
+    val existsi : ('a, 'p1, 'p2, [> read ]) t -> f:(int -> 'a elt -> bool) -> bool
+    val for_alli : ('a, 'p1, 'p2, [> read ]) t -> f:(int -> 'a elt -> bool) -> bool
+    val counti : ('a, 'p1, 'p2, [> read ]) t -> f:(int -> 'a elt -> bool) -> int
 
     val findi
-      :  ('a, 'p, [> read ]) t
+      :  ('a, 'p1, 'p2, [> read ]) t
       -> f:(int -> 'a elt -> bool)
       -> (int * 'a elt) option
 
-    val find_mapi : ('a, 'p, [> read ]) t -> f:(int -> 'a elt -> 'b option) -> 'b option
+    val find_mapi
+      :  ('a, 'p1, 'p2, [> read ]) t
+      -> f:(int -> 'a elt -> 'b option)
+      -> 'b option
   end
 
   module type Generic_with_creators_permissions = sig
@@ -133,29 +152,29 @@ module For_indexed_container = struct
     include
       Generic_permissions
         with type 'a elt := 'a elt
-         and type ('a, 'b, 'c) t := ('a, 'b, 'c) t
+         and type ('a, 'b, 'c, 'd) t := ('a, 'b, 'c, 'd) t
 
-    val init : int -> f:(int -> 'a elt) -> ('a, 'p, [< _ perms ]) t
+    val init : int -> f:(int -> 'a elt) -> ('a, 'p1, 'p2, [< _ perms ]) t
 
     val mapi
-      :  ('a, 'p, [> read ]) t
+      :  ('a, 'p1, 'p2, [> read ]) t
       -> f:(int -> 'a elt -> 'b elt)
-      -> ('b, 'p, [< _ perms ]) t
+      -> ('b, 'p1, 'p2, [< _ perms ]) t
 
     val filteri
-      :  ('a, 'p, [> read ]) t
+      :  ('a, 'p1, 'p2, [> read ]) t
       -> f:(int -> 'a elt -> bool)
-      -> ('a, 'p, [< _ perms ]) t
+      -> ('a, 'p1, 'p2, [< _ perms ]) t
 
     val filter_mapi
-      :  ('a, 'p, [> read ]) t
+      :  ('a, 'p1, 'p2, [> read ]) t
       -> f:(int -> 'a elt -> 'b elt option)
-      -> ('b, 'p, [< _ perms ]) t
+      -> ('b, 'p1, 'p2, [< _ perms ]) t
 
     val concat_mapi
-      :  ('a, 'p, [> read ]) t
-      -> f:(int -> 'a elt -> ('b, 'p, [> read ]) t)
-      -> ('b, 'p, [< _ perms ]) t
+      :  ('a, 'p1, 'p2, [> read ]) t
+      -> f:(int -> 'a elt -> ('b, 'p1, 'p2, [> read ]) t)
+      -> ('b, 'p1, 'p2, [< _ perms ]) t
   end
 end
 
@@ -166,9 +185,11 @@ module _ : module type of Container = struct
   (* Ensure that Generic_permissions without the permissions is just Generic. *)
   open struct
     module type Generic_without_permissions = sig
-      type ('a, 'phantom) t
+      type ('a, 'phantom1, 'phantom2) t
 
-      include Generic_permissions with type ('a, 'phantom, _) t := ('a, 'phantom) t
+      include
+        Generic_permissions
+          with type ('a, 'phantom1, 'phantom2, _) t := ('a, 'phantom1, 'phantom2) t
     end
   end
 
@@ -180,13 +201,14 @@ module _ : module type of Container = struct
 
   open struct
     module type Generic_with_creators_without_permissions = sig
-      type ('a, 'phantom) t
-      type ('a, 'phantom) concat
+      type ('a, 'phantom1, 'phantom2) t
+      type ('a, 'phantom1, 'phantom2) concat
 
       include
         Generic_with_creators_permissions
-          with type ('a, 'phantom, _) t := ('a, 'phantom) t
-           and type ('a, 'phantom, _) concat := ('a, 'phantom) concat
+          with type ('a, 'phantom1, 'phantom2, _) t := ('a, 'phantom1, 'phantom2) t
+           and type ('a, 'phantom1, 'phantom2, _) concat :=
+            ('a, 'phantom1, 'phantom2) concat
     end
   end
 
@@ -202,7 +224,7 @@ module _ : module type of Container = struct
       type elt
       type -_ t
 
-      include Generic_permissions with type 'a elt := elt and type (_, _, 'p) t := 'p t
+      include Generic_permissions with type 'a elt := elt and type (_, _, _, 'p) t := 'p t
 
       val mem : [> read ] t -> elt -> bool
     end
@@ -219,7 +241,7 @@ module _ : module type of Container = struct
       type (_, -_) t
 
       include
-        Generic_permissions with type 'a elt := 'a and type ('a, _, 'p) t := ('a, 'p) t
+        Generic_permissions with type 'a elt := 'a and type ('a, _, _, 'p) t := ('a, 'p) t
     end
   end
 
@@ -237,8 +259,8 @@ module _ : module type of Container = struct
       include
         Generic_with_creators_permissions
           with type 'a elt := 'a
-           and type ('a, _, 'p) t := ('a, 'p) t
-           and type ('a, _, 'p) concat := ('a, 'p) t
+           and type ('a, _, _, 'p) t := ('a, 'p) t
+           and type ('a, _, _, 'p) concat := ('a, 'p) t
     end
   end
 
@@ -253,9 +275,11 @@ module _ : module type of Indexed_container = struct
   (* Ensure that Generic_permissions without the permissions is just Generic. *)
   open struct
     module type Generic_without_permissions = sig
-      type ('a, 'phantom) t
+      type ('a, 'phantom1, 'phantom2) t
 
-      include Generic_permissions with type ('a, 'phantom, _) t := ('a, 'phantom) t
+      include
+        Generic_permissions
+          with type ('a, 'phantom1, 'phantom2, _) t := ('a, 'phantom1, 'phantom2) t
     end
   end
 
@@ -267,13 +291,14 @@ module _ : module type of Indexed_container = struct
 
   open struct
     module type Generic_with_creators_without_permissions = sig
-      type ('a, 'phantom) t
-      type ('a, 'phantom) concat
+      type ('a, 'phantom1, 'phantom2) t
+      type ('a, 'phantom1, 'phantom2) concat
 
       include
         Generic_with_creators_permissions
-          with type ('a, 'phantom, _) t := ('a, 'phantom) t
-           and type ('a, 'phantom, _) concat := ('a, 'phantom) concat
+          with type ('a, 'phantom1, 'phantom2, _) t := ('a, 'phantom1, 'phantom2) t
+           and type ('a, 'phantom1, 'phantom2, _) concat :=
+            ('a, 'phantom1, 'phantom2) concat
     end
   end
 
@@ -291,7 +316,7 @@ module _ : module type of Indexed_container = struct
       include
         Generic_permissions
           with type 'a elt := 'a
-           and type ('a, _, 'perms) t := ('a, 'perms) t
+           and type ('a, _, _, 'perms) t := ('a, 'perms) t
     end
   end
 
@@ -310,8 +335,8 @@ module _ : module type of Indexed_container = struct
       include
         Generic_with_creators_permissions
           with type 'a elt := 'a
-           and type ('a, _, 'p) t := ('a, 'p) t
-           and type ('a, _, 'p) concat := ('a, 'p) t
+           and type ('a, _, _, 'p) t := ('a, 'p) t
+           and type ('a, _, _, 'p) concat := ('a, 'p) t
     end
   end
 

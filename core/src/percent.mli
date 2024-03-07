@@ -252,7 +252,15 @@ module Stable : sig
     module Bin_shape_same_as_float : sig
       type nonrec t = t
       [@@deriving
-        sexp, sexp_grammar, bin_io, compare, hash, equal, typerep, stable_witness]
+        sexp
+        , sexp_grammar
+        , bin_io
+        , compare
+        , globalize
+        , hash
+        , equal
+        , typerep
+        , stable_witness]
     end
   end
 
@@ -262,7 +270,8 @@ module Stable : sig
         [Percent.to_string] (think user interfaces).  Read the comment above at [V1] for
         details. *)
     type nonrec t = t
-    [@@deriving sexp, sexp_grammar, bin_io, compare, hash, equal, typerep, stable_witness]
+    [@@deriving
+      sexp, sexp_grammar, bin_io, compare, globalize, hash, equal, typerep, stable_witness]
 
     val to_string : t -> string
     val of_string : string -> t
@@ -288,7 +297,8 @@ module Stable : sig
         {[ stable.V3.of_string "17.33%" <> of_percentage 17.33 ]}
     *)
     type nonrec t = t
-    [@@deriving sexp, sexp_grammar, bin_io, compare, hash, equal, typerep, stable_witness]
+    [@@deriving
+      sexp, sexp_grammar, bin_io, compare, globalize, hash, equal, typerep, stable_witness]
 
     include
       Comparable_binable

@@ -385,6 +385,7 @@ module Make_tree_S1 (Key : Comparator.S1) = struct
   ;;
 
   let merge a b ~f = merge a b ~f ~comparator
+  let merge_disjoint_exn a b = merge_disjoint_exn a b ~comparator
   let merge_skewed a b ~combine = merge_skewed a b ~combine ~comparator
   let min_elt = min_elt
   let min_elt_exn = min_elt_exn

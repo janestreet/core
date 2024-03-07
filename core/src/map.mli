@@ -576,12 +576,16 @@ val validatei
 
 (** Merges two maps. The runtime is O(length(t1) + length(t2)). In particular,
     you shouldn't use this function to merge a list of maps. Consider using
-    [merge_skewed] instead. *)
+    [merge_disjoint_exn] or [merge_skewed] instead. *)
 val merge
   :  ('k, 'v1, 'cmp) t
   -> ('k, 'v2, 'cmp) t
   -> f:(key:'k -> ('v1, 'v2) Merge_element.t -> 'v3 option)
   -> ('k, 'v3, 'cmp) t
+
+(** Merges two dictionaries with the same type of data and disjoint sets of keys.
+    Raises if any keys overlap. *)
+val merge_disjoint_exn : ('k, 'v, 'cmp) t -> ('k, 'v, 'cmp) t -> ('k, 'v, 'cmp) t
 
 (** A special case of [merge], [merge_skewed t1 t2] is a map containing all the
     bindings of [t1] and [t2]. Bindings that appear in both [t1] and [t2] are

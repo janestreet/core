@@ -57,6 +57,7 @@ struct
     let symmetric_diff x = simplify_accessor symmetric_diff x
     let fold_symmetric_diff x = simplify_accessor fold_symmetric_diff x
     let merge x = simplify_accessor merge x
+    let merge_disjoint_exn x = simplify_accessor merge_disjoint_exn x
     let merge_skewed x = simplify_accessor merge_skewed x
     let split x = simplify_accessor split x
     let split_le_gt x = simplify_accessor split_le_gt x
@@ -1272,6 +1273,35 @@ struct
       [ 0, -10; 3, 13; 4, 14; 6, 16 ]
       [ 1, 11; 3, 13; 4, -15; 5, -15 ]
       [ 1, `Right 11; 3, `Both (13, 13); 6, `Left 16 ]
+  ;;
+
+  let merge_disjoint_exn _ = assert false
+
+  let%test_unit _ =
+    let to_alist list = List.map list ~f:(fun x -> Key.of_int x, x) in
+    let test_ok a b =
+      [%test_result: (Key.t * int) list]
+        (Map.to_alist
+           (Map.merge_disjoint_exn
+              (Map.of_alist_exn (to_alist a))
+              (Map.of_alist_exn (to_alist b))))
+        ~expect:(to_alist (List.sort ~compare (a @ b)))
+    in
+    test_ok [] [];
+    test_ok [ 1 ] [ 2 ];
+    test_ok [ 2 ] [ 1 ];
+    test_ok [ 1; 3 ] [ 2; 4 ];
+    test_ok [ 2; 4; 6; 8 ] [ 1; 3; 5; 7; 9 ];
+    let test_error a b =
+      assert (
+        Exn.does_raise (fun () ->
+          Map.merge_disjoint_exn
+            (Map.of_alist_exn (to_alist a))
+            (Map.of_alist_exn (to_alist b))))
+    in
+    test_error [ 1 ] [ 1 ];
+    test_error [ 1; 2 ] [ 2; 3 ];
+    test_error [ 1; 3; 5; 7; 9 ] [ 2; 5; 8 ]
   ;;
 
   let merge_skewed _ = assert false

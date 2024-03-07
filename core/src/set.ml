@@ -129,7 +129,7 @@ let of_hashtbl_keys m hashtbl =
 
 module Creators (Elt : Comparator.S1) : sig
   type nonrec ('a, 'comparator) t_ = ('a Elt.t, Elt.comparator_witness) t
-  type ('a, 'b) tree = ('a, Elt.comparator_witness) Tree.t
+  type ('a, 'b) tree = ('a Elt.t, Elt.comparator_witness) Tree.t
   type 'a elt_ = 'a Elt.t
   type 'a cmp_ = Elt.comparator_witness
 
@@ -147,7 +147,7 @@ end = struct
   open Using_comparator
 
   type nonrec ('a, 'comparator) t_ = ('a Elt.t, Elt.comparator_witness) t
-  type ('a, 'b) tree = ('a, Elt.comparator_witness) Tree.t
+  type ('a, 'b) tree = ('a Elt.t, Elt.comparator_witness) Tree.t
   type 'a elt_ = 'a Elt.t
   type 'cmp cmp_ = Elt.comparator_witness
 
