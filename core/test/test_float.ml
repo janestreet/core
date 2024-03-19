@@ -4,8 +4,7 @@ open! Import
 
 let%expect_test "[Pervasives.float_of_string] supports underscores" =
   print_endline (Stdlib.string_of_float (Stdlib.float_of_string "1_234.567_8"));
-  [%expect {|
-    1234.5678 |}]
+  [%expect {| 1234.5678 |}]
 ;;
 
 let%expect_test "[Sexp.of_float_style] is respected by the various names for [float]" =
@@ -19,12 +18,14 @@ let%expect_test "[Sexp.of_float_style] is respected by the various names for [fl
   [%expect {|
     1234.5678
     1234.5678
-    1234.5678 |}];
+    1234.5678
+    |}];
   Ref.set_temporarily Sexp.of_float_style `Underscores ~f:print;
   [%expect {|
     1_234.5678
     1_234.5678
-    1_234.5678 |}]
+    1_234.5678
+    |}]
 ;;
 
 let%expect_test "[Sexp.of_float_style = `Underscores]" =

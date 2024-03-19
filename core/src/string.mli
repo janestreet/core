@@ -44,6 +44,7 @@ val rtake_while : t -> f:(char -> bool) -> t
 
 include Hexdump.S with type t := t
 include Identifiable.S with type t := t and type comparator_witness := comparator_witness
+include Diffable.S_atomic with type t := t
 include Quickcheckable.S with type t := t
 
 (** Like [quickcheck_generator], but without empty strings. *)
@@ -110,7 +111,7 @@ module Stable : sig
   end
 
   module V1 : sig
-    type nonrec t = t [@@deriving bin_io ~localize]
+    type nonrec t = t [@@deriving bin_io ~localize, diff ~extra_derive:[ sexp ]]
 
     include
       Identifiable_without_binio

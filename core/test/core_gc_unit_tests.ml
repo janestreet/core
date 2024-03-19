@@ -134,7 +134,8 @@ let%expect_test "stat diff" =
      (major_collections 0) (heap_words 0) (heap_chunks 0) (live_words 0)
      (live_blocks 0) (free_words 0) (free_blocks 0) (largest_free 0)
      (fragments 0) (compactions 7) (top_heap_words 0) (stack_size 0)
-     (forced_major_collections 0)) |}]
+     (forced_major_collections 0))
+    |}]
 ;;
 
 let empty_gc_stat =
@@ -170,5 +171,6 @@ let%expect_test "stat add" =
      (major_collections 0) (heap_words 10) (heap_chunks 0) (live_words 0)
      (live_blocks 7) (free_words 0) (free_blocks 0) (largest_free 0)
      (fragments 0) (compactions 4) (top_heap_words 0) (stack_size 0)
-     (forced_major_collections 0)) |}]
+     (forced_major_collections 0))
+    |}]
 ;;

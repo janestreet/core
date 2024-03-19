@@ -252,6 +252,10 @@ module Stable = struct
           (Exn.to_string exn)
           ()
     ;;
+
+    include Diffable.Atomic.Make (struct
+      type nonrec t = t [@@deriving bin_io, equal, sexp]
+    end)
   end
 end
 

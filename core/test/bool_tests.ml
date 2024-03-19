@@ -38,7 +38,8 @@ let%test_module "[of_string_hum]" =
         {|
         ("Bool.of_string_hum: invalid input"
           (input "")
-          (expected_case_insensitive (0 1 f false n no t true y yes))) |}];
+          (expected_case_insensitive (0 1 f false n no t true y yes)))
+        |}];
       let test string =
         Set.iter (variations_of_string string) ~f:(fun string ->
           (* the single-character prefixes might work, so we skip them *)

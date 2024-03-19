@@ -22,7 +22,8 @@ let%expect_test _ =
     (Table (
       (1955-11-12 0)
       (1985-10-26 1)
-      (2015-10-21 2))) |}]
+      (2015-10-21 2)))
+    |}]
 ;;
 
 let%expect_test "Date.V1" =
@@ -41,7 +42,8 @@ let%expect_test "Date.V1" =
     ((sexp   1955-11-05)
      (bin_io "\254\163\007\n\005"))
     ((sexp   2012-04-19)
-     (bin_io "\254\220\007\003\019")) |}];
+     (bin_io "\254\220\007\003\019"))
+    |}];
   List.iter examples ~f:(fun date ->
     let int = Date.Stable.V1.to_int date in
     print_s [%sexp (date : Date.Stable.V1.t), (int : int)];
@@ -51,7 +53,8 @@ let%expect_test "Date.V1" =
     {|
     (1066-10-16 69_863_952)
     (1955-11-05 128_125_701)
-    (2012-04-19 131_859_475) |}];
+    (2012-04-19 131_859_475)
+    |}];
   require_does_raise [%here] (fun () -> Date.Stable.V1.of_int_exn 0);
   [%expect {| (Failure "Month.of_int_exn 0") |}]
 ;;
@@ -78,7 +81,8 @@ let%expect_test "Date.V1.Set" =
     ((sexp (1955-11-05 2012-04-19))
      (bin_io "\002\254\163\007\n\005\254\220\007\003\019"))
     ((sexp (1066-10-16 1955-11-05 2012-04-19))
-     (bin_io "\003\254*\004\t\016\254\163\007\n\005\254\220\007\003\019")) |}]
+     (bin_io "\003\254*\004\t\016\254\163\007\n\005\254\220\007\003\019"))
+    |}]
 ;;
 
 let%expect_test "Date.V1.Map" =
@@ -119,7 +123,8 @@ let%expect_test "Date.V1.Map" =
        (1955-11-05 "flux capacitor")
        (2012-04-19 "a Thursday")))
      (bin_io
-      "\003\254*\004\t\016\026not the Battle of Hastings\254\163\007\n\005\014flux capacitor\254\220\007\003\019\na Thursday")) |}]
+      "\003\254*\004\t\016\026not the Battle of Hastings\254\163\007\n\005\014flux capacitor\254\220\007\003\019\na Thursday"))
+    |}]
 ;;
 
 let%expect_test "Date.Option.V1" =
@@ -139,7 +144,8 @@ let%expect_test "Date.Option.V1" =
     ((sexp ()) (bin_io "\000"))
     ((sexp (1066-10-16)) (bin_io "\253\016\n*\004"))
     ((sexp (1955-11-05)) (bin_io "\253\005\011\163\007"))
-    ((sexp (2012-04-19)) (bin_io "\253\019\004\220\007")) |}];
+    ((sexp (2012-04-19)) (bin_io "\253\019\004\220\007"))
+    |}];
   List.iter date_opt_examples ~f:(fun date ->
     let int = Date.Stable.Option.V1.to_int date in
     print_s [%sexp (date : Date.Stable.Option.V1.t), (int : int)];
@@ -150,7 +156,8 @@ let%expect_test "Date.Option.V1" =
     (() 0)
     ((1066-10-16) 69_863_952)
     ((1955-11-05) 128_125_701)
-    ((2012-04-19) 131_859_475) |}]
+    ((2012-04-19) 131_859_475)
+    |}]
 ;;
 
 let%expect_test "create_exn doesn't allocate" =
@@ -191,7 +198,8 @@ let%expect_test "add_years" =
     2013-10-07 +  1 years = 2014-10-07
     2013-10-07 +  2 years = 2015-10-07
     2013-10-07 +  3 years = 2016-10-07
-    2013-10-07 +  4 years = 2017-10-07 |}];
+    2013-10-07 +  4 years = 2017-10-07
+    |}];
   (* leap day maps to Feb 28 on non-leap years (and 400-year century behaves properly) *)
   test "2004-02-29";
   [%expect
@@ -204,7 +212,8 @@ let%expect_test "add_years" =
     2004-02-29 +  1 years = 2005-02-28
     2004-02-29 +  2 years = 2006-02-28
     2004-02-29 +  3 years = 2007-02-28
-    2004-02-29 +  4 years = 2008-02-29 |}];
+    2004-02-29 +  4 years = 2008-02-29
+    |}];
   (* non-leap year century behaves properly *)
   test "1904-02-29";
   [%expect
@@ -217,7 +226,8 @@ let%expect_test "add_years" =
     1904-02-29 +  1 years = 1905-02-28
     1904-02-29 +  2 years = 1906-02-28
     1904-02-29 +  3 years = 1907-02-28
-    1904-02-29 +  4 years = 1908-02-29 |}]
+    1904-02-29 +  4 years = 1908-02-29
+    |}]
 ;;
 
 let%test_module "week_number and week_number_and_year" =
@@ -341,7 +351,8 @@ let%test_module "adding weekdays and business days" =
           (-1 THU 2019-05-02)
           (0  FRI 2019-05-03)
           (1  MON 2019-05-06)
-          (2  TUE 2019-05-07))) |}];
+          (2  TUE 2019-05-07)))
+        |}];
       (* Saturday, Sunday: both round back to Friday or forward to Monday *)
       List.iter
         [ Sat, "2019-05-04"; Sun, "2019-05-05" ]
@@ -360,7 +371,8 @@ let%test_module "adding weekdays and business days" =
               (-1 FRI 2019-05-03)
               (0  MON 2019-05-06)
               (1  TUE 2019-05-07)
-              (2  WED 2019-05-08))) |}]);
+              (2  WED 2019-05-08)))
+            |}]);
       (* Monday *)
       test Mon "2019-05-06";
       [%expect
@@ -376,7 +388,8 @@ let%test_module "adding weekdays and business days" =
           (-1 FRI 2019-05-03)
           (0  MON 2019-05-06)
           (1  TUE 2019-05-07)
-          (2  WED 2019-05-08))) |}]
+          (2  WED 2019-05-08)))
+        |}]
     ;;
 
     let%expect_test "business days" =
@@ -405,7 +418,8 @@ let%test_module "adding weekdays and business days" =
           (-1 THU 2019-05-02)
           (0  FRI 2019-05-03)
           (1  TUE 2019-05-07)
-          (2  WED 2019-05-08))) |}];
+          (2  WED 2019-05-08)))
+        |}];
       (* Saturday, Sunday, Monday: all round back to Friday or forward to Tuesday *)
       List.iter
         [ Sat, "2019-05-04"; Sun, "2019-05-05"; Mon, "2019-05-06" ]
@@ -424,7 +438,8 @@ let%test_module "adding weekdays and business days" =
               (-1 FRI 2019-05-03)
               (0  TUE 2019-05-07)
               (1  WED 2019-05-08)
-              (2  THU 2019-05-09))) |}]);
+              (2  THU 2019-05-09)))
+            |}]);
       (* Tuesday *)
       test Tue "2019-05-07";
       [%expect
@@ -440,7 +455,8 @@ let%test_module "adding weekdays and business days" =
           (-1 FRI 2019-05-03)
           (0  TUE 2019-05-07)
           (1  WED 2019-05-08)
-          (2  THU 2019-05-09))) |}]
+          (2  THU 2019-05-09)))
+        |}]
     ;;
   end)
 ;;

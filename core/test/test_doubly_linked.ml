@@ -22,7 +22,8 @@ let%expect_test "empty" =
      ("is_empty t" true)
      ("first t"   ())
      ("last t"    ())
-     ("to_list t" ())) |}];
+     ("to_list t" ()))
+    |}];
   require_none [%here] [%sexp_of: int] (remove_first t);
   require_none [%here] [%sexp_of: int] (remove_last t)
 ;;
@@ -37,7 +38,8 @@ let%expect_test "singleton" =
      ("is_empty t" false)
      ("first t"   (13))
      ("last t"    (13))
-     ("to_list t" (13))) |}];
+     ("to_list t" (13)))
+    |}];
   require [%here] (is_first t elt);
   require [%here] (is_last t elt)
 ;;
@@ -53,7 +55,8 @@ let%expect_test "pair" =
      ("is_empty t" false)
      ("first t" (13))
      ("last t"  (14))
-     ("to_list t" (13 14))) |}];
+     ("to_list t" (13 14)))
+    |}];
   require [%here] (is_first t elt1);
   require [%here] (is_last t elt2)
 ;;
@@ -252,7 +255,8 @@ let%expect_test "length" =
   print_s [%message (length l1 : int) (length l2 : int)];
   [%expect {|
     (("length l1" 0)
-     ("length l2" 8)) |}]
+     ("length l2" 8))
+    |}]
 ;;
 
 let%test_unit "iter_elt" =
@@ -521,7 +525,8 @@ let%expect_test "iteri" =
     f 1 10
     f 2 20
     f 3 30
-    f 4 40 |}]
+    f 4 40
+    |}]
 ;;
 
 let%expect_test "iteri_elt" =
@@ -531,7 +536,8 @@ let%expect_test "iteri_elt" =
     f 1 10
     f 2 20
     f 3 30
-    f 4 40 |}]
+    f 4 40
+    |}]
 ;;
 
 let%expect_test "foldi" =
@@ -546,7 +552,8 @@ let%expect_test "foldi" =
     f 2 1 20
     f 3 3 30
     f 4 6 40
-    result: 10 |}]
+    result: 10
+    |}]
 ;;
 
 let%expect_test "foldi_elt" =
@@ -561,7 +568,8 @@ let%expect_test "foldi_elt" =
     f 2 1 20
     f 3 3 30
     f 4 6 40
-    result: 10 |}]
+    result: 10
+    |}]
 ;;
 
 let%expect_test "fold_right_elt" =
@@ -575,7 +583,8 @@ let%expect_test "fold_right_elt" =
     f 20 2
     f 10 3
     f 0 4
-    result: 5 |}]
+    result: 5
+    |}]
 ;;
 
 let%test _ = compare Int.compare (create ()) (create ()) = 0

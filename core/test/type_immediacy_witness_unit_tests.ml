@@ -263,7 +263,8 @@ let%test_module _ =
       check_n M.typerep_of_t [ { M.foo = () } ] |> require_boxed ~cr:CR_someday;
       check_u M.typerep_of_t [ { M.foo = () } ] |> require_maybe_boxed;
       [%expect {|
-        "Boxed container types should never be immediate" |}]
+        "Boxed container types should never be immediate"
+        |}]
     ;;
 
     let%expect_test _ =
@@ -276,7 +277,8 @@ let%test_module _ =
       check_u M.typerep_of_t [ { M.foo = () } ] |> require_maybe_boxed;
       [%expect
         {|
-        "Unboxed container types should have the immediacy of their contained type" |}]
+        "Unboxed container types should have the immediacy of their contained type"
+        |}]
     ;;
 
     let%expect_test _ =
@@ -385,7 +387,8 @@ let%test_module _ =
       check_n M.typerep_of_t [ M.Foo () ] |> require_boxed ~cr:CR_someday;
       check_u M.typerep_of_t [ M.Foo () ] |> require_maybe_boxed;
       [%expect {|
-        "Boxed container types should never be immediate" |}]
+        "Boxed container types should never be immediate"
+        |}]
     ;;
 
     let%expect_test _ =
@@ -398,7 +401,8 @@ let%test_module _ =
       check_u M.typerep_of_t [ M.Foo () ] |> require_maybe_boxed;
       [%expect
         {|
-        "Unboxed container types should have the immediacy of their contained type" |}]
+        "Unboxed container types should have the immediacy of their contained type"
+        |}]
     ;;
 
     let%expect_test _ =
@@ -535,21 +539,24 @@ let%test_module _ =
       [%expect
         {|
         (Failure
-         "type type_immediacy_witness_unit_tests.ml.t is not independent of its arguments") |}];
+         "type type_immediacy_witness_unit_tests.ml.t is not independent of its arguments")
+        |}];
       require_does_raise [%here] (fun () ->
         let module _ = Type_immediacy.Never.For_all_parameters_S1 (M) in
         ());
       [%expect
         {|
         (Failure
-         "type type_immediacy_witness_unit_tests.ml.t is not independent of its arguments") |}];
+         "type type_immediacy_witness_unit_tests.ml.t is not independent of its arguments")
+        |}];
       require_does_raise [%here] (fun () ->
         let module _ = Type_immediacy.Always.For_all_parameters_S1 (M) in
         ());
       [%expect
         {|
         (Failure
-         "type type_immediacy_witness_unit_tests.ml.t is not independent of its arguments") |}]
+         "type type_immediacy_witness_unit_tests.ml.t is not independent of its arguments")
+        |}]
     ;;
   end)
 ;;

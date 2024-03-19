@@ -19,6 +19,7 @@ module Stable = struct
 
     include Comparable.Stable.V1.With_stable_witness.Make (T)
     include Hashable.Stable.V1.With_stable_witness.Make (T)
+    include Diffable.Atomic.Make (T)
   end
 
   module Make_utf (Utf : sig
@@ -122,6 +123,10 @@ include
     end)
 
 include Comparable.Validate (Base.String)
+
+include Diffable.Atomic.Make (struct
+  type nonrec t = t [@@deriving sexp, bin_io, equal]
+end)
 
 include Hexdump.Of_indexable (struct
   type t = string

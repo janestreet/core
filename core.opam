@@ -20,6 +20,7 @@ depends: [
   "jst-config"
   "ppx_assert"
   "ppx_base"
+  "ppx_diff"
   "ppx_hash"
   "ppx_inline_test"
   "ppx_jane"

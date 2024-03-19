@@ -120,11 +120,9 @@ let%test_module _ =
       test [ 1 ];
       [%expect {| ((key1 1)) |}];
       test [ 1; 2 ];
-      [%expect {|
-        ((key1 1) (key2 2)) |}];
+      [%expect {| ((key1 1) (key2 2)) |}];
       test [ 1; 2; 3 ];
-      [%expect {|
-        ((key1 1) (key2 2) (key3 3)) |}]
+      [%expect {| ((key1 1) (key2 2) (key3 3)) |}]
     ;;
   end)
 ;;
@@ -161,7 +159,8 @@ let%expect_test "specified key module" =
     (Error
      ("[Key.type_id] must not provide different type ids when called on the same input"
       (key Foo) (type_id1 ((name foo) (uid <uid>)))
-      (type_id2 ((name foo) (uid <uid>))))) |}];
+      (type_id2 ((name foo) (uid <uid>)))))
+    |}];
   (* correct use *)
   let module Key_correct = struct
     type _ t =
@@ -237,7 +236,8 @@ let%expect_test "merge" =
     {|
     ((bar ((key Bar) (merge_result (Left (three)))))
      (baz ((key Baz) (merge_result (Right (a b c)))))
-     (foo ((key Foo) (merge_result (Both ((3) (4 5 6))))))) |}]
+     (foo ((key Foo) (merge_result (Both ((3) (4 5 6)))))))
+    |}]
 ;;
 
 let%expect_test "merge1" =
@@ -295,7 +295,8 @@ let%expect_test "merge1" =
     {|
     ((bar ((key Bar) (merge_result (Left (three)))))
      (baz ((key Baz) (merge_result (Right (a b c)))))
-     (foo ((key Foo) (merge_result (Both ((3) (4 5 6))))))) |}]
+     (foo ((key Foo) (merge_result (Both ((3) (4 5 6)))))))
+    |}]
 ;;
 
 module _ = struct

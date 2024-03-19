@@ -18,9 +18,7 @@ end = struct
   ;;
 end
 
-[%%expect
-  {|
-|}]
+[%%expect {| |}]
 
 module Fold_regular (M : sig
     type t = { a : int } [@@deriving fields ~iterators:fold]
@@ -35,9 +33,7 @@ end = struct
   ;;
 end
 
-[%%expect
-  {|
-|}]
+[%%expect {| |}]
 
 module Fold_direct_private (M : sig
     type t = private { a : int } [@@deriving fields ~direct_iterators:fold]
@@ -52,9 +48,7 @@ end = struct
   ;;
 end
 
-[%%expect
-  {|
-|}]
+[%%expect {| |}]
 
 module Fold_direct_regular (M : sig
     type t = { a : int } [@@deriving fields ~direct_iterators:fold]
@@ -69,9 +63,7 @@ end = struct
   ;;
 end
 
-[%%expect
-  {|
-|}]
+[%%expect {| |}]
 
 module Validate_field_private (M : sig
     type t = private { a : int } [@@deriving fields ~iterators:fold]
@@ -86,9 +78,7 @@ end = struct
   ;;
 end
 
-[%%expect
-  {|
-|}]
+[%%expect {| |}]
 
 module Validate_field (M : sig
     type t = { a : int } [@@deriving fields ~iterators:fold]
@@ -103,6 +93,4 @@ end = struct
   ;;
 end
 
-[%%expect
-  {|
-|}]
+[%%expect {| |}]

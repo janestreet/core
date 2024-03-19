@@ -9,6 +9,7 @@ module type S = sig
 
   include Identifiable with type t := t
   include Quickcheckable.S with type t := t
+  include Diffable.S_atomic with type t := t
 
   val arg_type : t Command.Arg_type.t
 
@@ -24,6 +25,7 @@ module type S = sig
           with type comparator_witness = comparator_witness
 
       include Hashable.Stable.V1.With_stable_witness.S with type key := t
+      include Diffable.S_atomic with type t := t
     end
   end
 end

@@ -42,8 +42,9 @@ module Stable = struct
         print_endline [%bin_digest: Serializable.t];
         [%expect
           {|
-                  957990f0fc4161fb874e66872550fb40
-                  957990f0fc4161fb874e66872550fb40 |}]
+          957990f0fc4161fb874e66872550fb40
+          957990f0fc4161fb874e66872550fb40
+          |}]
       ;;
 
       include
@@ -118,7 +119,18 @@ open! Import
 open! Std_internal
 
 module Latest = struct
-  include Stable.V1
+  module T = Stable.V1
+  include T
+
+  include Pretty_printer.Register (struct
+    type nonrec t = t
+
+    let to_string = to_string
+    let module_name = "Core.Host_and_port"
+  end)
+
+  include (Hashable.Make_binable (T) : Hashable.S_binable with type t := t)
+  include Comparable.Make_binable_using_comparator (T)
 end
 
 include Latest
@@ -127,15 +139,14 @@ let create ~host ~port = { host; port }
 let host t = t.host
 let port t = t.port
 let tuple t = to_serializable t
-
-include Pretty_printer.Register (struct
-  type nonrec t = t
-
-  let to_string = to_string
-  let module_name = "Core.Host_and_port"
-end)
-
-include (Hashable.Make_binable (Latest) : Hashable.S_binable with type t := t)
-include Comparable.Make_binable_using_comparator (Latest)
-
 let type_id = Type_equal.Id.create ~name:"Host_and_port" sexp_of_t
+
+module Hide_port_in_test = struct
+  include Latest
+
+  let sexp_of_t t =
+    match am_running_test with
+    | false -> sexp_of_t t
+    | true -> List [ Atom t.host; Atom "PORT" ]
+  ;;
+end

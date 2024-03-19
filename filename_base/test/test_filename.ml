@@ -85,7 +85,8 @@ let%expect_test "V1" =
     ((sexp   //tmp//foo//bar)
      (bin_io "\015//tmp//foo//bar"))
     ((sexp   ././.)
-     (bin_io "\005././.")) |}]
+     (bin_io "\005././."))
+    |}]
 ;;
 
 (* Assert type equality between stable and unstable map types *)
@@ -104,14 +105,16 @@ let%expect_test "to_absolute_exn" =
     (/already/absolute
      /a/b/c/relative
      /a/b/c/../relative
-     /a/b/c/implicitly-relative) |}];
+     /a/b/c/implicitly-relative)
+    |}];
   Expect_test_helpers_core.show_raise (fun () ->
     to_absolute_exn ~relative_to:"./a/relative/path" "foo");
   [%expect
     {|
     (raised (
       Failure
-      "Filename.to_absolute_exn called with a [relative_to] that is a relative path: ./a/relative/path")) |}]
+      "Filename.to_absolute_exn called with a [relative_to] that is a relative path: ./a/relative/path"))
+    |}]
 ;;
 
 let%expect_test "of_absolute_exn" =
@@ -134,10 +137,12 @@ let%expect_test "of_absolute_exn" =
   [%expect
     {|
     ("Filename.of_absolute_exn: [~relative_to] must be an absolute path"
-     (relative_to ./d/e/f)) |}];
+     (relative_to ./d/e/f))
+    |}];
   require_does_raise [%here] (fun () -> of_absolute_exn "./a/b/c" ~relative_to:"/d/e/f");
   [%expect
     {|
     ("Filename.of_absolute_exn: first argument must be an absolute path"
-     (first_arg ./a/b/c)) |}]
+     (first_arg ./a/b/c))
+    |}]
 ;;

@@ -20,27 +20,28 @@ let%expect_test "divide_and_round_up" =
   done;
   [%expect
     {|
-      -10 / 4 = -2
-      -9 / 4 = -2
-      -8 / 4 = -2
-      -7 / 4 = -1
-      -6 / 4 = -1
-      -5 / 4 = -1
-      -4 / 4 = -1
-      -3 / 4 = 0
-      -2 / 4 = 0
-      -1 / 4 = 0
-      0 / 4 = 0
-      1 / 4 = 1
-      2 / 4 = 1
-      3 / 4 = 1
-      4 / 4 = 1
-      5 / 4 = 2
-      6 / 4 = 2
-      7 / 4 = 2
-      8 / 4 = 2
-      9 / 4 = 3
-      10 / 4 = 3 |}]
+    -10 / 4 = -2
+    -9 / 4 = -2
+    -8 / 4 = -2
+    -7 / 4 = -1
+    -6 / 4 = -1
+    -5 / 4 = -1
+    -4 / 4 = -1
+    -3 / 4 = 0
+    -2 / 4 = 0
+    -1 / 4 = 0
+    0 / 4 = 0
+    1 / 4 = 1
+    2 / 4 = 1
+    3 / 4 = 1
+    4 / 4 = 1
+    5 / 4 = 2
+    6 / 4 = 2
+    7 / 4 = 2
+    8 / 4 = 2
+    9 / 4 = 3
+    10 / 4 = 3
+    |}]
 ;;
 
 let int63_ten = Int63.of_int 10
@@ -133,7 +134,8 @@ let%expect_test "write_1_digit_int" =
     (Invalid_argument
       "Digit_string_helpers.write_1_digit_int: -1 out of range [0, 9]")
     (Invalid_argument
-      "Digit_string_helpers.write_1_digit_int: 10 out of range [0, 9]") |}]
+      "Digit_string_helpers.write_1_digit_int: 10 out of range [0, 9]")
+    |}]
 ;;
 
 let%expect_test "write_2_digit_int" =
@@ -154,7 +156,8 @@ let%expect_test "write_2_digit_int" =
     (Invalid_argument
       "Digit_string_helpers.write_2_digit_int: -1 out of range [0, 99]")
     (Invalid_argument
-      "Digit_string_helpers.write_2_digit_int: 100 out of range [0, 99]") |}]
+      "Digit_string_helpers.write_2_digit_int: 100 out of range [0, 99]")
+    |}]
 ;;
 
 let%expect_test "write_3_digit_int" =
@@ -175,7 +178,8 @@ let%expect_test "write_3_digit_int" =
     (Invalid_argument
       "Digit_string_helpers.write_3_digit_int: -1 out of range [0, 999]")
     (Invalid_argument
-      "Digit_string_helpers.write_3_digit_int: 1000 out of range [0, 999]") |}]
+      "Digit_string_helpers.write_3_digit_int: 1000 out of range [0, 999]")
+    |}]
 ;;
 
 let%expect_test "write_4_digit_int" =
@@ -196,7 +200,8 @@ let%expect_test "write_4_digit_int" =
     (Invalid_argument
       "Digit_string_helpers.write_4_digit_int: -1 out of range [0, 9999]")
     (Invalid_argument
-      "Digit_string_helpers.write_4_digit_int: 10000 out of range [0, 9999]") |}]
+      "Digit_string_helpers.write_4_digit_int: 10000 out of range [0, 9999]")
+    |}]
 ;;
 
 let%expect_test "write_5_digit_int" =
@@ -217,7 +222,8 @@ let%expect_test "write_5_digit_int" =
     (Invalid_argument
       "Digit_string_helpers.write_5_digit_int: -1 out of range [0, 99999]")
     (Invalid_argument
-      "Digit_string_helpers.write_5_digit_int: 100000 out of range [0, 99999]") |}]
+      "Digit_string_helpers.write_5_digit_int: 100000 out of range [0, 99999]")
+    |}]
 ;;
 
 let%expect_test "write_6_digit_int" =
@@ -238,7 +244,8 @@ let%expect_test "write_6_digit_int" =
     (Invalid_argument
       "Digit_string_helpers.write_6_digit_int: -1 out of range [0, 999999]")
     (Invalid_argument
-      "Digit_string_helpers.write_6_digit_int: 1000000 out of range [0, 999999]") |}]
+      "Digit_string_helpers.write_6_digit_int: 1000000 out of range [0, 999999]")
+    |}]
 ;;
 
 let%expect_test "write_7_digit_int" =
@@ -259,7 +266,8 @@ let%expect_test "write_7_digit_int" =
     (Invalid_argument
       "Digit_string_helpers.write_7_digit_int: -1 out of range [0, 9999999]")
     (Invalid_argument
-      "Digit_string_helpers.write_7_digit_int: 10000000 out of range [0, 9999999]") |}]
+      "Digit_string_helpers.write_7_digit_int: 10000000 out of range [0, 9999999]")
+    |}]
 ;;
 
 let%expect_test "write_8_digit_int" =
@@ -280,7 +288,8 @@ let%expect_test "write_8_digit_int" =
     (Invalid_argument
       "Digit_string_helpers.write_8_digit_int: -1 out of range [0, 99999999]")
     (Invalid_argument
-      "Digit_string_helpers.write_8_digit_int: 100000000 out of range [0, 99999999]") |}]
+      "Digit_string_helpers.write_8_digit_int: 100000000 out of range [0, 99999999]")
+    |}]
 ;;
 
 let%expect_test "write_9_digit_int" =
@@ -301,7 +310,8 @@ let%expect_test "write_9_digit_int" =
     (Invalid_argument
       "Digit_string_helpers.write_9_digit_int: -1 out of range [0, 999999999]")
     (Invalid_argument
-      "Digit_string_helpers.write_9_digit_int: 1000000000 out of range [0, 999999999]") |}]
+      "Digit_string_helpers.write_9_digit_int: 1000000000 out of range [0, 999999999]")
+    |}]
 ;;
 
 let%expect_test "write_int63" =
@@ -363,7 +373,8 @@ let%expect_test "write_int63" =
     (Invalid_argument
       "Digit_string_helpers.write_int63: -1 out of range [0, 999999999999999999]")
     (Invalid_argument
-      "Digit_string_helpers.write_int63: 1000000000000000000 out of range [0, 999999999999999999]") |}];
+      "Digit_string_helpers.write_int63: 1000000000000000000 out of range [0, 999999999999999999]")
+    |}];
   (* write more digits than Int63.max_value fills *)
   let bytes = Bytes.make 50 '_' in
   write_int63 bytes ~pos:10 ~digits:30 Int63.max_value;
@@ -429,7 +440,8 @@ let%expect_test "read_1_digit_int" =
       "Digit_string_helpers.read_1_digit_int: pos=-1 out of range for string of length 1")
     (Invalid_argument
       "Digit_string_helpers.read_1_digit_int: pos=1 out of range for string of length 1")
-    (Failure "Char.get_digit_exn '!': not a digit") |}]
+    (Failure "Char.get_digit_exn '!': not a digit")
+    |}]
 ;;
 
 let%expect_test "read_2_digit_int" =
@@ -447,7 +459,8 @@ let%expect_test "read_2_digit_int" =
       "Digit_string_helpers.read_2_digit_int: pos=-1 out of range for string of length 2")
     (Invalid_argument
       "Digit_string_helpers.read_2_digit_int: 2 digits do not fit at pos 1 in string of length 2")
-    (Failure "Char.get_digit_exn '!': not a digit") |}]
+    (Failure "Char.get_digit_exn '!': not a digit")
+    |}]
 ;;
 
 let%expect_test "read_3_digit_int" =
@@ -465,7 +478,8 @@ let%expect_test "read_3_digit_int" =
       "Digit_string_helpers.read_3_digit_int: pos=-1 out of range for string of length 3")
     (Invalid_argument
       "Digit_string_helpers.read_3_digit_int: 3 digits do not fit at pos 1 in string of length 3")
-    (Failure "Char.get_digit_exn '!': not a digit") |}]
+    (Failure "Char.get_digit_exn '!': not a digit")
+    |}]
 ;;
 
 let%expect_test "read_4_digit_int" =
@@ -483,7 +497,8 @@ let%expect_test "read_4_digit_int" =
       "Digit_string_helpers.read_4_digit_int: pos=-1 out of range for string of length 4")
     (Invalid_argument
       "Digit_string_helpers.read_4_digit_int: 4 digits do not fit at pos 1 in string of length 4")
-    (Failure "Char.get_digit_exn '!': not a digit") |}]
+    (Failure "Char.get_digit_exn '!': not a digit")
+    |}]
 ;;
 
 let%expect_test "read_5_digit_int" =
@@ -501,7 +516,8 @@ let%expect_test "read_5_digit_int" =
       "Digit_string_helpers.read_5_digit_int: pos=-1 out of range for string of length 5")
     (Invalid_argument
       "Digit_string_helpers.read_5_digit_int: 5 digits do not fit at pos 1 in string of length 5")
-    (Failure "Char.get_digit_exn '!': not a digit") |}]
+    (Failure "Char.get_digit_exn '!': not a digit")
+    |}]
 ;;
 
 let%expect_test "read_6_digit_int" =
@@ -519,7 +535,8 @@ let%expect_test "read_6_digit_int" =
       "Digit_string_helpers.read_6_digit_int: pos=-1 out of range for string of length 6")
     (Invalid_argument
       "Digit_string_helpers.read_6_digit_int: 6 digits do not fit at pos 1 in string of length 6")
-    (Failure "Char.get_digit_exn '!': not a digit") |}]
+    (Failure "Char.get_digit_exn '!': not a digit")
+    |}]
 ;;
 
 let%expect_test "read_7_digit_int" =
@@ -537,7 +554,8 @@ let%expect_test "read_7_digit_int" =
       "Digit_string_helpers.read_7_digit_int: pos=-1 out of range for string of length 7")
     (Invalid_argument
       "Digit_string_helpers.read_7_digit_int: 7 digits do not fit at pos 1 in string of length 7")
-    (Failure "Char.get_digit_exn '!': not a digit") |}]
+    (Failure "Char.get_digit_exn '!': not a digit")
+    |}]
 ;;
 
 let%expect_test "read_8_digit_int" =
@@ -555,7 +573,8 @@ let%expect_test "read_8_digit_int" =
       "Digit_string_helpers.read_8_digit_int: pos=-1 out of range for string of length 8")
     (Invalid_argument
       "Digit_string_helpers.read_8_digit_int: 8 digits do not fit at pos 1 in string of length 8")
-    (Failure "Char.get_digit_exn '!': not a digit") |}]
+    (Failure "Char.get_digit_exn '!': not a digit")
+    |}]
 ;;
 
 let%expect_test "read_9_digit_int" =
@@ -573,7 +592,8 @@ let%expect_test "read_9_digit_int" =
       "Digit_string_helpers.read_9_digit_int: pos=-1 out of range for string of length 9")
     (Invalid_argument
       "Digit_string_helpers.read_9_digit_int: 9 digits do not fit at pos 1 in string of length 9")
-    (Failure "Char.get_digit_exn '!': not a digit") |}]
+    (Failure "Char.get_digit_exn '!': not a digit")
+    |}]
 ;;
 
 let%expect_test "read_int63" =
@@ -628,7 +648,8 @@ let%expect_test "read_int63" =
       "Digit_string_helpers.read_int63: pos=-1 out of range for string of length 18")
     (Invalid_argument
       "Digit_string_helpers.read_int63: 18 digits do not fit at pos 1 in string of length 18")
-    (Failure "Char.get_digit_exn '!': not a digit") |}];
+    (Failure "Char.get_digit_exn '!': not a digit")
+    |}];
   (* read more digits than Int63 can represent *)
   let string = String.make 50 '0' in
   let int63 = read_int63 string ~pos:10 ~digits:30 in
@@ -710,7 +731,8 @@ let%expect_test "read_int63_decimal" =
   [%expect {|
     0
     0
-    0 |}];
+    0
+    |}];
   test ~scale:1 "5";
   test ~scale:1 "500000";
   [%expect
@@ -718,7 +740,8 @@ let%expect_test "read_int63_decimal" =
     ((round_pos_inf 1)
      (round_neg_inf 0))
     ((round_pos_inf 1)
-     (round_neg_inf 0)) |}];
+     (round_neg_inf 0))
+    |}];
   test ~scale:1 "500001";
   [%expect {| 1 |}];
   test ~scale:1 "499999";
@@ -727,7 +750,8 @@ let%expect_test "read_int63_decimal" =
   test ~scale:7 "071428571428571428571428571428571428571428571428572";
   [%expect {|
     0
-    1 |}];
+    1
+    |}];
   test ~scale:60_000 "0";
   [%expect {| 0 |}];
   test ~scale:60_000 "5";
@@ -736,12 +760,14 @@ let%expect_test "read_int63_decimal" =
   test ~scale:60_000 "333333333333";
   [%expect {|
     20_000
-    20_000 |}];
+    20_000
+    |}];
   test ~scale:60_000 "333_341_666";
   test ~scale:60_000 "333_341_667";
   [%expect {|
     20_000
-    20_001 |}];
+    20_001
+    |}];
   test ~scale:60_000 "666_674_999";
   test ~scale:60_000 "666_675_000";
   test ~scale:60_000 "666_675";
@@ -753,7 +779,8 @@ let%expect_test "read_int63_decimal" =
      (round_neg_inf 40_000))
     ((round_pos_inf 40_001)
      (round_neg_inf 40_000))
-    40_001 |}];
+    40_001
+    |}];
   test ~scale:60_000 "111_111_111_111";
   test ~scale:60_000 "111_111_111";
   test ~scale:60_000 "111_111";
@@ -762,7 +789,8 @@ let%expect_test "read_int63_decimal" =
     6_667
     6_667
     6_667
-    6_660 |}];
+    6_660
+    |}];
   test ~scale:1_000 "5";
   test ~scale:1_000 "05";
   test ~scale:1_000 "005";
@@ -775,7 +803,8 @@ let%expect_test "read_int63_decimal" =
     5
     ((round_pos_inf 1)
      (round_neg_inf 0))
-    0 |}];
+    0
+    |}];
   test ~scale:1_000 "5";
   test ~scale:1_000 "95";
   test ~scale:1_000 "995";
@@ -788,7 +817,8 @@ let%expect_test "read_int63_decimal" =
     995
     ((round_pos_inf 1_000)
      (round_neg_inf 999))
-    1_000 |}];
+    1_000
+    |}];
   (* Tests values close to overflow:
      100000000000000000 ~= Int63.max_value / 46 *)
   let big_power_of_ten = Int63.of_string "100000000000000000" in
@@ -816,7 +846,8 @@ let%expect_test "read_int63_decimal" =
     80_000_000_000_000_000
     90_000_000_000_000_000
     ((round_pos_inf 98_765_432_101_112_224)
-     (round_neg_inf 98_765_432_101_112_223)) |}];
+     (round_neg_inf 98_765_432_101_112_223))
+    |}];
   (* Tests values close to overflow:
      230584300921369395 = Int63.max_value / 20 *)
   let maximum_scale = Int63.( / ) Int63.max_value (Int63.of_int 20) in
@@ -839,7 +870,8 @@ let%expect_test "read_int63_decimal" =
     228_278_457_912_155_701
     230_584_300_690_785_094
     230_584_300_921_369_393
-    230_584_300_921_369_395 |}];
+    230_584_300_921_369_395
+    |}];
   let test_failure
     ?(pos = 0)
     ?decimals
@@ -856,45 +888,54 @@ let%expect_test "read_int63_decimal" =
   [%expect
     {|
     (Invalid_argument
-     "Digit_string_helpers.read_int63_decimal: invalid decimal character") |}];
+     "Digit_string_helpers.read_int63_decimal: invalid decimal character")
+    |}];
   test_failure "000_000" ~allow_underscore:false;
   [%expect
     {|
     (Invalid_argument
-     "Digit_string_helpers.read_int63_decimal: invalid decimal character") |}];
+     "Digit_string_helpers.read_int63_decimal: invalid decimal character")
+    |}];
   test_failure "0" ~pos:(-1);
   [%expect
     {|
     (Invalid_argument
-     "Digit_string_helpers.read_int63_decimal: pos=-1 out of range for string of length 1") |}];
+     "Digit_string_helpers.read_int63_decimal: pos=-1 out of range for string of length 1")
+    |}];
   test_failure "0" ~pos:100 ~decimals:0;
   [%expect
     {|
     (Invalid_argument
-     "Digit_string_helpers.read_int63_decimal: pos=100 out of range for string of length 1") |}];
+     "Digit_string_helpers.read_int63_decimal: pos=100 out of range for string of length 1")
+    |}];
   test_failure "0" ~decimals:(-1);
   [%expect
     {|
     (Invalid_argument
-     "Digit_string_helpers.read_int63_decimal: decimals=-1 is negative") |}];
+     "Digit_string_helpers.read_int63_decimal: decimals=-1 is negative")
+    |}];
   test_failure "0" ~decimals:100;
   [%expect
     {|
     (Invalid_argument
-     "Digit_string_helpers.read_int63_decimal: 100 digits do not fit at pos 0 in string of length 1") |}];
+     "Digit_string_helpers.read_int63_decimal: 100 digits do not fit at pos 0 in string of length 1")
+    |}];
   test_failure "0" ~scale:Int63.zero;
   [%expect
     {|
     (Invalid_argument
-     "Digit_string_helpers.read_int63_decimal: scale=0 out of range [1, 230584300921369395]") |}];
+     "Digit_string_helpers.read_int63_decimal: scale=0 out of range [1, 230584300921369395]")
+    |}];
   test_failure "0" ~scale:(Int63.of_string "1000000000000000000");
   [%expect
     {|
     (Invalid_argument
-     "Digit_string_helpers.read_int63_decimal: scale=1000000000000000000 out of range [1, 230584300921369395]") |}];
+     "Digit_string_helpers.read_int63_decimal: scale=1000000000000000000 out of range [1, 230584300921369395]")
+    |}];
   test_failure "0" ~scale:Int63.max_value;
   [%expect
     {|
     (Invalid_argument
-     "Digit_string_helpers.read_int63_decimal: scale=4611686018427387903 out of range [1, 230584300921369395]") |}]
+     "Digit_string_helpers.read_int63_decimal: scale=4611686018427387903 out of range [1, 230584300921369395]")
+    |}]
 ;;

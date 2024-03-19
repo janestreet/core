@@ -142,19 +142,28 @@ module type Span = sig
   module Option : sig
     include Immediate_option.S_int63 with type value := t
     include Identifiable.S with type t := t
+    include Diffable.S_atomic with type t := t
     include Quickcheck.S with type t := t
 
     module Stable : sig
-      module V1 : Stable_int63able.With_stable_witness.S with type t = t
-      module V2 : Stable_int63able.With_stable_witness.S with type t = t
+      module V1 : sig
+        include Stable_int63able.With_stable_witness.S with type t = t
+        include Diffable.S_atomic with type t := t
+      end
+
+      module V2 : sig
+        include Stable_int63able.With_stable_witness.S with type t = t
+        include Diffable.S_atomic with type t := t
+      end
     end
   end
 
   module Stable : sig
     module V1 : sig
-      type nonrec t = t [@@deriving hash, equal]
+      type nonrec t = t [@@deriving hash, equal, sexp_grammar]
 
       include Stable_int63able.With_stable_witness.S with type t := t
+      include Diffable.S_atomic with type t := t
     end
 
     module V2 : sig
@@ -172,6 +181,7 @@ module type Span = sig
           with type comparator_witness := comparator_witness
 
       include Stringable.S with type t := t
+      include Diffable.S_atomic with type t := t
     end
   end
 
@@ -232,6 +242,8 @@ module type Ofday = sig
         Stable_int63able.With_stable_witness.S
           with type t := t
            and type comparator_witness = comparator_witness
+
+      include Diffable.S_atomic with type t := t
     end
   end
 
@@ -276,6 +288,7 @@ module type Time_ns = sig
     type nonrec t = t [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
 
     include Comparable.S with type t := t
+    include Diffable.S_atomic with type t := t
   end
 
   (** [Option.t] is like [t option], except that the value is immediate.  This module
@@ -307,6 +320,7 @@ module type Time_ns = sig
       type nonrec t = t [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
 
       include Comparable.S with type t := t
+      include Diffable.S_atomic with type t := t
     end
   end
 
@@ -538,6 +552,8 @@ module type Time_ns = sig
             Comparable.Stable.V1.With_stable_witness.S
               with type comparable := t
               with type comparator_witness := comparator_witness
+
+          include Diffable.S_atomic with type t := t
         end
       end
     end
@@ -556,14 +572,17 @@ module type Time_ns = sig
           Comparable.Stable.V1.With_stable_witness.S
             with type comparable := t
             with type comparator_witness := comparator_witness
+
+        include Diffable.S_atomic with type t := t
       end
     end
 
     module Span : sig
       module V1 : sig
-        type nonrec t = Span.t [@@deriving hash, equal]
+        type nonrec t = Span.t [@@deriving hash, equal, sexp_grammar]
 
         include Stable_int63able.With_stable_witness.S with type t := t
+        include Diffable.S_atomic with type t := t
       end
 
       module Option : sig end [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
@@ -583,6 +602,7 @@ module type Time_ns = sig
             with type comparator_witness := comparator_witness
 
         include Stringable.S with type t := t
+        include Diffable.S_atomic with type t := t
       end
     end
 
@@ -594,6 +614,8 @@ module type Time_ns = sig
           Stable_int63able.With_stable_witness.S
             with type t := t
              and type comparator_witness = Ofday.comparator_witness
+
+        include Diffable.S_atomic with type t := t
       end
 
       module Option : sig end [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]

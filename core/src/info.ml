@@ -97,7 +97,7 @@ module Extend (Info : Base.Info.S) = struct
   module Stable = struct
     module V2 = struct
       module T = struct
-        type t = Info.t [@@deriving sexp, sexp_grammar, compare, hash]
+        type t = Info.t [@@deriving sexp, sexp_grammar, compare, equal, hash]
       end
 
       include T
@@ -122,6 +122,10 @@ module Extend (Info : Base.Info.S) = struct
           of_binable
           to_binable
       ;;
+
+      include Diffable.Atomic.Make (struct
+        type nonrec t = t [@@deriving sexp, bin_io, equal]
+      end)
     end
 
     module V1 = struct
@@ -164,6 +168,8 @@ module Extend (Info : Base.Info.S) = struct
   end
 
   type t = Stable.V2.t [@@deriving bin_io]
+
+  module Diff = Stable.V2.Diff
 end
 
 include Extend (Base.Info)

@@ -1086,6 +1086,12 @@ module Stable : sig
       type nonrec 'a t = (key, 'a, comparator_witness) t
 
       include Stable_module_types.S1 with type 'a t := 'a t
+
+      include
+        Diffable.S1
+          with type 'a t := 'a t
+           and type ('a, 'a_diff) Diff.t =
+            (key, 'a, 'a_diff) Diffable.Map_diff.Stable.V1.t
     end
 
     include For_deriving with type ('a, 'b, 'c) t := ('a, 'b, 'c) t

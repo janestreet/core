@@ -230,16 +230,17 @@ end) : Set_intf.Creators_and_accessors_generic = struct
           {|
           (Error (
             "the set of integers from 1 to 10 is not a subset of the empty set"
-            (invalid_elements (_ _ _ _ _ _ _ _ _ _)))) |}]
+            (invalid_elements (_ _ _ _ _ _ _ _ _ _))))
+          |}]
       else
         [%expect
           {|
           (Error (
             "the set of integers from 1 to 10 is not a subset of the empty set"
-            (invalid_elements (1 2 3 4 5 6 7 8 9 10)))) |}];
+            (invalid_elements (1 2 3 4 5 6 7 8 9 10))))
+          |}];
       print_s [%sexp (Set.Named.is_subset map1 ~of_:map2 : unit Or_error.t)];
-      [%expect {|
-      (Ok ()) |}]
+      [%expect {| (Ok ()) |}]
     ;;
 
     let equal _ _ = assert false
@@ -258,19 +259,21 @@ end) : Set_intf.Creators_and_accessors_generic = struct
       then
         [%expect
           {|
-      (Error (
-        ("the set of integers from 1 to 10 is not a subset of the set of integers from 10 to 19"
-         (invalid_elements (_ _ _ _ _ _ _ _ _)))
-        ("the set of integers from 10 to 19 is not a subset of the set of integers from 1 to 10"
-         (invalid_elements (_ _ _ _ _ _ _ _ _))))) |}]
+          (Error (
+            ("the set of integers from 1 to 10 is not a subset of the set of integers from 10 to 19"
+             (invalid_elements (_ _ _ _ _ _ _ _ _)))
+            ("the set of integers from 10 to 19 is not a subset of the set of integers from 1 to 10"
+             (invalid_elements (_ _ _ _ _ _ _ _ _)))))
+          |}]
       else
         [%expect
           {|
-        (Error (
-          ("the set of integers from 1 to 10 is not a subset of the set of integers from 10 to 19"
-           (invalid_elements (1 2 3 4 5 6 7 8 9)))
-          ("the set of integers from 10 to 19 is not a subset of the set of integers from 1 to 10"
-           (invalid_elements (11 12 13 14 15 16 17 18 19))))) |}];
+          (Error (
+            ("the set of integers from 1 to 10 is not a subset of the set of integers from 10 to 19"
+             (invalid_elements (1 2 3 4 5 6 7 8 9)))
+            ("the set of integers from 10 to 19 is not a subset of the set of integers from 1 to 10"
+             (invalid_elements (11 12 13 14 15 16 17 18 19)))))
+          |}];
       print_s [%sexp (Set.Named.equal map1 map1 : unit Or_error.t)];
       [%expect {| (Ok ()) |}]
     ;;
@@ -1201,5 +1204,6 @@ let%expect_test _ =
     ((sexp ()) (bin_io "\000"))
     ((sexp (1)) (bin_io "\001\001"))
     ((sexp (1 2)) (bin_io "\002\001\002"))
-    ((sexp (1 2 3)) (bin_io "\003\001\002\003")) |}]
+    ((sexp (1 2 3)) (bin_io "\003\001\002\003"))
+    |}]
 ;;

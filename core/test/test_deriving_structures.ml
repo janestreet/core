@@ -23,13 +23,13 @@ module _ : sig
   type t0 = float Int.Map.t
   [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
 
-  type 'a t1 = 'a Int.Map.t
+  type 'a t1 = 'a Bool.Map.t
   [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
 end = struct
   type t0 = float Map.Stable.V1.M(Int.Stable.V1).t
   [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
 
-  type 'a t1 = 'a Map.Stable.V1.M(Int.Stable.V1).t
+  type 'a t1 = 'a Map.Stable.V1.M(Bool.Stable.V1).t
   [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
 end
 

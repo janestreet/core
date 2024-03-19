@@ -16,7 +16,7 @@
 
 open! Import
 
-type t [@@deriving sexp_of] [@@immediate64]
+type t [@@deriving sexp_of, typerep] [@@immediate64]
 
 val create : [ `Bytes | `Kilobytes | `Megabytes | `Gigabytes | `Words ] -> float -> t
   [@@deprecated
@@ -159,7 +159,7 @@ module Infix : sig
 end
 
 include module type of Infix
-include Quickcheckable.S with type t := t
+include Quickcheck.S_range with type t := t
 
 module Stable : sig
   (*_ old float based [bin_io] repr. *)
@@ -171,7 +171,7 @@ module Stable : sig
 
   (*_ new [Int63] based [bin_io] repr. *)
   module V2 : sig
-    type nonrec t = t [@@deriving hash]
+    type nonrec t = t [@@deriving hash, typerep]
 
     include Stable_module_types.With_stable_witness.S0_without_comparator with type t := t
   end

@@ -1484,7 +1484,8 @@ struct
        (data 4))
       ((key  3)
        (data 1))
-      Unfinished |}];
+      Unfinished
+      |}];
     test [ 1; 4; 9; 16; 25; 36; 49; 64 ];
     [%expect
       {|
@@ -1504,7 +1505,8 @@ struct
        (data 49))
       ((key  7)
        (data 64))
-      Finished |}]
+      Finished
+      |}]
   ;;
 
   let fold_until _ = assert false
@@ -1534,7 +1536,8 @@ struct
        (data 4))
       ((key  3)
        (data 1))
-      3 |}];
+      3
+      |}];
     test [ 1; 4; 9; 16; 25; 36; 49; 64 ];
     [%expect
       {|
@@ -1554,7 +1557,8 @@ struct
        (data 49))
       ((key  7)
        (data 64))
-      28 |}]
+      28
+      |}]
   ;;
 
   let to_sequence ?order:_ ?keys_greater_or_equal_to:_ ?keys_less_or_equal_to:_ _ =
@@ -2341,11 +2345,13 @@ struct
     test [ 0, []; 1, [ 1, 11 ] ];
     [%expect {| ((1 ((1 11)))) |}];
     test [ 0, []; 1, [ 1, 11 ]; 2, [ 1, 21; 2, 22 ] ];
-    [%expect {|
+    [%expect
+      {|
       ((1 (
          (1 11)
          (2 21)))
-       (2 ((2 22)))) |}];
+       (2 ((2 22))))
+      |}];
     test [ 0, []; 1, [ 1, 11 ]; 2, [ 1, 21; 2, 22 ]; 3, [ 1, 31; 2, 32; 3, 33 ] ];
     [%expect
       {|
@@ -2356,7 +2362,8 @@ struct
        (2 (
          (2 22)
          (3 32)))
-       (3 ((3 33)))) |}]
+       (3 ((3 33))))
+      |}]
   ;;
 
   let quickcheck_generator _ _ = assert false

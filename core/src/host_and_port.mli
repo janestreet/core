@@ -16,6 +16,10 @@ val tuple : t -> string * int
 include Identifiable with type t := t
 include Sexplib.Sexp_grammar.S with type t := t
 
+module Hide_port_in_test : sig
+  include Identifiable with type t := t and type comparator_witness = comparator_witness
+end
+
 module Stable : sig
   module V1 : sig
     type nonrec t = t

@@ -105,7 +105,8 @@ let%expect_test "merge_all" =
      (2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2))
     ((0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19))
     ((0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30 32 34 36 38)
-     (1 3 5 7 9 11 13 15 17 19 21 23 25 27 29 31 33 35 37 39)) |}];
+     (1 3 5 7 9 11 13 15 17 19 21 23 25 27 29 31 33 35 37 39))
+    |}];
   List.iter examples ~f:(fun example ->
     print_s [%sexp (merge_all example ~compare : sequence)]);
   [%expect
@@ -124,7 +125,8 @@ let%expect_test "merge_all" =
     (1 2 3 4)
     (1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1)
     (0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19)
-    (0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19) |}];
+    (0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19)
+    |}];
   (* During a Quickcheck test we want to bail out after a single failure. *)
   let require_exn here ?if_false_then_print_s bool =
     require here bool ?if_false_then_print_s;
@@ -155,7 +157,7 @@ let%expect_test "merge_all" =
       [%here]
       (List.is_sorted list ~compare)
       ~if_false_then_print_s:(lazy [%sexp (list : int No_poly_compare.t list)]));
-  [%expect {||}];
+  [%expect {| |}];
   (* Test that output is consistent with concat+sort. *)
   run (fun seqs ->
     let merge_all = list_of_sequence (merge_all seqs ~compare) in
@@ -174,7 +176,7 @@ let%expect_test "merge_all" =
             "inconsistent results"
               (merge_all : int No_poly_compare.t list)
               (concat_and_sort : int No_poly_compare.t list)]));
-  [%expect {||}];
+  [%expect {| |}];
   (* Test that sequence is replayable. *)
   run (fun seqs ->
     let seq = merge_all seqs ~compare in
@@ -189,5 +191,5 @@ let%expect_test "merge_all" =
             "sequence is impure"
               (list1 : int No_poly_compare.t list)
               (list2 : int No_poly_compare.t list)]));
-  [%expect {||}]
+  [%expect {| |}]
 ;;

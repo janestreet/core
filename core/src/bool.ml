@@ -2,7 +2,14 @@ open! Import
 
 module Stable = struct
   module V1 = struct
-    type t = bool [@@deriving compare, sexp, bin_io ~localize, stable_witness]
+    module T = struct
+      include Base.Bool
+
+      type t = bool [@@deriving compare, sexp, bin_io ~localize, stable_witness]
+    end
+
+    include T
+    include Comparable.Stable.V1.With_stable_witness.Make (T)
   end
 end
 

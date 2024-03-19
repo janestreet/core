@@ -80,7 +80,8 @@ let%expect_test "bin_digests" =
            v2 608ef16f40e15a75b1942a12465f47df
     option_v2 7d0312ebcdefb728502ea27a959a389b
            v3 320416d3338cb49f5c3ce6b8632f7717
-    option_v3 21451618c9bda19b005e0ba1e4abbd2a |}]
+    option_v3 21451618c9bda19b005e0ba1e4abbd2a
+    |}]
 ;;
 
 let%expect_test "rounding" =
@@ -198,7 +199,8 @@ let%expect_test _ =
       (0x   0)
       (15bp 1)
       (15%  2)
-      (15x  3))) |}]
+      (15x  3)))
+    |}]
 ;;
 
 let%expect_test "accept float in set and map sexps" =
@@ -223,7 +225,8 @@ let%expect_test "accept float in set and map sexps" =
     ((0x  "arbitrary value")
      (1bp "arbitrary value")
      (1%  "arbitrary value")
-     (1x  "arbitrary value")) |}]
+     (1x  "arbitrary value"))
+    |}]
 ;;
 
 let%expect_test "generator" =
@@ -259,7 +262,8 @@ let%expect_test "always-percentage format" =
     0x -> 0%
     3.2bp -> 0.032%
     5x -> 500%
-    75% -> 75% |}];
+    75% -> 75%
+    |}];
   let f x =
     let p = Percent.of_string x in
     printf
@@ -273,7 +277,8 @@ let%expect_test "always-percentage format" =
     0x -> 0.00000000%
     3.2bp -> 0.03200000%
     5x -> 500.00000000%
-    75% -> 75.00000000% |}]
+    75% -> 75.00000000%
+    |}]
 ;;
 
 let%expect_test "round-trippable sexp format" =
@@ -342,7 +347,8 @@ let%expect_test "round-trippable sexp format" =
        1.2E+09x |             1200000000x |              120000000000% |                1200000000x |              120000000000%
            7.3% |                    7.3% |                       7.3% |                       7.3% |                       7.3%
      1.39E-08bp |               1.39E-8bp |                  1.39E-10% |                  1.39E-8bp |                  1.39E-10%
-           15bp |                    15bp |                      0.15% |                       15bp |                      0.15% |}];
+           15bp |                    15bp |                      0.15% |                       15bp |                      0.15%
+    |}];
   Quickcheck.test Float.gen_finite ~trials:13 ~sexp_of:Float.sexp_of_t ~f:(fun x ->
     f (Percent.of_percentage x));
   [%expect
@@ -359,7 +365,8 @@ let%expect_test "round-trippable sexp format" =
            7.44064x |        7.4406372011417x |           744.06372011417% |        7.4406372011416533x |        744.06372011416533%
      1.96589E-316bp |  1.9658872048023E-316bp |      1.9658872048023E-318% |    1.96588720480232E-316bp |     1.96588720480232E-318%
             3.125bp |       3.1249999999773bp |         0.031249999999773% |       3.1249999999772627bp |      0.031249999999772627%
-          -2.18305x |       -2.1830518341064x |          -218.30518341064% |       -2.1830518341064451x |       -218.30518341064451% |}];
+          -2.18305x |       -2.1830518341064x |          -218.30518341064% |       -2.1830518341064451x |       -218.30518341064451%
+    |}];
   Quickcheck.test Float.gen_finite ~trials:1_000 ~sexp_of:Float.sexp_of_t ~f:(fun x ->
     (* check for accurate round trip *)
     let assert_rt x ~f ~g =
@@ -427,7 +434,8 @@ let%expect_test "Percent.Map serialization" =
   [%expect
     {|
     ((12.3457bp 3) (3.638% 2) (3.14159x 4) (3.1501x 1))
-    ((12.3456789bp 3) (3.638% 2) (3.1415926535897931x 4) (3.1501x 1)) |}]
+    ((12.3456789bp 3) (3.638% 2) (3.1415926535897931x 4) (3.1501x 1))
+    |}]
 ;;
 
 let%expect_test "nans and infs" =
@@ -443,7 +451,8 @@ let%expect_test "nans and infs" =
   [%expect {|
     NANbp | NANx
     INFx | INFx
-    -INFx | -INFx |}];
+    -INFx | -INFx
+    |}];
   [ "nanx"
   ; "NANbp"
   ; "NaN%"
@@ -474,11 +483,13 @@ let%expect_test "slow_more_accurate" =
   ; Percent.of_bp_slow_more_accurate
   ]
   |> List.iter ~f:(fun f -> printf !"%{Percent#round_trippable}\n" (f x));
-  [%expect {|
+  [%expect
+    {|
     70.180000000000009%
     70.180000000000008bp
     70.18%
-    70.18bp |}];
+    70.18bp
+    |}];
   (* 57.2%: An example where [to_percentage] and [to_bp] both introduce ugly-looking
      rounding errors. *)
   let p = Percent.of_mult 0.572 in
@@ -492,7 +503,8 @@ let%expect_test "slow_more_accurate" =
     57.199999999999996
     5719.9999999999991
     57.2
-    5720. |}];
+    5720.
+    |}];
   (* Find some more examples where [to_percentage] and [to_bp] introduce errors. *)
   for i = 0 to 100 do
     let p = Percent.of_mult (float i /. 100.) in
@@ -506,7 +518,8 @@ let%expect_test "slow_more_accurate" =
     14.000000000000002 1400.0000000000002
     28.000000000000004 2800.0000000000005
     56.000000000000007 5600.0000000000009
-    56.999999999999993 5699.9999999999991 |}]
+    56.999999999999993 5699.9999999999991
+    |}]
 ;;
 
 let%expect_test "parse errors" =
@@ -567,5 +580,6 @@ let%expect_test "parse errors" =
     (Failure"Unexpected character when parsing Percent.t: 'i' in '+inf'")
     ====
     (Failure"Unexpected character when parsing Percent.t: 'i' in '-infinity'")
-    ==== |}]
+    ====
+    |}]
 ;;

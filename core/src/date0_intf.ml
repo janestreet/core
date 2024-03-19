@@ -15,6 +15,7 @@ module type Date0 = sig
   include Stringable with type t := t
 
   include Comparable_binable with type t := t
+  include Diffable.S_atomic with type t := t
   include Pretty_printer.S with type t := t
 
   (** [create_exn ~y ~m ~d] creates the date specified in the arguments.  Arguments are
@@ -254,7 +255,7 @@ module type Date0 = sig
 
   module Option : sig
     type value := t
-    type t [@@immediate] [@@deriving sexp_grammar]
+    type t [@@immediate] [@@deriving bin_io ~localize, hash, sexp, sexp_grammar]
 
     include Immediate_option_intf.S with type value := value and type t := t
     include Comparable.S_plain with type t := t
@@ -277,6 +278,7 @@ module type Date0 = sig
           with type comparator_witness = comparator_witness
 
       include Hashable.Stable.V1.With_stable_witness.S with type key := t
+      include Diffable.S_atomic with type t := t
     end
 
     module Option : sig

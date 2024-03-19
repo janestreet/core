@@ -38,7 +38,8 @@ let%expect_test "nesting" =
     (nesting.sub0.sub1 fail)
     (nesting.sub0.sub2 fail)
     (nesting.sub0.sub3.sub4 fail)
-    (nesting.sub0.sub3.sub5 fail) |}]
+    (nesting.sub0.sub3.sub5 fail)
+    |}]
 ;;
 
 let%expect_test "Validate.all" =
@@ -55,7 +56,7 @@ let%expect_test "Validate.all" =
     ("" a)
     ("" b)
     ("" c)
-  |}]
+    |}]
 ;;
 
 let%expect_test _ =
@@ -75,7 +76,7 @@ let%expect_test _ =
   [%expect {|
     ("" foo)
     ("" bar)
-  |}]
+    |}]
 ;;
 
 let%expect_test _ =
@@ -93,15 +94,15 @@ let%expect_test _ =
     {|
     (""
      ("Exception raised during validation"
-      (Failure "This unit validation raises"))) |}]
+      (Failure "This unit validation raises")))
+    |}]
 ;;
 
 let%expect_test "try_with" =
   let v () = failwith "this function raises" in
   print (try_with v);
   [%expect
-    {|
-    ("" ("Exception raised during validation" (Failure "this function raises"))) |}]
+    {| ("" ("Exception raised during validation" (Failure "this function raises"))) |}]
 ;;
 
 type t = { x : bool } [@@deriving fields ~direct_iterators:fold]

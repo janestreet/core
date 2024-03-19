@@ -25,7 +25,7 @@
         { foo: int;
           bar: float;
         }
-      [@@deriving fields]
+      [@@deriving fields ~iterators:to_list]
 
       let validate t =
         let module V = Validate in

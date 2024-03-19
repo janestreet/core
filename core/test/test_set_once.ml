@@ -25,7 +25,8 @@ let%expect_test "[Stable.V1] serialization" =
     {|
     (bin_shape_digest 8b7c356301db5206ab98e334f4886c11)
     ((sexp ()) (bin_io "\000"))
-    ((sexp (13)) (bin_io "\001\r")) |}]
+    ((sexp (13)) (bin_io "\001\r"))
+    |}]
 ;;
 
 let%expect_test "[Unstable] serialization" =
@@ -34,7 +35,8 @@ let%expect_test "[Unstable] serialization" =
     {|
     (bin_shape_digest 8b7c356301db5206ab98e334f4886c11)
     ((sexp ()) (bin_io "\000"))
-    ((sexp (13)) (bin_io "\001\r")) |}]
+    ((sexp (13)) (bin_io "\001\r"))
+    |}]
 ;;
 
 type t = int Set_once.t [@@deriving sexp_of]
@@ -49,25 +51,24 @@ let show t =
 let%expect_test "[sexp_of_t]" =
   let t = create () in
   show t;
-  [%expect {|
-    unset |}];
+  [%expect {| unset |}];
   set_exn t [%here] 13;
   show t;
-  [%expect {|
+  [%expect
+    {|
     ((value  13)
-     (set_at lib/core/test/test_set_once.ml:LINE:COL)) |}]
+     (set_at lib/core/test/test_set_once.ml:LINE:COL))
+    |}]
 ;;
 
 let%expect_test "[get]" =
   let t = create () in
   let show_get () = print_s [%message "" ~_:(get t : int option)] in
   show_get ();
-  [%expect {|
-    () |}];
+  [%expect {| () |}];
   set_exn t [%here] 13;
   show_get ();
-  [%expect {|
-    (13) |}]
+  [%expect {| (13) |}]
 ;;
 
 let%expect_test "[get] doesn't allocate" =
@@ -76,31 +77,26 @@ let%expect_test "[get] doesn't allocate" =
     ignore (require_no_allocation here (fun () -> get t) : int option)
   in
   check_get [%here];
-  [%expect {|
-    |}];
+  [%expect {| |}];
   set_exn t [%here] 13;
   check_get [%here];
-  [%expect {|
-    |}]
+  [%expect {| |}]
 ;;
 
 let%expect_test "[get_exn]" =
   let t = create () in
   show_raise ~hide_positions (fun () -> get_exn t [%here]);
   [%expect
-    {|
-    (raised ("[Set_once.get_exn] unset" (at lib/core/test/test_set_once.ml:LINE:COL))) |}];
+    {| (raised ("[Set_once.get_exn] unset" (at lib/core/test/test_set_once.ml:LINE:COL))) |}];
   set_exn t [%here] 13;
   print_s [%message "" ~_:(get_exn t [%here] : int)];
-  [%expect {|
-    13 |}]
+  [%expect {| 13 |}]
 ;;
 
 let%expect_test "[set]" =
   let t = create () in
   print_s [%message "" ~_:(set t [%here] 13 : unit Or_error.t)];
-  [%expect {|
-    (Ok ()) |}]
+  [%expect {| (Ok ()) |}]
 ;;
 
 let%expect_test "[set_if_none]" =
@@ -124,7 +120,8 @@ let%expect_test "[set] error" =
     (Error (
       "[Set_once.set_exn] already set"
       (setting_at lib/core/test/test_set_once.ml:LINE:COL)
-      (previously_set_at lib/core/test/test_set_once.ml:LINE:COL))) |}]
+      (previously_set_at lib/core/test/test_set_once.ml:LINE:COL)))
+    |}]
 ;;
 
 let%expect_test "[set_exn] error" =
@@ -136,7 +133,8 @@ let%expect_test "[set_exn] error" =
     (raised (
       "[Set_once.set_exn] already set"
       (setting_at lib/core/test/test_set_once.ml:LINE:COL)
-      (previously_set_at lib/core/test/test_set_once.ml:LINE:COL))) |}]
+      (previously_set_at lib/core/test/test_set_once.ml:LINE:COL)))
+    |}]
 ;;
 
 let%expect_test "[is_none], [is_some]" =
@@ -147,12 +145,14 @@ let%expect_test "[is_none], [is_some]" =
   show ();
   [%expect {|
     ((is_none true)
-     (is_some false)) |}];
+     (is_some false))
+    |}];
   set_exn t [%here] 13;
   show ();
   [%expect {|
     ((is_none false)
-     (is_some true)) |}]
+     (is_some true))
+    |}]
 ;;
 
 let%expect_test "[match%optional]" =
@@ -165,22 +165,18 @@ let%expect_test "[match%optional]" =
        | Some i -> [%message "some" ~_:(i : int)])
   in
   show ();
-  [%expect {|
-    none |}];
+  [%expect {| none |}];
   set_exn t [%here] 13;
   show ();
-  [%expect {|
-    (some 13) |}]
+  [%expect {| (some 13) |}]
 ;;
 
 let%expect_test "[iter]" =
   let t = create () in
   let iter () = iter t ~f:(fun i -> print_s [%message (i : int)]) in
   iter ();
-  [%expect {|
-    |}];
+  [%expect {| |}];
   set_exn t [%here] 13;
   iter ();
-  [%expect {|
-    (i 13) |}]
+  [%expect {| (i 13) |}]
 ;;

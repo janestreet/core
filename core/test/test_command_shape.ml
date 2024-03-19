@@ -39,13 +39,14 @@ let%expect_test "somewhat typical flag arrangement" =
     ];
   [%expect
     {|
-0-aaaaa                    . aaaaaaaaa
-1-aaaaaaaaaaaaaaa, hi      . aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
-                             aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
-2-aaaaaaaaaaaaaaaaaaaaaaaaa
-                           . aaaaaaaaa aaaaaaaaa aaaaaaaaa
-3-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-                           . aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa |}]
+    0-aaaaa                    . aaaaaaaaa
+    1-aaaaaaaaaaaaaaa, hi      . aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
+                                 aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
+    2-aaaaaaaaaaaaaaaaaaaaaaaaa
+                               . aaaaaaaaa aaaaaaaaa aaaaaaaaa
+    3-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                               . aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
+    |}]
 ;;
 
 let%expect_test "one flag with lots of doc" =
@@ -56,17 +57,18 @@ let%expect_test "one flag with lots of doc" =
     ];
   [%expect
     {|
-0-aaaaaaaaaaaaaaaaaaaaaaaa . aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
-                             aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
-                             aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
-                             aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
-                             aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
-                             aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
-                             aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
-                             aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
-1-a                        . aaaa
-2-aaaaaaaaaaaaa, something1, alias2
-                           . aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa |}]
+    0-aaaaaaaaaaaaaaaaaaaaaaaa . aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
+                                 aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
+                                 aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
+                                 aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
+                                 aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
+                                 aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
+                                 aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
+                                 aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
+    1-a                        . aaaa
+    2-aaaaaaaaaaaaa, something1, alias2
+                               . aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
+    |}]
 ;;
 
 let%expect_test "only one long flag" =
@@ -77,18 +79,19 @@ let%expect_test "only one long flag" =
     ];
   [%expect
     {|
-0-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-                           . aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
-                             aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
-                             aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
-                             aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
-                             aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
-                             aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
-                             aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
-                             aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
-1-a, an-alias, another-alias
-                           . aaaa
-2-aa                       . aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa |}]
+    0-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                               . aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
+                                 aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
+                                 aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
+                                 aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
+                                 aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
+                                 aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
+                                 aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
+                                 aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
+    1-a, an-alias, another-alias
+                               . aaaa
+    2-aa                       . aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa aaaaaaaaa
+    |}]
 ;;
 
 let%expect_test "some have docs some don't" =
@@ -100,8 +103,9 @@ let%expect_test "some have docs some don't" =
     ];
   [%expect
     {|
-0-aaaaaaaaaaaaaaaaaa       . aaaa
-1-aaaaaaaa, an-alias, another-alias
-2-aaaaaaaaaa               .
-3-a                        . aaaaaaaaa aaaaaaaaa |}]
+    0-aaaaaaaaaaaaaaaaaa       . aaaa
+    1-aaaaaaaa, an-alias, another-alias
+    2-aaaaaaaaaa               .
+    3-a                        . aaaaaaaaa aaaaaaaaa
+    |}]
 ;;

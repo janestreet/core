@@ -615,6 +615,15 @@ struct
     Using_comparator.sexp_of_t Key.sexp_of_t sexp_of_v [%sexp_of: _] t
   ;;
 
+  module Diff = struct
+    type 'a derived_on = 'a t
+    type ('a, 'a_diff) t = (Key.t, 'a, 'a_diff) Diffable.Map_diff.t [@@deriving sexp_of]
+
+    let get = Diffable.Map_diff.get
+    let apply_exn = Diffable.Map_diff.apply_exn
+    let of_list_exn = Diffable.Map_diff.of_list_exn
+  end
+
   module Provide_of_sexp
     (Key : sig
       type t [@@deriving of_sexp]
@@ -622,6 +631,14 @@ struct
     with type t := Key.t) =
   struct
     let t_of_sexp v_of_sexp sexp = t_of_sexp Key.t_of_sexp v_of_sexp sexp
+
+    module Diff = struct
+      include Diff
+
+      let t_of_sexp v_of_sexp v_diff_of_sexp sexp =
+        Diffable.Map_diff.t_of_sexp Key.t_of_sexp v_of_sexp v_diff_of_sexp sexp
+      ;;
+    end
   end
 
   module Provide_hash (Key' : Hasher.S with type t := Key.t) = struct
@@ -686,6 +703,13 @@ struct
   include Make_using_comparator (Key_bin_sexp)
   module Key = Key_bin_sexp
   include Provide_bin_io (Key)
+
+  module Diff = struct
+    include Diff
+
+    type ('a, 'a_diff) t = (Key.t, 'a, 'a_diff) Diffable.Map_diff.t
+    [@@deriving bin_io, sexp]
+  end
 end
 
 module Make_binable (Key : Key_binable) = Make_binable_using_comparator (struct
@@ -809,6 +833,12 @@ module Stable = struct
       type nonrec 'a t = (key, 'a, comparator_witness) t
 
       include Stable_module_types.S1 with type 'a t := 'a t
+
+      include
+        Diffable.S1
+          with type 'a t := 'a t
+           and type ('a, 'a_diff) Diff.t =
+            (key, 'a, 'a_diff) Diffable.Map_diff.Stable.V1.t
     end
 
     include For_deriving

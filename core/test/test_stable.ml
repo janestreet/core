@@ -7,12 +7,10 @@ let%expect_test "[sexp_of_int] respects [sexp_of_int_style]" =
   let old = !r in
   r := `Underscores;
   print_s [%sexp (1234 : int)];
-  [%expect {|
-    1_234 |}];
+  [%expect {| 1_234 |}];
   r := `No_underscores;
   print_s [%sexp (1234 : int)];
-  [%expect {|
-    1234 |}];
+  [%expect {| 1234 |}];
   r := old
 ;;
 
@@ -24,12 +22,10 @@ let%expect_test "older [int_of_sexp] supports both [sexp_of_int_style]s" =
   let old = !r in
   r := `Underscores;
   print ();
-  [%expect {|
-    1_234 |}];
+  [%expect {| 1_234 |}];
   r := `No_underscores;
   print ();
-  [%expect {|
-    1234 |}];
+  [%expect {| 1234 |}];
   r := old
 ;;
 

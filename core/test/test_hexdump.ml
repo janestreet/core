@@ -144,7 +144,8 @@ let%expect_test _ =
     00000010  73 68 20 77 69 74 68 6f  75 74 20 61 20 66 69     |sh without a fi|
     32:
     00000000  57 65 20 77 69 6c 6c 20  6e 6f 74 20 76 61 6e 69  |We will not vani|
-    00000010  73 68 20 77 69 74 68 6f  75 74 20 61 20 66 69 67  |sh without a fig| |}];
+    00000010  73 68 20 77 69 74 68 6f  75 74 20 61 20 66 69 67  |sh without a fig|
+    |}];
   test string;
   [%expect
     {|
@@ -202,7 +203,8 @@ let%expect_test _ =
     00000330  6e 67 20 74 6f 20 73 75  72 76 69 76 65 21 20 54  |ng to survive! T|
     00000340  6f 64 61 79 20 77 65 20  63 65 6c 65 62 72 61 74  |oday we celebrat|
     00000350  65 20 6f 75 72 20 49 6e  64 65 70 65 6e 64 65 6e  |e our Independen|
-    00000360  63 65 20 44 61 79 21                              |ce Day!| |}];
+    00000360  63 65 20 44 61 79 21                              |ce Day!|
+    |}];
   for max_lines = 0 to 10 do
     printf "%d:\n" max_lines;
     test string ~max_lines
@@ -280,7 +282,8 @@ let%expect_test _ =
     00000330  6e 67 20 74 6f 20 73 75  72 76 69 76 65 21 20 54  |ng to survive! T|
     00000340  6f 64 61 79 20 77 65 20  63 65 6c 65 62 72 61 74  |oday we celebrat|
     00000350  65 20 6f 75 72 20 49 6e  64 65 70 65 6e 64 65 6e  |e our Independen|
-    00000360  63 65 20 44 61 79 21                              |ce Day!| |}];
+    00000360  63 65 20 44 61 79 21                              |ce Day!|
+    |}];
   test string ~pos:707 ~len:123;
   [%expect
     {|
@@ -291,7 +294,8 @@ let%expect_test _ =
     00000303  74 20 61 20 66 69 67 68  74 21 20 20 57 65 27 72  |t a fight!  We'r|
     00000313  65 20 67 6f 69 6e 67 20  74 6f 20 6c 69 76 65 20  |e going to live |
     00000323  6f 6e 21 20 57 65 27 72  65 20 67 6f 69 6e 67 20  |on! We're going |
-    00000333  74 6f 20 73 75 72 76 69  76 65 21                 |to survive!| |}];
+    00000333  74 6f 20 73 75 72 76 69  76 65 21                 |to survive!|
+    |}];
   test string ~pos:707 ~max_lines:10;
   [%expect
     {|
@@ -304,7 +308,8 @@ let%expect_test _ =
     00000333  74 6f 20 73 75 72 76 69  76 65 21 20 54 6f 64 61  |to survive! Toda|
     00000343  79 20 77 65 20 63 65 6c  65 62 72 61 74 65 20 6f  |y we celebrate o|
     00000353  75 72 20 49 6e 64 65 70  65 6e 64 65 6e 63 65 20  |ur Independence |
-    00000363  44 61 79 21                                       |Day!| |}];
+    00000363  44 61 79 21                                       |Day!|
+    |}];
   test string ~pos:707 ~max_lines:20;
   [%expect
     {|
@@ -318,7 +323,8 @@ let%expect_test _ =
     00000333  74 6f 20 73 75 72 76 69  76 65 21 20 54 6f 64 61  |to survive! Toda|
     00000343  79 20 77 65 20 63 65 6c  65 62 72 61 74 65 20 6f  |y we celebrate o|
     00000353  75 72 20 49 6e 64 65 70  65 6e 64 65 6e 63 65 20  |ur Independence |
-    00000363  44 61 79 21                                       |Day!| |}]
+    00000363  44 61 79 21                                       |Day!|
+    |}]
 ;;
 
 let%expect_test "pretty" =
@@ -329,5 +335,6 @@ let%expect_test "pretty" =
   [%expect
     {|
     ("00000000  57 68 61 74 00 61 72 65  ff 20 74 68 65 73 65 01  |What.are. these.|"
-     "00000010  77 65 69 72 64 20 62 79  74 65 73 3f fe           |weird bytes?.|") |}]
+     "00000010  77 65 69 72 64 20 62 79  74 65 73 3f fe           |weird bytes?.|")
+    |}]
 ;;

@@ -311,6 +311,10 @@ module Stable = struct
     let t_of_sexp sexp = t_of_sexp_v1_v2 sexp ~is_v2:false
     let sexp_of_t t = sexp_of_t_v1_v2 t ~is_v2:false
     let t_sexp_grammar = Sexplib.Sexp_grammar.coerce String.t_sexp_grammar
+
+    include Diffable.Atomic.Make (struct
+      type nonrec t = t [@@deriving bin_io, equal, sexp]
+    end)
   end
 
   module V2 = struct
@@ -318,6 +322,10 @@ module Stable = struct
 
     let t_of_sexp sexp = t_of_sexp_v1_v2 sexp ~is_v2:true
     let sexp_of_t t = sexp_of_t_v1_v2 t ~is_v2:true
+
+    include Diffable.Atomic.Make (struct
+      type nonrec t = t [@@deriving bin_io, equal, sexp]
+    end)
   end
 
   module V3 = struct
@@ -703,6 +711,10 @@ module Stable = struct
     ;;
 
     let t_sexp_grammar = Sexplib.Sexp_grammar.coerce String.t_sexp_grammar
+
+    include Diffable.Atomic.Make (struct
+      type nonrec t = t [@@deriving bin_io, equal, sexp]
+    end)
   end
 end
 

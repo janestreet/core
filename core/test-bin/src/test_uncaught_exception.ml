@@ -35,6 +35,7 @@ let%expect_test "uncaught exception at module init" =
 
       (just_raise.ml.E 42)
 
-    <backtrace lines elided> |}];
+    <backtrace lines elided>
+    |}];
   return ()
 ;;

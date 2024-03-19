@@ -195,6 +195,10 @@ module Stable = struct
     let sexp_of_t (t : t) = Sexp.Atom (to_string t)
     let to_int63 t = Span_ns.Stable.V2.to_int63 t
     let of_int63_exn t = of_span_since_start_of_day_exn (Span_ns.Stable.V2.of_int63_exn t)
+
+    include Diffable.Atomic.Make (struct
+      type nonrec t = t [@@deriving bin_io, equal, sexp]
+    end)
   end
 end
 
@@ -217,6 +221,8 @@ include Identifiable.Make_using_comparator (struct
 
   let module_name = "Core.Time_ns.Ofday"
 end)
+
+include Diffable.Atomic.Make (Stable.V1)
 
 let t_sexp_grammar = Sexplib.Sexp_grammar.coerce Stable.V1.t_sexp_grammar
 let to_microsecond_string t = Stable.V1.to_string_with_unit t ~unit:`Microsecond
@@ -301,7 +307,8 @@ let%expect_test "small_diff" =
     small_diff 00:52:00.000000000 23:19:00.000000000 = -27m
     small_diff 23:19:00.000000000 00:52:00.000000000 = 27m
     small_diff 00:00:00.000000000 24:00:00.000000000 = 0s
-    small_diff 24:00:00.000000000 00:00:00.000000000 = 0s |}]
+    small_diff 24:00:00.000000000 00:00:00.000000000 = 0s
+    |}]
 ;;
 
 let gen_incl = Span.gen_incl

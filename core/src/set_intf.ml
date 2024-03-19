@@ -205,6 +205,17 @@ module type S_plain = sig
 
   type t = (Elt.t, Elt.comparator_witness) Base.Set.t [@@deriving compare, equal, sexp_of]
 
+  module Diff : sig
+    type t = Elt.t Diffable.Set_diff.t [@@deriving sexp_of]
+
+    include
+      Diffable.Diff.S_plain
+        with type t := t
+         and type derived_on = (Elt.t, Elt.comparator_witness) Base.Set.t
+  end
+
+  include Diffable.S_plain with type t := t and module Diff := Diff
+
   include
     Creators_generic
       with type ('a, 'b) set := ('a, 'b) Set.t
@@ -245,7 +256,16 @@ module type S = sig
     include Comparator.S with type t := t
   end
 
-  include S_plain with module Elt := Elt
+  module Diff : sig
+    type t = Elt.t Diffable.Set_diff.t [@@deriving sexp]
+
+    include
+      Diffable.Diff.S_plain
+        with type t := t
+         and type derived_on = (Elt.t, Elt.comparator_witness) Base.Set.t
+  end
+
+  include S_plain with module Elt := Elt and module Diff := Diff
   include Sexpable.S with type t := t
 end
 
@@ -256,6 +276,15 @@ module type S_binable = sig
     include Comparator.S with type t := t
   end
 
-  include S with module Elt := Elt
+  module Diff : sig
+    type t = Elt.t Diffable.Set_diff.t [@@deriving bin_io, sexp]
+
+    include
+      Diffable.Diff.S_plain
+        with type t := t
+         and type derived_on = (Elt.t, Elt.comparator_witness) Base.Set.t
+  end
+
+  include S with module Elt := Elt and module Diff := Diff
   include Binable.S with type t := t
 end

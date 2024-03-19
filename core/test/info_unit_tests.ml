@@ -46,5 +46,6 @@ let%expect_test "Info.Stable.V2" =
      (bin_io "\000\001\002\000\007Failure\000\005Error"))
     ((sexp (Failure Error)) (bin_io "\002\001\002\000\007Failure\000\005Error"))
     ((sexp ((Failure Error) (backtrace)))
-     (bin_io "\b\003\001\002\000\007Failure\000\005Error\tbacktrace")) |}]
+     (bin_io "\b\003\001\002\000\007Failure\000\005Error\tbacktrace"))
+    |}]
 ;;

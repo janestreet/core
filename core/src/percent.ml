@@ -238,7 +238,8 @@ module Stable = struct
         1.47651E+12
         1.47651E+20
         1.47651E+50
-        -------------------------------------------------- |}]
+        --------------------------------------------------
+        |}]
     ;;
 
     module Stringable = struct
@@ -337,6 +338,10 @@ module Stable = struct
 
     include Comparable.Make_binable (struct
       type nonrec t = t [@@deriving bin_io, compare, sexp]
+    end)
+
+    include Diffable.Atomic.Make (struct
+      type nonrec t = t [@@deriving bin_io, equal, sexp]
     end)
 
     module Always_percentage = struct
@@ -493,6 +498,10 @@ module Stable = struct
       let comparator = V3.comparator
     end)
 
+    include Diffable.Atomic.Make (struct
+      type nonrec t = t [@@deriving bin_io, sexp, equal]
+    end)
+
     type comparator_witness = V3.comparator_witness
   end
 
@@ -517,6 +526,10 @@ module Stable = struct
           | float -> float
           | exception _ -> t_of_sexp sexp
         ;;
+      end)
+
+      include Diffable.Atomic.Make (struct
+        type nonrec t = t [@@deriving bin_io, equal, sexp]
       end)
     end
 

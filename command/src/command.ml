@@ -2632,9 +2632,11 @@ let%test_module "Version_info" =
 
     let%expect_test "print version where multiple repos are used" =
       Version_info.print_version ~version:Version_info.default_version;
-      [%expect {|
+      [%expect
+        {|
         hg://some/path_0xdeadbeef
-        ssh://a/path_8badf00d |}]
+        ssh://a/path_8badf00d
+        |}]
     ;;
 
     let%expect_test "print build info" =
@@ -2744,7 +2746,8 @@ let%expect_test "Demonstrate [autocomplete_function]" =
     " read -d "" -A COMPREPLY < <("${COMP_WORDS[@]}")
       fi
     }
-    complete -F _jsautocom_0000012345 <argv_0> |}]
+    complete -F _jsautocom_0000012345 <argv_0>
+    |}]
 ;;
 
 module For_unix (For_unix_with_string_env_var : For_unix with type env_var := string) =

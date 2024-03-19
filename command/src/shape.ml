@@ -415,10 +415,11 @@ module Num_occurrences = struct
       assert ([%compare.equal: string] flag_name flag_name'));
     [%expect
       {|
-        (((at_least_once false) (at_most_once false)) "[name] ...")
-        (((at_least_once true) (at_most_once false)) "name ...")
-        (((at_least_once false) (at_most_once true)) [name])
-        (((at_least_once true) (at_most_once true)) name) |}]
+      (((at_least_once false) (at_most_once false)) "[name] ...")
+      (((at_least_once true) (at_most_once false)) "name ...")
+      (((at_least_once false) (at_most_once true)) [name])
+      (((at_least_once true) (at_most_once true)) name)
+      |}]
   ;;
 end
 

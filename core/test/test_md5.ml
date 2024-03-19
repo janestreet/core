@@ -11,7 +11,8 @@ let%expect_test "digest_bin_prot" =
   [%expect
     {|
     93b885adfe0da089cdf634904fd59f71
-    22eaa1d1a43daf2abf8bb3f7b8d0128c |}]
+    22eaa1d1a43daf2abf8bb3f7b8d0128c
+    |}]
 ;;
 
 let%test_module "Md5.As_binary_string.V1" =

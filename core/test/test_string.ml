@@ -78,7 +78,8 @@ let%test_module "Verify reading/writing stable table sexp" =
       print_s [%sexp (table : string String.Stable.V1.Table.t)];
       [%expect {|
         ((alpha beta)
-         (delta gamma)) |}]
+         (delta gamma))
+        |}]
     ;;
 
     let%test_unit "t_of_sexp" =

@@ -9,6 +9,8 @@ module Stable : sig
       Stable_int63able.With_stable_witness.S
         with type t := t
          and type comparator_witness = comparator_witness
+
+    include Diffable.S_atomic with type t := t
   end
 
   module Option : sig end [@@deprecated "[since 2021-02] Use [Time_ns_unix.Stable]"]

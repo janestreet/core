@@ -65,7 +65,8 @@ let%expect_test "of_bigstring fails if the buffer is too long or too short" =
     {|
     ("bin_read_t did not consume the entire buffer"
      (consumed         11)
-     (bigstring_length 30)) |}]
+     (bigstring_length 30))
+    |}]
 ;;
 
 let%test_unit "Core_bin_prot" =

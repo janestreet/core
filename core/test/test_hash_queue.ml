@@ -105,8 +105,7 @@ let%expect_test _ =
   require_does_raise [%here] (fun () ->
     Hq.iter hq ~f:(fun _ -> ignore (Hq.remove hq "foo" : [ `No_such_key | `Ok ])));
   [%expect
-    {|
-    (Failure "It is an error to modify a Hash_queue.t while iterating over it.") |}];
+    {| (Failure "It is an error to modify a Hash_queue.t while iterating over it.") |}];
   [%test_result: int] (Hq.lookup_and_move_to_back_exn hq "2") ~expect:2;
   [%test_result: string * int] (Hq.dequeue_front_with_key_exn hq) ~expect:("1", 1);
   [%test_result: string * int] (Hq.dequeue_front_with_key_exn hq) ~expect:("3", 3);
@@ -217,7 +216,8 @@ let%expect_test "dequeue_back, dequeue_back_exn" =
     (8)
     (9)
     (10)
-    () |}];
+    ()
+    |}];
   let hq = make_hq () in
   for _ = 1 to 10 do
     print_s [%sexp (Hq.dequeue_back_exn hq : int)]
@@ -232,7 +232,8 @@ let%expect_test "dequeue_back, dequeue_back_exn" =
     7
     8
     9
-    10 |}]
+    10
+    |}]
 ;;
 
 let%expect_test "drop" =
@@ -327,7 +328,8 @@ let%expect_test "[replace_or_enqueue_back] adds a new element to the back when t
   print_s [%sexp (hq : string Hq.t)];
   [%expect {|
     ((key1 value1)
-     (key2 value2)) |}]
+     (key2 value2))
+    |}]
 ;;
 
 let%expect_test "[replace_or_enqueue_front] adds a new element to the front when the key \
@@ -339,7 +341,8 @@ let%expect_test "[replace_or_enqueue_front] adds a new element to the front when
   print_s [%sexp (hq : string Hq.t)];
   [%expect {|
     ((key2 value2)
-     (key1 value1)) |}]
+     (key1 value1))
+    |}]
 ;;
 
 let%expect_test "[replace_or_enqueue_front] replaces a value when the key already exists \

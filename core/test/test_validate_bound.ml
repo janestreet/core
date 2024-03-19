@@ -25,7 +25,8 @@ let%expect_test "int bounds" =
     (foo.incl_lower "value -1 < bound 0")
     (foo.incl_upper "value 101 > bound 100")
     (foo.excl_lower "value 0 <= bound 0")
-    (foo.excl_upper "value 100 >= bound 100") |}]
+    (foo.excl_upper "value 100 >= bound 100")
+    |}]
 ;;
 
 let%expect_test "inf/nan" =
@@ -40,5 +41,6 @@ let%expect_test "inf/nan" =
   print res;
   [%expect {|
     (bar.nan "value is NaN")
-    (bar.inf "value is infinite") |}]
+    (bar.inf "value is infinite")
+    |}]
 ;;

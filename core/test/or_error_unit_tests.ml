@@ -105,11 +105,13 @@ let%expect_test "[Expect_test_config]" =
     String.Map.of_alist_or_error [ hearts, 1; "diamonds", 2; "clubs", 3; "spades", 4 ]
   in
   print_s [%sexp (map : int String.Map.t)];
-  [%expect {|
+  [%expect
+    {|
     ((clubs    3)
      (diamonds 2)
      (hearts   1)
-     (spades   4)) |}];
+     (spades   4))
+    |}];
   let%bind hearts_value = Map.find_or_error map hearts in
   print_s [%sexp (hearts_value : int)];
   [%expect {| 1 |}];
@@ -125,11 +127,13 @@ let%expect_test "[Expect_test_config_with_unit_expect]" =
     String.Map.of_alist_or_error [ hearts, 1; "diamonds", 2; "clubs", 3; "spades", 4 ]
   in
   print_s [%sexp (map : int String.Map.t)];
-  [%expect {|
+  [%expect
+    {|
     ((clubs    3)
      (diamonds 2)
      (hearts   1)
-     (spades   4)) |}];
+     (spades   4))
+    |}];
   let%bind hearts_value = Map.find_or_error map hearts in
   print_s [%sexp (hearts_value : int)];
   [%expect {| 1 |}];

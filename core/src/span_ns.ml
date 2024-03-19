@@ -228,12 +228,17 @@ module Stable0 = struct
         of_span_float_round_nearest (Time_float.Stable.Span.V1.t_of_sexp s)
       ;;
 
+      let t_sexp_grammar : t Sexplib0.Sexp_grammar.t =
+        Sexplib0.Sexp_grammar.coerce Time_float.Stable.Span.V1.t_sexp_grammar
+      ;;
+
       let of_int63_exn t = of_int63_ns t
       let to_int63 t = to_int63_ns t
     end
 
     include T
     include Comparator.Stable.V1.Make (T)
+    include Diffable.Atomic.Make (T)
   end
 
   module V2 = struct
@@ -705,6 +710,7 @@ module Stable0 = struct
 
     include T
     include Comparable.Stable.V1.With_stable_witness.Make (T)
+    include Diffable.Atomic.Make (T)
   end
 end
 
@@ -809,6 +815,10 @@ include Comparable.Make_binable_using_comparator (struct
   let comparator = Stable.V2.comparator
 end)
 
+include Diffable.Atomic.Make (struct
+  type nonrec t = t [@@deriving bin_io, sexp, equal]
+end)
+
 (* re-include [Replace_polymorphic_compare] and its comparisons to shadow the
    un-inlineable ones from [Comparable] *)
 module Replace_polymorphic_compare = T.Replace_polymorphic_compare
@@ -892,7 +902,7 @@ let to_span = to_span_float_round_nearest_microsecond
 
 module Option = struct
   type span = t [@@deriving sexp]
-  type t = Int63.t [@@deriving bin_io, compare, hash, typerep]
+  type t = Int63.t [@@deriving bin_io, compare, equal, hash, typerep]
   (* nanoseconds or none *)
 
   let none = Int63.min_value
@@ -967,7 +977,7 @@ module Option = struct
   module Stable = struct
     module V1 = struct
       module T = struct
-        type nonrec t = t [@@deriving compare, bin_io]
+        type nonrec t = t [@@deriving bin_io, compare, equal]
 
         let v1_some span =
           assert (some_is_representable span);
@@ -989,11 +999,12 @@ module Option = struct
 
       include T
       include Comparator.Stable.V1.Make (T)
+      include Diffable.Atomic.Make (T)
     end
 
     module V2 = struct
       module T = struct
-        type nonrec t = t [@@deriving compare, bin_io]
+        type nonrec t = t [@@deriving bin_io, compare, equal]
 
         let sexp_of_t t =
           Sexp.List
@@ -1031,6 +1042,7 @@ module Option = struct
 
       include T
       include Comparator.Stable.V1.Make (T)
+      include Diffable.Atomic.Make (T)
     end
   end
 
@@ -1045,6 +1057,10 @@ module Option = struct
     include Sexpable.To_stringable (struct
       type nonrec t = t [@@deriving sexp]
     end)
+  end)
+
+  include Diffable.Atomic.Make (struct
+    type nonrec t = t [@@deriving bin_io, sexp, equal]
   end)
 
   include (Int63 : Comparisons.S with type t := t)

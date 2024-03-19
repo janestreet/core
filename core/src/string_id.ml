@@ -83,6 +83,7 @@ struct
       include T_with_comparator
       include Comparable.Stable.V1.With_stable_witness.Make (T_with_comparator)
       include Hashable.Stable.V1.With_stable_witness.Make (T_with_comparator)
+      include Diffable.Atomic.Make (T_with_comparator)
     end
   end
 
@@ -90,6 +91,7 @@ struct
   include Stable_latest.T_with_comparator
   include Comparable.Make_binable_using_comparator (Stable_latest.T_with_comparator)
   include Hashable.Make_binable (Stable_latest.T_with_comparator)
+  include Diffable.Atomic.Make (Stable_latest)
 
   let quickcheck_shrinker = Quickcheck.Shrinker.empty ()
   let quickcheck_observer = String.quickcheck_observer

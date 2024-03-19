@@ -366,6 +366,15 @@ struct
   let compare t1 t2 = compare_direct t1 t2
   let sexp_of_t t = sexp_of_t Elt.sexp_of_t [%sexp_of: _] t
 
+  module Diff = struct
+    type derived_on = t
+    type t = Elt.t Diffable.Set_diff.t [@@deriving sexp_of]
+
+    let get = Diffable.Set_diff.get
+    let apply_exn = Diffable.Set_diff.apply_exn
+    let of_list_exn = Diffable.Set_diff.of_list_exn
+  end
+
   module Provide_of_sexp
     (Elt : sig
       type t [@@deriving of_sexp]
@@ -373,6 +382,12 @@ struct
     with type t := Elt.t) =
   struct
     let t_of_sexp sexp = t_of_sexp Elt.t_of_sexp sexp
+
+    module Diff = struct
+      include Diff
+
+      let t_of_sexp sexp = Diffable.Set_diff.t_of_sexp Elt.t_of_sexp sexp
+    end
   end
 
   module Provide_hash (Elt : Hasher.S with type t := Elt.t) = struct
@@ -438,6 +453,12 @@ struct
   include Make_using_comparator (Elt_bin_sexp)
   module Elt = Elt_bin_sexp
   include Provide_bin_io (Elt)
+
+  module Diff = struct
+    include Diff
+
+    type t = Elt.t Diffable.Set_diff.t [@@deriving bin_io]
+  end
 end
 
 module Make_binable (Elt : Elt_binable) = Make_binable_using_comparator (struct
@@ -545,6 +566,9 @@ module Stable = struct
       type nonrec t = (elt, elt_comparator_witness) t
 
       include Stable_module_types.S0_without_comparator with type t := t
+
+      include
+        Diffable.S with type t := t and type Diff.t = elt Diffable.Set_diff.Stable.V1.t
     end
 
     include For_deriving

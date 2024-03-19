@@ -71,5 +71,6 @@ let%expect_test "validate sexp grammar" =
         (No_tag ((name Sep) (clause_kind Atom_clause)))
         (No_tag ((name Oct) (clause_kind Atom_clause)))
         (No_tag ((name Nov) (clause_kind Atom_clause)))
-        (No_tag ((name Dec) (clause_kind Atom_clause))))))) |}]
+        (No_tag ((name Dec) (clause_kind Atom_clause)))))))
+    |}]
 ;;

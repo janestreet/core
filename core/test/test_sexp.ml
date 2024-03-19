@@ -56,16 +56,14 @@ module _ = struct
   let%expect_test _ =
     require_does_raise [%here] (fun () -> il_of_text "(1 2 bla)");
     [%expect
-      {|
-      (Of_sexp_error :1:5 "int_of_sexp: (Failure int_of_string)" (invalid_sexp bla)) |}]
+      {| (Of_sexp_error :1:5 "int_of_sexp: (Failure int_of_string)" (invalid_sexp bla)) |}]
   ;;
 
   let%expect_test _ =
     require_does_raise [%here] (fun () ->
       t_of_sexp il_of_sexp (Sexp.of_string "\"(1 2 bla)\""));
     [%expect
-      {|
-      (Of_sexp_error :1:5 "int_of_sexp: (Failure int_of_string)" (invalid_sexp bla)) |}]
+      {| (Of_sexp_error :1:5 "int_of_sexp: (Failure int_of_string)" (invalid_sexp bla)) |}]
   ;;
 end
 
@@ -84,7 +82,8 @@ let%test_module _ =
         {|
         832b40ae394f2851da8ba67b3339b429
         832b40ae394f2851da8ba67b3339b429
-        832b40ae394f2851da8ba67b3339b429 |}]
+        832b40ae394f2851da8ba67b3339b429
+        |}]
     ;;
   end)
 ;;
@@ -127,14 +126,17 @@ let%test_module "of_sexp_allow_extra_fields_recursively" =
         ((
           v (
             (a a-suffix)
-            (b 0)))) |}];
+            (b 0))))
+        |}];
       let t = Sexp.of_sexp_allow_extra_fields_recursively t_of_sexp sexp in
       print_s (sexp_of_t t);
-      [%expect {|
+      [%expect
+        {|
         ((
           v (
             (a a)
-            (b 0)))) |}]
+            (b 0))))
+        |}]
     ;;
   end)
 ;;

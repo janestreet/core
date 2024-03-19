@@ -27,7 +27,8 @@ let%expect_test ("Quickcheck.Let_syntax" [@tags "64-bits-only"]) =
     ((true B 14980.765357503886) (A "tq\210H7LQ"))
     ((false 4 -4.94065645841247E-324) (A ""))
     ((false X -287262765.50439453) (A "yP\000xv\134uV\197"))
-    ((true q -8.6367588215150434E-19) (A A)) |}]
+    ((true q -8.6367588215150434E-19) (A A))
+    |}]
 ;;
 
 let%expect_test "ppx_quickcheck" =

@@ -34,14 +34,16 @@ let%expect_test "[exists2]" =
      (x2 3))
     ((x1 2)
      (x2 4))
-    (result (Ok false)) |}];
+    (result (Ok false))
+    |}];
   test2 exists2 (print2_and_return true) [%sexp_of: bool];
   [%expect
     {|
     (result Unequal_lengths)
     ((x1 1)
      (x2 3))
-    (result (Ok true)) |}]
+    (result (Ok true))
+    |}]
 ;;
 
 let%expect_test "[fold2]" =
@@ -61,7 +63,8 @@ let%expect_test "[fold2]" =
     (result (
       Ok (
         (2 4)
-        (1 3)))) |}]
+        (1 3))))
+    |}]
 ;;
 
 let%expect_test "[for_all2]" =
@@ -71,7 +74,8 @@ let%expect_test "[for_all2]" =
     (result Unequal_lengths)
     ((x1 1)
      (x2 3))
-    (result (Ok false)) |}];
+    (result (Ok false))
+    |}];
   test2 for_all2 (print2_and_return true) [%sexp_of: bool];
   [%expect
     {|
@@ -80,7 +84,8 @@ let%expect_test "[for_all2]" =
      (x2 3))
     ((x1 2)
      (x2 4))
-    (result (Ok true)) |}]
+    (result (Ok true))
+    |}]
 ;;
 
 let%expect_test "[iter2]" =
@@ -92,7 +97,8 @@ let%expect_test "[iter2]" =
      (x2 3))
     ((x1 2)
      (x2 4))
-    (result (Ok ())) |}]
+    (result (Ok ()))
+    |}]
 ;;
 
 let%expect_test "[map2]" =
@@ -112,7 +118,8 @@ let%expect_test "[map2]" =
     (result (
       Ok (
         (1 3)
-        (2 4)))) |}]
+        (2 4))))
+    |}]
 ;;
 
 let%expect_test "[map3]" =
@@ -134,7 +141,8 @@ let%expect_test "[map3]" =
     (result (
       Ok (
         (1 3 5)
-        (2 4 6)))) |}]
+        (2 4 6))))
+    |}]
 ;;
 
 let%expect_test "[rev_map2]" =
@@ -154,7 +162,8 @@ let%expect_test "[rev_map2]" =
     (result (
       Ok (
         (2 4)
-        (1 3)))) |}]
+        (1 3))))
+    |}]
 ;;
 
 let%expect_test "[rev_map3]" =
@@ -176,7 +185,8 @@ let%expect_test "[rev_map3]" =
     (result (
       Ok (
         (2 4 6)
-        (1 3 5)))) |}]
+        (1 3 5))))
+    |}]
 ;;
 
 let%test_module "zip_with_remainder" =

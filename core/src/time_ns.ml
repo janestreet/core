@@ -391,6 +391,10 @@ module Alternate_sexp = struct
   include Comparable.Make (T)
   include Replace_polymorphic_compare_efficient
 
+  include Diffable.Atomic.Make (struct
+    type nonrec t = t [@@deriving bin_io, equal, sexp]
+  end)
+
   module Stable = struct
     module V1 = struct
       module T = struct
@@ -407,6 +411,7 @@ module Alternate_sexp = struct
 
       include T
       include Comparable.Stable.V1.With_stable_witness.Make (T)
+      include Diffable.Atomic.Make (T)
     end
   end
 end
@@ -465,6 +470,12 @@ module Option0 = struct
     include T
     include Comparable.Make (T)
 
+    include Diffable.Atomic.Make (struct
+      include T
+
+      let equal = [%compare.equal: t]
+    end)
+
     module Stable = struct
       module V1 = struct
         module T = struct
@@ -484,6 +495,12 @@ module Option0 = struct
 
         include T
         include Comparable.Stable.V1.With_stable_witness.Make (T)
+
+        include Diffable.Atomic.Make (struct
+          include T
+
+          let equal = [%compare.equal: t]
+        end)
       end
     end
   end

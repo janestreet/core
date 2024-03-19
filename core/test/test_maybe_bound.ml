@@ -29,7 +29,8 @@ let%test_module "[As_lower_bound.compare], [As_upper_bound.compare]" =
           (Incl O2)
           (Excl O2)
           (Incl O3)
-          (Excl O3)) |}];
+          (Excl O3))
+        |}];
       print_s [%sexp (sorted_upper : t list)];
       [%expect
         {|
@@ -39,7 +40,8 @@ let%test_module "[As_lower_bound.compare], [As_upper_bound.compare]" =
          (Incl O2)
          (Excl O3)
          (Incl O3)
-         Unbounded) |}]
+         Unbounded)
+        |}]
     ;;
 
     let%test _ = List.is_sorted_strictly sorted_lower ~compare:[%compare: lower]

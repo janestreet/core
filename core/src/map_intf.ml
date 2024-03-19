@@ -167,6 +167,17 @@ module type S_plain = sig
       with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
       with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
 
+  module Diff : sig
+    type ('a, 'a_diff) t = (Key.t, 'a, 'a_diff) Diffable.Map_diff.t [@@deriving sexp_of]
+
+    include
+      Diffable.Diff.S1_plain
+        with type 'a derived_on = (Key.t, 'a, Key.comparator_witness) Map.t
+         and type ('a, 'a_diff) t := ('a, 'a_diff) t
+  end
+
+  include Diffable.S1_plain with type 'a t := 'a t and module Diff := Diff
+
   val map : 'a t -> f:('a -> 'b) -> 'b t
 
   module Provide_of_sexp
@@ -210,7 +221,16 @@ module type S = sig
     include Comparator.S with type t := t
   end
 
-  include S_plain with module Key := Key
+  module Diff : sig
+    type ('a, 'a_diff) t = (Key.t, 'a, 'a_diff) Diffable.Map_diff.t [@@deriving sexp]
+
+    include
+      Diffable.Diff.S1_plain
+        with type ('a, 'a_diff) t := ('a, 'a_diff) t
+         and type 'a derived_on = (Key.t, 'a, Key.comparator_witness) Map.t
+  end
+
+  include S_plain with module Key := Key and module Diff := Diff
   include Sexpable.S1 with type 'a t := 'a t
 end
 
@@ -221,7 +241,17 @@ module type S_binable = sig
     include Comparator.S with type t := t
   end
 
-  include S with module Key := Key
+  module Diff : sig
+    type ('a, 'a_diff) t = (Key.t, 'a, 'a_diff) Diffable.Map_diff.t
+    [@@deriving bin_io, sexp]
+
+    include
+      Diffable.Diff.S1_plain
+        with type ('a, 'a_diff) t := ('a, 'a_diff) t
+         and type 'a derived_on = (Key.t, 'a, Key.comparator_witness) Map.t
+  end
+
+  include S with module Key := Key and module Diff := Diff
   include Binable.S1 with type 'a t := 'a t
 end
 

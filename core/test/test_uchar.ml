@@ -38,7 +38,8 @@ let%expect_test "Stable.V1" =
     ((sexp   U+10000)
      (bin_io "\253\000\000\001\000"))
     ((sexp   U+10FFFF)
-     (bin_io "\253\255\255\016\000")) |}]
+     (bin_io "\253\255\255\016\000"))
+    |}]
 ;;
 
 let%expect_test "Test [Uchar.t] quickcheck generator" =
@@ -57,5 +58,5 @@ let%expect_test "Test [Uchar.t] quickcheck generator" =
     ~trials:1_000
     ~distinct_values:500
     ~compare:Uchar.compare;
-  [%expect {||}]
+  [%expect {| |}]
 ;;

@@ -27,7 +27,8 @@ let%expect_test "Time.Stable.With_utc_sexp.V2" =
     ((sexp (2001-01-01 00:00:00.000000Z)) (bin_io "\000\000\000@\228'\205A"))
     ((sexp (2013-10-07 09:30:00.000000Z))
      (bin_io "\000\000\000\198\159\148\212A"))
-    ((sexp (2017-07-28 11:57:00.000123Z)) (bin_io "\004\002\000\163\201^\214A")) |}]
+    ((sexp (2017-07-28 11:57:00.000123Z)) (bin_io "\004\002\000\163\201^\214A"))
+    |}]
 ;;
 
 let span_examples =
@@ -123,7 +124,8 @@ let%expect_test "Time.Stable.Span.V1" =
     ((sexp   -3.14159h)
      (bin_io "\162\235\015\229\221\022\198\192"))
     ((sexp   -3.14159d)
-     (bin_io "\186\240\203k&\145\016\193")) |}]
+     (bin_io "\186\240\203k&\145\016\193"))
+    |}]
 ;;
 
 let%expect_test "Time.Stable.Span.V2" =
@@ -202,7 +204,8 @@ let%expect_test "Time.Stable.Span.V2" =
     ((sexp   -3.1415926535897931h)
      (bin_io "\162\235\015\229\221\022\198\192"))
     ((sexp   -3.1415926535897936d)
-     (bin_io "\186\240\203k&\145\016\193")) |}]
+     (bin_io "\186\240\203k&\145\016\193"))
+    |}]
 ;;
 
 let span_gen = Quickcheck.Generator.map Float.gen_finite ~f:Time_float.Span.of_sec
@@ -342,7 +345,8 @@ let%test_module "Time.Stable.Span.V3" =
         ((sexp   INFs)
          (bin_io "\000\000\000\000\000\000\240\127"))
         ((sexp   -INFs)
-         (bin_io "\000\000\000\000\000\000\240\255")) |}]
+         (bin_io "\000\000\000\000\000\000\240\255"))
+        |}]
     ;;
 
     let%expect_test ("serialization tests for NaNs" [@tags "64-bits-only"]) =
@@ -358,7 +362,8 @@ let%test_module "Time.Stable.Span.V3" =
         ((sexp   NANs)
          (bin_io "\001\000\000\000\000\000\248\127"))
         ((sexp   NANs)
-         (bin_io "\001\000\000\000\000\000\248\255")) |}]
+         (bin_io "\001\000\000\000\000\000\248\255"))
+        |}]
     ;;
 
     let%expect_test "V3 accepts V1 and V2 sexp outputs" =
@@ -415,7 +420,8 @@ let%test_module "Span.to_string/of_string" =
         864000000.00000012
         864000000.00000012
         864000000.
-        8640001.000001 |}]
+        8640001.000001
+        |}]
     ;;
 
     let near_powers_of_10 =
@@ -691,42 +697,48 @@ let%test_module "Span.to_string/of_string" =
         {|
         span    : 6362914d12h18m8s
         ulp up  : 122.0703125us
-        ulp down: 61.03515625us |}];
+        ulp down: 61.03515625us
+        |}];
       let ms_ulp = Time_float.Span.of_sec (Float.ldexp 1. (53 - 10)) in
       check_ulps ms_ulp;
       [%expect
         {|
         span    : 101806632d4h50m8s
         ulp up  : 1.953125ms
-        ulp down: 976.5625us |}];
+        ulp down: 976.5625us
+        |}];
       let half_min_ulp = Time_float.Span.of_sec (Float.ldexp 1. (53 + 4)) in
       check_ulps half_min_ulp;
       [%expect
         {|
         span    : 1667999861989d1h44m32s
         ulp up  : 32s
-        ulp down: 16s |}];
+        ulp down: 16s
+        |}];
       let two_min_ulp = Time_float.Span.of_sec (Float.ldexp 1. (53 + 6)) in
       check_ulps two_min_ulp;
       [%expect
         {|
         span    : 6671999447956d6h58m
         ulp up  : 2m8s
-        ulp down: 1m4s |}];
+        ulp down: 1m4s
+        |}];
       let quarter_hr_ulp = Time_float.Span.of_sec (Float.ldexp 1. (53 + 9)) in
       check_ulps quarter_hr_ulp;
       [%expect
         {|
         span    : 53375995583650d7h42m
         ulp up  : 17m4s
-        ulp down: 8m32s |}];
+        ulp down: 8m32s
+        |}];
       let two_hr_ulp = Time_float.Span.of_sec (Float.ldexp 1. (53 + 12)) in
       check_ulps two_hr_ulp;
       [%expect
         {|
         span    : 427007964669202d14h
         ulp up  : 2h16m32s
-        ulp down: 1h8m16s |}];
+        ulp down: 1h8m16s
+        |}];
       let infinity = Time_float.Span.of_sec Float.infinity in
       (* Test magnitudes of span parts, allowing abnormal magnitudes (like 24h or 60s) in
          the ranges where we expect them. The allowed fractions of values with abnormal
@@ -772,7 +784,8 @@ let%test_module "Span.to_string/of_string" =
         {|
         34771412d23h36m1e+03us
         5267882376633d10h60m
-        218326395376058d24h |}]
+        218326395376058d24h
+        |}]
     ;;
 
     let%expect_test "unit appearing twice" =
@@ -794,7 +807,8 @@ let%test_module "Span.to_string/of_string" =
       [%expect
         {|
         ("quickcheck: test failed" (input -2.1695734240829744e+44d3e+28d))
-        (* require-failed: lib/core/test/test_time.ml:LINE:COL. *) |}];
+        (* require-failed: lib/core/test/test_time.ml:LINE:COL. *)
+        |}];
       test "h";
       [%expect {| |}];
       test "m";
@@ -812,7 +826,8 @@ let%test_module "Span.to_string/of_string" =
       [%expect
         {|
         ("quickcheck: test failed" (input -3.70807784925899e-59ns4e-75ns))
-        (* require-failed: lib/core/test/test_time.ml:LINE:COL. *) |}]
+        (* require-failed: lib/core/test/test_time.ml:LINE:COL. *)
+        |}]
     ;;
   end)
 ;;
@@ -879,7 +894,8 @@ let%expect_test "Span.to_parts + Span.create" =
     (-3h8m29.733552923255s
      ((sign Neg) (hr 3) (min 8) (sec 29) (ms 733) (us 552) (ns 923)))
     (-3d3h23m53.60527015815s
-     ((sign Neg) (hr 75) (min 23) (sec 53) (ms 605) (us 270) (ns 158))) |}]
+     ((sign Neg) (hr 75) (min 23) (sec 53) (ms 605) (us 270) (ns 158)))
+    |}]
 ;;
 
 let ofday_examples =
@@ -926,7 +942,8 @@ let%expect_test "Ofday.to_parts + Ofday.create" =
     (00:03:08.495559
      ((sign Pos) (hr 0) (min 3) (sec 8) (ms 495) (us 559) (ns 215)))
     (03:08:29.733553
-     ((sign Pos) (hr 3) (min 8) (sec 29) (ms 733) (us 552) (ns 923))) |}]
+     ((sign Pos) (hr 3) (min 8) (sec 29) (ms 733) (us 552) (ns 923)))
+    |}]
 ;;
 
 let%expect_test "time zone offset parsing" =
@@ -942,7 +959,8 @@ let%expect_test "time zone offset parsing" =
     2000-01-01 12:34:56.789012Z
     2000-01-01 12:34:56.789012Z
     2000-01-01 12:34:56.789012Z
-    2000-01-01 12:34:56.789012Z |}];
+    2000-01-01 12:34:56.789012Z
+    |}];
   test "2000-01-01 12:34:56.789012-05:00";
   test "2000-01-01 12:34:56.789012-5:00";
   test "2000-01-01 12:34:56.789012-05";
@@ -952,17 +970,20 @@ let%expect_test "time zone offset parsing" =
     2000-01-01 17:34:56.789012Z
     2000-01-01 17:34:56.789012Z
     2000-01-01 17:34:56.789012Z
-    2000-01-01 17:34:56.789012Z |}];
+    2000-01-01 17:34:56.789012Z
+    |}];
   test "2000-01-01 12:34:56.789012-23:00";
   test "2000-01-01 12:34:56.789012-23";
   [%expect {|
     2000-01-02 11:34:56.789012Z
-    2000-01-02 11:34:56.789012Z |}];
+    2000-01-02 11:34:56.789012Z
+    |}];
   test "2000-01-01 12:34:56.789012-24:00";
   test "2000-01-01 12:34:56.789012-24";
   [%expect {|
     2000-01-02 12:34:56.789012Z
-    2000-01-02 12:34:56.789012Z |}]
+    2000-01-02 12:34:56.789012Z
+    |}]
 ;;
 
 let%expect_test "time zone invalid offset parsing" =
@@ -1006,7 +1027,8 @@ let%expect_test "time zone invalid offset parsing" =
      (Failure "Char.get_digit_exn ':': not a digit"))
     (time.ml.Make.Time_of_string
      "2000-01-01 12:34:56.789012-"
-     (Invalid_argument "index out of bounds")) |}];
+     (Invalid_argument "index out of bounds"))
+    |}];
   test [%here] "2000-01-01 12:34:56.789012-25:00";
   test [%here] "2000-01-01 12:34:56.789012-25";
   [%expect
@@ -1016,7 +1038,8 @@ let%expect_test "time zone invalid offset parsing" =
      ("Time.Ofday: invalid string" 25:00 "hours out of bounds"))
     (time.ml.Make.Time_of_string
      "2000-01-01 12:34:56.789012-25"
-     ("Time.Ofday: invalid string" 25:00 "hours out of bounds")) |}];
+     ("Time.Ofday: invalid string" 25:00 "hours out of bounds"))
+    |}];
   test [%here] "2000-01-01 12:34:56.789012--1:00";
   test [%here] "2000-01-01 12:34:56.789012--1";
   [%expect
@@ -1026,7 +1049,8 @@ let%expect_test "time zone invalid offset parsing" =
      (Failure "Char.get_digit_exn '-': not a digit"))
     (time.ml.Make.Time_of_string
      "2000-01-01 12:34:56.789012--1"
-     (Invalid_argument "index out of bounds")) |}]
+     (Invalid_argument "index out of bounds"))
+    |}]
 ;;
 
 let%expect_test "of_string_iso8601_extended" =
@@ -1102,7 +1126,8 @@ let%expect_test "of_string_iso8601_extended" =
     13:00:00.000000 <-- 12:59:60
     13:00:00.000000 <-- 12:59:60.789
     13:00:00.000000 <-- 12:59:60.789123
-    13:00:00.000000 <-- 12:59:60.789123456 |}];
+    13:00:00.000000 <-- 12:59:60.789123456
+    |}];
   let failure string =
     match Time_float.Ofday.of_string_iso8601_extended string with
     | exception Invalid_argument message -> print_endline message
@@ -1146,7 +1171,8 @@ let%expect_test "of_string_iso8601_extended" =
     Ofday.of_string_iso8601_extended(12:34:5): (Failure "5 < len < 8")
     Ofday.of_string_iso8601_extended(25:00): (Failure "hour > 24")
     Ofday.of_string_iso8601_extended(00:60): (Failure "minute > 60")
-    Ofday.of_string_iso8601_extended(00:59:61): (Failure "invalid second: 61") |}]
+    Ofday.of_string_iso8601_extended(00:59:61): (Failure "invalid second: 61")
+    |}]
 ;;
 
 module _ = struct
@@ -1193,8 +1219,8 @@ module _ = struct
     printf "%s\n" (String.concat ~sep:" " (Lazy.force Ofday_helpers.pm_suffixes));
     [%expect
       {|
-        a A am AM a.m A.M a.m. A.M.
-        p P pm PM p.m P.M p.m. P.M.
+      a A am AM a.m A.M a.m. A.M.
+      p P pm PM p.m P.M p.m. P.M.
       |}]
   ;;
 
@@ -1393,14 +1419,16 @@ let%expect_test "times with implicit zones" =
     Time_float.Stable.With_utc_sexp.V2.t_of_sexp (Sexp.of_string "(2013-10-07 09:30)"));
   [%expect {|
     2013-10-07 09:30:00.000000Z
-    "did not raise" |}];
+    "did not raise"
+    |}];
   require_does_raise [%here] (fun () ->
     Time_float.of_string_with_utc_offset "2013-10-07 09:30");
   [%expect
     {|
     (time.ml.Make.Time_of_string
      "2013-10-07 09:30"
-     ("time has no time zone or UTC offset" "2013-10-07 09:30")) |}]
+     ("time has no time zone or UTC offset" "2013-10-07 09:30"))
+    |}]
 ;;
 
 let%expect_test "quickcheck should generate serializable times" =

@@ -5,7 +5,7 @@ module Buffer_is_from_base : module type of struct
 end =
   Buffer
 
-[%%expect]
+[%%expect {| |}]
 
 module Buffer_is_from_caml : module type of struct
   include Stdlib.Buffer

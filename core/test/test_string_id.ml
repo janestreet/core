@@ -81,29 +81,25 @@ let print_error or_error =
 
 let%expect_test "of string failure" =
   Or_error.try_with (fun () -> Even_int_id.of_string "15") |> print_error;
-  [%expect {|
-    (Invalid_argument "(\"Not a valid Even_int_id\"15)") |}]
+  [%expect {| (Invalid_argument "(\"Not a valid Even_int_id\"15)") |}]
 ;;
 
 let%expect_test "of sexp failure" =
   Or_error.try_with (fun () -> Even_int_id.t_of_sexp (Sexp.of_string "15")) |> print_error;
-  [%expect {|
-    (Of_sexp_error "(\"Not a valid Even_int_id\"15)" (invalid_sexp 15)) |}]
+  [%expect {| (Of_sexp_error "(\"Not a valid Even_int_id\"15)" (invalid_sexp 15)) |}]
 ;;
 
 let%expect_test "set of sexp failure" =
   Or_error.try_with (fun () -> Even_int_id.Set.t_of_sexp (Sexp.of_string "(15)"))
   |> print_error;
-  [%expect {|
-    (Of_sexp_error "(\"Not a valid Even_int_id\"15)" (invalid_sexp 15)) |}]
+  [%expect {| (Of_sexp_error "(\"Not a valid Even_int_id\"15)" (invalid_sexp 15)) |}]
 ;;
 
 let%expect_test "of bin prot failure" =
   Or_error.try_with (fun () ->
     even_int_id_of_bin_str (Unit_tests_util.string_to_bin_str "15"))
   |> print_error;
-  [%expect {|
-    (Invalid_argument "(\"Not a valid Even_int_id\"15)") |}]
+  [%expect {| (Invalid_argument "(\"Not a valid Even_int_id\"15)") |}]
 ;;
 
 module M =
@@ -151,8 +147,7 @@ let print_error or_error =
 
 let%expect_test "of string failure - empty string" =
   Or_error.try_with (fun () -> M.of_string "") |> print_error;
-  [%expect {|
-        (Invalid_argument "'' is not a valid test because it is empty") |}]
+  [%expect {| (Invalid_argument "'' is not a valid test because it is empty") |}]
 ;;
 
 let%expect_test "of string failure - whitespace after" =
@@ -160,7 +155,8 @@ let%expect_test "of string failure - whitespace after" =
   [%expect
     {|
     (Invalid_argument
-     "'FOOBAR ' is not a valid test because it has whitespace on the edge") |}]
+     "'FOOBAR ' is not a valid test because it has whitespace on the edge")
+    |}]
 ;;
 
 let%expect_test "of string failure - whitespace before" =
@@ -168,7 +164,8 @@ let%expect_test "of string failure - whitespace before" =
   [%expect
     {|
     (Invalid_argument
-     "' FOOBAR' is not a valid test because it has whitespace on the edge") |}]
+     "' FOOBAR' is not a valid test because it has whitespace on the edge")
+    |}]
 ;;
 
 let%expect_test "of sexp failure" =
@@ -177,7 +174,8 @@ let%expect_test "of sexp failure" =
     {|
     (Of_sexp_error
      "'FOOBAR ' is not a valid test because it has whitespace on the edge"
-     (invalid_sexp "FOOBAR ")) |}]
+     (invalid_sexp "FOOBAR "))
+    |}]
 ;;
 
 let%expect_test "set of sexp failure" =
@@ -187,7 +185,8 @@ let%expect_test "set of sexp failure" =
     {|
     (Of_sexp_error
      "'FOOBAR ' is not a valid test because it has whitespace on the edge"
-     (invalid_sexp "FOOBAR ")) |}]
+     (invalid_sexp "FOOBAR "))
+    |}]
 ;;
 
 let%expect_test "of bin prot failure" =
@@ -197,7 +196,8 @@ let%expect_test "of bin prot failure" =
   [%expect
     {|
     (Invalid_argument
-     "'FOOBAR ' is not a valid test because it has whitespace on the edge") |}]
+     "'FOOBAR ' is not a valid test because it has whitespace on the edge")
+    |}]
 ;;
 
 let%test_unit "String_id's of_string shouldn't allocate on success" =
@@ -222,7 +222,8 @@ let%test_module "Verify reading/writing stable table sexp" =
       print_s [%sexp (table : t String_id.Stable.V1.Table.t)];
       [%expect {|
         ((alpha beta)
-         (delta gamma)) |}]
+         (delta gamma))
+        |}]
     ;;
 
     let%test_unit "t_of_sexp" =
@@ -259,7 +260,8 @@ let%expect_test "include_default_validation" =
     ("  bar  " (Ok "  bar  "))
     (" bar" (Ok " bar"))
     ("bar " (Ok "bar "))
-    ("" (Ok "")) |}];
+    ("" (Ok ""))
+    |}];
   test ~include_default_validation:true;
   [%expect
     {|
@@ -277,5 +279,6 @@ let%expect_test "include_default_validation" =
       Error (
         Invalid_argument
         "'bar ' is not a valid M because it has whitespace on the edge")))
-    ("" (Error (Invalid_argument "'' is not a valid M because it is empty"))) |}]
+    ("" (Error (Invalid_argument "'' is not a valid M because it is empty")))
+    |}]
 ;;

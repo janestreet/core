@@ -108,5 +108,6 @@ let%expect_test "validate sexp grammar" =
         (Tag
          ((key sexp_grammar.completion-suggested)
           (value false)
-          (grammar (No_tag ((name Saturday) (clause_kind Atom_clause)))))))))) |}]
+          (grammar (No_tag ((name Saturday) (clause_kind Atom_clause))))))))))
+    |}]
 ;;

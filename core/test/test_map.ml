@@ -78,13 +78,15 @@ let%expect_test "Symmetric_diff_element.{left,right}" =
     {|
     (foo (Left 1)) => (1)
     (bar (Right 2)) => ()
-    (baz (Unequal (3 4))) => (3) |}];
+    (baz (Unequal (3 4))) => (3)
+    |}];
   go Symmetric_diff_element.right;
   [%expect
     {|
     (foo (Left 1)) => ()
     (bar (Right 2)) => (2)
-    (baz (Unequal (3 4))) => (4) |}]
+    (baz (Unequal (3 4))) => (4)
+    |}]
 ;;
 
 let%expect_test _ =
@@ -110,7 +112,8 @@ let%expect_test _ =
        (1 2)
        (2 3)
        (3 4)))
-     (bin_io "\003\001\002\002\003\003\004")) |}]
+     (bin_io "\003\001\002\002\003\003\004"))
+    |}]
 ;;
 
 let%expect_test "remove does not allocate too much if there's nothing to do" =

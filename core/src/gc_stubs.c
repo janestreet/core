@@ -90,8 +90,8 @@ CAMLprim value core_gc_allocated_words(value unit) {
 
 CAMLprim value core_gc_run_memprof_callbacks(value unit) {
   (void)unit;
-// Not implemented on 5.0.0
-#if OCAML_VERSION < 50000
+// statmemprof isn't implemented on runtime5 yet
+#ifndef HAS_OCAML_5_GC
   value res = caml_memprof_handle_postponed_exn();
   if (Is_exception_result(res))
     caml_raise(Extract_exception(res));

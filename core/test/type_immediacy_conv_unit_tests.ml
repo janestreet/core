@@ -373,7 +373,8 @@ let%test_module _ =
         (test_inconvertible_ints conv no_int_but_zero_converts)
         ~if_false_then_print_s:(lazy [%message "non-zero should not convert"]);
       [%expect {|
-        "zero should convert" |}]
+        "zero should convert"
+        |}]
     ;;
 
     let%test _ =
@@ -444,7 +445,8 @@ let%test_module _ =
         (test_inconvertible_ints conv no_int_but_zero_converts)
         ~if_false_then_print_s:(lazy [%message "non-zero should not convert"]);
       [%expect {|
-        "zero should convert" |}]
+        "zero should convert"
+        |}]
     ;;
 
     let%test _ =

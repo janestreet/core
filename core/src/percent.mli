@@ -34,6 +34,7 @@ include Sexplib.Sexp_grammar.S with type t := t
 include Binable with type t := t
 include Comparable_binable with type t := t
 include Comparable.With_zero with type t := t
+include Diffable.S_atomic with type t := t
 include Robustly_comparable.S with type t := t
 include Quickcheckable.S with type t := t
 
@@ -260,7 +261,8 @@ module Stable : sig
         , hash
         , equal
         , typerep
-        , stable_witness]
+        , stable_witness
+        , diff]
     end
   end
 
@@ -271,7 +273,16 @@ module Stable : sig
         details. *)
     type nonrec t = t
     [@@deriving
-      sexp, sexp_grammar, bin_io, compare, globalize, hash, equal, typerep, stable_witness]
+      sexp
+      , sexp_grammar
+      , bin_io
+      , compare
+      , globalize
+      , hash
+      , equal
+      , typerep
+      , stable_witness
+      , diff]
 
     val to_string : t -> string
     val of_string : string -> t
@@ -298,7 +309,16 @@ module Stable : sig
     *)
     type nonrec t = t
     [@@deriving
-      sexp, sexp_grammar, bin_io, compare, globalize, hash, equal, typerep, stable_witness]
+      sexp
+      , sexp_grammar
+      , bin_io
+      , compare
+      , globalize
+      , hash
+      , equal
+      , typerep
+      , stable_witness
+      , diff]
 
     include
       Comparable_binable

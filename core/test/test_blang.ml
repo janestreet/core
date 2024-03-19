@@ -411,7 +411,8 @@ let%expect_test "validate sexp grammar" =
              (No_tag
               ((name not)
                (clause_kind
-                (List_clause (args (Cons (Recursive blang ((Tyvar a))) Empty)))))))))))))))) |}]
+                (List_clause (args (Cons (Recursive blang ((Tyvar a))) Empty))))))))))))))))
+    |}]
 ;;
 
 module _ = struct
@@ -426,47 +427,51 @@ module _ = struct
   let%expect_test _ =
     print [ a ];
     [%expect {|
-        (standard a)
-        (raw (Base a)) |}]
+      (standard a)
+      (raw (Base a))
+      |}]
   ;;
 
   let%expect_test _ =
     print [ a; b ];
     [%expect
       {|
-        (standard (and a b))
-        (raw (
-          And
-          (Base a)
-          (Base b))) |}]
+      (standard (and a b))
+      (raw (
+        And
+        (Base a)
+        (Base b)))
+      |}]
   ;;
 
   let%expect_test _ =
     print [ a; b; c ];
     [%expect
       {|
-        (standard (and a b c))
-        (raw (
-          And
-          (Base a)
-          (And
-            (Base b)
-            (Base c)))) |}]
+      (standard (and a b c))
+      (raw (
+        And
+        (Base a)
+        (And
+          (Base b)
+          (Base c))))
+      |}]
   ;;
 
   let%expect_test _ =
     print [ a; b; c; d ];
     [%expect
       {|
-        (standard (and a b c d))
-        (raw (
-          And
-          (Base a)
+      (standard (and a b c d))
+      (raw (
+        And
+        (Base a)
+        (And
+          (Base b)
           (And
-            (Base b)
-            (And
-              (Base c)
-              (Base d))))) |}]
+            (Base c)
+            (Base d)))))
+      |}]
   ;;
 
   let%expect_test "arbitrary nesting" =
@@ -496,11 +501,13 @@ module _ = struct
                   (Base f)
                   (And
                     (Base g)
-                    (Base h))))))))) |}];
+                    (Base h)))))))))
+      |}];
     p false_;
     [%expect {|
       (standard false)
-      (raw False) |}]
+      (raw False)
+      |}]
   ;;
 end
 
@@ -516,47 +523,51 @@ module _ = struct
   let%expect_test _ =
     print [ a ];
     [%expect {|
-        (standard a)
-        (raw (Base a)) |}]
+      (standard a)
+      (raw (Base a))
+      |}]
   ;;
 
   let%expect_test _ =
     print [ a; b ];
     [%expect
       {|
-        (standard (or a b))
-        (raw (
-          Or
-          (Base a)
-          (Base b))) |}]
+      (standard (or a b))
+      (raw (
+        Or
+        (Base a)
+        (Base b)))
+      |}]
   ;;
 
   let%expect_test _ =
     print [ a; b; c ];
     [%expect
       {|
-        (standard (or a b c))
-        (raw (
-          Or
-          (Base a)
-          (Or
-            (Base b)
-            (Base c)))) |}]
+      (standard (or a b c))
+      (raw (
+        Or
+        (Base a)
+        (Or
+          (Base b)
+          (Base c))))
+      |}]
   ;;
 
   let%expect_test _ =
     print [ a; b; c; d ];
     [%expect
       {|
-        (standard (or a b c d))
-        (raw (
-          Or
-          (Base a)
+      (standard (or a b c d))
+      (raw (
+        Or
+        (Base a)
+        (Or
+          (Base b)
           (Or
-            (Base b)
-            (Or
-              (Base c)
-              (Base d))))) |}]
+            (Base c)
+            (Base d)))))
+      |}]
   ;;
 
   let%expect_test "arbitrary nesting" =
@@ -570,7 +581,8 @@ module _ = struct
     p true_;
     [%expect {|
       (standard true)
-      (raw True) |}];
+      (raw True)
+      |}];
     p false_;
     [%expect
       {|
@@ -590,7 +602,8 @@ module _ = struct
                   (Base f)
                   (Or
                     (Base g)
-                    (Base h))))))))) |}]
+                    (Base h)))))))))
+      |}]
   ;;
 end
 

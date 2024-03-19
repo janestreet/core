@@ -26,6 +26,7 @@ module type S = sig
 
   include Comparable_binable with type t := t
   include Hashable_binable with type t := t
+  include Diffable.S_atomic with type t := t
   include Pretty_printer.S with type t := t
   include Robustly_comparable with type t := t
   include Quickcheck.S_range with type t := t

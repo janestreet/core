@@ -1,4 +1,4 @@
-(** This module extends {{!module:Base.Error}[Base.Error]} with [bin_io]. *)
+(** This module extends {{!module:Base.Error}[Base.Error]} with [bin_io] and [diff]. *)
 
 open! Import
 
@@ -7,8 +7,9 @@ include module type of struct
   include Base.Error
 end
 
-(** This include is the source of the bin_io functions. *)
+(** This include is the source of the bin_io and diff functions. *)
 include Info_intf.Extension with type t := t
+
 (** @inline *)
 
 (** [Error.t] is {e not} wire-compatible with [Error.Stable.V1.t].  See info.mli for

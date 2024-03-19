@@ -586,6 +586,9 @@ module Stable : sig
       type nonrec t = (elt, elt_comparator_witness) t
 
       include Stable_module_types.S0_without_comparator with type t := t
+
+      include
+        Diffable.S with type t := t and type Diff.t = elt Diffable.Set_diff.Stable.V1.t
     end
 
     include For_deriving with type ('a, 'b) t := ('a, 'b) t

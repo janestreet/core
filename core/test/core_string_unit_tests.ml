@@ -207,7 +207,8 @@ let%test_module "split" =
         "aaa"
         "\naa\n"
         "\n\na\n\n"
-        "a\n\na\n\na" |}];
+        "a\n\na\n\na"
+        |}];
       test_split (module Char) (module String) ~examples;
       [%expect {| |}];
       let test_split utf_module =

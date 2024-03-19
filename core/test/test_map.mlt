@@ -2,9 +2,7 @@ open Core
 
 let _ = Map.add
 
-[%%expect
-  {|
-|}]
+[%%expect {| |}]
 
 let _ = String.Map.add
 

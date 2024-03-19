@@ -72,7 +72,8 @@ let%test_module "comparable" =
       printf "%d" (f 5);
       [%expect {|
         ("Computing value" (i 5))
-        6 |}];
+        6
+        |}];
       should_raise := true;
       printf "%d" (f 5);
       [%expect {| 6 |}]
@@ -82,9 +83,11 @@ let%test_module "comparable" =
       let { Env.should_raise; f } = Env.create () in
       should_raise := true;
       show_raise (fun () -> printf "%d" (f 5));
-      [%expect {|
+      [%expect
+        {|
         ("Computing value" (i 5))
-        (raised "I should raise") |}];
+        (raised "I should raise")
+        |}];
       should_raise := false;
       show_raise (fun () -> printf "%d" (f 5));
       [%expect {| (raised "I should raise") |}]
@@ -104,28 +107,29 @@ let%expect_test "[general] on recursive functions" =
   printf "%d\n" (fib 5);
   [%expect
     {|
-        fib 2
-        fib 0
-        fib 1
-        1
-        fib 5
-        fib 3
-        fib 1
-        fib 2
-        fib 0
-        fib 1
-        fib 4
-        fib 2
-        fib 0
-        fib 1
-        fib 3
-        fib 1
-        fib 2
-        fib 0
-        fib 1
-        5
-        1
-        5 |}]
+    fib 2
+    fib 0
+    fib 1
+    1
+    fib 5
+    fib 3
+    fib 1
+    fib 2
+    fib 0
+    fib 1
+    fib 4
+    fib 2
+    fib 0
+    fib 1
+    fib 3
+    fib 1
+    fib 2
+    fib 0
+    fib 1
+    5
+    1
+    5
+    |}]
 ;;
 
 let%expect_test "recursive" =
@@ -139,20 +143,21 @@ let%expect_test "recursive" =
   printf "%d\n" (fib 10);
   [%expect
     {|
-        fib 2
-        fib 0
-        fib 1
-        1
-        fib 5
-        fib 3
-        fib 4
-        5
-        fib 10
-        fib 8
-        fib 6
-        fib 7
-        fib 9
-        55 |}]
+    fib 2
+    fib 0
+    fib 1
+    1
+    fib 5
+    fib 3
+    fib 4
+    5
+    fib 10
+    fib 8
+    fib 6
+    fib 7
+    fib 9
+    55
+    |}]
 ;;
 
 let%expect_test "infinite loop" =
@@ -183,12 +188,13 @@ let%expect_test "recursive memo initialization effects" =
   printf "%d\n" (fib 5);
   [%expect
     {|
-        fib 2
-        fib 0
-        fib 1
-        1
-        fib 5
-        fib 3
-        fib 4
-        5 |}]
+    fib 2
+    fib 0
+    fib 1
+    1
+    fib 5
+    fib 3
+    fib 4
+    5
+    |}]
 ;;

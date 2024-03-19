@@ -135,6 +135,14 @@ let largest_measure t =
   else `Bytes
 ;;
 
+let gen_incl lo hi =
+  Repr.gen_incl (to_repr lo) (to_repr hi) |> Quickcheck.Generator.map ~f:of_repr
+;;
+
+let gen_uniform_incl lo hi =
+  Repr.gen_uniform_incl (to_repr lo) (to_repr hi) |> Quickcheck.Generator.map ~f:of_repr
+;;
+
 module Stable = struct
   (* Share the common [of_sexp] code for [V1] and [V2]. *)
   module Of_sexp_v1_v2 : sig
@@ -170,7 +178,7 @@ module Stable = struct
   end
 
   module V1 = struct
-    type nonrec t = t [@@deriving compare, hash]
+    type nonrec t = t [@@deriving compare, hash, typerep]
 
     let to_binable = bytes_float
     let of_binable = of_bytes_float_exn
@@ -237,7 +245,7 @@ module Stable = struct
   end
 
   module V2 = struct
-    type nonrec t = t [@@deriving compare, hash]
+    type nonrec t = t [@@deriving compare, hash, typerep]
 
     let to_binable = bytes_int63
     let of_binable = of_bytes_int63

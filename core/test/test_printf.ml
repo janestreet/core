@@ -18,7 +18,7 @@ let%expect_test "collect_to_string - try to use printf after [collect_to_string]
       printf "inside";
       Set_once.set_exn captured_printf [%here] printf)
   in
-  [%expect {||}];
+  [%expect {| |}];
   print_s [%sexp (output : string)];
   [%expect {| inside |}];
   Expect_test_helpers_base.require_does_raise [%here] (fun () ->

@@ -32,12 +32,14 @@ let%expect_test "set_int8_exn" =
   [%expect
     {|
     too large: (Invalid_argument
-      "Bigstring.set_int8_exn: 128 is not a valid (signed) 8-bit integer") |}];
+      "Bigstring.set_int8_exn: 128 is not a valid (signed) 8-bit integer")
+    |}];
   set_and_print ~test_name:"too small" ~pos:1 (-129);
   [%expect
     {|
     too small: (Invalid_argument
-      "Bigstring.set_int8_exn: -129 is not a valid (signed) 8-bit integer") |}];
+      "Bigstring.set_int8_exn: -129 is not a valid (signed) 8-bit integer")
+    |}];
   set_and_print ~test_name:"out of bounds" ~pos:16 64;
   [%expect {| out of bounds: (Invalid_argument "index out of bounds") |}]
 ;;
@@ -61,12 +63,14 @@ let%expect_test "set_uint8_exn" =
   [%expect
     {|
     too large: (Invalid_argument
-      "Bigstring.set_uint8_exn: 256 is not a valid unsigned 8-bit integer") |}];
+      "Bigstring.set_uint8_exn: 256 is not a valid unsigned 8-bit integer")
+    |}];
   set_and_print ~test_name:"too small" ~pos (-1);
   [%expect
     {|
     too small: (Invalid_argument
-      "Bigstring.set_uint8_exn: -1 is not a valid unsigned 8-bit integer") |}];
+      "Bigstring.set_uint8_exn: -1 is not a valid unsigned 8-bit integer")
+    |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64;
   [%expect {| out of bounds: (Invalid_argument "index out of bounds") |}]
 ;;
@@ -99,23 +103,25 @@ let%expect_test "set_int16_le_exn" =
   printf "@pos + 1: 0x%x\n" (Bigstring.get_uint8 buf ~pos:(pos + 1));
   [%expect {|
     @pos:     0xff
-    @pos + 1: 0x7f |}];
+    @pos + 1: 0x7f
+    |}];
   set_and_print ~test_name:"ok neg" ~pos (-32768);
   [%expect {| ok neg: -32768 |}];
   set_and_print ~test_name:"too large" ~pos 32768;
   [%expect
     {|
     too large: (Invalid_argument
-      "Bigstring.write_int16: 32768 is not a valid (signed) 16-bit integer") |}];
+      "Bigstring.write_int16: 32768 is not a valid (signed) 16-bit integer")
+    |}];
   set_and_print ~test_name:"too small" ~pos (-32769);
   [%expect
     {|
     too small: (Invalid_argument
-      "Bigstring.write_int16: -32769 is not a valid (signed) 16-bit integer") |}];
+      "Bigstring.write_int16: -32769 is not a valid (signed) 16-bit integer")
+    |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64;
   [%expect
-    {|
-    out of bounds: (Invalid_argument "Bigstring.set_16: length(bstr) < pos + len") |}]
+    {| out of bounds: (Invalid_argument "Bigstring.set_16: length(bstr) < pos + len") |}]
 ;;
 
 let%expect_test "set_int16_be_exn" =
@@ -134,23 +140,25 @@ let%expect_test "set_int16_be_exn" =
   printf "@pos + 1: 0x%x\n" (Bigstring.get_uint8 buf ~pos:(pos + 1));
   [%expect {|
     @pos:     0x7f
-    @pos + 1: 0xff |}];
+    @pos + 1: 0xff
+    |}];
   set_and_print ~test_name:"ok neg" ~pos (-32768);
   [%expect {| ok neg: -32768 |}];
   set_and_print ~test_name:"too large" ~pos 32768;
   [%expect
     {|
     too large: (Invalid_argument
-      "Bigstring.write_int16: 32768 is not a valid (signed) 16-bit integer") |}];
+      "Bigstring.write_int16: 32768 is not a valid (signed) 16-bit integer")
+    |}];
   set_and_print ~test_name:"too small" ~pos (-32769);
   [%expect
     {|
     too small: (Invalid_argument
-      "Bigstring.write_int16: -32769 is not a valid (signed) 16-bit integer") |}];
+      "Bigstring.write_int16: -32769 is not a valid (signed) 16-bit integer")
+    |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64;
   [%expect
-    {|
-    out of bounds: (Invalid_argument "Bigstring.set_16: length(bstr) < pos + len") |}]
+    {| out of bounds: (Invalid_argument "Bigstring.set_16: length(bstr) < pos + len") |}]
 ;;
 
 let%expect_test "set_uint16_le_exn" =
@@ -171,21 +179,23 @@ let%expect_test "set_uint16_le_exn" =
   [%expect {|
     endianness check: 51966
     @pos:     0xfe
-    @pos + 1: 0xca |}];
+    @pos + 1: 0xca
+    |}];
   set_and_print ~test_name:"too large" ~pos 0x1_0000;
   [%expect
     {|
     too large: (Invalid_argument
-      "Bigstring.write_uint16: 65536 is not a valid unsigned 16-bit integer") |}];
+      "Bigstring.write_uint16: 65536 is not a valid unsigned 16-bit integer")
+    |}];
   set_and_print ~test_name:"too small" ~pos (-1);
   [%expect
     {|
     too small: (Invalid_argument
-      "Bigstring.write_uint16: -1 is not a valid unsigned 16-bit integer") |}];
+      "Bigstring.write_uint16: -1 is not a valid unsigned 16-bit integer")
+    |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64;
   [%expect
-    {|
-    out of bounds: (Invalid_argument "Bigstring.set_16: length(bstr) < pos + len") |}]
+    {| out of bounds: (Invalid_argument "Bigstring.set_16: length(bstr) < pos + len") |}]
 ;;
 
 let%expect_test "set_uint16_be_exn" =
@@ -206,21 +216,23 @@ let%expect_test "set_uint16_be_exn" =
   [%expect {|
     endianness check: 51966
     @pos:     0xca
-    @pos + 1: 0xfe |}];
+    @pos + 1: 0xfe
+    |}];
   set_and_print ~test_name:"too large" ~pos 0x1_0000;
   [%expect
     {|
     too large: (Invalid_argument
-      "Bigstring.write_uint16: 65536 is not a valid unsigned 16-bit integer") |}];
+      "Bigstring.write_uint16: 65536 is not a valid unsigned 16-bit integer")
+    |}];
   set_and_print ~test_name:"too small" ~pos (-1);
   [%expect
     {|
     too small: (Invalid_argument
-      "Bigstring.write_uint16: -1 is not a valid unsigned 16-bit integer") |}];
+      "Bigstring.write_uint16: -1 is not a valid unsigned 16-bit integer")
+    |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64;
   [%expect
-    {|
-    out of bounds: (Invalid_argument "Bigstring.set_16: length(bstr) < pos + len") |}]
+    {| out of bounds: (Invalid_argument "Bigstring.set_16: length(bstr) < pos + len") |}]
 ;;
 
 let%expect_test "get_uint16_le oob" =
@@ -252,8 +264,7 @@ let%expect_test "set_int32_le_exn 32-bit" =
   [%expect {| ok neg: -1073741824 |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64;
   [%expect
-    {|
-    out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
+    {| out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
 ;;
 
 let%expect_test "set_int32_be_exn 32-bit" =
@@ -272,8 +283,7 @@ let%expect_test "set_int32_be_exn 32-bit" =
   [%expect {| ok neg: -1073741824 |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64;
   [%expect
-    {|
-    out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
+    {| out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
 ;;
 
 let%expect_test ("set_int32_le_exn" [@tags "64-bits-only"]) =
@@ -301,21 +311,23 @@ let%expect_test ("set_int32_le_exn" [@tags "64-bits-only"]) =
     @pos:     0xad
     @pos + 1: 0xde
     @pos + 2: 0xfe
-    @pos + 3: 0x1a |}];
+    @pos + 3: 0x1a
+    |}];
   set_and_print ~test_name:"too large" ~pos (1 lsl 31);
   [%expect
     {|
     too large: (Invalid_argument
-      "Bigstring.write_int32_int: 2147483648 is not a valid (signed) 32-bit integer") |}];
+      "Bigstring.write_int32_int: 2147483648 is not a valid (signed) 32-bit integer")
+    |}];
   set_and_print ~test_name:"too small" ~pos ((-1 lsl 31) - 1);
   [%expect
     {|
     too small: (Invalid_argument
-      "Bigstring.write_int32_int: -2147483649 is not a valid (signed) 32-bit integer") |}];
+      "Bigstring.write_int32_int: -2147483649 is not a valid (signed) 32-bit integer")
+    |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64;
   [%expect
-    {|
-    out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
+    {| out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
 ;;
 
 let%expect_test ("set_int32_be" [@tags "64-bits-only"]) =
@@ -343,21 +355,23 @@ let%expect_test ("set_int32_be" [@tags "64-bits-only"]) =
     @pos:     0x1a
     @pos + 1: 0xfe
     @pos + 2: 0xde
-    @pos + 3: 0xad |}];
+    @pos + 3: 0xad
+    |}];
   set_and_print ~test_name:"too large" ~pos (1 lsl 31);
   [%expect
     {|
     too large: (Invalid_argument
-      "Bigstring.write_int32_int: 2147483648 is not a valid (signed) 32-bit integer") |}];
+      "Bigstring.write_int32_int: 2147483648 is not a valid (signed) 32-bit integer")
+    |}];
   set_and_print ~test_name:"too small" ~pos ((-1 lsl 31) - 1);
   [%expect
     {|
     too small: (Invalid_argument
-      "Bigstring.write_int32_int: -2147483649 is not a valid (signed) 32-bit integer") |}];
+      "Bigstring.write_int32_int: -2147483649 is not a valid (signed) 32-bit integer")
+    |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64;
   [%expect
-    {|
-    out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
+    {| out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
 ;;
 
 let%expect_test "set_uint32_le_exn 32-bit" =
@@ -376,11 +390,11 @@ let%expect_test "set_uint32_le_exn 32-bit" =
   [%expect
     {|
     too small: (Invalid_argument
-      "Bigstring.set_uint32_le_exn: -1 is not a valid unsigned 32-bit integer") |}];
+      "Bigstring.set_uint32_le_exn: -1 is not a valid unsigned 32-bit integer")
+    |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64;
   [%expect
-    {|
-    out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
+    {| out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
 ;;
 
 let%expect_test "get_int32_le oob" =
@@ -411,11 +425,11 @@ let%expect_test "set_uint32_be_exn 32-bit" =
   [%expect
     {|
     too small: (Invalid_argument
-      "Bigstring.set_uint32_be_exn: -1 is not a valid unsigned 32-bit integer") |}];
+      "Bigstring.set_uint32_be_exn: -1 is not a valid unsigned 32-bit integer")
+    |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64;
   [%expect
-    {|
-    out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
+    {| out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
 ;;
 
 let%expect_test ("set_uint32_le_exn" [@tags "64-bits-only"]) =
@@ -441,21 +455,23 @@ let%expect_test ("set_uint32_le_exn" [@tags "64-bits-only"]) =
     @pos:     0xad
     @pos + 1: 0xde
     @pos + 2: 0xfe
-    @pos + 3: 0xca |}];
+    @pos + 3: 0xca
+    |}];
   set_and_print ~test_name:"too large" ~pos (1 lsl 32);
   [%expect
     {|
     too large: (Invalid_argument
-      "Bigstring.set_uint32_le_exn: 4294967296 is not a valid unsigned 32-bit integer") |}];
+      "Bigstring.set_uint32_le_exn: 4294967296 is not a valid unsigned 32-bit integer")
+    |}];
   set_and_print ~test_name:"too small" ~pos (-1);
   [%expect
     {|
     too small: (Invalid_argument
-      "Bigstring.set_uint32_le_exn: -1 is not a valid unsigned 32-bit integer") |}];
+      "Bigstring.set_uint32_le_exn: -1 is not a valid unsigned 32-bit integer")
+    |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64;
   [%expect
-    {|
-    out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
+    {| out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
 ;;
 
 let%expect_test ("set_uint32_be_exn" [@tags "64-bits-only"]) =
@@ -481,21 +497,23 @@ let%expect_test ("set_uint32_be_exn" [@tags "64-bits-only"]) =
     @pos:     0xca
     @pos + 1: 0xfe
     @pos + 2: 0xde
-    @pos + 3: 0xad |}];
+    @pos + 3: 0xad
+    |}];
   set_and_print ~test_name:"too large" ~pos (1 lsl 32);
   [%expect
     {|
     too large: (Invalid_argument
-      "Bigstring.set_uint32_be_exn: 4294967296 is not a valid unsigned 32-bit integer") |}];
+      "Bigstring.set_uint32_be_exn: 4294967296 is not a valid unsigned 32-bit integer")
+    |}];
   set_and_print ~test_name:"too small" ~pos (-1);
   [%expect
     {|
     too small: (Invalid_argument
-      "Bigstring.set_uint32_be_exn: -1 is not a valid unsigned 32-bit integer") |}];
+      "Bigstring.set_uint32_be_exn: -1 is not a valid unsigned 32-bit integer")
+    |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64;
   [%expect
-    {|
-    out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
+    {| out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
 ;;
 
 let%expect_test "get_uint32_le oob" =
@@ -536,11 +554,11 @@ let%expect_test "set_int32_t_le" =
     @pos:     0xad
     @pos + 1: 0xde
     @pos + 2: 0xfe
-    @pos + 3: 0xca |}];
+    @pos + 3: 0xca
+    |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64l;
   [%expect
-    {|
-    out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
+    {| out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
 ;;
 
 let%expect_test "set_int32_t_be" =
@@ -569,11 +587,11 @@ let%expect_test "set_int32_t_be" =
     @pos:     0xca
     @pos + 1: 0xfe
     @pos + 2: 0xde
-    @pos + 3: 0xad |}];
+    @pos + 3: 0xad
+    |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64l;
   [%expect
-    {|
-    out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
+    {| out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
 ;;
 
 let%expect_test "get_uint32_le oob" =
@@ -624,11 +642,11 @@ let%expect_test ("set_int64_le" [@tags "64-bits-only"]) =
     @pos + 4: 0xbe
     @pos + 5: 0xba
     @pos + 6: 0xfe
-    @pos + 7: 0x1a |}];
+    @pos + 7: 0x1a
+    |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64;
   [%expect
-    {|
-    out of bounds: (Invalid_argument "Bigstring.set_64: length(bstr) < pos + len") |}]
+    {| out of bounds: (Invalid_argument "Bigstring.set_64: length(bstr) < pos + len") |}]
 ;;
 
 let%expect_test ("set_int64_be" [@tags "64-bits-only"]) =
@@ -667,11 +685,11 @@ let%expect_test ("set_int64_be" [@tags "64-bits-only"]) =
     @pos + 4: 0xde
     @pos + 5: 0xad
     @pos + 6: 0xbe
-    @pos + 7: 0xef |}];
+    @pos + 7: 0xef
+    |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64;
   [%expect
-    {|
-    out of bounds: (Invalid_argument "Bigstring.set_64: length(bstr) < pos + len") |}]
+    {| out of bounds: (Invalid_argument "Bigstring.set_64: length(bstr) < pos + len") |}]
 ;;
 
 let%expect_test "get_int64_le_exn oob" =
@@ -760,16 +778,17 @@ let%expect_test ("set_uint64_le_exn" [@tags "64-bits-only"]) =
     @pos + 4: 0xbe
     @pos + 5: 0xba
     @pos + 6: 0xfe
-    @pos + 7: 0x1a |}];
+    @pos + 7: 0x1a
+    |}];
   set_and_print ~test_name:"too small" ~pos (-1);
   [%expect
     {|
     too small: (Invalid_argument
-      "Bigstring.set_uint64_le_exn: -1 is not a valid unsigned 64-bit integer") |}];
+      "Bigstring.set_uint64_le_exn: -1 is not a valid unsigned 64-bit integer")
+    |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64;
   [%expect
-    {|
-    out of bounds: (Invalid_argument "Bigstring.set_64: length(bstr) < pos + len") |}]
+    {| out of bounds: (Invalid_argument "Bigstring.set_64: length(bstr) < pos + len") |}]
 ;;
 
 let%expect_test ("set_uint64_be_exn" [@tags "64-bits-only"]) =
@@ -806,16 +825,17 @@ let%expect_test ("set_uint64_be_exn" [@tags "64-bits-only"]) =
     @pos + 4: 0xde
     @pos + 5: 0xad
     @pos + 6: 0xbe
-    @pos + 7: 0xef |}];
+    @pos + 7: 0xef
+    |}];
   set_and_print ~test_name:"too small" ~pos (-1);
   [%expect
     {|
     too small: (Invalid_argument
-      "Bigstring.set_uint64_be_exn: -1 is not a valid unsigned 64-bit integer") |}];
+      "Bigstring.set_uint64_be_exn: -1 is not a valid unsigned 64-bit integer")
+    |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64;
   [%expect
-    {|
-    out of bounds: (Invalid_argument "Bigstring.set_64: length(bstr) < pos + len") |}]
+    {| out of bounds: (Invalid_argument "Bigstring.set_64: length(bstr) < pos + len") |}]
 ;;
 
 let%expect_test "set_int64_t_le" =
@@ -852,11 +872,11 @@ let%expect_test "set_int64_t_le" =
     @pos + 4: 0xbe
     @pos + 5: 0xba
     @pos + 6: 0xfe
-    @pos + 7: 0xca |}];
+    @pos + 7: 0xca
+    |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64L;
   [%expect
-    {|
-    out of bounds: (Invalid_argument "Bigstring.set_64: length(bstr) < pos + len") |}]
+    {| out of bounds: (Invalid_argument "Bigstring.set_64: length(bstr) < pos + len") |}]
 ;;
 
 let%expect_test "set_int64_t_be" =
@@ -893,11 +913,11 @@ let%expect_test "set_int64_t_be" =
     @pos + 4: 0xde
     @pos + 5: 0xad
     @pos + 6: 0xbe
-    @pos + 7: 0xef |}];
+    @pos + 7: 0xef
+    |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64L;
   [%expect
-    {|
-    out of bounds: (Invalid_argument "Bigstring.set_64: length(bstr) < pos + len") |}]
+    {| out of bounds: (Invalid_argument "Bigstring.set_64: length(bstr) < pos + len") |}]
 ;;
 
 let%expect_test "get_int64_t_le oob" =

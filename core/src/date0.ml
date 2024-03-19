@@ -283,6 +283,7 @@ module Stable = struct
     include Without_comparable
     include Comparable.Stable.V1.With_stable_witness.Make (Without_comparable)
     include Hashable.Stable.V1.With_stable_witness.Make (Without_comparable)
+    include Diffable.Atomic.Make (Without_comparable)
   end
 
   module Option = struct
@@ -337,6 +338,11 @@ module Without_comparable = Stable.V1.Without_comparable
 include Without_comparable
 module C = Comparable.Make_binable_using_comparator (Without_comparable)
 include C
+
+include Diffable.Atomic.Make (struct
+  include Without_comparable
+  include C
+end)
 
 module O = struct
   include (C : Comparable.Infix with type t := t)
