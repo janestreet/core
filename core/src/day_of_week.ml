@@ -14,7 +14,14 @@ module Stable = struct
         | Fri
         | Sat
       [@@deriving
-        bin_io ~localize, compare, enumerate, hash, quickcheck, stable_witness, typerep]
+        bin_io ~localize
+        , compare
+        , enumerate
+        , equal
+        , hash
+        , quickcheck
+        , stable_witness
+        , typerep]
 
       let to_string t =
         match t with

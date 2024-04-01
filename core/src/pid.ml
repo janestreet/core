@@ -1,7 +1,7 @@
 module Stable = struct
   module V1 = struct
     module Without_containers = struct
-      type nonrec t = Int.Stable.V1.t [@@deriving compare, stable_witness]
+      type nonrec t = Int.Stable.V1.t [@@deriving compare, equal, stable_witness]
 
       exception Pid_must_be_positive of Int.Stable.V1.t [@@deriving sexp]
 

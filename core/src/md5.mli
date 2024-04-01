@@ -10,7 +10,7 @@ open Interfaces
 module Stable : sig
   module V1 : sig
     type t = Md5_lib.t
-    [@@deriving sexp, sexp_grammar, bin_io, compare, hash, stable_witness]
+    [@@deriving sexp, sexp_grammar, bin_io, compare, equal, hash, stable_witness]
   end
 end
 
@@ -19,7 +19,7 @@ module As_binary_string : sig
   module Stable : sig
     module V1 : sig
       type t = Md5_lib.t
-      [@@deriving sexp, sexp_grammar, bin_io, compare, hash, stable_witness]
+      [@@deriving sexp, sexp_grammar, bin_io, compare, equal, hash, stable_witness]
     end
   end
 

@@ -24,7 +24,7 @@ val gen_with_length : int -> char Quickcheck.Generator.t -> t Quickcheck.Generat
     interface uniformity with other stable types. *)
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving bin_io ~localize]
+    type nonrec t = t [@@deriving bin_io ~localize, equal]
     type nonrec comparator_witness = comparator_witness
 
     include

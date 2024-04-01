@@ -1,3 +1,30 @@
+* Add `Map.merge_disjoint_exn` for merging two disjoint maps of the same key/value types.
+Raises an exception if there are conflicting keys.
+
+* `Bool.Stable.V1` now defines `hash`.
+
+* Timezones can be used from javascript targets without needing to bundle and serve a copy of the unix timezone database.
+
+* Adding support for `@@deriving diff` to core.
+
+* Added `Bigstring.get_string` and some variants of it, as alternatives to `Bigstring.to_string`.
+These are nice because they follow the convention of the `Bigstring.get_int*` functions,
+and in particular avoid optional arguments.
+
+* Remove `Diffable_comparable` from core. It is no longer necessary now that `Map` and
+`Set` include `Diffable.S`.
+
+* Adds quickcheck `gen_incl` and `gen_uniform_incl` to `Byte_units`.
+
+* `Bool.Stable.V1` now exposes a comparator, type-equal to the unstable one.
+
+* Make `Map` and `Set` implement `Diffable.S`.
+
+* Updated `Container.Generic` to allow two phantom type parameters.
+
+* Make `Error`, `Result`, `Or_error`, `Percent`, `String_id.S`, `Date`, `Span` and `Ofday`
+implement `Diffable.S`.
+
 * Added `Utf8`, `Utf16le`, `Utf16be`, `Utf32le` and `Utf32be` submodules to `Uchar` and `String` for Unicode
 encoding support.
 

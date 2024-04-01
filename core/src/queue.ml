@@ -54,7 +54,7 @@ include Serialization_v1
 
 module Stable = struct
   module V1 = struct
-    type nonrec 'a t = 'a t [@@deriving compare]
+    type nonrec 'a t = 'a t [@@deriving compare, equal]
 
     include Serialization_v1
 

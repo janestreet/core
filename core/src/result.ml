@@ -7,7 +7,16 @@ module Stable = struct
       | Ok of 'a
       | Error of 'b
     [@@deriving
-      bin_io ~localize, compare, globalize, hash, sexp, sexp_grammar, stable_witness, diff]
+      bin_io ~localize
+      , compare
+      , diff
+      , equal
+      , globalize
+      , hash
+      , sexp
+      , sexp_grammar
+      , stable_witness
+      , typerep]
 
     let map x ~f1 ~f2 =
       match x with
@@ -17,9 +26,7 @@ module Stable = struct
   end
 
   module V1_stable_unit_test = struct
-    type t = (string, int) V1.t [@@deriving bin_io, compare, hash, sexp]
-
-    let equal = [%compare.equal: t]
+    type t = (string, int) V1.t [@@deriving bin_io, compare, equal, hash, sexp]
 
     let tests =
       [ V1.Ok "foo", "(Ok foo)", "\000\003foo"; V1.Error 7, "(Error 7)", "\001\007" ]

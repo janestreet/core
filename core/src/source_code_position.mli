@@ -17,5 +17,9 @@ include Comparable.S with type t := t and type comparator_witness := comparator_
 include Hashable.S with type t := t
 
 module Stable : sig
-  module V1 : Stable_module_types.With_stable_witness.S0 with type t = t
+  module V1 : sig
+    type nonrec t = t [@@deriving equal]
+
+    include Stable_module_types.With_stable_witness.S0 with type t := t
+  end
 end

@@ -227,6 +227,8 @@ module Core_private = struct
   module Stable_internal = Stable_internal
   module Std_internal = Std_internal
   module Time_ns_alternate_sexp = Time_ns_alternate_sexp
+  module Timezone_js_loader = Timezone_js_loader
+  module Timezone_types = Timezone_types
 end
 
 module Core_kernel_private = Core_private

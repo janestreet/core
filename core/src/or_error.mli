@@ -21,7 +21,8 @@ module Stable : sig
   module V1 : Stable_module_types.With_stable_witness.S1 with type 'a t = 'a t
 
   module V2 : sig
-    type nonrec 'a t = 'a t [@@deriving sexp_grammar, diff ~extra_derive:[ sexp; bin_io ]]
+    type nonrec 'a t = 'a t
+    [@@deriving equal, sexp_grammar, diff ~extra_derive:[ sexp; bin_io ]]
 
     include Stable_module_types.With_stable_witness.S1 with type 'a t := 'a t
   end

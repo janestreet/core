@@ -23,7 +23,7 @@ include Quickcheckable.S with type t := t
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving bin_io ~localize, compare, hash, sexp]
+    type nonrec t = t [@@deriving bin_io ~localize, compare, equal, hash, sexp]
 
     include
       Stable_comparable.With_stable_witness.V1

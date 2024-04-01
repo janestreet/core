@@ -11,6 +11,7 @@ module Stable = struct
     let map = Base.Lazy.map
     let compare = Base.Lazy.compare
     let compare__local = Base.Lazy.compare__local
+    let equal = Base.Lazy.equal
   end
 end
 

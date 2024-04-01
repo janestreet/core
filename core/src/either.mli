@@ -19,7 +19,7 @@ module Stable : sig
     type nonrec ('f, 's) t = ('f, 's) t =
       | First of 'f
       | Second of 's
-    [@@deriving bin_io ~localize]
+    [@@deriving bin_io ~localize, equal]
 
     include Stable_module_types.With_stable_witness.S2 with type ('f, 's) t := ('f, 's) t
   end

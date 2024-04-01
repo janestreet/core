@@ -5,7 +5,7 @@ open! Import
 type ('a, 'b) t = ('a, 'b) Base.Result.t =
   | Ok of 'a
   | Error of 'b
-[@@deriving bin_io ~localize, compare, equal, globalize, hash, sexp, diff]
+[@@deriving bin_io ~localize, compare, equal, globalize, hash, typerep, sexp, diff]
 
 include module type of Base.Result with type ('a, 'b) t := ('a, 'b) t (** @inline *)
 
@@ -14,7 +14,7 @@ module Stable : sig
     type nonrec ('ok, 'err) t = ('ok, 'err) t =
       | Ok of 'ok
       | Error of 'err
-    [@@deriving bin_io ~localize, sexp_grammar]
+    [@@deriving bin_io ~localize, equal, sexp_grammar]
 
     include
       Stable_module_types.With_stable_witness.S2 with type ('ok, 'err) t := ('ok, 'err) t

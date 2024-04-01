@@ -49,7 +49,7 @@ let slice a start stop =
 module Stable = struct
   module V1 = struct
     type nonrec 'a t = 'a t
-    [@@deriving sexp, sexp_grammar, bin_io ~localize, compare, hash]
+    [@@deriving sexp, sexp_grammar, bin_io ~localize, compare, equal, hash]
 
     let stable_witness = List0.stable_witness [@@alert "-for_internal_use_only"]
   end

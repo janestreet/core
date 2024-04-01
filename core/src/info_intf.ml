@@ -11,7 +11,7 @@ module type Extension = sig
 
     module V2 : sig
       type nonrec t = t
-      [@@deriving hash, sexp_grammar, diff ~extra_derive:[ sexp; bin_io ]]
+      [@@deriving equal, hash, sexp_grammar, diff ~extra_derive:[ sexp; bin_io ]]
 
       include Stable_module_types.With_stable_witness.S0 with type t := t
     end

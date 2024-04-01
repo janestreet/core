@@ -68,7 +68,7 @@ module Stable = struct
       end
 
       module Regime = struct
-        type t =
+        type t = Timezone_types.Regime.t =
           { utc_offset_in_seconds : Int63.Stable.V1.t
           ; is_dst : bool
           ; abbrv : string
@@ -88,7 +88,7 @@ module Stable = struct
       end
 
       module Transition = struct
-        type t =
+        type t = Timezone_types.Transition.t =
           { start_time_in_seconds_since_epoch : Int63.Stable.V1.t
           ; new_regime : Regime.t
           }
@@ -402,7 +402,30 @@ let likely_machine_zones =
   ref [ "America/New_York"; "Europe/London"; "Asia/Hong_Kong"; "America/Chicago" ]
 ;;
 
-let input_tz_file = Zone_file.input_tz_file
+let finalize_js_loaded ~zonename ~filename ~first_transition ~remaining_transitions =
+  let transitions = Array.of_list (first_transition :: remaining_transitions) in
+  { name = zonename
+  ; original_filename = Some filename
+  ; digest = None
+  ; transitions
+  ; last_regime_index = Index.before_first_transition
+  ; default_local_time_type = first_transition.Transition.new_regime
+  ; leap_seconds = []
+  }
+;;
+
+let input_tz_file ~zonename ~filename =
+  match Timezone_js_loader.load zonename with
+  | Error (Disabled | Platform_not_supported) ->
+    Zone_file.input_tz_file ~zonename ~filename
+  | Error (Failed exn_from_js_loader) ->
+    (try Zone_file.input_tz_file ~zonename ~filename with
+     | exn_from_input_tz_file ->
+       raise (Exn.Finally (exn_from_js_loader, exn_from_input_tz_file)))
+  | Ok { first_transition; remaining_transitions } ->
+    finalize_js_loaded ~zonename ~filename ~first_transition ~remaining_transitions
+;;
+
 let utc = of_utc_offset ~hours:0
 let name zone = zone.name
 let reset_transition_cache t = t.last_regime_index <- Index.before_first_transition

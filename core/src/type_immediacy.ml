@@ -213,8 +213,9 @@ module Computation_impl = struct
     | [], [ Tag tag ], [] when not (Variant.is_polymorphic variant) ->
       possibly_unboxed (Variant.typename_of_t variant) (Tag.traverse tag)
     | [], [], [] ->
-      (* We don't have an explict way of saying a type is uninhabited. *)
-      unknown (Variant.typename_of_t variant)
+      (* Type is uninhabited, so it's (vacuously) always immediate yet there are no
+         allowed ints *)
+      create (Variant.typename_of_t variant) Always Allowed_ints.None
     | [], _ :: _, _ | [], _, _ :: _ -> never (Variant.typename_of_t variant)
     | _ :: _, _, _ ->
       let no_arg_count = List.length no_arg_list in

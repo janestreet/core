@@ -32,7 +32,7 @@ end
 module Stable = struct
   module V1 = struct
     module T = struct
-      type t = Base.Int63.t [@@deriving hash, sexp, sexp_grammar]
+      type t = Base.Int63.t [@@deriving equal, hash, sexp, sexp_grammar]
 
       include Bin
 

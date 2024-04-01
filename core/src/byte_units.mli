@@ -171,7 +171,7 @@ module Stable : sig
 
   (*_ new [Int63] based [bin_io] repr. *)
   module V2 : sig
-    type nonrec t = t [@@deriving hash, typerep]
+    type nonrec t = t [@@deriving equal, hash, typerep]
 
     include Stable_module_types.With_stable_witness.S0_without_comparator with type t := t
   end

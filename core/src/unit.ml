@@ -18,7 +18,7 @@ module Stable = struct
   end
 
   module V2 = struct
-    type t = unit [@@deriving compare, sexp, stable_witness]
+    type t = unit [@@deriving compare, equal, sexp, stable_witness]
     type comparator_witness = V1.comparator_witness
 
     let comparator = V1.comparator

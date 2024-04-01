@@ -1,6 +1,7 @@
 module T = struct
   include Bin_prot.Md5
 
+  let equal = [%compare.equal: t]
   let sexp_of_t t = t |> to_hex |> String.sexp_of_t
   let t_of_sexp s = s |> String.t_of_sexp |> of_hex_exn
   let t_sexp_grammar = Sexplib.Sexp_grammar.coerce String.t_sexp_grammar
@@ -12,7 +13,7 @@ let hash t = String.hash (T.to_binary t)
 module As_binary_string = struct
   module Stable = struct
     module V1 = struct
-      type t = T.t [@@deriving compare]
+      type t = T.t [@@deriving compare, equal]
 
       let hash_fold_t = hash_fold_t
       let hash = hash
@@ -47,7 +48,7 @@ end
 
 module Stable = struct
   module V1 = struct
-    type t = T.t [@@deriving compare, sexp, sexp_grammar]
+    type t = T.t [@@deriving compare, equal, sexp, sexp_grammar]
 
     let hash_fold_t = hash_fold_t
     let hash = hash

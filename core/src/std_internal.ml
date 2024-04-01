@@ -194,6 +194,17 @@ include (
       , sexp_grammar
       , typerep]
 
+    type ('ok, 'err) result = ('ok, 'err) Result.t
+    [@@deriving
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , globalize
+      , hash
+      , sexp
+      , sexp_grammar
+      , typerep]
+
     type string = String.t
     [@@deriving
       bin_io ~localize
@@ -364,6 +375,17 @@ include (
         , sexp_grammar
         , typerep]
 
+      type ('ok, 'err) result
+      [@@deriving
+        bin_io ~localize
+        , compare ~localize
+        , equal ~localize
+        , globalize
+        , hash
+        , sexp
+        , sexp_grammar
+        , typerep]
+
       type string
       [@@deriving
         bin_io ~localize
@@ -416,6 +438,7 @@ include (
     with type 'a list := 'a list
     with type nativeint := nativeint
     with type 'a option := 'a option
+    with type ('ok, 'err) result := ('ok, 'err) result
     with type string := string
     with type bytes := bytes
     with type 'a lazy_t := 'a lazy_t

@@ -619,5 +619,23 @@ let%test_module _ =
       && test_inconvertible_values conv [ M.B (M.A, M.A); M.C () ]
       && test_inconvertible_ints conv no_int_but_zero_converts
     ;;
+
+    let%test _ =
+      let module M = struct
+        type t = | [@@deriving typerep]
+      end
+      in
+      let conv = get_conv M.typerep_of_t in
+      test_inconvertible_ints conv no_int_converts
+    ;;
+
+    let%test _ =
+      let module M = struct
+        type 'a t = | [@@deriving typerep]
+      end
+      in
+      let conv = get_conv (M.typerep_of_t typerep_of_unit) in
+      test_inconvertible_ints conv no_int_converts
+    ;;
   end)
 ;;

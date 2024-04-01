@@ -245,7 +245,7 @@ module Stable = struct
   end
 
   module V2 = struct
-    type nonrec t = t [@@deriving compare, hash, typerep]
+    type nonrec t = t [@@deriving compare, equal, hash, typerep]
 
     let to_binable = bytes_int63
     let of_binable = of_bytes_int63

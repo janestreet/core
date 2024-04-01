@@ -53,7 +53,8 @@ module type Day_of_week = sig
   module Stable : sig
     module V1 : sig
       type nonrec t = t
-      [@@deriving bin_io ~localize, sexp, sexp_grammar, compare, hash, stable_witness]
+      [@@deriving
+        bin_io ~localize, equal, sexp, sexp_grammar, compare, hash, stable_witness]
 
       include
         Comparable.Stable.V1.With_stable_witness.S

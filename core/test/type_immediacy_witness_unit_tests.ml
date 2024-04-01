@@ -496,6 +496,17 @@ let%test_module _ =
       check_s (M.typerep_of_t typerep_of_int) [ M.A; M.B (M.A, M.C 1) ]
     ;;
 
+    let%test _ =
+      let module M = struct
+        type t = | [@@deriving typerep]
+      end
+      in
+      let (_ : _ Type_immediacy.Always.t) =
+        Type_immediacy.Always.of_typerep_exn [%here] M.typerep_of_t
+      in
+      true
+    ;;
+
     (* Test the [For_all_parameters] generic witness functors. *)
     let%test _ =
       let module M = struct
@@ -557,6 +568,15 @@ let%test_module _ =
         (Failure
          "type type_immediacy_witness_unit_tests.ml.t is not independent of its arguments")
         |}]
+    ;;
+
+    let%test _ =
+      let module M = struct
+        type 'a t = | [@@deriving typerep]
+      end
+      in
+      let module _ = Type_immediacy.Always.For_all_parameters_S1 (M) in
+      true
     ;;
   end)
 ;;
