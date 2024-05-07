@@ -1,22 +1,22 @@
-* Add `Map.merge_disjoint_exn` for merging two disjoint maps of the same key/value types.
-Raises an exception if there are conflicting keys.
+## Release v0.17.0
 
-* `Bool.Stable.V1` now defines `hash`.
+* `Bool.Stable.V1`:
+  - Add `hash`.
+  - Expose a comparator, type-equal to the unstable one.
 
 * Timezones can be used from javascript targets without needing to bundle and serve a copy of the unix timezone database.
 
-* Adding support for `@@deriving diff` to core.
+* Add support for `@@deriving diff` to core.
 
-* Added `Bigstring.get_string` and some variants of it, as alternatives to `Bigstring.to_string`.
-These are nice because they follow the convention of the `Bigstring.get_int*` functions,
-and in particular avoid optional arguments.
+* `Bigstring`:
+  - Remove `max_mem_waiting_gc_in_bytes` parameter from `Bigstring.create`
+  - Add functions:
+    * `Bigstring.unsafe_memset` for filling a range with a character without bounds checks
+    * `Bigstring.memcmp_string` for efficient comparison between `Bigstring` and `string` data
+    * `Bigstring.get_string` and some variants of it, as alternatives to `Bigstring.to_string`. These are nice because they follow the convention of the `Bigstring.get_int*` functions, and in particular avoid optional arguments.
 
 * Remove `Diffable_comparable` from core. It is no longer necessary now that `Map` and
 `Set` include `Diffable.S`.
-
-* Adds quickcheck `gen_incl` and `gen_uniform_incl` to `Byte_units`.
-
-* `Bool.Stable.V1` now exposes a comparator, type-equal to the unstable one.
 
 * Make `Map` and `Set` implement `Diffable.S`.
 
@@ -29,10 +29,86 @@ implement `Diffable.S`.
 encoding support.
 
 * Add a `Binary` submodule to `Int`, `Int32`, etc, which provide `to_string` and `sexp_of_t`
-with syntax matching the ocaml binary int literal syntax.
+with syntax matching the OCaml binary int literal syntax.
 
 * Add Quickcheck generator to `Uchar.t` and add Quickcheck generators to `String` for
 generating valid Unicode strings in different encodings.
+
+* Update the type of `Quickcheck.Generator.create` and `Quickcheck.Generator.generate` to use `Splittable_random.t` instead of `Splittable_random.State.t`. The former is simply a shorter alias for the latter.
+
+* `Byte_units`:
+  - Add `[@@deriving typerep]`
+  - Add quickcheck `gen_incl` and `gen_uniform_incl`.
+
+* Add `add_validate_parsing_flag` parameter to `Command.run`, enabling a `-validate-parsing` flag in all subcommands. The command immediately exits with a return code of 0 if argument parsing is successful.
+
+* Add `Bin_prot` support for writing locally-allocated values in `Array`, `Bigstring`, `Blang`, `Bool`, `Bytes`, `Char`, `Date`, `Either`, `Filename`, `Float`, `Int`, `Int32`, `Int64`, `Lazy`, `List`, `Maybe_bound`, `Nativeint`, `Option`, `Ref`, `Result`, `String`, `Unit`
+
+* Add `Bin_prot.Writer.to_bigstring` and `Bin_prot.Reader.of_bigstring`, for converting directly between a value and a buffer containing precisely the serialization of that value.
+
+* Add `Binable.S_local` interface, reflecting support for writing locally-allocated values.
+
+* Add `Comparable` support for locally-allocated values in `Lazy`
+
+* Add `[@@deriving equal]` to a number of stable types: `Byte_units.Stable.V2`, `Day_of_week.Stable.V1`, `Either.Stable.V1`, `Fdeque.Stable.V1`, `Fqueue.Stable.V1`, `Int63.Stable.V1`, `List.Stable.V1`, `Md5.Stable.V1`, `Nothing.Stable.V1`, `Percent.Stable.V3`, `Pid.Stable.V1`, `Queue.Stable.V1`, `Result.Stable.V1`, `Set_once.Stable.V1`, `Source_code_position.Stable.V1`, `Unit.Stable.V2`
+
+* Add `[@@deriving equal]` to types exposed by `Perms`.
+
+* Expose the fact that `Pid.t` is an immediate.
+
+* Add `Char.Stable`.
+
+* Add `Comparable.Extend_plain`, which is like `Comparable.Extend` but only requires `sexp_of_t` and not `t_of_sexp`.
+
+* Remove or limit usage of `[@@deriving fields]` to reduce bloat in: `Command.Shape`, `Gc`, `Source_code_position`
+
+* Add `Float.Stable.V1.globalize`
+
+* Changes in `Gc` to support the OCaml 5 runtime:
+  - In documentation for `Gc.Stat`, indicate `heap_words`, `heap_chunks`, `free_blocks`, `largest_free`, `top_heap_words`, and `stack_size` metrics are not available in OCaml 5 runtime, defaulting to `0`.
+  - In documentation for `Gc.Control`:
+    - Include behavior under OCaml 5 runtime for `minor_heap_size`, detailing the total size of the minor heap across active domains.
+    - Update default `space_overhead` value documentation to reflect differences between OCaml 4 and OCaml 5 runtimes.
+    - Add new flag `0x400` to `Control.verbose` for outputting GC statistics at program exit in OCaml 5 runtime.
+    - Update `Gc.stat` and `quick_stat` function documentation to reflect behavior differences between OCaml 4 and OCaml 5 runtimes, emphasizing approximation of GC statistics in OCaml 5 due to per-domain buffers.
+    - Clarify `counters` function's return values may differ between `quick_stat` and itself under OCaml 5 runtime, detailing accuracy in single-domain scenarios.
+    - Note potential overflow of integers returned by GC statistics functions on 32-bit machines and clarify accuracy of `minor_words` in byte-code versus native code programs.
+
+* Additional `Gc` support for locally-allocated values.
+
+* Add `Sexp_grammar` support to `Char.Stable.V1`, `Filename.Stable.V1`, `Host_and_port`, `Maybe_bound.Stable.V1`, `Nothing.Stable.V1` `Time_ns.Ofday.Stable.V1`, `Result.Stable.V1`, `Time_ns.Ofday.Stable.V1`, `Time_ns.Span.Stable.V1`
+
+* Add `Host_and_port.Hide_port_in_tests`, re-exposing the type with test-friendly serialization which elides the port.
+
+* Deprecate `List.stable_dedup_staged` and `Set.stable_dedup_list` in favor of `List.stable_dedup`
+
+* Deprecate `Map.comparator` in favor of `Map.Comparator.Module.t`
+
+* Add new `Map` functions:
+  - `Map.of_list_with_key_fold` to resolve duplicate keys by folding values.
+  - `Map.of_list_with_key_reduce` to resolve duplicate keys by reducing values.
+  - `Map.unzip` to transform a map of tuples into a tuple of maps.
+  - `Map.merge_disjoint_exn` to merge two maps with disjoint keys, raising an exception if any keys overlap.
+  - `Map.sum` and `Map.sumi` for summing values with a provided summable type and function.
+
+* Add `[@@deriving sexp_of]` to `Substring`.
+
+* Improve `Time.to_sec_string` documentation.
+
+* Add fast, approximate rounding functions to `Time_ns.Span`.
+
+* Add `Time_ns.O` and `Time_ns.Span.O`, containing infix operators.
+
+* Improve `Time_ns.next_multiple` and `Time_ns.prev_multiple` documentation.
+
+* Add `For_testing.reset_counter` to `Unique_id.Id`.
+
+* Add support for validating locally-allocated values to `Validated`.
+
+* Add new functions to `Univ_map`:
+  - `key_id_set`, exposing the set of raw `Uid` keys
+  - `find_packed_by_id` and `find_packed_by_id_exn`, allowing lookup by raw `Uid` key
+
 
 ## Release v0.16.0
 
