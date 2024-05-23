@@ -22,6 +22,7 @@ let epoch = Span.zero
 let add = Span.( + )
 let sub = Span.( - )
 let diff = Span.( - )
+let since = diff @@ now ()
 let abs_diff t u = Span.abs (diff t u)
 let max = Span.max
 let min = Span.min

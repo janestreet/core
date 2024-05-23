@@ -397,6 +397,9 @@ module type Time_ns = sig
   val diff : t -> t -> Span.t
 
   (** overflows silently *)
+  val since : t -> Span.t
+
+  (** overflows silently *)
   val abs_diff : t -> t -> Span.t
 
   val to_span_since_epoch : t -> Span.t
