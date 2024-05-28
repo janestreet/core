@@ -578,7 +578,7 @@ module For_testing = struct
       }
     in
     match Stdlib.Gc.Memprof.start ~sampling_rate:1.0 tracker with
-    | () ->
+    | _ ->
       (* Exn.protect, manually inlined to guarantee no allocations *)
       let result =
         match f () with
