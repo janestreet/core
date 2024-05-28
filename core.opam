@@ -1,5 +1,5 @@
 opam-version: "2.0"
-version: "v0.17.0"
+version: "v0.17.1"
 maintainer: "Jane Street developers"
 authors: ["Jane Street Group, LLC"]
 homepage: "https://github.com/janestreet/core"
