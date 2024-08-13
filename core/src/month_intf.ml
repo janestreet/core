@@ -75,8 +75,8 @@ module type Month = sig
 
       include
         Stable_module_types.With_stable_witness.S0
-          with type comparator_witness = comparator_witness
-           and type t := t
+        with type comparator_witness = comparator_witness
+         and type t := t
     end
   end
 end

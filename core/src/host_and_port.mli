@@ -17,7 +17,7 @@ include Identifiable with type t := t
 include Sexplib.Sexp_grammar.S with type t := t
 
 module Hide_port_in_test : sig
-  include Identifiable with type t := t and type comparator_witness = comparator_witness
+  include Identifiable with type t = t and type comparator_witness = comparator_witness
 end
 
 module Stable : sig
@@ -29,8 +29,8 @@ module Stable : sig
 
     include
       Stable_comparable.With_stable_witness.V1
-        with type t := t
-         and type comparator_witness = comparator_witness
+      with type t := t
+       and type comparator_witness = comparator_witness
   end
 end
 

@@ -19,7 +19,7 @@ let%test_module _ =
         (change t key ~f:(function
            | None -> assert false
            | o -> o)
-          : t);
+         : t);
       match find t key with
       | None -> assert false
       | Some v' -> assert (phys_equal data v')
@@ -103,15 +103,14 @@ let%test_module _ =
           ints
           |> List.rev
           |> List.map ~f:(fun int ->
-               Packed.T
-                 ( Type_equal.Id.create ~name:("key" ^ Int.to_string int) [%sexp_of: int]
-                 , int ))
+            Packed.T
+              (Type_equal.Id.create ~name:("key" ^ Int.to_string int) [%sexp_of: int], int))
           |> of_alist_exn
           |> to_alist
           |> List.map ~f:(fun (Packed.T (type_id, a)) ->
-               let type_id_name = Type_equal.Id.name type_id in
-               let sexp_of_a = Type_equal.Id.to_sexp type_id in
-               [%sexp (type_id_name : string), (a : a)])
+            let type_id_name = Type_equal.Id.name type_id in
+            let sexp_of_a = Type_equal.Id.to_sexp type_id in
+            [%sexp (type_id_name : string), (a : a)])
         in
         Stdio.print_s [%sexp (sexps : Sexp.t list)]
       in
@@ -153,7 +152,7 @@ let%expect_test "specified key module" =
     [%sexp
       (Or_error.try_with (fun () ->
          U_incorrect.find (U_incorrect.of_alist_exn [ T (Foo, 3); T (Bar, "three") ]) Foo)
-        : int option Or_error.t)];
+       : int option Or_error.t)];
   [%expect
     {|
     (Error
@@ -188,7 +187,7 @@ let%expect_test "specified key module" =
   Stdio.print_s
     [%sexp
       (U_correct.find (U_correct.of_alist_exn [ T (Foo, 3); T (Bar, "three") ]) Foo
-        : int option)];
+       : int option)];
   [%expect {| (3) |}]
 ;;
 

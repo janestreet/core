@@ -5,7 +5,8 @@ module Stable = struct
     module T = struct
       include Base.Bool
 
-      type t = bool [@@deriving compare, sexp, bin_io ~localize, stable_witness]
+      type t = bool
+      [@@deriving bin_io ~localize, compare, sexp, sexp_grammar, stable_witness]
     end
 
     include T
@@ -41,9 +42,9 @@ let of_string_hum =
       (let table = String.Caseless.Table.create () in
        [ false, [ "false"; "no"; "0" ]; true, [ "true"; "yes"; "1" ] ]
        |> List.iter ~f:(fun (bool, strings) ->
-            List.iter strings ~f:(fun string ->
-              Hashtbl.set table ~key:string ~data:bool;
-              Hashtbl.set table ~key:(String.prefix string 1) ~data:bool));
+         List.iter strings ~f:(fun string ->
+           Hashtbl.set table ~key:string ~data:bool;
+           Hashtbl.set table ~key:(String.prefix string 1) ~data:bool));
        table)
   in
   let raise_invalid input =

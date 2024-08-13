@@ -83,7 +83,7 @@ module type S = sig
   val of_span_since_start_of_day_exn : Span.t -> t
 
   val of_span_since_start_of_day : Span.t -> t
-    [@@deprecated "[since 2018-04] use [of_span_since_start_of_day_exn] instead"]
+  [@@deprecated "[since 2018-04] use [of_span_since_start_of_day_exn] instead"]
 
   (** Reports whether a span represents a valid time since the start of the day, i.e.
       whether [of_span_since_start_of_day_exn span] would succeed. *)
@@ -132,5 +132,5 @@ module type S = sig
   val to_millisecond_string : t -> string
 
   val to_millisec_string : t -> string
-    [@@deprecated "[since 2018-04] use [to_millisecond_string] instead"]
+  [@@deprecated "[since 2018-04] use [to_millisecond_string] instead"]
 end

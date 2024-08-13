@@ -16,7 +16,7 @@ let test_serialization (module Format : Format) =
   let t1 = create () in
   let t2 = create () in
   set_exn t2 [%here] 13;
-  print_and_check_stable_type [%here] (module T) [ t1; t2 ]
+  print_and_check_stable_type (module T) [ t1; t2 ]
 ;;
 
 let%expect_test "[Stable.V1] serialization" =
@@ -74,7 +74,7 @@ let%expect_test "[get]" =
 let%expect_test "[get] doesn't allocate" =
   let t = create () in
   let check_get here =
-    ignore (require_no_allocation here (fun () -> get t) : int option)
+    ignore (require_no_allocation ~here (fun () -> get t) : int option)
   in
   check_get [%here];
   [%expect {| |}];
@@ -143,13 +143,15 @@ let%expect_test "[is_none], [is_some]" =
     print_s [%message "" ~is_none:(is_none t : bool) ~is_some:(is_some t : bool)]
   in
   show ();
-  [%expect {|
+  [%expect
+    {|
     ((is_none true)
      (is_some false))
     |}];
   set_exn t [%here] 13;
   show ();
-  [%expect {|
+  [%expect
+    {|
     ((is_none false)
      (is_some true))
     |}]

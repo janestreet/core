@@ -164,7 +164,6 @@ let%test_module "split" =
       in
       (* Now run the tests of [split] behavior. *)
       quickcheck_m
-        [%here]
         (module M)
         ~examples
         ~f:(fun (parts, delimiter) ->
@@ -175,7 +174,6 @@ let%test_module "split" =
           in
           (* Test that we got back where we started. *)
           require_equal
-            [%here]
             (module struct
               type t = Str.t list [@@deriving equal, sexp_of]
             end)

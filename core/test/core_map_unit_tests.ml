@@ -9,29 +9,31 @@ module With_comparator = Map_intf.With_comparator
 module With_first_class_module = Map_intf.With_first_class_module
 module Without_comparator = Map_intf.Without_comparator
 
-module Unit_tests (Key : sig
-  type 'a t [@@deriving sexp, compare, hash]
+module Unit_tests
+    (Key : sig
+       type 'a t [@@deriving sexp, compare, hash]
 
-  val of_int : int -> int t
-  val to_int : int t -> int
-end) (Map : sig
-  type ('a, 'b, 'c) t_
-  type ('a, 'b, 'c) tree
-  type ('a, 'b, 'c) create_options
-  type ('a, 'b, 'c) access_options
+       val of_int : int -> int t
+       val to_int : int t -> int
+     end)
+    (Map : sig
+       type ('a, 'b, 'c) t_
+       type ('a, 'b, 'c) tree
+       type ('a, 'b, 'c) create_options
+       type ('a, 'b, 'c) access_options
 
-  include
-    Map_intf.Creators_and_accessors_generic
-      with type ('a, 'b, 'c) t := ('a, 'b, 'c) t_
-      with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
-      with type 'a key := 'a Key.t
-      with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) create_options
-      with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) access_options
+       include
+         Map_intf.Creators_and_accessors_generic
+         with type ('a, 'b, 'c) t := ('a, 'b, 'c) t_
+         with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
+         with type 'a key := 'a Key.t
+         with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) create_options
+         with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) access_options
 
-  val simplify_creator : (int, Int.comparator_witness, 'c) create_options -> 'c
-  val simplify_accessor : (int, Int.comparator_witness, 'c) access_options -> 'c
-  val kind : [ `Map | `Tree ]
-end) : Map_intf.Creators_and_accessors_generic =
+       val simplify_creator : (int, Int.comparator_witness, 'c) create_options -> 'c
+       val simplify_accessor : (int, Int.comparator_witness, 'c) access_options -> 'c
+       val kind : [ `Map | `Tree ]
+     end) : Map_intf.Creators_and_accessors_generic =
 (* The result signature doesn't actually mean anything -- the values are required so
    that implementors are reminded to add a unit test for each one. *)
 struct
@@ -504,18 +506,16 @@ struct
   let%expect_test _ =
     (* Can't use require_does_raise because the exceptions differ on different key
        types. *)
-    require
-      [%here]
-      (Exn.does_raise (fun () -> Map.of_alist_exn [ Key.sample, 0; Key.sample, 1 ]))
+    require (Exn.does_raise (fun () -> Map.of_alist_exn [ Key.sample, 0; Key.sample, 1 ]))
   ;;
 
   let%expect_test _ =
-    require_does_not_raise [%here] (fun () ->
+    require_does_not_raise (fun () ->
       ignore
         (Map.of_hashtbl_exn
            (List.map Key.samples ~f:(fun key -> key, Key.to_int key)
             |> Hashtbl.Poly.of_alist_exn)
-          : _ Map.t_))
+         : _ Map.t_))
   ;;
 
   let%expect_test _ =
@@ -536,7 +536,7 @@ struct
     in
     (* Can't use require_does_raise because the exceptions differ on different key
        types. *)
-    require [%here] (Exn.does_raise (fun () -> Map.of_hashtbl_exn hashtbl_with_dup))
+    require (Exn.does_raise (fun () -> Map.of_hashtbl_exn hashtbl_with_dup))
   ;;
 
   let of_hashtbl_exn _ = assert false
@@ -594,7 +594,6 @@ struct
     (* Can't use require_does_raise because the exceptions differ on different key
        types. *)
     require
-      [%here]
       (Exn.does_raise (fun () ->
          Map.of_iteri_exn ~iteri:(alist_iteri [ Key.sample, 0; Key.sample, 1 ])))
   ;;
@@ -606,7 +605,7 @@ struct
     let increasing_alist =
       List.sort alist ~compare:(fun a b -> Comparable.lift ~f:fst Key.compare a b)
       |> List.remove_consecutive_duplicates ~equal:(fun a b ->
-           Comparable.lift ~f:fst Key.equal a b)
+        Comparable.lift ~f:fst Key.equal a b)
     in
     let duplicates_alist =
       match increasing_alist with
@@ -717,9 +716,9 @@ struct
       ;;
     end
     in
-    Expect_test_helpers_core.require_equal [%here] (module T) list expect;
-    Expect_test_helpers_core.require_equal [%here] (module T) list_exn expect;
-    Expect_test_helpers_core.require_equal [%here] (module T) list_or_error expect
+    Expect_test_helpers_core.require_equal (module T) list expect;
+    Expect_test_helpers_core.require_equal (module T) list_exn expect;
+    Expect_test_helpers_core.require_equal (module T) list_or_error expect
   ;;
 
   let of_list_with_key_multi _ = assert false
@@ -749,9 +748,9 @@ struct
       let sexp_of_t = Map.sexp_of_t [%sexp_of: int] [%sexp_of: (Key.t * int) list]
     end
     in
-    Expect_test_helpers_core.require_equal [%here] (module T) list_multi expect;
-    Expect_test_helpers_core.require_equal [%here] (module T) list_reduce expect;
-    Expect_test_helpers_core.require_equal [%here] (module T) list_fold expect
+    Expect_test_helpers_core.require_equal (module T) list_multi expect;
+    Expect_test_helpers_core.require_equal (module T) list_reduce expect;
+    Expect_test_helpers_core.require_equal (module T) list_fold expect
   ;;
 
   let is_empty _ = assert false
@@ -855,7 +854,7 @@ struct
        types. *)
     match Map.find_exn (Map.empty ()) Key.sample with
     | exception (Not_found_s _ | Stdlib.Not_found) -> ()
-    | _ -> print_cr [%here] [%message "didn't raise"]
+    | _ -> print_cr [%message "didn't raise"]
   ;;
 
   let%test _ = [%equal: int list] (Map.find_multi (Map.empty ()) Key.sample) []
@@ -1382,12 +1381,12 @@ struct
   let%test _ = [%equal: (Key.t * int) option] (Map.max_elt (Map.empty ())) None
 
   let%expect_test _ =
-    require_does_raise [%here] (fun () -> Map.min_elt_exn (Map.empty ()));
+    require_does_raise (fun () -> Map.min_elt_exn (Map.empty ()));
     [%expect {| map.ml.Tree0.Map_min_elt_exn_of_empty_map |}]
   ;;
 
   let%expect_test _ =
-    require_does_raise [%here] (fun () -> Map.max_elt_exn (Map.empty ()));
+    require_does_raise (fun () -> Map.max_elt_exn (Map.empty ()));
     [%expect {| map.ml.Tree0.Map_max_elt_exn_of_empty_map |}]
   ;;
 
@@ -1442,22 +1441,22 @@ struct
       bool
     in
     let require_num_calls expect =
-      require_equal [%here] (module Int) !num_calls expect;
+      require_equal (module Int) !num_calls expect;
       num_calls := 0
     in
-    require [%here] (Map.for_all (Map.empty ()) ~f:(const true));
-    require [%here] (Map.for_alli (Map.empty ()) ~f:(const_kd true));
-    require [%here] (not (Map.exists (Map.empty ()) ~f:(const true)));
-    require [%here] (not (Map.existsi (Map.empty ()) ~f:(const_kd true)));
+    require (Map.for_all (Map.empty ()) ~f:(const true));
+    require (Map.for_alli (Map.empty ()) ~f:(const_kd true));
+    require (not (Map.exists (Map.empty ()) ~f:(const true)));
+    require (not (Map.existsi (Map.empty ()) ~f:(const_kd true)));
     require_num_calls 0;
     let nonempty_map = random_map Key.samples in
-    require [%here] (not (Map.for_all nonempty_map ~f:(const false)));
+    require (not (Map.for_all nonempty_map ~f:(const false)));
     require_num_calls 1;
-    require [%here] (not (Map.for_alli nonempty_map ~f:(const_kd false)));
+    require (not (Map.for_alli nonempty_map ~f:(const_kd false)));
     require_num_calls 1;
-    require [%here] (Map.exists nonempty_map ~f:(const true));
+    require (Map.exists nonempty_map ~f:(const true));
     require_num_calls 1;
-    require [%here] (Map.existsi nonempty_map ~f:(const_kd true));
+    require (Map.existsi nonempty_map ~f:(const_kd true));
     require_num_calls 1
   ;;
 
@@ -1773,11 +1772,9 @@ struct
 
       let%expect_test _ =
         Expect_test_helpers_base.quickcheck
-          [%here]
           quickcheck_generator
           ~f:(fun input ->
             Expect_test_helpers_base.require_equal
-              [%here]
               (module struct
                 type t = (Key.t * int) list [@@deriving equal, sexp_of]
               end)
@@ -2628,12 +2625,22 @@ let%test_module "Int.Map" =
               include (
                 Core.Map :
                   Map_intf.Accessors_generic
-                    with type ('k, 'v, 'c) t := 'v t
-                    with type ('k, 'v, 'c) tree := 'v Tree.t
-                    with type 'k key := int
-                    with type 'c cmp := Int.comparator_witness
-                    with type ('k, 'v, 'c) access_options :=
-                      ('k, 'v, 'c) Without_comparator.t)
+                  with type ('k, 'v, 'c) t := 'v t
+                  with type ('k, 'v, 'c) tree := 'v Tree.t
+                  with type 'k key := int
+                  with type 'c cmp := Int.comparator_witness
+                  with type ('k, 'v, 'c) access_options :=
+                    ('k, 'v, 'c) Without_comparator.t)
+
+              include (
+                Core.Map :
+                  Map_intf.Transformers_generic
+                  with type ('k, 'v, 'c) t := 'v t
+                  with type ('k, 'v, 'c) tree := 'v Tree.t
+                  with type 'k key := int
+                  with type 'c cmp := Int.comparator_witness
+                  with type ('k, 'v, 'c) access_options :=
+                    ('k, 'v, 'c) Without_comparator.t)
             end))
 ;;
 

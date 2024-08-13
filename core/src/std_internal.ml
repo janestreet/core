@@ -14,6 +14,7 @@ include From_sexplib
 include Interfaces
 include List.Infix
 include Never_returns
+include Modes.Export
 include Ordering.Export
 include Perms.Export
 include Result.Export
@@ -68,8 +69,10 @@ let round = Float.round
 let ( **. ) = Base.( **. )
 let ( %. ) = Base.( %. )
 let sprintf = Printf.sprintf
-let stage = Staged.stage
-let unstage = Staged.unstage
+
+external stage : ('a[@local_opt]) -> ('a Staged.t[@local_opt]) = "%identity"
+external unstage : ('a Staged.t[@local_opt]) -> ('a[@local_opt]) = "%identity"
+
 let with_return = With_return.with_return
 let with_return_option = With_return.with_return_option
 
@@ -79,370 +82,370 @@ let with_return_option = With_return.with_return_option
 include Typerep_lib.Std_internal
 
 include (
-  struct
-    (* [deriving hash] is missing for [array], [bytes], and [ref] since these types are
+struct
+  (* [deriving hash] is missing for [array], [bytes], and [ref] since these types are
      mutable. *)
-    type 'a array = 'a Array.t
-    [@@deriving
-      bin_io ~localize
-      , compare ~localize
-      , equal ~localize
-      , globalize
-      , sexp
-      , sexp_grammar
-      , typerep]
+  type 'a array = 'a Array.t
+  [@@deriving
+    bin_io ~localize
+    , compare ~localize
+    , equal ~localize
+    , globalize
+    , sexp
+    , sexp_grammar
+    , typerep]
 
-    type bool = Bool.t
-    [@@deriving
-      bin_io ~localize
-      , compare ~localize
-      , hash
-      , equal ~localize
-      , globalize
-      , sexp
-      , sexp_grammar
-      , typerep]
+  type bool = Bool.t
+  [@@deriving
+    bin_io ~localize
+    , compare ~localize
+    , hash
+    , equal ~localize
+    , globalize
+    , sexp
+    , sexp_grammar
+    , typerep]
 
-    type char = Char.t
-    [@@deriving
-      bin_io ~localize
-      , compare ~localize
-      , hash
-      , equal ~localize
-      , globalize
-      , sexp
-      , sexp_grammar
-      , typerep]
+  type char = Char.t
+  [@@deriving
+    bin_io ~localize
+    , compare ~localize
+    , hash
+    , equal ~localize
+    , globalize
+    , sexp
+    , sexp_grammar
+    , typerep]
 
-    type float = Float.t
-    [@@deriving
-      bin_io ~localize
-      , compare ~localize
-      , hash
-      , equal ~localize
-      , globalize
-      , sexp
-      , sexp_grammar
-      , typerep]
+  type float = Float.t
+  [@@deriving
+    bin_io ~localize
+    , compare ~localize
+    , hash
+    , equal ~localize
+    , globalize
+    , sexp
+    , sexp_grammar
+    , typerep]
 
-    type int = Int.t
-    [@@deriving
-      bin_io ~localize
-      , compare ~localize
-      , hash
-      , equal ~localize
-      , globalize
-      , sexp
-      , sexp_grammar
-      , typerep]
+  type int = Int.t
+  [@@deriving
+    bin_io ~localize
+    , compare ~localize
+    , hash
+    , equal ~localize
+    , globalize
+    , sexp
+    , sexp_grammar
+    , typerep]
 
-    type int32 = Int32.t
-    [@@deriving
-      bin_io ~localize
-      , compare ~localize
-      , hash
-      , equal ~localize
-      , globalize
-      , sexp
-      , sexp_grammar
-      , typerep]
+  type int32 = Int32.t
+  [@@deriving
+    bin_io ~localize
+    , compare ~localize
+    , hash
+    , equal ~localize
+    , globalize
+    , sexp
+    , sexp_grammar
+    , typerep]
 
-    type int64 = Int64.t
-    [@@deriving
-      bin_io ~localize
-      , compare ~localize
-      , hash
-      , equal ~localize
-      , globalize
-      , sexp
-      , sexp_grammar
-      , typerep]
+  type int64 = Int64.t
+  [@@deriving
+    bin_io ~localize
+    , compare ~localize
+    , hash
+    , equal ~localize
+    , globalize
+    , sexp
+    , sexp_grammar
+    , typerep]
 
-    type 'a lazy_t = 'a Lazy.t
-    [@@deriving bin_io ~localize, compare ~localize, hash, sexp, sexp_grammar, typerep]
+  type 'a lazy_t = 'a Lazy.t
+  [@@deriving bin_io ~localize, compare ~localize, hash, sexp, sexp_grammar, typerep]
 
-    type 'a list = 'a List.t
-    [@@deriving
-      bin_io ~localize
-      , compare ~localize
-      , hash
-      , equal ~localize
-      , globalize
-      , sexp
-      , sexp_grammar
-      , typerep]
+  type 'a list = 'a List.t
+  [@@deriving
+    bin_io ~localize
+    , compare ~localize
+    , hash
+    , equal ~localize
+    , globalize
+    , sexp
+    , sexp_grammar
+    , typerep]
 
-    type nativeint = Nativeint.t
-    [@@deriving
-      bin_io ~localize
-      , compare ~localize
-      , equal ~localize
-      , globalize
-      , hash
-      , sexp
-      , sexp_grammar
-      , typerep]
+  type nativeint = Nativeint.t
+  [@@deriving
+    bin_io ~localize
+    , compare ~localize
+    , equal ~localize
+    , globalize
+    , hash
+    , sexp
+    , sexp_grammar
+    , typerep]
 
-    type 'a option = 'a Option.t
-    [@@deriving
-      bin_io ~localize
-      , compare ~localize
-      , equal ~localize
-      , globalize
-      , hash
-      , sexp
-      , sexp_grammar
-      , typerep]
+  type 'a option = 'a Option.t
+  [@@deriving
+    bin_io ~localize
+    , compare ~localize
+    , equal ~localize
+    , globalize
+    , hash
+    , sexp
+    , sexp_grammar
+    , typerep]
 
-    type ('ok, 'err) result = ('ok, 'err) Result.t
-    [@@deriving
-      bin_io ~localize
-      , compare ~localize
-      , equal ~localize
-      , globalize
-      , hash
-      , sexp
-      , sexp_grammar
-      , typerep]
+  type ('ok, 'err) result = ('ok, 'err) Result.t
+  [@@deriving
+    bin_io ~localize
+    , compare ~localize
+    , equal ~localize
+    , globalize
+    , hash
+    , sexp
+    , sexp_grammar
+    , typerep]
 
-    type string = String.t
-    [@@deriving
-      bin_io ~localize
-      , compare ~localize
-      , equal ~localize
-      , globalize
-      , hash
-      , sexp
-      , sexp_grammar
-      , typerep]
+  type string = String.t
+  [@@deriving
+    bin_io ~localize
+    , compare ~localize
+    , equal ~localize
+    , globalize
+    , hash
+    , sexp
+    , sexp_grammar
+    , typerep]
 
-    type bytes = Bytes.t
-    [@@deriving
-      bin_io ~localize
-      , compare ~localize
-      , equal ~localize
-      , globalize
-      , sexp
-      , sexp_grammar
-      , typerep]
+  type bytes = Bytes.t
+  [@@deriving
+    bin_io ~localize
+    , compare ~localize
+    , equal ~localize
+    , globalize
+    , sexp
+    , sexp_grammar
+    , typerep]
 
-    type 'a ref = 'a Ref.t
-    [@@deriving
-      bin_io ~localize
-      , compare ~localize
-      , equal ~localize
-      , globalize
-      , sexp
-      , sexp_grammar
-      , typerep]
+  type 'a ref = 'a Ref.t
+  [@@deriving
+    bin_io ~localize
+    , compare ~localize
+    , equal ~localize
+    , globalize
+    , sexp
+    , sexp_grammar
+    , typerep]
 
-    type unit = Unit.t
-    [@@deriving
-      bin_io ~localize
-      , compare ~localize
-      , equal ~localize
-      , globalize
-      , hash
-      , sexp
-      , sexp_grammar
-      , typerep]
+  type unit = Unit.t
+  [@@deriving
+    bin_io ~localize
+    , compare ~localize
+    , equal ~localize
+    , globalize
+    , hash
+    , sexp
+    , sexp_grammar
+    , typerep]
 
-    (* Bin_prot has optimized functions for float arrays *)
-    include struct
-      type float_array = float array [@@deriving bin_io ~localize]
-    end [@alert "-deprecated"]
+  (* Bin_prot has optimized functions for float arrays *)
+  include struct
+    type float_array = float array [@@deriving bin_io ~localize]
+  end [@alert "-deprecated"]
 
-    include (
-      struct
-        type float_array = Float.t array
-        [@@deriving compare ~localize, sexp, sexp_grammar, typerep]
-      end :
-        sig
-          type float_array [@@deriving compare ~localize, sexp, sexp_grammar, typerep]
-        end
-        with type float_array := float_array)
+  include (
+  struct
+    type float_array = Float.t array
+    [@@deriving compare ~localize, sexp, sexp_grammar, typerep]
   end :
     sig
-      type 'a array
-      [@@deriving
-        bin_io ~localize
-        , compare ~localize
-        , equal ~localize
-        , globalize
-        , sexp
-        , sexp_grammar
-        , typerep]
-
-      type bool
-      [@@deriving
-        bin_io ~localize
-        , compare ~localize
-        , equal ~localize
-        , globalize
-        , hash
-        , sexp
-        , sexp_grammar
-        , typerep]
-
-      type char
-      [@@deriving
-        bin_io ~localize
-        , compare ~localize
-        , equal ~localize
-        , globalize
-        , hash
-        , sexp
-        , sexp_grammar
-        , typerep]
-
-      type float
-      [@@deriving
-        bin_io ~localize
-        , compare ~localize
-        , equal ~localize
-        , globalize
-        , hash
-        , sexp
-        , sexp_grammar
-        , typerep]
-
-      type int
-      [@@deriving
-        bin_io ~localize
-        , compare ~localize
-        , equal ~localize
-        , globalize
-        , hash
-        , sexp
-        , sexp_grammar
-        , typerep]
-
-      type int32
-      [@@deriving
-        bin_io ~localize
-        , compare ~localize
-        , equal ~localize
-        , globalize
-        , hash
-        , sexp
-        , sexp_grammar
-        , typerep]
-
-      type int64
-      [@@deriving
-        bin_io ~localize
-        , compare ~localize
-        , equal ~localize
-        , globalize
-        , hash
-        , sexp
-        , sexp_grammar
-        , typerep]
-
-      type 'a lazy_t
-      [@@deriving bin_io ~localize, compare ~localize, hash, sexp, sexp_grammar, typerep]
-
-      type 'a list
-      [@@deriving
-        bin_io ~localize
-        , compare ~localize
-        , equal ~localize
-        , globalize
-        , hash
-        , sexp
-        , sexp_grammar
-        , typerep]
-
-      type nativeint
-      [@@deriving
-        bin_io ~localize
-        , compare ~localize
-        , equal ~localize
-        , globalize
-        , hash
-        , sexp
-        , sexp_grammar
-        , typerep]
-
-      type 'a option
-      [@@deriving
-        bin_io ~localize
-        , compare ~localize
-        , equal ~localize
-        , globalize
-        , hash
-        , sexp
-        , sexp_grammar
-        , typerep]
-
-      type ('ok, 'err) result
-      [@@deriving
-        bin_io ~localize
-        , compare ~localize
-        , equal ~localize
-        , globalize
-        , hash
-        , sexp
-        , sexp_grammar
-        , typerep]
-
-      type string
-      [@@deriving
-        bin_io ~localize
-        , compare ~localize
-        , equal ~localize
-        , globalize
-        , hash
-        , sexp
-        , sexp_grammar
-        , typerep]
-
-      type bytes
-      [@@deriving
-        bin_io ~localize
-        , compare ~localize
-        , equal ~localize
-        , globalize
-        , sexp
-        , sexp_grammar
-        , typerep]
-
-      type 'a ref
-      [@@deriving
-        bin_io ~localize
-        , compare ~localize
-        , equal ~localize
-        , globalize
-        , sexp
-        , sexp_grammar
-        , typerep]
-
-      type unit
-      [@@deriving
-        bin_io ~localize
-        , compare ~localize
-        , equal ~localize
-        , globalize
-        , hash
-        , sexp
-        , sexp_grammar
-        , typerep]
+      type float_array [@@deriving compare ~localize, sexp, sexp_grammar, typerep]
     end
-    with type 'a array := 'a array
-    with type bool := bool
-    with type char := char
-    with type float := float
-    with type int := int
-    with type int32 := int32
-    with type int64 := int64
-    with type 'a list := 'a list
-    with type nativeint := nativeint
-    with type 'a option := 'a option
-    with type ('ok, 'err) result := ('ok, 'err) result
-    with type string := string
-    with type bytes := bytes
-    with type 'a lazy_t := 'a lazy_t
-    with type 'a ref := 'a ref
-    with type unit := unit)
+    with type float_array := float_array)
+end :
+  sig
+    type 'a array
+    [@@deriving
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , globalize
+      , sexp
+      , sexp_grammar
+      , typerep]
+
+    type bool
+    [@@deriving
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , globalize
+      , hash
+      , sexp
+      , sexp_grammar
+      , typerep]
+
+    type char
+    [@@deriving
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , globalize
+      , hash
+      , sexp
+      , sexp_grammar
+      , typerep]
+
+    type float
+    [@@deriving
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , globalize
+      , hash
+      , sexp
+      , sexp_grammar
+      , typerep]
+
+    type int
+    [@@deriving
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , globalize
+      , hash
+      , sexp
+      , sexp_grammar
+      , typerep]
+
+    type int32
+    [@@deriving
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , globalize
+      , hash
+      , sexp
+      , sexp_grammar
+      , typerep]
+
+    type int64
+    [@@deriving
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , globalize
+      , hash
+      , sexp
+      , sexp_grammar
+      , typerep]
+
+    type 'a lazy_t
+    [@@deriving bin_io ~localize, compare ~localize, hash, sexp, sexp_grammar, typerep]
+
+    type 'a list
+    [@@deriving
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , globalize
+      , hash
+      , sexp
+      , sexp_grammar
+      , typerep]
+
+    type nativeint
+    [@@deriving
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , globalize
+      , hash
+      , sexp
+      , sexp_grammar
+      , typerep]
+
+    type 'a option
+    [@@deriving
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , globalize
+      , hash
+      , sexp
+      , sexp_grammar
+      , typerep]
+
+    type ('ok, 'err) result
+    [@@deriving
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , globalize
+      , hash
+      , sexp
+      , sexp_grammar
+      , typerep]
+
+    type string
+    [@@deriving
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , globalize
+      , hash
+      , sexp
+      , sexp_grammar
+      , typerep]
+
+    type bytes
+    [@@deriving
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , globalize
+      , sexp
+      , sexp_grammar
+      , typerep]
+
+    type 'a ref
+    [@@deriving
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , globalize
+      , sexp
+      , sexp_grammar
+      , typerep]
+
+    type unit
+    [@@deriving
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , globalize
+      , hash
+      , sexp
+      , sexp_grammar
+      , typerep]
+  end
+  with type 'a array := 'a array
+  with type bool := bool
+  with type char := char
+  with type float := float
+  with type int := int
+  with type int32 := int32
+  with type int64 := int64
+  with type 'a list := 'a list
+  with type nativeint := nativeint
+  with type 'a option := 'a option
+  with type ('ok, 'err) result := ('ok, 'err) result
+  with type string := string
+  with type bytes := bytes
+  with type 'a lazy_t := 'a lazy_t
+  with type 'a ref := 'a ref
+  with type unit := unit)
 
 let sexp_of_exn = Exn.sexp_of_t

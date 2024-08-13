@@ -7,10 +7,10 @@ module type Hashtbl_for_testing = sig
 
   include
     Hashtbl_intf.Creators
-      with type ('a, 'b) t := ('a, 'b) t
-      with type 'a key := 'a
-      with type ('a, 'b, 'c) create_options :=
-        ('a, 'b, 'c) Hashtbl_intf.create_options_with_first_class_module
+    with type ('a, 'b) t := ('a, 'b) t
+    with type 'a key := 'a
+    with type ('a, 'b, 'c) create_options :=
+      ('a, 'b, 'c) Hashtbl_intf.create_options_with_first_class_module
 
   (* [Creators] gives us a different create than [Hashtbl_intf.Hashtbl] does *)
   val create : ?growth_allowed:bool -> ?size:int -> 'a Base.Hashtbl.Key.t -> ('a, 'b) t

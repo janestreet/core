@@ -27,7 +27,7 @@ include module type of struct
 *)
 
 module Int : sig
-  type nonrec t = int t [@@deriving bin_io ~localize, compare, sexp]
+  type nonrec t = int t [@@deriving bin_io ~localize, compare, sexp, sexp_grammar]
 
   include Blit.S with type t := t
 
@@ -39,11 +39,11 @@ module Int : sig
     -> len:int
     -> unit
     = "core_array_unsafe_int_blit"
-    [@@noalloc]
+  [@@noalloc]
 end
 
 module Float : sig
-  type nonrec t = float t [@@deriving bin_io ~localize, compare, sexp]
+  type nonrec t = float t [@@deriving bin_io ~localize, compare, sexp, sexp_grammar]
 
   include Blit.S with type t := t
 
@@ -55,7 +55,7 @@ module Float : sig
     -> len:int
     -> unit
     = "core_array_unsafe_float_blit"
-    [@@noalloc]
+  [@@noalloc]
 end
 
 (** [normalize array index] returns a new index into the array such that if the index is
@@ -84,10 +84,11 @@ module Permissioned : sig
       information about the length of an array can leak out even if you only have write
       permissions since you can catch out-of-bounds errors.
   *)
-  type ('a, -'perms) t [@@deriving bin_io ~localize, compare, sexp]
+  type ('a, -'perms) t [@@deriving bin_io ~localize, compare, sexp, sexp_grammar]
 
   module Int : sig
-    type nonrec -'perms t = (int, 'perms) t [@@deriving bin_io ~localize, compare, sexp]
+    type nonrec -'perms t = (int, 'perms) t
+    [@@deriving bin_io ~localize, compare, sexp, sexp_grammar]
 
     include Blit.S_permissions with type 'perms t := 'perms t
 
@@ -99,11 +100,12 @@ module Permissioned : sig
       -> len:int
       -> unit
       = "core_array_unsafe_int_blit"
-      [@@noalloc]
+    [@@noalloc]
   end
 
   module Float : sig
-    type nonrec -'perms t = (float, 'perms) t [@@deriving bin_io ~localize, compare, sexp]
+    type nonrec -'perms t = (float, 'perms) t
+    [@@deriving bin_io ~localize, compare, sexp, sexp_grammar]
 
     include Blit.S_permissions with type 'perms t := 'perms t
 
@@ -141,7 +143,7 @@ module Permissioned : sig
       -> len:int
       -> unit
       = "core_array_unsafe_float_blit"
-      [@@noalloc]
+    [@@noalloc]
   end
 
   (** [of_array_id] and [to_array_id] return the same underlying array.  On the other
@@ -176,7 +178,7 @@ module Permissioned : sig
 
   include
     Indexed_container.S1_with_creators_permissions
-      with type ('a, 'perms) t := ('a, 'perms) t
+    with type ('a, 'perms) t := ('a, 'perms) t
 
   include Blit.S1_permissions with type ('a, 'perms) t := ('a, 'perms) t
   include Binary_searchable.S1_permissions with type ('a, 'perms) t := ('a, 'perms) t
@@ -385,7 +387,11 @@ module Permissioned : sig
   val zip_exn : ('a, [> read ]) t -> ('b, [> read ]) t -> ('a * 'b, [< _ perms ]) t
   val unzip : ('a * 'b, [> read ]) t -> ('a, [< _ perms ]) t * ('b, [< _ perms ]) t
   val sorted_copy : ('a, [> read ]) t -> compare:('a -> 'a -> int) -> ('a, [< _ perms ]) t
+
   val last : ('a, [> read ]) t -> 'a
+  [@@deprecated "[since 2024-07] This was renamed to [last_exn]"]
+
+  val last_exn : ('a, [> read ]) t -> 'a
   val equal : ('a -> 'a -> bool) -> ('a, [> read ]) t -> ('a, [> read ]) t -> bool
   val to_sequence : ('a, [> read ]) t -> 'a Sequence.t
   val to_sequence_mutable : ('a, [> read ]) t -> 'a Sequence.t

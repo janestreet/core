@@ -29,9 +29,16 @@ module Unstable = T
 
 let create size = create size
 
+external array1_sub
+  :  ('a, 'b, 'c) Array1.t
+  -> int
+  -> int
+  -> ('a, 'b, 'c) Array1.t
+  = "caml_ba_sub"
+
 let sub_shared ?(pos = 0) ?len (bstr : t) =
   let len = get_opt_len bstr ~pos len in
-  Array1.sub bstr pos len
+  array1_sub bstr pos len
 ;;
 
 (* Destruction *)
@@ -127,11 +134,11 @@ let write_bin_prot t ?pos (writer : _ Bin_prot.Type_class.writer) v =
 (* Hex dump *)
 
 include Hexdump.Of_indexable (struct
-  type nonrec t = t
+    type nonrec t = t
 
-  let length = length
-  let get = get
-end)
+    let length = length
+    let get = get
+  end)
 
 let rec last_nonmatch_plus_one ~buf ~min_pos ~pos ~char =
   let pos' = pos - 1 in

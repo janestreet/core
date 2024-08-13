@@ -10,6 +10,16 @@ module type S = sig
   end
 end
 
+module type S_zero_alloc = sig
+  type t
+  type value
+
+  module Optional_syntax : sig
+    val is_none : t -> bool [@@zero_alloc]
+    val unsafe_value : t -> value [@@zero_alloc]
+  end
+end
+
 module type S1 = sig
   type 'a t
   type 'a value
@@ -82,6 +92,7 @@ module type Optional_syntax = sig
       For more details on the syntax extension, see [ppx/ppx_optional/README.md]. *)
 
   module type S = S
+  module type S_zero_alloc = S_zero_alloc
   module type S1 = S1
   module type S2 = S2
 end

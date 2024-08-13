@@ -25,7 +25,6 @@ let for_all (type a) raw_fn validated_fn (module Output : Output with type t = a
     let expected = raw_fn raw in
     let actual = validated_fn (V.create_exn raw) in
     require
-      [%here]
       (Output.equal expected actual)
       ~if_false_then_print_s:
         (lazy
@@ -42,7 +41,6 @@ let for_all2 (type a) raw_fn validated_fn (module Output : Output with type t = 
       let expected = raw_fn raw1 raw2 in
       let actual = validated_fn (V.create_exn raw1) (V.create_exn raw2) in
       require
-        [%here]
         (Output.equal expected actual)
         ~if_false_then_print_s:
           (lazy
@@ -99,10 +97,10 @@ let%test_module _ =
     let does_raise = Exn.does_raise
 
     module M = Make (struct
-      let here = [%here]
+        let here = [%here]
 
-      include Positive_int
-    end)
+        include Positive_int
+      end)
 
     open M
 
@@ -135,18 +133,18 @@ let%test_module _ =
     ;;
 
     module M1 = Make_binable (struct
-      let here = [%here]
-      let validate_binio_deserialization = true
+        let here = [%here]
+        let validate_binio_deserialization = true
 
-      include Positive_int
-    end)
+        include Positive_int
+      end)
 
     module M2 = Make_binable (struct
-      let here = [%here]
-      let validate_binio_deserialization = false
+        let here = [%here]
+        let validate_binio_deserialization = false
 
-      include Positive_int
-    end)
+        include Positive_int
+      end)
 
     let int = 0
     let string = Binable.to_string (module Int) int

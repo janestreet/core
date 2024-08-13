@@ -368,9 +368,41 @@ module Stable = struct
         ;;
       end
 
-      let of_utc_offset_explicit_name ~name ~hours:offset =
-        assert (offset >= -24 && offset <= 24);
-        let utc_offset_in_seconds = Int63.of_int (offset * 60 * 60) in
+      let seconds_per_day = Int63.of_int (24 * 60 * 60)
+      let seconds_per_hour = Int63.of_int (60 * 60)
+      let seconds_per_minute = Int63.of_int 60
+
+      let default_name offset =
+        let open Int63.O in
+        let sign = if offset < Int63.zero then '-' else '+'
+        and hours = offset / seconds_per_hour |> Int63.to_int_exn |> Int.abs
+        and minutes =
+          Int63.rem offset seconds_per_hour / seconds_per_minute
+          |> Int63.to_int_exn
+          |> Int.abs
+        and seconds =
+          Int63.rem offset seconds_per_minute |> Int63.to_int_exn |> Int.abs
+        in
+        let open Int.O in
+        if seconds <> 0
+        then sprintf "UTC%c%d:%02d:%02d" sign hours minutes seconds
+        else if minutes <> 0
+        then sprintf "UTC%c%d:%02d" sign hours minutes
+        else if hours <> 0
+        then sprintf "UTC%c%d" sign hours
+        else "UTC"
+      ;;
+
+      let of_utc_offset_in_seconds ?name utc_offset_in_seconds =
+        let open Int63.O in
+        assert (
+          utc_offset_in_seconds >= -seconds_per_day
+          && utc_offset_in_seconds <= seconds_per_day);
+        let name =
+          match name with
+          | Some name -> name
+          | None -> default_name utc_offset_in_seconds
+        in
         { name
         ; original_filename = None
         ; digest = None
@@ -382,13 +414,14 @@ module Stable = struct
         }
       ;;
 
+      let of_utc_offset_explicit_name ~name ~hours:offset =
+        assert (offset >= -24 && offset <= 24);
+        of_utc_offset_in_seconds ~name (Int63.of_int (offset * 60 * 60))
+      ;;
+
       let of_utc_offset ~hours:offset =
-        let name =
-          if offset = 0
-          then "UTC"
-          else sprintf "UTC%s%d" (if offset < 0 then "-" else "+") (abs offset)
-        in
-        of_utc_offset_explicit_name ~name ~hours:offset
+        assert (offset >= -24 && offset <= 24);
+        of_utc_offset_in_seconds (Int63.of_int (offset * 60 * 60))
       ;;
     end
   end
@@ -480,9 +513,14 @@ let index_upper_bound_contains_seconds_since_epoch t index ~mode seconds =
 ;;
 
 let binary_search_index_of_seconds_since_epoch t ~mode seconds : Index.t =
-  Array.binary_search_segmented t.transitions `Last_on_left ~segment_of:(fun transition ->
-    if Int63.( <= ) (effective_start_time transition ~mode) seconds then `Left else `Right)
-  |> Option.value ~default:Index.before_first_transition
+  (Array.binary_search_segmented
+     t.transitions
+     `Last_on_left
+     ~segment_of:(fun transition ->
+       if Int63.( <= ) (effective_start_time transition ~mode) seconds
+       then `Left
+       else `Right)
+   |> Option.value_local ~default:Index.before_first_transition) [@nontail]
 ;;
 
 let index_of_seconds_since_epoch t ~mode seconds =
@@ -540,6 +578,30 @@ end = struct
 
   include Absolute
 end
+
+let of_utc_offset_in_seconds_round_down ?name span =
+  Time_in_seconds.Span.to_int63_seconds_round_down_exn span
+  |> of_utc_offset_in_seconds ?name
+;;
+
+let add_offset_in_seconds_round_down t ~name ~span =
+  let span = Time_in_seconds.Span.to_int63_seconds_round_down_exn span in
+  let offset_regime ({ utc_offset_in_seconds; is_dst; abbrv } : Regime.t) : Regime.t =
+    { utc_offset_in_seconds = Int63.( + ) utc_offset_in_seconds span; is_dst; abbrv }
+  in
+  { name
+  ; original_filename = None
+  ; digest = None
+  ; transitions =
+      Array.map
+        t.transitions
+        ~f:(fun { start_time_in_seconds_since_epoch; new_regime } : Transition.t ->
+          { start_time_in_seconds_since_epoch; new_regime = offset_regime new_regime })
+  ; last_regime_index = Index.before_first_transition
+  ; default_local_time_type = offset_regime t.default_local_time_type
+  ; leap_seconds = t.leap_seconds
+  }
+;;
 
 let index t time =
   Time_in_seconds.to_span_since_epoch time

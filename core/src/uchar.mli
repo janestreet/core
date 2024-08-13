@@ -27,8 +27,8 @@ module Stable : sig
 
     include
       Stable_comparable.With_stable_witness.V1
-        with type t := t
-        with type comparator_witness = comparator_witness
+      with type t := t
+      with type comparator_witness = comparator_witness
 
     include Hashable.Stable.V1.With_stable_witness.S with type key := t
   end

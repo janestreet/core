@@ -59,6 +59,25 @@ module type S_without_immediate = sig
   include S_without_immediate_plain with type t := t
 end
 
+module type S_without_immediate_zero_alloc = sig
+  type value
+  type t [@@deriving compare, hash, sexp_of, typerep]
+
+  val none : t
+  val some : value -> t [@@zero_alloc]
+  val some_is_representable : value -> bool [@@zero_alloc]
+  val is_none : t -> bool [@@zero_alloc]
+  val is_some : t -> bool [@@zero_alloc]
+  val value : t -> default:value -> value [@@zero_alloc]
+  val value_exn : t -> value [@@zero_alloc]
+  val unchecked_value : t -> value [@@zero_alloc]
+  val to_option : t -> value option
+  val of_option : value option -> t [@@zero_alloc]
+
+  module Optional_syntax :
+    Optional_syntax.S_zero_alloc with type t := t with type value := value
+end
+
 module type S_plain = sig
   type t [@@immediate]
 
@@ -71,10 +90,10 @@ module type S = sig
   include S_without_immediate with type t := t
 end
 
-module type S_int63 = sig
-  type t [@@immediate64]
+module type S_zero_alloc = sig
+  type t [@@immediate]
 
-  include S_without_immediate with type t := t
+  include S_without_immediate_zero_alloc with type t := t
 end
 
 module type S_int63_plain = sig
@@ -83,19 +102,34 @@ module type S_int63_plain = sig
   include S_without_immediate_plain with type t := t
 end
 
+module type S_int63 = sig
+  type t [@@immediate64]
+
+  include S_without_immediate with type t := t
+end
+
+module type S_int63_zero_alloc = sig
+  type t [@@immediate64]
+
+  include S_without_immediate_zero_alloc with type t := t
+end
+
 module type Immediate_option = sig
   (** Always immediate. *)
-  module type S = S
 
+  module type S = S
   module type S_plain = S_plain
+  module type S_zero_alloc = S_zero_alloc
 
   (** Immediate only on 64-bit machines. *)
-  module type S_int63 = S_int63
 
+  module type S_int63 = S_int63
   module type S_int63_plain = S_int63_plain
+  module type S_int63_zero_alloc = S_int63_zero_alloc
 
   (** Never immediate. *)
-  module type S_without_immediate = S_without_immediate
 
+  module type S_without_immediate = S_without_immediate
   module type S_without_immediate_plain = S_without_immediate_plain
+  module type S_without_immediate_zero_alloc = S_without_immediate_zero_alloc
 end

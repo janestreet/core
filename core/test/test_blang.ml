@@ -7,25 +7,28 @@ let orelse = O.( || )
 
 let%test_module "Stable.V1" =
   (module Stable_unit_test.Make (struct
-    type t = string Stable.V1.t [@@deriving bin_io, equal, sexp]
+      type t = string Stable.V1.t [@@deriving bin_io, equal, sexp]
 
-    let test_blang =
-      if_
-        (base "foo")
-        (not_ (or_ [ base "bara"; base "barb" ]))
-        (not_ (and_ [ base "baza"; base "bazb" ]))
-    ;;
+      let test_blang =
+        if_
+          (base "foo")
+          (not_ (or_ [ base "bara"; base "barb" ]))
+          (not_ (and_ [ base "baza"; base "bazb" ]))
+      ;;
 
-    let test_sexp = "(if foo (not (or bara barb)) (not (and baza bazb)))"
+      let test_sexp = "(if foo (not (or bara barb)) (not (and baza bazb)))"
 
-    let test_bin =
-      "\005\006\003foo\004\003\006\004bara\006\004barb\004\002\006\004baza\006\004bazb"
-    ;;
+      let test_bin =
+        "\005\006\003foo\004\003\006\004bara\006\004barb\004\002\006\004baza\006\004bazb"
+      ;;
 
-    let tests =
-      [ test_blang, test_sexp, test_bin; true_, "true", "\000"; false_, "false", "\001" ]
-    ;;
-  end))
+      let tests =
+        [ test_blang, test_sexp, test_bin
+        ; true_, "true", "\000"
+        ; false_, "false", "\001"
+        ]
+      ;;
+    end))
 ;;
 
 let%test_module "auto-simplification" =
@@ -348,7 +351,7 @@ let%expect_test "no-alloc-eval" =
       (not_ (or_ [ base "bara"; base "barb" ]))
       (not_ (and_ [ base "baza"; base "bazb" ]))
   in
-  require_no_allocation [%here] (fun () ->
+  require_no_allocation (fun () ->
     let result = eval blang (fun _ -> false) in
     ignore (result : bool));
   [%expect {| |}]
@@ -369,7 +372,6 @@ let%expect_test "quickcheck generator obeys invariants" =
    `lib/sexp_grammar/src/sexp_grammar.ml`. *)
 let%expect_test "validate sexp grammar" =
   require_ok
-    [%here]
     (Sexp_grammar_validation.validate_grammar
        (module struct
          type t = unit Blang.t [@@deriving quickcheck, sexp, sexp_grammar]
@@ -426,7 +428,8 @@ module _ = struct
 
   let%expect_test _ =
     print [ a ];
-    [%expect {|
+    [%expect
+      {|
       (standard a)
       (raw (Base a))
       |}]
@@ -504,7 +507,8 @@ module _ = struct
                     (Base h)))))))))
       |}];
     p false_;
-    [%expect {|
+    [%expect
+      {|
       (standard false)
       (raw False)
       |}]
@@ -522,7 +526,8 @@ module _ = struct
 
   let%expect_test _ =
     print [ a ];
-    [%expect {|
+    [%expect
+      {|
       (standard a)
       (raw (Base a))
       |}]
@@ -579,7 +584,8 @@ module _ = struct
         ]
     in
     p true_;
-    [%expect {|
+    [%expect
+      {|
       (standard true)
       (raw True)
       |}];
@@ -652,11 +658,7 @@ module _ : Monadic with module M := Monad.Ident = struct
         type t = Value.t Trace.t [@@deriving equal, sexp_of]
       end
       in
-      require_equal
-        [%here]
-        (module Value_with_trace)
-        (Trace.run op1 t ~f)
-        (Trace.run op2 t ~f)
+      require_equal (module Value_with_trace) (Trace.run op1 t ~f) (Trace.run op2 t ~f)
     ;;
   end
 
@@ -666,7 +668,6 @@ module _ : Monadic with module M := Monad.Ident = struct
 
   let%expect_test "map" =
     quickcheck_m
-      [%here]
       (module Small_int_blang)
       ~f:(fun t -> test (module Small_int_blang) t Blang.map Monadic.map ~f:Int.succ);
     [%expect {| |}]
@@ -676,7 +677,6 @@ module _ : Monadic with module M := Monad.Ident = struct
 
   let%expect_test "bind" =
     quickcheck_m
-      [%here]
       (module struct
         type t = Small_int_blang.t * Small_int_blang.t list
         [@@deriving quickcheck, sexp_of]
@@ -692,7 +692,6 @@ module _ : Monadic with module M := Monad.Ident = struct
 
   let%expect_test "eval" =
     quickcheck_m
-      [%here]
       (module struct
         type t = Small_int_blang.t * Small_int.t [@@deriving quickcheck, sexp_of]
       end)

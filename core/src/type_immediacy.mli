@@ -153,8 +153,8 @@ type 'a t
 module Always : sig
   type 'a t
 
-  val of_typerep : 'a Typerep.t -> 'a t option
-  val of_typerep_exn : Source_code_position.t -> 'a Typerep.t -> 'a t
+  val of_typerep : ('a, _) Typerep.t_any -> 'a t option
+  val of_typerep_exn : Source_code_position.t -> ('a, _) Typerep.t_any -> 'a t
   val int_as_value : 'a t -> int -> 'a option
   val int_as_value_exn : 'a t -> int -> 'a
   val int_is_value : 'a t -> int -> bool

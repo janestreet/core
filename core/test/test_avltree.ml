@@ -10,11 +10,11 @@ let invariant tree =
   Avltree.iter tree ~f:(fun ~key ~data -> assert (key = data))
 ;;
 
-let require_is_absent tree int = require [%here] (not (Avltree.mem tree ~compare int))
+let require_is_absent tree int = require (not (Avltree.mem tree ~compare int))
 
 let require_is_present tree int =
-  require [%here] (Avltree.mem tree ~compare int);
-  require_equal [%here] (module Int_option) (Avltree.find tree ~compare int) (Some int)
+  require (Avltree.mem tree ~compare int);
+  require_equal (module Int_option) (Avltree.find tree ~compare int) (Some int)
 ;;
 
 let require_equivalent_set tree set =
@@ -23,14 +23,14 @@ let require_equivalent_set tree set =
   let from_fold =
     Avltree.fold tree ~init:Int.Set.empty ~f:(fun ~key:int ~data:_ set -> Set.add set int)
   in
-  require_sets_are_equal [%here] !from_iter from_fold;
-  require_sets_are_equal [%here] !from_iter set
+  require_sets_are_equal !from_iter from_fold;
+  require_sets_are_equal !from_iter set
 ;;
 
 let require_ref_mutated f ~to_:expect =
   let r = ref (not expect) in
   let return = f r in
-  require_equal [%here] (module Bool) !r expect;
+  require_equal (module Bool) !r expect;
   return
 ;;
 
@@ -87,9 +87,9 @@ let operation_printed_crs = ref false
 let () =
   let old = !on_print_cr in
   on_print_cr
-    := fun cr ->
-         operation_printed_crs := true;
-         old cr
+  := fun cr ->
+       operation_printed_crs := true;
+       old cr
 ;;
 
 module Operation_sequence = struct
@@ -120,7 +120,6 @@ let add_then_remove_reverse_sorted =
 
 let%expect_test "random operations" =
   quickcheck_m
-    [%here]
     (module Operation_sequence)
     ~examples:[ add_then_remove_sorted; add_then_remove_reverse_sorted ]
     ~f:(fun operations ->

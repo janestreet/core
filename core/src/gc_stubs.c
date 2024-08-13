@@ -22,13 +22,10 @@
 #endif
 
 static intnat minor_words(void) {
-  return (intnat)(caml_stat_minor_words +
-                  (double)(caml_young_end - caml_young_ptr));
+  return (intnat)(caml_stat_minor_words + (double)(caml_young_end - caml_young_ptr));
 }
 
-static intnat promoted_words(void) {
-  return ((intnat)caml_stat_promoted_words);
-}
+static intnat promoted_words(void) { return ((intnat)caml_stat_promoted_words); }
 
 CAMLprim value core_gc_minor_words(value unit) {
   (void)unit;

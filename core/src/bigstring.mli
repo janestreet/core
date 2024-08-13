@@ -22,11 +22,12 @@ include Hexdump.S with type t := t
     Content is undefined. *)
 val create : int -> t
 
-(** [sub_shared ?pos ?len bstr] @return the sub-bigstring in [bstr]
-    that starts at position [pos] and has length [len].  The sub-bigstring
-    shares the same memory region, i.e. modifying it will modify the
-    original bigstring.  Holding on to the sub-bigstring will also keep
-    the (usually bigger) original one around.
+(** [sub_shared ?pos ?len bstr]
+
+    @return the sub-bigstring in [bstr] that starts at position [pos] and has length
+    [len]. The sub-bigstring shares the same memory region, i.e. modifying it will modify
+    the original bigstring. Holding on to the sub-bigstring will also keep the (usually
+    bigger) original one around.
 
     @param pos default = 0
     @param len default = [Bigstring.length bstr - pos] *)
@@ -160,15 +161,26 @@ val set_head_padded_fixed_string
   -> unit
 
 module Unstable : sig
-  type nonrec t = t [@@deriving bin_io ~localize, compare, equal, sexp_of]
-  type nonrec t_frozen = t_frozen [@@deriving bin_io ~localize, compare, hash, sexp_of]
+  type nonrec t = t
+  [@@deriving bin_io ~localize, compare ~localize, equal ~localize, sexp_of]
+
+  type nonrec t_frozen = t_frozen
+  [@@deriving bin_io ~localize, compare ~localize, hash, sexp_of]
 end
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving bin_io ~localize, stable_witness, compare, equal, sexp]
+    type nonrec t = t
+    [@@deriving
+      bin_io ~localize
+      , stable_witness
+      , compare ~localize
+      , equal ~localize
+      , sexp
+      , sexp_grammar]
 
     type nonrec t_frozen = t_frozen
-    [@@deriving bin_io ~localize, stable_witness, compare, hash, sexp]
+    [@@deriving
+      bin_io ~localize, stable_witness, compare ~localize, hash, sexp, sexp_grammar]
   end
 end

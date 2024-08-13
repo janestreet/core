@@ -28,8 +28,7 @@ CAMLprim value core_array_unsafe_int_blit(value src, value src_pos, value dst,
      See [https://github.com/ocaml/ocaml/pull/11255].
    */
   memmove((value *)&Field(dst, Long_val(dst_pos)),
-          (value *)&Field(src, Long_val(src_pos)),
-          Long_val(len) * sizeof(value));
+          (value *)&Field(src, Long_val(src_pos)), Long_val(len) * sizeof(value));
 
   return Val_unit;
 }

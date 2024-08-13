@@ -18,17 +18,17 @@ let%expect_test _ =
   inv ();
   assert (Hq.is_empty hq);
   assert (Option.is_none (Hq.dequeue_front hq));
-  require_does_raise [%here] (fun () -> Hq.dequeue_front_exn hq);
+  require_does_raise (fun () -> Hq.dequeue_front_exn hq);
   [%expect {| "Hash_queue.dequeue_exn: empty queue" |}];
   assert (Option.is_none (Hq.dequeue_front_with_key hq));
-  require_does_raise [%here] (fun () -> Hq.dequeue_front_with_key_exn hq);
+  require_does_raise (fun () -> Hq.dequeue_front_with_key_exn hq);
   [%expect {| "Hash_queue.dequeue_with_key: empty queue" |}];
   Hq.dequeue_all hq ~f:(fun _ -> assert false);
   assert (Poly.( = ) (Hq.remove hq "foobar") `No_such_key);
-  require_does_raise [%here] (fun () -> Hq.remove_exn hq "foobar");
+  require_does_raise (fun () -> Hq.remove_exn hq "foobar");
   [%expect {| ("Hash_queue.remove_exn: unknown key" foobar) |}];
   assert (Poly.( = ) (Hq.replace hq "foobar" 0) `No_such_key);
-  require_does_raise [%here] (fun () -> Hq.replace_exn hq "foobar" 0);
+  require_does_raise (fun () -> Hq.replace_exn hq "foobar" 0);
   [%expect {| ("Hash_queue.replace_exn: unknown key" foobar) |}];
   assert (List.is_empty (Hq.foldi hq ~init:[] ~f:(fun ac ~key:_ ~data:_ -> () :: ac)));
   assert (List.is_empty (Hq.fold hq ~init:[] ~f:(fun ac _ -> () :: ac)));
@@ -81,17 +81,17 @@ let%expect_test _ =
   done;
   (* double booking *)
   assert (Poly.( = ) (Hq.enqueue_back hq "42" 42) `Key_already_present);
-  require_does_raise [%here] (fun () -> Hq.enqueue_back_exn hq "42" 42);
+  require_does_raise (fun () -> Hq.enqueue_back_exn hq "42" 42);
   [%expect {| ("Hash_queue.enqueue_exn: duplicate key" 42) |}];
   assert (Poly.( = ) (Hq.replace hq "1" 42) `Ok);
   assert ([%equal: int option] (Hq.lookup hq "1") (Some 42));
   assert (Hq.lookup_exn hq "1" = 42);
   assert ([%equal: (string * int) option] (Hq.dequeue_front_with_key hq) (Some ("1", 42)));
   assert (Poly.( = ) (Hq.replace hq "1" 42) `No_such_key);
-  require_does_raise [%here] (fun () -> Hq.replace_exn hq "1" 42);
+  require_does_raise (fun () -> Hq.replace_exn hq "1" 42);
   [%expect {| ("Hash_queue.replace_exn: unknown key" 1) |}];
   assert ([%equal: int option] (Hq.lookup hq "1") None);
-  require_does_raise [%here] (fun () : int -> Hq.lookup_exn hq "1");
+  require_does_raise (fun () : int -> Hq.lookup_exn hq "1");
   [%expect {| (Not_found_s ("Hashtbl.find_exn: not found" 1)) |}];
   Hq.clear hq;
   assert (Hq.is_empty hq);
@@ -99,10 +99,10 @@ let%expect_test _ =
   List.iter [ 1; 2; 3 ] ~f:add;
   assert ([%equal: string list] [ "1"; "2"; "3" ] (Hq.keys hq));
   assert ([%equal: (string * int) list] [ "1", 1; "2", 2; "3", 3 ] (Hq.to_alist hq));
-  require_does_raise [%here] (fun () -> Hq.iter hq ~f:(fun _ -> add 13));
+  require_does_raise (fun () -> Hq.iter hq ~f:(fun _ -> add 13));
   [%expect
     {| (Failure "It is an error to modify a Hash_queue.t while iterating over it.") |}];
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     Hq.iter hq ~f:(fun _ -> ignore (Hq.remove hq "foo" : [ `No_such_key | `Ok ])));
   [%expect
     {| (Failure "It is an error to modify a Hash_queue.t while iterating over it.") |}];
@@ -137,7 +137,7 @@ let%expect_test "enqueue_front, enqueue_front_exn" =
   for i = 1 to n do
     Hq.enqueue_front_exn hq2 (string_of_int i) i
   done;
-  require [%here] ([%compare.equal: int list] (Hq.to_list hq2) (Hq.to_list hq))
+  require ([%compare.equal: int list] (Hq.to_list hq2) (Hq.to_list hq))
 ;;
 
 let test_enqueue_fn (back_or_front : [ `back | `front ]) enqueue_fn =
@@ -222,7 +222,8 @@ let%expect_test "dequeue_back, dequeue_back_exn" =
   for _ = 1 to 10 do
     print_s [%sexp (Hq.dequeue_back_exn hq : int)]
   done;
-  [%expect {|
+  [%expect
+    {|
     1
     2
     3
@@ -326,7 +327,8 @@ let%expect_test "[replace_or_enqueue_back] adds a new element to the back when t
   Hq.replace_or_enqueue_back hq "key1" "value1";
   Hq.replace_or_enqueue_back hq "key2" "value2";
   print_s [%sexp (hq : string Hq.t)];
-  [%expect {|
+  [%expect
+    {|
     ((key1 value1)
      (key2 value2))
     |}]
@@ -339,7 +341,8 @@ let%expect_test "[replace_or_enqueue_front] adds a new element to the front when
   Hq.replace_or_enqueue_front hq "key1" "value1";
   Hq.replace_or_enqueue_front hq "key2" "value2";
   print_s [%sexp (hq : string Hq.t)];
-  [%expect {|
+  [%expect
+    {|
     ((key2 value2)
      (key1 value1))
     |}]
@@ -370,7 +373,7 @@ let%expect_test "[replace_or_enqueue] raises with the correct message when the h
   =
   let hq = Hq.create () in
   Hq.replace_or_enqueue_front hq "key1" "value1";
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     Hq.iter hq ~f:(fun _ -> Hq.replace_or_enqueue_front hq "key2" "value2"));
   [%expect
     {| (Failure "It is an error to modify a Hash_queue.t while iterating over it.") |}]

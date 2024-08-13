@@ -1,7 +1,9 @@
 open! Import
 
 module type Infix = Base.Comparable.Infix
+module type Infix_with_zero_alloc = Base.Comparable.Infix_with_zero_alloc
 module type Comparisons = Base.Comparable.Comparisons
+module type Comparisons_with_zero_alloc = Base.Comparable.Comparisons_with_zero_alloc
 module type With_compare = Base.Comparable.With_compare
 
 module type Validate = sig
@@ -74,13 +76,13 @@ module type Map_and_set_binable = sig
 
   module Map :
     Map.S_binable
-      with type Key.t = t
-      with type Key.comparator_witness = comparator_witness
+    with type Key.t = t
+    with type Key.comparator_witness = comparator_witness
 
   module Set :
     Set.S_binable
-      with type Elt.t = t
-      with type Elt.comparator_witness = comparator_witness
+    with type Elt.t = t
+    with type Elt.comparator_witness = comparator_witness
 end
 
 module type S_binable = sig
@@ -88,8 +90,8 @@ module type S_binable = sig
 
   include
     Map_and_set_binable
-      with type t := t
-      with type comparator_witness := comparator_witness
+    with type t := t
+    with type comparator_witness := comparator_witness
 end
 
 module type Comparable = sig
@@ -140,8 +142,10 @@ module type Comparable = sig
   *)
 
   module type Infix = Infix
+  module type Infix_with_zero_alloc = Infix_with_zero_alloc
   module type Map_and_set_binable = Map_and_set_binable
   module type Comparisons = Comparisons
+  module type Comparisons_with_zero_alloc = Comparisons_with_zero_alloc
   module type S_plain = S_plain
   module type S = S
   module type S_binable = S_binable
@@ -154,13 +158,15 @@ module type Comparable = sig
   include With_compare
 
   (** Inherit comparability from a component. *)
-  module Inherit (C : sig
-    type t [@@deriving compare]
-  end) (T : sig
-    type t [@@deriving sexp]
+  module Inherit
+      (C : sig
+         type t [@@deriving compare]
+       end)
+      (T : sig
+         type t [@@deriving sexp]
 
-    val component : t -> C.t
-  end) : S with type t := T.t
+         val component : t -> C.t
+       end) : S with type t := T.t
 
   (** {2 Comparison-only Functors}
 
@@ -169,12 +175,12 @@ module type Comparable = sig
   *)
 
   module Infix (T : sig
-    type t [@@deriving compare]
-  end) : Infix with type t := T.t
+      type t [@@deriving compare]
+    end) : Infix with type t := T.t
 
   module Comparisons (T : sig
-    type t [@@deriving compare]
-  end) : Comparisons with type t := T.t
+      type t [@@deriving compare]
+    end) : Comparisons with type t := T.t
 
   (** {2 Make Functors}
 
@@ -189,83 +195,88 @@ module type Comparable = sig
   *)
 
   module Make_plain (T : sig
-    type t [@@deriving compare, sexp_of]
-  end) : S_plain with type t := T.t
+      type t [@@deriving compare, sexp_of]
+    end) : S_plain with type t := T.t
 
   module Make (T : sig
-    type t [@@deriving compare, sexp]
-  end) : S with type t := T.t
+      type t [@@deriving compare, sexp]
+    end) : S with type t := T.t
 
   module Make_plain_using_comparator (T : sig
-    type t [@@deriving sexp_of]
+      type t [@@deriving sexp_of]
 
-    include Comparator.S with type t := t
-  end) : S_plain with type t := T.t with type comparator_witness := T.comparator_witness
+      include Comparator.S with type t := t
+    end) : S_plain with type t := T.t with type comparator_witness := T.comparator_witness
 
   module Make_using_comparator (T : sig
-    type t [@@deriving sexp]
+      type t [@@deriving sexp]
 
-    include Comparator.S with type t := t
-  end) : S with type t := T.t with type comparator_witness := T.comparator_witness
+      include Comparator.S with type t := t
+    end) : S with type t := T.t with type comparator_witness := T.comparator_witness
 
   module Make_binable (T : sig
-    type t [@@deriving bin_io, compare, sexp]
-  end) : S_binable with type t := T.t
+      type t [@@deriving bin_io, compare, sexp]
+    end) : S_binable with type t := T.t
 
   module Make_binable_using_comparator (T : sig
-    type t [@@deriving bin_io, sexp]
+      type t [@@deriving bin_io, sexp]
 
-    include Comparator.S with type t := t
-  end) : S_binable with type t := T.t with type comparator_witness := T.comparator_witness
+      include Comparator.S with type t := t
+    end) :
+    S_binable with type t := T.t with type comparator_witness := T.comparator_witness
 
   module Extend_plain
-    (M : Base.Comparable.S) (X : sig
-      type t = M.t [@@deriving sexp_of]
-    end) : S_plain with type t := M.t with type comparator_witness := M.comparator_witness
+      (M : Base.Comparable.S)
+      (X : sig
+         type t = M.t [@@deriving sexp_of]
+       end) :
+    S_plain with type t := M.t with type comparator_witness := M.comparator_witness
 
   module Extend
-    (M : Base.Comparable.S) (X : sig
-      type t = M.t [@@deriving sexp]
-    end) : S with type t := M.t with type comparator_witness := M.comparator_witness
+      (M : Base.Comparable.S)
+      (X : sig
+         type t = M.t [@@deriving sexp]
+       end) : S with type t := M.t with type comparator_witness := M.comparator_witness
 
   module Extend_binable
-    (M : Base.Comparable.S) (X : sig
-      type t = M.t [@@deriving bin_io, sexp]
-    end) :
+      (M : Base.Comparable.S)
+      (X : sig
+         type t = M.t [@@deriving bin_io, sexp]
+       end) :
     S_binable with type t := M.t with type comparator_witness := M.comparator_witness
 
   module Map_and_set_binable (T : sig
-    type t [@@deriving bin_io, compare, sexp]
-  end) : Map_and_set_binable with type t := T.t
+      type t [@@deriving bin_io, compare, sexp]
+    end) : Map_and_set_binable with type t := T.t
 
   module Map_and_set_binable_using_comparator (T : sig
-    type t [@@deriving bin_io, compare, sexp]
+      type t [@@deriving bin_io, compare, sexp]
 
-    include Comparator.S with type t := t
-  end) :
+      include Comparator.S with type t := t
+    end) :
     Map_and_set_binable
-      with type t := T.t
-      with type comparator_witness := T.comparator_witness
+    with type t := T.t
+    with type comparator_witness := T.comparator_witness
 
   module Poly (T : sig
-    type t [@@deriving sexp]
-  end) : S with type t := T.t
+      type t [@@deriving sexp]
+    end) : S with type t := T.t
 
   module Validate (T : sig
-    type t [@@deriving compare, sexp_of]
-  end) : Validate with type t := T.t
+      type t [@@deriving compare, sexp_of]
+    end) : Validate with type t := T.t
 
   module Validate_with_zero (T : sig
-    type t [@@deriving compare, sexp_of]
+      type t [@@deriving compare, sexp_of]
 
-    val zero : t
-  end) : Validate_with_zero with type t := T.t
+      val zero : t
+    end) : Validate_with_zero with type t := T.t
 
   module With_zero (T : sig
-    type t [@@deriving compare, sexp_of]
+      type t [@@deriving compare, sexp_of]
 
-    val zero : t
-  end) : With_zero with type t := T.t
+      val zero : t
+    end) : With_zero with type t := T.t
 
   (** The following module types and functors may be used to define stable modules: *)
 
@@ -277,13 +288,13 @@ module type Comparable = sig
 
         module Map :
           Map.Stable.V1.S
-            with type key := comparable
-            with type comparator_witness := comparator_witness
+          with type key := comparable
+          with type comparator_witness := comparator_witness
 
         module Set :
           Set.Stable.V1.S
-            with type elt := comparable
-            with type elt_comparator_witness := comparator_witness
+          with type elt := comparable
+          with type elt_comparator_witness := comparator_witness
       end
 
       module Make (X : Stable_module_types.S0) :
@@ -296,19 +307,19 @@ module type Comparable = sig
 
           module Map :
             Map.Stable.V1.With_stable_witness.S
-              with type key := comparable
-              with type comparator_witness := comparator_witness
+            with type key := comparable
+            with type comparator_witness := comparator_witness
 
           module Set :
             Set.Stable.V1.With_stable_witness.S
-              with type elt := comparable
-              with type elt_comparator_witness := comparator_witness
+            with type elt := comparable
+            with type elt_comparator_witness := comparator_witness
         end
 
         module Make (X : Stable_module_types.With_stable_witness.S0) :
           S
-            with type comparable := X.t
-            with type comparator_witness := X.comparator_witness
+          with type comparable := X.t
+          with type comparator_witness := X.comparator_witness
       end
     end
   end

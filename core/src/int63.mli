@@ -15,11 +15,11 @@ include
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@immediate64] [@@deriving equal, hash, sexp_grammar]
+    type nonrec t = t [@@deriving equal, hash, sexp_grammar] [@@immediate64]
 
     include
       Stable_comparable.With_stable_witness.V1
-        with type t := t
-         and type comparator_witness = comparator_witness
+      with type t := t
+       and type comparator_witness = comparator_witness
   end
 end

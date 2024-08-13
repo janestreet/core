@@ -3,8 +3,8 @@ open! Import
 
 let invariant bag =
   Bag.invariant ignore bag;
-  require [%here] (Bag.length bag >= 0);
-  require_equal [%here] (module Bool) (Bag.length bag = 0) (Bag.is_empty bag)
+  require (Bag.length bag >= 0);
+  require_equal (module Bool) (Bag.length bag = 0) (Bag.is_empty bag)
 ;;
 
 let test bag =
@@ -57,7 +57,7 @@ let%expect_test "add100" =
     ignore (Bag.add b i : int Bag.Elt.t);
     invariant b
   done;
-  require_equal [%here] (module Int) (Bag.length b) n;
+  require_equal (module Int) (Bag.length b) n;
   for _ = 1 to n do
     (match Bag.remove_one b with
      | None -> assert false
@@ -73,5 +73,5 @@ include Base_test_helpers.Test_container.Test_S1 (Bag)
 let%expect_test "[iter] does not allocate" =
   let t = Bag.create () in
   Bag.add_unit t ();
-  require_no_allocation [%here] (fun () -> Bag.iter t ~f:ignore)
+  require_no_allocation (fun () -> Bag.iter t ~f:ignore)
 ;;

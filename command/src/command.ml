@@ -3,6 +3,12 @@ open! Import
 include Command_intf
 module Shape = Shape
 
+let am_running_test =
+  match Ppx_inline_test_lib.testing with
+  | `Testing `Am_test_runner | `Testing `Am_child_of_test_runner -> true
+  | `Not_testing -> false
+;;
+
 (* in order to define expect tests, we want to raise rather than exit if the code is
    running in the test runner process *)
 let raise_instead_of_exit =
@@ -47,7 +53,7 @@ let help_screen_compare = Shape.Private.help_screen_compare
  * expanded subcommand path
  * args passed to the base command
  * help text for the base command
- *)
+*)
 module Env = struct
   include Univ_map
 
@@ -106,12 +112,12 @@ end = struct
   let error ~has_arg err = { result = Error err; has_arg }
 
   include Applicative.Make (struct
-    type nonrec 'a t = 'a t
+      type nonrec 'a t = 'a t
 
-    let return = return_no_arg
-    let map = `Custom map
-    let apply = apply
-  end)
+      let return = return_no_arg
+      let map = `Custom map
+      let apply = apply
+    end)
 end
 
 module Auto_complete = struct
@@ -285,8 +291,8 @@ end = struct
             List.map alist ~f:(fun (k, (_ : 'a)) -> k, k)
             |> Map.of_alist_multi (module S)
             |> Map.filter ~f:(function
-                 | [] | [ _ ] -> false
-                 | _ :: _ :: _ -> true)
+              | [] | [ _ ] -> false
+              | _ :: _ :: _ -> true)
             |> Map.data
           in
           raise_s
@@ -589,8 +595,8 @@ module Flag = struct
           let { Doc.arg_doc; doc } = Doc.parse ~action ~doc in
           (wrap_if_optional t (Doc.concat ~name ~arg_doc), doc)
           :: List.map aliases ~f:(fun x ->
-               ( wrap_if_optional t (Doc.concat ~name:x ~arg_doc)
-               , sprintf "same as \"%s\"" name )))
+            ( wrap_if_optional t (Doc.concat ~name:x ~arg_doc)
+            , sprintf "same as \"%s\"" name )))
       ;;
     end
 
@@ -1461,8 +1467,7 @@ module Command_base = struct
   let path_key = Env.key_create "path"
   let args_key = Env.key_create "args"
   let help_key = Env.key_create "help"
-  let normalized_path = ref None
-  let normalized_args = ref None
+  let normalized_path_and_args = ref None
 
   let indent_by_2 str =
     String.split ~on:'\n' str
@@ -1634,8 +1639,7 @@ module Command_base = struct
             ~normalized_args:[]
             args
         in
-        normalized_path := Some path;
-        normalized_args := Some parsed_normalized_args;
+        normalized_path_and_args := Some (path, parsed_normalized_args);
         is_using_validate_parsing, main `Parse_args)
     with
     | Ok (`Only_validate_parsing true, (_thunk : _)) ->
@@ -1880,12 +1884,12 @@ module Command_base = struct
     ;;
 
     include Applicative.Make (struct
-      type nonrec 'a t = 'a t
+        type nonrec 'a t = 'a t
 
-      let return = return
-      let apply = apply
-      let map = `Custom map
-    end)
+        let return = return
+        let apply = apply
+        let map = `Custom map
+      end)
 
     let arg_names t =
       let flags = Flag.Internal.create (t.flags ()) in
@@ -2026,57 +2030,56 @@ module Command_base = struct
               acc
               (recover_from_missing_required_flags t)
               ~f:(fun acc { result = value; has_arg } ->
-              match has_arg with
-              | false -> acc
-              | true -> (name, value) :: acc))
+                match has_arg with
+                | false -> acc
+                | true -> (name, value) :: acc))
           |> map ~f:(fun value_list ->
-               let arg_counter = List.length value_list in
-               let missing_flag_error fmt =
-                 ksprintf
-                   (fun msg () -> Error (`Missing_required_flags (Error.of_string msg)))
-                   fmt
-               in
-               let more_than_one_error passed =
-                 die
-                   !"Cannot pass more than one of these: \n\
-                    \  %{Choice_name.list_to_string}"
-                   (List.map passed ~f:fst)
-                   ()
-               and success_list, error_list =
-                 List.partition_map value_list ~f:(function
-                   | name, Ok value -> First (name, value)
-                   | name, Error err -> Second (name, err))
-               in
-               match success_list with
-               | _ :: _ :: _ as passed -> more_than_one_error passed
-               | [ (_, (value : a)) ] ->
-                 if arg_counter > 1
-                 then more_than_one_error value_list
-                 else
-                   Ok
-                     (match if_nothing_chosen with
-                      | Default_to (_ : a) -> (value : b)
-                      | Raise -> (value : b)
-                      | Return_none -> (Some value : b))
-               | [] ->
-                 (match error_list with
-                  | [ (name, `Missing_required_flags err) ] ->
-                    Error
-                      (`Missing_required_flags
-                        (Error.of_string
-                           (sprintf
-                              "Not all flags in group \"%s\" are given: %s"
-                              (Choice_name.to_string name)
-                              (Error.to_string_hum err))))
-                  | _ ->
-                    (match if_nothing_chosen with
-                     | Default_to value -> Ok value
-                     | Return_none -> Ok None
-                     | Raise ->
-                       missing_flag_error
-                         !"Must pass one of these:\n  %{Choice_name.list_to_string}"
-                         (Map.keys ts)
-                         ())))
+            let arg_counter = List.length value_list in
+            let missing_flag_error fmt =
+              ksprintf
+                (fun msg () -> Error (`Missing_required_flags (Error.of_string msg)))
+                fmt
+            in
+            let more_than_one_error passed =
+              die
+                !"Cannot pass more than one of these: \n  %{Choice_name.list_to_string}"
+                (List.map passed ~f:fst)
+                ()
+            and success_list, error_list =
+              List.partition_map value_list ~f:(function
+                | name, Ok value -> First (name, value)
+                | name, Error err -> Second (name, err))
+            in
+            match success_list with
+            | _ :: _ :: _ as passed -> more_than_one_error passed
+            | [ (_, (value : a)) ] ->
+              if arg_counter > 1
+              then more_than_one_error value_list
+              else
+                Ok
+                  (match if_nothing_chosen with
+                   | Default_to (_ : a) -> (value : b)
+                   | Raise -> (value : b)
+                   | Return_none -> (Some value : b))
+            | [] ->
+              (match error_list with
+               | [ (name, `Missing_required_flags err) ] ->
+                 Error
+                   (`Missing_required_flags
+                     (Error.of_string
+                        (sprintf
+                           "Not all flags in group \"%s\" are given: %s"
+                           (Choice_name.to_string name)
+                           (Error.to_string_hum err))))
+               | _ ->
+                 (match if_nothing_chosen with
+                  | Default_to value -> Ok value
+                  | Return_none -> Ok None
+                  | Raise ->
+                    missing_flag_error
+                      !"Must pass one of these:\n  %{Choice_name.list_to_string}"
+                      (Map.keys ts)
+                      ())))
           |> introduce_missing_required_flags
       ;;
 
@@ -2151,7 +2154,7 @@ module Command_base = struct
             ~for_completion:(_ : bool)
             ~path:(_ : Path.t)
             ~verbose_on_parse_error:(_ : bool option)
-            -> result := Some (Error (Error.of_exn exn)));
+          -> result := Some (Error (Error.of_exn exn)));
       Option.value_exn ~here:[%here] !result
     ;;
   end
@@ -2226,12 +2229,12 @@ module Command_base = struct
       let flag_optional_with_default_doc = Param.flag_optional_with_default_doc
 
       include Applicative.Make (struct
-        type nonrec 'a t = 'a Param.t
+          type nonrec 'a t = 'a Param.t
 
-        let return = Param.return
-        let apply = apply
-        let map = `Custom map
-      end)
+          let return = Param.return
+          let apply = apply
+          let map = `Custom map
+        end)
 
       let pair = Param.both
     end
@@ -2622,13 +2625,13 @@ end
 let%test_module "Version_info" =
   (module struct
     module Version_info = Version_info (struct
-      let version_list = [ "hg://some/path_0xdeadbeef"; "ssh://a/path_8badf00d" ]
-      let reprint_build_info to_sexp = Sexp.to_string (to_sexp ())
+        let version_list = [ "hg://some/path_0xdeadbeef"; "ssh://a/path_8badf00d" ]
+        let reprint_build_info to_sexp = Sexp.to_string (to_sexp ())
 
-      module Time = struct
-        type t = unit [@@deriving sexp_of]
-      end
-    end)
+        module Time = struct
+          type t = unit [@@deriving sexp_of]
+        end
+      end)
 
     let%expect_test "print version where multiple repos are used" =
       Version_info.print_version ~version:Version_info.default_version;
@@ -2871,16 +2874,18 @@ struct
     ;;
 
     let of_external ~working_dir ~path_to_exe ~child_subcommand =
+      let env =
+        let help_sexp =
+          supported_versions |> Set.sexp_of_m__t (module Int) |> Sexp.to_string
+        in
+        `Extend [ Env_var.COMMAND_OUTPUT_HELP_SEXP, help_sexp ]
+      in
       let process_info =
         Unix.create_process_env
           ()
           ~prog:(abs_path ~dir:working_dir path_to_exe)
           ~args:child_subcommand
-          ~env:
-            (let help_sexp =
-               supported_versions |> Set.sexp_of_m__t (module Int) |> Sexp.to_string
-             in
-             `Extend [ COMMAND_OUTPUT_HELP_SEXP, help_sexp ])
+          ~env
       in
       Unix.close process_info.stdin;
       let stdout, stderr = read_stdout_and_stderr process_info in
@@ -2888,9 +2893,21 @@ struct
       (* Now we've killed all the processes and threads we made. *)
       match stdout |> Sexplib.Sexp.of_string |> Versioned.t_of_sexp |> of_versioned with
       | exception exn ->
+        let debug =
+          if am_running_test
+          then [%message "<debug info hidden in test>"]
+          else
+            [%message
+              ""
+                working_dir
+                path_to_exe
+                (child_subcommand : string list)
+                (env : [ `Extend of (Env_var.t * string) list ])]
+        in
         raise_s
           [%message
             "cannot parse command shape"
+              ~_:(debug : Sexp.t)
               ~_:(exn : exn)
               (stdout : string)
               (stderr : string)]
@@ -2967,11 +2984,11 @@ struct
         filtered_subcommands
         |> List.stable_sort ~compare:(fun a b -> help_screen_compare (fst a) (fst b))
         |> List.fold ~init:acc ~f:(fun acc (subcommand, shape) ->
-             let path = Path.append path ~subcommand in
-             let name = string_of_path path in
-             let doc = Shape.get_summary shape in
-             let acc = { Shape.Flag_info.name; doc; aliases = [] } :: acc in
-             if recursive then loop path acc shape else acc)
+          let path = Path.append path ~subcommand in
+          let name = string_of_path path in
+          let doc = Shape.get_summary shape in
+          let acc = { Shape.Flag_info.name; doc; aliases = [] } :: acc in
+          if recursive then loop path acc shape else acc)
       in
       match shape with
       | Exec (_, shape) ->
@@ -2986,9 +3003,9 @@ struct
           b.flags
           |> List.filter ~f:(fun fmt -> String.( <> ) fmt.name "[-help]")
           |> List.fold ~init:acc ~f:(fun acc fmt ->
-               let path = Path.append path ~subcommand:fmt.name in
-               let fmt = { fmt with name = string_of_path path } in
-               fmt :: acc)
+            let path = Path.append path ~subcommand:fmt.name in
+            let fmt = { fmt with name = string_of_path path } in
+            fmt :: acc)
         else acc
       | Lazy thunk -> loop path acc (Lazy.force thunk)
     in
@@ -3520,8 +3537,11 @@ let basic_or_error ~summary ?readme param =
 ;;
 
 module For_telemetry = struct
-  let normalized_path () = Option.map !Command_base.normalized_path ~f:Path.parts
-  let normalized_args () = !Command_base.normalized_args
+  let normalized_path_and_args () =
+    match !Command_base.normalized_path_and_args with
+    | Some (path, args) -> `Ok (`Path (Path.parts path), `Args args)
+    | None -> `Not_initialized_through_command
+  ;;
 end
 
 module Private = struct

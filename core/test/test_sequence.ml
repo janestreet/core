@@ -129,7 +129,7 @@ let%expect_test "merge_all" =
     |}];
   (* During a Quickcheck test we want to bail out after a single failure. *)
   let require_exn here ?if_false_then_print_s bool =
-    require here bool ?if_false_then_print_s;
+    require ~here bool ?if_false_then_print_s;
     if not bool then raise_s [%message "failed on random input"]
   in
   let quickcheck_generator =

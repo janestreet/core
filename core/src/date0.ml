@@ -12,8 +12,8 @@ module Stable = struct
     module Without_comparable = struct
       module T : sig
         type t
-        [@@immediate]
         [@@deriving bin_io ~localize, compare, equal, hash, typerep, stable_witness]
+        [@@immediate]
 
         val create_exn : y:int -> m:Month.Stable.V1.t -> d:int -> t
         val year : t -> int
@@ -340,9 +340,9 @@ module C = Comparable.Make_binable_using_comparator (Without_comparable)
 include C
 
 include Diffable.Atomic.Make (struct
-  include Without_comparable
-  include C
-end)
+    include Without_comparable
+    include C
+  end)
 
 module O = struct
   include (C : Comparable.Infix with type t := t)
@@ -359,11 +359,11 @@ include (
     Hashable.S_binable with type t := t)
 
 include Pretty_printer.Register (struct
-  type nonrec t = t
+    type nonrec t = t
 
-  let module_name = "Core.Date"
-  let to_string = to_string
-end)
+    let module_name = "Core.Date"
+    let to_string = to_string
+  end)
 
 let unix_epoch = create_exn ~y:1970 ~m:Jan ~d:1
 
@@ -376,16 +376,16 @@ let unix_epoch = create_exn ~y:1970 ~m:Jan ~d:1
    note: unit tests are in lib_test/time_test.ml
 *)
 module Days : sig
-  type date = t
-  type t [@@immediate]
+    type date = t
+    type t [@@immediate]
 
-  val of_date : date -> t
-  val to_date : t -> date
-  val diff : t -> t -> int
-  val add_days : t -> int -> t
-  val unix_epoch : t
-end
-with type date := t = struct
+    val of_date : date -> t
+    val to_date : t -> date
+    val diff : t -> t -> int
+    val add_days : t -> int -> t
+    val unix_epoch : t
+  end
+  with type date := t = struct
   open Int
 
   type t = int
@@ -684,6 +684,6 @@ module Option = struct
   ;;
 
   include Comparable.Make_plain (struct
-    type nonrec t = t [@@deriving compare, sexp_of]
-  end)
+      type nonrec t = t [@@deriving compare, sexp_of]
+    end)
 end

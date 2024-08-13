@@ -13,7 +13,7 @@ include module type of struct
   with type 'a t := 'a t
 
 module Permissioned : sig
-  type (!'a, -'perms) t [@@deriving sexp, bin_io ~localize]
+  type (!'a, -'perms) t [@@deriving sexp, sexp_grammar, bin_io ~localize]
 
   val create : 'a -> ('a, [< _ perms ]) t
   val read_only : ('a, [> read ]) t -> ('a, read) t

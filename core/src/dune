@@ -14,9 +14,10 @@
  (public_name core)
  (install_c_headers time_ns_stubs)
  (libraries base base_bigstring base_for_tests base_quickcheck bin_prot
-   command fieldslib filename_base heap_block ppx_diff.diffable
-   jane-street-headers base.md5 ppx_assert.runtime-lib ppx_hash.runtime-lib
-   ppx_inline_test.runtime-lib sexplib splittable_random stdio time_now
+   command fieldslib filename_base heap_block bin_prot.shape
+   ppx_diff.diffable ppx_expect.config_types jane-street-headers base.md5
+   ppx_assert.runtime-lib ppx_hash.runtime-lib ppx_inline_test.runtime-lib
+   sexplib splittable_random ppx_stable_witness.stable_witness stdio time_now
    typerep univ_map validate variantslib)
  (ocamlopt_flags
   :standard
@@ -26,7 +27,8 @@
  (preprocessor_deps config.h gc_stubs.h)
  (js_of_ocaml
   (javascript_files strftime.js runtime.js
-    temporal-polyfill/temporal-polyfill.js timezone_js_loader_stubs.js)))
+    temporal-polyfill/temporal-polyfill.js timezone_js_loader_stubs.js
+    timezone_runtime.js)))
 
 (rule
  (targets gc_stubs.h)

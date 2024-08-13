@@ -348,41 +348,41 @@ let values t =
 ;;
 
 module C = Container.Make (struct
-  type 'a t = 'a T.t
+    type 'a t = 'a T.t
 
-  let fold t ~init ~f =
-    let rec loop acc t pending =
+    let fold t ~init ~f =
+      let rec loop acc t pending =
+        match t with
+        | Base a -> next (f acc a) pending
+        | True | False -> next acc pending
+        | Not t -> loop acc t pending
+        | And (t1, t2) | Or (t1, t2) -> loop acc t1 (t2 :: pending)
+        | If (t1, t2, t3) -> loop acc t1 (t2 :: t3 :: pending)
+      and next acc = function
+        | [] -> acc
+        | t :: ts -> loop acc t ts
+      in
+      loop init t [] [@nontail]
+    ;;
+
+    (* Don't allocate *)
+    let rec iter t ~f =
       match t with
-      | Base a -> next (f acc a) pending
-      | True | False -> next acc pending
-      | Not t -> loop acc t pending
-      | And (t1, t2) | Or (t1, t2) -> loop acc t1 (t2 :: pending)
-      | If (t1, t2, t3) -> loop acc t1 (t2 :: t3 :: pending)
-    and next acc = function
-      | [] -> acc
-      | t :: ts -> loop acc t ts
-    in
-    loop init t [] [@nontail]
-  ;;
+      | Base a -> f a
+      | True | False -> ()
+      | Not t -> iter t ~f
+      | And (t1, t2) | Or (t1, t2) ->
+        iter t1 ~f;
+        iter t2 ~f
+      | If (t1, t2, t3) ->
+        iter t1 ~f;
+        iter t2 ~f;
+        iter t3 ~f
+    ;;
 
-  (* Don't allocate *)
-  let rec iter t ~f =
-    match t with
-    | Base a -> f a
-    | True | False -> ()
-    | Not t -> iter t ~f
-    | And (t1, t2) | Or (t1, t2) ->
-      iter t1 ~f;
-      iter t2 ~f
-    | If (t1, t2, t3) ->
-      iter t1 ~f;
-      iter t2 ~f;
-      iter t3 ~f
-  ;;
-
-  let iter = `Custom iter
-  let length = `Define_using_fold
-end)
+    let iter = `Custom iter
+    let length = `Define_using_fold
+  end)
 
 let count = C.count
 let sum = C.sum
@@ -463,12 +463,12 @@ let eval_set ~universe:all set_of_base t =
 ;;
 
 include Monad.Make (struct
-  type 'a t = 'a T.t
+    type 'a t = 'a T.t
 
-  let return = base
-  let bind = bind
-  let map = `Define_using_bind
-end)
+    let return = base
+    let bind = bind
+    let map = `Define_using_bind
+  end)
 
 module type Monadic = sig
   module M : Monad.S
@@ -489,22 +489,22 @@ module For_monad (M : Monad.S) : Monadic with module M := M = struct
     | And (a, b) ->
       bind a ~f
       >>= (function
-      | False -> M.return false_
-      | True -> bind b ~f
-      | a -> bind b ~f >>| fun b -> andalso a b)
+       | False -> M.return false_
+       | True -> bind b ~f
+       | a -> bind b ~f >>| fun b -> andalso a b)
     | Or (a, b) ->
       bind a ~f
       >>= (function
-      | True -> M.return true_
-      | False -> bind b ~f
-      | a -> bind b ~f >>| fun b -> orelse a b)
+       | True -> M.return true_
+       | False -> bind b ~f
+       | a -> bind b ~f >>| fun b -> orelse a b)
     | Not a -> bind a ~f >>| not_
     | If (a, b, c) ->
       bind a ~f
       >>= (function
-      | True -> bind b ~f
-      | False -> bind c ~f
-      | a -> bind b ~f >>= fun b -> bind c ~f >>| fun c -> if_ a b c)
+       | True -> bind b ~f
+       | False -> bind c ~f
+       | a -> bind b ~f >>= fun b -> bind c ~f >>| fun c -> if_ a b c)
   ;;
 
   let map t ~f = bind t ~f:(fun x -> f x >>| base)

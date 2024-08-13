@@ -56,6 +56,11 @@ module Stable = struct
       val to_parts : t -> Parts.t
       val next : t -> t
       val prev : t -> t
+
+      module Private : sig
+        val to_parts_default : underlying -> Parts.t
+        val to_parts_31 : underlying -> Parts.t
+      end
     end = struct
       type underlying = float [@@deriving hash, stable_witness]
       type t = underlying [@@deriving hash, stable_witness]
@@ -67,18 +72,18 @@ module Stable = struct
          (1) all values serialize the same way in both representations, or
          (2) you add a new Time.Span version to stable.ml *)
       include (
-        struct
-          include Float
+      struct
+        include Float
 
-          let sign = sign_exn
-        end :
-          Like_a_float with type t := t)
+        let sign = sign_exn
+      end :
+        Like_a_float with type t := t)
 
       (* due to precision limitations in float we can't expect better than microsecond
          precision *)
       include Float.Robust_compare.Make (struct
-        let robust_comparison_tolerance = 1E-6
-      end)
+          let robust_comparison_tolerance = 1E-6
+        end)
 
       (* this prevents any worry about having these very common names redefined below and
          makes their usage within this module safer.  Constant is included at the very
@@ -98,7 +103,7 @@ module Stable = struct
         let day = of_float (24. *. 60. *. 60.)
       end
 
-      let to_parts t : Parts.t =
+      let to_parts_default t : Parts.t =
         let sign = Float.sign_exn t in
         let t = abs t in
         let integral = Float.round_down t in
@@ -121,6 +126,42 @@ module Stable = struct
         let ms = milliseconds in
         { sign; hr; min; sec; ms; us; ns }
       ;;
+
+      (* jevouillon: [Float.iround_down_exn integral] overflows when
+         integers are 31 bits, so we provide an alternative definition
+         below. *)
+      let to_parts_31 t : Parts.t =
+        let sign = Float.sign_exn t in
+        let t = abs t in
+        let integral = Float.round_down t in
+        let fractional = t -. integral in
+        let seconds = Float.int63_round_down_exn integral in
+        let nanoseconds = Float.iround_nearest_exn (fractional *. 1E9) in
+        let seconds, nanoseconds =
+          if Int.equal nanoseconds 1_000_000_000
+          then Int63.succ seconds, 0
+          else seconds, nanoseconds
+        in
+        let sec = Int63.(to_int_exn (rem seconds (of_int 60))) in
+        let minutes = Int63.(seconds / of_int 60) in
+        let min = Int63.(to_int_exn (rem minutes (of_int 60))) in
+        let hr = Int63.(to_int_exn (minutes / of_int 60)) in
+        let ns = nanoseconds mod 1000 in
+        let microseconds = nanoseconds / 1000 in
+        let us = microseconds mod 1000 in
+        let milliseconds = microseconds / 1000 in
+        let ms = milliseconds in
+        { sign; hr; min; sec; ms; us; ns }
+      ;;
+
+      let to_parts =
+        if Int.(Sys.int_size_in_bits > 31) then to_parts_default else to_parts_31
+      ;;
+
+      module Private = struct
+        let to_parts_default = to_parts_default
+        let to_parts_31 = to_parts_31
+      end
     end
 
     let ( / ) t f = T.of_float ((t : T.t :> float) /. f)
@@ -313,8 +354,8 @@ module Stable = struct
     let t_sexp_grammar = Sexplib.Sexp_grammar.coerce String.t_sexp_grammar
 
     include Diffable.Atomic.Make (struct
-      type nonrec t = t [@@deriving bin_io, equal, sexp]
-    end)
+        type nonrec t = t [@@deriving bin_io, equal, sexp]
+      end)
   end
 
   module V2 = struct
@@ -322,10 +363,11 @@ module Stable = struct
 
     let t_of_sexp sexp = t_of_sexp_v1_v2 sexp ~is_v2:true
     let sexp_of_t t = sexp_of_t_v1_v2 t ~is_v2:true
+    let t_sexp_grammar = Sexplib.Sexp_grammar.coerce String.t_sexp_grammar
 
     include Diffable.Atomic.Make (struct
-      type nonrec t = t [@@deriving bin_io, equal, sexp]
-    end)
+        type nonrec t = t [@@deriving bin_io, equal, sexp]
+      end)
   end
 
   module V3 = struct
@@ -713,8 +755,8 @@ module Stable = struct
     let t_sexp_grammar = Sexplib.Sexp_grammar.coerce String.t_sexp_grammar
 
     include Diffable.Atomic.Make (struct
-      type nonrec t = t [@@deriving bin_io, equal, sexp]
-    end)
+        type nonrec t = t [@@deriving bin_io, equal, sexp]
+      end)
   end
 end
 
@@ -773,24 +815,24 @@ let quickcheck_generator =
 ;;
 
 include Pretty_printer.Register (struct
-  type nonrec t = t
+    type nonrec t = t
 
-  let to_string = to_string
-  let module_name = "Core.Time.Span"
-end)
+    let to_string = to_string
+    let module_name = "Core.Time_float.Span"
+  end)
 
 include Hashable.Make_binable (struct
-  type nonrec t = t [@@deriving bin_io, compare, hash, sexp_of]
+    type nonrec t = t [@@deriving bin_io, compare, hash, sexp_of]
 
-  (* Previous versions rendered hash-based containers using float serialization rather
+    (* Previous versions rendered hash-based containers using float serialization rather
        than time serialization, so when reading hash-based containers in we accept either
        serialization. *)
-  let t_of_sexp sexp =
-    match Float.t_of_sexp sexp with
-    | float -> of_float float
-    | exception _ -> t_of_sexp sexp
-  ;;
-end)
+    let t_of_sexp sexp =
+      match Float.t_of_sexp sexp with
+      | float -> of_float float
+      | exception _ -> t_of_sexp sexp
+    ;;
+  end)
 
 module C = struct
   type t = T.t [@@deriving bin_io]
@@ -817,12 +859,14 @@ module Map = Map.Make_binable_using_comparator (C)
 module Set = Set.Make_binable_using_comparator (C)
 
 include Comparable.With_zero (struct
-  type nonrec t = t [@@deriving compare, sexp_of]
+    type nonrec t = t [@@deriving compare, sexp_of]
 
-  let zero = zero
-end)
+    let zero = zero
+  end)
 
 module Private = struct
+  include Private
+
   let suffix_of_unit_of_time = suffix_of_unit_of_time
   let parse_suffix = Stable.V3.Of_string.parse_suffix
 end

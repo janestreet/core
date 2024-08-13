@@ -18,8 +18,8 @@ module Robust_compare : sig
   end
 
   module Make (T : sig
-    val robust_comparison_tolerance : float
-  end) : S
+      val robust_comparison_tolerance : float
+    end) : S
 end
 
 (** So-called "robust" comparisons, which include a small tolerance, so that float that
@@ -50,8 +50,8 @@ end
 
 include
   Identifiable.S
-    with type t := t
-     and type comparator_witness := Base.Float.comparator_witness
+  with type t := t
+   and type comparator_witness := Base.Float.comparator_witness
 
 include Comparable.Validate_with_zero with type t := t
 
@@ -78,7 +78,7 @@ include Quickcheckable.S with type t := t
   [Comparable.With_zero]. *)
 
 val sign : t -> Sign.t
-  [@@deprecated "[since 2016-01] Replace [sign] with [robust_sign] or [sign_exn]"]
+[@@deprecated "[since 2016-01] Replace [sign] with [robust_sign] or [sign_exn]"]
 
 (** (Formerly [sign]) Uses robust comparison (so sufficiently small numbers are mapped
     to [Zero]).  Also maps NaN to [Zero]. Using this function is weakly discouraged. *)
@@ -142,7 +142,7 @@ module Stable : sig
 
     include
       Stable_comparable.With_stable_witness.V1
-        with type t := t
-         and type comparator_witness = comparator_witness
+      with type t := t
+       and type comparator_witness = comparator_witness
   end
 end

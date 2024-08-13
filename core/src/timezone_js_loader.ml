@@ -1,12 +1,20 @@
 open! Base
 open Timezone_types
 
-external should_use_timezone_js_loader
-  :  [ `Yes ]
-  -> [ `Platform_not_supported ]
-  -> [ `Disabled ]
-  -> [ `Yes | `Platform_not_supported | `Disabled ]
-  = "should_use_timezone_js_loader"
+module For_advanced_timezone_feature_detection = struct
+  external should_use_timezone_js_loader
+    :  [ `Yes ]
+    -> [ `Platform_not_supported ]
+    -> [ `Disabled ]
+    -> [ `Yes | `Platform_not_supported | `Disabled ]
+    = "should_use_timezone_js_loader"
+
+  let should_use_timezone_js_loader () =
+    should_use_timezone_js_loader `Yes `Platform_not_supported `Disabled
+  ;;
+end
+
+open For_advanced_timezone_feature_detection
 
 module Instant = struct
   type t
@@ -118,7 +126,7 @@ module Load_error = struct
 end
 
 let load s =
-  match should_use_timezone_js_loader `Yes `Platform_not_supported `Disabled with
+  match should_use_timezone_js_loader () with
   | `Disabled -> Error Load_error.Disabled
   | `Platform_not_supported -> Error Load_error.Platform_not_supported
   | `Yes ->

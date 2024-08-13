@@ -70,7 +70,7 @@ let test_write_int63 ~digits ?(verbose = true) ?(align = digits) write_int63 =
   let require_does_raise here f =
     (* uses above print_endline, so if verbose is false, prints nothing on exn *)
     match f () with
-    | _ -> require_does_raise here ignore
+    | _ -> require_does_raise ~here ignore
     | exception exn -> print_endline (Exn.to_string exn)
   in
   let max = max_with ~digits in
@@ -91,7 +91,7 @@ let test_write_int63 ~digits ?(verbose = true) ?(align = digits) write_int63 =
       (Bytes.to_string bytes)
       ~expect:(sprintf "!%0*Ld!" digits (Int63.to_int64 int63))
   in
-  require_does_not_raise [%here] (fun () ->
+  require_does_not_raise (fun () ->
     Quickcheck.test
       (Int63.gen_log_uniform_incl Int63.zero max)
       ~examples:[ Int63.zero; max ]
@@ -316,7 +316,7 @@ let%expect_test "write_9_digit_int" =
 
 let%expect_test "write_int63" =
   for digits = 1 to max_int63_digits do
-    require_does_not_raise [%here] (fun () ->
+    require_does_not_raise (fun () ->
       test_write_int63
         ~verbose:(digits = max_int63_digits)
         ~align:max_int63_digits
@@ -386,7 +386,7 @@ let test_read_int63 ?(verbose = true) read_int63 ~digits =
   let print_endline = if verbose then print_endline ?hide_positions:None else ignore in
   let require_does_raise here f =
     match f () with
-    | _ -> require_does_raise here ignore
+    | _ -> require_does_raise ~here ignore
     | exception exn -> print_endline (Exn.to_string exn)
   in
   let max = max_with ~digits in
@@ -405,7 +405,7 @@ let test_read_int63 ?(verbose = true) read_int63 ~digits =
     let parsed = read_int63 string ~pos:1 in
     [%test_result: Int63.t] parsed ~expect:int63
   in
-  require_does_not_raise [%here] (fun () ->
+  require_does_not_raise (fun () ->
     Quickcheck.test
       (Int63.gen_log_uniform_incl Int63.zero max)
       ~examples:[ Int63.zero; max ]
@@ -598,7 +598,7 @@ let%expect_test "read_9_digit_int" =
 
 let%expect_test "read_int63" =
   for digits = 1 to max_int63_digits do
-    require_does_not_raise [%here] (fun () ->
+    require_does_not_raise (fun () ->
       test_read_int63 ~verbose:(digits = max_int63_digits) ~digits (read_int63 ~digits))
   done;
   [%expect
@@ -654,17 +654,17 @@ let%expect_test "read_int63" =
   let string = String.make 50 '0' in
   let int63 = read_int63 string ~pos:10 ~digits:30 in
   print_s [%sexp (int63 : Int63.t)];
-  require_equal [%here] (module Int63) int63 Int63.zero;
+  require_equal (module Int63) int63 Int63.zero;
   [%expect {| 0 |}];
   (* read Int63.max_value without overflowing *)
   let string = sprintf "%010d%030Ld%010d" 0 (Int63.to_int64 Int63.max_value) 0 in
   let int63 = read_int63 string ~pos:10 ~digits:30 in
   print_s [%sexp (int63 : Int63.t)];
-  require_equal [%here] (module Int63) int63 Int63.max_value;
+  require_equal (module Int63) int63 Int63.max_value;
   [%expect {| 4_611_686_018_427_387_903 |}];
   (* raise on overflow *)
   let string = String.make 50 '9' in
-  require_does_raise [%here] (fun () -> read_int63 string ~pos:10 ~digits:30);
+  require_does_raise (fun () -> read_int63 string ~pos:10 ~digits:30);
   [%expect
     {| (Invalid_argument "Digit_string_helpers.read_int63: overflow reading int63") |}]
 ;;
@@ -675,7 +675,7 @@ let require_no_allocation_if_64_bit_and_if_does_not_raise here f =
   | W64 ->
     (match f () with
      | exception _ -> f ()
-     | _ -> require_no_allocation here f)
+     | _ -> require_no_allocation ~here f)
 ;;
 
 let%expect_test "read_int63_decimal" =
@@ -695,18 +695,16 @@ let%expect_test "read_int63_decimal" =
     (match restricted with
      | Ok restricted ->
        if has_underscore
-       then print_cr [%here] [%message "ignored '_'" ~_:(restricted : Int63.t)]
-       else require_equal [%here] (module Int63) permissive restricted
+       then print_cr [%message "ignored '_'" ~_:(restricted : Int63.t)]
+       else require_equal (module Int63) permissive restricted
      | Error error ->
-       if has_underscore
-       then ()
-       else print_cr [%here] [%message "failed" ~_:(error : Error.t)]);
+       if has_underscore then () else print_cr [%message "failed" ~_:(error : Error.t)]);
     permissive
   in
   let test_read string ~decimals ~scale ~round_ties =
     let pos_0 = test_read_at string ~pos:0 ~decimals ~scale ~round_ties in
     let pos_1 = test_read_at ("!" ^ string ^ "!") ~pos:1 ~decimals ~scale ~round_ties in
-    require_equal [%here] (module Int63) pos_0 pos_1;
+    require_equal (module Int63) pos_0 pos_1;
     pos_0
   in
   let test63 string ~scale =
@@ -728,7 +726,8 @@ let%expect_test "read_int63_decimal" =
   test ~scale:1 "";
   test ~scale:1 "_";
   test ~scale:1 "0";
-  [%expect {|
+  [%expect
+    {|
     0
     0
     0
@@ -748,7 +747,8 @@ let%expect_test "read_int63_decimal" =
   [%expect {| 0 |}];
   test ~scale:7 "07142857142857142857142857142857142857142857142857";
   test ~scale:7 "071428571428571428571428571428571428571428571428572";
-  [%expect {|
+  [%expect
+    {|
     0
     1
     |}];
@@ -758,13 +758,15 @@ let%expect_test "read_int63_decimal" =
   [%expect {| 30_000 |}];
   test ~scale:60_000 "333_333_333_333";
   test ~scale:60_000 "333333333333";
-  [%expect {|
+  [%expect
+    {|
     20_000
     20_000
     |}];
   test ~scale:60_000 "333_341_666";
   test ~scale:60_000 "333_341_667";
-  [%expect {|
+  [%expect
+    {|
     20_000
     20_001
     |}];
@@ -785,7 +787,8 @@ let%expect_test "read_int63_decimal" =
   test ~scale:60_000 "111_111_111";
   test ~scale:60_000 "111_111";
   test ~scale:60_000 "111";
-  [%expect {|
+  [%expect
+    {|
     6_667
     6_667
     6_667
@@ -881,7 +884,7 @@ let%expect_test "read_int63_decimal" =
     string
     =
     let decimals = Option.value decimals ~default:(String.length string - pos) in
-    require_does_raise [%here] (fun () : Int63.t ->
+    require_does_raise (fun () : Int63.t ->
       read_int63_decimal string ~pos ~decimals ~scale ~round_ties ~allow_underscore)
   in
   test_failure "not a decimal string at all";

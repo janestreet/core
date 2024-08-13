@@ -14,16 +14,16 @@ module Sexp = struct
   include Sexplib.Sexp
 
   include (
-    struct
-      type t = Base.Sexp.t =
-        | Atom of string
-        | List of t list
-      [@@deriving bin_io, compare, hash, stable_witness]
-    end :
-      sig
-        type t [@@deriving bin_io, compare, hash, stable_witness]
-      end
-      with type t := t)
+  struct
+    type t = Base.Sexp.t =
+      | Atom of string
+      | List of t list
+    [@@deriving bin_io, compare, hash, stable_witness]
+  end :
+    sig
+      type t [@@deriving bin_io, compare, hash, stable_witness]
+    end
+    with type t := t)
 end
 
 module Binable_exn = struct
@@ -124,8 +124,8 @@ module Extend (Info : Base.Info.S) = struct
       ;;
 
       include Diffable.Atomic.Make (struct
-        type nonrec t = t [@@deriving sexp, bin_io, equal]
-      end)
+          type nonrec t = t [@@deriving sexp, bin_io, equal]
+        end)
     end
 
     module V1 = struct

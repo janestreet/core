@@ -4,8 +4,8 @@ open! Stable_internal
 module Stable = struct
   module V1 = struct
     module Make (M : sig
-      val label : string
-    end) =
+        val label : string
+      end) =
     struct
       type t =
         { index : int
@@ -44,15 +44,15 @@ module Stable = struct
           end)
 
       include Comparator.Stable.V1.Make (struct
-        type nonrec t = t [@@deriving sexp_of, compare]
-      end)
+          type nonrec t = t [@@deriving sexp_of, compare]
+        end)
 
       include Comparable.Stable.V1.With_stable_witness.Make (struct
-        type nonrec t = t [@@deriving sexp, compare, bin_io, stable_witness]
-        type nonrec comparator_witness = comparator_witness
+          type nonrec t = t [@@deriving sexp, compare, bin_io, stable_witness]
+          type nonrec comparator_witness = comparator_witness
 
-        let comparator = comparator
-      end)
+          let comparator = comparator
+        end)
     end
   end
 end
@@ -62,9 +62,9 @@ open! Std_internal
 module type S = Bounded_index_intf.S
 
 module Make (M : sig
-  val label : string
-  val module_name : string
-end) =
+    val label : string
+    val module_name : string
+  end) =
 struct
   module Stable = struct
     module V1 = Stable.V1.Make (M)
@@ -90,16 +90,16 @@ struct
   let num_indexes t = max_index t - min_index t + 1
 
   include Sexpable.To_stringable (struct
-    type nonrec t = t [@@deriving sexp]
-  end)
+      type nonrec t = t [@@deriving sexp]
+    end)
 
   include Identifiable.Make_using_comparator (struct
-    type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
-    type nonrec comparator_witness = comparator_witness
+      type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
+      type nonrec comparator_witness = comparator_witness
 
-    let comparator = comparator
-    let of_string = of_string
-    let to_string = to_string
-    let module_name = M.module_name
-  end)
+      let comparator = comparator
+      let of_string = of_string
+      let to_string = to_string
+      let module_name = M.module_name
+    end)
 end

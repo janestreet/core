@@ -106,5 +106,10 @@ module Stable : sig
       | List of t list
     [@@deriving
       sexp, bin_io, hash, compare ~localize, equal ~localize, sexp_grammar, stable_witness]
+
+    include
+      Stable_comparable.With_stable_witness.V1
+      with type t := t
+      with type comparator_witness := comparator_witness
   end
 end

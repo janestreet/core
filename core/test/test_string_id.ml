@@ -220,7 +220,8 @@ let%test_module "Verify reading/writing stable table sexp" =
 
     let%expect_test "sexp_of_t" =
       print_s [%sexp (table : t String_id.Stable.V1.Table.t)];
-      [%expect {|
+      [%expect
+        {|
         ((alpha beta)
          (delta gamma))
         |}]

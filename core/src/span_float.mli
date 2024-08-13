@@ -32,4 +32,6 @@ end
 module Private : sig
   val parse_suffix : string -> index:int -> Unit_of_time.t
   val suffix_of_unit_of_time : Unit_of_time.t -> string
+  val to_parts_default : float -> Parts.t
+  val to_parts_31 : float -> Parts.t
 end

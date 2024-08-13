@@ -12,7 +12,7 @@
 
 open! Import
 
-type 'a t [@@deriving bin_io, sexp, sexp_grammar]
+type 'a t [@@deriving bin_io, quickcheck, sexp, sexp_grammar]
 
 include Binary_searchable.S1 with type 'a t := 'a t
 include Container.S1 with type 'a t := 'a t

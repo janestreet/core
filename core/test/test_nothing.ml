@@ -2,7 +2,7 @@ open! Core
 open! Import
 
 let%expect_test "t_of_sexp" =
-  require_does_raise [%here] (fun () -> Nothing.t_of_sexp (Sexp.List []));
+  require_does_raise (fun () -> Nothing.t_of_sexp (Sexp.List []));
   [%expect
     {|
     (Of_sexp_error
@@ -16,7 +16,7 @@ let%test_module "Stable.V1" =
     module Nothing = Nothing.Stable.V1
 
     let%expect_test "t_of_sexp" =
-      require_does_raise [%here] (fun () -> Nothing.t_of_sexp (Sexp.List []));
+      require_does_raise (fun () -> Nothing.t_of_sexp (Sexp.List []));
       [%expect
         {|
         (Of_sexp_error

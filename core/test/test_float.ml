@@ -15,13 +15,15 @@ let%expect_test "[Sexp.of_float_style] is respected by the various names for [fl
     print_s [%sexp (f : Core.Core_stable.float)]
   in
   print ();
-  [%expect {|
+  [%expect
+    {|
     1234.5678
     1234.5678
     1234.5678
     |}];
   Ref.set_temporarily Sexp.of_float_style `Underscores ~f:print;
-  [%expect {|
+  [%expect
+    {|
     1_234.5678
     1_234.5678
     1_234.5678
@@ -35,7 +37,7 @@ let%expect_test "[Sexp.of_float_style = `Underscores]" =
     in
     print_s [%sexp (sexp `No_underscores : Sexp.t), (sexp `Underscores : Sexp.t)];
     if not (Float.is_nan f)
-    then require [%here] (Float.equal f (sexp `Underscores |> [%of_sexp: Float.t]))
+    then require (Float.equal f (sexp `Underscores |> [%of_sexp: Float.t]))
   in
   List.iter
     [ 0.
@@ -52,8 +54,8 @@ let%expect_test "[Sexp.of_float_style = `Underscores]" =
     ; Float.nan
     ]
     ~f:(fun f ->
-    check f;
-    check (-.f));
+      check f;
+      check (-.f));
   Expect_test_patterns.require_match
     [%here]
     {|
@@ -86,11 +88,7 @@ let%expect_test "[Sexp.of_float_style = `Underscores]" =
 let%expect_test "Terse.sexp_of_t" =
   let test number =
     let string = Float.Terse.to_string number in
-    require_equal
-      [%here]
-      (module String)
-      string
-      (Sexp.to_string (Float.Terse.sexp_of_t number));
+    require_equal (module String) string (Sexp.to_string (Float.Terse.sexp_of_t number));
     print_endline string
   in
   test 0.0123456789;
@@ -148,13 +146,13 @@ let%expect_test (_ [@tags "64-bits-only", "x-library-inlining-sensitive"]) =
   (* a.(0) is unboxed *)
   let one = 1. in
   (* [one] is boxed *)
-  ignore (require_no_allocation [%here] (fun () -> Float.( > ) a.(0) 0.) : bool);
+  ignore (require_no_allocation (fun () -> Float.( > ) a.(0) 0.) : bool);
   [%expect {| |}];
-  ignore (require_no_allocation [%here] (fun () -> Float.compare a.(0) 0. > 0) : bool);
+  ignore (require_no_allocation (fun () -> Float.compare a.(0) 0. > 0) : bool);
   [%expect {| |}];
-  ignore (require_no_allocation [%here] (fun () -> Float.is_positive a.(0)) : bool);
+  ignore (require_no_allocation (fun () -> Float.is_positive a.(0)) : bool);
   [%expect {| |}];
-  ignore (require_no_allocation [%here] (fun () -> Float.is_positive one) : bool);
+  ignore (require_no_allocation (fun () -> Float.is_positive one) : bool);
   [%expect {| |}]
 ;;
 
@@ -317,7 +315,7 @@ let%test_unit _ = test_class gen_nan Nan
 (* Additional tests of Base.Float requiring the Gc module *)
 
 let%expect_test (_ [@tags "64-bits-only"]) =
-  require_no_allocation [%here] (fun () ->
+  require_no_allocation (fun () ->
     [%test_result: Int63.t] (int63_round_nearest_exn 0.8) ~expect:(Int63.of_int_exn 1));
   [%expect {| |}]
 ;;
@@ -356,8 +354,8 @@ let%expect_test ("iround does not force re-boxing" [@tags "x-library-inlining-se
                  allocation, so we don't check anything here. *)
               | exception _ -> ()
               | `minor minor, `major major ->
-                require_equal [%here] (module Int) minor 0;
-                require_equal [%here] (module Int) major 0
+                require_equal (module Int) minor 0;
+                require_equal (module Int) major 0
             done))
     with
     | Stop_the_test -> ()
@@ -375,7 +373,7 @@ let%expect_test ("iround does not force re-boxing" [@tags "x-library-inlining-se
 ;;
 
 let%expect_test "Float.validate_positive doesn't allocate on success" =
-  require_no_allocation [%here] (fun () ->
+  require_no_allocation (fun () ->
     ignore (Sys.opaque_identity (validate_positive 1.) : Validate.t));
   [%expect {| |}]
 ;;

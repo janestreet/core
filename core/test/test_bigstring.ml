@@ -190,17 +190,15 @@ let%test_module "memcmp" =
     let b2 = Bigstring.of_string "jkcd"
 
     let%expect_test "out of bounds raises" =
-      require_does_raise [%here] (fun () ->
-        Bigstring.memcmp empty ~pos1:1 b1 ~pos2:1 ~len:0);
+      require_does_raise (fun () -> Bigstring.memcmp empty ~pos1:1 b1 ~pos2:1 ~len:0);
       [%expect {| (Invalid_argument "pos + len past end: 1 + 0 > 0") |}];
-      require_does_raise [%here] (fun () ->
-        Bigstring.memcmp empty ~pos1:1 b1 ~pos2:1 ~len:1);
+      require_does_raise (fun () -> Bigstring.memcmp empty ~pos1:1 b1 ~pos2:1 ~len:1);
       [%expect {| (Invalid_argument "pos + len past end: 1 + 1 > 0") |}];
-      require_does_raise [%here] (fun () -> Bigstring.memcmp b1 ~pos1:0 b1 ~pos2:0 ~len:5);
+      require_does_raise (fun () -> Bigstring.memcmp b1 ~pos1:0 b1 ~pos2:0 ~len:5);
       [%expect {| (Invalid_argument "pos + len past end: 0 + 5 > 4") |}];
-      require_does_raise [%here] (fun () -> Bigstring.memcmp b1 ~pos1:0 b1 ~pos2:5 ~len:0);
+      require_does_raise (fun () -> Bigstring.memcmp b1 ~pos1:0 b1 ~pos2:5 ~len:0);
       [%expect {| (Invalid_argument "pos + len past end: 5 + 0 > 4") |}];
-      require_does_raise [%here] (fun () -> Bigstring.memcmp b1 ~pos1:0 b1 ~pos2:4 ~len:2);
+      require_does_raise (fun () -> Bigstring.memcmp b1 ~pos1:0 b1 ~pos2:4 ~len:2);
       [%expect {| (Invalid_argument "pos + len past end: 4 + 2 > 4") |}]
     ;;
 
@@ -234,9 +232,9 @@ let%test_module "memset" =
 
     let%test_unit "out of bounds raises" =
       let b1 = Bigstring.of_string "abcd" in
-      require_does_raise [%here] (fun () -> Bigstring.memset empty ~pos:0 ~len:1 'a');
-      require_does_raise [%here] (fun () -> Bigstring.memset b1 ~pos:1 ~len:4 'a');
-      require_does_raise [%here] (fun () -> Bigstring.memset b1 ~pos:8 ~len:0 'a')
+      require_does_raise (fun () -> Bigstring.memset empty ~pos:0 ~len:1 'a');
+      require_does_raise (fun () -> Bigstring.memset b1 ~pos:1 ~len:4 'a');
+      require_does_raise (fun () -> Bigstring.memset b1 ~pos:8 ~len:0 'a')
     ;;
 
     let%test_unit "total memset works" =

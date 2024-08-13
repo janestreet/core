@@ -20,9 +20,9 @@ let%test_module "Caseless Hash" =
 ;;
 
 let%expect_test "of_string" =
-  require_equal [%here] (module Char) (Char.of_string "c") 'c';
-  require_does_raise [%here] (fun () -> Char.of_string "");
+  require_equal (module Char) (Char.of_string "c") 'c';
+  require_does_raise (fun () -> Char.of_string "");
   [%expect {| (Failure "Char.of_string: \"\"") |}];
-  require_does_raise [%here] (fun () -> Char.of_string "too long");
+  require_does_raise (fun () -> Char.of_string "too long");
   [%expect {| (Failure "Char.of_string: \"too long\"") |}]
 ;;

@@ -2,29 +2,31 @@ open! Core
 open! Expect_test_helpers_core
 open! Percent
 
-module Stable_unit_test (T : sig
-  type t = Percent.t
+module Stable_unit_test
+    (T : sig
+       type t = Percent.t
 
-  include Binable with type t := t
-  include Sexpable with type t := t
-end) (Version : sig
-  val v : int
-end) =
+       include Binable with type t := t
+       include Sexpable with type t := t
+     end)
+    (Version : sig
+       val v : int
+     end) =
 Stable_unit_test.Make (struct
-  include T
+    include T
 
-  let equal = equal
+    let equal = equal
 
-  let tests =
-    [ of_mult 0.375, "37.5%", "\000\000\000\000\000\000\216?"
-    ; of_mult 4.5, "4.5x", "\000\000\000\000\000\000\018@"
-    ; of_mult 0.0002, "2bp", "-C\028\235\2266*?"
-    ; ( of_mult 0.000075
-      , (if Int.(Version.v < 3) then "0.75bp" else "7.5E-1bp")
-      , "a2U0*\169\019?" )
-    ]
-  ;;
-end)
+    let tests =
+      [ of_mult 0.375, "37.5%", "\000\000\000\000\000\000\216?"
+      ; of_mult 4.5, "4.5x", "\000\000\000\000\000\000\018@"
+      ; of_mult 0.0002, "2bp", "-C\028\235\2266*?"
+      ; ( of_mult 0.000075
+        , (if Int.(Version.v < 3) then "0.75bp" else "7.5E-1bp")
+        , "a2U0*\169\019?" )
+      ]
+    ;;
+  end)
 
 let%test_module "Percent.V1.Bin_shape_same_as_float" =
   (module Stable_unit_test
@@ -189,7 +191,6 @@ let%test_unit _ =
 
 let%expect_test _ =
   print_and_check_comparable_sexps
-    [%here]
     (module Percent)
     [ Percent.zero; Percent.of_bp 15.; Percent.of_percentage 15.; Percent.of_mult 15. ];
   [%expect
@@ -241,7 +242,7 @@ let%expect_test "generator" =
 let%expect_test ("to_mult and of_mult no boxing in arrays" [@tags "fast-flambda"]) =
   let float_arr = Array.init 1 ~f:(fun i -> Float.of_int i) in
   let percent_arr = Array.create ~len:1 Percent.zero in
-  require_no_allocation [%here] (fun () ->
+  require_no_allocation (fun () ->
     percent_arr.(0) <- Percent.of_mult float_arr.(0);
     float_arr.(0) <- Percent.to_mult percent_arr.(0))
 ;;
@@ -258,7 +259,8 @@ let%expect_test "always-percentage format" =
   in
   let cases = [ "0x"; "3.2bp"; "5x"; "75%" ] in
   List.iter ~f cases;
-  [%expect {|
+  [%expect
+    {|
     0x -> 0%
     3.2bp -> 0.032%
     5x -> 500%
@@ -441,14 +443,15 @@ let%expect_test "Percent.Map serialization" =
 let%expect_test "nans and infs" =
   [ Float.nan; Float.infinity; Float.neg_infinity ]
   |> List.iter ~f:(fun p ->
-       let p = Percent.of_mult p in
-       let s1 = Percent.to_string p in
-       let s2 = Percent.Stable.V3.to_string p in
-       printf "%s | %s\n" s1 s2;
-       let p1 = Percent.of_string_allow_nan_and_inf s1 in
-       let p2 = Percent.Stable.V3.of_string_allow_nan_and_inf s2 in
-       assert (Percent.((is_nan p1 && is_nan p2) || p1 = p2)));
-  [%expect {|
+    let p = Percent.of_mult p in
+    let s1 = Percent.to_string p in
+    let s2 = Percent.Stable.V3.to_string p in
+    printf "%s | %s\n" s1 s2;
+    let p1 = Percent.of_string_allow_nan_and_inf s1 in
+    let p2 = Percent.Stable.V3.of_string_allow_nan_and_inf s2 in
+    assert (Percent.((is_nan p1 && is_nan p2) || p1 = p2)));
+  [%expect
+    {|
     NANbp | NANx
     INFx | INFx
     -INFx | -INFx
@@ -468,9 +471,9 @@ let%expect_test "nans and infs" =
   ; "-Inf%"
   ]
   |> List.iter ~f:(fun s ->
-       let p1 = Percent.of_string_allow_nan_and_inf s in
-       let p2 = Percent.Stable.V3.of_string_allow_nan_and_inf s in
-       assert (Percent.((is_nan p1 && is_nan p2) || p1 = p2)))
+    let p1 = Percent.of_string_allow_nan_and_inf s in
+    let p2 = Percent.Stable.V3.of_string_allow_nan_and_inf s in
+    assert (Percent.((is_nan p1 && is_nan p2) || p1 = p2)))
 ;;
 
 let%expect_test "slow_more_accurate" =
@@ -499,7 +502,8 @@ let%expect_test "slow_more_accurate" =
   ; Percent.to_bp_slow_more_accurate
   ]
   |> List.iter ~f:(fun f -> printf !"%{Float}\n" (f p));
-  [%expect {|
+  [%expect
+    {|
     57.199999999999996
     5719.9999999999991
     57.2
@@ -542,11 +546,11 @@ let%expect_test "parse errors" =
     ; "-infinity%"
     ]
     ~f:(fun s ->
-    let s1 =
-      try Percent.of_string s |> Percent.to_string_round_trippable with
-      | exn -> Exn.to_string_mach exn
-    in
-    printf "%s\n====\n" s1);
+      let s1 =
+        try Percent.of_string s |> Percent.to_string_round_trippable with
+        | exn -> Exn.to_string_mach exn
+      in
+      printf "%s\n====\n" s1);
   [%expect
     {|
     (Failure"Percent.of_string: must end in x, %, or bp: +34.27")

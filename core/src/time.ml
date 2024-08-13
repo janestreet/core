@@ -24,6 +24,11 @@ module Make (Time0 : Time0_intf.S) = struct
       |> Time0.Span.of_int63_seconds
     ;;
 
+    let to_span_in_seconds_round_down span =
+      Time0.Span.to_int63_seconds_round_down_exn span
+      |> Time_in_seconds.Span.of_int63_seconds
+    ;;
+
     let of_time_in_seconds time_in_seconds =
       Time_in_seconds.to_span_since_epoch time_in_seconds
       (* NB. no actual rounding or exns can occur here *)
@@ -44,6 +49,14 @@ module Make (Time0 : Time0_intf.S) = struct
       |> Time0.Span.to_int63_seconds_round_down_exn
       |> Time_in_seconds.Span.of_int63_seconds
       |> Time_in_seconds.Date_and_ofday.of_synthetic_span_since_epoch
+    ;;
+
+    let of_utc_offset_in_seconds_round_down ?name span =
+      of_utc_offset_in_seconds_round_down ?name (to_span_in_seconds_round_down span)
+    ;;
+
+    let add_offset_in_seconds_round_down t ~name ~span =
+      add_offset_in_seconds_round_down t ~name ~span:(to_span_in_seconds_round_down span)
     ;;
 
     let index t time = index t (to_time_in_seconds_round_down_exn time)

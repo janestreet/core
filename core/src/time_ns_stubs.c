@@ -28,8 +28,7 @@ CAMLprim value core_time_ns_format_tm(struct tm *tm, value v_fmt) {
     return v_str;
   }
 
-  v_str =
-      caml_copy_string(buf); /* [strftime] always null terminates the string */
+  v_str = caml_copy_string(buf); /* [strftime] always null terminates the string */
   free(buf);
   return v_str;
 }

@@ -8,7 +8,7 @@ module Stable = struct
       | Zero
       | Pos
       | Nan
-    [@@deriving sexp, bin_io, compare, hash, typerep, enumerate]
+    [@@deriving sexp, sexp_grammar, bin_io, compare, hash, typerep, enumerate]
   end
 end
 

@@ -1,235 +1,381 @@
-open! Import
+(** A module for representing absolute points in time, independent of time zone.
+
+    Note that on 32bit architecture, most functions will raise when used on time
+    outside the range [1901-12-13 20:45:52 - 2038-01-19 03:14:07].
+*)
+
 open! Std_internal
-
-module type S_kernel_without_zone = Time0_intf.S
-module type S_kernel = Time_intf.S
-
-include Time_intf.S with module Time := Time_float0
-
-module Ofday : sig
-  include module type of struct
-    include Ofday
-  end
-
-  val arg_type : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-  val now : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  module Zoned : sig end [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-end
+open! Import
+module Time := Time_float0
 
 module Span : sig
-  include module type of struct
-    include Span
-  end
+  include module type of Time.Span
 
-  val arg_type : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
+  val arg_type : t Command.Arg_type.t
 end
 
 module Zone : sig
-  include module type of struct
-    include Zone
-  end
+  include Time_intf.Zone with module Time := Time
+  include Timezone.Extend_zone with type t := t
 
-  module Hash_queue : sig end [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-  module Hash_set : sig end [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-  module Map : sig end [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  module Replace_polymorphic_compare : sig end
-  [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  module Set : sig end [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-  module Table : sig end [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  val ( < ) : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-  val ( <= ) : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-  val ( <> ) : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-  val ( = ) : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-  val ( > ) : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-  val ( >= ) : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  val __bin_read_t__ : [ `Use_Time_unix ]
-    [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  val arg_type : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  val ascending : [ `Use_Time_unix ]
-    [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  val between : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  val bin_read_t : [ `Use_Time_unix ]
-    [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  val bin_reader_t : [ `Use_Time_unix ]
-    [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  val bin_shape_t : [ `Use_Time_unix ]
-    [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  val bin_size_t : [ `Use_Time_unix ]
-    [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  val bin_t : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  val bin_write_t : [ `Use_Time_unix ]
-    [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  val bin_writer_t : [ `Use_Time_unix ]
-    [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  val clamp : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  val clamp_exn : [ `Use_Time_unix ]
-    [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  val comparator : [ `Use_Time_unix ]
-    [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  val descending : [ `Use_Time_unix ]
-    [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  val equal : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-  val find : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-  val find_exn : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-  val hash : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  val hash_fold_t : [ `Use_Time_unix ]
-    [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  val hashable : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-  val init : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  val initialized_zones : [ `Use_Time_unix ]
-    [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  val local : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-  val max : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-  val min : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  val of_string : [ `Use_Time_unix ]
-    [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  val pp : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  val t_of_sexp : [ `Use_Time_unix ]
-    [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  val to_string : [ `Use_Time_unix ]
-    [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  val validate_bound : [ `Use_Time_unix ]
-    [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  val validate_lbound : [ `Use_Time_unix ]
-    [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  val validate_ubound : [ `Use_Time_unix ]
-    [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
+  val arg_type : t Command.Arg_type.t
 end
 
-module Stable : sig
+module Ofday : sig
   include module type of struct
-    include Time_float0.Stable
+      include Time.Ofday
+    end [@ocaml.remove_aliases]
+    with type underlying := Time.Ofday.underlying
+
+  val arg_type : t Command.Arg_type.t
+
+  module Zoned : sig
+    (** Sexps look like "(12:01 nyc)"
+
+          Two [t]'s may or may not correspond to the same times depending on which date
+          they're evaluated. *)
+    type t [@@deriving bin_io, sexp, hash]
+
+    include Pretty_printer.S with type t := t
+
+    (** Strings look like "12:01 nyc" *)
+    include Stringable with type t := t
+
+    (** Like [to_string] but uses [Time_float.Ofday.to_string_trimmed] to format the
+          ofday *)
+    val to_string_trimmed : t -> string
+
+    val arg_type : t Command.Arg_type.t
+    val create : Time.Ofday.t -> Zone.t -> t
+    val create_local : Time.Ofday.t -> t
+    val ofday : t -> Time.Ofday.t
+    val zone : t -> Zone.t
+    val to_time : t -> Date0.t -> Time.t
+
+    module With_nonchronological_compare : sig
+      (** It is possible to consistently compare [t]'s, but due to the complexities of
+            time zones and daylight savings, the resulting ordering is not chronological.
+            That is, [compare t1 t2 > 0] does not imply [t2] occurs after [t1] every day,
+            or any day. *)
+      type nonrec t = t [@@deriving bin_io, sexp, compare, equal, hash]
+    end
+  end
+
+  val now : zone:Zone.t -> t
+end
+
+(** A fully qualified point in time, independent of timezone. *)
+type t = Time.t [@@deriving bin_io, compare, hash, sexp, sexp_grammar, typerep]
+
+include
+  Time_intf.S
+  with module Time := Time
+   and type t := t
+   and module Zone := Zone
+   and module Ofday := Ofday
+   and module Span := Span
+
+val arg_type : t Command.Arg_type.t
+
+(** String conversions use the local timezone by default. Sexp conversions use
+      [get_sexp_zone ()] by default, which can be overridden by calling [set_sexp_zone].
+      These default time zones are used when writing a time, and when reading a time with
+      no explicit zone or UTC offset.
+
+      Sexps and strings display the date, ofday, and UTC offset of [t] relative to the
+      appropriate time zone. *)
+include
+  Identifiable.S
+  with type t := t
+   and type comparator_witness := comparator_witness
+   and module Replace_polymorphic_compare := Replace_polymorphic_compare
+
+val get_sexp_zone : unit -> Zone.t
+val set_sexp_zone : Zone.t -> unit
+
+include Robustly_comparable with type t := t
+
+(** Conversion functions that involved Ofday.Zoned.t, exactly analogous to the
+      conversion functions that involve Ofday.t *)
+val of_date_ofday_zoned : Date0.t -> Ofday.Zoned.t -> t
+
+val to_date_ofday_zoned : t -> zone:Zone.t -> Date0.t * Ofday.Zoned.t
+val to_ofday_zoned : t -> zone:Zone.t -> Ofday.Zoned.t
+val to_string_fix_proto : [ `Utc | `Local ] -> t -> string
+val of_string_fix_proto : [ `Utc | `Local ] -> string -> t
+
+(** This is like [of_string] except that if the string doesn't specify the zone then it
+      raises rather than assume the local timezone. *)
+val of_string_abs : string -> t
+
+(** [of_string_gen ~if_no_timezone s] attempts to parse [s] to a [t].  If [s] doesn't
+      supply a time zone [if_no_timezone] is consulted. *)
+val of_string_gen
+  :  if_no_timezone:[ `Fail | `Local | `Use_this_one of Zone.t ]
+  -> string
+  -> t
+
+(** [t_of_sexp_abs sexp] as [t_of_sexp], but demands that [sexp] indicate the timezone
+      the time is expressed in. *)
+val t_of_sexp_abs : Sexp.t -> t
+
+val sexp_of_t_abs : t -> zone:Zone.t -> Sexp.t
+
+module Exposed_for_tests : sig
+  val ensure_colon_in_offset : string -> string
+end
+
+include Diffable.S_atomic with type t := t
+
+module Stable : sig
+  module V1 : sig
+    type nonrec t = t [@@deriving hash, typerep, sexp_grammar]
+    type nonrec comparator_witness = comparator_witness
+
+    include
+      Stable_comparable.With_stable_witness.V1
+      with type t := t
+      with type comparator_witness := comparator_witness
+
+    include Diffable.S_atomic with type t := t
+  end
+
+  (** Provides a sexp representation that is independent of the time zone of the machine
+      writing it.
+      [V1.t_of_sexp] will be generous in what sexps it accepts, while [V2.t_of_sexp]
+      should not be expected to parse sexps not generated by [V2.sexp_of_t]
+  *)
+  module With_utc_sexp : sig
+    module V1 :
+      Stable_comparable.V1
+      with type t = t
+      with type comparator_witness = comparator_witness
+
+    module V2 : sig
+      type nonrec t = t [@@deriving hash, sexp_grammar]
+      type nonrec comparator_witness = comparator_witness
+
+      include
+        Stable_comparable.With_stable_witness.V1
+        with type t := t
+        with type comparator_witness := comparator_witness
+    end
+  end
+
+  (** Provides a sexp representation where all sexps must include a timezone (in contrast
+      to [V1] above, which will assume local timezone if it's not specified). When
+      serializing, it uses the local timezone.  Concretely, this is just [V1] but
+      [t_of_sexp] is replaced with [t_of_sexp_abs]. *)
+  module With_t_of_sexp_abs : sig
+    module V1 : sig
+      type nonrec t = t
+      type nonrec comparator_witness = comparator_witness
+
+      include Stable with type t := t with type comparator_witness := comparator_witness
+    end
+  end
+
+  module Span : sig
+    module V1 : sig
+      type t = Time.Stable.Span.V1.t [@@deriving hash, equal, sexp_grammar]
+
+      include Stable_without_comparator_with_witness with type t := t
+      include Diffable.S_atomic with type t := t
+    end
+
+    module V2 : sig
+      type t = Time.Stable.Span.V2.t [@@deriving hash, equal, sexp_grammar]
+
+      include Stable_without_comparator_with_witness with type t := t
+      include Diffable.S_atomic with type t := t
+    end
+
+    module V3 : sig
+      type t = Time.Stable.Span.V3.t [@@deriving hash, typerep, equal, sexp_grammar]
+
+      include Stable_without_comparator_with_witness with type t := t
+      include Diffable.S_atomic with type t := t
+    end
   end
 
   module Ofday : sig
-    include module type of struct
-      include Ofday
-    end
-
-    module Zoned : sig end [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-  end
-
-  module V1 : sig end [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  module With_t_of_sexp_abs : sig end
-  [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-  module With_utc_sexp : sig
-    module V1 : sig end [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-
-    (** [Time_float_unix.Stable.V1.t_of_sexp] has parsing that understands non-UTC time
-        zones. *)
-    module V2 : sig
-      type t = Time_float0.t [@@deriving hash, sexp_grammar]
+    module V1 : sig
+      type t = Time.Stable.Ofday.V1.t [@@deriving hash, equal, sexp_grammar]
 
       include Stable_without_comparator_with_witness with type t := t
+      include Diffable.S_atomic with type t := t
+    end
 
-      val comparator : [ `Use_Time_unix ]
-        [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
+    module Zoned : sig
+      module V1 : sig
+        (** This uses [With_nonchronological_compare.compare] and
+            [With_nonchronological_compare.equal]. *)
+        type t = Ofday.Zoned.t [@@deriving hash, equal, sexp_grammar]
 
-      module Map : sig end [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-      module Set : sig end [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
+        include Stable_without_comparator_with_witness with type t := t
+      end
     end
   end
 
   module Zone : sig
-    module V1 : sig end [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-    include Zone_intf.S_stable with type t := Zone.t
+    module V1 : sig
+      type t = Timezone.Stable.V1.t [@@deriving hash, sexp_grammar]
+
+      include Stable_without_comparator_with_witness with type t := t
+      include Diffable.S_atomic with type t := t
+    end
+
+    module Full_data : sig
+      module V1 :
+        Stable_without_comparator_with_witness
+        with type t = Timezone.Stable.Full_data.V1.t
+    end
   end
 end
 
-module Exposed_for_tests : sig end [@@deprecated "[since 2021-03] use [Time_float_unix]"]
-module Hash_queue : sig end [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-module Hash_set : sig end [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-module Map : sig end [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-module Set : sig end [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-module Table : sig end [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
+(** {1 Notes on time}
 
-val arg_type : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-val format : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
+    This library replicates and extends the functionality of the standard Unix time
+    handling functions (currently exposed in the Unix module, and indirectly through the
+    Time module).
 
-val get_sexp_zone : [ `Use_Time_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
+    Things you should know before delving into the mess of time...
 
-val hashable : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
+    {2 Some general resources (summarized information also appears below) }
 
-val interruptible_pause : [ `Use_Time_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
+    {v
+    general overview   - http://www.twinsun.com/tz/tz-link.htm
+    zone abbreviations - http://blogs.msdn.com/oldnewthing/archive/2008/03/07/8080060.aspx
+    leap seconds       - http://en.wikipedia.org/wiki/Leap_second
+    epoch time         - http://en.wikipedia.org/wiki/Unix_time
+    UTC/GMT time       - http://www.apparent-wind.com/gmt-explained.html
+    TAI time           - http://en.wikipedia.org/wiki/International_Atomic_Time
+    Almost every possible time measurement -
+      http://www.ucolick.org/~sla/leapsecs/timescales.html
+  v}
 
-val of_date_ofday_zoned : [ `Use_Time_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
+    {2 Standards for measuring time }
 
-val of_string : string -> t
-  [@@deprecated
-    "[since 2021-03] Use [of_string_with_utc_offset] or [Time_float_unix.of_string]"]
+    - Epoch time/Unix time/Posix time: Defined as the number of seconds that have passed
+      since midnight, January 1st, 1970 GMT.  However, under epoch time, a day is always
+      86,400 seconds long, and a minute never contains more than 60 total seconds.  In other
+      words, epoch time does not take leap seconds into account properly.  What a POSIX
+      compliant system does during a leap second depends on the way in which its clock is
+      managed.  It either ignores it, replays the second, or causes a second to last longer
+      than a second (retards the second).  The important thing to remember is that however
+      the transition is managed, all days start on an evenly divisible multiple of 86,400.
+    - GMT/Greenwich Mean Time/Greenwich Civil Time: The time based on the movement of the
+      sun relative to the meridian through the Old Greenwich Observatory (0 degrees).  The
+      movement of the sun in this case is a "mean" movement of the sun to adjust for slight
+      eccentricities in the rotation of the earth, as well as for the effect of the tilt of
+      the earth on the visible speed of the sun across the sky at different times of the
+      year.  GMT is often used synonymously with the term UTC (see below), but may also be
+      used to refer to the time system described here, which differs from UTC (as of 2009)
+      by ~1 second.
+    - Standard Time: The time based on the adjusted (as in GMT) movement of the sun over a
+      point on the earth that is not Greenwich.  Colloquially, the time in a time zone
+      without accounting for any form of daylight savings time.
+    - Wall Clock Time: The time as it appears on a clock on the wall in a given time zone.
+      Essentially this is standard time with DST adjustments.
+    - TAI: International atomic time.  The time based on a weighted average of the time kept
+      by roughly 300 atomic clocks worldwide.  TAI is written using the same format as
+      normal solar (also called civil) times, but is not based on, or adjusted for the
+      apparent solar time.  Thus, as of 2009 TAI appears to be ahead of most other time
+      systems by ~34 seconds when written out in date/time form (2004-09-17T00:00:32 TAI is
+      2004-09-17T00:00:00 UTC)
+    - UTC/Universal Coordinated Time: Often taken as just another term for GMT, UTC is
+      actually TAI adjusted with leap seconds to keep it in line with apparent solar time.
+      Each UTC day is not an exact number of seconds long (unlike TAI or epoch time), and
+      every second is exactly one real second long (unlike GMT, which is based entirely on
+      the apparent motion of the sun, meaning that seconds under GMT slowly get longer as
+      the earth's rotation slows down).  Leap seconds are determined by the rotation of
+      the earth, which is carefully measured by the International Earth Rotation Service
+      in Paris, France using a combination of satellite and lunar laser ranging, very
+      long baseline interferometry, and Navstar Global Positioning System (GPS) stations.
+      This isn't important for using UTC, but is very cool.  UTC is not well defined before
+      about 1960.
+    - Windows File Time: The number of 100-nanosecond intervals that have elapsed since
+      12:00 A.M. January 1, 1601, UTC.  This is great because UTC has no meaning in 1601
+      (being based on atomic timekeeping technologies that didn't exist then), and also
+      because 1601 predates the development of even reasonably accurate clocks of any sort.
+      The reasoning behind the Windows epoch time choice is that "The Gregorian calendar
+      operates on a 400-year cycle, and 1601 is the first year of the cycle that was
+      active at the time Windows NT was being designed. In other words, it was chosen to
+      make the math come out nicely."
+      (http://blogs.msdn.com/oldnewthing/archive/2009/03/06/9461176.aspx)
+    - VBScript (this is my favorite):
+      http://blogs.msdn.com/ericlippert/archive/2003/09/16/eric-s-complete-guide-to-vt-date.aspx
 
-val of_string_abs : [ `Use_Time_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
+    All of these systems start to exhibit problems as you go further back in time, partly
+    because truly accurate timekeeping didn't make an appearance until roughly 1958, and
+    partly because different parts of the world didn't actually have well defined time zones
+    for a long time.  If you go back far enough, you run into the switch between the Julian
+    (old) and the Gregorian calendar, which happened at different times in history in
+    different places in the world.
 
-val of_string_fix_proto : [ `Use_Time_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
+    {2 How does a system determine what time zone it is in? }
 
-val of_tm : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-val parse : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
-val pause : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
+    + Check to see if the TZ environment variable is set.  If it is, it can be set to one
+    of three forms, two of which are rarely, if ever used see:
 
-val pause_forever : [ `Use_Time_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
+    http://www.opengroup.org/onlinepubs/000095399/basedefs/xbd_chap08.html
 
-val pp : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
+    for more information on the obscure forms.  The common form represents a relative path
+    from the base /usr/share/zoneinfo/posix, and is generally in the form of a continent
+    or country name paired with a city name (Europe/London, America/New_York).  This is
+    used to load the specified file from disk, which contains a time zone database in zic
+    format (man tzfile).
 
-val set_sexp_zone : [ `Use_Time_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
+    + If TZ is not set, the system will try to read the file located at /etc/localtime,
+    which must be a zic timezone database (and which is often just a symlink into
+    /usr/share/zoneinfo/posix).
+    + If /etc/localtime cannot be found, then the system is assumed to be in GMT.
 
-val sexp_of_t : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
+    It's worth noting that under this system there is no place on the system to go to get
+    the name of the file you are using (/etc/localtime may not be a link, and may just be a
+    copy, or its own database not represented in /usr/share/zoneinfo).  Additionally, the
+    names of the files in the system zoneinfo database follow an internal standard, and
+    there is no established standard for naming timezones.  So even if you were using one of
+    these files, and you did know its name, you cannot assume that that name matches any
+    timezone specified by any other system or description.
 
-val sexp_of_t_abs : [ `Use_Time_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
+    One common misconception about time zones is that the standard time zone abbreviations
+    can be used.  For instance, EST surely refers to Eastern Standard Time.  This is
+    unfortunately not true - CST can refer to China Central Time, Central Standard Time, or
+    Cuba Summer Time for instance - and time zone libraries that appear to correctly parse
+    times that use time zone abbreviations do so by using a heuristic that usually assumes
+    you mean a time in the US or Europe, in that order.  Time zones also sometimes use two
+    different abbreviations depending on whether the time in question is in standard time,
+    or daylight savings time.  These abbreviations are kept in the timezone databases, which
+    is how programs like date manage to output meaningful abbreviations. The only poorly
+    specified operation is reading in times with abbreviations.
 
-val t_of_sexp : [ `Use_Time_unix ] [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
+    This library contains a function that attempts to make an accurate determination of the
+    machine timezone by testing the md5 sum of the currently referenced timezone file
+    against all of the possible candidates in the system database.  It additionally makes
+    some adjustments to return the more common timezone names since some files in the
+    database are duplicated under several names.  It returns an option because of the
+    problems mentioned above.
 
-val t_of_sexp_abs : [ `Use_Time_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
+    {2 The problems with string time conversions }
 
-val to_date_ofday_zoned : [ `Use_Time_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
+    There are two cases where string time conversions are problematic, both related to
+    daylight savings time.
 
-val to_ofday_zoned : [ `Use_Time_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
+    In the case where time jumps forward one hour, there are possible representations of
+    times that never happened 2006-04-02T02:30:00 in the eastern U.S. never happened for
+    instance, because the clock jumped forward one hour directly from 2 to 3.  Unix time
+    zone libraries asked to convert one of these times will generally produce the epoch time
+    that represents the time 1/2 hour after 2 am, which when converted back to a string
+    representation will be T03:30:00.
 
-val to_string : t -> string
-  [@@deprecated "[since 2021-03] Use [to_string_utc] or [Time_float_unix.to_string]"]
+    The second case is when the clocks are set back one hour, which causes one hour of time
+    to happen twice.  Converting a string in this range without further specification into
+    an epoch time is indeterminate since it could be referring to either of two times.  Unix
+    libraries handle this by either allowing you to pass in a dst flag to the conversion
+    function to specify which time you mean, or by using a heuristic to guess which time you
+    meant.
 
-val to_string_fix_proto : [ `Use_Time_unix ]
-  [@@deprecated "[since 2021-03] Use [Time_float_unix]"]
+    The existence of both cases make a strong argument for serializing all times in UTC,
+    which doesn't suffer from these issues.
+*)

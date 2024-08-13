@@ -11,7 +11,7 @@
 #endif
 
 #if __GNUC__ < 8
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) && !defined(__llvm__)
 #pragma GCC diagnostic ignored "-pedantic"
 #endif
 #endif
@@ -62,8 +62,7 @@ CAMLprim value core_md5_fd(value fd) {
 */
 #define MD5_CUTOFF (THREAD_IO_CUTOFF / 50)
 
-CAMLprim value core_md5_digest_subbigstring(value buf, value ofs, value vlen,
-                                            value res) {
+CAMLprim value core_md5_digest_subbigstring(value buf, value ofs, value vlen, value res) {
   CAMLparam2(buf, res);
   struct MD5Context ctx;
   unsigned char *data = (unsigned char *)Caml_ba_data_val(buf) + Long_val(ofs);

@@ -6,8 +6,8 @@ include module type of Base.Bool with type t := t
 
 include
   Identifiable.S
-    with type t := t
-     and type comparator_witness := Base.Bool.comparator_witness
+  with type t := t
+   and type comparator_witness := Base.Bool.comparator_witness
 
 (**
    Human readable parsing. Accepted inputs are (case insensitive):
@@ -23,11 +23,12 @@ include Quickcheckable.S with type t := t
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving bin_io ~localize, compare, equal, hash, sexp]
+    type nonrec t = t
+    [@@deriving bin_io ~localize, compare, equal, hash, sexp, sexp_grammar]
 
     include
       Stable_comparable.With_stable_witness.V1
-        with type t := t
-        with type comparator_witness = comparator_witness
+      with type t := t
+      with type comparator_witness = comparator_witness
   end
 end

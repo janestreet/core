@@ -8,7 +8,7 @@
 
 open! Import
 
-type 'a t [@@deriving bin_io, compare, equal, hash, sexp]
+type 'a t [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
 
 include Container.S1 with type 'a t := 'a t
 include Invariant.S1 with type 'a t := 'a t

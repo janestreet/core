@@ -208,8 +208,8 @@ module Arbitrary_order = struct
 end
 
 module Make_container (F : sig
-  val to_list : 'a t -> 'a list
-end) =
+    val to_list : 'a t -> 'a list
+  end) =
 struct
   let to_list = F.to_list
   let is_empty = is_empty
@@ -247,8 +247,8 @@ module Front_to_back = struct
   ;;
 
   include Make_container (struct
-    let to_list = to_list
-  end)
+      let to_list = to_list
+    end)
 end
 
 module Back_to_front = struct
@@ -268,8 +268,8 @@ module Back_to_front = struct
   ;;
 
   include Make_container (struct
-    let to_list = to_list
-  end)
+      let to_list = to_list
+    end)
 end
 
 include Front_to_back
@@ -277,20 +277,20 @@ include Front_to_back
 let singleton x = of_list [ x ]
 
 include Monad.Make (struct
-  type nonrec 'a t = 'a t
+    type nonrec 'a t = 'a t
 
-  let bind t ~f =
-    fold t ~init:empty ~f:(fun t elt -> fold (f elt) ~init:t ~f:enqueue_back)
-  ;;
+    let bind t ~f =
+      fold t ~init:empty ~f:(fun t elt -> fold (f elt) ~init:t ~f:enqueue_back)
+    ;;
 
-  let return = singleton
+    let return = singleton
 
-  let map =
-    `Custom
-      (fun t ~f ->
-        { front = List.map t.front ~f; back = List.map t.back ~f; length = t.length })
-  ;;
-end)
+    let map =
+      `Custom
+        (fun t ~f ->
+          { front = List.map t.front ~f; back = List.map t.back ~f; length = t.length })
+    ;;
+  end)
 
 let compare cmp t1 t2 = List.compare cmp (to_list t1) (to_list t2)
 let equal eq t1 t2 = List.equal eq (to_list t1) (to_list t2)
@@ -298,6 +298,16 @@ let equal eq t1 t2 = List.equal eq (to_list t1) (to_list t2)
 let hash_fold_t hash_fold_a state t =
   fold ~f:hash_fold_a ~init:([%hash_fold: int] state (length t)) t
 ;;
+
+include
+  Quickcheckable.Of_quickcheckable1
+    (List)
+    (struct
+      type nonrec 'a t = 'a t
+
+      let to_quickcheckable = to_list
+      let of_quickcheckable = of_list
+    end)
 
 module Stable = struct
   module V1 = struct
@@ -307,33 +317,38 @@ module Stable = struct
     let equal = equal
     let sexp_of_t sexp_of_elt t = [%sexp_of: elt list] (to_list t)
     let t_of_sexp elt_of_sexp sexp = of_list ([%of_sexp: elt list] sexp)
-    let t_sexp_grammar = List.t_sexp_grammar
+
+    let t_sexp_grammar : 'a Sexplib.Sexp_grammar.t -> 'a t Sexplib.Sexp_grammar.t =
+      fun a_sexp_grammar ->
+      Sexplib.Sexp_grammar.coerce (List.t_sexp_grammar a_sexp_grammar)
+    ;;
+
     let map = map
 
     include Bin_prot.Utils.Make_iterable_binable1 (struct
-      type nonrec 'a t = 'a t
-      type 'a el = 'a [@@deriving bin_io]
+        type nonrec 'a t = 'a t
+        type 'a el = 'a [@@deriving bin_io]
 
-      let caller_identity =
-        Bin_prot.Shape.Uuid.of_string "83f96982-4992-11e6-919d-fbddcfdca576"
-      ;;
+        let caller_identity =
+          Bin_prot.Shape.Uuid.of_string "83f96982-4992-11e6-919d-fbddcfdca576"
+        ;;
 
-      let module_name = Some "Core.Fdeque"
-      let length = length
-      let iter t ~f = List.iter (to_list t) ~f
+        let module_name = Some "Core.Fdeque"
+        let length = length
+        let iter t ~f = List.iter (to_list t) ~f
 
-      let init ~len ~next =
-        let rec loop next acc n =
-          if len = n
-          then acc
-          else (
-            assert (n = length acc);
-            let x = next () in
-            loop next (enqueue_back acc x) (n + 1))
-        in
-        loop next empty 0
-      ;;
-    end)
+        let init ~len ~next =
+          let rec loop next acc n =
+            if len = n
+            then acc
+            else (
+              assert (n = length acc);
+              let x = next () in
+              loop next (enqueue_back acc x) (n + 1))
+          in
+          loop next empty 0
+        ;;
+      end)
 
     (* The binary representation produced by Bin_prot.Utils.Make_iterable_binable1 is
        assumed to be stable (if the 'a is stable). *)

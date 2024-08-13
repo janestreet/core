@@ -147,33 +147,49 @@ module Stable = struct
   (* Share the common [of_sexp] code for [V1] and [V2]. *)
   module Of_sexp_v1_v2 : sig
     val t_of_sexp : Sexp.t -> t
+    val t_sexp_grammar : t Sexplib.Sexp_grammar.t
   end = struct
     let no_match () = failwith "Not a recognized [Byte_units.t] representation"
 
-    let of_value_sexp_and_unit_name val_sexp = function
-      | "Bytes" ->
-        (try of_bytes_int63 (Int63.t_of_sexp val_sexp) with
-         | _ -> of_bytes_float_exn (Float.t_of_sexp val_sexp))
-      | "Kilobytes" -> of_kilobytes (float_of_sexp val_sexp)
-      | "Megabytes" -> of_megabytes (float_of_sexp val_sexp)
-      | "Gigabytes" -> of_gigabytes (float_of_sexp val_sexp)
-      | "Terabytes" -> of_terabytes (float_of_sexp val_sexp)
-      | "Petabytes" -> of_petabytes (float_of_sexp val_sexp)
-      | "Exabytes" -> of_exabytes (float_of_sexp val_sexp)
-      | "Words" -> of_words_float_exn (float_of_sexp val_sexp)
-      | _ -> no_match ()
-    ;;
-
-    let t_of_sexp = function
-      | Sexp.Atom str -> of_string str
-      | Sexp.List [ Sexp.Atom unit_name; value ] ->
-        of_value_sexp_and_unit_name value unit_name
-      | _ -> no_match ()
-    ;;
-
-    let t_of_sexp sexp =
-      try t_of_sexp sexp with
-      | exn -> raise (Sexp.Of_sexp_error (exn, sexp))
+    let t_of_sexp, t_sexp_grammar =
+      Sexplib.Sexp_grammar.remember_to_update_these_together
+        ~t_of_sexp:(fun sexp ->
+          try
+            match sexp with
+            | Sexp.Atom str -> of_string str
+            | Sexp.List [ Sexp.Atom unit_name; val_sexp ] ->
+              (match unit_name with
+               | "Bytes" ->
+                 (try of_bytes_int63 (Int63.t_of_sexp val_sexp) with
+                  | _ -> of_bytes_float_exn (Float.t_of_sexp val_sexp))
+               | "Kilobytes" -> of_kilobytes (float_of_sexp val_sexp)
+               | "Megabytes" -> of_megabytes (float_of_sexp val_sexp)
+               | "Gigabytes" -> of_gigabytes (float_of_sexp val_sexp)
+               | "Terabytes" -> of_terabytes (float_of_sexp val_sexp)
+               | "Petabytes" -> of_petabytes (float_of_sexp val_sexp)
+               | "Exabytes" -> of_exabytes (float_of_sexp val_sexp)
+               | "Words" -> of_words_float_exn (float_of_sexp val_sexp)
+               | _ -> no_match ())
+            | _ -> no_match ()
+          with
+          | exn -> raise (Sexp.Of_sexp_error (exn, sexp)))
+        ~t_sexp_grammar:
+          { untyped =
+              Union
+                [ String
+                ; [%sexp_grammar:
+                    [ `Bytes of float
+                    | `Exabytes of float
+                    | `Gigabytes of float
+                    | `Kilobytes of float
+                    | `Megabytes of float
+                    | `Petabytes of float
+                    | `Terabytes of float
+                    | `Words of float
+                    ]]
+                    .untyped
+                ]
+          }
     ;;
   end
 

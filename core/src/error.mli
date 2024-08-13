@@ -42,4 +42,4 @@ val failwithp
   -> 'a
   -> ('a -> Base.Sexp.t)
   -> _
-  [@@deprecated "[since 2020-03] Use [failwiths] instead."]
+[@@deprecated "[since 2020-03] Use [failwiths] instead."]

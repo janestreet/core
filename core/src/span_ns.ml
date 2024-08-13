@@ -112,12 +112,12 @@ let of_parts { Parts.sign; hr; min; sec; ms; us; ns } =
 
 let of_ns f = round_nearest_ns f
 let of_int63_ns i = i
-let of_int_us i = Int63.(of_int i * microsecond)
-let of_int_ms i = Int63.(of_int i * millisecond)
-let of_int_sec i = Int63.(of_int i * second)
-let of_int_min i = Int63.(of_int i * minute)
-let of_int_hr i = Int63.(of_int i * hour)
-let of_int_day i = Int63.(of_int i * day)
+let[@zero_alloc] of_int_us i = Int63.(of_int i * microsecond)
+let[@zero_alloc] of_int_ms i = Int63.(of_int i * millisecond)
+let[@zero_alloc] of_int_sec i = Int63.(of_int i * second)
+let[@zero_alloc] of_int_min i = Int63.(of_int i * minute)
+let[@zero_alloc] of_int_hr i = Int63.(of_int i * hour)
+let[@zero_alloc] of_int_day i = Int63.(of_int i * day)
 let of_us f = round_nearest_ns (f *. float_microsecond)
 let of_ms f = round_nearest_ns (f *. float_millisecond)
 let[@inline] of_sec f = round_nearest_ns (f *. float_second)
@@ -146,25 +146,26 @@ let[@inline] to_sec_approx t = float t *. ns_per_sec
 let[@inline] to_min_approx t = float t *. ns_per_min
 let[@inline] to_hr_approx t = float t *. ns_per_hr
 let[@inline] to_day_approx t = float t *. ns_per_day
-let to_int_us t = Int63.(to_int_exn (t / microsecond))
-let to_int_ms t = Int63.(to_int_exn (t / millisecond))
-let to_int_sec t = Int63.(to_int_exn (t / second))
-let to_int63_seconds_round_down_exn t = t /% second
-let of_int_ns i = of_int63_ns (Int63.of_int i)
+let[@zero_alloc] to_int_us t = Int63.(to_int_exn (t / microsecond))
+let[@zero_alloc] to_int_ms t = Int63.(to_int_exn (t / millisecond))
+let[@zero_alloc] to_int_sec t = Int63.(to_int_exn (t / second))
+let[@zero_alloc] to_int63_seconds_round_down_exn t = t /% second
+let[@zero_alloc] of_int_ns i = of_int63_ns (Int63.of_int i)
 
 let to_int_ns =
   if arch_sixtyfour
-  then fun t -> Int63.to_int_exn (to_int63_ns t)
+  then fun [@zero_alloc] t -> Int63.to_int_exn (to_int63_ns t)
   else fun _ -> failwith "Time_ns.Span.to_int_ns: unsupported on 32bit machines"
 ;;
 
+let[@zero_alloc] to_int_ns t = to_int_ns t
 let ( + ) t u = Int63.( + ) t u
 let ( - ) t u = Int63.( - ) t u
 let abs = Int63.abs
 let neg = Int63.neg
 let scale t f = round_nearest_ns (float t *. f)
 let scale_int63 t i = Int63.( * ) t i
-let scale_int t i = scale_int63 t (Int63.of_int i)
+let[@zero_alloc] scale_int t i = scale_int63 t (Int63.of_int i)
 let div = Int63.( /% )
 let ( / ) t f = round_nearest_ns (float t /. f)
 let ( // ) = Int63.( // )
@@ -216,7 +217,7 @@ let round t ~dir ~to_multiple_of =
 module Stable0 = struct
   module V1 = struct
     module T = struct
-      type nonrec t = t [@@deriving bin_io, compare, hash, equal]
+      type nonrec t = t [@@deriving bin_io, compare, equal, hash, typerep]
 
       let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
 
@@ -244,7 +245,7 @@ module Stable0 = struct
   module V2 = struct
     module T = struct
       module T0 = struct
-        type nonrec t = t [@@deriving bin_io, compare, hash, equal]
+        type nonrec t = t [@@deriving bin_io, compare, equal, hash, typerep]
 
         let stable_witness : t Stable_witness.t = Int63.Stable.V1.stable_witness
         let of_int63_exn t = of_int63_ns t
@@ -729,10 +730,10 @@ module Alternate_sexp = struct
 end
 
 include Comparable.With_zero (struct
-  type nonrec t = t [@@deriving compare, sexp]
+    type nonrec t = t [@@deriving compare, sexp]
 
-  let zero = zero
-end)
+    let zero = zero
+  end)
 
 (* Functions required by [Robustly_comparable]: allows for [robust_comparison_tolerance]
    granularity.
@@ -776,7 +777,9 @@ let to_string_hum
   prefix ^ suffix
 ;;
 
-let since_unix_epoch () = Time_now.nanoseconds_since_unix_epoch () |> of_int63_ns
+let[@zero_alloc] since_unix_epoch () =
+  Time_now.nanoseconds_since_unix_epoch () |> of_int63_ns
+;;
 
 let random ?state () =
   Int63.random ?state (max_value_for_1us_rounding + Int63.one)
@@ -796,28 +799,28 @@ let gen_incl = Int63.gen_incl
 let gen_uniform_incl = Int63.gen_uniform_incl
 
 include Pretty_printer.Register (struct
-  type nonrec t = t
+    type nonrec t = t
 
-  let to_string = to_string
-  let module_name = module_name
-end)
+    let to_string = to_string
+    let module_name = module_name
+  end)
 
 include Hashable.Make_binable (struct
-  type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
-end)
+    type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
+  end)
 
 type comparator_witness = Stable.V2.comparator_witness
 
 include Comparable.Make_binable_using_comparator (struct
-  type nonrec t = t [@@deriving bin_io, compare, sexp]
-  type nonrec comparator_witness = comparator_witness
+    type nonrec t = t [@@deriving bin_io, compare, sexp]
+    type nonrec comparator_witness = comparator_witness
 
-  let comparator = Stable.V2.comparator
-end)
+    let comparator = Stable.V2.comparator
+  end)
 
 include Diffable.Atomic.Make (struct
-  type nonrec t = t [@@deriving bin_io, sexp, equal]
-end)
+    type nonrec t = t [@@deriving bin_io, sexp, equal]
+  end)
 
 (* re-include [Replace_polymorphic_compare] and its comparisons to shadow the
    un-inlineable ones from [Comparable] *)
@@ -874,19 +877,19 @@ let min_value_representable = of_int63_ns Int63.min_value
 let max_value_representable = of_int63_ns Int63.max_value
 
 module O = struct
-  let ( / ) = ( / )
+  let[@zero_alloc] ( / ) t1 t2 = t1 / t2
   let ( // ) = ( // )
-  let ( + ) = ( + )
-  let ( - ) = ( - )
+  let[@zero_alloc] ( + ) t1 t2 = t1 + t2
+  let[@zero_alloc] ( - ) t1 t2 = t1 - t2
   let ( >= ) = ( >= )
   let ( <= ) = ( <= )
   let ( = ) = ( = )
   let ( > ) = ( > )
   let ( < ) = ( < )
   let ( <> ) = ( <> )
-  let ( ~- ) = neg
-  let ( *. ) = scale
-  let ( * ) = scale_int
+  let[@zero_alloc] ( ~- ) t = neg t
+  let[@zero_alloc] ( *. ) t x = scale t x
+  let[@zero_alloc] ( * ) t x = scale_int t x
 end
 
 module Private = struct
@@ -906,28 +909,28 @@ module Option = struct
   (* nanoseconds or none *)
 
   let none = Int63.min_value
-  let is_none t = Int63.(t = none)
-  let is_some t = Int63.(t <> none)
-  let some_is_representable span = is_some (to_int63_ns span)
+  let[@zero_alloc] is_none t = Int63.(t = none)
+  let[@zero_alloc] is_some t = Int63.(t <> none)
+  let[@zero_alloc] some_is_representable span = is_some (to_int63_ns span)
 
   let[@cold] raise_some_error span =
     raise_s [%message [%here] "Span.Option.some value not representable" (span : span)]
   ;;
 
-  let some span =
+  let[@zero_alloc] some span =
     if some_is_representable span then to_int63_ns span else raise_some_error span
   ;;
 
-  let unchecked_value t = of_int63_ns t
-  let value t ~default = Bool.select (is_none t) default (unchecked_value t)
+  let[@zero_alloc] unchecked_value t = of_int63_ns t
+  let[@zero_alloc] value t ~default = Bool.select (is_none t) default (unchecked_value t)
 
-  let value_exn t =
+  let[@zero_alloc] value_exn t =
     if is_some t
     then unchecked_value t
     else raise_s [%message [%here] "Span.Option.value_exn none"]
   ;;
 
-  let of_option = function
+  let[@zero_alloc] of_option = function
     | None -> none
     | Some t -> some t
   ;;
@@ -969,8 +972,8 @@ module Option = struct
 
   module Optional_syntax = struct
     module Optional_syntax = struct
-      let is_none = is_none
-      let unsafe_value = unchecked_value
+      let[@zero_alloc] is_none t = is_none t
+      let[@zero_alloc] unsafe_value t = unchecked_value t
     end
   end
 
@@ -1050,18 +1053,18 @@ module Option = struct
   let t_of_sexp = Stable.V2.t_of_sexp
 
   include Identifiable.Make (struct
-    type nonrec t = t [@@deriving sexp, compare, bin_io, hash]
+      type nonrec t = t [@@deriving sexp, compare, bin_io, hash]
 
-    let module_name = "Core.Time_ns.Span.Option"
+      let module_name = "Core.Time_ns.Span.Option"
 
-    include Sexpable.To_stringable (struct
-      type nonrec t = t [@@deriving sexp]
+      include Sexpable.To_stringable (struct
+          type nonrec t = t [@@deriving sexp]
+        end)
     end)
-  end)
 
   include Diffable.Atomic.Make (struct
-    type nonrec t = t [@@deriving bin_io, sexp, equal]
-  end)
+      type nonrec t = t [@@deriving bin_io, sexp, equal]
+    end)
 
   include (Int63 : Comparisons.S with type t := t)
 end

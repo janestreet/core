@@ -38,7 +38,7 @@ let randomly_round quickcheck_generator =
 ;;
 
 let quickcheck here quickcheck_generator f =
-  require_does_not_raise here (fun () ->
+  require_does_not_raise ~here (fun () ->
     Quickcheck.test
       quickcheck_generator
       ~f
@@ -55,7 +55,6 @@ let%expect_test "Time_ns.Span.Stable.V1" =
   let make int64 = V.of_int63_exn (Int63.of_int64_exn int64) in
   (* stable checks for values that round-trip *)
   print_and_check_stable_int63able_type
-    [%here]
     (module V)
     [ make 0L
     ; make 1_000L
@@ -91,11 +90,7 @@ let%expect_test "Time_ns.Span.Stable.V1" =
      (int63  1))
     |}];
   (* stable checks for values that do not precisely round-trip *)
-  print_and_check_stable_int63able_type
-    [%here]
-    (module V)
-    ~cr:Comment
-    [ make 11_275_440_000L ];
+  print_and_check_stable_int63able_type (module V) ~cr:Comment [ make 11_275_440_000L ];
   [%expect
     {|
     (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
@@ -142,22 +137,20 @@ let%test_module "Time_ns.Span.Stable.V2" =
 
     let%expect_test "round-trip" =
       Expect_test_helpers_core.quickcheck
-        [%here]
         ~sexp_of:Time_ns.Span.sexp_of_t
         ~examples:span_examples
         span_gen
         ~f:(fun span ->
-        let rt = V.t_of_sexp (V.sexp_of_t span) in
-        require_equal [%here] (module Time_ns.Span) span rt;
-        let rt = V.of_int63_exn (V.to_int63 span) in
-        require_equal [%here] (module Time_ns.Span) span rt);
+          let rt = V.t_of_sexp (V.sexp_of_t span) in
+          require_equal (module Time_ns.Span) span rt;
+          let rt = V.of_int63_exn (V.to_int63 span) in
+          require_equal (module Time_ns.Span) span rt);
       [%expect {| |}]
     ;;
 
     let%expect_test "stability" =
       let make int64 = V.of_int63_exn (Int63.of_int64_exn int64) in
       print_and_check_stable_int63able_type
-        [%here]
         (module V)
         [ make 0L
         ; make 1L
@@ -272,7 +265,6 @@ let%test_module "Time_ns.Alternate_sexp and Time_ns.Option.Alternate_sexp" =
           Time_ns.Alternate_sexp.t_of_sexp (Time_ns.Alternate_sexp.sexp_of_t time_ns)
         in
         require
-          [%here]
           (Time_ns.equal time_ns round_trip)
           ~if_false_then_print_s:
             (lazy
@@ -301,7 +293,6 @@ let%test_module "Time_ns.Alternate_sexp and Time_ns.Option.Alternate_sexp" =
             (Time_ns.Option.Alternate_sexp.sexp_of_t time_ns_opt)
         in
         require
-          [%here]
           (Time_ns.Option.equal time_ns_opt round_trip)
           ~if_false_then_print_s:
             (lazy
@@ -335,7 +326,6 @@ let%test_module "Time_ns.Alternate_sexp and Time_ns.Option.Alternate_sexp" =
 
     let%expect_test "validate sexp grammar" =
       require_ok
-        [%here]
         (Sexp_grammar_validation.validate_grammar
            (module struct
              include Time_ns.Alternate_sexp
@@ -433,7 +423,6 @@ let%test_module "Time_ns.Span rounding" =
 
     let%expect_test "quickcheck rounding" =
       quickcheck_m
-        [%here]
         (module struct
           type t = Time_ns.Span.t * Unit_of_time.t * Rounding_direction.t
           [@@deriving sexp_of]
@@ -465,18 +454,13 @@ let%test_module "Time_ns.Span rounding" =
             [%lazy_message
               "" (to_multiple_of : t) (rounded : t) (expect : t) (remainder_ns : Int63.t)]
           in
-          require_equal
-            [%here]
-            (module Time_ns.Span)
-            rounded
-            expect
-            ~if_false_then_print_s;
-          require [%here] (abs (span - rounded) < to_multiple_of) ~if_false_then_print_s;
-          require [%here] (Int63.equal remainder_ns Int63.zero) ~if_false_then_print_s;
+          require_equal (module Time_ns.Span) rounded expect ~if_false_then_print_s;
+          require (abs (span - rounded) < to_multiple_of) ~if_false_then_print_s;
+          require (Int63.equal remainder_ns Int63.zero) ~if_false_then_print_s;
           match dir with
-          | Up -> require [%here] (rounded >= span) ~if_false_then_print_s
-          | Down -> require [%here] (rounded <= span) ~if_false_then_print_s
-          | Zero -> require [%here] (abs rounded <= abs span) ~if_false_then_print_s
+          | Up -> require (rounded >= span) ~if_false_then_print_s
+          | Down -> require (rounded <= span) ~if_false_then_print_s
+          | Zero -> require (abs rounded <= abs span) ~if_false_then_print_s
           | Nearest -> ());
       [%expect {| |}]
     ;;
@@ -513,7 +497,7 @@ let%expect_test "Stable.Alternate_sexp.V1 and Stable.Option.Alternate_sexp.V1" =
     ; Time_ns.max_value_for_1us_rounding
     ]
   in
-  print_and_check_stable_type [%here] (module Time_ns.Stable.Alternate_sexp.V1) times;
+  print_and_check_stable_type (module Time_ns.Stable.Alternate_sexp.V1) times;
   [%expect
     {|
     (bin_shape_digest 2b528f4b22f08e28876ffe0239315ac2)
@@ -544,7 +528,6 @@ let%expect_test "Stable.Alternate_sexp.V1 and Stable.Option.Alternate_sexp.V1" =
     |}];
   let option_times = Time_ns.Option.none :: List.map times ~f:Time_ns.Option.some in
   print_and_check_stable_type
-    [%here]
     (module Time_ns.Stable.Option.Alternate_sexp.V1)
     option_times;
   [%expect
@@ -577,7 +560,7 @@ let%test_module "Ofday" =
   (module struct
     let%expect_test "of_string_iso8601_extended" =
       let success string =
-        require_does_not_raise [%here] (fun () ->
+        require_does_not_raise (fun () ->
           printf
             "%s <-- %s\n"
             (Time_ns.Ofday.to_string (Time_ns.Ofday.of_string_iso8601_extended string))
@@ -654,9 +637,7 @@ let%test_module "Ofday" =
         match Time_ns.Ofday.of_string_iso8601_extended string with
         | exception exn -> print_endline (Exn.to_string exn)
         | ofday ->
-          print_cr
-            [%here]
-            [%message "did not raise" (string : string) (ofday : Time_ns.Ofday.t)]
+          print_cr [%message "did not raise" (string : string) (ofday : Time_ns.Ofday.t)]
       in
       List.iter
         ~f:failure
@@ -718,7 +699,6 @@ let%test_module "Ofday" =
         match result with
         | Error _ ->
           require
-            [%here]
             should_be_error
             ~if_false_then_print_s:
               (lazy
@@ -728,7 +708,6 @@ let%test_module "Ofday" =
                     (non_positive_span : bool)])
         | Ok list ->
           require
-            [%here]
             (not should_be_error)
             ~if_false_then_print_s:
               (lazy
@@ -737,11 +716,9 @@ let%test_module "Ofday" =
                     (crossed_bounds : bool)
                     (non_positive_span : bool)]);
           require
-            [%here]
             (List.is_sorted list ~compare:Ofday.compare)
             ~if_false_then_print_s:(lazy [%message "not sorted"]);
           require
-            [%here]
             (List.for_all list ~f:(fun ofday ->
                Ofday.( >= ) ofday start && Ofday.( <= ) ofday stop))
             ~if_false_then_print_s:(lazy [%message "exceeds bounds"])
@@ -812,7 +789,6 @@ let%test_module "Ofday" =
           Span.( >= ) (Span.abs span) Span.second)
       in
       Expect_test_helpers_base.quickcheck
-        [%here]
         [%quickcheck.generator: [%custom span_gen] * Ofday.t * Ofday.t]
         ~sexp_of:[%sexp_of: Span.t * Ofday.t * Ofday.t]
         ~f:(fun (span, start, stop) -> test ~verbose:false span start stop);
@@ -947,7 +923,7 @@ module _ = struct
         print_s
           [%sexp
             (to_parts (create ~sign:Neg ~hr:2 ~min:3 ~sec:4 ~ms:5 ~us:6 ~ns:7 ())
-              : Parts.t)];
+             : Parts.t)];
         [%expect
           {|
           ((sign Neg)
@@ -1173,7 +1149,7 @@ let%test_module "next_multiple" =
 ;;
 
 let%expect_test "times with implicit zones" =
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     Time_ns.Stable.Alternate_sexp.V1.t_of_sexp (Sexp.Atom "2013-10-07 09:30:00"));
   [%expect
     {|
@@ -1181,7 +1157,7 @@ let%expect_test "times with implicit zones" =
       (Invalid_argument "String.chop_suffix_exn \"09:30:00\" \"Z\"")
       (invalid_sexp "2013-10-07 09:30:00"))
     |}];
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     Time_ns.Alternate_sexp.t_of_sexp (Sexp.Atom "2013-10-07 09:30:00"));
   [%expect
     {|
@@ -1213,13 +1189,9 @@ let%expect_test "Ofday.to_microsecond_string" =
   ; Time_ns.Ofday.start_of_next_day
   ]
   |> List.iter ~f:(fun ofday ->
-       let string = Time_ns.Ofday.to_microsecond_string ofday in
-       print_endline string;
-       require_equal
-         [%here]
-         (module Time_ns.Ofday)
-         (Time_ns.Ofday.of_string string)
-         (round ofday));
+    let string = Time_ns.Ofday.to_microsecond_string ofday in
+    print_endline string;
+    require_equal (module Time_ns.Ofday) (Time_ns.Ofday.of_string string) (round ofday));
   [%expect
     {|
     00:00:00.000000
@@ -1299,7 +1271,7 @@ let%expect_test "time zone offset parsing" =
 
 let%expect_test "time zone invalid offset parsing" =
   let test here string =
-    require_does_raise here (fun () -> Time_ns.of_string_with_utc_offset string)
+    require_does_raise ~here (fun () -> Time_ns.of_string_with_utc_offset string)
   in
   test [%here] "2000-01-01 12:34:56.789012345-0:";
   test [%here] "2000-01-01 12:34:56.789012345-00:";
@@ -1516,7 +1488,6 @@ let%expect_test "sub_saturating" =
 
 let%expect_test "[to_ofday] never returns 24:00" =
   quickcheck_m
-    [%here]
     (module struct
       include struct
         type t = Time_ns.t [@@deriving quickcheck]
@@ -1536,7 +1507,6 @@ let%expect_test "approximate conversions" =
   let test to_precise to_approx =
     (* show that conversion can be imprecise *)
     quickcheck_m
-      [%here]
       ~cr:Comment
       (module Time_ns.Span)
       ~f:(fun span ->
@@ -1546,7 +1516,6 @@ let%expect_test "approximate conversions" =
         then (
           let diff = approx -. precise in
           print_cr
-            [%here]
             ~cr:Comment
             [%message
               "result can be imprecise"
@@ -1556,7 +1525,6 @@ let%expect_test "approximate conversions" =
                 (diff : float)]));
     (* check that imprecision is at most 1 ULP *)
     quickcheck_m
-      [%here]
       (module Time_ns.Span)
       ~f:(fun span ->
         let precise = to_precise span in
@@ -1566,7 +1534,6 @@ let%expect_test "approximate conversions" =
         then (
           let diff = approx -. precise in
           print_cr
-            [%here]
             [%message
               "imprecision can exceed 1 ULP"
                 (span : Time_ns.Span.t)

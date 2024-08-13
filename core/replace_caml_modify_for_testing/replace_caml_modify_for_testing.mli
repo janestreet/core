@@ -7,8 +7,8 @@
 (** [count ()] returns the number of times [caml_modify] has been called since the last
     call to {!reset}. *)
 external count : unit -> int = "replace_caml_modify_for_testing_count"
-  [@@noalloc]
+[@@noalloc]
 
 (** [reset ()] reset the counter to [0]. *)
 external reset : unit -> unit = "replace_caml_modify_for_testing_reset"
-  [@@noalloc]
+[@@noalloc]

@@ -13,11 +13,11 @@ include Stable.V1
 include Comparable.Validate (Base.Bytes)
 
 include Hexdump.Of_indexable (struct
-  type t = bytes
+    type t = bytes
 
-  let length = length
-  let get = get
-end)
+    let length = length
+    let get t i = get t i
+  end)
 
 let gen' char_gen = String.gen' char_gen |> Quickcheck.Generator.map ~f:of_string
 

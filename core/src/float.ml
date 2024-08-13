@@ -77,8 +77,8 @@ module Robust_compare = struct
   end
 
   module Make (T : sig
-    val robust_comparison_tolerance : float
-  end) : S = struct
+      val robust_comparison_tolerance : float
+    end) : S = struct
     (* We have test in the tree that rely on these functions not allocating, even without
        X_LIBRARY_INLING. The only way to ensure that these don't create temporary boxed
        floats without X_LIBRARY_INLING is for this code to see the float operations as
@@ -106,8 +106,8 @@ module Robust_compare = struct
 end
 
 module Robustly_comparable = Robust_compare.Make (struct
-  let robust_comparison_tolerance = 1E-7
-end)
+    let robust_comparison_tolerance = 1E-7
+  end)
 
 include Robustly_comparable
 

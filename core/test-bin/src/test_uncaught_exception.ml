@@ -20,7 +20,7 @@ let%expect_test "uncaught exception at module init" =
         output
         |> String.split_lines
         |> List.map ~f:(fun line ->
-             if is_backtrace_line line then "<backtrace lines elided>" else line)
+          if is_backtrace_line line then "<backtrace lines elided>" else line)
         (* Don't depend on backtrace contents, which are unstable. *)
         |> List.remove_consecutive_duplicates ~equal:String.equal
         (* Don't depend on backtrace line count. *)

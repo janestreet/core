@@ -174,3 +174,15 @@ let%expect_test "stat add" =
      (forced_major_collections 0))
     |}]
 ;;
+
+let[@inline never] create_and_leak_uncollectable_value () =
+  let thing_to_leak = [| "please don't collect me" |] |> Sys.opaque_identity in
+  Gc.Expert.add_finalizer_exn thing_to_leak (fun _ ->
+    raise_s [%message "that should not have been collected"]);
+  Gc.Expert.leak thing_to_leak
+;;
+
+let%test_unit "leak prevents collection" =
+  create_and_leak_uncollectable_value ();
+  Gc.full_major ()
+;;

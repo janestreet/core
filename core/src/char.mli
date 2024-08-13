@@ -20,7 +20,7 @@ include module type of struct
     [Caseless.Map], [Caseless.Table] lookup and [Caseless.Set] membership is
     case-insensitive. *)
 module Caseless : sig
-  type nonrec t = t [@@deriving bin_io ~localize, hash, sexp]
+  type nonrec t = t [@@deriving bin_io ~localize, hash, sexp, sexp_grammar]
 
   include Comparable.S_binable with type t := t
   include Hashable.S_binable with type t := t
@@ -50,7 +50,7 @@ module Stable : sig
 
     include
       Stable_comparable.With_stable_witness.V1
-        with type t := t
-         and type comparator_witness = comparator_witness
+      with type t := t
+       and type comparator_witness = comparator_witness
   end
 end

@@ -41,7 +41,7 @@ include Quickcheckable.S with type t := t
 (** The value [nan] cannot be represented as an [Option.t] *)
 module Option : sig
   type value := t
-  type t = private float [@@deriving bin_io, sexp_grammar]
+  type t = private float [@@deriving bin_io, globalize, quickcheck, sexp_grammar]
 
   include Immediate_option.S_without_immediate with type value := value and type t := t
 
@@ -322,8 +322,8 @@ module Stable : sig
 
     include
       Comparable_binable
-        with type t := t
-         and type comparator_witness := comparator_witness
+      with type t := t
+       and type comparator_witness := comparator_witness
 
     val to_string : t -> string
     val of_string : string -> t
@@ -345,12 +345,14 @@ module Stable : sig
     module V1 : sig
       (** See comment for [Stable.V1.Bin_shape_same_as_float]. *)
       module Bin_shape_same_as_float : sig
-        type t = Option.t [@@deriving bin_io, compare, hash, sexp, stable_witness]
+        type t = Option.t
+        [@@deriving bin_io, compare, hash, sexp, sexp_grammar, stable_witness]
       end
     end
 
     module V2 : sig
-      type t = Option.t [@@deriving bin_io, compare, hash, sexp, stable_witness]
+      type t = Option.t
+      [@@deriving bin_io, compare, hash, sexp, sexp_grammar, stable_witness]
     end
 
     module V3 : sig

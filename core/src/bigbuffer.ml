@@ -54,6 +54,7 @@ module To_bytes =
       include Bytes
 
       let create ~len = create len
+      let get t i = get t i
 
       let unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len =
         Bigstring.To_bytes.unsafe_blit ~src:src.bstr ~src_pos ~dst ~dst_pos ~len

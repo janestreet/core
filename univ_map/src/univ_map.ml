@@ -3,9 +3,10 @@ include Univ_map_intf
 module Uid = Type_equal.Id.Uid
 
 module Make1
-  (Key : Key) (Data : sig
-    type ('s, 'a) t [@@deriving sexp_of]
-  end) =
+    (Key : Key)
+    (Data : sig
+       type ('s, 'a) t [@@deriving sexp_of]
+     end) =
 struct
   (* A wrapper for the [Key] module that adds a dynamic check to [Key.type_id].
 
@@ -26,7 +27,7 @@ struct
             (if Ppx_inline_test_lib.am_running
              then Sexp.Atom "<uid>"
              else Type_equal.Id.Uid.sexp_of_t (Type_equal.Id.uid type_id)
-              : Sexp.t)
+             : Sexp.t)
         }]
     ;;
 
@@ -149,9 +150,10 @@ struct
 end
 
 module Make
-  (Key : Key) (Data : sig
-    type 'a t [@@deriving sexp_of]
-  end) =
+    (Key : Key)
+    (Data : sig
+       type 'a t [@@deriving sexp_of]
+     end) =
 struct
   module M =
     Make1
@@ -230,10 +232,10 @@ struct
 end
 
 module Merge1
-  (Key : Key)
-  (Input1_data : Data1)
-  (Input2_data : Data1)
-  (Output_data : Data1) =
+    (Key : Key)
+    (Input1_data : Data1)
+    (Input2_data : Data1)
+    (Output_data : Data1) =
 struct
   type ('s1, 's2, 's3) f =
     { f :

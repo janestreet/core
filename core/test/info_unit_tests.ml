@@ -7,7 +7,6 @@ let%test_unit "[create_s sexp] produces an info whose [sexp_of_t] is [sexp]" =
 
 let%expect_test "Info.Stable.V2" =
   Expect_test_helpers_core.print_and_check_stable_type
-    [%here]
     (module Info.Stable.V2)
     (let here =
        { Source_code_position.pos_fname = "test.ml"

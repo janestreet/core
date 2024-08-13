@@ -17,6 +17,10 @@ module Stable = struct
             let of_sexpable = ensure
           end)
 
+      let t_sexp_grammar : t Sexplib.Sexp_grammar.t =
+        Sexplib.Sexp_grammar.coerce Int.Stable.V1.t_sexp_grammar
+      ;;
+
       include
         Binable.Stable.Of_binable.V1 [@alert "-legacy"]
           (Int.Stable.V1)
@@ -59,11 +63,11 @@ include
     end)
 
 include Identifiable.Make_using_comparator (struct
-  type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
-  type nonrec comparator_witness = comparator_witness
+    type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
+    type nonrec comparator_witness = comparator_witness
 
-  let comparator = comparator
-  let of_string = of_string
-  let to_string = to_string
-  let module_name = "Core.Pid"
-end)
+    let comparator = comparator
+    let of_string = of_string
+    let to_string = to_string
+    let module_name = "Core.Pid"
+  end)

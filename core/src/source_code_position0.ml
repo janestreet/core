@@ -10,7 +10,16 @@ module Stable = struct
       ; pos_bol : int
       ; pos_cnum : int
       }
-    [@@deriving bin_io, compare, equal, fields ~getters, hash, sexp, stable_witness]
+    [@@deriving
+      bin_io
+      , compare
+      , equal
+      , fields ~getters
+      , globalize
+      , hash
+      , sexp
+      , sexp_grammar
+      , stable_witness]
   end
 end
 

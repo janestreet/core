@@ -5,7 +5,6 @@ open! Date.Private
 
 let%expect_test _ =
   print_and_check_container_sexps
-    [%here]
     (module Date)
     [ Date.of_string "1955-11-12"
     ; Date.of_string "1985-10-26"
@@ -33,7 +32,7 @@ let%expect_test "Date.V1" =
     ; Date.create_exn ~y:2012 ~m:Apr ~d:19
     ]
   in
-  print_and_check_stable_type [%here] (module Date.Stable.V1) examples;
+  print_and_check_stable_type (module Date.Stable.V1) examples;
   [%expect
     {|
     (bin_shape_digest 47681bb034560d96024e1b2eca0d98ca)
@@ -48,20 +47,19 @@ let%expect_test "Date.V1" =
     let int = Date.Stable.V1.to_int date in
     print_s [%sexp (date : Date.Stable.V1.t), (int : int)];
     let round_trip = Date.Stable.V1.of_int_exn int in
-    require_compare_equal [%here] (module Date.Stable.V1) date round_trip);
+    require_compare_equal (module Date.Stable.V1) date round_trip);
   [%expect
     {|
     (1066-10-16 69_863_952)
     (1955-11-05 128_125_701)
     (2012-04-19 131_859_475)
     |}];
-  require_does_raise [%here] (fun () -> Date.Stable.V1.of_int_exn 0);
+  require_does_raise (fun () -> Date.Stable.V1.of_int_exn 0);
   [%expect {| (Failure "Month.of_int_exn 0") |}]
 ;;
 
 let%expect_test "Date.V1.Set" =
   print_and_check_stable_type
-    [%here]
     (module Date.Stable.V1.Set)
     [ Date.Set.empty
     ; Date.Set.singleton (Date.create_exn ~y:1066 ~m:Oct ~d:16)
@@ -91,7 +89,6 @@ let%expect_test "Date.V1.Map" =
   end
   in
   print_and_check_stable_type
-    [%here]
     (module T)
     [ Date.Map.empty
     ; Date.Map.singleton
@@ -137,7 +134,7 @@ let%expect_test "Date.Option.V1" =
   let date_opt_examples =
     Date.Option.none :: List.map date_examples ~f:Date.Option.some
   in
-  print_and_check_stable_type [%here] (module Date.Stable.Option.V1) date_opt_examples;
+  print_and_check_stable_type (module Date.Stable.Option.V1) date_opt_examples;
   [%expect
     {|
     (bin_shape_digest aff59493f3c14f005635a016cd36c44b)
@@ -150,7 +147,7 @@ let%expect_test "Date.Option.V1" =
     let int = Date.Stable.Option.V1.to_int date in
     print_s [%sexp (date : Date.Stable.Option.V1.t), (int : int)];
     let round_trip = Date.Stable.Option.V1.of_int_exn int in
-    require_compare_equal [%here] (module Date.Stable.Option.V1) date round_trip);
+    require_compare_equal (module Date.Stable.Option.V1) date round_trip);
   [%expect
     {|
     (() 0)
@@ -162,7 +159,7 @@ let%expect_test "Date.Option.V1" =
 
 let%expect_test "create_exn doesn't allocate" =
   let y, m, d = Sys.opaque_identity (1999, Month.Dec, 31) in
-  require_no_allocation [%here] (fun () ->
+  require_no_allocation (fun () ->
     ignore (Sys.opaque_identity (Date.create_exn ~y ~m ~d) : Date.t));
   [%expect {| |}]
 ;;
@@ -317,7 +314,7 @@ let%test_module "adding weekdays and business days" =
   (module struct
     let test alist day_of_week date_string =
       let date = Date.of_string date_string in
-      require_equal [%here] (module Day_of_week) day_of_week (Date.day_of_week date);
+      require_equal (module Day_of_week) day_of_week (Date.day_of_week date);
       List.iter alist ~f:(fun (name, round_and_add) ->
         let list =
           List.map [ -2; -1; 0; 1; 2 ] ~f:(fun increment ->
@@ -604,10 +601,10 @@ let%test_unit _ =
     Date.Option.quickcheck_generator
     ~sexp_of:Date.Option.sexp_of_t
     ~f:(fun t ->
-    Date.Option.between
-      t
-      ~low:(Date.Option.some (Date.of_string "1900-01-01"))
-      ~high:(Date.Option.some (Date.of_string "2100-01-01")))
+      Date.Option.between
+        t
+        ~low:(Date.Option.some (Date.of_string "1900-01-01"))
+        ~high:(Date.Option.some (Date.of_string "2100-01-01")))
 ;;
 
 let%test_unit _ =

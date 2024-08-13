@@ -17,9 +17,9 @@ end
 module Param = struct
   include (
     Param :
-      sig
-        include module type of Param with module Arg_type := Param.Arg_type
-      end)
+    sig
+      include module type of Param with module Arg_type := Param.Arg_type
+    end)
 
   module Arg_type = Arg_type
   include Arg_type.Export
@@ -28,9 +28,9 @@ end
 module Spec = struct
   include (
     Spec :
-      sig
-        include module type of Spec with module Arg_type := Spec.Arg_type
-      end)
+    sig
+      include module type of Spec with module Arg_type := Spec.Arg_type
+    end)
 
   module Arg_type = Arg_type
   include Arg_type.Export

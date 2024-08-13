@@ -101,11 +101,11 @@ val max : 'a -> 'a -> 'a
     implementation-dependent; however, it is guaranteed that
     [e1 == e2] implies [compare e1 e2 = 0]. *)
 external ( == ) : ('a[@local_opt]) -> ('a[@local_opt]) -> bool = "%eq"
-  [@@deprecated "[since 2014-10] Use [phys_equal]"]
+[@@deprecated "[since 2014-10] Use [phys_equal]"]
 
 (** Negation of {!( == )}. *)
 external ( != ) : ('a[@local_opt]) -> ('a[@local_opt]) -> bool = "%noteq"
-  [@@deprecated "[since 2014-10] Use [phys_equal]"]
+[@@deprecated "[since 2014-10] Use [phys_equal]"]
 
 (** {6 Boolean operations} *)
 
@@ -248,11 +248,11 @@ val abs : int -> int
 
 (** The greatest representable integer. *)
 val max_int : int
-  [@@deprecated "[since 2014-10] Use [Int.max_value]"]
+[@@deprecated "[since 2014-10] Use [Int.max_value]"]
 
 (** The smallest representable integer. *)
 val min_int : int
-  [@@deprecated "[since 2014-10] Use [Int.min_value]"]
+[@@deprecated "[since 2014-10] Use [Int.min_value]"]
 
 (** {7 Bitwise operations} *)
 
@@ -337,70 +337,70 @@ external ( /. )
 
 (** Exponentiation. *)
 external ( ** ) : float -> float -> float = "caml_power_float" "pow"
-  [@@unboxed] [@@noalloc]
+[@@unboxed] [@@noalloc]
 
 (** Square root. *)
 external sqrt : float -> float = "caml_sqrt_float" "sqrt"
-  [@@unboxed] [@@noalloc]
+[@@unboxed] [@@noalloc]
 
 (** Exponential. *)
 external exp : float -> float = "caml_exp_float" "exp"
-  [@@unboxed] [@@noalloc]
+[@@unboxed] [@@noalloc]
 
 (** Natural logarithm. *)
 external log : float -> float = "caml_log_float" "log"
-  [@@unboxed] [@@noalloc]
+[@@unboxed] [@@noalloc]
 
 (** Base 10 logarithm. *)
 external log10 : float -> float = "caml_log10_float" "log10"
-  [@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.log10]"]
+[@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.log10]"]
 
 (** [expm1 x] computes [exp x -. 1.0], giving numerically-accurate results
     even if [x] is close to [0.0].
     @since 3.12.0
 *)
 external expm1 : float -> float = "caml_expm1_float" "caml_expm1"
-  [@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.expm1]"]
+[@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.expm1]"]
 
 (** [log1p x] computes [log(1.0 +. x)] (natural logarithm),
     giving numerically-accurate results even if [x] is close to [0.0].
     @since 3.12.0
 *)
 external log1p : float -> float = "caml_log1p_float" "caml_log1p"
-  [@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.log1p]"]
+[@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.log1p]"]
 
 (** Cosine.  Argument is in radians. *)
 external cos : float -> float = "caml_cos_float" "cos"
-  [@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.cos]"]
+[@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.cos]"]
 
 (** Sine.  Argument is in radians. *)
 external sin : float -> float = "caml_sin_float" "sin"
-  [@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.sin]"]
+[@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.sin]"]
 
 (** Tangent.  Argument is in radians. *)
 external tan : float -> float = "caml_tan_float" "tan"
-  [@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.tan]"]
+[@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.tan]"]
 
 (** Arc cosine.  The argument must fall within the range [[-1.0, 1.0]].
     Result is in radians and is between [0.0] and [pi]. *)
 external acos : float -> float = "caml_acos_float" "acos"
-  [@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.acos]"]
+[@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.acos]"]
 
 (** Arc sine.  The argument must fall within the range [[-1.0, 1.0]].
     Result is in radians and is between [-pi/2] and [pi/2]. *)
 external asin : float -> float = "caml_asin_float" "asin"
-  [@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.asin]"]
+[@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.asin]"]
 
 (** Arc tangent.
     Result is in radians and is between [-pi/2] and [pi/2]. *)
 external atan : float -> float = "caml_atan_float" "atan"
-  [@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.atan]"]
+[@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.atan]"]
 
 (** [atan2 y x] returns the arc tangent of [y /. x].  The signs of [x]
     and [y] are used to determine the quadrant of the result.
     Result is in radians and is between [-pi] and [pi]. *)
 external atan2 : float -> float -> float = "caml_atan2_float" "atan2"
-  [@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.atan2]"]
+[@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.atan2]"]
 
 (** [hypot x y] returns [sqrt(x *. x + y *. y)], that is, the length
     of the hypotenuse of a right-angled triangle with sides of length
@@ -408,19 +408,19 @@ external atan2 : float -> float -> float = "caml_atan2_float" "atan2"
     to origin.
     @since 4.00.0  *)
 external hypot : float -> float -> float = "caml_hypot_float" "caml_hypot"
-  [@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.hypot]"]
+[@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.hypot]"]
 
 (** Hyperbolic cosine.  Argument is in radians. *)
 external cosh : float -> float = "caml_cosh_float" "cosh"
-  [@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.cosh]"]
+[@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.cosh]"]
 
 (** Hyperbolic sine.  Argument is in radians. *)
 external sinh : float -> float = "caml_sinh_float" "sinh"
-  [@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.sinh]"]
+[@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.sinh]"]
 
 (** Hyperbolic tangent.  Argument is in radians. *)
 external tanh : float -> float = "caml_tanh_float" "tanh"
-  [@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.tanh]"]
+[@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.tanh]"]
 
 (** Hyperbolic arc cosine.  The argument must fall within the range
     [[1.0, inf]].
@@ -429,7 +429,7 @@ external tanh : float -> float = "caml_tanh_float" "tanh"
     @since 4.13.0
 *)
 external acosh : float -> float = "caml_acosh_float" "caml_acosh"
-  [@@unboxed] [@@noalloc] [@@deprecated "[since 2022-11] Use [Float.acosh]"]
+[@@unboxed] [@@noalloc] [@@deprecated "[since 2022-11] Use [Float.acosh]"]
 
 (** Hyperbolic arc sine.  The argument and result range over the entire
     real line.
@@ -438,7 +438,7 @@ external acosh : float -> float = "caml_acosh_float" "caml_acosh"
     @since 4.13.0
 *)
 external asinh : float -> float = "caml_asinh_float" "caml_asinh"
-  [@@unboxed] [@@noalloc] [@@deprecated "[since 2022-11] Use [Float.asinh]"]
+[@@unboxed] [@@noalloc] [@@deprecated "[since 2022-11] Use [Float.asinh]"]
 
 (** Hyperbolic arc tangent.  The argument must fall within the range
     [[-1.0, 1.0]].
@@ -447,24 +447,24 @@ external asinh : float -> float = "caml_asinh_float" "caml_asinh"
     @since 4.13.0
 *)
 external atanh : float -> float = "caml_atanh_float" "caml_atanh"
-  [@@unboxed] [@@noalloc] [@@deprecated "[since 2022-11] Use [Float.atanh]"]
+[@@unboxed] [@@noalloc] [@@deprecated "[since 2022-11] Use [Float.atanh]"]
 
 (** Round above to an integer value.
     [ceil f] returns the least integer value greater than or equal to [f].
     The result is returned as a float. *)
 external ceil : float -> float = "caml_ceil_float" "ceil"
-  [@@unboxed] [@@noalloc] [@@deprecated "[since 2014-10] Use [Float.round_up]"]
+[@@unboxed] [@@noalloc] [@@deprecated "[since 2014-10] Use [Float.round_up]"]
 
 (** Round below to an integer value.
     [floor f] returns the greatest integer value less than or
     equal to [f].
     The result is returned as a float. *)
 external floor : float -> float = "caml_floor_float" "floor"
-  [@@unboxed] [@@noalloc] [@@deprecated "[since 2014-10] Use [Float.round_down]"]
+[@@unboxed] [@@noalloc] [@@deprecated "[since 2014-10] Use [Float.round_down]"]
 
 (** [abs_float f] returns the absolute value of [f]. *)
 external abs_float : float -> float = "%absfloat"
-  [@@deprecated "[since 2014-10] Use [Float.abs]"]
+[@@deprecated "[since 2014-10] Use [Float.abs]"]
 
 (** [copysign x y] returns a float whose absolute value is that of [x]
     and whose sign is that of [y].  If [x] is [nan], returns [nan].
@@ -472,13 +472,13 @@ external abs_float : float -> float = "%absfloat"
     specified which.
     @since 4.00.0  *)
 external copysign : float -> float -> float = "caml_copysign_float" "caml_copysign"
-  [@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.copysign]"]
+[@@unboxed] [@@noalloc] [@@deprecated "[since 2016-07] Use [Float.copysign]"]
 
 (** [mod_float a b] returns the remainder of [a] with respect to
     [b].  The returned value is [a -. n *. b], where [n]
     is the quotient [a /. b] rounded towards zero to an integer. *)
 external mod_float : float -> float -> float = "caml_fmod_float" "fmod"
-  [@@unboxed] [@@noalloc] [@@deprecated "[since 2014-10] Use [Float.mod_float]"]
+[@@unboxed] [@@noalloc] [@@deprecated "[since 2014-10] Use [Float.mod_float]"]
 
 (** [frexp f] returns the pair of the significant
     and the exponent of [f].  When [f] is zero, the
@@ -486,7 +486,7 @@ external mod_float : float -> float -> float = "caml_fmod_float" "fmod"
     zero.  When [f] is non-zero, they are defined by
     [f = x *. 2 ** n] and [0.5 <= x < 1.0]. *)
 external frexp : float -> float * int = "caml_frexp_float"
-  [@@deprecated "[since 2014-10] Use [Float.frexp]"]
+[@@deprecated "[since 2014-10] Use [Float.frexp]"]
 
 (** [ldexp x n] returns [x *. 2 ** n]. *)
 external ldexp
@@ -494,12 +494,12 @@ external ldexp
   -> (int[@untagged])
   -> (float[@unboxed])
   = "caml_ldexp_float" "caml_ldexp_float_unboxed"
-  [@@noalloc] [@@deprecated "[since 2014-10] Use [Float.ldexp]"]
+[@@noalloc] [@@deprecated "[since 2014-10] Use [Float.ldexp]"]
 
 (** [modf f] returns the pair of the fractional and integral
     part of [f]. *)
 external modf : float -> float * float = "caml_modf_float"
-  [@@deprecated "[since 2014-10] Use [Float.modf]"]
+[@@deprecated "[since 2014-10] Use [Float.modf]"]
 
 (** Same as {!Caml.float_of_int}. *)
 external float : (int[@local_opt]) -> (float[@local_opt]) = "%floatofint"
@@ -509,7 +509,7 @@ external float_of_int : (int[@local_opt]) -> (float[@local_opt]) = "%floatofint"
 
 (** Same as {!Caml.int_of_float}. *)
 external truncate : (float[@local_opt]) -> int = "%intoffloat"
-  [@@deprecated "[since 2014-10] Use [Float.iround_towards_zero_exn]"]
+[@@deprecated "[since 2014-10] Use [Float.iround_towards_zero_exn]"]
 
 (** Truncate the given floating-point number to an integer.
     The result is unspecified if the argument is [nan] or falls outside the
@@ -518,11 +518,11 @@ external int_of_float : (float[@local_opt]) -> int = "%intoffloat"
 
 (** Positive infinity. *)
 val infinity : float
-  [@@deprecated "[since 2014-10] Use [Float.infinity]"]
+[@@deprecated "[since 2014-10] Use [Float.infinity]"]
 
 (** Negative infinity. *)
 val neg_infinity : float
-  [@@deprecated "[since 2014-10] Use [Float.neg_infinity]"]
+[@@deprecated "[since 2014-10] Use [Float.neg_infinity]"]
 
 (** A special floating-point value denoting the result of an
     undefined operation such as [0.0 /. 0.0].  Stands for
@@ -531,20 +531,20 @@ val neg_infinity : float
     [=], [<], [<=], [>] and [>=] return [false] and [<>] returns [true]
     if one or both of their arguments is [nan]. *)
 val nan : float
-  [@@deprecated "[since 2014-10] Use [Float.nan]"]
+[@@deprecated "[since 2014-10] Use [Float.nan]"]
 
 (** The largest positive finite value of type [float]. *)
 val max_float : float
-  [@@deprecated "[since 2014-10] Use [Float.max_value]"]
+[@@deprecated "[since 2014-10] Use [Float.max_value]"]
 
 (** The smallest positive, non-zero, non-denormalized value of type [float]. *)
 val min_float : float
-  [@@deprecated "[since 2014-10] Use [Float.min_value]"]
+[@@deprecated "[since 2014-10] Use [Float.min_value]"]
 
 (** The difference between [1.0] and the smallest exactly representable
     floating-point number greater than [1.0]. *)
 val epsilon_float : float
-  [@@deprecated "[since 2014-10] Use [Float.epsilon_float]"]
+[@@deprecated "[since 2014-10] Use [Float.epsilon_float]"]
 
 (** The five classes of floating-point numbers, as determined by
     the {!Caml.classify_float} function. *)
@@ -561,7 +561,7 @@ external classify_float
   :  (float[@unboxed])
   -> fpclass
   = "caml_classify_float" "caml_classify_float_unboxed"
-  [@@noalloc] [@@deprecated "[since 2014-10] Use [Float.classify]"]
+[@@noalloc] [@@deprecated "[since 2014-10] Use [Float.classify]"]
 
 (** {6 String operations}
 
@@ -652,7 +652,7 @@ external snd : ('a * 'b[@local_opt]) -> ('b[@local_opt]) = "%field1"
 
 (** List concatenation. *)
 val ( @ ) : 'a list -> 'a list -> 'a list
-  [@@deprecated "[since 2014-10] Use [List.Infix]"]
+[@@deprecated "[since 2014-10] Use [List.Infix]"]
 
 (** {6 Input/output}
     Note: all input/output functions can raise [Sys_error] when the system
@@ -666,7 +666,7 @@ type out_channel = Stdlib.out_channel [@@deprecated "[since 2016-04] Use [Out_ch
 
 (** The standard input for the process. *)
 val stdin : Stdlib.in_channel
-  [@@deprecated "[since 2016-04] Use [In_channel.stdin]"]
+[@@deprecated "[since 2016-04] Use [In_channel.stdin]"]
 
 (** The standard output for the process. *)
 val stdout : Stdlib.out_channel
@@ -678,22 +678,22 @@ val stderr : Stdlib.out_channel
 
 (** Print a character on standard output. *)
 val print_char : char -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.output_char stdout]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.output_char stdout]"]
 
 (** Print a string on standard output. *)
 val print_string : string -> unit
 
 (** Print a byte sequence on standard output. *)
 val print_bytes : bytes -> unit
-  [@@deprecated "[since 2016-04] Core doesn't support [bytes] yet."]
+[@@deprecated "[since 2016-04] Core doesn't support [bytes] yet."]
 
 (** Print an integer, in decimal, on standard output. *)
 val print_int : int -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.output_string stdout]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.output_string stdout]"]
 
 (** Print a floating-point number, in decimal, on standard output. *)
 val print_float : float -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.output_string stdout]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.output_string stdout]"]
 
 (** Print a string, followed by a newline character, on
     standard output and flush standard output. *)
@@ -703,29 +703,29 @@ val print_endline : string -> unit
     standard output. This can be used to simulate line
     buffering of standard output. *)
 val print_newline : unit -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.newline stdout]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.newline stdout]"]
 
 (** {7 Output functions on standard error} *)
 
 (** Print a character on standard error. *)
 val prerr_char : char -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.output_char stderr]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.output_char stderr]"]
 
 (** Print a string on standard error. *)
 val prerr_string : string -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.output_string stderr]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.output_string stderr]"]
 
 (** Print a byte sequence on standard error. *)
 val prerr_bytes : bytes -> unit
-  [@@deprecated "[since 2016-04] Core doesn't support [bytes] yet"]
+[@@deprecated "[since 2016-04] Core doesn't support [bytes] yet"]
 
 (** Print an integer, in decimal, on standard error. *)
 val prerr_int : int -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.output_string stderr]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.output_string stderr]"]
 
 (** Print a floating-point number, in decimal, on standard error. *)
 val prerr_float : float -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.output_string stderr]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.output_string stderr]"]
 
 (** Print a string, followed by a newline character on standard
     error and flush standard error. *)
@@ -734,7 +734,7 @@ val prerr_endline : string -> unit
 (** Print a newline character on standard error, and flush
     standard error. *)
 val prerr_newline : unit -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.newline stderr]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.newline stderr]"]
 
 (** {7 Input functions on standard input} *)
 
@@ -742,25 +742,25 @@ val prerr_newline : unit -> unit
     until a newline character is encountered. Return the string of
     all characters read, without the newline character at the end. *)
 val read_line : unit -> string
-  [@@deprecated
-    "[since 2016-04] Use\n[Out_channel.(flush stdout); In_channel.(input_line_exn stdin)]"]
+[@@deprecated
+  "[since 2016-04] Use\n[Out_channel.(flush stdout); In_channel.(input_line_exn stdin)]"]
 
 (** Flush standard output, then read one line from standard input
     and convert it to an integer. Raise [Failure "int_of_string"]
     if the line read is not a valid representation of an integer. *)
 val read_int : unit -> int
-  [@@deprecated
-    "[since 2016-04] Use\n\
-     [Out_channel.(flush stdout); Int.of_string In_channel.(input_line_exn stdin)]"]
+[@@deprecated
+  "[since 2016-04] Use\n\
+   [Out_channel.(flush stdout); Int.of_string In_channel.(input_line_exn stdin)]"]
 
 (** Flush standard output, then read one line from standard input
     and convert it to a floating-point number.
     The result is unspecified if the line read is not a valid
     representation of a floating-point number. *)
 val read_float : unit -> float
-  [@@deprecated
-    "[since 2016-04] Use\n\
-     [Out_channel.(flush stdout); Float.of_string In_channel.(input_line_exn stdin)]"]
+[@@deprecated
+  "[since 2016-04] Use\n\
+   [Out_channel.(flush stdout); Float.of_string In_channel.(input_line_exn stdin)]"]
 
 (** {7 General output functions} *)
 
@@ -783,14 +783,14 @@ type open_flag = Stdlib.open_flag =
     file is truncated to zero length if it already exists. It
     is created if it does not already exists. *)
 val open_out : string -> Stdlib.out_channel
-  [@@deprecated "[since 2016-04] Use [Out_channel.create]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.create]"]
 
 (** Same as {!Caml.open_out}, but the file is opened in binary mode,
     so that no translation takes place during writes. On operating
     systems that do not distinguish between text mode and binary
     mode, this function behaves like {!Caml.open_out}. *)
 val open_out_bin : string -> Stdlib.out_channel
-  [@@deprecated "[since 2016-04] Use [Out_channel.create]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.create]"]
 
 (** [open_out_gen mode perm filename] opens the named file for writing,
     as described above. The extra argument [mode]
@@ -799,48 +799,48 @@ val open_out_bin : string -> Stdlib.out_channel
     {!Caml.open_out} and {!Caml.open_out_bin} are special
     cases of this function. *)
 val open_out_gen : Stdlib.open_flag list -> int -> string -> Stdlib.out_channel
-  [@@deprecated "[since 2016-04] Use [Out_channel.create]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.create]"]
 
 (** Flush the buffer associated with the given output channel,
     performing all pending writes on that channel.
     Interactive programs must be careful about flushing standard
     output and standard error at the right time. *)
 val flush : Stdlib.out_channel -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.flush]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.flush]"]
 
 (** Flush all open output channels; ignore errors. *)
 val flush_all : unit -> unit
-  [@@deprecated "[since 2016-04]"]
+[@@deprecated "[since 2016-04]"]
 
 (** Write the character on the given output channel. *)
 val output_char : Stdlib.out_channel -> char -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.output_char]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.output_char]"]
 
 (** Write the string on the given output channel. *)
 val output_string : Stdlib.out_channel -> string -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.output_string]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.output_string]"]
 
 (** Write the byte sequence on the given output channel. *)
 val output_bytes : Stdlib.out_channel -> bytes -> unit
-  [@@deprecated "[since 2016-04] Core doesn't yet support bytes."]
+[@@deprecated "[since 2016-04] Core doesn't yet support bytes."]
 
 (** [output oc buf pos len] writes [len] characters from byte sequence [buf],
     starting at offset [pos], to the given output channel [oc].
     Raise [Invalid_argument "output"] if [pos] and [len] do not
     designate a valid range of [buf]. *)
 val output : Stdlib.out_channel -> bytes -> int -> int -> unit
-  [@@deprecated "[since 2016-04] Core doesn't yet support bytes."]
+[@@deprecated "[since 2016-04] Core doesn't yet support bytes."]
 
 (** Same as [output] but take a string as argument instead of
     a byte sequence. *)
 val output_substring : Stdlib.out_channel -> string -> int -> int -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.output]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.output]"]
 
 (** Write one 8-bit integer (as the single character with that code)
     on the given output channel. The given integer is taken modulo
     256. *)
 val output_byte : Stdlib.out_channel -> int -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.output_byte]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.output_byte]"]
 
 (** Write one integer in binary format (4 bytes, big-endian)
     on the given output channel.
@@ -849,7 +849,7 @@ val output_byte : Stdlib.out_channel -> int -> unit
     {!Caml.input_binary_int} function. The format is compatible across
     all machines for a given version of OCaml. *)
 val output_binary_int : Stdlib.out_channel -> int -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.output_binary_int]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.output_binary_int]"]
 
 (** Write the representation of a structured value of any type
     to a channel. Circularities and sharing inside the value
@@ -858,26 +858,26 @@ val output_binary_int : Stdlib.out_channel -> int -> unit
     {!Marshal} for more information. {!Caml.output_value} is equivalent
     to {!Marshal.to_channel} with an empty list of flags. *)
 val output_value : Stdlib.out_channel -> 'a -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.output_value]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.output_value]"]
 
 (** [seek_out chan pos] sets the current writing position to [pos]
     for channel [chan]. This works only for regular files. On
     files of other kinds (such as terminals, pipes and sockets),
     the behavior is unspecified. *)
 val seek_out : Stdlib.out_channel -> int -> unit
-  [@@deprecated "[since 2014-10] Use [Out_channel.seek]"]
+[@@deprecated "[since 2014-10] Use [Out_channel.seek]"]
 
 (** Return the current writing position for the given channel.  Does
     not work on channels opened with the [Open_append] flag (returns
     unspecified results). *)
 val pos_out : Stdlib.out_channel -> int
-  [@@deprecated "[since 2014-10] Use [Out_channel.pos]"]
+[@@deprecated "[since 2014-10] Use [Out_channel.pos]"]
 
 (** Return the size (number of characters) of the regular file
     on which the given channel is opened.  If the channel is opened
     on a file that is not a regular file, the result is meaningless. *)
 val out_channel_length : Stdlib.out_channel -> int
-  [@@deprecated "[since 2014-10] Use [Out_channel.length]"]
+[@@deprecated "[since 2014-10] Use [Out_channel.length]"]
 
 (** Close the given channel, flushing all buffered write operations.
     Output functions raise a [Sys_error] exception when they are
@@ -886,11 +886,11 @@ val out_channel_length : Stdlib.out_channel -> int
     Note that [close_out] may raise [Sys_error] if the operating
     system signals an error when flushing or closing. *)
 val close_out : Stdlib.out_channel -> unit
-  [@@deprecated "[since 2014-10] Use [Out_channel.close]"]
+[@@deprecated "[since 2014-10] Use [Out_channel.close]"]
 
 (** Same as [close_out], but ignore all errors. *)
 val close_out_noerr : Stdlib.out_channel -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.close] and catch exceptions"]
+[@@deprecated "[since 2016-04] Use [Out_channel.close] and catch exceptions"]
 
 (** [set_binary_mode_out oc true] sets the channel [oc] to binary
     mode: no translations take place during output.
@@ -901,21 +901,21 @@ val close_out_noerr : Stdlib.out_channel -> unit
     This function has no effect under operating systems that
     do not distinguish between text mode and binary mode. *)
 val set_binary_mode_out : Stdlib.out_channel -> bool -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.set_binary_mode]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.set_binary_mode]"]
 
 (** {7 General input functions} *)
 
 (** Open the named file for reading, and return a new input channel
     on that file, positionned at the beginning of the file. *)
 val open_in : string -> Stdlib.in_channel
-  [@@deprecated "[since 2016-04] Use [In_channel.create]"]
+[@@deprecated "[since 2016-04] Use [In_channel.create]"]
 
 (** Same as {!Caml.open_in}, but the file is opened in binary mode,
     so that no translation takes place during reads. On operating
     systems that do not distinguish between text mode and binary
     mode, this function behaves like {!Caml.open_in}. *)
 val open_in_bin : string -> Stdlib.in_channel
-  [@@deprecated "[since 2016-04] Use [In_channel.create]"]
+[@@deprecated "[since 2016-04] Use [In_channel.create]"]
 
 (** [open_in_gen mode perm filename] opens the named file for reading,
     as described above. The extra arguments
@@ -923,12 +923,12 @@ val open_in_bin : string -> Stdlib.in_channel
     {!Caml.open_in} and {!Caml.open_in_bin} are special
     cases of this function. *)
 val open_in_gen : Stdlib.open_flag list -> int -> string -> Stdlib.in_channel
-  [@@deprecated "[since 2016-04] Use [In_channel.create]"]
+[@@deprecated "[since 2016-04] Use [In_channel.create]"]
 
 (** Read one character from the given input channel.
     Raise [End_of_file] if there are no more characters to read. *)
 val input_char : Stdlib.in_channel -> char
-  [@@deprecated "[since 2016-04] Use [In_channel.input_char]"]
+[@@deprecated "[since 2016-04] Use [In_channel.input_char]"]
 
 (** Read characters from the given input channel, until a
     newline character is encountered. Return the string of
@@ -936,7 +936,7 @@ val input_char : Stdlib.in_channel -> char
     Raise [End_of_file] if the end of the file is reached
     at the beginning of line. *)
 val input_line : Stdlib.in_channel -> string
-  [@@deprecated "[since 2016-04] Use [In_channel.input_line]"]
+[@@deprecated "[since 2016-04] Use [In_channel.input_line]"]
 
 (** [input ic buf pos len] reads up to [len] characters from
     the given channel [ic], storing them in byte sequence [buf], starting at
@@ -954,7 +954,7 @@ val input_line : Stdlib.in_channel -> string
     Exception [Invalid_argument "input"] is raised if [pos] and [len]
     do not designate a valid range of [buf]. *)
 val input : Stdlib.in_channel -> bytes -> int -> int -> int
-  [@@deprecated "[since 2016-04] Core doesn't yet support bytes."]
+[@@deprecated "[since 2016-04] Core doesn't yet support bytes."]
 
 (** [really_input ic buf pos len] reads [len] characters from channel [ic],
     storing them in byte sequence [buf], starting at character number [pos].
@@ -963,27 +963,27 @@ val input : Stdlib.in_channel -> bytes -> int -> int -> int
     Raise [Invalid_argument "really_input"] if
     [pos] and [len] do not designate a valid range of [buf]. *)
 val really_input : Stdlib.in_channel -> bytes -> int -> int -> unit
-  [@@deprecated "[since 2016-04] Core doesn't yet support bytes."]
+[@@deprecated "[since 2016-04] Core doesn't yet support bytes."]
 
 (** [really_input_string ic len] reads [len] characters from channel [ic]
     and returns them in a new string.
     Raise [End_of_file] if the end of file is reached before [len]
     characters have been read. *)
 val really_input_string : Stdlib.in_channel -> int -> string
-  [@@deprecated "[since 2016-04] Use [In_channel.really_input_exn ~pos:0]"]
+[@@deprecated "[since 2016-04] Use [In_channel.really_input_exn ~pos:0]"]
 
 (** Same as {!Caml.input_char}, but return the 8-bit integer representing
     the character.
     Raise [End_of_file] if an end of file was reached. *)
 val input_byte : Stdlib.in_channel -> int
-  [@@deprecated "[since 2016-04] Use [In_channel.input_byte]"]
+[@@deprecated "[since 2016-04] Use [In_channel.input_byte]"]
 
 (** Read an integer encoded in binary format (4 bytes, big-endian)
     from the given input channel. See {!Caml.output_binary_int}.
     Raise [End_of_file] if an end of file was reached while reading the
     integer. *)
 val input_binary_int : Stdlib.in_channel -> int
-  [@@deprecated "[since 2016-04] Use [In_channel.input_binary_int]"]
+[@@deprecated "[since 2016-04] Use [In_channel.input_binary_int]"]
 
 (** Read the representation of a structured value, as produced
     by {!Caml.output_value}, and return the corresponding value.
@@ -991,17 +991,17 @@ val input_binary_int : Stdlib.in_channel -> int
     see the description of module {!Marshal} for more information,
     in particular concerning the lack of type safety. *)
 val input_value : Stdlib.in_channel -> 'a
-  [@@deprecated "[since 2016-04] Use [In_channel.unsafe_input_value]"]
+[@@deprecated "[since 2016-04] Use [In_channel.unsafe_input_value]"]
 
 (** [seek_in chan pos] sets the current reading position to [pos]
     for channel [chan]. This works only for regular files. On
     files of other kinds, the behavior is unspecified. *)
 val seek_in : Stdlib.in_channel -> int -> unit
-  [@@deprecated "[since 2014-10] Use [In_channel.seek]"]
+[@@deprecated "[since 2014-10] Use [In_channel.seek]"]
 
 (** Return the current reading position for the given channel. *)
 val pos_in : Stdlib.in_channel -> int
-  [@@deprecated "[since 2014-10] Use [In_channel.pos]"]
+[@@deprecated "[since 2014-10] Use [In_channel.pos]"]
 
 (** Return the size (number of characters) of the regular file
     on which the given channel is opened.  If the channel is opened
@@ -1010,18 +1010,18 @@ val pos_in : Stdlib.in_channel -> int
     translations that can be performed when reading from a channel
     opened in text mode. *)
 val in_channel_length : Stdlib.in_channel -> int
-  [@@deprecated "[since 2014-10] Use [In_channel.length]"]
+[@@deprecated "[since 2014-10] Use [In_channel.length]"]
 
 (** Close the given channel.  Input functions raise a [Sys_error]
     exception when they are applied to a closed input channel,
     except [close_in], which does nothing when applied to an already
     closed channel. *)
 val close_in : Stdlib.in_channel -> unit
-  [@@deprecated "[since 2014-10] Use [In_channel.close]"]
+[@@deprecated "[since 2014-10] Use [In_channel.close]"]
 
 (** Same as [close_in], but ignore all errors. *)
 val close_in_noerr : Stdlib.in_channel -> unit
-  [@@deprecated "[since 2016-04] Use [In_channel.close] and catch exceptions"]
+[@@deprecated "[since 2016-04] Use [In_channel.close] and catch exceptions"]
 
 (** [set_binary_mode_in ic true] sets the channel [ic] to binary
     mode: no translations take place during input.
@@ -1032,7 +1032,7 @@ val close_in_noerr : Stdlib.in_channel -> unit
     This function has no effect under operating systems that
     do not distinguish between text mode and binary mode. *)
 val set_binary_mode_in : Stdlib.in_channel -> bool -> unit
-  [@@deprecated "[since 2016-04] Use [In_channel.set_binary_mode]"]
+[@@deprecated "[since 2016-04] Use [In_channel.set_binary_mode]"]
 
 (** {7 Operations on large files} *)
 
@@ -1209,6 +1209,6 @@ val at_exit : (unit -> unit) -> unit
 val valid_float_lexem : string -> string [@@deprecated "[since 2015-11] Do not use."]
 
 val unsafe_really_input : Stdlib.in_channel -> bytes -> int -> int -> unit
-  [@@deprecated "[since 2015-11] Do not use."]
+[@@deprecated "[since 2015-11] Do not use."]
 
 val do_at_exit : unit -> unit [@@deprecated "[since 2015-11] Do not use."]

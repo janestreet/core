@@ -67,7 +67,7 @@ let%test _ =
 let%test _ = Result.is_error (find_map_ok ~f:(fun _ -> assert false) [])
 
 let%expect_test _ =
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     ignore (find_map_ok ~f:(fun _ -> failwith "abc") [ 1 ] : _ t));
   [%expect {| (Failure abc) |}];
   Ok ()

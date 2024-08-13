@@ -3,12 +3,12 @@ include Time_ns_intf.Ofday with module Span := Span_ns
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving equal, hash, sexp_grammar]
+    type nonrec t = t [@@deriving equal, hash, sexp_grammar, typerep]
 
     include
       Stable_int63able.With_stable_witness.S
-        with type t := t
-         and type comparator_witness = comparator_witness
+      with type t := t
+       and type comparator_witness = comparator_witness
 
     include Diffable.S_atomic with type t := t
   end

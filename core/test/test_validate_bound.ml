@@ -39,7 +39,8 @@ let%expect_test "inf/nan" =
       ]
   in
   print res;
-  [%expect {|
+  [%expect
+    {|
     (bar.nan "value is NaN")
     (bar.inf "value is infinite")
     |}]

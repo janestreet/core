@@ -10,11 +10,11 @@ module Creators = Hashtbl.Creators
 
 include (
   Hashtbl :
-    sig
-      type ('a, 'b) t = ('a, 'b) Hashtbl.t [@@deriving sexp_of]
+  sig
+    type ('a, 'b) t = ('a, 'b) Hashtbl.t [@@deriving sexp_of]
 
-      include Base.Hashtbl.S_without_submodules with type ('a, 'b) t := ('a, 'b) t
-    end)
+    include Base.Hashtbl.S_without_submodules with type ('a, 'b) t := ('a, 'b) t
+  end)
 
 let validate ~name f t = Validate.alist ~name f (to_alist t)
 
@@ -99,81 +99,43 @@ module Poly = struct
   let validate = validate
 
   include Bin_prot.Utils.Make_iterable_binable2 (struct
-    type nonrec ('a, 'b) t = ('a, 'b) t
-    type ('a, 'b) el = 'a * 'b [@@deriving bin_io]
+      type nonrec ('a, 'b) t = ('a, 'b) t
+      type ('a, 'b) el = 'a * 'b [@@deriving bin_io]
 
-    let caller_identity =
-      Bin_prot.Shape.Uuid.of_string "8f3e445c-4992-11e6-a279-3703be311e7b"
-    ;;
+      let caller_identity =
+        Bin_prot.Shape.Uuid.of_string "8f3e445c-4992-11e6-a279-3703be311e7b"
+      ;;
 
-    let module_name = Some "Core.Hashtbl"
-    let length = length
-    let iter t ~f = iteri t ~f:(fun ~key ~data -> f (key, data))
+      let module_name = Some "Core.Hashtbl"
+      let length = length
 
-    let init ~len ~next =
-      let t = create ~size:len () in
-      for _i = 0 to len - 1 do
-        let key, data = next () in
-        match find t key with
-        | None -> set t ~key ~data
-        | Some _ -> failwith "Core_hashtbl.bin_read_t_: duplicate key"
-      done;
-      t
-    ;;
-  end)
+      let[@inline always] iter t ~f =
+        iteri t ~f:(fun ~key ~data -> f (key, data)) [@nontail]
+      ;;
+
+      let init ~len ~next =
+        let t = create ~size:len () in
+        for _i = 0 to len - 1 do
+          let key, data = next () in
+          match find t key with
+          | None -> set t ~key ~data
+          | Some _ -> failwith "Core_hashtbl.bin_read_t_: duplicate key"
+        done;
+        t
+      ;;
+    end)
 end
 
-module Make_plain_with_hashable (T : sig
-  module Key : Key_plain
+module Provide_bin_io (Key : sig
+    type t [@@deriving bin_io]
 
-  val hashable : Key.t Hashable.t
-end) =
-struct
-  let hashable = T.hashable
+    include Key_plain with type t := t
+  end) =
+Bin_prot.Utils.Make_iterable_binable1 (struct
+    module Key = Key
 
-  type key = T.Key.t
-  type ('a, 'b) hashtbl = ('a, 'b) t
-  type 'a t = (T.Key.t, 'a) hashtbl
-  type 'a key_ = T.Key.t
-
-  include Creators (struct
-    type 'a t = T.Key.t
-
-    let hashable = hashable
-  end)
-
-  include (
-    Hashtbl :
-      sig
-        include Invariant.S2 with type ('a, 'b) t := ('a, 'b) hashtbl
-      end)
-
-  let equal = Hashtbl.equal
-  let invariant invariant_key t = invariant ignore invariant_key t
-  let sexp_of_t sexp_of_v t = Poly.sexp_of_t T.Key.sexp_of_t sexp_of_v t
-
-  module Provide_of_sexp
-    (Key : sig
-      type t [@@deriving of_sexp]
-    end
-    with type t := key) =
-  struct
-    let t_of_sexp v_of_sexp sexp = t_of_sexp Key.t_of_sexp v_of_sexp sexp
-  end
-
-  module Provide_bin_io
-    (Key' : sig
-      type t [@@deriving bin_io]
-    end
-    with type t := key) =
-  Bin_prot.Utils.Make_iterable_binable1 (struct
-    module Key = struct
-      include T.Key
-      include Key'
-    end
-
-    type nonrec 'a t = 'a t
-    type 'a el = Key.t * 'a [@@deriving bin_io]
+    type nonrec 'v t = (Key.t, 'v) t
+    type 'v el = Key.t * 'v [@@deriving bin_io]
 
     let caller_identity =
       Bin_prot.Shape.Uuid.of_string "8fabab0a-4992-11e6-8cca-9ba2c4686d9e"
@@ -181,10 +143,13 @@ struct
 
     let module_name = Some "Core.Hashtbl"
     let length = length
-    let iter t ~f = iteri t ~f:(fun ~key ~data -> f (key, data))
+
+    let[@inline always] iter t ~f =
+      iteri t ~f:(fun ~key ~data -> f (key, data)) [@nontail]
+    ;;
 
     let init ~len ~next =
-      let t = create ~size:len () in
+      let t = create ~size:len (module Key) in
       for _i = 0 to len - 1 do
         let key, data = next () in
         match find t key with
@@ -200,11 +165,59 @@ struct
     ;;
   end)
 
+module Make_plain_with_hashable (T : sig
+    module Key : Key_plain
+
+    val hashable : Key.t Hashable.t
+  end) =
+struct
+  let hashable = T.hashable
+
+  type key = T.Key.t
+  type ('a, 'b) hashtbl = ('a, 'b) t
+  type 'a t = (T.Key.t, 'a) hashtbl
+  type 'a key_ = T.Key.t
+
+  include Creators (struct
+      type 'a t = T.Key.t
+
+      let hashable = hashable
+    end)
+
+  include (
+    Hashtbl :
+    sig
+      include Invariant.S2 with type ('a, 'b) t := ('a, 'b) hashtbl
+    end)
+
+  let equal = Hashtbl.equal
+  let invariant invariant_key t = invariant ignore invariant_key t
+  let sexp_of_t sexp_of_v t = Poly.sexp_of_t T.Key.sexp_of_t sexp_of_v t
+
+  module Provide_of_sexp
+      (Key : sig
+               type t [@@deriving of_sexp]
+             end
+             with type t := key) =
+  struct
+    let t_of_sexp v_of_sexp sexp = t_of_sexp Key.t_of_sexp v_of_sexp sexp
+  end
+
+  module Provide_bin_io
+      (Key' : sig
+                type t [@@deriving bin_io]
+              end
+              with type t := T.Key.t) =
+  Provide_bin_io (struct
+      include T.Key
+      include Key'
+    end)
+
   module Provide_stable_witness
-    (Key' : sig
-      type t [@@deriving stable_witness]
-    end
-    with type t := key) =
+      (Key' : sig
+                type t [@@deriving stable_witness]
+              end
+              with type t := key) =
   struct
     (* The binary representation of hashtbl is relied on by stable modules
        (e.g. Hashtable.Stable) and is therefore assumed to be stable.  So, if the key and
@@ -220,42 +233,42 @@ struct
 end
 
 module Make_with_hashable (T : sig
-  module Key : Key
+    module Key : Key
 
-  val hashable : Key.t Hashable.t
-end) =
+    val hashable : Key.t Hashable.t
+  end) =
 struct
   include Make_plain_with_hashable (T)
   include Provide_of_sexp (T.Key)
 end
 
 module Make_binable_with_hashable (T : sig
-  module Key : Key_binable
+    module Key : Key_binable
 
-  val hashable : Key.t Hashable.t
-end) =
+    val hashable : Key.t Hashable.t
+  end) =
 struct
   include Make_with_hashable (T)
   include Provide_bin_io (T.Key)
 end
 
 module Make_stable_with_hashable (T : sig
-  module Key : Key_stable
+    module Key : Key_stable
 
-  val hashable : Key.t Hashable.t
-end) =
+    val hashable : Key.t Hashable.t
+  end) =
 struct
   include Make_binable_with_hashable (T)
   include Provide_stable_witness (T.Key)
 end
 
 module Make_plain (Key : Key_plain) = Make_plain_with_hashable (struct
-  module Key = Key
+    module Key = Key
 
-  let hashable =
-    { Hashable.hash = Key.hash; compare = Key.compare; sexp_of_t = Key.sexp_of_t }
-  ;;
-end)
+    let hashable =
+      { Hashable.hash = Key.hash; compare = Key.compare; sexp_of_t = Key.sexp_of_t }
+    ;;
+  end)
 
 module Make (Key : Key) = struct
   include Make_plain (Key)
@@ -309,6 +322,31 @@ module For_deriving : For_deriving with type ('a, 'b) t := ('a, 'b) t = struct
     |> Quickcheck.Shrinker.filter_map
          ~f:(of_alist_option (module Key))
          ~f_inverse:to_alist
+  ;;
+
+  let bin_shape_m__t (type t) (module Key : Key_binable with type t = t) =
+    let module M = Provide_bin_io (Key) in
+    M.bin_shape_t
+  ;;
+
+  let bin_size_m__t (type t) (module Key : Key_binable with type t = t) =
+    let module M = Provide_bin_io (Key) in
+    M.bin_size_t
+  ;;
+
+  let bin_write_m__t (type t) (module Key : Key_binable with type t = t) =
+    let module M = Provide_bin_io (Key) in
+    M.bin_write_t
+  ;;
+
+  let bin_read_m__t (type t) (module Key : Key_binable with type t = t) =
+    let module M = Provide_bin_io (Key) in
+    M.bin_read_t
+  ;;
+
+  let __bin_read_m__t__ (type t) (module Key : Key_binable with type t = t) =
+    let module M = Provide_bin_io (Key) in
+    M.__bin_read_t__
   ;;
 end
 

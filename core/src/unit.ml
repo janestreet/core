@@ -5,7 +5,8 @@ module Stable = struct
 
   module V1 = struct
     module T = struct
-      type t = unit [@@deriving bin_io ~localize, compare, sexp, stable_witness]
+      type t = unit
+      [@@deriving bin_io ~localize, compare, sexp, sexp_grammar, stable_witness]
     end
 
     include T
@@ -18,7 +19,7 @@ module Stable = struct
   end
 
   module V2 = struct
-    type t = unit [@@deriving compare, equal, sexp, stable_witness]
+    type t = unit [@@deriving compare, equal, sexp, sexp_grammar, stable_witness]
     type comparator_witness = V1.comparator_witness
 
     let comparator = V1.comparator

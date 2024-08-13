@@ -3,14 +3,14 @@ module Stable = struct
     module T = struct
       include (
         Base.Uchar :
-          sig
-            type t = Base.Uchar.t [@@deriving compare, equal, hash, sexp, sexp_grammar]
+        sig
+          type t = Base.Uchar.t [@@deriving compare, equal, hash, sexp, sexp_grammar]
 
-            include
-              Base.Comparator.S
-                with type t := t
-                 and type comparator_witness = Base.Uchar.comparator_witness
-          end)
+          include
+            Base.Comparator.S
+            with type t := t
+             and type comparator_witness = Base.Uchar.comparator_witness
+        end)
 
       let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
 
@@ -39,10 +39,10 @@ open! Import
 include Stable.V1
 
 include Hashable.Make_binable_with_hashable (struct
-  module Key = Stable.V1
+    module Key = Stable.V1
 
-  let hashable = Key.hashable
-end)
+    let hashable = Key.hashable
+  end)
 
 include Comparable.Extend_binable (Base.Uchar) (Stable.V1)
 include Base.Uchar

@@ -26,11 +26,11 @@ let%test_module "slice" =
 
 let%test_module "nget" =
   (module struct
-    let%expect_test _ = require_equal [%here] (module Char) (nget "hey" (-3)) 'h'
-    let%expect_test _ = require_equal [%here] (module Char) (nget "hey" 2) 'y'
+    let%expect_test _ = require_equal (module Char) (nget "hey" (-3)) 'h'
+    let%expect_test _ = require_equal (module Char) (nget "hey" 2) 'y'
 
     let%expect_test _ =
-      require_does_raise [%here] (fun () -> nget "hey" (-100));
+      require_does_raise (fun () -> nget "hey" (-100));
       [%expect {| (Invalid_argument "index out of bounds") |}]
     ;;
   end)
@@ -76,7 +76,8 @@ let%test_module "Verify reading/writing stable table sexp" =
 
     let%expect_test "sexp_of_t" =
       print_s [%sexp (table : string String.Stable.V1.Table.t)];
-      [%expect {|
+      [%expect
+        {|
         ((alpha beta)
          (delta gamma))
         |}]
@@ -90,13 +91,13 @@ let%test_module "Verify reading/writing stable table sexp" =
 ;;
 
 let%expect_test "Hashtbl.merge of String.Table and String.Stable.V1.Table" =
-  Expect_test_helpers_core.require_does_not_raise [%here] (fun () ->
+  Expect_test_helpers_core.require_does_not_raise (fun () ->
     let result =
       Hashtbl.merge
         (String.Table.t_of_sexp int_of_sexp [%sexp []])
         (String.Stable.V1.Table.t_of_sexp int_of_sexp [%sexp []])
         ~f:(fun ~key:_ x -> Some x)
     in
-    require [%here] (Hashtbl.is_empty result));
+    require (Hashtbl.is_empty result));
   [%expect {| |}]
 ;;

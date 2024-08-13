@@ -115,10 +115,11 @@ let%test_unit _ =
     ; "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF"
     ]
     ~f:(fun string ->
-    assert (Exn.does_raise (fun () -> unsafe_get_uint64_be_exn ~pos:0 (of_string string)));
-    assert (
-      Exn.does_raise (fun () ->
-        unsafe_get_uint64_le_exn ~pos:0 (of_string (String.rev string)))))
+      assert (
+        Exn.does_raise (fun () -> unsafe_get_uint64_be_exn ~pos:0 (of_string string)));
+      assert (
+        Exn.does_raise (fun () ->
+          unsafe_get_uint64_le_exn ~pos:0 (of_string (String.rev string)))))
 ;;
 
 let%test _ =

@@ -235,9 +235,9 @@ module Foil : S = struct
     assert_no_pending_readers t;
     e.root <- create ();
     t.elts
-      <- (match z.before with
-          | [] -> z.after
-          | hd :: tl -> elts_of_zipper { z with before = tl; cursor = hd })
+    <- (match z.before with
+        | [] -> z.after
+        | hd :: tl -> elts_of_zipper { z with before = tl; cursor = hd })
   ;;
 
   let remove_first t =

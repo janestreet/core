@@ -101,7 +101,8 @@ let%expect_test "set_int16_le_exn" =
   [%expect {| ok pos: 32767 |}];
   printf "@pos:     0x%x\n" (Bigstring.get_uint8 buf ~pos);
   printf "@pos + 1: 0x%x\n" (Bigstring.get_uint8 buf ~pos:(pos + 1));
-  [%expect {|
+  [%expect
+    {|
     @pos:     0xff
     @pos + 1: 0x7f
     |}];
@@ -138,7 +139,8 @@ let%expect_test "set_int16_be_exn" =
   [%expect {| ok pos: 32767 |}];
   printf "@pos:     0x%x\n" (Bigstring.get_uint8 buf ~pos);
   printf "@pos + 1: 0x%x\n" (Bigstring.get_uint8 buf ~pos:(pos + 1));
-  [%expect {|
+  [%expect
+    {|
     @pos:     0x7f
     @pos + 1: 0xff
     |}];
@@ -176,7 +178,8 @@ let%expect_test "set_uint16_le_exn" =
   set_and_print ~test_name:"endianness check" ~pos 51966;
   printf "@pos:     0x%x\n" (Bigstring.get_uint8 buf ~pos);
   printf "@pos + 1: 0x%x\n" (Bigstring.get_uint8 buf ~pos:(pos + 1));
-  [%expect {|
+  [%expect
+    {|
     endianness check: 51966
     @pos:     0xfe
     @pos + 1: 0xca
@@ -213,7 +216,8 @@ let%expect_test "set_uint16_be_exn" =
   set_and_print ~test_name:"endianness check" ~pos 51966;
   printf "@pos:     0x%x\n" (Bigstring.get_uint8 buf ~pos);
   printf "@pos + 1: 0x%x\n" (Bigstring.get_uint8 buf ~pos:(pos + 1));
-  [%expect {|
+  [%expect
+    {|
     endianness check: 51966
     @pos:     0xca
     @pos + 1: 0xfe

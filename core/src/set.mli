@@ -23,25 +23,25 @@ module Tree : sig
 
   include
     Creators_and_accessors_generic
-      with type ('a, 'b) set := ('a, 'b) t
-      with type ('a, 'b) t := ('a, 'b) t
-      with type ('a, 'b) tree := ('a, 'b) t
-      with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) With_comparator.t
-      with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) With_comparator.t
-      with type 'a elt := 'a
-      with type 'c cmp := 'c
-      with module Named := Named
+    with type ('a, 'b) set := ('a, 'b) t
+    with type ('a, 'b) t := ('a, 'b) t
+    with type ('a, 'b) tree := ('a, 'b) t
+    with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) With_comparator.t
+    with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) With_comparator.t
+    with type 'a elt := 'a
+    with type 'c cmp := 'c
+    with module Named := Named
 end
 
 module Using_comparator : sig
   include
     Creators_generic
-      with type ('a, 'b) set := ('a, 'b) t
-      with type ('a, 'b) t := ('a, 'b) t
-      with type ('a, 'b) tree := ('a, 'b) Tree.t
-      with type 'a elt := 'a
-      with type 'c cmp := 'c
-      with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) With_comparator.t
+    with type ('a, 'b) set := ('a, 'b) t
+    with type ('a, 'b) t := ('a, 'b) t
+    with type ('a, 'b) tree := ('a, 'b) Tree.t
+    with type 'a elt := 'a
+    with type 'c cmp := 'c
+    with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) With_comparator.t
 end
 
 (** Tests internal invariants of the set data structure.  Returns true on success. *)
@@ -244,7 +244,7 @@ val of_increasing_iterator_unchecked
     of polymorphic comparison by instantiating the functor at a different implementation
     of [Comparator] and using the resulting [stable_dedup_list]. *)
 val stable_dedup_list : ('a, _) Comparator.Module.t -> 'a list -> 'a list
-  [@@deprecated "[since 2023-04] Use [List.stable_dedup] instead."]
+[@@deprecated "[since 2023-04] Use [List.stable_dedup] instead."]
 
 (** [map c t ~f] returns a new set created by applying [f] to every element in [t]. The
     returned set is based on the provided [c]. [O(n log n)]. *)
@@ -470,35 +470,35 @@ val quickcheck_shrinker
 *)
 
 module Poly : sig
-  type ('a, 'b) set
+    type ('a, 'b) set
 
-  module Tree : sig
-    type 'elt t = ('elt, Comparator.Poly.comparator_witness) Tree.t
-    [@@deriving sexp, sexp_grammar]
+    module Tree : sig
+      type 'elt t = ('elt, Comparator.Poly.comparator_witness) Tree.t
+      [@@deriving sexp, sexp_grammar]
 
-    include
-      Creators_generic
+      include
+        Creators_generic
         with type ('a, 'b) set := ('a, 'b) Tree.t
         with type ('elt, 'cmp) t := 'elt t
         with type ('elt, 'cmp) tree := 'elt t
         with type 'c cmp := Comparator.Poly.comparator_witness
         with type 'a elt := 'a
         with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
-  end
+    end
 
-  type 'elt t = ('elt, Comparator.Poly.comparator_witness) set
-  [@@deriving bin_io, compare, sexp, sexp_grammar]
+    type 'elt t = ('elt, Comparator.Poly.comparator_witness) set
+    [@@deriving bin_io, compare, sexp, sexp_grammar]
 
-  include
-    Creators_generic
+    include
+      Creators_generic
       with type ('a, 'b) set := ('a, 'b) set
       with type ('elt, 'cmp) t := 'elt t
       with type ('elt, 'cmp) tree := 'elt Tree.t
       with type 'c cmp := Comparator.Poly.comparator_witness
       with type 'a elt := 'a
       with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
-end
-with type ('a, 'b) set := ('a, 'b) t
+  end
+  with type ('a, 'b) set := ('a, 'b) t
 
 (** {2 Signatures and functors for building [Set] modules}  *)
 
@@ -530,47 +530,48 @@ module Make (Elt : Elt) : S with type Elt.t = Elt.t
 module Make_binable (Elt : Elt_binable) : S_binable with type Elt.t = Elt.t
 
 module Make_plain_using_comparator (Elt : sig
-  type t [@@deriving sexp_of]
+    type t [@@deriving sexp_of]
 
-  include Comparator.S with type t := t
-end) :
+    include Comparator.S with type t := t
+  end) :
   S_plain
-    with type Elt.t = Elt.t
-    with type Elt.comparator_witness = Elt.comparator_witness
+  with type Elt.t = Elt.t
+  with type Elt.comparator_witness = Elt.comparator_witness
 
 (** [Make_using_comparator] builds a set from an element type that has a comparator.
 
     [Make_binable_using_comparator] is similar, except the element and set types support
     [bin_io]. *)
 module Make_using_comparator (Elt : sig
-  type t [@@deriving sexp]
+    type t [@@deriving sexp]
 
-  include Comparator.S with type t := t
-end) : S with type Elt.t = Elt.t with type Elt.comparator_witness = Elt.comparator_witness
+    include Comparator.S with type t := t
+  end) :
+  S with type Elt.t = Elt.t with type Elt.comparator_witness = Elt.comparator_witness
 
 module Make_binable_using_comparator (Elt : sig
-  type t [@@deriving bin_io, sexp]
+    type t [@@deriving bin_io, sexp]
 
-  include Comparator.S with type t := t
-end) :
+    include Comparator.S with type t := t
+  end) :
   S_binable
-    with type Elt.t = Elt.t
-    with type Elt.comparator_witness = Elt.comparator_witness
+  with type Elt.t = Elt.t
+  with type Elt.comparator_witness = Elt.comparator_witness
 
 module Elt_bin_io = Elt_bin_io
 include For_deriving with type ('a, 'b) t := ('a, 'b) t
 
 module Make_tree_plain (Elt : sig
-  type t [@@deriving sexp_of]
+    type t [@@deriving sexp_of]
 
-  include Comparator.S with type t := t
-end) : Make_S_plain_tree(Elt).S
+    include Comparator.S with type t := t
+  end) : Make_S_plain_tree(Elt).S
 
 module Make_tree (Elt : sig
-  type t [@@deriving sexp]
+    type t [@@deriving sexp]
 
-  include Comparator.S with type t := t
-end) : sig
+    include Comparator.S with type t := t
+  end) : sig
   include Make_S_plain_tree(Elt).S
   include Sexpable.S with type t := t
 end
@@ -606,8 +607,8 @@ module Stable : sig
 
       module Make (Elt : Stable_module_types.With_stable_witness.S0) :
         S
-          with type elt := Elt.t
-          with type elt_comparator_witness := Elt.comparator_witness
+        with type elt := Elt.t
+        with type elt_comparator_witness := Elt.comparator_witness
     end
   end
 end

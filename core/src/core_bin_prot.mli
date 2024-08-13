@@ -15,7 +15,7 @@ end
 module Reader : sig
   type 'a t = 'a Bin_prot.Type_class.reader =
     { read : 'a Read.reader
-    ; vtag_read : (int -> 'a) Read.reader
+    ; vtag_read : 'a Read.vtag_reader
     }
 
   val of_string : 'a t -> string -> 'a

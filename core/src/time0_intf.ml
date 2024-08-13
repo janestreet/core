@@ -34,31 +34,31 @@ module type S = sig
 
   include
     Comparable.S_common
-      with type t := t
-       and module Replace_polymorphic_compare := Replace_polymorphic_compare
+    with type t := t
+     and module Replace_polymorphic_compare := Replace_polymorphic_compare
 
   (** Equivalent to a [Date.t] and an [Ofday.t] with no time zone. A [Date_and_ofday.t]
       does not correspond to a single, unambiguous point in time. *)
   module Date_and_ofday : sig
-    type absolute = t
-    type t = private underlying
+      type absolute = t
+      type t = private underlying
 
-    (** {2 Constructors and accessors} *)
+      (** {2 Constructors and accessors} *)
 
-    val of_date_ofday : Date0.t -> Ofday.t -> t
-    val to_date_ofday : t -> Date0.t * Ofday.t
-    val to_date : t -> Date0.t
-    val to_ofday : t -> Ofday.t
+      val of_date_ofday : Date0.t -> Ofday.t -> t
+      val to_date_ofday : t -> Date0.t * Ofday.t
+      val to_date : t -> Date0.t
+      val to_ofday : t -> Ofday.t
 
-    (** {2 Conversions between absolute times and date + ofday}
+      (** {2 Conversions between absolute times and date + ofday}
 
         Based on the offset from UTC at the given time. It is usually simpler to use the
         [Time.Zone] wrappers of these conversions. *)
 
-    val of_absolute : absolute -> offset_from_utc:Span.t -> t
-    val to_absolute : t -> offset_from_utc:Span.t -> absolute
+      val of_absolute : absolute -> offset_from_utc:Span.t -> t
+      val to_absolute : t -> offset_from_utc:Span.t -> absolute
 
-    (** {2 Low-level conversions}
+      (** {2 Low-level conversions}
 
         Convert between [t] and a synthetic span representing the difference in date from
         epoch, times the length of a day, plus the ofday's distance from midnight.
@@ -71,10 +71,10 @@ module type S = sig
         These functions are intended for low-level DST transition arithmetic. Most clients
         should not call these functions directly. *)
 
-    val of_synthetic_span_since_epoch : Span.t -> t
-    val to_synthetic_span_since_epoch : t -> Span.t
-  end
-  with type absolute := t
+      val of_synthetic_span_since_epoch : Span.t -> t
+      val to_synthetic_span_since_epoch : t -> Span.t
+    end
+    with type absolute := t
 
   (** [next_multiple ~base ~after ~interval] returns the smallest [time] of the form:
 

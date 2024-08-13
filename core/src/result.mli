@@ -5,7 +5,8 @@ open! Import
 type ('a, 'b) t = ('a, 'b) Base.Result.t =
   | Ok of 'a
   | Error of 'b
-[@@deriving bin_io ~localize, compare, equal, globalize, hash, typerep, sexp, diff]
+[@@deriving
+  bin_io ~localize, compare, diff, equal, globalize, hash, sexp, sexp_grammar, typerep]
 
 include module type of Base.Result with type ('a, 'b) t := ('a, 'b) t (** @inline *)
 
@@ -21,9 +22,9 @@ module Stable : sig
 
     include
       Diffable.S2
-        with type ('ok, 'err) t := ('ok, 'err) t
-         and type ('ok, 'err, 'ok_diff, 'err_diff) Diff.t =
-          ('ok, 'err, 'ok_diff, 'err_diff) Diff.t
+      with type ('ok, 'err) t := ('ok, 'err) t
+       and type ('ok, 'err, 'ok_diff, 'err_diff) Diff.t =
+        ('ok, 'err, 'ok_diff, 'err_diff) Diff.t
   end
 
   (** We export the unit test arg rather than instantiate the functor inside result.ml in

@@ -72,9 +72,13 @@ module T : sig
 
   module Never_values : sig
     val int32 : int32 t
+    val int32_u : (unit -> int32) t
     val int64 : int64 t
+    val int64_u : (unit -> int64) t
     val nativeint : nativeint t
+    val nativeint_u : (unit -> nativeint) t
     val float : float t
+    val float_u : (unit -> float) t
     val string : string t
     val bytes : bytes t
     val array : _ array t
@@ -121,9 +125,13 @@ end = struct
   module Never_values = struct
     (* int32 is boxed even on 64b platform at the moment. *)
     let int32 = never typename_of_int32
+    let int32_u = never typename_of_int32_u
     let int64 = never typename_of_int64
+    let int64_u = never typename_of_int64_u
     let nativeint = never typename_of_nativeint
+    let nativeint_u = never typename_of_nativeint_u
     let float = never typename_of_float
+    let float_u = never typename_of_float_u
     let string = never typename_of_string
     let bytes = never typename_of_bytes
     let array = never_with_name "array"
@@ -147,8 +155,8 @@ module Computation_impl = struct
   type nonrec 'a t = 'a t
 
   include Type_generic.Variant_and_record_intf.M (struct
-    type nonrec 'a t = 'a t
-  end)
+      type nonrec 'a t = 'a t
+    end)
 
   include Never_values
 
@@ -274,8 +282,8 @@ let of_typerep typerep =
 ;;
 
 module For_all_parameters (M : sig
-  val immediacy : Immediacy.t
-end) =
+    val immediacy : Immediacy.t
+  end) =
 struct
   let witness typerep1 typerep2 =
     let t1 = of_typerep typerep1 in
@@ -364,8 +372,8 @@ module Always = struct
   type nonrec 'a t = 'a t
 
   include For_all_parameters (struct
-    let immediacy = Always
-  end)
+      let immediacy = Always
+    end)
 
   let of_typerep typerep =
     let t = of_typerep typerep in
@@ -389,8 +397,8 @@ module Sometimes = struct
   type nonrec 'a t = 'a t
 
   include For_all_parameters (struct
-    let immediacy = Sometimes
-  end)
+      let immediacy = Sometimes
+    end)
 
   let of_typerep typerep =
     let t = of_typerep typerep in
@@ -414,8 +422,8 @@ module Never = struct
   type nonrec 'a t = 'a t
 
   include For_all_parameters (struct
-    let immediacy = Never
-  end)
+      let immediacy = Never
+    end)
 
   let of_typerep typerep =
     let t = of_typerep typerep in

@@ -11,8 +11,8 @@ module type S2 = Quickcheck.S2
 module type S_int = Quickcheck.S_int
 
 module Of_quickcheckable
-  (Quickcheckable : S)
-  (Conv : Conv with type quickcheckable := Quickcheckable.t) : S with type t := Conv.t =
+    (Quickcheckable : S)
+    (Conv : Conv with type quickcheckable := Quickcheckable.t) : S with type t := Conv.t =
 struct
   let quickcheck_generator =
     Quickcheck.Generator.map Quickcheckable.quickcheck_generator ~f:Conv.of_quickcheckable
@@ -31,8 +31,8 @@ struct
 end
 
 module Of_quickcheckable1
-  (Quickcheckable : S1)
-  (Conv : Conv1 with type 'a quickcheckable := 'a Quickcheckable.t) :
+    (Quickcheckable : S1)
+    (Conv : Conv1 with type 'a quickcheckable := 'a Quickcheckable.t) :
   S1 with type 'a t := 'a Conv.t = struct
   let quickcheck_generator generate_a =
     Quickcheck.Generator.map
@@ -55,8 +55,8 @@ module Of_quickcheckable1
 end
 
 module Of_quickcheckable_filtered
-  (Quickcheckable : S)
-  (Conv : Conv_filtered with type quickcheckable := Quickcheckable.t) :
+    (Quickcheckable : S)
+    (Conv : Conv_filtered with type quickcheckable := Quickcheckable.t) :
   S with type t := Conv.t = struct
   let quickcheck_generator =
     Quickcheck.Generator.filter_map
@@ -77,8 +77,8 @@ module Of_quickcheckable_filtered
 end
 
 module Of_quickcheckable_filtered1
-  (Quickcheckable : S1)
-  (Conv : Conv_filtered1 with type 'a quickcheckable := 'a Quickcheckable.t) :
+    (Quickcheckable : S1)
+    (Conv : Conv_filtered1 with type 'a quickcheckable := 'a Quickcheckable.t) :
   S1 with type 'a t := 'a Conv.t = struct
   let quickcheck_generator generate_a =
     Quickcheck.Generator.filter_map

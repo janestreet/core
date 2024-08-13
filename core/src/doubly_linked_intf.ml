@@ -38,7 +38,7 @@ module type S = sig
     val sexp_of_t : ('a -> Base.Sexp.t) -> 'a t -> Base.Sexp.t
   end
 
-  type 'a t [@@deriving compare, sexp, sexp_grammar]
+  type 'a t [@@deriving compare, quickcheck, sexp, sexp_grammar]
 
   include Container.S1 with type 'a t := 'a t
   include Invariant.S1 with type 'a t := 'a t

@@ -64,13 +64,13 @@ include From_sexplib
    other ppx's treat [sexp_opaque] correctly, by ignoring it and processing the underlying
    type. *)
 include (
-  struct
-    type 'a sexp_opaque = 'a [@@deriving bin_io, compare, hash, typerep]
-  end :
-    sig
-      type 'a sexp_opaque [@@deriving bin_io, compare, hash, typerep]
-    end
-    with type 'a sexp_opaque := 'a)
+struct
+  type 'a sexp_opaque = 'a [@@deriving bin_io, compare, hash, typerep]
+end :
+  sig
+    type 'a sexp_opaque [@@deriving bin_io, compare, hash, typerep]
+  end
+  with type 'a sexp_opaque := 'a)
 
 include (
   Typerep_lib.Std :

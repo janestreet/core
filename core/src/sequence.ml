@@ -2,15 +2,15 @@ open! Import
 include Base.Sequence
 
 include Bin_prot.Utils.Make_binable1_without_uuid [@alert "-legacy"] (struct
-  module Binable = struct
-    type 'a t = 'a list [@@deriving bin_io]
-  end
+    module Binable = struct
+      type 'a t = 'a list [@@deriving bin_io]
+    end
 
-  type 'a t = 'a Base.Sequence.t
+    type 'a t = 'a Base.Sequence.t
 
-  let of_binable = Base.Sequence.of_list
-  let to_binable = Base.Sequence.to_list
-end)
+    let of_binable = Base.Sequence.of_list
+    let to_binable = Base.Sequence.to_list
+  end)
 
 module Step = struct
   include Step

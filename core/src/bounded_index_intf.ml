@@ -34,8 +34,8 @@ module type S = sig
   module Stable : sig
     module V1 :
       Stable_comparable.With_stable_witness.V1
-        with type t = t
-        with type comparator_witness = comparator_witness
+      with type t = t
+      with type comparator_witness = comparator_witness
   end
 end
 
@@ -54,7 +54,7 @@ module type Bounded_index = sig
   module type S = S
 
   module Make (M : sig
-    val label : string
-    val module_name : string
-  end) : S
+      val label : string
+      val module_name : string
+    end) : S
 end

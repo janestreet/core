@@ -344,18 +344,18 @@ module Configure (Config : Quickcheck_config) = struct
 end
 
 include Configure (struct
-  let default_seed = `Deterministic "an arbitrary but deterministic string"
+    let default_seed = `Deterministic "an arbitrary but deterministic string"
 
-  let default_trial_count =
-    match Word_size.word_size with
-    | W64 -> 10_000
-    | W32 -> 1_000
-  ;;
+    let default_trial_count =
+      match Word_size.word_size with
+      | W64 -> 10_000
+      | W32 -> 1_000
+    ;;
 
-  let default_can_generate_trial_count = 10_000
-  let default_shrink_attempts = `Limit 1000
-  let default_sizes = Sequence.cycle_list_exn (List.range 0 30 ~stop:`inclusive)
-end)
+    let default_can_generate_trial_count = 10_000
+    let default_shrink_attempts = `Limit 1000
+    let default_sizes = Sequence.cycle_list_exn (List.range 0 30 ~stop:`inclusive)
+  end)
 
 module type S = S
 module type S1 = S1

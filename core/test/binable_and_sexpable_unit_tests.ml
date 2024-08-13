@@ -23,136 +23,136 @@ let%test_module _ =
 
     (* S0 *)
     module _ = Stable_unit_test.Make (struct
-      module T = struct
-        type t = int [@@deriving compare]
+        module T = struct
+          type t = int [@@deriving compare]
 
-        include
-          Sexpable.Of_sexpable.V1
-            (String)
-            (struct
-              type t = int
+          include
+            Sexpable.Of_sexpable.V1
+              (String)
+              (struct
+                type t = int
 
-              let to_sexpable = string_of_int
-              let of_sexpable = int_of_string
-            end)
+                let to_sexpable = string_of_int
+                let of_sexpable = int_of_string
+              end)
 
-        include
-          Binable.Of_binable.V1 [@alert "-legacy"]
-            (String)
-            (struct
-              type t = int
+          include
+            Binable.Of_binable.V1 [@alert "-legacy"]
+              (String)
+              (struct
+                type t = int
 
-              let to_binable = string_of_int
-              let of_binable = int_of_string
-            end)
-      end
-
-      type t = T.t [@@deriving bin_io, compare, sexp]
-
-      let equal a b = Int.( = ) 0 ([%compare: t] a b)
-      let tests = int_tests
-    end)
-
-    module _ = Stable_unit_test.Make (struct
-      module T = struct
-        type 'a t = 'a option [@@deriving compare]
-
-        include
-          Sexpable.Of_sexpable1.V1
-            (List)
-            (struct
-              type 'a t = 'a option
-
-              let to_sexpable = Option.to_list
-              let of_sexpable = List.hd
-            end)
-
-        include
-          Binable.Of_binable1.V1 [@alert "-legacy"]
-            (List)
-            (struct
-              type 'a t = 'a option
-
-              let to_binable = Option.to_list
-              let of_binable = List.hd
-            end)
-      end
-
-      type t = int T.t [@@deriving bin_io, compare, sexp]
-
-      let equal a b = Int.( = ) 0 ([%compare: t] a b)
-
-      let tests =
-        [ None, "()", "\000"
-        ; Some 1, "(1)", "\001\001"
-        ; Some 1_000, "(1000)", "\001\254\232\003"
-        ; Some ~-1, "(-1)", "\001\255\255"
-        ]
-      ;;
-    end)
-
-    module _ = Stable_unit_test.Make (struct
-      module T = struct
-        type ('a, 'b) t = ('a, 'b) Either.Stable.V1.t [@@deriving compare]
-
-        module Format = struct
-          type ('a, 'b) t =
-            | Left of 'a
-            | Right of 'b
-          [@@deriving bin_io, sexp]
-
-          let of_t = function
-            | First x -> Left x
-            | Second x -> Right x
-          ;;
-
-          let to_t = function
-            | Left x -> First x
-            | Right x -> Second x
-          ;;
+                let to_binable = string_of_int
+                let of_binable = int_of_string
+              end)
         end
 
-        include
-          Sexpable.Of_sexpable2.V1
-            (Format)
-            (struct
-              type nonrec ('a, 'b) t = ('a, 'b) t
+        type t = T.t [@@deriving bin_io, compare, sexp]
 
-              let to_sexpable = Format.of_t
-              let of_sexpable = Format.to_t
-            end)
+        let equal a b = Int.( = ) 0 ([%compare: t] a b)
+        let tests = int_tests
+      end)
 
-        include
-          Binable.Of_binable2.V1 [@alert "-legacy"]
-            (Format)
-            (struct
-              type nonrec ('a, 'b) t = ('a, 'b) t
+    module _ = Stable_unit_test.Make (struct
+        module T = struct
+          type 'a t = 'a option [@@deriving compare]
 
-              let to_binable = Format.of_t
-              let of_binable = Format.to_t
-            end)
-      end
+          include
+            Sexpable.Of_sexpable1.V1
+              (List)
+              (struct
+                type 'a t = 'a option
 
-      type t = (int, string) T.t [@@deriving bin_io, compare, sexp]
+                let to_sexpable = Option.to_list
+                let of_sexpable = List.hd
+              end)
 
-      let equal a b = Int.( = ) 0 ([%compare: t] a b)
+          include
+            Binable.Of_binable1.V1 [@alert "-legacy"]
+              (List)
+              (struct
+                type 'a t = 'a option
 
-      let tests =
-        [ First 1, "(Left 1)", "\000\001"
-        ; First 0, "(Left 0)", "\000\000"
-        ; Second "", "(Right \"\")", "\001\000"
-        ; Second "second", "(Right second)", "\001\006second"
-        ]
-        @
-        if Sys.word_size_in_bits = 64
-        then
-          [ ( First Int.min_value
-            , "(Left -4611686018427387904)"
-            , "\000\252\000\000\000\000\000\000\000\192" )
+                let to_binable = Option.to_list
+                let of_binable = List.hd
+              end)
+        end
+
+        type t = int T.t [@@deriving bin_io, compare, sexp]
+
+        let equal a b = Int.( = ) 0 ([%compare: t] a b)
+
+        let tests =
+          [ None, "()", "\000"
+          ; Some 1, "(1)", "\001\001"
+          ; Some 1_000, "(1000)", "\001\254\232\003"
+          ; Some ~-1, "(-1)", "\001\255\255"
           ]
-        else []
-      ;;
-    end)
+        ;;
+      end)
+
+    module _ = Stable_unit_test.Make (struct
+        module T = struct
+          type ('a, 'b) t = ('a, 'b) Either.Stable.V1.t [@@deriving compare]
+
+          module Format = struct
+            type ('a, 'b) t =
+              | Left of 'a
+              | Right of 'b
+            [@@deriving bin_io, sexp]
+
+            let of_t = function
+              | First x -> Left x
+              | Second x -> Right x
+            ;;
+
+            let to_t = function
+              | Left x -> First x
+              | Right x -> Second x
+            ;;
+          end
+
+          include
+            Sexpable.Of_sexpable2.V1
+              (Format)
+              (struct
+                type nonrec ('a, 'b) t = ('a, 'b) t
+
+                let to_sexpable = Format.of_t
+                let of_sexpable = Format.to_t
+              end)
+
+          include
+            Binable.Of_binable2.V1 [@alert "-legacy"]
+              (Format)
+              (struct
+                type nonrec ('a, 'b) t = ('a, 'b) t
+
+                let to_binable = Format.of_t
+                let of_binable = Format.to_t
+              end)
+        end
+
+        type t = (int, string) T.t [@@deriving bin_io, compare, sexp]
+
+        let equal a b = Int.( = ) 0 ([%compare: t] a b)
+
+        let tests =
+          [ First 1, "(Left 1)", "\000\001"
+          ; First 0, "(Left 0)", "\000\000"
+          ; Second "", "(Right \"\")", "\001\000"
+          ; Second "second", "(Right second)", "\001\006second"
+          ]
+          @
+          if Sys.word_size_in_bits = 64
+          then
+            [ ( First Int.min_value
+              , "(Left -4611686018427387904)"
+              , "\000\252\000\000\000\000\000\000\000\192" )
+            ]
+          else []
+        ;;
+      end)
 
     let%test_module "Of_stringable" =
       (module struct
@@ -164,14 +164,14 @@ let%test_module _ =
         end
 
         include Stable_unit_test.Make (struct
-          include M
+            include M
 
-          let equal = Poly.( = )
-          let tests = int_tests
-        end)
+            let equal = Poly.( = )
+            let tests = int_tests
+          end)
 
         let%expect_test "validate sexp grammar" =
-          require_ok [%here] (Sexp_grammar_validation.validate_grammar (module M));
+          require_ok (Sexp_grammar_validation.validate_grammar (module M));
           [%expect {| String |}]
         ;;
       end)

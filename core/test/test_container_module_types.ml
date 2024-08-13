@@ -151,8 +151,8 @@ module For_indexed_container = struct
 
     include
       Generic_permissions
-        with type 'a elt := 'a elt
-         and type ('a, 'b, 'c, 'd) t := ('a, 'b, 'c, 'd) t
+      with type 'a elt := 'a elt
+       and type ('a, 'b, 'c, 'd) t := ('a, 'b, 'c, 'd) t
 
     val init : int -> f:(int -> 'a elt) -> ('a, 'p1, 'p2, [< _ perms ]) t
 
@@ -189,7 +189,7 @@ module _ : module type of Container = struct
 
       include
         Generic_permissions
-          with type ('a, 'phantom1, 'phantom2, _) t := ('a, 'phantom1, 'phantom2) t
+        with type ('a, 'phantom1, 'phantom2, _) t := ('a, 'phantom1, 'phantom2) t
     end
   end
 
@@ -206,9 +206,9 @@ module _ : module type of Container = struct
 
       include
         Generic_with_creators_permissions
-          with type ('a, 'phantom1, 'phantom2, _) t := ('a, 'phantom1, 'phantom2) t
-           and type ('a, 'phantom1, 'phantom2, _) concat :=
-            ('a, 'phantom1, 'phantom2) concat
+        with type ('a, 'phantom1, 'phantom2, _) t := ('a, 'phantom1, 'phantom2) t
+         and type ('a, 'phantom1, 'phantom2, _) concat :=
+          ('a, 'phantom1, 'phantom2) concat
     end
   end
 
@@ -258,9 +258,9 @@ module _ : module type of Container = struct
 
       include
         Generic_with_creators_permissions
-          with type 'a elt := 'a
-           and type ('a, _, _, 'p) t := ('a, 'p) t
-           and type ('a, _, _, 'p) concat := ('a, 'p) t
+        with type 'a elt := 'a
+         and type ('a, _, _, 'p) t := ('a, 'p) t
+         and type ('a, _, _, 'p) concat := ('a, 'p) t
     end
   end
 
@@ -279,7 +279,7 @@ module _ : module type of Indexed_container = struct
 
       include
         Generic_permissions
-          with type ('a, 'phantom1, 'phantom2, _) t := ('a, 'phantom1, 'phantom2) t
+        with type ('a, 'phantom1, 'phantom2, _) t := ('a, 'phantom1, 'phantom2) t
     end
   end
 
@@ -296,9 +296,9 @@ module _ : module type of Indexed_container = struct
 
       include
         Generic_with_creators_permissions
-          with type ('a, 'phantom1, 'phantom2, _) t := ('a, 'phantom1, 'phantom2) t
-           and type ('a, 'phantom1, 'phantom2, _) concat :=
-            ('a, 'phantom1, 'phantom2) concat
+        with type ('a, 'phantom1, 'phantom2, _) t := ('a, 'phantom1, 'phantom2) t
+         and type ('a, 'phantom1, 'phantom2, _) concat :=
+          ('a, 'phantom1, 'phantom2) concat
     end
   end
 
@@ -315,8 +315,8 @@ module _ : module type of Indexed_container = struct
 
       include
         Generic_permissions
-          with type 'a elt := 'a
-           and type ('a, _, _, 'perms) t := ('a, 'perms) t
+        with type 'a elt := 'a
+         and type ('a, _, _, 'perms) t := ('a, 'perms) t
     end
   end
 
@@ -334,9 +334,9 @@ module _ : module type of Indexed_container = struct
 
       include
         Generic_with_creators_permissions
-          with type 'a elt := 'a
-           and type ('a, _, _, 'p) t := ('a, 'p) t
-           and type ('a, _, _, 'p) concat := ('a, 'p) t
+        with type 'a elt := 'a
+         and type ('a, _, _, 'p) t := ('a, 'p) t
+         and type ('a, _, _, 'p) concat := ('a, 'p) t
     end
   end
 

@@ -6,25 +6,26 @@ module Binable = Binable0
    exceptions. *)
 module Types = struct
   module Nobody = struct
-    type t [@@deriving bin_io, compare, equal, hash, sexp]
+    type t [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
 
     let name = "Nobody"
   end
 
   module Me = struct
-    type t [@@deriving bin_io, compare, equal, hash, sexp]
+    type t [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
 
     let name = "Me"
   end
 
   module Read = struct
-    type t = [ `Read ] [@@deriving bin_io, compare, equal, hash, sexp]
+    type t = [ `Read ] [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
 
     let name = "Read"
   end
 
   module Write = struct
-    type t = [ `Who_can_write of Me.t ] [@@deriving bin_io, compare, equal, hash, sexp]
+    type t = [ `Who_can_write of Me.t ]
+    [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
 
     let name = "Write"
   end
@@ -34,7 +35,7 @@ module Types = struct
       [ Read.t
       | `Who_can_write of Nobody.t
       ]
-    [@@deriving bin_io, compare, equal, hash, sexp]
+    [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
 
     let name = "Immutable"
   end
@@ -44,7 +45,7 @@ module Types = struct
       [ Read.t
       | Write.t
       ]
-    [@@deriving bin_io, compare, equal, hash, sexp]
+    [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
 
     let name = "Read_write"
   end
@@ -54,7 +55,7 @@ module Types = struct
       [ Read.t
       | `Who_can_write of 'a
       ]
-    [@@deriving bin_io, compare, equal, hash, sexp]
+    [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
 
     let name = "Upper_bound"
   end
@@ -71,8 +72,8 @@ end
 
 (* Override all bin_io, sexp, compare functions to raise exceptions *)
 module Only_used_as_phantom_type1 (Name : sig
-  val name : string
-end) : Sexpable_binable_comparable = struct
+    val name : string
+  end) : Sexpable_binable_comparable = struct
   type 'a t = 'a
 
   let sexp_of_t _ _ = failwithf "Unexpectedly called [%s.sexp_of_t]" Name.name ()
@@ -103,16 +104,17 @@ end) : Sexpable_binable_comparable = struct
 end
 
 module Only_used_as_phantom_type0 (T : sig
-  type t [@@deriving bin_io, compare, equal, hash, sexp]
+    type t [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
 
-  val name : string
-end) : sig
+    val name : string
+  end) : sig
   type t = T.t
-  [@@deriving bin_io, compare, equal, globalize, hash, sexp_poly, stable_witness]
+  [@@deriving
+    bin_io, compare, equal, globalize, hash, sexp_poly, sexp_grammar, stable_witness]
 end = struct
   module M = Only_used_as_phantom_type1 (T)
 
-  type t = T.t M.t [@@deriving bin_io, equal, compare, hash, sexp]
+  type t = T.t M.t [@@deriving bin_io, equal, compare, hash, sexp, sexp_grammar]
 
   let __t_of_sexp__ = t_of_sexp
   let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
@@ -128,14 +130,17 @@ module Stable = struct
     module Read_write = Only_used_as_phantom_type0 (Types.Read_write)
     module Immutable = Only_used_as_phantom_type0 (Types.Immutable)
 
-    type nobody = Nobody.t [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
-    type me = Me.t [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
+    type nobody = Nobody.t
+    [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar, stable_witness]
+
+    type me = Me.t
+    [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar, stable_witness]
 
     module Upper_bound = struct
       module M = Only_used_as_phantom_type1 (Types.Upper_bound)
 
       type 'a t = 'a Types.Upper_bound.t M.t
-      [@@deriving bin_io, compare, equal, hash, sexp]
+      [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
 
       let stable_witness _ = Stable_witness.assert_stable
       let __t_of_sexp__ = t_of_sexp
@@ -148,19 +153,23 @@ module Stable = struct
 
   module Export = struct
     type read = V1.Read.t
-    [@@deriving bin_io, compare, equal, globalize, hash, sexp, stable_witness]
+    [@@deriving
+      bin_io, compare, equal, globalize, hash, sexp, sexp_grammar, stable_witness]
 
     type write = V1.Write.t
-    [@@deriving compare, equal, hash, globalize, sexp, stable_witness]
+    [@@deriving compare, equal, hash, globalize, sexp, sexp_grammar, stable_witness]
 
     type immutable = V1.Immutable.t
-    [@@deriving bin_io, compare, equal, globalize, hash, sexp, stable_witness]
+    [@@deriving
+      bin_io, compare, equal, globalize, hash, sexp, sexp_grammar, stable_witness]
 
     type read_write = V1.Read_write.t
-    [@@deriving bin_io, compare, equal, globalize, hash, sexp, stable_witness]
+    [@@deriving
+      bin_io, compare, equal, globalize, hash, sexp, sexp_grammar, stable_witness]
 
     type 'a perms = 'a V1.Upper_bound.t
-    [@@deriving bin_io, compare, equal, globalize, hash, sexp, stable_witness]
+    [@@deriving
+      bin_io, compare, equal, globalize, hash, sexp, sexp_grammar, stable_witness]
   end
 end
 

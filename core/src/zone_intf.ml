@@ -55,11 +55,31 @@ module type S = sig
       use of the local timezone. *)
   val likely_machine_zones : string list ref
 
+  module Time_in_seconds : Time_in_seconds
+
   (** [of_utc_offset offset] returns a timezone with a static UTC offset (given in
       hours). *)
   val of_utc_offset : hours:int -> t
 
+  (** Like [of_utc_offset], but overriding the default name. These zones can only be
+      reliably transferred over sexp or bin-io using [Stable.Full_data]; see below. *)
   val of_utc_offset_explicit_name : name:string -> hours:int -> t
+
+  (** Returns a timezone with a static UTC offset in units of seconds. Rounds input to the
+      next lower unit of seconds if necessary. These zones can only be reliably
+      transferred over sexp or bin-io using [Stable.Full_data]; see below. *)
+  val of_utc_offset_in_seconds_round_down : ?name:string -> Time_in_seconds.Span.t -> t
+
+  (** Returns a timezone with a fixed offset relative to the given [t] in units of
+      seconds. This time zone doesn't represent any real place, but may be convenient for
+      testing or for other non-real-time purposes. Rounds [span] to the next lower unit of
+      seconds if necessary. These zones can only be reliably transferred over sexp or
+      bin-io using [Stable.Full_data]; see below. *)
+  val add_offset_in_seconds_round_down
+    :  t
+    -> name:string
+    -> span:Time_in_seconds.Span.t
+    -> t
 
   (** [utc] the UTC time zone.  Included for convenience *)
   val utc : t
@@ -71,8 +91,6 @@ module type S = sig
 
   (** [digest t] return the MD5 digest of the file the t was created from (if any) *)
   val digest : t -> Md5.t option
-
-  module Time_in_seconds : Time_in_seconds
 
   (** For performance testing only; [reset_transition_cache t] resets an internal cache in
       [t] used to speed up repeated lookups of the same clock shift transition. *)
@@ -122,6 +140,11 @@ end
 module type S_stable = sig
   type t
 
+  (** Transfers the full contents of a time zone including all DST transitions, while
+      other protocols such as [Timezone.Stable.V1] serialize only the name. This protocol
+      is required when talking to platforms that do not have access to a time zone
+      database, or for time zones that do not come from either [Timezone.find] or
+      [of_utc_offset]. *)
   module Full_data : sig
     module V1 :
       Stable_module_types.With_stable_witness.S0_without_comparator with type t = t

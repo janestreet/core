@@ -12,8 +12,7 @@ let%expect_test "concat" =
     ; "a/.", "./", "a/"
     ; "a///././/./.", ".///././/././/b", "a/b"
     ]
-    ~f:(fun (p1, p2, expected) ->
-      require_equal [%here] (module String) (p1 ^/ p2) expected);
+    ~f:(fun (p1, p2, expected) -> require_equal (module String) (p1 ^/ p2) expected);
   [%expect {| |}]
 ;;
 
@@ -72,7 +71,7 @@ let%expect_test "V1" =
     ; "././."
     ]
   in
-  print_and_check_stable_type [%here] (module Stable.V1) examples;
+  print_and_check_stable_type (module Stable.V1) examples;
   [%expect
     {|
     (bin_shape_digest d9a8da25d5656b016fb4dbdc2e4197fb)
@@ -133,13 +132,13 @@ let%expect_test "of_absolute_exn" =
   assert (relative_to "/a/d/e" = "../../b/c");
   [%expect {| |}];
   (* raises if either argument is a relative path *)
-  require_does_raise [%here] (fun () -> of_absolute_exn "/a/b/c" ~relative_to:"./d/e/f");
+  require_does_raise (fun () -> of_absolute_exn "/a/b/c" ~relative_to:"./d/e/f");
   [%expect
     {|
     ("Filename.of_absolute_exn: [~relative_to] must be an absolute path"
      (relative_to ./d/e/f))
     |}];
-  require_does_raise [%here] (fun () -> of_absolute_exn "./a/b/c" ~relative_to:"/d/e/f");
+  require_does_raise (fun () -> of_absolute_exn "./a/b/c" ~relative_to:"/d/e/f");
   [%expect
     {|
     ("Filename.of_absolute_exn: first argument must be an absolute path"

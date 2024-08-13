@@ -6,32 +6,34 @@ module With_first_class_module = Set_intf.With_first_class_module
 module Named = Set.Named
 open Expect_test_helpers_core
 
-module Unit_tests (Elt : sig
-  type 'a t [@@deriving sexp, hash]
+module Unit_tests
+    (Elt : sig
+       type 'a t [@@deriving sexp, hash]
 
-  val of_int : int -> int t
-  val to_int : int t -> int
-end) (Set : sig
-  type ('a, 'b) t_
-  type ('a, 'b) set
-  type ('a, 'b) tree
-  type ('a, 'b, 'c) create_options
-  type ('a, 'b, 'c) access_options
+       val of_int : int -> int t
+       val to_int : int t -> int
+     end)
+    (Set : sig
+       type ('a, 'b) t_
+       type ('a, 'b) set
+       type ('a, 'b) tree
+       type ('a, 'b, 'c) create_options
+       type ('a, 'b, 'c) access_options
 
-  include
-    Set_intf.Creators_and_accessors_generic
-      with type ('a, 'b) t := ('a, 'b) t_
-      with type ('a, 'b) set := ('a, 'b) set
-      with type ('a, 'b) tree := ('a, 'b) tree
-      with type 'a elt := 'a Elt.t
-      with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) create_options
-      with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) access_options
+       include
+         Set_intf.Creators_and_accessors_generic
+         with type ('a, 'b) t := ('a, 'b) t_
+         with type ('a, 'b) set := ('a, 'b) set
+         with type ('a, 'b) tree := ('a, 'b) tree
+         with type 'a elt := 'a Elt.t
+         with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) create_options
+         with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) access_options
 
-  val simplify_creator : (int, Int.comparator_witness, 'c) create_options -> 'c
-  val simplify_accessor : (int, Int.comparator_witness, 'c) access_options -> 'c
-  val kind : [ `Set | `Tree ]
-  val is_poly : bool
-end) : Set_intf.Creators_and_accessors_generic = struct
+       val simplify_creator : (int, Int.comparator_witness, 'c) create_options -> 'c
+       val simplify_accessor : (int, Int.comparator_witness, 'c) access_options -> 'c
+       val kind : [ `Set | `Tree ]
+       val is_poly : bool
+     end) : Set_intf.Creators_and_accessors_generic = struct
   module Set = struct
     include Set
 
@@ -179,11 +181,11 @@ end) : Set_intf.Creators_and_accessors_generic = struct
       (Quickcheck.Generator.tuple2 gen_set gen_set)
       ~sexp_of:[%sexp_of: Set.t * Set.t]
       ~f:(fun (s1, s2) ->
-      [%test_result: Set.t]
-        (Set.inter s1 s2)
-        ~expect:
-          (Set.fold s1 ~init:(Set.empty ()) ~f:(fun inter elt ->
-             if Set.mem s2 elt then Set.add inter elt else inter)))
+        [%test_result: Set.t]
+          (Set.inter s1 s2)
+          ~expect:
+            (Set.fold s1 ~init:(Set.empty ()) ~f:(fun inter elt ->
+               if Set.mem s2 elt then Set.add inter elt else inter)))
   ;;
 
   let is_subset _ ~of_:_ = assert false
@@ -198,9 +200,9 @@ end) : Set_intf.Creators_and_accessors_generic = struct
       (Quickcheck.Generator.tuple2 gen_set gen_set)
       ~sexp_of:[%sexp_of: Set.t * Set.t]
       ~f:(fun (superset, subset) ->
-      [%test_result: bool]
-        (Set.is_subset subset ~of_:superset)
-        ~expect:(Set.for_all subset ~f:(Set.mem superset)))
+        [%test_result: bool]
+          (Set.is_subset subset ~of_:superset)
+          ~expect:(Set.for_all subset ~f:(Set.mem superset)))
   ;;
 
   let are_disjoint _ _ = assert false
@@ -210,9 +212,9 @@ end) : Set_intf.Creators_and_accessors_generic = struct
       (Quickcheck.Generator.tuple2 gen_set gen_set)
       ~sexp_of:[%sexp_of: Set.t * Set.t]
       ~f:(fun (s1, s2) ->
-      [%test_result: bool]
-        (Set.are_disjoint s1 s2)
-        ~expect:(Set.is_empty (Set.inter s1 s2)))
+        [%test_result: bool]
+          (Set.are_disjoint s1 s2)
+          ~expect:(Set.is_empty (Set.inter s1 s2)))
   ;;
 
   module Named = struct
@@ -489,38 +491,38 @@ end) : Set_intf.Creators_and_accessors_generic = struct
         Quickcheck.test
           Merge_to_sequence_args.quickcheck_generator
           ~f:(fun { order; greater_or_equal_to; less_or_equal_to; x; y } ->
-          let open Set_intf.Merge_to_sequence_element in
-          let value = function
-            | Left x | Right x | Both (x, _) -> Elt.to_int x
-          in
-          let expect =
-            List.concat
-              [ List.map ~f:(fun x -> Both (x, x)) (Set.to_list (Set.inter x y))
-              ; List.map ~f:(fun x -> Left x) (Set.to_list (Set.diff x y))
-              ; List.map ~f:(fun x -> Right x) (Set.to_list (Set.diff y x))
-              ]
-          in
-          let expect =
-            Option.fold greater_or_equal_to ~init:expect ~f:(fun elts min ->
-              let min = Elt.to_int min in
-              List.filter elts ~f:(fun x -> Int.( >= ) (value x) min))
-          in
-          let expect =
-            Option.fold less_or_equal_to ~init:expect ~f:(fun elts max ->
-              let max = Elt.to_int max in
-              List.filter elts ~f:(fun x -> Int.( <= ) (value x) max))
-          in
-          let expect =
-            match order with
-            | None | Some `Increasing ->
-              List.sort expect ~compare:(fun a b -> Int.compare (value a) (value b))
-            | Some `Decreasing ->
-              List.sort expect ~compare:(fun a b -> Int.compare (value b) (value a))
-          in
-          [%test_result: (Elt.t, Elt.t) Merge_to_sequence_element.t list]
-            (Sequence.to_list
-               (Set.merge_to_sequence ?order ?greater_or_equal_to ?less_or_equal_to x y))
-            ~expect)
+            let open Set_intf.Merge_to_sequence_element in
+            let value = function
+              | Left x | Right x | Both (x, _) -> Elt.to_int x
+            in
+            let expect =
+              List.concat
+                [ List.map ~f:(fun x -> Both (x, x)) (Set.to_list (Set.inter x y))
+                ; List.map ~f:(fun x -> Left x) (Set.to_list (Set.diff x y))
+                ; List.map ~f:(fun x -> Right x) (Set.to_list (Set.diff y x))
+                ]
+            in
+            let expect =
+              Option.fold greater_or_equal_to ~init:expect ~f:(fun elts min ->
+                let min = Elt.to_int min in
+                List.filter elts ~f:(fun x -> Int.( >= ) (value x) min))
+            in
+            let expect =
+              Option.fold less_or_equal_to ~init:expect ~f:(fun elts max ->
+                let max = Elt.to_int max in
+                List.filter elts ~f:(fun x -> Int.( <= ) (value x) max))
+            in
+            let expect =
+              match order with
+              | None | Some `Increasing ->
+                List.sort expect ~compare:(fun a b -> Int.compare (value a) (value b))
+              | Some `Decreasing ->
+                List.sort expect ~compare:(fun a b -> Int.compare (value b) (value a))
+            in
+            [%test_result: (Elt.t, Elt.t) Merge_to_sequence_element.t list]
+              (Sequence.to_list
+                 (Set.merge_to_sequence ?order ?greater_or_equal_to ?less_or_equal_to x y))
+              ~expect)
       ;;
     end)
   ;;
@@ -643,9 +645,9 @@ end) : Set_intf.Creators_and_accessors_generic = struct
       (Quickcheck.Generator.tuple2 gen_set gen_set)
       ~sexp_of:[%sexp_of: Set.t_ * Set.t_]
       ~f:(fun (s1, s2) ->
-      let expect = symmetric_diff_spec s1 s2 in
-      let actual = symmetric_diff_set s1 s2 in
-      assert (Set.equal actual expect))
+        let expect = symmetric_diff_spec s1 s2 in
+        let actual = symmetric_diff_set s1 s2 in
+        assert (Set.equal actual expect))
   ;;
 
   let%test _ =
@@ -915,16 +917,10 @@ end) : Set_intf.Creators_and_accessors_generic = struct
 
   let%expect_test "compare and compare_direct" =
     let set_of_list ints = Set.of_list (List.map ints ~f:Elt.of_int) in
-    require_compare_equal [%here] (module Set) (Set.empty ()) (Set.empty ());
-    require [%here] (Set.compare (Set.empty ()) (set_of_list [ 0 ]) <> 0);
-    require_compare_equal
-      [%here]
-      (module Set)
-      (set_of_list [ 1; 2; 3 ])
-      (set_of_list [ 3; 2; 1 ]);
-    require
-      [%here]
-      (Set.compare (set_of_list [ 0; 1; 2; 3 ]) (set_of_list [ 1; 1; 2; 3 ]) <> 0)
+    require_compare_equal (module Set) (Set.empty ()) (Set.empty ());
+    require (Set.compare (Set.empty ()) (set_of_list [ 0 ]) <> 0);
+    require_compare_equal (module Set) (set_of_list [ 1; 2; 3 ]) (set_of_list [ 3; 2; 1 ]);
+    require (Set.compare (set_of_list [ 0; 1; 2; 3 ]) (set_of_list [ 1; 1; 2; 3 ]) <> 0)
   ;;
 
   let to_tree _ = assert false
@@ -1149,12 +1145,11 @@ let%test_module "Int.Set.Tree" =
 let%expect_test "t_of_sexp raises on duplicate elements" =
   let no_dup_sexp = Sexp.of_string "(a b c d)" in
   require_equal
-    [%here]
     (module Sexp)
     no_dup_sexp
     ([%sexp_of: String.Set.t] ([%of_sexp: String.Set.t] no_dup_sexp));
   let dup_sexp = Sexp.of_string "(a b a d)" in
-  require_does_raise [%here] (fun () -> [%of_sexp: String.Set.t] dup_sexp);
+  require_does_raise (fun () -> [%of_sexp: String.Set.t] dup_sexp);
   [%expect
     {| (Of_sexp_error "Set.t_of_sexp: duplicate element in set" (invalid_sexp a)) |}]
 ;;
@@ -1165,12 +1160,11 @@ let%expect_test "bin_read_t raises on duplicate elements" =
   for n = 0 to max_n do
     let s1 = Set.Poly.of_array (Array.init n ~f:succ) in
     let pos = Set.Poly.bin_write_t Int.bin_write_t bstr ~pos:0 s1 in
-    require_equal [%here] (module Int) pos (n + 1);
+    require_equal (module Int) pos (n + 1);
     let pos_ref = ref 0 in
     let s2 = Set.Poly.bin_read_t Int.bin_read_t bstr ~pos_ref in
-    require_equal [%here] (module Int) !pos_ref (n + 1);
+    require_equal (module Int) !pos_ref (n + 1);
     require_equal
-      [%here]
       (module struct
         type t = int Set.Poly.t [@@deriving sexp_of]
 
@@ -1183,17 +1177,15 @@ let%expect_test "bin_read_t raises on duplicate elements" =
       bstr.{1} <- 'x';
       bstr.{2} <- 'x';
       pos_ref := 0;
-      require_does_raise [%here] (fun () ->
-        Set.Poly.bin_read_t Int.bin_read_t bstr ~pos_ref);
+      require_does_raise (fun () -> Set.Poly.bin_read_t Int.bin_read_t bstr ~pos_ref);
       [%expect {| (Failure "Set.bin_read_t: duplicate element in set") |}];
-      require_equal [%here] (module Int) !pos_ref (n + 1))
+      require_equal (module Int) !pos_ref (n + 1))
   done
 ;;
 
 let%expect_test _ =
   let open Expect_test_helpers_core in
   print_and_check_stable_type
-    [%here]
     (module struct
       type t = Set.M(Int).t [@@deriving bin_io, compare, sexp]
     end)

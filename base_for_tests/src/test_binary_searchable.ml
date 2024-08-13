@@ -34,7 +34,8 @@ module Test_gen (M : Indexable_gen_and_for_test) = struct
       let b = For_test.big
 
       let binary_search ?pos ?len ~compare t how v =
-        binary_search ?pos ?len ~compare (For_test.of_array t) how v
+        let r = binary_search ?pos ?len ~compare (For_test.of_array t) how v in
+        [%globalize: int option] r [@nontail]
       ;;
 
       let ( = ) = Poly.equal
@@ -271,14 +272,17 @@ module Test_gen (M : Indexable_gen_and_for_test) = struct
                     failwiths "binary_search bug"
                     (exn, `length length, `search_key search_key, `pos pos, `len len)
                     <:sexp_of< exn * [ `length of int ] * [ `search_key of int ]
-                 * [ `pos of int ] * [ `len of int ] >>*)
+                   * [ `pos of int ] * [ `len of int ] >>*)
               done
             done
           done
         done
       ;;
 
-      let binary_search_segmented a = binary_search_segmented (For_test.of_array a)
+      let binary_search_segmented a ~segment_of which_target =
+        let r = binary_search_segmented (For_test.of_array a) ~segment_of which_target in
+        [%globalize: int option] r [@nontail]
+      ;;
 
       (*test for binary_search_segmented*)
       let%test _ =
@@ -306,41 +310,41 @@ module Test_gen (M : Indexable_gen_and_for_test) = struct
 end
 
 module Test (M : Binary_searchable_and_for_test) = Test_gen (struct
-  type 'a t = M.t
-  type 'a elt = M.elt
+    type 'a t = M.t
+    type 'a elt = M.elt
 
-  let binary_search = M.binary_search
-  let binary_search_segmented = M.binary_search_segmented
+    let binary_search = M.binary_search
+    let binary_search_segmented = M.binary_search_segmented
 
-  module For_test = M.For_test
-end)
+    module For_test = M.For_test
+  end)
 
 module Test1 (M : Binary_searchable1_and_for_test) = Test_gen (struct
-  type 'a t = 'a M.t
-  type 'a elt = 'a
+    type 'a t = 'a M.t
+    type 'a elt = 'a
 
-  let binary_search = M.binary_search
-  let binary_search_segmented = M.binary_search_segmented
+    let binary_search = M.binary_search
+    let binary_search_segmented = M.binary_search_segmented
 
-  module For_test = struct
-    let of_array = M.For_test.of_array
-    let compare = Bool.compare
-    let small = false
-    let big = true
-  end
-end)
+    module For_test = struct
+      let of_array = M.For_test.of_array
+      let compare = Bool.compare
+      let small = false
+      let big = true
+    end
+  end)
 
 module Make_and_test (M : Indexable_and_for_test) = struct
   module B = Binary_searchable.Make (M)
   include B
 
   include Test (struct
-    type t = M.t
-    type elt = M.elt
+      type t = M.t
+      type elt = M.elt
 
-    include B
-    module For_test = M.For_test
-  end)
+      include B
+      module For_test = M.For_test
+    end)
 end
 
 module Make1_and_test (M : Indexable1_and_for_test) = struct
@@ -348,9 +352,9 @@ module Make1_and_test (M : Indexable1_and_for_test) = struct
   include B
 
   include Test1 (struct
-    type 'a t = 'a M.t
+      type 'a t = 'a M.t
 
-    include B
-    module For_test = M.For_test
-  end)
+      include B
+      module For_test = M.For_test
+    end)
 end

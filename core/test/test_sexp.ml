@@ -26,7 +26,7 @@ module _ = struct
   let t' = il_of_text (text t)
 
   let%expect_test _ =
-    require_equal [%here] (module IL) (value t') [ 3; 4 ];
+    require_equal (module IL) (value t') [ 3; 4 ];
     [%expect {| |}]
   ;;
 
@@ -36,17 +36,12 @@ module _ = struct
   ;;
 
   let%expect_test _ =
-    require_equal
-      [%here]
-      (module IL)
-      (value (t_of_sexp il_of_sexp (Atom "(3 4)")))
-      [ 3; 4 ];
+    require_equal (module IL) (value (t_of_sexp il_of_sexp (Atom "(3 4)"))) [ 3; 4 ];
     [%expect {| |}]
   ;;
 
   let%expect_test _ =
     require_equal
-      [%here]
       (module IL)
       [ 8; 9 ]
       (value (il_of_text ";this is a comment\n (8; foo\n 9)   \n "));
@@ -54,14 +49,13 @@ module _ = struct
   ;;
 
   let%expect_test _ =
-    require_does_raise [%here] (fun () -> il_of_text "(1 2 bla)");
+    require_does_raise (fun () -> il_of_text "(1 2 bla)");
     [%expect
       {| (Of_sexp_error :1:5 "int_of_sexp: (Failure int_of_string)" (invalid_sexp bla)) |}]
   ;;
 
   let%expect_test _ =
-    require_does_raise [%here] (fun () ->
-      t_of_sexp il_of_sexp (Sexp.of_string "\"(1 2 bla)\""));
+    require_does_raise (fun () -> t_of_sexp il_of_sexp (Sexp.of_string "\"(1 2 bla)\""));
     [%expect
       {| (Of_sexp_error :1:5 "int_of_sexp: (Failure int_of_string)" (invalid_sexp bla)) |}]
   ;;

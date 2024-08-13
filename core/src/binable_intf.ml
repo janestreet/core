@@ -109,43 +109,43 @@ module type Binable0 = sig
       to be the same as that for some other isomorphic type. *)
 
   module Of_binable_with_uuid
-    (Binable : Minimal.S)
-    (M : Conv with type binable := Binable.t) : S with type t := M.t
+      (Binable : Minimal.S)
+      (M : Conv with type binable := Binable.t) : S with type t := M.t
 
   module Of_binable1_with_uuid
-    (Binable : Minimal.S1)
-    (M : Conv1 with type 'a binable := 'a Binable.t) : S1 with type 'a t := 'a M.t
+      (Binable : Minimal.S1)
+      (M : Conv1 with type 'a binable := 'a Binable.t) : S1 with type 'a t := 'a M.t
 
   module Of_binable2_with_uuid
-    (Binable : Minimal.S2)
-    (M : Conv2 with type ('a, 'b) binable := ('a, 'b) Binable.t) :
+      (Binable : Minimal.S2)
+      (M : Conv2 with type ('a, 'b) binable := ('a, 'b) Binable.t) :
     S2 with type ('a, 'b) t := ('a, 'b) M.t
 
   module Of_binable3_with_uuid
-    (Binable : Minimal.S3)
-    (M : Conv3 with type ('a, 'b, 'c) binable := ('a, 'b, 'c) Binable.t) :
+      (Binable : Minimal.S3)
+      (M : Conv3 with type ('a, 'b, 'c) binable := ('a, 'b, 'c) Binable.t) :
     S3 with type ('a, 'b, 'c) t := ('a, 'b, 'c) M.t
 
   module Of_binable_without_uuid
-    (Binable : Minimal.S)
-    (M : Conv_without_uuid with type binable := Binable.t) : S with type t := M.t
+      (Binable : Minimal.S)
+      (M : Conv_without_uuid with type binable := Binable.t) : S with type t := M.t
   [@@alert legacy "Use [Of_binable_with_uuid] if possible."]
 
   module Of_binable1_without_uuid
-    (Binable : Minimal.S1)
-    (M : Conv1_without_uuid with type 'a binable := 'a Binable.t) :
+      (Binable : Minimal.S1)
+      (M : Conv1_without_uuid with type 'a binable := 'a Binable.t) :
     S1 with type 'a t := 'a M.t
   [@@alert legacy "Use [Of_binable1_with_uuid] if possible."]
 
   module Of_binable2_without_uuid
-    (Binable : Minimal.S2)
-    (M : Conv2_without_uuid with type ('a, 'b) binable := ('a, 'b) Binable.t) :
+      (Binable : Minimal.S2)
+      (M : Conv2_without_uuid with type ('a, 'b) binable := ('a, 'b) Binable.t) :
     S2 with type ('a, 'b) t := ('a, 'b) M.t
   [@@alert legacy "Use [Of_binable2_with_uuid] if possible."]
 
   module Of_binable3_without_uuid
-    (Binable : Minimal.S3)
-    (M : Conv3_without_uuid with type ('a, 'b, 'c) binable := ('a, 'b, 'c) Binable.t) :
+      (Binable : Minimal.S3)
+      (M : Conv3_without_uuid with type ('a, 'b, 'c) binable := ('a, 'b, 'c) Binable.t) :
     S3 with type ('a, 'b, 'c) t := ('a, 'b, 'c) M.t
   [@@alert legacy "Use [Of_binable3_with_uuid] if possible."]
 

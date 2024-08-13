@@ -134,8 +134,8 @@ let%test_module "Int63_emul" = (module Make_tests (Base.Int63.Private.Emul))
 let%test_module "Int63_maybe_native" = (module Make_tests (Int63))
 
 module Make_tests_bin_io (B : sig
-  type t = Int63.t [@@deriving bin_io]
-end) : sig end = struct
+    type t = Int63.t [@@deriving bin_io]
+  end) : sig end = struct
   let test int63 str =
     let open Int63 in
     let s = B.bin_size_t int63 in

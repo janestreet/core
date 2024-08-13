@@ -23,12 +23,12 @@ module Stable = struct
   end
 
   module Make_utf (Utf : sig
-    type t [@@deriving sexp_grammar]
+      type t [@@deriving sexp_grammar]
 
-    include Base.Identifiable.S with type t := t
+      include Base.Identifiable.S with type t := t
 
-    val caller_identity : Bin_shape.Uuid.t
-  end) =
+      val caller_identity : Bin_shape.Uuid.t
+    end) =
   struct
     module V1 = struct
       module T = struct
@@ -57,44 +57,44 @@ module Stable = struct
   end
 
   module Utf8 = Make_utf (struct
-    include Utf8
+      include Utf8
 
-    let caller_identity =
-      Bin_prot.Shape.Uuid.of_string "5bc29e13-1c6f-4b6d-b431-3befb256ebda"
-    ;;
-  end)
+      let caller_identity =
+        Bin_prot.Shape.Uuid.of_string "5bc29e13-1c6f-4b6d-b431-3befb256ebda"
+      ;;
+    end)
 
   module Utf16le = Make_utf (struct
-    include Utf16le
+      include Utf16le
 
-    let caller_identity =
-      Bin_prot.Shape.Uuid.of_string "7a4f8cac-8fff-11ee-bd11-aaa233d0b6a7"
-    ;;
-  end)
+      let caller_identity =
+        Bin_prot.Shape.Uuid.of_string "7a4f8cac-8fff-11ee-bd11-aaa233d0b6a7"
+      ;;
+    end)
 
   module Utf16be = Make_utf (struct
-    include Utf16be
+      include Utf16be
 
-    let caller_identity =
-      Bin_prot.Shape.Uuid.of_string "7c3a50ce-8fff-11ee-94c6-aaa233d0b6a7"
-    ;;
-  end)
+      let caller_identity =
+        Bin_prot.Shape.Uuid.of_string "7c3a50ce-8fff-11ee-94c6-aaa233d0b6a7"
+      ;;
+    end)
 
   module Utf32le = Make_utf (struct
-    include Utf32le
+      include Utf32le
 
-    let caller_identity =
-      Bin_prot.Shape.Uuid.of_string "961d2214-9252-11ee-9f77-aaa233d0b6a7"
-    ;;
-  end)
+      let caller_identity =
+        Bin_prot.Shape.Uuid.of_string "961d2214-9252-11ee-9f77-aaa233d0b6a7"
+      ;;
+    end)
 
   module Utf32be = Make_utf (struct
-    include Utf32be
+      include Utf32be
 
-    let caller_identity =
-      Bin_prot.Shape.Uuid.of_string "9fcbae5c-9252-11ee-9f34-aaa233d0b6a7"
-    ;;
-  end)
+      let caller_identity =
+        Bin_prot.Shape.Uuid.of_string "9fcbae5c-9252-11ee-9f34-aaa233d0b6a7"
+      ;;
+    end)
 end
 
 module Caseless = struct
@@ -125,15 +125,15 @@ include
 include Comparable.Validate (Base.String)
 
 include Diffable.Atomic.Make (struct
-  type nonrec t = t [@@deriving sexp, bin_io, equal]
-end)
+    type nonrec t = t [@@deriving sexp, bin_io, equal]
+  end)
 
 include Hexdump.Of_indexable (struct
-  type t = string
+    type t = string
 
-  let length = length
-  let get = get
-end)
+    let length = length
+    let get = get
+  end)
 
 let quickcheck_generator = Base_quickcheck.Generator.string
 let quickcheck_observer = Base_quickcheck.Observer.string

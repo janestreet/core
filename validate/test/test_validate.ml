@@ -52,7 +52,8 @@ let%expect_test "Validate.all" =
        ; (fun _ -> fail "c")
        ]
        ());
-  [%expect {|
+  [%expect
+    {|
     ("" a)
     ("" b)
     ("" c)
@@ -73,7 +74,8 @@ let two_errors = of_list [ fail "foo"; fail "bar" ]
 
 let%expect_test _ =
   print (first_failure two_errors (fail "snoo"));
-  [%expect {|
+  [%expect
+    {|
     ("" foo)
     ("" bar)
     |}]
@@ -113,15 +115,15 @@ let%expect_test "typical use of Validate.field_direct_folder doesn't allocate on
     Fields.Direct.fold t ~init:[] ~x:validate_x |> Validate.of_list |> Validate.result
   in
   let t = { x = true } in
-  require_no_allocation [%here] (fun () -> ignore (validate t : unit Or_error.t))
+  require_no_allocation (fun () -> ignore (validate t : unit Or_error.t))
 ;;
 
 let%expect_test "Validate.all doesn't allocate on success" =
   let checks = List.init 5 ~f:(Fn.const Validate.pass_bool) in
-  require_no_allocation [%here] (fun () -> ignore (Validate.all checks true : Validate.t))
+  require_no_allocation (fun () -> ignore (Validate.all checks true : Validate.t))
 ;;
 
 let%expect_test "Validate.combine doesn't allocate on success" =
-  require_no_allocation [%here] (fun () ->
+  require_no_allocation (fun () ->
     ignore (Validate.combine Validate.pass Validate.pass : Validate.t))
 ;;

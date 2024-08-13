@@ -130,7 +130,11 @@ module type Univ_map = sig
   module Make1 (Key : Key) (Data : Data1) :
     S1 with type ('s, 'a) data = ('s, 'a) Data.t and module Key = Key
 
-  module Merge (Key : Key) (Input1_data : Data) (Input2_data : Data) (Output_data : Data) : sig
+  module Merge
+      (Key : Key)
+      (Input1_data : Data)
+      (Input2_data : Data)
+      (Output_data : Data) : sig
     type f =
       { f :
           'a.
@@ -151,10 +155,10 @@ module type Univ_map = sig
   end
 
   module Merge1
-    (Key : Key)
-    (Input1_data : Data1)
-    (Input2_data : Data1)
-    (Output_data : Data1) : sig
+      (Key : Key)
+      (Input1_data : Data1)
+      (Input2_data : Data1)
+      (Output_data : Data1) : sig
     type ('s1, 's2, 's3) f =
       { f :
           'a.

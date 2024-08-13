@@ -5,6 +5,21 @@ module T = struct
   let sexp_of_t t = t |> to_hex |> String.sexp_of_t
   let t_of_sexp s = s |> String.t_of_sexp |> of_hex_exn
   let t_sexp_grammar = Sexplib.Sexp_grammar.coerce String.t_sexp_grammar
+
+  include struct
+    open Base_quickcheck
+
+    let quickcheck_generator =
+      Generator.string_with_length_of
+        ~length:16
+        (Generator.union
+           [ Generator.char_uniform_inclusive Char.min_value Char.max_value ])
+      |> Generator.map ~f:of_binary_exn
+    ;;
+
+    let quickcheck_observer = Observer.unmap String.quickcheck_observer ~f:to_binary
+    let quickcheck_shrinker = Shrinker.atomic
+  end
 end
 
 let hash_fold_t accum t = String.hash_fold_t accum (T.to_binary t)
@@ -13,7 +28,7 @@ let hash t = String.hash (T.to_binary t)
 module As_binary_string = struct
   module Stable = struct
     module V1 = struct
-      type t = T.t [@@deriving compare, equal]
+      type t = T.t [@@deriving compare, equal, quickcheck]
 
       let hash_fold_t = hash_fold_t
       let hash = hash
@@ -24,13 +39,13 @@ module As_binary_string = struct
       let of_binable = T.of_binary_exn
 
       include Bin_prot.Utils.Make_binable_without_uuid [@alert "-legacy"] (struct
-        module Binable = String.Stable.V1
+          module Binable = String.Stable.V1
 
-        type t = Bin_prot.Md5.t
+          type t = Bin_prot.Md5.t
 
-        let to_binable = to_binable
-        let of_binable = of_binable
-      end)
+          let to_binable = to_binable
+          let of_binable = of_binable
+        end)
 
       let stable_witness : t Stable_witness.t =
         Stable_witness.of_serializable
@@ -48,7 +63,7 @@ end
 
 module Stable = struct
   module V1 = struct
-    type t = T.t [@@deriving compare, equal, sexp, sexp_grammar]
+    type t = T.t [@@deriving compare, equal, quickcheck, sexp, sexp_grammar]
 
     let hash_fold_t = hash_fold_t
     let hash = hash
@@ -56,13 +71,13 @@ module Stable = struct
     let of_binable = Fn.id
 
     include Bin_prot.Utils.Make_binable_without_uuid [@alert "-legacy"] (struct
-      module Binable = Bin_prot.Md5.Stable.V1
+        module Binable = Bin_prot.Md5.Stable.V1
 
-      type t = Bin_prot.Md5.t
+        type t = Bin_prot.Md5.t
 
-      let to_binable = to_binable
-      let of_binable = of_binable
-    end)
+        let to_binable = to_binable
+        let of_binable = of_binable
+      end)
 
     let stable_witness : t Stable_witness.t =
       Stable_witness.of_serializable

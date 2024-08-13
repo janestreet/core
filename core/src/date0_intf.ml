@@ -2,7 +2,7 @@ open! Import
 open Std_internal
 
 module type Date0 = sig
-  type t [@@immediate] [@@deriving bin_io ~localize, hash, sexp, sexp_grammar, typerep]
+  type t [@@deriving bin_io ~localize, hash, sexp, sexp_grammar, typerep] [@@immediate]
 
   include Hashable_binable with type t := t
 
@@ -147,15 +147,15 @@ module type Date0 = sig
 
       See the caveat on [is_weekend] about varying weekend/weekday cycles. *)
   val add_weekdays : t -> int -> t
-    [@@deprecated
-      "[since 2019-12] use [add_weekdays_rounding_backward] or \
-       [add_weekdays_rounding_forward] as appropriate"]
+  [@@deprecated
+    "[since 2019-12] use [add_weekdays_rounding_backward] or \
+     [add_weekdays_rounding_forward] as appropriate"]
 
   val add_weekdays_rounding_in_direction_of_step : t -> int -> t
-    [@@alert
-      legacy
-        "use [add_weekdays_rounding_backward] or [add_weekdays_rounding_forward] as \
-         appropriate"]
+  [@@alert
+    legacy
+      "use [add_weekdays_rounding_backward] or [add_weekdays_rounding_forward] as \
+       appropriate"]
 
   (** [add_business_days t ~is_holiday n] returns a business day even when
       [n=0]. [add_business_days ~is_holiday:(fun _ -> false) ...] is the same as
@@ -167,19 +167,19 @@ module type Date0 = sig
       See the caveat on [is_weekend] about varying weekend/weekday cycles.
   *)
   val add_business_days : t -> is_holiday:(t -> bool) -> int -> t
-    [@@deprecated
-      "[since 2019-12] use [add_business_days_rounding_backward] or \
-       [add_business_days_rounding_forward] as appropriate"]
+  [@@deprecated
+    "[since 2019-12] use [add_business_days_rounding_backward] or \
+     [add_business_days_rounding_forward] as appropriate"]
 
   val add_business_days_rounding_in_direction_of_step
     :  t
     -> is_holiday:(t -> bool)
     -> int
     -> t
-    [@@alert
-      legacy
-        "use [add_business_days_rounding_backward] or \
-         [add_business_days_rounding_forward] as appropriate"]
+  [@@alert
+    legacy
+      "use [add_business_days_rounding_backward] or [add_business_days_rounding_forward] \
+       as appropriate"]
 
   (** [add_days_skipping t ~skip n] adds [n] days to [t], ignoring any date satisfying
       [skip], starting at the first date at or after [t] that does not satisfy [skip].
@@ -240,22 +240,22 @@ module type Date0 = sig
       where dates are manipulated more often than they are constructed or deconstructed;
       most clients should use the ordinary [t]. *)
   module Days : sig
-    type date = t
-    type t [@@immediate]
+      type date = t
+      type t [@@immediate]
 
-    val of_date : date -> t
-    val to_date : t -> date
-    val diff : t -> t -> int
-    val add_days : t -> int -> t
+      val of_date : date -> t
+      val to_date : t -> date
+      val diff : t -> t -> int
+      val add_days : t -> int -> t
 
-    (** The starting date of the UNIX epoch: 1970-01-01 *)
-    val unix_epoch : t
-  end
-  with type date := t
+      (** The starting date of the UNIX epoch: 1970-01-01 *)
+      val unix_epoch : t
+    end
+    with type date := t
 
   module Option : sig
     type value := t
-    type t [@@immediate] [@@deriving bin_io ~localize, hash, sexp, sexp_grammar]
+    type t [@@deriving bin_io ~localize, hash, sexp, sexp_grammar] [@@immediate]
 
     include Immediate_option_intf.S with type value := value and type t := t
     include Comparable.S_plain with type t := t
@@ -264,7 +264,7 @@ module type Date0 = sig
 
   module Stable : sig
     module V1 : sig
-      type nonrec t = t [@@immediate] [@@deriving equal, hash, sexp_grammar]
+      type nonrec t = t [@@deriving equal, hash, sexp_grammar] [@@immediate]
 
       (** [to_int] and [of_int_exn] convert to/from the underlying integer
           representation. *)
@@ -274,8 +274,8 @@ module type Date0 = sig
 
       include
         Stable_comparable.With_stable_witness.V1
-          with type t := t
-          with type comparator_witness = comparator_witness
+        with type t := t
+        with type comparator_witness = comparator_witness
 
       include Hashable.Stable.V1.With_stable_witness.S with type key := t
       include Diffable.S_atomic with type t := t
@@ -284,8 +284,8 @@ module type Date0 = sig
     module Option : sig
       module V1 : sig
         type nonrec t = Option.t
-        [@@immediate]
         [@@deriving bin_io ~localize, compare, equal, sexp, sexp_grammar, stable_witness]
+        [@@immediate]
 
         (** [to_int] and [of_int_exn] convert to/from the underlying integer
             representation. *)

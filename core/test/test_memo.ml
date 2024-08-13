@@ -5,10 +5,7 @@ open! Memo
 let%expect_test "general" =
   let f x = x * x in
   let memo_f = Memo.general f in
-  quickcheck_m
-    [%here]
-    (module Int)
-    ~f:(fun x -> require_equal [%here] (module Int) (f x) (memo_f x))
+  quickcheck_m (module Int) ~f:(fun x -> require_equal (module Int) (f x) (memo_f x))
 ;;
 
 let%test_module "lru" =
@@ -70,7 +67,8 @@ let%test_module "comparable" =
     let%expect_test "Ensure no re computation" =
       let { Env.should_raise; f } = Env.create () in
       printf "%d" (f 5);
-      [%expect {|
+      [%expect
+        {|
         ("Computing value" (i 5))
         6
         |}];

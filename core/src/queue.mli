@@ -2,7 +2,7 @@
 
 open! Import
 
-type 'a t = 'a Base.Queue.t [@@deriving sexp_of, bin_io]
+type 'a t = 'a Base.Queue.t [@@deriving sexp_of, bin_io, quickcheck]
 
 (** {2 The interface from Base} *)
 

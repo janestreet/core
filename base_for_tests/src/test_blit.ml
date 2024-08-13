@@ -48,8 +48,8 @@ module type For_tests_gen = sig
 end
 
 module Test_gen
-  (For_tests : For_tests_gen)
-  (Tested : S_gen
+    (For_tests : For_tests_gen)
+    (Tested : S_gen
               with type 'a src := 'a For_tests.Src.t
               with type 'a dst := 'a For_tests.Dst.t) =
 struct
@@ -153,8 +153,8 @@ struct
 end
 
 module Test1
-  (Sequence : Sequence1 with type 'a elt := 'a poly)
-  (Tested : S1 with type 'a t := 'a Sequence.t) =
+    (Sequence : Sequence1 with type 'a elt := 'a poly)
+    (Tested : S1 with type 'a t := 'a Sequence.t) =
   Test_gen
     (struct
       module Elt = struct
@@ -177,9 +177,9 @@ module Test1
     (Tested)
 
 module Test1_generic
-  (Elt : Elt1)
-  (Sequence : Sequence1 with type 'a elt := 'a Elt.t)
-  (Tested : S1 with type 'a t := 'a Sequence.t) =
+    (Elt : Elt1)
+    (Sequence : Sequence1 with type 'a elt := 'a Elt.t)
+    (Tested : S1 with type 'a t := 'a Sequence.t) =
   Test_gen
     (struct
       module Elt = Elt
@@ -204,9 +204,9 @@ module Elt_to_elt1 (Elt : Elt) = struct
 end
 
 module Test
-  (Elt : Elt)
-  (Sequence : Sequence with type elt := Elt.t)
-  (Tested : S with type t := Sequence.t) =
+    (Elt : Elt)
+    (Sequence : Sequence with type elt := Elt.t)
+    (Tested : S with type t := Sequence.t) =
   Test_gen
     (struct
       module Elt = Elt_to_elt1 (Elt)
@@ -233,10 +233,10 @@ module Test
     (Tested)
 
 module Test_distinct
-  (Elt : Elt)
-  (Src : Sequence with type elt := Elt.t)
-  (Dst : Sequence with type elt := Elt.t)
-  (Tested : S_distinct with type src := Src.t with type dst := Dst.t) =
+    (Elt : Elt)
+    (Src : Sequence with type elt := Elt.t)
+    (Dst : Sequence with type elt := Elt.t)
+    (Tested : S_distinct with type src := Src.t with type dst := Dst.t) =
   Test_gen
     (struct
       module Elt = Elt_to_elt1 (Elt)
@@ -269,11 +269,12 @@ module Test_distinct
     (Tested)
 
 module Make_and_test
-  (Elt : Elt) (Sequence : sig
-    include Sequence with type elt := Elt.t
+    (Elt : Elt)
+    (Sequence : sig
+       include Sequence with type elt := Elt.t
 
-    val unsafe_blit : (t, t) blit
-  end) =
+       val unsafe_blit : (t, t) blit
+     end) =
 struct
   module B = Make (Sequence)
   include Test (Elt) (Sequence) (B)
@@ -281,12 +282,13 @@ struct
 end
 
 module Make_distinct_and_test
-  (Elt : Elt)
-  (Src : Sequence with type elt := Elt.t) (Dst : sig
-    include Sequence with type elt := Elt.t
+    (Elt : Elt)
+    (Src : Sequence with type elt := Elt.t)
+    (Dst : sig
+       include Sequence with type elt := Elt.t
 
-    val unsafe_blit : (Src.t, t) blit
-  end) =
+       val unsafe_blit : (Src.t, t) blit
+     end) =
 struct
   module B = Make_distinct (Src) (Dst)
   include Test_distinct (Elt) (Src) (Dst) (B)
@@ -294,9 +296,9 @@ struct
 end
 
 module Make1_and_test (Sequence : sig
-  include Blit.Sequence1
-  include Sequence1 with type 'a t := 'a t with type 'a elt := 'a poly
-end) =
+    include Blit.Sequence1
+    include Sequence1 with type 'a t := 'a t with type 'a elt := 'a poly
+  end) =
 struct
   module B = Make1 (Sequence)
   include Test1 (Sequence) (B)
@@ -304,10 +306,11 @@ struct
 end
 
 module Make1_generic_and_test
-  (Elt : Elt1) (Sequence : sig
-    include Blit.Sequence1
-    include Sequence1 with type 'a t := 'a t with type 'a elt := 'a Elt.t
-  end) =
+    (Elt : Elt1)
+    (Sequence : sig
+       include Blit.Sequence1
+       include Sequence1 with type 'a t := 'a t with type 'a elt := 'a Elt.t
+     end) =
 struct
   module B = Make1_generic (Sequence)
   include Test1_generic (Elt) (Sequence) (B)

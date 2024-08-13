@@ -83,13 +83,13 @@ let tests =
       ~name:"Linked_queue.enqueue + dequeue"
       ~args
       (fun num_elts ->
-      let t = Linked_queue.create () in
-      for _ = 1 to num_elts do
-        Linked_queue.enqueue t ()
-      done;
-      stage (fun () ->
-        Linked_queue.enqueue t ();
-        Linked_queue.dequeue_exn t))
+         let t = Linked_queue.create () in
+         for _ = 1 to num_elts do
+           Linked_queue.enqueue t ()
+         done;
+         stage (fun () ->
+           Linked_queue.enqueue t ();
+           Linked_queue.dequeue_exn t))
   ; Bench.Test.create_indexed ~name:"Deque.enqueue + dequeue" ~args (fun num_elts ->
       let t = Deque.create () in
       for _ = 1 to num_elts do

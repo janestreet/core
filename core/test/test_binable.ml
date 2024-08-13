@@ -30,8 +30,8 @@ let%test_unit "Of_sexpable" =
     type t = int
 
     include Of_sexpable_without_uuid [@alert "-legacy"] (struct
-      type t = int [@@deriving sexp]
-    end)
+        type t = int [@@deriving sexp]
+      end)
   end
   in
   let m = (module M : S with type t = M.t) in
@@ -48,7 +48,7 @@ let%expect_test "of_bigstring fails if the buffer is too long or too short" =
   [%expect {| test value |}];
   (* if the bigstring is too short, the [bin_read_t] function will raise: *)
   let shorter_bigstring = Bigstring.sub_shared ~len:10 good_bigstring in
-  require_does_raise [%here] (fun () -> of_bigstring (module String) shorter_bigstring);
+  require_does_raise (fun () -> of_bigstring (module String) shorter_bigstring);
   [%expect {| (Bin_prot__Common.Buffer_short) |}];
   (* if the bigstring is too long, the [bin_read_t] function will not consume all of it,
      and [of_bigstring] will raise. *)
@@ -60,7 +60,7 @@ let%expect_test "of_bigstring fails if the buffer is too long or too short" =
     ~dst:longer_bigstring
     ~dst_pos:0
     ~len:(Bigstring.length good_bigstring);
-  require_does_raise [%here] (fun () -> of_bigstring (module String) longer_bigstring);
+  require_does_raise (fun () -> of_bigstring (module String) longer_bigstring);
   [%expect
     {|
     ("bin_read_t did not consume the entire buffer"

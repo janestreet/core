@@ -2,12 +2,12 @@ open! Import
 
 include (
   Int :
-    sig
-      type t = int [@@deriving bin_io]
+  sig
+    type t = int [@@deriving bin_io]
 
-      include Comparable.S with type t := t
-      include Hashable.S with type t := t
-    end)
+    include Comparable.S with type t := t
+    include Hashable.S with type t := t
+  end)
 
 let of_caml_int t = t
 let to_caml_int t = t
@@ -19,7 +19,7 @@ type sys_behavior =
   | `Stop (** Stop the process *)
   | `Terminate (** Terminate the process *)
   ]
-[@@deriving sexp]
+[@@deriving sexp, sexp_grammar]
 
 let equal (t : t) t' = t = t'
 

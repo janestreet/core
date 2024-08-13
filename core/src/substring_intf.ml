@@ -64,7 +64,7 @@ module type S = sig
   val of_string : string -> t [@@deprecated "[since 2017-11] use [create] instead"]
 
   val of_bigstring : Bigstring.t -> t
-    [@@deprecated "[since 2017-11] use [create] instead"]
+  [@@deprecated "[since 2017-11] use [create] instead"]
 
   (** {2 Prefixes and suffixes}
 

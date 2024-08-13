@@ -29,7 +29,7 @@ module Stable : sig
 
     include
       Stable_module_types.With_stable_witness.S0
-        with type t := t
-        with type comparator_witness := comparator_witness
+      with type t := t
+      with type comparator_witness := comparator_witness
   end
 end

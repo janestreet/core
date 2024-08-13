@@ -632,13 +632,13 @@ module type Syntax = sig
 
   module Open_on_rhs :
     Generator
-      with type 'a t := 'a Generator.t
-       and module Let_syntax := Generator.Let_syntax
+    with type 'a t := 'a Generator.t
+     and module Let_syntax := Generator.Let_syntax
 
   include
     Monad.Syntax
-      with type 'a t := 'a Generator.t
-       and module Let_syntax.Let_syntax.Open_on_rhs = Open_on_rhs
+    with type 'a t := 'a Generator.t
+     and module Let_syntax.Let_syntax.Open_on_rhs = Open_on_rhs
 end
 
 module type Quickcheck = sig

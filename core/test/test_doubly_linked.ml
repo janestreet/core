@@ -24,8 +24,8 @@ let%expect_test "empty" =
      ("last t"    ())
      ("to_list t" ()))
     |}];
-  require_none [%here] [%sexp_of: int] (remove_first t);
-  require_none [%here] [%sexp_of: int] (remove_last t)
+  require_none [%sexp_of: int] (remove_first t);
+  require_none [%sexp_of: int] (remove_last t)
 ;;
 
 let%expect_test "singleton" =
@@ -40,8 +40,8 @@ let%expect_test "singleton" =
      ("last t"    (13))
      ("to_list t" (13)))
     |}];
-  require [%here] (is_first t elt);
-  require [%here] (is_last t elt)
+  require (is_first t elt);
+  require (is_last t elt)
 ;;
 
 let%expect_test "pair" =
@@ -57,8 +57,8 @@ let%expect_test "pair" =
      ("last t"  (14))
      ("to_list t" (13 14)))
     |}];
-  require [%here] (is_first t elt1);
-  require [%here] (is_last t elt2)
+  require (is_first t elt1);
+  require (is_last t elt2)
 ;;
 
 let%expect_test "of_list" =
@@ -66,7 +66,6 @@ let%expect_test "of_list" =
     let l = List.init i ~f:Fn.id in
     let t = of_list l in
     require_equal
-      [%here]
       (module struct
         type t = int list [@@deriving equal, sexp_of]
       end)
@@ -79,7 +78,7 @@ let%expect_test "clear" =
   for i = 0 to 5 do
     let t = of_list (List.init i ~f:Fn.id) in
     clear t;
-    require [%here] (is_empty t)
+    require (is_empty t)
   done
 ;;
 
@@ -91,9 +90,8 @@ let%expect_test "transfer" =
       let t1 = of_list l1 in
       let t2 = of_list l2 in
       transfer ~src:t1 ~dst:t2;
-      require [%here] (is_empty t1);
+      require (is_empty t1);
       require_equal
-        [%here]
         (module struct
           type t = int list [@@deriving equal, sexp_of]
         end)
@@ -109,13 +107,13 @@ let%expect_test "transfer2" =
   let l2 = create () in
   transfer ~src:l1 ~dst:l2;
   remove l2 e;
-  require [%here] (is_empty l1);
-  require [%here] (is_empty l2)
+  require (is_empty l1);
+  require (is_empty l2)
 ;;
 
 let%expect_test "self-transfer" =
   let t = of_list [] in
-  require_does_raise [%here] (fun () -> transfer ~src:t ~dst:t);
+  require_does_raise (fun () -> transfer ~src:t ~dst:t);
   [%expect {| (Core__Doubly_linked.Transfer_src_and_dst_are_same_list) |}]
 ;;
 
@@ -128,7 +126,7 @@ let%expect_test "transfer3" =
   transfer ~src ~dst;
   print_s [%message (src : int t) (dst : int t)];
   [%expect {| ((src ()) (dst (1 2 3 4 1 4))) |}];
-  require_does_not_raise [%here] (fun () -> ignore (next dst elt : _ Elt.t option))
+  require_does_not_raise (fun () -> ignore (next dst elt : _ Elt.t option))
 ;;
 
 let%expect_test "insert and remove" =
@@ -145,7 +143,6 @@ let%expect_test "insert and remove" =
   let t = create () in
   let is_elts elts =
     require_equal
-      [%here]
       (module struct
         type t = unit list [@@deriving equal, sexp_of]
       end)
@@ -155,7 +152,7 @@ let%expect_test "insert and remove" =
       match elt, elts with
       | None, [] -> ()
       | Some elt, elt' :: elts ->
-        require_equal [%here] (module Elt) elt elt';
+        require_equal (module Elt) elt elt';
         loop (next t elt) elts
       | _ -> assert false
     in
@@ -163,28 +160,28 @@ let%expect_test "insert and remove" =
     (match elts with
      | [] -> ()
      | elt :: elts ->
-       require_none [%here] [%sexp_of: Elt.t] (prev t elt);
-       require [%here] (is_first t elt);
-       require_equal [%here] (module Elt_option) (first_elt t) (Some elt);
-       List.iter elts ~f:(fun elt -> require [%here] (not (is_first t elt)));
+       require_none [%sexp_of: Elt.t] (prev t elt);
+       require (is_first t elt);
+       require_equal (module Elt_option) (first_elt t) (Some elt);
+       List.iter elts ~f:(fun elt -> require (not (is_first t elt)));
        ignore
          (List.fold elts ~init:elt ~f:(fun prev_elt elt ->
-            require_equal [%here] (module Elt_option) (prev t elt) (Some prev_elt);
+            require_equal (module Elt_option) (prev t elt) (Some prev_elt);
             elt)
-           : Elt.t));
+          : Elt.t));
     match List.rev elts with
     | [] -> ()
     | elt :: elts ->
       (* [elt] is the last elt.  each of [elts] is not last. *)
-      require_none [%here] [%sexp_of: Elt.t] (next t elt);
-      require [%here] (is_last t elt);
-      require_equal [%here] (module Elt_option) (last_elt t) (Some elt);
-      List.iter elts ~f:(fun elt -> require [%here] (not (is_last t elt)));
+      require_none [%sexp_of: Elt.t] (next t elt);
+      require (is_last t elt);
+      require_equal (module Elt_option) (last_elt t) (Some elt);
+      List.iter elts ~f:(fun elt -> require (not (is_last t elt)));
       ignore
         (List.fold elts ~init:elt ~f:(fun next_elt elt ->
            assert (Option.equal Elt.equal (next t elt) (Some next_elt));
            elt)
-          : Elt.t)
+         : Elt.t)
   in
   let elt1 = insert_first t () in
   is_elts [ elt1 ];
@@ -212,8 +209,8 @@ let%expect_test "removed element doesn't belong to list" =
   let t = of_list [ 1 ] in
   let e = insert_first t 2 in
   invariant ignore t;
-  require_some [%here] (remove_first t);
-  require_does_raise [%here] (fun () -> is_last t e);
+  require_some (remove_first t);
+  require_does_raise (fun () -> is_last t e);
   [%expect {| (Core__Doubly_linked.Elt_does_not_belong_to_list) |}]
 ;;
 
@@ -223,13 +220,13 @@ let%expect_test _ =
   invariant ignore t;
   remove t e;
   invariant ignore t;
-  require_some [%here] (first_elt t)
+  require_some (first_elt t)
 ;;
 
 let%expect_test _ =
   let t = of_list [ 1; 2 ] in
-  require_does_not_raise [%here] (fun _ -> [%test_result: int] ~expect:1 (first_exn t));
-  require_does_not_raise [%here] (fun _ -> [%test_result: int] ~expect:2 (last_exn t))
+  require_does_not_raise (fun _ -> [%test_result: int] ~expect:1 (first_exn t));
+  require_does_not_raise (fun _ -> [%test_result: int] ~expect:2 (last_exn t))
 ;;
 
 let%expect_test _ =
@@ -253,7 +250,8 @@ let%expect_test "length" =
   [%expect {| ("length l2" 3) |}];
   transfer ~src:l1 ~dst:l2;
   print_s [%message (length l1 : int) (length l2 : int)];
-  [%expect {|
+  [%expect
+    {|
     (("length l1" 0)
      ("length l2" 8))
     |}]
@@ -515,12 +513,13 @@ let%test_unit "findi_elt" =
 let%expect_test "[iter] does not allocate" =
   let t = create () in
   ignore (insert_first t () : _ Elt.t);
-  require_no_allocation [%here] (fun () -> iter t ~f:ignore)
+  require_no_allocation (fun () -> iter t ~f:ignore)
 ;;
 
 let%expect_test "iteri" =
   iteri (create_default ()) ~f:(fun i v -> printf "f %d %d\n" i v);
-  [%expect {|
+  [%expect
+    {|
     f 0 0
     f 1 10
     f 2 20
@@ -531,7 +530,8 @@ let%expect_test "iteri" =
 
 let%expect_test "iteri_elt" =
   iteri_elt (create_default ()) ~f:(fun i elt -> printf "f %d %d\n" i (Elt.value elt));
-  [%expect {|
+  [%expect
+    {|
     f 0 0
     f 1 10
     f 2 20
@@ -577,7 +577,8 @@ let%expect_test "fold_right_elt" =
     printf "f %d %d\n" (Elt.value elt) acc;
     acc + 1)
   |> printf "result: %d";
-  [%expect {|
+  [%expect
+    {|
     f 40 0
     f 30 1
     f 20 2
@@ -610,7 +611,7 @@ let%expect_test _ =
   let t1 = create () in
   let t2 = create () in
   let elt = insert_first t1 15 in
-  require_does_raise [%here] (fun () -> remove t2 elt);
+  require_does_raise (fun () -> remove t2 elt);
   [%expect {| (Core__Doubly_linked.Elt_does_not_belong_to_list) |}]
 ;;
 
@@ -619,7 +620,7 @@ let%expect_test _ =
   let t2 = create () in
   let elt = insert_first t1 14 in
   let (_ : int Elt.t) = insert_first t2 13 in
-  require_does_raise [%here] (fun () -> remove t2 elt);
+  require_does_raise (fun () -> remove t2 elt);
   [%expect {| (Core__Doubly_linked.Elt_does_not_belong_to_list) |}]
 ;;
 
@@ -627,7 +628,7 @@ let%expect_test _ =
   let t1 = create () in
   let t2 = create () in
   let elt = insert_first t1 14 in
-  require_does_raise [%here] (fun () -> next t2 elt);
+  require_does_raise (fun () -> next t2 elt);
   [%expect {| (Core__Doubly_linked.Elt_does_not_belong_to_list) |}]
 ;;
 
@@ -720,7 +721,6 @@ let%test_module "mutation during iteration" =
 
     let require_mutation_didn't_happen () =
       require_equal
-        [%here]
         (module struct
           type t = int list [@@deriving equal, sexp_of]
         end)
@@ -729,33 +729,33 @@ let%test_module "mutation during iteration" =
     ;;
 
     let%expect_test "remove" =
-      require_does_raise [%here] (fun () ->
+      require_does_raise (fun () ->
         iter t ~f:(fun _ -> ignore (remove_first t : int option)));
       [%expect {| (Core__Doubly_linked.Attempt_to_mutate_list_during_iteration) |}];
       require_mutation_didn't_happen ();
-      require_does_raise [%here] (fun () ->
+      require_does_raise (fun () ->
         iter t ~f:(fun _ -> ignore (remove_last t : int option)));
       [%expect {| (Core__Doubly_linked.Attempt_to_mutate_list_during_iteration) |}];
       require_mutation_didn't_happen ();
-      require_does_raise [%here] (fun () -> iter t ~f:(fun _ -> remove t e));
+      require_does_raise (fun () -> iter t ~f:(fun _ -> remove t e));
       [%expect {| (Core__Doubly_linked.Attempt_to_mutate_list_during_iteration) |}];
       require_mutation_didn't_happen ()
     ;;
 
     let%expect_test "insert" =
-      require_does_raise [%here] (fun () ->
+      require_does_raise (fun () ->
         iter t ~f:(fun _ -> ignore (insert_first t 4 : int Elt.t)));
       [%expect {| (Core__Doubly_linked.Attempt_to_mutate_list_during_iteration) |}];
       require_mutation_didn't_happen ();
-      require_does_raise [%here] (fun () ->
+      require_does_raise (fun () ->
         iter t ~f:(fun _ -> ignore (insert_last t 5 : int Elt.t)));
       [%expect {| (Core__Doubly_linked.Attempt_to_mutate_list_during_iteration) |}];
       require_mutation_didn't_happen ();
-      require_does_raise [%here] (fun () ->
+      require_does_raise (fun () ->
         iter t ~f:(fun _ -> ignore (insert_before t e 6 : int Elt.t)));
       [%expect {| (Core__Doubly_linked.Attempt_to_mutate_list_during_iteration) |}];
       require_mutation_didn't_happen ();
-      require_does_raise [%here] (fun () ->
+      require_does_raise (fun () ->
         iter t ~f:(fun _ -> ignore (insert_after t e 7 : int Elt.t)));
       [%expect {| (Core__Doubly_linked.Attempt_to_mutate_list_during_iteration) |}];
       require_mutation_didn't_happen ()

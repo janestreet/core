@@ -7,7 +7,11 @@ let%test _ = length (create ()) = 0
 
 let%test_module _ =
   (module struct
-    let binary_search = binary_search ~compare:Int.compare
+    let binary_search ?pos ?len t target key =
+      (binary_search ?pos ?len t ~compare:Int.compare target key
+       |> [%globalize: int option]) [@nontail]
+    ;;
+
     let t = of_array [| 1; 2; 3; 4 |]
     let%test _ = [%equal: int option] (binary_search t `First_equal_to 2) (Some 1)
     let%test _ = [%equal: int option] (binary_search t `First_equal_to 5) None

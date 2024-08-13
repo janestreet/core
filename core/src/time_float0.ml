@@ -9,23 +9,19 @@ module Absolute = struct
 
   include (
     Float :
-      sig
-        type t = float [@@deriving bin_io, hash, typerep]
+    sig
+      type t = float [@@deriving bin_io, hash, typerep]
 
-        include Comparable.S_common with type t := t
-
-        include module type of struct
-          include Float.O
-        end
-      end)
+      include Comparable.S_common with type t := t
+    end)
 
   (* due to precision limitations in float we can't expect better than microsecond
      precision *)
   include Float.Robust_compare.Make (struct
-    let robust_comparison_tolerance = 1E-6
-  end)
+      let robust_comparison_tolerance = 1E-6
+    end)
 
-  let diff t1 t2 = Span.of_sec (t1 - t2)
+  let diff t1 t2 = Span.of_sec (t1 -. t2)
   let add t span = t +. Span.to_sec span
   let sub t span = t -. Span.to_sec span
   let prev t = Float.one_ulp `Down t

@@ -6,7 +6,7 @@ let suffixes char =
   let sprintf = Printf.sprintf in
   [ sprintf "%c" char; sprintf "%cM" char; sprintf "%c.M" char; sprintf "%c.M." char ]
   |> List.concat_map ~f:(fun suffix ->
-       [ String.lowercase suffix; String.uppercase suffix ])
+    [ String.lowercase suffix; String.uppercase suffix ])
 ;;
 
 let am_suffixes = lazy (suffixes 'A')

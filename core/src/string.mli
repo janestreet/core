@@ -83,13 +83,13 @@ module Utf16be :
 
 module Utf32le :
   Utf
-    with type t = Base.String.Utf32le.t
-     and type comparator_witness = Base.String.Utf32le.comparator_witness
+  with type t = Base.String.Utf32le.t
+   and type comparator_witness = Base.String.Utf32le.comparator_witness
 
 module Utf32be :
   Utf
-    with type t = Base.String.Utf32be.t
-     and type comparator_witness = Base.String.Utf32be.comparator_witness
+  with type t = Base.String.Utf32be.t
+   and type comparator_witness = Base.String.Utf32be.comparator_witness
 
 (** Note that [string] is already stable by itself, since as a primitive type it is an
     integral part of the sexp / bin_io protocol. [String.Stable] exists only to introduce
@@ -104,8 +104,8 @@ module Stable : sig
 
     include
       Stable_comparable.With_stable_witness.V1
-        with type t := t
-        with type comparator_witness := comparator_witness
+      with type t := t
+      with type comparator_witness := comparator_witness
 
     include Hashable.Stable.V1.With_stable_witness.S with type key := t
   end
@@ -115,8 +115,8 @@ module Stable : sig
 
     include
       Identifiable_without_binio
-        with type t := t
-         and type comparator_witness = comparator_witness
+      with type t := t
+       and type comparator_witness = comparator_witness
   end
 
   module Utf8 : sig
@@ -125,8 +125,8 @@ module Stable : sig
 
       include
         Identifiable_without_binio
-          with type t := t
-           and type comparator_witness = Utf8.comparator_witness
+        with type t := t
+         and type comparator_witness = Utf8.comparator_witness
     end
   end
 
@@ -136,8 +136,8 @@ module Stable : sig
 
       include
         Identifiable_without_binio
-          with type t := t
-           and type comparator_witness = Utf16le.comparator_witness
+        with type t := t
+         and type comparator_witness = Utf16le.comparator_witness
     end
   end
 
@@ -147,8 +147,8 @@ module Stable : sig
 
       include
         Identifiable_without_binio
-          with type t := t
-           and type comparator_witness = Utf16be.comparator_witness
+        with type t := t
+         and type comparator_witness = Utf16be.comparator_witness
     end
   end
 
@@ -158,8 +158,8 @@ module Stable : sig
 
       include
         Identifiable_without_binio
-          with type t := t
-           and type comparator_witness = Utf32le.comparator_witness
+        with type t := t
+         and type comparator_witness = Utf32le.comparator_witness
     end
   end
 
@@ -169,8 +169,8 @@ module Stable : sig
 
       include
         Identifiable_without_binio
-          with type t := t
-           and type comparator_witness = Utf32be.comparator_witness
+        with type t := t
+         and type comparator_witness = Utf32be.comparator_witness
     end
   end
 end

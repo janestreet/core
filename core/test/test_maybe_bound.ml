@@ -50,7 +50,6 @@ let%test_module "[As_lower_bound.compare], [As_upper_bound.compare]" =
     let test_compare compare bound1 bound2 ok =
       let comparison = compare bound1 bound2 in
       require
-        [%here]
         (ok comparison)
         ~if_false_then_print_s:
           (lazy
@@ -83,7 +82,7 @@ let%test_module "[As_lower_bound.compare], [As_upper_bound.compare]" =
             let compare = Ord.compare in
             if As_lower_bound.compare compare t1 t2 <= 0
                && is_lower_bound t2 ~of_:a ~compare
-            then require [%here] (is_lower_bound t1 ~of_:a ~compare))))
+            then require (is_lower_bound t1 ~of_:a ~compare))))
     ;;
 
     let%expect_test "relationship between [As_upper_bound.compare] and [is_upper_bound]" =
@@ -93,7 +92,7 @@ let%test_module "[As_lower_bound.compare], [As_upper_bound.compare]" =
             let compare = Ord.compare in
             if As_upper_bound.compare compare t1 t2 <= 0
                && is_upper_bound t1 ~of_:a ~compare
-            then require [%here] (is_upper_bound t2 ~of_:a ~compare))))
+            then require (is_upper_bound t2 ~of_:a ~compare))))
     ;;
   end)
 ;;

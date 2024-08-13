@@ -15,9 +15,9 @@ module Assoc : sig
   type ('a, 'b) t = ('a, 'b) Base.List.Assoc.t [@@deriving bin_io ~localize]
 
   val compare : [%compare: 'a] -> [%compare: 'b] -> [%compare: ('a, 'b) t]
-    [@@deprecated
-      "[since 2016-06] This does not respect the equivalence class promised by List.Assoc.\n\
-       Use List.compare directly if that's what you want."]
+  [@@deprecated
+    "[since 2016-06] This does not respect the equivalence class promised by List.Assoc.\n\
+     Use List.compare directly if that's what you want."]
 
   include module type of struct
       include Base.List.Assoc
@@ -35,7 +35,7 @@ end
     function and lets you avoid the functor instantiation when you already have such a
     module on hand. *)
 val stable_dedup_staged : compare:('a -> 'a -> int) -> ('a list -> 'a list) Staged.t
-  [@@deprecated "[since 2023-04] Use [List.stable_dedup] instead."]
+[@@deprecated "[since 2023-04] Use [List.stable_dedup] instead."]
 
 (** Only raised in [exn_if_dup] below. *)
 exception

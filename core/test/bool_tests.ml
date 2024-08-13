@@ -20,10 +20,9 @@ let%test_module "[of_string_hum]" =
         (* skip memoized allocation *)
         ignore (Or_error.try_with (fun () -> Bool.of_string_hum string) : bool Or_error.t);
         Set.iter (variations_of_string string) ~f:(fun string ->
-          match require_no_allocation [%here] (fun () -> Bool.of_string_hum string) with
-          | actual -> require_equal [%here] (module Bool) actual expect
-          | exception exn ->
-            print_cr [%here] [%message "raised" (string : string) (exn : exn)])
+          match require_no_allocation (fun () -> Bool.of_string_hum string) with
+          | actual -> require_equal (module Bool) actual expect
+          | exception exn -> print_cr [%message "raised" (string : string) (exn : exn)])
       in
       List.iter ~f:(test ~expect:true) [ "true"; "yes"; "1" ];
       [%expect {| |}];
@@ -33,7 +32,7 @@ let%test_module "[of_string_hum]" =
 
     let%expect_test "failure" =
       (* print the exception once *)
-      require_does_raise [%here] (fun () -> Bool.of_string_hum "");
+      require_does_raise (fun () -> Bool.of_string_hum "");
       [%expect
         {|
         ("Bool.of_string_hum: invalid input"
@@ -46,8 +45,7 @@ let%test_module "[of_string_hum]" =
           if String.length string > 1
           then (
             match Bool.of_string_hum string with
-            | bool ->
-              print_cr [%here] [%message "did not raise" (string : string) (bool : bool)]
+            | bool -> print_cr [%message "did not raise" (string : string) (bool : bool)]
             | exception _ -> ()))
       in
       List.iter ~f:test [ "abc"; "tru"; "truth"; "fals"; "falsey"; "0x0"; "01"; "123" ];

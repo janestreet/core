@@ -5,7 +5,7 @@ open! Map
 let%expect_test "Tree.add duplicate does not allocate" =
   let tree = Tree.of_alist_exn ~comparator:Int.comparator [ 1, 1; 2, 2 ] in
   let result =
-    require_no_allocation [%here] (fun () ->
+    require_no_allocation (fun () ->
       Tree.add ~comparator:Int.comparator tree ~key:2 ~data:2)
   in
   print_s [%sexp (result : _ Map_intf.Or_duplicate.t)];
@@ -15,12 +15,11 @@ let%expect_test "Tree.add duplicate does not allocate" =
 let%expect_test "t_of_sexp raises on duplicate key" =
   let no_dup_sexp = Sexp.of_string "((a 1) (b 2) (c 3) (d 4))" in
   require_equal
-    [%here]
     (module Sexp)
     no_dup_sexp
     ([%sexp_of: int String.Map.t] ([%of_sexp: int String.Map.t] no_dup_sexp));
   let dup_sexp = Sexp.of_string "((a 1) (b 2) (a 3) (d 4))" in
-  require_does_raise [%here] (fun () -> [%of_sexp: int String.Map.t] dup_sexp);
+  require_does_raise (fun () -> [%of_sexp: int String.Map.t] dup_sexp);
   [%expect {| (Of_sexp_error "Map.t_of_sexp_direct: duplicate key" (invalid_sexp a)) |}]
 ;;
 
@@ -30,12 +29,11 @@ let%expect_test "bin_read_t raises on duplicate key" =
   for n = 0 to max_n do
     let m1 = Int.Map.of_alist_exn (List.init n ~f:(fun x -> x, succ x)) in
     let pos = Int.Map.bin_write_t Int.bin_write_t bstr ~pos:0 m1 in
-    require_equal [%here] (module Int) pos ((2 * n) + 1);
+    require_equal (module Int) pos ((2 * n) + 1);
     let pos_ref = ref 0 in
     let m2 = Int.Map.bin_read_t Int.bin_read_t bstr ~pos_ref in
-    require_equal [%here] (module Int) !pos_ref ((2 * n) + 1);
+    require_equal (module Int) !pos_ref ((2 * n) + 1);
     require_equal
-      [%here]
       (module struct
         type t = int Int.Map.t [@@deriving equal, sexp_of]
       end)
@@ -46,10 +44,9 @@ let%expect_test "bin_read_t raises on duplicate key" =
       bstr.{1} <- 'x';
       bstr.{3} <- 'x';
       pos_ref := 0;
-      require_does_raise [%here] (fun () ->
-        Int.Map.bin_read_t Int.bin_read_t bstr ~pos_ref);
+      require_does_raise (fun () -> Int.Map.bin_read_t Int.bin_read_t bstr ~pos_ref);
       [%expect {| (Failure "Map.bin_read_t: duplicate element in map") |}];
-      require_equal [%here] (module Int) !pos_ref ((2 * n) + 1))
+      require_equal (module Int) !pos_ref ((2 * n) + 1))
   done
 ;;
 
@@ -92,13 +89,12 @@ let%expect_test "Symmetric_diff_element.{left,right}" =
 let%expect_test _ =
   let open Expect_test_helpers_core in
   print_and_check_stable_type
-    [%here]
     (module struct
       type t = int Map.M(Int).t [@@deriving bin_io, compare, sexp]
     end)
     ([ []; [ 1 ]; [ 1; 2 ]; [ 1; 2; 3 ] ]
      |> List.map ~f:(fun xs ->
-          Map.of_alist_exn (module Int) (xs |> List.map ~f:(fun x -> x, x + 1))));
+       Map.of_alist_exn (module Int) (xs |> List.map ~f:(fun x -> x, x + 1))));
   [%expect
     {|
     (bin_shape_digest ed73a010af8ffc32cab7411d6be2d676)
@@ -121,10 +117,8 @@ let%expect_test "remove does not allocate too much if there's nothing to do" =
   (* This is a regression test. Previously this no-op remove allocated 16 words.
 
      Ideally, we wouldn't allocate the pair returned by [Tree0.remove] either. *)
-  Expect_test_helpers_core.require_allocation_does_not_exceed
-    (Minor_words 3)
-    [%here]
-    (fun () -> ignore (Sys.opaque_identity (Map.remove map1 2) : string Map.M(Int).t))
+  Expect_test_helpers_core.require_allocation_does_not_exceed (Minor_words 3) (fun () ->
+    ignore (Sys.opaque_identity (Map.remove map1 2) : string Map.M(Int).t))
 ;;
 
 let%expect_test "[map_keys]" =

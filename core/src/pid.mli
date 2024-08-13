@@ -2,7 +2,7 @@
 
 open! Import
 
-type t [@@deriving bin_io, hash, sexp, quickcheck] [@@immediate]
+type t [@@deriving bin_io, hash, sexp, sexp_grammar, quickcheck] [@@immediate]
 
 include Identifiable.S with type t := t
 
@@ -18,7 +18,7 @@ module Stable : sig
 
     include
       Stable_comparable.With_stable_witness.V1
-        with type t := t
-         and type comparator_witness = comparator_witness
+      with type t := t
+       and type comparator_witness = comparator_witness
   end
 end

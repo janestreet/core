@@ -140,7 +140,7 @@ val field_folder
 val field_direct_folder
   :  'a check
   -> (t list -> ([> `Read ], 'record, 'a) Field.t_with_perm -> 'record -> 'a -> t list)
-     Staged.t
+       Staged.t
 
 (** Combines a list of validation functions into one that does all validations. *)
 val all : 'a check list -> 'a check

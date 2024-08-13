@@ -37,12 +37,24 @@ let%expect_test ("attempt to use from javascript" [@tags "js-only"]) =
   [%expect {| platform supported |}]
 ;;
 
-let%expect_test ("disable javascript support" [@tags "js-only"]) =
+let%expect_test ("disable javascript support" [@tags "js-only", "no-wasm"]) =
   Exn.protect
     ~f:(fun () ->
       Timezone_js_loader.For_testing.disable ();
       print_result_kind "America/New_York";
       [%expect {| platform supported, but disabled |}])
+    ~finally:Timezone_js_loader.For_testing.enable
+;;
+
+let%expect_test ("disable wasm support (and it remains supported)" [@tags
+                                                                     "js-only"
+                                                                     , "wasm-only"])
+  =
+  Exn.protect
+    ~f:(fun () ->
+      Timezone_js_loader.For_testing.disable ();
+      print_result_kind "America/New_York";
+      [%expect {| platform supported |}])
     ~finally:Timezone_js_loader.For_testing.enable
 ;;
 

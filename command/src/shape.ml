@@ -450,13 +450,13 @@ module Flag_info = struct
   let num_occurrences t =
     parse_name t
     |> Or_error.map ~f:(fun (num_occurrences, (_ : bool), (_ : string)) ->
-         num_occurrences)
+      num_occurrences)
   ;;
 
   let requires_arg t =
     parse_name t
     |> Or_error.map ~f:(fun ((_ : Num_occurrences.t), requires_arg, (_ : string)) ->
-         requires_arg)
+      requires_arg)
   ;;
 
   let help_screen_compare a b =

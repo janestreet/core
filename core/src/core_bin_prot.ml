@@ -33,7 +33,7 @@ end
 module Reader = struct
   type 'a t = 'a Bin_prot.Type_class.reader =
     { read : 'a Read.reader
-    ; vtag_read : (int -> 'a) Read.reader
+    ; vtag_read : 'a Read.vtag_reader
     }
 
   let of_bigstring t buf =

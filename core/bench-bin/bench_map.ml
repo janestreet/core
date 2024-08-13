@@ -70,7 +70,7 @@ let merge_test do_merge =
          | `Left a -> Some a
          | `Right a -> Some a
          | `Both (a, b) -> Some (a + b))
-        : _ Map.t)
+       : _ Map.t)
 ;;
 
 let gen_diff_test m ~number_of_diff ~diff =

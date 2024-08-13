@@ -1,4 +1,5 @@
 open! Import
+include Tuple_intf.Definitions
 
 module type T = sig
   type t
@@ -9,7 +10,7 @@ module Make (T1 : T) (T2 : T) = struct
 end
 
 module T2 = struct
-  type ('a, 'b) t = 'a * 'b [@@deriving sexp, typerep]
+  type ('a, 'b) t = 'a * 'b [@@deriving sexp, sexp_grammar, typerep]
 
   let create a b = a, b
 
@@ -51,14 +52,14 @@ module T2 = struct
   let swap (a, b) = b, a
 
   include Comparator.Derived2 (struct
-    type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of]
+      type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of]
 
-    let compare cmp1 cmp2 = compare ~cmp1 ~cmp2
-  end)
+      let compare cmp1 cmp2 = compare ~cmp1 ~cmp2
+    end)
 end
 
 module T3 = struct
-  type ('a, 'b, 'c) t = 'a * 'b * 'c [@@deriving sexp, typerep]
+  type ('a, 'b, 'c) t = 'a * 'b * 'c [@@deriving sexp, sexp_grammar, typerep]
 
   let create a b c = a, b, c
 
@@ -107,22 +108,6 @@ module T3 = struct
   let equal ~eq1 ~eq2 ~eq3 (x, y, z) (x', y', z') = eq1 x x' && eq2 y y' && eq3 z z'
 end
 
-module type Comparable_sexpable = sig
-  type t [@@deriving sexp]
-
-  include Comparable.S with type t := t
-end
-
-module type Hashable_sexpable = sig
-  type t [@@deriving sexp]
-
-  include Hashable.S with type t := t
-end
-
-module type Hasher_sexpable = sig
-  type t [@@deriving compare, hash, sexp]
-end
-
 module Sexpable (S1 : Sexpable.S) (S2 : Sexpable.S) = struct
   type t = S1.t * S2.t [@@deriving sexp]
 end
@@ -140,7 +125,7 @@ module Comparator (S1 : Comparator.S) (S2 : Comparator.S) = struct
   let comparator = T2.comparator S1.comparator S2.comparator
 end
 
-module Comparable_plain (S1 : Comparable.S_plain) (S2 : Comparable.S_plain) = struct
+module Comparable_plain (S1 : Comparable_plain_arg) (S2 : Comparable_plain_arg) = struct
   module T = struct
     include Comparator (S1) (S2)
 
@@ -151,7 +136,7 @@ module Comparable_plain (S1 : Comparable.S_plain) (S2 : Comparable.S_plain) = st
   include Comparable.Make_plain_using_comparator (T)
 end
 
-module Comparable (S1 : Comparable_sexpable) (S2 : Comparable_sexpable) = struct
+module Comparable (S1 : Comparable_arg) (S2 : Comparable_arg) = struct
   module T = struct
     include Sexpable (S1) (S2)
 
@@ -166,7 +151,16 @@ module Comparable (S1 : Comparable_sexpable) (S2 : Comparable_sexpable) = struct
   include Comparable.Make (T)
 end
 
-module Hasher (H1 : Hasher_sexpable) (H2 : Hasher_sexpable) = struct
+module Hashable_plain (S1 : Hashable_plain_arg) (S2 : Hashable_plain_arg) = struct
+  module T = struct
+    type t = S1.t * S2.t [@@deriving compare, hash, sexp_of]
+  end
+
+  include T
+  include Hashable.Make_plain (T)
+end
+
+module Hasher (H1 : Hashable_arg) (H2 : Hashable_arg) = struct
   module T = struct
     type t = H1.t * H2.t [@@deriving compare, hash, sexp]
   end
@@ -175,14 +169,14 @@ module Hasher (H1 : Hasher_sexpable) (H2 : Hasher_sexpable) = struct
   include Hashable.Make (T)
 end
 
-module Hasher_sexpable_of_hashable_sexpable (S : Hashable_sexpable) :
-  Hasher_sexpable with type t = S.t = struct
+module Hasher_sexpable_of_hashable_sexpable (S : Hashable_arg) :
+  Hashable_arg with type t = S.t = struct
   include S
 
   let hash_fold_t state t = hash_fold_int state (hash t)
 end
 
-module Hashable_t (S1 : Hashable_sexpable) (S2 : Hashable_sexpable) =
+module Hashable_t (S1 : Hashable_arg) (S2 : Hashable_arg) =
   Hasher
     (Hasher_sexpable_of_hashable_sexpable
        (S1))

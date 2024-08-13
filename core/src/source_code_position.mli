@@ -11,7 +11,7 @@ type t = Base.Source_code_position.t =
   ; pos_bol : int
   ; pos_cnum : int
   }
-[@@deriving fields ~getters]
+[@@deriving fields ~getters, globalize]
 
 include Comparable.S with type t := t and type comparator_witness := comparator_witness
 include Hashable.S with type t := t

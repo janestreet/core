@@ -6,9 +6,9 @@ module Core_sequence = Sequence
 
 include (
   Base.Array :
-    sig
-      type 'a t = 'a array [@@deriving sexp, compare ~localize, globalize, sexp_grammar]
-    end)
+  sig
+    type 'a t = 'a array [@@deriving compare ~localize, globalize, sexp, sexp_grammar]
+  end)
 
 type 'a t = 'a array [@@deriving bin_io ~localize, quickcheck, typerep]
 
@@ -20,7 +20,12 @@ module T = struct
   let normalize t i = Ordered_collection_common.normalize ~length_fun:length t i
 
   let slice t start stop =
-    Ordered_collection_common.slice ~length_fun:length ~sub_fun:sub t start stop
+    Ordered_collection_common.slice
+      ~length_fun:length
+      ~sub_fun:(fun t ~pos ~len -> sub t ~pos ~len)
+      t
+      start
+      stop
   ;;
 
   let nget t i = t.(normalize t i)
@@ -38,7 +43,7 @@ module T = struct
      the section entitled "Fast, Slow and Incorrect Array blits" of
      https://web.archive.org/web/20130220000229/http://janestreet.github.com/ocaml-perf-notes.html *)
   module Int = struct
-    type t_ = int array [@@deriving bin_io ~localize, compare, sexp]
+    type t_ = int array [@@deriving bin_io ~localize, compare, sexp, sexp_grammar]
 
     module Unsafe_blit = struct
       external unsafe_blit
@@ -49,7 +54,7 @@ module T = struct
         -> len:int
         -> unit
         = "core_array_unsafe_int_blit"
-        [@@noalloc]
+      [@@noalloc]
     end
 
     include
@@ -74,7 +79,7 @@ module T = struct
   end
 
   module Float = struct
-    type t_ = float array [@@deriving bin_io ~localize, compare, sexp]
+    type t_ = float array [@@deriving bin_io ~localize, compare, sexp, sexp_grammar]
 
     module Unsafe_blit = struct
       external unsafe_blit
@@ -85,7 +90,7 @@ module T = struct
         -> len:int
         -> unit
         = "core_array_unsafe_float_blit"
-        [@@noalloc]
+      [@@noalloc]
     end
 
     external get : (t_[@local_opt]) -> (int[@local_opt]) -> float = "%floatarray_safe_get"
@@ -137,7 +142,7 @@ module type Permissioned = sig
 
   include
     Indexed_container.S1_with_creators_permissions
-      with type ('a, 'perms) t := ('a, 'perms) t
+    with type ('a, 'perms) t := ('a, 'perms) t
 
   include Blit.S1_permissions with type ('a, 'perms) t := ('a, 'perms) t
   include Binary_searchable.S1_permissions with type ('a, 'perms) t := ('a, 'perms) t
@@ -345,6 +350,7 @@ module type Permissioned = sig
   val unzip : ('a * 'b, [> read ]) t -> ('a, [< _ perms ]) t * ('b, [< _ perms ]) t
   val sorted_copy : ('a, [> read ]) t -> compare:('a -> 'a -> int) -> ('a, [< _ perms ]) t
   val last : ('a, [> read ]) t -> 'a
+  val last_exn : ('a, [> read ]) t -> 'a
   val equal : ('a -> 'a -> bool) -> ('a, [> read ]) t -> ('a, [> read ]) t -> bool
   val equal__local : ('a -> 'a -> bool) -> ('a, [> read ]) t -> ('a, [> read ]) t -> bool
   val to_sequence : ('a, [> read ]) t -> 'a Sequence.t
@@ -352,10 +358,11 @@ module type Permissioned = sig
 end
 
 module Permissioned : sig
-  type ('a, -'perms) t [@@deriving bin_io ~localize, compare, sexp]
+  type ('a, -'perms) t [@@deriving bin_io ~localize, compare, sexp, sexp_grammar]
 
   module Int : sig
-    type nonrec -'perms t = (int, 'perms) t [@@deriving bin_io ~localize, compare, sexp]
+    type nonrec -'perms t = (int, 'perms) t
+    [@@deriving bin_io ~localize, compare, sexp, sexp_grammar]
 
     include Blit.S_permissions with type 'perms t := 'perms t
 
@@ -367,11 +374,12 @@ module Permissioned : sig
       -> len:int
       -> unit
       = "core_array_unsafe_int_blit"
-      [@@noalloc]
+    [@@noalloc]
   end
 
   module Float : sig
-    type nonrec -'perms t = (float, 'perms) t [@@deriving bin_io ~localize, compare, sexp]
+    type nonrec -'perms t = (float, 'perms) t
+    [@@deriving bin_io ~localize, compare, sexp, sexp_grammar]
 
     include Blit.S_permissions with type 'perms t := 'perms t
 
@@ -409,7 +417,7 @@ module Permissioned : sig
       -> len:int
       -> unit
       = "core_array_unsafe_float_blit"
-      [@@noalloc]
+    [@@noalloc]
   end
 
   val of_array_id : 'a array -> ('a, [< read_write ]) t
@@ -418,18 +426,19 @@ module Permissioned : sig
 
   include Permissioned with type ('a, 'perms) t := ('a, 'perms) t
 end = struct
-  type ('a, -'perms) t = 'a array [@@deriving bin_io ~localize, compare, sexp, typerep]
+  type ('a, -'perms) t = 'a array
+  [@@deriving bin_io ~localize, compare, sexp, sexp_grammar, typerep]
 
   module Int = struct
     include T.Int
 
-    type -'perms t = t_ [@@deriving bin_io ~localize, compare, sexp]
+    type -'perms t = t_ [@@deriving bin_io ~localize, compare, sexp, sexp_grammar]
   end
 
   module Float = struct
     include T.Float
 
-    type -'perms t = t_ [@@deriving bin_io ~localize, compare, sexp]
+    type -'perms t = t_ [@@deriving bin_io ~localize, compare, sexp, sexp_grammar]
   end
 
   let to_array_id = Fn.id
@@ -542,6 +551,7 @@ module type S = sig
   val unzip : ('a * 'b) t -> 'a t * 'b t
   val sorted_copy : 'a t -> compare:('a -> 'a -> int) -> 'a t
   val last : 'a t -> 'a
+  val last_exn : 'a t -> 'a
   val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
   val equal__local : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
   val to_sequence : 'a t -> 'a Core_sequence.t
@@ -556,13 +566,13 @@ let max_length = Sys.max_array_length
 module Int = struct
   include T.Int
 
-  type t = t_ [@@deriving bin_io ~localize, compare, sexp]
+  type t = t_ [@@deriving bin_io ~localize, compare, sexp, sexp_grammar]
 end
 
 module Float = struct
   include T.Float
 
-  type t = t_ [@@deriving bin_io ~localize, compare, sexp]
+  type t = t_ [@@deriving bin_io ~localize, compare, sexp, sexp_grammar]
 end
 
 module _ (M : S) : sig

@@ -3,7 +3,6 @@ open Expect_test_helpers_core
 
 let%expect_test "Stable.V1" =
   print_and_check_stable_type
-    [%here]
     (module Uchar.Stable.V1)
     [ Uchar.min_value (* 0x0000 *)
     ; Uchar.of_scalar_exn 0x007F

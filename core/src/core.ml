@@ -100,6 +100,7 @@ module Map_intf = Map_intf
 module Maybe_bound = Maybe_bound
 module Md5 = Md5
 module Memo = Memo
+module Modes = Modes
 module Monad = Monad
 module Month = Month
 
@@ -164,6 +165,7 @@ module Time = Time_float
 
 module Time_float = Time_float
 module Time_ns = Time_ns
+module Timezone = Timezone
 module Tuple = Tuple
 module Tuple2 = Tuple.T2
 module Tuple3 = Tuple.T3

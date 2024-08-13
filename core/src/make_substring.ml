@@ -251,7 +251,7 @@ module F (Underlying : Base) : S with type base = Underlying.t = struct
       (List.fold ts ~init:0 ~f:(fun dst_pos t ->
          blit_dst t ~dst ~dst_pos;
          dst_pos + length t)
-        : int);
+       : int);
     dst
   ;;
 

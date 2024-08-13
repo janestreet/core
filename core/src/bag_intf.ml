@@ -20,7 +20,7 @@ module type S = sig
     val value : 'a t -> 'a
   end
 
-  type 'a t [@@deriving sexp]
+  type 'a t [@@deriving sexp, sexp_grammar]
 
   (** Much of a bag's interface comes from the generic {!Base.Container} module. *)
   include Container.S1 with type 'a t := 'a t

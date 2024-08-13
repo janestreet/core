@@ -35,7 +35,7 @@
 
 open! Import
 
-type 'a t
+type +'a t
 
 include Monad.S with type 'a t := 'a t
 

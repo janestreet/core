@@ -126,5 +126,5 @@ let%test_unit "balanced" =
 
 let%expect_test "[get] of a root does not allocate" =
   let t = create () in
-  require_no_allocation [%here] (fun () -> get t)
+  require_no_allocation (fun () -> get t)
 ;;

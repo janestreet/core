@@ -164,6 +164,31 @@ module type For_deriving = sig
     :  (module M_quickcheck with type t = 'k)
     -> 'v Quickcheck.Shrinker.t
     -> ('k, 'v) t Quickcheck.Shrinker.t
+
+  val bin_shape_m__t
+    :  (module Key_binable with type t = 'k)
+    -> Bin_prot.Shape.t
+    -> Bin_prot.Shape.t
+
+  val bin_size_m__t
+    :  (module Key_binable with type t = 'k)
+    -> 'v Bin_prot.Size.sizer
+    -> ('k, 'v) t Bin_prot.Size.sizer
+
+  val bin_write_m__t
+    :  (module Key_binable with type t = 'k)
+    -> 'v Bin_prot.Write.writer
+    -> ('k, 'v) t Bin_prot.Write.writer
+
+  val bin_read_m__t
+    :  (module Key_binable with type t = 'k)
+    -> 'v Bin_prot.Read.reader
+    -> ('k, 'v) t Bin_prot.Read.reader
+
+  val __bin_read_m__t__
+    :  (module Key_binable with type t = 'k)
+    -> 'v Bin_prot.Read.reader
+    -> ('k, 'v) t Bin_prot.Read.vtag_reader
 end
 
 module type S_plain = sig
@@ -179,28 +204,28 @@ module type S_plain = sig
 
   include
     Creators
-      with type ('a, 'b) t := ('a, 'b) t_
-      with type 'a key := 'a key_
-      with type ('key, 'data, 'z) create_options :=
-        ('key, 'data, 'z) create_options_without_hashable
+    with type ('a, 'b) t := ('a, 'b) t_
+    with type 'a key := 'a key_
+    with type ('key, 'data, 'z) create_options :=
+      ('key, 'data, 'z) create_options_without_hashable
 
   module Provide_of_sexp
-    (Key : sig
-      type t [@@deriving of_sexp]
+      (Key : sig
+               type t [@@deriving of_sexp]
+             end
+             with type t := key) : sig
+      type _ t [@@deriving of_sexp]
     end
-    with type t := key) : sig
-    type _ t [@@deriving of_sexp]
-  end
-  with type 'a t := 'a t
+    with type 'a t := 'a t
 
   module Provide_bin_io
-    (Key : sig
-      type t [@@deriving bin_io]
+      (Key : sig
+               type t [@@deriving bin_io]
+             end
+             with type t := key) : sig
+      type 'a t [@@deriving bin_io]
     end
-    with type t := key) : sig
-    type 'a t [@@deriving bin_io]
-  end
-  with type 'a t := 'a t
+    with type 'a t := 'a t
 end
 
 module type S = sig
@@ -231,9 +256,9 @@ module type Hashtbl = sig
   module Using_hashable : sig
     include
       Creators
-        with type ('a, 'b) t := ('a, 'b) t
-        with type 'a key := 'a key
-        with type ('a, 'b, 'z) create_options := ('a, 'b, 'z) create_options_with_hashable
+      with type ('a, 'b) t := ('a, 'b) t
+      with type 'a key := 'a key
+      with type ('a, 'b, 'z) create_options := ('a, 'b, 'z) create_options_with_hashable
   end
 
   module Poly : sig
@@ -262,28 +287,28 @@ module type Hashtbl = sig
   module Make_stable (Key : Key_stable) : S_stable with type key = Key.t
 
   module Make_plain_with_hashable (T : sig
-    module Key : Key_plain
+      module Key : Key_plain
 
-    val hashable : Key.t Hashable.t
-  end) : S_plain with type key = T.Key.t
+      val hashable : Key.t Hashable.t
+    end) : S_plain with type key = T.Key.t
 
   module Make_with_hashable (T : sig
-    module Key : Key
+      module Key : Key
 
-    val hashable : Key.t Hashable.t
-  end) : S with type key = T.Key.t
+      val hashable : Key.t Hashable.t
+    end) : S with type key = T.Key.t
 
   module Make_binable_with_hashable (T : sig
-    module Key : Key_binable
+      module Key : Key_binable
 
-    val hashable : Key.t Hashable.t
-  end) : S_binable with type key = T.Key.t
+      val hashable : Key.t Hashable.t
+    end) : S_binable with type key = T.Key.t
 
   module Make_stable_with_hashable (T : sig
-    module Key : Key_stable
+      module Key : Key_stable
 
-    val hashable : Key.t Hashable.t
-  end) : S_stable with type key = T.Key.t
+      val hashable : Key.t Hashable.t
+    end) : S_stable with type key = T.Key.t
 
   module M (K : T.T) : sig
     type nonrec 'v t = (K.t, 'v) t

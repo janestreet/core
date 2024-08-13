@@ -29,7 +29,7 @@ type sys_behavior =
   | `Stop (** Stop (suspend) the process *)
   | `Terminate (** Terminate the process *)
   ]
-[@@deriving sexp]
+[@@deriving sexp, sexp_grammar]
 
 (**
    Queries the default system behavior for a signal.
@@ -141,21 +141,21 @@ type sigprocmask_command = [ `Use_Signal_unix ]
 val can_send_to : [ `Use_Signal_unix ] [@@deprecated "[since 2021-04] Use [Signal_unix]"]
 
 val of_system_int : [ `Use_Signal_unix ]
-  [@@deprecated "[since 2021-04] Use [Signal_unix]"]
+[@@deprecated "[since 2021-04] Use [Signal_unix]"]
 
 val send : [ `Use_Signal_unix ] [@@deprecated "[since 2021-04] Use [Signal_unix]"]
 val send_exn : [ `Use_Signal_unix ] [@@deprecated "[since 2021-04] Use [Signal_unix]"]
 val send_i : [ `Use_Signal_unix ] [@@deprecated "[since 2021-04] Use [Signal_unix]"]
 
 val sexp_of_pid_spec : [ `Use_Signal_unix ]
-  [@@deprecated "[since 2021-04] Use [Signal_unix]"]
+[@@deprecated "[since 2021-04] Use [Signal_unix]"]
 
 val sigpending : [ `Use_Signal_unix ] [@@deprecated "[since 2021-04] Use [Signal_unix]"]
 val sigprocmask : [ `Use_Signal_unix ] [@@deprecated "[since 2021-04] Use [Signal_unix]"]
 val sigsuspend : [ `Use_Signal_unix ] [@@deprecated "[since 2021-04] Use [Signal_unix]"]
 
 val to_system_int : [ `Use_Signal_unix ]
-  [@@deprecated "[since 2021-04] Use [Signal_unix]"]
+[@@deprecated "[since 2021-04] Use [Signal_unix]"]
 
 (** The [Expert] module contains functions that novice users should avoid, due to their
     complexity.

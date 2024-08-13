@@ -4,7 +4,7 @@
 
     See also {!Core.Queue}, which has different performance characteristics. *)
 
-type 'a t = 'a Base.Linked_queue.t [@@deriving bin_io]
+type 'a t = 'a Base.Linked_queue.t [@@deriving bin_io, quickcheck]
 
 (** @inline *)
 include module type of struct

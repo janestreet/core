@@ -22,7 +22,7 @@ include module type of struct
       Unbounded < ... < Incl 13 < Excl 13 < Incl 14 < Excl 14 < ...
     ]} *)
 module As_lower_bound : sig
-  type nonrec 'a t = 'a t [@@deriving bin_io, compare, equal, hash, sexp]
+  type nonrec 'a t = 'a t [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
 end
 
 (** Compares [t] values as upper bounds, where [Unbounded] is highest, [Incl x > Excl x],
@@ -34,7 +34,7 @@ end
       ... < Excl 13 < Incl 13 < Excl 14 < Incl 14 < ... < Unbounded
     ]} *)
 module As_upper_bound : sig
-  type nonrec 'a t = 'a t [@@deriving bin_io, compare, equal, hash, sexp]
+  type nonrec 'a t = 'a t [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
 end
 
 module Stable : sig

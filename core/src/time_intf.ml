@@ -4,7 +4,12 @@ module Date = Date0
 
 module type Zone = sig
   module Time : Time0_intf.S
-  include Zone.S with type t = Zone.t and module Time_in_seconds := Time
+
+  include
+    Zone.S
+    with type t = Zone.t
+     and type Index.t = Zone.Index.t
+     and module Time_in_seconds := Time
 
   (** [abbreviation t time] returns the abbreviation name (such as EDT, EST, JST) of given
       zone [t] at [time]. This string conversion is one-way only, and cannot reliably be
@@ -223,8 +228,8 @@ module type S = sig
   include Shared with type t := t with module Span := Span with module Ofday := Ofday
 
   val of_string : string -> t
-    [@@deprecated
-      "[since 2021-04] Use [of_string_with_utc_offset] or [Time_float_unix.of_string]"]
+  [@@deprecated
+    "[since 2021-04] Use [of_string_with_utc_offset] or [Time_float_unix.of_string]"]
 
   (** [of_string_with_utc_offset] requires its input to have an explicit
       UTC offset, e.g. [2000-01-01 12:34:56.789012-23], or use the UTC zone, "Z",
@@ -232,7 +237,7 @@ module type S = sig
   val of_string_with_utc_offset : string -> t
 
   val to_string : t -> string
-    [@@deprecated "[since 2021-04] Use [to_string_utc] or [Time_float_unix.to_string]"]
+  [@@deprecated "[since 2021-04] Use [to_string_utc] or [Time_float_unix.to_string]"]
 
   (** [to_string_utc] generates a time string with the UTC zone, "Z", e.g. [2000-01-01
       12:34:56.789012Z]. *)

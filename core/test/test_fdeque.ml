@@ -7,8 +7,8 @@ let%expect_test _ =
     invariant (ignore : int -> unit) q;
     let list = to_list q in
     print_s [%sexp (list : int list)];
-    require_equal [%here] (module Int) (length q) (List.length list);
-    require_equal [%here] (module Bool) (is_empty q) (List.is_empty list)
+    require_equal (module Int) (length q) (List.length list);
+    require_equal (module Bool) (is_empty q) (List.is_empty list)
   in
   let q0 = of_list [ 1; 2; 3; 4; 5 ] in
   show q0;
@@ -22,19 +22,17 @@ let%expect_test _ =
   let q3 = enqueue_back q2 0 in
   show q3;
   [%expect {| (3 4 5 0) |}];
-  require_equal [%here] (module Int) (peek_front_exn q3) 3;
-  require_equal [%here] (module Int) (peek_back_exn q3) 0;
+  require_equal (module Int) (peek_front_exn q3) 3;
+  require_equal (module Int) (peek_back_exn q3) 0;
   require_equal
-    [%here]
     (module struct
       type t = int list [@@deriving equal, sexp_of]
     end)
     (to_list (drop_front_exn q0))
     (to_list q1);
-  require [%here] (not (is_empty q3));
-  require [%here] (is_empty (Fn.apply_n_times drop_front_exn ~n:4 q3));
+  require (not (is_empty q3));
+  require (is_empty (Fn.apply_n_times drop_front_exn ~n:4 q3));
   require_equal
-    [%here]
     (module struct
       type t = int list [@@deriving equal, sexp_of]
     end)
@@ -148,7 +146,7 @@ let%test_unit "Arbitrary_order doesn't drop elements" =
     |> of_list
     |> Arbitrary_order.to_sequence
     |> Sequence.fold ~init:Int.Map.empty ~f:(fun acc key ->
-         Map.update acc key ~f:(fun existing -> 1 + Option.value ~default:0 existing))
+      Map.update acc key ~f:(fun existing -> 1 + Option.value ~default:0 existing))
   in
   [%test_result: int Int.Map.t] ~expect arbitrary_order_elements
 ;;

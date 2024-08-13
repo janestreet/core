@@ -21,6 +21,6 @@ module Stable : sig
       | Zero
       | Pos
       | Nan
-    [@@deriving bin_io, compare, hash, sexp]
+    [@@deriving bin_io, compare, hash, sexp, sexp_grammar]
   end
 end

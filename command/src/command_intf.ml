@@ -574,26 +574,26 @@ module type Command = sig
   end
 
   module Let_syntax : sig
-    (** Substituted below. *)
-    type 'a t
-
-    val return : 'a -> 'a t
-
-    include Applicative.Applicative_infix with type 'a t := 'a t
-
-    module Let_syntax : sig
       (** Substituted below. *)
       type 'a t
 
       val return : 'a -> 'a t
-      val map : 'a t -> f:('a -> 'b) -> 'b t
-      val both : 'a t -> 'b t -> ('a * 'b) t
 
-      module Open_on_rhs = Param
+      include Applicative.Applicative_infix with type 'a t := 'a t
+
+      module Let_syntax : sig
+          (** Substituted below. *)
+          type 'a t
+
+          val return : 'a -> 'a t
+          val map : 'a t -> f:('a -> 'b) -> 'b t
+          val both : 'a t -> 'b t -> ('a * 'b) t
+
+          module Open_on_rhs = Param
+        end
+        with type 'a t := 'a Param.t
     end
     with type 'a t := 'a Param.t
-  end
-  with type 'a t := 'a Param.t
 
   (** The old interface for command-line specifications -- {b Do Not Use}.
 
@@ -610,13 +610,13 @@ module type Command = sig
 
     (** Superceded by [return], preserved for backwards compatibility. *)
     val const : 'a -> 'a Param.t
-      [@@deprecated
-        "[since 2018-10] use [Command.Param.return] instead of [Command.Spec.const]"]
+    [@@deprecated
+      "[since 2018-10] use [Command.Param.return] instead of [Command.Spec.const]"]
 
     (** Superceded by [both], preserved for backwards compatibility. *)
     val pair : 'a Param.t -> 'b Param.t -> ('a * 'b) Param.t
-      [@@deprecated
-        "[since 2018-10] use [Command.Param.both] instead of [Command.Spec.pair]"]
+    [@@deprecated
+      "[since 2018-10] use [Command.Param.both] instead of [Command.Spec.pair]"]
 
     (** {2 Command specifications} *)
 
@@ -805,7 +805,7 @@ module type Command = sig
     val flags_of_args_exn
       :  (Stdlib.Arg.key * Stdlib.Arg.spec * Stdlib.Arg.doc) list
       -> ('a, 'a) t
-      [@@deprecated "[since 2018-10] switch to Command.Param"]
+    [@@deprecated "[since 2018-10] switch to Command.Param"]
 
     (** A specification of some number of anonymous arguments. *)
     type 'a anons = 'a Anons.t
@@ -926,24 +926,17 @@ module type Command = sig
   val exit : int -> _
 
   module For_telemetry : sig
-    (** Returns the command and the list of subcommands. Arguments to the [Command.t] are
-        not included.
+    (** Returns the command and the list of subcommands, as well as a full list of
+        arguments.
 
-        If a subcommand was specified as a unique prefix [normalized_path] will contain
-        the full subcommand name.
-
-        If the entry point to the program was not through [Command] returns [None].
+        If a subcommand/flag was specified as a unique prefix, the return value will contain
+        the full subcommand/flag name.
     *)
-    val normalized_path : unit -> string list option
-
-    (** Returns the full list of arguments that were parsed by [Command].
-
-        If a flag name was specified as a unique prefix [normalized_args] will contain the
-        full flag name.
-
-        If the entry point to the program was not through [Command] returns [None].
-    *)
-    val normalized_args : unit -> string list option
+    val normalized_path_and_args
+      :  unit
+      -> [ `Not_initialized_through_command
+         | `Ok of [ `Path of string list ] * [ `Args of string list ]
+         ]
   end
 
   (** [Deprecated] should be used only by [Deprecated_command].  At some point

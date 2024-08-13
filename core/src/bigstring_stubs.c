@@ -123,8 +123,7 @@ void core_bigstring_destroy(value v, int flags) {
   case CAML_BA_EXTERNAL:
     if ((flags & CORE_BIGSTRING_DESTROY_ALLOW_EXTERNAL) !=
         CORE_BIGSTRING_DESTROY_ALLOW_EXTERNAL)
-      caml_failwith(
-          "bigstring_destroy: bigstring is external or already deallocated");
+      caml_failwith("bigstring_destroy: bigstring is external or already deallocated");
     break;
   case CAML_BA_MANAGED:
     check_bigstring_proxy(b);

@@ -123,11 +123,11 @@ module Latest = struct
   include T
 
   include Pretty_printer.Register (struct
-    type nonrec t = t
+      type nonrec t = t
 
-    let to_string = to_string
-    let module_name = "Core.Host_and_port"
-  end)
+      let to_string = to_string
+      let module_name = "Core.Host_and_port"
+    end)
 
   include (Hashable.Make_binable (T) : Hashable.S_binable with type t := t)
   include Comparable.Make_binable_using_comparator (T)

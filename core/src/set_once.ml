@@ -12,7 +12,7 @@ module Stable = struct
 
   module V1 = struct
     module Format = struct
-      type 'a t = 'a option ref [@@deriving bin_io, sexp]
+      type 'a t = 'a option ref [@@deriving bin_io, sexp, sexp_grammar]
     end
 
     include T
@@ -39,6 +39,11 @@ module Stable = struct
           let of_sexpable = of_format
           let to_sexpable = to_format
         end)
+
+    let t_sexp_grammar : 'a Sexplib.Sexp_grammar.t -> 'a t Sexplib.Sexp_grammar.t =
+      fun a_sexp_grammar ->
+      Sexplib.Sexp_grammar.coerce (Format.t_sexp_grammar a_sexp_grammar)
+    ;;
   end
 end
 
@@ -103,3 +108,13 @@ module Optional_syntax = struct
     let unsafe_value t = get_exn t [%here]
   end
 end
+
+include
+  Quickcheckable.Of_quickcheckable1
+    (Option)
+    (struct
+      type nonrec 'a t = 'a t
+
+      let to_quickcheckable { value; set_at = _ } = value
+      let of_quickcheckable value = { value; set_at = [%here] }
+    end)
