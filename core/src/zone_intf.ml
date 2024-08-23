@@ -100,7 +100,7 @@ module type S = sig
       both ends. Every time belongs to exactly one such range. The times of DST
       transitions themselves belong to the range for which they are the lower bound. *)
   module Index : sig
-    type t [@@immediate]
+    type t : immediate
 
     val next : t -> t
     val prev : t -> t

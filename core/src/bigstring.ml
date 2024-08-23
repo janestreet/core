@@ -154,7 +154,7 @@ let get_tail_padded_fixed_string ~padding t ~pos ~len () =
   get_string t ~pos ~len:(data_end - pos)
 ;;
 
-let get_tail_padded_fixed_string_local ~padding t ~pos ~len () =
+let get_tail_padded_fixed_string_local ~padding t ~pos ~len () = exclave_
   let data_end =
     last_nonmatch_plus_one ~buf:t ~min_pos:pos ~pos:(pos + len) ~char:padding
   in
@@ -171,7 +171,7 @@ let[@cold] set_padded_fixed_string_failed ~head_or_tail ~value ~len =
     ()
 ;;
 
-let set_tail_padded_fixed_string ~padding t ~pos ~len value =
+let set_tail_padded_fixed_string ~padding t ~pos ~len (local_ value) =
   let slen = String.length value in
   if slen > len then set_padded_fixed_string_failed ~head_or_tail:"tail" ~value ~len;
   From_string.blit ~src:value ~dst:t ~src_pos:0 ~dst_pos:pos ~len:slen;
@@ -186,7 +186,7 @@ let rec first_nonmatch ~buf ~pos ~max_pos ~char =
   else pos
 ;;
 
-let set_head_padded_fixed_string ~padding t ~pos ~len value =
+let set_head_padded_fixed_string ~padding t ~pos ~len (local_ value) =
   let slen = String.length value in
   if slen > len then set_padded_fixed_string_failed ~head_or_tail:"head" ~value ~len;
   From_string.blit ~src:value ~dst:t ~src_pos:0 ~dst_pos:(pos + len - slen) ~len:slen;
@@ -200,7 +200,7 @@ let get_head_padded_fixed_string ~padding t ~pos ~len () =
   get_string t ~pos:data_begin ~len:(len - (data_begin - pos))
 ;;
 
-let get_head_padded_fixed_string_local ~padding t ~pos ~len () =
+let get_head_padded_fixed_string_local ~padding t ~pos ~len () = exclave_
   let data_begin = first_nonmatch ~buf:t ~pos ~max_pos:(pos + len - 1) ~char:padding in
   let len = len - (data_begin - pos) in
   Local.get_string t ~pos:data_begin ~len

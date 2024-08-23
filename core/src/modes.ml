@@ -1,7 +1,7 @@
 module Stable = struct
   module Global = struct
     module V1 = struct
-      type 'a t = 'a Base.Modes.Global.t = { global : 'a }
+      type 'a t = 'a Base.Modes.Global.t = { global_ global : 'a }
       [@@unboxed] [@@deriving quickcheck, stable_witness, typerep]
 
       let compare = Base.Modes.Global.compare

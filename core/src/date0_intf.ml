@@ -2,7 +2,7 @@ open! Import
 open Std_internal
 
 module type Date0 = sig
-  type t [@@deriving bin_io ~localize, hash, sexp, sexp_grammar, typerep] [@@immediate]
+  type t : immediate [@@deriving bin_io ~localize, hash, sexp, sexp_grammar, typerep]
 
   include Hashable_binable with type t := t
 
@@ -241,7 +241,7 @@ module type Date0 = sig
       most clients should use the ordinary [t]. *)
   module Days : sig
       type date = t
-      type t [@@immediate]
+      type t : immediate
 
       val of_date : date -> t
       val to_date : t -> date
@@ -255,7 +255,7 @@ module type Date0 = sig
 
   module Option : sig
     type value := t
-    type t [@@deriving bin_io ~localize, hash, sexp, sexp_grammar] [@@immediate]
+    type t : immediate [@@deriving bin_io ~localize, hash, sexp, sexp_grammar]
 
     include Immediate_option_intf.S with type value := value and type t := t
     include Comparable.S_plain with type t := t
@@ -264,7 +264,7 @@ module type Date0 = sig
 
   module Stable : sig
     module V1 : sig
-      type nonrec t = t [@@deriving equal, hash, sexp_grammar] [@@immediate]
+      type nonrec t : immediate = t [@@deriving equal, hash, sexp_grammar]
 
       (** [to_int] and [of_int_exn] convert to/from the underlying integer
           representation. *)
@@ -283,9 +283,8 @@ module type Date0 = sig
 
     module Option : sig
       module V1 : sig
-        type nonrec t = Option.t
+        type nonrec t : immediate = Option.t
         [@@deriving bin_io ~localize, compare, equal, sexp, sexp_grammar, stable_witness]
-        [@@immediate]
 
         (** [to_int] and [of_int_exn] convert to/from the underlying integer
             representation. *)

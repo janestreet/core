@@ -44,10 +44,27 @@ module Header : sig
      For the same reason we make sure not to call [Result.try_with (fun () -> ...)]
      inside [with_iteration] and do an explicit match statement instead. *)
 
-  val with_iteration_2l : t -> 'a -> 'b -> ('a -> 'b -> 'c) -> 'c
-  val with_iteration_3l : t -> 'a -> 'b -> 'c -> ('a -> 'b -> 'c -> 'd) -> 'd
+  val with_iteration_2l : t -> 'a -> local_ 'b -> local_ ('a -> local_ 'b -> 'c) -> 'c
+
+  val with_iteration_3l
+    :  t
+    -> local_ 'a
+    -> 'b
+    -> 'c
+    -> (local_ 'a -> 'b -> 'c -> 'd)
+    -> 'd
+
   val with_iteration_4 : t -> 'a -> 'b -> 'c -> 'd -> ('a -> 'b -> 'c -> 'd -> 'e) -> 'e
-  val with_iteration_4l : t -> 'a -> 'b -> 'c -> 'd -> ('a -> 'b -> 'c -> 'd -> 'e) -> 'e
+
+  val with_iteration_4l
+    :  t
+    -> local_ 'a
+    -> local_ 'b
+    -> 'c
+    -> 'd
+    -> local_ (local_ 'a -> local_ 'b -> 'c -> 'd -> 'e)
+    -> 'e
+
   val merge : t -> t -> [ `Same_already | `Merged ]
 end = struct
   type s =
@@ -117,7 +134,7 @@ end = struct
       r
   ;;
 
-  let with_iteration_4l t a b c d f =
+  let with_iteration_4l t (local_ a) (local_ b) c d f =
     let s = Union_find.get t in
     incr_pending_iters s;
     match f a b c d with

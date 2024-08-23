@@ -299,11 +299,11 @@ let compact_if_not_running_test () = if not am_running_test then compact ()
 let rec keep_alive o = if zero <> 0 then keep_alive (Sys.opaque_identity o)
 
 module For_testing = struct
-  type 'a globl = { g : 'a } [@@unboxed]
+  type 'a globl = { global_ g : 'a } [@@unboxed]
 
   (* We disable inlining for this function so the GC stats and the call to [f] are never
      rearranged. *)
-  let[@cold] measure_internal ~on_result (f : unit -> 'a) =
+  let[@cold] measure_internal ~on_result (f : unit -> local_ 'a) = exclave_
     let minor_words_before = minor_words () in
     let major_words_before = major_words () in
     (* We wrap [f ()] with [Sys.opaque_identity] to prevent the return value from being
@@ -316,7 +316,7 @@ module For_testing = struct
     on_result ~major_words_allocated ~minor_words_allocated x
   ;;
 
-  let is_zero_alloc_local (type a) (f : unit -> a) =
+  let is_zero_alloc_local (type a) (f : unit -> local_ a) =
     (* Instead of using [Allocation_report.measure], and matching on the result, we use
        this construction, in order to have [is_zero_alloc] not allocate itself. This
        enables [is_zero_alloc] to be used in a nested way. *)
@@ -327,7 +327,7 @@ module For_testing = struct
         major_words_allocated == 0 && minor_words_allocated == 0) [@nontail]
   ;;
 
-  let is_zero_alloc f = is_zero_alloc_local (fun () -> { g = f () }) [@nontail]
+  let is_zero_alloc (local_ f) = is_zero_alloc_local (fun () -> { g = f () }) [@nontail]
 
   module Allocation_report = struct
     type t =
@@ -336,17 +336,17 @@ module For_testing = struct
       }
     [@@deriving sexp_of, globalize]
 
-    let create ~major_words_allocated ~minor_words_allocated =
+    let create ~major_words_allocated ~minor_words_allocated = exclave_
       { major_words_allocated; minor_words_allocated }
     ;;
   end
 
-  let measure_allocation_local f =
+  let measure_allocation_local f = exclave_
     measure_internal f ~on_result:(fun ~major_words_allocated ~minor_words_allocated x ->
-      x, Allocation_report.create ~major_words_allocated ~minor_words_allocated)
+      exclave_ x, Allocation_report.create ~major_words_allocated ~minor_words_allocated)
   ;;
 
-  let measure_allocation_for_runtime5_local f =
+  let measure_allocation_for_runtime5_local f = exclave_
     let minor_words_before = minor_words () in
     let promoted_words_before = promoted_words () in
     let major_words_before = major_words () in
@@ -389,7 +389,7 @@ module For_testing = struct
 
   [%%endif]
 
-  let measure_and_log_allocation_local (f : unit -> 'a) =
+  let measure_and_log_allocation_local (local_ (f : unit -> local_ 'a)) = exclave_
     let log : Allocation_log.t list ref = ref []
     and major_allocs = ref 0
     and minor_allocs = ref 0 in
@@ -472,7 +472,7 @@ module For_testing = struct
           (allocation_log : Allocation_log.t list)]
   ;;
 
-  let assert_no_allocation_local here f =
+  let assert_no_allocation_local here f = exclave_
     let result, allocation_report, allocation_log = measure_and_log_allocation_local f in
     if allocation_report.major_words_allocated > 0
        || allocation_report.minor_words_allocated > 0
@@ -527,6 +527,26 @@ module Expert = struct
          we can simply drop the finaliser. *)
       ()
   ;;
+
+  module With_leak_protection = struct
+    let protect_finalizer x finalizer =
+      let ephemeron = Ephemeron.K1.make x finalizer in
+      fun x ->
+        match Ephemeron.K1.query ephemeron x with
+        | None -> assert false
+        | Some finalizer -> finalizer x
+    ;;
+
+    let add_finalizer x f =
+      let f = protect_finalizer x f in
+      add_finalizer x f
+    ;;
+
+    let add_finalizer_exn x f =
+      let f = protect_finalizer x f in
+      add_finalizer_exn x f
+    ;;
+  end
 
   let finalize_release = Stdlib.Gc.finalise_release
 

@@ -114,7 +114,7 @@ external unsafe_destroy_and_resize : t -> len:int -> t = "bigstring_realloc"
     [.pack_tail_padded_fixed_string]. *)
 val get_tail_padded_fixed_string
   :  padding:char
-  -> t
+  -> local_ t
   -> pos:int
   -> len:int
   -> unit
@@ -122,23 +122,23 @@ val get_tail_padded_fixed_string
 
 val get_tail_padded_fixed_string_local
   :  padding:char
-  -> t
+  -> local_ t
   -> pos:int
   -> len:int
   -> unit
-  -> string
+  -> local_ string
 
 val set_tail_padded_fixed_string
   :  padding:char
-  -> t
+  -> local_ t
   -> pos:int
   -> len:int
-  -> string
+  -> local_ string
   -> unit
 
 val get_head_padded_fixed_string
   :  padding:char
-  -> t
+  -> local_ t
   -> pos:int
   -> len:int
   -> unit
@@ -146,18 +146,18 @@ val get_head_padded_fixed_string
 
 val get_head_padded_fixed_string_local
   :  padding:char
-  -> t
+  -> local_ t
   -> pos:int
   -> len:int
   -> unit
-  -> string
+  -> local_ string
 
 val set_head_padded_fixed_string
   :  padding:char
-  -> t
+  -> local_ t
   -> pos:int
   -> len:int
-  -> string
+  -> local_ string
   -> unit
 
 module Unstable : sig

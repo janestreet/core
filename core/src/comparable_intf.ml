@@ -5,6 +5,7 @@ module type Infix_with_zero_alloc = Base.Comparable.Infix_with_zero_alloc
 module type Comparisons = Base.Comparable.Comparisons
 module type Comparisons_with_zero_alloc = Base.Comparable.Comparisons_with_zero_alloc
 module type With_compare = Base.Comparable.With_compare
+module type With_compare_local = Base.Comparable.With_compare_local
 
 module type Validate = sig
   type t
@@ -153,9 +154,11 @@ module type Comparable = sig
   module type Validate = Validate
   module type Validate_with_zero = Validate_with_zero
   module type With_compare = With_compare
+  module type With_compare_local = With_compare_local
   module type With_zero = With_zero
 
   include With_compare
+  module Local : With_compare_local
 
   (** Inherit comparability from a component. *)
   module Inherit

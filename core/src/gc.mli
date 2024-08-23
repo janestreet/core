@@ -548,10 +548,12 @@ module For_testing : sig
   end
 
   (** [measure_allocation f] measures the words allocated by running [f ()] *)
-  val measure_allocation : (unit -> 'a) -> 'a * Allocation_report.t
+  val measure_allocation : local_ (unit -> 'a) -> 'a * Allocation_report.t
 
   (** Same as [measure_allocation], but for functions that return a local value. *)
-  val measure_allocation_local : (unit -> 'a) -> 'a * Allocation_report.t
+  val measure_allocation_local
+    :  local_ (unit -> local_ 'a)
+    -> local_ 'a * Allocation_report.t
 
   module Allocation_log : sig
     type t =
@@ -568,27 +570,30 @@ module For_testing : sig
       This function is only supported since OCaml 4.11. On prior versions, the function
       always returns an empty log. *)
   val measure_and_log_allocation
-    :  (unit -> 'a)
+    :  local_ (unit -> 'a)
     -> 'a * Allocation_report.t * Allocation_log.t list
 
   (** Same as [measure_and_log_allocation], but for functions that return a local
       value. *)
   val measure_and_log_allocation_local
-    :  (unit -> 'a)
-    -> 'a * Allocation_report.t * Allocation_log.t list
+    :  local_ (unit -> local_ 'a)
+    -> local_ 'a * Allocation_report.t * Allocation_log.t list
 
   (** [is_zero_alloc f] runs [f ()] and returns [true] if it does not allocate, or [false]
       otherwise. [is_zero_alloc] does not allocate. *)
-  val is_zero_alloc : (unit -> _) -> bool
+  val is_zero_alloc : local_ (unit -> _) -> bool
 
   (** Same as [is_zero_alloc], but for functions that return a local value. *)
-  val is_zero_alloc_local : (unit -> _) -> bool
+  val is_zero_alloc_local : local_ (unit -> local_ _) -> bool
 
   (** [assert_no_allocation [%here] f] raises if [f] allocates. *)
-  val assert_no_allocation : Source_code_position.t -> (unit -> 'a) -> 'a
+  val assert_no_allocation : Source_code_position.t -> local_ (unit -> 'a) -> 'a
 
   (** Same as [assert_no_allocation], but for functions that return a local value. *)
-  val assert_no_allocation_local : Source_code_position.t -> (unit -> 'a) -> 'a
+  val assert_no_allocation_local
+    :  Source_code_position.t
+    -> local_ (unit -> local_ 'a)
+    -> local_ 'a
 end
 
 (** The [Expert] module contains functions that novice users should not use, due to their
@@ -660,6 +665,32 @@ module Expert : sig
   val add_finalizer_last : 'a Heap_block.t -> (unit -> unit) -> unit
 
   val add_finalizer_last_exn : 'a -> (unit -> unit) -> unit
+
+  module With_leak_protection : sig
+    (** The versions of [add_finalizer] that protect against memory leaks on circular
+        references, by using ephemerons.
+
+        These functions are not subject to the limitation mentioned above:
+        if in a finalizer pair [(b, f)] the closure of [f] references [b], the
+        "normal" functions result in a memory leak, whereas these functions
+        work correctly.
+    *)
+
+    val add_finalizer : 'a Heap_block.t -> ('a Heap_block.t -> unit) -> unit
+    val add_finalizer_exn : 'a -> ('a -> unit) -> unit
+
+    (** Make a function [f] safe to use with [Stdlib.Gc.finalise f' x], despite [f]
+        potentially containing references back to [x].
+
+        You don't need to use this function if you use [add_finalizer] from this module.
+        It's only exposed for the case when you want to use [Stdlib.Gc.finalise]
+        directly.
+    *)
+    val protect_finalizer
+      :  'a Heap_block.t
+      -> ('a Heap_block.t -> unit)
+      -> ('a Heap_block.t -> unit)
+  end
 
   (** The runtime essentially maintains a bool ref:
 

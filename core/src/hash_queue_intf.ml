@@ -152,7 +152,7 @@ module type S1 = sig
 
   (** [dequeue_all t ~f] dequeues every element of the queue and applies [f] to each one.
       The dequeue order is from front to back. *)
-  val dequeue_all : ('key, 'data) t -> f:('data -> unit) -> unit
+  val dequeue_all : ('key, 'data) t -> f:local_ ('data -> unit) -> unit
 
   (** [remove q k] removes the key-value pair with key [k] from the queue. *)
   val remove : ('key, 'data) t -> 'key -> [ `Ok | `No_such_key ]
@@ -193,12 +193,12 @@ module type S1 = sig
   (** {2 Iterating over elements} *)
 
   (** [iter t ~f] applies [f] to each key and element of the queue. *)
-  val iteri : ('key, 'data) t -> f:(key:'key -> data:'data -> unit) -> unit
+  val iteri : ('key, 'data) t -> f:local_ (key:'key -> data:'data -> unit) -> unit
 
   val foldi
     :  ('key, 'data) t
     -> init:'acc
-    -> f:('acc -> key:'key -> data:'data -> 'acc)
+    -> f:local_ ('acc -> key:'key -> data:'data -> 'acc)
     -> 'acc
 end
 

@@ -178,86 +178,95 @@ module type Permissioned = sig
 
   val create_float_uninitialized : len:int -> (float, [< _ perms ]) t
   val create : len:int -> 'a -> ('a, [< _ perms ]) t
-  val create_local : len:int -> 'a -> ('a, [< _ perms ]) t
-  val init : int -> f:(int -> 'a) -> ('a, [< _ perms ]) t
+  val create_local : len:int -> 'a -> local_ ('a, [< _ perms ]) t
+  val init : int -> f:local_ (int -> 'a) -> ('a, [< _ perms ]) t
   val make_matrix : dimx:int -> dimy:int -> 'a -> (('a, [< _ perms ]) t, [< _ perms ]) t
 
   val copy_matrix
-    :  (('a, [> read ]) t, [> read ]) t
+    :  local_ (('a, [> read ]) t, [> read ]) t
     -> (('a, [< _ perms ]) t, [< _ perms ]) t
 
   val append : ('a, [> read ]) t -> ('a, [> read ]) t -> ('a, [< _ perms ]) t
-  val concat : ('a, [> read ]) t list -> ('a, [< _ perms ]) t
-  val copy : ('a, [> read ]) t -> ('a, [< _ perms ]) t
-  val fill : ('a, [> write ]) t -> pos:int -> len:int -> 'a -> unit
+  val concat : local_ ('a, [> read ]) t list -> ('a, [< _ perms ]) t
+  val copy : local_ ('a, [> read ]) t -> ('a, [< _ perms ]) t
+  val fill : local_ ('a, [> write ]) t -> pos:int -> len:int -> 'a -> unit
   val of_list : 'a list -> ('a, [< _ perms ]) t
-  val map : ('a, [> read ]) t -> f:('a -> 'b) -> ('b, [< _ perms ]) t
+  val map : ('a, [> read ]) t -> f:local_ ('a -> 'b) -> ('b, [< _ perms ]) t
 
   val folding_map
     :  ('a, [> read ]) t
     -> init:'acc
-    -> f:('acc -> 'a -> 'acc * 'b)
+    -> f:local_ ('acc -> 'a -> 'acc * 'b)
     -> ('b, [< _ perms ]) t
 
   val fold_map
     :  ('a, [> read ]) t
     -> init:'acc
-    -> f:('acc -> 'a -> 'acc * 'b)
+    -> f:local_ ('acc -> 'a -> 'acc * 'b)
     -> 'acc * ('b, [< _ perms ]) t
 
-  val mapi : ('a, [> read ]) t -> f:(int -> 'a -> 'b) -> ('b, [< _ perms ]) t
-  val iteri : ('a, [> read ]) t -> f:(int -> 'a -> unit) -> unit
-  val foldi : ('a, [> read ]) t -> init:'acc -> f:(int -> 'acc -> 'a -> 'acc) -> 'acc
+  val mapi : ('a, [> read ]) t -> f:local_ (int -> 'a -> 'b) -> ('b, [< _ perms ]) t
+  val iteri : ('a, [> read ]) t -> f:local_ (int -> 'a -> unit) -> unit
+
+  val foldi
+    :  ('a, [> read ]) t
+    -> init:'acc
+    -> f:local_ (int -> 'acc -> 'a -> 'acc)
+    -> 'acc
 
   val folding_mapi
     :  ('a, [> read ]) t
     -> init:'acc
-    -> f:(int -> 'acc -> 'a -> 'acc * 'b)
+    -> f:local_ (int -> 'acc -> 'a -> 'acc * 'b)
     -> ('b, [< _ perms ]) t
 
   val fold_mapi
     :  ('a, [> read ]) t
     -> init:'acc
-    -> f:(int -> 'acc -> 'a -> 'acc * 'b)
+    -> f:local_ (int -> 'acc -> 'a -> 'acc * 'b)
     -> 'acc * ('b, [< _ perms ]) t
 
-  val fold_right : ('a, [> read ]) t -> f:('a -> 'acc -> 'acc) -> init:'acc -> 'acc
+  val fold_right : ('a, [> read ]) t -> f:local_ ('a -> 'acc -> 'acc) -> init:'acc -> 'acc
 
   val sort
     :  ?pos:int
     -> ?len:int
-    -> ('a, [> read_write ]) t
-    -> compare:('a -> 'a -> int)
+    -> local_ ('a, [> read_write ]) t
+    -> compare:local_ ('a -> 'a -> int)
     -> unit
 
   val stable_sort : ('a, [> read_write ]) t -> compare:('a -> 'a -> int) -> unit
-  val is_sorted : ('a, [> read ]) t -> compare:('a -> 'a -> int) -> bool
-  val is_sorted_strictly : ('a, [> read ]) t -> compare:('a -> 'a -> int) -> bool
+  val is_sorted : local_ ('a, [> read ]) t -> compare:local_ ('a -> 'a -> int) -> bool
+
+  val is_sorted_strictly
+    :  local_ ('a, [> read ]) t
+    -> compare:local_ ('a -> 'a -> int)
+    -> bool
 
   val merge
     :  ('a, [> read ]) t
     -> ('a, [> read ]) t
-    -> compare:('a -> 'a -> int)
+    -> compare:local_ ('a -> 'a -> int)
     -> ('a, [< _ perms ]) t
 
   val concat_map
     :  ('a, [> read ]) t
-    -> f:('a -> ('b, [> read ]) t)
+    -> f:local_ ('a -> ('b, [> read ]) t)
     -> ('b, [< _ perms ]) t
 
   val concat_mapi
     :  ('a, [> read ]) t
-    -> f:(int -> 'a -> ('b, [> read ]) t)
+    -> f:local_ (int -> 'a -> ('b, [> read ]) t)
     -> ('b, [< _ perms ]) t
 
   val partition_tf
     :  ('a, [> read ]) t
-    -> f:('a -> bool)
+    -> f:local_ ('a -> bool)
     -> ('a, [< _ perms ]) t * ('a, [< _ perms ]) t
 
   val partitioni_tf
     :  ('a, [> read ]) t
-    -> f:(int -> 'a -> bool)
+    -> f:local_ (int -> 'a -> bool)
     -> ('a, [< _ perms ]) t * ('a, [< _ perms ]) t
 
   val cartesian_product
@@ -278,69 +287,79 @@ module type Permissioned = sig
   val nget : ('a, [> read ]) t -> int -> 'a
   val nset : ('a, [> write ]) t -> int -> 'a -> unit
   val filter_opt : ('a option, [> read ]) t -> ('a, [< _ perms ]) t
-  val filter_map : ('a, [> read ]) t -> f:('a -> 'b option) -> ('b, [< _ perms ]) t
+  val filter_map : ('a, [> read ]) t -> f:local_ ('a -> 'b option) -> ('b, [< _ perms ]) t
 
   val filter_mapi
     :  ('a, [> read ]) t
-    -> f:(int -> 'a -> 'b option)
+    -> f:local_ (int -> 'a -> 'b option)
     -> ('b, [< _ perms ]) t
 
-  val for_alli : ('a, [> read ]) t -> f:(int -> 'a -> bool) -> bool
-  val existsi : ('a, [> read ]) t -> f:(int -> 'a -> bool) -> bool
-  val counti : ('a, [> read ]) t -> f:(int -> 'a -> bool) -> int
-  val iter2_exn : ('a, [> read ]) t -> ('b, [> read ]) t -> f:('a -> 'b -> unit) -> unit
+  val for_alli : ('a, [> read ]) t -> f:local_ (int -> 'a -> bool) -> bool
+  val existsi : ('a, [> read ]) t -> f:local_ (int -> 'a -> bool) -> bool
+  val counti : ('a, [> read ]) t -> f:local_ (int -> 'a -> bool) -> int
+
+  val iter2_exn
+    :  ('a, [> read ]) t
+    -> ('b, [> read ]) t
+    -> f:local_ ('a -> 'b -> unit)
+    -> unit
 
   val map2_exn
     :  ('a, [> read ]) t
     -> ('b, [> read ]) t
-    -> f:('a -> 'b -> 'c)
+    -> f:local_ ('a -> 'b -> 'c)
     -> ('c, [< _ perms ]) t
 
   val fold2_exn
     :  ('a, [> read ]) t
     -> ('b, [> read ]) t
     -> init:'acc
-    -> f:('acc -> 'a -> 'b -> 'acc)
+    -> f:local_ ('acc -> 'a -> 'b -> 'acc)
     -> 'acc
 
   val for_all2_exn
     :  ('a, [> read ]) t
     -> ('b, [> read ]) t
-    -> f:('a -> 'b -> bool)
+    -> f:local_ ('a -> 'b -> bool)
     -> bool
 
-  val exists2_exn : ('a, [> read ]) t -> ('b, [> read ]) t -> f:('a -> 'b -> bool) -> bool
-  val filter : ('a, [> read ]) t -> f:('a -> bool) -> ('a, [< _ perms ]) t
-  val filteri : ('a, [> read ]) t -> f:(int -> 'a -> bool) -> ('a, [< _ perms ]) t
-  val swap : ('a, [> read_write ]) t -> int -> int -> unit
-  val rev_inplace : ('a, [> read_write ]) t -> unit
+  val exists2_exn
+    :  ('a, [> read ]) t
+    -> ('b, [> read ]) t
+    -> f:local_ ('a -> 'b -> bool)
+    -> bool
+
+  val filter : ('a, [> read ]) t -> f:local_ ('a -> bool) -> ('a, [< _ perms ]) t
+  val filteri : ('a, [> read ]) t -> f:local_ (int -> 'a -> bool) -> ('a, [< _ perms ]) t
+  val swap : local_ ('a, [> read_write ]) t -> int -> int -> unit
+  val rev_inplace : local_ ('a, [> read_write ]) t -> unit
   val rev : ('a, [> read ]) t -> ('a, [< _ perms ]) t
   val of_list_rev : 'a list -> ('a, [< _ perms ]) t
-  val of_list_map : 'a list -> f:('a -> 'b) -> ('b, [< _ perms ]) t
-  val of_list_mapi : 'a list -> f:(int -> 'a -> 'b) -> ('b, [< _ perms ]) t
-  val of_list_rev_map : 'a list -> f:('a -> 'b) -> ('b, [< _ perms ]) t
-  val of_list_rev_mapi : 'a list -> f:(int -> 'a -> 'b) -> ('b, [< _ perms ]) t
-  val map_inplace : ('a, [> read_write ]) t -> f:('a -> 'a) -> unit
-  val find_exn : ('a, [> read ]) t -> f:('a -> bool) -> 'a
-  val find_map_exn : ('a, [> read ]) t -> f:('a -> 'b option) -> 'b
-  val findi : ('a, [> read ]) t -> f:(int -> 'a -> bool) -> (int * 'a) option
-  val findi_exn : ('a, [> read ]) t -> f:(int -> 'a -> bool) -> int * 'a
-  val find_mapi : ('a, [> read ]) t -> f:(int -> 'a -> 'b option) -> 'b option
-  val find_mapi_exn : ('a, [> read ]) t -> f:(int -> 'a -> 'b option) -> 'b
+  val of_list_map : 'a list -> f:local_ ('a -> 'b) -> ('b, [< _ perms ]) t
+  val of_list_mapi : 'a list -> f:local_ (int -> 'a -> 'b) -> ('b, [< _ perms ]) t
+  val of_list_rev_map : 'a list -> f:local_ ('a -> 'b) -> ('b, [< _ perms ]) t
+  val of_list_rev_mapi : 'a list -> f:local_ (int -> 'a -> 'b) -> ('b, [< _ perms ]) t
+  val map_inplace : local_ ('a, [> read_write ]) t -> f:local_ ('a -> 'a) -> unit
+  val find_exn : ('a, [> read ]) t -> f:local_ ('a -> bool) -> 'a
+  val find_map_exn : ('a, [> read ]) t -> f:local_ ('a -> 'b option) -> 'b
+  val findi : ('a, [> read ]) t -> f:local_ (int -> 'a -> bool) -> (int * 'a) option
+  val findi_exn : ('a, [> read ]) t -> f:local_ (int -> 'a -> bool) -> int * 'a
+  val find_mapi : ('a, [> read ]) t -> f:local_ (int -> 'a -> 'b option) -> 'b option
+  val find_mapi_exn : ('a, [> read ]) t -> f:local_ (int -> 'a -> 'b option) -> 'b
 
   val find_consecutive_duplicate
     :  ('a, [> read ]) t
-    -> equal:('a -> 'a -> bool)
+    -> equal:local_ ('a -> 'a -> bool)
     -> ('a * 'a) option
 
-  val reduce : ('a, [> read ]) t -> f:('a -> 'a -> 'a) -> 'a option
-  val reduce_exn : ('a, [> read ]) t -> f:('a -> 'a -> 'a) -> 'a
+  val reduce : ('a, [> read ]) t -> f:local_ ('a -> 'a -> 'a) -> 'a option
+  val reduce_exn : ('a, [> read ]) t -> f:local_ ('a -> 'a -> 'a) -> 'a
 
   val permute
     :  ?random_state:Random.State.t
     -> ?pos:int
     -> ?len:int
-    -> ('a, [> read_write ]) t
+    -> local_ ('a, [> read_write ]) t
     -> unit
 
   val random_element : ?random_state:Random.State.t -> ('a, [> read ]) t -> 'a option
@@ -348,11 +367,22 @@ module type Permissioned = sig
   val zip : ('a, [> read ]) t -> ('b, [> read ]) t -> ('a * 'b, [< _ perms ]) t option
   val zip_exn : ('a, [> read ]) t -> ('b, [> read ]) t -> ('a * 'b, [< _ perms ]) t
   val unzip : ('a * 'b, [> read ]) t -> ('a, [< _ perms ]) t * ('b, [< _ perms ]) t
-  val sorted_copy : ('a, [> read ]) t -> compare:('a -> 'a -> int) -> ('a, [< _ perms ]) t
+
+  val sorted_copy
+    :  local_ ('a, [> read ]) t
+    -> compare:local_ ('a -> 'a -> int)
+    -> ('a, [< _ perms ]) t
+
   val last : ('a, [> read ]) t -> 'a
   val last_exn : ('a, [> read ]) t -> 'a
   val equal : ('a -> 'a -> bool) -> ('a, [> read ]) t -> ('a, [> read ]) t -> bool
-  val equal__local : ('a -> 'a -> bool) -> ('a, [> read ]) t -> ('a, [> read ]) t -> bool
+
+  val equal__local
+    :  (local_ 'a -> local_ 'a -> bool)
+    -> local_ ('a, [> read ]) t
+    -> local_ ('a, [> read ]) t
+    -> bool
+
   val to_sequence : ('a, [> read ]) t -> 'a Sequence.t
   val to_sequence_mutable : ('a, [> read ]) t -> 'a Sequence.t
 end
@@ -474,37 +504,55 @@ module type S = sig
     = "%array_unsafe_set"
 
   val create : len:int -> 'a -> 'a t
-  val create_local : len:int -> 'a -> 'a t
+  val create_local : len:int -> 'a -> local_ 'a t
   val create_float_uninitialized : len:int -> float t
-  val init : int -> f:(int -> 'a) -> 'a t
+  val init : int -> f:local_ (int -> 'a) -> 'a t
   val make_matrix : dimx:int -> dimy:int -> 'a -> 'a t t
-  val copy_matrix : 'a t t -> 'a t t
+  val copy_matrix : local_ 'a t t -> 'a t t
   val append : 'a t -> 'a t -> 'a t
-  val concat : 'a t list -> 'a t
-  val copy : 'a t -> 'a t
-  val fill : 'a t -> pos:int -> len:int -> 'a -> unit
+  val concat : local_ 'a t list -> 'a t
+  val copy : local_ 'a t -> 'a t
+  val fill : local_ 'a t -> pos:int -> len:int -> 'a -> unit
 
   include Blit.S1 with type 'a t := 'a t
 
   val of_list : 'a list -> 'a t
-  val map : 'a t -> f:('a -> 'b) -> 'b t
-  val folding_map : 'a t -> init:'acc -> f:('acc -> 'a -> 'acc * 'b) -> 'b t
-  val fold_map : 'a t -> init:'acc -> f:('acc -> 'a -> 'acc * 'b) -> 'acc * 'b t
-  val mapi : 'a t -> f:(int -> 'a -> 'b) -> 'b t
-  val iteri : 'a t -> f:(int -> 'a -> unit) -> unit
-  val foldi : 'a t -> init:'b -> f:(int -> 'b -> 'a -> 'b) -> 'b
-  val folding_mapi : 'a t -> init:'acc -> f:(int -> 'acc -> 'a -> 'acc * 'b) -> 'b t
-  val fold_mapi : 'a t -> init:'acc -> f:(int -> 'acc -> 'a -> 'acc * 'b) -> 'acc * 'b t
-  val fold_right : 'a t -> f:('a -> 'acc -> 'acc) -> init:'acc -> 'acc
-  val sort : ?pos:int -> ?len:int -> 'a t -> compare:('a -> 'a -> int) -> unit
+  val map : 'a t -> f:local_ ('a -> 'b) -> 'b t
+  val folding_map : 'a t -> init:'acc -> f:local_ ('acc -> 'a -> 'acc * 'b) -> 'b t
+  val fold_map : 'a t -> init:'acc -> f:local_ ('acc -> 'a -> 'acc * 'b) -> 'acc * 'b t
+  val mapi : 'a t -> f:local_ (int -> 'a -> 'b) -> 'b t
+  val iteri : 'a t -> f:local_ (int -> 'a -> unit) -> unit
+  val foldi : 'a t -> init:'b -> f:local_ (int -> 'b -> 'a -> 'b) -> 'b
+
+  val folding_mapi
+    :  'a t
+    -> init:'acc
+    -> f:local_ (int -> 'acc -> 'a -> 'acc * 'b)
+    -> 'b t
+
+  val fold_mapi
+    :  'a t
+    -> init:'acc
+    -> f:local_ (int -> 'acc -> 'a -> 'acc * 'b)
+    -> 'acc * 'b t
+
+  val fold_right : 'a t -> f:local_ ('a -> 'acc -> 'acc) -> init:'acc -> 'acc
+
+  val sort
+    :  ?pos:int
+    -> ?len:int
+    -> local_ 'a t
+    -> compare:local_ ('a -> 'a -> int)
+    -> unit
+
   val stable_sort : 'a t -> compare:('a -> 'a -> int) -> unit
-  val is_sorted : 'a t -> compare:('a -> 'a -> int) -> bool
-  val is_sorted_strictly : 'a t -> compare:('a -> 'a -> int) -> bool
-  val merge : 'a t -> 'a t -> compare:('a -> 'a -> int) -> 'a t
-  val concat_map : 'a t -> f:('a -> 'b t) -> 'b t
-  val concat_mapi : 'a t -> f:(int -> 'a -> 'b t) -> 'b t
-  val partition_tf : 'a t -> f:('a -> bool) -> 'a t * 'a t
-  val partitioni_tf : 'a t -> f:(int -> 'a -> bool) -> 'a t * 'a t
+  val is_sorted : local_ 'a t -> compare:local_ ('a -> 'a -> int) -> bool
+  val is_sorted_strictly : local_ 'a t -> compare:local_ ('a -> 'a -> int) -> bool
+  val merge : 'a t -> 'a t -> compare:local_ ('a -> 'a -> int) -> 'a t
+  val concat_map : 'a t -> f:local_ ('a -> 'b t) -> 'b t
+  val concat_mapi : 'a t -> f:local_ (int -> 'a -> 'b t) -> 'b t
+  val partition_tf : 'a t -> f:local_ ('a -> bool) -> 'a t * 'a t
+  val partitioni_tf : 'a t -> f:local_ (int -> 'a -> bool) -> 'a t * 'a t
   val cartesian_product : 'a t -> 'b t -> ('a * 'b) t
   val transpose : 'a t t -> 'a t t option
   val transpose_exn : 'a t t -> 'a t t
@@ -513,47 +561,65 @@ module type S = sig
   val nget : 'a t -> int -> 'a
   val nset : 'a t -> int -> 'a -> unit
   val filter_opt : 'a option t -> 'a t
-  val filter_map : 'a t -> f:('a -> 'b option) -> 'b t
-  val filter_mapi : 'a t -> f:(int -> 'a -> 'b option) -> 'b t
-  val for_alli : 'a t -> f:(int -> 'a -> bool) -> bool
-  val existsi : 'a t -> f:(int -> 'a -> bool) -> bool
-  val counti : 'a t -> f:(int -> 'a -> bool) -> int
-  val iter2_exn : 'a t -> 'b t -> f:('a -> 'b -> unit) -> unit
-  val map2_exn : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
-  val fold2_exn : 'a t -> 'b t -> init:'acc -> f:('acc -> 'a -> 'b -> 'acc) -> 'acc
-  val for_all2_exn : 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool
-  val exists2_exn : 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool
-  val filter : 'a t -> f:('a -> bool) -> 'a t
-  val filteri : 'a t -> f:(int -> 'a -> bool) -> 'a t
-  val swap : 'a t -> int -> int -> unit
-  val rev_inplace : 'a t -> unit
+  val filter_map : 'a t -> f:local_ ('a -> 'b option) -> 'b t
+  val filter_mapi : 'a t -> f:local_ (int -> 'a -> 'b option) -> 'b t
+  val for_alli : 'a t -> f:local_ (int -> 'a -> bool) -> bool
+  val existsi : 'a t -> f:local_ (int -> 'a -> bool) -> bool
+  val counti : 'a t -> f:local_ (int -> 'a -> bool) -> int
+  val iter2_exn : 'a t -> 'b t -> f:local_ ('a -> 'b -> unit) -> unit
+  val map2_exn : 'a t -> 'b t -> f:local_ ('a -> 'b -> 'c) -> 'c t
+  val fold2_exn : 'a t -> 'b t -> init:'acc -> f:local_ ('acc -> 'a -> 'b -> 'acc) -> 'acc
+  val for_all2_exn : 'a t -> 'b t -> f:local_ ('a -> 'b -> bool) -> bool
+  val exists2_exn : 'a t -> 'b t -> f:local_ ('a -> 'b -> bool) -> bool
+  val filter : 'a t -> f:local_ ('a -> bool) -> 'a t
+  val filteri : 'a t -> f:local_ (int -> 'a -> bool) -> 'a t
+  val swap : local_ 'a t -> int -> int -> unit
+  val rev_inplace : local_ 'a t -> unit
   val rev : 'a t -> 'a t
   val of_list_rev : 'a list -> 'a t
-  val of_list_map : 'a list -> f:('a -> 'b) -> 'b t
-  val of_list_mapi : 'a list -> f:(int -> 'a -> 'b) -> 'b t
-  val of_list_rev_map : 'a list -> f:('a -> 'b) -> 'b t
-  val of_list_rev_mapi : 'a list -> f:(int -> 'a -> 'b) -> 'b t
-  val map_inplace : 'a t -> f:('a -> 'a) -> unit
-  val find_exn : 'a t -> f:('a -> bool) -> 'a
-  val find_map_exn : 'a t -> f:('a -> 'b option) -> 'b
-  val findi : 'a t -> f:(int -> 'a -> bool) -> (int * 'a) option
-  val findi_exn : 'a t -> f:(int -> 'a -> bool) -> int * 'a
-  val find_mapi : 'a t -> f:(int -> 'a -> 'b option) -> 'b option
-  val find_mapi_exn : 'a t -> f:(int -> 'a -> 'b option) -> 'b
-  val find_consecutive_duplicate : 'a t -> equal:('a -> 'a -> bool) -> ('a * 'a) option
-  val reduce : 'a t -> f:('a -> 'a -> 'a) -> 'a option
-  val reduce_exn : 'a t -> f:('a -> 'a -> 'a) -> 'a
-  val permute : ?random_state:Random.State.t -> ?pos:int -> ?len:int -> 'a t -> unit
+  val of_list_map : 'a list -> f:local_ ('a -> 'b) -> 'b t
+  val of_list_mapi : 'a list -> f:local_ (int -> 'a -> 'b) -> 'b t
+  val of_list_rev_map : 'a list -> f:local_ ('a -> 'b) -> 'b t
+  val of_list_rev_mapi : 'a list -> f:local_ (int -> 'a -> 'b) -> 'b t
+  val map_inplace : local_ 'a t -> f:local_ ('a -> 'a) -> unit
+  val find_exn : 'a t -> f:local_ ('a -> bool) -> 'a
+  val find_map_exn : 'a t -> f:local_ ('a -> 'b option) -> 'b
+  val findi : 'a t -> f:local_ (int -> 'a -> bool) -> (int * 'a) option
+  val findi_exn : 'a t -> f:local_ (int -> 'a -> bool) -> int * 'a
+  val find_mapi : 'a t -> f:local_ (int -> 'a -> 'b option) -> 'b option
+  val find_mapi_exn : 'a t -> f:local_ (int -> 'a -> 'b option) -> 'b
+
+  val find_consecutive_duplicate
+    :  'a t
+    -> equal:local_ ('a -> 'a -> bool)
+    -> ('a * 'a) option
+
+  val reduce : 'a t -> f:local_ ('a -> 'a -> 'a) -> 'a option
+  val reduce_exn : 'a t -> f:local_ ('a -> 'a -> 'a) -> 'a
+
+  val permute
+    :  ?random_state:Random.State.t
+    -> ?pos:int
+    -> ?len:int
+    -> local_ 'a t
+    -> unit
+
   val random_element : ?random_state:Random.State.t -> 'a t -> 'a option
   val random_element_exn : ?random_state:Random.State.t -> 'a t -> 'a
   val zip : 'a t -> 'b t -> ('a * 'b) t option
   val zip_exn : 'a t -> 'b t -> ('a * 'b) t
   val unzip : ('a * 'b) t -> 'a t * 'b t
-  val sorted_copy : 'a t -> compare:('a -> 'a -> int) -> 'a t
+  val sorted_copy : local_ 'a t -> compare:local_ ('a -> 'a -> int) -> 'a t
   val last : 'a t -> 'a
   val last_exn : 'a t -> 'a
   val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
-  val equal__local : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
+
+  val equal__local
+    :  (local_ 'a -> local_ 'a -> bool)
+    -> local_ 'a t
+    -> local_ 'a t
+    -> bool
+
   val to_sequence : 'a t -> 'a Core_sequence.t
   val to_sequence_mutable : 'a t -> 'a Core_sequence.t
 end

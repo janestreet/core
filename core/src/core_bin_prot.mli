@@ -2,7 +2,7 @@ open! Import
 include module type of Bin_prot
 
 module Writer : sig
-  type 'a t = 'a Bin_prot.Type_class.writer =
+  type ('a : any) t = 'a Bin_prot.Type_class.writer =
     { size : 'a Size.sizer
     ; write : 'a Write.writer
     }
@@ -13,7 +13,7 @@ module Writer : sig
 end
 
 module Reader : sig
-  type 'a t = 'a Bin_prot.Type_class.reader =
+  type ('a : any) t = 'a Bin_prot.Type_class.reader =
     { read : 'a Read.reader
     ; vtag_read : 'a Read.vtag_reader
     }

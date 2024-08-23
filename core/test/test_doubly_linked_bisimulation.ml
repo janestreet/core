@@ -271,7 +271,11 @@ module Both : S = struct
     val pair : 'a -> 'b -> ('a, 'b) m
     val opt_obs : ('a option, 'b option) m -> ('a, 'b) m option (* observe option *)
     val obs : ('a, 'a) m -> 'a (* observe *)
-    val obs_f : (f:'f -> 'a, f:'f -> 'a) m -> f:'f -> 'a (* observe with local closure *)
+
+    val obs_f
+      :  (f:local_ 'f -> 'a, f:local_ 'f -> 'a) m
+      -> f:local_ 'f
+      -> 'a (* observe with local closure *)
   end = struct
     type ('a, 'b) m = ('a, exn) Result.t * ('b, exn) Result.t
 

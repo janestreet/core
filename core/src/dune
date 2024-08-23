@@ -34,7 +34,7 @@
  (targets gc_stubs.h)
  (deps)
  (action
-  (bash "echo \"#define OCAML_5_MINUS false\" > %{targets}")))
+  (bash "echo \"#define OCAML_5_MINUS true\" > %{targets}")))
 
 (documentation)
 
@@ -42,4 +42,4 @@
  (targets ocamlopt-flags)
  (deps)
  (action
-  (bash "echo '()' > ocamlopt-flags")))
+  (bash "echo '(-O3 -flambda2-inline-max-depth 10)' > ocamlopt-flags")))

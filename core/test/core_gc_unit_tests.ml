@@ -186,3 +186,35 @@ let%test_unit "leak prevents collection" =
   create_and_leak_uncollectable_value ();
   Gc.full_major ()
 ;;
+
+let create_finalizer_reference_loop ~add_finalizer_exn =
+  let array = Array.create ~len:10 'x' in
+  let accidentally_captured = Some array |> Sys.opaque_identity in
+  add_finalizer_exn array (fun _ ->
+    match accidentally_captured with
+    | None -> assert false
+    | Some x ->
+      print_s [%sexp "collected"];
+      assert (Char.( = ) x.(0) 'x'));
+  array
+;;
+
+let%expect_test ("finalizer reference loop: memory leak" [@tags "no-js"]) =
+  let _array =
+    create_finalizer_reference_loop ~add_finalizer_exn:Gc.Expert.add_finalizer_exn
+  in
+  (* Unfortunately, this creates a memory leak.
+     Despite the array and its finalizer not having any inbound references, it never gets
+     collected. *)
+  Gc.full_major ()
+;;
+
+let%expect_test ("finalizer reference loop: protection from memory leak" [@tags "no-js"]) =
+  let _array =
+    create_finalizer_reference_loop
+      ~add_finalizer_exn:Gc.Expert.With_leak_protection.add_finalizer_exn
+  in
+  (* The leak protection using ephemerons fixes the bug seen above! *)
+  Gc.full_major ();
+  [%expect {| collected |}]
+;;

@@ -16,7 +16,7 @@
 
 open! Import
 
-type t [@@deriving sexp_of, typerep] [@@immediate64]
+type t : immediate64 [@@deriving sexp_of, typerep]
 
 val create : [ `Bytes | `Kilobytes | `Megabytes | `Gigabytes | `Words ] -> float -> t
 [@@deprecated

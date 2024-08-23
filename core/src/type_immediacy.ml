@@ -72,13 +72,13 @@ module T : sig
 
   module Never_values : sig
     val int32 : int32 t
-    val int32_u : (unit -> int32) t
+    val int32_u : (unit -> int32#) t
     val int64 : int64 t
-    val int64_u : (unit -> int64) t
+    val int64_u : (unit -> int64#) t
     val nativeint : nativeint t
-    val nativeint_u : (unit -> nativeint) t
+    val nativeint_u : (unit -> nativeint#) t
     val float : float t
-    val float_u : (unit -> float) t
+    val float_u : (unit -> float#) t
     val string : string t
     val bytes : bytes t
     val array : _ array t

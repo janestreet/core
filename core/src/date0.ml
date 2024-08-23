@@ -11,9 +11,8 @@ module Stable = struct
   module V1 = struct
     module Without_comparable = struct
       module T : sig
-        type t
+        type t : immediate
         [@@deriving bin_io ~localize, compare, equal, hash, typerep, stable_witness]
-        [@@immediate]
 
         val create_exn : y:int -> m:Month.Stable.V1.t -> d:int -> t
         val year : t -> int
@@ -377,7 +376,7 @@ let unix_epoch = create_exn ~y:1970 ~m:Jan ~d:1
 *)
 module Days : sig
     type date = t
-    type t [@@immediate]
+    type t : immediate
 
     val of_date : date -> t
     val to_date : t -> date

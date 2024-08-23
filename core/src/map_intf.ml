@@ -91,7 +91,10 @@ module type Creators_generic = sig
     : ('k, 'cmp, ('k key, 'v) Hashtbl.t -> ('k, 'v, 'cmp) t) create_options
 
   (** Never requires a comparator because it can get one from the input [Set.t]. *)
-  val of_key_set : ('k key, 'cmp cmp) Base.Set.t -> f:('k key -> 'v) -> ('k, 'v, 'cmp) t
+  val of_key_set
+    :  ('k key, 'cmp cmp) Base.Set.t
+    -> f:local_ ('k key -> 'v)
+    -> ('k, 'v, 'cmp) t
 
   val quickcheck_generator
     : ( 'k
@@ -190,7 +193,7 @@ module type S_plain = sig
 
   include Diffable.S1_plain with type 'a t := 'a t and module Diff := Diff
 
-  val map : 'a t -> f:('a -> 'b) -> 'b t
+  val map : 'a t -> f:local_ ('a -> 'b) -> 'b t
 
   module Provide_of_sexp
       (Key : sig

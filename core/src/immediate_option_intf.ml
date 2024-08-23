@@ -79,37 +79,37 @@ module type S_without_immediate_zero_alloc = sig
 end
 
 module type S_plain = sig
-  type t [@@immediate]
+  type t : immediate
 
   include S_without_immediate_plain with type t := t
 end
 
 module type S = sig
-  type t [@@immediate]
+  type t : immediate
 
   include S_without_immediate with type t := t
 end
 
 module type S_zero_alloc = sig
-  type t [@@immediate]
+  type t : immediate
 
   include S_without_immediate_zero_alloc with type t := t
 end
 
 module type S_int63_plain = sig
-  type t [@@immediate64]
+  type t : immediate64
 
   include S_without_immediate_plain with type t := t
 end
 
 module type S_int63 = sig
-  type t [@@immediate64]
+  type t : immediate64
 
   include S_without_immediate with type t := t
 end
 
 module type S_int63_zero_alloc = sig
-  type t [@@immediate64]
+  type t : immediate64
 
   include S_without_immediate_zero_alloc with type t := t
 end

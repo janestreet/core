@@ -84,7 +84,7 @@ module type S_allowing_substitution = sig
   val create : raw -> t Or_error.t
   val create_exn : raw -> t
   val raw : t -> raw
-  val raw_local : t -> raw
+  val raw_local : local_ t -> local_ raw
   val create_stable_witness : raw Stable_witness.t -> t Stable_witness.t
   val type_equal : (t, (raw, witness) validated) Type_equal.t
 end
@@ -134,7 +134,7 @@ module type Validated = sig
   type ('raw, 'witness) t = private 'raw
 
   val raw : ('raw, _) t -> 'raw
-  val raw_local : ('raw, _) t -> 'raw
+  val raw_local : local_ ('raw, _) t -> local_ 'raw
 
   module type Raw = Raw
   module type S = S with type ('a, 'b) validated := ('a, 'b) t
