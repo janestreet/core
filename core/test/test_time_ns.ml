@@ -794,6 +794,12 @@ let%test_module "Ofday" =
         ~f:(fun (span, start, stop) -> test ~verbose:false span start stop);
       [%expect {| |}]
     ;;
+
+    let%test "Zoned.of_string supports space in ofday" =
+      Time_ns.Ofday.Zoned.With_nonchronological_compare.equal
+        (Time_ns.Ofday.Zoned.of_string "9AM UTC")
+        (Time_ns.Ofday.Zoned.of_string "9 AM UTC")
+    ;;
   end)
 ;;
 

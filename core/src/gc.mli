@@ -661,6 +661,33 @@ module Expert : sig
 
   val add_finalizer_last_exn : 'a -> (unit -> unit) -> unit
 
+  module With_leak_protection : sig
+    (** The versions of [add_finalizer] that protect against memory leaks on circular
+        references, by using ephemerons.
+
+        These functions are not subject to the limitation mentioned above:
+        if in a finalizer pair [(b, f)] the closure of [f] references [b], the
+        "normal" functions result in a memory leak, whereas these functions
+        work correctly.
+    *)
+
+    val add_finalizer : 'a Heap_block.t -> ('a Heap_block.t -> unit) -> unit
+    val add_finalizer_exn : 'a -> ('a -> unit) -> unit
+
+    (** Make a function [f] safe to use with [Stdlib.Gc.finalise f' x], despite [f]
+        potentially containing references back to [x].
+
+        You don't need to use this function if you use [add_finalizer] from this module.
+        It's only exposed for the case when you want to use [Stdlib.Gc.finalise]
+        directly.
+    *)
+    val protect_finalizer
+      :  'a Heap_block.t
+      -> ('a Heap_block.t -> unit)
+      -> 'a Heap_block.t
+      -> unit
+  end
+
   (** The runtime essentially maintains a bool ref:
 
       {[

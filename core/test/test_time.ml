@@ -1281,6 +1281,12 @@ module _ = struct
     Exn.does_raise (fun () -> of_string_iso8601_extended "23:59:61")
   ;;
 
+  let%test "Zoned.of_string supports space in ofday" =
+    Zoned.With_nonchronological_compare.equal
+      (Zoned.of_string "9AM UTC")
+      (Zoned.of_string "9 AM UTC")
+  ;;
+
   let%test _ =
     Set.equal
       (Set.of_list [ start_of_day ])

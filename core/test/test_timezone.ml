@@ -290,7 +290,7 @@ let%test_module "clock shift stuff" =
         (Time_float.to_date_ofday_precise ~zone second)
     ;;
 
-    let ( ^: ) hr min = Time_float.Ofday.create ~hr ~min ()
+    let ( ^: ) = Time_float.Ofday.( ^: )
     let outside_bst = Date.of_string "2013-01-01"
     let inside_bst = Date.of_string "2013-06-01"
 

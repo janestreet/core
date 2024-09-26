@@ -10,7 +10,7 @@ module Absolute = struct
   include (
     Float :
     sig
-      type t = float [@@deriving bin_io, hash, typerep]
+      type t = float [@@deriving bin_io, compare ~localize, hash, typerep]
 
       include Comparable.S_common with type t := t
     end)

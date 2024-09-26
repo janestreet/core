@@ -15,7 +15,7 @@ module type S = sig
 
   module Stable : sig
     module V1 : sig
-      type nonrec t = t [@@deriving equal, hash, sexp_grammar, stable_witness]
+      type nonrec t = t [@@deriving equal, globalize, hash, sexp_grammar, stable_witness]
 
       include Stringable.S with type t := t
 

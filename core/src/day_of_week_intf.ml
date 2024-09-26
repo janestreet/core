@@ -42,6 +42,7 @@ module type Day_of_week = sig
   val num_days : from:t -> to_:t -> int
 
   val is_sun_or_sat : t -> bool
+  val is_weekday : t -> bool
   val all : t list
 
   (** [ Mon; Tue; Wed; Thu; Fri ] *)

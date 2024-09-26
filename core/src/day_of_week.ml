@@ -166,3 +166,4 @@ let num_days ~from ~to_ =
 ;;
 
 let is_sun_or_sat t = t = Sun || t = Sat
+let is_weekday t = not (is_sun_or_sat t)

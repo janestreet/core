@@ -955,7 +955,6 @@ module Unit_tests
   let of_tree _ = assert false
   let filter_map _ = assert false
   let map _ = assert false
-  let stable_dedup_list _ = assert false
   let of_array _ = assert false
   let union_list _ = assert false
   let singleton _ = assert false

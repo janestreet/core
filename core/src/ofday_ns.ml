@@ -55,6 +55,12 @@ let create ?hr ?min ?sec ?ms ?us ?ns () =
   of_span_since_start_of_day_exn (Span.create ?hr ?min ?sec ?ms ?us ?ns ())
 ;;
 
+module O = struct
+  let ( ^: ) hr min = create ~hr ~min ()
+end
+
+include O
+
 module Stable = struct
   module Option = struct end
   module Zoned = struct end

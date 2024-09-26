@@ -256,6 +256,7 @@ Make (struct
   end)
 
 include (Base.Comparable : With_compare)
+module Local : With_compare_local = Base.Comparable.Local
 
 module Stable = struct
   module V1 = struct

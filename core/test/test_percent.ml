@@ -480,7 +480,7 @@ let%expect_test "slow_more_accurate" =
   (* 70.18%: An example where [of_percentage] and [of_bp] both introduce ugly-looking
      rounding errors. *)
   let x = 70.18 in
-  [ Percent.of_percentage
+  [ (Percent.of_percentage : _ -> _)
   ; Percent.of_bp
   ; Percent.of_percentage_slow_more_accurate
   ; Percent.of_bp_slow_more_accurate
@@ -496,7 +496,7 @@ let%expect_test "slow_more_accurate" =
   (* 57.2%: An example where [to_percentage] and [to_bp] both introduce ugly-looking
      rounding errors. *)
   let p = Percent.of_mult 0.572 in
-  [ Percent.to_percentage
+  [ (Percent.to_percentage : _ -> _)
   ; Percent.to_bp
   ; Percent.to_percentage_slow_more_accurate
   ; Percent.to_bp_slow_more_accurate

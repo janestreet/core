@@ -27,7 +27,6 @@ module Bounded_index = Bounded_index
 module Buffer = Base.Buffer
 module Byte_units = Byte_units
 module Bytes = Bytes
-module Caml = struct end [@@deprecated "[since 2023-01] use Stdlib instead of Caml"]
 module Char = Char
 module Command = Command_internal
 module Comparable = Comparable
@@ -159,9 +158,6 @@ module Sys = Core_sys
 
 module Thread = struct end
 [@@deprecated "[since 2021-04] Use [Core_thread] or [Caml_threads.Thread]"]
-
-module Time = Time_float
-[@@deprecated "[since 2021-11] Use [Time_float] or [Time_float_unix] instead"]
 
 module Time_float = Time_float
 module Time_ns = Time_ns

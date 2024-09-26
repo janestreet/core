@@ -6,11 +6,14 @@ open Std_internal
 (** Exposing that this is a float allows for more optimization. E.g. compiler can
     optimize some local refs and not box them.
 *)
-type t = private float [@@deriving globalize, hash, typerep]
+type t = private float [@@deriving compare ~localize, globalize, hash, typerep]
 
 (** [of_string] and [t_of_sexp] disallow [nan], [inf], etc.  Furthermore, they round to 6
     significant digits.  They are equivalent to [Stable.V2] sexp conversion. *)
 include Stringable with type t := t
+
+(** [to_string] can accept a locally-allocated argument. *)
+val to_string : t -> string
 
 (** Equivalent to [Stable.V3.to_string] *)
 val to_string_round_trippable : t -> string
@@ -31,7 +34,7 @@ val to_string_round_trippable : t -> string
 include Sexpable with type t := t
 
 include Sexplib.Sexp_grammar.S with type t := t
-include Binable with type t := t
+include Binable.S_local with type t := t
 include Comparable_binable with type t := t
 include Comparable.With_zero with type t := t
 include Diffable.S_atomic with type t := t
@@ -41,46 +44,56 @@ include Quickcheckable.S with type t := t
 (** The value [nan] cannot be represented as an [Option.t] *)
 module Option : sig
   type value := t
-  type t = private float [@@deriving bin_io, globalize, quickcheck, sexp_grammar]
+
+  type t = private float
+  [@@deriving bin_io ~localize, compare ~localize, globalize, quickcheck, sexp_grammar]
 
   include Immediate_option.S_without_immediate with type value := value and type t := t
 
   (** [apply_with_none_as_nan (some x) y = apply x y], and
       [apply_with_none_as_nan none y = apply (of_mult Float.nan) y] *)
-  val apply_with_none_as_nan : t -> float -> float
+  external apply_with_none_as_nan
+    :  (t[@local_opt])
+    -> (float[@local_opt])
+    -> (float[@local_opt])
+    = "%mulfloat"
 
   (** [of_mult_with_nan_as_none Float.nan = none], and
       [of_mult_with_nan_as_none x = some (of_mult x)] otherwise *)
-  val of_mult_with_nan_as_none : float -> t
+  external of_mult_with_nan_as_none : (float[@local_opt]) -> (t[@local_opt]) = "%identity"
 
   (** [to_mult_with_none_as_nan none = Float.nan], and
       [to_mult_with_none_as_nan (some x) = to_mult x] *)
-  val to_mult_with_none_as_nan : t -> float
+  external to_mult_with_none_as_nan : (t[@local_opt]) -> (float[@local_opt]) = "%identity"
 end
 
-val ( * ) : t -> t -> t
-val ( + ) : t -> t -> t
-val ( - ) : t -> t -> t
-val ( / ) : t -> t -> t
-val ( // ) : t -> t -> float
+external ( * ) : (t[@local_opt]) -> (t[@local_opt]) -> (t[@local_opt]) = "%mulfloat"
+external ( + ) : (t[@local_opt]) -> (t[@local_opt]) -> (t[@local_opt]) = "%addfloat"
+external ( - ) : (t[@local_opt]) -> (t[@local_opt]) -> (t[@local_opt]) = "%subfloat"
+external ( / ) : (t[@local_opt]) -> (t[@local_opt]) -> (t[@local_opt]) = "%divfloat"
+external ( // ) : (t[@local_opt]) -> (t[@local_opt]) -> (float[@local_opt]) = "%divfloat"
 val zero : t
 val one_hundred_percent : t
-val neg : t -> t
-val abs : t -> t
+external neg : (t[@local_opt]) -> (t[@local_opt]) = "%negfloat"
+external abs : (t[@local_opt]) -> (t[@local_opt]) = "%absfloat"
 val is_zero : t -> bool
 val is_nan : t -> bool
 val is_inf : t -> bool
 
 (** [apply t x] multiplies the percent [t] by [x], returning a float. *)
-val apply : t -> float -> float
+external apply
+  :  (t[@local_opt])
+  -> (float[@local_opt])
+  -> (float[@local_opt])
+  = "%mulfloat"
 
 (** [scale t x] scales the percent [t] by [x], returning a new [t]. *)
-val scale : t -> float -> t
+external scale : (t[@local_opt]) -> (float[@local_opt]) -> (t[@local_opt]) = "%mulfloat"
 
 (** [of_mult 5.] is 5x = 500% = 50_000bp *)
-val of_mult : float -> t
+external of_mult : (float[@local_opt]) -> (t[@local_opt]) = "%identity"
 
-val to_mult : t -> float
+external to_mult : (t[@local_opt]) -> (float[@local_opt]) = "%identity"
 
 (** [of_percentage 5.] is 5% = 0.05x = 500bp.  Note: this function performs float division
     by 100.0 and it may introduce rounding errors, for example:
@@ -94,6 +107,9 @@ val of_percentage : float -> t
     [of_percentage_slow_more_accurate x = of_string (Float.to_string x ^ "%")] *)
 val of_percentage_slow_more_accurate : float -> t
 
+(** Like [of_percentage_slow_more_accurate], but for locally-allocated values. *)
+val of_percentage_slow_more_accurate_local : float -> t
+
 (** [to_percentage (Percent.of_string "5%")] is 5.0.  Note: this function performs float
     multiplication by 100.0 and it may introduce rounding errors, for example:
     {[ to_percentage (Percent.of_mult 0.56) = 56.000000000000007 ]}
@@ -104,6 +120,9 @@ val to_percentage : t -> float
 (** Like [to_percentage], but consistent with [Stable.V3.sexp_of_t] and
     [to_string_round_trippable]. *)
 val to_percentage_slow_more_accurate : t -> float
+
+(** Like [to_percentage_slow_more_accurate], but for locally-allocated values. *)
+val to_percentage_slow_more_accurate_local : t -> float
 
 (** [of_bp 5.] is 5bp = 0.05% = 0.0005x.  Note: this function performs float division by
     10,000.0 and it may introduce rounding errors, for example:
@@ -117,6 +136,9 @@ val of_bp : float -> t
     [of_bp_slow_more_accurate x = of_string (Float.to_string x ^ "bp")] *)
 val of_bp_slow_more_accurate : float -> t
 
+(** Like [of_bp_slow_more_accurate], but for locally-allocated values. *)
+val of_bp_slow_more_accurate_local : float -> t
+
 (** [to_bp (Percent.of_bp "4bp")] is 4.0.  Note: this function performs float
     multiplication by 10000.0 and and it may introduce rounding errors, for example:
     {[ to_bp (Percent.of_mult 0.56) = 5600.0000000000009 ]}
@@ -128,6 +150,9 @@ val to_bp : t -> float
     [to_string_round_trippable]. *)
 val to_bp_slow_more_accurate : t -> float
 
+(** Like [to_bp_slow_more_accurate], but for locally-allocated values. *)
+val to_bp_slow_more_accurate_local : t -> float
+
 val of_bp_int : int -> t
 
 (** rounds down *)
@@ -136,8 +161,14 @@ val to_bp_int : t -> int
 (** 0.0123456% ~significant_digits:4 is 1.235bp *)
 val round_significant : t -> significant_digits:int -> t
 
+(** Like [round_significant], but for locally-allocated values. *)
+val round_significant_local : t -> significant_digits:int -> t
+
 (** 0.0123456% ~decimal_digits:4 is 0.0001 = 1bp *)
 val round_decimal_mult : t -> decimal_digits:int -> t
+
+(** Like [round_decimal_mult], but for locally-allocated values. *)
+val round_decimal_mult_local : t -> decimal_digits:int -> t
 
 (** 0.0123456% ~decimal_digits:4 is 0.0123% = 1.23bp *)
 val round_decimal_percentage : t -> decimal_digits:int -> t
@@ -255,11 +286,11 @@ module Stable : sig
       [@@deriving
         sexp
         , sexp_grammar
-        , bin_io
-        , compare
+        , bin_io ~localize
+        , compare ~localize
         , globalize
         , hash
-        , equal
+        , equal ~localize
         , typerep
         , stable_witness
         , diff]
@@ -275,11 +306,11 @@ module Stable : sig
     [@@deriving
       sexp
       , sexp_grammar
-      , bin_io
-      , compare
+      , bin_io ~localize
+      , compare ~localize
       , globalize
       , hash
-      , equal
+      , equal ~localize
       , typerep
       , stable_witness
       , diff]
@@ -311,11 +342,11 @@ module Stable : sig
     [@@deriving
       sexp
       , sexp_grammar
-      , bin_io
-      , compare
+      , bin_io ~localize
+      , compare ~localize
       , globalize
       , hash
-      , equal
+      , equal ~localize
       , typerep
       , stable_witness
       , diff]
@@ -335,7 +366,7 @@ module Stable : sig
         round-trippable in both directions.
     *)
     module Always_percentage : sig
-      type nonrec t = t [@@deriving sexp, bin_io]
+      type nonrec t = t [@@deriving sexp, bin_io ~localize]
 
       val to_string : t -> string
     end
@@ -346,18 +377,27 @@ module Stable : sig
       (** See comment for [Stable.V1.Bin_shape_same_as_float]. *)
       module Bin_shape_same_as_float : sig
         type t = Option.t
-        [@@deriving bin_io, compare, hash, sexp, sexp_grammar, stable_witness]
+        [@@deriving
+          bin_io ~localize, compare ~localize, hash, sexp, sexp_grammar, stable_witness]
       end
     end
 
     module V2 : sig
       type t = Option.t
-      [@@deriving bin_io, compare, hash, sexp, sexp_grammar, stable_witness]
+      [@@deriving
+        bin_io ~localize, compare ~localize, hash, sexp, sexp_grammar, stable_witness]
     end
 
     module V3 : sig
       type t = Option.t
-      [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar, stable_witness]
+      [@@deriving
+        bin_io ~localize
+        , compare ~localize
+        , equal ~localize
+        , hash
+        , sexp
+        , sexp_grammar
+        , stable_witness]
     end
   end
 end

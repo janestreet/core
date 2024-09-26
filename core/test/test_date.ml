@@ -391,17 +391,17 @@ let%test_module "adding weekdays and business days" =
 
     let%expect_test "business days" =
       let open Day_of_week in
-      let test =
+      let test ~is_weekday =
         let is_holiday = Date.equal (Date.of_string "2019-05-06") in
         test
           [ ( "add_business_days_rounding_backward"
-            , add_business_days_rounding_backward ~is_holiday )
+            , add_business_days_rounding_backward ~is_holiday ?is_weekday )
           ; ( "add_business_days_rounding_forward"
-            , add_business_days_rounding_forward ~is_holiday )
+            , add_business_days_rounding_forward ~is_holiday ?is_weekday )
           ]
       in
       (* Friday *)
-      test Fri "2019-05-03";
+      test ~is_weekday:None Fri "2019-05-03";
       [%expect
         {|
         (add_business_days_rounding_backward (
@@ -421,7 +421,7 @@ let%test_module "adding weekdays and business days" =
       List.iter
         [ Sat, "2019-05-04"; Sun, "2019-05-05"; Mon, "2019-05-06" ]
         ~f:(fun (day_of_week, date_string) ->
-          test day_of_week date_string;
+          test ~is_weekday:None day_of_week date_string;
           [%expect
             {|
             (add_business_days_rounding_backward (
@@ -438,7 +438,7 @@ let%test_module "adding weekdays and business days" =
               (2  THU 2019-05-09)))
             |}]);
       (* Tuesday *)
-      test Tue "2019-05-07";
+      test ~is_weekday:None Tue "2019-05-07";
       [%expect
         {|
         (add_business_days_rounding_backward (
@@ -450,6 +450,49 @@ let%test_module "adding weekdays and business days" =
         (add_business_days_rounding_forward (
           (-2 THU 2019-05-02)
           (-1 FRI 2019-05-03)
+          (0  TUE 2019-05-07)
+          (1  WED 2019-05-08)
+          (2  THU 2019-05-09)))
+        |}];
+      (* Weekday override tests - a Sun-Thu schedule *)
+      let is_weekday_nonstandard day =
+        match day with
+        | Fri | Sat -> false
+        | _ -> true
+      in
+      (* Friday and Saturday roll forward to Sunday and backward to Thursday. *)
+      List.iter
+        [ Fri, "2019-05-03"; Sat, "2019-05-04" ]
+        ~f:(fun (day_of_week, date_string) ->
+          test ~is_weekday:(Some is_weekday_nonstandard) day_of_week date_string;
+          [%expect
+            {|
+            (add_business_days_rounding_backward (
+              (-2 TUE 2019-04-30)
+              (-1 WED 2019-05-01)
+              (0  THU 2019-05-02)
+              (1  SUN 2019-05-05)
+              (2  TUE 2019-05-07)))
+            (add_business_days_rounding_forward (
+              (-2 WED 2019-05-01)
+              (-1 THU 2019-05-02)
+              (0  SUN 2019-05-05)
+              (1  TUE 2019-05-07)
+              (2  WED 2019-05-08)))
+            |}]);
+      (* weekdays override: Tuesday *)
+      test ~is_weekday:(Some is_weekday_nonstandard) Tue "2019-05-07";
+      [%expect
+        {|
+        (add_business_days_rounding_backward (
+          (-2 THU 2019-05-02)
+          (-1 SUN 2019-05-05)
+          (0  TUE 2019-05-07)
+          (1  WED 2019-05-08)
+          (2  THU 2019-05-09)))
+        (add_business_days_rounding_forward (
+          (-2 THU 2019-05-02)
+          (-1 SUN 2019-05-05)
           (0  TUE 2019-05-07)
           (1  WED 2019-05-08)
           (2  THU 2019-05-09)))

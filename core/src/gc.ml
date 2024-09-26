@@ -528,6 +528,26 @@ module Expert = struct
       ()
   ;;
 
+  module With_leak_protection = struct
+    let protect_finalizer x finalizer =
+      let ephemeron = Ephemeron.K1.make x finalizer in
+      fun x ->
+        match Ephemeron.K1.query ephemeron x with
+        | None -> assert false
+        | Some finalizer -> finalizer x
+    ;;
+
+    let add_finalizer x f =
+      let f = protect_finalizer x f in
+      add_finalizer x f
+    ;;
+
+    let add_finalizer_exn x f =
+      let f = protect_finalizer x f in
+      add_finalizer_exn x f
+    ;;
+  end
+
   let finalize_release = Stdlib.Gc.finalise_release
 
   (* Sys.opaque_identity means accesses to the ref cannot be optimized out *)

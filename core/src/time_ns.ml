@@ -1002,7 +1002,7 @@ end = struct
   let of_string_with_utc_offset s =
     let default_zone () = raise_s [%message "time has no time zone or UTC offset" s] in
     let find_zone zone_name =
-      failwithf "unable to lookup Zone %s.  Try using Core.Time.of_string" zone_name ()
+      failwithf "unable to lookup Zone %s. Try using Core.Time_ns.of_string" zone_name ()
     in
     of_string_gen ~default_zone ~find_zone s
   ;;
@@ -1085,10 +1085,10 @@ module Ofday = struct
     let create_local ofday = create ofday (Lazy.force Timezone.local)
 
     let of_string string : t =
-      match String.split string ~on:' ' with
-      | [ ofday; zone ] ->
+      match String.rsplit2 string ~on:' ' with
+      | Some (ofday, zone) ->
         { ofday = Ofday_ns.of_string ofday; zone = Timezone.of_string zone }
-      | _ -> failwithf "Ofday.Zoned.of_string %s" string ()
+      | None -> failwithf "Ofday.Zoned.of_string %s" string ()
     ;;
 
     let to_string (t : t) : string =
