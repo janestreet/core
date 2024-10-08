@@ -28,37 +28,33 @@ Stable_unit_test.Make (struct
     ;;
   end)
 
-let%test_module "Percent.V1.Bin_shape_same_as_float" =
-  (module Stable_unit_test
-            (Stable.V1.Bin_shape_same_as_float)
-            (struct
-              let v = 1
-            end))
-;;
+module%test [@name "Percent.V1.Bin_shape_same_as_float"] _ =
+  Stable_unit_test
+    (Stable.V1.Bin_shape_same_as_float)
+    (struct
+      let v = 1
+    end)
 
-let%test_module "Percent.V3" =
-  (module Stable_unit_test
-            (Stable.V3)
-            (struct
-              let v = 3
-            end))
-;;
+module%test [@name "Percent.V3"] _ =
+  Stable_unit_test
+    (Stable.V3)
+    (struct
+      let v = 3
+    end)
 
-let%test_module "Percent.V2" =
-  (module Stable_unit_test
-            (Stable.V2)
-            (struct
-              let v = 2
-            end))
-;;
+module%test [@name "Percent.V2"] _ =
+  Stable_unit_test
+    (Stable.V2)
+    (struct
+      let v = 2
+    end)
 
-let%test_module "Percent" =
-  (module Stable_unit_test
-            (Percent)
-            (struct
-              let v = 2
-            end))
-;;
+module%test Percent =
+  Stable_unit_test
+    (Percent)
+    (struct
+      let v = 2
+    end)
 
 let%expect_test "bin_digests" =
   (* [V2] intentionally has a bin_digest distinct from float's: changing

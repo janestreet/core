@@ -18,14 +18,12 @@ let%expect_test "slice" =
   [%expect {| (6) |}]
 ;;
 
-let%test_module "nget" =
-  (module struct
-    let%expect_test "neg" = require_equal (module Base.Int) (nget ar1 (-3)) 8
-    let%expect_test "pos" = require_equal (module Base.Int) (nget ar1 3) ar1.(3)
+module%test [@name "nget"] _ = struct
+  let%expect_test "neg" = require_equal (module Base.Int) (nget ar1 (-3)) 8
+  let%expect_test "pos" = require_equal (module Base.Int) (nget ar1 3) ar1.(3)
 
-    let%expect_test "invalid" =
-      require_does_raise (fun () : int -> nget ar1 (-100));
-      [%expect {| (Invalid_argument "index out of bounds") |}]
-    ;;
-  end)
-;;
+  let%expect_test "invalid" =
+    require_does_raise (fun () : int -> nget ar1 (-100));
+    [%expect {| (Invalid_argument "index out of bounds") |}]
+  ;;
+end

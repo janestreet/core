@@ -2622,32 +2622,30 @@ module Version_info (Version_util : Version_util) = struct
   ;;
 end
 
-let%test_module "Version_info" =
-  (module struct
-    module Version_info = Version_info (struct
-        let version_list = [ "hg://some/path_0xdeadbeef"; "ssh://a/path_8badf00d" ]
-        let reprint_build_info to_sexp = Sexp.to_string (to_sexp ())
+module%test Version_info = struct
+  module Version_info = Version_info (struct
+      let version_list = [ "hg://some/path_0xdeadbeef"; "ssh://a/path_8badf00d" ]
+      let reprint_build_info to_sexp = Sexp.to_string (to_sexp ())
 
-        module Time = struct
-          type t = unit [@@deriving sexp_of]
-        end
-      end)
+      module Time = struct
+        type t = unit [@@deriving sexp_of]
+      end
+    end)
 
-    let%expect_test "print version where multiple repos are used" =
-      Version_info.print_version ~version:Version_info.default_version;
-      [%expect
-        {|
-        hg://some/path_0xdeadbeef
-        ssh://a/path_8badf00d
-        |}]
-    ;;
+  let%expect_test "print version where multiple repos are used" =
+    Version_info.print_version ~version:Version_info.default_version;
+    [%expect
+      {|
+      hg://some/path_0xdeadbeef
+      ssh://a/path_8badf00d
+      |}]
+  ;;
 
-    let%expect_test "print build info" =
-      Version_info.print_build_info ~build_info:(lazy "some build info");
-      [%expect {| some build info |}]
-    ;;
-  end)
-;;
+  let%expect_test "print build info" =
+    Version_info.print_build_info ~build_info:(lazy "some build info");
+    [%expect {| some build info |}]
+  ;;
+end
 
 let rec summary = function
   | Base x -> x.summary

@@ -77,6 +77,7 @@ module type Tuple = sig
     val map_snd : ('a, 'b) t -> f:('b -> 'c) -> ('a, 'c) t
     val map_both : ('a, 'b) t -> f1:('a -> 'c) -> f2:('b -> 'd) -> ('c, 'd) t
     val map2 : ('a, 'a) t -> ('b, 'b) t -> f:('a -> 'b -> 'c) -> ('c, 'c) t
+    val sort : ('a, 'a) t -> compare:('a -> 'a -> int) -> ('a, 'a) t
     val swap : ('a, 'b) t -> ('b, 'a) t
   end
 

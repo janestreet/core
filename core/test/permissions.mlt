@@ -77,7 +77,7 @@ module type Foo = Container with type ('a, 'perm) t := ('a, 'perm) t
 [%%expect
   {|
 Line _, characters _-_:
-Error: In this `with' constraint, the new definition of t
+Error: In this with constraint, the new definition of t
        does not match its original definition in the constrained signature:
        Type declarations do not match:
          type ('a, 'b) t = ('a, 'b) t constraint 'b = [< 'c perms ]
@@ -103,7 +103,7 @@ module type Foo = Container with type ('a, 'perm) t := ('a, 'perm) t
 [%%expect
   {|
 Line _, characters _-_:
-Error: In this `with' constraint, the new definition of t
+Error: In this with constraint, the new definition of t
        does not match its original definition in the constrained signature:
        Type declarations do not match:
          type ('a, 'b) t = ('a, 'b) t

@@ -2,35 +2,33 @@ open! Core
 open! Import
 open! Month
 
-let%test_module "Month.V1" =
-  (module Stable_unit_test.Make (struct
-      include Stable.V1
+module%test [@name "Month.V1"] _ = Stable_unit_test.Make (struct
+    include Stable.V1
 
-      let equal t1 t2 = Int.( = ) 0 (compare t1 t2)
+    let equal t1 t2 = Int.( = ) 0 (compare t1 t2)
 
-      let tests =
-        let module V = Variant in
-        let c rank sexp bin_io tests variant =
-          assert (Int.( = ) variant.V.rank rank);
-          (variant.V.constructor, sexp, bin_io) :: tests
-        in
-        Variants.fold
-          ~init:[]
-          ~jan:(c 0 "Jan" "\000")
-          ~feb:(c 1 "Feb" "\001")
-          ~mar:(c 2 "Mar" "\002")
-          ~apr:(c 3 "Apr" "\003")
-          ~may:(c 4 "May" "\004")
-          ~jun:(c 5 "Jun" "\005")
-          ~jul:(c 6 "Jul" "\006")
-          ~aug:(c 7 "Aug" "\007")
-          ~sep:(c 8 "Sep" "\008")
-          ~oct:(c 9 "Oct" "\009")
-          ~nov:(c 10 "Nov" "\010")
-          ~dec:(c 11 "Dec" "\011")
-      ;;
-    end))
-;;
+    let tests =
+      let module V = Variant in
+      let c rank sexp bin_io tests variant =
+        assert (Int.( = ) variant.V.rank rank);
+        (variant.V.constructor, sexp, bin_io) :: tests
+      in
+      Variants.fold
+        ~init:[]
+        ~jan:(c 0 "Jan" "\000")
+        ~feb:(c 1 "Feb" "\001")
+        ~mar:(c 2 "Mar" "\002")
+        ~apr:(c 3 "Apr" "\003")
+        ~may:(c 4 "May" "\004")
+        ~jun:(c 5 "Jun" "\005")
+        ~jul:(c 6 "Jul" "\006")
+        ~aug:(c 7 "Aug" "\007")
+        ~sep:(c 8 "Sep" "\008")
+        ~oct:(c 9 "Oct" "\009")
+        ~nov:(c 10 "Nov" "\010")
+        ~dec:(c 11 "Dec" "\011")
+    ;;
+  end)
 
 let%test _ = Int.( = ) (List.length all) 12
 

@@ -205,7 +205,7 @@ type 'a _maybe_bound = 'a Maybe_bound.t =
 
 let am_running_test = am_running_test
 let does_raise = Exn.does_raise
-let sec = Time_float.Span.of_sec
+let sec = Span_float.of_sec
 let ( ^/ ) = Filename.concat
 
 (** We perform these side effects here because we want them to run for any code that uses

@@ -2,129 +2,127 @@ open! Base
 open Poly
 open! Univ_map
 
-let%test_module _ =
-  (module struct
-    let size = Key.create ~name:"size" Int.sexp_of_t
-    let name = Key.create ~name:"name" String.sexp_of_t
-    let foo = Key.create ~name:"foo" Float.sexp_of_t
-    let kids = Key.create ~name:"kids" (List.sexp_of_t sexp_of_t)
-    let%test _ = is_empty empty
+module%test _ = struct
+  let size = Key.create ~name:"size" Int.sexp_of_t
+  let name = Key.create ~name:"name" String.sexp_of_t
+  let foo = Key.create ~name:"foo" Float.sexp_of_t
+  let kids = Key.create ~name:"kids" (List.sexp_of_t sexp_of_t)
+  let%test _ = is_empty empty
 
-    let test_contains t ~key ~data =
-      assert (not (is_empty t));
-      assert (mem t key);
-      (* these do not raise *)
-      ignore (change_exn t key ~f:Fn.id : t);
-      ignore
-        (change t key ~f:(function
-           | None -> assert false
-           | o -> o)
-         : t);
-      match find t key with
-      | None -> assert false
-      | Some v' -> assert (phys_equal data v')
-    ;;
+  let test_contains t ~key ~data =
+    assert (not (is_empty t));
+    assert (mem t key);
+    (* these do not raise *)
+    ignore (change_exn t key ~f:Fn.id : t);
+    ignore
+      (change t key ~f:(function
+         | None -> assert false
+         | o -> o)
+       : t);
+    match find t key with
+    | None -> assert false
+    | Some v' -> assert (phys_equal data v')
+  ;;
 
-    let test_add t ~key ~data = test_contains (set t ~key ~data) ~key ~data
+  let test_add t ~key ~data = test_contains (set t ~key ~data) ~key ~data
 
-    let test_find t key =
-      let f1 = find t key in
-      let f2 = Option.try_with (fun () -> find_exn t key) in
-      match f1, f2 with
-      | None, None -> ()
-      | Some v1, Some v2 -> assert (phys_equal v1 v2)
-      | Some _, None -> assert false
-      | None, Some _ -> assert false
-    ;;
+  let test_find t key =
+    let f1 = find t key in
+    let f2 = Option.try_with (fun () -> find_exn t key) in
+    match f1, f2 with
+    | None, None -> ()
+    | Some v1, Some v2 -> assert (phys_equal v1 v2)
+    | Some _, None -> assert false
+    | None, Some _ -> assert false
+  ;;
 
-    let test_change t ~key ~data =
-      let t_minus = change t key ~f:(fun _ -> None) in
-      assert (not (mem t_minus key));
-      let t_plus = change t key ~f:(fun _ -> Some data) in
-      test_contains t_plus ~key ~data;
-      ()
-    ;;
+  let test_change t ~key ~data =
+    let t_minus = change t key ~f:(fun _ -> None) in
+    assert (not (mem t_minus key));
+    let t_plus = change t key ~f:(fun _ -> Some data) in
+    test_contains t_plus ~key ~data;
+    ()
+  ;;
 
-    let test_remove t ~key ~data =
-      let t_minus = remove t key in
-      assert (not (mem t_minus key));
-      let t_plus = set t ~key ~data in
-      test_contains t_plus ~key ~data;
-      let t_minus = remove t_plus key in
-      assert (not (mem t_minus key))
-    ;;
+  let test_remove t ~key ~data =
+    let t_minus = remove t key in
+    assert (not (mem t_minus key));
+    let t_plus = set t ~key ~data in
+    test_contains t_plus ~key ~data;
+    let t_minus = remove t_plus key in
+    assert (not (mem t_minus key))
+  ;;
 
-    let test_remove_by_id t ~key ~data =
-      let t_minus = remove_by_id t (Key.uid key) in
-      assert (not (mem t_minus key));
-      let t_plus = set t ~key ~data in
-      test_contains t_plus ~key ~data;
-      let t_minus = remove_by_id t_plus (Key.uid key) in
-      assert (not (mem t_minus key))
-    ;;
+  let test_remove_by_id t ~key ~data =
+    let t_minus = remove_by_id t (Key.uid key) in
+    assert (not (mem t_minus key));
+    let t_plus = set t ~key ~data in
+    test_contains t_plus ~key ~data;
+    let t_minus = remove_by_id t_plus (Key.uid key) in
+    assert (not (mem t_minus key))
+  ;;
 
-    let test t =
-      (* add *)
-      test_add t ~key:size ~data:12;
-      test_add t ~key:name ~data:"hank";
-      test_add t ~key:kids ~data:[ t; empty ];
-      (* find *)
-      test_find t size;
-      test_find t name;
-      test_find t kids;
-      (* change *)
-      test_change t ~key:size ~data:33;
-      test_change t ~key:name ~data:"frank";
-      test_change t ~key:kids ~data:[];
-      (* remove *)
-      test_remove t ~key:size ~data:33;
-      test_remove t ~key:name ~data:"frank";
-      test_remove t ~key:kids ~data:[];
-      (* remove_by_id *)
-      test_remove_by_id t ~key:size ~data:33;
-      test_remove_by_id t ~key:name ~data:"frank";
-      test_remove_by_id t ~key:kids ~data:[];
-      ()
-    ;;
+  let test t =
+    (* add *)
+    test_add t ~key:size ~data:12;
+    test_add t ~key:name ~data:"hank";
+    test_add t ~key:kids ~data:[ t; empty ];
+    (* find *)
+    test_find t size;
+    test_find t name;
+    test_find t kids;
+    (* change *)
+    test_change t ~key:size ~data:33;
+    test_change t ~key:name ~data:"frank";
+    test_change t ~key:kids ~data:[];
+    (* remove *)
+    test_remove t ~key:size ~data:33;
+    test_remove t ~key:name ~data:"frank";
+    test_remove t ~key:kids ~data:[];
+    (* remove_by_id *)
+    test_remove_by_id t ~key:size ~data:33;
+    test_remove_by_id t ~key:name ~data:"frank";
+    test_remove_by_id t ~key:kids ~data:[];
+    ()
+  ;;
 
-    let t0 = empty
-    let t1 = set t0 ~key:size ~data:9
-    let t2 = set t1 ~key:foo ~data:13.25
-    let t3 = set t2 ~key:size ~data:15
-    let%test_unit _ = test t0
-    let%test_unit _ = test t1
-    let%test_unit _ = test t2
-    let%test_unit _ = test t3
-    let%test _ = sexp_of_t t3 = Parsexp.Single.parse_string_exn "((foo 13.25)(size 15))"
+  let t0 = empty
+  let t1 = set t0 ~key:size ~data:9
+  let t2 = set t1 ~key:foo ~data:13.25
+  let t3 = set t2 ~key:size ~data:15
+  let%test_unit _ = test t0
+  let%test_unit _ = test t1
+  let%test_unit _ = test t2
+  let%test_unit _ = test t3
+  let%test _ = sexp_of_t t3 = Parsexp.Single.parse_string_exn "((foo 13.25)(size 15))"
 
-    let%expect_test "[to_alist]" =
-      let test ints =
-        let sexps =
-          ints
-          |> List.rev
-          |> List.map ~f:(fun int ->
-            Packed.T
-              (Type_equal.Id.create ~name:("key" ^ Int.to_string int) [%sexp_of: int], int))
-          |> of_alist_exn
-          |> to_alist
-          |> List.map ~f:(fun (Packed.T (type_id, a)) ->
-            let type_id_name = Type_equal.Id.name type_id in
-            let sexp_of_a = Type_equal.Id.to_sexp type_id in
-            [%sexp (type_id_name : string), (a : a)])
-        in
-        Stdio.print_s [%sexp (sexps : Sexp.t list)]
+  let%expect_test "[to_alist]" =
+    let test ints =
+      let sexps =
+        ints
+        |> List.rev
+        |> List.map ~f:(fun int ->
+          Packed.T
+            (Type_equal.Id.create ~name:("key" ^ Int.to_string int) [%sexp_of: int], int))
+        |> of_alist_exn
+        |> to_alist
+        |> List.map ~f:(fun (Packed.T (type_id, a)) ->
+          let type_id_name = Type_equal.Id.name type_id in
+          let sexp_of_a = Type_equal.Id.to_sexp type_id in
+          [%sexp (type_id_name : string), (a : a)])
       in
-      test [];
-      [%expect {| () |}];
-      test [ 1 ];
-      [%expect {| ((key1 1)) |}];
-      test [ 1; 2 ];
-      [%expect {| ((key1 1) (key2 2)) |}];
-      test [ 1; 2; 3 ];
-      [%expect {| ((key1 1) (key2 2) (key3 3)) |}]
-    ;;
-  end)
-;;
+      Stdio.print_s [%sexp (sexps : Sexp.t list)]
+    in
+    test [];
+    [%expect {| () |}];
+    test [ 1 ];
+    [%expect {| ((key1 1)) |}];
+    test [ 1; 2 ];
+    [%expect {| ((key1 1) (key2 2)) |}];
+    test [ 1; 2; 3 ];
+    [%expect {| ((key1 1) (key2 2) (key3 3)) |}]
+  ;;
+end
 
 let%expect_test "specified key module" =
   (* incorrect use *)

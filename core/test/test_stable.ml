@@ -30,70 +30,61 @@ let%expect_test "older [int_of_sexp] supports both [sexp_of_int_style]s" =
 ;;
 
 module _ = struct
-  let%test_module "Hashtbl.V1" =
-    (module Stable_unit_test.Make_unordered_container (struct
-        module Hashable = Core_stable.Hashable.V1.Make (Int)
-        module Table = Hashable.Table
-
-        type t = string Table.t [@@deriving sexp, bin_io]
-
-        let equal t1 t2 = Int.Table.equal String.equal t1 t2
-
-        let triple_table =
-          Int.Table.of_alist_exn ~size:16 [ 1, "foo"; 2, "bar"; 3, "baz" ]
-        ;;
-
-        let single_table = Int.Table.of_alist_exn [ 0, "foo" ]
-
-        module Test = Stable_unit_test.Unordered_container_test
-
-        let tests =
-          [ ( triple_table
-            , { Test.sexps = [ "(1 foo)"; "(2 bar)"; "(3 baz)" ]
-              ; bin_io_header = "\003"
-              ; bin_io_elements = [ "\001\003foo"; "\002\003bar"; "\003\003baz" ]
-              } )
-          ; ( Int.Table.create ()
-            , { Test.sexps = []; bin_io_header = "\000"; bin_io_elements = [] } )
-          ; ( single_table
-            , { Test.sexps = [ "(0 foo)" ]
-              ; bin_io_header = "\001"
-              ; bin_io_elements = [ "\000\003foo" ]
-              } )
-          ]
-        ;;
-      end))
-  ;;
-end
-
-let%test_module "Hash_set.V1" =
-  (module Stable_unit_test.Make_unordered_container (struct
+  module%test [@name "Hashtbl.V1"] _ = Stable_unit_test.Make_unordered_container (struct
       module Hashable = Core_stable.Hashable.V1.Make (Int)
-      include Hashable.Hash_set
+      module Table = Hashable.Table
 
-      let equal = Hash_set.equal
-      let int_list = List.init 10 ~f:Fn.id
-      let ten_set = Int.Hash_set.of_list ~size:32 int_list
-      let single_set = Int.Hash_set.of_list [ 0 ]
+      type t = string Table.t [@@deriving sexp, bin_io]
+
+      let equal t1 t2 = Int.Table.equal String.equal t1 t2
+      let triple_table = Int.Table.of_alist_exn ~size:16 [ 1, "foo"; 2, "bar"; 3, "baz" ]
+      let single_table = Int.Table.of_alist_exn [ 0, "foo" ]
 
       module Test = Stable_unit_test.Unordered_container_test
 
       let tests =
-        [ ( ten_set
-          , { Test.sexps = List.init 10 ~f:Int.to_string
-            ; bin_io_header = "\010"
-            ; bin_io_elements =
-                List.init 10 ~f:(fun n -> Char.to_string (Char.of_int_exn n))
+        [ ( triple_table
+          , { Test.sexps = [ "(1 foo)"; "(2 bar)"; "(3 baz)" ]
+            ; bin_io_header = "\003"
+            ; bin_io_elements = [ "\001\003foo"; "\002\003bar"; "\003\003baz" ]
             } )
-        ; ( Int.Hash_set.create ()
+        ; ( Int.Table.create ()
           , { Test.sexps = []; bin_io_header = "\000"; bin_io_elements = [] } )
-        ; ( single_set
-          , { Test.sexps = [ "0" ]; bin_io_header = "\001"; bin_io_elements = [ "\000" ] }
-          )
+        ; ( single_table
+          , { Test.sexps = [ "(0 foo)" ]
+            ; bin_io_header = "\001"
+            ; bin_io_elements = [ "\000\003foo" ]
+            } )
         ]
       ;;
-    end))
-;;
+    end)
+end
+
+module%test [@name "Hash_set.V1"] _ = Stable_unit_test.Make_unordered_container (struct
+    module Hashable = Core_stable.Hashable.V1.Make (Int)
+    include Hashable.Hash_set
+
+    let equal = Hash_set.equal
+    let int_list = List.init 10 ~f:Fn.id
+    let ten_set = Int.Hash_set.of_list ~size:32 int_list
+    let single_set = Int.Hash_set.of_list [ 0 ]
+
+    module Test = Stable_unit_test.Unordered_container_test
+
+    let tests =
+      [ ( ten_set
+        , { Test.sexps = List.init 10 ~f:Int.to_string
+          ; bin_io_header = "\010"
+          ; bin_io_elements =
+              List.init 10 ~f:(fun n -> Char.to_string (Char.of_int_exn n))
+          } )
+      ; ( Int.Hash_set.create ()
+        , { Test.sexps = []; bin_io_header = "\000"; bin_io_elements = [] } )
+      ; ( single_set
+        , { Test.sexps = [ "0" ]; bin_io_header = "\001"; bin_io_elements = [ "\000" ] } )
+      ]
+    ;;
+  end)
 
 module _ = struct
   module type F = functor (Key : Stable) -> sig
@@ -118,17 +109,15 @@ module _ = struct
       ;;
     end)
 
-  let%test_module "Map.V1" = (module Test (Map.Stable.V1.Make))
+  module%test [@name "Map.V1"] _ = Test (Map.Stable.V1.Make)
 
-  let%test_module "Map.V1.M" =
-    (module struct
-      module F (Key : Stable) = struct
-        type 'a t = 'a Map.Stable.V1.M(Key).t [@@deriving bin_io, compare, sexp]
-      end
+  module%test [@name "Map.V1.M"] _ = struct
+    module F (Key : Stable) = struct
+      type 'a t = 'a Map.Stable.V1.M(Key).t [@@deriving bin_io, compare, sexp]
+    end
 
-      include Test (F)
-    end)
-  ;;
+    include Test (F)
+  end
 end
 
 module _ = struct
@@ -151,15 +140,13 @@ module _ = struct
       ;;
     end)
 
-  let%test_module "Set.V1" = (module Test (Set.Stable.V1.Make))
+  module%test [@name "Set.V1"] _ = Test (Set.Stable.V1.Make)
 
-  let%test_module "Set.V1.M" =
-    (module struct
-      module F (Elt : Stable) = struct
-        type t = Set.Stable.V1.M(Elt).t [@@deriving bin_io, compare, sexp]
-      end
+  module%test [@name "Set.V1.M"] _ = struct
+    module F (Elt : Stable) = struct
+      type t = Set.Stable.V1.M(Elt).t [@@deriving bin_io, compare, sexp]
+    end
 
-      include Test (F)
-    end)
-  ;;
+    include Test (F)
+  end
 end

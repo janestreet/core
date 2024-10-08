@@ -209,18 +209,16 @@ module Of_binable3_without_uuid = Stable.Of_binable3.V1
 module Of_sexpable_without_uuid = Stable.Of_sexpable.V1
 module Of_stringable_without_uuid = Stable.Of_stringable.V1
 
-let%test_module _ =
-  (module struct
-    module type S_only_functions_and_shape = sig
-      include S_only_functions
+module%test _ = struct
+  module type S_only_functions_and_shape = sig
+    include S_only_functions
 
-      val bin_shape_t : Shape.t
-    end
+    val bin_shape_t : Shape.t
+  end
 
-    (* Check that only the functions & shape are sufficient for [@@deriving bin_io]. The
+  (* Check that only the functions & shape are sufficient for [@@deriving bin_io]. The
        fact that this functor typechecks is, itself, the test. *)
-    module _ (X : S_only_functions_and_shape) : S = struct
-      type t = X.t [@@deriving bin_io]
-    end
-  end)
-;;
+  module _ (X : S_only_functions_and_shape) : S = struct
+    type t = X.t [@@deriving bin_io]
+  end
+end

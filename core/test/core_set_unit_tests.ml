@@ -306,148 +306,140 @@ module Unit_tests
     assert false
   ;;
 
-  let%test_module "to_sequence" =
-    (module struct
-      let ( <=> ) observed expected =
-        [%test_eq: Elt.t list] (Sequence.to_list observed) expected
-      ;;
+  module%test [@name "to_sequence"] _ = struct
+    let ( <=> ) observed expected =
+      [%test_eq: Elt.t list] (Sequence.to_list observed) expected
+    ;;
 
-      let m = set_nonempty
+    let m = set_nonempty
 
-      (* Calibration: make sure [m] contains elements less than 4, greater than 8, and
+    (* Calibration: make sure [m] contains elements less than 4, greater than 8, and
          between these two. Otherwise the tests aren't testing what we want. *)
-      let%test _ =
-        let l = Set.to_list m in
-        List.exists l ~f:(fun x -> Elt.(x < of_int 4))
-        && List.exists l ~f:(fun x -> Elt.(x >= of_int 4) && Elt.(x <= of_int 8))
-        && List.exists l ~f:(fun x -> Elt.(x > of_int 8))
-      ;;
+    let%test _ =
+      let l = Set.to_list m in
+      List.exists l ~f:(fun x -> Elt.(x < of_int 4))
+      && List.exists l ~f:(fun x -> Elt.(x >= of_int 4) && Elt.(x <= of_int 8))
+      && List.exists l ~f:(fun x -> Elt.(x > of_int 8))
+    ;;
 
-      let%test_unit _ = Set.to_sequence ~order:`Increasing m <=> Set.to_list m
-      let%test_unit _ = Set.to_sequence ~order:`Decreasing m <=> List.rev (Set.to_list m)
+    let%test_unit _ = Set.to_sequence ~order:`Increasing m <=> Set.to_list m
+    let%test_unit _ = Set.to_sequence ~order:`Decreasing m <=> List.rev (Set.to_list m)
 
-      let%test_unit _ =
-        Set.to_sequence ~order:`Increasing ~greater_or_equal_to:(Elt.of_int 4) m
-        <=> List.filter ~f:(fun x -> Elt.(x >= of_int 4)) (Set.to_list m)
-      ;;
+    let%test_unit _ =
+      Set.to_sequence ~order:`Increasing ~greater_or_equal_to:(Elt.of_int 4) m
+      <=> List.filter ~f:(fun x -> Elt.(x >= of_int 4)) (Set.to_list m)
+    ;;
 
-      let%test_unit _ =
-        Set.to_sequence
-          m
-          ~order:`Increasing
-          ~greater_or_equal_to:(Elt.of_int 4)
-          ~less_or_equal_to:(Elt.of_int 8)
-        <=> List.filter
-              ~f:(fun x -> Elt.(x >= of_int 4) && Elt.(x <= of_int 8))
-              (Set.to_list m)
-      ;;
+    let%test_unit _ =
+      Set.to_sequence
+        m
+        ~order:`Increasing
+        ~greater_or_equal_to:(Elt.of_int 4)
+        ~less_or_equal_to:(Elt.of_int 8)
+      <=> List.filter
+            ~f:(fun x -> Elt.(x >= of_int 4) && Elt.(x <= of_int 8))
+            (Set.to_list m)
+    ;;
 
-      let%test_unit _ =
-        Set.to_sequence ~order:`Decreasing ~less_or_equal_to:(Elt.of_int 4) m
-        <=> List.filter ~f:(fun x -> Elt.(x <= of_int 4)) (List.rev (Set.to_list m))
-      ;;
+    let%test_unit _ =
+      Set.to_sequence ~order:`Decreasing ~less_or_equal_to:(Elt.of_int 4) m
+      <=> List.filter ~f:(fun x -> Elt.(x <= of_int 4)) (List.rev (Set.to_list m))
+    ;;
 
-      let%test_unit _ =
-        Set.to_sequence
-          m
-          ~order:`Decreasing
-          ~less_or_equal_to:(Elt.of_int 8)
-          ~greater_or_equal_to:(Elt.of_int 4)
-        <=> List.filter
-              ~f:(fun x -> Elt.(x <= of_int 8) && Elt.(x >= of_int 4))
-              (List.rev (Set.to_list m))
-      ;;
+    let%test_unit _ =
+      Set.to_sequence
+        m
+        ~order:`Decreasing
+        ~less_or_equal_to:(Elt.of_int 8)
+        ~greater_or_equal_to:(Elt.of_int 4)
+      <=> List.filter
+            ~f:(fun x -> Elt.(x <= of_int 8) && Elt.(x >= of_int 4))
+            (List.rev (Set.to_list m))
+    ;;
 
-      let%test_unit _ = Set.to_sequence ~order:`Increasing (Set.empty ()) <=> []
-      let%test_unit _ = Set.to_sequence ~order:`Decreasing (Set.empty ()) <=> []
+    let%test_unit _ = Set.to_sequence ~order:`Increasing (Set.empty ()) <=> []
+    let%test_unit _ = Set.to_sequence ~order:`Decreasing (Set.empty ()) <=> []
 
-      let%test_unit _ =
-        Set.to_sequence ~order:`Increasing ~greater_or_equal_to:(Elt.of_int 11) m <=> []
-      ;;
+    let%test_unit _ =
+      Set.to_sequence ~order:`Increasing ~greater_or_equal_to:(Elt.of_int 11) m <=> []
+    ;;
 
-      let%test_unit _ =
-        Set.to_sequence ~order:`Decreasing ~less_or_equal_to:(Elt.of_int ~-1) m <=> []
-      ;;
-    end)
-  ;;
+    let%test_unit _ =
+      Set.to_sequence ~order:`Decreasing ~less_or_equal_to:(Elt.of_int ~-1) m <=> []
+    ;;
+  end
 
   let binary_search _ = assert false
   let binary_search_segmented _ = assert false
 
-  let%test_module "binary_search" =
-    (module struct
-      let small_set = Set.of_list (List.map ~f:Elt.of_int [ 1; 2; 3 ])
-      let compare_elt elt v = Int.compare (Elt.to_int elt) v
+  module%test [@name "binary_search"] _ = struct
+    let small_set = Set.of_list (List.map ~f:Elt.of_int [ 1; 2; 3 ])
+    let compare_elt elt v = Int.compare (Elt.to_int elt) v
 
-      let%test _ =
-        [%equal: Elt.t option]
-          (Set.binary_search (Set.empty ()) ~compare:compare_elt `First_equal_to 1)
-          None
-      ;;
+    let%test _ =
+      [%equal: Elt.t option]
+        (Set.binary_search (Set.empty ()) ~compare:compare_elt `First_equal_to 1)
+        None
+    ;;
 
-      let%test _ =
-        [%equal: Elt.t option]
-          (Set.binary_search small_set ~compare:compare_elt `First_equal_to 2)
-          (Some (Elt.of_int 2))
-      ;;
+    let%test _ =
+      [%equal: Elt.t option]
+        (Set.binary_search small_set ~compare:compare_elt `First_equal_to 2)
+        (Some (Elt.of_int 2))
+    ;;
 
-      let%test _ =
-        [%equal: Elt.t option]
-          (Set.binary_search
-             small_set
-             ~compare:compare_elt
-             `First_greater_than_or_equal_to
-             2)
-          (Some (Elt.of_int 2))
-      ;;
+    let%test _ =
+      [%equal: Elt.t option]
+        (Set.binary_search
+           small_set
+           ~compare:compare_elt
+           `First_greater_than_or_equal_to
+           2)
+        (Some (Elt.of_int 2))
+    ;;
 
-      let%test _ =
-        [%equal: Elt.t option]
-          (Set.binary_search
-             small_set
-             ~compare:compare_elt
-             `First_strictly_greater_than
-             3)
-          None
-      ;;
+    let%test _ =
+      [%equal: Elt.t option]
+        (Set.binary_search small_set ~compare:compare_elt `First_strictly_greater_than 3)
+        None
+    ;;
 
-      let%test _ =
-        [%equal: Elt.t option]
-          (Set.binary_search_segmented
-             (Set.empty ())
-             ~segment_of:(fun _ -> assert false)
-             `First_on_right)
-          None
-      ;;
+    let%test _ =
+      [%equal: Elt.t option]
+        (Set.binary_search_segmented
+           (Set.empty ())
+           ~segment_of:(fun _ -> assert false)
+           `First_on_right)
+        None
+    ;;
 
-      let%test _ =
-        [%equal: Elt.t option]
-          (Set.binary_search_segmented
-             small_set
-             ~segment_of:(fun elt -> if Elt.to_int elt < 3 then `Left else `Right)
-             `First_on_right)
-          (Some (Elt.of_int 3))
-      ;;
+    let%test _ =
+      [%equal: Elt.t option]
+        (Set.binary_search_segmented
+           small_set
+           ~segment_of:(fun elt -> if Elt.to_int elt < 3 then `Left else `Right)
+           `First_on_right)
+        (Some (Elt.of_int 3))
+    ;;
 
-      let%test _ =
-        [%equal: Elt.t option]
-          (Set.binary_search_segmented
-             small_set
-             ~segment_of:(fun elt -> if Elt.to_int elt < 3 then `Left else `Right)
-             `Last_on_left)
-          (Some (Elt.of_int 2))
-      ;;
+    let%test _ =
+      [%equal: Elt.t option]
+        (Set.binary_search_segmented
+           small_set
+           ~segment_of:(fun elt -> if Elt.to_int elt < 3 then `Left else `Right)
+           `Last_on_left)
+        (Some (Elt.of_int 2))
+    ;;
 
-      let%test _ =
-        [%equal: Elt.t option]
-          (Set.binary_search_segmented
-             small_set
-             ~segment_of:(fun elt -> if Elt.to_int elt > 3 then `Right else `Left)
-             `First_on_right)
-          None
-      ;;
-    end)
-  ;;
+    let%test _ =
+      [%equal: Elt.t option]
+        (Set.binary_search_segmented
+           small_set
+           ~segment_of:(fun elt -> if Elt.to_int elt > 3 then `Right else `Left)
+           `First_on_right)
+        None
+    ;;
+  end
 
   let merge_to_sequence ?order:_ ?greater_or_equal_to:_ ?less_or_equal_to:_ _ _
     : _ Sequence.t
@@ -455,77 +447,75 @@ module Unit_tests
     assert false
   ;;
 
-  let%test_module "merge_to_sequence Quickcheck" =
-    (module struct
-      open Quickcheck
+  module%test [@name "merge_to_sequence Quickcheck"] _ = struct
+    open Quickcheck
 
-      module Merge_to_sequence_args = struct
-        type t =
-          { order : [ `Increasing | `Decreasing ] option
-          ; greater_or_equal_to : Elt.t option
-          ; less_or_equal_to : Elt.t option
-          ; x : (int, Int.comparator_witness) Set.t_
-          ; y : (int, Int.comparator_witness) Set.t_
-          }
+    module Merge_to_sequence_args = struct
+      type t =
+        { order : [ `Increasing | `Decreasing ] option
+        ; greater_or_equal_to : Elt.t option
+        ; less_or_equal_to : Elt.t option
+        ; x : (int, Int.comparator_witness) Set.t_
+        ; y : (int, Int.comparator_witness) Set.t_
+        }
 
-        let quickcheck_generator =
-          let open Generator.Monad_infix in
-          let int_set_gen =
-            Generator.small_non_negative_int
-            >>= fun size ->
-            List.gen_with_length size Int.quickcheck_generator
-            >>| fun ints -> Set.of_list (List.map ints ~f:Elt.of_int)
-          in
-          Generator.tuple5
-            (Option.quickcheck_generator (Generator.of_list [ `Increasing; `Decreasing ]))
-            (Option.quickcheck_generator (Int.quickcheck_generator >>| Elt.of_int))
-            (Option.quickcheck_generator (Int.quickcheck_generator >>| Elt.of_int))
-            int_set_gen
-            int_set_gen
-          >>| fun (order, greater_or_equal_to, less_or_equal_to, x, y) ->
-          { order; greater_or_equal_to; less_or_equal_to; x; y }
-        ;;
-      end
-
-      let%test_unit "merge_to_sequence = symmetric diff + inter" =
-        Quickcheck.test
-          Merge_to_sequence_args.quickcheck_generator
-          ~f:(fun { order; greater_or_equal_to; less_or_equal_to; x; y } ->
-            let open Set_intf.Merge_to_sequence_element in
-            let value = function
-              | Left x | Right x | Both (x, _) -> Elt.to_int x
-            in
-            let expect =
-              List.concat
-                [ List.map ~f:(fun x -> Both (x, x)) (Set.to_list (Set.inter x y))
-                ; List.map ~f:(fun x -> Left x) (Set.to_list (Set.diff x y))
-                ; List.map ~f:(fun x -> Right x) (Set.to_list (Set.diff y x))
-                ]
-            in
-            let expect =
-              Option.fold greater_or_equal_to ~init:expect ~f:(fun elts min ->
-                let min = Elt.to_int min in
-                List.filter elts ~f:(fun x -> Int.( >= ) (value x) min))
-            in
-            let expect =
-              Option.fold less_or_equal_to ~init:expect ~f:(fun elts max ->
-                let max = Elt.to_int max in
-                List.filter elts ~f:(fun x -> Int.( <= ) (value x) max))
-            in
-            let expect =
-              match order with
-              | None | Some `Increasing ->
-                List.sort expect ~compare:(fun a b -> Int.compare (value a) (value b))
-              | Some `Decreasing ->
-                List.sort expect ~compare:(fun a b -> Int.compare (value b) (value a))
-            in
-            [%test_result: (Elt.t, Elt.t) Merge_to_sequence_element.t list]
-              (Sequence.to_list
-                 (Set.merge_to_sequence ?order ?greater_or_equal_to ?less_or_equal_to x y))
-              ~expect)
+      let quickcheck_generator =
+        let open Generator.Monad_infix in
+        let int_set_gen =
+          Generator.small_non_negative_int
+          >>= fun size ->
+          List.gen_with_length size Int.quickcheck_generator
+          >>| fun ints -> Set.of_list (List.map ints ~f:Elt.of_int)
+        in
+        Generator.tuple5
+          (Option.quickcheck_generator (Generator.of_list [ `Increasing; `Decreasing ]))
+          (Option.quickcheck_generator (Int.quickcheck_generator >>| Elt.of_int))
+          (Option.quickcheck_generator (Int.quickcheck_generator >>| Elt.of_int))
+          int_set_gen
+          int_set_gen
+        >>| fun (order, greater_or_equal_to, less_or_equal_to, x, y) ->
+        { order; greater_or_equal_to; less_or_equal_to; x; y }
       ;;
-    end)
-  ;;
+    end
+
+    let%test_unit "merge_to_sequence = symmetric diff + inter" =
+      Quickcheck.test
+        Merge_to_sequence_args.quickcheck_generator
+        ~f:(fun { order; greater_or_equal_to; less_or_equal_to; x; y } ->
+          let open Set_intf.Merge_to_sequence_element in
+          let value = function
+            | Left x | Right x | Both (x, _) -> Elt.to_int x
+          in
+          let expect =
+            List.concat
+              [ List.map ~f:(fun x -> Both (x, x)) (Set.to_list (Set.inter x y))
+              ; List.map ~f:(fun x -> Left x) (Set.to_list (Set.diff x y))
+              ; List.map ~f:(fun x -> Right x) (Set.to_list (Set.diff y x))
+              ]
+          in
+          let expect =
+            Option.fold greater_or_equal_to ~init:expect ~f:(fun elts min ->
+              let min = Elt.to_int min in
+              List.filter elts ~f:(fun x -> Int.( >= ) (value x) min))
+          in
+          let expect =
+            Option.fold less_or_equal_to ~init:expect ~f:(fun elts max ->
+              let max = Elt.to_int max in
+              List.filter elts ~f:(fun x -> Int.( <= ) (value x) max))
+          in
+          let expect =
+            match order with
+            | None | Some `Increasing ->
+              List.sort expect ~compare:(fun a b -> Int.compare (value a) (value b))
+            | Some `Decreasing ->
+              List.sort expect ~compare:(fun a b -> Int.compare (value b) (value a))
+          in
+          [%test_result: (Elt.t, Elt.t) Merge_to_sequence_element.t list]
+            (Sequence.to_list
+               (Set.merge_to_sequence ?order ?greater_or_equal_to ?less_or_equal_to x y))
+            ~expect)
+    ;;
+  end
 
   let of_sorted_array _ = assert false
   let of_sorted_array_unchecked _ = assert false
@@ -780,138 +770,131 @@ module Unit_tests
 
   let quickcheck_generator _ = assert false
 
-  let%test_module _ =
-    (module struct
-      open Quickcheck
+  module%test _ = struct
+    open Quickcheck
 
-      let sexp_of = [%sexp_of: Set.t]
-      let compare = [%compare: Set.t]
-      let quickcheck_generator = Set.quickcheck_generator Elt.quickcheck_generator
-      let can_generate f = test_can_generate quickcheck_generator ~sexp_of ~f
+    let sexp_of = [%sexp_of: Set.t]
+    let compare = [%compare: Set.t]
+    let quickcheck_generator = Set.quickcheck_generator Elt.quickcheck_generator
+    let can_generate f = test_can_generate quickcheck_generator ~sexp_of ~f
 
-      let%test_unit _ =
-        test_distinct_values
-          quickcheck_generator
-          ~sexp_of
-          ~compare
-          ~trials:1_000
-          ~distinct_values:500
-      ;;
+    let%test_unit _ =
+      test_distinct_values
+        quickcheck_generator
+        ~sexp_of
+        ~compare
+        ~trials:1_000
+        ~distinct_values:500
+    ;;
 
-      let%test_unit _ = can_generate (fun t -> Set.is_empty t)
-      let%test_unit _ = can_generate (fun t -> Set.length t = 1)
-      let%test_unit _ = can_generate (fun t -> Set.length t = 2)
-      let%test_unit _ = can_generate (fun t -> Set.length t >= 3)
+    let%test_unit _ = can_generate (fun t -> Set.is_empty t)
+    let%test_unit _ = can_generate (fun t -> Set.length t = 1)
+    let%test_unit _ = can_generate (fun t -> Set.length t = 2)
+    let%test_unit _ = can_generate (fun t -> Set.length t >= 3)
 
-      let%test_unit _ =
-        can_generate (fun t -> Set.exists t ~f:(fun elt -> Elt.to_int elt >= 0))
-      ;;
+    let%test_unit _ =
+      can_generate (fun t -> Set.exists t ~f:(fun elt -> Elt.to_int elt >= 0))
+    ;;
 
-      let%test_unit _ =
-        can_generate (fun t -> Set.exists t ~f:(fun elt -> Elt.to_int elt < 0))
-      ;;
-    end)
-  ;;
+    let%test_unit _ =
+      can_generate (fun t -> Set.exists t ~f:(fun elt -> Elt.to_int elt < 0))
+    ;;
+  end
 
   let quickcheck_observer _ = assert false
 
-  let%test_module _ =
-    (module struct
-      open Quickcheck
+  module%test _ = struct
+    open Quickcheck
 
-      module Set' = struct
-        include Set
+    module Set' = struct
+      include Set
 
-        let hash_fold_t hash t = [%hash_fold: Elt.t list] hash (to_list t)
-        let hash t = hash_fold_t (Hash.alloc ()) t |> Hash.get_hash_value
-      end
+      let hash_fold_t hash t = [%hash_fold: Elt.t list] hash (to_list t)
+      let hash t = hash_fold_t (Hash.alloc ()) t |> Hash.get_hash_value
+    end
 
-      module F =
-        Fn_for_testing.Make (Set') (Int)
-          (struct
-            let examples =
-              [] :: Elt.samples :: List.map Elt.samples ~f:(fun x -> [ x ])
-              |> List.map ~f:Set.of_list
-            ;;
-          end)
+    module F =
+      Fn_for_testing.Make (Set') (Int)
+        (struct
+          let examples =
+            [] :: Elt.samples :: List.map Elt.samples ~f:(fun x -> [ x ])
+            |> List.map ~f:Set.of_list
+          ;;
+        end)
 
-      let sexp_of = [%sexp_of: F.t]
-      let compare = [%compare: F.t]
+    let sexp_of = [%sexp_of: F.t]
+    let compare = [%compare: F.t]
 
-      let quickcheck_generator =
-        (* memoizing these functions makes [test_no_duplicates] run much faster *)
-        let hashable = Hashtbl_intf.Hashable.of_key (module Set') in
-        Generator.(
-          fn (Set.quickcheck_observer Elt.quickcheck_observer) Int.quickcheck_generator
-          |> map ~f:(fun f -> Memo.general f ~hashable))
-      ;;
+    let quickcheck_generator =
+      (* memoizing these functions makes [test_no_duplicates] run much faster *)
+      let hashable = Hashtbl_intf.Hashable.of_key (module Set') in
+      Generator.(
+        fn (Set.quickcheck_observer Elt.quickcheck_observer) Int.quickcheck_generator
+        |> map ~f:(fun f -> Memo.general f ~hashable))
+    ;;
 
-      let can_generate f = test_can_generate quickcheck_generator ~sexp_of ~f
+    let can_generate f = test_can_generate quickcheck_generator ~sexp_of ~f
 
-      let%test_unit (_ [@tags "no-js"]) =
-        test_distinct_values
-          quickcheck_generator
-          ~sexp_of
-          ~compare
-          ~trials:1_000
-          ~distinct_values:500
-      ;;
+    let%test_unit (_ [@tags "no-js"]) =
+      test_distinct_values
+        quickcheck_generator
+        ~sexp_of
+        ~compare
+        ~trials:1_000
+        ~distinct_values:500
+    ;;
 
-      let%test_unit _ =
-        can_generate (fun f -> f (Set.singleton (Elt.of_int 0)) <> f (Set.empty ()))
-      ;;
+    let%test_unit _ =
+      can_generate (fun f -> f (Set.singleton (Elt.of_int 0)) <> f (Set.empty ()))
+    ;;
 
-      let%test_unit _ =
-        can_generate (fun f ->
-          f (Set.singleton (Elt.of_int 0)) <> f (Set.singleton (Elt.of_int 1)))
-      ;;
+    let%test_unit _ =
+      can_generate (fun f ->
+        f (Set.singleton (Elt.of_int 0)) <> f (Set.singleton (Elt.of_int 1)))
+    ;;
 
-      let%test_unit _ =
-        can_generate (fun f ->
-          f (Set.singleton (Elt.of_int 0))
-          <> f (Set.of_list [ Elt.of_int 0; Elt.of_int 1 ]))
-      ;;
-    end)
-  ;;
+    let%test_unit _ =
+      can_generate (fun f ->
+        f (Set.singleton (Elt.of_int 0)) <> f (Set.of_list [ Elt.of_int 0; Elt.of_int 1 ]))
+    ;;
+  end
 
   let quickcheck_shrinker _ = assert false
 
-  let%test_module _ =
-    (module struct
-      open Quickcheck
+  module%test _ = struct
+    open Quickcheck
 
-      let elt_test_shrinker =
-        Shrinker.create (fun t ->
-          let n = Elt.to_int t in
-          if n <= 0 then Sequence.empty else Sequence.singleton (Elt.of_int (n - 1)))
-      ;;
+    let elt_test_shrinker =
+      Shrinker.create (fun t ->
+        let n = Elt.to_int t in
+        if n <= 0 then Sequence.empty else Sequence.singleton (Elt.of_int (n - 1)))
+    ;;
 
-      let quickcheck_shrinker = Set.quickcheck_shrinker elt_test_shrinker
-      let normalize_list list = List.sort list ~compare:[%compare: int]
+    let quickcheck_shrinker = Set.quickcheck_shrinker elt_test_shrinker
+    let normalize_list list = List.sort list ~compare:[%compare: int]
 
-      let normalize_lists lists =
-        List.map lists ~f:normalize_list |> List.sort ~compare:[%compare: int list]
-      ;;
+    let normalize_lists lists =
+      List.map lists ~f:normalize_list |> List.sort ~compare:[%compare: int list]
+    ;;
 
-      let set_of_list list = List.map list ~f:Elt.of_int |> Set.of_list
-      let list_of_set set = Set.to_list set |> List.map ~f:Elt.to_int
+    let set_of_list list = List.map list ~f:Elt.of_int |> Set.of_list
+    let list_of_set set = Set.to_list set |> List.map ~f:Elt.to_int
 
-      let test list shrunk_lists =
-        [%test_result: int list list]
-          (set_of_list list
-           |> Shrinker.shrink quickcheck_shrinker
-           |> Sequence.to_list
-           |> List.map ~f:list_of_set
-           |> normalize_lists)
-          ~expect:(normalize_lists shrunk_lists)
-      ;;
+    let test list shrunk_lists =
+      [%test_result: int list list]
+        (set_of_list list
+         |> Shrinker.shrink quickcheck_shrinker
+         |> Sequence.to_list
+         |> List.map ~f:list_of_set
+         |> normalize_lists)
+        ~expect:(normalize_lists shrunk_lists)
+    ;;
 
-      let%test_unit _ = test [] []
-      let%test_unit _ = test [ 0 ] [ [] ]
-      let%test_unit _ = test [ 1 ] [ []; [ 0 ] ]
-      let%test_unit _ = test [ 0; 1 ] [ [ 0 ]; [ 1 ] ]
-    end)
-  ;;
+    let%test_unit _ = test [] []
+    let%test_unit _ = test [ 0 ] [ [] ]
+    let%test_unit _ = test [ 1 ] [ []; [ 0 ] ]
+    let%test_unit _ = test [ 0; 1 ] [ [ 0 ]; [ 1 ] ]
+  end
 
   let compare_direct _ = assert false
 
@@ -1021,125 +1004,119 @@ module Access_options_with_int_comparator = struct
   let simplify_accessor f = f ~comparator:Int.comparator
 end
 
-let%test_module "Set" =
-  (module Unit_tests
-            (Elt_poly)
-            (struct
-              include Set
+module%test Set =
+  Unit_tests
+    (Elt_poly)
+    (struct
+      include Set
 
-              type ('a, 'b) t_ = ('a, 'b) t
-              type ('a, 'b) set = ('a, 'b) t
-              type ('a, 'b) tree = ('a, 'b) Tree.t
-              type 'a cmp = 'a
+      type ('a, 'b) t_ = ('a, 'b) t
+      type ('a, 'b) set = ('a, 'b) t
+      type ('a, 'b) tree = ('a, 'b) Tree.t
+      type 'a cmp = 'a
 
-              include Create_options_with_first_class_module
-              include Access_options_without_comparator
+      include Create_options_with_first_class_module
+      include Access_options_without_comparator
 
-              let kind = `Set
-              let is_poly = false
-            end))
-;;
+      let kind = `Set
+      let is_poly = false
+    end)
 
-let%test_module "Set.Poly" =
-  (module Unit_tests
-            (Elt_poly)
-            (struct
-              include Set
-              include Set.Poly
+module%test [@name "Set.Poly"] _ =
+  Unit_tests
+    (Elt_poly)
+    (struct
+      include Set
+      include Set.Poly
 
-              type ('a, 'b) set = ('a, 'b) Set.t
-              type ('a, 'b) t_ = 'a t
-              type ('a, 'b) tree = 'a Tree.t
-              type 'a cmp = Comparator.Poly.comparator_witness
+      type ('a, 'b) set = ('a, 'b) Set.t
+      type ('a, 'b) t_ = 'a t
+      type ('a, 'b) tree = 'a Tree.t
+      type 'a cmp = Comparator.Poly.comparator_witness
 
-              include Create_options_without_comparator
-              include Access_options_without_comparator
+      include Create_options_without_comparator
+      include Access_options_without_comparator
 
-              let kind = `Set
-              let is_poly = true
-            end))
-;;
+      let kind = `Set
+      let is_poly = true
+    end)
 
-let%test_module "Int.Set" =
-  (module Unit_tests
-            (Elt_int)
-            (struct
-              include Set
-              include Int.Set
-              module Tree = Set.Make_tree (Int.Set.Elt)
+module%test [@name "Int.Set"] _ =
+  Unit_tests
+    (Elt_int)
+    (struct
+      include Set
+      include Int.Set
+      module Tree = Set.Make_tree (Int.Set.Elt)
 
-              type ('a, 'b) set = ('a, 'b) Set.t
-              type ('a, 'b) t_ = t
-              type ('a, 'b) tree = Tree.t
-              type 'a cmp = Int.comparator_witness
+      type ('a, 'b) set = ('a, 'b) Set.t
+      type ('a, 'b) t_ = t
+      type ('a, 'b) tree = Tree.t
+      type 'a cmp = Int.comparator_witness
 
-              include Create_options_without_comparator
-              include Access_options_without_comparator
+      include Create_options_without_comparator
+      include Access_options_without_comparator
 
-              let kind = `Set
-              let is_poly = false
-            end))
-;;
+      let kind = `Set
+      let is_poly = false
+    end)
 
-let%test_module "Set.Tree" =
-  (module Unit_tests
-            (Elt_poly)
-            (struct
-              include Set.Tree
+module%test [@name "Set.Tree"] _ =
+  Unit_tests
+    (Elt_poly)
+    (struct
+      include Set.Tree
 
-              type ('a, 'b) set = ('a, 'b) Set.Tree.t
-              type ('a, 'b) t_ = ('a, 'b) t
-              type ('a, 'b) tree = ('a, 'b) t
-              type 'a cmp = 'a
+      type ('a, 'b) set = ('a, 'b) Set.Tree.t
+      type ('a, 'b) t_ = ('a, 'b) t
+      type ('a, 'b) tree = ('a, 'b) t
+      type 'a cmp = 'a
 
-              include Create_options_with_comparator
-              include Access_options_with_comparator
+      include Create_options_with_comparator
+      include Access_options_with_comparator
 
-              let kind = `Tree
-              let is_poly = false
-            end))
-;;
+      let kind = `Tree
+      let is_poly = false
+    end)
 
-let%test_module "Set.Poly.Tree" =
-  (module Unit_tests
-            (Elt_poly)
-            (struct
-              include Set.Tree
-              include Set.Poly.Tree
+module%test [@name "Set.Poly.Tree"] _ =
+  Unit_tests
+    (Elt_poly)
+    (struct
+      include Set.Tree
+      include Set.Poly.Tree
 
-              type ('a, 'b) set = ('a, 'b) Set.Tree.t
-              type ('a, 'b) t_ = 'a t
-              type ('a, 'b) tree = 'a t
-              type 'a cmp = Comparator.Poly.comparator_witness
+      type ('a, 'b) set = ('a, 'b) Set.Tree.t
+      type ('a, 'b) t_ = 'a t
+      type ('a, 'b) tree = 'a t
+      type 'a cmp = Comparator.Poly.comparator_witness
 
-              include Create_options_without_comparator
-              include Access_options_with_poly_comparator
+      include Create_options_without_comparator
+      include Access_options_with_poly_comparator
 
-              let kind = `Tree
-              let is_poly = true
-            end))
-;;
+      let kind = `Tree
+      let is_poly = true
+    end)
 
-let%test_module "Int.Set.Tree" =
-  (module Unit_tests
-            (Elt_int)
-            (struct
-              include Set.Tree
-              include Set.Make_tree (Int.Set.Elt)
+module%test [@name "Int.Set.Tree"] _ =
+  Unit_tests
+    (Elt_int)
+    (struct
+      include Set.Tree
+      include Set.Make_tree (Int.Set.Elt)
 
-              type ('a, 'b) set = ('a, 'b) Set.Tree.t
-              type ('a, 'b) t_ = t
-              type ('a, 'b) tree = t
-              type 'a cmp = Int.comparator_witness
+      type ('a, 'b) set = ('a, 'b) Set.Tree.t
+      type ('a, 'b) t_ = t
+      type ('a, 'b) tree = t
+      type 'a cmp = Int.comparator_witness
 
-              include Create_options_without_comparator
-              include Access_options_with_int_comparator
+      include Create_options_without_comparator
+      include Access_options_with_int_comparator
 
-              let equal ~comparator:_ = equal
-              let kind = `Tree
-              let is_poly = false
-            end))
-;;
+      let equal ~comparator:_ = equal
+      let kind = `Tree
+      let is_poly = false
+    end)
 
 let%expect_test "t_of_sexp raises on duplicate elements" =
   let no_dup_sexp = Sexp.of_string "(a b c d)" in

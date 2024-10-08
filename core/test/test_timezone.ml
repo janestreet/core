@@ -112,262 +112,254 @@ module Common_dates = struct
   let bst_start_2014 = mkt ~year:2014 Mar 30 01 00, Time_float.Span.hour
 end
 
-let%test_module "differences in abbreviations between native and js" =
-  (module struct
-    open Common_dates
+module%test [@name "differences in abbreviations between native and js"] _ = struct
+  open Common_dates
 
-    let print_abbrev ~zone ~time =
-      let time_in_seconds =
-        time
-        |> Time_float.to_span_since_epoch
-        |> Time_float.Span.to_int63_seconds_round_down_exn
-        |> Timezone.Time_in_seconds.Span.of_int63_seconds
-        |> Timezone.Time_in_seconds.of_span_since_epoch
-      in
-      let index = Timezone.index zone time_in_seconds in
-      print_endline (Timezone.index_abbreviation_exn zone index)
-    ;;
+  let print_abbrev ~zone ~time =
+    let time_in_seconds =
+      time
+      |> Time_float.to_span_since_epoch
+      |> Time_float.Span.to_int63_seconds_round_down_exn
+      |> Timezone.Time_in_seconds.Span.of_int63_seconds
+      |> Timezone.Time_in_seconds.of_span_since_epoch
+    in
+    let index = Timezone.index zone time_in_seconds in
+    print_endline (Timezone.index_abbreviation_exn zone index)
+  ;;
 
-    let%expect_test ("bst-start native" [@tags "no-js"]) =
-      print_abbrev ~zone:(Timezone.find_exn "Europe/London") ~time:(fst bst_start);
-      [%expect {| BST |}]
-    ;;
+  let%expect_test ("bst-start native" [@tags "no-js"]) =
+    print_abbrev ~zone:(Timezone.find_exn "Europe/London") ~time:(fst bst_start);
+    [%expect {| BST |}]
+  ;;
 
-    let%expect_test ("bst-start javascript" [@tags "js-only"]) =
-      print_abbrev ~zone:(Timezone.find_exn "Europe/London") ~time:(fst bst_start);
-      [%expect {| |}]
-    ;;
+  let%expect_test ("bst-start javascript" [@tags "js-only"]) =
+    print_abbrev ~zone:(Timezone.find_exn "Europe/London") ~time:(fst bst_start);
+    [%expect {| |}]
+  ;;
 
-    let%expect_test ("bst-end native" [@tags "no-js"]) =
-      print_abbrev ~zone:(Timezone.find_exn "Europe/London") ~time:(fst bst_end);
-      [%expect {| GMT |}]
-    ;;
+  let%expect_test ("bst-end native" [@tags "no-js"]) =
+    print_abbrev ~zone:(Timezone.find_exn "Europe/London") ~time:(fst bst_end);
+    [%expect {| GMT |}]
+  ;;
 
-    let%expect_test ("bst-end javascript" [@tags "js-only"]) =
-      print_abbrev ~zone:(Timezone.find_exn "Europe/London") ~time:(fst bst_end);
-      [%expect {| |}]
-    ;;
-  end)
-;;
+  let%expect_test ("bst-end javascript" [@tags "js-only"]) =
+    print_abbrev ~zone:(Timezone.find_exn "Europe/London") ~time:(fst bst_end);
+    [%expect {| |}]
+  ;;
+end
 
-let%test_module "next_clock_shift, prev_clock_shift" =
-  (module struct
-    open Common_dates
+module%test [@name "next_clock_shift, prev_clock_shift"] _ = struct
+  open Common_dates
 
-    let%expect_test "UTC" =
-      Time_float.Zone.next_clock_shift Timezone.utc ~strictly_after:(mkt Jan 01 12 00)
-      |> require_none [%sexp_of: Time_float.t * Time_float.Span.t];
-      Time_float.Zone.prev_clock_shift Timezone.utc ~at_or_before:(mkt Jan 01 12 00)
-      |> require_none [%sexp_of: Time_float.t * Time_float.Span.t]
-    ;;
+  let%expect_test "UTC" =
+    Time_float.Zone.next_clock_shift Timezone.utc ~strictly_after:(mkt Jan 01 12 00)
+    |> require_none [%sexp_of: Time_float.t * Time_float.Span.t];
+    Time_float.Zone.prev_clock_shift Timezone.utc ~at_or_before:(mkt Jan 01 12 00)
+    |> require_none [%sexp_of: Time_float.t * Time_float.Span.t]
+  ;;
 
-    let expect_next strictly_after next =
-      [%test_result: (Time_float.t * Time_float.Span.t) option]
-        ~expect:(Some next)
-        (Time_float.Zone.next_clock_shift
-           (Timezone.find_exn "Europe/London")
-           ~strictly_after)
-    ;;
+  let expect_next strictly_after next =
+    [%test_result: (Time_float.t * Time_float.Span.t) option]
+      ~expect:(Some next)
+      (Time_float.Zone.next_clock_shift
+         (Timezone.find_exn "Europe/London")
+         ~strictly_after)
+  ;;
 
-    let expect_prev at_or_before prev =
-      [%test_result: (Time_float.t * Time_float.Span.t) option]
-        ~expect:(Some prev)
-        (Time_float.Zone.prev_clock_shift
-           (Timezone.find_exn "Europe/London")
-           ~at_or_before)
-    ;;
+  let expect_prev at_or_before prev =
+    [%test_result: (Time_float.t * Time_float.Span.t) option]
+      ~expect:(Some prev)
+      (Time_float.Zone.prev_clock_shift (Timezone.find_exn "Europe/London") ~at_or_before)
+  ;;
 
-    let expect_between time prev next =
-      expect_prev time prev;
-      expect_next time next
-    ;;
+  let expect_between time prev next =
+    expect_prev time prev;
+    expect_next time next
+  ;;
 
-    let%expect_test "outside BST" = expect_next (mkt Jan 01 12 00) bst_start
-    let%expect_test "just before BST start" = expect_next (mkt Mar 31 00 59) bst_start
-    let%expect_test "on BST start time" = expect_next (mkt Mar 31 01 00) bst_end
+  let%expect_test "outside BST" = expect_next (mkt Jan 01 12 00) bst_start
+  let%expect_test "just before BST start" = expect_next (mkt Mar 31 00 59) bst_start
+  let%expect_test "on BST start time" = expect_next (mkt Mar 31 01 00) bst_end
 
-    let%expect_test "just after BST start" =
-      expect_between (mkt Mar 31 01 01) bst_start bst_end
-    ;;
+  let%expect_test "just after BST start" =
+    expect_between (mkt Mar 31 01 01) bst_start bst_end
+  ;;
 
-    let%expect_test "inside BST" = expect_between (mkt Jun 01 12 00) bst_start bst_end
+  let%expect_test "inside BST" = expect_between (mkt Jun 01 12 00) bst_start bst_end
 
-    let%expect_test "just before BST end" =
-      expect_between (mkt Oct 27 00 59) bst_start bst_end
-    ;;
+  let%expect_test "just before BST end" =
+    expect_between (mkt Oct 27 00 59) bst_start bst_end
+  ;;
 
-    let%expect_test "BST end time" =
-      expect_between (mkt Oct 27 01 00) bst_end bst_start_2014
-    ;;
+  let%expect_test "BST end time" =
+    expect_between (mkt Oct 27 01 00) bst_end bst_start_2014
+  ;;
 
-    let%expect_test "just after BST end" =
-      expect_between (mkt Oct 27 01 01) bst_end bst_start_2014
-    ;;
-  end)
-;;
+  let%expect_test "just after BST end" =
+    expect_between (mkt Oct 27 01 01) bst_end bst_start_2014
+  ;;
+end
 
-let%test_module "clock shift stuff" =
-  (module struct
-    (* Some stuff to make [%test_result: t] failures look nicer. Notice that a bug in
+module%test [@name "clock shift stuff"] _ = struct
+  (* Some stuff to make [%test_result: t] failures look nicer. Notice that a bug in
        [to_date_ofday] could cause this thing to lie. *)
-    type time = Time_float.t [@@deriving compare]
+  type time = Time_float.t [@@deriving compare]
 
-    let sexp_of_time t =
-      let d, o = Time_float.to_date_ofday t ~zone:Timezone.utc in
-      [%sexp_of: Date.t * Time_float.Ofday.t * Timezone.t] (d, o, Timezone.utc)
-    ;;
+  let sexp_of_time t =
+    let d, o = Time_float.to_date_ofday t ~zone:Timezone.utc in
+    [%sexp_of: Date.t * Time_float.Ofday.t * Timezone.t] (d, o, Timezone.utc)
+  ;;
 
-    type to_date_ofday_ambiguity =
-      [ `Only
-      | `Also_at of time
-      | `Also_skipped of Date.t * Time_float.Ofday.t
-      ]
-    [@@deriving compare, sexp_of]
+  type to_date_ofday_ambiguity =
+    [ `Only
+    | `Also_at of time
+    | `Also_skipped of Date.t * Time_float.Ofday.t
+    ]
+  [@@deriving compare, sexp_of]
 
-    type of_date_ofday_result =
-      [ `Once of time
-      | `Twice of time * time
-      | `Never of time
-      ]
-    [@@deriving compare, sexp_of]
+  type of_date_ofday_result =
+    [ `Once of time
+    | `Twice of time * time
+    | `Never of time
+    ]
+  [@@deriving compare, sexp_of]
 
-    let zone = Timezone.find_exn "Europe/London"
+  let zone = Timezone.find_exn "Europe/London"
 
-    let mkt month day hr min =
-      let ofday =
-        Time_float.Span.of_sec (60. *. ((Float.of_int hr *. 60.) +. Float.of_int min))
-        |> Time_float.Ofday.of_span_since_start_of_day_exn
-      in
-      let date = Date.create_exn ~y:2013 ~m:month ~d:day in
-      Time_float.of_date_ofday date ofday ~zone:Timezone.utc
-    ;;
+  let mkt month day hr min =
+    let ofday =
+      Time_float.Span.of_sec (60. *. ((Float.of_int hr *. 60.) +. Float.of_int min))
+      |> Time_float.Ofday.of_span_since_start_of_day_exn
+    in
+    let date = Date.create_exn ~y:2013 ~m:month ~d:day in
+    Time_float.of_date_ofday date ofday ~zone:Timezone.utc
+  ;;
 
-    let simple_case ?(zone = zone) date ofday time =
-      [%test_result: of_date_ofday_result]
-        ~expect:(`Once time)
-        (Time_float.of_date_ofday_precise ~zone date ofday);
-      [%test_result: Date.t * Time_float.Ofday.t * to_date_ofday_ambiguity]
-        ~expect:(date, ofday, `Only)
-        (Time_float.to_date_ofday_precise ~zone time)
-    ;;
+  let simple_case ?(zone = zone) date ofday time =
+    [%test_result: of_date_ofday_result]
+      ~expect:(`Once time)
+      (Time_float.of_date_ofday_precise ~zone date ofday);
+    [%test_result: Date.t * Time_float.Ofday.t * to_date_ofday_ambiguity]
+      ~expect:(date, ofday, `Only)
+      (Time_float.to_date_ofday_precise ~zone time)
+  ;;
 
-    let skipped_this_time date ofday skipped_at =
-      [%test_result: of_date_ofday_result]
-        ~expect:(`Never skipped_at)
-        (Time_float.of_date_ofday_precise ~zone date ofday);
-      let time = Time_float.of_date_ofday ~zone date ofday in
-      let d, o, a = Time_float.to_date_ofday_precise ~zone time in
-      [%test_result: Date.t] ~expect:date d;
-      let diff = Time_float.Ofday.diff o ofday in
-      [%test_result: Time_float.Span.t] ~expect:Time_float.Span.hour diff;
-      [%test_result: to_date_ofday_ambiguity] ~expect:(`Also_skipped (date, ofday)) a
-    ;;
+  let skipped_this_time date ofday skipped_at =
+    [%test_result: of_date_ofday_result]
+      ~expect:(`Never skipped_at)
+      (Time_float.of_date_ofday_precise ~zone date ofday);
+    let time = Time_float.of_date_ofday ~zone date ofday in
+    let d, o, a = Time_float.to_date_ofday_precise ~zone time in
+    [%test_result: Date.t] ~expect:date d;
+    let diff = Time_float.Ofday.diff o ofday in
+    [%test_result: Time_float.Span.t] ~expect:Time_float.Span.hour diff;
+    [%test_result: to_date_ofday_ambiguity] ~expect:(`Also_skipped (date, ofday)) a
+  ;;
 
-    let skipped_prev_time date ofday time =
-      [%test_result: of_date_ofday_result]
-        ~expect:(`Once time)
-        (Time_float.of_date_ofday_precise ~zone date ofday);
-      let d, o, a = Time_float.to_date_ofday_precise ~zone time in
-      [%test_result: Date.t] ~expect:date d;
-      [%test_result: Time_float.Ofday.t] ~expect:ofday o;
-      [%test_result: to_date_ofday_ambiguity]
-        ~expect:
-          (`Also_skipped
-            (date, Option.value_exn (Time_float.Ofday.sub o Time_float.Span.hour)))
-        a
-    ;;
+  let skipped_prev_time date ofday time =
+    [%test_result: of_date_ofday_result]
+      ~expect:(`Once time)
+      (Time_float.of_date_ofday_precise ~zone date ofday);
+    let d, o, a = Time_float.to_date_ofday_precise ~zone time in
+    [%test_result: Date.t] ~expect:date d;
+    [%test_result: Time_float.Ofday.t] ~expect:ofday o;
+    [%test_result: to_date_ofday_ambiguity]
+      ~expect:
+        (`Also_skipped
+          (date, Option.value_exn (Time_float.Ofday.sub o Time_float.Span.hour)))
+      a
+  ;;
 
-    let repeated_time date ofday ~first =
-      let second = Time_float.add first Time_float.Span.hour in
-      [%test_result: of_date_ofday_result]
-        ~expect:(`Twice (first, second))
-        (Time_float.of_date_ofday_precise ~zone date ofday);
-      [%test_result: Date.t * Time_float.Ofday.t * to_date_ofday_ambiguity]
-        ~expect:(date, ofday, `Also_at second)
-        (Time_float.to_date_ofday_precise ~zone first);
-      [%test_result: Date.t * Time_float.Ofday.t * to_date_ofday_ambiguity]
-        ~expect:(date, ofday, `Also_at first)
-        (Time_float.to_date_ofday_precise ~zone second)
-    ;;
+  let repeated_time date ofday ~first =
+    let second = Time_float.add first Time_float.Span.hour in
+    [%test_result: of_date_ofday_result]
+      ~expect:(`Twice (first, second))
+      (Time_float.of_date_ofday_precise ~zone date ofday);
+    [%test_result: Date.t * Time_float.Ofday.t * to_date_ofday_ambiguity]
+      ~expect:(date, ofday, `Also_at second)
+      (Time_float.to_date_ofday_precise ~zone first);
+    [%test_result: Date.t * Time_float.Ofday.t * to_date_ofday_ambiguity]
+      ~expect:(date, ofday, `Also_at first)
+      (Time_float.to_date_ofday_precise ~zone second)
+  ;;
 
-    let ( ^: ) = Time_float.Ofday.( ^: )
-    let outside_bst = Date.of_string "2013-01-01"
-    let inside_bst = Date.of_string "2013-06-01"
+  let ( ^: ) = Time_float.Ofday.( ^: )
+  let outside_bst = Date.of_string "2013-01-01"
+  let inside_bst = Date.of_string "2013-06-01"
 
-    let%expect_test "of_date_ofday_precise, outside BST" =
-      simple_case outside_bst (12 ^: 00) (mkt Jan 01 12 00)
-    ;;
+  let%expect_test "of_date_ofday_precise, outside BST" =
+    simple_case outside_bst (12 ^: 00) (mkt Jan 01 12 00)
+  ;;
 
-    let%expect_test "of_date_ofday_precise, inside BST" =
-      simple_case inside_bst (12 ^: 00) (mkt Jun 01 11 00)
-    ;;
+  let%expect_test "of_date_ofday_precise, inside BST" =
+    simple_case inside_bst (12 ^: 00) (mkt Jun 01 11 00)
+  ;;
 
-    let bst_start = Date.of_string "2013-03-31"
-    let bst_end = Date.of_string "2013-10-27"
+  let bst_start = Date.of_string "2013-03-31"
+  let bst_end = Date.of_string "2013-10-27"
 
-    let%expect_test "of_date_ofday_precise, just before skipped hour" =
-      simple_case bst_start (00 ^: 59) (mkt Mar 31 00 59)
-    ;;
+  let%expect_test "of_date_ofday_precise, just before skipped hour" =
+    simple_case bst_start (00 ^: 59) (mkt Mar 31 00 59)
+  ;;
 
-    let%expect_test "of_date_ofday_precise, start of skipped hour" =
-      skipped_this_time bst_start (01 ^: 00) (mkt Mar 31 01 00)
-    ;;
+  let%expect_test "of_date_ofday_precise, start of skipped hour" =
+    skipped_this_time bst_start (01 ^: 00) (mkt Mar 31 01 00)
+  ;;
 
-    let%expect_test "of_date_ofday_precise, during skipped hour" =
-      skipped_this_time bst_start (01 ^: 30) (mkt Mar 31 01 00)
-    ;;
+  let%expect_test "of_date_ofday_precise, during skipped hour" =
+    skipped_this_time bst_start (01 ^: 30) (mkt Mar 31 01 00)
+  ;;
 
-    let%expect_test "of_date_ofday_precise, end of skipped hour" =
-      skipped_prev_time bst_start (02 ^: 00) (mkt Mar 31 01 00)
-    ;;
+  let%expect_test "of_date_ofday_precise, end of skipped hour" =
+    skipped_prev_time bst_start (02 ^: 00) (mkt Mar 31 01 00)
+  ;;
 
-    let%expect_test "of_date_ofday_precise, just after skipped hour" =
-      skipped_prev_time bst_start (02 ^: 01) (mkt Mar 31 01 01)
-    ;;
+  let%expect_test "of_date_ofday_precise, just after skipped hour" =
+    skipped_prev_time bst_start (02 ^: 01) (mkt Mar 31 01 01)
+  ;;
 
-    let%expect_test "of_date_ofday_precise, later after skipped hour" =
-      simple_case bst_start (03 ^: 00) (mkt Mar 31 02 00)
-    ;;
+  let%expect_test "of_date_ofday_precise, later after skipped hour" =
+    simple_case bst_start (03 ^: 00) (mkt Mar 31 02 00)
+  ;;
 
-    let%expect_test "of_date_ofday_precise, just before repeated hour" =
-      simple_case bst_end (00 ^: 59) (mkt Oct 26 23 59)
-    ;;
+  let%expect_test "of_date_ofday_precise, just before repeated hour" =
+    simple_case bst_end (00 ^: 59) (mkt Oct 26 23 59)
+  ;;
 
-    let%expect_test "of_date_ofday_precise, start of repeated hour" =
-      repeated_time bst_end (01 ^: 00) ~first:(mkt Oct 27 00 00)
-    ;;
+  let%expect_test "of_date_ofday_precise, start of repeated hour" =
+    repeated_time bst_end (01 ^: 00) ~first:(mkt Oct 27 00 00)
+  ;;
 
-    let%expect_test "of_date_ofday_precise, during repeated hour" =
-      repeated_time bst_end (01 ^: 30) ~first:(mkt Oct 27 00 30)
-    ;;
+  let%expect_test "of_date_ofday_precise, during repeated hour" =
+    repeated_time bst_end (01 ^: 30) ~first:(mkt Oct 27 00 30)
+  ;;
 
-    let%expect_test "of_date_ofday_precise, end of repeated hour" =
-      simple_case bst_end (02 ^: 00) (mkt Oct 27 02 00)
-    ;;
+  let%expect_test "of_date_ofday_precise, end of repeated hour" =
+    simple_case bst_end (02 ^: 00) (mkt Oct 27 02 00)
+  ;;
 
-    let%expect_test "of_date_ofday_precise, after repeated hour" =
-      simple_case bst_end (02 ^: 01) (mkt Oct 27 02 01)
-    ;;
+  let%expect_test "of_date_ofday_precise, after repeated hour" =
+    simple_case bst_end (02 ^: 01) (mkt Oct 27 02 01)
+  ;;
 
-    let%expect_test "of_date_ofday_precise, time zone with no transitions" =
-      simple_case
-        (Date.of_string "2013-01-01")
-        (12 ^: 00)
-        (mkt Jan 01 04 00)
-        ~zone:(Timezone.of_utc_offset ~hours:8)
-    ;;
+  let%expect_test "of_date_ofday_precise, time zone with no transitions" =
+    simple_case
+      (Date.of_string "2013-01-01")
+      (12 ^: 00)
+      (mkt Jan 01 04 00)
+      ~zone:(Timezone.of_utc_offset ~hours:8)
+  ;;
 
-    let%expect_test "of_date_ofday_precise, time zone with no recent transitions" =
-      (* The Hong Kong time zone observed daylight savings from 1941 to 1979, but not
+  let%expect_test "of_date_ofday_precise, time zone with no recent transitions" =
+    (* The Hong Kong time zone observed daylight savings from 1941 to 1979, but not
          since, so the zone arithmetic for recent dates hits boundary cases. *)
-      simple_case
-        (Date.of_string "2013-01-01")
-        (12 ^: 00)
-        (mkt Jan 01 04 00)
-        ~zone:(Timezone.find_exn "Asia/Hong_Kong")
-    ;;
-  end)
-;;
+    simple_case
+      (Date.of_string "2013-01-01")
+      (12 ^: 00)
+      (mkt Jan 01 04 00)
+      ~zone:(Timezone.find_exn "Asia/Hong_Kong")
+  ;;
+end
 
 let%expect_test "grammar" =
   Sexp_grammar_validation.validate_grammar

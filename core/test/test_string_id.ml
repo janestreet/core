@@ -207,32 +207,30 @@ let%test_unit "String_id's of_string shouldn't allocate on success" =
   [%test_result: int] allocated ~expect:0
 ;;
 
-let%test_module "Verify reading/writing stable table sexp" =
-  (module struct
-    let expected_sexp = Sexp.of_string "((alpha beta) (delta gamma))"
+module%test [@name "Verify reading/writing stable table sexp"] _ = struct
+  let expected_sexp = Sexp.of_string "((alpha beta) (delta gamma))"
 
-    let table =
-      let s = String_id.Table.create () in
-      Hashtbl.add_exn s ~key:(of_string "delta") ~data:(of_string "gamma");
-      Hashtbl.add_exn s ~key:(of_string "alpha") ~data:(of_string "beta");
-      s
-    ;;
+  let table =
+    let s = String_id.Table.create () in
+    Hashtbl.add_exn s ~key:(of_string "delta") ~data:(of_string "gamma");
+    Hashtbl.add_exn s ~key:(of_string "alpha") ~data:(of_string "beta");
+    s
+  ;;
 
-    let%expect_test "sexp_of_t" =
-      print_s [%sexp (table : t String_id.Stable.V1.Table.t)];
-      [%expect
-        {|
-        ((alpha beta)
-         (delta gamma))
-        |}]
-    ;;
+  let%expect_test "sexp_of_t" =
+    print_s [%sexp (table : t String_id.Stable.V1.Table.t)];
+    [%expect
+      {|
+      ((alpha beta)
+       (delta gamma))
+      |}]
+  ;;
 
-    let%test_unit "t_of_sexp" =
-      let loaded_table = [%of_sexp: t String_id.Stable.V1.Table.t] expected_sexp in
-      assert (Hashtbl.equal String_id.equal loaded_table table)
-    ;;
-  end)
-;;
+  let%test_unit "t_of_sexp" =
+    let loaded_table = [%of_sexp: t String_id.Stable.V1.Table.t] expected_sexp in
+    assert (Hashtbl.equal String_id.equal loaded_table table)
+  ;;
+end
 
 let%expect_test "include_default_validation" =
   let test ~include_default_validation =
