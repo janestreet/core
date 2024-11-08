@@ -175,6 +175,16 @@ module For_indexed_container = struct
       :  ('a, 'p1, 'p2, [> read ]) t
       -> f:local_ (int -> 'a elt -> ('b, 'p1, 'p2, [> read ]) t)
       -> ('b, 'p1, 'p2, [< _ perms ]) t
+
+    val partitioni_tf
+      :  ('a, 'p1, 'p2, [> read ]) t
+      -> f:local_ (int -> 'a elt -> bool)
+      -> ('a, 'p1, 'p2, [< _ perms ]) t * ('a, 'p1, 'p2, [< _ perms ]) t
+
+    val partition_mapi
+      :  ('a, 'p1, 'p2, [> read ]) t
+      -> f:local_ (int -> 'a elt -> ('b elt, 'c elt) Either.t)
+      -> ('b, 'p1, 'p2, [< _ perms ]) t * ('c, 'p1, 'p2, [< _ perms ]) t
   end
 end
 

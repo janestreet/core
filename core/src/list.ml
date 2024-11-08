@@ -1,24 +1,5 @@
 include List0 (** @inline *)
 
-(* This function is staged to indicate that real work (the functor application) takes
-   place after a partial application. *)
-let stable_dedup_staged (type a) ~(compare : a -> a -> int)
-  : (a list -> a list) Base.Staged.t
-  =
-  let module Set =
-    Set.Make (struct
-      type t = a
-
-      let compare = compare
-
-      (* [stable_dedup_list] never calls these *)
-      let t_of_sexp _ = assert false
-      let sexp_of_t _ = assert false
-    end)
-  in
-  Base.Staged.stage Set.stable_dedup_list [@alert "-deprecated"]
-;;
-
 let zip_with_remainder =
   let rec zip_with_acc_and_remainder acc xs ys =
     match xs, ys with

@@ -4,7 +4,14 @@ open Std_internal
 module Stable = struct
   module V3 = struct
     type t = (float[@quickcheck.generator Float.gen_finite])
-    [@@deriving compare, globalize, hash, quickcheck, typerep, stable_witness]
+    [@@deriving
+      compare ~localize
+      , equal ~localize
+      , globalize
+      , hash
+      , quickcheck
+      , typerep
+      , stable_witness]
 
     (* For [s] which is a string representation of a finite float, in either decimal or
        scientific notation, shift the decimal point or adjust the scientific notation
@@ -245,7 +252,7 @@ module Stable = struct
     module Stringable = struct
       type t = float
 
-      external format_float : string -> float -> string = "caml_format_float"
+      external format_float : string -> local_ float -> string = "caml_format_float"
 
       (* Logic stolen from lib/base/src/float.ml, but this does not call
          [valid_float_lexem] so not adding a trailing "." and also, we're using
@@ -315,7 +322,7 @@ module Stable = struct
         sig
           type t
 
-          val to_string : t -> string
+          val to_string : local_ t -> string
           val of_string : string -> t
           val of_string_allow_nan_and_inf : string -> t
         end
@@ -324,7 +331,7 @@ module Stable = struct
     let t_sexp_grammar = Sexplib.Sexp_grammar.coerce String.t_sexp_grammar
 
     include (Sexpable.Stable.Of_stringable.V1 (Stringable) : Sexpable.S with type t := t)
-    include (Float : Binable with type t := t)
+    include (Float : Binable.S_local with type t := t)
 
     (* Use a different bin_shape_t than Percent.Stable.V2, even though these two versions
        have compatible bin_io serialization.  Since they do differ in sexp serialization,
@@ -345,7 +352,7 @@ module Stable = struct
       end)
 
     module Always_percentage = struct
-      type nonrec t = t [@@deriving sexp, bin_io]
+      type nonrec t = t [@@deriving sexp, bin_io ~localize]
 
       let to_string x =
         let s = Stringable.float_to_string x in
@@ -358,42 +365,96 @@ module Stable = struct
 
   module V2 = struct
     type t = (float[@quickcheck.generator Float.gen_finite])
-    [@@deriving compare, globalize, hash, quickcheck, typerep, stable_witness]
+    [@@deriving
+      compare ~localize
+      , equal ~localize
+      , globalize
+      , hash
+      , quickcheck
+      , typerep
+      , stable_witness]
 
-    let of_mult f = f
-    let to_mult t = t
-    let of_percentage f = f /. 100.
-    let to_percentage t = t *. 100.
-    let of_bp f = f /. 10_000.
-    let to_bp t = t *. 10_000.
+    external of_mult : (float[@local_opt]) -> (t[@local_opt]) = "%identity"
+    external to_mult : (t[@local_opt]) -> (float[@local_opt]) = "%identity"
+
+    let of_percentage f = globalize (f /. 100.) [@nontail]
+    let to_percentage t = globalize (t *. 100.) [@nontail]
+    let of_bp f = globalize (f /. 10_000.) [@nontail]
+    let to_bp t = globalize (t *. 10_000.) [@nontail]
     let of_bp_int i = of_bp (Float.of_int i)
     let to_bp_int t = Float.to_int (to_bp t)
 
     (* Multiply the decimal representation of float [f] by [10**by], and convert back to
        the nearest representable float. *)
-    let shift_decimal_point_in_float f ~by =
-      if not (Float.is_finite f)
-      then f
-      else Float.to_string f |> V3.shift_decimal_point ~by |> Float.of_string
+    let shift_decimal_point_in_float, shift_decimal_point_in_float_local =
+      let open
+        Modes.Global.Poly_fn2 (Float) (Int) (Float)
+          (functor
+             (W : Modes.Global.Wrapper)
+             ->
+             struct
+               let fn f by =
+                 if not (Float.is_finite (W.unwrap f))
+                 then f
+                 else
+                   exclave_
+                   f
+                   |> W.unwrap
+                   |> Float.to_string
+                   |> V3.shift_decimal_point ~by:(W.unwrap by)
+                   |> Float.of_string
+                   |> W.wrap
+               ;;
+             end) in
+      ( (fun [@inline] f ~by -> fn_global f by)
+      , fun [@inline] f ~by -> exclave_ fn_local f by )
     ;;
 
     let of_percentage_slow_more_accurate f = shift_decimal_point_in_float f ~by:(-2)
+
+    let of_percentage_slow_more_accurate_local f = exclave_
+      shift_decimal_point_in_float_local f ~by:(-2)
+    ;;
+
     let to_percentage_slow_more_accurate f = shift_decimal_point_in_float f ~by:2
+
+    let to_percentage_slow_more_accurate_local f = exclave_
+      shift_decimal_point_in_float_local f ~by:2
+    ;;
+
     let of_bp_slow_more_accurate f = shift_decimal_point_in_float f ~by:(-4)
+
+    let of_bp_slow_more_accurate_local f = exclave_
+      shift_decimal_point_in_float_local f ~by:(-4)
+    ;;
+
     let to_bp_slow_more_accurate f = shift_decimal_point_in_float f ~by:4
+
+    let to_bp_slow_more_accurate_local f = exclave_
+      shift_decimal_point_in_float_local f ~by:4
+    ;;
 
     let round_significant p ~significant_digits =
       Float.round_significant p ~significant_digits
     ;;
 
+    let round_significant_local p ~significant_digits = exclave_
+      Float.round_significant_local p ~significant_digits
+    ;;
+
     let round_decimal_mult p ~decimal_digits = Float.round_decimal p ~decimal_digits
 
+    let round_decimal_mult_local p ~decimal_digits = exclave_
+      Float.round_decimal_local p ~decimal_digits
+    ;;
+
     let round_decimal_percentage p ~decimal_digits =
-      Float.round_decimal (p *. 100.) ~decimal_digits /. 100.
+      globalize (Float.round_decimal_local (p *. 100.) ~decimal_digits /. 100.) [@nontail]
     ;;
 
     let round_decimal_bp p ~decimal_digits =
-      Float.round_decimal (p *. 10000.) ~decimal_digits /. 10000.
+      globalize
+        (Float.round_decimal_local (p *. 10000.) ~decimal_digits /. 10000.) [@nontail]
     ;;
 
     module Format = struct
@@ -445,6 +506,8 @@ module Stable = struct
     module Stringable = struct
       type t = float
 
+      external format_float : string -> local_ float -> string = "caml_format_float"
+
       (* WARNING - PLEASE READ BEFORE EDITING THESE FUNCTIONS:
 
          The string converters in Stable.V3/V2/V1 should never change. If you are changing
@@ -453,7 +516,7 @@ module Stable = struct
          make your changes there. Thanks! *)
       let to_string x =
         let x_abs = Float.abs x in
-        let string float = sprintf "%.6G" float in
+        let string float = format_float "%.6G" float in
         if Float.( = ) x_abs 0.
         then "0x"
         else if Float.( >= ) x_abs 1.
@@ -472,7 +535,7 @@ module Stable = struct
         sig
           type t
 
-          val to_string : t -> string
+          val to_string : local_ t -> string
           val of_string : string -> t
           val of_string_allow_nan_and_inf : string -> t
         end
@@ -481,7 +544,7 @@ module Stable = struct
     let t_sexp_grammar = Sexplib.Sexp_grammar.coerce String.t_sexp_grammar
 
     include (Sexpable.Stable.Of_stringable.V1 (Stringable) : Sexpable.S with type t := t)
-    include (Float : Binable with type t := t)
+    include (Float : Binable.S_local with type t := t)
 
     (* Mint a unique [bin_shape_t] that's distinct from the hidden underlying
        representation of float. *)
@@ -545,9 +608,22 @@ module Stable = struct
       let some = Fn.id
       let unchecked_value = Fn.id
       let to_option t = if is_some t then Some (unchecked_value t) else None
-      let apply_with_none_as_nan = ( *. )
-      let of_mult_with_nan_as_none = Fn.id
-      let to_mult_with_none_as_nan = Fn.id
+
+      external apply_with_none_as_nan
+        :  (float[@local_opt])
+        -> (float[@local_opt])
+        -> (float[@local_opt])
+        = "%mulfloat"
+
+      external of_mult_with_nan_as_none
+        :  (float[@local_opt])
+        -> (float[@local_opt])
+        = "%identity"
+
+      external to_mult_with_none_as_nan
+        :  (float[@local_opt])
+        -> (float[@local_opt])
+        = "%identity"
 
       let of_option opt =
         match opt with
@@ -566,7 +642,14 @@ module Stable = struct
 
     module V3 = struct
       type t = V3.t
-      [@@deriving bin_io, compare, equal, globalize, hash, stable_witness, typerep]
+      [@@deriving
+        bin_io ~localize
+        , compare ~localize
+        , equal ~localize
+        , globalize
+        , hash
+        , stable_witness
+        , typerep]
 
       let bin_shape_t =
         Bin_prot.Shape.basetype
@@ -582,7 +665,9 @@ module Stable = struct
     end
 
     module V2 = struct
-      type t = V2.t [@@deriving bin_io, compare, globalize, hash, stable_witness, typerep]
+      type t = V2.t
+      [@@deriving
+        bin_io ~localize, compare ~localize, globalize, hash, stable_witness, typerep]
 
       let bin_shape_t =
         Bin_prot.Shape.basetype
@@ -635,33 +720,39 @@ module Option = struct
   end
 end
 
-let is_zero t = t = 0.
-let apply t f = t *. f
-let scale t f = t *. f
+let is_zero t = [%equal_local: t] t 0.
+
+external apply
+  :  (t[@local_opt])
+  -> (float[@local_opt])
+  -> (float[@local_opt])
+  = "%mulfloat"
+
+external scale : (t[@local_opt]) -> (float[@local_opt]) -> (t[@local_opt]) = "%mulfloat"
 
 include (
 struct
   include Float
 
   let one_hundred_percent = 1.
-  let ( // ) x y = of_mult x /. of_mult y
 end :
 sig
   val zero : t
   val one_hundred_percent : t
-  val ( * ) : t -> t -> t
-  val ( + ) : t -> t -> t
-  val ( - ) : t -> t -> t
-  val ( / ) : t -> t -> t
-  val ( // ) : t -> t -> float
-  val abs : t -> t
-  val neg : t -> t
-  val is_nan : t -> bool
-  val is_inf : t -> bool
-  val sign_exn : t -> Sign.t
+  external ( * ) : (t[@local_opt]) -> (t[@local_opt]) -> (t[@local_opt]) = "%mulfloat"
+  external ( + ) : (t[@local_opt]) -> (t[@local_opt]) -> (t[@local_opt]) = "%addfloat"
+  external ( - ) : (t[@local_opt]) -> (t[@local_opt]) -> (t[@local_opt]) = "%subfloat"
+  external ( / ) : (t[@local_opt]) -> (t[@local_opt]) -> (t[@local_opt]) = "%divfloat"
+  external abs : (t[@local_opt]) -> (t[@local_opt]) = "%absfloat"
+  external neg : (t[@local_opt]) -> (t[@local_opt]) = "%negfloat"
+  val is_nan : local_ t -> bool
+  val is_inf : local_ t -> bool
+  val sign_exn : local_ t -> Sign.t
 
   include Robustly_comparable with type t := t
 end)
+
+external ( // ) : (t[@local_opt]) -> (t[@local_opt]) -> (t[@local_opt]) = "%divfloat"
 
 include Comparable.With_zero (struct
     include Stable.V1.Bin_shape_same_as_float

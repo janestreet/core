@@ -269,6 +269,16 @@ module type Permissioned = sig
     -> f:local_ (int -> 'a -> bool)
     -> ('a, [< _ perms ]) t * ('a, [< _ perms ]) t
 
+  val partition_map
+    :  ('a, [> read ]) t
+    -> f:local_ ('a -> ('b, 'c) Either.t)
+    -> ('b, [< _ perms ]) t * ('c, [< _ perms ]) t
+
+  val partition_mapi
+    :  ('a, [> read ]) t
+    -> f:local_ (int -> 'a -> ('b, 'c) Either.t)
+    -> ('b, [< _ perms ]) t * ('c, [< _ perms ]) t
+
   val cartesian_product
     :  ('a, [> read ]) t
     -> ('b, [> read ]) t

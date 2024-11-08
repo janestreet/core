@@ -12,7 +12,7 @@ include Stdlib
    [[1] http://caml.inria.fr/mantis/view.php?id=6556
 *)
 external raise : exn -> 'a = "%reraise"
-external ignore : ('a[@local_opt]) -> unit = "%ignore"
+external ignore : ('a : any). ('a[@local_opt]) -> unit = "%ignore" [@@layout_poly]
 
 [%%if ocaml_version < (4, 12, 0)]
 
@@ -28,11 +28,34 @@ external __POS_OF__
   -> ((string * int * int * int) * 'a[@local_opt])
   = "%loc_POS"
 
-external ( |> ) : 'a -> (('a -> 'b)[@local_opt]) -> 'b = "%revapply"
-external ( @@ ) : (('a -> 'b)[@local_opt]) -> 'a -> 'b = "%apply"
+external ( |> )
+  : ('a : any) ('b : any).
+  'a -> (('a -> 'b)[@local_opt]) -> 'b
+  = "%revapply"
+[@@layout_poly]
+
+external ( @@ ) : ('a : any) ('b : any). (('a -> 'b)[@local_opt]) -> 'a -> 'b = "%apply"
+[@@layout_poly]
+
 external int_of_char : (char[@local_opt]) -> int = "%identity"
 
 external format_of_string
   :  (('a, 'b, 'c, 'd, 'e, 'f) format6[@local_opt])
   -> (('a, 'b, 'c, 'd, 'e, 'f) format6[@local_opt])
   = "%identity"
+
+external ( ** )
+  :  (float[@local_opt])
+  -> (float[@local_opt])
+  -> float
+  = "caml_power_float" "pow"
+[@@unboxed] [@@noalloc]
+
+external sqrt : (float[@local_opt]) -> float = "caml_sqrt_float" "sqrt"
+[@@unboxed] [@@noalloc]
+
+external exp : (float[@local_opt]) -> float = "caml_exp_float" "exp"
+[@@unboxed] [@@noalloc]
+
+external log : (float[@local_opt]) -> float = "caml_log_float" "log"
+[@@unboxed] [@@noalloc]

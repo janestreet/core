@@ -11,23 +11,21 @@ let%expect_test ("Byte_units.to_string_hum" [@tags "64-bits-only"]) =
   [%expect {| 1.46K |}]
 ;;
 
-let%test_module "{of,to}_string" =
-  (module struct
-    let f input expected_output =
-      let observed_output = to_string (of_string input) in
-      let result = String.equal expected_output observed_output in
-      if not result
-      then eprintf "\n%s -> %s != %s\n%!" input expected_output observed_output;
-      result
-    ;;
+module%test [@name "{of,to}_string"] _ = struct
+  let f input expected_output =
+    let observed_output = to_string (of_string input) in
+    let result = String.equal expected_output observed_output in
+    if not result
+    then eprintf "\n%s -> %s != %s\n%!" input expected_output observed_output;
+    result
+  ;;
 
-    let%test _ = f "3B" "3B"
-    let%test _ = f "3w" (sprintf "%gB" (3.0 *. bytes_per_word))
-    let%test _ = f "3K" "3K"
-    let%test _ = f "3M" "3M"
-    let%test _ = f "3G" "3G"
-  end)
-;;
+  let%test _ = f "3B" "3B"
+  let%test _ = f "3w" (sprintf "%gB" (3.0 *. bytes_per_word))
+  let%test _ = f "3K" "3K"
+  let%test _ = f "3M" "3M"
+  let%test _ = f "3G" "3G"
+end
 
 let examples =
   [ Byte_units.zero

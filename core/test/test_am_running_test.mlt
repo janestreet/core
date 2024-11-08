@@ -4,5 +4,5 @@ let () = print_s [%message (am_running_test : bool)]
 
 [%%expect
   {|
-(am_running_test false)
+(am_running_test true)
 |}]

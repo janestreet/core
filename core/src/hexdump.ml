@@ -46,7 +46,7 @@ module Of_indexable2 (T : Indexable2) = struct
     let printable_string t ~start ~until =
       String.init (until - start) ~f:(fun i ->
         let char = get t (start + i) in
-        if Char.is_print char then char else '.')
+        if Char.is_print char then char else '.') [@nontail]
     ;;
 
     let line t ~pos ~len ~line_index =
@@ -59,7 +59,7 @@ module Of_indexable2 (T : Indexable2) = struct
         (printable_string t ~start ~until)
     ;;
 
-    let to_sequence ?max_lines ?pos ?len t =
+    let create ~max_lines ~pos ~len t ~f =
       let (pos : int), (len : int) =
         Ordered_collection_common.get_pos_len_exn () ?pos ?len ~total_length:(length t)
       in
@@ -80,6 +80,10 @@ module Of_indexable2 (T : Indexable2) = struct
          ellipsis line. *)
       let skip_from = (max_lines - 1) / 2 in
       let skip_to = unabridged_lines - (max_lines - skip_from) + 1 in
+      f t ~len ~max_lines ~pos ~skip_from ~skip_to ~unabridged_lines
+    ;;
+
+    let create_sequence t ~len ~max_lines ~pos ~skip_from ~skip_to ~unabridged_lines =
       Sequence.unfold_step ~init:0 ~f:(fun line_index ->
         if line_index >= unabridged_lines
         then Done
@@ -88,8 +92,28 @@ module Of_indexable2 (T : Indexable2) = struct
         else Yield { value = line t ~pos ~len ~line_index; state = line_index + 1 })
     ;;
 
+    let create_string t ~len ~max_lines ~pos ~skip_from ~skip_to ~unabridged_lines =
+      let lines =
+        if unabridged_lines <= max_lines
+        then
+          List.init unabridged_lines ~f:(fun line_index -> line t ~pos ~len ~line_index)
+        else
+          List.concat
+            [ List.init skip_from ~f:(fun line_index -> line t ~pos ~len ~line_index)
+            ; [ "..." ]
+            ; List.init (unabridged_lines - skip_to) ~f:(fun index ->
+                line t ~pos ~len ~line_index:(index + skip_to))
+            ]
+      in
+      String.concat lines ~sep:"\n"
+    ;;
+
+    let to_sequence ?max_lines ?pos ?len t =
+      create ~max_lines ~pos ~len t ~f:(fun _ -> create_sequence t)
+    ;;
+
     let to_string_hum ?max_lines ?pos ?len t =
-      to_sequence ?max_lines ?pos ?len t |> Sequence.to_list |> String.concat ~sep:"\n"
+      create ~max_lines ~pos ~len t ~f:create_string
     ;;
 
     let sexp_of_t _ _ t = to_sequence t |> Sequence.to_list |> [%sexp_of: string list]

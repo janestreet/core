@@ -1,5 +1,0 @@
-(library
- (name univ_map_test)
- (libraries base parsexp stdio univ_map)
- (preprocess
-  (pps ppx_jane)))

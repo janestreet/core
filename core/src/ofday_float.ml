@@ -256,6 +256,12 @@ module Stable = struct
     include Diffable.Atomic.Make (struct
         type nonrec t = t [@@deriving bin_io, equal, sexp]
       end)
+
+    module O = struct
+      let ( ^: ) hr min = create ~hr ~min ()
+    end
+
+    include O
   end
 end
 

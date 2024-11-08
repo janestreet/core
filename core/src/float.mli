@@ -2,6 +2,13 @@
 
 open! Import
 
+(*_ This needs to be above the place where we include [Base.Float] so that it doesn't
+   shadow the latter's mode-polymorphic operators. *)
+include
+  Identifiable.S
+  with type t := float
+   and type comparator_witness := Base.Float.comparator_witness
+
 (** @inline *)
 include module type of struct
   include Base.Float
@@ -48,11 +55,6 @@ module Terse : sig
     with type t := t
 end
 
-include
-  Identifiable.S
-  with type t := t
-   and type comparator_witness := Base.Float.comparator_witness
-
 include Comparable.Validate_with_zero with type t := t
 
 (** [validate_ordinary] fails if class is [Nan] or [Infinite]. *)
@@ -61,7 +63,7 @@ val validate_ordinary : t Validate.check
 (** [to_string_12 x] builds a string representing [x] using up to 12 significant digits.
     It loses precision.  You can use ["%{Float#12}"] in formats, but consider ["%.12g"],
     ["%{Float#hum}"], or ["%{Float}"] as alternatives.  *)
-val to_string_12 : t -> string
+val to_string_12 : local_ t -> string
 
 (** [to_string x] builds a string [s] representing the float [x] that guarantees the round
     trip, i.e., [Float.equal x (Float.of_string s)].
@@ -70,19 +72,19 @@ val to_string_12 : t -> string
     [3.14] as [3.1400000000000001243].  The only exception is that occasionally it will
     output 17 significant digits when the number can be represented with just 16 (but
     not 15 or fewer) of them. *)
-val to_string : t -> string
+include Stringable.S_local_input with type t := t
 
 include Quickcheckable.S with type t := t
 
 (*_ Caution: If we remove this sig item, [sign] will still be present from
   [Comparable.With_zero]. *)
 
-val sign : t -> Sign.t
+val sign : local_ t -> Sign.t
 [@@deprecated "[since 2016-01] Replace [sign] with [robust_sign] or [sign_exn]"]
 
 (** (Formerly [sign]) Uses robust comparison (so sufficiently small numbers are mapped
     to [Zero]).  Also maps NaN to [Zero]. Using this function is weakly discouraged. *)
-val robust_sign : t -> Sign.t
+val robust_sign : local_ t -> Sign.t
 
 (** [gen_uniform_excl lo hi] creates a Quickcheck generator producing finite [t] values
     between [lo] and [hi], exclusive.  The generator approximates a uniform distribution
@@ -138,7 +140,9 @@ val gen_zero : t Quickcheck.Generator.t
     stable types. *)
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving equal, hash, sexp_grammar, typerep, globalize]
+    type nonrec t = t
+    [@@deriving
+      compare ~localize, equal ~localize, hash, sexp_grammar, typerep, globalize]
 
     include
       Stable_comparable.With_stable_witness.V1

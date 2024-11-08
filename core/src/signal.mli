@@ -133,6 +133,9 @@ val xfsz : t
     permission to signal it                        *)
 val zero : t
 
+(** All known POSIX signals. *)
+val all_posix : t list
+
 type pid_spec = [ `Use_Signal_unix ] [@@deprecated "[since 2021-04] Use [Signal_unix]"]
 
 type sigprocmask_command = [ `Use_Signal_unix ]

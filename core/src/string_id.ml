@@ -208,6 +208,5 @@ include
 module String_without_validation_without_pretty_printer = struct
   include String
 
-  let globalize = globalize_string
   let arg_type = Command.Arg_type.create Fn.id
 end

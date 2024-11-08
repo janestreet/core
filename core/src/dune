@@ -7,12 +7,11 @@
 (library
  (foreign_stubs
   (language c)
-  (names bigstring_stubs md5_stubs array_stubs gc_stubs time_ns_stubs
+  (names bigstring_stubs md5_stubs array_stubs gc_stubs
     timezone_js_loader_stubs)
   (flags :standard -D_LARGEFILE64_SOURCE))
  (name core)
  (public_name core)
- (install_c_headers time_ns_stubs)
  (libraries base base_bigstring base_for_tests base_quickcheck bin_prot
    command fieldslib filename_base heap_block bin_prot.shape
    ppx_diff.diffable ppx_expect.config_types jane-street-headers base.md5

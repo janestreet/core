@@ -28,37 +28,33 @@ Stable_unit_test.Make (struct
     ;;
   end)
 
-let%test_module "Percent.V1.Bin_shape_same_as_float" =
-  (module Stable_unit_test
-            (Stable.V1.Bin_shape_same_as_float)
-            (struct
-              let v = 1
-            end))
-;;
+module%test [@name "Percent.V1.Bin_shape_same_as_float"] _ =
+  Stable_unit_test
+    (Stable.V1.Bin_shape_same_as_float)
+    (struct
+      let v = 1
+    end)
 
-let%test_module "Percent.V3" =
-  (module Stable_unit_test
-            (Stable.V3)
-            (struct
-              let v = 3
-            end))
-;;
+module%test [@name "Percent.V3"] _ =
+  Stable_unit_test
+    (Stable.V3)
+    (struct
+      let v = 3
+    end)
 
-let%test_module "Percent.V2" =
-  (module Stable_unit_test
-            (Stable.V2)
-            (struct
-              let v = 2
-            end))
-;;
+module%test [@name "Percent.V2"] _ =
+  Stable_unit_test
+    (Stable.V2)
+    (struct
+      let v = 2
+    end)
 
-let%test_module "Percent" =
-  (module Stable_unit_test
-            (Percent)
-            (struct
-              let v = 2
-            end))
-;;
+module%test Percent =
+  Stable_unit_test
+    (Percent)
+    (struct
+      let v = 2
+    end)
 
 let%expect_test "bin_digests" =
   (* [V2] intentionally has a bin_digest distinct from float's: changing
@@ -480,7 +476,7 @@ let%expect_test "slow_more_accurate" =
   (* 70.18%: An example where [of_percentage] and [of_bp] both introduce ugly-looking
      rounding errors. *)
   let x = 70.18 in
-  [ Percent.of_percentage
+  [ (Percent.of_percentage : _ -> _)
   ; Percent.of_bp
   ; Percent.of_percentage_slow_more_accurate
   ; Percent.of_bp_slow_more_accurate
@@ -496,7 +492,7 @@ let%expect_test "slow_more_accurate" =
   (* 57.2%: An example where [to_percentage] and [to_bp] both introduce ugly-looking
      rounding errors. *)
   let p = Percent.of_mult 0.572 in
-  [ Percent.to_percentage
+  [ (Percent.to_percentage : _ -> _)
   ; Percent.to_bp
   ; Percent.to_percentage_slow_more_accurate
   ; Percent.to_bp_slow_more_accurate

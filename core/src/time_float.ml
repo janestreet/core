@@ -48,10 +48,10 @@ module Ofday = struct
     let create_local ofday = create ofday (Lazy.force Zone.local)
 
     let of_string string : t =
-      match String.split string ~on:' ' with
-      | [ ofday; zone ] ->
+      match String.rsplit2 string ~on:' ' with
+      | Some (ofday, zone) ->
         { ofday = Time.Ofday.of_string ofday; zone = Zone.of_string zone }
-      | _ -> failwithf "Ofday.Zoned.of_string %s" string ()
+      | None -> failwithf "Ofday.Zoned.of_string %s" string ()
     ;;
 
     let to_string (t : t) : string =

@@ -55,6 +55,12 @@ let create ?hr ?min ?sec ?ms ?us ?ns () =
   of_span_since_start_of_day_exn (Span.create ?hr ?min ?sec ?ms ?us ?ns ())
 ;;
 
+module O = struct
+  let ( ^: ) hr min = create ~hr ~min ()
+end
+
+include O
+
 module Stable = struct
   module Option = struct end
   module Zoned = struct end
@@ -226,6 +232,7 @@ include Identifiable.Make_using_comparator (struct
 include Diffable.Atomic.Make (Stable.V1)
 
 let t_sexp_grammar = Stable.V1.t_sexp_grammar
+let to_nanosecond_string t = Stable.V1.to_string_with_unit t ~unit:`Nanosecond
 let to_microsecond_string t = Stable.V1.to_string_with_unit t ~unit:`Microsecond
 let to_millisecond_string t = Stable.V1.to_string_with_unit t ~unit:`Millisecond
 let to_sec_string t = Stable.V1.to_string_with_unit t ~unit:`Second

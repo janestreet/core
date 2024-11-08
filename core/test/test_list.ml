@@ -189,32 +189,30 @@ let%expect_test "[rev_map3]" =
     |}]
 ;;
 
-let%test_module "zip_with_remainder" =
-  (module struct
-    let check left right ~expect =
-      [%test_result: (int * string) list * (int list, string list) Either.t option]
-        (List.zip_with_remainder left right)
-        ~expect
-    ;;
+module%test [@name "zip_with_remainder"] _ = struct
+  let check left right ~expect =
+    [%test_result: (int * string) list * (int list, string list) Either.t option]
+      (List.zip_with_remainder left right)
+      ~expect
+  ;;
 
-    let numbers = [ 1; 2; 3 ]
-    let words = [ "One"; "Two"; "Three" ]
+  let numbers = [ 1; 2; 3 ]
+  let words = [ "One"; "Two"; "Three" ]
 
-    let%test_unit "equal length" =
-      let expect = [ 1, "One"; 2, "Two"; 3, "Three" ], None in
-      check numbers words ~expect
-    ;;
+  let%test_unit "equal length" =
+    let expect = [ 1, "One"; 2, "Two"; 3, "Three" ], None in
+    check numbers words ~expect
+  ;;
 
-    let%test_unit "right is longer" =
-      let expect = [ 1, "One" ], Some (Second [ "Two"; "Three" ]) in
-      check [ 1 ] words ~expect
-    ;;
+  let%test_unit "right is longer" =
+    let expect = [ 1, "One" ], Some (Second [ "Two"; "Three" ]) in
+    check [ 1 ] words ~expect
+  ;;
 
-    let%test_unit "left is longer" =
-      let expect = [ 1, "One" ], Some (First [ 2; 3 ]) in
-      check numbers [ "One" ] ~expect
-    ;;
+  let%test_unit "left is longer" =
+    let expect = [ 1, "One" ], Some (First [ 2; 3 ]) in
+    check numbers [ "One" ] ~expect
+  ;;
 
-    let%test_unit "empty" = check [] [] ~expect:([], None)
-  end)
-;;
+  let%test_unit "empty" = check [] [] ~expect:([], None)
+end

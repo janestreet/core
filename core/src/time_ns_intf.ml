@@ -237,6 +237,7 @@ module type Ofday = sig
   val every : Span.t -> start:t -> stop:t -> t list Or_error.t
 
   val to_microsecond_string : t -> string
+  val to_nanosecond_string : t -> string
 
   module Stable : sig
     module V1 : sig
@@ -310,7 +311,7 @@ module type Time_ns = sig
         they're evaluated. *)
       type ofday := t
 
-      type t [@@deriving bin_io, sexp, hash]
+      type t [@@deriving bin_io, sexp, sexp_grammar, hash]
 
       include Pretty_printer.S with type t := t
 
@@ -329,12 +330,12 @@ module type Time_ns = sig
           time zones and daylight savings, the resulting ordering is not chronological.
           That is, [compare t1 t2 > 0] does not imply [t2] occurs after [t1] every day,
           or any day. *)
-        type nonrec t = t [@@deriving bin_io, sexp, compare, equal, hash]
+        type nonrec t = t [@@deriving bin_io, sexp, sexp_grammar, compare, equal, hash]
       end
 
       module Stable : sig
         module V1 : sig
-          type nonrec t = t [@@deriving hash]
+          type nonrec t = t [@@deriving equal, hash, sexp_grammar]
 
           include Stable_without_comparator_with_witness with type t := t
         end
@@ -453,6 +454,28 @@ module type Time_ns = sig
   (** [to_string_utc] generates a time string with the UTC zone, "Z", e.g. [2000-01-01
       12:34:56.789012Z]. *)
   val to_string_utc : t -> string
+
+  (** Returns the ISO 8601 extended format for a time (including the date) in the given
+      time zone. The number of decimal places is determined by [precision], default [`ns].
+
+      For example:
+
+      {[
+        to_string_iso8601_extended epoch ~zone:Zone.utc ~precision:`us
+        =
+        "1970-01-01T00:00:00.000000Z"
+      ]}
+  *)
+  val to_string_iso8601_extended
+    :  ?precision:
+         [ `sec (** second precision: no decimal *)
+         | `ms (** millisecond precision: three decimal places *)
+         | `us (** microsecond precision: six decimal places *)
+         | `ns (** nanosecond precision: nine decimal places *)
+         ]
+    -> zone:Zone.t
+    -> t
+    -> string
 
   (** Unix epoch (1970-01-01 00:00:00 UTC) *)
   val epoch : t
@@ -767,7 +790,7 @@ module type Time_ns = sig
 
       module Zoned : sig
         module V1 : sig
-          type nonrec t = Ofday.Zoned.t [@@deriving hash]
+          type nonrec t = Ofday.Zoned.t [@@deriving equal, hash, sexp_grammar]
 
           include Stable_without_comparator_with_witness with type t := t
         end

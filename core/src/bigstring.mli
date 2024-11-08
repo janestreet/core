@@ -33,6 +33,21 @@ val create : int -> t
     @param len default = [Bigstring.length bstr - pos] *)
 val sub_shared : ?pos:int -> ?len:int -> t -> t
 
+(** Like [sub_shared], for local input and output.
+
+    The result is allocated on the global heap, even if built with a compiler supporting
+    stack allocation. At least as of 2024-08, custom blocks with finalizers cannot be
+    allocated on the local heap. *)
+val sub_shared_local : ?pos:int -> ?len:int -> local_ t -> local_ t
+
+(** Like [sub_shared], for local input and global output.
+
+    Creates a global bigstring sharing the same storage as the local input. This is unsafe
+    if the input's storage will be destroyed or overwritten after [t]'s local scope ends.
+    Only use this function if you know the input's underlying storage is safe to use
+    beyond the lifetime of the input [t]. *)
+val unsafe_sub_shared_of_local : ?pos:int -> ?len:int -> local_ t -> t
+
 (** {2 Reading/writing bin-prot} *)
 
 (** These functions write the "size-prefixed" bin-prot format that is used by, e.g.,

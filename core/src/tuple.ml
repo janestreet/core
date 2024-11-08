@@ -49,6 +49,7 @@ module T2 = struct
   ;;
 
   let equal ~eq1 ~eq2 (x, y) (x', y') = eq1 x x' && eq2 y y'
+  let sort ((a, b) as t) ~compare = if compare a b <= 0 then t else b, a
   let swap (a, b) = b, a
 
   include Comparator.Derived2 (struct

@@ -83,31 +83,6 @@
    (data $Date "Date")
    (data $strftime "strftime")
 
-   (func (export "core_time_ns_format")
-      (param $time (ref eq)) (param $format (ref eq)) (result (ref eq))
-      (local $d (ref eq))
-      (local.set $d
-         (call $caml_js_new
-            (call $caml_js_get
-               (call $caml_js_global (ref.i31 (i32.const 0)))
-               (array.new_data $string $Date (i32.const 0) (i32.const 4)))
-            (call $caml_js_from_array
-               (array.new_fixed $block 2 (ref.i31 (i32.const 0))
-                  (call $caml_js_from_float
-                     (struct.new $float
-                        (f64.mul
-                           (struct.get $float 0
-                              (ref.cast (ref $float) (local.get $time)))
-                           (f64.const 1000.))))))))
-      (return_call $caml_string_of_jsstring
-         (call $caml_js_fun_call
-            (call $caml_js_get
-               (call $caml_js_global (ref.i31 (i32.const 0)))
-               (array.new_data $string $strftime (i32.const 0) (i32.const 8)))
-            (array.new_fixed $block 3 (ref.i31 (i32.const 0))
-               (call $caml_jsstring_of_string (local.get $format))
-               (local.get $d)))))
-
    (func (export "core_gc_compactions") (param (ref eq)) (result (ref eq))
       (ref.i31 (i32.const 0)))
 

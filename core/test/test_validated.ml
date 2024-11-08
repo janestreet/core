@@ -86,73 +86,71 @@ end = struct
   include Add_typerep (Raw) (V)
 end
 
-let%test_module _ =
-  (module struct
-    module Positive_int = struct
-      type t = int [@@deriving bin_io, sexp]
+module%test _ = struct
+  module Positive_int = struct
+    type t = int [@@deriving bin_io, sexp]
 
-      let validate t = if t > 0 then Validate.pass else Validate.fail "must be positive"
-    end
+    let validate t = if t > 0 then Validate.pass else Validate.fail "must be positive"
+  end
 
-    let does_raise = Exn.does_raise
+  let does_raise = Exn.does_raise
 
-    module M = Make (struct
-        let here = [%here]
+  module M = Make (struct
+      let here = [%here]
 
-        include Positive_int
-      end)
+      include Positive_int
+    end)
 
-    open M
+  open M
 
-    let%test_unit _ = assert (does_raise (fun () -> t_of_sexp ([%sexp_of: int] 0)))
+  let%test_unit _ = assert (does_raise (fun () -> t_of_sexp ([%sexp_of: int] 0)))
 
-    let%test_unit _ =
-      let sexp = [%sexp_of: int] 13 in
-      assert (sexp_of_t (t_of_sexp sexp) = sexp)
-    ;;
+  let%test_unit _ =
+    let sexp = [%sexp_of: int] 13 in
+    assert (sexp_of_t (t_of_sexp sexp) = sexp)
+  ;;
 
-    let%test_unit _ = assert (does_raise (fun () -> create_exn 0))
+  let%test_unit _ = assert (does_raise (fun () -> create_exn 0))
 
-    let%test_unit _ =
-      match create 0 with
-      | Error _ -> ()
-      | Ok _ -> assert false
-    ;;
+  let%test_unit _ =
+    match create 0 with
+    | Error _ -> ()
+    | Ok _ -> assert false
+  ;;
 
-    let%test_unit _ =
-      let n = 13 in
-      let t = create_exn n in
-      assert (raw t = n)
-    ;;
+  let%test_unit _ =
+    let n = 13 in
+    let t = create_exn n in
+    assert (raw t = n)
+  ;;
 
-    let%test_unit _ =
-      let n = 13 in
-      match create n with
-      | Error _ -> assert false
-      | Ok t -> assert ((t :> int) = n)
-    ;;
+  let%test_unit _ =
+    let n = 13 in
+    match create n with
+    | Error _ -> assert false
+    | Ok t -> assert ((t :> int) = n)
+  ;;
 
-    module M1 = Make_binable (struct
-        let here = [%here]
-        let validate_binio_deserialization = true
+  module M1 = Make_binable (struct
+      let here = [%here]
+      let validate_binio_deserialization = true
 
-        include Positive_int
-      end)
+      include Positive_int
+    end)
 
-    module M2 = Make_binable (struct
-        let here = [%here]
-        let validate_binio_deserialization = false
+  module M2 = Make_binable (struct
+      let here = [%here]
+      let validate_binio_deserialization = false
 
-        include Positive_int
-      end)
+      include Positive_int
+    end)
 
-    let int = 0
-    let string = Binable.to_string (module Int) int
-    let%test _ = does_raise (fun () -> Binable.of_string (module M1) string)
-    let%test _ = M2.raw (Binable.of_string (module M2) string) = int
-    let int = 1
-    let string = Binable.to_string (module Int) int
-    let%test _ = M1.raw (Binable.of_string (module M1) string) = int
-    let%test _ = M2.raw (Binable.of_string (module M2) string) = int
-  end)
-;;
+  let int = 0
+  let string = Binable.to_string (module Int) int
+  let%test _ = does_raise (fun () -> Binable.of_string (module M1) string)
+  let%test _ = M2.raw (Binable.of_string (module M2) string) = int
+  let int = 1
+  let string = Binable.to_string (module Int) int
+  let%test _ = M1.raw (Binable.of_string (module M1) string) = int
+  let%test _ = M2.raw (Binable.of_string (module M2) string) = int
+end

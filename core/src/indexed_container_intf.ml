@@ -37,6 +37,16 @@ module type S1_with_creators_permissions = sig
     :  ('a, [> read ]) t
     -> f:local_ (int -> 'a -> ('b, [> read ]) t)
     -> ('b, [< _ perms ]) t
+
+  val partitioni_tf
+    :  ('a, [> read ]) t
+    -> f:local_ (int -> 'a -> bool)
+    -> ('a, [< _ perms ]) t * ('a, [< _ perms ]) t
+
+  val partition_mapi
+    :  ('a, [> read ]) t
+    -> f:local_ (int -> 'a -> ('b, 'c) Either.t)
+    -> ('b, [< _ perms ]) t * ('c, [< _ perms ]) t
 end
 
 module type Indexed_container = sig

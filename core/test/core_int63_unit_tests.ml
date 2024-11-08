@@ -130,8 +130,8 @@ module Make_tests (Int : Base.Int.S) : sig end = struct
   ;;
 end
 
-let%test_module "Int63_emul" = (module Make_tests (Base.Int63.Private.Emul))
-let%test_module "Int63_maybe_native" = (module Make_tests (Int63))
+module%test Int63_emul = Make_tests (Base.Int63.Private.Emul)
+module%test Int63_maybe_native = Make_tests (Int63)
 
 module Make_tests_bin_io (B : sig
     type t = Int63.t [@@deriving bin_io]
@@ -165,8 +165,5 @@ module Make_tests_bin_io (B : sig
   ;;
 end
 
-let%test_module "Int63_bin_io_maybe_native" = (module Make_tests_bin_io (Int63))
-
-let%test_module "Int63_bin_io_maybe_native_stable" =
-  (module Make_tests_bin_io (Int63.Stable.V1))
-;;
+module%test Int63_bin_io_maybe_native = Make_tests_bin_io (Int63)
+module%test Int63_bin_io_maybe_native_stable = Make_tests_bin_io (Int63.Stable.V1)

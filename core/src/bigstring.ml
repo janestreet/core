@@ -29,16 +29,27 @@ module Unstable = T
 
 let create size = create size
 
-external array1_sub
-  :  ('a, 'b, 'c) Array1.t
+external unsafe_array1_sub
+  :  local_ ('a, 'b, 'c) Array1.t
   -> int
   -> int
   -> ('a, 'b, 'c) Array1.t
   = "caml_ba_sub"
 
-let sub_shared ?(pos = 0) ?len (bstr : t) =
+(* Potentially unsafe because input's data may be overwritten or destroyed when local
+   reference goes out of scope. *)
+let unsafe_sub_shared_of_local ?(pos = 0) ?len (bstr : t) =
   let len = get_opt_len bstr ~pos len in
-  array1_sub bstr pos len
+  unsafe_array1_sub bstr pos len
+;;
+
+(* Calling with global [t] is safe because its data is assumed to persist. *)
+let sub_shared : ?pos:int -> ?len:int -> t -> t = unsafe_sub_shared_of_local
+
+(* Returning local [t] is safe because the reference cannot be held past the lifetime of
+   the input. *)
+let sub_shared_local : ?pos:int -> ?len:int -> local_ t -> local_ t =
+  unsafe_sub_shared_of_local
 ;;
 
 (* Destruction *)

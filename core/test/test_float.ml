@@ -156,140 +156,136 @@ let%expect_test (_ [@tags "64-bits-only", "x-library-inlining-sensitive"]) =
   [%expect {| |}]
 ;;
 
-let%test_module "round_significant" =
-  (module struct
-    let round_significant = Float.round_significant
+module%test [@name "round_significant"] _ = struct
+  let round_significant = Float.round_significant
 
-    let%test_unit "key values" =
-      [%test_result: float]
-        (round_significant ~significant_digits:3 0.0045678)
-        ~expect:0.00457;
-      [%test_result: float]
-        (round_significant ~significant_digits:3 123456.)
-        ~expect:123000.;
-      [%test_result: float] (round_significant ~significant_digits:3 0.) ~expect:0.;
-      [%test_result: float]
-        (round_significant ~significant_digits:3 Float.nan)
-        ~expect:Float.nan;
-      [%test_result: float]
-        (round_significant ~significant_digits:3 Float.infinity)
-        ~expect:Float.infinity;
-      [%test_result: float]
-        (round_significant ~significant_digits:3 Float.neg_infinity)
-        ~expect:Float.neg_infinity;
-      [%test_result: float]
-        (round_significant ~significant_digits:1 (-5.85884163457842E+100))
-        ~expect:(-6E+100);
-      [%test_result: float]
-        (round_significant ~significant_digits:16 (-129361178280336660.))
-        ~expect:(-129361178280336700.);
-      (* An example where it appears like we don't round to even (since the argument is
+  let%test_unit "key values" =
+    [%test_result: float]
+      (round_significant ~significant_digits:3 0.0045678)
+      ~expect:0.00457;
+    [%test_result: float]
+      (round_significant ~significant_digits:3 123456.)
+      ~expect:123000.;
+    [%test_result: float] (round_significant ~significant_digits:3 0.) ~expect:0.;
+    [%test_result: float]
+      (round_significant ~significant_digits:3 Float.nan)
+      ~expect:Float.nan;
+    [%test_result: float]
+      (round_significant ~significant_digits:3 Float.infinity)
+      ~expect:Float.infinity;
+    [%test_result: float]
+      (round_significant ~significant_digits:3 Float.neg_infinity)
+      ~expect:Float.neg_infinity;
+    [%test_result: float]
+      (round_significant ~significant_digits:1 (-5.85884163457842E+100))
+      ~expect:(-6E+100);
+    [%test_result: float]
+      (round_significant ~significant_digits:16 (-129361178280336660.))
+      ~expect:(-129361178280336700.);
+    (* An example where it appears like we don't round to even (since the argument is
          under-represented as a float). *)
-      [%test_result: float]
-        (round_significant ~significant_digits:11 4.36083208835)
-        ~expect:4.3608320883
-    ;;
+    [%test_result: float]
+      (round_significant ~significant_digits:11 4.36083208835)
+      ~expect:4.3608320883
+  ;;
 
-    let%test_unit ("round_significant vs sprintf quickcheck 1" [@tags "64-bits-only"]) =
-      for significant_digits = 1 to 16 do
-        let open Quickcheck in
-        test
-          Float.gen_without_nan
-          ~trials:10_000
-          ~sexp_of:(fun float -> [%message "" (float : float) (significant_digits : int)])
-          ~f:(fun x ->
-            let s = sprintf "%.*g" significant_digits x |> Float.of_string in
-            assert (
-              s = round_significant ~significant_digits x
-              || s = round_significant ~significant_digits (Float.one_ulp `Up x)
-              || s = round_significant ~significant_digits (Float.one_ulp `Down x)))
-      done
-    ;;
+  let%test_unit ("round_significant vs sprintf quickcheck 1" [@tags "64-bits-only"]) =
+    for significant_digits = 1 to 16 do
+      let open Quickcheck in
+      test
+        Float.gen_without_nan
+        ~trials:10_000
+        ~sexp_of:(fun float -> [%message "" (float : float) (significant_digits : int)])
+        ~f:(fun x ->
+          let s = sprintf "%.*g" significant_digits x |> Float.of_string in
+          assert (
+            s = round_significant ~significant_digits x
+            || s = round_significant ~significant_digits (Float.one_ulp `Up x)
+            || s = round_significant ~significant_digits (Float.one_ulp `Down x)))
+    done
+  ;;
 
-    let%test_unit ("round_significant vs sprintf quickcheck 2" [@tags "64-bits-only"]) =
-      (* this test is much more likely to exercise cases when we're off by an ulp *)
-      let num_digits_gen = Int.gen_incl 1 18 in
-      let digits_gen num_digits =
-        let x = Int63.(pow (of_int 10) (of_int num_digits) - of_int 1) in
-        Int63.gen_incl Int63.(~-x) x
-      in
-      let scale_gen = Int.gen_incl (-20) 20 in
-      let sf_gen = Int.gen_incl 1 18 in
-      Quickcheck.test
-        ~trials:1000
-        (Quickcheck.Generator.tuple3
-           (Quickcheck.Generator.bind num_digits_gen ~f:digits_gen)
-           scale_gen
-           sf_gen)
-        ~f:(fun (digits, scale, sf) ->
-          let x =
-            if scale > 0
-            then Int63.to_float digits *. (10. ** float scale)
-            else Int63.to_float digits /. (10. ** float (-scale))
-          in
-          let r = round_significant ~significant_digits:sf x in
-          let r1 = round_significant ~significant_digits:sf (Float.one_ulp `Up x) in
-          let r2 = round_significant ~significant_digits:sf (Float.one_ulp `Down x) in
-          let s = sprintf "%.*g" sf x |> Float.of_string in
-          assert (s = r || s = r1 || s = r2))
-    ;;
+  let%test_unit ("round_significant vs sprintf quickcheck 2" [@tags "64-bits-only"]) =
+    (* this test is much more likely to exercise cases when we're off by an ulp *)
+    let num_digits_gen = Int.gen_incl 1 18 in
+    let digits_gen num_digits =
+      let x = Int63.(pow (of_int 10) (of_int num_digits) - of_int 1) in
+      Int63.gen_incl Int63.(~-x) x
+    in
+    let scale_gen = Int.gen_incl (-20) 20 in
+    let sf_gen = Int.gen_incl 1 18 in
+    Quickcheck.test
+      ~trials:1000
+      (Quickcheck.Generator.tuple3
+         (Quickcheck.Generator.bind num_digits_gen ~f:digits_gen)
+         scale_gen
+         sf_gen)
+      ~f:(fun (digits, scale, sf) ->
+        let x =
+          if scale > 0
+          then Int63.to_float digits *. (10. ** float scale)
+          else Int63.to_float digits /. (10. ** float (-scale))
+        in
+        let r = round_significant ~significant_digits:sf x in
+        let r1 = round_significant ~significant_digits:sf (Float.one_ulp `Up x) in
+        let r2 = round_significant ~significant_digits:sf (Float.one_ulp `Down x) in
+        let s = sprintf "%.*g" sf x |> Float.of_string in
+        assert (s = r || s = r1 || s = r2))
+  ;;
 
-    let%test "0 significant digits" =
-      Exn.does_raise (fun () ->
-        ignore (round_significant ~significant_digits:0 1.3 : float))
-    ;;
-  end)
-;;
+  let%test "0 significant digits" =
+    Exn.does_raise (fun () ->
+      ignore (round_significant ~significant_digits:0 1.3 : float))
+  ;;
+end
 
-let%test_module "round_decimal" =
-  (module struct
-    let round_decimal = Float.round_decimal
+module%test [@name "round_decimal"] _ = struct
+  let round_decimal = Float.round_decimal
 
-    let%test_unit "key values" =
-      [%test_result: float] (round_decimal ~decimal_digits:3 0.0045678) ~expect:0.005;
-      [%test_result: float] (round_decimal ~decimal_digits:0 0.0045678) ~expect:0.;
-      [%test_result: float] (round_decimal ~decimal_digits:0 1.0045678) ~expect:1.;
-      [%test_result: float] (round_decimal ~decimal_digits:3 123456.) ~expect:123456.;
-      [%test_result: float] (round_decimal ~decimal_digits:(-3) 123456.) ~expect:123000.;
-      [%test_result: float] (round_decimal ~decimal_digits:3 0.) ~expect:0.;
-      [%test_result: float] (round_decimal ~decimal_digits:3 Float.nan) ~expect:Float.nan;
-      [%test_result: float]
-        (round_decimal ~decimal_digits:3 Float.infinity)
-        ~expect:Float.infinity;
-      [%test_result: float]
-        (round_decimal ~decimal_digits:3 Float.neg_infinity)
-        ~expect:Float.neg_infinity;
-      [%test_result: float]
-        (round_decimal ~decimal_digits:(-100) (-5.85884163457842E+100))
-        ~expect:(-6E+100);
-      [%test_result: float]
-        (round_decimal ~decimal_digits:0 (-129361178280336660.))
-        ~expect:(-129361178280336660.);
-      [%test_result: float]
-        (round_decimal ~decimal_digits:(-2) (-129361178280336660.))
-        ~expect:(-129361178280336700.);
-      [%test_result: float]
-        (round_decimal ~decimal_digits:10 4.36083208835)
-        ~expect:4.3608320883
-    ;;
+  let%test_unit "key values" =
+    [%test_result: float] (round_decimal ~decimal_digits:3 0.0045678) ~expect:0.005;
+    [%test_result: float] (round_decimal ~decimal_digits:0 0.0045678) ~expect:0.;
+    [%test_result: float] (round_decimal ~decimal_digits:0 1.0045678) ~expect:1.;
+    [%test_result: float] (round_decimal ~decimal_digits:3 123456.) ~expect:123456.;
+    [%test_result: float] (round_decimal ~decimal_digits:(-3) 123456.) ~expect:123000.;
+    [%test_result: float] (round_decimal ~decimal_digits:3 0.) ~expect:0.;
+    [%test_result: float] (round_decimal ~decimal_digits:3 Float.nan) ~expect:Float.nan;
+    [%test_result: float]
+      (round_decimal ~decimal_digits:3 Float.infinity)
+      ~expect:Float.infinity;
+    [%test_result: float]
+      (round_decimal ~decimal_digits:3 Float.neg_infinity)
+      ~expect:Float.neg_infinity;
+    [%test_result: float]
+      (round_decimal ~decimal_digits:(-100) (-5.85884163457842E+100))
+      ~expect:(-6E+100);
+    [%test_result: float]
+      (round_decimal ~decimal_digits:0 (-129361178280336660.))
+      ~expect:(-129361178280336660.);
+    [%test_result: float]
+      (round_decimal ~decimal_digits:(-2) (-129361178280336660.))
+      ~expect:(-129361178280336700.);
+    [%test_result: float]
+      (round_decimal ~decimal_digits:10 4.36083208835)
+      ~expect:4.3608320883
+  ;;
 
-    let%test_unit ("round_decimal vs sprintf quickcheck 1" [@tags "64-bits-only"]) =
-      for decimal_digits = 1 to 16 do
-        let open Quickcheck in
-        test
-          Float.gen_without_nan
-          ~trials:10_000
-          ~sexp_of:(fun float -> [%message "" (float : float) (decimal_digits : int)])
-          ~f:(fun x ->
-            let s = sprintf "%.*f" decimal_digits x |> Float.of_string in
-            assert (
-              s = round_decimal ~decimal_digits x
-              || s = round_decimal ~decimal_digits (Float.one_ulp `Up x)
-              || s = round_decimal ~decimal_digits (Float.one_ulp `Down x)))
-      done
-    ;;
-  end)
-;;
+  let%test_unit ("round_decimal vs sprintf quickcheck 1" [@tags "64-bits-only"]) =
+    for decimal_digits = 1 to 16 do
+      let open Quickcheck in
+      test
+        Float.gen_without_nan
+        ~trials:10_000
+        ~sexp_of:(fun float -> [%message "" (float : float) (decimal_digits : int)])
+        ~f:(fun x ->
+          let s = sprintf "%.*f" decimal_digits x |> Float.of_string in
+          assert (
+            s = round_decimal ~decimal_digits x
+            || s = round_decimal ~decimal_digits (Float.one_ulp `Up x)
+            || s = round_decimal ~decimal_digits (Float.one_ulp `Down x)))
+    done
+  ;;
+end
 
 open! Float
 
@@ -378,26 +374,24 @@ let%expect_test "Float.validate_positive doesn't allocate on success" =
   [%expect {| |}]
 ;;
 
-let%test_module _ =
-  (module struct
-    let check v expect =
-      match Validate.result v, expect with
-      | Ok (), `Ok | Error _, `Error -> ()
-      | r, expect ->
-        raise_s [%message "mismatch" (r : unit Or_error.t) (expect : [ `Ok | `Error ])]
-    ;;
+module%test _ = struct
+  let check v expect =
+    match Validate.result v, expect with
+    | Ok (), `Ok | Error _, `Error -> ()
+    | r, expect ->
+      raise_s [%message "mismatch" (r : unit Or_error.t) (expect : [ `Ok | `Error ])]
+  ;;
 
-    let%test_unit _ = check (validate_lbound ~min:(Incl 0.) nan) `Error
-    let%test_unit _ = check (validate_lbound ~min:(Incl 0.) infinity) `Error
-    let%test_unit _ = check (validate_lbound ~min:(Incl 0.) neg_infinity) `Error
-    let%test_unit _ = check (validate_lbound ~min:(Incl 0.) (-1.)) `Error
-    let%test_unit _ = check (validate_lbound ~min:(Incl 0.) 0.) `Ok
-    let%test_unit _ = check (validate_lbound ~min:(Incl 0.) 1.) `Ok
-    let%test_unit _ = check (validate_ubound ~max:(Incl 0.) nan) `Error
-    let%test_unit _ = check (validate_ubound ~max:(Incl 0.) infinity) `Error
-    let%test_unit _ = check (validate_ubound ~max:(Incl 0.) neg_infinity) `Error
-    let%test_unit _ = check (validate_ubound ~max:(Incl 0.) (-1.)) `Ok
-    let%test_unit _ = check (validate_ubound ~max:(Incl 0.) 0.) `Ok
-    let%test_unit _ = check (validate_ubound ~max:(Incl 0.) 1.) `Error
-  end)
-;;
+  let%test_unit _ = check (validate_lbound ~min:(Incl 0.) nan) `Error
+  let%test_unit _ = check (validate_lbound ~min:(Incl 0.) infinity) `Error
+  let%test_unit _ = check (validate_lbound ~min:(Incl 0.) neg_infinity) `Error
+  let%test_unit _ = check (validate_lbound ~min:(Incl 0.) (-1.)) `Error
+  let%test_unit _ = check (validate_lbound ~min:(Incl 0.) 0.) `Ok
+  let%test_unit _ = check (validate_lbound ~min:(Incl 0.) 1.) `Ok
+  let%test_unit _ = check (validate_ubound ~max:(Incl 0.) nan) `Error
+  let%test_unit _ = check (validate_ubound ~max:(Incl 0.) infinity) `Error
+  let%test_unit _ = check (validate_ubound ~max:(Incl 0.) neg_infinity) `Error
+  let%test_unit _ = check (validate_ubound ~max:(Incl 0.) (-1.)) `Ok
+  let%test_unit _ = check (validate_ubound ~max:(Incl 0.) 0.) `Ok
+  let%test_unit _ = check (validate_ubound ~max:(Incl 0.) 1.) `Error
+end

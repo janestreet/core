@@ -65,7 +65,7 @@ module Ofday : sig
 end
 
 (** A fully qualified point in time, independent of timezone. *)
-type t = Time.t [@@deriving bin_io, compare, hash, sexp, sexp_grammar, typerep]
+type t = Time.t [@@deriving bin_io, compare ~localize, hash, sexp, sexp_grammar, typerep]
 
 include
   Time_intf.S
@@ -129,7 +129,7 @@ include Diffable.S_atomic with type t := t
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving hash, typerep, sexp_grammar]
+    type nonrec t = t [@@deriving compare ~localize, hash, typerep, sexp_grammar]
     type nonrec comparator_witness = comparator_witness
 
     include

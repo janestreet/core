@@ -5,7 +5,7 @@ include module type of struct
   include Base.String
 end
 
-type t = string [@@deriving bin_io ~localize, typerep]
+type t = string [@@deriving bin_io ~localize, typerep, globalize]
 
 (** [Caseless] compares and hashes strings ignoring case, so that for example
     [Caseless.equal "OCaml" "ocaml"] and [Caseless.("apple" < "Banana")] are [true], and
@@ -111,7 +111,8 @@ module Stable : sig
   end
 
   module V1 : sig
-    type nonrec t = t [@@deriving bin_io ~localize, diff ~extra_derive:[ sexp ]]
+    type nonrec t = t
+    [@@deriving bin_io ~localize, diff ~extra_derive:[ sexp ], globalize]
 
     include
       Identifiable_without_binio

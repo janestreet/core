@@ -27,7 +27,6 @@ module Bounded_index = Bounded_index
 module Buffer = Base.Buffer
 module Byte_units = Byte_units
 module Bytes = Bytes
-module Caml = struct end [@@deprecated "[since 2023-01] use Stdlib instead of Caml"]
 module Char = Char
 module Command = Command_internal
 module Comparable = Comparable
@@ -160,9 +159,6 @@ module Sys = Core_sys
 module Thread = struct end
 [@@deprecated "[since 2021-04] Use [Core_thread] or [Caml_threads.Thread]"]
 
-module Time = Time_float
-[@@deprecated "[since 2021-11] Use [Time_float] or [Time_float_unix] instead"]
-
 module Time_float = Time_float
 module Time_ns = Time_ns
 module Timezone = Timezone
@@ -209,7 +205,7 @@ type 'a _maybe_bound = 'a Maybe_bound.t =
 
 let am_running_test = am_running_test
 let does_raise = Exn.does_raise
-let sec = Time_float.Span.of_sec
+let sec = Span_float.of_sec
 let ( ^/ ) = Filename.concat
 
 (** We perform these side effects here because we want them to run for any code that uses

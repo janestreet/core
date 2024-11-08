@@ -188,13 +188,18 @@ external __POS_OF__
     to [g (f (x))].
     @since 4.01
 *)
-external ( |> ) : 'a -> (('a -> 'b)[@local_opt]) -> 'b = "%revapply"
+external ( |> )
+  : ('a : any) ('b : any).
+  'a -> (('a -> 'b)[@local_opt]) -> 'b
+  = "%revapply"
+[@@layout_poly]
 
 (** Application operator: [g @@ f @@ x] is exactly equivalent to
     [g (f (x))].
     @since 4.01
 *)
-external ( @@ ) : (('a -> 'b)[@local_opt]) -> 'a -> 'b = "%apply"
+external ( @@ ) : ('a : any) ('b : any). (('a -> 'b)[@local_opt]) -> 'a -> 'b = "%apply"
+[@@layout_poly]
 
 (** {6 Integer arithmetic} *)
 
@@ -336,19 +341,23 @@ external ( /. )
   = "%divfloat"
 
 (** Exponentiation. *)
-external ( ** ) : float -> float -> float = "caml_power_float" "pow"
+external ( ** )
+  :  (float[@local_opt])
+  -> (float[@local_opt])
+  -> float
+  = "caml_power_float" "pow"
 [@@unboxed] [@@noalloc]
 
 (** Square root. *)
-external sqrt : float -> float = "caml_sqrt_float" "sqrt"
+external sqrt : (float[@local_opt]) -> float = "caml_sqrt_float" "sqrt"
 [@@unboxed] [@@noalloc]
 
 (** Exponential. *)
-external exp : float -> float = "caml_exp_float" "exp"
+external exp : (float[@local_opt]) -> float = "caml_exp_float" "exp"
 [@@unboxed] [@@noalloc]
 
 (** Natural logarithm. *)
-external log : float -> float = "caml_log_float" "log"
+external log : (float[@local_opt]) -> float = "caml_log_float" "log"
 [@@unboxed] [@@noalloc]
 
 (** Base 10 logarithm. *)
@@ -592,7 +601,8 @@ val char_of_int : int -> char
     [f x; ()], except that the latter may generate a
     compiler warning; writing [ignore(f x)] instead
     avoids the warning. *)
-external ignore : ('a[@local_opt]) -> unit = "%ignore"
+external ignore : ('a : any). ('a[@local_opt]) -> unit = "%ignore"
+[@@layout_poly]
 
 (** {6 String conversion functions} *)
 

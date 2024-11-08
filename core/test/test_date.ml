@@ -227,329 +227,485 @@ let%expect_test "add_years" =
     |}]
 ;;
 
-let%test_module "week_number and week_number_and_year" =
-  (module struct
-    let%test_unit _ =
-      [%test_result: int] (ordinal_date (create_exn ~y:2014 ~m:Jan ~d:1)) ~expect:1
-    ;;
+module%test [@name "week_number and week_number_and_year"] _ = struct
+  let%test_unit _ =
+    [%test_result: int] (ordinal_date (create_exn ~y:2014 ~m:Jan ~d:1)) ~expect:1
+  ;;
 
-    let%test_unit _ =
-      [%test_result: int] (ordinal_date (create_exn ~y:2014 ~m:Dec ~d:31)) ~expect:365
-    ;;
+  let%test_unit _ =
+    [%test_result: int] (ordinal_date (create_exn ~y:2014 ~m:Dec ~d:31)) ~expect:365
+  ;;
 
-    let%test_unit _ =
-      [%test_result: int] (ordinal_date (create_exn ~y:2014 ~m:Feb ~d:28)) ~expect:59
-    ;;
+  let%test_unit _ =
+    [%test_result: int] (ordinal_date (create_exn ~y:2014 ~m:Feb ~d:28)) ~expect:59
+  ;;
 
-    let test_week_number_and_year y m d ~expect =
-      [%test_result: int] (week_number (create_exn ~y ~m ~d)) ~expect:(fst expect);
-      [%test_result: int * int] (week_number_and_year (create_exn ~y ~m ~d)) ~expect
-    ;;
+  let test_week_number_and_year y m d ~expect =
+    [%test_result: int] (week_number (create_exn ~y ~m ~d)) ~expect:(fst expect);
+    [%test_result: int * int] (week_number_and_year (create_exn ~y ~m ~d)) ~expect
+  ;;
 
-    let%test_unit _ = test_week_number_and_year 2014 Jan 1 ~expect:(1, 2014)
-    let%test_unit _ = test_week_number_and_year 2014 Dec 31 ~expect:(1, 2015)
-    let%test_unit _ = test_week_number_and_year 2010 Jan 1 ~expect:(53, 2009)
-    let%test_unit _ = test_week_number_and_year 2017 Jan 1 ~expect:(52, 2016)
-    let%test_unit _ = test_week_number_and_year 2014 Jan 10 ~expect:(2, 2014)
-    let%test_unit _ = test_week_number_and_year 2012 Jan 1 ~expect:(52, 2011)
-    let%test_unit _ = test_week_number_and_year 2012 Dec 31 ~expect:(1, 2013)
-  end)
-;;
+  let%test_unit _ = test_week_number_and_year 2014 Jan 1 ~expect:(1, 2014)
+  let%test_unit _ = test_week_number_and_year 2014 Dec 31 ~expect:(1, 2015)
+  let%test_unit _ = test_week_number_and_year 2010 Jan 1 ~expect:(53, 2009)
+  let%test_unit _ = test_week_number_and_year 2017 Jan 1 ~expect:(52, 2016)
+  let%test_unit _ = test_week_number_and_year 2014 Jan 10 ~expect:(2, 2014)
+  let%test_unit _ = test_week_number_and_year 2012 Jan 1 ~expect:(52, 2011)
+  let%test_unit _ = test_week_number_and_year 2012 Dec 31 ~expect:(1, 2013)
+end
 
-let%test_module "diff_weekdays" =
-  (module struct
-    let c y m d = create_exn ~y ~m ~d
+module%test [@name "diff_weekdays"] _ = struct
+  let c y m d = create_exn ~y ~m ~d
 
-    let%test "2014 Jan 1 is a Wednesday" =
-      Day_of_week.( = ) (day_of_week (c 2014 Jan 1)) Day_of_week.Wed
-    ;;
+  let%test "2014 Jan 1 is a Wednesday" =
+    Day_of_week.( = ) (day_of_week (c 2014 Jan 1)) Day_of_week.Wed
+  ;;
 
-    let ( = ) = Int.( = )
+  let ( = ) = Int.( = )
 
-    (* future minus Wednesday *)
-    let%test _ = diff_weekdays (c 2014 Jan 1) (c 2014 Jan 1) = 0
-    let%test _ = diff_weekdays (c 2014 Jan 2) (c 2014 Jan 1) = 1
-    let%test _ = diff_weekdays (c 2014 Jan 3) (c 2014 Jan 1) = 2
-    let%test _ = diff_weekdays (c 2014 Jan 4) (c 2014 Jan 1) = 3
-    let%test _ = diff_weekdays (c 2014 Jan 5) (c 2014 Jan 1) = 3
-    let%test _ = diff_weekdays (c 2014 Jan 6) (c 2014 Jan 1) = 3
-    let%test _ = diff_weekdays (c 2014 Jan 7) (c 2014 Jan 1) = 4
-    let%test _ = diff_weekdays (c 2014 Jan 8) (c 2014 Jan 1) = 5
-    let%test _ = diff_weekdays (c 2014 Jan 9) (c 2014 Jan 1) = 6
-    let%test _ = diff_weekdays (c 2014 Jan 10) (c 2014 Jan 1) = 7
-    let%test _ = diff_weekdays (c 2014 Jan 11) (c 2014 Jan 1) = 8
-    let%test _ = diff_weekdays (c 2014 Jan 12) (c 2014 Jan 1) = 8
-    let%test _ = diff_weekdays (c 2014 Jan 13) (c 2014 Jan 1) = 8
-    let%test _ = diff_weekdays (c 2014 Jan 14) (c 2014 Jan 1) = 9
+  (* future minus Wednesday *)
+  let%test _ = diff_weekdays (c 2014 Jan 1) (c 2014 Jan 1) = 0
+  let%test _ = diff_weekdays (c 2014 Jan 2) (c 2014 Jan 1) = 1
+  let%test _ = diff_weekdays (c 2014 Jan 3) (c 2014 Jan 1) = 2
+  let%test _ = diff_weekdays (c 2014 Jan 4) (c 2014 Jan 1) = 3
+  let%test _ = diff_weekdays (c 2014 Jan 5) (c 2014 Jan 1) = 3
+  let%test _ = diff_weekdays (c 2014 Jan 6) (c 2014 Jan 1) = 3
+  let%test _ = diff_weekdays (c 2014 Jan 7) (c 2014 Jan 1) = 4
+  let%test _ = diff_weekdays (c 2014 Jan 8) (c 2014 Jan 1) = 5
+  let%test _ = diff_weekdays (c 2014 Jan 9) (c 2014 Jan 1) = 6
+  let%test _ = diff_weekdays (c 2014 Jan 10) (c 2014 Jan 1) = 7
+  let%test _ = diff_weekdays (c 2014 Jan 11) (c 2014 Jan 1) = 8
+  let%test _ = diff_weekdays (c 2014 Jan 12) (c 2014 Jan 1) = 8
+  let%test _ = diff_weekdays (c 2014 Jan 13) (c 2014 Jan 1) = 8
+  let%test _ = diff_weekdays (c 2014 Jan 14) (c 2014 Jan 1) = 9
 
-    (* Wednesday minus future *)
-    let%test _ = diff_weekdays (c 2014 Jan 1) (c 2014 Jan 2) = -1
-    let%test _ = diff_weekdays (c 2014 Jan 1) (c 2014 Jan 3) = -2
-    let%test _ = diff_weekdays (c 2014 Jan 1) (c 2014 Jan 4) = -3
-    let%test _ = diff_weekdays (c 2014 Jan 1) (c 2014 Jan 5) = -3
-    let%test _ = diff_weekdays (c 2014 Jan 1) (c 2014 Jan 6) = -3
-    let%test _ = diff_weekdays (c 2014 Jan 1) (c 2014 Jan 7) = -4
-    let%test _ = diff_weekdays (c 2014 Jan 1) (c 2014 Jan 8) = -5
-    let%test _ = diff_weekdays (c 2014 Jan 1) (c 2014 Jan 9) = -6
+  (* Wednesday minus future *)
+  let%test _ = diff_weekdays (c 2014 Jan 1) (c 2014 Jan 2) = -1
+  let%test _ = diff_weekdays (c 2014 Jan 1) (c 2014 Jan 3) = -2
+  let%test _ = diff_weekdays (c 2014 Jan 1) (c 2014 Jan 4) = -3
+  let%test _ = diff_weekdays (c 2014 Jan 1) (c 2014 Jan 5) = -3
+  let%test _ = diff_weekdays (c 2014 Jan 1) (c 2014 Jan 6) = -3
+  let%test _ = diff_weekdays (c 2014 Jan 1) (c 2014 Jan 7) = -4
+  let%test _ = diff_weekdays (c 2014 Jan 1) (c 2014 Jan 8) = -5
+  let%test _ = diff_weekdays (c 2014 Jan 1) (c 2014 Jan 9) = -6
 
-    (* diff_weekend_days *)
-    let%test _ = diff_weekend_days (c 2014 Jan 1) (c 2014 Jan 1) = 0
-    let%test _ = diff_weekend_days (c 2014 Jan 2) (c 2014 Jan 1) = 0
-    let%test _ = diff_weekend_days (c 2014 Jan 3) (c 2014 Jan 1) = 0
-    let%test _ = diff_weekend_days (c 2014 Jan 4) (c 2014 Jan 1) = 0
-    let%test _ = diff_weekend_days (c 2014 Jan 5) (c 2014 Jan 1) = 1
-    let%test _ = diff_weekend_days (c 2014 Jan 6) (c 2014 Jan 1) = 2
-    let%test _ = diff_weekend_days (c 2014 Jan 7) (c 2014 Jan 1) = 2
-    let%test _ = diff_weekend_days (c 2014 Jan 8) (c 2014 Jan 1) = 2
-    let%test _ = diff_weekend_days (c 2014 Jan 9) (c 2014 Jan 1) = 2
-    let%test _ = diff_weekend_days (c 2014 Jan 10) (c 2014 Jan 1) = 2
-    let%test _ = diff_weekend_days (c 2014 Jan 11) (c 2014 Jan 1) = 2
-    let%test _ = diff_weekend_days (c 2014 Jan 12) (c 2014 Jan 1) = 3
-    let%test _ = diff_weekend_days (c 2014 Jan 13) (c 2014 Jan 1) = 4
-    let%test _ = diff_weekend_days (c 2014 Jan 14) (c 2014 Jan 1) = 4
-  end)
-;;
+  (* diff_weekend_days *)
+  let%test _ = diff_weekend_days (c 2014 Jan 1) (c 2014 Jan 1) = 0
+  let%test _ = diff_weekend_days (c 2014 Jan 2) (c 2014 Jan 1) = 0
+  let%test _ = diff_weekend_days (c 2014 Jan 3) (c 2014 Jan 1) = 0
+  let%test _ = diff_weekend_days (c 2014 Jan 4) (c 2014 Jan 1) = 0
+  let%test _ = diff_weekend_days (c 2014 Jan 5) (c 2014 Jan 1) = 1
+  let%test _ = diff_weekend_days (c 2014 Jan 6) (c 2014 Jan 1) = 2
+  let%test _ = diff_weekend_days (c 2014 Jan 7) (c 2014 Jan 1) = 2
+  let%test _ = diff_weekend_days (c 2014 Jan 8) (c 2014 Jan 1) = 2
+  let%test _ = diff_weekend_days (c 2014 Jan 9) (c 2014 Jan 1) = 2
+  let%test _ = diff_weekend_days (c 2014 Jan 10) (c 2014 Jan 1) = 2
+  let%test _ = diff_weekend_days (c 2014 Jan 11) (c 2014 Jan 1) = 2
+  let%test _ = diff_weekend_days (c 2014 Jan 12) (c 2014 Jan 1) = 3
+  let%test _ = diff_weekend_days (c 2014 Jan 13) (c 2014 Jan 1) = 4
+  let%test _ = diff_weekend_days (c 2014 Jan 14) (c 2014 Jan 1) = 4
+end
 
-let%test_module "adding weekdays and business days" =
-  (module struct
-    let test alist day_of_week date_string =
-      let date = Date.of_string date_string in
-      require_equal (module Day_of_week) day_of_week (Date.day_of_week date);
-      List.iter alist ~f:(fun (name, round_and_add) ->
-        let list =
-          List.map [ -2; -1; 0; 1; 2 ] ~f:(fun increment ->
-            let date = round_and_add date increment in
-            let day_of_week = Date.day_of_week date in
-            increment, day_of_week, date)
-        in
-        print_s [%sexp (name : string), (list : (int * Day_of_week.t * Date.t) list)])
-    ;;
+module%test [@name "dates in a month"] _ = struct
+  let sexp_of_year year =
+    Ref.set_temporarily Sexp.of_int_style `No_underscores ~f:(fun () -> sexp_of_int year)
+  ;;
 
-    let%expect_test "weekdays" =
-      let open Day_of_week in
-      let test =
-        test
-          [ "add_weekdays_rounding_backward", add_weekdays_rounding_backward
-          ; "add_weekdays_rounding_forward", add_weekdays_rounding_forward
-          ]
+  (* 2024 is a leap year. 2023 and 2025 are not. *)
+  let years = [ 2023; 2024; 2025 ]
+
+  (* Leap day month, 31-day month, and 30-day month. *)
+  let months : Month.t list = [ Feb; Mar; Apr ]
+
+  let%expect_test "last_date_in_month" =
+    List.iter years ~f:(fun year ->
+      List.iter Month.all ~f:(fun month ->
+        let date = Date.last_date_in_month ~year ~month in
+        print_s [%sexp ((year, month, date) : year * Month.t * Date.t)]));
+    [%expect
+      {|
+      (2023 Jan 2023-01-31)
+      (2023 Feb 2023-02-28)
+      (2023 Mar 2023-03-31)
+      (2023 Apr 2023-04-30)
+      (2023 May 2023-05-31)
+      (2023 Jun 2023-06-30)
+      (2023 Jul 2023-07-31)
+      (2023 Aug 2023-08-31)
+      (2023 Sep 2023-09-30)
+      (2023 Oct 2023-10-31)
+      (2023 Nov 2023-11-30)
+      (2023 Dec 2023-12-31)
+      (2024 Jan 2024-01-31)
+      (2024 Feb 2024-02-29)
+      (2024 Mar 2024-03-31)
+      (2024 Apr 2024-04-30)
+      (2024 May 2024-05-31)
+      (2024 Jun 2024-06-30)
+      (2024 Jul 2024-07-31)
+      (2024 Aug 2024-08-31)
+      (2024 Sep 2024-09-30)
+      (2024 Oct 2024-10-31)
+      (2024 Nov 2024-11-30)
+      (2024 Dec 2024-12-31)
+      (2025 Jan 2025-01-31)
+      (2025 Feb 2025-02-28)
+      (2025 Mar 2025-03-31)
+      (2025 Apr 2025-04-30)
+      (2025 May 2025-05-31)
+      (2025 Jun 2025-06-30)
+      (2025 Jul 2025-07-31)
+      (2025 Aug 2025-08-31)
+      (2025 Sep 2025-09-30)
+      (2025 Oct 2025-10-31)
+      (2025 Nov 2025-11-30)
+      (2025 Dec 2025-12-31)
+      |}]
+  ;;
+
+  let%expect_test "all_dates_in_month" =
+    List.iter years ~f:(fun year ->
+      List.iter months ~f:(fun month ->
+        let dates = Date.all_dates_in_month ~year ~month in
+        Core.print_s [%sexp ((year, month, dates) : year * Month.t * Date.t list)]));
+    [%expect
+      {|
+      (2023 Feb
+       (2023-02-01 2023-02-02 2023-02-03 2023-02-04 2023-02-05 2023-02-06
+        2023-02-07 2023-02-08 2023-02-09 2023-02-10 2023-02-11 2023-02-12
+        2023-02-13 2023-02-14 2023-02-15 2023-02-16 2023-02-17 2023-02-18
+        2023-02-19 2023-02-20 2023-02-21 2023-02-22 2023-02-23 2023-02-24
+        2023-02-25 2023-02-26 2023-02-27 2023-02-28))
+      (2023 Mar
+       (2023-03-01 2023-03-02 2023-03-03 2023-03-04 2023-03-05 2023-03-06
+        2023-03-07 2023-03-08 2023-03-09 2023-03-10 2023-03-11 2023-03-12
+        2023-03-13 2023-03-14 2023-03-15 2023-03-16 2023-03-17 2023-03-18
+        2023-03-19 2023-03-20 2023-03-21 2023-03-22 2023-03-23 2023-03-24
+        2023-03-25 2023-03-26 2023-03-27 2023-03-28 2023-03-29 2023-03-30
+        2023-03-31))
+      (2023 Apr
+       (2023-04-01 2023-04-02 2023-04-03 2023-04-04 2023-04-05 2023-04-06
+        2023-04-07 2023-04-08 2023-04-09 2023-04-10 2023-04-11 2023-04-12
+        2023-04-13 2023-04-14 2023-04-15 2023-04-16 2023-04-17 2023-04-18
+        2023-04-19 2023-04-20 2023-04-21 2023-04-22 2023-04-23 2023-04-24
+        2023-04-25 2023-04-26 2023-04-27 2023-04-28 2023-04-29 2023-04-30))
+      (2024 Feb
+       (2024-02-01 2024-02-02 2024-02-03 2024-02-04 2024-02-05 2024-02-06
+        2024-02-07 2024-02-08 2024-02-09 2024-02-10 2024-02-11 2024-02-12
+        2024-02-13 2024-02-14 2024-02-15 2024-02-16 2024-02-17 2024-02-18
+        2024-02-19 2024-02-20 2024-02-21 2024-02-22 2024-02-23 2024-02-24
+        2024-02-25 2024-02-26 2024-02-27 2024-02-28 2024-02-29))
+      (2024 Mar
+       (2024-03-01 2024-03-02 2024-03-03 2024-03-04 2024-03-05 2024-03-06
+        2024-03-07 2024-03-08 2024-03-09 2024-03-10 2024-03-11 2024-03-12
+        2024-03-13 2024-03-14 2024-03-15 2024-03-16 2024-03-17 2024-03-18
+        2024-03-19 2024-03-20 2024-03-21 2024-03-22 2024-03-23 2024-03-24
+        2024-03-25 2024-03-26 2024-03-27 2024-03-28 2024-03-29 2024-03-30
+        2024-03-31))
+      (2024 Apr
+       (2024-04-01 2024-04-02 2024-04-03 2024-04-04 2024-04-05 2024-04-06
+        2024-04-07 2024-04-08 2024-04-09 2024-04-10 2024-04-11 2024-04-12
+        2024-04-13 2024-04-14 2024-04-15 2024-04-16 2024-04-17 2024-04-18
+        2024-04-19 2024-04-20 2024-04-21 2024-04-22 2024-04-23 2024-04-24
+        2024-04-25 2024-04-26 2024-04-27 2024-04-28 2024-04-29 2024-04-30))
+      (2025 Feb
+       (2025-02-01 2025-02-02 2025-02-03 2025-02-04 2025-02-05 2025-02-06
+        2025-02-07 2025-02-08 2025-02-09 2025-02-10 2025-02-11 2025-02-12
+        2025-02-13 2025-02-14 2025-02-15 2025-02-16 2025-02-17 2025-02-18
+        2025-02-19 2025-02-20 2025-02-21 2025-02-22 2025-02-23 2025-02-24
+        2025-02-25 2025-02-26 2025-02-27 2025-02-28))
+      (2025 Mar
+       (2025-03-01 2025-03-02 2025-03-03 2025-03-04 2025-03-05 2025-03-06
+        2025-03-07 2025-03-08 2025-03-09 2025-03-10 2025-03-11 2025-03-12
+        2025-03-13 2025-03-14 2025-03-15 2025-03-16 2025-03-17 2025-03-18
+        2025-03-19 2025-03-20 2025-03-21 2025-03-22 2025-03-23 2025-03-24
+        2025-03-25 2025-03-26 2025-03-27 2025-03-28 2025-03-29 2025-03-30
+        2025-03-31))
+      (2025 Apr
+       (2025-04-01 2025-04-02 2025-04-03 2025-04-04 2025-04-05 2025-04-06
+        2025-04-07 2025-04-08 2025-04-09 2025-04-10 2025-04-11 2025-04-12
+        2025-04-13 2025-04-14 2025-04-15 2025-04-16 2025-04-17 2025-04-18
+        2025-04-19 2025-04-20 2025-04-21 2025-04-22 2025-04-23 2025-04-24
+        2025-04-25 2025-04-26 2025-04-27 2025-04-28 2025-04-29 2025-04-30))
+      |}]
+  ;;
+end
+
+module%test [@name "adding weekdays and business days"] _ = struct
+  let test alist day_of_week date_string =
+    let date = Date.of_string date_string in
+    require_equal (module Day_of_week) day_of_week (Date.day_of_week date);
+    List.iter alist ~f:(fun (name, round_and_add) ->
+      let list =
+        List.map [ -2; -1; 0; 1; 2 ] ~f:(fun increment ->
+          let date = round_and_add date increment in
+          let day_of_week = Date.day_of_week date in
+          increment, day_of_week, date)
       in
-      (* Friday *)
-      test Fri "2019-05-03";
-      [%expect
-        {|
-        (add_weekdays_rounding_backward (
-          (-2 WED 2019-05-01)
-          (-1 THU 2019-05-02)
-          (0  FRI 2019-05-03)
-          (1  MON 2019-05-06)
-          (2  TUE 2019-05-07)))
-        (add_weekdays_rounding_forward (
-          (-2 WED 2019-05-01)
-          (-1 THU 2019-05-02)
-          (0  FRI 2019-05-03)
-          (1  MON 2019-05-06)
-          (2  TUE 2019-05-07)))
-        |}];
-      (* Saturday, Sunday: both round back to Friday or forward to Monday *)
-      List.iter
-        [ Sat, "2019-05-04"; Sun, "2019-05-05" ]
-        ~f:(fun (day_of_week, date_string) ->
-          test day_of_week date_string;
-          [%expect
-            {|
-            (add_weekdays_rounding_backward (
-              (-2 WED 2019-05-01)
-              (-1 THU 2019-05-02)
-              (0  FRI 2019-05-03)
-              (1  MON 2019-05-06)
-              (2  TUE 2019-05-07)))
-            (add_weekdays_rounding_forward (
-              (-2 THU 2019-05-02)
-              (-1 FRI 2019-05-03)
-              (0  MON 2019-05-06)
-              (1  TUE 2019-05-07)
-              (2  WED 2019-05-08)))
-            |}]);
-      (* Monday *)
-      test Mon "2019-05-06";
-      [%expect
-        {|
-        (add_weekdays_rounding_backward (
-          (-2 THU 2019-05-02)
-          (-1 FRI 2019-05-03)
-          (0  MON 2019-05-06)
-          (1  TUE 2019-05-07)
-          (2  WED 2019-05-08)))
-        (add_weekdays_rounding_forward (
-          (-2 THU 2019-05-02)
-          (-1 FRI 2019-05-03)
-          (0  MON 2019-05-06)
-          (1  TUE 2019-05-07)
-          (2  WED 2019-05-08)))
-        |}]
-    ;;
+      print_s [%sexp (name : string), (list : (int * Day_of_week.t * Date.t) list)])
+  ;;
 
-    let%expect_test "business days" =
-      let open Day_of_week in
-      let test =
-        let is_holiday = Date.equal (Date.of_string "2019-05-06") in
-        test
-          [ ( "add_business_days_rounding_backward"
-            , add_business_days_rounding_backward ~is_holiday )
-          ; ( "add_business_days_rounding_forward"
-            , add_business_days_rounding_forward ~is_holiday )
-          ]
-      in
-      (* Friday *)
-      test Fri "2019-05-03";
-      [%expect
-        {|
-        (add_business_days_rounding_backward (
-          (-2 WED 2019-05-01)
-          (-1 THU 2019-05-02)
-          (0  FRI 2019-05-03)
-          (1  TUE 2019-05-07)
-          (2  WED 2019-05-08)))
-        (add_business_days_rounding_forward (
-          (-2 WED 2019-05-01)
-          (-1 THU 2019-05-02)
-          (0  FRI 2019-05-03)
-          (1  TUE 2019-05-07)
-          (2  WED 2019-05-08)))
-        |}];
-      (* Saturday, Sunday, Monday: all round back to Friday or forward to Tuesday *)
-      List.iter
-        [ Sat, "2019-05-04"; Sun, "2019-05-05"; Mon, "2019-05-06" ]
-        ~f:(fun (day_of_week, date_string) ->
-          test day_of_week date_string;
-          [%expect
-            {|
-            (add_business_days_rounding_backward (
-              (-2 WED 2019-05-01)
-              (-1 THU 2019-05-02)
-              (0  FRI 2019-05-03)
-              (1  TUE 2019-05-07)
-              (2  WED 2019-05-08)))
-            (add_business_days_rounding_forward (
-              (-2 THU 2019-05-02)
-              (-1 FRI 2019-05-03)
-              (0  TUE 2019-05-07)
-              (1  WED 2019-05-08)
-              (2  THU 2019-05-09)))
-            |}]);
-      (* Tuesday *)
-      test Tue "2019-05-07";
-      [%expect
-        {|
-        (add_business_days_rounding_backward (
-          (-2 THU 2019-05-02)
-          (-1 FRI 2019-05-03)
-          (0  TUE 2019-05-07)
-          (1  WED 2019-05-08)
-          (2  THU 2019-05-09)))
-        (add_business_days_rounding_forward (
-          (-2 THU 2019-05-02)
-          (-1 FRI 2019-05-03)
-          (0  TUE 2019-05-07)
-          (1  WED 2019-05-08)
-          (2  THU 2019-05-09)))
-        |}]
-    ;;
-  end)
-;;
+  let%expect_test "weekdays" =
+    let open Day_of_week in
+    let test =
+      test
+        [ "add_weekdays_rounding_backward", add_weekdays_rounding_backward
+        ; "add_weekdays_rounding_forward", add_weekdays_rounding_forward
+        ]
+    in
+    (* Friday *)
+    test Fri "2019-05-03";
+    [%expect
+      {|
+      (add_weekdays_rounding_backward (
+        (-2 WED 2019-05-01)
+        (-1 THU 2019-05-02)
+        (0  FRI 2019-05-03)
+        (1  MON 2019-05-06)
+        (2  TUE 2019-05-07)))
+      (add_weekdays_rounding_forward (
+        (-2 WED 2019-05-01)
+        (-1 THU 2019-05-02)
+        (0  FRI 2019-05-03)
+        (1  MON 2019-05-06)
+        (2  TUE 2019-05-07)))
+      |}];
+    (* Saturday, Sunday: both round back to Friday or forward to Monday *)
+    List.iter
+      [ Sat, "2019-05-04"; Sun, "2019-05-05" ]
+      ~f:(fun (day_of_week, date_string) ->
+        test day_of_week date_string;
+        [%expect
+          {|
+          (add_weekdays_rounding_backward (
+            (-2 WED 2019-05-01)
+            (-1 THU 2019-05-02)
+            (0  FRI 2019-05-03)
+            (1  MON 2019-05-06)
+            (2  TUE 2019-05-07)))
+          (add_weekdays_rounding_forward (
+            (-2 THU 2019-05-02)
+            (-1 FRI 2019-05-03)
+            (0  MON 2019-05-06)
+            (1  TUE 2019-05-07)
+            (2  WED 2019-05-08)))
+          |}]);
+    (* Monday *)
+    test Mon "2019-05-06";
+    [%expect
+      {|
+      (add_weekdays_rounding_backward (
+        (-2 THU 2019-05-02)
+        (-1 FRI 2019-05-03)
+        (0  MON 2019-05-06)
+        (1  TUE 2019-05-07)
+        (2  WED 2019-05-08)))
+      (add_weekdays_rounding_forward (
+        (-2 THU 2019-05-02)
+        (-1 FRI 2019-05-03)
+        (0  MON 2019-05-06)
+        (1  TUE 2019-05-07)
+        (2  WED 2019-05-08)))
+      |}]
+  ;;
 
-let%test_module "ordinal_date" =
-  (module struct
-    (* check the ordinal date tables we found on wikipedia... *)
-    let check_table year ordinal_date_table =
-      let days_of_year =
-        dates_between
-          ~min:(create_exn ~y:year ~m:Month.Jan ~d:01)
-          ~max:(create_exn ~y:year ~m:Month.Dec ~d:31)
-      in
-      [%test_result: int]
-        (List.length days_of_year)
-        ~expect:(if is_leap_year ~year then 366 else 365);
-      let months =
-        List.group days_of_year ~break:(fun d d' -> Month.( <> ) (month d) (month d'))
-      in
-      let sum =
-        List.foldi months ~init:0 ~f:(fun index sum month ->
-          [%test_result: int] sum ~expect:ordinal_date_table.(index);
-          sum + List.length month)
-      in
-      [%test_result: int] sum ~expect:(List.length days_of_year)
-    ;;
+  let%expect_test "business days" =
+    let open Day_of_week in
+    let test ~is_weekday =
+      let is_holiday = Date.equal (Date.of_string "2019-05-06") in
+      test
+        [ ( "add_business_days_rounding_backward"
+          , add_business_days_rounding_backward ~is_holiday ?is_weekday )
+        ; ( "add_business_days_rounding_forward"
+          , add_business_days_rounding_forward ~is_holiday ?is_weekday )
+        ]
+    in
+    (* Friday *)
+    test ~is_weekday:None Fri "2019-05-03";
+    [%expect
+      {|
+      (add_business_days_rounding_backward (
+        (-2 WED 2019-05-01)
+        (-1 THU 2019-05-02)
+        (0  FRI 2019-05-03)
+        (1  TUE 2019-05-07)
+        (2  WED 2019-05-08)))
+      (add_business_days_rounding_forward (
+        (-2 WED 2019-05-01)
+        (-1 THU 2019-05-02)
+        (0  FRI 2019-05-03)
+        (1  TUE 2019-05-07)
+        (2  WED 2019-05-08)))
+      |}];
+    (* Saturday, Sunday, Monday: all round back to Friday or forward to Tuesday *)
+    List.iter
+      [ Sat, "2019-05-04"; Sun, "2019-05-05"; Mon, "2019-05-06" ]
+      ~f:(fun (day_of_week, date_string) ->
+        test ~is_weekday:None day_of_week date_string;
+        [%expect
+          {|
+          (add_business_days_rounding_backward (
+            (-2 WED 2019-05-01)
+            (-1 THU 2019-05-02)
+            (0  FRI 2019-05-03)
+            (1  TUE 2019-05-07)
+            (2  WED 2019-05-08)))
+          (add_business_days_rounding_forward (
+            (-2 THU 2019-05-02)
+            (-1 FRI 2019-05-03)
+            (0  TUE 2019-05-07)
+            (1  WED 2019-05-08)
+            (2  THU 2019-05-09)))
+          |}]);
+    (* Tuesday *)
+    test ~is_weekday:None Tue "2019-05-07";
+    [%expect
+      {|
+      (add_business_days_rounding_backward (
+        (-2 THU 2019-05-02)
+        (-1 FRI 2019-05-03)
+        (0  TUE 2019-05-07)
+        (1  WED 2019-05-08)
+        (2  THU 2019-05-09)))
+      (add_business_days_rounding_forward (
+        (-2 THU 2019-05-02)
+        (-1 FRI 2019-05-03)
+        (0  TUE 2019-05-07)
+        (1  WED 2019-05-08)
+        (2  THU 2019-05-09)))
+      |}];
+    (* Weekday override tests - a Sun-Thu schedule *)
+    let is_weekday_nonstandard day =
+      match day with
+      | Fri | Sat -> false
+      | _ -> true
+    in
+    (* Friday and Saturday roll forward to Sunday and backward to Thursday. *)
+    List.iter
+      [ Fri, "2019-05-03"; Sat, "2019-05-04" ]
+      ~f:(fun (day_of_week, date_string) ->
+        test ~is_weekday:(Some is_weekday_nonstandard) day_of_week date_string;
+        [%expect
+          {|
+          (add_business_days_rounding_backward (
+            (-2 TUE 2019-04-30)
+            (-1 WED 2019-05-01)
+            (0  THU 2019-05-02)
+            (1  SUN 2019-05-05)
+            (2  TUE 2019-05-07)))
+          (add_business_days_rounding_forward (
+            (-2 WED 2019-05-01)
+            (-1 THU 2019-05-02)
+            (0  SUN 2019-05-05)
+            (1  TUE 2019-05-07)
+            (2  WED 2019-05-08)))
+          |}]);
+    (* weekdays override: Tuesday *)
+    test ~is_weekday:(Some is_weekday_nonstandard) Tue "2019-05-07";
+    [%expect
+      {|
+      (add_business_days_rounding_backward (
+        (-2 THU 2019-05-02)
+        (-1 SUN 2019-05-05)
+        (0  TUE 2019-05-07)
+        (1  WED 2019-05-08)
+        (2  THU 2019-05-09)))
+      (add_business_days_rounding_forward (
+        (-2 THU 2019-05-02)
+        (-1 SUN 2019-05-05)
+        (0  TUE 2019-05-07)
+        (1  WED 2019-05-08)
+        (2  THU 2019-05-09)))
+      |}]
+  ;;
+end
 
-    let%test_unit _ = check_table 2015 non_leap_year_table
-    let%test_unit _ = check_table 2000 leap_year_table
-  end)
-;;
+module%test [@name "ordinal_date"] _ = struct
+  (* check the ordinal date tables we found on wikipedia... *)
+  let check_table year ordinal_date_table =
+    let days_of_year =
+      dates_between
+        ~min:(create_exn ~y:year ~m:Month.Jan ~d:01)
+        ~max:(create_exn ~y:year ~m:Month.Dec ~d:31)
+    in
+    [%test_result: int]
+      (List.length days_of_year)
+      ~expect:(if is_leap_year ~year then 366 else 365);
+    let months =
+      List.group days_of_year ~break:(fun d d' -> Month.( <> ) (month d) (month d'))
+    in
+    let sum =
+      List.foldi months ~init:0 ~f:(fun index sum month ->
+        [%test_result: int] sum ~expect:ordinal_date_table.(index);
+        sum + List.length month)
+    in
+    [%test_result: int] sum ~expect:(List.length days_of_year)
+  ;;
 
-let%test_module "weekdays_between" =
-  (module struct
-    let c y m d = create_exn ~y ~m ~d
+  let%test_unit _ = check_table 2015 non_leap_year_table
+  let%test_unit _ = check_table 2000 leap_year_table
+end
 
-    (* systematic test of consistency between [weekdays_between] and [diff_weekdays] *)
-    let dates =
-      [ c 2014 Jan 1
-      ; c 2014 Jan 2
-      ; c 2014 Jan 3
-      ; c 2014 Jan 4
-      ; c 2014 Jan 5
-      ; c 2014 Jan 6
-      ; c 2014 Jan 7
-      ; c 2014 Feb 15
-      ; c 2014 Feb 16
-      ; c 2014 Feb 17
-      ; c 2014 Feb 18
-      ; c 2014 Feb 19
-      ; c 2014 Feb 20
-      ; c 2014 Feb 21
-      ]
-    ;;
+module%test [@name "weekdays_between"] _ = struct
+  let c y m d = create_exn ~y ~m ~d
 
-    let ( = ) = Int.( = )
+  (* systematic test of consistency between [weekdays_between] and [diff_weekdays] *)
+  let dates =
+    [ c 2014 Jan 1
+    ; c 2014 Jan 2
+    ; c 2014 Jan 3
+    ; c 2014 Jan 4
+    ; c 2014 Jan 5
+    ; c 2014 Jan 6
+    ; c 2014 Jan 7
+    ; c 2014 Feb 15
+    ; c 2014 Feb 16
+    ; c 2014 Feb 17
+    ; c 2014 Feb 18
+    ; c 2014 Feb 19
+    ; c 2014 Feb 20
+    ; c 2014 Feb 21
+    ]
+  ;;
 
-    let%test_unit _ =
-      List.iter dates ~f:(fun date1 ->
-        List.iter dates ~f:(fun date2 ->
-          if date1 <= date2
-          then
-            assert (
-              List.length (weekdays_between ~min:date1 ~max:(add_days date2 (-1)))
-              = diff_weekdays date2 date1)))
-    ;;
-  end)
-;;
+  let ( = ) = Int.( = )
 
-let%test_module "first_strictly_after" =
-  (module struct
-    let mon1 = create_exn ~y:2013 ~m:Month.Apr ~d:1
-    let tue1 = create_exn ~y:2013 ~m:Month.Apr ~d:2
-    let wed1 = create_exn ~y:2013 ~m:Month.Apr ~d:3
-    let thu1 = create_exn ~y:2013 ~m:Month.Apr ~d:4
-    let fri1 = create_exn ~y:2013 ~m:Month.Apr ~d:5
-    let sat1 = create_exn ~y:2013 ~m:Month.Apr ~d:6
-    let sun1 = create_exn ~y:2013 ~m:Month.Apr ~d:7
-    let mon2 = create_exn ~y:2013 ~m:Month.Apr ~d:8
-    let tue2 = create_exn ~y:2013 ~m:Month.Apr ~d:9
-    let%test _ = equal (first_strictly_after tue1 ~on:Day_of_week.Mon) mon2
-    let%test _ = equal (first_strictly_after tue1 ~on:Day_of_week.Tue) tue2
-    let%test _ = equal (first_strictly_after tue1 ~on:Day_of_week.Wed) wed1
-    let%test _ = equal (first_strictly_after tue1 ~on:Day_of_week.Thu) thu1
-    let%test _ = equal (first_strictly_after tue1 ~on:Day_of_week.Fri) fri1
-    let%test _ = equal (first_strictly_after tue1 ~on:Day_of_week.Sat) sat1
-    let%test _ = equal (first_strictly_after tue1 ~on:Day_of_week.Sun) sun1
-    let%test _ = equal (first_strictly_after mon1 ~on:Day_of_week.Mon) mon2
-    let%test _ = equal (first_strictly_after mon1 ~on:Day_of_week.Tue) tue1
-    let%test _ = equal (first_strictly_after mon1 ~on:Day_of_week.Wed) wed1
-    let%test _ = equal (first_strictly_after mon1 ~on:Day_of_week.Thu) thu1
-    let%test _ = equal (first_strictly_after mon1 ~on:Day_of_week.Fri) fri1
-    let%test _ = equal (first_strictly_after mon1 ~on:Day_of_week.Sat) sat1
-    let%test _ = equal (first_strictly_after mon1 ~on:Day_of_week.Sun) sun1
-  end)
-;;
+  let%test_unit _ =
+    List.iter dates ~f:(fun date1 ->
+      List.iter dates ~f:(fun date2 ->
+        if date1 <= date2
+        then
+          assert (
+            List.length (weekdays_between ~min:date1 ~max:(add_days date2 (-1)))
+            = diff_weekdays date2 date1)))
+  ;;
+end
+
+module%test [@name "first_strictly_after"] _ = struct
+  let mon1 = create_exn ~y:2013 ~m:Month.Apr ~d:1
+  let tue1 = create_exn ~y:2013 ~m:Month.Apr ~d:2
+  let wed1 = create_exn ~y:2013 ~m:Month.Apr ~d:3
+  let thu1 = create_exn ~y:2013 ~m:Month.Apr ~d:4
+  let fri1 = create_exn ~y:2013 ~m:Month.Apr ~d:5
+  let sat1 = create_exn ~y:2013 ~m:Month.Apr ~d:6
+  let sun1 = create_exn ~y:2013 ~m:Month.Apr ~d:7
+  let mon2 = create_exn ~y:2013 ~m:Month.Apr ~d:8
+  let tue2 = create_exn ~y:2013 ~m:Month.Apr ~d:9
+  let%test _ = equal (first_strictly_after tue1 ~on:Day_of_week.Mon) mon2
+  let%test _ = equal (first_strictly_after tue1 ~on:Day_of_week.Tue) tue2
+  let%test _ = equal (first_strictly_after tue1 ~on:Day_of_week.Wed) wed1
+  let%test _ = equal (first_strictly_after tue1 ~on:Day_of_week.Thu) thu1
+  let%test _ = equal (first_strictly_after tue1 ~on:Day_of_week.Fri) fri1
+  let%test _ = equal (first_strictly_after tue1 ~on:Day_of_week.Sat) sat1
+  let%test _ = equal (first_strictly_after tue1 ~on:Day_of_week.Sun) sun1
+  let%test _ = equal (first_strictly_after mon1 ~on:Day_of_week.Mon) mon2
+  let%test _ = equal (first_strictly_after mon1 ~on:Day_of_week.Tue) tue1
+  let%test _ = equal (first_strictly_after mon1 ~on:Day_of_week.Wed) wed1
+  let%test _ = equal (first_strictly_after mon1 ~on:Day_of_week.Thu) thu1
+  let%test _ = equal (first_strictly_after mon1 ~on:Day_of_week.Fri) fri1
+  let%test _ = equal (first_strictly_after mon1 ~on:Day_of_week.Sat) sat1
+  let%test _ = equal (first_strictly_after mon1 ~on:Day_of_week.Sun) sun1
+end
 
 let%test_unit _ =
   Quickcheck.test_can_generate quickcheck_generator ~sexp_of:sexp_of_t ~f:(fun t ->

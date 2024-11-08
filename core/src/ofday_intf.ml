@@ -32,6 +32,11 @@ module type S = sig
   include Quickcheck.S_range with type t := t
   module Span : Span_intf.S
 
+  module O : sig
+    (** alias for [create ~hr ~min ()], e.g. [18 ^: 00]. *)
+    val ( ^: ) : int -> int -> t
+  end
+
   (** [of_string] supports and correctly interprets 12h strings with the following suffixes:
 
       {v
@@ -55,6 +60,9 @@ module type S = sig
     -> ?ns:int
     -> unit
     -> t
+
+  (** alias for [create ~hr ~min ()], e.g. [18 ^: 00]. *)
+  val ( ^: ) : int -> int -> t
 
   val to_parts : t -> Span.Parts.t
 

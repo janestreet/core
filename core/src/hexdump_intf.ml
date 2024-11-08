@@ -31,7 +31,7 @@ module type S = sig
       :  ?max_lines:int (** default: [!default_max_lines] *)
       -> ?pos:int
       -> ?len:int
-      -> t
+      -> local_ t
       -> string
 
     (** [to_sequence] produces the lines of [to_string_hum] as a sequence of strings.
@@ -61,7 +61,7 @@ module type S1 = sig
   module Hexdump : sig
     type nonrec 'a t = 'a t [@@deriving sexp_of]
 
-    val to_string_hum : ?max_lines:int -> ?pos:int -> ?len:int -> _ t -> string
+    val to_string_hum : ?max_lines:int -> ?pos:int -> ?len:int -> local_ _ t -> string
     val to_sequence : ?max_lines:int -> ?pos:int -> ?len:int -> _ t -> string Sequence.t
 
     module Pretty : sig
@@ -76,7 +76,12 @@ module type S2 = sig
   module Hexdump : sig
     type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of]
 
-    val to_string_hum : ?max_lines:int -> ?pos:int -> ?len:int -> (_, _) t -> string
+    val to_string_hum
+      :  ?max_lines:int
+      -> ?pos:int
+      -> ?len:int
+      -> local_ (_, _) t
+      -> string
 
     val to_sequence
       :  ?max_lines:int
@@ -96,22 +101,22 @@ end
 module type Indexable = sig
   type t
 
-  val length : t -> int
-  val get : t -> int -> char
+  val length : local_ t -> int
+  val get : local_ t -> int -> char
 end
 
 module type Indexable1 = sig
   type _ t
 
-  val length : _ t -> int
-  val get : _ t -> int -> char
+  val length : local_ _ t -> int
+  val get : local_ _ t -> int -> char
 end
 
 module type Indexable2 = sig
   type (_, _) t
 
-  val length : (_, _) t -> int
-  val get : (_, _) t -> int -> char
+  val length : local_ (_, _) t -> int
+  val get : local_ (_, _) t -> int -> char
 end
 
 module type Hexdump = sig
