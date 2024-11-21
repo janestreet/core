@@ -647,10 +647,14 @@ module Expert : sig
 
       [add_finalizer_exn b f] is like [add_finalizer], but will raise if [b] is not a heap
       block.
+
+      [add_finalizer_ignore b f] is like [add_finalizer], but will ignore the error, if
+      any. This means that the finalizer may not ever run.
   *)
   val add_finalizer : 'a Heap_block.t -> ('a Heap_block.t -> unit) -> unit
 
   val add_finalizer_exn : 'a -> ('a -> unit) -> unit
+  val add_finalizer_ignore : 'a -> ('a -> unit) -> unit
 
   (** Same as {!add_finalizer} except that the function is not called until the value has
       become unreachable for the last time.  This means that the finalization function
@@ -660,6 +664,7 @@ module Expert : sig
   val add_finalizer_last : 'a Heap_block.t -> (unit -> unit) -> unit
 
   val add_finalizer_last_exn : 'a -> (unit -> unit) -> unit
+  val add_finalizer_last_ignore : 'a -> (unit -> unit) -> unit
 
   module With_leak_protection : sig
     (** The versions of [add_finalizer] that protect against memory leaks on circular
@@ -673,6 +678,7 @@ module Expert : sig
 
     val add_finalizer : 'a Heap_block.t -> ('a Heap_block.t -> unit) -> unit
     val add_finalizer_exn : 'a -> ('a -> unit) -> unit
+    val add_finalizer_ignore : 'a -> ('a -> unit) -> unit
 
     (** Make a function [f] safe to use with [Stdlib.Gc.finalise f' x], despite [f]
         potentially containing references back to [x].

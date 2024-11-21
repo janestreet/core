@@ -353,6 +353,7 @@ module Make_tree_S1 (Key : Comparator.S1) = struct
   let find_multi a b = find_multi a b ~comparator
   let change a b ~f = change a b ~f ~comparator
   let update a b ~f = update a b ~f ~comparator
+  let update_and_return a b ~f = update_and_return a b ~f ~comparator
   let find_exn a b = find_exn a b ~comparator
   let find a b = find a b ~comparator
   let remove a b = remove a b ~comparator

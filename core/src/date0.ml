@@ -642,6 +642,16 @@ let first_strictly_after t ~on:dow =
   add_days tplus1 diff
 ;;
 
+let last_date_in_month ~year ~month =
+  create_exn ~y:year ~m:month ~d:(days_in_month ~year ~month)
+;;
+
+let all_dates_in_month ~year ~month =
+  dates_between
+    ~min:(create_exn ~y:year ~m:month ~d:1)
+    ~max:(last_date_in_month ~year ~month)
+;;
+
 module For_quickcheck = struct
   open Quickcheck
 

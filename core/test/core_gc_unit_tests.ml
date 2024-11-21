@@ -175,7 +175,7 @@ let%expect_test "stat add" =
 
 let[@inline never] create_and_leak_uncollectable_value () =
   let thing_to_leak = [| "please don't collect me" |] |> Sys.opaque_identity in
-  Gc.Expert.add_finalizer_exn thing_to_leak (fun _ ->
+  Gc.Expert.add_finalizer_ignore thing_to_leak (fun _ ->
     raise_s [%message "that should not have been collected"]);
   Gc.Expert.leak thing_to_leak
 ;;
@@ -183,6 +183,12 @@ let[@inline never] create_and_leak_uncollectable_value () =
 let%test_unit "leak prevents collection" =
   create_and_leak_uncollectable_value ();
   Gc.full_major ()
+;;
+
+let%expect_test ("can't attach a finalizer to non-heap-blocks" [@tags "no-js"]) =
+  Expect_test_helpers_core.show_raise (fun () ->
+    Gc.Expert.add_finalizer_exn 8 (fun _ -> print_s [%message "collected"]));
+  [%expect {| (raised (Failure "Heap_block.create_exn called with non heap block")) |}]
 ;;
 
 let create_finalizer_reference_loop ~add_finalizer_exn =

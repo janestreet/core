@@ -1155,6 +1155,48 @@ let%expect_test "to_string" =
   [%expect {| 2009-02-13 23:31:30.123456789Z |}]
 ;;
 
+let%expect_test "to_string_iso8601_extended" =
+  print_endline
+    (Time_ns.to_string_iso8601_extended
+       ~zone:Zone.utc
+       ~precision:`sec
+       (Time_ns.of_int63_ns_since_epoch (Int63.of_int64_exn 1_234_567_890_123_456_789L)));
+  [%expect {| 2009-02-13T23:31:30Z |}];
+  print_endline
+    (Time_ns.to_string_iso8601_extended
+       ~zone:Zone.utc
+       ~precision:`ms
+       (Time_ns.of_int63_ns_since_epoch (Int63.of_int64_exn 1_234_567_890_123_456_789L)));
+  [%expect {| 2009-02-13T23:31:30.123Z |}];
+  print_endline
+    (Time_ns.to_string_iso8601_extended
+       ~zone:Zone.utc
+       ~precision:`us
+       (Time_ns.of_int63_ns_since_epoch (Int63.of_int64_exn 1_234_567_890_123_456_789L)));
+  [%expect {| 2009-02-13T23:31:30.123456Z |}];
+  print_endline
+    (Time_ns.to_string_iso8601_extended
+       ~zone:Zone.utc
+       ~precision:`ns
+       (Time_ns.of_int63_ns_since_epoch (Int63.of_int64_exn 1_234_567_890_123_456_789L)));
+  [%expect {| 2009-02-13T23:31:30.123456789Z |}]
+;;
+
+let%expect_test "[to_string_iso8601_extended] trailing zeroes" =
+  print_endline
+    (Time_ns.to_string_iso8601_extended ~zone:Zone.utc ~precision:`sec Time_ns.epoch);
+  [%expect {| 1970-01-01T00:00:00Z |}];
+  print_endline
+    (Time_ns.to_string_iso8601_extended ~zone:Zone.utc ~precision:`ms Time_ns.epoch);
+  [%expect {| 1970-01-01T00:00:00.000Z |}];
+  print_endline
+    (Time_ns.to_string_iso8601_extended ~zone:Zone.utc ~precision:`us Time_ns.epoch);
+  [%expect {| 1970-01-01T00:00:00.000000Z |}];
+  print_endline
+    (Time_ns.to_string_iso8601_extended ~zone:Zone.utc ~precision:`ns Time_ns.epoch);
+  [%expect {| 1970-01-01T00:00:00.000000000Z |}]
+;;
+
 let%expect_test "Ofday.to_microsecond_string" =
   let round ofday =
     ofday

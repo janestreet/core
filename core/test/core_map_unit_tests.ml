@@ -46,6 +46,7 @@ struct
     let remove_multi x = simplify_accessor remove_multi x
     let change x = simplify_accessor change x
     let update x = simplify_accessor update x
+    let update_and_return x = simplify_accessor update_and_return x
     let find x = simplify_accessor find x
     let find_exn x = simplify_accessor find_exn x
     let invariants x = simplify_accessor invariants x
@@ -808,6 +809,7 @@ struct
 
   let change _ = assert false
   let update _ = assert false
+  let update_and_return _ = assert false
 
   let%test _ =
     let m1 = Map.remove (random_map Key.samples) Key.sample in
@@ -845,6 +847,18 @@ struct
     match Map.find m2 Key.sample with
     | None -> true
     | Some _ -> false
+  ;;
+
+  let%test _ =
+    let m1 = random_map Key.samples in
+    let res, m2 = Map.update_and_return m1 Key.sample ~f:(Fn.const 8) in
+    [%compare.equal: int option] (Some res) (Map.find m2 Key.sample)
+  ;;
+
+  let%test _ =
+    let m1 = Map.set (random_map Key.samples) ~key:Key.sample ~data:7 in
+    let res, m2 = Map.update_and_return m1 Key.sample ~f:(Fn.const 8) in
+    [%compare.equal: int option] (Some res) (Map.find m2 Key.sample)
   ;;
 
   let find_exn _ = assert false

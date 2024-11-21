@@ -496,15 +496,20 @@ module Expert = struct
       ()
   ;;
 
-  (* [add_finalizer_exn] is the same as [add_finalizer].  However, their types in
+  (* [add_finalizer_ignore] is the same as [add_finalizer].  However, their types in
      core_gc.mli are different, and the type of [add_finalizer] guarantees that it always
      receives a heap block, which ensures that it will not raise, while
      [add_finalizer_exn] accepts any type, and so may raise. *)
+  let add_finalizer_ignore x f =
+    try Stdlib.Gc.finalise (fun x -> Exn.handle_uncaught_and_exit (fun () -> f x)) x with
+    | Invalid_argument _ -> ()
+  ;;
+
   let add_finalizer_exn x f =
     try Stdlib.Gc.finalise (fun x -> Exn.handle_uncaught_and_exit (fun () -> f x)) x with
     | Invalid_argument _ ->
-      ignore (Heap_block.create x : _ Heap_block.t option);
-      (* If [Heap_block.create] succeeds then [x] is static data and so
+      ignore (Heap_block.create_exn x : _ Heap_block.t);
+      (* If [Heap_block.create_exn] succeeds then [x] is static data and so
          we can simply drop the finaliser. *)
       ()
   ;;
@@ -519,11 +524,16 @@ module Expert = struct
       ()
   ;;
 
+  let add_finalizer_last_ignore x f =
+    try Stdlib.Gc.finalise_last (fun () -> Exn.handle_uncaught_and_exit f) x with
+    | Invalid_argument _ -> ()
+  ;;
+
   let add_finalizer_last_exn x f =
     try Stdlib.Gc.finalise_last (fun () -> Exn.handle_uncaught_and_exit f) x with
     | Invalid_argument _ ->
-      ignore (Heap_block.create x : _ Heap_block.t option);
-      (* If [Heap_block.create] succeeds then [x] is static data and so
+      ignore (Heap_block.create_exn x : _ Heap_block.t);
+      (* If [Heap_block.create_exn] succeeds then [x] is static data and so
          we can simply drop the finaliser. *)
       ()
   ;;
@@ -545,6 +555,11 @@ module Expert = struct
     let add_finalizer_exn x f =
       let f = protect_finalizer x f in
       add_finalizer_exn x f
+    ;;
+
+    let add_finalizer_ignore x f =
+      let f = protect_finalizer x f in
+      add_finalizer_ignore x f
     ;;
   end
 

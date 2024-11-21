@@ -93,7 +93,7 @@
         | A
         | B
         | C of int
-      with typerep
+      [@deriving typerep]
     ]}
 
     Type [test] is sometimes immediate, as [A] is represented as [0], [B] as [1], and [C]
@@ -113,7 +113,7 @@
     Consider this other example:
 
     {[
-      type test = bool with typerep
+      type test = bool [@deriving typerep]
     ]}
 
     Type [test] is always immediate, since [true] is represented as [1] and [false] as

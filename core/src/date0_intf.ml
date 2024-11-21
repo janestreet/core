@@ -254,6 +254,12 @@ module type Date0 = sig
       Incorrect for September 1752. *)
   val days_in_month : year:int -> month:Month.t -> int
 
+  (** [last_date_in_month ~year ~month] returns the last date in [month] and [year]. *)
+  val last_date_in_month : year:int -> month:Month.t -> t
+
+  (** [all_dates_in_month ~year ~month] returns all dates in [month] and [year]. *)
+  val all_dates_in_month : year:int -> month:Month.t -> t list
+
   (** [is_leap_year ~year] returns true if [year] is considered a leap year *)
   val is_leap_year : year:int -> bool
 
@@ -301,7 +307,7 @@ module type Date0 = sig
 
   module Stable : sig
     module V1 : sig
-      type nonrec t = t [@@deriving equal, hash, sexp_grammar] [@@immediate]
+      type nonrec t = t [@@deriving equal, hash, sexp_grammar, string] [@@immediate]
 
       (** [to_int] and [of_int_exn] convert to/from the underlying integer
           representation. *)

@@ -35,6 +35,7 @@ depends: [
   "stdio"
   "time_now"
   "typerep"
+  "univ_map"
   "variantslib"
   "dune"                {>= "3.11.0"}
 ]

@@ -473,6 +473,12 @@ module To_and_of_string : sig
   val to_string_abs_parts : t -> zone:Zone.t -> string list
   val to_string_iso8601_basic : t -> zone:Zone.t -> string
 
+  val to_string_iso8601_extended
+    :  ?precision:[ `sec | `ms | `us | `ns ]
+    -> zone:Zone.t
+    -> t
+    -> string
+
   val occurrence
     :  [ `First_after_or_at | `Last_before_or_at ]
     -> t
@@ -839,13 +845,18 @@ end = struct
         ]
   ;;
 
-  let to_string_abs_parts =
+  let to_string_abs_parts_with_precision ~precision =
     let attempt time ~zone =
       let date, ofday = to_date_ofday time ~zone in
       let offset_string = offset_string time ~zone in
-      [ Date0.to_string date
-      ; String.concat ~sep:"" [ Ofday_ns.to_string ofday; offset_string ]
-      ]
+      let ofday_string =
+        match precision with
+        | `sec -> Ofday_ns.to_sec_string ofday
+        | `ms -> Ofday_ns.to_millisecond_string ofday
+        | `us -> Ofday_ns.to_microsecond_string ofday
+        | `ns -> Ofday_ns.to_nanosecond_string ofday
+      in
+      [ Date0.to_string date; String.concat ~sep:"" [ ofday_string; offset_string ] ]
     in
     fun time ~zone ->
       try attempt time ~zone with
@@ -853,6 +864,8 @@ end = struct
         (* If we overflow applying the UTC offset, try again with UTC time. *)
         attempt time ~zone:Zone.utc
   ;;
+
+  let to_string_abs_parts = to_string_abs_parts_with_precision ~precision:`ns
 
   let to_string_abs_trimmed time ~zone =
     let date, ofday = to_date_ofday time ~zone in
@@ -865,9 +878,11 @@ end = struct
   let to_string_abs time ~zone = String.concat ~sep:" " (to_string_abs_parts ~zone time)
   let to_string_utc t = to_string_abs t ~zone:Zone.utc
 
-  let to_string_iso8601_basic time ~zone =
-    String.concat ~sep:"T" (to_string_abs_parts ~zone time)
+  let to_string_iso8601_extended ?(precision = `ns) ~zone time =
+    String.concat ~sep:"T" (to_string_abs_parts_with_precision ~zone ~precision time)
   ;;
+
+  let to_string_iso8601_basic t ~zone = to_string_iso8601_extended t ~precision:`ns ~zone
 
   let to_string_trimmed t ~zone =
     let date, sec = to_date_ofday ~zone t in
@@ -1071,7 +1086,7 @@ module Ofday = struct
       }
     [@@deriving bin_io, fields ~getters, compare, equal, hash]
 
-    type sexp_repr = Ofday_ns.t * Timezone.t [@@deriving sexp]
+    type sexp_repr = Ofday_ns.t * Timezone.t [@@deriving sexp, sexp_grammar]
 
     let sexp_of_t t = [%sexp_of: sexp_repr] (t.ofday, t.zone)
 
@@ -1080,6 +1095,7 @@ module Ofday = struct
       { ofday; zone }
     ;;
 
+    let t_sexp_grammar = Sexplib.Sexp_grammar.coerce [%sexp_grammar: sexp_repr]
     let to_time_ns t date = of_date_ofday ~zone:(zone t) date (ofday t)
     let create ofday zone = { ofday; zone }
     let create_local ofday = create ofday (Lazy.force Timezone.local)
@@ -1098,7 +1114,7 @@ module Ofday = struct
     let arg_type = Command.Arg_type.create of_string
 
     module With_nonchronological_compare = struct
-      type nonrec t = t [@@deriving bin_io, compare, equal, sexp, hash]
+      type nonrec t = t [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
     end
 
     include Pretty_printer.Register (struct
@@ -1111,6 +1127,7 @@ module Ofday = struct
     module Stable = struct
       module V1 = struct
         let compare = With_nonchronological_compare.compare
+        let equal = With_nonchronological_compare.equal
 
         module Bin_repr = struct
           type nonrec t = t =
@@ -1134,7 +1151,8 @@ module Ofday = struct
 
         let stable_witness : t Stable_witness.t = Bin_repr.stable_witness
 
-        type sexp_repr = Ofday_ns.Stable.V1.t * Timezone.Stable.V1.t [@@deriving sexp]
+        type sexp_repr = Ofday_ns.Stable.V1.t * Timezone.Stable.V1.t
+        [@@deriving sexp, sexp_grammar]
 
         let sexp_of_t t = [%sexp_of: sexp_repr] (ofday t, zone t)
 
@@ -1142,6 +1160,8 @@ module Ofday = struct
           let ofday, zone = [%of_sexp: sexp_repr] sexp in
           create ofday zone
         ;;
+
+        let t_sexp_grammar = Sexplib.Sexp_grammar.coerce [%sexp_grammar: sexp_repr]
       end
     end
   end

@@ -29,7 +29,7 @@ include Info_intf.Extension with type t := t
    [~here:Source_code_position.t] to avoid a circular dependency. *)
 val failwiths
   :  ?strict:unit
-  -> here:Lexing.position
+  -> ?here:Stdlib.Lexing.position
   -> string
   -> 'a
   -> ('a -> Base.Sexp.t)

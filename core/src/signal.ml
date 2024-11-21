@@ -60,7 +60,7 @@ end
 
 exception Invalid_signal_mnemonic_or_number of string [@@deriving sexp]
 
-let to_string_with_version, of_string, default_sys_behavior =
+let to_string_with_version, of_string, default_sys_behavior, all_posix =
   let known =
     [ "sigabrt", abrt, `Dump_core, 1
     ; "sigalrm", alrm, `Terminate, 1
@@ -127,7 +127,8 @@ let to_string_with_version, of_string, default_sys_behavior =
            ("Signal.default_sys_behavior: unknown signal " ^ Int.to_string t))
     | Some behavior -> behavior
   in
-  to_string_with_version, of_string, default_sys_behavior
+  let all_posix = List.map known ~f:(fun (_, t, _, _) -> t) in
+  to_string_with_version, of_string, default_sys_behavior, all_posix
 ;;
 
 exception Expected_atom of Sexp.t [@@deriving sexp]
