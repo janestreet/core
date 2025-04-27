@@ -5,9 +5,12 @@ module Binable = struct
 end
 
 include Binable
-include Identifiable.Extend (Base.Nativeint) (Binable)
+
+include%template Identifiable.Extend [@modality portable] (Base.Nativeint) (Binable)
+
 include Base.Nativeint
-include Comparable.Validate_with_zero (Base.Nativeint)
+
+include%template Comparable.Validate_with_zero [@modality portable] (Base.Nativeint)
 
 type t = nativeint [@@deriving typerep]
 

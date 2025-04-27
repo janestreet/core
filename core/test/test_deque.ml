@@ -8,7 +8,8 @@ let%test _ = length (create ()) = 0
 module%test _ = struct
   let binary_search ?pos ?len t target key =
     (binary_search ?pos ?len t ~compare:Int.compare target key |> [%globalize: int option]
-    ) [@nontail]
+    )
+    [@nontail]
   ;;
 
   let t = of_array [| 1; 2; 3; 4 |]

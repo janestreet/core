@@ -1,4 +1,6 @@
-(** This module extends {{!Base.List}[Base.List]} with bin_io and quickcheck. *)
+@@ portable
+
+(** This module extends {{!Base.List} [Base.List]} with bin_io and quickcheck. *)
 
 open! Import
 
@@ -50,7 +52,8 @@ val exn_if_dup
 val slice : 'a t -> int -> int -> 'a t
 
 include Comparator.Derived with type 'a t := 'a t
-include Quickcheckable.S1 with type 'a t := 'a t
+
+include%template Quickcheckable.S1 [@modality portable] with type 'a t := 'a t
 
 val to_string : f:('a -> string) -> 'a t -> string
 
@@ -64,7 +67,7 @@ val gen_with_length : int -> 'a Quickcheck.Generator.t -> 'a t Quickcheck.Genera
     the length of the input, inclusive. *)
 val gen_filtered : 'a t -> 'a t Quickcheck.Generator.t
 
-(** [gen_permutations t] generates all permutations of [list].  If [t] contains duplicate
+(** [gen_permutations t] generates all permutations of [list]. If [t] contains duplicate
     values, then [gen_permutations t] will produce duplicate lists. *)
 val gen_permutations : 'a t -> 'a t Quickcheck.Generator.t
 

@@ -1,3 +1,5 @@
+@@ portable
+
 (** A module for organizing validations of data structures.
 
     Allows standardized ways of checking for conditions, and keeps track of the location
@@ -5,10 +7,7 @@
     following datastructure:
 
     {[
-      { foo = 3;
-        bar = { snoo = 34.5;
-                blue = Snoot -6; }
-      }
+      { foo = 3; bar = { snoo = 34.5; blue = Snoot - 6 } }
     ]}
 
     One might end up with an error with the error path:
@@ -22,20 +21,18 @@
 
     {[
       type t =
-        { foo: int;
-          bar: float;
+        { foo : int
+        ; bar : float
         }
       [@@deriving fields ~iterators:to_list]
 
       let validate t =
         let module V = Validate in
         let w check = V.field check t in
-        Fields.to_list
-          ~foo:(w Int.validate_positive)
-          ~bar:(w Float.validate_non_negative)
+        Fields.to_list ~foo:(w Int.validate_positive) ~bar:(w Float.validate_non_negative)
         |> V.of_list
+      ;;
     ]}
-
 
     And here's an example of how you would use it with a variant type:
 
@@ -47,16 +44,18 @@
 
       let validate = function
         | Foo i -> V.name "Foo" (Int.validate_positive i)
-        | Bar p -> V.name "Bar" (V.pair
-                                   ~fst:Float.validate_positive
-                                   ~snd:Int.validate_non_negative p)
+        | Bar p ->
+          V.name
+            "Bar"
+            (V.pair ~fst:Float.validate_positive ~snd:Int.validate_non_negative p)
         | Snoo floogle -> V.name "Snoo" (Floogle.validate floogle)
+      ;;
     ]} *)
 
 open Base
 
-(** The result of a validation.  This effectively contains the list of errors, qualified
-    by their location path *)
+(** The result of a validation. This effectively contains the list of errors, qualified by
+    their location path *)
 type t
 
 (** To make function signatures easier to read. *)
@@ -87,8 +86,8 @@ val name : string -> t -> t
 val name_list : string -> t list -> t
 
 (** [fail_fn err] returns a function that always returns fail, with [err] as the error
-    message.  (Note that there is no [pass_fn] so as to discourage people from ignoring
-    the type of the value being passed unconditionally irrespective of type.) *)
+    message. (Note that there is no [pass_fn] so as to discourage people from ignoring the
+    type of the value being passed unconditionally irrespective of type.) *)
 val fail_fn : string -> _ check
 
 (** Checks for unconditionally passing a bool. *)

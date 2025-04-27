@@ -114,7 +114,7 @@ let%expect_test "transfer2" =
 let%expect_test "self-transfer" =
   let t = of_list [] in
   require_does_raise (fun () -> transfer ~src:t ~dst:t);
-  [%expect {| (Core__Doubly_linked.Transfer_src_and_dst_are_same_list) |}]
+  [%expect {| "Doubly_linked: transfer src and dst are same list" |}]
 ;;
 
 let%expect_test "transfer3" =
@@ -211,7 +211,7 @@ let%expect_test "removed element doesn't belong to list" =
   invariant ignore t;
   require_some (remove_first t);
   require_does_raise (fun () -> is_last t e);
-  [%expect {| (Core__Doubly_linked.Elt_does_not_belong_to_list) |}]
+  [%expect {| "Doubly_linked: elt does not belong to list" |}]
 ;;
 
 let%expect_test _ =
@@ -580,7 +580,7 @@ let%expect_test _ =
   let t2 = create () in
   let elt = insert_first t1 15 in
   require_does_raise (fun () -> remove t2 elt);
-  [%expect {| (Core__Doubly_linked.Elt_does_not_belong_to_list) |}]
+  [%expect {| "Doubly_linked: elt does not belong to list" |}]
 ;;
 
 let%expect_test _ =
@@ -589,7 +589,7 @@ let%expect_test _ =
   let elt = insert_first t1 14 in
   let (_ : int Elt.t) = insert_first t2 13 in
   require_does_raise (fun () -> remove t2 elt);
-  [%expect {| (Core__Doubly_linked.Elt_does_not_belong_to_list) |}]
+  [%expect {| "Doubly_linked: elt does not belong to list" |}]
 ;;
 
 let%expect_test _ =
@@ -597,7 +597,7 @@ let%expect_test _ =
   let t2 = create () in
   let elt = insert_first t1 14 in
   require_does_raise (fun () -> next t2 elt);
-  [%expect {| (Core__Doubly_linked.Elt_does_not_belong_to_list) |}]
+  [%expect {| "Doubly_linked: elt does not belong to list" |}]
 ;;
 
 let%test_unit "mem_elt" =
@@ -696,33 +696,33 @@ module%test [@name "mutation during iteration"] _ = struct
   let%expect_test "remove" =
     require_does_raise (fun () ->
       iter t ~f:(fun _ -> ignore (remove_first t : int option)));
-    [%expect {| (Core__Doubly_linked.Attempt_to_mutate_list_during_iteration) |}];
+    [%expect {| "Doubly_linked: attempt to mutate list during iteration" |}];
     require_mutation_didn't_happen ();
     require_does_raise (fun () ->
       iter t ~f:(fun _ -> ignore (remove_last t : int option)));
-    [%expect {| (Core__Doubly_linked.Attempt_to_mutate_list_during_iteration) |}];
+    [%expect {| "Doubly_linked: attempt to mutate list during iteration" |}];
     require_mutation_didn't_happen ();
     require_does_raise (fun () -> iter t ~f:(fun _ -> remove t e));
-    [%expect {| (Core__Doubly_linked.Attempt_to_mutate_list_during_iteration) |}];
+    [%expect {| "Doubly_linked: attempt to mutate list during iteration" |}];
     require_mutation_didn't_happen ()
   ;;
 
   let%expect_test "insert" =
     require_does_raise (fun () ->
       iter t ~f:(fun _ -> ignore (insert_first t 4 : int Elt.t)));
-    [%expect {| (Core__Doubly_linked.Attempt_to_mutate_list_during_iteration) |}];
+    [%expect {| "Doubly_linked: attempt to mutate list during iteration" |}];
     require_mutation_didn't_happen ();
     require_does_raise (fun () ->
       iter t ~f:(fun _ -> ignore (insert_last t 5 : int Elt.t)));
-    [%expect {| (Core__Doubly_linked.Attempt_to_mutate_list_during_iteration) |}];
+    [%expect {| "Doubly_linked: attempt to mutate list during iteration" |}];
     require_mutation_didn't_happen ();
     require_does_raise (fun () ->
       iter t ~f:(fun _ -> ignore (insert_before t e 6 : int Elt.t)));
-    [%expect {| (Core__Doubly_linked.Attempt_to_mutate_list_during_iteration) |}];
+    [%expect {| "Doubly_linked: attempt to mutate list during iteration" |}];
     require_mutation_didn't_happen ();
     require_does_raise (fun () ->
       iter t ~f:(fun _ -> ignore (insert_after t e 7 : int Elt.t)));
-    [%expect {| (Core__Doubly_linked.Attempt_to_mutate_list_during_iteration) |}];
+    [%expect {| "Doubly_linked: attempt to mutate list during iteration" |}];
     require_mutation_didn't_happen ()
   ;;
 end

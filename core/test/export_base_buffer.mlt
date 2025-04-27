@@ -18,55 +18,55 @@ Line _, characters _-_:
 Error: Signature mismatch:
        ...
        The value to_bytes is required but not provided
-       File "buffer.mli", line 71, characters 0-25: Expected declaration
+       File "buffer.mli", line 73, characters 0-25: Expected declaration
        The value output_buffer is required but not provided
-       File "buffer.mli", line 110, characters 0-44: Expected declaration
+       File "buffer.mli", line 112, characters 0-44: Expected declaration
        The value truncate is required but not provided
-       File "buffer.mli", line 114, characters 0-31: Expected declaration
+       File "buffer.mli", line 116, characters 0-31: Expected declaration
        The value add_utf_8_uchar is required but not provided
-       File "buffer.mli", line 129, characters 0-42: Expected declaration
+       File "buffer.mli", line 131, characters 0-42: Expected declaration
        The value add_utf_16le_uchar is required but not provided
-       File "buffer.mli", line 135, characters 0-45: Expected declaration
+       File "buffer.mli", line 137, characters 0-45: Expected declaration
        The value add_utf_16be_uchar is required but not provided
-       File "buffer.mli", line 142, characters 0-45: Expected declaration
+       File "buffer.mli", line 144, characters 0-45: Expected declaration
        The value add_substitute is required but not provided
-       File "buffer.mli", line 172, characters 0-62: Expected declaration
+       File "buffer.mli", line 174, characters 0-62: Expected declaration
        The value add_channel is required but not provided
-       File "buffer.mli", line 190, characters 0-48: Expected declaration
+       File "buffer.mli", line 192, characters 0-48: Expected declaration
        The value to_seq is required but not provided
-       File "buffer.mli", line 202, characters 0-28: Expected declaration
+       File "buffer.mli", line 204, characters 0-28: Expected declaration
        The value to_seqi is required but not provided
-       File "buffer.mli", line 208, characters 0-37: Expected declaration
+       File "buffer.mli", line 210, characters 0-37: Expected declaration
        The value add_seq is required but not provided
-       File "buffer.mli", line 214, characters 0-37: Expected declaration
+       File "buffer.mli", line 216, characters 0-37: Expected declaration
        The value of_seq is required but not provided
-       File "buffer.mli", line 218, characters 0-28: Expected declaration
+       File "buffer.mli", line 220, characters 0-28: Expected declaration
        The value add_uint8 is required but not provided
-       File "buffer.mli", line 242, characters 0-32: Expected declaration
+       File "buffer.mli", line 244, characters 0-32: Expected declaration
        The value add_int8 is required but not provided
-       File "buffer.mli", line 248, characters 0-31: Expected declaration
+       File "buffer.mli", line 250, characters 0-31: Expected declaration
        The value add_uint16_ne is required but not provided
-       File "buffer.mli", line 254, characters 0-36: Expected declaration
+       File "buffer.mli", line 256, characters 0-36: Expected declaration
        The value add_uint16_be is required but not provided
-       File "buffer.mli", line 260, characters 0-36: Expected declaration
+       File "buffer.mli", line 262, characters 0-36: Expected declaration
        The value add_uint16_le is required but not provided
-       File "buffer.mli", line 266, characters 0-36: Expected declaration
+       File "buffer.mli", line 268, characters 0-36: Expected declaration
        The value add_int16_ne is required but not provided
-       File "buffer.mli", line 272, characters 0-35: Expected declaration
+       File "buffer.mli", line 274, characters 0-35: Expected declaration
        The value add_int16_be is required but not provided
-       File "buffer.mli", line 278, characters 0-35: Expected declaration
+       File "buffer.mli", line 280, characters 0-35: Expected declaration
        The value add_int16_le is required but not provided
-       File "buffer.mli", line 284, characters 0-35: Expected declaration
+       File "buffer.mli", line 286, characters 0-35: Expected declaration
        The value add_int32_ne is required but not provided
-       File "buffer.mli", line 290, characters 0-37: Expected declaration
+       File "buffer.mli", line 292, characters 0-37: Expected declaration
        The value add_int32_be is required but not provided
-       File "buffer.mli", line 296, characters 0-37: Expected declaration
+       File "buffer.mli", line 298, characters 0-37: Expected declaration
        The value add_int32_le is required but not provided
-       File "buffer.mli", line 302, characters 0-37: Expected declaration
+       File "buffer.mli", line 304, characters 0-37: Expected declaration
        The value add_int64_ne is required but not provided
-       File "buffer.mli", line 308, characters 0-38: Expected declaration
+       File "buffer.mli", line 310, characters 0-38: Expected declaration
        The value add_int64_be is required but not provided
-       File "buffer.mli", line 314, characters 0-37: Expected declaration
+       File "buffer.mli", line 316, characters 0-37: Expected declaration
        The value add_int64_le is required but not provided
-       File "buffer.mli", line 320, characters 0-37: Expected declaration
+       File "buffer.mli", line 322, characters 0-37: Expected declaration
 |}]

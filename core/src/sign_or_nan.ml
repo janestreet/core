@@ -14,4 +14,5 @@ end
 
 include Stable.V1
 include Sign_or_nan
-include Identifiable.Extend (Sign_or_nan) (Stable.V1)
+
+include%template Identifiable.Extend [@modality portable] (Sign_or_nan) (Stable.V1)

@@ -19,14 +19,23 @@ module type Zone = sig
   (** [absolute_time_of_date_and_ofday] and [date_and_ofday_of_absolute_time] convert
       between absolute times and date + ofday forms. These are low level functions not
       intended for most clients. These functions read and write the zone's cached index.
-  *)
-  val absolute_time_of_date_and_ofday : t -> Time.Date_and_ofday.t -> Time.t
+
+      When there are two absolute times at which a date/ofday occurs, the result is
+      determined by [prefer]. *)
+  val absolute_time_of_date_and_ofday
+    :  ?prefer:Earlier_or_later.t (** default: [Later] *)
+    -> t
+    -> Time.Date_and_ofday.t
+    -> Time.t
 
   val date_and_ofday_of_absolute_time : t -> Time.t -> Time.Date_and_ofday.t
 
   (** Takes a [Time.t] and returns the next [Time.t] strictly after it, if any, that the
       time zone UTC offset changes, and by how much it does so. *)
   val next_clock_shift : t -> strictly_after:Time.t -> (Time.t * Time.Span.t) option
+
+  (** As [next_clock_shift], but *at or after* the given time. *)
+  val next_clock_shift_incl : t -> at_or_after:Time.t -> (Time.t * Time.Span.t) option
 
   (** As [next_clock_shift], but *at or before* the given time. *)
   val prev_clock_shift : t -> at_or_before:Time.t -> (Time.t * Time.Span.t) option
@@ -50,16 +59,15 @@ module type Basic = sig
 
   (** [add t s] adds the span [s] to time [t] and returns the resulting time.
 
-      NOTE: adding spans as a means of adding days is not accurate, and may run into trouble
-      due to shifts in daylight savings time, float arithmetic issues, and leap seconds.
-      See the comment at the top of Zone.mli for a more complete discussion of some of
-      the issues of time-keeping.  For spans that cross date boundaries, use date functions
-      instead.
-  *)
+      NOTE: adding spans as a means of adding days is not accurate, and may run into
+      trouble due to shifts in daylight savings time, float arithmetic issues, and leap
+      seconds. See the comment at the top of Zone.mli for a more complete discussion of
+      some of the issues of time-keeping. For spans that cross date boundaries, use date
+      functions instead. *)
   val add : t -> Span.t -> t
 
-  (** [sub t s] subtracts the span [s] from time [t] and returns the
-      resulting time.  See important note for [add]. *)
+  (** [sub t s] subtracts the span [s] from time [t] and returns the resulting time. See
+      important note for [add]. *)
   val sub : t -> Span.t -> t
 
   (** [diff t1 t2] returns time [t1] minus time [t2]. *)
@@ -89,19 +97,27 @@ module type Shared = sig
 
   (** {6 Conversions} *)
 
-  val of_date_ofday : zone:Zone.t -> Date.t -> Ofday.t -> t
+  (** Produces the absolute time of a date and time of day in this zone. When there are
+      two occurrences, the result is determined by [prefer]. *)
+  val of_date_ofday
+    :  ?prefer:Zone.Earlier_or_later.t (** default: [Later] *)
+    -> zone:Zone.t
+    -> Date.t
+    -> Ofday.t
+    -> t
 
   (** Because timezone offsets change throughout the year (clocks go forward or back) some
-      local times can occur twice or not at all.  In the case that they occur twice, this
+      local times can occur twice or not at all. In the case that they occur twice, this
       function gives [`Twice] with both occurrences in order; if they do not occur at all,
       this function gives [`Never] with the time at which the local clock skips over the
       desired time of day.
 
-      Note that this is really only intended to work with DST transitions and not unusual or
-      dramatic changes, like the calendar change in 1752 (run "cal 9 1752" in a shell to
-      see).  In particular it makes the assumption that midnight of each day is unambiguous.
+      Note that this is really only intended to work with DST transitions and not unusual
+      or dramatic changes, like the calendar change in 1752 (run "cal 9 1752" in a shell
+      to see). In particular it makes the assumption that midnight of each day is
+      unambiguous.
 
-      Most callers should use {!of_date_ofday} rather than this function.  In the [`Twice]
+      Most callers should use {!of_date_ofday} rather than this function. In the [`Twice]
       and [`Never] cases, {!of_date_ofday} will return reasonable times for most uses. *)
   val of_date_ofday_precise
     :  Date.t
@@ -111,9 +127,9 @@ module type Shared = sig
 
   val to_date_ofday : t -> zone:Zone.t -> Date.t * Ofday.t
 
-  (** Always returns the [Date.t * Ofday.t] that [to_date_ofday] would have returned, and in
-      addition returns a variant indicating whether the time is associated with a time zone
-      transition.
+  (** Always returns the [Date.t * Ofday.t] that [to_date_ofday] would have returned, and
+      in addition returns a variant indicating whether the time is associated with a time
+      zone transition.
 
       {v
       - `Only         -> there is a one-to-one mapping between [t]'s and
@@ -123,8 +139,7 @@ module type Shared = sig
       - `Also_skipped -> there is another [Date.t * Ofday.t] pair that never happened (due
                          to a jump forward) that [of_date_ofday] would map to the same
                          [t].
-    v}
-  *)
+      v} *)
   val to_date_ofday_precise
     :  t
     -> zone:Zone.t
@@ -140,9 +155,9 @@ module type Shared = sig
 
   (** Unlike [Time_ns], this module purposely omits [max_value] and [min_value]:
       1. They produce unintuitive corner cases because most people's mental models of time
-      do not include +/- infinity as concrete values
+         do not include +/- infinity as concrete values
       2. In practice, when people ask for these values, it is for questionable uses, e.g.,
-      as null values to use in place of explicit options. *)
+         as null values to use in place of explicit options. *)
 
   (** midnight, Jan 1, 1970 in UTC *)
   val epoch : t
@@ -153,18 +168,18 @@ module type Shared = sig
 
   val utc_offset : t -> zone:Zone.t -> Span.t
 
-  (** {6 Other string conversions}  *)
+  (** {6 Other string conversions} *)
 
-  (** The [{to,of}_string] functions in [Time] convert to UTC time, because a local time
-      zone is not necessarily available.  They are generous in what they will read in. *)
+  (** [to_string] uses the local time zone. [of_string] defaults to the local time zone if
+      not specified, and is generous in what it will read in. *)
   include Stringable with type t := t
 
   (** [to_filename_string t ~zone] converts [t] to string with format
       YYYY-MM-DD_HH-MM-SS.mmm which is suitable for using in filenames. *)
   val to_filename_string : t -> zone:Zone.t -> string
 
-  (** [of_filename_string s ~zone] converts [s] that has format YYYY-MM-DD_HH-MM-SS.mmm into
-      time. *)
+  (** [of_filename_string s ~zone] converts [s] that has format YYYY-MM-DD_HH-MM-SS.mmm
+      into time. *)
   val of_filename_string : string -> zone:Zone.t -> t
 
   (** [to_string_abs ~zone t] is the same as [to_string t] except that it uses the given
@@ -202,10 +217,8 @@ module type Shared = sig
     -> t
 
   (** [to_string_iso8601_basic] return a string representation of the following form:
-      %Y-%m-%dT%H:%M:%S.%s%Z
-      e.g.
-      [ to_string_iso8601_basic ~zone:Time.Zone.utc epoch = "1970-01-01T00:00:00.000000Z" ]
-  *)
+      %Y-%m-%dT%H:%M:%S.%s%Z e.g.
+      [ to_string_iso8601_basic ~zone:Time.Zone.utc epoch = "1970-01-01T00:00:00.000000Z" ] *)
   val to_string_iso8601_basic : t -> zone:Zone.t -> string
 
   (** [occurrence side time ~ofday ~zone] returns a [Time.t] that is the occurrence of
@@ -213,8 +226,7 @@ module type Shared = sig
       earliest occurrence (>=) [time], according to [side].
 
       NOTE: If the given time converted to wall clock time in the given zone is equal to
-      ofday then the t returned will be equal to the t given.
-  *)
+      ofday then the t returned will be equal to the t given. *)
   val occurrence
     :  [ `First_after_or_at | `Last_before_or_at ]
     -> t
@@ -231,16 +243,16 @@ module type S = sig
   [@@deprecated
     "[since 2021-04] Use [of_string_with_utc_offset] or [Time_float_unix.of_string]"]
 
-  (** [of_string_with_utc_offset] requires its input to have an explicit
-      UTC offset, e.g. [2000-01-01 12:34:56.789012-23], or use the UTC zone, "Z",
-      e.g. [2000-01-01 12:34:56.789012Z]. *)
+  (** [of_string_with_utc_offset] requires its input to have an explicit UTC offset, e.g.
+      [2000-01-01 12:34:56.789012-23], or use the UTC zone, "Z", e.g.
+      [2000-01-01 12:34:56.789012Z]. *)
   val of_string_with_utc_offset : string -> t
 
   val to_string : t -> string
   [@@deprecated "[since 2021-04] Use [to_string_utc] or [Time_float_unix.to_string]"]
 
-  (** [to_string_utc] generates a time string with the UTC zone, "Z", e.g. [2000-01-01
-      12:34:56.789012Z]. *)
+  (** [to_string_utc] generates a time string with the UTC zone, "Z", e.g.
+      [2000-01-01 12:34:56.789012Z]. *)
   val to_string_utc : t -> string
 end
 

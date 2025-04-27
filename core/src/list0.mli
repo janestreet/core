@@ -1,3 +1,5 @@
+@@ portable
+
 open! Import
 
 include module type of struct
@@ -7,7 +9,8 @@ end
 type 'a t = 'a Base.List.t [@@deriving bin_io ~localize, typerep]
 
 include Comparator.Derived with type 'a t := 'a t
-include Quickcheckable.S1 with type 'a t := 'a t
+
+include%template Quickcheckable.S1 [@mode portable] with type 'a t := 'a t
 
 val stable_witness : 'a Stable_witness.t -> 'a t Stable_witness.t
 [@@alert

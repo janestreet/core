@@ -4,14 +4,10 @@ open! Expect_test_helpers_core
 let%expect_test "[sexp_of_int] respects [sexp_of_int_style]" =
   let sexp_of_int = Core.Core_stable.sexp_of_int in
   let r = Int_conversions.sexp_of_int_style in
-  let old = !r in
-  r := `Underscores;
-  print_s [%sexp (1234 : int)];
+  Dynamic.with_temporarily r `Underscores ~f:(fun () -> print_s [%sexp (1234 : int)]);
   [%expect {| 1_234 |}];
-  r := `No_underscores;
-  print_s [%sexp (1234 : int)];
-  [%expect {| 1234 |}];
-  r := old
+  Dynamic.with_temporarily r `No_underscores ~f:(fun () -> print_s [%sexp (1234 : int)]);
+  [%expect {| 1234 |}]
 ;;
 
 let%expect_test "older [int_of_sexp] supports both [sexp_of_int_style]s" =
@@ -19,14 +15,10 @@ let%expect_test "older [int_of_sexp] supports both [sexp_of_int_style]s" =
   let int_of_sexp = Sexplib.Std.int_of_sexp in
   let print () = print_s [%sexp (int_of_sexp (sexp_of_int 1234) : int)] in
   let r = Int_conversions.sexp_of_int_style in
-  let old = !r in
-  r := `Underscores;
-  print ();
+  Dynamic.with_temporarily r `Underscores ~f:print;
   [%expect {| 1_234 |}];
-  r := `No_underscores;
-  print ();
-  [%expect {| 1234 |}];
-  r := old
+  Dynamic.with_temporarily r `No_underscores ~f:print;
+  [%expect {| 1234 |}]
 ;;
 
 module _ = struct

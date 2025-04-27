@@ -10,7 +10,8 @@ type single_error =
 type t = single_error list
 type 'a check = 'a -> t
 
-let pass : t = []
+let get_pass () : t = []
+let pass = get_pass ()
 
 let fails message a sexp_of_a =
   [ { path = []; error = Error.create message a sexp_of_a } ]
@@ -30,8 +31,8 @@ let name name t =
 
 let name_list n l = name n (of_list l)
 let fail_fn message _ = fail message
-let pass_bool (_ : bool) = pass
-let pass_unit (_ : unit) = pass
+let pass_bool (_ : bool) = get_pass ()
+let pass_unit (_ : unit) = get_pass ()
 
 let protect f v =
   try f v with
@@ -43,7 +44,7 @@ let try_with f =
   protect
     (fun () ->
       f ();
-      pass)
+      get_pass ())
     ()
 ;;
 
@@ -106,18 +107,18 @@ let all checks v =
 let of_result f =
   protect (fun v ->
     match f v with
-    | Ok () -> pass
+    | Ok () -> get_pass ()
     | Error error -> fail error)
 ;;
 
 let of_error f =
   protect (fun v ->
     match f v with
-    | Ok () -> pass
+    | Ok () -> get_pass ()
     | Error error -> [ { path = []; error } ])
 ;;
 
-let booltest f ~if_false = protect (fun v -> if f v then pass else fail if_false)
+let booltest f ~if_false = protect (fun v -> if f v then get_pass () else fail if_false)
 
 let pair ~fst ~snd (fst_value, snd_value) =
   of_list [ name "fst" (protect fst fst_value); name "snd" (protect snd snd_value) ]
@@ -142,13 +143,13 @@ let alist ~name f list' = list (fun (_, x) -> f x) list' ~name:(fun (key, _) -> 
 let first_failure t1 t2 = if List.is_empty t1 then t2 else t1
 
 let of_error_opt = function
-  | None -> pass
+  | None -> get_pass ()
   | Some error -> fail error
 ;;
 
 let bounded ~name ~lower ~upper ~compare x =
   match Maybe_bound.compare_to_interval_exn ~lower ~upper ~compare x with
-  | In_range -> pass
+  | In_range -> get_pass ()
   | Below_lower_bound ->
     (match lower with
      | Unbounded -> assert false

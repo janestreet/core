@@ -1,5 +1,5 @@
-module type V1 = sig
-  include Stable_module_types.S0
+module type%template [@mode m = (global, local)] V1 = sig
+  include Stable_module_types.S0 [@mode m]
 
   include
     Comparable.Stable.V1.S
@@ -8,8 +8,8 @@ module type V1 = sig
 end
 
 module With_stable_witness = struct
-  module type V1 = sig
-    include Stable_module_types.With_stable_witness.S0
+  module type%template [@mode m = (global, local)] V1 = sig
+    include Stable_module_types.With_stable_witness.S0 [@mode m]
 
     include
       Comparable.Stable.V1.With_stable_witness.S

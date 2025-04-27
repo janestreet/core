@@ -21,7 +21,7 @@ let%expect_test "[Sexp.of_float_style] is respected by the various names for [fl
     1234.5678
     1234.5678
     |}];
-  Ref.set_temporarily Sexp.of_float_style `Underscores ~f:print;
+  Dynamic.with_temporarily Sexp.of_float_style `Underscores ~f:print;
   [%expect
     {|
     1_234.5678
@@ -33,7 +33,8 @@ let%expect_test "[Sexp.of_float_style] is respected by the various names for [fl
 let%expect_test "[Sexp.of_float_style = `Underscores]" =
   let check f =
     let sexp style =
-      Ref.set_temporarily Sexp.of_float_style style ~f:(fun () -> [%sexp (f : float)])
+      Dynamic.with_temporarily Sexp.of_float_style style ~f:(fun () ->
+        [%sexp (f : float)])
     in
     print_s [%sexp (sexp `No_underscores : Sexp.t), (sexp `Underscores : Sexp.t)];
     if not (Float.is_nan f)
@@ -394,4 +395,6 @@ module%test _ = struct
   let%test_unit _ = check (validate_ubound ~max:(Incl 0.) (-1.)) `Ok
   let%test_unit _ = check (validate_ubound ~max:(Incl 0.) 0.) `Ok
   let%test_unit _ = check (validate_ubound ~max:(Incl 0.) 1.) `Error
+  let%test_unit _ = check (validate_non_negative nan) `Error
+  let%test_unit _ = check (validate_non_positive nan) `Error
 end

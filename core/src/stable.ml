@@ -1,21 +1,30 @@
 (* module types *)
+[%%template
+[@@@mode.default m = (global, local)]
 
-module type Stable = Stable_module_types.S0
-module type Stable1 = Stable_module_types.S1
-module type Stable1_with_witness = Stable_module_types.With_stable_witness.S1
-module type Stable2 = Stable_module_types.S2
-module type Stable2_with_witness = Stable_module_types.With_stable_witness.S2
-module type Stable3 = Stable_module_types.S3
-module type Stable3_with_witness = Stable_module_types.With_stable_witness.S3
-module type Stable4 = Stable_module_types.S4
-module type Stable4_with_witness = Stable_module_types.With_stable_witness.S4
+module type Stable = Stable_module_types.S0 [@mode m]
+module type Stable1 = Stable_module_types.S1 [@mode m]
+module type Stable1_with_witness = Stable_module_types.With_stable_witness.S1 [@mode m]
+module type Stable2 = Stable_module_types.S2 [@mode m]
+module type Stable2_with_witness = Stable_module_types.With_stable_witness.S2 [@mode m]
+module type Stable3 = Stable_module_types.S3 [@mode m]
+module type Stable3_with_witness = Stable_module_types.With_stable_witness.S3 [@mode m]
+module type Stable4 = Stable_module_types.S4 [@mode m]
+module type Stable4_with_witness = Stable_module_types.With_stable_witness.S4 [@mode m]
+
 module type Stable_int63able_without_comparator = Stable_int63able.Without_comparator.S
+[@mode m]
+
 module type Stable_int63able_with_witness = Stable_int63able.With_stable_witness.S
-module type Stable_with_witness = Stable_module_types.With_stable_witness.S0
+[@mode m]
+
+module type Stable_with_witness = Stable_module_types.With_stable_witness.S0 [@mode m]
+
 module type Stable_without_comparator = Stable_module_types.S0_without_comparator
+[@mode m]
 
 module type Stable_without_comparator_with_witness =
-  Stable_module_types.With_stable_witness.S0_without_comparator
+  Stable_module_types.With_stable_witness.S0_without_comparator [@mode m]]
 
 (* stable helpers *)
 
@@ -61,6 +70,7 @@ module Or_error = Or_error.Stable
 module Percent = Percent.Stable
 module Perms = Perms.Stable
 module Pid = Pid.Stable
+module Portable_lazy = Portable_lazy.Stable
 module Queue = Queue.Stable
 module Result = Result.Stable
 module Set = Set.Stable

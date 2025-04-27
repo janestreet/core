@@ -6,11 +6,19 @@ module Stable = struct
       include Base.Bool
 
       type t = bool
-      [@@deriving bin_io ~localize, compare, sexp, sexp_grammar, stable_witness]
+      [@@deriving
+        bin_io ~localize
+        , compare ~localize
+        , equal ~localize
+        , sexp
+        , sexp_grammar
+        , stable_witness
+        , typerep]
     end
 
     include T
-    include Comparable.Stable.V1.With_stable_witness.Make (T)
+
+    include%template Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (T)
   end
 end
 
@@ -18,8 +26,8 @@ include Stable.V1
 
 type t = bool [@@deriving typerep]
 
-include
-  Identifiable.Extend
+include%template
+  Identifiable.Extend [@modality portable]
     (Base.Bool)
     (struct
       type nonrec t = t [@@deriving bin_io]
@@ -29,26 +37,21 @@ module Replace_polymorphic_compare = Base.Bool
 
 include (
   Base.Bool :
-    module type of struct
-      include Base.Bool
-    end
-    with type t := t)
+  sig
+  @@ portable
+    include module type of struct
+        include Base.Bool
+      end
+      with type t := t
+  end)
 
-include Comparable.Validate (Base.Bool)
+include%template Comparable.Validate [@modality portable] (Base.Bool)
 
-let of_string_hum =
-  let table =
-    lazy
-      (let table = String.Caseless.Table.create () in
-       [ false, [ "false"; "no"; "0" ]; true, [ "true"; "yes"; "1" ] ]
-       |> List.iter ~f:(fun (bool, strings) ->
-         List.iter strings ~f:(fun string ->
-           Hashtbl.set table ~key:string ~data:bool;
-           Hashtbl.set table ~key:(String.prefix string 1) ~data:bool));
-       table)
-  in
+let%template of_string_hum =
   let raise_invalid input =
-    let expected_case_insensitive = String.Set.of_list (Hashtbl.keys (force table)) in
+    let expected_case_insensitive =
+      String.Set.of_list [ "true"; "t"; "yes"; "y"; "1"; "false"; "f"; "no"; "n"; "0" ]
+    in
     raise_s
       [%message
         "Bool.of_string_hum: invalid input"
@@ -56,7 +59,10 @@ let of_string_hum =
           (expected_case_insensitive : String.Set.t)]
   in
   fun string ->
-    Hashtbl.find_and_call (force table) string ~if_found:Fn.id ~if_not_found:raise_invalid
+    match String.lowercase__stack string with
+    | "true" | "t" | "yes" | "y" | "1" -> true
+    | "false" | "f" | "no" | "n" | "0" -> false
+    | _ -> raise_invalid string
 ;;
 
 let quickcheck_generator = Base_quickcheck.Generator.bool

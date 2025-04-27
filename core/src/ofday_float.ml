@@ -11,7 +11,16 @@ module Stable = struct
   module V1 = struct
     module T : sig
       type underlying = float
-      type t = private underlying [@@deriving bin_io, hash, typerep, stable_witness]
+
+      type t = private underlying
+      [@@deriving
+        bin_io ~localize
+        , compare ~localize
+        , equal ~localize
+        , globalize
+        , hash
+        , typerep
+        , stable_witness]
 
       include Comparable.S_common with type t := t
       include Robustly_comparable with type t := t
@@ -43,7 +52,15 @@ module Stable = struct
         ;;
       end :
       sig
-        type t = underlying [@@deriving bin_io, hash, typerep, stable_witness]
+        type t = underlying
+        [@@deriving
+          bin_io ~localize
+          , compare ~localize
+          , equal ~localize
+          , globalize
+          , hash
+          , typerep
+          , stable_witness]
 
         include Comparable.S_common with type t := t
         include Comparable.With_zero with type t := t
@@ -257,11 +274,17 @@ module Stable = struct
         type nonrec t = t [@@deriving bin_io, equal, sexp]
       end)
 
-    module O = struct
-      let ( ^: ) hr min = create ~hr ~min ()
-    end
+    let ( ^: ) hr min = create ~hr ~min ()
 
-    include O
+    module O = struct
+      let ( ^: ) = ( ^: )
+      let ( < ) = ( < )
+      let ( <= ) = ( <= )
+      let ( = ) = ( = )
+      let ( >= ) = ( >= )
+      let ( > ) = ( > )
+      let ( <> ) = ( <> )
+    end
   end
 end
 

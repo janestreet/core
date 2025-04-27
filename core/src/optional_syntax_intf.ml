@@ -1,46 +1,71 @@
 open! Import
 
 module type S = sig
-  type t
-  type value
+  type t : any
+  type value : any
 
   module Optional_syntax : sig
-    val is_none : t -> bool
+    val is_none : t @ local -> bool
     val unsafe_value : t -> value
   end
 end
 
 module type S_zero_alloc = sig
-  type t
-  type value
+  type t : any
+  type value : any
 
   module Optional_syntax : sig
-    val is_none : t -> bool [@@zero_alloc]
+    val is_none : t @ local -> bool [@@zero_alloc]
     val unsafe_value : t -> value [@@zero_alloc]
   end
 end
 
+[%%template
+[@@@kind.default ka = (value, float64, bits32, bits64, word)]
+
 module type S1 = sig
-  type 'a t
-  type 'a value
+  type ('a : ka) t : any
+  type ('a : ka) value : any
 
   module Optional_syntax : sig
-    val is_none : _ t -> bool
+    val is_none : _ t @ local -> bool
     val unsafe_value : 'a t -> 'a value
   end
 end
 
-module type S2 = sig
-  type ('a, 'b) t
-  type ('a, 'b) value
+module type S1_zero_alloc = sig
+  type ('a : ka) t : any
+  type ('a : ka) value : any
 
   module Optional_syntax : sig
-    val is_none : _ t -> bool
+    val is_none : _ t @ local -> bool [@@zero_alloc]
+    val unsafe_value : 'a t -> 'a value [@@zero_alloc]
+  end
+end
+
+[@@@kind.default kb = (value, float64, bits32, bits64, word)]
+
+module type S2 = sig
+  type ('a : ka, 'b : kb) t : any
+  type ('a : ka, 'b : kb) value : any
+
+  module Optional_syntax : sig
+    val is_none : _ t @ local -> bool
     val unsafe_value : ('a, 'b) t -> ('a, 'b) value
   end
 end
 
-module type Optional_syntax = sig
+module type S2_zero_alloc = sig
+  type ('a : ka, 'b : kb) t : any
+  type ('a : ka, 'b : kb) value : any
+
+  module Optional_syntax : sig
+    val is_none : _ t @ local -> bool [@@zero_alloc]
+    val unsafe_value : ('a, 'b) t -> ('a, 'b) value [@@zero_alloc]
+  end
+end]
+
+module type Optional_syntax = sig @@ portable
   (** Idiomatic usage is to have a module [M] like:
 
       {[
@@ -73,26 +98,35 @@ module type Optional_syntax = sig
       [match%optional] then expands to references to [M.Optional_syntax]'s [is_none] and
       [unsafe_value] functions.
 
-      The reason for the double [module Optional_syntax] is historical.  The idiom used to
+      The reason for the double [module Optional_syntax] is historical. The idiom used to
       use [open M.Optional_syntax], and we wanted that to bring into scope as little as
       possible, so we made it put in scope only [module Optional_syntax].
 
       [unsafe_value] does not have to be memory-safe if not guarded by [is_none].
 
-      Implementations of [is_none] and [unsafe_value] must not have any side effects.
-      More precisely, if you mutate any value currently being match'ed on (not necessarily
-      your own argument) you risk a segfault as well.
+      Implementations of [is_none] and [unsafe_value] must not have any side effects. More
+      precisely, if you mutate any value currently being match'ed on (not necessarily your
+      own argument) you risk a segfault as well.
 
       This is because [match%optional] does not make any guarantee about [is_none] call
       being immediately followed by the corresponding [unsafe_value] call. In fact it
-      makes several [is_none] calls followed by several [unsafe_value] calls, so in
-      the presence of side-effects by the time it makes an [unsafe_value] call the result
-      of the corresponding [is_none] can go stale.
+      makes several [is_none] calls followed by several [unsafe_value] calls, so in the
+      presence of side-effects by the time it makes an [unsafe_value] call the result of
+      the corresponding [is_none] can go stale.
 
       For more details on the syntax extension, see [ppx/ppx_optional/README.md]. *)
 
   module type S = S
   module type S_zero_alloc = S_zero_alloc
-  module type S1 = S1
-  module type S2 = S2
+
+  [%%template:
+  [@@@kind.default ka = (value, float64, bits32, bits64, word)]
+
+  module type S1 = S1 [@kind ka]
+  module type S1_zero_alloc = S1_zero_alloc [@kind ka]
+
+  [@@@kind.default kb = (value, float64, bits32, bits64, word)]
+
+  module type S2 = S2 [@kind ka kb]
+  module type S2_zero_alloc = S2_zero_alloc [@kind ka kb]]
 end

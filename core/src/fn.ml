@@ -1,4 +1,4 @@
-(** Extends {{!Base.Fn}[Base.Fn]}. *)
+(** Extends {{!Base.Fn} [Base.Fn]}. *)
 
 include Base.Fn (** @open *)
 

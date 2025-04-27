@@ -1,4 +1,4 @@
-(** This module extends {{!Base.Queue}[Base.Queue]} with bin_io. *)
+(** This module extends {{!Base.Queue} [Base.Queue]} with bin_io. *)
 
 open! Import
 

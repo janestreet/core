@@ -29,7 +29,7 @@ module type S1_permissions = sig
   val subo : (('a, [> read ]) t, ('a, [< _ perms ]) t) subo
 end
 
-module type Blit = sig
+module type Blit = sig @@ portable
   (** @inline *)
   include module type of struct
     include Base.Blit

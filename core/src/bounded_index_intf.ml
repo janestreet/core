@@ -6,7 +6,7 @@ module type S = sig
 
   include Identifiable with type t := t
 
-  (** [create index ~min ~max] raises if [index < min || index > max].  The resulting [t]
+  (** [create index ~min ~max] raises if [index < min || index > max]. The resulting [t]
       is only equal to other [t] if all three fields are the same. *)
   val create : int -> min:int -> max:int -> t
 
@@ -28,7 +28,7 @@ module type S = sig
   val max_index : t -> int
 
   (** [num_indexes t] returns the number of valid indexes in the range. Equal to
-      [max_index t - min_index t + 1]*)
+      [max_index t - min_index t + 1] *)
   val num_indexes : t -> int
 
   module Stable : sig

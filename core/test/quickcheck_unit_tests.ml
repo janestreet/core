@@ -468,8 +468,8 @@ module Test (S : sig
         | Id -> Fn.id
         | Neg -> Int.neg
         | Abs -> Int.abs
-        | Succ -> Int.succ
-        | Pred -> Int.pred
+        | Succ -> (Int.succ : _ -> _)
+        | Pred -> (Int.pred : _ -> _)
       ;;
     end
 

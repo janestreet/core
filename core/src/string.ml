@@ -17,12 +17,13 @@ module Stable = struct
     let to_string = Fn.id
     let of_string = Fn.id
 
-    include Comparable.Stable.V1.With_stable_witness.Make (T)
-    include Hashable.Stable.V1.With_stable_witness.Make (T)
-    include Diffable.Atomic.Make (T)
+    include%template Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (T)
+    include%template Hashable.Stable.V1.With_stable_witness.Make [@modality portable] (T)
+    include%template Diffable.Atomic.Make [@modality portable] (T)
   end
 
   module Make_utf (Utf : sig
+    @@ portable
       type t [@@deriving sexp_grammar]
 
       include Base.Identifiable.S with type t := t
@@ -34,8 +35,8 @@ module Stable = struct
       module T = struct
         include Utf
 
-        include
-          Binable0.Of_binable_with_uuid
+        include%template
+          Binable0.Of_binable_with_uuid [@modality portable]
             (struct
               type t = string [@@deriving bin_io]
             end)
@@ -51,8 +52,11 @@ module Stable = struct
       end
 
       include T
-      include Comparable.Stable.V1.With_stable_witness.Make (T)
-      include Hashable.Stable.V1.With_stable_witness.Make (T)
+
+      include%template
+        Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (T)
+
+      include%template Hashable.Stable.V1.With_stable_witness.Make [@modality portable] (T)
     end
   end
 
@@ -105,14 +109,15 @@ module Caseless = struct
   end
 
   include T
-  include Comparable.Make_binable_using_comparator (T)
-  include Hashable.Make_binable (T)
+
+  include%template Comparable.Make_binable_using_comparator [@modality portable] (T)
+  include%template Hashable.Make_binable [@modality portable] (T)
 end
 
 type t = string [@@deriving bin_io ~localize, typerep]
 
-include
-  Identifiable.Extend
+include%template
+  Identifiable.Extend [@modality portable]
     (struct
       include Base.String
 
@@ -122,13 +127,13 @@ include
       type t = string [@@deriving bin_io]
     end)
 
-include Comparable.Validate (Base.String)
+include%template Comparable.Validate [@modality portable] (Base.String)
 
-include Diffable.Atomic.Make (struct
+include%template Diffable.Atomic.Make [@modality portable] (struct
     type nonrec t = t [@@deriving sexp, bin_io, equal]
   end)
 
-include Hexdump.Of_indexable (struct
+include%template Hexdump.Of_indexable [@modality portable] (struct
     type t = string
 
     let length = length
@@ -181,26 +186,45 @@ end
 
 module type Utf_as_string = Utf with type t = private string
 
-module Extend_utf (Utf : Base.String.Utf) (B : Binable0.S with type t = Utf.t) :
-  Utf with type t = Utf.t and type comparator_witness = Utf.comparator_witness = struct
+module Extend_utf
+    (Utf : sig
+     @@ portable
+       include Base.String.Utf
+     end)
+    (B : sig
+     @@ portable
+       include Binable0.S with type t = Utf.t
+     end) : sig
+  @@ portable
+  include Utf with type t = Utf.t and type comparator_witness = Utf.comparator_witness
+end = struct
   include Utf
   include B
-  include Identifiable.Extend (Utf) (B)
 
-  let quickcheck_observer = Base_quickcheck.Observer.(unmap string ~f:Utf.to_string)
+  include%template Identifiable.Extend [@modality portable] (Utf) (B)
 
-  let quickcheck_shrinker =
-    let open Base_quickcheck in
-    Shrinker.map
-      [%quickcheck.shrinker: Uchar.t list]
-      ~f:Utf.of_list
-      ~f_inverse:Utf.to_list
-  ;;
+  include%template struct
+    open Base_quickcheck
 
-  let quickcheck_generator =
-    let open Base_quickcheck in
-    Generator.list Uchar.quickcheck_generator |> Generator.map ~f:Utf.of_list
-  ;;
+    let%template quickcheck_observer =
+      (Observer.unmap [@mode portable])
+        [%quickcheck.observer_portable: string]
+        ~f:Utf.to_string
+    ;;
+
+    let quickcheck_shrinker =
+      (Shrinker.map [@mode portable])
+        [%quickcheck.shrinker_portable: Uchar.t list]
+        ~f:Utf.of_list
+        ~f_inverse:Utf.to_list
+    ;;
+
+    let quickcheck_generator =
+      (Generator.map [@mode portable])
+        [%quickcheck.generator_portable: Uchar.t list]
+        ~f:Utf.of_list
+    ;;
+  end
 end
 
 module Utf8 = Extend_utf (Utf8) (Stable.Utf8.V1)

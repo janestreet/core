@@ -1,7 +1,11 @@
 open! Import
 include Base.Or_error
 
-type 'a t = ('a, Error.t) Result.t [@@deriving bin_io, diff ~extra_derive:[ sexp ]]
+type%template ('a : k) t = (('a, Error.t) Result.t[@kind k])
+[@@deriving bin_io] [@@kind k = (float64, bits32, bits64, word)]
+
+type 'a t = ('a, Error.t) Result.t
+[@@deriving bin_io, diff ~extra_derive:[ sexp ], quickcheck]
 
 module Expect_test_config = struct
   module IO = Base.Or_error

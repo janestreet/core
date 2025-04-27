@@ -2,7 +2,16 @@ open! Import
 open Std_internal
 
 module type Date0 = sig
-  type t : immediate [@@deriving bin_io ~localize, hash, sexp, sexp_grammar, typerep]
+  type t : immediate
+  [@@deriving
+    bin_io ~localize
+    , compare ~localize
+    , equal ~localize
+    , globalize
+    , hash
+    , sexp
+    , sexp_grammar
+    , typerep]
 
   include Hashable_binable with type t := t
 
@@ -18,16 +27,15 @@ module type Date0 = sig
   include Diffable.S_atomic with type t := t
   include Pretty_printer.S with type t := t
 
-  (** [create_exn ~y ~m ~d] creates the date specified in the arguments.  Arguments are
-      validated, and are not normalized in any way.  So, days must be within the limits
-      for the month in question, numbers cannot be negative, years must be fully
-      specified, etc.  *)
+  (** [create_exn ~y ~m ~d] creates the date specified in the arguments. Arguments are
+      validated, and are not normalized in any way. So, days must be within the limits for
+      the month in question, numbers cannot be negative, years must be fully specified,
+      etc. *)
   val create_exn : y:int -> m:Month.t -> d:int -> t
 
   (** For details on this ISO format, see:
 
-      http://www.wikipedia.org/wiki/iso8601
-  *)
+      http://www.wikipedia.org/wiki/iso8601 *)
   val of_string_iso8601_basic : string -> pos:int -> t
 
   (** YYYYMMDD *)
@@ -54,11 +62,10 @@ module type Date0 = sig
       number 52 or 53 and belong to the previous week-numbering year.
 
       The triple (week-numbering year, week number, week day) uniquely identifies a
-      particular date, which is not true if the calendar year is used instead.
-  *)
+      particular date, which is not true if the calendar year is used instead. *)
   val week_number_and_year : t -> int * int
 
-  (** See {!week_number_and_year} for the meaning of week number.  *)
+  (** See {!week_number_and_year} for the meaning of week number. *)
   val week_number : t -> int
 
   (** [is_weekend] and [is_weekday] treat Saturday and Sunday as the weekend, and Monday
@@ -81,13 +88,12 @@ module type Date0 = sig
 
   (** [add_days t n] adds n days to [t] and returns the resulting date.
 
-      Inaccurate when crossing 1752-09.
-  *)
+      Inaccurate when crossing 1752-09. *)
   val add_days : t -> int -> t
 
   (** [add_months t n] returns date with max days for the month if the date would be
-      invalid. e.g. adding 1 month to Jan 30 results in Feb 28 due to Feb 30 being
-      an invalid date, Feb 29 is returned in cases of leap year.
+      invalid. e.g. adding 1 month to Jan 30 results in Feb 28 due to Feb 30 being an
+      invalid date, Feb 29 is returned in cases of leap year.
 
       In particular, this means adding [x] months and then adding [y] months isn't the
       same as adding [x + y] months, and in particular adding [x] months and then [-x]
@@ -109,8 +115,7 @@ module type Date0 = sig
   val diff_weekdays : t -> t -> int
 
   (** [diff_weekend_days t1 t2] returns the number of days that are weekend days in the
-      half-open interval \[t2,t1) if t1 >= t2, and [- diff_weekend_days t2 t1]
-      otherwise.
+      half-open interval \[t2,t1) if t1 >= t2, and [- diff_weekend_days t2 t1] otherwise.
 
       See the caveat on [is_weekend] about varying weekend/weekday cycles. *)
   val diff_weekend_days : t -> t -> int
@@ -153,10 +158,10 @@ module type Date0 = sig
 
   (** [add_weekdays t 0] returns the next weekday if [t] is a weekend and [t] otherwise.
       Unlike [add_days] this is done by looping over the count of days to be added
-      (forward or backwards based on the sign), and is O(n) in the number of days to
-      add. Beware, [add_weekdays sat 1] or [add_weekdays sun 1] both return the next
-      [tue], not the next [mon]. You may want to use [following_weekday] if you want the
-      next following weekday, [following_weekday (fri|sat|sun)] would all return the next
+      (forward or backwards based on the sign), and is O(n) in the number of days to add.
+      Beware, [add_weekdays sat 1] or [add_weekdays sun 1] both return the next [tue], not
+      the next [mon]. You may want to use [following_weekday] if you want the next
+      following weekday, [following_weekday (fri|sat|sun)] would all return the next
       [mon].
 
       See the caveat on [is_weekend] about varying weekend/weekday cycles. *)
@@ -171,15 +176,12 @@ module type Date0 = sig
       "use [add_weekdays_rounding_backward] or [add_weekdays_rounding_forward] as \
        appropriate"]
 
-  (** [add_business_days t ~is_holiday n] returns a business day even when
-      [n=0]. [add_business_days ~is_holiday:(fun _ -> false) ...] is the same as
-      [add_weekdays].
+  (** [add_business_days t ~is_holiday n] returns a business day even when [n=0].
+      [add_business_days ~is_holiday:(fun _ -> false) ...] is the same as [add_weekdays].
 
       If you don't want to skip Saturday or Sunday, use [add_days_skipping].
 
-
-      See the caveat on [is_weekend] about varying weekend/weekday cycles.
-  *)
+      See the caveat on [is_weekend] about varying weekend/weekday cycles. *)
   val add_business_days
     :  t
     -> ?is_weekday:(Day_of_week.t -> bool)
@@ -202,8 +204,11 @@ module type Date0 = sig
        as appropriate"]
 
   (** [add_days_skipping t ~skip n] adds [n] days to [t], ignoring any date satisfying
-      [skip], starting at the first date at or after [t] that does not satisfy [skip].
-      For example, if [skip t = true], then [add_days_skipping t ~skip 0 > t].
+      [skip]. If [n >= 0], then we start from the first date at or after [t] that does not
+      satisfy [skip]. If [n < 0], then we start from the first date at or before [t] that
+      does not satisfy [skip].
+
+      In particular, if [skip t = true], then [add_days_skipping t ~skip 0 > t].
 
       [add_business_days] and [add_weekdays] are special cases of [add_days_skipping]. *)
   val add_days_skipping : t -> skip:(t -> bool) -> int -> t
@@ -244,8 +249,8 @@ module type Date0 = sig
     -> is_holiday:(t -> bool)
     -> t
 
-  (** [first_strictly_after t ~on:day_of_week] returns the first occurrence of [day_of_week]
-      strictly after [t]. *)
+  (** [first_strictly_after t ~on:day_of_week] returns the first occurrence of
+      [day_of_week] strictly after [t]. *)
   val first_strictly_after : t -> on:Day_of_week.t -> t
 
   (** [days_in_month ~year ~month] returns the number of days in [month], using [year]
@@ -270,11 +275,11 @@ module type Date0 = sig
   include Quickcheckable with type t := t
 
   (** [gen_incl d1 d2] generates dates in the range between [d1] and [d2], inclusive, with
-      the endpoints having higher weight than the rest.  Raises if [d1 > d2]. *)
+      the endpoints having higher weight than the rest. Raises if [d1 > d2]. *)
   val gen_incl : t -> t -> t Quickcheck.Generator.t
 
   (** [gen_uniform_incl d1 d2] generates dates chosen uniformly in the range between [d1]
-      and [d2], inclusive.  Raises if [d1 > d2]. *)
+      and [d2], inclusive. Raises if [d1 > d2]. *)
   val gen_uniform_incl : t -> t -> t Quickcheck.Generator.t
 
   (** [Days] provides a linear representation of dates that is optimized for arithmetic on
@@ -298,25 +303,35 @@ module type Date0 = sig
 
   module Option : sig
     type value := t
-    type t : immediate [@@deriving bin_io ~localize, hash, sexp, sexp_grammar]
 
-    include Immediate_option_intf.S with type value := value and type t := t
+    type t : immediate
+    [@@deriving
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , globalize
+      , hash
+      , sexp
+      , sexp_grammar]
+
+    include Immediate_option_intf.S_zero_alloc with type value := value and type t := t
     include Comparable.S_plain with type t := t
     include Quickcheckable.S with type t := t
   end
 
   module Stable : sig
     module V1 : sig
-      type nonrec t : immediate = t [@@deriving equal, hash, sexp_grammar, string]
+      type nonrec t : immediate = t
+      [@@deriving equal ~localize, globalize, hash, sexp_grammar, string]
 
-      (** [to_int] and [of_int_exn] convert to/from the underlying integer
-          representation. *)
+      (** [to_int] and [of_int_exn] convert to/from the underlying integer representation. *)
 
       val to_int : t -> int
       val of_int_exn : int -> t
 
-      include
+      include%template
         Stable_comparable.With_stable_witness.V1
+        [@mode local]
         with type t := t
         with type comparator_witness = comparator_witness
 
@@ -327,7 +342,14 @@ module type Date0 = sig
     module Option : sig
       module V1 : sig
         type nonrec t : immediate = Option.t
-        [@@deriving bin_io ~localize, compare, equal, sexp, sexp_grammar, stable_witness]
+        [@@deriving
+          bin_io ~localize
+          , compare ~localize
+          , equal ~localize
+          , globalize
+          , sexp
+          , sexp_grammar
+          , stable_witness]
 
         (** [to_int] and [of_int_exn] convert to/from the underlying integer
             representation. *)

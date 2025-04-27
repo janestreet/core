@@ -15,7 +15,15 @@ module Stable = struct
       | Oct
       | Nov
       | Dec
-    [@@deriving sexp, sexp_grammar, compare, equal, hash, quickcheck, variants]
+    [@@deriving
+      compare ~localize
+      , equal ~localize
+      , globalize
+      , hash
+      , quickcheck
+      , sexp
+      , sexp_grammar
+      , variants]
 
     let failwithf = Printf.failwithf
 
@@ -60,13 +68,13 @@ module Stable = struct
     let to_binable t = to_int t - 1
     let of_binable i = of_int_exn (i + 1)
 
-    include
-      Binable.Stable.Of_binable.V1 [@alert "-legacy"]
+    include%template
+      Binable.Stable.Of_binable.V1 [@mode local] [@alert "-legacy"]
         (Int.Stable.V1)
         (struct
           type nonrec t = t
 
-          let to_binable = to_binable
+          let[@mode m = (global, local)] to_binable = to_binable
           let of_binable = of_binable
         end)
 

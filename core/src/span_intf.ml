@@ -5,7 +5,7 @@ open Std_internal
     counterpart to [Span.create]). For example, 90 seconds is represented by:
 
     {[
-      {sign = Pos; hr = 0; min = 1; sec = 30; ms = 0; ns = 0}
+      { sign = Pos; hr = 0; min = 1; sec = 30; ms = 0; ns = 0 }
     ]}
 
     The fields will always be non-negative, and will never be large enough to form the
@@ -24,11 +24,20 @@ module type Parts = sig
 end
 
 module type S = sig
-  (** Span.t represents a span of time (e.g. 7 minutes, 3 hours, 12.8 days).  The span
-      may be positive or negative. *)
+  (** Span.t represents a span of time (e.g. 7 minutes, 3 hours, 12.8 days). The span may
+      be positive or negative. *)
   type underlying
 
-  type t = private underlying [@@deriving bin_io, hash, sexp, sexp_grammar, typerep]
+  type t = private underlying
+  [@@deriving
+    bin_io ~localize
+    , compare ~localize
+    , equal ~localize
+    , globalize
+    , hash
+    , sexp
+    , sexp_grammar
+    , typerep]
 
   module Parts : Parts
   include Comparable_binable with type t := t
@@ -39,7 +48,8 @@ module type S = sig
   include Robustly_comparable with type t := t
   include Quickcheck.S_range with type t := t
 
-  (** Time spans are denominated as a float suffixed by a unit of time; the valid suffixes
+  (** {v
+ Time spans are denominated as a float suffixed by a unit of time; the valid suffixes
       are listed below:
 
       d  - days
@@ -64,7 +74,7 @@ module type S = sig
       String and sexp conversions round-trip precisely, that is:
 
       {[ Span.of_string (Span.to_string t) = t ]}
-  *)
+      v} *)
   val to_string : t -> string
 
   val of_string : string -> t
@@ -171,18 +181,14 @@ module type S = sig
       representation-dependent) *)
   val prev : t -> t
 
-  (** [to_short_string t] pretty-prints approximate time span using no more than
-      five characters if the span is positive, and six if the span is negative.
-      Examples
-      {ul
-      {li ["4h"] = 4 hours}
-      {li ["5m"] = 5 minutes}
-      {li ["4s"] = 4 seconds}
-      {li ["10ms"] = 10 milliseconds}
-      }
+  (** [to_short_string t] pretty-prints approximate time span using no more than five
+      characters if the span is positive, and six if the span is negative. Examples
+      - ["4h"] = 4 hours
+      - ["5m"] = 5 minutes
+      - ["4s"] = 4 seconds
+      - ["10ms"] = 10 milliseconds
 
-      only the most significant denomination is shown.
-  *)
+      only the most significant denomination is shown. *)
   val to_short_string : t -> string
 
   (** [to_unit_of_time t] = [Day] if [abs t >= day], [Hour] if [abs t >= hour], and so on
@@ -192,15 +198,16 @@ module type S = sig
   (** [of_unit_of_time unit_of_time] produces a [t] representing the corresponding span. *)
   val of_unit_of_time : Unit_of_time.t -> t
 
-  (** [to_string_hum t ~delimiter ~decimals ~align_decimal ~unit_of_time] formats [t] using
-      the given unit of time, or the largest appropriate units if none is specified, among
-      "d"=day, "h"=hour, "m"=minute, "s"=second, "ms"=millisecond, "us"=microsecond, or
-      "ns"=nanosecond.  The magnitude of the time span in the chosen unit is formatted by:
+  (** [to_string_hum t ~delimiter ~decimals ~align_decimal ~unit_of_time] formats [t]
+      using the given unit of time, or the largest appropriate units if none is specified,
+      among "d"=day, "h"=hour, "m"=minute, "s"=second, "ms"=millisecond, "us"=microsecond,
+      or "ns"=nanosecond. The magnitude of the time span in the chosen unit is formatted
+      by:
 
       [Float.to_string_hum ~delimiter ~decimals ~strip_zero:(not align_decimal)]
 
       If [align_decimal] is true, the single-character suffixes are padded with an extra
-      space character.  In combination with not stripping zeroes, this means that the
+      space character. In combination with not stripping zeroes, this means that the
       decimal point will occur a fixed number of characters from the end of the string. *)
   val to_string_hum
     :  ?delimiter:char (** defaults to ['_'] *)
@@ -210,7 +217,7 @@ module type S = sig
     -> t
     -> string
 
-  (** [randomize t ~percent] returns a span +/- percent * original span.  Percent must be
+  (** [randomize t ~percent] returns a span +/- percent * original span. Percent must be
       between 0% and 100% inclusive, and must be positive. *)
   val randomize : ?state:Random.State.t -> t -> percent:Percent.t -> t
 end

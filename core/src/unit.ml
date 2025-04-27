@@ -10,7 +10,8 @@ module Stable = struct
     end
 
     include T
-    include Comparator.Stable.V1.Make (T)
+
+    include%template Comparator.Stable.V1.Make [@modality portable] (T)
 
     let%expect_test _ =
       print_endline [%bin_digest: t];
@@ -58,8 +59,8 @@ end
 
 open! Import
 
-include
-  Identifiable.Extend
+include%template
+  Identifiable.Extend [@modality portable]
     (Base.Unit)
     (struct
       type t = unit [@@deriving bin_io]

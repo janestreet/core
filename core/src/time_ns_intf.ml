@@ -17,11 +17,11 @@ module type Span = sig
   include Span_intf.S with type underlying = Int63.t and type t := t
 
   val of_sec_with_microsecond_precision : float -> t
-  val of_int_us : int -> t [@@zero_alloc]
-  val of_int_ms : int -> t [@@zero_alloc]
-  val to_int_us : t -> int [@@zero_alloc]
-  val to_int_ms : t -> int [@@zero_alloc]
-  val to_int_sec : t -> int [@@zero_alloc]
+  val of_int_us : int -> t [@@zero_alloc strict]
+  val of_int_ms : int -> t [@@zero_alloc strict]
+  val to_int_us : t -> int [@@zero_alloc strict]
+  val to_int_ms : t -> int [@@zero_alloc strict]
+  val to_int_sec : t -> int [@@zero_alloc strict]
 
   (** Approximations of float conversions using multiplication instead of division. *)
 
@@ -57,7 +57,7 @@ module type Span = sig
      instead"]
 
   (** overflows silently *)
-  val scale_int : t -> int -> t [@@zero_alloc]
+  val scale_int : t -> int -> t [@@zero_alloc strict]
 
   (** overflows silently *)
   val scale_int63 : t -> Int63.t -> t
@@ -71,7 +71,7 @@ module type Span = sig
   (** Fast, implemented as the identity function. *)
   val of_int63_ns : Int63.t -> t
 
-  (** Will raise on 32-bit platforms.  Consider [to_int63_ns] instead. *)
+  (** Will raise on 32-bit platforms. Consider [to_int63_ns] instead. *)
   val to_int_ns : t -> int
   [@@zero_alloc]
 
@@ -81,8 +81,7 @@ module type Span = sig
 
   (** WARNING!!! [to_span] and [of_span] both round to the nearest 1us.
 
-      Around 135y magnitudes [to_span] and [of_span] raise.
-  *)
+      Around 135y magnitudes [to_span] and [of_span] raise. *)
   val to_span : t -> Span_float.t
   [@@deprecated
     "[since 2019-01] use [to_span_float_round_nearest] or \
@@ -123,38 +122,51 @@ module type Span = sig
   module O : sig
     val ( / ) : t -> float -> t [@@zero_alloc]
     val ( // ) : t -> t -> float
-    val ( + ) : t -> t -> t [@@zero_alloc]
-    val ( - ) : t -> t -> t [@@zero_alloc]
+    val ( + ) : t -> t -> t [@@zero_alloc strict]
+    val ( - ) : t -> t -> t [@@zero_alloc strict]
 
     (** alias for [neg] *)
-    val ( ~- ) : t -> t [@@zero_alloc]
+    val ( ~- ) : t -> t [@@zero_alloc strict]
 
     (** alias for [scale] *)
     val ( *. ) : t -> float -> t [@@zero_alloc]
 
     (** alias for [scale_int] *)
-    val ( * ) : t -> int -> t [@@zero_alloc]
+    val ( * ) : t -> int -> t [@@zero_alloc strict]
 
-    include Comparisons.Infix with type t := t
+    include Comparisons.Infix_with_zero_alloc with type t := t
   end
 
   (** [Span.Option.t] is like [Span.t option], except that the value is immediate on
-      architectures where [Int63.t] is immediate.  This module should mainly be used to
+      architectures where [Int63.t] is immediate. This module should mainly be used to
       avoid allocations. *)
   module Option : sig
-    include Immediate_option.S_int63_zero_alloc with type value := t
+    type value := t
+
+    type t : immediate64
+    [@@deriving bin_io ~localize, compare ~localize, equal ~localize, globalize]
+
+    include Immediate_option.S_int63_zero_alloc with type value := value and type t := t
     include Identifiable.S with type t := t
     include Diffable.S_atomic with type t := t
     include Quickcheck.S with type t := t
 
     module Stable : sig
       module V1 : sig
-        include Stable_int63able.With_stable_witness.S with type t = t
+        type nonrec t = t
+        [@@deriving
+          bin_io ~localize, compare ~localize, equal ~localize, globalize, typerep]
+
+        include Stable_int63able.With_stable_witness.S with type t := t
         include Diffable.S_atomic with type t := t
       end
 
       module V2 : sig
-        include Stable_int63able.With_stable_witness.S with type t = t
+        type nonrec t = t
+        [@@deriving
+          bin_io ~localize, compare ~localize, equal ~localize, globalize, typerep]
+
+        include Stable_int63able.With_stable_witness.S with type t := t
         include Diffable.S_atomic with type t := t
       end
     end
@@ -162,14 +174,30 @@ module type Span = sig
 
   module Stable : sig
     module V1 : sig
-      type nonrec t = t [@@deriving hash, equal, sexp_grammar]
+      type nonrec t = t
+      [@@deriving
+        bin_io ~localize
+        , compare ~localize
+        , equal ~localize
+        , globalize
+        , hash
+        , sexp_grammar]
 
       include Stable_int63able.With_stable_witness.S with type t := t
       include Diffable.S_atomic with type t := t
     end
 
     module V2 : sig
-      type nonrec t = t [@@deriving hash, equal, sexp_grammar, typerep]
+      type nonrec t = t
+      [@@deriving
+        bin_io ~localize
+        , compare ~localize
+        , equal ~localize
+        , globalize
+        , hash
+        , sexp_grammar
+        , typerep]
+
       type nonrec comparator_witness = comparator_witness
 
       include
@@ -184,6 +212,7 @@ module type Span = sig
 
       include Stringable.S with type t := t
       include Diffable.S_atomic with type t := t
+      include Quickcheck.S with type t := t
     end
   end
 
@@ -202,11 +231,10 @@ module type Ofday = sig
   (** [t] is immediate on 64bit boxes and so plays nicely with the GC write barrier. *)
   type t = private Int63.t
 
-  (** String and sexp output takes the form 'HH:MM:SS.sssssssss'; see
-      {!Core.Ofday_intf} for accepted input. If input includes more than 9 decimal
-      places in seconds, rounds to the nearest nanosecond, with the midpoint rounded up.
-      Allows 60[.sss...] seconds for leap seconds but treats it as exactly 60s regardless
-      of fractional part. *)
+  (** String and sexp output takes the form 'HH:MM:SS.sssssssss'; see {!Core.Ofday_intf}
+      for accepted input. If input includes more than 9 decimal places in seconds, rounds
+      to the nearest nanosecond, with the midpoint rounded up. Allows 60[.sss...] seconds
+      for leap seconds but treats it as exactly 60s regardless of fractional part. *)
   include
     Ofday_intf.S with type underlying = Int63.t and type t := t and module Span := Span
 
@@ -241,7 +269,14 @@ module type Ofday = sig
 
   module Stable : sig
     module V1 : sig
-      type nonrec t = t [@@deriving equal, hash, sexp_grammar]
+      type nonrec t = t
+      [@@deriving
+        bin_io ~localize
+        , compare ~localize
+        , equal ~localize
+        , globalize
+        , hash
+        , sexp_grammar]
 
       include
         Stable_int63able.With_stable_witness.S
@@ -255,30 +290,41 @@ end
 
 module type Time_ns = sig
   (** An absolute point in time, more efficient and precise than the [float]-based
-    {!Time_float}, but representing a narrower range of times.
+      {!Time_float}, but representing a narrower range of times.
 
-    This module represents absolute times with nanosecond precision, approximately between
-    the years 1823 and 2116 CE.
+      This module represents absolute times with nanosecond precision, approximately
+      between the years 1823 and 2116 CE.
 
-    Some reasons you might prefer [Time_ns.t] over float-based [Time_float.t]:
+      Some reasons you might prefer [Time_ns.t] over float-based [Time_float.t]:
 
-    - It has superior performance.
+      - It has superior performance.
 
-    - It uses [int]s rather than [float]s internally, which makes certain things easier to
-      reason about, since [int]s respect a bunch of arithmetic identities that [float]s
-      don't, e.g., [x + (y + z) = (x + y) + z].
+      - It uses [int]s rather than [float]s internally, which makes certain things easier
+        to reason about, since [int]s respect a bunch of arithmetic identities that
+        [float]s don't, e.g., [x + (y + z) = (x + y) + z].
 
-    Some reasons you might prefer to use float-based [Time_float] instead of this module:
+      Some reasons you might prefer to use float-based [Time_float] instead of this
+      module:
 
-    - Some libraries use [Time_float.t] values, often for historical reasons, so it may be
-      necessary to use [Time_float.t] with them.
+      - Some libraries use [Time_float.t] values, often for historical reasons, so it may
+        be necessary to use [Time_float.t] with them.
 
-    - [Time_ns] silently ignores overflow.
+      - [Time_ns] silently ignores overflow.
 
-    Neither {!Time_ns_unix} nor {!Time_float_unix} are available in JavaScript, but both
-    {!Core.Time_ns} and {!Core.Time_float} are. *)
+      Neither {!Time_ns_unix} nor {!Time_float_unix} are available in JavaScript, but both
+      {!Core.Time_ns} and {!Core.Time_float} are. *)
 
-  type t = private Int63.t [@@deriving hash, typerep, bin_io, sexp, sexp_grammar]
+  type t = private Int63.t
+  [@@deriving
+    bin_io ~localize
+    , compare ~localize
+    , equal ~localize
+    , globalize
+    , hash
+    , sexp
+    , sexp_grammar
+    , typerep]
+
   type time_ns := t
 
   module Span : Span
@@ -307,8 +353,8 @@ module type Time_ns = sig
     module Zoned : sig
       (** Sexps look like "(12:01 nyc)"
 
-        Two [t]'s may or may not correspond to the same times depending on which date
-        they're evaluated. *)
+          Two [t]'s may or may not correspond to the same times depending on which date
+          they're evaluated. *)
       type ofday := t
 
       type t [@@deriving bin_io, sexp, sexp_grammar, hash]
@@ -327,9 +373,9 @@ module type Time_ns = sig
 
       module With_nonchronological_compare : sig
         (** It is possible to consistently compare [t]'s, but due to the complexities of
-          time zones and daylight savings, the resulting ordering is not chronological.
-          That is, [compare t1 t2 > 0] does not imply [t2] occurs after [t1] every day,
-          or any day. *)
+            time zones and daylight savings, the resulting ordering is not chronological.
+            That is, [compare t1 t2 > 0] does not imply [t2] occurs after [t1] every day,
+            or any day. *)
         type nonrec t = t [@@deriving bin_io, sexp, sexp_grammar, compare, equal, hash]
       end
 
@@ -343,25 +389,33 @@ module type Time_ns = sig
     end
 
     module Option : sig
-      include Immediate_option.S_int63 with type value := t
+      type value := t
+
+      type t : immediate64
+      [@@deriving bin_io ~localize, compare ~localize, equal ~localize, globalize]
+
+      include Immediate_option.S_int63_zero_alloc with type value := value and type t := t
       include Identifiable with type t := t
       include Quickcheck.S with type t := t
       include Diffable.S_atomic with type t := t
 
       module Stable : sig
         module V1 : sig
-          include Stable_int63able_with_witness with type t = t
+          type nonrec t = t
+          [@@deriving bin_io ~localize, compare ~localize, equal ~localize, globalize]
+
+          include Stable_int63able_with_witness with type t := t
           include Diffable.S_atomic with type t := t
         end
       end
 
       (** Returns [some] if the given span is a valid time since start of day, and [none]
-        otherwise. *)
+          otherwise. *)
       val of_span_since_start_of_day : Span.t -> t
     end
   end
 
-  include Comparisons.S with type t := t
+  include Comparisons.S_with_zero_alloc with type t := t
   include Diffable.S_atomic with type t := t
   module Zone : module type of Time_float.Zone with type t = Time_float.Zone.t
 
@@ -375,11 +429,13 @@ module type Time_ns = sig
     include Diffable.S_atomic with type t := t
   end
 
-  (** [Option.t] is like [t option], except that the value is immediate.  This module
+  (** [Option.t] is like [t option], except that the value is immediate. This module
       should mainly be used to avoid allocations. *)
   module Option : sig
     type value := t
-    type t = private Span.Option.t [@@deriving compare, bin_io]
+
+    type t = private Span.Option.t
+    [@@deriving bin_io ~localize, compare ~localize, equal ~localize, globalize]
 
     include Immediate_option.S_int63_zero_alloc with type value := value with type t := t
     include Identifiable with type t := t
@@ -388,15 +444,19 @@ module type Time_ns = sig
 
     module Stable : sig
       module V1 : sig
-        include Stable_int63able_with_witness with type t = t
+        type nonrec t = t
+        [@@deriving
+          bin_io ~localize, compare ~localize, equal ~localize, globalize, typerep]
+
+        include Stable_int63able_with_witness with type t := t
         include Diffable.S_atomic with type t := t
       end
     end
 
-    include Comparisons.S with type t := t
+    include Comparisons.S_with_zero_alloc with type t := t
 
     (** Just like [Time_ns.Alternate_sexp], this is different from the sexp format exposed
-        in [Time_ns_unix].  See the comment above. *)
+        in [Time_ns_unix]. See the comment above. *)
     module Alternate_sexp : sig
       type nonrec t = t [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
 
@@ -432,7 +492,7 @@ module type Time_ns = sig
       raises rather than assume the local timezone. *)
   val of_string_abs : string -> t
 
-  (** [of_string_gen ~if_no_timezone ?find_zone s] attempts to parse [s] to a [t].  If [s]
+  (** [of_string_gen ~if_no_timezone ?find_zone s] attempts to parse [s] to a [t]. If [s]
       doesn't supply a time zone [if_no_timezone] is consulted. [find_zone] is used to
       look up time zones by name. *)
   val of_string_gen
@@ -446,13 +506,13 @@ module type Time_ns = sig
     -> string
     -> t
 
-  (** [of_string_with_utc_offset] requires its input to have an explicit
-      UTC offset, e.g. [2000-01-01 12:34:56.789012-23], or use the UTC zone, "Z",
-      e.g. [2000-01-01 12:34:56.789012Z]. *)
+  (** [of_string_with_utc_offset] requires its input to have an explicit UTC offset, e.g.
+      [2000-01-01 12:34:56.789012-23], or use the UTC zone, "Z", e.g.
+      [2000-01-01 12:34:56.789012Z]. *)
   val of_string_with_utc_offset : string -> t
 
-  (** [to_string_utc] generates a time string with the UTC zone, "Z", e.g. [2000-01-01
-      12:34:56.789012Z]. *)
+  (** [to_string_utc] generates a time string with the UTC zone, "Z", e.g.
+      [2000-01-01 12:34:56.789012Z]. *)
   val to_string_utc : t -> string
 
   (** Returns the ISO 8601 extended format for a time (including the date) in the given
@@ -462,10 +522,8 @@ module type Time_ns = sig
 
       {[
         to_string_iso8601_extended epoch ~zone:Zone.utc ~precision:`us
-        =
-        "1970-01-01T00:00:00.000000Z"
-      ]}
-  *)
+        = "1970-01-01T00:00:00.000000Z"
+      ]} *)
   val to_string_iso8601_extended
     :  ?precision:
          [ `sec (** second precision: no decimal *)
@@ -508,39 +566,39 @@ module type Time_ns = sig
   val now : unit -> t [@@zero_alloc]
 
   (** overflows silently *)
-  val add : t -> Span.t -> t [@@zero_alloc]
+  val add : t -> Span.t -> t [@@zero_alloc strict]
 
   (** As [add]; rather than over/underflowing, clamps the result to the closed interval
       between [min_value_representable] and [max_value_representable]. *)
   val add_saturating : t -> Span.t -> t
-  [@@zero_alloc]
+  [@@zero_alloc strict]
 
   (** As [sub]; rather than over/underflowing, clamps the result to the closed interval
       between [min_value_representable] and [max_value_representable]. *)
   val sub_saturating : t -> Span.t -> t
-  [@@zero_alloc]
+  [@@zero_alloc strict]
 
   (** overflows silently *)
-  val sub : t -> Span.t -> t [@@zero_alloc]
+  val sub : t -> Span.t -> t [@@zero_alloc strict]
 
   (** overflows silently *)
-  val next : t -> t [@@zero_alloc]
+  val next : t -> t [@@zero_alloc strict]
 
   (** overflows silently *)
-  val prev : t -> t [@@zero_alloc]
+  val prev : t -> t [@@zero_alloc strict]
 
   (** overflows silently *)
-  val diff : t -> t -> Span.t [@@zero_alloc]
+  val diff : t -> t -> Span.t [@@zero_alloc strict]
 
   (** overflows silently *)
-  val abs_diff : t -> t -> Span.t [@@zero_alloc]
+  val abs_diff : t -> t -> Span.t [@@zero_alloc strict]
 
-  val to_span_since_epoch : t -> Span.t [@@zero_alloc]
-  val of_span_since_epoch : Span.t -> t [@@zero_alloc]
+  val to_span_since_epoch : t -> Span.t [@@zero_alloc strict]
+  val of_span_since_epoch : Span.t -> t [@@zero_alloc strict]
   val to_int63_ns_since_epoch : t -> Int63.t
   val of_int63_ns_since_epoch : Int63.t -> t
 
-  (** Will raise on 32-bit platforms.  Consider [to_int63_ns_since_epoch] instead. *)
+  (** Will raise on 32-bit platforms. Consider [to_int63_ns_since_epoch] instead. *)
   val to_int_ns_since_epoch : t -> int
   [@@zero_alloc]
 
@@ -549,10 +607,10 @@ module type Time_ns = sig
   (** [next_multiple ~base ~after ~interval] returns the smallest [time] of the form:
 
       {[
-        time = base + k * interval
+        time = base + (k * interval)
       ]}
 
-      where [k >= 0] and [time > after].  It is an error if [interval <= 0].
+      where [k >= 0] and [time > after]. It is an error if [interval <= 0].
 
       Supplying [~can_equal_after:true] allows the result to satisfy [time >= after].
 
@@ -578,10 +636,10 @@ module type Time_ns = sig
   (** [prev_multiple ~base ~before ~interval] returns the largest [time] of the form:
 
       {[
-        time = base + k * interval
+        time = base + (k * interval)
       ]}
 
-      where [k >= 0] and [time < before].  It is an error if [interval <= 0].
+      where [k >= 0] and [time < before]. It is an error if [interval <= 0].
 
       Supplying [~can_equal_before:true] allows the result to satisfy [time <= before].
 
@@ -645,8 +703,8 @@ module type Time_ns = sig
 
   module Utc : sig
     (** [to_date_and_span_since_start_of_day] computes the date and intraday-offset of a
-        time in UTC.  It may be slower than [Core.Time_ns.to_date_ofday], as this
-        function does not cache partial results while the latter does. *)
+        time in UTC. It may be slower than [Core.Time_ns.to_date_ofday], as this function
+        does not cache partial results while the latter does. *)
     val to_date_and_span_since_start_of_day : t -> Date0.t * Span.t
 
     (** The inverse of [to_date_and_span_since_start_of_day]. *)
@@ -656,12 +714,12 @@ module type Time_ns = sig
 
   module O : sig
     (** alias for [add] *)
-    val ( + ) : t -> Span.t -> t [@@zero_alloc]
+    val ( + ) : t -> Span.t -> t [@@zero_alloc strict]
 
     (** alias for [diff] *)
-    val ( - ) : t -> t -> Span.t [@@zero_alloc]
+    val ( - ) : t -> t -> Span.t [@@zero_alloc strict]
 
-    include Comparisons.Infix with type t := t
+    include Comparisons.Infix_with_zero_alloc with type t := t
   end
 
   (** String conversions use the local timezone by default. Sexp conversions use
@@ -673,9 +731,19 @@ module type Time_ns = sig
       appropriate time zone. *)
   include Identifiable with type t := t
 
+  (** [Identifiable] masks the comparison functions' [@zero_alloc] annotations *)
+  include Comparisons.S_with_zero_alloc_strict with type t := t
+
   module Stable : sig
     module V1 : sig
-      type nonrec t = t [@@deriving equal, hash, sexp_grammar]
+      type nonrec t = t
+      [@@deriving
+        bin_io ~localize
+        , compare ~localize
+        , equal ~localize
+        , globalize
+        , hash
+        , sexp_grammar]
 
       include
         Stable_int63able_with_witness
@@ -688,11 +756,15 @@ module type Time_ns = sig
         with type comparator_witness := comparator_witness
 
       include Diffable.S_atomic with type t := t
+      include Quickcheck.S with type t := t
     end
 
     module Option : sig
       module V1 : sig
-        include Stable_int63able_with_witness with type t = Option.t
+        type t = Option.t
+        [@@deriving bin_io ~localize, compare ~localize, equal ~localize, globalize]
+
+        include Stable_int63able_with_witness with type t := t
         include Diffable.S_atomic with type t := t
       end
 
@@ -739,14 +811,29 @@ module type Time_ns = sig
 
     module Span : sig
       module V1 : sig
-        type nonrec t = Span.t [@@deriving hash, equal, sexp_grammar]
+        type nonrec t = Span.t
+        [@@deriving
+          bin_io ~localize
+          , compare ~localize
+          , equal ~localize
+          , globalize
+          , hash
+          , sexp_grammar]
 
         include Stable_int63able.With_stable_witness.S with type t := t
         include Diffable.S_atomic with type t := t
       end
 
       module V2 : sig
-        type t = Span.t [@@deriving hash, equal, sexp_grammar]
+        type t = Span.t
+        [@@deriving
+          bin_io ~localize
+          , compare ~localize
+          , equal ~localize
+          , globalize
+          , hash
+          , sexp_grammar]
+
         type nonrec comparator_witness = Span.comparator_witness
 
         include
@@ -765,12 +852,18 @@ module type Time_ns = sig
 
       module Option : sig
         module V1 : sig
-          include Stable_int63able_with_witness with type t = Span.Option.t
+          type t = Span.Option.t
+          [@@deriving bin_io ~localize, compare ~localize, equal ~localize, globalize]
+
+          include Stable_int63able_with_witness with type t := t
           include Diffable.S_atomic with type t := t
         end
 
         module V2 : sig
-          include Stable_int63able_with_witness with type t = Span.Option.t
+          type t = Span.Option.t
+          [@@deriving bin_io ~localize, compare ~localize, equal ~localize, globalize]
+
+          include Stable_int63able_with_witness with type t := t
           include Diffable.S_atomic with type t := t
         end
       end
@@ -778,7 +871,14 @@ module type Time_ns = sig
 
     module Ofday : sig
       module V1 : sig
-        type t = Ofday.t [@@deriving equal, hash, sexp_grammar]
+        type t = Ofday.t
+        [@@deriving
+          bin_io ~localize
+          , compare ~localize
+          , equal ~localize
+          , globalize
+          , hash
+          , sexp_grammar]
 
         include
           Stable_int63able.With_stable_witness.S
@@ -798,7 +898,10 @@ module type Time_ns = sig
 
       module Option : sig
         module V1 : sig
-          include Stable_int63able_with_witness with type t = Ofday.Option.t
+          type t = Ofday.Option.t
+          [@@deriving bin_io ~localize, compare ~localize, equal ~localize, globalize]
+
+          include Stable_int63able_with_witness with type t := t
           include Diffable.S_atomic with type t := t
         end
       end

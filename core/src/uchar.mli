@@ -1,4 +1,6 @@
-(** This module extends {{!Base.Uchar}[Base.Uchar]}, adding [Comparable] and [Hashable]
+@@ portable
+
+(** This module extends {{!Base.Uchar} [Base.Uchar]}, adding [Comparable] and [Hashable]
     functionality, [bin_io] support, and [Quickcheckable] to facilitate automated testing
     with pseudorandom data. *)
 

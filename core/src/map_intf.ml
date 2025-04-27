@@ -1,5 +1,5 @@
-(** This module defines interfaces used in {{!Map}[Map]}. See those docs for a description
-    of the design.
+(** This module defines interfaces used in {{!Map} [Map]}. See those docs for a
+    description of the design.
 
     This module defines module types
     [{Creators,Accessors}{1,2,3,_generic,_with_comparator}]. It uses check functors to
@@ -7,8 +7,7 @@
 
     We must treat [Creators] and [Accessors] separately, because we sometimes need to
     choose different instantiations of their [options]. In particular, [Map] itself
-    matches [Creators3_with_comparator] but [Accessors3] (without comparator).
-*)
+    matches [Creators3_with_comparator] but [Accessors3] (without comparator). *)
 
 open! Import
 module Binable = Binable0
@@ -139,31 +138,33 @@ module type Creators_and_accessors_generic = sig
     with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) access_options
 end
 
-module Make_S_plain_tree (Key : Comparator.S) = struct
-  module type S = sig
-    type 'a t = (Key.t, 'a, Key.comparator_witness) Tree.t [@@deriving sexp_of]
+module type%template [@modality p = (portable, nonportable)] S_plain_tree = sig @@ p
+  module Key : Comparator.S
 
-    include
-      Creators_and_accessors_generic
-      with type ('a, 'b, 'c) t := 'b t
-      with type ('a, 'b, 'c) tree := 'b t
-      with type 'a key := Key.t
-      with type 'a cmp := Key.comparator_witness
-      with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
-      with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
+  type 'a t = (Key.t, 'a, Key.comparator_witness) Tree.t [@@deriving sexp_of]
 
-    module Provide_of_sexp
-        (K : sig
-               type t [@@deriving of_sexp]
-             end
-             with type t := Key.t) : sig
-        type _ t [@@deriving of_sexp]
-      end
-      with type 'a t := 'a t
-  end
+  include
+    Creators_and_accessors_generic
+    with type ('a, 'b, 'c) t := 'b t
+    with type ('a, 'b, 'c) tree := 'b t
+    with type 'a key := Key.t
+    with type 'a cmp := Key.comparator_witness
+    with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
+    with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
+
+  module%template
+    [@modality p' = (nonportable, p)] Provide_of_sexp
+      (K : sig
+           @@ p'
+             type t [@@deriving of_sexp]
+           end
+           with type t := Key.t) : sig @@ p'
+      type _ t [@@deriving of_sexp]
+    end
+    with type 'a t := 'a t
 end
 
-module type S_plain = sig
+module type%template [@modality p = (portable, nonportable)] S_plain = sig @@ p
   module Key : sig
     type t [@@deriving sexp_of]
 
@@ -195,23 +196,33 @@ module type S_plain = sig
 
   val map : 'a t -> f:local_ ('a -> 'b) -> 'b t
 
-  module Provide_of_sexp
+  module%template
+    [@modality p' = (nonportable, p)] Provide_of_sexp
       (Key : sig
+             @@ p'
                type t [@@deriving of_sexp]
              end
-             with type t := Key.t) : sig
+             with type t := Key.t) : sig @@ p'
       type _ t [@@deriving of_sexp]
     end
     with type 'a t := 'a t
 
-  module Provide_bin_io
+  module%template
+    [@modality p' = (nonportable, p)] Provide_bin_io
       (Key : sig
+             @@ p'
                type t [@@deriving bin_io]
              end
-             with type t := Key.t) : Binable.S1 with type 'a t := 'a t
+             with type t := Key.t) : sig @@ p'
+      include Binable.S1
+    end
+    with type 'a t := 'a t
 
-  module Provide_hash
-      (Key : Hasher.S with type t := Key.t) : sig
+  module%template
+    [@modality p' = (nonportable, p)] Provide_hash (Key : sig
+    @@ p'
+      include Hasher.S with type t := Key.t
+    end) : sig @@ p'
       type 'a t [@@deriving hash]
     end
     with type 'a t := 'a t
@@ -230,7 +241,7 @@ module type S_plain = sig
         Without_comparator.t
 end
 
-module type S = sig
+module type%template [@modality p = (portable, nonportable)] S = sig @@ p
   module Key : sig
     type t [@@deriving sexp]
 
@@ -246,11 +257,11 @@ module type S = sig
        and type 'a derived_on = (Key.t, 'a, Key.comparator_witness) Map.t
   end
 
-  include S_plain with module Key := Key and module Diff := Diff
+  include S_plain [@modality p] with module Key := Key and module Diff := Diff
   include Sexpable.S1 with type 'a t := 'a t
 end
 
-module type S_binable = sig
+module type%template [@modality p = (portable, nonportable)] S_binable = sig @@ p
   module Key : sig
     type t [@@deriving bin_io, sexp]
 
@@ -267,7 +278,7 @@ module type S_binable = sig
        and type 'a derived_on = (Key.t, 'a, Key.comparator_witness) Map.t
   end
 
-  include S with module Key := Key and module Diff := Diff
+  include S [@modality p] with module Key := Key and module Diff := Diff
   include Binable.S1 with type 'a t := 'a t
 end
 
@@ -275,10 +286,11 @@ module type For_deriving = sig
   include Base.Map.For_deriving
   module M = Base.Map.M
 
-  (** The following [*bin*] functions support bin-io on base-style maps,
-      e.g.:
+  (** The following [*bin*] functions support bin-io on base-style maps, e.g.:
 
-      {[ type t = int Map.M(String).t [@@deriving bin_io] ]} *)
+      {[
+        type t = int Map.M(String).t [@@deriving bin_io]
+      ]} *)
 
   val bin_shape_m__t : ('a, 'c) Key_bin_io.t -> Bin_prot.Shape.t -> Bin_prot.Shape.t
 
@@ -302,10 +314,12 @@ module type For_deriving = sig
     -> 'b Bin_prot.Read.reader
     -> ('a, 'b, 'c) t Bin_prot.Read.vtag_reader
 
-  (** The following [quickcheck*] functions support deriving quickcheck on base-style maps,
-      e.g.:
+  (** The following [quickcheck*] functions support deriving quickcheck on base-style
+      maps, e.g.:
 
-      {[ type t = int Map.M(String).t [@@deriving quickcheck] ]} *)
+      {[
+        type t = int Map.M(String).t [@@deriving quickcheck]
+      ]} *)
 
   module type Quickcheck_generator_m = sig
     include Comparator.S

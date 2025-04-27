@@ -1,4 +1,4 @@
-(** This module extends {{!Base.Printf}[Base.Printf]}. *)
+(** This module extends {{!Base.Printf} [Base.Printf]}. *)
 
 open! Import
 

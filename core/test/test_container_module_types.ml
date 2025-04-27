@@ -121,8 +121,8 @@ module For_indexed_container = struct
   module type Generic_permissions = sig
     include For_container.Generic_permissions
 
-    (** These are all like their equivalents in [Container] except that an index starting at
-        0 is added as the first argument to [f]. *)
+    (** These are all like their equivalents in [Container] except that an index starting
+        at 0 is added as the first argument to [f]. *)
 
     val foldi
       :  ('a, 'p1, 'p2, [> read ]) t

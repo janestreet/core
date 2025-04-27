@@ -1,4 +1,6 @@
-(** Module for the type [unit], extended from {{!Base.Unit}[Base.Unit]}.  This is mostly
+@@ portable
+
+(** Module for the type [unit], extended from {{!Base.Unit} [Base.Unit]}. This is mostly
     useful for building functor arguments. *)
 
 open! Import
@@ -11,7 +13,12 @@ include module type of struct
   end
   with type t := t
 
-include Identifiable.S with type t := t and type comparator_witness := comparator_witness
+include%template
+  Identifiable.S
+  [@modality portable]
+  with type t := t
+   and type comparator_witness := comparator_witness
+
 include Quickcheckable.S with type t := t
 
 include sig
@@ -32,10 +39,10 @@ module Stable : sig
 
   (** Zero-length bin_prot format.
 
-      The default converter for the type [unit] is the V1 converter, not the V2.  That's
+      The default converter for the type [unit] is the V1 converter, not the V2. That's
       because there's an assumption that primitive types, which include [unit], are stable
       whether or not they say so, so we can't change the [unit] bin-io converter without
-      breaking many stable types.  *)
+      breaking many stable types. *)
   module V2 : sig
     type nonrec t = t [@@deriving bin_io ~localize, equal, sexp_grammar]
 

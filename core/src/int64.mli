@@ -1,4 +1,4 @@
-(** This module extends {{!Base.Int64}[Base.Int64]}. *)
+(** This module extends {{!Base.Int64} [Base.Int64]}. *)
 
 (** {2 Interface from Base} *)
 
@@ -11,8 +11,9 @@ end
 
 (** @inline *)
 include
-  Int_intf.Extension with type t := t and type comparator_witness := comparator_witness
+  Int_intf.Extension with type t := t and type comparator_witness := comparator_witness @@ 
+portable
 
-include sig
+include sig @@ portable
   type nonrec t = t [@@deriving bin_io ~localize]
 end

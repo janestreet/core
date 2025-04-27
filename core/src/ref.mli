@@ -1,4 +1,6 @@
-(** This module extends {{!Base.Ref}[Base.Ref]}. *)
+@@ portable
+
+(** This module extends {{!Base.Ref} [Base.Ref]}. *)
 
 open! Import
 open Perms.Export

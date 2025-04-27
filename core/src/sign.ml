@@ -13,4 +13,5 @@ end
 
 include Stable.V1
 include Sign
-include Identifiable.Extend (Sign) (Stable.V1)
+
+include%template Identifiable.Extend [@modality portable] (Sign) (Stable.V1)

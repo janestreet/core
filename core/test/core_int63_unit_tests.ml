@@ -78,11 +78,11 @@ module Make_tests (Int : Base.Int.S) : sig end = struct
   ;;
 
   let%test _ = Exn.does_raise (fun () -> of_string "0o1111111111111111111111")
-  let%test_unit _ = [%test_result: int] (popcount zero) ~expect:0
-  let%test_unit _ = [%test_result: int] (popcount one) ~expect:1
-  let%test_unit _ = [%test_result: int] (popcount minus_one) ~expect:63
-  let%test_unit _ = [%test_result: int] (popcount max_value) ~expect:62
-  let%test_unit _ = [%test_result: int] (popcount min_value) ~expect:1
+  let%test_unit _ = [%test_result: t] (popcount zero) ~expect:(of_int_exn 0)
+  let%test_unit _ = [%test_result: t] (popcount one) ~expect:(of_int_exn 1)
+  let%test_unit _ = [%test_result: t] (popcount minus_one) ~expect:(of_int_exn 63)
+  let%test_unit _ = [%test_result: t] (popcount max_value) ~expect:(of_int_exn 62)
+  let%test_unit _ = [%test_result: t] (popcount min_value) ~expect:(of_int_exn 1)
 
   let%test_unit _ =
     [%test_result: string] (Hex.to_string max_value) ~expect:"0x3fffffffffffffff"

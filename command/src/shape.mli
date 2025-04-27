@@ -79,8 +79,8 @@ module Base_info : sig
 
       It raises if [prefix] does not begin with [-] as all flags should.
 
-      [find_flag] does not consider [aliases_excluded_from_help], and it assumes that
-      all flags can be passed by prefix. These are limitations in the underlying shape
+      [find_flag] does not consider [aliases_excluded_from_help], and it assumes that all
+      flags can be passed by prefix. These are limitations in the underlying shape
       representation. *)
   val find_flag : t -> string -> Flag_info.t Or_error.t
 

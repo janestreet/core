@@ -6,7 +6,8 @@ let arch_sixtyfour = Sys.word_size_in_bits = 64
 module Span = Span_ns
 
 type t = Span.t (* since the Unix epoch (1970-01-01 00:00:00 UTC) *)
-[@@deriving bin_io, compare, hash, typerep]
+[@@deriving
+  bin_io ~localize, compare ~localize, equal ~localize, globalize, hash, typerep]
 
 module Replace_polymorphic_compare_efficient = Span.Replace_polymorphic_compare
 include Replace_polymorphic_compare_efficient
@@ -17,16 +18,16 @@ let equal = Span.equal
 let min_value_for_1us_rounding = Span.min_value_for_1us_rounding
 let max_value_for_1us_rounding = Span.max_value_for_1us_rounding
 let epoch = Span.zero
-let[@zero_alloc] add t1 t2 = Span.(t1 + t2)
-let[@zero_alloc] sub t1 t2 = Span.(t1 - t2)
-let[@zero_alloc] diff t1 t2 = Span.(t1 - t2)
-let[@zero_alloc] abs_diff t u = Span.abs (diff t u)
+let[@zero_alloc strict] add t1 t2 = Span.(t1 + t2)
+let[@zero_alloc strict] sub t1 t2 = Span.(t1 - t2)
+let[@zero_alloc strict] diff t1 t2 = Span.(t1 - t2)
+let[@zero_alloc strict] abs_diff t u = Span.abs (diff t u)
 let max = Span.max
 let min = Span.min
-let[@zero_alloc] next t = Span.next t
-let[@zero_alloc] prev t = Span.prev t
-let[@zero_alloc] to_span_since_epoch t = t
-let[@zero_alloc] of_span_since_epoch s = s
+let[@zero_alloc strict] next t = Span.next t
+let[@zero_alloc strict] prev t = Span.prev t
+let[@zero_alloc strict] to_span_since_epoch t = t
+let[@zero_alloc strict] of_span_since_epoch s = s
 let to_int63_ns_since_epoch t : Int63.t = Span.to_int63_ns (to_span_since_epoch t)
 let[@inline] of_int63_ns_since_epoch i = of_span_since_epoch (Span.of_int63_ns i)
 let[@cold] overflow () = raise_s [%message "Time_ns: overflow"]
@@ -51,7 +52,7 @@ let sub_exn x y =
   if sub_overflowed x y ~diff then overflow () else diff
 ;;
 
-let[@zero_alloc] add_saturating x y =
+let[@zero_alloc strict] add_saturating x y =
   let sum = add x y in
   if add_overflowed x y ~sum
   then
@@ -59,7 +60,7 @@ let[@zero_alloc] add_saturating x y =
   else sum
 ;;
 
-let[@zero_alloc] sub_saturating x y =
+let[@zero_alloc strict] sub_saturating x y =
   let diff = sub x y in
   if sub_overflowed x y ~diff
   then
@@ -99,7 +100,6 @@ let check_before_conversion_for_1us_rounding time =
      || Time_float.( > ) time max_time_value_for_1us_rounding
   then
     failwiths
-      ~here:[%here]
       "Time_ns does not support this time"
       time
       [%sexp_of: Time_float.Stable.With_utc_sexp.V2.t]
@@ -118,7 +118,6 @@ let[@zero_alloc] of_time_float_round_nearest_microsecond time =
 
 let[@cold] raise_next_multiple_got_nonpositive_interval ~calling_function_name interval =
   failwiths
-    ~here:[%here]
     ("Time_ns." ^ calling_function_name ^ " got nonpositive interval")
     interval
     [%sexp_of: Span.t]
@@ -405,7 +404,15 @@ module Alternate_sexp = struct
       module T = struct
         (* see tests in lib/core/test/src/test_time_ns that ensure stability of this
            representation *)
-        type nonrec t = t [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
+        type nonrec t = t
+        [@@deriving
+          bin_io ~localize
+          , compare ~localize
+          , equal ~localize
+          , globalize
+          , hash
+          , sexp
+          , sexp_grammar]
 
         let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
 
@@ -424,7 +431,12 @@ end
 (* this code is directly duplicated from Time.ml functor, converted enough to get Time_ns
    to/of_string working *)
 module To_and_of_string : sig
-  val of_date_ofday : zone:Zone.t -> Date.t -> Ofday_ns.t -> t
+  val of_date_ofday
+    :  ?prefer:Zone.Earlier_or_later.t
+    -> zone:Zone.t
+    -> Date.t
+    -> Ofday_ns.t
+    -> t
 
   val of_date_ofday_precise
     :  Date.t
@@ -573,9 +585,16 @@ end = struct
     val index_offset_from_utc_exn : t -> Index.t -> time
     val index_prev_clock_shift_time_exn : t -> Index.t -> time
     val index_next_clock_shift_time_exn : t -> Index.t -> time
-    val absolute_time_of_date_and_ofday : t -> Date_and_ofday.t -> time
+
+    val absolute_time_of_date_and_ofday
+      :  ?prefer:Zone.Earlier_or_later.t
+      -> t
+      -> Date_and_ofday.t
+      -> time
+
     val date_and_ofday_of_absolute_time : t -> time -> Date_and_ofday.t
     val next_clock_shift : t -> strictly_after:time -> (time * Span.t) option
+    val next_clock_shift_incl : t -> at_or_after:time -> (time * Span.t) option
     val prev_clock_shift : t -> at_or_before:time -> (time * Span.t) option
   end = struct
     type time = t
@@ -612,8 +631,11 @@ end = struct
 
     let index t time = index t (to_time_in_seconds_round_down_exn time)
 
-    let index_of_date_and_ofday t relative =
-      index_of_date_and_ofday t (to_date_and_ofday_in_seconds_round_down_exn relative)
+    let index_of_date_and_ofday ?prefer t relative =
+      index_of_date_and_ofday
+        ?prefer
+        t
+        (to_date_and_ofday_in_seconds_round_down_exn relative)
     ;;
 
     let index_offset_from_utc_exn t index =
@@ -645,6 +667,22 @@ end = struct
     let prev_clock_shift t ~at_or_before:time = index_prev_clock_shift t (index t time)
     let next_clock_shift t ~strictly_after:time = index_next_clock_shift t (index t time)
 
+    let next_clock_shift_incl t ~at_or_after:time =
+      let index = index t time in
+      let shift_at_time =
+        if index_has_prev_clock_shift t index
+        then (
+          let shift_time = index_prev_clock_shift_time_exn t index in
+          if equal time shift_time
+          then Some (shift_time, index_prev_clock_shift_amount_exn t index)
+          else None)
+        else None
+      in
+      match shift_at_time with
+      | Some _ -> shift_at_time
+      | None -> index_next_clock_shift t index
+    ;;
+
     let date_and_ofday_of_absolute_time t time =
       let index = index t time in
       (* no exn because [index] always returns a valid index *)
@@ -652,24 +690,24 @@ end = struct
       Date_and_ofday.of_absolute time ~offset_from_utc
     ;;
 
-    let absolute_time_of_date_and_ofday t relative =
-      let index = index_of_date_and_ofday t relative in
+    let absolute_time_of_date_and_ofday ?prefer t relative =
+      let index = index_of_date_and_ofday ?prefer t relative in
       (* no exn because [index_of_date_and_ofday] always returns a valid index *)
       let offset_from_utc = index_offset_from_utc_exn t index in
       Date_and_ofday.to_absolute relative ~offset_from_utc
     ;;
   end
 
-  let of_date_ofday ~zone date ofday =
+  let of_date_ofday ?prefer ~zone date ofday =
     let relative = Date_and_ofday.of_date_ofday date ofday in
-    Zone.absolute_time_of_date_and_ofday zone relative
+    Zone.absolute_time_of_date_and_ofday ?prefer zone relative
   ;;
 
   let of_date_ofday_precise date ofday ~zone =
     (* We assume that there will be only one zone shift within a given local day.  *)
-    let start_of_day = of_date_ofday ~zone date Ofday_ns.start_of_day in
+    let start_of_day = of_date_ofday ~prefer:Earlier ~zone date Ofday_ns.start_of_day in
     let proposed_time = add start_of_day (Ofday_ns.to_span_since_start_of_day ofday) in
-    match Zone.next_clock_shift zone ~strictly_after:start_of_day with
+    match Zone.next_clock_shift_incl zone ~at_or_after:start_of_day with
     | None -> `Once proposed_time
     | Some (shift_start, shift_amount) ->
       let shift_backwards = Span.(shift_amount < zero) in
@@ -1168,7 +1206,10 @@ module Ofday = struct
 
   module Option = struct
     type ofday = t [@@deriving sexp, compare]
-    type t = Span.Option.t [@@deriving bin_io, compare, equal, hash, typerep]
+
+    type t = Span.Option.t
+    [@@deriving
+      bin_io ~localize, compare ~localize, equal ~localize, globalize, hash, typerep]
 
     let none = Span.Option.none
     let[@zero_alloc] some t = Span.Option.some (to_span_since_start_of_day t)
@@ -1233,15 +1274,16 @@ module Ofday = struct
 
     module Optional_syntax = struct
       module Optional_syntax = struct
-        let is_none = is_none
-        let unsafe_value = unchecked_value
+        let[@zero_alloc] is_none t = is_none t
+        let[@zero_alloc] unsafe_value t = unchecked_value t
       end
     end
 
     module Stable = struct
       module V1 = struct
         module T = struct
-          type nonrec t = t [@@deriving compare, equal, bin_io]
+          type nonrec t = t
+          [@@deriving bin_io ~localize, compare ~localize, equal ~localize, globalize]
 
           let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
           let sexp_of_t t = [%sexp_of: Ofday_ns.Stable.V1.t option] (to_option t)
@@ -1384,7 +1426,16 @@ module Stable0 = struct
       (* We use the unstable serialization here, and rely on comprehensive tests of the
          stable conversion to make sure we don't change it. *)
 
-      type nonrec t = t [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
+      type nonrec t = t
+      [@@deriving
+        bin_io ~localize
+        , compare ~localize
+        , equal ~localize
+        , globalize
+        , hash
+        , quickcheck
+        , sexp
+        , sexp_grammar]
 
       let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
       let of_int63_exn t = of_span_since_epoch (Span.of_int63_ns t)
@@ -1407,7 +1458,16 @@ include Stable0.V1.Comparator
 
 module Option = struct
   type time = t [@@deriving compare]
-  type t = Span.Option.t [@@deriving bin_io, compare, hash, typerep, quickcheck]
+
+  type t = Span.Option.t
+  [@@deriving
+    bin_io ~localize
+    , compare ~localize
+    , equal ~localize
+    , globalize
+    , hash
+    , typerep
+    , quickcheck]
 
   let none = Span.Option.none
   let[@zero_alloc] some time = Span.Option.some (to_span_since_epoch time)
@@ -1468,7 +1528,15 @@ module Option = struct
     module Stable = struct
       module V1 = struct
         module T = struct
-          type nonrec t = t [@@deriving bin_io, compare, hash, sexp, sexp_grammar]
+          type nonrec t = t
+          [@@deriving
+            bin_io ~localize
+            , compare ~localize
+            , equal ~localize
+            , globalize
+            , hash
+            , sexp
+            , sexp_grammar]
 
           let stable_witness : t Stable_witness.t =
             Stable_witness.of_serializable
@@ -1497,7 +1565,9 @@ module Option = struct
   module Stable = struct
     module V1 = struct
       module T = struct
-        type nonrec t = t [@@deriving compare, bin_io]
+        type nonrec t = t
+        [@@deriving
+          bin_io ~localize, compare ~localize, equal ~localize, globalize, typerep]
 
         let sexp_of_t t = [%sexp_of: Stable0.V1.t option] (to_option t)
         let t_of_sexp s = of_option ([%of_sexp: Stable0.V1.t option] s)
@@ -1534,7 +1604,22 @@ module Option = struct
     end)
 
   (* bring back the efficient implementation of comparison operators *)
-  include (Span.Option : Comparisons.S with type t := t)
+  include (
+  struct
+    include Span.Option
+
+    let[@zero_alloc] ( >= ) = [%eta2 ( >= )]
+    let[@zero_alloc] ( <= ) = [%eta2 ( <= )]
+    let[@zero_alloc] ( = ) = [%eta2 ( = )]
+    let[@zero_alloc] ( > ) = [%eta2 ( > )]
+    let[@zero_alloc] ( < ) = [%eta2 ( < )]
+    let[@zero_alloc] ( <> ) = [%eta2 ( <> )]
+    let[@zero_alloc] equal = [%eta2 equal]
+    let[@zero_alloc] compare = [%eta2 compare]
+    let[@zero_alloc] min = [%eta2 min]
+    let[@zero_alloc] max = [%eta2 max]
+  end :
+    Comparisons.S_with_zero_alloc with type t := t)
 
   include Diffable.Atomic.Make (struct
       type nonrec t = t [@@deriving bin_io, equal, sexp]
@@ -1549,7 +1634,23 @@ include Identifiable.Make_using_comparator (struct
   end)
 
 (* bring back the efficient implementation of comparison operators *)
-include (Replace_polymorphic_compare_efficient : Comparisons.S with type t := t)
+include (
+struct
+  include Replace_polymorphic_compare_efficient
+
+  let[@zero_alloc strict] ( >= ) = [%eta2 ( >= )]
+  let[@zero_alloc strict] ( <= ) = [%eta2 ( <= )]
+  let[@zero_alloc strict] ( = ) = [%eta2 ( = )]
+  let[@zero_alloc strict] ( > ) = [%eta2 ( > )]
+  let[@zero_alloc strict] ( < ) = [%eta2 ( < )]
+  let[@zero_alloc strict] ( <> ) = [%eta2 ( <> )]
+  let[@zero_alloc strict] equal = [%eta2 equal]
+  let[@zero_alloc strict] compare = [%eta2 compare]
+  let[@zero_alloc strict] min = [%eta2 min]
+  let[@zero_alloc strict] max = [%eta2 max]
+end :
+  Comparisons.S_with_zero_alloc_strict with type t := t)
+
 module Zone = Time_float.Zone
 
 module Stable = struct
@@ -1576,14 +1677,14 @@ let pause = `Use_Time_ns_unix
 let pause_forever = `Use_Time_ns_unix
 
 module O = struct
-  let ( >= ) = ( >= )
-  let ( <= ) = ( <= )
-  let ( = ) = ( = )
-  let ( > ) = ( > )
-  let ( < ) = ( < )
-  let ( <> ) = ( <> )
-  let[@zero_alloc] ( + ) t1 t2 = add t1 t2
-  let[@zero_alloc] ( - ) t1 t2 = diff t1 t2
+  let[@zero_alloc strict] ( >= ) = [%eta2 ( >= )]
+  let[@zero_alloc strict] ( <= ) = [%eta2 ( <= )]
+  let[@zero_alloc strict] ( = ) = [%eta2 ( = )]
+  let[@zero_alloc strict] ( > ) = [%eta2 ( > )]
+  let[@zero_alloc strict] ( < ) = [%eta2 ( < )]
+  let[@zero_alloc strict] ( <> ) = [%eta2 ( <> )]
+  let[@zero_alloc strict] ( + ) = [%eta2 add]
+  let[@zero_alloc strict] ( - ) = [%eta2 diff]
 end
 
 (*

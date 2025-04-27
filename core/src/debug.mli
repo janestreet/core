@@ -2,7 +2,7 @@
 
 open! Import
 
-(** [eprint message] prints to stderr [message], followed by a newline and flush.  This is
+(** [eprint message] prints to stderr [message], followed by a newline and flush. This is
     the same as [prerr_endline]. *)
 val eprint : string -> unit
 
@@ -18,7 +18,7 @@ val eprint_s : Sexp.t -> unit
 val eprintf : ('r, unit, string, unit) format4 -> 'r
 
 (** [Debug.Make] produces a [debug] function used to wrap a function to display arguments
-    before calling and display results after returning.  Intended usage is:
+    before calling and display results after returning. Intended usage is:
 
     {[
       module Foo = struct
@@ -34,8 +34,7 @@ val eprintf : ('r, unit, string, unit) format4 -> 'r
           debug "bar" [t] (t, x, y) [%sexp_of: t * X.t * Y.t] [%sexp_of: Result.t]
             (fun () -> bar t x y)
       end
-    ]}
-*)
+    ]} *)
 module Make () : sig
   (** Whether the invariants are called on each invocation. *)
   val check_invariant : bool ref
@@ -56,24 +55,23 @@ module Make () : sig
     -> 'result
 end
 
-(** [am], [ams], and [amf] output a source code position and backtrace to stderr.  [amf]
-    accepts a printf-style format string.  [ams] accepts a message, value, and sexp
-    converter for that value.  Typical usage looks like:
+(** [am], [ams], and [amf] output a source code position and backtrace to stderr. [amf]
+    accepts a printf-style format string. [ams] accepts a message, value, and sexp
+    converter for that value. Typical usage looks like:
 
     {[
-      ...;
-    Debug.am [%here];
-      ...;
-      Debug.amf [%here] "hello (%s, %s)" (X.to_string x) (Y.to_string y);
-      ...;
-      Debug.ams [%here] "hello" (x, y) [%sexp_of: X.t * Y.t];
-      ...;
+        ...;
+      Debug.am [%here];
+        ...;
+        Debug.amf [%here] "hello (%s, %s)" (X.to_string x) (Y.to_string y);
+        ...;
+        Debug.ams [%here] "hello" (x, y) [%sexp_of: X.t * Y.t];
+        ...;
     ]}
 
     The [am*] functions output source code positions in the standard format
     "FILE:LINE:COL", which means that one can use a tool like emacs grep-mode on a buffer
-    containing debug messages to step through one's code by stepping through the
-    messages. *)
+    containing debug messages to step through one's code by stepping through the messages. *)
 val am : Source_code_position.t -> unit
 
 val ams : Source_code_position.t -> string -> 'a -> ('a -> Sexp.t) -> unit

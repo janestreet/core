@@ -5,11 +5,12 @@ module Stable = struct
     module T = struct
       include Base.Int
 
-      type t = int [@@deriving hash, bin_io ~localize, sexp, stable_witness]
+      type t = int [@@deriving bin_io ~localize, hash, sexp, stable_witness]
     end
 
     include T
-    include Comparable.Stable.V1.With_stable_witness.Make (T)
+
+    include%template Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (T)
   end
 end
 
@@ -18,10 +19,13 @@ module Binable = struct
 end
 
 include Binable
-include Identifiable.Extend (Base.Int) (Binable)
+
+include%template Identifiable.Extend [@modality portable] (Base.Int) (Binable)
+
 module Replace_polymorphic_compare = Base.Int
 include Base.Int
-include Comparable.Validate_with_zero (Base.Int)
+
+include%template Comparable.Validate_with_zero [@modality portable] (Base.Int)
 
 (* This is already defined by Comparable.Validate_with_zero, but Sign.of_int is
    more direct. *)

@@ -1,4 +1,5 @@
-(** Conversions between units of measure that are based on bytes (like kilobytes,
+(** {v
+ Conversions between units of measure that are based on bytes (like kilobytes,
     megabytes, gigabytes, and words).
 
     [t]'s are created with [of_bytes_float_exn], [of_words_float_exn], [of_kilobytes],
@@ -12,7 +13,7 @@
     - 1 Terabyte: 2^40 = 1024^4 bytes
     - 1 Petabyte: 2^50 = 1024^5 bytes
     - 1 Exabyte:  2^60 = 1024^6 bytes
-*)
+    v} *)
 
 open! Import
 
@@ -35,36 +36,36 @@ val of_bytes : float -> t
 val of_bytes_int : int -> t
 val of_bytes_int63 : Int63.t -> t
 
-(** This will raise if and only if the argument can not be represented as a [Byte_units.t].
-    Specifically this is if the argument is outside of \[-2^62,2^62). *)
+(** This will raise if and only if the argument can not be represented as a
+    [Byte_units.t]. Specifically this is if the argument is outside of \[-2^62,2^62). *)
 val of_bytes_int64_exn : Int64.t -> t
 
-(** This will raise if and only if the argument can not be represented as a [Byte_units.t].
-    Specifically this is if the argument is outside of \[-2^62,2^62), *)
+(** This will raise if and only if the argument can not be represented as a
+    [Byte_units.t]. Specifically this is if the argument is outside of \[-2^62,2^62), *)
 val of_bytes_float_exn : float -> t
 
-(** create of [Byte_units] based on the number of kilobytes.
-    N.B. This will raise if the value is outside of \[-2^52,2^52). *)
+(** create of [Byte_units] based on the number of kilobytes. N.B. This will raise if the
+    value is outside of \[-2^52,2^52). *)
 val of_kilobytes : float -> t
 
-(** create of [Byte_units] based on the number of Megabytes.
-    N.B. This will raise if the value is outside of \[-2^42,2^42). *)
+(** create of [Byte_units] based on the number of Megabytes. N.B. This will raise if the
+    value is outside of \[-2^42,2^42). *)
 val of_megabytes : float -> t
 
-(** create of [Byte_units] based on the number of Gigabytes.
-    N.B. This will raise if the value is outside of \[-2^32,2^32). *)
+(** create of [Byte_units] based on the number of Gigabytes. N.B. This will raise if the
+    value is outside of \[-2^32,2^32). *)
 val of_gigabytes : float -> t
 
-(** create of [Byte_units] based on the number of Terabytes.
-    N.B. This will raise if the value is outside of \[-2^22,2^22). *)
+(** create of [Byte_units] based on the number of Terabytes. N.B. This will raise if the
+    value is outside of \[-2^22,2^22). *)
 val of_terabytes : float -> t
 
-(** create of [Byte_units] based on the number of Petabytes.
-    N.B. This will raise if the value is outside of \[-2^12,2^12). *)
+(** create of [Byte_units] based on the number of Petabytes. N.B. This will raise if the
+    value is outside of \[-2^12,2^12). *)
 val of_petabytes : float -> t
 
-(** create of [Byte_units] based on the number of Exabytes.
-    N.B. This will raise if the value is outside of \[-4,4). *)
+(** create of [Byte_units] based on the number of Exabytes. N.B. This will raise if the
+    value is outside of \[-4,4). *)
 val of_exabytes : float -> t
 
 (** Do not use, consider using [of_words_int] instead. Alias for [of_words_float_exn]. *)
@@ -75,8 +76,9 @@ val of_words : float -> t
 val of_words_int : int -> t
 
 (** Create of [Byte_units] based on the number of machine words.
-    On 64-bit platforms this will raise if the value is outside of \[-2^59,2^59).
-    On 32-bit platforms (including JS) this will raise if the value is outside of  \[-2^60,2^60). *)
+    - On 64-bit platforms this will raise if the value is outside of \[-2^59,2^59).
+    - On 32-bit platforms (including JS) this will raise if the value is outside of
+      \[-2^60,2^60). *)
 val of_words_float_exn : float -> t
 
 (** [to_string_hum t] returns a string representation of [t]. This will use the largest
@@ -92,14 +94,13 @@ val to_string_short : t -> string
 module Short : sig
   type nonrec t = t [@@deriving sexp_of]
 
-  (** [Short.to_string] is like [to_string_hum] but will attempt to only show 4 significant
-      digits.
+  (** [Short.to_string] is like [to_string_hum] but will attempt to only show 4
+      significant digits.
 
       For example [Byte_units.to_string_hum (Byte_units.of_bytes_int 1000)] gives [1000B],
       but [Byte_units.to_string_hum (Byte_units.of_bytes_int 1500)] gives [1.46K].
 
-      [Short.sexp_of_t] does the same.
-  *)
+      [Short.sexp_of_t] does the same. *)
   val to_string : t -> string
 end
 
@@ -110,10 +111,9 @@ val bytes : t -> float
    appropriate."]
 
 (** This will raise if and only if the value of this [Byte_units.t] can not be represented
-    as an int.
-    This can only happen on platforms where [int] is less than 63 bits, specifically JS
-    and 32-bit OCaml where this will raise if the number of bytes is outside
-    of \[-2^30,2^30). *)
+    as an int. This can only happen on platforms where [int] is less than 63 bits,
+    specifically JS and 32-bit OCaml where this will raise if the number of bytes is
+    outside of \[-2^30,2^30). *)
 val bytes_int_exn : t -> int
 
 val bytes_int63 : t -> Int63.t
@@ -130,8 +130,8 @@ val exabytes : t -> float
 val words : t -> float
 [@@deprecated "[since 2019-01] Use [words_int_exn] or [words_float] instead."]
 
-(** In JS and on 32-bit OCaml this will raise if and only if the number of bytes is outside
-    of \[-2^32,2^32). *)
+(** In JS and on 32-bit OCaml this will raise if and only if the number of bytes is
+    outside of \[-2^32,2^32). *)
 val words_int_exn : t -> int
 
 val words_float : t -> float

@@ -11,8 +11,10 @@ include Stdlib
 
    [[1] http://caml.inria.fr/mantis/view.php?id=6556
 *)
-external raise : exn -> 'a = "%reraise"
-external ignore : ('a : any). ('a[@local_opt]) -> unit = "%ignore" [@@layout_poly]
+external raise : exn -> 'a @@ portable = "%reraise"
+
+external ignore : ('a : any). ('a[@local_opt]) -> unit @@ portable = "%ignore"
+[@@layout_poly]
 
 [%%if ocaml_version < (4, 12, 0)]
 
@@ -20,42 +22,59 @@ let __FUNCTION__ = "<__FUNCTION__ not supported before OCaml 4.12>"
 
 [%%endif]
 
-external __LOC_OF__ : ('a[@local_opt]) -> (string * 'a[@local_opt]) = "%loc_LOC"
-external __LINE_OF__ : ('a[@local_opt]) -> (int * 'a[@local_opt]) = "%loc_LINE"
+external __LOC_OF__
+  :  ('a[@local_opt])
+  -> (string * 'a[@local_opt])
+  @@ portable
+  = "%loc_LOC"
+
+external __LINE_OF__
+  :  ('a[@local_opt])
+  -> (int * 'a[@local_opt])
+  @@ portable
+  = "%loc_LINE"
 
 external __POS_OF__
   :  ('a[@local_opt])
   -> ((string * int * int * int) * 'a[@local_opt])
+  @@ portable
   = "%loc_POS"
 
 external ( |> )
   : ('a : any) ('b : any).
   'a -> (('a -> 'b)[@local_opt]) -> 'b
+  @@ portable
   = "%revapply"
 [@@layout_poly]
 
-external ( @@ ) : ('a : any) ('b : any). (('a -> 'b)[@local_opt]) -> 'a -> 'b = "%apply"
+external ( @@ )
+  : ('a : any) ('b : any).
+  (('a -> 'b)[@local_opt]) -> 'a -> 'b
+  @@ portable
+  = "%apply"
 [@@layout_poly]
 
-external int_of_char : (char[@local_opt]) -> int = "%identity"
+external int_of_char : (char[@local_opt]) -> int @@ portable = "%identity"
 
 external format_of_string
   :  (('a, 'b, 'c, 'd, 'e, 'f) format6[@local_opt])
   -> (('a, 'b, 'c, 'd, 'e, 'f) format6[@local_opt])
+  @@ portable
   = "%identity"
 
 external ( ** )
   :  (float[@local_opt])
   -> (float[@local_opt])
   -> float
+  @@ portable
   = "caml_power_float" "pow"
 [@@unboxed] [@@noalloc]
 
-external sqrt : (float[@local_opt]) -> float = "caml_sqrt_float" "sqrt"
+external sqrt : (float[@local_opt]) -> float @@ portable = "caml_sqrt_float" "sqrt"
 [@@unboxed] [@@noalloc]
 
-external exp : (float[@local_opt]) -> float = "caml_exp_float" "exp"
+external exp : (float[@local_opt]) -> float @@ portable = "caml_exp_float" "exp"
 [@@unboxed] [@@noalloc]
 
-external log : (float[@local_opt]) -> float = "caml_log_float" "log"
+external log : (float[@local_opt]) -> float @@ portable = "caml_log_float" "log"
 [@@unboxed] [@@noalloc]

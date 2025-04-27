@@ -299,36 +299,6 @@ let compact_if_not_running_test () = if not am_running_test then compact ()
 let rec keep_alive o = if zero <> 0 then keep_alive (Sys.opaque_identity o)
 
 module For_testing = struct
-  type 'a globl = { global_ g : 'a } [@@unboxed]
-
-  (* We disable inlining for this function so the GC stats and the call to [f] are never
-     rearranged. *)
-  let[@cold] measure_internal ~on_result (f : unit -> local_ 'a) = exclave_
-    let minor_words_before = minor_words () in
-    let major_words_before = major_words () in
-    (* We wrap [f ()] with [Sys.opaque_identity] to prevent the return value from being
-       optimized away. *)
-    let x = Sys.opaque_identity (f ()) in
-    let minor_words_after = minor_words () in
-    let major_words_after = major_words () in
-    let major_words_allocated = major_words_after - major_words_before in
-    let minor_words_allocated = minor_words_after - minor_words_before in
-    on_result ~major_words_allocated ~minor_words_allocated x
-  ;;
-
-  let is_zero_alloc_local (type a) (f : unit -> local_ a) =
-    (* Instead of using [Allocation_report.measure], and matching on the result, we use
-       this construction, in order to have [is_zero_alloc] not allocate itself. This
-       enables [is_zero_alloc] to be used in a nested way. *)
-    measure_internal
-      f
-      ~on_result:(fun ~major_words_allocated ~minor_words_allocated value ->
-        ignore (Sys.opaque_identity value : a);
-        major_words_allocated == 0 && minor_words_allocated == 0) [@nontail]
-  ;;
-
-  let is_zero_alloc (local_ f) = is_zero_alloc_local (fun () -> { g = f () }) [@nontail]
-
   module Allocation_report = struct
     type t =
       { major_words_allocated : int [@globalized]
@@ -340,35 +310,6 @@ module For_testing = struct
       { major_words_allocated; minor_words_allocated }
     ;;
   end
-
-  let measure_allocation_local f = exclave_
-    measure_internal f ~on_result:(fun ~major_words_allocated ~minor_words_allocated x ->
-      exclave_ x, Allocation_report.create ~major_words_allocated ~minor_words_allocated)
-  ;;
-
-  let measure_allocation_for_runtime5_local f = exclave_
-    let minor_words_before = minor_words () in
-    let promoted_words_before = promoted_words () in
-    let major_words_before = major_words () in
-    let x = Sys.opaque_identity (f ()) in
-    let minor_words_after = minor_words () in
-    let promoted_words_after = promoted_words () in
-    let major_words_after = major_words () in
-    let major_words_allocated =
-      major_words_after
-      - promoted_words_after
-      - (major_words_before - promoted_words_before)
-    in
-    let minor_words_allocated = minor_words_after - minor_words_before in
-    x, Allocation_report.create ~major_words_allocated ~minor_words_allocated
-  ;;
-
-  let measure_allocation f =
-    let%tydi { g }, allocation_report =
-      measure_allocation_local (fun () -> { g = f () })
-    in
-    g, [%globalize: Allocation_report.t] allocation_report
-  ;;
 
   module Allocation_log = struct
     type t =
@@ -389,6 +330,75 @@ module For_testing = struct
 
   [%%endif]
 
+  [%%template
+  [@@@kind.default k = (value, float64, bits32, bits64, word)]
+
+  type ('a : k) globl = { global_ g : 'a } [@@unboxed]
+
+  (* We disable inlining for this function so the GC stats and the call to [f] are never
+     rearranged. *)
+  let[@cold] measure_internal ~on_result (f : unit -> local_ 'a) = exclave_
+    let minor_words_before = minor_words () in
+    let major_words_before = major_words () in
+    (* We wrap [f ()] with [Sys.opaque_identity] to prevent the return value from being
+       optimized away. *)
+    let x = Sys.opaque_identity (f ()) in
+    let minor_words_after = minor_words () in
+    let major_words_after = major_words () in
+    let major_words_allocated = major_words_after - major_words_before in
+    let minor_words_allocated = minor_words_after - minor_words_before in
+    on_result ~major_words_allocated ~minor_words_allocated x
+  [@@kind k = (k, k & value)]
+  ;;
+
+  let is_zero_alloc_local (type a : k) (f : unit -> local_ a) =
+    (* Instead of using [Allocation_report.measure], and matching on the result, we use
+       this construction, in order to have [is_zero_alloc] not allocate itself. This
+       enables [is_zero_alloc] to be used in a nested way. *)
+    (measure_internal [@kind k])
+      f
+      ~on_result:(fun ~major_words_allocated ~minor_words_allocated value ->
+        ignore (Sys.opaque_identity value : a);
+        major_words_allocated == 0 && minor_words_allocated == 0)
+    [@nontail]
+  ;;
+
+  let is_zero_alloc (local_ f) =
+    (is_zero_alloc_local [@kind k]) (fun () -> { g = f () }) [@nontail]
+  ;;
+
+  let measure_allocation_local f = exclave_
+    (measure_internal [@kind k & value])
+      f
+      ~on_result:(fun ~major_words_allocated ~minor_words_allocated x ->
+        exclave_
+        #(x, Allocation_report.create ~major_words_allocated ~minor_words_allocated))
+  ;;
+
+  let measure_allocation_for_runtime5_local f = exclave_
+    let minor_words_before = minor_words () in
+    let promoted_words_before = promoted_words () in
+    let major_words_before = major_words () in
+    let x = Sys.opaque_identity (f ()) in
+    let minor_words_after = minor_words () in
+    let promoted_words_after = promoted_words () in
+    let major_words_after = major_words () in
+    let major_words_allocated =
+      major_words_after
+      - promoted_words_after
+      - (major_words_before - promoted_words_before)
+    in
+    let minor_words_allocated = minor_words_after - minor_words_before in
+    #(x, Allocation_report.create ~major_words_allocated ~minor_words_allocated)
+  ;;
+
+  let measure_allocation f =
+    let #({ g }, allocation_report) =
+      (measure_allocation_local [@kind k]) (fun () -> { g = f () })
+    in
+    #(g, [%globalize: Allocation_report.t] allocation_report)
+  ;;
+
   let measure_and_log_allocation_local (local_ (f : unit -> local_ 'a)) = exclave_
     let log : Allocation_log.t list ref = ref []
     and major_allocs = ref 0
@@ -397,7 +407,7 @@ module For_testing = struct
       if is_major
       then major_allocs := !major_allocs + info.n_samples
       else minor_allocs := !minor_allocs + info.n_samples;
-      let backtrace = Stdlib.Printexc.raw_backtrace_to_string info.callstack in
+      let backtrace = Backtrace.to_string info.callstack in
       (* Make backtraces easier to read by deleting everything below this function *)
       let backtrace =
         match String.substr_index backtrace ~pattern:"measure_and_log_allocation" with
@@ -437,52 +447,59 @@ module For_testing = struct
         | exception e ->
           run_memprof_callbacks ();
           Memprof.stop ();
-          raise e
+          raise e |> (Never_returns.never_returns [@kind k])
       in
-      ( result
-      , Allocation_report.create
-          ~major_words_allocated:!major_allocs
-          ~minor_words_allocated:!minor_allocs
-      , List.rev !log )
+      #( result
+       , Allocation_report.create
+           ~major_words_allocated:!major_allocs
+           ~minor_words_allocated:!minor_allocs
+       , List.rev !log )
     | exception Failure msg ->
       if String.equal msg "Gc.memprof.start: not implemented in multicore"
       then (
-        let a, b = measure_allocation_for_runtime5_local f in
-        a, b, [])
-      else failwith msg
+        let #(a, b) = (measure_allocation_for_runtime5_local [@kind k]) f in
+        #(a, b, []))
+      else (
+        match failwith msg with
+        | (_ : Nothing.t) -> .)
   ;;
 
   let measure_and_log_allocation f =
-    let { g }, allocation_report, log =
-      measure_and_log_allocation_local (fun () -> { g = f () })
+    let #({ g }, allocation_report, log) =
+      (measure_and_log_allocation_local [@kind k]) (fun () -> { g = f () })
     in
-    ( g
-    , [%globalize: Allocation_report.t] allocation_report
-    , [%globalize: Allocation_log.t list] log )
+    #( g
+     , [%globalize: Allocation_report.t] allocation_report
+     , [%globalize: Allocation_log.t list] log )
   ;;
 
   let[@cold] require_no_allocation_local_failed here allocation_report allocation_log =
     let allocation_report = [%globalize: Allocation_report.t] allocation_report in
     let allocation_log = [%globalize: Allocation_log.t list] allocation_log in
+    let here = if Source_code_position.is_dummy here then None else Some here in
     raise_s
       [%message
         "allocation detected"
-          (here : Source_code_position.t)
+          (here : (Source_code_position.t option[@sexp.option]))
           (allocation_report : Allocation_report.t)
           (allocation_log : Allocation_log.t list)]
   ;;
 
-  let assert_no_allocation_local here f = exclave_
-    let result, allocation_report, allocation_log = measure_and_log_allocation_local f in
+  let assert_no_allocation_local ~(here : [%call_pos]) f = exclave_
+    let #(result, allocation_report, allocation_log) =
+      (measure_and_log_allocation_local [@kind k]) f
+    in
     if allocation_report.major_words_allocated > 0
        || allocation_report.minor_words_allocated > 0
-    then require_no_allocation_local_failed here allocation_report allocation_log;
+    then
+      (require_no_allocation_local_failed [@kind k]) here allocation_report allocation_log;
     result
   ;;
 
-  let assert_no_allocation here f =
-    (assert_no_allocation_local here (fun () -> { g = f () })).g
-  ;;
+  let assert_no_allocation ~(here : [%call_pos]) f =
+    let { g } = (assert_no_allocation_local [@kind k]) ~here (fun () -> { g = f () }) in
+    g
+  ;;]
 end
 
 module Expert = struct
@@ -496,15 +513,20 @@ module Expert = struct
       ()
   ;;
 
-  (* [add_finalizer_exn] is the same as [add_finalizer].  However, their types in
+  (* [add_finalizer_ignore] is the same as [add_finalizer].  However, their types in
      core_gc.mli are different, and the type of [add_finalizer] guarantees that it always
      receives a heap block, which ensures that it will not raise, while
      [add_finalizer_exn] accepts any type, and so may raise. *)
+  let add_finalizer_ignore x f =
+    try Stdlib.Gc.finalise (fun x -> Exn.handle_uncaught_and_exit (fun () -> f x)) x with
+    | Invalid_argument _ -> ()
+  ;;
+
   let add_finalizer_exn x f =
     try Stdlib.Gc.finalise (fun x -> Exn.handle_uncaught_and_exit (fun () -> f x)) x with
     | Invalid_argument _ ->
-      ignore (Heap_block.create x : _ Heap_block.t option);
-      (* If [Heap_block.create] succeeds then [x] is static data and so
+      ignore (Heap_block.create_exn x : _ Heap_block.t);
+      (* If [Heap_block.create_exn] succeeds then [x] is static data and so
          we can simply drop the finaliser. *)
       ()
   ;;
@@ -519,11 +541,16 @@ module Expert = struct
       ()
   ;;
 
+  let add_finalizer_last_ignore x f =
+    try Stdlib.Gc.finalise_last (fun () -> Exn.handle_uncaught_and_exit f) x with
+    | Invalid_argument _ -> ()
+  ;;
+
   let add_finalizer_last_exn x f =
     try Stdlib.Gc.finalise_last (fun () -> Exn.handle_uncaught_and_exit f) x with
     | Invalid_argument _ ->
-      ignore (Heap_block.create x : _ Heap_block.t option);
-      (* If [Heap_block.create] succeeds then [x] is static data and so
+      ignore (Heap_block.create_exn x : _ Heap_block.t);
+      (* If [Heap_block.create_exn] succeeds then [x] is static data and so
          we can simply drop the finaliser. *)
       ()
   ;;
@@ -545,6 +572,11 @@ module Expert = struct
     let add_finalizer_exn x f =
       let f = protect_finalizer x f in
       add_finalizer_exn x f
+    ;;
+
+    let add_finalizer_ignore x f =
+      let f = protect_finalizer x f in
+      add_finalizer_ignore x f
     ;;
   end
 

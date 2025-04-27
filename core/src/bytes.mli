@@ -1,4 +1,6 @@
-(** This module extends {{!Base.Bytes}[Base.Bytes]}. *)
+@@ portable
+
+(** This module extends {{!Base.Bytes} [Base.Bytes]}. *)
 
 open! Import
 

@@ -5,10 +5,10 @@
     put in weak pointers and use with finalizers are heap blocks.
 
     Some examples of values that are not heap-allocated are integers, constant
-    constructors, booleans, the empty array, the empty list, the unit value.  The exact
-    list of what is heap-allocated or not is implementation-dependent.  Some constant
+    constructors, booleans, the empty array, the empty list, the unit value. The exact
+    list of what is heap-allocated or not is implementation-dependent. Some constant
     values can be heap-allocated but never deallocated during the lifetime of the program,
-    for example a list of integer constants; this is also implementation-dependent.  You
+    for example a list of integer constants; this is also implementation-dependent. You
     should also be aware that compiler optimizations may duplicate some immutable values,
     for example floating-point numbers when stored into arrays; thus they can be finalized
     and collected while another copy is still in use by the program.
@@ -21,8 +21,8 @@ open! Base
 
 type +'a t = private 'a [@@deriving sexp_of]
 
-(** [create v] returns [Some t] if [v] is a heap block, where [t] is physically equal
-    to [v]. *)
+(** [create v] returns [Some t] if [v] is a heap block, where [t] is physically equal to
+    [v]. *)
 val create : 'a -> 'a t option
 
 val create_exn : 'a -> 'a t
@@ -31,6 +31,5 @@ val create_exn : 'a -> 'a t
 val value : 'a t -> 'a
 
 (** [bytes t] returns the number of bytes on the heap taken by heap block [t], including
-    the header.  This is just the space for the single block, not anything it points
-    to. *)
+    the header. This is just the space for the single block, not anything it points to. *)
 val bytes : _ t -> int

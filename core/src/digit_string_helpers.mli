@@ -1,6 +1,6 @@
-(** Utility functions for parsing and outputing strings containing known numbers
-    of digits.  Used primarily for building functions for reading in and writing
-    out Time related values. *)
+(** Utility functions for parsing and outputing strings containing known numbers of
+    digits. Used primarily for building functions for reading in and writing out Time
+    related values. *)
 
 open! Import
 
@@ -79,8 +79,8 @@ val read_int63_decimal
 val max_int63_with : digits:int -> Int63.t
 
 module Unsafe : sig
-  (** [divide_and_round_up ~numerator ~denominator] returns [ceil
-      (numerator/denominator)]. *)
+  (** [divide_and_round_up ~numerator ~denominator] returns
+      [ceil (numerator/denominator)]. *)
   val divide_and_round_up : numerator:Int63.t -> denominator:Int63.t -> Int63.t
 
   val write_1_digit_int : bytes -> pos:int -> int -> unit

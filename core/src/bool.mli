@@ -1,4 +1,6 @@
-(** This module extends {{!Base.Bool}[Base.Bool]}. *)
+@@ portable
+
+(** This module extends {{!Base.Bool} [Base.Bool]}. *)
 
 type t = bool [@@deriving bin_io ~localize, typerep]
 
@@ -9,14 +11,12 @@ include
   with type t := t
    and type comparator_witness := Base.Bool.comparator_witness
 
-(**
-   Human readable parsing. Accepted inputs are (case insensitive):
-   - true/false
-   - yes/no
-   - 1/0
-   - t/f
-   - y/n
-*)
+(** Human readable parsing. Accepted inputs are (case insensitive):
+    - true/false
+    - yes/no
+    - 1/0
+    - t/f
+    - y/n *)
 val of_string_hum : string -> t
 
 include Quickcheckable.S with type t := t
@@ -24,7 +24,14 @@ include Quickcheckable.S with type t := t
 module Stable : sig
   module V1 : sig
     type nonrec t = t
-    [@@deriving bin_io ~localize, compare, equal, hash, sexp, sexp_grammar]
+    [@@deriving
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , hash
+      , sexp
+      , sexp_grammar
+      , typerep]
 
     include
       Stable_comparable.With_stable_witness.V1

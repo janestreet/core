@@ -16,8 +16,8 @@ module type Day_of_week = sig
   include Comparable.S_binable with type t := t
   include Hashable.S_binable with type t := t
 
-  (** [of_string s] accepts three-character abbreviations and full day names
-      with any capitalization, and strings of the integers 0-6. *)
+  (** [of_string s] accepts three-character abbreviations and full day names with any
+      capitalization, and strings of the integers 0-6. *)
   include Stringable.S with type t := t
 
   (** Capitalized full day names rather than all-caps 3-letter abbreviations. *)
@@ -36,9 +36,8 @@ module type Day_of_week = sig
   val shift : t -> int -> t
 
   (** [num_days ~from ~to_] gives the number of days that must elapse from a [from] to get
-      to a [to_], i.e., the smallest non-negative number [i] such that [shift from i =
-      to_].
-  *)
+      to a [to_], i.e., the smallest non-negative number [i] such that
+      [shift from i = to_]. *)
   val num_days : from:t -> to_:t -> int
 
   val is_sun_or_sat : t -> bool

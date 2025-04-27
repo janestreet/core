@@ -1,3 +1,5 @@
+@@ portable
+
 open! Import
 
 (** @inline *)
@@ -17,7 +19,7 @@ val kfprintf
 val printf : ('a, out_channel, unit) format -> 'a
 
 (** print to stderr; exit 1 *)
-val exitf : ('a, unit, string, unit -> _) format4 -> 'a
+val exitf : ('a, unit, string, unit -> _) format4 -> 'a @@ nonportable
 
 type printf = { printf : 'a. ('a, Buffer.t, unit) format -> 'a }
 
@@ -45,6 +47,5 @@ type printf = { printf : 'a. ('a, Buffer.t, unit) format -> 'a }
       (* long computation *)
       let world = sprintf "%s%c" "world" '!' in
       hello ^ world
-    ]}
-*)
+    ]} *)
 val collect_to_string : (printf -> unit) -> string

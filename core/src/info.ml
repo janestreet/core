@@ -18,10 +18,11 @@ module Sexp = struct
     type t = Base.Sexp.t =
       | Atom of string
       | List of t list
-    [@@deriving bin_io, compare, hash, stable_witness]
+    [@@deriving bin_io ~localize, compare, hash, stable_witness]
   end :
     sig
-      type t [@@deriving bin_io, compare, hash, stable_witness]
+    @@ portable
+      type t [@@deriving bin_io ~localize, compare, hash, stable_witness]
     end
     with type t := t)
 end
@@ -30,21 +31,24 @@ module Binable_exn = struct
   module Stable = struct
     module V1 = struct
       module T = struct
-        type t = exn [@@deriving sexp_of, stable_witness]
+        type t = exn Modes.Stable.Global.V1.t [@@deriving sexp_of, stable_witness]
       end
 
       include T
 
-      let to_binable t = t |> [%sexp_of: t]
-      let of_binable = Exn.create_s
+      let%template[@mode m = (global, local)] to_binable t =
+        t |> Modes.Global.unwrap |> [%sexp_of: exn]
+      ;;
 
-      include
-        Binable.Stable.Of_binable.V1 [@alert "-legacy"]
+      let of_binable exn = exn |> Exn.create_s |> Modes.Global.wrap
+
+      include%template
+        Binable.Stable.Of_binable.V1 [@mode local] [@modality portable] [@alert "-legacy"]
           (Sexp)
           (struct
             include T
 
-            let to_binable = to_binable
+            let[@mode m = (global, local)] to_binable = (to_binable [@mode m])
             let of_binable = of_binable
           end)
 
@@ -58,13 +62,35 @@ end
 module Extend (Info : Base.Info.S) = struct
   include Info
 
+  (* Note that implementations of Base.Info.S should have t_of_sexp that handles any
+     sexp. *)
+  let%template quickcheck_generator =
+    let module G = Base_quickcheck.Generator in
+    (G.union [@mode portable])
+      [ (G.map [@mode portable]) G.sexp ~f:t_of_sexp
+      ; (G.map [@mode portable]) G.string ~f:of_string
+      ]
+  ;;
+
+  let%template quickcheck_observer =
+    (Base_quickcheck.Observer.of_hash_fold [@mode portable]) hash_fold_t
+  ;;
+
+  let%template quickcheck_shrinker =
+    (Base_quickcheck.Shrinker.map [@mode portable])
+      Base_quickcheck.Shrinker.sexp
+      ~f:t_of_sexp
+      ~f_inverse:sexp_of_t
+  ;;
+
   module Internal_repr = struct
     module Stable = struct
       module Binable_exn = Binable_exn.Stable
 
       module Source_code_position = struct
         module V1 = struct
-          type t = Source_code_position.Stable.V1.t [@@deriving bin_io, stable_witness]
+          type t = Source_code_position.Stable.V1.t
+          [@@deriving bin_io ~localize, stable_witness]
 
           (* [sexp_of_t] as defined here is unstable; this is OK because there is no
              [t_of_sexp].  [sexp_of_t] is only used to produce a sexp that is never
@@ -84,7 +110,7 @@ module Extend (Info : Base.Info.S) = struct
           | Tag_arg of string * Sexp.t * t
           | Of_list of int option * t list
           | With_backtrace of t * string (* backtrace *)
-        [@@deriving bin_io, sexp_of, stable_witness]
+        [@@deriving bin_io ~localize, sexp_of, stable_witness]
       end
     end
 
@@ -97,22 +123,27 @@ module Extend (Info : Base.Info.S) = struct
   module Stable = struct
     module V2 = struct
       module T = struct
-        type t = Info.t [@@deriving sexp, sexp_grammar, compare, equal, hash]
+        type t = Info.t
+        [@@deriving sexp, sexp_grammar, compare ~localize, equal, globalize, hash]
       end
 
       include T
-      include Comparator.Stable.V1.Make (T)
 
-      let to_binable = Info.Internal_repr.of_info
+      include%template Comparator.Stable.V1.Make [@modality portable] (T)
+
+      let%template[@mode m = (global, local)] to_binable =
+        (Info.Internal_repr.of_info : _ @ m -> _)
+      ;;
+
       let of_binable = Info.Internal_repr.to_info
 
-      include
-        Binable.Stable.Of_binable.V1 [@alert "-legacy"]
+      include%template
+        Binable.Stable.Of_binable.V1 [@mode local] [@modality portable] [@alert "-legacy"]
           (Internal_repr.Stable.V2)
           (struct
             type nonrec t = t
 
-            let to_binable = to_binable
+            let[@mode m = (global, local)] to_binable = (to_binable [@mode m])
             let of_binable = of_binable
           end)
 
@@ -123,7 +154,7 @@ module Extend (Info : Base.Info.S) = struct
           to_binable
       ;;
 
-      include Diffable.Atomic.Make (struct
+      include%template Diffable.Atomic.Make [@modality portable] (struct
           type nonrec t = t [@@deriving sexp, bin_io, equal]
         end)
     end
@@ -132,8 +163,8 @@ module Extend (Info : Base.Info.S) = struct
       module T = struct
         type t = Info.t [@@deriving compare]
 
-        include
-          Sexpable.Stable.Of_sexpable.V1
+        include%template
+          Sexpable.Stable.Of_sexpable.V1 [@modality portable]
             (Sexp)
             (struct
               type nonrec t = t
@@ -146,13 +177,14 @@ module Extend (Info : Base.Info.S) = struct
       end
 
       include T
-      include Comparator.Stable.V1.Make (T)
+
+      include%template Comparator.Stable.V1.Make [@modality portable] (T)
 
       let to_binable = sexp_of_t
       let of_binable = t_of_sexp
 
-      include
-        Binable.Stable.Of_binable.V1 [@alert "-legacy"]
+      include%template
+        Binable.Stable.Of_binable.V1 [@modality portable] [@alert "-legacy"]
           (Sexp)
           (struct
             type nonrec t = t
@@ -167,7 +199,7 @@ module Extend (Info : Base.Info.S) = struct
     end
   end
 
-  type t = Stable.V2.t [@@deriving bin_io]
+  type t = Stable.V2.t [@@deriving bin_io ~localize]
 
   module Diff = Stable.V2.Diff
 end

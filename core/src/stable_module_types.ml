@@ -1,11 +1,14 @@
 open! Import
 
+[%%template
+[@@@mode.default m = (global, local)]
+
 module type S0_without_comparator = sig
-  type t [@@deriving bin_io, compare, sexp]
+  type t [@@deriving (bin_io [@mode m]), (compare [@mode m]), sexp]
 end
 
 module type S0 = sig
-  include S0_without_comparator
+  include S0_without_comparator [@mode m]
   include Comparator.Stable.V1.S with type t := t
 end
 
@@ -14,19 +17,19 @@ end
     reaching into the unstable part of the module. *)
 
 module type S1 = sig
-  type 'a t [@@deriving bin_io, compare, sexp]
+  type 'a t [@@deriving (bin_io [@mode m]), (compare [@mode m]), sexp]
 
   val map : 'a t -> f:('a -> 'b) -> 'b t
 end
 
 module type S2 = sig
-  type ('a1, 'a2) t [@@deriving bin_io, compare, sexp]
+  type ('a1, 'a2) t [@@deriving (bin_io [@mode m]), (compare [@mode m]), sexp]
 
   val map : ('a1, 'a2) t -> f1:('a1 -> 'b1) -> f2:('a2 -> 'b2) -> ('b1, 'b2) t
 end
 
 module type S3 = sig
-  type ('a1, 'a2, 'a3) t [@@deriving bin_io, compare, sexp]
+  type ('a1, 'a2, 'a3) t [@@deriving (bin_io [@mode m]), (compare [@mode m]), sexp]
 
   val map
     :  ('a1, 'a2, 'a3) t
@@ -37,7 +40,7 @@ module type S3 = sig
 end
 
 module type S4 = sig
-  type ('a1, 'a2, 'a3, 'a4) t [@@deriving bin_io, compare, sexp]
+  type ('a1, 'a2, 'a3, 'a4) t [@@deriving (bin_io [@mode m]), (compare [@mode m]), sexp]
 
   val map
     :  ('a1, 'a2, 'a3, 'a4) t
@@ -46,42 +49,44 @@ module type S4 = sig
     -> f3:('a3 -> 'b3)
     -> f4:('a4 -> 'b4)
     -> ('b1, 'b2, 'b3, 'b4) t
-end
+end]
 
-module With_stable_witness = struct
+module%template With_stable_witness = struct
+  [@@@mode.default m = (global, local)]
+
   module type S0_without_comparator = sig
     type t [@@deriving stable_witness]
 
-    include S0_without_comparator with type t := t
+    include S0_without_comparator [@mode m] with type t := t
   end
 
   module type S0 = sig
     type t [@@deriving stable_witness]
 
-    include S0 with type t := t
+    include S0 [@mode m] with type t := t
   end
 
   module type S1 = sig
     type 'a t [@@deriving stable_witness]
 
-    include S1 with type 'a t := 'a t
+    include S1 [@mode m] with type 'a t := 'a t
   end
 
   module type S2 = sig
     type ('a, 'b) t [@@deriving stable_witness]
 
-    include S2 with type ('a, 'b) t := ('a, 'b) t
+    include S2 [@mode m] with type ('a, 'b) t := ('a, 'b) t
   end
 
   module type S3 = sig
     type ('a, 'b, 'c) t [@@deriving stable_witness]
 
-    include S3 with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
+    include S3 [@mode m] with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
   end
 
   module type S4 = sig
     type ('a, 'b, 'c, 'd) t [@@deriving stable_witness]
 
-    include S4 with type ('a, 'b, 'c, 'd) t := ('a, 'b, 'c, 'd) t
+    include S4 [@mode m] with type ('a, 'b, 'c, 'd) t := ('a, 'b, 'c, 'd) t
   end
 end

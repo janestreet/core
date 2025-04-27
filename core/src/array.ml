@@ -7,12 +7,12 @@ module Core_sequence = Sequence
 include (
   Base.Array :
   sig
-    type 'a t = 'a array [@@deriving compare ~localize, globalize, sexp, sexp_grammar]
+  @@ portable
+    type 'a t = 'a array
+    [@@deriving compare ~localize, globalize, sexp ~localize, sexp_grammar]
   end)
 
 type 'a t = 'a array [@@deriving bin_io ~localize, quickcheck, typerep]
-
-module Private = Base.Array.Private
 
 module T = struct
   include Base.Array
@@ -53,12 +53,13 @@ module T = struct
         -> dst_pos:int
         -> len:int
         -> unit
+        @@ portable
         = "core_array_unsafe_int_blit"
       [@@noalloc]
     end
 
-    include
-      Test_blit.Make_and_test
+    include%template
+      Test_blit.Make_and_test [@modality portable]
         (struct
           type t = int
 
@@ -89,23 +90,31 @@ module T = struct
         -> dst_pos:int
         -> len:int
         -> unit
+        @@ portable
         = "core_array_unsafe_float_blit"
       [@@noalloc]
     end
 
-    external get : (t_[@local_opt]) -> (int[@local_opt]) -> float = "%floatarray_safe_get"
+    external get
+      :  (t_[@local_opt])
+      -> (int[@local_opt])
+      -> float
+      @@ portable
+      = "%floatarray_safe_get"
 
     external set
       :  (t_[@local_opt])
       -> (int[@local_opt])
       -> (float[@local_opt])
       -> unit
+      @@ portable
       = "%floatarray_safe_set"
 
     external unsafe_get
       :  (t_[@local_opt])
       -> (int[@local_opt])
       -> float
+      @@ portable
       = "%floatarray_unsafe_get"
 
     external unsafe_set
@@ -113,10 +122,11 @@ module T = struct
       -> (int[@local_opt])
       -> (float[@local_opt])
       -> unit
+      @@ portable
       = "%floatarray_unsafe_set"
 
-    include
-      Test_blit.Make_and_test
+    include%template
+      Test_blit.Make_and_test [@modality portable]
         (struct
           type t = float
 
@@ -137,7 +147,7 @@ module T = struct
   end
 end
 
-module type Permissioned = sig
+module type Permissioned = sig @@ portable
   type ('a, -'perms) t
 
   include
@@ -397,7 +407,7 @@ module type Permissioned = sig
   val to_sequence_mutable : ('a, [> read ]) t -> 'a Sequence.t
 end
 
-module Permissioned : sig
+module Permissioned : sig @@ portable
   type ('a, -'perms) t [@@deriving bin_io ~localize, compare, sexp, sexp_grammar]
 
   module Int : sig
@@ -490,7 +500,7 @@ end = struct
   let to_sequence_immutable = to_sequence_mutable
 end
 
-module type S = sig
+module type S = sig @@ portable
   type 'a t
 
   include Binary_searchable.S1 with type 'a t := 'a t

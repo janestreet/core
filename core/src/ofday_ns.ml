@@ -55,11 +55,7 @@ let create ?hr ?min ?sec ?ms ?us ?ns () =
   of_span_since_start_of_day_exn (Span.create ?hr ?min ?sec ?ms ?us ?ns ())
 ;;
 
-module O = struct
-  let ( ^: ) hr min = create ~hr ~min ()
-end
-
-include O
+let ( ^: ) hr min = create ~hr ~min ()
 
 module Stable = struct
   module Option = struct end
@@ -67,7 +63,14 @@ module Stable = struct
 
   module V1 = struct
     type t = Span.Stable.V2.t
-    [@@deriving bin_io, compare, equal, hash, stable_witness, typerep]
+    [@@deriving
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , globalize
+      , hash
+      , stable_witness
+      , typerep]
 
     include (
       Span.Stable.V2 :
@@ -215,6 +218,9 @@ include (
     with type t := t
      and type comparator_witness = Stable.V1.comparator_witness)
 
+[%%rederive
+  type nonrec t = Stable.V1.t [@@deriving compare ~localize, equal ~localize, globalize]]
+
 include Identifiable.Make_using_comparator (struct
     type t = Stable.V1.t [@@deriving bin_io, compare, hash, sexp]
 
@@ -228,6 +234,8 @@ include Identifiable.Make_using_comparator (struct
 
     let module_name = "Core.Time_ns.Ofday"
   end)
+
+include%template (Stable.V1 : Binable.S [@mode local] with type t := t)
 
 include Diffable.Atomic.Make (Stable.V1)
 
@@ -277,6 +285,16 @@ let every =
   in
   every
 ;;
+
+module O = struct
+  let ( ^: ) = ( ^: )
+  let ( < ) = ( < )
+  let ( <= ) = ( <= )
+  let ( = ) = ( = )
+  let ( >= ) = ( >= )
+  let ( > ) = ( > )
+  let ( <> ) = ( <> )
+end
 
 let small_diff =
   let hour = Span.to_int63_ns Span.hour in

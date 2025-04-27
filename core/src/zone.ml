@@ -493,34 +493,44 @@ module Mode = struct
   type t =
     | Absolute
     | Date_and_ofday
+    | Date_and_ofday_unambiguous
 end
 
-let effective_start_time ~mode (x : Transition.t) =
-  let open Int63.O in
+let effective_start_time ~mode t i =
+  let curr = t.transitions.(i) in
+  let start_time = curr.start_time_in_seconds_since_epoch in
   match (mode : Mode.t) with
-  | Absolute -> x.start_time_in_seconds_since_epoch
-  | Date_and_ofday ->
-    x.start_time_in_seconds_since_epoch + x.new_regime.utc_offset_in_seconds
+  | Absolute -> start_time
+  | Date_and_ofday -> Int63.O.(start_time + curr.new_regime.utc_offset_in_seconds)
+  | Date_and_ofday_unambiguous ->
+    let curr_offset = curr.new_regime.utc_offset_in_seconds in
+    let prev_offset =
+      if i <= 0
+      then (get_regime_exn t Index.before_first_transition).utc_offset_in_seconds
+      else t.transitions.(i - 1).new_regime.utc_offset_in_seconds
+    in
+    Int63.O.(start_time + Int63.max prev_offset curr_offset)
 ;;
 
 let index_lower_bound_contains_seconds_since_epoch t index ~mode seconds =
-  index < 0 || Int63.( >= ) seconds (effective_start_time ~mode t.transitions.(index))
+  index < 0 || Int63.( >= ) seconds (effective_start_time ~mode t index)
 ;;
 
 let index_upper_bound_contains_seconds_since_epoch t index ~mode seconds =
   index + 1 >= Array.length t.transitions
-  || Int63.( < ) seconds (effective_start_time ~mode t.transitions.(index + 1))
+  || Int63.( < ) seconds (effective_start_time ~mode t (index + 1))
 ;;
 
-let binary_search_index_of_seconds_since_epoch t ~mode seconds : Index.t =
-  (Array.binary_search_segmented
-     t.transitions
+let%template binary_search_index_of_seconds_since_epoch t ~mode seconds : Index.t =
+  (Binary_search.binary_search_segmented
+     ()
      `Last_on_left
-     ~segment_of:(fun transition ->
-       if Int63.( <= ) (effective_start_time transition ~mode) seconds
-       then `Left
-       else `Right)
-   |> Option.value_local ~default:Index.before_first_transition) [@nontail]
+     ~length:(fun () -> Array.length t.transitions)
+     ~get:(fun () i -> i)
+     ~segment_of:(fun i ->
+       if Int63.( <= ) (effective_start_time ~mode t i) seconds then `Left else `Right)
+   |> (Option.value [@mode local]) ~default:Index.before_first_transition)
+  [@nontail]
 ;;
 
 let index_of_seconds_since_epoch t ~mode seconds =
@@ -609,10 +619,15 @@ let index t time =
   |> index_of_seconds_since_epoch t ~mode:Absolute
 ;;
 
-let index_of_date_and_ofday t time =
+let index_of_date_and_ofday ?(prefer : Earlier_or_later.t = Later) t time =
+  let (mode : Mode.t) =
+    match prefer with
+    | Later -> Date_and_ofday
+    | Earlier -> Date_and_ofday_unambiguous
+  in
   Time_in_seconds.Date_and_ofday.to_synthetic_span_since_epoch time
   |> Time_in_seconds.Span.to_int63_seconds_round_down_exn
-  |> index_of_seconds_since_epoch t ~mode:Date_and_ofday
+  |> index_of_seconds_since_epoch t ~mode
 ;;
 
 let index_has_prev_clock_shift t index = index >= 0 && index < Array.length t.transitions

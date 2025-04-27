@@ -61,8 +61,11 @@ module Make (Time0 : Time0_intf.S) = struct
 
     let index t time = index t (to_time_in_seconds_round_down_exn time)
 
-    let index_of_date_and_ofday t relative =
-      index_of_date_and_ofday t (to_date_and_ofday_in_seconds_round_down_exn relative)
+    let index_of_date_and_ofday ?prefer t relative =
+      index_of_date_and_ofday
+        ?prefer
+        t
+        (to_date_and_ofday_in_seconds_round_down_exn relative)
     ;;
 
     let index_offset_from_utc_exn t index =
@@ -103,6 +106,22 @@ module Make (Time0 : Time0_intf.S) = struct
     let prev_clock_shift t ~at_or_before:time = index_prev_clock_shift t (index t time)
     let next_clock_shift t ~strictly_after:time = index_next_clock_shift t (index t time)
 
+    let next_clock_shift_incl t ~at_or_after:time =
+      let index = index t time in
+      let shift_at_time =
+        if index_has_prev_clock_shift t index
+        then (
+          let shift_time = index_prev_clock_shift_time_exn t index in
+          if Time0.equal time shift_time
+          then Some (shift_time, index_prev_clock_shift_amount_exn t index)
+          else None)
+        else None
+      in
+      match shift_at_time with
+      | Some _ -> shift_at_time
+      | None -> index_next_clock_shift t index
+    ;;
+
     let date_and_ofday_of_absolute_time t time =
       let index = index t time in
       (* no exn because [index] always returns a valid index *)
@@ -110,8 +129,8 @@ module Make (Time0 : Time0_intf.S) = struct
       Time0.Date_and_ofday.of_absolute time ~offset_from_utc
     ;;
 
-    let absolute_time_of_date_and_ofday t relative =
-      let index = index_of_date_and_ofday t relative in
+    let absolute_time_of_date_and_ofday ?prefer t relative =
+      let index = index_of_date_and_ofday ?prefer t relative in
       (* no exn because [index_of_date_and_ofday] always returns a valid index *)
       let offset_from_utc = index_offset_from_utc_exn t index in
       Time0.Date_and_ofday.to_absolute relative ~offset_from_utc
@@ -120,16 +139,16 @@ module Make (Time0 : Time0_intf.S) = struct
 
   let abs_diff t1 t2 = Span.abs (diff t1 t2)
 
-  let of_date_ofday ~zone date ofday =
+  let of_date_ofday ?prefer ~zone date ofday =
     let relative = Date_and_ofday.of_date_ofday date ofday in
-    Zone.absolute_time_of_date_and_ofday zone relative
+    Zone.absolute_time_of_date_and_ofday ?prefer zone relative
   ;;
 
   let of_date_ofday_precise date ofday ~zone =
-    (* We assume that there will be only one zone shift within a given local day.  *)
-    let start_of_day = of_date_ofday ~zone date Ofday.start_of_day in
+    (* We assume that there will be only one zone shift within a given local day. *)
+    let start_of_day = of_date_ofday ~prefer:Earlier ~zone date Ofday.start_of_day in
     let proposed_time = add start_of_day (Ofday.to_span_since_start_of_day ofday) in
-    match Zone.next_clock_shift zone ~strictly_after:start_of_day with
+    match Zone.next_clock_shift_incl zone ~at_or_after:start_of_day with
     | None -> `Once proposed_time
     | Some (shift_start, shift_amount) ->
       let shift_backwards = Span.(shift_amount < zero) in
@@ -222,7 +241,7 @@ module Make (Time0 : Time0_intf.S) = struct
     date_cache.date
   ;;
 
-  let end_of_day = Ofday.prev Ofday.start_of_next_day |> Option.value_exn ~here:[%here]
+  let end_of_day = Ofday.prev Ofday.start_of_next_day |> Option.value_exn
 
   let to_ofday time ~zone =
     set_date_cache time ~zone;

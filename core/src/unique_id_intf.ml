@@ -1,4 +1,4 @@
-(** Signature for use by {{!module:Core.Unique_id}[Unique_id]}. *)
+(** Signature for use by {{!module:Core.Unique_id} [Unique_id]}. *)
 
 open! Import
 open Std_internal
@@ -15,8 +15,7 @@ module type Id = sig
   include Intable with type t := t
   include Stringable with type t := t
 
-  (** Always returns a value that is not equal to any other value created with
-      [create]. *)
+  (** Always returns a value that is not equal to any other value created with [create]. *)
   val create : unit -> t
 
   module For_testing : sig

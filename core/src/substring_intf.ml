@@ -1,4 +1,4 @@
-(** Interface for {{!Core.Substring}[Substring]}. *)
+(** Interface for {{!Core.Substring} [Substring]}. *)
 
 open! Import
 
@@ -21,15 +21,16 @@ module type S = sig
       of bounds. *)
   val get : t -> int -> char
 
-  (** [create ?pos ?len base] creates a substring of the base sequence of
-      length [len] starting at position [pos], i.e.,
+  (** [create ?pos ?len base] creates a substring of the base sequence of length [len]
+      starting at position [pos], i.e.,
 
-      {[ base.[pos], base.[pos + 1], ... base.[pos + len - 1] ]}
+      {[
+        base.[pos], base.[pos + 1], ... base.[pos + len - 1]
+      ]}
 
       An exception is raised if any of those indices into [base] is invalid.
 
-      It does not copy the characters, so mutating [base] mutates [t] and vice versa.
-  *)
+      It does not copy the characters, so mutating [base] mutates [t] and vice versa. *)
   val create : ?pos:int -> ?len:int -> base -> t
 
   val sub : ?pos:int -> ?len:int -> t -> t

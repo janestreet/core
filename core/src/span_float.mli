@@ -6,7 +6,16 @@ module Stable : sig
       support [us] or [ns]. [V1]'s sexp conversions do not round-trip precisely. *)
   module V1 : sig
     type nonrec t = t
-    [@@deriving sexp, sexp_grammar, bin_io, compare, hash, equal, stable_witness, diff]
+    [@@deriving
+      sexp
+      , sexp_grammar
+      , bin_io ~localize
+      , compare ~localize
+      , globalize
+      , hash
+      , equal ~localize
+      , stable_witness
+      , diff]
   end
 
   (** [V2]'s sexps use single-unit format and support units from [d] to [ns]. [V2] can
@@ -14,7 +23,16 @@ module Stable : sig
       precisely. *)
   module V2 : sig
     type nonrec t = t
-    [@@deriving sexp, sexp_grammar, bin_io, compare, hash, equal, stable_witness, diff]
+    [@@deriving
+      sexp
+      , sexp_grammar
+      , bin_io ~localize
+      , compare ~localize
+      , globalize
+      , hash
+      , equal ~localize
+      , stable_witness
+      , diff]
   end
 
   (** [V3] uses mixed-unit format and supports units from [d] to [ns]. [V3] can read [V2]
@@ -22,7 +40,16 @@ module Stable : sig
   module V3 : sig
     type nonrec t = t
     [@@deriving
-      sexp, sexp_grammar, bin_io, compare, hash, typerep, equal, stable_witness, diff]
+      sexp
+      , sexp_grammar
+      , bin_io ~localize
+      , compare ~localize
+      , globalize
+      , hash
+      , typerep
+      , equal ~localize
+      , stable_witness
+      , diff]
   end
 end
 

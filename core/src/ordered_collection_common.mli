@@ -1,4 +1,7 @@
-(** This module extends {{!Base.Ordered_collection_common}[Base.Ordered_collection_common]}. *)
+@@ portable
+
+(** This module extends {{!Base.Ordered_collection_common}
+    [Base.Ordered_collection_common]}. *)
 
 include module type of struct
   include Base.Ordered_collection_common

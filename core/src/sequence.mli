@@ -1,21 +1,25 @@
-(** This module extends {{!Base.Sequence}[Base.Sequence]} with bin_io. *)
+@@ portable
+
+(** This module extends {{!Base.Sequence} [Base.Sequence]} with bin_io. *)
 
 type 'a t = 'a Base.Sequence.t [@@deriving bin_io]
 
 module Step : sig
-  type ('a, 's) t = ('a, 's) Base.Sequence.Step.t =
+  type (+'a : any, 's) t = ('a, 's) Base.Sequence.Step.t =
     | Done
     | Skip of { state : 's }
-    | Yield of
+    | Yield :
+        ('a : value) 's.
         { value : 'a
         ; state : 's
         }
+        -> ('a, 's) t
   [@@deriving bin_io]
 
   include module type of struct
       include Base.Sequence.Step
     end
-    with type ('a, 's) t := ('a, 's) t
+    with type ('a : any, 's : any) t := ('a, 's) t
 end
 
 module Merge_with_duplicates_element : sig
@@ -35,7 +39,7 @@ end
 include module type of struct
     include Base.Sequence
   end
-  with type 'a t := 'a Base.Sequence.t
+  with type ('a : any) t := 'a Base.Sequence.t
    and module Step := Base.Sequence.Step
    and module Merge_with_duplicates_element := Base.Sequence.Merge_with_duplicates_element
 
@@ -51,7 +55,6 @@ end
     sequence also sorted by [compare]. If any of the inputs are not sorted, the order of
     the output is not guaranteed to be sorted.
 
-    This includes duplicate elements in the output (whether they occur within
-    one input sequence, or across different input sequences).
-*)
+    This includes duplicate elements in the output (whether they occur within one input
+    sequence, or across different input sequences). *)
 val merge_all : (module Heap) -> 'a t list -> compare:('a -> 'a -> int) -> 'a t

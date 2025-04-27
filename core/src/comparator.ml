@@ -10,7 +10,7 @@ module type Base_mask = module type of Comparator with type ('a, 'b) t := ('a, '
 
 include (Comparator : Base_mask)
 
-module Stable = struct
+module%template Stable = struct
   module V1 = struct
     type nonrec ('a, 'witness) t = ('a, 'witness) t = private
       { compare : 'a -> 'a -> int
@@ -22,9 +22,11 @@ module Stable = struct
     module type S = S
     module type S1 = S1
 
-    let make = make
+    [@@@modality.default p = (portable, nonportable)]
 
-    module Make = Make
-    module Make1 = Make1
+    let make = (make [@modality p])
+
+    module Make = Make [@modality p]
+    module Make1 = Make1 [@modality p]
   end
 end

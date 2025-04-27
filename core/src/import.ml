@@ -5,8 +5,11 @@ module Applicative = Base.Applicative
 module Avltree = Base.Avltree
 module Backtrace = Base.Backtrace
 module Binary_search = Base.Binary_search
+module Capsule = Base.Capsule
 module Comparisons = Base.Comparisons
+module Container_with_local = Base.Container_with_local
 module Continue_or_stop = Base.Continue_or_stop
+module Dynamic = Base.Dynamic
 module Equal = Base.Equal
 module Exn = Base.Exn
 module Floatable = Base.Floatable
@@ -19,6 +22,7 @@ module Int_math = Base.Int_math
 module Invariant = Base.Invariant
 module Monad = Base.Monad
 module Poly = Base.Poly
+module Portability_hacks = Base.Portability_hacks
 module Pretty_printer = Base.Pretty_printer
 module Random = Base.Random
 module Staged = Base.Staged
@@ -36,7 +40,7 @@ include Bin_prot.Std
 include Stable_witness.Export
 module Field = Fieldslib.Field
 
-module From_sexplib : sig
+module From_sexplib : sig @@ portable
   type bigstring = Sexplib.Conv.bigstring [@@deriving sexp]
   type mat = Sexplib.Conv.mat [@@deriving sexp]
   type vec = Sexplib.Conv.vec [@@deriving sexp]
@@ -68,6 +72,7 @@ struct
   type 'a sexp_opaque = 'a [@@deriving bin_io, compare, hash, typerep]
 end :
   sig
+  @@ portable
     type 'a sexp_opaque [@@deriving bin_io, compare, hash, typerep]
   end
   with type 'a sexp_opaque := 'a)
@@ -92,7 +97,7 @@ let am_running_test =
   | Stdlib.Not_found -> false
 ;;
 
-type 'a identity = 'a
+type ('a : any) identity = 'a
 
 module Not_found = struct
   exception

@@ -109,16 +109,18 @@ module Stable = struct
         let long_clause t = unsuggested (atom (to_string_long t)) in
         { untyped =
             Lazy
-              (lazy
-                (Variant
-                   { case_sensitivity = Case_insensitive
-                   ; clauses =
-                       List.concat
-                         [ List.map all ~f:int_clause
-                         ; List.map all ~f:short_clause
-                         ; List.map all ~f:long_clause
-                         ]
-                   }))
+              (Basement.Portable_lazy.from_fun
+                 (Portability_hacks.magic_portable__needs_base_and_core
+                    (fun () : Sexplib0.Sexp_grammar.grammar ->
+                       Variant
+                         { case_sensitivity = Case_insensitive
+                         ; clauses =
+                             List.concat
+                               [ List.map all ~f:int_clause
+                               ; List.map all ~f:short_clause
+                               ; List.map all ~f:long_clause
+                               ]
+                         })))
         }
       ;;
     end

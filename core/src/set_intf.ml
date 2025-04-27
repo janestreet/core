@@ -1,5 +1,5 @@
-(** This module defines interfaces used in {{!Core.Set}[Set]}. See the
-    {!Map} docs for a description of the design.
+(** This module defines interfaces used in {{!Core.Set} [Set]}. See the {!Map} docs for a
+    description of the design.
 
     This module defines module types
     [{Creators,Accessors}{0,1,2,_generic,_with_comparator}]. It uses check functors to
@@ -7,8 +7,7 @@
 
     We must treat [Creators] and [Accessors] separately, because we sometimes need to
     choose different instantiations of their [options]. In particular, [Set] itself
-    matches [Creators2_with_comparator] but [Accessors2] (without comparator).
-*)
+    matches [Creators2_with_comparator] but [Accessors2] (without comparator). *)
 
 (*
    CRs and comments about [Set] functions do not belong in this file.  They belong next
@@ -48,7 +47,9 @@ module type For_deriving = sig
 
   (** The following [*bin*] functions support bin-io on base-style sets, e.g.:
 
-      {[ type t = Set.M(String).t [@@deriving bin_io] ]} *)
+      {[
+        type t = Set.M(String).t [@@deriving bin_io]
+      ]} *)
 
   val bin_shape_m__t : ('a, 'b) Elt_bin_io.t -> Bin_prot.Shape.t
   val bin_size_m__t : ('a, 'b) Elt_bin_io.t -> ('a, 'b) t Bin_prot.Size.sizer
@@ -59,7 +60,9 @@ module type For_deriving = sig
   (** The following [quickcheck*] functions support deriving quickcheck on base-style
       sets, e.g.:
 
-      {[ type t = Set.M(String).t [@@deriving quickcheck] ]} *)
+      {[
+        type t = Set.M(String).t [@@deriving quickcheck]
+      ]} *)
 
   module type Quickcheck_generator_m = sig
     include Comparator.S
@@ -183,31 +186,33 @@ module type Creators_and_accessors_generic = sig
     with type 'cmp cmp := 'cmp cmp
 end
 
-module Make_S_plain_tree (Elt : Comparator.S) = struct
-  module type S = sig
-    type t = (Elt.t, Elt.comparator_witness) Tree.t [@@deriving compare, equal, sexp_of]
+module type%template [@modality p = (portable, nonportable)] S_plain_tree = sig @@ p
+  module Elt : Comparator.S
 
-    include
-      Creators_generic
-      with type ('a, 'b) set := ('a, 'b) Tree.t
-      with type ('a, 'b) t := t
-      with type ('a, 'b) tree := t
-      with type 'a elt := Elt.t
-      with type 'c cmp := Elt.comparator_witness
-      with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
+  type t = (Elt.t, Elt.comparator_witness) Tree.t [@@deriving compare, equal, sexp_of]
 
-    module Provide_of_sexp
-        (Elt : sig
-                 type t [@@deriving of_sexp]
-               end
-               with type t := Elt.t) : sig
-        type t [@@deriving of_sexp]
-      end
-      with type t := t
-  end
+  include
+    Creators_generic
+    with type ('a, 'b) set := ('a, 'b) Tree.t
+    with type ('a, 'b) t := t
+    with type ('a, 'b) tree := t
+    with type 'a elt := Elt.t
+    with type 'c cmp := Elt.comparator_witness
+    with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
+
+  module%template
+    [@modality p' = (nonportable, p)] Provide_of_sexp
+      (Elt : sig
+             @@ p'
+               type t [@@deriving of_sexp]
+             end
+             with type t := Elt.t) : sig @@ p'
+      type t [@@deriving of_sexp]
+    end
+    with type t := t
 end
 
-module type S_plain = sig
+module type%template [@modality p = (portable, nonportable)] S_plain = sig @@ p
   module Elt : sig
     type t [@@deriving sexp_of]
 
@@ -236,23 +241,33 @@ module type S_plain = sig
     with type 'c cmp := Elt.comparator_witness
     with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
 
-  module Provide_of_sexp
+  module%template
+    [@modality p' = (nonportable, p)] Provide_of_sexp
       (Elt : sig
+             @@ p'
                type t [@@deriving of_sexp]
              end
-             with type t := Elt.t) : sig
+             with type t := Elt.t) : sig @@ p'
       type t [@@deriving of_sexp]
     end
     with type t := t
 
-  module Provide_bin_io
+  module%template
+    [@modality p' = (nonportable, p)] Provide_bin_io
       (Elt : sig
+             @@ p'
                type t [@@deriving bin_io]
              end
-             with type t := Elt.t) : Binable.S with type t := t
+             with type t := Elt.t) : sig
+    @@ p'
+    include Binable.S with type t := t
+  end
 
-  module Provide_hash
-      (Elt : Hasher.S with type t := Elt.t) : sig
+  module%template
+    [@modality p' = (nonportable, p)] Provide_hash (Elt : sig
+    @@ p'
+      include Hasher.S with type t := Elt.t
+    end) : sig @@ p'
       type t [@@deriving hash]
     end
     with type t := t
@@ -261,7 +276,7 @@ module type S_plain = sig
   val quickcheck_shrinker : Elt.t Quickcheck.Shrinker.t -> t Quickcheck.Shrinker.t
 end
 
-module type S = sig
+module type%template [@modality p = (portable, nonportable)] S = sig @@ p
   module Elt : sig
     type t [@@deriving sexp]
 
@@ -277,11 +292,11 @@ module type S = sig
        and type derived_on = (Elt.t, Elt.comparator_witness) Base.Set.t
   end
 
-  include S_plain with module Elt := Elt and module Diff := Diff
+  include S_plain [@modality p] with module Elt := Elt and module Diff := Diff
   include Sexpable.S with type t := t
 end
 
-module type S_binable = sig
+module type%template [@modality p = (portable, nonportable)] S_binable = sig @@ p
   module Elt : sig
     type t [@@deriving sexp, bin_io]
 
@@ -297,6 +312,6 @@ module type S_binable = sig
        and type derived_on = (Elt.t, Elt.comparator_witness) Base.Set.t
   end
 
-  include S with module Elt := Elt and module Diff := Diff
+  include S [@modality p] with module Elt := Elt and module Diff := Diff
   include Binable.S with type t := t
 end

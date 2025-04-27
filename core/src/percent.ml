@@ -331,7 +331,8 @@ module Stable = struct
     let t_sexp_grammar = Sexplib.Sexp_grammar.coerce String.t_sexp_grammar
 
     include (Sexpable.Stable.Of_stringable.V1 (Stringable) : Sexpable.S with type t := t)
-    include (Float : Binable.S_local with type t := t)
+
+    include%template (Float : Binable.S [@mode local] with type t := t)
 
     (* Use a different bin_shape_t than Percent.Stable.V2, even though these two versions
        have compatible bin_io serialization.  Since they do differ in sexp serialization,
@@ -434,28 +435,24 @@ module Stable = struct
       shift_decimal_point_in_float_local f ~by:4
     ;;
 
-    let round_significant p ~significant_digits =
-      Float.round_significant p ~significant_digits
-    ;;
+    [%%template
+    [@@@mode.default m = (global, local)]
 
-    let round_significant_local p ~significant_digits = exclave_
-      Float.round_significant_local p ~significant_digits
-    ;;
+    let round_significant = (Float.round_significant [@mode m])
+    let round_decimal_mult = (Float.round_decimal [@mode m])]
 
-    let round_decimal_mult p ~decimal_digits = Float.round_decimal p ~decimal_digits
-
-    let round_decimal_mult_local p ~decimal_digits = exclave_
-      Float.round_decimal_local p ~decimal_digits
-    ;;
-
+    [%%template
     let round_decimal_percentage p ~decimal_digits =
-      globalize (Float.round_decimal_local (p *. 100.) ~decimal_digits /. 100.) [@nontail]
+      globalize
+        ((round_decimal_mult [@mode local]) (p *. 100.) ~decimal_digits /. 100.)
+      [@nontail]
     ;;
 
     let round_decimal_bp p ~decimal_digits =
       globalize
-        (Float.round_decimal_local (p *. 10000.) ~decimal_digits /. 10000.) [@nontail]
-    ;;
+        ((round_decimal_mult [@mode local]) (p *. 10000.) ~decimal_digits /. 10000.)
+      [@nontail]
+    ;;]
 
     module Format = struct
       type t =
@@ -544,7 +541,8 @@ module Stable = struct
     let t_sexp_grammar = Sexplib.Sexp_grammar.coerce String.t_sexp_grammar
 
     include (Sexpable.Stable.Of_stringable.V1 (Stringable) : Sexpable.S with type t := t)
-    include (Float : Binable.S_local with type t := t)
+
+    include%template (Float : Binable.S [@mode local] with type t := t)
 
     (* Mint a unique [bin_shape_t] that's distinct from the hidden underlying
        representation of float. *)
@@ -608,6 +606,7 @@ module Stable = struct
       let some = Fn.id
       let unchecked_value = Fn.id
       let to_option t = if is_some t then Some (unchecked_value t) else None
+      let equal x y = Float.equal x y || (is_none x && is_none y)
 
       external apply_with_none_as_nan
         :  (float[@local_opt])

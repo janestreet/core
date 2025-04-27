@@ -36,8 +36,9 @@ depends: [
   "time_now"
   "typerep"
   "univ_map"
+  "uopt"
   "variantslib"
-  "dune"                {>= "3.11.0"}
+  "dune"                {>= "3.17.0"}
 ]
 available: arch != "arm32" & arch != "x86_32"
 synopsis: "Industrial strength alternative to OCaml's standard library"

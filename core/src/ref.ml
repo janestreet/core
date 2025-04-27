@@ -9,6 +9,7 @@ module T = struct
     type 'a t = 'a ref [@@deriving bin_io ~localize, quickcheck, typerep]
   end :
     sig
+    @@ portable
       type 'a t = 'a ref [@@deriving bin_io ~localize, quickcheck, typerep]
     end
     with type 'a t := 'a t)

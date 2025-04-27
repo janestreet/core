@@ -443,7 +443,8 @@ let specialize t f =
   bind t ~f:(fun v ->
     match f v with
     | `Known c -> constant c
-    | `Unknown -> base v) [@nontail]
+    | `Unknown -> base v)
+  [@nontail]
 ;;
 
 let eval_set ~universe:all set_of_base t =
@@ -476,6 +477,12 @@ module type Monadic = sig
   val map : 'a t -> f:('a -> 'b M.t) -> 'b t M.t
   val bind : 'a t -> f:('a -> 'b t M.t) -> 'b t M.t
   val eval : 'a t -> f:('a -> bool M.t) -> bool M.t
+
+  val eval_set
+    :  universe:('elt, 'comparator) Set.t M.t Lazy.t
+    -> f:('a -> ('elt, 'comparator) Set.t M.t)
+    -> 'a t
+    -> ('elt, 'comparator) Set.t M.t
 end
 
 module For_monad (M : Monad.S) : Monadic with module M := M = struct
@@ -516,6 +523,33 @@ module For_monad (M : Monad.S) : Monadic with module M := M = struct
       | true -> true_
       | false -> false_)
     >>| fun t -> eval t Nothing.unreachable_code
+  ;;
+
+  let map2 ~f a b =
+    let%map.M a and b in
+    f a b
+  ;;
+
+  let inter_m a b = map2 ~f:Set.inter a b
+  let union_m a b = map2 ~f:Set.union a b
+  let diff_m a b = map2 ~f:Set.diff a b
+
+  let eval_set ~universe:all ~f t =
+    let rec aux b =
+      match b with
+      | True -> force all
+      | False ->
+        let%map.M all = force all in
+        Set.Using_comparator.empty ~comparator:(Set.comparator all)
+      | And (a, b) -> inter_m (aux a) (aux b)
+      | Or (a, b) -> union_m (aux a) (aux b)
+      | Not a -> diff_m (force all) (aux a)
+      | Base a -> f a
+      | If (cond, a, b) ->
+        let cond = aux cond in
+        union_m (inter_m cond (aux a)) (inter_m (diff_m (force all) cond) (aux b))
+    in
+    aux t [@nontail]
   ;;
 end
 

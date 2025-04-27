@@ -21,7 +21,7 @@ module type S1_permissions = sig
   val binary_search_segmented : (('a, [> read ]) t, 'a) binary_search_segmented
 end
 
-module type Binary_searchable = sig
+module type Binary_searchable = sig @@ portable
   include module type of struct
     include Base.Binary_searchable
   end

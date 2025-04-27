@@ -1,7 +1,8 @@
-(** This module extends {{!Base.Char}[Base.Char]}, adding [Identifiable] for making char
+@@ portable
+
+(** This module extends {{!Base.Char} [Base.Char]}, adding [Identifiable] for making char
     identifiers and [Quickcheckable] to facilitate automated testing with pseudorandom
-    data.
-*)
+    data. *)
 
 type t = char [@@deriving typerep, bin_io ~localize]
 
@@ -16,17 +17,20 @@ include module type of struct
 (** {2 Extensions} *)
 
 (** [Caseless] compares and hashes characters ignoring case, so that for example
-    [Caseless.equal 'A' 'a'] and [Caseless.('a' < 'B')] are [true], and
-    [Caseless.Map], [Caseless.Table] lookup and [Caseless.Set] membership is
-    case-insensitive. *)
+    [Caseless.equal 'A' 'a'] and [Caseless.('a' < 'B')] are [true], and [Caseless.Map],
+    [Caseless.Table] lookup and [Caseless.Set] membership is case-insensitive. *)
 module Caseless : sig
   type nonrec t = t [@@deriving bin_io ~localize, hash, sexp, sexp_grammar]
 
-  include Comparable.S_binable with type t := t
-  include Hashable.S_binable with type t := t
+  include%template Comparable.S_binable [@modality portable] with type t := t
+  include%template Hashable.S_binable [@modality portable] with type t := t
 end
 
-include Identifiable.S with type t := t and type comparator_witness := comparator_witness
+include%template
+  Identifiable.S
+  [@modality portable]
+  with type t := t
+   and type comparator_witness := comparator_witness
 
 (** {3 Quickcheck Support} *)
 

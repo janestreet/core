@@ -278,6 +278,16 @@ end = struct
         stage (fun () -> ignore (choose t : (key * int) option)))
     ;;
 
+    let%template choose = (Impl.choose [@mode m]) [@@mode m = local]
+
+    let%template () =
+      ( !! ) "choose" (fun size ->
+        let t = Example.t size in
+        stage (fun () ->
+          ignore
+            ((choose [@mode local]) t : (key Modes.Global.t * int Modes.Global.t) option)))
+    ;;
+
     let choose_randomly = Impl.choose_randomly
 
     let () =
@@ -319,6 +329,15 @@ end = struct
       ( !! ) "choose_exn" (fun size ->
         let t = Example.t size in
         stage (fun () -> ignore (choose_exn t : key * int)))
+    ;;
+
+    let%template choose_exn = (Impl.choose_exn [@mode m]) [@@mode m = local]
+
+    let%template () =
+      ( !! ) "choose_local_exn" (fun size ->
+        let t = Example.t size in
+        stage (fun () ->
+          ignore ((choose_exn [@mode local]) t : key Modes.Global.t * int Modes.Global.t)))
     ;;
 
     let choose_randomly_exn = Impl.choose_randomly_exn

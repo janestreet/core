@@ -18,6 +18,7 @@ include Modes.Export
 include Ordering.Export
 include Perms.Export
 include Result.Export
+include Iarray.O
 
 type -'a return = 'a With_return.return = private { return : 'b. 'a -> 'b } [@@unboxed]
 
@@ -25,7 +26,11 @@ type -'a return = 'a With_return.return = private { return : 'b. 'a -> 'b } [@@u
 exception C_malloc_exn of int * int
 
 (* errno, size *)
-let () = Callback.register_exception "C_malloc_exn" (C_malloc_exn (0, 0))
+let () =
+  Basement.Stdlib_shim.Callback.Safe.register_exception
+    "C_malloc_exn"
+    (C_malloc_exn (0, 0))
+;;
 
 exception Finally = Exn.Finally
 
@@ -33,11 +38,11 @@ let fst3 (x, _, _) = x
 let snd3 (_, y, _) = y
 let trd3 (_, _, z) = z
 
-(** [phys_same] is like [phys_equal], but with a more general type.  [phys_same] is useful
+(** [phys_same] is like [phys_equal], but with a more general type. [phys_same] is useful
     when dealing with existential types, when one has a packed value and an unpacked value
-    that one wants to check are physically equal.  One can't use [phys_equal] in such a
+    that one wants to check are physically equal. One can't use [phys_equal] in such a
     situation because the types are different. *)
-external phys_same : ('a[@local_opt]) -> ('b[@local_opt]) -> bool = "%eq"
+external phys_same : ('a[@local_opt]) -> ('b[@local_opt]) -> bool @@ portable = "%eq"
 
 let ( % ) = Int.( % )
 let ( /% ) = Int.( /% )
@@ -70,8 +75,8 @@ let ( **. ) = Base.( **. )
 let ( %. ) = Base.( %. )
 let sprintf = Printf.sprintf
 
-external stage : ('a[@local_opt]) -> ('a Staged.t[@local_opt]) = "%identity"
-external unstage : ('a Staged.t[@local_opt]) -> ('a[@local_opt]) = "%identity"
+external stage : ('a[@local_opt]) -> ('a Staged.t[@local_opt]) @@ portable = "%identity"
+external unstage : ('a Staged.t[@local_opt]) -> ('a[@local_opt]) @@ portable = "%identity"
 
 let with_return = With_return.with_return
 let with_return_option = With_return.with_return_option
@@ -91,7 +96,7 @@ struct
     , compare ~localize
     , equal ~localize
     , globalize
-    , sexp
+    , sexp ~localize
     , sexp_grammar
     , typerep]
 
@@ -102,7 +107,7 @@ struct
     , hash
     , equal ~localize
     , globalize
-    , sexp
+    , sexp ~localize
     , sexp_grammar
     , typerep]
 
@@ -113,7 +118,7 @@ struct
     , hash
     , equal ~localize
     , globalize
-    , sexp
+    , sexp ~localize
     , sexp_grammar
     , typerep]
 
@@ -124,7 +129,18 @@ struct
     , hash
     , equal ~localize
     , globalize
-    , sexp
+    , sexp ~localize
+    , sexp_grammar
+    , typerep]
+
+  type 'a iarray = 'a Iarray.t
+  [@@deriving
+    bin_io
+    , compare ~localize
+    , hash
+    , equal ~localize
+    , globalize
+    , sexp ~localize
     , sexp_grammar
     , typerep]
 
@@ -135,7 +151,7 @@ struct
     , hash
     , equal ~localize
     , globalize
-    , sexp
+    , sexp ~localize
     , sexp_grammar
     , typerep]
 
@@ -146,7 +162,7 @@ struct
     , hash
     , equal ~localize
     , globalize
-    , sexp
+    , sexp ~localize
     , sexp_grammar
     , typerep]
 
@@ -157,12 +173,13 @@ struct
     , hash
     , equal ~localize
     , globalize
-    , sexp
+    , sexp ~localize
     , sexp_grammar
     , typerep]
 
   type 'a lazy_t = 'a Lazy.t
-  [@@deriving bin_io ~localize, compare ~localize, hash, sexp, sexp_grammar, typerep]
+  [@@deriving
+    bin_io ~localize, compare ~localize, hash, sexp ~localize, sexp_grammar, typerep]
 
   type 'a list = 'a List.t
   [@@deriving
@@ -171,7 +188,7 @@ struct
     , hash
     , equal ~localize
     , globalize
-    , sexp
+    , sexp ~localize
     , sexp_grammar
     , typerep]
 
@@ -182,7 +199,7 @@ struct
     , equal ~localize
     , globalize
     , hash
-    , sexp
+    , sexp ~localize
     , sexp_grammar
     , typerep]
 
@@ -193,9 +210,13 @@ struct
     , equal ~localize
     , globalize
     , hash
-    , sexp
+    , sexp ~localize
     , sexp_grammar
     , typerep]
+
+  type%template nonrec ('a : k) option = ('a Option.t[@kind k])
+  [@@deriving bin_io ~localize, compare ~localize, equal ~localize, sexp ~localize]
+  [@@kind k = (float64, bits32, bits64, word)]
 
   type ('ok, 'err) result = ('ok, 'err) Result.t
   [@@deriving
@@ -204,9 +225,13 @@ struct
     , equal ~localize
     , globalize
     , hash
-    , sexp
+    , sexp ~localize
     , sexp_grammar
     , typerep]
+
+  type%template nonrec ('ok : k, 'err) result = (('ok, 'err) Result.t[@kind k])
+  [@@deriving bin_io ~localize, compare ~localize, equal ~localize, sexp ~localize]
+  [@@kind k = (float64, bits32, bits64, word)]
 
   type string = String.t
   [@@deriving
@@ -215,7 +240,7 @@ struct
     , equal ~localize
     , globalize
     , hash
-    , sexp
+    , sexp ~localize
     , sexp_grammar
     , typerep]
 
@@ -225,7 +250,7 @@ struct
     , compare ~localize
     , equal ~localize
     , globalize
-    , sexp
+    , sexp ~localize
     , sexp_grammar
     , typerep]
 
@@ -235,7 +260,7 @@ struct
     , compare ~localize
     , equal ~localize
     , globalize
-    , sexp
+    , sexp ~localize
     , sexp_grammar
     , typerep]
 
@@ -246,33 +271,19 @@ struct
     , equal ~localize
     , globalize
     , hash
-    , sexp
+    , sexp ~localize
     , sexp_grammar
     , typerep]
-
-  (* Bin_prot has optimized functions for float arrays *)
-  include struct
-    type float_array = float array [@@deriving bin_io ~localize]
-  end [@alert "-deprecated"]
-
-  include (
-  struct
-    type float_array = Float.t array
-    [@@deriving compare ~localize, sexp, sexp_grammar, typerep]
-  end :
-    sig
-      type float_array [@@deriving compare ~localize, sexp, sexp_grammar, typerep]
-    end
-    with type float_array := float_array)
 end :
   sig
+  @@ portable
     type 'a array
     [@@deriving
       bin_io ~localize
       , compare ~localize
       , equal ~localize
       , globalize
-      , sexp
+      , sexp ~localize
       , sexp_grammar
       , typerep]
 
@@ -283,7 +294,7 @@ end :
       , equal ~localize
       , globalize
       , hash
-      , sexp
+      , sexp ~localize
       , sexp_grammar
       , typerep]
 
@@ -294,7 +305,7 @@ end :
       , equal ~localize
       , globalize
       , hash
-      , sexp
+      , sexp ~localize
       , sexp_grammar
       , typerep]
 
@@ -305,7 +316,18 @@ end :
       , equal ~localize
       , globalize
       , hash
-      , sexp
+      , sexp ~localize
+      , sexp_grammar
+      , typerep]
+
+    type 'a iarray = 'a Iarray.t
+    [@@deriving
+      bin_io
+      , compare ~localize
+      , hash
+      , equal ~localize
+      , globalize
+      , sexp ~localize
       , sexp_grammar
       , typerep]
 
@@ -316,7 +338,7 @@ end :
       , equal ~localize
       , globalize
       , hash
-      , sexp
+      , sexp ~localize
       , sexp_grammar
       , typerep]
 
@@ -327,7 +349,7 @@ end :
       , equal ~localize
       , globalize
       , hash
-      , sexp
+      , sexp ~localize
       , sexp_grammar
       , typerep]
 
@@ -338,12 +360,13 @@ end :
       , equal ~localize
       , globalize
       , hash
-      , sexp
+      , sexp ~localize
       , sexp_grammar
       , typerep]
 
     type 'a lazy_t
-    [@@deriving bin_io ~localize, compare ~localize, hash, sexp, sexp_grammar, typerep]
+    [@@deriving
+      bin_io ~localize, compare ~localize, hash, sexp ~localize, sexp_grammar, typerep]
 
     type 'a list
     [@@deriving
@@ -352,7 +375,7 @@ end :
       , equal ~localize
       , globalize
       , hash
-      , sexp
+      , sexp ~localize
       , sexp_grammar
       , typerep]
 
@@ -363,7 +386,7 @@ end :
       , equal ~localize
       , globalize
       , hash
-      , sexp
+      , sexp ~localize
       , sexp_grammar
       , typerep]
 
@@ -374,9 +397,13 @@ end :
       , equal ~localize
       , globalize
       , hash
-      , sexp
+      , sexp ~localize
       , sexp_grammar
       , typerep]
+
+    type%template ('a : k) option
+    [@@deriving bin_io ~localize, compare ~localize, equal ~localize, sexp ~localize]
+    [@@kind k = (float64, bits32, bits64, word)]
 
     type ('ok, 'err) result
     [@@deriving
@@ -385,9 +412,13 @@ end :
       , equal ~localize
       , globalize
       , hash
-      , sexp
+      , sexp ~localize
       , sexp_grammar
       , typerep]
+
+    type%template ('ok : k, 'err) result
+    [@@deriving bin_io ~localize, compare ~localize, equal ~localize, sexp ~localize]
+    [@@kind k = (float64, bits32, bits64, word)]
 
     type string
     [@@deriving
@@ -396,7 +427,7 @@ end :
       , equal ~localize
       , globalize
       , hash
-      , sexp
+      , sexp ~localize
       , sexp_grammar
       , typerep]
 
@@ -406,7 +437,7 @@ end :
       , compare ~localize
       , equal ~localize
       , globalize
-      , sexp
+      , sexp ~localize
       , sexp_grammar
       , typerep]
 
@@ -416,7 +447,7 @@ end :
       , compare ~localize
       , equal ~localize
       , globalize
-      , sexp
+      , sexp ~localize
       , sexp_grammar
       , typerep]
 
@@ -427,7 +458,7 @@ end :
       , equal ~localize
       , globalize
       , hash
-      , sexp
+      , sexp ~localize
       , sexp_grammar
       , typerep]
   end
@@ -435,17 +466,39 @@ end :
   with type bool := bool
   with type char := char
   with type float := float
+  with type 'a iarray := 'a iarray
   with type int := int
   with type int32 := int32
   with type int64 := int64
   with type 'a list := 'a list
   with type nativeint := nativeint
   with type 'a option := 'a option
+  with type 'a option__float64 = 'a option__float64
+  with type 'a option__bits32 = 'a option__bits32
+  with type 'a option__bits64 = 'a option__bits64
+  with type 'a option__word = 'a option__word
   with type ('ok, 'err) result := ('ok, 'err) result
+  with type ('ok, 'err) result__float64 = ('ok, 'err) result__float64
+  with type ('ok, 'err) result__bits32 = ('ok, 'err) result__bits32
+  with type ('ok, 'err) result__bits64 = ('ok, 'err) result__bits64
+  with type ('ok, 'err) result__word = ('ok, 'err) result__word
   with type string := string
   with type bytes := bytes
   with type 'a lazy_t := 'a lazy_t
   with type 'a ref := 'a ref
   with type unit := unit)
+
+(* When running with versions of the compiler that don't support the [iarray] extension,
+   re-export it from [Base], which defines it as an abstract type in such cases.
+
+   We avoid re-exporting it internally as this constrains the kinding of the type
+   parameter as compared to the compiler built-in [iarray]. *)
+include (
+struct
+  type nonrec 'a iarray = 'a iarray [@@warning "-34"]
+end :
+sig
+  type 'a iarray := 'a iarray [@@warning "-34"]
+end)
 
 let sexp_of_exn = Exn.sexp_of_t

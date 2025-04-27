@@ -1525,6 +1525,42 @@ let%expect_test "[to_ofday] never returns 24:00" =
         ofday)
 ;;
 
+let%expect_test "Time_ns.Ofday comparisons" =
+  let test txt op o_op x y =
+    let res_op = op x y in
+    let res_o_op = o_op x y in
+    require_equal
+      ~if_false_then_print_s:
+        [%lazy_message
+          ""
+            ~operation:(txt : string)
+            ~left_arg:(x : Time_ns.Ofday.t)
+            ~right_arg:(y : Time_ns.Ofday.t)
+            ~ofday_result:(res_op : bool)
+            ~ofday_o_result:(res_o_op : bool)]
+      (module Bool)
+      res_op
+      res_o_op
+  in
+  let low = Time_ns.Ofday.( ^: ) 2 0 in
+  let mid = Time_ns.Ofday.( ^: ) 13 20 in
+  let high = Time_ns.Ofday.( ^: ) 18 15 in
+  List.iter
+    [ "( < )", Time_ns.Ofday.( < ), Time_ns.Ofday.O.( < )
+    ; "( <= )", Time_ns.Ofday.( <= ), Time_ns.Ofday.O.( <= )
+    ; "( = )", Time_ns.Ofday.( = ), Time_ns.Ofday.O.( = )
+    ; "( >= )", Time_ns.Ofday.( >= ), Time_ns.Ofday.O.( >= )
+    ; "( > )", Time_ns.Ofday.( > ), Time_ns.Ofday.O.( > )
+    ; "( <> )", Time_ns.Ofday.( <> ), Time_ns.Ofday.O.( <> )
+    ]
+    ~f:(fun (txt, op, o_op) ->
+      let test = test txt op o_op in
+      test low mid;
+      test mid mid;
+      test high mid);
+  [%expect {| |}]
+;;
+
 let%expect_test "approximate conversions" =
   let open Time_ns.Span in
   let test to_precise to_approx =

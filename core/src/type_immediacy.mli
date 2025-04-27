@@ -1,4 +1,5 @@
-(** Witnesses that express whether a type's values are always, sometimes, or never
+(** {v
+ Witnesses that express whether a type's values are always, sometimes, or never
     immediate.
 
     A value is immediate when it is internally represented unboxed, using one word of
@@ -93,7 +94,7 @@
         | A
         | B
         | C of int
-      with typerep
+      [@deriving typerep]
     ]}
 
     Type [test] is sometimes immediate, as [A] is represented as [0], [B] as [1], and [C]
@@ -113,7 +114,7 @@
     Consider this other example:
 
     {[
-      type test = bool with typerep
+      type test = bool [@deriving typerep]
     ]}
 
     Type [test] is always immediate, since [true] is represented as [1] and [false] as
@@ -144,17 +145,17 @@
     An exception is raised on functor application if such witness cannot be obtained.
     That happens either because the witness depends on the actual type parameter, or
     because the type has a different witness (e.g. [Sometimes] instead of [Always]).
-*)
+    v} *)
 
 open! Import
 
-type 'a t
+type 'a t : immutable_data
 
 module Always : sig
-  type 'a t
+  type 'a t : immutable_data
 
   val of_typerep : ('a, _) Typerep.t_any -> 'a t option
-  val of_typerep_exn : Source_code_position.t -> ('a, _) Typerep.t_any -> 'a t
+  val of_typerep_exn : here:[%call_pos] -> ('a, _) Typerep.t_any -> 'a t
   val int_as_value : 'a t -> int -> 'a option
   val int_as_value_exn : 'a t -> int -> 'a
   val int_is_value : 'a t -> int -> bool
@@ -187,10 +188,10 @@ module Always : sig
 end
 
 module Sometimes : sig
-  type 'a t
+  type 'a t : immutable_data
 
   val of_typerep : 'a Typerep.t -> 'a t option
-  val of_typerep_exn : Source_code_position.t -> 'a Typerep.t -> 'a t
+  val of_typerep_exn : here:[%call_pos] -> 'a Typerep.t -> 'a t
   val int_as_value : 'a t -> int -> 'a option
   val int_as_value_exn : 'a t -> int -> 'a
   val int_is_value : 'a t -> int -> bool
@@ -226,7 +227,7 @@ module Never : sig
   type 'a t
 
   val of_typerep : 'a Typerep.t -> 'a t option
-  val of_typerep_exn : Source_code_position.t -> 'a Typerep.t -> 'a t
+  val of_typerep_exn : here:[%call_pos] -> 'a Typerep.t -> 'a t
 
   module For_all_parameters_S1 (X : Typerepable.S1) : sig
     val witness : unit -> _ X.t t

@@ -35,16 +35,18 @@ let of_bytes_int63 = of_repr
 let of_bytes_int64_exn b = of_repr (Repr.of_int64_exn b)
 let of_bytes_float_exn b = of_repr (Repr.of_float b)
 
-let (bytes [@deprecated
-             "[since 2019-01] Use [bytes_int_exn], [bytes_int63], [bytes_int64] or \
-              [bytes_float] as appropriate."])
+let (bytes
+  [@deprecated
+    "[since 2019-01] Use [bytes_int_exn], [bytes_int63], [bytes_int64] or [bytes_float] \
+     as appropriate."])
   =
   bytes_float
 ;;
 
-let (of_bytes [@deprecated
-                "[since 2019-01] Use [of_bytes_int], [of_bytes_int63], \
-                 [of_bytes_int64_exn] or [of_bytes_float_exn] as appropriate."])
+let (of_bytes
+  [@deprecated
+    "[since 2019-01] Use [of_bytes_int], [of_bytes_int63], [of_bytes_int64_exn] or \
+     [of_bytes_float_exn] as appropriate."])
   =
   of_bytes_float_exn
 ;;
@@ -346,9 +348,9 @@ end
 
 let to_string_short = Short.to_string
 
-let (create [@deprecated
-              "[since 2019-01] Use [of_bytes], [of_kilobytes], [of_megabytes], etc as \
-               appropriate."])
+let (create
+  [@deprecated
+    "[since 2019-01] Use [of_bytes], [of_kilobytes], [of_megabytes], etc as appropriate."])
   =
   fun units value ->
   match units with

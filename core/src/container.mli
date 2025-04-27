@@ -5,7 +5,6 @@
     [Container.S1] in the signature for every container-like data structure ([Array],
     [List], [String], ...) to ensure a consistent interface.
 
-    These signatures extend signatures exported by {!Base.Container_intf}.
-*)
+    These signatures extend signatures exported by {!Base.Container_intf}. *)
 
 include Container_intf.Container (** @inline *)
