@@ -16,13 +16,22 @@ module type S = sig
       There is one nonstandard representable value, [start_of_next_day], which can be
       thought of as "24:00:00" in 24-hour time. It is essentially "00:00:00" on the next
       day. By having this value, we allow comparisons against a strict upper bound on [t]
-      values. However, it has some odd properties; for example, [Time.of_date_ofday ~zone
-      date start_of_next_day |> Time.to_date ~zone] yields a different date.
+      values. However, it has some odd properties; for example,
+      [Time.of_date_ofday ~zone date start_of_next_day |> Time.to_date ~zone] yields a
+      different date.
 
       Any [ofday] will satisfy [start_of_day <= ofday <= start_of_next_day]. *)
   type underlying
 
-  type t = private underlying [@@deriving bin_io, sexp, sexp_grammar, typerep]
+  type t = private underlying
+  [@@deriving
+    bin_io ~localize
+    , compare ~localize
+    , equal ~localize
+    , globalize
+    , sexp
+    , sexp_grammar
+    , typerep]
 
   include Comparable_binable with type t := t
   include Hashable_binable with type t := t
@@ -35,14 +44,17 @@ module type S = sig
   module O : sig
     (** alias for [create ~hr ~min ()], e.g. [18 ^: 00]. *)
     val ( ^: ) : int -> int -> t
+
+    include Comparisons.Infix with type t := t
   end
 
-  (** [of_string] supports and correctly interprets 12h strings with the following suffixes:
+  (** [of_string] supports and correctly interprets 12h strings with the following
+      suffixes:
 
       {v
       "A", "AM", "A.M.", "A.M"
       "P", "PM", "P.M.", "P.M"
-    v}
+      v}
 
       as well as the lowercase and space-prefixed versions of these suffixes.
 
@@ -104,7 +116,7 @@ module type S = sig
       segfault), if the input does not satisfy [span_since_start_of_day_is_valid]. *)
   val of_span_since_start_of_day_unchecked : Span.t -> t
 
-  (** [add t s] shifts the time of day [t] by the span [s].  It returns [None] if the
+  (** [add t s] shifts the time of day [t] by the span [s]. It returns [None] if the
       result is not in the same 24-hour day. *)
   val add : t -> Span.t -> t option
 

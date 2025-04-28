@@ -9,7 +9,7 @@ module M = struct
     | C
   [@@deriving typerep]
 
-  let always = Always.of_typerep_exn [%here] typerep_of_t
+  let always = Always.of_typerep_exn typerep_of_t
 end
 
 let tests =

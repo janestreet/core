@@ -3,7 +3,9 @@ include Time_ns_intf.Span
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving hash, equal, sexp_grammar]
+    type nonrec t = t
+    [@@deriving
+      bin_io ~localize, compare ~localize, equal ~localize, globalize, hash, sexp_grammar]
 
     include Stable_int63able.With_stable_witness.S with type t := t
     include Diffable.S_atomic with type t := t
@@ -11,18 +13,34 @@ module Stable : sig
 
   module Option : sig
     module V1 : sig
-      include Stable_int63able.With_stable_witness.S with type t = t
+      type nonrec t = t
+      [@@deriving bin_io ~localize, compare ~localize, equal ~localize, globalize]
+
+      include Stable_int63able.With_stable_witness.S with type t := t
       include Diffable.S_atomic with type t := t
     end
 
     module V2 : sig
-      include Stable_int63able.With_stable_witness.S with type t = t
+      type nonrec t = t
+      [@@deriving bin_io ~localize, compare ~localize, equal ~localize, globalize]
+
+      include Stable_int63able.With_stable_witness.S with type t := t
       include Diffable.S with type t := t and type Diff.t = t
     end
   end
 
   module V2 : sig
-    type nonrec t = t [@@deriving hash, equal, sexp_grammar, stable_witness, typerep]
+    type nonrec t = t
+    [@@deriving
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , globalize
+      , hash
+      , sexp_grammar
+      , stable_witness
+      , typerep]
+
     type nonrec comparator_witness = comparator_witness
 
     include
@@ -37,5 +55,6 @@ module Stable : sig
 
     include Stringable.S with type t := t
     include Diffable.S_atomic with type t := t
+    include Quickcheck.S with type t := t
   end
 end

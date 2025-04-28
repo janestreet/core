@@ -3,10 +3,14 @@ include Hashtbl_unit_tests_intf
 
 (* Demonstrate that [Hashtbl_for_testing] contains all the parts of [Hashtbl_intf.Hashtbl]
    that need to be tested. *)
-module _ (Hashtbl : Hashtbl_intf.Hashtbl) = struct
+module%template _ (Hashtbl : Hashtbl_intf.Hashtbl [@modality portable]) = struct
   module%test [@name "tests are exhaustive"] _ : Hashtbl_intf.Hashtbl = struct
     (* Include [Hashtbl_for_testing]. *)
-    include (Hashtbl : Hashtbl_for_testing with type ('a, 'b) t = ('a, 'b) Hashtbl.t)
+    include (
+      Hashtbl :
+      sig
+        include Hashtbl_for_testing with type ('a, 'b) t = ('a, 'b) Hashtbl.t
+      end)
 
     (* Now add what remains from [Hashtbl_intf.Hashtbl]. *)
 
@@ -19,28 +23,41 @@ module _ (Hashtbl : Hashtbl_intf.Hashtbl) = struct
     module type Key_binable = Hashtbl.Key_binable
     module type Key_stable = Hashtbl.Key_stable
     module type Key_plain = Hashtbl.Key_plain
-    module type S = Hashtbl.S
-    module type S_binable = Hashtbl.S_binable
-    module type S_stable = Hashtbl.S_stable
-    module type S_plain = Hashtbl.S_plain
+
+    [%%template
+    [@@@modality.default p = (nonportable, portable)]
+
+    module type S = Hashtbl.S [@modality p]
+    module type S_binable = Hashtbl.S_binable [@modality p]
+    module type S_stable = Hashtbl.S_stable [@modality p]
+    module type S_plain = Hashtbl.S_plain [@modality p]]
 
     (* module aliases *)
     module Hashable = Hashtbl.Hashable
     module M = Hashtbl.M
-    module Make = Hashtbl.Make
-    module Make_binable = Hashtbl.Make_binable
-    module Make_binable_with_hashable = Hashtbl.Make_binable_with_hashable
-    module Make_stable = Hashtbl.Make_stable
-    module Make_stable_with_hashable = Hashtbl.Make_stable_with_hashable
-    module Make_plain = Hashtbl.Make_plain
-    module Make_plain_with_hashable = Hashtbl.Make_plain_with_hashable
-    module Make_with_hashable = Hashtbl.Make_with_hashable
+
+    [%%template
+    [@@@modality.default p = (nonportable, portable)]
+
+    module Make = Hashtbl.Make [@modality p]
+    module Make_binable = Hashtbl.Make_binable [@modality p]
+    module Make_binable_with_hashable = Hashtbl.Make_binable_with_hashable [@modality p]
+    module Make_stable = Hashtbl.Make_stable [@modality p]
+    module Make_stable_with_hashable = Hashtbl.Make_stable_with_hashable [@modality p]
+    module Make_plain = Hashtbl.Make_plain [@modality p]
+    module Make_plain_with_hashable = Hashtbl.Make_plain_with_hashable [@modality p]
+    module Make_with_hashable = Hashtbl.Make_with_hashable [@modality p]]
+
     module Merge_into_action = Hashtbl.Merge_into_action
     module Poly = Hashtbl.Poly
     module Using_hashable = Hashtbl.Using_hashable
 
     (* exports for deriving via [Hashtbl.M(_)] *)
-    include (Hashtbl : For_deriving with type ('a, 'b) t := ('a, 'b) t)
+    include (
+      Hashtbl :
+      sig
+        include For_deriving with type ('a, 'b) t := ('a, 'b) t
+      end)
 
     (* hash function accessors, not interesting to test *)
     let hash = Hashtbl.hash
@@ -580,25 +597,36 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
               ~expect:(Map.change map key ~f:(fun _ -> data_opt)))
       ;;
 
-      let choose = Hashtbl.choose
-      let choose_exn = Hashtbl.choose_exn
+      let%template choose = (Hashtbl.choose [@mode m]) [@@mode m = (local, global)]
+
+      let%template choose_exn = (Hashtbl.choose_exn [@mode m])
+      [@@mode m = (local, global)]
+      ;;
+
       let choose_randomly = Hashtbl.choose_randomly
       let choose_randomly_exn = Hashtbl.choose_randomly_exn
 
-      let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          [%test_result: bool] (is_some (choose t)) ~expect:(not (Map.is_empty map));
-          [%test_result: bool]
-            (is_some (choose_randomly t))
-            ~expect:(not (Map.is_empty map));
-          [%test_result: bool]
-            (Exn.does_raise (fun () -> choose_exn t))
-            ~expect:(Map.is_empty map);
-          [%test_result: bool]
-            (Exn.does_raise (fun () -> choose_randomly_exn t))
-            ~expect:(Map.is_empty map))
-      ;;
+      [%%template
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: bool] (is_some (choose t)) ~expect:(not (Map.is_empty map));
+            [%test_result: bool]
+              (is_some ((choose [@mode local]) t))
+              ~expect:(not (Map.is_empty map));
+            [%test_result: bool]
+              (is_some (choose_randomly t))
+              ~expect:(not (Map.is_empty map));
+            [%test_result: bool]
+              (Exn.does_raise (fun () -> choose_exn t))
+              ~expect:(Map.is_empty map);
+            [%test_result: bool]
+              (Exn.does_raise (fun () -> ignore ((choose_exn [@mode local]) t : _ * _)))
+              ~expect:(Map.is_empty map);
+            [%test_result: bool]
+              (Exn.does_raise (fun () -> choose_randomly_exn t))
+              ~expect:(Map.is_empty map))
+        ;;]
 
       let update = Hashtbl.update
 
@@ -2023,8 +2051,8 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_for_testing) = struct
 
     (* non-functions, and functions that neither mutate nor have callbacks *)
 
-    let choose = Hashtbl.choose
-    let choose_exn = Hashtbl.choose_exn
+    let%template choose = (Hashtbl.choose [@mode m]) [@@mode m = (local, global)]
+    let%template choose_exn = (Hashtbl.choose_exn [@mode m]) [@@mode m = (local, global)]
     let choose_randomly = Hashtbl.choose_randomly
     let choose_randomly_exn = Hashtbl.choose_randomly_exn
     let create = Hashtbl.create

@@ -11,7 +11,7 @@ module Stable = struct
       ; pos_cnum : int
       }
     [@@deriving
-      bin_io
+      bin_io ~localize
       , compare
       , equal
       , fields ~getters

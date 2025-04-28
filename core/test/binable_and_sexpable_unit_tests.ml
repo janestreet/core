@@ -4,8 +4,8 @@ module Sexpable = Sexpable.Stable
 module Binable = Binable.Stable
 
 module%test _ = struct
-  let old_style = !Sexp.of_int_style
-  let () = Sexp.of_int_style := `No_underscores
+  let old_style = Dynamic.get Sexp.of_int_style
+  let () = Dynamic.set_root Sexp.of_int_style `No_underscores
 
   let int_tests =
     [ ~-1, "-1", "\002-1"; 0, "0", "\0010"; 1, "1", "\0011" ]
@@ -21,7 +21,7 @@ module%test _ = struct
   ;;
 
   (* S0 *)
-  module _ = Stable_unit_test.Make (struct
+  module%template _ = Stable_unit_test.Make [@mode local] (struct
       module T = struct
         type t = int [@@deriving compare]
 
@@ -36,23 +36,23 @@ module%test _ = struct
             end)
 
         include
-          Binable.Of_binable.V1 [@alert "-legacy"]
+          Binable.Of_binable.V1 [@mode local] [@alert "-legacy"]
             (String)
             (struct
               type t = int
 
-              let to_binable = string_of_int
+              let[@mode m = (global, local)] to_binable = string_of_int
               let of_binable = int_of_string
             end)
       end
 
-      type t = T.t [@@deriving bin_io, compare, sexp]
+      type t = T.t [@@deriving bin_io ~localize, compare, sexp]
 
       let equal a b = Int.( = ) 0 ([%compare: t] a b)
       let tests = int_tests
     end)
 
-  module _ = Stable_unit_test.Make (struct
+  module%template _ = Stable_unit_test.Make [@mode local] (struct
       module T = struct
         type 'a t = 'a option [@@deriving compare]
 
@@ -67,17 +67,18 @@ module%test _ = struct
             end)
 
         include
-          Binable.Of_binable1.V1 [@alert "-legacy"]
+          Binable.Of_binable1.V1 [@mode local] [@alert "-legacy"]
             (List)
             (struct
               type 'a t = 'a option
 
-              let to_binable = Option.to_list
+              let[@mode global] to_binable = Option.to_list
+              let[@mode local] to_binable = (Option.to_list [@mode local])
               let of_binable = List.hd
             end)
       end
 
-      type t = int T.t [@@deriving bin_io, compare, sexp]
+      type t = int T.t [@@deriving bin_io ~localize, compare, sexp]
 
       let equal a b = Int.( = ) 0 ([%compare: t] a b)
 
@@ -90,7 +91,7 @@ module%test _ = struct
       ;;
     end)
 
-  module _ = Stable_unit_test.Make (struct
+  module%template _ = Stable_unit_test.Make [@mode local] (struct
       module T = struct
         type ('a, 'b) t = ('a, 'b) Either.Stable.V1.t [@@deriving compare]
 
@@ -98,11 +99,11 @@ module%test _ = struct
           type ('a, 'b) t =
             | Left of 'a
             | Right of 'b
-          [@@deriving bin_io, sexp]
+          [@@deriving bin_io ~localize, sexp]
 
-          let of_t = function
-            | First x -> Left x
-            | Second x -> Right x
+          let[@mode m = (global, local)] of_t = function
+            | First x -> Left x [@exclave_if_local m]
+            | Second x -> Right x [@exclave_if_local m]
           ;;
 
           let to_t = function
@@ -122,17 +123,17 @@ module%test _ = struct
             end)
 
         include
-          Binable.Of_binable2.V1 [@alert "-legacy"]
+          Binable.Of_binable2.V1 [@mode local] [@alert "-legacy"]
             (Format)
             (struct
               type nonrec ('a, 'b) t = ('a, 'b) t
 
-              let to_binable = Format.of_t
+              let[@mode m = (global, local)] to_binable = (Format.of_t [@mode m])
               let of_binable = Format.to_t
             end)
       end
 
-      type t = (int, string) T.t [@@deriving bin_io, compare, sexp]
+      type t = (int, string) T.t [@@deriving bin_io ~localize, compare, sexp]
 
       let equal a b = Int.( = ) 0 ([%compare: t] a b)
 
@@ -188,5 +189,5 @@ module%test _ = struct
     ;;
   end
 
-  let () = Sexp.of_int_style := old_style
+  let () = Dynamic.set_root Sexp.of_int_style old_style
 end

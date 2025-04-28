@@ -208,7 +208,6 @@ let test_int64 get_exn get_trunc set_t double_check_set =
       with
       | e ->
         failwiths
-          ~here:[%here]
           "test_int64"
           ( sprintf "too_big = %LdL = 0x%LxL" too_big too_big
           , sprintf "trunc = %d = 0x%x" trunc trunc

@@ -1,4 +1,5 @@
-(** Witnesses that express whether a type's values are always, sometimes, or never
+(** {v
+ Witnesses that express whether a type's values are always, sometimes, or never
     immediate.
 
     A value is immediate when it is internally represented unboxed, using one word of
@@ -144,7 +145,7 @@
     An exception is raised on functor application if such witness cannot be obtained.
     That happens either because the witness depends on the actual type parameter, or
     because the type has a different witness (e.g. [Sometimes] instead of [Always]).
-*)
+    v} *)
 
 open! Import
 
@@ -154,7 +155,7 @@ module Always : sig
   type 'a t
 
   val of_typerep : ('a, _) Typerep.t_any -> 'a t option
-  val of_typerep_exn : Source_code_position.t -> ('a, _) Typerep.t_any -> 'a t
+  val of_typerep_exn : ?here:Stdlib.Lexing.position -> ('a, _) Typerep.t_any -> 'a t
   val int_as_value : 'a t -> int -> 'a option
   val int_as_value_exn : 'a t -> int -> 'a
   val int_is_value : 'a t -> int -> bool
@@ -190,7 +191,7 @@ module Sometimes : sig
   type 'a t
 
   val of_typerep : 'a Typerep.t -> 'a t option
-  val of_typerep_exn : Source_code_position.t -> 'a Typerep.t -> 'a t
+  val of_typerep_exn : ?here:Stdlib.Lexing.position -> 'a Typerep.t -> 'a t
   val int_as_value : 'a t -> int -> 'a option
   val int_as_value_exn : 'a t -> int -> 'a
   val int_is_value : 'a t -> int -> bool
@@ -226,7 +227,7 @@ module Never : sig
   type 'a t
 
   val of_typerep : 'a Typerep.t -> 'a t option
-  val of_typerep_exn : Source_code_position.t -> 'a Typerep.t -> 'a t
+  val of_typerep_exn : ?here:Stdlib.Lexing.position -> 'a Typerep.t -> 'a t
 
   module For_all_parameters_S1 (X : Typerepable.S1) : sig
     val witness : unit -> _ X.t t

@@ -499,7 +499,7 @@ module%test _ = struct
     end
     in
     let (_ : _ Type_immediacy.Always.t) =
-      Type_immediacy.Always.of_typerep_exn [%here] M.typerep_of_t
+      Type_immediacy.Always.of_typerep_exn M.typerep_of_t
     in
     true
   ;;

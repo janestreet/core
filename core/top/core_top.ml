@@ -1,0 +1,1 @@
+module Core_install_printers = Core_install_printers

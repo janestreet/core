@@ -6,7 +6,7 @@ module List = List0
 
 let failwiths = Error.failwiths
 
-module Creators = Hashtbl.Creators
+module%template.portable [@modality p] Creators = Hashtbl.Creators [@modality p]
 
 include (
   Hashtbl :
@@ -84,10 +84,18 @@ module Using_hashable = struct
   ;;
 end
 
-module type S_plain = S_plain with type ('a, 'b) hashtbl = ('a, 'b) t
-module type S = S with type ('a, 'b) hashtbl = ('a, 'b) t
-module type S_binable = S_binable with type ('a, 'b) hashtbl = ('a, 'b) t
-module type S_stable = S_stable with type ('a, 'b) hashtbl = ('a, 'b) t
+module type%template [@modality p = (portable, nonportable)] S_plain =
+  S_plain [@modality p] with type ('a, 'b) hashtbl = ('a, 'b) t
+
+module type%template [@modality p = (portable, nonportable)] S =
+  S [@modality p] with type ('a, 'b) hashtbl = ('a, 'b) t
+
+module type%template [@modality p = (portable, nonportable)] S_binable =
+  S_binable [@modality p] with type ('a, 'b) hashtbl = ('a, 'b) t
+
+module type%template [@modality p = (portable, nonportable)] S_stable =
+  S_stable [@modality p] with type ('a, 'b) hashtbl = ('a, 'b) t
+
 module type Key_plain = Key_plain
 module type Key = Key
 module type Key_binable = Key_binable
@@ -98,7 +106,7 @@ module Poly = struct
 
   let validate = validate
 
-  include Bin_prot.Utils.Make_iterable_binable2 (struct
+  include%template Bin_prot.Utils.Make_iterable_binable2 [@modality portable] (struct
       type nonrec ('a, 'b) t = ('a, 'b) t
       type ('a, 'b) el = 'a * 'b [@@deriving bin_io]
 
@@ -126,12 +134,13 @@ module Poly = struct
     end)
 end
 
-module Provide_bin_io (Key : sig
+module%template.portable
+  [@modality p] Toplevel_provide_bin_io (Key : sig
     type t [@@deriving bin_io]
 
     include Key_plain with type t := t
   end) =
-Bin_prot.Utils.Make_iterable_binable1 (struct
+Bin_prot.Utils.Make_iterable_binable1 [@modality p] (struct
     module Key = Key
 
     type nonrec 'v t = (Key.t, 'v) t
@@ -154,18 +163,14 @@ Bin_prot.Utils.Make_iterable_binable1 (struct
         let key, data = next () in
         match find t key with
         | None -> set t ~key ~data
-        | Some _ ->
-          failwiths
-            ~here:[%here]
-            "Hashtbl.bin_read_t: duplicate key"
-            key
-            [%sexp_of: Key.t]
+        | Some _ -> failwiths "Hashtbl.bin_read_t: duplicate key" key [%sexp_of: Key.t]
       done;
       t
     ;;
   end)
 
-module Make_plain_with_hashable (T : sig
+module%template.portable
+  [@modality p] Make_plain_with_hashable (T : sig
     module Key : Key_plain
 
     val hashable : Key.t Hashable.t
@@ -178,7 +183,7 @@ struct
   type 'a t = (T.Key.t, 'a) hashtbl
   type 'a key_ = T.Key.t
 
-  include Creators (struct
+  include Creators [@modality p] (struct
       type 'a t = T.Key.t
 
       let hashable = hashable
@@ -194,7 +199,8 @@ struct
   let invariant invariant_key t = invariant ignore invariant_key t
   let sexp_of_t sexp_of_v t = Poly.sexp_of_t T.Key.sexp_of_t sexp_of_v t
 
-  module Provide_of_sexp
+  module%template
+    [@modality p' = (nonportable, p)] Provide_of_sexp
       (Key : sig
                type t [@@deriving of_sexp]
              end
@@ -203,12 +209,13 @@ struct
     let t_of_sexp v_of_sexp sexp = t_of_sexp Key.t_of_sexp v_of_sexp sexp
   end
 
-  module Provide_bin_io
+  module%template
+    [@modality p' = (nonportable, p)] Provide_bin_io
       (Key' : sig
                 type t [@@deriving bin_io]
               end
               with type t := T.Key.t) =
-  Provide_bin_io (struct
+  Toplevel_provide_bin_io [@modality p'] (struct
       include T.Key
       include Key'
     end)
@@ -232,37 +239,41 @@ struct
   end
 end
 
-module Make_with_hashable (T : sig
+module%template.portable
+  [@modality p] Make_with_hashable (T : sig
     module Key : Key
 
     val hashable : Key.t Hashable.t
   end) =
 struct
-  include Make_plain_with_hashable (T)
-  include Provide_of_sexp (T.Key)
+  include Make_plain_with_hashable [@modality p] (T)
+  include Provide_of_sexp [@modality p] (T.Key)
 end
 
-module Make_binable_with_hashable (T : sig
+module%template.portable
+  [@modality p] Make_binable_with_hashable (T : sig
     module Key : Key_binable
 
     val hashable : Key.t Hashable.t
   end) =
 struct
-  include Make_with_hashable (T)
-  include Provide_bin_io (T.Key)
+  include Make_with_hashable [@modality p] (T)
+  include Provide_bin_io [@modality p] (T.Key)
 end
 
-module Make_stable_with_hashable (T : sig
+module%template.portable
+  [@modality p] Make_stable_with_hashable (T : sig
     module Key : Key_stable
 
     val hashable : Key.t Hashable.t
   end) =
 struct
-  include Make_binable_with_hashable (T)
+  include Make_binable_with_hashable [@modality p] (T)
   include Provide_stable_witness (T.Key)
 end
 
-module Make_plain (Key : Key_plain) = Make_plain_with_hashable (struct
+module%template.portable [@modality p] Make_plain (Key : Key_plain) =
+Make_plain_with_hashable [@modality p] (struct
     module Key = Key
 
     let hashable =
@@ -270,18 +281,18 @@ module Make_plain (Key : Key_plain) = Make_plain_with_hashable (struct
     ;;
   end)
 
-module Make (Key : Key) = struct
-  include Make_plain (Key)
-  include Provide_of_sexp (Key)
+module%template.portable [@modality p] Make (Key : Key) = struct
+  include Make_plain [@modality p] (Key)
+  include Provide_of_sexp [@modality p] (Key)
 end
 
-module Make_binable (Key : Key_binable) = struct
-  include Make (Key)
-  include Provide_bin_io (Key)
+module%template.portable [@modality p] Make_binable (Key : Key_binable) = struct
+  include Make [@modality p] (Key)
+  include Provide_bin_io [@modality p] (Key)
 end
 
-module Make_stable (Key : Key_stable) = struct
-  include Make_binable (Key)
+module%template.portable [@modality p] Make_stable (Key : Key_stable) = struct
+  include Make_binable [@modality p] (Key)
   include Provide_stable_witness (Key)
 end
 
@@ -289,8 +300,14 @@ module M = Hashtbl.M
 
 module type For_deriving = For_deriving
 
-module For_deriving : For_deriving with type ('a, 'b) t := ('a, 'b) t = struct
-  include (Hashtbl : Hashtbl.For_deriving with type ('a, 'b) t := ('a, 'b) t)
+module For_deriving : sig
+  include For_deriving with type ('a, 'b) t := ('a, 'b) t
+end = struct
+  include (
+    Hashtbl :
+    sig
+      include Hashtbl.For_deriving with type ('a, 'b) t := ('a, 'b) t
+    end)
 
   module type M_quickcheck = M_quickcheck
 
@@ -302,7 +319,7 @@ module For_deriving : For_deriving with type ('a, 'b) t := ('a, 'b) t = struct
     quickcheck_generator_data
     =
     [%quickcheck.generator: (Key.t * data) List.t]
-    |> Quickcheck.Generator.filter_map ~f:(of_alist_option (module Key))
+    |> Base_quickcheck.Generator.filter_map ~f:(of_alist_option (module Key))
   ;;
 
   let quickcheck_observer_m__t
@@ -310,7 +327,8 @@ module For_deriving : For_deriving with type ('a, 'b) t := ('a, 'b) t = struct
     (module Key : M_quickcheck with type t = key)
     quickcheck_observer_data
     =
-    [%quickcheck.observer: (Key.t * data) List.t] |> Quickcheck.Observer.unmap ~f:to_alist
+    [%quickcheck.observer: (Key.t * data) List.t]
+    |> Base_quickcheck.Observer.unmap ~f:to_alist
   ;;
 
   let quickcheck_shrinker_m__t
@@ -319,34 +337,61 @@ module For_deriving : For_deriving with type ('a, 'b) t := ('a, 'b) t = struct
     quickcheck_shrinker_data
     =
     [%quickcheck.shrinker: (Key.t * data) List.t]
-    |> Quickcheck.Shrinker.filter_map
+    |> Base_quickcheck.Shrinker.filter_map
          ~f:(of_alist_option (module Key))
          ~f_inverse:to_alist
   ;;
 
   let bin_shape_m__t (type t) (module Key : Key_binable with type t = t) =
-    let module M = Provide_bin_io (Key) in
+    let module M = Toplevel_provide_bin_io (Key) in
     M.bin_shape_t
   ;;
 
   let bin_size_m__t (type t) (module Key : Key_binable with type t = t) =
-    let module M = Provide_bin_io (Key) in
+    let module M = Toplevel_provide_bin_io (Key) in
     M.bin_size_t
   ;;
 
   let bin_write_m__t (type t) (module Key : Key_binable with type t = t) =
-    let module M = Provide_bin_io (Key) in
+    let module M = Toplevel_provide_bin_io (Key) in
     M.bin_write_t
   ;;
 
   let bin_read_m__t (type t) (module Key : Key_binable with type t = t) =
-    let module M = Provide_bin_io (Key) in
+    let module M = Toplevel_provide_bin_io (Key) in
     M.bin_read_t
   ;;
 
   let __bin_read_m__t__ (type t) (module Key : Key_binable with type t = t) =
-    let module M = Provide_bin_io (Key) in
+    let module M = Toplevel_provide_bin_io (Key) in
     M.__bin_read_t__
+  ;;
+
+  type binio =
+    { bin_shape_m__t :
+        'a. (module Key_binable with type t = 'a) -> Bin_shape.t -> Bin_shape.t
+    ; bin_size_m__t :
+        'a 'b.
+        (module Key_binable with type t = 'a) -> ('b, ('a, 'b) t) Bin_prot.Size.sizer1
+    ; bin_write_m__t :
+        'a 'b.
+        (module Key_binable with type t = 'a) -> ('b, ('a, 'b) t) Bin_prot.Write.writer1
+    ; bin_read_m__t :
+        'a 'b.
+        (module Key_binable with type t = 'a) -> ('b, ('a, 'b) t) Bin_prot.Read.reader1
+    ; __bin_read_m__t__ :
+        'a 'b.
+        (module Key_binable with type t = 'a)
+        -> ('b, ('a, 'b) t) Bin_prot.Read.vtag_reader1
+    }
+
+  let binio =
+    { bin_shape_m__t; bin_size_m__t; bin_write_m__t; bin_read_m__t; __bin_read_m__t__ }
+    |> Portability_hacks.magic_portable__needs_portable_functors
+  ;;
+
+  let { bin_shape_m__t; bin_size_m__t; bin_write_m__t; bin_read_m__t; __bin_read_m__t__ } =
+    binio
   ;;
 end
 

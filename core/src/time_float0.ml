@@ -108,12 +108,7 @@ end
 
 let next_multiple_internal ~can_equal_after ~base ~after ~interval =
   if Span.( <= ) interval Span.zero
-  then
-    failwiths
-      ~here:[%here]
-      "Time.next_multiple got nonpositive interval"
-      interval
-      [%sexp_of: Span.t];
+  then failwiths "Time.next_multiple got nonpositive interval" interval [%sexp_of: Span.t];
   let base_to_after = diff after base in
   if Span.( < ) base_to_after Span.zero
   then base (* [after < base], choose [k = 0]. *)

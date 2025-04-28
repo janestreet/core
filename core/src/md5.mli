@@ -2,8 +2,7 @@
     [t] is the result type and [val digest_string : string -> t] is the implementation of
     the algorithm itself.
 
-    This is currently a thin wrapper over the [Digest] module in INRIA's standard
-    library. *)
+    This is currently a thin wrapper over the [Digest] module in INRIA's standard library. *)
 
 open Interfaces
 
@@ -48,21 +47,19 @@ val to_binary : t -> string
 
 val of_binary_exn : string -> t
 
-(** [to_hex] prints each byte of [t] as a big-endian sequence of 2 hex digits
-    (e.g. byte 31 is written as "1f") and then concatenates them.
-    For example,
+(** [to_hex] prints each byte of [t] as a big-endian sequence of 2 hex digits (e.g. byte
+    31 is written as "1f") and then concatenates them. For example,
     {[
-      Md5.to_hex (Md5.digest_string "a") =
-      Md5.to_hex (
-        Md5.of_binary_exn
-          "\x0c\xc1\x75\xb9\xc0\xf1\xb6\xa8\x31\xc3\x99\xe2\x69\x77\x26\x61") =
-      "0cc175b9c0f1b6a831c399e269772661"
-    ]}
-*)
+      Md5.to_hex (Md5.digest_string "a")
+      = Md5.to_hex
+          (Md5.of_binary_exn
+             "\x0c\xc1\x75\xb9\xc0\xf1\xb6\xa8\x31\xc3\x99\xe2\x69\x77\x26\x61")
+      = "0cc175b9c0f1b6a831c399e269772661"
+    ]} *)
 val to_hex : t -> string
 
-(** The inverse of [to_hex]. This function ignores case. It will raise an
-    exception if the string is not a 32-byte-long string of hex digits. *)
+(** The inverse of [to_hex]. This function ignores case. It will raise an exception if the
+    string is not a 32-byte-long string of hex digits. *)
 val of_hex_exn : string -> t
 
 val digest_string : string -> t
@@ -82,8 +79,7 @@ val digest_file_blocking : string -> t
     be slow and make the other threads starve. See [digest_file_blocking]. *)
 val digest_channel_blocking_without_releasing_runtime_lock : in_channel -> len:int -> t
 
-(** Reads an Md5 digest from the given channel (in a format written by [output_blocking])
-*)
+(** Reads an Md5 digest from the given channel (in a format written by [output_blocking]) *)
 val input_blocking : in_channel -> t
 
 (** Writes the Md5 digest to the given channel. *)
@@ -116,13 +112,13 @@ val input : in_channel -> t
   "[since 2017-07] blocking functions should be avoided. Use [input_blocking] if you \
    really want this."]
 
-(** [digest_bin_prot w x] digests the serialization of [x] by [w].
-    It is a cheap way (in dev time) to compute the digest of an ocaml value, for a
-    fixed and deterministic serialization function.
-    It is currently implemented inefficiently and allocates large strings.
+(** [digest_bin_prot w x] digests the serialization of [x] by [w]. It is a cheap way (in
+    dev time) to compute the digest of an ocaml value, for a fixed and deterministic
+    serialization function. It is currently implemented inefficiently and allocates large
+    strings.
 
-    For a more efficient and resource-aware version, use [Bigbuffer.add_bin_prot]
-    and [Bigbuffer_blocking.md5]. *)
+    For a more efficient and resource-aware version, use [Bigbuffer.add_bin_prot] and
+    [Bigbuffer_blocking.md5]. *)
 val digest_bin_prot : 'a Bin_prot.Type_class.writer -> 'a -> t
 
 val digest_bigstring : Bigstring.t -> t

@@ -5,8 +5,7 @@ open! Binary_searchable
 
 module type For_test = sig
   (** To implement the tests, we need two different [elt] values [small < big], to be able
-      to compare those values, and to be able to construct a [t] containing those
-      values. *)
+      to compare those values, and to be able to construct a [t] containing those values. *)
 
   type t
   type elt

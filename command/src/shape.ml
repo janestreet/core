@@ -22,7 +22,7 @@ module Stable = struct
         [@@deriving compare, sexp, stable_witness]
 
         let rec invariant t =
-          Base.Invariant.invariant [%here] t [%sexp_of: t] (fun () ->
+          Base.Invariant.invariant t [%sexp_of: t] (fun () ->
             match t with
             | Zero -> ()
             | One _ -> ()

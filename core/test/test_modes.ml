@@ -50,7 +50,7 @@ end [@remove_aliases] = struct
   module Global = struct
     module V1 = struct
       type 'a t = 'a Modes.Stable.Global.V1.t
-      [@@deriving bin_io, compare, sexp, stable_witness]
+      [@@deriving bin_io ~localize, compare ~localize, sexp, stable_witness]
 
       let map = Modes.Stable.Global.V1.map
 

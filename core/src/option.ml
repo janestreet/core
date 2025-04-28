@@ -1,17 +1,32 @@
 open! Import
 include Base.Option
 
+(* We hide the constructors of the non-value types so that [None] does not get inferred as
+   being e.g. the [float64] version below. This is the same as using [[%%rederive]],
+   except we can't currently use [[%%rederive]] when we need the sig to be [@@ portable].
+*)
+  include%template (
+  struct
+    type 'a t = ('a Constructors.t[@kind k]) =
+      | None
+      | Some of 'a
+    [@@deriving bin_io ~localize] [@@kind k = (float64, bits32, bits64, word)]
+  end :
+  sig
+    type 'a t = ('a Constructors.t[@kind k])
+    [@@deriving bin_io ~localize] [@@kind k = (float64, bits32, bits64, word)]
+  end)
+
 type 'a t = 'a option [@@deriving bin_io ~localize, typerep, stable_witness]
 
-include Comparator.Derived (struct
+include%template Comparator.Derived [@modality portable] (struct
     type nonrec 'a t = 'a t [@@deriving sexp_of, compare]
   end)
 
 let validate ~none ~some t =
-  let module V = Validate in
   match t with
-  | None -> V.name "none" (V.protect none ())
-  | Some x -> V.name "some" (V.protect some x)
+  | None -> Validate.name "none" (Validate.protect none ())
+  | Some x -> Validate.name "some" (Validate.protect some x)
 ;;
 
 let quickcheck_generator = Base_quickcheck.Generator.option
@@ -45,8 +60,10 @@ module Optional_syntax = struct
       type 'a t = Unchecked_some of 'a [@@ocaml.boxed] [@@ocaml.warning "-37"]
     end
 
+    external magic_transparent : 'a t -> 'a Unchecked_some.t = "%identity"
+
     let unsafe_value (type a) (t : a t) : a =
-      let (Unchecked_some value) = (Obj.magic t : a Unchecked_some.t) in
+      let (Unchecked_some value) = magic_transparent t in
       value
     ;;
   end

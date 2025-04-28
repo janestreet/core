@@ -180,7 +180,10 @@ module Expert = struct
   end
 
   let signal t behavior =
-    Behavior.of_caml (Stdlib.Sys.signal t (Behavior.to_caml behavior))
+    Behavior.of_caml
+      ((Stdlib.Sys.signal [@ocaml.alert "-unsafe_multidomain"])
+         t
+         (Behavior.to_caml behavior))
   ;;
 
   let set t behavior = ignore (signal t behavior : behavior)

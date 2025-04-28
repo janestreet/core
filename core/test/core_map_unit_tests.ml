@@ -2228,7 +2228,8 @@ struct
     ;;
   end
 
-  module Make_applicative_traversals (_ : Applicative.Lazy_applicative) = struct
+  module%template.portable Make_applicative_traversals (_ : Applicative.Lazy_applicative) =
+  struct
     let mapi _ = assert false
     let filter_mapi _ = assert false
   end

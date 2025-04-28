@@ -10,9 +10,10 @@ module Stable = struct
 end
 
 include Stable.V1
-include Comparable.Validate (Base.Bytes)
 
-include Hexdump.Of_indexable (struct
+include%template Comparable.Validate [@modality portable] (Base.Bytes)
+
+include%template Hexdump.Of_indexable [@modality portable] (struct
     type t = bytes
 
     let length = length

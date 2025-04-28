@@ -19,21 +19,13 @@ module Make () = struct
     then (
       try List.iter ts ~f:invariant with
       | exn ->
-        failwiths
-          ~here:[%here]
-          "invariant pre-condition failed"
-          (name, exn)
-          [%sexp_of: string * exn]);
+        failwiths "invariant pre-condition failed" (name, exn) [%sexp_of: string * exn]);
     let result_or_exn = Result.try_with f in
     if !check_invariant
     then (
       try List.iter ts ~f:invariant with
       | exn ->
-        failwiths
-          ~here:[%here]
-          "invariant post-condition failed"
-          (name, exn)
-          [%sexp_of: string * exn]);
+        failwiths "invariant post-condition failed" (name, exn) [%sexp_of: string * exn]);
     if !show_messages
     then
       eprints

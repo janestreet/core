@@ -9,9 +9,9 @@ let bytes_per_line = 16
 (* Initialize to enough lines to display 4096 bytes -- large enough that, for example, a
    complete Ethernet packet can always be displayed -- including the line containing the
    final index. *)
-let default_max_lines = ref ((4096 / bytes_per_line) + 1)
+let default_max_lines = Dynamic.make ((4096 / bytes_per_line) + 1)
 
-module Of_indexable2 (T : Indexable2) = struct
+module%template.portable Of_indexable2 (T : Indexable2) = struct
   module Hexdump = struct
     include T
 
@@ -46,7 +46,8 @@ module Of_indexable2 (T : Indexable2) = struct
     let printable_string t ~start ~until =
       String.init (until - start) ~f:(fun i ->
         let char = get t (start + i) in
-        if Char.is_print char then char else '.') [@nontail]
+        if Char.is_print char then char else '.')
+      [@nontail]
     ;;
 
     let line t ~pos ~len ~line_index =
@@ -66,7 +67,7 @@ module Of_indexable2 (T : Indexable2) = struct
       let max_lines =
         match max_lines with
         | Some max_lines -> max_lines
-        | None -> !default_max_lines
+        | None -> Dynamic.get default_max_lines
       in
       (* always produce at least 3 lines: first line of hex, ellipsis, last line of hex *)
       let max_lines = max max_lines 3 in
@@ -138,8 +139,8 @@ module Of_indexable2 (T : Indexable2) = struct
   end
 end
 
-module Of_indexable1 (T : Indexable1) = struct
-  module M = Of_indexable2 (struct
+module%template.portable [@modality p] Of_indexable1 (T : Indexable1) = struct
+  module M = Of_indexable2 [@modality p] (struct
       type ('a, _) t = 'a T.t
 
       let length = T.length
@@ -161,8 +162,8 @@ module Of_indexable1 (T : Indexable1) = struct
   end
 end
 
-module Of_indexable (T : Indexable) = struct
-  module M = Of_indexable1 (struct
+module%template.portable [@modality p] Of_indexable (T : Indexable) = struct
+  module M = Of_indexable1 [@modality p] (struct
       type _ t = T.t
 
       let length = T.length

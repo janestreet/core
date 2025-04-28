@@ -103,6 +103,53 @@ module%test [@name "gc"] [@tags "no-js"] _ = struct
     let open Gc.For_testing in
     is_zero_alloc (fun () -> ignore (is_zero_alloc Fn.id : bool))
   ;;
+
+  let show_raise_hide_backtraces f =
+    Dynamic.with_temporarily Backtrace.elide true ~f:(fun () ->
+      match Or_error.try_with f with
+      | Ok _ -> print_string "did not raise"
+      | Error err ->
+        Error.sexp_of_t err |> Expect_test_helpers_base.print_s ~hide_positions:true)
+  ;;
+
+  let non_allocating_function () = 1 + 2
+  let allocating_function () = ref 0
+
+  let%expect_test "[assert_no_allocation]" =
+    show_raise_hide_backtraces (fun () ->
+      Gc.For_testing.assert_no_allocation non_allocating_function);
+    [%expect {| did not raise |}];
+    show_raise_hide_backtraces (fun () ->
+      Gc.For_testing.assert_no_allocation allocating_function);
+    [%expect
+      {|
+      ("allocation detected"
+        (here lib/core/test/core_gc_unit_tests.ml:LINE:COL)
+        (allocation_report (
+          (major_words_allocated 0)
+          (minor_words_allocated 2)))
+        (allocation_log ((
+          (size_in_words 2)
+          (is_major      false)
+          (backtrace     "<backtrace elided in test>")))))
+      |}];
+    (* Location information should be excluded when [here] is [Lexing.dummy_pos], which is
+       the default value of [here] in the external version of Base for [%call_pos]
+       arguments*)
+    show_raise_hide_backtraces (fun () ->
+      Gc.For_testing.assert_no_allocation ~here:Lexing.dummy_pos allocating_function);
+    [%expect
+      {|
+      ("allocation detected"
+        (allocation_report (
+          (major_words_allocated 0)
+          (minor_words_allocated 2)))
+        (allocation_log ((
+          (size_in_words 2)
+          (is_major      false)
+          (backtrace     "<backtrace elided in test>")))))
+      |}]
+  ;;
 end
 
 let%test_unit _ =

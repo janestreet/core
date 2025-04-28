@@ -4,11 +4,14 @@ open Hash_queue_intf
 module type Key = Key
 module type S_backend = S_backend
 
-module Make_backend (Table : Hashtbl_intf.Hashtbl) : S_backend = struct
-  module type Backend =
-    S1
-    with type 'key create_arg := 'key Hashtbl.Hashable.t
-    with type 'key create_key := 'key
+module%template Make_backend (Table : Hashtbl_intf.Hashtbl [@modality portable]) :
+  S_backend = struct
+  module type Backend = sig
+    include
+      S1
+      with type 'key create_arg := 'key Hashtbl.Hashable.t
+      with type 'key create_key := 'key
+  end
 
   module Backend : Backend = struct
     module Key_value = struct
@@ -99,24 +102,27 @@ module Make_backend (Table : Hashtbl_intf.Hashtbl) : S_backend = struct
 
     let for_all t ~f =
       read t (fun () ->
-        Doubly_linked.for_all t.queue ~f:(fun kv -> f kv.value) [@nontail]) [@nontail]
+        Doubly_linked.for_all t.queue ~f:(fun kv -> f kv.value) [@nontail])
+      [@nontail]
     ;;
 
     let exists t ~f =
-      read t (fun () -> Doubly_linked.exists t.queue ~f:(fun kv -> f kv.value) [@nontail]) 
+      read t (fun () -> Doubly_linked.exists t.queue ~f:(fun kv -> f kv.value) [@nontail])
       [@nontail]
     ;;
 
     let find_map t ~f =
       read t (fun () ->
-        Doubly_linked.find_map t.queue ~f:(fun kv -> f kv.value) [@nontail]) [@nontail]
+        Doubly_linked.find_map t.queue ~f:(fun kv -> f kv.value) [@nontail])
+      [@nontail]
     ;;
 
     let find t ~f =
       read t (fun () ->
         Option.map
           (Doubly_linked.find t.queue ~f:(fun kv -> f kv.value))
-          ~f:Key_value.value) [@nontail]
+          ~f:Key_value.value)
+      [@nontail]
     ;;
 
     let enqueue_unchecked t back_or_front key value =
@@ -273,7 +279,7 @@ module Make_backend (Table : Hashtbl_intf.Hashtbl) : S_backend = struct
 
     let iteri t ~f =
       read t (fun () ->
-        Doubly_linked.iter t.queue ~f:(fun kv -> f ~key:kv.key ~data:kv.value) [@nontail]) 
+        Doubly_linked.iter t.queue ~f:(fun kv -> f ~key:kv.key ~data:kv.value) [@nontail])
       [@nontail]
     ;;
 
@@ -281,8 +287,9 @@ module Make_backend (Table : Hashtbl_intf.Hashtbl) : S_backend = struct
 
     let foldi t ~init ~f =
       read t (fun () ->
-        Doubly_linked.fold t.queue ~init ~f:(fun ac kv -> f ac ~key:kv.key ~data:kv.value) 
-        [@nontail]) [@nontail]
+        Doubly_linked.fold t.queue ~init ~f:(fun ac kv -> f ac ~key:kv.key ~data:kv.value)
+        [@nontail])
+      [@nontail]
     ;;
 
     let fold t ~init ~f = foldi t ~init ~f:(fun ac ~key:_ ~data -> f ac data) [@nontail]
@@ -389,7 +396,7 @@ module Make_backend (Table : Hashtbl_intf.Hashtbl) : S_backend = struct
 
   module type S = S0 with type ('key, 'data) hash_queue := ('key, 'data) Backend.t
 
-  module Make_with_hashable (T : sig
+  module%template.portable Make_with_hashable (T : sig
       module Key : Key
 
       val hashable : Key.t Hashtbl.Hashable.t
@@ -403,10 +410,11 @@ module Make_backend (Table : Hashtbl_intf.Hashtbl) : S_backend = struct
     let create ?growth_allowed ?size () = create ?growth_allowed ?size hashable
   end
 
-  module Make (Key : Key) : S with type key = Key.t = Make_with_hashable (struct
+  module%template.portable [@modality p] Make (Key : Key) : S with type key = Key.t =
+  Make_with_hashable [@modality p] (struct
       module Key = Key
 
-      let hashable = Table.Hashable.of_key (module Key)
+      let hashable = (Table.Hashable.of_key [@modality p]) (module Key)
     end)
 
   include Backend

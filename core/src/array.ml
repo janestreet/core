@@ -7,12 +7,11 @@ module Core_sequence = Sequence
 include (
   Base.Array :
   sig
-    type 'a t = 'a array [@@deriving compare ~localize, globalize, sexp, sexp_grammar]
+    type 'a t = 'a array
+    [@@deriving compare ~localize, globalize, sexp ~localize, sexp_grammar]
   end)
 
 type 'a t = 'a array [@@deriving bin_io ~localize, quickcheck, typerep]
-
-module Private = Base.Array.Private
 
 module T = struct
   include Base.Array
@@ -57,8 +56,8 @@ module T = struct
       [@@noalloc]
     end
 
-    include
-      Test_blit.Make_and_test
+    include%template
+      Test_blit.Make_and_test [@modality portable]
         (struct
           type t = int
 
@@ -115,8 +114,8 @@ module T = struct
       -> unit
       = "%floatarray_unsafe_set"
 
-    include
-      Test_blit.Make_and_test
+    include%template
+      Test_blit.Make_and_test [@modality portable]
         (struct
           type t = float
 

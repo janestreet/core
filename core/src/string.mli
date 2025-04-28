@@ -1,4 +1,4 @@
-(** This module extends {{!Base.String}[Base.String]}. *)
+(** This module extends {{!Base.String} [Base.String]}. *)
 
 (** @inline *)
 include module type of struct
@@ -13,8 +13,8 @@ type t = string [@@deriving bin_io ~localize, typerep, globalize]
     case-insensitive.
 
     [Caseless] also provides case-insensitive [is_suffix] and [is_prefix] functions, so
-    that for example [Caseless.is_suffix "OCaml" ~suffix:"AmL"] and [Caseless.is_prefix
-    "OCaml" ~prefix:"oc"] are [true]. *)
+    that for example [Caseless.is_suffix "OCaml" ~suffix:"AmL"] and
+    [Caseless.is_prefix "OCaml" ~prefix:"oc"] are [true]. *)
 module Caseless : sig
   include module type of struct
     include Caseless
@@ -112,7 +112,12 @@ module Stable : sig
 
   module V1 : sig
     type nonrec t = t
-    [@@deriving bin_io ~localize, diff ~extra_derive:[ sexp ], globalize]
+    [@@deriving
+      bin_io ~localize
+      , compare ~localize
+      , diff ~extra_derive:[ sexp ]
+      , equal ~localize
+      , globalize]
 
     include
       Identifiable_without_binio

@@ -909,6 +909,7 @@ module Unit_tests
   let to_tree _ = assert false
   let remove_index _ = assert false
   let nth _ = assert false
+  let rank _ = assert false
   let find_exn _ = assert false
   let group_by _ = assert false
   let choose_exn _ = assert false

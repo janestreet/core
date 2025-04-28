@@ -1,5 +1,5 @@
-(** This module is only used in the implementation of ofday.ml, and isn't exposed as
-    a submodule of [Core]. *)
+(** This module is only used in the implementation of ofday.ml, and isn't exposed as a
+    submodule of [Core]. *)
 
 open! Import
 

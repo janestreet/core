@@ -9,14 +9,15 @@ module Stable = struct
     end
 
     include T
-    include Comparable.Stable.V1.With_stable_witness.Make (T)
+
+    include%template Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (T)
   end
 end
 
 type t = char [@@deriving typerep, bin_io ~localize]
 
-include
-  Identifiable.Extend
+include%template
+  Identifiable.Extend [@modality portable]
     (Base.Char)
     (struct
       type t = char [@@deriving bin_io]
@@ -26,10 +27,12 @@ include
    [Comparable] functions with the pervasive versions *)
 include (
   Base.Char :
-    module type of struct
-      include Base.Char
-    end
-    with type t := t)
+  sig
+    include module type of struct
+        include Base.Char
+      end
+      with type t := t
+  end)
 
 module Caseless = struct
   module T = struct
@@ -39,8 +42,9 @@ module Caseless = struct
   end
 
   include T
-  include Comparable.Make_binable_using_comparator (T)
-  include Hashable.Make_binable (T)
+
+  include%template Comparable.Make_binable_using_comparator [@modality portable] (T)
+  include%template Hashable.Make_binable [@modality portable] (T)
 end
 
 module Replace_polymorphic_compare = Base.Char

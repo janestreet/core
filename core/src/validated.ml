@@ -11,16 +11,20 @@ module type S = S with type ('a, 'b) validated := ('a, 'b) t
 module type S_allowing_substitution =
   S_allowing_substitution with type ('a, 'b) validated := ('a, 'b) t
 
-module type S_bin_io = S_bin_io with type ('a, 'b) validated := ('a, 'b) t
+[%%template
+[@@@mode.default m = (global, local)]
+
+module type S_bin_io = S_bin_io [@mode m] with type ('a, 'b) validated := ('a, 'b) t
 
 module type S_bin_io_compare_hash_sexp =
-  S_bin_io_compare_hash_sexp with type ('a, 'b) validated := ('a, 'b) t
+  S_bin_io_compare_hash_sexp [@mode m] with type ('a, 'b) validated := ('a, 'b) t
 
 module type S_bin_io_compare_globalize_hash_sexp =
-  S_bin_io_compare_globalize_hash_sexp with type ('a, 'b) validated := ('a, 'b) t
+  S_bin_io_compare_globalize_hash_sexp
+  [@mode m]
+  with type ('a, 'b) validated := ('a, 'b) t
 
-let raw t = t
-let raw_local t = t
+let raw t = t]
 
 module Make (Raw : Raw) = struct
   type witness
@@ -46,47 +50,13 @@ module Make (Raw : Raw) = struct
   ;;
 
   let t_of_sexp sexp = create_exn (Raw.t_of_sexp sexp)
-  let raw t = t
-  let raw_local t = t
+  let%template[@mode m = (global, local)] raw t = t
 
   let create_stable_witness raw_stable_witness =
     Stable_witness.of_serializable raw_stable_witness create_exn raw
   ;;
 
   let type_equal = Type_equal.T
-end
-
-module Add_bin_io
-    (Raw : sig
-       type t [@@deriving bin_io]
-
-       include Raw_bin_io with type t := t
-     end)
-    (Validated : S with type raw := Raw.t) =
-struct
-  include
-    Binable.Of_binable_without_uuid [@alert "-legacy"]
-      (Raw)
-      (struct
-        type t = Raw.t
-
-        let of_binable raw =
-          if Raw.validate_binio_deserialization then Validated.create_exn raw else raw
-        ;;
-
-        let to_binable = Fn.id
-      end)
-end
-
-module Add_compare
-    (Raw : sig
-       type t [@@deriving compare]
-
-       include Raw with type t := t
-     end)
-    (_ : S with type raw := Raw.t) =
-struct
-  let compare t1 t2 = [%compare: Raw.t] (raw t1) (raw t2)
 end
 
 (* We don't expose [Validated.Add_globalize] because it can be used in a way that can
@@ -132,34 +102,54 @@ struct
   type t = Raw.t [@@deriving typerep]
 end
 
-module Make_binable (Raw : Raw_bin_io) = struct
-  module T0 = Make (Raw)
-  include T0
-  include Add_bin_io (Raw) (T0)
+[%%template
+[@@@mode.default m = (global, local)]
+
+module Add_bin_io (Raw : Raw_bin_io [@mode m]) (Validated : S with type raw := Raw.t) =
+  Binable.Of_binable_without_uuid [@mode m] [@alert "-legacy"]
+    (Raw)
+    (struct
+      type t = Raw.t
+
+      let of_binable raw =
+        if Raw.validate_binio_deserialization then Validated.create_exn raw else raw
+      ;;
+
+      let[@mode m = (global, m)] to_binable t = t
+    end)
+
+module Add_compare
+    (Raw : sig
+       type t [@@deriving compare [@mode m]]
+
+       include Raw with type t := t
+     end)
+    (_ : S with type raw := Raw.t) =
+struct
+  let[@mode m = (global, m)] compare t1 t2 =
+    (Raw.compare [@mode m]) ((raw [@mode m]) t1) ((raw [@mode m]) t2) [@nontail]
+  ;;
 end
 
-module Make_bin_io_compare_hash_sexp (Raw : sig
-    type t [@@deriving compare, hash]
+module Make_binable (Raw : Raw_bin_io [@mode m]) = struct
+  module T0 = Make (Raw)
+  include T0
+  include Add_bin_io [@mode m] (Raw) (T0)
+end
 
-    include Raw_bin_io with type t := t
-  end) =
+module Make_bin_io_compare_hash_sexp (Raw : Raw_bin_io_compare_hash_sexp [@mode m]) =
 struct
-  module T = Make_binable (Raw)
+  module T = Make_binable [@mode m] (Raw)
   include T
-  include Add_compare (Raw) (T)
-
-  include (
-    Add_hash (Raw) (T) :
-        sig
-          type t [@@deriving hash]
-        end
-        with type t := t)
+  include Add_compare [@mode m] (Raw) (T)
+  include Add_hash (Raw) (T)
 end
 
 module Make_bin_io_compare_globalize_hash_sexp
-    (Raw : Raw_bin_io_compare_globalize_hash_sexp) =
+    (Raw : Raw_bin_io_compare_globalize_hash_sexp
+  [@mode m]) =
 struct
-  module T1 = Make_bin_io_compare_hash_sexp (Raw)
+  module T1 = Make_bin_io_compare_hash_sexp [@mode m] (Raw)
   include T1
   include Add_globalize (Raw) (T1)
-end
+end]

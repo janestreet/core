@@ -1,29 +1,26 @@
 open! Import
-open Quickcheckable_intf
+include Quickcheck_intf.Definitions
+include Quickcheckable_intf.Definitions
 
-module type Conv = Conv
-module type Conv_filtered = Conv_filtered
-module type Conv1 = Conv1
-module type Conv_filtered1 = Conv_filtered1
-module type S = Quickcheck.S
-module type S1 = Quickcheck.S1
-module type S2 = Quickcheck.S2
-module type S_int = Quickcheck.S_int
-
-module Of_quickcheckable
+module%template.portable
+  [@modality p] [@conflate_modality_as_mode p] Of_quickcheckable
     (Quickcheckable : S)
     (Conv : Conv with type quickcheckable := Quickcheckable.t) : S with type t := Conv.t =
 struct
   let quickcheck_generator =
-    Quickcheck.Generator.map Quickcheckable.quickcheck_generator ~f:Conv.of_quickcheckable
+    (Quickcheck.Generator.map [@mode p])
+      Quickcheckable.quickcheck_generator
+      ~f:Conv.of_quickcheckable
   ;;
 
   let quickcheck_observer =
-    Quickcheck.Observer.unmap Quickcheckable.quickcheck_observer ~f:Conv.to_quickcheckable
+    (Quickcheck.Observer.unmap [@mode p])
+      Quickcheckable.quickcheck_observer
+      ~f:Conv.to_quickcheckable
   ;;
 
   let quickcheck_shrinker =
-    Quickcheck.Shrinker.map
+    (Quickcheck.Shrinker.map [@mode p])
       Quickcheckable.quickcheck_shrinker
       ~f:Conv.of_quickcheckable
       ~f_inverse:Conv.to_quickcheckable
@@ -54,22 +51,54 @@ module Of_quickcheckable1
   ;;
 end
 
-module Of_quickcheckable_filtered
+module%template
+  [@modality portable] Of_quickcheckable1
+    (Quickcheckable : S1
+  [@modality portable])
+    (Conv : sig
+       include Conv1 with type 'a quickcheckable := 'a Quickcheckable.t
+     end) : S1 [@modality portable] with type 'a t := 'a Conv.t = struct
+  [@@@mode.default p = (portable, nonportable)]
+
+  let quickcheck_generator generate_a =
+    (Quickcheck.Generator.map [@mode p])
+      ((Quickcheckable.quickcheck_generator [@mode p]) generate_a)
+      ~f:Conv.of_quickcheckable
+  ;;
+
+  let quickcheck_observer observe_a =
+    (Quickcheck.Observer.unmap [@mode p])
+      ((Quickcheckable.quickcheck_observer [@mode p]) observe_a)
+      ~f:Conv.to_quickcheckable
+  ;;
+
+  let quickcheck_shrinker shrink_a =
+    (Quickcheck.Shrinker.map [@mode p])
+      ((Quickcheckable.quickcheck_shrinker [@mode p]) shrink_a)
+      ~f:Conv.of_quickcheckable
+      ~f_inverse:Conv.to_quickcheckable
+  ;;
+end
+
+module%template.portable
+  [@modality p] [@conflate_modality_as_mode p] Of_quickcheckable_filtered
     (Quickcheckable : S)
     (Conv : Conv_filtered with type quickcheckable := Quickcheckable.t) :
   S with type t := Conv.t = struct
   let quickcheck_generator =
-    Quickcheck.Generator.filter_map
+    (Quickcheck.Generator.filter_map [@mode p])
       Quickcheckable.quickcheck_generator
       ~f:Conv.of_quickcheckable
   ;;
 
   let quickcheck_observer =
-    Quickcheck.Observer.unmap Quickcheckable.quickcheck_observer ~f:Conv.to_quickcheckable
+    (Quickcheck.Observer.unmap [@mode p])
+      Quickcheckable.quickcheck_observer
+      ~f:Conv.to_quickcheckable
   ;;
 
   let quickcheck_shrinker =
-    Quickcheck.Shrinker.filter_map
+    (Quickcheck.Shrinker.filter_map [@mode p])
       Quickcheckable.quickcheck_shrinker
       ~f:Conv.of_quickcheckable
       ~f_inverse:Conv.to_quickcheckable
@@ -95,6 +124,35 @@ module Of_quickcheckable_filtered1
   let quickcheck_shrinker shrink_a =
     Quickcheck.Shrinker.filter_map
       (Quickcheckable.quickcheck_shrinker shrink_a)
+      ~f:Conv.of_quickcheckable
+      ~f_inverse:Conv.to_quickcheckable
+  ;;
+end
+
+module%template
+  [@modality portable] Of_quickcheckable_filtered1
+    (Quickcheckable : S1
+  [@modality portable])
+    (Conv : sig
+       include Conv_filtered1 with type 'a quickcheckable := 'a Quickcheckable.t
+     end) : S1 [@modality portable] with type 'a t := 'a Conv.t = struct
+  [@@@mode.default p = (portable, nonportable)]
+
+  let quickcheck_generator generate_a =
+    (Quickcheck.Generator.filter_map [@mode p])
+      ((Quickcheckable.quickcheck_generator [@mode p]) generate_a)
+      ~f:Conv.of_quickcheckable
+  ;;
+
+  let quickcheck_observer observe_a =
+    (Quickcheck.Observer.unmap [@mode p])
+      ((Quickcheckable.quickcheck_observer [@mode p]) observe_a)
+      ~f:Conv.to_quickcheckable
+  ;;
+
+  let quickcheck_shrinker shrink_a =
+    (Quickcheck.Shrinker.filter_map [@mode p])
+      ((Quickcheckable.quickcheck_shrinker [@mode p]) shrink_a)
       ~f:Conv.of_quickcheckable
       ~f_inverse:Conv.to_quickcheckable
   ;;

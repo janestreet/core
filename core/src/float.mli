@@ -10,9 +10,13 @@ include
    and type comparator_witness := Base.Float.comparator_witness
 
 (** @inline *)
-include module type of struct
-  include Base.Float
-end
+include
+  Base.Float.S
+  with type t = Base.Float.t
+   and type comparator_witness = Base.Float.comparator_witness
+   and type Class.t = Base.Float.Class.t
+   and type Parts.t = Base.Float.Parts.t
+   and type Terse.t = Base.Float.Terse.t
 
 type t = float [@@deriving typerep, bin_io ~localize]
 
@@ -32,8 +36,7 @@ end
 (** So-called "robust" comparisons, which include a small tolerance, so that float that
     differ by a small amount are considered equal.
 
-    Note that the results of robust comparisons on [nan] should be considered
-    undefined. *)
+    Note that the results of robust comparisons on [nan] should be considered undefined. *)
 include Robust_compare.S
 
 module O : sig
@@ -55,23 +58,27 @@ module Terse : sig
     with type t := t
 end
 
+(** [validate_lbound], [validate_ubound], and [validate_bound] always fail if class is
+    [Nan] or [Infinite]. The other validation functions still fail on [Nan], but permit
+    [Infinite] values of the correct sign. (The behavior with respect to infinity will
+    probably be changed to be more consistent.) *)
 include Comparable.Validate_with_zero with type t := t
 
 (** [validate_ordinary] fails if class is [Nan] or [Infinite]. *)
 val validate_ordinary : t Validate.check
 
 (** [to_string_12 x] builds a string representing [x] using up to 12 significant digits.
-    It loses precision.  You can use ["%{Float#12}"] in formats, but consider ["%.12g"],
-    ["%{Float#hum}"], or ["%{Float}"] as alternatives.  *)
+    It loses precision. You can use ["%{Float#12}"] in formats, but consider ["%.12g"],
+    ["%{Float#hum}"], or ["%{Float}"] as alternatives. *)
 val to_string_12 : t -> string
 
 (** [to_string x] builds a string [s] representing the float [x] that guarantees the round
     trip, i.e., [Float.equal x (Float.of_string s)].
 
-    It usually yields as few significant digits as possible.  That is, it won't print
-    [3.14] as [3.1400000000000001243].  The only exception is that occasionally it will
-    output 17 significant digits when the number can be represented with just 16 (but
-    not 15 or fewer) of them. *)
+    It usually yields as few significant digits as possible. That is, it won't print
+    [3.14] as [3.1400000000000001243]. The only exception is that occasionally it will
+    output 17 significant digits when the number can be represented with just 16 (but not
+    15 or fewer) of them. *)
 include Stringable.S_local_input with type t := t
 
 include Quickcheckable.S with type t := t
@@ -82,31 +89,29 @@ include Quickcheckable.S with type t := t
 val sign : t -> Sign.t
 [@@deprecated "[since 2016-01] Replace [sign] with [robust_sign] or [sign_exn]"]
 
-(** (Formerly [sign]) Uses robust comparison (so sufficiently small numbers are mapped
-    to [Zero]).  Also maps NaN to [Zero]. Using this function is weakly discouraged. *)
+(** (Formerly [sign]) Uses robust comparison (so sufficiently small numbers are mapped to
+    [Zero]). Also maps NaN to [Zero]. Using this function is weakly discouraged. *)
 val robust_sign : t -> Sign.t
 
 (** [gen_uniform_excl lo hi] creates a Quickcheck generator producing finite [t] values
-    between [lo] and [hi], exclusive.  The generator approximates a uniform distribution
-    over the interval (lo, hi).  Raises an exception if [lo] is not finite, [hi] is not
+    between [lo] and [hi], exclusive. The generator approximates a uniform distribution
+    over the interval (lo, hi). Raises an exception if [lo] is not finite, [hi] is not
     finite, or the requested range is empty.
 
     The implementation chooses values uniformly distributed between 0 (inclusive) and 1
     (exclusive) up to 52 bits of precision, then scales that interval to the requested
-    range.  Due to rounding errors and non-uniform floating point precision, the resulting
+    range. Due to rounding errors and non-uniform floating point precision, the resulting
     distribution may not be precisely uniform and may not include all values between [lo]
-    and [hi].
-*)
+    and [hi]. *)
 val gen_uniform_excl : t -> t -> t Quickcheck.Generator.t
 
 (** [gen_incl lo hi] creates a Quickcheck generator that produces values between [lo] and
     [hi], inclusive, approximately uniformly distributed, with extra weight given to
-    generating the endpoints [lo] and [hi].  Raises an exception if [lo] is not finite,
+    generating the endpoints [lo] and [hi]. Raises an exception if [lo] is not finite,
     [hi] is not finite, or the requested range is empty. *)
 val gen_incl : t -> t -> t Quickcheck.Generator.t
 
-(** [gen_finite] produces all finite [t] values, excluding infinities and all NaN
-    values. *)
+(** [gen_finite] produces all finite [t] values, excluding infinities and all NaN values. *)
 val gen_finite : t Quickcheck.Generator.t
 
 (** [gen_positive] produces all (strictly) positive finite [t] values. *)
@@ -144,8 +149,13 @@ module Stable : sig
     [@@deriving
       compare ~localize, equal ~localize, hash, sexp_grammar, typerep, globalize]
 
-    include
+    (** We expose [Quickcheckable.S] here specifically for tests that operate on the
+        stable type. Note that the quickcheck semantics themselves are *not* stable. *)
+    include Quickcheckable.S with type t := t
+
+    include%template
       Stable_comparable.With_stable_witness.V1
+      [@mode local]
       with type t := t
        and type comparator_witness = comparator_witness
   end

@@ -1,4 +1,4 @@
-(** This module extends {{!Base.Either}[Base.Either]}. *)
+(** This module extends {{!Base.Either} [Base.Either]}. *)
 
 type ('f, 's) t = ('f, 's) Base.Either.t =
   | First of 'f

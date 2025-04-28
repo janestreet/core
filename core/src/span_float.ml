@@ -18,7 +18,15 @@ module Stable = struct
     end
 
     module type Like_a_float = sig
-      type t [@@deriving bin_io, hash, quickcheck, typerep]
+      type t
+      [@@deriving
+        bin_io ~localize
+        , compare ~localize
+        , equal ~localize
+        , globalize
+        , hash
+        , quickcheck
+        , typerep]
 
       include Comparable.S_common with type t := t
       include Comparable.With_zero with type t := t
@@ -35,7 +43,15 @@ module Stable = struct
 
     module T : sig
       type underlying = float [@@deriving hash]
-      type t = private underlying [@@deriving bin_io, hash, stable_witness]
+
+      type t = private underlying
+      [@@deriving
+        bin_io ~localize
+        , compare ~localize
+        , equal ~localize
+        , globalize
+        , hash
+        , stable_witness]
 
       include Like_a_float with type t := t
       include Robustly_comparable with type t := t
@@ -127,9 +143,6 @@ module Stable = struct
         { sign; hr; min; sec; ms; us; ns }
       ;;
 
-      (* jevouillon: [Float.iround_down_exn integral] overflows when
-         integers are 31 bits, so we provide an alternative definition
-         below. *)
       let to_parts_31 t : Parts.t =
         let sign = Float.sign_exn t in
         let t = abs t in
@@ -314,7 +327,7 @@ module Stable = struct
       if is_v2
          (* This is the same float-to-string conversion used in [Float.sexp_of_t].  It's like
          [Float.to_string], but may leave off trailing period. *)
-      then !Sexplib.Conv.default_string_of_float float ^ suffix
+      then (Dynamic.get Sexplib.Conv.default_string_of_float) float ^ suffix
       else sprintf "%g%s" float suffix
     ;;
 

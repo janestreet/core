@@ -1,4 +1,4 @@
-(** This module extends {{!Base.Nativeint}[Base.Nativeint]}. *)
+(** This module extends {{!Base.Nativeint} [Base.Nativeint]}. *)
 
 (** @inline *)
 include module type of struct

@@ -3,7 +3,7 @@ include Base.Sexpable
 
 module Stable = struct
   module Of_sexpable = struct
-    module V1
+    module%template.portable V1
         (Sexpable : S)
         (M : sig
            type t
@@ -22,7 +22,7 @@ module Stable = struct
   end
 
   module Of_sexpable1 = struct
-    module V1
+    module%template.portable V1
         (Sexpable : S1)
         (M : sig
            type 'a t
@@ -41,7 +41,7 @@ module Stable = struct
   end
 
   module Of_sexpable2 = struct
-    module V1
+    module%template.portable V1
         (Sexpable : S2)
         (M : sig
            type ('a, 'b) t
@@ -62,7 +62,7 @@ module Stable = struct
   end
 
   module Of_sexpable3 = struct
-    module V1
+    module%template.portable V1
         (Sexpable : S3)
         (M : sig
            type ('a, 'b, 'c) t
@@ -83,7 +83,7 @@ module Stable = struct
   end
 
   module Of_stringable = struct
-    module V1
+    module%template.portable V1
         (M : Stringable.S) : sig
         type t [@@deriving sexp_grammar]
 
@@ -110,11 +110,13 @@ module Stable = struct
   end
 
   module To_stringable = struct
-    module V1 (M : S) : Stringable.S with type t := M.t = struct
+    module%template.portable V1 (M : S) : Stringable.S with type t := M.t = struct
       let of_string x = Sexplib.Conv.of_string__of__of_sexp M.t_of_sexp x
       let to_string x = Sexplib.Conv.string_of__of__sexp_of M.sexp_of_t x
     end
   end
 end
 
-module To_stringable = Stable.To_stringable.V1
+module%template.portable [@modality p] To_stringable =
+  Stable.To_stringable.V1
+  [@modality p]

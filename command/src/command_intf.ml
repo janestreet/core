@@ -10,20 +10,20 @@
           (let%map_open num_eggs =
              flag "num-eggs" (required int) ~doc:"COUNT cook this many eggs"
            and style =
-             flag "style" (required (Arg_type.create Egg_style.of_string))
+             flag
+               "style"
+               (required (Arg_type.create Egg_style.of_string))
                ~doc:"OVER-EASY|SUNNY-SIDE-UP style of eggs"
-           and recipient =
-             anon ("recipient" %: string)
-           in
+           and recipient = anon ("recipient" %: string) in
            fun () ->
              (* TODO: implement egg-cooking in ocaml *)
              failwith "no eggs today")
         |> Command.run
+      ;;
     ]}
 
-    {b Note}: {{!Core.Command.Param}[Command.Param]} has replaced
-    {{!Core.Command.Spec}[Command.Spec] (DEPRECATED)} and should be used in all new
-    code. *)
+    {b Note}: {{!Core.Command.Param} [Command.Param]} has replaced {{!Core.Command.Spec}
+    [Command.Spec] (DEPRECATED)} and should be used in all new code. *)
 
 open! Base
 open! Import
@@ -45,10 +45,9 @@ module type Version_util = sig
 end
 
 (** [For_unix] is the subset of Core's interface that [Command] needs, in particular to
-    implement the [shape] and [run] functions.  [Core.Private.Command] is a functor
-    taking a module matching [For_unix] and is applied in Core to construct
-    [Core.Command].  We use a functor in this way so that [Command]'s internal data
-    types can remain hidden. *)
+    implement the [shape] and [run] functions. [Core.Private.Command] is a functor taking
+    a module matching [For_unix] and is applied in Core to construct [Core.Command]. We
+    use a functor in this way so that [Command]'s internal data types can remain hidden. *)
 module type For_unix = sig
   type env_var
 
@@ -60,30 +59,8 @@ module type For_unix = sig
     val to_int : t -> int
   end
 
-  module Signal : sig
-    type t
-  end
-
-  module Thread : sig
-    type t
-
-    val create
-      :  on_uncaught_exn:[ `Kill_whole_process | `Print_to_stderr ]
-      -> ('a -> unit)
-      -> 'a
-      -> t
-
-    val join : t -> unit
-  end
-
   module Unix : sig
-    module File_descr : sig
-      type t
-    end
-
     val getpid : unit -> Pid.t
-    val close : ?restart:bool -> File_descr.t -> unit
-    val in_channel_of_descr : File_descr.t -> In_channel.t
     val putenv : key:env_var -> data:string -> unit
     val unsetenv : env_var -> unit
     val unsafe_getenv : env_var -> string option
@@ -103,26 +80,14 @@ module type For_unix = sig
       -> unit
       -> Nothing.t
 
-    module Process_info : sig
+    module Run_output : sig
       type t =
-        { pid : Pid.t
-        ; stdin : File_descr.t
-        ; stdout : File_descr.t
-        ; stderr : File_descr.t
+        { stdout : string
+        ; stderr : string
         }
     end
 
-    val create_process_env
-      :  ?working_dir:string
-      -> ?prog_search_path:string list
-      -> ?argv0:string
-      -> prog:string
-      -> args:string list
-      -> env:env
-      -> unit
-      -> Process_info.t
-
-    val wait : Pid.t -> unit
+    val run : prog:string -> args:string list -> env:env -> unit -> Run_output.t
   end
 end
 
@@ -173,6 +138,15 @@ module type Command = sig
       -> (string -> 'a)
       -> 'a t
 
+    (** Like [create], but takes a lazy [additional_documentation] string which is
+        appended to the help text of all arguments created from this argument type. *)
+    val create_with_additional_documentation
+      :  ?complete:Auto_complete.t
+      -> ?key:'a Univ_map.Multi.Key.t
+      -> (string -> 'a)
+      -> additional_documentation:string Lazy.t
+      -> 'a t
+
     (** Apply the parse function to the given string the same way it would apply to an
         argument, catching any exceptions thrown. *)
     val parse : 'a t -> string -> 'a Or_error.t
@@ -187,15 +161,16 @@ module type Command = sig
     val of_map
       :  ?accept_unique_prefixes:bool
            (** Defaults to [true]. Automatically parses a prefix of a valid key if it's
-          unambiguous. *)
+               unambiguous. *)
       -> ?case_sensitive:bool
-           (** Defaults to [true]. If [false], map keys must all be distinct when lowercased.*)
+           (** Defaults to [true]. If [false], map keys must all be distinct when
+               lowercased. *)
       -> ?list_values_in_help:bool
-           (** Defaults to [true]. If you set it to false the accepted values won't be listed
-          in the command help. *)
+           (** Defaults to [true]. If you set it to false the accepted values won't be
+               listed in the command help. *)
       -> ?auto_complete:Auto_complete.t
-           (** Defaults to bash completion on the string prefix. This allows users to specify
-          arbitrary auto-completion for [t]. *)
+           (** Defaults to bash completion on the string prefix. This allows users to
+               specify arbitrary auto-completion for [t]. *)
       -> ?key:'a Univ_map.Multi.Key.t
       -> 'a Map.M(String).t
       -> 'a t
@@ -204,7 +179,8 @@ module type Command = sig
     val of_alist_exn
       :  ?accept_unique_prefixes:bool
       -> ?case_sensitive:bool
-           (** Defaults to [true]. If [false], map keys must all be distinct when lowercased.*)
+           (** Defaults to [true]. If [false], map keys must all be distinct when
+               lowercased. *)
       -> ?list_values_in_help:bool (** default: true *)
       -> ?auto_complete:Auto_complete.t
       -> ?key:'a Univ_map.Multi.Key.t
@@ -216,7 +192,8 @@ module type Command = sig
     val enumerated
       :  ?accept_unique_prefixes:bool
       -> ?case_sensitive:bool
-           (** Defaults to [true]. If [false], map keys must all be distinct when lowercased.*)
+           (** Defaults to [true]. If [false], map keys must all be distinct when
+               lowercased. *)
       -> ?list_values_in_help:bool (** default: true *)
       -> ?auto_complete:Auto_complete.t
       -> ?key:'a Univ_map.Multi.Key.t
@@ -229,7 +206,8 @@ module type Command = sig
     val enumerated_sexpable
       :  ?accept_unique_prefixes:bool
       -> ?case_sensitive:bool
-           (** Defaults to [true]. If [false], map keys must all be distinct when lowercased.*)
+           (** Defaults to [true]. If [false], map keys must all be distinct when
+               lowercased. *)
       -> ?list_values_in_help:bool (** default: true *)
       -> ?auto_complete:Auto_complete.t
       -> ?key:'a Univ_map.Multi.Key.t
@@ -261,11 +239,11 @@ module type Command = sig
       val string : string t
 
       (** Beware that an anonymous argument of type [int] cannot be specified as negative,
-          as it is ambiguous whether -1 is a negative number or a flag.  (The same applies
-          to [float], [time_span], etc.)  You can use the special built-in "-anon" flag to
+          as it is ambiguous whether -1 is a negative number or a flag. (The same applies
+          to [float], [time_span], etc.) You can use the special built-in "-anon" flag to
           force a string starting with a hyphen to be interpreted as an anonymous argument
-          rather than as a flag, or you can just make it a parameter to a flag to avoid the
-          issue. *)
+          rather than as a flag, or you can just make it a parameter to a flag to avoid
+          the issue. *)
       val int : int t
 
       val char : char t
@@ -301,7 +279,7 @@ module type Command = sig
     (** Like [one_or_more_as_pair], but returns the flag values as a list. *)
     val one_or_more_as_list : 'a Arg_type.t -> 'a list t
 
-    (** [no_arg] flags may be passed at most once.  The boolean returned is true iff the
+    (** [no_arg] flags may be passed at most once. The boolean returned is true iff the
         flag is passed on the command line. *)
     val no_arg : bool t
 
@@ -313,16 +291,16 @@ module type Command = sig
         passed on the command line, and return [None] otherwise. *)
     val no_arg_some : 'a -> 'a option t
 
-    (** [no_arg_required value] is like [no_arg], but the argument is required.
-        This is useful in combination with [choose_one_non_optional]. *)
+    (** [no_arg_required value] is like [no_arg], but the argument is required. This is
+        useful in combination with [choose_one_non_optional]. *)
     val no_arg_required : 'a -> 'a t
 
     (** [no_arg_abort ~exit] is like [no_arg], but aborts command-line parsing by calling
-        [exit].  This flag type is useful for "help"-style flags that just print something
+        [exit]. This flag type is useful for "help"-style flags that just print something
         and exit. *)
     val no_arg_abort : exit:(unit -> Nothing.t) -> unit t
 
-    (** [escape] flags may be passed at most once.  They cause the command line parser to
+    (** [escape] flags may be passed at most once. They cause the command line parser to
         abort and pass through all remaining command line arguments as the value of the
         flag.
 
@@ -358,9 +336,9 @@ module type Command = sig
         command. *)
     val ( %: ) : string -> 'a Arg_type.t -> 'a t
 
-    (** [sequence anons] specifies a sequence of anonymous arguments.  An exception will be
-        raised if [anons] matches anything other than a fixed number of anonymous arguments.
-    *)
+    (** [sequence anons] specifies a sequence of anonymous arguments. An exception will be
+        raised if [anons] matches anything other than a fixed number of anonymous
+        arguments. *)
     val sequence : 'a t -> 'a list t
 
     (** [non_empty_sequence_as_pair anons] and [non_empty_sequence_as_list anons] are like
@@ -373,32 +351,30 @@ module type Command = sig
     (** [(maybe anons)] indicates that some anonymous arguments are optional. *)
     val maybe : 'a t -> 'a option t
 
-    (** [(maybe_with_default default anons)] indicates an optional anonymous argument with a
-        default value. *)
+    (** [(maybe_with_default default anons)] indicates an optional anonymous argument with
+        a default value. *)
     val maybe_with_default : 'a -> 'a t -> 'a t
 
     (** [t2], [t3], and [t4] each concatenate multiple anonymous argument specs into a
         single one. The purpose of these combinators is to allow for optional sequences of
-        anonymous arguments.  Consider a command with usage:
+        anonymous arguments. Consider a command with usage:
 
         {v
         main.exe FOO [BAR BAZ]
-       v}
+        v}
 
-        where the second and third anonymous arguments must either both be there or both not
-        be there.  This can be expressed as:
+        where the second and third anonymous arguments must either both be there or both
+        not be there. This can be expressed as:
 
         {[
           t2 ("FOO" %: foo) (maybe (t2 ("BAR" %: bar) ("BAZ" %: baz)))]
         ]}
 
-        Sequences of 5 or more anonymous arguments can be built up using
-        nested tuples:
+        Sequences of 5 or more anonymous arguments can be built up using nested tuples:
 
         {[
           maybe (t3 a b (t3 c d e))
-        ]}
-    *)
+        ]} *)
 
     val t2 : 'a t -> 'b t -> ('a * 'b) t
     val t3 : 'a t -> 'b t -> 'c t -> ('a * 'b * 'c) t
@@ -410,9 +386,8 @@ module type Command = sig
 
   (** Command-line parameter specification.
 
-      This module replaces {{!Core.Command.Spec}[Command.Spec]}, and should be used
-      in all new code.  Its types and compositional rules are much easier to
-      understand. *)
+      This module replaces {{!Core.Command.Spec} [Command.Spec]}, and should be used in
+      all new code. Its types and compositional rules are much easier to understand. *)
   module Param : sig
     module type S = sig
       type +'a t
@@ -421,35 +396,38 @@ module type Command = sig
           [ppx_let], like so:
           {[
             let command =
-              Command.basic ~summary:"..."
+              Command.basic
+                ~summary:"..."
                 (let%map_open count = anon ("COUNT" %: int)
                  and port = flag "port" (optional int) ~doc:"N listen on this port"
-                 and person = person_param
-                 in
+                 and person = person_param in
                  (* ... Command-line validation code, if any, goes here ... *)
                  fun () ->
                    (* The body of the command *)
                    do_stuff count port person)
+            ;;
           ]}
 
           One can also use [[%map_open]] to define composite command line parameters, like
           [person_param] in the previous snippet:
 
           {[
-            type person = { name : string; age : int }
+            type person =
+              { name : string
+              ; age : int
+              }
 
             let person_param : person Command.Param.t =
-              (let%map_open name =
-                 flag "name" (required string) ~doc:"X name of the person"
-               and age = flag "age" (required int) ~doc:"N how many years old"
-               in
-               {name; age})
+              let%map_open name =
+                flag "name" (required string) ~doc:"X name of the person"
+              and age = flag "age" (required int) ~doc:"N how many years old" in
+              { name; age }
+            ;;
           ]}
 
           The right-hand sides of [[%map_open]] definitions have [Command.Param] in scope.
 
-          See example/command/main.ml for more examples.
-      *)
+          See example/command/main.ml for more examples. *)
       include Applicative.S with type 'a t := 'a t
 
       (** {2 Various internal values} *)
@@ -464,9 +442,9 @@ module type Command = sig
       val args : string list t
 
       (** [flag name spec ~doc] specifies a command that, among other things, takes a flag
-          named [name] on its command line.  [doc] indicates the meaning of the flag.
+          named [name] on its command line. [doc] indicates the meaning of the flag.
 
-          All flags must have a dash at the beginning of the name.  If [name] is not
+          All flags must have a dash at the beginning of the name. If [name] is not
           prefixed by "-", it will be normalized to ["-" ^ name].
 
           Unless [full_flag_required] is used, one doesn't have to pass [name] exactly on
@@ -480,8 +458,7 @@ module type Command = sig
           NOTE: flag names (including aliases) containing underscores will be rejected.
           Use dashes instead.
 
-          NOTE: "-" by itself is an invalid flag name and will be rejected.
-      *)
+          NOTE: "-" by itself is an invalid flag name and will be rejected. *)
       val flag
         :  ?aliases:string list
         -> ?full_flag_required:unit
@@ -494,7 +471,7 @@ module type Command = sig
           a shortcut for [flag], where:
           + The [Flag.t] is [optional_with_default default arg_type]
           + The [doc] is passed through with an explanation of what the default value
-          appended. *)
+            appended. *)
       val flag_optional_with_default_doc
         :  ?aliases:string list
         -> ?full_flag_required:unit
@@ -525,16 +502,16 @@ module type Command = sig
           | Return_none : ('a, 'a option) t
       end
 
-      (** [choose_one clauses ~if_nothing_chosen] expresses a sum type.  It raises if more
-          than one of [clauses] is [Some _].  When [if_nothing_chosen = Raise], it also
+      (** [choose_one clauses ~if_nothing_chosen] expresses a sum type. It raises if more
+          than one of [clauses] is [Some _]. When [if_nothing_chosen = Raise], it also
           raises if none of [clauses] is [Some _]. *)
       val choose_one
         :  'a option t list
         -> if_nothing_chosen:('a, 'b) If_nothing_chosen.t
         -> 'b t
 
-      (** [choose_one_non_optional clauses ~if_nothing_chosen] expresses a sum type.
-          It raises if more than one of the [clauses] has any flags given on the
+      (** [choose_one_non_optional clauses ~if_nothing_chosen] expresses a sum type. It
+          raises if more than one of the [clauses] has any flags given on the
           command-line, and returns the value parsed from the clause that's given.
 
           When [if_nothing_chosen = Raise], it also raises if none of the [clauses] are
@@ -597,8 +574,8 @@ module type Command = sig
 
   (** The old interface for command-line specifications -- {b Do Not Use}.
 
-      This interface should not be used. See the {{!Core.Command.Param}[Param]}
-      module for the new way to do things. *)
+      This interface should not be used. See the {{!Core.Command.Param} [Param]} module
+      for the new way to do things. *)
   module Spec : sig
     (** {2 Command parameters} *)
 
@@ -622,24 +599,24 @@ module type Command = sig
 
     (** Composable command-line specifications. *)
     type (-'main_in, +'main_out) t
-    (** Ultimately one forms a basic command by combining a spec of type [('main, unit ->
-        unit) t] with a main function of type ['main]; see the [basic] function below.
-        Combinators in this library incrementally build up the type of main according to
-        what command-line parameters it expects, so the resulting type of [main] is
-        something like:
+    (** Ultimately one forms a basic command by combining a spec of type
+        [('main, unit -> unit) t] with a main function of type ['main]; see the [basic]
+        function below. Combinators in this library incrementally build up the type of
+        main according to what command-line parameters it expects, so the resulting type
+        of [main] is something like:
 
         [arg1 -> ... -> argN -> unit -> unit]
 
-        It may help to think of [('a, 'b) t] as a function space ['a -> 'b] embellished with
-        information about:
+        It may help to think of [('a, 'b) t] as a function space ['a -> 'b] embellished
+        with information about:
 
-        {ul {- how to parse the command line}
-        {- what the command does and how to call it}
-        {- how to autocomplete a partial command line}}
+        - how to parse the command line
+        - what the command does and how to call it
+        - how to autocomplete a partial command line
 
-        One can view a value of type [('main_in, 'main_out) t] as a function that transforms
-        a main function from type ['main_in] to ['main_out], typically by supplying some
-        arguments.  E.g., a value of type [Spec.t] might have type:
+        One can view a value of type [('main_in, 'main_out) t] as a function that
+        transforms a main function from type ['main_in] to ['main_out], typically by
+        supplying some arguments. E.g., a value of type [Spec.t] might have type:
 
         {[
           (arg1 -> ... -> argN -> 'r, 'r) Spec.t
@@ -647,28 +624,28 @@ module type Command = sig
 
         Such a value can transform a main function of type [arg1 -> ... -> argN -> 'r] by
         supplying it argument values of type [arg1], ..., [argn], leaving a main function
-        whose type is ['r].  In the end, [Command.basic] takes a completed spec where
+        whose type is ['r]. In the end, [Command.basic] takes a completed spec where
         ['r = unit -> unit], and hence whose type looks like:
 
         {[
           (arg1 -> ... -> argN -> unit -> unit, unit -> unit) Spec.t
         ]}
 
-        A value of this type can fully apply a main function of type [arg1 -> ... -> argN ->
-        unit -> unit] to all its arguments.
+        A value of this type can fully apply a main function of type
+        [arg1 -> ... -> argN -> unit -> unit] to all its arguments.
 
-        The final unit argument allows the implementation to distinguish between the phases
-        of (1) parsing the command line and (2) running the body of the command.  Exceptions
-        raised in phase (1) lead to a help message being displayed alongside the exception.
-        Exceptions raised in phase (2) are displayed without any command line help.
+        The final unit argument allows the implementation to distinguish between the
+        phases of (1) parsing the command line and (2) running the body of the command.
+        Exceptions raised in phase (1) lead to a help message being displayed alongside
+        the exception. Exceptions raised in phase (2) are displayed without any command
+        line help.
 
         The view of [('main_in, main_out) Spec.t] as a function from ['main_in] to
         ['main_out] is directly reflected by the [step] function, whose type is:
 
         {[
           val step : ('m1 -> 'm2) -> ('m1, 'm2) t
-        ]}
-    *)
+        ]} *)
 
     (** [spec1 ++ spec2 ++ ... ++ specN] composes [spec1] through [specN].
 
@@ -707,8 +684,7 @@ module type Command = sig
 
         {[
           sa ++ sb = fun main -> sb (sa main)
-        ]}
-    *)
+        ]} *)
 
     (** The empty command-line spec. *)
     val empty : ('m, 'm) t
@@ -729,17 +705,19 @@ module type Command = sig
     (** Combinator for patching up how parameters are obtained or presented.
 
         Here are a couple examples of some of its many uses:
-        {ul
-        {li {i introducing labeled arguments}
-        {v step (fun m v -> m ~foo:v)
-               +> flag "-foo" no_arg : (foo:bool -> 'm, 'm) t v}}
-        {li {i prompting for missing values}
-        {v step (fun m user -> match user with
+        - {i introducing labeled arguments}
+          {v
+step (fun m v -> m ~foo:v)
+               +> flag "-foo" no_arg : (foo:bool -> 'm, 'm) t
+          v}
+        - {i prompting for missing values}
+          {v
+step (fun m user -> match user with
                  | Some user -> m user
                  | None -> print_string "enter username: "; m (read_line ()))
                +> flag "-user" (optional string) ~doc:"USER to frobnicate"
-               : (string -> 'm, 'm) t v}}
-        }
+               : (string -> 'm, 'm) t
+          v}
 
         A use of [step] might look something like:
 
@@ -748,42 +726,39 @@ module type Command = sig
         ]}
 
         Thus, [step] allows one to write arbitrary code to decide how to transform a main
-        function.  As a simple example:
+        function. As a simple example:
 
         {[
           step (fun main -> main 13.) : (float -> 'r, 'r) t
         ]}
 
         This spec is identical to [const 13.]; it transforms a main function by supplying
-        it with a single float argument, [13.].  As another example:
+        it with a single float argument, [13.]. As another example:
 
         {[
           step (fun m v -> m ~foo:v) : (foo:'foo -> 'r, 'foo -> 'r) t
         ]}
 
-        This spec transforms a main function that requires a labeled argument into
-        a main function that requires the argument unlabeled, making it easily composable
-        with other spec combinators.
-
-    *)
+        This spec transforms a main function that requires a labeled argument into a main
+        function that requires the argument unlabeled, making it easily composable with
+        other spec combinators. *)
     val step : ('m1 -> 'm2) -> ('m1, 'm2) t
 
     (** Combinator for defining a class of commands with common behavior.
 
         Here are two examples of command classes defined using [wrap]:
-        {ul
-        {li {i print top-level exceptions to stderr}
-        {v wrap (fun ~run ~main ->
+        - {i print top-level exceptions to stderr}
+          {v
+wrap (fun ~run ~main ->
                  Exn.handle_uncaught ~exit:true (fun () -> run main)
                ) : ('m, unit) t -> ('m, unit) t
-             v}}
-        {li {i iterate over lines from stdin}
-        {v wrap (fun ~run ~main ->
+          v}
+        - {i iterate over lines from stdin}
+          {v
+wrap (fun ~run ~main ->
                  In_channel.iter_lines stdin ~f:(fun line -> run (main line))
                ) : ('m, unit) t -> (string -> 'm, unit) t
-             v}}
-        }
-    *)
+          v} *)
     val wrap : (run:('m1 -> 'r1) -> main:'m2 -> 'r2) -> ('m1, 'r1) t -> ('m2, 'r2) t
 
     module Arg_type : module type of Arg_type with type 'a t = 'a Arg_type.t
@@ -795,13 +770,13 @@ module type Command = sig
     include module type of Flag with type 'a t := 'a flag
 
     (** [flags_of_args_exn args] creates a spec from [Caml.Arg.t]s, for compatibility with
-        OCaml's base libraries.  Fails if it encounters an arg that cannot be converted.
+        OCaml's base libraries. Fails if it encounters an arg that cannot be converted.
 
         NOTE: There is a difference in side effect ordering between [Caml.Arg] and
-        [Command].  In the [Arg] module, flag handling functions embedded in [Caml.Arg.t]
-        values will be run in the order that flags are passed on the command line.  In the
+        [Command]. In the [Arg] module, flag handling functions embedded in [Caml.Arg.t]
+        values will be run in the order that flags are passed on the command line. In the
         [Command] module, using [flags_of_args_exn flags], they are evaluated in the order
-        that the [Caml.Arg.t] values appear in [args].  *)
+        that the [Caml.Arg.t] values appear in [args]. *)
     val flags_of_args_exn
       :  (Stdlib.Arg.key * Stdlib.Arg.spec * Stdlib.Arg.doc) list
       -> ('a, 'a) t
@@ -830,7 +805,7 @@ module type Command = sig
 
   (** [basic_spec ~summary ?readme spec main] is a basic command that executes a function
       [main] which is passed parameters parsed from the command line according to [spec].
-      [summary] is to contain a short one-line description of its behavior.  [readme] is to
+      [summary] is to contain a short one-line description of its behavior. [readme] is to
       contain any longer description of its behavior that will go on that command's help
       screen. *)
   val basic_spec : ('main, unit) basic_spec_command
@@ -838,8 +813,8 @@ module type Command = sig
   type 'result basic_command =
     summary:string -> ?readme:(unit -> string) -> (unit -> 'result) Param.t -> t
 
-  (** Same general behavior as [basic_spec], but takes a command line specification built up
-      using [Params] instead of [Spec]. *)
+  (** Same general behavior as [basic_spec], but takes a command line specification built
+      up using [Params] instead of [Spec]. *)
   val basic : unit basic_command
 
   (** [basic_or_error] is like [basic], except that the main function it expects may
@@ -848,14 +823,14 @@ module type Command = sig
   val basic_or_error : unit Or_error.t basic_command
 
   (** [group ~summary subcommand_alist] is a compound command with named subcommands, as
-      found in [subcommand_alist].  [summary] is to contain a short one-line description of
-      the command group.  [readme] is to contain any longer description of its behavior that
-      will go on that command's help screen.
+      found in [subcommand_alist]. [summary] is to contain a short one-line description of
+      the command group. [readme] is to contain any longer description of its behavior
+      that will go on that command's help screen.
 
       NOTE: subcommand names containing underscores will be rejected; use dashes instead.
 
       [body] is called when no additional arguments are passed -- in particular, when no
-      subcommand is passed.  Its [path] argument is the subcommand path by which the group
+      subcommand is passed. Its [path] argument is the subcommand path by which the group
       command was reached. *)
   val group
     :  summary:string
@@ -877,24 +852,24 @@ module type Command = sig
 
   (** [exec ~summary ~path_to_exe] runs [exec] on the executable at [path_to_exe]. If
       [path_to_exe] is [`Absolute path] then [path] is executed without any further
-      qualification.  If it is [`Relative_to_me path] then [Filename.dirname
-      Sys.executable_name ^ "/" ^ path] is executed instead.  All of the usual caveats about
-      [Sys.executable_name] apply: specifically, it may only return an absolute path in
-      Linux.  On other operating systems it will return [Sys.argv.(0)].  If it is
-      [`Relative_to_argv0 path] then [Sys.argv.(0) ^ "/" ^ path] is executed.
+      qualification. If it is [`Relative_to_me path] then
+      [Filename.dirname Sys.executable_name ^ "/" ^ path] is executed instead. All of the
+      usual caveats about [Sys.executable_name] apply: specifically, it may only return an
+      absolute path in Linux. On other operating systems it will return [Sys.argv.(0)]. If
+      it is [`Relative_to_argv0 path] then [Sys.argv.(0) ^ "/" ^ path] is executed.
 
       The [child_subcommand] argument allows referencing a subcommand one or more levels
       below the top-level of the child executable. It should {e not} be used to pass flags
       or anonymous arguments to the child.
 
-      Care has been taken to support nesting multiple executables built with Command.  In
+      Care has been taken to support nesting multiple executables built with Command. In
       particular, recursive help and autocompletion should work as expected.
 
       NOTE: Non-Command executables can be used with this function but will still be
-      executed when [help -recursive] is called or autocompletion is attempted (despite the
-      fact that neither will be particularly helpful in this case).  This means that if you
-      have a shell script called "reboot-everything.sh" that takes no arguments and reboots
-      everything no matter how it is called, you shouldn't use it with [exec].
+      executed when [help -recursive] is called or autocompletion is attempted (despite
+      the fact that neither will be particularly helpful in this case). This means that if
+      you have a shell script called "reboot-everything.sh" that takes no arguments and
+      reboots everything no matter how it is called, you shouldn't use it with [exec].
 
       Additionally, no loop detection is attempted, so if you nest an executable within
       itself, [help -recursive] and autocompletion will hang forever (although actually
@@ -912,8 +887,8 @@ module type Command = sig
     -> unit
     -> t
 
-  (** [of_lazy thunk] constructs a lazy command that is forced only when necessary to run it
-      or extract its shape. *)
+  (** [of_lazy thunk] constructs a lazy command that is forced only when necessary to run
+      it or extract its shape. *)
   val of_lazy : t Lazy.t -> t
 
   (** Extracts the summary string for a command. *)
@@ -922,16 +897,15 @@ module type Command = sig
   module Shape = Shape
 
   (** call this instead of [Core.exit] if in command-related code that you want to run in
-      tests.  For example, in the body of [Command.Param.no_arg_abort] *)
+      tests. For example, in the body of [Command.Param.no_arg_abort] *)
   val exit : int -> _
 
   module For_telemetry : sig
     (** Returns the command and the list of subcommands, as well as a full list of
         arguments.
 
-        If a subcommand/flag was specified as a unique prefix, the return value will contain
-        the full subcommand/flag name.
-    *)
+        If a subcommand/flag was specified as a unique prefix, the return value will
+        contain the full subcommand/flag name. *)
     val normalized_path_and_args
       :  unit
       -> [ `Not_initialized_through_command
@@ -939,8 +913,8 @@ module type Command = sig
          ]
   end
 
-  (** [Deprecated] should be used only by [Deprecated_command].  At some point
-      it will go away. *)
+  (** [Deprecated] should be used only by [Deprecated_command]. At some point it will go
+      away. *)
   module Deprecated : sig
     module Spec : sig
       val no_arg : hook:(unit -> unit) -> bool Spec.flag
@@ -1019,10 +993,10 @@ module type Command = sig
 
       val run
         :  ?add_validate_parsing_flag:bool
-             (** When [add_validate_parsing_flag] is true a new flag `-validate-parsing` is
-            added to all subcommands. When this flag is passed the command will exit
-            immediately if parsing is succesfull and return 0. This flag does not take any
-            steps to stop side effects from occurring. *)
+             (** When [add_validate_parsing_flag] is true a new flag `-validate-parsing`
+                 is added to all subcommands. When this flag is passed the command will
+                 exit immediately if parsing is succesfull and return 0. This flag does
+                 not take any steps to stop side effects from occurring. *)
         -> ?verbose_on_parse_error:bool
         -> ?version:string
         -> ?build_info:string
@@ -1031,25 +1005,25 @@ module type Command = sig
         -> ?when_parsing_succeeds:(unit -> unit)
         -> ?complete_subcommands:
              (path:string list -> part:string -> string list list -> string list option)
-             (** [complete_subcommands ~path ~part options] allows users to provide a custom
-            tab completion handler to an invocation of [run]. By default, completion is
-            performed via standard bash completion.
+             (** [complete_subcommands ~path ~part options] allows users to provide a
+                 custom tab completion handler to an invocation of [run]. By default,
+                 completion is performed via standard bash completion.
 
-            One may use this to, e.g. use a fuzzy finder for completion.
+                 One may use this to, e.g. use a fuzzy finder for completion.
 
-            Imagine a command whose structure is "subcommand1 subcommand2",
+                 Imagine a command whose structure is "subcommand1 subcommand2",
 
-            [path] represents the subcommand invocations interpreted thusfar in being
-            matched.
+                 [path] represents the subcommand invocations interpreted thusfar in being
+                 matched.
 
-            [part] is the portion of the auto-completion that is being matched upon.
+                 [part] is the portion of the auto-completion that is being matched upon.
 
-            If a user attempts to complete "exe subcommand1 s<TAB>", they will get
-            ["subcommand1"] in [path] and "s" in [part].
+                 If a user attempts to complete "exe subcommand1 s<TAB>", they will get
+                 ["subcommand1"] in [path] and "s" in [part].
 
-            [options] are the valid subcommand invocations to present to the user.
+                 [options] are the valid subcommand invocations to present to the user.
 
-            [complete_subcommands] should return the selection made, if any. *)
+                 [complete_subcommands] should return the selection made, if any. *)
         -> t
         -> unit
 

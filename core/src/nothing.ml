@@ -47,4 +47,5 @@ end
 
 include Stable.V1
 include Base.Nothing
-include Identifiable.Extend (Base.Nothing) (Stable.V1)
+
+include%template Identifiable.Extend [@modality portable] (Base.Nothing) (Stable.V1)

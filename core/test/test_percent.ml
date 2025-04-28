@@ -248,6 +248,19 @@ let%test "Percent.Option cannot represent nan" =
   Percent.Option.((not (some_is_representable nan)) && is_none (some nan))
 ;;
 
+let%test "Percent.Option none equals none" =
+  let none = Percent.Option.none in
+  let none2 = Percent.Option.none in
+  Percent.Option.equal none none2
+;;
+
+let%expect_test "Percent.Option to_sexp" =
+  Percent.of_mult 0.5 |> Percent.Option.some |> Percent.Option.sexp_of_t |> print_s;
+  [%expect {| (50%) |}];
+  Percent.Option.none |> Percent.Option.sexp_of_t |> print_s;
+  [%expect {| () |}]
+;;
+
 let%expect_test "always-percentage format" =
   let f x =
     let p = Percent.of_string x in

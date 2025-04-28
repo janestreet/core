@@ -103,13 +103,10 @@ let read_bin_prot t ?pos ?len reader =
 
 let write_bin_prot_known_size t ?(pos = 0) write ~size:data_len v =
   let total_len = data_len + Bin_prot.Utils.size_header_length in
-  if pos < 0
-  then
-    failwiths ~here:[%here] "Bigstring.write_bin_prot: negative pos" pos [%sexp_of: int];
+  if pos < 0 then failwiths "Bigstring.write_bin_prot: negative pos" pos [%sexp_of: int];
   if pos + total_len > length t
   then
     failwiths
-      ~here:[%here]
       "Bigstring.write_bin_prot: not enough room"
       (`pos pos, `pos_after_writing (pos + total_len), `bigstring_length (length t))
       [%sexp_of:
@@ -119,7 +116,6 @@ let write_bin_prot_known_size t ?(pos = 0) write ~size:data_len v =
   if pos_after_data - pos <> total_len
   then
     failwiths
-      ~here:[%here]
       "Bigstring.write_bin_prot bug!"
       ( `pos_after_data pos_after_data
       , `start_pos pos
@@ -142,12 +138,12 @@ let write_bin_prot t ?pos (writer : _ Bin_prot.Type_class.writer) v =
 
 (* Hex dump *)
 
-include Hexdump.Of_indexable (struct
-    type nonrec t = t
+  include%template Hexdump.Of_indexable [@modality portable] (struct
+      type nonrec t = t
 
-    let length = length
-    let get = get
-  end)
+      let length = length
+      let get = get
+    end)
 
 let rec last_nonmatch_plus_one ~buf ~min_pos ~pos ~char =
   let pos' = pos - 1 in

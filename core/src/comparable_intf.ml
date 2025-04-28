@@ -5,7 +5,6 @@ module type Infix_with_zero_alloc = Base.Comparable.Infix_with_zero_alloc
 module type Comparisons = Base.Comparable.Comparisons
 module type Comparisons_with_zero_alloc = Base.Comparable.Comparisons_with_zero_alloc
 module type With_compare = Base.Comparable.With_compare
-module type With_compare_local = Base.Comparable.With_compare_local
 
 module type Validate = sig
   type t
@@ -50,53 +49,68 @@ end
 
     Then use [Comparable.Make] in the struct (see comparable.mli for an example). *)
 
-module type S_plain = sig
+module type%template [@modality p = (portable, nonportable)] S_plain = sig
   include S_common
 
   module Map :
-    Map.S_plain with type Key.t = t with type Key.comparator_witness = comparator_witness
+    Map.S_plain
+    [@modality p]
+    with type Key.t = t
+    with type Key.comparator_witness = comparator_witness
 
   module Set :
-    Set.S_plain with type Elt.t = t with type Elt.comparator_witness = comparator_witness
+    Set.S_plain
+    [@modality p]
+    with type Elt.t = t
+    with type Elt.comparator_witness = comparator_witness
 end
 
-module type S = sig
+module type%template [@modality p = (portable, nonportable)] S = sig
   include S_common
 
   module Map :
-    Map.S with type Key.t = t with type Key.comparator_witness = comparator_witness
+    Map.S
+    [@modality p]
+    with type Key.t = t
+    with type Key.comparator_witness = comparator_witness
 
   module Set :
-    Set.S with type Elt.t = t with type Elt.comparator_witness = comparator_witness
+    Set.S
+    [@modality p]
+    with type Elt.t = t
+    with type Elt.comparator_witness = comparator_witness
 end
 
-module type Map_and_set_binable = sig
+module type%template [@modality p = (portable, nonportable)] Map_and_set_binable = sig
   type t
 
   include Comparator.S with type t := t
 
   module Map :
     Map.S_binable
+    [@modality p]
     with type Key.t = t
     with type Key.comparator_witness = comparator_witness
 
   module Set :
     Set.S_binable
+    [@modality p]
     with type Elt.t = t
     with type Elt.comparator_witness = comparator_witness
 end
 
-module type S_binable = sig
+module type%template [@modality p = (portable, nonportable)] S_binable = sig
   include S_common
 
   include
     Map_and_set_binable
+    [@modality p]
     with type t := t
     with type comparator_witness := comparator_witness
 end
 
 module type Comparable = sig
-  (** Comparable extends {{!Base.Comparable}[Base.Comparable]} and provides functions for
+  (** Comparable extends {{!Base.Comparable} [Base.Comparable]} and provides functions for
       comparing like types.
 
       Usage example:
@@ -119,12 +133,12 @@ module type Comparable = sig
       {[
         module C = Comparable.Make (T)
         include C
-        module Infix = (C : Comparable.Infix with type t := t)
+        module Infix : Comparable.Infix with type t := t = C
       ]}
 
-      Common pattern: Define a module [O] with a restricted signature.  It aims to be
+      Common pattern: Define a module [O] with a restricted signature. It aims to be
       (locally) opened to bring useful operators into scope without shadowing unexpected
-      variable names.  E.g. in the [Date] module:
+      variable names. E.g. in the [Date] module:
 
       {[
         module O = struct
@@ -139,29 +153,36 @@ module type Comparable = sig
         let now = .. in
         let someday = .. in
         Date.O.(now > someday)
-      ]}
-  *)
+      ]} *)
 
   module type Infix = Infix
   module type Infix_with_zero_alloc = Infix_with_zero_alloc
-  module type Map_and_set_binable = Map_and_set_binable
+
+  module type%template [@modality p = (portable, nonportable)] Map_and_set_binable =
+    Map_and_set_binable [@modality p]
+
   module type Comparisons = Comparisons
   module type Comparisons_with_zero_alloc = Comparisons_with_zero_alloc
-  module type S_plain = S_plain
-  module type S = S
-  module type S_binable = S_binable
+
+  module type%template [@modality p = (portable, nonportable)] S_plain = S_plain
+  [@modality p]
+
+  module type%template [@modality p = (portable, nonportable)] S = S [@modality p]
+
+  module type%template [@modality p = (portable, nonportable)] S_binable = S_binable
+  [@modality p]
+
   module type S_common = S_common
   module type Validate = Validate
   module type Validate_with_zero = Validate_with_zero
   module type With_compare = With_compare
-  module type With_compare_local = With_compare_local
   module type With_zero = With_zero
 
   include With_compare
-  module Local : With_compare_local
 
   (** Inherit comparability from a component. *)
-  module Inherit
+  module%template.portable
+    [@modality p] Inherit
       (C : sig
          type t [@@deriving compare]
        end)
@@ -169,19 +190,18 @@ module type Comparable = sig
          type t [@@deriving sexp]
 
          val component : t -> C.t
-       end) : S with type t := T.t
+       end) : S [@modality p] with type t := T.t
 
   (** {2 Comparison-only Functors}
 
-      These functors require only [type t] and [val compare]. They do not require [val
-      sexp_of_t], and do not generate container datatypes.
-  *)
+      These functors require only [type t] and [val compare]. They do not require
+      [val sexp_of_t], and do not generate container datatypes. *)
 
-  module Infix (T : sig
+  module%template.portable Infix (T : sig
       type t [@@deriving compare]
     end) : Infix with type t := T.t
 
-  module Comparisons (T : sig
+  module%template.portable Comparisons (T : sig
       type t [@@deriving compare]
     end) : Comparisons with type t := T.t
 
@@ -194,88 +214,121 @@ module type Comparable = sig
       - [*_binable] or not
       - [*_plain] or not
 
-      Thus there are functors like [Make_plain] or [Make_binable_using_comparator], etc.
-  *)
+      Thus there are functors like [Make_plain] or [Make_binable_using_comparator], etc. *)
 
-  module Make_plain (T : sig
+  module%template.portable
+    [@modality p] Make_plain (T : sig
       type t [@@deriving compare, sexp_of]
-    end) : S_plain with type t := T.t
+    end) : S_plain [@modality p] with type t := T.t
 
-  module Make (T : sig
+  module%template.portable
+    [@modality p] Make (T : sig
       type t [@@deriving compare, sexp]
-    end) : S with type t := T.t
+    end) : S [@modality p] with type t := T.t
 
-  module Make_plain_using_comparator (T : sig
+  module%template.portable
+    [@modality p] Make_plain_using_comparator (T : sig
       type t [@@deriving sexp_of]
 
       include Comparator.S with type t := t
-    end) : S_plain with type t := T.t with type comparator_witness := T.comparator_witness
+    end) :
+    S_plain
+    [@modality p]
+    with type t := T.t
+    with type comparator_witness := T.comparator_witness
 
-  module Make_using_comparator (T : sig
+  module%template.portable
+    [@modality p] Make_using_comparator (T : sig
       type t [@@deriving sexp]
 
       include Comparator.S with type t := t
-    end) : S with type t := T.t with type comparator_witness := T.comparator_witness
+    end) :
+    S
+    [@modality p]
+    with type t := T.t
+    with type comparator_witness := T.comparator_witness
 
-  module Make_binable (T : sig
+  module%template.portable
+    [@modality p] Make_binable (T : sig
       type t [@@deriving bin_io, compare, sexp]
-    end) : S_binable with type t := T.t
+    end) : S_binable [@modality p] with type t := T.t
 
-  module Make_binable_using_comparator (T : sig
+  module%template.portable
+    [@modality p] Make_binable_using_comparator (T : sig
       type t [@@deriving bin_io, sexp]
 
       include Comparator.S with type t := t
     end) :
-    S_binable with type t := T.t with type comparator_witness := T.comparator_witness
+    S_binable
+    [@modality p]
+    with type t := T.t
+    with type comparator_witness := T.comparator_witness
 
-  module Extend_plain
+  module%template.portable
+    [@modality p] Extend_plain
       (M : Base.Comparable.S)
       (X : sig
          type t = M.t [@@deriving sexp_of]
        end) :
-    S_plain with type t := M.t with type comparator_witness := M.comparator_witness
+    S_plain
+    [@modality p]
+    with type t := M.t
+    with type comparator_witness := M.comparator_witness
 
-  module Extend
+  module%template.portable
+    [@modality p] Extend
       (M : Base.Comparable.S)
       (X : sig
          type t = M.t [@@deriving sexp]
-       end) : S with type t := M.t with type comparator_witness := M.comparator_witness
+       end) :
+    S
+    [@modality p]
+    with type t := M.t
+    with type comparator_witness := M.comparator_witness
 
-  module Extend_binable
+  module%template.portable
+    [@modality p] Extend_binable
       (M : Base.Comparable.S)
       (X : sig
          type t = M.t [@@deriving bin_io, sexp]
        end) :
-    S_binable with type t := M.t with type comparator_witness := M.comparator_witness
+    S_binable
+    [@modality p]
+    with type t := M.t
+    with type comparator_witness := M.comparator_witness
 
-  module Map_and_set_binable (T : sig
+  module%template.portable
+    [@modality p] Map_and_set_binable (T : sig
       type t [@@deriving bin_io, compare, sexp]
-    end) : Map_and_set_binable with type t := T.t
+    end) : Map_and_set_binable [@modality p] with type t := T.t
 
-  module Map_and_set_binable_using_comparator (T : sig
+  module%template.portable
+    [@modality p] Map_and_set_binable_using_comparator (T : sig
       type t [@@deriving bin_io, compare, sexp]
 
       include Comparator.S with type t := t
     end) :
     Map_and_set_binable
+    [@modality p]
     with type t := T.t
     with type comparator_witness := T.comparator_witness
 
-  module Poly (T : sig
+  module%template.portable
+    [@modality p] Poly (T : sig
       type t [@@deriving sexp]
-    end) : S with type t := T.t
+    end) : S [@modality p] with type t := T.t
 
-  module Validate (T : sig
+  module%template.portable Validate (T : sig
       type t [@@deriving compare, sexp_of]
     end) : Validate with type t := T.t
 
-  module Validate_with_zero (T : sig
+  module%template.portable Validate_with_zero (T : sig
       type t [@@deriving compare, sexp_of]
 
       val zero : t
     end) : Validate_with_zero with type t := T.t
 
-  module With_zero (T : sig
+  module%template.portable With_zero (T : sig
       type t [@@deriving compare, sexp_of]
 
       val zero : t
@@ -300,7 +353,7 @@ module type Comparable = sig
           with type elt_comparator_witness := comparator_witness
       end
 
-      module Make (X : Stable_module_types.S0) :
+      module%template.portable Make (X : Stable_module_types.S0) :
         S with type comparable := X.t with type comparator_witness := X.comparator_witness
 
       module With_stable_witness : sig
@@ -319,7 +372,7 @@ module type Comparable = sig
             with type elt_comparator_witness := comparator_witness
         end
 
-        module Make (X : Stable_module_types.With_stable_witness.S0) :
+        module%template.portable Make (X : Stable_module_types.With_stable_witness.S0) :
           S
           with type comparable := X.t
           with type comparator_witness := X.comparator_witness

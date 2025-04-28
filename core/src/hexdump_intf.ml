@@ -2,14 +2,14 @@
     hexadecimal.
 
     [sexp_of_t] and [to_string_hum] print [t] in a similar format to 'hexdump' on Unix
-    systems.  For example, the string "Back off, man, I'm a scientist." renders as:
+    systems. For example, the string "Back off, man, I'm a scientist." renders as:
 
     {v
 00000000  42 61 63 6b 20 6f 66 66  2c 20 6d 61 6e 2c 20 49  |Back off, man, I|
 00000010  27 6d 20 61 20 73 63 69  65 6e 74 69 73 74 2e     |'m a scientist.|
     v}
 
-    [to_sequence] produces a sequence of strings representing lines in the hex dump.  It
+    [to_sequence] produces a sequence of strings representing lines in the hex dump. It
     can be used to process a hex dump incrementally, for example with potentially infinite
     values, or to avoid keeping the entire output in memory at once. *)
 
@@ -21,11 +21,11 @@ module type S = sig
   module Hexdump : sig
     type nonrec t = t [@@deriving sexp_of]
 
-    (** [to_string_hum] renders [t] as a multi-line ASCII string in hexdump format.  [pos]
-        and [len] select a subrange of [t] to render.  [max_lines] determines the maximum
-        number of lines of hex dump to produce.  If the full hex dump exceeds this number,
+    (** [to_string_hum] renders [t] as a multi-line ASCII string in hexdump format. [pos]
+        and [len] select a subrange of [t] to render. [max_lines] determines the maximum
+        number of lines of hex dump to produce. If the full hex dump exceeds this number,
         lines in the middle are replaced by a single "..."; the beginning and end of the
-        hex dump are left intact.  In order to produce at least some readable hex dump, at
+        hex dump are left intact. In order to produce at least some readable hex dump, at
         least 3 lines are always produced. *)
     val to_string_hum
       :  ?max_lines:int (** default: [!default_max_lines] *)
@@ -34,9 +34,9 @@ module type S = sig
       -> t
       -> string
 
-    (** [to_sequence] produces the lines of [to_string_hum] as a sequence of strings.
-        This may be useful for incrementally rendering a large hex dump without producing
-        the whole thing in memory.  Optional arguments function as in [to_string_hum]. *)
+    (** [to_sequence] produces the lines of [to_string_hum] as a sequence of strings. This
+        may be useful for incrementally rendering a large hex dump without producing the
+        whole thing in memory. Optional arguments function as in [to_string_hum]. *)
     val to_sequence
       :  ?max_lines:int (** default: [!default_max_lines] *)
       -> ?pos:int
@@ -124,9 +124,11 @@ module type Hexdump = sig
 
   (** Can be used to override the default [~lines] argument for [to_string_hum] and
       [to_sequence] in [S]. *)
-  val default_max_lines : int ref
+  val default_max_lines : int Dynamic.t
 
-  module Of_indexable (T : Indexable) : S with type t := T.t
-  module Of_indexable1 (T : Indexable1) : S1 with type 'a t := 'a T.t
-  module Of_indexable2 (T : Indexable2) : S2 with type ('a, 'b) t := ('a, 'b) T.t
+  module%template.portable Of_indexable (T : Indexable) : S with type t := T.t
+  module%template.portable Of_indexable1 (T : Indexable1) : S1 with type 'a t := 'a T.t
+
+  module%template.portable Of_indexable2 (T : Indexable2) :
+    S2 with type ('a, 'b) t := ('a, 'b) T.t
 end

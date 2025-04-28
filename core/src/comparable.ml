@@ -1,9 +1,12 @@
 open! Import
 include Comparable_intf
-module Infix = Base.Comparable.Infix
-module Comparisons = Base.Comparable.Comparisons
+module%template.portable [@modality p] Infix = Base.Comparable.Infix [@modality p]
 
-module Validate (T : sig
+module%template.portable [@modality p] Comparisons =
+  Base.Comparable.Comparisons
+  [@modality p]
+
+module%template.portable Validate (T : sig
     type t [@@deriving compare, sexp_of]
   end) : Validate with type t := T.t = struct
   module V = Validate
@@ -19,13 +22,14 @@ module Validate (T : sig
   let validate_ubound ~max t = validate_bound ~max ~min:Unbounded t
 end
 
-module Validate_with_zero (T : sig
+module%template.portable
+  [@modality p] Validate_with_zero (T : sig
     type t [@@deriving compare, sexp_of]
 
     val zero : t
   end) =
 struct
-  module V = Validate (T)
+  module V = Validate [@modality p] (T)
   include V
 
   (* Preallocate the interesting bounds to minimize allocation in the implementations of
@@ -38,137 +42,171 @@ struct
   let validate_non_positive t = validate_ubound ~max:incl_zero t
 end
 
-module With_zero (T : sig
+module%template.portable
+  [@modality p] With_zero (T : sig
     type t [@@deriving compare, sexp_of]
 
     val zero : t
   end) =
 struct
-  include Validate_with_zero (T)
-  include Base.Comparable.With_zero (T)
+  include Validate_with_zero [@modality p] (T)
+  include Base.Comparable.With_zero [@modality p] (T)
 end
 
-module Map_and_set_binable_using_comparator (T : sig
+module%template.portable
+  [@modality p] Map_and_set_binable_using_comparator (T : sig
     type t [@@deriving bin_io, compare, sexp]
 
     include Comparator.S with type t := t
   end) =
 struct
   include T
-  module Map = Map.Make_binable_using_comparator (T)
-  module Set = Set.Make_binable_using_comparator (T)
+  module Map = Map.Make_binable_using_comparator [@modality p] (T)
+  module Set = Set.Make_binable_using_comparator [@modality p] (T)
 end
 
-module Map_and_set_binable (T : sig
+module%template.portable
+  [@modality p] Map_and_set_binable (T : sig
     type t [@@deriving bin_io, compare, sexp]
   end) =
-Map_and_set_binable_using_comparator (struct
+Map_and_set_binable_using_comparator [@modality p] (struct
     include T
-    include Comparator.Make (T)
+    include Comparator.Make [@modality p] (T)
   end)
 
-module Poly (T : sig
+module%template.portable
+  [@modality p] Poly (T : sig
     type t [@@deriving sexp]
   end) =
 struct
   module C = struct
     include T
-    include Base.Comparable.Poly (T)
+    include Base.Comparable.Poly [@modality p] (T)
   end
 
   include C
-  include Validate (C)
-  module Replace_polymorphic_compare : Comparisons with type t := t = C
-  module Map = Map.Make_using_comparator (C)
-  module Set = Set.Make_using_comparator (C)
+  include Validate [@modality p] (C)
+
+  module Replace_polymorphic_compare : sig
+    include Comparisons with type t := t
+  end =
+    C
+
+  module Map = Map.Make_using_comparator [@modality p] (C)
+  module Set = Set.Make_using_comparator [@modality p] (C)
 end
 
-module Make_plain_using_comparator (T : sig
+module%template.portable
+  [@modality p] Make_plain_using_comparator (T : sig
     type t [@@deriving sexp_of]
 
     include Comparator.S with type t := t
-  end) : S_plain with type t := T.t and type comparator_witness = T.comparator_witness =
-struct
+  end) :
+  S_plain
+  [@modality p]
+  with type t := T.t
+   and type comparator_witness = T.comparator_witness = struct
   include T
-  module M = Base.Comparable.Make_using_comparator (T)
+  module M = Base.Comparable.Make_using_comparator [@modality p] (T)
   include M
 
-  include Validate (struct
+  include Validate [@modality p] (struct
       include T
       include M
     end)
 
-  module Replace_polymorphic_compare : Comparisons with type t := t = M
-  module Map = Map.Make_plain_using_comparator (T)
-  module Set = Set.Make_plain_using_comparator (T)
+  module Replace_polymorphic_compare : sig
+    include Comparisons with type t := t
+  end =
+    M
+
+  module Map = Map.Make_plain_using_comparator [@modality p] (T)
+  module Set = Set.Make_plain_using_comparator [@modality p] (T)
 end
 
-module Make_plain (T : sig
+module%template.portable
+  [@modality p] Make_plain (T : sig
     type t [@@deriving compare, sexp_of]
   end) =
-Make_plain_using_comparator (struct
+Make_plain_using_comparator [@modality p] (struct
     include T
-    include Comparator.Make (T)
+    include Comparator.Make [@modality p] (T)
   end)
 
-module Make_using_comparator (T : sig
+module%template.portable
+  [@modality p] Make_using_comparator (T : sig
     type t [@@deriving sexp]
 
     include Comparator.S with type t := t
-  end) : S with type t := T.t and type comparator_witness = T.comparator_witness = struct
+  end) :
+  S [@modality p] with type t := T.t and type comparator_witness = T.comparator_witness =
+struct
   include T
-  module M = Base.Comparable.Make_using_comparator (T)
+  module M = Base.Comparable.Make_using_comparator [@modality p] (T)
   include M
 
-  include Validate (struct
+  include Validate [@modality p] (struct
       include T
       include M
     end)
 
-  module Replace_polymorphic_compare : Comparisons with type t := t = M
-  module Map = Map.Make_using_comparator (T)
-  module Set = Set.Make_using_comparator (T)
+  module Replace_polymorphic_compare : sig
+    include Comparisons with type t := t
+  end =
+    M
+
+  module Map = Map.Make_using_comparator [@modality p] (T)
+  module Set = Set.Make_using_comparator [@modality p] (T)
 end
 
-module Make (T : sig
+module%template.portable
+  [@modality p] Make (T : sig
     type t [@@deriving compare, sexp]
-  end) : S with type t := T.t = Make_using_comparator (struct
+  end) : S [@modality p] with type t := T.t = Make_using_comparator [@modality p] (struct
     include T
-    include Comparator.Make (T)
+    include Comparator.Make [@modality p] (T)
   end)
 
-module Make_binable_using_comparator (T : sig
+module%template.portable
+  [@modality p] Make_binable_using_comparator (T : sig
     type t [@@deriving bin_io, sexp]
 
     include Comparator.S with type t := t
   end) =
 struct
   include T
-  module M = Base.Comparable.Make_using_comparator (T)
+  module M = Base.Comparable.Make_using_comparator [@modality p] (T)
 
-  include Validate (struct
+  include Validate [@modality p] (struct
       include T
 
       let compare = T.comparator.compare
     end)
 
   include M
-  module Replace_polymorphic_compare : Comparisons with type t := t = M
-  module Map = Map.Make_binable_using_comparator (T)
-  module Set = Set.Make_binable_using_comparator (T)
+
+  module Replace_polymorphic_compare : sig
+    include Comparisons with type t := t
+  end =
+    M
+
+  module Map = Map.Make_binable_using_comparator [@modality p] (T)
+  module Set = Set.Make_binable_using_comparator [@modality p] (T)
 end
 
-module Make_binable (T : sig
+module%template.portable
+  [@modality p] Make_binable (T : sig
     type t [@@deriving bin_io, compare, sexp]
   end) =
 struct
-  include Make_binable_using_comparator (struct
+  include Make_binable_using_comparator [@modality p] (struct
       include T
-      include Comparator.Make (T)
+      include Comparator.Make [@modality p] (T)
     end)
 end
 
-module Extend_plain
+module%template.portable
+  [@modality p] Extend_plain
     (M : Base.Comparable.S)
     (X : sig
        type t = M.t [@@deriving sexp_of]
@@ -186,13 +224,19 @@ struct
   end
 
   include T
-  include Validate (T)
-  module Replace_polymorphic_compare : Comparisons with type t := t = M
-  module Map = Map.Make_plain_using_comparator (T)
-  module Set = Set.Make_plain_using_comparator (T)
+  include Validate [@modality p] (T)
+
+  module Replace_polymorphic_compare : sig
+    include Comparisons with type t := t
+  end =
+    M
+
+  module Map = Map.Make_plain_using_comparator [@modality p] (T)
+  module Set = Set.Make_plain_using_comparator [@modality p] (T)
 end
 
-module Extend
+module%template.portable
+  [@modality p] Extend
     (M : Base.Comparable.S)
     (X : sig
        type t = M.t [@@deriving sexp]
@@ -210,13 +254,19 @@ struct
   end
 
   include T
-  include Validate (T)
-  module Replace_polymorphic_compare : Comparisons with type t := t = M
-  module Map = Map.Make_using_comparator (T)
-  module Set = Set.Make_using_comparator (T)
+  include Validate [@modality p] (T)
+
+  module Replace_polymorphic_compare : sig
+    include Comparisons with type t := t
+  end =
+    M
+
+  module Map = Map.Make_using_comparator [@modality p] (T)
+  module Set = Set.Make_using_comparator [@modality p] (T)
 end
 
-module Extend_binable
+module%template.portable
+  [@modality p] Extend_binable
     (M : Base.Comparable.S)
     (X : sig
        type t = M.t [@@deriving bin_io, sexp]
@@ -234,13 +284,19 @@ struct
   end
 
   include T
-  include Validate (T)
-  module Replace_polymorphic_compare : Comparisons with type t := t = M
-  module Map = Map.Make_binable_using_comparator (T)
-  module Set = Set.Make_binable_using_comparator (T)
+  include Validate [@modality p] (T)
+
+  module Replace_polymorphic_compare : sig
+    include Comparisons with type t := t
+  end =
+    M
+
+  module Map = Map.Make_binable_using_comparator [@modality p] (T)
+  module Set = Set.Make_binable_using_comparator [@modality p] (T)
 end
 
-module Inherit
+module%template.portable
+  [@modality p] Inherit
     (C : sig
        type t [@@deriving compare]
      end)
@@ -249,14 +305,17 @@ module Inherit
 
        val component : t -> C.t
      end) =
-Make (struct
+Make [@modality p] (struct
     type t = T.t [@@deriving sexp]
 
     let compare t t' = C.compare (T.component t) (T.component t')
   end)
 
-include (Base.Comparable : With_compare)
-module Local : With_compare_local = Base.Comparable.Local
+include (
+  Base.Comparable :
+  sig
+    include With_compare
+  end)
 
 module Stable = struct
   module V1 = struct
@@ -275,9 +334,9 @@ module Stable = struct
         with type elt_comparator_witness := comparator_witness
     end
 
-    module Make (X : Stable_module_types.S0) = struct
-      module Map = Map.Stable.V1.Make (X)
-      module Set = Set.Stable.V1.Make (X)
+    module%template.portable [@modality p] Make (X : Stable_module_types.S0) = struct
+      module Map = Map.Stable.V1.Make [@modality p] (X)
+      module Set = Set.Stable.V1.Make [@modality p] (X)
     end
 
     module With_stable_witness = struct
@@ -296,9 +355,12 @@ module Stable = struct
           with type elt_comparator_witness := comparator_witness
       end
 
-      module Make (X : Stable_module_types.With_stable_witness.S0) = struct
-        module Map = Map.Stable.V1.With_stable_witness.Make (X)
-        module Set = Set.Stable.V1.With_stable_witness.Make (X)
+      module%template.portable
+        [@modality p] Make
+          (X : Stable_module_types.With_stable_witness.S0) =
+      struct
+        module Map = Map.Stable.V1.With_stable_witness.Make [@modality p] (X)
+        module Set = Set.Stable.V1.With_stable_witness.Make [@modality p] (X)
       end
     end
   end

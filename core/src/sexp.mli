@@ -6,7 +6,13 @@ type t = Base.Sexp.t =
   | Atom of string
   | List of t list
 [@@deriving
-  bin_io, compare ~localize, equal ~localize, globalize, hash, sexp, sexp_grammar]
+  bin_io ~localize
+  , compare ~localize
+  , equal ~localize
+  , globalize
+  , hash
+  , sexp
+  , sexp_grammar]
 
 module O : sig
   type sexp = Base.Sexp.t =
@@ -14,7 +20,8 @@ module O : sig
     | List of t list
 end
 
-include Comparable.S with type t := t
+include%template Comparable.S [@modality portable] with type t := t
+
 include Stringable.S with type t := t
 include Quickcheckable.S with type t := t
 
@@ -23,10 +30,18 @@ include module type of struct
   end
   with type t := t
 
+module Utf8 = Base.Sexp.Utf8 (** @inline *)
+
 exception Of_sexp_error of exn * t
 
-val of_float_style : [ `Underscores | `No_underscores ] ref
-val of_int_style : [ `Underscores | `No_underscores ] ref
+(** A witness that [Sexp.t] can safely cross portability. *)
+val cross_portable : t Basement.Portability_hacks.Cross.Portable.t
+
+(** A witness that [Sexp.t] can safely cross contention. *)
+val cross_contended : t Basement.Portability_hacks.Cross.Contended.t
+
+val of_float_style : [ `Underscores | `No_underscores ] Dynamic.t
+val of_int_style : [ `Underscores | `No_underscores ] Dynamic.t
 
 (** [no_raise] is the identity, but by using ['a no_raise] in a sexpable type, the
     resulting use [sexp_of_no_raise] protects the conversion of ['a] to a sexp so that if
@@ -47,12 +62,11 @@ type 'a no_raise = 'a [@@deriving bin_io, sexp]
     {[
       type query =
         | Start of Initial_config.t Sexp_maybe.t
-        | Stop of  Reason_to_stop.t Sexp_maybe.t
+        | Stop of Reason_to_stop.t Sexp_maybe.t
       [@@deriving sexp]
     ]}
 
-    If [Reason_to_stop.t_of_sexp] fails, you can still tell it was a [Stop] query.
-*)
+    If [Reason_to_stop.t_of_sexp] fails, you can still tell it was a [Stop] query. *)
 module Sexp_maybe : sig
   type 'a t = ('a, Base.Sexp.t * Error.t) Result.t
   [@@deriving bin_io, compare, hash, sexp, sexp_grammar]
@@ -92,8 +106,8 @@ module With_text : sig
   val text : 'a t -> string
 end
 
-(** [of_sexp_allow_extra_fields_recursively of_sexp sexp] uses [of_sexp] to convert [sexp] to a
-    value, but will not fail if there are any extra fields in a record (even deeply
+(** [of_sexp_allow_extra_fields_recursively of_sexp sexp] uses [of_sexp] to convert [sexp]
+    to a value, but will not fail if there are any extra fields in a record (even deeply
     nested records).
 
     The implementation uses global state, so it is not thread safe. *)
@@ -105,7 +119,14 @@ module Stable : sig
       | Atom of string
       | List of t list
     [@@deriving
-      sexp, bin_io, hash, compare ~localize, equal ~localize, sexp_grammar, stable_witness]
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , globalize
+      , hash
+      , sexp
+      , sexp_grammar
+      , stable_witness]
 
     include
       Stable_comparable.With_stable_witness.V1

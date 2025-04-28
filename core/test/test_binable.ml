@@ -2,12 +2,15 @@ open! Core
 open! Import
 open! Binable
 
+[%%template
+[@@@mode m = (global, local)]
+
 let%test_unit _ =
   let module M = struct
-    type t = int [@@deriving bin_io]
+    type t = int [@@deriving bin_io ~localize]
   end
   in
-  let m = (module M : S with type t = int) in
+  let m : (int m[@mode m]) = (module M) in
   List.iter
     [ Int.min_value; Int.min_value / 2; -1; 0; 1; Int.max_value / 2; Int.max_value ]
     ~f:(fun i ->
@@ -16,14 +19,13 @@ let%test_unit _ =
         if i <> i'
         then
           Error.failwiths
-            ~here:[%here]
             (Printf.sprintf "Binable.{of,to}_%s failure" name)
             (i, `Round_tripped_to i')
             [%sexp_of: int * [ `Round_tripped_to of int ]]
       in
-      check "string" of_string to_string;
-      check "bigstring" of_bigstring to_bigstring)
-;;
+      check "string" (of_string [@mode m]) (to_string [@mode m]);
+      check "bigstring" (of_bigstring [@mode m]) (to_bigstring [@mode m]))
+;;]
 
 let%test_unit "Of_sexpable" =
   let module M = struct

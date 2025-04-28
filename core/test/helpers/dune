@@ -1,0 +1,6 @@
+(library
+ (name core_test_helpers)
+ (libraries base_quickcheck core
+   expect_test_helpers_core.expect_test_helpers_base expect_test_helpers_core)
+ (preprocess
+  (pps ppx_jane)))

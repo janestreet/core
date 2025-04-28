@@ -8,8 +8,7 @@ open! Import
     The name of the interface reflects the fact that the interface only gives you access
     to the seconds of the [t]. But you can use this interface with types that have higher
     precision than that, hence the rounding implied in the name of
-    [to_int63_seconds_round_down_exn].
-*)
+    [to_int63_seconds_round_down_exn]. *)
 module type Time_in_seconds = sig
   module Span : sig
     type t
@@ -31,6 +30,17 @@ module type Time_in_seconds = sig
   val to_span_since_epoch : t -> Span.t
 end
 
+(** When there is a backwards DST transition, some local times can occur twice. Some
+    functions that operate on local times accept an optional [Earlier_or_later.t], which
+    allows the user to explicitly specify whether the earlier or later of the two absolute
+    times corresponding to an ambiguous local time is intended. *)
+module Earlier_or_later = struct
+  type t =
+    | Earlier
+    | Later
+  [@@deriving compare, enumerate, equal, hash, sexp_of]
+end
+
 (** This is the interface of [Zone], but not the interface of [Time.Zone] or
     [Time_ns.Zone]. For those, look at [Time_intf.Zone] *)
 module type S = sig
@@ -38,27 +48,26 @@ module type S = sig
 
   (** The type of a time-zone.
 
-      bin_io and sexp representations of Zone.t are the name of the zone, and
-      not the full data that is read from disk when Zone.find is called.  The
-      full Zone.t is reconstructed on the receiving/reading side by reloading
-      the zone file from disk.  Any zone name that is accepted by [find] is
-      acceptable in the bin_io and sexp representations. *)
+      bin_io and sexp representations of Zone.t are the name of the zone, and not the full
+      data that is read from disk when Zone.find is called. The full Zone.t is
+      reconstructed on the receiving/reading side by reloading the zone file from disk.
+      Any zone name that is accepted by [find] is acceptable in the bin_io and sexp
+      representations. *)
   type t [@@deriving sexp_of, compare]
 
-  (** [input_tz_file ~zonename ~filename] read in [filename] and return [t]
-      with [name t] = [zonename] *)
+  (** [input_tz_file ~zonename ~filename] read in [filename] and return [t] with [name t]
+      = [zonename] *)
   val input_tz_file : zonename:string -> filename:string -> t
 
-  (** [likely_machine_zones] is a list of zone names that will be searched
-      first when trying to determine the machine zone of a box.  Setting this
-      to a likely set of zones for your application will speed the very first
-      use of the local timezone. *)
+  (** [likely_machine_zones] is a list of zone names that will be searched first when
+      trying to determine the machine zone of a box. Setting this to a likely set of zones
+      for your application will speed the very first use of the local timezone. *)
   val likely_machine_zones : string list ref
 
   module Time_in_seconds : Time_in_seconds
+  module Earlier_or_later = Earlier_or_later
 
-  (** [of_utc_offset offset] returns a timezone with a static UTC offset (given in
-      hours). *)
+  (** [of_utc_offset offset] returns a timezone with a static UTC offset (given in hours). *)
   val of_utc_offset : hours:int -> t
 
   (** Like [of_utc_offset], but overriding the default name. These zones can only be
@@ -81,7 +90,7 @@ module type S = sig
     -> span:Time_in_seconds.Span.t
     -> t
 
-  (** [utc] the UTC time zone.  Included for convenience *)
+  (** [utc] the UTC time zone. Included for convenience *)
   val utc : t
 
   val name : t -> string
@@ -109,7 +118,13 @@ module type S = sig
   (** Gets the index of a time. *)
   val index : t -> Time_in_seconds.t -> Index.t
 
-  val index_of_date_and_ofday : t -> Time_in_seconds.Date_and_ofday.t -> Index.t
+  (** Gets the index of an date and time of day in this zone. When there are two
+      occurrences, the result is determined by [prefer]. *)
+  val index_of_date_and_ofday
+    :  ?prefer:Earlier_or_later.t (** default: [Later] *)
+    -> t
+    -> Time_in_seconds.Date_and_ofday.t
+    -> Index.t
 
   (** Gets the UTC offset of times in a specific range.
 

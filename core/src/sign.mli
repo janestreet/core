@@ -1,4 +1,4 @@
-(** This module extends {{!Base.Sign}[Base.Sign]} with bin_io. *)
+(** This module extends {{!Base.Sign} [Base.Sign]} with bin_io. *)
 
 open! Import
 

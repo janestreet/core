@@ -1,6 +1,5 @@
-(** Extends {{!Base.Ordering}[Base.Ordering]}, intended to make code that matches on the
-    result of a comparison more concise and easier to read.
-*)
+(** Extends {{!Base.Ordering} [Base.Ordering]}, intended to make code that matches on the
+    result of a comparison more concise and easier to read. *)
 
 open! Import
 

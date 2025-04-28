@@ -24,15 +24,14 @@ include Container.S1 with type 'a t := 'a t
     then [never_shrink] is presumed to be [true], otherwise [never_shrink] defaults to
     [false].
 
-    @param initial_length defaults to 7
-*)
+    @param initial_length defaults to 7 *)
 val create
   :  ?initial_length:int (** defaults to [7]. *)
   -> ?never_shrink:bool
   -> unit
   -> _ t
 
-(** [of_array arr] creates a dequeue containing the elements of [arr].  The first element
+(** [of_array arr] creates a dequeue containing the elements of [arr]. The first element
     of the array will be at the front of the dequeue. *)
 val of_array : 'a array -> 'a t
 
@@ -46,15 +45,14 @@ val front_index_exn : _ t -> int
 (** [back_index t] return the index of the back item in [t]. *)
 val back_index : _ t -> int option
 
-(** [back_index_exn t] throws an exception if [t] is empty, otherwise returns the index
-    of the back item in [t]. *)
+(** [back_index_exn t] throws an exception if [t] is empty, otherwise returns the index of
+    the back item in [t]. *)
 val back_index_exn : _ t -> int
 
 (** [get_opt t i] returns the element at index [i]. Return [None] if [i] is invalid. *)
 val get_opt : 'a t -> int -> 'a option
 
-(** [get t i] returns the element at index [i]. Raise an exception if [i] is
-    invalid. *)
+(** [get t i] returns the element at index [i]. Raise an exception if [i] is invalid. *)
 val get : 'a t -> int -> 'a
 
 (** [peek t back_or_front] returns the value at the back or front of the dequeue without
@@ -72,8 +70,7 @@ val set_exn : 'a t -> int -> 'a -> unit
 (** [iter' t ~f] iterates over the elements of [t]. *)
 val iter' : 'a t -> [ `front_to_back | `back_to_front ] -> f:('a -> unit) -> unit
 
-(** [iteri t ~f] iterates over the elements of [t] [`front_to_back] passing in the
-    index. *)
+(** [iteri t ~f] iterates over the elements of [t] [`front_to_back] passing in the index. *)
 val iteri : 'a t -> f:(int -> 'a -> unit) -> unit
 
 (** [iteri' t ~f] is the same as [iter'], but also passes in the index of the current

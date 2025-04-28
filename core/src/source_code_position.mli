@@ -1,4 +1,4 @@
-(** This module extends {{!Base.Source_code_position}[Base.Source_code_position]}. *)
+(** This module extends {{!Base.Source_code_position} [Base.Source_code_position]}. *)
 
 (** @inline *)
 include module type of struct
@@ -13,8 +13,13 @@ type t = Base.Source_code_position.t =
   }
 [@@deriving fields ~getters, globalize]
 
-include Comparable.S with type t := t and type comparator_witness := comparator_witness
-include Hashable.S with type t := t
+include%template
+  Comparable.S
+  [@modality portable]
+  with type t := t
+   and type comparator_witness := comparator_witness
+
+include%template Hashable.S [@modality portable] with type t := t
 
 module Stable : sig
   module V1 : sig

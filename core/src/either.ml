@@ -17,7 +17,7 @@ end
 include Stable.V1
 include Base.Either
 
-include Comparator.Derived2 (struct
+include%template Comparator.Derived2 [@modality portable] (struct
     type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of, compare]
   end)
 

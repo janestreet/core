@@ -2,16 +2,25 @@ open! Import
 include Hash_set_intf
 include Base.Hash_set
 
-module type S_plain = S_plain with type 'a hash_set := 'a t
-module type S = S with type 'a hash_set := 'a t
-module type S_binable = S_binable with type 'a hash_set := 'a t
-module type S_stable = S_stable with type 'a hash_set := 'a t
+module type%template [@modality p = (portable, nonportable)] S_plain =
+  S_plain [@modality p] with type 'a hash_set := 'a t
+
+module type%template [@modality p = (portable, nonportable)] S =
+  S [@modality p] with type 'a hash_set := 'a t
+
+module type%template [@modality p = (portable, nonportable)] S_binable =
+  S_binable [@modality p] with type 'a hash_set := 'a t
+
+module type%template [@modality p = (portable, nonportable)] S_stable =
+  S_stable [@modality p] with type 'a hash_set := 'a t
+
 module type Elt_plain = Hashtbl.Key_plain
 module type Elt = Hashtbl.Key
 module type Elt_binable = Hashtbl.Key_binable
 module type Elt_stable = Hashtbl.Key_stable
 
-module Make_plain_with_hashable (T : sig
+module%template.portable
+  [@modality p] Make_plain_with_hashable (T : sig
     module Elt : Elt_plain
 
     val hashable : Elt.t Hashtbl.Hashable.t
@@ -22,7 +31,7 @@ struct
 
   let equal = equal
 
-  include Creators (struct
+  include Creators [@modality p] (struct
       type 'a t = T.Elt.t
 
       let hashable = T.hashable
@@ -30,7 +39,8 @@ struct
 
   let sexp_of_t t = Poly.sexp_of_t T.Elt.sexp_of_t t
 
-  module Provide_of_sexp
+  module%template
+    [@modality p' = (nonportable, p)] Provide_of_sexp
       (X : sig
              type t [@@deriving of_sexp]
            end
@@ -39,12 +49,13 @@ struct
     let t_of_sexp sexp = t_of_sexp X.t_of_sexp sexp
   end
 
-  module Provide_bin_io
+  module%template
+    [@modality p' = (nonportable, p)] Provide_bin_io
       (X : sig
              type t [@@deriving bin_io]
            end
            with type t := elt) =
-  Bin_prot.Utils.Make_iterable_binable (struct
+  Bin_prot.Utils.Make_iterable_binable [@modality p'] (struct
       module Elt = struct
         include T.Elt
         include X
@@ -88,54 +99,58 @@ struct
   end
 end
 
-module Make_with_hashable (T : sig
+module%template.portable
+  [@modality p] Make_with_hashable (T : sig
     module Elt : Elt
 
     val hashable : Elt.t Hashtbl.Hashable.t
   end) =
 struct
-  include Make_plain_with_hashable (T)
-  include Provide_of_sexp (T.Elt)
+  include Make_plain_with_hashable [@modality p] (T)
+  include Provide_of_sexp [@modality p] (T.Elt)
 end
 
-module Make_binable_with_hashable (T : sig
+module%template.portable
+  [@modality p] Make_binable_with_hashable (T : sig
     module Elt : Elt_binable
 
     val hashable : Elt.t Hashtbl.Hashable.t
   end) =
 struct
-  include Make_with_hashable (T)
-  include Provide_bin_io (T.Elt)
+  include Make_with_hashable [@modality p] (T)
+  include Provide_bin_io [@modality p] (T.Elt)
 end
 
-module Make_stable_with_hashable (T : sig
+module%template.portable
+  [@modality p] Make_stable_with_hashable (T : sig
     module Elt : Elt_stable
 
     val hashable : Elt.t Hashtbl.Hashable.t
   end) =
 struct
-  include Make_binable_with_hashable (T)
+  include Make_binable_with_hashable [@modality p] (T)
   include Provide_stable_witness (T.Elt)
 end
 
-module Make_plain (Elt : Elt_plain) = Make_plain_with_hashable (struct
+module%template.portable [@modality p] Make_plain (Elt : Elt_plain) =
+Make_plain_with_hashable [@modality p] (struct
     module Elt = Elt
 
-    let hashable = Hashtbl.Hashable.of_key (module Elt)
+    let hashable = (Hashtbl.Hashable.of_key [@modality p]) (module Elt)
   end)
 
-module Make (Elt : Elt) = struct
-  include Make_plain (Elt)
-  include Provide_of_sexp (Elt)
+module%template.portable [@modality p] Make (Elt : Elt) = struct
+  include Make_plain [@modality p] (Elt)
+  include Provide_of_sexp [@modality p] (Elt)
 end
 
-module Make_binable (Elt : Elt_binable) = struct
-  include Make (Elt)
-  include Provide_bin_io (Elt)
+module%template.portable [@modality p] Make_binable (Elt : Elt_binable) = struct
+  include Make [@modality p] (Elt)
+  include Provide_bin_io [@modality p] (Elt)
 end
 
-module Make_stable (Elt : Elt_stable) = struct
-  include Make_binable (Elt)
+module%template.portable [@modality p] Make_stable (Elt : Elt_stable) = struct
+  include Make_binable [@modality p] (Elt)
   include Provide_stable_witness (Elt)
 end
 
@@ -156,14 +171,16 @@ let create ?growth_allowed ?size m = create ?growth_allowed ?size m
 
 let quickcheck_generator_m__t (type key) (module Key : M_quickcheck with type t = key) =
   [%quickcheck.generator: Key.t List0.t]
-  |> Quickcheck.Generator.map ~f:(of_list (module Key))
+  |> Base_quickcheck.Generator.map ~f:(fun list -> of_list (module Key) list)
 ;;
 
 let quickcheck_observer_m__t (type key) (module Key : M_quickcheck with type t = key) =
-  [%quickcheck.observer: Key.t List0.t] |> Quickcheck.Observer.unmap ~f:to_list
+  [%quickcheck.observer: Key.t List0.t] |> Base_quickcheck.Observer.unmap ~f:to_list
 ;;
 
 let quickcheck_shrinker_m__t (type key) (module Key : M_quickcheck with type t = key) =
   [%quickcheck.shrinker: Key.t List0.t]
-  |> Quickcheck.Shrinker.map ~f:(of_list (module Key)) ~f_inverse:to_list
+  |> Base_quickcheck.Shrinker.map
+       ~f:(fun list -> of_list (module Key) list)
+       ~f_inverse:to_list
 ;;

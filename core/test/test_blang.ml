@@ -312,11 +312,7 @@ module%test [@name "laws"] _ = struct
         [%test_result: Int.Set.t] ~expect (eval_set ~universe set_of_base expression)
       with
       | exn ->
-        failwiths
-          ~here:[%here]
-          "fail on expression"
-          (expression, exn)
-          [%sexp_of: base_set t * Exn.t]
+        failwiths "fail on expression" (expression, exn) [%sexp_of: base_set t * Exn.t]
     ;;
 
     let%test_unit _ =
@@ -682,6 +678,28 @@ module _ : Monadic with module M := Monad.Ident = struct
         (* derive [f] from first-order input that can be shown in sexps *)
         let f n = n > x in
         test (module Bool) t (fun t ~f -> Blang.eval t f) Monadic.eval ~f);
+    [%expect {| |}]
+  ;;
+
+  let eval_set = Monadic.eval_set
+
+  let%expect_test "eval_set" =
+    quickcheck_m
+      (module struct
+        type t = Small_int_blang.t * Small_int.t [@@deriving quickcheck, sexp_of]
+      end)
+      ~f:(fun (t, x) ->
+        (* essentially the same test as for [eval]: the set of all values with [n >= x],
+           with a suitable upper bound *)
+        let hi = 1000 in
+        let f n = List.init (max x (min hi n)) ~f:Fn.id |> Int.Set.of_list in
+        let universe = lazy (f 1000) in
+        test
+          (module Int.Set)
+          t
+          (fun t ~f -> Blang.eval_set ~universe f t)
+          (fun t ~f -> Monadic.eval_set ~universe ~f t)
+          ~f);
     [%expect {| |}]
   ;;
 end

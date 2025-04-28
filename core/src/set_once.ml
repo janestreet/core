@@ -2,12 +2,12 @@ module Stable = struct
   open Stable_internal
 
   module T = struct
-    type 'a t =
-      { mutable value : 'a Option.t
+    type%template 'a t =
+      { mutable value : ('a Option.t[@kind k])
       ; mutable set_at : Source_code_position.Stable.V1.t
            [@compare.ignore] [@equal.ignore]
       }
-    [@@deriving compare, equal]
+    [@@deriving compare, equal] [@@kind k = (value, float64, bits32, bits64, word)]
   end
 
   module V1 = struct
@@ -51,13 +51,23 @@ open! Import
 module Unstable = Stable.V1
 open Stable.T
 
-type 'a t = 'a Stable.T.t [@@deriving compare, equal]
+[%%template
+[@@@kind.default k = (float64, bits32, bits64, word, value)]
+
+type nonrec 'a t = ('a t[@kind k]) =
+  { mutable value : ('a Option.t[@kind k])
+  ; mutable set_at : Source_code_position.t
+  }
+
+[%%rederive type nonrec 'a t = ('a t[@kind k]) [@@deriving compare, equal] [@@kind k]]
 
 let sexp_of_t sexp_of_a { value; set_at } =
   match value with
   | None -> [%message "unset"]
   | Some value ->
-    [%message "" (value : a) ~set_at:(set_at |> Source_code_position.to_string)]
+    if Source_code_position.is_dummy set_at
+    then [%message "" (value : a)]
+    else [%message "" (value : a) ~set_at:(set_at |> Source_code_position.to_string)]
 ;;
 
 let invariant invariant_a t =
@@ -73,12 +83,14 @@ let set_internal t here value =
   t.set_at <- here
 ;;
 
-let set_if_none t here value = if Option.is_none t.value then set_internal t here value
+let set_if_none t ?(here = Stdlib.Lexing.dummy_pos) value =
+  if (Option.is_none [@kind k]) t.value then (set_internal [@kind k]) t here value
+;;
 
-let set t here value =
-  if Option.is_none t.value
+let set t ?(here = Stdlib.Lexing.dummy_pos) value =
+  if (Option.is_none [@kind k]) t.value
   then (
-    set_internal t here value;
+    (set_internal [@kind k]) t here value;
     Ok ())
   else
     Or_error.error_s
@@ -88,26 +100,42 @@ let set t here value =
           ~previously_set_at:(t.set_at : Source_code_position.t)]
 ;;
 
-let set_exn t here value = Or_error.ok_exn (set t here value)
+let set_exn t ?(here = Stdlib.Lexing.dummy_pos) value =
+  Or_error.ok_exn ((set [@kind k]) t ~here value)
+;;
+
 let get t = t.value
 
-let get_exn (t : _ t) here =
+let get_exn ?(here = Stdlib.Lexing.dummy_pos) t =
   match t.value with
   | Some a -> a
   | None ->
-    raise_s [%message "[Set_once.get_exn] unset" ~at:(here : Source_code_position.t)]
+    raise_s
+      (if Source_code_position.is_dummy here
+       then [%message "[Set_once.get_exn] unset"]
+       else [%message "[Set_once.get_exn] unset" ~at:(here : Source_code_position.t)])
+    |> (Never_returns.never_returns [@kind k])
 ;;
 
-let is_none t = Option.is_none t.value
-let is_some t = Option.is_some t.value
-let iter t ~f = Option.iter t.value ~f
+let get_or_set_thunk ?(here = Stdlib.Lexing.dummy_pos) t ~f =
+  match t.value with
+  | Some a -> a
+  | None ->
+    let value = f () in
+    (set_internal [@kind k]) t here value;
+    value
+;;
+
+let is_none t = (Option.is_none [@kind k]) t.value
+let is_some t = (Option.is_some [@kind k]) t.value
+let iter t ~f = (Option.iter [@kind k]) t.value ~f
 
 module Optional_syntax = struct
   module Optional_syntax = struct
-    let is_none = is_none
-    let unsafe_value t = get_exn t [%here]
+    let is_none = (is_none [@kind k])
+    let unsafe_value t = (get_exn [@kind k]) t
   end
-end
+end]
 
 include
   Quickcheckable.Of_quickcheckable1

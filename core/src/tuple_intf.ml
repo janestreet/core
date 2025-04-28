@@ -1,4 +1,4 @@
-(** Functors and signatures for dealing with modules for tuples.  *)
+(** Functors and signatures for dealing with modules for tuples. *)
 
 open! Import
 
@@ -136,14 +136,13 @@ module type Tuple = sig
   (** These functors allow users to write:
       {[
         module Foo = struct
-          include Tuple.Make       (String) (Int)
+          include Tuple.Make (String) (Int)
           include Tuple.Comparator (String) (Int)
           include Tuple.Comparable (String) (Int)
-          include Tuple.Hashable   (String) (Int)
-          include Tuple.Binable    (String) (Int)
+          include Tuple.Hashable (String) (Int)
+          include Tuple.Binable (String) (Int)
         end
-      ]}
-  *)
+      ]} *)
 
   module Make
       (T1 : sig
@@ -180,7 +179,8 @@ module type Tuple = sig
   module Hashable_plain (S1 : Hashable_plain_arg) (S2 : Hashable_plain_arg) :
     Hashable.S_plain with type t := Make(S1)(S2).t
 
-  (** The difference between [Hashable] and [Hashable_t] functors is that the former's
+  (** {v
+ The difference between [Hashable] and [Hashable_t] functors is that the former's
       result type doesn't contain type [t] and the latter does. Therefore, [Hashable] can't
       be used to combine two pairs into 4-tuple. but [Hashable_t] can. On the other hand
       result of [Hashable_t] cannot be combined with [Comparable].
@@ -204,7 +204,7 @@ module type Tuple = sig
 
       Unfortunately, it is not possible to define just one functor that could be used in
       both cases.
-  *)
+      v} *)
   module Hashable (S1 : Hashable_arg) (S2 : Hashable_arg) :
     Hashable_sexpable with type t := Make(S1)(S2).t
 

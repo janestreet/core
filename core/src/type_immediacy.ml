@@ -7,28 +7,18 @@
 
 open! Import
 module List = Base.List
-module Hash_set = Base.Hash_set
 
 let sprintf = Printf.sprintf
-
-module Key = struct
-  type t = int [@@deriving compare, sexp_of]
-
-  (* The integers here are the values underlying the polymorphic variants, they already
-     are hashes of constructor names, and hence are expected to be uniformly
-     distributed. *)
-  let hash x = x
-end
 
 module Allowed_ints = struct
   type t =
     | None
     | All
-    | Hash_set of Hash_set.M(Key).t
+    | Set of (int, Int.comparator_witness) Set.Tree.t
     | From_zero_to of int
 
   let _invariant = function
-    | None | All | Hash_set _ -> ()
+    | None | All | Set _ -> ()
     | From_zero_to n -> assert (n >= 0)
   ;;
 
@@ -36,7 +26,7 @@ module Allowed_ints = struct
     match t with
     | None -> false
     | All -> true
-    | Hash_set hash_set -> Hash_set.mem hash_set i
+    | Set set -> Set.Tree.mem ~comparator:Int.comparator set i
     | From_zero_to n -> 0 <= i && i <= n
   ;;
 end
@@ -230,13 +220,13 @@ module Computation_impl = struct
       let allowed_ints =
         if not (Variant.is_polymorphic variant)
         then Allowed_ints.From_zero_to (no_arg_count - 1)
-        else (
-          let hash_set = Hash_set.create (module Key) ~size:(no_arg_count * 2) in
-          List.iter no_arg_list ~f:(fun (Tag tag) ->
+        else
+          List.map no_arg_list ~f:(fun (Tag tag) ->
             match Tag.create tag with
-            | Tag.Const _ -> Hash_set.add hash_set (Tag.ocaml_repr tag)
-            | Tag.Args _ -> assert false);
-          Allowed_ints.Hash_set hash_set)
+            | Tag.Const _ -> Tag.ocaml_repr tag
+            | Tag.Args _ -> assert false)
+          |> Set.Tree.of_list ~comparator:Int.comparator
+          |> Allowed_ints.Set
       in
       let immediacy =
         if List.is_empty one_arg_list && List.is_empty more_arg_list
@@ -382,7 +372,10 @@ module Always = struct
     | Unknown | Never | Sometimes -> None
   ;;
 
-  let of_typerep_exn here typerep = Option.value_exn ~here (of_typerep typerep)
+  let of_typerep_exn ?(here = Stdlib.Lexing.dummy_pos) typerep =
+    Option.value_exn ~here (of_typerep typerep)
+  ;;
+
   let int_as_value = int_as_value
   let int_as_value_exn = int_as_value_exn
   let int_is_value = int_is_value
@@ -407,7 +400,10 @@ module Sometimes = struct
     | Unknown | Always | Never -> None
   ;;
 
-  let of_typerep_exn here typerep = Option.value_exn ~here (of_typerep typerep)
+  let of_typerep_exn ?(here = Stdlib.Lexing.dummy_pos) typerep =
+    Option.value_exn ~here (of_typerep typerep)
+  ;;
+
   let int_as_value = int_as_value
   let int_as_value_exn = int_as_value_exn
   let int_is_value = int_is_value
@@ -432,7 +428,9 @@ module Never = struct
     | Unknown | Always | Sometimes -> None
   ;;
 
-  let of_typerep_exn here typerep = Option.value_exn ~here (of_typerep typerep)
+  let of_typerep_exn ?(here = Stdlib.Lexing.dummy_pos) typerep =
+    Option.value_exn ~here (of_typerep typerep)
+  ;;
 
   include Never_values
 end

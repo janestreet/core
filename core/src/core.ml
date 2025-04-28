@@ -1,15 +1,16 @@
 (** Core greatly expands the functionality available in Base while still remaining
-    platform-agnostic.  Core changes more frequently (i.e., is less stable) than Base.
+    platform-agnostic. Core changes more frequently (i.e., is less stable) than Base.
 
     Some modules are mere extensions of their counterparts in Base, usually adding generic
     functionality by including functors that make them binable, comparable, sexpable,
-    blitable, etc.  The bulk of Core, though, is modules providing entirely new
+    blitable, etc. The bulk of Core, though, is modules providing entirely new
     functionality. *)
 
 open! Import
 module Applicative = Applicative
 module Arg = Arg
 module Array = Array
+module Atomic = Atomic
 module Avltree = Avltree
 module Backtrace = Backtrace
 module Bag = Bag
@@ -27,6 +28,7 @@ module Bounded_index = Bounded_index
 module Buffer = Base.Buffer
 module Byte_units = Byte_units
 module Bytes = Bytes
+module Capsule = Base.Capsule
 module Char = Char
 module Command = Command_internal
 module Comparable = Comparable
@@ -34,6 +36,7 @@ module Comparator = Comparator
 module Comparisons = Comparisons
 module Container = Container
 module Container_intf = Container_intf
+module Container_with_local = Base.Container_with_local
 module Continue_or_stop = Continue_or_stop
 
 module Core_kernel_stable = Stable
@@ -47,6 +50,7 @@ module Deque = Deque
 module Deriving_hash = Deriving_hash
 module Digest = Md5 [@@ocaml.deprecated "[since 2017-05] Use Md5 instead."]
 module Doubly_linked = Doubly_linked
+module Dynamic = Base.Dynamic
 module Either = Either
 module Ephemeron = Stdlib.Ephemeron
 module Equal = Equal
@@ -73,6 +77,7 @@ module Heap_block = Heap_block
 module Hexdump = Hexdump
 module Hexdump_intf = Hexdump_intf
 module Host_and_port = Host_and_port
+module Iarray = Iarray
 module Identifiable = Identifiable
 module Immediate_option = Immediate_option
 module Immediate_option_intf = Immediate_option_intf
@@ -122,6 +127,8 @@ module Percent = Percent
 module Perms = Perms
 module Pid = Pid
 module Poly = Poly
+module Portability_hacks = Base.Portability_hacks
+module Portable_lazy = Portable_lazy
 module Pretty_printer = Pretty_printer
 module Printexc = Printexc
 module Printf = Printf
@@ -209,8 +216,8 @@ let sec = Span_float.of_sec
 let ( ^/ ) = Filename.concat
 
 (** We perform these side effects here because we want them to run for any code that uses
-    [Core].  If this were in another module in [Core] that was not used in some program,
-    then the side effects might not be run in that program.  This will run as long as the
+    [Core]. If this were in another module in [Core] that was not used in some program,
+    then the side effects might not be run in that program. This will run as long as the
     program refers to at least one value directly in Core; referring to values in
     [Core.Bool], for example, is not sufficient. *)
 let () = Exn.initialize_module ()

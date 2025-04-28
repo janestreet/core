@@ -19,11 +19,11 @@ module type S0_permissions = sig
   val iter : [> read ] t -> f:(elt -> unit) -> unit
 
   (** [fold t ~init ~f] returns [f (... f (f (f init e1) e2) e3 ...) en], where [e1..en]
-      are the elements of [t]  *)
+      are the elements of [t] *)
   val fold : [> read ] t -> init:'acc -> f:('acc -> elt -> 'acc) -> 'acc
 
   (** [fold_result t ~init ~f] is a short-circuiting version of [fold] that runs in the
-      [Result] monad.  If [f] returns an [Error _], that value is returned without any
+      [Result] monad. If [f] returns an [Error _], that value is returned without any
       additional invocations of [f]. *)
   val fold_result
     :  [> read ] t
@@ -43,11 +43,11 @@ module type S0_permissions = sig
     -> 'final
 
   (** Returns [true] if and only if there exists an element for which the provided
-      function evaluates to [true].  This is a short-circuiting operation. *)
+      function evaluates to [true]. This is a short-circuiting operation. *)
   val exists : [> read ] t -> f:(elt -> bool) -> bool
 
   (** Returns [true] if and only if the provided function evaluates to [true] for all
-      elements.  This is a short-circuiting operation. *)
+      elements. This is a short-circuiting operation. *)
   val for_all : [> read ] t -> f:(elt -> bool) -> bool
 
   (** Returns the number of elements for which the provided function evaluates to true. *)
@@ -60,7 +60,7 @@ module type S0_permissions = sig
   val find : [> read ] t -> f:(elt -> bool) -> elt option
 
   (** Returns the first evaluation of [f] that returns [Some], and returns [None] if there
-      is no such element.  *)
+      is no such element. *)
   val find_map : [> read ] t -> f:(elt -> 'b option) -> 'b option
 
   val to_list : [> read ] t -> elt list
@@ -88,11 +88,11 @@ module type S1_permissions = sig
   val iter : ('a, [> read ]) t -> f:('a -> unit) -> unit
 
   (** [fold t ~init ~f] returns [f (... f (f (f init e1) e2) e3 ...) en], where [e1..en]
-      are the elements of [t]  *)
+      are the elements of [t] *)
   val fold : ('a, [> read ]) t -> init:'acc -> f:('acc -> 'a -> 'acc) -> 'acc
 
   (** [fold_result t ~init ~f] is a short-circuiting version of [fold] that runs in the
-      [Result] monad.  If [f] returns an [Error _], that value is returned without any
+      [Result] monad. If [f] returns an [Error _], that value is returned without any
       additional invocations of [f]. *)
   val fold_result
     :  ('a, [> read ]) t
@@ -112,11 +112,11 @@ module type S1_permissions = sig
     -> 'final
 
   (** Returns [true] if and only if there exists an element for which the provided
-      function evaluates to [true].  This is a short-circuiting operation. *)
+      function evaluates to [true]. This is a short-circuiting operation. *)
   val exists : ('a, [> read ]) t -> f:('a -> bool) -> bool
 
   (** Returns [true] if and only if the provided function evaluates to [true] for all
-      elements.  This is a short-circuiting operation. *)
+      elements. This is a short-circuiting operation. *)
   val for_all : ('a, [> read ]) t -> f:('a -> bool) -> bool
 
   (** Returns the number of elements for which the provided function evaluates to true. *)
@@ -133,7 +133,7 @@ module type S1_permissions = sig
   val find : ('a, [> read ]) t -> f:('a -> bool) -> 'a option
 
   (** Returns the first evaluation of [f] that returns [Some], and returns [None] if there
-      is no such element.  *)
+      is no such element. *)
   val find_map : ('a, [> read ]) t -> f:('a -> 'b option) -> 'b option
 
   val to_list : ('a, [> read ]) t -> 'a list

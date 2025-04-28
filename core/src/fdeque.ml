@@ -2,8 +2,7 @@
 
 (** Invariants:
     - queue.length = List.length queue.front + List.length queue.back
-    - if queue has >= 2 elements, neither front nor back are empty
-*)
+    - if queue has >= 2 elements, neither front nor back are empty *)
 
 open! Import
 open Std_internal
@@ -357,6 +356,8 @@ module Stable = struct
     ;;
   end
 end
+
+let _ = Stable.V1.t_sexp_grammar
 
 include (Stable.V1 : module type of Stable.V1 with type 'a t := 'a t)
 

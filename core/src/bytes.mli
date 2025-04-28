@@ -1,4 +1,4 @@
-(** This module extends {{!Base.Bytes}[Base.Bytes]}. *)
+(** This module extends {{!Base.Bytes} [Base.Bytes]}. *)
 
 open! Import
 

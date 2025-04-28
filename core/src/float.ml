@@ -26,19 +26,29 @@ module Stable = struct
 
       type t = float
       [@@deriving bin_io ~localize, hash, sexp, stable_witness, typerep, globalize]
+
+      let quickcheck_generator = Base_quickcheck.Generator.float
+      let quickcheck_observer = Base_quickcheck.Observer.float
+      let quickcheck_shrinker = Base_quickcheck.Shrinker.float
     end
 
     include T1
-    include Comparable.Stable.V1.With_stable_witness.Make (T1)
+
+    include%template
+      Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (T1)
   end
 end
 
 module T = Stable.V1
 include T
-include Hashable.Make_binable (T)
-include Comparable.Map_and_set_binable_using_comparator (T)
-include Comparable.Validate_with_zero (T)
-module Replace_polymorphic_compare : Comparisons.S with type t := t = T
+
+include%template Hashable.Make_binable [@modality portable] (T)
+include%template Comparable.Map_and_set_binable_using_comparator [@modality portable] (T)
+
+module Replace_polymorphic_compare : sig
+  include Comparisons.S with type t := t
+end =
+  T
 
 let validate_ordinary t =
   Validate.of_error_opt
@@ -50,7 +60,7 @@ let validate_ordinary t =
 ;;
 
 module V = struct
-  module ZZ = Comparable.Validate (T)
+  module%template ZZ = Comparable.Validate [@modality portable] (T)
 
   let validate_bound ~min ~max t =
     Validate.first_failure (validate_ordinary t) (ZZ.validate_bound t ~min ~max)
@@ -67,10 +77,39 @@ end
 
 include V
 
+let validate_not_nan t =
+  Validate.of_error_opt
+    (let module C = Class in
+    match classify t with
+    | C.Normal | C.Subnormal | C.Zero | C.Infinite -> None
+    | C.Nan -> Some "value is NaN")
+;;
+
+module V_with_zero = struct
+  module%template ZZ = Comparable.Validate_with_zero [@modality portable] (T)
+
+  let validate_positive t =
+    Validate.first_failure (validate_not_nan t) (ZZ.validate_positive t)
+  ;;
+
+  let validate_non_negative t =
+    Validate.first_failure (validate_not_nan t) (ZZ.validate_non_negative t)
+  ;;
+
+  let validate_negative t =
+    Validate.first_failure (validate_not_nan t) (ZZ.validate_negative t)
+  ;;
+
+  let validate_non_positive t =
+    Validate.first_failure (validate_not_nan t) (ZZ.validate_non_positive t)
+  ;;
+end
+
+include V_with_zero
+
 module Robust_compare = struct
   module type S = sig
     (* intended to be a tolerance on human-entered floats *)
-
     val robust_comparison_tolerance : float
 
     include Robustly_comparable.S with type t := float
@@ -139,9 +178,6 @@ let sign = robust_sign
 (* Standard 12 significant digits, exponential notation used as necessary, guaranteed to
    be a valid OCaml float lexem, not to look like an int. *)
 let to_string_12 x = valid_float_lexem (format_float "%.12g" x)
-let quickcheck_generator = Base_quickcheck.Generator.float
-let quickcheck_observer = Base_quickcheck.Observer.float
-let quickcheck_shrinker = Base_quickcheck.Shrinker.float
 let gen_uniform_excl = Base_quickcheck.Generator.float_uniform_exclusive
 let gen_incl = Base_quickcheck.Generator.float_inclusive
 let gen_without_nan = Base_quickcheck.Generator.float_without_nan

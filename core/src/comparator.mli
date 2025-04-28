@@ -1,4 +1,4 @@
-(** Extends {{!Base.Comparator}[Base.Comparator]}, providing a type-indexed value that
+(** Extends {{!Base.Comparator} [Base.Comparator]}, providing a type-indexed value that
     allows you to compare values of that type. *)
 
 open! Import
@@ -13,7 +13,7 @@ include module type of Base.Comparator with type ('a, 'witness) t := ('a, 'witne
 
 (** The following module types and functors may be used to define stable modules *)
 
-module Stable : sig
+module%template Stable : sig
   module V1 : sig
     type nonrec ('a, 'b) t = ('a, 'b) t = private
       { compare : 'a -> 'a -> int
@@ -36,12 +36,15 @@ module Stable : sig
       val comparator : ('a t, comparator_witness) comparator
     end
 
+    [@@@modality.default p = (portable, nonportable)]
+
     val make
       :  compare:('a -> 'a -> int)
       -> sexp_of_t:('a -> Base.Sexp.t)
-      -> (module S_fc with type comparable_t = 'a)
+      -> ((module S_fc with type comparable_t = 'a)[@modality p])
+    [@@conflate_modality_as_mode p]
 
-    module Make : module type of Make
-    module Make1 : module type of Make1
+    module Make : module type of Make [@modality p]
+    module Make1 : module type of Make1 [@modality p]
   end
 end

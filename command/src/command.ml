@@ -145,7 +145,7 @@ end
 module Arg_type : sig
   type 'a t
 
-  val extra_doc : 'a t -> string option lazy_t
+  val additional_documentation : 'a t -> string option lazy_t
   val key : 'a t -> 'a Env.Multi.Key.t option
   val complete : 'a t -> Completer.t
   val parse : 'a t -> string -> 'a Or_error.t
@@ -154,6 +154,13 @@ module Arg_type : sig
     :  ?complete:Auto_complete.t
     -> ?key:'a Env.Multi.Key.t
     -> (string -> 'a)
+    -> 'a t
+
+  val create_with_additional_documentation
+    :  ?complete:Auto_complete.t
+    -> ?key:'a Env.Multi.Key.t
+    -> (string -> 'a)
+    -> additional_documentation:string lazy_t
     -> 'a t
 
   val map : ?key:'a Env.Multi.Key.t -> 'b t -> f:('b -> 'a) -> 'a t
@@ -219,15 +226,26 @@ end = struct
     { parse : string -> 'a
     ; complete : Completer.t
     ; key : 'a Univ_map.Multi.Key.t option
-    ; extra_doc : string option Lazy.t
+    ; additional_documentation : string option Lazy.t
     }
   [@@deriving fields ~getters]
 
   let parse t s = Or_error.try_with (fun () -> t.parse s)
-  let create' ?complete ?key parse ~extra_doc = { parse; key; complete; extra_doc }
 
-  let create ?complete ?key of_string =
-    create' ?complete ?key of_string ~extra_doc:(Lazy.from_val None)
+  let create' ?complete ?key parse ~additional_documentation =
+    { parse; key; complete; additional_documentation }
+  ;;
+
+  let create ?complete ?key parse =
+    create' ?complete ?key parse ~additional_documentation:(Lazy.from_val None)
+  ;;
+
+  let create_with_additional_documentation ?complete ?key parse ~additional_documentation =
+    create'
+      ?complete
+      ?key
+      parse
+      ~additional_documentation:(Lazy.map additional_documentation ~f:Option.some)
   ;;
 
   let map ?key t ~f = { t with key; parse = (fun s -> f (t.parse s)) }
@@ -242,8 +260,8 @@ end = struct
         []
       | Some complete -> complete env ~part
     in
-    let extra_doc = Lazy.bind t ~f:extra_doc in
-    { parse; complete = Some complete; key; extra_doc }
+    let additional_documentation = Lazy.bind t ~f:additional_documentation in
+    { parse; complete = Some complete; key; additional_documentation }
   ;;
 
   let string = create Fn.id
@@ -334,7 +352,7 @@ end = struct
               None))
     in
     create'
-      ~extra_doc:
+      ~additional_documentation:
         (lazy
           (if list_values_in_help
            then (
@@ -634,7 +652,7 @@ module Flag = struct
     { action : action
     ; read : Env.t -> 'a Parsing_outcome.t
     ; num_occurrences : Num_occurrences.t
-    ; extra_doc : string option Lazy.t
+    ; additional_documentation : string option Lazy.t
     }
 
   type 'a t = string -> 'a state
@@ -659,16 +677,16 @@ module Flag = struct
               | Some key -> Env.multi_add env ~key ~data:arg)
          in
          Arg (update, Arg_type.complete arg_type))
-    ; extra_doc = Arg_type.extra_doc arg_type
+    ; additional_documentation = Arg_type.additional_documentation arg_type
     }
   ;;
 
   let map_flag (t : _ t) ~f input =
-    let { action; read; num_occurrences; extra_doc } = t input in
+    let { action; read; num_occurrences; additional_documentation } = t input in
     { action
     ; read = (fun env -> Parsing_outcome.map (read env) ~f)
     ; num_occurrences
-    ; extra_doc
+    ; additional_documentation
     }
   ;;
 
@@ -754,7 +772,7 @@ module Flag = struct
         (if is_required
          then Num_occurrences.exactly_once
          else Num_occurrences.at_most_once)
-    ; extra_doc = Lazy.from_val None
+    ; additional_documentation = Lazy.from_val None
     }
   ;;
 
@@ -834,7 +852,7 @@ module Flag = struct
     { action = Rest (action, complete)
     ; read
     ; num_occurrences = Num_occurrences.at_most_once
-    ; extra_doc = Lazy.from_val None
+    ; additional_documentation = Lazy.from_val None
     }
   ;;
 
@@ -846,7 +864,7 @@ module Flag = struct
           (* We know that the flag wasn't passed here because if it was passed
               then the [action] would have called [exit]. *)
           Parsing_outcome.return_no_arg ())
-    ; extra_doc = Lazy.from_val None
+    ; additional_documentation = Lazy.from_val None
     }
   ;;
 
@@ -1781,7 +1799,7 @@ module Command_base = struct
         let normalize flag = normalize Key_type.Flag flag in
         let name = normalize name in
         let aliases = List.map ~f:normalize aliases in
-        let { read; action; num_occurrences; extra_doc } = mode name in
+        let { read; action; num_occurrences; additional_documentation } = mode name in
         let check_available =
           match num_occurrences.at_least_once with
           | false -> (ignore : Univ_map.t -> unit)
@@ -1799,8 +1817,9 @@ module Command_base = struct
                 ; aliases
                 ; aliases_excluded_from_help
                 ; doc =
-                    (match force extra_doc with
-                     | Some extra_doc -> [%string "%{doc} %{extra_doc}"]
+                    (match force additional_documentation with
+                     | Some additional_documentation ->
+                       [%string "%{doc} %{additional_documentation}"]
                      | None -> doc)
                 ; action
                 ; num_occurrences
@@ -2155,7 +2174,7 @@ module Command_base = struct
             ~path:(_ : Path.t)
             ~verbose_on_parse_error:(_ : bool option)
           -> result := Some (Error (Error.of_exn exn)));
-      Option.value_exn ~here:[%here] !result
+      Option.value_exn !result
     ;;
   end
 
@@ -2783,16 +2802,7 @@ struct
         exec ~prog ~argv ?use_path ?env:(Option.map env ~f:convert_env) ()
       ;;
 
-      let create_process_env ?working_dir ?prog_search_path ?argv0 ~prog ~args ~env () =
-        create_process_env
-          ?working_dir
-          ?prog_search_path
-          ?argv0
-          ~prog
-          ~args
-          ~env:(convert_env env)
-          ()
-      ;;
+      let run ~prog ~args ~env () = run ~prog ~args ~env:(convert_env env) ()
     end
   end
 
@@ -2837,40 +2847,6 @@ struct
   module Sexpable = struct
     include Shape.Sexpable
 
-    let read_stdout_and_stderr (process_info : Unix.Process_info.t) =
-      (* We need to read each of stdout and stderr in a separate thread to avoid deadlocks
-         if the child process decides to wait for a read on one before closing the other.
-         Buffering may hide this problem until output is "sufficiently large". *)
-      let start_reading descr info =
-        let output = ref None in
-        let thread =
-          Thread.create
-            ~on_uncaught_exn:`Print_to_stderr
-            (fun () ->
-              let result =
-                Result.try_with (fun () ->
-                  descr |> Unix.in_channel_of_descr |> In_channel.input_all)
-              in
-              output := Some result)
-            ()
-        in
-        Staged.stage (fun () ->
-          Thread.join thread;
-          Unix.close descr;
-          match !output with
-          | None -> raise_s [%message "BUG failed to read" (info : Info.t)]
-          | Some (Ok output) -> output
-          | Some (Error exn) -> raise exn)
-      in
-      (* We might hang forever trying to join the reading threads if the child process keeps
-         the file descriptor open. Not handling this because I think we've never seen it
-         in the wild despite running vulnerable code for years. *)
-      (* We have to start both threads before joining any of them. *)
-      let finish_stdout = start_reading process_info.stdout (Info.of_string "stdout") in
-      let finish_stderr = start_reading process_info.stderr (Info.of_string "stderr") in
-      Staged.unstage finish_stdout (), Staged.unstage finish_stderr ()
-    ;;
-
     let of_external ~working_dir ~path_to_exe ~child_subcommand =
       let env =
         let help_sexp =
@@ -2878,16 +2854,13 @@ struct
         in
         `Extend [ Env_var.COMMAND_OUTPUT_HELP_SEXP, help_sexp ]
       in
-      let process_info =
-        Unix.create_process_env
-          ()
+      let { Unix.Run_output.stdout; stderr } =
+        Unix.run
           ~prog:(abs_path ~dir:working_dir path_to_exe)
           ~args:child_subcommand
           ~env
+          ()
       in
-      Unix.close process_info.stdin;
-      let stdout, stderr = read_stdout_and_stderr process_info in
-      Unix.wait process_info.pid;
       (* Now we've killed all the processes and threads we made. *)
       match stdout |> Sexplib.Sexp.of_string |> Versioned.t_of_sexp |> of_versioned with
       | exception exn ->

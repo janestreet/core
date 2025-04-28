@@ -308,7 +308,8 @@ end
 
 module%test [@name "dates in a month"] _ = struct
   let sexp_of_year year =
-    Ref.set_temporarily Sexp.of_int_style `No_underscores ~f:(fun () -> sexp_of_int year)
+    Dynamic.with_temporarily Sexp.of_int_style `No_underscores ~f:(fun () ->
+      sexp_of_int year)
   ;;
 
   (* 2024 is a leap year. 2023 and 2025 are not. *)

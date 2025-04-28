@@ -1,12 +1,13 @@
-(** This module extends {{!Base.Int_intf}[Base.Int_intf]}. *)
+(** This module extends {{!Base.Int_intf} [Base.Int_intf]}. *)
 
 module type Round = Base.Int.Round
 
 module type Stable = sig
   module V1 : sig
-    type t [@@deriving equal, hash, sexp_grammar]
+    type t [@@deriving equal, globalize, hash, sexp_grammar]
 
-    include Stable_comparable.With_stable_witness.V1 with type t := t
+    include%template
+      Stable_comparable.With_stable_witness.V1 [@mode local] with type t := t
   end
 end
 
@@ -37,11 +38,14 @@ module type Hexable = sig
 end
 
 module type Extension = sig
-  type t [@@deriving bin_io, typerep]
+  type t [@@deriving bin_io ~localize, typerep]
 
   include Binaryable with type t := t
   include Hexable with type t := t
-  include Identifiable.S with type t := t
+
+  include%template Identifiable.S [@modality portable] with type t := t
+
+  include Base.Stringable.S_local_input with type t := t
   include Comparable.Validate_with_zero with type t := t
   include Quickcheckable.S_int with type t := t
 end

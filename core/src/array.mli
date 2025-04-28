@@ -1,6 +1,6 @@
 (** Fixed-length, mutable vector of elements with O(1) [get] and [set] operations.
 
-    This module extends {{!Base.Array}[Base.Array]}. *)
+    This module extends {{!Base.Array} [Base.Array]}. *)
 
 open Import
 open Perms.Export
@@ -11,11 +11,7 @@ type 'a t = 'a Base.Array.t [@@deriving bin_io ~localize, quickcheck, typerep]
 
 (** {2 The signature included from [Base.Array]} *)
 
-(** @inline *)
-include module type of struct
-    include Base.Array
-  end
-  with type 'a t := 'a t
+include Base.Array.Public with type 'a t := 'a t (** @inline *)
 
 (** {2 Extensions}
 
@@ -23,8 +19,7 @@ include module type of struct
     sexpable, and blit-able (via [Blit.S]). [Permissioned] provides fine-grained access
     control for arrays.
 
-    Operations supporting "normalized" indexes are also available.
-*)
+    Operations supporting "normalized" indexes are also available. *)
 
 module Int : sig
   type nonrec t = int t [@@deriving bin_io ~localize, compare, sexp, sexp_grammar]
@@ -59,8 +54,8 @@ module Float : sig
 end
 
 (** [normalize array index] returns a new index into the array such that if the index is
-    less than zero, the returned index will "wrap around" -- i.e., [array.(normalize array
-    (-1))] returns the last element of the array. *)
+    less than zero, the returned index will "wrap around" -- i.e.,
+    [array.(normalize array (-1))] returns the last element of the array. *)
 val normalize : 'a t -> int -> int
 
 (** [slice t start stop] returns a new array including elements [t.(start)] through
@@ -75,15 +70,13 @@ val nget : 'a t -> int -> 'a
 val nset : 'a t -> int -> 'a -> unit
 
 (** The [Permissioned] module gives the ability to restrict permissions on an array, so
-    you can give a function read-only access to an array, create an immutable array, etc.
-*)
+    you can give a function read-only access to an array, create an immutable array, etc. *)
 module Permissioned : sig
   (** The meaning of the ['perms] parameter is as usual (see the [Perms] module for more
       details) with the non-obvious difference that you don't need any permissions to
-      extract the length of an array.  This was done for simplicity because some
+      extract the length of an array. This was done for simplicity because some
       information about the length of an array can leak out even if you only have write
-      permissions since you can catch out-of-bounds errors.
-  *)
+      permissions since you can catch out-of-bounds errors. *)
   type ('a, -'perms) t [@@deriving bin_io ~localize, compare, sexp, sexp_grammar]
 
   module Int : sig
@@ -146,28 +139,25 @@ module Permissioned : sig
     [@@noalloc]
   end
 
-  (** [of_array_id] and [to_array_id] return the same underlying array.  On the other
-      hand, [to_array] (inherited from [Container.S1_permissions] below) makes a copy.
+  (** [of_array_id] and [to_array_id] return the same underlying array. On the other hand,
+      [to_array] (inherited from [Container.S1_permissions] below) makes a copy.
 
-      To create a new (possibly immutable) copy of an array [a], use [copy (of_array_id
-      a)].  More generally, any function that takes a (possibly mutable) [t] can be called
-      on an array by calling [of_array_id] on it first.
+      To create a new (possibly immutable) copy of an array [a], use
+      [copy (of_array_id a)]. More generally, any function that takes a (possibly mutable)
+      [t] can be called on an array by calling [of_array_id] on it first.
 
       There is a conceptual type equality between ['a Array.t] and
-      [('a, read_write) Array.Permissioned.t].  The reason for not exposing this as an
+      [('a, read_write) Array.Permissioned.t]. The reason for not exposing this as an
       actual type equality is that we also want:
 
-      {ul
-      {- The type equality ['a Array.t = 'a array] for interoperability with code which
-      does not use Core.}
-      {- The type [('a, 'perms) Array.Permissioned.t] to be abstract, so that the
-      permission phantom type will have an effect.}
-      }
+      - The type equality ['a Array.t = 'a array] for interoperability with code which
+        does not use Core.
+      - The type [('a, 'perms) Array.Permissioned.t] to be abstract, so that the
+        permission phantom type will have an effect.
 
       Since we don't control the definition of ['a array], this would require a type
       [('a, 'perms) Array.Permissioned.t] which is abstract, except that
-      [('a, read_write) Array.Permissioned.t] is concrete, which is not possible.
-  *)
+      [('a, read_write) Array.Permissioned.t] is concrete, which is not possible. *)
   val of_array_id : 'a array -> ('a, [< read_write ]) t
 
   val to_array_id : ('a, [> read_write ]) t -> 'a array

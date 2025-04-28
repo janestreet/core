@@ -45,6 +45,5 @@ type printf = { printf : 'a. ('a, Buffer.t, unit) format -> 'a }
       (* long computation *)
       let world = sprintf "%s%c" "world" '!' in
       hello ^ world
-    ]}
-*)
+    ]} *)
 val collect_to_string : (printf -> unit) -> string

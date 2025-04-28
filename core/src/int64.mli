@@ -1,4 +1,4 @@
-(** This module extends {{!Base.Int64}[Base.Int64]}. *)
+(** This module extends {{!Base.Int64} [Base.Int64]}. *)
 
 (** {2 Interface from Base} *)
 

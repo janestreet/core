@@ -12,7 +12,14 @@ module Stable = struct
     module Without_comparable = struct
       module T : sig
         type t
-        [@@deriving bin_io ~localize, compare, equal, hash, typerep, stable_witness]
+        [@@deriving
+          bin_io ~localize
+          , compare ~localize
+          , equal ~localize
+          , globalize
+          , hash
+          , typerep
+          , stable_witness]
         [@@immediate]
 
         val create_exn : y:int -> m:Month.Stable.V1.t -> d:int -> t
@@ -39,8 +46,9 @@ module Stable = struct
         *)
         type t = int
         [@@deriving
-          compare
-          , equal
+          compare ~localize
+          , equal ~localize
+          , globalize
           , hash
           , typerep
           , bin_shape ~basetype:"899ee3e0-490a-11e6-a10a-a3734f733566"
@@ -292,8 +300,9 @@ module Stable = struct
       [@@deriving
         bin_io ~localize
         , bin_shape ~basetype:"826a3e79-3321-451a-9707-ed6c03b84e2f"
-        , compare
-        , equal
+        , compare ~localize
+        , equal ~localize
+        , globalize
         , hash
         , typerep
         , stable_witness]
@@ -303,7 +312,7 @@ module Stable = struct
       let is_some t = not (is_none t)
       let some_is_representable _ = true
       let some t = V1.to_int t
-      let unchecked_value = V1.of_int_unchecked
+      let unchecked_value t = V1.of_int_unchecked t
       let to_option t = if is_some t then Some (unchecked_value t) else None
 
       let of_option opt =
@@ -694,8 +703,8 @@ module Option = struct
 
   module Optional_syntax = struct
     module Optional_syntax = struct
-      let is_none = is_none
-      let unsafe_value = unchecked_value
+      let[@zero_alloc] is_none t = is_none t
+      let[@zero_alloc] unsafe_value t = unchecked_value t
     end
   end
 

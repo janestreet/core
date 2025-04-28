@@ -17,7 +17,7 @@
    ppx_diff.diffable ppx_expect.config_types jane-street-headers base.md5
    ppx_assert.runtime-lib ppx_hash.runtime-lib ppx_inline_test.runtime-lib
    sexplib splittable_random ppx_stable_witness.stable_witness stdio time_now
-   typerep univ_map validate variantslib)
+   typerep univ_map uopt validate variantslib)
  (ocamlopt_flags
   :standard
   (:include ocamlopt-flags))
@@ -27,7 +27,13 @@
  (js_of_ocaml
   (javascript_files strftime.js runtime.js
     temporal-polyfill/temporal-polyfill.js timezone_js_loader_stubs.js
-    timezone_runtime.js)))
+    timezone_runtime.js))
+ (wasm_of_ocaml
+  (javascript_files strftime.js runtime.js
+    temporal-polyfill/temporal-polyfill.js timezone_js_loader_stubs.js
+    timezone_runtime.js)
+  (wasm_files runtime.wat timezone_js_loader_stubs.wasm.js
+    timezone_js_loader_stubs.wat)))
 
 (rule
  (targets gc_stubs.h)
