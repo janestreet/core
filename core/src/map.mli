@@ -1015,83 +1015,92 @@ module Poly : sig
 module type Key_plain = Key_plain
 module type Key = Key
 module type Key_binable = Key_binable
+module type S_plain = S_plain
+module type S = S
+module type S_binable = S_binable
 
-module type%template [@modality p = (portable, nonportable)] S_plain = S_plain
-[@modality p]
+module%template.portable Make_plain (Key : Key_plain) : S_plain with type Key.t = Key.t
 
-module type%template [@modality p = (portable, nonportable)] S = S [@modality p]
-
-module type%template [@modality p = (portable, nonportable)] S_binable = S_binable
-[@modality p]
-
-module%template.portable [@modality p] Make_plain (Key : Key_plain) : sig
-  include S_plain [@modality p] with type Key.t = Key.t
-end
-
-module%template.portable
-  [@modality p] Make_plain_using_comparator (Key : sig
+module%template.portable Make_plain_using_comparator (Key : sig
     type t [@@deriving sexp_of]
 
     include Comparator.S with type t := t
-  end) : sig
-  include
-    S_plain
-    [@modality p]
-    with type Key.t = Key.t
-    with type Key.comparator_witness = Key.comparator_witness
-end
+  end) :
+  S_plain
+  with type Key.t = Key.t
+  with type Key.comparator_witness = Key.comparator_witness
 
-module%template.portable [@modality p] Make (Key : Key) : sig
-  include S [@modality p] with type Key.t = Key.t
-end
-
-module%template.portable
-  [@modality p] Make_using_comparator (Key : sig
-    type t [@@deriving sexp]
+module%template.portable Provide_of_sexp (Key : sig
+    type t [@@deriving of_sexp]
 
     include Comparator.S with type t := t
   end) : sig
-  include
-    S
-    [@modality p]
-    with type Key.t = Key.t
-    with type Key.comparator_witness = Key.comparator_witness
-end
+    type _ t [@@deriving of_sexp]
+  end
+  with type 'a t := (Key.t, 'a, Key.comparator_witness) t
 
-module%template.portable [@modality p] Make_binable (Key : Key_binable) : sig
-  include S_binable [@modality p] with type Key.t = Key.t
-end
+module%template.portable Make (Key : Key) : S with type Key.t = Key.t
+
+module%template.portable Make_using_comparator (Key : sig
+    type t [@@deriving sexp]
+
+    include Comparator.S with type t := t
+  end) :
+  S with type Key.t = Key.t with type Key.comparator_witness = Key.comparator_witness
+
+module Key_bin_io = Key_bin_io
 
 module%template.portable
-  [@modality p] Make_binable_using_comparator (Key : sig
+  [@modality p] Provide_bin_io
+    (Key : Key_bin_io.S) : sig
+    type _ t [@@deriving bin_io]
+  end
+  with type 'a t := (Key.t, 'a, Key.comparator_witness) t
+
+module%template.portable Make_binable (Key : Key_binable) :
+  S_binable with type Key.t = Key.t
+
+module%template.portable Make_binable_using_comparator (Key : sig
     type t [@@deriving bin_io, sexp]
 
     include Comparator.S with type t := t
-  end) : sig
-  include
-    S_binable
-    [@modality p]
-    with type Key.t = Key.t
-    with type Key.comparator_witness = Key.comparator_witness
-end
+  end) :
+  S_binable
+  with type Key.t = Key.t
+  with type Key.comparator_witness = Key.comparator_witness
 
-module Key_bin_io = Key_bin_io
+module%template Provide_stable_witness (Key : sig
+    type t [@@deriving stable_witness]
+    type comparator_witness
+  end) : sig
+    type _ t [@@deriving stable_witness]
+  end
+  with type 'a t := (Key.t, 'a, Key.comparator_witness) t
+
+module%template.portable Provide_hash (Key : sig
+    type t
+    type comparator_witness
+
+    include Hasher.S with type t := t
+  end) : sig
+    type _ t [@@deriving hash]
+  end
+  with type 'a t := (Key.t, 'a, Key.comparator_witness) t
+
 include For_deriving with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
 
-module%template.portable
-  [@modality p] Make_tree_plain (Key : sig
+module%template.portable Make_tree_plain (Key : sig
     type t [@@deriving sexp_of]
 
     include Comparator.S with type t := t
-  end) : S_plain_tree [@modality p] with module Key := Key
+  end) : S_plain_tree with module Key := Key
 
-module%template.portable
-  [@modality p] Make_tree (Key : sig
+module%template.portable Make_tree (Key : sig
     type t [@@deriving sexp]
 
     include Comparator.S with type t := t
   end) : sig
-  include S_plain_tree [@modality p] with module Key := Key
+  include S_plain_tree with module Key := Key
   include Sexpable.S1 with type 'a t := 'a t
 end
 

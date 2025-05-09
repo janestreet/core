@@ -4,7 +4,7 @@ open Stable_module_types
 module%template Of_stable_format : sig
   [@@@mode.default m = (global, local)]
 
-  module V1
+  module%template.portable V1
       (Stable_format : sig
          type t [@@deriving (bin_io [@mode m]), sexp]
        end)
@@ -15,7 +15,7 @@ module%template Of_stable_format : sig
          val of_stable_format : Stable_format.t -> t
        end) : S0 [@mode m] with type t = M.t
 
-  module V2
+  module%template.portable V2
       (Stable_format : sig
          type t [@@deriving (bin_io [@mode m]), sexp]
        end)
@@ -31,7 +31,7 @@ end
 module%template Of_stable_format1 : sig
   [@@@mode.default m = (global, local)]
 
-  module V1
+  module%template.portable V1
       (Stable_format : sig
          type 'a t [@@deriving (bin_io [@mode m]), sexp]
        end)
@@ -43,7 +43,7 @@ module%template Of_stable_format1 : sig
          val of_stable_format : 'a Stable_format.t -> 'a t
        end) : S1 [@mode m] with type 'a t = 'a M.t
 
-  module V2
+  module%template.portable V2
       (Stable_format : sig
          type 'a t [@@deriving (bin_io [@mode m]), sexp]
        end)
@@ -60,7 +60,7 @@ end
 module%template Of_stable_format2 : sig
   [@@@mode.default m = (global, local)]
 
-  module V1
+  module%template.portable V1
       (Stable_format : sig
          type ('a1, 'a2) t [@@deriving (bin_io [@mode m]), sexp]
        end)
@@ -75,7 +75,7 @@ module%template Of_stable_format2 : sig
          val of_stable_format : ('a1, 'a2) Stable_format.t -> ('a1, 'a2) t
        end) : S2 [@mode m] with type ('a1, 'a2) t = ('a1, 'a2) M.t
 
-  module V2
+  module%template.portable V2
       (Stable_format : sig
          type ('a1, 'a2) t [@@deriving (bin_io [@mode m]), sexp]
        end)
@@ -95,7 +95,7 @@ end
 module%template Of_stable_format3 : sig
   [@@@mode.default m = (global, local)]
 
-  module V1
+  module%template.portable V1
       (Stable_format : sig
          type ('a1, 'a2, 'a3) t [@@deriving (bin_io [@mode m]), sexp]
        end)
@@ -115,7 +115,7 @@ module%template Of_stable_format3 : sig
          val of_stable_format : ('a1, 'a2, 'a3) Stable_format.t -> ('a1, 'a2, 'a3) t
        end) : S3 [@mode m] with type ('a1, 'a2, 'a3) t = ('a1, 'a2, 'a3) M.t
 
-  module V2
+  module%template.portable V2
       (Stable_format : sig
          type ('a1, 'a2, 'a3) t [@@deriving (bin_io [@mode m]), sexp]
        end)
@@ -141,7 +141,7 @@ module With_stable_witness : sig
   module%template Of_stable_format : sig
     [@@@mode.default m = (global, local)]
 
-    module V1
+    module%template.portable V1
         (Stable_format : sig
            type t [@@deriving (bin_io [@mode m]), sexp, stable_witness]
          end)
@@ -152,7 +152,7 @@ module With_stable_witness : sig
            val of_stable_format : Stable_format.t -> t
          end) : With_stable_witness.S0 [@mode m] with type t = M.t
 
-    module V2
+    module%template.portable V2
         (Stable_format : sig
            type t [@@deriving (bin_io [@mode m]), sexp, stable_witness]
          end)
@@ -168,7 +168,7 @@ module With_stable_witness : sig
   module%template Of_stable_format1 : sig
     [@@@mode.default m = (global, local)]
 
-    module V1
+    module%template.portable V1
         (Stable_format : sig
            type 'a t [@@deriving (bin_io [@mode m]), sexp, stable_witness]
          end)
@@ -180,7 +180,7 @@ module With_stable_witness : sig
            val of_stable_format : 'a Stable_format.t -> 'a t
          end) : With_stable_witness.S1 [@mode m] with type 'a t = 'a M.t
 
-    module V2
+    module%template.portable V2
         (Stable_format : sig
            type 'a t [@@deriving (bin_io [@mode m]), sexp, stable_witness]
          end)
@@ -197,7 +197,7 @@ module With_stable_witness : sig
   module%template Of_stable_format2 : sig
     [@@@mode.default m = (global, local)]
 
-    module V1
+    module%template.portable V1
         (Stable_format : sig
            type ('a1, 'a2) t [@@deriving (bin_io [@mode m]), sexp, stable_witness]
          end)
@@ -212,7 +212,7 @@ module With_stable_witness : sig
            val of_stable_format : ('a1, 'a2) Stable_format.t -> ('a1, 'a2) t
          end) : With_stable_witness.S2 [@mode m] with type ('a1, 'a2) t = ('a1, 'a2) M.t
 
-    module V2
+    module%template.portable V2
         (Stable_format : sig
            type ('a1, 'a2) t [@@deriving (bin_io [@mode m]), sexp, stable_witness]
          end)
@@ -232,7 +232,7 @@ module With_stable_witness : sig
   module%template Of_stable_format3 : sig
     [@@@mode.default m = (global, local)]
 
-    module V1
+    module%template.portable V1
         (Stable_format : sig
            type ('a1, 'a2, 'a3) t [@@deriving (bin_io [@mode m]), sexp, stable_witness]
          end)
@@ -253,7 +253,7 @@ module With_stable_witness : sig
          end) :
       With_stable_witness.S3 [@mode m] with type ('a1, 'a2, 'a3) t = ('a1, 'a2, 'a3) M.t
 
-    module V2
+    module%template.portable V2
         (Stable_format : sig
            type ('a1, 'a2, 'a3) t [@@deriving (bin_io [@mode m]), sexp, stable_witness]
          end)

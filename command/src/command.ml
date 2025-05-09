@@ -150,18 +150,20 @@ module Arg_type : sig
   val complete : 'a t -> Completer.t
   val parse : 'a t -> string -> 'a Or_error.t
 
-  val create
+  val%template create
     :  ?complete:Auto_complete.t
     -> ?key:'a Env.Multi.Key.t
     -> (string -> 'a)
     -> 'a t
+  [@@mode p = (nonportable, portable)]
 
-  val create_with_additional_documentation
+  val%template create_with_additional_documentation
     :  ?complete:Auto_complete.t
     -> ?key:'a Env.Multi.Key.t
     -> (string -> 'a)
     -> additional_documentation:string lazy_t
     -> 'a t
+  [@@mode p = (nonportable, portable)]
 
   val map : ?key:'a Env.Multi.Key.t -> 'b t -> f:('b -> 'a) -> 'a t
   val of_lazy : ?key:'a Env.Multi.Key.t -> 'a t lazy_t -> 'a t
@@ -226,27 +228,43 @@ end = struct
     { parse : string -> 'a
     ; complete : Completer.t
     ; key : 'a Univ_map.Multi.Key.t option
-    ; additional_documentation : string option Lazy.t
+    ; additional_documentation : string option Lazy.t Modes.Portable_via_contended.t
     }
   [@@deriving fields ~getters]
 
+  let additional_documentation t =
+    Modes.Portable_via_contended.unwrap t.additional_documentation
+  ;;
+
   let parse t s = Or_error.try_with (fun () -> t.parse s)
 
+  [%%template
+  [@@@mode.default p = (nonportable, portable)]
+
   let create' ?complete ?key parse ~additional_documentation =
-    { parse; key; complete; additional_documentation }
+    { parse
+    ; key
+    ; complete
+    ; additional_documentation =
+        Modes.Portable_via_contended.wrap additional_documentation
+    }
   ;;
 
   let create ?complete ?key parse =
-    create' ?complete ?key parse ~additional_documentation:(Lazy.from_val None)
+    (create' [@mode p])
+      ?complete
+      ?key
+      parse
+      ~additional_documentation:(Lazy.from_val None)
   ;;
 
   let create_with_additional_documentation ?complete ?key parse ~additional_documentation =
-    create'
+    (create' [@mode p])
       ?complete
       ?key
       parse
       ~additional_documentation:(Lazy.map additional_documentation ~f:Option.some)
-  ;;
+  ;;]
 
   let map ?key t ~f = { t with key; parse = (fun s -> f (t.parse s)) }
 
@@ -260,7 +278,11 @@ end = struct
         []
       | Some complete -> complete env ~part
     in
-    let additional_documentation = Lazy.bind t ~f:additional_documentation in
+    let additional_documentation =
+      Modes.Portable_via_contended.wrap
+        (Lazy.bind t ~f:(fun t ->
+           Modes.Portable_via_contended.unwrap t.additional_documentation))
+    in
     { parse; complete = Some complete; key; additional_documentation }
   ;;
 

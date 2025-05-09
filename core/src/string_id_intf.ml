@@ -77,7 +77,9 @@ module type%template String_id = sig
       (M : sig
          val module_name : string
        end)
-      () : S_with_extras [@mode local]
+      () : sig
+    include S_with_extras [@mode local]
+  end
 
   (** Like [Make], but lets you specify a [caller_identity] to ensure that the bin-shape
       is distinct, which helps catch serialization bugs where identifiers with different
@@ -87,7 +89,9 @@ module type%template String_id = sig
          val module_name : string
          val caller_identity : Bin_prot.Shape.Uuid.t
        end)
-      () : S_with_extras [@mode local]
+      () : sig
+    include S_with_extras [@mode local]
+  end
 
   (** [Make_with_validate] is like [Make], but modifies [of_string]/[of_sexp]/[bin_read_t]
       to raise if [validate] returns an error. Before using this functor one should be
@@ -99,7 +103,7 @@ module type%template String_id = sig
       [validate]. For complex validation predictes, the generator may spin indefinitely
       trying to generate a satisfying string. In these cases, the client should shadow
       [quickcheck_generator] with a generator that constructs valid strings more directly. *)
-  module Make_with_validate
+  module%template.portable Make_with_validate
       (M : sig
          val module_name : string
          val validate : string -> unit Or_error.t
@@ -116,7 +120,7 @@ module type%template String_id = sig
       () : S_with_extras [@mode local]
 
   (** See [Make_with_validate] and [Make_with_distinct_bin_shape] *)
-  module Make_with_validate_and_distinct_bin_shape
+  module%template.portable Make_with_validate_and_distinct_bin_shape
       (M : sig
          val module_name : string
          val validate : string -> unit Or_error.t
@@ -132,10 +136,12 @@ module type%template String_id = sig
       (M : sig
          val module_name : string
        end)
-      () : S_with_extras [@mode local]
+      () : sig
+    include S_with_extras [@mode local]
+  end
 
   (** See [Make_with_validate] and [Make_without_pretty_printer] *)
-  module Make_with_validate_without_pretty_printer
+  module%template.portable Make_with_validate_without_pretty_printer
       (M : sig
          val module_name : string
          val validate : string -> unit Or_error.t

@@ -87,7 +87,7 @@ include Quickcheckable.S with type t := t
   [Comparable.With_zero]. *)
 
 val sign : t -> Sign.t
-[@@deprecated "[since 2016-01] Replace [sign] with [robust_sign] or [sign_exn]"]
+[@@deprecated "[since 2016-01] Replace [sign] with [sign_or_nan] or [sign_exn]"]
 
 (** (Formerly [sign]) Uses robust comparison (so sufficiently small numbers are mapped to
     [Zero]). Also maps NaN to [Zero]. Using this function is weakly discouraged. *)

@@ -144,10 +144,14 @@ let quickcheck_observer = Base_quickcheck.Observer.string
 let quickcheck_shrinker = Base_quickcheck.Shrinker.string
 let gen_nonempty = Base_quickcheck.Generator.string_non_empty
 let gen' = Base_quickcheck.Generator.string_of
-let gen_nonempty' = Base_quickcheck.Generator.string_non_empty_of
 
-let gen_with_length length chars =
-  Base_quickcheck.Generator.string_with_length_of chars ~length
+let%template gen_nonempty' = (Base_quickcheck.Generator.string_non_empty_of [@mode p])
+[@@mode p = (portable, nonportable)]
+;;
+
+let%template gen_with_length length chars =
+  (Base_quickcheck.Generator.string_with_length_of [@mode p]) chars ~length
+[@@mode p = (portable, nonportable)]
 ;;
 
 let take_while t ~f =

@@ -147,6 +147,8 @@
     because the type has a different witness (e.g. [Sometimes] instead of [Always]).
     v} *)
 
+type 'a builtin_array := 'a array
+
 open! Import
 
 type 'a t
@@ -154,8 +156,8 @@ type 'a t
 module Always : sig
   type 'a t
 
-  val of_typerep : ('a, _) Typerep.t_any -> 'a t option
-  val of_typerep_exn : ?here:Stdlib.Lexing.position -> ('a, _) Typerep.t_any -> 'a t
+  val of_typerep : 'a. 'a Typerep.t -> 'a t option
+  val of_typerep_exn : 'a. ?here:Stdlib.Lexing.position -> 'a Typerep.t -> 'a t
   val int_as_value : 'a t -> int -> 'a option
   val int_as_value_exn : 'a t -> int -> 'a
   val int_is_value : 'a t -> int -> bool
@@ -190,8 +192,8 @@ end
 module Sometimes : sig
   type 'a t
 
-  val of_typerep : 'a Typerep.t -> 'a t option
-  val of_typerep_exn : ?here:Stdlib.Lexing.position -> 'a Typerep.t -> 'a t
+  val of_typerep : 'a. 'a Typerep.t -> 'a t option
+  val of_typerep_exn : 'a. ?here:Stdlib.Lexing.position -> 'a Typerep.t -> 'a t
   val int_as_value : 'a t -> int -> 'a option
   val int_as_value_exn : 'a t -> int -> 'a
   val int_is_value : 'a t -> int -> bool
@@ -226,8 +228,8 @@ end
 module Never : sig
   type 'a t
 
-  val of_typerep : 'a Typerep.t -> 'a t option
-  val of_typerep_exn : ?here:Stdlib.Lexing.position -> 'a Typerep.t -> 'a t
+  val of_typerep : 'a. 'a Typerep.t -> 'a t option
+  val of_typerep_exn : 'a. ?here:Stdlib.Lexing.position -> 'a Typerep.t -> 'a t
 
   module For_all_parameters_S1 (X : Typerepable.S1) : sig
     val witness : unit -> _ X.t t
@@ -255,15 +257,19 @@ module Never : sig
   val float : float t
   val string : string t
   val bytes : bytes t
-  val array : _ array t
+  val array : _ builtin_array t
   val ref_ : _ ref t
   val tuple2 : (_ * _) t
   val tuple3 : (_ * _ * _) t
   val tuple4 : (_ * _ * _ * _) t
   val tuple5 : (_ * _ * _ * _ * _) t
+  val tuple2_u : (_ * _) t
+  val tuple3_u : (_ * _ * _) t
+  val tuple4_u : (_ * _ * _ * _) t
+  val tuple5_u : (_ * _ * _ * _ * _) t
 end
 
-val of_typerep : 'a Typerep.t -> 'a t
+val of_typerep : 'a. 'a Typerep.t -> 'a t
 
 type 'a dest =
   | Always of 'a Always.t
@@ -271,7 +277,7 @@ type 'a dest =
   | Never of 'a Never.t
   | Unknown
 
-val dest : 'a t -> 'a dest
+val dest : 'a. 'a t -> 'a dest
 val int_as_value : 'a t -> int -> 'a option
 val int_as_value_exn : 'a t -> int -> 'a
 val int_is_value : 'a t -> int -> bool

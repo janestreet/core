@@ -259,5 +259,5 @@ end
 module type Time = sig
   module type S = S
 
-  module Make (Time : Time0_intf.S) : S with module Time := Time
+  module Make (Time : Time0_intf.S) () : S with module Time := Time
 end

@@ -120,6 +120,7 @@ module Option_array = Option_array
 module Optional_syntax = Optional_syntax
 module Optional_syntax_intf = Optional_syntax_intf
 module Or_error = Or_error
+module Or_null = Base.Or_null
 module Ordered_collection_common = Ordered_collection_common
 module Ordering = Ordering
 module Out_channel = Out_channel

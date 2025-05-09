@@ -2,7 +2,7 @@ open! Std_internal
 open! Import
 
 module Time = struct
-  include Time.Make (Time_float0)
+  include Time.Make (Time_float0) ()
   include Time_float0
 end
 
@@ -316,7 +316,7 @@ module Stable = struct
 
     module V2 = struct
       module C = struct
-        type nonrec t = t [@@deriving bin_io, compare, hash]
+        type nonrec t = t [@@deriving bin_io, compare, equal, hash]
 
         let sexp_of_t t = [%sexp (to_string_abs_parts t ~zone:Zone.utc : string list)]
         let stable_witness = Stable_witness.assert_stable

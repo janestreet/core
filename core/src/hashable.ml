@@ -8,7 +8,7 @@ module%template.portable
     type t [@@deriving hash]
 
     include Hashtbl.Key_plain with type t := t
-  end) : S_plain [@modality p] with type t := T.t = struct
+  end) : S_plain with type t := T.t = struct
   include T
   module Table = Hashtbl.Make_plain [@modality p] (T)
   module Hash_set = Hash_set.Make_plain [@modality p] (T)
@@ -19,7 +19,7 @@ end
 
 module%template.portable
   [@modality p] Make_plain_and_derive_hash_fold_t
-    (T : Hashtbl.Key_plain) : S_plain [@modality p] with type t := T.t =
+    (T : Hashtbl.Key_plain) : S_plain with type t := T.t =
 Make_plain [@modality p] (struct
     include T
 
@@ -31,7 +31,7 @@ module%template.portable
     type t [@@deriving hash]
 
     include Hashtbl.Key with type t := t
-  end) : S [@modality p] with type t := T.t = struct
+  end) : S with type t := T.t = struct
   include T
   module Table = Hashtbl.Make [@modality p] (T)
   module Hash_set = Hash_set.Make [@modality p] (T)
@@ -41,7 +41,7 @@ module%template.portable
 end
 
 module%template.portable [@modality p] Make_and_derive_hash_fold_t (T : Hashtbl.Key) :
-  S [@modality p] with type t := T.t = Make [@modality p] (struct
+  S with type t := T.t = Make [@modality p] (struct
     include T
 
     let hash_fold_t state t = hash_fold_int state (hash t)
@@ -52,7 +52,7 @@ module%template.portable
     type t [@@deriving hash]
 
     include Hashtbl.Key_binable with type t := t
-  end) : S_binable [@modality p] with type t := T.t = struct
+  end) : S_binable with type t := T.t = struct
   module Table = Hashtbl.Make_binable [@modality p] (T)
   module Hash_set = Hash_set.Make_binable [@modality p] (T)
   module Hash_queue = Hash_queue.Make [@modality p] (T)
@@ -70,7 +70,7 @@ module%template.portable
     end
 
     val hashable : Key.t Hashtbl_intf.Hashable.t
-  end) : S_plain [@modality p] with type t := T.Key.t = struct
+  end) : S_plain with type t := T.Key.t = struct
   include T.Key
   module Table = Hashtbl.Make_plain_with_hashable [@modality p] (T)
 
@@ -94,7 +94,7 @@ module%template.portable
     end
 
     val hashable : Key.t Hashtbl_intf.Hashable.t
-  end) : S [@modality p] with type t := T.Key.t = struct
+  end) : S with type t := T.Key.t = struct
   include T.Key
   module Table = Hashtbl.Make_with_hashable [@modality p] (T)
 
@@ -118,7 +118,7 @@ module%template.portable
     end
 
     val hashable : Key.t Hashtbl_intf.Hashable.t
-  end) : S_binable [@modality p] with type t := T.Key.t = struct
+  end) : S_binable with type t := T.Key.t = struct
   module Table = Hashtbl.Make_binable_with_hashable [@modality p] (T)
 
   module Hash_set = Hash_set.Make_binable_with_hashable [@modality p] (struct
@@ -135,7 +135,7 @@ end
 
 module%template.portable
   [@modality p] Make_binable_and_derive_hash_fold_t
-    (T : Hashtbl.Key_binable) : S_binable [@modality p] with type t := T.t =
+    (T : Hashtbl.Key_binable) : S_binable with type t := T.t =
 Make_binable [@modality p] (struct
     include T
 

@@ -2,18 +2,10 @@ open! Import
 include Hash_set_intf
 include Base.Hash_set
 
-module type%template [@modality p = (portable, nonportable)] S_plain =
-  S_plain [@modality p] with type 'a hash_set := 'a t
-
-module type%template [@modality p = (portable, nonportable)] S =
-  S [@modality p] with type 'a hash_set := 'a t
-
-module type%template [@modality p = (portable, nonportable)] S_binable =
-  S_binable [@modality p] with type 'a hash_set := 'a t
-
-module type%template [@modality p = (portable, nonportable)] S_stable =
-  S_stable [@modality p] with type 'a hash_set := 'a t
-
+module type S_plain = S_plain with type 'a hash_set := 'a t
+module type S = S with type 'a hash_set := 'a t
+module type S_binable = S_binable with type 'a hash_set := 'a t
+module type S_stable = S_stable with type 'a hash_set := 'a t
 module type Elt_plain = Hashtbl.Key_plain
 module type Elt = Hashtbl.Key
 module type Elt_binable = Hashtbl.Key_binable
@@ -38,65 +30,52 @@ struct
     end)
 
   let sexp_of_t t = Poly.sexp_of_t T.Elt.sexp_of_t t
+end
 
-  module%template
-    [@modality p' = (nonportable, p)] Provide_of_sexp
-      (X : sig
-             type t [@@deriving of_sexp]
-           end
-           with type t := elt) =
-  struct
-    let t_of_sexp sexp = t_of_sexp X.t_of_sexp sexp
-  end
+module%template.portable Provide_of_sexp (Elt : Base.Hashtbl.M_of_sexp) = struct
+  let t_of_sexp sexp = Base.Hash_set.m__t_of_sexp (module Elt) sexp
+end
 
-  module%template
-    [@modality p' = (nonportable, p)] Provide_bin_io
-      (X : sig
-             type t [@@deriving bin_io]
-           end
-           with type t := elt) =
-  Bin_prot.Utils.Make_iterable_binable [@modality p'] (struct
-      module Elt = struct
-        include T.Elt
-        include X
-      end
+module%template.portable
+  [@modality p] Provide_bin_io (Elt : sig
+    type t [@@deriving bin_io]
 
-      type nonrec t = t
-      type el = Elt.t [@@deriving bin_io]
+    include Elt_plain with type t := t
+  end) =
+Bin_prot.Utils.Make_iterable_binable [@modality p] (struct
+    type nonrec t = Elt.t t
+    type el = Elt.t [@@deriving bin_io]
 
-      let _ = bin_el
+    let _ = bin_el
 
-      let caller_identity =
-        Bin_prot.Shape.Uuid.of_string "ad381672-4992-11e6-9e36-b76dc8cd466f"
-      ;;
-
-      let module_name = Some "Core.Hash_set"
-      let length = length
-      let iter = iter
-
-      let init ~len ~next =
-        let t = create ~size:len () in
-        for _i = 0 to len - 1 do
-          let v = next () in
-          add t v
-        done;
-        t
-      ;;
-    end)
-
-  module Provide_stable_witness
-      (X : sig
-             type t [@@deriving stable_witness]
-           end
-           with type t := elt) =
-  struct
-    (* The binary representation of hash_set is used in the stable modules below, so it's
-       assumed to be stable (if the elt is stable) . *)
-    let stable_witness : t Stable_witness.t =
-      let (_ : elt Stable_witness.t) = X.stable_witness in
-      Stable_witness.assert_stable
+    let caller_identity =
+      Bin_prot.Shape.Uuid.of_string "ad381672-4992-11e6-9e36-b76dc8cd466f"
     ;;
-  end
+
+    let module_name = Some "Core.Hash_set"
+    let length = length
+    let iter = iter
+
+    let init ~len ~next =
+      let t = create (module Elt) ~size:len in
+      for _i = 0 to len - 1 do
+        let v = next () in
+        add t v
+      done;
+      t
+    ;;
+  end)
+
+module Provide_stable_witness (Elt : sig
+    type t [@@deriving stable_witness]
+  end) =
+struct
+  (* The binary representation of hash_set is used in the stable modules below, so it's
+       assumed to be stable (if the elt is stable) . *)
+  let stable_witness : Elt.t t Stable_witness.t =
+    let (_ : Elt.t Stable_witness.t) = Elt.stable_witness in
+    Stable_witness.assert_stable
+  ;;
 end
 
 module%template.portable

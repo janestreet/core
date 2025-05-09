@@ -110,6 +110,7 @@ val errors : t -> string list
 (** If the result contains any errors, then raises an exception with a formatted error
     message containing a message for every error. *)
 val maybe_raise : t -> unit
+[@@zero_alloc]
 
 (** Returns an error if validation fails. *)
 val valid_or_error : 'a check -> 'a -> 'a Or_error.t

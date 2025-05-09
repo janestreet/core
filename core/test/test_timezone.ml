@@ -8,10 +8,9 @@ let%expect_test (_ [@tags "no-js"]) =
   let open Timezone.Private.Zone_cache in
   init ();
   let result = Option.is_some (find "America/New_York") in
+  require result;
   (* keep this test from contaminating tests later in the file *)
-  the_one_and_only.full <- false;
-  Hashtbl.clear the_one_and_only.table;
-  require result
+  clear ()
 ;;
 
 let%expect_test (_ [@tags "js-only"]) =
@@ -23,11 +22,11 @@ let%expect_test (_ [@tags "js-only"]) =
   require_none [%sexp_of: Timezone.t] (find "America/New_York");
   let () =
     require (Hashtbl.is_empty the_one_and_only.table);
-    require_some (public_find "America/New_York");
-    (* keep this test from contaminating tests later in the file *)
-    Hashtbl.clear the_one_and_only.table
+    require_some (public_find "America/New_York")
   in
-  require (not the_one_and_only.full)
+  require (not the_one_and_only.full);
+  (* keep this test from contaminating tests later in the file *)
+  clear ()
 ;;
 
 let%expect_test "Zone.V1" =

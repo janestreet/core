@@ -297,11 +297,11 @@ let%expect_test "round-trippable sexp format" =
     print_string
       (sprintf
          "%20s | %23s | %26s | %26s | %26s \n"
-         [%string "%{p#Percent}"]
-         [%string "%{p#Percent.Almost_round_trippable}"]
-         [%string "%{p#Percent.Almost_round_trippable.Always_percentage}"]
-         [%string "%{p#Percent.Stable.V3}"]
-         [%string "%{p#Percent.Stable.V3.Always_percentage}"]);
+         [%string.global "%{p#Percent}"]
+         [%string.global "%{p#Percent.Almost_round_trippable}"]
+         [%string.global "%{p#Percent.Almost_round_trippable.Always_percentage}"]
+         [%string.global "%{p#Percent.Stable.V3}"]
+         [%string.global "%{p#Percent.Stable.V3.Always_percentage}"]);
     let pp = Percent.Stable.V3.sexp_of_t p |> Percent.Stable.V3.t_of_sexp in
     [%test_result: Percent.t] pp ~expect:p;
     [%test_result: Float.t] (Percent.to_mult pp) ~expect:(Percent.to_mult p)

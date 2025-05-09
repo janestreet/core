@@ -6,70 +6,61 @@ module type Common = sig
   val hashable : t Hashtbl.Hashable.t
 end
 
-module type%template [@modality p = (portable, nonportable)] S_plain = sig
+module type S_plain = sig
   include Common
-  module Table : Hashtbl.S_plain [@modality p] with type key = t
-  module Hash_set : Hash_set.S_plain [@modality p] with type elt = t
+  module Table : Hashtbl.S_plain with type key = t
+  module Hash_set : Hash_set.S_plain with type elt = t
   module Hash_queue : Hash_queue.S with type key = t
 end
 
-module type%template [@modality p = (portable, nonportable)] S = sig
+module type S = sig
   include Common
-  module Table : Hashtbl.S [@modality p] with type key = t
-  module Hash_set : Hash_set.S [@modality p] with type elt = t
+  module Table : Hashtbl.S with type key = t
+  module Hash_set : Hash_set.S with type elt = t
   module Hash_queue : Hash_queue.S with type key = t
 end
 
-module type%template [@modality p = (portable, nonportable)] S_binable = sig
+module type S_binable = sig
   type t [@@deriving hash]
 
   val hashable : t Hashtbl.Hashable.t
 
-  module Table : Hashtbl.S_binable [@modality p] with type key = t
-  module Hash_set : Hash_set.S_binable [@modality p] with type elt = t
+  module Table : Hashtbl.S_binable with type key = t
+  module Hash_set : Hash_set.S_binable with type elt = t
   module Hash_queue : Hash_queue.S with type key = t
 end
 
 module type Hashable = sig
   module type Common = Common
-  module type%template [@modality p = (portable, nonportable)] S = S [@modality p]
+  module type S = S
+  module type S_binable = S_binable
+  module type S_plain = S_plain
 
-  module type%template [@modality p = (portable, nonportable)] S_binable = S_binable
-  [@modality p]
-
-  module type%template [@modality p = (portable, nonportable)] S_plain = S_plain
-  [@modality p]
-
-  module%template.portable
-    [@modality p] Make_plain (T : sig
+  module%template.portable Make_plain (T : sig
       type t [@@deriving hash]
 
       include Hashtbl.Key_plain with type t := t
-    end) : S_plain [@modality p] with type t := T.t
+    end) : S_plain with type t := T.t
 
-  module%template.portable
-    [@modality p] Make_plain_and_derive_hash_fold_t
-      (T : Hashtbl.Key_plain) : S_plain [@modality p] with type t := T.t
+  module%template.portable Make_plain_and_derive_hash_fold_t (T : Hashtbl.Key_plain) :
+    S_plain with type t := T.t
 
-  module%template.portable
-    [@modality p] Make (T : sig
+  module%template.portable Make (T : sig
       type t [@@deriving hash]
 
       include Hashtbl.Key with type t := t
-    end) : S [@modality p] with type t := T.t
+    end) : S with type t := T.t
 
-  module%template.portable [@modality p] Make_and_derive_hash_fold_t (T : Hashtbl.Key) :
-    S [@modality p] with type t := T.t
+  module%template.portable Make_and_derive_hash_fold_t (T : Hashtbl.Key) :
+    S with type t := T.t
 
-  module%template.portable
-    [@modality p] Make_binable (T : sig
+  module%template.portable Make_binable (T : sig
       type t [@@deriving hash]
 
       include Hashtbl.Key_binable with type t := t
-    end) : S_binable [@modality p] with type t := T.t
+    end) : S_binable with type t := T.t
 
-  module%template.portable
-    [@modality p] Make_plain_with_hashable (T : sig
+  module%template.portable Make_plain_with_hashable (T : sig
       module Key : sig
         type t [@@deriving hash]
 
@@ -77,10 +68,9 @@ module type Hashable = sig
       end
 
       val hashable : Key.t Hashtbl.Hashable.t
-    end) : S_plain [@modality p] with type t := T.Key.t
+    end) : S_plain with type t := T.Key.t
 
-  module%template.portable
-    [@modality p] Make_with_hashable (T : sig
+  module%template.portable Make_with_hashable (T : sig
       module Key : sig
         type t [@@deriving hash]
 
@@ -88,10 +78,9 @@ module type Hashable = sig
       end
 
       val hashable : Key.t Hashtbl.Hashable.t
-    end) : S [@modality p] with type t := T.Key.t
+    end) : S with type t := T.Key.t
 
-  module%template.portable
-    [@modality p] Make_binable_with_hashable (T : sig
+  module%template.portable Make_binable_with_hashable (T : sig
       module Key : sig
         type t [@@deriving hash]
 
@@ -99,11 +88,10 @@ module type Hashable = sig
       end
 
       val hashable : Key.t Hashtbl.Hashable.t
-    end) : S_binable [@modality p] with type t := T.Key.t
+    end) : S_binable with type t := T.Key.t
 
-  module%template.portable
-    [@modality p] Make_binable_and_derive_hash_fold_t
-      (T : Hashtbl.Key_binable) : S_binable [@modality p] with type t := T.t
+  module%template.portable Make_binable_and_derive_hash_fold_t (T : Hashtbl.Key_binable) :
+    S_binable with type t := T.t
 
   module Stable : sig
     module V1 : sig

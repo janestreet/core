@@ -20,15 +20,11 @@ include module type of struct
 module Caseless : sig
   type nonrec t = t [@@deriving bin_io ~localize, hash, sexp, sexp_grammar]
 
-  include%template Comparable.S_binable [@modality portable] with type t := t
-  include%template Hashable.S_binable [@modality portable] with type t := t
+  include Comparable.S_binable with type t := t
+  include Hashable.S_binable with type t := t
 end
 
-include%template
-  Identifiable.S
-  [@modality portable]
-  with type t := t
-   and type comparator_witness := comparator_witness
+include Identifiable.S with type t := t and type comparator_witness := comparator_witness
 
 (** {3 Quickcheck Support} *)
 

@@ -3,7 +3,7 @@
  (libraries base_container_tests base_for_tests base_test_helpers core
    core_test_helpers expectable expect_test_helpers_core core_kernel.fheap
    core_kernel.version_util expect_test_helpers_core.expect_test_helpers_base
-   expect_test_patterns sexp_grammar_validation sexplib
+   expect_test_patterns float_u int64_u sexp_grammar_validation sexplib
    ppx_stable_witness.stable_witness)
  (preprocessor_deps ../src/config.h)
  (preprocess

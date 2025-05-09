@@ -109,6 +109,7 @@ module type Timezone = sig
         }
 
       val the_one_and_only : z
+      val clear : unit -> unit
       val init : unit -> unit
       val find : string -> t option
     end

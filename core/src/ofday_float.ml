@@ -326,7 +326,7 @@ module C = struct
   type comparator_witness = T.comparator_witness
 
   let comparator = T.comparator
-  let compare = T.comparator.compare
+  let compare = Comparator.compare T.comparator
 
   (* In 108.06a and earlier, ofdays in sexps of Maps and Sets were raw floats.  From
      108.07 through 109.13, the output format remained raw as before, but both the raw and

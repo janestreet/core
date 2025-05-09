@@ -5,7 +5,7 @@ open Std_internal
 open! Int.Replace_polymorphic_compare
 include Time_intf
 
-module Make (Time0 : Time0_intf.S) = struct
+module Make (Time0 : Time0_intf.S) () = struct
   module Time0 = Time0
   include Time0
 
@@ -168,86 +168,24 @@ module Make (Time0 : Time0_intf.S) = struct
       else `Once (sub proposed_time shift_amount)
   ;;
 
-  module Date_cache = struct
-    type t =
-      { mutable zone : Zone.t
-      ; mutable cache_start_incl : Time0.t
-      ; mutable cache_until_excl : Time0.t
-      ; mutable effective_day_start : Time0.t
-      ; mutable date : Date0.t
-      }
-  end
+  module Shared_date_cache =
+    Date_cache.Make
+      (struct
+        include Time0
+        module Zone = Zone
 
-  let date_cache : Date_cache.t =
-    { zone = Zone.utc
-    ; cache_start_incl = epoch
-    ; cache_until_excl = epoch
-    ; effective_day_start = epoch
-    ; date = Date0.unix_epoch
-    }
-  ;;
+        let epoch = epoch
+      end)
+      ()
 
-  let reset_date_cache () =
-    date_cache.zone <- Zone.utc;
-    date_cache.cache_start_incl <- epoch;
-    date_cache.cache_until_excl <- epoch;
-    date_cache.effective_day_start <- epoch;
-    date_cache.date <- Date0.unix_epoch
-  ;;
-
-  let is_in_cache time ~zone =
-    phys_equal zone date_cache.zone
-    && Time0.( >= ) time date_cache.cache_start_incl
-    && Time0.( < ) time date_cache.cache_until_excl
-  ;;
-
-  let set_date_cache time ~zone =
-    match is_in_cache time ~zone with
-    | true -> ()
-    | false ->
-      let index = Zone.index zone time in
-      (* no exn because [Zone.index] always returns a valid index *)
-      let offset_from_utc = Zone.index_offset_from_utc_exn zone index in
-      let rel = Date_and_ofday.of_absolute time ~offset_from_utc in
-      let date = Date_and_ofday.to_date rel in
-      let span = Date_and_ofday.to_ofday rel |> Ofday.to_span_since_start_of_day in
-      let effective_day_start =
-        Time0.sub (Date_and_ofday.to_absolute rel ~offset_from_utc) span
-      in
-      let effective_day_until = Time0.add effective_day_start Span.day in
-      let cache_start_incl =
-        match Zone.index_has_prev_clock_shift zone index with
-        | false -> effective_day_start
-        | true ->
-          effective_day_start
-          |> Time0.max (Zone.index_prev_clock_shift_time_exn zone index)
-      in
-      let cache_until_excl =
-        match Zone.index_has_next_clock_shift zone index with
-        | false -> effective_day_until
-        | true ->
-          effective_day_until
-          |> Time0.min (Zone.index_next_clock_shift_time_exn zone index)
-      in
-      date_cache.zone <- zone;
-      date_cache.cache_start_incl <- cache_start_incl;
-      date_cache.cache_until_excl <- cache_until_excl;
-      date_cache.effective_day_start <- effective_day_start;
-      date_cache.date <- date
-  ;;
-
-  let to_date time ~zone =
-    set_date_cache time ~zone;
-    date_cache.date
-  ;;
-
+  let reset_date_cache = Shared_date_cache.reset
+  let to_date time ~zone : Date0.t = Shared_date_cache.get_date time ~zone
   let end_of_day = Ofday.prev Ofday.start_of_next_day |> Option.value_exn
 
   let to_ofday time ~zone =
-    set_date_cache time ~zone;
+    let effective_day_start = Shared_date_cache.get_day_start time ~zone in
     let of_day =
-      Time0.diff time date_cache.effective_day_start
-      |> Ofday.of_span_since_start_of_day_exn
+      Time0.diff time effective_day_start |> Ofday.of_span_since_start_of_day_exn
     in
     if Ofday.equal of_day Ofday.start_of_next_day then end_of_day else of_day
   ;;

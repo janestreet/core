@@ -5,6 +5,8 @@
    [../test/test_conversions.ml]
 *)
 
+type 'a builtin_array = 'a array
+
 open! Import
 module List = Base.List
 
@@ -54,37 +56,41 @@ open Immediacy
 module T : sig
   type 'a t
 
-  val create : 'a Typename.t -> Immediacy.t -> Allowed_ints.t -> 'a t
-  val create_with_name : string -> Immediacy.t -> Allowed_ints.t -> _ t
-  val immediacy : _ t -> Immediacy.t
-  val allowed_ints : _ t -> Allowed_ints.t
-  val typename : _ t -> string
+  val create : 'a. 'a Typename.t -> Immediacy.t -> Allowed_ints.t -> 'a t
+  val create_with_name : 'a. string -> Immediacy.t -> Allowed_ints.t -> 'a t
+  val immediacy : 'a. 'a t -> Immediacy.t
+  val allowed_ints : 'a. 'a t -> Allowed_ints.t
+  val typename : 'a. 'a t -> string
 
   module Never_values : sig
     val int32 : int32 t
-    val int32_u : (unit -> int32) t
+    val int32_u : int32 t
     val int64 : int64 t
-    val int64_u : (unit -> int64) t
+    val int64_u : int64 t
     val nativeint : nativeint t
-    val nativeint_u : (unit -> nativeint) t
+    val nativeint_u : nativeint t
     val float : float t
-    val float_u : (unit -> float) t
+    val float_u : float t
     val string : string t
     val bytes : bytes t
-    val array : _ array t
+    val array : _ builtin_array t
     val ref_ : _ ref t
     val tuple2 : (_ * _) t
     val tuple3 : (_ * _ * _) t
     val tuple4 : (_ * _ * _ * _) t
     val tuple5 : (_ * _ * _ * _ * _) t
+    val tuple2_u : (_ * _) t
+    val tuple3_u : (_ * _ * _) t
+    val tuple4_u : (_ * _ * _ * _) t
+    val tuple5_u : (_ * _ * _ * _ * _) t
     val function_ : (_ -> _) t
   end
 
-  val never : 'a Typename.t -> 'a t
-  val unknown : 'a Typename.t -> 'a t
+  val never : 'a. 'a Typename.t -> 'a t
+  val unknown : 'a. 'a Typename.t -> 'a t
   val option : _ t
   val list : _ t
-  val magic : _ t -> _ t
+  val magic : 'a 'b. 'a t -> 'b t
 end = struct
   type t_ =
     { immediacy : Immediacy.t
@@ -130,6 +136,10 @@ end = struct
     let tuple3 = never_with_name "tuple3"
     let tuple4 = never_with_name "tuple4"
     let tuple5 = never_with_name "tuple5"
+    let tuple2_u = never_with_name "tuple2_u"
+    let tuple3_u = never_with_name "tuple3_u"
+    let tuple4_u = never_with_name "tuple4_u"
+    let tuple5_u = never_with_name "tuple5_u"
     let function_ = never_with_name "function"
   end
 end
@@ -151,12 +161,16 @@ module Computation_impl = struct
   include Never_values
 
   let ref_ _ = ref_
-  let array _ = array
+  let array _ _ = array
   let tuple2 _ _ = tuple2
   let tuple3 _ _ _ = tuple3
   let tuple4 _ _ _ _ = tuple4
   let tuple5 _ _ _ _ _ = tuple5
-  let function_ _ _ = function_
+  let tuple2_u _ _ _ = tuple2_u
+  let tuple3_u _ _ _ _ = tuple3_u
+  let tuple4_u _ _ _ _ _ = tuple4_u
+  let tuple5_u _ _ _ _ _ _ = tuple5_u
+  let function_ _ _ _ = function_
   let int = int
   let char = char
   let bool = bool

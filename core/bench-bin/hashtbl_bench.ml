@@ -36,7 +36,7 @@ module type Config = sig
 end
 
 module type Impl = sig
-  include Hashtbl_intf.Hashtbl
+  include Hashtbl_intf.Hashtbl_over_values
 
   val module_name : string
 end
@@ -125,9 +125,6 @@ end = struct
     type 'v t = 'v Table.t
     type ('k, 'v) t_ = ('k, 'v) Table.t_
     type 'k key_ = 'k Table.key_
-
-    module Provide_of_sexp = Table.Provide_of_sexp
-    module Provide_bin_io = Table.Provide_bin_io
 
     (* benchmarks begin here *)
 

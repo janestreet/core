@@ -3,10 +3,7 @@
 
 open! Import
 
-type ('a, 'witness) t = ('a, 'witness) Base.Comparator.t = private
-  { compare : 'a -> 'a -> int
-  ; sexp_of_t : 'a -> Base.Sexp.t
-  }
+type ('a, 'witness) t = ('a, 'witness) Base.Comparator.t
 
 include module type of Base.Comparator with type ('a, 'witness) t := ('a, 'witness) t
 (** @inline *)
@@ -15,11 +12,7 @@ include module type of Base.Comparator with type ('a, 'witness) t := ('a, 'witne
 
 module%template Stable : sig
   module V1 : sig
-    type nonrec ('a, 'b) t = ('a, 'b) t = private
-      { compare : 'a -> 'a -> int
-      ; sexp_of_t : 'a -> Base.Sexp.t
-      }
-
+    type nonrec ('a, 'b) t = ('a, 'b) t
     type ('a, 'b) comparator = ('a, 'b) t
 
     module type S = sig

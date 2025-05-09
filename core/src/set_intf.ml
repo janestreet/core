@@ -186,7 +186,7 @@ module type Creators_and_accessors_generic = sig
     with type 'cmp cmp := 'cmp cmp
 end
 
-module type%template [@modality p = (portable, nonportable)] S_plain_tree = sig
+module type S_plain_tree = sig
   module Elt : Comparator.S
 
   type t = (Elt.t, Elt.comparator_witness) Tree.t [@@deriving compare, equal, sexp_of]
@@ -199,19 +199,9 @@ module type%template [@modality p = (portable, nonportable)] S_plain_tree = sig
     with type 'a elt := Elt.t
     with type 'c cmp := Elt.comparator_witness
     with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
-
-  module%template
-    [@modality p' = (nonportable, p)] Provide_of_sexp
-      (Elt : sig
-               type t [@@deriving of_sexp]
-             end
-             with type t := Elt.t) : sig
-      type t [@@deriving of_sexp]
-    end
-    with type t := t
 end
 
-module type%template [@modality p = (portable, nonportable)] S_plain = sig
+module type S_plain = sig
   module Elt : sig
     type t [@@deriving sexp_of]
 
@@ -240,38 +230,11 @@ module type%template [@modality p = (portable, nonportable)] S_plain = sig
     with type 'c cmp := Elt.comparator_witness
     with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
 
-  module%template
-    [@modality p' = (nonportable, p)] Provide_of_sexp
-      (Elt : sig
-               type t [@@deriving of_sexp]
-             end
-             with type t := Elt.t) : sig
-      type t [@@deriving of_sexp]
-    end
-    with type t := t
-
-  module%template
-    [@modality p' = (nonportable, p)] Provide_bin_io
-      (Elt : sig
-               type t [@@deriving bin_io]
-             end
-             with type t := Elt.t) : sig
-    include Binable.S with type t := t
-  end
-
-  module%template
-    [@modality p' = (nonportable, p)] Provide_hash (Elt : sig
-      include Hasher.S with type t := Elt.t
-    end) : sig
-      type t [@@deriving hash]
-    end
-    with type t := t
-
   val quickcheck_observer : Elt.t Quickcheck.Observer.t -> t Quickcheck.Observer.t
   val quickcheck_shrinker : Elt.t Quickcheck.Shrinker.t -> t Quickcheck.Shrinker.t
 end
 
-module type%template [@modality p = (portable, nonportable)] S = sig
+module type S = sig
   module Elt : sig
     type t [@@deriving sexp]
 
@@ -287,11 +250,11 @@ module type%template [@modality p = (portable, nonportable)] S = sig
        and type derived_on = (Elt.t, Elt.comparator_witness) Base.Set.t
   end
 
-  include S_plain [@modality p] with module Elt := Elt and module Diff := Diff
+  include S_plain with module Elt := Elt and module Diff := Diff
   include Sexpable.S with type t := t
 end
 
-module type%template [@modality p = (portable, nonportable)] S_binable = sig
+module type S_binable = sig
   module Elt : sig
     type t [@@deriving sexp, bin_io]
 
@@ -307,6 +270,6 @@ module type%template [@modality p = (portable, nonportable)] S_binable = sig
        and type derived_on = (Elt.t, Elt.comparator_witness) Base.Set.t
   end
 
-  include S [@modality p] with module Elt := Elt and module Diff := Diff
+  include S with module Elt := Elt and module Diff := Diff
   include Binable.S with type t := t
 end

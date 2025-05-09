@@ -14,6 +14,19 @@ module%template _ (Hashtbl : Hashtbl_intf.Hashtbl [@modality portable]) = struct
 
     (* Now add what remains from [Hashtbl_intf.Hashtbl]. *)
 
+    include (
+      Hashtbl :
+        Hashtbl.Non_value
+        with type ('a, 'b) t := ('a, 'b) Hashtbl.t
+         and type ('a, 'b) t__float64__float64 = ('a, 'b) Hashtbl.t__float64__float64
+         and type ('a, 'b) t__float64__bits64 = ('a, 'b) Hashtbl.t__float64__bits64
+         and type ('a, 'b) t__float64__value = ('a, 'b) Hashtbl.t__float64__value
+         and type ('a, 'b) t__bits64__float64 = ('a, 'b) Hashtbl.t__bits64__float64
+         and type ('a, 'b) t__bits64__bits64 = ('a, 'b) Hashtbl.t__bits64__bits64
+         and type ('a, 'b) t__bits64__value = ('a, 'b) Hashtbl.t__bits64__value
+         and type ('a, 'b) t__value__float64 = ('a, 'b) Hashtbl.t__value__float64
+         and type ('a, 'b) t__value__bits64 = ('a, 'b) Hashtbl.t__value__bits64)
+
     (* type definition *)
     type 'a key = 'a
 
@@ -23,14 +36,11 @@ module%template _ (Hashtbl : Hashtbl_intf.Hashtbl [@modality portable]) = struct
     module type Key_binable = Hashtbl.Key_binable
     module type Key_stable = Hashtbl.Key_stable
     module type Key_plain = Hashtbl.Key_plain
-
-    [%%template
-    [@@@modality.default p = (nonportable, portable)]
-
-    module type S = Hashtbl.S [@modality p]
-    module type S_binable = Hashtbl.S_binable [@modality p]
-    module type S_stable = Hashtbl.S_stable [@modality p]
-    module type S_plain = Hashtbl.S_plain [@modality p]]
+    module type S = Hashtbl.S
+    module type S_binable = Hashtbl.S_binable
+    module type S_stable = Hashtbl.S_stable
+    module type S_plain = Hashtbl.S_plain
+    module type Non_value = Hashtbl.Non_value
 
     (* module aliases *)
     module Hashable = Hashtbl.Hashable
@@ -46,7 +56,9 @@ module%template _ (Hashtbl : Hashtbl_intf.Hashtbl [@modality portable]) = struct
     module Make_stable_with_hashable = Hashtbl.Make_stable_with_hashable [@modality p]
     module Make_plain = Hashtbl.Make_plain [@modality p]
     module Make_plain_with_hashable = Hashtbl.Make_plain_with_hashable [@modality p]
-    module Make_with_hashable = Hashtbl.Make_with_hashable [@modality p]]
+    module Make_with_hashable = Hashtbl.Make_with_hashable [@modality p]
+    module Provide_of_sexp = Hashtbl.Provide_of_sexp [@modality p]
+    module Provide_bin_io = Hashtbl.Provide_bin_io [@modality p]]
 
     module Merge_into_action = Hashtbl.Merge_into_action
     module Poly = Hashtbl.Poly
@@ -2130,4 +2142,30 @@ let%expect_test _ =
     [%bin_digest: M1.t]
     [%bin_digest: M2.t];
   [%expect {| |}]
+;;
+
+let%expect_test "smoke tests for templated versions making sure the Core wrappers expose \
+                 things correctly"
+  =
+  let open%template Expect_test_helpers_base in
+  let module StrO = struct
+    type t = string option [@@deriving compare, equal, sexp]
+  end
+  in
+  let t = (Hashtbl.create [@kind bits64 value]) (module Int64_u) in
+  (Hashtbl.set [@kind bits64 value]) t ~key:1L ~data:"foo";
+  require ((Hashtbl.mem [@kind bits64 value]) t 1L);
+  require (not @@ (Hashtbl.mem [@kind bits64 value]) t 2L);
+  require_equal (module StrO) ((Hashtbl.find [@kind bits64 value]) t 2L) None;
+  require_equal (module StrO) ((Hashtbl.find [@kind bits64 value]) t 1L) (Some "foo");
+  (Hashtbl.add_exn [@kind bits64 value]) t ~key:0L ~data:"zero";
+  require_does_raise (fun () ->
+    (Hashtbl.add_exn [@kind bits64 value]) t ~key:0L ~data:"zero");
+  [%expect {| ("Hashtbl.add_exn got key already present" 0) |}];
+  print_s [%sexp (t : ((Int64_u.t, string) Hashtbl.t[@kind bits64 value]))];
+  [%expect
+    {|
+    ((0 zero)
+     (1 foo))
+    |}]
 ;;

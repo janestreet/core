@@ -20,17 +20,11 @@ module Stable = struct
           let of_sexpable = unsafe_of_array__promise_no_mutation
         end)
 
-    include%template
-      Binable0.Stable.Of_binable1.V1 [@modality portable]
-        (struct
-          type 'a t = 'a array [@@deriving bin_io]
-        end)
-        (struct
-          type nonrec 'a t = 'a t
+    let t_sexp_grammar (type a) (a_sexp_grammar : a Sexplib.Sexp_grammar.t) =
+      Sexplib.Sexp_grammar.coerce [%sexp_grammar: a array]
+    ;;
 
-          let to_binable = unsafe_to_array__promise_no_mutation
-          let of_binable = unsafe_of_array__promise_no_mutation
-        end) [@@alert "-legacy"]
+    [%%rederive type 'a t = 'a iarray [@@deriving bin_io ~localize ~portable]]
 
     let stable_witness elt_witness =
       Stable_witness.of_serializable

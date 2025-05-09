@@ -135,7 +135,7 @@ module type Creators_and_accessors_generic = sig
     with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) access_options
 end
 
-module type%template [@modality p = (portable, nonportable)] S_plain_tree = sig
+module type S_plain_tree = sig
   module Key : Comparator.S
 
   type 'a t = (Key.t, 'a, Key.comparator_witness) Tree.t [@@deriving sexp_of]
@@ -148,19 +148,9 @@ module type%template [@modality p = (portable, nonportable)] S_plain_tree = sig
     with type 'a cmp := Key.comparator_witness
     with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
     with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
-
-  module%template
-    [@modality p' = (nonportable, p)] Provide_of_sexp
-      (K : sig
-             type t [@@deriving of_sexp]
-           end
-           with type t := Key.t) : sig
-      type _ t [@@deriving of_sexp]
-    end
-    with type 'a t := 'a t
 end
 
-module type%template [@modality p = (portable, nonportable)] S_plain = sig
+module type S_plain = sig
   module Key : sig
     type t [@@deriving sexp_of]
 
@@ -192,34 +182,6 @@ module type%template [@modality p = (portable, nonportable)] S_plain = sig
 
   val map : 'a t -> f:('a -> 'b) -> 'b t
 
-  module%template
-    [@modality p' = (nonportable, p)] Provide_of_sexp
-      (Key : sig
-               type t [@@deriving of_sexp]
-             end
-             with type t := Key.t) : sig
-      type _ t [@@deriving of_sexp]
-    end
-    with type 'a t := 'a t
-
-  module%template
-    [@modality p' = (nonportable, p)] Provide_bin_io
-      (Key : sig
-               type t [@@deriving bin_io]
-             end
-             with type t := Key.t) : sig
-      include Binable.S1
-    end
-    with type 'a t := 'a t
-
-  module%template
-    [@modality p' = (nonportable, p)] Provide_hash (Key : sig
-      include Hasher.S with type t := Key.t
-    end) : sig
-      type 'a t [@@deriving hash]
-    end
-    with type 'a t := 'a t
-
   val quickcheck_observer
     :  Key.t Quickcheck.Observer.t
     -> 'v Quickcheck.Observer.t
@@ -234,7 +196,7 @@ module type%template [@modality p = (portable, nonportable)] S_plain = sig
         Without_comparator.t
 end
 
-module type%template [@modality p = (portable, nonportable)] S = sig
+module type S = sig
   module Key : sig
     type t [@@deriving sexp]
 
@@ -250,11 +212,11 @@ module type%template [@modality p = (portable, nonportable)] S = sig
        and type 'a derived_on = (Key.t, 'a, Key.comparator_witness) Map.t
   end
 
-  include S_plain [@modality p] with module Key := Key and module Diff := Diff
+  include S_plain with module Key := Key and module Diff := Diff
   include Sexpable.S1 with type 'a t := 'a t
 end
 
-module type%template [@modality p = (portable, nonportable)] S_binable = sig
+module type S_binable = sig
   module Key : sig
     type t [@@deriving bin_io, sexp]
 
@@ -271,7 +233,7 @@ module type%template [@modality p = (portable, nonportable)] S_binable = sig
        and type 'a derived_on = (Key.t, 'a, Key.comparator_witness) Map.t
   end
 
-  include S [@modality p] with module Key := Key and module Diff := Diff
+  include S with module Key := Key and module Diff := Diff
   include Binable.S1 with type 'a t := 'a t
 end
 

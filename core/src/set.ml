@@ -244,18 +244,15 @@ struct
 
   let compare t1 t2 = compare_direct t1 t2
   let sexp_of_t t = Tree.sexp_of_t Elt.sexp_of_t [%sexp_of: _] t
+end
 
-  module%template
-    [@modality p' = (nonportable, p)] Provide_of_sexp
-      (X : sig
-             type t [@@deriving of_sexp]
-           end
-           with type t := Elt.t) =
-  struct
-    let t_of_sexp sexp =
-      Tree.t_of_sexp_direct X.t_of_sexp sexp ~comparator:Elt_S1.comparator
-    ;;
-  end
+module%template.portable Provide_of_sexp_tree (X : sig
+    type t [@@deriving of_sexp]
+
+    include Comparator.S with type t := t
+  end) =
+struct
+  let t_of_sexp sexp = Tree.t_of_sexp_direct X.t_of_sexp sexp ~comparator:X.comparator
 end
 
 module%template.portable
@@ -266,7 +263,20 @@ module%template.portable
   end) =
 struct
   include Make_tree_plain [@modality p] (Elt)
-  include Provide_of_sexp [@modality p] (Elt)
+  include Provide_of_sexp_tree [@modality p] (Elt)
+end
+
+module%template.portable Provide_hash (Elt : sig
+    type t
+
+    include Hasher.S with type t := t
+  end) =
+struct
+  let hash_fold_t state t = Using_comparator.hash_fold_direct Elt.hash_fold_t state t
+
+  let hash t =
+    Ppx_hash_lib.Std.Hash.get_hash_value (hash_fold_t (Ppx_hash_lib.Std.Hash.create ()) t)
+  ;;
 end
 
 (* Don't use [of_sorted_array] to avoid the allocation of an intermediate array *)
@@ -338,7 +348,7 @@ end
 
 module Elt_bin_io = Elt_bin_io
 
-module%template.portable [@modality p] Toplevel_provide_bin_io (Elt : Elt_bin_io.S) =
+module%template.portable [@modality p] Provide_bin_io (Elt : Elt_bin_io.S) =
 Bin_prot.Utils.Make_iterable_binable [@modality p] (struct
     type nonrec t = (Elt.t, Elt.comparator_witness) t
     type el = Elt.t [@@deriving bin_io]
@@ -358,10 +368,9 @@ Bin_prot.Utils.Make_iterable_binable [@modality p] (struct
     ;;
   end)
 
-module Toplevel_provide_stable_witness (Elt : sig
+module Provide_stable_witness (Elt : sig
     type t [@@deriving stable_witness]
-
-    include Comparator.S with type t := t
+    type comparator_witness
   end) =
 struct
   (* The binary representation of set is used in the stable modules below, so it's
@@ -400,50 +409,6 @@ struct
     let of_list_exn = Diffable.Set_diff.of_list_exn
   end
 
-  module%template
-    [@modality p' = (nonportable, p)] Provide_of_sexp
-      (Elt : sig
-               type t [@@deriving of_sexp]
-             end
-             with type t := Elt.t) =
-  struct
-    let t_of_sexp sexp = t_of_sexp Elt.t_of_sexp sexp
-  end
-
-  module%template
-    [@modality p' = (nonportable, p)] Provide_hash (Elt : sig
-      include Hasher.S with type t := Elt.t
-    end) =
-  struct
-    let hash_fold_t state t = Using_comparator.hash_fold_direct Elt.hash_fold_t state t
-
-    let hash t =
-      Ppx_hash_lib.Std.Hash.get_hash_value
-        (hash_fold_t (Ppx_hash_lib.Std.Hash.create ()) t)
-    ;;
-  end
-
-  module%template
-    [@modality p' = (nonportable, p)] Provide_bin_io
-      (Elt' : sig
-                type t [@@deriving bin_io]
-              end
-              with type t := Elt.t) =
-  Toplevel_provide_bin_io [@modality p'] (struct
-      include Elt
-      include Elt'
-    end)
-
-  module Provide_stable_witness
-      (Elt' : sig
-                type t [@@deriving stable_witness]
-              end
-              with type t := Elt.t) =
-  Toplevel_provide_stable_witness (struct
-      include Elt
-      include Elt'
-    end)
-
   let quickcheck_observer = quickcheck_observer
   let quickcheck_shrinker = quickcheck_shrinker
 end
@@ -453,6 +418,19 @@ Make_plain_using_comparator [@modality p] (struct
     include Elt
     include Comparator.Make [@modality p] (Elt)
   end)
+
+module%template.portable Provide_of_sexp (Elt : sig
+    type t [@@deriving of_sexp]
+
+    include Comparator.S with type t := t
+  end) =
+struct
+  let t_of_sexp sexp =
+    of_tree
+      (module Elt)
+      (Tree.t_of_sexp_direct Elt.t_of_sexp sexp ~comparator:Elt.comparator)
+  ;;
+end
 
 module%template.portable
   [@modality p] Make_using_comparator (Elt_sexp : sig
@@ -487,7 +465,7 @@ module%template.portable
 struct
   include Make_using_comparator [@modality p] (Elt_bin_sexp)
   module Elt = Elt_bin_sexp
-  include Toplevel_provide_bin_io [@modality p] (Elt)
+  include Provide_bin_io [@modality p] (Elt)
 
   module Diff = struct
     include Diff
@@ -507,27 +485,27 @@ module For_deriving = struct
 
   include struct
     let bin_shape_m__t (type t c) (m : (t, c) Elt_bin_io.t) =
-      let module M = Toplevel_provide_bin_io ((val m)) in
+      let module M = Provide_bin_io ((val m)) in
       M.bin_shape_t
     ;;
 
     let bin_size_m__t (type t c) (m : (t, c) Elt_bin_io.t) =
-      let module M = Toplevel_provide_bin_io ((val m)) in
+      let module M = Provide_bin_io ((val m)) in
       M.bin_size_t
     ;;
 
     let bin_write_m__t (type t c) (m : (t, c) Elt_bin_io.t) =
-      let module M = Toplevel_provide_bin_io ((val m)) in
+      let module M = Provide_bin_io ((val m)) in
       M.bin_write_t
     ;;
 
     let bin_read_m__t (type t c) (m : (t, c) Elt_bin_io.t) =
-      let module M = Toplevel_provide_bin_io ((val m)) in
+      let module M = Provide_bin_io ((val m)) in
       M.bin_read_t
     ;;
 
     let __bin_read_m__t__ (type t c) (m : (t, c) Elt_bin_io.t) =
-      let module M = Toplevel_provide_bin_io ((val m)) in
+      let module M = Provide_bin_io ((val m)) in
       M.__bin_read_t__
     ;;
 
@@ -615,7 +593,7 @@ module For_deriving_stable = struct
     (type t cmp)
     (module Elt : Stable_witness_m with type t = t and type comparator_witness = cmp)
     =
-    let module M = Toplevel_provide_stable_witness (Elt) in
+    let module M = Provide_stable_witness (Elt) in
     M.stable_witness
   ;;
 
