@@ -1,0 +1,4 @@
+module Blit_helpers = Blit_helpers
+module Blit_helpers_intf = Blit_helpers_intf
+module Test_container_with_local = Test_container_with_local
+module Test_container_with_local_intf = Test_container_with_local_intf

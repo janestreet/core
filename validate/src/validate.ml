@@ -26,7 +26,10 @@ let of_list = List.concat
 let name name t =
   match t with
   | [] -> [] (* when successful, avoid the allocation of a closure for [~f], below *)
-  | _ -> List.map t ~f:(fun { path; error } -> { path = name :: path; error })
+  | _ ->
+    List.map
+      t
+      ~f:(stack_ fun { path; error } -> { path = name :: path; error }) [@nontail]
 ;;
 
 let name_list n l = name n (of_list l)
@@ -67,7 +70,12 @@ let result_fail t =
     which is not inlineable, is key to this. *)
 let result t = if List.is_empty t then Ok () else result_fail t
 
-let maybe_raise t = Or_error.ok_exn (result t)
+let maybe_raise t =
+  (* [@zero_alloc] assume here because this function always raises  *)
+  let[@zero_alloc assume] fail () = Or_error.ok_exn (result_fail t) in
+  if List.is_empty t then () else fail ()
+;;
+
 let valid_or_error check x = Or_error.map (result (protect check x)) ~f:(fun () -> x)
 
 let field_direct check fld _record v =
@@ -125,18 +133,19 @@ let pair ~fst ~snd (fst_value, snd_value) =
 ;;
 
 let list_indexed check list =
-  List.mapi list ~f:(fun i el -> name (Int.to_string (i + 1)) (protect check el))
-  |> of_list
+  List.concat_mapi list ~f:(fun i el ->
+    match protect check el with
+    | [] -> [] (* when successful, avoid the allocation of a string below *)
+    | t -> name (Int.to_string (i + 1)) t)
 ;;
 
 let list ~name:extract_name check list =
-  List.map list ~f:(fun el ->
+  List.concat_map list ~f:(fun el ->
     match protect check el with
     | [] -> []
     | t ->
       (* extra level of protection in case extract_name throws an exception *)
       protect (fun t -> name (extract_name el) t) t)
-  |> of_list
 ;;
 
 let alist ~name f list' = list (fun (_, x) -> f x) list' ~name:(fun (key, _) -> name key)

@@ -42,9 +42,7 @@ module type Extension = sig @@ portable
 
   include Binaryable with type t := t
   include Hexable with type t := t
-
-  include%template Identifiable.S [@modality portable] with type t := t
-
+  include Identifiable.S with type t := t
   include Base.Stringable.S_local_input with type t := t
   include Comparable.Validate_with_zero with type t := t
   include Quickcheckable.S_int with type t := t

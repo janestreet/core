@@ -132,20 +132,22 @@ module type Command = sig
         If the [of_string] function raises an exception, command line parsing will be
         aborted and the exception propagated up to top-level and printed along with
         command-line help. *)
-    val create
-      :  ?complete:Auto_complete.t
-      -> ?key:'a Univ_map.Multi.Key.t
-      -> (string -> 'a)
-      -> 'a t
+    val%template create
+      :  ?complete:Auto_complete.t @ p
+      -> ?key:'a Univ_map.Multi.Key.t @ p
+      -> (string -> 'a) @ p
+      -> 'a t @ p
+    [@@mode p = (nonportable, portable)]
 
     (** Like [create], but takes a lazy [additional_documentation] string which is
         appended to the help text of all arguments created from this argument type. *)
-    val create_with_additional_documentation
-      :  ?complete:Auto_complete.t
-      -> ?key:'a Univ_map.Multi.Key.t
-      -> (string -> 'a)
+    val%template create_with_additional_documentation
+      :  ?complete:Auto_complete.t @ p
+      -> ?key:'a Univ_map.Multi.Key.t @ p
+      -> (string -> 'a) @ p
       -> additional_documentation:string Lazy.t
-      -> 'a t
+      -> 'a t @ p
+    [@@mode p = (nonportable, portable)]
 
     (** Apply the parse function to the given string the same way it would apply to an
         argument, catching any exceptions thrown. *)

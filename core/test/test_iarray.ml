@@ -8,7 +8,7 @@ module _ : module type of struct
   include Iarray
   module Private = Base.Iarray.Private [@alert "-private_iarray"]
 end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
-  type 'a t = 'a Iarray.t [@@deriving bin_io, quickcheck, typerep]
+  type 'a t = 'a Iarray.t [@@deriving bin_io ~localize, quickcheck, typerep]
 
   let%expect_test "unstable (pseudo-nondeterministic) sample" =
     Test.with_sample_exn
@@ -1051,7 +1051,7 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
       |}]
   ;;
 
-  let%expect_test _ =
+  let%expect_test "standard stable conversions" =
     print_and_check_stable_type
       (module struct
         type t = int Iarray.t [@@deriving bin_io, compare, sexp]
@@ -1070,6 +1070,79 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
       ((sexp (0 1 2 3 4 5 6)) (bin_io "\007\000\001\002\003\004\005\006"))
       ((sexp (0 1 2 3 4 5 6 7)) (bin_io "\b\000\001\002\003\004\005\006\007"))
       ((sexp (0 1 2 3 4 5 6 7 8)) (bin_io "\t\000\001\002\003\004\005\006\007\b"))
+      |}]
+  ;;
+
+  let%expect_test "local bin-io" =
+    let module M = struct
+      type t = int Iarray.t [@@deriving bin_io ~localize, equal, sexp_of]
+    end
+    in
+    print_and_check_round_trip
+      (module M)
+      [ (module%template struct
+          type t = int Iarray.t
+          type repr = string [@@deriving sexp_of]
+
+          let repr_name = "bin_io__local"
+          let to_repr = (Binable.to_string [@mode local]) (module M)
+          let of_repr = (Binable.of_string [@mode local]) (module M)
+        end)
+      ]
+      (List.init 10 ~f:(fun len -> Iarray.init len ~f:Fn.id));
+    [%expect
+      {|
+      "\000"
+      "\001\000"
+      "\002\000\001"
+      "\003\000\001\002"
+      "\004\000\001\002\003"
+      "\005\000\001\002\003\004"
+      "\006\000\001\002\003\004\005"
+      "\007\000\001\002\003\004\005\006"
+      "\b\000\001\002\003\004\005\006\007"
+      "\t\000\001\002\003\004\005\006\007\b"
+      |}]
+  ;;
+
+  let%expect_test "local bin-io for iarrays with float hack representation" =
+    let module M = struct
+      type t = float Iarray.t [@@deriving bin_io ~localize, equal, sexp_of]
+    end
+    in
+    print_and_check_round_trip
+      (module M)
+      [ (module struct
+          type t = float Iarray.t
+          type repr = string [@@deriving sexp_of]
+
+          let repr_name = "bin_io"
+          let to_repr = Binable.to_string (module M)
+          let of_repr = Binable.of_string (module M)
+        end)
+      ; (module%template struct
+          type t = float Iarray.t
+          type repr = string [@@deriving sexp_of]
+
+          let repr_name = "bin_io__local"
+          let to_repr = (Binable.to_string [@mode local]) (module M)
+          let of_repr = (Binable.of_string [@mode local]) (module M)
+        end)
+      ]
+      (List.init 4 ~f:(fun len -> Iarray.init len ~f:Float.of_int));
+    [%expect
+      {|
+      ((bin_io        "\000")
+       (bin_io__local "\000"))
+      ((bin_io "\001\000\000\000\000\000\000\000\000")
+       (bin_io__local "\001\000\000\000\000\000\000\000\000"))
+      ((bin_io "\002\000\000\000\000\000\000\000\000\000\000\000\000\000\000\240?")
+       (bin_io__local
+        "\002\000\000\000\000\000\000\000\000\000\000\000\000\000\000\240?"))
+      ((bin_io
+        "\003\000\000\000\000\000\000\000\000\000\000\000\000\000\000\240?\000\000\000\000\000\000\000@")
+       (bin_io__local
+        "\003\000\000\000\000\000\000\000\000\000\000\000\000\000\000\240?\000\000\000\000\000\000\000@"))
       |}]
   ;;
 
@@ -1117,6 +1190,19 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
           ((sexp (0 1 2 3 4 5 6 7)) (bin_io "\b\000\001\002\003\004\005\006\007"))
           ((sexp (0 1 2 3 4 5 6 7 8)) (bin_io "\t\000\001\002\003\004\005\006\007\b"))
           |}]
+      ;;
+
+      let t_sexp_grammar = Iarray.Stable.V1.t_sexp_grammar
+
+      let%expect_test "sexp_grammar" =
+        require_ok
+          (Sexp_grammar_validation.validate_grammar_poly1
+             (module struct
+               type nonrec 'a t = 'a t [@@deriving sexp, sexp_grammar]
+
+               [%%rederive type 'a t = 'a Iarray.t [@@deriving quickcheck]]
+             end));
+        [%expect {| (List (Many (Any A))) |}]
       ;;
     end
   end
@@ -1797,7 +1883,11 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
   let t_sexp_grammar = Iarray.t_sexp_grammar
 
   let%expect_test "sexp_grammar" =
-    require_ok (Sexp_grammar_validation.validate_grammar_poly1 (module Iarray));
+    require_ok
+      (Sexp_grammar_validation.validate_grammar_poly1
+         (module struct
+           type nonrec 'a t = 'a t [@@deriving quickcheck, sexp, sexp_grammar]
+         end));
     [%expect {| (List (Many (Any A))) |}]
   ;;
 end

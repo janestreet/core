@@ -147,15 +147,17 @@
     because the type has a different witness (e.g. [Sometimes] instead of [Always]).
     v} *)
 
+type ('a : any_non_null) builtin_array := 'a array
+
 open! Import
 
-type 'a t : immutable_data
+type ('a : any) t : immutable_data
 
 module Always : sig
-  type 'a t : immutable_data
+  type ('a : any) t : immutable_data
 
-  val of_typerep : ('a, _) Typerep.t_any -> 'a t option
-  val of_typerep_exn : here:[%call_pos] -> ('a, _) Typerep.t_any -> 'a t
+  val of_typerep : ('a : any). 'a Typerep.t -> 'a t option
+  val of_typerep_exn : ('a : any). here:[%call_pos] -> 'a Typerep.t -> 'a t
   val int_as_value : 'a t -> int -> 'a option
   val int_as_value_exn : 'a t -> int -> 'a
   val int_is_value : 'a t -> int -> bool
@@ -188,10 +190,10 @@ module Always : sig
 end
 
 module Sometimes : sig
-  type 'a t : immutable_data
+  type ('a : any) t : immutable_data
 
-  val of_typerep : 'a Typerep.t -> 'a t option
-  val of_typerep_exn : here:[%call_pos] -> 'a Typerep.t -> 'a t
+  val of_typerep : ('a : any). 'a Typerep.t -> 'a t option
+  val of_typerep_exn : ('a : any). here:[%call_pos] -> 'a Typerep.t -> 'a t
   val int_as_value : 'a t -> int -> 'a option
   val int_as_value_exn : 'a t -> int -> 'a
   val int_is_value : 'a t -> int -> bool
@@ -224,10 +226,10 @@ module Sometimes : sig
 end
 
 module Never : sig
-  type 'a t
+  type ('a : any) t
 
-  val of_typerep : 'a Typerep.t -> 'a t option
-  val of_typerep_exn : here:[%call_pos] -> 'a Typerep.t -> 'a t
+  val of_typerep : ('a : any). 'a Typerep.t -> 'a t option
+  val of_typerep_exn : ('a : any). here:[%call_pos] -> 'a Typerep.t -> 'a t
 
   module For_all_parameters_S1 (X : Typerepable.S1) : sig
     val witness : unit -> _ X.t t
@@ -255,23 +257,27 @@ module Never : sig
   val float : float t
   val string : string t
   val bytes : bytes t
-  val array : _ array t
+  val array : (_ : any_non_null) builtin_array t
   val ref_ : _ ref t
   val tuple2 : (_ * _) t
   val tuple3 : (_ * _ * _) t
   val tuple4 : (_ * _ * _ * _) t
   val tuple5 : (_ * _ * _ * _ * _) t
+  val tuple2_u : #((_ : any) * (_ : any)) t
+  val tuple3_u : #((_ : any) * (_ : any) * (_ : any)) t
+  val tuple4_u : #((_ : any) * (_ : any) * (_ : any) * (_ : any)) t
+  val tuple5_u : #((_ : any) * (_ : any) * (_ : any) * (_ : any) * (_ : any)) t
 end
 
-val of_typerep : 'a Typerep.t -> 'a t
+val of_typerep : ('a : any). 'a Typerep.t -> 'a t
 
-type 'a dest =
+type ('a : any) dest =
   | Always of 'a Always.t
   | Sometimes of 'a Sometimes.t
   | Never of 'a Never.t
   | Unknown
 
-val dest : 'a t -> 'a dest
+val dest : ('a : any). 'a t -> 'a dest
 val int_as_value : 'a t -> int -> 'a option
 val int_as_value_exn : 'a t -> int -> 'a
 val int_is_value : 'a t -> int -> bool

@@ -5,6 +5,8 @@
    [../test/test_conversions.ml]
 *)
 
+type ('a : any_non_null) builtin_array = 'a array
+
 open! Import
 module List = Base.List
 
@@ -52,39 +54,43 @@ end
 open Immediacy
 
 module T : sig
-  type 'a t : immutable_data
+  type ('a : any) t : immutable_data
 
-  val create : 'a Typename.t -> Immediacy.t -> Allowed_ints.t -> 'a t
-  val create_with_name : string -> Immediacy.t -> Allowed_ints.t -> _ t
-  val immediacy : _ t -> Immediacy.t
-  val allowed_ints : _ t -> Allowed_ints.t
-  val typename : _ t -> string
+  val create : ('a : any). 'a Typename.t -> Immediacy.t -> Allowed_ints.t -> 'a t
+  val create_with_name : ('a : any). string -> Immediacy.t -> Allowed_ints.t -> 'a t
+  val immediacy : ('a : any). 'a t -> Immediacy.t
+  val allowed_ints : ('a : any). 'a t -> Allowed_ints.t
+  val typename : ('a : any). 'a t -> string
 
   module Never_values : sig
     val int32 : int32 t
-    val int32_u : (unit -> int32#) t
+    val int32_u : int32# t
     val int64 : int64 t
-    val int64_u : (unit -> int64#) t
+    val int64_u : int64# t
     val nativeint : nativeint t
-    val nativeint_u : (unit -> nativeint#) t
+    val nativeint_u : nativeint# t
     val float : float t
-    val float_u : (unit -> float#) t
+    val float_u : float# t
     val string : string t
     val bytes : bytes t
-    val array : _ array t
+    val array : (_ : any_non_null) builtin_array t
     val ref_ : _ ref t
     val tuple2 : (_ * _) t
     val tuple3 : (_ * _ * _) t
     val tuple4 : (_ * _ * _ * _) t
     val tuple5 : (_ * _ * _ * _ * _) t
-    val function_ : (_ -> _) t
+    val tuple2_u : #((_ : any) * (_ : any)) t
+    val tuple3_u : #((_ : any) * (_ : any) * (_ : any)) t
+    val tuple4_u : #((_ : any) * (_ : any) * (_ : any) * (_ : any)) t
+    val tuple5_u : #((_ : any) * (_ : any) * (_ : any) * (_ : any) * (_ : any)) t
+    val function_ : ((_ : any) -> (_ : any)) t
   end
 
-  val never : 'a Typename.t -> 'a t
-  val unknown : 'a Typename.t -> 'a t
+  val never : ('a : any). 'a Typename.t -> 'a t
+  val unknown : ('a : any). 'a Typename.t -> 'a t
   val option : _ t
   val list : _ t
-  val magic : _ t -> _ t
+  val magic : ('a : any) ('b : any). 'a t -> 'b t
 end = struct
   type t_ =
     { immediacy : Immediacy.t
@@ -92,7 +98,7 @@ end = struct
     ; typename : string
     }
 
-  type 'a t = t_
+  type ('a : any) t = t_
 
   let create_with_name typename immediacy allowed_ints =
     { immediacy; allowed_ints; typename }
@@ -130,6 +136,10 @@ end = struct
     let tuple3 = never_with_name "tuple3"
     let tuple4 = never_with_name "tuple4"
     let tuple5 = never_with_name "tuple5"
+    let tuple2_u = never_with_name "tuple2_u"
+    let tuple3_u = never_with_name "tuple3_u"
+    let tuple4_u = never_with_name "tuple4_u"
+    let tuple5_u = never_with_name "tuple5_u"
     let function_ = never_with_name "function"
   end
 end
@@ -142,21 +152,25 @@ let bool = create typename_of_bool Always (Allowed_ints.From_zero_to 1)
 let char = create typename_of_char Always (Allowed_ints.From_zero_to 255)
 
 module Computation_impl = struct
-  type nonrec 'a t = 'a t
+  type nonrec ('a : any) t = 'a t
 
   include Type_generic.Variant_and_record_intf.M (struct
-      type nonrec 'a t = 'a t
+      type nonrec ('a : any) t = 'a t
     end)
 
   include Never_values
 
   let ref_ _ = ref_
-  let array _ = array
+  let array _ _ = array
   let tuple2 _ _ = tuple2
   let tuple3 _ _ _ = tuple3
   let tuple4 _ _ _ _ = tuple4
   let tuple5 _ _ _ _ _ = tuple5
-  let function_ _ _ = function_
+  let tuple2_u _ _ _ = tuple2_u
+  let tuple3_u _ _ _ _ = tuple3_u
+  let tuple4_u _ _ _ _ _ = tuple4_u
+  let tuple5_u _ _ _ _ _ _ = tuple5_u
+  let function_ _ _ _ = function_
   let int = int
   let char = char
   let bool = bool
@@ -246,7 +260,7 @@ module Computation_impl = struct
       let create () = ()
     end
 
-    type nonrec 'a t = 'a t ref
+    type nonrec ('a : any) t = 'a t ref
 
     (* The default witness - which is created by calling [init] and recovered at any later
        point by calling [get_wip_computation] - can only be used in a recursive type.
@@ -359,7 +373,7 @@ let value_as_int (type a) (_ : a t) a =
 let value_is_int (type a) (_ : a t) a = Obj.is_int (Obj.repr a)
 
 module Always = struct
-  type nonrec 'a t = 'a t
+  type nonrec ('a : any) t = 'a t
 
   include For_all_parameters (struct
       let immediacy = Always
@@ -387,7 +401,7 @@ module Always = struct
 end
 
 module Sometimes = struct
-  type nonrec 'a t = 'a t
+  type nonrec ('a : any) t = 'a t
 
   include For_all_parameters (struct
       let immediacy = Sometimes
@@ -415,7 +429,7 @@ module Sometimes = struct
 end
 
 module Never = struct
-  type nonrec 'a t = 'a t
+  type nonrec ('a : any) t = 'a t
 
   include For_all_parameters (struct
       let immediacy = Never
@@ -435,7 +449,7 @@ module Never = struct
   include Never_values
 end
 
-type 'a dest =
+type ('a : any) dest =
   | Always of 'a Always.t
   | Sometimes of 'a Sometimes.t
   | Never of 'a Never.t

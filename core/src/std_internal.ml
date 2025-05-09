@@ -135,7 +135,7 @@ struct
 
   type 'a iarray = 'a Iarray.t
   [@@deriving
-    bin_io
+    bin_io ~localize
     , compare ~localize
     , hash
     , equal ~localize
@@ -274,6 +274,9 @@ struct
     , sexp ~localize
     , sexp_grammar
     , typerep]
+
+  type 'a or_null = 'a Base.Or_null.t
+  [@@deriving compare ~localize, equal ~localize, sexp ~localize]
 end :
   sig
   @@ portable
@@ -322,7 +325,7 @@ end :
 
     type 'a iarray = 'a Iarray.t
     [@@deriving
-      bin_io
+      bin_io ~localize
       , compare ~localize
       , hash
       , equal ~localize
@@ -461,6 +464,9 @@ end :
       , sexp ~localize
       , sexp_grammar
       , typerep]
+
+    type 'a or_null : immediate_or_null with 'a
+    [@@deriving compare ~localize, equal ~localize, sexp ~localize]
   end
   with type 'a array := 'a array
   with type bool := bool
@@ -486,7 +492,8 @@ end :
   with type bytes := bytes
   with type 'a lazy_t := 'a lazy_t
   with type 'a ref := 'a ref
-  with type unit := unit)
+  with type unit := unit
+  with type 'a or_null = 'a or_null)
 
 (* When running with versions of the compiler that don't support the [iarray] extension,
    re-export it from [Base], which defines it as an abstract type in such cases.
@@ -500,5 +507,8 @@ end :
 sig
   type 'a iarray := 'a iarray [@@warning "-34"]
 end)
+
+(* Export ['a or_null] with constructors [Null] and [This] whenever Core is opened,
+   so uses of those identifiers work in both upstream OCaml and OxCaml. *)
 
 let sexp_of_exn = Exn.sexp_of_t

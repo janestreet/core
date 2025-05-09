@@ -5,7 +5,7 @@
 
 open! Import
 
-type%template 'a t = ('a Base.Or_error.t[@kind k])
+type%template ('a : k) t = ('a Base.Or_error.t[@kind k])
 [@@deriving bin_io] [@@kind k = (float64, bits32, bits64, word)]
 
 type 'a t = ('a, Error.t) Result.t

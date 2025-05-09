@@ -57,10 +57,17 @@ val gen_nonempty : t Quickcheck.Generator.t
 val gen' : char Quickcheck.Generator.t -> t Quickcheck.Generator.t
 
 (** Like [gen'], but without empty strings. *)
-val gen_nonempty' : char Quickcheck.Generator.t -> t Quickcheck.Generator.t
+val%template gen_nonempty'
+  :  char Quickcheck.Generator.t @ p
+  -> t Quickcheck.Generator.t @ p
+[@@mode p = (portable, nonportable)]
 
 (** Like [gen'], but generate strings with the given length. *)
-val gen_with_length : int -> char Quickcheck.Generator.t -> t Quickcheck.Generator.t
+val%template gen_with_length
+  :  int
+  -> char Quickcheck.Generator.t @ p
+  -> t Quickcheck.Generator.t @ p
+[@@mode p = (portable, nonportable)]
 
 module type Utf = sig
   include Utf

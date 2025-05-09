@@ -1,5 +1,7 @@
 open! Import
 
+[@@@warning "-incompatible-with-upstream"]
+
 module type S = sig
   type t : any
   type value : any
@@ -21,7 +23,7 @@ module type S_zero_alloc = sig
 end
 
 [%%template
-[@@@kind.default ka = (value, float64, bits32, bits64, word)]
+[@@@kind.default ka = (value, float64, bits32, bits64, word, immediate, immediate64)]
 
 module type S1 = sig
   type ('a : ka) t : any
@@ -43,7 +45,7 @@ module type S1_zero_alloc = sig
   end
 end
 
-[@@@kind.default kb = (value, float64, bits32, bits64, word)]
+[@@@kind.default kb = (value, float64, bits32, bits64, word, immediate, immediate64)]
 
 module type S2 = sig
   type ('a : ka, 'b : kb) t : any
@@ -120,12 +122,12 @@ module type Optional_syntax = sig @@ portable
   module type S_zero_alloc = S_zero_alloc
 
   [%%template:
-  [@@@kind.default ka = (value, float64, bits32, bits64, word)]
+  [@@@kind.default ka = (value, float64, bits32, bits64, word, immediate, immediate64)]
 
   module type S1 = S1 [@kind ka]
   module type S1_zero_alloc = S1_zero_alloc [@kind ka]
 
-  [@@@kind.default kb = (value, float64, bits32, bits64, word)]
+  [@@@kind.default kb = (value, float64, bits32, bits64, word, immediate, immediate64)]
 
   module type S2 = S2 [@kind ka kb]
   module type S2_zero_alloc = S2_zero_alloc [@kind ka kb]]

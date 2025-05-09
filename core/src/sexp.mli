@@ -22,8 +22,7 @@ module O : sig
     | List of t list
 end
 
-include%template Comparable.S [@modality portable] with type t := t
-
+include Comparable.S with type t := t
 include Stringable.S with type t := t
 include Quickcheckable.S with type t := t
 
@@ -133,6 +132,6 @@ module Stable : sig
     include
       Stable_comparable.With_stable_witness.V1
       with type t := t
-      with type comparator_witness := comparator_witness
+      with type comparator_witness = comparator_witness
   end
 end

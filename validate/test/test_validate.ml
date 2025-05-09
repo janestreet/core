@@ -127,3 +127,72 @@ let%expect_test "Validate.combine doesn't allocate on success" =
   require_no_allocation (fun () ->
     ignore (Validate.combine Validate.pass Validate.pass : Validate.t))
 ;;
+
+let%expect_test "Validate.list" =
+  let name _t = "name" in
+  let validate ts =
+    print_s [%sexp (Validate.list ~name Fn.id ts |> Validate.result : unit Or_error.t)]
+  in
+  (* all pass *)
+  validate [ Validate.pass; Validate.pass; Validate.pass ];
+  [%expect {| (Ok ()) |}];
+  (* mixed pass and fail *)
+  validate [ Validate.pass; Validate.pass; Validate.fail "fail1"; Validate.fail "fail2" ];
+  [%expect
+    {|
+    (Error (
+      "validation errors" (
+        (name fail1)
+        (name fail2))))
+    |}];
+  (* all fail *)
+  validate
+    [ Validate.fail "fail1"
+    ; Validate.fail "fail2"
+    ; Validate.fail "fail3"
+    ; Validate.fail "fail4"
+    ];
+  [%expect
+    {|
+    (Error (
+      "validation errors" (
+        (name fail1)
+        (name fail2)
+        (name fail3)
+        (name fail4))))
+    |}]
+;;
+
+let%expect_test "Validate.list_indexed" =
+  let validate ts =
+    print_s [%sexp (Validate.list_indexed Fn.id ts |> Validate.result : unit Or_error.t)]
+  in
+  (* all pass *)
+  validate [ Validate.pass; Validate.pass; Validate.pass ];
+  [%expect {| (Ok ()) |}];
+  (* mixed pass and fail *)
+  validate [ Validate.pass; Validate.pass; Validate.fail "fail1"; Validate.fail "fail2" ];
+  [%expect
+    {|
+    (Error (
+      "validation errors" (
+        (3 fail1)
+        (4 fail2))))
+    |}];
+  (* all fail *)
+  validate
+    [ Validate.fail "fail1"
+    ; Validate.fail "fail2"
+    ; Validate.fail "fail3"
+    ; Validate.fail "fail4"
+    ];
+  [%expect
+    {|
+    (Error (
+      "validation errors" (
+        (1 fail1)
+        (2 fail2)
+        (3 fail3)
+        (4 fail4))))
+    |}]
+;;

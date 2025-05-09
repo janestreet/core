@@ -14,6 +14,9 @@ include (
   @@ portable
     type ('a, 'b) t = ('a, 'b) Hashtbl.t [@@deriving sexp_of]
 
+    module type Non_value = Base.Hashtbl.Non_value
+
+    include Non_value with type ('k, 'v) t := ('k, 'v) t
     include Base.Hashtbl.S_without_submodules with type ('a, 'b) t := ('a, 'b) t
   end)
 
@@ -85,18 +88,10 @@ module Using_hashable = struct
   ;;
 end
 
-module type%template [@modality p = (portable, nonportable)] S_plain =
-  S_plain [@modality p] with type ('a, 'b) hashtbl = ('a, 'b) t
-
-module type%template [@modality p = (portable, nonportable)] S =
-  S [@modality p] with type ('a, 'b) hashtbl = ('a, 'b) t
-
-module type%template [@modality p = (portable, nonportable)] S_binable =
-  S_binable [@modality p] with type ('a, 'b) hashtbl = ('a, 'b) t
-
-module type%template [@modality p = (portable, nonportable)] S_stable =
-  S_stable [@modality p] with type ('a, 'b) hashtbl = ('a, 'b) t
-
+module type S_plain = S_plain with type ('a, 'b) hashtbl = ('a, 'b) t
+module type S = S with type ('a, 'b) hashtbl = ('a, 'b) t
+module type S_binable = S_binable with type ('a, 'b) hashtbl = ('a, 'b) t
+module type S_stable = S_stable with type ('a, 'b) hashtbl = ('a, 'b) t
 module type Key_plain = Key_plain
 module type Key = Key
 module type Key_binable = Key_binable
@@ -136,7 +131,7 @@ module Poly = struct
 end
 
 module%template.portable
-  [@modality p] Toplevel_provide_bin_io (Key : sig
+  [@modality p] Provide_bin_io (Key : sig
     type t [@@deriving bin_io]
 
     include Key_plain with type t := t
@@ -200,47 +195,26 @@ struct
   let equal = Hashtbl.equal
   let invariant invariant_key t = invariant ignore invariant_key t
   let sexp_of_t sexp_of_v t = Poly.sexp_of_t T.Key.sexp_of_t sexp_of_v t
+end
 
-  module%template
-    [@modality p' = (nonportable, p)] Provide_of_sexp
-      (Key : sig
-             @@ p'
-               type t [@@deriving of_sexp]
-             end
-             with type t := key) =
-  struct
-    let t_of_sexp v_of_sexp sexp = t_of_sexp Key.t_of_sexp v_of_sexp sexp
-  end
+module%template.portable Provide_of_sexp (Key : Base.Hashtbl.M_of_sexp) = struct
+  let t_of_sexp v_of_sexp sexp = Base.Hashtbl.m__t_of_sexp (module Key) v_of_sexp sexp
+end
 
-  module%template
-    [@modality p' = (nonportable, p)] Provide_bin_io
-      (Key' : sig
-              @@ p'
-                type t [@@deriving bin_io]
-              end
-              with type t := T.Key.t) =
-  Toplevel_provide_bin_io [@modality p'] (struct
-      include T.Key
-      include Key'
-    end)
-
-  module Provide_stable_witness
-      (Key' : sig
-                type t [@@deriving stable_witness]
-              end
-              with type t := key) =
-  struct
-    (* The binary representation of hashtbl is relied on by stable modules
+module Provide_stable_witness (Key : sig
+    type t [@@deriving stable_witness]
+  end) =
+struct
+  (* The binary representation of hashtbl is relied on by stable modules
        (e.g. Hashtable.Stable) and is therefore assumed to be stable.  So, if the key and
        data can provide a stable witnesses, then we can safely the hashtbl is also
        stable. *)
-    let stable_witness (type data) (_data_stable_witness : data Stable_witness.t)
-      : data t Stable_witness.t
-      =
-      let (_ : key Stable_witness.t) = Key'.stable_witness in
-      Stable_witness.assert_stable
-    ;;
-  end
+  let stable_witness (type data) (_data_stable_witness : data Stable_witness.t)
+    : (Key.t, data) t Stable_witness.t
+    =
+    let (_ : Key.t Stable_witness.t) = Key.stable_witness in
+    Stable_witness.assert_stable
+  ;;
 end
 
 module%template.portable
@@ -348,27 +322,27 @@ end = struct
   ;;
 
   let bin_shape_m__t (type t) (module Key : Key_binable with type t = t) =
-    let module M = Toplevel_provide_bin_io (Key) in
+    let module M = Provide_bin_io (Key) in
     M.bin_shape_t
   ;;
 
   let bin_size_m__t (type t) (module Key : Key_binable with type t = t) =
-    let module M = Toplevel_provide_bin_io (Key) in
+    let module M = Provide_bin_io (Key) in
     M.bin_size_t
   ;;
 
   let bin_write_m__t (type t) (module Key : Key_binable with type t = t) =
-    let module M = Toplevel_provide_bin_io (Key) in
+    let module M = Provide_bin_io (Key) in
     M.bin_write_t
   ;;
 
   let bin_read_m__t (type t) (module Key : Key_binable with type t = t) =
-    let module M = Toplevel_provide_bin_io (Key) in
+    let module M = Provide_bin_io (Key) in
     M.bin_read_t
   ;;
 
   let __bin_read_m__t__ (type t) (module Key : Key_binable with type t = t) =
-    let module M = Toplevel_provide_bin_io (Key) in
+    let module M = Provide_bin_io (Key) in
     M.__bin_read_t__
   ;;
 

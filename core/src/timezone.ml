@@ -19,6 +19,11 @@ module Zone_cache = struct
     }
   ;;
 
+  let clear () =
+    the_one_and_only.full <- false;
+    Hashtbl.clear the_one_and_only.table
+  ;;
+
   let find zone = Hashtbl.find the_one_and_only.table zone
 
   let find_or_load zonename =

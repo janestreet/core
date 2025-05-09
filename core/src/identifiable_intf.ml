@@ -13,34 +13,32 @@ module Definitions = struct
     include Pretty_printer.S with type t := t
   end
 
-  [@@@modality.default p = (portable, nonportable)]
-
-  module type S_plain = sig @@ p
+  module type S_plain = sig
     include S_common [@mode m]
-    include Comparable.S_plain [@modality p] with type t := t
-    include Hashable.S_plain [@modality p] with type t := t
+    include Comparable.S_plain with type t := t
+    include Hashable.S_plain with type t := t
   end
 
-  module type S_not_binable = sig @@ p
+  module type S_not_binable = sig
     type t [@@deriving hash, sexp]
 
     include S_common [@mode m] with type t := t
-    include Comparable.S [@modality p] with type t := t
-    include Hashable.S [@modality p] with type t := t
+    include Comparable.S with type t := t
+    include Hashable.S with type t := t
   end
 
-  module type S = sig @@ p
+  module type S = sig
     type t [@@deriving (bin_io [@mode m]), hash, sexp]
 
     include S_common [@mode m] with type t := t
-    include Comparable.S_binable [@modality p] with type t := t
-    include Hashable.S_binable [@modality p] with type t := t
+    include Comparable.S_binable with type t := t
+    include Hashable.S_binable with type t := t
   end
 
-  module type S_sexp_grammar = sig @@ p
+  module type S_sexp_grammar = sig
     type t [@@deriving sexp_grammar]
 
-    include S [@mode m] [@modality p] with type t := t
+    include S [@mode m] with type t := t
   end]
 end
 
@@ -50,17 +48,15 @@ module type%template Identifiable = sig @@ portable
   end
 
   [@@@mode.default m = (global, local)]
-  [@@@modality.default p = (portable, nonportable)]
 
-  module Make_plain (M : sig
-    @@ p
+  module%template.portable Make_plain (M : sig
       type t [@@deriving (compare [@mode m]), hash, sexp_of]
 
       include Stringable.S with type t := t
 
       (** for registering the pretty printer *)
       val module_name : string
-    end) : S_plain [@mode m] [@modality p] with type t := M.t
+    end) : S_plain [@mode m] with type t := M.t
 
   (** Used for making an Identifiable module. Here's an example:
 
@@ -83,18 +79,16 @@ module type%template Identifiable = sig @@ portable
           include Identifiable.Make (T)
         end
       ]} *)
-  module Make (M : sig
-    @@ p
+  module%template.portable Make (M : sig
       type t [@@deriving (bin_io [@mode m]), (compare [@mode m]), hash, sexp]
 
       include Stringable.S with type t := t
 
       (** for registering the pretty printer *)
       val module_name : string
-    end) : S [@mode m] [@modality p] with type t := M.t
+    end) : S [@mode m] with type t := M.t
 
-  module Make_with_sexp_grammar (M : sig
-    @@ p
+  module%template.portable Make_with_sexp_grammar (M : sig
       type t
       [@@deriving (bin_io [@mode m]), (compare [@mode m]), hash, sexp, sexp_grammar]
 
@@ -102,10 +96,9 @@ module type%template Identifiable = sig @@ portable
 
       (** for registering the pretty printer *)
       val module_name : string
-    end) : S_sexp_grammar [@mode m] [@modality p] with type t := M.t
+    end) : S_sexp_grammar [@mode m] with type t := M.t
 
-  module Make_and_derive_hash_fold_t (M : sig
-    @@ p
+  module%template.portable Make_and_derive_hash_fold_t (M : sig
       type t [@@deriving (bin_io [@mode m]), (compare [@mode m]), sexp]
 
       include Stringable.S with type t := t
@@ -114,10 +107,9 @@ module type%template Identifiable = sig @@ portable
 
       (** for registering the pretty printer *)
       val module_name : string
-    end) : S [@mode m] [@modality p] with type t := M.t
+    end) : S [@mode m] with type t := M.t
 
-  module Make_using_comparator (M : sig
-    @@ p
+  module%template.portable Make_using_comparator (M : sig
       type t [@@deriving (bin_io [@mode m]), (compare [@mode m]), hash, sexp]
 
       include Comparator.S with type t := t
@@ -125,13 +117,9 @@ module type%template Identifiable = sig @@ portable
 
       val module_name : string
     end) :
-    S
-    [@mode m] [@modality p]
-    with type t := M.t
-    with type comparator_witness := M.comparator_witness
+    S [@mode m] with type t := M.t with type comparator_witness := M.comparator_witness
 
-  module Make_plain_using_comparator (M : sig
-    @@ p
+  module%template.portable Make_plain_using_comparator (M : sig
       type t [@@deriving (compare [@mode m]), hash, sexp_of]
 
       include Comparator.S with type t := t
@@ -141,12 +129,11 @@ module type%template Identifiable = sig @@ portable
       val module_name : string
     end) :
     S_plain
-    [@mode m] [@modality p]
+    [@mode m]
     with type t := M.t
     with type comparator_witness := M.comparator_witness
 
-  module Make_using_comparator_and_derive_hash_fold_t (M : sig
-    @@ p
+  module%template.portable Make_using_comparator_and_derive_hash_fold_t (M : sig
       type t [@@deriving (bin_io [@mode m]), (compare [@mode m]), sexp]
 
       include Comparator.S with type t := t
@@ -155,22 +142,11 @@ module type%template Identifiable = sig @@ portable
       val hash : t -> int
       val module_name : string
     end) :
-    S
-    [@mode m] [@modality p]
-    with type t := M.t
-    with type comparator_witness := M.comparator_witness
+    S [@mode m] with type t := M.t with type comparator_witness := M.comparator_witness
 
-  module Extend
-      (M : sig
-       @@ p
-         include Base.Identifiable.S [@mode m]
-       end)
-      (B : sig
-       @@ p
-         include Binable0.S [@mode m] with type t = M.t
-       end) :
-    S
-    [@mode m] [@modality p]
-    with type t := M.t
-    with type comparator_witness := M.comparator_witness
+  module%template.portable Extend
+      (M : Base.Identifiable.S
+    [@mode m])
+      (B : Binable0.S [@mode m] with type t = M.t) :
+    S [@mode m] with type t := M.t with type comparator_witness := M.comparator_witness
 end

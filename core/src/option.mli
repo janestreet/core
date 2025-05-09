@@ -5,7 +5,7 @@
 
 type 'a t = 'a Base.Option.t [@@deriving bin_io ~localize, typerep]
 
-type%template 'a t = ('a Base.Option.t[@kind k])
+type%template ('a : k) t = ('a Base.Option.t[@kind k])
 [@@deriving bin_io ~localize] [@@kind k = (float64, bits32, bits64, word)]
 
 (** @inline *)

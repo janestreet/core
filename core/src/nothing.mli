@@ -15,11 +15,7 @@ end
     prevented for lack of [Identifiable.S] here.
 
     Obviously, [of_string] and [t_of_sexp] will raise an exception. *)
-include%template
-  Identifiable.S
-  [@modality portable]
-  with type t := t
-   and type comparator_witness := comparator_witness
+include Identifiable.S with type t := t and type comparator_witness := comparator_witness
 
 module Stable : sig
   module V1 : sig

@@ -130,7 +130,7 @@ module type S_unboxed_float64 = sig
   type t : float64
   type value : float64
 
-  val typerep_of_t : t Typerep_lib.Std.Typerep.t_non_value
+  val typerep_of_t : t Typerep_lib.Std.Typerep.t
   val sexp_of_t : t -> Sexp.t
   val none : unit -> t [@@zero_alloc]
   val some : value -> t [@@zero_alloc]

@@ -38,7 +38,7 @@ val failwiths
   -> string
   -> 'a
   -> ('a -> Base.Sexp.t)
-  -> _
+  -> _ @ portable
 
 val failwithp
   :  ?strict:unit

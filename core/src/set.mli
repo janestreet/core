@@ -509,37 +509,40 @@ module type Elt = Elt
 module type Elt_binable = Elt_binable
 
 (** Module signature for a Set that doesn't support [of_sexp]. *)
-module type%template [@modality p = (portable, nonportable)] S_plain = S_plain
-[@modality p]
+module type S_plain = S_plain
 
 (** Module signature for a Set. *)
-module type%template [@modality p = (portable, nonportable)] S = S [@modality p]
+module type S = S
 
 (** Module signature for a Set that supports [bin_io]. *)
-module type%template [@modality p = (portable, nonportable)] S_binable = S_binable
-[@modality p]
+module type S_binable = S_binable
 
 (** [Make] builds a set from an element type that has a [compare] function but doesn't
     have a comparator. This generates a new comparator.
 
     [Make_binable] is similar, except the element and set types support [bin_io]. *)
-module%template.portable [@modality p] Make_plain (Elt : Elt_plain) :
-  S_plain [@modality p] with type Elt.t = Elt.t
+module%template.portable Make_plain (Elt : Elt_plain) : S_plain with type Elt.t = Elt.t
 
-module%template.portable [@modality p] Make (Elt : Elt) :
-  S [@modality p] with type Elt.t = Elt.t
+module%template.portable Provide_of_sexp (Elt : sig
+    type t [@@deriving of_sexp]
 
-module%template.portable [@modality p] Make_binable (Elt : Elt_binable) :
-  S_binable [@modality p] with type Elt.t = Elt.t
+    include Comparator.S with type t := t
+  end) : sig
+    type t [@@deriving of_sexp]
+  end
+  with type t := (Elt.t, Elt.comparator_witness) t
 
-module%template.portable
-  [@modality p] Make_plain_using_comparator (Elt : sig
+module%template.portable Make (Elt : Elt) : S with type Elt.t = Elt.t
+
+module%template.portable Make_binable (Elt : Elt_binable) :
+  S_binable with type Elt.t = Elt.t
+
+module%template.portable Make_plain_using_comparator (Elt : sig
     type t [@@deriving sexp_of]
 
     include Comparator.S with type t := t
   end) :
   S_plain
-  [@modality p]
   with type Elt.t = Elt.t
   with type Elt.comparator_witness = Elt.comparator_witness
 
@@ -547,45 +550,63 @@ module%template.portable
 
     [Make_binable_using_comparator] is similar, except the element and set types support
     [bin_io]. *)
-module%template.portable
-  [@modality p] Make_using_comparator (Elt : sig
+module%template.portable Make_using_comparator (Elt : sig
     type t [@@deriving sexp]
 
     include Comparator.S with type t := t
   end) :
-  S
-  [@modality p]
-  with type Elt.t = Elt.t
-  with type Elt.comparator_witness = Elt.comparator_witness
+  S with type Elt.t = Elt.t with type Elt.comparator_witness = Elt.comparator_witness
+
+module Elt_bin_io = Elt_bin_io
 
 module%template.portable
-  [@modality p] Make_binable_using_comparator (Elt : sig
+  [@modality p] Provide_bin_io
+    (Elt : Elt_bin_io.S) : sig
+    type t [@@deriving bin_io]
+  end
+  with type t := (Elt.t, Elt.comparator_witness) t
+
+module%template.portable Make_binable_using_comparator (Elt : sig
     type t [@@deriving bin_io, sexp]
 
     include Comparator.S with type t := t
   end) :
   S_binable
-  [@modality p]
   with type Elt.t = Elt.t
   with type Elt.comparator_witness = Elt.comparator_witness
 
-module Elt_bin_io = Elt_bin_io
+module%template Provide_stable_witness (Elt : sig
+    type t [@@deriving stable_witness]
+    type comparator_witness
+  end) : sig
+    type t [@@deriving stable_witness]
+  end
+  with type t := (Elt.t, Elt.comparator_witness) t
+
+module%template.portable Provide_hash (Elt : sig
+    type t
+    type comparator_witness
+
+    include Hasher.S with type t := t
+  end) : sig
+    type t [@@deriving hash]
+  end
+  with type t := (Elt.t, Elt.comparator_witness) t
+
 include For_deriving with type ('a, 'b) t := ('a, 'b) t
 
-module%template.portable
-  [@modality p] Make_tree_plain (Elt : sig
+module%template.portable Make_tree_plain (Elt : sig
     type t [@@deriving sexp_of]
 
     include Comparator.S with type t := t
-  end) : S_plain_tree [@modality p] with module Elt := Elt
+  end) : S_plain_tree with module Elt := Elt
 
-module%template.portable
-  [@modality p] Make_tree (Elt : sig
+module%template.portable Make_tree (Elt : sig
     type t [@@deriving sexp]
 
     include Comparator.S with type t := t
   end) : sig
-  include S_plain_tree [@modality p] with module Elt := Elt
+  include S_plain_tree with module Elt := Elt
   include Sexpable.S with type t := t
 end
 

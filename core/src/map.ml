@@ -78,7 +78,10 @@ module Using_comparator = struct
     match of_iteri ~comparator ~iteri:(Hashtbl.iteri hashtbl) with
     | `Ok map -> map
     | `Duplicate_key key ->
-      Error.failwiths "Map.of_hashtbl_exn: duplicate key" key comparator.sexp_of_t
+      Error.failwiths
+        "Map.of_hashtbl_exn: duplicate key"
+        key
+        (Comparator.sexp_of_t comparator)
   ;;
 
   let tree_of_hashtbl_exn ~comparator hashtbl =
@@ -187,7 +190,7 @@ let find_or_error t key =
   match find t key with
   | Some data -> Ok data
   | None ->
-    let sexp_of_key = comparator.sexp_of_t in
+    let sexp_of_key = Comparator.sexp_of_t comparator in
     Or_error.error_s [%message "key not found" ~_:(key : key)]
 ;;
 
@@ -197,12 +200,6 @@ let of_hashtbl_exn m t = Using_comparator.of_hashtbl_exn ~comparator:(to_compara
 module%template.portable [@modality p] Creators (Key : Comparator.S1) : sig
   type ('a, 'b, 'c) t_ = ('a Key.t, 'b, Key.comparator_witness) t
   type ('a, 'b, 'c) tree = ('a, 'b, Key.comparator_witness) Tree.t
-
-  val t_of_sexp
-    :  (Base.Sexp.t -> 'a Key.t)
-    -> (Base.Sexp.t -> 'b)
-    -> Base.Sexp.t
-    -> ('a, 'b, _) t_
 
   include
     Creators_generic
@@ -283,11 +280,6 @@ end = struct
   let of_alist_reduce alist ~f = Using_comparator.of_alist_reduce ~comparator alist ~f
   let of_iteri ~iteri = Using_comparator.of_iteri ~comparator ~iteri
   let of_iteri_exn ~iteri = Using_comparator.of_iteri_exn ~comparator ~iteri
-
-  let t_of_sexp k_of_sexp v_of_sexp sexp =
-    Using_comparator.t_of_sexp_direct ~comparator k_of_sexp v_of_sexp sexp
-  ;;
-
   let of_key_set key_set ~f = Using_comparator.of_key_set key_set ~f
   let map_keys t ~f = Using_comparator.map_keys ~comparator t ~f
   let map_keys_exn t ~f = Using_comparator.map_keys_exn ~comparator t ~f
@@ -303,7 +295,6 @@ module%template.portable Make_tree_S1 (Key : Comparator.S1) = struct
 
   let comparator = Key.comparator
   let sexp_of_t = sexp_of_t
-  let t_of_sexp a b c = t_of_sexp_direct a b c ~comparator
   let empty = empty_without_value_restriction
   let of_tree tree = tree
   let singleton a = singleton a ~comparator
@@ -480,17 +471,17 @@ struct
   type +'v t = (Key.t, 'v, Key.comparator_witness) Tree.t
 
   let sexp_of_t sexp_of_v t = sexp_of_t Key.sexp_of_t sexp_of_v [%sexp_of: _] t
+end
 
-  module%template
-    [@modality p' = (nonportable, p)] Provide_of_sexp
-      (X : sig
-           @@ p'
-             type t [@@deriving of_sexp]
-           end
-           with type t := Key.t) =
-  struct
-    let t_of_sexp v_of_sexp sexp = t_of_sexp X.t_of_sexp v_of_sexp sexp
-  end
+module%template.portable Provide_of_sexp_tree (Key : sig
+    type t [@@deriving of_sexp]
+
+    include Comparator.S with type t := t
+  end) =
+struct
+  let t_of_sexp v_of_sexp sexp =
+    Tree.t_of_sexp_direct Key.t_of_sexp v_of_sexp sexp ~comparator:Key.comparator
+  ;;
 end
 
 module%template.portable
@@ -501,7 +492,7 @@ module%template.portable
   end) =
 struct
   include Make_tree_plain [@modality p] (Key)
-  include Provide_of_sexp [@modality p] (Key)
+  include Provide_of_sexp_tree [@modality p] (Key)
 end
 
 (* Don't use [of_sorted_array] to avoid the allocation of an intermediate array *)
@@ -530,6 +521,14 @@ module Poly = struct
 
   let sexp_of_t sexp_of_k sexp_of_v t =
     Using_comparator.sexp_of_t sexp_of_k sexp_of_v [%sexp_of: _] t
+  ;;
+
+  let t_of_sexp sexp_of_k sexp_of_v t =
+    Using_comparator.t_of_sexp_direct
+      ~comparator:Comparator.Poly.comparator
+      sexp_of_k
+      sexp_of_v
+      t
   ;;
 
   let t_sexp_grammar k_grammar v_grammar =
@@ -569,6 +568,10 @@ module Poly = struct
 
     let sexp_of_t sexp_of_k sexp_of_v t = sexp_of_t sexp_of_k sexp_of_v [%sexp_of: _] t
 
+    let t_of_sexp k_of_sexp v_of_sexp t =
+      Tree.t_of_sexp_direct ~comparator:Comparator.Poly.comparator k_of_sexp v_of_sexp t
+    ;;
+
     let t_sexp_grammar k_grammar v_grammar =
       Sexplib.Sexp_grammar.coerce (List.Assoc.t_sexp_grammar k_grammar v_grammar)
     ;;
@@ -580,18 +583,13 @@ module type Key = Key
 module type Key_binable = Key_binable
 module type Key_hashable = Key_hashable
 module type Key_binable_hashable = Key_binable_hashable
-
-module type%template [@modality p = (portable, nonportable)] S_plain = S_plain
-[@modality p]
-
-module type%template [@modality p = (portable, nonportable)] S = S [@modality p]
-
-module type%template [@modality p = (portable, nonportable)] S_binable = S_binable
-[@modality p]
+module type S_plain = S_plain
+module type S = S
+module type S_binable = S_binable
 
 module Key_bin_io = Key_bin_io
 
-module%template.portable [@modality p] Toplevel_provide_bin_io (Key : Key_bin_io.S) =
+module%template.portable [@modality p] Provide_bin_io (Key : Key_bin_io.S) =
 Bin_prot.Utils.Make_iterable_binable1 [@modality p] (struct
     module Key = Key
 
@@ -616,10 +614,9 @@ Bin_prot.Utils.Make_iterable_binable1 [@modality p] (struct
     ;;
   end)
 
-module Toplevel_provide_stable_witness (Key : sig
+module%template Provide_stable_witness (Key : sig
     type t [@@deriving stable_witness]
-
-    include Comparator.S with type t := t
+    type comparator_witness
   end) =
 struct
   (* The binary representation of map is used in the stable modules below, so it's
@@ -664,52 +661,19 @@ struct
     let apply_exn = Diffable.Map_diff.apply_exn
     let of_list_exn = Diffable.Map_diff.of_list_exn
   end
+end
 
-  module%template
-    [@modality p' = (nonportable, p)] Provide_of_sexp
-      (Key : sig
-             @@ p'
-               type t [@@deriving of_sexp]
-             end
-             with type t := Key.t) =
-  struct
-    let t_of_sexp v_of_sexp sexp = t_of_sexp Key.t_of_sexp v_of_sexp sexp
-  end
+module%template.portable Provide_hash (Key : sig
+    type t
+    type comparator_witness
 
-  module%template
-    [@modality p' = (nonportable, p)] Provide_hash (Key' : sig
-    @@ p'
-      include Hasher.S with type t := Key.t
-    end) =
-  struct
-    let hash_fold_t (type a) hash_fold_data state (t : a t) =
-      Using_comparator.hash_fold_direct Key'.hash_fold_t hash_fold_data state t
-    ;;
-  end
-
-  module%template
-    [@modality p' = (nonportable, p)] Provide_bin_io
-      (Key' : sig
-              @@ p'
-                type t [@@deriving bin_io]
-              end
-              with type t := Key.t) =
-  Toplevel_provide_bin_io [@modality p'] (struct
-      include Key
-      include Key'
-    end)
-
-  module%template
-    [@modality p' = (nonportable, p)] Provide_stable_witness
-      (Key' : sig
-              @@ p'
-                type t [@@deriving stable_witness]
-              end
-              with type t := Key.t) =
-  Toplevel_provide_stable_witness (struct
-      include Key
-      include Key'
-    end)
+    include Hasher.S with type t := t
+  end) =
+struct
+  let hash_fold_t (type a) hash_fold_data state (t : (Key.t, a, Key.comparator_witness) t)
+    =
+    Using_comparator.hash_fold_direct Key.hash_fold_t hash_fold_data state t
+  ;;
 end
 
 module%template.portable [@modality p] Make_plain (Key : Key_plain) =
@@ -717,6 +681,18 @@ Make_plain_using_comparator [@modality p] (struct
     include Key
     include Comparator.Make [@modality p] (Key)
   end)
+
+module%template.portable Provide_of_sexp (Key : sig
+    type t [@@deriving of_sexp]
+
+    include Comparator.S with type t := t
+  end) =
+struct
+  let t_of_sexp v_of_sexp sexp =
+    Tree.t_of_sexp_direct Key.t_of_sexp v_of_sexp sexp ~comparator:Key.comparator
+    |> of_tree (module Key)
+  ;;
+end
 
 module%template.portable
   [@modality p] Make_using_comparator (Key_sexp : sig
@@ -753,7 +729,7 @@ module%template.portable
 struct
   include Make_using_comparator [@modality p] (Key_bin_sexp)
   module Key = Key_bin_sexp
-  include Toplevel_provide_bin_io [@modality p] (Key)
+  include Provide_bin_io [@modality p] (Key)
 
   module Diff = struct
     include Diff
@@ -774,27 +750,27 @@ module For_deriving = struct
 
   include struct
     let bin_shape_m__t (type t c) (m : (t, c) Key_bin_io.t) =
-      let module M = Toplevel_provide_bin_io ((val m)) in
+      let module M = Provide_bin_io ((val m)) in
       M.bin_shape_t
     ;;
 
     let bin_size_m__t (type t c) (m : (t, c) Key_bin_io.t) =
-      let module M = Toplevel_provide_bin_io ((val m)) in
+      let module M = Provide_bin_io ((val m)) in
       M.bin_size_t
     ;;
 
     let bin_write_m__t (type t c) (m : (t, c) Key_bin_io.t) =
-      let module M = Toplevel_provide_bin_io ((val m)) in
+      let module M = Provide_bin_io ((val m)) in
       M.bin_write_t
     ;;
 
     let bin_read_m__t (type t c) (m : (t, c) Key_bin_io.t) =
-      let module M = Toplevel_provide_bin_io ((val m)) in
+      let module M = Provide_bin_io ((val m)) in
       M.bin_read_t
     ;;
 
     let __bin_read_m__t__ (type t c) (m : (t, c) Key_bin_io.t) =
-      let module M = Toplevel_provide_bin_io ((val m)) in
+      let module M = Provide_bin_io ((val m)) in
       M.__bin_read_t__
     ;;
 
@@ -890,7 +866,7 @@ module For_deriving_stable = struct
     (type k cmp)
     (module Key : Stable_witness_m with type t = k and type comparator_witness = cmp)
     =
-    let module M = Toplevel_provide_stable_witness (Key) in
+    let module M = Provide_stable_witness (Key) in
     M.stable_witness
   ;;
 

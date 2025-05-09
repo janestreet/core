@@ -19,7 +19,7 @@ module type Id = sig
   module Uid : Uid
 end
 
-module type Type_equal = sig
+module type Type_equal = sig @@ portable
   (** @inline *)
   include module type of struct
     include Base.Type_equal

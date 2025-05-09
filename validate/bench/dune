@@ -1,0 +1,5 @@
+(library
+ (name validate_bench)
+ (libraries base validate)
+ (preprocess
+  (pps ppx_jane)))

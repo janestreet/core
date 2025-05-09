@@ -117,6 +117,9 @@ module Binable (B1 : Binable.S) (B2 : Binable.S) = struct
   type t = B1.t * B2.t [@@deriving bin_io]
 end
 
+(* Redefinition to avoid shadowing Core.Comparator *)
+module Comparator_ = Comparator
+
 module Comparator (S1 : Comparator.S) (S2 : Comparator.S) = struct
   include Make (S1) (S2)
 
@@ -130,7 +133,7 @@ module Comparable_plain (S1 : Comparable_plain_arg) (S2 : Comparable_plain_arg) 
   module T = struct
     include Comparator (S1) (S2)
 
-    let sexp_of_t = comparator.sexp_of_t
+    let sexp_of_t = Comparator_.sexp_of_t comparator
   end
 
   include T

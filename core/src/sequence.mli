@@ -14,7 +14,8 @@ module Step : sig
         ; state : 's
         }
         -> ('a, 's) t
-  [@@deriving bin_io]
+
+  [%%rederive: type nonrec (+'a, 's) t = ('a, 's) t [@@deriving bin_io]]
 
   include module type of struct
       include Base.Sequence.Step
