@@ -971,7 +971,7 @@ wrap (fun ~run ~main ->
     end
 
     module Cmdline : sig
-      type t [@@deriving compare]
+      type t [@@deriving compare ~localize]
 
       val of_list : string list -> t
       val extend : t -> extend:(string list -> string list) -> path:Path.t -> t

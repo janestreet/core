@@ -1,6 +1,12 @@
 open! Core
 open! Import
 
+let with_the_one_and_only f =
+  let open Timezone.Private.Zone_cache in
+  Capsule.Mutex.with_lock The_one_and_only.mutex ~f:(fun password ->
+    Capsule.Data.get The_one_and_only.capsule ~password ~f)
+;;
+
 (* [init] is a noop in javascript, so this is expected to not work. It will only fail
    with [Private.Zone_cache.find], which only checks the cache and shouldn't be used
    directly anyway. *)
@@ -20,11 +26,19 @@ let%expect_test (_ [@tags "js-only"]) =
      behavior differs between native and web contexts. *)
   init ();
   require_none [%sexp_of: Timezone.t] (find "America/New_York");
-  let () =
-    require (Hashtbl.is_empty the_one_and_only.table);
-    require_some (public_find "America/New_York")
+  let is_empty =
+    with_the_one_and_only (fun the_one_and_only ->
+      Hashtbl.is_empty the_one_and_only.table)
   in
-  require (not the_one_and_only.full);
+  let new_york = public_find "America/New_York" in
+  let { portended = new_york, full } =
+    with_the_one_and_only (fun the_one_and_only ->
+      let full = the_one_and_only.full in
+      { portended = new_york, full })
+  in
+  require is_empty;
+  require_some new_york;
+  require (not full);
   (* keep this test from contaminating tests later in the file *)
   clear ()
 ;;

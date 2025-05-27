@@ -1,20 +1,23 @@
 open! Import
 
+[%%template
+[@@@mode.default m = (local, global)]
+
 module type Common = sig
-  type t [@@deriving compare, hash]
+  type t [@@deriving (compare [@mode m]), hash]
 
   val hashable : t Hashtbl.Hashable.t
 end
 
 module type S_plain = sig
-  include Common
+  include Common [@mode m]
   module Table : Hashtbl.S_plain with type key = t
   module Hash_set : Hash_set.S_plain with type elt = t
   module Hash_queue : Hash_queue.S with type key = t
 end
 
 module type S = sig
-  include Common
+  include Common [@mode m]
   module Table : Hashtbl.S with type key = t
   module Hash_set : Hash_set.S with type elt = t
   module Hash_queue : Hash_queue.S with type key = t
@@ -28,13 +31,16 @@ module type S_binable = sig
   module Table : Hashtbl.S_binable with type key = t
   module Hash_set : Hash_set.S_binable with type elt = t
   module Hash_queue : Hash_queue.S with type key = t
-end
+end]
 
 module type Hashable = sig
-  module type Common = Common
-  module type S = S
-  module type S_binable = S_binable
-  module type S_plain = S_plain
+  [%%template:
+  [@@@mode.default m = (local, global)]
+
+  module type Common = Common [@mode m]
+  module type S = S [@mode m]
+  module type S_binable = S_binable [@mode m]
+  module type S_plain = S_plain [@mode m]]
 
   module%template.portable Make_plain (T : sig
       type t [@@deriving hash]

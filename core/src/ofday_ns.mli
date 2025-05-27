@@ -13,8 +13,9 @@ module Stable : sig
       , sexp_grammar
       , typerep]
 
-    include
+    include%template
       Stable_int63able.With_stable_witness.S
+      [@mode local]
       with type t := t
        and type comparator_witness = comparator_witness
 

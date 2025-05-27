@@ -14,7 +14,7 @@ module Stable = struct
         ; us : int
         ; ns : int
         }
-      [@@deriving compare, sexp, sexp_grammar]
+      [@@deriving compare ~localize, sexp, sexp_grammar]
     end
 
     module type Like_a_float = sig
@@ -28,7 +28,9 @@ module Stable = struct
         , quickcheck
         , typerep]
 
-      include Comparable.S_common with type t := t
+      include%template
+        Comparable.S_common [@mode local] [@modality portable] with type t := t
+
       include Comparable.With_zero with type t := t
       include Floatable with type t := t
 
@@ -264,7 +266,7 @@ module Stable = struct
     include T
     include Constant
 
-    let randomize ?(state = Random.State.default) t ~percent =
+    let randomize ?(state = Random.State.get_default ()) t ~percent =
       Span_helpers.randomize t state ~percent ~scale
     ;;
 
@@ -366,8 +368,8 @@ module Stable = struct
     let sexp_of_t t = sexp_of_t_v1_v2 t ~is_v2:false
     let t_sexp_grammar = Sexplib.Sexp_grammar.coerce String.t_sexp_grammar
 
-    include Diffable.Atomic.Make (struct
-        type nonrec t = t [@@deriving bin_io, equal, sexp]
+    include%template Diffable.Atomic.Make [@modality portable] (struct
+        type nonrec t = t [@@deriving bin_io, equal ~localize, sexp]
       end)
   end
 
@@ -378,8 +380,8 @@ module Stable = struct
     let sexp_of_t t = sexp_of_t_v1_v2 t ~is_v2:true
     let t_sexp_grammar = Sexplib.Sexp_grammar.coerce String.t_sexp_grammar
 
-    include Diffable.Atomic.Make (struct
-        type nonrec t = t [@@deriving bin_io, equal, sexp]
+    include%template Diffable.Atomic.Make [@modality portable] (struct
+        type nonrec t = t [@@deriving bin_io, equal ~localize, sexp]
       end)
   end
 
@@ -767,8 +769,8 @@ module Stable = struct
 
     let t_sexp_grammar = Sexplib.Sexp_grammar.coerce String.t_sexp_grammar
 
-    include Diffable.Atomic.Make (struct
-        type nonrec t = t [@@deriving bin_io, equal, sexp]
+    include%template Diffable.Atomic.Make [@modality portable] (struct
+        type nonrec t = t [@@deriving bin_io, equal ~localize, sexp]
       end)
   end
 end
@@ -803,17 +805,19 @@ let to_string_hum
   prefix ^ suffix
 ;;
 
-let gen_incl lo hi =
-  Float.gen_incl (to_sec lo) (to_sec hi) |> Quickcheck.Generator.map ~f:of_sec
+let%template gen_incl lo hi =
+  Float.gen_incl (to_sec lo) (to_sec hi)
+  |> (Base_quickcheck.Generator.map [@mode portable]) ~f:of_sec
 ;;
 
-let gen_uniform_incl lo hi =
+let%template gen_uniform_incl lo hi =
   (* Technically exclusive rather than inclusive, but otherwise satisfies the contract to
      within 1ulp of the given bounds. *)
-  Float.gen_uniform_excl (to_sec lo) (to_sec hi) |> Quickcheck.Generator.map ~f:of_sec
+  Float.gen_uniform_excl (to_sec lo) (to_sec hi)
+  |> (Base_quickcheck.Generator.map [@mode portable]) ~f:of_sec
 ;;
 
-let quickcheck_generator =
+let%template quickcheck_generator =
   (* We generate spans up to (slightly more than) a millennium, positive or negative. This
      is based on the Gregorian calendar, in which years average 365.2425 days when
      accounting for leap days. Covering a two-millennium span is more than enough for most
@@ -823,19 +827,19 @@ let quickcheck_generator =
      We generate by filtering the default generator so that spans are still skewed toward
      small values, even though the bounds are large. *)
   let millennium = of_day (Float.round_up (365.2425 *. 1000.)) in
-  Quickcheck.Generator.filter quickcheck_generator ~f:(fun t ->
+  (Quickcheck.Generator.filter [@mode portable]) quickcheck_generator ~f:(fun t ->
     neg millennium <= t && t <= millennium)
 ;;
 
-include Pretty_printer.Register (struct
+include%template Pretty_printer.Register [@modality portable] (struct
     type nonrec t = t
 
     let to_string = to_string
     let module_name = "Core.Time_float.Span"
   end)
 
-include Hashable.Make_binable (struct
-    type nonrec t = t [@@deriving bin_io, compare, hash, sexp_of]
+include%template Hashable.Make_binable [@modality portable] (struct
+    type nonrec t = t [@@deriving bin_io, compare ~localize, hash, sexp_of]
 
     (* Previous versions rendered hash-based containers using float serialization rather
        than time serialization, so when reading hash-based containers in we accept either
@@ -868,11 +872,11 @@ module C = struct
   ;;
 end
 
-module Map = Map.Make_binable_using_comparator (C)
-module Set = Set.Make_binable_using_comparator (C)
+module%template Map = Map.Make_binable_using_comparator [@modality portable] (C)
+module%template Set = Set.Make_binable_using_comparator [@modality portable] (C)
 
-include Comparable.With_zero (struct
-    type nonrec t = t [@@deriving compare, sexp_of]
+include%template Comparable.With_zero [@modality portable] (struct
+    type nonrec t = t [@@deriving compare ~localize, sexp_of]
 
     let zero = zero
   end)

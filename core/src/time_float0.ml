@@ -10,9 +10,10 @@ module Absolute = struct
   include (
     Float :
     sig
-      type t = float [@@deriving bin_io, compare ~localize, hash, typerep]
+      type t = float [@@deriving bin_io ~localize, compare ~localize, hash, typerep]
 
-      include Comparable.S_common with type t := t
+      include%template
+        Comparable.S_common [@mode local] [@modality portable] with type t := t
     end)
 
   (* due to precision limitations in float we can't expect better than microsecond

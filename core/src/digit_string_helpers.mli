@@ -49,7 +49,7 @@ module Round : sig
   type t =
     | Toward_positive_infinity
     | Toward_negative_infinity
-  [@@deriving compare, sexp_of]
+  [@@deriving compare ~localize, sexp_of]
 end
 
 (** [read_int63_decimal string ~pos ~decimals ~scale ~round_ties ~allow_underscore] reads

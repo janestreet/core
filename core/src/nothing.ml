@@ -14,10 +14,15 @@ module Stable = struct
     let all = []
     let hash_fold_t _ t = unreachable_code t
     let hash = unreachable_code
+
+    [%%template
+    [@@@mode.default m = (local, global)]
+
     let compare a _ = unreachable_code a
     let equal a _ = unreachable_code a
     let bin_size_t = unreachable_code
-    let bin_write_t _buf ~pos:_ t = unreachable_code t
+    let bin_write_t _buf ~pos:_ t = unreachable_code t]
+
     let bin_writer_t = { Bin_prot.Type_class.size = bin_size_t; write = bin_write_t }
 
     let __bin_read_t__ _buf ~pos_ref _ =
@@ -48,4 +53,5 @@ end
 include Stable.V1
 include Base.Nothing
 
-include%template Identifiable.Extend [@modality portable] (Base.Nothing) (Stable.V1)
+include%template
+  Identifiable.Extend [@mode local] [@modality portable] (Base.Nothing) (Stable.V1)

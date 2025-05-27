@@ -22,7 +22,9 @@ module Stable = struct
         , typerep
         , stable_witness]
 
-      include Comparable.S_common with type t := t
+      include%template
+        Comparable.S_common [@mode local] [@modality portable] with type t := t
+
       include Robustly_comparable with type t := t
       include Floatable with type t := t
 
@@ -62,7 +64,9 @@ module Stable = struct
           , typerep
           , stable_witness]
 
-        include Comparable.S_common with type t := t
+        include%template
+          Comparable.S_common [@mode local] [@modality portable] with type t := t
+
         include Comparable.With_zero with type t := t
         include Robustly_comparable with type t := t
         include Floatable with type t := t
@@ -229,7 +233,7 @@ module Stable = struct
 
     let to_string t = to_string_gen ~drop_ms:false ~drop_us:false ~trim:false t
 
-    include Pretty_printer.Register (struct
+    include%template Pretty_printer.Register [@modality portable] (struct
         type nonrec t = t
 
         let to_string = to_string
@@ -270,8 +274,8 @@ module Stable = struct
           ()
     ;;
 
-    include Diffable.Atomic.Make (struct
-        type nonrec t = t [@@deriving bin_io, equal, sexp]
+    include%template Diffable.Atomic.Make [@modality portable] (struct
+        type nonrec t = t [@@deriving bin_io, equal ~localize, sexp]
       end)
 
     let ( ^: ) hr min = create ~hr ~min ()
@@ -290,26 +294,28 @@ end
 
 include Stable.V1
 
-let gen_incl lo hi =
+let%template gen_incl lo hi =
   Span.gen_incl (to_span_since_start_of_day lo) (to_span_since_start_of_day hi)
-  |> Quickcheck.Generator.map ~f:of_span_since_start_of_day_exn
+  |> (Base_quickcheck.Generator.map [@mode portable]) ~f:of_span_since_start_of_day_exn
 ;;
 
-let gen_uniform_incl lo hi =
+let%template gen_uniform_incl lo hi =
   Span.gen_uniform_incl (to_span_since_start_of_day lo) (to_span_since_start_of_day hi)
-  |> Quickcheck.Generator.map ~f:of_span_since_start_of_day_exn
+  |> (Base_quickcheck.Generator.map [@mode portable]) ~f:of_span_since_start_of_day_exn
 ;;
 
 let quickcheck_generator = gen_incl start_of_day start_of_next_day
 
-let quickcheck_observer =
-  Quickcheck.Observer.unmap Span.quickcheck_observer ~f:to_span_since_start_of_day
+let%template quickcheck_observer =
+  (Quickcheck.Observer.unmap [@mode portable])
+    Span.quickcheck_observer
+    ~f:to_span_since_start_of_day
 ;;
 
 let quickcheck_shrinker = Quickcheck.Shrinker.empty ()
 
-include Hashable.Make_binable (struct
-    type nonrec t = t [@@deriving bin_io, compare, hash, sexp_of]
+include%template Hashable.Make_binable [@modality portable] (struct
+    type nonrec t = t [@@deriving bin_io, compare ~localize, hash, sexp_of]
 
     (* Previous versions rendered hash-based containers using float serialization rather
        than time serialization, so when reading hash-based containers in we accept either
@@ -326,7 +332,7 @@ module C = struct
   type comparator_witness = T.comparator_witness
 
   let comparator = T.comparator
-  let compare = Comparator.compare T.comparator
+  let compare = [%eta2 Comparator.compare T.comparator]
 
   (* In 108.06a and earlier, ofdays in sexps of Maps and Sets were raw floats.  From
      108.07 through 109.13, the output format remained raw as before, but both the raw and
@@ -343,9 +349,10 @@ module C = struct
   ;;
 end
 
-module Map = Map.Make_binable_using_comparator (C)
-module Set = Set.Make_binable_using_comparator (C)
-include Comparable.Validate (C)
+module%template Map = Map.Make_binable_using_comparator [@modality portable] (C)
+module%template Set = Set.Make_binable_using_comparator [@modality portable] (C)
+
+include%template Comparable.Validate [@modality portable] (C)
 
 let of_span_since_start_of_day = of_span_since_start_of_day_exn
 let to_millisec_string = to_millisecond_string

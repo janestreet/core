@@ -125,6 +125,10 @@ module Load_error = struct
   [@@deriving sexp_of]
 end
 
+(* This function is only ever run from jsoo and wasm, which don't support multidomain
+   programs, so it is safe to portablize. *)
+let load_exn = Basement.Stdlib_shim.Obj.magic_portable load_exn
+
 let load s =
   match should_use_timezone_js_loader () with
   | `Disabled -> Error Load_error.Disabled

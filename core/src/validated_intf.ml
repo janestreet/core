@@ -149,7 +149,7 @@ module type Validated = sig
   module type S_allowing_substitution =
     S_allowing_substitution with type ('a, 'b) validated := ('a, 'b) t
 
-  module Make (Raw : Raw) : S with type raw := Raw.t
+  module%template.portable Make (Raw : Raw) : S with type raw := Raw.t
 
   [%%template:
   [@@@mode.default m = (global, local)]
@@ -164,18 +164,19 @@ module type Validated = sig
     [@mode m]
     with type ('a, 'b) validated := ('a, 'b) t
 
-  module Make_binable (Raw : Raw_bin_io [@mode m]) :
+  module%template.portable Make_binable (Raw : Raw_bin_io [@mode m]) :
     S_bin_io [@mode m] with type raw := Raw.t
 
   (** [Make_bin_io_compare_hash_sexp] is useful for stable types. *)
-  module Make_bin_io_compare_hash_sexp (Raw : Raw_bin_io_compare_hash_sexp [@mode m]) :
-    S_bin_io_compare_hash_sexp [@mode m] with type raw := Raw.t
+  module%template.portable Make_bin_io_compare_hash_sexp
+      (Raw : Raw_bin_io_compare_hash_sexp
+    [@mode m]) : S_bin_io_compare_hash_sexp [@mode m] with type raw := Raw.t
 
-  module Make_bin_io_compare_globalize_hash_sexp
+  module%template.portable Make_bin_io_compare_globalize_hash_sexp
       (Raw : Raw_bin_io_compare_globalize_hash_sexp
     [@mode m]) : S_bin_io_compare_globalize_hash_sexp [@mode m] with type raw := Raw.t
 
-  module Add_bin_io
+  module%template.portable Add_bin_io
       (Raw : Raw_bin_io
     [@mode m])
       (Validated : S with type raw := Raw.t) : sig
@@ -183,18 +184,18 @@ module type Validated = sig
     end
     with type t := Validated.t
 
-  module Add_compare
+  module%template.portable Add_compare
       (Raw : sig
          type t [@@deriving compare [@mode m]]
 
          include Raw with type t := t
        end)
       (Validated : S with type raw := Raw.t) : sig
-      type t [@@deriving compare]
+      type t [@@deriving compare [@mode m]]
     end
     with type t := Validated.t]
 
-  module Add_hash
+  module%template.portable Add_hash
       (Raw : sig
          type t [@@deriving hash]
 
@@ -205,7 +206,7 @@ module type Validated = sig
     end
     with type t := Validated.t
 
-  module Add_typerep
+  module%template.portable Add_typerep
       (Raw : sig
          type t [@@deriving typerep]
 

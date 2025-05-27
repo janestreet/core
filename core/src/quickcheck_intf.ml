@@ -64,10 +64,13 @@ module Definitions = struct
         [of_list [ v1 ; ... ; vN ] = union [ singleton v1 ; ... ; singleton vN ]] *)
     val of_list : 'a list -> 'a t
 
+    val%template of_list : 'a. 'a list -> 'a t [@@mode portable]
+
     (** Combine arbitrary generators, weighted equally.
 
         [ union [ g1 ; ... ; gN ] = weighted_union [ (1.0, g1) ; ... ; (1.0, gN) ] ] *)
-    val union : 'a t list -> 'a t
+    val%template union : 'a t list -> 'a t
+    [@@mode p = (portable, nonportable)]
 
     (** Generator for the values from a potentially infinite sequence. Chooses each value
         with probability [p], or continues with probability [1-p]. Must satisfy
@@ -246,7 +249,9 @@ module Definitions = struct
     val list : 'a t -> 'a list t
 
     val list_non_empty : 'a t -> 'a list t
-    val list_with_length : int -> 'a t -> 'a list t
+
+    val%template list_with_length : int -> 'a t -> 'a list t
+    [@@mode p = (portable, nonportable)]
 
     (** [fold_until ~init ~f ~finish] is similar to
 
@@ -301,7 +306,7 @@ module Definitions = struct
 
     (** [of_hash] creates an observer for any hashable type. *)
     val%template of_hash : ((module Deriving_hash with type t = 'a)[@modality p]) -> 'a t
-    [@@modality p = (nonportable, portable)] [@@conflate_modality_as_mode p]
+    [@@modality p = (nonportable, portable)]
 
     val bool : bool t
     val char : char t

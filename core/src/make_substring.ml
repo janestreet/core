@@ -33,7 +33,8 @@ end
 
 (* We can't call the base module [Base] because [@@deriving quickcheck] wants to access
    the [Base] library directly, and we'd be shadowing it. *)
-module F (Underlying : Base) : S with type base = Underlying.t = struct
+module%template.portable [@modality p] F (Underlying : Base) :
+  S with type base = Underlying.t = struct
   type base = Underlying.t
 
   type t =
@@ -41,7 +42,7 @@ module F (Underlying : Base) : S with type base = Underlying.t = struct
     ; pos : int
     ; len : int
     }
-  [@@deriving quickcheck]
+  [@@deriving quickcheck [@mode p]]
 
   (* note we override the generated [quickcheck_generator] below, once we've defined
      [create] *)
@@ -84,8 +85,9 @@ module F (Underlying : Base) : S with type base = Underlying.t = struct
   ;;
 
   let quickcheck_generator =
-    let open Quickcheck.Let_syntax in
+    let open Base_quickcheck.Generator.Let_syntax [@mode p] in
     let%bind base = Underlying.quickcheck_generator in
+    let open Base_quickcheck.Generator.Let_syntax in
     let base_len = Underlying.length base in
     let%bind len = Int.gen_uniform_incl 0 base_len in
     let%bind pos = Int.gen_uniform_incl 0 (base_len - len) in
@@ -145,7 +147,7 @@ module F (Underlying : Base) : S with type base = Underlying.t = struct
     let length = `Custom length
   end
 
-  module C = Indexed_container.Make0 (Make_arg)
+  module%template C = Indexed_container.Make0 [@modality p] (Make_arg)
 
   let fold = C.fold
   let iter = C.iter

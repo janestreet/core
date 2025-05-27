@@ -6,7 +6,7 @@ module Stable = struct
   module V1 = struct
     module T = struct
       type t = unit
-      [@@deriving bin_io ~localize, compare, sexp, sexp_grammar, stable_witness]
+      [@@deriving bin_io ~localize, compare ~localize, sexp, sexp_grammar, stable_witness]
     end
 
     include T
@@ -20,7 +20,9 @@ module Stable = struct
   end
 
   module V2 = struct
-    type t = unit [@@deriving compare, equal, sexp, sexp_grammar, stable_witness]
+    type t = unit
+    [@@deriving compare ~localize, equal ~localize, sexp, sexp_grammar, stable_witness]
+
     type comparator_witness = V1.comparator_witness
 
     let comparator = V1.comparator
@@ -60,10 +62,10 @@ end
 open! Import
 
 include%template
-  Identifiable.Extend [@modality portable]
+  Identifiable.Extend [@mode local] [@modality portable]
     (Base.Unit)
     (struct
-      type t = unit [@@deriving bin_io]
+      type t = unit [@@deriving bin_io ~localize]
     end)
 
 include Base.Unit

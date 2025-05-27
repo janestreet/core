@@ -897,6 +897,7 @@ module Unit_tests
   end
 
   let compare_direct _ = assert false
+  let compare_direct__local _ = assert false
 
   let%expect_test "compare and compare_direct" =
     let set_of_list ints = Set.of_list (List.map ints ~f:Elt.of_int) in
@@ -924,6 +925,7 @@ module Unit_tests
   let fold_right _ = assert false
   let fold_until _ = assert false
   let equal _ = assert false
+  let equal__local _ = assert false
   let diff _ = assert false
   let union _ = assert false
   let remove _ = assert false
@@ -1114,7 +1116,7 @@ module%test [@name "Int.Set.Tree"] _ =
       include Create_options_without_comparator
       include Access_options_with_int_comparator
 
-      let equal ~comparator:_ = equal
+      let%template equal ~comparator:_ = equal [@mode m] [@@mode m = (local, global)]
       let kind = `Tree
       let is_poly = false
     end)

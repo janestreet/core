@@ -2,6 +2,9 @@
 
 open! Import
 
+[%%template
+[@@@mode.default m = (global, local)]
+
 module type S_without_immediate_plain = sig
   (** The immediate value carried by the immediate option.
 
@@ -18,11 +21,13 @@ module type S_without_immediate_plain = sig
       which adds the [[@@immediate]] annotation. *)
   type t
 
+  module Optional_syntax :
+    Optional_syntax.S [@mode m] with type t := t with type value := value
+
   (** Constructors analogous to [None] and [Some]. If [not (some_is_representable x)] then
       [some x] may raise or return [none]. *)
 
   val none : t
-  val some : value -> t
 
   (** For some representations of immediate options, the encodings of [none] and [some]
       overlap. For these representations, [some_is_representable value = false] if [value]
@@ -33,6 +38,10 @@ module type S_without_immediate_plain = sig
 
   val is_none : t -> bool
   val is_some : t -> bool
+
+  [@@@mode.default m = (global, m)]
+
+  val some : value -> t
 
   (** [value (some x) ~default = x] and [value none ~default = default]. *)
   val value : t -> default:value -> value
@@ -49,51 +58,34 @@ module type S_without_immediate_plain = sig
 
   val to_option : t -> value option
   val of_option : value option -> t
-
-  module Optional_syntax : Optional_syntax.S with type t := t with type value := value
 end
 
 module type S_without_immediate_plain_zero_alloc = sig
   type value
   type t
 
+  module Optional_syntax :
+    Optional_syntax.S_zero_alloc [@mode m] with type t := t with type value := value
+
   val none : t
-  val some : value -> t [@@zero_alloc]
   val some_is_representable : value -> bool [@@zero_alloc]
   val is_none : t -> bool [@@zero_alloc]
   val is_some : t -> bool [@@zero_alloc]
+
+  [@@@mode.default m = (global, m)]
+
+  val some : value -> t [@@zero_alloc]
   val value : t -> default:value -> value [@@zero_alloc]
   val value_exn : t -> value [@@zero_alloc]
   val unchecked_value : t -> value [@@zero_alloc]
   val to_option : t -> value option
   val of_option : value option -> t [@@zero_alloc]
-
-  module Optional_syntax :
-    Optional_syntax.S_zero_alloc with type t := t with type value := value
-end
-
-module type S_without_immediate = sig
-  type t [@@deriving compare, hash, sexp_of, typerep]
-
-  include S_without_immediate_plain with type t := t
-end
-
-module type S_without_immediate_zero_alloc = sig
-  type t [@@deriving compare, hash, sexp_of, typerep]
-
-  include S_without_immediate_plain_zero_alloc with type t := t
-end
+end]
 
 module type S_plain = sig
   type t [@@immediate]
 
   include S_without_immediate_plain with type t := t
-end
-
-module type S = sig
-  type t [@@immediate]
-
-  include S_without_immediate with type t := t
 end
 
 module type S_plain_zero_alloc = sig
@@ -102,29 +94,60 @@ module type S_plain_zero_alloc = sig
   include S_without_immediate_plain_zero_alloc with type t := t
 end
 
-module type S_zero_alloc = sig
-  type t [@@immediate]
-
-  include S_without_immediate_zero_alloc with type t := t
-end
-
 module type S_int63_plain = sig
   type t [@@immediate64]
 
   include S_without_immediate_plain with type t := t
 end
 
-module type S_int63 = sig
-  type t [@@immediate64]
+[%%template
+[@@@mode.default m = (global, local)]
 
-  include S_without_immediate with type t := t
+module type S_derivers = sig
+  type t [@@deriving (compare [@mode m]), hash, sexp_of, typerep]
+end
+
+module type S_without_immediate = sig
+  include S_without_immediate_plain [@mode m]
+  include S_derivers [@mode m] with type t := t
+end
+
+module type S_without_immediate_zero_alloc = sig
+  include S_without_immediate_plain_zero_alloc [@mode m]
+  include S_derivers [@mode m] with type t := t
+end
+
+(** For interfaces that expose that [t] is immediate, the only additional function
+    provided in the [local] versions is [compare]. This is because [t] crosses locality,
+    and so existing functions can all be used with [local] [t]s. We provide compare
+    specially only because [compare__local] is a name needed by downstream users of
+    [[@@deriving compare ~localize]].
+
+    There are some clients of the [S_*] family where [value] is non-immediate and does not
+    cross, and so local-allocating versions of e.g. [value_exn] could plausibly be useful:
+    we can add templating over those functions if someone asks. *)
+
+module type S = sig
+  include S_plain
+  include S_derivers [@mode m] with type t := t
+end
+
+module type S_zero_alloc = sig
+  include S_plain_zero_alloc
+  include S_derivers [@mode m] with type t := t
+end
+
+module type S_int63 = sig
+  include S_int63_plain
+  include S_derivers [@mode m] with type t := t
 end
 
 module type S_int63_zero_alloc = sig
   type t [@@immediate64]
 
-  include S_without_immediate_zero_alloc with type t := t
-end
+  include S_without_immediate_plain_zero_alloc with type t := t
+  include S_derivers [@mode m] with type t := t
+end]
 
 module type S_unboxed_float64 = sig
   type t
@@ -155,24 +178,38 @@ end
 module type Immediate_option = sig
   (** Always immediate. *)
 
-  module type S = S
   module type S_plain = S_plain
   module type S_plain_zero_alloc = S_plain_zero_alloc
-  module type S_zero_alloc = S_zero_alloc
+
+  [%%template:
+  [@@@mode.default m = (global, local)]
+
+  module type S = S [@mode m]
+  module type S_zero_alloc = S_zero_alloc [@mode m]]
 
   (** Immediate only on 64-bit machines. *)
 
-  module type S_int63 = S_int63
   module type S_int63_plain = S_int63_plain
-  module type S_int63_zero_alloc = S_int63_zero_alloc
 
-  (** Never immediate. *)
+  [%%template:
+  [@@@mode.default m = (global, local)]
 
-  module type S_without_immediate = S_without_immediate
-  module type S_without_immediate_plain = S_without_immediate_plain
-  module type S_without_immediate_plain_zero_alloc = S_without_immediate_plain_zero_alloc
-  module type S_without_immediate_zero_alloc = S_without_immediate_zero_alloc
+  module type S_int63 = S_int63 [@mode m]
+  module type S_int63_zero_alloc = S_int63_zero_alloc [@mode m]]
 
   (** Unboxed types *)
   module type S_unboxed_float64 = S_unboxed_float64
+
+  (** Never immediate. *)
+
+  [%%template:
+  [@@@mode.default m = (global, local)]
+
+  module type S_without_immediate_plain = S_without_immediate_plain [@mode m]
+
+  module type S_without_immediate_plain_zero_alloc = S_without_immediate_plain_zero_alloc
+  [@mode m]
+
+  module type S_without_immediate = S_without_immediate [@mode m]
+  module type S_without_immediate_zero_alloc = S_without_immediate_zero_alloc [@mode m]]
 end

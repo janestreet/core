@@ -39,13 +39,16 @@ module Stable = struct
            the index to -1, which is a safe value. *)
         let of_external (_ : t) = -1
 
-        include
-          Binable.Of_binable_without_uuid [@alert "-legacy"]
+        include%template
+          Binable.Of_binable_without_uuid
+            [@mode local]
+            [@modality portable]
+            [@alert "-legacy"]
             (Int.Stable.V1)
             (struct
               type t = int
 
-              let to_binable = to_external
+              let%template to_binable = to_external [@@mode m = (local, global)]
               let of_binable = of_external
             end)
 
@@ -56,8 +59,8 @@ module Stable = struct
             to_external
         ;;
 
-        include
-          Sexpable.Of_sexpable
+        include%template
+          Sexpable.Of_sexpable [@modality portable]
             (Int)
             (struct
               type t = int
@@ -73,7 +76,7 @@ module Stable = struct
           ; is_dst : bool
           ; abbrv : string
           }
-        [@@deriving bin_io, sexp, stable_witness]
+        [@@deriving bin_io ~localize, sexp, stable_witness]
       end
 
       (* holds information about when leap seconds should be applied - unused
@@ -84,7 +87,7 @@ module Stable = struct
           { time_in_seconds_since_epoch : Int63.Stable.V1.t
           ; seconds : int
           }
-        [@@deriving bin_io, sexp, stable_witness]
+        [@@deriving bin_io ~localize, sexp, stable_witness]
       end
 
       module Transition = struct
@@ -92,23 +95,26 @@ module Stable = struct
           { start_time_in_seconds_since_epoch : Int63.Stable.V1.t
           ; new_regime : Regime.t
           }
-        [@@deriving bin_io, sexp, stable_witness]
+        [@@deriving bin_io ~localize, sexp, stable_witness]
       end
 
       type t =
         { name : string
         ; original_filename : string option
         ; digest : Md5.As_binary_string.Stable.V1.t option
-        ; transitions : Transition.t array
+        ; transitions : Transition.t iarray
         ; (* caches the index of the last transition we used to make lookups faster *)
-          mutable last_regime_index : Index.t
+          last_regime_index : Index.t Atomic.t
         ; default_local_time_type : Regime.t
         ; leap_seconds : Leap_second.t list
         }
-      [@@deriving bin_io, sexp, stable_witness]
+      [@@deriving bin_io ~localize, sexp, stable_witness]
 
       (* this relies on zones with the same name having the same transitions *)
-      let compare t1 t2 = String.compare t1.name t2.name
+      let%template compare t1 t2 = (String.compare [@mode m]) t1.name t2.name
+      [@@mode m = (local, global)]
+      ;;
+
       let original_filename zone = zone.original_filename
       let digest zone = zone.digest
 
@@ -117,16 +123,20 @@ module Stable = struct
       end = struct
         let bool_of_int i = i <> 0
 
+        module DLS = Basement.Stdlib_shim.Domain.Safe.DLS
+
         let input_long_as_int32 =
-          let long = Bytes.create 4 in
+          let long = DLS.new_key (fun () -> Bytes.create 4) in
           let int32_of_char chr = Int32.of_int_exn (int_of_char chr) in
           fun ic ->
-            In_channel.really_input_exn ic ~buf:long ~pos:0 ~len:4;
-            let sb1 = Int32.shift_left (int32_of_char (Bytes.get long 0)) 24 in
-            let sb2 = Int32.shift_left (int32_of_char (Bytes.get long 1)) 16 in
-            let sb3 = Int32.shift_left (int32_of_char (Bytes.get long 2)) 8 in
-            let sb4 = int32_of_char (Bytes.get long 3) in
-            Int32.bit_or (Int32.bit_or sb1 sb2) (Int32.bit_or sb3 sb4)
+            DLS.access (fun access ->
+              let long = DLS.get access long in
+              In_channel.really_input_exn ic ~buf:long ~pos:0 ~len:4;
+              let sb1 = Int32.shift_left (int32_of_char (Bytes.get long 0)) 24 in
+              let sb2 = Int32.shift_left (int32_of_char (Bytes.get long 1)) 16 in
+              let sb3 = Int32.shift_left (int32_of_char (Bytes.get long 2)) 8 in
+              let sb4 = int32_of_char (Bytes.get long 3) in
+              Int32.bit_or (Int32.bit_or sb1 sb2) (Int32.bit_or sb3 sb4))
         ;;
 
         (* Note that this is only safe to use on numbers that will fit into a 31-bit
@@ -174,17 +184,20 @@ module Stable = struct
           in
           let buf = Buffer.create len in
           let _, indexed_abbrvs =
-            List.fold raw_abbrvs ~init:(0, Map.Poly.empty) ~f:(fun (index, abbrvs) c ->
-              match c with
-              | '\000' ->
-                let data = Buffer.contents buf in
-                let next_index = index + String.length data + 1 in
-                let abbrvs = Map.set abbrvs ~key:index ~data in
-                Buffer.clear buf;
-                next_index, abbrvs
-              | c ->
-                Buffer.add_char buf c;
-                index, abbrvs)
+            List.fold
+              raw_abbrvs
+              ~init:(0, (Map.Poly.empty : (int, string) Map.Poly.t))
+              ~f:(fun (index, abbrvs) c ->
+                match c with
+                | '\000' ->
+                  let data = Buffer.contents buf in
+                  let next_index = index + String.length data + 1 in
+                  let abbrvs = Map.set abbrvs ~key:index ~data in
+                  Buffer.clear buf;
+                  next_index, abbrvs
+                | c ->
+                  Buffer.add_char buf c;
+                  index, abbrvs)
           in
           if Buffer.length buf <> 0
           then
@@ -249,7 +262,7 @@ module Stable = struct
           let transitions =
             let rec make_transitions acc l =
               match l with
-              | [] -> Array.of_list (List.rev acc)
+              | [] -> Iarray.of_list (List.rev acc)
               | (start_time_in_seconds_since_epoch, new_regime) :: rest ->
                 make_transitions
                   ({ Transition.start_time_in_seconds_since_epoch; new_regime } :: acc)
@@ -267,7 +280,7 @@ module Stable = struct
             ; original_filename = Some original_filename
             ; digest = Some digest
             ; transitions
-            ; last_regime_index = Index.before_first_transition
+            ; last_regime_index = Atomic.make Index.before_first_transition
             ; default_local_time_type
             ; leap_seconds
             }
@@ -406,8 +419,8 @@ module Stable = struct
         { name
         ; original_filename = None
         ; digest = None
-        ; transitions = [||]
-        ; last_regime_index = Index.before_first_transition
+        ; transitions = Iarray.empty
+        ; last_regime_index = Atomic.make Index.before_first_transition
         ; default_local_time_type =
             { Regime.utc_offset_in_seconds; is_dst = false; abbrv = name }
         ; leap_seconds = []
@@ -432,16 +445,16 @@ include Stable.Full_data.V1
 let sexp_of_t t = Sexp.Atom t.name
 
 let likely_machine_zones =
-  ref [ "America/New_York"; "Europe/London"; "Asia/Hong_Kong"; "America/Chicago" ]
+  Atomic.make [ "America/New_York"; "Europe/London"; "Asia/Hong_Kong"; "America/Chicago" ]
 ;;
 
 let finalize_js_loaded ~zonename ~filename ~first_transition ~remaining_transitions =
-  let transitions = Array.of_list (first_transition :: remaining_transitions) in
+  let transitions = Iarray.of_list (first_transition :: remaining_transitions) in
   { name = zonename
   ; original_filename = Some filename
   ; digest = None
   ; transitions
-  ; last_regime_index = Index.before_first_transition
+  ; last_regime_index = Atomic.make Index.before_first_transition
   ; default_local_time_type = first_transition.Transition.new_regime
   ; leap_seconds = []
   }
@@ -460,12 +473,15 @@ let input_tz_file ~zonename ~filename =
 ;;
 
 let utc = of_utc_offset ~hours:0
-let name zone = zone.name
-let reset_transition_cache t = t.last_regime_index <- Index.before_first_transition
+let%template name zone = zone.name [@exclave_if_local m] [@@mode m = (local, global)]
+
+let reset_transition_cache t =
+  Atomic.set t.last_regime_index Index.before_first_transition
+;;
 
 (* Raises if [index >= Array.length t.transitions] *)
 let get_regime_exn t index =
-  if index < 0 then t.default_local_time_type else t.transitions.(index).new_regime
+  if index < 0 then t.default_local_time_type else t.transitions.:(index).new_regime
 ;;
 
 (* In "absolute mode", a number of seconds is interpreted as an offset of that many
@@ -497,7 +513,7 @@ module Mode = struct
 end
 
 let effective_start_time ~mode t i =
-  let curr = t.transitions.(i) in
+  let curr = t.transitions.:(i) in
   let start_time = curr.start_time_in_seconds_since_epoch in
   match (mode : Mode.t) with
   | Absolute -> start_time
@@ -507,7 +523,7 @@ let effective_start_time ~mode t i =
     let prev_offset =
       if i <= 0
       then (get_regime_exn t Index.before_first_transition).utc_offset_in_seconds
-      else t.transitions.(i - 1).new_regime.utc_offset_in_seconds
+      else t.transitions.:(i - 1).new_regime.utc_offset_in_seconds
     in
     Int63.O.(start_time + Int63.max prev_offset curr_offset)
 ;;
@@ -517,7 +533,7 @@ let index_lower_bound_contains_seconds_since_epoch t index ~mode seconds =
 ;;
 
 let index_upper_bound_contains_seconds_since_epoch t index ~mode seconds =
-  index + 1 >= Array.length t.transitions
+  index + 1 >= Iarray.length t.transitions
   || Int63.( < ) seconds (effective_start_time ~mode t (index + 1))
 ;;
 
@@ -525,7 +541,7 @@ let%template binary_search_index_of_seconds_since_epoch t ~mode seconds : Index.
   (Binary_search.binary_search_segmented
      ()
      `Last_on_left
-     ~length:(fun () -> Array.length t.transitions)
+     ~length:(fun () -> Iarray.length t.transitions)
      ~get:(fun () i -> i)
      ~segment_of:(fun i ->
        if Int63.( <= ) (effective_start_time ~mode t i) seconds then `Left else `Right)
@@ -535,7 +551,7 @@ let%template binary_search_index_of_seconds_since_epoch t ~mode seconds : Index.
 
 let index_of_seconds_since_epoch t ~mode seconds =
   let index =
-    let index = t.last_regime_index in
+    let index = Atomic.get t.last_regime_index in
     if not (index_lower_bound_contains_seconds_since_epoch t index ~mode seconds)
        (* time is before cached index; try previous index *)
     then (
@@ -558,7 +574,7 @@ let index_of_seconds_since_epoch t ~mode seconds =
       else index (* time is within cached index *))
     else index
   in
-  t.last_regime_index <- index;
+  Atomic.set t.last_regime_index index;
   index
 ;;
 
@@ -603,11 +619,11 @@ let add_offset_in_seconds_round_down t ~name ~span =
   ; original_filename = None
   ; digest = None
   ; transitions =
-      Array.map
+      Iarray.map
         t.transitions
         ~f:(fun { start_time_in_seconds_since_epoch; new_regime } : Transition.t ->
           { start_time_in_seconds_since_epoch; new_regime = offset_regime new_regime })
-  ; last_regime_index = Index.before_first_transition
+  ; last_regime_index = Atomic.make Index.before_first_transition
   ; default_local_time_type = offset_regime t.default_local_time_type
   ; leap_seconds = t.leap_seconds
   }
@@ -630,11 +646,11 @@ let index_of_date_and_ofday ?(prefer : Earlier_or_later.t = Later) t time =
   |> index_of_seconds_since_epoch t ~mode
 ;;
 
-let index_has_prev_clock_shift t index = index >= 0 && index < Array.length t.transitions
+let index_has_prev_clock_shift t index = index >= 0 && index < Iarray.length t.transitions
 let index_has_next_clock_shift t index = index_has_prev_clock_shift t (index + 1)
 
 let index_prev_clock_shift_time_exn t index =
-  let transition = t.transitions.(index) in
+  let transition = t.transitions.:(index) in
   transition.start_time_in_seconds_since_epoch
   |> Time_in_seconds.Span.of_int63_seconds
   |> Time_in_seconds.of_span_since_epoch
@@ -643,10 +659,10 @@ let index_prev_clock_shift_time_exn t index =
 let index_next_clock_shift_time_exn t index = index_prev_clock_shift_time_exn t (index + 1)
 
 let index_prev_clock_shift_amount_exn t index =
-  let transition = t.transitions.(index) in
+  let transition = t.transitions.:(index) in
   let after = transition.new_regime in
   let before =
-    if index = 0 then t.default_local_time_type else t.transitions.(index - 1).new_regime
+    if index = 0 then t.default_local_time_type else t.transitions.:(index - 1).new_regime
   in
   Int63.( - ) after.utc_offset_in_seconds before.utc_offset_in_seconds
   |> Time_in_seconds.Span.of_int63_seconds

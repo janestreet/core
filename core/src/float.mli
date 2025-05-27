@@ -4,10 +4,11 @@ open! Import
 
 (*_ This needs to be above the place where we include [Base.Float] so that it doesn't
    shadow the latter's mode-polymorphic operators. *)
-include
-  Identifiable.S
-  with type t := float
-   and type comparator_witness := Base.Float.comparator_witness
+  include%template
+    Identifiable.S
+    [@mode local]
+    with type t := float
+     and type comparator_witness := Base.Float.comparator_witness
 
 (** @inline *)
 include

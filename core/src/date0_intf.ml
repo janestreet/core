@@ -24,7 +24,9 @@ module type Date0 = sig
       - YYYYMMDD *)
   include Stringable with type t := t
 
-  include Comparable_binable with type t := t
+  include%template
+    Comparable.S_binable [@mode local] [@modality portable] with type t := t
+
   include Diffable.S_atomic with type t := t
   include Pretty_printer.S with type t := t
 
@@ -317,7 +319,9 @@ module type Date0 = sig
     [@@immediate]
 
     include Immediate_option_intf.S_zero_alloc with type value := value and type t := t
-    include Comparable.S_plain with type t := t
+
+    include%template Comparable.S_plain [@mode local] with type t := t
+
     include Quickcheckable.S with type t := t
   end
 
@@ -371,8 +375,8 @@ module type Date0 = sig
 
     https://opensource.janestreet.com/standards/#private-submodules *)
   module Private : sig
-    val leap_year_table : int array
-    val non_leap_year_table : int array
+    val leap_year_table : int iarray
+    val non_leap_year_table : int iarray
     val ordinal_date : t -> int
   end
 end

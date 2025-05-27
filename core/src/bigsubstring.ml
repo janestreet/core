@@ -1,6 +1,6 @@
 open! Import
 
-include Make_substring.F (struct
+include%template Make_substring.F [@modality portable] (struct
     type t = Bigstring.t [@@deriving quickcheck]
 
     let create = Bigstring.create

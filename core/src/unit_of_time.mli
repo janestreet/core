@@ -11,4 +11,4 @@ type t =
   | Minute
   | Hour
   | Day
-[@@deriving sexp, sexp_grammar, compare, enumerate, hash]
+[@@deriving sexp, sexp_grammar, compare ~localize, enumerate, hash]

@@ -7,9 +7,9 @@ module type S0_without_comparator = sig
   type t [@@deriving (bin_io [@mode m]), (compare [@mode m]), sexp]
 end
 
-module type S0 = sig
+module type [@modality p = (portable, nonportable)] S0 = sig
   include S0_without_comparator [@mode m]
-  include Comparator.Stable.V1.S with type t := t
+  include Comparator.Stable.V1.S [@modality p] with type t := t
 end
 
 (** The polymorphic signatures require a mapping function so people can write conversion
@@ -60,10 +60,10 @@ module%template With_stable_witness = struct
     include S0_without_comparator [@mode m] with type t := t
   end
 
-  module type S0 = sig
+  module type [@modality p = (portable, nonportable)] S0 = sig
     type t [@@deriving stable_witness]
 
-    include S0 [@mode m] with type t := t
+    include S0 [@mode m] [@modality p] with type t := t
   end
 
   module type S1 = sig

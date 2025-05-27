@@ -27,12 +27,14 @@ module Expect_test_config_with_unit_expect = Expect_test_config
 module Stable : sig
   (** [Or_error.t] is wire compatible with [V2.t], but not [V1.t], like [Info.Stable] and
       [Error.Stable]. *)
-  module V1 : Stable_module_types.With_stable_witness.S1 with type 'a t = 'a t
+  module%template V1 :
+    Stable_module_types.With_stable_witness.S1 [@mode local] with type 'a t = 'a t
 
   module V2 : sig
     type nonrec 'a t = 'a t
-    [@@deriving equal, sexp_grammar, diff ~extra_derive:[ sexp; bin_io ]]
+    [@@deriving equal ~localize, sexp_grammar, diff ~extra_derive:[ sexp; bin_io ]]
 
-    include Stable_module_types.With_stable_witness.S1 with type 'a t := 'a t
+    include%template
+      Stable_module_types.With_stable_witness.S1 [@mode local] with type 'a t := 'a t
   end
 end

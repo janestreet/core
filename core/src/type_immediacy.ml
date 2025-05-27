@@ -39,7 +39,7 @@ module Immediacy = struct
     | Sometimes
     | Never
     | Unknown
-  [@@deriving compare]
+  [@@deriving compare ~localize]
 
   let equal = [%compare.equal: t]
 
@@ -88,8 +88,9 @@ module T : sig
 
   val never : 'a. 'a Typename.t -> 'a t
   val unknown : 'a. 'a Typename.t -> 'a t
-  val option : _ t
-  val list : _ t
+  val option : _ option t
+  val or_null : 'a. 'a t
+  val list : _ list t
   val magic : 'a 'b. 'a t -> 'b t
 end = struct
   type t_ =
@@ -116,6 +117,7 @@ end = struct
   let never typename = create typename Never None
   let unknown typename = create typename Unknown None
   let option = create_with_name "option" Sometimes (Allowed_ints.From_zero_to 0)
+  let or_null = create_with_name "or_null" Sometimes Allowed_ints.None
   let list = create_with_name "list" Sometimes (Allowed_ints.From_zero_to 0)
 
   module Never_values = struct
@@ -176,6 +178,7 @@ module Computation_impl = struct
   let bool = bool
   let unit = unit
   let option _ = option
+  let or_null _ = or_null
   let list _ = list
 
   (* An [a Lazy.t] might be a boxed closure, so must have immediacy either [Never] or

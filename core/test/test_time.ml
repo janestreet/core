@@ -1195,8 +1195,8 @@ module _ = struct
   (* This because we're sharing the suffixes between the parser code and tests, so e.g.
      typos would otherwise go undetected *)
   let%expect_test "the permissible suffixes are reasonable" =
-    printf "%s\n" (String.concat ~sep:" " (Lazy.force Ofday_helpers.am_suffixes));
-    printf "%s\n" (String.concat ~sep:" " (Lazy.force Ofday_helpers.pm_suffixes));
+    printf "%s\n" (String.concat ~sep:" " (Portable_lazy.force Ofday_helpers.am_suffixes));
+    printf "%s\n" (String.concat ~sep:" " (Portable_lazy.force Ofday_helpers.pm_suffixes));
     [%expect
       {|
       a A am AM a.m A.M a.m. A.M.
@@ -1210,8 +1210,8 @@ module _ = struct
         let plus_space xs = xs @ List.map xs ~f:(fun x -> " " ^ x) in
         match meridiem with
         | None -> 0, [ "" ]
-        | Some `AM -> 0, plus_space (Lazy.force Ofday_helpers.am_suffixes)
-        | Some `PM -> 12, plus_space (Lazy.force Ofday_helpers.pm_suffixes)
+        | Some `AM -> 0, plus_space (Portable_lazy.force Ofday_helpers.am_suffixes)
+        | Some `PM -> 12, plus_space (Portable_lazy.force Ofday_helpers.pm_suffixes)
       in
       List.iter suffixes ~f:(fun suffix ->
         let t = create ~hr:(hr + hrs_to_add) () in

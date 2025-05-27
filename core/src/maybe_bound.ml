@@ -7,7 +7,13 @@ module Stable = struct
       | Excl of 'a
       | Unbounded
     [@@deriving
-      bin_io ~localize, compare, equal, hash, sexp, sexp_grammar, stable_witness]
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , hash
+      , sexp
+      , sexp_grammar
+      , stable_witness]
 
     let map x ~f =
       match x with
@@ -24,9 +30,16 @@ type 'a t = 'a Stable.V1.t =
   | Incl of 'a
   | Excl of 'a
   | Unbounded
-[@@deriving bin_io ~localize, compare, equal, hash, quickcheck, sexp, sexp_grammar]
+[@@deriving
+  bin_io ~localize
+  , compare ~localize
+  , equal ~localize
+  , hash
+  , quickcheck
+  , sexp
+  , sexp_grammar]
 
-let compare_one_sided ~side compare_a t1 t2 =
+let%template compare_one_sided ~side compare_a t1 t2 =
   match t1, t2 with
   | Unbounded, Unbounded -> 0
   | Unbounded, _ ->
@@ -55,16 +68,23 @@ let compare_one_sided ~side compare_a t1 t2 =
       | `Lower -> 1
       | `Upper -> -1)
     else c
+[@@mode m = (local, global)]
 ;;
 
 module As_lower_bound = struct
-  type nonrec 'a t = 'a t [@@deriving bin_io, equal, hash, sexp, sexp_grammar]
+  type nonrec 'a t = 'a t [@@deriving bin_io, equal ~localize, hash, sexp, sexp_grammar]
 
-  let compare compare_a t1 t2 = compare_one_sided ~side:`Lower compare_a t1 t2
+  let%template compare compare_a t1 t2 =
+    (compare_one_sided [@mode m]) ~side:`Lower compare_a t1 t2
+  [@@mode m = (local, global)]
+  ;;
 end
 
 module As_upper_bound = struct
-  type nonrec 'a t = 'a t [@@deriving bin_io, equal, hash, sexp, sexp_grammar]
+  type nonrec 'a t = 'a t [@@deriving bin_io, equal ~localize, hash, sexp, sexp_grammar]
 
-  let compare compare_a t1 t2 = compare_one_sided ~side:`Upper compare_a t1 t2
+  let%template compare compare_a t1 t2 =
+    (compare_one_sided [@mode m]) ~side:`Upper compare_a t1 t2
+  [@@mode m = (local, global)]
+  ;;
 end

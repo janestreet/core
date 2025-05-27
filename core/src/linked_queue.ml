@@ -2,7 +2,7 @@ open! Import
 module Queue = Base.Linked_queue
 include Queue
 
-include Bin_prot.Utils.Make_iterable_binable1 (struct
+include%template Bin_prot.Utils.Make_iterable_binable1 [@modality portable] (struct
     type 'a t = 'a Queue.t
     type 'a el = 'a [@@deriving bin_io]
 
@@ -26,8 +26,8 @@ include Bin_prot.Utils.Make_iterable_binable1 (struct
     ;;
   end)
 
-include
-  Quickcheckable.Of_quickcheckable1
+include%template
+  Quickcheckable.Of_quickcheckable1 [@modality portable]
     (List)
     (struct
       type nonrec 'a t = 'a t

@@ -9,6 +9,7 @@ module Stable : sig
     type nonrec 'a t = 'a t
     [@@deriving compare ~localize, equal ~localize, globalize, hash, sexp, sexp_grammar]
 
-    include Stable_module_types.With_stable_witness.S1 with type 'a t := 'a t
+    include%template
+      Stable_module_types.With_stable_witness.S1 [@mode local] with type 'a t := 'a t
   end
 end

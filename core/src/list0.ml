@@ -2,7 +2,8 @@ open! Import
 open! Typerep_lib.Std
 include Base.List
 
-type 'a t = 'a list [@@deriving bin_io ~localize, typerep, stable_witness]
+[%%rederive.portable
+  type 'a t = 'a list [@@deriving bin_io ~localize, typerep, stable_witness]]
 
 module Assoc = struct
   include Assoc
@@ -17,7 +18,7 @@ let to_string ~f t =
 ;;
 
 include%template Comparator.Derived [@modality portable] (struct
-    type nonrec 'a t = 'a t [@@deriving sexp_of, compare]
+    type nonrec 'a t = 'a t [@@deriving sexp_of, compare ~localize]
   end)
 
 [%%template

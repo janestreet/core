@@ -62,6 +62,8 @@ type 'a check = 'a -> t
 (** A result containing no errors. *)
 val pass : t
 
+val get_pass : unit -> t
+
 (** A result containing a single error. *)
 val fail : string -> t
 
@@ -80,6 +82,10 @@ val of_list : t list -> t
 
 (** Extends location path by one name. *)
 val name : string -> t -> t
+
+(** Extends location path by one lazy name, which will be forced only in the case of
+    failure. *)
+val lazy_name : string Lazy.t -> t -> t
 
 val name_list : string -> t list -> t
 

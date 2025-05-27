@@ -42,7 +42,7 @@ module Parts = struct
     ; us : int
     ; ns : int
     }
-  [@@deriving compare, sexp, sexp_grammar]
+  [@@deriving compare ~localize, sexp, sexp_grammar]
 end
 
 let next t = Int63.succ t
@@ -249,8 +249,9 @@ module Stable0 = struct
     end
 
     include T
-    include Comparator.Stable.V1.Make (T)
-    include Diffable.Atomic.Make (T)
+
+    include%template Comparator.Stable.V1.Make [@modality portable] (T)
+    include%template Diffable.Atomic.Make [@modality portable] (T)
   end
 
   module V2 = struct
@@ -367,7 +368,7 @@ module Stable0 = struct
               | Microsecond
               | Nanosecond
               | None
-            [@@deriving compare, sexp_of]
+            [@@deriving compare ~localize, sexp_of]
 
             let create ~s ~ns =
               let open Int.O in
@@ -725,12 +726,14 @@ module Stable0 = struct
       end
 
       include T0
-      include Comparator.Stable.V1.Make (T0)
+
+      include%template Comparator.Stable.V1.Make [@modality portable] (T0)
     end
 
     include T
-    include Comparable.Stable.V1.With_stable_witness.Make (T)
-    include Diffable.Atomic.Make (T)
+
+    include%template Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (T)
+    include%template Diffable.Atomic.Make [@modality portable] (T)
   end
 end
 
@@ -748,8 +751,8 @@ module Alternate_sexp = struct
   type nonrec t = t [@@deriving sexp, sexp_grammar]
 end
 
-include Comparable.With_zero (struct
-    type nonrec t = t [@@deriving compare, sexp]
+include%template Comparable.With_zero [@modality portable] (struct
+    type nonrec t = t [@@deriving compare ~localize, sexp]
 
     let zero = zero
   end)
@@ -805,7 +808,7 @@ let random ?state () =
   - Int63.random ?state (neg min_value_for_1us_rounding + Int63.one)
 ;;
 
-let randomize ?(state = Random.State.default) t ~percent =
+let randomize ?(state = Random.State.get_default ()) t ~percent =
   Span_helpers.randomize t state ~percent ~scale
 ;;
 
@@ -817,28 +820,28 @@ let to_short_string t =
 let gen_incl = Int63.gen_incl
 let gen_uniform_incl = Int63.gen_uniform_incl
 
-include Pretty_printer.Register (struct
+include%template Pretty_printer.Register [@modality portable] (struct
     type nonrec t = t
 
     let to_string = to_string
     let module_name = module_name
   end)
 
-include Hashable.Make_binable (struct
-    type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
+include%template Hashable.Make_binable [@modality portable] (struct
+    type nonrec t = t [@@deriving bin_io, compare ~localize, hash, sexp]
   end)
 
 type comparator_witness = Stable.V2.comparator_witness
 
-include Comparable.Make_binable_using_comparator (struct
-    type nonrec t = t [@@deriving bin_io, compare, sexp]
+include%template Comparable.Make_binable_using_comparator [@modality portable] (struct
+    type nonrec t = t [@@deriving bin_io, compare ~localize, sexp]
     type nonrec comparator_witness = comparator_witness
 
     let comparator = Stable.V2.comparator
   end)
 
-include Diffable.Atomic.Make (struct
-    type nonrec t = t [@@deriving bin_io, sexp, equal]
+include%template Diffable.Atomic.Make [@modality portable] (struct
+    type nonrec t = t [@@deriving bin_io, sexp, equal ~localize]
   end)
 
 (* re-include [Replace_polymorphic_compare] and its comparisons to shadow the
@@ -961,30 +964,38 @@ module Option = struct
     module Some = struct
       type t = span
 
-      let quickcheck_generator =
-        Quickcheck.Generator.filter quickcheck_generator ~f:some_is_representable
+      let%template quickcheck_generator =
+        (Base_quickcheck.Generator.filter [@mode portable])
+          quickcheck_generator
+          ~f:some_is_representable
       ;;
 
       let quickcheck_observer = quickcheck_observer
 
-      let quickcheck_shrinker =
-        Base_quickcheck.Shrinker.filter quickcheck_shrinker ~f:some_is_representable
+      let%template quickcheck_shrinker =
+        (Base_quickcheck.Shrinker.filter [@mode portable])
+          quickcheck_shrinker
+          ~f:some_is_representable
       ;;
     end
 
-    type t = Some.t option [@@deriving quickcheck]
+    type t = Some.t option [@@deriving quickcheck ~portable]
   end
 
-  let quickcheck_generator =
-    Quickcheck.Generator.map For_quickcheck.quickcheck_generator ~f:of_option
+  let%template quickcheck_generator =
+    (Base_quickcheck.Generator.map [@mode portable])
+      For_quickcheck.quickcheck_generator
+      ~f:of_option
   ;;
 
-  let quickcheck_observer =
-    Quickcheck.Observer.unmap For_quickcheck.quickcheck_observer ~f:to_option
+  let%template quickcheck_observer =
+    (Quickcheck.Observer.unmap [@mode portable])
+      For_quickcheck.quickcheck_observer
+      ~f:to_option
   ;;
 
-  let quickcheck_shrinker =
-    Quickcheck.Shrinker.map
+  let%template quickcheck_shrinker =
+    (Quickcheck.Shrinker.map [@mode portable])
       For_quickcheck.quickcheck_shrinker
       ~f:of_option
       ~f_inverse:to_option
@@ -1023,8 +1034,9 @@ module Option = struct
       end
 
       include T
-      include Comparator.Stable.V1.Make (T)
-      include Diffable.Atomic.Make (T)
+
+      include%template Comparator.Stable.V1.Make [@modality portable] (T)
+      include%template Diffable.Atomic.Make [@modality portable] (T)
     end
 
     module V2 = struct
@@ -1068,26 +1080,27 @@ module Option = struct
       end
 
       include T
-      include Comparator.Stable.V1.Make (T)
-      include Diffable.Atomic.Make (T)
+
+      include%template Comparator.Stable.V1.Make [@modality portable] (T)
+      include%template Diffable.Atomic.Make [@modality portable] (T)
     end
   end
 
   let sexp_of_t = Stable.V2.sexp_of_t
   let t_of_sexp = Stable.V2.t_of_sexp
 
-  include Identifiable.Make (struct
-      type nonrec t = t [@@deriving sexp, compare, bin_io, hash]
+  include%template Identifiable.Make [@mode local] [@modality portable] (struct
+      type nonrec t = t [@@deriving sexp, compare ~localize, bin_io ~localize, hash]
 
       let module_name = "Core.Time_ns.Span.Option"
 
-      include Sexpable.To_stringable (struct
+      include%template Sexpable.To_stringable [@modality portable] (struct
           type nonrec t = t [@@deriving sexp]
         end)
     end)
 
-  include Diffable.Atomic.Make (struct
-      type nonrec t = t [@@deriving bin_io, sexp, equal]
+  include%template Diffable.Atomic.Make [@modality portable] (struct
+      type nonrec t = t [@@deriving bin_io, sexp, equal ~localize]
     end)
 
   include (
@@ -1105,7 +1118,9 @@ module Option = struct
     let[@zero_alloc strict] min = [%eta2 min]
     let[@zero_alloc strict] max = [%eta2 max]
   end :
-    Comparisons.S_with_zero_alloc with type t := t)
+  sig
+    include Comparisons.S_with_zero_alloc with type t := t
+  end)
 end
 
 module Stable = struct
@@ -1117,4 +1132,4 @@ module Stable = struct
   end
 end
 
-let arg_type = Command.Arg_type.create of_string
+let%template arg_type = (Command.Arg_type.create [@mode portable]) of_string

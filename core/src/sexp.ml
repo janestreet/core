@@ -44,7 +44,8 @@ module O = struct
 end
 
 module Sexp_maybe = struct
-  type nonrec 'a t = ('a, t * Error.t) Result.t [@@deriving bin_io, compare, hash]
+  type nonrec 'a t = ('a, t * Error.t) Result.t
+  [@@deriving bin_io, compare ~localize, hash]
 
   let sexp_of_t sexp_of_a t =
     match t with
@@ -112,7 +113,8 @@ let sexp_of_no_raise sexp_of_a a =
      | _ -> Atom "could not build sexp for exn raised when building sexp for value")
 ;;
 
-include%template Comparable.Extend [@modality portable] (Base.Sexp) (Base.Sexp)
+include%template
+  Comparable.Extend [@mode local] [@modality portable] (Base.Sexp) (Base.Sexp)
 
 let of_sexp_allow_extra_fields_recursively of_sexp sexp =
   Dynamic.with_temporarily Sexplib.Conv.record_check_extra_fields false ~f:(fun () ->

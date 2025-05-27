@@ -17,6 +17,7 @@ include (
 
     include Non_value with type ('k, 'v) t := ('k, 'v) t
     include Base.Hashtbl.S_without_submodules with type ('a, 'b) t := ('a, 'b) t
+    include Hashtbl_equality with type ('k, 'v) t := ('k, 'v) t
   end)
 
 let validate ~name f t = Validate.alist ~name f (to_alist t)
@@ -91,10 +92,14 @@ module type S_plain = S_plain with type ('a, 'b) hashtbl = ('a, 'b) t
 module type S = S with type ('a, 'b) hashtbl = ('a, 'b) t
 module type S_binable = S_binable with type ('a, 'b) hashtbl = ('a, 'b) t
 module type S_stable = S_stable with type ('a, 'b) hashtbl = ('a, 'b) t
-module type Key_plain = Key_plain
-module type Key = Key
-module type Key_binable = Key_binable
-module type Key_stable = Key_stable
+
+[%%template
+[@@@mode.default m = (local, global)]
+
+module type Key_plain = Key_plain [@mode m]
+module type Key = Key [@mode m]
+module type Key_binable = Key_binable [@mode m]
+module type Key_stable = Key_stable [@mode m]]
 
 module Poly = struct
   include Hashtbl.Poly
@@ -190,7 +195,7 @@ struct
       include Invariant.S2 with type ('a, 'b) t := ('a, 'b) hashtbl
     end)
 
-  let equal = Hashtbl.equal
+  let%template equal = (Hashtbl.equal [@mode m]) [@@mode m = (local, global)]
   let invariant invariant_key t = invariant ignore invariant_key t
   let sexp_of_t sexp_of_v t = Poly.sexp_of_t T.Key.sexp_of_t sexp_of_v t
 end
@@ -285,7 +290,7 @@ end = struct
       include Hashtbl.For_deriving with type ('a, 'b) t := ('a, 'b) t
     end)
 
-  module type M_quickcheck = M_quickcheck
+  module type%template M_quickcheck = M_quickcheck [@mode m] [@@mode m = (local, global)]
 
   let of_alist_option m alist = Result.ok (of_alist_or_error m alist)
 

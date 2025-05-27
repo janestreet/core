@@ -4,7 +4,11 @@ module Span = Span_ns
 type underlying = Int63.t
 type t = Span.t (* since wall-clock midnight *) [@@deriving typerep]
 
-include (Span : Robustly_comparable.S with type t := t)
+include (
+  Span :
+  sig
+    include Robustly_comparable.S with type t := t
+  end)
 
 let to_parts t = Span.to_parts t
 let start_of_day : t = Span.zero
@@ -74,9 +78,12 @@ module Stable = struct
 
     include (
       Span.Stable.V2 :
-        Comparator.S
-        with type t := t
-         and type comparator_witness = Span.Stable.V2.comparator_witness)
+      sig
+        include
+          Comparator.S
+          with type t := t
+           and type comparator_witness = Span.Stable.V2.comparator_witness
+      end)
 
     let to_string_with_unit =
       let ( / ) = Int63.( / ) in
@@ -206,38 +213,53 @@ module Stable = struct
     let to_int63 t = Span_ns.Stable.V2.to_int63 t
     let of_int63_exn t = of_span_since_start_of_day_exn (Span_ns.Stable.V2.of_int63_exn t)
 
-    include Diffable.Atomic.Make (struct
-        type nonrec t = t [@@deriving bin_io, equal, sexp]
+    include%template Diffable.Atomic.Make [@modality portable] (struct
+        type nonrec t = t [@@deriving bin_io, equal ~localize, sexp]
       end)
   end
 end
 
 include (
   Stable.V1 :
-    Comparator.S
-    with type t := t
-     and type comparator_witness = Stable.V1.comparator_witness)
+  sig
+    include
+      Comparator.S
+      with type t := t
+       and type comparator_witness = Stable.V1.comparator_witness
+  end)
 
-[%%rederive
+[%%rederive.portable
   type nonrec t = Stable.V1.t [@@deriving compare ~localize, equal ~localize, globalize]]
 
-include Identifiable.Make_using_comparator (struct
-    type t = Stable.V1.t [@@deriving bin_io, compare, hash, sexp]
+include%template
+  Identifiable.Make_using_comparator [@mode local] [@modality portable] (struct
+    type t = Stable.V1.t [@@deriving bin_io ~localize, compare ~localize, hash, sexp]
 
     include (
       Stable.V1 :
-        Comparator.S
-        with type t := t
-         and type comparator_witness = Stable.V1.comparator_witness)
+      sig
+        include
+          Comparator.S
+          with type t := t
+           and type comparator_witness = Stable.V1.comparator_witness
+      end)
 
-    include (Stable.V1 : Stringable.S with type t := t)
+    include (
+      Stable.V1 :
+      sig
+        include Stringable.S with type t := t
+      end)
 
     let module_name = "Core.Time_ns.Ofday"
   end)
 
-include%template (Stable.V1 : Binable.S [@mode local] with type t := t)
+include%template (
+  Stable.V1 :
+  sig
+    include Binable.S [@mode local] with type t := t
+  end)
 
-include Diffable.Atomic.Make (Stable.V1)
+include%template Diffable.Atomic.Make [@modality portable] (Stable.V1)
 
 let t_sexp_grammar = Stable.V1.t_sexp_grammar
 let to_nanosecond_string t = Stable.V1.to_string_with_unit t ~unit:`Nanosecond
@@ -343,7 +365,11 @@ let quickcheck_generator = gen_incl start_of_day start_of_next_day
 let quickcheck_observer = Span.quickcheck_observer
 let quickcheck_shrinker = Quickcheck.Shrinker.empty ()
 
-include (Span : Comparisons.S with type t := t)
+include (
+  Span :
+  sig
+    include Comparisons.S with type t := t
+  end)
 
 (* deprecated bindings *)
 let of_span_since_start_of_day = of_span_since_start_of_day_exn

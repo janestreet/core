@@ -47,8 +47,8 @@ module Definitions = struct
   end
 
   (** The shared cache for calculating date and start-of-day from a given time. Contains a
-      shared mutable state that is exposed via [get] and [reset]. *)
-  module type Shared_date_cache = sig
+      synchronized mutable state that is exposed via [get] and [reset]. *)
+  module type Synchronized_date_cache = sig
     type time
 
     (** [get_date time ~zone] and [get_day_start time ~zone] calculate the date and
@@ -71,5 +71,5 @@ module type Date_cache = sig
     include Definitions
   end
 
-  module Make (Time : Time) () : Shared_date_cache with type time := Time.t
+  module Make (Time : Time) () : Synchronized_date_cache with type time := Time.t
 end

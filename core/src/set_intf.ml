@@ -20,15 +20,18 @@ module Set = Base.Set
 module Tree = Set.Using_comparator.Tree
 module Container = Base.Container
 
-module type Elt_plain = Set.Elt_plain
+[%%template
+[@@@mode.default m = (local, global)]
+
+module type Elt_plain = Set.Elt_plain [@mode m]
 
 module type Elt = sig
-  type t [@@deriving compare, sexp]
+  type t [@@deriving (compare [@mode m]), sexp]
 end
 
 module type Elt_binable = sig
-  type t [@@deriving bin_io, compare, sexp]
-end
+  type t [@@deriving bin_io, (compare [@mode m]), sexp]
+end]
 
 module Elt_bin_io = struct
   module type S = sig
@@ -189,7 +192,8 @@ end
 module type S_plain_tree = sig
   module Elt : Comparator.S
 
-  type t = (Elt.t, Elt.comparator_witness) Tree.t [@@deriving compare, equal, sexp_of]
+  type t = (Elt.t, Elt.comparator_witness) Tree.t
+  [@@deriving compare ~localize, equal ~localize, sexp_of]
 
   include
     Creators_generic
@@ -201,14 +205,18 @@ module type S_plain_tree = sig
     with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
 end
 
+[%%template
+[@@@modality.default p = (portable, nonportable)]
+
 module type S_plain = sig
   module Elt : sig
     type t [@@deriving sexp_of]
 
-    include Comparator.S with type t := t
+    include Comparator.S [@modality p] with type t := t
   end
 
-  type t = (Elt.t, Elt.comparator_witness) Base.Set.t [@@deriving compare, equal, sexp_of]
+  type t = (Elt.t, Elt.comparator_witness) Base.Set.t
+  [@@deriving compare ~localize, equal ~localize, sexp_of]
 
   module Diff : sig
     type t = Elt.t Diffable.Set_diff.t [@@deriving sexp_of]
@@ -238,7 +246,7 @@ module type S = sig
   module Elt : sig
     type t [@@deriving sexp]
 
-    include Comparator.S with type t := t
+    include Comparator.S [@modality p] with type t := t
   end
 
   module Diff : sig
@@ -250,7 +258,7 @@ module type S = sig
        and type derived_on = (Elt.t, Elt.comparator_witness) Base.Set.t
   end
 
-  include S_plain with module Elt := Elt and module Diff := Diff
+  include S_plain [@modality p] with module Elt := Elt and module Diff := Diff
   include Sexpable.S with type t := t
 end
 
@@ -258,7 +266,7 @@ module type S_binable = sig
   module Elt : sig
     type t [@@deriving sexp, bin_io]
 
-    include Comparator.S with type t := t
+    include Comparator.S [@modality p] with type t := t
   end
 
   module Diff : sig
@@ -270,6 +278,6 @@ module type S_binable = sig
        and type derived_on = (Elt.t, Elt.comparator_witness) Base.Set.t
   end
 
-  include S with module Elt := Elt and module Diff := Diff
-  include Binable.S with type t := t
-end
+  include S [@modality p] with module Elt := Elt and module Diff := Diff
+  include Binable.S [@mode local] with type t := t
+end]

@@ -7,7 +7,8 @@
 
 open! Import
 
-type 'a t [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
+type 'a t
+[@@deriving bin_io, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
 
 include Container.S1 with type 'a t := 'a t
 include Invariant.S1 with type 'a t := 'a t
@@ -74,7 +75,7 @@ val singleton : 'a -> 'a t
 
 module Stable : sig
   module V1 : sig
-    type nonrec 'a t = 'a t [@@deriving equal]
+    type nonrec 'a t = 'a t [@@deriving compare ~localize, equal ~localize]
 
     include Stable_module_types.With_stable_witness.S1 with type 'a t := 'a t
   end

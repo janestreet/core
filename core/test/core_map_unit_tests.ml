@@ -221,7 +221,9 @@ struct
   let mapi _ = assert false
   let fold _ = assert false
   let equal _ = assert false
+  let equal__local _ = assert false
   let compare_direct _ = assert false
+  let compare_direct__local _ = assert false
 
   (* runs a series of random tests on a map of the input type and a Caml map to see if
      they have the same behavior *)

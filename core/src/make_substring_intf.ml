@@ -42,5 +42,5 @@ module type Make_substring = sig
     val bigstring_bigstring : (bigstring, bigstring) t
   end
 
-  module F (Base : Base) : S with type base = Base.t
+  module%template.portable F (Base : Base) : S with type base = Base.t
 end

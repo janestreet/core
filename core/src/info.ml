@@ -18,10 +18,10 @@ module Sexp = struct
     type t = Base.Sexp.t =
       | Atom of string
       | List of t list
-    [@@deriving bin_io ~localize, compare, hash, stable_witness]
+    [@@deriving bin_io ~localize, compare ~localize, hash, stable_witness]
   end :
     sig
-      type t [@@deriving bin_io ~localize, compare, hash, stable_witness]
+      type t [@@deriving bin_io ~localize, compare ~localize, hash, stable_witness]
     end
     with type t := t)
 end
@@ -123,7 +123,8 @@ module Extend (Info : Base.Info.S) = struct
     module V2 = struct
       module T = struct
         type t = Info.t
-        [@@deriving sexp, sexp_grammar, compare ~localize, equal, globalize, hash]
+        [@@deriving
+          sexp, sexp_grammar, compare ~localize, equal ~localize, globalize, hash]
       end
 
       include T
@@ -154,13 +155,13 @@ module Extend (Info : Base.Info.S) = struct
       ;;
 
       include%template Diffable.Atomic.Make [@modality portable] (struct
-          type nonrec t = t [@@deriving sexp, bin_io, equal]
+          type nonrec t = t [@@deriving sexp, bin_io, equal ~localize]
         end)
     end
 
     module V1 = struct
       module T = struct
-        type t = Info.t [@@deriving compare]
+        type t = Info.t [@@deriving compare ~localize]
 
         include%template
           Sexpable.Stable.Of_sexpable.V1 [@modality portable]
@@ -180,15 +181,16 @@ module Extend (Info : Base.Info.S) = struct
       include%template Comparator.Stable.V1.Make [@modality portable] (T)
 
       let to_binable = sexp_of_t
+      let%template[@mode local] to_binable t = sexp_of_t (globalize t)
       let of_binable = t_of_sexp
 
       include%template
-        Binable.Stable.Of_binable.V1 [@modality portable] [@alert "-legacy"]
+        Binable.Stable.Of_binable.V1 [@mode local] [@modality portable] [@alert "-legacy"]
           (Sexp)
           (struct
             type nonrec t = t
 
-            let to_binable = to_binable
+            let%template[@mode l = (local, global)] to_binable = (to_binable [@mode l])
             let of_binable = of_binable
           end)
 

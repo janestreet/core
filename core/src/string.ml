@@ -23,9 +23,10 @@ module Stable = struct
   end
 
   module Make_utf (Utf : sig
-      type t [@@deriving sexp_grammar]
+      type t = private string [@@deriving sexp_grammar]
 
-      include Base.Identifiable.S with type t := t
+      include%template
+        Base.Identifiable.S [@mode local] [@modality portable] with type t := t
 
       val caller_identity : Bin_shape.Uuid.t
     end) =
@@ -35,15 +36,15 @@ module Stable = struct
         include Utf
 
         include%template
-          Binable0.Of_binable_with_uuid [@modality portable]
+          Binable0.Of_binable_with_uuid [@mode local] [@modality portable]
             (struct
-              type t = string [@@deriving bin_io]
+              type t = string [@@deriving bin_io ~localize]
             end)
             (struct
               type t = Utf.t
 
               let of_binable = Utf.of_string
-              let to_binable = Utf.to_string
+              let[@mode __ = (local, global)] to_binable (t : t) = (t :> string)
               let caller_identity = Utf.caller_identity
             end)
 
@@ -109,27 +110,29 @@ module Caseless = struct
 
   include T
 
-  include%template Comparable.Make_binable_using_comparator [@modality portable] (T)
+  include%template
+    Comparable.Make_binable_using_comparator [@mode local] [@modality portable] (T)
+
   include%template Hashable.Make_binable [@modality portable] (T)
 end
 
 type t = string [@@deriving bin_io ~localize, typerep]
 
 include%template
-  Identifiable.Extend [@modality portable]
+  Identifiable.Extend [@mode local] [@modality portable]
     (struct
       include Base.String
 
       let hashable = Stable.V1.hashable
     end)
     (struct
-      type t = string [@@deriving bin_io]
+      type t = string [@@deriving bin_io ~localize]
     end)
 
 include%template Comparable.Validate [@modality portable] (Base.String)
 
 include%template Diffable.Atomic.Make [@modality portable] (struct
-    type nonrec t = t [@@deriving sexp, bin_io, equal]
+    type nonrec t = t [@@deriving sexp, bin_io, equal ~localize]
   end)
 
 include%template Hexdump.Of_indexable [@modality portable] (struct
@@ -181,8 +184,11 @@ let nget x i =
 module type Utf = sig
   include Utf
 
-  include
-    Identifiable.S with type t := t and type comparator_witness := comparator_witness
+  include%template
+    Identifiable.S
+    [@mode local]
+    with type t := t
+     and type comparator_witness := comparator_witness
 
   include Quickcheckable.S with type t := t
 end
@@ -194,14 +200,14 @@ module Extend_utf
        include Base.String.Utf
      end)
     (B : sig
-       include Binable0.S with type t = Utf.t
+       include%template Binable0.S [@mode local] with type t = Utf.t
      end) : sig
   include Utf with type t = Utf.t and type comparator_witness = Utf.comparator_witness
 end = struct
   include Utf
   include B
 
-  include%template Identifiable.Extend [@modality portable] (Utf) (B)
+  include%template Identifiable.Extend [@mode local] [@modality portable] (Utf) (B)
 
   include%template struct
     open Base_quickcheck

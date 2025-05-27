@@ -33,12 +33,15 @@ module type S = sig
     , sexp_grammar
     , typerep]
 
-  include Comparable_binable with type t := t
+  include%template Comparable_binable [@mode local] with type t := t
+
   include Hashable_binable with type t := t
   include Diffable.S_atomic with type t := t
   include Pretty_printer.S with type t := t
   include Robustly_comparable with type t := t
-  include Quickcheck.S_range with type t := t
+
+  include%template Quickcheck.S_range [@mode portable] with type t := t
+
   module Span : Span_intf.S
 
   module O : sig

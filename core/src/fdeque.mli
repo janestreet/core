@@ -7,7 +7,9 @@
 
 open! Import
 
-type 'a t [@@deriving bin_io, compare, equal, hash, quickcheck, sexp, sexp_grammar]
+type 'a t
+[@@deriving
+  bin_io, compare ~localize, equal ~localize, hash, quickcheck, sexp, sexp_grammar]
 
 (** [Container] operations traverse deque elements front-to-back, like [Front_to_back]
     below. If you need faster traversal and don't care about the order, use
@@ -108,7 +110,7 @@ val dequeue_back_exn : 'a t -> 'a * 'a t
 
 module Stable : sig
   module V1 : sig
-    type nonrec 'a t = 'a t [@@deriving equal]
+    type nonrec 'a t = 'a t [@@deriving compare ~localize, equal ~localize]
 
     include Stable_module_types.With_stable_witness.S1 with type 'a t := 'a t
   end

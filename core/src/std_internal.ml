@@ -48,6 +48,7 @@ let ( % ) = Int.( % )
 let ( /% ) = Int.( /% )
 let ( // ) = Int.( // )
 let ( ==> ) a b = (not a) || b
+let ( .:() ) = Iarray.( .:() )
 let bprintf = Printf.bprintf
 let const = Fn.const
 let eprintf = Printf.eprintf
@@ -75,8 +76,11 @@ let ( **. ) = Base.( **. )
 let ( %. ) = Base.( %. )
 let sprintf = Printf.sprintf
 
+[%%template
+[@@@mode.default p = (portable, nonportable)]
+
 external stage : ('a[@local_opt]) -> ('a Staged.t[@local_opt]) = "%identity"
-external unstage : ('a Staged.t[@local_opt]) -> ('a[@local_opt]) = "%identity"
+external unstage : ('a Staged.t[@local_opt]) -> ('a[@local_opt]) = "%identity"]
 
 let with_return = With_return.with_return
 let with_return_option = With_return.with_return_option
@@ -276,7 +280,7 @@ struct
     , typerep]
 
   type 'a or_null = 'a Base.Or_null.t
-  [@@deriving compare ~localize, equal ~localize, sexp ~localize]
+  [@@deriving compare ~localize, equal ~localize, globalize, sexp ~localize]
 end :
   sig
     type 'a array
@@ -464,7 +468,8 @@ end :
       , sexp_grammar
       , typerep]
 
-    type 'a or_null [@@deriving compare ~localize, equal ~localize, sexp ~localize]
+    type 'a or_null
+    [@@deriving compare ~localize, equal ~localize, globalize, sexp ~localize]
   end
   with type 'a array := 'a array
   with type bool := bool
@@ -498,13 +503,8 @@ end :
 
    We avoid re-exporting it internally as this constrains the kinding of the type
    parameter as compared to the compiler built-in [iarray]. *)
-include (
-struct
-  type nonrec 'a iarray = 'a iarray [@@warning "-34"]
-end :
-sig
-  type nonrec 'a iarray = 'a iarray
-end)
+
+type nonrec 'a iarray = 'a iarray
 
 (* Export ['a or_null] with constructors [Null] and [This] whenever Core is opened,
    so uses of those identifiers work in both upstream OCaml and OxCaml. *)

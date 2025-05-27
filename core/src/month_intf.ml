@@ -23,9 +23,11 @@ module type Month = sig
     , quickcheck
     , sexp
     , sexp_grammar
+    , typerep
     , variants]
 
-  include Comparable.S_binable with type t := t
+  include%template Comparable.S_binable [@mode local] with type t := t
+
   include Hashable.S_binable with type t := t
 
   (** [of_string s] accepts three-character abbreviations with three capitalizations (e.g.

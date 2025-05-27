@@ -8,13 +8,17 @@ type compare =
   -> [ `no_polymorphic_compare ]
   -> [ `no_polymorphic_compare ]
 
+[%%template:
+[@@@mode.default m = (local, global)]
+
 val compare : compare
+val equal : compare]
+
 val ( < ) : compare
 val ( <= ) : compare
 val ( > ) : compare
 val ( >= ) : compare
 val ( = ) : compare
 val ( <> ) : compare
-val equal : compare
 val min : compare
 val max : compare

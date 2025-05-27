@@ -22,7 +22,8 @@ module Caseless : sig
 
   type nonrec t = t [@@deriving bin_io ~localize, hash, sexp]
 
-  include Comparable.S_binable with type t := t
+  include%template Comparable.S_binable [@mode local] with type t := t
+
   include Hashable.S_binable with type t := t
 end
 
@@ -43,7 +44,13 @@ val take_while : t -> f:(char -> bool) -> t
 val rtake_while : t -> f:(char -> bool) -> t
 
 include Hexdump.S with type t := t
-include Identifiable.S with type t := t and type comparator_witness := comparator_witness
+
+include%template
+  Identifiable.S
+  [@mode local]
+  with type t := t
+   and type comparator_witness := comparator_witness
+
 include Diffable.S_atomic with type t := t
 include Quickcheckable.S with type t := t
 
@@ -68,8 +75,11 @@ val%template gen_with_length
 module type Utf = sig
   include Utf
 
-  include
-    Identifiable.S with type t := t and type comparator_witness := comparator_witness
+  include%template
+    Identifiable.S
+    [@mode local]
+    with type t := t
+     and type comparator_witness := comparator_witness
 
   include Quickcheckable.S with type t := t
 end
@@ -102,13 +112,14 @@ module Utf32be :
     uniformity with other stable types. *)
 module Stable : sig
   module type Identifiable_without_binio := sig
-    type t [@@deriving equal, hash, sexp_grammar]
+    type t [@@deriving equal ~localize, hash, sexp_grammar]
     type comparator_witness
 
     include Base.Stringable.S with type t := t
 
-    include
+    include%template
       Stable_comparable.With_stable_witness.V1
+      [@mode local]
       with type t := t
       with type comparator_witness := comparator_witness
 
@@ -132,7 +143,7 @@ module Stable : sig
 
   module Utf8 : sig
     module V1 : sig
-      type t = Utf8.t [@@deriving bin_io]
+      type t = Utf8.t [@@deriving bin_io ~localize]
 
       include
         Identifiable_without_binio
@@ -143,7 +154,7 @@ module Stable : sig
 
   module Utf16le : sig
     module V1 : sig
-      type t = Utf16le.t [@@deriving bin_io]
+      type t = Utf16le.t [@@deriving bin_io ~localize]
 
       include
         Identifiable_without_binio
@@ -154,7 +165,7 @@ module Stable : sig
 
   module Utf16be : sig
     module V1 : sig
-      type t = Utf16be.t [@@deriving bin_io]
+      type t = Utf16be.t [@@deriving bin_io ~localize]
 
       include
         Identifiable_without_binio
@@ -165,7 +176,7 @@ module Stable : sig
 
   module Utf32le : sig
     module V1 : sig
-      type t = Utf32le.t [@@deriving bin_io]
+      type t = Utf32le.t [@@deriving bin_io ~localize]
 
       include
         Identifiable_without_binio
@@ -176,7 +187,7 @@ module Stable : sig
 
   module Utf32be : sig
     module V1 : sig
-      type t = Utf32be.t [@@deriving bin_io]
+      type t = Utf32be.t [@@deriving bin_io ~localize]
 
       include
         Identifiable_without_binio

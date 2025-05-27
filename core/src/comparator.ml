@@ -9,11 +9,10 @@ include (Comparator : Base_mask)
 
 module%template Stable = struct
   module V1 = struct
+    include Comparator_intf.Definitions.Stable.V1
+
     type nonrec ('a, 'witness) t = ('a, 'witness) t
     type ('a, 'b) comparator = ('a, 'b) t
-
-    module type S = S
-    module type S1 = S1
 
     [@@@modality.default p = (portable, nonportable)]
 

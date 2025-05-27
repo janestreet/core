@@ -551,6 +551,14 @@ end = struct
         stage (fun () -> ignore (capacity t : int)))
     ;;
 
+    let growth_allowed = Impl.growth_allowed
+
+    let () =
+      ( !! ) "growth_allowed" (fun size ->
+        let t = Example.t size in
+        stage (fun () -> ignore (growth_allowed t : bool)))
+    ;;
+
     let keys = Impl.keys
 
     let () =
@@ -1046,6 +1054,7 @@ end = struct
     ;;
 
     let equal = Impl.equal
+    let equal__local = Table.equal__local
 
     let () =
       ( !! ) "equal [same]" (fun size ->

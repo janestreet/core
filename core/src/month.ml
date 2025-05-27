@@ -20,9 +20,10 @@ module Stable = struct
       , equal ~localize
       , globalize
       , hash
-      , quickcheck
+      , quickcheck ~portable
       , sexp
       , sexp_grammar
+      , typerep
       , variants]
 
     let failwithf = Printf.failwithf
@@ -69,7 +70,7 @@ module Stable = struct
     let of_binable i = of_int_exn (i + 1)
 
     include%template
-      Binable.Stable.Of_binable.V1 [@mode local] [@alert "-legacy"]
+      Binable.Stable.Of_binable.V1 [@mode local] [@modality portable] [@alert "-legacy"]
         (Int.Stable.V1)
         (struct
           type nonrec t = t
@@ -78,7 +79,8 @@ module Stable = struct
           let of_binable = of_binable
         end)
 
-    include (val Comparator.Stable.V1.make ~compare ~sexp_of_t)
+    include%template
+      (val (Comparator.Stable.V1.make [@modality portable]) ~compare ~sexp_of_t)
 
     let stable_witness : t Stable_witness.t =
       Stable_witness.of_serializable Int.Stable.V1.stable_witness of_binable to_binable
@@ -97,13 +99,16 @@ end
 
 include T
 
-include (
-  Hashable.Make_binable (struct
+include%template (
+  Hashable.Make_binable [@modality portable] (struct
     include T
   end) :
-    Hashable.S_binable with type t := t)
+  sig
+    include Hashable.S_binable with type t := t
+  end)
 
-include Comparable.Make_binable_using_comparator (struct
+include%template
+  Comparable.Make_binable_using_comparator [@mode local] [@modality portable] (struct
     include T
 
     (* In 108.06a and earlier, months in sexps of Maps and Sets were raw ints.  From 108.07
@@ -126,29 +131,27 @@ let t_of_sexp = T.t_of_sexp
 let shift t i = of_int_exn (1 + Int.( % ) (to_int t - 1 + i) num_months)
 
 let all_strings =
-  lazy
-    (Array.of_list (List.map all ~f:(fun variant -> Sexp.to_string (sexp_of_t variant))))
+  Portable_lazy.from_fun (fun () ->
+    Iarray.of_list (List.map all ~f:(fun variant -> Sexp.to_string (sexp_of_t variant))))
 ;;
 
 let to_string (t : t) =
-  let all_strings = Lazy.force all_strings in
-  all_strings.(to_int t - 1)
+  let all_strings = Portable_lazy.force all_strings in
+  all_strings.:(to_int t - 1)
 ;;
 
 let of_string =
   let table =
-    lazy
-      (let module T = String.Table in
-      let table = T.create ~size:num_months () in
-      Array.iteri (Lazy.force all_strings) ~f:(fun i s ->
+    Portable_lazy.from_fun (fun () ->
+      Portable_lazy.force all_strings
+      |> Iarray.to_list
+      |> List.concat_mapi ~f:(fun i s ->
         let t = of_int_exn (i + 1) in
-        Hashtbl.set table ~key:s ~data:t;
-        Hashtbl.set table ~key:(String.lowercase s) ~data:t;
-        Hashtbl.set table ~key:(String.uppercase s) ~data:t);
-      table)
+        [ s, t; String.lowercase s, t; String.uppercase s, t ])
+      |> String_dict.of_alist_exn)
   in
   fun str ->
-    match Hashtbl.find (Lazy.force table) str with
+    match String_dict.find (Portable_lazy.force table) str with
     | Some x -> x
     | None -> failwithf "Invalid month: %s" str ()
 ;;

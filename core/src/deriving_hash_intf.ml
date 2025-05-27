@@ -5,7 +5,7 @@ module type S = sig
 end
 
 module type Deriving_hash = sig
-  module Of_deriving_hash
+  module%template.portable Of_deriving_hash
       (Repr : S)
       (M : sig
          type t

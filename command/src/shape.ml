@@ -6,7 +6,7 @@ module Stable = struct
   module Lazy = struct
     type 'a t = 'a lazy_t [@@deriving sexp, stable_witness]
 
-    let compare = Base.Lazy.compare
+    let%template compare = (Base.Lazy.compare [@mode m]) [@@mode m = (local, global)]
   end
 
   module Anons = struct
@@ -19,7 +19,7 @@ module Stable = struct
           | Maybe of t
           | Concat of t list
           | Ad_hoc of string
-        [@@deriving compare, sexp, stable_witness]
+        [@@deriving compare ~localize, sexp, stable_witness]
 
         let rec invariant t =
           Base.Invariant.invariant t [%sexp_of: t] (fun () ->
@@ -63,7 +63,7 @@ module Stable = struct
       type t =
         | Usage of string
         | Grammar of Grammar.V1.t
-      [@@deriving compare, sexp, stable_witness]
+      [@@deriving compare ~localize, sexp, stable_witness]
     end
 
     module Model = V2
@@ -76,7 +76,7 @@ module Stable = struct
         ; doc : string
         ; aliases : string list
         }
-      [@@deriving compare, sexp, stable_witness]
+      [@@deriving compare ~localize, sexp, stable_witness]
     end
 
     module Model = V1
@@ -90,7 +90,7 @@ module Stable = struct
         ; anons : Anons.V2.t
         ; flags : Flag_info.V1.t list
         }
-      [@@deriving compare, sexp, stable_witness]
+      [@@deriving compare ~localize, sexp, stable_witness]
     end
 
     module V1 = struct
@@ -131,7 +131,7 @@ module Stable = struct
         ; readme : string option [@sexp.option]
         ; subcommands : (string * 'a) list Lazy.t
         }
-      [@@deriving compare, sexp, stable_witness]
+      [@@deriving compare ~localize, sexp, stable_witness]
 
       open! Base
 
@@ -148,7 +148,7 @@ module Stable = struct
         ; readme : string option [@sexp.option]
         ; subcommands : (string * 'a) list
         }
-      [@@deriving compare, sexp, stable_witness]
+      [@@deriving compare ~localize, sexp, stable_witness]
 
       open! Base
 
@@ -177,7 +177,7 @@ module Stable = struct
         ; path_to_exe : string
         ; child_subcommand : string list
         }
-      [@@deriving compare, sexp, stable_witness]
+      [@@deriving compare ~localize, sexp, stable_witness]
 
       let to_latest = Base.Fn.id
       let of_latest = Base.Fn.id
@@ -250,7 +250,7 @@ module Stable = struct
         | Basic of Base_info.V2.t
         | Group of t Group_info.V2.t
         | Exec of Exec_info.V3.t * t
-      [@@deriving compare, sexp, stable_witness]
+      [@@deriving compare ~localize, sexp, stable_witness]
     end
 
     module Model = V1
@@ -355,7 +355,7 @@ module Anons = struct
       | Maybe of t
       | Concat of t list
       | Ad_hoc of string
-    [@@deriving compare, sexp]
+    [@@deriving compare ~localize, sexp]
 
     let invariant = Stable.Anons.Grammar.Model.invariant
     let usage = Stable.Anons.Grammar.Model.usage
@@ -364,7 +364,7 @@ module Anons = struct
   type t = Stable.Anons.Model.t =
     | Usage of string
     | Grammar of Grammar.t
-  [@@deriving compare, sexp]
+  [@@deriving compare ~localize, sexp]
 end
 
 module Num_occurrences = struct
@@ -372,7 +372,7 @@ module Num_occurrences = struct
     { at_least_once : bool
     ; at_most_once : bool
     }
-  [@@deriving compare, enumerate, sexp_of]
+  [@@deriving compare ~localize, enumerate, sexp_of]
 
   let maybe_missing_prefix = "["
   let maybe_missing_suffix = "]"
@@ -429,7 +429,7 @@ module Flag_info = struct
     ; doc : string
     ; aliases : string list
     }
-  [@@deriving compare, fields ~getters, sexp]
+  [@@deriving compare ~localize, fields ~getters, sexp]
 
   let parse_name t =
     let num_occurrences, flag_name = Num_occurrences.of_help_string t.name in
@@ -593,7 +593,7 @@ module Key_type = struct
   ;;
 end
 
-let lookup_expand alist prefix key_type =
+let lookup_expand_with_equivalence_classes equal_a alist prefix key_type =
   let is_dash = Char.equal '-' in
   let alist =
     (* no partial matches unless some non-dash char is present *)
@@ -612,13 +612,24 @@ let lookup_expand alist prefix key_type =
     (match List.find matches ~f:(fun (key, _) -> String.( = ) key prefix) with
      | Some (key, (data, _name_matching)) -> Ok (key, data)
      | None ->
-       let matching_keys = List.map ~f:fst matches in
-       Error
-         (sprintf
-            !"%{Key_type} %s is an ambiguous prefix: %s"
-            key_type
-            prefix
-            (String.concat ~sep:", " matching_keys)))
+       (match
+          (* Base explicitly allows the argument of [find_consecutive_duplicate] to not be
+             an equivalence relation. *)
+          Base.List.find_consecutive_duplicate
+            ~equal:(fun (_, (a, _)) (_, (b, _)) -> not (equal_a a b))
+            matches
+        with
+        | None ->
+          let key, (data, _) = List.hd_exn matches in
+          Ok (key, data)
+        | Some _ ->
+          let matching_keys = List.map ~f:fst matches |> String.concat ~sep:", " in
+          [%string "%{key_type#Key_type} %{prefix} is ambiguous: %{matching_keys}"]
+          |> Error))
+;;
+
+let lookup_expand alist prefix key_type =
+  lookup_expand_with_equivalence_classes (fun _ _ -> false) alist prefix key_type
 ;;
 
 module Base_info = struct
@@ -628,7 +639,7 @@ module Base_info = struct
     ; anons : Anons.t
     ; flags : Flag_info.t list
     }
-  [@@deriving compare, fields ~getters, sexp]
+  [@@deriving compare ~localize, fields ~getters, sexp]
 
   let find_flag t prefix =
     match String.is_prefix prefix ~prefix:"-" with
@@ -642,7 +653,11 @@ module Base_info = struct
                key, (flag_info, `Prefix))))
         |> Or_error.combine_errors
       in
-      lookup_expand (List.concat choices) prefix Flag
+      lookup_expand_with_equivalence_classes
+        (fun flag1 flag2 -> String.( = ) (Flag_info.name flag1) (Flag_info.name flag2))
+        (List.concat choices)
+        prefix
+        Flag
       |> Result.map_error ~f:Error.of_string
       |> Or_error.map ~f:snd
   ;;
@@ -660,7 +675,7 @@ module Group_info = struct
     ; readme : string option [@sexp.option]
     ; subcommands : (string * 'a) List.t Lazy.t
     }
-  [@@deriving compare, fields ~getters, sexp]
+  [@@deriving compare ~localize, fields ~getters, sexp]
 
   let find_subcommand t prefix =
     match String.is_prefix prefix ~prefix:"-" with
@@ -686,7 +701,7 @@ module Exec_info = struct
     ; path_to_exe : string
     ; child_subcommand : string list
     }
-  [@@deriving compare, sexp]
+  [@@deriving compare ~localize, sexp]
 end
 
 module Fully_forced = struct
@@ -694,7 +709,7 @@ module Fully_forced = struct
     | Basic of Base_info.t
     | Group of t Group_info.t
     | Exec of Exec_info.t * t
-  [@@deriving compare, sexp]
+  [@@deriving compare ~localize, sexp]
 
   let expanded_subcommands t =
     let rec expand = function
@@ -759,4 +774,5 @@ module Private = struct
   let help_screen_compare = Flag_info.help_screen_compare
   let word_wrap = Flag_help_display.word_wrap_and_strip
   let lookup_expand = lookup_expand
+  let lookup_expand_with_equivalence_classes = lookup_expand_with_equivalence_classes
 end

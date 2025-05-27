@@ -5,7 +5,13 @@ module Stable = struct
       sig
         type t = string
         [@@deriving
-          bin_io ~localize, compare, equal, hash, sexp, sexp_grammar, stable_witness]
+          bin_io ~localize
+          , compare ~localize
+          , equal ~localize
+          , hash
+          , sexp
+          , sexp_grammar
+          , stable_witness]
 
         include
           Comparable.Stable.V1.With_stable_witness.S
@@ -28,8 +34,11 @@ include (
   sig
     type t = string [@@deriving bin_io ~localize]
 
-    include
-      Comparable.S with type t := t and type comparator_witness := comparator_witness
+    include%template
+      Comparable.S
+      [@mode local]
+      with type t := t
+       and type comparator_witness := comparator_witness
 
     include Hashable.S with type t := t
   end)

@@ -512,7 +512,7 @@ let t_sexp_grammar elt_grammar =
 let copy t = of_list (to_list t)
 let clear t = t := None
 
-let compare compare_elt t1 t2 =
+let%template compare compare_elt t1 t2 =
   match !t1, !t2 with
   | None, None -> 0
   | None, _ -> -1
@@ -536,6 +536,7 @@ let compare compare_elt t1 t2 =
         loop compare_elt f1 f1 f2 f2)
       [@nontail])
     [@nontail]
+[@@mode m = (local, global)]
 ;;
 
 include%template

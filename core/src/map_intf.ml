@@ -18,25 +18,28 @@ module With_first_class_module = Map.With_first_class_module
 module Without_comparator = Map.Without_comparator
 module Tree = Map.Using_comparator.Tree
 
+[%%template
+[@@@mode.default m = (local, global)]
+
 module type Key_plain = sig
-  type t [@@deriving compare, sexp_of]
+  type t [@@deriving (compare [@mode m]), sexp_of]
 end
 
 module type Key = sig
-  type t [@@deriving compare, sexp]
+  type t [@@deriving (compare [@mode m]), sexp]
 end
 
 module type Key_binable = sig
-  type t [@@deriving bin_io, compare, sexp]
+  type t [@@deriving bin_io, (compare [@mode m]), sexp]
 end
 
 module type Key_hashable = sig
-  type t [@@deriving compare, hash, sexp]
+  type t [@@deriving (compare [@mode m]), hash, sexp]
 end
 
 module type Key_binable_hashable = sig
-  type t [@@deriving bin_io, compare, hash, sexp]
-end
+  type t [@@deriving bin_io, (compare [@mode m]), hash, sexp]
+end]
 
 module Key_bin_io = struct
   module type S = sig
@@ -150,15 +153,15 @@ module type S_plain_tree = sig
     with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
 end
 
-module type S_plain = sig
+module type%template [@modality p = (portable, nonportable)] S_plain = sig
   module Key : sig
     type t [@@deriving sexp_of]
 
-    include Comparator.S with type t := t
+    include Comparator.S [@modality p] with type t := t
   end
 
   type +'a t = (Key.t, 'a, Key.comparator_witness) Map.t
-  [@@deriving compare, equal, sexp_of]
+  [@@deriving compare ~localize, equal ~localize, sexp_of]
 
   include
     Creators_generic
@@ -196,11 +199,11 @@ module type S_plain = sig
         Without_comparator.t
 end
 
-module type S = sig
+module type%template [@modality p = (portable, nonportable)] S = sig
   module Key : sig
     type t [@@deriving sexp]
 
-    include Comparator.S with type t := t
+    include Comparator.S [@modality p] with type t := t
   end
 
   module Diff : sig
@@ -216,11 +219,11 @@ module type S = sig
   include Sexpable.S1 with type 'a t := 'a t
 end
 
-module type S_binable = sig
+module type%template [@modality p = (portable, nonportable)] S_binable = sig
   module Key : sig
     type t [@@deriving bin_io, sexp]
 
-    include Comparator.S with type t := t
+    include Comparator.S [@modality p] with type t := t
   end
 
   module Diff : sig
@@ -234,7 +237,7 @@ module type S_binable = sig
   end
 
   include S with module Key := Key and module Diff := Diff
-  include Binable.S1 with type 'a t := 'a t
+  include Binable.S1 [@mode local] with type 'a t := 'a t
 end
 
 module type For_deriving = sig

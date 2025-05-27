@@ -2,9 +2,9 @@
     [t_of_sexp], but doesn't check when reading from bin_io. *)
 
 open! Import
-open Std_internal
 
-module type%template [@mode m = (global, local)] S = sig
+module type%template
+  [@mode m = (global, local)] [@modality p = (portable, nonportable)] S = sig
   type t = private string
   [@@deriving
     (bin_io [@mode m])
@@ -14,7 +14,7 @@ module type%template [@mode m = (global, local)] S = sig
     , hash
     , sexp_grammar]
 
-  include Identifiable with type t := t
+  include Identifiable.S [@mode m] [@modality p] with type t := t
   include Quickcheckable.S with type t := t
   include Diffable.S_atomic with type t := t
 
@@ -48,18 +48,20 @@ end
 
 (** Some extra features we provide in [Make] and other functors here, but don't want to
     require of any string ID like type. *)
-module type%template [@mode m = (global, local)] S_with_extras = sig
+module type%template
+  [@mode m = (global, local)] [@modality p = (portable, nonportable)] S_with_extras = sig
   type t = private string [@@deriving typerep]
 
-  include S [@mode m] with type t := t
+  include S [@mode m] [@modality p] with type t := t
 end
 
 module type%template String_id = sig
   include sig
     [@@@mode.default m = (global, local)]
+    [@@@modality.default p = (portable, nonportable)]
 
-    module type S = S [@mode m]
-    module type S_with_extras = S_with_extras [@mode m]
+    module type S = S [@mode m] [@modality p]
+    module type S_with_extras = S_with_extras [@mode m] [@modality p]
   end
 
   include S [@mode local]
@@ -78,7 +80,7 @@ module type%template String_id = sig
          val module_name : string
        end)
       () : sig
-    include S_with_extras [@mode local]
+    include S_with_extras [@mode local] [@modality portable]
   end
 
   (** Like [Make], but lets you specify a [caller_identity] to ensure that the bin-shape
@@ -103,7 +105,8 @@ module type%template String_id = sig
       [validate]. For complex validation predictes, the generator may spin indefinitely
       trying to generate a satisfying string. In these cases, the client should shadow
       [quickcheck_generator] with a generator that constructs valid strings more directly. *)
-  module%template.portable Make_with_validate
+  module%template.portable
+    [@modality p] Make_with_validate
       (M : sig
          val module_name : string
          val validate : string -> unit Or_error.t
@@ -117,17 +120,18 @@ module type%template String_id = sig
              You can turn this validation off using this flag. *)
          val include_default_validation : bool
        end)
-      () : S_with_extras [@mode local]
+      () : S_with_extras [@mode local] [@modality p]
 
   (** See [Make_with_validate] and [Make_with_distinct_bin_shape] *)
-  module%template.portable Make_with_validate_and_distinct_bin_shape
+  module%template.portable
+    [@modality p] Make_with_validate_and_distinct_bin_shape
       (M : sig
          val module_name : string
          val validate : string -> unit Or_error.t
          val include_default_validation : bool
          val caller_identity : Bin_prot.Shape.Uuid.t
        end)
-      () : S_with_extras [@mode local]
+      () : S_with_extras [@mode local] [@modality p]
 
   (** This does what [Make] does without registering a pretty printer. Use this when the
       module that is made is not exposed in mli. Registering a pretty printer without
@@ -137,18 +141,19 @@ module type%template String_id = sig
          val module_name : string
        end)
       () : sig
-    include S_with_extras [@mode local]
+    include S_with_extras [@mode local] [@modality portable]
   end
 
   (** See [Make_with_validate] and [Make_without_pretty_printer] *)
-  module%template.portable Make_with_validate_without_pretty_printer
+  module%template.portable
+    [@modality p] Make_with_validate_without_pretty_printer
       (M : sig
          val module_name : string
          val validate : string -> unit Or_error.t
          val include_default_validation : bool
        end)
-      () : S_with_extras [@mode local]
+      () : S_with_extras [@mode local] [@modality p]
 
   module String_without_validation_without_pretty_printer :
-    S [@mode local] with type t = string
+    S [@mode local] [@modality portable] with type t = string
 end

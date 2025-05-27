@@ -1,7 +1,7 @@
 open! Import
 module Repr = Int63
 
-type t [@@deriving compare, hash, sexp_of, typerep] [@@immediate64]
+type t [@@deriving compare ~localize, hash, sexp_of, typerep] [@@immediate64]
 
 val to_string : t -> string
 val to_string_hum : t -> string

@@ -46,7 +46,7 @@ include%template Hashable.Make_binable [@modality portable] (T)
 include%template Comparable.Map_and_set_binable_using_comparator [@modality portable] (T)
 
 module Replace_polymorphic_compare : sig
-  include Comparisons.S with type t := t
+  include%template Comparisons.S [@mode local] with type t := t
 end =
   T
 

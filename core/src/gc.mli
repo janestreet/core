@@ -479,7 +479,7 @@ module Allocation_policy : sig
     | Next_fit
     | First_fit
     | Best_fit
-  [@@deriving compare, equal, hash, sexp_of]
+  [@@deriving compare ~localize, equal ~localize, hash, sexp_of]
 end
 
 (** Adjust the specified GC parameters. *)
@@ -703,24 +703,52 @@ module Stable : sig
 
     module V1 : sig
       type nonrec t = Stat.t
-      [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar, stable_witness]
+      [@@deriving
+        bin_io
+        , compare ~localize
+        , equal ~localize
+        , hash
+        , sexp
+        , sexp_grammar
+        , stable_witness]
     end
 
     module V2 : sig
       type nonrec t
-      [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar, stable_witness]
+      [@@deriving
+        bin_io
+        , compare ~localize
+        , equal ~localize
+        , hash
+        , sexp
+        , sexp_grammar
+        , stable_witness]
     end
 
     [%%else]
 
     module V1 : sig
       type nonrec t
-      [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar, stable_witness]
+      [@@deriving
+        bin_io
+        , compare ~localize
+        , equal ~localize
+        , hash
+        , sexp
+        , sexp_grammar
+        , stable_witness]
     end
 
     module V2 : sig
       type nonrec t = Stat.t
-      [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar, stable_witness]
+      [@@deriving
+        bin_io
+        , compare ~localize
+        , equal ~localize
+        , hash
+        , sexp
+        , sexp_grammar
+        , stable_witness]
     end
 
     [%%endif]
@@ -729,14 +757,22 @@ module Stable : sig
   module Allocation_policy : sig
     module V1 : sig
       type nonrec t = Allocation_policy.t
-      [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar, stable_witness]
+      [@@deriving
+        bin_io
+        , compare ~localize
+        , equal ~localize
+        , hash
+        , sexp
+        , sexp_grammar
+        , stable_witness]
     end
   end
 
   module Control : sig
     module V1 : sig
       type nonrec t = Control.t
-      [@@deriving bin_io, compare, equal, sexp, sexp_grammar, stable_witness]
+      [@@deriving
+        bin_io, compare ~localize, equal ~localize, sexp, sexp_grammar, stable_witness]
     end
   end
 end

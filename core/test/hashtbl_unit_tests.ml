@@ -27,15 +27,23 @@ module%template _ (Hashtbl : Hashtbl_intf.Hashtbl [@modality portable]) = struct
          and type ('a, 'b) t__value__float64 = ('a, 'b) Hashtbl.t__value__float64
          and type ('a, 'b) t__value__bits64 = ('a, 'b) Hashtbl.t__value__bits64)
 
+    include (
+      Hashtbl : Base.Hashtbl.Hashtbl_equality with type ('a, 'b) t := ('a, 'b) Hashtbl.t)
+
     (* type definition *)
     type 'a key = 'a
 
     (* module type aliases *)
     module type For_deriving = Hashtbl.For_deriving
-    module type Key = Hashtbl.Key
-    module type Key_binable = Hashtbl.Key_binable
-    module type Key_stable = Hashtbl.Key_stable
-    module type Key_plain = Hashtbl.Key_plain
+
+    [%%template
+    [@@@mode.default m = (local, global)]
+
+    module type Key = Hashtbl.Key [@mode m]
+    module type Key_binable = Hashtbl.Key_binable [@mode m]
+    module type Key_stable = Hashtbl.Key_stable [@mode m]
+    module type Key_plain = Hashtbl.Key_plain [@mode m]]
+
     module type S = Hashtbl.S
     module type S_binable = Hashtbl.S_binable
     module type S_stable = Hashtbl.S_stable
@@ -507,6 +515,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
 
       let length = Hashtbl.length
       let capacity = Hashtbl.capacity
+      let growth_allowed = Hashtbl.growth_allowed
 
       let%test_unit _ =
         Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
@@ -2084,6 +2093,7 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_for_testing) = struct
     let data = Hashtbl.data
     let length = Hashtbl.length
     let capacity = Hashtbl.capacity
+    let growth_allowed = Hashtbl.growth_allowed
     let is_empty = Hashtbl.is_empty
     let mem = Hashtbl.mem
     let find = Hashtbl.find

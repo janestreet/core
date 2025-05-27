@@ -8,9 +8,9 @@ module Stable = struct
       | Error of 'b
     [@@deriving
       bin_io ~localize
-      , compare
+      , compare ~localize
       , diff
-      , equal
+      , equal ~localize
       , globalize
       , hash
       , sexp ~localize
@@ -26,7 +26,8 @@ module Stable = struct
   end
 
   module V1_stable_unit_test = struct
-    type t = (string, int) V1.t [@@deriving bin_io, compare, equal, hash, sexp]
+    type t = (string, int) V1.t
+    [@@deriving bin_io, compare ~localize, equal ~localize, hash, sexp]
 
     let tests =
       [ V1.Ok "foo", "(Ok foo)", "\000\003foo"; V1.Error 7, "(Error 7)", "\001\007" ]

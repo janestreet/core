@@ -272,7 +272,8 @@ struct
   include B
 end
 
-module Make_distinct_and_test
+module%template.portable
+  [@modality p] Make_distinct_and_test
     (Elt : Elt)
     (Src : Sequence with type elt := Elt.t)
     (Dst : sig
@@ -281,7 +282,7 @@ module Make_distinct_and_test
        val unsafe_blit : (Src.t, t) blit
      end) =
 struct
-  module B = Make_distinct (Src) (Dst)
+  module B = Make_distinct [@modality p] (Src) (Dst)
   include Test_distinct (Elt) (Src) (Dst) (B)
   include B
 end

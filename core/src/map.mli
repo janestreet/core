@@ -386,14 +386,14 @@ module Continue_or_stop : sig
   type t = Base.Map.Continue_or_stop.t =
     | Continue
     | Stop
-  [@@deriving compare, enumerate, equal, sexp_of]
+  [@@deriving compare ~localize, enumerate, equal ~localize, sexp_of]
 end
 
 module Finished_or_unfinished : sig
   type t = Base.Map.Finished_or_unfinished.t =
     | Finished
     | Unfinished
-  [@@deriving compare, enumerate, equal, sexp_of]
+  [@@deriving compare ~localize, enumerate, equal ~localize, sexp_of]
 
   (** Maps [Continue] to [Finished] and [Stop] to [Unfinished]. *)
   val of_continue_or_stop : Continue_or_stop.t -> t
@@ -538,7 +538,12 @@ val unzip : ('k, 'v1 * 'v2, 'cmp) t -> ('k, 'v1, 'cmp) t * ('k, 'v2, 'cmp) t
 
 (** Total ordering between maps. The first argument is a total ordering used to compare
     data associated with equal keys in the two maps. *)
-val compare_direct : ('v -> 'v -> int) -> ('k, 'v, 'cmp) t -> ('k, 'v, 'cmp) t -> int
+val%template compare_direct
+  :  ('v -> 'v -> int)
+  -> ('k, 'v, 'cmp) t
+  -> ('k, 'v, 'cmp) t
+  -> int
+[@@mode m = (local, global)]
 
 (** Hash function: a building block to use when hashing data structures containing maps in
     them. [hash_fold_direct hash_fold_key] is compatible with [compare_direct] iff
@@ -549,7 +554,8 @@ val hash_fold_direct : 'k Hash.folder -> 'v Hash.folder -> ('k, 'v, 'cmp) t Hash
 (** [equal cmp m1 m2] tests whether the maps [m1] and [m2] are equal, that is, contain
     equal keys and associate them with equal data. [cmp] is the equality predicate used to
     compare the data associated with the keys. *)
-val equal : ('v -> 'v -> bool) -> ('k, 'v, 'cmp) t -> ('k, 'v, 'cmp) t -> bool
+val%template equal : ('v -> 'v -> bool) -> ('k, 'v, 'cmp) t -> ('k, 'v, 'cmp) t -> bool
+[@@mode m = (local, global)]
 
 (** Returns list of keys in map in increasing order. *)
 val keys : ('k, _, _) t -> 'k list
@@ -600,7 +606,7 @@ val merge_skewed
 
 module Symmetric_diff_element : sig
   type ('k, 'v) t = 'k * [ `Left of 'v | `Right of 'v | `Unequal of 'v * 'v ]
-  [@@deriving bin_io, compare, sexp]
+  [@@deriving bin_io, compare ~localize, sexp]
 
   val map_data : ('k, 'v1) t -> f:('v1 -> 'v2) -> ('k, 'v2) t
 
@@ -999,7 +1005,7 @@ module Poly : sig
     type comparator_witness = Comparator.Poly.comparator_witness
 
     type ('a, +'b) t = ('a, 'b, comparator_witness) map
-    [@@deriving bin_io, sexp, sexp_grammar, compare]
+    [@@deriving bin_io, sexp, sexp_grammar, compare ~localize]
 
     include
       Creators_and_accessors_generic
@@ -1015,25 +1021,31 @@ module Poly : sig
 module type Key_plain = Key_plain
 module type Key = Key
 module type Key_binable = Key_binable
-module type S_plain = S_plain
-module type S = S
-module type S_binable = S_binable
+
+[%%template:
+[@@@modality.default p = (portable, nonportable)]
+
+module type S_plain = S_plain [@modality p]
+module type S = S [@modality p]
+module type S_binable = S_binable [@modality p]]
 
 module%template.portable Make_plain (Key : Key_plain) : S_plain with type Key.t = Key.t
 
-module%template.portable Make_plain_using_comparator (Key : sig
+module%template.portable
+  [@modality p] Make_plain_using_comparator (Key : sig
     type t [@@deriving sexp_of]
 
-    include Comparator.S with type t := t
+    include Comparator.S [@modality p] with type t := t
   end) :
   S_plain
   with type Key.t = Key.t
   with type Key.comparator_witness = Key.comparator_witness
 
-module%template.portable Provide_of_sexp (Key : sig
+module%template.portable
+  [@modality p] Provide_of_sexp (Key : sig
     type t [@@deriving of_sexp]
 
-    include Comparator.S with type t := t
+    include Comparator.S [@modality p] with type t := t
   end) : sig
     type _ t [@@deriving of_sexp]
   end
@@ -1041,10 +1053,11 @@ module%template.portable Provide_of_sexp (Key : sig
 
 module%template.portable Make (Key : Key) : S with type Key.t = Key.t
 
-module%template.portable Make_using_comparator (Key : sig
+module%template.portable
+  [@modality p] Make_using_comparator (Key : sig
     type t [@@deriving sexp]
 
-    include Comparator.S with type t := t
+    include Comparator.S [@modality p] with type t := t
   end) :
   S with type Key.t = Key.t with type Key.comparator_witness = Key.comparator_witness
 
@@ -1053,19 +1066,21 @@ module Key_bin_io = Key_bin_io
 module%template.portable
   [@modality p] Provide_bin_io
     (Key : Key_bin_io.S) : sig
-    type _ t [@@deriving bin_io]
+    type _ t [@@deriving bin_io ~localize]
   end
   with type 'a t := (Key.t, 'a, Key.comparator_witness) t
 
 module%template.portable Make_binable (Key : Key_binable) :
   S_binable with type Key.t = Key.t
 
-module%template.portable Make_binable_using_comparator (Key : sig
+module%template.portable
+  [@modality p] Make_binable_using_comparator (Key : sig
     type t [@@deriving bin_io, sexp]
 
-    include Comparator.S with type t := t
+    include Comparator.S [@modality p] with type t := t
   end) :
   S_binable
+  [@modality p]
   with type Key.t = Key.t
   with type Key.comparator_witness = Key.comparator_witness
 
@@ -1089,16 +1104,18 @@ module%template.portable Provide_hash (Key : sig
 
 include For_deriving with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
 
-module%template.portable Make_tree_plain (Key : sig
+module%template.portable
+  [@modality p] Make_tree_plain (Key : sig
     type t [@@deriving sexp_of]
 
-    include Comparator.S with type t := t
+    include Comparator.S [@modality p] with type t := t
   end) : S_plain_tree with module Key := Key
 
-module%template.portable Make_tree (Key : sig
+module%template.portable
+  [@modality p] Make_tree (Key : sig
     type t [@@deriving sexp]
 
-    include Comparator.S with type t := t
+    include Comparator.S [@modality p] with type t := t
   end) : sig
   include S_plain_tree with module Key := Key
   include Sexpable.S1 with type 'a t := 'a t
@@ -1114,7 +1131,7 @@ module Stable : sig
       type comparator_witness
       type nonrec 'a t = (key, 'a, comparator_witness) t
 
-      include Stable_module_types.S1 with type 'a t := 'a t
+      include%template Stable_module_types.S1 [@mode local] with type 'a t := 'a t
 
       include
         Diffable.S1
@@ -1125,7 +1142,10 @@ module Stable : sig
     include For_deriving with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
     include For_deriving_stable with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
 
-    module%template.portable Make (Key : Stable_module_types.S0) :
+    module%template.portable
+      [@modality p] Make
+        (Key : Stable_module_types.S0
+      [@modality p]) :
       S with type key := Key.t with type comparator_witness := Key.comparator_witness
 
     module With_stable_witness : sig
@@ -1135,7 +1155,10 @@ module Stable : sig
         val stable_witness : 'a Stable_witness.t -> 'a t Stable_witness.t
       end
 
-      module%template.portable Make (Key : Stable_module_types.With_stable_witness.S0) :
+      module%template.portable
+        [@modality p] Make
+          (Key : Stable_module_types.With_stable_witness.S0
+        [@modality p]) :
         S with type key := Key.t with type comparator_witness := Key.comparator_witness
     end
   end

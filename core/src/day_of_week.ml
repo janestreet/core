@@ -15,11 +15,11 @@ module Stable = struct
         | Sat
       [@@deriving
         bin_io ~localize
-        , compare
+        , compare ~localize
         , enumerate
-        , equal
+        , equal ~localize
         , hash
-        , quickcheck
+        , quickcheck ~portable
         , stable_witness
         , typerep]
 
@@ -91,12 +91,12 @@ module Stable = struct
 
       (* this is in T rather than outside so that the later functor application to build maps
          uses this sexp representation *)
-      include Sexpable.Stable.Of_stringable.V1 (struct
-          type nonrec t = t
+        include%template Sexpable.Stable.Of_stringable.V1 [@modality portable] (struct
+            type nonrec t = t
 
-          let of_string = of_string
-          let to_string = to_string
-        end)
+            let of_string = of_string
+            let to_string = to_string
+          end)
 
       let t_sexp_grammar =
         let open Sexplib0.Sexp_grammar in
@@ -129,12 +129,23 @@ module Stable = struct
 
     module Unstable = struct
       include T
-      include (Comparable.Make_binable (T) : Comparable.S_binable with type t := t)
-      include Hashable.Make_binable (T)
+
+      include%template (
+        Comparable.Make_binable [@mode local] [@modality portable]
+          (T) :
+          sig
+            include
+              Comparable.S_binable [@mode local] [@modality portable] with type t := t
+          end)
+
+      include%template Hashable.Make_binable [@modality portable] (T)
     end
 
-    include Comparable.Stable.V1.With_stable_witness.Make (Unstable)
-    include Hashable.Stable.V1.With_stable_witness.Make (Unstable)
+    include%template
+      Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (Unstable)
+
+    include%template
+      Hashable.Stable.V1.With_stable_witness.Make [@modality portable] (Unstable)
   end
 end
 

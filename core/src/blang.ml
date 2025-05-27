@@ -27,11 +27,13 @@ module T : sig
     | Not of 'a t
     | If of 'a t * 'a t * 'a t
     | Base of 'a
-  [@@deriving bin_io ~localize, compare, equal, hash, typerep]
+  [@@deriving bin_io ~localize, compare ~localize, equal ~localize, hash, typerep]
 
   val invariant : 'a t -> unit
   val true_ : 'a t
   val false_ : 'a t
+  val get_true : unit -> 'a t
+  val get_false : unit -> 'a t
   val not_ : 'a t -> 'a t
   val andalso : 'a t -> 'a t -> 'a t
   val orelse : 'a t -> 'a t -> 'a t
@@ -46,7 +48,7 @@ end = struct
     | Not of 'a t
     | If of 'a t * 'a t * 'a t
     | Base of 'a
-  [@@deriving bin_io ~localize, compare, equal, hash, typerep]
+  [@@deriving bin_io ~localize, compare ~localize, equal ~localize, hash, typerep]
 
   let invariant =
     let subterms = function
@@ -63,7 +65,9 @@ end = struct
   ;;
 
   let true_ = True
+  let[@inline] get_true () = True
   let false_ = False
+  let[@inline] get_false () = False
   let base v = Base v
 
   let not_ = function
@@ -125,7 +129,6 @@ module Stable = struct
   module V1 : sig
     (* THIS TYPE AND ITS SERIALIZATIONS SHOULD NEVER BE CHANGED - PLEASE SPEAK WITH
        ANOTHER DEVELOPER IF YOU NEED MORE DETAIL *)
-
     type 'a t = 'a T.t = private
       | True
       | False
@@ -135,7 +138,13 @@ module Stable = struct
       | If of 'a t * 'a t * 'a t
       | Base of 'a
     [@@deriving
-      bin_io ~localize, stable_witness, compare, equal, hash, sexp, sexp_grammar]
+      bin_io ~localize
+      , stable_witness
+      , compare ~localize
+      , equal ~localize
+      , hash
+      , sexp
+      , sexp_grammar]
 
     (* the remainder of this signature consists of functions used in the definitions
        of sexp conversions that are also useful more generally *)
@@ -162,7 +171,8 @@ module Stable = struct
     include (
       T :
         sig
-          type 'a t [@@deriving bin_io ~localize, compare, equal, hash]
+          type 'a t
+          [@@deriving bin_io ~localize, compare ~localize, equal ~localize, hash]
         end
         with type 'a t := 'a t)
 
@@ -196,8 +206,8 @@ module Stable = struct
 
     (* [and_] and [or_] use [fold_right] instead of [fold_left] to avoid quadratic
        behavior with [andalso] or [orelse], respectively. *)
-    let and_ ts = List.fold_right ts ~init:true_ ~f:andalso
-    let or_ ts = List.fold_right ts ~init:false_ ~f:orelse
+    let and_ ts = List.fold_right ts ~init:(get_true ()) ~f:andalso
+    let or_ ts = List.fold_right ts ~init:(get_false ()) ~f:orelse
 
     let unary name args sexp =
       match args with
@@ -239,8 +249,8 @@ module Stable = struct
         match sexp with
         | Atom kw ->
           (match String.lowercase kw with
-           | "true" -> true_
-           | "false" -> false_
+           | "true" -> get_true ()
+           | "false" -> get_false ()
            | _ -> base sexp)
         | List (Atom kw :: args) ->
           (match String.lowercase kw with
@@ -299,9 +309,13 @@ module Stable = struct
   end
 end
 
-include (Stable.V1 : module type of Stable.V1 with type 'a t := 'a t)
+include (
+  Stable.V1 :
+  sig
+    include module type of Stable.V1 with type 'a t := 'a t
+  end)
 
-let constant b = if b then true_ else false_
+let constant b = if b then get_true () else get_false ()
 
 module type Constructors = sig
   val base : 'a -> 'a t
@@ -347,7 +361,7 @@ let values t =
   loop [] [ t ]
 ;;
 
-module C = Container.Make (struct
+module%template C = Container.Make [@modality portable] (struct
     type 'a t = 'a T.t
 
     let fold t ~init ~f =
@@ -405,19 +419,19 @@ let fold_until = C.fold_until
 let rec bind t ~f:k =
   match t with
   | Base v -> k v
-  | True -> true_
-  | False -> false_
+  | True -> get_true ()
+  | False -> get_false ()
   | Not t1 -> not_ (bind t1 ~f:k)
   (* Unfortunately we need to duplicate some of the short-circuiting from [andalso] and
      friends here. In principle we could do something involving [Lazy.t] but the
      overhead probably wouldn't be worth it. *)
   | And (t1, t2) ->
     (match bind t1 ~f:k with
-     | False -> false_
+     | False -> get_false ()
      | other -> andalso other (bind t2 ~f:k))
   | Or (t1, t2) ->
     (match bind t1 ~f:k with
-     | True -> true_
+     | True -> get_true ()
      | other -> orelse other (bind t2 ~f:k))
   | If (t1, t2, t3) ->
     (match bind t1 ~f:k with
@@ -463,7 +477,7 @@ let eval_set ~universe:all set_of_base t =
   aux t [@nontail]
 ;;
 
-include Monad.Make (struct
+include%template Monad.Make [@modality portable] (struct
     type 'a t = 'a T.t
 
     let return = base
@@ -491,18 +505,18 @@ module For_monad (M : Monad.S) : Monadic with module M := M = struct
   let rec bind t ~f =
     match t with
     | Base x -> f x
-    | True -> M.return true_
-    | False -> M.return false_
+    | True -> M.return (get_true ())
+    | False -> M.return (get_false ())
     | And (a, b) ->
       bind a ~f
       >>= (function
-       | False -> M.return false_
+       | False -> M.return (get_false ())
        | True -> bind b ~f
        | a -> bind b ~f >>| fun b -> andalso a b)
     | Or (a, b) ->
       bind a ~f
       >>= (function
-       | True -> M.return true_
+       | True -> M.return (get_true ())
        | False -> bind b ~f
        | a -> bind b ~f >>| fun b -> orelse a b)
     | Not a -> bind a ~f >>| not_
@@ -520,8 +534,8 @@ module For_monad (M : Monad.S) : Monadic with module M := M = struct
     bind t ~f:(fun x ->
       f x
       >>| function
-      | true -> true_
-      | false -> false_)
+      | true -> get_true ()
+      | false -> get_false ())
     >>| fun t -> eval t Nothing.unreachable_code
   ;;
 
@@ -558,8 +572,8 @@ end
 let quickcheck_generator a_generator =
   Quickcheck.Generator.recursive_union
     [ Quickcheck.Generator.map ~f:base a_generator
-    ; Quickcheck.Generator.singleton true_
-    ; Quickcheck.Generator.singleton false_
+    ; Quickcheck.Generator.singleton (get_true ())
+    ; Quickcheck.Generator.singleton (get_false ())
     ]
     ~f:(fun self ->
       [ Quickcheck.Generator.map self ~f:not_
@@ -583,7 +597,7 @@ let quickcheck_shrinker (type a) (a_shrinker : a Quickcheck.Shrinker.t) =
     in
     Quickcheck.Shrinker.create (fun t ->
       match t with
-      | True | False -> Sequence.empty
+      | True | False -> Sequence.get_empty ()
       | Base a -> Sequence.map ~f:base (Quickcheck.Shrinker.shrink a_shrinker a)
       | Or (left, right) -> binop O.( || ) left right
       | And (left, right) -> binop O.( && ) left right

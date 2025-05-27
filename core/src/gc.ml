@@ -7,7 +7,14 @@ module Stable = struct
         | Next_fit
         | First_fit
         | Best_fit
-      [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar, stable_witness]
+      [@@deriving
+        bin_io
+        , compare ~localize
+        , equal ~localize
+        , hash
+        , sexp
+        , sexp_grammar
+        , stable_witness]
     end
   end
 
@@ -31,7 +38,14 @@ module Stable = struct
         ; top_heap_words : int
         ; stack_size : int
         }
-      [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar, stable_witness]
+      [@@deriving
+        bin_io
+        , compare ~localize
+        , equal ~localize
+        , hash
+        , sexp
+        , sexp_grammar
+        , stable_witness]
     end
 
     module V2 = struct
@@ -54,7 +68,14 @@ module Stable = struct
         ; stack_size : int
         ; forced_major_collections : int
         }
-      [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar, stable_witness]
+      [@@deriving
+        bin_io
+        , compare ~localize
+        , equal ~localize
+        , hash
+        , sexp
+        , sexp_grammar
+        , stable_witness]
     end
   end
 
@@ -75,7 +96,8 @@ module Stable = struct
         ; custom_minor_ratio : int
         ; custom_minor_max_size : int
         }
-      [@@deriving bin_io, compare, equal, sexp, sexp_grammar, stable_witness]
+      [@@deriving
+        bin_io, compare ~localize, equal ~localize, sexp, sexp_grammar, stable_witness]
     end
   end
 end
@@ -104,7 +126,7 @@ module Stat = struct
       ; forced_major_collections : int
       }
     [@@deriving
-      compare
+      compare ~localize
       , hash
       , sexp_of
       , fields
@@ -162,7 +184,9 @@ module Control = struct
       ; custom_minor_max_size : int
       }
     [@@deriving
-      compare, sexp_of, fields ~getters ~setters ~fields ~iterators:(map, to_list)]
+      compare ~localize
+      , sexp_of
+      , fields ~getters ~setters ~fields ~iterators:(map, to_list)]
   end
 
   include T
@@ -174,7 +198,7 @@ module Allocation_policy = struct
     | Next_fit
     | First_fit
     | Best_fit
-  [@@deriving compare, equal, hash, sexp_of]
+  [@@deriving compare ~localize, equal ~localize, hash, sexp_of]
 
   let to_int = function
     | Next_fit -> 0
@@ -252,39 +276,10 @@ external major_collections : unit -> int = "core_gc_major_collections" [@@noallo
 external major_plus_minor_words : unit -> int = "core_gc_major_plus_minor_words"
 external allocated_words : unit -> int = "core_gc_allocated_words"
 external run_memprof_callbacks : unit -> unit = "core_gc_run_memprof_callbacks"
-
-module Runtime4 = struct
-  external heap_words : unit -> int = "core_gc_heap_words" [@@noalloc]
-  external heap_chunks : unit -> int = "core_gc_heap_chunks" [@@noalloc]
-  external top_heap_words : unit -> int = "core_gc_top_heap_words" [@@noalloc]
-end
-
-[%%import "gc_stubs.h"]
-
-module Runtime5 = struct
-  let heap_words () = (quick_stat ()).heap_words
-  let heap_chunks () = (quick_stat ()).heap_chunks
-  let top_heap_words () = (quick_stat ()).top_heap_words
-end
-
-[%%if OCAML_5_MINUS]
-
-external runtime5 : unit -> bool = "caml_is_runtime5_stub"
 external compactions : unit -> int = "core_gc_compactions" [@@noalloc]
-
-let runtime5 = runtime5 ()
-let heap_words = if runtime5 then Runtime5.heap_words else Runtime4.heap_words
-let heap_chunks = if runtime5 then Runtime5.heap_chunks else Runtime4.heap_chunks
-let top_heap_words = if runtime5 then Runtime5.top_heap_words else Runtime4.top_heap_words
-
-[%%else]
-
-let compactions () = (quick_stat ()).compactions
-let heap_words = Runtime5.heap_words
-let heap_chunks = Runtime5.heap_chunks
-let top_heap_words = Runtime5.top_heap_words
-
-[%%endif]
+external heap_words : unit -> int = "core_gc_heap_words" [@@noalloc]
+external heap_chunks : unit -> int = "core_gc_heap_chunks" [@@noalloc]
+external top_heap_words : unit -> int = "core_gc_top_heap_words" [@@noalloc]
 
 let stat_size_lazy =
   lazy (Obj.reachable_words (Obj.repr (Stdlib.Gc.quick_stat () : Stat.t)))
@@ -320,15 +315,7 @@ module For_testing = struct
     [@@deriving sexp_of, globalize]
   end
 
-  [%%if OCAML_5_MINUS || ocaml_version >= (5, 2, 0)]
-
   type memprof = Stdlib.Gc.Memprof.t
-
-  [%%else]
-
-  type memprof = unit
-
-  [%%endif]
 
   [%%template
   [@@@kind.default k = (value, float64, bits32, bits64, word)]

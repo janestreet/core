@@ -4,14 +4,15 @@ open! Import
 module Binable = Binable0
 open Base.Hash_set
 
-module type M_quickcheck = sig
-  type t [@@deriving compare, hash, quickcheck, sexp_of]
+module type%template M_quickcheck = sig
+  type t [@@deriving (compare [@mode m]), hash, quickcheck, sexp_of]
 end
+[@@mode m = (local, global)]
 
 module type For_deriving = sig
   include For_deriving
 
-  module type M_quickcheck = M_quickcheck
+  module type%template M_quickcheck = M_quickcheck [@mode m] [@@mode m = (local, global)]
 
   val quickcheck_generator_m__t
     :  (module M_quickcheck with type t = 'key)
@@ -29,7 +30,7 @@ end
 module type S_plain = sig
   type elt
   type 'a hash_set
-  type t = elt hash_set [@@deriving equal, sexp_of]
+  type t = elt hash_set [@@deriving equal ~localize, sexp_of]
 
   include
     Creators_generic
@@ -77,10 +78,14 @@ module type Hash_set = sig
 
   val hashable : 'key t -> 'key Hashtbl.Hashable.t
 
-  module type Elt_plain = Hashtbl.Key_plain
-  module type Elt = Hashtbl.Key
-  module type Elt_binable = Hashtbl.Key_binable
-  module type Elt_stable = Hashtbl.Key_stable
+  [%%template:
+  [@@@mode.default m = (local, global)]
+
+  module type Elt_plain = Hashtbl.Key_plain [@mode m]
+  module type Elt = Hashtbl.Key [@mode m]
+  module type Elt_binable = Hashtbl.Key_binable [@mode m]
+  module type Elt_stable = Hashtbl.Key_stable [@mode m]]
+
   module type S_plain = S_plain with type 'a hash_set := 'a t
   module type S = S with type 'a hash_set := 'a t
   module type S_binable = S_binable with type 'a hash_set := 'a t

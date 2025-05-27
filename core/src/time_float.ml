@@ -11,20 +11,25 @@ include Time
 module Span = struct
   include Time.Span
 
-  let arg_type = Command.Arg_type.create of_string
+  let%template arg_type = (Command.Arg_type.create [@mode portable]) of_string
 end
 
 module Zone = struct
   include Time.Zone
-  include (Timezone : Timezone.Extend_zone with type t := t)
 
-  let arg_type = Command.Arg_type.create of_string
+  include (
+    Timezone :
+    sig
+      include Timezone.Extend_zone with type t := t
+    end)
+
+  let%template arg_type = (Command.Arg_type.create [@mode portable]) of_string
 end
 
 module Ofday = struct
   include Time.Ofday
 
-  let arg_type = Command.Arg_type.create of_string
+  let%template arg_type = (Command.Arg_type.create [@mode portable]) of_string
   let now ~zone = Time.to_ofday ~zone (Time.now ())
 
   module Zoned = struct
@@ -32,7 +37,8 @@ module Ofday = struct
       { ofday : Time.Ofday.t
       ; zone : Zone.t
       }
-    [@@deriving bin_io, fields ~getters, compare, equal, hash]
+    [@@deriving
+      bin_io, fields ~getters ~local_getters, compare ~localize, equal ~localize, hash]
 
     type sexp_repr = Time.Ofday.t * Zone.t [@@deriving sexp]
 
@@ -45,7 +51,7 @@ module Ofday = struct
 
     let to_time t date = Time.of_date_ofday ~zone:(zone t) date (ofday t)
     let create ofday zone = { ofday; zone }
-    let create_local ofday = create ofday (Lazy.force Zone.local)
+    let create_local ofday = create ofday (Portable_lazy.force Zone.local_portable)
 
     let of_string string : t =
       match String.rsplit2 string ~on:' ' with
@@ -62,13 +68,14 @@ module Ofday = struct
       String.concat [ Time.Ofday.to_string_trimmed t.ofday; " "; Zone.to_string t.zone ]
     ;;
 
-    let arg_type = Command.Arg_type.create of_string
+    let%template arg_type = (Command.Arg_type.create [@mode portable]) of_string
 
     module With_nonchronological_compare = struct
-      type nonrec t = t [@@deriving bin_io, compare, equal, sexp, hash]
+      type nonrec t = t
+      [@@deriving bin_io, compare ~localize, equal ~localize, sexp, hash]
     end
 
-    include Pretty_printer.Register (struct
+    include%template Pretty_printer.Register [@modality portable] (struct
         type nonrec t = t
 
         let to_string = to_string
@@ -77,7 +84,9 @@ module Ofday = struct
   end
 end
 
-module T = struct
+exception Time_string_not_absolute of string [@@deriving sexp]
+
+module T_without_Map_and_Set = struct
   include (
     Time :
       module type of Time
@@ -108,7 +117,7 @@ module T = struct
       let zone =
         match utc with
         | `Utc -> Zone.utc
-        | `Local -> Lazy.force Zone.local
+        | `Local -> Portable_lazy.force Zone.local_portable
       in
       if Int.( > ) (String.length str) expect_length then failwithf "input too long" ();
       of_date_ofday
@@ -123,13 +132,13 @@ module T = struct
     let zone =
       match utc with
       | `Utc -> Zone.utc
-      | `Local -> Lazy.force Zone.local
+      | `Local -> Portable_lazy.force Zone.local_portable
     in
     let date, sec = to_date_ofday t ~zone in
     Date0.to_string_iso8601_basic date ^ "-" ^ Ofday.to_millisecond_string sec
   ;;
 
-  let to_string t = to_string_abs t ~zone:(Lazy.force Zone.local)
+  let to_string t = to_string_abs t ~zone:(Portable_lazy.force Zone.local_portable)
 
   let ensure_colon_in_offset offset =
     if Char.( = ) offset.[1] ':' || Char.( = ) offset.[2] ':'
@@ -146,13 +155,11 @@ module T = struct
           ])
   ;;
 
-  exception Time_string_not_absolute of string [@@deriving sexp]
-
   let of_string_gen ~if_no_timezone s =
     let default_zone () =
       match if_no_timezone with
       | `Fail -> raise (Time_string_not_absolute s)
-      | `Local -> Lazy.force Zone.local
+      | `Local -> Portable_lazy.force Zone.local_portable
       | `Use_this_one zone -> zone
     in
     of_string_gen ~default_zone ~find_zone:Zone.find_exn s
@@ -160,18 +167,18 @@ module T = struct
 
   let of_string_abs s = of_string_gen ~if_no_timezone:`Fail s
   let of_string s = of_string_gen ~if_no_timezone:`Local s
-  let arg_type = Command.Arg_type.create of_string_abs
+  let%template arg_type = (Command.Arg_type.create [@mode portable]) of_string_abs
 
-  include Pretty_printer.Register (struct
+  include%template Pretty_printer.Register [@modality portable] (struct
       type nonrec t = t
 
       let to_string = to_string
       let module_name = "Core.Time_float"
     end)
 
-  let sexp_zone = ref Zone.local
-  let get_sexp_zone () = Lazy.force !sexp_zone
-  let set_sexp_zone zone = sexp_zone := lazy zone
+  let sexp_zone = Atomic.make Zone.local_portable
+  let get_sexp_zone () = Portable_lazy.force (Atomic.get sexp_zone)
+  let set_sexp_zone zone = Atomic.set sexp_zone (Portable_lazy.from_val zone)
 
   let t_of_sexp_gen ~if_no_timezone sexp =
     try
@@ -193,7 +200,7 @@ module T = struct
   ;;
 
   let t_of_sexp sexp =
-    t_of_sexp_gen sexp ~if_no_timezone:(`Use_this_one (Lazy.force !sexp_zone))
+    t_of_sexp_gen sexp ~if_no_timezone:(`Use_this_one (get_sexp_zone ()))
   ;;
 
   let t_sexp_grammar : t Sexplib.Sexp_grammar.t =
@@ -212,7 +219,15 @@ module T = struct
     Sexp.List (List.map (Time.to_string_abs_parts ~zone t) ~f:(fun s -> Sexp.Atom s))
   ;;
 
-  let sexp_of_t t = sexp_of_t_abs ~zone:(Lazy.force !sexp_zone) t
+  let sexp_of_t t = sexp_of_t_abs ~zone:(get_sexp_zone ()) t
+
+  module Exposed_for_tests = struct
+    let ensure_colon_in_offset = ensure_colon_in_offset
+  end
+end
+
+module T = struct
+  include T_without_Map_and_Set
 
   include (
   struct
@@ -240,12 +255,15 @@ module T = struct
     end
 
     include C
-    module Map = Map.Make_binable_using_comparator (C)
-    module Set = Set.Make_binable_using_comparator (C)
+    module%template Map = Map.Make_binable_using_comparator [@modality portable] (C)
+    module%template Set = Set.Make_binable_using_comparator [@modality portable] (C)
   end :
-    Comparable.Map_and_set_binable
-    with type t := t
-     and type comparator_witness := comparator_witness)
+  sig
+    include
+      Comparable.Map_and_set_binable
+      with type t := t
+       and type comparator_witness := comparator_witness
+  end)
 
   let%test _ =
     Set.equal
@@ -253,48 +271,49 @@ module T = struct
       (Set.t_of_sexp
          (Sexp.List [ Float.sexp_of_t (Span.to_sec (to_span_since_epoch epoch)) ]))
   ;;
-
-  module Exposed_for_tests = struct
-    let ensure_colon_in_offset = ensure_colon_in_offset
-  end
 end
 
-include Diffable.Atomic.Make (T)
+include%template Diffable.Atomic.Make [@modality portable] (T)
 
 (* Previous versions rendered hash-based containers using float serialization rather than
    time serialization, so when reading hash-based containers in we accept either
    serialization. *)
-include Hashable.Make_binable (struct
-    type t = Time.t [@@deriving bin_io, compare, hash]
+  include%template Hashable.Make_binable [@modality portable] (struct
+      type t = Time.t [@@deriving bin_io, compare ~localize, hash]
 
-    let sexp_of_t = T.sexp_of_t
+      let sexp_of_t = T.sexp_of_t
 
-    let t_of_sexp sexp =
-      match Float.t_of_sexp sexp with
-      | float -> Time.of_span_since_epoch (Time.Span.of_sec float)
-      | exception _ -> T.t_of_sexp sexp
-    ;;
-  end)
+      let t_of_sexp sexp =
+        match Float.t_of_sexp sexp with
+        | float -> Time.of_span_since_epoch (Time.Span.of_sec float)
+        | exception _ -> T.t_of_sexp sexp
+      ;;
+    end)
 
 module Stable = struct
-  module V1 = struct
+  module V1_without_Map_and_Set = struct
     (* There is no simple, pristine implementation of "stable time", and in fact
        [Time.Stable.V1] has always called out to "unstable" string conversions.
        For a complicated "stable" story like this, we rely on comprehensive tests
        of stability; see [lib/core/test/src/test_time.ml]. *)
-    include T
-    include Diffable.Atomic.Make (T)
+    include T_without_Map_and_Set
+
+    include%template Diffable.Atomic.Make [@modality portable] (T)
 
     let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
+  end
+
+  module V1 = struct
+    include V1_without_Map_and_Set
 
     module Map = struct
-      include Map
+      include T.Map
 
       let stable_witness _ = Stable_witness.assert_stable
     end
 
     module Set = struct
-      include Set
+      include T.Set
 
       let stable_witness = Stable_witness.assert_stable
     end
@@ -303,20 +322,20 @@ module Stable = struct
   module With_utc_sexp = struct
     module V1 = struct
       module C = struct
-        include (
-          V1 : module type of V1 with module Map := V1.Map and module Set := V1.Set)
+        include V1_without_Map_and_Set
 
         let sexp_of_t t = sexp_of_t_abs t ~zone:Zone.utc
       end
 
       include C
-      module Map = Map.Make_binable_using_comparator (C)
-      module Set = Set.Make_binable_using_comparator (C)
+      module%template Map = Map.Make_binable_using_comparator [@modality portable] (C)
+      module%template Set = Set.Make_binable_using_comparator [@modality portable] (C)
     end
 
     module V2 = struct
       module C = struct
-        type nonrec t = t [@@deriving bin_io, compare, equal, hash]
+        type nonrec t = t
+        [@@deriving bin_io ~localize, compare ~localize, equal ~localize, hash]
 
         let sexp_of_t t = [%sexp (to_string_abs_parts t ~zone:Zone.utc : string list)]
         let stable_witness = Stable_witness.assert_stable
@@ -349,13 +368,15 @@ module Stable = struct
       end
 
       include C
-      include Comparable.Stable.V1.With_stable_witness.Make (C)
+
+      include%template
+        Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (C)
     end
   end
 
   module With_t_of_sexp_abs = struct
     module V1 = struct
-      include (V1 : module type of V1 with module Map := V1.Map and module Set := V1.Set)
+      include V1_without_Map_and_Set
 
       let t_of_sexp = t_of_sexp_abs
     end
@@ -372,27 +393,35 @@ module Stable = struct
 
         type nonrec t = t [@@deriving hash]
 
-        let compare = With_nonchronological_compare.compare
-        let equal = With_nonchronological_compare.equal
+        [%%rederive
+          type t = With_nonchronological_compare.t
+          [@@deriving compare ~localize ~portable, equal ~localize ~portable]]
 
         module Bin_repr = struct
           type t =
             { ofday : Time.Stable.Ofday.V1.t
             ; zone : Timezone.Stable.V1.t
             }
-          [@@deriving bin_io, stable_witness]
+          [@@deriving bin_io ~localize, stable_witness]
         end
 
-        let to_binable t : Bin_repr.t = { ofday = ofday t; zone = zone t }
+        let%template[@alloc a @ m = (heap_global, stack_local)] to_binable t : Bin_repr.t =
+          { ofday = (ofday [@mode m]) t; zone = (zone [@mode m]) t } [@exclave_if_stack a]
+        ;;
+
         let of_binable (repr : Bin_repr.t) = create repr.ofday repr.zone
 
-        include
-          Binable.Stable.Of_binable.V1 [@alert "-legacy"]
+        include%template
+          Binable.Stable.Of_binable.V1
+            [@mode local]
+            [@modality portable]
+            [@alert "-legacy"]
             (Bin_repr)
             (struct
               type nonrec t = t
 
               let to_binable = to_binable
+              let%template[@mode local] to_binable = (to_binable [@alloc stack])
               let of_binable = of_binable
             end)
 
@@ -426,17 +455,4 @@ module Stable = struct
   module Zone = Timezone.Stable
 end
 
-include (
-  T :
-    module type of struct
-      include T
-    end
-    with module Replace_polymorphic_compare := T.Replace_polymorphic_compare
-    with module Date_and_ofday := T.Date_and_ofday
-    with type underlying := T.underlying
-    with type t := T.t
-    with type comparator_witness := T.comparator_witness)
-
-let to_string = T.to_string
-let of_string = T.of_string
-let of_string_gen = T.of_string_gen
+include T

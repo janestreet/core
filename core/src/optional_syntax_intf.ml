@@ -1,6 +1,7 @@
 open! Import
 
-[@@@warning "-incompatible-with-upstream"]
+[%%template
+[@@@mode.default m = (global, local)]
 
 module type S = sig
   type t
@@ -8,7 +9,7 @@ module type S = sig
 
   module Optional_syntax : sig
     val is_none : t -> bool
-    val unsafe_value : t -> value
+    val unsafe_value : t -> value [@@mode m = (global, m)]
   end
 end
 
@@ -18,11 +19,10 @@ module type S_zero_alloc = sig
 
   module Optional_syntax : sig
     val is_none : t -> bool [@@zero_alloc]
-    val unsafe_value : t -> value [@@zero_alloc]
+    val unsafe_value : t -> value [@@zero_alloc] [@@mode m = (global, m)]
   end
 end
 
-[%%template
 [@@@kind.default ka = (value, float64, bits32, bits64, word, immediate, immediate64)]
 
 module type S1 = sig
@@ -31,7 +31,7 @@ module type S1 = sig
 
   module Optional_syntax : sig
     val is_none : _ t -> bool
-    val unsafe_value : 'a t -> 'a value
+    val unsafe_value : 'a t -> 'a value [@@mode m = (global, m)]
   end
 end
 
@@ -41,7 +41,7 @@ module type S1_zero_alloc = sig
 
   module Optional_syntax : sig
     val is_none : _ t -> bool [@@zero_alloc]
-    val unsafe_value : 'a t -> 'a value [@@zero_alloc]
+    val unsafe_value : 'a t -> 'a value [@@zero_alloc] [@@mode m = (global, m)]
   end
 end
 
@@ -53,7 +53,7 @@ module type S2 = sig
 
   module Optional_syntax : sig
     val is_none : _ t -> bool
-    val unsafe_value : ('a, 'b) t -> ('a, 'b) value
+    val unsafe_value : ('a, 'b) t -> ('a, 'b) value [@@mode m = (global, m)]
   end
 end
 
@@ -63,11 +63,13 @@ module type S2_zero_alloc = sig
 
   module Optional_syntax : sig
     val is_none : _ t -> bool [@@zero_alloc]
-    val unsafe_value : ('a, 'b) t -> ('a, 'b) value [@@zero_alloc]
+
+    val unsafe_value : ('a, 'b) t -> ('a, 'b) value
+    [@@zero_alloc] [@@mode m = (global, m)]
   end
 end]
 
-module type Optional_syntax = sig
+module type%template Optional_syntax = sig
   (** Idiomatic usage is to have a module [M] like:
 
       {[
@@ -118,17 +120,18 @@ module type Optional_syntax = sig
 
       For more details on the syntax extension, see [ppx/ppx_optional/README.md]. *)
 
-  module type S = S
-  module type S_zero_alloc = S_zero_alloc
+  [@@@mode.default m = (global, local)]
 
-  [%%template:
+  module type S = S [@mode m]
+  module type S_zero_alloc = S_zero_alloc [@mode m]
+
   [@@@kind.default ka = (value, float64, bits32, bits64, word, immediate, immediate64)]
 
-  module type S1 = S1 [@kind ka]
-  module type S1_zero_alloc = S1_zero_alloc [@kind ka]
+  module type S1 = S1 [@kind ka] [@mode m]
+  module type S1_zero_alloc = S1_zero_alloc [@kind ka] [@mode m]
 
   [@@@kind.default kb = (value, float64, bits32, bits64, word, immediate, immediate64)]
 
-  module type S2 = S2 [@kind ka kb]
-  module type S2_zero_alloc = S2_zero_alloc [@kind ka kb]]
+  module type S2 = S2 [@kind ka kb] [@mode m]
+  module type S2_zero_alloc = S2_zero_alloc [@kind ka kb] [@mode m]
 end

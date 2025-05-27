@@ -12,8 +12,8 @@ module Stable = struct
       }
     [@@deriving
       bin_io ~localize
-      , compare
-      , equal
+      , compare ~localize
+      , equal ~localize
       , fields ~getters
       , globalize
       , hash
