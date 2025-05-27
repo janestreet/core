@@ -50,8 +50,9 @@ module type Test_binary_searchable = sig
   module Test1 (M : Binary_searchable1_and_for_test) : sig end
 
   (** [Make_and_test] does [Binary_searchable.Make] and [Test]. *)
-  module Make_and_test (T : Indexable_and_for_test) :
+  module%template.portable Make_and_test (T : Indexable_and_for_test) :
     S with type t := T.t with type elt := T.elt
 
-  module Make1_and_test (T : Indexable1_and_for_test) : S1 with type 'a t := 'a T.t
+  module%template.portable Make1_and_test (T : Indexable1_and_for_test) :
+    S1 with type 'a t := 'a T.t
 end

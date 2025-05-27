@@ -93,28 +93,32 @@ open! Import
 module Binable = Binable0
 module Hashtbl = Base.Hashtbl
 
-module type Key_plain = Hashtbl.Key.S
+module type%template Key_plain = Hashtbl.Key.S [@mode m] [@@mode m = (local, global)]
+module type Hashtbl_equality = Hashtbl.Hashtbl_equality
 
 module Hashable = Base.Hashable
 module Merge_into_action = Base.Hashtbl.Merge_into_action
 
+[%%template
+[@@@mode.default m = (local, global)]
+
 module type Key = sig
   type t [@@deriving sexp]
 
-  include Key_plain with type t := t
+  include Key_plain [@mode m] with type t := t
 end
 
 module type Key_binable = sig
   type t [@@deriving bin_io, sexp]
 
-  include Key with type t := t
+  include Key [@mode m] with type t := t
 end
 
 module type Key_stable = sig
   type t [@@deriving bin_io, sexp, stable_witness]
 
-  include Key_binable with type t := t
-end
+  include Key_binable [@mode m] with type t := t
+end]
 
 module type Creators = Hashtbl.Private.Creators_generic
 
@@ -138,14 +142,15 @@ type ('key, 'data, 'z) create_options_with_hashable =
   -> hashable:'key Hashable.t
   -> 'z
 
-module type M_quickcheck = sig
-  type t [@@deriving compare, hash, quickcheck, sexp_of]
+module type%template M_quickcheck = sig
+  type t [@@deriving (compare [@mode m]), hash, quickcheck, sexp_of]
 end
+[@@mode m = (local, global)]
 
 module type For_deriving = sig
   include Base.Hashtbl.For_deriving
 
-  module type M_quickcheck = M_quickcheck
+  module type%template M_quickcheck = M_quickcheck [@mode m] [@@mode m = (local, global)]
 
   val quickcheck_generator_m__t
     :  (module M_quickcheck with type t = 'k)
@@ -191,7 +196,7 @@ end
 module type S_plain = sig
   type key
   type ('a, 'b) hashtbl
-  type 'b t = (key, 'b) hashtbl [@@deriving equal, sexp_of]
+  type 'b t = (key, 'b) hashtbl [@@deriving equal ~localize, sexp_of]
   type ('a, 'b) t_ = 'b t
   type 'a key_ = key
 
@@ -253,10 +258,14 @@ module type%template
       -> ('a, 'b) t Validate.check
   end
 
-  module type Key_plain = Key_plain
-  module type Key = Key
-  module type Key_binable = Key_binable
-  module type Key_stable = Key_stable
+  [%%template:
+  [@@@mode.default m = (local, global)]
+
+  module type Key_plain = Key_plain [@mode m]
+  module type Key = Key [@mode m]
+  module type Key_binable = Key_binable [@mode m]
+  module type Key_stable = Key_stable [@mode m]]
+
   module type S_plain = S_plain with type ('a, 'b) hashtbl = ('a, 'b) t
   module type S = S with type ('a, 'b) hashtbl = ('a, 'b) t
   module type S_binable = S_binable with type ('a, 'b) hashtbl = ('a, 'b) t
@@ -381,4 +390,5 @@ module type%template [@modality p = (portable, nonportable)] Hashtbl = sig @@ p
 
   include Non_value
   include Hashtbl_over_values [@modality p] with type ('a, 'b) t := ('a, 'b) t
+  include Hashtbl_equality with type ('a, 'b) t := ('a, 'b) t
 end

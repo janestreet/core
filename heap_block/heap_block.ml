@@ -2,7 +2,11 @@ open! Base
 
 type 'a t = 'a [@@deriving sexp_of]
 
-external is_heap_block : Stdlib.Obj.t -> bool = "core_heap_block_is_heap_block"
+external is_heap_block
+  :  Stdlib.Obj.t
+  -> bool
+  @@ portable
+  = "core_heap_block_is_heap_block"
 [@@noalloc]
 
 let is_ok v = is_heap_block (Stdlib.Obj.repr v)

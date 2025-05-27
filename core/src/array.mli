@@ -9,11 +9,14 @@ open Perms.Export
 
 (** {2 The [Array] type} *)
 
-type 'a t = 'a Base.Array.t [@@deriving bin_io ~localize, quickcheck, typerep]
+type ('a : any_non_null) t = 'a Base.Array.t
+
+[%%rederive:
+  type nonrec 'a t = 'a t [@@deriving bin_io ~localize, quickcheck ~portable, typerep]]
 
 (** {2 The signature included from [Base.Array]} *)
 
-include Base.Array.Public with type 'a t := 'a t (** @inline *)
+include Base.Array.Public with type ('a : any_non_null) t := 'a t (** @inline *)
 
 (** {2 Extensions}
 
@@ -24,7 +27,8 @@ include Base.Array.Public with type 'a t := 'a t (** @inline *)
     Operations supporting "normalized" indexes are also available. *)
 
 module Int : sig
-  type nonrec t = int t [@@deriving bin_io ~localize, compare, sexp, sexp_grammar]
+  type nonrec t = int t
+  [@@deriving bin_io ~localize, compare ~localize, sexp, sexp_grammar]
 
   include Blit.S with type t := t
 
@@ -40,7 +44,8 @@ module Int : sig
 end
 
 module Float : sig
-  type nonrec t = float t [@@deriving bin_io ~localize, compare, sexp, sexp_grammar]
+  type nonrec t = float t
+  [@@deriving bin_io ~localize, compare ~localize, sexp, sexp_grammar]
 
   include Blit.S with type t := t
 
@@ -79,11 +84,15 @@ module Permissioned : sig
       extract the length of an array. This was done for simplicity because some
       information about the length of an array can leak out even if you only have write
       permissions since you can catch out-of-bounds errors. *)
-  type ('a, -'perms) t [@@deriving bin_io ~localize, compare, sexp, sexp_grammar]
+  type ('a : any_non_null, -'perms) t
+
+  [%%rederive:
+    type nonrec ('a, -'perms) t = ('a, 'perms) t
+    [@@deriving bin_io ~localize, compare ~localize, sexp, sexp_grammar]]
 
   module Int : sig
     type nonrec -'perms t = (int, 'perms) t
-    [@@deriving bin_io ~localize, compare, sexp, sexp_grammar]
+    [@@deriving bin_io ~localize, compare ~localize, sexp, sexp_grammar]
 
     include Blit.S_permissions with type 'perms t := 'perms t
 
@@ -100,7 +109,7 @@ module Permissioned : sig
 
   module Float : sig
     type nonrec -'perms t = (float, 'perms) t
-    [@@deriving bin_io ~localize, compare, sexp, sexp_grammar]
+    [@@deriving bin_io ~localize, compare ~localize, sexp, sexp_grammar]
 
     include Blit.S_permissions with type 'perms t := 'perms t
 
@@ -124,7 +133,7 @@ module Permissioned : sig
       = "%floatarray_unsafe_get"
 
     external unsafe_set
-      :  ([> read ] t[@local_opt])
+      :  ([> write ] t[@local_opt])
       -> (int[@local_opt])
       -> (float[@local_opt])
       -> unit
@@ -184,33 +193,70 @@ module Permissioned : sig
   (** counterparts of regular array functions above *)
 
   external get
-    :  (('a, [> read ]) t[@local_opt])
-    -> (int[@local_opt])
-    -> 'a
+    : ('a : any_non_null).
+    (('a, [> read ]) t[@local_opt]) -> (int[@local_opt]) -> 'a
     = "%array_safe_get"
+  [@@layout_poly]
 
   external set
-    :  (('a, [> write ]) t[@local_opt])
-    -> (int[@local_opt])
-    -> 'a
-    -> unit
+    : ('a : any_non_null).
+    (('a, [> write ]) t[@local_opt]) -> (int[@local_opt]) -> 'a -> unit
     = "%array_safe_set"
+  [@@layout_poly]
 
   external unsafe_get
-    :  (('a, [> read ]) t[@local_opt])
-    -> (int[@local_opt])
-    -> 'a
+    : ('a : any_non_null).
+    (('a, [> read ]) t[@local_opt]) -> (int[@local_opt]) -> 'a
     = "%array_unsafe_get"
+  [@@layout_poly]
 
   external unsafe_set
-    :  (('a, [> write ]) t[@local_opt])
-    -> (int[@local_opt])
-    -> 'a
-    -> unit
+    : ('a : any_non_null).
+    (('a, [> write ]) t[@local_opt]) -> (int[@local_opt]) -> 'a -> unit
     = "%array_unsafe_set"
+  [@@layout_poly]
 
-  val create : len:int -> 'a -> ('a, [< _ perms ]) t
-  val create_local : len:int -> 'a -> local_ ('a, [< _ perms ]) t
+  [%%template:
+    external create
+      : ('a : any_non_null) 'perm.
+      len:int -> 'a -> ('a, [< 'perm perms ]) t @ m
+      = "%makearray_dynamic"
+    [@@ocaml.doc
+      " [create ~len x] creates an array of length [len] with the value [x] populated in\n\
+      \        each element. "]
+    [@@layout_poly]
+    [@@alloc __ @ m = (heap_global, stack_local)]]
+
+  external create_local
+    : ('a : any_non_null) 'perm.
+    len:int -> 'a -> local_ ('a, [< 'perm perms ]) t
+    = "%makearray_dynamic"
+  [@@ocaml.doc
+    " [create_local ~len x] is like [create]. It allocates the array on the local stack.\n\
+    \        The array's elements are still global. "]
+  [@@layout_poly]
+
+  external magic_create_uninitialized
+    : ('a : any_non_null) 'perm.
+    len:int -> (('a, [< 'perm perms ]) t[@local_opt])
+    = "%makearray_dynamic_uninit"
+  [@@ocaml.doc
+    " [magic_create_uninitialized ~len] creates an array of length [len] with\n\
+    \        uninitialized elements -- that is, they may contain arbitrary, \
+     nondeterministic 'a\n\
+    \        values. This can be significantly faster than using [create].\n\n\
+    \        [magic_create_uninitialized] can only be used for GC-ignorable arrays not\n\
+    \        involving tagged immediates and arrays of elements with unboxed number \
+     layout. The\n\
+    \        compiler rejects attempts to use [magic_create_uninitialized] to produce \
+     e.g. an\n\
+    \        [('a : value) array].\n\n\
+    \        [magic_create_uninitialized] can break abstraction boundaries and type safety\n\
+    \        (e.g. by creating phony witnesses to type equality) and so should be used \
+     with\n\
+    \        caution. "]
+  [@@layout_poly]
+
   val create_float_uninitialized : len:int -> (float, [< _ perms ]) t
   val init : int -> f:local_ (int -> 'a) -> ('a, [< _ perms ]) t
   val make_matrix : dimx:int -> dimy:int -> 'a -> (('a, [< _ perms ]) t, [< _ perms ]) t

@@ -10,7 +10,7 @@ type single_error =
 type t = single_error list
 type 'a check = 'a -> t
 
-let get_pass () : t = []
+let[@inline] get_pass () : t = []
 let pass = get_pass ()
 
 let fails message a sexp_of_a =
@@ -30,6 +30,16 @@ let name name t =
     List.map
       t
       ~f:(stack_ fun { path; error } -> { path = name :: path; error }) [@nontail]
+;;
+
+let lazy_name name t =
+  match t with
+  | [] -> [] (* when successful, do not force the name *)
+  | _ ->
+    List.map
+      t
+      ~f:(stack_ fun { path; error } -> { path = Lazy.force name :: path; error })
+    [@nontail]
 ;;
 
 let name_list n l = name n (of_list l)

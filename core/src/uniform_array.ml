@@ -1,8 +1,8 @@
 open! Import
 include Base.Uniform_array
 
-include
-  Binable.Of_binable1_without_uuid [@alert "-legacy"]
+include%template
+  Binable.Of_binable1_without_uuid [@modality portable] [@alert "-legacy"]
     (Array)
     (struct
       type nonrec 'a t = 'a t
@@ -11,8 +11,8 @@ include
       let of_binable = of_array
     end)
 
-include
-  Quickcheckable.Of_quickcheckable1
+include%template
+  Quickcheckable.Of_quickcheckable1 [@modality portable]
     (Array)
     (struct
       type nonrec 'a t = 'a t

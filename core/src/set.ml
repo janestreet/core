@@ -93,7 +93,9 @@ sig
     with module Named = Set.Named
 end)
 
-let compare _ _ t1 t2 = compare_direct t1 t2
+let%template compare _ _ t1 t2 = (compare_direct [@mode m]) t1 t2
+[@@mode m = (local, global)]
+;;
 
 module Using_comparator = struct
   include (
@@ -194,15 +196,18 @@ module type For_make_tree_S1 = sig
      and type _ cmp := Elt.comparator_witness
      and type ('elt, 'cmp, 'fn) create_options := 'fn
 
+  [%%template:
+  [@@@mode.default m = (local, global)]
+
   val compare_direct
-    :  ('a Elt.t, Elt.comparator_witness) Tree.t
-    -> ('a Elt.t, Elt.comparator_witness) Tree.t
+    :  ('a Elt.t, Elt.comparator_witness) Tree.t @ m
+    -> ('a Elt.t, Elt.comparator_witness) Tree.t @ m
     -> int
 
   val equal
-    :  ('a Elt.t, Elt.comparator_witness) Tree.t
-    -> ('a Elt.t, Elt.comparator_witness) Tree.t
-    -> bool
+    :  ('a Elt.t, Elt.comparator_witness) Tree.t @ m
+    -> ('a Elt.t, Elt.comparator_witness) Tree.t @ m
+    -> bool]
 end
 
 module%template.portable Make_tree_S1 (Elt : Comparator.S1) :
@@ -212,8 +217,13 @@ module%template.portable Make_tree_S1 (Elt : Comparator.S1) :
   let singleton e = Tree.singleton ~comparator e
   let map t ~f = Tree.map t ~f ~comparator
   let filter_map t ~f = Tree.filter_map t ~f ~comparator
-  let compare_direct t1 t2 = Tree.compare_direct ~comparator t1 t2
-  let equal t1 t2 = Tree.equal t1 t2 ~comparator
+
+  [%%template
+  [@@@mode.default m = (local, global)]
+
+  let compare_direct t1 t2 = (Tree.compare_direct [@mode m]) ~comparator t1 t2
+  let equal t1 t2 = (Tree.equal [@mode m]) t1 t2 ~comparator]
+
   let of_list l = Tree.of_list l ~comparator
   let of_sequence s = Tree.of_sequence s ~comparator
   let of_hash_set h = Tree.of_hash_set h ~comparator
@@ -233,7 +243,7 @@ module%template.portable Make_tree_S1 (Elt : Comparator.S1) :
 end
 
 module%template.portable
-  [@modality p] [@conflate_modality_as_mode p] Make_tree_plain (Elt : sig
+  [@modality p] Make_tree_plain (Elt : sig
     type t [@@deriving sexp_of]
 
     include Comparator.S with type t := t
@@ -244,7 +254,10 @@ struct
 
   type t = (Elt.t, Elt.comparator_witness) Tree.t
 
-  let compare t1 t2 = compare_direct t1 t2
+  let%template compare t1 t2 = (compare_direct [@mode m]) t1 t2
+  [@@mode m = (local, global)]
+  ;;
+
   let sexp_of_t t = Tree.sexp_of_t Elt.sexp_of_t [%sexp_of: _] t
 end
 
@@ -304,7 +317,10 @@ module Poly = struct
 
   include Accessors
 
-  let compare _ t1 t2 = compare_direct t1 t2
+  let%template compare _ t1 t2 = (compare_direct [@mode m]) t1 t2
+  [@@mode m = (global, local)]
+  ;;
+
   let sexp_of_t sexp_of_k t = sexp_of_t sexp_of_k [%sexp_of: _] t
 
   let t_sexp_grammar elt_grammar =
@@ -350,25 +366,29 @@ end
 
 module Elt_bin_io = Elt_bin_io
 
-module%template.portable [@modality p] Provide_bin_io (Elt : Elt_bin_io.S) =
-Bin_prot.Utils.Make_iterable_binable [@modality p] (struct
-    type nonrec t = (Elt.t, Elt.comparator_witness) t
-    type el = Elt.t [@@deriving bin_io]
+module%template.portable [@modality p] Provide_bin_io (Elt : Elt_bin_io.S) = struct
+  include Bin_prot.Utils.Make_iterable_binable [@modality p] (struct
+      type nonrec t = (Elt.t, Elt.comparator_witness) t
+      type el = Elt.t [@@deriving bin_io]
 
-    let _ = bin_el
+      let _ = bin_el
 
-    let caller_identity =
-      Bin_prot.Shape.Uuid.of_string "8989278e-4992-11e6-8f4a-6b89776b1e53"
-    ;;
+      let caller_identity =
+        Bin_prot.Shape.Uuid.of_string "8989278e-4992-11e6-8f4a-6b89776b1e53"
+      ;;
 
-    let module_name = Some "Core.Set"
-    let length = length
-    let[@inline always] iter t ~f = iter ~f:(fun key -> f key) t [@nontail]
+      let module_name = Some "Core.Set"
+      let length = length
+      let[@inline always] iter t ~f = iter ~f:(fun key -> f key) t [@nontail]
 
-    let init ~len ~next =
-      init_for_bin_prot ~len ~f:(fun _ -> next ()) ~comparator:Elt.comparator
-    ;;
-  end)
+      let init ~len ~next =
+        init_for_bin_prot ~len ~f:(fun _ -> next ()) ~comparator:Elt.comparator
+      ;;
+    end)
+
+  let[@mode local] bin_size_t t = bin_size_t (Base.Set.globalize0 t)
+  let[@mode local] bin_write_t buf ~pos t = bin_write_t buf ~pos (Base.Set.globalize0 t)
+end
 
 module Provide_stable_witness (Elt : sig
     type t [@@deriving stable_witness]
@@ -387,7 +407,7 @@ module%template.portable
   [@modality p] Make_plain_using_comparator (Elt : sig
     type t [@@deriving sexp_of]
 
-    include Comparator.S with type t := t
+    include Comparator.S [@modality p] with type t := t
   end) =
 struct
   module Elt = Elt
@@ -399,7 +419,10 @@ struct
 
   include Accessors
 
-  let compare t1 t2 = compare_direct t1 t2
+  let%template compare t1 t2 = (compare_direct [@mode m]) t1 t2
+  [@@mode m = (local, global)]
+  ;;
+
   let sexp_of_t t = sexp_of_t Elt.sexp_of_t [%sexp_of: _] t
 
   module Diff = struct
@@ -438,7 +461,7 @@ module%template.portable
   [@modality p] Make_using_comparator (Elt_sexp : sig
     type t [@@deriving sexp]
 
-    include Comparator.S with type t := t
+    include Comparator.S [@modality p] with type t := t
   end) =
 struct
   include Make_plain_using_comparator [@modality p] (Elt_sexp)
@@ -462,7 +485,7 @@ module%template.portable
   [@modality p] Make_binable_using_comparator (Elt_bin_sexp : sig
     type t [@@deriving bin_io, sexp]
 
-    include Comparator.S with type t := t
+    include Comparator.S [@modality p] with type t := t
   end) =
 struct
   include Make_using_comparator [@modality p] (Elt_bin_sexp)
@@ -625,7 +648,8 @@ module Stable = struct
       type elt_comparator_witness
       type nonrec t = (elt, elt_comparator_witness) t
 
-      include Stable_module_types.S0_without_comparator with type t := t
+      include%template
+        Stable_module_types.S0_without_comparator [@mode local] with type t := t
 
       include
         Diffable.S with type t := t and type Diff.t = elt Diffable.Set_diff.Stable.V1.t
@@ -634,7 +658,10 @@ module Stable = struct
     include For_deriving
     include For_deriving_stable
 
-    module%template.portable [@modality p] Make (Elt : Stable_module_types.S0) =
+    module%template.portable
+      [@modality p] Make
+        (Elt : Stable_module_types.S0
+      [@modality p]) =
       Make_binable_using_comparator [@modality p] (Elt)
 
     module With_stable_witness = struct
@@ -646,7 +673,8 @@ module Stable = struct
 
       module%template.portable
         [@modality p] Make
-          (Elt_stable : Stable_module_types.With_stable_witness.S0) =
+          (Elt_stable : Stable_module_types.With_stable_witness.S0
+        [@modality p]) =
       struct
         include Make_binable_using_comparator [@modality p] (Elt_stable)
         include Provide_stable_witness (Elt_stable)

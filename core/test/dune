@@ -1,10 +1,12 @@
 (library
  (name core_test)
  (libraries base_container_tests base_for_tests base_test_helpers core
-   core_test_helpers expectable expect_test_helpers_core core_kernel.fheap
-   core_kernel.version_util expect_test_helpers_core.expect_test_helpers_base
-   expect_test_patterns float_u int64_u sexp_grammar_validation sexplib
-   ppx_stable_witness.stable_witness)
+   core_test_helpers expect_test_helpers_core.expect_test_helpers_base
+   expect_test_helpers_core expect_test_patterns expectable core_kernel.fheap
+   unboxed.float_u unboxed.int32_u unboxed.int64_u unboxed.nativeint_u
+   portable.test_helpers sexp_grammar_validation sexplib
+   ppx_stable_witness.stable_witness unboxed_test_harness
+   core_kernel.version_util)
  (preprocessor_deps ../src/config.h)
  (preprocess
   (pps ppx_jane ppx_bin_and_sexp_digest)))

@@ -439,8 +439,11 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
       ~f:(fun t -> require_equal (module Int_t) t (of_sequence (to_sequence t)))
   ;;
 
-  let binary_search = Iarray.binary_search
-  let binary_search_segmented = Iarray.binary_search_segmented
+  let%template[@mode m = (global, local)] binary_search = (Iarray.binary_search [@mode m])
+
+  let%template[@mode m = (global, local)] binary_search_segmented =
+    (Iarray.binary_search_segmented [@mode m])
+  ;;
 
   module%test [@name "run binary search tests"] _ =
   Base_for_tests.Test_binary_searchable.Test1 (struct
@@ -991,6 +994,49 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
       include Indexed_container.S1_with_creators with type 'a t := 'a t
     end)
 
+  include struct
+    open%template struct
+      (* Accumulators just convert from an int and then do an int operation *)
+      let[@kind bits64] of_int = Int64_u.of_int
+      let[@kind bits32] of_int = Int32_u.of_int_trunc
+      let[@kind word] of_int = Nativeint_u.of_int
+      let[@kind float64] of_int = Float_u.of_int
+      let[@kind bits64] to_int = Int64_u.to_int_trunc
+      let[@kind bits32] to_int = Int32_u.to_int_trunc
+      let[@kind word] to_int = Nativeint_u.to_int_trunc
+      let[@kind float64] to_int = Float_u.to_int
+    end
+
+    [%%template
+    [@@@kind.default ka = value, kacc = (bits64, bits32, word, float64)]
+
+    let fold = (Iarray.fold [@kind ka kacc])
+    let foldi = (Iarray.foldi [@kind ka kacc])
+    let fold_right = (Iarray.fold_right [@kind ka kacc])
+
+    let%expect_test _ =
+      let iarr = List.range 2 7 |> Iarray.of_list_rev in
+      let test fold ~f =
+        fold iarr ~init:((of_int [@kind kacc]) 6) ~f
+        |> (to_int [@kind kacc])
+        |> [%sexp_of: int]
+        |> print_s
+      in
+      test (fold [@kind ka kacc]) ~f:(fun acc a ->
+        (to_int [@kind kacc]) acc + a |> (of_int [@kind kacc]));
+      [%expect {| 26 |}];
+      test (foldi [@kind ka kacc]) ~f:(fun i acc a ->
+        (to_int [@kind kacc]) acc + a - i |> (of_int [@kind kacc]));
+      [%expect {| 16 |}];
+      test (fold_right [@kind ka kacc]) ~f:(fun a acc ->
+        (to_int [@kind kacc]) acc + a |> (of_int [@kind kacc]));
+      [%expect {| 26 |}]
+    ;;]
+  end
+
+  (* Tested as [Local.init] below *)
+  let%template[@alloc stack] init = (Iarray.init [@alloc stack])
+
   external length : ('a t[@local_opt]) -> int @@ portable = "%array_length"
 
   let%expect_test "Ensure [Iarray.length] accepts [local_]s" =
@@ -1167,7 +1213,7 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
         Iarray.Stable.V1 :
         sig
         @@ portable
-          include Stable1_with_witness with type 'a t := 'a t
+          include%template Stable1_with_witness [@mode local] with type 'a t := 'a t
         end)
 
       let%expect_test _ =
@@ -1541,6 +1587,18 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
         (fun (t1, t2) -> Iarray.cartesian_product t1 t2)
     ;;
 
+    let fold_right = Iarray.Local.fold_right
+
+    let%expect_test _ =
+      quickcheck_m
+        (module Int_t)
+        ~f:(fun t ->
+          require_equal
+            (module Int)
+            (fold_right t ~init:0 ~f:( - ))
+            (List.fold_right (Iarray.to_list t) ~init:0 ~f:( - )))
+    ;;
+
     let fold_map = Iarray.Local.fold_map
 
     let%expect_test _ =
@@ -1618,6 +1676,46 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
       @@ portable
         include Container_with_local.S1_indexed_with_creators with type 'a t := 'a iarray
       end)
+
+    include struct
+      open%template struct
+        (* Accumulators just convert from an int and then do an int operation *)
+        let[@kind bits64] of_int = Int64_u.of_int
+        let[@kind bits32] of_int = Int32_u.of_int_trunc
+        let[@kind word] of_int = Nativeint_u.of_int
+        let[@kind float64] of_int = Float_u.of_int
+        let[@kind bits64] to_int = Int64_u.to_int_trunc
+        let[@kind bits32] to_int = Int32_u.to_int_trunc
+        let[@kind word] to_int = Nativeint_u.to_int_trunc
+        let[@kind float64] to_int = Float_u.to_int
+      end
+
+      [%%template
+      [@@@kind.default ka = value, kacc = (bits64, bits32, word, float64)]
+
+      let fold = (Iarray.Local.fold [@kind ka kacc])
+      let foldi = (Iarray.Local.foldi [@kind ka kacc])
+      let fold_right = (Iarray.Local.fold_right [@kind ka kacc])
+
+      let%expect_test _ =
+        let iarr = List.range 2 7 |> Iarray.Local.of_list_rev in
+        let test fold ~f =
+          fold iarr ~init:((of_int [@kind kacc]) 6) ~f
+          |> (to_int [@kind kacc])
+          |> [%sexp_of: int]
+          |> print_s
+        in
+        test (fold [@kind ka kacc]) ~f:(fun acc a ->
+          (to_int [@kind kacc]) acc + a |> (of_int [@kind kacc]));
+        [%expect {| 26 |}];
+        test (foldi [@kind ka kacc]) ~f:(fun i acc a ->
+          (to_int [@kind kacc]) acc + a - i |> (of_int [@kind kacc]));
+        [%expect {| 16 |}];
+        test (fold_right [@kind ka kacc]) ~f:(fun a acc ->
+          (to_int [@kind kacc]) acc + a |> (of_int [@kind kacc]));
+        [%expect {| 26 |}]
+      ;;]
+    end
 
     let%expect_test _ =
       test_indexed_container_with_creators

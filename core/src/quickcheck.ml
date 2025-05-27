@@ -73,7 +73,7 @@ module Observer = struct
 
   let%template of_hash (type a) (module M : Deriving_hash with type t = a[@modality p]) =
     (of_hash_fold [@mode p]) M.hash_fold_t
-  [@@modality p = (nonportable, portable)] [@@conflate_modality_as_mode p]
+  [@@modality p = (nonportable, portable)]
   ;;
 
   let variant2 = Polymorphic_types.quickcheck_observer_variant2
@@ -137,7 +137,11 @@ module Generator = struct
   let geometric = Generator.int_geometric
   let small_non_negative_int = small_positive_or_zero_int
   let small_positive_int = small_strictly_positive_int
-  let list_with_length length t = list_with_length t ~length
+
+  let%template list_with_length length t = (list_with_length [@mode p]) t ~length
+  [@@mode p = (portable, nonportable)]
+  ;;
+
   let variant2 = Polymorphic_types.quickcheck_generator_variant2
   let variant3 = Polymorphic_types.quickcheck_generator_variant3
   let variant4 = Polymorphic_types.quickcheck_generator_variant4

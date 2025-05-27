@@ -6,37 +6,32 @@ include Zone
 module type Extend_zone = Timezone_intf.Extend_zone
 
 module Zone_cache = struct
-  type z =
+  type zone = t
+
+  type t =
     { mutable full : bool
     ; basedir : string
-    ; table : t String.Table.t
+    ; table : zone String.Table.t
     }
 
-  let the_one_and_only =
-    { full = false
-    ; basedir = Option.value (Sys.getenv "TZDIR") ~default:"/usr/share/zoneinfo/"
-    ; table = String.Table.create ()
-    }
+  let clear t =
+    t.full <- false;
+    Hashtbl.clear t.table
   ;;
 
-  let clear () =
-    the_one_and_only.full <- false;
-    Hashtbl.clear the_one_and_only.table
-  ;;
+  let find t zone = Hashtbl.find t.table zone
 
-  let find zone = Hashtbl.find the_one_and_only.table zone
-
-  let find_or_load zonename =
-    match find zonename with
+  let find_or_load t zonename =
+    match find t zonename with
     | Some z -> Some z
     | None ->
-      if the_one_and_only.full
+      if t.full
       then None
       else (
         try
-          let filename = the_one_and_only.basedir ^ "/" ^ zonename in
+          let filename = t.basedir ^ "/" ^ zonename in
           let zone = input_tz_file ~zonename ~filename in
-          Hashtbl.set the_one_and_only.table ~key:zonename ~data:zone;
+          Hashtbl.set t.table ~key:zonename ~data:zone;
           Some zone
         with
         | _ -> None)
@@ -64,62 +59,95 @@ module Zone_cache = struct
     dfs basedir maxdepth
   ;;
 
-  let init_from_file_system () =
-    if not the_one_and_only.full
+  let init_from_file_system t =
+    if not t.full
     then (
-      traverse the_one_and_only.basedir ~f:(fun zone_name ->
-        ignore (find_or_load zone_name : t option));
-      the_one_and_only.full <- true)
+      traverse t.basedir ~f:(fun zone_name ->
+        ignore (find_or_load t zone_name : zone option));
+      t.full <- true)
   ;;
 
-  let init =
-    (* On web we are relying on Timezone_js_loader and don't have access to zoneinfo files.
-       This is especially problematic because in test environments on node we do have
-       access to the files so the test/app behavior would be different if we allowed this.
+  let to_alist t = Hashtbl.to_alist t.table
 
-       wasm_of_ocaml doesn't support file access at all (2024-05), and so the
-       initialization always fails. *)
-    match
-      Timezone_js_loader.For_advanced_timezone_feature_detection
-      .should_use_timezone_js_loader
-        ()
-    with
-    | `Yes -> ignore
-    | `Platform_not_supported | `Disabled -> init_from_file_system
+  let initialized_zones t =
+    List.sort ~compare:(fun a b -> String.ascending (fst a) (fst b)) (to_alist t)
   ;;
 
-  let to_alist () = Hashtbl.to_alist the_one_and_only.table
-
-  let initialized_zones () =
-    List.sort ~compare:(fun a b -> String.ascending (fst a) (fst b)) (to_alist ())
-  ;;
-
-  let find_or_load_matching t1 =
+  let find_or_load_matching t zone =
     let file_size filename =
       let c = Stdio.In_channel.create filename in
       let l = Stdio.In_channel.length c in
       Stdio.In_channel.close c;
       l
     in
-    let t1_file_size = Option.map (original_filename t1) ~f:file_size in
+    let t1_file_size = Option.map (original_filename zone) ~f:file_size in
     with_return (fun r ->
       let return_if_matches zone_name =
-        let filename = String.concat ~sep:"/" [ the_one_and_only.basedir; zone_name ] in
+        let filename = String.concat ~sep:"/" [ t.basedir; zone_name ] in
         let matches =
           try
             [%compare.equal: int64 option] t1_file_size (Some (file_size filename))
             && [%compare.equal: Md5.t option]
-                 (digest t1)
-                 Option.(join (map (find_or_load zone_name) ~f:digest))
+                 (digest zone)
+                 Option.(join (map (find_or_load t zone_name) ~f:digest))
           with
           | _ -> false
         in
-        if matches then r.return (find_or_load zone_name) else ()
+        if matches then r.return (find_or_load t zone_name) else ()
       in
-      List.iter !likely_machine_zones ~f:return_if_matches;
-      traverse the_one_and_only.basedir ~f:return_if_matches;
+      List.iter (Atomic.get likely_machine_zones) ~f:return_if_matches;
+      traverse t.basedir ~f:return_if_matches;
       None)
   ;;
+
+  module The_one_and_only = struct
+    include Capsule.Mutex.Create ()
+
+    let capsule : (t, k) Capsule.Data.t =
+      Capsule.Data.create (fun () : t ->
+        { full = false
+        ; basedir = Option.value (Sys.getenv "TZDIR") ~default:"/usr/share/zoneinfo/"
+        ; table = String.Table.create ()
+        })
+    ;;
+
+    let with_the_one_and_only f =
+      Capsule.Mutex.with_lock mutex ~f:(fun password ->
+        Capsule.Data.get capsule ~password ~f)
+    ;;
+
+    let clear () = with_the_one_and_only (fun t -> clear t)
+    let find zone = with_the_one_and_only (fun t -> find t zone)
+    let find_or_load zonename = with_the_one_and_only (fun t -> find_or_load t zonename)
+
+    let init_from_file_system () =
+      with_the_one_and_only (fun t -> init_from_file_system t)
+    ;;
+
+    let initialized_zones () = with_the_one_and_only (fun t -> initialized_zones t)
+
+    let find_or_load_matching zone =
+      with_the_one_and_only (fun t -> find_or_load_matching t zone)
+    ;;
+
+    let init =
+      (* On web we are relying on Timezone_js_loader and don't have access to zoneinfo files.
+         This is especially problematic because in test environments on node we do have
+         access to the files so the test/app behavior would be different if we allowed this.
+
+         wasm_of_ocaml doesn't support file access at all (2024-05), and so the
+         initialization always fails. *)
+      match
+        Timezone_js_loader.For_advanced_timezone_feature_detection
+        .should_use_timezone_js_loader
+          ()
+      with
+      | `Yes -> ignore
+      | `Platform_not_supported | `Disabled -> init_from_file_system
+    ;;
+  end
+
+  include The_one_and_only
 end
 
 let init = Zone_cache.init
@@ -151,7 +179,7 @@ let find_exn zone =
   | Some z -> z
 ;;
 
-let local =
+let local_portable =
   (* Load [TZ] immediately so that subsequent modifications to the environment cannot
      alter the result of [force local]. *)
   let local_zone_name = Sys.getenv "TZ" in
@@ -169,8 +197,11 @@ let local =
        | Some t -> t
        | None -> localtime_t)
   in
-  Lazy.from_fun load
+  Portable_lazy.from_fun load
 ;;
+
+(* See cr-someday in interface file. *)
+let local = lazy (Portable_lazy.force local_portable)
 
 module Stable = struct
   include Zone.Stable
@@ -180,7 +211,7 @@ module Stable = struct
 
     let of_string name =
       match name with
-      | "Local" -> Lazy.force local
+      | "Local" -> Portable_lazy.force local_portable
       | name ->
         if String.equal name "UTC" || String.equal name "GMT"
         then of_utc_offset_explicit_name ~name ~hours:0
@@ -215,11 +246,16 @@ module Stable = struct
       | _ -> of_sexp_error "Timezone.t_of_sexp: expected atom" sexp
     ;;
 
-    let to_string t =
-      let name = name t in
-      if String.equal name "/etc/localtime"
-      then failwith "the local time zone cannot be serialized";
-      name
+    let%template check_name name =
+      if (String.equal [@mode local]) name "/etc/localtime"
+      then failwith "the local time zone cannot be serialized"
+    ;;
+
+    let%template[@alloc a @ m = (heap_global, stack_local)] to_string t =
+      (let name = (name [@mode m]) t in
+       check_name name;
+       name)
+      [@exclave_if_stack a]
     ;;
 
     let sexp_of_t t = Sexp.Atom (to_string t)
@@ -237,44 +273,56 @@ module Stable = struct
     (* The correctness of these relies on not exposing raw loading/creation functions to
        the outside world that would allow the construction of two Zone's with the same
        name and different transitions. *)
-    let compare t1 t2 = String.compare (to_string t1) (to_string t2)
-    let equal t1 t2 = String.equal (to_string t1) (to_string t2)
-    let hash_fold_t state t = String.hash_fold_t state (to_string t)
-    let hash = Ppx_hash_lib.Std.Hash.of_fold hash_fold_t
+    [%%template
+    let[@mode local] to_string = (to_string [@alloc stack])
 
-    let to_binable t =
-      let name = name t in
-      if String.equal name "/etc/localtime"
-      then failwith "the local time zone cannot be serialized";
-      name
+    [@@@mode.default m = (local, global)]
+
+    let compare t1 t2 =
+      (String.compare [@mode m])
+        ((to_string [@mode m]) t1)
+        ((to_string [@mode m]) t2) [@nontail]
     ;;
 
+    let equal t1 t2 =
+      (String.equal [@mode m])
+        ((to_string [@mode m]) t1)
+        ((to_string [@mode m]) t2) [@nontail]
+    ;;]
+
+    let hash_fold_t state t = String.hash_fold_t state (to_string t)
+    let hash t = Ppx_hash_lib.Std.Hash.of_fold hash_fold_t t
+    let%template to_binable = (to_string [@mode m]) [@@mode m = (local, global)]
     let of_binable s = t_of_sexp (Sexp.Atom s)
 
-    include (
-      Binable.Stable.Of_binable.V1 [@alert "-legacy"]
+    include%template (
+      Binable.Stable.Of_binable.V1 [@mode local] [@modality portable] [@alert "-legacy"]
         (String)
         (struct
           type nonrec t = t
 
           let to_binable = to_binable
+          let%template[@mode local] to_binable = (to_binable [@mode local])
           let of_binable = of_binable
         end) :
-          Binable.S with type t := t)
+        sig
+        @@ portable
+          include Binable.S [@mode local] with type t := t
+        end)
 
     let stable_witness =
       Stable_witness.of_serializable String.Stable.V1.stable_witness of_binable to_binable
     ;;
 
-    include Diffable.Atomic.Make (struct
-        type nonrec t = t [@@deriving sexp, bin_io, equal]
+    include%template Diffable.Atomic.Make [@modality portable] (struct
+        type nonrec t = t [@@deriving sexp, bin_io, equal ~localize]
       end)
   end
 
   module Current = V1
 end
 
-include Identifiable.Make (struct
+include%template Identifiable.Make [@mode local] [@modality portable] (struct
     let module_name = "Core.Timezone"
 
     include Stable.Current

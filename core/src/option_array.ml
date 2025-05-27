@@ -3,11 +3,11 @@ open! Base_quickcheck.Export
 include Base.Option_array
 
 module Array_of_options = struct
-  type 'a t = 'a option array [@@deriving sexp, bin_io, quickcheck]
+  type 'a t = 'a option array [@@deriving sexp, bin_io, quickcheck ~portable]
 end
 
-include
-  Binable.Of_binable1_without_uuid [@alert "-legacy"]
+include%template
+  Binable.Of_binable1_without_uuid [@modality portable] [@alert "-legacy"]
     (Array_of_options)
     (struct
       type nonrec 'a t = 'a t
@@ -16,8 +16,8 @@ include
       let of_binable = of_array
     end)
 
-include
-  Quickcheckable.Of_quickcheckable1
+include%template
+  Quickcheckable.Of_quickcheckable1 [@modality portable]
     (Array_of_options)
     (struct
       type nonrec 'a t = 'a t

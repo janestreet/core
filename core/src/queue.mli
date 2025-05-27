@@ -1,3 +1,5 @@
+@@ portable
+
 (** This module extends {{!Base.Queue} [Base.Queue]} with bin_io. *)
 
 open! Import
@@ -14,7 +16,7 @@ include Binary_searchable.S1 with type 'a t := 'a t
 
 module Stable : sig
   module V1 : sig
-    type nonrec 'a t = 'a t [@@deriving equal]
+    type nonrec 'a t = 'a t [@@deriving equal ~localize]
 
     include Stable_module_types.With_stable_witness.S1 with type 'a t := 'a t
   end

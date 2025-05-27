@@ -1,3 +1,5 @@
+@@ portable
+
 (** A scale factor, not bounded between 0% and 100%, represented as a float. *)
 
 open! Import
@@ -35,8 +37,8 @@ include Sexpable with type t := t
 include Sexplib.Sexp_grammar.S with type t := t
 
 include%template Binable.S [@mode local] with type t := t
+include%template Comparable.S_binable [@mode local] [@modality portable] with type t := t
 
-include Comparable_binable with type t := t
 include Comparable.With_zero with type t := t
 include Diffable.S_atomic with type t := t
 include Robustly_comparable.S with type t := t
@@ -48,9 +50,19 @@ module Option : sig
 
   type t = private float
   [@@deriving
-    bin_io ~localize, compare ~localize, equal, globalize, quickcheck, sexp_grammar, sexp]
+    bin_io ~localize
+    , compare ~localize
+    , equal ~localize
+    , globalize
+    , quickcheck
+    , sexp_grammar
+    , sexp]
 
-  include Immediate_option.S_without_immediate with type value := value and type t := t
+  include%template
+    Immediate_option.S_without_immediate
+    [@mode local]
+    with type value := value
+     and type t := t
 
   (** [apply_with_none_as_nan (some x) y = apply x y], and
       [apply_with_none_as_nan none y = apply (of_mult Float.nan) y] *)
@@ -109,10 +121,8 @@ val of_percentage : local_ float -> t
 
 (** Like [of_percentage], but consistent with [of_string] and [t_of_sexp], that is,
     [of_percentage_slow_more_accurate x = of_string (Float.to_string x ^ "%")] *)
-val of_percentage_slow_more_accurate : float -> t
-
-(** Like [of_percentage_slow_more_accurate], but for locally-allocated values. *)
-val of_percentage_slow_more_accurate_local : local_ float -> local_ t
+val%template of_percentage_slow_more_accurate : float @ m -> t @ m
+[@@mode m = (global, local)]
 
 (** [to_percentage (Percent.of_string "5%")] is 5.0. Note: this function performs float
     multiplication by 100.0 and it may introduce rounding errors, for example:
@@ -125,10 +135,8 @@ val to_percentage : local_ t -> float
 
 (** Like [to_percentage], but consistent with [Stable.V3.sexp_of_t] and
     [to_string_round_trippable]. *)
-val to_percentage_slow_more_accurate : t -> float
-
-(** Like [to_percentage_slow_more_accurate], but for locally-allocated values. *)
-val to_percentage_slow_more_accurate_local : local_ t -> local_ float
+val%template to_percentage_slow_more_accurate : t @ m -> float @ m
+[@@mode m = (global, local)]
 
 (** [of_bp 5.] is 5bp = 0.05% = 0.0005x. Note: this function performs float division by
     10,000.0 and it may introduce rounding errors, for example:
@@ -142,10 +150,8 @@ val of_bp : local_ float -> t
 
 (** Like [of_bp], but consistent with [of_string] and [t_of_sexp], that is,
     [of_bp_slow_more_accurate x = of_string (Float.to_string x ^ "bp")] *)
-val of_bp_slow_more_accurate : float -> t
-
-(** Like [of_bp_slow_more_accurate], but for locally-allocated values. *)
-val of_bp_slow_more_accurate_local : local_ float -> local_ t
+val%template of_bp_slow_more_accurate : float @ m -> t @ m
+[@@mode m = (global, local)]
 
 (** [to_bp (Percent.of_bp "4bp")] is 4.0. Note: this function performs float
     multiplication by 10000.0 and and it may introduce rounding errors, for example:
@@ -158,10 +164,8 @@ val to_bp : local_ t -> float
 
 (** Like [to_bp], but consistent with [Stable.V3.sexp_of_t] and
     [to_string_round_trippable]. *)
-val to_bp_slow_more_accurate : t -> float
-
-(** Like [to_bp_slow_more_accurate], but for locally-allocated values. *)
-val to_bp_slow_more_accurate_local : local_ t -> local_ float
+val%template to_bp_slow_more_accurate : t @ m -> float @ m
+[@@mode m = (global, local)]
 
 val of_bp_int : int -> t
 
@@ -357,8 +361,9 @@ module Stable : sig
       , diff
       , quickcheck]
 
-    include
-      Comparable_binable
+    include%template
+      Comparable.S_binable
+      [@mode local]
       with type t := t
        and type comparator_witness := comparator_witness
 

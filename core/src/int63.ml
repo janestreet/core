@@ -20,19 +20,17 @@ end = struct
               (Base.Int63.Private.Emul.W.wrap_exn i) [@nontail]
           ;;
 
-          include struct
-            external unbox_int64
-              :  local_ int64
-              -> (int64#[@unboxed])
-              @@ portable
-              = "%unbox_int64"
+          external unbox_int64
+            :  local_ int64
+            -> (int64#[@unboxed])
+            @@ portable
+            = "%unbox_int64"
 
-            external box_int64
-              :  (int64#[@unboxed])
-              -> (int64[@local_opt])
-              @@ portable
-              = "%box_int64"
-          end
+          external box_int64
+            :  (int64#[@unboxed])
+            -> (int64[@local_opt])
+            @@ portable
+            = "%box_int64"
 
           let[@mode m = (global, local)] to_binable t =
             let i = unbox_int64 (Base.Int63.Private.Emul.W.unwrap t) in
@@ -109,7 +107,7 @@ include%template
 include Bin
 
 module Replace_polymorphic_compare : sig @@ portable
-  include Comparable.Comparisons with type t := t
+  include%template Comparable.Comparisons [@mode local] with type t := t
 end =
   Base.Int63
 

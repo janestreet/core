@@ -15,14 +15,15 @@
  (libraries base base_bigstring base_for_tests base_quickcheck bin_prot
    command fieldslib filename_base heap_block bin_prot.shape
    ppx_diff.diffable ppx_expect.config_types jane-street-headers base.md5
-   ppx_assert.runtime-lib ppx_hash.runtime-lib ppx_inline_test.runtime-lib
-   sexplib splittable_random ppx_stable_witness.stable_witness stdio time_now
-   typerep univ_map uopt validate variantslib)
+   portable ppx_assert.runtime-lib ppx_hash.runtime-lib
+   ppx_inline_test.runtime-lib sexplib splittable_random
+   ppx_stable_witness.stable_witness stdio string_dict time_now typerep
+   univ_map uopt validate variantslib)
  (ocamlopt_flags
   :standard
   (:include ocamlopt-flags))
  (preprocess
-  (pps ppx_jane ppx_optcomp ppx_diff.ppx_diff))
+  (pps ppx_jane -require-template-extension ppx_optcomp ppx_diff.ppx_diff))
  (preprocessor_deps config.h gc_stubs.h)
  (js_of_ocaml
   (javascript_files strftime.js runtime.js

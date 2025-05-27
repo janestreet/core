@@ -2,8 +2,15 @@
 
 (** @inline *)
 include module type of struct
-  include Base.Atomic
+  include Portable.Atomic
 end
 
-(*_ This module will soon be extended with more definitions, including stability and
-  bin_io serialization *)
+[%%rederive: type nonrec 'a t = 'a t [@@deriving bin_shape, stable_witness]]
+
+[%%rederive:
+  type nonrec ('a : value mod contended) t = 'a t [@@deriving bin_write ~localize]]
+
+[%%rederive: type nonrec ('a : value mod portable) t = 'a t [@@deriving bin_read]]
+
+[%%rederive:
+  type nonrec ('a : value mod contended portable) t = 'a t [@@deriving bin_type_class]]

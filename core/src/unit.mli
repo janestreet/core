@@ -13,7 +13,12 @@ include module type of struct
   end
   with type t := t
 
-include Identifiable.S with type t := t and type comparator_witness := comparator_witness
+include%template
+  Identifiable.S
+  [@mode local]
+  with type t := t
+   and type comparator_witness := comparator_witness
+
 include Quickcheckable.S with type t := t
 
 include sig
@@ -39,8 +44,9 @@ module Stable : sig
       whether or not they say so, so we can't change the [unit] bin-io converter without
       breaking many stable types. *)
   module V2 : sig
-    type nonrec t = t [@@deriving bin_io ~localize, equal, sexp_grammar]
+    type nonrec t = t [@@deriving bin_io ~localize, equal ~localize, sexp_grammar]
 
-    include Stable_module_types.With_stable_witness.S0 with type t := t
+    include%template
+      Stable_module_types.With_stable_witness.S0 [@mode local] with type t := t
   end
 end

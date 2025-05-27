@@ -6,10 +6,14 @@ module type S_plain = S_plain with type 'a hash_set := 'a t
 module type S = S with type 'a hash_set := 'a t
 module type S_binable = S_binable with type 'a hash_set := 'a t
 module type S_stable = S_stable with type 'a hash_set := 'a t
-module type Elt_plain = Hashtbl.Key_plain
-module type Elt = Hashtbl.Key
-module type Elt_binable = Hashtbl.Key_binable
-module type Elt_stable = Hashtbl.Key_stable
+
+[%%template
+[@@@mode.default m = (local, global)]
+
+module type Elt_plain = Hashtbl.Key_plain [@mode m]
+module type Elt = Hashtbl.Key [@mode m]
+module type Elt_binable = Hashtbl.Key_binable [@mode m]
+module type Elt_stable = Hashtbl.Key_stable [@mode m]]
 
 module%template.portable
   [@modality p] Make_plain_with_hashable (T : sig
@@ -21,7 +25,7 @@ struct
   type elt = T.Elt.t
   type nonrec t = elt t
 
-  let equal = equal
+  let%template equal = (equal [@mode m]) [@@mode m = (local, global)]
 
   include Creators [@modality p] (struct
       type 'a t = T.Elt.t

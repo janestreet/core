@@ -20,10 +20,10 @@ module type Parts = sig
     ; us : int
     ; ns : int
     }
-  [@@deriving compare, sexp, sexp_grammar]
+  [@@deriving compare ~localize, sexp, sexp_grammar]
 end
 
-module type S = sig
+module type S = sig @@ portable
   (** Span.t represents a span of time (e.g. 7 minutes, 3 hours, 12.8 days). The span may
       be positive or negative. *)
   type underlying
@@ -40,13 +40,17 @@ module type S = sig
     , typerep]
 
   module Parts : Parts
-  include Comparable_binable with type t := t
+
+  include%template
+    Comparable.S_binable [@mode local] [@modality portable] with type t := t
+
   include Comparable.With_zero with type t := t
   include Hashable_binable with type t := t
   include Diffable.S_atomic with type t := t
   include Pretty_printer.S with type t := t
   include Robustly_comparable with type t := t
-  include Quickcheck.S_range with type t := t
+
+  include%template Quickcheck.S_range [@mode portable] with type t := t
 
   (** {v
  Time spans are denominated as a float suffixed by a unit of time; the valid suffixes

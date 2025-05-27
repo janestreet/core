@@ -1,3 +1,5 @@
+@@ portable
+
 (** This module extends {{!Base.Option_array} [Base.Option_array]} with bin_io. *)
 
 open! Import

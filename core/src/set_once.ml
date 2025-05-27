@@ -7,7 +7,8 @@ module Stable = struct
       ; mutable set_at : Source_code_position.Stable.V1.t
            [@compare.ignore] [@equal.ignore]
       }
-    [@@deriving compare, equal] [@@kind k = (value, float64, bits32, bits64, word)]
+    [@@deriving compare ~localize, equal ~localize]
+    [@@kind k = (value, float64, bits32, bits64, word)]
   end
 
   module V1 = struct
@@ -20,8 +21,8 @@ module Stable = struct
     let of_format (v1 : 'a Format.t) : 'a t = { value = !v1; set_at = [%here] }
     let to_format (t : 'a t) : 'a Format.t = ref t.value
 
-    include
-      Binable.Of_binable1_without_uuid [@alert "-legacy"]
+    include%template
+      Binable.Of_binable1_without_uuid [@modality portable] [@alert "-legacy"]
         (Format)
         (struct
           include T
@@ -30,8 +31,8 @@ module Stable = struct
           let to_binable = to_format
         end)
 
-    include
-      Sexpable.Of_sexpable1
+    include%template
+      Sexpable.Of_sexpable1 [@modality portable]
         (Format)
         (struct
           include T
@@ -59,8 +60,9 @@ type nonrec ('a : k) t = ('a t[@kind k]) =
   ; mutable set_at : Source_code_position.t
   }
 
-[%%rederive
-  type nonrec ('a : k) t = ('a t[@kind k]) [@@deriving compare, equal] [@@kind k]]
+[%%rederive.portable
+  type nonrec ('a : k) t = ('a t[@kind k])
+  [@@deriving compare ~localize, equal ~localize] [@@kind k]]
 
 let sexp_of_t sexp_of_a { value; set_at } =
   match value with
@@ -138,8 +140,8 @@ module Optional_syntax = struct
   end
 end]
 
-include
-  Quickcheckable.Of_quickcheckable1
+include%template
+  Quickcheckable.Of_quickcheckable1 [@modality portable]
     (Option)
     (struct
       type nonrec 'a t = 'a t

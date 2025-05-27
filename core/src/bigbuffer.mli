@@ -1,3 +1,5 @@
+@@ portable
+
 (** Extensible string buffers based on Bigstrings.
 
     This module implements string buffers that automatically expand as necessary. It

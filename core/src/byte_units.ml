@@ -4,9 +4,16 @@ open! Import
 open Std_internal
 module Repr = Int63
 module T = Byte_units0
-include (T : module type of T with module Repr := Repr)
-include Comparable.Make_plain (T)
-include Hashable.Make_plain (T)
+
+include (
+  T :
+  sig
+  @@ portable
+    include module type of T with module Repr := Repr
+  end)
+
+include%template Comparable.Make_plain [@mode local] [@modality portable] (T)
+include%template Hashable.Make_plain [@modality portable] (T)
 
 module Infix = struct
   let ( - ) a b = of_repr (Repr.( - ) (to_repr a) (to_repr b))
@@ -118,7 +125,7 @@ let of_string s =
     invalid_argf "'%s' passed to Byte_units.of_string - illegal extension %c" s ext ()
 ;;
 
-let arg_type = Command.Arg_type.create of_string
+let%template arg_type = (Command.Arg_type.create [@mode portable]) of_string
 
 let largest_measure t =
   let t_abs = of_repr (Repr.abs (to_repr t)) in
@@ -137,24 +144,26 @@ let largest_measure t =
   else `Bytes
 ;;
 
-let gen_incl lo hi =
-  Repr.gen_incl (to_repr lo) (to_repr hi) |> Quickcheck.Generator.map ~f:of_repr
+let%template gen_incl lo hi =
+  Repr.gen_incl (to_repr lo) (to_repr hi)
+  |> (Quickcheck.Generator.map [@mode portable]) ~f:of_repr
 ;;
 
-let gen_uniform_incl lo hi =
-  Repr.gen_uniform_incl (to_repr lo) (to_repr hi) |> Quickcheck.Generator.map ~f:of_repr
+let%template gen_uniform_incl lo hi =
+  Repr.gen_uniform_incl (to_repr lo) (to_repr hi)
+  |> (Quickcheck.Generator.map [@mode portable]) ~f:of_repr
 ;;
 
 module Stable = struct
   (* Share the common [of_sexp] code for [V1] and [V2]. *)
-  module Of_sexp_v1_v2 : sig
+  module Of_sexp_v1_v2 : sig @@ portable
     val t_of_sexp : Sexp.t -> t
     val t_sexp_grammar : t Sexplib.Sexp_grammar.t
   end = struct
     let no_match () = failwith "Not a recognized [Byte_units.t] representation"
 
-    let t_of_sexp, t_sexp_grammar =
-      Sexplib.Sexp_grammar.remember_to_update_these_together
+    let%template t_of_sexp, t_sexp_grammar =
+      (Sexplib.Sexp_grammar.remember_to_update_these_together [@mode portable])
         ~t_of_sexp:(fun sexp ->
           try
             match sexp with
@@ -196,18 +205,21 @@ module Stable = struct
   end
 
   module V1 = struct
-    type nonrec t = t [@@deriving compare, hash, typerep]
+    type nonrec t = t [@@deriving compare ~localize, hash, typerep]
 
     let to_binable = bytes_float
     let of_binable = of_bytes_float_exn
 
-    include
-      Binable0.Of_binable_without_uuid [@alert "-legacy"]
+    include%template
+      Binable0.Of_binable_without_uuid
+        [@mode local]
+        [@modality portable]
+        [@alert "-legacy"]
         (Float)
         (struct
           type nonrec t = t
 
-          let to_binable = to_binable
+          let%template to_binable = to_binable [@@mode m = (global, local)]
           let of_binable = of_binable
         end)
 
@@ -263,18 +275,21 @@ module Stable = struct
   end
 
   module V2 = struct
-    type nonrec t = t [@@deriving compare, equal, hash, typerep]
+    type nonrec t = t [@@deriving compare ~localize, equal ~localize, hash, typerep]
 
     let to_binable = bytes_int63
     let of_binable = of_bytes_int63
 
-    include
-      Binable0.Of_binable_without_uuid [@alert "-legacy"]
+    include%template
+      Binable0.Of_binable_without_uuid
+        [@mode local]
+        [@modality portable]
+        [@alert "-legacy"]
         (Int63.Stable.V1)
         (struct
           type nonrec t = t
 
-          let to_binable = to_binable
+          let%template to_binable = to_binable [@@mode m = (global, local)]
           let of_binable = of_binable
         end)
 
@@ -361,8 +376,8 @@ let (create
   | `Words -> of_words_float_exn value
 ;;
 
-include
-  Quickcheckable.Of_quickcheckable
+include%template
+  Quickcheckable.Of_quickcheckable [@modality portable]
     (Repr)
     (struct
       type nonrec t = t

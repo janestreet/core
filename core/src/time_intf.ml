@@ -78,7 +78,7 @@ module type Basic = sig
 end
 
 module type Shared = sig
-  type t
+  type t : immutable_data
 
   include Quickcheck.S_range with type t := t
 
@@ -235,7 +235,7 @@ module type Shared = sig
     -> t
 end
 
-module type S = sig
+module type S = sig @@ portable
   include Basic
   include Shared with type t := t with module Span := Span with module Ofday := Ofday
 

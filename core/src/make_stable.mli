@@ -1,3 +1,5 @@
+@@ portable
+
 open! Import
 open Stable_module_types
 

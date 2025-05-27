@@ -5,7 +5,8 @@ module Stable = struct
     module T = struct
       include Base.Char
 
-      type t = char [@@deriving bin_io, sexp, sexp_grammar, stable_witness, typerep]
+      type t = char
+      [@@deriving bin_io ~localize, sexp, sexp_grammar, stable_witness, typerep]
     end
 
     include T
@@ -17,10 +18,10 @@ end
 type t = char [@@deriving typerep, bin_io ~localize]
 
 include%template
-  Identifiable.Extend [@modality portable]
+  Identifiable.Extend [@mode local] [@modality portable]
     (Base.Char)
     (struct
-      type t = char [@@deriving bin_io]
+      type t = char [@@deriving bin_io ~localize]
     end)
 
 (* include [Base.Char] after the application of [Identifiable.Extend] to replace the
@@ -44,7 +45,9 @@ module Caseless = struct
 
   include T
 
-  include%template Comparable.Make_binable_using_comparator [@modality portable] (T)
+  include%template
+    Comparable.Make_binable_using_comparator [@mode local] [@modality portable] (T)
+
   include%template Hashable.Make_binable [@modality portable] (T)
 end
 

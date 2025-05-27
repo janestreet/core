@@ -1,3 +1,5 @@
+@@ portable
+
 open! Import
 include Ofday_intf.S with type underlying = float and module Span := Span_float
 

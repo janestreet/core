@@ -1,3 +1,5 @@
+@@ portable
+
 (** This module can be used to safely expose functions and values in signatures that
     should only be used in unit tests.
 

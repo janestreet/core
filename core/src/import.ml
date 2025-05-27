@@ -5,7 +5,7 @@ module Applicative = Base.Applicative
 module Avltree = Base.Avltree
 module Backtrace = Base.Backtrace
 module Binary_search = Base.Binary_search
-module Capsule = Base.Capsule
+module Capsule = Portable.Capsule
 module Comparisons = Base.Comparisons
 module Container_with_local = Base.Container_with_local
 module Continue_or_stop = Base.Continue_or_stop
@@ -21,6 +21,7 @@ module Int_conversions = Base.Int_conversions
 module Int_math = Base.Int_math
 module Invariant = Base.Invariant
 module Monad = Base.Monad
+module Obj = Base.Obj
 module Poly = Base.Poly
 module Portability_hacks = Base.Portability_hacks
 module Pretty_printer = Base.Pretty_printer
@@ -69,11 +70,11 @@ include From_sexplib
    type. *)
 include (
 struct
-  type 'a sexp_opaque = 'a [@@deriving bin_io, compare, hash, typerep]
+  type 'a sexp_opaque = 'a [@@deriving bin_io, compare ~localize, hash, typerep]
 end :
   sig
   @@ portable
-    type 'a sexp_opaque [@@deriving bin_io, compare, hash, typerep]
+    type 'a sexp_opaque [@@deriving bin_io, compare ~localize, hash, typerep]
   end
   with type 'a sexp_opaque := 'a)
 

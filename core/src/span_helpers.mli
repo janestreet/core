@@ -1,3 +1,5 @@
+@@ portable
+
 open! Import
 
 val randomize

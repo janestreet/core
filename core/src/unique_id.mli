@@ -1,3 +1,5 @@
+@@ portable
+
 (** Functors for creating modules that mint unique identifiers. *)
 
 open! Import
@@ -16,7 +18,11 @@ module type Id = Id
     do not have very stringent requirements on the size, speed, and ordering of your IDs
     then you should use the UUIDM library instead, which will give you a truly unique id,
     even amongst different runs and different machines. *)
-module Int () : Id with type t = private int
+module Int () : sig @@ portable
+  include Id with type t = private int
+end
 
 (** An abstract unique identifier based on 63 bit integers. *)
-module Int63 () : Id with type t = private Int63.t
+module Int63 () : sig @@ portable
+  include Id with type t = private Int63.t
+end

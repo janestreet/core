@@ -9,11 +9,11 @@ open Bigarray
 
 (** Type of bigstrings *)
 type t = (char, int8_unsigned_elt, c_layout) Array1.t
-[@@deriving compare, quickcheck, sexp_of]
+[@@deriving compare ~localize, quickcheck, sexp_of]
 
 (** Type of bigstrings which support hashing. Note that mutation invalidates previous
     hashes. *)
-type t_frozen = t [@@deriving compare, hash, sexp_of]
+type t_frozen = t [@@deriving compare ~localize, hash, sexp_of]
 
 include module type of Base_bigstring with type t := t and type t_frozen := t_frozen
 include Hexdump.S with type t := t

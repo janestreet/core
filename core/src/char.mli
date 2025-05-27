@@ -22,11 +22,16 @@ include module type of struct
 module Caseless : sig
   type nonrec t = t [@@deriving bin_io ~localize, hash, sexp, sexp_grammar]
 
-  include Comparable.S_binable with type t := t
+  include%template Comparable.S_binable [@mode local] with type t := t
+
   include Hashable.S_binable with type t := t
 end
 
-include Identifiable.S with type t := t and type comparator_witness := comparator_witness
+include%template
+  Identifiable.S
+  [@mode local]
+  with type t := t
+   and type comparator_witness := comparator_witness
 
 (** {3 Quickcheck Support} *)
 
@@ -42,14 +47,15 @@ val gen_whitespace : t Quickcheck.Generator.t
 
 (** Generates characters between the given inclusive bounds in ASCII order. Raises if
     bounds are in decreasing order. *)
-val gen_uniform_inclusive : t -> t -> t Quickcheck.Generator.t
+val gen_uniform_inclusive : t -> t -> t Quickcheck.Generator.t @ portable
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving equal, hash, sexp_grammar, typerep]
+    type nonrec t = t [@@deriving equal ~localize, hash, sexp_grammar, typerep]
 
-    include
+    include%template
       Stable_comparable.With_stable_witness.V1
+      [@mode local]
       with type t := t
        and type comparator_witness = comparator_witness
   end

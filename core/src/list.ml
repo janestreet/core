@@ -29,8 +29,13 @@ let slice a start stop =
 
 module Stable = struct
   module V1 = struct
+    type%template nonrec ('a : k) t = ('a t[@kind k])
+    [@@kind k = (float64, bits32, bits64, word)]
+    [@@deriving compare ~localize, equal ~localize]
+
     type nonrec 'a t = 'a t
-    [@@deriving sexp, sexp_grammar, bin_io ~localize, compare, equal, hash]
+    [@@deriving
+      sexp, sexp_grammar, bin_io ~localize, compare ~localize, equal ~localize, hash]
 
     let stable_witness = List0.stable_witness [@@alert "-for_internal_use_only"]
   end

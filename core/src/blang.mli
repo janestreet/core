@@ -1,3 +1,5 @@
+@@ portable
+
 (** Boolean expressions. *)
 
 open! Import
@@ -87,7 +89,8 @@ type +'a t = private
   | Not of 'a t
   | If of 'a t * 'a t * 'a t
   | Base of 'a
-[@@deriving bin_io ~localize, compare, equal, hash, sexp, sexp_grammar, typerep]
+[@@deriving
+  bin_io ~localize, compare ~localize, equal ~localize, hash, sexp, sexp_grammar, typerep]
 
 (** [Raw] provides the automatically derived [sexp_of_t], useful in debugging the actual
     structure of the blang. *)
@@ -254,6 +257,12 @@ module Stable : sig
       | If of 'a t * 'a t * 'a t
       | Base of 'a
     [@@deriving
-      sexp, sexp_grammar, bin_io ~localize, stable_witness, compare, equal, hash]
+      sexp
+      , sexp_grammar
+      , bin_io ~localize
+      , stable_witness
+      , compare ~localize
+      , equal ~localize
+      , hash]
   end
 end

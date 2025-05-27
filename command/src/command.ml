@@ -155,6 +155,7 @@ module Arg_type : sig
     -> ?key:'a Env.Multi.Key.t @ p
     -> (string -> 'a) @ p
     -> 'a t @ p
+    @@ portable
   [@@mode p = (nonportable, portable)]
 
   val%template create_with_additional_documentation
@@ -547,7 +548,7 @@ module Flag = struct
       { at_least_once : bool
       ; at_most_once : bool
       }
-    [@@deriving compare, enumerate, sexp_of]
+    [@@deriving compare ~localize, enumerate, sexp_of]
 
     let to_help_string = Shape.Num_occurrences.to_help_string
 
@@ -1391,7 +1392,7 @@ module Cmdline = struct
     | Nil
     | Cons of string * t
     | Complete of string
-  [@@deriving compare]
+  [@@deriving compare ~localize]
 
   let of_list args = List.fold_right args ~init:Nil ~f:(fun arg args -> Cons (arg, args))
 
@@ -1441,6 +1442,10 @@ let normalize key_type key =
 
 let lookup_expand = Shape.Private.lookup_expand
 
+let lookup_expand_with_equivalence_classes =
+  Shape.Private.lookup_expand_with_equivalence_classes
+;;
+
 let lookup_expand_with_aliases map prefix key_type =
   let alist =
     List.concat_map (Map.data map) ~f:(fun flag ->
@@ -1461,7 +1466,13 @@ let lookup_expand_with_aliases map prefix key_type =
       (name, data) :: List.map aliases ~f:(fun alias -> alias, data))
   in
   match List.find_a_dup alist ~compare:(fun (s1, _) (s2, _) -> String.compare s1 s2) with
-  | None -> lookup_expand alist prefix key_type
+  | None ->
+    let name { Flag.Internal.name; _ } = name in
+    lookup_expand_with_equivalence_classes
+      (fun a b -> String.( = ) (name a) (name b))
+      alist
+      prefix
+      key_type
   | Some (flag, _) -> failwithf "multiple flags named %s" flag ()
 ;;
 
@@ -1949,7 +1960,7 @@ module Command_base = struct
       type 'a param = 'a t
 
       module Choice_name : sig
-        type t [@@deriving compare, sexp_of]
+        type t [@@deriving compare ~localize, sexp_of]
 
         include Comparator.S with type t := t
 
@@ -1963,7 +1974,7 @@ module Command_base = struct
             { all_args : string list
             ; required_args : string list
             }
-          [@@deriving compare]
+          [@@deriving compare ~localize]
 
           let sexp_of_t t = [%sexp (t.all_args : string list)]
         end

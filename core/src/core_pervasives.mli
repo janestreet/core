@@ -15,17 +15,17 @@
 (** {6 Exceptions} *)
 
 (** Raise the given exception value *)
-external raise : exn -> 'a = "%reraise"
+external raise : exn -> 'a @ portable = "%reraise"
 
 (** A faster version [raise] which does not record the backtrace.
     @since 4.02.0 *)
-external raise_notrace : exn -> 'a = "%raise_notrace"
+external raise_notrace : exn -> 'a @ portable = "%raise_notrace"
 
 (** Raise exception [Invalid_argument] with the given string. *)
-val invalid_arg : string -> 'a
+val invalid_arg : string -> 'a @ portable
 
 (** Raise exception [Failure] with the given string. *)
-val failwith : string -> 'a
+val failwith : string -> 'a @ portable
 
 (** The [Exit] exception is not raised by any library function. It is provided for use in
     your programs. *)

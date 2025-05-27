@@ -1,7 +1,7 @@
 open! Import
 open Std_internal
 
-module type S = sig
+module type S = sig @@ portable
   (** Time of day.
 
       [t] represents a clock-face time of day. Usually this is equivalent to a time-offset
@@ -21,7 +21,7 @@ module type S = sig
       different date.
 
       Any [ofday] will satisfy [start_of_day <= ofday <= start_of_next_day]. *)
-  type underlying
+  type underlying : immutable_data
 
   type t = private underlying
   [@@deriving
@@ -33,12 +33,15 @@ module type S = sig
     , sexp_grammar
     , typerep]
 
-  include Comparable_binable with type t := t
+  include%template Comparable_binable [@mode local] with type t := t
+
   include Hashable_binable with type t := t
   include Diffable.S_atomic with type t := t
   include Pretty_printer.S with type t := t
   include Robustly_comparable with type t := t
-  include Quickcheck.S_range with type t := t
+
+  include%template Quickcheck.S_range [@mode portable] with type t := t
+
   module Span : Span_intf.S
 
   module O : sig

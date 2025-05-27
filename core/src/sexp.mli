@@ -22,7 +22,8 @@ module O : sig
     | List of t list
 end
 
-include Comparable.S with type t := t
+include%template Comparable.S [@mode local] with type t := t
+
 include Stringable.S with type t := t
 include Quickcheckable.S with type t := t
 
@@ -70,7 +71,7 @@ type 'a no_raise = 'a [@@deriving bin_io, sexp]
     If [Reason_to_stop.t_of_sexp] fails, you can still tell it was a [Stop] query. *)
 module Sexp_maybe : sig
   type 'a t = ('a, Base.Sexp.t * Error.t) Result.t
-  [@@deriving bin_io, compare, hash, sexp, sexp_grammar]
+  [@@deriving bin_io, compare ~localize, hash, sexp, sexp_grammar]
 end
 
 (** A [With_text.t] is a value paired with the full textual representation of its sexp.
@@ -129,8 +130,9 @@ module Stable : sig
       , sexp_grammar
       , stable_witness]
 
-    include
+    include%template
       Stable_comparable.With_stable_witness.V1
+      [@mode local]
       with type t := t
       with type comparator_witness = comparator_witness
   end

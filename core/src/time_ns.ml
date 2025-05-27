@@ -11,7 +11,13 @@ type t = Span.t (* since the Unix epoch (1970-01-01 00:00:00 UTC) *)
 
 module Replace_polymorphic_compare_efficient = Span.Replace_polymorphic_compare
 include Replace_polymorphic_compare_efficient
-include (Span : Quickcheck.S_range with type t := t)
+
+include (
+  Span :
+  sig
+  @@ portable
+    include Quickcheck.S_range with type t := t
+  end)
 
 let[@zero_alloc] now t = Span.since_unix_epoch t
 let equal = Span.equal
@@ -215,7 +221,7 @@ let round_down_to_sec t =
 
 let random ?state () = Span.random ?state ()
 
-module Utc : sig
+module Utc : sig @@ portable
   val to_date_and_span_since_start_of_day : t -> Date0.t * Span.t
   val of_date_and_span_since_start_of_day : Date0.t -> Span.t -> t [@@zero_alloc]
 end = struct
@@ -256,7 +262,7 @@ end
 
 module Alternate_sexp = struct
   module T = struct
-    type nonrec t = t [@@deriving bin_io, compare, hash]
+    type nonrec t = t [@@deriving bin_io, compare ~localize, hash]
 
     module Ofday_as_span = struct
       open Int.O
@@ -373,7 +379,7 @@ module Alternate_sexp = struct
       Utc.of_date_and_span_since_start_of_day date ofday
     ;;
 
-    include Sexpable.Of_stringable (struct
+    include%template Sexpable.Of_stringable [@modality portable] (struct
         type nonrec t = t
 
         let to_string = to_string
@@ -390,11 +396,13 @@ module Alternate_sexp = struct
   end
 
   include T
-  include Comparable.Make (T)
+
+  include%template Comparable.Make [@mode local] [@modality portable] (T)
+
   include Replace_polymorphic_compare_efficient
 
-  include Diffable.Atomic.Make (struct
-      type nonrec t = t [@@deriving bin_io, equal, sexp]
+  include%template Diffable.Atomic.Make [@modality portable] (struct
+      type nonrec t = t [@@deriving bin_io, equal ~localize, sexp]
     end)
 
   module Stable = struct
@@ -420,15 +428,18 @@ module Alternate_sexp = struct
       end
 
       include T
-      include Comparable.Stable.V1.With_stable_witness.Make (T)
-      include Diffable.Atomic.Make (T)
+
+      include%template
+        Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (T)
+
+      include%template Diffable.Atomic.Make [@modality portable] (T)
     end
   end
 end
 
 (* this code is directly duplicated from Time.ml functor, converted enough to get Time_ns
    to/of_string working *)
-module To_and_of_string : sig
+module To_and_of_string : sig @@ portable
   val of_date_ofday
     :  ?prefer:Zone.Earlier_or_later.t
     -> zone:Zone.t
@@ -560,12 +571,12 @@ end = struct
   end
 
   module Zone : sig
-    (* This interface is directly duplicated from Time_intf.Zone, converted enough to get
+    @@ portable
+       (* This interface is directly duplicated from Time_intf.Zone, converted enough to get
        this to work.
 
        The problem is has references to Time0_intf.S, which is the functor input interface
        that Time_ns currently does not satisfy. *)
-
     type time = t
     type t = Zone.t [@@deriving sexp_of]
 
@@ -1008,15 +1019,15 @@ end
 
 include To_and_of_string
 
-let to_string t = to_string_abs t ~zone:(Lazy.force Timezone.local)
+let to_string t = to_string_abs t ~zone:(Portable_lazy.force Timezone.local_portable)
 
 exception Time_string_not_absolute of string [@@deriving sexp]
 
 let of_string_gen ~if_no_timezone ?(find_zone = Timezone.find_exn) s =
-  let default_zone () =
+  let default_zone () : Zone.t =
     match if_no_timezone with
     | `Fail -> raise (Time_string_not_absolute s)
-    | `Local -> Lazy.force Timezone.local
+    | `Local -> Portable_lazy.force Timezone.local_portable
     | `Use_this_one zone -> zone
     | `Use_this_one_lazy zone -> Lazy.force zone
   in
@@ -1025,12 +1036,12 @@ let of_string_gen ~if_no_timezone ?(find_zone = Timezone.find_exn) s =
 
 let of_string_abs s = of_string_gen ~if_no_timezone:`Fail s
 let of_string s = of_string_gen ~if_no_timezone:`Local s
-let arg_type = Command.Arg_type.create of_string_abs
+let%template arg_type = (Command.Arg_type.create [@mode portable]) of_string_abs
 
 module Ofday = struct
   include Ofday_ns
 
-  let arg_type = Command.Arg_type.create of_string
+  let%template arg_type = (Command.Arg_type.create [@mode portable]) of_string
 
   let[@zero_alloc] of_ofday_float_round_nearest_microsecond core =
     of_span_since_start_of_day_exn
@@ -1067,7 +1078,8 @@ module Ofday = struct
       { ofday : Ofday_ns.t
       ; zone : Timezone.t
       }
-    [@@deriving bin_io, fields ~getters, compare, equal, hash]
+    [@@deriving
+      bin_io, fields ~getters ~local_getters, compare ~localize, equal ~localize, hash]
 
     type sexp_repr = Ofday_ns.t * Timezone.t [@@deriving sexp, sexp_grammar]
 
@@ -1081,7 +1093,7 @@ module Ofday = struct
     let t_sexp_grammar = Sexplib.Sexp_grammar.coerce [%sexp_grammar: sexp_repr]
     let to_time_ns t date = of_date_ofday ~zone:(zone t) date (ofday t)
     let create ofday zone = { ofday; zone }
-    let create_local ofday = create ofday (Lazy.force Timezone.local)
+    let create_local ofday = create ofday (Portable_lazy.force Timezone.local_portable)
 
     let of_string string : t =
       match String.rsplit2 string ~on:' ' with
@@ -1094,13 +1106,14 @@ module Ofday = struct
       String.concat [ Ofday_ns.to_string t.ofday; " "; Timezone.to_string t.zone ]
     ;;
 
-    let arg_type = Command.Arg_type.create of_string
+    let%template arg_type = (Command.Arg_type.create [@mode portable]) of_string
 
     module With_nonchronological_compare = struct
-      type nonrec t = t [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
+      type nonrec t = t
+      [@@deriving bin_io, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
     end
 
-    include Pretty_printer.Register (struct
+    include%template Pretty_printer.Register [@modality portable] (struct
         type nonrec t = t
 
         let to_string = to_string
@@ -1109,24 +1122,35 @@ module Ofday = struct
 
     module Stable = struct
       module V1 = struct
-        let compare = With_nonchronological_compare.compare
-        let equal = With_nonchronological_compare.equal
+        [%%rederive
+          type t = With_nonchronological_compare.t
+          [@@deriving compare ~localize ~portable, equal ~localize ~portable]]
 
         module Bin_repr = struct
           type nonrec t = t =
             { ofday : Ofday_ns.Stable.V1.t
             ; zone : Timezone.Stable.V1.t
             }
-          [@@deriving bin_io, stable_witness]
+          [@@deriving bin_io ~localize, stable_witness]
         end
 
-        include
-          Binable.Of_binable_without_uuid [@alert "-legacy"]
+        include%template
+          Binable.Of_binable_without_uuid
+            [@mode local]
+            [@modality portable]
+            [@alert "-legacy"]
             (Bin_repr)
             (struct
               type nonrec t = t
 
-              let to_binable t : Bin_repr.t = { ofday = ofday t; zone = zone t }
+              let%template[@alloc a @ m = (heap_global, stack_local)] to_binable t
+                : Bin_repr.t
+                =
+                { ofday = (ofday [@mode m]) t; zone = (zone [@mode m]) t }
+                [@exclave_if_stack a]
+              ;;
+
+              let%template[@mode local] to_binable = (to_binable [@alloc stack])
               let of_binable (repr : Bin_repr.t) = create repr.ofday repr.zone
             end)
 
@@ -1150,7 +1174,7 @@ module Ofday = struct
   end
 
   module Option = struct
-    type ofday = t [@@deriving sexp, compare]
+    type ofday = t [@@deriving sexp, compare ~localize]
 
     type t = Span.Option.t
     [@@deriving
@@ -1196,21 +1220,21 @@ module Ofday = struct
     (* Can't use the quickcheck generator and shrinker inherited from [Span.Option]
        because they may produce spans whose representation is larger than
        [start_of_next_day] *)
-    let quickcheck_generator : t Quickcheck.Generator.t =
-      Quickcheck.Generator.map
+    let%template quickcheck_generator : t Quickcheck.Generator.t =
+      (Base_quickcheck.Generator.map [@mode portable])
         ~f:of_option
-        (quickcheck_generator_option
-           (Quickcheck.Generator.filter
+        ((quickcheck_generator_option [@mode portable])
+           ((Base_quickcheck.Generator.filter [@mode portable])
               ~f:some_is_representable
               Ofday_ns.quickcheck_generator))
     ;;
 
-    let quickcheck_shrinker : t Quickcheck.Shrinker.t =
-      Quickcheck.Shrinker.map
+    let%template quickcheck_shrinker : t Quickcheck.Shrinker.t =
+      (Quickcheck.Shrinker.map [@mode portable])
         ~f:of_option
         ~f_inverse:to_option
-        (quickcheck_shrinker_option
-           (Base_quickcheck.Shrinker.filter
+        ((quickcheck_shrinker_option [@mode portable])
+           ((Base_quickcheck.Shrinker.filter [@mode portable])
               ~f:some_is_representable
               Ofday_ns.quickcheck_shrinker))
     ;;
@@ -1238,10 +1262,11 @@ module Ofday = struct
         end
 
         include T
-        include Comparator.Stable.V1.Make (T)
 
-        include Diffable.Atomic.Make (struct
-            type nonrec t = t [@@deriving sexp, bin_io, equal]
+        include%template Comparator.Stable.V1.Make [@modality portable] (T)
+
+        include%template Diffable.Atomic.Make [@modality portable] (struct
+            type nonrec t = t [@@deriving sexp, bin_io, equal ~localize]
           end)
       end
     end
@@ -1249,20 +1274,25 @@ module Ofday = struct
     let sexp_of_t = Stable.V1.sexp_of_t
     let t_of_sexp = Stable.V1.t_of_sexp
 
-    include Identifiable.Make (struct
-        type nonrec t = t [@@deriving sexp, compare, bin_io, hash]
+    include%template Identifiable.Make [@mode local] [@modality portable] (struct
+        type nonrec t = t [@@deriving sexp, compare ~localize, bin_io ~localize, hash]
 
         let module_name = "Core.Time_ns.Ofday.Option"
 
-        include Sexpable.To_stringable (struct
+        include%template Sexpable.To_stringable [@modality portable] (struct
             type nonrec t = t [@@deriving sexp]
           end)
       end)
 
-    include (Span.Option : Comparisons.S with type t := t)
+    include (
+      Span.Option :
+      sig
+      @@ portable
+        include Comparisons.S with type t := t
+      end)
 
-    include Diffable.Atomic.Make (struct
-        type nonrec t = t [@@deriving sexp, bin_io, equal]
+    include%template Diffable.Atomic.Make [@modality portable] (struct
+        type nonrec t = t [@@deriving sexp, bin_io, equal ~localize]
       end)
   end
 end
@@ -1319,8 +1349,8 @@ let to_ofday_zoned t ~zone =
   Ofday.Zoned.create ofday zone
 ;;
 
-include Diffable.Atomic.Make (struct
-    type nonrec t = t [@@deriving bin_io, equal, sexp]
+include%template Diffable.Atomic.Make [@modality portable] (struct
+    type nonrec t = t [@@deriving bin_io, equal ~localize, sexp]
   end)
 
 (* Note: This is FIX standard millisecond precision. You should use
@@ -1389,20 +1419,21 @@ module Stable0 = struct
 
     module T = struct
       include T0
-      module Comparator = Comparator.Stable.V1.Make (T0)
+      module%template Comparator = Comparator.Stable.V1.Make [@modality portable] (T0)
       include Comparator
     end
 
     include T
-    include Comparable.Stable.V1.With_stable_witness.Make (T)
-    include Diffable.Atomic.Make (T)
+
+    include%template Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (T)
+    include%template Diffable.Atomic.Make [@modality portable] (T)
   end
 end
 
 include Stable0.V1.Comparator
 
 module Option = struct
-  type time = t [@@deriving compare]
+  type time = t [@@deriving compare ~localize]
 
   type t = Span.Option.t
   [@@deriving
@@ -1451,7 +1482,7 @@ module Option = struct
 
   module Alternate_sexp = struct
     module T = struct
-      type nonrec t = t [@@deriving bin_io, compare, hash]
+      type nonrec t = t [@@deriving bin_io, compare ~localize, hash]
 
       let sexp_of_t t = [%sexp_of: Alternate_sexp.t option] (to_option t)
       let t_of_sexp s = of_option ([%of_sexp: Alternate_sexp.t option] s)
@@ -1462,9 +1493,10 @@ module Option = struct
     end
 
     include T
-    include Comparable.Make (T)
 
-    include Diffable.Atomic.Make (struct
+    include%template Comparable.Make [@mode local] [@modality portable] (T)
+
+    include%template Diffable.Atomic.Make [@modality portable] (struct
         include T
 
         let equal = [%compare.equal: t]
@@ -1496,9 +1528,11 @@ module Option = struct
         end
 
         include T
-        include Comparable.Stable.V1.With_stable_witness.Make (T)
 
-        include Diffable.Atomic.Make (struct
+        include%template
+          Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (T)
+
+        include%template Diffable.Atomic.Make [@modality portable] (struct
             include T
 
             let equal = [%compare.equal: t]
@@ -1519,13 +1553,14 @@ module Option = struct
       end
 
       include T
-      include Comparator.Stable.V1.Make (T)
+
+      include%template Comparator.Stable.V1.Make [@modality portable] (T)
 
       let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
       let to_int63 t = Span.Option.Stable.V1.to_int63 t
       let of_int63_exn t = Span.Option.Stable.V1.of_int63_exn t
 
-      include Diffable.Atomic.Make (struct
+      include%template Diffable.Atomic.Make [@modality portable] (struct
           include T
 
           let equal = [%compare.equal: t]
@@ -1538,12 +1573,12 @@ module Option = struct
   let sexp_of_t = Stable.V1.sexp_of_t
   let t_of_sexp = Stable.V1.t_of_sexp
 
-  include Identifiable.Make (struct
-      type nonrec t = t [@@deriving sexp, compare, bin_io, hash]
+  include%template Identifiable.Make [@mode local] [@modality portable] (struct
+      type nonrec t = t [@@deriving sexp, compare ~localize, bin_io ~localize, hash]
 
       let module_name = "Core.Time_ns.Option"
 
-      include Sexpable.To_stringable (struct
+      include%template Sexpable.To_stringable [@modality portable] (struct
           type nonrec t = t [@@deriving sexp]
         end)
     end)
@@ -1559,19 +1594,28 @@ module Option = struct
     let[@zero_alloc] ( > ) = [%eta2 ( > )]
     let[@zero_alloc] ( < ) = [%eta2 ( < )]
     let[@zero_alloc] ( <> ) = [%eta2 ( <> )]
-    let[@zero_alloc] equal = [%eta2 equal]
-    let[@zero_alloc] compare = [%eta2 compare]
+
+    [%%template
+    [@@@mode.default m = (local, global)]
+
+    let[@zero_alloc] equal = [%eta2 equal [@mode m]]
+    let[@zero_alloc] compare = [%eta2 compare [@mode m]]]
+
     let[@zero_alloc] min = [%eta2 min]
     let[@zero_alloc] max = [%eta2 max]
   end :
-    Comparisons.S_with_zero_alloc with type t := t)
+  sig
+  @@ portable
+    include%template Comparisons.S_with_zero_alloc [@mode local] with type t := t
+  end)
 
-  include Diffable.Atomic.Make (struct
-      type nonrec t = t [@@deriving bin_io, equal, sexp]
+  include%template Diffable.Atomic.Make [@modality portable] (struct
+      type nonrec t = t [@@deriving bin_io, equal ~localize, sexp]
     end)
 end
 
-include Identifiable.Make_using_comparator (struct
+include%template
+  Identifiable.Make_using_comparator [@mode local] [@modality portable] (struct
     include Stable0.V1
 
     let module_name = "Core.Time_ns"
@@ -1589,12 +1633,20 @@ struct
   let[@zero_alloc strict] ( > ) = [%eta2 ( > )]
   let[@zero_alloc strict] ( < ) = [%eta2 ( < )]
   let[@zero_alloc strict] ( <> ) = [%eta2 ( <> )]
-  let[@zero_alloc strict] equal = [%eta2 equal]
-  let[@zero_alloc strict] compare = [%eta2 compare]
+
+  [%%template
+  [@@@mode.default m = (local, global)]
+
+  let[@zero_alloc strict] equal = [%eta2 equal [@mode m]]
+  let[@zero_alloc strict] compare = [%eta2 compare [@mode m]]]
+
   let[@zero_alloc strict] min = [%eta2 min]
   let[@zero_alloc strict] max = [%eta2 max]
 end :
-  Comparisons.S_with_zero_alloc_strict with type t := t)
+sig
+@@ portable
+  include%template Comparisons.S_with_zero_alloc_strict [@mode local] with type t := t
+end)
 
 module Zone = Time_float.Zone
 

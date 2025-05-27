@@ -128,6 +128,33 @@ let%expect_test "Validate.combine doesn't allocate on success" =
     ignore (Validate.combine Validate.pass Validate.pass : Validate.t))
 ;;
 
+let%expect_test "Validate.lazy_name doesn't allocate on succes" =
+  let name = Lazy.from_val "name" in
+  require_no_allocation (fun () ->
+    ignore (Validate.pass |> Validate.lazy_name name : Validate.t))
+;;
+
+let%expect_test "Lazy name" =
+  let name =
+    Lazy.from_fun (fun () ->
+      print_endline "Computing lazy string";
+      "name")
+  in
+  print_s
+    [%sexp
+      (Validate.pass |> Validate.lazy_name name |> Validate.result : unit Or_error.t)];
+  [%expect {| (Ok ()) |}];
+  print_s
+    [%sexp
+      (Validate.fail "fail" |> Validate.lazy_name name |> Validate.result
+       : unit Or_error.t)];
+  [%expect
+    {|
+    Computing lazy string
+    (Error ("validation errors" ((name fail))))
+    |}]
+;;
+
 let%expect_test "Validate.list" =
   let name _t = "name" in
   let validate ts =

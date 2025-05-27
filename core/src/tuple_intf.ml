@@ -4,34 +4,40 @@ open! Import
 
 module Definitions = struct
   (*_ Defined here to circumvent shadowing of [Comparator] below. *)
-  module type Comparable_plain_arg = Comparator.S
+
+  [%%template
+  [@@@mode.default m = (local, global)]
+
+  module type%template
+    [@mode m] [@modality p = (portable, nonportable)] Comparable_plain_arg =
+    Comparable.Using_comparator_arg [@mode m] [@modality p]
 
   module type Comparable_arg = sig
-    type t [@@deriving compare, sexp]
+    type t [@@deriving (compare [@mode m]), sexp]
   end
 
   module type Comparable_sexpable = sig
     type t [@@deriving sexp]
 
-    include Comparable.S with type t := t
+    include Comparable.S [@mode m] with type t := t
   end
 
   module type Hashable_plain_arg = sig
-    type t [@@deriving compare, hash, sexp_of]
+    type t [@@deriving (compare [@mode m]), hash, sexp_of]
   end
 
   module type Hashable_arg = sig
-    type t [@@deriving compare, hash, sexp]
+    type t [@@deriving (compare [@mode m]), hash, sexp]
   end
 
   module type Hashable_sexpable = sig
     type t [@@deriving sexp]
 
-    include Hashable.S with type t := t
-  end
+    include Hashable.S [@mode m] with type t := t
+  end]
 end
 
-module type Tuple = sig
+module type Tuple = sig @@ portable
   include module type of struct
     include Definitions
   end
@@ -40,7 +46,8 @@ module type Tuple = sig
   module T2 : sig
     type ('a, 'b) t = 'a * 'b [@@deriving sexp, sexp_grammar, typerep]
 
-    include Comparator.Derived2 with type ('a, 'b) t := ('a, 'b) t
+    include%template
+      Comparator.Derived2 [@modality portable] with type ('a, 'b) t := ('a, 'b) t
 
     val create : 'a -> 'b -> ('a, 'b) t
     val curry : (('a, 'b) t -> 'c) -> 'a -> 'b -> 'c
@@ -160,7 +167,15 @@ module type Tuple = sig
      and type comparator_witness =
       (S1.comparator_witness, S2.comparator_witness) T2.comparator_witness
 
-  module Comparable_plain (S1 : Comparable_plain_arg) (S2 : Comparable_plain_arg) : sig
+  [%%template:
+  [@@@mode.default m = (local, global)]
+
+  module%template.portable
+    [@modality p] Comparable_plain
+      (S1 : Comparable_plain_arg
+    [@mode m] [@modality p])
+      (S2 : Comparable_plain_arg
+    [@mode m] [@modality p]) : sig
     (*_ This type is introduced because older versions of OCaml do not support
       destructive substitutions with `type t1 = 'a t2`. *)
 
@@ -169,18 +184,25 @@ module type Tuple = sig
 
     include
       Comparable.S_plain
+      [@mode m]
       with type t := Make(S1)(S2).t
       with type comparator_witness := comparator_witness
   end
 
-  module Comparable (S1 : Comparable_arg) (S2 : Comparable_arg) :
-    Comparable_sexpable with type t := Make(S1)(S2).t
+  module%template.portable Comparable
+      (S1 : Comparable_arg
+    [@mode m])
+      (S2 : Comparable_arg
+    [@mode m]) : Comparable_sexpable [@mode m] with type t := Make(S1)(S2).t
 
-  module Hashable_plain (S1 : Hashable_plain_arg) (S2 : Hashable_plain_arg) :
-    Hashable.S_plain with type t := Make(S1)(S2).t
+  module%template.portable Hashable_plain
+      (S1 : Hashable_plain_arg
+    [@mode m])
+      (S2 : Hashable_plain_arg
+    [@mode m]) : Hashable.S_plain [@mode m] with type t := Make(S1)(S2).t
 
   (** {v
- The difference between [Hashable] and [Hashable_t] functors is that the former's
+      The difference between [Hashable] and [Hashable_t] functors is that the former's
       result type doesn't contain type [t] and the latter does. Therefore, [Hashable] can't
       be used to combine two pairs into 4-tuple. but [Hashable_t] can. On the other hand
       result of [Hashable_t] cannot be combined with [Comparable].
@@ -205,18 +227,27 @@ module type Tuple = sig
       Unfortunately, it is not possible to define just one functor that could be used in
       both cases.
       v} *)
-  module Hashable (S1 : Hashable_arg) (S2 : Hashable_arg) :
-    Hashable_sexpable with type t := Make(S1)(S2).t
+  module%template.portable Hashable
+      (S1 : Hashable_arg
+    [@mode m])
+      (S2 : Hashable_arg
+    [@mode m]) : Hashable_sexpable [@mode m] with type t := Make(S1)(S2).t
 
-  module Hashable_t (S1 : Hashable_arg) (S2 : Hashable_arg) :
-    Hashable_sexpable with type t = Make(S1)(S2).t
+  module%template.portable Hashable_t
+      (S1 : Hashable_arg
+    [@mode m])
+      (S2 : Hashable_arg
+    [@mode m]) : Hashable_sexpable [@mode m] with type t = Make(S1)(S2).t
 
-  module Sexpable (S1 : Sexpable.S) (S2 : Sexpable.S) :
+  module%template.portable Hasher
+      (H1 : Hashable_arg
+    [@mode m])
+      (H2 : Hashable_arg
+    [@mode m]) : Hashable_sexpable [@mode m] with type t := Make(H1)(H2).t]
+
+  module%template.portable Sexpable (S1 : Sexpable.S) (S2 : Sexpable.S) :
     Sexpable.S with type t := Make(S1)(S2).t
 
-  module Binable (B1 : Binable.S) (B2 : Binable.S) :
+  module%template.portable Binable (B1 : Binable.S) (B2 : Binable.S) :
     Binable.S with type t := Make(B1)(B2).t
-
-  module Hasher (H1 : Hashable_arg) (H2 : Hashable_arg) :
-    Hashable_sexpable with type t := Make(H1)(H2).t
 end

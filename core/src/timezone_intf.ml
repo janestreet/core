@@ -2,10 +2,11 @@ open! Import
 open! Std_internal
 open! Int.Replace_polymorphic_compare
 
-module type Extend_zone = sig
+module type Extend_zone = sig @@ portable
   type t [@@deriving sexp_grammar]
 
-  include Identifiable.S with type t := t
+  include%template Identifiable.S [@mode local] with type t := t
+
   include Diffable.S_atomic with type t := t
 
   (** [find name] looks up a [t] by its name and returns it. This also accepts some
@@ -36,6 +37,9 @@ module type Extend_zone = sig
       all the names in this module because such misconfiguration is quite rare. *)
   val local : t Lazy.t
 
+  (** Like {!local}, but a [Portable_lazy.t]. *)
+  val local_portable : t Portable_lazy.t
+
   (** [initialized_zones ()] returns a sorted list of time zone names that have been
       loaded from disk thus far. *)
   val initialized_zones : unit -> (string * t) list
@@ -50,7 +54,7 @@ module type Extend_zone = sig
   val init : unit -> unit
 end
 
-module type Timezone = sig
+module type Timezone = sig @@ portable
   (** Timezone handles parsing timezone data and create [Timezone.t] that can later be
       used to manipulate time using the [Time_float] and [Time_ns] modules.
 
@@ -86,7 +90,14 @@ module type Timezone = sig
   module Stable : sig
     module V1 : sig
       type nonrec t = t
-      [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar, stable_witness]
+      [@@deriving
+        bin_io ~localize
+        , compare ~localize
+        , equal ~localize
+        , hash
+        , sexp
+        , sexp_grammar
+        , stable_witness]
 
       include Stringable.S with type t := t
       include Diffable.S with type t := t and type Diff.t = Diff.t
@@ -102,16 +113,23 @@ module type Timezone = sig
     https://opensource.janestreet.com/standards/#private-submodules *)
   module Private : sig
     module Zone_cache : sig
-      type z =
+      type zone := t
+
+      type t =
         { mutable full : bool
         ; basedir : string
         ; table : Zone.t String.Table.t
         }
 
-      val the_one_and_only : z
+      module The_one_and_only : sig
+        include Capsule.With_mutex
+
+        val capsule : (t, k) Capsule.Data.t
+      end
+
       val clear : unit -> unit
       val init : unit -> unit
-      val find : string -> t option
+      val find : string -> zone option
     end
   end
 end

@@ -16,7 +16,7 @@ module Stable = struct
           | Maybe of t
           | Concat of t list
           | Ad_hoc of string
-        [@@deriving bin_io]
+        [@@deriving bin_io ~localize]
 
         let%expect_test _ =
           print_endline [%bin_digest: t];
@@ -31,7 +31,7 @@ module Stable = struct
       type t = Command.Shape.Stable.Anons.V2.t =
         | Usage of string
         | Grammar of Grammar.V1.t
-      [@@deriving bin_io]
+      [@@deriving bin_io ~localize]
 
       let%expect_test _ =
         print_endline [%bin_digest: t];
@@ -49,7 +49,7 @@ module Stable = struct
         ; doc : string
         ; aliases : string list
         }
-      [@@deriving bin_io]
+      [@@deriving bin_io ~localize]
 
       let%expect_test _ =
         print_endline [%bin_digest: t];
@@ -68,7 +68,7 @@ module Stable = struct
         ; anons : Anons.V2.t
         ; flags : Flag_info.V1.t list
         }
-      [@@deriving bin_io]
+      [@@deriving bin_io ~localize]
 
       let%expect_test _ =
         print_endline [%bin_digest: t];
@@ -79,7 +79,7 @@ module Stable = struct
 
   module Group_info = struct
     type a = Dummy_type_because_we_cannot_digest_type_constructors_only_concrete_types
-    [@@deriving bin_io]
+    [@@deriving bin_io ~localize]
 
     module V2 = struct
       include Command.Shape.Stable.Group_info.V2
@@ -89,7 +89,7 @@ module Stable = struct
         ; readme : string option
         ; subcommands : (string * 'a) List.Stable.V1.t Lazy.Stable.V1.t
         }
-      [@@deriving bin_io]
+      [@@deriving bin_io ~localize]
 
       let%expect_test _ =
         print_endline [%bin_digest: a t];
@@ -109,7 +109,7 @@ module Stable = struct
         ; path_to_exe : string
         ; child_subcommand : string list
         }
-      [@@deriving bin_io]
+      [@@deriving bin_io ~localize]
 
       let%expect_test _ =
         print_endline [%bin_digest: t];
@@ -126,7 +126,7 @@ module Stable = struct
         | Basic of Base_info.V2.t
         | Group of t Group_info.V2.t
         | Exec of Exec_info.V3.t * t
-      [@@deriving bin_io]
+      [@@deriving bin_io ~localize]
 
       let%expect_test _ =
         print_endline [%bin_digest: t];

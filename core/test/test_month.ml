@@ -51,6 +51,16 @@ let%test _ = shift Jan (-16) = Sep
 let%test _ = shift Sep 1 = Oct
 let%test _ = shift Sep (-1) = Aug
 
+let%expect_test "of_string" =
+  List.iter Month.all ~f:(fun month ->
+    let string = Month.to_string month in
+    let test string = require_equal (module Month) (Month.of_string string) month in
+    test string;
+    test (String.lowercase string);
+    test (String.uppercase string));
+  [%expect {| |}]
+;;
+
 let%expect_test "validate sexp grammar" =
   Sexp_grammar_validation.validate_grammar (module Month) |> require_ok;
   [%expect

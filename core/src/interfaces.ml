@@ -3,8 +3,13 @@
 open! Import
 
 module type Applicative = Applicative.S
-module type Comparable = Comparable.S
-module type Comparable_binable = Comparable.S_binable
+
+module type%template Comparable = Comparable.S [@mode m] [@modality p]
+[@@mode m = (global, local)] [@@modality p = (portable, nonportable)]
+
+module type%template Comparable_binable = Comparable.S_binable [@mode m] [@modality p]
+[@@mode m = (global, local)] [@@modality p = (portable, nonportable)]
+
 module type Floatable = Floatable.S
 module type Hashable = Hashable.S
 module type Hashable_binable = Hashable.S_binable

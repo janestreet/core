@@ -13,6 +13,7 @@ module Stable = struct
     let compare = Base.Lazy.compare
     let compare__local = Base.Lazy.compare__local
     let equal = Base.Lazy.equal
+    let equal__local = Base.Lazy.equal__local
   end
 end
 

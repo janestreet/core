@@ -5,7 +5,8 @@ module Stable = struct
         Base.Uchar :
         sig
         @@ portable
-          type t = Base.Uchar.t [@@deriving compare, equal, hash, sexp, sexp_grammar]
+          type t = Base.Uchar.t
+          [@@deriving compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
 
           include
             Base.Comparator.S
@@ -46,7 +47,8 @@ include%template Hashable.Make_binable_with_hashable [@modality portable] (struc
     let hashable = Key.hashable
   end)
 
-include%template Comparable.Extend_binable [@modality portable] (Base.Uchar) (Stable.V1)
+include%template
+  Comparable.Extend_binable [@mode local] [@modality portable] (Base.Uchar) (Stable.V1)
 
 include Base.Uchar
 

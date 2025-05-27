@@ -1,4 +1,4 @@
-module type Date = sig
+module type Date = sig @@ portable
   type t = Date0.t
 
   include module type of Date0 with type t := t (** @inline *)

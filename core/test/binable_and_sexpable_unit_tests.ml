@@ -23,7 +23,7 @@ module%test _ = struct
   (* S0 *)
   module%template _ = Stable_unit_test.Make [@mode local] (struct
       module T = struct
-        type t = int [@@deriving compare]
+        type t = int [@@deriving compare ~localize, equal ~localize]
 
         include
           Sexpable.Of_sexpable.V1
@@ -46,15 +46,14 @@ module%test _ = struct
             end)
       end
 
-      type t = T.t [@@deriving bin_io ~localize, compare, sexp]
+      type t = T.t [@@deriving bin_io ~localize, compare ~localize, equal ~localize, sexp]
 
-      let equal a b = Int.( = ) 0 ([%compare: t] a b)
       let tests = int_tests
     end)
 
   module%template _ = Stable_unit_test.Make [@mode local] (struct
       module T = struct
-        type 'a t = 'a option [@@deriving compare]
+        type 'a t = 'a option [@@deriving compare ~localize, equal ~localize]
 
         include
           Sexpable.Of_sexpable1.V1
@@ -78,9 +77,8 @@ module%test _ = struct
             end)
       end
 
-      type t = int T.t [@@deriving bin_io ~localize, compare, sexp]
-
-      let equal a b = Int.( = ) 0 ([%compare: t] a b)
+      type t = int T.t
+      [@@deriving bin_io ~localize, compare ~localize, equal ~localize, sexp]
 
       let tests =
         [ None, "()", "\000"
@@ -93,7 +91,8 @@ module%test _ = struct
 
   module%template _ = Stable_unit_test.Make [@mode local] (struct
       module T = struct
-        type ('a, 'b) t = ('a, 'b) Either.Stable.V1.t [@@deriving compare]
+        type ('a, 'b) t = ('a, 'b) Either.Stable.V1.t
+        [@@deriving compare ~localize, equal ~localize]
 
         module Format = struct
           type ('a, 'b) t =
@@ -133,9 +132,8 @@ module%test _ = struct
             end)
       end
 
-      type t = (int, string) T.t [@@deriving bin_io ~localize, compare, sexp]
-
-      let equal a b = Int.( = ) 0 ([%compare: t] a b)
+      type t = (int, string) T.t
+      [@@deriving bin_io ~localize, compare ~localize, equal ~localize, sexp]
 
       let tests =
         [ First 1, "(Left 1)", "\000\001"

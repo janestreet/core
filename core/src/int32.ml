@@ -6,7 +6,8 @@ end
 
 include Binable
 
-include%template Identifiable.Extend [@modality portable] (Base.Int32) (Binable)
+include%template
+  Identifiable.Extend [@mode local] [@modality portable] (Base.Int32) (Binable)
 
 include Base.Int32
 

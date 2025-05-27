@@ -5,8 +5,11 @@ module type Uid = sig
     include Base.Type_equal.Id.Uid
   end
 
-  include
-    Comparable.S_plain with type t := t and type comparator_witness := comparator_witness
+  include%template
+    Comparable.S_plain
+    [@mode local]
+    with type t := t
+     and type comparator_witness := comparator_witness
 
   include Hashable.S_plain with type t := t
 end

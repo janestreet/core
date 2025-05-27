@@ -1,3 +1,5 @@
+@@ portable
+
 open! Import
 
 (** Memoization of OCaml functions of a single argument.

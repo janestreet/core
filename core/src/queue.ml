@@ -1,7 +1,7 @@
 open! Import
 include Base.Queue
 
-include Test_binary_searchable.Make1_and_test (struct
+include%template Test_binary_searchable.Make1_and_test [@modality portable] (struct
     type nonrec 'a t = 'a t
 
     let get = get
@@ -25,8 +25,8 @@ include Test_binary_searchable.Make1_and_test (struct
     end
   end)
 
-include
-  Quickcheckable.Of_quickcheckable1
+include%template
+  Quickcheckable.Of_quickcheckable1 [@modality portable]
     (List)
     (struct
       type nonrec 'a t = 'a t
@@ -40,7 +40,7 @@ module Serialization_v1 = struct
   let t_of_sexp = t_of_sexp
   let t_sexp_grammar = t_sexp_grammar
 
-  include Bin_prot.Utils.Make_iterable_binable1 (struct
+  include%template Bin_prot.Utils.Make_iterable_binable1 [@modality portable] (struct
       type nonrec 'a t = 'a t
       type 'a el = 'a [@@deriving bin_io]
 
@@ -64,7 +64,7 @@ include Serialization_v1
 
 module Stable = struct
   module V1 = struct
-    type nonrec 'a t = 'a t [@@deriving compare, equal, quickcheck]
+    type nonrec 'a t = 'a t [@@deriving compare ~localize, equal ~localize, quickcheck]
 
     include Serialization_v1
 

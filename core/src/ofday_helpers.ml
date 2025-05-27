@@ -9,8 +9,8 @@ let suffixes char =
     [ String.lowercase suffix; String.uppercase suffix ])
 ;;
 
-let am_suffixes = lazy (suffixes 'A')
-let pm_suffixes = lazy (suffixes 'P')
+let am_suffixes = Portable_lazy.from_fun (fun () -> suffixes 'A')
+let pm_suffixes = Portable_lazy.from_fun (fun () -> suffixes 'P')
 
 (* Avoids the allocation that [List.find] would entail in both both the closure input and
    the option output. *)
@@ -67,8 +67,8 @@ let parse string ~f =
   let am_or_pm, until =
     (* discriminate among AM (1:30am), PM (12:30:00 P.M.), or 24-hr (13:00). *)
     match
-      ( find_suffix string (Lazy.force am_suffixes)
-      , find_suffix string (Lazy.force pm_suffixes) )
+      ( find_suffix string (Portable_lazy.force am_suffixes)
+      , find_suffix string (Portable_lazy.force pm_suffixes) )
     with
     | "", "" -> `hr_24, len
     | am, "" -> `hr_AM, decrement_length_if_ends_in_space string (len - String.length am)

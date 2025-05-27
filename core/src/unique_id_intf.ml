@@ -9,7 +9,7 @@ module type Id = sig
 
   (** {b Caveat}: values created with [of_float], [of_sexp], or [of_string] may be equal
       to previously created values. *)
-  include Comparable.S_binable with type t := t
+  include%template Comparable.S_binable [@mode local] with type t := t
 
   include Hashable.S_binable with type t := t
   include Intable with type t := t

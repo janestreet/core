@@ -103,7 +103,7 @@ struct
   include Stable_latest.T_with_comparator
 
   include
-    Comparable.Make_binable_using_comparator [@modality p]
+    Comparable.Make_binable_using_comparator [@mode local] [@modality p]
       (Stable_latest.T_with_comparator)
 
   include Hashable.Make_binable [@modality p] (Stable_latest.T_with_comparator)

@@ -21,7 +21,7 @@ include Base.Option
 type 'a t = 'a option [@@deriving bin_io ~localize, typerep, stable_witness]
 
 include%template Comparator.Derived [@modality portable] (struct
-    type nonrec 'a t = 'a t [@@deriving sexp_of, compare]
+    type nonrec 'a t = 'a t [@@deriving sexp_of, compare ~localize]
   end)
 
 let validate ~none ~some t =
@@ -30,42 +30,52 @@ let validate ~none ~some t =
   | Some x -> Validate.name "some" (Validate.protect some x)
 ;;
 
-let quickcheck_generator = Base_quickcheck.Generator.option
-let quickcheck_observer = Base_quickcheck.Observer.option
-let quickcheck_shrinker = Base_quickcheck.Shrinker.option
+[%%template
+[@@@mode.default p = (nonportable, portable)]
+
+let quickcheck_generator = (Base_quickcheck.Generator.option [@mode p])
+let quickcheck_observer = (Base_quickcheck.Observer.option [@mode p])
+let quickcheck_shrinker = (Base_quickcheck.Shrinker.option [@mode p])]
 
 module Stable = struct
   module V1 = struct
     type nonrec 'a t = 'a t
     [@@deriving
-      bin_io ~localize, compare, equal, hash, sexp, sexp_grammar, stable_witness]
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , hash
+      , sexp
+      , sexp_grammar
+      , stable_witness]
   end
 end
 
 module Optional_syntax = struct
   module Optional_syntax = struct
-    let is_none = is_none
+    [%%if flambda_backend]
 
-    (* [unsafe_value] is only safe to call when [is_none] returns [false]. To avoid
-       repeating the [is_none] check, we declare [Unchecked_some]. [Unchecked_some x]
-       has the same representation as [Some x], but the type has no [None] clause.
+    (** [unsafe_value] is only safe to call when [is_none] returns [false]. To avoid
+        repeating the [is_none] check, we directly extract field 0 using
+        ["%field0_immut"]. Note that the codegen for ["%field0_immut"] is better than with
+        [Obj.field t 0] here. The former is just a [mov], while the latter emits code to
+        handle the packed float array case. *)
+    external unbox
+      :  ('a option[@local_opt])
+      -> ('a[@local_opt])
+      @@ portable
+      = "%field0_immut"
 
-       We make sure all this works with tests of [unsafe_value] in test_option.ml.
+    [%%else]
 
-       We tried using [Obj.field] instead. It generates much worse native code due to
-       float array representations. *)
+    external unbox : ('a option[@local_opt]) -> ('a[@local_opt]) @@ portable = "%field0"
 
-    module Unchecked_some = struct
-      (* Warning 37 tells us [Unchecked_some] is never used as a constructor. This is
-         intentional, so we disable the warning. *)
-      type 'a t = Unchecked_some of 'a [@@ocaml.boxed] [@@ocaml.warning "-37"]
-    end
+    [%%endif]
 
-    external magic_transparent : 'a t -> 'a Unchecked_some.t @@ portable = "%identity"
-
-    let unsafe_value (type a) (t : a t) : a =
-      let (Unchecked_some value) = magic_transparent t in
-      value
+    let%template unsafe_value : type a. a t @ m -> a @ m = unbox
+    [@@mode m = (global, local)]
     ;;
+
+    let is_none = is_none
   end
 end

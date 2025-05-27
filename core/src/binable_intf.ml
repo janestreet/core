@@ -283,6 +283,6 @@ module type Binable = sig @@ portable
   [%%template:
   [@@@mode.default m = (global, local)]
 
-  val of_string : ('a m[@mode m]) -> string -> 'a
+  val of_string : ('a m[@mode m]) -> string @ local -> 'a
   val to_string : ('a m[@mode m]) -> 'a @ m -> string]
 end

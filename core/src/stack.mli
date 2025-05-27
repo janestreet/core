@@ -1,3 +1,5 @@
+@@ portable
+
 open! Import
 
 include module type of struct

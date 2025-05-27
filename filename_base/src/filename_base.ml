@@ -3,10 +3,12 @@ open! Base
 include (
   String :
   sig
-    type t = string [@@deriving compare, hash, sexp, sexp_grammar]
+  @@ portable
+    type t = string [@@deriving compare ~localize, hash, sexp, sexp_grammar]
 
-    include
+    include%template
       Comparable.S
+      [@mode local]
       with type t := t
       with type comparator_witness = String.comparator_witness
 

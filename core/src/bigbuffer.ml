@@ -27,8 +27,8 @@ let add_char buf c =
   buf.pos <- pos + 1
 ;;
 
-module To_bytes =
-  Test_blit.Make_distinct_and_test
+module%template To_bytes =
+  Test_blit.Make_distinct_and_test [@modality portable]
     (struct
       type t = char
 
@@ -62,7 +62,9 @@ module To_bytes =
     end)
 
 include To_bytes
-module To_string = Blit.Make_to_string (Bigbuffer_internal) (To_bytes)
+
+module%template To_string =
+  Blit.Make_to_string [@modality portable] (Bigbuffer_internal) (To_bytes)
 
 let nth buf pos =
   if pos < 0 || pos >= buf.pos then invalid_arg "Bigbuffer.nth" else buf.bstr.{pos}

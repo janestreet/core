@@ -82,7 +82,7 @@ module type S = sig
   val unchecked_iter : 'a t -> f:('a -> unit) -> unit
 end
 
-module type Bag = sig
+module type Bag = sig @@ portable
   (** The module type of the Bag module.
 
       Example usage:

@@ -1,10 +1,10 @@
 open! Import
 open! Std_internal
 
-module type S = sig
+module type S = sig @@ portable
   type t [@@deriving hash]
 
-  include Identifiable with type t := t
+  include%template Identifiable.S [@mode local] with type t := t
 
   (** [create index ~min ~max] raises if [index < min || index > max]. The resulting [t]
       is only equal to other [t] if all three fields are the same. *)
@@ -32,8 +32,9 @@ module type S = sig
   val num_indexes : t -> int
 
   module Stable : sig
-    module V1 :
+    module%template V1 :
       Stable_comparable.With_stable_witness.V1
+      [@mode local]
       with type t = t
       with type comparator_witness = comparator_witness
   end

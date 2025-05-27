@@ -1,3 +1,5 @@
+@@ portable
+
 open! Base
 
 type t =

@@ -24,17 +24,8 @@ let unit f =
   fun () -> Lazy.force l
 ;;
 
-let unbounded (type a) ?(hashable = Hashtbl.Hashable.poly) f =
-  let cache =
-    let module A =
-      Hashable.Make_plain_and_derive_hash_fold_t (struct
-        type t = a
-
-        let { Hashtbl.Hashable.hash; compare; sexp_of_t } = hashable
-      end)
-    in
-    A.Table.create () ~size:0
-  in
+let unbounded ?(hashable = Hashtbl.Hashable.poly) f =
+  let cache = Hashtbl.create ~size:0 (Hashtbl.Hashable.to_key hashable) in
   (* Allocate this closure at the call to [unbounded], not at each call to the memoized
      function. *)
   let really_call_f arg = Result.capture f arg in
@@ -42,27 +33,20 @@ let unbounded (type a) ?(hashable = Hashtbl.Hashable.poly) f =
 ;;
 
 (* the same but with a bound on cache size *)
-let lru (type a) ?(hashable = Hashtbl.Hashable.poly) ~max_cache_size f =
+let lru ?(hashable = Hashtbl.Hashable.poly) ~max_cache_size f =
   if max_cache_size <= 0
   then failwithf "Memo.lru: max_cache_size of %i <= 0" max_cache_size ();
-  let module Cache =
-    Hash_queue.Make (struct
-      type t = a
-
-      let { Hashtbl.Hashable.hash; compare; sexp_of_t } = hashable
-    end)
-  in
-  let cache = Cache.create () in
+  let cache = Hash_queue.create hashable in
   fun arg ->
     Result.return
-      (match Cache.lookup_and_move_to_back cache arg with
+      (match Hash_queue.lookup_and_move_to_back cache arg with
        | Some result -> result
        | None ->
          let result = Result.capture f arg in
-         Cache.enqueue_back_exn cache arg result;
+         Hash_queue.enqueue_back_exn cache arg result;
          (* eject least recently used cache entry *)
-         if Cache.length cache > max_cache_size
-         then ignore (Cache.dequeue_front_exn cache : _ Result.t);
+         if Hash_queue.length cache > max_cache_size
+         then ignore (Hash_queue.dequeue_front_exn cache : _ Result.t);
          result)
 ;;
 

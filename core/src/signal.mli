@@ -4,7 +4,8 @@ open! Import
 
 type t [@@deriving bin_io, sexp]
 
-include Comparable.S with type t := t
+include%template Comparable.S [@mode local] with type t := t
+
 include Hashable.S with type t := t
 include Stringable.S with type t := t
 
@@ -199,10 +200,10 @@ end
 
 module Stable : sig
   module V2 : sig
-    type nonrec t = t [@@deriving bin_io, compare, sexp]
+    type nonrec t = t [@@deriving bin_io, compare ~localize, sexp]
   end
 
   module V1 : sig
-    type nonrec t = t [@@deriving bin_io, compare, sexp]
+    type nonrec t = t [@@deriving bin_io, compare ~localize, sexp]
   end
 end

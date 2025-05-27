@@ -1,3 +1,5 @@
+@@ portable
+
 open! Import
 include Time_ns_intf.Span
 
@@ -7,7 +9,8 @@ module Stable : sig
     [@@deriving
       bin_io ~localize, compare ~localize, equal ~localize, globalize, hash, sexp_grammar]
 
-    include Stable_int63able.With_stable_witness.S with type t := t
+    include%template Stable_int63able.With_stable_witness.S [@mode local] with type t := t
+
     include Diffable.S_atomic with type t := t
   end
 
@@ -16,7 +19,9 @@ module Stable : sig
       type nonrec t = t
       [@@deriving bin_io ~localize, compare ~localize, equal ~localize, globalize]
 
-      include Stable_int63able.With_stable_witness.S with type t := t
+      include%template
+        Stable_int63able.With_stable_witness.S [@mode local] with type t := t
+
       include Diffable.S_atomic with type t := t
     end
 
@@ -24,7 +29,9 @@ module Stable : sig
       type nonrec t = t
       [@@deriving bin_io ~localize, compare ~localize, equal ~localize, globalize]
 
-      include Stable_int63able.With_stable_witness.S with type t := t
+      include%template
+        Stable_int63able.With_stable_witness.S [@mode local] with type t := t
+
       include Diffable.S with type t := t and type Diff.t = t
     end
   end
@@ -43,8 +50,9 @@ module Stable : sig
 
     type nonrec comparator_witness = comparator_witness
 
-    include
+    include%template
       Stable_int63able.With_stable_witness.S
+      [@mode local]
       with type t := t
       with type comparator_witness := comparator_witness
 

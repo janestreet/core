@@ -26,7 +26,7 @@ module type S_bin_io_compare_globalize_hash_sexp =
 
 let raw t = t]
 
-module Make (Raw : Raw) = struct
+module%template.portable Make (Raw : Raw) = struct
   type witness
   type t = Raw.t [@@deriving sexp_of]
 
@@ -68,7 +68,7 @@ end
        M.globalize example_validated
      ;;
    ]} *)
-module Add_globalize
+module%template.portable Add_globalize
     (Raw : sig
        type t [@@deriving globalize]
 
@@ -79,7 +79,7 @@ struct
   let globalize t = Raw.globalize t
 end
 
-module Add_hash
+module%template.portable Add_hash
     (Raw : sig
        type t [@@deriving hash]
 
@@ -91,7 +91,7 @@ struct
   let hash t = Raw.hash (Validated.raw t)
 end
 
-module Add_typerep
+module%template.portable Add_typerep
     (Raw : sig
        type t [@@deriving typerep]
 
@@ -105,8 +105,12 @@ end
 [%%template
 [@@@mode.default m = (global, local)]
 
-module Add_bin_io (Raw : Raw_bin_io [@mode m]) (Validated : S with type raw := Raw.t) =
-  Binable.Of_binable_without_uuid [@mode m] [@alert "-legacy"]
+module%template.portable
+  [@modality p] Add_bin_io
+    (Raw : Raw_bin_io
+  [@mode m])
+    (Validated : S with type raw := Raw.t) =
+  Binable.Of_binable_without_uuid [@mode m] [@modality p] [@alert "-legacy"]
     (Raw)
     (struct
       type t = Raw.t
@@ -118,7 +122,7 @@ module Add_bin_io (Raw : Raw_bin_io [@mode m]) (Validated : S with type raw := R
       let[@mode m = (global, m)] to_binable t = t
     end)
 
-module Add_compare
+module%template.portable Add_compare
     (Raw : sig
        type t [@@deriving compare [@mode m]]
 
@@ -131,25 +135,29 @@ struct
   ;;
 end
 
-module Make_binable (Raw : Raw_bin_io [@mode m]) = struct
-  module T0 = Make (Raw)
+module%template.portable [@modality p] Make_binable (Raw : Raw_bin_io [@mode m]) = struct
+  module T0 = Make [@modality p] (Raw)
   include T0
-  include Add_bin_io [@mode m] (Raw) (T0)
+  include Add_bin_io [@mode m] [@modality p] (Raw) (T0)
 end
 
-module Make_bin_io_compare_hash_sexp (Raw : Raw_bin_io_compare_hash_sexp [@mode m]) =
+module%template.portable
+  [@modality p] Make_bin_io_compare_hash_sexp
+    (Raw : Raw_bin_io_compare_hash_sexp
+  [@mode m]) =
 struct
-  module T = Make_binable [@mode m] (Raw)
+  module T = Make_binable [@mode m] [@modality p] (Raw)
   include T
-  include Add_compare [@mode m] (Raw) (T)
-  include Add_hash (Raw) (T)
+  include Add_compare [@mode m] [@modality p] (Raw) (T)
+  include Add_hash [@modality p] (Raw) (T)
 end
 
-module Make_bin_io_compare_globalize_hash_sexp
+module%template.portable
+  [@modality p] Make_bin_io_compare_globalize_hash_sexp
     (Raw : Raw_bin_io_compare_globalize_hash_sexp
   [@mode m]) =
 struct
-  module T1 = Make_bin_io_compare_hash_sexp [@mode m] (Raw)
+  module T1 = Make_bin_io_compare_hash_sexp [@mode m] [@modality p] (Raw)
   include T1
-  include Add_globalize (Raw) (T1)
+  include Add_globalize [@modality p] (Raw) (T1)
 end]

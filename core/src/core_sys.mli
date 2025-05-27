@@ -1,8 +1,10 @@
+@@ portable
+
 open! Import
 
 include module type of struct
   include Base.Sys
-end
+end @@ nonportable
 
 (** [quote s] quotes the string in a format suitable for the shell of the current system
     (e.g. suitable for [command]). On Unix, this function only quotes as necessary, which

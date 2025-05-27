@@ -6,8 +6,11 @@ module type Basic = sig
 
   type t
 
-  module Replace_polymorphic_compare : Comparable.Comparisons with type t := t
-  include Comparable.Comparisons with type t := t
+  module%template Replace_polymorphic_compare :
+    Comparable.Comparisons [@mode local] with type t := t
+
+  include%template Comparable.Comparisons [@mode local] with type t := t
+
   include Robustly_comparable with type t := t
 
   val add : t -> Span.t -> t
@@ -24,16 +27,19 @@ module type Basic = sig
   val of_span_since_epoch : Span.t -> t
 end
 
-module type S = sig
-  type underlying
-  type t = private underlying [@@deriving bin_io, compare ~localize, hash, typerep]
+module type S = sig @@ portable
+  type underlying : immutable_data
+
+  type t = private underlying
+  [@@deriving bin_io ~localize, compare ~localize, hash, typerep]
 
   module Span : Span_intf.S with type underlying = underlying
   module Ofday : Ofday_intf.S with type underlying := underlying and module Span := Span
   include Basic with type t := t and module Span := Span
 
-  include
+  include%template
     Comparable.S_common
+    [@mode local] [@modality portable]
     with type t := t
      and module Replace_polymorphic_compare := Replace_polymorphic_compare
 

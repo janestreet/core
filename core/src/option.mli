@@ -19,7 +19,8 @@ include module type of struct
   with type 'a t__word := 'a t__word
 
 include Comparator.Derived with type 'a t := 'a t
-include Quickcheckable.S1 with type 'a t := 'a t
+
+include%template Quickcheckable.S1 [@mode portable] with type 'a t := 'a t
 
 val validate : none:unit Validate.check -> some:'a Validate.check -> 'a t Validate.check
 
@@ -27,7 +28,13 @@ module Stable : sig
   module V1 : sig
     type nonrec 'a t = 'a t
     [@@deriving
-      bin_io ~localize, compare, equal, hash, sexp, sexp_grammar, stable_witness]
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , hash
+      , sexp
+      , sexp_grammar
+      , stable_witness]
   end
 end
 
@@ -37,4 +44,5 @@ end
     [Optional_syntax]. Since [Optional_syntax] can only be opted into at the granularity
     of the whole match expression, we need this [Optional_syntax] support for options in
     order to use it for the other half of the tuple. *)
-module Optional_syntax : Optional_syntax.S1 with type 'a t := 'a t and type 'a value := 'a
+module%template Optional_syntax :
+  Optional_syntax.S1 [@mode local] with type 'a t := 'a t and type 'a value := 'a

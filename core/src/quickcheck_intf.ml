@@ -65,10 +65,16 @@ module Definitions = struct
         [of_list [ v1 ; ... ; vN ] = union [ singleton v1 ; ... ; singleton vN ]] *)
     val of_list : 'a list -> 'a t
 
+    val%template of_list
+      : ('a : value mod contended).
+      'a list @ portable -> 'a t @ portable
+    [@@mode portable]
+
     (** Combine arbitrary generators, weighted equally.
 
         [ union [ g1 ; ... ; gN ] = weighted_union [ (1.0, g1) ; ... ; (1.0, gN) ] ] *)
-    val union : 'a t list -> 'a t
+    val%template union : 'a t list @ p -> 'a t @ p
+    [@@mode p = (portable, nonportable)]
 
     (** Generator for the values from a potentially infinite sequence. Chooses each value
         with probability [p], or continues with probability [1-p]. Must satisfy
@@ -247,7 +253,9 @@ module Definitions = struct
     val list : 'a t -> 'a list t
 
     val list_non_empty : 'a t -> 'a list t
-    val list_with_length : int -> 'a t -> 'a list t
+
+    val%template list_with_length : int -> 'a t @ p -> 'a list t @ p
+    [@@mode p = (portable, nonportable)]
 
     (** [fold_until ~init ~f ~finish] is similar to
 
@@ -306,7 +314,7 @@ module Definitions = struct
     val%template of_hash
       :  ((module Deriving_hash with type t = 'a)[@modality p])
       -> 'a t @ p
-    [@@modality p = (nonportable, portable)] [@@conflate_modality_as_mode p]
+    [@@modality p = (nonportable, portable)]
 
     val bool : bool t
     val char : char t
@@ -374,7 +382,7 @@ module Definitions = struct
     val comparison : compare:('a -> 'a -> int) -> eq:'a -> lt:'a t -> gt:'a t -> 'a t
 
     (** maps all values to a single bucket. *)
-    val singleton : unit -> _ t
+    val singleton : unit -> _ t @ portable
 
     (** [unmap t ~f] applies [f] to values before observing them using [t]. *)
     val%template unmap : 'a t @ p -> f:('b -> 'a) @ p -> 'b t @ p

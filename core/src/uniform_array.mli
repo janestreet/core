@@ -1,3 +1,5 @@
+@@ portable
+
 (** This module extends {{!Base.Uniform_array} [Base.Uniform_array]} with bin_io. *)
 
 open! Import

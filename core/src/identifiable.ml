@@ -16,7 +16,7 @@ module Make_plain (T : sig
   end) =
 struct
   include T
-  include Comparable.Make_plain [@modality p] (T)
+  include Comparable.Make_plain [@mode m] [@modality p] (T)
   include Hashable.Make_plain [@modality p] (T)
   include Pretty_printer.Register [@modality p] (T)
 end
@@ -31,7 +31,7 @@ module Make (T : sig
   end) =
 struct
   include T
-  include Comparable.Make_binable [@modality p] (T)
+  include Comparable.Make_binable [@mode m] [@modality p] (T)
   include Hashable.Make_binable [@modality p] (T)
   include Pretty_printer.Register [@modality p] (T)
 end
@@ -68,14 +68,14 @@ module Make_using_comparator (T : sig
   @@ p
     type t [@@deriving (bin_io [@mode m]), (compare [@mode m]), hash, sexp]
 
-    include Comparator.S with type t := t
+    include Comparator.S [@modality p] with type t := t
     include Stringable.S with type t := t
 
     val module_name : string
   end) =
 struct
   include T
-  include Comparable.Make_binable_using_comparator [@modality p] (T)
+  include Comparable.Make_binable_using_comparator [@mode m] [@modality p] (T)
   include Hashable.Make_binable [@modality p] (T)
   include Pretty_printer.Register [@modality p] (T)
 end
@@ -84,14 +84,14 @@ module Make_plain_using_comparator (T : sig
   @@ p
     type t [@@deriving (compare [@mode m]), hash, sexp_of]
 
-    include Comparator.S with type t := t
+    include Comparator.S [@modality p] with type t := t
     include Stringable.S with type t := t
 
     val module_name : string
   end) =
 struct
   include T
-  include Comparable.Make_plain_using_comparator [@modality p] (T)
+  include Comparable.Make_plain_using_comparator [@mode m] [@modality p] (T)
   include Hashable.Make_plain [@modality p] (T)
   include Pretty_printer.Register [@modality p] (T)
 end
@@ -100,7 +100,7 @@ module Make_using_comparator_and_derive_hash_fold_t (T : sig
   @@ p
     type t [@@deriving (bin_io [@mode m]), (compare [@mode m]), sexp]
 
-    include Comparator.S with type t := t
+    include Comparator.S [@modality p] with type t := t
     include Stringable.S with type t := t
 
     val hash : t -> int
@@ -115,7 +115,7 @@ Make_using_comparator [@mode m] [@modality p] (struct
 module Extend
     (M : sig
      @@ p
-       include Base.Identifiable.S [@mode m]
+       include Base.Identifiable.S [@mode m] [@modality p]
      end)
     (B : sig
      @@ p
@@ -134,7 +134,7 @@ struct
   end
 
   include T
-  include Comparable.Extend_binable [@modality p] (M) (T)
+  include Comparable.Extend_binable [@mode m] [@modality p] (M) (T)
 
   include Hashable.Make_binable_with_hashable [@modality p] (struct
       module Key = T

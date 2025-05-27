@@ -4,7 +4,7 @@ module type Round = Base.Int.Round
 
 module type Stable = sig @@ portable
   module V1 : sig
-    type t [@@deriving equal, globalize, hash, sexp_grammar]
+    type t [@@deriving equal ~localize, globalize, hash, sexp_grammar]
 
     include%template
       Stable_comparable.With_stable_witness.V1 [@mode local] with type t := t
@@ -42,10 +42,13 @@ module type Extension = sig @@ portable
 
   include Binaryable with type t := t
   include Hexable with type t := t
-  include Identifiable.S with type t := t
+
+  include%template Identifiable.S [@mode local] with type t := t
+
   include Base.Stringable.S_local_input with type t := t
   include Comparable.Validate_with_zero with type t := t
-  include Quickcheckable.S_int with type t := t
+
+  include%template Quickcheckable.S_int [@mode portable] with type t := t
 end
 
 module type S_unbounded = sig @@ portable

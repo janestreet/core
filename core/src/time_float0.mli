@@ -1,3 +1,5 @@
+@@ portable
+
 open! Import
 
 module Span : module type of struct

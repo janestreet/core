@@ -8,7 +8,7 @@ module Id = struct
     include Base.Type_equal.Id.Uid
 
     include%template
-      Comparable.Extend_plain [@modality portable]
+      Comparable.Extend_plain [@mode local] [@modality portable]
         (Upstream)
         (struct
           type t = Base.Type_equal.Id.Uid.t [@@deriving sexp_of]

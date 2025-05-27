@@ -28,10 +28,12 @@ module Stable : sig
     type nonrec ('ok, 'err) t = ('ok, 'err) t =
       | Ok of 'ok
       | Error of 'err
-    [@@deriving bin_io ~localize, equal, sexp_grammar]
+    [@@deriving bin_io ~localize, equal ~localize, globalize, sexp_grammar]
 
-    include
-      Stable_module_types.With_stable_witness.S2 with type ('ok, 'err) t := ('ok, 'err) t
+    include%template
+      Stable_module_types.With_stable_witness.S2
+      [@mode local]
+      with type ('ok, 'err) t := ('ok, 'err) t
 
     include
       Diffable.S2

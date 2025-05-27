@@ -96,7 +96,7 @@ module type Test_blit = sig @@ portable
          val unsafe_blit : (t, t) blit
        end) : S with type t := Sequence.t
 
-  module Make_distinct_and_test
+  module%template.portable Make_distinct_and_test
       (Elt : Elt)
       (Src : Sequence with type elt := Elt.t)
       (Dst : sig

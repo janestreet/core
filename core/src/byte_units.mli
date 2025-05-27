@@ -1,3 +1,5 @@
+@@ portable
+
 (** {v
  Conversions between units of measure that are based on bytes (like kilobytes,
     megabytes, gigabytes, and words).
@@ -166,13 +168,19 @@ module Stable : sig
   module V1 : sig
     type nonrec t = t [@@deriving hash]
 
-    include Stable_module_types.With_stable_witness.S0_without_comparator with type t := t
+    include%template
+      Stable_module_types.With_stable_witness.S0_without_comparator
+      [@mode local]
+      with type t := t
   end
 
   (*_ new [Int63] based [bin_io] repr. *)
   module V2 : sig
-    type nonrec t = t [@@deriving equal, hash, sexp_grammar, typerep]
+    type nonrec t = t [@@deriving equal ~localize, hash, sexp_grammar, typerep]
 
-    include Stable_module_types.With_stable_witness.S0_without_comparator with type t := t
+    include%template
+      Stable_module_types.With_stable_witness.S0_without_comparator
+      [@mode local]
+      with type t := t
   end
 end

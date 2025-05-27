@@ -1,3 +1,5 @@
+@@ portable
+
 (** This module extends the {{!Base.Linked_queue} [Base.Linked_queue]} module with bin_io
     support. As a reminder, the [Base.Linked_queue] module is a wrapper around OCaml's
     standard [Queue] module that follows Base idioms and adds some functions.

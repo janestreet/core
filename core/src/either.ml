@@ -4,7 +4,14 @@ module Stable = struct
       | First of 'f
       | Second of 's
     [@@deriving
-      bin_io ~localize, compare, equal, hash, sexp, sexp_grammar, stable_witness, typerep]
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , hash
+      , sexp
+      , sexp_grammar
+      , stable_witness
+      , typerep]
 
     let map x ~f1 ~f2 =
       match x with
@@ -18,7 +25,7 @@ include Stable.V1
 include Base.Either
 
 include%template Comparator.Derived2 [@modality portable] (struct
-    type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of, compare]
+    type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of, compare ~localize]
   end)
 
 let quickcheck_generator = Base_quickcheck.Generator.either

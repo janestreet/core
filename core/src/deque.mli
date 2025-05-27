@@ -1,3 +1,5 @@
+@@ portable
+
 (** A double-ended queue that can shrink and expand on both ends.
 
     An index is assigned to an element when it enters the queue, and the index of an

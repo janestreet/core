@@ -13,7 +13,7 @@ module Make (Time0 : Time0_intf.S) () = struct
   let is_earlier t1 ~than:t2 = t1 <. t2
   let is_later t1 ~than:t2 = t1 >. t2
 
-  module Zone : sig
+  module Zone : sig @@ portable
     include Time_intf.Zone with module Time := Time0
   end = struct
     include Zone
@@ -431,28 +431,32 @@ module Make (Time0 : Time0_intf.S) () = struct
 
   let of_string = of_string_with_utc_offset
 
-  let quickcheck_shrinker =
-    Quickcheck.Shrinker.map
+  let%template quickcheck_shrinker =
+    (Quickcheck.Shrinker.map [@mode portable])
       Span.quickcheck_shrinker
       ~f:of_span_since_epoch
       ~f_inverse:to_span_since_epoch
   ;;
 
-  let quickcheck_observer =
-    Quickcheck.Observer.unmap Span.quickcheck_observer ~f:to_span_since_epoch
+  let%template quickcheck_observer =
+    (Quickcheck.Observer.unmap [@mode portable])
+      Span.quickcheck_observer
+      ~f:to_span_since_epoch
   ;;
 
-  let quickcheck_generator =
-    Quickcheck.Generator.map Span.quickcheck_generator ~f:of_span_since_epoch
+  let%template quickcheck_generator =
+    (Quickcheck.Generator.map [@mode portable])
+      Span.quickcheck_generator
+      ~f:of_span_since_epoch
   ;;
 
   let gen_incl lo hi =
     Span.gen_incl (to_span_since_epoch lo) (to_span_since_epoch hi)
-    |> Quickcheck.Generator.map ~f:of_span_since_epoch
+    |> Base_quickcheck.Generator.map ~f:of_span_since_epoch
   ;;
 
   let gen_uniform_incl lo hi =
     Span.gen_uniform_incl (to_span_since_epoch lo) (to_span_since_epoch hi)
-    |> Quickcheck.Generator.map ~f:of_span_since_epoch
+    |> Base_quickcheck.Generator.map ~f:of_span_since_epoch
   ;;
 end

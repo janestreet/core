@@ -137,6 +137,7 @@ module type Command = sig
       -> ?key:'a Univ_map.Multi.Key.t @ p
       -> (string -> 'a) @ p
       -> 'a t @ p
+      @@ portable
     [@@mode p = (nonportable, portable)]
 
     (** Like [create], but takes a lazy [additional_documentation] string which is
@@ -971,7 +972,7 @@ wrap (fun ~run ~main ->
     end
 
     module Cmdline : sig
-      type t [@@deriving compare]
+      type t [@@deriving compare ~localize]
 
       val of_list : string list -> t
       val extend : t -> extend:(string list -> string list) -> path:Path.t -> t

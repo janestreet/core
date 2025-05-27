@@ -1,3 +1,5 @@
+@@ portable
+
 (** A ['a Set_once.t] is like an ['a option ref] that can only be set once. A [Set_once.t]
     starts out as [None], the first [set] transitions it to [Some], and subsequent [set]s
     fail.
@@ -9,9 +11,10 @@ open! Import
 
 [%%template:
 type ('a : k) t
-[@@deriving compare, equal, sexp_of] [@@kind k = (float64, bits32, bits64, word)]
+[@@deriving compare ~localize, equal ~localize, sexp_of]
+[@@kind k = (float64, bits32, bits64, word)]
 
-type 'a t [@@deriving compare, equal, quickcheck, sexp_of]
+type 'a t [@@deriving compare ~localize, equal ~localize, quickcheck, sexp_of]
 
 [@@@kind k = (float64, bits32, bits64, word, value)]
 
@@ -43,11 +46,13 @@ module Optional_syntax :
   Optional_syntax.S1 [@kind k] with type 'a t := 'a t with type 'a value := 'a identity]
 
 module Unstable : sig
-  type nonrec 'a t = 'a t [@@deriving bin_io, compare, equal, sexp, sexp_grammar]
+  type nonrec 'a t = 'a t
+  [@@deriving bin_io, compare ~localize, equal ~localize, sexp, sexp_grammar]
 end
 
 module Stable : sig
   module V1 : sig
-    type nonrec 'a t = 'a t [@@deriving bin_io, compare, equal, sexp, sexp_grammar]
+    type nonrec 'a t = 'a t
+    [@@deriving bin_io, compare ~localize, equal ~localize, sexp, sexp_grammar]
   end
 end

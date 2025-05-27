@@ -5,7 +5,8 @@ include (
   sig
     type t = int [@@deriving bin_io]
 
-    include Comparable.S with type t := t
+    include%template Comparable.S [@mode local] with type t := t
+
     include Hashable.S with type t := t
   end)
 
@@ -197,14 +198,14 @@ let ignore t = set t `Ignore
 
 module Stable = struct
   module V2 = struct
-    type nonrec t = t [@@deriving bin_io, compare]
+    type nonrec t = t [@@deriving bin_io, compare ~localize]
 
     let t_of_sexp = t_of_sexp
     let sexp_of_t t = sexp_of_t_with_version t ~version:2
   end
 
   module V1 = struct
-    type nonrec t = t [@@deriving bin_io, compare]
+    type nonrec t = t [@@deriving bin_io, compare ~localize]
 
     let t_of_sexp = t_of_sexp
     let sexp_of_t t = sexp_of_t_with_version t ~version:1

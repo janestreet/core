@@ -10,7 +10,7 @@ let is_leap_year ~year = (year mod 4 = 0 && not (year mod 100 = 0)) || year mod 
 module Stable = struct
   module V1 = struct
     module Without_comparable = struct
-      module T : sig
+      module T : sig @@ portable
         type t : immediate
         [@@deriving
           bin_io ~localize
@@ -284,13 +284,21 @@ module Stable = struct
       end
 
       include Sexpable
-      include (val Comparator.Stable.V1.make ~compare ~sexp_of_t)
+
+      include%template
+        (val (Comparator.Stable.V1.make [@mode portable]) ~compare ~sexp_of_t)
     end
 
     include Without_comparable
-    include Comparable.Stable.V1.With_stable_witness.Make (Without_comparable)
-    include Hashable.Stable.V1.With_stable_witness.Make (Without_comparable)
-    include Diffable.Atomic.Make (Without_comparable)
+
+    include%template
+      Comparable.Stable.V1.With_stable_witness.Make [@modality portable]
+        (Without_comparable)
+
+    include%template
+      Hashable.Stable.V1.With_stable_witness.Make [@modality portable] (Without_comparable)
+
+    include%template Diffable.Atomic.Make [@modality portable] (Without_comparable)
   end
 
   module Option = struct
@@ -344,29 +352,41 @@ end
 
 module Without_comparable = Stable.V1.Without_comparable
 include Without_comparable
-module C = Comparable.Make_binable_using_comparator (Without_comparable)
+
+module%template C =
+  Comparable.Make_binable_using_comparator [@mode local] [@modality portable]
+    (Without_comparable)
+
 include C
 
-include Diffable.Atomic.Make (struct
+include%template Diffable.Atomic.Make [@modality portable] (struct
     include Without_comparable
     include C
   end)
 
 module O = struct
-  include (C : Comparable.Infix with type t := t)
+  include (
+    C :
+    sig
+    @@ portable
+      include Comparable.Infix with type t := t
+    end)
 end
 
-include (
-  Hashable.Make_binable (struct
+include%template (
+  Hashable.Make_binable [@modality portable] (struct
     include T
     include Sexpable
     include Binable
 
     let compare (a : t) (b : t) = compare a b
   end) :
-    Hashable.S_binable with type t := t)
+  sig
+  @@ portable
+    include Hashable.S_binable with type t := t
+  end)
 
-include Pretty_printer.Register (struct
+include%template Pretty_printer.Register [@modality portable] (struct
     type nonrec t = t
 
     let module_name = "Core.Date"
@@ -383,7 +403,7 @@ let unix_epoch = create_exn ~y:1970 ~m:Jan ~d:1
 
    note: unit tests are in lib_test/time_test.ml
 *)
-module Days : sig
+module Days : sig @@ portable
     type date = t
     type t : immediate
 
@@ -462,23 +482,32 @@ let add_years t n = add_months t (n * 12)
    note: unit tests in lib_test/time_test.ml
 *)
 let day_of_week =
-  let table = [| 0; 3; 2; 5; 0; 3; 5; 1; 4; 6; 2; 4 |] in
+  let table =
+    Iarray.unsafe_of_array__promise_no_mutation [| 0; 3; 2; 5; 0; 3; 5; 1; 4; 6; 2; 4 |]
+  in
   fun t ->
     let m = Month.to_int (month t) in
     let y = if Int.( < ) m 3 then year t - 1 else year t in
     Day_of_week.of_int_exn
-      ((y + (y / 4) - (y / 100) + (y / 400) + table.(m - 1) + day t) % 7)
+      ((y + (y / 4) - (y / 100) + (y / 400) + table.:(m - 1) + day t) % 7)
 ;;
 
 (* http://en.wikipedia.org/wiki/Ordinal_date *)
-let non_leap_year_table = [| 0; 31; 59; 90; 120; 151; 181; 212; 243; 273; 304; 334 |]
-let leap_year_table = [| 0; 31; 60; 91; 121; 152; 182; 213; 244; 274; 305; 335 |]
+let non_leap_year_table =
+  Iarray.unsafe_of_array__promise_no_mutation
+    [| 0; 31; 59; 90; 120; 151; 181; 212; 243; 273; 304; 334 |]
+;;
+
+let leap_year_table =
+  Iarray.unsafe_of_array__promise_no_mutation
+    [| 0; 31; 60; 91; 121; 152; 182; 213; 244; 274; 305; 335 |]
+;;
 
 let ordinal_date t =
   let table =
     if is_leap_year ~year:(year t) then leap_year_table else non_leap_year_table
   in
-  let offset = table.(Month.to_int (month t) - 1) in
+  let offset = table.:(Month.to_int (month t) - 1) in
   day t + offset
 ;;
 
@@ -661,9 +690,9 @@ let all_dates_in_month ~year ~month =
 ;;
 
 module For_quickcheck = struct
-  open Quickcheck
+  open Base_quickcheck
 
-  let gen_uniform_incl d1 d2 =
+  let%template gen_uniform_incl d1 d2 =
     if d1 > d2
     then
       raise_s
@@ -671,17 +700,26 @@ module For_quickcheck = struct
           "Date.gen_uniform_incl: bounds are crossed"
             ~lower_bound:(d1 : t)
             ~upper_bound:(d2 : t)];
-    Generator.map (Int.gen_uniform_incl 0 (diff d2 d1)) ~f:(fun days -> add_days d1 days)
+    (Generator.map [@mode portable])
+      (Generator.int_uniform_inclusive 0 (diff d2 d1))
+      ~f:(fun days -> add_days d1 days)
   ;;
 
-  let gen_incl d1 d2 =
-    Generator.weighted_union
-      [ 1., Generator.return d1; 1., Generator.return d2; 18., gen_uniform_incl d1 d2 ]
+  let%template gen_incl d1 d2 =
+    (Generator.weighted_union [@mode portable])
+      [ 1., (Generator.return [@mode portable]) d1
+      ; 1., (Generator.return [@mode portable]) d2
+      ; 18., gen_uniform_incl d1 d2
+      ]
   ;;
 
   let quickcheck_generator = gen_incl (of_string "1900-01-01") (of_string "2100-01-01")
-  let quickcheck_observer = Observer.create (fun t ~size:_ ~hash -> hash_fold_t hash t)
-  let quickcheck_shrinker = Shrinker.empty ()
+
+  let%template quickcheck_observer =
+    (Observer.create [@mode portable]) (fun t ~size:_ ~hash -> hash_fold_t hash t)
+  ;;
+
+  let quickcheck_shrinker = Shrinker.atomic
 end
 
 let quickcheck_generator = For_quickcheck.quickcheck_generator
@@ -707,27 +745,24 @@ module Option = struct
     end
   end
 
-  let quickcheck_generator =
-    Quickcheck.Generator.map
-      (Option.quickcheck_generator quickcheck_generator)
+  let%template quickcheck_generator =
+    (Quickcheck.Generator.map [@mode portable])
+      ((Option.quickcheck_generator [@mode portable]) quickcheck_generator)
       ~f:of_option
   ;;
 
-  let quickcheck_shrinker =
-    Quickcheck.Shrinker.map
-      (Option.quickcheck_shrinker quickcheck_shrinker)
+  let%template quickcheck_shrinker =
+    (Quickcheck.Shrinker.map [@mode portable])
+      ((Option.quickcheck_shrinker [@mode portable]) quickcheck_shrinker)
       ~f:of_option
       ~f_inverse:to_option
   ;;
 
-  let quickcheck_observer =
-    Quickcheck.Observer.of_hash
-      (module struct
-        type nonrec t = t [@@deriving hash]
-      end)
+  let%template quickcheck_observer =
+    (Base_quickcheck.Observer.of_hash_fold [@mode portable]) hash_fold_t
   ;;
 
-  include Comparable.Make_plain (struct
-      type nonrec t = t [@@deriving compare, sexp_of]
+  include%template Comparable.Make_plain [@mode local] [@modality portable] (struct
+      type nonrec t = t [@@deriving compare ~localize, sexp_of]
     end)
 end

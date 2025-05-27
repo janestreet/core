@@ -6,7 +6,7 @@ module Symmetric_diff_element = struct
   module Stable = struct
     module V1 = struct
       type ('k, 'v) t = 'k * [ `Left of 'v | `Right of 'v | `Unequal of 'v * 'v ]
-      [@@deriving bin_io, compare, sexp, stable_witness]
+      [@@deriving bin_io, compare ~localize, sexp, stable_witness]
 
       let%expect_test _ =
         print_endline [%bin_digest: (int, string) t];
@@ -378,8 +378,15 @@ module%template.portable Make_tree_S1 (Key : Comparator.S1) = struct
   let partition_tf t ~f = partition_tf t ~f
   let combine_errors t = combine_errors t ~comparator
   let unzip = unzip
-  let compare_direct a b c = compare_direct a b c ~comparator
-  let equal a b c = equal a b c ~comparator
+
+  let%template[@mode m = (local, global)] compare_direct a b c =
+    (compare_direct [@mode m]) a b c ~comparator
+  ;;
+
+  let%template[@mode m = (local, global)] equal a b c =
+    (equal [@mode m]) a b c ~comparator
+  ;;
+
   let keys = keys
   let data = data
   let to_alist = to_alist
@@ -517,7 +524,9 @@ module Poly = struct
   include Accessors
   include Transformers
 
-  let compare _ cmpv t1 t2 = compare_direct cmpv t1 t2
+  let%template compare _ cmpv t1 t2 = (compare_direct [@mode m]) cmpv t1 t2
+  [@@mode m = (local, global)]
+  ;;
 
   let sexp_of_t sexp_of_k sexp_of_v t =
     Using_comparator.sexp_of_t sexp_of_k sexp_of_v [%sexp_of: _] t
@@ -583,36 +592,47 @@ module type Key = Key
 module type Key_binable = Key_binable
 module type Key_hashable = Key_hashable
 module type Key_binable_hashable = Key_binable_hashable
-module type S_plain = S_plain
-module type S = S
-module type S_binable = S_binable
+
+[%%template
+[@@@modality.default p = (portable, nonportable)]
+
+module type S_plain = S_plain [@modality p]
+module type S = S [@modality p]
+module type S_binable = S_binable [@modality p]]
 
 module Key_bin_io = Key_bin_io
 
-module%template.portable [@modality p] Provide_bin_io (Key : Key_bin_io.S) =
-Bin_prot.Utils.Make_iterable_binable1 [@modality p] (struct
-    module Key = Key
+module%template.portable [@modality p] Provide_bin_io (Key : Key_bin_io.S) = struct
+  include Bin_prot.Utils.Make_iterable_binable1 [@modality p] (struct
+      module Key = Key
 
-    type nonrec 'v t = (Key.t, 'v, Key.comparator_witness) t
-    type 'v el = Key.t * 'v [@@deriving bin_io]
+      type nonrec 'v t = (Key.t, 'v, Key.comparator_witness) t
+      type 'v el = Key.t * 'v [@@deriving bin_io]
 
-    let _ = bin_el
+      let _ = bin_el
 
-    let caller_identity =
-      Bin_prot.Shape.Uuid.of_string "dfb300f8-4992-11e6-9c15-73a2ac6b815c"
-    ;;
+      let caller_identity =
+        Bin_prot.Shape.Uuid.of_string "dfb300f8-4992-11e6-9c15-73a2ac6b815c"
+      ;;
 
-    let module_name = Some "Core.Map"
-    let length = length
+      let module_name = Some "Core.Map"
+      let length = length
 
-    let[@inline always] iter t ~f =
-      iteri t ~f:(fun ~key ~data -> f (key, data)) [@nontail]
-    ;;
+      let[@inline always] iter t ~f =
+        iteri t ~f:(fun ~key ~data -> f (key, data)) [@nontail]
+      ;;
 
-    let init ~len ~next =
-      init_for_bin_prot ~len ~f:(fun _ -> next ()) ~comparator:Key.comparator
-    ;;
-  end)
+      let init ~len ~next =
+        init_for_bin_prot ~len ~f:(fun _ -> next ()) ~comparator:Key.comparator
+      ;;
+    end)
+
+  let[@mode local] bin_size_t sizer t = bin_size_t sizer (Base.Map.globalize0 t)
+
+  let[@mode local] bin_write_t f buf ~pos t =
+    bin_write_t f buf ~pos (Base.Map.globalize0 t)
+  ;;
+end
 
 module%template Provide_stable_witness (Key : sig
     type t [@@deriving stable_witness]
@@ -633,7 +653,7 @@ module%template.portable
   [@modality p] Make_plain_using_comparator (Key : sig
     type t [@@deriving sexp_of]
 
-    include Comparator.S with type t := t
+    include Comparator.S [@modality p] with type t := t
   end) =
 struct
   module Key = Key
@@ -647,7 +667,9 @@ struct
   include Accessors
   include Transformers
 
-  let compare cmpv t1 t2 = compare_direct cmpv t1 t2
+  let%template[@mode m = (local, global)] compare cmpv t1 t2 =
+    (compare_direct [@mode m]) cmpv t1 t2
+  ;;
 
   let sexp_of_t sexp_of_v t =
     Using_comparator.sexp_of_t Key.sexp_of_t sexp_of_v [%sexp_of: _] t
@@ -698,7 +720,7 @@ module%template.portable
   [@modality p] Make_using_comparator (Key_sexp : sig
     type t [@@deriving sexp]
 
-    include Comparator.S with type t := t
+    include Comparator.S [@modality p] with type t := t
   end) =
 struct
   include Make_plain_using_comparator [@modality p] (Key_sexp)
@@ -724,7 +746,7 @@ module%template.portable
   [@modality p] Make_binable_using_comparator (Key_bin_sexp : sig
     type t [@@deriving bin_io, sexp]
 
-    include Comparator.S with type t := t
+    include Comparator.S [@modality p] with type t := t
   end) =
 struct
   include Make_using_comparator [@modality p] (Key_bin_sexp)
@@ -909,7 +931,7 @@ module Stable = struct
       type comparator_witness
       type nonrec 'a t = (key, 'a, comparator_witness) t
 
-      include Stable_module_types.S1 with type 'a t := 'a t
+      include%template Stable_module_types.S1 [@mode local] with type 'a t := 'a t
 
       include
         Diffable.S1
@@ -920,7 +942,10 @@ module Stable = struct
     include For_deriving
     include For_deriving_stable
 
-    module%template.portable [@modality p] Make (Key : Stable_module_types.S0) =
+    module%template.portable
+      [@modality p] Make
+        (Key : Stable_module_types.S0
+      [@modality p]) =
       Make_binable_using_comparator [@modality p] (Key)
 
     module With_stable_witness = struct
@@ -932,7 +957,8 @@ module Stable = struct
 
       module%template.portable
         [@modality p] Make
-          (Key_stable : Stable_module_types.With_stable_witness.S0) =
+          (Key_stable : Stable_module_types.With_stable_witness.S0
+        [@modality p]) =
       struct
         include Make [@modality p] (Key_stable)
         include Provide_stable_witness (Key_stable)

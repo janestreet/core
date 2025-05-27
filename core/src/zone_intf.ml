@@ -38,7 +38,7 @@ module Earlier_or_later = struct
   type t =
     | Earlier
     | Later
-  [@@deriving compare, enumerate, equal, hash, sexp_of]
+  [@@deriving compare ~localize, enumerate, equal ~localize, hash, sexp_of]
 end
 
 (** This is the interface of [Zone], but not the interface of [Time.Zone] or
@@ -53,7 +53,7 @@ module type S = sig
       reconstructed on the receiving/reading side by reloading the zone file from disk.
       Any zone name that is accepted by [find] is acceptable in the bin_io and sexp
       representations. *)
-  type t [@@deriving sexp_of, compare]
+  type t : immutable_data [@@deriving sexp_of, compare ~localize]
 
   (** [input_tz_file ~zonename ~filename] read in [filename] and return [t] with [name t]
       = [zonename] *)
@@ -62,7 +62,7 @@ module type S = sig
   (** [likely_machine_zones] is a list of zone names that will be searched first when
       trying to determine the machine zone of a box. Setting this to a likely set of zones
       for your application will speed the very first use of the local timezone. *)
-  val likely_machine_zones : string list ref
+  val likely_machine_zones : string list Atomic.t
 
   module Time_in_seconds : Time_in_seconds
   module Earlier_or_later = Earlier_or_later
@@ -93,7 +93,7 @@ module type S = sig
   (** [utc] the UTC time zone. Included for convenience *)
   val utc : t
 
-  val name : t -> string
+  val%template name : t @ m -> string @ m [@@mode m = (local, global)]
 
   (** [original_filename t] return the filename [t] was loaded from (if any) *)
   val original_filename : t -> string option
@@ -161,12 +161,14 @@ module type S_stable = sig
       database, or for time zones that do not come from either [Timezone.find] or
       [of_utc_offset]. *)
   module Full_data : sig
-    module V1 :
-      Stable_module_types.With_stable_witness.S0_without_comparator with type t = t
+    module%template V1 :
+      Stable_module_types.With_stable_witness.S0_without_comparator
+      [@mode local]
+      with type t = t
   end
 end
 
-module type Zone = sig
+module type Zone = sig @@ portable
   module type S = S
   module type S_stable = S_stable
 

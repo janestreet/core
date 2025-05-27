@@ -6,8 +6,9 @@ type t = bool [@@deriving bin_io ~localize, typerep]
 
 include module type of Base.Bool with type t := t
 
-include
+include%template
   Identifiable.S
+  [@mode local]
   with type t := t
    and type comparator_witness := Base.Bool.comparator_witness
 

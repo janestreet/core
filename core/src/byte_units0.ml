@@ -2,15 +2,15 @@ open! Import
 open Std_internal
 module Repr = Int63
 
-module T : sig
-  type t : immediate64 [@@deriving compare, hash, sexp_of, typerep]
+module T : sig @@ portable
+  type t : immediate64 [@@deriving compare ~localize, hash, sexp_of, typerep]
 
   val to_string : t -> string
   val to_string_hum : t -> string
   val of_repr : Repr.t -> t
   val to_repr : t -> Repr.t
 end = struct
-  type t = Repr.t [@@deriving compare, hash, typerep]
+  type t = Repr.t [@@deriving compare ~localize, hash, typerep]
 
   let of_repr = Fn.id
   let to_repr = Fn.id

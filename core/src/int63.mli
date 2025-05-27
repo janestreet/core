@@ -18,7 +18,12 @@ module Stable : sig @@ portable
   module V1 : sig
     type nonrec t : immediate64 = t
     [@@deriving
-      bin_io ~localize, compare ~localize, equal ~localize, globalize, hash, sexp_grammar]
+      bin_io ~localize ~portable
+      , compare ~localize ~portable
+      , equal ~localize ~portable
+      , globalize
+      , hash
+      , sexp_grammar]
 
     include
       Stable_comparable.With_stable_witness.V1

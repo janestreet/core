@@ -1,3 +1,5 @@
+@@ portable
+
 (** A heap block is a value that is guaranteed to live on the OCaml heap, and is hence
     guaranteed to be usable with finalization or in a weak pointer.
 

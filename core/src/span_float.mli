@@ -1,3 +1,5 @@
+@@ portable
+
 open! Import
 include Span_intf.S with type underlying = float
 
