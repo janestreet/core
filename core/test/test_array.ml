@@ -41,7 +41,7 @@ module%test Array_tests = struct
         , word
         , float64
         , value & value
-        , bits64 & bits64
+        , (bits64 & bits64) mod external_
         , (bits64 & value) mod external_ )] Test
       (E : sig
          type t : value [@@deriving compare, equal, quickcheck, sexp_of]
@@ -126,29 +126,25 @@ module%test Array_tests = struct
 
     let () =
       let confirm_test = lazy (print_endline "testing [sexp_of]") in
-      quickcheck_m
-        (module Array_pair)
-        ~f:(fun { arr_i; arr_iu } ->
-          force confirm_test;
-          require_equal
-            ~is_zero_alloc_with_flambda2:false
-            [%here]
-            (module Sexp)
-            (fun () -> Array.sexp_of_t E.sexp_of_t arr_i)
-            (fun () -> sexp_of_uarray arr_iu))
+      quickcheck_m (module Array_pair) ~f:(fun { arr_i; arr_iu } ->
+        force confirm_test;
+        require_equal
+          ~is_zero_alloc_with_flambda2:false
+          [%here]
+          (module Sexp)
+          (fun () -> Array.sexp_of_t E.sexp_of_t arr_i)
+          (fun () -> sexp_of_uarray arr_iu))
     ;;
 
     let () =
       let confirm_test = lazy (print_endline "testing [length]") in
-      quickcheck_m
-        (module Array_pair)
-        ~f:(fun { arr_i; arr_iu } ->
-          force confirm_test;
-          require_equal
-            [%here]
-            (module Int)
-            (fun () -> Array.length arr_i)
-            (fun () -> Array.length arr_iu))
+      quickcheck_m (module Array_pair) ~f:(fun { arr_i; arr_iu } ->
+        force confirm_test;
+        require_equal
+          [%here]
+          (module Int)
+          (fun () -> Array.length arr_i)
+          (fun () -> Array.length arr_iu))
     ;;
 
     let () =
@@ -167,14 +163,12 @@ module%test Array_tests = struct
 
     let () =
       let confirm_test = lazy (print_endline "testing [unsafe_get]") in
-      quickcheck_m
-        (module In_bounds_array_pair)
-        ~f:(fun (i, { Array_pair.arr_iu; _ }) ->
-          force confirm_test;
-          Harness.require_equal_unboxed
-            [%here]
-            (fun () -> Array.get arr_iu i)
-            (fun () -> Array.unsafe_get arr_iu i))
+      quickcheck_m (module In_bounds_array_pair) ~f:(fun (i, { Array_pair.arr_iu; _ }) ->
+        force confirm_test;
+        Harness.require_equal_unboxed
+          [%here]
+          (fun () -> Array.get arr_iu i)
+          (fun () -> Array.unsafe_get arr_iu i))
     ;;
 
     let () =
@@ -454,7 +448,7 @@ module%test Array_tests = struct
         |}]
     ;;
 
-    module Test_int64_u_pair = Test [@kind bits64 & bits64] (struct
+    module Test_int64_u_pair = Test [@kind (bits64 & bits64) mod external_] (struct
         type t = int64 * int64 [@@deriving compare, equal, quickcheck, sexp_of]
         type unboxed = #(int64# * int64#)
 

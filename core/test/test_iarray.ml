@@ -151,18 +151,15 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
   let globalize = Iarray.globalize
 
   let%expect_test _ =
-    quickcheck_m
-      (module Int_t)
-      ~f:(fun iarray ->
-        require_equal (module Int_t) iarray (globalize Int.globalize iarray))
+    quickcheck_m (module Int_t) ~f:(fun iarray ->
+      require_equal (module Int_t) iarray (globalize Int.globalize iarray))
   ;;
 
   let compare = Iarray.compare
 
   let%expect_test "reflexive" =
-    quickcheck_m
-      (module Int_t)
-      ~f:(fun iarray -> require_equal (module Int) (compare Int.compare iarray iarray) 0)
+    quickcheck_m (module Int_t) ~f:(fun iarray ->
+      require_equal (module Int) (compare Int.compare iarray iarray) 0)
   ;;
 
   let%expect_test "anti-symmetric" =
@@ -314,16 +311,14 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
   let create = Iarray.create
 
   let%expect_test _ =
-    quickcheck_m
-      (module Int_t)
-      ~f:(fun t ->
-        require_equal
-          (module Int_t)
-          (create ~len:(Iarray.length t) 0 ~mutate:(fun array ->
-             for pos = 0 to Iarray.length t - 1 do
-               Array.set array pos (Iarray.get t pos)
-             done))
-          t);
+    quickcheck_m (module Int_t) ~f:(fun t ->
+      require_equal
+        (module Int_t)
+        (create ~len:(Iarray.length t) 0 ~mutate:(fun array ->
+           for pos = 0 to Iarray.length t - 1 do
+             Array.set array pos (Iarray.get t pos)
+           done))
+        t);
     [%expect {| |}]
   ;;
 
@@ -344,10 +339,8 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
     = "%array_unsafe_get"
 
   let%expect_test _ =
-    quickcheck_m
-      (module Int_t)
-      ~f:(fun t ->
-        require_equal (module Int_t) t (Iarray.init (Iarray.length t) ~f:(unsafe_get t)))
+    quickcheck_m (module Int_t) ~f:(fun t ->
+      require_equal (module Int_t) t (Iarray.init (Iarray.length t) ~f:(unsafe_get t)))
   ;;
 
   external get
@@ -383,21 +376,19 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
       [@@deriving sexp_of, quickcheck]
     end
     in
-    quickcheck_m
-      (module Args)
-      ~f:(fun { iarray; index; value } ->
-        require_equal
-          (module struct
-            type t = Int_t.t option [@@deriving equal, sexp_of]
-          end)
-          (Option.try_with (fun () -> set iarray index value))
-          (Option.try_with (fun () ->
-             Iarray.concat
-               (Iarray.unsafe_of_array__promise_no_mutation
-                  [| Iarray.prefix iarray ~len:index
-                   ; Iarray.unsafe_of_array__promise_no_mutation [| value |]
-                   ; Iarray.drop_prefix iarray ~len:(index + 1)
-                  |]))))
+    quickcheck_m (module Args) ~f:(fun { iarray; index; value } ->
+      require_equal
+        (module struct
+          type t = Int_t.t option [@@deriving equal, sexp_of]
+        end)
+        (Option.try_with (fun () -> set iarray index value))
+        (Option.try_with (fun () ->
+           Iarray.concat
+             (Iarray.unsafe_of_array__promise_no_mutation
+                [| Iarray.prefix iarray ~len:index
+                 ; Iarray.unsafe_of_array__promise_no_mutation [| value |]
+                 ; Iarray.drop_prefix iarray ~len:(index + 1)
+                |]))))
   ;;
 
   let update = Iarray.update
@@ -412,31 +403,28 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
       [@@deriving sexp_of, quickcheck]
     end
     in
-    quickcheck_m
-      (module Args)
-      ~f:(fun { iarray; index; add } ->
-        require_equal
-          (module struct
-            type t = Int_t.t option [@@deriving equal, sexp_of]
-          end)
-          (Option.try_with (fun () -> update iarray index ~f:(( + ) add)))
-          (Option.try_with (fun () ->
-             Iarray.concat
-               (Iarray.unsafe_of_array__promise_no_mutation
-                  [| Iarray.prefix iarray ~len:index
-                   ; Iarray.unsafe_of_array__promise_no_mutation
-                       [| add + Iarray.get iarray index |]
-                   ; Iarray.drop_prefix iarray ~len:(index + 1)
-                  |]))))
+    quickcheck_m (module Args) ~f:(fun { iarray; index; add } ->
+      require_equal
+        (module struct
+          type t = Int_t.t option [@@deriving equal, sexp_of]
+        end)
+        (Option.try_with (fun () -> update iarray index ~f:(( + ) add)))
+        (Option.try_with (fun () ->
+           Iarray.concat
+             (Iarray.unsafe_of_array__promise_no_mutation
+                [| Iarray.prefix iarray ~len:index
+                 ; Iarray.unsafe_of_array__promise_no_mutation
+                     [| add + Iarray.get iarray index |]
+                 ; Iarray.drop_prefix iarray ~len:(index + 1)
+                |]))))
   ;;
 
   let of_sequence = Iarray.of_sequence
   let to_sequence = Iarray.to_sequence
 
   let%expect_test _ =
-    quickcheck_m
-      (module Int_t)
-      ~f:(fun t -> require_equal (module Int_t) t (of_sequence (to_sequence t)))
+    quickcheck_m (module Int_t) ~f:(fun t ->
+      require_equal (module Int_t) t (of_sequence (to_sequence t)))
   ;;
 
   let%template[@mode m = (global, local)] binary_search = (Iarray.binary_search [@mode m])
@@ -563,136 +551,116 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
       type t = Int_t.t option [@@deriving equal, sexp_of]
     end
     in
-    quickcheck_m
-      (module With_len)
-      ~f:(fun { t; len } ->
-        require_equal
-          (module Optional)
-          (Option.try_with (fun () -> prefix t ~len))
-          (Option.try_with (fun () -> sub t ~pos:0 ~len));
-        require_equal
-          (module Optional)
-          (Option.try_with (fun () -> suffix t ~len))
-          (Option.try_with (fun () -> sub t ~pos:(Iarray.length t - len) ~len));
-        require_equal
-          (module Optional)
-          (Option.try_with (fun () -> drop_prefix t ~len))
-          (Option.try_with (fun () -> sub t ~pos:len ~len:(Iarray.length t - len)));
-        require_equal
-          (module Optional)
-          (Option.try_with (fun () -> drop_suffix t ~len))
-          (Option.try_with (fun () -> sub t ~pos:0 ~len:(Iarray.length t - len))))
+    quickcheck_m (module With_len) ~f:(fun { t; len } ->
+      require_equal
+        (module Optional)
+        (Option.try_with (fun () -> prefix t ~len))
+        (Option.try_with (fun () -> sub t ~pos:0 ~len));
+      require_equal
+        (module Optional)
+        (Option.try_with (fun () -> suffix t ~len))
+        (Option.try_with (fun () -> sub t ~pos:(Iarray.length t - len) ~len));
+      require_equal
+        (module Optional)
+        (Option.try_with (fun () -> drop_prefix t ~len))
+        (Option.try_with (fun () -> sub t ~pos:len ~len:(Iarray.length t - len)));
+      require_equal
+        (module Optional)
+        (Option.try_with (fun () -> drop_suffix t ~len))
+        (Option.try_with (fun () -> sub t ~pos:0 ~len:(Iarray.length t - len))))
   ;;
 
   let group = Iarray.group
 
   let%expect_test _ =
-    quickcheck_m
-      (module Int_t)
-      ~f:(fun t ->
-        require_equal
-          (module struct
-            type t = int Iarray.t Iarray.t [@@deriving equal, sexp_of]
-          end)
-          (group ~break:( > ) t)
-          (List.group ~break:( > ) (Iarray.to_list t)
-           |> List.map ~f:Iarray.of_list
-           |> Iarray.of_list))
+    quickcheck_m (module Int_t) ~f:(fun t ->
+      require_equal
+        (module struct
+          type t = int Iarray.t Iarray.t [@@deriving equal, sexp_of]
+        end)
+        (group ~break:( > ) t)
+        (List.group ~break:( > ) (Iarray.to_list t)
+         |> List.map ~f:Iarray.of_list
+         |> Iarray.of_list))
   ;;
 
   let rev = Iarray.rev
 
   let%expect_test _ =
-    quickcheck_m
-      (module Int_t)
-      ~f:(fun t ->
-        require_equal
-          (module Int_t)
-          (rev t)
-          (Iarray.init (Iarray.length t) ~f:(fun i ->
-             Iarray.get t (Iarray.length t - i - 1))))
+    quickcheck_m (module Int_t) ~f:(fun t ->
+      require_equal
+        (module Int_t)
+        (rev t)
+        (Iarray.init (Iarray.length t) ~f:(fun i ->
+           Iarray.get t (Iarray.length t - i - 1))))
   ;;
 
   let sort = Iarray.sort
 
   let%expect_test _ =
-    quickcheck_m
-      (module Int_t)
-      ~f:(fun t ->
-        require_equal
-          (module Int_t)
-          (sort ~compare:Int.compare t)
-          (Iarray.of_list (List.sort ~compare:Int.compare (Iarray.to_list t))))
+    quickcheck_m (module Int_t) ~f:(fun t ->
+      require_equal
+        (module Int_t)
+        (sort ~compare:Int.compare t)
+        (Iarray.of_list (List.sort ~compare:Int.compare (Iarray.to_list t))))
   ;;
 
   let stable_sort = Iarray.stable_sort
 
   let%expect_test _ =
-    quickcheck_m
-      (module Int_t)
-      ~f:(fun t ->
-        let compare a b = Int.compare (a / 2) (b / 2) in
-        require_equal
-          (module Int_t)
-          (stable_sort ~compare t)
-          (Iarray.of_list (List.stable_sort ~compare (Iarray.to_list t))))
+    quickcheck_m (module Int_t) ~f:(fun t ->
+      let compare a b = Int.compare (a / 2) (b / 2) in
+      require_equal
+        (module Int_t)
+        (stable_sort ~compare t)
+        (Iarray.of_list (List.stable_sort ~compare (Iarray.to_list t))))
   ;;
 
   let dedup_and_sort = Iarray.dedup_and_sort
 
   let%expect_test _ =
-    quickcheck_m
-      (module Int_t)
-      ~f:(fun t ->
-        require_equal
-          (module Int_t)
-          (dedup_and_sort ~compare:Int.compare t)
-          (Iarray.of_list (List.dedup_and_sort ~compare:Int.compare (Iarray.to_list t))))
+    quickcheck_m (module Int_t) ~f:(fun t ->
+      require_equal
+        (module Int_t)
+        (dedup_and_sort ~compare:Int.compare t)
+        (Iarray.of_list (List.dedup_and_sort ~compare:Int.compare (Iarray.to_list t))))
   ;;
 
   let sort_and_group = Iarray.sort_and_group
 
   let%expect_test _ =
-    quickcheck_m
-      (module Int_t)
-      ~f:(fun t ->
-        require_equal
-          (module struct
-            type t = int Iarray.t Iarray.t [@@deriving equal, sexp_of]
-          end)
-          (sort_and_group ~compare:Int.compare t)
-          (List.sort_and_group ~compare:Int.compare (Iarray.to_list t)
-           |> List.map ~f:Iarray.of_list
-           |> Iarray.of_list))
+    quickcheck_m (module Int_t) ~f:(fun t ->
+      require_equal
+        (module struct
+          type t = int Iarray.t Iarray.t [@@deriving equal, sexp_of]
+        end)
+        (sort_and_group ~compare:Int.compare t)
+        (List.sort_and_group ~compare:Int.compare (Iarray.to_list t)
+         |> List.map ~f:Iarray.of_list
+         |> Iarray.of_list))
   ;;
 
   let is_sorted = Iarray.is_sorted
 
   let%expect_test _ =
-    quickcheck_m
-      (module Int_t)
-      ~f:(fun t ->
-        require_equal
-          (module Bool)
-          (is_sorted ~compare:Int.compare t)
-          (List.is_sorted ~compare:Int.compare (Iarray.to_list t)));
-    quickcheck_m
-      (module Int_t)
-      ~f:(fun t ->
-        let sorted = sort ~compare:Int.compare t in
-        require_equal (module Bool) true (is_sorted ~compare:Int.compare sorted))
+    quickcheck_m (module Int_t) ~f:(fun t ->
+      require_equal
+        (module Bool)
+        (is_sorted ~compare:Int.compare t)
+        (List.is_sorted ~compare:Int.compare (Iarray.to_list t)));
+    quickcheck_m (module Int_t) ~f:(fun t ->
+      let sorted = sort ~compare:Int.compare t in
+      require_equal (module Bool) true (is_sorted ~compare:Int.compare sorted))
   ;;
 
   let fold_right = Iarray.fold_right
 
   let%expect_test _ =
-    quickcheck_m
-      (module Int_t)
-      ~f:(fun t ->
-        require_equal
-          (module Int)
-          (fold_right t ~init:0 ~f:( - ))
-          (List.fold_right (Iarray.to_list t) ~init:0 ~f:( - )))
+    quickcheck_m (module Int_t) ~f:(fun t ->
+      require_equal
+        (module Int)
+        (fold_right t ~init:0 ~f:( - ))
+        (List.fold_right (Iarray.to_list t) ~init:0 ~f:( - )))
   ;;
 
   let of_list_rev = Iarray.of_list_rev
@@ -705,22 +673,20 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
       type t = int list [@@deriving quickcheck, sexp_of]
     end
     in
-    quickcheck_m
-      (module Int_list)
-      ~f:(fun list ->
-        require_equal (module Int_t) (of_list_rev list) (Iarray.of_list (List.rev list));
-        require_equal
-          (module Int_t)
-          (of_list_map list ~f:Int.succ)
-          (Iarray.of_list (List.map list ~f:Int.succ));
-        require_equal
-          (module Int_t)
-          (of_list_mapi list ~f:( + ))
-          (Iarray.of_list (List.mapi list ~f:( + )));
-        require_equal
-          (module Int_t)
-          (of_list_rev_map list ~f:Int.succ)
-          (Iarray.of_list (List.rev_map list ~f:Int.succ)))
+    quickcheck_m (module Int_list) ~f:(fun list ->
+      require_equal (module Int_t) (of_list_rev list) (Iarray.of_list (List.rev list));
+      require_equal
+        (module Int_t)
+        (of_list_map list ~f:Int.succ)
+        (Iarray.of_list (List.map list ~f:Int.succ));
+      require_equal
+        (module Int_t)
+        (of_list_mapi list ~f:( + ))
+        (Iarray.of_list (List.mapi list ~f:( + )));
+      require_equal
+        (module Int_t)
+        (of_list_rev_map list ~f:Int.succ)
+        (Iarray.of_list (List.rev_map list ~f:Int.succ)))
   ;;
 
   let reduce = Iarray.reduce
@@ -731,17 +697,15 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
       type t = int option [@@deriving equal, sexp_of]
     end
     in
-    quickcheck_m
-      (module Int_t)
-      ~f:(fun t ->
-        require_equal
-          (module Int_opt)
-          (reduce t ~f:( - ))
-          (List.reduce (Iarray.to_list t) ~f:( - ));
-        require_equal
-          (module Int_opt)
-          (Option.try_with (fun () -> reduce_exn t ~f:( - )))
-          (reduce t ~f:( - )))
+    quickcheck_m (module Int_t) ~f:(fun t ->
+      require_equal
+        (module Int_opt)
+        (reduce t ~f:( - ))
+        (List.reduce (Iarray.to_list t) ~f:( - ));
+      require_equal
+        (module Int_opt)
+        (Option.try_with (fun () -> reduce_exn t ~f:( - )))
+        (reduce t ~f:( - )))
   ;;
 
   let combine_errors = Iarray.combine_errors
@@ -780,33 +744,29 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
   let fold_map = Iarray.fold_map
 
   let%expect_test _ =
-    quickcheck_m
-      (module Int_t)
-      ~f:(fun t ->
-        let init = [] in
-        let f acc x = x :: acc, -x in
-        require_equal
-          (module struct
-            type t = int list * Int_t.t [@@deriving equal, sexp_of]
-          end)
-          (fold_map t ~init ~f)
-          (List.rev (Iarray.to_list t), Iarray.map t ~f:Int.neg))
+    quickcheck_m (module Int_t) ~f:(fun t ->
+      let init = [] in
+      let f acc x = x :: acc, -x in
+      require_equal
+        (module struct
+          type t = int list * Int_t.t [@@deriving equal, sexp_of]
+        end)
+        (fold_map t ~init ~f)
+        (List.rev (Iarray.to_list t), Iarray.map t ~f:Int.neg))
   ;;
 
   let fold_mapi = Iarray.fold_mapi
 
   let%expect_test _ =
-    quickcheck_m
-      (module Int_t)
-      ~f:(fun t ->
-        let init = [] in
-        let f i acc x = x :: acc, i - x in
-        require_equal
-          (module struct
-            type t = int list * Int_t.t [@@deriving equal, sexp_of]
-          end)
-          (fold_mapi t ~init ~f)
-          (List.rev (Iarray.to_list t), Iarray.mapi t ~f:(fun i x -> i - x)))
+    quickcheck_m (module Int_t) ~f:(fun t ->
+      let init = [] in
+      let f i acc x = x :: acc, i - x in
+      require_equal
+        (module struct
+          type t = int list * Int_t.t [@@deriving equal, sexp_of]
+        end)
+        (fold_mapi t ~init ~f)
+        (List.rev (Iarray.to_list t), Iarray.mapi t ~f:(fun i x -> i - x)))
   ;;
 
   let zip = Iarray.zip
@@ -919,18 +879,14 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
   let is_sorted_strictly = Iarray.is_sorted_strictly
 
   let%expect_test _ =
-    quickcheck_m
-      (module Int_t)
-      ~f:(fun t ->
-        require_equal
-          (module Bool)
-          (is_sorted_strictly ~compare:Int.compare t)
-          (List.is_sorted_strictly ~compare:Int.compare (Iarray.to_list t)));
-    quickcheck_m
-      (module Int_t)
-      ~f:(fun t ->
-        let sorted = dedup_and_sort ~compare:Int.compare t in
-        require_equal (module Bool) true (is_sorted_strictly ~compare:Int.compare sorted))
+    quickcheck_m (module Int_t) ~f:(fun t ->
+      require_equal
+        (module Bool)
+        (is_sorted_strictly ~compare:Int.compare t)
+        (List.is_sorted_strictly ~compare:Int.compare (Iarray.to_list t)));
+    quickcheck_m (module Int_t) ~f:(fun t ->
+      let sorted = dedup_and_sort ~compare:Int.compare t in
+      require_equal (module Bool) true (is_sorted_strictly ~compare:Int.compare sorted))
   ;;
 
   let random_element = Iarray.random_element
@@ -945,12 +901,10 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
     [%expect {| |}];
     require_equal (module Int) (random_element_exn (singleton 0)) 0;
     [%expect {| |}];
-    quickcheck_m
-      (module Int_t)
-      ~f:(fun t ->
-        match random_element t with
-        | None -> require (Iarray.is_empty t)
-        | Some x -> require (Iarray.mem t x ~equal:Int.equal))
+    quickcheck_m (module Int_t) ~f:(fun t ->
+      match random_element t with
+      | None -> require (Iarray.is_empty t)
+      | Some x -> require (Iarray.mem t x ~equal:Int.equal))
   ;;
 
   let last_exn = Iarray.last_exn
@@ -960,12 +914,10 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
     [%expect {| (Invalid_argument "index out of bounds") |}];
     require (Int.equal (last_exn (singleton 0)) 0);
     [%expect {| |}];
-    quickcheck_m
-      (module Int_t)
-      ~f:(fun t ->
-        if Iarray.is_empty t
-        then ()
-        else require (Int.equal (last_exn t) (List.last_exn (Iarray.to_list t))))
+    quickcheck_m (module Int_t) ~f:(fun t ->
+      if Iarray.is_empty t
+      then ()
+      else require (Int.equal (last_exn t) (List.last_exn (Iarray.to_list t))))
   ;;
 
   let unsafe_to_array__promise_no_mutation = Iarray.unsafe_to_array__promise_no_mutation
@@ -977,14 +929,12 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
     = "%array_to_iarray"
 
   let%expect_test _ =
-    quickcheck_m
-      (module Int_t)
-      ~f:(fun imm1 ->
-        let arr1 = unsafe_to_array__promise_no_mutation (Sys.opaque_identity imm1) in
-        let imm2 = unsafe_of_array__promise_no_mutation (Sys.opaque_identity arr1) in
-        require (phys_equal imm1 imm2);
-        let arr2 = unsafe_to_array__promise_no_mutation (Sys.opaque_identity imm2) in
-        require (phys_equal arr1 arr2))
+    quickcheck_m (module Int_t) ~f:(fun imm1 ->
+      let arr1 = unsafe_to_array__promise_no_mutation (Sys.opaque_identity imm1) in
+      let imm2 = unsafe_of_array__promise_no_mutation (Sys.opaque_identity arr1) in
+      require (phys_equal imm1 imm2);
+      let arr2 = unsafe_to_array__promise_no_mutation (Sys.opaque_identity imm2) in
+      require (phys_equal arr1 arr2))
   ;;
 
   include (
@@ -1037,7 +987,7 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
   (* Tested as [Local.init] below *)
   let%template[@alloc stack] init = (Iarray.init [@alloc stack])
 
-  external length : ('a t[@local_opt]) -> int @@ portable = "%array_length"
+  external length : ('a t[@local_opt]) @ contended -> int @@ portable = "%array_length"
 
   let%expect_test "Ensure [Iarray.length] accepts [local_]s" =
     let global_iarray = Iarray.unsafe_of_array__promise_no_mutation [| 1; 2; 3; 4 |] in
@@ -1267,17 +1217,15 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
     let create = Iarray.Local.create
 
     let%expect_test _ =
-      quickcheck_m
-        (module Int_t)
-        ~f:(fun t ->
-          require_equal
-            (module Int_t)
-            (create ~len:(Iarray.length t) 0 ~mutate:(fun array ->
-               for pos = 0 to Iarray.length t - 1 do
-                 Array.set array pos (Iarray.get t pos)
-               done)
-             |> Int_t.globalize)
-            t);
+      quickcheck_m (module Int_t) ~f:(fun t ->
+        require_equal
+          (module Int_t)
+          (create ~len:(Iarray.length t) 0 ~mutate:(fun array ->
+             for pos = 0 to Iarray.length t - 1 do
+               Array.set array pos (Iarray.get t pos)
+             done)
+           |> Int_t.globalize)
+          t);
       [%expect {| |}]
     ;;
 
@@ -1308,8 +1256,7 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
           | t -> Some t
           | exception _ -> None)
         (fun (t, len) -> Option.try_with (fun () -> Iarray.prefix t ~len))
-        ~noalloc:(fun (t, len) ->
-          exclave_
+        ~noalloc:(fun (t, len) -> exclave_
           if len < 0 || len > Iarray.Local.length t
           then None
           else Some (Iarray.Local.prefix t ~len));
@@ -1332,8 +1279,7 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
           | t -> Some t
           | exception _ -> None)
         (fun (t, len) -> Option.try_with (fun () -> Iarray.suffix t ~len))
-        ~noalloc:(fun (t, len) ->
-          exclave_
+        ~noalloc:(fun (t, len) -> exclave_
           if len < 0 || len > Iarray.Local.length t
           then None
           else Some (Iarray.Local.suffix t ~len));
@@ -1356,8 +1302,7 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
           | t -> Some t
           | exception _ -> None)
         (fun (t, len) -> Option.try_with (fun () -> Iarray.drop_prefix t ~len))
-        ~noalloc:(fun (t, len) ->
-          exclave_
+        ~noalloc:(fun (t, len) -> exclave_
           if len < 0 || len > Iarray.Local.length t
           then None
           else Some (Iarray.Local.drop_prefix t ~len));
@@ -1380,8 +1325,7 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
           | t -> Some t
           | exception _ -> None)
         (fun (t, len) -> Option.try_with (fun () -> Iarray.drop_suffix t ~len))
-        ~noalloc:(fun (t, len) ->
-          exclave_
+        ~noalloc:(fun (t, len) -> exclave_
           if len < 0 || len > Iarray.Local.length t
           then None
           else Some (Iarray.Local.drop_prefix t ~len));
@@ -1407,8 +1351,7 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
           | t -> Some t
           | exception _ -> None)
         (fun (t, pos, len) -> Option.try_with (fun () -> Iarray.sub t ~pos ~len))
-        ~noalloc:(fun (t, pos, len) ->
-          exclave_
+        ~noalloc:(fun (t, pos, len) -> exclave_
           if pos < 0 || len < 0 || pos + len > Iarray.Local.length t
           then None
           else Some (Iarray.Local.sub t ~pos ~len));
@@ -1434,8 +1377,7 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
           | t -> Some t
           | exception _ -> None)
         (fun (t, pos, len) -> Option.try_with (fun () -> Iarray.subo t ?pos ?len))
-        ~noalloc:(fun (t, pos, len) ->
-          exclave_
+        ~noalloc:(fun (t, pos, len) -> exclave_
           let length = Iarray.Local.length t in
           match local_ pos, len with
           | Some pos, _ when pos < 0 || pos > length -> None
@@ -1590,13 +1532,11 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
     let fold_right = Iarray.Local.fold_right
 
     let%expect_test _ =
-      quickcheck_m
-        (module Int_t)
-        ~f:(fun t ->
-          require_equal
-            (module Int)
-            (fold_right t ~init:0 ~f:( - ))
-            (List.fold_right (Iarray.to_list t) ~init:0 ~f:( - )))
+      quickcheck_m (module Int_t) ~f:(fun t ->
+        require_equal
+          (module Int)
+          (fold_right t ~init:0 ~f:( - ))
+          (List.fold_right (Iarray.to_list t) ~init:0 ~f:( - )))
     ;;
 
     let fold_map = Iarray.Local.fold_map
@@ -1845,8 +1785,8 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
       let%expect_test _ =
         run
           (fun iarray -> exclave_
-            concat_map iarray ~f:(fun x ->
-              exclave_ Iarray.Local.init x ~f:alloc_local_non_immediate))
+            concat_map iarray ~f:(fun x -> exclave_
+              Iarray.Local.init x ~f:alloc_local_non_immediate))
           [| 0; 1; 2; 3 |];
         [%expect {| No allocation. |}]
       ;;
@@ -1856,8 +1796,8 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
       let%expect_test _ =
         run
           (fun iarray -> exclave_
-            concat_mapi iarray ~f:(fun _ x ->
-              exclave_ Iarray.Local.init x ~f:alloc_local_non_immediate))
+            concat_mapi iarray ~f:(fun _ x -> exclave_
+              Iarray.Local.init x ~f:alloc_local_non_immediate))
           [| 0; 1; 2; 3 |];
         [%expect {| No allocation. |}]
       ;;
@@ -1910,8 +1850,7 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
       let%expect_test _ =
         run
           (fun iarray -> exclave_
-            partition_map iarray ~f:(fun x ->
-              exclave_
+            partition_map iarray ~f:(fun x -> exclave_
               let y = alloc_local_non_immediate x in
               if x > 2 then First y else Second y))
           [| 1; 2; 3; 4 |];
@@ -1923,10 +1862,12 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
       let%expect_test _ =
         run
           (fun iarray -> exclave_
-            fold_mapi iarray ~init:(alloc_local_non_immediate 0) ~f:(fun i acc x ->
-              exclave_
-              let (`A acc) = acc in
-              alloc_local_non_immediate (i - x + acc), alloc_local_non_immediate (x - i)))
+            fold_mapi
+              iarray
+              ~init:(alloc_local_non_immediate 0)
+              ~f:(fun i acc x -> exclave_
+                let (`A acc) = acc in
+                alloc_local_non_immediate (i - x + acc), alloc_local_non_immediate (x - i)))
           [| 1; 2; 3; 4 |];
         [%expect {| No allocation. |}]
       ;;
@@ -1936,8 +1877,7 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
       let%expect_test _ =
         run
           (fun iarray -> exclave_
-            fold_map iarray ~init:(alloc_local_non_immediate 0) ~f:(fun acc x ->
-              exclave_
+            fold_map iarray ~init:(alloc_local_non_immediate 0) ~f:(fun acc x -> exclave_
               let (`A acc) = acc in
               alloc_local_non_immediate (x + acc), alloc_local_non_immediate (x - acc)))
           [| 1; 2; 3; 4 |];

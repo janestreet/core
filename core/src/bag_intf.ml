@@ -13,14 +13,14 @@ open! Import
 
 module type S = sig
   module Elt : sig
-    type 'a t
+    type 'a t : mutable_data with 'a
 
     val equal : 'a t -> 'a t -> bool
     val sexp_of_t : ('a -> Sexp.t) -> 'a t -> Sexp.t
     val value : 'a t -> 'a
   end
 
-  type 'a t [@@deriving sexp, sexp_grammar]
+  type 'a t : mutable_data with 'a [@@deriving sexp, sexp_grammar]
 
   (** Much of a bag's interface comes from the generic {!Base.Container} module. *)
   include Container.S1 with type 'a t := 'a t

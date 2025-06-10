@@ -34,20 +34,16 @@ let test
   (f_local : local_ Input.t -> local_ Output.t)
   (f_global : Input.t -> Output.t)
   =
-  quickcheck_m
-    ~here
-    ?cr
-    (module Input)
-    ~f:(fun input ->
-      require_equal
-        ~here
-        ?cr
-        (module Output)
-        (Output.globalize (local_ f_local input))
-        (f_global input);
-      let f_noalloc = Option.value noalloc ~default:(fun x -> exclave_ f_local x) in
-      require_no_allocation ~here (fun () ->
-        ignore (Sys.opaque_identity (local_ f_noalloc input) : Output.t)))
+  quickcheck_m ~here ?cr (module Input) ~f:(fun input ->
+    require_equal
+      ~here
+      ?cr
+      (module Output)
+      (Output.globalize (local_ f_local input))
+      (f_global input);
+    let f_noalloc = Option.value noalloc ~default:(fun x -> exclave_ f_local x) in
+    require_no_allocation ~here (fun () ->
+      ignore (Sys.opaque_identity (local_ f_noalloc input) : Output.t)))
 ;;
 
 let test_indexed_container_with_creators
@@ -94,8 +90,8 @@ let test_indexed_container_with_creators
         (module Bool)
         (fun (t, elt) -> exclave_ M.Local.mem t elt ~equal:[%equal_local: int M.elt])
         (fun (t, elt) -> M.Global.mem t elt ~equal:[%equal: int M.elt])
-        ~noalloc:(fun (t, elt) ->
-          exclave_ M.Local.mem t elt ~equal:[%equal_local: int M.elt]);
+        ~noalloc:(fun (t, elt) -> exclave_
+          M.Local.mem t elt ~equal:[%equal_local: int M.elt]);
       M.Local.mem
 
     and iter =
@@ -150,8 +146,8 @@ let test_indexed_container_with_creators
           M.Local.fold_result t ~init ~f:(fun acc elt ->
             (f acc) ([%globalize: int M.elt] elt)))
         (fun (t, init, f) -> M.Global.fold_result t ~init ~f)
-        ~noalloc:(fun (t, _, _) ->
-          exclave_ M.Local.fold_result t ~init:0 ~f:(fun acc _ -> exclave_ Ok acc));
+        ~noalloc:(fun (t, _, _) -> exclave_
+          M.Local.fold_result t ~init:0 ~f:(fun acc _ -> exclave_ Ok acc));
       M.Local.fold_result
 
     and fold_until =
@@ -173,10 +169,9 @@ let test_indexed_container_with_creators
             ~f:(fun acc elt -> (f acc) ([%globalize: int M.elt] elt))
             ~finish:(fun acc -> finish acc))
         (fun (t, init, f, finish) -> M.Global.fold_until t ~init ~f ~finish)
-        ~noalloc:(fun (t, _, _, _) ->
-          exclave_
-          M.Local.fold_until t ~init:0 ~finish:Fn.id ~f:(fun acc _ ->
-            exclave_ Continue acc));
+        ~noalloc:(fun (t, _, _, _) -> exclave_
+          M.Local.fold_until t ~init:0 ~finish:Fn.id ~f:(fun acc _ -> exclave_
+            Continue acc));
       M.Local.fold_until
 
     and exists =
@@ -288,8 +283,8 @@ let test_indexed_container_with_creators
         end)
         (fun t -> exclave_ M.Local.min_elt t ~compare:[%compare_local: int M.elt])
         (fun t -> M.Global.min_elt t ~compare:[%compare: int M.elt])
-        ~noalloc:(fun t ->
-          exclave_ M.Local.min_elt t ~compare:[%compare_local: int M.elt]);
+        ~noalloc:(fun t -> exclave_
+          M.Local.min_elt t ~compare:[%compare_local: int M.elt]);
       M.Local.min_elt
 
     and max_elt =
@@ -303,8 +298,8 @@ let test_indexed_container_with_creators
         end)
         (fun t -> exclave_ M.Local.max_elt t ~compare:[%compare_local: int M.elt])
         (fun t -> M.Global.max_elt t ~compare:[%compare: int M.elt])
-        ~noalloc:(fun t ->
-          exclave_ M.Local.max_elt t ~compare:[%compare_local: int M.elt]);
+        ~noalloc:(fun t -> exclave_
+          M.Local.max_elt t ~compare:[%compare_local: int M.elt]);
       M.Local.max_elt
 
     and of_list =
@@ -426,8 +421,8 @@ let test_indexed_container_with_creators
         (fun (t, f) -> exclave_
           M.Local.filter_map t ~f:(fun elt -> f ([%globalize: int M.elt] elt)))
         (fun (t, f) -> M.Global.filter_map t ~f)
-        ~noalloc:(fun (t, _) ->
-          exclave_ M.Local.filter_map t ~f:(fun elt -> exclave_ Some elt));
+        ~noalloc:(fun (t, _) -> exclave_
+          M.Local.filter_map t ~f:(fun elt -> exclave_ Some elt));
       M.Local.filter_map
 
     and concat_map =
@@ -442,8 +437,8 @@ let test_indexed_container_with_creators
         (fun (t, f) -> exclave_
           M.Local.concat_map t ~f:(fun elt -> f ([%globalize: int M.elt] elt)))
         (fun (t, f) -> M.Global.concat_map t ~f)
-        ~noalloc:(fun (t, _) ->
-          exclave_ M.Local.concat_map t ~f:(fun elt -> exclave_ M.Local.of_list [ elt ]));
+        ~noalloc:(fun (t, _) -> exclave_
+          M.Local.concat_map t ~f:(fun elt -> exclave_ M.Local.of_list [ elt ]));
       M.Local.concat_map
 
     and partition_tf =
@@ -458,8 +453,7 @@ let test_indexed_container_with_creators
         (fun (t, f) -> exclave_
           M.Local.partition_tf t ~f:(fun elt -> f ([%globalize: int M.elt] elt)))
         (fun (t, f) -> M.Global.partition_tf t ~f)
-        ~noalloc:(fun (t, _) ->
-          exclave_
+        ~noalloc:(fun (t, _) -> exclave_
           let local_ flag = ref false in
           M.Local.partition_tf t ~f:(fun _ ->
             flag := not !flag;
@@ -479,11 +473,9 @@ let test_indexed_container_with_creators
         (fun (t, f) -> exclave_
           M.Local.partition_map t ~f:(fun elt -> f ([%globalize: int M.elt] elt)))
         (fun (t, f) -> M.Global.partition_map t ~f)
-        ~noalloc:(fun (t, _) ->
-          exclave_
+        ~noalloc:(fun (t, _) -> exclave_
           let local_ flag = ref false in
-          M.Local.partition_map t ~f:(fun elt ->
-            exclave_
+          M.Local.partition_map t ~f:(fun elt -> exclave_
             flag := not !flag;
             if !flag then First elt else Second elt));
       M.Local.partition_map
@@ -500,8 +492,8 @@ let test_indexed_container_with_creators
         (fun t -> exclave_
           M.Local.foldi t ~init:[] ~f:(fun i acc elt -> exclave_ (i, elt) :: acc))
         (fun t -> M.Global.foldi t ~init:[] ~f:(fun i acc elt -> (i, elt) :: acc))
-        ~noalloc:(fun t ->
-          exclave_ M.Local.foldi t ~init:[] ~f:(fun i acc elt -> exclave_ (i, elt) :: acc));
+        ~noalloc:(fun t -> exclave_
+          M.Local.foldi t ~init:[] ~f:(fun i acc elt -> exclave_ (i, elt) :: acc));
       M.Local.foldi
 
     and iteri =
@@ -593,8 +585,8 @@ let test_indexed_container_with_creators
         (fun (t, f) -> exclave_
           M.Local.find_mapi t ~f:(fun i elt -> (f i) ([%globalize: int M.elt] elt)))
         (fun (t, f) -> M.Global.find_mapi t ~f)
-        ~noalloc:(fun (t, _) ->
-          exclave_ M.Local.find_mapi t ~f:(fun _ _ -> exclave_ Some 0));
+        ~noalloc:(fun (t, _) -> exclave_
+          M.Local.find_mapi t ~f:(fun _ _ -> exclave_ Some 0));
       M.Local.find_mapi
 
     and init =
@@ -609,8 +601,8 @@ let test_indexed_container_with_creators
         (fun array -> exclave_
           M.Local.init (Array.length array) ~f:(fun i -> Array.get array i))
         (fun array -> M.Global.init (Array.length array) ~f:(fun i -> Array.get array i))
-        ~noalloc:(fun array ->
-          exclave_ M.Local.init (Array.length array) ~f:(fun i -> Array.get array i));
+        ~noalloc:(fun array -> exclave_
+          M.Local.init (Array.length array) ~f:(fun i -> Array.get array i));
       M.Local.init
 
     and mapi =
@@ -692,8 +684,8 @@ let test_indexed_container_with_creators
         (fun (t, f) -> exclave_
           M.Local.filter_mapi t ~f:(fun i elt -> (f i) ([%globalize: int M.elt] elt)))
         (fun (t, f) -> M.Global.filter_mapi t ~f)
-        ~noalloc:(fun (t, _) ->
-          exclave_ M.Local.filter_mapi t ~f:(fun _ elt -> exclave_ Some elt));
+        ~noalloc:(fun (t, _) -> exclave_
+          M.Local.filter_mapi t ~f:(fun _ elt -> exclave_ Some elt));
       M.Local.filter_mapi
 
     and concat_mapi =
@@ -709,8 +701,8 @@ let test_indexed_container_with_creators
         (fun (t, f) -> exclave_
           M.Local.concat_mapi t ~f:(fun i elt -> (f i) ([%globalize: int M.elt] elt)))
         (fun (t, f) -> M.Global.concat_mapi t ~f)
-        ~noalloc:(fun (t, _) ->
-          exclave_ M.Local.concat_mapi t ~f:(fun _ _ -> exclave_ M.Local.of_list []));
+        ~noalloc:(fun (t, _) -> exclave_
+          M.Local.concat_mapi t ~f:(fun _ _ -> exclave_ M.Local.of_list []));
       M.Local.concat_mapi
 
     and partitioni_tf =
@@ -725,8 +717,7 @@ let test_indexed_container_with_creators
         (fun (t, f) -> exclave_
           M.Local.partitioni_tf t ~f:(fun i elt -> (f i) ([%globalize: int M.elt] elt)))
         (fun (t, f) -> M.Global.partitioni_tf t ~f)
-        ~noalloc:(fun (t, _) ->
-          exclave_
+        ~noalloc:(fun (t, _) -> exclave_
           let local_ flag = ref false in
           M.Local.partitioni_tf t ~f:(fun _ _ ->
             flag := not !flag;
@@ -746,11 +737,9 @@ let test_indexed_container_with_creators
         (fun (t, f) -> exclave_
           M.Local.partition_mapi t ~f:(fun i elt -> (f i) ([%globalize: int M.elt] elt)))
         (fun (t, f) -> M.Global.partition_mapi t ~f)
-        ~noalloc:(fun (t, _) ->
-          exclave_
+        ~noalloc:(fun (t, _) -> exclave_
           let local_ flag = ref false in
-          M.Local.partition_mapi t ~f:(fun _ elt ->
-            exclave_
+          M.Local.partition_mapi t ~f:(fun _ elt -> exclave_
             flag := not !flag;
             if !flag then First elt else Second elt));
       M.Local.partition_mapi

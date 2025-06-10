@@ -150,7 +150,7 @@ module type S_int63_zero_alloc = sig
 end]
 
 module type S_unboxed_float64 = sig
-  type t : float64
+  type t : float64 mod global
   type value : float64
 
   val typerep_of_t : t Typerep_lib.Std.Typerep.t

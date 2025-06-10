@@ -1565,40 +1565,35 @@ let%expect_test "approximate conversions" =
   let open Time_ns.Span in
   let test to_precise to_approx =
     (* show that conversion can be imprecise *)
-    quickcheck_m
-      ~cr:Comment
-      (module Time_ns.Span)
-      ~f:(fun span ->
-        let precise = to_precise span in
-        let approx = to_approx span in
-        if Float.( <> ) precise approx
-        then (
-          let diff = approx -. precise in
-          print_cr
-            ~cr:Comment
-            [%message
-              "result can be imprecise"
-                (span : Time_ns.Span.t)
-                (precise : float)
-                (approx : float)
-                (diff : float)]));
+    quickcheck_m ~cr:Comment (module Time_ns.Span) ~f:(fun span ->
+      let precise = to_precise span in
+      let approx = to_approx span in
+      if Float.( <> ) precise approx
+      then (
+        let diff = approx -. precise in
+        print_cr
+          ~cr:Comment
+          [%message
+            "result can be imprecise"
+              (span : Time_ns.Span.t)
+              (precise : float)
+              (approx : float)
+              (diff : float)]));
     (* check that imprecision is at most 1 ULP *)
-    quickcheck_m
-      (module Time_ns.Span)
-      ~f:(fun span ->
-        let precise = to_precise span in
-        let approx = to_approx span in
-        if Float.( > ) approx (Float.one_ulp `Up precise)
-           || Float.( < ) approx (Float.one_ulp `Down precise)
-        then (
-          let diff = approx -. precise in
-          print_cr
-            [%message
-              "imprecision can exceed 1 ULP"
-                (span : Time_ns.Span.t)
-                (precise : float)
-                (approx : float)
-                (diff : float)]))
+    quickcheck_m (module Time_ns.Span) ~f:(fun span ->
+      let precise = to_precise span in
+      let approx = to_approx span in
+      if Float.( > ) approx (Float.one_ulp `Up precise)
+         || Float.( < ) approx (Float.one_ulp `Down precise)
+      then (
+        let diff = approx -. precise in
+        print_cr
+          [%message
+            "imprecision can exceed 1 ULP"
+              (span : Time_ns.Span.t)
+              (precise : float)
+              (approx : float)
+              (diff : float)]))
   in
   test to_us to_us_approx;
   [%expect

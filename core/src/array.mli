@@ -187,7 +187,7 @@ module Permissioned : sig
   (** These functions are in [Container.S1_permissions], but they are re-exposed here so
       that their types can be changed to make them more permissive (see comment above). *)
 
-  val length : (_, _) t -> int
+  val length : (_, _) t @ contended -> int
   val is_empty : (_, _) t -> bool
 
   (** counterparts of regular array functions above *)

@@ -246,7 +246,9 @@ module type Permissioned = sig @@ portable
     \        caution. "]
   [@@layout_poly]
 
-  val init : int -> f:local_ (int -> 'a) -> ('a, [< _ perms ]) t
+  val%template init : int -> f:local_ (int -> 'a) -> ('a, [< _ perms ]) t @ m
+  [@@alloc __ @ m = (heap_global, stack_local)]
+
   val make_matrix : dimx:int -> dimy:int -> 'a -> (('a, [< _ perms ]) t, [< _ perms ]) t
 
   val copy_matrix
@@ -258,7 +260,15 @@ module type Permissioned = sig @@ portable
   val copy : local_ ('a, [> read ]) t -> ('a, [< _ perms ]) t
   val fill : local_ ('a, [> write ]) t -> pos:int -> len:int -> 'a -> unit
   val of_list : 'a list -> ('a, [< _ perms ]) t
-  val map : ('a, [> read ]) t -> f:local_ ('a -> 'b) -> ('b, [< _ perms ]) t
+
+  [@@@warning "-incompatible-with-upstream"]
+
+  val%template map
+    : ('a : ki) ('b : ko) 'p.
+    ('a, [> read ]) t -> f:local_ ('a -> 'b) -> ('b, [< 'p perms ]) t
+  [@@kind
+    ki = (value, float64, bits32, bits64, word, immediate, immediate64)
+    , ko = (value, float64, bits32, bits64, word, immediate, immediate64)]
 
   val folding_map
     :  ('a, [> read ]) t
@@ -585,6 +595,13 @@ module type S = sig @@ portable
   include Binary_searchable.S1 with type 'a t := 'a t
   include Indexed_container.S1_with_creators with type 'a t := 'a t
 
+  [@@@warning "-incompatible-with-upstream"]
+
+  val%template map : ('a : ki) ('b : ko). 'a t -> f:local_ ('a -> 'b) -> 'b t
+  [@@kind
+    ki = (value, float64, bits32, bits64, word, immediate, immediate64)
+    , ko = (value, float64, bits32, bits64, word, immediate, immediate64)]
+
   external length
     : ('a : any_non_null) 'perms.
     ('a t[@local_opt]) @ contended -> int
@@ -665,7 +682,10 @@ module type S = sig @@ portable
   [@@layout_poly]
 
   val create_float_uninitialized : len:int -> float t
-  val init : int -> f:local_ (int -> 'a) -> 'a t
+
+  val%template init : int -> f:local_ (int -> 'a) -> 'a t @ m
+  [@@alloc __ @ m = (heap_global, stack_local)]
+
   val make_matrix : dimx:int -> dimy:int -> 'a -> 'a t t
   val copy_matrix : local_ 'a t t -> 'a t t
   val append : 'a t -> 'a t -> 'a t

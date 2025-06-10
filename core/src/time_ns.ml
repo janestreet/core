@@ -16,7 +16,7 @@ include (
   Span :
   sig
   @@ portable
-    include Quickcheck.S_range with type t := t
+    include Quickcheck.S_int with type t := t
   end)
 
 let[@zero_alloc] now t = Span.since_unix_epoch t

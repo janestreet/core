@@ -96,6 +96,32 @@ module type S2 = sig
   end
 end
 
+module type S3 = sig
+  type (_, _, _) t
+
+  module Hexdump : sig
+    type nonrec ('a, 'b, 'c) t = ('a, 'b, 'c) t [@@deriving sexp_of]
+
+    val to_string_hum
+      :  ?max_lines:int
+      -> ?pos:int
+      -> ?len:int
+      -> local_ (_, _, _) t
+      -> string
+
+    val to_sequence
+      :  ?max_lines:int
+      -> ?pos:int
+      -> ?len:int
+      -> (_, _, _) t
+      -> string Sequence.t
+
+    module Pretty : sig
+      type nonrec ('a, 'b, 'c) t = ('a, 'b, 'c) t [@@deriving sexp_of]
+    end
+  end
+end
+
 (** The functor [Hexdump.Of_indexable] uses [length] and [get] to iterate over the
     characters in a value and produce a hex dump. *)
 module type Indexable = sig
@@ -119,13 +145,22 @@ module type Indexable2 = sig
   val get : local_ (_, _) t -> int -> char
 end
 
+module type Indexable3 = sig
+  type (_, _, _) t
+
+  val length : local_ (_, _, _) t -> int
+  val get : local_ (_, _, _) t -> int -> char
+end
+
 module type Hexdump = sig @@ portable
   module type Indexable = Indexable
   module type Indexable1 = Indexable1
   module type Indexable2 = Indexable2
+  module type Indexable3 = Indexable3
   module type S = S
   module type S1 = S1
   module type S2 = S2
+  module type S3 = S3
 
   (** Can be used to override the default [~lines] argument for [to_string_hum] and
       [to_sequence] in [S]. *)
@@ -136,4 +171,7 @@ module type Hexdump = sig @@ portable
 
   module%template.portable Of_indexable2 (T : Indexable2) :
     S2 with type ('a, 'b) t := ('a, 'b) T.t
+
+  module%template.portable Of_indexable3 (T : Indexable3) :
+    S3 with type ('a, 'b, 'c) t := ('a, 'b, 'c) T.t
 end

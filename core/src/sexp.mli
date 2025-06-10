@@ -89,7 +89,7 @@ end
     s-expression transformations.
 
     The invariants of a [x With_text.t] are broken if the [x] value is mutated. *)
-module (With_text @ nonportable) : sig
+module (With_text @@ nonportable) : sig
   type 'a t [@@deriving sexp, sexp_grammar, bin_io]
 
   (** Generates a [t] from the value by creating the text automatically using the provided

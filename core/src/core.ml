@@ -205,7 +205,11 @@ include Not_found
 
 (** {2 Top-level values} *)
 
-external phys_equal : ('a[@local_opt]) -> ('a[@local_opt]) -> bool @@ portable = "%eq"
+external phys_equal
+  : ('a : value_or_null).
+  ('a[@local_opt]) -> ('a[@local_opt]) -> bool
+  @@ portable
+  = "%eq"
 
 type 'a _maybe_bound = 'a Maybe_bound.t =
   | Incl of 'a

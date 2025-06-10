@@ -27,7 +27,7 @@ open! Import
 
 module type S = sig
   module Elt : sig
-    type 'a t
+    type 'a t : mutable_data with 'a
 
     val value : 'a t -> 'a
 
@@ -38,7 +38,8 @@ module type S = sig
     val sexp_of_t : ('a -> Base.Sexp.t) -> 'a t -> Base.Sexp.t
   end
 
-  type 'a t [@@deriving compare ~localize, quickcheck, sexp, sexp_grammar]
+  type 'a t : mutable_data with 'a
+  [@@deriving compare ~localize, quickcheck, sexp, sexp_grammar]
 
   include Container.S1 with type 'a t := 'a t
   include Invariant.S1 with type 'a t := 'a t

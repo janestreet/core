@@ -4,20 +4,21 @@ include Test_blit_intf.Definitions
 
 module type For_tests = sig
   module Elt : Elt1
-  module Src : Sequence1_phantom with type 'a elt := 'a Elt.t
+  module Src : Sequence1_phantom2 with type 'a elt := 'a Elt.t
 
   module Dst : sig
-    include Sequence1_phantom with type 'a elt := 'a Elt.t
+    include Sequence1_phantom2 with type 'a elt := 'a Elt.t
 
-    val overlapping_src_dst : [ `Do_not_check | `Check of ('elt, _) Src.t -> ('elt, _) t ]
+    val overlapping_src_dst
+      : [ `Do_not_check | `Check of ('elt, 'p1, 'p2) Src.t -> ('elt, 'p1, 'p2) t ]
   end
 end
 
 module Test_gen
     (For_tests : For_tests)
-    (Tested : S1_phantom_distinct
-              with type ('elt, 'phantom) src := ('elt, 'phantom) For_tests.Src.t
-              with type ('elt, 'phantom) dst := ('elt, 'phantom) For_tests.Dst.t) =
+    (Tested : S1_phantom2_distinct
+              with type ('elt, 'p1, 'p2) src := ('elt, 'p1, 'p2) For_tests.Src.t
+              with type ('elt, 'p1, 'p2) dst := ('elt, 'p1, 'p2) For_tests.Dst.t) =
 struct
   open Tested
   open For_tests
@@ -133,13 +134,13 @@ module Test1
       module Src = struct
         include Sequence
 
-        type ('a, _) t = 'a Sequence.t
+        type ('a, _, _) t = 'a Sequence.t
       end
 
       module Dst = struct
         include Sequence
 
-        type ('a, _) t = 'a Sequence.t
+        type ('a, _, _) t = 'a Sequence.t
 
         let overlapping_src_dst = `Check Fn.id
       end
@@ -157,13 +158,13 @@ module Test1_generic
       module Src = struct
         include Sequence
 
-        type ('a, _) t = 'a Sequence.t
+        type ('a, _, _) t = 'a Sequence.t
       end
 
       module Dst = struct
         include Sequence
 
-        type ('a, _) t = 'a Sequence.t
+        type ('a, _, _) t = 'a Sequence.t
 
         let overlapping_src_dst = `Check Fn.id
       end
@@ -188,7 +189,7 @@ module Test
       module Src = struct
         open Sequence
 
-        type nonrec (_, _) t = t
+        type nonrec (_, _, _) t = t
 
         let length = length
         let get = get
@@ -216,7 +217,7 @@ module Test_distinct
       module Src = struct
         open Src
 
-        type nonrec (_, _) t = t
+        type nonrec (_, _, _) t = t
 
         let length = length
         let get = get
@@ -227,7 +228,7 @@ module Test_distinct
       module Dst = struct
         open Dst
 
-        type nonrec (_, _) t = t
+        type nonrec (_, _, _) t = t
 
         let length = length
         let get = get
@@ -238,13 +239,32 @@ module Test_distinct
     end)
     (Tested)
 
-module Test1_phantom_distinct
+module Test1_phantom2
     (Elt : Elt1)
-    (Src : Sequence1_phantom with type 'a elt := 'a Elt.t)
-    (Dst : Sequence1_phantom with type 'a elt := 'a Elt.t)
-    (Tested : S1_phantom_distinct
-              with type ('elt, 'phantom) src := ('elt, 'phantom) Src.t
-               and type ('elt, 'phantom) dst := ('elt, 'phantom) Dst.t) =
+    (Sequence : Sequence1_phantom2 with type 'a elt := 'a Elt.t)
+    (Tested : S1_phantom2_distinct
+              with type ('elt, 'p1, 'p2) src := ('elt, 'p1, 'p2) Sequence.t
+               and type ('elt, 'p1, 'p2) dst := ('elt, 'p1, 'p2) Sequence.t) =
+  Test_gen
+    (struct
+      module Elt = Elt
+      module Src = Sequence
+
+      module Dst = struct
+        include Sequence
+
+        let overlapping_src_dst = `Check Fn.id
+      end
+    end)
+    (Tested)
+
+module Test1_phantom2_distinct
+    (Elt : Elt1)
+    (Src : Sequence1_phantom2 with type 'a elt := 'a Elt.t)
+    (Dst : Sequence1_phantom2 with type 'a elt := 'a Elt.t)
+    (Tested : S1_phantom2_distinct
+              with type ('elt, 'p1, 'p2) src := ('elt, 'p1, 'p2) Src.t
+               and type ('elt, 'p1, 'p2) dst := ('elt, 'p1, 'p2) Dst.t) =
   Test_gen
     (struct
       module Elt = Elt
@@ -309,17 +329,35 @@ struct
   include B
 end
 
-module Make1_phantom_distinct_and_test
+module Make1_phantom2_and_test
     (Elt : Elt1)
-    (Src : Sequence1_phantom with type 'a elt := 'a Elt.t)
-    (Dst : sig
-       include Sequence1_phantom with type 'a elt := 'a Elt.t
+    (Sequence : sig
+       type (_, _, _) t
 
-       val create_like : len:int -> local_ ('elt, _) Src.t -> ('elt, _) t
-       val unsafe_blit : (('elt, _) Src.t, ('elt, _) t) blit
+       val get : ('elt, _, _) t -> int -> 'elt Elt.t
+       val set : ('elt, _, _) t -> int -> 'elt Elt.t -> unit
+       val length : local_ (_, _, _) t -> int
+       val create_bool : len:int -> (bool, _, _) t
+       val create_like : len:int -> local_ ('elt, _, _) t -> ('elt, _, _) t
+       val unsafe_blit : (('elt, _, _) t, ('elt, _, _) t) Blit.blit
      end) =
 struct
-  module B = Make1_phantom_distinct (Src) (Dst)
-  include Test1_phantom_distinct (Elt) (Src) (Dst) (B)
+  module B = Make1_phantom2_distinct (Sequence) (Sequence)
+  include Test1_phantom2 (Elt) (Sequence) (B)
+  include B
+end
+
+module Make1_phantom2_distinct_and_test
+    (Elt : Elt1)
+    (Src : Sequence1_phantom2 with type 'a elt := 'a Elt.t)
+    (Dst : sig
+       include Sequence1_phantom2 with type 'a elt := 'a Elt.t
+
+       val create_like : len:int -> local_ ('elt, _, _) Src.t -> ('elt, _, _) t
+       val unsafe_blit : (('elt, _, _) Src.t, ('elt, _, _) t) blit
+     end) =
+struct
+  module B = Make1_phantom2_distinct (Src) (Dst)
+  include Test1_phantom2_distinct (Elt) (Src) (Dst) (B)
   include B
 end

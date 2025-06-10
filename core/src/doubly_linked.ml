@@ -12,7 +12,7 @@ let raise_attempt_to_mutate_list_during_iteration () =
 let phys_equal = ( == )
 
 module Header : sig @@ portable
-  type t
+  type t : mutable_data
 
   val create : unit -> t
   val length : t -> int
@@ -76,9 +76,8 @@ end = struct
     | Some u ->
       let s = Union_find.get u in
       s.pending_iterations <- s.pending_iterations + 1;
-      Exn.protect
-        ~f
-        ~finally:(stack_ fun () -> s.pending_iterations <- s.pending_iterations - 1)
+      Exn.protect ~f ~finally:(stack_ fun () ->
+        s.pending_iterations <- s.pending_iterations - 1)
       [@nontail]
   ;;
 
@@ -90,17 +89,11 @@ end = struct
     else (
       let n1 = (union_find_get__check_no_pending_iterations u1).length in
       let n2 = (union_find_get__check_no_pending_iterations u2).length in
-      with_iteration
-        t1
-        (stack_
-          fun () ->
-            with_iteration
-              t2
-              (stack_
-                fun () ->
-                  Union_find.union u1 u2;
-                  Union_find.set u1 { length = n1 + n2; pending_iterations = 0 })
-            [@nontail]);
+      with_iteration t1 (stack_ fun () ->
+        with_iteration t2 (stack_ fun () ->
+          Union_find.union u1 u2;
+          Union_find.set u1 { length = n1 + n2; pending_iterations = 0 })
+        [@nontail]);
       `Merged)
   ;;
 
@@ -108,7 +101,7 @@ end = struct
 end
 
 module Elt : sig @@ portable
-  type 'a t [@@deriving sexp_of]
+  type 'a t : mutable_data with 'a [@@deriving sexp_of]
 
   val header : 'a t -> Header.t
   val equal : 'a t -> 'a t -> bool
@@ -292,18 +285,15 @@ let map t ~f =
   | None -> create ()
   | Some first ->
     let new_first = Elt.create (f (Elt.value first)) in
-    Header.with_iteration
-      (Elt.header first)
-      (stack_
-        fun () ->
-          let rec loop f acc first elt =
-            let acc = Elt.insert_after acc (f (Elt.value elt)) in
-            let next = Elt.next elt in
-            if not (phys_equal next first) then loop f acc first next
-          in
-          (* unroll and skip first elt *)
-          let next = Elt.next first in
-          if not (phys_equal next first) then loop f new_first first next);
+    Header.with_iteration (Elt.header first) (stack_ fun () ->
+      let rec loop f acc first elt =
+        let acc = Elt.insert_after acc (f (Elt.value elt)) in
+        let next = Elt.next elt in
+        if not (phys_equal next first) then loop f acc first next
+      in
+      (* unroll and skip first elt *)
+      let next = Elt.next first in
+      if not (phys_equal next first) then loop f new_first first next);
     ref (Some new_first)
 ;;
 
@@ -312,18 +302,15 @@ let mapi t ~f =
   | None -> create ()
   | Some first ->
     let new_first = Elt.create (f 0 (Elt.value first)) in
-    Header.with_iteration
-      (Elt.header first)
-      (stack_
-        fun () ->
-          let rec loop f i acc first elt =
-            let acc = Elt.insert_after acc (f i (Elt.value elt)) in
-            let next = Elt.next elt in
-            if not (phys_equal next first) then loop f (i + 1) acc first next
-          in
-          (* unroll and skip first elt *)
-          let next = Elt.next first in
-          if not (phys_equal next first) then loop f 1 new_first first next);
+    Header.with_iteration (Elt.header first) (stack_ fun () ->
+      let rec loop f i acc first elt =
+        let acc = Elt.insert_after acc (f i (Elt.value elt)) in
+        let next = Elt.next elt in
+        if not (phys_equal next first) then loop f (i + 1) acc first next
+      in
+      (* unroll and skip first elt *)
+      let next = Elt.next first in
+      if not (phys_equal next first) then loop f 1 new_first first next);
     ref (Some new_first)
 ;;
 
@@ -331,64 +318,56 @@ let fold_elt t ~init ~f =
   match !t with
   | None -> init
   | Some first ->
-    Header.with_iteration
-      (Elt.header first)
-      (stack_
-        fun () ->
-          let rec loop f acc first elt =
-            let acc = f acc elt in
-            let next = Elt.next elt in
-            if phys_equal next first then acc else loop f acc first next
-          in
-          loop f init first first) [@nontail]
+    Header.with_iteration (Elt.header first) (stack_ fun () ->
+      let rec loop f acc first elt =
+        let acc = f acc elt in
+        let next = Elt.next elt in
+        if phys_equal next first then acc else loop f acc first next
+      in
+      loop f init first first)
+    [@nontail]
 ;;
 
 let foldi_elt t ~init ~f =
   match !t with
   | None -> init
   | Some first ->
-    Header.with_iteration
-      (Elt.header first)
-      (stack_
-        fun () ->
-          let rec loop f i acc first elt =
-            let acc = f i acc elt in
-            let next = Elt.next elt in
-            if phys_equal next first then acc else loop f (i + 1) acc first next
-          in
-          loop f 0 init first first) [@nontail]
+    Header.with_iteration (Elt.header first) (stack_ fun () ->
+      let rec loop f i acc first elt =
+        let acc = f i acc elt in
+        let next = Elt.next elt in
+        if phys_equal next first then acc else loop f (i + 1) acc first next
+      in
+      loop f 0 init first first)
+    [@nontail]
 ;;
 
 let fold_elt_1 t ~init ~f a =
   match !t with
   | None -> init
   | Some first ->
-    Header.with_iteration
-      (Elt.header first)
-      (stack_
-        fun () ->
-          let rec loop f a acc first elt =
-            let acc = f a acc elt in
-            let next = Elt.next elt in
-            if phys_equal next first then acc else loop f a acc first next
-          in
-          loop f a init first first) [@nontail]
+    Header.with_iteration (Elt.header first) (stack_ fun () ->
+      let rec loop f a acc first elt =
+        let acc = f a acc elt in
+        let next = Elt.next elt in
+        if phys_equal next first then acc else loop f a acc first next
+      in
+      loop f a init first first)
+    [@nontail]
 ;;
 
 let foldi_elt_1 t ~init ~f a =
   match !t with
   | None -> init
   | Some first ->
-    Header.with_iteration
-      (Elt.header first)
-      (stack_
-        fun () ->
-          let rec loop f i a acc first elt =
-            let acc = f i a acc elt in
-            let next = Elt.next elt in
-            if phys_equal next first then acc else loop f (i + 1) a acc first next
-          in
-          loop f 0 a init first first) [@nontail]
+    Header.with_iteration (Elt.header first) (stack_ fun () ->
+      let rec loop f i a acc first elt =
+        let acc = f i a acc elt in
+        let next = Elt.next elt in
+        if phys_equal next first then acc else loop f (i + 1) a acc first next
+      in
+      loop f 0 a init first first)
+    [@nontail]
 ;;
 
 let iter_elt t ~f = fold_elt_1 t ~init:() ~f:(fun f () elt -> f elt) f
@@ -422,9 +401,8 @@ let iter t ~f =
   match !t with
   | None -> ()
   | Some first ->
-    Header.with_iteration
-      (Elt.header first)
-      (stack_ fun () -> iter_loop first f first) [@nontail]
+    Header.with_iteration (Elt.header first) (stack_ fun () -> iter_loop first f first)
+    [@nontail]
 ;;
 
 let length t =
@@ -443,9 +421,8 @@ let iteri t ~f =
   match !t with
   | None -> ()
   | Some first ->
-    Header.with_iteration
-      (Elt.header first)
-      (stack_ fun () -> iteri_loop first f 0 first) [@nontail]
+    Header.with_iteration (Elt.header first) (stack_ fun () -> iteri_loop first f 0 first)
+    [@nontail]
 ;;
 
 let foldi t ~init ~f =
@@ -501,32 +478,28 @@ let fold_right t ~init ~f =
   match !t with
   | None -> init
   | Some first ->
-    Header.with_iteration
-      (Elt.header first)
-      (stack_
-        fun () ->
-          let rec loop f acc elt =
-            let prev = Elt.prev elt in
-            let acc = f (Elt.value prev) acc in
-            if phys_equal prev first then acc else loop f acc prev
-          in
-          loop f init first) [@nontail]
+    Header.with_iteration (Elt.header first) (stack_ fun () ->
+      let rec loop f acc elt =
+        let prev = Elt.prev elt in
+        let acc = f (Elt.value prev) acc in
+        if phys_equal prev first then acc else loop f acc prev
+      in
+      loop f init first)
+    [@nontail]
 ;;
 
 let fold_right_elt t ~init ~f =
   match !t with
   | None -> init
   | Some first ->
-    Header.with_iteration
-      (Elt.header first)
-      (stack_
-        fun () ->
-          let rec loop f acc elt =
-            let prev = Elt.prev elt in
-            let acc = f prev acc in
-            if phys_equal prev first then acc else loop f acc prev
-          in
-          loop f init first) [@nontail]
+    Header.with_iteration (Elt.header first) (stack_ fun () ->
+      let rec loop f acc elt =
+        let prev = Elt.prev elt in
+        let acc = f prev acc in
+        if phys_equal prev first then acc else loop f acc prev
+      in
+      loop f init first)
+    [@nontail]
 ;;
 
 let to_list t = fold_right t ~init:[] ~f:(fun x tl -> x :: tl)
@@ -546,28 +519,24 @@ let%template compare compare_elt (t1 @ m) (t2 @ m) =
   | None, _ -> -1
   | _, None -> 1
   | Some f1, Some f2 ->
-    Header.with_iteration
-      (Elt.header f1)
-      (stack_
-        fun () ->
-          Header.with_iteration
-            (Elt.header f2)
-            (stack_
-              fun () ->
-                let rec loop compare_elt elt1 f1 elt2 f2 =
-                  let compare_result = compare_elt (Elt.value elt1) (Elt.value elt2) in
-                  if compare_result <> 0
-                  then compare_result
-                  else (
-                    let next1 = Elt.next elt1 in
-                    let next2 = Elt.next elt2 in
-                    match phys_equal next1 f1, phys_equal next2 f2 with
-                    | true, true -> 0
-                    | true, false -> -1
-                    | false, true -> 1
-                    | false, false -> loop compare_elt next1 f1 next2 f2)
-                in
-                loop compare_elt f1 f1 f2 f2) [@nontail]) [@nontail]
+    Header.with_iteration (Elt.header f1) (stack_ fun () ->
+      Header.with_iteration (Elt.header f2) (stack_ fun () ->
+        let rec loop compare_elt elt1 f1 elt2 f2 =
+          let compare_result = compare_elt (Elt.value elt1) (Elt.value elt2) in
+          if compare_result <> 0
+          then compare_result
+          else (
+            let next1 = Elt.next elt1 in
+            let next2 = Elt.next elt2 in
+            match phys_equal next1 f1, phys_equal next2 f2 with
+            | true, true -> 0
+            | true, false -> -1
+            | false, true -> 1
+            | false, false -> loop compare_elt next1 f1 next2 f2)
+        in
+        loop compare_elt f1 f1 f2 f2)
+      [@nontail])
+    [@nontail]
 [@@mode m = (local, global)]
 ;;
 
@@ -800,17 +769,14 @@ let filter t ~f =
   (match !t with
    | None -> ()
    | Some first ->
-     Header.with_iteration
-       (Elt.header first)
-       (stack_
-         fun () ->
-           let rec loop f new_t first elt =
-             if f (Elt.value elt)
-             then insert_last new_t (Elt.value elt) |> (ignore : _ Elt.t -> unit);
-             let next = Elt.next elt in
-             if not (phys_equal next first) then loop f new_t first next
-           in
-           loop f new_t first first));
+     Header.with_iteration (Elt.header first) (stack_ fun () ->
+       let rec loop f new_t first elt =
+         if f (Elt.value elt)
+         then insert_last new_t (Elt.value elt) |> (ignore : _ Elt.t -> unit);
+         let next = Elt.next elt in
+         if not (phys_equal next first) then loop f new_t first next
+       in
+       loop f new_t first first));
   new_t
 ;;
 
@@ -819,17 +785,14 @@ let filteri t ~f =
   (match !t with
    | None -> ()
    | Some first ->
-     Header.with_iteration
-       (Elt.header first)
-       (stack_
-         fun () ->
-           let rec loop f i new_t first elt =
-             if f i (Elt.value elt)
-             then insert_last new_t (Elt.value elt) |> (ignore : _ Elt.t -> unit);
-             let next = Elt.next elt in
-             if not (phys_equal next first) then loop f (i + 1) new_t first next
-           in
-           loop f 0 new_t first first));
+     Header.with_iteration (Elt.header first) (stack_ fun () ->
+       let rec loop f i new_t first elt =
+         if f i (Elt.value elt)
+         then insert_last new_t (Elt.value elt) |> (ignore : _ Elt.t -> unit);
+         let next = Elt.next elt in
+         if not (phys_equal next first) then loop f (i + 1) new_t first next
+       in
+       loop f 0 new_t first first));
   new_t
 ;;
 
@@ -838,18 +801,15 @@ let filter_map t ~f =
   (match !t with
    | None -> ()
    | Some first ->
-     Header.with_iteration
-       (Elt.header first)
-       (stack_
-         fun () ->
-           let rec loop f new_t first elt =
-             (match f (Elt.value elt) with
-              | None -> ()
-              | Some value -> insert_last new_t value |> (ignore : _ Elt.t -> unit));
-             let next = Elt.next elt in
-             if not (phys_equal next first) then loop f new_t first next
-           in
-           loop f new_t first first));
+     Header.with_iteration (Elt.header first) (stack_ fun () ->
+       let rec loop f new_t first elt =
+         (match f (Elt.value elt) with
+          | None -> ()
+          | Some value -> insert_last new_t value |> (ignore : _ Elt.t -> unit));
+         let next = Elt.next elt in
+         if not (phys_equal next first) then loop f new_t first next
+       in
+       loop f new_t first first));
   new_t
 ;;
 
@@ -858,18 +818,15 @@ let filter_mapi t ~f =
   (match !t with
    | None -> ()
    | Some first ->
-     Header.with_iteration
-       (Elt.header first)
-       (stack_
-         fun () ->
-           let rec loop f i new_t first elt =
-             (match f i (Elt.value elt) with
-              | None -> ()
-              | Some value -> insert_last new_t value |> (ignore : _ Elt.t -> unit));
-             let next = Elt.next elt in
-             if not (phys_equal next first) then loop f (i + 1) new_t first next
-           in
-           loop f 0 new_t first first));
+     Header.with_iteration (Elt.header first) (stack_ fun () ->
+       let rec loop f i new_t first elt =
+         (match f i (Elt.value elt) with
+          | None -> ()
+          | Some value -> insert_last new_t value |> (ignore : _ Elt.t -> unit));
+         let next = Elt.next elt in
+         if not (phys_equal next first) then loop f (i + 1) new_t first next
+       in
+       loop f 0 new_t first first));
   new_t
 ;;
 
@@ -879,17 +836,14 @@ let partition_tf t ~f =
   (match !t with
    | None -> ()
    | Some first ->
-     Header.with_iteration
-       (Elt.header first)
-       (stack_
-         fun () ->
-           let rec loop f t1 t2 first elt =
-             insert_last (if f (Elt.value elt) then t1 else t2) (Elt.value elt)
-             |> (ignore : _ Elt.t -> unit);
-             let next = Elt.next elt in
-             if not (phys_equal next first) then loop f t1 t2 first next
-           in
-           loop f t1 t2 first first));
+     Header.with_iteration (Elt.header first) (stack_ fun () ->
+       let rec loop f t1 t2 first elt =
+         insert_last (if f (Elt.value elt) then t1 else t2) (Elt.value elt)
+         |> (ignore : _ Elt.t -> unit);
+         let next = Elt.next elt in
+         if not (phys_equal next first) then loop f t1 t2 first next
+       in
+       loop f t1 t2 first first));
   t1, t2
 ;;
 
@@ -899,17 +853,14 @@ let partitioni_tf t ~f =
   (match !t with
    | None -> ()
    | Some first ->
-     Header.with_iteration
-       (Elt.header first)
-       (stack_
-         fun () ->
-           let rec loop f i t1 t2 first elt =
-             insert_last (if f i (Elt.value elt) then t1 else t2) (Elt.value elt)
-             |> (ignore : _ Elt.t -> unit);
-             let next = Elt.next elt in
-             if not (phys_equal next first) then loop f (i + 1) t1 t2 first next
-           in
-           loop f 0 t1 t2 first first));
+     Header.with_iteration (Elt.header first) (stack_ fun () ->
+       let rec loop f i t1 t2 first elt =
+         insert_last (if f i (Elt.value elt) then t1 else t2) (Elt.value elt)
+         |> (ignore : _ Elt.t -> unit);
+         let next = Elt.next elt in
+         if not (phys_equal next first) then loop f (i + 1) t1 t2 first next
+       in
+       loop f 0 t1 t2 first first));
   t1, t2
 ;;
 
@@ -919,18 +870,15 @@ let partition_map t ~f =
   (match !t with
    | None -> ()
    | Some first ->
-     Header.with_iteration
-       (Elt.header first)
-       (stack_
-         fun () ->
-           let rec loop f t1 t2 first elt =
-             (match (f (Elt.value elt) : (_, _) Either.t) with
-              | First value -> insert_last t1 value |> (ignore : _ Elt.t -> unit)
-              | Second value -> insert_last t2 value |> (ignore : _ Elt.t -> unit));
-             let next = Elt.next elt in
-             if not (phys_equal next first) then loop f t1 t2 first next
-           in
-           loop f t1 t2 first first));
+     Header.with_iteration (Elt.header first) (stack_ fun () ->
+       let rec loop f t1 t2 first elt =
+         (match (f (Elt.value elt) : (_, _) Either.t) with
+          | First value -> insert_last t1 value |> (ignore : _ Elt.t -> unit)
+          | Second value -> insert_last t2 value |> (ignore : _ Elt.t -> unit));
+         let next = Elt.next elt in
+         if not (phys_equal next first) then loop f t1 t2 first next
+       in
+       loop f t1 t2 first first));
   t1, t2
 ;;
 
@@ -940,18 +888,15 @@ let partition_mapi t ~f =
   (match !t with
    | None -> ()
    | Some first ->
-     Header.with_iteration
-       (Elt.header first)
-       (stack_
-         fun () ->
-           let rec loop f i t1 t2 first elt =
-             (match (f i (Elt.value elt) : (_, _) Either.t) with
-              | First value -> insert_last t1 value |> (ignore : _ Elt.t -> unit)
-              | Second value -> insert_last t2 value |> (ignore : _ Elt.t -> unit));
-             let next = Elt.next elt in
-             if not (phys_equal next first) then loop f (i + 1) t1 t2 first next
-           in
-           loop f 0 t1 t2 first first));
+     Header.with_iteration (Elt.header first) (stack_ fun () ->
+       let rec loop f i t1 t2 first elt =
+         (match (f i (Elt.value elt) : (_, _) Either.t) with
+          | First value -> insert_last t1 value |> (ignore : _ Elt.t -> unit)
+          | Second value -> insert_last t2 value |> (ignore : _ Elt.t -> unit));
+         let next = Elt.next elt in
+         if not (phys_equal next first) then loop f (i + 1) t1 t2 first next
+       in
+       loop f 0 t1 t2 first first));
   t1, t2
 ;;
 

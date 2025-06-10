@@ -162,22 +162,19 @@ module%test [@name "split"] _ = struct
     end
     in
     (* Now run the tests of [split] behavior. *)
-    quickcheck_m
-      (module M)
-      ~examples
-      ~f:(fun (parts, delimiter) ->
-        let str = concat (module Str) parts ~delimiter in
-        let split =
-          (* Re-split the whole [str] into parts. *)
-          Str.split str ~on:delimiter
-        in
-        (* Test that we got back where we started. *)
-        require_equal
-          (module struct
-            type t = Str.t list [@@deriving equal, sexp_of]
-          end)
-          split
-          parts)
+    quickcheck_m (module M) ~examples ~f:(fun (parts, delimiter) ->
+      let str = concat (module Str) parts ~delimiter in
+      let split =
+        (* Re-split the whole [str] into parts. *)
+        Str.split str ~on:delimiter
+      in
+      (* Test that we got back where we started. *)
+      require_equal
+        (module struct
+          type t = Str.t list [@@deriving equal, sexp_of]
+        end)
+        split
+        parts)
   ;;
 
   let%expect_test "round-trip via concat" =

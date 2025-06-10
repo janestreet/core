@@ -31,16 +31,29 @@ module Binable_exn = struct
   module Stable = struct
     module V1 = struct
       module T = struct
-        type t = exn Modes.Stable.Global.V1.t [@@deriving sexp_of, stable_witness]
+        type 'a contended_via_portable = 'a Modes.Contended_via_portable.t
+        [@@deriving sexp_of]
+
+        let stable_witness_contended_via_portable x =
+          Stable_witness.of_serializable
+            x
+            Modes.Contended_via_portable.wrap
+            Modes.Contended_via_portable.unwrap
+        ;;
+
+        type t = exn contended_via_portable Modes.Stable.Global.V1.t
+        [@@deriving sexp_of, stable_witness]
       end
 
       include T
 
       let%template[@mode m = (global, local)] to_binable t =
-        t |> Modes.Global.unwrap |> [%sexp_of: exn]
+        t |> Modes.Global.unwrap |> Modes.Contended_via_portable.unwrap |> [%sexp_of: exn]
       ;;
 
-      let of_binable exn = exn |> Exn.create_s |> Modes.Global.wrap
+      let of_binable exn =
+        exn |> Exn.create_s |> Modes.Contended_via_portable.wrap |> Modes.Global.wrap
+      ;;
 
       include%template
         Binable.Stable.Of_binable.V1 [@mode local] [@modality portable] [@alert "-legacy"]

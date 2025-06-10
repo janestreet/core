@@ -819,6 +819,8 @@ let to_short_string t =
 
 let gen_incl = Int63.gen_incl
 let gen_uniform_incl = Int63.gen_uniform_incl
+let gen_log_incl = Int63.gen_incl
+let gen_log_uniform_incl = Int63.gen_log_uniform_incl
 
 include%template Pretty_printer.Register [@modality portable] (struct
     type nonrec t = t

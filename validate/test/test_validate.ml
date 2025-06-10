@@ -155,6 +155,53 @@ let%expect_test "Lazy name" =
     |}]
 ;;
 
+let%expect_test "Lazy name list" =
+  let name =
+    Lazy.from_fun (fun () ->
+      print_endline "Computing lazy string";
+      "name")
+  in
+  print_s
+    [%sexp
+      ([ Validate.pass; Validate.pass ] |> Validate.lazy_name_list name |> Validate.result
+       : unit Or_error.t)];
+  [%expect {| (Ok ()) |}];
+  print_s
+    [%sexp
+      ([ Validate.fail "fail"; Validate.pass; Validate.fail "fail" ]
+       |> Validate.lazy_name_list name
+       |> Validate.result
+       : unit Or_error.t)];
+  [%expect
+    {|
+    Computing lazy string
+    (Error (
+      "validation errors" (
+        (name fail)
+        (name fail))))
+    |}]
+;;
+
+let%expect_test "Lazy booltest" =
+  let if_false =
+    Lazy.from_fun (fun () ->
+      print_endline "Computing lazy string";
+      "name")
+  in
+  print_s
+    [%sexp
+      (Validate.lazy_booltest Fn.id ~if_false true |> Validate.result : unit Or_error.t)];
+  [%expect {| (Ok ()) |}];
+  print_s
+    [%sexp
+      (Validate.lazy_booltest Fn.id ~if_false false |> Validate.result : unit Or_error.t)];
+  [%expect
+    {|
+    Computing lazy string
+    (Error ("validation errors" (("" name))))
+    |}]
+;;
+
 let%expect_test "Validate.list" =
   let name _t = "name" in
   let validate ts =

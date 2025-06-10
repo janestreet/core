@@ -1,5 +1,7 @@
 @@ portable
 
+[@@@warning "-incompatible-with-upstream"]
+
 (** A module for organizing validations of data structures.
 
     Allows standardized ways of checking for conditions, and keeps track of the location
@@ -59,7 +61,7 @@ open Base
 type t
 
 (** To make function signatures easier to read. *)
-type 'a check = 'a -> t
+type ('a : any) check = 'a -> t
 
 (** A result containing no errors. *)
 val pass : t
@@ -90,6 +92,7 @@ val name : string -> t -> t
 val lazy_name : string Lazy.t -> t -> t
 
 val name_list : string -> t list -> t
+val lazy_name_list : string Lazy.t -> t list -> t
 
 (** [fail_fn err] returns a function that always returns fail, with [err] as the error
     message. (Note that there is no [pass_fn] so as to discourage people from ignoring the
@@ -104,7 +107,8 @@ val pass_unit : unit check
 
 (** [protect f x] applies the validation [f] to [x], catching any exceptions and returning
     them as errors. *)
-val protect : 'a check -> 'a check
+val%template protect : ('a : k). 'a check -> 'a check
+[@@kind k = (value_or_null, float64, bits32, bits64, word, immediate, immediate64)]
 
 (** [try_with f] runs [f] catching any exceptions and returning them as errors. *)
 val try_with : (unit -> unit) -> t
@@ -124,15 +128,16 @@ val maybe_raise : t -> unit
 val valid_or_error : 'a check -> 'a -> 'a Or_error.t
 
 (** Used for validating an individual field. Should be used with [Fields.to_list]. *)
-val field : 'a check -> 'record -> ([> `Read ], 'record, 'a) Field.t_with_perm -> t
+val%template field
+  : ('a : k) 'record.
+  'a check -> 'record -> ([> `Read ], 'record, 'a) Field.t_with_perm -> t
+[@@kind k = (value_or_null, float64, bits32, bits64, word, immediate, immediate64)]
 
 (** Used for validating an individual field. Should be used with [Fields.Direct.to_list]. *)
-val field_direct
-  :  'a check
-  -> ([> `Read ], 'record, 'a) Field.t_with_perm
-  -> 'record
-  -> 'a
-  -> t
+val%template field_direct
+  : ('a : k) 'record.
+  'a check -> ([> `Read ], 'record, 'a) Field.t_with_perm -> 'record -> 'a -> t
+[@@kind k = (value_or_null, float64, bits32, bits64, word, immediate, immediate64)]
 
 (** Creates a function for use in a [Fields.fold]. *)
 val field_folder
@@ -158,6 +163,10 @@ val of_error : ('a -> unit Or_error.t) -> 'a check
 
 (** Creates a validation function from a function that produces a bool. *)
 val booltest : ('a -> bool) -> if_false:string -> 'a check
+
+(** Creates a validation function from a function that produces a bool. Forces the name
+    only when validation fails. *)
+val lazy_booltest : ('a -> bool) -> if_false:string Lazy.t -> 'a check
 
 (** Validation functions for particular data types. *)
 val pair : fst:'a check -> snd:'b check -> ('a * 'b) check

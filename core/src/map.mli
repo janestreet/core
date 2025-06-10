@@ -145,7 +145,8 @@ val of_iteri_exn
     data structure). *)
 
 module Tree : sig
-  type ('k, +'v, 'cmp) t = ('k, 'v, 'cmp) Tree.t [@@deriving sexp_of]
+  type ('k, +'v, 'cmp) t : immutable_data with 'k with 'v = ('k, 'v, 'cmp) Tree.t
+  [@@deriving sexp_of]
 
   include
     Creators_and_accessors_generic

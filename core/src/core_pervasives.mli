@@ -962,18 +962,18 @@ end
 (** {6 References} *)
 
 (** The type of references (mutable indirection cells) containing a value of type ['a]. *)
-type 'a ref = 'a Stdlib.ref = { mutable contents : 'a }
+type ('a : value_or_null) ref = 'a Stdlib.ref = { mutable contents : 'a }
 
 (** Return a fresh reference containing the given value. *)
-external ref : 'a -> ('a ref[@local_opt]) = "%makemutable"
+external ref : ('a : value_or_null). 'a -> ('a ref[@local_opt]) = "%makemutable"
 
 (** [!r] returns the current contents of reference [r]. Equivalent to
     [fun r -> r.contents]. *)
-external ( ! ) : ('a ref[@local_opt]) -> 'a = "%field0"
+external ( ! ) : ('a : value_or_null). ('a ref[@local_opt]) -> 'a = "%field0"
 
 (** [r := a] stores the value of [a] in reference [r]. Equivalent to
     [fun r v -> r.contents <- v]. *)
-external ( := ) : ('a ref[@local_opt]) -> 'a -> unit = "%setfield0"
+external ( := ) : ('a : value_or_null). ('a ref[@local_opt]) -> 'a -> unit = "%setfield0"
 
 (** Increment the integer contained in the given reference. Equivalent to
     [fun r -> r := succ !r]. *)

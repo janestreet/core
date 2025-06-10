@@ -357,8 +357,7 @@ module For_testing = struct
   let measure_allocation_local f = exclave_
     (measure_internal [@kind k & value])
       f
-      ~on_result:(fun ~major_words_allocated ~minor_words_allocated x ->
-        exclave_
+      ~on_result:(fun ~major_words_allocated ~minor_words_allocated x -> exclave_
         #(x, Allocation_report.create ~major_words_allocated ~minor_words_allocated))
   ;;
 

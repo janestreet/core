@@ -162,4 +162,10 @@ module Hide_port_in_test = struct
     | false -> sexp_of_t t
     | true -> List [ Atom t.host; Atom "PORT" ]
   ;;
+
+  let to_string =
+    match am_running_test with
+    | false -> to_string
+    | true -> fun t -> [%string "%{t.host}:PORT"]
+  ;;
 end

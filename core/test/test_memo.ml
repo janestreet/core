@@ -50,12 +50,10 @@ module%test [@name "comparable"] _ = struct
     let create () =
       let should_raise = ref false in
       let f =
-        of_comparable
-          (module Int)
-          (fun i ->
-            print_s [%message "Computing value" (i : int)];
-            if !should_raise then raise_s [%message "I should raise"];
-            i + 1)
+        of_comparable (module Int) (fun i ->
+          print_s [%message "Computing value" (i : int)];
+          if !should_raise then raise_s [%message "I should raise"];
+          i + 1)
       in
       { should_raise; f }
     ;;

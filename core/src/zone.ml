@@ -98,7 +98,7 @@ module Stable = struct
         [@@deriving bin_io ~localize, sexp, stable_witness]
       end
 
-      type t =
+      type t : sync_data =
         { name : string
         ; original_filename : string option
         ; digest : Md5.As_binary_string.Stable.V1.t option

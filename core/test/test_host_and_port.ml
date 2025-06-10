@@ -9,3 +9,10 @@ let%expect_test "validate sexp grammar" =
        end));
   [%expect {| (Union (String (List (Cons String (Cons Integer Empty))))) |}]
 ;;
+
+let%expect_test "test [Hide_port_in_test.to_string]" =
+  print_endline
+    (Host_and_port.Hide_port_in_test.to_string
+       (Host_and_port.create ~host:"localhost" ~port:1234));
+  [%expect {| localhost:PORT |}]
+;;

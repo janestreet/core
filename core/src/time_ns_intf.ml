@@ -16,6 +16,8 @@ module type Span = sig @@ portable
 
   include Span_intf.S with type underlying = Int63.t and type t := t
 
+  include%template Quickcheck.S_int [@mode portable] with type t := t
+
   val of_sec_with_microsecond_precision : float -> t
   val of_int_us : int -> t [@@zero_alloc strict]
   val of_int_ms : int -> t [@@zero_alloc strict]

@@ -122,7 +122,7 @@ module type Timezone = sig @@ portable
         }
 
       module The_one_and_only : sig
-        include Capsule.With_mutex
+        include Capsule.Module_with_mutex
 
         val capsule : (t, k) Capsule.Data.t
       end
