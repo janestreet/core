@@ -77,7 +77,7 @@ CAMLprim value core_gc_run_memprof_callbacks(value unit) {
 #if OCAML_5_MINUS /* This function is renamed upstream. */
   value res = caml_memprof_run_callbacks_exn();
 #elif OCAML_VERSION >= 50300 /* Supported upstream as of 5.3 */
-  value res = caml_memprof_run_callbacks_res();
+  value res = caml_get_value_or_raise(caml_memprof_run_callbacks_res());
 #else
   value res = Val_unit;
 #endif
