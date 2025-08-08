@@ -50,28 +50,38 @@ module Replace_polymorphic_compare : sig
 end =
   T
 
-let validate_ordinary t =
+let%template validate_ordinary t =
   Validate.of_error_opt
     (let module C = Class in
     match classify t with
     | C.Normal | C.Subnormal | C.Zero -> None
     | C.Infinite -> Some "value is infinite"
     | C.Nan -> Some "value is NaN")
+[@@mode p = (portable, nonportable)]
 ;;
 
 module V = struct
   module%template ZZ = Comparable.Validate [@modality portable] (T)
 
-  let validate_bound ~min ~max t =
-    Validate.first_failure (validate_ordinary t) (ZZ.validate_bound t ~min ~max)
+  let%template validate_bound ~min ~max t =
+    (Validate.first_failure [@mode p])
+      ((validate_ordinary [@mode p]) t)
+      ((ZZ.validate_bound [@mode p]) t ~min ~max)
+  [@@mode p = (portable, nonportable)]
   ;;
 
-  let validate_lbound ~min t =
-    Validate.first_failure (validate_ordinary t) (ZZ.validate_lbound t ~min)
+  let%template validate_lbound ~min t =
+    (Validate.first_failure [@mode p])
+      ((validate_ordinary [@mode p]) t)
+      ((ZZ.validate_lbound [@mode p]) t ~min)
+  [@@mode p = (portable, nonportable)]
   ;;
 
-  let validate_ubound ~max t =
-    Validate.first_failure (validate_ordinary t) (ZZ.validate_ubound t ~max)
+  let%template validate_ubound ~max t =
+    (Validate.first_failure [@mode p])
+      ((validate_ordinary [@mode p]) t)
+      ((ZZ.validate_ubound [@mode p]) t ~max)
+  [@@mode p = (portable, nonportable)]
   ;;
 end
 
@@ -88,21 +98,32 @@ let validate_not_nan t =
 module V_with_zero = struct
   module%template ZZ = Comparable.Validate_with_zero [@modality portable] (T)
 
+  [%%template
+  [@@@mode.default p = (portable, nonportable)]
+
   let validate_positive t =
-    Validate.first_failure (validate_not_nan t) (ZZ.validate_positive t)
+    (Validate.first_failure [@mode p])
+      (validate_not_nan t)
+      ((ZZ.validate_positive [@mode p]) t)
   ;;
 
   let validate_non_negative t =
-    Validate.first_failure (validate_not_nan t) (ZZ.validate_non_negative t)
+    (Validate.first_failure [@mode p])
+      (validate_not_nan t)
+      ((ZZ.validate_non_negative [@mode p]) t)
   ;;
 
   let validate_negative t =
-    Validate.first_failure (validate_not_nan t) (ZZ.validate_negative t)
+    (Validate.first_failure [@mode p])
+      (validate_not_nan t)
+      ((ZZ.validate_negative [@mode p]) t)
   ;;
 
   let validate_non_positive t =
-    Validate.first_failure (validate_not_nan t) (ZZ.validate_non_positive t)
-  ;;
+    (Validate.first_failure [@mode p])
+      (validate_not_nan t)
+      ((ZZ.validate_non_positive [@mode p]) t)
+  ;;]
 end
 
 include V_with_zero

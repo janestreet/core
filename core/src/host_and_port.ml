@@ -12,7 +12,8 @@ module Stable = struct
         { host : String.t
         ; port : Int.t
         }
-      [@@deriving compare ~localize, equal ~localize, hash, quickcheck ~portable]
+      [@@deriving
+        compare ~localize, equal ~localize, globalize, hash, quickcheck ~portable]
 
       let%template[@alloc a = (heap, stack)] to_serializable { host; port } =
         (host, port) [@exclave_if_stack a]
@@ -161,5 +162,11 @@ module Hide_port_in_test = struct
     match am_running_test with
     | false -> sexp_of_t t
     | true -> List [ Atom t.host; Atom "PORT" ]
+  ;;
+
+  let to_string =
+    match am_running_test with
+    | false -> to_string
+    | true -> fun t -> [%string "%{t.host}:PORT"]
   ;;
 end

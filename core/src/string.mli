@@ -22,7 +22,8 @@ module Caseless : sig
 
   type nonrec t = t [@@deriving bin_io ~localize, hash, sexp]
 
-  include%template Comparable.S_binable [@mode local] with type t := t
+  include%template
+    Comparable.S_binable [@mode local] [@modality portable] with type t := t
 
   include Hashable.S_binable with type t := t
 end
@@ -47,7 +48,7 @@ include Hexdump.S with type t := t
 
 include%template
   Identifiable.S
-  [@mode local]
+  [@mode local] [@modality portable]
   with type t := t
    and type comparator_witness := comparator_witness
 

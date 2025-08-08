@@ -6,7 +6,7 @@ type t =
   { host : string
   ; port : int
   }
-[@@deriving hash]
+[@@deriving globalize, hash]
 
 val create : host:string -> port:int -> t
 val host : t -> string
@@ -35,7 +35,14 @@ module Stable : sig
   module V1 : sig
     type nonrec t = t
     [@@deriving
-      sexp, sexp_grammar, bin_io, compare ~localize, equal ~localize, hash, quickcheck]
+      sexp
+      , sexp_grammar
+      , bin_io
+      , compare ~localize
+      , equal ~localize
+      , globalize
+      , hash
+      , quickcheck]
 
     include Base.Stringable.S with type t := t
 

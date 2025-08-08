@@ -11,7 +11,7 @@ include (
 
     [%%rederive:
       type nonrec 'a t = 'a t
-      [@@deriving compare ~localize, globalize, sexp ~localize, sexp_grammar]]
+      [@@deriving compare ~localize, globalize, sexp ~stackify, sexp_grammar]]
   end)
 
 [%%rederive.portable
@@ -152,52 +152,59 @@ module type Permissioned = sig
   include Blit.S1_permissions with type ('a, 'perms) t := ('a, 'perms) t
   include Binary_searchable.S1_permissions with type ('a, 'perms) t := ('a, 'perms) t
 
-  external length : 'a 'perms. (('a, 'perms) t[@local_opt]) -> int = "%array_length"
-  [@@layout_poly]
-
+  val length : ('a, 'perms) t -> int
   val is_empty : (_, _) t -> bool
 
   external%template get
-    : 'a.
-    (('a, [> read ]) t[@local_opt]) -> (int[@local_opt]) -> 'a
+    :  (('a, [> read ]) t[@local_opt])
+    -> (int[@local_opt])
+    -> 'a
     = "%array_safe_get"
-  [@@layout_poly] [@@mode m = (uncontended, shared)]
+  [@@mode m = (uncontended, shared)]
+
+  val%template get_opt : ('a, [> read ]) t -> int -> 'a Option.t
+  [@@mode c = (uncontended, shared)] [@@alloc __ @ m = (heap_global, stack_local)]
 
   external set
-    : 'a.
-    (('a, [> write ]) t[@local_opt]) -> (int[@local_opt]) -> 'a -> unit
+    :  (('a, [> write ]) t[@local_opt])
+    -> (int[@local_opt])
+    -> 'a
+    -> unit
     = "%array_safe_set"
-  [@@layout_poly]
 
   external%template unsafe_get
-    : 'a.
-    (('a, [> read ]) t[@local_opt]) -> (int[@local_opt]) -> 'a
+    :  (('a, [> read ]) t[@local_opt])
+    -> (int[@local_opt])
+    -> 'a
     = "%array_unsafe_get"
-  [@@layout_poly] [@@mode m = (uncontended, shared)]
+  [@@mode m = (uncontended, shared)]
 
   external unsafe_set
-    : 'a.
-    (('a, [> write ]) t[@local_opt]) -> (int[@local_opt]) -> 'a -> unit
+    :  (('a, [> write ]) t[@local_opt])
+    -> (int[@local_opt])
+    -> 'a
+    -> unit
     = "%array_unsafe_set"
-  [@@layout_poly]
 
   val create_float_uninitialized : len:int -> (float, [< _ perms ]) t
 
   [%%template:
     val create : len:int -> 'a -> ('a, [< _ perms ]) t
     [@@ocaml.doc
-      " [create ~len x] creates an array of length [len] with the value [x] populated in\n\
-      \        each element. "]
+      {| [create ~len x] creates an array of length [len] with the value [x] populated in
+        each element. |}]
     [@@alloc __ = (heap, stack)]]
 
   val create_local : len:int -> 'a -> ('a, [< _ perms ]) t
 
   val magic_create_uninitialized : len:int -> ('a, [< _ perms ]) t
   [@@ocaml.doc
-    " [magic_create_uninitialized ~len] creates an array of length [len]. All elements\n\
-    \        are magically populated as a tagged [0]. "]
+    {| [magic_create_uninitialized ~len] creates an array of length [len]. All elements
+        are magically populated as a tagged [0]. |}]
 
-  val init : int -> f:(int -> 'a) -> ('a, [< _ perms ]) t
+  val%template init : int -> f:(int -> 'a) -> ('a, [< _ perms ]) t
+  [@@alloc __ @ m = (heap_global, stack_local)]
+
   val make_matrix : dimx:int -> dimy:int -> 'a -> (('a, [< _ perms ]) t, [< _ perms ]) t
 
   val copy_matrix
@@ -209,7 +216,9 @@ module type Permissioned = sig
   val copy : ('a, [> read ]) t -> ('a, [< _ perms ]) t
   val fill : ('a, [> write ]) t -> pos:int -> len:int -> 'a -> unit
   val of_list : 'a list -> ('a, [< _ perms ]) t
-  val map : ('a, [> read ]) t -> f:('a -> 'b) -> ('b, [< _ perms ]) t
+
+  val%template map : 'a 'b 'p. ('a, [> read ]) t -> f:('a -> 'b) -> ('b, [< 'p perms ]) t
+  [@@kind ki = (value, immediate, immediate64), ko = (value, immediate, immediate64)]
 
   val folding_map
     :  ('a, [> read ]) t
@@ -493,7 +502,42 @@ end = struct
   let to_array_id = Fn.id
   let of_array_id = Fn.id
 
-  include (T : Permissioned with type ('a, 'b) t := ('a, 'b) t) [@ocaml.warning "-3"]
+  module T' = struct
+    (* Replace externals in [T] with non-layout poly versions *)
+    include T
+
+    external length : ('a t[@local_opt]) -> int = "%array_length"
+
+    external%template get
+      :  ('a t[@local_opt])
+      -> (int[@local_opt])
+      -> 'a
+      = "%array_safe_get"
+    [@@mode m = (uncontended, shared)]
+
+    external%template unsafe_get
+      :  ('a t[@local_opt])
+      -> (int[@local_opt])
+      -> 'a
+      = "%array_unsafe_get"
+    [@@mode m = (uncontended, shared)]
+
+    external unsafe_set
+      :  ('a t[@local_opt])
+      -> (int[@local_opt])
+      -> 'a
+      -> unit
+      = "%array_unsafe_set"
+
+    external set
+      :  ('a t[@local_opt])
+      -> (int[@local_opt])
+      -> 'a
+      -> unit
+      = "%array_safe_set"
+  end
+
+  include (T' : Permissioned with type ('a, 'b) t := ('a, 'b) t) [@ocaml.warning "-3"]
 
   let to_array = copy
   let to_sequence_immutable = to_sequence_mutable
@@ -505,6 +549,21 @@ module type S = sig
   include Binary_searchable.S1 with type 'a t := 'a t
   include Indexed_container.S1_with_creators with type 'a t := 'a t
 
+  include
+    Indexed_container.S1_with_creators__base
+    with type 'a t := 'a t
+     and type 'a t__float64 := 'a t
+     and type 'a t__bits32 := 'a t
+     and type 'a t__bits64 := 'a t
+     and type 'a t__word := 'a t
+     and type 'a t__immediate := 'a t
+     and type 'a t__immediate64 := 'a t
+
+  val%template map : 'a 'b. 'a t -> f:('a -> 'b) -> 'b t
+  [@@kind
+    ki = (value, float64, bits32, bits64, word, immediate, immediate64)
+    , ko = (value, float64, bits32, bits64, word, immediate, immediate64)]
+
   external length : 'a 'perms. ('a t[@local_opt]) -> int = "%array_length" [@@layout_poly]
 
   external%template get
@@ -512,6 +571,11 @@ module type S = sig
     ('a t[@local_opt]) -> (int[@local_opt]) -> 'a
     = "%array_safe_get"
   [@@layout_poly] [@@mode m = (uncontended, shared)]
+
+  val%template get_opt : 'a. 'a t -> int -> ('a Option.t[@kind k])
+  [@@mode c = (uncontended, shared)]
+  [@@kind k = (value, immediate, immediate64, float64, bits32, bits64, word)]
+  [@@alloc __ @ m = (heap_global, stack_local)]
 
   external set
     : 'a.
@@ -534,27 +598,40 @@ module type S = sig
   [%%template:
     val create : len:int -> 'a -> 'a t
     [@@ocaml.doc
-      " [create ~len x] creates an array of length [len] with the value [x] populated in\n\
-      \        each element. "]
+      {| [create ~len x] creates an array of length [len] with the value [x] populated in
+        each element. |}]
     [@@alloc __ = (heap, stack)]]
 
   val create_local : len:int -> 'a -> 'a t
 
   val magic_create_uninitialized : len:int -> 'a t
   [@@ocaml.doc
-    " [magic_create_uninitialized ~len] creates an array of length [len]. All elements\n\
-    \        are magically populated as a tagged [0]. "]
+    {| [magic_create_uninitialized ~len] creates an array of length [len]. All elements
+        are magically populated as a tagged [0]. |}]
 
   val create_float_uninitialized : len:int -> float t
-  val init : int -> f:(int -> 'a) -> 'a t
+
+  val%template init : int -> f:(int -> 'a) -> 'a t
+  [@@alloc __ @ m = (heap_global, stack_local)]
+
   val make_matrix : dimx:int -> dimy:int -> 'a -> 'a t t
   val copy_matrix : 'a t t -> 'a t t
   val append : 'a t -> 'a t -> 'a t
-  val concat : 'a t list -> 'a t
-  val copy : 'a t -> 'a t
-  val fill : 'a t -> pos:int -> len:int -> 'a -> unit
+
+  [%%template:
+  [@@@kind.default k = (value, float64, bits32, bits64, word, immediate, immediate64)]
+
+  val concat : 'a. 'a t list -> 'a t
+  val copy : 'a. 'a t -> 'a t
+  val fill : 'a. 'a t -> pos:int -> len:int -> 'a -> unit]
 
   include Blit.S1 with type 'a t := 'a t
+
+  val%template unsafe_blit : 'a. ('a array, 'a array) Blit.blit
+  [@@kind k = (immediate, immediate64, bits64, bits32, word, float64)]
+
+  val%template sub : 'a. ('a array, 'a array) Blit.sub
+  [@@kind k = (immediate, immediate64, bits64, bits32, word, float64)]
 
   val of_list : 'a list -> 'a t
   val map : 'a t -> f:('a -> 'b) -> 'b t
@@ -611,12 +688,25 @@ module type S = sig
   val of_list_rev_map : 'a list -> f:('a -> 'b) -> 'b t
   val of_list_rev_mapi : 'a list -> f:(int -> 'a -> 'b) -> 'b t
   val map_inplace : 'a t -> f:('a -> 'a) -> unit
-  val find_exn : 'a t -> f:('a -> bool) -> 'a
-  val find_map_exn : 'a t -> f:('a -> 'b option) -> 'b
+
+  [%%template:
+  [@@@kind.default k1 = (value, float64, bits32, bits64, word, immediate, immediate64)]
+
+  val find_exn : 'a. 'a t -> f:('a -> bool) -> 'a
+
+  [@@@kind.default k2 = (value, float64, bits32, bits64, word, immediate, immediate64)]
+
+  val find_map_exn : 'a 'b. 'a t -> f:('a -> ('b Option.t[@kind k2])) -> 'b
+  val find_mapi_exn : 'a 'b. 'a t -> f:(int -> 'a -> ('b Option.t[@kind k2])) -> 'b]
+
+  [%%template:
+  [@@@kind.default k = (float64, bits32, bits64, word, immediate, immediate64)]
+
+  val findi : 'a. 'a t -> f:(int -> 'a -> bool) -> ((int * 'a) Option.t[@kind value & k])
+  val findi_exn : 'a. 'a t -> f:(int -> 'a -> bool) -> int * 'a]
+
   val findi : 'a t -> f:(int -> 'a -> bool) -> (int * 'a) option
   val findi_exn : 'a t -> f:(int -> 'a -> bool) -> int * 'a
-  val find_mapi : 'a t -> f:(int -> 'a -> 'b option) -> 'b option
-  val find_mapi_exn : 'a t -> f:(int -> 'a -> 'b option) -> 'b
   val find_consecutive_duplicate : 'a t -> equal:('a -> 'a -> bool) -> ('a * 'a) option
   val reduce : 'a t -> f:('a -> 'a -> 'a) -> 'a option
   val reduce_exn : 'a t -> f:('a -> 'a -> 'a) -> 'a
@@ -633,6 +723,8 @@ module type S = sig
   val equal__local : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
   val to_sequence : 'a t -> 'a Core_sequence.t
   val to_sequence_mutable : 'a t -> 'a Core_sequence.t
+  val split_n : 'a t -> int -> 'a t * 'a t
+  val chunks_of : 'a t -> length:int -> 'a t t
 end
 
 include (T : S with type 'a t := 'a array) [@ocaml.warning "-3"]
@@ -650,24 +742,4 @@ module Float = struct
   include T.Float
 
   type t = t_ [@@deriving bin_io ~localize, compare ~localize, sexp, sexp_grammar]
-end
-
-module _ (M : S) : sig
-  type ('a, -'perm) t_
-
-  include Permissioned with type ('a, 'perm) t := ('a, 'perm) t_
-end = struct
-  include M
-
-  type ('a, -'perm) t_ = 'a t
-end
-
-module _ (M : Permissioned) : sig
-  type 'a t_
-
-  include S with type 'a t := 'a t_
-end = struct
-  include M
-
-  type 'a t_ = ('a, read_write) t
 end

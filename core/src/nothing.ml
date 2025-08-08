@@ -47,6 +47,19 @@ module Stable = struct
     let sexp_of_t = unreachable_code
     let t_of_sexp sexp = Sexplib.Conv_error.empty_type tp_loc sexp
     let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
+
+    module Diff = struct
+      type nonrec derived_on = t
+      type nonrec t = t [@@deriving bin_io, sexp]
+
+      let get ~from ~to_:_ = unreachable_code from
+      let apply_exn derived_on _ = unreachable_code derived_on
+
+      let of_list_exn = function
+        | [] -> Diffable.Optional_diff.get_none ()
+        | t :: _ -> unreachable_code t
+      ;;
+    end
   end
 end
 

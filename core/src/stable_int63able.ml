@@ -29,3 +29,11 @@ module With_stable_witness = struct
     val of_int63_exn : Int63.t -> t
   end
 end
+
+module%template Module_types_for_export = struct
+  [@@@mode.default m = (global, local)]
+
+  module type Stable_int63able = S [@mode m]
+  module type Stable_int63able_without_comparator = Without_comparator.S [@mode m]
+  module type Stable_int63able_with_witness = With_stable_witness.S [@mode m]
+end

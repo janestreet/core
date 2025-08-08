@@ -19,6 +19,8 @@ include%template
   with type t := t
    and type comparator_witness := comparator_witness
 
+include Diffable.S_atomic with type t := t
+
 module Stable : sig
   module V1 : sig
     type nonrec t = t
@@ -31,5 +33,7 @@ module Stable : sig
       , sexp
       , stable_witness
       , sexp_grammar]
+
+    include Diffable.S_atomic with type t := t
   end
 end

@@ -11,7 +11,7 @@ include Stdlib
 
    [[1] http://caml.inria.fr/mantis/view.php?id=6556
 *)
-external raise : exn -> 'a = "%reraise"
+external raise : 'a. exn -> 'a = "%reraise"
 external ignore : 'a. ('a[@local_opt]) -> unit = "%ignore" [@@layout_poly]
 
 [%%if ocaml_version < (4, 12, 0)]

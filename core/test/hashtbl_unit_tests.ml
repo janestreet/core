@@ -9,7 +9,9 @@ module%template _ (Hashtbl : Hashtbl_intf.Hashtbl [@modality portable]) = struct
     include (
       Hashtbl :
       sig
-        include Hashtbl_for_testing with type ('a, 'b) t = ('a, 'b) Hashtbl.t
+        type (!'a, !'b) t = ('a, 'b) Hashtbl.t
+
+        include Hashtbl_for_testing with type ('a, 'b) t := ('a, 'b) t
       end)
 
     (* Now add what remains from [Hashtbl_intf.Hashtbl]. *)
@@ -20,12 +22,16 @@ module%template _ (Hashtbl : Hashtbl_intf.Hashtbl [@modality portable]) = struct
         with type ('a, 'b) t := ('a, 'b) Hashtbl.t
          and type ('a, 'b) t__float64__float64 = ('a, 'b) Hashtbl.t__float64__float64
          and type ('a, 'b) t__float64__bits64 = ('a, 'b) Hashtbl.t__float64__bits64
-         and type ('a, 'b) t__float64__value = ('a, 'b) Hashtbl.t__float64__value
+         and type ('a, 'b) t__float64__value_or_null =
+          ('a, 'b) Hashtbl.t__float64__value_or_null
          and type ('a, 'b) t__bits64__float64 = ('a, 'b) Hashtbl.t__bits64__float64
          and type ('a, 'b) t__bits64__bits64 = ('a, 'b) Hashtbl.t__bits64__bits64
-         and type ('a, 'b) t__bits64__value = ('a, 'b) Hashtbl.t__bits64__value
-         and type ('a, 'b) t__value__float64 = ('a, 'b) Hashtbl.t__value__float64
-         and type ('a, 'b) t__value__bits64 = ('a, 'b) Hashtbl.t__value__bits64)
+         and type ('a, 'b) t__bits64__value_or_null =
+          ('a, 'b) Hashtbl.t__bits64__value_or_null
+         and type ('a, 'b) t__value_or_null__float64 =
+          ('a, 'b) Hashtbl.t__value_or_null__float64
+         and type ('a, 'b) t__value_or_null__bits64 =
+          ('a, 'b) Hashtbl.t__value_or_null__bits64)
 
     include (
       Hashtbl : Base.Hashtbl.Hashtbl_equality with type ('a, 'b) t := ('a, 'b) Hashtbl.t)
@@ -619,11 +625,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
       ;;
 
       let%template choose = (Hashtbl.choose [@mode m]) [@@mode m = (local, global)]
-
-      let%template choose_exn = (Hashtbl.choose_exn [@mode m])
-      [@@mode m = (local, global)]
-      ;;
-
+      let choose_exn = Hashtbl.choose_exn
       let choose_randomly = Hashtbl.choose_randomly
       let choose_randomly_exn = Hashtbl.choose_randomly_exn
 
@@ -639,13 +641,10 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
               (is_some (choose_randomly t))
               ~expect:(not (Map.is_empty map));
             [%test_result: bool]
-              (Exn.does_raise (fun () -> choose_exn t))
+              (Exn.does_raise (fun () -> ignore (choose_exn t : _ * _)))
               ~expect:(Map.is_empty map);
             [%test_result: bool]
-              (Exn.does_raise (fun () -> ignore ((choose_exn [@mode local]) t : _ * _)))
-              ~expect:(Map.is_empty map);
-            [%test_result: bool]
-              (Exn.does_raise (fun () -> choose_randomly_exn t))
+              (Exn.does_raise (fun () -> ignore (choose_randomly_exn t : _ * _)))
               ~expect:(Map.is_empty map))
         ;;]
 
@@ -936,6 +935,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
       ;;
 
       let find = Hashtbl.find
+      let find_or_null = Hashtbl.find_or_null
       let find_exn = Hashtbl.find_exn
 
       let%test_unit _ =
@@ -950,12 +950,13 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
                 ~expect:(Map.find map key)
                 ~message:name)
         in
+        let find_or_null t key = find_or_null t key |> Or_null.to_option in
         let find_exn t key =
           match find_exn t key with
           | data -> Some data
           | exception _ -> None
         in
-        List.iter ~f [ "find", find; "find_exn", find_exn ]
+        List.iter ~f [ "find", find; "find_or_null", find_or_null; "find_exn", find_exn ]
       ;;
 
       let find_and_call = Hashtbl.find_and_call
@@ -1287,14 +1288,6 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_for_testing) = struct
           assert false)
       ;;
 
-      type 'a test_result =
-        ?here:Lexing.position list
-        -> ?message:string
-        -> ?equal:('a -> 'a -> bool)
-        -> expect:'a
-        -> 'a
-        -> unit
-
       let mutation_after_callback_does_not_raise
         (type a)
         ~make
@@ -1303,7 +1296,7 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_for_testing) = struct
         ~mutate
         ~test_result
         =
-        let (_ : a test_result) = test_result in
+        let (_ : [%test_result: a]) = test_result in
         let t = make () in
         let (_ : a) = caller t callback in
         mutate t
@@ -1317,7 +1310,7 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_for_testing) = struct
         ~mutate
         ~test_result
         =
-        let (_ : a test_result) = test_result in
+        let (_ : [%test_result: a]) = test_result in
         let t = make () in
         let (_ : a Or_error.t) =
           Or_error.try_with (fun () -> inside_iter t (fun () -> caller t callback))
@@ -1333,7 +1326,7 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_for_testing) = struct
         ~mutate
         ~test_result
         =
-        let (_ : a test_result) = test_result in
+        let (_ : [%test_result: a]) = test_result in
         let t = make () in
         let (_ : a Or_error.t) =
           Or_error.try_with (fun () ->
@@ -1350,7 +1343,7 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_for_testing) = struct
         ~mutate
         ~test_result
         =
-        let (_ : a test_result) = test_result in
+        let (_ : [%test_result: a]) = test_result in
         let t = make () in
         let (_ : a Or_error.t) =
           Or_error.try_with (fun () -> caller t (fun _ -> assert false))
@@ -2073,7 +2066,7 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_for_testing) = struct
     (* non-functions, and functions that neither mutate nor have callbacks *)
 
     let%template choose = (Hashtbl.choose [@mode m]) [@@mode m = (local, global)]
-    let%template choose_exn = (Hashtbl.choose_exn [@mode m]) [@@mode m = (local, global)]
+    let choose_exn = Hashtbl.choose_exn
     let choose_randomly = Hashtbl.choose_randomly
     let choose_randomly_exn = Hashtbl.choose_randomly_exn
     let create = Hashtbl.create
@@ -2097,6 +2090,7 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_for_testing) = struct
     let is_empty = Hashtbl.is_empty
     let mem = Hashtbl.mem
     let find = Hashtbl.find
+    let find_or_null = Hashtbl.find_or_null
     let find_exn = Hashtbl.find_exn
     let find_multi = Hashtbl.find_multi
     let to_alist = Hashtbl.to_alist
@@ -2162,17 +2156,20 @@ let%expect_test "smoke tests for templated versions making sure the Core wrapper
     type t = string option [@@deriving compare, equal, sexp]
   end
   in
-  let t = (Hashtbl.create [@kind bits64 value]) (module Int64_u) in
-  (Hashtbl.set [@kind bits64 value]) t ~key:1L ~data:"foo";
-  require ((Hashtbl.mem [@kind bits64 value]) t 1L);
-  require (not @@ (Hashtbl.mem [@kind bits64 value]) t 2L);
-  require_equal (module StrO) ((Hashtbl.find [@kind bits64 value]) t 2L) None;
-  require_equal (module StrO) ((Hashtbl.find [@kind bits64 value]) t 1L) (Some "foo");
-  (Hashtbl.add_exn [@kind bits64 value]) t ~key:0L ~data:"zero";
+  let t = (Hashtbl.create [@kind bits64 value_or_null]) (module Int64_u) in
+  (Hashtbl.set [@kind bits64 value_or_null]) t ~key:1L ~data:"foo";
+  require ((Hashtbl.mem [@kind bits64 value_or_null]) t 1L);
+  require (not @@ (Hashtbl.mem [@kind bits64 value_or_null]) t 2L);
+  require_equal (module StrO) ((Hashtbl.find [@kind bits64 value_or_null]) t 2L) None;
+  require_equal
+    (module StrO)
+    ((Hashtbl.find [@kind bits64 value_or_null]) t 1L)
+    (Some "foo");
+  (Hashtbl.add_exn [@kind bits64 value_or_null]) t ~key:0L ~data:"zero";
   require_does_raise (fun () ->
-    (Hashtbl.add_exn [@kind bits64 value]) t ~key:0L ~data:"zero");
+    (Hashtbl.add_exn [@kind bits64 value_or_null]) t ~key:0L ~data:"zero");
   [%expect {| ("Hashtbl.add_exn got key already present" 0) |}];
-  print_s [%sexp (t : ((Int64_u.t, string) Hashtbl.t[@kind bits64 value]))];
+  print_s [%sexp (t : ((Int64_u.t, string) Hashtbl.t[@kind bits64 value_or_null]))];
   [%expect
     {|
     ((0 zero)

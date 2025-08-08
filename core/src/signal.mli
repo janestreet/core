@@ -2,7 +2,7 @@
 
 open! Import
 
-type t [@@deriving bin_io, sexp]
+type t [@@deriving bin_io, sexp] [@@immediate]
 
 include%template Comparable.S [@mode local] with type t := t
 

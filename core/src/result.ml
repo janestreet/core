@@ -13,7 +13,7 @@ module Stable = struct
       , equal ~localize
       , globalize
       , hash
-      , sexp ~localize
+      , sexp ~stackify
       , sexp_grammar
       , stable_witness
       , typerep]

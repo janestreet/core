@@ -112,8 +112,8 @@ module Zone_cache = struct
     ;;
 
     let with_the_one_and_only f =
-      Capsule.Mutex.with_lock mutex ~f:(fun password ->
-        Capsule.Data.get capsule ~password ~f)
+      Capsule.Mutex.with_lock mutex ~f:(fun access ->
+        f (Capsule.Data.unwrap ~access capsule))
     ;;
 
     let clear () = with_the_one_and_only (fun t -> clear t)

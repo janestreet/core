@@ -22,7 +22,9 @@ module Definitions = struct
 
     type +'a t = 'a Generator.t
 
-    val create : (size:int -> random:Splittable_random.t -> 'a) -> 'a t
+    val%template create : (size:int -> random:Splittable_random.t -> 'a) -> 'a t
+    [@@mode p = (portable, nonportable)]
+
     val generate : 'a t -> size:int -> random:Splittable_random.t -> 'a
 
     (** Generators form a monad. [t1 >>= fun x -> t2] replaces each value [x] in [t1] with
@@ -323,6 +325,9 @@ module Definitions = struct
         observed values to the elements of [list] using [equal]. *)
     val of_list : 'a list -> equal:('a -> 'a -> bool) -> 'a t
 
+    val%template of_list : 'a. 'a list -> equal:('a -> 'a -> bool) -> 'a t
+    [@@mode p = portable]
+
     (** Fixed point observer for recursive types. For example:
 
         {[
@@ -431,7 +436,10 @@ module Definitions = struct
     type 'a t = 'a Shrinker.t
 
     val shrink : 'a t -> 'a -> 'a Sequence.t
-    val create : ('a -> 'a Sequence.t) -> 'a t
+
+    val%template create : ('a -> 'a Sequence.t) -> 'a t
+    [@@mode p = (portable, nonportable)]
+
     val empty : unit -> 'a t
     val bool : bool t
     val char : char t

@@ -596,3 +596,84 @@ let%expect_test "parse errors" =
     ====
     |}]
 ;;
+
+let%expect_test "[Percent] and [Float] used to misalign on various functions" =
+  let negative_float_generators =
+    [ Quickcheck.Generator.return Float.neg_infinity; Float.gen_negative ]
+  in
+  let positive_float_generators =
+    [ Float.gen_positive; Quickcheck.Generator.return Float.infinity ]
+  in
+  let float_generators =
+    [ Float.gen_nan; Float.gen_zero ]
+    @ negative_float_generators
+    @ positive_float_generators
+  in
+  List.iter float_generators ~f:(fun gen ->
+    quickcheck gen ~sexp_of:[%sexp_of: float] ~f:(fun float ->
+      let test ?(here = Stdlib.Lexing.dummy_pos) name f_percent f_float =
+        require_equal
+          ~here
+          ~message:name
+          (module Bool)
+          (f_percent (Percent.of_mult float))
+          (f_float float)
+      in
+      test "is_positive" Percent.is_positive Float.is_positive;
+      test "is_negative" Percent.is_negative Float.is_negative;
+      test "is_non_positive" Percent.is_non_positive Float.is_non_positive;
+      test "is_non_negative" Percent.is_non_negative Float.is_non_negative));
+  [%expect {| |}];
+  List.iter float_generators ~f:(fun gen ->
+    quickcheck gen ~sexp_of:[%sexp_of: float] ~f:(fun float ->
+      let test ?(here = Stdlib.Lexing.dummy_pos) name f_percent f_float =
+        require_equal
+          ~here
+          ~message:name
+          (module struct
+            type t = Sign.t option [@@deriving equal, sexp_of]
+          end)
+          (Core.Option.try_with (fun () -> f_percent (Percent.of_mult float)))
+          (Core.Option.try_with (fun () -> f_float float))
+      in
+      test "sign_exn" Percent.sign_exn Float.sign_exn));
+  [%expect {| |}];
+  let require_float_equal ?(here = Stdlib.Lexing.dummy_pos) name t1 t2 =
+    require
+      ~here
+      (Float.equal t1 t2 || (Float.is_nan t1 && Float.is_nan t2))
+      ~if_false_then_print_s:
+        [%lazy_message "" ~_:(name : string) ~_:(t1 : float) ~_:(t2 : float)]
+  in
+  List.iter float_generators ~f:(fun gen_a ->
+    List.iter float_generators ~f:(fun gen_b ->
+      quickcheck
+        ~sexp_of:[%sexp_of: float * float]
+        (Quickcheck.Generator.tuple2 gen_a gen_b)
+        ~f:(fun (a, b) ->
+          require_float_equal
+            "min"
+            (Percent.to_mult (Percent.min (Percent.of_mult a) (Percent.of_mult b)))
+            (Float.min a b);
+          require_float_equal
+            "max"
+            (Percent.to_mult (Percent.max (Percent.of_mult a) (Percent.of_mult b)))
+            (Float.max a b))));
+  [%expect {| |}];
+  List.iter negative_float_generators ~f:(fun gen_min ->
+    List.iter positive_float_generators ~f:(fun gen_max ->
+      List.iter float_generators ~f:(fun gen ->
+        quickcheck
+          ~sexp_of:[%sexp_of: float * float * float]
+          (Quickcheck.Generator.tuple3 gen_min gen_max gen)
+          ~f:(fun (min, max, float) ->
+            require_float_equal
+              "clamp_exn"
+              (Percent.to_mult
+                 (Percent.clamp_exn
+                    ~min:(Percent.of_mult min)
+                    ~max:(Percent.of_mult max)
+                    (Percent.of_mult float)))
+              (Float.clamp_exn ~min ~max float)))));
+  [%expect {| |}]
+;;

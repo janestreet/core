@@ -89,7 +89,7 @@ module Observer = struct
   let of_predicate a b ~f = unmap (variant2 a b) ~f:(fun x -> if f x then `A x else `B x)
   let singleton () = opaque
   let doubleton f = of_predicate (singleton ()) (singleton ()) ~f
-  let enum _ ~f = unmap int ~f
+  let%template enum _ ~f = (unmap [@mode p]) int ~f [@@mode p = (portable, nonportable)]
 
   let of_list list ~equal =
     let f x =
@@ -98,6 +98,19 @@ module Observer = struct
       | Some (i, _) -> i
     in
     enum (List.length list) ~f
+  ;;
+
+  (* It's difficult to define both [of_list]s in the same [%template] definition as we
+     need [a] to mode-cross contention in the portable definition.
+  *)
+  let%template of_list (type a) (list : a list) ~(equal : a -> a -> bool) =
+    let f x =
+      match List.findi list ~f:(fun _ y -> equal x y) with
+      | None -> failwith "Quickcheck.Observer.of_list: value not found"
+      | Some (i, _) -> i
+    in
+    (enum [@mode portable]) (List.length list) ~f
+  [@@mode portable]
   ;;
 
   let of_fun f = create (fun x ~size ~hash -> observe (f ()) x ~size ~hash)

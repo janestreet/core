@@ -65,6 +65,10 @@ struct
     let split x = simplify_accessor split x
     let split_le_gt x = simplify_accessor split_le_gt x
     let split_lt_ge x = simplify_accessor split_lt_ge x
+    let count_lt x = simplify_accessor count_lt x
+    let count_le x = simplify_accessor count_le x
+    let count_gt x = simplify_accessor count_gt x
+    let count_ge x = simplify_accessor count_ge x
     let subrange x = simplify_accessor subrange x
     let fold_range_inclusive x = simplify_accessor fold_range_inclusive x
     let range_to_alist x = simplify_accessor range_to_alist x
@@ -1979,6 +1983,10 @@ struct
   let split _ = assert false
   let split_le_gt _ = assert false
   let split_lt_ge _ = assert false
+  let count_lt _ = assert false
+  let count_le _ = assert false
+  let count_gt _ = assert false
+  let count_ge _ = assert false
 
   let%test_unit _ =
     let check here map pivot =
@@ -2003,7 +2011,9 @@ struct
         assert (Map.invariants r);
         Map.iteri l ~f:(fun ~key ~data:_ -> assert (Key.( <= ) key pivot));
         Map.iteri r ~f:(fun ~key ~data:_ -> assert (Key.( > ) key pivot));
-        [%test_eq: int] ~here:[ here ] (Map.length map) (Map.length l + Map.length r)
+        [%test_eq: int] ~here:[ here ] (Map.length map) (Map.length l + Map.length r);
+        [%test_eq: int] ~here:[ here ] (Map.count_le map pivot) (Map.length l);
+        [%test_eq: int] ~here:[ here ] (Map.count_gt map pivot) (Map.length r)
       in
       let () =
         let l, r = Map.split_lt_ge map pivot in
@@ -2011,7 +2021,9 @@ struct
         assert (Map.invariants r);
         Map.iteri l ~f:(fun ~key ~data:_ -> assert (Key.( < ) key pivot));
         Map.iteri r ~f:(fun ~key ~data:_ -> assert (Key.( >= ) key pivot));
-        [%test_eq: int] ~here:[ here ] (Map.length map) (Map.length l + Map.length r)
+        [%test_eq: int] ~here:[ here ] (Map.length map) (Map.length l + Map.length r);
+        [%test_eq: int] ~here:[ here ] (Map.count_lt map pivot) (Map.length l);
+        [%test_eq: int] ~here:[ here ] (Map.count_ge map pivot) (Map.length r)
       in
       ()
     in

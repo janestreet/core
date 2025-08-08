@@ -15,7 +15,7 @@ include Replace_polymorphic_compare_efficient
 include (
   Span :
   sig
-    include Quickcheck.S_range with type t := t
+    include Quickcheck.S_int with type t := t
   end)
 
 let[@zero_alloc] now t = Span.since_unix_epoch t
@@ -158,7 +158,7 @@ let prev_multiple_internal
     ~interval
 ;;
 
-let next_multiple ?(can_equal_after = false) ~base ~after ~interval () =
+let next_multiple ?(can_equal_after = false) ~base ~after ~interval () : t =
   next_multiple_internal
     ~calling_function_name:"next_multiple"
     ~can_equal_after
@@ -216,6 +216,21 @@ let round_down_to_ms t =
 
 let round_down_to_sec t =
   round_down t ~interval:Span.second ~calling_function_name:"round_down_to_sec"
+;;
+
+let every interval ~start ~stop =
+  let[@tail_mod_cons] rec maybe_starting_at ~start =
+    if start > stop then [] else starting_at ~start
+  and[@tail_mod_cons] starting_at ~start =
+    start :: maybe_starting_at ~start:(Span.( + ) start interval)
+  in
+  if Span.( <= ) interval Span.zero
+  then
+    Or_error.error_s
+      [%message "[Time_ns.every] got non-positive interval" (interval : Span.t)]
+  else if start > stop
+  then Or_error.error_s [%message "Time_ns.every called with [start > stop]."]
+  else Ok (starting_at ~start)
 ;;
 
 let random ?state () = Span.random ?state ()
@@ -1028,6 +1043,7 @@ let of_string_gen ~if_no_timezone ?(find_zone = Timezone.find_exn) s =
     | `Local -> Portable_lazy.force Timezone.local_portable
     | `Use_this_one zone -> zone
     | `Use_this_one_lazy zone -> Lazy.force zone
+    | `Use_this_one_portable_lazy zone -> Portable_lazy.force zone
   in
   of_string_gen ~default_zone ~find_zone s
 ;;

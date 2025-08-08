@@ -937,6 +937,7 @@ module Unit_tests
   let exists _ = assert false
   let fold _ = assert false
   let iter _ = assert false
+  let iter_until _ = assert false
   let length _ = assert false
   let of_tree _ = assert false
   let filter_map _ = assert false

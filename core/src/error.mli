@@ -12,7 +12,6 @@ include Quickcheckable.S with type t := t
 
 (** This include is the source of the bin_io and diff functions. *)
 include Info_intf.Extension with type t := t
-
 (** @inline *)
 
 (** [Error.t] is {e not} wire-compatible with [Error.Stable.V1.t]. See info.mli for

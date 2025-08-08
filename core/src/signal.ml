@@ -94,24 +94,31 @@ let to_string_with_version, of_string, default_sys_behavior, all_posix =
     ; "sigzero", zero, `Ignore, 1
     ]
   in
-  let name_and_version_by_t = Int.Table.create ~size:1 () in
-  let t_by_name = String.Table.create ~size:1 () in
-  let behavior_by_t = Int.Table.create ~size:1 () in
-  List.iter known ~f:(fun (name, t, behavior, stable_version) ->
-    Hashtbl.set name_and_version_by_t ~key:t ~data:(name, stable_version);
-    Hashtbl.set t_by_name ~key:name ~data:t;
-    Hashtbl.set behavior_by_t ~key:t ~data:behavior);
+  let name_and_version_by_t =
+    Int.Map.of_iteri_exn ~iteri:(fun ~f ->
+      List.iter known ~f:(fun (name, t, _, stable_version) ->
+        f ~key:t ~data:(name, stable_version))
+      [@nontail])
+  in
+  let t_by_name =
+    String.Map.of_iteri_exn ~iteri:(fun ~f ->
+      List.iter known ~f:(fun (name, t, _, _) -> f ~key:name ~data:t) [@nontail])
+  in
+  let behavior_by_t : sys_behavior Int.Map.t =
+    Int.Map.of_iteri_exn ~iteri:(fun ~f ->
+      List.iter known ~f:(fun (_, t, behavior, _) -> f ~key:t ~data:behavior) [@nontail])
+  in
   (* For unknown signal numbers, [to_string] returns a meaningful
      string, while [default_sys_behavior] has to raise an exception
      because we don't know what the right answer is. *)
   let to_string_with_version t ~version:requested_version =
-    match Hashtbl.find name_and_version_by_t t with
+    match Base.Map.find name_and_version_by_t t with
     | Some (string, needed_version) when requested_version >= needed_version -> string
     | _ -> "<unknown signal " ^ Int.to_string t ^ ">"
   in
   let of_string s =
     let s = String.lowercase (String.strip s) in
-    match Hashtbl.find t_by_name s with
+    match Base.Map.find t_by_name s with
     | Some sn -> sn
     | None ->
       if String.is_prefix s ~prefix:"<unknown signal "
@@ -121,7 +128,7 @@ let to_string_with_version, of_string, default_sys_behavior, all_posix =
       else raise (Invalid_signal_mnemonic_or_number s)
   in
   let default_sys_behavior t =
-    match Hashtbl.find behavior_by_t t with
+    match Base.Map.find behavior_by_t t with
     | None ->
       raise
         (Invalid_argument

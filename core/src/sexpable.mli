@@ -8,6 +8,7 @@ include module type of struct
 end
 
 module%template.portable To_stringable (M : S) : Stringable.S with type t := M.t
+module%template.portable To_stringable_utf8 (M : S) : Stringable.S with type t := M.t
 
 (** The following functors preserve stability: if applied to stable types with stable
     (de)serializations, they will produce stable types with stable (de)serializations.
@@ -17,28 +18,33 @@ module%template.portable To_stringable (M : S) : Stringable.S with type t := M.t
     the future. *)
 module%template Stable : sig
   module Of_sexpable : sig
-    module%template [@modality p = (portable, nonportable)] V1 :
-        module type of Of_sexpable [@modality p]
+    module%template
+      [@alloc a = (heap, stack)] [@modality p = (portable, nonportable)] V1 :
+        module type of Of_sexpable [@alloc a] [@modality p]
   end
 
   module Of_sexpable1 : sig
-    module%template [@modality p = (portable, nonportable)] V1 :
-        module type of Of_sexpable1 [@modality p]
+    module%template
+      [@alloc a = (heap, stack)] [@modality p = (portable, nonportable)] V1 :
+        module type of Of_sexpable1 [@alloc a] [@modality p]
   end
 
   module Of_sexpable2 : sig
-    module%template [@modality p = (portable, nonportable)] V1 :
-        module type of Of_sexpable2 [@modality p]
+    module%template
+      [@alloc a = (heap, stack)] [@modality p = (portable, nonportable)] V1 :
+        module type of Of_sexpable2 [@alloc a] [@modality p]
   end
 
   module Of_sexpable3 : sig
-    module%template [@modality p = (portable, nonportable)] V1 :
-        module type of Of_sexpable3 [@modality p]
+    module%template
+      [@alloc a = (heap, stack)] [@modality p = (portable, nonportable)] V1 :
+        module type of Of_sexpable3 [@alloc a] [@modality p]
   end
 
   module Of_stringable : sig
-    module%template [@modality p = (portable, nonportable)] V1 :
-        module type of Of_stringable [@modality p]
+    module%template
+      [@alloc a = (heap, stack)] [@modality p = (portable, nonportable)] V1 :
+        module type of Of_stringable [@alloc a] [@modality p]
   end
 
   module To_stringable : sig

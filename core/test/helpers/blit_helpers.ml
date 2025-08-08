@@ -89,13 +89,11 @@ module Make (Src : Blittable) (Dst : Blittable) = struct
   include M (Src) (Dst)
 
   let test_sub_internal sub =
-    quickcheck_m
-      (module For_sub)
-      ~f:(fun { array; pos; len } ->
-        require_equal
-          (module Int_array_option)
-          (Option.try_with (fun () -> Dst.to_array (sub (Src.of_array array) ~pos ~len)))
-          (Option.try_with (fun () -> Array.subo array ?pos ?len)))
+    quickcheck_m (module For_sub) ~f:(fun { array; pos; len } ->
+      require_equal
+        (module Int_array_option)
+        (Option.try_with (fun () -> Dst.to_array (sub (Src.of_array array) ~pos ~len)))
+        (Option.try_with (fun () -> Array.subo array ?pos ?len)))
   ;;
 
   let test_sub ~sub:{ sub } =
@@ -115,21 +113,19 @@ module Make (Src : Blittable) (Dst : Blittable) = struct
   ;;
 
   let test_blit_internal blit =
-    quickcheck_m
-      (module For_blit)
-      ~f:(fun { src; src_pos; dst; dst_pos; len } ->
-        require_equal
-          (module Int_array_option)
-          (Option.try_with (fun () ->
-             let src = Src.of_array (Array.copy src) in
-             let dst = Dst.of_array (Array.copy dst) in
-             blit ~src ~src_pos ~dst ~dst_pos ~len;
-             Dst.to_array dst))
-          (Option.try_with (fun () ->
-             let src = Array.copy src in
-             let dst = Array.copy dst in
-             Array.blito ~src ?src_pos ?src_len:len ~dst ?dst_pos ();
-             dst)))
+    quickcheck_m (module For_blit) ~f:(fun { src; src_pos; dst; dst_pos; len } ->
+      require_equal
+        (module Int_array_option)
+        (Option.try_with (fun () ->
+           let src = Src.of_array (Array.copy src) in
+           let dst = Dst.of_array (Array.copy dst) in
+           blit ~src ~src_pos ~dst ~dst_pos ~len;
+           Dst.to_array dst))
+        (Option.try_with (fun () ->
+           let src = Array.copy src in
+           let dst = Array.copy dst in
+           Array.blito ~src ?src_pos ?src_len:len ~dst ?dst_pos ();
+           dst)))
   ;;
 
   let test_blit ~blit:{ blit } =

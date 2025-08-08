@@ -646,9 +646,8 @@ module _ : Monadic with module M := Monad.Ident = struct
   let map = Monadic.map
 
   let%expect_test "map" =
-    quickcheck_m
-      (module Small_int_blang)
-      ~f:(fun t -> test (module Small_int_blang) t Blang.map Monadic.map ~f:Int.succ);
+    quickcheck_m (module Small_int_blang) ~f:(fun t ->
+      test (module Small_int_blang) t Blang.map Monadic.map ~f:Int.succ);
     [%expect {| |}]
   ;;
 

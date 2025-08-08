@@ -3,8 +3,8 @@ open! Import
 
 let with_the_one_and_only f =
   let open Timezone.Private.Zone_cache in
-  Capsule.Mutex.with_lock The_one_and_only.mutex ~f:(fun password ->
-    Capsule.Data.get The_one_and_only.capsule ~password ~f)
+  Capsule.Mutex.with_lock The_one_and_only.mutex ~f:(fun access ->
+    f (Capsule.Data.unwrap The_one_and_only.capsule ~access))
 ;;
 
 (* [init] is a noop in javascript, so this is expected to not work. It will only fail

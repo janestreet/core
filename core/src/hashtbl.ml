@@ -11,13 +11,13 @@ module%template.portable [@modality p] Creators = Hashtbl.Creators [@modality p]
 include (
   Hashtbl :
   sig
-    type ('a, 'b) t = ('a, 'b) Hashtbl.t [@@deriving sexp_of]
+    type (!'a, !'b) t = ('a, 'b) Hashtbl.t [@@deriving sexp_of]
 
     module type Non_value = Base.Hashtbl.Non_value
 
-    include Non_value with type ('k, 'v) t := ('k, 'v) t
     include Base.Hashtbl.S_without_submodules with type ('a, 'b) t := ('a, 'b) t
     include Hashtbl_equality with type ('k, 'v) t := ('k, 'v) t
+    include Non_value with type ('k, 'v) t := ('k, 'v) t
   end)
 
 let validate ~name f t = Validate.alist ~name f (to_alist t)

@@ -60,12 +60,12 @@ let float_second = float second
 let float_minute = float minute
 let float_hour = float hour
 let float_day = float day
-let ns_per_us = 1. /. float_microsecond
-let ns_per_ms = 1. /. float_millisecond
-let ns_per_sec = 1. /. float_second
-let ns_per_min = 1. /. float_minute
-let ns_per_hr = 1. /. float_hour
-let ns_per_day = 1. /. float_day
+let us_per_ns = 1. /. float_microsecond
+let ms_per_ns = 1. /. float_millisecond
+let sec_per_ns = 1. /. float_second
+let min_per_ns = 1. /. float_minute
+let hr_per_ns = 1. /. float_hour
+let day_per_ns = 1. /. float_day
 
 (* Beyond [min_value_for_1us_rounding..max_value_for_1us_rounding], not every microsecond
    can be represented as a [float] number of seconds. (In fact, it is around 135y, but we
@@ -149,12 +149,12 @@ let[@inline] to_sec t = float t /. float_second
 let[@inline] to_min t = float t /. float_minute
 let[@inline] to_hr t = float t /. float_hour
 let[@inline] to_day t = float t /. float_day
-let[@inline] to_us_approx t = float t *. ns_per_us
-let[@inline] to_ms_approx t = float t *. ns_per_ms
-let[@inline] to_sec_approx t = float t *. ns_per_sec
-let[@inline] to_min_approx t = float t *. ns_per_min
-let[@inline] to_hr_approx t = float t *. ns_per_hr
-let[@inline] to_day_approx t = float t *. ns_per_day
+let[@inline] to_us_approx t = float t *. us_per_ns
+let[@inline] to_ms_approx t = float t *. ms_per_ns
+let[@inline] to_sec_approx t = float t *. sec_per_ns
+let[@inline] to_min_approx t = float t *. min_per_ns
+let[@inline] to_hr_approx t = float t *. hr_per_ns
+let[@inline] to_day_approx t = float t *. day_per_ns
 let[@zero_alloc strict] to_int_us t = Int63.(to_int_exn (t / microsecond))
 let[@zero_alloc strict] to_int_ms t = Int63.(to_int_exn (t / millisecond))
 let[@zero_alloc strict] to_int_sec t = Int63.(to_int_exn (t / second))
@@ -819,6 +819,8 @@ let to_short_string t =
 
 let gen_incl = Int63.gen_incl
 let gen_uniform_incl = Int63.gen_uniform_incl
+let gen_log_incl = Int63.gen_incl
+let gen_log_uniform_incl = Int63.gen_log_uniform_incl
 
 include%template Pretty_printer.Register [@modality portable] (struct
     type nonrec t = t

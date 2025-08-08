@@ -1,6 +1,8 @@
 open! Import
 include Time_ns_intf.Span
 
+include%template Quickcheck.S_int [@mode portable] with type t := t
+
 module Stable : sig
   module V1 : sig
     type nonrec t = t

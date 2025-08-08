@@ -85,8 +85,8 @@ let recursive ~hashable ?cache_size_bound f_onestep =
   force memoized
 ;;
 
-let of_comparable (type index) (module M : Comparable.S_plain with type t = index) f =
-  let m = ref M.Map.empty in
+let of_comparator (type index) (module M : Comparator.S with type t = index) f =
+  let m = ref (Map.empty (module M)) in
   fun (x : M.t) ->
     let v =
       match Map.find !m x with

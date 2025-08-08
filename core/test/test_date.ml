@@ -25,11 +25,56 @@ let%expect_test _ =
     |}]
 ;;
 
+let max_value = Date.create_exn ~y:9999 ~m:Dec ~d:31
+
+let%expect_test "ensure this is the real [max_value]" =
+  require_does_raise (fun () -> Date.add_days max_value 1);
+  [%expect
+    {|
+    (Invalid_argument
+     "Date.create_exn ~y:10000 ~m:Jan ~d:1 error: year outside of [0..9999]")
+    |}]
+;;
+
+let min_value = Date.create_exn ~y:0 ~m:Jan ~d:1
+
+let%expect_test "ensure this is the real [min_value]" =
+  require_does_raise (fun () -> Date.add_days min_value (-1));
+  [%expect
+    {|
+    (Invalid_argument
+     "Date.create_exn ~y:-1 ~m:Dec ~d:31 error: year outside of [0..9999]")
+    |}]
+;;
+
+let%expect_test "limits are representable in an [int] in 32 bit ocaml" =
+  let min_value = Date.Stable.V1.to_int min_value in
+  let max_value = Date.Stable.V1.to_int max_value in
+  print_s [%message (min_value : int) (max_value : int)];
+  [%expect
+    {|
+    ((min_value 257)
+     (max_value 655_297_567))
+    |}];
+  let open Int.O in
+  (* There would be no issue if min_value was much smaller, but this is true at the time
+     of writing. Just make sure it's representable in 32-bit OCaml. *)
+  assert (0 < min_value);
+  assert (0 < max_value);
+  (* These asserts are trivially true in 32-bit (because no value larger than that can
+     exist), but they're relevant when running in 64-bit, and we want to make sure we
+     don't overflow. *)
+  assert (min_value < Int.max_value_30_bits);
+  assert (max_value < Int.max_value_30_bits)
+;;
+
 let%expect_test "Date.V1" =
   let examples =
     [ Date.create_exn ~y:1066 ~m:Oct ~d:16
     ; Date.create_exn ~y:1955 ~m:Nov ~d:5
     ; Date.create_exn ~y:2012 ~m:Apr ~d:19
+    ; min_value
+    ; max_value
     ]
   in
   print_and_check_stable_type (module Date.Stable.V1) examples;
@@ -42,6 +87,10 @@ let%expect_test "Date.V1" =
      (bin_io "\254\163\007\n\005"))
     ((sexp   2012-04-19)
      (bin_io "\254\220\007\003\019"))
+    ((sexp   0000-01-01)
+     (bin_io "\000\000\001"))
+    ((sexp   9999-12-31)
+     (bin_io "\254\015'\011\031"))
     |}];
   List.iter examples ~f:(fun date ->
     let int = Date.Stable.V1.to_int date in
@@ -53,6 +102,8 @@ let%expect_test "Date.V1" =
     (1066-10-16 69_863_952)
     (1955-11-05 128_125_701)
     (2012-04-19 131_859_475)
+    (0000-01-01 257)
+    (9999-12-31 655_297_567)
     |}];
   require_does_raise (fun () -> Date.Stable.V1.of_int_exn 0);
   [%expect {| (Failure "Month.of_int_exn 0") |}]
@@ -800,72 +851,3 @@ let%test_unit "compare" =
             (d0 : Date.t)
             (d1 : Date.t)])
 ;;
-
-module%test [@name "[Date_cache] does not race"] [@tags "runtime5-only", "no-js"] _ =
-struct
-  module Barrier = Portable_test_helpers.Barrier
-
-  module Domain = struct
-    include Stdlib.Domain
-    include Basement.Stdlib_shim.Domain.Safe
-  end
-
-  let test
-    : type time result.
-      (int -> time)
-      -> (time -> zone:Timezone.t -> result)
-      -> (module With_equal with type t = result iarray)
-      -> unit
-    =
-    fun time_of_days f m ->
-    let num_domains = 20 in
-    let barrier = Barrier.create num_domains in
-    let times = Iarray.init num_domains ~f:(fun n -> time_of_days (n * 5)) in
-    let domains =
-      Iarray.map times ~f:(fun time ->
-        (Domain.Safe.spawn [@alert "-unsafe_parallelism"])
-          (Portability_hacks.magic_portable__needs_base_and_core (fun () ->
-             Barrier.await barrier;
-             f time ~zone:Timezone.utc)))
-    in
-    let results_parallel = Iarray.map domains ~f:Domain.join in
-    let results_sequential =
-      Iarray.map times ~f:(fun time -> f time ~zone:Timezone.utc)
-    in
-    Expect_test_helpers_base.require_equal m results_parallel results_sequential
-  ;;
-
-  let%expect_test "[Time_ns]" =
-    let time_ns_of_days n = Time_ns.add Time_ns.epoch (Time_ns.Span.create ~day:n ()) in
-    test
-      time_ns_of_days
-      Time_ns.to_date
-      (module struct
-        type t = Date.t Iarray.t [@@deriving equal, sexp_of]
-      end);
-    test
-      time_ns_of_days
-      Time_ns.to_ofday
-      (module struct
-        type t = Time_ns.Ofday.t Iarray.t [@@deriving equal, sexp_of]
-      end)
-  ;;
-
-  let%expect_test "[Time_float]" =
-    let time_float_of_days n =
-      Time_float.add Time_float.epoch (Time_float.Span.create ~day:n ())
-    in
-    test
-      time_float_of_days
-      Time_float.to_date
-      (module struct
-        type t = Date.t Iarray.t [@@deriving equal, sexp_of]
-      end);
-    test
-      time_float_of_days
-      Time_float.to_ofday
-      (module struct
-        type t = Time_float.Ofday.t Iarray.t [@@deriving equal, sexp_of]
-      end)
-  ;;
-end

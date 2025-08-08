@@ -95,15 +95,32 @@ module type Enumerable_sexpable = sig
   type t [@@deriving enumerate, sexp_of]
 end
 
+module type%template Enumerable_sexpable = sig
+  type t
+
+  include Enumerable_sexpable with type t := t
+end
+[@@modality p = portable]
+
 module type Enumerable_stringable = sig
   type t [@@deriving enumerate]
 
   val to_string : t -> string
 end
 
+module type%template Enumerable_stringable = sig
+  type t
+
+  include Enumerable_stringable with type t := t
+end
+[@@modality p = portable]
+
 module type Command = sig
-  module type Enumerable_sexpable = Enumerable_sexpable
-  module type Enumerable_stringable = Enumerable_stringable
+  module type%template Enumerable_sexpable = Enumerable_sexpable [@modality p]
+  [@@modality p = (nonportable, portable)]
+
+  module type%template Enumerable_stringable = Enumerable_stringable [@modality p]
+  [@@modality p = (nonportable, portable)]
 
   (** Specifications for command-line auto-completion. *)
   module Auto_complete : sig

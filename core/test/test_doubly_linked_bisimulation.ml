@@ -102,6 +102,10 @@ module Foil : S = struct
     read_wrap t (fun () -> List.max_elt ~compare (to_list t)) [@nontail]
   ;;
 
+  let iter_until t ~f ~finish =
+    read_wrap t (fun () -> List.iter_until (to_list t) ~f ~finish) [@nontail]
+  ;;
+
   let fold_result t ~init ~f =
     read_wrap t (fun () -> List.fold_result (to_list t) ~init ~f) [@nontail]
   ;;
@@ -389,6 +393,7 @@ module Both : S = struct
   let fold_result _ = failwith "unimplemented"
   let fold_until _ = failwith "unimplemented"
   let iter _ = failwith "unimplemented"
+  let iter_until _ = failwith "unimplemented"
   let count _ = failwith "unimplemented"
   let sum _ = failwith "unimplemented"
   let invariant f t = obs (pair (Hero.invariant f) (Foil.invariant f) *@ t)

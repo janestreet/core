@@ -789,7 +789,7 @@ module%test Ofday = struct
   ;;
 end
 
-module _ = struct
+module%test Span = struct
   open! Time_ns.Span
 
   let%test (_ [@tags "64-bits-only"]) =
@@ -1128,6 +1128,32 @@ module%test [@name "next_multiple"] _ = struct
   let%test_unit _ = test false 302933078 1816140399596962652L
   let%test_unit _ = test true 3609444 1802393395129668217L
 end
+
+let%expect_test "every" =
+  let start = Time_ns.of_string "2001-10-29 08:08:08Z" in
+  let stop = Time_ns.of_string "2001-10-30 18:18:18Z" in
+  Time_ns.every (Time_ns.Span.of_int_hr 5) ~start ~stop
+  |> ok_exn
+  |> List.map ~f:Time_ns.to_string_utc
+  |> String.concat_lines
+  |> print_endline;
+  [%expect
+    {|
+    2001-10-29 08:08:08.000000000Z
+    2001-10-29 13:08:08.000000000Z
+    2001-10-29 18:08:08.000000000Z
+    2001-10-29 23:08:08.000000000Z
+    2001-10-30 04:08:08.000000000Z
+    2001-10-30 09:08:08.000000000Z
+    2001-10-30 14:08:08.000000000Z
+    |}];
+  Time_ns.every (Time_ns.Span.of_int_min (-1)) ~start ~stop
+  |> require_error ~print_error:true [%sexp_of: Time_ns.t list];
+  [%expect {| ("[Time_ns.every] got non-positive interval" (interval -1m)) |}];
+  Time_ns.every Time_ns.Span.minute ~start:stop ~stop:start
+  |> require_error ~print_error:true [%sexp_of: Time_ns.t list];
+  [%expect {| "Time_ns.every called with [start > stop]." |}]
+;;
 
 let%expect_test "times with implicit zones" =
   require_does_raise (fun () ->
@@ -1565,40 +1591,35 @@ let%expect_test "approximate conversions" =
   let open Time_ns.Span in
   let test to_precise to_approx =
     (* show that conversion can be imprecise *)
-    quickcheck_m
-      ~cr:Comment
-      (module Time_ns.Span)
-      ~f:(fun span ->
-        let precise = to_precise span in
-        let approx = to_approx span in
-        if Float.( <> ) precise approx
-        then (
-          let diff = approx -. precise in
-          print_cr
-            ~cr:Comment
-            [%message
-              "result can be imprecise"
-                (span : Time_ns.Span.t)
-                (precise : float)
-                (approx : float)
-                (diff : float)]));
+    quickcheck_m ~cr:Comment (module Time_ns.Span) ~f:(fun span ->
+      let precise = to_precise span in
+      let approx = to_approx span in
+      if Float.( <> ) precise approx
+      then (
+        let diff = approx -. precise in
+        print_cr
+          ~cr:Comment
+          [%message
+            "result can be imprecise"
+              (span : Time_ns.Span.t)
+              (precise : float)
+              (approx : float)
+              (diff : float)]));
     (* check that imprecision is at most 1 ULP *)
-    quickcheck_m
-      (module Time_ns.Span)
-      ~f:(fun span ->
-        let precise = to_precise span in
-        let approx = to_approx span in
-        if Float.( > ) approx (Float.one_ulp `Up precise)
-           || Float.( < ) approx (Float.one_ulp `Down precise)
-        then (
-          let diff = approx -. precise in
-          print_cr
-            [%message
-              "imprecision can exceed 1 ULP"
-                (span : Time_ns.Span.t)
-                (precise : float)
-                (approx : float)
-                (diff : float)]))
+    quickcheck_m (module Time_ns.Span) ~f:(fun span ->
+      let precise = to_precise span in
+      let approx = to_approx span in
+      if Float.( > ) approx (Float.one_ulp `Up precise)
+         || Float.( < ) approx (Float.one_ulp `Down precise)
+      then (
+        let diff = approx -. precise in
+        print_cr
+          [%message
+            "imprecision can exceed 1 ULP"
+              (span : Time_ns.Span.t)
+              (precise : float)
+              (approx : float)
+              (diff : float)]))
   in
   test to_us to_us_approx;
   [%expect

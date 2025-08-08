@@ -13,17 +13,17 @@
 (** {6 Exceptions} *)
 
 (** Raise the given exception value *)
-external raise : exn -> 'a = "%reraise"
+external raise : 'a. exn -> 'a = "%reraise"
 
 (** A faster version [raise] which does not record the backtrace.
     @since 4.02.0 *)
-external raise_notrace : exn -> 'a = "%raise_notrace"
+external raise_notrace : 'a. exn -> 'a = "%raise_notrace"
 
 (** Raise exception [Invalid_argument] with the given string. *)
-val invalid_arg : string -> 'a
+val invalid_arg : 'a. string -> 'a
 
 (** Raise exception [Failure] with the given string. *)
-val failwith : string -> 'a
+val failwith : 'a. string -> 'a
 
 (** The [Exit] exception is not raised by any library function. It is provided for use in
     your programs. *)
@@ -960,15 +960,15 @@ end
 type 'a ref = 'a Stdlib.ref = { mutable contents : 'a }
 
 (** Return a fresh reference containing the given value. *)
-external ref : 'a -> ('a ref[@local_opt]) = "%makemutable"
+external ref : 'a. 'a -> ('a ref[@local_opt]) = "%makemutable"
 
 (** [!r] returns the current contents of reference [r]. Equivalent to
     [fun r -> r.contents]. *)
-external ( ! ) : ('a ref[@local_opt]) -> 'a = "%field0"
+external ( ! ) : 'a. ('a ref[@local_opt]) -> 'a = "%field0"
 
 (** [r := a] stores the value of [a] in reference [r]. Equivalent to
     [fun r v -> r.contents <- v]. *)
-external ( := ) : ('a ref[@local_opt]) -> 'a -> unit = "%setfield0"
+external ( := ) : 'a. ('a ref[@local_opt]) -> 'a -> unit = "%setfield0"
 
 (** Increment the integer contained in the given reference. Equivalent to
     [fun r -> r := succ !r]. *)

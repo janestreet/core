@@ -4,9 +4,8 @@
    core_test_helpers expect_test_helpers_core.expect_test_helpers_base
    expect_test_helpers_core expect_test_patterns expectable core_kernel.fheap
    unboxed.float_u unboxed.int32_u unboxed.int64_u unboxed.nativeint_u
-   portable.test_helpers sexp_grammar_validation sexplib
-   ppx_stable_witness.stable_witness unboxed_test_harness
-   core_kernel.version_util)
+   sexp_grammar_validation sexplib ppx_stable_witness.stable_witness
+   unboxed_test_harness core_kernel.version_util)
  (preprocessor_deps ../src/config.h)
  (preprocess
   (pps ppx_jane ppx_bin_and_sexp_digest)))

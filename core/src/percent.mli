@@ -88,6 +88,19 @@ val zero : t
 val one_hundred_percent : t
 external neg : (t[@local_opt]) -> (t[@local_opt]) = "%negfloat"
 external abs : (t[@local_opt]) -> (t[@local_opt]) = "%absfloat"
+
+(** The functions below come from a [Comparable] functor and do not handle [NaN] in any
+    principled way. As of 2025-06-06, the non-legacy versions are updated to match the
+    behavior of their [Float] counterparts w.r.t. [NaN]. *)
+
+val min_legacy : t -> t -> t
+val max_legacy : t -> t -> t
+val clamp_legacy : t -> min:t -> max:t -> t Or_error.t
+val clamp_exn_legacy : t -> min:t -> max:t -> t
+val is_positive_legacy : t -> bool
+val is_non_negative_legacy : t -> bool
+val is_negative_legacy : t -> bool
+val is_non_positive_legacy : t -> bool
 val is_zero : t -> bool
 val is_nan : t -> bool
 val is_inf : t -> bool
@@ -255,6 +268,9 @@ val sign : t -> Sign.t [@@deprecated "[since 2016-01] Replace [sign] with [sign_
 (** The sign of a [Percent.t]. Both [-0.] and [0.] map to [Zero]. Raises on nan. All other
     values map to [Neg] or [Pos]. *)
 val sign_exn : t -> Sign.t
+
+val arg_type : t Command.Arg_type.t
+val arg_type_allow_nan_and_inf : t Command.Arg_type.t
 
 module Stable : sig
   module V1 : sig

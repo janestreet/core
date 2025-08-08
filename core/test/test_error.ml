@@ -50,3 +50,139 @@ module%test [@name "shrinking"] _ = struct
     [%expect {| ("shrunk twice" (shrunk2 (() bar () foo))) |}]
   ;;
 end
+
+module%test Portable = struct
+  (* [test] checks that [A] and [B] are wire-compatible:
+     - They share the same bin_digest, which on its own gives us some confidence
+       the serializers/deserializers are compatible.
+     - The [A.t] values round-trip through the bin-io serializers and deserializers.
+       More specifically, both occurrences of "bytes" in this diagram are the same:
+       [A.t -> bytes -> B.t -> bytes]
+  *)
+  let test
+    (type a b)
+    (module A : Stable_without_comparator with type t = a)
+    (module B : Stable_without_comparator with type t = b)
+    examples_a
+    ~expect
+    =
+    Expect_test_helpers_core.print_and_check_stable_type (module A) examples_a;
+    expect ();
+    let examples_b =
+      List.map examples_a ~f:(fun a ->
+        Binable.of_string (module B) (Binable.to_string (module A) a))
+    in
+    Expect_test_helpers_core.print_and_check_stable_type (module B) examples_b;
+    expect ()
+  ;;
+
+  let%expect_test "error -> portable" =
+    let examples =
+      [ Error.of_string "hello"
+      ; Error.create_s [%sexp "world"]
+      ; Error.of_list [ Error.of_string "hello"; Error.create_s [%sexp "world"] ]
+      ; Error.of_exn Stdlib.Not_found
+      ]
+    in
+    test
+      (module Error.Stable.V1)
+      (module Error.Stable.Portable.V1)
+      examples
+      ~expect:(fun () ->
+        [%expect
+          {|
+          (bin_shape_digest 832b40ae394f2851da8ba67b3339b429)
+          ((sexp   hello)
+           (bin_io "\000\005hello"))
+          ((sexp   world)
+           (bin_io "\000\005world"))
+          ((sexp (hello world)) (bin_io "\001\002\000\005hello\000\005world"))
+          ((sexp   Not_found)
+           (bin_io "\000\tNot_found"))
+          |}]);
+    test
+      (module Error.Stable.V2)
+      (module Error.Stable.Portable.V2)
+      examples
+      ~expect:(fun () ->
+        [%expect
+          {|
+          (bin_shape_digest 52966f4a49a77bfdff668e9cc61511b3)
+          ((sexp   hello)
+           (bin_io "\001\005hello"))
+          ((sexp   world)
+           (bin_io "\003\000\005world"))
+          ((sexp (hello world)) (bin_io "\007\000\002\001\005hello\003\000\005world"))
+          ((sexp   Not_found)
+           (bin_io "\002\000\tNot_found"))
+          |}]);
+    (* Note: Testing Unstable Modules
+
+       In principle, we need not guarantee wire-compatibility of the unstable bin_io
+       conversion functions on [Error] and [Error.Portable]: they're unstable! In
+       practice, though, we'd rather allow users to swap between the modules with little
+       effort, at least until/unless a newer stable version gets added, so we witness
+       their compatibility with a test. *)
+    test (module Error) (module Error.Portable) examples ~expect:(fun () ->
+      [%expect
+        {|
+        (bin_shape_digest 52966f4a49a77bfdff668e9cc61511b3)
+        ((sexp   hello)
+         (bin_io "\001\005hello"))
+        ((sexp   world)
+         (bin_io "\003\000\005world"))
+        ((sexp (hello world)) (bin_io "\007\000\002\001\005hello\003\000\005world"))
+        ((sexp   Not_found)
+         (bin_io "\002\000\tNot_found"))
+        |}])
+  ;;
+
+  let%expect_test "portable -> error" =
+    let examples =
+      [ Error.Portable.of_string "hello"
+      ; Error.Portable.create_s [%sexp "world"]
+      ; Error.Portable.of_list
+          [ Error.Portable.of_string "hello"; Error.Portable.create_s [%sexp "world"] ]
+      ]
+    in
+    test
+      (module Error.Stable.Portable.V1)
+      (module Error.Stable.V1)
+      examples
+      ~expect:(fun () ->
+        [%expect
+          {|
+          (bin_shape_digest 832b40ae394f2851da8ba67b3339b429)
+          ((sexp   hello)
+           (bin_io "\000\005hello"))
+          ((sexp   world)
+           (bin_io "\000\005world"))
+          ((sexp (hello world)) (bin_io "\001\002\000\005hello\000\005world"))
+          |}]);
+    test
+      (module Error.Stable.Portable.V2)
+      (module Error.Stable.V2)
+      examples
+      ~expect:(fun () ->
+        [%expect
+          {|
+          (bin_shape_digest 52966f4a49a77bfdff668e9cc61511b3)
+          ((sexp   hello)
+           (bin_io "\001\005hello"))
+          ((sexp   world)
+           (bin_io "\003\000\005world"))
+          ((sexp (hello world)) (bin_io "\007\000\002\001\005hello\003\000\005world"))
+          |}]);
+    (* See the above "Note: Testing Unstable Modules". *)
+    test (module Error.Portable) (module Error) examples ~expect:(fun () ->
+      [%expect
+        {|
+        (bin_shape_digest 52966f4a49a77bfdff668e9cc61511b3)
+        ((sexp   hello)
+         (bin_io "\001\005hello"))
+        ((sexp   world)
+         (bin_io "\003\000\005world"))
+        ((sexp (hello world)) (bin_io "\007\000\002\001\005hello\003\000\005world"))
+        |}])
+  ;;
+end

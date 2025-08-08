@@ -119,6 +119,10 @@ module%template.portable [@modality p] F (Underlying : Base) :
       go init 0 [@nontail]
     ;;
 
+    let fold_until t ~init ~f ~finish = Container.fold_until ~fold ~init ~f t ~finish
+    let fold = `Custom fold
+    let iter_until = `Define_using_fold_until
+
     let iter =
       `Custom
         (fun t ~f ->
@@ -135,6 +139,8 @@ module%template.portable [@modality p] F (Underlying : Base) :
           in
           go init 0 [@nontail])
     ;;
+
+    let foldi_until = `Define_using_fold_until
 
     let iteri =
       `Custom
@@ -153,6 +159,7 @@ module%template.portable [@modality p] F (Underlying : Base) :
   let iter = C.iter
   let fold_result = C.fold_result
   let fold_until = C.fold_until
+  let iter_until = C.iter_until
 
   (* [C.to_list] has to construct then reverse the list *)
   let to_list t = List.init (length t) ~f:(get t)
@@ -167,7 +174,9 @@ module%template.portable [@modality p] F (Underlying : Base) :
   let min_elt = C.min_elt
   let max_elt = C.max_elt
   let foldi = C.foldi
+  let foldi_until = C.foldi_until
   let iteri = C.iteri
+  let iteri_until = C.iteri_until
   let existsi = C.existsi
   let for_alli = C.for_alli
   let counti = C.counti

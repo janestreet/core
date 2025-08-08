@@ -2,7 +2,10 @@
 
 open! Import
 
-type 'a t = 'a Base.Uniform_array.t [@@deriving bin_io, quickcheck, sexp, sexp_grammar]
+type 'a t = 'a Base.Uniform_array.t [@@deriving compare ~localize, sexp, sexp_grammar]
+
+[%%rederive:
+  type nonrec 'a t = 'a Base.Uniform_array.t [@@deriving bin_io ~localize, quickcheck]]
 
 include module type of struct
     include Base.Uniform_array

@@ -5,7 +5,7 @@ open! Int.Replace_polymorphic_compare
 module type Extend_zone = sig
   type t [@@deriving sexp_grammar]
 
-  include%template Identifiable.S [@mode local] with type t := t
+  include%template Identifiable.S [@mode local] [@modality portable] with type t := t
 
   include Diffable.S_atomic with type t := t
 
@@ -122,7 +122,7 @@ module type Timezone = sig
         }
 
       module The_one_and_only : sig
-        include Capsule.With_mutex
+        include Capsule.Module_with_mutex
 
         val capsule : (t, k) Capsule.Data.t
       end

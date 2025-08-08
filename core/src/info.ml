@@ -30,16 +30,25 @@ module Binable_exn = struct
   module Stable = struct
     module V1 = struct
       module T = struct
-        type t = exn Modes.Stable.Global.V1.t [@@deriving sexp_of, stable_witness]
+        type 'a thunk = unit -> 'a [@@deriving sexp_of]
+
+        let stable_witness_thunk x =
+          Stable_witness.of_serializable x (fun x () -> x) (fun f -> f ())
+        ;;
+
+        type t = exn thunk Modes.Stable.Global.V1.t [@@deriving sexp_of, stable_witness]
       end
 
       include T
 
       let%template[@mode m = (global, local)] to_binable t =
-        t |> Modes.Global.unwrap |> [%sexp_of: exn]
+        (Modes.Global.unwrap t) () |> [%sexp_of: exn]
       ;;
 
-      let of_binable exn = exn |> Exn.create_s |> Modes.Global.wrap
+      let of_binable exn =
+        let exn = exn |> Exn.create_s in
+        Modes.Global.wrap (fun () -> exn)
+      ;;
 
       include%template
         Binable.Stable.Of_binable.V1 [@mode local] [@modality portable] [@alert "-legacy"]
@@ -60,6 +69,7 @@ end
 
 module Extend (Info : Base.Info.S) = struct
   include Info
+  module Utf8 = Base.Info.Utf8
 
   (* Note that implementations of Base.Info.S should have t_of_sexp that handles any
      sexp. *)
@@ -115,7 +125,10 @@ module Extend (Info : Base.Info.S) = struct
 
     include Stable.V2
 
-    let to_info = Info.Internal_repr.to_info
+    let%template to_info = (Info.Internal_repr.to_info [@mode p])
+    [@@mode p = (portable, nonportable)]
+    ;;
+
     let of_info = Info.Internal_repr.of_info
   end
 
@@ -125,6 +138,8 @@ module Extend (Info : Base.Info.S) = struct
         type t = Info.t
         [@@deriving
           sexp, sexp_grammar, compare ~localize, equal ~localize, globalize, hash]
+
+        let t_of_sexp = Info.t_of_sexp
       end
 
       include T
@@ -163,17 +178,8 @@ module Extend (Info : Base.Info.S) = struct
       module T = struct
         type t = Info.t [@@deriving compare ~localize]
 
-        include%template
-          Sexpable.Stable.Of_sexpable.V1 [@modality portable]
-            (Sexp)
-            (struct
-              type nonrec t = t
-
-              let to_sexpable = Info.sexp_of_t
-              let of_sexpable = Info.t_of_sexp
-            end)
-
-        let compare = compare
+        let sexp_of_t = Info.sexp_of_t
+        let t_of_sexp = Info.t_of_sexp
       end
 
       include T
@@ -198,11 +204,196 @@ module Extend (Info : Base.Info.S) = struct
         Stable_witness.of_serializable Sexp.stable_witness of_binable to_binable
       ;;
     end
+
+    module Portable = struct
+      type 'a portable = 'a Modes.Portable.t = { portable : 'a }
+      [@@unboxed] [@@deriving stable_witness]
+
+      [%%rederive.portable
+        type 'a portable = 'a Modes.Portable.t
+        [@@deriving compare ~localize, equal ~localize, hash, sexp_grammar, sexp_of]]
+
+      (* Can't be in rederive due to non-standard type signature. *)
+      let portable_of_sexp = Modes.Portable.t_of_sexp
+
+      module V1 = struct
+        module T = struct
+          type t = V1.t portable [@@deriving compare ~localize, sexp, stable_witness]
+        end
+
+        include T
+
+        include%template Comparator.Stable.V1.Make [@modality portable] (T)
+
+        let to_binable = sexp_of_t
+        let%template[@mode local] to_binable t = sexp_of_t (Info.Portable.globalize t)
+        let of_binable = t_of_sexp
+
+        include%template
+          Binable.Stable.Of_binable.V1
+            [@modality portable]
+            [@mode local]
+            [@alert "-legacy"]
+            (Sexp)
+            (struct
+              type nonrec t = t
+
+              let%template[@mode l = (local, global)] to_binable = (to_binable [@mode l])
+              let of_binable = of_binable
+            end)
+      end
+
+      module V2 = struct
+        module T = struct
+          type t = V2.t portable
+          [@@deriving
+            compare ~localize, equal ~localize, hash, sexp, sexp_grammar, stable_witness]
+        end
+
+        let globalize = Info.Portable.globalize
+
+        include T
+
+        include%template Comparator.Stable.V1.Make [@modality portable] (T)
+
+        (* We define a mode-crossing protocol type that make it possible to convert
+           into a portable error in [of_binable]. We can't directly use the bin_io
+           of [Internal_repr.t] because it's not mode-crossing to portable:
+           [Exn] contains an exn.
+
+           This protocol type is wire-compatible with [Internal_repr.t]. This
+           claim is tested in unit tests.
+        *)
+        module Protocol = struct
+          open Stable_witness.Export
+
+          type t =
+            | Could_not_construct of Sexp.t
+            | String of string
+            | Exn of Sexp.t
+            | Sexp of Sexp.t
+            | Tag_sexp of string * Sexp.t * Source_code_position.Stable.V1.t option
+            | Tag_t of string * t
+            | Tag_arg of string * Sexp.t * t
+            | Of_list of int option * t list
+            | With_backtrace of t * string (* backtrace *)
+          [@@deriving bin_io ~localize, stable_witness]
+        end
+
+        let rec repr_of_binable : Protocol.t -> Info.Internal_repr.t = function
+          | Could_not_construct x -> Could_not_construct x
+          | String x -> String x
+          | Exn x ->
+            let exn_creator = Exn.create_s_uncontended x in
+            Exn { global = exn_creator }
+          | Sexp x -> Sexp x
+          | Tag_sexp (tag, x, pos) -> Tag_sexp (tag, x, pos)
+          | Tag_t (tag, t) -> Tag_t (tag, repr_of_binable t)
+          | Tag_arg (message, tag, t) -> Tag_arg (message, tag, repr_of_binable t)
+          | Of_list (n, xs) ->
+            Of_list
+              ( n
+              , List.map xs ~f:(fun x -> repr_of_binable x |> Modes.Portable.wrap)
+                |> Modes.Portable.unwrap_list )
+          | With_backtrace (t, bt) -> With_backtrace (repr_of_binable t, bt)
+        ;;
+
+        (* Copied from [Local_iterators_to_be_replaced.List.map_local] *)
+        let rec map_local t ~f =
+          match t with
+          | [] -> []
+          | x :: xs ->
+            let y = f x in
+            let ys = map_local xs ~f in
+            y :: ys
+        ;;
+
+        let%template[@alloc heap] list_map = List.map
+        let%template[@alloc stack] list_map = map_local
+
+        let%template rec repr_to_binable : Info.Internal_repr.t -> Protocol.t =
+          fun repr ->
+          let repr_to_binable = repr_to_binable [@alloc a] in
+          match[@exclave_if_stack a] repr with
+          | Could_not_construct x -> Could_not_construct x
+          | String x -> String x
+          | Exn x ->
+            let f = Modes.Global.unwrap x in
+            Exn (Exn.sexp_of_t (f ()))
+          | Sexp x -> Sexp x
+          | Tag_sexp (tag, x, pos) -> Tag_sexp (tag, x, pos)
+          | Tag_t (tag, t) -> Tag_t (tag, repr_to_binable t)
+          | Tag_arg (message, tag, t) -> Tag_arg (message, tag, repr_to_binable t)
+          | Of_list (n, xs) ->
+            Of_list
+              ( n
+              , (list_map [@alloc a]) xs ~f:(fun repr ->
+                  repr_to_binable repr [@exclave_if_local m]) )
+          | With_backtrace (t, bt) -> With_backtrace (repr_to_binable t, bt)
+        [@@alloc a @ m = (stack_local, heap_global)]
+        ;;
+
+        let%template to_binable t =
+          let repr = Info.Internal_repr.of_info (Modes.Portable.unwrap t) in
+          (repr_to_binable [@alloc a]) repr [@exclave_if_local m]
+        [@@alloc a @ m = (stack_local, heap_global)]
+        ;;
+
+        let%template of_binable binable =
+          repr_of_binable binable
+          |> (Info.Internal_repr.to_info [@mode portable])
+          |> Modes.Portable.wrap
+        ;;
+
+        (* The mli claims that this is wire-compatible with [Info.Stable.V2.t].
+       A test verifies this. Note that we just use [bin_shape_t] as generated
+       by [@@deriving bin_io] -- the generated shape exactly matches up with the
+       shape of [Info.Stable.V2.bin_shape_t].
+        *)
+          include%template
+            Binable.Stable.Of_binable.V1
+              [@alert "-legacy"]
+              [@mode local]
+              [@modality portable]
+              (Protocol)
+              (struct
+                type nonrec t = t
+
+                let%template[@mode global] to_binable = (to_binable [@alloc heap])
+                let%template[@mode local] to_binable = (to_binable [@alloc stack])
+                let of_binable = of_binable
+              end)
+
+        include%template Diffable.Atomic.Make [@modality portable] (struct
+            type nonrec t = t [@@deriving sexp, bin_io, equal]
+          end)
+      end
+    end
   end
 
   type t = Stable.V2.t [@@deriving bin_io ~localize]
+  type info = t [@@deriving quickcheck]
 
   module Diff = Stable.V2.Diff
+
+  module Portable = struct
+    include Info.Portable
+    module Diff = Stable.Portable.V2.Diff
+
+    include%template
+      Quickcheckable.Of_quickcheckable [@modality portable]
+        (struct
+          type t = info [@@deriving quickcheck]
+        end)
+        (struct
+          type nonrec t = t
+
+          let of_quickcheckable info = portabilize info |> Info.to_portable
+          let to_quickcheckable = Info.of_portable
+        end)
+
+    [%%rederive.portable type t = Stable.Portable.V2.t [@@deriving bin_io ~localize]]
+  end
 end
 
 include Extend (Base.Info)

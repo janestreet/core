@@ -711,6 +711,29 @@ val split_le_gt : ('k, 'v, 'cmp) t -> 'k -> ('k, 'v, 'cmp) t * ('k, 'v, 'cmp) t
     length of the output maps. *)
 val split_lt_ge : ('k, 'v, 'cmp) t -> 'k -> ('k, 'v, 'cmp) t * ('k, 'v, 'cmp) t
 
+(** [count_lt t key] returns the number of keys in [t] that are strictly less than [key].
+
+    Runtime is O(log n) where n is the size of the input map. *)
+val count_lt : ('k, 'v, 'cmp) t -> 'k -> int
+
+(** [count_le t key] returns the number of keys in [t] that are less than or equal to
+    [key].
+
+    Runtime is O(log n) where n is the size of the input map. *)
+val count_le : ('k, 'v, 'cmp) t -> 'k -> int
+
+(** [count_gt t key] returns the number of keys in [t] that are strictly greater than
+    [key].
+
+    Runtime is O(log n) where n is the size of the input map. *)
+val count_gt : ('k, 'v, 'cmp) t -> 'k -> int
+
+(** [count_ge t key] returns the number of keys in [t] that are greater than or equal to
+    [key].
+
+    Runtime is O(log n) where n is the size of the input map. *)
+val count_ge : ('k, 'v, 'cmp) t -> 'k -> int
+
 (** [append ~lower_part ~upper_part] returns [`Ok map] where [map] contains all the
     [(key, value)] pairs from the two input maps if all the keys from [lower_part] are
     less than all the keys from [upper_part]. Otherwise it returns
@@ -1018,9 +1041,14 @@ module Poly : sig
   end
   with type ('a, 'b, 'c) map = ('a, 'b, 'c) t
 
-module type Key_plain = Key_plain
-module type Key = Key
-module type Key_binable = Key_binable
+[%%template:
+[@@@mode.default m = (local, global)]
+
+module type Key_plain = Key_plain [@mode m]
+module type Key = Key [@mode m]
+module type Key_binable = Key_binable [@mode m]
+module type Key_hashable = Key_hashable [@mode m]
+module type Key_binable_hashable = Key_binable_hashable [@mode m]]
 
 [%%template:
 [@@@modality.default p = (portable, nonportable)]

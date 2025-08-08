@@ -191,40 +191,42 @@ module Permissioned : sig
   (** counterparts of regular array functions above *)
 
   external get
-    : 'a.
-    (('a, [> read ]) t[@local_opt]) -> (int[@local_opt]) -> 'a
+    :  (('a, [> read ]) t[@local_opt])
+    -> (int[@local_opt])
+    -> 'a
     = "%array_safe_get"
-  [@@layout_poly]
 
   external set
-    : 'a.
-    (('a, [> write ]) t[@local_opt]) -> (int[@local_opt]) -> 'a -> unit
+    :  (('a, [> write ]) t[@local_opt])
+    -> (int[@local_opt])
+    -> 'a
+    -> unit
     = "%array_safe_set"
-  [@@layout_poly]
 
   external unsafe_get
-    : 'a.
-    (('a, [> read ]) t[@local_opt]) -> (int[@local_opt]) -> 'a
+    :  (('a, [> read ]) t[@local_opt])
+    -> (int[@local_opt])
+    -> 'a
     = "%array_unsafe_get"
-  [@@layout_poly]
 
   external unsafe_set
-    : 'a.
-    (('a, [> write ]) t[@local_opt]) -> (int[@local_opt]) -> 'a -> unit
+    :  (('a, [> write ]) t[@local_opt])
+    -> (int[@local_opt])
+    -> 'a
+    -> unit
     = "%array_unsafe_set"
-  [@@layout_poly]
 
   val create : len:int -> 'a -> ('a, [< _ perms ]) t
   [@@ocaml.doc
-    " [create ~len x] creates an array of length [len] with the value [x] populated in\n\
-    \        each element. "]
+    {| [create ~len x] creates an array of length [len] with the value [x] populated in
+        each element. |}]
 
   val create_local : len:int -> 'a -> ('a, [< _ perms ]) t
 
   val magic_create_uninitialized : len:int -> ('a, [< _ perms ]) t
   [@@ocaml.doc
-    " [magic_create_uninitialized ~len] creates an array of length [len]. All elements\n\
-    \        are magically populated as a tagged [0]. "]
+    {| [magic_create_uninitialized ~len] creates an array of length [len]. All elements
+        are magically populated as a tagged [0]. |}]
 
   val create_float_uninitialized : len:int -> (float, [< _ perms ]) t
   val init : int -> f:(int -> 'a) -> ('a, [< _ perms ]) t

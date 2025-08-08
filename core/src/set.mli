@@ -290,6 +290,15 @@ val iter2
   -> f:([ `Left of 'a | `Right of 'a | `Both of 'a * 'a ] -> unit)
   -> unit
 
+(** [iter_until t ~f ~finish] is a short-circuiting version of [iter]. If [f] returns
+    [Stop x] the computation ceases and returns [x]. If [f] always returns [Continue ()]
+    the final result is computed by [finish]. *)
+val iter_until
+  :  ('a, 'cmp') t
+  -> f:('a -> (unit, 'final) Continue_or_stop.t)
+  -> finish:(unit -> 'final)
+  -> 'final
+
 (** If [a, b = partition_tf set ~f] then [a] is the elements on which [f] produced [true],
     and [b] is the elements on which [f] produces [false]. *)
 val partition_tf : ('a, 'cmp) t -> f:('a -> bool) -> ('a, 'cmp) t * ('a, 'cmp) t

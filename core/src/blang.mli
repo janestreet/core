@@ -73,7 +73,7 @@ open! Import
 
     If you want to see the derived sexp, use [Raw.sexp_of_t]. *)
 
-open Std_internal
+open! Std_internal
 
 (** Note that the sexps are not directly inferred from the type below -- there are lots of
     fancy shortcuts. Also, the sexps for ['a] must not look anything like blang sexps.
@@ -180,7 +180,7 @@ include Quickcheckable.S1 with type 'a t := 'a t
 
     Note: [bind t f] does short-circuiting, so [f] may not be called on every variable in
     [t]. *)
-include Monad with type 'a t := 'a t
+include%template Monad.S [@mode local] with type 'a t := 'a t
 
 (** [values t] forms the list containing every [v] for which [Base v] is a subexpression
     of [t] *)

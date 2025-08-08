@@ -12,7 +12,7 @@ module type S := sig
     ; pos_bol : int
     ; pos_cnum : int
     }
-  [@@deriving fields ~getters, globalize]
+  [@@deriving bin_io ~localize, fields ~getters, globalize]
 
   include%template
     Comparable.S

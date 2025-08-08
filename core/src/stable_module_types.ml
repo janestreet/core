@@ -90,3 +90,26 @@ module%template With_stable_witness = struct
     include S4 [@mode m] with type ('a, 'b, 'c, 'd) t := ('a, 'b, 'c, 'd) t
   end
 end
+
+module%template For_export = struct
+  [@@@mode.default m = (global, local)]
+
+  module type Stable = S0 [@mode m] [@modality p] [@@modality p = (portable, nonportable)]
+  module type Stable_without_comparator = S0_without_comparator [@mode m]
+  module type Stable1 = S1 [@mode m]
+  module type Stable2 = S2 [@mode m]
+  module type Stable3 = S3 [@mode m]
+  module type Stable4 = S4 [@mode m]
+
+  (* Versions of the stable module types that expose a stable_witness *)
+  module type Stable_with_witness = With_stable_witness.S0 [@mode m] [@modality p]
+  [@@modality p = (portable, nonportable)]
+
+  module type Stable_without_comparator_with_witness =
+    With_stable_witness.S0_without_comparator [@mode m]
+
+  module type Stable1_with_witness = With_stable_witness.S1 [@mode m]
+  module type Stable2_with_witness = With_stable_witness.S2 [@mode m]
+  module type Stable3_with_witness = With_stable_witness.S3 [@mode m]
+  module type Stable4_with_witness = With_stable_witness.S4 [@mode m]
+end

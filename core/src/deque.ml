@@ -206,7 +206,9 @@ let clear t =
 module%template C = Container.Make [@modality portable] (struct
     type nonrec 'a t = 'a t
 
-    let fold = fold
+    let fold_until t ~init ~f ~finish = Container.fold_until ~fold ~init ~f t ~finish
+    let fold = `Custom fold
+    let iter_until = `Define_using_fold_until
     let iter = `Custom iter
     let length = `Custom length
   end)
@@ -223,6 +225,7 @@ let min_elt = C.min_elt
 let max_elt = C.max_elt
 let fold_result = C.fold_result
 let fold_until = C.fold_until
+let iter_until = C.iter_until
 
 let blit new_arr t =
   assert (not (is_empty t));

@@ -413,6 +413,10 @@ module%template.portable Make_tree_S1 (Key : Comparator.S1) = struct
   let split a b = split a b ~comparator
   let split_le_gt a b = split_le_gt a b ~comparator
   let split_lt_ge a b = split_lt_ge a b ~comparator
+  let count_lt a b = count_lt a b ~comparator
+  let count_le a b = count_le a b ~comparator
+  let count_gt a b = count_gt a b ~comparator
+  let count_ge a b = count_ge a b ~comparator
   let append ~lower_part ~upper_part = append ~lower_part ~upper_part ~comparator
 
   let subrange t ~lower_bound ~upper_bound =
@@ -584,11 +588,14 @@ module Poly = struct
   end
 end
 
-module type Key_plain = Key_plain
-module type Key = Key
-module type Key_binable = Key_binable
-module type Key_hashable = Key_hashable
-module type Key_binable_hashable = Key_binable_hashable
+[%%template
+[@@@mode.default m = (local, global)]
+
+module type Key_plain = Key_plain [@mode m]
+module type Key = Key [@mode m]
+module type Key_binable = Key_binable [@mode m]
+module type Key_hashable = Key_hashable [@mode m]
+module type Key_binable_hashable = Key_binable_hashable [@mode m]]
 
 [%%template
 [@@@modality.default p = (portable, nonportable)]

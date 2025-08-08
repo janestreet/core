@@ -16,6 +16,8 @@ module type Span = sig
 
   include Span_intf.S with type underlying = Int63.t and type t := t
 
+  include%template Quickcheck.S_int [@mode portable] with type t := t
+
   val of_sec_with_microsecond_precision : float -> t
   val of_int_us : int -> t [@@zero_alloc strict]
   val of_int_ms : int -> t [@@zero_alloc strict]
@@ -526,6 +528,7 @@ module type Time_ns = sig
          | `Local
          | `Use_this_one of Zone.t
          | `Use_this_one_lazy of Zone.t Lazy.t
+         | `Use_this_one_portable_lazy of Zone.t Portable_lazy.t
          ]
     -> ?find_zone:(string -> Zone.t) (** default: [Timezone.find_exn] *)
     -> string
@@ -657,6 +660,7 @@ module type Time_ns = sig
     -> interval:Span.t
     -> unit
     -> t
+  [@@zero_alloc]
 
   (** [prev_multiple ~base ~before ~interval] returns the largest [time] of the form:
 
@@ -704,6 +708,12 @@ module type Time_ns = sig
 
   (** [round_down_to_sec t] returns [t] rounded down to the previous second. *)
   val round_down_to_sec : t -> t
+
+  (** [every interval ~start ~stop] returns a sorted list of all [t]s that can be
+      expressed as [start + (i * interval)] and satisfy [t >= start && t <= stop].
+
+      Returns an [Error] if [interval <= Span.zero || start > stop]. *)
+  val every : Span.t -> start:t -> stop:t -> t list Or_error.t
 
   val random : ?state:Random.State.t -> unit -> t
 
@@ -822,7 +832,7 @@ module type Time_ns = sig
       module V1 : sig
         type t = Alternate_sexp.t
         [@@deriving
-          bin_io
+          bin_io ~localize
           , compare ~localize
           , equal ~localize
           , hash

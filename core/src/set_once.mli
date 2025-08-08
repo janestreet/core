@@ -24,6 +24,7 @@ type 'a t := ('a t[@kind k])
 include Invariant.S1 [@kind k] with type 'a t := 'a t
 
 val create : unit -> _ t
+val create_full : ?here:Stdlib.Lexing.position -> 'a -> 'a t
 val set : 'a t -> ?here:Stdlib.Lexing.position -> 'a -> unit Or_error.t
 val set_exn : 'a t -> ?here:Stdlib.Lexing.position -> 'a -> unit
 

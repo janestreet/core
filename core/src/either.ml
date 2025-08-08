@@ -28,6 +28,9 @@ include%template Comparator.Derived2 [@modality portable] (struct
     type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of, compare ~localize]
   end)
 
-let quickcheck_generator = Base_quickcheck.Generator.either
-let quickcheck_observer = Base_quickcheck.Observer.either
-let quickcheck_shrinker = Base_quickcheck.Shrinker.either
+[%%template
+[@@@mode.default p = (portable, nonportable)]
+
+let quickcheck_generator = (Base_quickcheck.Generator.either [@mode p])
+let quickcheck_observer = (Base_quickcheck.Observer.either [@mode p])
+let quickcheck_shrinker = (Base_quickcheck.Shrinker.either [@mode p])]

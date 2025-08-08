@@ -29,6 +29,7 @@ module Random = Base.Random
 module Staged = Base.Staged
 module Stringable = Base.Stringable
 module Sys = Base.Sys
+module Toplevel_value = Base.Toplevel_value
 module With_return = Base.With_return
 module Word_size = Base.Word_size
 

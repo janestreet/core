@@ -290,11 +290,9 @@ module%test Nonvalue_layout_tests = struct
 
     let test name ~f =
       let confirm_test = lazy (print_endline {%string|testing [%{name}]|}) in
-      quickcheck_m
-        (module List_pair)
-        ~f:(fun pair ->
-          force confirm_test;
-          f pair)
+      quickcheck_m (module List_pair) ~f:(fun pair ->
+        force confirm_test;
+        f pair)
     ;;
 
     let test_sexp_of () =

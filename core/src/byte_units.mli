@@ -23,7 +23,8 @@ val create : [ `Bytes | `Kilobytes | `Megabytes | `Gigabytes | `Words ] -> float
 [@@deprecated
   "[since 2019-01] Use [of_bytes], [of_kilobytes], [of_megabytes], etc as appropriate."]
 
-include Comparable.S_plain with type t := t
+include%template Comparable.S_plain [@mode local] with type t := t
+
 include Hashable.S_plain with type t := t
 include Stringable.S with type t := t
 
@@ -164,7 +165,7 @@ include Quickcheck.S_range with type t := t
 module Stable : sig
   (*_ old float based [bin_io] repr. *)
   module V1 : sig
-    type nonrec t = t [@@deriving hash]
+    type nonrec t = t [@@deriving compare ~localize, hash]
 
     include%template
       Stable_module_types.With_stable_witness.S0_without_comparator
@@ -174,7 +175,8 @@ module Stable : sig
 
   (*_ new [Int63] based [bin_io] repr. *)
   module V2 : sig
-    type nonrec t = t [@@deriving equal ~localize, hash, sexp_grammar, typerep]
+    type nonrec t = t
+    [@@deriving compare ~localize, equal ~localize, hash, sexp_grammar, typerep]
 
     include%template
       Stable_module_types.With_stable_witness.S0_without_comparator

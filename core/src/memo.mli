@@ -84,8 +84,5 @@ val recursive
 (** efficient special case for argument type [unit] *)
 val unit : (unit -> 'a) -> (unit, 'a) fn
 
-(** Use a comparable instead of hashable type *)
-val of_comparable
-  :  (module Comparable.S_plain with type t = 'a)
-  -> ('a -> 'b)
-  -> ('a, 'b) fn
+(** Use a comparator instead of hashable type *)
+val of_comparator : (module Comparator.S with type t = 'a) -> ('a -> 'b) -> ('a, 'b) fn

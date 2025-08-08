@@ -11,7 +11,7 @@ let bytes_per_line = 16
    final index. *)
 let default_max_lines = Dynamic.make ((4096 / bytes_per_line) + 1)
 
-module%template.portable Of_indexable2 (T : Indexable2) = struct
+module%template.portable Of_indexable3 (T : Indexable3) = struct
   module Hexdump = struct
     include T
 
@@ -117,7 +117,7 @@ module%template.portable Of_indexable2 (T : Indexable2) = struct
       create ~max_lines ~pos ~len t ~f:create_string
     ;;
 
-    let sexp_of_t _ _ t = to_sequence t |> Sequence.to_list |> [%sexp_of: string list]
+    let sexp_of_t _ _ _ t = to_sequence t |> Sequence.to_list |> [%sexp_of: string list]
 
     module Pretty = struct
       include T
@@ -132,9 +132,32 @@ module%template.portable Of_indexable2 (T : Indexable2) = struct
 
       let to_string t = String.init (length t) ~f:(fun pos -> get t pos)
 
-      let sexp_of_t sexp_of_a sexp_of_b t =
-        if printable t then [%sexp (to_string t : string)] else [%sexp (t : (a, b) t)]
+      let sexp_of_t sexp_of_a sexp_of_b sexp_of_c t =
+        if printable t then [%sexp (to_string t : string)] else [%sexp (t : (a, b, c) t)]
       ;;
+    end
+  end
+end
+
+module%template.portable [@modality p] Of_indexable2 (T : Indexable2) = struct
+  module M = Of_indexable3 [@modality p] (struct
+      type ('a, 'b, _) t = ('a, 'b) T.t
+
+      let length = T.length
+      let get = T.get
+    end)
+
+  module Hexdump = struct
+    include T
+
+    let sexp_of_t x y t = M.Hexdump.sexp_of_t x y [%sexp_of: _] t
+    let to_sequence = M.Hexdump.to_sequence
+    let to_string_hum = M.Hexdump.to_string_hum
+
+    module Pretty = struct
+      include T
+
+      let sexp_of_t sexp_of_a sexp_of_b t = [%sexp (t : (a, b, _) M.Hexdump.Pretty.t)]
     end
   end
 end

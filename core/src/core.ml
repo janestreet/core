@@ -171,6 +171,7 @@ module Thread = struct end
 module Time_float = Time_float
 module Time_ns = Time_ns
 module Timezone = Timezone
+module Toplevel_value = Toplevel_value
 module Tuple = Tuple
 module Tuple2 = Tuple.T2
 module Tuple3 = Tuple.T3
@@ -202,10 +203,11 @@ include T (** @open *)
 
 include Std_internal
 include Not_found
+include Stable_witness.Export
 
 (** {2 Top-level values} *)
 
-external phys_equal : ('a[@local_opt]) -> ('a[@local_opt]) -> bool = "%eq"
+external phys_equal : 'a. ('a[@local_opt]) -> ('a[@local_opt]) -> bool = "%eq"
 
 type 'a _maybe_bound = 'a Maybe_bound.t =
   | Incl of 'a

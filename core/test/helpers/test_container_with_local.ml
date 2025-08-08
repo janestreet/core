@@ -34,20 +34,16 @@ let test
   (f_local : Input.t -> Output.t)
   (f_global : Input.t -> Output.t)
   =
-  quickcheck_m
-    ~here
-    ?cr
-    (module Input)
-    ~f:(fun input ->
-      require_equal
-        ~here
-        ?cr
-        (module Output)
-        (Output.globalize (f_local input))
-        (f_global input);
-      let f_noalloc = Option.value noalloc ~default:(fun x -> f_local x) in
-      require_no_allocation ~here (fun () ->
-        ignore (Sys.opaque_identity (f_noalloc input) : Output.t)))
+  quickcheck_m ~here ?cr (module Input) ~f:(fun input ->
+    require_equal
+      ~here
+      ?cr
+      (module Output)
+      (Output.globalize (f_local input))
+      (f_global input);
+    let f_noalloc = Option.value noalloc ~default:(fun x -> f_local x) in
+    require_no_allocation ~here (fun () ->
+      ignore (Sys.opaque_identity (f_noalloc input) : Output.t)))
 ;;
 
 let test_indexed_container_with_creators

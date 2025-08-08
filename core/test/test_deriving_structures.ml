@@ -1,5 +1,4 @@
 open Core
-open Stable_witness.Export
 
 (* We just want to make sure all of this compiles. *)
 

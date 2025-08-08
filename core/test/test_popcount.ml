@@ -27,12 +27,8 @@ let%test_unit _ = test_int64 Int64.max_value 63L
 let%test_unit _ = test_int64 Int64.min_value 1L
 let%test_unit _ = test_nativeint 0n 0n
 let%test_unit _ = test_nativeint 1n 1n
-let%test_unit _ = test_nativeint (-1n) Nativeint.(num_bits |> of_int_exn)
-
-let%test_unit _ =
-  test_nativeint Nativeint.max_value (Nativeint.num_bits - 1 |> Nativeint.of_int_exn)
-;;
-
+let%test_unit _ = test_nativeint (-1n) Nativeint.(num_bits)
+let%test_unit _ = test_nativeint Nativeint.max_value Nativeint.(num_bits - 1n)
 let%test_unit _ = test_nativeint Nativeint.min_value 1n
 
 (* test that we can account for each bit individually *)
@@ -62,10 +58,10 @@ let%test_unit _ =
 ;;
 
 let%test_unit _ =
-  for i = 0 to Nativeint.num_bits - 1 do
+  for i = 0 to Nativeint.(num_bits |> to_int_trunc) - 1 do
     let n = Nativeint.shift_left 1n i in
     test_nativeint n 1n;
-    test_nativeint (Nativeint.bit_not n) (Nativeint.num_bits - 1 |> Nativeint.of_int_exn)
+    test_nativeint (Nativeint.bit_not n) Nativeint.(num_bits - one)
   done
 ;;
 

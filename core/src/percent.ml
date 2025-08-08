@@ -775,15 +775,60 @@ end)
 
 external ( // ) : (t[@local_opt]) -> (t[@local_opt]) -> (t[@local_opt]) = "%divfloat"
 
-include%template Comparable.With_zero [@modality portable] (struct
+module%template With_zero = Comparable.With_zero [@modality portable] (struct
     include Stable.V1.Bin_shape_same_as_float
 
     let zero = zero
   end)
 
+include (
+  With_zero :
+  sig
+    val validate_positive : t Validate.check
+    val validate_non_negative : t Validate.check
+    val validate_negative : t Validate.check
+    val validate_non_positive : t Validate.check
+
+    (* This behavior doesn't align with that of [Float], but we don't worry about it
+       because it is deprecated anyways in favor of [sign_exn] (which raises on [NaN]). *)
+    val sign : t -> Sign.t
+  end)
+
+(* See comment in mli about the functions below. *)
+
+let clamp_legacy = clamp
+and clamp = Float.clamp
+
+let clamp_exn_legacy = clamp_exn
+and clamp_exn = Float.clamp_exn
+
+let min_legacy = min
+and min = Float.min
+
+let max_legacy = max
+and max = Float.max
+
+let is_positive_legacy = With_zero.is_positive
+and is_positive = Float.is_positive
+
+let is_non_negative_legacy = With_zero.is_non_negative
+and is_non_negative = Float.is_non_negative
+
+let is_negative_legacy = With_zero.is_negative
+and is_negative = Float.is_negative
+
+let is_non_positive_legacy = With_zero.is_non_positive
+and is_non_positive = Float.is_non_positive
+
+(* [validate_ordinary] fails if class is [Nan] or [Infinite]. *)
 let validate = Float.validate_ordinary
 let of_string_allow_nan_and_inf s = Stringable.of_string_allow_nan_and_inf s
 let t_of_sexp_allow_nan_and_inf sexp = of_string_allow_nan_and_inf (Sexp.to_string sexp)
+let arg_type = [%template Command.Arg_type.create [@modality portable]] of_string
+
+let arg_type_allow_nan_and_inf =
+  [%template Command.Arg_type.create [@modality portable]] of_string_allow_nan_and_inf
+;;
 
 module Always_percentage = struct
   type nonrec t = t
