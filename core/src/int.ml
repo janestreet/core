@@ -20,7 +20,8 @@ end
 
 include Binable
 
-include%template Identifiable.Extend [@modality portable] (Base.Int) (Binable)
+include%template
+  Identifiable.Extend [@mode local] [@modality portable] (Base.Int) (Binable)
 
 module Replace_polymorphic_compare = Base.Int
 include Base.Int

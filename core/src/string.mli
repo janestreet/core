@@ -36,13 +36,16 @@ val slice : t -> int -> int -> t
 (** [nget s i] gets the char at normalized position [i] in [s]. *)
 val nget : t -> int -> char
 
+[%%template:
+[@@@alloc.default a @ m = (heap @ global, stack @ local)]
+
 (** [take_while s ~f] returns the longest prefix of [s] satisfying [for_all prefix ~f]
     (See [lstrip] to drop such a prefix) *)
 val take_while : t -> f:(char -> bool) -> t
 
 (** [rtake_while s ~f] returns the longest suffix of [s] satisfying [for_all suffix ~f]
     (See [rstrip] to drop such a suffix) *)
-val rtake_while : t -> f:(char -> bool) -> t
+val rtake_while : t -> f:(char -> bool) -> t]
 
 include Hexdump.S with type t := t
 
@@ -116,7 +119,7 @@ module Stable : sig
     type t [@@deriving equal ~localize, hash, sexp_grammar]
     type comparator_witness
 
-    include Base.Stringable.S with type t := t
+    include%template Base.Stringable.S [@alloc stack] with type t := t
 
     include%template
       Stable_comparable.With_stable_witness.V1

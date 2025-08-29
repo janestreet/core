@@ -18,7 +18,9 @@ module%template Stable = struct
 
     let make = (make [@modality p])
 
-    module Make = Make [@modality p]
-    module Make1 = Make1 [@modality p]
+    [@@@mode.default m = (global, local)]
+
+    module Make = Make [@mode m] [@modality p]
+    module Make1 = Make1 [@mode m] [@modality p]
   end
 end

@@ -343,7 +343,7 @@ module Poly = struct
         init_for_bin_prot
           ~len
           ~f:(fun _ -> next ())
-          ~comparator:Comparator.Poly.comparator
+          ~comparator:Comparator.Poly.comparator [@nontail]
       ;;
     end)
 
@@ -364,12 +364,19 @@ end
 
 module Elt_bin_io = Elt_bin_io
 
-module%template.portable [@modality p] Provide_bin_io (Elt : Elt_bin_io.S) = struct
-  include Bin_prot.Utils.Make_iterable_binable [@modality p] (struct
+module%template.portable [@inline] [@modality p] Provide_bin_io (Elt : Elt_bin_io.S) =
+struct
+  include Bin_prot.Utils.Make_iterable_binable [@inlined hint] [@modality p] (struct
       type nonrec t = (Elt.t, Elt.comparator_witness) t
-      type el = Elt.t [@@deriving bin_io]
+      type el = Elt.t
 
-      let _ = bin_el
+      (* You may be tempted to replace these with [type el = Elt.t [@@deriving bin_io]],
+         but this generates a new [Bin_shape.t], which is both allocating and side-
+         effectful, and difficult for the compiler to eliminate in [bin_size_m__t] etc. *)
+      let bin_size_el = [%bin_size: Elt.t]
+      let bin_write_el = [%bin_write: Elt.t]
+      let bin_read_el = [%bin_read: Elt.t]
+      let bin_shape_el = [%bin_shape: Elt.t]
 
       let caller_identity =
         Bin_prot.Shape.Uuid.of_string "8989278e-4992-11e6-8f4a-6b89776b1e53"
@@ -377,10 +384,10 @@ module%template.portable [@modality p] Provide_bin_io (Elt : Elt_bin_io.S) = str
 
       let module_name = Some "Core.Set"
       let length = length
-      let[@inline always] iter t ~f = iter ~f:(fun key -> f key) t [@nontail]
+      let iter = iter
 
       let init ~len ~next =
-        init_for_bin_prot ~len ~f:(fun _ -> next ()) ~comparator:Elt.comparator
+        init_for_bin_prot ~len ~f:(fun _ -> next ()) ~comparator:Elt.comparator [@nontail]
       ;;
     end)
 
@@ -507,48 +514,64 @@ module For_deriving = struct
   module M = Set.M
 
   include struct
-    let bin_shape_m__t (type t c) (m : (t, c) Elt_bin_io.t) =
+    let[@inline] bin_shape_m__t (type t c) (m : (t, c) Elt_bin_io.t) =
       let module M = Provide_bin_io ((val m)) in
       M.bin_shape_t
     ;;
 
-    let bin_size_m__t (type t c) (m : (t, c) Elt_bin_io.t) =
+    [%%template
+    [@@@mode.default m = (global, local)]
+
+    let[@inline] bin_size_m__t (type t c) (m : (t, c) Elt_bin_io.t) =
       let module M = Provide_bin_io ((val m)) in
-      M.bin_size_t
+      M.bin_size_t [@mode m]
     ;;
 
-    let bin_write_m__t (type t c) (m : (t, c) Elt_bin_io.t) =
+    let[@inline] bin_write_m__t (type t c) (m : (t, c) Elt_bin_io.t) =
       let module M = Provide_bin_io ((val m)) in
-      M.bin_write_t
-    ;;
+      M.bin_write_t [@mode m]
+    ;;]
 
-    let bin_read_m__t (type t c) (m : (t, c) Elt_bin_io.t) =
+    let[@inline] bin_read_m__t (type t c) (m : (t, c) Elt_bin_io.t) =
       let module M = Provide_bin_io ((val m)) in
       M.bin_read_t
     ;;
 
-    let __bin_read_m__t__ (type t c) (m : (t, c) Elt_bin_io.t) =
+    let[@inline] __bin_read_m__t__ (type t c) (m : (t, c) Elt_bin_io.t) =
       let module M = Provide_bin_io ((val m)) in
       M.__bin_read_t__
     ;;
 
-    type binio =
+    type%template binio =
       { bin_shape_m__t : 'a 'c. ('a, 'c) Elt_bin_io.t -> Bin_shape.t
       ; bin_size_m__t : 'a 'c. ('a, 'c) Elt_bin_io.t -> ('a, 'c) t Bin_prot.Size.sizer
+      ; bin_size_m__t__local :
+          'a 'c. ('a, 'c) Elt_bin_io.t -> (('a, 'c) t Bin_prot.Size.sizer[@mode local])
       ; bin_write_m__t : 'a 'c. ('a, 'c) Elt_bin_io.t -> ('a, 'c) t Bin_prot.Write.writer
+      ; bin_write_m__t__local :
+          'a 'c. ('a, 'c) Elt_bin_io.t -> (('a, 'c) t Bin_prot.Write.writer[@mode local])
       ; bin_read_m__t : 'a 'c. ('a, 'c) Elt_bin_io.t -> ('a, 'c) t Bin_prot.Read.reader
       ; __bin_read_m__t__ :
           'a 'c. ('a, 'c) Elt_bin_io.t -> ('a, 'c) t Bin_prot.Read.vtag_reader
       }
 
     let binio =
-      { bin_shape_m__t; bin_size_m__t; bin_write_m__t; bin_read_m__t; __bin_read_m__t__ }
+      { bin_shape_m__t
+      ; bin_size_m__t
+      ; bin_size_m__t__local
+      ; bin_write_m__t
+      ; bin_write_m__t__local
+      ; bin_read_m__t
+      ; __bin_read_m__t__
+      }
       |> Portability_hacks.magic_portable__needs_portable_functors
     ;;
 
     let { bin_shape_m__t
         ; bin_size_m__t
+        ; bin_size_m__t__local
         ; bin_write_m__t
+        ; bin_write_m__t__local
         ; bin_read_m__t
         ; __bin_read_m__t__
         }

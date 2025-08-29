@@ -2176,3 +2176,31 @@ let%expect_test "smoke tests for templated versions making sure the Core wrapper
      (1 foo))
     |}]
 ;;
+
+let%expect_test ("bin_io functions do not allocate" [@tags "fast-flambda2"]) =
+  let t = create (module Unit) in
+  Hashtbl.set t ~key:() ~data:();
+  let size =
+    Expect_test_helpers_core.require_no_allocation ~here:[%here] (fun () ->
+      [%bin_size: unit M(Unit).t] t)
+  in
+  [%expect {| |}];
+  let buf = Bigstring.create size in
+  let _ : int =
+    Expect_test_helpers_core.require_no_allocation ~here:[%here] (fun () ->
+      [%bin_write: unit M(Unit).t] buf ~pos:0 t)
+  in
+  [%expect {| |}];
+  let pos_ref = ref 0 in
+  let _ : unit M(Unit).t =
+    Expect_test_helpers_core.require_allocation_does_not_exceed
+      (* 6 words for the table record +
+         2 words for the array containing the node +
+         3 words for the [Leaf] node +
+         3 words for the [(), ()] key-value pair *)
+      (Minor_words 14)
+      ~here:[%here]
+      (fun () -> [%bin_read: unit M(Unit).t] buf ~pos_ref)
+  in
+  [%expect {| |}]
+;;

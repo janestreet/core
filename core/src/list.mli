@@ -37,12 +37,13 @@ exception
 (** [exn_if_dup ~compare ?context t ~to_sexp] raises if [t] contains a duplicate. It will
     specifically raise a [Duplicate_found] exception and use [context] as its second
     argument. O(n log n) time complexity. *)
-val exn_if_dup
+val%template exn_if_dup
   :  compare:('a -> 'a -> int)
   -> ?context:string
   -> 'a t
   -> to_sexp:('a -> Base.Sexp.t)
   -> unit
+[@@mode (p, c) = ((nonportable, uncontended), (portable, contended))]
 
 (** [slice t start stop] returns a new list including elements [t.(start)] through
     [t.(stop-1)], normalized Python-style with the exception that [stop = 0] is treated as

@@ -41,11 +41,19 @@ module type Date0 = sig
       http://www.wikipedia.org/wiki/iso8601 *)
   val of_string_iso8601_basic : string -> pos:int -> t
 
+  [%%template:
+  [@@@alloc.default a @ m = (heap_global, stack_local)]
+
+  (** YYYY-MM-DD *)
+  val to_string_iso8601_extended : t -> string
+
   (** YYYYMMDD *)
   val to_string_iso8601_basic : t -> string
 
   (** MM/DD/YYYY *)
   val to_string_american : t -> string
+
+  val to_string : t -> string]
 
   val day : t -> int
   val month : t -> Month.t

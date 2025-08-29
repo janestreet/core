@@ -30,24 +30,18 @@ module Binable_exn = struct
   module Stable = struct
     module V1 = struct
       module T = struct
-        type 'a thunk = unit -> 'a [@@deriving sexp_of]
-
-        let stable_witness_thunk x =
-          Stable_witness.of_serializable x (fun x () -> x) (fun f -> f ())
-        ;;
-
-        type t = exn thunk Modes.Stable.Global.V1.t [@@deriving sexp_of, stable_witness]
+        type t = exn Modes.Stable.Global.V1.t [@@deriving sexp_of, stable_witness]
       end
 
       include T
 
       let%template[@mode m = (global, local)] to_binable t =
-        (Modes.Global.unwrap t) () |> [%sexp_of: exn]
+        Modes.Global.unwrap t |> [%sexp_of: exn]
       ;;
 
       let of_binable exn =
         let exn = exn |> Exn.create_s in
-        Modes.Global.wrap (fun () -> exn)
+        Modes.Global.wrap exn
       ;;
 
       include%template
@@ -284,7 +278,7 @@ module Extend (Info : Base.Info.S) = struct
           | Could_not_construct x -> Could_not_construct x
           | String x -> String x
           | Exn x ->
-            let exn_creator = Exn.create_s_uncontended x in
+            let exn_creator = Exn.create_s x in
             Exn { global = exn_creator }
           | Sexp x -> Sexp x
           | Tag_sexp (tag, x, pos) -> Tag_sexp (tag, x, pos)
@@ -319,7 +313,7 @@ module Extend (Info : Base.Info.S) = struct
           | String x -> String x
           | Exn x ->
             let f = Modes.Global.unwrap x in
-            Exn (Exn.sexp_of_t (f ()))
+            Exn (Exn.sexp_of_t f)
           | Sexp x -> Sexp x
           | Tag_sexp (tag, x, pos) -> Tag_sexp (tag, x, pos)
           | Tag_t (tag, t) -> Tag_t (tag, repr_to_binable t)

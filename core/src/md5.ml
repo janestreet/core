@@ -111,7 +111,7 @@ let to_hex = T.to_hex
 let from_hex = T.of_hex_exn
 let of_hex_exn = T.of_hex_exn
 let of_binary_exn = T.of_binary_exn
-let to_binary = T.to_binary
+let%template[@mode m = (global, local)] to_binary = (T.to_binary [@mode m])
 let digest_string = Stable.digest_string
 let digest_bytes = Md5_lib.bytes
 

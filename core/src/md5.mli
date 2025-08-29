@@ -53,7 +53,8 @@ include Hashable with type t := t
 val digest_num_bytes : int
 
 (** Binary representations are 16 bytes long, and not human readable. *)
-val to_binary : t -> string
+val%template to_binary : t -> string
+[@@mode m = (global, local)]
 
 val of_binary_exn : string -> t
 

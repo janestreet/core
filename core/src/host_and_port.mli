@@ -21,6 +21,8 @@ include%template
   with type t := t
    and type comparator_witness := comparator_witness
 
+include%template Base.Stringable.S [@alloc stack] with type t := t
+
 include Sexplib.Sexp_grammar.S with type t := t
 
 module Hide_port_in_test : sig
@@ -44,7 +46,7 @@ module Stable : sig
       , hash
       , quickcheck]
 
-    include Base.Stringable.S with type t := t
+    include%template Base.Stringable.S [@alloc stack] with type t := t
 
     include%template
       Stable_comparable.With_stable_witness.V1

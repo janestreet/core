@@ -444,7 +444,8 @@ module type Time_ns = sig
       zeros are trimmed, rather than trimming in groups of three. *)
   module Alternate_sexp : sig
     type nonrec t = t
-    [@@deriving bin_io, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+    [@@deriving
+      bin_io ~localize, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
 
     include%template Comparable.S [@mode local] with type t := t
 
@@ -484,7 +485,8 @@ module type Time_ns = sig
         in [Time_ns_unix]. See the comment above. *)
     module Alternate_sexp : sig
       type nonrec t = t
-      [@@deriving bin_io, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+      [@@deriving
+        bin_io ~localize, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
 
       include%template Comparable.S [@mode local] with type t := t
 
@@ -623,8 +625,8 @@ module type Time_ns = sig
 
   val to_span_since_epoch : t -> Span.t [@@zero_alloc strict]
   val of_span_since_epoch : Span.t -> t [@@zero_alloc strict]
-  val to_int63_ns_since_epoch : t -> Int63.t
-  val of_int63_ns_since_epoch : Int63.t -> t
+  val to_int63_ns_since_epoch : t -> Int63.t [@@zero_alloc strict]
+  val of_int63_ns_since_epoch : Int63.t -> t [@@zero_alloc strict]
 
   (** Will raise on 32-bit platforms. Consider [to_int63_ns_since_epoch] instead. *)
   val to_int_ns_since_epoch : t -> int
@@ -809,7 +811,8 @@ module type Time_ns = sig
       module Alternate_sexp : sig
         module V1 : sig
           type nonrec t = Option.Alternate_sexp.t
-          [@@deriving bin_io, compare ~localize, hash, sexp, sexp_grammar, stable_witness]
+          [@@deriving
+            bin_io ~localize, compare ~localize, hash, sexp, sexp_grammar, stable_witness]
 
           include
             Comparator.Stable.V1.S

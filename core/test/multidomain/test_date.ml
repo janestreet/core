@@ -18,11 +18,17 @@ module%test [@name "[Date_cache] does not race"] _ = struct
     let times = Iarray.init num_domains ~f:(fun n -> time_of_days (n * 5)) in
     let results = Iarray.init num_domains ~f:(fun _ -> Await_sync.Ivar.create ()) in
     for i = 0 to num_domains - 1 do
-      Multicore.spawn (fun () ->
-        let time = Iarray.get times i in
-        let ivar = Iarray.get results i in
-        Barrier.await barrier;
-        Await_sync.Ivar.fill_exn ivar (f time ~zone:Timezone.utc))
+      match
+        Multicore.spawn
+          (fun () ->
+            let time = Iarray.get times i in
+            let ivar = Iarray.get results i in
+            Barrier.await barrier;
+            Await_sync.Ivar.fill_exn ivar (f time ~zone:Timezone.utc))
+          ()
+      with
+      | Spawned -> ()
+      | Failed ((), exn, bt) -> Exn.raise_with_original_backtrace exn bt
     done;
     let results_parallel =
       Await_blocking.with_await Await.Terminator.never ~f:(fun block ->

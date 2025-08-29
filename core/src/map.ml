@@ -6,7 +6,7 @@ module Symmetric_diff_element = struct
   module Stable = struct
     module V1 = struct
       type ('k, 'v) t = 'k * [ `Left of 'v | `Right of 'v | `Unequal of 'v * 'v ]
-      [@@deriving bin_io, compare ~localize, sexp, stable_witness]
+      [@@deriving bin_io ~localize, compare ~localize, sexp, stable_witness]
 
       let%expect_test _ =
         print_endline [%bin_digest: (int, string) t];
@@ -566,7 +566,7 @@ module Poly = struct
         init_for_bin_prot
           ~len
           ~f:(fun _ -> next ())
-          ~comparator:Comparator.Poly.comparator
+          ~comparator:Comparator.Poly.comparator [@nontail]
       ;;
     end)
 
@@ -606,14 +606,32 @@ module type S_binable = S_binable [@modality p]]
 
 module Key_bin_io = Key_bin_io
 
-module%template.portable [@modality p] Provide_bin_io (Key : Key_bin_io.S) = struct
-  include Bin_prot.Utils.Make_iterable_binable1 [@modality p] (struct
+module%template.portable [@inline] [@modality p] Provide_bin_io (Key : Key_bin_io.S) =
+struct
+  include Bin_prot.Utils.Make_iterable_binable1 [@inlined hint] [@modality p] (struct
       module Key = Key
 
       type nonrec 'v t = (Key.t, 'v, Key.comparator_witness) t
-      type 'v el = Key.t * 'v [@@deriving bin_io]
+      type 'v el = Key.t * 'v
 
-      let _ = bin_el
+      (* You may be tempted to replace these with
+         [type 'v el = Key.t * 'v [@@deriving bin_io]], but this generates a new
+         [Bin_shape.t], which is both allocating and side-effectful, and difficult for the
+         compiler to eliminate in [bin_size_m__t] etc. *)
+
+      let bin_size_el (type v) (bin_size_v : v Bin_prot.Size.sizer) =
+        [%bin_size: Key.t * v]
+      ;;
+
+      let bin_write_el (type v) (bin_write_v : v Bin_prot.Write.writer) =
+        [%bin_write: Key.t * v]
+      ;;
+
+      let bin_read_el (type v) (bin_read_v : v Bin_prot.Read.reader) =
+        [%bin_read: Key.t * v]
+      ;;
+
+      let bin_shape_el bin_shape_v = [%bin_shape: Key.t * v]
 
       let caller_identity =
         Bin_prot.Shape.Uuid.of_string "dfb300f8-4992-11e6-9c15-73a2ac6b815c"
@@ -627,7 +645,7 @@ module%template.portable [@modality p] Provide_bin_io (Key : Key_bin_io.S) = str
       ;;
 
       let init ~len ~next =
-        init_for_bin_prot ~len ~f:(fun _ -> next ()) ~comparator:Key.comparator
+        init_for_bin_prot ~len ~f:(fun _ -> next ()) ~comparator:Key.comparator [@nontail]
       ;;
     end)
 
@@ -775,37 +793,48 @@ module For_deriving = struct
   module M = Map.M
 
   include struct
-    let bin_shape_m__t (type t c) (m : (t, c) Key_bin_io.t) =
+    let[@inline] bin_shape_m__t (type t c) (m : (t, c) Key_bin_io.t) =
       let module M = Provide_bin_io ((val m)) in
       M.bin_shape_t
     ;;
 
-    let bin_size_m__t (type t c) (m : (t, c) Key_bin_io.t) =
+    [%%template
+    [@@@mode.default m = (global, local)]
+
+    let[@inline] bin_size_m__t (type t c) (m : (t, c) Key_bin_io.t) =
       let module M = Provide_bin_io ((val m)) in
-      M.bin_size_t
+      M.bin_size_t [@mode m]
     ;;
 
-    let bin_write_m__t (type t c) (m : (t, c) Key_bin_io.t) =
+    let[@inline] bin_write_m__t (type t c) (m : (t, c) Key_bin_io.t) =
       let module M = Provide_bin_io ((val m)) in
-      M.bin_write_t
-    ;;
+      M.bin_write_t [@mode m]
+    ;;]
 
-    let bin_read_m__t (type t c) (m : (t, c) Key_bin_io.t) =
+    let[@inline] bin_read_m__t (type t c) (m : (t, c) Key_bin_io.t) =
       let module M = Provide_bin_io ((val m)) in
       M.bin_read_t
     ;;
 
-    let __bin_read_m__t__ (type t c) (m : (t, c) Key_bin_io.t) =
+    let[@inline] __bin_read_m__t__ (type t c) (m : (t, c) Key_bin_io.t) =
       let module M = Provide_bin_io ((val m)) in
       M.__bin_read_t__
     ;;
 
-    type binio =
+    type%template binio =
       { bin_shape_m__t : 'a 'c. ('a, 'c) Key_bin_io.t -> Bin_shape.t -> Bin_shape.t
       ; bin_size_m__t :
           'a 'b 'c. ('a, 'c) Key_bin_io.t -> ('b, ('a, 'b, 'c) t) Bin_prot.Size.sizer1
+      ; bin_size_m__t__local :
+          'a 'b 'c.
+          ('a, 'c) Key_bin_io.t
+          -> (('b, ('a, 'b, 'c) t) Bin_prot.Size.sizer1[@mode local])
       ; bin_write_m__t :
           'a 'b 'c. ('a, 'c) Key_bin_io.t -> ('b, ('a, 'b, 'c) t) Bin_prot.Write.writer1
+      ; bin_write_m__t__local :
+          'a 'b 'c.
+          ('a, 'c) Key_bin_io.t
+          -> (('b, ('a, 'b, 'c) t) Bin_prot.Write.writer1[@mode local])
       ; bin_read_m__t :
           'a 'b 'c. ('a, 'c) Key_bin_io.t -> ('b, ('a, 'b, 'c) t) Bin_prot.Read.reader1
       ; __bin_read_m__t__ :
@@ -814,13 +843,22 @@ module For_deriving = struct
       }
 
     let binio =
-      { bin_shape_m__t; bin_size_m__t; bin_write_m__t; bin_read_m__t; __bin_read_m__t__ }
+      { bin_shape_m__t
+      ; bin_size_m__t
+      ; bin_size_m__t__local
+      ; bin_write_m__t
+      ; bin_write_m__t__local
+      ; bin_read_m__t
+      ; __bin_read_m__t__
+      }
       |> Portability_hacks.magic_portable__needs_portable_functors
     ;;
 
     let { bin_shape_m__t
         ; bin_size_m__t
+        ; bin_size_m__t__local
         ; bin_write_m__t
+        ; bin_write_m__t__local
         ; bin_read_m__t
         ; __bin_read_m__t__
         }

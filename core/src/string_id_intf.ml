@@ -3,18 +3,18 @@
 
 open! Import
 
+[%%template
+module type Stringable = Stringable.S
+module type%template [@mode local] Stringable = Stringable.S [@alloc stack]]
+
 module type%template
   [@mode m = (global, local)] [@modality p = (portable, nonportable)] S = sig
   type t = private string
   [@@deriving
-    (bin_io [@mode m])
-    , (compare [@mode m])
-    , (equal [@mode m])
-    , globalize
-    , hash
-    , sexp_grammar]
+    (bin_io [@mode m]), compare ~localize, equal ~localize, globalize, hash, sexp_grammar]
 
   include Identifiable.S [@mode m] [@modality p] with type t := t
+  include Stringable [@mode m] with type t := t
   include Quickcheckable.S with type t := t
   include Diffable.S_atomic with type t := t
 
@@ -25,14 +25,14 @@ module type%template
       type nonrec t = t
       [@@deriving
         (bin_io [@mode m])
-        , (compare [@mode m])
-        , (equal [@mode m])
+        , compare ~localize
+        , equal ~localize
         , globalize
         , hash
         , sexp_grammar
         , stable_witness]
 
-      include Stringable.S with type t := t
+      include Stringable [@mode m] with type t := t
 
       include
         Stable_comparable.With_stable_witness.V1

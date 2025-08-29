@@ -276,7 +276,7 @@ end
 
 module Alternate_sexp = struct
   module T = struct
-    type nonrec t = t [@@deriving bin_io, compare ~localize, hash]
+    type nonrec t = t [@@deriving bin_io ~localize, compare ~localize, hash]
 
     module Ofday_as_span = struct
       open Int.O
@@ -1495,7 +1495,7 @@ module Option = struct
 
   module Alternate_sexp = struct
     module T = struct
-      type nonrec t = t [@@deriving bin_io, compare ~localize, hash]
+      type nonrec t = t [@@deriving bin_io ~localize, compare ~localize, hash]
 
       let sexp_of_t t = [%sexp_of: Alternate_sexp.t option] (to_option t)
       let t_of_sexp s = of_option ([%of_sexp: Alternate_sexp.t option] s)

@@ -67,7 +67,9 @@ module Stable = struct
       open! Std_internal
       open! T0
 
-      let to_string { host; port } = sprintf "%s:%d" host port
+      let%template[@alloc a = (heap, stack)] to_string { host; port } =
+        (String.concat [@alloc a]) [ host; ":"; Int.to_string port ] [@exclave_if_stack a]
+      ;;
 
       let of_string s =
         match String.split s ~on:':' with

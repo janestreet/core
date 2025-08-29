@@ -41,16 +41,22 @@ module%template.portable Provide_of_sexp (Elt : Base.Hashtbl.M_of_sexp) = struct
 end
 
 module%template.portable
-  [@modality p] Provide_bin_io (Elt : sig
+  [@inline] [@modality p] Provide_bin_io (Elt : sig
     type t [@@deriving bin_io]
 
     include Elt_plain with type t := t
   end) =
-Bin_prot.Utils.Make_iterable_binable [@modality p] (struct
+Bin_prot.Utils.Make_iterable_binable [@inlined hint] [@modality p] (struct
     type nonrec t = Elt.t t
-    type el = Elt.t [@@deriving bin_io]
+    type el = Elt.t
 
-    let _ = bin_el
+    (* You may be tempted to replace these with [type el = Elt.t [@@deriving bin_io]],
+       but this generates a new [Bin_shape.t], which is both allocating and side-
+       effectful, and difficult for the compiler to eliminate in [bin_size_m__t] etc. *)
+    let bin_size_el = [%bin_size: Elt.t]
+    let bin_write_el = [%bin_write: Elt.t]
+    let bin_read_el = [%bin_read: Elt.t]
+    let bin_shape_el = [%bin_shape: Elt.t]
 
     let caller_identity =
       Bin_prot.Shape.Uuid.of_string "ad381672-4992-11e6-9e36-b76dc8cd466f"

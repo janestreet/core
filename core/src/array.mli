@@ -167,9 +167,15 @@ module Permissioned : sig
       Since we don't control the definition of ['a array], this would require a type
       [('a, 'perms) Array.Permissioned.t] which is abstract, except that
       [('a, read_write) Array.Permissioned.t] is concrete, which is not possible. *)
-  val of_array_id : 'a array -> ('a, [< read_write ]) t
+  external of_array_id
+    :  ('a array[@local_opt])
+    -> (('a, [< read_write ]) t[@local_opt])
+    = "%identity"
 
-  val to_array_id : ('a, [> read_write ]) t -> 'a array
+  external to_array_id
+    :  (('a, [> read_write ]) t[@local_opt])
+    -> ('a array[@local_opt])
+    = "%identity"
 
   (** [to_sequence_immutable t] converts [t] to a sequence. Unlike [to_sequence],
       [to_sequence_immutable] does not need to copy [t] since it is immutable. *)

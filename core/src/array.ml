@@ -473,8 +473,16 @@ module Permissioned : sig
     [@@noalloc]
   end
 
-  val of_array_id : 'a array -> ('a, [< read_write ]) t
-  val to_array_id : ('a, [> read_write ]) t -> 'a array
+  external of_array_id
+    :  ('a array[@local_opt])
+    -> (('a, [< read_write ]) t[@local_opt])
+    = "%identity"
+
+  external to_array_id
+    :  (('a, [> read_write ]) t[@local_opt])
+    -> ('a array[@local_opt])
+    = "%identity"
+
   val to_sequence_immutable : ('a, [> immutable ]) t -> 'a Sequence.t
 
   include Permissioned with type ('a, 'perms) t := ('a, 'perms) t
@@ -499,8 +507,15 @@ end = struct
     [@@deriving bin_io ~localize, compare ~localize, sexp, sexp_grammar]
   end
 
-  let to_array_id = Fn.id
-  let of_array_id = Fn.id
+  external to_array_id
+    :  (('a, [> read_write ]) t[@local_opt])
+    -> ('a array[@local_opt])
+    = "%identity"
+
+  external of_array_id
+    :  ('a array[@local_opt])
+    -> (('a, [< read_write ]) t[@local_opt])
+    = "%identity"
 
   module T' = struct
     (* Replace externals in [T] with non-layout poly versions *)
@@ -545,6 +560,10 @@ end
 
 module type S = sig
   type 'a t
+
+  type%template 'a t
+  [@@kind k = (float64, bits32, bits64, word, immediate, immediate64)]
+  [@@deriving compare ~localize, equal ~localize, sexp ~stackify, globalize]
 
   include Binary_searchable.S1 with type 'a t := 'a t
   include Indexed_container.S1_with_creators with type 'a t := 'a t
@@ -675,23 +694,32 @@ module type S = sig
   val iter2_exn : 'a t -> 'b t -> f:('a -> 'b -> unit) -> unit
   val map2_exn : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
   val fold2_exn : 'a t -> 'b t -> init:'acc -> f:('acc -> 'a -> 'b -> 'acc) -> 'acc
-  val for_all2_exn : 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool
-  val exists2_exn : 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool
+
+  [%%template:
+  [@@@kind.default k1 = (value, float64, bits32, bits64, word, immediate, immediate64)]
+  [@@@kind.default k2 = (value, float64, bits32, bits64, word, immediate, immediate64)]
+
+  val of_list_map : 'a 'b. ('a List.t[@kind k1]) -> f:('a -> 'b) -> 'b t
+  val of_list_mapi : 'a 'b. ('a List.t[@kind k1]) -> f:(int -> 'a -> 'b) -> 'b t
+  val of_list_rev_map : 'a 'b. ('a List.t[@kind k1]) -> f:('a -> 'b) -> 'b t
+  val of_list_rev_mapi : 'a 'b. ('a List.t[@kind k1]) -> f:(int -> 'a -> 'b) -> 'b t
+
+  [@@@mode.default m = (global, local)]
+
+  val for_all2_exn : 'a 'b. 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool
+  val exists2_exn : 'a 'b. 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool]
+
   val filter : 'a t -> f:('a -> bool) -> 'a t
   val filteri : 'a t -> f:(int -> 'a -> bool) -> 'a t
-  val swap : 'a t -> int -> int -> unit
-  val rev_inplace : 'a t -> unit
-  val rev : 'a t -> 'a t
-  val of_list_rev : 'a list -> 'a t
-  val of_list_map : 'a list -> f:('a -> 'b) -> 'b t
-  val of_list_mapi : 'a list -> f:(int -> 'a -> 'b) -> 'b t
-  val of_list_rev_map : 'a list -> f:('a -> 'b) -> 'b t
-  val of_list_rev_mapi : 'a list -> f:(int -> 'a -> 'b) -> 'b t
   val map_inplace : 'a t -> f:('a -> 'a) -> unit
 
   [%%template:
   [@@@kind.default k1 = (value, float64, bits32, bits64, word, immediate, immediate64)]
 
+  val swap : 'a. 'a t -> int -> int -> unit
+  val rev_inplace : 'a. 'a t -> unit
+  val rev : 'a. 'a t -> 'a t
+  val of_list_rev : 'a. ('a List.t[@kind k1]) -> 'a t
   val find_exn : 'a. 'a t -> f:('a -> bool) -> 'a
 
   [@@@kind.default k2 = (value, float64, bits32, bits64, word, immediate, immediate64)]
@@ -727,7 +755,17 @@ module type S = sig
   val chunks_of : 'a t -> length:int -> 'a t t
 end
 
-include (T : S with type 'a t := 'a array) [@ocaml.warning "-3"]
+include (
+  T :
+    S
+    with type 'a t := 'a array
+     and type 'a t__bits64 = 'a array
+     and type 'a t__bits32 = 'a array
+     and type 'a t__float64 = 'a array
+     and type 'a t__word = 'a array
+     and type 'a t__immediate = 'a array
+     and type 'a t__immediate64 = 'a array)
+[@ocaml.warning "-3"]
 
 let invariant invariant_a t = iter t ~f:invariant_a
 let max_length = Sys.max_array_length

@@ -32,7 +32,8 @@ module Stable : sig
   module V1 : sig
     type nonrec t = t [@@deriving bin_io ~localize, sexp_grammar]
 
-    include Stable_module_types.With_stable_witness.S0 with type t := t
+    include%template
+      Stable_module_types.With_stable_witness.S0 [@mode local] with type t := t
   end
 
   (** Zero-length bin_prot format.

@@ -1192,8 +1192,9 @@ module Stable : sig
   end
 
   module Symmetric_diff_element : sig
-    module V1 :
+    module%template V1 :
       Stable_module_types.With_stable_witness.S2
+      [@mode local]
       with type ('a, 'b) t = ('a, 'b) Symmetric_diff_element.t
   end
 end

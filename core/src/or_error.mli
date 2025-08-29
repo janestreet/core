@@ -4,10 +4,10 @@
 open! Import
 
 type%template 'a t = ('a Base.Or_error.t[@kind k])
-[@@deriving bin_io] [@@kind k = (float64, bits32, bits64, word)]
+[@@deriving bin_io ~localize] [@@kind k = (float64, bits32, bits64, word)]
 
 type 'a t = ('a, Error.t) Result.t
-[@@deriving bin_io, diff ~extra_derive:[ sexp ], quickcheck]
+[@@deriving bin_io ~localize, diff ~extra_derive:[ sexp ], quickcheck]
 
 (** @inline *)
 include module type of struct

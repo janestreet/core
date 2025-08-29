@@ -112,6 +112,15 @@ module type S1 = sig
       queue. *)
   val to_alist : ('key, 'data) t -> ('key * 'data) list
 
+  (** [of_alist_exn t] creates a queue from the given list, raising in the same situation
+      as [enqueue_exn] *)
+  val of_alist_exn
+    :  ?growth_allowed:bool
+    -> ?size:int
+    -> 'key create_arg
+    -> ('key create_key * 'data) list
+    -> ('key create_key, 'data) t
+
   (** [dequeue t front_or_back] returns the front or back element of the queue. *)
   val dequeue : ('key, 'data) t -> [ `back | `front ] -> 'data option
 

@@ -252,15 +252,18 @@ module type For_deriving = sig
 
   val bin_shape_m__t : ('a, 'c) Key_bin_io.t -> Bin_prot.Shape.t -> Bin_prot.Shape.t
 
+  [%%template:
+  [@@@mode.default m = (global, local)]
+
   val bin_size_m__t
     :  ('a, 'c) Key_bin_io.t
-    -> 'b Bin_prot.Size.sizer
-    -> ('a, 'b, 'c) t Bin_prot.Size.sizer
+    -> ('b Bin_prot.Size.sizer[@mode m])
+    -> (('a, 'b, 'c) t Bin_prot.Size.sizer[@mode m])
 
   val bin_write_m__t
     :  ('a, 'c) Key_bin_io.t
-    -> 'b Bin_prot.Write.writer
-    -> ('a, 'b, 'c) t Bin_prot.Write.writer
+    -> ('b Bin_prot.Write.writer[@mode m])
+    -> (('a, 'b, 'c) t Bin_prot.Write.writer[@mode m])]
 
   val bin_read_m__t
     :  ('a, 'c) Key_bin_io.t

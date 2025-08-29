@@ -1179,3 +1179,28 @@ let%expect_test _ =
     ((sexp (1 2 3)) (bin_io "\003\001\002\003"))
     |}]
 ;;
+
+let%expect_test ("bin_io functions do not allocate" [@tags "fast-flambda2"]) =
+  let t = Set.singleton (module Unit) () in
+  let size =
+    Expect_test_helpers_core.require_no_allocation ~here:[%here] (fun () ->
+      [%bin_size: Set.M(Unit).t] t)
+  in
+  [%expect {| |}];
+  let buf = Bigstring.create size in
+  let _ : int =
+    Expect_test_helpers_core.require_no_allocation ~here:[%here] (fun () ->
+      [%bin_write: Set.M(Unit).t] buf ~pos:0 t)
+  in
+  [%expect {| |}];
+  let pos_ref = ref 0 in
+  let _ : Set.M(Unit).t =
+    Expect_test_helpers_core.require_allocation_does_not_exceed
+      (* 3 words for the set record +
+         2 words for the [Leaf] node *)
+      (Minor_words 5)
+      ~here:[%here]
+      (fun () -> [%bin_read: Set.M(Unit).t] buf ~pos_ref)
+  in
+  [%expect {| |}]
+;;

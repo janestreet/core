@@ -3266,6 +3266,7 @@ struct
         ~when_parsing_succeeds
         ~on_failure:Command_base.run_exn
     | Exec exec ->
+      when_parsing_succeeds ();
       let args = Cmdline.to_list (maybe_apply_extend args ~extend ~path) in
       Exec.exec_with_args ~args exec ~maybe_new_comp_cword
     | Group ({ summary; readme; subcommands = subs; body } as group) ->

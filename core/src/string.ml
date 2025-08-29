@@ -15,6 +15,7 @@ module Stable = struct
     include T
 
     let to_string = Fn.id
+    let%template[@alloc stack] to_string = Fn.id
     let of_string = Fn.id
 
     include%template Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (T)
@@ -52,6 +53,8 @@ module Stable = struct
       end
 
       include T
+
+      let%template[@alloc stack] to_string (t : t) = (t :> string)
 
       include%template
         Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (T)
@@ -157,17 +160,21 @@ let%template gen_with_length length chars =
 [@@mode p = (portable, nonportable)]
 ;;
 
+[%%template
+[@@@alloc.default a = (heap, stack)]
+
 let take_while t ~f =
   match lfindi t ~f:(fun _ elt -> not (f elt)) with
   | None -> t
-  | Some i -> sub t ~pos:0 ~len:i
+  | Some i -> (sub [@alloc a]) t ~pos:0 ~len:i [@exclave_if_stack a]
 ;;
 
 let rtake_while t ~f =
   match rfindi t ~f:(fun _ elt -> not (f elt)) with
   | None -> t
-  | Some i -> sub t ~pos:(i + 1) ~len:(length t - i - 1)
-;;
+  | Some i ->
+    (sub [@alloc a]) t ~pos:(i + 1) ~len:(length t - i - 1) [@exclave_if_stack a]
+;;]
 
 (** See {!Array.normalize} for the following 4 functions. *)
 let normalize t i = Ordered_collection_common.normalize ~length_fun:length t i

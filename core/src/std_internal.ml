@@ -467,7 +467,8 @@ end :
       , sexp_grammar
       , typerep]
 
-    type 'a or_null
+    type nonrec 'a or_null = 'a or_null
+    [@@or_null_reexport]
     [@@deriving compare ~localize, equal ~localize, globalize, sexp ~stackify]
   end
   with type 'a array := 'a array
@@ -495,7 +496,7 @@ end :
   with type 'a lazy_t := 'a lazy_t
   with type 'a ref := 'a ref
   with type unit := unit
-  with type 'a or_null = 'a or_null)
+  with type 'a or_null := 'a or_null)
 
 (* When running with versions of the compiler that don't support the [iarray] extension,
    re-export it from [Base], which defines it as an abstract type in such cases.

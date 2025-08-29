@@ -58,8 +58,10 @@ module type Comparator = sig
         -> sexp_of_t:('a -> Base.Sexp.t)
         -> ((module S_fc with type comparable_t = 'a)[@modality p])
 
-      module Make : module type of Make [@modality p]
-      module Make1 : module type of Make1 [@modality p]
+      [@@@mode.default m = (global, local)]
+
+      module Make : module type of Make [@mode m] [@modality p]
+      module Make1 : module type of Make1 [@mode m] [@modality p]
     end
   end
 end

@@ -15,7 +15,7 @@ type 'a t =
   ; length : int
   }
 
-let length t = t.length
+let%template[@mode m = (global, local)] length t = t.length
 let is_empty t = t.length = 0
 
 let invariant f t =
@@ -229,10 +229,11 @@ module%template [@alloc stack] List = struct
 end
 
 module Make_container (F : sig
-    val to_list : 'a t -> 'a list
+    val%template to_list : 'a t -> 'a list [@@alloc a @ m = (heap_global, stack_local)]
   end) =
 struct
-  let to_list = F.to_list
+  include F
+
   let is_empty = is_empty
   let length = length
   let mem t x ~equal = List.mem ~equal (to_list t) x
@@ -274,12 +275,17 @@ module Front_to_back = struct
   ;;
 
   include Make_container (struct
-      let to_list = to_list
+      let%template[@alloc a = (heap, stack)] to_list = (to_list [@alloc a])
     end)
 end
 
 module Back_to_front = struct
-  let to_list t = t.back @ List.rev t.front
+  let%template[@alloc a = (heap, stack)] to_list t =
+    (let module L = List [@alloc a] in
+    L.append t.back (L.rev t.front))
+    [@exclave_if_stack a]
+  ;;
+
   let of_list list = make ~length:(List.length list) ~back:list ~front:[]
 
   let to_sequence t =
@@ -295,7 +301,7 @@ module Back_to_front = struct
   ;;
 
   include Make_container (struct
-      let to_list = to_list
+      let%template[@alloc a = (heap, stack)] to_list = (to_list [@alloc a])
     end)
 end
 
@@ -364,17 +370,37 @@ module Stable = struct
 
     let map = map
 
-    include%template Bin_prot.Utils.Make_iterable_binable1 [@modality portable] (struct
+    open struct
+      module%template List = struct
+        include List
+
+        let[@mode m = (local, global)] rec iter t ~f =
+          match t with
+          | [] -> ()
+          | a :: xs ->
+            f a;
+            (iter [@mode m]) xs ~f
+        ;;
+      end
+
+      let%template[@mode local] to_list = (to_list [@alloc stack])
+    end
+
+    include%template
+      Bin_prot.Utils.Make_iterable_binable1 [@mode local] [@modality portable] (struct
         type nonrec 'a t = 'a t
-        type 'a el = 'a [@@deriving bin_io]
+        type 'a el = 'a [@@deriving bin_io ~localize]
 
         let caller_identity =
           Bin_prot.Shape.Uuid.of_string "83f96982-4992-11e6-919d-fbddcfdca576"
         ;;
 
         let module_name = Some "Core.Fdeque"
-        let length = length
-        let iter t ~f = List.iter (to_list t) ~f
+        let%template[@mode m = (global, local)] length = (length [@mode m])
+
+        let%template[@mode m = (local, global)] iter t ~f =
+          (List.iter [@mode m]) ((to_list [@mode m]) t) ~f [@nontail]
+        ;;
 
         let init ~len ~next =
           let rec loop next acc n =

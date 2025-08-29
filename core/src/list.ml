@@ -23,6 +23,20 @@ let exn_if_dup ~compare ?(context = "exn_if_dup") t ~to_sexp =
   | Some dup -> raise (Duplicate_found ((fun () -> to_sexp dup), context))
 ;;
 
+exception Duplicate_found__portable of sexp_thunk * Base.String.t [@@deriving sexp]
+
+let%template exn_if_dup ~compare ?(context = "exn_if_dup") t ~to_sexp =
+  match
+    find_a_dup
+      ~compare:(fun x y -> compare (Modes.Portable.unwrap x) (Modes.Portable.unwrap y))
+      (Modes.Portable.wrap_list t)
+  with
+  | None -> ()
+  | Some { portable = dup } ->
+    raise (Duplicate_found__portable ((fun () -> to_sexp dup), context))
+[@@mode portable]
+;;
+
 let slice a start stop =
   Ordered_collection_common.slice ~length_fun:(length :> _ -> _) ~sub_fun:sub a start stop
 ;;

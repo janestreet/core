@@ -56,14 +56,19 @@ module%test Array_tests = struct
         , (bits64 & bits64) mod external_
         , (bits64 & value) mod external_ )] Test
       (E : sig
-         type t [@@deriving compare, equal, quickcheck, sexp_of]
-         type unboxed [@@deriving equal]
+         type t [@@deriving compare, equal, quickcheck, sexp]
+         type unboxed [@@deriving equal, sexp]
 
          val create_uninitialized : len:int -> unboxed array
          val unsafe_blit : (unboxed array, unboxed array) Blit.blit option
          val fill : (unboxed array -> pos:int -> len:int -> unboxed -> unit) option
          val sub : (unboxed array, unboxed array) Blit.sub option
          val concat : (unboxed array list -> unboxed array) option
+
+         val sexp
+           : (((unboxed -> Sexp.t) -> unboxed array -> Sexp.t)
+             * ((Sexp.t -> unboxed) -> Sexp.t -> unboxed array))
+               option
 
          include
            Unboxed_test_harness.Boxable
@@ -98,7 +103,11 @@ module%test Array_tests = struct
       Array.init (Array.length arr) ~f:(fun i -> E.box (Array.get arr i))
     ;;
 
-    let sexp_of_uarray (arr : E.unboxed array) = [%sexp_of: E.t array] (box_array arr)
+    let sexp_of_uarray =
+      match E.sexp with
+      | Some (sexp_of, _) -> sexp_of E.sexp_of_unboxed
+      | None -> fun arr -> [%sexp_of: E.t array] (box_array arr)
+    ;;
 
     let check_array_against_u_array confirm_test arr_i arr_iu =
       force confirm_test;
@@ -169,18 +178,6 @@ module%test Array_tests = struct
         Quickcheck.Shrinker.empty ()
       ;;
     end
-
-    let () =
-      let confirm_test = lazy (print_endline "testing [sexp_of]") in
-      quickcheck_m (module Array_pair) ~f:(fun { arr_i; arr_iu } ->
-        force confirm_test;
-        require_equal
-          ~is_zero_alloc_with_flambda2:false
-          [%here]
-          (module Sexp)
-          (fun () -> Array.sexp_of_t E.sexp_of_t arr_i)
-          (fun () -> sexp_of_uarray arr_iu))
-    ;;
 
     let () =
       let confirm_test = lazy (print_endline "testing [length]") in
@@ -444,6 +441,25 @@ module%test Array_tests = struct
                ~sexp_of_output1:[%sexp_of: E.t array]
                ~sexp_of_output2:sexp_of_uarray))
     ;;
+
+    let () =
+      let confirm_test = lazy (print_endline "testing [sexp]") in
+      Option.iter E.sexp ~f:(fun (sexp_of, of_sexp) ->
+        quickcheck_m (module Array_pair) ~f:(fun { arr_i; arr_iu } ->
+          force confirm_test;
+          let sexp = Array.sexp_of_t E.sexp_of_t arr_i in
+          require_equal
+            ~is_zero_alloc_with_flambda2:false
+            [%here]
+            (module Sexp)
+            (fun () -> sexp)
+            (fun () -> sexp_of E.sexp_of_unboxed arr_iu);
+          require
+            (check_array_against_u_array
+               confirm_test
+               (Array.t_of_sexp E.t_of_sexp sexp)
+               (of_sexp E.unboxed_of_sexp sexp))))
+    ;;
   end
 
   module _ = struct
@@ -451,13 +467,18 @@ module%test Array_tests = struct
         include Int32_u
         include Int32
 
-        type unboxed = Int32_u.t [@@deriving equal]
+        type unboxed = Int32_u.t [@@deriving equal, sexp]
 
         let create_uninitialized = Core.Array.magic_create_uninitialized
         let unsafe_blit = Some (Core.Array.unsafe_blit [@kind bits32])
         let fill = Some (Core.Array.fill [@kind bits32])
         let sub = Some (Core.Array.sub [@kind bits32])
         let concat = Some (Core.Array.concat [@kind bits32])
+
+        let sexp =
+          Some
+            ((Core.Array.sexp_of_t [@kind bits32]), (Core.Array.t_of_sexp [@kind bits32]))
+        ;;
       end)
 
     let%expect_test "int32#" =
@@ -469,7 +490,6 @@ module%test Array_tests = struct
       in
       [%expect
         {|
-        testing [sexp_of]
         testing [length]
         testing [get]
         testing [unsafe_get]
@@ -480,6 +500,7 @@ module%test Array_tests = struct
         testing [fill]
         testing [sub]
         testing [concat]
+        testing [sexp]
         |}]
     ;;
 
@@ -492,7 +513,6 @@ module%test Array_tests = struct
       in
       [%expect
         {|
-        testing [sexp_of]
         testing [length]
         testing [get]
         testing [unsafe_get]
@@ -503,6 +523,7 @@ module%test Array_tests = struct
         testing [fill]
         testing [sub]
         testing [concat]
+        testing [sexp]
         |}]
     ;;
 
@@ -510,13 +531,18 @@ module%test Array_tests = struct
         include Int64_u
         include Int64
 
-        type unboxed = Int64_u.t [@@deriving equal]
+        type unboxed = Int64_u.t [@@deriving equal, sexp]
 
         let create_uninitialized = Core.Array.magic_create_uninitialized
         let unsafe_blit = Some (Core.Array.unsafe_blit [@kind bits64])
         let fill = Some (Core.Array.fill [@kind bits64])
         let sub = Some (Core.Array.sub [@kind bits64])
         let concat = Some (Core.Array.concat [@kind bits64])
+
+        let sexp =
+          Some
+            ((Core.Array.sexp_of_t [@kind bits64]), (Core.Array.t_of_sexp [@kind bits64]))
+        ;;
       end)
 
     let%expect_test "int64#" =
@@ -528,7 +554,6 @@ module%test Array_tests = struct
       in
       [%expect
         {|
-        testing [sexp_of]
         testing [length]
         testing [get]
         testing [unsafe_get]
@@ -539,6 +564,7 @@ module%test Array_tests = struct
         testing [fill]
         testing [sub]
         testing [concat]
+        testing [sexp]
         |}]
     ;;
 
@@ -551,7 +577,6 @@ module%test Array_tests = struct
       in
       [%expect
         {|
-        testing [sexp_of]
         testing [length]
         testing [get]
         testing [unsafe_get]
@@ -562,6 +587,7 @@ module%test Array_tests = struct
         testing [fill]
         testing [sub]
         testing [concat]
+        testing [sexp]
         |}]
     ;;
 
@@ -569,13 +595,17 @@ module%test Array_tests = struct
         include Nativeint_u
         include Nativeint
 
-        type unboxed = Nativeint_u.t [@@deriving equal]
+        type unboxed = Nativeint_u.t [@@deriving equal, sexp]
 
         let create_uninitialized = Core.Array.magic_create_uninitialized
         let unsafe_blit = Some (Core.Array.unsafe_blit [@kind word])
         let fill = Some (Core.Array.fill [@kind word])
         let sub = Some (Core.Array.sub [@kind word])
         let concat = Some (Core.Array.concat [@kind word])
+
+        let sexp =
+          Some ((Core.Array.sexp_of_t [@kind word]), (Core.Array.t_of_sexp [@kind word]))
+        ;;
       end)
 
     let%expect_test "nativeint#" =
@@ -587,7 +617,6 @@ module%test Array_tests = struct
       in
       [%expect
         {|
-        testing [sexp_of]
         testing [length]
         testing [get]
         testing [unsafe_get]
@@ -598,6 +627,7 @@ module%test Array_tests = struct
         testing [fill]
         testing [sub]
         testing [concat]
+        testing [sexp]
         |}]
     ;;
 
@@ -610,7 +640,6 @@ module%test Array_tests = struct
       in
       [%expect
         {|
-        testing [sexp_of]
         testing [length]
         testing [get]
         testing [unsafe_get]
@@ -621,6 +650,7 @@ module%test Array_tests = struct
         testing [fill]
         testing [sub]
         testing [concat]
+        testing [sexp]
         |}]
     ;;
 
@@ -628,13 +658,20 @@ module%test Array_tests = struct
         include Float_u
         include Float
 
-        type unboxed = Float_u.t
+        type unboxed = Float_u.t [@@deriving sexp]
 
         let create_uninitialized = Core.Array.magic_create_uninitialized
         let unsafe_blit = Some (Core.Array.unsafe_blit [@kind float64])
         let fill = Some (Core.Array.fill [@kind float64])
         let sub = Some (Core.Array.sub [@kind float64])
         let concat = Some (Core.Array.concat [@kind float64])
+
+        let sexp =
+          Some
+            ( (Core.Array.sexp_of_t [@kind float64])
+            , (Core.Array.t_of_sexp [@kind float64]) )
+        ;;
+
         let equal_unboxed = [%compare.equal: Float_u.t]
         let equal = [%compare.equal: Float.t]
       end)
@@ -648,7 +685,6 @@ module%test Array_tests = struct
       in
       [%expect
         {|
-        testing [sexp_of]
         testing [length]
         testing [get]
         testing [unsafe_get]
@@ -659,6 +695,7 @@ module%test Array_tests = struct
         testing [fill]
         testing [sub]
         testing [concat]
+        testing [sexp]
         |}]
     ;;
 
@@ -671,7 +708,6 @@ module%test Array_tests = struct
       in
       [%expect
         {|
-        testing [sexp_of]
         testing [length]
         testing [get]
         testing [unsafe_get]
@@ -682,12 +718,13 @@ module%test Array_tests = struct
         testing [fill]
         testing [sub]
         testing [concat]
+        testing [sexp]
         |}]
     ;;
 
     module Test_int64_u_pair = Test [@kind (bits64 & bits64) mod external_] (struct
-        type t = int64 * int64 [@@deriving compare, equal, quickcheck, sexp_of]
-        type unboxed = int64 * int64
+        type t = int64 * int64 [@@deriving compare, equal, quickcheck, sexp]
+        type unboxed = Int64_u.t * Int64_u.t [@@deriving sexp]
 
         let create_uninitialized : len:int -> unboxed array =
           Core.Array.magic_create_uninitialized
@@ -697,6 +734,7 @@ module%test Array_tests = struct
         let fill = None
         let sub = None
         let concat = None
+        let sexp = None
 
         let equal_unboxed (x1, y1) (x2, y2) =
           [%equal: Int64_u.t] x1 x2 && [%equal: Int64_u.t] y1 y2
@@ -715,7 +753,6 @@ module%test Array_tests = struct
       in
       [%expect
         {|
-        testing [sexp_of]
         testing [length]
         testing [get]
         testing [unsafe_get]
@@ -734,7 +771,6 @@ module%test Array_tests = struct
       in
       [%expect
         {|
-        testing [sexp_of]
         testing [length]
         testing [get]
         testing [unsafe_get]
@@ -746,8 +782,8 @@ module%test Array_tests = struct
   end
 
   module Test_int_pair = Test [@kind value & value] (struct
-      type t = int * int [@@deriving compare, equal, quickcheck, sexp_of]
-      type unboxed = int * int
+      type t = int * int [@@deriving compare, equal, quickcheck, sexp]
+      type unboxed = int * int [@@deriving sexp]
 
       (* We can't actually make uninitialized [int]s, so initialize with 0 *)
       let create_uninitialized ~len = Array.create ~len (0, 0)
@@ -755,6 +791,7 @@ module%test Array_tests = struct
       let fill = None
       let sub = None
       let concat = None
+      let sexp = None
       let equal_unboxed (x1, y1) (x2, y2) = [%equal: Int.t] x1 x2 && [%equal: Int.t] y1 y2
       let box (x, y) = x, y
       let unbox (x, y) = x, y
@@ -769,7 +806,6 @@ module%test Array_tests = struct
     in
     [%expect
       {|
-      testing [sexp_of]
       testing [length]
       testing [get]
       testing [unsafe_get]
@@ -788,7 +824,6 @@ module%test Array_tests = struct
     in
     [%expect
       {|
-      testing [sexp_of]
       testing [length]
       testing [get]
       testing [unsafe_get]
@@ -799,8 +834,8 @@ module%test Array_tests = struct
   ;;
 
   module Test_int64_u_int_pair = Test [@kind (bits64 & value) mod external_] (struct
-      type t = int64 * int [@@deriving compare, equal, quickcheck, sexp_of]
-      type unboxed = int64 * int
+      type t = int64 * int [@@deriving compare, equal, quickcheck, sexp]
+      type unboxed = Int64_u.t * int [@@deriving sexp]
 
       (* We can't actually make uninitialized [int]s, so initialize with 0 *)
       let create_uninitialized ~len = Array.create ~len (0L, 0)
@@ -808,6 +843,7 @@ module%test Array_tests = struct
       let fill = None
       let sub = None
       let concat = None
+      let sexp = None
 
       let equal_unboxed (x1, y1) (x2, y2) =
         [%equal: Int64_u.t] x1 x2 && [%equal: Int.t] y1 y2
@@ -826,7 +862,6 @@ module%test Array_tests = struct
     in
     [%expect
       {|
-      testing [sexp_of]
       testing [length]
       testing [get]
       testing [unsafe_get]
@@ -845,7 +880,6 @@ module%test Array_tests = struct
     in
     [%expect
       {|
-      testing [sexp_of]
       testing [length]
       testing [get]
       testing [unsafe_get]
