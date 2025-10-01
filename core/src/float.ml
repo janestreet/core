@@ -1,3 +1,5 @@
+module String = Base.String
+
 external format_float : string -> float -> string = "caml_format_float"
 
 (* Stolen from [pervasives.ml].  Adds a "." at the end if needed.  It is in

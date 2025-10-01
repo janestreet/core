@@ -1,5 +1,6 @@
 open! Import
 open Std_internal
+module String = Base.String
 
 module Stable = struct
   module V3 = struct

@@ -2,7 +2,9 @@ open! Import
 
 module Definitions = struct
   module Stable = struct
-    module V1 = struct
+    module%template V1 = struct
+      [@@@modality.default p = (nonportable, portable)]
+
       module type S = sig
         type t
         type comparator_witness
@@ -10,23 +12,11 @@ module Definitions = struct
         val comparator : (t, comparator_witness) Base.Comparator.t
       end
 
-      module type%template [@modality portable] S = sig
-        type comparator_witness
-
-        include S with type comparator_witness := comparator_witness
-      end
-
       module type S1 = sig
         type 'a t
         type comparator_witness
 
         val comparator : ('a t, comparator_witness) Base.Comparator.t
-      end
-
-      module type%template [@modality portable] S1 = sig
-        type comparator_witness
-
-        include S1 with type comparator_witness := comparator_witness
       end
     end
   end

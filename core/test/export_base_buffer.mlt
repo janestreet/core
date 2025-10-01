@@ -21,8 +21,6 @@ Error: Signature mismatch:
        File "buffer.mli", line 73, characters 0-25: Expected declaration
        The value output_buffer is required but not provided
        File "buffer.mli", line 112, characters 0-44: Expected declaration
-       The value truncate is required but not provided
-       File "buffer.mli", line 116, characters 0-31: Expected declaration
        The value add_utf_8_uchar is required but not provided
        File "buffer.mli", line 131, characters 0-42: Expected declaration
        The value add_utf_16le_uchar is required but not provided

@@ -382,7 +382,7 @@ module Extend (Info : Base.Info.S) = struct
         (struct
           type nonrec t = t
 
-          let of_quickcheckable info = portabilize info |> Info.to_portable
+          let of_quickcheckable = Info.to_portable_portabilize
           let to_quickcheckable = Info.of_portable
         end)
 

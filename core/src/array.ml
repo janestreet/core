@@ -94,7 +94,7 @@ module T = struct
         -> dst_pos:int
         -> len:int
         -> unit
-        = "core_array_unsafe_float_blit"
+        = "base_array_unsafe_float_blit"
       [@@noalloc]
     end
 
@@ -469,7 +469,7 @@ module Permissioned : sig
       -> dst_pos:int
       -> len:int
       -> unit
-      = "core_array_unsafe_float_blit"
+      = "base_array_unsafe_float_blit"
     [@@noalloc]
   end
 

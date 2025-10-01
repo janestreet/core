@@ -33,14 +33,15 @@ module Stable = struct
 
   module%template Of_binable1 = struct
     [@@@mode.default m = (global, local)]
+    [@@@kind.default ka = (value, any)]
 
     module%template.portable
       [@modality p] V1
         (Binable : Minimal.S1
-      [@mode m])
-        (M : Conv1_without_uuid [@mode m] with type 'a binable := 'a Binable.t) :
-      S1 [@mode m] with type 'a t := 'a M.t =
-    Bin_prot.Utils.Make_binable1_without_uuid [@mode m] [@modality p] (struct
+      [@kind ka] [@mode m])
+        (M : Conv1_without_uuid [@kind ka] [@mode m] with type 'a binable := 'a Binable.t) :
+      S1 [@kind ka] [@mode m] with type 'a t := 'a M.t =
+    Bin_prot.Utils.Make_binable1_without_uuid [@kind ka] [@mode m] [@modality p] (struct
         module Binable = Binable
         include M
       end)
@@ -49,10 +50,10 @@ module Stable = struct
     module%template.portable
       [@modality p] V2
         (Binable : Minimal.S1
-      [@mode m])
-        (M : Conv1 [@mode m] with type 'a binable := 'a Binable.t) :
-      S1 [@mode m] with type 'a t := 'a M.t =
-    Bin_prot.Utils.Make_binable1_with_uuid [@mode m] [@modality p] (struct
+      [@kind ka] [@mode m])
+        (M : Conv1 [@kind ka] [@mode m] with type 'a binable := 'a Binable.t) :
+      S1 [@kind ka] [@mode m] with type 'a t := 'a M.t =
+    Bin_prot.Utils.Make_binable1_with_uuid [@kind ka] [@mode m] [@modality p] (struct
         module Binable = Binable
         include M
       end)
@@ -60,14 +61,17 @@ module Stable = struct
 
   module%template Of_binable2 = struct
     [@@@mode.default m = (global, local)]
+    [@@@kind.default ka = (value, any), kb = (value, any)]
 
     module%template.portable
       [@modality p] V1
         (Binable : Minimal.S2
-      [@mode m])
-        (M : Conv2_without_uuid [@mode m] with type ('a, 'b) binable := ('a, 'b) Binable.t) :
-      S2 [@mode m] with type ('a, 'b) t := ('a, 'b) M.t =
-    Bin_prot.Utils.Make_binable2_without_uuid [@mode m] [@modality p] (struct
+      [@kind ka kb] [@mode m])
+        (M : Conv2_without_uuid
+             [@kind ka kb] [@mode m]
+             with type ('a, 'b) binable := ('a, 'b) Binable.t) :
+      S2 [@kind ka kb] [@mode m] with type ('a, 'b) t := ('a, 'b) M.t =
+    Bin_prot.Utils.Make_binable2_without_uuid [@kind ka kb] [@mode m] [@modality p] (struct
         module Binable = Binable
         include M
       end)
@@ -76,10 +80,12 @@ module Stable = struct
     module%template.portable
       [@modality p] V2
         (Binable : Minimal.S2
-      [@mode m])
-        (M : Conv2 [@mode m] with type ('a, 'b) binable := ('a, 'b) Binable.t) :
-      S2 [@mode m] with type ('a, 'b) t := ('a, 'b) M.t =
-    Bin_prot.Utils.Make_binable2_with_uuid [@mode m] [@modality p] (struct
+      [@kind ka kb] [@mode m])
+        (M : Conv2
+             [@kind ka kb] [@mode m]
+             with type ('a, 'b) binable := ('a, 'b) Binable.t) :
+      S2 [@kind ka kb] [@mode m] with type ('a, 'b) t := ('a, 'b) M.t =
+    Bin_prot.Utils.Make_binable2_with_uuid [@kind ka kb] [@mode m] [@modality p] (struct
         module Binable = Binable
         include M
       end)
@@ -87,16 +93,17 @@ module Stable = struct
 
   module%template Of_binable3 = struct
     [@@@mode.default m = (global, local)]
+    [@@@kind.default ka = (value, any), kb = (value, any), kc = (value, any)]
 
     module%template.portable
       [@modality p] V1
         (Binable : Minimal.S3
-      [@mode m])
+      [@kind ka kb kc] [@mode m])
         (M : Conv3_without_uuid
-             [@mode m]
+             [@kind ka kb kc] [@mode m]
              with type ('a, 'b, 'c) binable := ('a, 'b, 'c) Binable.t) :
-      S3 [@mode m] with type ('a, 'b, 'c) t := ('a, 'b, 'c) M.t =
-    Bin_prot.Utils.Make_binable3_without_uuid [@mode m] [@modality p] (struct
+      S3 [@kind ka kb kc] [@mode m] with type ('a, 'b, 'c) t := ('a, 'b, 'c) M.t =
+    Bin_prot.Utils.Make_binable3_without_uuid [@kind ka kb kc] [@mode m] [@modality p] (struct
         module Binable = Binable
         include M
       end)
@@ -105,10 +112,12 @@ module Stable = struct
     module%template.portable
       [@modality p] V2
         (Binable : Minimal.S3
-      [@mode m])
-        (M : Conv3 [@mode m] with type ('a, 'b, 'c) binable := ('a, 'b, 'c) Binable.t) :
-      S3 [@mode m] with type ('a, 'b, 'c) t := ('a, 'b, 'c) M.t =
-    Bin_prot.Utils.Make_binable3_with_uuid [@mode m] [@modality p] (struct
+      [@kind ka kb kc] [@mode m])
+        (M : Conv3
+             [@kind ka kb kc] [@mode m]
+             with type ('a, 'b, 'c) binable := ('a, 'b, 'c) Binable.t) :
+      S3 [@kind ka kb kc] [@mode m] with type ('a, 'b, 'c) t := ('a, 'b, 'c) M.t =
+    Bin_prot.Utils.Make_binable3_with_uuid [@kind ka kb kc] [@mode m] [@modality p] (struct
         module Binable = Binable
         include M
       end)
@@ -239,13 +248,36 @@ let to_bigstring ?(prefix_with_length = false) (type a) m t =
 [@@@modality.default p = (portable, nonportable)]
 
 module Of_binable_with_uuid = Stable.Of_binable.V2 [@mode m] [@modality p]
-module Of_binable1_with_uuid = Stable.Of_binable1.V2 [@mode m] [@modality p]
-module Of_binable2_with_uuid = Stable.Of_binable2.V2 [@mode m] [@modality p]
-module Of_binable3_with_uuid = Stable.Of_binable3.V2 [@mode m] [@modality p]
 module Of_binable_without_uuid = Stable.Of_binable.V1 [@mode m] [@modality p]
-module Of_binable1_without_uuid = Stable.Of_binable1.V1 [@mode m] [@modality p]
-module Of_binable2_without_uuid = Stable.Of_binable2.V1 [@mode m] [@modality p]
-module Of_binable3_without_uuid = Stable.Of_binable3.V1 [@mode m] [@modality p]]
+
+[@@@kind.default ka = (value, any)]
+
+module Of_binable1_with_uuid = Stable.Of_binable1.V2 [@kind ka] [@mode m] [@modality p]
+module Of_binable1_without_uuid = Stable.Of_binable1.V1 [@kind ka] [@mode m] [@modality p]
+
+[@@@kind.default kb = (value, any)]
+
+module Of_binable2_with_uuid = Stable.Of_binable2.V2 [@kind ka kb] [@mode m] [@modality p]
+
+module Of_binable2_without_uuid =
+  Stable.Of_binable2.V1
+  [@kind ka kb]
+  [@mode m]
+  [@modality p]
+
+[@@@kind.default kc = (value, any)]
+
+module Of_binable3_with_uuid =
+  Stable.Of_binable3.V2
+  [@kind ka kb kc]
+  [@mode m]
+  [@modality p]
+
+module Of_binable3_without_uuid =
+  Stable.Of_binable3.V1
+  [@kind ka kb kc]
+  [@mode m]
+  [@modality p]]
 
 [%%template
 [@@@modality.default p = (portable, nonportable)]

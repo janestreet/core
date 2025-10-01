@@ -25,20 +25,26 @@ module%template Stable : sig
 
   module Of_sexpable1 : sig
     module%template
-      [@alloc a = (heap, stack)] [@modality p = (portable, nonportable)] V1 :
-        module type of Of_sexpable1 [@alloc a] [@modality p]
+      [@alloc a = (heap, stack)]
+      [@modality p = (portable, nonportable)]
+      [@kind ka = (value, any)] V1 :
+        module type of Of_sexpable1 [@kind ka] [@alloc a] [@modality p]
   end
 
   module Of_sexpable2 : sig
     module%template
-      [@alloc a = (heap, stack)] [@modality p = (portable, nonportable)] V1 :
-        module type of Of_sexpable2 [@alloc a] [@modality p]
+      [@alloc a = (heap, stack)]
+      [@modality p = (portable, nonportable)]
+      [@kind ka = (value, any), kb = (value, any)] V1 :
+        module type of Of_sexpable2 [@kind ka kb] [@alloc a] [@modality p]
   end
 
   module Of_sexpable3 : sig
     module%template
-      [@alloc a = (heap, stack)] [@modality p = (portable, nonportable)] V1 :
-        module type of Of_sexpable3 [@alloc a] [@modality p]
+      [@alloc a = (heap, stack)]
+      [@modality p = (portable, nonportable)]
+      [@kind ka = (value, any), kb = (value, any), kc = (value, any)] V1 :
+        module type of Of_sexpable3 [@kind ka kb kc] [@alloc a] [@modality p]
   end
 
   module Of_stringable : sig

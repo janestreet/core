@@ -1,4 +1,5 @@
 open! Import
+module String = Base.String
 
 let failwithf = Printf.failwithf
 

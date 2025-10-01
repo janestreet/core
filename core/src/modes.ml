@@ -2,7 +2,7 @@ module Stable = struct
   module Global = struct
     module V1 = struct
       type 'a t = 'a Base.Modes.Global.t = { global : 'a [@globalized] }
-      [@@unboxed] [@@deriving quickcheck, stable_witness, typerep]
+      [@@unboxed] [@@deriving quickcheck ~portable, stable_witness, typerep]
 
       let%template[@mode m = (global, local)] compare =
         (Base.Modes.Global.compare [@mode m])

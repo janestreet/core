@@ -1,6 +1,8 @@
 open! Import
 open Map_intf
 module List = List0
+module Or_error = Base.Or_error
+module Hashtbl = Base.Hashtbl
 
 module Symmetric_diff_element = struct
   module Stable = struct
@@ -44,6 +46,8 @@ module Symmetric_diff_element = struct
 end
 
 module Merge_element = Base.Map.Merge_element
+module When_matched = Base.Map.When_matched
+module When_unmatched = Base.Map.When_unmatched
 module Continue_or_stop = Base.Map.Continue_or_stop
 module Finished_or_unfinished = Base.Map.Finished_or_unfinished
 
@@ -66,9 +70,12 @@ module For_quickcheck = struct
   ;;
 end
 
-let quickcheck_generator = Base_quickcheck.Generator.map_t_m
-let quickcheck_observer = Base_quickcheck.Observer.map_t
-let quickcheck_shrinker = Base_quickcheck.Shrinker.map_t
+[%%template
+[@@@mode.default p = (portable, nonportable)]
+
+let quickcheck_generator = (Base_quickcheck.Generator.map_t_m [@mode p])
+let quickcheck_observer = (Base_quickcheck.Observer.map_t [@mode p])
+let quickcheck_shrinker = (Base_quickcheck.Shrinker.map_t [@mode p])]
 
 module Using_comparator = struct
   include Map.Using_comparator
@@ -166,8 +173,10 @@ sig
     with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Map.With_first_class_module.t
     with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Map.Without_comparator.t
     with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
+    with type ('a, 'b, 'c) map := ('a, 'b, 'c) t
     with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
     with type 'k key := 'k key
+    with type 'k map_key := 'k key
     with type 'c cmp := 'c cmp
 
   val validate : name:('k -> string) -> 'v Validate.check -> ('k, 'v, _) t Validate.check
@@ -201,8 +210,10 @@ module%template.portable [@modality p] Creators (Key : Comparator.S1) : sig
   include
     Creators_generic
     with type ('a, 'b, 'c) t := ('a, 'b, 'c) t_
+    with type ('a, 'b, 'c) map := ('a, 'b, 'c) t
     with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
     with type 'a key := 'a Key.t
+    with type 'a map_key := 'a
     with type 'a cmp := Key.comparator_witness
     with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
     with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
@@ -371,6 +382,7 @@ module%template.portable Make_tree_S1 (Key : Comparator.S1) = struct
   let filter_mapi a ~f = filter_mapi a ~f
   let partition_mapi t ~f = partition_mapi t ~f
   let partition_map t ~f = partition_map t ~f
+  let partition_result t = partition_result t
   let partitioni_tf t ~f = partitioni_tf t ~f
   let partition_tf t ~f = partition_tf t ~f
   let combine_errors t = combine_errors t ~comparator
@@ -398,6 +410,11 @@ module%template.portable Make_tree_S1 (Key : Comparator.S1) = struct
   let merge a b ~f = merge a b ~f ~comparator
   let merge_disjoint_exn a b = merge_disjoint_exn a b ~comparator
   let merge_skewed a b ~combine = merge_skewed a b ~combine ~comparator
+
+  let merge_by_case a b ~left ~right ~both =
+    merge_by_case a b ~left ~right ~both ~comparator
+  ;;
+
   let min_elt = min_elt
   let min_elt_exn = min_elt_exn
   let max_elt = max_elt
@@ -885,12 +902,15 @@ module For_deriving = struct
     val quickcheck_shrinker : t Quickcheck.Shrinker.t
   end
 
+  [%%template
+  [@@@mode.default p = (portable, nonportable)]
+
   let quickcheck_generator_m__t
     (type k cmp)
     (module Key : Quickcheck_generator_m with type t = k and type comparator_witness = cmp)
     v_generator
     =
-    quickcheck_generator (module Key) Key.quickcheck_generator v_generator
+    (quickcheck_generator [@mode p]) (module Key) Key.quickcheck_generator v_generator
   ;;
 
   let quickcheck_observer_m__t
@@ -898,7 +918,7 @@ module For_deriving = struct
     (module Key : Quickcheck_observer_m with type t = k and type comparator_witness = cmp)
     v_observer
     =
-    quickcheck_observer Key.quickcheck_observer v_observer
+    (quickcheck_observer [@mode p]) Key.quickcheck_observer v_observer
   ;;
 
   let quickcheck_shrinker_m__t
@@ -906,8 +926,8 @@ module For_deriving = struct
     (module Key : Quickcheck_shrinker_m with type t = k and type comparator_witness = cmp)
     v_shrinker
     =
-    quickcheck_shrinker Key.quickcheck_shrinker v_shrinker
-  ;;
+    (quickcheck_shrinker [@mode p]) Key.quickcheck_shrinker v_shrinker
+  ;;]
 
   module type For_deriving = Map.For_deriving
 

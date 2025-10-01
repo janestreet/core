@@ -8,7 +8,10 @@ module _ : module type of struct
   include Iarray
   module Private = Base.Iarray.Private [@alert "-private_iarray"]
 end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
-  type 'a t = 'a Iarray.t [@@deriving bin_io ~localize, quickcheck, typerep]
+  type 'a t = 'a Iarray.t
+
+  [%%rederive.portable
+    type 'a t = 'a Iarray.t [@@deriving bin_io ~localize, quickcheck ~portable, typerep]]
 
   let%expect_test "unstable (pseudo-nondeterministic) sample" =
     Test.with_sample_exn
@@ -331,7 +334,7 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
   ;;
 
   [%%template
-  [@@@mode.default c = (uncontended, shared, contended)]
+  [@@@mode.default c = (uncontended, shared, contended), p = (portable, nonportable)]
 
   external unsafe_get
     :  ('a t[@local_opt])
@@ -345,7 +348,7 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
   ;;
 
   [%%template
-  [@@@mode.default c = (uncontended, shared, contended)]
+  [@@@mode.default c = (uncontended, shared, contended), p = (portable, nonportable)]
 
   external get : ('a t[@local_opt]) -> int -> ('a[@local_opt]) = "%array_safe_get"]
 
@@ -1049,7 +1052,7 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
   (* Tested as [Local.init] below *)
   let%template[@alloc stack] init = (Iarray.init [@alloc stack])
 
-  external length : ('a t[@local_opt]) -> int = "%array_length"
+  external length : 'a. ('a t[@local_opt]) -> int = "%array_length" [@@layout_poly]
 
   let%expect_test "Ensure [Iarray.length] accepts [local_]s" =
     let global_iarray = Iarray.unsafe_of_array__promise_no_mutation [| 1; 2; 3; 4 |] in
@@ -2002,7 +2005,7 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
      comparison). This test ensures that the helper function is inlined; if it weren't,
      then the predicates constructed by [min_elt] and [max_elt] would allocate a closure.
      The two allocated minor words are for the returned option. *)
-  let%expect_test ("[min_elt] and [max_elt] don't allocate" [@tags "fast-flambda"]) =
+  let%expect_test ("[min_elt] and [max_elt] don't allocate" [@tags "fast-flambda2"]) =
     let iarr =
       Sys.opaque_identity (Iarray.unsafe_of_array__promise_no_mutation [| 1; 2; 3; 4 |])
     in

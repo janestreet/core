@@ -41,6 +41,7 @@ include Base_for_tests
 include Bin_prot.Std
 include Stable_witness.Export
 module Field = Fieldslib.Field
+module Mutex = Basement.Blocking_sync.Mutex [@@alert "-deprecated"]
 
 module From_sexplib : sig
   type bigstring = Sexplib.Conv.bigstring [@@deriving sexp]

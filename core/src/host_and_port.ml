@@ -1,3 +1,5 @@
+module String = Base.String
+
 module Stable = struct
   open Stable_internal
 
@@ -9,7 +11,7 @@ module Stable = struct
 
     module T0 = struct
       type t =
-        { host : String.t
+        { host : Stable_string.V1.t
         ; port : Int.t
         }
       [@@deriving

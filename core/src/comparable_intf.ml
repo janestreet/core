@@ -353,18 +353,23 @@ module type Comparable = sig
       type t [@@deriving (compare [@mode m]), sexp_of]
     end) : Validate [@modality p] with type t := T.t
 
-  module%template.portable
-    [@modality p] Validate_with_zero (T : sig
+  module Validate_with_zero (T : sig
       type t [@@deriving (compare [@mode m]), sexp_of]
 
       val zero : t
-    end) : Validate_with_zero [@modality p] with type t := T.t
+    end) : sig
+    include Validate_with_zero [@modality p] with type t := T.t
+  end
+  [@@modality (p, c) = ((nonportable, uncontended), (portable, contended))]
 
-  module%template.portable With_zero (T : sig
+  module With_zero (T : sig
       type t [@@deriving (compare [@mode m]), sexp_of]
 
       val zero : t
-    end) : With_zero [@mode m] with type t := T.t]
+    end) : sig
+    include With_zero [@mode m] with type t := T.t
+  end
+  [@@modality (p, c) = ((nonportable, uncontended), (portable, contended))]]
 
   (** The following module types and functors may be used to define stable modules: *)
 

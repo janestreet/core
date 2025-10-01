@@ -23,6 +23,7 @@ module Stable = struct
 end
 
 include Stable.V1
+module String = Base.String
 
 type t = bool [@@deriving typerep]
 
@@ -49,13 +50,14 @@ include%template Comparable.Validate [@modality portable] (Base.Bool)
 let%template of_string_hum =
   let raise_invalid input =
     let expected_case_insensitive =
-      String.Set.of_list [ "true"; "t"; "yes"; "y"; "1"; "false"; "f"; "no"; "n"; "0" ]
+      [ "true"; "t"; "yes"; "y"; "1"; "false"; "f"; "no"; "n"; "0" ]
+      |> List.sort ~compare:compare_string
     in
     raise_s
       [%message
         "Bool.of_string_hum: invalid input"
           (input : string)
-          (expected_case_insensitive : String.Set.t)]
+          (expected_case_insensitive : string list)]
   in
   fun string ->
     match String.lowercase__stack string with

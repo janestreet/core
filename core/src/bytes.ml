@@ -21,8 +21,11 @@ include%template Hexdump.Of_indexable [@modality portable] (struct
     let get t i = get t i
   end)
 
-let gen' char_gen = String.gen' char_gen |> Quickcheck.Generator.map ~f:of_string
+let gen' char_gen =
+  Base_quickcheck.Generator.string_of char_gen |> Quickcheck.Generator.map ~f:of_string
+;;
 
-let gen_with_length len char_gen =
-  String.gen_with_length len char_gen |> Quickcheck.Generator.map ~f:of_string
+let gen_with_length length char_gen =
+  Base_quickcheck.Generator.string_with_length_of char_gen ~length
+  |> Quickcheck.Generator.map ~f:of_string
 ;;

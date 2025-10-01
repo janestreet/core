@@ -1,5 +1,7 @@
 open! Import
 open Std_internal
+module String = Base.String
+module Date = Date0
 
 let arch_sixtyfour = Sys.word_size_in_bits = 64
 
@@ -236,8 +238,8 @@ let every interval ~start ~stop =
 let random ?state () = Span.random ?state ()
 
 module Utc : sig
-  val to_date_and_span_since_start_of_day : t -> Date0.t * Span.t
-  val of_date_and_span_since_start_of_day : Date0.t -> Span.t -> t [@@zero_alloc]
+  val to_date_and_span_since_start_of_day : t -> Date.t * Span.t
+  val of_date_and_span_since_start_of_day : Date.t -> Span.t -> t [@@zero_alloc]
 end = struct
   (* a recreation of the system call gmtime specialized to the fields we need that also
      doesn't rely on Unix. *)
@@ -255,7 +257,7 @@ end = struct
     in
     let ns_since_start_of_day = ns_since_epoch - (ns_per_day * days_from_epoch) in
     let date =
-      Date0.Days.add_days Date0.Days.unix_epoch !>days_from_epoch |> Date0.Days.to_date
+      Date.Days.add_days Date.Days.unix_epoch !>days_from_epoch |> Date.Days.to_date
     in
     let span_since_start_of_day = Span.of_int63_ns ns_since_start_of_day in
     date, span_since_start_of_day
@@ -265,9 +267,7 @@ end = struct
     assert (
       Span.( >= ) span_since_start_of_day Span.zero
       && Span.( < ) span_since_start_of_day Span.day);
-    let days_from_epoch =
-      Date0.Days.diff (Date0.Days.of_date date) Date0.Days.unix_epoch
-    in
+    let days_from_epoch = Date.Days.diff (Date.Days.of_date date) Date.Days.unix_epoch in
     let span_in_days_since_epoch = Span.scale_int Span.day days_from_epoch in
     let span_since_epoch = Span.( + ) span_in_days_since_epoch span_since_start_of_day in
     of_span_since_epoch span_since_epoch
@@ -382,13 +382,13 @@ module Alternate_sexp = struct
 
     let to_string t =
       let date, span_since_start_of_day = Utc.to_date_and_span_since_start_of_day t in
-      Date0.to_string date ^ " " ^ Ofday_as_span.to_string span_since_start_of_day ^ "Z"
+      Date.to_string date ^ " " ^ Ofday_as_span.to_string span_since_start_of_day ^ "Z"
     ;;
 
     let of_string string =
       let date_string, ofday_string_with_zone = String.lsplit2_exn string ~on:' ' in
       let ofday_string = String.chop_suffix_exn ofday_string_with_zone ~suffix:"Z" in
-      let date = Date0.of_string date_string in
+      let date = Date.of_string date_string in
       let ofday = Ofday_as_span.of_string ofday_string in
       Utc.of_date_and_span_since_start_of_day date ofday
     ;;
@@ -530,7 +530,7 @@ end = struct
 
     let of_date_ofday date ofday =
       let days =
-        Date0.Days.diff (Date0.Days.of_date date) Date0.Days.unix_epoch |> Int63.of_int
+        Date.Days.diff (Date.Days.of_date date) Date.Days.unix_epoch |> Int63.of_int
       in
       let open Int63.O in
       (days * Span.to_int63_ns Span.day)
@@ -569,8 +569,8 @@ end = struct
 
     let date_of_days_from_epoch ~days_from_epoch =
       Int63.to_int_exn days_from_epoch
-      |> Date0.Days.add_days Date0.Days.unix_epoch
-      |> Date0.Days.to_date
+      |> Date.Days.add_days Date.Days.unix_epoch
+      |> Date.Days.to_date
     ;;
 
     let to_date t =
@@ -863,7 +863,7 @@ end = struct
         | `us -> Ofday_ns.to_microsecond_string ofday
         | `ns -> Ofday_ns.to_nanosecond_string ofday
       in
-      [ Date0.to_string date; String.concat ~sep:"" [ ofday_string; offset_string ] ]
+      [ Date.to_string date; String.concat ~sep:"" [ ofday_string; offset_string ] ]
     in
     fun time ~zone ->
       try attempt time ~zone with
@@ -879,7 +879,7 @@ end = struct
     let offset_string = offset_string time ~zone in
     String.concat
       ~sep:" "
-      [ Date0.to_string date; Ofday_ns.to_string_trimmed ofday ^ offset_string ]
+      [ Date.to_string date; Ofday_ns.to_string_trimmed ofday ^ offset_string ]
   ;;
 
   let to_string_abs time ~zone = String.concat ~sep:" " (to_string_abs_parts ~zone time)
@@ -893,19 +893,19 @@ end = struct
 
   let to_string_trimmed t ~zone =
     let date, sec = to_date_ofday ~zone t in
-    Date0.to_string date ^ " " ^ Ofday_ns.to_string_trimmed sec
+    Date.to_string date ^ " " ^ Ofday_ns.to_string_trimmed sec
   ;;
 
   let to_sec_string t ~zone =
     let date, sec = to_date_ofday ~zone t in
-    Date0.to_string date ^ " " ^ Ofday_ns.to_sec_string sec
+    Date.to_string date ^ " " ^ Ofday_ns.to_sec_string sec
   ;;
 
   let to_sec_string_with_zone t ~zone = to_sec_string t ~zone ^ offset_string t ~zone
 
   let to_filename_string t ~zone =
     let date, ofday = to_date_ofday ~zone t in
-    Date0.to_string date
+    Date.to_string date
     ^ "_"
     ^ String.tr
         ~target:':'
@@ -918,7 +918,7 @@ end = struct
       match String.lsplit2 s ~on:'_' with
       | None -> failwith "no space in filename string"
       | Some (date, ofday) ->
-        let date = Date0.of_string date in
+        let date = Date.of_string date in
         let ofday = String.tr ~target:'-' ~replacement:':' ofday in
         let ofday = Ofday_ns.of_string ofday in
         of_date_ofday date ofday ~zone
@@ -931,7 +931,7 @@ end = struct
       match String.lsplit2 str ~on:' ' with
       | None -> invalid_arg (sprintf "no space in date_ofday string: %s" str)
       | Some (date, time) ->
-        let date = Date0.of_string date in
+        let date = Date.of_string date in
         let ofday = Ofday_ns.of_string time in
         of_date_ofday ~zone date ofday
     with
@@ -948,7 +948,7 @@ end = struct
     in
     if cmp first_guess t
     then first_guess
-    else of_date_ofday ~zone (Date0.add_days first_guess_date increment) ofday
+    else of_date_ofday ~zone (Date.add_days first_guess_date increment) ofday
   ;;
 
   let ensure_colon_in_offset offset =
@@ -963,9 +963,9 @@ end = struct
     then failwithf "invalid offset %s" offset ()
     else
       String.concat
-        [ String.slice offset 0 (offset_length - 2)
+        [ String.sub offset ~pos:0 ~len:(offset_length - 2)
         ; ":"
-        ; String.slice offset (offset_length - 2) offset_length
+        ; String.sub offset ~pos:(offset_length - 2) ~len:2
         ]
   ;;
 
@@ -1005,7 +1005,7 @@ end = struct
                  )
                | None -> ofday, None))
       in
-      let date = Date0.of_string date in
+      let date = Date.of_string date in
       let ofday = Ofday_ns.of_string ofday in
       match tz with
       | Some tz -> of_date_ofday ~zone:(find_zone tz) date ofday

@@ -1,4 +1,5 @@
 open! Import
+module String = Base.String
 
 module Stable = struct
   module Allocation_policy = struct
@@ -138,7 +139,8 @@ module Stat = struct
   end
 
   include T
-  include Comparable.Make_plain (T)
+
+  include%template Comparable.Make_plain [@mode portable] (T)
 
   let combine first second ~float_f ~int_f =
     { minor_words = float_f first.minor_words second.minor_words
@@ -190,7 +192,8 @@ module Control = struct
   end
 
   include T
-  include Comparable.Make_plain (T)
+
+  include%template Comparable.Make_plain [@mode portable] (T)
 end
 
 module Allocation_policy = struct
@@ -282,10 +285,11 @@ external heap_chunks : unit -> int = "core_gc_heap_chunks" [@@noalloc]
 external top_heap_words : unit -> int = "core_gc_top_heap_words" [@@noalloc]
 
 let stat_size_lazy =
-  lazy (Obj.reachable_words (Obj.repr (Stdlib.Gc.quick_stat () : Stat.t)))
+  Portable_lazy.from_fun (fun () ->
+    Obj.reachable_words (Obj.repr (Stdlib.Gc.quick_stat () : Stat.t)))
 ;;
 
-let stat_size () = Lazy.force stat_size_lazy
+let stat_size () = Portable_lazy.force stat_size_lazy
 let zero = Sys.opaque_identity (int_of_string "0")
 let compact_if_not_running_test () = if not am_running_test then compact ()
 

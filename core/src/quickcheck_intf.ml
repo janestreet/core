@@ -41,6 +41,20 @@ module Definitions = struct
 
     include Applicative.S with type 'a t := 'a t
 
+    module Via_thunk : sig
+      type 'a thunk := unit -> 'a
+
+      val%template create
+        : 'a.
+        (size:int -> random:Splittable_random.t -> 'a thunk) -> 'a t
+      [@@mode p = (nonportable, portable)]
+
+      val generate : 'a. 'a t -> size:int -> random:Splittable_random.t -> 'a thunk
+
+      val%template map : 'a 'b. 'a t -> f:('a thunk -> 'b thunk) -> 'b t
+      [@@mode p = (nonportable, portable)]
+    end
+
     val%template map : 'a t -> f:('a -> 'b) -> 'b t [@@mode p = (nonportable, portable)]
 
     (** [size = create (fun ~size _ -> size)] *)
@@ -250,7 +264,7 @@ module Definitions = struct
         among the sizes of the elements. *)
     val list : 'a t -> 'a list t
 
-    val list_non_empty : 'a t -> 'a list t
+    val%template list_non_empty : 'a t -> 'a list t [@@mode p = (portable, nonportable)]
 
     val%template list_with_length : int -> 'a t -> 'a list t
     [@@mode p = (portable, nonportable)]

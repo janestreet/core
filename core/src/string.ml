@@ -5,23 +5,7 @@ include Base.String
    binds new [Map] and [Set] modules. *)
 
 module Stable = struct
-  module V1 = struct
-    module T = struct
-      include Base.String
-
-      type t = string [@@deriving bin_io ~localize, stable_witness]
-    end
-
-    include T
-
-    let to_string = Fn.id
-    let%template[@alloc stack] to_string = Fn.id
-    let of_string = Fn.id
-
-    include%template Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (T)
-    include%template Hashable.Stable.V1.With_stable_witness.Make [@modality portable] (T)
-    include%template Diffable.Atomic.Make [@modality portable] (T)
-  end
+  module V1 = Stable_string.V1
 
   module Make_utf (Utf : sig
       type t = private string [@@deriving sexp_grammar]
@@ -126,7 +110,7 @@ include%template
     (struct
       include Base.String
 
-      let hashable = Stable.V1.hashable
+      let hashable = Stable_string.V1.hashable
     end)
     (struct
       type t = string [@@deriving bin_io ~localize]
@@ -149,7 +133,10 @@ let quickcheck_generator = Base_quickcheck.Generator.string
 let quickcheck_observer = Base_quickcheck.Observer.string
 let quickcheck_shrinker = Base_quickcheck.Shrinker.string
 let gen_nonempty = Base_quickcheck.Generator.string_non_empty
-let gen' = Base_quickcheck.Generator.string_of
+
+let%template gen' = (Base_quickcheck.Generator.string_of [@mode p])
+[@@mode p = (portable, nonportable)]
+;;
 
 let%template gen_nonempty' = (Base_quickcheck.Generator.string_non_empty_of [@mode p])
 [@@mode p = (portable, nonportable)]

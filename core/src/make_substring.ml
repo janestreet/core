@@ -4,6 +4,7 @@
 
 open! Import
 open Std_internal
+module String = Base.String
 include Make_substring_intf
 
 type bigstring = Bigstring.t

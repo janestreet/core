@@ -1,3 +1,5 @@
+module String = Base.String
+
 module T = struct
   include Bin_prot.Md5
 
@@ -18,7 +20,7 @@ module T = struct
     ;;
 
     let quickcheck_observer =
-      (Observer.unmap [@mode portable]) String.quickcheck_observer ~f:to_binary
+      (Observer.unmap [@mode portable]) Base_quickcheck.Observer.string ~f:to_binary
     ;;
 
     let quickcheck_shrinker = Shrinker.atomic
@@ -47,7 +49,7 @@ module As_binary_string = struct
           [@modality portable]
           [@alert "-legacy"]
           (struct
-          module Binable = String.Stable.V1
+          module Binable = Stable_string.V1
 
           type t = Bin_prot.Md5.t
 
@@ -57,7 +59,7 @@ module As_binary_string = struct
 
       let stable_witness : t Stable_witness.t =
         Stable_witness.of_serializable
-          String.Stable.V1.stable_witness
+          Stable_string.V1.stable_witness
           of_binable
           to_binable
       ;;
@@ -174,7 +176,7 @@ let unsafe_digest_subbigstring buf ~pos ~len =
 ;;
 
 let digest_subbigstring buf ~pos ~len =
-  Ordered_collection_common.check_pos_len_exn
+  Base.Ordered_collection_common.check_pos_len_exn
     ~pos
     ~len
     ~total_length:(Bigstring.length buf);

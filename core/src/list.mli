@@ -9,7 +9,8 @@ include module type of struct
   include Base.List
 end
 
-[%%rederive: type nonrec 'a t = 'a list [@@deriving bin_io ~localize, typerep]]
+[%%rederive: type nonrec 'a t = 'a list [@@deriving typerep]]
+[%%rederive: type nonrec 'a t = 'a list [@@deriving bin_io ~localize]]
 
 module Assoc : sig
   type ('a, 'b) t = ('a, 'b) Base.List.Assoc.t [@@deriving bin_io ~localize]
@@ -38,7 +39,8 @@ exception
     specifically raise a [Duplicate_found] exception and use [context] as its second
     argument. O(n log n) time complexity. *)
 val%template exn_if_dup
-  :  compare:('a -> 'a -> int)
+  : 'a.
+  compare:('a -> 'a -> int)
   -> ?context:string
   -> 'a t
   -> to_sexp:('a -> Base.Sexp.t)
@@ -53,13 +55,18 @@ val slice : 'a t -> int -> int -> 'a t
 include%template Comparator.Derived [@modality portable] with type 'a t := 'a t
 include%template Quickcheckable.S1 [@modality portable] with type 'a t := 'a t
 
-val to_string : f:('a -> string) -> 'a t -> string
+val to_string : 'a. f:('a -> string) -> 'a t -> string
 
 (** Like [gen], but never generates the empty list. *)
-val gen_non_empty : 'a Quickcheck.Generator.t -> 'a t Quickcheck.Generator.t
+val%template gen_non_empty : 'a Quickcheck.Generator.t -> 'a t Quickcheck.Generator.t
+[@@mode p = (portable, nonportable)]
 
 (** Like [gen], but generates lists with the given length. *)
-val gen_with_length : int -> 'a Quickcheck.Generator.t -> 'a t Quickcheck.Generator.t
+val%template gen_with_length
+  :  int
+  -> 'a Quickcheck.Generator.t
+  -> 'a t Quickcheck.Generator.t
+[@@mode p = (portable, nonportable)]
 
 (** Randomly drops elements from the input list. Length is chosen uniformly between 0 and
     the length of the input, inclusive. *)
@@ -76,9 +83,8 @@ val gen_permutations : 'a t -> 'a t Quickcheck.Generator.t
     If [xs] and [ys] have the same length, [zip_with_remainder xs ys] returns the same
     thing as [(zip_exn xs ys, None)] *)
 val zip_with_remainder
-  :  'a list
-  -> 'b list
-  -> ('a * 'b) list * ('a list, 'b list) Either.t option
+  : 'a 'b.
+  'a list -> 'b list -> ('a * 'b) list * ('a list, 'b list) Either.t option
 
 module Stable : sig
   module V1 : sig
@@ -88,12 +94,8 @@ module Stable : sig
 
     type nonrec 'a t = 'a t
     [@@deriving
-      sexp
-      , sexp_grammar
-      , bin_io ~localize
-      , compare ~localize
-      , equal ~localize
-      , hash
-      , stable_witness]
+      sexp, sexp_grammar, compare ~localize, equal ~localize, hash, stable_witness]
+
+    [%%rederive: type nonrec 'a t = 'a t [@@deriving bin_io ~localize]]
   end
 end

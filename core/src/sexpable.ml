@@ -28,15 +28,17 @@ module Stable = struct
 
   module Of_sexpable1 = struct
     module%template.portable
-      [@alloc a @ m = (heap_global, stack_local)] V1
+      [@alloc a @ m = (heap_global, stack_local)] [@kind ka = (value, any)] V1
         (Sexpable : S1
-      [@alloc a])
+      [@kind ka] [@alloc a])
         (M : sig
            type 'a t
 
-           val to_sexpable : 'a t -> 'a Sexpable.t [@@alloc a @ m = (a @ m, heap_global)]
-           val of_sexpable : 'a Sexpable.t -> 'a t
-         end) : S1 [@alloc a] with type 'a t := 'a M.t = struct
+           val to_sexpable : 'a. 'a t -> 'a Sexpable.t
+           [@@alloc a @ m = (a @ m, heap_global)]
+
+           val of_sexpable : 'a. 'a Sexpable.t -> 'a t
+         end) : S1 [@kind ka] [@alloc a] with type 'a t := 'a M.t = struct
       let t_of_sexp a_of_sexp sexp =
         let s = Sexpable.t_of_sexp a_of_sexp sexp in
         try M.of_sexpable s with
@@ -53,17 +55,18 @@ module Stable = struct
 
   module Of_sexpable2 = struct
     module%template.portable
-      [@alloc a @ m = (heap_global, stack_local)] V1
+      [@alloc a @ m = (heap_global, stack_local)]
+      [@kind ka = (value, any), kb = (value, any)] V1
         (Sexpable : S2
-      [@alloc a])
+      [@kind ka kb] [@alloc a])
         (M : sig
            type ('a, 'b) t
 
-           val to_sexpable : ('a, 'b) t -> ('a, 'b) Sexpable.t
+           val to_sexpable : 'a 'b. ('a, 'b) t -> ('a, 'b) Sexpable.t
            [@@alloc a @ m = (a @ m, heap_global)]
 
-           val of_sexpable : ('a, 'b) Sexpable.t -> ('a, 'b) t
-         end) : S2 [@alloc a] with type ('a, 'b) t := ('a, 'b) M.t = struct
+           val of_sexpable : 'a 'b. ('a, 'b) Sexpable.t -> ('a, 'b) t
+         end) : S2 [@kind ka kb] [@alloc a] with type ('a, 'b) t := ('a, 'b) M.t = struct
       let t_of_sexp a_of_sexp b_of_sexp sexp =
         let s = Sexpable.t_of_sexp a_of_sexp b_of_sexp sexp in
         try M.of_sexpable s with
@@ -81,17 +84,19 @@ module Stable = struct
 
   module Of_sexpable3 = struct
     module%template.portable
-      [@alloc a @ m = (heap_global, stack_local)] V1
+      [@alloc a @ m = (heap_global, stack_local)]
+      [@kind ka = (value, any), kb = (value, any), kc = (value, any)] V1
         (Sexpable : S3
-      [@alloc a])
+      [@kind ka kb kc] [@alloc a])
         (M : sig
            type ('a, 'b, 'c) t
 
-           val to_sexpable : ('a, 'b, 'c) t -> ('a, 'b, 'c) Sexpable.t
+           val to_sexpable : 'a 'b 'c. ('a, 'b, 'c) t -> ('a, 'b, 'c) Sexpable.t
            [@@alloc a @ m = (a @ m, heap_global)]
 
-           val of_sexpable : ('a, 'b, 'c) Sexpable.t -> ('a, 'b, 'c) t
-         end) : S3 [@alloc a] with type ('a, 'b, 'c) t := ('a, 'b, 'c) M.t = struct
+           val of_sexpable : 'a 'b 'c. ('a, 'b, 'c) Sexpable.t -> ('a, 'b, 'c) t
+         end) :
+      S3 [@kind ka kb kc] [@alloc a] with type ('a, 'b, 'c) t := ('a, 'b, 'c) M.t = struct
       let t_of_sexp a_of_sexp b_of_sexp c_of_sexp sexp =
         let s = Sexpable.t_of_sexp a_of_sexp b_of_sexp c_of_sexp sexp in
         try M.of_sexpable s with

@@ -1,4 +1,5 @@
 open! Import
+module String = Base.String
 
 module Stable = struct
   module V1 = struct

@@ -63,7 +63,8 @@ val gen_nonempty : t Quickcheck.Generator.t
 
 (** Like [quickcheck_generator], but generate strings with the given distribution of
     characters. *)
-val gen' : char Quickcheck.Generator.t -> t Quickcheck.Generator.t
+val%template gen' : char Quickcheck.Generator.t -> t Quickcheck.Generator.t
+[@@mode p = (portable, nonportable)]
 
 (** Like [gen'], but without empty strings. *)
 val%template gen_nonempty' : char Quickcheck.Generator.t -> t Quickcheck.Generator.t
@@ -115,33 +116,10 @@ module Utf32be :
     [String.Stable.Set], [String.Stable.Map], [String.Stable.Table], and provide interface
     uniformity with other stable types. *)
 module Stable : sig
-  module type Identifiable_without_binio := sig
-    type t [@@deriving equal ~localize, hash, sexp_grammar]
-    type comparator_witness
-
-    include%template Base.Stringable.S [@alloc stack] with type t := t
-
-    include%template
-      Stable_comparable.With_stable_witness.V1
-      [@mode local]
-      with type t := t
-      with type comparator_witness := comparator_witness
-
-    include Hashable.Stable.V1.With_stable_witness.S with type key := t
-  end
-
   module V1 : sig
-    type nonrec t = t
-    [@@deriving
-      bin_io ~localize
-      , compare ~localize
-      , diff ~extra_derive:[ sexp ]
-      , equal ~localize
-      , globalize]
-
     include
-      Identifiable_without_binio
-      with type t := t
+      module type of Stable_string.V1
+      with type t = t
        and type comparator_witness = comparator_witness
   end
 
@@ -150,7 +128,7 @@ module Stable : sig
       type t = Utf8.t [@@deriving bin_io ~localize]
 
       include
-        Identifiable_without_binio
+        Stable_string.Identifiable_without_binio
         with type t := t
          and type comparator_witness = Utf8.comparator_witness
     end
@@ -161,7 +139,7 @@ module Stable : sig
       type t = Utf16le.t [@@deriving bin_io ~localize]
 
       include
-        Identifiable_without_binio
+        Stable_string.Identifiable_without_binio
         with type t := t
          and type comparator_witness = Utf16le.comparator_witness
     end
@@ -172,7 +150,7 @@ module Stable : sig
       type t = Utf16be.t [@@deriving bin_io ~localize]
 
       include
-        Identifiable_without_binio
+        Stable_string.Identifiable_without_binio
         with type t := t
          and type comparator_witness = Utf16be.comparator_witness
     end
@@ -183,7 +161,7 @@ module Stable : sig
       type t = Utf32le.t [@@deriving bin_io ~localize]
 
       include
-        Identifiable_without_binio
+        Stable_string.Identifiable_without_binio
         with type t := t
          and type comparator_witness = Utf32le.comparator_witness
     end
@@ -194,7 +172,7 @@ module Stable : sig
       type t = Utf32be.t [@@deriving bin_io ~localize]
 
       include
-        Identifiable_without_binio
+        Stable_string.Identifiable_without_binio
         with type t := t
          and type comparator_witness = Utf32be.comparator_witness
     end

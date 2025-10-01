@@ -1,5 +1,6 @@
 open! Import
 include Stdlib.Arg
+module String = Base.String
 
 type t = key * spec * doc
 

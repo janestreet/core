@@ -3,10 +3,6 @@
       (func $caml_array_blit
          (param (ref eq)) (param (ref eq)) (param (ref eq)) (param (ref eq))
          (param (ref eq)) (result (ref eq))))
-   (import "env" "caml_floatarray_blit"
-      (func $caml_floatarray_blit
-         (param (ref eq)) (param (ref eq)) (param (ref eq)) (param (ref eq))
-         (param (ref eq)) (result (ref eq))))
    (import "env" "caml_js_global"
       (func $caml_js_global (param (ref eq)) (result (ref eq))))
    (import "env" "caml_js_get"
@@ -74,7 +70,6 @@
        (func $caml_ba_dim_1 (param (ref eq)) (result (ref eq))))
 
    (export "core_array_unsafe_int_blit" (func $caml_array_blit))
-   (export "core_array_unsafe_float_blit" (func $caml_floatarray_blit))
 
    (type $block (array (mut (ref eq))))
    (type $string (array (mut i8)))

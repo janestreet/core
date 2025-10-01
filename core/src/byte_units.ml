@@ -4,6 +4,7 @@ open! Import
 open Std_internal
 module Repr = Int63
 module T = Byte_units0
+module String = Base.String
 
 include (
   T :

@@ -123,7 +123,7 @@ let to_string_with_version, of_string, default_sys_behavior, all_posix =
     | None ->
       if String.is_prefix s ~prefix:"<unknown signal "
       then (
-        try Int.of_string (String.slice s 16 ~-1) with
+        try Int.of_string (String.sub s ~pos:16 ~len:(String.length s - 16 - 1)) with
         | _ -> raise (Invalid_signal_mnemonic_or_number s))
       else raise (Invalid_signal_mnemonic_or_number s)
   in

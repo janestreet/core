@@ -617,11 +617,17 @@ module type Time_ns = sig
   (** overflows silently *)
   val prev : t -> t [@@zero_alloc strict]
 
-  (** overflows silently *)
-  val diff : t -> t -> Span.t [@@zero_alloc strict]
+  (** [diff t1 t2] returns time [t1] minus time [t2].
 
-  (** overflows silently *)
-  val abs_diff : t -> t -> Span.t [@@zero_alloc strict]
+      This operation overflows silently. *)
+  val diff : t -> t -> Span.t
+  [@@zero_alloc strict]
+
+  (** [abs_diff t1 t2] returns the absolute span of time [t1] minus time [t2].
+
+      This operation overflows silently. *)
+  val abs_diff : t -> t -> Span.t
+  [@@zero_alloc strict]
 
   val to_span_since_epoch : t -> Span.t [@@zero_alloc strict]
   val of_span_since_epoch : Span.t -> t [@@zero_alloc strict]

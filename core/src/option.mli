@@ -1,7 +1,9 @@
 (** This module extends {{!Base.Option} [Base.Option]} with bin_io, quickcheck, and
     support for ppx_optional. *)
 
-type 'a t = 'a Base.Option.t [@@deriving bin_io ~localize, typerep]
+type 'a t = 'a Base.Option.t [@@deriving typerep]
+
+[%%rederive: type 'a t = 'a Base.Option.t [@@deriving bin_io ~localize]]
 
 type%template 'a t = ('a Base.Option.t[@kind k])
 [@@deriving bin_io ~localize] [@@kind k = (float64, bits32, bits64, word)]
@@ -26,13 +28,9 @@ module Stable : sig
   module V1 : sig
     type nonrec 'a t = 'a t
     [@@deriving
-      bin_io ~localize
-      , compare ~localize
-      , equal ~localize
-      , hash
-      , sexp
-      , sexp_grammar
-      , stable_witness]
+      compare ~localize, equal ~localize, hash, sexp, sexp_grammar, stable_witness]
+
+    [%%rederive: type nonrec 'a t = 'a t [@@deriving bin_io ~localize]]
   end
 end
 

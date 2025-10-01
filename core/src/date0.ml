@@ -1,6 +1,7 @@
 open! Import
 open Std_internal
 open Digit_string_helpers
+module String = Base.String
 
 let is_leap_year ~year = (year mod 4 = 0 && not (year mod 100 = 0)) || year mod 400 = 0
 

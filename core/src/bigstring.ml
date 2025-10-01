@@ -1,6 +1,7 @@
 open! Import
 open Std_internal
 open Bigarray
+module String = Base.String
 
 module Stable = struct
   module V1 = struct

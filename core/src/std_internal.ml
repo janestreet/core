@@ -69,7 +69,14 @@ let eprint_s = Stdio.eprint_s
 let printf = Printf.printf
 let protect = Exn.protect
 let protectx = Exn.protectx
-let raise_s = Error.raise_s
+
+[%%template
+[@@@kind.default
+  k
+  = (value_or_null, immediate, immediate64, bits64, bits32, word, float64, bits32 & bits32)]
+
+let raise_s = (Error.raise_s [@kind k])]
+
 let round = Float.round
 let ( **. ) = Base.( **. )
 let ( %. ) = Base.( %. )
@@ -186,14 +193,15 @@ struct
 
   type 'a list = 'a List.t
   [@@deriving
-    bin_io ~localize
-    , compare ~localize
+    compare ~localize
     , hash
     , equal ~localize
     , globalize
     , sexp ~stackify
     , sexp_grammar
     , typerep]
+
+  [%%rederive type nonrec 'a list = 'a List.t [@@deriving bin_io ~localize]]
 
   type nativeint = Nativeint.t
   [@@deriving
@@ -236,7 +244,9 @@ struct
   [@@deriving bin_io ~localize, compare ~localize, equal ~localize, sexp ~stackify]
   [@@kind k = (float64, bits32, bits64, word)]
 
-  type string = String.t
+  (* Referring to [String.t] inserts [string.ml] in the middle of a ton of module
+     dependencies in this library. Instead we just nonrec with [string]. *)
+  type nonrec string = string
   [@@deriving
     bin_io ~localize
     , compare ~localize
@@ -375,14 +385,15 @@ end :
 
     type 'a list
     [@@deriving
-      bin_io ~localize
-      , compare ~localize
+      compare ~localize
       , equal ~localize
       , globalize
       , hash
       , sexp ~stackify
       , sexp_grammar
       , typerep]
+
+    [%%rederive: type nonrec 'a list = 'a List.t [@@deriving bin_io ~localize]]
 
     type nativeint
     [@@deriving

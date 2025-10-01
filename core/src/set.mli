@@ -13,10 +13,21 @@ open Set_intf
 type ('elt, 'cmp) t = ('elt, 'cmp) Base.Set.t [@@deriving compare ~localize]
 
 module Tree : sig
+  type weight = Tree.weight
+
   (** A [Tree.t] contains just the tree data structure that a set is based on, without
       including the comparator. Accordingly, any operation on a [Tree.t] must also take as
       an argument the corresponding comparator. *)
-  type ('elt, 'cmp) t = ('elt, 'cmp) Tree.t [@@deriving sexp_of]
+  type ('elt, 'cmp) t = ('elt, 'cmp) Tree.t = private
+    | Empty
+    | Leaf of { elt : 'elt [@globalized] }
+    | Node of
+        { left : ('elt, 'cmp) t [@globalized]
+        ; elt : 'elt [@globalized]
+        ; right : ('elt, 'cmp) t [@globalized]
+        ; weight : weight
+        }
+  [@@deriving sexp_of]
 
   module Named = Tree.Named
 

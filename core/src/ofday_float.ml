@@ -3,6 +3,7 @@ open Std_internal
 open Digit_string_helpers
 open! Int.Replace_polymorphic_compare
 module Span = Span_float
+module String = Base.String
 
 (* Create an abstract type for Ofday to prevent us from confusing it with
    other floats.

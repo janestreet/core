@@ -1,5 +1,6 @@
 open! Import
 open Std_internal
+module String = Base.String
 
 (* The module [T] serves to enforce the invariant that all Blang.t values are in a
    normal form whereby boolean constants True and False only appear as the topmost

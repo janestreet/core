@@ -3,16 +3,13 @@ include Base.Portable_lazy
 
 module Stable = struct
   module V1 = struct
-    type nonrec 'a t = 'a t
+    type nonrec 'a t = 'a t [@@deriving sexp_grammar]
 
-    let compare = compare
-    let compare__local = compare__local
-    let equal = equal
-    let equal__local = equal__local
-    let sexp_of_t = sexp_of_t
-    let t_of_sexp = t_of_sexp
-    let t_sexp_grammar = t_sexp_grammar
-    let hash_fold_t = hash_fold_t
+    [%%rederive
+      type nonrec 'a t = 'a t
+      [@@deriving compare ~localize, equal ~localize, hash, sexp_of]]
+
+    [%%rederive type nonrec 'a t = 'a t [@@deriving of_sexp]]
 
     include struct
       open Bin_prot

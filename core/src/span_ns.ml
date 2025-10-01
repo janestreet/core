@@ -2,6 +2,7 @@ open! Import
 open Std_internal
 open! Int63.O
 module Rounding_direction = Time_ns_intf.Rounding_direction
+module String = Base.String
 
 let module_name = "Core.Time_ns.Span"
 
@@ -1017,14 +1018,9 @@ module Option = struct
         [@@deriving
           bin_io ~localize, compare ~localize, equal ~localize, globalize, typerep]
 
-        let v1_some span =
-          assert (some_is_representable span);
-          to_int63_ns span
-        ;;
-
         let sexp_of_t t = [%sexp_of: Stable.V1.t option] (to_option t)
         let t_of_sexp s = of_option ([%of_sexp: Stable.V1.t option] s)
-        let of_int63_exn i = if is_none i then none else v1_some (of_int63_ns i)
+        let of_int63_exn i = i
         let to_int63 t = t
 
         let stable_witness : t Stable_witness.t =

@@ -269,7 +269,7 @@ module%test Nonvalue_layout_tests = struct
 
       let quickcheck_generator =
         let%bind b_list = [%generator: Boxed.t list] in
-        let u_list = b_list |> (List.map [@kind value k]) ~f:unbox in
+        let u_list = b_list |> (List.map [@kind value_or_null k]) ~f:unbox in
         return { b_list; u_list }
       ;;
 
@@ -285,7 +285,7 @@ module%test Nonvalue_layout_tests = struct
           type t = Boxed.t List.t [@@deriving sexp_of, compare]
         end)
         (fun () -> f_boxed b_list)
-        (fun () -> f_unboxed u_list |> (List.map [@kind k value]) ~f:box)
+        (fun () -> f_unboxed u_list |> (List.map [@kind k value_or_null]) ~f:box)
     ;;
 
     let test name ~f =
@@ -479,7 +479,8 @@ module%test Nonvalue_layout_tests = struct
             end)
             (fun () -> List.init n ~f:(fun i -> box (of_int i)))
             (fun () ->
-              (List.init [@kind k]) n ~f:of_int |> (List.map [@kind k value]) ~f:box))
+              (List.init [@kind k]) n ~f:of_int
+              |> (List.map [@kind k value_or_null]) ~f:box))
     ;;
 
     let test_rev_append () =

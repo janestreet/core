@@ -112,8 +112,7 @@ module Stat : sig
         ~direct_iterators:to_list]
 
   [%%endif]
-
-  include Comparable.S_plain with type t := t
+  include%template Comparable.S_plain [@mode portable] with type t := t
 
   (** [add first second] computes [first+second] pointwise across each field; this helps
       in aggregating statistics across processes. *)
