@@ -3,7 +3,7 @@ module Result = Base.Result
 
 module Stable = struct
   module V1 = struct
-    type ('a, 'b) t = ('a, 'b) Result.t =
+    type ('a : value_or_null, 'b : value_or_null) t = ('a, 'b) Result.t =
       | Ok of 'a
       | Error of 'b
     [@@deriving
@@ -13,7 +13,7 @@ module Stable = struct
       , equal ~localize
       , globalize
       , hash
-      , sexp ~localize
+      , sexp ~stackify
       , sexp_grammar
       , stable_witness
       , typerep]
@@ -38,7 +38,7 @@ end
 include Stable.V1
 include Result
 
-type%template ('a : k, 'b) t = (('a, 'b) Result.t[@kind k]) =
+type%template ('a : k, 'b : value_or_null) t = (('a, 'b) Result.t[@kind k]) =
   | Ok of 'a
   | Error of 'b
 [@@deriving bin_io ~localize] [@@kind k = (float64, bits32, bits64, word)]

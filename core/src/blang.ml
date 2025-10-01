@@ -1,5 +1,6 @@
 open! Import
 open Std_internal
+module String = Base.String
 
 (* The module [T] serves to enforce the invariant that all Blang.t values are in a
    normal form whereby boolean constants True and False only appear as the topmost
@@ -397,6 +398,9 @@ module%template C = Container.Make [@modality portable] (struct
         iter t3 ~f
     ;;
 
+    let fold_until t ~init ~f ~finish = Container.fold_until ~fold ~init ~f t ~finish
+    let fold = `Custom fold
+    let iter_until = `Define_using_fold_until
     let iter = `Custom iter
     let length = `Define_using_fold
   end)
@@ -418,6 +422,7 @@ let min_elt = C.min_elt
 let max_elt = C.max_elt
 let fold_result = C.fold_result
 let fold_until = C.fold_until
+let iter_until = C.iter_until
 
 let rec bind t ~f:k =
   match t with
@@ -480,7 +485,7 @@ let eval_set ~universe:all set_of_base t =
   aux t [@nontail]
 ;;
 
-include%template Monad.Make [@modality portable] (struct
+include%template Monad.Make [@mode local] [@modality portable] (struct
     type 'a t = 'a T.t
 
     let return = base

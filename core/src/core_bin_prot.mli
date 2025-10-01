@@ -20,7 +20,7 @@ module Reader : sig
     ; vtag_read : 'a Read.vtag_reader
     }
 
-  val of_string : 'a t -> string -> 'a
-  val of_bytes : 'a t -> bytes -> 'a
+  val of_string : 'a t -> string @ local -> 'a
+  val of_bytes : 'a t -> bytes @ local -> 'a
   val of_bigstring : 'a t -> Bigstring.t -> 'a
 end

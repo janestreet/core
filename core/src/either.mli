@@ -14,7 +14,8 @@ include module type of struct
   with type ('f, 's) t := ('f, 's) t
 
 include Comparator.Derived2 with type ('a, 'b) t := ('a, 'b) t
-include Quickcheckable.S2 with type ('a, 'b) t := ('a, 'b) t
+
+include%template Quickcheckable.S2 [@modality portable] with type ('a, 'b) t := ('a, 'b) t
 
 module Stable : sig
   module V1 : sig

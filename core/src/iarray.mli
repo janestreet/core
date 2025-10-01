@@ -2,9 +2,13 @@
 
 open! Import
 
-type 'a t = 'a Base.Iarray.t [@@deriving bin_io ~localize, quickcheck, typerep]
+type ('a : any mod separable) t = 'a Base.Iarray.t
 
-include Base.Iarray.Public with type 'a t := 'a t (** @inline *)
+[%%rederive:
+  type 'a t = 'a Base.Iarray.t
+  [@@deriving bin_io ~localize, quickcheck ~portable, typerep]]
+
+include Base.Iarray.Public with type ('a : any mod separable) t := 'a t (** @inline *)
 
 module Stable : sig
   module V1 : sig

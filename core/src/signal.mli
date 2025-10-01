@@ -1,8 +1,10 @@
+@@ portable
+
 (** Signal handlers. *)
 
 open! Import
 
-type t [@@deriving bin_io, sexp]
+type t : immediate [@@deriving bin_io, sexp]
 
 include%template Comparable.S [@mode local] with type t := t
 
@@ -36,10 +38,10 @@ type sys_behavior =
 val default_sys_behavior : t -> sys_behavior
 
 (** [handle_default t] is [set t `Default]. *)
-val handle_default : t -> unit
+val handle_default : t -> unit @@ nonportable
 
 (** [ignore t] is [set t `Ignore]. *)
-val ignore : t -> unit
+val ignore : t -> unit @@ nonportable
 
 (** Specific signals, along with their default behavior and meaning. *)
 
@@ -178,7 +180,7 @@ val to_system_int : [ `Use_Signal_unix ]
 
     If you do use [Core] signal handlers, you should strive to make the signal handler
     perform a simple idempotent action, like setting a ref. *)
-module Expert : sig
+module (Expert @@ nonportable) : sig @@ portable
   type behavior =
     [ `Default
     | `Ignore
@@ -189,13 +191,13 @@ module Expert : sig
   (** [signal t] sets the behavior of the system on receipt of signal [t] and returns the
       behavior previously associated with [t]. If [t] is not available on your system,
       [signal] raises. *)
-  val signal : t -> behavior -> behavior
+  val signal : t -> behavior -> behavior @@ nonportable
 
   (** [set t b] is [ignore (signal t b)]. *)
-  val set : t -> behavior -> unit
+  val set : t -> behavior -> unit @@ nonportable
 
   (** [handle t f] is [set t (`Handle f)]. *)
-  val handle : t -> (t -> unit) -> unit
+  val handle : t -> (t -> unit) -> unit @@ nonportable
 end
 
 module Stable : sig

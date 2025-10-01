@@ -1,4 +1,5 @@
 open! Import
+module String = Base.String
 
 module Stable = struct
   module Allocation_policy = struct
@@ -138,7 +139,8 @@ module Stat = struct
   end
 
   include T
-  include Comparable.Make_plain (T)
+
+  include%template Comparable.Make_plain [@mode portable] (T)
 
   let combine first second ~float_f ~int_f =
     { minor_words = float_f first.minor_words second.minor_words
@@ -190,7 +192,8 @@ module Control = struct
   end
 
   include T
-  include Comparable.Make_plain (T)
+
+  include%template Comparable.Make_plain [@mode portable] (T)
 end
 
 module Allocation_policy = struct
@@ -268,24 +271,35 @@ let disable_compaction ?logger ~allocation_policy () =
   tune ?logger ?allocation_policy ~max_overhead:1_000_000 ()
 ;;
 
-external minor_words : unit -> int = "core_gc_minor_words"
-external major_words : unit -> int = "core_gc_major_words" [@@noalloc]
-external promoted_words : unit -> int = "core_gc_promoted_words" [@@noalloc]
-external minor_collections : unit -> int = "core_gc_minor_collections" [@@noalloc]
-external major_collections : unit -> int = "core_gc_major_collections" [@@noalloc]
-external major_plus_minor_words : unit -> int = "core_gc_major_plus_minor_words"
-external allocated_words : unit -> int = "core_gc_allocated_words"
+external minor_words : unit -> int @@ portable = "core_gc_minor_words"
+external major_words : unit -> int @@ portable = "core_gc_major_words" [@@noalloc]
+external promoted_words : unit -> int @@ portable = "core_gc_promoted_words" [@@noalloc]
+
+external minor_collections : unit -> int @@ portable = "core_gc_minor_collections"
+[@@noalloc]
+
+external major_collections : unit -> int @@ portable = "core_gc_major_collections"
+[@@noalloc]
+
+external major_plus_minor_words
+  :  unit
+  -> int
+  @@ portable
+  = "core_gc_major_plus_minor_words"
+
+external allocated_words : unit -> int @@ portable = "core_gc_allocated_words"
 external run_memprof_callbacks : unit -> unit = "core_gc_run_memprof_callbacks"
-external compactions : unit -> int = "core_gc_compactions" [@@noalloc]
-external heap_words : unit -> int = "core_gc_heap_words" [@@noalloc]
-external heap_chunks : unit -> int = "core_gc_heap_chunks" [@@noalloc]
-external top_heap_words : unit -> int = "core_gc_top_heap_words" [@@noalloc]
+external compactions : unit -> int @@ portable = "core_gc_compactions" [@@noalloc]
+external heap_words : unit -> int @@ portable = "core_gc_heap_words" [@@noalloc]
+external heap_chunks : unit -> int @@ portable = "core_gc_heap_chunks" [@@noalloc]
+external top_heap_words : unit -> int @@ portable = "core_gc_top_heap_words" [@@noalloc]
 
 let stat_size_lazy =
-  lazy (Obj.reachable_words (Obj.repr (Stdlib.Gc.quick_stat () : Stat.t)))
+  Portable_lazy.from_fun (fun () ->
+    Obj.reachable_words (Obj.repr (Stdlib.Gc.quick_stat () : Stat.t)))
 ;;
 
-let stat_size () = Lazy.force stat_size_lazy
+let stat_size () = Portable_lazy.force stat_size_lazy
 let zero = Sys.opaque_identity (int_of_string "0")
 let compact_if_not_running_test () = if not am_running_test then compact ()
 
@@ -324,7 +338,7 @@ module For_testing = struct
 
   (* We disable inlining for this function so the GC stats and the call to [f] are never
      rearranged. *)
-  let[@cold] measure_internal ~on_result (f : unit -> local_ 'a) = exclave_
+  let[@cold] measure_internal ~on_result (f : unit -> 'a @ local) = exclave_
     let minor_words_before = minor_words () in
     let major_words_before = major_words () in
     (* We wrap [f ()] with [Sys.opaque_identity] to prevent the return value from being
@@ -338,7 +352,7 @@ module For_testing = struct
   [@@kind k = (k, k & value)]
   ;;
 
-  let is_zero_alloc_local (type a : k) (f : unit -> local_ a) =
+  let is_zero_alloc_local (type a : k) (f : unit -> a @ local) =
     (* Instead of using [Allocation_report.measure], and matching on the result, we use
        this construction, in order to have [is_zero_alloc] not allocate itself. This
        enables [is_zero_alloc] to be used in a nested way. *)
@@ -350,7 +364,7 @@ module For_testing = struct
     [@nontail]
   ;;
 
-  let is_zero_alloc (local_ f) =
+  let is_zero_alloc (f @ local) =
     (is_zero_alloc_local [@kind k]) (fun () -> { g = f () }) [@nontail]
   ;;
 
@@ -385,7 +399,7 @@ module For_testing = struct
     #(g, [%globalize: Allocation_report.t] allocation_report)
   ;;
 
-  let measure_and_log_allocation_local (local_ (f : unit -> local_ 'a)) = exclave_
+  let measure_and_log_allocation_local (f : (unit -> 'a @ local) @ local) = exclave_
     let log : Allocation_log.t list ref = ref []
     and major_allocs = ref 0
     and minor_allocs = ref 0 in

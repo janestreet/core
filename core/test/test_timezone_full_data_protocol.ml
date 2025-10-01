@@ -7,7 +7,7 @@ let%expect_test "Time.Stable.Zone.Full_data.V1" =
       ~zonename:"Sample Time Zone"
       ~filename:"sample_time_zone_file"
   in
-  Ref.set_temporarily sexp_style Sexp_style.simple_pretty ~f:(fun () ->
+  Dynamic.with_temporarily sexp_style Sexp_style.simple_pretty ~f:(fun () ->
     print_and_check_stable_type
       (module Time_float.Stable.Zone.Full_data.V1)
       [ Time_float.Zone.utc

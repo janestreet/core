@@ -1,5 +1,6 @@
 open! Std_internal
 open! Import
+module String = Base.String
 
 module Time = struct
   include Time.Make (Time_float0) ()
@@ -150,9 +151,9 @@ module T_without_Map_and_Set = struct
       then failwithf "invalid offset %s" offset ()
       else
         String.concat
-          [ String.slice offset 0 (offset_length - 2)
+          [ String.sub offset ~pos:0 ~len:(offset_length - 2)
           ; ":"
-          ; String.slice offset (offset_length - 2) offset_length
+          ; String.sub offset ~pos:(offset_length - 2) ~len:2
           ])
   ;;
 

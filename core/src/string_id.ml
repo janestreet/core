@@ -50,7 +50,7 @@ struct
           else validate s
         ;;
 
-        let to_string = Fn.id
+        let%template[@alloc __ = (heap, stack)] to_string = Fn.id
         let pp = String.pp
 
         let of_string s =
@@ -254,5 +254,6 @@ include
 module String_without_validation_without_pretty_printer = struct
   include String
 
+  let%template[@alloc stack] to_string = (to_string [@alloc stack])
   let%template arg_type = (Command.Arg_type.create [@mode portable]) Fn.id
 end

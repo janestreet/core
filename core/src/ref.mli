@@ -5,17 +5,17 @@
 open! Import
 open Perms.Export
 
-type 'a t = 'a Base.Ref.t = { mutable contents : 'a }
+type ('a : value_or_null) t = 'a Base.Ref.t = { mutable contents : 'a }
 [@@deriving bin_io ~localize, quickcheck, typerep]
 
 (** @inline *)
 include module type of struct
     include Base.Ref
   end
-  with type 'a t := 'a t
+  with type ('a : value_or_null) t := 'a t
 
 module Permissioned : sig
-  type (!'a, -'perms) t [@@deriving sexp, sexp_grammar, bin_io ~localize]
+  type (!'a : value_or_null, -'perms) t [@@deriving sexp, sexp_grammar, bin_io ~localize]
 
   val create : 'a -> ('a, [< _ perms ]) t
   val read_only : ('a, [> read ]) t -> ('a, read) t

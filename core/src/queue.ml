@@ -51,7 +51,7 @@ module Serialization_v1 = struct
       let module_name = Some "Core.Queue"
       let length = length
       let iter = iter
-      let init ~len ~next = init len ~f:(fun _ -> next ())
+      let init ~len ~next = init len ~f:(fun _ -> next ()) [@nontail]
     end)
 
   let stable_witness (_ : 'a Stable_witness.t) : 'a t Stable_witness.t =

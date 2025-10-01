@@ -13,7 +13,7 @@ type t = Base.Sexp.t =
   , equal ~localize
   , globalize
   , hash
-  , sexp
+  , sexp ~stackify
   , sexp_grammar]
 
 module O : sig
@@ -22,7 +22,11 @@ module O : sig
     | List of t list
 end
 
-include%template Comparable.S [@mode local] with type t := t
+include%template
+  Comparable.S
+  [@mode local]
+  with type t := t
+   and type comparator_witness = Base.Sexp.comparator_witness
 
 include Stringable.S with type t := t
 include Quickcheckable.S with type t := t
@@ -32,8 +36,6 @@ include module type of struct
   end
   with type t := t @@ nonportable
 
-module Utf8 = Base.Sexp.Utf8 (** @inline *)
-
 exception Of_sexp_error of exn * t
 
 (** A witness that [Sexp.t] can safely cross portability. *)
@@ -41,6 +43,20 @@ val cross_portable : t Basement.Portability_hacks.Cross.Portable.t
 
 (** A witness that [Sexp.t] can safely cross contention. *)
 val cross_contended : t Basement.Portability_hacks.Cross.Contended.t
+
+(** Pretty printing *)
+
+module type Pretty_printing = Base.Sexp.Pretty_printing (** @inline *)
+
+module type Pretty_printing_to_string = Base.Sexp.Pretty_printing_to_string (** @inline *)
+
+module Utf8 = Base.Sexp.Utf8 (** @inline *)
+
+module Utf8_as_string = Base.Sexp.Utf8_as_string (** @inline *)
+
+include Pretty_printing_to_string
+
+(** Printing configuration *)
 
 val of_float_style : [ `Underscores | `No_underscores ] Dynamic.t
 val of_int_style : [ `Underscores | `No_underscores ] Dynamic.t
@@ -126,7 +142,7 @@ module Stable : sig
       , equal ~localize
       , globalize
       , hash
-      , sexp
+      , sexp ~stackify
       , sexp_grammar
       , stable_witness]
 

@@ -38,17 +38,21 @@ end
 include struct
   open Base_quickcheck
 
+  [%%template
+  [@@@mode.default p = (nonportable, portable)]
+
   let quickcheck_generator elt_generator =
-    Generator.list elt_generator |> Generator.map ~f:of_list
+    (Generator.list [@mode p]) elt_generator |> (Generator.map [@mode p]) ~f:of_list
   ;;
 
   let quickcheck_observer elt_observer =
-    Observer.list elt_observer |> Observer.unmap ~f:to_list
+    (Observer.list [@mode p]) elt_observer |> (Observer.unmap [@mode p]) ~f:to_list
   ;;
 
   let quickcheck_shrinker elt_shrinker =
-    Shrinker.list elt_shrinker |> Shrinker.map ~f:of_list ~f_inverse:to_list
-  ;;
+    (Shrinker.list [@mode p]) elt_shrinker
+    |> (Shrinker.map [@mode p]) ~f:of_list ~f_inverse:to_list
+  ;;]
 end
 
 include (
@@ -57,4 +61,9 @@ struct
 end :
   Typerep_lib.Typerepable.S1 with type 'a t := 'a t)
 
-include Stable.V1
+include (
+  Stable.V1 :
+    module type of struct
+      include Stable.V1
+    end
+    with type 'a t := 'a t)

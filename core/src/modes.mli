@@ -6,7 +6,7 @@ module Global : sig
   end
 
   include sig @@ portable
-      type 'a t [@@deriving bin_io ~localize, quickcheck, typerep]
+      type 'a t [@@deriving bin_io ~localize, quickcheck ~portable, typerep]
     end
     with type 'a t := 'a t
 end

@@ -29,6 +29,7 @@ module Random = Base.Random
 module Staged = Base.Staged
 module Stringable = Base.Stringable
 module Sys = Base.Sys
+module Toplevel_value = Base.Toplevel_value
 module With_return = Base.With_return
 module Word_size = Base.Word_size
 
@@ -40,6 +41,7 @@ include Base_for_tests
 include Bin_prot.Std
 include Stable_witness.Export
 module Field = Fieldslib.Field
+module Mutex = Basement.Blocking_sync.Mutex [@@alert "-deprecated"]
 
 module From_sexplib : sig @@ portable
   type bigstring = Sexplib.Conv.bigstring [@@deriving sexp]

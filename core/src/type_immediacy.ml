@@ -5,7 +5,7 @@
    [../test/test_conversions.ml]
 *)
 
-type ('a : any_non_null) builtin_array = 'a array
+type ('a : any mod separable) builtin_array = 'a array
 
 open! Import
 module List = Base.List
@@ -59,8 +59,8 @@ module T : sig
   val create : ('a : any). 'a Typename.t -> Immediacy.t -> Allowed_ints.t -> 'a t
   val create_with_name : ('a : any). string -> Immediacy.t -> Allowed_ints.t -> 'a t
   val immediacy : ('a : any). 'a t -> Immediacy.t
-  val allowed_ints : ('a : any). 'a t -> Allowed_ints.t
-  val typename : ('a : any). 'a t -> string
+  val allowed_ints : ('a : any). 'a t -> Allowed_ints.t @@ portable
+  val typename : ('a : any). 'a t -> string @@ portable
 
   module Never_values : sig
     val int32 : int32 t
@@ -73,7 +73,7 @@ module T : sig
     val float_u : float# t
     val string : string t
     val bytes : bytes t
-    val array : (_ : any_non_null) builtin_array t
+    val array : (_ : any mod separable) builtin_array t
     val ref_ : _ ref t
     val tuple2 : (_ * _) t
     val tuple3 : (_ * _ * _) t

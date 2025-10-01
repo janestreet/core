@@ -49,7 +49,7 @@ open Map_intf
 
 type (!'key, +!'value, !'cmp) t = ('key, 'value, 'cmp) Base.Map.t
 
-(** Test if invariants of internal AVL search tree hold. *)
+(** Test if invariants of internal weight-balanced search tree hold. *)
 val invariants : (_, _, _) t -> bool
 
 val comparator : ('a, _, 'cmp) t -> ('a, 'cmp) Comparator.t
@@ -145,15 +145,33 @@ val of_iteri_exn
     data structure). *)
 
 module Tree : sig
-  type ('k, +'v, 'cmp) t : immutable_data with 'k with 'v = ('k, 'v, 'cmp) Tree.t
+  type weight = Tree.weight
+
+  type ('k, +'v, 'cmp) t : immutable_data with 'k with 'v =
+        ('k, 'v, 'cmp) Tree.t =
+    private
+    | Empty
+    | Leaf of
+        { global_ key : 'k
+        ; global_ data : 'v
+        }
+    | Node of
+        { global_ left : ('k, 'v, 'cmp) t
+        ; global_ key : 'k
+        ; global_ data : 'v
+        ; global_ right : ('k, 'v, 'cmp) t
+        ; weight : weight
+        }
   [@@deriving sexp_of]
 
   include
     Creators_and_accessors_generic
     with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
+    with type ('a, 'b, 'c) map := ('a, 'b, 'c) t
     with type ('a, 'b, 'c) tree := ('a, 'b, 'c) t
     with type 'cmp cmp := 'cmp
     with type 'key key := 'key
+    with type 'key map_key := 'key
     with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) With_comparator.t
     with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) With_comparator.t
 end
@@ -523,6 +541,11 @@ val partition_map
   -> f:local_ ('v1 -> ('v2, 'v3) Either.t)
   -> ('k, 'v2, 'cmp) t * ('k, 'v3, 'cmp) t
 
+(** [partition_result t = partition_map t ~f:Result.to_either] *)
+val partition_result
+  :  ('k, ('ok, 'error) Result.t, 'cmp) t
+  -> ('k, 'ok, 'cmp) t * ('k, 'error, 'cmp) t
+
 (** {[
       partitioni_tf t ~f
       = partition_mapi t ~f:(fun ~key ~data ->
@@ -592,9 +615,12 @@ val validatei
 
 (** {2 Additional operations on maps} *)
 
-(** Merges two maps. The runtime is O(length(t1) + length(t2)). In particular, you
-    shouldn't use this function to merge a list of maps. Consider using
-    [merge_disjoint_exn] or [merge_skewed] instead. *)
+(** Merges two maps. The runtime is O(length(t1) + length(t2)).
+
+    The [merge_*] functions immediately below perform better in cases where they are
+    applicable. For merging a list of maps especially, use [merge_disjoin_exn] or
+    [merge_skewed] instead. If you don't require the full generality of [~f]'s behavior,
+    use [merge_by_case]. *)
 val merge
   :  ('k, 'v1, 'cmp) t
   -> ('k, 'v2, 'cmp) t
@@ -618,6 +644,47 @@ val merge_skewed
   -> ('k, 'v, 'cmp) t
   -> combine:local_ (key:'k -> 'v -> 'v -> 'v)
   -> ('k, 'v, 'cmp) t
+
+module When_unmatched : sig
+  (** Used for [merge_by_case] for unmatched keys in one map or the other. Using a more
+      specific case, like [Drop] instead of [Filter (fun ... -> false)] or [Map f] instead
+      of [Filter_map (fun ... -> Some (f ...))], allows a more optimized implementation.
+      [Drop] and [Keep], specifically, allow some entire non-overlapping subtrees to be
+      handled without traversal. *)
+  type ('k, 'a, 'b) t = ('k, 'a, 'b) Base.Map.When_unmatched.t =
+    | Drop
+    | Keep : (_, 'a, 'a) t
+    | Map of (key:'k -> local_ (data:'a -> 'b))
+    | Filter : (key:'k -> local_ (data:'a -> bool)) -> ('k, 'a, 'a) t
+    | Filter_map of (key:'k -> local_ (data:'a -> 'b option))
+  [@@deriving sexp_of]
+end
+
+module When_matched : sig
+  (** Used for [merge_by_case] for matching keys in two merged maps. Using a more specific
+      case, like [Drop] instead of [Filter_map (fun ~key:_ _ _ -> None)] or [Map f]
+      instead of [Filter_map (fun ... -> Some (f ...))], allows a more optimized
+      implementation. *)
+  type ('k, 'a, 'b, 'c) t = ('k, 'a, 'b, 'c) Base.Map.When_matched.t =
+    | Drop
+    | Keep_first : (_, 'a, _, 'a) t
+    | Keep_second : (_, _, 'a, 'a) t
+    | Map of (key:'k -> local_ ('a -> 'b -> 'c))
+    | Filter_first : (key:'k -> local_ ('a -> 'b -> bool)) -> ('k, 'a, 'b, 'a) t
+    | Filter_second : (key:'k -> local_ ('a -> 'b -> bool)) -> ('k, 'a, 'b, 'b) t
+    | Filter_map of (key:'k -> local_ ('a -> 'b -> 'c option))
+  [@@deriving sexp_of]
+end
+
+(** An alternative to [merge] that is more efficient when unmatched keys are
+    unconditionally dropped or kept unchanged in the result. *)
+val merge_by_case
+  :  ('k, 'v1, 'cmp) t
+  -> ('k, 'v2, 'cmp) t
+  -> left:local_ ('k, 'v1, 'v3) When_unmatched.t
+  -> right:local_ ('k, 'v2, 'v3) When_unmatched.t
+  -> both:local_ ('k, 'v1, 'v2, 'v3) When_matched.t
+  -> ('k, 'v3, 'cmp) t
 
 module Symmetric_diff_element : sig
   type ('k, 'v) t = 'k * [ `Left of 'v | `Right of 'v | `Unequal of 'v * 'v ]
@@ -725,6 +792,29 @@ val split_le_gt : ('k, 'v, 'cmp) t -> 'k -> ('k, 'v, 'cmp) t * ('k, 'v, 'cmp) t
     smaller of the two output maps. The O(m) term is due to the need to calculate the
     length of the output maps. *)
 val split_lt_ge : ('k, 'v, 'cmp) t -> 'k -> ('k, 'v, 'cmp) t * ('k, 'v, 'cmp) t
+
+(** [count_lt t key] returns the number of keys in [t] that are strictly less than [key].
+
+    Runtime is O(log n) where n is the size of the input map. *)
+val count_lt : ('k, 'v, 'cmp) t -> 'k -> int
+
+(** [count_le t key] returns the number of keys in [t] that are less than or equal to
+    [key].
+
+    Runtime is O(log n) where n is the size of the input map. *)
+val count_le : ('k, 'v, 'cmp) t -> 'k -> int
+
+(** [count_gt t key] returns the number of keys in [t] that are strictly greater than
+    [key].
+
+    Runtime is O(log n) where n is the size of the input map. *)
+val count_gt : ('k, 'v, 'cmp) t -> 'k -> int
+
+(** [count_ge t key] returns the number of keys in [t] that are greater than or equal to
+    [key].
+
+    Runtime is O(log n) where n is the size of the input map. *)
+val count_ge : ('k, 'v, 'cmp) t -> 'k -> int
 
 (** [append ~lower_part ~upper_part] returns [`Ok map] where [map] contains all the
     [(key, value)] pairs from the two input maps if all the keys from [lower_part] are
@@ -994,8 +1084,10 @@ module Using_comparator : sig
   include
     Creators_generic
     with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
+    with type ('a, 'b, 'c) map := ('a, 'b, 'c) t
     with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
     with type 'k key := 'k
+    with type 'k map_key := 'k
     with type 'c cmp := 'c
     with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) With_comparator.t
     with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
@@ -1013,8 +1105,10 @@ module Poly : sig
       include
         Creators_and_accessors_generic
         with type ('a, 'b, 'c) t := ('a, 'b) t
+        with type ('a, 'b, 'c) map := ('a, 'b) t
         with type ('a, 'b, 'c) tree := ('a, 'b) t
         with type 'k key := 'k
+        with type 'k map_key := 'k
         with type 'c cmp := comparator_witness
         with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
         with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
@@ -1028,17 +1122,24 @@ module Poly : sig
     include
       Creators_and_accessors_generic
       with type ('a, 'b, 'c) t := ('a, 'b) t
+      with type ('a, 'b, 'c) map := ('a, 'b, 'c) map
       with type ('a, 'b, 'c) tree := ('a, 'b) Tree.t
       with type 'k key := 'k
+      with type 'k map_key := 'k
       with type 'c cmp := comparator_witness
       with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
       with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
   end
   with type ('a, 'b, 'c) map = ('a, 'b, 'c) t
 
-module type Key_plain = Key_plain
-module type Key = Key
-module type Key_binable = Key_binable
+[%%template:
+[@@@mode.default m = (local, global)]
+
+module type Key_plain = Key_plain [@mode m]
+module type Key = Key [@mode m]
+module type Key_binable = Key_binable [@mode m]
+module type Key_hashable = Key_hashable [@mode m]
+module type Key_binable_hashable = Key_binable_hashable [@mode m]]
 
 [%%template:
 [@@@modality.default p = (portable, nonportable)]
@@ -1182,8 +1283,9 @@ module Stable : sig
   end
 
   module Symmetric_diff_element : sig
-    module V1 :
+    module%template V1 :
       Stable_module_types.With_stable_witness.S2
+      [@mode local]
       with type ('a, 'b) t = ('a, 'b) Symmetric_diff_element.t
   end
 end

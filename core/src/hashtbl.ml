@@ -12,13 +12,14 @@ include (
   Hashtbl :
   sig
   @@ portable
-    type ('a, 'b) t = ('a, 'b) Hashtbl.t [@@deriving sexp_of]
+    type (!'a : value_or_null, !'b : value_or_null) t = ('a, 'b) Hashtbl.t
+    [@@deriving sexp_of]
 
     module type Non_value = Base.Hashtbl.Non_value
 
-    include Non_value with type ('k, 'v) t := ('k, 'v) t
     include Base.Hashtbl.S_without_submodules with type ('a, 'b) t := ('a, 'b) t
     include Hashtbl_equality with type ('k, 'v) t := ('k, 'v) t
+    include Non_value with type ('k : value_or_null, 'v : value_or_null) t := ('k, 'v) t
   end)
 
 let validate ~name f t = Validate.alist ~name f (to_alist t)
@@ -136,16 +137,33 @@ module Poly = struct
 end
 
 module%template.portable
-  [@modality p] Provide_bin_io (Key : sig
+  [@inline] [@modality p] Provide_bin_io (Key : sig
     type t [@@deriving bin_io]
 
     include Key_plain with type t := t
   end) =
-Bin_prot.Utils.Make_iterable_binable1 [@modality p] (struct
+Bin_prot.Utils.Make_iterable_binable1 [@inlined hint] [@modality p] (struct
     module Key = Key
 
     type nonrec 'v t = (Key.t, 'v) t
-    type 'v el = Key.t * 'v [@@deriving bin_io]
+    type 'v el = Key.t * 'v
+
+    (* You may be tempted to replace these with
+       [type 'v el = Key.t * 'v [@@deriving bin_io]], but this generates a new
+       [Bin_shape.t], which is both allocating and side-effectful, and difficult for the
+       compiler to eliminate in [bin_size_m__t] etc. *)
+
+    let bin_size_el (type v) (bin_size_v : v Bin_prot.Size.sizer) = [%bin_size: Key.t * v]
+
+    let bin_write_el (type v) (bin_write_v : v Bin_prot.Write.writer) =
+      [%bin_write: Key.t * v]
+    ;;
+
+    let bin_read_el (type v) (bin_read_v : v Bin_prot.Read.reader) =
+      [%bin_read: Key.t * v]
+    ;;
+
+    let bin_shape_el bin_shape_v = [%bin_shape: Key.t * v]
 
     let caller_identity =
       Bin_prot.Shape.Uuid.of_string "8fabab0a-4992-11e6-8cca-9ba2c4686d9e"
@@ -326,27 +344,27 @@ end = struct
          ~f_inverse:to_alist
   ;;
 
-  let bin_shape_m__t (type t) (module Key : Key_binable with type t = t) =
+  let[@inline] bin_shape_m__t (type t) (module Key : Key_binable with type t = t) =
     let module M = Provide_bin_io (Key) in
     M.bin_shape_t
   ;;
 
-  let bin_size_m__t (type t) (module Key : Key_binable with type t = t) =
+  let[@inline] bin_size_m__t (type t) (module Key : Key_binable with type t = t) =
     let module M = Provide_bin_io (Key) in
     M.bin_size_t
   ;;
 
-  let bin_write_m__t (type t) (module Key : Key_binable with type t = t) =
+  let[@inline] bin_write_m__t (type t) (module Key : Key_binable with type t = t) =
     let module M = Provide_bin_io (Key) in
     M.bin_write_t
   ;;
 
-  let bin_read_m__t (type t) (module Key : Key_binable with type t = t) =
+  let[@inline] bin_read_m__t (type t) (module Key : Key_binable with type t = t) =
     let module M = Provide_bin_io (Key) in
     M.bin_read_t
   ;;
 
-  let __bin_read_m__t__ (type t) (module Key : Key_binable with type t = t) =
+  let[@inline] __bin_read_m__t__ (type t) (module Key : Key_binable with type t = t) =
     let module M = Provide_bin_io (Key) in
     M.__bin_read_t__
   ;;

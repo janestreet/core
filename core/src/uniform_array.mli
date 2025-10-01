@@ -4,10 +4,13 @@
 
 open! Import
 
-type 'a t = 'a Base.Uniform_array.t
-[@@deriving bin_io ~localize, quickcheck, sexp, sexp_grammar]
+type ('a : value_or_null) t = 'a Base.Uniform_array.t
+[@@deriving compare ~localize, sexp, sexp_grammar, stable_witness]
+
+[%%rederive:
+  type nonrec 'a t = 'a Base.Uniform_array.t [@@deriving bin_io ~localize, quickcheck]]
 
 include module type of struct
     include Base.Uniform_array
   end
-  with type 'a t := 'a t
+  with type ('a : value_or_null) t := 'a t

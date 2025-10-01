@@ -14,25 +14,29 @@ module%template.portable [@modality p] Comparisons =
   [@modality p]
   [@mode m]
 
-module%template.portable Validate (T : sig
+module%template.portable
+  [@modality p] Validate (T : sig
     type t [@@deriving (compare [@mode m]), sexp_of]
-  end) : Validate with type t := T.t = struct
+  end) : Validate [@modality p] with type t := T.t = struct
   module V = Validate
   open Maybe_bound
 
   let to_string t = Base.Sexp.to_string (T.sexp_of_t t)
 
+  [%%template
+  [@@@mode.default p = (p, nonportable)]
+
   let validate_bound ~min ~max t =
     V.bounded ~name:to_string ~lower:min ~upper:max ~compare:T.compare t
   ;;
 
-  let validate_lbound ~min t = validate_bound ~min ~max:Unbounded t
-  let validate_ubound ~max t = validate_bound ~max ~min:Unbounded t
+  let validate_lbound ~min t = (validate_bound [@mode p]) ~min ~max:Unbounded t
+  let validate_ubound ~max t = (validate_bound [@mode p]) ~max ~min:Unbounded t]
 end
 
-module%template.portable
-  [@modality p] Validate_with_zero (T : sig
-    type t : value mod contended [@@deriving (compare [@mode m]), sexp_of]
+module Validate_with_zero (T : sig
+  @@ p
+    type t : value mod c p [@@deriving (compare [@mode m]), sexp_of]
 
     val zero : t
   end) =
@@ -44,15 +48,20 @@ struct
      [validate_*]. *)
   let excl_zero = Maybe_bound.Excl T.zero
   let incl_zero = Maybe_bound.Incl T.zero
-  let validate_positive t = validate_lbound ~min:excl_zero t
-  let validate_non_negative t = validate_lbound ~min:incl_zero t
-  let validate_negative t = validate_ubound ~max:excl_zero t
-  let validate_non_positive t = validate_ubound ~max:incl_zero t
-end
 
-module%template.portable
-  [@modality p] With_zero (T : sig
-    type t : value mod contended [@@deriving (compare [@mode m]), sexp_of]
+  [%%template
+  [@@@mode.default p = (p, nonportable)]
+
+  let validate_positive t = (validate_lbound [@mode p]) ~min:excl_zero t
+  let validate_non_negative t = (validate_lbound [@mode p]) ~min:incl_zero t
+  let validate_negative t = (validate_ubound [@mode p]) ~max:excl_zero t
+  let validate_non_positive t = (validate_ubound [@mode p]) ~max:incl_zero t]
+end
+[@@modality (p, c) = ((nonportable, uncontended), (portable, contended))]
+
+module With_zero (T : sig
+  @@ p
+    type t : value mod c p [@@deriving (compare [@mode m]), sexp_of]
 
     val zero : t
   end) =
@@ -60,6 +69,7 @@ struct
   include Validate_with_zero [@mode m] [@modality p] (T)
   include Base.Comparable.With_zero [@modality p] [@mode m] (T)
 end
+[@@modality (p, c) = ((nonportable, uncontended), (portable, contended))]
 
 module%template.portable
   [@modality p] Map_and_set_binable_using_comparator (T : sig

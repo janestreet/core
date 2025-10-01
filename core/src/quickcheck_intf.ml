@@ -20,9 +20,11 @@ module Definitions = struct
         generators need only make sure it decreases in recursive calls and that recursion
         bottoms out at 0. *)
 
-    type +'a t = 'a Generator.t
+    type (+'a : any) t = 'a Generator.t
 
-    val create : (size:int -> random:Splittable_random.t -> 'a) -> 'a t
+    val%template create : (size:int -> random:Splittable_random.t -> 'a) @ p -> 'a t @ p
+    [@@mode p = (portable, nonportable)]
+
     val generate : 'a t -> size:int -> random:Splittable_random.t -> 'a
 
     (** Generators form a monad. [t1 >>= fun x -> t2] replaces each value [x] in [t1] with
@@ -38,6 +40,24 @@ module Definitions = struct
     include Monad.S with type 'a t := 'a t
 
     include Applicative.S with type 'a t := 'a t
+
+    module Via_thunk : sig
+      type ('a : any) thunk := unit -> 'a
+
+      val%template create
+        : ('a : any).
+        (size:int -> random:Splittable_random.t -> 'a thunk) @ p -> 'a t @ p
+      [@@mode p = (nonportable, portable)]
+
+      val generate
+        : ('a : any).
+        'a t -> size:int -> random:Splittable_random.t -> 'a thunk
+
+      val%template map
+        : ('a : any) ('b : any).
+        'a t @ p -> f:('a thunk -> 'b thunk) @ p -> 'b t @ p
+      [@@mode p = (nonportable, portable)]
+    end
 
     val%template map : 'a t @ p -> f:('a -> 'b) @ p -> 'b t @ p
     [@@mode p = (nonportable, portable)]
@@ -252,7 +272,8 @@ module Definitions = struct
         among the sizes of the elements. *)
     val list : 'a t -> 'a list t
 
-    val list_non_empty : 'a t -> 'a list t
+    val%template list_non_empty : 'a t @ p -> 'a list t @ p
+    [@@mode p = (portable, nonportable)]
 
     val%template list_with_length : int -> 'a t @ p -> 'a list t @ p
     [@@mode p = (portable, nonportable)]
@@ -330,6 +351,11 @@ module Definitions = struct
     (** [of_list list ~equal] maps values in [list] to separate buckets, and compares
         observed values to the elements of [list] using [equal]. *)
     val of_list : 'a list -> equal:('a -> 'a -> bool) -> 'a t
+
+    val%template of_list
+      : ('a : value mod contended).
+      'a list @ p -> equal:('a -> 'a -> bool) @ p -> 'a t @ p
+    [@@mode p = portable]
 
     (** Fixed point observer for recursive types. For example:
 
@@ -439,7 +465,10 @@ module Definitions = struct
     type 'a t = 'a Shrinker.t
 
     val shrink : 'a t -> 'a -> 'a Sequence.t
-    val create : ('a -> 'a Sequence.t) -> 'a t
+
+    val%template create : ('a -> 'a Sequence.t) @ p -> 'a t @ p
+    [@@mode p = (portable, nonportable)]
+
     val empty : unit -> 'a t @ portable
     val bool : bool t
     val char : char t
@@ -743,7 +772,7 @@ module Definitions = struct
 
     module Open_on_rhs :
       Generator
-      with type 'a t := 'a Generator.t
+      with type ('a : any) t := 'a Generator.t
        and module Let_syntax := Generator.Let_syntax
 
     include

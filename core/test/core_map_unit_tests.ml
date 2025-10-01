@@ -25,8 +25,10 @@ module Unit_tests
        include
          Map_intf.Creators_and_accessors_generic
          with type ('a, 'b, 'c) t := ('a, 'b, 'c) t_
+         with type ('a, 'b, 'c) map := ('a, 'b, 'c) t_
          with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
          with type 'a key := 'a Key.t
+         with type 'a map_key := 'a Key.t
          with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) create_options
          with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) access_options
 
@@ -62,9 +64,14 @@ struct
     let merge x = simplify_accessor merge x
     let merge_disjoint_exn x = simplify_accessor merge_disjoint_exn x
     let merge_skewed x = simplify_accessor merge_skewed x
+    let merge_by_case x = simplify_accessor merge_by_case x
     let split x = simplify_accessor split x
     let split_le_gt x = simplify_accessor split_le_gt x
     let split_lt_ge x = simplify_accessor split_lt_ge x
+    let count_lt x = simplify_accessor count_lt x
+    let count_le x = simplify_accessor count_le x
+    let count_gt x = simplify_accessor count_gt x
+    let count_ge x = simplify_accessor count_ge x
     let subrange x = simplify_accessor subrange x
     let fold_range_inclusive x = simplify_accessor fold_range_inclusive x
     let range_to_alist x = simplify_accessor range_to_alist x
@@ -139,8 +146,10 @@ struct
   end
 
   type ('a, 'b, 'c) t = Unit_test_follows
+  type ('a, 'b, 'c) map = ('a, 'b, 'c) t
   type ('a, 'b, 'c) tree = ('a, 'b, 'c) t
   type 'a key
+  type 'a map_key = 'a key
   type ('a, 'b, 'c) create_options = ('a, 'b, 'c) Without_comparator.t
   type ('a, 'b, 'c) access_options = ('a, 'b, 'c) Without_comparator.t
   type 'cmp cmp
@@ -982,6 +991,22 @@ struct
     && Map.equal String.equal m2 (Map.of_alist_exn [ k1, "a"; k3, "d" ])
   ;;
 
+  let partition_result _ = assert false
+
+  let%test _ =
+    let open Some_keys in
+    let m0 =
+      Map.of_alist_exn
+        [ k1, Ok "a"; k2, error_s (Atom "2"); k3, Ok "d"; k4, error_s (Atom "5") ]
+    in
+    let m1, m2 = Map.partition_result m0 in
+    Map.equal String.equal m1 (Map.of_alist_exn [ k1, "a"; k3, "d" ])
+    && Map.equal
+         Error.equal
+         m2
+         (Map.of_alist_exn [ k2, Error.of_string "2"; k4, Error.of_string "5" ])
+  ;;
+
   let partitioni_tf _ = assert false
 
   let%test _ =
@@ -1365,6 +1390,113 @@ struct
     ;;
   end
 
+  let merge_by_case _ = assert false
+
+  module Key_int = struct
+    type t = int [@@deriving quickcheck, sexp_of]
+
+    let length = 8 (* small but allows a few lengths of prefix *)
+    let quickcheck_generator = Int.gen_uniform_incl 0 ((1 lsl length) - 1)
+  end
+
+  module Int_map = struct
+    module Key = struct
+      include Key
+
+      let quickcheck_generator =
+        Quickcheck.Generator.map Key_int.quickcheck_generator ~f:of_int
+      ;;
+
+      let quickcheck_observer =
+        Quickcheck.Observer.unmap Key_int.quickcheck_observer ~f:to_int
+      ;;
+
+      let quickcheck_shrinker =
+        Quickcheck.Shrinker.map Key_int.quickcheck_shrinker ~f:of_int ~f_inverse:to_int
+      ;;
+    end
+
+    type t = (int, int) Map.t [@@deriving compare, sexp_of]
+
+    let quickcheck_generator =
+      Map.quickcheck_generator Key.quickcheck_generator Int.quickcheck_generator
+    ;;
+
+    let quickcheck_observer =
+      Map.quickcheck_observer Key.quickcheck_observer Int.quickcheck_observer
+    ;;
+
+    let quickcheck_shrinker =
+      Map.quickcheck_shrinker Key.quickcheck_shrinker Int.quickcheck_shrinker
+    ;;
+  end
+
+  module When_unmatched = struct
+    type t =
+      | Drop
+      | Keep
+      | Filter_map of (key:Int_map.Key.t -> data:int -> int option)
+    [@@deriving quickcheck, sexp_of]
+
+    let apply t ~key data =
+      match t with
+      | Drop -> None
+      | Keep -> Some data
+      | Filter_map f -> f ~key ~data
+    ;;
+
+    let to_when_unmatched t : _ Core.Map.When_unmatched.t =
+      match t with
+      | Drop -> Drop
+      | Keep -> Keep
+      | Filter_map f -> Filter_map f
+    ;;
+  end
+
+  module When_matched = struct
+    type t =
+      | Drop
+      | Keep_first
+      | Keep_second
+      | Filter_map of (key:Int_map.Key.t -> int -> int -> int option)
+    [@@deriving quickcheck, sexp_of]
+
+    let apply t ~key x y =
+      match t with
+      | Drop -> None
+      | Keep_first -> Some x
+      | Keep_second -> Some y
+      | Filter_map f -> f ~key x y
+    ;;
+
+    let to_when_matched t : _ Core.Map.When_matched.t =
+      match t with
+      | Drop -> Drop
+      | Keep_first -> Keep_first
+      | Keep_second -> Keep_second
+      | Filter_map f -> Filter_map f
+    ;;
+  end
+
+  let%test_unit _ =
+    Quickcheck.test
+      [%quickcheck.generator:
+        Int_map.t * Int_map.t * When_unmatched.t * When_unmatched.t * When_matched.t]
+      ~f:(fun (t1, t2, left, right, both) ->
+        [%test_result: Int_map.t]
+          (Map.merge_by_case
+             t1
+             t2
+             ~left:(When_unmatched.to_when_unmatched left)
+             ~right:(When_unmatched.to_when_unmatched right)
+             ~both:(When_matched.to_when_matched both))
+          ~expect:
+            (Map.merge t1 t2 ~f:(fun ~key -> function
+               | `Left x -> When_unmatched.apply left ~key x
+               | `Right y -> When_unmatched.apply right ~key y
+               | `Both (x, y) -> When_matched.apply both ~key x y)))
+  ;;
+
   let min_and_max_keys ~init keys =
     List.fold keys ~init:(init, init) ~f:(fun (min, max) key ->
       ( (if Key.compare key min < 0 then key else min)
@@ -1687,51 +1819,12 @@ struct
 
   module%test [@name "binary_search_subrange"] _ = struct
     (* Strategy is to generate maps keyed by integer, and compare various prefixes of
-         the binary representation. *)
-
-    module Key_int = struct
-      type t = int [@@deriving quickcheck, sexp_of]
-
-      let length = 8 (* small but allows a few lengths of prefix *)
-      let quickcheck_generator = Int.gen_uniform_incl 0 ((1 lsl length) - 1)
-    end
+       the binary representation. *)
 
     module Prefix_length = struct
       type t = int [@@deriving quickcheck, sexp]
 
       let quickcheck_generator = Int.gen_uniform_incl 0 Key_int.length
-    end
-
-    module Key = struct
-      include Key
-
-      let quickcheck_generator =
-        Quickcheck.Generator.map Key_int.quickcheck_generator ~f:of_int
-      ;;
-
-      let quickcheck_observer =
-        Quickcheck.Observer.unmap Key_int.quickcheck_observer ~f:to_int
-      ;;
-
-      let quickcheck_shrinker =
-        Quickcheck.Shrinker.map Key_int.quickcheck_shrinker ~f:of_int ~f_inverse:to_int
-      ;;
-    end
-
-    module Int_map = struct
-      type t = (int, int) Map.t [@@deriving sexp_of]
-
-      let quickcheck_generator =
-        Map.quickcheck_generator Key.quickcheck_generator Int.quickcheck_generator
-      ;;
-
-      let quickcheck_observer =
-        Map.quickcheck_observer Key.quickcheck_observer Int.quickcheck_observer
-      ;;
-
-      let quickcheck_shrinker =
-        Map.quickcheck_shrinker Key.quickcheck_shrinker Int.quickcheck_shrinker
-      ;;
     end
 
     type t =
@@ -1979,6 +2072,10 @@ struct
   let split _ = assert false
   let split_le_gt _ = assert false
   let split_lt_ge _ = assert false
+  let count_lt _ = assert false
+  let count_le _ = assert false
+  let count_gt _ = assert false
+  let count_ge _ = assert false
 
   let%test_unit _ =
     let check here map pivot =
@@ -2003,7 +2100,9 @@ struct
         assert (Map.invariants r);
         Map.iteri l ~f:(fun ~key ~data:_ -> assert (Key.( <= ) key pivot));
         Map.iteri r ~f:(fun ~key ~data:_ -> assert (Key.( > ) key pivot));
-        [%test_eq: int] ~here:[ here ] (Map.length map) (Map.length l + Map.length r)
+        [%test_eq: int] ~here:[ here ] (Map.length map) (Map.length l + Map.length r);
+        [%test_eq: int] ~here:[ here ] (Map.count_le map pivot) (Map.length l);
+        [%test_eq: int] ~here:[ here ] (Map.count_gt map pivot) (Map.length r)
       in
       let () =
         let l, r = Map.split_lt_ge map pivot in
@@ -2011,7 +2110,9 @@ struct
         assert (Map.invariants r);
         Map.iteri l ~f:(fun ~key ~data:_ -> assert (Key.( < ) key pivot));
         Map.iteri r ~f:(fun ~key ~data:_ -> assert (Key.( >= ) key pivot));
-        [%test_eq: int] ~here:[ here ] (Map.length map) (Map.length l + Map.length r)
+        [%test_eq: int] ~here:[ here ] (Map.length map) (Map.length l + Map.length r);
+        [%test_eq: int] ~here:[ here ] (Map.count_lt map pivot) (Map.length l);
+        [%test_eq: int] ~here:[ here ] (Map.count_ge map pivot) (Map.length r)
       in
       ()
     in

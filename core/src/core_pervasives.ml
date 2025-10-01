@@ -11,7 +11,11 @@ include Stdlib
 
    [[1] http://caml.inria.fr/mantis/view.php?id=6556
 *)
-external raise : exn -> 'a @ portable @@ portable = "%reraise"
+external raise
+  : ('a : value_or_null).
+  exn -> 'a @ portable unique
+  @@ portable
+  = "%reraise"
 
 external ignore : ('a : any). ('a[@local_opt]) -> unit @@ portable = "%ignore"
 [@@layout_poly]

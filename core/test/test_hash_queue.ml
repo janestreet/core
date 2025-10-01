@@ -378,3 +378,26 @@ let%expect_test "[replace_or_enqueue] raises with the correct message when the h
   [%expect
     {| (Failure "It is an error to modify a Hash_queue.t while iterating over it.") |}]
 ;;
+
+let%expect_test "[of_alist_exn] round-trips with [to_alist]" =
+  let hq = Hq.create () in
+  Hq.enqueue_back_exn hq "1" "1";
+  Hq.enqueue_back_exn hq "2" "2";
+  Hq.enqueue_back_exn hq "3" "3";
+  let lst = Hq.to_alist hq in
+  print_s [%sexp (lst : (string * string) list)];
+  [%expect
+    {|
+    ((1 1)
+     (2 2)
+     (3 3))
+    |}];
+  let hq2 = Hq.of_alist_exn () lst in
+  print_s [%sexp (hq2 : string Hq.t)];
+  [%expect
+    {|
+    ((1 1)
+     (2 2)
+     (3 3))
+    |}]
+;;

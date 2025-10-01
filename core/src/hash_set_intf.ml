@@ -29,8 +29,8 @@ end
 
 module type S_plain = sig
   type elt
-  type 'a hash_set
-  type t = elt hash_set [@@deriving equal ~localize, sexp_of]
+  type 'a hash_set : value mod non_float
+  type t : value mod non_float = elt hash_set [@@deriving equal ~localize, sexp_of]
 
   include
     Creators_generic
@@ -64,7 +64,7 @@ type ('key, 'z) create_options_with_hashable_required =
   ('key, unit, 'z) Hashtbl_intf.create_options_with_hashable
 
 module type Hash_set = sig @@ portable
-  type 'a t = 'a Base.Hash_set.t [@@deriving sexp_of]
+  type 'a t : value mod non_float = 'a Base.Hash_set.t [@@deriving sexp_of]
 
   (** We use [[@@deriving sexp_of]] but not [[@@deriving sexp]] because we want people to
       be explicit about the hash and comparison functions used when creating hashtables.

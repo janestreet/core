@@ -8,7 +8,7 @@ module type S1 = sig
   type 'key create_key
 
   (** A hash-queue, where the values are of type ['data]. *)
-  type ('key, 'data) t [@@deriving sexp_of]
+  type ('key, 'data) t : value mod non_float [@@deriving sexp_of]
 
   include Container.S1_phantom with type ('data, 'key) t := ('key, 'data) t
 
@@ -112,6 +112,15 @@ module type S1 = sig
       queue. *)
   val to_alist : ('key, 'data) t -> ('key * 'data) list
 
+  (** [of_alist_exn t] creates a queue from the given list, raising in the same situation
+      as [enqueue_exn] *)
+  val of_alist_exn
+    :  ?growth_allowed:bool
+    -> ?size:int
+    -> 'key create_arg
+    -> ('key create_key * 'data) list
+    -> ('key create_key, 'data) t
+
   (** [dequeue t front_or_back] returns the front or back element of the queue. *)
   val dequeue : ('key, 'data) t -> [ `back | `front ] -> 'data option
 
@@ -201,7 +210,7 @@ module type S1 = sig
 end
 
 module type S0 = sig
-  type ('key, 'data) hash_queue
+  type ('key, 'data) hash_queue : value mod non_float
   type key
 
   include

@@ -3,6 +3,7 @@
 open! Import
 open Bigstring
 include Bigbuffer_internal
+module String = Base.String
 
 let __internal (t : t) = t
 let length t = t.pos
@@ -76,6 +77,10 @@ let reset buf =
   buf.pos <- 0;
   buf.bstr <- buf.init;
   buf.len <- Bigstring.length buf.bstr
+;;
+
+let truncate buf pos =
+  if pos < 0 || pos >= buf.pos then invalid_arg "Bigbuffer.truncate" else buf.pos <- pos
 ;;
 
 let add_substring buf src ~pos:src_pos ~len =

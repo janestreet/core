@@ -92,7 +92,7 @@ module type S = sig @@ portable
 
       Supplying [~can_equal_after:true] allows the result to satisfy [time >= after]. *)
   val next_multiple
-    :  ?can_equal_after:bool (** default is [false] *)
+    :  ?can_equal_after:local_ bool (** default is [false] *)
     -> base:t
     -> after:t
     -> interval:Span.t

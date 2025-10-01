@@ -80,6 +80,7 @@ let invariant invariant_a t =
 ;;
 
 let create () = { value = None; set_at = [%here] }
+let create_full ~(here : [%call_pos]) value = { value = Some value; set_at = here }
 
 let set_internal t here value =
   t.value <- Some value;

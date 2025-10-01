@@ -2,6 +2,7 @@ open! Import
 open! Std_internal
 include Timezone_intf
 include Zone
+module String = Base.String
 
 module type Extend_zone = Timezone_intf.Extend_zone
 
@@ -11,7 +12,7 @@ module Zone_cache = struct
   type t =
     { mutable full : bool
     ; basedir : string
-    ; table : zone String.Table.t
+    ; table : zone Hashtbl.M(String).t
     }
 
   let clear t =
@@ -101,19 +102,36 @@ module Zone_cache = struct
   ;;
 
   module The_one_and_only = struct
-    include Capsule.Mutex.Create ()
+    module type M = sig
+      type k
+
+      val mutex : k Mutex.t
+    end
+
+    include
+      (val let (P (type k) (key : k Capsule.Expert.Key.t)) = Capsule.Expert.create () in
+           let mutex = Mutex.create key in
+           (module struct
+             type nonrec k = k
+
+             let mutex = mutex
+           end : M))
 
     let capsule : (t, k) Capsule.Data.t =
       Capsule.Data.create (fun () : t ->
         { full = false
         ; basedir = Option.value (Sys.getenv "TZDIR") ~default:"/usr/share/zoneinfo/"
-        ; table = String.Table.create ()
+        ; table = Hashtbl.create (module String)
         })
     ;;
 
     let with_the_one_and_only f =
-      Capsule.Mutex.with_lock mutex ~f:(fun password ->
-        Capsule.Data.get capsule ~password ~f)
+      (Mutex.with_lock mutex ~f:(fun password ->
+         Capsule.Expert.access ~password ~f:(fun access ->
+           { contended = { aliased = f (Capsule.Data.unwrap ~access capsule) } })
+         [@nontail]))
+        .contended
+        .aliased
     ;;
 
     let clear () = with_the_one_and_only (fun t -> clear t)
@@ -297,7 +315,7 @@ module Stable = struct
 
     include%template (
       Binable.Stable.Of_binable.V1 [@mode local] [@modality portable] [@alert "-legacy"]
-        (String)
+        (Stable_string.V1)
         (struct
           type nonrec t = t
 
@@ -311,7 +329,7 @@ module Stable = struct
         end)
 
     let stable_witness =
-      Stable_witness.of_serializable String.Stable.V1.stable_witness of_binable to_binable
+      Stable_witness.of_serializable Stable_string.V1.stable_witness of_binable to_binable
     ;;
 
     include%template Diffable.Atomic.Make [@modality portable] (struct

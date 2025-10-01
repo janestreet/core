@@ -65,10 +65,11 @@ end
     [Nan] or [Infinite]. The other validation functions still fail on [Nan], but permit
     [Infinite] values of the correct sign. (The behavior with respect to infinity will
     probably be changed to be more consistent.) *)
-include Comparable.Validate_with_zero with type t := t
+include%template Comparable.Validate_with_zero [@modality portable] with type t := t
 
 (** [validate_ordinary] fails if class is [Nan] or [Infinite]. *)
-val validate_ordinary : t Validate.check
+val%template validate_ordinary : (t Validate.check[@mode p])
+[@@mode p = (portable, nonportable)]
 
 (** [to_string_12 x] builds a string representing [x] using up to 12 significant digits.
     It loses precision. You can use ["%{Float#12}"] in formats, but consider ["%.12g"],

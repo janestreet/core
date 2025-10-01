@@ -12,6 +12,7 @@ open Import
 open Std_internal
 open! Int.Replace_polymorphic_compare
 include Zone_intf
+module String = Base.String
 
 exception Invalid_file_format of string [@@deriving sexp]
 
@@ -129,14 +130,13 @@ module Stable = struct
           let long = DLS.new_key (fun () -> Bytes.create 4) in
           let int32_of_char chr = Int32.of_int_exn (int_of_char chr) in
           fun ic ->
-            DLS.access (fun access ->
-              let long = DLS.get access long in
-              In_channel.really_input_exn ic ~buf:long ~pos:0 ~len:4;
-              let sb1 = Int32.shift_left (int32_of_char (Bytes.get long 0)) 24 in
-              let sb2 = Int32.shift_left (int32_of_char (Bytes.get long 1)) 16 in
-              let sb3 = Int32.shift_left (int32_of_char (Bytes.get long 2)) 8 in
-              let sb4 = int32_of_char (Bytes.get long 3) in
-              Int32.bit_or (Int32.bit_or sb1 sb2) (Int32.bit_or sb3 sb4))
+            let long = Obj.magic_uncontended (DLS.get long) in
+            In_channel.really_input_exn ic ~buf:long ~pos:0 ~len:4;
+            let sb1 = Int32.shift_left (int32_of_char (Bytes.get long 0)) 24 in
+            let sb2 = Int32.shift_left (int32_of_char (Bytes.get long 1)) 16 in
+            let sb3 = Int32.shift_left (int32_of_char (Bytes.get long 2)) 8 in
+            let sb4 = int32_of_char (Bytes.get long 3) in
+            Int32.bit_or (Int32.bit_or sb1 sb2) (Int32.bit_or sb3 sb4)
         ;;
 
         (* Note that this is only safe to use on numbers that will fit into a 31-bit

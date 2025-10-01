@@ -1,6 +1,7 @@
 open! Import
 open Std_internal
 open Digit_string_helpers
+module String = Base.String
 
 let is_leap_year ~year = (year mod 4 = 0 && not (year mod 100 = 0)) || year mod 400 = 0
 
@@ -145,38 +146,44 @@ module Stable = struct
 
       include T
 
+      [%%template
+      [@@@alloc.default a @ m = (heap_global, stack_local)]
+
       (** YYYY-MM-DD *)
-      let to_string_iso8601_extended t =
-        let buf = Bytes.create 10 in
-        write_4_digit_int buf ~pos:0 (year t);
-        Bytes.set buf 4 '-';
-        write_2_digit_int buf ~pos:5 (Month.to_int (month t));
-        Bytes.set buf 7 '-';
-        write_2_digit_int buf ~pos:8 (day t);
-        Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf
+      let to_string_iso8601_extended (t @ m) =
+        (let buf = (Bytes.create [@alloc a]) 10 in
+         write_4_digit_int buf ~pos:0 (year t);
+         Bytes.set buf 4 '-';
+         write_2_digit_int buf ~pos:5 (Month.to_int (month t));
+         Bytes.set buf 7 '-';
+         write_2_digit_int buf ~pos:8 (day t);
+         Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf)
+        [@exclave_if_stack a]
       ;;
 
-      let to_string = to_string_iso8601_extended
+      let to_string = (to_string_iso8601_extended [@alloc a])
 
       (** YYYYMMDD *)
-      let to_string_iso8601_basic t =
-        let buf = Bytes.create 8 in
-        write_4_digit_int buf ~pos:0 (year t);
-        write_2_digit_int buf ~pos:4 (Month.to_int (month t));
-        write_2_digit_int buf ~pos:6 (day t);
-        Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf
+      let to_string_iso8601_basic (t @ m) =
+        (let buf = (Bytes.create [@alloc a]) 8 in
+         write_4_digit_int buf ~pos:0 (year t);
+         write_2_digit_int buf ~pos:4 (Month.to_int (month t));
+         write_2_digit_int buf ~pos:6 (day t);
+         Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf)
+        [@exclave_if_stack a]
       ;;
 
       (** MM/DD/YYYY *)
-      let to_string_american t =
-        let buf = Bytes.create 10 in
-        write_2_digit_int buf ~pos:0 (Month.to_int (month t));
-        Bytes.set buf 2 '/';
-        write_2_digit_int buf ~pos:3 (day t);
-        Bytes.set buf 5 '/';
-        write_4_digit_int buf ~pos:6 (year t);
-        Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf
-      ;;
+      let to_string_american (t @ m) =
+        (let buf = (Bytes.create [@alloc a]) 10 in
+         write_2_digit_int buf ~pos:0 (Month.to_int (month t));
+         Bytes.set buf 2 '/';
+         write_2_digit_int buf ~pos:3 (day t);
+         Bytes.set buf 5 '/';
+         write_4_digit_int buf ~pos:6 (year t);
+         Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf)
+        [@exclave_if_stack a]
+      ;;]
 
       let parse_year4 str pos = read_4_digit_int str ~pos
       let parse_month str pos = Month.of_int_exn (read_2_digit_int str ~pos)

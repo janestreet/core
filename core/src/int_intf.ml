@@ -15,7 +15,7 @@ module type Binaryable = sig
   type t
 
   module Binary : sig
-    type nonrec t = t [@@deriving bin_io, typerep]
+    type nonrec t = t [@@deriving bin_io ~localize, typerep]
 
     include Base.Int.To_string_format with type t := t
   end
@@ -28,7 +28,7 @@ module type Hexable = sig
   type t
 
   module Hex : sig
-    type nonrec t = t [@@deriving bin_io, typerep]
+    type nonrec t = t [@@deriving bin_io ~localize, typerep]
 
     include Base.Int.String_format with type t := t
   end

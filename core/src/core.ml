@@ -113,6 +113,7 @@ module Mutex = struct end
 
 module Nativeint = Nativeint
 module No_polymorphic_compare = No_polymorphic_compare
+module Nonempty_list = Nonempty_list
 module Nothing = Nothing
 module Obj = Base.Obj
 module Only_in_test = Only_in_test
@@ -122,7 +123,7 @@ module Optional_syntax = Optional_syntax
 module Optional_syntax_intf = Optional_syntax_intf
 module Or_error = Or_error
 module Or_null = Base.Or_null
-module Ordered_collection_common = Ordered_collection_common
+module Ordered_collection_common = Base.Ordered_collection_common
 module Ordering = Ordering
 module Out_channel = Out_channel
 module Percent = Percent
@@ -161,6 +162,7 @@ module Staged = Base.Staged
 module String = String
 module String_id = String_id
 module Stringable = Stringable
+module Subatomic = Portable.Subatomic
 module Substring = Substring
 module Substring_intf = Substring_intf
 module Sys = Core_sys
@@ -171,6 +173,7 @@ module Thread = struct end
 module Time_float = Time_float
 module Time_ns = Time_ns
 module Timezone = Timezone
+module Toplevel_value = Toplevel_value
 module Tuple = Tuple
 module Tuple2 = Tuple.T2
 module Tuple3 = Tuple.T3
@@ -202,12 +205,13 @@ include T (** @open *)
 
 include Std_internal
 include Not_found
+include Stable_witness.Export
 
 (** {2 Top-level values} *)
 
 external phys_equal
   : ('a : value_or_null).
-  ('a[@local_opt]) -> ('a[@local_opt]) -> bool
+  ('a[@local_opt]) @ contended -> ('a[@local_opt]) @ contended -> bool
   @@ portable
   = "%eq"
 

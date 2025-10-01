@@ -15,17 +15,20 @@
 (** {6 Exceptions} *)
 
 (** Raise the given exception value *)
-external raise : exn -> 'a @ portable = "%reraise"
+external raise : ('a : value_or_null). exn -> 'a @ portable unique = "%reraise"
 
 (** A faster version [raise] which does not record the backtrace.
     @since 4.02.0 *)
-external raise_notrace : exn -> 'a @ portable = "%raise_notrace"
+external raise_notrace
+  : ('a : value_or_null).
+  exn -> 'a @ portable unique
+  = "%raise_notrace"
 
 (** Raise exception [Invalid_argument] with the given string. *)
-val invalid_arg : string -> 'a @ portable
+val invalid_arg : ('a : value_or_null). string -> 'a @ portable unique
 
 (** Raise exception [Failure] with the given string. *)
-val failwith : string -> 'a @ portable
+val failwith : ('a : value_or_null). string -> 'a @ portable unique
 
 (** The [Exit] exception is not raised by any library function. It is provided for use in
     your programs. *)
@@ -985,7 +988,7 @@ external decr : (int ref[@local_opt]) -> unit = "%decr"
 
 (** Result type *)
 
-type ('a, 'b) result = ('a, 'b) Stdlib.result =
+type ('a : value_or_null, 'b : value_or_null) result = ('a, 'b) Stdlib.result =
   | Ok of 'a
   | Error of 'b
 

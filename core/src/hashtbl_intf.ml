@@ -388,7 +388,9 @@ end
 module type%template [@modality p = (portable, nonportable)] Hashtbl = sig @@ p
   module type Non_value = Base.Hashtbl.Non_value
 
-  include Non_value
+  type (!'a : value_or_null, !'b : value_or_null) t : value mod non_float
+
   include Hashtbl_over_values [@modality p] with type ('a, 'b) t := ('a, 'b) t
   include Hashtbl_equality with type ('a, 'b) t := ('a, 'b) t
+  include Non_value with type ('a : value_or_null, 'b : value_or_null) t := ('a, 'b) t
 end

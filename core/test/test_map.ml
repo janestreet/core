@@ -133,3 +133,29 @@ let%expect_test "[map_keys]" =
   test map (module String) ~f:(fun x -> Int.to_string (x / 2));
   [%expect {| (Duplicate_key 1) |}]
 ;;
+
+let%expect_test ("bin_io functions do not allocate" [@tags "fast-flambda2"]) =
+  let t = singleton (module Unit) () () in
+  let size =
+    Expect_test_helpers_core.require_no_allocation ~here:[%here] (fun () ->
+      [%bin_size: unit M(Unit).t] t)
+  in
+  [%expect {| |}];
+  let buf = Bigstring.create size in
+  let _ : int =
+    Expect_test_helpers_core.require_no_allocation ~here:[%here] (fun () ->
+      [%bin_write: unit M(Unit).t] buf ~pos:0 t)
+  in
+  [%expect {| |}];
+  let pos_ref = ref 0 in
+  let _ : unit M(Unit).t =
+    Expect_test_helpers_core.require_allocation_does_not_exceed
+      (* 3 words for the map record +
+         3 words for the [Leaf] node +
+         3 words for the [(), ()] key-value pair *)
+      (Minor_words 9)
+      ~here:[%here]
+      (fun () -> [%bin_read: unit M(Unit).t] buf ~pos_ref)
+  in
+  [%expect {| |}]
+;;

@@ -4,6 +4,7 @@ open! Import
 open Std_internal
 open! Int.Replace_polymorphic_compare
 include Time_intf
+module String = Base.String
 
 module Make (Time0 : Time0_intf.S) () = struct
   module Time0 = Time0
@@ -363,9 +364,9 @@ module Make (Time0 : Time0_intf.S) () = struct
     then failwithf "invalid offset %s" offset ()
     else
       String.concat
-        [ String.slice offset 0 (offset_length - 2)
+        [ String.sub offset ~pos:0 ~len:(offset_length - 2)
         ; ":"
-        ; String.slice offset (offset_length - 2) offset_length
+        ; String.sub offset ~pos:(offset_length - 2) ~len:2
         ]
   ;;
 

@@ -9,14 +9,14 @@ open Perms.Export
 
 (** {2 The [Array] type} *)
 
-type ('a : any_non_null) t = 'a Base.Array.t
+type ('a : any mod separable) t = 'a Base.Array.t
 
 [%%rederive:
   type nonrec 'a t = 'a t [@@deriving bin_io ~localize, quickcheck ~portable, typerep]]
 
 (** {2 The signature included from [Base.Array]} *)
 
-include Base.Array.Public with type ('a : any_non_null) t := 'a t (** @inline *)
+include Base.Array.Public with type ('a : any mod separable) t := 'a t (** @inline *)
 
 (** {2 Extensions}
 
@@ -56,7 +56,7 @@ module Float : sig
     -> dst_pos:int
     -> len:int
     -> unit
-    = "core_array_unsafe_float_blit"
+    = "base_array_unsafe_float_blit"
   [@@noalloc]
 end
 
@@ -84,7 +84,7 @@ module Permissioned : sig
       extract the length of an array. This was done for simplicity because some
       information about the length of an array can leak out even if you only have write
       permissions since you can catch out-of-bounds errors. *)
-  type ('a : any_non_null, -'perms) t
+  type ('a : value, -'perms) t
 
   [%%rederive:
     type nonrec ('a, -'perms) t = ('a, 'perms) t
@@ -146,7 +146,7 @@ module Permissioned : sig
       -> dst_pos:int
       -> len:int
       -> unit
-      = "core_array_unsafe_float_blit"
+      = "base_array_unsafe_float_blit"
     [@@noalloc]
   end
 
@@ -169,9 +169,15 @@ module Permissioned : sig
       Since we don't control the definition of ['a array], this would require a type
       [('a, 'perms) Array.Permissioned.t] which is abstract, except that
       [('a, read_write) Array.Permissioned.t] is concrete, which is not possible. *)
-  val of_array_id : 'a array -> ('a, [< read_write ]) t
+  external of_array_id
+    :  ('a array[@local_opt])
+    -> (('a, [< read_write ]) t[@local_opt])
+    = "%identity"
 
-  val to_array_id : ('a, [> read_write ]) t -> 'a array
+  external to_array_id
+    :  (('a, [> read_write ]) t[@local_opt])
+    -> ('a array[@local_opt])
+    = "%identity"
 
   (** [to_sequence_immutable t] converts [t] to a sequence. Unlike [to_sequence],
       [to_sequence_immutable] does not need to copy [t] since it is immutable. *)
@@ -187,75 +193,70 @@ module Permissioned : sig
   (** These functions are in [Container.S1_permissions], but they are re-exposed here so
       that their types can be changed to make them more permissive (see comment above). *)
 
-  val length : (_, _) t @ contended -> int
+  val length : (_, _) t @ contended local -> int
   val is_empty : (_, _) t -> bool
 
   (** counterparts of regular array functions above *)
 
   external get
-    : ('a : any_non_null).
-    (('a, [> read ]) t[@local_opt]) -> (int[@local_opt]) -> 'a
+    :  (('a, [> read ]) t[@local_opt])
+    -> (int[@local_opt])
+    -> 'a
     = "%array_safe_get"
-  [@@layout_poly]
 
   external set
-    : ('a : any_non_null).
-    (('a, [> write ]) t[@local_opt]) -> (int[@local_opt]) -> 'a -> unit
+    :  (('a, [> write ]) t[@local_opt])
+    -> (int[@local_opt])
+    -> 'a
+    -> unit
     = "%array_safe_set"
-  [@@layout_poly]
 
   external unsafe_get
-    : ('a : any_non_null).
-    (('a, [> read ]) t[@local_opt]) -> (int[@local_opt]) -> 'a
+    :  (('a, [> read ]) t[@local_opt])
+    -> (int[@local_opt])
+    -> 'a
     = "%array_unsafe_get"
-  [@@layout_poly]
 
   external unsafe_set
-    : ('a : any_non_null).
-    (('a, [> write ]) t[@local_opt]) -> (int[@local_opt]) -> 'a -> unit
+    :  (('a, [> write ]) t[@local_opt])
+    -> (int[@local_opt])
+    -> 'a
+    -> unit
     = "%array_unsafe_set"
-  [@@layout_poly]
 
   [%%template:
-    external create
-      : ('a : any_non_null) 'perm.
-      len:int -> 'a -> ('a, [< 'perm perms ]) t @ m
-      = "%makearray_dynamic"
+    external create : len:int -> 'a -> ('a, [< 'perm perms ]) t @ m = "%makearray_dynamic"
     [@@ocaml.doc
-      " [create ~len x] creates an array of length [len] with the value [x] populated in\n\
-      \        each element. "]
-    [@@layout_poly]
+      {| [create ~len x] creates an array of length [len] with the value [x] populated in
+        each element. |}]
     [@@alloc __ @ m = (heap_global, stack_local)]]
 
   external create_local
-    : ('a : any_non_null) 'perm.
-    len:int -> 'a -> local_ ('a, [< 'perm perms ]) t
+    :  len:int
+    -> 'a
+    -> local_ ('a, [< 'perm perms ]) t
     = "%makearray_dynamic"
   [@@ocaml.doc
-    " [create_local ~len x] is like [create]. It allocates the array on the local stack.\n\
-    \        The array's elements are still global. "]
-  [@@layout_poly]
+    {| [create_local ~len x] is like [create]. It allocates the array on the local stack.
+        The array's elements are still global. |}]
 
   external magic_create_uninitialized
-    : ('a : any_non_null) 'perm.
-    len:int -> (('a, [< 'perm perms ]) t[@local_opt])
+    :  len:int
+    -> (('a, [< 'perm perms ]) t[@local_opt])
     = "%makearray_dynamic_uninit"
   [@@ocaml.doc
-    " [magic_create_uninitialized ~len] creates an array of length [len] with\n\
-    \        uninitialized elements -- that is, they may contain arbitrary, \
-     nondeterministic 'a\n\
-    \        values. This can be significantly faster than using [create].\n\n\
-    \        [magic_create_uninitialized] can only be used for GC-ignorable arrays not\n\
-    \        involving tagged immediates and arrays of elements with unboxed number \
-     layout. The\n\
-    \        compiler rejects attempts to use [magic_create_uninitialized] to produce \
-     e.g. an\n\
-    \        [('a : value) array].\n\n\
-    \        [magic_create_uninitialized] can break abstraction boundaries and type safety\n\
-    \        (e.g. by creating phony witnesses to type equality) and so should be used \
-     with\n\
-    \        caution. "]
-  [@@layout_poly]
+    {| [magic_create_uninitialized ~len] creates an array of length [len] with
+        uninitialized elements -- that is, they may contain arbitrary, nondeterministic 'a
+        values. This can be significantly faster than using [create].
+
+        [magic_create_uninitialized] can only be used for GC-ignorable arrays not
+        involving tagged immediates and arrays of elements with unboxed number layout. The
+        compiler rejects attempts to use [magic_create_uninitialized] to produce e.g. an
+        [('a : value) array].
+
+        [magic_create_uninitialized] can break abstraction boundaries and type safety
+        (e.g. by creating phony witnesses to type equality) and so should be used with
+        caution. |}]
 
   val create_float_uninitialized : len:int -> (float, [< _ perms ]) t
   val init : int -> f:local_ (int -> 'a) -> ('a, [< _ perms ]) t

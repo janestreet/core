@@ -119,7 +119,7 @@ let%expect_test "typical use of Validate.field_direct_folder doesn't allocate on
 ;;
 
 let%expect_test "Validate.all doesn't allocate on success" =
-  let checks = List.init 5 ~f:(Fn.const Validate.pass_bool) in
+  let checks = List.init 5 ~f:(fun _ x -> Validate.pass_bool x) in
   require_no_allocation (fun () -> ignore (Validate.all checks true : Validate.t))
 ;;
 
@@ -269,4 +269,13 @@ let%expect_test "Validate.list_indexed" =
         (3 fail3)
         (4 fail4))))
     |}]
+;;
+
+let%expect_test ("booltest no allocation" [@tags "fast-flambda"]) =
+  let _ : _ =
+    Expect_test_helpers_core.require_no_allocation (fun () ->
+      Validate.booltest (Sys.opaque_identity (Fn.const true)) ~if_false:"oops" ())
+    |> Validate.maybe_raise
+  in
+  ()
 ;;

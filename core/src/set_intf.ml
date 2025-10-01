@@ -55,8 +55,16 @@ module type For_deriving = sig
       ]} *)
 
   val bin_shape_m__t : ('a, 'b) Elt_bin_io.t -> Bin_prot.Shape.t
-  val bin_size_m__t : ('a, 'b) Elt_bin_io.t -> ('a, 'b) t Bin_prot.Size.sizer
-  val bin_write_m__t : ('a, 'b) Elt_bin_io.t -> ('a, 'b) t Bin_prot.Write.writer
+
+  [%%template:
+  [@@@mode.default m = (global, local)]
+
+  val bin_size_m__t : ('a, 'b) Elt_bin_io.t -> (('a, 'b) t Bin_prot.Size.sizer[@mode m])
+
+  val bin_write_m__t
+    :  ('a, 'b) Elt_bin_io.t
+    -> (('a, 'b) t Bin_prot.Write.writer[@mode m])]
+
   val bin_read_m__t : ('a, 'b) Elt_bin_io.t -> ('a, 'b) t Bin_prot.Read.reader
   val __bin_read_m__t__ : ('a, 'b) Elt_bin_io.t -> ('a, 'b) t Bin_prot.Read.vtag_reader
 

@@ -1,4 +1,5 @@
 open! Import
+module String = Base.String
 
 module T = struct
   include Base.Source_code_position

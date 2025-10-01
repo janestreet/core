@@ -26,6 +26,7 @@ type ('a : k) t := ('a t[@kind k])
 include Invariant.S1 [@kind k] with type 'a t := 'a t
 
 val create : unit -> _ t
+val create_full : here:[%call_pos] -> 'a -> 'a t
 val set : 'a t -> here:[%call_pos] -> 'a -> unit Or_error.t
 val set_exn : 'a t -> here:[%call_pos] -> 'a -> unit
 

@@ -96,7 +96,7 @@ let typerep_of_t = typerep_of_int63
 let typename_of_t = typename_of_int63
 
 include%template
-  Identifiable.Extend [@modality portable]
+  Identifiable.Extend [@mode local] [@modality portable]
     (Base.Int63)
     (struct
       type nonrec t = t
@@ -118,13 +118,13 @@ include%template Comparable.Validate_with_zero [@modality portable] (Base.Int63)
 module Binary = struct
   include Binary
 
-  type nonrec t = t [@@deriving typerep, bin_io]
+  type nonrec t = t [@@deriving typerep, bin_io ~localize]
 end
 
 module Hex = struct
   include Hex
 
-  type nonrec t = t [@@deriving typerep, bin_io]
+  type nonrec t = t [@@deriving typerep, bin_io ~localize]
 end
 
 let quickcheck_generator = Base_quickcheck.Generator.int63

@@ -120,14 +120,6 @@ end = struct
     end)
 end
 
-module Auto_complete = struct
-  type t = Env.t -> part:string -> string list
-
-  module For_escape = struct
-    type t = Env.t -> part:string list -> string list
-  end
-end
-
 module Completer = struct
   type t = Auto_complete.t option
 
@@ -143,88 +135,17 @@ module Completer = struct
 end
 
 module Arg_type : sig
-  type 'a t
+  include Arg_type
 
   val additional_documentation : 'a t -> string option lazy_t
   val key : 'a t -> 'a Env.Multi.Key.t option
   val complete : 'a t -> Completer.t
-  val parse : 'a t -> string -> 'a Or_error.t
-
-  val%template create
-    :  ?complete:Auto_complete.t @ p
-    -> ?key:'a Env.Multi.Key.t @ p
-    -> (string -> 'a) @ p
-    -> 'a t @ p
-    @@ portable
-  [@@mode p = (nonportable, portable)]
-
-  val%template create_with_additional_documentation
-    :  ?complete:Auto_complete.t @ p
-    -> ?key:'a Env.Multi.Key.t @ p
-    -> (string -> 'a) @ p
-    -> additional_documentation:string lazy_t
-    -> 'a t @ p
-  [@@mode p = (nonportable, portable)]
-
-  val map : ?key:'a Env.Multi.Key.t -> 'b t -> f:('b -> 'a) -> 'a t
-  val of_lazy : ?key:'a Env.Multi.Key.t -> 'a t lazy_t -> 'a t
-
-  val of_map
-    :  ?accept_unique_prefixes:bool
-    -> ?case_sensitive:bool
-    -> ?list_values_in_help:bool
-    -> ?auto_complete:Auto_complete.t
-    -> ?key:'a Env.Multi.Key.t
-    -> 'a Map.M(String).t
-    -> 'a t
-
-  val of_alist_exn
-    :  ?accept_unique_prefixes:bool
-    -> ?case_sensitive:bool
-    -> ?list_values_in_help:bool
-    -> ?auto_complete:Auto_complete.t
-    -> ?key:'a Env.Multi.Key.t
-    -> (string * 'a) list
-    -> 'a t
-
-  val enumerated
-    :  ?accept_unique_prefixes:bool
-    -> ?case_sensitive:bool
-    -> ?list_values_in_help:bool
-    -> ?auto_complete:Auto_complete.t
-    -> ?key:'a Env.Multi.Key.t
-    -> (module Enumerable_stringable with type t = 'a)
-    -> 'a t
-
-  val enumerated_sexpable
-    :  ?accept_unique_prefixes:bool
-    -> ?case_sensitive:bool
-    -> ?list_values_in_help:bool
-    -> ?auto_complete:Auto_complete.t
-    -> ?key:'a Env.Multi.Key.t
-    -> (module Enumerable_sexpable with type t = 'a)
-    -> 'a t
-
-  val comma_separated
-    :  ?allow_empty:bool
-    -> ?key:'a list Env.Multi.Key.t
-    -> ?strip_whitespace:bool
-    -> ?unique_values:bool
-    -> 'a t
-    -> 'a list t
-
-  module Export : sig
-    val string : string t
-    val int : int t
-    val char : char t
-    val float : float t
-    val bool : bool t
-    val sexp : Sexp.t t
-    val sexp_conv : ?complete:Auto_complete.t -> (Sexp.t -> 'a) -> 'a t
-  end
-
-  val auto_complete : _ t -> Auto_complete.t
 end = struct
+  let wrap_list x = x
+  let unwrap x = x
+  let%template[@mode portable] wrap_list = Modes.Portable.wrap_list
+  let%template[@mode portable] unwrap = Modes.Portable.unwrap
+
   type 'a t =
     { parse : string -> 'a
     ; complete : Completer.t
@@ -237,10 +158,12 @@ end = struct
     Modes.Portable_via_contended.unwrap t.additional_documentation
   ;;
 
-  let parse t s = Or_error.try_with (fun () -> t.parse s)
-
   [%%template
   [@@@mode.default p = (nonportable, portable)]
+
+  let parse (type a : value mod p) (t : a t) s =
+    (Or_error.try_with [@mode p]) (fun () -> t.parse s)
+  ;;
 
   let create' ?complete ?key parse ~additional_documentation =
     { parse
@@ -265,9 +188,9 @@ end = struct
       ?key
       parse
       ~additional_documentation:(Lazy.map additional_documentation ~f:Option.some)
-  ;;]
+  ;;
 
-  let map ?key t ~f = { t with key; parse = (fun s -> f (t.parse s)) }
+  let map ?key t ~f = { t with key; parse = (fun s -> f (t.parse s)) }]
 
   let of_lazy ?key t =
     let parse str = (force t).parse str in
@@ -287,29 +210,33 @@ end = struct
     { parse; complete = Some complete; key; additional_documentation }
   ;;
 
-  let string = create Fn.id
-  let int = create Int.of_string
-  let char = create Char.of_string
-  let float = create Float.of_string
-  let sexp = create Parsexp.Single.parse_string_exn
+  let%template string = (create [@mode portable]) Fn.id
+  let%template int = (create [@mode portable]) Int.of_string
+  let%template char = (create [@mode portable]) Char.of_string
+  let%template float = (create [@mode portable]) Float.of_string
+  let%template sexp = (create [@mode portable]) Parsexp.Single.parse_string_exn
+
+  [%%template
+  [@@@mode.default (p, c) = ((nonportable, uncontended), (portable, contended))]
 
   let sexp_conv ?complete of_sexp =
-    create ?complete (fun s -> of_sexp (Parsexp.Single.parse_string_exn s))
+    (create [@mode p]) ?complete (fun s -> of_sexp (Parsexp.Single.parse_string_exn s))
   ;;
 
   let associative
+    (type a : value mod c p)
     ?(accept_unique_prefixes = true)
     ?(list_values_in_help = true)
     ?auto_complete
     ?key
     ~case_sensitive
-    alist
+    (alist : (string * a) list)
     =
     let open struct
       module type S = sig
-        include Comparator.S with type t = string
+        include Comparator.S [@modality p] with type t = string
 
-        val is_prefix : string -> prefix:string -> bool
+        val is_prefix : string @ local -> prefix:string @ local -> bool
       end
 
       type 'a t =
@@ -321,7 +248,7 @@ end = struct
     end in
     let (T { cmp = (module S); map }) =
       let make_map_raise_duplicate_key
-        (type cmp)
+        (type cmp : value mod p)
         (module S : S with type comparator_witness = cmp)
         alist
         =
@@ -374,7 +301,7 @@ end = struct
                  more generally useful to list all the options, which we do below. *)
               None))
     in
-    create'
+    (create' [@mode p])
       ~additional_documentation:
         (lazy
           (if list_values_in_help
@@ -406,7 +333,7 @@ end = struct
     ?key
     alist
     =
-    associative
+    (associative [@mode p])
       ?accept_unique_prefixes
       ?list_values_in_help
       ?auto_complete
@@ -423,7 +350,7 @@ end = struct
     ?key
     map
     =
-    of_alist_exn
+    (of_alist_exn [@mode p])
       ?accept_unique_prefixes
       ?case_sensitive
       ?list_values_in_help
@@ -433,34 +360,35 @@ end = struct
   ;;
 
   let enumerated
-    (type t)
+    (type t : value mod c p)
     ?accept_unique_prefixes
     ?case_sensitive
     ?list_values_in_help
     ?auto_complete
     ?key
-    (module E : Enumerable_stringable with type t = t)
+    (module E : Enumerable_stringable with type t = t[@mode p])
     =
-    of_alist_exn
+    (of_alist_exn [@mode p])
       ?accept_unique_prefixes
       ?case_sensitive
       ?list_values_in_help
       ?auto_complete
       ?key
-      (let%map.List t = E.all in
+      (let%map.List t = (wrap_list [@mode p]) E.all in
+       let t = (unwrap [@mode p]) t in
        E.to_string t, t)
   ;;
 
   let enumerated_sexpable
-    (type t)
+    (type t : value mod c p)
     ?accept_unique_prefixes
     ?case_sensitive
     ?list_values_in_help
     ?auto_complete
     ?key
-    (module E : Enumerable_sexpable with type t = t)
+    (module E : Enumerable_sexpable with type t = t[@mode p])
     =
-    enumerated
+    (enumerated [@mode p])
       ?accept_unique_prefixes
       ?case_sensitive
       ?list_values_in_help
@@ -473,8 +401,6 @@ end = struct
       end)
   ;;
 
-  let bool = enumerated ~list_values_in_help:false (module Bool)
-
   let comma_separated
     ?(allow_empty = false)
     ?key
@@ -484,34 +410,39 @@ end = struct
     =
     let strip = if strip_whitespace then fun str -> String.strip str else Fn.id in
     let complete =
-      Option.map t.complete ~f:(fun complete_elt env ~part ->
-        let prefixes, suffix =
-          match String.split part ~on:',' |> List.rev with
-          | [] -> [], part
-          | hd :: tl -> List.rev tl, hd
-        in
-        let is_allowed =
-          if not unique_values
-          then fun (_ : string) -> true
-          else (
-            let seen_already =
-              prefixes |> List.map ~f:strip |> Set.of_list (module String)
+      match t.complete with
+      | None -> None
+      | Some complete_elt ->
+        Some
+          (fun env ~part ->
+            let prefixes, suffix =
+              match String.split part ~on:',' |> List.rev with
+              | [] -> [], part
+              | hd :: tl -> List.rev tl, hd
             in
-            fun choice -> not (Set.mem seen_already (strip choice)))
-        in
-        let choices =
-          match
-            List.filter (complete_elt env ~part:suffix) ~f:(fun choice ->
-              (not (String.mem choice ',')) && is_allowed choice)
-          with
-          (* If there is exactly one choice to auto-complete, add a second choice with
+            let is_allowed =
+              if not unique_values
+              then fun (_ : string) -> true
+              else (
+                let seen_already =
+                  prefixes |> List.map ~f:strip |> Set.of_list (module String)
+                in
+                fun choice -> not (Set.mem seen_already (strip choice)))
+            in
+            let choices =
+              match
+                List.filter (complete_elt env ~part:suffix) ~f:(fun choice ->
+                  (not (String.mem choice ',')) && is_allowed choice)
+              with
+              (* If there is exactly one choice to auto-complete, add a second choice with
              a trailing comma so that auto-completion will go to the end but bash
              won't add a space.  If there are multiple choices, or a single choice
              that must be final, there is no need to add a dummy option. *)
-          | [ choice ] -> [ choice; choice ^ "," ]
-          | choices -> choices
-        in
-        List.map choices ~f:(fun choice -> String.concat ~sep:"," (prefixes @ [ choice ])))
+              | [ choice ] -> [ choice; choice ^ "," ]
+              | choices -> choices
+            in
+            List.map choices ~f:(fun choice ->
+              String.concat ~sep:"," (prefixes @ [ choice ])))
     in
     let of_string string =
       let string = strip string in
@@ -522,7 +453,17 @@ end = struct
         else failwith "Command.Spec.Arg_type.comma_separated: empty list not allowed"
       else List.map (String.split string ~on:',') ~f:(fun str -> t.parse (strip str))
     in
-    create ?key ?complete of_string
+    (create [@mode p]) ?key ?complete of_string
+  ;;
+
+  let auto_complete t =
+    match t.complete with
+    | Some f -> f
+    | None -> fun _ ~part:_ -> []
+  ;;]
+
+  let%template bool =
+    (enumerated [@mode portable]) ~list_values_in_help:false (module Bool)
   ;;
 
   module Export = struct
@@ -532,14 +473,8 @@ end = struct
     let float = float
     let bool = bool
     let sexp = sexp
-    let sexp_conv = sexp_conv
+    let%template sexp_conv = (sexp_conv [@mode p]) [@@mode p = (nonportable, portable)]
   end
-
-  let auto_complete t =
-    match t.complete with
-    | Some f -> f
-    | None -> fun _ ~part:_ -> []
-  ;;
 end
 
 module Flag = struct
@@ -1866,6 +1801,28 @@ module Command_base = struct
 
       let flag = flag_internal ~aliases_excluded_from_help:[]
 
+      let flag_optional_with_default_doc_string
+        ?aliases
+        ?full_flag_required
+        name
+        arg_type
+        string_of_default
+        ~default
+        ~doc
+        =
+        let doc =
+          match string_of_default default with
+          | "_" -> doc
+          | default_string -> sprintf "%s (default: %s)" doc default_string
+        in
+        flag
+          ?aliases
+          ?full_flag_required
+          name
+          (optional_with_default default arg_type)
+          ~doc
+      ;;
+
       let flag_optional_with_default_doc
         ?aliases
         ?full_flag_required
@@ -1875,16 +1832,13 @@ module Command_base = struct
         ~default
         ~doc
         =
-        let doc =
-          match sexp_of_default default with
-          | Sexp.Atom "_" -> doc
-          | default_sexp -> sprintf !"%s (default: %{Sexp})" doc default_sexp
-        in
-        flag
+        flag_optional_with_default_doc_string
           ?aliases
           ?full_flag_required
           name
-          (optional_with_default default arg_type)
+          arg_type
+          (fun default -> sexp_of_default default |> Sexp.to_string)
+          ~default
           ~doc
       ;;
     end
@@ -2279,6 +2233,10 @@ module Command_base = struct
       let required = required
       let flag = Param.flag
       let flag_optional_with_default_doc = Param.flag_optional_with_default_doc
+
+      let flag_optional_with_default_doc_string =
+        Param.flag_optional_with_default_doc_string
+      ;;
 
       include Applicative.Make (struct
           type nonrec 'a t = 'a Param.t
@@ -3267,6 +3225,7 @@ struct
         ~when_parsing_succeeds
         ~on_failure:Command_base.run_exn
     | Exec exec ->
+      when_parsing_succeeds ();
       let args = Cmdline.to_list (maybe_apply_extend args ~extend ~path) in
       Exec.exec_with_args ~args exec ~maybe_new_comp_cword
     | Group ({ summary; readme; subcommands = subs; body } as group) ->
@@ -3476,6 +3435,16 @@ module Param = struct
       -> string
       -> 'a Arg_type.t
       -> ('a -> Sexp.t)
+      -> default:'a
+      -> doc:string
+      -> 'a t
+
+    val flag_optional_with_default_doc_string
+      :  ?aliases:string list
+      -> ?full_flag_required:unit
+      -> string
+      -> 'a Arg_type.t
+      -> ('a -> string)
       -> default:'a
       -> doc:string
       -> 'a t

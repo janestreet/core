@@ -1,6 +1,7 @@
 open! Import
 open Std_internal
 open Digit_string_helpers
+module String = Base.String
 
 let suffixes char =
   let sprintf = Printf.sprintf in

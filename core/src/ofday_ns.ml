@@ -1,5 +1,6 @@
 open! Import
 module Span = Span_ns
+module String = Base.String
 
 type underlying = Int63.t
 type t = Span.t (* since wall-clock midnight *) [@@deriving typerep]

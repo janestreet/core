@@ -1,4 +1,5 @@
-open Core
+open! Core
+open Expect_test_helpers_core
 
 let test_int n bits = [%test_result: int] (Int.popcount n) ~expect:bits
 let test_int32 n bits = [%test_result: Int32.t] (Int32.popcount n) ~expect:bits
@@ -27,12 +28,8 @@ let%test_unit _ = test_int64 Int64.max_value 63L
 let%test_unit _ = test_int64 Int64.min_value 1L
 let%test_unit _ = test_nativeint 0n 0n
 let%test_unit _ = test_nativeint 1n 1n
-let%test_unit _ = test_nativeint (-1n) Nativeint.(num_bits |> of_int_exn)
-
-let%test_unit _ =
-  test_nativeint Nativeint.max_value (Nativeint.num_bits - 1 |> Nativeint.of_int_exn)
-;;
-
+let%test_unit _ = test_nativeint (-1n) Nativeint.(num_bits)
+let%test_unit _ = test_nativeint Nativeint.max_value Nativeint.(num_bits - 1n)
 let%test_unit _ = test_nativeint Nativeint.min_value 1n
 
 (* test that we can account for each bit individually *)
@@ -62,10 +59,10 @@ let%test_unit _ =
 ;;
 
 let%test_unit _ =
-  for i = 0 to Nativeint.num_bits - 1 do
+  for i = 0 to Nativeint.(num_bits |> to_int_trunc) - 1 do
     let n = Nativeint.shift_left 1n i in
     test_nativeint n 1n;
-    test_nativeint (Nativeint.bit_not n) (Nativeint.num_bits - 1 |> Nativeint.of_int_exn)
+    test_nativeint (Nativeint.bit_not n) Nativeint.(num_bits - one)
   done
 ;;
 
@@ -73,41 +70,37 @@ let%test_unit _ =
    stubs with boxed values for [int64], [int32], and [nativeint].  Use random inputs
    to make sure the compiler can't inline and precompute results. *)
 
-let does_not_allocate f =
-  let test () =
-    let len = 100 in
-    let inputs = ArrayLabels.init len ~f:(fun _ -> Random.bits ()) in
-    let minor_before = Gc.minor_words () in
-    for i = 0 to len - 1 do
-      ignore (f inputs.(i) : int)
-    done;
-    let minor_after = Gc.minor_words () in
-    [%test_result: int]
-      (minor_after - minor_before)
-      ~expect:0
-      ~message:"number of words allocated"
-  in
-  (* On 32-bit systems, int64 cannot be unboxed, so this test only makes sense on 64-bit
-     systems.  Also, without cross-library inlining, the arguments to popcount cannot be
-     unboxed. *)
-  match Word_size.word_size with
-  | W64 when Version_util.x_library_inlining -> test ()
-  | _ -> ()
+(* On 32-bit systems, int64 cannot be unboxed, so this test only makes sense on 64-bit
+   systems.  Also, without cross-library inlining, the arguments to popcount cannot be
+   unboxed. *)
+let%expect_test ("Int.popcount does not allocate"
+  [@tags "64-bits-only", "x-library-inlining-sensitive"])
+  =
+  let i = Sys.opaque_identity 123 in
+  require_no_allocation (fun () -> ignore (Int.popcount i : int));
+  [%expect {| |}]
 ;;
 
-let%test_unit _ = does_not_allocate (fun x -> Int.popcount x)
-
-let%test_unit _ =
-  does_not_allocate (fun x ->
-    Int32.popcount (Stdlib.Int32.of_int x) |> Stdlib.Int32.to_int)
+let%expect_test ("Int32.popcount does not allocate"
+  [@tags "disabled", "x-library-inlining-sensitive"])
+  =
+  let i = Sys.opaque_identity 123l in
+  require_no_allocation (fun () -> ignore (Int32.popcount i : int32));
+  [%expect {| |}]
 ;;
 
-let%test_unit _ =
-  does_not_allocate (fun x ->
-    Int64.popcount (Stdlib.Int64.of_int x) |> Int64.to_int_trunc)
+let%expect_test ("Int64.popcount does not allocate"
+  [@tags "disabled", "64-bits-only", "x-library-inlining-sensitive"])
+  =
+  let i = Sys.opaque_identity 123L in
+  require_no_allocation (fun () -> ignore (Int64.popcount i : int64));
+  [%expect {| |}]
 ;;
 
-let%test_unit _ =
-  does_not_allocate (fun x ->
-    Nativeint.popcount (Stdlib.Nativeint.of_int x) |> Nativeint.to_int_trunc)
+let%expect_test ("Nativeint.popcount does not allocate"
+  [@tags "disabled", "64-bits-only", "x-library-inlining-sensitive"])
+  =
+  let i = Sys.opaque_identity 123n in
+  require_no_allocation (fun () -> ignore (Nativeint.popcount i : nativeint));
+  [%expect {| |}]
 ;;

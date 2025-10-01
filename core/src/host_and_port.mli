@@ -8,7 +8,7 @@ type t =
   { host : string
   ; port : int
   }
-[@@deriving hash]
+[@@deriving globalize, hash]
 
 val create : host:string -> port:int -> t
 val host : t -> string
@@ -22,6 +22,8 @@ include%template
   [@mode local]
   with type t := t
    and type comparator_witness := comparator_witness
+
+include%template Base.Stringable.S [@alloc stack] with type t := t
 
 include Sexplib.Sexp_grammar.S with type t := t
 
@@ -37,9 +39,16 @@ module Stable : sig
   module V1 : sig
     type nonrec t = t
     [@@deriving
-      sexp, sexp_grammar, bin_io, compare ~localize, equal ~localize, hash, quickcheck]
+      sexp
+      , sexp_grammar
+      , bin_io
+      , compare ~localize
+      , equal ~localize
+      , globalize
+      , hash
+      , quickcheck]
 
-    include Base.Stringable.S with type t := t
+    include%template Base.Stringable.S [@alloc stack] with type t := t
 
     include%template
       Stable_comparable.With_stable_witness.V1

@@ -269,7 +269,7 @@ module%test Nonvalue_layout_tests = struct
 
       let quickcheck_generator =
         let%bind b_list = [%generator: Boxed.t list] in
-        let u_list = b_list |> (List.map [@kind value k]) ~f:unbox in
+        let u_list = b_list |> (List.map [@kind value_or_null k]) ~f:unbox in
         return { b_list; u_list }
       ;;
 
@@ -285,7 +285,7 @@ module%test Nonvalue_layout_tests = struct
           type t = Boxed.t List.t [@@deriving sexp_of, compare]
         end)
         (fun () -> f_boxed b_list)
-        (fun () -> f_unboxed u_list |> (List.map [@kind k value]) ~f:box)
+        (fun () -> f_unboxed u_list |> (List.map [@kind k value_or_null]) ~f:box)
     ;;
 
     let test name ~f =
@@ -423,6 +423,36 @@ module%test Nonvalue_layout_tests = struct
              ~f_unboxed:((List.map [@kind k k]) ~f:(fun x -> map_fun x)))
     ;;
 
+    let test_concat_mapi () =
+      test
+        "concat_mapi"
+        ~f:
+          (require_equal_lists
+             ~f_boxed:
+               (List.concat_mapi ~f:(fun i x ->
+                  let y i = box (map_fun i (unbox x)) in
+                  [ y i; y (i * 2); y (i * 3) ]))
+             ~f_unboxed:
+               ((List.concat_mapi [@kind k k]) ~f:(fun i x ->
+                  let y i = map_fun i x in
+                  [ y i; y (i * 2); y (i * 3) ])))
+    ;;
+
+    let test_concat_map () =
+      test
+        "concat_map"
+        ~f:
+          (require_equal_lists
+             ~f_boxed:
+               (List.concat_map ~f:(fun x ->
+                  let y i = box (map_fun i (unbox x)) in
+                  [ y 1; y 2; y 3 ]))
+             ~f_unboxed:
+               ((List.concat_map [@kind k k]) ~f:(fun x ->
+                  let y i = map_fun i x in
+                  [ y 1; y 2; y 3 ])))
+    ;;
+
     let test_append () =
       test
         "append"
@@ -449,7 +479,8 @@ module%test Nonvalue_layout_tests = struct
             end)
             (fun () -> List.init n ~f:(fun i -> box (of_int i)))
             (fun () ->
-              (List.init [@kind k]) n ~f:of_int |> (List.map [@kind k value]) ~f:box))
+              (List.init [@kind k]) n ~f:of_int
+              |> (List.map [@kind k value_or_null]) ~f:box))
     ;;
 
     let test_rev_append () =
@@ -558,6 +589,8 @@ module%test Nonvalue_layout_tests = struct
       test_filteri ();
       test_mapi ();
       test_map ();
+      test_concat_mapi ();
+      test_concat_map ();
       test_append ();
       test_init ();
       test_rev_append ();
@@ -592,6 +625,8 @@ module%test Nonvalue_layout_tests = struct
       testing [filteri]
       testing [mapi]
       testing [map]
+      testing [concat_mapi]
+      testing [concat_map]
       testing [append]
       testing [init]
       testing [rev_append]
@@ -627,6 +662,8 @@ module%test Nonvalue_layout_tests = struct
       testing [filteri]
       testing [mapi]
       testing [map]
+      testing [concat_mapi]
+      testing [concat_map]
       testing [append]
       testing [init]
       testing [rev_append]
@@ -661,6 +698,8 @@ module%test Nonvalue_layout_tests = struct
       testing [filteri]
       testing [mapi]
       testing [map]
+      testing [concat_mapi]
+      testing [concat_map]
       testing [append]
       testing [init]
       testing [rev_append]
@@ -695,6 +734,8 @@ module%test Nonvalue_layout_tests = struct
       testing [filteri]
       testing [mapi]
       testing [map]
+      testing [concat_mapi]
+      testing [concat_map]
       testing [append]
       testing [init]
       testing [rev_append]

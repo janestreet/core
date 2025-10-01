@@ -147,7 +147,7 @@
     because the type has a different witness (e.g. [Sometimes] instead of [Always]).
     v} *)
 
-type ('a : any_non_null) builtin_array := 'a array
+type ('a : any mod separable) builtin_array := 'a array
 
 open! Import
 
@@ -159,9 +159,9 @@ module Always : sig
   val of_typerep : ('a : any). 'a Typerep.t -> 'a t option
   val of_typerep_exn : ('a : any). here:[%call_pos] -> 'a Typerep.t -> 'a t
   val int_as_value : 'a t -> int -> 'a option
-  val int_as_value_exn : 'a t -> int -> 'a
+  val int_as_value_exn : 'a t -> int -> 'a @@ portable
   val int_is_value : 'a t -> int -> bool
-  val value_as_int : 'a t -> 'a -> int
+  val value_as_int : 'a t -> 'a -> int @@ portable
 
   module For_all_parameters_S1 (X : Typerepable.S1) : sig
     val witness : unit -> _ X.t t
@@ -257,7 +257,7 @@ module Never : sig
   val float : float t
   val string : string t
   val bytes : bytes t
-  val array : (_ : any_non_null) builtin_array t
+  val array : (_ : any mod separable) builtin_array t
   val ref_ : _ ref t
   val tuple2 : (_ * _) t
   val tuple3 : (_ * _ * _) t

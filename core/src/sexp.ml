@@ -17,7 +17,7 @@ module Stable = struct
 
     let t_sexp_grammar = Sexplib.Sexp.t_sexp_grammar
     let t_of_sexp = Sexplib.Sexp.t_of_sexp
-    let sexp_of_t = Sexplib.Sexp.sexp_of_t
+    let%template[@alloc a = (heap, stack)] sexp_of_t = (Sexplib.Sexp.sexp_of_t [@alloc a])
   end
 end
 

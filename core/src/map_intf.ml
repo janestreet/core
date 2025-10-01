@@ -17,6 +17,7 @@ module With_comparator = Map.With_comparator
 module With_first_class_module = Map.With_first_class_module
 module Without_comparator = Map.Without_comparator
 module Tree = Map.Using_comparator.Tree
+module Hashtbl = Base.Hashtbl
 
 [%%template
 [@@@mode.default m = (local, global)]
@@ -109,6 +110,7 @@ end
 
 module type Creators_and_accessors_generic = sig
   type ('a, 'b, 'c) t
+  type ('a, 'b, 'c) map
   type ('a, 'b, 'c) tree
   type 'a key
   type 'a cmp
@@ -118,6 +120,7 @@ module type Creators_and_accessors_generic = sig
   include
     Creators_generic
     with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
+    with type ('a, 'b, 'c) map := ('a, 'b, 'c) map
     with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
     with type 'a key := 'a key
     with type 'a cmp := 'a cmp
@@ -149,8 +152,10 @@ module type S_plain_tree = sig
   include
     Creators_and_accessors_generic
     with type ('a, 'b, 'c) t := 'b t
+    with type ('a, 'b, 'c) map := 'b t
     with type ('a, 'b, 'c) tree := 'b t
     with type 'a key := Key.t
+    with type 'a map_key := Key.t
     with type 'a cmp := Key.comparator_witness
     with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
     with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
@@ -169,8 +174,10 @@ module type%template [@modality p = (portable, nonportable)] S_plain = sig
   include
     Creators_generic
     with type ('a, 'b, 'c) t := 'b t
+    with type ('a, 'b, 'c) map := ('a, 'b, 'c) Map.t
     with type ('a, 'b, 'c) tree := (Key.t, 'b, Key.comparator_witness) Tree.t
     with type 'k key := Key.t
+    with type 'k map_key := 'k
     with type 'c cmp := Key.comparator_witness
     with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
     with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
@@ -255,15 +262,18 @@ module type For_deriving = sig
 
   val bin_shape_m__t : ('a, 'c) Key_bin_io.t -> Bin_prot.Shape.t -> Bin_prot.Shape.t
 
+  [%%template:
+  [@@@mode.default m = (global, local)]
+
   val bin_size_m__t
     :  ('a, 'c) Key_bin_io.t
-    -> 'b Bin_prot.Size.sizer
-    -> ('a, 'b, 'c) t Bin_prot.Size.sizer
+    -> ('b Bin_prot.Size.sizer[@mode m])
+    -> (('a, 'b, 'c) t Bin_prot.Size.sizer[@mode m])
 
   val bin_write_m__t
     :  ('a, 'c) Key_bin_io.t
-    -> 'b Bin_prot.Write.writer
-    -> ('a, 'b, 'c) t Bin_prot.Write.writer
+    -> ('b Bin_prot.Write.writer[@mode m])
+    -> (('a, 'b, 'c) t Bin_prot.Write.writer[@mode m])]
 
   val bin_read_m__t
     :  ('a, 'c) Key_bin_io.t
@@ -300,20 +310,27 @@ module type For_deriving = sig
     val quickcheck_shrinker : t Quickcheck.Shrinker.t
   end
 
+  [%%template:
+  [@@@mode.default p = (portable, nonportable)]
+
   val quickcheck_generator_m__t
-    :  (module Quickcheck_generator_m with type t = 'k and type comparator_witness = 'cmp)
-    -> 'v Quickcheck.Generator.t
-    -> ('k, 'v, 'cmp) t Quickcheck.Generator.t
+    : 'k 'v ('cmp : value mod p).
+    (module Quickcheck_generator_m with type t = 'k and type comparator_witness = 'cmp)
+    @ p
+    -> 'v Quickcheck.Generator.t @ p
+    -> ('k, 'v, 'cmp) t Quickcheck.Generator.t @ p
 
   val quickcheck_observer_m__t
     :  (module Quickcheck_observer_m with type t = 'k and type comparator_witness = 'cmp)
-    -> 'v Quickcheck.Observer.t
-    -> ('k, 'v, 'cmp) t Quickcheck.Observer.t
+       @ p
+    -> 'v Quickcheck.Observer.t @ p
+    -> ('k, 'v, 'cmp) t Quickcheck.Observer.t @ p
 
   val quickcheck_shrinker_m__t
-    :  (module Quickcheck_shrinker_m with type t = 'k and type comparator_witness = 'cmp)
-    -> 'v Quickcheck.Shrinker.t
-    -> ('k, 'v, 'cmp) t Quickcheck.Shrinker.t
+    : 'k 'v ('cmp : value mod p).
+    (module Quickcheck_shrinker_m with type t = 'k and type comparator_witness = 'cmp) @ p
+    -> 'v Quickcheck.Shrinker.t @ p
+    -> ('k, 'v, 'cmp) t Quickcheck.Shrinker.t @ p]
 end
 
 module type For_deriving_stable = sig

@@ -3,9 +3,6 @@
 //Provides: core_array_unsafe_int_blit
 //Requires: caml_array_blit
 var core_array_unsafe_int_blit = caml_array_blit
-//Provides: core_array_unsafe_float_blit
-//Requires: caml_array_blit
-var core_array_unsafe_float_blit = caml_array_blit
 
 //Provides: core_gc_compactions
 function core_gc_compactions() { return 0 }

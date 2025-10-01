@@ -79,11 +79,9 @@ struct
                    then (
                      init_src ();
                      let dst = src_to_dst src in
-                     if false
-                     then (
-                       blito ~src ~src_pos ~src_len ~dst ~dst_pos ();
-                       check_dst "blit dst overlapping" dst ~expect:(fun i ->
-                         src_bit (if is_in_range i then src_pos + i - dst_pos else i)))));
+                     blito ~src ~src_pos ~src_len ~dst ~dst_pos ();
+                     check_dst "blit dst overlapping" dst ~expect:(fun i ->
+                       src_bit (if is_in_range i then src_pos + i - dst_pos else i))));
                 (* Check [sub]. *)
                 init_src ();
                 let dst = sub src ~pos:src_pos ~len:src_len in
@@ -307,29 +305,32 @@ struct
   include B
 end
 
-module Make1_and_test (Sequence : sig
+module%template.portable
+  [@modality p] Make1_and_test (Sequence : sig
     include Blit.Sequence1
     include Sequence1 with type 'a t := 'a t with type 'a elt := 'a
   end) =
 struct
-  module B = Make1 (Sequence)
+  module B = Make1 [@modality p] (Sequence)
   include Test1 (Sequence) (B)
   include B
 end
 
-module Make1_generic_and_test
+module%template.portable
+  [@modality p] Make1_generic_and_test
     (Elt : Elt1)
     (Sequence : sig
        include Blit.Sequence1
        include Sequence1 with type 'a t := 'a t with type 'a elt := 'a Elt.t
      end) =
 struct
-  module B = Make1 (Sequence)
+  module B = Make1 [@modality p] (Sequence)
   include Test1_generic (Elt) (Sequence) (B)
   include B
 end
 
-module Make1_phantom2_and_test
+module%template.portable
+  [@modality p] Make1_phantom2_and_test
     (Elt : Elt1)
     (Sequence : sig
        type (_, _, _) t
@@ -342,12 +343,13 @@ module Make1_phantom2_and_test
        val unsafe_blit : (('elt, _, _) t, ('elt, _, _) t) Blit.blit
      end) =
 struct
-  module B = Make1_phantom2_distinct (Sequence) (Sequence)
+  module B = Make1_phantom2_distinct [@modality p] (Sequence) (Sequence)
   include Test1_phantom2 (Elt) (Sequence) (B)
   include B
 end
 
-module Make1_phantom2_distinct_and_test
+module%template.portable
+  [@modality p] Make1_phantom2_distinct_and_test
     (Elt : Elt1)
     (Src : Sequence1_phantom2 with type 'a elt := 'a Elt.t)
     (Dst : sig
@@ -357,7 +359,7 @@ module Make1_phantom2_distinct_and_test
        val unsafe_blit : (('elt, _, _) Src.t, ('elt, _, _) t) blit
      end) =
 struct
-  module B = Make1_phantom2_distinct (Src) (Dst)
+  module B = Make1_phantom2_distinct [@modality p] (Src) (Dst)
   include Test1_phantom2_distinct (Elt) (Src) (Dst) (B)
   include B
 end

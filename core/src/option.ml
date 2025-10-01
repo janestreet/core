@@ -18,7 +18,9 @@ include Base.Option
     [@@deriving bin_io ~localize] [@@kind k = (float64, bits32, bits64, word)]
   end)
 
-type 'a t = 'a option [@@deriving bin_io ~localize, typerep, stable_witness]
+type ('a : value_or_null) t = 'a option [@@deriving typerep, stable_witness]
+
+[%%rederive type 'a t = 'a option [@@deriving bin_io ~localize]]
 
 include%template Comparator.Derived [@modality portable] (struct
     type nonrec 'a t = 'a t [@@deriving sexp_of, compare ~localize]
@@ -39,15 +41,11 @@ let quickcheck_shrinker = (Base_quickcheck.Shrinker.option [@mode p])]
 
 module Stable = struct
   module V1 = struct
-    type nonrec 'a t = 'a t
+    type nonrec ('a : value_or_null) t = 'a t
     [@@deriving
-      bin_io ~localize
-      , compare ~localize
-      , equal ~localize
-      , hash
-      , sexp
-      , sexp_grammar
-      , stable_witness]
+      compare ~localize, equal ~localize, hash, sexp, sexp_grammar, stable_witness]
+
+    [%%rederive type nonrec 'a t = 'a t [@@deriving bin_io ~localize]]
   end
 end
 

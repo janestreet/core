@@ -40,11 +40,19 @@ module type Date0 = sig @@ portable
       http://www.wikipedia.org/wiki/iso8601 *)
   val of_string_iso8601_basic : string -> pos:int -> t
 
+  [%%template:
+  [@@@alloc.default a @ m = (heap_global, stack_local)]
+
+  (** YYYY-MM-DD *)
+  val to_string_iso8601_extended : t @ m -> string @ m
+
   (** YYYYMMDD *)
-  val to_string_iso8601_basic : t -> string
+  val to_string_iso8601_basic : t @ m -> string @ m
 
   (** MM/DD/YYYY *)
-  val to_string_american : t -> string
+  val to_string_american : t @ m -> string @ m
+
+  val to_string : t @ m -> string @ m]
 
   val day : t -> int
   val month : t -> Month.t
@@ -274,15 +282,7 @@ module type Date0 = sig @@ portable
   val unix_epoch : t
 
   (** [gen] generates dates between 1900-01-01 and 2100-01-01. *)
-  include Quickcheckable with type t := t
-
-  (** [gen_incl d1 d2] generates dates in the range between [d1] and [d2], inclusive, with
-      the endpoints having higher weight than the rest. Raises if [d1 > d2]. *)
-  val gen_incl : t -> t -> t Quickcheck.Generator.t
-
-  (** [gen_uniform_incl d1 d2] generates dates chosen uniformly in the range between [d1]
-      and [d2], inclusive. Raises if [d1 > d2]. *)
-  val gen_uniform_incl : t -> t -> t Quickcheck.Generator.t
+  include%template Quickcheckable.S_range [@mode portable] with type t := t
 
   (** [Days] provides a linear representation of dates that is optimized for arithmetic on
       the number of days between dates, rather than for representing year/month/day

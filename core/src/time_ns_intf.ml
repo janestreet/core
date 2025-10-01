@@ -369,7 +369,7 @@ module type Time_ns = sig @@ portable
           they're evaluated. *)
       type ofday := t
 
-      type t [@@deriving bin_io, sexp, sexp_grammar, hash]
+      type t : sync_data [@@deriving bin_io, sexp, sexp_grammar, hash]
 
       include Pretty_printer.S with type t := t
 
@@ -442,7 +442,8 @@ module type Time_ns = sig @@ portable
       zeros are trimmed, rather than trimming in groups of three. *)
   module Alternate_sexp : sig
     type nonrec t = t
-    [@@deriving bin_io, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+    [@@deriving
+      bin_io ~localize, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
 
     include%template Comparable.S [@mode local] with type t := t
 
@@ -482,7 +483,8 @@ module type Time_ns = sig @@ portable
         in [Time_ns_unix]. See the comment above. *)
     module Alternate_sexp : sig
       type nonrec t = t
-      [@@deriving bin_io, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+      [@@deriving
+        bin_io ~localize, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
 
       include%template Comparable.S [@mode local] with type t := t
 
@@ -526,6 +528,7 @@ module type Time_ns = sig @@ portable
          | `Local
          | `Use_this_one of Zone.t
          | `Use_this_one_lazy of Zone.t Lazy.t
+         | `Use_this_one_portable_lazy of Zone.t Portable_lazy.t
          ]
     -> ?find_zone:(string -> Zone.t) (** default: [Timezone.find_exn] *)
     -> string
@@ -612,16 +615,22 @@ module type Time_ns = sig @@ portable
   (** overflows silently *)
   val prev : t -> t [@@zero_alloc strict]
 
-  (** overflows silently *)
-  val diff : t -> t -> Span.t [@@zero_alloc strict]
+  (** [diff t1 t2] returns time [t1] minus time [t2].
 
-  (** overflows silently *)
-  val abs_diff : t -> t -> Span.t [@@zero_alloc strict]
+      This operation overflows silently. *)
+  val diff : t -> t -> Span.t
+  [@@zero_alloc strict]
+
+  (** [abs_diff t1 t2] returns the absolute span of time [t1] minus time [t2].
+
+      This operation overflows silently. *)
+  val abs_diff : t -> t -> Span.t
+  [@@zero_alloc strict]
 
   val to_span_since_epoch : t -> Span.t [@@zero_alloc strict]
   val of_span_since_epoch : Span.t -> t [@@zero_alloc strict]
-  val to_int63_ns_since_epoch : t -> Int63.t
-  val of_int63_ns_since_epoch : Int63.t -> t
+  val to_int63_ns_since_epoch : t -> Int63.t [@@zero_alloc strict]
+  val of_int63_ns_since_epoch : Int63.t -> t [@@zero_alloc strict]
 
   (** Will raise on 32-bit platforms. Consider [to_int63_ns_since_epoch] instead. *)
   val to_int_ns_since_epoch : t -> int
@@ -651,12 +660,13 @@ module type Time_ns = sig @@ portable
       units that evenly divide into a second, call with [base = epoch], [after] as the
       time to round, and [interval] as the unit span you are rounding to. *)
   val next_multiple
-    :  ?can_equal_after:bool (** default is [false] *)
+    :  ?can_equal_after:local_ bool (** default is [false] *)
     -> base:t
     -> after:t
     -> interval:Span.t
     -> unit
     -> t
+  [@@zero_alloc]
 
   (** [prev_multiple ~base ~before ~interval] returns the largest [time] of the form:
 
@@ -704,6 +714,12 @@ module type Time_ns = sig @@ portable
 
   (** [round_down_to_sec t] returns [t] rounded down to the previous second. *)
   val round_down_to_sec : t -> t
+
+  (** [every interval ~start ~stop] returns a sorted list of all [t]s that can be
+      expressed as [start + (i * interval)] and satisfy [t >= start && t <= stop].
+
+      Returns an [Error] if [interval <= Span.zero || start > stop]. *)
+  val every : Span.t -> start:t -> stop:t -> t list Or_error.t
 
   val random : ?state:Random.State.t -> unit -> t
 
@@ -799,7 +815,8 @@ module type Time_ns = sig @@ portable
       module Alternate_sexp : sig
         module V1 : sig
           type nonrec t = Option.Alternate_sexp.t
-          [@@deriving bin_io, compare ~localize, hash, sexp, sexp_grammar, stable_witness]
+          [@@deriving
+            bin_io ~localize, compare ~localize, hash, sexp, sexp_grammar, stable_witness]
 
           include
             Comparator.Stable.V1.S
@@ -822,7 +839,7 @@ module type Time_ns = sig @@ portable
       module V1 : sig
         type t = Alternate_sexp.t
         [@@deriving
-          bin_io
+          bin_io ~localize
           , compare ~localize
           , equal ~localize
           , hash

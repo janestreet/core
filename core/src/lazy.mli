@@ -10,7 +10,7 @@ type 'a t = 'a Base.Lazy.t
   , compare ~localize
   , hash
   , quickcheck
-  , sexp ~localize
+  , sexp ~stackify
   , sexp_grammar
   , typerep]
 

@@ -1,3 +1,5 @@
+module String = Base.String
+
 module Stable = struct
   open Stable_internal
 
@@ -9,10 +11,11 @@ module Stable = struct
 
     module T0 = struct
       type t =
-        { host : String.t
+        { host : Stable_string.V1.t
         ; port : Int.t
         }
-      [@@deriving compare ~localize, equal ~localize, hash, quickcheck ~portable]
+      [@@deriving
+        compare ~localize, equal ~localize, globalize, hash, quickcheck ~portable]
 
       let%template[@alloc a = (heap, stack)] to_serializable { host; port } =
         (host, port) [@exclave_if_stack a]
@@ -66,7 +69,9 @@ module Stable = struct
       open! Std_internal
       open! T0
 
-      let to_string { host; port } = sprintf "%s:%d" host port
+      let%template[@alloc a = (heap, stack)] to_string { host; port } =
+        (String.concat [@alloc a]) [ host; ":"; Int.to_string port ] [@exclave_if_stack a]
+      ;;
 
       let of_string s =
         match String.split s ~on:':' with

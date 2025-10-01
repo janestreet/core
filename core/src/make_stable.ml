@@ -16,7 +16,7 @@ module%template Of_stable_format = struct
 
          val to_stable_format : t @ m -> Stable_format.t @ m [@@mode m = (m, global)]
          val of_stable_format : Stable_format.t -> t
-       end) : S0 [@mode m] with type t = M.t = struct
+       end) : S0 [@mode m] [@modality p] with type t = M.t = struct
     module T1 = struct
       module T2 = struct
         include M
@@ -51,7 +51,7 @@ module%template Of_stable_format = struct
          val to_stable_format : t @ m -> Stable_format.t @ m [@@mode m = (m, global)]
          val of_stable_format : Stable_format.t -> t
          val caller_identity : Bin_shape.Uuid.t
-       end) : S0 [@mode m] with type t = M.t = struct
+       end) : S0 [@mode m] [@modality p] with type t = M.t = struct
     module T1 = struct
       module T2 = struct
         include M
@@ -301,7 +301,7 @@ module With_stable_witness = struct
 
            val to_stable_format : t @ m -> Stable_format.t @ m [@@mode m = (m, global)]
            val of_stable_format : Stable_format.t -> t
-         end) : With_stable_witness.S0 [@mode m] with type t = M.t = struct
+         end) : With_stable_witness.S0 [@mode m] [@modality p] with type t = M.t = struct
       include Of_stable_format.V1 [@modality p] [@mode m] (Stable_format) (M)
 
       let stable_witness =
@@ -323,7 +323,7 @@ module With_stable_witness = struct
            val to_stable_format : t @ m -> Stable_format.t @ m [@@mode m = (m, global)]
            val of_stable_format : Stable_format.t -> t
            val caller_identity : Bin_shape.Uuid.t
-         end) : With_stable_witness.S0 [@mode m] with type t = M.t = struct
+         end) : With_stable_witness.S0 [@mode m] [@modality p] with type t = M.t = struct
       include Of_stable_format.V2 [@modality p] [@mode m] (Stable_format) (M)
 
       let stable_witness =

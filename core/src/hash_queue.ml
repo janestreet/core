@@ -163,6 +163,12 @@ module%template Make_backend (Table : Hashtbl_intf.Hashtbl [@modality portable])
     let enqueue_back_exn t = enqueue_exn t `back
     let enqueue_front_exn t = enqueue_exn t `front
 
+    let of_alist_exn ?growth_allowed ?size hashable lst =
+      let t = create ?growth_allowed ?size hashable in
+      List.iter lst ~f:(fun (key, data) -> enqueue_back_exn t key data);
+      t
+    ;;
+
     (* Performance hack: we implement this version separately to avoid allocation from the
        option. *)
     let lookup_and_move_to_back_exn t key =
@@ -297,8 +303,9 @@ module%template Make_backend (Table : Hashtbl_intf.Hashtbl [@modality portable])
     let sum m t ~f = Container.sum m ~fold t ~f
     let min_elt t ~compare = Container.min_elt ~fold t ~compare
     let max_elt t ~compare = Container.max_elt ~fold t ~compare
-    let fold_result t ~init ~f = Container.fold_result ~fold ~init ~f t
     let fold_until t ~init ~f ~finish = Container.fold_until ~fold ~init ~f t ~finish
+    let fold_result t ~init ~f = Container.fold_result ~fold_until ~init ~f t
+    let iter_until t ~f ~finish = Container.iter_until ~fold_until ~f t ~finish
 
     let dequeue_all t ~f =
       let rec loop () =
@@ -408,6 +415,10 @@ module%template Make_backend (Table : Hashtbl_intf.Hashtbl [@modality portable])
 
     let hashable = T.hashable
     let create ?growth_allowed ?size () = create ?growth_allowed ?size hashable
+
+    let of_alist_exn ?growth_allowed ?size () lst =
+      of_alist_exn ?growth_allowed ?size hashable lst
+    ;;
   end
 
   module%template.portable [@modality p] Make (Key : Key) : S with type key = Key.t =

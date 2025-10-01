@@ -1,11 +1,12 @@
 open! Import
 open! Std_internal
 open! Int.Replace_polymorphic_compare
+module String = Base.String
 
 module type Extend_zone = sig @@ portable
   type t [@@deriving sexp_grammar]
 
-  include%template Identifiable.S [@mode local] with type t := t
+  include%template Identifiable.S [@mode local] [@modality portable] with type t := t
 
   include Diffable.S_atomic with type t := t
 
@@ -118,12 +119,13 @@ module type Timezone = sig @@ portable
       type t =
         { mutable full : bool
         ; basedir : string
-        ; table : Zone.t String.Table.t
+        ; table : Zone.t Hashtbl.M(String).t
         }
 
       module The_one_and_only : sig
-        include Capsule.Module_with_mutex
+        type k
 
+        val mutex : k Mutex.t
         val capsule : (t, k) Capsule.Data.t
       end
 

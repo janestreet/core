@@ -8,7 +8,10 @@ module _ : module type of struct
   include Iarray
   module Private = Base.Iarray.Private [@alert "-private_iarray"]
 end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
-  type 'a t = 'a Iarray.t [@@deriving bin_io ~localize, quickcheck, typerep]
+  type ('a : any mod separable) t = 'a Iarray.t
+
+  [%%rederive.portable
+    type 'a t = 'a Iarray.t [@@deriving bin_io ~localize, quickcheck ~portable, typerep]]
 
   let%expect_test "unstable (pseudo-nondeterministic) sample" =
     Test.with_sample_exn
@@ -243,7 +246,7 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
 
   let t_of_sexp = Iarray.t_of_sexp
   let sexp_of_t = Iarray.sexp_of_t
-  let sexp_of_t__local = Iarray.sexp_of_t__local
+  let sexp_of_t__stack = Iarray.sexp_of_t__stack
 
   let%expect_test "test round-trip" =
     print_and_check_sexpable (module Int_t) (10 |> List.init ~f:(Iarray.init ~f:Int.succ));
@@ -265,7 +268,7 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
 
       let sexp_of_t t =
         Sexp.globalize
-          (sexp_of_t__local (fun elt -> exclave_ sexp_of_int__local elt) t) [@nontail]
+          (sexp_of_t__stack (fun elt -> exclave_ sexp_of_int__stack elt) t) [@nontail]
       ;;
     end
     in
@@ -331,24 +334,30 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
     quickcheck_m (module Int_t) ~f:(fun t -> invariant Int.invariant t)
   ;;
 
+  [%%template
+  [@@@mode.default c = (uncontended, shared, contended), p = (portable, nonportable)]
+
   external unsafe_get
-    :  ('a t[@local_opt])
+    :  ('a t[@local_opt]) @ c p
     -> int
-    -> ('a[@local_opt])
+    -> ('a[@local_opt]) @ c p
     @@ portable
-    = "%array_unsafe_get"
+    = "%array_unsafe_get"]
 
   let%expect_test _ =
     quickcheck_m (module Int_t) ~f:(fun t ->
       require_equal (module Int_t) t (Iarray.init (Iarray.length t) ~f:(unsafe_get t)))
   ;;
 
+  [%%template
+  [@@@mode.default c = (uncontended, shared, contended), p = (portable, nonportable)]
+
   external get
-    :  ('a t[@local_opt])
+    :  ('a t[@local_opt]) @ c p
     -> int
-    -> ('a[@local_opt])
+    -> ('a[@local_opt]) @ c p
     @@ portable
-    = "%array_safe_get"
+    = "%array_safe_get"]
 
   let%expect_test _ =
     quickcheck_m
@@ -362,6 +371,26 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
           end)
           (Option.try_with (fun () -> get t i))
           (if 0 <= i && i < Iarray.length t then Some (Iarray.unsafe_get t i) else None))
+  ;;
+
+  [%%template
+  [@@@mode.default c = (uncontended, shared, contended)]
+  [@@@alloc.default a = (heap, stack)]
+
+  let get_opt = (Iarray.get_opt [@mode c] [@alloc a])]
+
+  let%expect_test _ =
+    quickcheck_m
+      (module struct
+        type t = Int_t.t * int [@@deriving quickcheck, sexp_of]
+      end)
+      ~f:(fun (t, i) ->
+        require_equal
+          (module struct
+            type t = int option [@@deriving equal, sexp_of]
+          end)
+          (Option.try_with (fun () -> get t i))
+          (Iarray.get_opt t i))
   ;;
 
   let set = Iarray.set
@@ -582,6 +611,44 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
         (List.group ~break:( > ) (Iarray.to_list t)
          |> List.map ~f:Iarray.of_list
          |> Iarray.of_list))
+  ;;
+
+  let split_n = Iarray.split_n
+
+  let%expect_test "[split_n]" =
+    quickcheck_m (module Int_t) ~f:(fun t ->
+      let list = Iarray.to_list t in
+      for n = -2 to Iarray.length t + 2 do
+        let first_arr, second_arr = split_n t n in
+        let first_list, second_list = List.split_n list n in
+        require_equal (module Int_t) first_arr (Iarray.of_list first_list);
+        require_equal (module Int_t) second_arr (Iarray.of_list second_list)
+      done)
+  ;;
+
+  let chunks_of = Iarray.chunks_of
+
+  let%expect_test "[chunks_of]" =
+    quickcheck_m (module Int_t) ~f:(fun t ->
+      let list = Iarray.to_list t in
+      for length = 1 to max 1 (Iarray.length t + 2) do
+        let chunks_arr = chunks_of t ~length in
+        let chunks_list = List.chunks_of list ~length in
+        require_equal
+          (module struct
+            type t = int Iarray.t Iarray.t [@@deriving equal, sexp_of]
+          end)
+          chunks_arr
+          (List.map chunks_list ~f:Iarray.of_list |> Iarray.of_list)
+      done);
+    (* Test that [chunks_of] raises for invalid length. *)
+    require_does_raise (fun () -> chunks_of (Iarray.of_list [ 1; 2; 3 ]) ~length:0);
+    require_does_raise (fun () -> chunks_of (Iarray.of_list [ 1; 2; 3 ]) ~length:(-1));
+    [%expect
+      {|
+      (Invalid_argument "Iarray.chunks_of: Expected length > 0, got 0")
+      (Invalid_argument "Iarray.chunks_of: Expected length > 0, got -1")
+      |}]
   ;;
 
   let rev = Iarray.rev
@@ -920,6 +987,13 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
       else require (Int.equal (last_exn t) (List.last_exn (Iarray.to_list t))))
   ;;
 
+  let%expect_test "Iarray.filter reserves physical equality" =
+    let x = Iarray.of_list [ 1; 2; 3 ] in
+    let y = Iarray.filter x ~f:(fun _ -> true) in
+    require (phys_equal x y);
+    [%expect {| |}]
+  ;;
+
   let unsafe_to_array__promise_no_mutation = Iarray.unsafe_to_array__promise_no_mutation
 
   external unsafe_of_array__promise_no_mutation
@@ -987,7 +1061,12 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
   (* Tested as [Local.init] below *)
   let%template[@alloc stack] init = (Iarray.init [@alloc stack])
 
-  external length : ('a t[@local_opt]) @ contended -> int @@ portable = "%array_length"
+  external length
+    : ('a : any mod separable).
+    ('a t[@local_opt]) @ immutable -> int
+    @@ portable
+    = "%array_length"
+  [@@layout_poly]
 
   let%expect_test "Ensure [Iarray.length] accepts [local_]s" =
     let global_iarray = Iarray.unsafe_of_array__promise_no_mutation [| 1; 2; 3; 4 |] in
@@ -1007,6 +1086,7 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
       Container: testing [is_empty]
       Container: testing [mem]
       Container: testing [iter]
+      Container: testing [iter_until]
       Container: testing [fold]
       Container: testing [fold_result]
       Container: testing [fold_until]
@@ -1031,7 +1111,9 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
       Container: testing [partition_tf]
       Container: testing [partition_map]
       Container: testing [foldi]
+      Container: testing [foldi_until]
       Container: testing [iteri]
+      Container: testing [iteri_until]
       Container: testing [existsi]
       Container: testing [for_alli]
       Container: testing [counti]
@@ -1719,6 +1801,66 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
     ;;
   end
 
+  module Unique = struct
+    (* We test the Unique module by implementing all functions using only one bit of
+       magic, to convert to and from a unique list. This is slower and involves more
+       allocations than the implementations in Array, which are implemented in terms of
+       magic *)
+    open struct
+      let of_unique_list : 'a list @ unique -> 'a iarray @ unique =
+        fun l -> Obj.magic_unique (Iarray.of_list l)
+      ;;
+
+      let to_unique_list : 'a iarray @ unique -> 'a list @ unique =
+        fun a ->
+        let[@tail_mod_cons] rec go i =
+          if i < Iarray.length a then Obj.magic_unique a.:(i) :: go (i + 1) else []
+        in
+        go 0
+      ;;
+    end
+
+    (* ---- No magic after this point! ---- *)
+
+    (* Implementation without magic - potentially less efficient but correct *)
+    let init len ~f =
+      let[@tail_mod_cons] rec go i = if i < len then f i :: go (i + 1) else [] in
+      of_unique_list (go 0)
+    ;;
+
+    let mapi t ~f =
+      let[@tail_mod_cons] rec go i = function
+        | [] -> []
+        | x :: xs -> f i x :: go (i + 1) xs
+      in
+      of_unique_list (go 0 (to_unique_list t))
+    ;;
+
+    let map (t @ unique) ~f = mapi t ~f:(fun _ x -> f x) [@nontail]
+    let iteri (t @ unique) ~f = ignore (mapi t ~f : unit t)
+    let iter (t @ unique) ~f = iteri t ~f:(fun _ x -> f x) [@nontail]
+
+    let unzip (t @ unique) =
+      let rec go = function
+        | [] -> [], []
+        | (x, y) :: l ->
+          let l1, l2 = go l in
+          x :: l1, y :: l2
+      in
+      let l1, l2 = go (to_unique_list t) in
+      of_unique_list l1, of_unique_list l2
+    ;;
+
+    let zip_exn (t1 @ unique) (t2 @ unique) =
+      let[@tail_mod_cons] rec go = function
+        | #([], []) -> []
+        | #(x :: xs, y :: ys) -> (x, y) :: go #(xs, ys)
+        | _ -> invalid_arg "zip_exn"
+      in
+      of_unique_list (go #(to_unique_list t1, to_unique_list t2))
+    ;;
+  end
+
   module Private = struct
     (* We test that uses of the [iarray] functions labeled "VERY UNSAFE" are in fact safe.
        This relies on the tests being run in debug mode, i.e. with [-runtime_variant d]. *)
@@ -1892,7 +2034,7 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
      comparison). This test ensures that the helper function is inlined; if it weren't,
      then the predicates constructed by [min_elt] and [max_elt] would allocate a closure.
      The two allocated minor words are for the returned option. *)
-  let%expect_test ("[min_elt] and [max_elt] don't allocate" [@tags "fast-flambda"]) =
+  let%expect_test ("[min_elt] and [max_elt] don't allocate" [@tags "fast-flambda2"]) =
     let iarr =
       Sys.opaque_identity (Iarray.unsafe_of_array__promise_no_mutation [| 1; 2; 3; 4 |])
     in

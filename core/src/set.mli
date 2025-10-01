@@ -15,10 +15,21 @@ open Set_intf
 type ('elt, 'cmp) t = ('elt, 'cmp) Base.Set.t [@@deriving compare ~localize]
 
 module Tree : sig
+  type weight = Tree.weight
+
   (** A [Tree.t] contains just the tree data structure that a set is based on, without
       including the comparator. Accordingly, any operation on a [Tree.t] must also take as
       an argument the corresponding comparator. *)
-  type ('elt, 'cmp) t = ('elt, 'cmp) Tree.t [@@deriving sexp_of]
+  type ('elt, 'cmp) t = ('elt, 'cmp) Tree.t = private
+    | Empty
+    | Leaf of { global_ elt : 'elt }
+    | Node of
+        { global_ left : ('elt, 'cmp) t
+        ; global_ elt : 'elt
+        ; global_ right : ('elt, 'cmp) t
+        ; weight : weight
+        }
+  [@@deriving sexp_of]
 
   module Named = Tree.Named
 
@@ -295,6 +306,15 @@ val iter2
   -> ('a, 'cmp) t
   -> f:local_ ([ `Left of 'a | `Right of 'a | `Both of 'a * 'a ] -> unit)
   -> unit
+
+(** [iter_until t ~f ~finish] is a short-circuiting version of [iter]. If [f] returns
+    [Stop x] the computation ceases and returns [x]. If [f] always returns [Continue ()]
+    the final result is computed by [finish]. *)
+val iter_until
+  :  ('a, 'cmp') t
+  -> f:('a -> (unit, 'final) Continue_or_stop.t) @ local
+  -> finish:(unit -> 'final) @ local
+  -> 'final
 
 (** If [a, b = partition_tf set ~f] then [a] is the elements on which [f] produced [true],
     and [b] is the elements on which [f] produces [false]. *)

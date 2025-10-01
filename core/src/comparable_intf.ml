@@ -16,24 +16,40 @@ module type Comparisons = Base.Comparable.Comparisons [@mode m]
 module type Comparisons_with_zero_alloc = Base.Comparable.Comparisons_with_zero_alloc
 [@mode m]]
 
-module type Validate = sig
+module type%template Validate = sig
   type t
 
-  val validate_lbound : min:t Maybe_bound.t -> t Validate.check
-  val validate_ubound : max:t Maybe_bound.t -> t Validate.check
-  val validate_bound : min:t Maybe_bound.t -> max:t Maybe_bound.t -> t Validate.check
-end
+  (*_ Expose both portable and nonportable versions of the validators if the signature is
+      used at mode portable. *)
+  [%%template:
+  [@@@mode.default p = (p, nonportable)]
 
-module type Validate_with_zero = sig
+  val validate_lbound : min:t Maybe_bound.t -> (t Validate.check[@mode p])
+  val validate_ubound : max:t Maybe_bound.t -> (t Validate.check[@mode p])
+
+  val validate_bound
+    :  min:t Maybe_bound.t
+    -> max:t Maybe_bound.t
+    -> (t Validate.check[@mode p])]
+end
+[@@modality p = (portable, nonportable)]
+
+module type%template Validate_with_zero = sig
   type t
 
-  include Validate with type t := t
+  include Validate [@modality p] with type t := t
 
-  val validate_positive : t Validate.check
-  val validate_non_negative : t Validate.check
-  val validate_negative : t Validate.check
-  val validate_non_positive : t Validate.check
+  (*_ Expose both portable and nonportable versions of the validators if the signature is
+      used at mode portable. *)
+  [%%template:
+  [@@@mode.default p = (p, nonportable)]
+
+  val validate_positive : (t Validate.check[@mode p])
+  val validate_non_negative : (t Validate.check[@mode p])
+  val validate_negative : (t Validate.check[@mode p])
+  val validate_non_positive : (t Validate.check[@mode p])]
 end
+[@@mode p = (portable, nonportable)]
 
 [%%template
 [@@@mode.default m = (local, global)]
@@ -179,7 +195,10 @@ module type Comparable = sig @@ portable
   module type Using_comparator_arg = Using_comparator_arg [@modality p] [@mode m]]
 
   module type Validate = Validate
-  module type Validate_with_zero = Validate_with_zero
+
+  module type%template Validate_with_zero = Validate_with_zero [@modality p]
+  [@@mode p = (portable, nonportable)]
+
   module type With_compare = With_compare
 
   include With_compare
@@ -329,21 +348,32 @@ module type Comparable = sig @@ portable
       type t [@@deriving sexp]
     end) : S [@modality p] [@mode m] with type t := T.t
 
-  module%template.portable Validate (T : sig
+  module%template.portable
+    [@modality p] Validate (T : sig
       type t [@@deriving (compare [@mode m]), sexp_of]
-    end) : Validate with type t := T.t
+    end) : Validate [@modality p] with type t := T.t
 
-  module%template.portable Validate_with_zero (T : sig
-      type t : value mod contended [@@deriving (compare [@mode m]), sexp_of]
-
-      val zero : t
-    end) : Validate_with_zero with type t := T.t
-
-  module%template.portable With_zero (T : sig
-      type t : value mod contended [@@deriving (compare [@mode m]), sexp_of]
+  module Validate_with_zero (T : sig
+    @@ p
+      type t : value mod c p [@@deriving (compare [@mode m]), sexp_of]
 
       val zero : t
-    end) : With_zero [@mode m] with type t := T.t]
+    end) : sig
+    @@ p
+    include Validate_with_zero [@modality p] with type t := T.t
+  end
+  [@@modality (p, c) = ((nonportable, uncontended), (portable, contended))]
+
+  module With_zero (T : sig
+    @@ p
+      type t : value mod c p [@@deriving (compare [@mode m]), sexp_of]
+
+      val zero : t
+    end) : sig
+    @@ p
+    include With_zero [@mode m] with type t := T.t
+  end
+  [@@modality (p, c) = ((nonportable, uncontended), (portable, contended))]]
 
   (** The following module types and functors may be used to define stable modules: *)
 

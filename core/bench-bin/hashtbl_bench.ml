@@ -325,16 +325,7 @@ end = struct
     let () =
       ( !! ) "choose_exn" (fun size ->
         let t = Example.t size in
-        stage (fun () -> ignore (choose_exn t : key * int)))
-    ;;
-
-    let%template choose_exn = (Impl.choose_exn [@mode m]) [@@mode m = local]
-
-    let%template () =
-      ( !! ) "choose_local_exn" (fun size ->
-        let t = Example.t size in
-        stage (fun () ->
-          ignore ((choose_exn [@mode local]) t : key Modes.Global.t * int Modes.Global.t)))
+        stage (fun () -> ignore (choose_exn t : #(key * int))))
     ;;
 
     let choose_randomly_exn = Impl.choose_randomly_exn
@@ -342,7 +333,7 @@ end = struct
     let () =
       ( !! ) "choose_randomly_exn" (fun size ->
         let t = Example.t size in
-        stage (fun () -> ignore (choose_randomly_exn t : key * int)))
+        stage (fun () -> ignore (choose_randomly_exn t : #(key * int))))
     ;;
 
     let copy = Impl.copy
@@ -853,6 +844,16 @@ end = struct
         let r = Example.random size in
         let t = Example.t size in
         stage (fun () -> ignore (find_exn t (Example.random_key r `present) : int)))
+    ;;
+
+    let find_or_null = Impl.find_or_null
+
+    let () =
+      ( !! ) "find_or_null + <rand key>" (fun size ->
+        let r = Example.random size in
+        let t = Example.t size in
+        stage (fun () ->
+          ignore (find_or_null t (Example.random_key r `present) : int or_null)))
     ;;
 
     let find = Impl.find

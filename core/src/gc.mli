@@ -1,3 +1,5 @@
+@@ portable
+
 (** This is a wrapper around INRIA's standard [Gc] module. Provides memory management
     control and statistics, and finalized values. *)
 
@@ -112,8 +114,7 @@ module Stat : sig
         ~direct_iterators:to_list]
 
   [%%endif]
-
-  include Comparable.S_plain with type t := t
+  include%template Comparable.S_plain [@mode portable] with type t := t
 
   (** [add first second] computes [first+second] pointwise across each field; this helps
       in aggregating statistics across processes. *)
@@ -462,7 +463,7 @@ val allocated_bytes : unit -> float
 (** [keep_alive a] ensures that [a] is live at the point where [keep_alive a] is called.
     It is like [ignore a], except that the compiler won't be able to simplify it and
     potentially collect [a] too soon. *)
-val keep_alive : _ -> unit @@ portable
+val keep_alive : _ -> unit
 
 (** The policy used for allocating in the heap.
 
@@ -505,7 +506,7 @@ val disable_compaction
   -> unit
   -> unit
 
-module For_testing : sig
+module (For_testing @@ nonportable) : sig
   module Allocation_report : sig
     type t =
       { major_words_allocated : int
@@ -527,12 +528,12 @@ module For_testing : sig
   [@@@kind.default k = (value, float64, bits32, bits64, word)]
 
   (** [measure_allocation f] measures the words allocated by running [f ()] *)
-  val measure_allocation : local_ (unit -> ('a : k)) -> #('a * Allocation_report.t)
+  val measure_allocation : (unit -> ('a : k)) @ local once -> #('a * Allocation_report.t)
 
   (** Same as [measure_allocation], but for functions that return a local value. *)
   val measure_allocation_local
-    :  local_ (unit -> local_ ('a : k))
-    -> local_ #('a * Allocation_report.t)
+    :  (unit -> ('a : k) @ local) @ local once
+    -> #('a * Allocation_report.t) @ local
 
   (** [measure_and_log_allocation f] logs each allocation that [f ()] performs, as well as
       reporting the total. (This can be slow if [f] allocates heavily).
@@ -540,29 +541,29 @@ module For_testing : sig
       This function is only supported since OCaml 4.11. On prior versions, the function
       always returns an empty log. *)
   val measure_and_log_allocation
-    :  local_ (unit -> ('a : k))
+    :  (unit -> ('a : k)) @ local once
     -> #('a * Allocation_report.t * Allocation_log.t list)
 
   (** Same as [measure_and_log_allocation], but for functions that return a local value. *)
   val measure_and_log_allocation_local
-    :  local_ (unit -> local_ ('a : k))
-    -> local_ #('a * Allocation_report.t * Allocation_log.t list)
+    :  (unit -> ('a : k) @ local) @ local once
+    -> #('a * Allocation_report.t * Allocation_log.t list) @ local
 
   (** [is_zero_alloc f] runs [f ()] and returns [true] if it does not allocate, or [false]
       otherwise. [is_zero_alloc] does not allocate. *)
-  val is_zero_alloc : local_ (unit -> (_ : k)) -> bool
+  val is_zero_alloc : (unit -> (_ : k)) @ local once -> bool
 
   (** Same as [is_zero_alloc], but for functions that return a local value. *)
-  val is_zero_alloc_local : local_ (unit -> local_ (_ : k)) -> bool
+  val is_zero_alloc_local : (unit -> (_ : k) @ local) @ local once -> bool
 
   (** [assert_no_allocation f] raises if [f] allocates. *)
-  val assert_no_allocation : here:[%call_pos] -> local_ (unit -> ('a : k)) -> 'a
+  val assert_no_allocation : here:[%call_pos] -> (unit -> ('a : k)) @ local once -> 'a
 
   (** Same as [assert_no_allocation], but for functions that return a local value. *)
   val assert_no_allocation_local
     :  here:[%call_pos]
-    -> local_ (unit -> local_ ('a : k))
-    -> local_ 'a]
+    -> (unit -> ('a : k) @ local) @ local once
+    -> 'a @ local]
 end
 
 (** The [Expert] module contains functions that novice users should not use, due to their
@@ -578,7 +579,7 @@ end
     If you do use [Core] finalizers, you should strive to make the finalization function
     perform a simple idempotent action, like setting a ref. The same rules as for signal
     handlers apply to finalizers. *)
-module Expert : sig
+module (Expert @@ nonportable) : sig
   (** [add_finalizer b f] ensures that [f] runs after [b] becomes unreachable. The OCaml
       runtime only supports finalizers on heap blocks, hence [add_finalizer] requires
       [b : _ Heap_block.t]. The runtime essentially maintains a set of finalizer pairs:

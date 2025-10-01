@@ -91,173 +91,191 @@ module type For_unix = sig
   end
 end
 
-module type Enumerable_sexpable = sig
-  type t [@@deriving enumerate, sexp_of]
+module type%template Enumerable_sexpable = sig @@ p
+  type t : value mod c p [@@deriving enumerate, sexp_of]
+end
+[@@modality (p, c) = ((nonportable, uncontended), (portable, contended))]
+
+module type%template Enumerable_stringable = sig @@ p
+  type t : value mod c p [@@deriving enumerate, to_string]
+end
+[@@modality (p, c) = ((nonportable, uncontended), (portable, contended))]
+
+module Auto_complete = struct
+  (** In addition to the argument prefix, an auto-completion spec has access to any
+      previously parsed arguments in the form of a heterogeneous map into which those
+      arguments may register themselves by providing a [Univ_map.Multi.Key] using the
+      [~key] argument to [Arg_type.create]. *)
+  type t = Univ_map.t -> part:string -> string list
+
+  module For_escape = struct
+    (** For the [escape] flag, it's more useful if the auto-completion spec has access to
+        all past arguments after the flag, hence the [part:string list] argument. *)
+    type t = Univ_map.t -> part:string list -> string list
+  end
 end
 
-module type Enumerable_stringable = sig
-  type t [@@deriving enumerate]
+module type Arg_type = sig @@ portable
+  (** The type of a command line argument. *)
+  type 'a t
 
-  val to_string : t -> string
+  [%%template:
+  [@@@mode.default (p, c) = ((nonportable, uncontended), (portable, contended))]
+
+  (** An argument type includes information about how to parse values of that type from
+      the command line, and (optionally) how to autocomplete partial arguments of that
+      type via bash's programmable tab-completion.
+
+      If the [of_string] function raises an exception, command line parsing will be
+      aborted and the exception propagated up to top-level and printed along with
+      command-line help. *)
+  val create
+    :  ?complete:Auto_complete.t @ p
+    -> ?key:'a Univ_map.Multi.Key.t @ p
+    -> (string -> 'a) @ p
+    -> 'a t @ p
+
+  (** Like [create], but takes a lazy [additional_documentation] string which is appended
+      to the help text of all arguments created from this argument type. *)
+  val create_with_additional_documentation
+    :  ?complete:Auto_complete.t @ p
+    -> ?key:'a Univ_map.Multi.Key.t @ p
+    -> (string -> 'a) @ p
+    -> additional_documentation:string Lazy.t
+    -> 'a t @ p
+
+  (** Apply the parse function to the given string the same way it would apply to an
+      argument, catching any exceptions thrown. *)
+  val parse : ('a : value mod p). 'a t -> string -> 'a Or_error.t @ p
+
+  (** Transforms the result of a [t] using [f]. *)
+  val map : ?key:'b Univ_map.Multi.Key.t @ p -> 'a t @ p -> f:('a -> 'b) @ p -> 'b t @ p
+
+  (** Defers construction of the arg type until it is needed. *)
+  val of_lazy : ?key:'a Univ_map.Multi.Key.t -> 'a t Lazy.t -> 'a t
+  [@@mode] [@@warning "-unused-value-declaration"]
+
+  (** An auto-completing [Arg_type] over a finite set of values. *)
+  val of_map
+    : ('a : value mod c p).
+    ?accept_unique_prefixes:bool
+      (** Defaults to [true]. Automatically parses a prefix of a valid key if it's
+          unambiguous. *)
+    -> ?case_sensitive:bool
+         (** Defaults to [true]. If [false], map keys must all be distinct when
+             lowercased. *)
+    -> ?list_values_in_help:bool
+         (** Defaults to [true]. If you set it to false the accepted values won't be
+             listed in the command help. *)
+    -> ?auto_complete:Auto_complete.t
+         (** Defaults to bash completion on the string prefix. This allows users to
+             specify arbitrary auto-completion for [t]. *)
+       @ p
+    -> ?key:'a Univ_map.Multi.Key.t @ p
+    -> 'a Map.M(String).t
+    -> 'a t @ p
+
+  (** Convenience wrapper for [of_map]. Raises on duplicate keys. *)
+  val of_alist_exn
+    : ('a : value mod c p).
+    ?accept_unique_prefixes:bool
+    -> ?case_sensitive:bool
+         (** Defaults to [true]. If [false], map keys must all be distinct when
+             lowercased. *)
+    -> ?list_values_in_help:bool (** default: true *)
+    -> ?auto_complete:Auto_complete.t @ p
+    -> ?key:'a Univ_map.Multi.Key.t @ p
+    -> (string * 'a) list
+    -> 'a t @ p
+
+  (** Convenience wrapper for [of_alist_exn] to use with [ppx_enumerate] using
+      [to_string]. Raises on duplicate [to_string]ed values. *)
+  val enumerated
+    : ('a : value mod c p).
+    ?accept_unique_prefixes:bool
+    -> ?case_sensitive:bool
+         (** Defaults to [true]. If [false], map keys must all be distinct when
+             lowercased. *)
+    -> ?list_values_in_help:bool (** default: true *)
+    -> ?auto_complete:Auto_complete.t @ p
+    -> ?key:'a Univ_map.Multi.Key.t @ p
+    -> ((module Enumerable_stringable with type t = 'a)[@mode p])
+    -> 'a t @ p
+
+  (** Convenience wrapper for [of_alist_exn] to use with [ppx_enumerate] using [sexp_of_t]
+      to turn the value into a string. Raises on duplicate [to_string]ed values. *)
+  val enumerated_sexpable
+    : ('a : value mod c p).
+    ?accept_unique_prefixes:bool
+    -> ?case_sensitive:bool
+         (** Defaults to [true]. If [false], map keys must all be distinct when
+             lowercased. *)
+    -> ?list_values_in_help:bool (** default: true *)
+    -> ?auto_complete:Auto_complete.t @ p
+    -> ?key:'a Univ_map.Multi.Key.t @ p
+    -> ((module Enumerable_sexpable with type t = 'a)[@mode p])
+    -> 'a t @ p
+
+  (** [comma_separated t] accepts comma-separated lists of arguments parsed by [t].
+
+      If [strip_whitespace = true], whitespace is stripped from each comma-separated
+      string before it is parsed by [t].
+
+      If [allow_empty = true] then the empty string (or just whitespace, if
+      [strip_whitespace = true]) results in an empty list, and if [allow_empty = false]
+      then the empty string will fail to parse. (Note that there is currently no way for
+      [comma_separated] to produce a list whose only element is the empty string.)
+
+      If [unique_values = true] no autocompletion will be offered for arguments already
+      supplied in the fragment to complete. *)
+  val comma_separated
+    :  ?allow_empty:bool (** default: [false] *)
+    -> ?key:'a list Univ_map.Multi.Key.t @ p
+    -> ?strip_whitespace:bool (** default: [false] *)
+    -> ?unique_values:bool (** default: [false] *)
+    -> 'a t @ p
+    -> 'a list t @ p
+
+  val auto_complete : _ t @ p -> Auto_complete.t @ p]
+
+  (** Values to include in other namespaces. *)
+  module Export : sig
+    val string : string t
+
+    (** Beware that an anonymous argument of type [int] cannot be specified as negative,
+        as it is ambiguous whether -1 is a negative number or a flag. (The same applies to
+        [float], [time_span], etc.) You can use the special built-in "-anon" flag to force
+        a string starting with a hyphen to be interpreted as an anonymous argument rather
+        than as a flag, or you can just make it a parameter to a flag to avoid the issue. *)
+    val int : int t
+
+    val char : char t
+    val float : float t
+    val bool : bool t
+    val sexp : Sexp.t t
+
+    val%template sexp_conv
+      :  ?complete:Auto_complete.t @ p
+      -> (Sexp.t -> 'a) @ p
+      -> 'a t @ p
+    [@@mode p = (nonportable, portable)]
+  end
 end
 
 module type Command = sig
-  module type Enumerable_sexpable = Enumerable_sexpable
-  module type Enumerable_stringable = Enumerable_stringable
+  module type%template Enumerable_sexpable = Enumerable_sexpable [@modality p]
+  [@@modality p = (nonportable, portable)]
+
+  module type%template Enumerable_stringable = Enumerable_stringable [@modality p]
+  [@@modality p = (nonportable, portable)]
 
   (** Specifications for command-line auto-completion. *)
-  module Auto_complete : sig
-    (** In addition to the argument prefix, an auto-completion spec has access to any
-        previously parsed arguments in the form of a heterogeneous map into which those
-        arguments may register themselves by providing a [Univ_map.Multi.Key] using the
-        [~key] argument to [Arg_type.create]. *)
-    type t = Univ_map.t -> part:string -> string list
-
-    module For_escape : sig
-      (** For the [escape] flag, it's more useful if the auto-completion spec has access
-          to all past arguments after the flag, hence the [part:string list] argument. *)
-      type t = Univ_map.t -> part:string list -> string list
-    end
-  end
+  module Auto_complete = Auto_complete
+  (** @inline *)
 
   (** Argument types. *)
-  module Arg_type : sig
-    (** The type of a command line argument. *)
-    type 'a t
-
-    (** An argument type includes information about how to parse values of that type from
-        the command line, and (optionally) how to autocomplete partial arguments of that
-        type via bash's programmable tab-completion.
-
-        If the [of_string] function raises an exception, command line parsing will be
-        aborted and the exception propagated up to top-level and printed along with
-        command-line help. *)
-    val%template create
-      :  ?complete:Auto_complete.t @ p
-      -> ?key:'a Univ_map.Multi.Key.t @ p
-      -> (string -> 'a) @ p
-      -> 'a t @ p
-      @@ portable
-    [@@mode p = (nonportable, portable)]
-
-    (** Like [create], but takes a lazy [additional_documentation] string which is
-        appended to the help text of all arguments created from this argument type. *)
-    val%template create_with_additional_documentation
-      :  ?complete:Auto_complete.t @ p
-      -> ?key:'a Univ_map.Multi.Key.t @ p
-      -> (string -> 'a) @ p
-      -> additional_documentation:string Lazy.t
-      -> 'a t @ p
-    [@@mode p = (nonportable, portable)]
-
-    (** Apply the parse function to the given string the same way it would apply to an
-        argument, catching any exceptions thrown. *)
-    val parse : 'a t -> string -> 'a Or_error.t
-
-    (** Transforms the result of a [t] using [f]. *)
-    val map : ?key:'b Univ_map.Multi.Key.t -> 'a t -> f:('a -> 'b) -> 'b t
-
-    (** Defers construction of the arg type until it is needed. *)
-    val of_lazy : ?key:'a Univ_map.Multi.Key.t -> 'a t Lazy.t -> 'a t
-
-    (** An auto-completing [Arg_type] over a finite set of values. *)
-    val of_map
-      :  ?accept_unique_prefixes:bool
-           (** Defaults to [true]. Automatically parses a prefix of a valid key if it's
-               unambiguous. *)
-      -> ?case_sensitive:bool
-           (** Defaults to [true]. If [false], map keys must all be distinct when
-               lowercased. *)
-      -> ?list_values_in_help:bool
-           (** Defaults to [true]. If you set it to false the accepted values won't be
-               listed in the command help. *)
-      -> ?auto_complete:Auto_complete.t
-           (** Defaults to bash completion on the string prefix. This allows users to
-               specify arbitrary auto-completion for [t]. *)
-      -> ?key:'a Univ_map.Multi.Key.t
-      -> 'a Map.M(String).t
-      -> 'a t
-
-    (** Convenience wrapper for [of_map]. Raises on duplicate keys. *)
-    val of_alist_exn
-      :  ?accept_unique_prefixes:bool
-      -> ?case_sensitive:bool
-           (** Defaults to [true]. If [false], map keys must all be distinct when
-               lowercased. *)
-      -> ?list_values_in_help:bool (** default: true *)
-      -> ?auto_complete:Auto_complete.t
-      -> ?key:'a Univ_map.Multi.Key.t
-      -> (string * 'a) list
-      -> 'a t
-
-    (** Convenience wrapper for [of_alist_exn] to use with [ppx_enumerate] using
-        [to_string]. Raises on duplicate [to_string]ed values. *)
-    val enumerated
-      :  ?accept_unique_prefixes:bool
-      -> ?case_sensitive:bool
-           (** Defaults to [true]. If [false], map keys must all be distinct when
-               lowercased. *)
-      -> ?list_values_in_help:bool (** default: true *)
-      -> ?auto_complete:Auto_complete.t
-      -> ?key:'a Univ_map.Multi.Key.t
-      -> (module Enumerable_stringable with type t = 'a)
-      -> 'a t
-
-    (** Convenience wrapper for [of_alist_exn] to use with [ppx_enumerate] using
-        [sexp_of_t] to turn the value into a string. Raises on duplicate [to_string]ed
-        values. *)
-    val enumerated_sexpable
-      :  ?accept_unique_prefixes:bool
-      -> ?case_sensitive:bool
-           (** Defaults to [true]. If [false], map keys must all be distinct when
-               lowercased. *)
-      -> ?list_values_in_help:bool (** default: true *)
-      -> ?auto_complete:Auto_complete.t
-      -> ?key:'a Univ_map.Multi.Key.t
-      -> (module Enumerable_sexpable with type t = 'a)
-      -> 'a t
-
-    (** [comma_separated t] accepts comma-separated lists of arguments parsed by [t].
-
-        If [strip_whitespace = true], whitespace is stripped from each comma-separated
-        string before it is parsed by [t].
-
-        If [allow_empty = true] then the empty string (or just whitespace, if
-        [strip_whitespace = true]) results in an empty list, and if [allow_empty = false]
-        then the empty string will fail to parse. (Note that there is currently no way for
-        [comma_separated] to produce a list whose only element is the empty string.)
-
-        If [unique_values = true] no autocompletion will be offered for arguments already
-        supplied in the fragment to complete. *)
-    val comma_separated
-      :  ?allow_empty:bool (** default: [false] *)
-      -> ?key:'a list Univ_map.Multi.Key.t
-      -> ?strip_whitespace:bool (** default: [false] *)
-      -> ?unique_values:bool (** default: [false] *)
-      -> 'a t
-      -> 'a list t
-
-    (** Values to include in other namespaces. *)
-    module Export : sig
-      val string : string t
-
-      (** Beware that an anonymous argument of type [int] cannot be specified as negative,
-          as it is ambiguous whether -1 is a negative number or a flag. (The same applies
-          to [float], [time_span], etc.) You can use the special built-in "-anon" flag to
-          force a string starting with a hyphen to be interpreted as an anonymous argument
-          rather than as a flag, or you can just make it a parameter to a flag to avoid
-          the issue. *)
-      val int : int t
-
-      val char : char t
-      val float : float t
-      val bool : bool t
-      val sexp : Sexp.t t
-      val sexp_conv : ?complete:Auto_complete.t -> (Sexp.t -> 'a) -> 'a t
-    end
-
-    val auto_complete : _ t -> Auto_complete.t
-  end
+  module Arg_type : Arg_type
+  (** @inline *)
 
   (** Command-line flag specifications. *)
   module Flag : sig
@@ -481,6 +499,19 @@ module type Command = sig
         -> string
         -> 'a Arg_type.t
         -> ('a -> Sexp.t)
+        -> default:'a
+        -> doc:string
+        -> 'a t
+
+      (** [flag_optional_with_default_doc_string name arg_type string_of_default ~default ~doc]
+          is similar to [flag_optional_with_default_doc] but uses [string_of_default]
+          rather than converting via sexp. *)
+      val flag_optional_with_default_doc_string
+        :  ?aliases:string list
+        -> ?full_flag_required:unit
+        -> string
+        -> 'a Arg_type.t
+        -> ('a -> string)
         -> default:'a
         -> doc:string
         -> 'a t

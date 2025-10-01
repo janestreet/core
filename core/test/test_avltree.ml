@@ -82,14 +82,13 @@ module Operation = struct
   ;;
 end
 
-let operation_printed_crs = ref false
+let operation_printed_crs = Atomic.make false
 
 let () =
-  let old = !on_print_cr in
-  on_print_cr
-  := fun cr ->
-       operation_printed_crs := true;
-       old cr
+  let old = Dynamic.get on_print_cr in
+  Dynamic.set_root on_print_cr (fun cr ->
+    Atomic.set operation_printed_crs true;
+    old cr)
 ;;
 
 module Operation_sequence = struct
@@ -127,9 +126,9 @@ let%expect_test "random operations" =
         operations
         ~init:(Avltree.empty, Int.Set.empty)
         ~f:(fun (t, s) (operation, int) ->
-          operation_printed_crs := false;
+          Atomic.set operation_printed_crs false;
           Operation.perform operation int t s;
-          if !operation_printed_crs then Stop () else Continue (t, s))
+          if Atomic.get operation_printed_crs then Stop () else Continue (t, s))
         ~finish:(ignore : (int, int) Avltree.t * Int.Set.t -> unit));
   [%expect {| |}]
 ;;

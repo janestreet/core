@@ -6,7 +6,8 @@ open Stable_module_types
 module%template Of_stable_format : sig
   [@@@mode.default m = (global, local)]
 
-  module%template.portable V1
+  module%template.portable
+    [@modality p] V1
       (Stable_format : sig
          type t [@@deriving (bin_io [@mode m]), sexp]
        end)
@@ -15,9 +16,10 @@ module%template Of_stable_format : sig
 
          val to_stable_format : t @ m -> Stable_format.t @ m [@@mode m = (m, global)]
          val of_stable_format : Stable_format.t -> t
-       end) : S0 [@mode m] with type t = M.t
+       end) : S0 [@mode m] [@modality p] with type t = M.t
 
-  module%template.portable V2
+  module%template.portable
+    [@modality p] V2
       (Stable_format : sig
          type t [@@deriving (bin_io [@mode m]), sexp]
        end)
@@ -27,7 +29,7 @@ module%template Of_stable_format : sig
          val to_stable_format : t @ m -> Stable_format.t @ m [@@mode m = (m, global)]
          val of_stable_format : Stable_format.t -> t
          val caller_identity : Bin_shape.Uuid.t
-       end) : S0 [@mode m] with type t = M.t
+       end) : S0 [@mode m] [@modality p] with type t = M.t
 end
 
 module%template Of_stable_format1 : sig
@@ -153,7 +155,8 @@ module With_stable_witness : sig
   module%template Of_stable_format : sig
     [@@@mode.default m = (global, local)]
 
-    module%template.portable V1
+    module%template.portable
+      [@modality p] V1
         (Stable_format : sig
            type t [@@deriving (bin_io [@mode m]), sexp, stable_witness]
          end)
@@ -162,9 +165,10 @@ module With_stable_witness : sig
 
            val to_stable_format : t @ m -> Stable_format.t @ m [@@mode m = (m, global)]
            val of_stable_format : Stable_format.t -> t
-         end) : With_stable_witness.S0 [@mode m] with type t = M.t
+         end) : With_stable_witness.S0 [@mode m] [@modality p] with type t = M.t
 
-    module%template.portable V2
+    module%template.portable
+      [@modality p] V2
         (Stable_format : sig
            type t [@@deriving (bin_io [@mode m]), sexp, stable_witness]
          end)
@@ -174,7 +178,7 @@ module With_stable_witness : sig
            val to_stable_format : t @ m -> Stable_format.t @ m [@@mode m = (m, global)]
            val of_stable_format : Stable_format.t -> t
            val caller_identity : Bin_shape.Uuid.t
-         end) : With_stable_witness.S0 [@mode m] with type t = M.t
+         end) : With_stable_witness.S0 [@mode m] [@modality p] with type t = M.t
   end
 
   module%template Of_stable_format1 : sig

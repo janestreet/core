@@ -325,7 +325,7 @@ let%expect_test ("iround does not force re-boxing" [@tags "x-library-inlining-se
   let exception Stop_the_test in
   let require_no_float_boxing f =
     try
-      Ref.set_temporarily
+      Dynamic.with_temporarily
         on_print_cr
         (fun _ -> raise Stop_the_test)
         ~f:(fun () ->

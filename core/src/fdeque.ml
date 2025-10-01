@@ -15,7 +15,7 @@ type 'a t =
   ; length : int
   }
 
-let length t = t.length
+let%template[@mode m = (global, local)] length t = t.length
 let is_empty t = t.length = 0
 
 let invariant f t =
@@ -181,8 +181,9 @@ module Arbitrary_order = struct
     (List.fold t.front ~init ~f |> fun init -> List.fold t.back ~init ~f) [@nontail]
   ;;
 
-  let fold_result t ~init ~f = Container.fold_result ~fold ~init ~f t
   let fold_until t ~init ~f ~finish = Container.fold_until ~fold ~init ~f t ~finish
+  let fold_result t ~init ~f = Container.fold_result ~fold_until ~init ~f t
+  let iter_until t ~f ~finish = Container.iter_until ~fold_until ~finish ~f t
 
   let find t ~f =
     match List.find t.front ~f with
@@ -229,10 +230,12 @@ end
 
 module Make_container (F : sig
   @@ portable
-    val to_list : 'a t -> 'a list
+    val%template to_list : 'a t @ m -> 'a list @ m
+    [@@alloc a @ m = (heap_global, stack_local)]
   end) =
 struct
-  let to_list = F.to_list
+  include F
+
   let is_empty = is_empty
   let length = length
   let mem t x ~equal = List.mem ~equal (to_list t) x
@@ -247,8 +250,9 @@ struct
   let to_array t = List.to_array (to_list t)
   let min_elt t ~compare = List.min_elt (to_list t) ~compare
   let max_elt t ~compare = List.max_elt (to_list t) ~compare
-  let fold_result t ~init ~f = Container.fold_result ~fold ~init ~f t
   let fold_until t ~init ~f ~finish = Container.fold_until ~fold ~init ~f t ~finish
+  let fold_result t ~init ~f = Container.fold_result ~fold_until ~init ~f t
+  let iter_until t ~f ~finish = Container.iter_until ~fold_until ~finish ~f t
 end
 
 module Front_to_back = struct
@@ -273,12 +277,17 @@ module Front_to_back = struct
   ;;
 
   include Make_container (struct
-      let to_list = to_list
+      let%template[@alloc a = (heap, stack)] to_list = (to_list [@alloc a])
     end)
 end
 
 module Back_to_front = struct
-  let to_list t = t.back @ List.rev t.front
+  let%template[@alloc a = (heap, stack)] to_list t =
+    (let module L = List [@alloc a] in
+    L.append t.back (L.rev t.front))
+    [@exclave_if_stack a]
+  ;;
+
   let of_list list = make ~length:(List.length list) ~back:list ~front:[]
 
   let to_sequence t =
@@ -294,7 +303,7 @@ module Back_to_front = struct
   ;;
 
   include Make_container (struct
-      let to_list = to_list
+      let%template[@alloc a = (heap, stack)] to_list = (to_list [@alloc a])
     end)
 end
 
@@ -323,7 +332,7 @@ let[@mode local] to_list = (to_list [@alloc stack])
 
 [@@@mode.default m = (local, global)]
 
-let compare cmp t1 t2 =
+let (compare @ portable) cmp t1 t2 =
   (List.compare [@mode m])
     cmp
     ((to_list [@mode m]) t1)
@@ -363,17 +372,37 @@ module Stable = struct
 
     let map = map
 
-    include%template Bin_prot.Utils.Make_iterable_binable1 [@modality portable] (struct
+    open struct
+      module%template List = struct
+        include List
+
+        let[@mode m = (local, global)] rec iter t ~f =
+          match t with
+          | [] -> ()
+          | a :: xs ->
+            f a;
+            (iter [@mode m]) xs ~f
+        ;;
+      end
+
+      let%template[@mode local] to_list = (to_list [@alloc stack])
+    end
+
+    include%template
+      Bin_prot.Utils.Make_iterable_binable1 [@mode local] [@modality portable] (struct
         type nonrec 'a t = 'a t
-        type 'a el = 'a [@@deriving bin_io]
+        type 'a el = 'a [@@deriving bin_io ~localize]
 
         let caller_identity =
           Bin_prot.Shape.Uuid.of_string "83f96982-4992-11e6-919d-fbddcfdca576"
         ;;
 
         let module_name = Some "Core.Fdeque"
-        let length = length
-        let iter t ~f = List.iter (to_list t) ~f
+        let%template[@mode m = (global, local)] length = (length [@mode m])
+
+        let%template[@mode m = (local, global)] iter t ~f =
+          (List.iter [@mode m]) ((to_list [@mode m]) t) ~f [@nontail]
+        ;;
 
         let init ~len ~next =
           let rec loop next acc n =
