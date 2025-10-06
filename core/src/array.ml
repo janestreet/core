@@ -623,6 +623,27 @@ end = struct
       -> unit
       @@ portable
       = "%array_safe_set"
+
+    external%template create
+      :  len:int
+      -> 'a
+      -> 'a t @ m
+      @@ portable
+      = "%makearray_dynamic"
+    [@@alloc __ @ m = (heap_global, stack_local)]
+
+    external create_local
+      :  len:int
+      -> 'a
+      -> 'a t @ local
+      @@ portable
+      = "%makearray_dynamic"
+
+    external magic_create_uninitialized
+      :  len:int
+      -> ('a t[@local_opt])
+      @@ portable
+      = "%makearray_dynamic_uninit"
   end
 
   include (T' : Permissioned with type ('a, 'b) t := ('a, 'b) t) [@ocaml.warning "-3"]
@@ -633,6 +654,8 @@ end
 
 module type S = sig @@ portable
   type ('a : any mod separable) t
+
+  val array_should_be_polymorphic_over_value_or_null : unit
 
   type%template ('a : k) t
   [@@kind k = (float64, bits32, bits64, word, immediate, immediate64)]
