@@ -624,18 +624,14 @@ end = struct
       @@ portable
       = "%array_safe_set"
 
-    external%template create
-      :  len:int
-      -> 'a
-      -> 'a t @ m
-      @@ portable
-      = "%makearray_dynamic"
-    [@@alloc __ @ m = (heap_global, stack_local)]
+    [%%template
+      external create : len:int -> 'a -> 'a t @ m @@ portable = "%makearray_dynamic"
+      [@@alloc __ @ m = (heap_global, stack_local)]]
 
     external create_local
       :  len:int
       -> 'a
-      -> 'a t @ local
+      -> local_ 'a t
       @@ portable
       = "%makearray_dynamic"
 
