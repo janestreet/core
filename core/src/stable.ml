@@ -30,6 +30,7 @@ module Fqueue = Fqueue.Stable
 module Gc = Gc.Stable
 module Hashable = Hashable.Stable
 module Host_and_port = Host_and_port.Stable
+module Iarray = Iarray.Stable
 module Info = Info.Stable
 module Int = Int.Stable
 module Int63 = Int63.Stable

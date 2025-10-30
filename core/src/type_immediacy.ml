@@ -5,8 +5,6 @@
    [../test/test_conversions.ml]
 *)
 
-type 'a builtin_array = 'a array
-
 open! Import
 module List = Base.List
 
@@ -73,24 +71,24 @@ module T : sig
     val float_u : float t
     val string : string t
     val bytes : bytes t
-    val array : _ builtin_array t
-    val ref_ : _ ref t
-    val tuple2 : (_ * _) t
-    val tuple3 : (_ * _ * _) t
-    val tuple4 : (_ * _ * _ * _) t
-    val tuple5 : (_ * _ * _ * _ * _) t
-    val tuple2_u : (_ * _) t
-    val tuple3_u : (_ * _ * _) t
-    val tuple4_u : (_ * _ * _ * _) t
-    val tuple5_u : (_ * _ * _ * _ * _) t
-    val function_ : (_ -> _) t
+    val array : 'a. 'a array t
+    val ref_ : 'a. 'a ref t
+    val tuple2 : 'a 'b. ('a * 'b) t
+    val tuple3 : 'a 'b 'c. ('a * 'b * 'c) t
+    val tuple4 : 'a 'b 'c 'd. ('a * 'b * 'c * 'd) t
+    val tuple5 : 'a 'b 'c 'd 'e. ('a * 'b * 'c * 'd * 'e) t
+    val tuple2_u : 'a 'b. ('a * 'b) t
+    val tuple3_u : 'a 'b 'c. ('a * 'b * 'c) t
+    val tuple4_u : 'a 'b 'c 'd. ('a * 'b * 'c * 'd) t
+    val tuple5_u : 'a 'b 'c 'd 'e. ('a * 'b * 'c * 'd * 'e) t
+    val function_ : 'a 'b. ('a -> 'b) t
   end
 
   val never : 'a. 'a Typename.t -> 'a t
   val unknown : 'a. 'a Typename.t -> 'a t
-  val option : _ option t
-  val or_null : 'a. 'a t
-  val list : _ list t
+  val option : 'a. 'a option t
+  val or_null : 'a. 'a or_null t
+  val list : 'a. 'a list t
   val magic : 'a 'b. 'a t -> 'b t
 end = struct
   type t_ =

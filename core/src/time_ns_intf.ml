@@ -708,6 +708,9 @@ module type Time_ns = sig
   (** [round_up_to_sec t] returns [t] rounded up to the next second. *)
   val round_up_to_sec : t -> t
 
+  (** [round_up_to] returns [t] rounded up to the next [interval] *)
+  val round_up_to : t -> interval:Span.t -> t
+
   (** [round_down_to_us t] returns [t] rounded down to the previous microsecond. *)
   val round_down_to_us : t -> t
 
@@ -716,6 +719,9 @@ module type Time_ns = sig
 
   (** [round_down_to_sec t] returns [t] rounded down to the previous second. *)
   val round_down_to_sec : t -> t
+
+  (** [round_down_to] returns [t] rounded down to the previous [interval] *)
+  val round_down_to : t -> interval:Span.t -> t
 
   (** [every interval ~start ~stop] returns a sorted list of all [t]s that can be
       expressed as [start + (i * interval)] and satisfy [t >= start && t <= stop].

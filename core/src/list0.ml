@@ -2,8 +2,8 @@ open! Import
 open! Typerep_lib.Std
 include Base.List
 
-[%%rederive.portable type 'a t = 'a list [@@deriving typerep, stable_witness]]
-[%%rederive.portable type 'a t = 'a list [@@deriving bin_io ~localize]]
+[%%rederive.portable
+  type 'a t = 'a list [@@deriving bin_io ~localize, typerep, stable_witness]]
 
 module Assoc = struct
   include Assoc

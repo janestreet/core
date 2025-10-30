@@ -155,5 +155,5 @@ module type%template String_id = sig
       () : S_with_extras [@mode local] [@modality p]
 
   module String_without_validation_without_pretty_printer :
-    S [@mode local] [@modality portable] with type t = string
+    S_with_extras [@mode local] [@modality portable] with type t = string
 end

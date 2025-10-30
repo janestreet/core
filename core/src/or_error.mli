@@ -4,20 +4,17 @@
 open! Import
 
 type%template 'a t = ('a Base.Or_error.t[@kind k])
-[@@deriving bin_io ~localize] [@@kind k = (float64, bits32, bits64, word)]
+[@@deriving bin_io ~localize] [@@kind k = base_non_value]
 
 type 'a t = ('a, Error.t) Result.t
 [@@deriving bin_io ~localize, diff ~extra_derive:[ sexp ], quickcheck]
 
 (** @inline *)
-include module type of struct
+include%template (module type of struct
     include Base.Or_error
   end
   with type 'a t := 'a t
-  with type 'a t__float64 := 'a t__float64
-  with type 'a t__bits32 := 'a t__bits32
-  with type 'a t__bits64 := 'a t__bits64
-  with type 'a t__word := 'a t__word
+ [@with: type 'a t := ('a t[@kind k]) [@@kind k = base_non_value]])
 
 module Expect_test_config : Expect_test_config_types.S with type 'a IO.t = 'a t
 

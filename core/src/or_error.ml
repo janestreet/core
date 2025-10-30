@@ -2,7 +2,7 @@ open! Import
 include Base.Or_error
 
 type%template 'a t = (('a, Error.t) Result.t[@kind k])
-[@@deriving bin_io ~localize] [@@kind k = (float64, bits32, bits64, word)]
+[@@deriving bin_io ~localize] [@@kind k = base_non_value]
 
 type 'a t = ('a, Error.t) Result.t
 [@@deriving bin_io ~localize, diff ~extra_derive:[ sexp ], quickcheck]

@@ -4,7 +4,7 @@ open! Import
 
 type t [@@deriving bin_io, sexp] [@@immediate]
 
-include%template Comparable.S [@mode local] with type t := t
+include%template Comparable.S [@mode local portable] with type t := t
 
 include Hashable.S with type t := t
 include Stringable.S with type t := t
@@ -171,19 +171,20 @@ val to_system_int : [ `Use_Signal_unix ]
     for any signal, so handling a signal with a [Core] signal handler will interfere if
     Async is attempting to handle the same signal.
 
-    All signal handler functions are called with [Exn.handle_uncaught_and_exit], to
-    prevent the signal handler from raising, because raising from a signal handler could
-    raise to any allocation or GC point in any thread, which would be impossible to reason
-    about.
+    All signal handler functions are called with
+    [Exn.handle_uncaught_and_exit_immediately], to prevent the signal handler from
+    raising, because raising from a signal handler could raise to any allocation or GC
+    point in any thread, which would be impossible to reason about. Note that since it
+    calls [exit_immediately], uncaught exceptions will lead to any registered [at_exit]
+    functions not being run.
 
     If you do use [Core] signal handlers, you should strive to make the signal handler
     perform a simple idempotent action, like setting a ref. *)
 module Expert : sig
   type behavior =
-    [ `Default
-    | `Ignore
-    | `Handle of t -> unit
-    ]
+    | Default
+    | Ignore
+    | Handle of (t -> unit)
   [@@deriving sexp_of]
 
   (** [signal t] sets the behavior of the system on receipt of signal [t] and returns the

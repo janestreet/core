@@ -741,8 +741,9 @@ module Definitions = struct
       with type 'a t := 'a Generator.t
        and module Let_syntax := Generator.Let_syntax
 
-    include
+    include%template
       Monad.Syntax
+      [@kind value_or_null mod maybe_null]
       with type 'a t := 'a Generator.t
        and module Let_syntax.Let_syntax.Open_on_rhs = Open_on_rhs
   end

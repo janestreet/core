@@ -322,7 +322,7 @@ module For_testing = struct
   type memprof = Stdlib.Gc.Memprof.t
 
   [%%template
-  [@@@kind.default k = (value, float64, bits32, bits64, word)]
+  [@@@kind.default k = base]
 
   type 'a globl = { g : 'a [@globalized] } [@@unboxed]
 

@@ -10,16 +10,14 @@ include Base.Option
     type 'a t = ('a Constructors.t[@kind k]) =
       | None
       | Some of 'a
-    [@@deriving bin_io ~localize] [@@kind k = (float64, bits32, bits64, word)]
+    [@@deriving bin_io ~localize] [@@kind k = base_non_value]
   end :
   sig
     type 'a t = ('a Constructors.t[@kind k])
-    [@@deriving bin_io ~localize] [@@kind k = (float64, bits32, bits64, word)]
+    [@@deriving bin_io ~localize] [@@kind k = base_non_value]
   end)
 
-type 'a t = 'a option [@@deriving typerep, stable_witness]
-
-[%%rederive type 'a t = 'a option [@@deriving bin_io ~localize]]
+type 'a t = 'a option [@@deriving bin_io ~localize, typerep, stable_witness]
 
 include%template Comparator.Derived [@modality portable] (struct
     type nonrec 'a t = 'a t [@@deriving sexp_of, compare ~localize]
@@ -42,9 +40,13 @@ module Stable = struct
   module V1 = struct
     type nonrec 'a t = 'a t
     [@@deriving
-      compare ~localize, equal ~localize, hash, sexp, sexp_grammar, stable_witness]
-
-    [%%rederive type nonrec 'a t = 'a t [@@deriving bin_io ~localize]]
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , hash
+      , sexp
+      , sexp_grammar
+      , stable_witness]
   end
 end
 

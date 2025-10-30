@@ -147,8 +147,6 @@
     because the type has a different witness (e.g. [Sometimes] instead of [Always]).
     v} *)
 
-type 'a builtin_array := 'a array
-
 open! Import
 
 type 'a t
@@ -221,8 +219,8 @@ module Sometimes : sig
     val witness : unit -> (_, _, _, _, _) X.t t
   end
 
-  val option : _ option t
-  val list : _ list t
+  val option : 'a. 'a option t
+  val list : 'a. 'a list t
 end
 
 module Never : sig
@@ -257,16 +255,16 @@ module Never : sig
   val float : float t
   val string : string t
   val bytes : bytes t
-  val array : _ builtin_array t
-  val ref_ : _ ref t
-  val tuple2 : (_ * _) t
-  val tuple3 : (_ * _ * _) t
-  val tuple4 : (_ * _ * _ * _) t
-  val tuple5 : (_ * _ * _ * _ * _) t
-  val tuple2_u : (_ * _) t
-  val tuple3_u : (_ * _ * _) t
-  val tuple4_u : (_ * _ * _ * _) t
-  val tuple5_u : (_ * _ * _ * _ * _) t
+  val array : 'a. 'a array t
+  val ref_ : 'a. 'a ref t
+  val tuple2 : 'a 'b. ('a * 'b) t
+  val tuple3 : 'a 'b 'c. ('a * 'b * 'c) t
+  val tuple4 : 'a 'b 'c 'd. ('a * 'b * 'c * 'd) t
+  val tuple5 : 'a 'b 'c 'd 'e. ('a * 'b * 'c * 'd * 'e) t
+  val tuple2_u : 'a 'b. ('a * 'b) t
+  val tuple3_u : 'a 'b 'c. ('a * 'b * 'c) t
+  val tuple4_u : 'a 'b 'c 'd. ('a * 'b * 'c * 'd) t
+  val tuple5_u : 'a 'b 'c 'd 'e. ('a * 'b * 'c * 'd * 'e) t
 end
 
 val of_typerep : 'a. 'a Typerep.t -> 'a t

@@ -9,12 +9,11 @@ open! Import
 
 [%%template:
 type 'a t
-[@@deriving compare ~localize, equal ~localize, sexp_of]
-[@@kind k = (float64, bits32, bits64, word)]
+[@@deriving compare ~localize, equal ~localize, sexp_of] [@@kind k = base_non_value]
 
 type 'a t [@@deriving compare ~localize, equal ~localize, quickcheck, sexp_of]
 
-[@@@kind k = (float64, bits32, bits64, word, value)]
+[@@@kind k = base]
 
 type 'a t := ('a t[@kind k])
 

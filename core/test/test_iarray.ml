@@ -13,6 +13,8 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
   [%%rederive.portable
     type 'a t = 'a Iarray.t [@@deriving bin_io ~localize, quickcheck ~portable, typerep]]
 
+  let iarray_should_be_layout_polymorphic = Iarray.iarray_should_be_layout_polymorphic
+
   let%expect_test "unstable (pseudo-nondeterministic) sample" =
     Test.with_sample_exn
       (quickcheck_generator Generator.small_positive_or_zero_int)
@@ -337,10 +339,10 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
   [@@@mode.default c = (uncontended, shared, contended), p = (portable, nonportable)]
 
   external unsafe_get
-    :  ('a t[@local_opt])
-    -> int
-    -> ('a[@local_opt])
-    = "%array_unsafe_get"]
+    : 'a.
+    ('a t[@local_opt]) -> int -> ('a[@local_opt])
+    = "%array_unsafe_get"
+  [@@layout_poly]]
 
   let%expect_test _ =
     quickcheck_m (module Int_t) ~f:(fun t ->
@@ -350,7 +352,8 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
   [%%template
   [@@@mode.default c = (uncontended, shared, contended), p = (portable, nonportable)]
 
-  external get : ('a t[@local_opt]) -> int -> ('a[@local_opt]) = "%array_safe_get"]
+  external get : 'a. ('a t[@local_opt]) -> int -> ('a[@local_opt]) = "%array_safe_get"
+  [@@layout_poly]]
 
   let%expect_test _ =
     quickcheck_m
@@ -987,12 +990,17 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
     [%expect {| |}]
   ;;
 
-  let unsafe_to_array__promise_no_mutation = Iarray.unsafe_to_array__promise_no_mutation
+  [%%template
+  [@@@mode.default c = (uncontended, shared)]
+
+  let unsafe_to_array__promise_no_mutation =
+    (Iarray.unsafe_to_array__promise_no_mutation [@mode c])
+  ;;
 
   external unsafe_of_array__promise_no_mutation
-    :  ('a array[@local_opt])
-    -> ('a t[@local_opt])
-    = "%array_to_iarray"
+    : 'a.
+    ('a array[@local_opt]) -> ('a t[@local_opt])
+    = "%array_to_iarray"]
 
   let%expect_test _ =
     quickcheck_m (module Int_t) ~f:(fun imm1 ->
@@ -1016,14 +1024,16 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
       let[@kind bits32] of_int = Int32_u.of_int_trunc
       let[@kind word] of_int = Nativeint_u.of_int
       let[@kind float64] of_int = Float_u.of_int
+      let[@kind float32] of_int = Float32_u.of_int
       let[@kind bits64] to_int = Int64_u.to_int_trunc
       let[@kind bits32] to_int = Int32_u.to_int_trunc
       let[@kind word] to_int = Nativeint_u.to_int_trunc
       let[@kind float64] to_int = Float_u.to_int
+      let[@kind float32] to_int = Float32_u.to_int
     end
 
     [%%template
-    [@@@kind.default ka = value, kacc = (bits64, bits32, word, float64)]
+    [@@@kind.default ka = value, kacc = base_non_value]
 
     let fold = (Iarray.fold [@kind ka kacc])
     let foldi = (Iarray.foldi [@kind ka kacc])
@@ -1210,21 +1220,28 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
 
   module O = struct
     (* already tested as [get] *)
-    external ( .:() ) : ('a t[@local_opt]) -> int -> ('a[@local_opt]) = "%array_safe_get"
+    external ( .:() )
+      : 'a.
+      ('a t[@local_opt]) -> int -> ('a[@local_opt])
+      = "%array_safe_get"
+    [@@layout_poly]
   end
 
   include O
 
   module Stable = struct
     module V1 = struct
-      type 'a t = 'a Iarray.Stable.V1.t
-      [@@deriving compare ~localize, equal ~localize, globalize, hash]
+      type 'a t = 'a Iarray.Stable.V1.t [@@deriving equal ~localize]
+
+      [%%rederive type nonrec 'a t = 'a t [@@deriving globalize, hash]]
 
       include (
         Iarray.Stable.V1 :
         sig
           include%template Stable1_with_witness [@mode local] with type 'a t := 'a t
         end)
+
+      [%%rederive type nonrec 'a t = 'a Iarray.Stable.V1.t [@@deriving compare ~localize]]
 
       let%expect_test _ =
         print_and_check_stable_type
@@ -1682,14 +1699,16 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
         let[@kind bits32] of_int = Int32_u.of_int_trunc
         let[@kind word] of_int = Nativeint_u.of_int
         let[@kind float64] of_int = Float_u.of_int
+        let[@kind float32] of_int = Float32_u.of_int
         let[@kind bits64] to_int = Int64_u.to_int_trunc
         let[@kind bits32] to_int = Int32_u.to_int_trunc
         let[@kind word] to_int = Nativeint_u.to_int_trunc
         let[@kind float64] to_int = Float_u.to_int
+        let[@kind float32] to_int = Float32_u.to_int
       end
 
       [%%template
-      [@@@kind.default ka = value, kacc = (bits64, bits32, word, float64)]
+      [@@@kind.default ka = value, kacc = base_non_value]
 
       let fold = (Iarray.Local.fold [@kind ka kacc])
       let foldi = (Iarray.Local.foldi [@kind ka kacc])

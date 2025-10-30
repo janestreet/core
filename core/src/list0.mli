@@ -4,8 +4,9 @@ include module type of struct
   include Base.List
 end
 
-[%%rederive: type 'a t = 'a Base.List.t [@@deriving quickcheck ~portable, typerep]]
-[%%rederive: type 'a t = 'a Base.List.t [@@deriving bin_io ~localize]]
+[%%rederive:
+  type 'a t = 'a Base.List.t [@@deriving bin_io ~localize, quickcheck ~portable, typerep]]
+
 include%template Comparator.Derived [@modality portable] with type 'a t := 'a t
 
 val stable_witness : 'a Stable_witness.t -> 'a t Stable_witness.t
@@ -15,13 +16,12 @@ val stable_witness : 'a Stable_witness.t -> 'a t Stable_witness.t
 
 val to_string : 'a. f:('a -> string) -> 'a t -> string
 
-val%template gen_non_empty : 'a Quickcheck.Generator.t -> 'a t Quickcheck.Generator.t
+val%template gen_non_empty : 'a. 'a Quickcheck.Generator.t -> 'a t Quickcheck.Generator.t
 [@@mode p = (portable, nonportable)]
 
 val%template gen_with_length
-  :  int
-  -> 'a Quickcheck.Generator.t
-  -> 'a t Quickcheck.Generator.t
+  : 'a.
+  int -> 'a Quickcheck.Generator.t -> 'a t Quickcheck.Generator.t
 [@@mode p = (portable, nonportable)]
 
 val gen_filtered : 'a t -> 'a t Quickcheck.Generator.t

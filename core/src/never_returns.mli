@@ -9,4 +9,4 @@ open! Import
 type never_returns = Nothing.t [@@deriving sexp_of]
 
 val%template never_returns : never_returns -> _
-[@@kind k = (value_or_null, float64, bits32, bits64, word)]
+[@@kind k = (base_or_null, value_or_null & value_or_null)]

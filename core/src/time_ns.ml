@@ -196,6 +196,8 @@ let round_down t ~interval ~calling_function_name =
     ~interval
 ;;
 
+let round_up_to = round_up ~calling_function_name:"round_up_to"
+
 let round_up_to_us t =
   round_up t ~interval:Span.microsecond ~calling_function_name:"round_up_to_us"
 ;;
@@ -207,6 +209,8 @@ let round_up_to_ms t =
 let round_up_to_sec t =
   round_up t ~interval:Span.second ~calling_function_name:"round_up_to_sec"
 ;;
+
+let round_down_to = round_down ~calling_function_name:"round_down_to"
 
 let round_down_to_us t =
   round_down t ~interval:Span.microsecond ~calling_function_name:"round_down_to_us"

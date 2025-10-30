@@ -523,7 +523,7 @@ module For_testing : sig
   end
 
   [%%template:
-  [@@@kind.default k = (value, float64, bits32, bits64, word)]
+  [@@@kind.default k = base]
 
   (** [measure_allocation f] measures the words allocated by running [f ()] *)
   val measure_allocation : (unit -> 'a) -> 'a * Allocation_report.t
