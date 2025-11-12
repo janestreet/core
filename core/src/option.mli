@@ -3,22 +3,17 @@
 (** This module extends {{!Base.Option} [Base.Option]} with bin_io, quickcheck, and
     support for ppx_optional. *)
 
-type ('a : value_or_null) t = 'a Base.Option.t [@@deriving typerep]
-
-[%%rederive: type 'a t = 'a Base.Option.t [@@deriving bin_io ~localize]]
+type ('a : value_or_null) t = 'a Base.Option.t [@@deriving bin_io ~localize, typerep]
 
 type%template ('a : k) t = ('a Base.Option.t[@kind k])
-[@@deriving bin_io ~localize] [@@kind k = (float64, bits32, bits64, word)]
+[@@deriving bin_io ~localize] [@@kind k = base_non_value]
 
 (** @inline *)
-include module type of struct
+include%template (module type of struct
     include Base.Option
   end
   with type ('a : value_or_null) t := 'a option
-  with type 'a t__float64 := 'a t__float64
-  with type 'a t__bits32 := 'a t__bits32
-  with type 'a t__bits64 := 'a t__bits64
-  with type 'a t__word := 'a t__word
+ [@with: type ('a : any) t := ('a t[@kind k]) [@@kind k = base_non_value]])
 
 include Comparator.Derived with type 'a t := 'a t
 
@@ -30,9 +25,13 @@ module Stable : sig
   module V1 : sig
     type nonrec ('a : value_or_null) t = 'a t
     [@@deriving
-      compare ~localize, equal ~localize, hash, sexp, sexp_grammar, stable_witness]
-
-    [%%rederive: type nonrec 'a t = 'a t [@@deriving bin_io ~localize]]
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , hash
+      , sexp
+      , sexp_grammar
+      , stable_witness]
   end
 end
 

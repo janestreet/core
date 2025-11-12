@@ -20,7 +20,7 @@ module Step = struct
     | Done
     | Skip of { state : 's }
     | Yield :
-        ('a : value) 's.
+        ('a : value_or_null) 's.
         { value : 'a
         ; state : 's
         }

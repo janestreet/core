@@ -7,8 +7,7 @@ module Stable = struct
       ; mutable set_at : Source_code_position.Stable.V1.t
            [@compare.ignore] [@equal.ignore]
       }
-    [@@deriving compare ~localize, equal ~localize]
-    [@@kind k = (value, float64, bits32, bits64, word)]
+    [@@deriving compare ~localize, equal ~localize] [@@kind k = base]
   end
 
   module V1 = struct
@@ -53,7 +52,7 @@ module Unstable = Stable.V1
 open Stable.T
 
 [%%template
-[@@@kind.default k = (float64, bits32, bits64, word, value)]
+[@@@kind.default k = base]
 
 type nonrec ('a : k) t = ('a t[@kind k]) =
   { mutable value : ('a Option.t[@kind k])

@@ -5,7 +5,7 @@ open! Import
 module Definitions = struct
   (** The pieces of [Time] and [Time_ns] needed for calculating the date and start-of-day. *)
   module type Time = sig @@ portable
-    type underlying : value mod contended many portable stateless unyielding
+    type underlying : value mod contended many stateless unyielding
     type t = private underlying
 
     val epoch : t

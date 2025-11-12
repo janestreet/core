@@ -7,9 +7,9 @@ include module type of struct
 end
 
 [%%rederive:
-  type ('a : value_or_null) t = 'a Base.List.t [@@deriving quickcheck ~portable, typerep]]
+  type ('a : value_or_null) t = 'a Base.List.t
+  [@@deriving bin_io ~localize, quickcheck ~portable, typerep]]
 
-[%%rederive: type 'a t = 'a Base.List.t [@@deriving bin_io ~localize]]
 include%template Comparator.Derived [@modality portable] with type 'a t := 'a t
 
 val stable_witness : 'a Stable_witness.t -> 'a t Stable_witness.t
@@ -20,14 +20,13 @@ val stable_witness : 'a Stable_witness.t -> 'a t Stable_witness.t
 val to_string : ('a : value_or_null). f:('a -> string) -> 'a t -> string
 
 val%template gen_non_empty
-  :  'a Quickcheck.Generator.t @ p
-  -> 'a t Quickcheck.Generator.t @ p
+  : ('a : value_or_null).
+  'a Quickcheck.Generator.t @ p -> 'a t Quickcheck.Generator.t @ p
 [@@mode p = (portable, nonportable)]
 
 val%template gen_with_length
-  :  int
-  -> 'a Quickcheck.Generator.t @ p
-  -> 'a t Quickcheck.Generator.t @ p
+  : ('a : value_or_null).
+  int -> 'a Quickcheck.Generator.t @ p -> 'a t Quickcheck.Generator.t @ p
 [@@mode p = (portable, nonportable)]
 
 val gen_filtered : 'a t -> 'a t Quickcheck.Generator.t

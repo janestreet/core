@@ -570,6 +570,21 @@ let%expect_test "Option does not allocate" =
     assert (phys_equal l round_tripped))
 ;;
 
+let%quick_test "of_list_or_null" =
+  fun (l : int list) ->
+  [%test_result: int list]
+    (Expect_test_helpers_core.require_no_allocation (fun () ->
+       match #(of_list_or_null l, l) with
+       | #(Null, []) -> []
+       | #(Null, _ :: _) -> assert false
+       | #(This (_ :: _), []) -> assert false
+       | #(This (x :: xs as nonempty_list), y :: ys) ->
+         assert (x = y);
+         assert (phys_equal xs ys);
+         Nonempty_list.to_list nonempty_list))
+    ~expect:l
+;;
+
 let%quick_test "remove_consecutive_duplicates" =
   fun (t : int t) (which_to_keep : [ `First | `Last ]) ->
   [%test_result: int list]

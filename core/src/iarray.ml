@@ -3,26 +3,15 @@ include Base.Iarray
 
 module Stable = struct
   module V1 = struct
-    type nonrec 'a t = 'a t
-    [@@deriving compare ~localize, equal ~localize, globalize, hash]
+    type nonrec ('a : value_or_null mod separable) t = 'a t
+    [@@deriving compare ~localize, equal ~localize]
+
+    [%%rederive type nonrec 'a t = 'a t [@@deriving globalize, hash]]
 
     let map = map
-
-    include%template
-      Sexpable.Stable.Of_sexpable1.V1 [@modality portable]
-        (struct
-          type 'a t = 'a array [@@deriving sexp]
-        end)
-        (struct
-          type nonrec 'a t = 'a t
-
-          let to_sexpable = unsafe_to_array__promise_no_mutation
-          let of_sexpable = unsafe_of_array__promise_no_mutation
-        end)
-
-    let t_sexp_grammar (type a) (a_sexp_grammar : a Sexplib.Sexp_grammar.t) =
-      Sexplib.Sexp_grammar.coerce [%sexp_grammar: a array]
-    ;;
+    let t_of_sexp = t_of_sexp
+    let sexp_of_t = sexp_of_t
+    let t_sexp_grammar = t_sexp_grammar
 
     [%%rederive type 'a t = 'a iarray [@@deriving bin_io ~localize ~portable]]
 
@@ -66,4 +55,4 @@ include (
     module type of struct
       include Stable.V1
     end
-    with type 'a t := 'a t)
+    with type ('a : value_or_null mod separable) t := 'a t)

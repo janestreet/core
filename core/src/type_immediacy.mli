@@ -147,8 +147,6 @@
     because the type has a different witness (e.g. [Sometimes] instead of [Always]).
     v} *)
 
-type ('a : any mod separable) builtin_array := 'a array
-
 open! Import
 
 type ('a : any) t : immutable_data
@@ -221,8 +219,8 @@ module Sometimes : sig
     val witness : unit -> (_, _, _, _, _) X.t t
   end
 
-  val option : _ option t
-  val list : _ list t
+  val option : ('a : value_or_null). 'a option t
+  val list : ('a : value_or_null). 'a list t
 end
 
 module Never : sig
@@ -257,16 +255,30 @@ module Never : sig
   val float : float t
   val string : string t
   val bytes : bytes t
-  val array : (_ : any mod separable) builtin_array t
-  val ref_ : _ ref t
-  val tuple2 : (_ * _) t
-  val tuple3 : (_ * _ * _) t
-  val tuple4 : (_ * _ * _ * _) t
-  val tuple5 : (_ * _ * _ * _ * _) t
-  val tuple2_u : #((_ : any) * (_ : any)) t
-  val tuple3_u : #((_ : any) * (_ : any) * (_ : any)) t
-  val tuple4_u : #((_ : any) * (_ : any) * (_ : any) * (_ : any)) t
-  val tuple5_u : #((_ : any) * (_ : any) * (_ : any) * (_ : any) * (_ : any)) t
+  val array : ('a : any mod separable). 'a array t
+  val ref_ : ('a : value_or_null). 'a ref t
+  val tuple2 : ('a : value_or_null) ('b : value_or_null). ('a * 'b) t
+
+  val tuple3
+    : ('a : value_or_null) ('b : value_or_null) ('c : value_or_null).
+    ('a * 'b * 'c) t
+
+  val tuple4
+    : ('a : value_or_null) ('b : value_or_null) ('c : value_or_null) ('d : value_or_null).
+    ('a * 'b * 'c * 'd) t
+
+  val tuple5
+    : ('a : value_or_null) ('b : value_or_null) ('c : value_or_null) ('d : value_or_null)
+      ('e : value_or_null).
+    ('a * 'b * 'c * 'd * 'e) t
+
+  val tuple2_u : ('a : any) ('b : any). #('a * 'b) t
+  val tuple3_u : ('a : any) ('b : any) ('c : any). #('a * 'b * 'c) t
+  val tuple4_u : ('a : any) ('b : any) ('c : any) ('d : any). #('a * 'b * 'c * 'd) t
+
+  val tuple5_u
+    : ('a : any) ('b : any) ('c : any) ('d : any) ('e : any).
+    #('a * 'b * 'c * 'd * 'e) t
 end
 
 val of_typerep : ('a : any). 'a Typerep.t -> 'a t

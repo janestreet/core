@@ -150,7 +150,7 @@ module type Span = sig @@ portable
 
     include Immediate_option.S_int63_zero_alloc with type value := value and type t := t
 
-    include%template Identifiable.S [@mode local] with type t := t
+    include%template Identifiable.S [@mode local] [@modality portable] with type t := t
 
     include Diffable.S_atomic with type t := t
     include Quickcheck.S with type t := t
@@ -410,7 +410,7 @@ module type Time_ns = sig @@ portable
 
       include Immediate_option.S_int63_zero_alloc with type value := value and type t := t
 
-      include%template Identifiable.S [@mode local] with type t := t
+      include%template Identifiable.S [@mode local] [@modality portable] with type t := t
 
       include Quickcheck.S with type t := t
       include Diffable.S_atomic with type t := t
@@ -460,7 +460,7 @@ module type Time_ns = sig @@ portable
 
     include Immediate_option.S_int63_zero_alloc with type value := value with type t := t
 
-    include%template Identifiable.S [@mode local] with type t := t
+    include%template Identifiable.S [@mode local] [@modality portable] with type t := t
 
     include Quickcheck.S with type t := t
     include Diffable.S_atomic with type t := t
@@ -706,6 +706,9 @@ module type Time_ns = sig @@ portable
   (** [round_up_to_sec t] returns [t] rounded up to the next second. *)
   val round_up_to_sec : t -> t
 
+  (** [round_up_to] returns [t] rounded up to the next [interval] *)
+  val round_up_to : t -> interval:Span.t -> t
+
   (** [round_down_to_us t] returns [t] rounded down to the previous microsecond. *)
   val round_down_to_us : t -> t
 
@@ -714,6 +717,9 @@ module type Time_ns = sig @@ portable
 
   (** [round_down_to_sec t] returns [t] rounded down to the previous second. *)
   val round_down_to_sec : t -> t
+
+  (** [round_down_to] returns [t] rounded down to the previous [interval] *)
+  val round_down_to : t -> interval:Span.t -> t
 
   (** [every interval ~start ~stop] returns a sorted list of all [t]s that can be
       expressed as [start + (i * interval)] and satisfy [t >= start && t <= stop].
@@ -770,7 +776,7 @@ module type Time_ns = sig @@ portable
 
       Sexps and strings display the date, ofday, and UTC offset of [t] relative to the
       appropriate time zone. *)
-  include%template Identifiable.S [@mode local] with type t := t
+  include%template Identifiable.S [@mode local] [@modality portable] with type t := t
 
   (** [Identifiable] masks the comparison functions' [@zero_alloc] annotations *)
 

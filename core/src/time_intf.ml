@@ -78,7 +78,7 @@ module type Basic = sig
 end
 
 module type Shared = sig
-  type t : value mod contended many portable stateless unyielding
+  type t : value mod contended many stateless unyielding
 
   include Quickcheck.S_range with type t := t
 

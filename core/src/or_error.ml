@@ -2,7 +2,7 @@ open! Import
 include Base.Or_error
 
 type%template ('a : k) t = (('a, Error.t) Result.t[@kind k])
-[@@deriving bin_io ~localize] [@@kind k = (float64, bits32, bits64, word)]
+[@@deriving bin_io ~localize] [@@kind k = base_non_value]
 
 type ('a : value_or_null) t = ('a, Error.t) Result.t
 [@@deriving bin_io ~localize, diff ~extra_derive:[ sexp ], quickcheck]
@@ -26,7 +26,7 @@ module Stable = struct
   end
 
   module V2 = struct
-    type 'a t = ('a, Error.Stable.V2.t) Result.Stable.V1.t
+    type ('a : value_or_null) t = ('a, Error.Stable.V2.t) Result.Stable.V1.t
     [@@deriving
       bin_io ~localize
       , compare ~localize

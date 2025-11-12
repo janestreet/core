@@ -131,7 +131,18 @@ module%template.portable Sexpable (S1 : Sexpable.S) (S2 : Sexpable.S) = struct
   type t = S1.t * S2.t [@@deriving sexp]
 end
 
-module%template.portable Binable (B1 : Binable.S) (B2 : Binable.S) = struct
+module%template.portable Binable
+    (B1 : sig
+       type t
+
+       include Binable.S with type t := t
+     end)
+    (B2 : sig
+       type t
+
+       include Binable.S with type t := t
+     end) =
+struct
   type t = B1.t * B2.t [@@deriving bin_io]
 end
 

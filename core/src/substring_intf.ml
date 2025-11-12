@@ -39,11 +39,17 @@ module type S = sig
 
       For copying characters from a substring to and from both strings and substrings. *)
 
-  val blit_to_string : t -> dst:bytes -> dst_pos:int -> unit
-  val blit_to_bytes : t -> dst:bytes -> dst_pos:int -> unit
-  val blit_to_bigstring : t -> dst:Bigstring.t -> dst_pos:int -> unit
-  val blit_from_string : t -> src:string -> src_pos:int -> len:int -> unit
-  val blit_from_bigstring : t -> src:Bigstring.t -> src_pos:int -> len:int -> unit
+  val blit_to_string : t @ local -> dst:bytes @ local -> dst_pos:int -> unit
+  val blit_to_bytes : t @ local -> dst:bytes @ local -> dst_pos:int -> unit
+  val blit_to_bigstring : t @ local -> dst:Bigstring.t @ local -> dst_pos:int -> unit
+  val blit_from_string : t @ local -> src:string @ local -> src_pos:int -> len:int -> unit
+
+  val blit_from_bigstring
+    :  t @ local
+    -> src:Bigstring.t @ local
+    -> src_pos:int
+    -> len:int
+    -> unit
 
   (** {2 String concatenation} *)
 

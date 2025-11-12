@@ -3,9 +3,8 @@ open! Typerep_lib.Std
 include Base.List
 
 [%%rederive.portable
-  type ('a : value_or_null) t = 'a list [@@deriving typerep, stable_witness]]
-
-[%%rederive.portable type 'a t = 'a list [@@deriving bin_io ~localize]]
+  type ('a : value_or_null) t = 'a list
+  [@@deriving bin_io ~localize, typerep, stable_witness]]
 
 module Assoc = struct
   include Assoc

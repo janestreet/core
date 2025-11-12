@@ -26,7 +26,8 @@ module type Month = sig @@ portable
     , typerep
     , variants]
 
-  include%template Comparable.S_binable [@mode local] with type t := t
+  include%template
+    Comparable.S_binable [@mode local] [@modality portable] with type t := t
 
   include Hashable.S_binable with type t := t
 

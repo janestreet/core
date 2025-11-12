@@ -17,7 +17,11 @@ include (
 
     module type Non_value = Base.Hashtbl.Non_value
 
-    include Base.Hashtbl.S_without_submodules with type ('a, 'b) t := ('a, 'b) t
+    include%template
+      Base.Hashtbl.S_without_submodules
+      [@mode portable]
+      with type ('a, 'b) t := ('a, 'b) t
+
     include Hashtbl_equality with type ('k, 'v) t := ('k, 'v) t
     include Non_value with type ('k : value_or_null, 'v : value_or_null) t := ('k, 'v) t
   end)

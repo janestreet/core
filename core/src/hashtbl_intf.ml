@@ -235,7 +235,7 @@ end
 module type%template
   [@modality p = (portable, nonportable)] Hashtbl_over_values = sig
   @@ p
-  include Hashtbl.S_without_submodules (** @inline *)
+  include Hashtbl.S_without_submodules [@mode p] (** @inline *)
 
   val validate : name:('a key -> string) -> 'b Validate.check -> ('a, 'b) t Validate.check
 

@@ -414,8 +414,8 @@ module%template.portable Make_tree_S1 (Key : Comparator.S1) = struct
   let merge_disjoint_exn a b = merge_disjoint_exn a b ~comparator
   let merge_skewed a b ~combine = merge_skewed a b ~combine ~comparator
 
-  let merge_by_case a b ~left ~right ~both =
-    merge_by_case a b ~left ~right ~both ~comparator
+  let merge_by_case a b ~first ~second ~both =
+    merge_by_case a b ~first ~second ~both ~comparator
   ;;
 
   let min_elt = min_elt

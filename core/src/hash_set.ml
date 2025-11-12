@@ -153,6 +153,10 @@ module Using_hashable = struct
   let of_list ?growth_allowed ?size ~hashable l =
     of_list ?growth_allowed ?size (Base.Hashable.to_key hashable) l
   ;;
+
+  let of_array ?growth_allowed ?size ~hashable a =
+    of_array ?growth_allowed ?size (Base.Hashable.to_key hashable) a
+  ;;
 end
 
 let hashable = Private.hashable

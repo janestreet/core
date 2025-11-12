@@ -41,7 +41,7 @@ include Result
 type%template ('a : k, 'b : value_or_null) t = (('a, 'b) Result.t[@kind k]) =
   | Ok of 'a
   | Error of 'b
-[@@deriving bin_io ~localize] [@@kind k = (float64, bits32, bits64, word)]
+[@@deriving bin_io ~localize] [@@kind k = base_non_value]
 
 let quickcheck_generator = Base_quickcheck.Generator.result
 let quickcheck_observer = Base_quickcheck.Observer.result

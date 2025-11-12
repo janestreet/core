@@ -302,7 +302,11 @@ module%test _ = struct
 
   (* Check that only the functions & shape are sufficient for [@@deriving bin_io]. The
        fact that this functor typechecks is, itself, the test. *)
-  module _ (X : S_only_functions_and_shape) : S = struct
+  module _ (X : sig
+      type t
+
+      include S_only_functions_and_shape with type t := t
+    end) : S = struct
     type t = X.t [@@deriving bin_io]
   end
 end

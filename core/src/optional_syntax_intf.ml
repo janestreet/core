@@ -25,7 +25,7 @@ module type S_zero_alloc = sig
   end
 end
 
-[@@@kind.default ka = (value, float64, bits32, bits64, word, immediate, immediate64)]
+[@@@kind.default ka = base_with_imm]
 
 module type S1 = sig
   type ('a : ka) t : any
@@ -47,7 +47,7 @@ module type S1_zero_alloc = sig
   end
 end
 
-[@@@kind.default kb = (value, float64, bits32, bits64, word, immediate, immediate64)]
+[@@@kind.default kb = base_with_imm]
 
 module type S2 = sig
   type ('a : ka, 'b : kb) t : any
@@ -127,12 +127,12 @@ module type%template Optional_syntax = sig @@ portable
   module type S = S [@mode m]
   module type S_zero_alloc = S_zero_alloc [@mode m]
 
-  [@@@kind.default ka = (value, float64, bits32, bits64, word, immediate, immediate64)]
+  [@@@kind.default ka = base_with_imm]
 
   module type S1 = S1 [@kind ka] [@mode m]
   module type S1_zero_alloc = S1_zero_alloc [@kind ka] [@mode m]
 
-  [@@@kind.default kb = (value, float64, bits32, bits64, word, immediate, immediate64)]
+  [@@@kind.default kb = base_with_imm]
 
   module type S2 = S2 [@kind ka kb] [@mode m]
   module type S2_zero_alloc = S2_zero_alloc [@kind ka kb] [@mode m]

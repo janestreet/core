@@ -1487,8 +1487,8 @@ struct
           (Map.merge_by_case
              t1
              t2
-             ~left:(When_unmatched.to_when_unmatched left)
-             ~right:(When_unmatched.to_when_unmatched right)
+             ~first:(When_unmatched.to_when_unmatched left)
+             ~second:(When_unmatched.to_when_unmatched right)
              ~both:(When_matched.to_when_matched both))
           ~expect:
             (Map.merge t1 t2 ~f:(fun ~key -> function

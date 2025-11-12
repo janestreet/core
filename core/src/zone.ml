@@ -124,13 +124,13 @@ module Stable = struct
       end = struct
         let bool_of_int i = i <> 0
 
-        module DLS = Basement.Stdlib_shim.Domain.Safe.DLS
+        module TLS = Basement.Stdlib_shim.Domain.Safe.TLS
 
         let input_long_as_int32 =
-          let long = DLS.new_key (fun () -> Bytes.create 4) in
+          let long = TLS.new_key (fun () -> Bytes.create 4) in
           let int32_of_char chr = Int32.of_int_exn (int_of_char chr) in
           fun ic ->
-            let long = Obj.magic_uncontended (DLS.get long) in
+            let long = Obj.magic_uncontended (TLS.get long) in
             In_channel.really_input_exn ic ~buf:long ~pos:0 ~len:4;
             let sb1 = Int32.shift_left (int32_of_char (Bytes.get long 0)) 24 in
             let sb2 = Int32.shift_left (int32_of_char (Bytes.get long 1)) 16 in

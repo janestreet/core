@@ -6,7 +6,7 @@ include (
   @@ portable
     type t = int [@@deriving bin_io]
 
-    include%template Comparable.S [@mode local] with type t := t
+    include%template Comparable.S [@mode local portable] with type t := t
 
     include Hashable.S with type t := t
   end)
@@ -168,41 +168,44 @@ let to_system_int = `Use_Signal_unix
 
 module Expert = struct
   type behavior =
-    [ `Default
-    | `Ignore
-    | `Handle of (t -> unit[@sexp.opaque])
-    ]
+    | Default
+    | Ignore
+    | Handle of ((t -> unit)[@sexp.opaque]) @@ portable
   [@@deriving sexp_of]
 
   module Behavior = struct
     let of_caml = function
-      | Stdlib.Sys.Signal_default -> `Default
-      | Signal_ignore -> `Ignore
-      | Signal_handle f -> `Handle f
+      | Stdlib.Sys.Signal_default -> Default
+      | Signal_ignore -> Ignore
+      | Signal_handle f -> Handle f
     ;;
 
     let to_caml = function
-      | `Default -> Stdlib.Sys.Signal_default
-      | `Ignore -> Signal_ignore
-      | `Handle f -> Signal_handle (fun t -> Exn.handle_uncaught_and_exit (fun () -> f t))
+      | Default -> Stdlib.Sys.Signal_default
+      | Ignore -> Signal_ignore
+      | Handle f ->
+        (* If an uncaught exception is raised from a signal handler, behavior is highly
+           unpredictable (see explanation in mli). So, we catch any exceptions and exit.
+           We must [exit_immediately], in particular, since [at_exit] functions are not
+           generally thread-safe. This isn't great (as it may leak resources expecting to
+           be cleaned up on exit), but given we are already in a very bad path, this seems
+           fine. *)
+        Signal_handle (fun t -> Exn.handle_uncaught_and_exit_immediately (fun () -> f t))
     ;;
   end
 
   let signal t behavior =
-    Behavior.of_caml
-      ((Stdlib.Sys.signal [@ocaml.alert "-unsafe_multidomain"])
-         t
-         (Behavior.to_caml behavior))
+    Behavior.of_caml (Basement.Stdlib_shim.Sys.Safe.signal t (Behavior.to_caml behavior))
   ;;
 
   let set t behavior = ignore (signal t behavior : behavior)
-  let handle t f = set t (`Handle f)
+  let handle t f = set t (Handle f)
 end
 
 open Expert
 
-let handle_default t = set t `Default
-let ignore t = set t `Ignore
+let handle_default t = set t Default
+let ignore t = set t Ignore
 
 module Stable = struct
   module V2 = struct

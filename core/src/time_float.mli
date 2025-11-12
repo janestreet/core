@@ -35,8 +35,7 @@ module Ofday : sig
 
         Two [t]'s may or may not correspond to the same times depending on which date
         they're evaluated. *)
-    type t : value mod contended many portable stateless unyielding
-    [@@deriving bin_io, sexp, hash]
+    type t : value mod contended many stateless unyielding [@@deriving bin_io, sexp, hash]
 
     include Pretty_printer.S with type t := t
 

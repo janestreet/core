@@ -13,12 +13,11 @@
  (name core)
  (public_name core)
  (libraries base base_bigstring base_for_tests base_quickcheck bin_prot
-   command fieldslib filename_base heap_block bin_prot.shape
-   ppx_diff.diffable ppx_expect.config_types jane-street-headers base.md5
-   portable ppx_assert.runtime-lib ppx_hash.runtime-lib
-   ppx_inline_test.runtime-lib sexplib splittable_random
-   ppx_stable_witness.stable_witness stdio string_dict time_now typerep
-   univ_map uopt validate variantslib)
+   bin_prot.shape command ppx_diff.diffable ppx_expect.config_types fieldslib
+   filename_base heap_block jane-street-headers base.md5 portable
+   ppx_assert.runtime-lib ppx_hash.runtime-lib ppx_inline_test.runtime-lib
+   sexplib splittable_random ppx_stable_witness.stable_witness stdio
+   string_dict time_now typerep univ_map uopt validate variantslib)
  (ocamlopt_flags
   :standard
   (:include ocamlopt-flags))

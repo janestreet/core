@@ -4,7 +4,7 @@ open! Std_internal
 module type S = sig @@ portable
   type t [@@deriving hash]
 
-  include%template Identifiable.S [@mode local] with type t := t
+  include%template Identifiable.S [@mode local] [@modality portable] with type t := t
 
   (** [create index ~min ~max] raises if [index < min || index > max]. The resulting [t]
       is only equal to other [t] if all three fields are the same. *)

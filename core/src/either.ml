@@ -1,6 +1,6 @@
 module Stable = struct
   module V1 = struct
-    type ('f, 's) t = ('f, 's) Base.Either.t =
+    type ('f : value_or_null, 's : value_or_null) t = ('f, 's) Base.Either.t =
       | First of 'f
       | Second of 's
     [@@deriving

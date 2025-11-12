@@ -21,7 +21,7 @@ module type S = sig @@ portable
       different date.
 
       Any [ofday] will satisfy [start_of_day <= ofday <= start_of_next_day]. *)
-  type underlying : value mod contended many portable stateless unyielding
+  type underlying : value mod contended many stateless unyielding
 
   type t = private underlying
   [@@deriving

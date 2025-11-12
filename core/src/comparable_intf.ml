@@ -84,20 +84,32 @@ module type S_plain = sig
   include S_common [@modality p] [@mode m]
 
   module Map :
-    Map.S_plain with type Key.t = t with type Key.comparator_witness = comparator_witness
+    Map.S_plain
+    [@modality p]
+    with type Key.t = t
+    with type Key.comparator_witness = comparator_witness
 
   module Set :
-    Set.S_plain with type Elt.t = t with type Elt.comparator_witness = comparator_witness
+    Set.S_plain
+    [@modality p]
+    with type Elt.t = t
+    with type Elt.comparator_witness = comparator_witness
 end
 
 module type S = sig
   include S_common [@modality p] [@mode m]
 
   module Map :
-    Map.S with type Key.t = t with type Key.comparator_witness = comparator_witness
+    Map.S
+    [@modality p]
+    with type Key.t = t
+    with type Key.comparator_witness = comparator_witness
 
   module Set :
-    Set.S with type Elt.t = t with type Elt.comparator_witness = comparator_witness
+    Set.S
+    [@modality p]
+    with type Elt.t = t
+    with type Elt.comparator_witness = comparator_witness
 end]
 
 [%%template
@@ -110,11 +122,13 @@ module type Map_and_set_binable = sig
 
   module Map :
     Map.S_binable
+    [@modality p]
     with type Key.t = t
     with type Key.comparator_witness = comparator_witness
 
   module Set :
     Set.S_binable
+    [@modality p]
     with type Elt.t = t
     with type Elt.comparator_witness = comparator_witness
 end

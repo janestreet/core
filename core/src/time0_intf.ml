@@ -28,7 +28,7 @@ module type Basic = sig
 end
 
 module type S = sig @@ portable
-  type underlying : value mod contended many portable stateless unyielding
+  type underlying : value mod contended many stateless unyielding
 
   type t = private underlying
   [@@deriving bin_io ~localize, compare ~localize, hash, typerep]

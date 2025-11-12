@@ -248,6 +248,15 @@ module type Tuple = sig @@ portable
   module%template.portable Sexpable (S1 : Sexpable.S) (S2 : Sexpable.S) :
     Sexpable.S with type t := Make(S1)(S2).t
 
-  module%template.portable Binable (B1 : Binable.S) (B2 : Binable.S) :
-    Binable.S with type t := Make(B1)(B2).t
+  module%template.portable Binable
+      (B1 : sig
+         type t
+
+         include Binable.S with type t := t
+       end)
+      (B2 : sig
+         type t
+
+         include Binable.S with type t := t
+       end) : Binable.S with type t := Make(B1)(B2).t
 end
