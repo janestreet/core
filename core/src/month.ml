@@ -113,11 +113,11 @@ include%template
   Comparable.Make_binable_using_comparator [@mode local] [@modality portable] (struct
     include T
 
-    (* In 108.06a and earlier, months in sexps of Maps and Sets were raw ints.  From 108.07
+    (* In 108.06a and earlier, months in sexps of Maps and Sets were raw ints. From 108.07
        through 109.13, the output format remained raw as before, but both the raw and
-       pretty format were accepted as input.  From 109.14 on, the output format was
-       changed from raw to pretty, while continuing to accept both formats.  Once we believe
-       most programs are beyond 109.14, we will switch the input format to no longer accept
+       pretty format were accepted as input. From 109.14 on, the output format was changed
+       from raw to pretty, while continuing to accept both formats. Once we believe most
+       programs are beyond 109.14, we will switch the input format to no longer accept
        raw. *)
     let t_of_sexp sexp =
       match Option.try_with (fun () -> Int.t_of_sexp sexp) with

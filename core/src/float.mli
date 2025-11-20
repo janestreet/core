@@ -5,7 +5,7 @@
 open! Import
 
 (*_ This needs to be above the place where we include [Base.Float] so that it doesn't
-   shadow the latter's mode-polymorphic operators. *)
+    shadow the latter's mode-polymorphic operators. *)
   include%template
     Identifiable.S
     [@mode local]
@@ -88,7 +88,7 @@ include Stringable.S_local_input with type t := t
 include Quickcheckable.S with type t := t
 
 (*_ Caution: If we remove this sig item, [sign] will still be present from
-  [Comparable.With_zero]. *)
+    [Comparable.With_zero]. *)
 
 val sign : local_ t -> Sign.t
 [@@deprecated "[since 2016-01] Replace [sign] with [sign_or_nan] or [sign_exn]"]

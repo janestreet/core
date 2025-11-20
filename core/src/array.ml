@@ -13,12 +13,14 @@ include (
     type ('a : any mod separable) t = 'a array
 
     [%%rederive:
-      type nonrec 'a t = 'a t
+      type nonrec ('a : value_or_null mod separable) t = 'a t
       [@@deriving compare ~localize, globalize, sexp ~stackify, sexp_grammar]]
   end)
 
 [%%rederive.portable
-  type 'a t = 'a array [@@deriving bin_io ~localize, quickcheck ~portable, typerep]]
+  type ('a : value_or_null mod separable) t = 'a array [@@deriving bin_io ~localize]]
+
+[%%rederive.portable type 'a t = 'a array [@@deriving quickcheck ~portable, typerep]]
 
 module T = struct
   include Base.Array
@@ -743,7 +745,9 @@ module type S = sig @@ portable
 
   val create_float_uninitialized : len:int -> float t
 
-  val%template init : int -> f:local_ (int -> 'a) -> 'a t @ m
+  val%template init
+    : ('a : value_or_null mod separable).
+    int -> f:local_ (int -> 'a) -> 'a t @ m
   [@@alloc __ @ m = (heap_global, stack_local)]
 
   val make_matrix : dimx:int -> dimy:int -> 'a -> 'a t t
@@ -933,13 +937,14 @@ module type S = sig @@ portable
   val sorted_copy : local_ 'a t -> compare:local_ ('a -> 'a -> int) -> 'a t
   val last : 'a t -> 'a
   val last_exn : 'a t -> 'a
-  val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
+
+  val equal
+    : ('a : value_or_null mod separable).
+    ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
 
   val equal__local
-    :  (local_ 'a -> local_ 'a -> bool)
-    -> local_ 'a t
-    -> local_ 'a t
-    -> bool
+    : ('a : value_or_null mod separable).
+    (local_ 'a -> local_ 'a -> bool) -> local_ 'a t -> local_ 'a t -> bool
 
   val to_sequence : 'a t -> 'a Core_sequence.t
   val to_sequence_mutable : 'a t -> 'a Core_sequence.t

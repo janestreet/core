@@ -9,8 +9,17 @@ include module type of struct
   include Base.Sexpable
 end
 
-module%template.portable To_stringable (M : S) : Stringable.S with type t := M.t
-module%template.portable To_stringable_utf8 (M : S) : Stringable.S with type t := M.t
+module%template.portable To_stringable (M : sig
+    type t
+
+    include S with type t := t
+  end) : Stringable.S with type t := M.t
+
+module%template.portable To_stringable_utf8 (M : sig
+    type t
+
+    include S with type t := t
+  end) : Stringable.S with type t := M.t
 
 (** The following functors preserve stability: if applied to stable types with stable
     (de)serializations, they will produce stable types with stable (de)serializations.

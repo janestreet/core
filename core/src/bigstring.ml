@@ -13,8 +13,8 @@ module Stable = struct
     end = struct
       type t = bigstring [@@deriving bin_io ~localize]
 
-      (* bigstring's serialization is intended to be stable.  We assert it here rather
-         than asserting it in two separate places for the bin_io and sexp definitions. *)
+      (* bigstring's serialization is intended to be stable. We assert it here rather than
+         asserting it in two separate places for the bin_io and sexp definitions. *)
       let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
     end
 

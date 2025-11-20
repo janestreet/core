@@ -57,7 +57,7 @@ let () =
                let needle = make_needle k in
                let needle_length = Int.to_string (String.length needle) in
                List.concat
-                 (List.map [ 10; 100 (*300 *) ] ~f:(fun j ->
+                 (List.map [ 10; 100 (* 300 *) ] ~f:(fun j ->
                     let haystack = make_haystack k j in
                     let haystack_length = Int.to_string (String.length haystack) in
                     List.map

@@ -2,20 +2,22 @@
 
 (** This module extends {{!Base.Sequence} [Base.Sequence]} with bin_io. *)
 
-type 'a t = 'a Base.Sequence.t [@@deriving bin_io]
+type ('a : any) t = 'a Base.Sequence.t
+
+[%%rederive: type ('a : value) t = 'a Base.Sequence.t [@@deriving bin_io]]
 
 module Step : sig
-  type (+'a : any, 's) t = ('a, 's) Base.Sequence.Step.t =
+  type (+'a : any, 's : any) t = ('a, 's) Base.Sequence.Step.t =
     | Done
-    | Skip of { state : 's }
+    | Skip : ('a : any) ('s : value_or_null). { state : 's } -> ('a, 's) t
     | Yield :
-        ('a : value_or_null) 's.
+        ('a : value_or_null) ('s : value_or_null).
         { value : 'a
         ; state : 's
         }
         -> ('a, 's) t
 
-  [%%rederive: type nonrec (+'a, 's) t = ('a, 's) t [@@deriving bin_io]]
+  [%%rederive: type nonrec (+'a : value, 's : value) t = ('a, 's) t [@@deriving bin_io]]
 
   include module type of struct
       include Base.Sequence.Step
@@ -24,7 +26,8 @@ module Step : sig
 end
 
 module Merge_with_duplicates_element : sig
-  type ('a, 'b) t = ('a, 'b) Base.Sequence.Merge_with_duplicates_element.t =
+  type ('a : value_or_null, 'b : value_or_null) t =
+        ('a, 'b) Base.Sequence.Merge_with_duplicates_element.t =
     | Left of 'a
     | Right of 'b
     | Both of 'a * 'b
@@ -33,7 +36,7 @@ module Merge_with_duplicates_element : sig
   include module type of struct
       include Base.Sequence.Merge_with_duplicates_element
     end
-    with type ('a, 'b) t := ('a, 'b) t
+    with type ('a : value_or_null, 'b : value_or_null) t := ('a, 'b) t
 end
 
 (** @inline *)

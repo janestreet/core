@@ -2,7 +2,7 @@ module String = Base.String
 
 external format_float : string -> local_ float -> string @@ portable = "caml_format_float"
 
-(* Stolen from [pervasives.ml].  Adds a "." at the end if needed.  It is in
+(* Stolen from [pervasives.ml]. Adds a "." at the end if needed. It is in
    [pervasives.mli], but it also says not to use it directly, so we copy and paste the
    code. It makes the assumption on the string passed in argument that it was returned by
    [format_float] *)

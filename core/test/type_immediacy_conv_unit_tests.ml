@@ -31,7 +31,7 @@ module%test _ = struct
     }
   ;;
 
-  (*In the following, the three cases for values and two for ints that are discuessed are
+  (*=In the following, the three cases for values and two for ints that are discuessed are
       described in [./type_immediacy.mli].
 
       We merge case 1) and I), as they are really the same, and provide the following 4
@@ -322,8 +322,8 @@ module%test _ = struct
       && test_inconvertible_values conv [ lazy (1 + 2); lazy (List.length []) ]
     ;;
 
-    (* depending on when the Gc runs, some lazy after being forced might be
-           replaced by their immediate value.  *)
+    (* depending on when the Gc runs, some lazy after being forced might be replaced by
+       their immediate value. *)
 
     let%test _ =
       (* type t = int list lazy_t *)

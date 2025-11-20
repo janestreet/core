@@ -1,7 +1,7 @@
 (library
  (name core_test)
  (libraries await.blocking await.kernel base_container_tests base_for_tests
-   base_test_helpers core core_test_helpers
+   base_test_helpers capsule core core_test_helpers
    expect_test_helpers_core.expect_test_helpers_base expect_test_helpers_core
    expect_test_patterns expectable core_kernel.fheap unboxed.float32_u
    unboxed.float_u unboxed.int32_u unboxed.int64_u unboxed.nativeint_u

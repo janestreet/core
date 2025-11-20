@@ -52,11 +52,9 @@ module Date_and_ofday = struct
 
   (* Years out of range for [Date.create_exn]. *)
   let[@cold] assert_in_bounds ~sec_since_epoch =
-    (* $ TZ=UTC date --date=@-62167219200
-       Sat Jan  1 00:00:00 UTC 0000 *)
+    (* $ TZ=UTC date --date=@-62167219200 Sat Jan 1 00:00:00 UTC 0000 *)
     let gmtime_lower_bound = -62_167_219_200. in
-    (* $ TZ=UTC date --date=@253402300799
-       Fri Dec 31 23:59:59 UTC 9999 *)
+    (* $ TZ=UTC date --date=@253402300799 Fri Dec 31 23:59:59 UTC 9999 *)
     let gmtime_upper_bound = 253_402_300_799. in
     if Float.( >= ) sec_since_epoch (gmtime_upper_bound +. 1.)
        || Float.( < ) sec_since_epoch gmtime_lower_bound

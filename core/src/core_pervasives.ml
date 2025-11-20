@@ -1,6 +1,6 @@
 include Stdlib
 
-(* At Jane Street, the OCaml stdlib is patched to define [Pervasives.raise] as the
+(*=At Jane Street, the OCaml stdlib is patched to define [Pervasives.raise] as the
    ["%reraise"] primitive. We do this as the compiler is currently not good enough at
    automatically detecting reraise [1]. We patch the stdlib so that everything is
    affected, including libraries defined before base such as sexplib or non Jane Street

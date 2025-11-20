@@ -229,7 +229,7 @@ module type Span = sig @@ portable
 
   (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
 
-    https://opensource.janestreet.com/standards/#private-submodules *)
+      https://opensource.janestreet.com/standards/#private-submodules *)
   module Private : sig
     val of_parts : Parts.t -> t
     val to_parts : t -> Parts.t
@@ -254,7 +254,7 @@ module type Ofday = sig
   val approximate_end_of_day : t
 
   (*_ This is already exported from [Ofday_intf.S], but we re-declare it to add
-    documentation. *)
+      documentation. *)
 
   (** [add_exn t span] shifts the time of day [t] by [span]. It raises if the result is
       not in the same 24-hour day. Daylight savings shifts are not accounted for. *)

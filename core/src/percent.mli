@@ -263,7 +263,7 @@ val format : t -> Format.t -> string
 val validate : t -> Validate.t
 
 (*_ Caution: If we remove this sig item, [sign] will still be present from
-  [Comparable.With_zero]. *)
+    [Comparable.With_zero]. *)
 
 val sign : t -> Sign.t [@@deprecated "[since 2016-01] Replace [sign] with [sign_exn]"]
 

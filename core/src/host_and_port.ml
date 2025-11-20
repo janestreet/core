@@ -97,7 +97,7 @@ module Stable = struct
               Union
                 [ (* handles the host:port string case *)
                   String
-                ; (* handles the list (host port) case  *)
+                ; (* handles the list (host port) case *)
                   List (Cons (String, Cons (Integer, Empty)))
                 ]
           }

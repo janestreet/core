@@ -3,7 +3,7 @@ include Doubly_linked_intf
 
 (* INVARIANT: This exception is raised if a list is mutated during a pending iteration.
 
-   This invariant is guaranteed by the Header and Elt modules in conjunction.  All
+   This invariant is guaranteed by the Header and Elt modules in conjunction. All
    downstream code in this module need not be concerned with this invariant. *)
 let raise_attempt_to_mutate_list_during_iteration () =
   raise_s (Atom "Doubly_linked: attempt to mutate list during iteration")
@@ -140,13 +140,11 @@ end = struct
   let value t = t.value
   let set t v = t.value <- v
 
-  (*
-     [split_or_splice] is sufficient as the lone primitive for
-     accomplishing all pointer updates on cyclic loops of list nodes.
-     It takes two "gaps" between adjacent linked list nodes.  If the gaps
-     point into the same list, the result is that it will be split into
-     two lists afterwards.  If the gaps point into different lists, the
-     result is that they will be spliced together into one list afterwards.
+  (* [split_or_splice] is sufficient as the lone primitive for accomplishing all pointer
+     updates on cyclic loops of list nodes. It takes two "gaps" between adjacent linked
+     list nodes. If the gaps point into the same list, the result is that it will be split
+     into two lists afterwards. If the gaps point into different lists, the result is that
+     they will be spliced together into one list afterwards.
 
      {v
        Before                      After

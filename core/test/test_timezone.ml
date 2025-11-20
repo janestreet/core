@@ -13,9 +13,9 @@ let with_the_one_and_only f =
     .aliased
 ;;
 
-(* [init] is a noop in javascript, so this is expected to not work. It will only fail
-   with [Private.Zone_cache.find], which only checks the cache and shouldn't be used
-   directly anyway. *)
+(* [init] is a noop in javascript, so this is expected to not work. It will only fail with
+   [Private.Zone_cache.find], which only checks the cache and shouldn't be used directly
+   anyway. *)
 let%expect_test (_ [@tags "no-js"]) =
   let open Timezone.Private.Zone_cache in
   init ();

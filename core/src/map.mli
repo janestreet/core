@@ -869,7 +869,7 @@ val sumi
 
     Runtime is O(m + log n) where n is the size of the input map, and m is the size of the
     smaller of the two output maps. The O(m) term is due to the need to calculate the
-    length of the output maps. **)
+    length of the output maps. *)
 val split
   :  ('k, 'v, 'cmp) t
   -> 'k
@@ -985,6 +985,10 @@ val nth_exn : ('k, 'v, _) t -> int -> 'k * 'v
 (** [rank t k] if [k] is in [t], returns the number of keys strictly less than [k] in [t],
     otherwise [None]. *)
 val rank : ('k, 'v, 'cmp) t -> 'k -> int option
+
+(** [split_n t n = l, r] such that [append ~lower_part:l ~upper_part:r = `Ok t] and
+    [length l = n], or as close as possible if [n < 0] or [n > length t]. *)
+val split_n : ('k, 'v, 'cmp) t -> int -> ('k, 'v, 'cmp) t * ('k, 'v, 'cmp) t
 
 (** [to_sequence ?order ?keys_greater_or_equal_to ?keys_less_or_equal_to t] gives a
     sequence of key-value pairs between [keys_less_or_equal_to] and

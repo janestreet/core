@@ -15,7 +15,7 @@ include%template Bin_prot.Utils.Make_iterable_binable1 [@modality portable] (str
     let iter = iter
 
     (* Bin_prot reads the elements in the same order they were written out, as determined
-       by [iter].  So, we can ignore the index and just enqueue each element as it is read
+       by [iter]. So, we can ignore the index and just enqueue each element as it is read
        in. *)
     let init ~len ~next =
       let t = create () in

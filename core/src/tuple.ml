@@ -2,7 +2,7 @@ open! Import
 include Tuple_intf.Definitions
 
 module type T = sig
-  type t
+  type t : value_or_null
 end
 
 module Make (T1 : T) (T2 : T) = struct
@@ -10,7 +10,8 @@ module Make (T1 : T) (T2 : T) = struct
 end
 
 module T2 = struct
-  type ('a, 'b) t = 'a * 'b [@@deriving sexp, sexp_grammar, typerep]
+  type ('a : value_or_null, 'b : value_or_null) t = 'a * 'b
+  [@@deriving sexp, sexp_grammar, typerep]
 
   let create a b = a, b
 
@@ -27,21 +28,30 @@ module T2 = struct
   [%%if flambda_backend]
 
   external get1
-    :  (('a, _) t[@local_opt])
-    -> ('a[@local_opt])
+    : ('a : value_or_null) ('b : value_or_null).
+    (('a, 'b) t[@local_opt]) -> ('a[@local_opt])
     @@ portable
     = "%field0_immut"
 
   external get2
-    :  ((_, 'a) t[@local_opt])
-    -> ('a[@local_opt])
+    : ('a : value_or_null) ('b : value_or_null).
+    (('a, 'b) t[@local_opt]) -> ('b[@local_opt])
     @@ portable
     = "%field1_immut"
 
   [%%else]
 
-  external get1 : (('a, _) t[@local_opt]) -> ('a[@local_opt]) @@ portable = "%field0"
-  external get2 : ((_, 'a) t[@local_opt]) -> ('a[@local_opt]) @@ portable = "%field1"
+  external get1
+    : ('a : value_or_null) ('b : value_or_null).
+    (('a, 'b) t[@local_opt]) -> ('a[@local_opt])
+    @@ portable
+    = "%field0"
+
+  external get2
+    : ('a : value_or_null) ('b : value_or_null).
+    (('a, 'b) t[@local_opt]) -> ('b[@local_opt])
+    @@ portable
+    = "%field1"
 
   [%%endif]
 
@@ -69,7 +79,8 @@ module T2 = struct
 end
 
 module T3 = struct
-  type ('a, 'b, 'c) t = 'a * 'b * 'c [@@deriving sexp, sexp_grammar, typerep]
+  type ('a : value_or_null, 'b : value_or_null, 'c : value_or_null) t = 'a * 'b * 'c
+  [@@deriving sexp, sexp_grammar, typerep]
 
   let create a b c = a, b, c
 
@@ -93,28 +104,37 @@ module T3 = struct
   [%%if flambda_backend]
 
   external get1
-    :  (('a, _, _) t[@local_opt])
-    -> ('a[@local_opt])
+    : ('a : value_or_null) ('b : value_or_null) ('c : value_or_null).
+    (('a, 'b, 'c) t[@local_opt]) -> ('a[@local_opt])
     @@ portable
     = "%field0_immut"
 
   external get2
-    :  ((_, 'a, _) t[@local_opt])
-    -> ('a[@local_opt])
+    : ('a : value_or_null) ('b : value_or_null) ('c : value_or_null).
+    (('a, 'b, 'c) t[@local_opt]) -> ('b[@local_opt])
     @@ portable
     = "%field1_immut"
 
   [%%else]
 
-  external get1 : (('a, _, _) t[@local_opt]) -> ('a[@local_opt]) @@ portable = "%field0"
-  external get2 : ((_, 'a, _) t[@local_opt]) -> ('a[@local_opt]) @@ portable = "%field1"
+  external get1
+    : ('a : value_or_null) ('b : value_or_null) ('c : value_or_null).
+    (('a, 'b, 'c) t[@local_opt]) -> ('a[@local_opt])
+    @@ portable
+    = "%field0"
+
+  external get2
+    : ('a : value_or_null) ('b : value_or_null) ('c : value_or_null).
+    (('a, 'b, 'c) t[@local_opt]) -> ('b[@local_opt])
+    @@ portable
+    = "%field1"
 
   [%%endif]
 
-  (* There's no %field2....*)
+  (* There's no %field2.... *)
   let get3 (_, _, a) = a
 
-  (* lexicographic comparison  *)
+  (* lexicographic comparison *)
   let compare ~cmp1 ~cmp2 ~cmp3 (x, y, z) (x', y', z') =
     let c1 = cmp1 x x' in
     if c1 <> 0
@@ -127,18 +147,29 @@ module T3 = struct
   let equal ~eq1 ~eq2 ~eq3 (x, y, z) (x', y', z') = eq1 x x' && eq2 y y' && eq3 z z'
 end
 
-module%template.portable Sexpable (S1 : Sexpable.S) (S2 : Sexpable.S) = struct
+module%template.portable Sexpable
+    (S1 : sig
+       type t : value_or_null
+
+       include Sexpable.S with type t := t
+     end)
+    (S2 : sig
+       type t : value_or_null
+
+       include Sexpable.S with type t := t
+     end) =
+struct
   type t = S1.t * S2.t [@@deriving sexp]
 end
 
 module%template.portable Binable
     (B1 : sig
-       type t
+       type t : value_or_null
 
        include Binable.S with type t := t
      end)
     (B2 : sig
-       type t
+       type t : value_or_null
 
        include Binable.S with type t := t
      end) =

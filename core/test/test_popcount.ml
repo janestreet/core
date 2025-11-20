@@ -66,12 +66,12 @@ let%test_unit _ =
   done
 ;;
 
-(* Make sure unboxing works as expected and so forth, which it wouldn't if we used C
-   stubs with boxed values for [int64], [int32], and [nativeint].  Use random inputs
-   to make sure the compiler can't inline and precompute results. *)
+(* Make sure unboxing works as expected and so forth, which it wouldn't if we used C stubs
+   with boxed values for [int64], [int32], and [nativeint]. Use random inputs to make sure
+   the compiler can't inline and precompute results. *)
 
 (* On 32-bit systems, int64 cannot be unboxed, so this test only makes sense on 64-bit
-   systems.  Also, without cross-library inlining, the arguments to popcount cannot be
+   systems. Also, without cross-library inlining, the arguments to popcount cannot be
    unboxed. *)
 let%expect_test ("Int.popcount does not allocate"
   [@tags "64-bits-only", "x-library-inlining-sensitive"])

@@ -28,8 +28,8 @@ include Base.Int
 
 include%template Comparable.Validate_with_zero [@modality portable] (Base.Int)
 
-(* This is already defined by Comparable.Validate_with_zero, but Sign.of_int is
-   more direct. *)
+(* This is already defined by Comparable.Validate_with_zero, but Sign.of_int is more
+   direct. *)
 let sign = Sign.of_int
 
 type t = int [@@deriving typerep]

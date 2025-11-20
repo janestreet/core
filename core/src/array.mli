@@ -12,7 +12,9 @@ open Perms.Export
 type ('a : any mod separable) t = 'a Base.Array.t
 
 [%%rederive:
-  type nonrec 'a t = 'a t [@@deriving bin_io ~localize, quickcheck ~portable, typerep]]
+  type nonrec ('a : value_or_null mod separable) t = 'a t [@@deriving bin_io ~localize]]
+
+[%%rederive: type nonrec 'a t = 'a t [@@deriving quickcheck ~portable, typerep]]
 
 (** {2 The signature included from [Base.Array]} *)
 

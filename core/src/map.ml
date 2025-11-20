@@ -452,6 +452,7 @@ module%template.portable Make_tree_S1 (Key : Comparator.S1) = struct
   let nth = nth
   let nth_exn = nth_exn
   let rank a b = rank a b ~comparator
+  let split_n = split_n
 
   let to_sequence ?order ?keys_greater_or_equal_to ?keys_less_or_equal_to t =
     to_sequence ~comparator ?order ?keys_greater_or_equal_to ?keys_less_or_equal_to t
@@ -681,8 +682,8 @@ module%template Provide_stable_witness (Key : sig
     type comparator_witness
   end) =
 struct
-  (* The binary representation of map is used in the stable modules below, so it's
-     assumed to be stable (if the key and data are stable) . *)
+  (* The binary representation of map is used in the stable modules below, so it's assumed
+     to be stable (if the key and data are stable) . *)
   let stable_witness (type data) (_data_stable_witness : data Stable_witness.t)
     : (Key.t, data, Key.comparator_witness) t Stable_witness.t
     =

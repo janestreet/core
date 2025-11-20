@@ -75,8 +75,7 @@ module Stable = struct
             with type comparator_witness = Base.Int63.comparator_witness
         end)
 
-      (* This serialization is stable, since it either delegates to [int] or
-         [Int63_emul]. *)
+      (* This serialization is stable, since it either delegates to [int] or [Int63_emul]. *)
       let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
     end
 

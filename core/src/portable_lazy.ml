@@ -59,8 +59,8 @@ include struct
   open Quickcheck
 
   open struct
-    let from_val (a : (_ : value mod portable)) = from_val a
-    let force (a : ('a : value mod contended) t) : 'a = force a
+    let from_val (a : (_ : value_or_null mod portable)) = from_val a
+    let force (a : ('a : value_or_null mod contended) t) : 'a = force a
   end
 
   let quickcheck_generator gen_a = Generator.map gen_a ~f:from_val

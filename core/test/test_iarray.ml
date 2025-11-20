@@ -1035,6 +1035,11 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
       val fold_right
         : ('a : value) ('acc : value_or_null).
         'a t -> init:'acc -> f:local_ ('a -> 'acc -> 'acc) -> 'acc
+
+      val%template init
+        : ('a : value_or_null mod separable).
+        int -> f:(int -> 'a @ m) @ local -> 'a t @ m
+      [@@alloc __ @ m = (heap_global, stack_local)]
     end)
 
   include struct
@@ -1870,7 +1875,7 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
       ;;
     end
 
-    (* ---- No magic after this point! ---- *)
+    (*=---- No magic after this point! ---- *)
 
     (* Implementation without magic - potentially less efficient but correct *)
     let init len ~f =
@@ -1950,10 +1955,10 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
           ignore_local y [@nontail]
         ;;
 
-        (* In order to properly excercise the no forwards local pointers checks, we need to
-           actually try to make some pointers. Specifically, if we create a value
-           [a] which 'points to' [b], but [b] happens to be an immedate, then this is
-           not caught as a forwards pointer even if [b] was morally 'allocated' later. *)
+        (* In order to properly excercise the no forwards local pointers checks, we need
+           to actually try to make some pointers. Specifically, if we create a value [a]
+           which 'points to' [b], but [b] happens to be an immedate, then this is not
+           caught as a forwards pointer even if [b] was morally 'allocated' later. *)
         let alloc_local_non_immediate (local_ i) = exclave_ `A i
       end
 
@@ -2079,8 +2084,8 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
   end
 
   (* This test uses allocations as a proxy for checking for inlining. In particular,
-     [min_elt] and [max_elt] are implemented by using a helper function that accepts
-     a predicate [first_is_better_than_second] (used to abstract over the direction of
+     [min_elt] and [max_elt] are implemented by using a helper function that accepts a
+     predicate [first_is_better_than_second] (used to abstract over the direction of
      comparison). This test ensures that the helper function is inlined; if it weren't,
      then the predicates constructed by [min_elt] and [max_elt] would allocate a closure.
      The two allocated minor words are for the returned option. *)

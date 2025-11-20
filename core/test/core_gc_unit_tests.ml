@@ -49,7 +49,7 @@ module%test [@name "gc"] [@tags "no-js"] _ = struct
 
   let stat_eq func projection =
     (* In the stub the record is allocated after getting the stats, so we must ensure
-         [func] is called first. *)
+       [func] is called first. *)
     let x = func () in
     let y = projection (quick_stat ()) in
     x = y
@@ -135,7 +135,7 @@ module%test [@name "gc"] [@tags "no-js"] _ = struct
       |}];
     (* Location information should be excluded when [here] is [Lexing.dummy_pos], which is
        the default value of [here] in the external version of Base for [%call_pos]
-       arguments*)
+       arguments *)
     show_raise_hide_backtraces (fun () ->
       Gc.For_testing.assert_no_allocation ~here:Lexing.dummy_pos allocating_function);
     [%expect
@@ -254,9 +254,8 @@ let%expect_test ("finalizer reference loop: memory leak" [@tags "no-js"]) =
   let _array =
     create_finalizer_reference_loop ~add_finalizer_exn:Gc.Expert.add_finalizer_exn
   in
-  (* Unfortunately, this creates a memory leak.
-     Despite the array and its finalizer not having any inbound references, it never gets
-     collected. *)
+  (* Unfortunately, this creates a memory leak. Despite the array and its finalizer not
+     having any inbound references, it never gets collected. *)
   Gc.full_major ()
 ;;
 

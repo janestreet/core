@@ -53,7 +53,11 @@ val%template exn_if_dup
 
 (** [slice t start stop] returns a new list including elements [t.(start)] through
     [t.(stop-1)], normalized Python-style with the exception that [stop = 0] is treated as
-    [stop = length t]. *)
+    [stop = length t]. This can still raise if indices are too large in the negative or
+    positive direction.
+
+    Consider using [List.sub] instead, which has a more conventional interface that does
+    not require reasoning about negative indices. *)
 val slice : 'a t -> int -> int -> 'a t
 
 include%template Comparator.Derived [@modality portable] with type 'a t := 'a t

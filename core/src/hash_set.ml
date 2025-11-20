@@ -50,9 +50,9 @@ Bin_prot.Utils.Make_iterable_binable [@inlined hint] [@modality p] (struct
     type nonrec t = Elt.t t
     type el = Elt.t
 
-    (* You may be tempted to replace these with [type el = Elt.t [@@deriving bin_io]],
-       but this generates a new [Bin_shape.t], which is both allocating and side-
-       effectful, and difficult for the compiler to eliminate in [bin_size_m__t] etc. *)
+    (* You may be tempted to replace these with [type el = Elt.t [@@deriving bin_io]], but
+       this generates a new [Bin_shape.t], which is both allocating and side- effectful,
+       and difficult for the compiler to eliminate in [bin_size_m__t] etc. *)
     let bin_size_el = [%bin_size: Elt.t]
     let bin_write_el = [%bin_write: Elt.t]
     let bin_read_el = [%bin_read: Elt.t]
@@ -81,7 +81,7 @@ module Provide_stable_witness (Elt : sig
   end) =
 struct
   (* The binary representation of hash_set is used in the stable modules below, so it's
-       assumed to be stable (if the elt is stable) . *)
+     assumed to be stable (if the elt is stable) . *)
   let stable_witness : Elt.t t Stable_witness.t =
     let (_ : Elt.t Stable_witness.t) = Elt.stable_witness in
     Stable_witness.assert_stable

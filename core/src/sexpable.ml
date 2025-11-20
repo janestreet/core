@@ -5,8 +5,11 @@ module Stable = struct
   module Of_sexpable = struct
     module%template.portable
       [@alloc a @ m = (heap_global, stack_local)] V1
-        (Sexpable : S
-      [@alloc a])
+        (Sexpable : sig
+           type t
+
+           include S [@alloc a] with type t := t
+         end)
         (M : sig
            type t
 
@@ -31,8 +34,11 @@ module Stable = struct
   module Of_sexpable1 = struct
     module%template.portable
       [@alloc a @ m = (heap_global, stack_local)] [@kind ka = (value, any)] V1
-        (Sexpable : S1
-      [@kind ka] [@alloc a])
+        (Sexpable : sig
+           type ('a : ka) t
+
+           include S1 [@kind ka] [@alloc a] with type ('a : ka) t := ('a : ka) t
+         end)
         (M : sig
            type ('a : ka) t
 
@@ -59,8 +65,14 @@ module Stable = struct
     module%template.portable
       [@alloc a @ m = (heap_global, stack_local)]
       [@kind ka = (value, any), kb = (value, any)] V1
-        (Sexpable : S2
-      [@kind ka kb] [@alloc a])
+        (Sexpable : sig
+           type ('a : ka, 'b : kb) t
+
+           include
+             S2
+             [@kind ka kb] [@alloc a]
+             with type ('a : ka, 'b : kb) t := ('a : ka, 'b : kb) t
+         end)
         (M : sig
            type ('a : ka, 'b : kb) t
 
@@ -91,8 +103,14 @@ module Stable = struct
     module%template.portable
       [@alloc a @ m = (heap_global, stack_local)]
       [@kind ka = (value, any), kb = (value, any), kc = (value, any)] V1
-        (Sexpable : S3
-      [@kind ka kb kc] [@alloc a])
+        (Sexpable : sig
+           type ('a : ka, 'b : kb, 'c : kc) t
+
+           include
+             S3
+             [@kind ka kb kc] [@alloc a]
+             with type ('a : ka, 'b : kb, 'c : kc) t := ('a : ka, 'b : kb, 'c : kc) t
+         end)
         (M : sig
            type ('a : ka, 'b : kb, 'c : kc) t
 
@@ -156,14 +174,22 @@ module Stable = struct
   end
 
   module To_stringable = struct
-    module%template.portable V1 (M : S) : Stringable.S with type t := M.t = struct
+    module%template.portable V1 (M : sig
+        type t
+
+        include S with type t := t
+      end) : Stringable.S with type t := M.t = struct
       let of_string x = Sexplib.Conv.of_string__of__of_sexp M.t_of_sexp x
       let to_string x = Sexplib.Conv.string_of__of__sexp_of M.sexp_of_t x
     end
   end
 
   module To_stringable_utf8 = struct
-    module%template.portable V1 (M : S) : Stringable.S with type t := M.t = struct
+    module%template.portable V1 (M : sig
+        type t
+
+        include S with type t := t
+      end) : Stringable.S with type t := M.t = struct
       let of_string x = Sexplib.Conv.of_string__of__of_sexp M.t_of_sexp x
 
       let to_string x =

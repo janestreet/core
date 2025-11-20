@@ -105,7 +105,7 @@ module Stable = struct
         end)
 
       (* this prevents any worry about having these very common names redefined below and
-         makes their usage within this module safer.  Constant is included at the very
+         makes their usage within this module safer. Constant is included at the very
          bottom to re-export these constants in a more convenient way *)
       module Constant = struct
         let nanoseconds_per_second = 1E9
@@ -328,8 +328,8 @@ module Stable = struct
 
     let string ~is_v2 suffix float =
       if is_v2
-         (* This is the same float-to-string conversion used in [Float.sexp_of_t].  It's like
-         [Float.to_string], but may leave off trailing period. *)
+         (* This is the same float-to-string conversion used in [Float.sexp_of_t]. It's
+            like [Float.to_string], but may leave off trailing period. *)
       then (Dynamic.get Sexplib.Conv.default_string_of_float) float ^ suffix
       else sprintf "%g%s" float suffix
     ;;
@@ -642,10 +642,9 @@ module Stable = struct
       let to_int_string_and_sum unit_of_time ~abs_t ~sum_t =
         let unit_span = of_unit_of_time unit_of_time in
         let rem_t = abs_t - sum_t in
-        (* We calculate the approximate multiple of [unit_of_time] that needs to be
-           added to [sum_t]. Due to rounding, this can be off by one (we've never seen a
-           case off by two or more), so we re-compute the remainder and correct if
-           necessary. *)
+        (* We calculate the approximate multiple of [unit_of_time] that needs to be added
+           to [sum_t]. Due to rounding, this can be off by one (we've never seen a case
+           off by two or more), so we re-compute the remainder and correct if necessary. *)
         let magnitude = Float.round_down (rem_t // unit_span) in
         let new_sum_t = sum ~sum_t ~unit_of_time ~magnitude in
         let new_rem_t = abs_t - new_sum_t in
@@ -858,12 +857,11 @@ module C = struct
 
   let comparator = T.comparator
 
-  (* In 108.06a and earlier, spans in sexps of Maps and Sets were raw floats.  From 108.07
+  (* In 108.06a and earlier, spans in sexps of Maps and Sets were raw floats. From 108.07
      through 109.13, the output format remained raw as before, but both the raw and pretty
-     format were accepted as input.  From 109.14 on, the output format was changed from
-     raw to pretty, while continuing to accept both formats.  Once we believe most
-     programs are beyond 109.14, we will switch the input format to no longer accept
-     raw. *)
+     format were accepted as input. From 109.14 on, the output format was changed from raw
+     to pretty, while continuing to accept both formats. Once we believe most programs are
+     beyond 109.14, we will switch the input format to no longer accept raw. *)
   let sexp_of_t = sexp_of_t
 
   let t_of_sexp sexp =

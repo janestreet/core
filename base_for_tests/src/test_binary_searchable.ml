@@ -131,7 +131,7 @@ module Test_gen (M : Indexable_gen_and_for_test) = struct
       binary_search arr ~compare `Last_strictly_less_than b = Some 50_000
     ;;
 
-    (* tests around a gap*)
+    (* tests around a gap *)
     let%test _ =
       let arr = create_deterministic_test () in
       binary_search arr ~compare `First_equal_to b = Some 50_001
@@ -232,7 +232,7 @@ module Test_gen (M : Indexable_gen_and_for_test) = struct
           let arr = Array.init length ~f:(fun i -> if i < num_s then s else b) in
           for pos = -1 to length do
             for len = -1 to length + 1 do
-              (*try*)
+              (* try *)
               let should_raise =
                 Exn.does_raise (fun () ->
                   Ordered_collection_common.check_pos_len_exn
@@ -260,11 +260,10 @@ module Test_gen (M : Indexable_gen_and_for_test) = struct
                   else Some searched
                 in
                 if not (correct_result = result) then failwith "Wrong result"
-              (*with exn ->
-                    failwiths "binary_search bug"
-                    (exn, `length length, `search_key search_key, `pos pos, `len len)
-                    <:sexp_of< exn * [ `length of int ] * [ `search_key of int ]
-                   * [ `pos of int ] * [ `len of int ] >>*)
+              (* with exn -> failwiths "binary_search bug" (exn, `length length,
+                 `search_key search_key, `pos pos, `len len) <:sexp_of< exn *
+                 [ `length of int ] * [ `search_key of int ] * [ `pos of int ] *
+                 [ `len of int ] >> *)
             done
           done
         done
@@ -276,7 +275,7 @@ module Test_gen (M : Indexable_gen_and_for_test) = struct
       [%globalize: int option] r [@nontail]
     ;;
 
-    (*test for binary_search_segmented*)
+    (* test for binary_search_segmented *)
     let%test _ =
       let arr = create_deterministic_test () in
       let segment_of x = if x = b then `Right else `Left in

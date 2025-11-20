@@ -6,8 +6,8 @@ open Bigarray
 [@@@mode.default m = (global, local)]
 
 module type Conv_without_uuid = sig
-  type binable
-  type t
+  type binable : value_or_null
+  type t : value_or_null
 
   val to_binable : t @ m -> binable @ m [@@mode m = (global, m)]
   val of_binable : binable -> t
@@ -22,8 +22,8 @@ end
 [@@@kind.default ka = (value, any)]
 
 module type Conv1_without_uuid = sig
-  type ('a : ka) binable
-  type ('a : ka) t
+  type ('a : ka) binable : value_or_null
+  type ('a : ka) t : value_or_null
 
   val to_binable : ('a : ka). 'a t @ m -> 'a binable @ m [@@mode m = (global, m)]
   val of_binable : ('a : ka). 'a binable -> 'a t
@@ -38,8 +38,8 @@ end
 [@@@kind.default kb = (value, any)]
 
 module type Conv2_without_uuid = sig
-  type ('a : ka, 'b : kb) binable
-  type ('a : ka, 'b : kb) t
+  type ('a : ka, 'b : kb) binable : value_or_null
+  type ('a : ka, 'b : kb) t : value_or_null
 
   val to_binable : ('a : ka) ('b : kb). ('a, 'b) t @ m -> ('a, 'b) binable @ m
   [@@mode m = (global, m)]
@@ -56,8 +56,8 @@ end
 [@@@kind.default kc = (value, any)]
 
 module type Conv3_without_uuid = sig
-  type ('a : ka, 'b : kb, 'c : kc) binable
-  type ('a : ka, 'b : kb, 'c : kc) t
+  type ('a : ka, 'b : kb, 'c : kc) binable : value_or_null
+  type ('a : ka, 'b : kb, 'c : kc) t : value_or_null
 
   val to_binable
     : ('a : ka) ('b : kb) ('c : kc).
@@ -74,7 +74,9 @@ module type Conv3 = sig
 end]
 
 module type Conv_sexpable = sig
-  include Sexpable.S
+  type t : value_or_null
+
+  include Sexpable.S with type t := t
 
   val caller_identity : Bin_prot.Shape.Uuid.t
 end
@@ -221,8 +223,11 @@ module type Binable0 = sig @@ portable
   module%template.portable Of_stringable_with_uuid (M : Conv_stringable) :
     S with type t := M.t
 
-  module%template.portable Of_sexpable_without_uuid (M : Sexpable.S) :
-    S with type t := M.t
+  module%template.portable Of_sexpable_without_uuid (M : sig
+      type t : value_or_null
+
+      include Sexpable.S with type t := t
+    end) : S with type t := M.t
   [@@alert legacy "Use [Of_sexpable_with_uuid] if possible."]
 
   module%template.portable Of_stringable_without_uuid (M : Stringable.S) :
@@ -232,12 +237,13 @@ module type Binable0 = sig @@ portable
   [%%template:
   [@@@mode.default m = (global, local)]
 
-  type 'a m = ((module S with type t = 'a)[@mode m])
+  type ('a : any) m = ((module S with type t = 'a)[@mode m])
 
-  val of_bigstring : ('a m[@mode m]) -> bigstring -> 'a
+  val of_bigstring : ('a : value_or_null). ('a m[@mode m]) -> bigstring -> 'a
 
   val to_bigstring
-    :  ?prefix_with_length:bool (** defaults to false *)
+    : ('a : value_or_null).
+    ?prefix_with_length:bool (** defaults to false *)
     -> ('a m[@mode m])
     -> 'a @ m
     -> bigstring]
@@ -322,6 +328,6 @@ module type Binable = sig @@ portable
   [%%template:
   [@@@mode.default m = (global, local)]
 
-  val of_string : ('a m[@mode m]) -> string @ local -> 'a
-  val to_string : ('a m[@mode m]) -> 'a @ m -> string]
+  val of_string : ('a : value_or_null). ('a m[@mode m]) -> string @ local -> 'a
+  val to_string : ('a : value_or_null). ('a m[@mode m]) -> 'a @ m -> string]
 end

@@ -181,7 +181,7 @@ let closing = function
   | _ -> assert false
 ;;
 
-(* opening and closing: open and close characters, typically ( and )
+(*=opening and closing: open and close characters, typically ( and )
    k: balance of opening and closing chars
    s: the string where we are searching
    start: the index where we start the search. *)
@@ -263,8 +263,7 @@ let find_ident s start =
     String.sub s ~pos:start ~len:(stop - start), stop
 ;;
 
-(* Substitute $ident, $(ident), or ${ident} in s,
-   according to the function mapping f. *)
+(* Substitute $ident, $(ident), or $[{ident}] in s, according to the function mapping f. *)
 let add_substitute buf f s =
   let lim = String.length s in
   let rec subst previous i =

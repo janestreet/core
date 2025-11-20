@@ -130,7 +130,12 @@ module Stable = struct
   end
 
   module Of_sexpable = struct
-    module%template.portable [@modality p] V1 (M : Sexpable.S) =
+    module%template.portable
+      [@modality p] V1 (M : sig
+        type t : value_or_null
+
+        include Sexpable.S with type t := t
+      end) =
       Of_binable.V1 [@modality p]
         (struct
           type t = Base.Sexp.t =
@@ -216,9 +221,9 @@ let create_bigstring size = Array1.create Bigarray.char Bigarray.c_layout size
 [%%template
 [@@@mode.default m = (global, local)]
 
-type 'a m = ((module S with type t = 'a)[@mode m])
+type ('a : any) m = ((module S with type t = 'a)[@mode m])
 
-let of_bigstring (type a) m bigstring =
+let of_bigstring (type a : value_or_null) m bigstring =
   let module M = (val (m : (a m[@mode m]))) in
   let pos_ref = ref 0 in
   let t = M.bin_read_t bigstring ~pos_ref in
@@ -234,7 +239,7 @@ let of_bigstring (type a) m bigstring =
   t
 ;;
 
-let to_bigstring ?(prefix_with_length = false) (type a) m t =
+let to_bigstring ?(prefix_with_length = false) (type a : value_or_null) m t =
   let module M = (val (m : (a m[@mode m]))) in
   let t_length = (M.bin_size_t [@mode m]) t in
   let bigstring_length =

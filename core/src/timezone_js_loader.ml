@@ -50,8 +50,7 @@ module Zone = struct
   ;;
 end
 
-(* Mom: "we have Nonempty_list.t at home."
-   The Nonempty_list.t at home: *)
+(* Mom: "we have Nonempty_list.t at home." The Nonempty_list.t at home: *)
 type t =
   { first_transition : Timezone_types.Transition.t
   ; remaining_transitions : Timezone_types.Transition.t list
@@ -66,8 +65,8 @@ let utc_offset_s_at_instant tz instant =
 ;;
 
 let make_transition ~start_time_in_seconds_since_epoch ~utc_offset_in_seconds =
-  (* The javascript API does not have access to abbreviations.
-     Abbreviations do not appear to be used in applications.
+  (* The javascript API does not have access to abbreviations. Abbreviations do not appear
+     to be used in applications.
 
      We also don't know if the transition is caused by daylight saving time, but this
      information is never even exposed by Core.zone. *)
@@ -76,7 +75,7 @@ let make_transition ~start_time_in_seconds_since_epoch ~utc_offset_in_seconds =
 ;;
 
 let load_exn s =
-  (* From https://tc39.es/proposal-temporal/docs/instant.html:
+  (*=From https://tc39.es/proposal-temporal/docs/instant.html:
      > The range of allowed values for this type is the same as the old-style JavaScript
      > Date, 100 million (10^8) days before or after the Unix epoch. This range covers
      > approximately half a million years. If epochNanoseconds is outside of this range, a

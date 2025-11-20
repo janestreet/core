@@ -34,5 +34,5 @@ module%test _ : module type of Queue = struct
       end)
   end
 end
-(* This signature is here to remind us to update the unit tests whenever we
-      change [Queue]. *)
+(* This signature is here to remind us to update the unit tests whenever we change
+   [Queue]. *)

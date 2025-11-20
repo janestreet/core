@@ -40,7 +40,7 @@ let should_print_backtrace = Atomic.make false
 
 let am_internal here message =
   (* In this function we use [Printf.eprintf] rather than [Debug.eprintf], because the
-     former doesn't flush, while the latter does.  We'd rather flush once at the end,
+     former doesn't flush, while the latter does. We'd rather flush once at the end,
      rather than three times. *)
   Printf.eprintf "%s:\n" (Source_code_position.to_string here);
   if Atomic.get should_print_backtrace

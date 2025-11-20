@@ -10,8 +10,7 @@
 
 open! Import
 
-(*
-   {v
+(* {v
            Root
              |
            Inner
@@ -21,23 +20,20 @@ open! Import
       ...   ...   ...
    v}
 
-   We construct the `inverted' tree in the ML representation.
-   The direction of the edges is UPWARDS.
-   Starting with any ['a t] we can step directly to its parent.
-   But we can't (and don't need to) start from the root and step to its children.
+   We construct the `inverted' tree in the ML representation. The direction of the edges
+   is UPWARDS. Starting with any ['a t] we can step directly to its parent. But we can't
+   (and don't need to) start from the root and step to its children.
 *)
 
-(*
-   [rank] is an upper bound on the depth of any node in the up-tree.
+(* [rank] is an upper bound on the depth of any node in the up-tree.
 
-   Imagine an unlucky sequence of operations in which you create N
-   individual [t]-values and then union them together in such a way
-   that you always pick the root of each tree to union together, so that
-   no path compression takes place.  If you don't take care to somehow
-   balance the resulting up-tree, it is possible that you end up with one
-   big long chain of N links, and then calling [representative] on the
-   deepest node takes Theta(N) time.  With the balancing scheme of never
-   increasing the rank of a node unnecessarily, it would take O(log N).
+   Imagine an unlucky sequence of operations in which you create N individual [t]-values
+   and then union them together in such a way that you always pick the root of each tree
+   to union together, so that no path compression takes place. If you don't take care to
+   somehow balance the resulting up-tree, it is possible that you end up with one big long
+   chain of N links, and then calling [representative] on the deepest node takes Theta(N)
+   time. With the balancing scheme of never increasing the rank of a node unnecessarily,
+   it would take O(log N).
 *)
 type 'a root =
   { mutable value : 'a
@@ -62,16 +58,14 @@ let invariant _ t =
 
 let create v = { node = Root { value = v; rank = 0 } }
 
-(* invariants:
-   [inner.node] = [inner_node] = [Inner t].
-   [descendants] are the proper descendants of [inner] we've visited.
+(* invariants: [inner.node] = [inner_node] = [Inner t]. [descendants] are the proper
+   descendants of [inner] we've visited.
 *)
 let rec compress t ~inner_node ~inner ~descendants =
   match t.node with
   | Root r ->
-    (* t is the root of the tree.
-       Re-point all descendants directly to it by setting them to [Inner t].
-       Note: we don't re-point [inner] as it already points there. *)
+    (* t is the root of the tree. Re-point all descendants directly to it by setting them
+       to [Inner t]. Note: we don't re-point [inner] as it already points there. *)
     List.iter descendants ~f:(fun t -> t.node <- inner_node);
     t, r
   | Inner t' as node ->

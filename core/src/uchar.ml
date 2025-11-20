@@ -64,10 +64,10 @@ let%template quickcheck_generator =
   in
   (* The most common characters we expect in a unicode string are ASCII, so we weight
      those most. We then bucket unicode scalar values by the different length
-     representations they have and make sure to draw somewhat from each of the buckets.
-     We give extra weight to [four_bytes_utf8] as it's interesting for both UTF-8 and
-     UTF-16. Finally, we give special attention to the start and end of the Unicode range,
-     as is often done in Quickcheck generators. *)
+     representations they have and make sure to draw somewhat from each of the buckets. We
+     give extra weight to [four_bytes_utf8] as it's interesting for both UTF-8 and UTF-16.
+     Finally, we give special attention to the start and end of the Unicode range, as is
+     often done in Quickcheck generators. *)
   (weighted_union [@mode portable])
     [ 20., range one_byte_utf8
     ; 5., range two_bytes_utf8

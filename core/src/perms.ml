@@ -1,7 +1,7 @@
 open! Import
 module Binable = Binable0
 
-(* All the types as exposed in the mli are defined in this [Types] module.  The rest of
+(* All the types as exposed in the mli are defined in this [Types] module. The rest of
    this file is simply overriding all the bin_io, compare, and sexp functions to raise
    exceptions. *)
 module Types = struct

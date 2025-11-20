@@ -40,6 +40,63 @@ module%test [@name "nget"] _ = struct
   ;;
 end
 
+[%%template
+  let%expect_test "derivers on value_or_null" =
+    let t = [| Null; This 2; This 3; Null |] in
+    let t' = stack_ [| Null; This 2; This 3; Null |] in
+    print_s ([%sexp_of: int or_null array] t);
+    print_s ([%sexp_of: Core.Int.t Or_null.t Array.t] t);
+    [%expect
+      {|
+      (()
+       (2)
+       (3)
+       ())
+      (()
+       (2)
+       (3)
+       ())
+      |}];
+    print_s
+      ([%sexp_of: bool]
+         ([%equal: int or_null array]
+            t
+            (t |> [%sexp_of: int or_null array] |> [%of_sexp: int or_null array])));
+    print_s
+      ([%sexp_of: bool]
+         ([%equal: Core.Int.t Or_null.t Array.t]
+            t
+            (t
+             |> [%sexp_of: Core.Int.t Or_null.t Array.t]
+             |> [%of_sexp: int or_null array])));
+    [%expect
+      {|
+      true
+      true
+      |}];
+    print_s ([%sexp_of: int] (([%compare: int or_null array] [@mode local]) t t'));
+    [%expect {| 0 |}];
+    t'.(0) <- This 1;
+    print_s
+      ([%sexp_of: int] (([%compare: Core.Int.t Or_null.t Array.t] [@mode local]) t t'));
+    [%expect {| -1 |}];
+    print_s ([%sexp_of: int or_null array] ([%globalize: int or_null array] t'));
+    print_s
+      ([%sexp_of: Core.Int.t Or_null.t Array.t]
+         ([%globalize: Core.Int.t Or_null.t Array.t] t'));
+    [%expect
+      {|
+      ((1)
+       (2)
+       (3)
+       ())
+      ((1)
+       (2)
+       (3)
+       ())
+      |}]
+  ;;]
+
 module%test Array_tests = struct
   module Generator = Base_quickcheck.Generator
   module Int = Core.Int

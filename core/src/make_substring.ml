@@ -1,5 +1,5 @@
-(* A substring is a contiguous sequence of characters in a string.  We use a
-   functor because we want substrings of [string] and [bigstring].
+(* A substring is a contiguous sequence of characters in a string. We use a functor
+   because we want substrings of [string] and [bigstring].
 *)
 
 open! Import
@@ -52,8 +52,9 @@ module%template.portable [@modality p] F (Underlying : Base) :
        let invariant t =
          assert (0 <= t.pos);
          assert (0 <= t.len);
-         assert (t.pos + t.len <= Base.length t.base);
-       ;; ]} *)
+         assert (t.pos + t.len <= Base.length t.base)
+       ;;
+     ]} *)
 
   let base t = t.base
   let pos t = t.pos

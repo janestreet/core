@@ -9,8 +9,8 @@ module%test [@name "can contain nulls"] _ = struct
   let _ = Ok Null
   let _ = Error Null
 
-  (* In Core, but not Base, the [Result.Export] module is also included at toplevel.
-     This is the inferred type if you use the constructor without annotations. *)
+  (* In Core, but not Base, the [Result.Export] module is also included at toplevel. This
+     is the inferred type if you use the constructor without annotations. *)
   let _ : _ _result = Ok Null
   let _ : _ _result = Error Null
 

@@ -47,7 +47,7 @@ exception Break [@deprecated "[since 2021-04] Use [Sys_unix]"]
 
 (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
 
-  https://opensource.janestreet.com/standards/#private-submodules *)
+    https://opensource.janestreet.com/standards/#private-submodules *)
 module Private : sig
   val unix_quote : string -> string
 end

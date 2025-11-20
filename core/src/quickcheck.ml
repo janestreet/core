@@ -240,7 +240,9 @@ module Configure (Config : Quickcheck_config) = struct
     }
   ;;
 
-  let make_test_m (type a) ~gen ~shrinker ~sexp_of : (module Test.S with type t = a) =
+  let make_test_m (type a : value_or_null) ~gen ~shrinker ~sexp_of
+    : (module Test.S with type t = a)
+    =
     let module M = struct
       type t = a
 

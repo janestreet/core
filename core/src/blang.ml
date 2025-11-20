@@ -2,21 +2,20 @@ open! Import
 open Std_internal
 module String = Base.String
 
-(* The module [T] serves to enforce the invariant that all Blang.t values are in a
-   normal form whereby boolean constants True and False only appear as the topmost
-   constructor -- in any other position they are simplified away using laws of
-   boolean algebra.
+(* The module [T] serves to enforce the invariant that all Blang.t values are in a normal
+   form whereby boolean constants True and False only appear as the topmost constructor --
+   in any other position they are simplified away using laws of boolean algebra.
 
    We also enforce that nested [And]s and [Or]s each lean to the right so that [eval]
-   doesn't need so much stack space as it would if they leaned to the left.  Thought
+   doesn't need so much stack space as it would if they leaned to the left. Thought
    experiment: compare how [eval] works on right-leaning [And (a, And (b, And (c, d)))]
-   versus left-leaning [And (And (And (a, b), c), d)].  The former is the best case and is
+   versus left-leaning [And (And (And (a, b), c), d)]. The former is the best case and is
    enforced.
 
    Note: this file deviates from the usual pattern of modules with Stable interfaces in
-   that the Stable sub-module is not the first thing to be defined in the module.  The
+   that the Stable sub-module is not the first thing to be defined in the module. The
    reason for this deviation is so that one can convince oneself of the aforementioned
-   invariant after reading only this small amount of code.  After defining T we then
+   invariant after reading only this small amount of code. After defining T we then
    immediately define its Stable interface.
 *)
 module T : sig @@ portable
@@ -130,7 +129,7 @@ module Stable = struct
   module V1 : sig
     @@ portable
        (* THIS TYPE AND ITS SERIALIZATIONS SHOULD NEVER BE CHANGED - PLEASE SPEAK WITH
-       ANOTHER DEVELOPER IF YOU NEED MORE DETAIL *)
+          ANOTHER DEVELOPER IF YOU NEED MORE DETAIL *)
     type 'a t = 'a T.t = private
       | True
       | False
@@ -148,8 +147,8 @@ module Stable = struct
       , sexp
       , sexp_grammar]
 
-    (* the remainder of this signature consists of functions used in the definitions
-       of sexp conversions that are also useful more generally *)
+    (* the remainder of this signature consists of functions used in the definitions of
+       sexp conversions that are also useful more generally *)
 
     val and_ : 'a t list -> 'a t
     val or_ : 'a t list -> 'a t
@@ -431,8 +430,8 @@ let rec bind t ~f:k =
   | False -> get_false ()
   | Not t1 -> not_ (bind t1 ~f:k)
   (* Unfortunately we need to duplicate some of the short-circuiting from [andalso] and
-     friends here. In principle we could do something involving [Lazy.t] but the
-     overhead probably wouldn't be worth it. *)
+     friends here. In principle we could do something involving [Lazy.t] but the overhead
+     probably wouldn't be worth it. *)
   | And (t1, t2) ->
     (match bind t1 ~f:k with
      | False -> get_false ()

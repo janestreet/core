@@ -58,7 +58,7 @@ Error: This expression has type
        Types for tag `Who_can_write are incompatible
 |}]
 
-(* The following tests are not tests of things that we don't want to compile.  They
+(* The following tests are not tests of things that we don't want to compile. They
    document reasons why we didn't use constraints in the usage of the new permission
    types, and if they ever start compiling, we might want to revisit them.
 *)
@@ -85,8 +85,8 @@ Error: In this with constraint, the new definition of t
          type ('a, -'perm) t
        Their parameters differ:
        The type [< 'a perms ] is not equal to the type 'perm
-       File "permissions.mlt", line 75, characters 2-21: Expected declaration
-       File "permissions.mlt", line 82, characters 33-68: Actual declaration
+       File "permissions.mlt", line 74, characters 2-21: Expected declaration
+       File "permissions.mlt", line 81, characters 33-68: Actual declaration
 |}]
 
 (* Constraints don't work with included signatures, part 2 *)
@@ -114,9 +114,9 @@ Error: In this with constraint, the new definition of t
        The type [< `Read | `Who_can_write of 'a & 'b ]
        is not equal to the type [< 'a perms ]
        Types for tag `Who_can_write are incompatible
-       File "permissions.mlt", line 101, characters 2-53:
+       File "permissions.mlt", line 100, characters 2-53:
          Expected declaration
-       File "permissions.mlt", line 108, characters 33-68: Actual declaration
+       File "permissions.mlt", line 107, characters 33-68: Actual declaration
 |}]
 
 (* Situation where constraints do work with type aliases *)

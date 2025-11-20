@@ -197,7 +197,7 @@ let round_down t ~interval ~calling_function_name =
     ~interval
 ;;
 
-let round_up_to = round_up ~calling_function_name:"round_up_to"
+let round_up_to t ~interval = round_up t ~interval ~calling_function_name:"round_up_to"
 
 let round_up_to_us t =
   round_up t ~interval:Span.microsecond ~calling_function_name:"round_up_to_us"
@@ -211,7 +211,9 @@ let round_up_to_sec t =
   round_up t ~interval:Span.second ~calling_function_name:"round_up_to_sec"
 ;;
 
-let round_down_to = round_down ~calling_function_name:"round_down_to"
+let round_down_to t ~interval =
+  round_down t ~interval ~calling_function_name:"round_down_to"
+;;
 
 let round_down_to_us t =
   round_down t ~interval:Span.microsecond ~calling_function_name:"round_down_to_us"
@@ -526,8 +528,8 @@ module To_and_of_string : sig @@ portable
     -> zone:Zone.t
     -> t
 end = struct
-  (* this code is directly duplicated from Time_float0.ml, converted enough to get
-     Time_ns to/of_string working *)
+  (* this code is directly duplicated from Time_float0.ml, converted enough to get Time_ns
+     to/of_string working *)
   module Date_and_ofday = struct
     type t = Int63.t
 
@@ -591,11 +593,11 @@ end = struct
 
   module Zone : sig
     @@ portable
-       (* This interface is directly duplicated from Time_intf.Zone, converted enough to get
-       this to work.
+       (* This interface is directly duplicated from Time_intf.Zone, converted enough to
+          get this to work.
 
-       The problem is has references to Time0_intf.S, which is the functor input interface
-       that Time_ns currently does not satisfy. *)
+          The problem is has references to Time0_intf.S, which is the functor input
+          interface that Time_ns currently does not satisfy. *)
     type time = t
     type t = Zone.t [@@deriving sexp_of]
 
@@ -732,7 +734,7 @@ end = struct
   ;;
 
   let of_date_ofday_precise date ofday ~zone =
-    (* We assume that there will be only one zone shift within a given local day.  *)
+    (* We assume that there will be only one zone shift within a given local day. *)
     let start_of_day = of_date_ofday ~prefer:Earlier ~zone date Ofday_ns.start_of_day in
     let proposed_time = add start_of_day (Ofday_ns.to_span_since_start_of_day ofday) in
     match Zone.next_clock_shift_incl zone ~at_or_after:start_of_day with
@@ -780,19 +782,18 @@ end = struct
 
   let to_date_ofday time ~zone = to_date time ~zone, to_ofday time ~zone
 
-  (* The correctness of this algorithm (interface, even) depends on the fact that
-     timezone shifts aren't too close together (as in, it can't simultaneously be the
-     case that a timezone shift of X hours occurred less than X hours ago, *and*
-     a timezone shift of Y hours will occur in less than Y hours' time) *)
+  (* The correctness of this algorithm (interface, even) depends on the fact that timezone
+     shifts aren't too close together (as in, it can't simultaneously be the case that a
+     timezone shift of X hours occurred less than X hours ago, *and* a timezone shift of Y
+     hours will occur in less than Y hours' time) *)
   let to_date_ofday_precise time ~zone =
     let date, ofday = to_date_ofday time ~zone in
     let clock_shift_after = Zone.next_clock_shift zone ~strictly_after:time in
     let clock_shift_before_or_at = Zone.prev_clock_shift zone ~at_or_before:time in
     let also_skipped_earlier amount =
-      (* Using [date] and raising on [None] here is OK on the assumption that clock
-         shifts can't cross date boundaries. This is true in all cases I've ever heard
-         of (and [of_date_ofday_precise] would need revisiting if it turned out to be
-         false) *)
+      (* Using [date] and raising on [None] here is OK on the assumption that clock shifts
+         can't cross date boundaries. This is true in all cases I've ever heard of (and
+         [of_date_ofday_precise] would need revisiting if it turned out to be false) *)
       match Ofday_ns.sub ofday amount with
       | Some ofday -> `Also_skipped (date, ofday)
       | None ->
@@ -806,8 +807,8 @@ end = struct
       (* Edge cases: the instant of transition belongs to the new zone regime. So if the
          clock moved by an hour exactly one hour ago, there's no ambiguity, because the
          hour-ago time belongs to the same regime as you, and conversely, if the clock
-         will move by an hour in an hours' time, there *is* ambiguity. Hence [>.] for
-         the first case and [<=.] for the second. *)
+         will move by an hour in an hours' time, there *is* ambiguity. Hence [>.] for the
+         first case and [<=.] for the second. *)
       match clock_shift_before_or_at, clock_shift_after with
       | Some (start, amount), _ when add start (Span.abs amount) > time ->
         (* clock shifted recently *)
@@ -1704,31 +1705,28 @@ module O = struct
   let[@zero_alloc strict] ( - ) = [%eta2 diff]
 end
 
-(*
-   Dropping Time in favor of Time_ns is possible and has been discussed, but we have
+(* Dropping Time in favor of Time_ns is possible and has been discussed, but we have
    chosen not to do so at this time for a few reasons:
 
-   - It's a lot of work.  All functions over Time, including the related
-     modules Date, Ofday, Zone, Span, Schedule have to be converted to Time_ns
-     space.  This is largely mechanical, but will create a lot of churn within
-     the modules and possibly externally where the floatiness of the Time world
-     leaks out.
+   - It's a lot of work. All functions over Time, including the related modules Date,
+     Ofday, Zone, Span, Schedule have to be converted to Time_ns space. This is largely
+     mechanical, but will create a lot of churn within the modules and possibly externally
+     where the floatiness of the Time world leaks out.
 
-   - It's of limited utility compared to other things we could be working on.
-     Time math would be easier to understand and somewhat faster, but very few
-     modules/programs would benefit from faster time math.  Those that do can
-     use Time_ns already for the most part.
+   - It's of limited utility compared to other things we could be working on. Time math
+     would be easier to understand and somewhat faster, but very few modules/programs
+     would benefit from faster time math. Those that do can use Time_ns already for the
+     most part.
 
-   - Having Time_ns and a conversion function already gives the bulk of the
-     value to programs that want a fast, non-allocating version of [Time.now].
-     Indeed, many remaining unconverted functions
+   - Having Time_ns and a conversion function already gives the bulk of the value to
+     programs that want a fast, non-allocating version of [Time.now]. Indeed, many
+     remaining unconverted functions
 
-   - We aren't certain about how the boundaries around Time_ns will affect the
-     external viability of Core.  Internally we don't think being limited to
-     a smaller time range is an issue, and really far off times are better
-     represented as (Date.t * Ofday.t), but it is still a restriction.  This
-     pushback is probably minimal and, if we could get over the work concerns,
-     could be eliminated.
+   - We aren't certain about how the boundaries around Time_ns will affect the external
+     viability of Core. Internally we don't think being limited to a smaller time range is
+     an issue, and really far off times are better represented as (Date.t * Ofday.t), but
+     it is still a restriction. This pushback is probably minimal and, if we could get
+     over the work concerns, could be eliminated.
 
    - Converting between Time and Time_ns when you use libraries based on different ones
      isn't so bad. (?)

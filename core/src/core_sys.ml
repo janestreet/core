@@ -10,7 +10,7 @@ let unix_quote x =
        | '_' | '-' | ':' | '.' | '/' | ',' | '+' | '=' | '%' | '@' -> true
        | _ -> false)
   then (
-    (* Shell keywords, as output by [compgen -k] for bash, [man dash] for dash, and [PATH=
+    (*=Shell keywords, as output by [compgen -k] for bash, [man dash] for dash, and [PATH=
        type -m '*' | grep reserved] for zsh, except for keywords that have special
        characters like [[. Note that builtins don't matter because 'alias' and alias
        behave the same, unlike 'if' and if. *)

@@ -402,8 +402,8 @@ module Provide_stable_witness (Elt : sig
     type comparator_witness
   end) =
 struct
-  (* The binary representation of set is used in the stable modules below, so it's
-     assumed to be stable (if the elt is stable). *)
+  (* The binary representation of set is used in the stable modules below, so it's assumed
+     to be stable (if the elt is stable). *)
   let stable_witness : (Elt.t, Elt.comparator_witness) t Stable_witness.t =
     let (_ : Elt.t Stable_witness.t) = Elt.stable_witness in
     Stable_witness.assert_stable

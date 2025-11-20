@@ -981,7 +981,7 @@ wrap (fun ~run ~main ->
 
   (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
 
-    https://opensource.janestreet.com/standards/#private-submodules *)
+      https://opensource.janestreet.com/standards/#private-submodules *)
   module Private : sig
     val abs_path : dir:string -> string -> string
     val word_wrap : string -> int -> string list

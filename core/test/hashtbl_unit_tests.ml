@@ -363,8 +363,8 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
       let invariant = Hashtbl.invariant
 
       (* This test is mostly validating constructors, making sure all of them satisfy
-            [invariant] and that we have correctly constructed corresponding hash tables
-            and maps. *)
+         [invariant] and that we have correctly constructed corresponding hash tables and
+         maps. *)
       let%test_unit _ =
         Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
           let map, t = map_and_table constructor in
@@ -2060,8 +2060,8 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_for_testing) = struct
     ;;
 
     (* we do not test [validate], which should never raise externally, but which may go
-          from pass to fail if the callback mutates, so it does not fit the normal
-          criteria used by tests above *)
+       from pass to fail if the callback mutates, so it does not fit the normal criteria
+       used by tests above *)
 
     let validate = Hashtbl.validate
 
@@ -2196,10 +2196,8 @@ let%expect_test ("bin_io functions do not allocate" [@tags "fast-flambda2"]) =
   let pos_ref = ref 0 in
   let _ : unit M(Unit).t =
     Expect_test_helpers_core.require_allocation_does_not_exceed
-      (* 6 words for the table record +
-         2 words for the array containing the node +
-         3 words for the [Leaf] node +
-         3 words for the [(), ()] key-value pair *)
+      (* 6 words for the table record + 2 words for the array containing the node + 3
+         words for the [Leaf] node + 3 words for the [(), ()] key-value pair *)
       (Minor_words 14)
       ~here:[%here]
       (fun () -> [%bin_read: unit M(Unit).t] buf ~pos_ref)

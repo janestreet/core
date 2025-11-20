@@ -150,9 +150,8 @@ let%expect_test ("bin_io functions do not allocate" [@tags "fast-flambda2"]) =
   let pos_ref = ref 0 in
   let _ : unit M(Unit).t =
     Expect_test_helpers_core.require_allocation_does_not_exceed
-      (* 3 words for the map record +
-         3 words for the [Leaf] node +
-         3 words for the [(), ()] key-value pair *)
+      (* 3 words for the map record + 3 words for the [Leaf] node + 3 words for the
+         [(), ()] key-value pair *)
       (Minor_words 9)
       ~here:[%here]
       (fun () -> [%bin_read: unit M(Unit).t] buf ~pos_ref)

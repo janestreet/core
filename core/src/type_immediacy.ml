@@ -196,7 +196,7 @@ module Computation_impl = struct
   let list _ = list
 
   (* An [a Lazy.t] might be a boxed closure, so must have immediacy either [Never] or
-     [Sometimes].  An [a Lazy.t] value could be immediate if [a] is immediate.  But if [a]
+     [Sometimes]. An [a Lazy.t] value could be immediate if [a] is immediate. But if [a]
      is never immediate, then [a Lazy.t] cannot be. *)
   let lazy_t t =
     let immediacy =
@@ -335,7 +335,7 @@ struct
   let rn = Typerep.String
 
   (* Each of the [For_all_parameters_*] functors works by instantiating the n-ary type
-     with all [Always] types, and then with all [Never] types.  If those produce the same
+     with all [Always] types, and then with all [Never] types. If those produce the same
      immediacy, then we conclude that the n-ary type is independent of its arguments. *)
 
   module For_all_parameters_S1 (X : Typerepable.S1) = struct

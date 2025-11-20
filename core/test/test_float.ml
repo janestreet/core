@@ -141,7 +141,7 @@ let%test _ = not (Float.( < ) Float.nan 0.)
 
 (* When we put a similar in base/test, it doesn't behave the same, and undesirable
    versions of [Float.is_positive] that allocate when we put the test here don't allocate
-   when we put the test there.  So, we put the test here. *)
+   when we put the test there. So, we put the test here. *)
 let%expect_test (_ [@tags "64-bits-only", "x-library-inlining-sensitive"]) =
   let a = [| 1. |] in
   (* a.(0) is unboxed *)
@@ -184,7 +184,7 @@ module%test [@name "round_significant"] _ = struct
       (round_significant ~significant_digits:16 (-129361178280336660.))
       ~expect:(-129361178280336700.);
     (* An example where it appears like we don't round to even (since the argument is
-         under-represented as a float). *)
+       under-represented as a float). *)
     [%test_result: float]
       (round_significant ~significant_digits:11 4.36083208835)
       ~expect:4.3608320883
@@ -318,7 +318,7 @@ let%expect_test (_ [@tags "64-bits-only"]) =
 ;;
 
 (* We have to carefully allow the compiler to unbox t.(0) to test that each function
-   doesn't force it to re-box the float.  We need the extra fun per function to allow the
+   doesn't force it to re-box the float. We need the extra fun per function to allow the
    compiler to inline each one separately around t.(0). *)
 let%expect_test ("iround does not force re-boxing" [@tags "x-library-inlining-sensitive"])
   =
@@ -333,11 +333,11 @@ let%expect_test ("iround does not force re-boxing" [@tags "x-library-inlining-se
             let scale = 10. ** float e in
             for _ = 0 to 14_000 do
               let t = [| Random.float scale -. (scale /. 2.) |] in
-              (* When the result doesn't fit, [f] will raise.  In that case, we allow
+              (* When the result doesn't fit, [f] will raise. In that case, we allow
                  allocation, so we don't check anything here.
 
                  We manually check the Gc stats rather than use [require_no_allocation],
-                 because the latter is too slow to use thousands of times in a loop.  *)
+                 because the latter is too slow to use thousands of times in a loop. *)
               match
                 let minor_before = Gc.minor_words () in
                 let major_before = Gc.major_words () in
@@ -347,7 +347,7 @@ let%expect_test ("iround does not force re-boxing" [@tags "x-library-inlining-se
                 ( `minor (Int.( - ) minor_after minor_before)
                 , `major (Int.( - ) major_after major_before) )
               with
-              (* When the result doesn't fit, [f] will raise.  In that case, we allow
+              (* When the result doesn't fit, [f] will raise. In that case, we allow
                  allocation, so we don't check anything here. *)
               | exception _ -> ()
               | `minor minor, `major major ->

@@ -5,8 +5,7 @@ open! Int.Replace_polymorphic_compare
 module Span = Span_float
 module String = Base.String
 
-(* Create an abstract type for Ofday to prevent us from confusing it with
-   other floats.
+(* Create an abstract type for Ofday to prevent us from confusing it with other floats.
 *)
 module Stable = struct
   module V1 = struct
@@ -223,9 +222,9 @@ module Stable = struct
         let ofday1 = Span.to_sec (T.to_span_since_start_of_day ofday1) in
         let ofday2 = Span.to_sec (T.to_span_since_start_of_day ofday2) in
         let diff = ofday1 -. ofday2 in
-        (*  d1 is in (-hour; hour) *)
+        (* d1 is in (-hour; hour) *)
         let d1 = Float.mod_float diff hour in
-        (*  d2 is in (0;hour) *)
+        (* d2 is in (0;hour) *)
         let d2 = Float.mod_float (d1 +. hour) hour in
         let d = if Float.( > ) d2 (hour /. 2.) then d2 -. hour else d2 in
         Span.of_sec d

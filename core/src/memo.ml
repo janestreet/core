@@ -75,9 +75,9 @@ let general ?hashable ?cache_size_bound f =
        recursive f_onestep
    ]}
 
-   we want to compute [data] immediately. If we had [fun x -> f_onestep (force memoized)
-   x] below, we'd recompute [data] each time the user calls [f] on an argument that hadn't
-   yet been memoized. *)
+   we want to compute [data] immediately. If we had
+   [fun x -> f_onestep (force memoized) x] below, we'd recompute [data] each time the user
+   calls [f] on an argument that hadn't yet been memoized. *)
 let recursive ~hashable ?cache_size_bound f_onestep =
   let rec memoized =
     lazy (general ~hashable ?cache_size_bound (f_onestep (fun x -> (force memoized) x)))

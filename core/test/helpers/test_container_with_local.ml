@@ -371,8 +371,8 @@ let test_indexed_container_with_creators
         (fun (t, f) -> exclave_
           M.Local.map_to_global t ~f:(fun elt -> f ([%globalize: int M.elt] elt)))
         (fun (t, f) -> M.Global.map t ~f)
-          (* [map_to_global] inherently allocates, so we provide a trivial function for the
-           noalloc test. *)
+          (* [map_to_global] inherently allocates, so we provide a trivial function for
+             the noalloc test. *)
         ~noalloc:(fun (t, _) -> t);
       M.Local.map_to_global
 

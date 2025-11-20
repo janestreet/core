@@ -33,15 +33,15 @@ module Toplevel_value = Base.Toplevel_value
 module With_return = Base.With_return
 module Word_size = Base.Word_size
 
-(* We do include [Base]'s top-level value and type bindings, because they don't cause
-   any confusion, and duplicating them would be error prone. *)
+(* We do include [Base]'s top-level value and type bindings, because they don't cause any
+   confusion, and duplicating them would be error prone. *)
 include Base.Export
 include Stdio
 include Base_for_tests
 include Bin_prot.Std
 include Stable_witness.Export
 module Field = Fieldslib.Field
-module Mutex = Basement.Blocking_sync.Mutex [@@alert "-deprecated"]
+module Mutex = Capsule.Blocking_sync.Mutex [@@alert "-deprecated"]
 
 module From_sexplib : sig @@ portable
   type bigstring = Sexplib.Conv.bigstring [@@deriving sexp]
@@ -49,7 +49,7 @@ module From_sexplib : sig @@ portable
   type vec = Sexplib.Conv.vec [@@deriving sexp]
 
   (* [sexp_of_opaque] and [opaque_of_sexp] are used by the code generated from
-     [[@@deriving sexp]], [[%sexp_of: ]], and [[%of_sexp: ]].  The type [_ sexp_opaque]
+     [[@@deriving sexp]], [[%sexp_of: ]], and [[%of_sexp: ]]. The type [_ sexp_opaque]
      expands to uses of [sexp_of_opaque] and [opaque_of_sexp]. *)
 
   val sexp_of_opaque : _ -> Base.Sexp.t
@@ -67,9 +67,8 @@ end =
 include From_sexplib
 
 (* [sexp_opaque] indicates to [ppx_sexp_conv] that a value should be rendered as [_], i.e.
-   [Sexp.Atom "_"].  Here we expose the [@@deriving] aspects of [sexp_opaque] so that
-   other ppx's treat [sexp_opaque] correctly, by ignoring it and processing the underlying
-   type. *)
+   [Sexp.Atom "_"]. Here we expose the [@@deriving] aspects of [sexp_opaque] so that other
+   ppx's treat [sexp_opaque] correctly, by ignoring it and processing the underlying type. *)
 include (
 struct
   type 'a sexp_opaque = 'a [@@deriving bin_io, compare ~localize, hash, typerep]

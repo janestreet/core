@@ -296,9 +296,9 @@ include%template Diffable.Atomic.Make [@modality portable] (T)
 module Stable = struct
   module V1_without_Map_and_Set = struct
     (* There is no simple, pristine implementation of "stable time", and in fact
-       [Time.Stable.V1] has always called out to "unstable" string conversions.
-       For a complicated "stable" story like this, we rely on comprehensive tests
-       of stability; see [lib/core/test/src/test_time.ml]. *)
+       [Time.Stable.V1] has always called out to "unstable" string conversions. For a
+       complicated "stable" story like this, we rely on comprehensive tests of stability;
+       see [lib/core/test/src/test_time.ml]. *)
     include T_without_Map_and_Set
 
     include%template Diffable.Atomic.Make [@modality portable] (T)

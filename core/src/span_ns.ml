@@ -12,7 +12,7 @@ let arch_sixtyfour = Int.equal Sys.word_size_in_bits 64
 let round_nearest_ns = Float.int63_round_nearest_exn
 let[@inline] float x = Int63.to_float x
 
-(* [Span] is basically a [Int63].  It even silently ignores overflow. *)
+(* [Span] is basically a [Int63]. It even silently ignores overflow. *)
 module T = struct
   type t = Int63.t
   (* nanoseconds *)
@@ -510,12 +510,11 @@ module Stable0 = struct
         let to_string = To_string.to_string
 
         module Of_string = struct
-          (* We do computations using negative numbers everywhere and test against
-             things related to [Int63.min_value] rather than using positive numbers
-             and testing against things related to [Int63.max_value] because the
-             negative integer range is one wider than the positive integer range
-             (-2**63 vs 2**63-1), and we need that to be able to handle Int63.min_value
-             nicely. *)
+          (* We do computations using negative numbers everywhere and test against things
+             related to [Int63.min_value] rather than using positive numbers and testing
+             against things related to [Int63.max_value] because the negative integer
+             range is one wider than the positive integer range (-2**63 vs 2**63-1), and
+             we need that to be able to handle Int63.min_value nicely. *)
 
           let int63_10 = Int63.of_int 10
           let min_mult10_without_underflow = Int63.(min_value / int63_10)
@@ -761,8 +760,8 @@ include%template Comparable.With_zero [@modality portable] (struct
 (* Functions required by [Robustly_comparable]: allows for [robust_comparison_tolerance]
    granularity.
 
-   A microsecond is a reasonable granularity because there is very little network
-   activity that can be measured to sub-microsecond resolution. *)
+   A microsecond is a reasonable granularity because there is very little network activity
+   that can be measured to sub-microsecond resolution. *)
 let robust_comparison_tolerance = microsecond
 let ( >=. ) t u = t >= Int63.(u - robust_comparison_tolerance)
 let ( <=. ) t u = t <= Int63.(u + robust_comparison_tolerance)
@@ -886,8 +885,8 @@ let of_span_float_round_nearest_microsecond s =
   if Span_float.( > ) s max_span_float_value_for_1us_rounding
      || Span_float.( < ) s min_span_float_value_for_1us_rounding
   then failwiths "Time_ns.Span does not support this span" s [%sexp_of: Span_float.t];
-  (* Using [Time.Span.to_sec] (being the identity) so that
-     we make don't apply too many conversion
+  (* Using [Time.Span.to_sec] (being the identity) so that we make don't apply too many
+     conversion
      - Too many : `[Span.t] -> [a] -> [t]`
      - Only One : `[Span.t]==[a] -> [t]`. *)
   of_sec_with_microsecond_precision (Span_float.to_sec s)

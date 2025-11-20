@@ -193,19 +193,18 @@ module Make (Time0 : Time0_intf.S) () = struct
 
   let to_date_ofday time ~zone = to_date time ~zone, to_ofday time ~zone
 
-  (* The correctness of this algorithm (interface, even) depends on the fact that
-     timezone shifts aren't too close together (as in, it can't simultaneously be the
-     case that a timezone shift of X hours occurred less than X hours ago, *and*
-     a timezone shift of Y hours will occur in less than Y hours' time) *)
+  (* The correctness of this algorithm (interface, even) depends on the fact that timezone
+     shifts aren't too close together (as in, it can't simultaneously be the case that a
+     timezone shift of X hours occurred less than X hours ago, *and* a timezone shift of Y
+     hours will occur in less than Y hours' time) *)
   let to_date_ofday_precise time ~zone =
     let date, ofday = to_date_ofday time ~zone in
     let clock_shift_after = Zone.next_clock_shift zone ~strictly_after:time in
     let clock_shift_before_or_at = Zone.prev_clock_shift zone ~at_or_before:time in
     let also_skipped_earlier amount =
-      (* Using [date] and raising on [None] here is OK on the assumption that clock
-         shifts can't cross date boundaries. This is true in all cases I've ever heard
-         of (and [of_date_ofday_precise] would need revisiting if it turned out to be
-         false) *)
+      (* Using [date] and raising on [None] here is OK on the assumption that clock shifts
+         can't cross date boundaries. This is true in all cases I've ever heard of (and
+         [of_date_ofday_precise] would need revisiting if it turned out to be false) *)
       match Ofday.sub ofday amount with
       | Some ofday -> `Also_skipped (date, ofday)
       | None ->
@@ -219,8 +218,8 @@ module Make (Time0 : Time0_intf.S) () = struct
       (* Edge cases: the instant of transition belongs to the new zone regime. So if the
          clock moved by an hour exactly one hour ago, there's no ambiguity, because the
          hour-ago time belongs to the same regime as you, and conversely, if the clock
-         will move by an hour in an hours' time, there *is* ambiguity. Hence [>.] for
-         the first case and [<=.] for the second. *)
+         will move by an hour in an hours' time, there *is* ambiguity. Hence [>.] for the
+         first case and [<=.] for the second. *)
       match clock_shift_before_or_at, clock_shift_after with
       | Some (start, amount), _ when add start (Span.abs amount) >. time ->
         (* clock shifted recently *)

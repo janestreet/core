@@ -42,23 +42,6 @@ let of_bytes_int b = of_repr (Repr.of_int b)
 let of_bytes_int63 = of_repr
 let of_bytes_int64_exn b = of_repr (Repr.of_int64_exn b)
 let of_bytes_float_exn b = of_repr (Repr.of_float b)
-
-let (bytes
-  [@deprecated
-    "[since 2019-01] Use [bytes_int_exn], [bytes_int63], [bytes_int64] or [bytes_float] \
-     as appropriate."])
-  =
-  bytes_float
-;;
-
-let (of_bytes
-  [@deprecated
-    "[since 2019-01] Use [of_bytes_int], [of_bytes_int63], [of_bytes_int64_exn] or \
-     [of_bytes_float_exn] as appropriate."])
-  =
-  of_bytes_float_exn
-;;
-
 let kilobyte : t = of_bytes_int 1024
 let megabyte = iscale kilobyte 1024
 let gigabyte = iscale megabyte 1024
@@ -89,14 +72,6 @@ let of_petabytes t = Infix.( * ) petabyte t
 let of_exabytes t = Infix.( * ) exabyte t
 let of_words_int t = iscale word t
 let of_words_float_exn t = Infix.( * ) word t
-
-let (words [@deprecated "[since 2019-01] Use [words_int_exn] or [words_float]"]) =
-  words_float
-;;
-
-let (of_words [@deprecated "[since 2019-01] Use [of_words_int] or [of_words_float_exn]"]) =
-  of_words_float_exn
-;;
 
 let of_string s =
   let length = String.length s in
@@ -363,19 +338,6 @@ module Short = struct
 end
 
 let to_string_short = Short.to_string
-
-let (create
-  [@deprecated
-    "[since 2019-01] Use [of_bytes], [of_kilobytes], [of_megabytes], etc as appropriate."])
-  =
-  fun units value ->
-  match units with
-  | `Bytes -> of_bytes_float_exn value
-  | `Kilobytes -> of_kilobytes value
-  | `Megabytes -> of_megabytes value
-  | `Gigabytes -> of_gigabytes value
-  | `Words -> of_words_float_exn value
-;;
 
 include%template
   Quickcheckable.Of_quickcheckable [@modality portable]

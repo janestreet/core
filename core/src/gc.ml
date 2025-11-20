@@ -265,8 +265,8 @@ let disable_compaction ?logger ~allocation_policy () =
     | `Set_to policy -> Some policy
   in
   (* The value 1_000_000, according to
-     http://caml.inria.fr/pub/docs/manual-ocaml-4.02/libref/Gc.html
-     will disable compactions.
+     http://caml.inria.fr/pub/docs/manual-ocaml-4.02/libref/Gc.html will disable
+     compactions.
   *)
   tune ?logger ?allocation_policy ~max_overhead:1_000_000 ()
 ;;
@@ -303,8 +303,8 @@ let stat_size () = Portable_lazy.force stat_size_lazy
 let zero = Sys.opaque_identity (int_of_string "0")
 let compact_if_not_running_test () = if not am_running_test then compact ()
 
-(* The compiler won't optimize int_of_string away so it won't
-   perform constant folding below. *)
+(* The compiler won't optimize int_of_string away so it won't perform constant folding
+   below. *)
 let rec keep_alive o = if zero <> 0 then keep_alive (Sys.opaque_identity o)
 
 module For_testing = struct
@@ -332,7 +332,7 @@ module For_testing = struct
   type memprof = Stdlib.Gc.Memprof.t
 
   [%%template
-  [@@@kind.default k = base]
+  [@@@kind.default k = base_or_null]
 
   type ('a : k) globl = { global_ g : 'a } [@@unboxed]
 
@@ -438,9 +438,9 @@ module For_testing = struct
       let result =
         match f () with
         | x ->
-          (* Memprof.stop does not guarantee that all memprof callbacks are run (some may be
-             delayed if they happened during C code and there has been no allocation since),
-             so we explictly flush them *)
+          (* Memprof.stop does not guarantee that all memprof callbacks are run (some may
+             be delayed if they happened during C code and there has been no allocation
+             since), so we explictly flush them *)
           run_memprof_callbacks ();
           Memprof.stop ();
           x
@@ -506,14 +506,13 @@ module Expert = struct
   let add_finalizer x f =
     try Stdlib.Gc.finalise (fun x -> Exn.handle_uncaught_and_exit (fun () -> f x)) x with
     | Invalid_argument _ ->
-      (* The type of add_finalizer ensures that the only possible failure
-         is due to [x] being static data. In this case, we simply drop the
-         finalizer since static data would never have been collected by the
-         GC anyway. *)
+      (* The type of add_finalizer ensures that the only possible failure is due to [x]
+         being static data. In this case, we simply drop the finalizer since static data
+         would never have been collected by the GC anyway. *)
       ()
   ;;
 
-  (* [add_finalizer_ignore] is the same as [add_finalizer].  However, their types in
+  (* [add_finalizer_ignore] is the same as [add_finalizer]. However, their types in
      core_gc.mli are different, and the type of [add_finalizer] guarantees that it always
      receives a heap block, which ensures that it will not raise, while
      [add_finalizer_exn] accepts any type, and so may raise. *)
@@ -526,18 +525,17 @@ module Expert = struct
     try Stdlib.Gc.finalise (fun x -> Exn.handle_uncaught_and_exit (fun () -> f x)) x with
     | Invalid_argument _ ->
       ignore (Heap_block.create_exn x : _ Heap_block.t);
-      (* If [Heap_block.create_exn] succeeds then [x] is static data and so
-         we can simply drop the finaliser. *)
+      (* If [Heap_block.create_exn] succeeds then [x] is static data and so we can simply
+         drop the finaliser. *)
       ()
   ;;
 
   let add_finalizer_last x f =
     try Stdlib.Gc.finalise_last (fun () -> Exn.handle_uncaught_and_exit f) x with
     | Invalid_argument _ ->
-      (* The type of add_finalizer_last ensures that the only possible failure
-         is due to [x] being static data. In this case, we simply drop the
-         finalizer since static data would never have been collected by the
-         GC anyway. *)
+      (* The type of add_finalizer_last ensures that the only possible failure is due to
+         [x] being static data. In this case, we simply drop the finalizer since static
+         data would never have been collected by the GC anyway. *)
       ()
   ;;
 
@@ -550,8 +548,8 @@ module Expert = struct
     try Stdlib.Gc.finalise_last (fun () -> Exn.handle_uncaught_and_exit f) x with
     | Invalid_argument _ ->
       ignore (Heap_block.create_exn x : _ Heap_block.t);
-      (* If [Heap_block.create_exn] succeeds then [x] is static data and so
-         we can simply drop the finaliser. *)
+      (* If [Heap_block.create_exn] succeeds then [x] is static data and so we can simply
+         drop the finaliser. *)
       ()
   ;;
 

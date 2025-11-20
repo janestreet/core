@@ -40,7 +40,7 @@ val union : 'a t -> 'a t -> unit
 
 (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
 
-  https://opensource.janestreet.com/standards/#private-submodules *)
+    https://opensource.janestreet.com/standards/#private-submodules *)
 module Private : sig
   val is_compressed : _ t -> bool
   val rank : _ t -> int

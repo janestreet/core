@@ -5,7 +5,7 @@
 
 open! Import
 
-(*_
+(*_ {v
   (***********************************************************************)
   (*                                                                     *)
   (*                           Objective Caml                            *)
@@ -20,7 +20,7 @@ open! Import
   (***********************************************************************)
 
   (* $Id: gc.mli,v 1.42 2005-10-25 18:34:07 doligez Exp $ *)
-*)
+    v} *)
 module Stat : sig
   [%%if ocaml_version < (4, 12, 0)]
 
@@ -359,7 +359,7 @@ type control = Control.t
 external stat : unit -> stat = "caml_gc_stat"
 
 (** Creating a [Stat.t] can allocate on the minor heap. Return the expected number of
-    words allocated. **)
+    words allocated. *)
 val stat_size : unit -> int
 
 (** Same as [stat] except that [live_words], [live_blocks], [free_words], [free_blocks],
@@ -525,15 +525,17 @@ module (For_testing @@ nonportable) : sig
   end
 
   [%%template:
-  [@@@kind.default k = base]
+  [@@@kind.default k = base_or_null]
 
   (** [measure_allocation f] measures the words allocated by running [f ()] *)
-  val measure_allocation : (unit -> ('a : k)) @ local once -> #('a * Allocation_report.t)
+  val measure_allocation
+    : ('a : k).
+    (unit -> 'a) @ local once -> #('a * Allocation_report.t)
 
   (** Same as [measure_allocation], but for functions that return a local value. *)
   val measure_allocation_local
-    :  (unit -> ('a : k) @ local) @ local once
-    -> #('a * Allocation_report.t) @ local
+    : ('a : k).
+    (unit -> 'a @ local) @ local once -> #('a * Allocation_report.t) @ local
 
   (** [measure_and_log_allocation f] logs each allocation that [f ()] performs, as well as
       reporting the total. (This can be slow if [f] allocates heavily).
@@ -541,29 +543,29 @@ module (For_testing @@ nonportable) : sig
       This function is only supported since OCaml 4.11. On prior versions, the function
       always returns an empty log. *)
   val measure_and_log_allocation
-    :  (unit -> ('a : k)) @ local once
-    -> #('a * Allocation_report.t * Allocation_log.t list)
+    : ('a : k).
+    (unit -> 'a) @ local once -> #('a * Allocation_report.t * Allocation_log.t list)
 
   (** Same as [measure_and_log_allocation], but for functions that return a local value. *)
   val measure_and_log_allocation_local
-    :  (unit -> ('a : k) @ local) @ local once
+    : ('a : k).
+    (unit -> 'a @ local) @ local once
     -> #('a * Allocation_report.t * Allocation_log.t list) @ local
 
   (** [is_zero_alloc f] runs [f ()] and returns [true] if it does not allocate, or [false]
       otherwise. [is_zero_alloc] does not allocate. *)
-  val is_zero_alloc : (unit -> (_ : k)) @ local once -> bool
+  val is_zero_alloc : ('a : k). (unit -> 'a) @ local once -> bool
 
   (** Same as [is_zero_alloc], but for functions that return a local value. *)
-  val is_zero_alloc_local : (unit -> (_ : k) @ local) @ local once -> bool
+  val is_zero_alloc_local : ('a : k). (unit -> 'a @ local) @ local once -> bool
 
   (** [assert_no_allocation f] raises if [f] allocates. *)
-  val assert_no_allocation : here:[%call_pos] -> (unit -> ('a : k)) @ local once -> 'a
+  val assert_no_allocation : ('a : k). here:[%call_pos] -> (unit -> 'a) @ local once -> 'a
 
   (** Same as [assert_no_allocation], but for functions that return a local value. *)
   val assert_no_allocation_local
-    :  here:[%call_pos]
-    -> (unit -> ('a : k) @ local) @ local once
-    -> 'a @ local]
+    : ('a : k).
+    here:[%call_pos] -> (unit -> 'a @ local) @ local once -> 'a @ local]
 end
 
 (** The [Expert] module contains functions that novice users should not use, due to their

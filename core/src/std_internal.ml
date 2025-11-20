@@ -111,15 +111,11 @@ include%template (
 struct
   (* [deriving hash] is missing for [array], [bytes], and [ref] since these types are
      mutable. *)
-  type 'a array = 'a Array.t
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , sexp ~stackify
-    , sexp_grammar
-    , typerep]
+  type ('a : value_or_null mod separable) array = 'a Array.t
+  [@@deriving compare ~localize, equal ~localize, globalize, sexp ~stackify, sexp_grammar]
+
+  [%%rederive.portable
+    type nonrec 'a array = 'a Array.t [@@deriving bin_io ~localize, typerep]]
 
   type bool = Bool.t
   [@@deriving
@@ -301,15 +297,10 @@ struct
 end :
 sig
 @@ portable
-  type 'a array
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , sexp ~stackify
-    , sexp_grammar
-    , typerep]
+  type ('a : value_or_null mod separable) array
+  [@@deriving compare ~localize, equal ~localize, globalize, sexp ~stackify, sexp_grammar]
+
+  [%%rederive: type nonrec 'a array = 'a Array.t [@@deriving bin_io ~localize, typerep]]
 
   type bool
   [@@deriving
@@ -489,7 +480,7 @@ sig
   [@@deriving compare ~localize, equal ~localize, globalize, hash, sexp ~stackify]
 end
 [@with:
-  type 'a array := 'a array
+  type ('a : value_or_null mod separable) array := 'a array
   type bool := bool
   type char := char
   type float := float
@@ -501,8 +492,8 @@ end
   type nativeint := nativeint
 
   (* use a destructive substitution for [value] only to re-expose the constructors;
-     otherwise, in certain cases this produces arcane errors about the type being
-     abstract and ruins the output of mdx tests *)
+     otherwise, in certain cases this produces arcane errors about the type being abstract
+     and ruins the output of mdx tests *)
 
   type ('a : any) option := 'a option
   type ('a : any) option = ('a option[@kind k]) [@@kind k = base_non_value]
@@ -524,7 +515,7 @@ end
    We avoid re-exporting it internally as this constrains the kinding of the type
    parameter as compared to the compiler built-in [iarray]. *)
 
-(* Export ['a or_null] with constructors [Null] and [This] whenever Core is opened,
-   so uses of those identifiers work in both upstream OCaml and OxCaml. *)
+(* Export ['a or_null] with constructors [Null] and [This] whenever Core is opened, so
+   uses of those identifiers work in both upstream OCaml and OxCaml. *)
 
 let sexp_of_exn = Exn.sexp_of_t

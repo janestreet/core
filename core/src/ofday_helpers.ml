@@ -232,8 +232,8 @@ let parse_iso8601_extended ?pos ?len str ~f =
       else (
         let sec = read_2_digit_int str ~pos:(pos + 6) in
         (* second can be 60 in the case of a leap second. Unfortunately, what with
-           non-hour-multiple timezone offsets, we can't say anything about what
-           the hour or minute must be in that case *)
+           non-hour-multiple timezone offsets, we can't say anything about what the hour
+           or minute must be in that case *)
         if sec > 60 then failwithf "invalid second: %i" sec ();
         if hr = 24 && sec <> 0 then failwith "24 hours and non-zero seconds";
         if len = 8

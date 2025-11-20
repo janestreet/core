@@ -9,9 +9,8 @@
     choose different instantiations of their [options]. In particular, [Set] itself
     matches [Creators2_with_comparator] but [Accessors2] (without comparator). *)
 
-(*
-   CRs and comments about [Set] functions do not belong in this file.  They belong next
-   to the appropriate function in set.mli.
+(* CRs and comments about [Set] functions do not belong in this file. They belong next to
+   the appropriate function in set.mli.
 *)
 
 open! Import

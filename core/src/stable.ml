@@ -41,6 +41,7 @@ module Maybe_bound = Maybe_bound.Stable
 module Md5 = Md5.Stable
 module Modes = Modes.Stable
 module Month = Month.Stable
+module Nonempty_list = Nonempty_list.Stable
 module Nothing = Nothing.Stable
 module Option = Option.Stable
 module Or_error = Or_error.Stable

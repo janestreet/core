@@ -1,4 +1,4 @@
-(* This program benchmarks all functions exported by [Hashtbl.Make (...)].  For functions
+(*=This program benchmarks all functions exported by [Hashtbl.Make (...)].  For functions
    that look up / add / remove a single key, we attempt to construct a benchmark that uses
    one hash table, and touches a random key each time.  For operations that behave
    differently when the key is present vs absent, we try to maintain a 50/50 chance on
@@ -1145,7 +1145,7 @@ end
 
 (* There is no specific reason why we chose this record structure. It would be good to
    test a mix of immediate components, non-immediate components, and recursive components.
-   So we threw a few such things into this record structure.  *)
+   So we threw a few such things into this record structure. *)
 module Compound_key = struct
   type t =
     { int : int

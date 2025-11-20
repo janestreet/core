@@ -15,6 +15,7 @@ depends: [
   "base_bigstring"
   "base_quickcheck"
   "bin_prot"
+  "capsule"
   "fieldslib"
   "jane-street-headers"
   "jst-config"

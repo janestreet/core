@@ -822,8 +822,7 @@ let%expect_test "read_int63_decimal" =
      (round_neg_inf 999))
     1_000
     |}];
-  (* Tests values close to overflow:
-     100000000000000000 ~= Int63.max_value / 46 *)
+  (* Tests values close to overflow: 100000000000000000 ~= Int63.max_value / 46 *)
   let big_power_of_ten = Int63.of_string "100000000000000000" in
   print_s [%sexp (Int63.( / ) Int63.max_value big_power_of_ten : Int63.t)];
   [%expect {| 46 |}];
@@ -851,8 +850,7 @@ let%expect_test "read_int63_decimal" =
     ((round_pos_inf 98_765_432_101_112_224)
      (round_neg_inf 98_765_432_101_112_223))
     |}];
-  (* Tests values close to overflow:
-     230584300921369395 = Int63.max_value / 20 *)
+  (* Tests values close to overflow: 230584300921369395 = Int63.max_value / 20 *)
   let maximum_scale = Int63.( / ) Int63.max_value (Int63.of_int 20) in
   print_s [%sexp (maximum_scale : Int63.t)];
   [%expect {| 230_584_300_921_369_395 |}];
