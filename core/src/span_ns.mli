@@ -29,7 +29,8 @@ module Stable : sig
 
     module V2 : sig
       type nonrec t = t
-      [@@deriving bin_io ~localize, compare ~localize, equal ~localize, globalize]
+      [@@deriving
+        bin_io ~localize, compare ~localize, equal ~localize, globalize, sexp_of ~stackify]
 
       include%template
         Stable_int63able.With_stable_witness.S [@mode local] with type t := t

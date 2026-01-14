@@ -12,7 +12,7 @@ end
 
 module type Span = sig @@ portable
   (** [t] is immediate on 64bit boxes and so plays nicely with the GC write barrier. *)
-  type t = private Int63.t [@@deriving hash, typerep]
+  type t = private Int63.t [@@deriving hash, typerep, sexp_of ~stackify]
 
   include Span_intf.S with type underlying = Int63.t and type t := t
 
@@ -146,7 +146,8 @@ module type Span = sig @@ portable
     type value := t
 
     type t : immediate64
-    [@@deriving bin_io ~localize, compare ~localize, equal ~localize, globalize]
+    [@@deriving
+      bin_io ~localize, compare ~localize, equal ~localize, globalize, sexp_of ~stackify]
 
     include Immediate_option.S_int63_zero_alloc with type value := value and type t := t
 
@@ -275,8 +276,11 @@ module type Ofday = sig
       midnight, e.g. every hour from 10pm to 2am, requires multiple calls to [every]. *)
   val every : Span.t -> start:t -> stop:t -> t list Or_error.t
 
-  val to_microsecond_string : t -> string
-  val to_nanosecond_string : t -> string
+  val%template to_microsecond_string : t -> string @ m
+  [@@alloc a @ m = (stack_local, heap_global)]
+
+  val%template to_nanosecond_string : t -> string @ m
+  [@@alloc a @ m = (stack_local, heap_global)]
 
   module Stable : sig
     module V1 : sig
@@ -333,7 +337,7 @@ module type Time_ns = sig @@ portable
     , equal ~localize
     , globalize
     , hash
-    , sexp
+    , sexp ~stackify
     , sexp_grammar
     , typerep]
 
@@ -456,7 +460,8 @@ module type Time_ns = sig @@ portable
     type value := t
 
     type t = private Span.Option.t
-    [@@deriving bin_io ~localize, compare ~localize, equal ~localize, globalize]
+    [@@deriving
+      bin_io ~localize, compare ~localize, equal ~localize, globalize, sexp_of ~stackify]
 
     include Immediate_option.S_int63_zero_alloc with type value := value with type t := t
 
@@ -791,6 +796,7 @@ module type Time_ns = sig @@ portable
         , equal ~localize
         , globalize
         , hash
+        , sexp_of ~stackify
         , sexp_grammar]
 
       include%template

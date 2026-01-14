@@ -10,7 +10,7 @@
 open! Import
 
 [%%template:
-type ('a : k) t
+type ('a : k) t : mutable_data with 'a
 [@@deriving compare ~localize, equal ~localize, sexp_of] [@@kind k = base_non_value]
 
 type 'a t [@@deriving compare ~localize, equal ~localize, quickcheck, sexp_of]

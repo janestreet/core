@@ -61,7 +61,8 @@ module Stable = struct
   module V1 = struct
     module T = struct
       type t = Base.Int63.t
-      [@@deriving compare ~localize, equal ~localize, globalize, hash, sexp, sexp_grammar]
+      [@@deriving
+        compare ~localize, equal ~localize, globalize, hash, sexp ~stackify, sexp_grammar]
 
       include Bin
 

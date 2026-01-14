@@ -279,7 +279,9 @@ module Stable = struct
           | Invalid_argument a -> of_sexp_error a s
         ;;
 
-        let sexp_of_t t = Sexp.Atom (to_string t)
+        let%template[@alloc a = (heap, stack)] sexp_of_t t =
+          Sexp.Atom (to_string t) [@exclave_if_stack a]
+        ;;
 
         let t_sexp_grammar =
           let open Sexplib in
@@ -327,7 +329,10 @@ module Stable = struct
       let some_is_representable _ = true
       let some t = V1.to_int t
       let unchecked_value t = V1.of_int_unchecked t
-      let to_option t = if is_some t then Some (unchecked_value t) else None
+
+      let%template[@alloc a = (heap, stack)] to_option t =
+        (if is_some t then Some (unchecked_value t) else None) [@exclave_if_stack a]
+      ;;
 
       let of_option opt =
         match opt with
@@ -342,7 +347,13 @@ module Stable = struct
       ;;
 
       let value t ~default = Bool.select (is_none t) default (unchecked_value t)
-      let sexp_of_t t = to_option t |> Option.sexp_of_t V1.sexp_of_t
+
+      let%template[@alloc a = (heap, stack)] sexp_of_t t =
+        ((to_option [@alloc a]) t
+         |> (Option.sexp_of_t [@alloc a]) (V1.sexp_of_t [@alloc a]))
+        [@exclave_if_stack a]
+      ;;
+
       let t_of_sexp sexp = (Option.t_of_sexp V1.t_of_sexp) sexp |> of_option
       let t_sexp_grammar = Sexplib.Sexp_grammar.coerce [%sexp_grammar: V1.t Option.t]
 

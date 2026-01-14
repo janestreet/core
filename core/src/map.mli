@@ -1308,7 +1308,7 @@ module%template.portable
 module%template Provide_stable_witness (Key : sig
     type t [@@deriving stable_witness]
     type comparator_witness
-  end) : sig
+  end) : sig @@ portable
     type _ t [@@deriving stable_witness]
   end
   with type 'a t := (Key.t, 'a, Key.comparator_witness) t
@@ -1350,7 +1350,7 @@ module Stable : sig
     module type S = sig
       type key
       type comparator_witness
-      type nonrec 'a t = (key, 'a, comparator_witness) t
+      type nonrec 'a t = (key, 'a, comparator_witness) t [@@deriving equal]
 
       include%template Stable_module_types.S1 [@mode local] with type 'a t := 'a t
 

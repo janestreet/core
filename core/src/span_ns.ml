@@ -442,72 +442,75 @@ module Stable0 = struct
             ;;
           end
 
-          let to_string t =
-            if equal t zero
-            then "0s"
-            else (
-              let is_negative = t < zero in
-              let seconds = Int63.( / ) (to_int63_ns t) (to_int63_ns second) in
-              let ns =
-                Int63.rem (to_int63_ns t) (to_int63_ns second) |> Int63.to_int_exn
-              in
-              let seconds = Int63.abs seconds in
-              let ns = Int.abs ns in
-              let s = Int63.rem seconds int63_60 |> Int63.to_int_exn in
-              let minutes = Int63.( / ) seconds int63_60 in
-              let m = Int63.rem minutes int63_60 |> Int63.to_int_exn in
-              let hours = Int63.( / ) minutes int63_60 in
-              let h = Int63.rem hours int63_24 |> Int63.to_int_exn in
-              let d = Int63.( / ) hours int63_24 |> Int63.to_int_exn in
-              let open Int.O in
-              let digits_of_d = number_of_digits_to_write ~span_part_magnitude:d in
-              let digits_of_h = number_of_digits_to_write ~span_part_magnitude:h in
-              let digits_of_m = number_of_digits_to_write ~span_part_magnitude:m in
-              let decimal_unit = Decimal_unit.create ~s ~ns in
-              let decimal_unit_integer = Decimal_unit.integer decimal_unit ~s ~ns in
-              let decimal_unit_billionths = Decimal_unit.billionths decimal_unit ~ns in
-              let digits_of_decimal_unit =
-                number_of_digits_to_write ~span_part_magnitude:decimal_unit_integer
-              in
-              let decimals_of_decimal_unit =
-                number_of_decimal_places_to_write ~billionths:decimal_unit_billionths
-              in
-              let string_length =
-                let sign_len = if is_negative then 1 else 0 in
-                let d_len = if digits_of_d > 0 then digits_of_d + 1 else 0 in
-                let h_len = if digits_of_h > 0 then digits_of_h + 1 else 0 in
-                let m_len = if digits_of_m > 0 then digits_of_m + 1 else 0 in
-                let decimal_unit_len =
-                  Decimal_unit.length
-                    decimal_unit
-                    ~digits:digits_of_decimal_unit
-                    ~decimals:decimals_of_decimal_unit
-                in
-                sign_len + d_len + h_len + m_len + decimal_unit_len
-              in
-              assert (string_length > 0);
-              let buf = Bytes.create string_length in
-              let pos = 0 in
-              let pos = if is_negative then write_char buf ~pos '-' else pos in
-              let pos = write_if_non_empty buf ~pos ~digits:digits_of_d d 'd' in
-              let pos = write_if_non_empty buf ~pos ~digits:digits_of_h h 'h' in
-              let pos = write_if_non_empty buf ~pos ~digits:digits_of_m m 'm' in
-              let pos =
-                Decimal_unit.write
-                  decimal_unit
-                  buf
-                  ~pos
-                  ~integer:decimal_unit_integer
-                  ~digits:digits_of_decimal_unit
-                  ~billionths:decimal_unit_billionths
-                  ~decimals:decimals_of_decimal_unit
-              in
-              assert (pos = string_length);
-              Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf)
+          let%template[@alloc a = (heap, stack)] to_string t =
+            (if equal t zero
+             then "0s"
+             else (
+               let is_negative = t < zero in
+               let seconds = Int63.( / ) (to_int63_ns t) (to_int63_ns second) in
+               let ns =
+                 Int63.rem (to_int63_ns t) (to_int63_ns second) |> Int63.to_int_exn
+               in
+               let seconds = Int63.abs seconds in
+               let ns = Int.abs ns in
+               let s = Int63.rem seconds int63_60 |> Int63.to_int_exn in
+               let minutes = Int63.( / ) seconds int63_60 in
+               let m = Int63.rem minutes int63_60 |> Int63.to_int_exn in
+               let hours = Int63.( / ) minutes int63_60 in
+               let h = Int63.rem hours int63_24 |> Int63.to_int_exn in
+               let d = Int63.( / ) hours int63_24 |> Int63.to_int_exn in
+               let open Int.O in
+               let digits_of_d = number_of_digits_to_write ~span_part_magnitude:d in
+               let digits_of_h = number_of_digits_to_write ~span_part_magnitude:h in
+               let digits_of_m = number_of_digits_to_write ~span_part_magnitude:m in
+               let decimal_unit = Decimal_unit.create ~s ~ns in
+               let decimal_unit_integer = Decimal_unit.integer decimal_unit ~s ~ns in
+               let decimal_unit_billionths = Decimal_unit.billionths decimal_unit ~ns in
+               let digits_of_decimal_unit =
+                 number_of_digits_to_write ~span_part_magnitude:decimal_unit_integer
+               in
+               let decimals_of_decimal_unit =
+                 number_of_decimal_places_to_write ~billionths:decimal_unit_billionths
+               in
+               let string_length =
+                 let sign_len = if is_negative then 1 else 0 in
+                 let d_len = if digits_of_d > 0 then digits_of_d + 1 else 0 in
+                 let h_len = if digits_of_h > 0 then digits_of_h + 1 else 0 in
+                 let m_len = if digits_of_m > 0 then digits_of_m + 1 else 0 in
+                 let decimal_unit_len =
+                   Decimal_unit.length
+                     decimal_unit
+                     ~digits:digits_of_decimal_unit
+                     ~decimals:decimals_of_decimal_unit
+                 in
+                 sign_len + d_len + h_len + m_len + decimal_unit_len
+               in
+               assert (string_length > 0);
+               let buf = (Bytes.create [@alloc a]) string_length in
+               let pos = 0 in
+               let pos = if is_negative then write_char buf ~pos '-' else pos in
+               let pos = write_if_non_empty buf ~pos ~digits:digits_of_d d 'd' in
+               let pos = write_if_non_empty buf ~pos ~digits:digits_of_h h 'h' in
+               let pos = write_if_non_empty buf ~pos ~digits:digits_of_m m 'm' in
+               let pos =
+                 Decimal_unit.write
+                   decimal_unit
+                   buf
+                   ~pos
+                   ~integer:decimal_unit_integer
+                   ~digits:digits_of_decimal_unit
+                   ~billionths:decimal_unit_billionths
+                   ~decimals:decimals_of_decimal_unit
+               in
+               assert (pos = string_length);
+               Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf))
+            [@exclave_if_stack a]
           ;;
         end
 
-        let to_string = To_string.to_string
+        let%template[@alloc a = (heap, stack)] to_string =
+          (To_string.to_string [@alloc a])
+        ;;
 
         module Of_string = struct
           (* We do computations using negative numbers everywhere and test against things
@@ -711,7 +714,10 @@ module Stable0 = struct
         end
 
         let of_string = Of_string.of_string
-        let sexp_of_t t = Sexp.Atom (to_string t)
+
+        let%template[@alloc a = (heap, stack)] sexp_of_t t =
+          Sexp.Atom ((to_string [@alloc a]) t) [@exclave_if_stack a]
+        ;;
 
         let t_of_sexp sexp =
           match sexp with
@@ -743,7 +749,7 @@ end
 
 let to_string = Stable.V2.to_string
 let of_string = Stable.V2.of_string
-let sexp_of_t = Stable.V2.sexp_of_t
+let%template[@alloc a = (heap, stack)] sexp_of_t = (Stable.V2.sexp_of_t [@alloc a])
 let t_of_sexp = Stable.V2.t_of_sexp
 let t_sexp_grammar = Stable.V2.t_sexp_grammar
 
@@ -1042,9 +1048,12 @@ module Option = struct
         [@@deriving
           bin_io ~localize, compare ~localize, equal ~localize, globalize, typerep]
 
-        let sexp_of_t t =
+        let%template[@alloc a = (heap, stack)] sexp_of_t t =
           Sexp.List
-            (if is_none t then [] else [ Stable.V2.sexp_of_t (unchecked_value t) ])
+            (if is_none t
+             then []
+             else [ (Stable.V2.sexp_of_t [@alloc a]) (unchecked_value t) ])
+          [@exclave_if_stack a]
         ;;
 
         let t_of_sexp sexp =
@@ -1083,7 +1092,7 @@ module Option = struct
     end
   end
 
-  let sexp_of_t = Stable.V2.sexp_of_t
+  let%template[@alloc a = (heap, stack)] sexp_of_t = (Stable.V2.sexp_of_t [@alloc a])
   let t_of_sexp = Stable.V2.t_of_sexp
 
   include%template Identifiable.Make [@mode local] [@modality portable] (struct

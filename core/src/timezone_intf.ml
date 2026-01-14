@@ -96,7 +96,7 @@ module type Timezone = sig @@ portable
         , compare ~localize
         , equal ~localize
         , hash
-        , sexp
+        , sexp ~stackify
         , sexp_grammar
         , stable_witness]
 

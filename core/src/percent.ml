@@ -510,16 +510,17 @@ module Stable = struct
          the semantics of anything that affects the sexp or bin-io representation of
          values of this type (this includes to_string and of_string) make a Stable.V4 and
          make your changes there. Thanks! *)
-      let to_string x =
-        let x_abs = Float.abs x in
-        let string float = format_float "%.6G" float in
-        if Float.( = ) x_abs 0.
-        then "0x"
-        else if Float.( >= ) x_abs 1.
-        then string (x *. 1.) ^ "x"
-        else if Float.( >= ) x_abs 0.01
-        then string (x *. 100.) ^ "%"
-        else string (x *. 10_000.) ^ "bp"
+      let%template[@alloc a = (heap, stack)] to_string (x @ local) =
+        (let x_abs = Float.abs x in
+         let string float = format_float "%.6G" float in
+         if Float.( = ) x_abs 0.
+         then "0x"
+         else if Float.( >= ) x_abs 1.
+         then string (x *. 1.) ^ "x"
+         else if Float.( >= ) x_abs 0.01
+         then string (x *. 100.) ^ "%"
+         else string (x *. 10_000.) ^ "bp")
+        [@exclave_if_stack a]
       ;;
 
       let of_string = V3.of_string
@@ -532,7 +533,9 @@ module Stable = struct
         @@ portable
           type t
 
-          val to_string : local_ t -> string
+          val%template to_string : local_ t -> string @ m
+          [@@alloc a @ m = (heap_global, stack_local)]
+
           val of_string : string -> t
           val of_string_allow_nan_and_inf : string -> t
         end
@@ -546,6 +549,14 @@ module Stable = struct
         sig
         @@ portable
           include Sexpable.S with type t := t
+        end)
+
+    include%template (
+      Sexpable.Stable.Of_stringable.V1 [@modality portable] [@alloc stack]
+        (Stringable) :
+        sig
+        @@ portable
+          include Sexplib0.Sexpable.Sexp_of [@alloc stack] with type t := t
         end)
 
     include%template (
@@ -761,7 +772,7 @@ module Option = struct
   end
 end
 
-let is_zero t = [%equal_local: t] t 0.
+let%template is_zero t = ([%equal: t] [@mode local]) t 0.
 
 external apply
   :  (t[@local_opt])

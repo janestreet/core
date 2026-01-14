@@ -11,7 +11,13 @@ module type%template
   [@mode m = (global, local)] [@modality p = (portable, nonportable)] S = sig
   type t = private string
   [@@deriving
-    (bin_io [@mode m]), compare ~localize, equal ~localize, globalize, hash, sexp_grammar]
+    (bin_io [@mode m])
+    , compare ~localize
+    , equal ~localize
+    , globalize
+    , hash
+    , sexp_grammar
+    , sexp_of ~stackify]
 
   include Identifiable.S [@mode m] [@modality p] with type t := t
   include Stringable [@mode m] with type t := t
@@ -30,6 +36,7 @@ module type%template
         , globalize
         , hash
         , sexp_grammar
+        , sexp_of ~stackify
         , stable_witness]
 
       include Stringable [@mode m] with type t := t
@@ -159,4 +166,17 @@ module type%template String_id = sig @@ portable
 
   module String_without_validation_without_pretty_printer :
     S_with_extras [@mode local] [@modality portable] with type t = string
+
+  val%template make
+    :  ?validate:(string -> unit Or_error.t) (** defaults to [const (Ok ())] *) @ p
+    -> ?caller_identity:Bin_prot.Shape.Uuid.t (** defaults to bin_shape of [String] *)
+    -> ?include_pretty_printer:bool (** defaults to [true] *)
+    -> module_name:string
+    -> include_default_validation:bool
+         (** If [true], [of_string] will raise if passed a string that is empty or has
+             whitespace on either edge. *)
+    -> unit
+    -> ((module S_with_extras)[@mode local] [@modality p]) @ p
+    @@ nonportable
+  [@@modality p = (nonportable, portable)]
 end

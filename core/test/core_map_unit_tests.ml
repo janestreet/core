@@ -1994,8 +1994,8 @@ struct
     in
     let length = Map.length map in
     (* fold_range_inclusive *)
-    (* The two [Key.(>)] assertions below verify that the intervals in the
-       two assertions following them are indeed empty.*)
+    (* The two [Key.(>)] assertions below verify that the intervals in the two assertions
+       following them are indeed empty. *)
     assert (Key.( > ) before_max min_key);
     assert (Key.( > ) max_key min_key);
     assert (keys_between ~min:before_max ~max:min_key = 0);

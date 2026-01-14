@@ -21,7 +21,7 @@
 open! Import
 
 module type Raw = sig
-  type t [@@deriving sexp]
+  type t [@@deriving sexp ~stackify]
 
   (** [here] will appear in validation-failure error messages. *)
   val here : Source_code_position.t
@@ -82,7 +82,7 @@ module type S_allowing_substitution = sig
   type ('raw, 'witness) validated
   type witness
   type raw
-  type t [@@deriving sexp]
+  type t [@@deriving sexp ~stackify]
 
   val create : raw -> t Or_error.t
   val create_exn : raw -> t

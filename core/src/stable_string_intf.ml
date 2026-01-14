@@ -26,7 +26,8 @@ module type Stable_string = sig @@ portable
       , diff ~extra_derive:[ sexp ]
       , equal ~localize
       , globalize
-      , quickcheck]
+      , quickcheck
+      , sexp_of ~stackify]
 
     include
       Identifiable_without_binio

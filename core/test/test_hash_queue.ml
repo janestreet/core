@@ -401,3 +401,55 @@ let%expect_test "[of_alist_exn] round-trips with [to_alist]" =
      (3 3))
     |}]
 ;;
+
+let%expect_test "findi short-circuits and returns the first matching element" =
+  let hq = Hq.of_alist_exn () [ "a", 1; "b", 1 ] in
+  let print e = print_s [%sexp (e : (string * int) option)] in
+  Hq.findi hq ~f:(fun ~key:_ ~data ->
+    print_endline "iterating";
+    data = 1)
+  |> print;
+  [%expect
+    {|
+    iterating
+    ((a 1))
+    |}];
+  Hq.findi hq ~f:(fun ~key ~data:_ ->
+    print_endline "iterating";
+    String.equal key "b")
+  |> print;
+  [%expect
+    {|
+    iterating
+    iterating
+    ((b 1))
+    |}];
+  Hq.findi hq ~f:(fun ~key:_ ~data ->
+    print_endline "iterating";
+    data = 2)
+  |> print;
+  [%expect
+    {|
+    iterating
+    iterating
+    ()
+    |}]
+;;
+
+let%expect_test "lookup_(prev|next)_with_key returns the right element" =
+  let hq = Hq.of_alist_exn () [ "a", 1; "b", 2; "c", 3 ] in
+  let print e = print_s [%sexp (e : (string * int) option)] in
+  Hq.lookup_prev_with_key hq "b" |> print;
+  [%expect {| ((a 1)) |}];
+  Hq.lookup_next_with_key hq "b" |> print;
+  [%expect {| ((c 3)) |}]
+;;
+
+let%expect_test "lookup_(prev|next)_with_key on the head/tail returns [None]" =
+  let hq = Hq.of_alist_exn () [ "a", 1; "b", 2; "c", 3 ] in
+  let print e = print_s [%sexp (e : (string * int) option)] in
+  Hq.lookup_prev_with_key hq "a" |> print;
+  [%expect {| () |}];
+  Hq.lookup_next_with_key hq "c" |> print;
+  [%expect {| () |}]
+;;

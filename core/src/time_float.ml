@@ -42,9 +42,11 @@ module Ofday = struct
     [@@deriving
       bin_io, fields ~getters ~local_getters, compare ~localize, equal ~localize, hash]
 
-    type sexp_repr = Time.Ofday.t * Zone.t [@@deriving sexp]
+    type sexp_repr = Time.Ofday.t * Zone.t [@@deriving sexp ~stackify]
 
-    let sexp_of_t t = [%sexp_of: sexp_repr] (t.ofday, t.zone)
+    let%template[@alloc a = (heap, stack)] sexp_of_t t =
+      [%sexp ((t.ofday, t.zone) : sexp_repr)] [@alloc a] [@exclave_if_stack a]
+    ;;
 
     let t_of_sexp sexp =
       let ofday, zone = [%of_sexp: sexp_repr] sexp in
@@ -240,10 +242,10 @@ module T = struct
       let comparator = comparator
       let sexp_of_t = sexp_of_t
 
-      (* In 108.06a and earlier, times in sexps of Maps and Sets were raw floats.  From
+      (* In 108.06a and earlier, times in sexps of Maps and Sets were raw floats. From
          108.07 through 109.13, the output format remained raw as before, but both the raw
-         and pretty format were accepted as input.  From 109.14 on, the output format was
-         changed from raw to pretty, while continuing to accept both formats.  Once we
+         and pretty format were accepted as input. From 109.14 on, the output format was
+         changed from raw to pretty, while continuing to accept both formats. Once we
          believe most programs are beyond 109.14, we will switch the input format to no
          longer accept raw. *)
       let t_of_sexp sexp =
@@ -331,8 +333,16 @@ module Stable = struct
       end
 
       include C
-      module%template Map = Map.Make_binable_using_comparator [@modality portable] (C)
-      module%template Set = Set.Make_binable_using_comparator [@modality portable] (C)
+
+      module%template Map = struct
+        include Map.Make_binable_using_comparator [@modality portable] (C)
+        include Map.Provide_stable_witness (C)
+      end
+
+      module%template Set = struct
+        include Set.Make_binable_using_comparator [@modality portable] (C)
+        include Set.Provide_stable_witness (C)
+      end
     end
 
     module V2 = struct

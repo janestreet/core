@@ -1,6 +1,6 @@
-(* This module is very much dependent on the runtime representation of values.  Should the
+(* This module is very much dependent on the runtime representation of values. Should the
    way the compiler represents various types change, it needs to be reflected in this
-   module, otherwise bad things could happen.  Therefore the conversions and
+   module, otherwise bad things could happen. Therefore the conversions and
    representations are tested thoroughly in [../test/test_witness.ml] and
    [../test/test_conversions.ml]
 *)
@@ -214,6 +214,16 @@ module Computation_impl = struct
     | Unknown | Always | Sometimes -> unknown typename
   ;;
 
+  let tuple_l t =
+    assert (Tuple_l.length t > 1);
+    never (Tuple_l.typename_of_t t)
+  ;;
+
+  let tuple_l_u t =
+    assert (Tuple_l_u.length t > 1);
+    never (Tuple_l_u.typename_of_t t)
+  ;;
+
   let record r =
     if Record.length r > 1
     then never (Record.typename_of_t r)
@@ -221,6 +231,11 @@ module Computation_impl = struct
       let (Field the_only_field) = Record.field r 0 in
       possibly_unboxed (Record.typename_of_t r) (Field.traverse the_only_field))
   ;;
+
+  (* An unboxed record of one field inherits the immediacy of said field, same as an
+     [@@unboxed] record. Thus, we can't tell whether either is unboxed from the typerep
+     alone. *)
+  let record_u r = record r
 
   (* Variants with all constructors having no arguments are always immediate; variants
      with all constructors having some arguments are never immediate; mixed variants are

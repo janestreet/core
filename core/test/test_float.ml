@@ -58,7 +58,6 @@ let%expect_test "[Sexp.of_float_style = `Underscores]" =
       check f;
       check (-.f));
   Expect_test_patterns.require_match
-    [%here]
     {|
     (0 0)
     (-0 -0)

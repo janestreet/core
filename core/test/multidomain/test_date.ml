@@ -31,8 +31,8 @@ module%test [@name "[Date_cache] does not race"] _ = struct
       | Failed ((), exn, bt) -> Exn.raise_with_original_backtrace exn bt
     done;
     let results_parallel =
-      Await_blocking.with_await Await.Terminator.never ~f:(fun block ->
-        Iarray.map results ~f:(fun ivar -> Await_sync.Ivar.read block ivar) [@nontail])
+      let await = Await_blocking.await Await.Terminator.never in
+      Iarray.map results ~f:(fun ivar -> Await_sync.Ivar.read await ivar) [@nontail]
     in
     let results_sequential =
       Iarray.map times ~f:(fun time -> f time ~zone:Timezone.utc)

@@ -83,7 +83,7 @@ module type Month = sig @@ portable
         | Oct
         | Nov
         | Dec
-      [@@deriving equal ~localize, globalize, hash, sexp_grammar]
+      [@@deriving equal ~localize, globalize, hash, sexp_grammar, sexp_of ~stackify]
 
       include%template
         Stable_module_types.With_stable_witness.S0

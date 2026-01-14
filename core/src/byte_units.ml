@@ -218,8 +218,8 @@ module Stable = struct
     let to_string t = String.lowercase (to_string t)
     let of_string = of_string
 
-    (* This test documents the original to-string representation and fails under javascript
-       due to differences in the rounding. *)
+    (* This test documents the original to-string representation and fails under
+       javascript due to differences in the rounding. *)
     let%expect_test (_ [@tags "no-js"]) =
       printf !"%{}" (of_bytes_int 1000);
       [%expect {| 1000b |}];

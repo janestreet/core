@@ -292,8 +292,15 @@ struct
     , sexp_grammar
     , typerep]
 
-  type 'a or_null = 'a Base.Or_null.t
-  [@@deriving compare ~localize, equal ~localize, globalize, hash, sexp ~stackify]
+  type 'a or_null = 'a Or_null.t
+  [@@deriving
+    bin_io ~localize
+    , compare ~localize
+    , equal ~localize
+    , globalize
+    , hash
+    , sexp ~stackify
+    , typerep]
 end :
 sig
 @@ portable
@@ -477,7 +484,14 @@ sig
 
   type nonrec 'a or_null : value_or_null mod everything with 'a = 'a or_null
   [@@or_null_reexport]
-  [@@deriving compare ~localize, equal ~localize, globalize, hash, sexp ~stackify]
+  [@@deriving
+    bin_io ~localize
+    , compare ~localize
+    , equal ~localize
+    , globalize
+    , hash
+    , sexp ~stackify
+    , typerep]
 end
 [@with:
   type ('a : value_or_null mod separable) array := 'a array

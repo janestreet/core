@@ -512,7 +512,10 @@ module To_and_of_string : sig @@ portable
 
   val to_string_abs : t -> zone:Zone.t -> string
   val to_string_abs_trimmed : t -> zone:Zone.t -> string
-  val to_string_abs_parts : t -> zone:Zone.t -> string list
+
+  val%template to_string_abs_parts : t @ m -> zone:Zone.t -> string list @ m
+  [@@alloc a @ m = (heap_global, stack_local)]
+
   val to_string_iso8601_basic : t -> zone:Zone.t -> string
 
   val to_string_iso8601_extended
@@ -846,40 +849,48 @@ end = struct
       (to_span_since_epoch t)
   ;;
 
-  let offset_string time ~zone =
-    let utc_offset = utc_offset time ~zone in
-    let is_utc = Span.( = ) utc_offset Span.zero in
-    if is_utc
-    then "Z"
-    else
-      String.concat
-        [ (if Span.( < ) utc_offset Span.zero then "-" else "+")
-        ; Ofday_ns.to_string_trimmed
-            (Ofday_ns.of_span_since_start_of_day_exn (Span.abs utc_offset))
-        ]
+  let%template[@alloc a @ m = (heap_global, stack_local)] offset_string time ~zone =
+    (let utc_offset = utc_offset time ~zone in
+     let is_utc = Span.( = ) utc_offset Span.zero in
+     if is_utc
+     then "Z"
+     else
+       (String.concat [@alloc a])
+         [ (if Span.( < ) utc_offset Span.zero then "-" else "+")
+         ; (Ofday_ns.to_string_trimmed [@alloc a])
+             (Ofday_ns.of_span_since_start_of_day_exn (Span.abs utc_offset))
+         ])
+    [@exclave_if_stack a]
   ;;
 
-  let to_string_abs_parts_with_precision ~precision =
+  let%template[@alloc a @ m = (heap_global, stack_local)] to_string_abs_parts_with_precision
+    ~precision
+    =
     let attempt time ~zone =
-      let date, ofday = to_date_ofday time ~zone in
-      let offset_string = offset_string time ~zone in
-      let ofday_string =
-        match precision with
-        | `sec -> Ofday_ns.to_sec_string ofday
-        | `ms -> Ofday_ns.to_millisecond_string ofday
-        | `us -> Ofday_ns.to_microsecond_string ofday
-        | `ns -> Ofday_ns.to_nanosecond_string ofday
-      in
-      [ Date.to_string date; String.concat ~sep:"" [ ofday_string; offset_string ] ]
+      (let date, ofday = to_date_ofday time ~zone in
+       let offset_string = (offset_string [@alloc a]) time ~zone in
+       let ofday_string =
+         match precision with
+         | `sec -> (Ofday_ns.to_sec_string [@alloc a]) ofday
+         | `ms -> (Ofday_ns.to_millisecond_string [@alloc a]) ofday
+         | `us -> (Ofday_ns.to_microsecond_string [@alloc a]) ofday
+         | `ns -> (Ofday_ns.to_nanosecond_string [@alloc a]) ofday
+       in
+       [ (Date.to_string [@alloc a]) date
+       ; (String.concat [@alloc a]) ~sep:"" [ ofday_string; offset_string ]
+       ])
+      [@exclave_if_stack a]
     in
-    fun time ~zone ->
-      try attempt time ~zone with
+    fun (time @ m) ~zone ->
+      try[@exclave_if_stack a] attempt time ~zone with
       | (_ : exn) ->
         (* If we overflow applying the UTC offset, try again with UTC time. *)
         attempt time ~zone:Zone.utc
   ;;
 
-  let to_string_abs_parts = to_string_abs_parts_with_precision ~precision:`ns
+  let%template[@alloc a = (heap, stack)] to_string_abs_parts =
+    (to_string_abs_parts_with_precision [@alloc a]) ~precision:`ns
+  ;;
 
   let to_string_abs_trimmed time ~zone =
     let date, ofday = to_date_ofday time ~zone in
@@ -1353,11 +1364,18 @@ let t_sexp_grammar : t Sexplib.Sexp_grammar.t =
   }
 ;;
 
-let sexp_of_t_abs t ~zone =
-  Sexp.List (List.map (to_string_abs_parts ~zone t) ~f:(fun s -> Sexp.Atom s))
+let%template[@alloc a @ m = (stack_local, heap_global)] sexp_of_t_abs t ~zone =
+  Sexp.List
+    ((List.map [@mode m] [@alloc a])
+       ((to_string_abs_parts [@alloc a]) ~zone t)
+       ~f:(fun s -> Sexp.Atom s [@exclave_if_stack a]))
+  [@exclave_if_stack a]
 ;;
 
-let sexp_of_t t = sexp_of_t_abs ~zone:(get_sexp_zone ()) t
+let%template[@alloc a = (heap, stack)] sexp_of_t t =
+  (sexp_of_t_abs [@alloc a]) ~zone:(get_sexp_zone ()) t [@exclave_if_stack a]
+;;
+
 let of_date_ofday_zoned date ofday_zoned = Ofday.Zoned.to_time_ns ofday_zoned date
 
 let to_date_ofday_zoned t ~zone =
@@ -1430,7 +1448,7 @@ module Stable0 = struct
         , globalize
         , hash
         , quickcheck
-        , sexp
+        , sexp ~stackify
         , sexp_grammar]
 
       let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
@@ -1492,7 +1510,9 @@ module Option = struct
     | Some t -> some t
   ;;
 
-  let to_option t = if is_none t then None else Some (value_exn t)
+  let%template[@alloc a = (heap, stack)] to_option t =
+    (if is_none t then None else Some (value_exn t)) [@exclave_if_stack a]
+  ;;
 
   module Optional_syntax = struct
     module Optional_syntax = struct
@@ -1569,7 +1589,11 @@ module Option = struct
         [@@deriving
           bin_io ~localize, compare ~localize, equal ~localize, globalize, typerep]
 
-        let sexp_of_t t = [%sexp_of: Stable0.V1.t option] (to_option t)
+        let%template[@alloc a = (heap, stack)] sexp_of_t t =
+          [%sexp ((to_option [@alloc a]) t : Stable0.V1.t option)]
+          [@alloc a] [@exclave_if_stack a]
+        ;;
+
         let t_of_sexp s = of_option ([%of_sexp: Stable0.V1.t option] s)
       end
 
@@ -1591,7 +1615,7 @@ module Option = struct
     module Alternate_sexp = Alternate_sexp.Stable
   end
 
-  let sexp_of_t = Stable.V1.sexp_of_t
+  let%template[@alloc a = (heap, stack)] sexp_of_t = (Stable.V1.sexp_of_t [@alloc a])
   let t_of_sexp = Stable.V1.t_of_sexp
 
   include%template Identifiable.Make [@mode local] [@modality portable] (struct

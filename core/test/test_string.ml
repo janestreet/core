@@ -39,6 +39,13 @@ module%test [@name "Caseless Comparable"] _ = struct
 
   let%test _ = Base.Set.mem (Caseless.Set.of_list [ "hello"; "world" ]) "heLLO"
   let%test _ = Int.equal (Base.Set.length (Caseless.Set.of_list [ "a"; "A" ])) 1
+
+  let%expect_test "[equal] vs [compare.equal]" =
+    let%quick_test prop (s1 : string) (s2 : string) =
+      assert (Bool.equal (Caseless.equal s1 s2) ([%compare.equal: Caseless.t] s1 s2))
+    in
+    ()
+  ;;
 end
 
 module%test [@name "Caseless Hash"] _ = struct

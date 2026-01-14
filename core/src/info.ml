@@ -250,13 +250,13 @@ module Extend (Info : Base.Info.S) = struct
 
         include%template Comparator.Stable.V1.Make [@modality portable] (T)
 
-        (* We define a mode-crossing protocol type that make it possible to convert
-           into a portable error in [of_binable]. We can't directly use the bin_io
-           of [Internal_repr.t] because it's not mode-crossing to portable:
-           [Exn] contains an exn.
+        (* We define a mode-crossing protocol type that make it possible to convert into a
+           portable error in [of_binable]. We can't directly use the bin_io of
+           [Internal_repr.t] because it's not mode-crossing to portable: [Exn] contains an
+           exn.
 
-           This protocol type is wire-compatible with [Internal_repr.t]. This
-           claim is tested in unit tests.
+           This protocol type is wire-compatible with [Internal_repr.t]. This claim is
+           tested in unit tests.
         *)
         module Protocol = struct
           open Stable_witness.Export

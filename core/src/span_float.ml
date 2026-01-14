@@ -184,6 +184,7 @@ module Stable = struct
     let ( // ) (f : T.t) (t : T.t) = (f :> float) /. (t :> float)
 
     (* Multiplying by 1E3 is more accurate than division by 1E-3 *)
+
     let to_ns (x : T.t) = (x :> float) *. T.Constant.nanoseconds_per_second
     let to_us (x : T.t) = (x :> float) *. T.Constant.microseconds_per_second
     let to_ms (x : T.t) = (x :> float) *. T.Constant.milliseconds_per_second
@@ -337,17 +338,23 @@ module Stable = struct
     (* WARNING: if you are going to change this function in any material way, make sure
        you update Stable appropriately. *)
     (* I'd like it to be the case that you could never construct an infinite span, but I
-       can't think of a good way to enforce it.  So this to_string function can produce
+       can't think of a good way to enforce it. So this to_string function can produce
        strings that will raise an exception when they are fed to of_string *)
-    let to_string_v1_v2 (t : T.t) ~is_v2 =
+    let%template[@alloc a @ m = (heap_global, stack_local)] to_string_v1_v2
+      (t : T.t @ m)
+      ~is_v2
+      =
       (* this is a sad broken abstraction... *)
-      let module C = Float.Class in
+      (let module C = Float.Class in
       match Float.classify (t :> float) with
       | C.Subnormal | C.Zero -> "0s"
-      | C.Infinite -> if T.( > ) t T.zero then "inf" else "-inf"
+      | C.Infinite ->
+        let t = T.globalize t in
+        if T.( > ) t T.zero then "inf" else "-inf"
       | C.Nan -> "nan"
       | C.Normal ->
         let ( < ) = T.( < ) in
+        let t = T.globalize t in
         let abs_t = T.of_float (Float.abs (t :> float)) in
         if is_v2 && abs_t < T.Constant.microsecond
         then string ~is_v2 "ns" (to_ns t)
@@ -361,12 +368,21 @@ module Stable = struct
         then string ~is_v2 "m" (to_min t)
         else if abs_t < T.Constant.day
         then string ~is_v2 "h" (to_hr t)
-        else string ~is_v2 "d" (to_day t)
+        else string ~is_v2 "d" (to_day t))
+      [@exclave_if_stack a]
     ;;
 
-    let sexp_of_t_v1_v2 t ~is_v2 = Sexp.Atom (to_string_v1_v2 t ~is_v2)
+    let%template[@alloc a @ m = (heap_global, stack_local)] sexp_of_t_v1_v2 (t @ m) ~is_v2
+      =
+      Sexp.Atom ((to_string_v1_v2 [@alloc a]) t ~is_v2) [@exclave_if_stack a]
+    ;;
+
     let t_of_sexp sexp = t_of_sexp_v1_v2 sexp ~is_v2:false
-    let sexp_of_t t = sexp_of_t_v1_v2 t ~is_v2:false
+
+    let%template[@alloc a @ m = (heap_global, stack_local)] sexp_of_t (t @ m) =
+      (sexp_of_t_v1_v2 [@alloc a]) t ~is_v2:false [@exclave_if_stack a]
+    ;;
+
     let t_sexp_grammar = Sexplib.Sexp_grammar.coerce String.t_sexp_grammar
 
     include%template Diffable.Atomic.Make [@modality portable] (struct
@@ -378,7 +394,11 @@ module Stable = struct
     include V1
 
     let t_of_sexp sexp = t_of_sexp_v1_v2 sexp ~is_v2:true
-    let sexp_of_t t = sexp_of_t_v1_v2 t ~is_v2:true
+
+    let%template[@alloc a = (heap, stack)] sexp_of_t t =
+      (sexp_of_t_v1_v2 [@alloc a]) t ~is_v2:true [@exclave_if_stack a]
+    ;;
+
     let t_sexp_grammar = Sexplib.Sexp_grammar.coerce String.t_sexp_grammar
 
     include%template Diffable.Atomic.Make [@modality portable] (struct

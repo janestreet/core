@@ -7,7 +7,7 @@ open! Import
 open Base_quickcheck
 
 module Definitions = struct
-  module type Generator = sig
+  module type Generator = sig @@ portable
     (** An ['a t] a generates values of type ['a] with a specific probability
         distribution.
 
@@ -22,10 +22,14 @@ module Definitions = struct
 
     type (+'a : any) t = 'a Generator.t
 
-    val%template create : (size:int -> random:Splittable_random.t -> 'a) @ p -> 'a t @ p
+    val%template create
+      : ('a : value_or_null).
+      (size:int -> random:Splittable_random.t -> 'a) @ p -> 'a t @ p
     [@@mode p = (portable, nonportable)]
 
-    val generate : 'a t -> size:int -> random:Splittable_random.t -> 'a
+    val generate
+      : ('a : value_or_null).
+      'a t -> size:int -> random:Splittable_random.t -> 'a
 
     (** Generators form a monad. [t1 >>= fun x -> t2] replaces each value [x] in [t1] with
         the values in [t2]; each value's probability is the product of its probability in
@@ -37,9 +41,15 @@ module Definitions = struct
         {[
           Int.gen >>= fun x -> Int.gen_incl x Int.max_value >>| fun y -> x, y
         ]} *)
-    include Monad.S with type 'a t := 'a t
+    include%template
+      Monad.S
+      [@kind value_or_null mod maybe_null]
+      with type ('a : value_or_null) t := 'a t
 
-    include Applicative.S with type 'a t := 'a t
+    include%template
+      Applicative.S
+      [@kind value_or_null mod maybe_null]
+      with type ('a : value_or_null) t := 'a t
 
     module Via_thunk : sig
       type ('a : any) thunk := unit -> 'a
@@ -59,16 +69,30 @@ module Definitions = struct
       [@@mode p = (nonportable, portable)]
     end
 
+    module Portable = Base_quickcheck.Generator.Portable
+    module%template [@mode portable] Let_syntax = Portable.Let_syntax
+
+    val%template return
+      : ('a : value_or_null mod contended).
+      'a @ portable -> 'a t @ portable
+    [@@mode portable]
+
     val%template map
       : ('a : value_or_null) ('b : value_or_null).
       'a t @ p -> f:('a -> 'b) @ p -> 'b t @ p
     [@@mode p = (nonportable, portable)]
 
+    val%template bind
+      : ('a : value_or_null) ('b : value_or_null).
+      'a t @ portable -> f:('a -> 'b t) @ portable -> 'b t @ portable
+    [@@mode portable]
+
     (** [size = create (fun ~size _ -> size)] *)
     val size : int t
 
     (** [with_size t ~size = create (fun ~size:_ random -> generate t ~size random)] *)
-    val with_size : 'a t -> size:int -> 'a t
+    val%template with_size : ('a : value_or_null). 'a t @ p -> size:int -> 'a t @ p
+    [@@mode p = (portable, nonportable)]
 
     val bool : bool t
     val char : char t
@@ -85,12 +109,8 @@ module Definitions = struct
     (** Produce any of the given values, weighted equally.
 
         [of_list [ v1 ; ... ; vN ] = union [ singleton v1 ; ... ; singleton vN ]] *)
-    val of_list : 'a list -> 'a t
-
-    val%template of_list
-      : ('a : value mod contended).
-      'a list @ portable -> 'a t @ portable
-    [@@mode portable]
+    val%template of_list : ('a : value mod c). 'a list @ p -> 'a t @ p
+    [@@mode (p, c) = ((nonportable, uncontended), (portable, contended))]
 
     (** Combine arbitrary generators, weighted equally.
 
@@ -101,7 +121,7 @@ module Definitions = struct
     (** Generator for the values from a potentially infinite sequence. Chooses each value
         with probability [p], or continues with probability [1-p]. Must satisfy
         [0. < p && p <= 1.]. *)
-    val of_sequence : p:float -> 'a Sequence.t -> 'a t
+    val of_sequence : ('a : value_or_null). p:float -> 'a Sequence.t -> 'a t
 
     val tuple2 : 'a t -> 'b t -> ('a * 'b) t
     val tuple3 : 'a t -> 'b t -> 'c t -> ('a * 'b * 'c) t
@@ -232,13 +252,14 @@ module Definitions = struct
                  Node (left, int, right))
               ])
         ]} *)
-    val recursive_union : 'a t list -> f:('a t -> 'a t list) -> 'a t
+    val recursive_union : ('a : value_or_null). 'a t list -> f:('a t -> 'a t list) -> 'a t
 
     (** Like [recursive_union], with the addition of non-uniform weights for each clause. *)
-    val weighted_recursive_union
-      :  (float * 'a t) list
-      -> f:('a t -> (float * 'a t) list)
-      -> 'a t
+    val%template weighted_recursive_union
+      :  (float * 'a t) list @ p
+      -> f:('a t @ p -> (float * 'a t) list @ p) @ p
+      -> 'a t @ p
+    [@@mode p = (nonportable, portable)]
 
     (** Fixed-point generator. Use [size] to bound the size of the value and the depth of
         the recursion. There is no prescribed semantics for [size] except that it must be
@@ -251,12 +272,18 @@ module Definitions = struct
             | 0 -> singleton 0
             | n -> with_size self ~size:(n - 1) >>| Int.succ)
         ]} *)
-    val fixed_point : ('a t -> 'a t) -> 'a t
+    val%template fixed_point
+      : ('a : value_or_null).
+      ('a t @ p -> 'a t @ p) @ p -> 'a t @ p
+    [@@mode p = (nonportable, portable)]
 
     (** [weighted_union alist] produces a generator that combines the distributions of
         each [t] in [alist] with the associated weights, which must be finite positive
         floating point values. *)
-    val weighted_union : (float * 'a t) list -> 'a t
+    val%template weighted_union
+      : ('a : value_or_null).
+      (float * 'a t) list @ p -> 'a t @ p
+    [@@mode p = (portable, nonportable)]
 
     (** [of_fun f] produces a generator that lazily applies [f].
 
@@ -265,19 +292,20 @@ module Definitions = struct
         [weighted_union]. This allows lazily generated generators to be garbage collected
         after each test and the relevant portions cheaply recomputed in subsequent tests,
         rather than accumulating without bound over time. *)
-    val of_fun : (unit -> 'a t) -> 'a t
+    val of_fun : ('a : value_or_null). (unit -> 'a t) -> 'a t
 
     (** Generators for lists, choosing each element independently from the given element
         generator. [list] and [list_non_empty] distribute [size] among the list length and
         the sizes of each element. [list_non_empty] never generates the empty list.
         [list_with_length] generates lists of the given length, and distributes [size]
         among the sizes of the elements. *)
-    val list : 'a t -> 'a list t
-
-    val%template list_non_empty : 'a t @ p -> 'a list t @ p
+    val%template list : ('a : value_or_null). 'a t @ p -> 'a list t @ p
     [@@mode p = (portable, nonportable)]
 
-    val%template list_with_length : int -> 'a t @ p -> 'a list t @ p
+    val%template list_non_empty : ('a : value_or_null). 'a t @ p -> 'a list t @ p
+    [@@mode p = (portable, nonportable)]
+
+    val%template list_with_length : ('a : value_or_null). int -> 'a t @ p -> 'a list t @ p
     [@@mode p = (portable, nonportable)]
 
     (** [fold_until ~init ~f ~finish] is similar to
@@ -468,7 +496,7 @@ module Definitions = struct
 
     type ('a : any) t = 'a Shrinker.t
 
-    val shrink : 'a t -> 'a -> 'a Sequence.t
+    val shrink : ('a : value_or_null). 'a t -> 'a -> 'a Sequence.t
 
     val%template create : ('a -> 'a Sequence.t) @ p -> 'a t @ p
     [@@mode p = (portable, nonportable)]

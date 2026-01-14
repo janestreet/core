@@ -35,7 +35,8 @@ module Ofday : sig
 
         Two [t]'s may or may not correspond to the same times depending on which date
         they're evaluated. *)
-    type t : value mod contended many stateless unyielding [@@deriving bin_io, sexp, hash]
+    type t : value mod contended many stateless unyielding
+    [@@deriving bin_io, sexp ~stackify, hash]
 
     include Pretty_printer.S with type t := t
 
@@ -152,7 +153,7 @@ module Stable : sig
       type nonrec comparator_witness = comparator_witness
 
       include%template
-        Stable_comparable.V1
+        Stable_comparable.With_stable_witness.V1
         [@mode local]
         with type t := t
         with type comparator_witness := comparator_witness
@@ -189,7 +190,8 @@ module Stable : sig
 
   module Span : sig
     module V1 : sig
-      type t = Time.Stable.Span.V1.t [@@deriving hash, equal ~localize, sexp_grammar]
+      type t = Time.Stable.Span.V1.t
+      [@@deriving hash, equal ~localize, sexp_of ~stackify, sexp_grammar]
 
       include%template
         Stable_without_comparator_with_witness [@mode local] with type t := t
@@ -198,7 +200,8 @@ module Stable : sig
     end
 
     module V2 : sig
-      type t = Time.Stable.Span.V2.t [@@deriving hash, equal ~localize, sexp_grammar]
+      type t = Time.Stable.Span.V2.t
+      [@@deriving hash, equal ~localize, sexp_of ~stackify, sexp_grammar]
 
       include%template
         Stable_without_comparator_with_witness [@mode local] with type t := t
@@ -219,7 +222,8 @@ module Stable : sig
 
   module Ofday : sig
     module V1 : sig
-      type t = Time.Stable.Ofday.V1.t [@@deriving hash, equal ~localize, sexp_grammar]
+      type t = Time.Stable.Ofday.V1.t
+      [@@deriving hash, equal ~localize, sexp_grammar, sexp_of ~stackify]
 
       include%template
         Stable_without_comparator_with_witness [@mode local] with type t := t
@@ -241,7 +245,8 @@ module Stable : sig
 
   module Zone : sig
     module V1 : sig
-      type t = Timezone.Stable.V1.t [@@deriving hash, sexp_grammar, equal ~localize]
+      type t = Timezone.Stable.V1.t
+      [@@deriving hash, sexp_grammar, equal ~localize, sexp_of ~stackify]
 
       include%template
         Stable_without_comparator_with_witness [@mode local] with type t := t

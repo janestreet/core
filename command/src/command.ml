@@ -3,16 +3,16 @@ open! Import
 include Command_intf
 module Shape = Shape
 
-let am_running_test =
-  match Ppx_inline_test_lib.testing with
+let am_running_test () =
+  match Ppx_inline_test_lib.testing () with
   | `Testing `Am_test_runner | `Testing `Am_child_of_test_runner -> true
   | `Not_testing -> false
 ;;
 
 (* in order to define expect tests, we want to raise rather than exit if the code is
    running in the test runner process *)
-let raise_instead_of_exit =
-  match Ppx_inline_test_lib.testing with
+let raise_instead_of_exit () =
+  match Ppx_inline_test_lib.testing () with
   | `Testing `Am_test_runner -> true
   | `Testing `Am_child_of_test_runner | `Not_testing -> false
 ;;
@@ -22,12 +22,14 @@ exception Exit_called of { status : int } [@@deriving sexp_of]
 (* [raise_instead_of_exit]-respecting wrappers for [exit] and functions that call it *)
 include struct
   let exit status =
-    if raise_instead_of_exit then raise (Exit_called { status }) else Stdlib.exit status
+    if raise_instead_of_exit ()
+    then raise (Exit_called { status })
+    else Stdlib.exit status
   ;;
 
   module Exn = struct
     let handle_uncaught_and_exit f =
-      if raise_instead_of_exit
+      if raise_instead_of_exit ()
       then (
         try f () with
         | Exit_called { status = 0 } as exn -> print_s [%sexp (exn : exn)])
@@ -1821,7 +1823,7 @@ module Command_base = struct
           ~doc
       ;;
 
-      let flag_optional_with_default_doc
+      let flag_optional_with_default_doc_sexp
         ?aliases
         ?full_flag_required
         name
@@ -2230,7 +2232,7 @@ module Command_base = struct
       let optional_with_default = optional_with_default
       let required = required
       let flag = Param.flag
-      let flag_optional_with_default_doc = Param.flag_optional_with_default_doc
+      let flag_optional_with_default_doc_sexp = Param.flag_optional_with_default_doc_sexp
 
       let flag_optional_with_default_doc_string =
         Param.flag_optional_with_default_doc_string
@@ -2478,6 +2480,32 @@ let group ~summary ?readme ?preserve_subcommand_order ?body alist =
   lazy_group ~summary ?readme ?preserve_subcommand_order ?body (Lazy.from_val alist)
 ;;
 
+let rec extend_group_exn ~(here : [%call_pos]) t ~subcommands =
+  match t with
+  | Group group ->
+    let subcommands =
+      List.map subcommands ~f:(fun (name, cmd) -> normalize Key_type.Subcommand name, cmd)
+    in
+    let merged =
+      Lazy.map group.subcommands ~f:(fun existing ->
+        List.fold subcommands ~init:existing ~f:(fun acc (name, cmd) ->
+          extend_alist_exn acc Key_type.Subcommand ~key:name cmd))
+    in
+    Group { group with subcommands = merged }
+  | Lazy thunk ->
+    Lazy (Lazy.map thunk ~f:(fun thunk -> extend_group_exn thunk ~here ~subcommands))
+  | Base _ ->
+    raise_s
+      [%message
+        "cannot extend a basic command, expected a group"
+          ~called_from:(here : Source_code_position.t)]
+  | Exec _ ->
+    raise_s
+      [%message
+        "cannot extend an exec command, expected a group"
+          ~called_from:(here : Source_code_position.t)]
+;;
+
 let exec ~summary ?readme ?(child_subcommand = []) ?env ~path_to_exe () =
   let working_dir =
     Filename_base.dirname
@@ -2711,9 +2739,8 @@ module Deprecated = struct
   ;;
 end
 
-(* This script works in both bash (via readarray) and zsh (via read -A).  If you change
-   it, please test in both bash and zsh.  It does not work tcsh (different function
-   syntax). *)
+(* This script works in both bash (via readarray) and zsh (via read -A). If you change it,
+   please test in both bash and zsh. It does not work tcsh (different function syntax). *)
 let autocomplete_function ~argv_0 ~pid =
   let fname =
     (* Note: we pad the pid to a deterministic length, as in 2023 it was determined that
@@ -2854,7 +2881,7 @@ struct
       match stdout |> Sexplib.Sexp.of_string |> Versioned.t_of_sexp |> of_versioned with
       | exception exn ->
         let debug =
-          if am_running_test
+          if am_running_test ()
           then [%message "<debug info hidden in test>"]
           else
             [%message
@@ -3426,7 +3453,7 @@ module Param = struct
       -> doc:string
       -> 'a t
 
-    val flag_optional_with_default_doc
+    val flag_optional_with_default_doc_sexp
       :  ?aliases:string list
       -> ?full_flag_required:unit
       -> string

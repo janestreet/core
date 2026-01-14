@@ -4,7 +4,7 @@ module type Round = Base.Int.Round
 
 module type Stable = sig @@ portable
   module V1 : sig
-    type t [@@deriving equal ~localize, globalize, hash, sexp_grammar]
+    type t [@@deriving equal ~localize, globalize, hash, sexp_grammar, sexp_of ~stackify]
 
     include%template
       Stable_comparable.With_stable_witness.V1 [@mode local] with type t := t

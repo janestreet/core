@@ -277,7 +277,9 @@ module Stable = struct
       [@exclave_if_stack a]
     ;;
 
-    let sexp_of_t t = Sexp.Atom (to_string t)
+    let%template[@alloc a = (heap, stack)] sexp_of_t t =
+      Sexp.Atom ((to_string [@alloc a]) t) [@exclave_if_stack a]
+    ;;
 
     let t_sexp_grammar : t Sexplib.Sexp_grammar.t =
       { untyped =

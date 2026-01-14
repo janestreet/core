@@ -597,7 +597,7 @@ let rand_f =
 ;;
 
 exception Traced of Sexp.t * [ `Operation of f | `New_elt of e | `New_list of l ] list
-[@@deriving sexp]
+[@@deriving sexp ~nonportable__magic_unsafe_in_parallel_programs]
 
 let simulate nsteps =
   let env =

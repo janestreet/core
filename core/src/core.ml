@@ -36,7 +36,6 @@ module Comparator = Comparator
 module Comparisons = Comparisons
 module Container = Container
 module Container_intf = Container_intf
-module Container_with_local = Base.Container_with_local
 module Continue_or_stop = Continue_or_stop
 
 module Core_kernel_stable = Stable
@@ -122,7 +121,7 @@ module Option_array = Option_array
 module Optional_syntax = Optional_syntax
 module Optional_syntax_intf = Optional_syntax_intf
 module Or_error = Or_error
-module Or_null = Base.Or_null
+module Or_null = Or_null
 module Ordered_collection_common = Base.Ordered_collection_common
 module Ordering = Ordering
 module Out_channel = Out_channel

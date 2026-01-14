@@ -7,7 +7,6 @@ module Backtrace = Base.Backtrace
 module Binary_search = Base.Binary_search
 module Capsule = Portable.Capsule
 module Comparisons = Base.Comparisons
-module Container_with_local = Base.Container_with_local
 module Continue_or_stop = Base.Continue_or_stop
 module Dynamic = Base.Dynamic
 module Equal = Base.Equal

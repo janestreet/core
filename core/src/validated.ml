@@ -28,7 +28,7 @@ let raw t = t]
 
 module%template.portable Make (Raw : Raw) = struct
   type witness
-  type t = Raw.t [@@deriving sexp_of]
+  type t = Raw.t [@@deriving sexp_of ~stackify]
 
   let validation_failed t error =
     Error.create

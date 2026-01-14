@@ -108,6 +108,12 @@ module type S1 = sig
   (** [keys t] returns the keys in the order of the queue. *)
   val keys : ('key, 'data) t -> 'key list
 
+  (** Find and return the key-value pair directly before ['key] in the queue *)
+  val lookup_prev_with_key : ('key, 'data) t -> 'key -> ('key * 'data) option
+
+  (** Find and return the key-value directly after ['key] in the queue *)
+  val lookup_next_with_key : ('key, 'data) t -> 'key -> ('key * 'data) option
+
   (** [to_alist t] returns the elements of the queue with their keys in the order of the
       queue. *)
   val to_alist : ('key, 'data) t -> ('key * 'data) list
@@ -207,6 +213,11 @@ module type S1 = sig
     -> init:'acc
     -> f:local_ ('acc -> key:'key -> data:'data -> 'acc)
     -> 'acc
+
+  val findi
+    :  ('key, 'data) t
+    -> f:(key:'key -> data:'data -> bool)
+    -> ('key * 'data) option
 end
 
 module type S0 = sig

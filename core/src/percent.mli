@@ -34,6 +34,8 @@ val to_string_round_trippable : local_ t -> string
     conversion. *)
 include Sexpable with type t := t
 
+include%template Sexplib0.Sexpable.Sexp_of [@alloc stack] with type t := t
+
 include Sexplib.Sexp_grammar.S with type t := t
 
 include%template Binable.S [@mode local] with type t := t

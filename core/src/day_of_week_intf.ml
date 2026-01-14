@@ -59,7 +59,7 @@ module type Day_of_week = sig @@ portable
       [@@deriving
         bin_io ~localize
         , equal ~localize
-        , sexp
+        , sexp ~stackify
         , sexp_grammar
         , compare ~localize
         , hash

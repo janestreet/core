@@ -439,7 +439,9 @@ end
 
 include Stable.Full_data.V1
 
-let sexp_of_t t = Sexp.Atom t.name
+let%template[@alloc a = (heap, stack)] sexp_of_t t =
+  Sexp.Atom t.name [@exclave_if_stack a]
+;;
 
 let likely_machine_zones =
   Atomic.make [ "America/New_York"; "Europe/London"; "Asia/Hong_Kong"; "America/Chicago" ]

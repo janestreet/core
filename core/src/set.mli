@@ -161,10 +161,10 @@ val empty : ('a, 'cmp) Comparator.Module.t -> ('a, 'cmp) t
 val singleton : ('a, 'cmp) Comparator.Module.t -> 'a -> ('a, 'cmp) t
 
 (** Returns the cardinality of the set. [O(1)]. *)
-val length : (_, _) t -> int
+val length : (_, _) t @ local -> int
 
 (** [is_empty t] is [true] iff [t] is empty. [O(1)]. *)
-val is_empty : (_, _) t -> bool
+val is_empty : (_, _) t @ local -> bool
 
 (** [mem t a] returns [true] iff [a] is in [t]. [O(log n)]. *)
 val mem : ('a, _) t -> 'a -> bool

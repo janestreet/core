@@ -22,7 +22,7 @@ module Stable = struct
       , globalize
       , hash
       , quickcheck ~portable
-      , sexp
+      , sexp ~stackify
       , sexp_grammar
       , typerep
       , variants]

@@ -9,7 +9,7 @@ module Stable : sig
   module V1 : sig
     type nonrec t = t
     [@@deriving
-      sexp
+      sexp ~stackify
       , sexp_grammar
       , bin_io ~localize
       , compare ~localize
@@ -26,7 +26,7 @@ module Stable : sig
   module V2 : sig
     type nonrec t = t
     [@@deriving
-      sexp
+      sexp ~stackify
       , sexp_grammar
       , bin_io ~localize
       , compare ~localize

@@ -30,7 +30,8 @@ type sexp_thunk = unit -> Base.Sexp.t
 
 let sexp_of_sexp_thunk x = x ()
 
-exception Duplicate_found of sexp_thunk * Base.String.t [@@deriving sexp]
+exception Duplicate_found of sexp_thunk * Base.String.t
+[@@deriving sexp ~nonportable__magic_unsafe_in_parallel_programs]
 
 let%template exn_if_dup ~compare ?(context = "exn_if_dup") t ~to_sexp =
   let open Wrapper [@mode p] in

@@ -125,6 +125,14 @@ module%template Make_backend (Table : Hashtbl_intf.Hashtbl [@modality portable])
       [@nontail]
     ;;
 
+    let findi t ~f =
+      read t (fun () ->
+        Option.map
+          (Doubly_linked.find t.queue ~f:(fun kv -> f ~key:kv.key ~data:kv.value))
+          ~f:(fun kv -> kv.key, kv.value))
+      [@nontail]
+    ;;
+
     let enqueue_unchecked t back_or_front key value =
       let contents = { Key_value.key; value } in
       let elt =
@@ -199,6 +207,22 @@ module%template Make_backend (Table : Hashtbl_intf.Hashtbl [@modality portable])
       let%map elt = Table.find t.table key in
       Doubly_linked.move_to_front t.queue elt;
       Key_value.value (Elt.value elt)
+    ;;
+
+    let lookup_prev_with_key t key =
+      let open Option.Let_syntax in
+      let%bind elt = Table.find t.table key in
+      let%map prev = Doubly_linked.prev t.queue elt in
+      let e = Elt.value prev in
+      Key_value.key e, Key_value.value e
+    ;;
+
+    let lookup_next_with_key t key =
+      let open Option.Let_syntax in
+      let%bind elt = Table.find t.table key in
+      let%map next = Doubly_linked.next t.queue elt in
+      let e = Elt.value next in
+      Key_value.key e, Key_value.value e
     ;;
 
     let dequeue_with_key t back_or_front =

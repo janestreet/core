@@ -9,7 +9,7 @@ module type Date0 = sig @@ portable
     , equal ~localize
     , globalize
     , hash
-    , sexp
+    , sexp ~stackify
     , sexp_grammar
     , typerep]
 
@@ -326,7 +326,8 @@ module type Date0 = sig @@ portable
   module Stable : sig
     module V1 : sig
       type nonrec t : immediate = t
-      [@@deriving equal ~localize, globalize, hash, sexp_grammar, string]
+      [@@deriving
+        equal ~localize, globalize, hash, sexp_grammar, string, sexp_of ~stackify]
 
       (** [to_int] and [of_int_exn] convert to/from the underlying integer representation. *)
 
@@ -351,7 +352,7 @@ module type Date0 = sig @@ portable
           , compare ~localize
           , equal ~localize
           , globalize
-          , sexp
+          , sexp ~stackify
           , sexp_grammar
           , stable_witness]
 

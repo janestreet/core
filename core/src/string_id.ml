@@ -21,7 +21,7 @@ struct
           , equal ~localize
           , globalize
           , hash
-          , sexp
+          , sexp ~stackify
           , sexp_grammar
           , typerep
           , stable_witness]
@@ -257,3 +257,37 @@ module String_without_validation_without_pretty_printer = struct
   let%template[@alloc stack] to_string = (to_string [@alloc stack])
   let%template arg_type = (Command.Arg_type.create [@mode portable]) Fn.id
 end
+
+let%template[@modality p = (nonportable, portable)] make
+  ?(validate = fun _ -> Ok ())
+  ?caller_identity
+  ?(include_pretty_printer = true)
+  ~module_name
+  ~include_default_validation
+  ()
+  : ((module S_with_extras)[@mode local] [@modality p])
+  =
+  let module M =
+    Make_with_validate_without_pretty_printer_with_bin_shape [@modality p]
+      (struct
+        let module_name = module_name
+        let validate = validate
+        let include_default_validation = include_default_validation
+        let caller_identity = caller_identity
+      end)
+      ()
+  in
+  match include_pretty_printer with
+  | false -> (module M)
+  | true ->
+    (module struct
+      include M
+
+      include Pretty_printer.Register [@modality p] (struct
+          type nonrec t = t
+
+          let module_name = module_name
+          let to_string = to_string
+        end)
+    end)
+;;

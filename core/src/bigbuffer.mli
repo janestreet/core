@@ -23,7 +23,11 @@ val big_contents : t -> Bigstring.t
 val volatile_contents : t -> Bigstring.t
 
 (** [add_bigstring b s] appends the bigstring [s] at the end of the buffer [b]. *)
-val add_bigstring : t -> Bigstring.t -> unit
+val add_bigstring : t -> Bigstring.t @ local -> unit
+
+(** [add_bigsubstring b s ~pos ~len] takes [len] characters from offset [pos] in bigstring
+    [s] and appends them at the end of the buffer [b]. *)
+val add_bigsubstring : t -> Bigstring.t @ local -> pos:int -> len:int -> unit
 
 (** [add_bin_prot b writer x] appends the bin-protted representation of [x] at the end of
     the buffer [b]. *)

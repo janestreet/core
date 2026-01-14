@@ -83,6 +83,15 @@ let truncate buf pos =
   if pos < 0 || pos >= buf.pos then invalid_arg "Bigbuffer.truncate" else buf.pos <- pos
 ;;
 
+let add_bigsubstring buf src ~pos:src_pos ~len =
+  if src_pos < 0 || len < 0 || src_pos > Bigstring.length src - len
+  then invalid_arg "Bigbuffer.add_bigsubstring";
+  let new_pos = buf.pos + len in
+  if new_pos > buf.len then resize buf len;
+  Bigstring.blit ~src ~src_pos ~len ~dst:buf.bstr ~dst_pos:buf.pos;
+  buf.pos <- new_pos
+;;
+
 let add_substring buf src ~pos:src_pos ~len =
   if src_pos < 0 || len < 0 || src_pos > String.length src - len
   then invalid_arg "Bigbuffer.add_substring";

@@ -306,7 +306,7 @@ module%test _ = struct
   end
 
   (* Check that only the functions & shape are sufficient for [@@deriving bin_io]. The
-       fact that this functor typechecks is, itself, the test. *)
+     fact that this functor typechecks is, itself, the test. *)
   module _ (X : sig
       type t
 

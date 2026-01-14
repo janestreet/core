@@ -630,10 +630,10 @@ val print_char : char -> unit
 [@@deprecated "[since 2016-04] Use [Out_channel.output_char stdout]"]
 
 (** Print a string on standard output. *)
-val print_string : string -> unit
+val print_string : string @ local -> unit
 
 (** Print a byte sequence on standard output. *)
-val print_bytes : bytes -> unit
+val print_bytes : bytes @ local -> unit
 [@@deprecated "[since 2016-04] Core doesn't support [bytes] yet."]
 
 (** Print an integer, in decimal, on standard output. *)
@@ -646,7 +646,7 @@ val print_float : float -> unit
 
 (** Print a string, followed by a newline character, on standard output and flush standard
     output. *)
-val print_endline : string -> unit
+val print_endline : string @ local -> unit
 
 (** Print a newline character on standard output, and flush standard output. This can be
     used to simulate line buffering of standard output. *)
@@ -660,11 +660,11 @@ val prerr_char : char -> unit
 [@@deprecated "[since 2016-04] Use [Out_channel.output_char stderr]"]
 
 (** Print a string on standard error. *)
-val prerr_string : string -> unit
+val prerr_string : string @ local -> unit
 [@@deprecated "[since 2016-04] Use [Out_channel.output_string stderr]"]
 
 (** Print a byte sequence on standard error. *)
-val prerr_bytes : bytes -> unit
+val prerr_bytes : bytes @ local -> unit
 [@@deprecated "[since 2016-04] Core doesn't support [bytes] yet"]
 
 (** Print an integer, in decimal, on standard error. *)
@@ -677,7 +677,7 @@ val prerr_float : float -> unit
 
 (** Print a string, followed by a newline character on standard error and flush standard
     error. *)
-val prerr_endline : string -> unit
+val prerr_endline : string @ local -> unit
 
 (** Print a newline character on standard error, and flush standard error. *)
 val prerr_newline : unit -> unit
