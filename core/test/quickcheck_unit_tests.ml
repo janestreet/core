@@ -453,8 +453,8 @@ module Test (S : sig
 
   module%test [@name "higher-order function"] _ = struct
     (* [First_order] defines a flat representation for [int -> int] functions that has
-         [sexp_of] and [compare], but which can map to functions and use [Observer.fn] on
-         below. *)
+       [sexp_of] and [compare], but which can map to functions and use [Observer.fn] on
+       below. *)
     module First_order = struct
       type t =
         | Id

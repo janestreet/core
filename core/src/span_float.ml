@@ -105,7 +105,7 @@ module Stable = struct
         end)
 
       (* this prevents any worry about having these very common names redefined below and
-         makes their usage within this module safer.  Constant is included at the very
+         makes their usage within this module safer. Constant is included at the very
          bottom to re-export these constants in a more convenient way *)
       module Constant = struct
         let nanoseconds_per_second = 1E9
@@ -184,6 +184,7 @@ module Stable = struct
     let ( // ) (f : T.t) (t : T.t) = (f :> float) /. (t :> float)
 
     (* Multiplying by 1E3 is more accurate than division by 1E-3 *)
+
     let to_ns (x : T.t) = (x :> float) *. T.Constant.nanoseconds_per_second
     let to_us (x : T.t) = (x :> float) *. T.Constant.microseconds_per_second
     let to_ms (x : T.t) = (x :> float) *. T.Constant.milliseconds_per_second
@@ -328,8 +329,8 @@ module Stable = struct
 
     let string ~is_v2 suffix float =
       if is_v2
-         (* This is the same float-to-string conversion used in [Float.sexp_of_t].  It's like
-         [Float.to_string], but may leave off trailing period. *)
+         (* This is the same float-to-string conversion used in [Float.sexp_of_t]. It's
+            like [Float.to_string], but may leave off trailing period. *)
       then (Dynamic.get Sexplib.Conv.default_string_of_float) float ^ suffix
       else sprintf "%g%s" float suffix
     ;;
@@ -337,17 +338,23 @@ module Stable = struct
     (* WARNING: if you are going to change this function in any material way, make sure
        you update Stable appropriately. *)
     (* I'd like it to be the case that you could never construct an infinite span, but I
-       can't think of a good way to enforce it.  So this to_string function can produce
+       can't think of a good way to enforce it. So this to_string function can produce
        strings that will raise an exception when they are fed to of_string *)
-    let to_string_v1_v2 (t : T.t) ~is_v2 =
+    let%template[@alloc a @ m = (heap_global, stack_local)] to_string_v1_v2
+      (t : T.t)
+      ~is_v2
+      =
       (* this is a sad broken abstraction... *)
-      let module C = Float.Class in
+      (let module C = Float.Class in
       match Float.classify (t :> float) with
       | C.Subnormal | C.Zero -> "0s"
-      | C.Infinite -> if T.( > ) t T.zero then "inf" else "-inf"
+      | C.Infinite ->
+        let t = T.globalize t in
+        if T.( > ) t T.zero then "inf" else "-inf"
       | C.Nan -> "nan"
       | C.Normal ->
         let ( < ) = T.( < ) in
+        let t = T.globalize t in
         let abs_t = T.of_float (Float.abs (t :> float)) in
         if is_v2 && abs_t < T.Constant.microsecond
         then string ~is_v2 "ns" (to_ns t)
@@ -361,12 +368,20 @@ module Stable = struct
         then string ~is_v2 "m" (to_min t)
         else if abs_t < T.Constant.day
         then string ~is_v2 "h" (to_hr t)
-        else string ~is_v2 "d" (to_day t)
+        else string ~is_v2 "d" (to_day t))
+      [@exclave_if_stack a]
     ;;
 
-    let sexp_of_t_v1_v2 t ~is_v2 = Sexp.Atom (to_string_v1_v2 t ~is_v2)
+    let%template[@alloc a @ m = (heap_global, stack_local)] sexp_of_t_v1_v2 t ~is_v2 =
+      Sexp.Atom ((to_string_v1_v2 [@alloc a]) t ~is_v2) [@exclave_if_stack a]
+    ;;
+
     let t_of_sexp sexp = t_of_sexp_v1_v2 sexp ~is_v2:false
-    let sexp_of_t t = sexp_of_t_v1_v2 t ~is_v2:false
+
+    let%template[@alloc a @ m = (heap_global, stack_local)] sexp_of_t t =
+      (sexp_of_t_v1_v2 [@alloc a]) t ~is_v2:false [@exclave_if_stack a]
+    ;;
+
     let t_sexp_grammar = Sexplib.Sexp_grammar.coerce String.t_sexp_grammar
 
     include%template Diffable.Atomic.Make [@modality portable] (struct
@@ -378,7 +393,11 @@ module Stable = struct
     include V1
 
     let t_of_sexp sexp = t_of_sexp_v1_v2 sexp ~is_v2:true
-    let sexp_of_t t = sexp_of_t_v1_v2 t ~is_v2:true
+
+    let%template[@alloc a = (heap, stack)] sexp_of_t t =
+      (sexp_of_t_v1_v2 [@alloc a]) t ~is_v2:true [@exclave_if_stack a]
+    ;;
+
     let t_sexp_grammar = Sexplib.Sexp_grammar.coerce String.t_sexp_grammar
 
     include%template Diffable.Atomic.Make [@modality portable] (struct
@@ -642,10 +661,9 @@ module Stable = struct
       let to_int_string_and_sum unit_of_time ~abs_t ~sum_t =
         let unit_span = of_unit_of_time unit_of_time in
         let rem_t = abs_t - sum_t in
-        (* We calculate the approximate multiple of [unit_of_time] that needs to be
-           added to [sum_t]. Due to rounding, this can be off by one (we've never seen a
-           case off by two or more), so we re-compute the remainder and correct if
-           necessary. *)
+        (* We calculate the approximate multiple of [unit_of_time] that needs to be added
+           to [sum_t]. Due to rounding, this can be off by one (we've never seen a case
+           off by two or more), so we re-compute the remainder and correct if necessary. *)
         let magnitude = Float.round_down (rem_t // unit_span) in
         let new_sum_t = sum ~sum_t ~unit_of_time ~magnitude in
         let new_rem_t = abs_t - new_sum_t in
@@ -858,12 +876,11 @@ module C = struct
 
   let comparator = T.comparator
 
-  (* In 108.06a and earlier, spans in sexps of Maps and Sets were raw floats.  From 108.07
+  (* In 108.06a and earlier, spans in sexps of Maps and Sets were raw floats. From 108.07
      through 109.13, the output format remained raw as before, but both the raw and pretty
-     format were accepted as input.  From 109.14 on, the output format was changed from
-     raw to pretty, while continuing to accept both formats.  Once we believe most
-     programs are beyond 109.14, we will switch the input format to no longer accept
-     raw. *)
+     format were accepted as input. From 109.14 on, the output format was changed from raw
+     to pretty, while continuing to accept both formats. Once we believe most programs are
+     beyond 109.14, we will switch the input format to no longer accept raw. *)
   let sexp_of_t = sexp_of_t
 
   let t_of_sexp sexp =

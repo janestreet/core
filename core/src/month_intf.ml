@@ -26,7 +26,8 @@ module type Month = sig
     , typerep
     , variants]
 
-  include%template Comparable.S_binable [@mode local] with type t := t
+  include%template
+    Comparable.S_binable [@mode local] [@modality portable] with type t := t
 
   include Hashable.S_binable with type t := t
 
@@ -82,7 +83,7 @@ module type Month = sig
         | Oct
         | Nov
         | Dec
-      [@@deriving equal ~localize, globalize, hash, sexp_grammar]
+      [@@deriving equal ~localize, globalize, hash, sexp_grammar, sexp_of ~stackify]
 
       include%template
         Stable_module_types.With_stable_witness.S0

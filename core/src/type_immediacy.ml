@@ -1,6 +1,6 @@
-(* This module is very much dependent on the runtime representation of values.  Should the
+(* This module is very much dependent on the runtime representation of values. Should the
    way the compiler represents various types change, it needs to be reflected in this
-   module, otherwise bad things could happen.  Therefore the conversions and
+   module, otherwise bad things could happen. Therefore the conversions and
    representations are tested thoroughly in [../test/test_witness.ml] and
    [../test/test_conversions.ml]
 *)
@@ -180,7 +180,7 @@ module Computation_impl = struct
   let list _ = list
 
   (* An [a Lazy.t] might be a boxed closure, so must have immediacy either [Never] or
-     [Sometimes].  An [a Lazy.t] value could be immediate if [a] is immediate.  But if [a]
+     [Sometimes]. An [a Lazy.t] value could be immediate if [a] is immediate. But if [a]
      is never immediate, then [a Lazy.t] cannot be. *)
   let lazy_t t =
     let immediacy =
@@ -198,6 +198,16 @@ module Computation_impl = struct
     | Unknown | Always | Sometimes -> unknown typename
   ;;
 
+  let tuple_l t =
+    assert (Tuple_l.length t > 1);
+    never (Tuple_l.typename_of_t t)
+  ;;
+
+  let tuple_l_u t =
+    assert (Tuple_l_u.length t > 1);
+    never (Tuple_l_u.typename_of_t t)
+  ;;
+
   let record r =
     if Record.length r > 1
     then never (Record.typename_of_t r)
@@ -205,6 +215,11 @@ module Computation_impl = struct
       let (Field the_only_field) = Record.field r 0 in
       possibly_unboxed (Record.typename_of_t r) (Field.traverse the_only_field))
   ;;
+
+  (* An unboxed record of one field inherits the immediacy of said field, same as an
+     [@@unboxed] record. Thus, we can't tell whether either is unboxed from the typerep
+     alone. *)
+  let record_u r = record r
 
   (* Variants with all constructors having no arguments are always immediate; variants
      with all constructors having some arguments are never immediate; mixed variants are
@@ -319,7 +334,7 @@ struct
   let rn = Typerep.String
 
   (* Each of the [For_all_parameters_*] functors works by instantiating the n-ary type
-     with all [Always] types, and then with all [Never] types.  If those produce the same
+     with all [Always] types, and then with all [Never] types. If those produce the same
      immediacy, then we conclude that the n-ary type is independent of its arguments. *)
 
   module For_all_parameters_S1 (X : Typerepable.S1) = struct

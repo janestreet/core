@@ -281,3 +281,37 @@ let%expect_test "include_default_validation" =
     ("" (Error (Invalid_argument "'' is not a valid M because it is empty")))
     |}]
 ;;
+
+let%expect_test "[Make] is the same as [make] with default validation" =
+  let test (module M : String_id.S) =
+    List.iter [ "foobar"; "foo"; "  bar  "; " bar"; "bar "; "" ] ~f:(fun s ->
+      let x = Or_error.try_with (fun () -> M.of_string s) in
+      print_s [%message s ~_:(x : M.t Or_error.t)]);
+    [%expect
+      {|
+      (foobar (Ok foobar))
+      (foo (Ok foo))
+      ("  bar  " (
+        Error (
+          Invalid_argument
+          "'  bar  ' is not a valid M because it has whitespace on the edge")))
+      (" bar" (
+        Error (
+          Invalid_argument
+          "' bar' is not a valid M because it has whitespace on the edge")))
+      ("bar " (
+        Error (
+          Invalid_argument
+          "'bar ' is not a valid M because it has whitespace on the edge")))
+      ("" (Error (Invalid_argument "'' is not a valid M because it is empty")))
+      |}]
+  in
+  let module_name = "M" in
+  test
+    (module Make
+              (struct
+                let module_name = module_name
+              end)
+              ());
+  test (module (val make ~module_name ~include_default_validation:true ()))
+;;

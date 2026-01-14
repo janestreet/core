@@ -66,8 +66,8 @@ let load_exn zone =
 ;;
 
 let%expect_test ("load named zone" [@tags "js-only"]) =
-  (* Zone content changes over time, so we can't print the output of
-     these functions deterministically *)
+  (* Zone content changes over time, so we can't print the output of these functions
+     deterministically *)
   let ({ first_transition; remaining_transitions } : Timezone_js_loader.t) =
     load_exn "America/New_York"
   in
@@ -79,8 +79,8 @@ let%expect_test ("load named zone" [@tags "js-only"]) =
      ((start_time_in_seconds_since_epoch -8_640_000_000_000)
       (new_regime ((utc_offset_in_seconds -17_762) (is_dst false) (abbrv "")))))
     |}];
-  (* There should be a lot of transitions, and this number should grow over
-     time, so this should be deterministic *)
+  (* There should be a lot of transitions, and this number should grow over time, so this
+     should be deterministic *)
   assert (List.length remaining_transitions > 100)
 ;;
 

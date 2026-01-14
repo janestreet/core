@@ -172,7 +172,7 @@ let%expect_test "insert and remove" =
     match List.rev elts with
     | [] -> ()
     | elt :: elts ->
-      (* [elt] is the last elt.  each of [elts] is not last. *)
+      (* [elt] is the last elt. each of [elts] is not last. *)
       require_none [%sexp_of: Elt.t] (next t elt);
       require (is_last t elt);
       require_equal (module Elt_option) (last_elt t) (Some elt);

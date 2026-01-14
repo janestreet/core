@@ -411,8 +411,8 @@ module%template.portable Make_tree_S1 (Key : Comparator.S1) = struct
   let merge_disjoint_exn a b = merge_disjoint_exn a b ~comparator
   let merge_skewed a b ~combine = merge_skewed a b ~combine ~comparator
 
-  let merge_by_case a b ~left ~right ~both =
-    merge_by_case a b ~left ~right ~both ~comparator
+  let merge_by_case a b ~first ~second ~both =
+    merge_by_case a b ~first ~second ~both ~comparator
   ;;
 
   let min_elt = min_elt
@@ -449,6 +449,7 @@ module%template.portable Make_tree_S1 (Key : Comparator.S1) = struct
   let nth = nth
   let nth_exn = nth_exn
   let rank a b = rank a b ~comparator
+  let split_n = split_n
 
   let to_sequence ?order ?keys_greater_or_equal_to ?keys_less_or_equal_to t =
     to_sequence ~comparator ?order ?keys_greater_or_equal_to ?keys_less_or_equal_to t
@@ -678,8 +679,8 @@ module%template Provide_stable_witness (Key : sig
     type comparator_witness
   end) =
 struct
-  (* The binary representation of map is used in the stable modules below, so it's
-     assumed to be stable (if the key and data are stable) . *)
+  (* The binary representation of map is used in the stable modules below, so it's assumed
+     to be stable (if the key and data are stable) . *)
   let stable_witness (type data) (_data_stable_witness : data Stable_witness.t)
     : (Key.t, data, Key.comparator_witness) t Stable_witness.t
     =
@@ -990,7 +991,7 @@ module Stable = struct
     module type S = sig
       type key
       type comparator_witness
-      type nonrec 'a t = (key, 'a, comparator_witness) t
+      type nonrec 'a t = (key, 'a, comparator_witness) t [@@deriving equal]
 
       include%template Stable_module_types.S1 [@mode local] with type 'a t := 'a t
 

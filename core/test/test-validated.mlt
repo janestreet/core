@@ -1,7 +1,7 @@
 open! Core
 
 module Positive_int = Validated.Make (struct
-    type t = int [@@deriving sexp]
+    type t = int [@@deriving sexp ~stackify]
 
     let here = [%here]
 
@@ -11,7 +11,7 @@ module Positive_int = Validated.Make (struct
   end)
 
 module Negative_int = Validated.Make (struct
-    type t = int [@@deriving sexp]
+    type t = int [@@deriving sexp ~stackify]
 
     let here = [%here]
 

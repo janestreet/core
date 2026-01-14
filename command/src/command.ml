@@ -3,16 +3,16 @@ open! Import
 include Command_intf
 module Shape = Shape
 
-let am_running_test =
-  match Ppx_inline_test_lib.testing with
+let am_running_test () =
+  match Ppx_inline_test_lib.testing () with
   | `Testing `Am_test_runner | `Testing `Am_child_of_test_runner -> true
   | `Not_testing -> false
 ;;
 
 (* in order to define expect tests, we want to raise rather than exit if the code is
    running in the test runner process *)
-let raise_instead_of_exit =
-  match Ppx_inline_test_lib.testing with
+let raise_instead_of_exit () =
+  match Ppx_inline_test_lib.testing () with
   | `Testing `Am_test_runner -> true
   | `Testing `Am_child_of_test_runner | `Not_testing -> false
 ;;
@@ -22,12 +22,14 @@ exception Exit_called of { status : int } [@@deriving sexp_of]
 (* [raise_instead_of_exit]-respecting wrappers for [exit] and functions that call it *)
 include struct
   let exit status =
-    if raise_instead_of_exit then raise (Exit_called { status }) else Stdlib.exit status
+    if raise_instead_of_exit ()
+    then raise (Exit_called { status })
+    else Stdlib.exit status
   ;;
 
   module Exn = struct
     let handle_uncaught_and_exit f =
-      if raise_instead_of_exit
+      if raise_instead_of_exit ()
       then (
         try f () with
         | Exit_called { status = 0 } as exn -> print_s [%sexp (exn : exn)])
@@ -44,7 +46,7 @@ exception Failed_to_parse_command_line of string
 let die fmt = ksprintf (fun msg () -> raise (Failed_to_parse_command_line msg)) fmt
 let help_screen_compare = Shape.Private.help_screen_compare
 
-(* universal maps are used to pass around values between different bits
+(*=universal maps are used to pass around values between different bits
    of command line parsing code without having a huge impact on the
    types involved
 
@@ -195,8 +197,7 @@ end = struct
     let complete env ~part =
       match (force t).complete with
       | None ->
-        (* See [run_and_exit] - no completions is equivalent to not having a
-           [Complete]. *)
+        (* See [run_and_exit] - no completions is equivalent to not having a [Complete]. *)
         []
       | Some complete -> complete env ~part
     in
@@ -433,9 +434,9 @@ end = struct
                   (not (String.mem choice ',')) && is_allowed choice)
               with
               (* If there is exactly one choice to auto-complete, add a second choice with
-             a trailing comma so that auto-completion will go to the end but bash
-             won't add a space.  If there are multiple choices, or a single choice
-             that must be final, there is no need to add a dummy option. *)
+                 a trailing comma so that auto-completion will go to the end but bash
+                 won't add a space. If there are multiple choices, or a single choice that
+                 must be final, there is no need to add a dummy option. *)
               | [ choice ] -> [ choice; choice ^ "," ]
               | choices -> choices
             in
@@ -507,8 +508,8 @@ module Flag = struct
       ; aliases : string list
       ; aliases_excluded_from_help : string list
           (* [aliases_excluded_from_help] are aliases that don't show up in -help output.
-         Currently they're only used for double-dash built-in flags like --help and
-         --version. *)
+             Currently they're only used for double-dash built-in flags like --help and
+             --version. *)
       ; action : action
       ; doc : string
       ; num_occurrences : Num_occurrences.t
@@ -817,8 +818,8 @@ module Flag = struct
     ; num_occurrences = Num_occurrences.at_most_once
     ; read =
         (fun _ ->
-          (* We know that the flag wasn't passed here because if it was passed
-              then the [action] would have called [exit]. *)
+          (* We know that the flag wasn't passed here because if it was passed then the
+             [action] would have called [exit]. *)
           Parsing_outcome.return_no_arg ())
     ; additional_documentation = Lazy.from_val None
     }
@@ -1052,8 +1053,8 @@ module Anons = struct
         (* A [Test] will (generally) return a [Done _] value if there is no more input and
            a [More] parser to use if there is any more input. *)
         | Test of (more:bool -> 'a t)
-        (* If we're only completing, we can't pull values out, but we can still step through
-           [t]s (which may have completion set up). *)
+        (* If we're only completing, we can't pull values out, but we can still step
+           through [t]s (which may have completion set up). *)
         | Only_for_completion of packed list
         | Stop_parsing of 'a t
 
@@ -1184,9 +1185,9 @@ module Anons = struct
       | Stop_parsing t -> final_value t env
       | Test f -> final_value (f ~more:false) env
       | More _ ->
-        (* this doesn't happen because all occurrences of [More] are protected
-           by [Test], which means there will always be an extra argument to give
-           before requesting the final value *)
+        (* this doesn't happen because all occurrences of [More] are protected by [Test],
+           which means there will always be an extra argument to give before requesting
+           the final value *)
         assert false
       | Only_for_completion _ ->
         failwith "BUG: asked for final value when doing completion"
@@ -1482,8 +1483,7 @@ module Command_base = struct
     match action with
     | Print_info_and_quit info ->
       let completing = Cmdline.ends_in_complete args in
-      (* If we're doing completion, version/help info aren't useful completion
-         responses. *)
+      (* If we're doing completion, version/help info aren't useful completion responses. *)
       if completing
       then env, args
       else (
@@ -1536,8 +1536,8 @@ module Command_base = struct
         | false -> arg, args, false
         | true ->
           (match arg, args with
-           (* the '-anon' flag is here as an escape hatch in case you have an
-              anonymous argument that starts with a hyphen. *)
+           (* the '-anon' flag is here as an escape hatch in case you have an anonymous
+              argument that starts with a hyphen. *)
            | "-anon", Cons (arg, args) -> arg, args, false
            (* support the common Unix convention where "-" means stdin *)
            | "-", _ -> arg, args, false
@@ -1650,8 +1650,8 @@ module Command_base = struct
       { f =
           (fun () ->
             return (fun f x () ->
-              (* order of evaluation here affects in what order the users' callbacks
-                  are evaluated, so it's important to call [f] before [x] *)
+              (* order of evaluation here affects in what order the users' callbacks are
+                 evaluated, so it's important to call [f] before [x] *)
               let f_outcome = f () in
               let x_outcome = x () in
               Parsing_outcome.apply f_outcome x_outcome)
@@ -1821,7 +1821,7 @@ module Command_base = struct
           ~doc
       ;;
 
-      let flag_optional_with_default_doc
+      let flag_optional_with_default_doc_sexp
         ?aliases
         ?full_flag_required
         name
@@ -2230,7 +2230,7 @@ module Command_base = struct
       let optional_with_default = optional_with_default
       let required = required
       let flag = Param.flag
-      let flag_optional_with_default_doc = Param.flag_optional_with_default_doc
+      let flag_optional_with_default_doc_sexp = Param.flag_optional_with_default_doc_sexp
 
       let flag_optional_with_default_doc_string =
         Param.flag_optional_with_default_doc_string
@@ -2343,8 +2343,8 @@ module Exec = struct
   ;;
 end
 
-(* A proxy command is the structure of an Exec command obtained by running it in a
-   special way *)
+(* A proxy command is the structure of an Exec command obtained by running it in a special
+   way *)
 module Proxy = struct
   module Kind = struct
     type 'a t =
@@ -2476,6 +2476,32 @@ let lazy_group ~summary ?readme ?preserve_subcommand_order ?body alist =
 let group ~summary ?readme ?preserve_subcommand_order ?body alist =
   let readme = Option.map readme ~f:(fun f () -> String.strip (f ())) in
   lazy_group ~summary ?readme ?preserve_subcommand_order ?body (Lazy.from_val alist)
+;;
+
+let rec extend_group_exn ?(here = Stdlib.Lexing.dummy_pos) t ~subcommands =
+  match t with
+  | Group group ->
+    let subcommands =
+      List.map subcommands ~f:(fun (name, cmd) -> normalize Key_type.Subcommand name, cmd)
+    in
+    let merged =
+      Lazy.map group.subcommands ~f:(fun existing ->
+        List.fold subcommands ~init:existing ~f:(fun acc (name, cmd) ->
+          extend_alist_exn acc Key_type.Subcommand ~key:name cmd))
+    in
+    Group { group with subcommands = merged }
+  | Lazy thunk ->
+    Lazy (Lazy.map thunk ~f:(fun thunk -> extend_group_exn thunk ~here ~subcommands))
+  | Base _ ->
+    raise_s
+      [%message
+        "cannot extend a basic command, expected a group"
+          ~called_from:(here : Source_code_position.t)]
+  | Exec _ ->
+    raise_s
+      [%message
+        "cannot extend an exec command, expected a group"
+          ~called_from:(here : Source_code_position.t)]
 ;;
 
 let exec ~summary ?readme ?(child_subcommand = []) ?env ~path_to_exe () =
@@ -2711,9 +2737,8 @@ module Deprecated = struct
   ;;
 end
 
-(* This script works in both bash (via readarray) and zsh (via read -A).  If you change
-   it, please test in both bash and zsh.  It does not work tcsh (different function
-   syntax). *)
+(* This script works in both bash (via readarray) and zsh (via read -A). If you change it,
+   please test in both bash and zsh. It does not work tcsh (different function syntax). *)
 let autocomplete_function ~argv_0 ~pid =
   let fname =
     (* Note: we pad the pid to a deterministic length, as in 2023 it was determined that
@@ -2797,8 +2822,8 @@ struct
 
   open For_unix_with_command_env_var
 
-  (* Clear the setting of environment variable associated with command-line
-     completion and recursive help so that subprocesses don't see them.
+  (* Clear the setting of environment variable associated with command-line completion and
+     recursive help so that subprocesses don't see them.
 
      Use [unsafe_getenv] so setuid-root programs can still read environment variables.
      There is no security risk here because the values are only used as triggers to dump
@@ -2854,7 +2879,7 @@ struct
       match stdout |> Sexplib.Sexp.of_string |> Versioned.t_of_sexp |> of_versioned with
       | exception exn ->
         let debug =
-          if am_running_test
+          if am_running_test ()
           then [%message "<debug info hidden in test>"]
           else
             [%message
@@ -3349,9 +3374,8 @@ struct
       match version with
       | None -> Version_info.default_version
       | Some v ->
-        (* [version] was space delimited at some point and newline delimited
-           at another.  We always print one (repo, revision) pair per line
-           and ensure sorted order *)
+        (* [version] was space delimited at some point and newline delimited at another.
+           We always print one (repo, revision) pair per line and ensure sorted order *)
         lazy
           (Version_info.normalize_version_lines
              (String.split v ~on:' ' |> List.concat_map ~f:(String.split ~on:'\n')))
@@ -3427,7 +3451,7 @@ module Param = struct
       -> doc:string
       -> 'a t
 
-    val flag_optional_with_default_doc
+    val flag_optional_with_default_doc_sexp
       :  ?aliases:string list
       -> ?full_flag_required:unit
       -> string

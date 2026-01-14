@@ -1,11 +1,13 @@
 (** This module extends {{!Base.Sequence} [Base.Sequence]} with bin_io. *)
 
-type 'a t = 'a Base.Sequence.t [@@deriving bin_io]
+type 'a t = 'a Base.Sequence.t
+
+[%%rederive: type 'a t = 'a Base.Sequence.t [@@deriving bin_io]]
 
 module Step : sig
   type (+'a, 's) t = ('a, 's) Base.Sequence.Step.t =
     | Done
-    | Skip of { state : 's }
+    | Skip : 'a 's. { state : 's } -> ('a, 's) t
     | Yield :
         'a 's.
         { value : 'a

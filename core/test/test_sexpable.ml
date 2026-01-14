@@ -13,8 +13,8 @@ module%test _ = struct
   let%expect_test "output is utf8" =
     Input.create "你好 world" |> To_test.to_string |> print_endline;
     [%expect {| ((my_string"你好 world")) |}];
-    (* Even when the input, while valid utf8, is encoded as escaped bytes.
-       (This is the output of just running [Sexp.to_string] on the above sexp) *)
+    (* Even when the input, while valid utf8, is encoded as escaped bytes. (This is the
+       output of just running [Sexp.to_string] on the above sexp) *)
     let encoded_sexp_repr = {| ((my_string"\228\189\160\229\165\189 world")) |} in
     Sexp.of_string_conv_exn encoded_sexp_repr Input.t_of_sexp
     |> To_test.to_string

@@ -96,7 +96,7 @@ module type Timezone = sig
         , compare ~localize
         , equal ~localize
         , hash
-        , sexp
+        , sexp ~stackify
         , sexp_grammar
         , stable_witness]
 
@@ -111,7 +111,7 @@ module type Timezone = sig
 
   (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
 
-    https://opensource.janestreet.com/standards/#private-submodules *)
+      https://opensource.janestreet.com/standards/#private-submodules *)
   module Private : sig
     module Zone_cache : sig
       type zone := t

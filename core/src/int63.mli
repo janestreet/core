@@ -17,7 +17,13 @@ module Stable : sig
   module V1 : sig
     type nonrec t = t
     [@@deriving
-      bin_io ~localize, compare ~localize, equal ~localize, globalize, hash, sexp_grammar]
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , globalize
+      , hash
+      , sexp_grammar
+      , sexp_of ~stackify]
     [@@immediate64]
 
     include

@@ -196,7 +196,7 @@ let round_down t ~interval ~calling_function_name =
     ~interval
 ;;
 
-let round_up_to = round_up ~calling_function_name:"round_up_to"
+let round_up_to t ~interval = round_up t ~interval ~calling_function_name:"round_up_to"
 
 let round_up_to_us t =
   round_up t ~interval:Span.microsecond ~calling_function_name:"round_up_to_us"
@@ -210,7 +210,9 @@ let round_up_to_sec t =
   round_up t ~interval:Span.second ~calling_function_name:"round_up_to_sec"
 ;;
 
-let round_down_to = round_down ~calling_function_name:"round_down_to"
+let round_down_to t ~interval =
+  round_down t ~interval ~calling_function_name:"round_down_to"
+;;
 
 let round_down_to_us t =
   round_down t ~interval:Span.microsecond ~calling_function_name:"round_down_to_us"
@@ -509,7 +511,10 @@ module To_and_of_string : sig
 
   val to_string_abs : t -> zone:Zone.t -> string
   val to_string_abs_trimmed : t -> zone:Zone.t -> string
-  val to_string_abs_parts : t -> zone:Zone.t -> string list
+
+  val%template to_string_abs_parts : t -> zone:Zone.t -> string list
+  [@@alloc a @ m = (heap_global, stack_local)]
+
   val to_string_iso8601_basic : t -> zone:Zone.t -> string
 
   val to_string_iso8601_extended
@@ -525,8 +530,8 @@ module To_and_of_string : sig
     -> zone:Zone.t
     -> t
 end = struct
-  (* this code is directly duplicated from Time_float0.ml, converted enough to get
-     Time_ns to/of_string working *)
+  (* this code is directly duplicated from Time_float0.ml, converted enough to get Time_ns
+     to/of_string working *)
   module Date_and_ofday = struct
     type t = Int63.t
 
@@ -589,11 +594,11 @@ end = struct
   end
 
   module Zone : sig
-    (* This interface is directly duplicated from Time_intf.Zone, converted enough to get
-       this to work.
+    (* This interface is directly duplicated from Time_intf.Zone, converted enough to
+          get this to work.
 
-       The problem is has references to Time0_intf.S, which is the functor input interface
-       that Time_ns currently does not satisfy. *)
+          The problem is has references to Time0_intf.S, which is the functor input
+          interface that Time_ns currently does not satisfy. *)
     type time = t
     type t = Zone.t [@@deriving sexp_of]
 
@@ -730,7 +735,7 @@ end = struct
   ;;
 
   let of_date_ofday_precise date ofday ~zone =
-    (* We assume that there will be only one zone shift within a given local day.  *)
+    (* We assume that there will be only one zone shift within a given local day. *)
     let start_of_day = of_date_ofday ~prefer:Earlier ~zone date Ofday_ns.start_of_day in
     let proposed_time = add start_of_day (Ofday_ns.to_span_since_start_of_day ofday) in
     match Zone.next_clock_shift_incl zone ~at_or_after:start_of_day with
@@ -778,19 +783,18 @@ end = struct
 
   let to_date_ofday time ~zone = to_date time ~zone, to_ofday time ~zone
 
-  (* The correctness of this algorithm (interface, even) depends on the fact that
-     timezone shifts aren't too close together (as in, it can't simultaneously be the
-     case that a timezone shift of X hours occurred less than X hours ago, *and*
-     a timezone shift of Y hours will occur in less than Y hours' time) *)
+  (* The correctness of this algorithm (interface, even) depends on the fact that timezone
+     shifts aren't too close together (as in, it can't simultaneously be the case that a
+     timezone shift of X hours occurred less than X hours ago, *and* a timezone shift of Y
+     hours will occur in less than Y hours' time) *)
   let to_date_ofday_precise time ~zone =
     let date, ofday = to_date_ofday time ~zone in
     let clock_shift_after = Zone.next_clock_shift zone ~strictly_after:time in
     let clock_shift_before_or_at = Zone.prev_clock_shift zone ~at_or_before:time in
     let also_skipped_earlier amount =
-      (* Using [date] and raising on [None] here is OK on the assumption that clock
-         shifts can't cross date boundaries. This is true in all cases I've ever heard
-         of (and [of_date_ofday_precise] would need revisiting if it turned out to be
-         false) *)
+      (* Using [date] and raising on [None] here is OK on the assumption that clock shifts
+         can't cross date boundaries. This is true in all cases I've ever heard of (and
+         [of_date_ofday_precise] would need revisiting if it turned out to be false) *)
       match Ofday_ns.sub ofday amount with
       | Some ofday -> `Also_skipped (date, ofday)
       | None ->
@@ -804,8 +808,8 @@ end = struct
       (* Edge cases: the instant of transition belongs to the new zone regime. So if the
          clock moved by an hour exactly one hour ago, there's no ambiguity, because the
          hour-ago time belongs to the same regime as you, and conversely, if the clock
-         will move by an hour in an hours' time, there *is* ambiguity. Hence [>.] for
-         the first case and [<=.] for the second. *)
+         will move by an hour in an hours' time, there *is* ambiguity. Hence [>.] for the
+         first case and [<=.] for the second. *)
       match clock_shift_before_or_at, clock_shift_after with
       | Some (start, amount), _ when add start (Span.abs amount) > time ->
         (* clock shifted recently *)
@@ -843,40 +847,48 @@ end = struct
       (to_span_since_epoch t)
   ;;
 
-  let offset_string time ~zone =
-    let utc_offset = utc_offset time ~zone in
-    let is_utc = Span.( = ) utc_offset Span.zero in
-    if is_utc
-    then "Z"
-    else
-      String.concat
-        [ (if Span.( < ) utc_offset Span.zero then "-" else "+")
-        ; Ofday_ns.to_string_trimmed
-            (Ofday_ns.of_span_since_start_of_day_exn (Span.abs utc_offset))
-        ]
+  let%template[@alloc a @ m = (heap_global, stack_local)] offset_string time ~zone =
+    (let utc_offset = utc_offset time ~zone in
+     let is_utc = Span.( = ) utc_offset Span.zero in
+     if is_utc
+     then "Z"
+     else
+       (String.concat [@alloc a])
+         [ (if Span.( < ) utc_offset Span.zero then "-" else "+")
+         ; (Ofday_ns.to_string_trimmed [@alloc a])
+             (Ofday_ns.of_span_since_start_of_day_exn (Span.abs utc_offset))
+         ])
+    [@exclave_if_stack a]
   ;;
 
-  let to_string_abs_parts_with_precision ~precision =
+  let%template[@alloc a @ m = (heap_global, stack_local)] to_string_abs_parts_with_precision
+    ~precision
+    =
     let attempt time ~zone =
-      let date, ofday = to_date_ofday time ~zone in
-      let offset_string = offset_string time ~zone in
-      let ofday_string =
-        match precision with
-        | `sec -> Ofday_ns.to_sec_string ofday
-        | `ms -> Ofday_ns.to_millisecond_string ofday
-        | `us -> Ofday_ns.to_microsecond_string ofday
-        | `ns -> Ofday_ns.to_nanosecond_string ofday
-      in
-      [ Date.to_string date; String.concat ~sep:"" [ ofday_string; offset_string ] ]
+      (let date, ofday = to_date_ofday time ~zone in
+       let offset_string = (offset_string [@alloc a]) time ~zone in
+       let ofday_string =
+         match precision with
+         | `sec -> (Ofday_ns.to_sec_string [@alloc a]) ofday
+         | `ms -> (Ofday_ns.to_millisecond_string [@alloc a]) ofday
+         | `us -> (Ofday_ns.to_microsecond_string [@alloc a]) ofday
+         | `ns -> (Ofday_ns.to_nanosecond_string [@alloc a]) ofday
+       in
+       [ (Date.to_string [@alloc a]) date
+       ; (String.concat [@alloc a]) ~sep:"" [ ofday_string; offset_string ]
+       ])
+      [@exclave_if_stack a]
     in
     fun time ~zone ->
-      try attempt time ~zone with
+      try[@exclave_if_stack a] attempt time ~zone with
       | (_ : exn) ->
         (* If we overflow applying the UTC offset, try again with UTC time. *)
         attempt time ~zone:Zone.utc
   ;;
 
-  let to_string_abs_parts = to_string_abs_parts_with_precision ~precision:`ns
+  let%template[@alloc a = (heap, stack)] to_string_abs_parts =
+    (to_string_abs_parts_with_precision [@alloc a]) ~precision:`ns
+  ;;
 
   let to_string_abs_trimmed time ~zone =
     let date, ofday = to_date_ofday time ~zone in
@@ -1349,11 +1361,18 @@ let t_sexp_grammar : t Sexplib.Sexp_grammar.t =
   }
 ;;
 
-let sexp_of_t_abs t ~zone =
-  Sexp.List (List.map (to_string_abs_parts ~zone t) ~f:(fun s -> Sexp.Atom s))
+let%template[@alloc a @ m = (stack_local, heap_global)] sexp_of_t_abs t ~zone =
+  Sexp.List
+    ((List.map [@mode m] [@alloc a])
+       ((to_string_abs_parts [@alloc a]) ~zone t)
+       ~f:(fun s -> Sexp.Atom s [@exclave_if_stack a]))
+  [@exclave_if_stack a]
 ;;
 
-let sexp_of_t t = sexp_of_t_abs ~zone:(get_sexp_zone ()) t
+let%template[@alloc a = (heap, stack)] sexp_of_t t =
+  (sexp_of_t_abs [@alloc a]) ~zone:(get_sexp_zone ()) t [@exclave_if_stack a]
+;;
+
 let of_date_ofday_zoned date ofday_zoned = Ofday.Zoned.to_time_ns ofday_zoned date
 
 let to_date_ofday_zoned t ~zone =
@@ -1426,7 +1445,7 @@ module Stable0 = struct
         , globalize
         , hash
         , quickcheck
-        , sexp
+        , sexp ~stackify
         , sexp_grammar]
 
       let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
@@ -1488,7 +1507,9 @@ module Option = struct
     | Some t -> some t
   ;;
 
-  let to_option t = if is_none t then None else Some (value_exn t)
+  let%template[@alloc a = (heap, stack)] to_option t =
+    (if is_none t then None else Some (value_exn t)) [@exclave_if_stack a]
+  ;;
 
   module Optional_syntax = struct
     module Optional_syntax = struct
@@ -1565,7 +1586,11 @@ module Option = struct
         [@@deriving
           bin_io ~localize, compare ~localize, equal ~localize, globalize, typerep]
 
-        let sexp_of_t t = [%sexp_of: Stable0.V1.t option] (to_option t)
+        let%template[@alloc a = (heap, stack)] sexp_of_t t =
+          [%sexp ((to_option [@alloc a]) t : Stable0.V1.t option)]
+          [@alloc a] [@exclave_if_stack a]
+        ;;
+
         let t_of_sexp s = of_option ([%of_sexp: Stable0.V1.t option] s)
       end
 
@@ -1587,7 +1612,7 @@ module Option = struct
     module Alternate_sexp = Alternate_sexp.Stable
   end
 
-  let sexp_of_t = Stable.V1.sexp_of_t
+  let%template[@alloc a = (heap, stack)] sexp_of_t = (Stable.V1.sexp_of_t [@alloc a])
   let t_of_sexp = Stable.V1.t_of_sexp
 
   include%template Identifiable.Make [@mode local] [@modality portable] (struct
@@ -1699,31 +1724,28 @@ module O = struct
   let[@zero_alloc strict] ( - ) = [%eta2 diff]
 end
 
-(*
-   Dropping Time in favor of Time_ns is possible and has been discussed, but we have
+(* Dropping Time in favor of Time_ns is possible and has been discussed, but we have
    chosen not to do so at this time for a few reasons:
 
-   - It's a lot of work.  All functions over Time, including the related
-     modules Date, Ofday, Zone, Span, Schedule have to be converted to Time_ns
-     space.  This is largely mechanical, but will create a lot of churn within
-     the modules and possibly externally where the floatiness of the Time world
-     leaks out.
+   - It's a lot of work. All functions over Time, including the related modules Date,
+     Ofday, Zone, Span, Schedule have to be converted to Time_ns space. This is largely
+     mechanical, but will create a lot of churn within the modules and possibly externally
+     where the floatiness of the Time world leaks out.
 
-   - It's of limited utility compared to other things we could be working on.
-     Time math would be easier to understand and somewhat faster, but very few
-     modules/programs would benefit from faster time math.  Those that do can
-     use Time_ns already for the most part.
+   - It's of limited utility compared to other things we could be working on. Time math
+     would be easier to understand and somewhat faster, but very few modules/programs
+     would benefit from faster time math. Those that do can use Time_ns already for the
+     most part.
 
-   - Having Time_ns and a conversion function already gives the bulk of the
-     value to programs that want a fast, non-allocating version of [Time.now].
-     Indeed, many remaining unconverted functions
+   - Having Time_ns and a conversion function already gives the bulk of the value to
+     programs that want a fast, non-allocating version of [Time.now]. Indeed, many
+     remaining unconverted functions
 
-   - We aren't certain about how the boundaries around Time_ns will affect the
-     external viability of Core.  Internally we don't think being limited to
-     a smaller time range is an issue, and really far off times are better
-     represented as (Date.t * Ofday.t), but it is still a restriction.  This
-     pushback is probably minimal and, if we could get over the work concerns,
-     could be eliminated.
+   - We aren't certain about how the boundaries around Time_ns will affect the external
+     viability of Core. Internally we don't think being limited to a smaller time range is
+     an issue, and really far off times are better represented as (Date.t * Ofday.t), but
+     it is still a restriction. This pushback is probably minimal and, if we could get
+     over the work concerns, could be eliminated.
 
    - Converting between Time and Time_ns when you use libraries based on different ones
      isn't so bad. (?)

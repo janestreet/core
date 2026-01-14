@@ -81,7 +81,7 @@ module Stable = struct
         | Sat -> 6
       ;;
 
-      (* Be very generous with of_string.  We accept all possible capitalizations and the
+      (* Be very generous with of_string. We accept all possible capitalizations and the
          integer representations as well. *)
       let of_string s =
         try of_string_internal s with
@@ -90,14 +90,20 @@ module Stable = struct
            | _ -> failwithf "Day_of_week.of_string: %S" s ())
       ;;
 
-      (* this is in T rather than outside so that the later functor application to build maps
-         uses this sexp representation *)
-        include%template Sexpable.Stable.Of_stringable.V1 [@modality portable] (struct
-            type nonrec t = t
+      (* this is in T rather than outside so that the later functor application to build
+         maps uses this sexp representation *)
 
-            let of_string = of_string
-            let to_string = to_string
-          end)
+      module S = struct
+        type nonrec t = t
+
+        let of_string = of_string
+        let%template[@alloc a = (heap, stack)] to_string = to_string
+      end
+
+      include%template Sexpable.Stable.Of_stringable.V1 [@modality portable] (S)
+
+      include%template
+        Sexpable.Stable.Of_stringable.V1 [@modality portable] [@alloc stack] (S)
 
       let t_sexp_grammar =
         let open Sexplib0.Sexp_grammar in

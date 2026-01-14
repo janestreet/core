@@ -53,7 +53,7 @@ module type S = sig
       reconstructed on the receiving/reading side by reloading the zone file from disk.
       Any zone name that is accepted by [find] is acceptable in the bin_io and sexp
       representations. *)
-  type t [@@deriving sexp_of, compare ~localize]
+  type t [@@deriving sexp_of ~stackify, compare ~localize]
 
   (** [input_tz_file ~zonename ~filename] read in [filename] and return [t] with [name t]
       = [zonename] *)

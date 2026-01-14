@@ -29,7 +29,7 @@ module type S = sig
     , compare ~localize
     , equal ~localize
     , globalize
-    , sexp
+    , sexp ~stackify
     , sexp_grammar
     , typerep]
 
@@ -143,16 +143,19 @@ module type S = sig
   (** Trailing groups of zeroes are trimmed such that the output is printed in terms of
       the smallest non-zero units among nanoseconds, microseconds, milliseconds, or
       seconds; or minutes if all of the above are zero. *)
-  val to_string_trimmed : t -> string
+  val%template to_string_trimmed : t -> string
+  [@@alloc a @ m = (stack_local, heap_global)]
 
   (** HH:MM:SS, without any subsecond components. Seconds appear even if they are zero. *)
-  val to_sec_string : t -> string
+  val%template to_sec_string : t -> string
+  [@@alloc a @ m = (stack_local, heap_global)]
 
   (** 24-hour times according to the ISO 8601 standard. This function can raise. *)
   val of_string_iso8601_extended : ?pos:int -> ?len:int -> string -> t
 
   (** with milliseconds *)
-  val to_millisecond_string : t -> string
+  val%template to_millisecond_string : t -> string
+  [@@alloc a @ m = (stack_local, heap_global)]
 
   val to_millisec_string : t -> string
   [@@deprecated "[since 2018-04] use [to_millisecond_string] instead"]

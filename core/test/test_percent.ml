@@ -57,8 +57,8 @@ module%test Percent =
     end)
 
 let%expect_test "bin_digests" =
-  (* [V2] intentionally has a bin_digest distinct from float's: changing
-     a protocol to use float vs. percent is usually a breaking change.
+  (* [V2] intentionally has a bin_digest distinct from float's: changing a protocol to use
+     float vs. percent is usually a breaking change.
   *)
   List.iter
     [ "float", [%bin_digest: float]
@@ -201,11 +201,16 @@ let%expect_test _ =
 ;;
 
 let%expect_test "accept float in set and map sexps" =
-  let module Of_string (M : Sexpable.S1) = struct
+  let module Of_string (M : sig
+      type 'a t
+
+      include Sexpable.S1 with type 'a t := 'a t
+    end) =
+  struct
     type t = string M.t [@@deriving sexp]
   end
   in
-  let test (module M : Sexpable) string =
+  let test (type t) (module M : Sexpable with type t = t) string =
     print_s (M.sexp_of_t (M.t_of_sexp (Sexp.of_string string)))
   in
   test (module Percent.Set) {| (0 0.0001 0.01 1) |};
@@ -410,7 +415,7 @@ let%expect_test "round-trippable sexp format" =
     if Float.(abs y < max_finite_value /. 100.)
     then (
       (* [(to|of)_(percentage|bp)_slow_more_accurate] work by shifting the decimal point
-         in the string representation of the underlying float.  Since floats have
+         in the string representation of the underlying float. Since floats have
          guaranteed 15 decimal digits of precision across their range, we take [y] to be
          [x] rounded to 15 decimal digits and test that [y] round-trips accurately (while
          [x] might not). *)

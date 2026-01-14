@@ -2,11 +2,10 @@ open! Core
 open Expect_test_helpers_core
 
 (* Tests to make sure the implementation of values hasn't changed and that witnesses are
-   provided correctly.  *)
+   provided correctly. *)
 
 (* Tests are bound to the value returned by Immediate.of_typerep, as the test cases are
-   designed along the value returned and so that they must be revised if changes are
-   made. *)
+   designed along the value returned and so that they must be revised if changes are made. *)
 module%test _ = struct
   type t =
     | Always
@@ -15,14 +14,14 @@ module%test _ = struct
     | Unknown
 
   (* Where appropriate, unit is used as a representative of something that will always be
-       immediate and int ref is used as a representative of something that will always be
-       boxed, no matter the actual representation. *)
+     immediate and int ref is used as a representative of something that will always be
+     boxed, no matter the actual representation. *)
   let imm_t = typerep_of_unit
   let box_t = typerep_of_ref typerep_of_int
   let is_imm v = Obj.is_int (Obj.repr v)
 
   (* When [expected] and the actual result is [Sometimes], at least one immediate and one
-       non-immediate value must be supplied. It requires at least one value in any case.  *)
+     non-immediate value must be supplied. It requires at least one value in any case. *)
   let check expected typerep list =
     if List.length list = 0 then failwith "Must provide at least one test case.";
     let actual =
@@ -168,8 +167,8 @@ module%test _ = struct
 
   let%test _ =
     let module M = struct
-      (* The generated typrep in the case of parametric types have this signature:
-           val M.typerep_of_t : 'a Typerep.t -> 'a t Typerep.t *)
+      (* The generated typrep in the case of parametric types have this signature: val
+         M.typerep_of_t : 'a Typerep.t -> 'a t Typerep.t *)
       type 'a t = 'a option [@@deriving typerep]
     end
     in

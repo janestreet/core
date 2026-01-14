@@ -603,16 +603,16 @@ module%test [@name "Span.to_string/of_string"] _ = struct
                 (seconds : float)]);
       let parts = parts_of_string string in
       let is_abnormal =
-        (* Spans with a ULP over half a minute start to have abnormal parts like
-               "60s".  This is an artifact of our [to_string] algorithm and how it uses
-               smaller units of time to correct for rounding error in the larger ones;
-               once the rounding error is over half the size of the previous unit, the
-               results are no longer what we expect as humans.
+        (* Spans with a ULP over half a minute start to have abnormal parts like "60s".
+           This is an artifact of our [to_string] algorithm and how it uses smaller units
+           of time to correct for rounding error in the larger ones; once the rounding
+           error is over half the size of the previous unit, the results are no longer
+           what we expect as humans.
 
-               Since the output is still numerically correct and spans this large are
-               rarely used, we tolerate the abnormality, but only in the very last
-               part. Additionally, we very occasionally have remainders that are >900us,
-               but we print 1 decimal place and end up printing 1000us instead of 1ms *)
+           Since the output is still numerically correct and spans this large are rarely
+           used, we tolerate the abnormality, but only in the very last part.
+           Additionally, we very occasionally have remainders that are >900us, but we
+           print 1 decimal place and end up printing 1000us instead of 1ms *)
         List.fold parts ~init:false ~f:(fun has_abnormal (magnitude, unit_of_time) ->
           let open Float.O in
           require
@@ -632,8 +632,8 @@ module%test [@name "Span.to_string/of_string"] _ = struct
             ~default:false
             (upper_bound unit_of_time)
             ~f:(fun upper_bound ->
-              (* we tolerate one abnormality where the very last part is exactly at
-                     the upper bound *)
+              (* we tolerate one abnormality where the very last part is exactly at the
+                 upper bound *)
               if magnitude = upper_bound
               then true
               else (
@@ -724,9 +724,9 @@ module%test [@name "Span.to_string/of_string"] _ = struct
       |}];
     let infinity = Time_float.Span.of_sec Float.infinity in
     (* Test magnitudes of span parts, allowing abnormal magnitudes (like 24h or 60s) in
-         the ranges where we expect them. The allowed fractions of values with abnormal
-         magnitudes are set generously, so if they break in the future we've seen a
-         significant change in behavior, and not just a different random seed. *)
+       the ranges where we expect them. The allowed fractions of values with abnormal
+       magnitudes are set generously, so if they break in the future we've seen a
+       significant change in behavior, and not just a different random seed. *)
     test_part_magnitudes
       ~magnitude_low:Time_float.Span.zero
       ~magnitude_high:tenth_ms_ulp
@@ -784,8 +784,8 @@ module%test [@name "Span.to_string/of_string"] _ = struct
         require ?cr (List.count strings ~f:(String.equal suffix) <= 1))
     in
     (* For very large values (ULP >> 1s), we can see days appear twice, once very large
-         and once smaller by several orders of magnitude. Note that the specific example
-         produced here is nondeterministic and may change. *)
+       and once smaller by several orders of magnitude. Note that the specific example
+       produced here is nondeterministic and may change. *)
     test ~cr:Comment "d";
     [%expect
       {|
@@ -803,8 +803,8 @@ module%test [@name "Span.to_string/of_string"] _ = struct
     test "us";
     [%expect {| |}];
     (* For some times measured in ns, we can see ns appear twice, with the second one
-         smaller than the first by several orders of magnitude. The specific example
-         produced here is nondeterministic and may change. *)
+       smaller than the first by several orders of magnitude. The specific example
+       produced here is nondeterministic and may change. *)
     test ~cr:Comment "ns";
     [%expect
       {|
@@ -1225,8 +1225,8 @@ module _ = struct
     (* Test everything but hour 12 and 0 *)
     let first_half_of_day_except_0_and_12 = [ 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11 ] in
     let second_half_of_day = [ 13; 14; 15; 16; 17; 18; 19; 21; 21; 22; 23; 24 ] in
-    (* 1 -> 11 are tested here, simplistically by adding 12 when
-       [meridiem is `PM]. We test ~hr:12 later *)
+    (* 1 -> 11 are tested here, simplistically by adding 12 when [meridiem is `PM]. We
+       test ~hr:12 later *)
     List.iter first_half_of_day_except_0_and_12 ~f:(fun hr ->
       (* Test X:00:00am, X:00am. amd Xam *)
       success (test_excluding_noon ~hr ~zeroes:":00:00" ~meridiem:(Some `AM));

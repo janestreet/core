@@ -151,8 +151,8 @@ module%test [@name "split"] _ = struct
       (* Generate parts to join and a delimiter to join them with. *)
       type t = Str.t list * Elt.t [@@deriving quickcheck ~generator ~shrinker, sexp_of]
 
-      (* Skip values split that should not round-trip: empty lists, and parts
-           containing the delimiter. *)
+      (* Skip values split that should not round-trip: empty lists, and parts containing
+         the delimiter. *)
       let is_valid (parts, delimiter) =
         (not (List.is_empty parts))
         && List.for_all parts ~f:(fun str -> not (Str.mem str delimiter))

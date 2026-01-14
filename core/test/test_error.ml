@@ -10,8 +10,7 @@ let%expect_test "[raise_s sexp] raises an exn whose [sexp_of_t] is [sexp]" =
 
 let%expect_test "[failwiths] handles [Lexing.dummy_pos]" =
   (* Location information should be excluded when [here] is [Lexing.dummy_pos], which is
-     the default value of [here] in the external version of Base for [%call_pos]
-     arguments *)
+     the default value of [here] in the external version of Base for [%call_pos] arguments *)
   require_does_raise ~hide_positions:true (fun () ->
     Error.failwiths "hello world" 13 sexp_of_int);
   [%expect {| ("hello world" 13 lib/core/test/test_error.ml:LINE:COL) |}];
@@ -20,8 +19,8 @@ let%expect_test "[failwiths] handles [Lexing.dummy_pos]" =
   [%expect {| ("hello world" 13) |}]
 ;;
 
-(* Since t_of_sexp and sexp_of_t are a little bespoke and are used by our
-   shrinker, we check that shrinking doesn't actually blow things up. *)
+(* Since t_of_sexp and sexp_of_t are a little bespoke and are used by our shrinker, we
+   check that shrinking doesn't actually blow things up. *)
 module%test [@name "shrinking"] _ = struct
   let shrink = Base_quickcheck.Shrinker.shrink Error.quickcheck_shrinker
 
@@ -37,9 +36,9 @@ module%test [@name "shrinking"] _ = struct
       (module String)
   ;;
 
-  (* Our second claim is that starting from a small sexp, we can only shrink a
-     few times before not being able to shrink farther.  We check this on a
-     particular sexp where we believe that it is only possible to shrink twice. *)
+  (* Our second claim is that starting from a small sexp, we can only shrink a few times
+     before not being able to shrink farther. We check this on a particular sexp where we
+     believe that it is only possible to shrink twice. *)
   let%expect_test "shrinking from sexp" =
     let t = Error.t_of_sexp (Sexp.of_string "(foo bar)") in
     let shrunk1 = shrink t in
@@ -53,10 +52,10 @@ end
 
 module%test Portable = struct
   (* [test] checks that [A] and [B] are wire-compatible:
-     - They share the same bin_digest, which on its own gives us some confidence
-       the serializers/deserializers are compatible.
-     - The [A.t] values round-trip through the bin-io serializers and deserializers.
-       More specifically, both occurrences of "bytes" in this diagram are the same:
+     - They share the same bin_digest, which on its own gives us some confidence the
+       serializers/deserializers are compatible.
+     - The [A.t] values round-trip through the bin-io serializers and deserializers. More
+       specifically, both occurrences of "bytes" in this diagram are the same:
        [A.t -> bytes -> B.t -> bytes]
   *)
   let test

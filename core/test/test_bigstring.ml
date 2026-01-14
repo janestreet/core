@@ -83,7 +83,7 @@ end
 module%test _ = struct
   let make_t ~size input =
     (* We hardcode the size here to catch problems if [Bin_prot.Utils.size_header_length]
-         ever changes. *)
+       ever changes. *)
     let t = create (String.length input + 8) in
     ignore (Bin_prot.Write.bin_write_int_64bit t ~pos:0 size : int);
     List.iteri (String.to_list input) ~f:(fun i c -> set t (i + 8) c);
@@ -109,8 +109,8 @@ module%test _ = struct
   ;;
 
   (* Keep in mind that the string bin-prot representation is itself prefixed with a
-       length, so strings under the length-prefixed bin-prot protocol end up with two
-       lengths at the front. *)
+     length, so strings under the length-prefixed bin-prot protocol end up with two
+     lengths at the front. *)
   let%test_unit _ = test_int ~size:1 "\042" ~expect:(`Ok 42)
   let%test_unit _ = test_int ~size:1 "\042suffix" ~expect:(`Ok 42)
   let%test_unit _ = test_string ~size:4 "\003foo" ~expect:(`Ok "foo")
@@ -239,7 +239,7 @@ module%test [@name "stability"] _ = struct
     [%expect "e2d261c6c291b94bf6aa68ec2b08cb00"]
   ;;
 
-  (* Should we assert these are the same?  *)
+  (* Should we assert these are the same? *)
   let%expect_test "t_frozen" =
     print_endline [%bin_digest: Bigstring.Stable.V1.t_frozen];
     [%expect "e2d261c6c291b94bf6aa68ec2b08cb00"]

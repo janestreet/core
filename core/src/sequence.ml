@@ -18,7 +18,7 @@ module Step = struct
 
   type (+'a, 's) t = ('a, 's) Base.Sequence.Step.t =
     | Done
-    | Skip of { state : 's }
+    | Skip : 'a 's. { state : 's } -> ('a, 's) t
     | Yield :
         'a 's.
         { value : 'a

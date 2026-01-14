@@ -4,7 +4,7 @@ open! Import
 
 type t [@@deriving bin_io, hash, sexp, sexp_grammar, quickcheck] [@@immediate]
 
-include%template Identifiable.S [@mode local] with type t := t
+include%template Identifiable.S [@mode local] [@modality portable] with type t := t
 
 val of_int : int -> t
 val to_int : t -> int

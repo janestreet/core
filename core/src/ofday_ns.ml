@@ -28,8 +28,8 @@ let[@inline always] is_invalid span =
   (* Why we use [Span.( > )] rather than [( >= )] below:
 
      We allow to represent the end-of-day sentinel value ([24.000000000h]), which is not
-     itself a valid clock face time.  However, since valid clock face times readily
-     round up to it, it's better to allow it to be represented. *)
+     itself a valid clock face time. However, since valid clock face times readily round
+     up to it, it's better to allow it to be represented. *)
   Span.( < ) span start_of_day || Span.( > ) span start_of_next_day
 ;;
 
@@ -86,7 +86,7 @@ module Stable = struct
            and type comparator_witness = Span.Stable.V2.comparator_witness
       end)
 
-    let to_string_with_unit =
+    let%template to_string_with_unit =
       let ( / ) = Int63.( / ) in
       let ( mod ) = Int63.rem in
       let ( ! ) = Int63.of_int in
@@ -95,63 +95,66 @@ module Stable = struct
         if Span.( < ) t start_of_day || Span.( < ) start_of_next_day t
         then "Incorrect day"
         else (
-          let sixty = !60 in
-          let thousand = !1000 in
-          let ns = Span.to_int63_ns t in
-          let us = ns / thousand in
-          let ns = ns mod thousand |> i in
-          let ms = us / thousand in
-          let us = us mod thousand |> i in
-          let s = ms / thousand in
-          let ms = ms mod thousand |> i in
-          let m = s / sixty in
-          let s = s mod sixty |> i in
-          let h = m / sixty |> i in
-          let m = m mod sixty |> i in
-          let unit =
-            match unit with
-            | (`Nanosecond | `Microsecond | `Millisecond | `Second) as unit -> unit
-            | `Minute_or_less ->
-              if ns <> 0
-              then `Nanosecond
-              else if us <> 0
-              then `Microsecond
-              else if ms <> 0
-              then `Millisecond
-              else if s <> 0
-              then `Second
-              else `Minute
-          in
-          let len =
-            match unit with
-            | `Minute -> 5
-            | `Second -> 8
-            | `Millisecond -> 12
-            | `Microsecond -> 15
-            | `Nanosecond -> 18
-          in
-          let str = Bytes.create len in
-          Digit_string_helpers.write_2_digit_int str ~pos:0 h;
-          Bytes.set str 2 ':';
-          Digit_string_helpers.write_2_digit_int str ~pos:3 m;
-          (match unit with
-           | `Minute -> ()
-           | (`Second | `Millisecond | `Microsecond | `Nanosecond) as unit ->
-             Bytes.set str 5 ':';
-             Digit_string_helpers.write_2_digit_int str ~pos:6 s;
-             (match unit with
-              | `Second -> ()
-              | (`Millisecond | `Microsecond | `Nanosecond) as unit ->
-                Bytes.set str 8 '.';
-                Digit_string_helpers.write_3_digit_int str ~pos:9 ms;
-                (match unit with
-                 | `Millisecond -> ()
-                 | (`Microsecond | `Nanosecond) as unit ->
-                   Digit_string_helpers.write_3_digit_int str ~pos:12 us;
-                   (match unit with
-                    | `Microsecond -> ()
-                    | `Nanosecond -> Digit_string_helpers.write_3_digit_int str ~pos:15 ns))));
-          Bytes.unsafe_to_string ~no_mutation_while_string_reachable:str)
+          (let sixty = !60 in
+           let thousand = !1000 in
+           let ns = Span.to_int63_ns t in
+           let us = ns / thousand in
+           let ns = ns mod thousand |> i in
+           let ms = us / thousand in
+           let us = us mod thousand |> i in
+           let s = ms / thousand in
+           let ms = ms mod thousand |> i in
+           let m = s / sixty in
+           let s = s mod sixty |> i in
+           let h = m / sixty |> i in
+           let m = m mod sixty |> i in
+           let unit =
+             match unit with
+             | (`Nanosecond | `Microsecond | `Millisecond | `Second) as unit -> unit
+             | `Minute_or_less ->
+               if ns <> 0
+               then `Nanosecond
+               else if us <> 0
+               then `Microsecond
+               else if ms <> 0
+               then `Millisecond
+               else if s <> 0
+               then `Second
+               else `Minute
+           in
+           let len =
+             match unit with
+             | `Minute -> 5
+             | `Second -> 8
+             | `Millisecond -> 12
+             | `Microsecond -> 15
+             | `Nanosecond -> 18
+           in
+           let str = (Bytes.create [@alloc a]) len in
+           Digit_string_helpers.write_2_digit_int str ~pos:0 h;
+           Bytes.set str 2 ':';
+           Digit_string_helpers.write_2_digit_int str ~pos:3 m;
+           (match unit with
+            | `Minute -> ()
+            | (`Second | `Millisecond | `Microsecond | `Nanosecond) as unit ->
+              Bytes.set str 5 ':';
+              Digit_string_helpers.write_2_digit_int str ~pos:6 s;
+              (match unit with
+               | `Second -> ()
+               | (`Millisecond | `Microsecond | `Nanosecond) as unit ->
+                 Bytes.set str 8 '.';
+                 Digit_string_helpers.write_3_digit_int str ~pos:9 ms;
+                 (match unit with
+                  | `Millisecond -> ()
+                  | (`Microsecond | `Nanosecond) as unit ->
+                    Digit_string_helpers.write_3_digit_int str ~pos:12 us;
+                    (match unit with
+                     | `Microsecond -> ()
+                     | `Nanosecond ->
+                       Digit_string_helpers.write_3_digit_int str ~pos:15 ns))));
+           Bytes.unsafe_to_string ~no_mutation_while_string_reachable:str)
+          [@exclave_if_stack a])
+    [@@alloc a @ m = (stack_local, heap_global)]
     ;;
 
     let parse_nanoseconds string ~pos ~until =
@@ -209,8 +212,14 @@ module Stable = struct
         ~value:(Atom "Core.Time_ns.Ofday.t")
     ;;
 
-    let to_string (t : t) = to_string_with_unit t ~unit:`Nanosecond
-    let sexp_of_t (t : t) = Sexp.Atom (to_string t)
+    let%template[@alloc a = (heap, stack)] to_string (t : t) =
+      (to_string_with_unit [@alloc a]) t ~unit:`Nanosecond [@exclave_if_stack a]
+    ;;
+
+    let%template[@alloc a = (heap, stack)] sexp_of_t (t : t) =
+      Sexp.Atom ((to_string [@alloc a]) t) [@exclave_if_stack a]
+    ;;
+
     let to_int63 t = Span_ns.Stable.V2.to_int63 t
     let of_int63_exn t = of_span_since_start_of_day_exn (Span_ns.Stable.V2.of_int63_exn t)
 
@@ -254,6 +263,8 @@ include%template
     let module_name = "Core.Time_ns.Ofday"
   end)
 
+let%template[@alloc a = stack] sexp_of_t = (Stable.V1.sexp_of_t [@alloc a])
+
 include%template (
   Stable.V1 :
   sig
@@ -263,11 +274,29 @@ include%template (
 include%template Diffable.Atomic.Make [@modality portable] (Stable.V1)
 
 let t_sexp_grammar = Stable.V1.t_sexp_grammar
-let to_nanosecond_string t = Stable.V1.to_string_with_unit t ~unit:`Nanosecond
-let to_microsecond_string t = Stable.V1.to_string_with_unit t ~unit:`Microsecond
-let to_millisecond_string t = Stable.V1.to_string_with_unit t ~unit:`Millisecond
-let to_sec_string t = Stable.V1.to_string_with_unit t ~unit:`Second
-let to_string_trimmed t = Stable.V1.to_string_with_unit t ~unit:`Minute_or_less
+
+[%%template
+[@@@alloc.default a @ m = (stack_local, heap_global)]
+
+let to_nanosecond_string t =
+  (Stable.V1.to_string_with_unit [@alloc a]) t ~unit:`Nanosecond [@exclave_if_stack a]
+;;
+
+let to_microsecond_string t =
+  (Stable.V1.to_string_with_unit [@alloc a]) t ~unit:`Microsecond [@exclave_if_stack a]
+;;
+
+let to_millisecond_string t =
+  (Stable.V1.to_string_with_unit [@alloc a]) t ~unit:`Millisecond [@exclave_if_stack a]
+;;
+
+let to_sec_string t =
+  (Stable.V1.to_string_with_unit [@alloc a]) t ~unit:`Second [@exclave_if_stack a]
+;;
+
+let to_string_trimmed t =
+  (Stable.V1.to_string_with_unit [@alloc a]) t ~unit:`Minute_or_less [@exclave_if_stack a]
+;;]
 
 let of_string_iso8601_extended ?pos ?len str =
   try
@@ -326,9 +355,9 @@ let small_diff =
     let ofday1 = Span.to_int63_ns (to_span_since_start_of_day ofday1) in
     let ofday2 = Span.to_int63_ns (to_span_since_start_of_day ofday2) in
     let diff = ofday1 - ofday2 in
-    (*  d1 is in (-hour; hour) *)
+    (* d1 is in (-hour; hour) *)
     let d1 = Int63.rem diff hour in
-    (*  d2 is in (0;hour) *)
+    (* d2 is in (0;hour) *)
     let d2 = Int63.rem (d1 + hour) hour in
     let d = if d2 > hour / Int63.of_int 2 then d2 - hour else d2 in
     Span.of_int63_ns d

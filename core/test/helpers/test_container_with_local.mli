@@ -1,1 +1,0 @@
-include Test_container_with_local_intf.Test_container_with_local

@@ -41,7 +41,7 @@ module Unit_tests
     let remove = simplify_accessor remove
     let mem = simplify_accessor mem
 
-    (* let filter          = simplify_accessor filter *)
+    (*=let filter          = simplify_accessor filter *)
     let compare_direct = simplify_accessor compare_direct
     let equal = simplify_accessor equal
     let inter = simplify_accessor inter
@@ -87,7 +87,7 @@ module Unit_tests
     let of_sorted_array = simplify_creator of_sorted_array
     let of_sorted_array_unchecked = simplify_creator of_sorted_array_unchecked
 
-    (* let of_tree        = simplify_creator of_tree *)
+    (*=let of_tree        = simplify_creator of_tree *)
     let quickcheck_generator = simplify_creator quickcheck_generator
     let symmetric_diff = simplify_accessor symmetric_diff
     let split = simplify_accessor split
@@ -314,7 +314,7 @@ module Unit_tests
     let m = set_nonempty
 
     (* Calibration: make sure [m] contains elements less than 4, greater than 8, and
-         between these two. Otherwise the tests aren't testing what we want. *)
+       between these two. Otherwise the tests aren't testing what we want. *)
     let%test _ =
       let l = Set.to_list m in
       List.exists l ~f:(fun x -> Elt.(x < of_int 4))
@@ -1196,8 +1196,7 @@ let%expect_test ("bin_io functions do not allocate" [@tags "fast-flambda2"]) =
   let pos_ref = ref 0 in
   let _ : Set.M(Unit).t =
     Expect_test_helpers_core.require_allocation_does_not_exceed
-      (* 3 words for the set record +
-         2 words for the [Leaf] node *)
+      (* 3 words for the set record + 2 words for the [Leaf] node *)
       (Minor_words 5)
       ~here:[%here]
       (fun () -> [%bin_read: Set.M(Unit).t] buf ~pos_ref)

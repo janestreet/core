@@ -4,6 +4,9 @@ open Perms.Export
 module Array = Base.Array
 module Core_sequence = Sequence
 
+[%%template
+[@@@kind_set.define base_with_ext = (base, value mod external64)]
+
 include (
   Base.Array :
   sig
@@ -14,8 +17,8 @@ include (
       [@@deriving compare ~localize, globalize, sexp ~stackify, sexp_grammar]]
   end)
 
-[%%rederive.portable
-  type 'a t = 'a array [@@deriving bin_io ~localize, quickcheck ~portable, typerep]]
+[%%rederive.portable type 'a t = 'a array [@@deriving bin_io ~localize]]
+[%%rederive.portable type 'a t = 'a array [@@deriving quickcheck ~portable, typerep]]
 
 module T = struct
   include Base.Array
@@ -218,7 +221,7 @@ module type Permissioned = sig
   val of_list : 'a list -> ('a, [< _ perms ]) t
 
   val%template map : 'a 'b 'p. ('a, [> read ]) t -> f:('a -> 'b) -> ('b, [< 'p perms ]) t
-  [@@kind ki = (value, immediate, immediate64), ko = (value, immediate, immediate64)]
+  [@@kind ki = (value, value mod external64), ko = (value, value mod external64)]
 
   val folding_map
     :  ('a, [> read ]) t
@@ -562,18 +565,20 @@ module type S = sig
   type 'a t
 
   type%template 'a t
-  [@@kind k = (base_non_value, immediate, immediate64)]
+  [@@kind k = base_non_value]
   [@@deriving compare ~localize, equal ~localize, sexp ~stackify, globalize]
+
+  type 'a t [@@kind k = value mod external64]
 
   include Binary_searchable.S1 with type 'a t := 'a t
   include Indexed_container.S1_with_creators with type 'a t := 'a t
 
   include%template
     Indexed_container.S1_with_creators
-  [@kind_set.explicit base_with_imm] [@with: type 'a t := 'a t [@@kind base_with_imm]]
+  [@kind_set.explicit base_with_ext] [@with: type 'a t := 'a t [@@kind base_with_ext]]
 
   val%template map : 'a 'b. 'a t -> f:('a -> 'b) -> 'b t
-  [@@kind ki = base_with_imm, ko = base_with_imm]
+  [@@kind ki = base_with_ext, ko = base_with_ext]
 
   external length : 'a 'perms. ('a t[@local_opt]) -> int = "%array_length" [@@layout_poly]
 
@@ -583,9 +588,9 @@ module type S = sig
     = "%array_safe_get"
   [@@layout_poly] [@@mode m = (uncontended, shared)]
 
-  val%template get_opt : 'a. 'a t -> int -> ('a Option.t[@kind k])
+  val%template get_opt : 'a. 'a t -> int -> ('a Option.t[@kind k or value_or_null])
   [@@mode c = (uncontended, shared)]
-  [@@kind k = base_with_imm]
+  [@@kind k = base]
   [@@alloc __ @ m = (heap_global, stack_local)]
 
   external set
@@ -622,7 +627,7 @@ module type S = sig
 
   val create_float_uninitialized : len:int -> float t
 
-  val%template init : int -> f:(int -> 'a) -> 'a t
+  val%template init : 'a. int -> f:(int -> 'a) -> 'a t
   [@@alloc __ @ m = (heap_global, stack_local)]
 
   val make_matrix : dimx:int -> dimy:int -> 'a -> 'a t t
@@ -630,7 +635,7 @@ module type S = sig
   val append : 'a t -> 'a t -> 'a t
 
   [%%template:
-  [@@@kind.default k = base_with_imm]
+  [@@@kind.default k = base_with_ext]
 
   val concat : 'a. 'a t list -> 'a t
   val copy : 'a. 'a t -> 'a t
@@ -639,10 +644,10 @@ module type S = sig
   include Blit.S1 with type 'a t := 'a t
 
   val%template unsafe_blit : 'a. ('a array, 'a array) Blit.blit
-  [@@kind k = (base_non_value, immediate, immediate64)]
+  [@@kind k = (base_non_value, value mod external64)]
 
   val%template sub : 'a. ('a array, 'a array) Blit.sub
-  [@@kind k = (base_non_value, immediate, immediate64)]
+  [@@kind k = (base_non_value, value mod external64)]
 
   val of_list : 'a list -> 'a t
   val map : 'a t -> f:('a -> 'b) -> 'b t
@@ -688,7 +693,7 @@ module type S = sig
   val fold2_exn : 'a t -> 'b t -> init:'acc -> f:('acc -> 'a -> 'b -> 'acc) -> 'acc
 
   [%%template:
-  [@@@kind.default k1 = base_with_imm]
+  [@@@kind.default k1 = base_with_ext]
 
   [%%template:
   [@@@kind.default
@@ -700,16 +705,23 @@ module type S = sig
         , (word, word)
         , (float64, float64)
         , (float32, float32)
-        , (immediate, immediate)
-        , (immediate64, immediate64) )]
+        , (value mod external64, value mod external64) )]
 
-  val of_list_map : 'a 'b. ('a List.t[@kind k1]) -> f:('a -> 'b) -> 'b t
-  val of_list_mapi : 'a 'b. ('a List.t[@kind k1]) -> f:(int -> 'a -> 'b) -> 'b t]
+  val of_list_map : 'a 'b. ('a List.t[@kind k1 or value_or_null]) -> f:('a -> 'b) -> 'b t
 
-  [@@@kind.default k2 = base_with_imm]
+  val of_list_mapi
+    : 'a 'b.
+    ('a List.t[@kind k1 or value_or_null]) -> f:(int -> 'a -> 'b) -> 'b t]
 
-  val of_list_rev_map : 'a 'b. ('a List.t[@kind k1]) -> f:('a -> 'b) -> 'b t
-  val of_list_rev_mapi : 'a 'b. ('a List.t[@kind k1]) -> f:(int -> 'a -> 'b) -> 'b t
+  [@@@kind.default k2 = base_with_ext]
+
+  val of_list_rev_map
+    : 'a 'b.
+    ('a List.t[@kind k1 or value_or_null]) -> f:('a -> 'b) -> 'b t
+
+  val of_list_rev_mapi
+    : 'a 'b.
+    ('a List.t[@kind k1 or value_or_null]) -> f:(int -> 'a -> 'b) -> 'b t
 
   [@@@mode.default m = (global, local)]
 
@@ -721,23 +733,31 @@ module type S = sig
   val map_inplace : 'a t -> f:('a -> 'a) -> unit
 
   [%%template:
-  [@@@kind.default k1 = base_with_imm]
+  [@@@kind.default k1 = base_with_ext]
 
   val swap : 'a. 'a t -> int -> int -> unit
   val rev_inplace : 'a. 'a t -> unit
   val rev : 'a. 'a t -> 'a t
-  val of_list_rev : 'a. ('a List.t[@kind k1]) -> 'a t
+  val of_list_rev : 'a. ('a List.t[@kind k1 or value_or_null]) -> 'a t
   val find_exn : 'a. 'a t -> f:('a -> bool) -> 'a
 
   [@@@kind.default k2 = base]
 
-  val find_map_exn : 'a 'b. 'a t -> f:('a -> ('b Option.t[@kind k2])) -> 'b
-  val find_mapi_exn : 'a 'b. 'a t -> f:(int -> 'a -> ('b Option.t[@kind k2])) -> 'b]
+  val find_map_exn
+    : 'a 'b.
+    'a t -> f:('a -> ('b Option.t[@kind k2 or value_or_null])) -> 'b
+
+  val find_mapi_exn
+    : 'a 'b.
+    'a t -> f:(int -> 'a -> ('b Option.t[@kind k2 or value_or_null])) -> 'b]
 
   [%%template:
-  [@@@kind.default k = (base_non_value, immediate, immediate64)]
+  [@@@kind.default k = (base_non_value, value mod external64)]
 
-  val findi : 'a. 'a t -> f:(int -> 'a -> bool) -> ((int * 'a) Option.t[@kind value & k])
+  val findi
+    : 'a.
+    'a t -> f:(int -> 'a -> bool) -> ((int * 'a) Option.t[@kind value & (k or value)])
+
   val findi_exn : 'a. 'a t -> f:(int -> 'a -> bool) -> int * 'a]
 
   val findi : 'a t -> f:(int -> 'a -> bool) -> (int * 'a) option
@@ -754,8 +774,8 @@ module type S = sig
   val sorted_copy : 'a t -> compare:('a -> 'a -> int) -> 'a t
   val last : 'a t -> 'a
   val last_exn : 'a t -> 'a
-  val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
-  val equal__local : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
+  val equal : 'a. ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
+  val equal__local : 'a. ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
   val to_sequence : 'a t -> 'a Core_sequence.t
   val to_sequence_mutable : 'a t -> 'a Core_sequence.t
   val split_n : 'a t -> int -> 'a t * 'a t
@@ -767,7 +787,7 @@ include%template (
     S
     [@with:
       type 'a t := 'a array
-      type 'a t = 'a array [@@kind k = (base_non_value, immediate, immediate64)]])
+      type 'a t = 'a array [@@kind k = (base_non_value, value mod external64)]])
 [@ocaml.warning "-3"]
 
 let invariant invariant_a t = iter t ~f:invariant_a
@@ -783,4 +803,4 @@ module Float = struct
   include T.Float
 
   type t = t_ [@@deriving bin_io ~localize, compare ~localize, sexp, sexp_grammar]
-end
+end]

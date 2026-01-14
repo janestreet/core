@@ -1,11 +1,10 @@
 (* Functions for parsing time zone database files (zic files).
 
-   A time zone file consists (conceptually - the representation is more
-   compact) of an ordered list of (Time.t * [local_time_type]) that mark
-   the boundaries (marked from the epoch) at which various time adjustment
-   regimes are in effect.  This can also be thought of as breaking down all
-   time past the epoch into ranges with a [local_time_type] that describes the
-   offset from GMT to apply to each range to get local time.
+   A time zone file consists (conceptually - the representation is more compact) of an
+   ordered list of (Time.t * [local_time_type]) that mark the boundaries (marked from the
+   epoch) at which various time adjustment regimes are in effect. This can also be thought
+   of as breaking down all time past the epoch into ranges with a [local_time_type] that
+   describes the offset from GMT to apply to each range to get local time.
 *)
 
 open Import
@@ -80,9 +79,8 @@ module Stable = struct
         [@@deriving bin_io ~localize, sexp, stable_witness]
       end
 
-      (* holds information about when leap seconds should be applied - unused
-         because we are translating based on a epoch system clock (see the Core_zone
-         documentation). *)
+      (* holds information about when leap seconds should be applied - unused because we
+         are translating based on a epoch system clock (see the Core_zone documentation). *)
       module Leap_second = struct
         type t =
           { time_in_seconds_since_epoch : Int63.Stable.V1.t
@@ -139,9 +137,9 @@ module Stable = struct
             Int32.bit_or (Int32.bit_or sb1 sb2) (Int32.bit_or sb3 sb4)
         ;;
 
-        (* Note that this is only safe to use on numbers that will fit into a 31-bit
-           int. UNIX timestamps won't, for example.  In our case this is only used
-           to hold small numbers that are never interpreted as timestamps. *)
+        (* Note that this is only safe to use on numbers that will fit into a 31-bit int.
+           UNIX timestamps won't, for example. In our case this is only used to hold small
+           numbers that are never interpreted as timestamps. *)
         let input_long_as_int ic = Int32.to_int_exn (input_long_as_int32 ic)
         let input_long_as_int63 ic = Int63.of_int32 (input_long_as_int32 ic)
 
@@ -226,7 +224,7 @@ module Stable = struct
           let regimes = input_list ic ~f:input_regime ~len:type_count in
           let abbreviations = input_abbreviations ic ~len:abbrv_char_count in
           let leap_seconds = input_list ic ~f:input_leap_second ~len:leap_count in
-          (* The following two arrays indicate two boolean values per regime that
+          (*=The following two arrays indicate two boolean values per regime that
              represent a three-value type that would translate to:
 
              type transition_type = UTC | Standard | Wall_clock
@@ -321,18 +319,17 @@ module Stable = struct
           input_tz_file_gen ~input_transition:input_long_as_int63 ~input_leap_second ic
         ;;
 
-        (*
-           version 2 timezone files have the format:
+        (* version 2 timezone files have the format:
 
            part 1 - exactly the same as v1
 
-           part 2 - same format as v1, except that 8 bytes are used to store
-           transition times and leap seconds
+           part 2 - same format as v1, except that 8 bytes are used to store transition
+           times and leap seconds
 
-           part 3 - a newline-encloded, POSIX-TZ-environment-variable-style
-           string for use in handling instants after the last transition time
-           stored in the file (with nothing between the newlines if there is no
-           POSIX representation for such instants)
+           part 3 - a newline-encloded, POSIX-TZ-environment-variable-style string for use
+           in handling instants after the last transition time stored in the file (with
+           nothing between the newlines if there is no POSIX representation for such
+           instants)
 
            We handle files in this format by parsing the first part exactly as a v1
            timezone file and then continuing to parse with 64bit reading functions in the
@@ -340,14 +337,14 @@ module Stable = struct
 
            Version 3 timezone files are the same as version 2, except the
            POSIX-TZ-environment-variable-style string in part 3 may use two minor
-           extensions to the POSIX TZ format (the hours part of its transition
-           times may be signed and range from -167 through 167 instead of the
-           POSIX-required unsigned values from 0 through 24; and DST is in effect all
-           year if it starts January 1 at 00:00 and ends December 31 at 24:00 plus the
-           difference between daylight saving and standard time).
+           extensions to the POSIX TZ format (the hours part of its transition times may
+           be signed and range from -167 through 167 instead of the POSIX-required
+           unsigned values from 0 through 24; and DST is in effect all year if it starts
+           January 1 at 00:00 and ends December 31 at 24:00 plus the difference between
+           daylight saving and standard time).
 
-           As we don't actually do anything with part 3 anyway, we can just read v3
-           files as v2.
+           As we don't actually do anything with part 3 anyway, we can just read v3 files
+           as v2.
         *)
         let input_tz_file_v2_or_v3 ~version ic =
           let (_ : string -> original_filename:string -> digest:Md5_lib.t -> t) =
@@ -442,7 +439,9 @@ end
 
 include Stable.Full_data.V1
 
-let sexp_of_t t = Sexp.Atom t.name
+let%template[@alloc a = (heap, stack)] sexp_of_t t =
+  Sexp.Atom t.name [@exclave_if_stack a]
+;;
 
 let likely_machine_zones =
   Atomic.make [ "America/New_York"; "Europe/London"; "Asia/Hong_Kong"; "America/Chicago" ]

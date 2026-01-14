@@ -3,13 +3,13 @@ open! Gc
 
 module%test [@name "gc"] [@tags "no-js"] _ = struct
   (* The idea underlying this test is that minor_words does not allocate any memory. Hence
-       the subsequent call to quick_stat should report exactly the same number. Also:
+     the subsequent call to quick_stat should report exactly the same number. Also:
 
-       1) This test may fail if the float is so large that it cannot fit in a 64bit int.
+     1) This test may fail if the float is so large that it cannot fit in a 64bit int.
 
-       2) We run this in a loop because the each call to [quick_stat] allocates minor_data
-       and this number should be picked up by [minor_words] *)
-  (*
+     2) We run this in a loop because the each call to [quick_stat] allocates minor_data
+        and this number should be picked up by [minor_words] *)
+  (*=
        let%test_unit _ =
        for _ = 1 to 0 do
        let mw1 = minor_words () in
@@ -21,9 +21,9 @@ module%test [@name "gc"] [@tags "no-js"] _ = struct
     *)
 
   (* The point of doing a [minor] in the tests below is that [st] is still live and will
-       be promoted during the minor GC, thereby changing both the promoted words and the
-       major words in each iteration of the loop *)
-  (*
+     be promoted during the minor GC, thereby changing both the promoted words and the
+     major words in each iteration of the loop *)
+  (*=
        let%test_unit _ =
        for _ = 1 to 1000 do
        let mw1 = major_words () in
@@ -49,7 +49,7 @@ module%test [@name "gc"] [@tags "no-js"] _ = struct
 
   let stat_eq func projection =
     (* In the stub the record is allocated after getting the stats, so we must ensure
-         [func] is called first. *)
+       [func] is called first. *)
     let x = func () in
     let y = projection (quick_stat ()) in
     x = y
@@ -79,8 +79,8 @@ module%test [@name "gc"] [@tags "no-js"] _ = struct
     done
   ;;
 
-  (*
-     let%test_unit _ =
+  (*=
+       let%test_unit _ =
        let check () =
        assert (stat_eq heap_chunks Stat.heap_chunks);
        assert (stat_eq heap_words Stat.heap_words);
@@ -97,7 +97,7 @@ module%test [@name "gc"] [@tags "no-js"] _ = struct
        let _ = (Sys.opaque_identity !r : bytes list) in
        check ()
        ;;
-  *)
+    *)
 
   let%test "is_zero_alloc does not allocate" =
     let open Gc.For_testing in
@@ -135,7 +135,7 @@ module%test [@name "gc"] [@tags "no-js"] _ = struct
       |}];
     (* Location information should be excluded when [here] is [Lexing.dummy_pos], which is
        the default value of [here] in the external version of Base for [%call_pos]
-       arguments*)
+       arguments *)
     show_raise_hide_backtraces (fun () ->
       Gc.For_testing.assert_no_allocation ~here:Lexing.dummy_pos allocating_function);
     [%expect
@@ -254,9 +254,8 @@ let%expect_test ("finalizer reference loop: memory leak" [@tags "no-js"]) =
   let _array =
     create_finalizer_reference_loop ~add_finalizer_exn:Gc.Expert.add_finalizer_exn
   in
-  (* Unfortunately, this creates a memory leak.
-     Despite the array and its finalizer not having any inbound references, it never gets
-     collected. *)
+  (* Unfortunately, this creates a memory leak. Despite the array and its finalizer not
+     having any inbound references, it never gets collected. *)
   Gc.full_major ()
 ;;
 

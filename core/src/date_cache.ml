@@ -225,14 +225,14 @@ module Make (Time : Time) () = struct
      an arbitrary state, so we reset it to the initial value (along with [atomic_counter])
      before re-raising the exception.
 
-     [protect] is pulled out of [with_cache] below for performance reasons: its codegen
-     is large, but it is in the cold path of the function. *)
+     [protect] is pulled out of [with_cache] below for performance reasons: its codegen is
+     large, but it is in the cold path of the function. *)
   let[@cold] protect ~write ~date_cache ~time ~zone =
     try write ~date_cache ~time ~zone with
     | exn ->
       Date_cache.reset date_cache;
-      (* Be sure to set [lock_state] back to [init] *after* resetting the
-         [date_cache] so that no one tries to read the invalid [date_cache]. *)
+      (* Be sure to set [lock_state] back to [init] *after* resetting the [date_cache] so
+         that no one tries to read the invalid [date_cache]. *)
       Date_cache.set_lock_state date_cache Lock_state.(Packed initial);
       raise exn
   ;;
@@ -304,7 +304,7 @@ module Make (Time : Time) () = struct
       ~read:f
       ~write:update_cache
         (* Explicitly pass the following as arguments rather than allocating a closure for
-         [write]. *)
+           [write]. *)
       ~date_cache
       ~time
       ~zone

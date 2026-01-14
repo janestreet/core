@@ -5,8 +5,7 @@ open! Int.Replace_polymorphic_compare
 module Span = Span_float
 module String = Base.String
 
-(* Create an abstract type for Ofday to prevent us from confusing it with
-   other floats.
+(* Create an abstract type for Ofday to prevent us from confusing it with other floats.
 *)
 module Stable = struct
   module V1 = struct
@@ -87,7 +86,7 @@ module Stable = struct
 
       (* Another reasonable choice would be only allowing Ofday.t to be < 24hr, but this
          choice was made early on and people became used to being able to easily call 24hr
-         the end of the day.  It's a bit sad because it shares that moment with the
+         the end of the day. It's a bit sad because it shares that moment with the
          beginning of the next day, and round trips oddly if passed through
          Time.to_date_ofday/Time.of_date_ofday.
 
@@ -169,52 +168,76 @@ module Stable = struct
 
     let to_parts t = Span.to_parts (T.to_span_since_start_of_day t)
 
+    [%%template
+    [@@@alloc.default a @ m = (stack_local, heap_global)]
+
     let to_string_gen ~drop_ms ~drop_us ~trim t =
-      let ( / ) = Int63.( / ) in
-      let ( ! ) = Int63.of_int in
-      let ( mod ) = Int63.rem in
-      let i = Int63.to_int_exn in
-      assert (if drop_ms then drop_us else true);
-      let float_sec = Span.to_sec (T.to_span_since_start_of_day t) in
-      let us = Float.int63_round_nearest_exn (float_sec *. 1e6) in
-      let ms, us = us / !1000, us mod !1000 |> i in
-      let sec, ms = ms / !1000, ms mod !1000 |> i in
-      let min, sec = sec / !60, sec mod !60 |> i in
-      let hr, min = min / !60, min mod !60 |> i in
-      let hr = i hr in
-      let dont_print_us = drop_us || (trim && us = 0) in
-      let dont_print_ms = drop_ms || (trim && ms = 0 && dont_print_us) in
-      let dont_print_s = trim && sec = 0 && dont_print_ms in
-      let len =
-        if dont_print_s
-        then 5
-        else if dont_print_ms
-        then 8
-        else if dont_print_us
-        then 12
-        else 15
-      in
-      let buf = Bytes.create len in
-      write_2_digit_int buf ~pos:0 hr;
-      Bytes.set buf 2 ':';
-      write_2_digit_int buf ~pos:3 min;
-      if dont_print_s
-      then ()
-      else (
-        Bytes.set buf 5 ':';
-        write_2_digit_int buf ~pos:6 sec;
-        if dont_print_ms
-        then ()
-        else (
-          Bytes.set buf 8 '.';
-          write_3_digit_int buf ~pos:9 ms;
-          if dont_print_us then () else write_3_digit_int buf ~pos:12 us));
-      Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf
+      (let ( / ) = Int63.( / ) in
+       let ( ! ) = Int63.of_int in
+       let ( mod ) = Int63.rem in
+       let i = Int63.to_int_exn in
+       assert (if drop_ms then drop_us else true);
+       let float_sec = Span.to_sec (T.to_span_since_start_of_day t) in
+       let us = Float.int63_round_nearest_exn (float_sec *. 1e6) in
+       let ms, us = us / !1000, us mod !1000 |> i in
+       let sec, ms = ms / !1000, ms mod !1000 |> i in
+       let min, sec = sec / !60, sec mod !60 |> i in
+       let hr, min = min / !60, min mod !60 |> i in
+       let hr = i hr in
+       let dont_print_us = drop_us || (trim && us = 0) in
+       let dont_print_ms = drop_ms || (trim && ms = 0 && dont_print_us) in
+       let dont_print_s = trim && sec = 0 && dont_print_ms in
+       let len =
+         if dont_print_s
+         then 5
+         else if dont_print_ms
+         then 8
+         else if dont_print_us
+         then 12
+         else 15
+       in
+       let buf = (Bytes.create [@alloc a]) len in
+       write_2_digit_int buf ~pos:0 hr;
+       Bytes.set buf 2 ':';
+       write_2_digit_int buf ~pos:3 min;
+       if dont_print_s
+       then ()
+       else (
+         Bytes.set buf 5 ':';
+         write_2_digit_int buf ~pos:6 sec;
+         if dont_print_ms
+         then ()
+         else (
+           Bytes.set buf 8 '.';
+           write_3_digit_int buf ~pos:9 ms;
+           if dont_print_us then () else write_3_digit_int buf ~pos:12 us));
+       Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf)
+      [@exclave_if_stack a]
     ;;
 
-    let to_string_trimmed t = to_string_gen ~drop_ms:false ~drop_us:false ~trim:true t
-    let to_sec_string t = to_string_gen ~drop_ms:true ~drop_us:true ~trim:false t
-    let to_millisecond_string t = to_string_gen ~drop_ms:false ~drop_us:true ~trim:false t
+    let to_string_trimmed t =
+      (to_string_gen [@alloc a])
+        ~drop_ms:false
+        ~drop_us:false
+        ~trim:true
+        t [@exclave_if_stack a]
+    ;;
+
+    let to_sec_string t =
+      (to_string_gen [@alloc a])
+        ~drop_ms:true
+        ~drop_us:true
+        ~trim:false
+        t [@exclave_if_stack a]
+    ;;
+
+    let to_millisecond_string t =
+      (to_string_gen [@alloc a])
+        ~drop_ms:false
+        ~drop_us:true
+        ~trim:false
+        t [@exclave_if_stack a]
+    ;;]
 
     let small_diff =
       let hour = 3600. in
@@ -222,9 +245,9 @@ module Stable = struct
         let ofday1 = Span.to_sec (T.to_span_since_start_of_day ofday1) in
         let ofday2 = Span.to_sec (T.to_span_since_start_of_day ofday2) in
         let diff = ofday1 -. ofday2 in
-        (*  d1 is in (-hour; hour) *)
+        (* d1 is in (-hour; hour) *)
         let d1 = Float.mod_float diff hour in
-        (*  d2 is in (0;hour) *)
+        (* d2 is in (0;hour) *)
         let d2 = Float.mod_float (d1 +. hour) hour in
         let d = if Float.( > ) d2 (hour /. 2.) then d2 -. hour else d2 in
         Span.of_sec d
@@ -263,7 +286,11 @@ module Stable = struct
     ;;
 
     let t_sexp_grammar = Sexplib.Sexp_grammar.coerce String.t_sexp_grammar
-    let sexp_of_t span = Sexp.Atom (to_string span)
+
+    let%template[@alloc a = (heap, stack)] sexp_of_t span =
+      let span = globalize span in
+      Sexp.Atom (to_string span) [@exclave_if_stack a]
+    ;;
 
     let of_string_iso8601_extended ?pos ?len str =
       try Ofday_helpers.parse_iso8601_extended ?pos ?len str ~f:create_from_parsed with
@@ -335,12 +362,11 @@ module C = struct
   let comparator = T.comparator
   let compare = [%eta2 Comparator.compare T.comparator]
 
-  (* In 108.06a and earlier, ofdays in sexps of Maps and Sets were raw floats.  From
-     108.07 through 109.13, the output format remained raw as before, but both the raw and
-     pretty format were accepted as input.  From 109.14 on, the output format was changed
-     from raw to pretty, while continuing to accept both formats.  Once we believe most
-     programs are beyond 109.14, we will switch the input format to no longer accept
-     raw. *)
+  (* In 108.06a and earlier, ofdays in sexps of Maps and Sets were raw floats. From 108.07
+     through 109.13, the output format remained raw as before, but both the raw and pretty
+     format were accepted as input. From 109.14 on, the output format was changed from raw
+     to pretty, while continuing to accept both formats. Once we believe most programs are
+     beyond 109.14, we will switch the input format to no longer accept raw. *)
   let sexp_of_t = sexp_of_t
 
   let t_of_sexp sexp =

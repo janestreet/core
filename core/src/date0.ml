@@ -33,7 +33,7 @@ module Stable = struct
         val of_int_unchecked : int -> t
         val invalid_value__for_internal_use_only : t
       end = struct
-        (* We used to store dates like this:
+        (*=We used to store dates like this:
            type t = { y: int; m: Month.Stable.V1.t; d: int; }
            In the below we make sure that the bin_io representation is
            identical (and the stable unit tests check this)
@@ -73,8 +73,8 @@ module Stable = struct
         ;;
 
         let create_exn ~y:year ~m:month ~d:day =
-          (* year, month, and day need to be passed as parameters to avoid allocating
-             a closure (see unit test below) *)
+          (* year, month, and day need to be passed as parameters to avoid allocating a
+             closure (see unit test below) *)
           let invalid ~year ~month ~day msg =
             invalid_argf
               !"Date.create_exn ~y:%d ~m:%{Month} ~d:%d error: %s"
@@ -93,10 +93,10 @@ module Stable = struct
           create0 ~year ~month ~day
         ;;
 
-        (* We don't use Make_binable here, because that would go via an immediate
-           tuple or record.  That is exactly the 32 bytes we worked so hard above to
-           get rid of.  We also don't want to just bin_io the integer directly
-           because that would mean a new bin_io format.  *)
+        (* We don't use Make_binable here, because that would go via an immediate tuple or
+           record. That is exactly the 32 bytes we worked so hard above to get rid of. We
+           also don't want to just bin_io the integer directly because that would mean a
+           new bin_io format. *)
 
         let bin_read_t buf ~pos_ref =
           let year = Int.bin_read_t buf ~pos_ref in
@@ -280,7 +280,9 @@ module Stable = struct
           | Invalid_argument a -> of_sexp_error a s
         ;;
 
-        let sexp_of_t t = Sexp.Atom (to_string t)
+        let%template[@alloc a = (heap, stack)] sexp_of_t t =
+          Sexp.Atom (to_string t) [@exclave_if_stack a]
+        ;;
 
         let t_sexp_grammar =
           let open Sexplib in
@@ -328,7 +330,10 @@ module Stable = struct
       let some_is_representable _ = true
       let some t = V1.to_int t
       let unchecked_value t = V1.of_int_unchecked t
-      let to_option t = if is_some t then Some (unchecked_value t) else None
+
+      let%template[@alloc a = (heap, stack)] to_option t =
+        (if is_some t then Some (unchecked_value t) else None) [@exclave_if_stack a]
+      ;;
 
       let of_option opt =
         match opt with
@@ -343,7 +348,13 @@ module Stable = struct
       ;;
 
       let value t ~default = Bool.select (is_none t) default (unchecked_value t)
-      let sexp_of_t t = to_option t |> Option.sexp_of_t V1.sexp_of_t
+
+      let%template[@alloc a = (heap, stack)] sexp_of_t t =
+        ((to_option [@alloc a]) t
+         |> (Option.sexp_of_t [@alloc a]) (V1.sexp_of_t [@alloc a]))
+        [@exclave_if_stack a]
+      ;;
+
       let t_of_sexp sexp = (Option.t_of_sexp V1.t_of_sexp) sexp |> of_option
       let t_sexp_grammar = Sexplib.Sexp_grammar.coerce [%sexp_grammar: V1.t Option.t]
 
@@ -402,8 +413,8 @@ include%template Pretty_printer.Register [@modality portable] (struct
 let unix_epoch = create_exn ~y:1970 ~m:Jan ~d:1
 
 (* The Days module is used for calculations that involve adding or removing a known number
-   of days from a date.  Internally the date is translated to a day number, the days are
-   added, and the new date is returned.  Those interested in the math can read:
+   of days from a date. Internally the date is translated to a day number, the days are
+   added, and the new date is returned. Those interested in the math can read:
 
    http://alcor.concordia.ca/~gpkatch/gdate-method.html
 
@@ -654,8 +665,8 @@ let dates_between ~min:t1 ~max:t2 =
 let weekdays_between_with_weekday_override ~min ~max ~is_weekday =
   let all_dates = dates_between ~min ~max in
   Option.value_map (List.hd all_dates) ~default:[] ~f:(fun first_date ->
-    (* to avoid a system call on every date, we just get the weekday for the first
-       date and use it to get all the other weekdays *)
+    (* to avoid a system call on every date, we just get the weekday for the first date
+       and use it to get all the other weekdays *)
     let first_weekday = day_of_week first_date in
     let date_and_weekdays =
       List.mapi all_dates ~f:(fun i date -> date, Day_of_week.shift first_weekday i)

@@ -12,7 +12,7 @@ end
 
 module type Span = sig
   (** [t] is immediate on 64bit boxes and so plays nicely with the GC write barrier. *)
-  type t = private Int63.t [@@deriving hash, typerep]
+  type t = private Int63.t [@@deriving hash, typerep, sexp_of ~stackify]
 
   include Span_intf.S with type underlying = Int63.t and type t := t
 
@@ -146,12 +146,13 @@ module type Span = sig
     type value := t
 
     type t
-    [@@deriving bin_io ~localize, compare ~localize, equal ~localize, globalize]
+    [@@deriving
+      bin_io ~localize, compare ~localize, equal ~localize, globalize, sexp_of ~stackify]
     [@@immediate64]
 
     include Immediate_option.S_int63_zero_alloc with type value := value and type t := t
 
-    include%template Identifiable.S [@mode local] with type t := t
+    include%template Identifiable.S [@mode local] [@modality portable] with type t := t
 
     include Diffable.S_atomic with type t := t
     include Quickcheck.S with type t := t
@@ -230,7 +231,7 @@ module type Span = sig
 
   (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
 
-    https://opensource.janestreet.com/standards/#private-submodules *)
+      https://opensource.janestreet.com/standards/#private-submodules *)
   module Private : sig
     val of_parts : Parts.t -> t
     val to_parts : t -> Parts.t
@@ -255,7 +256,7 @@ module type Ofday = sig
   val approximate_end_of_day : t
 
   (*_ This is already exported from [Ofday_intf.S], but we re-declare it to add
-    documentation. *)
+      documentation. *)
 
   (** [add_exn t span] shifts the time of day [t] by [span]. It raises if the result is
       not in the same 24-hour day. Daylight savings shifts are not accounted for. *)
@@ -276,8 +277,11 @@ module type Ofday = sig
       midnight, e.g. every hour from 10pm to 2am, requires multiple calls to [every]. *)
   val every : Span.t -> start:t -> stop:t -> t list Or_error.t
 
-  val to_microsecond_string : t -> string
-  val to_nanosecond_string : t -> string
+  val%template to_microsecond_string : t -> string
+  [@@alloc a @ m = (stack_local, heap_global)]
+
+  val%template to_nanosecond_string : t -> string
+  [@@alloc a @ m = (stack_local, heap_global)]
 
   module Stable : sig
     module V1 : sig
@@ -334,7 +338,7 @@ module type Time_ns = sig
     , equal ~localize
     , globalize
     , hash
-    , sexp
+    , sexp ~stackify
     , sexp_grammar
     , typerep]
 
@@ -412,7 +416,7 @@ module type Time_ns = sig
 
       include Immediate_option.S_int63_zero_alloc with type value := value and type t := t
 
-      include%template Identifiable.S [@mode local] with type t := t
+      include%template Identifiable.S [@mode local] [@modality portable] with type t := t
 
       include Quickcheck.S with type t := t
       include Diffable.S_atomic with type t := t
@@ -458,11 +462,12 @@ module type Time_ns = sig
     type value := t
 
     type t = private Span.Option.t
-    [@@deriving bin_io ~localize, compare ~localize, equal ~localize, globalize]
+    [@@deriving
+      bin_io ~localize, compare ~localize, equal ~localize, globalize, sexp_of ~stackify]
 
     include Immediate_option.S_int63_zero_alloc with type value := value with type t := t
 
-    include%template Identifiable.S [@mode local] with type t := t
+    include%template Identifiable.S [@mode local] [@modality portable] with type t := t
 
     include Quickcheck.S with type t := t
     include Diffable.S_atomic with type t := t
@@ -778,7 +783,7 @@ module type Time_ns = sig
 
       Sexps and strings display the date, ofday, and UTC offset of [t] relative to the
       appropriate time zone. *)
-  include%template Identifiable.S [@mode local] with type t := t
+  include%template Identifiable.S [@mode local] [@modality portable] with type t := t
 
   (** [Identifiable] masks the comparison functions' [@zero_alloc] annotations *)
 
@@ -793,6 +798,7 @@ module type Time_ns = sig
         , equal ~localize
         , globalize
         , hash
+        , sexp_of ~stackify
         , sexp_grammar]
 
       include%template

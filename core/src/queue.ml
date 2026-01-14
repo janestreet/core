@@ -12,7 +12,7 @@ include%template Test_binary_searchable.Make1_and_test [@modality portable] (str
         let r = create () in
         (* We enqueue everything twice, and dequeue it once to ensure:
            - that the queue has the same content as the array.
-           - that it has, in most cases, an interesting internal structure*)
+           - that it has, in most cases, an interesting internal structure *)
         for i = 0 to Array.length a - 1 do
           enqueue r a.(i)
         done;

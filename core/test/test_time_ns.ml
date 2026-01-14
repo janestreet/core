@@ -313,7 +313,7 @@ module%test [@name "Time_ns.Alternate_sexp and Time_ns.Option.Alternate_sexp"] _
 
   let%expect_test "round-trip" =
     (* randomly round spans to make sure we round-trip at various precisions, since it
-         affects number of decimal places *)
+       affects number of decimal places *)
     quickcheck [%here] (randomly_round quickcheck_generator) (fun time_ns ->
       [%test_result: time_ns]
         (Time_ns.Alternate_sexp.t_of_sexp (Time_ns.Alternate_sexp.sexp_of_t time_ns))
@@ -976,7 +976,7 @@ module%test [@name "next_multiple"] _ = struct
   ;;
 
   (* The below tests all failed in a previous implementation of [next_multiple], due to
-       the use of floating point division rather than integer division. *)
+     the use of floating point division rather than integer division. *)
   let%test_unit _ = test true 71 1666750235549516973L
   let%test_unit _ = test true 4398 1232807081547132235L
   let%test_unit _ = test false 702561 1233263206897519979L

@@ -9,7 +9,7 @@ module type Date0 = sig
     , equal ~localize
     , globalize
     , hash
-    , sexp
+    , sexp ~stackify
     , sexp_grammar
     , typerep]
   [@@immediate]
@@ -108,7 +108,7 @@ module type Date0 = sig
 
       In particular, this means adding [x] months and then adding [y] months isn't the
       same as adding [x + y] months, and in particular adding [x] months and then [-x]
-      months won't always get you back where you were. **)
+      months won't always get you back where you were. *)
   val add_months : t -> int -> t
 
   (** [add_years t n] has the same semantics as [add_months] for adding years to Feb 29 of
@@ -328,7 +328,9 @@ module type Date0 = sig
   module Stable : sig
     module V1 : sig
       type nonrec t = t
-      [@@deriving equal ~localize, globalize, hash, sexp_grammar, string] [@@immediate]
+      [@@deriving
+        equal ~localize, globalize, hash, sexp_grammar, string, sexp_of ~stackify]
+      [@@immediate]
 
       (** [to_int] and [of_int_exn] convert to/from the underlying integer representation. *)
 
@@ -353,7 +355,7 @@ module type Date0 = sig
           , compare ~localize
           , equal ~localize
           , globalize
-          , sexp
+          , sexp ~stackify
           , sexp_grammar
           , stable_witness]
         [@@immediate]
@@ -373,7 +375,7 @@ module type Date0 = sig
 
   (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
 
-    https://opensource.janestreet.com/standards/#private-submodules *)
+      https://opensource.janestreet.com/standards/#private-submodules *)
   module Private : sig
     val leap_year_table : int iarray
     val non_leap_year_table : int iarray

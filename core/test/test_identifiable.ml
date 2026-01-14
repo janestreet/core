@@ -3,8 +3,7 @@ open! Import
 open! Identifiable
 
 (* The unit test below checks that for a call to [Identifiable.Make], the functions in the
-   resulting module call the functions in the argument module the correct number of
-   times. *)
+   resulting module call the functions in the argument module the correct number of times. *)
 module%test _ = struct
   module Counter = struct
     type t =

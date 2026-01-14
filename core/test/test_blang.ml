@@ -176,8 +176,8 @@ module%test [@name "laws"] _ = struct
   ;;
 
   module Gen = struct
-    (* all random values are generated from a fixed PRNG seed so that
-         unit tests are deterministic *)
+    (* all random values are generated from a fixed PRNG seed so that unit tests are
+       deterministic *)
     let prng =
       Random.State.make
         (String.to_list
@@ -345,10 +345,9 @@ let%expect_test "quickcheck generator obeys invariants" =
   [%expect {| |}]
 ;;
 
-(* If this test fails on `javascript-runtest`, then js-of-ocaml may have
-   a bug related to mutually recursive functions inside of loops, and
-   was able to see through the anti-tail-recursion hack in
-   `lib/sexp_grammar/src/sexp_grammar.ml`. *)
+(* If this test fails on `javascript-runtest`, then js-of-ocaml may have a bug related to
+   mutually recursive functions inside of loops, and was able to see through the
+   anti-tail-recursion hack in `lib/sexp_grammar/src/sexp_grammar.ml`. *)
 let%expect_test "validate sexp grammar" =
   require_ok
     (Sexp_grammar_validation.validate_grammar

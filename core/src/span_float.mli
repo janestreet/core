@@ -7,7 +7,7 @@ module Stable : sig
   module V1 : sig
     type nonrec t = t
     [@@deriving
-      sexp
+      sexp ~stackify
       , sexp_grammar
       , bin_io ~localize
       , compare ~localize
@@ -24,7 +24,7 @@ module Stable : sig
   module V2 : sig
     type nonrec t = t
     [@@deriving
-      sexp
+      sexp ~stackify
       , sexp_grammar
       , bin_io ~localize
       , compare ~localize
@@ -55,7 +55,7 @@ end
 
 (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
 
-  https://opensource.janestreet.com/standards/#private-submodules *)
+    https://opensource.janestreet.com/standards/#private-submodules *)
 module Private : sig
   val parse_suffix : string -> index:int -> Unit_of_time.t
   val suffix_of_unit_of_time : Unit_of_time.t -> string

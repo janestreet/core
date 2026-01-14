@@ -128,7 +128,7 @@ let result_fail t =
 let result t = if List.is_empty t then Ok () else result_fail t
 
 let maybe_raise t =
-  (* [@zero_alloc] assume here because this function always raises  *)
+  (* [@zero_alloc] assume here because this function always raises *)
   let[@zero_alloc assume] fail () = Or_error.ok_exn (result_fail t) in
   if List.is_empty t then () else fail ()
 ;;

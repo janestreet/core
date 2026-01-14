@@ -32,6 +32,8 @@ val to_string_round_trippable : t -> string
     conversion. *)
 include Sexpable with type t := t
 
+include%template Sexplib0.Sexpable.Sexp_of [@alloc stack] with type t := t
+
 include Sexplib.Sexp_grammar.S with type t := t
 
 include%template Binable.S [@mode local] with type t := t
@@ -261,7 +263,7 @@ val format : t -> Format.t -> string
 val validate : t -> Validate.t
 
 (*_ Caution: If we remove this sig item, [sign] will still be present from
-  [Comparable.With_zero]. *)
+    [Comparable.With_zero]. *)
 
 val sign : t -> Sign.t [@@deprecated "[since 2016-01] Replace [sign] with [sign_exn]"]
 

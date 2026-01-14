@@ -578,7 +578,7 @@ module%test [@name "random"] _ = struct
            (G.compare_fn quickcheck_observer))
         ~f:(fun (list, cmp) ->
           (* When comparing [t] using [cmp], [sort] and [stable_sort] should be
-               indistinguishable. *)
+             indistinguishable. *)
           let compare = cmp in
           [%test_eq: t list]
             (List.sort list ~compare:cmp)

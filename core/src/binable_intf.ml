@@ -70,7 +70,9 @@ module type Conv3 = sig
 end]
 
 module type Conv_sexpable = sig
-  include Sexpable.S
+  type t
+
+  include Sexpable.S with type t := t
 
   val caller_identity : Bin_prot.Shape.Uuid.t
 end
@@ -209,8 +211,11 @@ module type Binable0 = sig
   module%template.portable Of_stringable_with_uuid (M : Conv_stringable) :
     S with type t := M.t
 
-  module%template.portable Of_sexpable_without_uuid (M : Sexpable.S) :
-    S with type t := M.t
+  module%template.portable Of_sexpable_without_uuid (M : sig
+      type t
+
+      include Sexpable.S with type t := t
+    end) : S with type t := M.t
   [@@alert legacy "Use [Of_sexpable_with_uuid] if possible."]
 
   module%template.portable Of_stringable_without_uuid (M : Stringable.S) :
@@ -222,10 +227,11 @@ module type Binable0 = sig
 
   type 'a m = ((module S with type t = 'a)[@mode m])
 
-  val of_bigstring : ('a m[@mode m]) -> bigstring -> 'a
+  val of_bigstring : 'a. ('a m[@mode m]) -> bigstring -> 'a
 
   val to_bigstring
-    :  ?prefix_with_length:bool (** defaults to false *)
+    : 'a.
+    ?prefix_with_length:bool (** defaults to false *)
     -> ('a m[@mode m])
     -> 'a
     -> bigstring]
@@ -310,6 +316,6 @@ module type Binable = sig
   [%%template:
   [@@@mode.default m = (global, local)]
 
-  val of_string : ('a m[@mode m]) -> string -> 'a
-  val to_string : ('a m[@mode m]) -> 'a -> string]
+  val of_string : 'a. ('a m[@mode m]) -> string -> 'a
+  val to_string : 'a. ('a m[@mode m]) -> 'a -> string]
 end

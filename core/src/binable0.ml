@@ -124,7 +124,12 @@ module Stable = struct
   end
 
   module Of_sexpable = struct
-    module%template.portable [@modality p] V1 (M : Sexpable.S) =
+    module%template.portable
+      [@modality p] V1 (M : sig
+        type t
+
+        include Sexpable.S with type t := t
+      end) =
       Of_binable.V1 [@modality p]
         (struct
           type t = Base.Sexp.t =
@@ -295,8 +300,12 @@ module%test _ = struct
   end
 
   (* Check that only the functions & shape are sufficient for [@@deriving bin_io]. The
-       fact that this functor typechecks is, itself, the test. *)
-  module _ (X : S_only_functions_and_shape) : S = struct
+     fact that this functor typechecks is, itself, the test. *)
+  module _ (X : sig
+      type t
+
+      include S_only_functions_and_shape with type t := t
+    end) : S = struct
     type t = X.t [@@deriving bin_io]
   end
 end

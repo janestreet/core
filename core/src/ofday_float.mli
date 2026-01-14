@@ -10,7 +10,7 @@ module Stable : sig
       , equal ~localize
       , globalize
       , hash
-      , sexp
+      , sexp ~stackify
       , sexp_grammar
       , stable_witness
       , diff]

@@ -484,12 +484,12 @@ module type Command = sig
         -> doc:string
         -> 'a t
 
-      (** [flag_optional_with_default_doc name arg_type sexp_of_default ~default ~doc] is
-          a shortcut for [flag], where:
+      (** [flag_optional_with_default_doc_sexp name arg_type sexp_of_default ~default ~doc]
+          is a shortcut for [flag], where:
           + The [Flag.t] is [optional_with_default default arg_type]
           + The [doc] is passed through with an explanation of what the default value
             appended. *)
-      val flag_optional_with_default_doc
+      val flag_optional_with_default_doc_sexp
         :  ?aliases:string list
         -> ?full_flag_required:unit
         -> string
@@ -500,7 +500,7 @@ module type Command = sig
         -> 'a t
 
       (** [flag_optional_with_default_doc_string name arg_type string_of_default ~default ~doc]
-          is similar to [flag_optional_with_default_doc] but uses [string_of_default]
+          is similar to [flag_optional_with_default_doc_sexp] but uses [string_of_default]
           rather than converting via sexp. *)
       val flag_optional_with_default_doc_string
         :  ?aliases:string list
@@ -880,6 +880,20 @@ wrap (fun ~run ~main ->
     -> (string * t) list Lazy.t
     -> t
 
+  (** [extend_group_exn t ~subcommands] returns a new group command that includes all the
+      subcommands from [t] plus the additional subcommands in [subcommands].
+
+      Raises if:
+      - [t] is not a group command (i.e., it's a [basic], [exec], or similar)
+      - Any name in [subcommands] conflicts with an existing subcommand name in [t]
+
+      NOTE: subcommand names containing underscores will be rejected; use dashes instead. *)
+  val extend_group_exn
+    :  ?here:Stdlib.Lexing.position
+    -> t
+    -> subcommands:(string * t) list
+    -> t
+
   (** [exec ~summary ~path_to_exe] runs [exec] on the executable at [path_to_exe]. If
       [path_to_exe] is [`Absolute path] then [path] is executed without any further
       qualification. If it is [`Relative_to_me path] then
@@ -977,7 +991,7 @@ wrap (fun ~run ~main ->
 
   (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
 
-    https://opensource.janestreet.com/standards/#private-submodules *)
+      https://opensource.janestreet.com/standards/#private-submodules *)
   module Private : sig
     val abs_path : dir:string -> string -> string
     val word_wrap : string -> int -> string list

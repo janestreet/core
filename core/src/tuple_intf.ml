@@ -49,55 +49,50 @@ module type Tuple = sig
     include%template
       Comparator.Derived2 [@modality portable] with type ('a, 'b) t := ('a, 'b) t
 
-    val create : 'a -> 'b -> ('a, 'b) t
-    val curry : (('a, 'b) t -> 'c) -> 'a -> 'b -> 'c
-    val uncurry : ('a -> 'b -> 'c) -> ('a, 'b) t -> 'c
+    val create : 'a 'b. 'a -> 'b -> ('a, 'b) t
+    val curry : 'a 'b 'c. (('a, 'b) t -> 'c) -> 'a -> 'b -> 'c
+    val uncurry : 'a 'b 'c. ('a -> 'b -> 'c) -> ('a, 'b) t -> 'c
 
     val compare
-      :  cmp1:('a -> 'a -> int)
-      -> cmp2:('b -> 'b -> int)
-      -> ('a, 'b) t
-      -> ('a, 'b) t
-      -> int
+      : 'a 'b.
+      cmp1:('a -> 'a -> int) -> cmp2:('b -> 'b -> int) -> ('a, 'b) t -> ('a, 'b) t -> int
 
     val equal
-      :  eq1:('a -> 'a -> bool)
-      -> eq2:('b -> 'b -> bool)
-      -> ('a, 'b) t
-      -> ('a, 'b) t
-      -> bool
+      : 'a 'b.
+      eq1:('a -> 'a -> bool) -> eq2:('b -> 'b -> bool) -> ('a, 'b) t -> ('a, 'b) t -> bool
 
     [%%if flambda_backend]
 
-    external get1 : (('a, _) t[@local_opt]) -> ('a[@local_opt]) = "%field0_immut"
-    external get2 : ((_, 'a) t[@local_opt]) -> ('a[@local_opt]) = "%field1_immut"
+    external get1 : 'a 'b. (('a, 'b) t[@local_opt]) -> ('a[@local_opt]) = "%field0_immut"
+    external get2 : 'a 'b. (('a, 'b) t[@local_opt]) -> ('b[@local_opt]) = "%field1_immut"
 
     [%%else]
 
-    external get1 : (('a, _) t[@local_opt]) -> ('a[@local_opt]) = "%field0"
-    external get2 : ((_, 'a) t[@local_opt]) -> ('a[@local_opt]) = "%field1"
+    external get1 : 'a 'b. (('a, 'b) t[@local_opt]) -> ('a[@local_opt]) = "%field0"
+    external get2 : 'a 'b. (('a, 'b) t[@local_opt]) -> ('b[@local_opt]) = "%field1"
 
     [%%endif]
 
-    val map : ('a, 'a) t -> f:('a -> 'b) -> ('b, 'b) t
-    val map_fst : ('a, 'b) t -> f:('a -> 'c) -> ('c, 'b) t
-    val map_snd : ('a, 'b) t -> f:('b -> 'c) -> ('a, 'c) t
-    val map_both : ('a, 'b) t -> f1:('a -> 'c) -> f2:('b -> 'd) -> ('c, 'd) t
-    val map2 : ('a, 'a) t -> ('b, 'b) t -> f:('a -> 'b -> 'c) -> ('c, 'c) t
-    val sort : ('a, 'a) t -> compare:('a -> 'a -> int) -> ('a, 'a) t
-    val swap : ('a, 'b) t -> ('b, 'a) t
+    val map : 'a 'b. ('a, 'a) t -> f:('a -> 'b) -> ('b, 'b) t
+    val map_fst : 'a 'b 'c. ('a, 'b) t -> f:('a -> 'c) -> ('c, 'b) t
+    val map_snd : 'a 'b 'c. ('a, 'b) t -> f:('b -> 'c) -> ('a, 'c) t
+    val map_both : 'a 'b 'c 'd. ('a, 'b) t -> f1:('a -> 'c) -> f2:('b -> 'd) -> ('c, 'd) t
+    val map2 : 'a 'b 'c. ('a, 'a) t -> ('b, 'b) t -> f:('a -> 'b -> 'c) -> ('c, 'c) t
+    val sort : 'a 'a. ('a, 'a) t -> compare:('a -> 'a -> int) -> ('a, 'a) t
+    val swap : 'a 'b. ('a, 'b) t -> ('b, 'a) t
   end
 
   (** Signature for a 3-tuple module *)
   module T3 : sig
     type ('a, 'b, 'c) t = 'a * 'b * 'c [@@deriving sexp, sexp_grammar, typerep]
 
-    val create : 'a -> 'b -> 'c -> ('a, 'b, 'c) t
-    val curry : (('a, 'b, 'c) t -> 'd) -> 'a -> 'b -> 'c -> 'd
-    val uncurry : ('a -> 'b -> 'c -> 'd) -> ('a, 'b, 'c) t -> 'd
+    val create : 'a 'b 'c. 'a -> 'b -> 'c -> ('a, 'b, 'c) t
+    val curry : 'a 'b 'c 'd. (('a, 'b, 'c) t -> 'd) -> 'a -> 'b -> 'c -> 'd
+    val uncurry : 'a 'b 'c 'd. ('a -> 'b -> 'c -> 'd) -> ('a, 'b, 'c) t -> 'd
 
     val equal
-      :  eq1:('a -> 'a -> bool)
+      : 'a 'b 'c.
+      eq1:('a -> 'a -> bool)
       -> eq2:('b -> 'b -> bool)
       -> eq3:('c -> 'c -> bool)
       -> ('a, 'b, 'c) t
@@ -105,7 +100,8 @@ module type Tuple = sig
       -> bool
 
     val compare
-      :  cmp1:('a -> 'a -> int)
+      : 'a 'b 'c.
+      cmp1:('a -> 'a -> int)
       -> cmp2:('b -> 'b -> int)
       -> cmp3:('c -> 'c -> int)
       -> ('a, 'b, 'c) t
@@ -114,30 +110,36 @@ module type Tuple = sig
 
     [%%if flambda_backend]
 
-    external get1 : (('a, _, _) t[@local_opt]) -> ('a[@local_opt]) = "%field0_immut"
-    external get2 : ((_, 'a, _) t[@local_opt]) -> ('a[@local_opt]) = "%field1_immut"
+    external get1
+      : 'a 'b 'c.
+      (('a, 'b, 'c) t[@local_opt]) -> ('a[@local_opt])
+      = "%field0_immut"
+
+    external get2
+      : 'a 'b 'c.
+      (('a, 'b, 'c) t[@local_opt]) -> ('b[@local_opt])
+      = "%field1_immut"
 
     [%%else]
 
-    external get1 : (('a, _, _) t[@local_opt]) -> ('a[@local_opt]) = "%field0"
-    external get2 : ((_, 'a, _) t[@local_opt]) -> ('a[@local_opt]) = "%field1"
+    external get1 : 'a 'b 'c. (('a, 'b, 'c) t[@local_opt]) -> ('a[@local_opt]) = "%field0"
+    external get2 : 'a 'b 'c. (('a, 'b, 'c) t[@local_opt]) -> ('b[@local_opt]) = "%field1"
 
     [%%endif]
 
-    val get3 : (_, _, 'a) t -> 'a
-    val map : ('a, 'a, 'a) t -> f:('a -> 'b) -> ('b, 'b, 'b) t
-    val map_fst : ('a, 'b, 'c) t -> f:('a -> 'd) -> ('d, 'b, 'c) t
-    val map_snd : ('a, 'b, 'c) t -> f:('b -> 'd) -> ('a, 'd, 'c) t
-    val map_trd : ('a, 'b, 'c) t -> f:('c -> 'd) -> ('a, 'b, 'd) t
+    val get3 : 'a 'b 'c. ('a, 'b, 'c) t -> 'c
+    val map : 'a 'b. ('a, 'a, 'a) t -> f:('a -> 'b) -> ('b, 'b, 'b) t
+    val map_fst : 'a 'b 'c 'd. ('a, 'b, 'c) t -> f:('a -> 'd) -> ('d, 'b, 'c) t
+    val map_snd : 'a 'b 'c 'd. ('a, 'b, 'c) t -> f:('b -> 'd) -> ('a, 'd, 'c) t
+    val map_trd : 'a 'b 'c 'd. ('a, 'b, 'c) t -> f:('c -> 'd) -> ('a, 'b, 'd) t
 
     val map_all
-      :  ('a, 'b, 'c) t
-      -> f1:('a -> 'd)
-      -> f2:('b -> 'e)
-      -> f3:('c -> 'f)
-      -> ('d, 'e, 'f) t
+      : 'a 'b 'c 'd 'e 'f.
+      ('a, 'b, 'c) t -> f1:('a -> 'd) -> f2:('b -> 'e) -> f3:('c -> 'f) -> ('d, 'e, 'f) t
 
-    val map2 : ('a, 'a, 'a) t -> ('b, 'b, 'b) t -> f:('a -> 'b -> 'c) -> ('c, 'c, 'c) t
+    val map2
+      : 'a 'b 'c.
+      ('a, 'a, 'a) t -> ('b, 'b, 'b) t -> f:('a -> 'b -> 'c) -> ('c, 'c, 'c) t
   end
 
   (** These functors allow users to write:
@@ -176,8 +178,8 @@ module type Tuple = sig
     [@mode m] [@modality p])
       (S2 : Comparable_plain_arg
     [@mode m] [@modality p]) : sig
-    (*_ This type is introduced because older versions of OCaml do not support
-      destructive substitutions with `type t1 = 'a t2`. *)
+    (*_ This type is introduced because older versions of OCaml do not support destructive
+        substitutions with `type t1 = 'a t2`. *)
 
     type comparator_witness =
       (S1.comparator_witness, S2.comparator_witness) T2.comparator_witness
@@ -245,9 +247,27 @@ module type Tuple = sig
       (H2 : Hashable_arg
     [@mode m]) : Hashable_sexpable [@mode m] with type t := Make(H1)(H2).t]
 
-  module%template.portable Sexpable (S1 : Sexpable.S) (S2 : Sexpable.S) :
-    Sexpable.S with type t := Make(S1)(S2).t
+  module%template.portable Sexpable
+      (S1 : sig
+         type t
 
-  module%template.portable Binable (B1 : Binable.S) (B2 : Binable.S) :
-    Binable.S with type t := Make(B1)(B2).t
+         include Sexpable.S with type t := t
+       end)
+      (S2 : sig
+         type t
+
+         include Sexpable.S with type t := t
+       end) : Sexpable.S with type t := Make(S1)(S2).t
+
+  module%template.portable Binable
+      (B1 : sig
+         type t
+
+         include Binable.S with type t := t
+       end)
+      (B2 : sig
+         type t
+
+         include Binable.S with type t := t
+       end) : Binable.S with type t := Make(B1)(B2).t
 end

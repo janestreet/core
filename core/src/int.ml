@@ -5,7 +5,7 @@ module Stable = struct
     module T = struct
       include Base.Int
 
-      type t = int [@@deriving bin_io ~localize, hash, sexp, stable_witness]
+      type t = int [@@deriving bin_io ~localize, hash, sexp ~stackify, stable_witness]
     end
 
     include T
@@ -28,8 +28,8 @@ include Base.Int
 
 include%template Comparable.Validate_with_zero [@modality portable] (Base.Int)
 
-(* This is already defined by Comparable.Validate_with_zero, but Sign.of_int is
-   more direct. *)
+(* This is already defined by Comparable.Validate_with_zero, but Sign.of_int is more
+   direct. *)
 let sign = Sign.of_int
 
 type t = int [@@deriving typerep]

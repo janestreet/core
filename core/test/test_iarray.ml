@@ -1011,10 +1011,19 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
       require (phys_equal arr1 arr2))
   ;;
 
-  include (
+  include%template (
     Iarray :
     sig
-      include Indexed_container.S1_with_creators with type 'a t := 'a t
+      include Indexed_container.S1_with_creators [@alloc stack] with type 'a t := 'a t
+
+      [@@@mode.default li = (global, local), lo = (global, local)]
+
+      val fold : 'a 'acc. 'a t -> init:'acc -> f:('acc -> 'a -> 'acc) -> 'acc
+      val foldi : 'a 'acc. 'a t -> init:'acc -> f:(int -> 'acc -> 'a -> 'acc) -> 'acc
+      val fold_right : 'a 'acc. 'a t -> init:'acc -> f:('a -> 'acc -> 'acc) -> 'acc
+
+      val%template init : 'a. int -> f:(int -> 'a) -> 'a t
+      [@@alloc __ @ m = (heap_global, stack_local)]
     end)
 
   include struct
@@ -1034,10 +1043,11 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
 
     [%%template
     [@@@kind.default ka = value, kacc = base_non_value]
+    [@@@mode.default li = (global, local), lo = (global, local)]
 
-    let fold = (Iarray.fold [@kind ka kacc])
-    let foldi = (Iarray.foldi [@kind ka kacc])
-    let fold_right = (Iarray.fold_right [@kind ka kacc])
+    let fold = (Iarray.fold [@kind ka kacc] [@mode li lo])
+    let foldi = (Iarray.foldi [@kind ka kacc] [@mode li lo])
+    let fold_right = (Iarray.fold_right [@kind ka kacc] [@mode li lo])
 
     let%expect_test _ =
       let iarr = List.range 2 7 |> Iarray.of_list_rev in
@@ -1073,53 +1083,144 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
   ;;
 
   let%expect_test _ =
-    Base_container_tests.test_indexed_container_s1_with_creators (module Iarray);
+    (Base_container_tests.test_indexed_container_s1_with_creators [@alloc stack])
+      ~check_no_allocation:true
+      (module Iarray);
     [%expect
       {|
-      Container: testing [length]
-      Container: testing [is_empty]
-      Container: testing [mem]
+      Container: testing [length zero_alloc]
+      Container: testing [is_empty zero_alloc]
+      Container: testing [mem zero_alloc]
+      Container: testing [mem__local zero_alloc]
       Container: testing [iter]
+      Container: testing [iter zero_alloc]
+      Container: testing [iter__local]
+      Container: testing [iter__local zero_alloc]
       Container: testing [iter_until]
+      Container: testing [iter_until__global__local zero_alloc]
+      Container: testing [iter_until__local__global]
+      Container: testing [iter_until__local__local zero_alloc]
       Container: testing [fold]
+      Container: testing [fold zero_alloc]
+      Container: testing [fold__global__local zero_alloc]
+      Container: testing [fold__global__local zero_alloc]
+      Container: testing [fold__local__global]
+      Container: testing [fold__local__global zero_alloc]
+      Container: testing [fold__local__local zero_alloc]
+      Container: testing [fold__local__local zero_alloc]
       Container: testing [fold_result]
+      Container: testing [fold_result__global__local zero_alloc]
+      Container: testing [fold_result__local__global]
+      Container: testing [fold_result__local__local zero_alloc]
       Container: testing [fold_until]
-      Container: testing [exists]
-      Container: testing [for_all]
-      Container: testing [count]
-      Container: testing [sum]
+      Container: testing [fold_until__global__local zero_alloc]
+      Container: testing [fold_until__local__global]
+      Container: testing [fold_until__local__local zero_alloc]
+      Container: testing [exists zero_alloc]
+      Container: testing [exists__local zero_alloc]
+      Container: testing [for_all zero_alloc]
+      Container: testing [for_all__local zero_alloc]
+      Container: testing [count zero_alloc]
+      Container: testing [count__local zero_alloc]
+      Container: testing [sum zero_alloc]
+      Container: testing [sum__global__local zero_alloc]
+      Container: testing [sum__local__global zero_alloc]
+      Container: testing [sum__local__local zero_alloc]
       Container: testing [find]
+      Container: testing [find__local zero_alloc]
       Container: testing [find_map]
+      Container: testing [find_map__global__local zero_alloc]
+      Container: testing [find_map__local__global]
+      Container: testing [find_map__local__local zero_alloc]
       Container: testing [to_list]
+      Container: testing [to_list__stack zero_alloc]
       Container: testing [to_array]
       Container: testing [min_elt]
+      Container: testing [min_elt__local zero_alloc]
       Container: testing [max_elt]
+      Container: testing [max_elt__local zero_alloc]
       Container: testing [of_list]
+      Container: testing [of_list__stack zero_alloc]
       Container: testing [of_array]
+      Container: testing [of_array__stack zero_alloc]
       Container: testing [append]
+      Container: testing [append__stack zero_alloc]
       Container: testing [concat]
+      Container: testing [concat__stack zero_alloc]
       Container: testing [map]
+      Container: testing [map__stack zero_alloc]
+      Container: testing [map__local]
+      Container: testing [map__local__stack zero_alloc]
       Container: testing [filter]
+      Container: testing [filter__stack zero_alloc]
       Container: testing [filter_map]
+      Container: testing [filter_map__stack zero_alloc]
+      Container: testing [filter_map__local]
+      Container: testing [filter_map__local__stack zero_alloc]
       Container: testing [concat_map]
+      Container: testing [concat_map__stack zero_alloc]
+      Container: testing [concat_map__local]
+      Container: testing [concat_map__local__stack zero_alloc]
       Container: testing [partition_tf]
+      Container: testing [partition_tf__stack zero_alloc]
       Container: testing [partition_map]
+      Container: testing [partition_map__stack zero_alloc]
+      Container: testing [partition_map__local]
+      Container: testing [partition_map__local__stack zero_alloc]
       Container: testing [foldi]
+      Container: testing [foldi zero_alloc]
+      Container: testing [foldi__global__local zero_alloc]
+      Container: testing [foldi__global__local zero_alloc]
+      Container: testing [foldi__local__global]
+      Container: testing [foldi__local__global zero_alloc]
+      Container: testing [foldi__local__local zero_alloc]
+      Container: testing [foldi__local__local zero_alloc]
       Container: testing [foldi_until]
+      Container: testing [foldi_until__global__local zero_alloc]
+      Container: testing [foldi_until__local__global]
+      Container: testing [foldi_until__local__local zero_alloc]
       Container: testing [iteri]
+      Container: testing [iteri zero_alloc]
+      Container: testing [iteri__local]
+      Container: testing [iteri__local zero_alloc]
       Container: testing [iteri_until]
-      Container: testing [existsi]
-      Container: testing [for_alli]
-      Container: testing [counti]
+      Container: testing [iteri_until__global__local zero_alloc]
+      Container: testing [iteri_until__local__global]
+      Container: testing [iteri_until__local__local zero_alloc]
+      Container: testing [existsi zero_alloc]
+      Container: testing [existsi__local zero_alloc]
+      Container: testing [for_alli zero_alloc]
+      Container: testing [for_alli__local zero_alloc]
+      Container: testing [counti zero_alloc]
+      Container: testing [counti__local zero_alloc]
       Container: testing [findi]
+      Container: testing [findi__local zero_alloc]
       Container: testing [find_mapi]
+      Container: testing [find_mapi__global__local zero_alloc]
+      Container: testing [find_mapi__local__global]
+      Container: testing [find_mapi__local__local zero_alloc]
       Container: testing [init]
+      Container: testing [init__stack zero_alloc]
       Container: testing [mapi]
+      Container: testing [mapi__stack zero_alloc]
+      Container: testing [mapi__local]
+      Container: testing [mapi__local__stack zero_alloc]
       Container: testing [filteri]
+      Container: testing [filteri__stack zero_alloc]
       Container: testing [filter_mapi]
+      Container: testing [filter_mapi__stack zero_alloc]
+      Container: testing [filter_mapi__local]
+      Container: testing [filter_mapi__local__stack zero_alloc]
       Container: testing [concat_mapi]
+      Container: testing [concat_mapi__stack zero_alloc]
+      Container: testing [concat_mapi__local]
+      Container: testing [concat_mapi__local__stack zero_alloc]
       Container: testing [partitioni_tf]
+      Container: testing [partitioni_tf__stack zero_alloc]
       Container: testing [partition_mapi]
+      Container: testing [partition_mapi__stack zero_alloc]
+      Container: testing [partition_mapi__local]
+      Container: testing [partition_mapi__local__stack zero_alloc]
       |}]
   ;;
 
@@ -1282,7 +1383,35 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
 
   (* We test [Local] functions against their non-local counterparts. *)
   module Local = struct
-    open Test_container_with_local
+    module type Input = sig
+      type t [@@deriving quickcheck, sexp_of]
+    end
+
+    module type Output = sig
+      type t [@@deriving equal, globalize, sexp_of]
+    end
+
+    let test
+      (type input output)
+      ?(here = Stdlib.Lexing.dummy_pos)
+      (module Input : Input with type t = input)
+      (module Output : Output with type t = output)
+      ?cr
+      ?(noalloc : (Input.t -> Output.t) option)
+      (f_local : Input.t -> Output.t)
+      (f_global : Input.t -> Output.t)
+      =
+      quickcheck_m ~here ?cr (module Input) ~f:(fun input ->
+        require_equal
+          ~here
+          ?cr
+          (module Output)
+          (Output.globalize (f_local input))
+          (f_global input);
+        let f_noalloc = Option.value noalloc ~default:(fun x -> f_local x) in
+        require_no_allocation ~here (fun () ->
+          ignore (Sys.opaque_identity (f_noalloc input) : Output.t)))
+    ;;
 
     let singleton = Iarray.Local.singleton
 
@@ -1689,7 +1818,70 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
     include (
       Iarray.Local :
       sig
-        include Container_with_local.S1_indexed_with_creators with type 'a t := 'a iarray
+        (* The following signatures are for functions in [Iarray.Local] which only
+           re-export [Container] functions, and are thus tested elsewhere. *)
+        val length : _ t -> int
+        val is_empty : _ t -> bool
+        val mem : 'a t -> 'a -> equal:('a -> 'a -> bool) -> bool
+        val iter : 'a t -> f:('a -> unit) -> unit
+
+        val fold_result
+          :  'a t
+          -> init:'acc
+          -> f:('acc -> 'a -> ('acc, 'e) Result.t)
+          -> ('acc, 'e) Result.t
+
+        val fold_until
+          :  'a t
+          -> init:'acc
+          -> f:('acc -> 'a -> ('acc, 'final) Container.Continue_or_stop.t)
+          -> finish:('acc -> 'final)
+          -> 'final
+
+        val exists : 'a t -> f:('a -> bool) -> bool
+        val for_all : 'a t -> f:('a -> bool) -> bool
+        val count : 'a t -> f:('a -> bool) -> int
+
+        val%template sum
+          :  ((module Container.Summable with type t = 'sum)[@mode local])
+          -> 'a t
+          -> f:('a -> 'sum)
+          -> 'sum
+
+        val find : 'a t -> f:('a -> bool) -> 'a option
+        val find_map : 'a t -> f:('a -> 'b option) -> 'b option
+        val to_list : 'a t -> 'a list
+        val min_elt : 'a t -> compare:('a -> 'a -> int) -> 'a option
+        val max_elt : 'a t -> compare:('a -> 'a -> int) -> 'a option
+        val of_list : 'a list -> 'a t
+        val append : 'a t -> 'a t -> 'a t
+        val concat : 'a t t -> 'a t
+        val map : 'a t -> f:('a -> 'b) -> 'b t
+        val map_to_global : 'a t -> f:('a -> 'b) -> 'b t
+        val map_of_global : 'a t -> f:('a -> 'b) -> 'b t
+        val filter : 'a t -> f:('a -> bool) -> 'a t
+        val filter_map : 'a t -> f:('a -> 'b option) -> 'b t
+        val concat_map : 'a t -> f:('a -> 'b t) -> 'b t
+        val partition_tf : 'a t -> f:('a -> bool) -> 'a t * 'a t
+        val partition_map : 'a t -> f:('a -> ('b, 'c) Either.t) -> 'b t * 'c t
+        val iteri : 'a t -> f:(int -> 'a -> unit) -> unit
+        val existsi : 'a t -> f:(int -> 'a -> bool) -> bool
+        val for_alli : 'a t -> f:(int -> 'a -> bool) -> bool
+        val counti : 'a t -> f:(int -> 'a -> bool) -> int
+        val findi : 'a t -> f:(int -> 'a -> bool) -> (int * 'a) option
+        val find_mapi : 'a t -> f:(int -> 'a -> 'b option) -> 'b option
+        val partitioni_tf : 'a t -> f:(int -> 'a -> bool) -> 'a t * 'a t
+        val partition_mapi : 'a t -> f:(int -> 'a -> ('b, 'c) Either.t) -> 'b t * 'c t
+        val init : int -> f:(int -> 'a) -> 'a t
+        val mapi : 'a t -> f:(int -> 'a -> 'b) -> 'b t
+        val mapi_to_global : 'a t -> f:(int -> 'a -> 'b) -> 'b t
+        val mapi_of_global : 'a t -> f:(int -> 'a -> 'b) -> 'b t
+        val filteri : 'a t -> f:(int -> 'a -> bool) -> 'a t
+        val filter_mapi : 'a t -> f:(int -> 'a -> 'b option) -> 'b t
+        val concat_mapi : 'a t -> f:(int -> 'a -> 'b t) -> 'b t
+        val fold : 'a 'acc. 'a t -> init:'acc -> f:('acc -> 'a -> 'acc) -> 'acc
+        val foldi : 'a 'acc. 'a t -> init:'acc -> f:(int -> 'acc -> 'a -> 'acc) -> 'acc
+        val fold_right : 'a 'acc. 'a t -> init:'acc -> f:('a -> 'acc -> 'acc) -> 'acc
       end)
 
     include struct
@@ -1733,67 +1925,6 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
         [%expect {| 26 |}]
       ;;]
     end
-
-    let%expect_test _ =
-      test_indexed_container_with_creators
-        (module struct
-          type 'a t = 'a Iarray.t [@@deriving equal, globalize, quickcheck, sexp_of]
-
-          type 'a elt = 'a
-          [@@deriving compare ~localize, equal ~localize, globalize, quickcheck, sexp_of]
-
-          type 'a concat = 'a Iarray.t [@@deriving quickcheck, sexp_of]
-
-          module Global = Iarray
-          module Local = Iarray.Local
-        end);
-      [%expect
-        {|
-        Container_with_local: length
-        Container_with_local: is_empty
-        Container_with_local: mem
-        Container_with_local: iter
-        Container_with_local: fold
-        Container_with_local: fold_result
-        Container_with_local: fold_until
-        Container_with_local: exists
-        Container_with_local: for_all
-        Container_with_local: count
-        Container_with_local: sum
-        Container_with_local: find
-        Container_with_local: find_map
-        Container_with_local: to_list
-        Container_with_local: min_elt
-        Container_with_local: max_elt
-        Container_with_local: of_list
-        Container_with_local: append
-        Container_with_local: concat
-        Container_with_local: map
-        Container_with_local: map_to_global
-        Container_with_local: map_of_global
-        Container_with_local: filter
-        Container_with_local: filter_map
-        Container_with_local: concat_map
-        Container_with_local: partition_tf
-        Container_with_local: partition_map
-        Container_with_local: foldi
-        Container_with_local: iteri
-        Container_with_local: existsi
-        Container_with_local: for_alli
-        Container_with_local: counti
-        Container_with_local: findi
-        Container_with_local: find_mapi
-        Container_with_local: init
-        Container_with_local: mapi
-        Container_with_local: mapi_to_global
-        Container_with_local: mapi_of_global
-        Container_with_local: filteri
-        Container_with_local: filter_mapi
-        Container_with_local: concat_mapi
-        Container_with_local: partitioni_tf
-        Container_with_local: partition_mapi
-        |}]
-    ;;
   end
 
   module Unique = struct
@@ -1815,7 +1946,7 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
       ;;
     end
 
-    (* ---- No magic after this point! ---- *)
+    (*=---- No magic after this point! ---- *)
 
     (* Implementation without magic - potentially less efficient but correct *)
     let init len ~f =
@@ -1895,10 +2026,10 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
           ignore_local y [@nontail]
         ;;
 
-        (* In order to properly excercise the no forwards local pointers checks, we need to
-           actually try to make some pointers. Specifically, if we create a value
-           [a] which 'points to' [b], but [b] happens to be an immedate, then this is
-           not caught as a forwards pointer even if [b] was morally 'allocated' later. *)
+        (* In order to properly excercise the no forwards local pointers checks, we need
+           to actually try to make some pointers. Specifically, if we create a value [a]
+           which 'points to' [b], but [b] happens to be an immedate, then this is not
+           caught as a forwards pointer even if [b] was morally 'allocated' later. *)
         let alloc_local_non_immediate i = `A i
       end
 
@@ -2019,8 +2150,8 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
   end
 
   (* This test uses allocations as a proxy for checking for inlining. In particular,
-     [min_elt] and [max_elt] are implemented by using a helper function that accepts
-     a predicate [first_is_better_than_second] (used to abstract over the direction of
+     [min_elt] and [max_elt] are implemented by using a helper function that accepts a
+     predicate [first_is_better_than_second] (used to abstract over the direction of
      comparison). This test ensures that the helper function is inlined; if it weren't,
      then the predicates constructed by [min_elt] and [max_elt] would allocate a closure.
      The two allocated minor words are for the returned option. *)

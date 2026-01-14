@@ -1,5 +1,5 @@
-(* This module defines a functor, [Unit_tests], that does unit tests on a generic map,
-   and then instantiates that functor to create unit tests for [Map], [Map.Poly], and
+(* This module defines a functor, [Unit_tests], that does unit tests on a generic map, and
+   then instantiates that functor to create unit tests for [Map], [Map.Poly], and
    [Int.Map]. *)
 
 module Caml_map = Map
@@ -36,8 +36,8 @@ module Unit_tests
        val simplify_accessor : (int, Int.comparator_witness, 'c) access_options -> 'c
        val kind : [ `Map | `Tree ]
      end) : Map_intf.Creators_and_accessors_generic =
-(* The result signature doesn't actually mean anything -- the values are required so
-   that implementors are reminded to add a unit test for each one. *)
+(* The result signature doesn't actually mean anything -- the values are required so that
+   implementors are reminded to add a unit test for each one. *)
 struct
   module Map = struct
     include Map
@@ -516,8 +516,7 @@ struct
   let of_alist_exn _ = assert false
 
   let%expect_test _ =
-    (* Can't use require_does_raise because the exceptions differ on different key
-       types. *)
+    (* Can't use require_does_raise because the exceptions differ on different key types. *)
     require (Exn.does_raise (fun () -> Map.of_alist_exn [ Key.sample, 0; Key.sample, 1 ]))
   ;;
 
@@ -546,8 +545,7 @@ struct
         ~hashable:bogus_hashable
         [ Key.sample, 0; Key.sample, 1 ]
     in
-    (* Can't use require_does_raise because the exceptions differ on different key
-       types. *)
+    (* Can't use require_does_raise because the exceptions differ on different key types. *)
     require (Exn.does_raise (fun () -> Map.of_hashtbl_exn hashtbl_with_dup))
   ;;
 
@@ -603,8 +601,7 @@ struct
   ;;
 
   let%expect_test _ =
-    (* Can't use require_does_raise because the exceptions differ on different key
-       types. *)
+    (* Can't use require_does_raise because the exceptions differ on different key types. *)
     require
       (Exn.does_raise (fun () ->
          Map.of_iteri_exn ~iteri:(alist_iteri [ Key.sample, 0; Key.sample, 1 ])))
@@ -875,8 +872,7 @@ struct
   let find_exn _ = assert false
 
   let%expect_test _ =
-    (* Can't use require_does_raise because the exceptions differ on different key
-       types. *)
+    (* Can't use require_does_raise because the exceptions differ on different key types. *)
     match Map.find_exn (Map.empty ()) Key.sample with
     | exception (Not_found_s _ | Stdlib.Not_found) -> ()
     | _ -> print_cr [%message "didn't raise"]
@@ -1487,8 +1483,8 @@ struct
           (Map.merge_by_case
              t1
              t2
-             ~left:(When_unmatched.to_when_unmatched left)
-             ~right:(When_unmatched.to_when_unmatched right)
+             ~first:(When_unmatched.to_when_unmatched left)
+             ~second:(When_unmatched.to_when_unmatched right)
              ~both:(When_matched.to_when_matched both))
           ~expect:
             (Map.merge t1 t2 ~f:(fun ~key -> function
@@ -1818,8 +1814,8 @@ struct
   let binary_search_subrange _ ~compare:_ ~lower_bound:_ ~upper_bound:_ = assert false
 
   module%test [@name "binary_search_subrange"] _ = struct
-    (* Strategy is to generate maps keyed by integer, and compare various prefixes of
-       the binary representation. *)
+    (* Strategy is to generate maps keyed by integer, and compare various prefixes of the
+       binary representation. *)
 
     module Prefix_length = struct
       type t = int [@@deriving quickcheck, sexp]
@@ -1979,6 +1975,7 @@ struct
   let nth _ = assert false
   let nth_exn _ = assert false
   let rank _ = assert false
+  let split_n _ = assert false
 
   let%test_unit _ =
     let map = random_map (Key.sample :: Key.samples) in
@@ -1997,8 +1994,8 @@ struct
     in
     let length = Map.length map in
     (* fold_range_inclusive *)
-    (* The two [Key.(>)] assertions below verify that the intervals in the
-       two assertions following them are indeed empty.*)
+    (* The two [Key.(>)] assertions below verify that the intervals in the two assertions
+       following them are indeed empty. *)
     assert (Key.( > ) before_max min_key);
     assert (Key.( > ) max_key min_key);
     assert (keys_between ~min:before_max ~max:min_key = 0);
@@ -2063,7 +2060,16 @@ struct
         (Map.to_alist map)
         (List.init (Map.length map) ~f:(Map.nth map) |> List.filter_opt));
     assert (Option.is_none (Map.nth map (-1)));
-    assert (Option.is_none (Map.nth map (Map.length map)))
+    assert (Option.is_none (Map.nth map (Map.length map)));
+    (* split_n *)
+    for n = 0 to length do
+      let l, r = Map.split_n map n in
+      assert (Map.length l = n);
+      assert (Map.length r = length - n);
+      match Map.append ~lower_part:l ~upper_part:r with
+      | `Ok appended -> assert (Map.equal Int.equal map appended)
+      | `Overlapping_key_ranges -> assert false
+    done
   ;;
 
   let _ = Map.nth_exn

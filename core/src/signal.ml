@@ -108,9 +108,9 @@ let to_string_with_version, of_string, default_sys_behavior, all_posix =
     Int.Map.of_iteri_exn ~iteri:(fun ~f ->
       List.iter known ~f:(fun (_, t, behavior, _) -> f ~key:t ~data:behavior) [@nontail])
   in
-  (* For unknown signal numbers, [to_string] returns a meaningful
-     string, while [default_sys_behavior] has to raise an exception
-     because we don't know what the right answer is. *)
+  (* For unknown signal numbers, [to_string] returns a meaningful string, while
+     [default_sys_behavior] has to raise an exception because we don't know what the right
+     answer is. *)
   let to_string_with_version t ~version:requested_version =
     match Base.Map.find name_and_version_by_t t with
     | Some (string, needed_version) when requested_version >= needed_version -> string

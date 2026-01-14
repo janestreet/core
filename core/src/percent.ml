@@ -63,7 +63,7 @@ module Stable = struct
         else (
           match e with
           | Some e ->
-            (* [s] is in scientific notation.  Simply adjust the exponent after 'e'. *)
+            (* [s] is in scientific notation. Simply adjust the exponent after 'e'. *)
             let exp = Int.of_string (String.drop_prefix s (e + 1)) in
             let exp = exp + by in
             if exp = 0
@@ -77,15 +77,15 @@ module Stable = struct
                 ; Int.to_string exp
                 ]
           | None ->
-            (* [s] is in decimal notation.  Start by dropping the leading sign if there is
-               one.  We'll re-add it at the end to keep the rest of the code simpler. *)
+            (* [s] is in decimal notation. Start by dropping the leading sign if there is
+               one. We'll re-add it at the end to keep the rest of the code simpler. *)
             let neg = Char.( = ) s.[0] '-' in
             let signed = neg || Char.( = ) s.[0] '+' in
             let s = if signed then String.drop_prefix s 1 else s in
             let s, by =
               (* Next, scratch the decimal point if there is one, so that [s] becomes an
-                 integer, and adjust [by] accordingly to keep the result unchanged.  We
-                 also know that [s <> 0.0] so we remove leading zeros.  We may be wasting
+                 integer, and adjust [by] accordingly to keep the result unchanged. We
+                 also know that [s <> 0.0] so we remove leading zeros. We may be wasting
                  some work because we may have to add them back below, but the code is
                  simpler that way. *)
               match d with
@@ -129,7 +129,7 @@ module Stable = struct
                    large enough positive power of 10 that we need to add leading 0s. *)
                 String.concat [ "0."; String.make (-by - len) '0'; s ]
             in
-            (* Finally, restore the sign.  We can't just drop the '+' sign, we need to
+            (* Finally, restore the sign. We can't just drop the '+' sign, we need to
                restore it too, because if we didn't, we would silently parse numbers like
                "+-13%" or "++17bp" without raising an error. *)
             if signed then (if neg then "-" else "+") ^ s else s))
@@ -256,8 +256,8 @@ module Stable = struct
       external format_float : string -> float -> string = "caml_format_float"
 
       (* Logic stolen from lib/base/src/float.ml, but this does not call
-         [valid_float_lexem] so not adding a trailing "." and also, we're using
-         uppercase (%G vs %g) for consistency with [Percent.Stable.V2]. *)
+         [valid_float_lexem] so not adding a trailing "." and also, we're using uppercase
+         (%G vs %g) for consistency with [Percent.Stable.V2]. *)
       let float_to_string x =
         let y = format_float "%.15G" x in
         if Float.( = ) (float_of_string y) x then y else format_float "%.17G" x
@@ -311,8 +311,8 @@ module Stable = struct
           | "+infinity"
           | "-inf"
           | "-infinity" ->
-            (* We parse these nan or inf strings directly, because
-               [shift_decimal_point] does not support them *)
+            (* We parse these nan or inf strings directly, because [shift_decimal_point]
+               does not support them *)
             Float.of_string s
           | _ -> shift_decimal_point s ~by |> Float.of_string)
       ;;
@@ -345,7 +345,7 @@ module Stable = struct
       end)
 
     (* Use a different bin_shape_t than Percent.Stable.V2, even though these two versions
-       have compatible bin_io serialization.  Since they do differ in sexp serialization,
+       have compatible bin_io serialization. Since they do differ in sexp serialization,
        we err on the side of safety and change the bin shape to warn that V3 is not always
        a drop-in replacement for V2. *)
     let bin_shape_t =
@@ -497,16 +497,17 @@ module Stable = struct
          the semantics of anything that affects the sexp or bin-io representation of
          values of this type (this includes to_string and of_string) make a Stable.V4 and
          make your changes there. Thanks! *)
-      let to_string x =
-        let x_abs = Float.abs x in
-        let string float = format_float "%.6G" float in
-        if Float.( = ) x_abs 0.
-        then "0x"
-        else if Float.( >= ) x_abs 1.
-        then string (x *. 1.) ^ "x"
-        else if Float.( >= ) x_abs 0.01
-        then string (x *. 100.) ^ "%"
-        else string (x *. 10_000.) ^ "bp"
+      let%template[@alloc a = (heap, stack)] to_string x =
+        (let x_abs = Float.abs x in
+         let string float = format_float "%.6G" float in
+         if Float.( = ) x_abs 0.
+         then "0x"
+         else if Float.( >= ) x_abs 1.
+         then string (x *. 1.) ^ "x"
+         else if Float.( >= ) x_abs 0.01
+         then string (x *. 100.) ^ "%"
+         else string (x *. 10_000.) ^ "bp")
+        [@exclave_if_stack a]
       ;;
 
       let of_string = V3.of_string
@@ -518,7 +519,9 @@ module Stable = struct
         sig
           type t
 
-          val to_string : t -> string
+          val%template to_string : t -> string
+          [@@alloc a @ m = (heap_global, stack_local)]
+
           val of_string : string -> t
           val of_string_allow_nan_and_inf : string -> t
         end
@@ -531,6 +534,13 @@ module Stable = struct
         (Stringable) :
         sig
           include Sexpable.S with type t := t
+        end)
+
+    include%template (
+      Sexpable.Stable.Of_stringable.V1 [@modality portable] [@alloc stack]
+        (Stringable) :
+        sig
+          include Sexplib0.Sexpable.Sexp_of [@alloc stack] with type t := t
         end)
 
     include%template (
@@ -742,7 +752,7 @@ module Option = struct
   end
 end
 
-let is_zero t = [%equal_local: t] t 0.
+let%template is_zero t = ([%equal: t] [@mode local]) t 0.
 
 external apply
   :  (t[@local_opt])

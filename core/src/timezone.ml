@@ -149,9 +149,10 @@ module Zone_cache = struct
     ;;
 
     let init =
-      (* On web we are relying on Timezone_js_loader and don't have access to zoneinfo files.
-         This is especially problematic because in test environments on node we do have
-         access to the files so the test/app behavior would be different if we allowed this.
+      (* On web we are relying on Timezone_js_loader and don't have access to zoneinfo
+         files. This is especially problematic because in test environments on node we do
+         have access to the files so the test/app behavior would be different if we
+         allowed this.
 
          wasm_of_ocaml doesn't support file access at all (2024-05), and so the
          initialization always fails. *)
@@ -276,7 +277,9 @@ module Stable = struct
       [@exclave_if_stack a]
     ;;
 
-    let sexp_of_t t = Sexp.Atom (to_string t)
+    let%template[@alloc a = (heap, stack)] sexp_of_t t =
+      Sexp.Atom ((to_string [@alloc a]) t) [@exclave_if_stack a]
+    ;;
 
     let t_sexp_grammar : t Sexplib.Sexp_grammar.t =
       { untyped =

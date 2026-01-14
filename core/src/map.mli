@@ -759,8 +759,8 @@ end
 val merge_by_case
   :  ('k, 'v1, 'cmp) t
   -> ('k, 'v2, 'cmp) t
-  -> left:('k, 'v1, 'v3) When_unmatched.t
-  -> right:('k, 'v2, 'v3) When_unmatched.t
+  -> first:('k, 'v1, 'v3) When_unmatched.t
+  -> second:('k, 'v2, 'v3) When_unmatched.t
   -> both:('k, 'v1, 'v2, 'v3) When_matched.t
   -> ('k, 'v3, 'cmp) t
 
@@ -849,7 +849,7 @@ val sumi
 
     Runtime is O(m + log n) where n is the size of the input map, and m is the size of the
     smaller of the two output maps. The O(m) term is due to the need to calculate the
-    length of the output maps. **)
+    length of the output maps. *)
 val split
   :  ('k, 'v, 'cmp) t
   -> 'k
@@ -965,6 +965,10 @@ val nth_exn : ('k, 'v, _) t -> int -> 'k * 'v
 (** [rank t k] if [k] is in [t], returns the number of keys strictly less than [k] in [t],
     otherwise [None]. *)
 val rank : ('k, 'v, 'cmp) t -> 'k -> int option
+
+(** [split_n t n = l, r] such that [append ~lower_part:l ~upper_part:r = `Ok t] and
+    [length l = n], or as close as possible if [n < 0] or [n > length t]. *)
+val split_n : ('k, 'v, 'cmp) t -> int -> ('k, 'v, 'cmp) t * ('k, 'v, 'cmp) t
 
 (** [to_sequence ?order ?keys_greater_or_equal_to ?keys_less_or_equal_to t] gives a
     sequence of key-value pairs between [keys_less_or_equal_to] and
@@ -1323,7 +1327,7 @@ module Stable : sig
     module type S = sig
       type key
       type comparator_witness
-      type nonrec 'a t = (key, 'a, comparator_witness) t
+      type nonrec 'a t = (key, 'a, comparator_witness) t [@@deriving equal]
 
       include%template Stable_module_types.S1 [@mode local] with type 'a t := 'a t
 

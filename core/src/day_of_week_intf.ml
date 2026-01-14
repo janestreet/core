@@ -14,7 +14,8 @@ module type Day_of_week = sig
   [@@deriving
     bin_io ~localize, compare ~localize, hash, quickcheck, sexp, sexp_grammar, typerep]
 
-  include%template Comparable.S_binable [@mode local] with type t := t
+  include%template
+    Comparable.S_binable [@mode local] [@modality portable] with type t := t
 
   include Hashable.S_binable with type t := t
 
@@ -58,7 +59,7 @@ module type Day_of_week = sig
       [@@deriving
         bin_io ~localize
         , equal ~localize
-        , sexp
+        , sexp ~stackify
         , sexp_grammar
         , compare ~localize
         , hash

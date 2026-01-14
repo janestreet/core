@@ -4,7 +4,7 @@ open! Import
 open Validated
 
 module Raw = struct
-  type t = int [@@deriving bin_io, compare, hash, sexp, typerep]
+  type t = int [@@deriving bin_io, compare, hash, sexp ~stackify, typerep]
 
   let here = [%here]
   let validate _ = Validate.pass
@@ -88,7 +88,7 @@ end
 
 module%test _ = struct
   module Positive_int = struct
-    type t = int [@@deriving bin_io, sexp]
+    type t = int [@@deriving bin_io, sexp ~stackify]
 
     let validate t = if t > 0 then Validate.pass else Validate.fail "must be positive"
   end

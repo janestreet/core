@@ -99,14 +99,10 @@ struct
   (* [deriving hash] is missing for [array], [bytes], and [ref] since these types are
      mutable. *)
   type 'a array = 'a Array.t
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , sexp ~stackify
-    , sexp_grammar
-    , typerep]
+  [@@deriving compare ~localize, equal ~localize, globalize, sexp ~stackify, sexp_grammar]
+
+  [%%rederive.portable
+    type nonrec 'a array = 'a Array.t [@@deriving bin_io ~localize, typerep]]
 
   type bool = Bool.t
   [@@deriving
@@ -283,19 +279,21 @@ struct
     , sexp_grammar
     , typerep]
 
-  type 'a or_null = 'a Base.Or_null.t
-  [@@deriving compare ~localize, equal ~localize, globalize, hash, sexp ~stackify]
-end :
-sig
-  type 'a array
+  type 'a or_null = 'a Or_null.t
   [@@deriving
     bin_io ~localize
     , compare ~localize
     , equal ~localize
     , globalize
+    , hash
     , sexp ~stackify
-    , sexp_grammar
     , typerep]
+end :
+sig
+  type 'a array
+  [@@deriving compare ~localize, equal ~localize, globalize, sexp ~stackify, sexp_grammar]
+
+  [%%rederive: type nonrec 'a array = 'a Array.t [@@deriving bin_io ~localize, typerep]]
 
   type bool
   [@@deriving
@@ -472,7 +470,14 @@ sig
 
   type nonrec 'a or_null = 'a or_null
   [@@or_null_reexport]
-  [@@deriving compare ~localize, equal ~localize, globalize, hash, sexp ~stackify]
+  [@@deriving
+    bin_io ~localize
+    , compare ~localize
+    , equal ~localize
+    , globalize
+    , hash
+    , sexp ~stackify
+    , typerep]
 end
 [@with:
   type 'a array := 'a array
@@ -487,8 +492,8 @@ end
   type nativeint := nativeint
 
   (* use a destructive substitution for [value] only to re-expose the constructors;
-     otherwise, in certain cases this produces arcane errors about the type being
-     abstract and ruins the output of mdx tests *)
+     otherwise, in certain cases this produces arcane errors about the type being abstract
+     and ruins the output of mdx tests *)
 
   type 'a option := 'a option
   type 'a option = ('a option[@kind k]) [@@kind k = base_non_value]
@@ -509,8 +514,8 @@ end
 
 type nonrec 'a iarray = 'a iarray
 
-(* Export ['a or_null] with constructors [Null] and [This] whenever Core is opened,
-   so uses of those identifiers work in both upstream OCaml and OxCaml. *)
+(* Export ['a or_null] with constructors [Null] and [This] whenever Core is opened, so
+   uses of those identifiers work in both upstream OCaml and OxCaml. *)
 
 type 'a or_null = 'a Base.Or_null.t =
   | Null

@@ -9,8 +9,8 @@ open Perms.Export
 
 type 'a t = 'a Base.Array.t
 
-[%%rederive:
-  type nonrec 'a t = 'a t [@@deriving bin_io ~localize, quickcheck ~portable, typerep]]
+[%%rederive: type nonrec 'a t = 'a t [@@deriving bin_io ~localize]]
+[%%rederive: type nonrec 'a t = 'a t [@@deriving quickcheck ~portable, typerep]]
 
 (** {2 The signature included from [Base.Array]} *)
 

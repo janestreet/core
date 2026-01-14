@@ -141,7 +141,7 @@ module%test [@name "quickcheck"] _ = struct
         let pos = Substring.pos sub in
         let len = Substring.length sub in
         (* non-triviality: contains at least one character and excludes at least one
-             character from each end *)
+           character from each end *)
         pos > 0 && len > 0 && pos + len < Bytes.length (Substring.base sub));
     [%expect ""]
   ;;

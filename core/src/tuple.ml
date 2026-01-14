@@ -26,13 +26,13 @@ module T2 = struct
 
   [%%if flambda_backend]
 
-  external get1 : (('a, _) t[@local_opt]) -> ('a[@local_opt]) = "%field0_immut"
-  external get2 : ((_, 'a) t[@local_opt]) -> ('a[@local_opt]) = "%field1_immut"
+  external get1 : 'a 'b. (('a, 'b) t[@local_opt]) -> ('a[@local_opt]) = "%field0_immut"
+  external get2 : 'a 'b. (('a, 'b) t[@local_opt]) -> ('b[@local_opt]) = "%field1_immut"
 
   [%%else]
 
-  external get1 : (('a, _) t[@local_opt]) -> ('a[@local_opt]) = "%field0"
-  external get2 : ((_, 'a) t[@local_opt]) -> ('a[@local_opt]) = "%field1"
+  external get1 : 'a 'b. (('a, 'b) t[@local_opt]) -> ('a[@local_opt]) = "%field0"
+  external get2 : 'a 'b. (('a, 'b) t[@local_opt]) -> ('b[@local_opt]) = "%field1"
 
   [%%endif]
 
@@ -83,20 +83,27 @@ module T3 = struct
 
   [%%if flambda_backend]
 
-  external get1 : (('a, _, _) t[@local_opt]) -> ('a[@local_opt]) = "%field0_immut"
-  external get2 : ((_, 'a, _) t[@local_opt]) -> ('a[@local_opt]) = "%field1_immut"
+  external get1
+    : 'a 'b 'c.
+    (('a, 'b, 'c) t[@local_opt]) -> ('a[@local_opt])
+    = "%field0_immut"
+
+  external get2
+    : 'a 'b 'c.
+    (('a, 'b, 'c) t[@local_opt]) -> ('b[@local_opt])
+    = "%field1_immut"
 
   [%%else]
 
-  external get1 : (('a, _, _) t[@local_opt]) -> ('a[@local_opt]) = "%field0"
-  external get2 : ((_, 'a, _) t[@local_opt]) -> ('a[@local_opt]) = "%field1"
+  external get1 : 'a 'b 'c. (('a, 'b, 'c) t[@local_opt]) -> ('a[@local_opt]) = "%field0"
+  external get2 : 'a 'b 'c. (('a, 'b, 'c) t[@local_opt]) -> ('b[@local_opt]) = "%field1"
 
   [%%endif]
 
-  (* There's no %field2....*)
+  (* There's no %field2.... *)
   let get3 (_, _, a) = a
 
-  (* lexicographic comparison  *)
+  (* lexicographic comparison *)
   let compare ~cmp1 ~cmp2 ~cmp3 (x, y, z) (x', y', z') =
     let c1 = cmp1 x x' in
     if c1 <> 0
@@ -109,11 +116,33 @@ module T3 = struct
   let equal ~eq1 ~eq2 ~eq3 (x, y, z) (x', y', z') = eq1 x x' && eq2 y y' && eq3 z z'
 end
 
-module%template.portable Sexpable (S1 : Sexpable.S) (S2 : Sexpable.S) = struct
+module%template.portable Sexpable
+    (S1 : sig
+       type t
+
+       include Sexpable.S with type t := t
+     end)
+    (S2 : sig
+       type t
+
+       include Sexpable.S with type t := t
+     end) =
+struct
   type t = S1.t * S2.t [@@deriving sexp]
 end
 
-module%template.portable Binable (B1 : Binable.S) (B2 : Binable.S) = struct
+module%template.portable Binable
+    (B1 : sig
+       type t
+
+       include Binable.S with type t := t
+     end)
+    (B2 : sig
+       type t
+
+       include Binable.S with type t := t
+     end) =
+struct
   type t = B1.t * B2.t [@@deriving bin_io]
 end
 

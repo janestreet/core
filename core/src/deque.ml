@@ -5,18 +5,18 @@ type 'a t =
   { (* [arr] is a cyclic buffer *)
     mutable arr : 'a Option_array.t
   ; (* [front_index] and [back_index] are the positions in which new elements may be
-       enqueued.  This makes the active part of [arr] the range from [front_index+1] to
-       [back_index-1] (modulo the length of [arr] and wrapping around if necessary).  Note
-       that this means the active range is maximized when [front_index = back_index], which
-       occurs when there are [Array.length arr - 1] active elements. *)
+       enqueued. This makes the active part of [arr] the range from [front_index+1] to
+       [back_index-1] (modulo the length of [arr] and wrapping around if necessary). Note
+       that this means the active range is maximized when [front_index = back_index],
+       which occurs when there are [Array.length arr - 1] active elements. *)
     mutable front_index : int
   ; mutable back_index : int
-  ; (* apparent_front_index is what is exposed as the front index externally.  It has no
+  ; (* apparent_front_index is what is exposed as the front index externally. It has no
        real relation to the array -- every enqueue to the front decrements it and every
        dequeue from the front increments it. *)
     mutable apparent_front_index : int
   ; mutable length : int
-  ; (* We keep arr_length here as a speed hack.  Calling Array.length on arr is actually
+  ; (* We keep arr_length here as a speed hack. Calling Array.length on arr is actually
        meaningfully slower. *)
     mutable arr_length : int
   ; never_shrink : bool
@@ -32,7 +32,7 @@ let create ?initial_length ?never_shrink () =
   if initial_length < 0
   then invalid_argf "passed negative initial_length to Deque.create: %i" initial_length ();
   (* Make the initial array length be [initial_length + 1] so we can fit [initial_length]
-     elements without growing.  We never quite use the whole array. *)
+     elements without growing. We never quite use the whole array. *)
   let arr_length = initial_length + 1 in
   { arr = Option_array.create ~len:arr_length
   ; front_index = 0
@@ -59,7 +59,7 @@ let _invariant_length t =
 ;;
 
 (* The various "when_not_empty" functions return misleading numbers when the dequeue is
-   empty.  They are safe to call if it is known that the dequeue is non-empty. *)
+   empty. They are safe to call if it is known that the dequeue is non-empty. *)
 let apparent_front_index_when_not_empty t = t.apparent_front_index
 let apparent_back_index_when_not_empty t = t.apparent_front_index + length t - 1
 
@@ -95,13 +95,13 @@ let foldi' t dir ~init ~f =
           ~step
     in
     (* We want to iterate from actual_front to actual_back (or vice versa), but we may
-       need to wrap around the array to do so.  Thus we do the following:
-       1.  If the active range is contiguous (i.e. actual_front <= actual_back), then loop
-       starting at the appropriate end of the active range until we reach the first
-       element outside of it.
-       2.  If it is not contiguous (actual_front > actual_back), then first loop from the
-       appropriate end of the active range to the end of the array.  Then, loop from
-       the opposite end of the array to the opposite end of the active range.
+       need to wrap around the array to do so. Thus we do the following:
+       1. If the active range is contiguous (i.e. actual_front <= actual_back), then loop
+          starting at the appropriate end of the active range until we reach the first
+          element outside of it.
+       2. If it is not contiguous (actual_front > actual_back), then first loop from the
+          appropriate end of the active range to the end of the array. Then, loop from the
+          opposite end of the array to the opposite end of the active range.
     *)
     match dir with
     | `front_to_back ->
@@ -201,8 +201,8 @@ let clear t =
 ;;
 
 (* We have to be careful here, importing all of Container.Make would change the runtime of
-   some functions ([length] minimally) silently without changing the semantics.  We get
-   around that by importing things explicitly.  *)
+   some functions ([length] minimally) silently without changing the semantics. We get
+   around that by importing things explicitly. *)
 module%template C = Container.Make [@modality portable] (struct
     type nonrec 'a t = 'a t
 
@@ -259,9 +259,9 @@ let blit new_arr t =
   t.arr <- new_arr;
   t.arr_length <- Option_array.length new_arr;
   t.front_index <- Option_array.length new_arr - 1;
-  (* Since t.front_index = Option_array.length new_arr - 1, this is asserting that t.back_index
-     is a valid index in the array and that the array can support at least one more
-     element -- recall, if t.front_index = t.back_index then the array is full.
+  (* Since t.front_index = Option_array.length new_arr - 1, this is asserting that
+     t.back_index is a valid index in the array and that the array can support at least
+     one more element -- recall, if t.front_index = t.back_index then the array is full.
 
      Note that this is true if and only if Option_array.length new_arr > length t + 1.
   *)
@@ -514,9 +514,9 @@ Test_binary_searchable.Make1_and_test [@modality portable] (struct
   end)
 
 (* The "stable" indices used in this module make the application of the
-   [Binary_searchable] functor awkward.  We need to be sure to translate incoming
-   positions from stable space to the expected 0 -> length - 1 space and then we need to
-   translate them back on return. *)
+   [Binary_searchable] functor awkward. We need to be sure to translate incoming positions
+   from stable space to the expected 0 -> length - 1 space and then we need to translate
+   them back on return. *)
 let binary_search ?pos ?len t ~compare how v =
   let pos =
     match pos with

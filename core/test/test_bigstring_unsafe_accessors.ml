@@ -180,7 +180,7 @@ let%test _ =
 
    Whilst this bit pattern does fit in an OCaml [int] on a 64-bit machine, it is the
    representation of a negative number ([Int.min_value]), and in particular is not the
-   representation of 2^62.  It is thus suitable for this test. *)
+   representation of 2^62. It is thus suitable for this test. *)
 let test_int64 get_exn get_trunc set_t double_check_set =
   List.iter
     [ 0x4000_0000_0000_0000L
