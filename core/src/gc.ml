@@ -59,6 +59,53 @@ module Stable = struct
       [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
     end
 
+    [%%elif ocaml_version < (5, 5, 0)]
+
+    module V1 = struct
+      type t =
+        { minor_words : float
+        ; promoted_words : float
+        ; major_words : float
+        ; minor_collections : int
+        ; major_collections : int
+        ; heap_words : int
+        ; heap_chunks : int
+        ; live_words : int
+        ; live_blocks : int
+        ; free_words : int
+        ; free_blocks : int
+        ; largest_free : int
+        ; fragments : int
+        ; compactions : int
+        ; top_heap_words : int
+        ; stack_size : int
+        }
+      [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
+    end
+
+    module V2 = struct
+      type t = Stdlib.Gc.stat =
+        { minor_words : float
+        ; promoted_words : float
+        ; major_words : float
+        ; minor_collections : int
+        ; major_collections : int
+        ; heap_words : int
+        ; heap_chunks : int
+        ; live_words : int
+        ; live_blocks : int
+        ; free_words : int
+        ; free_blocks : int
+        ; largest_free : int
+        ; fragments : int
+        ; compactions : int
+        ; top_heap_words : int
+        ; stack_size : int
+        ; forced_major_collections : int
+        }
+      [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
+    end
+
     [%%else]
 
     module V1 = struct
@@ -102,6 +149,7 @@ module Stable = struct
         ; top_heap_words : int
         ; stack_size : int
         ; forced_major_collections : int
+        ; live_stacks_words : int
         }
       [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
     end
@@ -182,6 +230,38 @@ module Stat = struct
       }
     [@@deriving compare, hash, bin_io, sexp]
 
+    [%%elif ocaml_version < (5, 5, 0)]
+
+    type t = Stdlib.Gc.stat =
+      { minor_words : float
+      ; promoted_words : float
+      ; major_words : float
+      ; minor_collections : int
+      ; major_collections : int
+      ; heap_words : int
+      ; heap_chunks : int
+      ; live_words : int
+      ; live_blocks : int
+      ; free_words : int
+      ; free_blocks : int
+      ; largest_free : int
+      ; fragments : int
+      ; compactions : int
+      ; top_heap_words : int
+      ; stack_size : int
+      ; forced_major_collections : int
+      }
+    [@@deriving
+      compare
+      , hash
+      , sexp_of
+      , fields
+          ~getters
+          ~setters
+          ~fields
+          ~iterators:(create, fold, iter, map, to_list)
+          ~direct_iterators:to_list]
+
     [%%else]
 
     type t = Stdlib.Gc.stat =
@@ -202,6 +282,7 @@ module Stat = struct
       ; top_heap_words : int
       ; stack_size : int
       ; forced_major_collections : int
+      ; live_stacks_words : int
       }
     [@@deriving
       compare
@@ -242,6 +323,30 @@ module Stat = struct
     }
   ;;
 
+  [%%elif ocaml_version < (5, 5, 0)]
+
+  let combine first second ~float_f ~int_f =
+    { minor_words = float_f first.minor_words second.minor_words
+    ; promoted_words = float_f first.promoted_words second.promoted_words
+    ; major_words = float_f first.major_words second.major_words
+    ; minor_collections = int_f first.minor_collections second.minor_collections
+    ; major_collections = int_f first.major_collections second.major_collections
+    ; heap_words = int_f first.heap_words second.heap_words
+    ; heap_chunks = int_f first.heap_chunks second.heap_chunks
+    ; live_words = int_f first.live_words second.live_words
+    ; live_blocks = int_f first.live_blocks second.live_blocks
+    ; free_words = int_f first.free_words second.free_words
+    ; free_blocks = int_f first.free_blocks second.free_blocks
+    ; largest_free = int_f first.largest_free second.largest_free
+    ; fragments = int_f first.fragments second.fragments
+    ; compactions = int_f first.compactions second.compactions
+    ; top_heap_words = int_f first.top_heap_words second.top_heap_words
+    ; stack_size = int_f first.stack_size second.stack_size
+    ; forced_major_collections =
+        int_f first.forced_major_collections second.forced_major_collections
+    }
+  ;;
+
   [%%else]
 
   let combine first second ~float_f ~int_f =
@@ -263,6 +368,8 @@ module Stat = struct
     ; stack_size = int_f first.stack_size second.stack_size
     ; forced_major_collections =
         int_f first.forced_major_collections second.forced_major_collections
+    ; live_stacks_words =
+        int_f first.live_stacks_words second.live_stacks_words
     }
   ;;
 
