@@ -158,7 +158,7 @@ module Tree : sig
         ; right : ('k, 'v, 'cmp) t [@globalized]
         ; weight : weight
         }
-  [@@deriving sexp_of]
+  [@@sexp.phantom: 'cmp] [@@deriving sexp_of]
 
   include
     Creators_and_accessors_generic
@@ -1324,10 +1324,12 @@ module Stable : sig
   module V1 : sig
     type nonrec ('a, 'b, 'c) t = ('a, 'b, 'c) t
 
-    module type S = sig
+    module type%template [@mode m = (local, global)] S = sig
       type key
       type comparator_witness
-      type nonrec 'a t = (key, 'a, comparator_witness) t [@@deriving equal]
+
+      type nonrec 'a t = (key, 'a, comparator_witness) t
+      [@@deriving equal [@mode.explicit m]]
 
       include%template Stable_module_types.S1 [@mode local] with type 'a t := 'a t
 

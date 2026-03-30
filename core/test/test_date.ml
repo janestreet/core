@@ -357,6 +357,65 @@ module%test [@name "diff_weekdays"] _ = struct
   let%test _ = diff_weekend_days (c 2014 Jan 14) (c 2014 Jan 1) = 4
 end
 
+module%test [@name "diff_business_days"] _ = struct
+  let c y m d = create_exn ~y ~m ~d
+
+  (* Jan 1 2014 is a Wednesday *)
+  let%test "2014 Jan 1 is a Wednesday" =
+    Day_of_week.( = ) (day_of_week (c 2014 Jan 1)) Day_of_week.Wed
+  ;;
+
+  let ( = ) = Int.( = )
+
+  (* No holidays: should equal diff_weekdays *)
+  let no_holiday _ = false
+  let%test _ = diff_business_days (c 2014 Jan 1) (c 2014 Jan 1) ~is_holiday:no_holiday = 0
+  let%test _ = diff_business_days (c 2014 Jan 2) (c 2014 Jan 1) ~is_holiday:no_holiday = 1
+  let%test _ = diff_business_days (c 2014 Jan 5) (c 2014 Jan 1) ~is_holiday:no_holiday = 3
+  let%test _ = diff_business_days (c 2014 Jan 7) (c 2014 Jan 1) ~is_holiday:no_holiday = 4
+
+  let%test _ =
+    diff_business_days (c 2014 Jan 14) (c 2014 Jan 1) ~is_holiday:no_holiday = 9
+  ;;
+
+  (* With a weekday holiday: Jan 2 (Thu) is a holiday *)
+  let jan2_holiday d = Date.equal d (c 2014 Jan 2)
+
+  let%test _ =
+    diff_business_days (c 2014 Jan 3) (c 2014 Jan 1) ~is_holiday:jan2_holiday = 1
+  ;;
+
+  let%test _ =
+    diff_business_days (c 2014 Jan 7) (c 2014 Jan 1) ~is_holiday:jan2_holiday = 3
+  ;;
+
+  (* Holiday on weekend has no effect *)
+  let jan4_holiday d = Date.equal d (c 2014 Jan 4)
+
+  let%test _ =
+    diff_business_days (c 2014 Jan 6) (c 2014 Jan 1) ~is_holiday:jan4_holiday = 3
+  ;;
+
+  (* Negative direction *)
+  let%test _ =
+    diff_business_days (c 2014 Jan 1) (c 2014 Jan 7) ~is_holiday:no_holiday = -4
+  ;;
+
+  (* Custom weekday: Fri/Sat are weekend instead of Sat/Sun *)
+  (* [Jan 1, Jan 5): standard = 3 (Wed, Thu, Fri), custom = 2 (Wed, Thu) *)
+  let is_weekday_sun_to_thu dow = Day_of_week.(not (equal dow Fri || equal dow Sat))
+  let%test _ = diff_business_days (c 2014 Jan 5) (c 2014 Jan 1) ~is_holiday:no_holiday = 3
+
+  let%test _ =
+    diff_business_days
+      ~is_weekday:is_weekday_sun_to_thu
+      (c 2014 Jan 5)
+      (c 2014 Jan 1)
+      ~is_holiday:no_holiday
+    = 2
+  ;;
+end
+
 module%test [@name "dates in a month"] _ = struct
   let sexp_of_year year =
     Dynamic.with_temporarily Sexp.of_int_style `No_underscores ~f:(fun () ->

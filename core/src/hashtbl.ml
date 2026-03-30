@@ -192,7 +192,11 @@ Bin_prot.Utils.Make_iterable_binable1 [@inlined hint] [@modality p] (struct
 
 module%template.portable
   [@modality p] Make_plain_with_hashable (T : sig
-    module Key : Key_plain
+    module Key : sig
+      type t
+
+      include Key_plain with type t := t
+    end
 
     val hashable : Key.t Hashable.t
   end) =
@@ -273,7 +277,12 @@ struct
   include Provide_stable_witness (T.Key)
 end
 
-module%template.portable [@modality p] Make_plain (Key : Key_plain) =
+module%template.portable
+  [@modality p] Make_plain (Key : sig
+    type t
+
+    include Key_plain with type t := t
+  end) =
 Make_plain_with_hashable [@modality p] (struct
     module Key = Key
 

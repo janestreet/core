@@ -767,7 +767,7 @@ module%test Ofday = struct
     [%expect
       {|
       (Error (
-        "[Time_ns.Ofday.every] called with negative span"
+        "[Time_ns.Ofday.every] called with non-positive span"
         -53375d23h53m38.427387904s))
       |}];
     let span_gen =
@@ -786,6 +786,18 @@ module%test Ofday = struct
     Time_ns.Ofday.Zoned.With_nonchronological_compare.equal
       (Time_ns.Ofday.Zoned.of_string "9AM UTC")
       (Time_ns.Ofday.Zoned.of_string "9 AM UTC")
+  ;;
+
+  let%expect_test "Zoned.to_string uses full ofday and zone name" =
+    let t = Time_ns.Ofday.Zoned.of_string "12:01 nyc" in
+    print_endline (Time_ns.Ofday.Zoned.to_string t);
+    [%expect {| 12:01:00.000000000 America/New_York |}]
+  ;;
+
+  let%expect_test "Zoned.sexp_of_t uses full ofday and zone name" =
+    let t = Time_ns.Ofday.Zoned.of_string "12:01 nyc" in
+    print_s (Time_ns.Ofday.Zoned.sexp_of_t t);
+    [%expect {| (12:01:00.000000000 America/New_York) |}]
   ;;
 end
 

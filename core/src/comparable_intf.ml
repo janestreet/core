@@ -221,7 +221,7 @@ module type Comparable = sig
   module%template.portable
     [@modality p] Inherit
       (C : sig
-         type t [@@deriving compare [@mode m]]
+         type t [@@deriving compare [@mode.explicit m]]
        end)
       (T : sig
          type t [@@deriving sexp]
@@ -239,11 +239,11 @@ module type Comparable = sig
   [@@@mode.default m = (local, global)]
 
   module%template.portable Infix (T : sig
-      type t [@@deriving compare [@mode m]]
+      type t [@@deriving compare [@mode.explicit m]]
     end) : Infix with type t := T.t
 
   module%template.portable Comparisons (T : sig
-      type t [@@deriving compare [@mode m]]
+      type t [@@deriving compare [@mode.explicit m]]
     end) : Comparisons [@mode m] with type t := T.t
 
   (** {2 Make Functors}
@@ -259,12 +259,12 @@ module type Comparable = sig
 
   module%template.portable
     [@modality p] Make_plain (T : sig
-      type t [@@deriving (compare [@mode m]), sexp_of]
+      type t [@@deriving (compare [@mode.explicit m]), sexp_of]
     end) : S_plain [@modality p] [@mode m] with type t := T.t
 
   module%template.portable
     [@modality p] Make (T : sig
-      type t [@@deriving (compare [@mode m]), sexp]
+      type t [@@deriving (compare [@mode.explicit m]), sexp]
     end) : S [@modality p] [@mode m] with type t := T.t
 
   module%template.portable
@@ -291,7 +291,7 @@ module type Comparable = sig
 
   module%template.portable
     [@modality p] Make_binable (T : sig
-      type t [@@deriving bin_io, (compare [@mode m]), sexp]
+      type t [@@deriving bin_io, (compare [@mode.explicit m]), sexp]
     end) : S_binable [@modality p] [@mode m] with type t := T.t
 
   module%template.portable
@@ -343,12 +343,12 @@ module type Comparable = sig
 
   module%template.portable
     [@modality p] Map_and_set_binable (T : sig
-      type t [@@deriving bin_io, (compare [@mode m]), sexp]
+      type t [@@deriving bin_io, (compare [@mode.explicit m]), sexp]
     end) : Map_and_set_binable [@modality p] with type t := T.t
 
   module%template.portable
     [@modality p] Map_and_set_binable_using_comparator (T : sig
-      type t [@@deriving bin_io, (compare [@mode m]), sexp]
+      type t [@@deriving bin_io, (compare [@mode.explicit m]), sexp]
 
       include Comparator.S [@modality p] with type t := t
     end) :
@@ -364,11 +364,11 @@ module type Comparable = sig
 
   module%template.portable
     [@modality p] Validate (T : sig
-      type t [@@deriving (compare [@mode m]), sexp_of]
+      type t [@@deriving (compare [@mode.explicit m]), sexp_of]
     end) : Validate [@modality p] with type t := T.t
 
   module Validate_with_zero (T : sig
-      type t [@@deriving (compare [@mode m]), sexp_of]
+      type t [@@deriving (compare [@mode.explicit m]), sexp_of]
 
       val zero : t
     end) : sig
@@ -377,7 +377,7 @@ module type Comparable = sig
   [@@modality (p, c) = ((nonportable, uncontended), (portable, contended))]
 
   module With_zero (T : sig
-      type t [@@deriving (compare [@mode m]), sexp_of]
+      type t [@@deriving (compare [@mode.explicit m]), sexp_of]
 
       val zero : t
     end) : sig

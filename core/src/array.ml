@@ -5,7 +5,7 @@ module Array = Base.Array
 module Core_sequence = Sequence
 
 [%%template
-[@@@kind_set.define base_with_ext = (base, value mod external64)]
+[@@@kind_set.define base_or_null_with_ext = (base_or_null, value_or_null mod external64)]
 
 include (
   Base.Array :
@@ -219,9 +219,7 @@ module type Permissioned = sig
   val copy : ('a, [> read ]) t -> ('a, [< _ perms ]) t
   val fill : ('a, [> write ]) t -> pos:int -> len:int -> 'a -> unit
   val of_list : 'a list -> ('a, [< _ perms ]) t
-
-  val%template map : 'a 'b 'p. ('a, [> read ]) t -> f:('a -> 'b) -> ('b, [< 'p perms ]) t
-  [@@kind ki = (value, value mod external64), ko = (value, value mod external64)]
+  val map : ('a, [> read ]) t -> f:('a -> 'b) -> ('b, [< _ perms ]) t
 
   val folding_map
     :  ('a, [> read ]) t
@@ -568,17 +566,22 @@ module type S = sig
   [@@kind k = base_non_value]
   [@@deriving compare ~localize, equal ~localize, sexp ~stackify, globalize]
 
-  type 'a t [@@kind k = value mod external64]
+  type 'a t [@@kind k = value_or_null mod external64]
 
   include Binary_searchable.S1 with type 'a t := 'a t
-  include Indexed_container.S1_with_creators with type 'a t := 'a t
 
   include%template
     Indexed_container.S1_with_creators
-  [@kind_set.explicit base_with_ext] [@with: type 'a t := 'a t [@@kind base_with_ext]]
+  [@kind_set.explicit base_or_null_with_ext]
+  [@with: type 'a t := 'a t [@@kind base_or_null_with_ext]]
+
+  include
+    Indexed_container.S1_with_creators
+    [@kind_set.explicit value_or_null]
+    with type 'a t := 'a t
 
   val%template map : 'a 'b. 'a t -> f:('a -> 'b) -> 'b t
-  [@@kind ki = base_with_ext, ko = base_with_ext]
+  [@@kind ki = base_or_null_with_ext, ko = base_or_null_with_ext]
 
   external length : 'a 'perms. ('a t[@local_opt]) -> int = "%array_length" [@@layout_poly]
 
@@ -632,10 +635,10 @@ module type S = sig
 
   val make_matrix : dimx:int -> dimy:int -> 'a -> 'a t t
   val copy_matrix : 'a t t -> 'a t t
-  val append : 'a t -> 'a t -> 'a t
 
   [%%template:
-  [@@@kind.default k = base_with_ext]
+  [@@@kind.default k' = base_or_null_with_ext]
+  [@@@kind k = k' mod separable]
 
   val concat : 'a. 'a t list -> 'a t
   val copy : 'a. 'a t -> 'a t
@@ -644,18 +647,12 @@ module type S = sig
   include Blit.S1 with type 'a t := 'a t
 
   val%template unsafe_blit : 'a. ('a array, 'a array) Blit.blit
-  [@@kind k = (base_non_value, value mod external64)]
+  [@@kind k = base_or_null_with_ext]
 
-  val%template sub : 'a. ('a array, 'a array) Blit.sub
-  [@@kind k = (base_non_value, value mod external64)]
+  val%template sub : 'a. ('a array, 'a array) Blit.sub [@@kind k = base_or_null_with_ext]
 
-  val of_list : 'a list -> 'a t
-  val map : 'a t -> f:('a -> 'b) -> 'b t
   val folding_map : 'a t -> init:'acc -> f:('acc -> 'a -> 'acc * 'b) -> 'b t
   val fold_map : 'a t -> init:'acc -> f:('acc -> 'a -> 'acc * 'b) -> 'acc * 'b t
-  val mapi : 'a t -> f:(int -> 'a -> 'b) -> 'b t
-  val iteri : 'a t -> f:(int -> 'a -> unit) -> unit
-  val foldi : 'a t -> init:'b -> f:(int -> 'b -> 'a -> 'b) -> 'b
 
   val%template foldi_right : 'a t -> init:'acc -> f:(int -> 'a -> 'acc -> 'acc) -> 'acc
   [@@alloc a @ m = (stack_local, heap_global)]
@@ -666,14 +663,21 @@ module type S = sig
   val%template fold_right : 'a t -> f:('a -> 'acc -> 'acc) -> init:'acc -> 'acc
   [@@mode m = (uncontended, shared)]
 
-  val sort : ?pos:int -> ?len:int -> 'a t -> compare:('a -> 'a -> int) -> unit
+  val%template sort
+    : 'a.
+    ?pos:int -> ?len:int -> 'a t -> compare:('a -> 'a -> int) -> unit
+  [@@kind k = base_or_null_with_ext]
+
   val stable_sort : 'a t -> compare:('a -> 'a -> int) -> unit
-  val is_sorted : 'a t -> compare:('a -> 'a -> int) -> bool
-  val is_sorted_strictly : 'a t -> compare:('a -> 'a -> int) -> bool
-  val merge : 'a t -> 'a t -> compare:('a -> 'a -> int) -> 'a t
-  val concat_map : 'a t -> f:('a -> 'b t) -> 'b t
-  val concat_mapi : 'a t -> f:(int -> 'a -> 'b t) -> 'b t
-  val partition_tf : 'a t -> f:('a -> bool) -> 'a t * 'a t
+
+  [%%template:
+  [@@@kind.default k = base_or_null_with_ext]
+  [@@@kind k = k mod separable]
+
+  val is_sorted : 'a. 'a t -> compare:('a -> 'a -> int) -> bool
+  val is_sorted_strictly : 'a. 'a t -> compare:('a -> 'a -> int) -> bool
+  val merge : 'a. 'a t -> 'a t -> compare:('a -> 'a -> int) -> 'a t]
+
   val partitioni_tf : 'a t -> f:(int -> 'a -> bool) -> 'a t * 'a t
   val cartesian_product : 'a t -> 'b t -> ('a * 'b) t
   val transpose : 'a t t -> 'a t t option
@@ -683,65 +687,46 @@ module type S = sig
   val nget : 'a t -> int -> 'a
   val nset : 'a t -> int -> 'a -> unit
   val filter_opt : 'a option t -> 'a t
-  val filter_map : 'a t -> f:('a -> 'b option) -> 'b t
-  val filter_mapi : 'a t -> f:(int -> 'a -> 'b option) -> 'b t
-  val for_alli : 'a t -> f:(int -> 'a -> bool) -> bool
-  val existsi : 'a t -> f:(int -> 'a -> bool) -> bool
-  val counti : 'a t -> f:(int -> 'a -> bool) -> int
   val iter2_exn : 'a t -> 'b t -> f:('a -> 'b -> unit) -> unit
   val map2_exn : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
   val fold2_exn : 'a t -> 'b t -> init:'acc -> f:('acc -> 'a -> 'b -> 'acc) -> 'acc
 
   [%%template:
-  [@@@kind.default k1 = base_with_ext]
+  [@@@kind.default k1' = base_or_null_with_ext, k2' = base_or_null_with_ext]
+  [@@@kind k1 = k1' mod separable, k2 = k2' mod separable]
 
-  [%%template:
-  [@@@kind.default
-    k1 = k1
-    , (k2_for_mangling, k2)
-      = ( (value, value_or_null mod separable)
-        , (bits64, bits64)
-        , (bits32, bits32)
-        , (word, word)
-        , (float64, float64)
-        , (float32, float32)
-        , (value mod external64, value mod external64) )]
-
-  val of_list_map : 'a 'b. ('a List.t[@kind k1 or value_or_null]) -> f:('a -> 'b) -> 'b t
+  val of_list_map : 'a 'b. ('a List.t[@kind k1' or value_or_null]) -> f:('a -> 'b) -> 'b t
 
   val of_list_mapi
     : 'a 'b.
-    ('a List.t[@kind k1 or value_or_null]) -> f:(int -> 'a -> 'b) -> 'b t]
-
-  [@@@kind.default k2 = base_with_ext]
+    ('a List.t[@kind k1' or value_or_null]) -> f:(int -> 'a -> 'b) -> 'b t
 
   val of_list_rev_map
     : 'a 'b.
-    ('a List.t[@kind k1 or value_or_null]) -> f:('a -> 'b) -> 'b t
+    ('a List.t[@kind k1' or value_or_null]) -> f:('a -> 'b) -> 'b t
 
   val of_list_rev_mapi
     : 'a 'b.
-    ('a List.t[@kind k1 or value_or_null]) -> f:(int -> 'a -> 'b) -> 'b t
+    ('a List.t[@kind k1' or value_or_null]) -> f:(int -> 'a -> 'b) -> 'b t
 
   [@@@mode.default m = (global, local)]
 
   val for_all2_exn : 'a 'b. 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool
   val exists2_exn : 'a 'b. 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool]
 
-  val filter : 'a t -> f:('a -> bool) -> 'a t
-  val filteri : 'a t -> f:(int -> 'a -> bool) -> 'a t
   val map_inplace : 'a t -> f:('a -> 'a) -> unit
 
   [%%template:
-  [@@@kind.default k1 = base_with_ext]
+  [@@@kind.default k1' = base_or_null_with_ext]
+  [@@@kind k1 = k1' mod separable]
 
   val swap : 'a. 'a t -> int -> int -> unit
   val rev_inplace : 'a. 'a t -> unit
   val rev : 'a. 'a t -> 'a t
-  val of_list_rev : 'a. ('a List.t[@kind k1 or value_or_null]) -> 'a t
+  val of_list_rev : 'a. ('a List.t[@kind k1' or value_or_null]) -> 'a t
   val find_exn : 'a. 'a t -> f:('a -> bool) -> 'a
 
-  [@@@kind.default k2 = base]
+  [@@@kind.default k2 = base_or_null]
 
   val find_map_exn
     : 'a 'b.
@@ -752,16 +737,12 @@ module type S = sig
     'a t -> f:(int -> 'a -> ('b Option.t[@kind k2 or value_or_null])) -> 'b]
 
   [%%template:
-  [@@@kind.default k = (base_non_value, value mod external64)]
-
-  val findi
-    : 'a.
-    'a t -> f:(int -> 'a -> bool) -> ((int * 'a) Option.t[@kind value & (k or value)])
+  [@@@kind.default k' = (base_non_value, value_or_null mod external64)]
+  [@@@kind k = k' mod separable]
 
   val findi_exn : 'a. 'a t -> f:(int -> 'a -> bool) -> int * 'a]
 
-  val findi : 'a t -> f:(int -> 'a -> bool) -> (int * 'a) option
-  val findi_exn : 'a t -> f:(int -> 'a -> bool) -> int * 'a
+  val findi_exn : 'a. 'a t -> f:(int -> 'a -> bool) -> int * 'a
   val find_consecutive_duplicate : 'a t -> equal:('a -> 'a -> bool) -> ('a * 'a) option
   val reduce : 'a t -> f:('a -> 'a -> 'a) -> 'a option
   val reduce_exn : 'a t -> f:('a -> 'a -> 'a) -> 'a
@@ -787,7 +768,7 @@ include%template (
     S
     [@with:
       type 'a t := 'a array
-      type 'a t = 'a array [@@kind k = (base_non_value, value mod external64)]])
+      type 'a t = 'a array [@@kind k = (base_non_value, value_or_null mod external64)]])
 [@ocaml.warning "-3"]
 
 let invariant invariant_a t = iter t ~f:invariant_a

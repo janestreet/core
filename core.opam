@@ -6,6 +6,7 @@ bug-reports: "https://github.com/janestreet/core/issues"
 dev-repo: "git+https://github.com/janestreet/core.git"
 doc: "https://ocaml.janestreet.com/ocaml-core/latest/doc/core/index.html"
 license: "MIT"
+x-maintenance-intent: ["(latest)"]
 build: [
   ["dune" "build" "-p" name "-j" jobs]
 ]

@@ -31,7 +31,7 @@ module type S = sig
   type underlying
 
   type t = private underlying
-  [@@deriving bin_io ~localize, compare ~localize, hash, typerep]
+  [@@deriving bin_io ~localize, compare ~localize, hash, typerep, globalize]
 
   module Span : Span_intf.S with type underlying = underlying
   module Ofday : Ofday_intf.S with type underlying := underlying and module Span := Span

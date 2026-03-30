@@ -306,8 +306,8 @@ module Private : sig
 
   (** In case of ambiguity within an equivalence class, the returned key will be the first
       matching key in the list. *)
-  val lookup_expand_with_equivalence_classes
-    :  [%equal: 'a]
+  val%template lookup_expand_with_equivalence_classes
+    :  ([%equal: 'a][@mode local])
     -> (string * ('a * [ `Full_match_required | `Prefix ])) list
     -> string
     -> Key_type.t

@@ -1,4 +1,5 @@
 open Core
+open Expect_test_helpers_core
 open Nonempty_list
 
 include (
@@ -750,7 +751,12 @@ module%test Partition = struct
           (Nonempty_list.partition_tf' xs ~f))
     in
     test t;
-    [%expect {| (Both ((2 4) (1 3))) |}];
+    [%expect
+      {|
+      (Both (
+        (2 4)
+        (1 3)))
+      |}];
     test [ 1; 3 ];
     [%expect {| (Snd (1 3)) |}];
     test [ 2; 4 ];
@@ -771,7 +777,12 @@ module%test Partition = struct
           (Nonempty_list.partition_map' xs ~f))
     in
     test t;
-    [%expect {| (Both ((2 4) ("odd 1" "odd 3"))) |}];
+    [%expect
+      {|
+      (Both (
+        (2       4)
+        ("odd 1" "odd 3")))
+      |}];
     test [ 1; 3 ];
     [%expect {| (Snd ("odd 1" "odd 3")) |}];
     test [ 2; 4 ];
@@ -793,7 +804,12 @@ module%test Partition = struct
           (Nonempty_list.partition_result' xs))
     in
     test t;
-    [%expect {| (Both ((2 4) ("odd 1" "odd 3"))) |}];
+    [%expect
+      {|
+      (Both (
+        (2       4)
+        ("odd 1" "odd 3")))
+      |}];
     test [ 1; 3 ];
     [%expect {| (Snd ("odd 1" "odd 3")) |}];
     test [ 2; 4 ];
@@ -832,11 +848,26 @@ module%test Partition3 = struct
     test [ 1; 2; 3; 4 ];
     [%expect {| (Fst_snd_trd (3) (1 4) (2)) |}];
     test [ 1; 3 ];
-    [%expect {| (Fst_snd (3) (1)) |}];
+    [%expect
+      {|
+      (Fst_snd
+        (3)
+        (1))
+      |}];
     test [ 5; 3 ];
-    [%expect {| (Fst_trd (3) (5)) |}];
+    [%expect
+      {|
+      (Fst_trd
+        (3)
+        (5))
+      |}];
     test [ 2; 4 ];
-    [%expect {| (Snd_trd (4) (2)) |}];
+    [%expect
+      {|
+      (Snd_trd
+        (4)
+        (2))
+      |}];
     test [ 6; 3 ];
     [%expect {| (Fst (6 3)) |}];
     test [ 4; 7 ];
@@ -853,4 +884,468 @@ module%test Partition3 = struct
     in
     ()
   ;;
+end
+
+(* Test functions with templated definitions for non-value layouts *)
+
+module%test Nonvalue_layout_tests = struct
+  module Generator = Base_quickcheck.Generator
+  module Shrinker = Base_quickcheck.Shrinker
+  open Generator.Let_syntax
+
+  [%%template
+  module
+    [@kind k = (bits32, bits64, word, float64)] Test_against_boxed (T : sig
+      module Boxed : Unboxed_test_harness.Boxed
+
+      type t [@@deriving sexp_of]
+
+      include
+        Unboxed_test_harness.Boxable [@kind k] with type boxed := Boxed.t with type t := t
+
+      val of_int : int -> t
+      val to_int : t -> int
+    end) : sig end = struct
+    module Harness =
+      Unboxed_test_harness.Make [@kind k]
+        (T)
+        (struct
+          (* Almost all of these functions allocate, so we're not really concerned about
+             testing allocation behavior specifically in optimized builds. *)
+          let flambda2 = false
+
+          let filenames_to_suppress_in_backtraces : string list =
+            [ "nonempty_list.ml"; "list.ml" ]
+          ;;
+        end)
+
+    open Harness
+    open T
+
+    let filter_fun i x = if i < 0 then to_int x < 1 else to_int x > -1
+    let map_fun i x = x |> to_int |> ( + ) i |> ( * ) 2 |> of_int
+
+    let make_iter_fun () =
+      let acc = ref 0 in
+      (fun i x -> acc := !acc + i + to_int x), acc
+    ;;
+
+    (* We generate nonempty lists by generating a boxed nonempty list, then converting *)
+    module Nonempty_list_pair = struct
+      type t =
+        { b_list : Boxed.t Nonempty_list.t
+        ; u_list : (T.t Nonempty_list.t[@kind k])
+        }
+      [@@deriving sexp_of]
+
+      let quickcheck_generator =
+        let%bind b_list = [%generator: Boxed.t Nonempty_list.t] in
+        let u_list =
+          b_list |> Nonempty_list.to_list |> (List.map [@kind value_or_null k]) ~f:unbox
+        in
+        let u_list = (Nonempty_list.of_list_exn [@kind k]) u_list in
+        return { b_list; u_list }
+      ;;
+
+      (* To avoid breaking invariants, don't shrink *)
+      let quickcheck_shrinker : t Shrinker.t = Quickcheck.Shrinker.empty ()
+    end
+
+    let require_equal_nonempty_lists
+      ~f_boxed
+      ~f_unboxed
+      ({ b_list; u_list } : Nonempty_list_pair.t)
+      =
+      require_compare_equal
+        ~is_zero_alloc_with_flambda2:false
+        [%here]
+        (module struct
+          type t = Boxed.t Nonempty_list.t [@@deriving sexp_of, compare]
+        end)
+        (fun () -> f_boxed b_list)
+        (fun () -> f_unboxed u_list |> (Nonempty_list.map [@kind k value_or_null]) ~f:box)
+    ;;
+
+    let require_equal_lists
+      ~f_boxed
+      ~f_unboxed
+      ({ b_list; u_list } : Nonempty_list_pair.t)
+      =
+      require_compare_equal
+        ~is_zero_alloc_with_flambda2:false
+        [%here]
+        (module struct
+          type t = Boxed.t List.t [@@deriving sexp_of, compare]
+        end)
+        (fun () -> f_boxed b_list)
+        (fun () -> f_unboxed u_list |> (List.map [@kind k value_or_null]) ~f:box)
+    ;;
+
+    let test name ~f =
+      let confirm_test = lazy (print_endline {%string|testing [%{name}]|}) in
+      quickcheck_m (module Nonempty_list_pair) ~f:(fun pair ->
+        force confirm_test;
+        f pair)
+    ;;
+
+    let test_sexp_of () =
+      test "sexp_of" ~f:(fun { b_list; u_list } ->
+        require_equal
+          ~is_zero_alloc_with_flambda2:false
+          [%here]
+          (module Sexp)
+          (fun () -> [%sexp_of: Boxed.t Nonempty_list.t] b_list)
+          (fun () -> [%sexp_of: (T.t Nonempty_list.t[@kind k])] u_list))
+    ;;
+
+    let test_iter () =
+      test "iter" ~f:(fun { b_list; u_list } ->
+        require_equal
+          ~is_zero_alloc_with_flambda2:false
+          [%here]
+          (module Int)
+          (fun () ->
+            let f, r = make_iter_fun () in
+            Nonempty_list.iter b_list ~f:(fun x -> f 0 (unbox x));
+            !r)
+          (fun () ->
+            let f, r = make_iter_fun () in
+            (Nonempty_list.iter [@kind k]) u_list ~f:(fun x -> f 0 x);
+            !r))
+    ;;
+
+    let test_iteri () =
+      test "iteri" ~f:(fun { b_list; u_list } ->
+        require_equal
+          ~is_zero_alloc_with_flambda2:false
+          [%here]
+          (module Int)
+          (fun () ->
+            let f, r = make_iter_fun () in
+            Nonempty_list.iteri b_list ~f:(fun i x -> f i (unbox x));
+            !r)
+          (fun () ->
+            let f, r = make_iter_fun () in
+            (Nonempty_list.iteri [@kind k]) u_list ~f:(fun i x -> f i x);
+            !r))
+    ;;
+
+    let test_length () =
+      test "length" ~f:(fun { b_list; u_list } ->
+        require_equal
+          ~is_zero_alloc_with_flambda2:false
+          [%here]
+          (module Int)
+          (fun () -> Nonempty_list.length b_list)
+          (fun () -> (Nonempty_list.length [@kind k]) u_list))
+    ;;
+
+    let test_mapi () =
+      test
+        "mapi"
+        ~f:
+          (require_equal_nonempty_lists
+             ~f_boxed:(Nonempty_list.mapi ~f:(fun i x -> box (map_fun i (unbox x))))
+             ~f_unboxed:((Nonempty_list.mapi [@kind k k]) ~f:map_fun))
+    ;;
+
+    let test_map () =
+      let map_fun = map_fun 0 in
+      test
+        "map"
+        ~f:
+          (require_equal_nonempty_lists
+             ~f_boxed:(Nonempty_list.map ~f:(fun x -> box (map_fun (unbox x))))
+             ~f_unboxed:((Nonempty_list.map [@kind k k]) ~f:(fun x -> map_fun x)))
+    ;;
+
+    let test_concat_map () =
+      test
+        "concat_map"
+        ~f:
+          (require_equal_nonempty_lists
+             ~f_boxed:
+               (Nonempty_list.concat_map ~f:(fun x ->
+                  let y i = box (map_fun i (unbox x)) in
+                  [ y 1; y 2; y 3 ]))
+             ~f_unboxed:
+               ((Nonempty_list.concat_map [@kind k k]) ~f:(fun x ->
+                  let y i = map_fun i x in
+                  [ y 1; y 2; y 3 ])))
+    ;;
+
+    let test_filter_map () =
+      let filter_fun = filter_fun 0 in
+      let map_fun = map_fun 0 in
+      test
+        "filter_map"
+        ~f:
+          (require_equal_lists
+             ~f_boxed:
+               (Nonempty_list.filter_map ~f:(fun x ->
+                  if filter_fun (unbox x) then Some (box (map_fun (unbox x))) else None))
+             ~f_unboxed:
+               ((Nonempty_list.filter_map [@kind k k]) ~f:(fun x ->
+                  if filter_fun x
+                  then (Some (map_fun x) : (_ Core.Option.t[@kind k]))
+                  else None)))
+    ;;
+
+    let test_filter_mapi () =
+      test
+        "filter_mapi"
+        ~f:
+          (require_equal_lists
+             ~f_boxed:
+               (Nonempty_list.filter_mapi ~f:(fun i x ->
+                  if filter_fun i (unbox x)
+                  then Some (box (map_fun i (unbox x)))
+                  else None))
+             ~f_unboxed:
+               ((Nonempty_list.filter_mapi [@kind k k]) ~f:(fun i x ->
+                  if filter_fun i x
+                  then (Some (map_fun i x) : (_ Core.Option.t[@kind k]))
+                  else None)))
+    ;;
+
+    let test_hd () =
+      test "hd" ~f:(fun { b_list; u_list } ->
+        Harness.require_compare_equal_wrapped
+          ~is_zero_alloc_with_flambda2:false
+          [%here]
+          (fun () -> Nonempty_list.hd b_list)
+          (fun () -> (Nonempty_list.hd [@kind k]) u_list))
+    ;;
+
+    let test_tl () =
+      test
+        "tl"
+        ~f:
+          (require_equal_lists
+             ~f_boxed:Nonempty_list.tl
+             ~f_unboxed:(Nonempty_list.tl [@kind k]))
+    ;;
+
+    let test_min_elt' () =
+      let compare x y = Int.compare (to_int x) (to_int y) in
+      test "min_elt'" ~f:(fun { b_list; u_list } ->
+        Harness.require_compare_equal_wrapped
+          ~is_zero_alloc_with_flambda2:false
+          [%here]
+          (fun () ->
+            Nonempty_list.min_elt' b_list ~compare:(fun x y ->
+              compare (unbox x) (unbox y)))
+          (fun () -> (Nonempty_list.min_elt' [@kind k]) u_list ~compare))
+    ;;
+
+    let test_max_elt' () =
+      let compare x y = Int.compare (to_int x) (to_int y) in
+      test "max_elt'" ~f:(fun { b_list; u_list } ->
+        Harness.require_compare_equal_wrapped
+          ~is_zero_alloc_with_flambda2:false
+          [%here]
+          (fun () ->
+            Nonempty_list.max_elt' b_list ~compare:(fun x y ->
+              compare (unbox x) (unbox y)))
+          (fun () -> (Nonempty_list.max_elt' [@kind k]) u_list ~compare))
+    ;;
+
+    let test_fold_nonempty () =
+      let fold_fun acc x = of_int (to_int acc + to_int x) in
+      let init_fun (x : t) : t = x in
+      test "fold_nonempty" ~f:(fun { b_list; u_list } ->
+        Harness.require_compare_equal_wrapped
+          ~is_zero_alloc_with_flambda2:false
+          [%here]
+          (fun () ->
+            Core.Nonempty_list.fold_nonempty b_list ~init:Fn.id ~f:(fun acc x ->
+              box (fold_fun (unbox acc) (unbox x))))
+          (fun () ->
+            (Core.Nonempty_list.fold_nonempty [@kind k k])
+              u_list
+              ~init:init_fun
+              ~f:fold_fun))
+    ;;
+
+    let test_of_list () =
+      (* Test empty list returns None *)
+      assert (Core.Option.is_none (Nonempty_list.of_list []));
+      assert (Core.Option.is_none ((Nonempty_list.of_list [@kind k]) []));
+      (* Test non-empty lists *)
+      test
+        "of_list"
+        ~f:
+          (require_equal_nonempty_lists
+             ~f_boxed:(fun l ->
+               Nonempty_list.of_list (Nonempty_list.to_list l)
+               |> Core.Option.value_exn ~here:[%here])
+             ~f_unboxed:(fun l ->
+               (Nonempty_list.of_list [@kind k]) ((Nonempty_list.to_list [@kind k]) l)
+               |> Core.Option.value_exn ~here:[%here]))
+    ;;
+
+    let test_of_list_exn () =
+      test
+        "of_list_exn"
+        ~f:
+          (require_equal_nonempty_lists
+             ~f_boxed:(fun l -> Nonempty_list.of_list_exn (Nonempty_list.to_list l))
+             ~f_unboxed:(fun l ->
+               (Nonempty_list.of_list_exn [@kind k]) ((Nonempty_list.to_list [@kind k]) l)))
+    ;;
+
+    let test_to_list () =
+      test
+        "to_list"
+        ~f:
+          (require_equal_lists
+             ~f_boxed:Nonempty_list.to_list
+             ~f_unboxed:(Nonempty_list.to_list [@kind k]))
+    ;;
+
+    let () =
+      test_sexp_of ();
+      test_iter ();
+      test_iteri ();
+      test_length ();
+      test_mapi ();
+      test_map ();
+      test_concat_map ();
+      test_filter_map ();
+      test_filter_mapi ();
+      test_hd ();
+      test_tl ();
+      test_min_elt' ();
+      test_max_elt' ();
+      test_fold_nonempty ();
+      test_of_list ();
+      test_of_list_exn ();
+      test_to_list ()
+    ;;
+  end
+
+  let%expect_test "float64" =
+    let module _ =
+      Test_against_boxed [@kind float64] (struct
+        include Float_u
+        module Boxed = Float
+
+        let to_int x = iround x |> Core.Option.value ~default:(-5)
+      end)
+    in
+    [%expect
+      {|
+      testing [sexp_of]
+      testing [iter]
+      testing [iteri]
+      testing [length]
+      testing [mapi]
+      testing [map]
+      testing [concat_map]
+      testing [filter_map]
+      testing [filter_mapi]
+      testing [hd]
+      testing [tl]
+      testing [min_elt']
+      testing [max_elt']
+      testing [fold_nonempty]
+      testing [of_list]
+      testing [of_list_exn]
+      testing [to_list]
+      |}]
+  ;;
+
+  let%expect_test "bits32" =
+    let module _ =
+      Test_against_boxed [@warning "-60"] [@kind bits32] (struct
+        include Int32_u
+        module Boxed = Int32
+
+        let of_int = of_int_trunc
+        let to_int = to_int_trunc
+      end)
+    in
+    [%expect
+      {|
+      testing [sexp_of]
+      testing [iter]
+      testing [iteri]
+      testing [length]
+      testing [mapi]
+      testing [map]
+      testing [concat_map]
+      testing [filter_map]
+      testing [filter_mapi]
+      testing [hd]
+      testing [tl]
+      testing [min_elt']
+      testing [max_elt']
+      testing [fold_nonempty]
+      testing [of_list]
+      testing [of_list_exn]
+      testing [to_list]
+      |}]
+  ;;
+
+  let%expect_test "bits64" =
+    let module _ =
+      Test_against_boxed [@warning "-60"] [@kind bits64] (struct
+        include Int64_u
+        module Boxed = Int64
+
+        let to_int = to_int_trunc
+      end)
+    in
+    [%expect
+      {|
+      testing [sexp_of]
+      testing [iter]
+      testing [iteri]
+      testing [length]
+      testing [mapi]
+      testing [map]
+      testing [concat_map]
+      testing [filter_map]
+      testing [filter_mapi]
+      testing [hd]
+      testing [tl]
+      testing [min_elt']
+      testing [max_elt']
+      testing [fold_nonempty]
+      testing [of_list]
+      testing [of_list_exn]
+      testing [to_list]
+      |}]
+  ;;
+
+  let%expect_test "word" =
+    let module _ =
+      Test_against_boxed [@warning "-60"] [@kind word] (struct
+        include Nativeint_u
+        module Boxed = Nativeint
+
+        let to_int = to_int_trunc
+      end)
+    in
+    [%expect
+      {|
+      testing [sexp_of]
+      testing [iter]
+      testing [iteri]
+      testing [length]
+      testing [mapi]
+      testing [map]
+      testing [concat_map]
+      testing [filter_map]
+      testing [filter_mapi]
+      testing [hd]
+      testing [tl]
+      testing [min_elt']
+      testing [max_elt']
+      testing [fold_nonempty]
+      testing [of_list]
+      testing [of_list_exn]
+      testing [to_list]
+      |}]
+  ;;]
 end

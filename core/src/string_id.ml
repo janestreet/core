@@ -3,7 +3,7 @@ open Std_internal
 include String_id_intf
 
 module%template.portable
-  [@modality p] Make_with_validate_without_pretty_printer_with_bin_shape
+  [@modality p] Make
     (M : sig
        val module_name : string
        val validate : string -> unit Or_error.t
@@ -121,144 +121,7 @@ struct
   let arg_type = (Command.Arg_type.create [@modality p]) of_string
 end
 
-module%template.portable
-  [@modality p] Make_with_validate_without_pretty_printer
-    (M : sig
-       val module_name : string
-       val validate : string -> unit Or_error.t
-       val include_default_validation : bool
-     end)
-    () =
-struct
-  include%template
-    Make_with_validate_without_pretty_printer_with_bin_shape [@modality p]
-      (struct
-        include M
-
-        let caller_identity = None
-      end)
-      ()
-end
-
-module Make_without_pretty_printer
-    (M : sig
-       val module_name : string
-     end)
-    () =
-struct
-  include%template
-    Make_with_validate_without_pretty_printer [@modality portable]
-      (struct
-        let module_name = M.module_name
-        let validate _ = Ok ()
-        let include_default_validation = true
-      end)
-      ()
-end
-
-module%template.portable
-  [@modality p] Make_with_validate
-    (M : sig
-       val module_name : string
-       val validate : string -> unit Or_error.t
-       val include_default_validation : bool
-     end)
-    () =
-struct
-  include Make_with_validate_without_pretty_printer [@modality p] (M) ()
-
-  include Pretty_printer.Register [@modality p] (struct
-      type nonrec t = t
-
-      let module_name = M.module_name
-      let to_string = to_string
-    end)
-end
-
-module Make
-    (M : sig
-       val module_name : string
-     end)
-    () =
-struct
-  include Make_without_pretty_printer (M) ()
-
-  include%template Pretty_printer.Register [@modality portable] (struct
-      type nonrec t = t
-
-      let module_name = M.module_name
-      let to_string = to_string
-    end)
-end
-
-module Make_with_distinct_bin_shape
-    (M : sig
-       val module_name : string
-       val caller_identity : Bin_prot.Shape.Uuid.t
-     end)
-    () =
-struct
-  include%template
-    Make_with_validate_without_pretty_printer_with_bin_shape [@modality portable]
-      (struct
-        let module_name = M.module_name
-        let validate _ = Ok ()
-        let include_default_validation = true
-        let caller_identity = Some M.caller_identity
-      end)
-      ()
-
-  include%template Pretty_printer.Register [@modality portable] (struct
-      type nonrec t = t
-
-      let module_name = M.module_name
-      let to_string = to_string
-    end)
-end
-
-module%template.portable
-  [@modality p] Make_with_validate_and_distinct_bin_shape
-    (M : sig
-       val module_name : string
-       val validate : string -> unit Or_error.t
-       val include_default_validation : bool
-       val caller_identity : Bin_prot.Shape.Uuid.t
-     end)
-    () =
-struct
-  include
-    Make_with_validate_without_pretty_printer_with_bin_shape [@modality p]
-      (struct
-        let module_name = M.module_name
-        let validate = M.validate
-        let include_default_validation = M.include_default_validation
-        let caller_identity = Some M.caller_identity
-      end)
-      ()
-
-  include Pretty_printer.Register [@modality p] (struct
-      type nonrec t = t
-
-      let module_name = M.module_name
-      let to_string = to_string
-    end)
-end
-
-include
-  Make
-    (struct
-      let module_name = "Core.String_id"
-    end)
-    ()
-
-module String_without_validation_without_pretty_printer = struct
-  include String
-
-  let%template[@alloc stack] to_string = (to_string [@alloc stack])
-  let%template arg_type = (Command.Arg_type.create [@mode portable]) Fn.id
-end
-
-let%template[@modality p = (nonportable, portable)] make
+let%template[@modality p = (nonportable, portable)] [@inline] make
   ?(validate = fun _ -> Ok ())
   ?caller_identity
   ?(include_pretty_printer = true)
@@ -268,7 +131,7 @@ let%template[@modality p = (nonportable, portable)] make
   : ((module S_with_extras)[@mode local] [@modality p])
   =
   let module M =
-    Make_with_validate_without_pretty_printer_with_bin_shape [@modality p]
+    Make [@modality p]
       (struct
         let module_name = module_name
         let validate = validate
@@ -291,3 +154,20 @@ let%template[@modality p = (nonportable, portable)] make
         end)
     end)
 ;;
+
+include%template
+  Make [@modality portable]
+    (struct
+      let module_name = "Core.String_id"
+      let validate _ = Ok ()
+      let include_default_validation = true
+      let caller_identity = None
+    end)
+    ()
+
+module String_without_validation_without_pretty_printer = struct
+  include String
+
+  let%template[@alloc stack] to_string = (to_string [@alloc stack])
+  let%template arg_type = (Command.Arg_type.create [@mode portable]) Fn.id
+end

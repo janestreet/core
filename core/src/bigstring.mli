@@ -7,7 +7,7 @@ open Bigarray
 
 (** Type of bigstrings *)
 type t = (char, int8_unsigned_elt, c_layout) Array1.t
-[@@deriving compare ~localize, quickcheck, sexp_of]
+[@@deriving compare ~localize, quickcheck, sexp_of ~stackify]
 
 (** Type of bigstrings which support hashing. Note that mutation invalidates previous
     hashes. *)

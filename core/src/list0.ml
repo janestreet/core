@@ -10,7 +10,11 @@ module Assoc = struct
 
   type ('a, 'b) t = ('a * 'b) list [@@deriving bin_io ~localize]
 
-  let compare (type a b) compare_a compare_b = [%compare: (a * b) list]
+  let%template[@mode m = (local, global)] compare (type a b) compare_a compare_b =
+    let[@mode m] compare_a = compare_a in
+    let[@mode m] compare_b = compare_b in
+    [%compare: (a * b) list] [@mode.explicit m]
+  ;;
 end
 
 let to_string ~f t =

@@ -42,7 +42,7 @@ let trd3 (_, _, z) = z
     when dealing with existential types, when one has a packed value and an unpacked value
     that one wants to check are physically equal. One can't use [phys_equal] in such a
     situation because the types are different. *)
-external phys_same : ('a[@local_opt]) -> ('b[@local_opt]) -> bool = "%eq"
+external phys_same : 'a 'b. ('a[@local_opt]) -> ('b[@local_opt]) -> bool = "%eq"
 
 let ( % ) = Int.( % )
 let ( /% ) = Int.( /% )

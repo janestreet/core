@@ -143,7 +143,7 @@ type ('key, 'data, 'z) create_options_with_hashable =
   -> 'z
 
 module type%template M_quickcheck = sig
-  type t [@@deriving (compare [@mode m]), hash, quickcheck, sexp_of]
+  type t [@@deriving (compare [@mode.explicit m]), hash, quickcheck, sexp_of]
 end
 [@@mode m = (local, global)]
 
@@ -271,7 +271,9 @@ module type%template [@modality p = (portable, nonportable)] Hashtbl_over_values
 
   module%template
     [@modality p = (p, nonportable)] Make_plain (Key : sig
-      include Key_plain
+      type t
+
+      include Key_plain with type t := t
     end) : sig
     include S_plain with type key = Key.t
   end
@@ -299,7 +301,11 @@ module type%template [@modality p = (portable, nonportable)] Hashtbl_over_values
 
   module%template
     [@modality p = (p, nonportable)] Make_plain_with_hashable (T : sig
-      module Key : Key_plain
+      module Key : sig
+        type t
+
+        include Key_plain with type t := t
+      end
 
       val hashable : Key.t Hashable.t
     end) : sig

@@ -44,7 +44,13 @@ val anons : 'a Command.Anons.t -> 'a t Command.Anons.t
 module Option : sig
   type 'a t = 'a list
   [@@deriving
-    compare ~localize, equal ~localize, sexp, sexp_grammar, hash, quickcheck, typerep]
+    compare ~localize
+    , equal ~localize
+    , sexp ~stackify
+    , sexp_grammar
+    , hash
+    , quickcheck
+    , typerep]
 
   (** Constructors analogous to [None] and [Some]. *)
 
@@ -75,7 +81,8 @@ end
 
 module Unstable : sig
   type nonrec 'a t = 'a t
-  [@@deriving bin_io, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+  [@@deriving
+    bin_io, compare ~localize, equal ~localize, hash, sexp ~stackify, sexp_grammar]
 end
 
 module Stable : sig
@@ -88,7 +95,7 @@ module Stable : sig
       , compare ~localize
       , equal ~localize
       , globalize
-      , sexp
+      , sexp ~stackify
       , sexp_grammar
       , hash
       , stable_witness]
@@ -101,7 +108,13 @@ module Stable : sig
   module V2 : sig
     type nonrec 'a t = 'a t
     [@@deriving
-      bin_io, compare ~localize, equal ~localize, sexp, sexp_grammar, hash, stable_witness]
+      bin_io
+      , compare ~localize
+      , equal ~localize
+      , sexp ~stackify
+      , sexp_grammar
+      , hash
+      , stable_witness]
   end
 
   (** Represents a [t] as an ordinary list for sexps, but as a pair for bin_io conversions
@@ -111,6 +124,11 @@ module Stable : sig
   module V1 : sig
     type nonrec 'a t = 'a t
     [@@deriving
-      bin_io, compare ~localize, equal ~localize, sexp, sexp_grammar, stable_witness]
+      bin_io
+      , compare ~localize
+      , equal ~localize
+      , sexp ~stackify
+      , sexp_grammar
+      , stable_witness]
   end
 end

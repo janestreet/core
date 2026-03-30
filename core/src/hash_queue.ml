@@ -428,7 +428,11 @@ module%template Make_backend (Table : Hashtbl_intf.Hashtbl [@modality portable])
   module type S = S0 with type ('key, 'data) hash_queue := ('key, 'data) Backend.t
 
   module%template.portable Make_with_hashable (T : sig
-      module Key : Key
+      module Key : sig
+        type t
+
+        include Key with type t := t
+      end
 
       val hashable : Key.t Hashtbl.Hashable.t
     end) : S with type key = T.Key.t = struct
@@ -445,8 +449,12 @@ module%template Make_backend (Table : Hashtbl_intf.Hashtbl [@modality portable])
     ;;
   end
 
-  module%template.portable [@modality p] Make (Key : Key) : S with type key = Key.t =
-  Make_with_hashable [@modality p] (struct
+  module%template.portable
+    [@modality p] Make (Key : sig
+      type t
+
+      include Key with type t := t
+    end) : S with type key = Key.t = Make_with_hashable [@modality p] (struct
       module Key = Key
 
       let hashable = (Table.Hashable.of_key [@modality p]) (module Key)

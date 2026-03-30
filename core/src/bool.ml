@@ -10,7 +10,7 @@ module Stable = struct
         bin_io ~localize
         , compare ~localize
         , equal ~localize
-        , sexp
+        , sexp ~stackify
         , sexp_grammar
         , stable_witness
         , typerep]

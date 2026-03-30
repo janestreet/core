@@ -10,7 +10,7 @@ include Base.Iarray.Public with type 'a t := 'a t (** @inline *)
 
 module Stable : sig
   module V1 : sig
-    type nonrec 'a t = 'a t [@@deriving equal ~localize, sexp, sexp_grammar]
+    type nonrec 'a t = 'a t [@@deriving equal ~localize, sexp ~stackify, sexp_grammar]
 
     [%%rederive: type nonrec 'a t = 'a t [@@deriving globalize, hash]]
 

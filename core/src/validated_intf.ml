@@ -53,7 +53,7 @@ module type Raw_bin_io = sig
 end
 
 module type Raw_bin_io_compare_hash_sexp = sig
-  type t [@@deriving (compare [@mode m]), hash]
+  type t [@@deriving (compare [@mode.explicit m]), hash]
 
   include Raw_bin_io [@mode m] with type t := t
 end
@@ -124,7 +124,7 @@ module type S_bin_io_compare_hash_sexp = sig
 
   include sig
       type t = (raw, witness) validated
-      [@@deriving (bin_io [@mode m]), (compare [@mode m]), hash]
+      [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), hash]
     end
     with type t := t
 end
@@ -186,12 +186,12 @@ module type Validated = sig
 
   module%template.portable Add_compare
       (Raw : sig
-         type t [@@deriving compare [@mode m]]
+         type t [@@deriving compare [@mode.explicit m]]
 
          include Raw with type t := t
        end)
       (Validated : S with type raw := Raw.t) : sig
-      type t [@@deriving compare [@mode m]]
+      type t [@@deriving compare [@mode.explicit m]]
     end
     with type t := Validated.t]
 

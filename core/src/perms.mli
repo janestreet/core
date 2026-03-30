@@ -106,22 +106,42 @@ open! Import
     two represent who is allowed to write in the [Write.t] and [Immutable.t] types. *)
 type nobody
 [@@deriving
-  bin_io ~localize, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+  bin_io ~localize
+  , compare ~localize
+  , equal ~localize
+  , hash
+  , sexp ~stackify ~localize
+  , sexp_grammar]
 
 type me
 [@@deriving
-  bin_io ~localize, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+  bin_io ~localize
+  , compare ~localize
+  , equal ~localize
+  , hash
+  , sexp ~stackify ~localize
+  , sexp_grammar]
 
 module Read : sig
   type t = [ `Read ]
   [@@deriving
-    bin_io ~localize, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+    bin_io ~localize
+    , compare ~localize
+    , equal ~localize
+    , hash
+    , sexp ~stackify ~localize
+    , sexp_grammar]
 end
 
 module Write : sig
   type t = [ `Who_can_write of me ]
   [@@deriving
-    bin_io ~localize, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+    bin_io ~localize
+    , compare ~localize
+    , equal ~localize
+    , hash
+    , sexp ~stackify ~localize
+    , sexp_grammar]
 end
 
 module Immutable : sig
@@ -130,7 +150,12 @@ module Immutable : sig
     | `Who_can_write of nobody
     ]
   [@@deriving
-    bin_io ~localize, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+    bin_io ~localize
+    , compare ~localize
+    , equal ~localize
+    , hash
+    , sexp ~stackify ~localize
+    , sexp_grammar]
 end
 
 module Read_write : sig
@@ -139,7 +164,12 @@ module Read_write : sig
     | Write.t
     ]
   [@@deriving
-    bin_io ~localize, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+    bin_io ~localize
+    , compare ~localize
+    , equal ~localize
+    , hash
+    , sexp ~stackify ~localize
+    , sexp_grammar]
 end
 
 module Upper_bound : sig
@@ -148,7 +178,12 @@ module Upper_bound : sig
     | `Who_can_write of 'a
     ]
   [@@deriving
-    bin_io ~localize, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+    bin_io ~localize
+    , compare ~localize
+    , equal ~localize
+    , hash
+    , sexp ~stackify ~localize
+    , sexp_grammar]
 end
 
 module Export : sig
@@ -159,7 +194,7 @@ module Export : sig
     , equal ~localize
     , globalize
     , hash
-    , sexp
+    , sexp ~stackify ~localize
     , sexp_grammar
     , stable_witness]
 
@@ -172,7 +207,7 @@ module Export : sig
     , equal ~localize
     , hash
     , globalize
-    , sexp
+    , sexp ~stackify ~localize
     , sexp_grammar
     , stable_witness]
 
@@ -183,7 +218,7 @@ module Export : sig
     , equal ~localize
     , globalize
     , hash
-    , sexp
+    , sexp ~stackify ~localize
     , sexp_grammar
     , stable_witness]
 
@@ -194,7 +229,7 @@ module Export : sig
     , equal ~localize
     , globalize
     , hash
-    , sexp
+    , sexp ~stackify ~localize
     , sexp_grammar
     , stable_witness]
 
@@ -205,7 +240,7 @@ module Export : sig
     , equal ~localize
     , globalize
     , hash
-    , sexp
+    , sexp ~stackify ~localize
     , sexp_grammar
     , stable_witness]
 end
@@ -218,7 +253,7 @@ module Stable : sig
       , compare ~localize
       , equal ~localize
       , hash
-      , sexp
+      , sexp ~stackify ~localize
       , sexp_grammar
       , stable_witness]
 
@@ -228,7 +263,7 @@ module Stable : sig
       , compare ~localize
       , equal ~localize
       , hash
-      , sexp
+      , sexp ~stackify ~localize
       , sexp_grammar
       , stable_witness]
 
@@ -239,7 +274,7 @@ module Stable : sig
         , compare ~localize
         , equal ~localize
         , hash
-        , sexp
+        , sexp ~stackify ~localize
         , sexp_grammar
         , stable_witness]
     end
@@ -251,7 +286,7 @@ module Stable : sig
         , compare ~localize
         , equal ~localize
         , hash
-        , sexp
+        , sexp ~stackify ~localize
         , sexp_grammar
         , stable_witness]
     end
@@ -263,7 +298,7 @@ module Stable : sig
         , compare ~localize
         , equal ~localize
         , hash
-        , sexp
+        , sexp ~stackify ~localize
         , sexp_grammar
         , stable_witness]
     end
@@ -275,7 +310,7 @@ module Stable : sig
         , compare ~localize
         , equal ~localize
         , hash
-        , sexp
+        , sexp ~stackify ~localize
         , sexp_grammar
         , stable_witness]
     end
@@ -287,7 +322,7 @@ module Stable : sig
         , compare ~localize
         , equal ~localize
         , hash
-        , sexp
+        , sexp ~stackify ~localize
         , sexp_grammar
         , stable_witness]
     end

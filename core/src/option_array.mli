@@ -2,7 +2,9 @@
 
 open! Import
 
-type 'a t = 'a Base.Option_array.t [@@deriving bin_io, quickcheck, sexp, sexp_grammar]
+type 'a t = 'a Base.Option_array.t
+
+[%%rederive: type nonrec 'a t = 'a t [@@deriving bin_io, quickcheck, sexp, sexp_grammar]]
 
 include module type of struct
     include Base.Option_array

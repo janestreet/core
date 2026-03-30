@@ -3,4 +3,5 @@
  (public_name core.command)
  (libraries base filename_base parsexp sexplib stdio univ_map)
  (preprocess
-  (pps ppx_jane -require-template-extension ppx_optcomp)))
+  (pps ppx_jane -compare-require-explicit-locality
+    -require-template-extension ppx_optcomp)))

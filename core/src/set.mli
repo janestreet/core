@@ -10,7 +10,8 @@ open Set_intf
     the second identifies the comparator, which determines the comparison function that is
     used for ordering elements in this set. Many operations (e.g., {!union}), require that
     they be passed sets with the same element type and the same comparator type. *)
-type ('elt, 'cmp) t = ('elt, 'cmp) Base.Set.t [@@deriving compare ~localize]
+type ('elt, 'cmp) t = ('elt, 'cmp) Base.Set.t
+[@@sexp.phantom: 'cmp] [@@deriving compare ~localize, sexp_of]
 
 module Tree : sig
   type weight = Tree.weight
@@ -27,7 +28,7 @@ module Tree : sig
         ; right : ('elt, 'cmp) t [@globalized]
         ; weight : weight
         }
-  [@@deriving sexp_of]
+  [@@sexp.phantom: 'cmp] [@@deriving sexp_of]
 
   module Named = Tree.Named
 
@@ -552,8 +553,12 @@ val to_map : ('key, 'cmp) t -> f:('key -> 'data) -> ('key, 'data, 'cmp) Base.Map
 
 val of_map_keys : ('key, _, 'cmp) Base.Map.t -> ('key, 'cmp) t
 
+[%%template:
+[@@@mode.default p = (nonportable, portable)]
+
 val quickcheck_generator
-  :  ('key, 'cmp) Comparator.Module.t
+  : 'key 'cmp.
+  ('key, 'cmp) Comparator.Module.t
   -> 'key Quickcheck.Generator.t
   -> ('key, 'cmp) t Quickcheck.Generator.t
 
@@ -562,8 +567,8 @@ val quickcheck_observer
   -> ('key, 'cmp) t Quickcheck.Observer.t
 
 val quickcheck_shrinker
-  :  'key Quickcheck.Shrinker.t
-  -> ('key, 'cmp) t Quickcheck.Shrinker.t
+  : 'key 'cmp.
+  'key Quickcheck.Shrinker.t -> ('key, 'cmp) t Quickcheck.Shrinker.t]
 
 (** {2 Polymorphic sets}
 

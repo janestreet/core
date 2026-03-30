@@ -31,6 +31,8 @@ module Binable_exn = struct
     module V1 = struct
       module T = struct
         type t = exn Modes.Stable.Global.V1.t [@@deriving sexp_of, stable_witness]
+
+        let sexp_of_t__stack t = t |> Modes.Global.unwrap |> sexp_of_exn
       end
 
       include T
@@ -97,7 +99,9 @@ module Extend (Info : Base.Info.S) = struct
           (* [sexp_of_t] as defined here is unstable; this is OK because there is no
              [t_of_sexp]. [sexp_of_t] is only used to produce a sexp that is never
              deserialized as a [Source_code_position]. *)
-          let sexp_of_t = Source_code_position.sexp_of_t
+          let%template[@alloc a = (heap, stack)] sexp_of_t =
+            (Source_code_position.sexp_of_t [@alloc a])
+          ;;
         end
       end
 
@@ -112,7 +116,7 @@ module Extend (Info : Base.Info.S) = struct
           | Tag_arg of string * Sexp.t * t
           | Of_list of int option * t list
           | With_backtrace of t * string (* backtrace *)
-        [@@deriving bin_io ~localize, sexp_of, stable_witness]
+        [@@deriving bin_io ~localize, sexp_of ~stackify, stable_witness]
       end
     end
 
@@ -130,7 +134,12 @@ module Extend (Info : Base.Info.S) = struct
       module T = struct
         type t = Info.t
         [@@deriving
-          sexp, sexp_grammar, compare ~localize, equal ~localize, globalize, hash]
+          sexp ~stackify
+          , sexp_grammar
+          , compare ~localize
+          , equal ~localize
+          , globalize
+          , hash]
 
         let t_of_sexp = Info.t_of_sexp
       end
@@ -358,7 +367,7 @@ module Extend (Info : Base.Info.S) = struct
               end)
 
         include%template Diffable.Atomic.Make [@modality portable] (struct
-            type nonrec t = t [@@deriving sexp, bin_io, equal]
+            type nonrec t = t [@@deriving sexp, bin_io, equal ~localize]
           end)
       end
     end

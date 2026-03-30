@@ -44,7 +44,7 @@ module Stable = struct
       , compare ~localize
       , equal ~localize
       , hash
-      , sexp
+      , sexp ~stackify
       , sexp_grammar
       , stable_witness]
   end

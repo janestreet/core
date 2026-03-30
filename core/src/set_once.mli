@@ -8,14 +8,17 @@
 open! Import
 
 [%%template:
-type 'a t
-[@@deriving compare ~localize, equal ~localize, sexp_of] [@@kind k = base_non_value]
+type 'a t [@@deriving compare ~localize, equal ~localize, sexp_of] [@@kind k = base]
 
-type 'a t [@@deriving compare ~localize, equal ~localize, quickcheck, sexp_of]
+(*_ Non-value [t]s don't support quickcheck *)
+[%%rederive: type nonrec 'a t = 'a t [@@deriving quickcheck]]
+
+(*_ Unmangled [t] is shadowed below, so define [t] with explicit mangling. *)
+type 'a t := 'a t [@@kind.explicit value]
 
 [@@@kind k = base]
 
-type 'a t := ('a t[@kind k])
+type 'a t := ('a t[@kind.explicit k])
 
 [@@@kind.default k]
 

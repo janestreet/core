@@ -151,6 +151,7 @@ module type Span = sig
     [@@immediate64]
 
     include Immediate_option.S_int63_zero_alloc with type value := value and type t := t
+    include Or_nullable.S_with_zero_alloc with type value := value with type t := t
 
     include%template Identifiable.S [@mode local] [@modality portable] with type t := t
 
@@ -161,7 +162,12 @@ module type Span = sig
       module V1 : sig
         type nonrec t = t
         [@@deriving
-          bin_io ~localize, compare ~localize, equal ~localize, globalize, typerep]
+          bin_io ~localize
+          , compare ~localize
+          , equal ~localize
+          , globalize
+          , typerep
+          , sexp_of ~stackify]
 
         include%template
           Stable_int63able.With_stable_witness.S [@mode local] with type t := t
@@ -172,7 +178,12 @@ module type Span = sig
       module V2 : sig
         type nonrec t = t
         [@@deriving
-          bin_io ~localize, compare ~localize, equal ~localize, globalize, typerep]
+          bin_io ~localize
+          , compare ~localize
+          , equal ~localize
+          , globalize
+          , typerep
+          , sexp_of ~stackify]
 
         include%template
           Stable_int63able.With_stable_witness.S [@mode local] with type t := t
@@ -207,6 +218,7 @@ module type Span = sig
         , equal ~localize
         , globalize
         , hash
+        , sexp ~stackify
         , sexp_grammar
         , typerep]
 
@@ -292,6 +304,7 @@ module type Ofday = sig
         , equal ~localize
         , globalize
         , hash
+        , sexp_of ~stackify
         , sexp_grammar]
 
       include%template
@@ -334,8 +347,8 @@ module type Time_ns = sig
   type t = private Int63.t
   [@@deriving
     bin_io ~localize
-    , compare ~localize
-    , equal ~localize
+    , compare ~localize ~zero_alloc
+    , equal ~localize ~zero_alloc
     , globalize
     , hash
     , sexp ~stackify
@@ -368,7 +381,8 @@ module type Time_ns = sig
     val of_ofday_float_round_nearest_microsecond : Time_float.Ofday.t -> t [@@zero_alloc]
 
     module Zoned : sig
-      (** Sexps look like "(12:01 nyc)"
+      (** [t_of_sexp] accepts short forms like "(12:01 nyc)". [sexp_of_t] produces the
+          full ofday and zone name, e.g., "(12:01:00.000000000 America/New_York)".
 
           Two [t]'s may or may not correspond to the same times depending on which date
           they're evaluated. *)
@@ -378,7 +392,8 @@ module type Time_ns = sig
 
       include Pretty_printer.S with type t := t
 
-      (** Strings look like "12:01 nyc" *)
+      (** [of_string] accepts short forms like "12:01 nyc". [to_string] produces the full
+          ofday and zone name, e.g., "12:01:00.000000000 America/New_York". *)
       include Stringable.S with type t := t
 
       val arg_type : t Command.Arg_type.t
@@ -411,10 +426,12 @@ module type Time_ns = sig
       type value := t
 
       type t
-      [@@deriving bin_io ~localize, compare ~localize, equal ~localize, globalize]
+      [@@deriving
+        bin_io ~localize, compare ~localize, equal ~localize, globalize, sexp_of ~stackify]
       [@@immediate64]
 
       include Immediate_option.S_int63_zero_alloc with type value := value and type t := t
+      include Or_nullable.S_with_zero_alloc with type value := value with type t := t
 
       include%template Identifiable.S [@mode local] [@modality portable] with type t := t
 
@@ -424,7 +441,12 @@ module type Time_ns = sig
       module Stable : sig
         module V1 : sig
           type nonrec t = t
-          [@@deriving bin_io ~localize, compare ~localize, equal ~localize, globalize]
+          [@@deriving
+            bin_io ~localize
+            , compare ~localize
+            , equal ~localize
+            , globalize
+            , sexp_of ~stackify]
 
           include%template Stable_int63able_with_witness [@mode local] with type t := t
 
@@ -449,7 +471,12 @@ module type Time_ns = sig
   module Alternate_sexp : sig
     type nonrec t = t
     [@@deriving
-      bin_io ~localize, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , hash
+      , sexp ~stackify
+      , sexp_grammar]
 
     include%template Comparable.S [@mode local] with type t := t
 
@@ -466,7 +493,9 @@ module type Time_ns = sig
       bin_io ~localize, compare ~localize, equal ~localize, globalize, sexp_of ~stackify]
 
     include Immediate_option.S_int63_zero_alloc with type value := value with type t := t
+    include Or_nullable.S_with_zero_alloc with type value := value with type t := t
 
+    val%template to_option : t -> value option [@@alloc a @ m = stack_local]
     include%template Identifiable.S [@mode local] [@modality portable] with type t := t
 
     include Quickcheck.S with type t := t
@@ -476,7 +505,12 @@ module type Time_ns = sig
       module V1 : sig
         type nonrec t = t
         [@@deriving
-          bin_io ~localize, compare ~localize, equal ~localize, globalize, typerep]
+          bin_io ~localize
+          , compare ~localize
+          , equal ~localize
+          , globalize
+          , typerep
+          , sexp_of ~stackify]
 
         include%template Stable_int63able_with_witness [@mode local] with type t := t
 
@@ -819,7 +853,12 @@ module type Time_ns = sig
     module Option : sig
       module V1 : sig
         type t = Option.t
-        [@@deriving bin_io ~localize, compare ~localize, equal ~localize, globalize]
+        [@@deriving
+          bin_io ~localize
+          , compare ~localize
+          , equal ~localize
+          , globalize
+          , sexp_of ~stackify]
 
         include%template Stable_int63able_with_witness [@mode local] with type t := t
 
@@ -900,6 +939,7 @@ module type Time_ns = sig
           , equal ~localize
           , globalize
           , hash
+          , sexp_of ~stackify
           , sexp_grammar]
 
         type nonrec comparator_witness = Span.comparator_witness
@@ -931,7 +971,12 @@ module type Time_ns = sig
 
         module V2 : sig
           type t = Span.Option.t
-          [@@deriving bin_io ~localize, compare ~localize, equal ~localize, globalize]
+          [@@deriving
+            bin_io ~localize
+            , compare ~localize
+            , equal ~localize
+            , globalize
+            , sexp_of ~stackify]
 
           include%template Stable_int63able_with_witness [@mode local] with type t := t
 
@@ -949,6 +994,7 @@ module type Time_ns = sig
           , equal ~localize
           , globalize
           , hash
+          , sexp_of ~stackify
           , sexp_grammar]
 
         include%template

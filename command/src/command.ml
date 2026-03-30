@@ -592,14 +592,14 @@ module Flag = struct
       { name; doc; aliases }
     ;;
 
-    let create flags =
+    let%template create flags =
       match
         Map.of_alist (module String) (List.map flags ~f:(fun flag -> flag.name, flag))
       with
       | `Duplicate_key flag -> failwithf "multiple flags named %s" flag ()
       | `Ok map ->
         List.concat_map flags ~f:(fun flag -> flag.name :: flag.aliases)
-        |> List.find_a_dup ~compare:[%compare: string]
+        |> List.find_a_dup ~compare:([%compare: string] [@mode local])
         |> Option.iter ~f:(fun x -> failwithf "multiple flags or aliases named %s" x ());
         map
     ;;
@@ -1380,7 +1380,7 @@ let lookup_expand_with_equivalence_classes =
   Shape.Private.lookup_expand_with_equivalence_classes
 ;;
 
-let lookup_expand_with_aliases map prefix key_type =
+let%template lookup_expand_with_aliases map prefix key_type =
   let alist =
     List.concat_map (Map.data map) ~f:(fun flag ->
       let { Flag.Internal.name
@@ -1403,7 +1403,7 @@ let lookup_expand_with_aliases map prefix key_type =
   | None ->
     let name { Flag.Internal.name; _ } = name in
     lookup_expand_with_equivalence_classes
-      (fun a b -> String.( = ) (name a) (name b))
+      (fun a b -> (String.equal [@mode local]) (name a) (name b) [@nontail])
       alist
       prefix
       key_type

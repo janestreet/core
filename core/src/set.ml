@@ -7,29 +7,36 @@ let to_comparator = Comparator.of_module
 let of_comparator = Comparator.to_module
 
 module For_quickcheck = struct
+  [%%template
+  [@@@mode.default p = (portable, nonportable)]
+
   let quickcheck_generator ~comparator elt_gen =
-    Base_quickcheck.Generator.set_t_m (of_comparator comparator) elt_gen
+    (Base_quickcheck.Generator.set_t_m [@mode p]) (of_comparator comparator) elt_gen
   ;;
+
+  let quickcheck_observer elt_obs = (Base_quickcheck.Observer.set_t [@mode p]) elt_obs
+  let quickcheck_shrinker elt_shr = (Base_quickcheck.Shrinker.set_t [@mode p]) elt_shr]
 
   let gen_tree ~comparator elt_gen =
     Base_quickcheck.Generator.set_tree_using_comparator ~comparator elt_gen
   ;;
 
-  let quickcheck_observer elt_obs = Base_quickcheck.Observer.set_t elt_obs
   let obs_tree elt_obs = Base_quickcheck.Observer.set_tree elt_obs
-  let quickcheck_shrinker elt_shr = Base_quickcheck.Shrinker.set_t elt_shr
 
   let shr_tree ~comparator elt_shr =
     Base_quickcheck.Shrinker.set_tree_using_comparator ~comparator elt_shr
   ;;
 end
 
+[%%template
+[@@@mode.default p = (portable, nonportable)]
+
 let quickcheck_generator m elt_gen =
-  For_quickcheck.quickcheck_generator ~comparator:(to_comparator m) elt_gen
+  (For_quickcheck.quickcheck_generator [@mode p]) ~comparator:(to_comparator m) elt_gen
 ;;
 
-let quickcheck_observer = For_quickcheck.quickcheck_observer
-let quickcheck_shrinker = For_quickcheck.quickcheck_shrinker
+let quickcheck_observer = (For_quickcheck.quickcheck_observer [@mode p])
+let quickcheck_shrinker = (For_quickcheck.quickcheck_shrinker [@mode p])]
 
 module Tree = struct
   include Tree
@@ -77,7 +84,7 @@ struct
   let sexp_of_t = Set.Using_comparator.sexp_of_t
 end :
 sig
-  type ('a, 'b) t = ('a, 'b) Set.t [@@deriving sexp_of]
+  type ('a, 'b) t = ('a, 'b) Set.t [@@sexp.phantom: 'b] [@@deriving sexp_of]
 
   include
     Set.Creators_and_accessors_and_transformers_generic
@@ -256,7 +263,7 @@ struct
   [@@mode m = (local, global)]
   ;;
 
-  let sexp_of_t t = Tree.sexp_of_t Elt.sexp_of_t [%sexp_of: _] t
+  let sexp_of_t t = Tree.sexp_of_t Elt.sexp_of_t t
 end
 
 module%template.portable Provide_of_sexp_tree (X : sig
@@ -319,7 +326,7 @@ module Poly = struct
   [@@mode m = (global, local)]
   ;;
 
-  let sexp_of_t sexp_of_k t = sexp_of_t sexp_of_k [%sexp_of: _] t
+  let sexp_of_t sexp_of_k t = sexp_of_t sexp_of_k t
 
   let t_sexp_grammar elt_grammar =
     Sexplib.Sexp_grammar.coerce (List.t_sexp_grammar elt_grammar)
@@ -352,7 +359,7 @@ module Poly = struct
 
     type 'elt t = ('elt, Comparator.Poly.comparator_witness) tree
 
-    let sexp_of_t sexp_of_elt t = Tree.sexp_of_t sexp_of_elt [%sexp_of: _] t
+    let sexp_of_t sexp_of_elt t = Tree.sexp_of_t sexp_of_elt t
 
     let t_of_sexp elt_of_sexp sexp =
       Tree.t_of_sexp_direct elt_of_sexp sexp ~comparator:Comparator.Poly.comparator
@@ -428,7 +435,7 @@ struct
   [@@mode m = (local, global)]
   ;;
 
-  let sexp_of_t t = sexp_of_t Elt.sexp_of_t [%sexp_of: _] t
+  let sexp_of_t t = sexp_of_t Elt.sexp_of_t t
 
   module Diff = struct
     type derived_on = t
@@ -598,26 +605,29 @@ module For_deriving = struct
     val quickcheck_shrinker : t Quickcheck.Shrinker.t
   end
 
+  [%%template
+  [@@@mode.default p = (portable, nonportable)]
+
   let quickcheck_generator_m__t
     (type t cmp)
     (module Elt : Quickcheck_generator_m with type t = t and type comparator_witness = cmp)
     =
-    quickcheck_generator (module Elt) Elt.quickcheck_generator
+    (quickcheck_generator [@mode p]) (module Elt) Elt.quickcheck_generator
   ;;
 
   let quickcheck_observer_m__t
     (type t cmp)
     (module Elt : Quickcheck_observer_m with type t = t and type comparator_witness = cmp)
     =
-    quickcheck_observer Elt.quickcheck_observer
+    (quickcheck_observer [@mode p]) Elt.quickcheck_observer
   ;;
 
   let quickcheck_shrinker_m__t
     (type t cmp)
     (module Elt : Quickcheck_shrinker_m with type t = t and type comparator_witness = cmp)
     =
-    quickcheck_shrinker Elt.quickcheck_shrinker
-  ;;
+    (quickcheck_shrinker [@mode p]) Elt.quickcheck_shrinker
+  ;;]
 
   module type For_deriving = Set.For_deriving
 

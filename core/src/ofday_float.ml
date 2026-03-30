@@ -167,6 +167,8 @@ module Stable = struct
     ;;
 
     let to_parts t = Span.to_parts (T.to_span_since_start_of_day t)
+    let maybe_globalize t = t
+    let maybe_globalize__stack t = T.globalize t
 
     [%%template
     [@@@alloc.default a @ m = (stack_local, heap_global)]
@@ -177,6 +179,7 @@ module Stable = struct
        let ( mod ) = Int63.rem in
        let i = Int63.to_int_exn in
        assert (if drop_ms then drop_us else true);
+       let t = (maybe_globalize [@alloc a]) t in
        let float_sec = Span.to_sec (T.to_span_since_start_of_day t) in
        let us = Float.int63_round_nearest_exn (float_sec *. 1e6) in
        let ms, us = us / !1000, us mod !1000 |> i in
@@ -255,7 +258,13 @@ module Stable = struct
 
     include T
 
-    let to_string t = to_string_gen ~drop_ms:false ~drop_us:false ~trim:false t
+    let%template[@alloc a @ m = (heap_global, stack_local)] to_string t =
+      (to_string_gen [@alloc a])
+        ~drop_ms:false
+        ~drop_us:false
+        ~trim:false
+        t [@exclave_if_stack a]
+    ;;
 
     include%template Pretty_printer.Register [@modality portable] (struct
         type nonrec t = t

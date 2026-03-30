@@ -18,9 +18,11 @@ module%template.portable
 end
 
 module%template.portable
-  [@modality p] Make_plain_and_derive_hash_fold_t
-    (T : Hashtbl.Key_plain) : S_plain with type t := T.t =
-Make_plain [@modality p] (struct
+  [@modality p] Make_plain_and_derive_hash_fold_t (T : sig
+    type t
+
+    include Hashtbl.Key_plain with type t := t
+  end) : S_plain with type t := T.t = Make_plain [@modality p] (struct
     include T
 
     let hash_fold_t state t = hash_fold_int state (hash t)

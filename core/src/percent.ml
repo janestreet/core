@@ -278,7 +278,7 @@ module Stable = struct
           else shift_decimal_point s ~by:4 ^ "bp")
       ;;
 
-      let to_string x = to_string' float_to_string x
+      let%template[@alloc a = (heap, stack)] to_string x = to_string' float_to_string x
 
       let really_of_string str float_of_string =
         match String.chop_suffix str ~suffix:"x" with
@@ -332,10 +332,11 @@ module Stable = struct
     let t_sexp_grammar = Sexplib.Sexp_grammar.coerce String.t_sexp_grammar
 
     include%template (
-      Sexpable.Stable.Of_stringable.V1 [@modality portable]
+      Sexpable.Stable.Of_stringable.V1 [@modality portable] [@alloc stack]
         (Stringable) :
         sig
           include Sexpable.S with type t := t
+          include Sexplib0.Sexpable.Sexp_of [@alloc stack] with type t := t
         end)
 
     include%template (
@@ -363,14 +364,16 @@ module Stable = struct
       end)
 
     module Always_percentage = struct
-      type nonrec t = t [@@deriving sexp, bin_io ~localize]
+      type nonrec t = t [@@deriving of_sexp, bin_io ~localize]
 
       let to_string x =
         let s = Stringable.float_to_string x in
         shift_decimal_point s ~by:2 ^ "%"
       ;;
 
-      let sexp_of_t t = Sexp.Atom (to_string t)
+      let%template[@alloc a = (heap, stack)] sexp_of_t t =
+        Sexp.Atom (to_string t) [@exclave_if_stack a]
+      ;;
     end
   end
 
@@ -450,7 +453,7 @@ module Stable = struct
         | Compact_E of int
         | Hex of int
         | Hex_E of int
-      [@@deriving sexp_of]
+      [@@deriving sexp_of ~stackify]
 
       let exponent ~precision = Exponent precision
       let exponent_E ~precision = Exponent_E precision
@@ -530,16 +533,10 @@ module Stable = struct
     let t_sexp_grammar = Sexplib.Sexp_grammar.coerce String.t_sexp_grammar
 
     include%template (
-      Sexpable.Stable.Of_stringable.V1 [@modality portable]
-        (Stringable) :
-        sig
-          include Sexpable.S with type t := t
-        end)
-
-    include%template (
       Sexpable.Stable.Of_stringable.V1 [@modality portable] [@alloc stack]
         (Stringable) :
         sig
+          include Sexpable.S with type t := t
           include Sexplib0.Sexpable.Sexp_of [@alloc stack] with type t := t
         end)
 
@@ -614,7 +611,7 @@ module Stable = struct
       [%%template
       [@@@mode.default m = (local, global)]
 
-      let some = Fn.id
+      let some : _ -> _ = Fn.id
       let unchecked_value : _ -> _ = Fn.id]
 
       let%template to_option t =
@@ -691,7 +688,12 @@ module Stable = struct
 
       include Option_repr
 
-      let sexp_of_t t = to_option t |> Option.sexp_of_t V3.sexp_of_t
+      let%template[@alloc a = (heap, stack)] sexp_of_t t =
+        ((to_option [@alloc a]) t
+         |> (Option.sexp_of_t [@alloc a]) (V3.sexp_of_t [@alloc a]))
+        [@exclave_if_stack a]
+      ;;
+
       let t_of_sexp sexp = (Option.t_of_sexp V3.t_of_sexp) sexp |> of_option
       let t_sexp_grammar = Sexplib.Sexp_grammar.coerce [%sexp_grammar: V3.t Option.t]
     end
@@ -709,7 +711,12 @@ module Stable = struct
 
       include Option_repr
 
-      let sexp_of_t t = to_option t |> Option.sexp_of_t V2.sexp_of_t
+      let%template[@alloc a = (heap, stack)] sexp_of_t t =
+        ((to_option [@alloc a]) t
+         |> (Option.sexp_of_t [@alloc a]) (V2.sexp_of_t [@alloc a]))
+        [@exclave_if_stack a]
+      ;;
+
       let t_of_sexp sexp = (Option.t_of_sexp V2.t_of_sexp) sexp |> of_option
       let t_sexp_grammar = Sexplib.Sexp_grammar.coerce [%sexp_grammar: V2.t Option.t]
     end
@@ -729,8 +736,27 @@ end
 include Stable.V1.Bin_shape_same_as_float
 
 module Option = struct
+  type value = t
+
   module Stable = Stable.Option
   include Stable.V1.Bin_shape_same_as_float
+
+  include%template
+    Immediate_option.Provide_or_null_conversions_zero_alloc
+      [@mode local]
+      [@modality portable]
+      (struct
+      type nonrec t = t
+      type nonrec value = value
+
+      let none = none
+      let is_none t = is_none t
+
+      [@@@mode m = (global, local)]
+
+      let[@mode m] some v = (some [@mode m]) v [@exclave_if_local m]
+      let[@mode m] unchecked_value t = (unchecked_value [@mode m]) t [@exclave_if_local m]
+    end)
 
   include%template
     Quickcheckable.Of_quickcheckable [@mode portable]
@@ -845,8 +871,11 @@ module Always_percentage = struct
   type nonrec t = t
 
   let format x format = Format.format_float format (x *. 100.) ^ "%"
-  let to_string x = sprintf "%.6G%%" (x * 100.)
-  let sexp_of_t t = Sexp.Atom (to_string t)
+  let to_string x = sprintf "%.6G%%" (Float.globalize (x * 100.))
+
+  let%template[@alloc a = (heap, stack)] sexp_of_t t =
+    Sexp.Atom (to_string t) [@exclave_if_stack a]
+  ;;
 end
 
 let to_string_round_trippable = Stable.V3.to_string
@@ -856,7 +885,11 @@ module Almost_round_trippable = struct
 
   let to_string x = Stable.V3.Stringable.(to_string' (format_float "%.14G") x)
   let of_string x = Stable.V3.Stringable.of_string x
-  let sexp_of_t t = Sexp.Atom (to_string t)
+
+  let%template[@alloc a = (heap, stack)] sexp_of_t t =
+    Sexp.Atom (to_string t) [@exclave_if_stack a]
+  ;;
+
   let t_of_sexp = Stable.V3.t_of_sexp
 
   module Always_percentage = struct
@@ -868,6 +901,8 @@ module Almost_round_trippable = struct
       shift_decimal_point s ~by:2 ^ "%"
     ;;
 
-    let sexp_of_t t = Sexp.Atom (to_string t)
+    let%template[@alloc a = (heap, stack)] sexp_of_t t =
+      Sexp.Atom (to_string t) [@exclave_if_stack a]
+    ;;
   end
 end

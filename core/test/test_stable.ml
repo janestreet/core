@@ -1,3 +1,9 @@
+module _ = struct
+  open! Core.Core_stable
+
+  type t = { x : int or_null } [@@deriving sexp]
+end
+
 open! Core
 open! Expect_test_helpers_core
 

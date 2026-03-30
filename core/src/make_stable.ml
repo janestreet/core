@@ -12,7 +12,7 @@ module%template Of_stable_format = struct
          type t [@@deriving (bin_io [@mode m]), sexp]
        end)
       (M : sig
-         type t [@@deriving compare [@mode m]]
+         type t [@@deriving compare [@mode.explicit m]]
 
          val to_stable_format : t -> Stable_format.t [@@mode m = (m, global)]
          val of_stable_format : Stable_format.t -> t
@@ -46,7 +46,7 @@ module%template Of_stable_format = struct
          type t [@@deriving (bin_io [@mode m]), sexp]
        end)
       (M : sig
-         type t [@@deriving compare [@mode m]]
+         type t [@@deriving compare [@mode.explicit m]]
 
          val to_stable_format : t -> Stable_format.t [@@mode m = (m, global)]
          val of_stable_format : Stable_format.t -> t
@@ -81,7 +81,7 @@ module%template Of_stable_format1 = struct
          type 'a t [@@deriving (bin_io [@mode m]), sexp]
        end)
       (M : sig
-         type 'a t [@@deriving compare [@mode m]]
+         type 'a t [@@deriving compare [@mode.explicit m]]
 
          val map : 'a t -> f:('a -> 'b) -> 'b t
          val to_stable_format : 'a t -> 'a Stable_format.t [@@mode m = (m, global)]
@@ -111,7 +111,7 @@ module%template Of_stable_format1 = struct
          type 'a t [@@deriving (bin_io [@mode m]), sexp]
        end)
       (M : sig
-         type 'a t [@@deriving compare [@mode m]]
+         type 'a t [@@deriving compare [@mode.explicit m]]
 
          val map : 'a t -> f:('a -> 'b) -> 'b t
          val to_stable_format : 'a t -> 'a Stable_format.t [@@mode m = (m, global)]
@@ -142,7 +142,7 @@ module%template Of_stable_format2 = struct
          type ('a1, 'a2) t [@@deriving (bin_io [@mode m]), sexp]
        end)
       (M : sig
-         type ('a1, 'a2) t [@@deriving compare [@mode m]]
+         type ('a1, 'a2) t [@@deriving compare [@mode.explicit m]]
 
          val map : ('a1, 'a2) t -> f1:('a1 -> 'b1) -> f2:('a2 -> 'b2) -> ('b1, 'b2) t
 
@@ -175,7 +175,7 @@ module%template Of_stable_format2 = struct
          type ('a1, 'a2) t [@@deriving (bin_io [@mode m]), sexp]
        end)
       (M : sig
-         type ('a1, 'a2) t [@@deriving compare [@mode m]]
+         type ('a1, 'a2) t [@@deriving compare [@mode.explicit m]]
 
          val map : ('a1, 'a2) t -> f1:('a1 -> 'b1) -> f2:('a2 -> 'b2) -> ('b1, 'b2) t
 
@@ -209,7 +209,7 @@ module%template Of_stable_format3 = struct
          type ('a1, 'a2, 'a3) t [@@deriving (bin_io [@mode m]), sexp]
        end)
       (M : sig
-         type ('a1, 'a2, 'a3) t [@@deriving compare [@mode m]]
+         type ('a1, 'a2, 'a3) t [@@deriving compare [@mode.explicit m]]
 
          val map
            :  ('a1, 'a2, 'a3) t
@@ -247,7 +247,7 @@ module%template Of_stable_format3 = struct
          type ('a1, 'a2, 'a3) t [@@deriving (bin_io [@mode m]), sexp]
        end)
       (M : sig
-         type ('a1, 'a2, 'a3) t [@@deriving compare [@mode m]]
+         type ('a1, 'a2, 'a3) t [@@deriving compare [@mode.explicit m]]
 
          val map
            :  ('a1, 'a2, 'a3) t
@@ -287,7 +287,7 @@ module With_stable_witness = struct
            type t [@@deriving (bin_io [@mode m]), sexp, stable_witness]
          end)
         (M : sig
-           type t [@@deriving compare [@mode m]]
+           type t [@@deriving compare [@mode.explicit m]]
 
            val to_stable_format : t -> Stable_format.t [@@mode m = (m, global)]
            val of_stable_format : Stable_format.t -> t
@@ -308,7 +308,7 @@ module With_stable_witness = struct
            type t [@@deriving (bin_io [@mode m]), sexp, stable_witness]
          end)
         (M : sig
-           type t [@@deriving compare [@mode m]]
+           type t [@@deriving compare [@mode.explicit m]]
 
            val to_stable_format : t -> Stable_format.t [@@mode m = (m, global)]
            val of_stable_format : Stable_format.t -> t
@@ -334,7 +334,7 @@ module With_stable_witness = struct
            type 'a t [@@deriving (bin_io [@mode m]), sexp, stable_witness]
          end)
         (M : sig
-           type 'a t [@@deriving compare [@mode m]]
+           type 'a t [@@deriving compare [@mode.explicit m]]
 
            val map : 'a t -> f:('a -> 'b) -> 'b t
            val to_stable_format : 'a t -> 'a Stable_format.t [@@mode m = (m, global)]
@@ -359,7 +359,7 @@ module With_stable_witness = struct
            type 'a t [@@deriving (bin_io [@mode m]), sexp, stable_witness]
          end)
         (M : sig
-           type 'a t [@@deriving compare [@mode m]]
+           type 'a t [@@deriving compare [@mode.explicit m]]
 
            val map : 'a t -> f:('a -> 'b) -> 'b t
            val to_stable_format : 'a t -> 'a Stable_format.t [@@mode m = (m, global)]
@@ -389,7 +389,7 @@ module With_stable_witness = struct
            type ('a1, 'a2) t [@@deriving (bin_io [@mode m]), sexp, stable_witness]
          end)
         (M : sig
-           type ('a1, 'a2) t [@@deriving compare [@mode m]]
+           type ('a1, 'a2) t [@@deriving compare [@mode.explicit m]]
 
            val map : ('a1, 'a2) t -> f1:('a1 -> 'b1) -> f2:('a2 -> 'b2) -> ('b1, 'b2) t
 
@@ -417,7 +417,7 @@ module With_stable_witness = struct
            type ('a1, 'a2) t [@@deriving (bin_io [@mode m]), sexp, stable_witness]
          end)
         (M : sig
-           type ('a1, 'a2) t [@@deriving compare [@mode m]]
+           type ('a1, 'a2) t [@@deriving compare [@mode.explicit m]]
 
            val map : ('a1, 'a2) t -> f1:('a1 -> 'b1) -> f2:('a2 -> 'b2) -> ('b1, 'b2) t
 
@@ -450,7 +450,7 @@ module With_stable_witness = struct
            type ('a1, 'a2, 'a3) t [@@deriving (bin_io [@mode m]), sexp, stable_witness]
          end)
         (M : sig
-           type ('a1, 'a2, 'a3) t [@@deriving compare [@mode m]]
+           type ('a1, 'a2, 'a3) t [@@deriving compare [@mode.explicit m]]
 
            val map
              :  ('a1, 'a2, 'a3) t
@@ -484,7 +484,7 @@ module With_stable_witness = struct
            type ('a1, 'a2, 'a3) t [@@deriving (bin_io [@mode m]), sexp, stable_witness]
          end)
         (M : sig
-           type ('a1, 'a2, 'a3) t [@@deriving compare [@mode m]]
+           type ('a1, 'a2, 'a3) t [@@deriving compare [@mode.explicit m]]
 
            val map
              :  ('a1, 'a2, 'a3) t

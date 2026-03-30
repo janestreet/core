@@ -7,7 +7,7 @@ module Binable = Binable0
 [@@@modality.default p = (portable, nonportable)]
 
 module Make_plain (T : sig
-    type t [@@deriving (compare [@mode m]), hash, sexp_of]
+    type t [@@deriving (compare [@mode.explicit m]), hash, sexp_of]
 
     include Stringable.S with type t := t
 
@@ -21,7 +21,7 @@ struct
 end
 
 module Make (T : sig
-    type t [@@deriving (bin_io [@mode m]), (compare [@mode m]), hash, sexp]
+    type t [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), hash, sexp]
 
     include Stringable.S with type t := t
 
@@ -35,7 +35,9 @@ struct
 end
 
 module Make_with_sexp_grammar (T : sig
-    type t [@@deriving (bin_io [@mode m]), (compare [@mode m]), hash, sexp, sexp_grammar]
+    type t
+    [@@deriving
+      (bin_io [@mode m]), (compare [@mode.explicit m]), hash, sexp, sexp_grammar]
 
     include Stringable.S with type t := t
 
@@ -47,7 +49,7 @@ struct
 end
 
 module Make_and_derive_hash_fold_t (T : sig
-    type t [@@deriving (bin_io [@mode m]), (compare [@mode m]), sexp]
+    type t [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), sexp]
 
     include Stringable.S with type t := t
 
@@ -61,7 +63,7 @@ Make [@mode m] [@modality p] (struct
   end)
 
 module Make_using_comparator (T : sig
-    type t [@@deriving (bin_io [@mode m]), (compare [@mode m]), hash, sexp]
+    type t [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), hash, sexp]
 
     include Comparator.S [@modality p] with type t := t
     include Stringable.S with type t := t
@@ -76,7 +78,7 @@ struct
 end
 
 module Make_plain_using_comparator (T : sig
-    type t [@@deriving (compare [@mode m]), hash, sexp_of]
+    type t [@@deriving (compare [@mode.explicit m]), hash, sexp_of]
 
     include Comparator.S [@modality p] with type t := t
     include Stringable.S with type t := t
@@ -91,7 +93,7 @@ struct
 end
 
 module Make_using_comparator_and_derive_hash_fold_t (T : sig
-    type t [@@deriving (bin_io [@mode m]), (compare [@mode m]), sexp]
+    type t [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), sexp]
 
     include Comparator.S [@modality p] with type t := t
     include Stringable.S with type t := t

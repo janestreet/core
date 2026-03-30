@@ -51,9 +51,7 @@ end
 module Stable = struct
   module V1 = struct
     module T = struct
-      type t = Base.Int63.t
-      [@@deriving
-        compare ~localize, equal ~localize, globalize, hash, sexp ~stackify, sexp_grammar]
+      type t = Base.Int63.t [@@deriving globalize, hash, sexp ~stackify, sexp_grammar]
 
       include Bin
 
@@ -65,6 +63,10 @@ module Stable = struct
             with type t := t
             with type comparator_witness = Base.Int63.comparator_witness
         end)
+
+      [%%rederive
+        type t = Base.Int63.t
+        [@@deriving compare ~localize ~zero_alloc, equal ~localize ~zero_alloc]]
 
       (* This serialization is stable, since it either delegates to [int] or [Int63_emul]. *)
       let stable_witness : t Stable_witness.t = Stable_witness.assert_stable

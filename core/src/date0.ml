@@ -585,6 +585,20 @@ let rec diff_weekend_days t1 t2 =
 
 let diff_weekdays t1 t2 = diff t1 t2 - diff_weekend_days t1 t2
 
+let rec diff_business_days ?(is_weekday = Day_of_week.is_weekday) t1 t2 ~is_holiday =
+  if t1 < t2
+  then -diff_business_days ~is_weekday t2 t1 ~is_holiday
+  else (
+    let rec count acc date =
+      if date >= t1
+      then acc
+      else (
+        let acc = if is_business_day ~is_weekday ~is_holiday date then acc + 1 else acc in
+        count acc (add_days date 1))
+    in
+    count 0 t2)
+;;
+
 let add_days_skipping t ~skip n =
   let step = if Int.( >= ) n 0 then 1 else -1 in
   let rec loop t k =
@@ -752,8 +766,21 @@ module Private = struct
 end
 
 module Option = struct
+  type value = t
+
   module Stable = Stable.Option
   include Stable.V1
+
+  include%template
+    Immediate_option.Provide_or_null_conversions_zero_alloc [@modality portable] (struct
+      type nonrec t = t
+      type nonrec value = value
+
+      let none = none
+      let some v = some v
+      let is_none t = is_none t
+      let unchecked_value t = unchecked_value t
+    end)
 
   module Optional_syntax = struct
     module Optional_syntax = struct

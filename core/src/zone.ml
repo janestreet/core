@@ -97,17 +97,104 @@ module Stable = struct
         [@@deriving bin_io ~localize, sexp, stable_witness]
       end
 
+      module Index_cache : sig
+        type t
+
+        val create : unit -> t
+        val get : t -> Index.t
+        val set : t -> Index.t -> unit
+        val reset : t -> unit
+      end = struct
+        type t = Index.t Atomic.t
+
+        let create () = Atomic.make Index.before_first_transition
+        let get = Atomic.get
+        let set = Atomic.set
+        let reset t = Atomic.set t Index.before_first_transition
+      end
+
       type t =
         { name : string
         ; original_filename : string option
-        ; digest : Md5.As_binary_string.Stable.V1.t option
+        ; digest : Md5.t option
         ; transitions : Transition.t iarray
-        ; (* caches the index of the last transition we used to make lookups faster *)
-          last_regime_index : Index.t Atomic.t
+        ; last_regime_index : Index_cache.t
         ; default_local_time_type : Regime.t
         ; leap_seconds : Leap_second.t list
         }
-      [@@deriving bin_io ~localize, sexp, stable_witness]
+
+      let index_cache_get t = Index_cache.get t.last_regime_index [@@inline]
+      let index_cache_set t index = Index_cache.set t.last_regime_index index [@@inline]
+      let index_cache_reset t = Index_cache.reset t.last_regime_index [@@inline]
+
+      include%template struct
+        open struct
+          module Without_cache = struct
+            type t =
+              { name : string
+              ; original_filename : string option
+              ; digest : Md5.As_binary_string.Stable.V1.t option
+              ; transitions : Transition.t iarray
+              ; last_regime_index : Index.t
+              ; default_local_time_type : Regime.t
+              ; leap_seconds : Leap_second.t list
+              }
+            [@@deriving bin_io ~localize, sexp, stable_witness]
+          end
+
+          module T = struct
+            type nonrec t = t
+
+            let to_without_cache t : Without_cache.t =
+              { name = t.name
+              ; original_filename = t.original_filename
+              ; digest = t.digest
+              ; transitions = t.transitions
+              ; last_regime_index = Index.before_first_transition
+              ; default_local_time_type = t.default_local_time_type
+              ; leap_seconds = t.leap_seconds
+              }
+              [@exclave_if_local m]
+            [@@mode m = (global, local)]
+            ;;
+
+            let of_without_cache (t : Without_cache.t) =
+              { name = t.name
+              ; original_filename = t.original_filename
+              ; digest = t.digest
+              ; transitions = t.transitions
+              ; last_regime_index = Index_cache.create ()
+              ; default_local_time_type = t.default_local_time_type
+              ; leap_seconds = t.leap_seconds
+              }
+            ;;
+
+            let to_binable = (to_without_cache [@mode m]) [@@mode m = (global, local)]
+            let of_binable = of_without_cache
+            let to_sexpable = to_without_cache
+            let of_sexpable = of_without_cache
+
+            let stable_witness =
+              Stable_witness.of_serializable
+                Without_cache.stable_witness
+                of_without_cache
+                to_without_cache
+            ;;
+          end
+        end
+
+        let stable_witness = T.stable_witness
+
+        include Sexpable.Of_sexpable [@modality portable] (Without_cache) (T)
+
+        include
+          Binable.Of_binable_without_uuid
+            [@modality portable]
+            [@mode local]
+            [@alert "-legacy"]
+            (Without_cache)
+            (T)
+      end
 
       (* this relies on zones with the same name having the same transitions *)
       let%template compare t1 t2 = (String.compare [@mode m]) t1.name t2.name
@@ -278,7 +365,7 @@ module Stable = struct
             ; original_filename = Some original_filename
             ; digest = Some digest
             ; transitions
-            ; last_regime_index = Atomic.make Index.before_first_transition
+            ; last_regime_index = Index_cache.create ()
             ; default_local_time_type
             ; leap_seconds
             }
@@ -346,12 +433,15 @@ module Stable = struct
            As we don't actually do anything with part 3 anyway, we can just read v3 files
            as v2.
         *)
-        let input_tz_file_v2_or_v3 ~version ic =
+        let%template input_tz_file_v2_or_v3 ~version ic =
           let (_ : string -> original_filename:string -> digest:Md5_lib.t -> t) =
             input_tz_file_v1 ic
           in
           (* the header is fully repeated *)
-          assert ([%compare.equal: [ `V1 | `V2 | `V3 ]] (read_header ic) version);
+          assert (
+            ([%compare.equal: [ `V1 | `V2 | `V3 ]] [@mode.explicit local])
+              (read_header ic)
+              version);
           let input_leap_second =
             input_leap_second_gen ~input_leap_second:input_long_long_as_int63
           in
@@ -417,7 +507,7 @@ module Stable = struct
         ; original_filename = None
         ; digest = None
         ; transitions = Iarray.empty
-        ; last_regime_index = Atomic.make Index.before_first_transition
+        ; last_regime_index = Index_cache.create ()
         ; default_local_time_type =
             { Regime.utc_offset_in_seconds; is_dst = false; abbrv = name }
         ; leap_seconds = []
@@ -453,7 +543,7 @@ let finalize_js_loaded ~zonename ~filename ~first_transition ~remaining_transiti
   ; original_filename = Some filename
   ; digest = None
   ; transitions
-  ; last_regime_index = Atomic.make Index.before_first_transition
+  ; last_regime_index = Index_cache.create ()
   ; default_local_time_type = first_transition.Transition.new_regime
   ; leap_seconds = []
   }
@@ -473,10 +563,7 @@ let input_tz_file ~zonename ~filename =
 
 let utc = of_utc_offset ~hours:0
 let%template name zone = zone.name [@exclave_if_local m] [@@mode m = (local, global)]
-
-let reset_transition_cache t =
-  Atomic.set t.last_regime_index Index.before_first_transition
-;;
+let reset_transition_cache t = index_cache_reset t
 
 (* Raises if [index >= Array.length t.transitions] *)
 let get_regime_exn t index =
@@ -550,7 +637,7 @@ let%template binary_search_index_of_seconds_since_epoch t ~mode seconds : Index.
 
 let index_of_seconds_since_epoch t ~mode seconds =
   let index =
-    let index = Atomic.get t.last_regime_index in
+    let index = index_cache_get t in
     if not (index_lower_bound_contains_seconds_since_epoch t index ~mode seconds)
        (* time is before cached index; try previous index *)
     then (
@@ -573,7 +660,7 @@ let index_of_seconds_since_epoch t ~mode seconds =
       else index (* time is within cached index *))
     else index
   in
-  Atomic.set t.last_regime_index index;
+  index_cache_set t index;
   index
 ;;
 
@@ -622,7 +709,7 @@ let add_offset_in_seconds_round_down t ~name ~span =
         t.transitions
         ~f:(fun { start_time_in_seconds_since_epoch; new_regime } : Transition.t ->
           { start_time_in_seconds_since_epoch; new_regime = offset_regime new_regime })
-  ; last_regime_index = Atomic.make Index.before_first_transition
+  ; last_regime_index = Index_cache.create ()
   ; default_local_time_type = offset_regime t.default_local_time_type
   ; leap_seconds = t.leap_seconds
   }

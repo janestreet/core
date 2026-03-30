@@ -5,7 +5,7 @@ open! Import
 [%%template
 [@@@mode.default m = (global, local)]
 
-module type S_without_immediate_plain = sig
+module type S_minimal = sig
   (** The immediate value carried by the immediate option.
 
       Given the presence of {!unchecked_value}, the [value] type should not have
@@ -21,13 +21,40 @@ module type S_without_immediate_plain = sig
       which adds the [[@@immediate]] annotation. *)
   type t
 
-  module Optional_syntax :
-    Optional_syntax.S [@mode m] with type t := t with type value := value
-
   (** Constructors analogous to [None] and [Some]. If [not (some_is_representable x)] then
       [some x] may raise or return [none]. *)
 
   val none : t
+  val is_none : t -> bool
+
+  [@@@mode.default m = (global, m)]
+
+  val some : value -> t
+
+  (** [unchecked_value (some x) = x]. [unchecked_value none] returns an unspecified value.
+      [unchecked_value t] is intended as an optimization of [value_exn t] when [is_some t]
+      is known to be true. *)
+  val unchecked_value : t -> value
+end
+
+module type S_minimal_zero_alloc = sig
+  type value
+  type t
+
+  val none : t
+  val is_none : t -> bool [@@zero_alloc]
+
+  [@@@mode.default m = (global, m)]
+
+  val some : value -> t [@@zero_alloc]
+  val unchecked_value : t -> value [@@zero_alloc]
+end
+
+module type S_without_immediate_plain = sig
+  include S_minimal [@mode m]
+
+  module Optional_syntax :
+    Optional_syntax.S [@mode m] with type t := t with type value := value
 
   (** For some representations of immediate options, the encodings of [none] and [some]
       overlap. For these representations, [some_is_representable value = false] if [value]
@@ -36,12 +63,9 @@ module type S_without_immediate_plain = sig
       [true]. *)
   val some_is_representable : value -> bool
 
-  val is_none : t -> bool
   val is_some : t -> bool
 
   [@@@mode.default m = (global, m)]
-
-  val some : value -> t
 
   (** [value (some x) ~default = x] and [value none ~default = default]. *)
   val value : t -> default:value -> value
@@ -51,33 +75,23 @@ module type S_without_immediate_plain = sig
       not have to allocate. *)
   val value_exn : t -> value
 
-  (** [unchecked_value (some x) = x]. [unchecked_value none] returns an unspecified value.
-      [unchecked_value t] is intended as an optimization of [value_exn t] when [is_some t]
-      is known to be true. *)
-  val unchecked_value : t -> value
-
   val to_option : t -> value option
   val of_option : value option -> t
 end
 
 module type S_without_immediate_plain_zero_alloc = sig
-  type value
-  type t
+  include S_minimal_zero_alloc [@mode m]
 
   module Optional_syntax :
     Optional_syntax.S_zero_alloc [@mode m] with type t := t with type value := value
 
-  val none : t
   val some_is_representable : value -> bool [@@zero_alloc]
-  val is_none : t -> bool [@@zero_alloc]
   val is_some : t -> bool [@@zero_alloc]
 
   [@@@mode.default m = (global, m)]
 
-  val some : value -> t [@@zero_alloc]
   val value : t -> default:value -> value [@@zero_alloc]
   val value_exn : t -> value [@@zero_alloc]
-  val unchecked_value : t -> value [@@zero_alloc]
   val to_option : t -> value option
   val of_option : value option -> t [@@zero_alloc]
 end]
@@ -104,7 +118,7 @@ end
 [@@@mode.default m = (global, local)]
 
 module type S_derivers = sig
-  type t [@@deriving (compare [@mode m]), hash, sexp_of, typerep]
+  type t [@@deriving (compare [@mode.explicit m]), hash, sexp_of, typerep]
 end
 
 module type S_without_immediate = sig
@@ -156,7 +170,7 @@ module type S_unboxed_float64 = sig
   val typerep_of_t : t Typerep_lib.Std.Typerep.t
   val typename_of_t : t Typerep_lib.Std.Typename.t
   val sexp_of_t : t -> Sexp.t
-  val none : unit -> t [@@zero_alloc]
+  val none : t
   val some : value -> t [@@zero_alloc]
   val some_is_representable : value -> bool [@@zero_alloc]
   val is_none : t -> bool [@@zero_alloc]
@@ -177,6 +191,12 @@ module type S_unboxed_float64 = sig
 end
 
 module type Immediate_option = sig
+  [%%template:
+  [@@@mode.default m = (global, local)]
+
+  module type S_minimal = S_minimal [@mode m]
+  module type S_minimal_zero_alloc = S_minimal_zero_alloc [@mode m]]
+
   (** Always immediate. *)
 
   module type S_plain = S_plain
@@ -213,4 +233,31 @@ module type Immediate_option = sig
 
   module type S_without_immediate = S_without_immediate [@mode m]
   module type S_without_immediate_zero_alloc = S_without_immediate_zero_alloc [@mode m]]
+
+  (** Provides generic conversions to/from [t] and [value or_null]. *)
+
+  [%%template:
+  [@@@mode.default m = (global, local)]
+  [@@@mode.default (p, c) = ((nonportable, uncontended), (portable, contended))]
+
+  module Provide_or_null_conversions (Option : sig
+      type t
+
+      include S_minimal [@mode m] with type t := t
+    end) : sig
+    include
+      Or_nullable.S [@mode m] with type t := Option.t with type value := Option.value
+  end
+
+  module Provide_or_null_conversions_zero_alloc (Option : sig
+      type t
+
+      include S_minimal_zero_alloc [@mode m] with type t := t
+    end) : sig
+    include
+      Or_nullable.S_with_zero_alloc
+      [@mode m]
+      with type t := Option.t
+      with type value := Option.value
+  end]
 end

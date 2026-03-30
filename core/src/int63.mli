@@ -18,8 +18,8 @@ module Stable : sig
     type nonrec t = t
     [@@deriving
       bin_io ~localize
-      , compare ~localize
-      , equal ~localize
+      , compare ~localize ~zero_alloc
+      , equal ~localize ~zero_alloc
       , globalize
       , hash
       , sexp_grammar

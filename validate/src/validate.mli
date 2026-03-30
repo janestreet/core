@@ -156,11 +156,13 @@ val%template field_direct
 
 (** Creates a function for use in a [Fields.fold]. *)
 val%template field_folder
-  :  ('a check[@mode p])
+  : 'a 'record.
+  ('a check[@mode p])
   -> 'record
   -> t list
   -> ([> `Read ], 'record, 'a) Field.t_with_perm
   -> t list
+[@@kind k = (value_or_null, float64, bits32, bits64, word, immediate, immediate64)]
 [@@mode p = (portable, nonportable)]
 
 (** Like [field_folder], but for producing a list of portable ts. It's marginally easier

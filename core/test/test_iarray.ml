@@ -1024,6 +1024,22 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
 
       val%template init : 'a. int -> f:(int -> 'a) -> 'a t
       [@@alloc __ @ m = (heap_global, stack_local)]
+
+      val%template map : 'a 'b. 'a t -> f:('a -> 'b) -> 'b t
+      [@@kind ki = (value_or_null, float64), ko = (value_or_null, float64)]
+      [@@mode mi = (global, local)]
+      [@@alloc __ @ mo = (heap_global, stack_local)]
+
+      val%template mapi : 'a 'b. 'a t -> f:(int -> 'a -> 'b) -> 'b t
+      [@@kind ki = value_or_null, ko = value_or_null]
+      [@@mode mi = (global, local)]
+      [@@alloc __ @ mo = (heap_global, stack_local)]
+
+      val%template iteri : 'a. 'a t -> f:(int -> 'a -> unit) -> unit
+      [@@kind ki = value_or_null] [@@mode mi = (global, local)]
+
+      val%template iter : 'a. 'a t -> f:('a -> unit) -> unit
+      [@@kind ki = value_or_null] [@@mode mi = (global, local)]
     end)
 
   include struct
@@ -1067,6 +1083,141 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
         (to_int [@kind kacc]) acc + a |> (of_int [@kind kacc]));
       [%expect {| 26 |}]
     ;;]
+  end
+
+  (* Tests for templated map functions over float64 kinds *)
+  include struct
+    open struct
+      let int_to_float64 i = Float_u.of_int i
+      let float64_to_int f = Float_u.to_int f
+
+      let print_int_iarray arr =
+        for i = 0 to Iarray.length arr - 1 do
+          printf "%d " (Int.globalize (Iarray.get arr i))
+        done
+      ;;
+
+      let print_float64_iarray arr =
+        for i = 0 to Iarray.length arr - 1 do
+          printf "%.1f " (Float_u.box (Iarray.get arr i))
+        done
+      ;;
+
+      let%template make_int_iarray () : int Iarray.t =
+        (Iarray.of_list [@alloc a]) [ 1; 2; 3; 4; 5 ] [@exclave_if_stack a]
+      [@@alloc a @ m = (heap_global, stack_local)]
+      ;;
+    end
+
+    (* Test map from value_or_null to float64 *)
+    let%expect_test "map value_or_null -> float64" =
+      let arr = make_int_iarray () in
+      (* heap allocation *)
+      let result = (Iarray.map [@kind value_or_null float64]) arr ~f:int_to_float64 in
+      print_float64_iarray result;
+      [%expect {| 1.0 2.0 3.0 4.0 5.0 |}];
+      (* stack allocation *)
+      let result =
+        (Iarray.map [@kind value_or_null float64] [@alloc stack]) arr ~f:int_to_float64
+      in
+      print_float64_iarray result;
+      [%expect {| 1.0 2.0 3.0 4.0 5.0 |}];
+      (* local input, heap allocation *)
+      let local_arr = (make_int_iarray [@alloc stack]) () in
+      let result =
+        (Iarray.map [@kind value_or_null float64] [@mode local])
+          local_arr
+          ~f:int_to_float64
+      in
+      print_float64_iarray result;
+      [%expect {| 1.0 2.0 3.0 4.0 5.0 |}];
+      (* local input, stack allocation *)
+      let result =
+        (Iarray.map [@kind value_or_null float64] [@mode local] [@alloc stack])
+          local_arr
+          ~f:int_to_float64
+      in
+      print_float64_iarray result;
+      [%expect {| 1.0 2.0 3.0 4.0 5.0 |}]
+    ;;
+
+    (* Test map from float64 to value_or_null *)
+    let%expect_test "map float64 -> value_or_null" =
+      let arr =
+        (Iarray.map [@kind value_or_null float64]) (make_int_iarray ()) ~f:int_to_float64
+      in
+      (* heap allocation *)
+      let result = (Iarray.map [@kind float64 value_or_null]) arr ~f:float64_to_int in
+      print_int_iarray result;
+      [%expect {| 1 2 3 4 5 |}];
+      (* stack allocation *)
+      let result =
+        (Iarray.map [@kind float64 value_or_null] [@alloc stack]) arr ~f:float64_to_int
+      in
+      print_int_iarray result;
+      [%expect {| 1 2 3 4 5 |}];
+      (* local input, heap allocation - use global float64 array as input *)
+      let result =
+        (Iarray.map [@kind float64 value_or_null] [@mode local]) arr ~f:float64_to_int
+      in
+      print_int_iarray result;
+      [%expect {| 1 2 3 4 5 |}];
+      (* local input, stack allocation - use global float64 array as input *)
+      let result =
+        (Iarray.map [@kind float64 value_or_null] [@mode local] [@alloc stack])
+          arr
+          ~f:float64_to_int
+      in
+      print_int_iarray result;
+      [%expect {| 1 2 3 4 5 |}]
+    ;;
+
+    (* Test map from float64 to float64 *)
+    let%expect_test "map float64 -> float64" =
+      let arr =
+        (Iarray.map [@kind value_or_null float64]) (make_int_iarray ()) ~f:int_to_float64
+      in
+      let double f = Float_u.of_float (Float_u.to_float f *. 2.0) in
+      (* heap allocation *)
+      let result = (Iarray.map [@kind float64 float64]) arr ~f:double in
+      print_float64_iarray result;
+      [%expect {| 2.0 4.0 6.0 8.0 10.0 |}];
+      (* stack allocation *)
+      let result = (Iarray.map [@kind float64 float64] [@alloc stack]) arr ~f:double in
+      print_float64_iarray result;
+      [%expect {| 2.0 4.0 6.0 8.0 10.0 |}];
+      (* local input, heap allocation - use global float64 array as input *)
+      let result = (Iarray.map [@kind float64 float64] [@mode local]) arr ~f:double in
+      print_float64_iarray result;
+      [%expect {| 2.0 4.0 6.0 8.0 10.0 |}];
+      (* local input, stack allocation - use global float64 array as input *)
+      let result =
+        (Iarray.map [@kind float64 float64] [@mode local] [@alloc stack]) arr ~f:double
+      in
+      print_float64_iarray result;
+      [%expect {| 2.0 4.0 6.0 8.0 10.0 |}]
+    ;;
+
+    (* Test empty arrays *)
+    let%expect_test "map with empty arrays" =
+      let empty_int : int Iarray.t = Iarray.empty in
+      (* value_or_null -> float64 with empty input *)
+      let result = (map [@kind value_or_null float64]) empty_int ~f:int_to_float64 in
+      print_float64_iarray result;
+      [%expect {| |}];
+      (* Create empty float64 array by mapping from empty int array *)
+      let empty_float64 =
+        (map [@kind value_or_null float64]) empty_int ~f:int_to_float64
+      in
+      (* float64 -> value_or_null with empty input *)
+      let result = (map [@kind float64 value_or_null]) empty_float64 ~f:float64_to_int in
+      print_int_iarray result;
+      [%expect {| |}];
+      (* float64 -> float64 with empty input *)
+      let result = (map [@kind float64 float64]) empty_float64 ~f:Fn.id in
+      print_float64_iarray result;
+      [%expect {| |}]
+    ;;
   end
 
   (* Tested as [Local.init] below *)
@@ -1343,6 +1494,8 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
         end)
 
       [%%rederive type nonrec 'a t = 'a Iarray.Stable.V1.t [@@deriving compare ~localize]]
+
+      let sexp_of_t__stack = Iarray.Stable.V1.sexp_of_t__stack
 
       let%expect_test _ =
         print_and_check_stable_type
@@ -1879,6 +2032,8 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
         val filteri : 'a t -> f:(int -> 'a -> bool) -> 'a t
         val filter_mapi : 'a t -> f:(int -> 'a -> 'b option) -> 'b t
         val concat_mapi : 'a t -> f:(int -> 'a -> 'b t) -> 'b t
+        val to_array_of_immediates : 'a iarray -> 'a array
+        val sort_immediates : 'a iarray -> compare:('a -> 'a -> int) -> 'a iarray
         val fold : 'a 'acc. 'a t -> init:'acc -> f:('acc -> 'a -> 'acc) -> 'acc
         val foldi : 'a 'acc. 'a t -> init:'acc -> f:(int -> 'acc -> 'a -> 'acc) -> 'acc
         val fold_right : 'a 'acc. 'a t -> init:'acc -> f:('a -> 'acc -> 'acc) -> 'acc

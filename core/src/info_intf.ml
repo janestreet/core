@@ -21,7 +21,9 @@ module type Extension = sig
         the underlying message, whereas [V2] bin-prots the underlying message. *)
     module V1 : sig
       include%template
-        Stable_module_types.With_stable_witness.S0 [@mode local] with type t = t
+        Stable_module_types.With_stable_witness.S0
+        [@mode local] [@modality portable]
+        with type t = t
 
       (** Explicitly indicate that [t_of_sexp] produces a portable [t]. This is nicer for
           the user: you can do more things with a portable [t], e.g. move it between
@@ -35,11 +37,14 @@ module type Extension = sig
         globalize
         , equal ~localize
         , hash
+        , sexp_of ~stackify
         , sexp_grammar
         , diff ~extra_derive:[ sexp; bin_io ]]
 
       include%template
-        Stable_module_types.With_stable_witness.S0 [@mode local] with type t := t
+        Stable_module_types.With_stable_witness.S0
+        [@mode local] [@modality portable]
+        with type t := t
 
       (** See comment on [V1.t_of_sexp]. *)
       val t_of_sexp : Sexplib.Sexp.t -> t
@@ -51,7 +56,9 @@ module type Extension = sig
         type t = Portable.t
 
         include%template
-          Stable_module_types.With_stable_witness.S0 [@mode local] with type t := t
+          Stable_module_types.With_stable_witness.S0
+          [@mode local] [@modality portable]
+          with type t := t
       end
 
       module V2 : sig
@@ -65,7 +72,9 @@ module type Extension = sig
           , diff ~extra_derive:[ sexp; bin_io ]]
 
         include%template
-          Stable_module_types.With_stable_witness.S0 [@mode local] with type t := t
+          Stable_module_types.With_stable_witness.S0
+          [@mode local] [@modality portable]
+          with type t := t
       end
     end
   end
