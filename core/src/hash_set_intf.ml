@@ -5,7 +5,7 @@ module Binable = Binable0
 open Base.Hash_set
 
 module type%template M_quickcheck = sig
-  type t [@@deriving (compare [@mode m]), hash, quickcheck, sexp_of]
+  type t [@@deriving (compare [@mode.explicit m]), hash, quickcheck, sexp_of]
 end
 [@@mode m = (local, global)]
 
@@ -114,7 +114,12 @@ module type Hash_set = sig @@ portable
     include Accessors with type 'a t := 'a t with type 'a elt := 'a elt
   end
 
-  module%template.portable Make_plain (Elt : Elt_plain) : S_plain with type elt = Elt.t
+  module%template.portable Make_plain (Elt : sig
+      type t
+
+      include Elt_plain with type t := t
+    end) : S_plain with type elt = Elt.t
+
   module%template.portable Make (Elt : Elt) : S with type elt = Elt.t
 
   module%template.portable Make_binable (Elt : Elt_binable) :
@@ -123,7 +128,11 @@ module type Hash_set = sig @@ portable
   module%template.portable Make_stable (Elt : Elt_stable) : S_stable with type elt = Elt.t
 
   module%template.portable Make_plain_with_hashable (T : sig
-      module Elt : Elt_plain
+      module Elt : sig
+        type t
+
+        include Elt_plain with type t := t
+      end
 
       val hashable : Elt.t Hashtbl.Hashable.t
     end) : S_plain with type elt = T.Elt.t

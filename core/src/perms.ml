@@ -8,7 +8,12 @@ module Types = struct
   module Nobody = struct
     type t
     [@@deriving
-      bin_io ~localize, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , hash
+      , sexp ~stackify ~localize
+      , sexp_grammar]
 
     let name = "Nobody"
   end
@@ -16,7 +21,12 @@ module Types = struct
   module Me = struct
     type t
     [@@deriving
-      bin_io ~localize, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , hash
+      , sexp ~stackify ~localize
+      , sexp_grammar]
 
     let name = "Me"
   end
@@ -24,7 +34,12 @@ module Types = struct
   module Read = struct
     type t = [ `Read ]
     [@@deriving
-      bin_io ~localize, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , hash
+      , sexp ~stackify ~localize
+      , sexp_grammar]
 
     let name = "Read"
   end
@@ -32,7 +47,12 @@ module Types = struct
   module Write = struct
     type t = [ `Who_can_write of Me.t ]
     [@@deriving
-      bin_io ~localize, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , hash
+      , sexp ~stackify ~localize
+      , sexp_grammar]
 
     let name = "Write"
   end
@@ -43,7 +63,12 @@ module Types = struct
       | `Who_can_write of Nobody.t
       ]
     [@@deriving
-      bin_io ~localize, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , hash
+      , sexp ~stackify ~localize
+      , sexp_grammar]
 
     let name = "Immutable"
   end
@@ -54,7 +79,12 @@ module Types = struct
       | Write.t
       ]
     [@@deriving
-      bin_io ~localize, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , hash
+      , sexp ~stackify ~localize
+      , sexp_grammar]
 
     let name = "Read_write"
   end
@@ -65,7 +95,12 @@ module Types = struct
       | `Who_can_write of 'a
       ]
     [@@deriving
-      bin_io ~localize, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , hash
+      , sexp ~stackify ~localize
+      , sexp_grammar]
 
     let name = "Upper_bound"
   end
@@ -83,7 +118,7 @@ module type Sexpable_binable_comparable = sig
     , equal ~localize
     , globalize
     , hash
-    , sexp
+    , sexp ~stackify ~localize
     , sexp_grammar
     , stable_witness]
 end
@@ -98,7 +133,10 @@ module Only_used_as_phantom_type1 (Name : sig
 end = struct
   type 'a t = 'a
 
-  let sexp_of_t _ _ = failwithf "Unexpectedly called [%s.sexp_of_t]" Name.name ()
+  let%template[@alloc a = (heap, stack)] sexp_of_t _ _ =
+    failwithf "Unexpectedly called [%s.sexp_of_t]" Name.name ()
+  ;;
+
   let t_of_sexp _ _ = failwithf "Unexpectedly called [%s.t_of_sexp]" Name.name ()
   let compare _ _ _ = failwithf "Unexpectedly called [%s.compare]" Name.name ()
   let equal _ _ _ = failwithf "Unexpectedly called [%s.equal]" Name.name ()
@@ -143,7 +181,12 @@ module Only_used_as_phantom_type0 (T : sig
   @@ portable
     type t
     [@@deriving
-      bin_io ~localize, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , hash
+      , sexp ~stackify ~localize
+      , sexp_grammar]
 
     val name : string
   end) : sig
@@ -155,7 +198,7 @@ module Only_used_as_phantom_type0 (T : sig
     , equal ~localize
     , globalize
     , hash
-    , sexp_poly
+    , sexp_poly ~stackify ~localize
     , sexp_grammar
     , stable_witness]
 end = struct
@@ -163,7 +206,12 @@ end = struct
 
   type t = T.t M.t
   [@@deriving
-    bin_io ~localize, equal ~localize, compare ~localize, hash, sexp, sexp_grammar]
+    bin_io ~localize
+    , equal ~localize
+    , compare ~localize
+    , hash
+    , sexp ~stackify ~localize
+    , sexp_grammar]
 
   let __t_of_sexp__ = t_of_sexp
   let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
@@ -185,7 +233,7 @@ module Stable = struct
       , compare ~localize
       , equal ~localize
       , hash
-      , sexp
+      , sexp ~stackify ~localize
       , sexp_grammar
       , stable_witness]
 
@@ -195,7 +243,7 @@ module Stable = struct
       , compare ~localize
       , equal ~localize
       , hash
-      , sexp
+      , sexp ~stackify ~localize
       , sexp_grammar
       , stable_witness]
 
@@ -204,7 +252,12 @@ module Stable = struct
 
       type 'a t = 'a Types.Upper_bound.t M.t
       [@@deriving
-        bin_io ~localize, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+        bin_io ~localize
+        , compare ~localize
+        , equal ~localize
+        , hash
+        , sexp ~stackify ~localize
+        , sexp_grammar]
 
       let stable_witness _ = Stable_witness.assert_stable
       let __t_of_sexp__ = t_of_sexp
@@ -223,7 +276,7 @@ module Stable = struct
       , equal ~localize
       , globalize
       , hash
-      , sexp
+      , sexp ~stackify ~localize
       , sexp_grammar
       , stable_witness]
 
@@ -233,7 +286,7 @@ module Stable = struct
       , equal ~localize
       , hash
       , globalize
-      , sexp
+      , sexp ~stackify ~localize
       , sexp_grammar
       , stable_witness]
 
@@ -244,7 +297,7 @@ module Stable = struct
       , equal ~localize
       , globalize
       , hash
-      , sexp
+      , sexp ~stackify ~localize
       , sexp_grammar
       , stable_witness]
 
@@ -255,7 +308,7 @@ module Stable = struct
       , equal ~localize
       , globalize
       , hash
-      , sexp
+      , sexp ~stackify ~localize
       , sexp_grammar
       , stable_witness]
 
@@ -266,7 +319,7 @@ module Stable = struct
       , equal ~localize
       , globalize
       , hash
-      , sexp
+      , sexp ~stackify ~localize
       , sexp_grammar
       , stable_witness]
   end

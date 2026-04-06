@@ -18,8 +18,6 @@ end
 module Zone : sig
   include Time_intf.Zone with module Time := Time
   include Timezone.Extend_zone with type t := t
-
-  val arg_type : t Command.Arg_type.t
 end
 
 module Ofday : sig
@@ -31,7 +29,8 @@ module Ofday : sig
   val arg_type : t Command.Arg_type.t
 
   module Zoned : sig
-    (** Sexps look like "(12:01 nyc)"
+    (** [t_of_sexp] accepts short forms like "(12:01 nyc)". [sexp_of_t] produces the full
+        ofday and zone name, e.g., "(12:01:00.000000 America/New_York)".
 
         Two [t]'s may or may not correspond to the same times depending on which date
         they're evaluated. *)
@@ -40,7 +39,8 @@ module Ofday : sig
 
     include Pretty_printer.S with type t := t
 
-    (** Strings look like "12:01 nyc" *)
+    (** [of_string] accepts short forms like "12:01 nyc". [to_string] produces the full
+        ofday and zone name, e.g., "12:01:00.000000 America/New_York". *)
     include Stringable with type t := t
 
     (** Like [to_string] but uses [Time_float.Ofday.to_string_trimmed] to format the ofday *)
@@ -67,7 +67,8 @@ module Ofday : sig
 end
 
 (** A fully qualified point in time, independent of timezone. *)
-type t = Time.t [@@deriving bin_io, compare ~localize, hash, sexp, sexp_grammar, typerep]
+type t = Time.t
+[@@deriving bin_io, compare ~localize, hash, sexp ~stackify, sexp_grammar, typerep]
 
 include
   Time_intf.S
@@ -132,7 +133,9 @@ include Diffable.S_atomic with type t := t
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving compare ~localize, hash, typerep, sexp_grammar]
+    type nonrec t = t
+    [@@deriving compare ~localize, hash, typerep, sexp_of ~stackify, sexp_grammar]
+
     type nonrec comparator_witness = comparator_witness
 
     include%template

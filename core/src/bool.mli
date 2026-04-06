@@ -30,7 +30,7 @@ module Stable : sig
       , compare ~localize
       , equal ~localize
       , hash
-      , sexp
+      , sexp ~stackify
       , sexp_grammar
       , typerep]
 

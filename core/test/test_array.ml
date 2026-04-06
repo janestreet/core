@@ -2,6 +2,8 @@ open! Core
 open Expect_test_helpers_core
 open Array
 
+[@@@warning "-incompatible-with-upstream"]
+
 let ar1 = [| 1; 2; 3; 4; 5; 6; 7; 8; 9; 10 |]
 
 let%expect_test "slice" =
@@ -105,10 +107,12 @@ module%test Array_tests = struct
   module%template
     [@kind
       k
-      = ( bits32
+      = ( value_or_null mod external_ separable
+        , bits32
         , bits64
         , word
         , float64
+        , value mod external64
         , value & value
         , (bits64 & bits64) mod external_
         , (bits64 & value) mod external_ )] Test
@@ -132,7 +136,7 @@ module%test Array_tests = struct
 
          include
            Unboxed_test_harness.Boxable
-           [@kind k]
+           [@kind k or value_or_null]
            with type t := unboxed
             and type boxed := t
        end)
@@ -142,7 +146,7 @@ module%test Array_tests = struct
        end) =
   struct
     module Harness =
-      Unboxed_test_harness.Make [@kind k]
+      Unboxed_test_harness.Make [@kind k or value_or_null]
         (struct
           module Boxed = E
           include Boxed
@@ -950,6 +954,135 @@ module%test Array_tests = struct
       testing [set]
       testing [unsafe_set]
       testing [magic_create_uninitialized]
+      |}]
+  ;;
+
+  module Test_int = Test [@kind value mod external64] (struct
+      include Int
+
+      type unboxed = int [@@deriving equal, sexp]
+
+      (* We can't actually make uninitialized [int]s, so initialize with 0 *)
+      let create_uninitialized ~len = Array.create ~len 0
+      let unsafe_blit = Some (Core.Array.unsafe_blit [@kind value_or_null mod external64])
+      let fill = Some (Core.Array.fill [@kind value_or_null mod external64])
+      let sub = Some (Core.Array.sub [@kind value_or_null mod external64])
+      let concat = Some (Core.Array.concat [@kind value_or_null mod external64])
+
+      let sexp =
+        Some
+          ( (Core.Array.sexp_of_t [@kind value_or_null])
+          , (Core.Array.t_of_sexp [@kind value_or_null]) )
+      ;;
+
+      let box = Fun.id
+      let unbox = Fun.id
+    end)
+
+  let%expect_test "int (value mod external64)" =
+    let module _ =
+      Test_int (struct
+        let flambda2 = false
+        let filenames_to_suppress_in_backtraces = [ "test_array.ml" ]
+      end)
+    in
+    [%expect
+      {|
+      testing [length]
+      testing [get]
+      testing [unsafe_get]
+      testing [set]
+      testing [unsafe_set]
+      testing [magic_create_uninitialized]
+      testing [unsafe_blit]
+      testing [fill]
+      testing [sub]
+      testing [concat]
+      testing [sexp]
+      |}]
+  ;;
+
+  let%expect_test ("int (value mod external64) (alloc)" [@tags "fast-flambda2"]) =
+    let module _ =
+      Test_int (struct
+        let flambda2 = true
+        let filenames_to_suppress_in_backtraces = [ "test_array.ml" ]
+      end)
+    in
+    [%expect
+      {|
+      testing [length]
+      testing [get]
+      testing [unsafe_get]
+      testing [set]
+      testing [unsafe_set]
+      testing [magic_create_uninitialized]
+      testing [unsafe_blit]
+      testing [fill]
+      testing [sub]
+      testing [concat]
+      testing [sexp]
+      |}]
+  ;;
+
+  module Test_int_or_null = Test [@kind value_or_null mod external_ separable] (struct
+      type t = int option [@@deriving compare, equal, quickcheck, sexp]
+      type unboxed = int or_null [@@deriving sexp, equal]
+
+      (* We can't actually make uninitialized [int]s, so initialize with [Null] *)
+      let create_uninitialized ~len = Core.Array.create ~len Null
+      let unsafe_blit = Some Core.Array.unsafe_blit
+      let fill = Some Core.Array.fill
+      let sub = Some Core.Array.sub
+      let concat = Some Core.Array.concat
+      let sexp = Some (Core.Array.sexp_of_t, Core.Array.t_of_sexp)
+      let box = Or_null.to_option
+      let unbox = Or_null.of_option
+    end)
+
+  let%expect_test "int or_null" =
+    let module _ =
+      Test_int_or_null (struct
+        let flambda2 = false
+        let filenames_to_suppress_in_backtraces = [ "test_array.ml" ]
+      end)
+    in
+    [%expect
+      {|
+      testing [length]
+      testing [get]
+      testing [unsafe_get]
+      testing [set]
+      testing [unsafe_set]
+      testing [magic_create_uninitialized]
+      testing [unsafe_blit]
+      testing [fill]
+      testing [sub]
+      testing [concat]
+      testing [sexp]
+      |}]
+  ;;
+
+  let%expect_test ("int or_null" [@tags "fast-flambda2"]) =
+    let module _ =
+      Test_int_or_null (struct
+        let flambda2 = true
+        let filenames_to_suppress_in_backtraces = [ "test_array.ml" ]
+      end)
+    in
+    [%expect
+      {|
+      testing [length]
+      testing [get]
+      testing [unsafe_get]
+      testing [set]
+      testing [unsafe_set]
+      testing [magic_create_uninitialized]
+      testing [unsafe_blit]
+      testing [fill]
+      testing [sub]
+      testing [concat]
+      testing [sexp]
       |}]
   ;;
 end

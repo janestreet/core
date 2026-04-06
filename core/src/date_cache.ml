@@ -148,6 +148,7 @@ module Make (Time : Time) () = struct
         }
       ;;
 
+      let create_padded () = Portable.Padding.copy_as_padded (create ())
       let get_lock_state t = Atomic.Loc.get [%atomic.loc t.lock_state] [@@inline]
       let set_lock_state t v = Atomic.Loc.set [%atomic.loc t.lock_state] v [@@inline]
 
@@ -167,7 +168,7 @@ module Make (Time : Time) () = struct
         t.date <- Date0.unix_epoch
       ;;
 
-      let is_in_cache t time ~zone =
+      let[@inline] is_in_cache t time ~zone =
         phys_equal zone t.zone
         && Time.( >= ) time t.cache_start_incl
         && Time.( < ) time t.cache_until_excl
@@ -221,8 +222,13 @@ module Make (Time : Time) () = struct
      constituting the date cache, and in time to only occur between those two writes to
      [lock_state]. *)
 
-  (* The shared cache over which we are synchronizing. *)
-  let date_cache = Date_cache.create ()
+  let get_date_cache =
+    let date_caches =
+      Portable.Domain_shards.create (fun () -> Date_cache.create_padded ())
+    in
+    fun [@inline] () ->
+      [%template Portable.Domain_shards.get [@mode contended]] date_caches
+  ;;
 
   (* Call [write date_cache]; if the call raises, we have to assume the [date_cache] is in
      an arbitrary state, so we reset it to the initial value (along with [atomic_counter])
@@ -302,7 +308,7 @@ module Make (Time : Time) () = struct
 
   let update_cache ~date_cache ~time ~zone = Date_cache.update date_cache time ~zone
 
-  let get time ~zone ~f =
+  let[@inline] get time ~zone ~f =
     with_cache
       ~may_read_without_writing:(fun [@inline] date_cache ->
         Date_cache.is_in_cache date_cache time ~zone)
@@ -310,7 +316,7 @@ module Make (Time : Time) () = struct
       ~write:update_cache
         (* Explicitly pass the following as arguments rather than allocating a closure for
            [write]. *)
-      ~date_cache
+      ~date_cache:(get_date_cache ())
       ~time
       ~zone
   ;;
@@ -327,7 +333,7 @@ module Make (Time : Time) () = struct
       ~may_read_without_writing:(fun [@inline] _ -> false)
       ~read:(fun [@inline] _ -> ())
       ~write:reset_cache
-      ~date_cache
+      ~date_cache:(get_date_cache ())
       ~time:()
       ~zone:()
   ;;

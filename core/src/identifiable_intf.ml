@@ -7,7 +7,7 @@ module Definitions = struct
   [@@@mode.default m = (global, local)]
 
   module type S_common = sig
-    type t [@@deriving (compare [@mode m]), hash, sexp_of]
+    type t [@@deriving (compare [@mode.explicit m]), hash, sexp_of]
 
     include Stringable.S with type t := t
     include Pretty_printer.S with type t := t
@@ -53,7 +53,7 @@ module type%template Identifiable = sig @@ portable
 
   module%template.portable
     [@modality p] Make_plain (M : sig
-      type t [@@deriving (compare [@mode m]), hash, sexp_of]
+      type t [@@deriving (compare [@mode.explicit m]), hash, sexp_of]
 
       include Stringable.S with type t := t
 
@@ -84,7 +84,7 @@ module type%template Identifiable = sig @@ portable
       ]} *)
   module%template.portable
     [@modality p] Make (M : sig
-      type t [@@deriving (bin_io [@mode m]), (compare [@mode m]), hash, sexp]
+      type t [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), hash, sexp]
 
       include Stringable.S with type t := t
 
@@ -95,7 +95,8 @@ module type%template Identifiable = sig @@ portable
   module%template.portable
     [@modality p] Make_with_sexp_grammar (M : sig
       type t
-      [@@deriving (bin_io [@mode m]), (compare [@mode m]), hash, sexp, sexp_grammar]
+      [@@deriving
+        (bin_io [@mode m]), (compare [@mode.explicit m]), hash, sexp, sexp_grammar]
 
       include Stringable.S with type t := t
 
@@ -105,7 +106,7 @@ module type%template Identifiable = sig @@ portable
 
   module%template.portable
     [@modality p] Make_and_derive_hash_fold_t (M : sig
-      type t [@@deriving (bin_io [@mode m]), (compare [@mode m]), sexp]
+      type t [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), sexp]
 
       include Stringable.S with type t := t
 
@@ -117,7 +118,7 @@ module type%template Identifiable = sig @@ portable
 
   module%template.portable
     [@modality p] Make_using_comparator (M : sig
-      type t [@@deriving (bin_io [@mode m]), (compare [@mode m]), hash, sexp]
+      type t [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), hash, sexp]
 
       include Comparator.S [@modality p] with type t := t
       include Stringable.S with type t := t
@@ -131,7 +132,7 @@ module type%template Identifiable = sig @@ portable
 
   module%template.portable
     [@modality p] Make_plain_using_comparator (M : sig
-      type t [@@deriving (compare [@mode m]), hash, sexp_of]
+      type t [@@deriving (compare [@mode.explicit m]), hash, sexp_of]
 
       include Comparator.S [@modality p] with type t := t
       include Stringable.S with type t := t
@@ -146,7 +147,7 @@ module type%template Identifiable = sig @@ portable
 
   module%template.portable
     [@modality p] Make_using_comparator_and_derive_hash_fold_t (M : sig
-      type t [@@deriving (bin_io [@mode m]), (compare [@mode m]), sexp]
+      type t [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), sexp]
 
       include Comparator.S [@modality p] with type t := t
       include Stringable.S with type t := t

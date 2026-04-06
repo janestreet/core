@@ -4,7 +4,6 @@
    core_string_search_pattern dequeue hashtbl_bench immediate_bench
    ordering_container string_escaping time_to_string)
  (libraries core_unix.command_unix core core_bench core_kernel.pairing_heap
-   pcre core_kernel.pooled_hashtbl ppx_hash.runtime-lib re2
-   shell.string_extended)
+   pcre core_kernel.pooled_hashtbl ppx_hash.runtime-lib re2)
  (preprocess
   (pps ppx_jane)))

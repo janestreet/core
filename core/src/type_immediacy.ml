@@ -39,7 +39,7 @@ module Immediacy = struct
     | Unknown
   [@@deriving compare ~localize]
 
-  let equal = [%compare.equal: t]
+  let%template[@mode m = local] equal = ([%compare.equal: t] [@mode m])
 
   let to_string = function
     | Always -> "Always"
@@ -321,18 +321,18 @@ module For_all_parameters (M : sig
     val immediacy : Immediacy.t
   end) =
 struct
-  let witness typerep1 typerep2 =
+  let%template witness typerep1 typerep2 =
     let t1 = of_typerep typerep1 in
     let t2 = of_typerep typerep2 in
     let i1 = immediacy t1 in
     let i2 = immediacy t2 in
-    if not (Immediacy.equal i1 i2)
+    if not ((Immediacy.equal [@mode local]) i1 i2)
     then
       failwith
         (sprintf
            "type %s is not independent of its arguments"
            (Typename.name (Typerep.typename_of_t typerep1)))
-    else if not (Immediacy.equal i1 M.immediacy)
+    else if not ((Immediacy.equal [@mode local]) i1 M.immediacy)
     then
       failwith
         (sprintf

@@ -25,11 +25,11 @@ module Container = Base.Container
 module type Elt_plain = Set.Elt_plain [@mode m]
 
 module type Elt = sig
-  type t [@@deriving (compare [@mode m]), sexp]
+  type t [@@deriving (compare [@mode.explicit m]), sexp]
 end
 
 module type Elt_binable = sig
-  type t [@@deriving bin_io, (compare [@mode m]), sexp]
+  type t [@@deriving bin_io, (compare [@mode.explicit m]), sexp]
 end]
 
 module Elt_bin_io = struct
@@ -92,17 +92,24 @@ module type For_deriving = sig
     val quickcheck_shrinker : t Quickcheck.Shrinker.t
   end
 
+  [%%template:
+  [@@@mode.default p = (portable, nonportable)]
+
   val quickcheck_generator_m__t
-    :  (module Quickcheck_generator_m with type t = 'a and type comparator_witness = 'cmp)
-    -> ('a, 'cmp) t Quickcheck.Generator.t
+    : 'a ('cmp : value mod p).
+    (module Quickcheck_generator_m with type t = 'a and type comparator_witness = 'cmp)
+    @ p
+    -> ('a, 'cmp) t Quickcheck.Generator.t @ p
 
   val quickcheck_observer_m__t
-    :  (module Quickcheck_observer_m with type t = 'a and type comparator_witness = 'cmp)
-    -> ('a, 'cmp) t Quickcheck.Observer.t
+    : 'a ('cmp : value mod p).
+    (module Quickcheck_observer_m with type t = 'a and type comparator_witness = 'cmp) @ p
+    -> ('a, 'cmp) t Quickcheck.Observer.t @ p
 
   val quickcheck_shrinker_m__t
-    :  (module Quickcheck_shrinker_m with type t = 'a and type comparator_witness = 'cmp)
-    -> ('a, 'cmp) t Quickcheck.Shrinker.t
+    : 'a ('cmp : value mod p).
+    (module Quickcheck_shrinker_m with type t = 'a and type comparator_witness = 'cmp) @ p
+    -> ('a, 'cmp) t Quickcheck.Shrinker.t @ p]
 end
 
 module type For_deriving_stable = sig

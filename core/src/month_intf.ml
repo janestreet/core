@@ -21,7 +21,7 @@ module type Month = sig @@ portable
     , globalize
     , hash
     , quickcheck
-    , sexp
+    , sexp ~stackify
     , sexp_grammar
     , typerep
     , variants]

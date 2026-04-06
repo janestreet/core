@@ -499,7 +499,7 @@ struct
 
   type +'v t = (Key.t, 'v, Key.comparator_witness) Tree.t
 
-  let sexp_of_t sexp_of_v t = sexp_of_t Key.sexp_of_t sexp_of_v [%sexp_of: _] t
+  let sexp_of_t sexp_of_v t = sexp_of_t Key.sexp_of_t sexp_of_v t
 end
 
 module%template.portable Provide_of_sexp_tree (Key : sig
@@ -550,9 +550,7 @@ module Poly = struct
   [@@mode m = (local, global)]
   ;;
 
-  let sexp_of_t sexp_of_k sexp_of_v t =
-    Using_comparator.sexp_of_t sexp_of_k sexp_of_v [%sexp_of: _] t
-  ;;
+  let sexp_of_t sexp_of_k sexp_of_v t = Using_comparator.sexp_of_t sexp_of_k sexp_of_v t
 
   let t_of_sexp sexp_of_k sexp_of_v t =
     Using_comparator.t_of_sexp_direct
@@ -597,7 +595,7 @@ module Poly = struct
     type ('k, +'v) t = ('k, 'v, Comparator.Poly.comparator_witness) tree
     type comparator_witness = Comparator.Poly.comparator_witness
 
-    let sexp_of_t sexp_of_k sexp_of_v t = sexp_of_t sexp_of_k sexp_of_v [%sexp_of: _] t
+    let sexp_of_t sexp_of_k sexp_of_v t = sexp_of_t sexp_of_k sexp_of_v t
 
     let t_of_sexp k_of_sexp v_of_sexp t =
       Tree.t_of_sexp_direct ~comparator:Comparator.Poly.comparator k_of_sexp v_of_sexp t
@@ -714,9 +712,7 @@ struct
     (compare_direct [@mode m]) cmpv t1 t2
   ;;
 
-  let sexp_of_t sexp_of_v t =
-    Using_comparator.sexp_of_t Key.sexp_of_t sexp_of_v [%sexp_of: _] t
-  ;;
+  let sexp_of_t sexp_of_v t = Using_comparator.sexp_of_t Key.sexp_of_t sexp_of_v t
 
   module Diff = struct
     type 'a derived_on = 'a t
@@ -992,10 +988,12 @@ module Stable = struct
   module V1 = struct
     type nonrec ('k, 'v, 'cmp) t = ('k, 'v, 'cmp) t
 
-    module type S = sig
+    module type%template [@mode m = (local, global)] S = sig
       type key
       type comparator_witness
-      type nonrec 'a t = (key, 'a, comparator_witness) t [@@deriving equal]
+
+      type nonrec 'a t = (key, 'a, comparator_witness) t
+      [@@deriving equal [@mode.explicit m]]
 
       include%template Stable_module_types.S1 [@mode local] with type 'a t := 'a t
 

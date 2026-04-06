@@ -4,7 +4,7 @@ open! Import
 [@@@mode.default m = (global, local)]
 
 module type S0_without_comparator = sig
-  type t [@@deriving (bin_io [@mode m]), (compare [@mode m]), sexp]
+  type t [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), sexp]
 end
 
 module type [@modality p = (portable, nonportable)] S0 = sig
@@ -17,19 +17,20 @@ end
     reaching into the unstable part of the module. *)
 
 module type S1 = sig
-  type 'a t [@@deriving (bin_io [@mode m]), (compare [@mode m]), sexp]
+  type 'a t [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), sexp]
 
   val map : 'a t -> f:('a -> 'b) -> 'b t
 end
 
 module type S2 = sig
-  type ('a1, 'a2) t [@@deriving (bin_io [@mode m]), (compare [@mode m]), sexp]
+  type ('a1, 'a2) t [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), sexp]
 
   val map : ('a1, 'a2) t -> f1:('a1 -> 'b1) -> f2:('a2 -> 'b2) -> ('b1, 'b2) t
 end
 
 module type S3 = sig
-  type ('a1, 'a2, 'a3) t [@@deriving (bin_io [@mode m]), (compare [@mode m]), sexp]
+  type ('a1, 'a2, 'a3) t
+  [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), sexp]
 
   val map
     :  ('a1, 'a2, 'a3) t
@@ -40,7 +41,8 @@ module type S3 = sig
 end
 
 module type S4 = sig
-  type ('a1, 'a2, 'a3, 'a4) t [@@deriving (bin_io [@mode m]), (compare [@mode m]), sexp]
+  type ('a1, 'a2, 'a3, 'a4) t
+  [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), sexp]
 
   val map
     :  ('a1, 'a2, 'a3, 'a4) t

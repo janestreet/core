@@ -4,7 +4,7 @@
 
 open! Import
 
-type t : immediate [@@deriving bin_io, hash, sexp, sexp_grammar, quickcheck]
+type t : immediate [@@deriving bin_io, hash, sexp ~stackify, sexp_grammar, quickcheck]
 
 include%template Identifiable.S [@mode local] [@modality portable] with type t := t
 
@@ -23,5 +23,7 @@ module Stable : sig
       [@mode local]
       with type t := t
        and type comparator_witness = comparator_witness
+
+    include%template Sexplib0.Sexpable.Sexp_of [@alloc stack] with type t := t
   end
 end

@@ -12,6 +12,7 @@ module Stable : sig
       , equal ~localize
       , globalize
       , hash
+      , sexp_of ~stackify
       , sexp_grammar
       , typerep]
 

@@ -4,7 +4,7 @@ open! Import
 [@@@mode.default m = (local, global)]
 
 module type Common = sig
-  type t [@@deriving (compare [@mode m]), hash]
+  type t [@@deriving (compare [@mode.explicit m]), hash]
 
   val hashable : t Hashtbl.Hashable.t
 end
@@ -48,8 +48,11 @@ module type Hashable = sig @@ portable
       include Hashtbl.Key_plain with type t := t
     end) : S_plain with type t := T.t
 
-  module%template.portable Make_plain_and_derive_hash_fold_t (T : Hashtbl.Key_plain) :
-    S_plain with type t := T.t
+  module%template.portable Make_plain_and_derive_hash_fold_t (T : sig
+      type t
+
+      include Hashtbl.Key_plain with type t := t
+    end) : S_plain with type t := T.t
 
   module%template.portable Make (T : sig
       type t [@@deriving hash]

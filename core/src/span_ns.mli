@@ -47,6 +47,7 @@ module Stable : sig
       , equal ~localize
       , globalize
       , hash
+      , sexp_of ~stackify
       , sexp_grammar
       , stable_witness
       , typerep]

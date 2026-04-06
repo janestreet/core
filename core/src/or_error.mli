@@ -31,7 +31,11 @@ module Stable : sig
 
   module V2 : sig
     type nonrec ('a : value_or_null) t = 'a t
-    [@@deriving equal ~localize, sexp_grammar, diff ~extra_derive:[ sexp; bin_io ]]
+    [@@deriving
+      equal ~localize
+      , sexp_of ~stackify
+      , sexp_grammar
+      , diff ~extra_derive:[ sexp; bin_io ]]
 
     include%template
       Stable_module_types.With_stable_witness.S1 [@mode local] with type 'a t := 'a t

@@ -260,7 +260,7 @@ module%template.portable
   [@mode m]) =
 struct
   module T = struct
-    type t = S1.t * S2.t [@@deriving (compare [@mode m]), hash, sexp_of]
+    type t = S1.t * S2.t [@@deriving (compare [@mode.explicit m]), hash, sexp_of]
   end
 
   include T
@@ -275,7 +275,7 @@ module%template.portable
   [@mode m]) =
 struct
   module T = struct
-    type t = H1.t * H2.t [@@deriving (compare [@mode m]), hash, sexp]
+    type t = H1.t * H2.t [@@deriving (compare [@mode.explicit m]), hash, sexp]
   end
 
   include T

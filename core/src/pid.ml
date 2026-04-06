@@ -9,12 +9,12 @@ module Stable = struct
       let ensure i = if i <= 0 then raise (Pid_must_be_positive i) else i
 
       include%template
-        Sexpable.Stable.Of_sexpable.V1 [@modality portable]
+        Sexpable.Stable.Of_sexpable.V1 [@modality portable] [@alloc stack]
           (Int.Stable.V1)
           (struct
             type t = Int.Stable.V1.t
 
-            let to_sexpable = Fn.id
+            let%template[@alloc a = (heap, stack)] to_sexpable t = t
             let of_sexpable = ensure
           end)
 

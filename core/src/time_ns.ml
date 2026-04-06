@@ -9,7 +9,12 @@ module Span = Span_ns
 
 type t = Span.t (* since the Unix epoch (1970-01-01 00:00:00 UTC) *)
 [@@deriving
-  bin_io ~localize, compare ~localize, equal ~localize, globalize, hash, typerep]
+  bin_io ~localize
+  , compare ~localize ~zero_alloc
+  , equal ~localize ~zero_alloc
+  , globalize
+  , hash
+  , typerep]
 
 module Replace_polymorphic_compare_efficient = Span.Replace_polymorphic_compare
 include Replace_polymorphic_compare_efficient
@@ -288,7 +293,7 @@ module Alternate_sexp = struct
     module Ofday_as_span = struct
       open Int.O
 
-      let seconds_to_string seconds_span =
+      let%template[@alloc a = (heap, stack)] seconds_to_string seconds_span =
         let seconds = Span.to_int_sec seconds_span in
         let h = seconds / 3600 in
         let m = seconds / 60 % 60 in
@@ -321,7 +326,7 @@ module Alternate_sexp = struct
       let ns_of_10_ns = 10
       let ns_of_1_ns = 1
 
-      let sub_second_to_string sub_second_span =
+      let%template[@alloc a = (heap, stack)] sub_second_to_string sub_second_span =
         let open Int.O in
         let ns = Span.to_int63_ns sub_second_span |> Int63.to_int_exn in
         if ns = 0
@@ -367,11 +372,14 @@ module Alternate_sexp = struct
           Span.of_int63_ns (Int63.of_int (Int.of_string digits * multiplier)))
       ;;
 
-      let to_string span =
-        assert (Span.( >= ) span Span.zero && Span.( < ) span Span.day);
-        let seconds_span = span |> Span.to_int_sec |> Span.of_int_sec in
-        let sub_second_span = Span.( - ) span seconds_span in
-        seconds_to_string seconds_span ^ sub_second_to_string sub_second_span
+      let%template[@alloc a = (heap, stack)] to_string span =
+        (assert (Span.( >= ) span Span.zero && Span.( < ) span Span.day);
+         let seconds_span = span |> Span.to_int_sec |> Span.of_int_sec in
+         let sub_second_span = Span.( - ) span seconds_span in
+         let ( ^ ) = String.append [@alloc a] in
+         (seconds_to_string [@alloc a]) seconds_span
+         ^ (sub_second_to_string [@alloc a]) sub_second_span)
+        [@exclave_if_stack a]
       ;;
 
       let of_string string =
@@ -387,9 +395,14 @@ module Alternate_sexp = struct
       ;;
     end
 
-    let to_string t =
-      let date, span_since_start_of_day = Utc.to_date_and_span_since_start_of_day t in
-      Date.to_string date ^ " " ^ Ofday_as_span.to_string span_since_start_of_day ^ "Z"
+    let%template[@alloc a = (heap, stack)] to_string t =
+      (let date, span_since_start_of_day = Utc.to_date_and_span_since_start_of_day t in
+       let ( ^ ) = String.append [@alloc a] in
+       (Date.to_string [@alloc a]) date
+       ^ " "
+       ^ (Ofday_as_span.to_string [@alloc a]) span_since_start_of_day
+       ^ "Z")
+      [@exclave_if_stack a]
     ;;
 
     let of_string string =
@@ -400,10 +413,10 @@ module Alternate_sexp = struct
       Utc.of_date_and_span_since_start_of_day date ofday
     ;;
 
-    include%template Sexpable.Of_stringable [@modality portable] (struct
+    include%template Sexpable.Of_stringable [@modality portable] [@alloc stack] (struct
         type nonrec t = t
 
-        let to_string = to_string
+        let%template[@alloc a = (heap, stack)] to_string = (to_string [@alloc a])
         let of_string = of_string
       end)
 
@@ -438,7 +451,7 @@ module Alternate_sexp = struct
           , equal ~localize
           , globalize
           , hash
-          , sexp
+          , sexp ~stackify
           , sexp_grammar]
 
         let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
@@ -1247,7 +1260,20 @@ module Ofday = struct
       | Some t -> some t
     ;;
 
-    let to_option t = if is_none t then None else Some (value_exn t)
+    let%template[@alloc a = (heap, stack)] to_option t =
+      (if is_none t then None else Some (value_exn t)) [@exclave_if_stack a]
+    ;;
+
+    include%template
+      Immediate_option.Provide_or_null_conversions_zero_alloc [@modality portable] (struct
+        type nonrec t = t
+        type value = ofday
+
+        let none = none
+        let some v = some v
+        let is_none t = is_none t
+        let unchecked_value t = unchecked_value t
+      end)
 
     (* Can't use the quickcheck generator and shrinker inherited from [Span.Option]
        because they may produce spans whose representation is larger than
@@ -1287,7 +1313,12 @@ module Ofday = struct
           [@@deriving bin_io ~localize, compare ~localize, equal ~localize, globalize]
 
           let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
-          let sexp_of_t t = [%sexp_of: Ofday_ns.Stable.V1.t option] (to_option t)
+
+          let%template[@alloc a = (heap, stack)] sexp_of_t t =
+            [%sexp ((to_option [@alloc a]) t : Ofday_ns.Stable.V1.t option)]
+            [@alloc a] [@exclave_if_stack a]
+          ;;
+
           let t_of_sexp s = of_option ([%of_sexp: Ofday_ns.Stable.V1.t option] s)
           let to_int63 t = Span.Option.Stable.V1.to_int63 t
           let of_int63_exn t = Span.Option.Stable.V1.of_int63_exn t
@@ -1303,7 +1334,7 @@ module Ofday = struct
       end
     end
 
-    let sexp_of_t = Stable.V1.sexp_of_t
+    let%template[@alloc a = (heap, stack)] sexp_of_t = (Stable.V1.sexp_of_t [@alloc a])
     let t_of_sexp = Stable.V1.t_of_sexp
 
     include%template Identifiable.Make [@mode local] [@modality portable] (struct
@@ -1514,6 +1545,17 @@ module Option = struct
     (if is_none t then None else Some (value_exn t)) [@exclave_if_stack a]
   ;;
 
+  include%template
+    Immediate_option.Provide_or_null_conversions_zero_alloc [@modality portable] (struct
+      type nonrec t = t
+      type value = time
+
+      let none = none
+      let some v = some v
+      let is_none t = is_none t
+      let unchecked_value t = unchecked_value t
+    end)
+
   module Optional_syntax = struct
     module Optional_syntax = struct
       let[@zero_alloc] is_none t = is_none t
@@ -1540,7 +1582,8 @@ module Option = struct
     include%template Diffable.Atomic.Make [@modality portable] (struct
         include T
 
-        let equal = [%compare.equal: t]
+        let%template[@mode m = local] equal = ([%compare.equal: t] [@mode m])
+        let equal = (equal [@mode local])
       end)
 
     module Stable = struct
@@ -1576,7 +1619,8 @@ module Option = struct
         include%template Diffable.Atomic.Make [@modality portable] (struct
             include T
 
-            let equal = [%compare.equal: t]
+            let%template[@mode m = local] equal = ([%compare.equal: t] [@mode m])
+            let equal = (equal [@mode local])
           end)
       end
     end
@@ -1608,7 +1652,8 @@ module Option = struct
       include%template Diffable.Atomic.Make [@modality portable] (struct
           include T
 
-          let equal = [%compare.equal: t]
+          let%template[@mode m = local] equal = ([%compare.equal: t] [@mode m])
+          let equal = (equal [@mode local])
         end)
     end
 

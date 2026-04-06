@@ -24,19 +24,15 @@ end
 
 (* Even integers are the only valid identifiers *)
 module Even_int_id =
-  Make_with_validate_without_pretty_printer
-    (struct
-      let module_name = "Even_int_id"
-
-      let validate s =
-        if Int.of_string s % 2 <> 0
-        then Or_error.error_s [%message "Not a valid Even_int_id" ~_:(s : string)]
-        else Ok ()
-      ;;
-
-      let include_default_validation = true
-    end)
-    ()
+  (val make
+         ~module_name:"Even_int_id"
+         ~validate:(fun s ->
+           if Int.of_string s % 2 <> 0
+           then Or_error.error_s [%message "Not a valid Even_int_id" ~_:(s : string)]
+           else Ok ())
+         ~include_default_validation:true
+         ~include_pretty_printer:false
+         ())
 
 let even_int_id_to_bin_str t =
   let bin_writer_t = Even_int_id.bin_writer_t in
@@ -103,11 +99,11 @@ let%expect_test "of bin prot failure" =
 ;;
 
 module M =
-  Make_without_pretty_printer
-    (struct
-      let module_name = "test"
-    end)
-    ()
+  (val (make [@modality portable])
+         ~module_name:"test"
+         ~include_default_validation:true
+         ~include_pretty_printer:false
+         ())
 
 let%test_unit "string roundtrip" =
   [%test_result: string] (M.of_string "FOOBAR" |> M.to_string) ~expect:"FOOBAR"
@@ -234,19 +230,11 @@ end
 
 let%expect_test "include_default_validation" =
   let test ~include_default_validation =
-    let module M =
-      Make_with_validate
-        (struct
-          let module_name = "M"
-
-          let validate s =
-            if String.( = ) s "foo" then error_s [%message "no foo"] else Ok ()
-          ;;
-
-          let include_default_validation = include_default_validation
-        end)
-        ()
+    let module_name = "M" in
+    let validate s =
+      if String.( = ) s "foo" then error_s [%message "no foo"] else Ok ()
     in
+    let module M = (val make ~module_name ~validate ~include_default_validation ()) in
     List.iter [ "foobar"; "foo"; "  bar  "; " bar"; "bar "; "" ] ~f:(fun s ->
       print_s
         [%message s ~_:(Or_error.try_with (fun () -> M.of_string s) : M.t Or_error.t)])
@@ -280,38 +268,4 @@ let%expect_test "include_default_validation" =
         "'bar ' is not a valid M because it has whitespace on the edge")))
     ("" (Error (Invalid_argument "'' is not a valid M because it is empty")))
     |}]
-;;
-
-let%expect_test "[Make] is the same as [make] with default validation" =
-  let test (module M : String_id.S) =
-    List.iter [ "foobar"; "foo"; "  bar  "; " bar"; "bar "; "" ] ~f:(fun s ->
-      let x = Or_error.try_with (fun () -> M.of_string s) in
-      print_s [%message s ~_:(x : M.t Or_error.t)]);
-    [%expect
-      {|
-      (foobar (Ok foobar))
-      (foo (Ok foo))
-      ("  bar  " (
-        Error (
-          Invalid_argument
-          "'  bar  ' is not a valid M because it has whitespace on the edge")))
-      (" bar" (
-        Error (
-          Invalid_argument
-          "' bar' is not a valid M because it has whitespace on the edge")))
-      ("bar " (
-        Error (
-          Invalid_argument
-          "'bar ' is not a valid M because it has whitespace on the edge")))
-      ("" (Error (Invalid_argument "'' is not a valid M because it is empty")))
-      |}]
-  in
-  let module_name = "M" in
-  test
-    (module Make
-              (struct
-                let module_name = module_name
-              end)
-              ());
-  test (module (val make ~module_name ~include_default_validation:true ()))
 ;;

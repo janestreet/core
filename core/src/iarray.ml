@@ -10,7 +10,7 @@ module Stable = struct
 
     let map = map
     let t_of_sexp = t_of_sexp
-    let sexp_of_t = sexp_of_t
+    let%template[@alloc a = (heap, stack)] sexp_of_t = (sexp_of_t [@alloc a])
     let t_sexp_grammar = t_sexp_grammar
 
     [%%rederive type 'a t = 'a iarray [@@deriving bin_io ~localize ~portable]]

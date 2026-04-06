@@ -41,6 +41,8 @@ module type Extend_zone = sig @@ portable
   (** Like {!local}, but a [Portable_lazy.t]. *)
   val local_portable : t Portable_lazy.t
 
+  val arg_type : t Command.Arg_type.t
+
   (** [initialized_zones ()] returns a sorted list of time zone names that have been
       loaded from disk thus far. *)
   val initialized_zones : unit -> (string * t) list

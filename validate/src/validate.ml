@@ -97,6 +97,12 @@ let field (type a : k) (check : (a check[@mode p])) record fld =
   let v = (Field.get [@kind k]) fld record in
   (field_direct [@kind k] [@mode p]) check fld record v
 [@@mode p = (portable, nonportable)] [@@warning "-unused-value-declaration"]
+;;
+
+let field_folder (type a : k) (check : (a check[@mode p])) record =
+  ();
+  fun acc fld -> (field [@kind k] [@mode p]) check record fld :: acc
+[@@mode p = (portable, nonportable)]
 ;;]
 
 let%template try_with (f @ p) =
@@ -134,12 +140,6 @@ let maybe_raise t =
 ;;
 
 let valid_or_error check x = Or_error.map (result (protect check x)) ~f:(fun () -> x)
-
-let%template field_folder check record =
-  ();
-  fun acc fld -> (field [@mode p]) check record fld :: acc
-[@@mode p = (portable, nonportable)]
-;;
 
 let%template portable_field_folder check record =
   let f = (field_folder [@mode portable]) check record in

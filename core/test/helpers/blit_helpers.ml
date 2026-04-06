@@ -5,7 +5,7 @@ open Base_quickcheck
 open Generator.Let_syntax
 
 module Int_array_option = struct
-  type t = int array option [@@deriving equal, sexp_of]
+  type t = int array option [@@deriving equal ~localize, sexp_of]
 end
 
 let index_of array =

@@ -268,6 +268,7 @@ include%template
     let module_name = "Core.Time_ns.Ofday"
   end)
 
+let%template[@alloc a = stack] to_string = (Stable.V1.to_string [@alloc a])
 let%template[@alloc a = stack] sexp_of_t = (Stable.V1.sexp_of_t [@alloc a])
 
 include%template (
@@ -336,7 +337,8 @@ let every =
     else if Span.( <= ) span Span.zero
     then
       Or_error.error_s
-        [%message "[Time_ns.Ofday.every] called with negative span" ~_:(span : Span.t)]
+        [%message
+          "[Time_ns.Ofday.every] called with non-positive span" ~_:(span : Span.t)]
     else if is_invalid span
     then Ok [ start ]
     else Ok (every_valid_ofday_span span ~start ~stop ~acc:[])

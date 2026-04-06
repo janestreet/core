@@ -1,10 +1,9 @@
 open! Core
+open! Await
 open! Date
 open! Date.Private
 
 module%test [@name "[Date_cache] does not race"] _ = struct
-  module Barrier = Portable_test_helpers.Barrier
-
   let test
     : type (time : value mod contended portable) (result : value mod contended portable).
       (int -> time)
@@ -13,31 +12,26 @@ module%test [@name "[Date_cache] does not race"] _ = struct
       -> unit
     =
     fun time_of_days f m ->
+    (* Box the result to make it non-float *)
+    let module Result_box = struct
+      type t = { result : result }
+    end
+    in
     let num_domains = 20 in
-    let barrier = Barrier.create num_domains in
-    let times = Iarray.init num_domains ~f:(fun n -> time_of_days (n * 5)) in
-    let results = Iarray.init num_domains ~f:(fun _ -> Await_sync.Ivar.create ()) in
-    for i = 0 to num_domains - 1 do
-      match
-        Multicore.spawn
-          (fun () ->
-            let time = Iarray.get times i in
-            let ivar = Iarray.get results i in
-            Barrier.await barrier;
-            Await_sync.Ivar.fill_exn ivar (f time ~zone:Timezone.utc))
-          ()
-      with
-      | Spawned -> ()
-      | Failed ((), exn, bt) -> Exn.raise_with_original_backtrace exn bt
-    done;
-    let results_parallel =
-      let await = Await_blocking.await Await.Terminator.never in
-      Iarray.map results ~f:(fun ivar -> Await_sync.Ivar.read await ivar) [@nontail]
-    in
-    let results_sequential =
-      Iarray.map times ~f:(fun time -> f time ~zone:Timezone.utc)
-    in
-    Expect_test_helpers_base.require_equal m results_parallel results_sequential
+    Concurrent_in_thread.with_blocking Terminator.never ~f:(fun conc ->
+      let barrier = Await.Barrier.create num_domains in
+      let times = Iarray.init num_domains ~f:(fun n -> time_of_days (n * 5)) in
+      let results_parallel =
+        Concurrent.spawn_join_n conc () ~n:num_domains ~f:(fun _s () conc i ->
+          let time = Iarray.get times i in
+          Await.Barrier.await (Concurrent.await conc) barrier;
+          { Result_box.result = f time ~zone:Timezone.utc })
+        |> Iarray.map ~f:(fun { Result_box.result } -> result)
+      in
+      let results_sequential =
+        Iarray.map times ~f:(fun time -> f time ~zone:Timezone.utc)
+      in
+      Expect_test_helpers_base.require_equal m results_parallel results_sequential)
   ;;
 
   let%expect_test "[Time_ns]" =

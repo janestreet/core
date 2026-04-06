@@ -11,13 +11,17 @@ open! Import
 
 [%%template:
 type ('a : k) t : mutable_data with 'a
-[@@deriving compare ~localize, equal ~localize, sexp_of] [@@kind k = base_non_value]
+[@@deriving compare ~localize, equal ~localize, sexp_of] [@@kind k = base]
 
-type 'a t [@@deriving compare ~localize, equal ~localize, quickcheck, sexp_of]
+(*_ Non-value [t]s don't support quickcheck *)
+[%%rederive: type nonrec 'a t = 'a t [@@deriving quickcheck]]
+
+(*_ Unmangled [t] is shadowed below, so define [t] with explicit mangling. *)
+type 'a t := 'a t [@@kind.explicit value]
 
 [@@@kind k = base]
 
-type ('a : k) t := ('a t[@kind k])
+type ('a : k) t := ('a t[@kind.explicit k])
 
 [@@@kind.default k]
 

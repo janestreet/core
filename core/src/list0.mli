@@ -40,7 +40,13 @@ module Assoc : sig
   type ('a : value_or_null, 'b : value_or_null) t = ('a, 'b) Base.List.Assoc.t
   [@@deriving bin_io ~localize]
 
-  val compare : ('a -> 'a -> int) -> ('b -> 'b -> int) -> ('a, 'b) t -> ('a, 'b) t -> int
+  val%template compare
+    :  ('a @ m -> 'a @ m -> int)
+    -> ('b @ m -> 'b @ m -> int)
+    -> ('a, 'b) t @ m
+    -> ('a, 'b) t @ m
+    -> int
+  [@@mode m = (local, global)]
   [@@deprecated
     "[since 2016-06] This does not respect the equivalence class promised by List.Assoc. \
      Use List.compare directly if that's what you want."]

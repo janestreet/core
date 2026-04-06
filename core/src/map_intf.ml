@@ -23,23 +23,23 @@ module Hashtbl = Base.Hashtbl
 [@@@mode.default m = (local, global)]
 
 module type Key_plain = sig
-  type t [@@deriving (compare [@mode m]), sexp_of]
+  type t [@@deriving (compare [@mode.explicit m]), sexp_of]
 end
 
 module type Key = sig
-  type t [@@deriving (compare [@mode m]), sexp]
+  type t [@@deriving (compare [@mode.explicit m]), sexp]
 end
 
 module type Key_binable = sig
-  type t [@@deriving bin_io, (compare [@mode m]), sexp]
+  type t [@@deriving bin_io, (compare [@mode.explicit m]), sexp]
 end
 
 module type Key_hashable = sig
-  type t [@@deriving (compare [@mode m]), hash, sexp]
+  type t [@@deriving (compare [@mode.explicit m]), hash, sexp]
 end
 
 module type Key_binable_hashable = sig
-  type t [@@deriving bin_io, (compare [@mode m]), hash, sexp]
+  type t [@@deriving bin_io, (compare [@mode.explicit m]), hash, sexp]
 end]
 
 module Key_bin_io = struct

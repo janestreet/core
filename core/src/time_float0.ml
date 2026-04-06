@@ -11,7 +11,8 @@ module Absolute = struct
     Float :
     sig
     @@ portable
-      type t = float [@@deriving bin_io ~localize, compare ~localize, hash, typerep]
+      type t = float
+      [@@deriving bin_io ~localize, compare ~localize, hash, typerep, globalize]
 
       include%template
         Comparable.S_common [@mode local] [@modality portable] with type t := t

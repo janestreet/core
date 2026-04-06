@@ -5,7 +5,7 @@
 open! Import
 
 type ('a : value_or_null) t = 'a Base.Uniform_array.t
-[@@deriving compare ~localize, sexp, sexp_grammar, stable_witness]
+[@@deriving compare ~localize, sexp ~stackify, sexp_grammar, stable_witness]
 
 [%%rederive:
   type nonrec 'a t = 'a Base.Uniform_array.t [@@deriving bin_io ~localize, quickcheck]]

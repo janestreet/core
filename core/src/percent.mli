@@ -58,13 +58,16 @@ module Option : sig
     , globalize
     , quickcheck
     , sexp_grammar
-    , sexp]
+    , sexp ~stackify]
 
   include%template
     Immediate_option.S_without_immediate
     [@mode local]
     with type value := value
      and type t := t
+
+  include%template
+    Or_nullable.S_with_zero_alloc [@mode local] with type value := value and type t := t
 
   (** [apply_with_none_as_nan (some x) y = apply x y], and
       [apply_with_none_as_nan none y = apply (of_mult Float.nan) y] *)
@@ -234,7 +237,7 @@ val of_string_allow_nan_and_inf : string -> t
     - h or H: convert a floating-point argument to hexadecimal notation, in the style
       0xh.hhhh e+-dd (hexadecimal mantissa, exponent in decimal and denotes a power of 2). *)
 module Format : sig
-  type t [@@deriving sexp_of]
+  type t [@@deriving sexp_of ~stackify]
 
   (** [sprintf "%.*e" precision] *)
   val exponent : precision:int -> t
@@ -310,7 +313,7 @@ module Stable : sig
     module Bin_shape_same_as_float : sig
       type nonrec t = t
       [@@deriving
-        sexp
+        sexp ~stackify
         , sexp_grammar
         , bin_io ~localize
         , compare ~localize
@@ -330,7 +333,7 @@ module Stable : sig
         details. *)
     type nonrec t = t
     [@@deriving
-      sexp
+      sexp ~stackify
       , sexp_grammar
       , bin_io ~localize
       , compare ~localize
@@ -367,7 +370,7 @@ module Stable : sig
         ]} *)
     type nonrec t = t
     [@@deriving
-      sexp
+      sexp ~stackify
       , sexp_grammar
       , bin_io ~localize
       , compare ~localize
@@ -394,7 +397,7 @@ module Stable : sig
         [Percent.Stable.V3.t]: either can read the other's output and it's fully
         round-trippable in both directions. *)
     module Always_percentage : sig
-      type nonrec t = t [@@deriving sexp, bin_io ~localize]
+      type nonrec t = t [@@deriving sexp ~stackify, bin_io ~localize]
 
       val to_string : local_ t -> string
     end
@@ -406,14 +409,24 @@ module Stable : sig
       module Bin_shape_same_as_float : sig
         type t = Option.t
         [@@deriving
-          bin_io ~localize, compare ~localize, hash, sexp, sexp_grammar, stable_witness]
+          bin_io ~localize
+          , compare ~localize
+          , hash
+          , sexp ~stackify
+          , sexp_grammar
+          , stable_witness]
       end
     end
 
     module V2 : sig
       type t = Option.t
       [@@deriving
-        bin_io ~localize, compare ~localize, hash, sexp, sexp_grammar, stable_witness]
+        bin_io ~localize
+        , compare ~localize
+        , hash
+        , sexp ~stackify
+        , sexp_grammar
+        , stable_witness]
     end
 
     module V3 : sig
@@ -423,7 +436,7 @@ module Stable : sig
         , compare ~localize
         , equal ~localize
         , hash
-        , sexp
+        , sexp ~stackify
         , sexp_grammar
         , stable_witness]
     end
@@ -438,7 +451,7 @@ end
     [Percent.Almost_round_trippable.Always_percentage], which rounds to 14 significant
     digits). *)
 module Always_percentage : sig
-  type nonrec t = t [@@deriving sexp_of]
+  type nonrec t = t [@@deriving sexp_of ~stackify]
 
   val to_string : t -> string
   val format : t -> Format.t -> string
@@ -459,7 +472,7 @@ end
       Percent.Almost_round_trippable.to_string (Percent.of_percentage 17.13) = "17.13%"
     ]} *)
 module Almost_round_trippable : sig
-  type nonrec t = t [@@deriving sexp]
+  type nonrec t = t [@@deriving sexp ~stackify]
 
   val to_string : local_ t -> string
   val of_string : string -> t
@@ -469,7 +482,7 @@ module Almost_round_trippable : sig
       [Percent.Almost_round_trippable.t]: either can read the other's output and the
       precision is exactly the same for both. *)
   module Always_percentage : sig
-    type nonrec t = t [@@deriving sexp, bin_io]
+    type nonrec t = t [@@deriving sexp ~stackify, bin_io]
 
     val to_string : local_ t -> string
   end

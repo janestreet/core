@@ -22,7 +22,7 @@ module Stable = struct
     include T
 
     module Format = struct
-      type 'a t = 'a list [@@deriving bin_io, sexp, stable_witness]
+      type 'a t = 'a list [@@deriving bin_io, sexp ~stackify, stable_witness]
     end
 
     include%template
@@ -39,15 +39,18 @@ module Stable = struct
           ;;
         end)
 
-    include%template
-      Sexpable.Of_sexpable1.V1 [@modality portable]
-        (Format)
-        (struct
-          include T
+    module To = struct
+      include T
 
-          let to_sexpable = Base.Nonempty_list.to_list
-          let of_sexpable = Base.Nonempty_list.of_list_exn
-        end)
+      let%template[@alloc a @ m = (heap_global, stack_local)] to_sexpable =
+        (Base.Nonempty_list.to_list [@mode m])
+      ;;
+
+      let of_sexpable = Base.Nonempty_list.of_list_exn
+    end
+
+    include%template
+      Sexpable.Of_sexpable1.V1 [@modality portable] [@alloc stack] (Format) (To)
 
     let t_sexp_grammar (type a) ({ untyped = element } : [%sexp_grammar: a])
       : [%sexp_grammar: a t]
@@ -77,7 +80,7 @@ module Stable = struct
       type nonrec 'a t = 'a V3.t = ( :: ) of 'a * 'a list
       [@@deriving compare ~localize, equal ~localize, hash]
 
-      let sexp_of_t = V3.sexp_of_t
+      let%template[@alloc a = (heap, stack)] sexp_of_t = (V3.sexp_of_t [@alloc a])
       let t_of_sexp = V3.t_of_sexp
       let t_sexp_grammar = V3.t_sexp_grammar
     end
@@ -127,7 +130,7 @@ module Stable = struct
       type 'a t = 'a V2.t = ( :: ) of 'a * 'a list
       [@@deriving compare ~localize, equal ~localize]
 
-      let sexp_of_t = V2.sexp_of_t
+      let%template[@alloc a = (heap, stack)] sexp_of_t = (V2.sexp_of_t [@alloc a])
       let t_of_sexp = V2.t_of_sexp
       let t_sexp_grammar = V2.t_sexp_grammar
     end
@@ -208,7 +211,13 @@ let anons anons =
 module Option = struct
   type 'a t = 'a list
   [@@deriving
-    compare ~localize, equal ~localize, sexp, sexp_grammar, hash, quickcheck, typerep]
+    compare ~localize
+    , equal ~localize
+    , sexp ~stackify
+    , sexp_grammar
+    , hash
+    , quickcheck
+    , typerep]
 
   let[@inline always] none () = []
   let some (_ :: _ as value : 'a nonempty_list) : 'a t = Obj.magic value

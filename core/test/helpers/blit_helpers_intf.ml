@@ -1,7 +1,7 @@
 open! Base
 
-module type Blittable = sig
-  type 'a t [@@deriving quickcheck, equal, sexp_of]
+module type%template [@mode m = (local, global)] Blittable = sig
+  type 'a t [@@deriving quickcheck, (equal [@mode.explicit m]), sexp_of]
 
   val length : _ t -> int
   val of_array : 'a array -> 'a t

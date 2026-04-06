@@ -124,7 +124,7 @@ module%template.portable
 
 module%template.portable Add_compare
     (Raw : sig
-       type t [@@deriving compare [@mode m]]
+       type t [@@deriving compare [@mode.explicit m]]
 
        include Raw with type t := t
      end)

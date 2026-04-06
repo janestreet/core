@@ -3,4 +3,5 @@
  (public_name core.filename_base)
  (libraries base)
  (preprocess
-  (pps ppx_jane -require-template-extension)))
+  (pps ppx_jane -compare-require-explicit-locality
+    -require-template-extension)))

@@ -112,7 +112,8 @@ Error: In this with constraint, the new definition of t
          type ('a, -'b) t constraint 'b = [< 'c perms ]
        Their parameters differ:
        The type [< `Read | `Who_can_write of 'a & 'b ]
-       is not equal to the type [< 'a perms ]
+       is not equal to the type
+         [< 'a perms ] = [< `Read | `Who_can_write of 'a ]
        Types for tag `Who_can_write are incompatible
        File "permissions.mlt", line 100, characters 2-53:
          Expected declaration

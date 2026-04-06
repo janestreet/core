@@ -17,7 +17,11 @@ module type Elt_stable = Hashtbl.Key_stable [@mode m]]
 
 module%template.portable
   [@modality p] Make_plain_with_hashable (T : sig
-    module Elt : Elt_plain
+    module Elt : sig
+      type t
+
+      include Elt_plain with type t := t
+    end
 
     val hashable : Elt.t Hashtbl.Hashable.t
   end) =
@@ -121,7 +125,12 @@ struct
   include Provide_stable_witness (T.Elt)
 end
 
-module%template.portable [@modality p] Make_plain (Elt : Elt_plain) =
+module%template.portable
+  [@modality p] Make_plain (Elt : sig
+    type t
+
+    include Elt_plain with type t := t
+  end) =
 Make_plain_with_hashable [@modality p] (struct
     module Elt = Elt
 

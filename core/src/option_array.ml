@@ -3,7 +3,8 @@ open! Base_quickcheck.Export
 include Base.Option_array
 
 module Array_of_options = struct
-  type 'a t = 'a option array [@@deriving sexp, bin_io, quickcheck ~portable]
+  type ('a : value_or_null) t = 'a option array
+  [@@deriving sexp, bin_io, quickcheck ~portable]
 end
 
 include%template

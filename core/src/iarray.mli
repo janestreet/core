@@ -13,7 +13,7 @@ include Base.Iarray.Public with type ('a : any mod separable) t := 'a t (** @inl
 module Stable : sig
   module V1 : sig
     type nonrec ('a : value_or_null mod separable) t = 'a t
-    [@@deriving equal ~localize, sexp, sexp_grammar]
+    [@@deriving equal ~localize, sexp ~stackify, sexp_grammar]
 
     [%%rederive: type nonrec 'a t = 'a t [@@deriving globalize, hash]]
 

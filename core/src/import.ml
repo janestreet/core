@@ -21,6 +21,7 @@ module Int_math = Base.Int_math
 module Invariant = Base.Invariant
 module Monad = Base.Monad
 module Obj = Base.Obj
+module Or_nullable = Base.Or_nullable
 module Poly = Base.Poly
 module Portability_hacks = Base.Portability_hacks
 module Pretty_printer = Base.Pretty_printer
@@ -28,7 +29,6 @@ module Random = Base.Random
 module Staged = Base.Staged
 module Stringable = Base.Stringable
 module Sys = Base.Sys
-module Toplevel_value = Base.Toplevel_value
 module With_return = Base.With_return
 module Word_size = Base.Word_size
 

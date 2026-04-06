@@ -1276,6 +1276,18 @@ module _ = struct
       (Zoned.of_string "9 AM UTC")
   ;;
 
+  let%expect_test "Zoned.to_string uses full ofday and zone name" =
+    let t = Zoned.of_string "12:01 nyc" in
+    print_endline (Zoned.to_string t);
+    [%expect {| 12:01:00.000000 America/New_York |}]
+  ;;
+
+  let%expect_test "Zoned.sexp_of_t uses full ofday and zone name" =
+    let t = Zoned.of_string "12:01 nyc" in
+    print_s (Zoned.sexp_of_t t);
+    [%expect {| (12:01:00.000000 America/New_York) |}]
+  ;;
+
   let%test _ =
     Set.equal
       (Set.of_list [ start_of_day ])

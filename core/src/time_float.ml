@@ -24,8 +24,6 @@ module Zone = struct
     @@ portable
       include Timezone.Extend_zone with type t := t
     end)
-
-  let%template arg_type = (Command.Arg_type.create [@mode portable]) of_string
 end
 
 module Ofday = struct
@@ -218,12 +216,17 @@ module T_without_Map_and_Set = struct
   ;;
 
   let t_of_sexp_abs sexp = t_of_sexp_gen sexp ~if_no_timezone:`Fail
+  let maybe_globalize t = t
+  let maybe_globalize__stack t = globalize t
 
-  let sexp_of_t_abs t ~zone =
+  let%template[@alloc a = (heap, stack)] sexp_of_t_abs t ~zone =
+    let t = (maybe_globalize [@alloc a]) t in
     Sexp.List (List.map (Time.to_string_abs_parts ~zone t) ~f:(fun s -> Sexp.Atom s))
   ;;
 
-  let sexp_of_t t = sexp_of_t_abs ~zone:(get_sexp_zone ()) t
+  let%template[@alloc a = (heap, stack)] sexp_of_t t =
+    (sexp_of_t_abs [@alloc a]) ~zone:(get_sexp_zone ()) t [@exclave_if_stack a]
+  ;;
 
   module Exposed_for_tests = struct
     let ensure_colon_in_offset = ensure_colon_in_offset

@@ -407,12 +407,14 @@ module Num_occurrences = struct
 
   let%expect_test "to_help_string" =
     let flag_name = "name" in
-    List.iter [%all: t] ~f:(fun t ->
-      let s = to_help_string t ~flag_name in
-      print_s [%message "" ~_:(t : t) s];
-      let t', flag_name' = of_help_string s in
-      assert ([%compare.equal: t] t t');
-      assert ([%compare.equal: string] flag_name flag_name'));
+    let%template () =
+      List.iter [%all: t] ~f:(fun t ->
+        let s = to_help_string t ~flag_name in
+        print_s [%message "" ~_:(t : t) s];
+        let t', flag_name' = of_help_string s in
+        assert (([%compare.equal: t] [@mode local]) t t');
+        assert (([%compare.equal: string] [@mode local]) flag_name flag_name'))
+    in
     [%expect
       {|
       (((at_least_once false) (at_most_once false)) "[name] ...")

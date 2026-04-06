@@ -13,7 +13,11 @@ module type Hashtbl_for_testing = sig
       ('a, 'b, 'c) Hashtbl_intf.create_options_with_first_class_module
 
   (* [Creators] gives us a different create than [Hashtbl_intf.Hashtbl] does *)
-  val create : ?growth_allowed:bool -> ?size:int -> 'a Base.Hashtbl.Key.t -> ('a, 'b) t
+  val create
+    :  ?growth_allowed:bool
+    -> ?size:int
+    -> 'a Base.Hashtbl.Key.t @ immutable
+    -> ('a, 'b) t
 
   include Hashtbl_intf.Accessors with type ('a, 'b) t := ('a, 'b) t with type 'a key := 'a
   include Hashtbl_intf.Multi with type ('a, 'b) t := ('a, 'b) t with type 'a key := 'a

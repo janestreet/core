@@ -13,7 +13,7 @@ module Definitions = struct
     Comparable.Using_comparator_arg [@mode m] [@modality p]
 
   module type Comparable_arg = sig
-    type t : value_or_null [@@deriving (compare [@mode m]), sexp]
+    type t : value_or_null [@@deriving (compare [@mode.explicit m]), sexp]
   end
 
   module type Comparable_sexpable = sig
@@ -23,11 +23,11 @@ module Definitions = struct
   end
 
   module type Hashable_plain_arg = sig
-    type t : value_or_null [@@deriving (compare [@mode m]), hash, sexp_of]
+    type t : value_or_null [@@deriving (compare [@mode.explicit m]), hash, sexp_of]
   end
 
   module type Hashable_arg = sig
-    type t : value_or_null [@@deriving (compare [@mode m]), hash, sexp]
+    type t : value_or_null [@@deriving (compare [@mode.explicit m]), hash, sexp]
   end
 
   module type Hashable_sexpable = sig
