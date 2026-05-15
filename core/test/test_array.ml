@@ -30,6 +30,30 @@ let%expect_test "get_opt" =
   [%expect {| () |}]
 ;;
 
+let%expect_test "find_or_null does not allocate" =
+  let result =
+    require_no_allocation ~here:[%here] (fun () ->
+      Array.find_or_null ar1 ~f:(fun x -> x = 7))
+  in
+  print_s [%sexp (result : int Or_null.t)];
+  [%expect {| (7) |}];
+  let result =
+    require_no_allocation ~here:[%here] (fun () ->
+      Array.find_or_null ar1 ~f:(fun x -> x > 100))
+  in
+  print_s [%sexp (result : int Or_null.t)];
+  [%expect {| () |}]
+;;
+
+let%expect_test "findi_or_null does not allocate when no element matches" =
+  let result =
+    require_no_allocation ~here:[%here] (fun () ->
+      Array.findi_or_null ar1 ~f:(fun _ x -> x > 100))
+  in
+  print_s [%sexp (result : (int * int) Or_null.t)];
+  [%expect {| () |}]
+;;
+
 module%test [@name "nget"] _ = struct
   let%expect_test "neg" = require_equal (module Base.Int) (nget ar1 (-3)) 8
   let%expect_test "pos" = require_equal (module Base.Int) (nget ar1 3) ar1.(3)

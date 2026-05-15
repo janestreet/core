@@ -340,11 +340,11 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
 
         let empty_constructor = For_tests.empty_constructor
 
-        let constructor_gen =
+        let quickcheck_generator_constructor : constructor Gen.t =
           constructor_gen Key.quickcheck_generator Data.quickcheck_generator ~compare_keys
         ;;
 
-        let multi_constructor_gen =
+        let quickcheck_generator_multi_constructor : multi_constructor Gen.t =
           multi_constructor_gen
             Key.quickcheck_generator
             Data.quickcheck_generator
@@ -364,15 +364,18 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
          [invariant] and that we have correctly constructed corresponding hash tables and
          maps. *)
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          Hashtbl.invariant ignore ignore t;
-          [%test_result: Data.t Key.Map.t] (to_map t) ~expect:map)
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            Hashtbl.invariant ignore ignore t;
+            [%test_result: Data.t Key.Map.t] (to_map t) ~expect:map)
       ;;
 
       let%test_unit _ =
         Qc.test
-          multi_constructor_gen
+          [%quickcheck.generator: multi_constructor]
           ~sexp_of:[%sexp_of: multi_constructor]
           ~f:(fun multi_constructor ->
             let map, t = map_and_table_multi multi_constructor in
@@ -384,7 +387,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
 
       let%test_unit _ =
         Qc.test
-          (Gen.tuple2 constructor_gen Key.quickcheck_generator)
+          [%quickcheck.generator: constructor * Key.t]
           ~sexp_of:[%sexp_of: constructor * Key.t]
           ~f:(fun (constructor, key) ->
             let _, t = map_and_table constructor in
@@ -396,127 +399,163 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
       let clear = Hashtbl.clear
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let _, t = map_and_table constructor in
-          Hashtbl.clear t;
-          Hashtbl.invariant ignore ignore t;
-          [%test_result: Data.t Key.Map.t] (to_map t) ~expect:Key.Map.empty)
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let _, t = map_and_table constructor in
+            Hashtbl.clear t;
+            Hashtbl.invariant ignore ignore t;
+            [%test_result: Data.t Key.Map.t] (to_map t) ~expect:Key.Map.empty)
       ;;
 
       let copy = Hashtbl.copy
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          let t_copy = Hashtbl.copy t in
-          Hashtbl.clear t;
-          Hashtbl.invariant ignore ignore t_copy;
-          [%test_result: Data.t Key.Map.t] (to_map t_copy) ~expect:map)
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            let t_copy = Hashtbl.copy t in
+            Hashtbl.clear t;
+            Hashtbl.invariant ignore ignore t_copy;
+            [%test_result: Data.t Key.Map.t] (to_map t_copy) ~expect:map)
       ;;
 
       let fold = Hashtbl.fold
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          [%test_result: Data.t Key.Map.t]
-            (Hashtbl.fold t ~init:Key.Map.empty ~f:(fun ~key ~data map ->
-               Map.set map ~key ~data))
-            ~expect:map)
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: Data.t Key.Map.t]
+              (Hashtbl.fold t ~init:Key.Map.empty ~f:(fun ~key ~data map ->
+                 Map.set map ~key ~data))
+              ~expect:map)
       ;;
 
       let iter = Hashtbl.iter
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          let datas = ref [] in
-          Hashtbl.iter t ~f:(fun data -> datas := data :: !datas);
-          [%test_result: Data.t list]
-            (List.sort !datas ~compare:Data.compare)
-            ~expect:(List.sort (Map.data map) ~compare:Data.compare))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            let datas = ref [] in
+            Hashtbl.iter t ~f:(fun data -> datas := data :: !datas);
+            [%test_result: Data.t list]
+              (List.sort !datas ~compare:Data.compare)
+              ~expect:(List.sort (Map.data map) ~compare:Data.compare))
       ;;
 
       let iteri = Hashtbl.iteri
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          let t_copy = Hashtbl.create (module Key) in
-          Hashtbl.iteri t ~f:(fun ~key ~data -> Hashtbl.add_exn t_copy ~key ~data);
-          [%test_result: Data.t Key.Map.t] (to_map t_copy) ~expect:map)
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            let t_copy = Hashtbl.create (module Key) in
+            Hashtbl.iteri t ~f:(fun ~key ~data -> Hashtbl.add_exn t_copy ~key ~data);
+            [%test_result: Data.t Key.Map.t] (to_map t_copy) ~expect:map)
       ;;
 
       let iter_keys = Hashtbl.iter_keys
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          let keys = ref [] in
-          Hashtbl.iter_keys t ~f:(fun key -> keys := key :: !keys);
-          [%test_result: Key.t list]
-            (List.sort !keys ~compare:Key.compare)
-            ~expect:(List.sort (Map.keys map) ~compare:Key.compare))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            let keys = ref [] in
+            Hashtbl.iter_keys t ~f:(fun key -> keys := key :: !keys);
+            [%test_result: Key.t list]
+              (List.sort !keys ~compare:Key.compare)
+              ~expect:(List.sort (Map.keys map) ~compare:Key.compare))
       ;;
 
       let exists = Hashtbl.exists
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          [%test_result: bool]
-            (Hashtbl.exists t ~f:Data.to_bool)
-            ~expect:(Map.exists map ~f:Data.to_bool))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: bool]
+              (Hashtbl.exists t ~f:Data.to_bool)
+              ~expect:(Map.exists map ~f:Data.to_bool))
       ;;
 
       let existsi = Hashtbl.existsi
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          [%test_result: bool]
-            (Hashtbl.existsi t ~f:Key_and_data.to_bool)
-            ~expect:(Map.existsi map ~f:Key_and_data.to_bool))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: bool]
+              (Hashtbl.existsi t ~f:Key_and_data.to_bool)
+              ~expect:(Map.existsi map ~f:Key_and_data.to_bool))
       ;;
 
       let for_all = Hashtbl.for_all
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          [%test_result: bool]
-            (Hashtbl.for_all t ~f:Data.to_bool)
-            ~expect:(Map.for_all map ~f:Data.to_bool))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: bool]
+              (Hashtbl.for_all t ~f:Data.to_bool)
+              ~expect:(Map.for_all map ~f:Data.to_bool))
       ;;
 
       let for_alli = Hashtbl.for_alli
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          [%test_result: bool]
-            (Hashtbl.for_alli t ~f:Key_and_data.to_bool)
-            ~expect:(Map.for_alli map ~f:Key_and_data.to_bool))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: bool]
+              (Hashtbl.for_alli t ~f:Key_and_data.to_bool)
+              ~expect:(Map.for_alli map ~f:Key_and_data.to_bool))
       ;;
 
       let count = Hashtbl.count
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          [%test_result: int]
-            (Hashtbl.count t ~f:Data.to_bool)
-            ~expect:(Map.count map ~f:Data.to_bool))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: int]
+              (Hashtbl.count t ~f:Data.to_bool)
+              ~expect:(Map.count map ~f:Data.to_bool))
       ;;
 
       let counti = Hashtbl.counti
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          [%test_result: int]
-            (Hashtbl.counti t ~f:Key_and_data.to_bool)
-            ~expect:(Map.counti map ~f:Key_and_data.to_bool))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: int]
+              (Hashtbl.counti t ~f:Key_and_data.to_bool)
+              ~expect:(Map.counti map ~f:Key_and_data.to_bool))
       ;;
 
       let length = Hashtbl.length
@@ -524,17 +563,20 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
       let growth_allowed = Hashtbl.growth_allowed
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          [%test_result: int] (Hashtbl.length t) ~expect:(Map.length map);
-          assert (Hashtbl.capacity t >= Hashtbl.length t))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: int] (Hashtbl.length t) ~expect:(Map.length map);
+            assert (Hashtbl.capacity t >= Hashtbl.length t))
       ;;
 
       let is_empty = Hashtbl.is_empty
 
       let%test_unit _ =
         Qc.test
-          constructor_gen
+          [%quickcheck.generator: constructor]
           ~examples:[ empty_constructor ]
           ~sexp_of:[%sexp_of: constructor]
           ~f:(fun constructor ->
@@ -546,7 +588,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
 
       let%test_unit _ =
         Qc.test
-          (Gen.tuple2 constructor_gen Key.quickcheck_generator)
+          [%quickcheck.generator: constructor * Key.t]
           ~sexp_of:[%sexp_of: constructor * Key.t]
           ~f:(fun (constructor, key) ->
             let map, t = map_and_table constructor in
@@ -557,7 +599,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
 
       let%test_unit _ =
         Qc.test
-          (Gen.tuple2 constructor_gen Key.quickcheck_generator)
+          [%quickcheck.generator: constructor * Key.t]
           ~sexp_of:[%sexp_of: constructor * Key.t]
           ~f:(fun (constructor, key) ->
             let map, t = map_and_table constructor in
@@ -569,7 +611,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
 
       let%test_unit _ =
         Qc.test
-          (Gen.tuple3 constructor_gen Key.quickcheck_generator Data.quickcheck_generator)
+          [%quickcheck.generator: constructor * Key.t * Data.t]
           ~sexp_of:[%sexp_of: constructor * Key.t * Data.t]
           ~f:(fun (constructor, key, data) ->
             let map, t = map_and_table constructor in
@@ -583,10 +625,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
       let%test_unit _ =
         let f (name, add) =
           Qc.test
-            (Gen.tuple3
-               constructor_gen
-               Key.quickcheck_generator
-               Data.quickcheck_generator)
+            [%quickcheck.generator: constructor * Key.t * Data.t]
             ~sexp_of:[%sexp_of: constructor * Key.t * Data.t]
             ~f:(fun (constructor, key, data) ->
               let map, t = map_and_table constructor in
@@ -609,10 +648,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
 
       let%test_unit _ =
         Qc.test
-          (Gen.tuple3
-             constructor_gen
-             Key.quickcheck_generator
-             (Option.quickcheck_generator Data.quickcheck_generator))
+          [%quickcheck.generator: constructor * Key.t * Data.t option]
           ~sexp_of:[%sexp_of: constructor * Key.t * Data.t option]
           ~f:(fun (constructor, key, data_opt) ->
             let map, t = map_and_table constructor in
@@ -624,6 +660,22 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
               ~expect:(Map.change map key ~f:(fun _ -> data_opt)))
       ;;
 
+      let change_or_null = Hashtbl.change_or_null
+
+      let%test_unit _ =
+        Qc.test
+          [%quickcheck.generator: constructor * Key.t * Data.t or_null]
+          ~sexp_of:[%sexp_of: constructor * Key.t * Data.t or_null]
+          ~f:(fun (constructor, key, data_or_null) ->
+            let map, t = map_and_table constructor in
+            Hashtbl.change_or_null t key ~f:(fun original ->
+              [%test_result: Data.t or_null] original ~expect:(Map.find_or_null map key);
+              data_or_null);
+            [%test_result: Data.t Key.Map.t]
+              (to_map t)
+              ~expect:(Map.change_or_null map key ~f:(fun _ -> data_or_null)))
+      ;;
+
       let%template choose = (Hashtbl.choose [@mode m]) [@@mode m = (local, global)]
       let choose_exn = Hashtbl.choose_exn
       let choose_randomly = Hashtbl.choose_randomly
@@ -631,28 +683,31 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
 
       [%%template
         let%test_unit _ =
-          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-            let map, t = map_and_table constructor in
-            [%test_result: bool] (is_some (choose t)) ~expect:(not (Map.is_empty map));
-            [%test_result: bool]
-              (is_some ((choose [@mode local]) t))
-              ~expect:(not (Map.is_empty map));
-            [%test_result: bool]
-              (is_some (choose_randomly t))
-              ~expect:(not (Map.is_empty map));
-            [%test_result: bool]
-              (Exn.does_raise (fun () -> ignore (choose_exn t : _ * _)))
-              ~expect:(Map.is_empty map);
-            [%test_result: bool]
-              (Exn.does_raise (fun () -> ignore (choose_randomly_exn t : _ * _)))
-              ~expect:(Map.is_empty map))
+          Qc.test
+            [%quickcheck.generator: constructor]
+            ~sexp_of:[%sexp_of: constructor]
+            ~f:(fun constructor ->
+              let map, t = map_and_table constructor in
+              [%test_result: bool] (is_some (choose t)) ~expect:(not (Map.is_empty map));
+              [%test_result: bool]
+                (is_some ((choose [@mode local]) t))
+                ~expect:(not (Map.is_empty map));
+              [%test_result: bool]
+                (is_some (choose_randomly t))
+                ~expect:(not (Map.is_empty map));
+              [%test_result: bool]
+                (Exn.does_raise (fun () -> ignore (choose_exn t : _ * _)))
+                ~expect:(Map.is_empty map);
+              [%test_result: bool]
+                (Exn.does_raise (fun () -> ignore (choose_randomly_exn t : _ * _)))
+                ~expect:(Map.is_empty map))
         ;;]
 
       let update = Hashtbl.update
 
       let%test_unit _ =
         Qc.test
-          (Gen.tuple3 constructor_gen Key.quickcheck_generator Data.quickcheck_generator)
+          [%quickcheck.generator: constructor * Key.t * Data.t]
           ~sexp_of:[%sexp_of: constructor * Key.t * Data.t]
           ~f:(fun (constructor, key, data) ->
             let map, t = map_and_table constructor in
@@ -668,7 +723,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
 
       let%test_unit _ =
         Qc.test
-          (Gen.tuple3 constructor_gen Key.quickcheck_generator Data.quickcheck_generator)
+          [%quickcheck.generator: constructor * Key.t * Data.t]
           ~sexp_of:[%sexp_of: constructor * Key.t * Data.t]
           ~f:(fun (constructor, key, data) ->
             let map, t = map_and_table constructor in
@@ -688,10 +743,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
 
       let%test_unit _ =
         Qc.test
-          (Gen.tuple3
-             multi_constructor_gen
-             Key.quickcheck_generator
-             Data.quickcheck_generator)
+          [%quickcheck.generator: multi_constructor * Key.t * Data.t]
           ~sexp_of:[%sexp_of: multi_constructor * Key.t * Data.t]
           ~f:(fun (multi_constructor, key, data) ->
             let map, t = map_and_table_multi multi_constructor in
@@ -705,7 +757,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
 
       let%test_unit _ =
         Qc.test
-          (Gen.tuple2 multi_constructor_gen Key.quickcheck_generator)
+          [%quickcheck.generator: multi_constructor * Key.t]
           ~sexp_of:[%sexp_of: multi_constructor * Key.t]
           ~f:(fun (multi_constructor, key) ->
             let map, t = map_and_table_multi multi_constructor in
@@ -719,7 +771,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
 
       let%test_unit _ =
         Qc.test
-          (Gen.tuple2 multi_constructor_gen Key.quickcheck_generator)
+          [%quickcheck.generator: multi_constructor * Key.t]
           ~sexp_of:[%sexp_of: multi_constructor * Key.t]
           ~f:(fun (multi_constructor, key) ->
             let map, t = map_and_table_multi multi_constructor in
@@ -731,190 +783,244 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
       let map = Hashtbl.map
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          [%test_result: Data.t Key.Map.t]
-            (to_map (Hashtbl.map t ~f:Data.succ))
-            ~expect:(Map.map map ~f:Data.succ))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: Data.t Key.Map.t]
+              (to_map (Hashtbl.map t ~f:Data.succ))
+              ~expect:(Map.map map ~f:Data.succ))
       ;;
 
       let mapi = Hashtbl.mapi
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          [%test_result: Data.t Key.Map.t]
-            (to_map (Hashtbl.mapi t ~f:Key_and_data.to_data))
-            ~expect:(Map.mapi map ~f:Key_and_data.to_data))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: Data.t Key.Map.t]
+              (to_map (Hashtbl.mapi t ~f:Key_and_data.to_data))
+              ~expect:(Map.mapi map ~f:Key_and_data.to_data))
       ;;
 
       let map_inplace = Hashtbl.map_inplace
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          Hashtbl.map_inplace t ~f:Data.succ;
-          [%test_result: Data.t Key.Map.t] (to_map t) ~expect:(Map.map map ~f:Data.succ))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            Hashtbl.map_inplace t ~f:Data.succ;
+            [%test_result: Data.t Key.Map.t] (to_map t) ~expect:(Map.map map ~f:Data.succ))
       ;;
 
       let mapi_inplace = Hashtbl.mapi_inplace
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          Hashtbl.mapi_inplace t ~f:Key_and_data.to_data;
-          [%test_result: Data.t Key.Map.t]
-            (to_map t)
-            ~expect:(Map.mapi map ~f:Key_and_data.to_data))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            Hashtbl.mapi_inplace t ~f:Key_and_data.to_data;
+            [%test_result: Data.t Key.Map.t]
+              (to_map t)
+              ~expect:(Map.mapi map ~f:Key_and_data.to_data))
       ;;
 
       let filter_keys = Hashtbl.filter_keys
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          [%test_result: Data.t Key.Map.t]
-            (to_map (Hashtbl.filter_keys t ~f:Key.to_bool))
-            ~expect:(Map.filter_keys map ~f:Key.to_bool))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: Data.t Key.Map.t]
+              (to_map (Hashtbl.filter_keys t ~f:Key.to_bool))
+              ~expect:(Map.filter_keys map ~f:Key.to_bool))
       ;;
 
       let filter = Hashtbl.filter
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          [%test_result: Data.t Key.Map.t]
-            (to_map (Hashtbl.filter t ~f:Data.to_bool))
-            ~expect:(Map.filter map ~f:Data.to_bool))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: Data.t Key.Map.t]
+              (to_map (Hashtbl.filter t ~f:Data.to_bool))
+              ~expect:(Map.filter map ~f:Data.to_bool))
       ;;
 
       let filteri = Hashtbl.filteri
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          [%test_result: Data.t Key.Map.t]
-            (to_map (Hashtbl.filteri t ~f:Key_and_data.to_bool))
-            ~expect:(Map.filteri map ~f:Key_and_data.to_bool))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: Data.t Key.Map.t]
+              (to_map (Hashtbl.filteri t ~f:Key_and_data.to_bool))
+              ~expect:(Map.filteri map ~f:Key_and_data.to_bool))
       ;;
 
       let filter_map = Hashtbl.filter_map
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          [%test_result: Data.t Key.Map.t]
-            (to_map (Hashtbl.filter_map t ~f:Data.to_option))
-            ~expect:(Map.filter_map map ~f:Data.to_option))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: Data.t Key.Map.t]
+              (to_map (Hashtbl.filter_map t ~f:Data.to_option))
+              ~expect:(Map.filter_map map ~f:Data.to_option))
       ;;
 
       let filter_mapi = Hashtbl.filter_mapi
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          [%test_result: Data.t Key.Map.t]
-            (to_map (Hashtbl.filter_mapi t ~f:Key_and_data.to_data_option))
-            ~expect:(Map.filter_mapi map ~f:Key_and_data.to_data_option))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: Data.t Key.Map.t]
+              (to_map (Hashtbl.filter_mapi t ~f:Key_and_data.to_data_option))
+              ~expect:(Map.filter_mapi map ~f:Key_and_data.to_data_option))
       ;;
 
       let filter_inplace = Hashtbl.filter_inplace
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          Hashtbl.filter_inplace t ~f:Data.to_bool;
-          [%test_result: Data.t Key.Map.t]
-            (to_map t)
-            ~expect:(Map.filteri map ~f:(fun ~key:_ ~data -> Data.to_bool data)))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            Hashtbl.filter_inplace t ~f:Data.to_bool;
+            [%test_result: Data.t Key.Map.t]
+              (to_map t)
+              ~expect:(Map.filteri map ~f:(fun ~key:_ ~data -> Data.to_bool data)))
       ;;
 
       let filteri_inplace = Hashtbl.filteri_inplace
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          Hashtbl.filteri_inplace t ~f:Key_and_data.to_bool;
-          [%test_result: Data.t Key.Map.t]
-            (to_map t)
-            ~expect:(Map.filteri map ~f:Key_and_data.to_bool))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            Hashtbl.filteri_inplace t ~f:Key_and_data.to_bool;
+            [%test_result: Data.t Key.Map.t]
+              (to_map t)
+              ~expect:(Map.filteri map ~f:Key_and_data.to_bool))
       ;;
 
       let filter_map_inplace = Hashtbl.filter_map_inplace
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          Hashtbl.filter_map_inplace t ~f:Data.to_option;
-          [%test_result: Data.t Key.Map.t]
-            (to_map t)
-            ~expect:(Map.filter_map map ~f:Data.to_option))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            Hashtbl.filter_map_inplace t ~f:Data.to_option;
+            [%test_result: Data.t Key.Map.t]
+              (to_map t)
+              ~expect:(Map.filter_map map ~f:Data.to_option))
       ;;
 
       let filter_mapi_inplace = Hashtbl.filter_mapi_inplace
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          Hashtbl.filter_mapi_inplace t ~f:Key_and_data.to_data_option;
-          [%test_result: Data.t Key.Map.t]
-            (to_map t)
-            ~expect:(Map.filter_mapi map ~f:Key_and_data.to_data_option))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            Hashtbl.filter_mapi_inplace t ~f:Key_and_data.to_data_option;
+            [%test_result: Data.t Key.Map.t]
+              (to_map t)
+              ~expect:(Map.filter_mapi map ~f:Key_and_data.to_data_option))
       ;;
 
       let filter_keys_inplace = Hashtbl.filter_keys_inplace
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          Hashtbl.filter_keys_inplace t ~f:Key.to_bool;
-          [%test_result: Data.t Key.Map.t]
-            (to_map t)
-            ~expect:(Map.filteri map ~f:(fun ~key ~data:_ -> Key.to_bool key)))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            Hashtbl.filter_keys_inplace t ~f:Key.to_bool;
+            [%test_result: Data.t Key.Map.t]
+              (to_map t)
+              ~expect:(Map.filteri map ~f:(fun ~key ~data:_ -> Key.to_bool key)))
       ;;
 
       let partition_map = Hashtbl.partition_map
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          [%test_result: Data.t Key.Map.t * Data.t Key.Map.t]
-            (let a, b = Hashtbl.partition_map t ~f:Data.to_partition in
-             to_map a, to_map b)
-            ~expect:(Map.partition_map map ~f:Data.to_partition))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: Data.t Key.Map.t * Data.t Key.Map.t]
+              (let a, b = Hashtbl.partition_map t ~f:Data.to_partition in
+               to_map a, to_map b)
+              ~expect:(Map.partition_map map ~f:Data.to_partition))
       ;;
 
       let partition_mapi = Hashtbl.partition_mapi
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          [%test_result: Data.t Key.Map.t * Data.t Key.Map.t]
-            (let a, b = Hashtbl.partition_mapi t ~f:Key_and_data.to_data_partition in
-             to_map a, to_map b)
-            ~expect:(Map.partition_mapi map ~f:Key_and_data.to_data_partition))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: Data.t Key.Map.t * Data.t Key.Map.t]
+              (let a, b = Hashtbl.partition_mapi t ~f:Key_and_data.to_data_partition in
+               to_map a, to_map b)
+              ~expect:(Map.partition_mapi map ~f:Key_and_data.to_data_partition))
       ;;
 
       let partition_tf = Hashtbl.partition_tf
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          [%test_result: Data.t Key.Map.t * Data.t Key.Map.t]
-            (let a, b = Hashtbl.partition_tf t ~f:Data.to_bool in
-             to_map a, to_map b)
-            ~expect:(Map.partition_tf map ~f:Data.to_bool))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: Data.t Key.Map.t * Data.t Key.Map.t]
+              (let a, b = Hashtbl.partition_tf t ~f:Data.to_bool in
+               to_map a, to_map b)
+              ~expect:(Map.partition_tf map ~f:Data.to_bool))
       ;;
 
       let partitioni_tf = Hashtbl.partitioni_tf
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          [%test_result: Data.t Key.Map.t * Data.t Key.Map.t]
-            (let a, b = Hashtbl.partitioni_tf t ~f:Key_and_data.to_bool in
-             to_map a, to_map b)
-            ~expect:(Map.partitioni_tf map ~f:Key_and_data.to_bool))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: Data.t Key.Map.t * Data.t Key.Map.t]
+              (let a, b = Hashtbl.partitioni_tf t ~f:Key_and_data.to_bool in
+               to_map a, to_map b)
+              ~expect:(Map.partitioni_tf map ~f:Key_and_data.to_bool))
       ;;
 
       let find_or_add = Hashtbl.find_or_add
@@ -922,7 +1028,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
 
       let%test_unit _ =
         Qc.test
-          (Gen.tuple3 constructor_gen Key.quickcheck_generator Data.quickcheck_generator)
+          [%quickcheck.generator: constructor * Key.t * Data.t]
           ~sexp_of:[%sexp_of: constructor * Key.t * Data.t]
           ~f:(fun (constructor, key, data) ->
             let map, t = map_and_table constructor in
@@ -941,7 +1047,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
       let%test_unit _ =
         let f (name, find) =
           Qc.test
-            (Gen.tuple2 constructor_gen Key.quickcheck_generator)
+            [%quickcheck.generator: constructor * Key.t]
             ~sexp_of:[%sexp_of: constructor * Key.t]
             ~f:(fun (constructor, key) ->
               let map, t = map_and_table constructor in
@@ -968,11 +1074,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
 
       let%test_unit _ =
         Qc.test
-          (Gen.tuple4
-             constructor_gen
-             Key.quickcheck_generator
-             Int.quickcheck_generator
-             String.quickcheck_generator)
+          [%quickcheck.generator: constructor * Key.t * int * string]
           ~sexp_of:[%sexp_of: constructor * Key.t * int * string]
           ~f:(fun (constructor, key, a, b) ->
             let map, t = map_and_table constructor in
@@ -1048,7 +1150,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
 
       let%test_unit _ =
         Qc.test
-          (Gen.tuple2 constructor_gen Key.quickcheck_generator)
+          [%quickcheck.generator: constructor * Key.t]
           ~sexp_of:[%sexp_of: constructor * Key.t]
           ~f:(fun (constructor, key) ->
             let map, t = map_and_table constructor in
@@ -1062,7 +1164,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
 
       let%test_unit _ =
         Qc.test
-          (Gen.tuple2 constructor_gen constructor_gen)
+          [%quickcheck.generator: constructor * constructor]
           ~sexp_of:[%sexp_of: constructor * constructor]
           ~f:(fun (constructor1, constructor2) ->
             let map1, t1 = map_and_table constructor1 in
@@ -1076,7 +1178,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
 
       let%test_unit _ =
         Qc.test
-          (Gen.tuple2 constructor_gen constructor_gen)
+          [%quickcheck.generator: constructor * constructor]
           ~sexp_of:[%sexp_of: constructor * constructor]
           ~f:(fun (constructor1, constructor2) ->
             let map1, t1 = map_and_table constructor1 in
@@ -1107,7 +1209,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
 
       let%test_unit _ =
         Qc.test
-          (Gen.tuple2 constructor_gen constructor_gen)
+          [%quickcheck.generator: constructor * constructor]
           ~sexp_of:[%sexp_of: constructor * constructor]
           ~f:(fun (constructor1, constructor2) ->
             let map1, t1 = map_and_table constructor1 in
@@ -1121,7 +1223,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
 
       let%test_unit _ =
         Qc.test
-          (Gen.tuple2 constructor_gen constructor_gen)
+          [%quickcheck.generator: constructor * constructor]
           ~sexp_of:[%sexp_of: constructor * constructor]
           ~f:(fun (constructor1, constructor2) ->
             let map1, t1 = map_and_table constructor1 in
@@ -1134,52 +1236,64 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
       let keys = Hashtbl.keys
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          [%test_result: Key.t list]
-            (keys t |> List.sort ~compare:Key.compare)
-            ~expect:(Map.keys map |> List.sort ~compare:Key.compare))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: Key.t list]
+              (keys t |> List.sort ~compare:Key.compare)
+              ~expect:(Map.keys map |> List.sort ~compare:Key.compare))
       ;;
 
       let data = Hashtbl.data
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          [%test_result: Data.t list]
-            (data t |> List.sort ~compare:Data.compare)
-            ~expect:(Map.data map |> List.sort ~compare:Data.compare))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: Data.t list]
+              (data t |> List.sort ~compare:Data.compare)
+              ~expect:(Map.data map |> List.sort ~compare:Data.compare))
       ;;
 
       let to_alist = Hashtbl.to_alist
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          [%test_result: (Key.t * Data.t) list]
-            (to_alist t |> List.sort ~compare:[%compare: Key.t * Data.t])
-            ~expect:(Map.to_alist map |> List.sort ~compare:[%compare: Key.t * Data.t]))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: (Key.t * Data.t) list]
+              (to_alist t |> List.sort ~compare:[%compare: Key.t * Data.t])
+              ~expect:(Map.to_alist map |> List.sort ~compare:[%compare: Key.t * Data.t]))
       ;;
 
       let validate = Hashtbl.validate
 
       let%test_unit _ =
-        Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-          let map, t = map_and_table constructor in
-          let name = Key.to_string in
-          let check_data data =
-            if Data.to_bool data then Validate.pass else Validate.fail "data"
-          in
-          [%test_result: bool]
-            (Result.is_ok (Validate.result (Hashtbl.validate ~name check_data t)))
-            ~expect:(Map.for_all map ~f:Data.to_bool))
+        Qc.test
+          [%quickcheck.generator: constructor]
+          ~sexp_of:[%sexp_of: constructor]
+          ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            let name = Key.to_string in
+            let check_data data =
+              if Data.to_bool data then Validate.pass else Validate.fail "data"
+            in
+            [%test_result: bool]
+              (Result.is_ok (Validate.result (Hashtbl.validate ~name check_data t)))
+              ~expect:(Map.for_all map ~f:Data.to_bool))
       ;;
 
       let incr = Hashtbl.incr
 
       let%test_unit _ =
         Qc.test
-          (Gen.tuple3 constructor_gen Key.quickcheck_generator Data.quickcheck_generator)
+          [%quickcheck.generator: constructor * Key.t * Data.t]
           ~sexp_of:[%sexp_of: constructor * Key.t * Data.t]
           ~f:(fun (constructor, key, by) ->
             let map, t = map_and_table constructor in
@@ -1194,7 +1308,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
 
       let%test_unit _ =
         Qc.test
-          (Gen.tuple3 constructor_gen Key.quickcheck_generator Data.quickcheck_generator)
+          [%quickcheck.generator: constructor * Key.t * Data.t]
           ~sexp_of:[%sexp_of: constructor * Key.t * Data.t]
           ~f:(fun (constructor, key, by) ->
             let map, t = map_and_table constructor in
@@ -1266,6 +1380,7 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_for_testing) = struct
 
       let bools = [ true; false ]
       let option values = None :: List.map values ~f:(fun value -> Some value)
+      let or_null values = Null :: List.map values ~f:(fun value -> This value)
 
       let first_or_second values =
         List.concat_map values ~f:(fun value -> [ First value; Second value ])
@@ -1566,6 +1681,7 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_for_testing) = struct
     ;;
 
     let change = Hashtbl.change
+    let change_or_null = Hashtbl.change_or_null
     let update = Hashtbl.update
     let update_and_return = Hashtbl.update_and_return
 
@@ -1577,6 +1693,17 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_for_testing) = struct
           let test_result = [%test_result: int option] in
           test_caller ~callback ~test_result (fun t f ->
             Hashtbl.change t key ~f;
+            Hashtbl.find t key)))
+    ;;
+
+    let%test_unit "change_or_null" =
+      for_each "key" sexp_of_key sample_keys (fun key ->
+        for_each "f result" [%sexp_of: data or_null] (or_null sample_data) (fun or_null ->
+          test_mutate (fun t -> Hashtbl.change_or_null t key ~f:(fun _ -> or_null));
+          let callback _ = or_null in
+          let test_result = [%test_result: int option] in
+          test_caller ~callback ~test_result (fun t f ->
+            Hashtbl.change_or_null t key ~f;
             Hashtbl.find t key)))
     ;;
 

@@ -295,7 +295,9 @@ let compact_if_not_running_test () = if not am_running_test then compact ()
 
 (* The compiler won't optimize int_of_string away so it won't perform constant folding
    below. *)
-let rec keep_alive o = if zero <> 0 then keep_alive (Sys.opaque_identity o)
+let%template rec keep_alive o =
+  if zero <> 0 then keep_alive ((Sys.opaque_identity [@mode contended]) o)
+;;
 
 module For_testing = struct
   module Allocation_report = struct
@@ -445,7 +447,7 @@ module For_testing = struct
           ~minor_words_allocated:!minor_allocs
       , List.rev !log )
     | exception Failure msg ->
-      if String.equal msg "Gc.memprof.start: not implemented in multicore"
+      if String.equal msg "Gc.Memprof.start: not implemented in multicore"
       then (
         let a, b = (measure_allocation_for_runtime5_local [@kind k]) f in
         a, b, [])

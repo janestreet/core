@@ -178,6 +178,10 @@ let scale_int63 t i = Int63.( * ) t i
 let[@zero_alloc strict] scale_int t i = scale_int63 t (Int63.of_int i)
 let[@inline] div t u = Int63.( /% ) t u
 let[@inline] ( // ) t u = Int63.( // ) t u
+
+external unbox_float : float -> float = "%identity"
+
+let[@zero_alloc] ( /// ) t u = unbox_float (Int63.( // ) t u)
 let ( / ) t f = round_nearest_ns (float t /. f)
 let to_proportional_float t = Int63.to_float t
 
@@ -906,6 +910,7 @@ let max_value_representable = of_int63_ns Int63.max_value
 module O = struct
   let[@zero_alloc] ( / ) = [%eta2 ( / )]
   let ( // ) = ( // )
+  let[@zero_alloc] ( /// ) = [%eta2 ( /// )]
   let[@zero_alloc strict] ( + ) = [%eta2 ( + )]
   let[@zero_alloc strict] ( - ) = [%eta2 ( - )]
   let[@zero_alloc strict] ( >= ) = [%eta2 ( >= )]

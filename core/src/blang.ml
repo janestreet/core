@@ -128,7 +128,7 @@ include T
 module Stable = struct
   module V1 : sig
     (* THIS TYPE AND ITS SERIALIZATIONS SHOULD NEVER BE CHANGED - PLEASE SPEAK WITH
-          ANOTHER DEVELOPER IF YOU NEED MORE DETAIL *)
+       ANOTHER DEVELOPER IF YOU NEED MORE DETAIL *)
     type 'a t = 'a T.t = private
       | True
       | False

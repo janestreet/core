@@ -1,4 +1,8 @@
 open! Import
+
+[%%template
+[@@@kind_set.define all_ks_non_value = base_non_value]
+
 include Base.Option
 
 (* We hide the constructors of the non-value types so that [None] does not get inferred as
@@ -10,11 +14,11 @@ include Base.Option
     type 'a t = ('a Constructors.t[@kind k]) =
       | None
       | Some of 'a
-    [@@deriving bin_io ~localize] [@@kind k = base_non_value]
+    [@@deriving bin_io ~localize] [@@kind k = all_ks_non_value]
   end :
   sig
     type 'a t = ('a Constructors.t[@kind k])
-    [@@deriving bin_io ~localize] [@@kind k = base_non_value]
+    [@@deriving bin_io ~localize] [@@kind k = all_ks_non_value]
   end)
 
 type 'a t = 'a option [@@deriving bin_io ~localize, typerep, stable_witness]
@@ -70,4 +74,4 @@ module Optional_syntax = struct
     let%template unsafe_value : type a. a t -> a = unbox [@@mode m = (global, local)]
     let is_none = is_none
   end
-end
+end]

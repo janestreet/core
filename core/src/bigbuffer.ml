@@ -295,7 +295,7 @@ let add_substitute buf f s =
         add_char buf current;
         subst current (i + 1))
   in
-  subst ' ' 0
+  subst ' ' 0 [@nontail]
 ;;
 
 module Format = struct

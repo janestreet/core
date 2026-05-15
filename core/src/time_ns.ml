@@ -522,7 +522,9 @@ module To_and_of_string : sig
     -> string
     -> t
 
-  val to_string_abs : t -> zone:Zone.t -> string
+  val%template to_string_abs : t -> zone:Zone.t -> string
+  [@@alloc a @ m = (heap_global, stack_local)]
+
   val to_string_abs_trimmed : t -> zone:Zone.t -> string
 
   val%template to_string_abs_parts : t -> zone:Zone.t -> string list
@@ -607,11 +609,11 @@ end = struct
   end
 
   module Zone : sig
-    (* This interface is directly duplicated from Time_intf.Zone, converted enough to
-          get this to work.
+    (* This interface is directly duplicated from Time_intf.Zone, converted enough to get
+       this to work.
 
-          The problem is has references to Time0_intf.S, which is the functor input
-          interface that Time_ns currently does not satisfy. *)
+       The problem is has references to Time0_intf.S, which is the functor input interface
+       that Time_ns currently does not satisfy. *)
     type time = t
     type t = Zone.t [@@deriving sexp_of]
 
@@ -911,7 +913,12 @@ end = struct
       [ Date.to_string date; Ofday_ns.to_string_trimmed ofday ^ offset_string ]
   ;;
 
-  let to_string_abs time ~zone = String.concat ~sep:" " (to_string_abs_parts ~zone time)
+  let%template[@alloc a = (heap, stack)] to_string_abs time ~zone =
+    (String.concat [@alloc a])
+      ~sep:" "
+      ((to_string_abs_parts [@alloc a]) ~zone time) [@exclave_if_stack a]
+  ;;
+
   let to_string_utc t = to_string_abs t ~zone:Zone.utc
 
   let to_string_iso8601_extended ?(precision = `ns) ~zone time =
@@ -1061,7 +1068,11 @@ end
 
 include To_and_of_string
 
-let to_string t = to_string_abs t ~zone:(Portable_lazy.force Timezone.local_portable)
+let%template[@alloc a = (heap, stack)] to_string t =
+  (to_string_abs [@alloc a])
+    t
+    ~zone:(Portable_lazy.force Timezone.local_portable) [@exclave_if_stack a]
+;;
 
 exception Time_string_not_absolute of string [@@deriving sexp]
 

@@ -75,7 +75,7 @@ CAMLprim value core_gc_run_memprof_callbacks(value unit) {
   (void)unit;
 #ifdef HAS_OCAML_5_GC
 #if OCAML_5_MINUS /* This function is renamed upstream. */
-  value res = caml_memprof_run_callbacks_exn();
+  value res = caml_memprof_do_pending_exn();
 #elif OCAML_VERSION >= 50300 /* Supported upstream as of 5.3 */
   value res = caml_memprof_run_callbacks_res();
 #else

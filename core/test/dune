@@ -1,10 +1,15 @@
 (library
  (name core_test)
  (libraries base_container_tests base_for_tests base_test_helpers capsule
-   core core_test_helpers expect_test_helpers_core.expect_test_helpers_base
-   expect_test_helpers_core expect_test_patterns expectable core_kernel.fheap
-   unboxed.float32_u unboxed.float_u unboxed.int32_u unboxed.int64_u
-   unboxed.nativeint_u sexp_grammar_validation sexplib unboxed_test_harness)
+   core core_test_helpers expect_test_helpers_base expect_test_helpers_core
+   expect_test_patterns expectable core_kernel.fheap unboxed.float32_u
+   unboxed.float_u unboxed.int32_u unboxed.int64_u unboxed.nativeint_u
+   sexp_grammar_validation sexplib unboxed_test_harness)
  (preprocessor_deps ../src/config.h)
  (preprocess
   (pps ppx_bin_and_sexp_digest ppx_jane ppx_quick_test)))
+
+(alias
+ (name runtest)
+ (deps
+  (glob_files %{workspace_root}/lib/kindly_core/src/*.ml{,i})))

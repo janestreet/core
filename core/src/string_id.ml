@@ -121,12 +121,14 @@ struct
   let arg_type = (Command.Arg_type.create [@modality p]) of_string
 end
 
+let legacy_identity = Bin_prot.Shape.Uuid.of_string "6e3d6e2d-d51b-4836-a6a9-18c19e85ef3d"
+
 let%template[@modality p = (nonportable, portable)] [@inline] make
   ?(validate = fun _ -> Ok ())
-  ?caller_identity
   ?(include_pretty_printer = true)
   ~module_name
   ~include_default_validation
+  ~caller_identity
   ()
   : ((module S_with_extras)[@mode local] [@modality p])
   =
@@ -136,7 +138,12 @@ let%template[@modality p = (nonportable, portable)] [@inline] make
         let module_name = module_name
         let validate = validate
         let include_default_validation = include_default_validation
-        let caller_identity = caller_identity
+
+        let caller_identity =
+          if Bin_prot.Shape.Uuid.equal caller_identity legacy_identity
+          then None
+          else Some caller_identity
+        ;;
       end)
       ()
   in

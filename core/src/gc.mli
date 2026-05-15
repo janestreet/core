@@ -525,17 +525,22 @@ module For_testing : sig
   [%%template:
   [@@@kind.default k = base_or_null]
 
-  (** [measure_allocation f] measures the words allocated by running [f ()] *)
+  (** [measure_allocation f] measures the words allocated by running [f ()] using GC
+      counters. *)
   val measure_allocation : 'a. (unit -> 'a) -> 'a * Allocation_report.t
 
   (** Same as [measure_allocation], but for functions that return a local value. *)
   val measure_allocation_local : 'a. (unit -> 'a) -> 'a * Allocation_report.t
 
-  (** [measure_and_log_allocation f] logs each allocation that [f ()] performs, as well as
-      reporting the total. (This can be slow if [f] allocates heavily).
+  (** [measure_and_log_allocation f] uses memprof to log each allocation that [f ()]
+      performs, as well as reporting the total. (This can be slow if [f] allocates
+      heavily).
 
-      This function is only supported since OCaml 4.11. On prior versions, the function
-      always returns an empty log. *)
+      Notes:
+      - This function is only supported since OCaml 4.11. On prior versions, the function
+        always returns an empty log.
+      - Because this uses memprof and [measure_allocation] uses GC counters, this also
+        tracks custom off-heap memory, like allocation of bigstrings. *)
   val measure_and_log_allocation
     : 'a.
     (unit -> 'a) -> 'a * Allocation_report.t * Allocation_log.t list

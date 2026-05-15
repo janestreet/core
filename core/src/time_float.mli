@@ -65,7 +65,17 @@ end
 
 (** A fully qualified point in time, independent of timezone. *)
 type t = Time.t
-[@@deriving bin_io, compare ~localize, hash, sexp ~stackify, sexp_grammar, typerep]
+[@@deriving
+  bin_io ~unboxed
+  , compare ~localize ~unboxed
+  , equal ~localize ~unboxed
+  , hash
+  , sexp ~stackify ~unboxed
+  , sexp_grammar
+  , typerep]
+
+val unbox : t -> t
+val box : t -> t
 
 include
   Time_intf.S

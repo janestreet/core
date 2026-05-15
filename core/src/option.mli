@@ -1,17 +1,20 @@
 (** This module extends {{!Base.Option} [Base.Option]} with bin_io, quickcheck, and
     support for ppx_optional. *)
 
+[%%template:
+[@@@kind_set.define all_ks_non_value = base_non_value]
+
 type 'a t = 'a Base.Option.t [@@deriving bin_io ~localize, typerep]
 
 type%template 'a t = ('a Base.Option.t[@kind k])
-[@@deriving bin_io ~localize] [@@kind k = base_non_value]
+[@@deriving bin_io ~localize] [@@kind k = all_ks_non_value]
 
 (** @inline *)
 include%template (module type of struct
     include Base.Option
   end
   with type 'a t := 'a option
- [@with: type 'a t := ('a t[@kind k]) [@@kind k = base_non_value]])
+ [@with: type 'a t := ('a t[@kind k]) [@@kind k = all_ks_non_value]])
 
 include Comparator.Derived with type 'a t := 'a t
 
@@ -40,4 +43,4 @@ end
     of the whole match expression, we need this [Optional_syntax] support for options in
     order to use it for the other half of the tuple. *)
 module%template Optional_syntax :
-  Optional_syntax.S1 [@mode local] with type 'a t := 'a t and type 'a value := 'a
+  Optional_syntax.S1 [@mode local] with type 'a t := 'a t and type 'a value := 'a]

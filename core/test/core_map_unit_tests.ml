@@ -47,10 +47,12 @@ struct
     let find_multi x = simplify_accessor find_multi x
     let remove_multi x = simplify_accessor remove_multi x
     let change x = simplify_accessor change x
+    let change_or_null x = simplify_accessor change_or_null x
     let update x = simplify_accessor update x
     let update_and_return x = simplify_accessor update_and_return x
     let find x = simplify_accessor find x
-    let find_exn x = simplify_accessor find_exn x
+    let find_or_null x = simplify_accessor find_or_null x
+    let find_exn x = (simplify_accessor find_exn) ~here:[%here] x
     let invariants x = simplify_accessor invariants x
     let remove x = simplify_accessor remove x
     let mem x = simplify_accessor mem x
@@ -222,6 +224,7 @@ struct
   let set _ = assert false
   let remove _ = assert false
   let find _ = assert false
+  let find_or_null _ = assert false
   let mem _ = assert false
   let iter _ = assert false
   let iteri _ = assert false
@@ -276,7 +279,11 @@ struct
                assert (not (Map.is_empty core_map));
                assert (Map.length core_map = Caml_map.cardinal caml_map);
                assert (Map.mem core_map key);
-               assert ([%equal: int option] (Map.find core_map key) (Some data)));
+               assert ([%equal: int option] (Map.find core_map key) (Some data));
+               assert (
+                 [%equal: int option]
+                   (Or_null.to_option (Map.find_or_null core_map key))
+                   (Some data)));
             old_values
           | 3 ->
             let target =
@@ -816,6 +823,7 @@ struct
   ;;
 
   let change _ = assert false
+  let change_or_null _ = assert false
   let update _ = assert false
   let update_and_return _ = assert false
 
@@ -827,6 +835,19 @@ struct
     in
     let m2 = Map.change m1 Key.sample ~f in
     let m3 = Map.change m2 Key.sample ~f in
+    match Map.find m3 Key.sample with
+    | Some 1 -> true
+    | _ -> false
+  ;;
+
+  let%test _ =
+    let m1 = Map.remove (random_map Key.samples) Key.sample in
+    let f = function
+      | This x -> This (x + 1)
+      | Null -> This 0
+    in
+    let m2 = Map.change_or_null m1 Key.sample ~f in
+    let m3 = Map.change_or_null m2 Key.sample ~f in
     match Map.find m3 Key.sample with
     | Some 1 -> true
     | _ -> false
@@ -869,7 +890,7 @@ struct
     [%compare.equal: int option] (Some res) (Map.find m2 Key.sample)
   ;;
 
-  let find_exn _ = assert false
+  let find_exn ?here:(_ = Stdlib.Lexing.dummy_pos) _ _ = assert false
 
   let%expect_test _ =
     (* Can't use require_does_raise because the exceptions differ on different key types. *)
@@ -947,6 +968,46 @@ struct
         if Key.equal key Key.sample && data = 0 then None else Some (data + 1))
     in
     let m2 = Map.map (Map.remove base_map Key.sample) ~f:(fun x -> x + 1) in
+    Map.equal ( = ) m1 m2
+  ;;
+
+  let filter_map_or_null _ = assert false
+
+  let%test _ =
+    let alist = random_alist Key.samples in
+    let core_map = Map.set (Map.of_alist_exn alist) ~key:Key.sample ~data:(-1) in
+    let m1 =
+      Map.filter_map_or_null core_map ~f:(fun x -> if x >= 0 then This (x + 1) else Null)
+    in
+    let m2 =
+      Map.filter_map core_map ~f:(fun x -> if x >= 0 then Some (x + 1) else None)
+    in
+    Map.equal ( = ) m1 m2
+  ;;
+
+  let filter_mapi_or_null _ = assert false
+
+  let%test _ =
+    let base_map = Map.set (random_map Key.samples) ~key:Key.sample ~data:0 in
+    let m1 =
+      Map.filter_mapi_or_null base_map ~f:(fun ~key ~data ->
+        if Key.equal key Key.sample && data = 0 then Null else This (data + 1))
+    in
+    let m2 =
+      Map.filter_mapi base_map ~f:(fun ~key ~data ->
+        if Key.equal key Key.sample && data = 0 then None else Some (data + 1))
+    in
+    Map.equal ( = ) m1 m2
+  ;;
+
+  let filter_opt _ = assert false
+
+  let%test _ =
+    let alist = random_alist Key.samples in
+    let core_map = Map.set (Map.of_alist_exn alist) ~key:Key.sample ~data:(-1) in
+    let core_map = Map.map core_map ~f:(fun x -> if x >= 0 then Some (x + 1) else None) in
+    let m1 = Map.filter_opt core_map in
+    let m2 = Map.filter_map core_map ~f:Fn.id in
     Map.equal ( = ) m1 m2
   ;;
 

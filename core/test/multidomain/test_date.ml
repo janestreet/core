@@ -18,7 +18,7 @@ module%test [@name "[Date_cache] does not race"] _ = struct
     end
     in
     let num_domains = 20 in
-    Concurrent_in_thread.with_blocking Terminator.never ~f:(fun conc ->
+    Concurrent_in_thread.with_blocking Terminator.unkillable ~f:(fun conc ->
       let barrier = Await.Barrier.create num_domains in
       let times = Iarray.init num_domains ~f:(fun n -> time_of_days (n * 5)) in
       let results_parallel =

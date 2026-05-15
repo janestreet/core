@@ -297,14 +297,16 @@ module Definitions = struct
         This can be quite useful when, for example, generating a list of updates to a
         state machine. In such a case, some updates may or may not be valid depending on
         the state of the machine. *)
-    val fold_until
-      :  ?min_length:int
+    val%template fold_until
+      : 'acc 'final.
+      ?min_length:int
       -> ?max_length:int
       -> init:'acc
       -> f:('acc -> ('acc, 'final) Continue_or_stop.t t)
       -> finish:('acc -> 'final)
       -> unit
       -> 'final t
+    [@@mode (p, c) = ((nonportable, uncontended), (portable, contended))]
   end
 
   (** We template over a modality so that the portable version may be used with

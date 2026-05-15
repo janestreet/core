@@ -19,6 +19,7 @@ include Ordering.Export
 include Perms.Export
 include Result.Export
 include Iarray.O
+include Ppx_enumerate_lib.Export
 
 type -'a return = 'a With_return.return = private { return : 'b. 'a -> 'b } [@@unboxed]
 
@@ -103,6 +104,8 @@ struct
 
   [%%rederive.portable
     type nonrec 'a array = 'a Array.t [@@deriving bin_io ~localize, typerep]]
+
+  type nonrec floatarray = floatarray [@@deriving globalize, sexp ~stackify, sexp_grammar]
 
   type bool = Bool.t
   [@@deriving
@@ -294,6 +297,8 @@ sig
   [@@deriving compare ~localize, equal ~localize, globalize, sexp ~stackify, sexp_grammar]
 
   [%%rederive: type nonrec 'a array = 'a Array.t [@@deriving bin_io ~localize, typerep]]
+
+  type nonrec floatarray = floatarray [@@deriving sexp ~stackify, globalize, sexp_grammar]
 
   type bool
   [@@deriving
@@ -522,3 +527,4 @@ type 'a or_null = 'a Base.Or_null.t =
   | This of 'a
 
 let sexp_of_exn = Exn.sexp_of_t
+let%template[@alloc a = (heap, stack)] maybe_globalize = (Base.maybe_globalize [@alloc a])

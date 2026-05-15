@@ -5,18 +5,19 @@ open! Import
 module Definitions = struct
   [%%template
   [@@@mode.default m = (global, local)]
+  [@@@alloc.default a = (heap, stack)]
 
   module type S_common = sig
     type t [@@deriving (compare [@mode.explicit m]), hash, sexp_of]
 
-    include Stringable.S with type t := t
+    include Stringable.S [@alloc a] with type t := t
     include Pretty_printer.S with type t := t
   end
 
   [@@@modality.default p = (portable, nonportable)]
 
   module type S_plain = sig
-    include S_common [@mode m]
+    include S_common [@mode m] [@alloc a]
     include Comparable.S_plain [@modality p] [@mode m] with type t := t
     include Hashable.S_plain with type t := t
   end
@@ -24,7 +25,7 @@ module Definitions = struct
   module type S_not_binable = sig
     type t [@@deriving hash, sexp]
 
-    include S_common [@mode m] with type t := t
+    include S_common [@mode m] [@alloc a] with type t := t
     include Comparable.S [@modality p] [@mode m] with type t := t
     include Hashable.S with type t := t
   end
@@ -32,7 +33,7 @@ module Definitions = struct
   module type S = sig
     type t [@@deriving (bin_io [@mode m]), hash, sexp]
 
-    include S_common [@mode m] with type t := t
+    include S_common [@mode m] [@alloc a] with type t := t
     include Comparable.S_binable [@modality p] [@mode m] with type t := t
     include Hashable.S_binable with type t := t
   end
@@ -40,7 +41,7 @@ module Definitions = struct
   module type S_sexp_grammar = sig
     type t [@@deriving sexp_grammar]
 
-    include S [@mode m] [@modality p] with type t := t
+    include S [@mode m] [@modality p] [@alloc a] with type t := t
   end]
 end
 
@@ -50,16 +51,17 @@ module type%template Identifiable = sig
   end
 
   [@@@mode.default m = (global, local)]
+  [@@@alloc.default a = (heap, stack)]
 
   module%template.portable
     [@modality p] Make_plain (M : sig
       type t [@@deriving (compare [@mode.explicit m]), hash, sexp_of]
 
-      include Stringable.S with type t := t
+      include Stringable.S [@alloc a] with type t := t
 
       (** for registering the pretty printer *)
       val module_name : string
-    end) : S_plain [@modality p] [@mode m] with type t := M.t
+    end) : S_plain [@modality p] [@mode m] [@alloc a] with type t := M.t
 
   (** Used for making an Identifiable module. Here's an example:
 
@@ -86,11 +88,11 @@ module type%template Identifiable = sig
     [@modality p] Make (M : sig
       type t [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), hash, sexp]
 
-      include Stringable.S with type t := t
+      include Stringable.S [@alloc a] with type t := t
 
       (** for registering the pretty printer *)
       val module_name : string
-    end) : S [@modality p] [@mode m] with type t := M.t
+    end) : S [@modality p] [@mode m] [@alloc a] with type t := M.t
 
   module%template.portable
     [@modality p] Make_with_sexp_grammar (M : sig
@@ -98,35 +100,35 @@ module type%template Identifiable = sig
       [@@deriving
         (bin_io [@mode m]), (compare [@mode.explicit m]), hash, sexp, sexp_grammar]
 
-      include Stringable.S with type t := t
+      include Stringable.S [@alloc a] with type t := t
 
       (** for registering the pretty printer *)
       val module_name : string
-    end) : S_sexp_grammar [@modality p] [@mode m] with type t := M.t
+    end) : S_sexp_grammar [@modality p] [@mode m] [@alloc a] with type t := M.t
 
   module%template.portable
     [@modality p] Make_and_derive_hash_fold_t (M : sig
       type t [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), sexp]
 
-      include Stringable.S with type t := t
+      include Stringable.S [@alloc a] with type t := t
 
       val hash : t -> int
 
       (** for registering the pretty printer *)
       val module_name : string
-    end) : S [@modality p] [@mode m] with type t := M.t
+    end) : S [@modality p] [@mode m] [@alloc a] with type t := M.t
 
   module%template.portable
     [@modality p] Make_using_comparator (M : sig
       type t [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), hash, sexp]
 
       include Comparator.S [@modality p] with type t := t
-      include Stringable.S with type t := t
+      include Stringable.S [@alloc a] with type t := t
 
       val module_name : string
     end) :
     S
-    [@modality p] [@mode m]
+    [@modality p] [@mode m] [@alloc a]
     with type t := M.t
     with type comparator_witness := M.comparator_witness
 
@@ -135,13 +137,13 @@ module type%template Identifiable = sig
       type t [@@deriving (compare [@mode.explicit m]), hash, sexp_of]
 
       include Comparator.S [@modality p] with type t := t
-      include Stringable.S with type t := t
+      include Stringable.S [@alloc a] with type t := t
 
       (** for registering the pretty printer *)
       val module_name : string
     end) :
     S_plain
-    [@modality p] [@mode m]
+    [@modality p] [@mode m] [@alloc a]
     with type t := M.t
     with type comparator_witness := M.comparator_witness
 
@@ -150,23 +152,23 @@ module type%template Identifiable = sig
       type t [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), sexp]
 
       include Comparator.S [@modality p] with type t := t
-      include Stringable.S with type t := t
+      include Stringable.S [@alloc a] with type t := t
 
       val hash : t -> int
       val module_name : string
     end) :
     S
-    [@modality p] [@mode m]
+    [@modality p] [@mode m] [@alloc a]
     with type t := M.t
     with type comparator_witness := M.comparator_witness
 
   module%template.portable
     [@modality p] Extend
       (M : Base.Identifiable.S
-    [@mode m] [@modality p])
+    [@mode m] [@modality p] [@alloc a])
       (B : Binable0.S [@mode m] with type t = M.t) :
     S
-    [@modality p] [@mode m]
+    [@modality p] [@mode m] [@alloc a]
     with type t := M.t
     with type comparator_witness := M.comparator_witness
 end

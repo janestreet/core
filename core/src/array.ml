@@ -644,24 +644,28 @@ module type S = sig
   val copy : 'a. 'a t -> 'a t
   val fill : 'a. 'a t -> pos:int -> len:int -> 'a -> unit]
 
-  include Blit.S1 with type 'a t := 'a t
+  include Blit.S1 [@kind.explicit value_or_null mod separable] with type 'a t := 'a t
 
   val%template unsafe_blit : 'a. ('a array, 'a array) Blit.blit
   [@@kind k = base_or_null_with_ext]
 
   val%template sub : 'a. ('a array, 'a array) Blit.sub [@@kind k = base_or_null_with_ext]
 
-  val folding_map : 'a t -> init:'acc -> f:('acc -> 'a -> 'acc * 'b) -> 'b t
-  val fold_map : 'a t -> init:'acc -> f:('acc -> 'a -> 'acc * 'b) -> 'acc * 'b t
+  include sig
+    [@@@implicit_kind: 'a]
 
-  val%template foldi_right : 'a t -> init:'acc -> f:(int -> 'a -> 'acc -> 'acc) -> 'acc
-  [@@alloc a @ m = (stack_local, heap_global)]
+    val folding_map : 'a t -> init:'acc -> f:('acc -> 'a -> 'acc * 'b) -> 'b t
+    val fold_map : 'a t -> init:'acc -> f:('acc -> 'a -> 'acc * 'b) -> 'acc * 'b t
 
-  val folding_mapi : 'a t -> init:'acc -> f:(int -> 'acc -> 'a -> 'acc * 'b) -> 'b t
-  val fold_mapi : 'a t -> init:'acc -> f:(int -> 'acc -> 'a -> 'acc * 'b) -> 'acc * 'b t
+    val%template foldi_right : 'a t -> init:'acc -> f:(int -> 'a -> 'acc -> 'acc) -> 'acc
+    [@@alloc a @ m = (stack_local, heap_global)]
 
-  val%template fold_right : 'a t -> f:('a -> 'acc -> 'acc) -> init:'acc -> 'acc
-  [@@mode m = (uncontended, shared)]
+    val folding_mapi : 'a t -> init:'acc -> f:(int -> 'acc -> 'a -> 'acc * 'b) -> 'b t
+    val fold_mapi : 'a t -> init:'acc -> f:(int -> 'acc -> 'a -> 'acc * 'b) -> 'acc * 'b t
+
+    val%template fold_right : 'a t -> f:('a -> 'acc -> 'acc) -> init:'acc -> 'acc
+    [@@mode m = (uncontended, shared)]
+  end
 
   val%template sort
     : 'a.
@@ -678,18 +682,30 @@ module type S = sig
   val is_sorted_strictly : 'a. 'a t -> compare:('a -> 'a -> int) -> bool
   val merge : 'a. 'a t -> 'a t -> compare:('a -> 'a -> int) -> 'a t]
 
-  val partitioni_tf : 'a t -> f:(int -> 'a -> bool) -> 'a t * 'a t
-  val cartesian_product : 'a t -> 'b t -> ('a * 'b) t
-  val transpose : 'a t t -> 'a t t option
-  val transpose_exn : 'a t t -> 'a t t
+  include sig
+    [@@@implicit_kind: 'a]
+    [@@@implicit_kind: 'b]
+
+    val partitioni_tf : 'a t -> f:(int -> 'a -> bool) -> 'a t * 'a t
+    val cartesian_product : 'a t -> 'b t -> ('a * 'b) t
+    val transpose : 'a t t -> 'a t t option
+    val transpose_exn : 'a t t -> 'a t t
+  end
+
   val normalize : 'a t -> int -> int
   val slice : 'a t -> int -> int -> 'a t
   val nget : 'a t -> int -> 'a
   val nset : 'a t -> int -> 'a -> unit
-  val filter_opt : 'a option t -> 'a t
-  val iter2_exn : 'a t -> 'b t -> f:('a -> 'b -> unit) -> unit
-  val map2_exn : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
-  val fold2_exn : 'a t -> 'b t -> init:'acc -> f:('acc -> 'a -> 'b -> 'acc) -> 'acc
+
+  include sig
+    [@@@implicit_kind: 'a]
+    [@@@implicit_kind: 'b]
+
+    val filter_opt : 'a option t -> 'a t
+    val iter2_exn : 'a t -> 'b t -> f:('a -> 'b -> unit) -> unit
+    val map2_exn : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
+    val fold2_exn : 'a t -> 'b t -> init:'acc -> f:('acc -> 'a -> 'b -> 'acc) -> 'acc
+  end
 
   [%%template:
   [@@@kind.default k1' = base_or_null_with_ext, k2' = base_or_null_with_ext]
@@ -714,7 +730,7 @@ module type S = sig
   val for_all2_exn : 'a 'b. 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool
   val exists2_exn : 'a 'b. 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool]
 
-  val map_inplace : 'a t -> f:('a -> 'a) -> unit
+  val map_inplace : 'a. 'a t -> f:('a -> 'a) -> unit
 
   [%%template:
   [@@@kind.default k1' = base_or_null_with_ext]
@@ -742,25 +758,32 @@ module type S = sig
 
   val findi_exn : 'a. 'a t -> f:(int -> 'a -> bool) -> int * 'a]
 
-  val findi_exn : 'a. 'a t -> f:(int -> 'a -> bool) -> int * 'a
-  val find_consecutive_duplicate : 'a t -> equal:('a -> 'a -> bool) -> ('a * 'a) option
-  val reduce : 'a t -> f:('a -> 'a -> 'a) -> 'a option
-  val reduce_exn : 'a t -> f:('a -> 'a -> 'a) -> 'a
-  val permute : ?random_state:Random.State.t -> ?pos:int -> ?len:int -> 'a t -> unit
-  val random_element : ?random_state:Random.State.t -> 'a t -> 'a option
-  val random_element_exn : ?random_state:Random.State.t -> 'a t -> 'a
-  val zip : 'a t -> 'b t -> ('a * 'b) t option
-  val zip_exn : 'a t -> 'b t -> ('a * 'b) t
-  val unzip : ('a * 'b) t -> 'a t * 'b t
-  val sorted_copy : 'a t -> compare:('a -> 'a -> int) -> 'a t
-  val last : 'a t -> 'a
-  val last_exn : 'a t -> 'a
-  val equal : 'a. ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
-  val equal__local : 'a. ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
-  val to_sequence : 'a t -> 'a Core_sequence.t
-  val to_sequence_mutable : 'a t -> 'a Core_sequence.t
-  val split_n : 'a t -> int -> 'a t * 'a t
-  val chunks_of : 'a t -> length:int -> 'a t t
+  val find_or_null : 'a. 'a t -> f:('a -> bool) -> 'a or_null
+  val findi_or_null : 'a. 'a t -> f:(int -> 'a -> bool) -> (int * 'a) or_null
+
+  include sig
+    [@@@implicit_kind: 'a]
+
+    val findi_exn : 'a t -> f:(int -> 'a -> bool) -> int * 'a
+    val find_consecutive_duplicate : 'a t -> equal:('a -> 'a -> bool) -> ('a * 'a) option
+    val reduce : 'a t -> f:('a -> 'a -> 'a) -> 'a option
+    val reduce_exn : 'a t -> f:('a -> 'a -> 'a) -> 'a
+    val permute : ?random_state:Random.State.t -> ?pos:int -> ?len:int -> 'a t -> unit
+    val random_element : ?random_state:Random.State.t -> 'a t -> 'a option
+    val random_element_exn : ?random_state:Random.State.t -> 'a t -> 'a
+    val zip : 'a t -> 'b t -> ('a * 'b) t option
+    val zip_exn : 'a t -> 'b t -> ('a * 'b) t
+    val unzip : ('a * 'b) t -> 'a t * 'b t
+    val sorted_copy : 'a t -> compare:('a -> 'a -> int) -> 'a t
+    val last : 'a t -> 'a
+    val last_exn : 'a t -> 'a
+    val equal : 'a. ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
+    val equal__local : 'a. ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
+    val to_sequence : 'a t -> 'a Core_sequence.t
+    val to_sequence_mutable : 'a t -> 'a Core_sequence.t
+    val split_n : 'a t -> int -> 'a t * 'a t
+    val chunks_of : 'a t -> length:int -> 'a t t
+  end
 end
 
 include%template (

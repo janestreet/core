@@ -1,5 +1,6 @@
-module type%template [@mode m = (global, local)] V1 = sig
-  include Stable_module_types.S0 [@mode m]
+module type%template
+  [@mode m = (global, local)] [@modality p = (portable, nonportable)] V1 = sig
+  include Stable_module_types.S0 [@mode m] [@modality p]
 
   include
     Comparable.Stable.V1.S
@@ -8,8 +9,9 @@ module type%template [@mode m = (global, local)] V1 = sig
 end
 
 module With_stable_witness = struct
-  module type%template [@mode m = (global, local)] V1 = sig
-    include Stable_module_types.With_stable_witness.S0 [@mode m]
+  module type%template
+    [@mode m = (global, local)] [@modality p = (portable, nonportable)] V1 = sig
+    include Stable_module_types.With_stable_witness.S0 [@mode m] [@modality p]
 
     include
       Comparable.Stable.V1.With_stable_witness.S

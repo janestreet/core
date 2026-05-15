@@ -146,13 +146,13 @@ val valid_or_error : 'a check -> 'a -> 'a Or_error.t
 val%template field
   : 'a 'record.
   'a check -> 'record -> ([> `Read ], 'record, 'a) Field.t_with_perm -> t
-[@@kind k = (value_or_null, float64, bits32, bits64, word, immediate, immediate64)]
+[@@kind k = base_or_null_with_imm]
 
 (** Used for validating an individual field. Should be used with [Fields.Direct.to_list]. *)
 val%template field_direct
   : 'a 'record.
   'a check -> ([> `Read ], 'record, 'a) Field.t_with_perm -> 'record -> 'a -> t
-[@@kind k = (value_or_null, float64, bits32, bits64, word, immediate, immediate64)]
+[@@kind k = base_or_null_with_imm]
 
 (** Creates a function for use in a [Fields.fold]. *)
 val%template field_folder
@@ -162,8 +162,7 @@ val%template field_folder
   -> t list
   -> ([> `Read ], 'record, 'a) Field.t_with_perm
   -> t list
-[@@kind k = (value_or_null, float64, bits32, bits64, word, immediate, immediate64)]
-[@@mode p = (portable, nonportable)]
+[@@kind k = base_or_null_with_imm] [@@mode p = (portable, nonportable)]
 
 (** Like [field_folder], but for producing a list of portable ts. It's marginally easier
     to use directly when folding over fields to produce a portable result. *)
@@ -183,26 +182,28 @@ val field_direct_folder
 (** Combines a list of validation functions into one that does all validations. *)
 val all : 'a check list -> 'a check
 
+[%%template:
 (** Creates a validation function from a function that produces a [Result.t]. *)
-val%template of_result : ('a -> (unit, string) Result.t) -> ('a check[@mode portable])
+val of_result : ('a -> (unit, string) Result.t) -> ('a check[@mode portable])
 [@@mode p = (portable, nonportable)]
 
-val%template of_error : ('a -> unit Or_error.t) -> 'a check
-[@@mode p = (portable, nonportable)]
+val of_error : ('a -> unit Or_error.t) -> 'a check [@@mode p = (portable, nonportable)]
 
 (** Creates a validation function from a function that produces a bool. *)
-val booltest : ('a -> bool) -> if_false:string -> 'a check
+val booltest : 'a. ('a -> bool) -> if_false:string -> 'a check
+[@@kind k = base_or_null_with_imm]
 
 (** Creates a validation function from a function that produces a bool. Forces the name
     only when validation fails. *)
-val lazy_booltest : ('a -> bool) -> if_false:string Lazy.t -> 'a check
+val lazy_booltest : 'a. ('a -> bool) -> if_false:string Lazy.t -> 'a check
+[@@kind k = base_or_null_with_imm]
 
 (** Validation functions for particular data types. *)
-val%template pair
+val pair
   :  fst:('a check[@mode p1])
   -> snd:('b check[@mode p1])
   -> (('a * 'b) check[@mode p1])
-[@@mode p1 = (portable, nonportable), p2 = (portable, nonportable)]
+[@@mode p1 = (portable, nonportable), p2 = (portable, nonportable)]]
 
 (** Validates a list, naming each element by its position in the list (where the first
     position is 1, not 0). *)

@@ -74,8 +74,7 @@ let%template pass_bool (_ : bool) = get_pass () [@@mode __ = (portable, nonporta
 let%template pass_unit (_ : unit) = get_pass () [@@mode __ = (portable, nonportable)]
 
 [%%template
-[@@@kind.default
-  k = (value_or_null, float64, bits32, bits64, word, immediate, immediate64)]
+[@@@kind.default k = base_or_null_with_imm]
 
 let protect (type a) (f : (a check[@mode p1])) (v : a) =
   try f v with
@@ -103,6 +102,15 @@ let field_folder (type a) (check : (a check[@mode p])) record =
   ();
   fun acc fld -> (field [@kind k] [@mode p]) check record fld :: acc
 [@@mode p = (portable, nonportable)]
+;;
+
+let[@inline] lazy_booltest (type a) (f : a -> bool) ~if_false =
+  (protect [@kind k]) (fun (v : a) ->
+    if f v then get_pass () else fail (Lazy.force if_false))
+;;
+
+let[@inline] booltest f ~if_false =
+  (lazy_booltest [@kind k]) f ~if_false:(Lazy.from_val if_false)
 ;;]
 
 let%template try_with f =
@@ -180,12 +188,6 @@ let%template of_error f =
     | Error error -> [ { path = []; error } ])
 [@@mode p = (portable, nonportable)]
 ;;
-
-let[@inline] lazy_booltest f ~if_false =
-  protect (fun v -> if f v then get_pass () else fail (Lazy.force if_false))
-;;
-
-let[@inline] booltest f ~if_false = lazy_booltest f ~if_false:(Lazy.from_val if_false)
 
 let%template pair ~fst ~snd (fst_value, snd_value) =
   (of_list [@mode p1])

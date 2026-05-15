@@ -67,6 +67,7 @@ module Unit = Unit.Stable
 
 include Stable_internal
 include Perms.Export
+include Ppx_enumerate_lib.Export
 include Ppx_compare_lib.Builtin
 include Base.Exported_for_specific_uses.Globalize
 include Import.Not_found

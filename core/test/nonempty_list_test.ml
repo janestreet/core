@@ -188,9 +188,29 @@ let%expect_test "filter_map" =
   ()
 ;;
 
+let%expect_test "filter_map_or_null" =
+  let%quick_test prop (t : int t) (f : int -> int option) =
+    let f x = f x |> Or_null.of_option in
+    [%test_result: int list]
+      (filter_map_or_null t ~f)
+      ~expect:(List.filter_map_or_null (to_list t) ~f)
+  in
+  ()
+;;
+
 let%expect_test "filter_mapi" =
   let%quick_test prop (t : int t) (f : int -> int -> int option) =
     [%test_result: int list] (filter_mapi t ~f) ~expect:(List.filter_mapi (to_list t) ~f)
+  in
+  ()
+;;
+
+let%expect_test "filter_mapi_or_null" =
+  let%quick_test prop (t : int t) (f : int -> int -> int option) =
+    let f i x = f i x |> Or_null.of_option in
+    [%test_result: int list]
+      (filter_mapi_or_null t ~f)
+      ~expect:(List.filter_mapi_or_null (to_list t) ~f)
   in
   ()
 ;;

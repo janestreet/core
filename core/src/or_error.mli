@@ -3,18 +3,26 @@
 
 open! Import
 
-type%template 'a t = ('a Base.Or_error.t[@kind k])
-[@@deriving bin_io ~localize] [@@kind k = base_non_value]
+[%%template:
+[@@@kind_set.define all_ks_non_value = base_non_value]
+[@@@kind_set.define all_ks = (all_ks_non_value, value_or_null_with_imm)]
+
+type 'a t = ('a Base.Or_error.t[@kind k])
+[@@deriving bin_io ~localize] [@@kind k = all_ks_non_value]]
 
 type 'a t = ('a, Error.t) Result.t
 [@@deriving bin_io ~localize, diff ~extra_derive:[ sexp ], quickcheck]
+
+[%%template:
+[@@@kind_set.define all_ks_non_value = base_non_value]
+[@@@kind_set.define all_ks = (all_ks_non_value, value_or_null_with_imm)]
 
 (** @inline *)
 include%template (module type of struct
     include Base.Or_error
   end
   with type 'a t := 'a t
- [@with: type 'a t := ('a t[@kind k]) [@@kind k = base_non_value]])
+ [@with: type 'a t := ('a t[@kind k]) [@@kind k = all_ks_non_value]])
 
 module Expect_test_config : Expect_test_config_types.S with type 'a IO.t = 'a t
 
@@ -38,4 +46,4 @@ module Stable : sig
     include%template
       Stable_module_types.With_stable_witness.S1 [@mode local] with type 'a t := 'a t
   end
-end
+end]
