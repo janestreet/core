@@ -64,11 +64,11 @@ include%template Quickcheckable.S1 [@modality portable] with type 'a t := 'a t
 
 val to_string : 'a. f:('a -> string) -> 'a t -> string
 
-(** Like [gen], but never generates the empty list. *)
+(** Like [quickcheck_generator], but never generates the empty list. *)
 val%template gen_non_empty : 'a Quickcheck.Generator.t -> 'a t Quickcheck.Generator.t
 [@@mode p = (portable, nonportable)]
 
-(** Like [gen], but generates lists with the given length. *)
+(** Like [quickcheck_generator], but generates lists with the given length. *)
 val%template gen_with_length
   :  int
   -> 'a Quickcheck.Generator.t
