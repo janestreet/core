@@ -17,27 +17,27 @@ module type Comparisons_with_zero_alloc = Base.Comparable.Comparisons_with_zero_
 [@mode m]]
 
 module type%template Validate = sig
-  type t
+  type t : k
 
   (*_ Expose both portable and nonportable versions of the validators if the signature is
       used at mode portable. *)
   [%%template:
   [@@@mode.default p = (p, nonportable)]
 
-  val validate_lbound : min:t Maybe_bound.t -> (t Validate.check[@mode p])
-  val validate_ubound : max:t Maybe_bound.t -> (t Validate.check[@mode p])
+  val validate_lbound : min:(t Maybe_bound.t[@kind k]) -> (t Validate.check[@mode p])
+  val validate_ubound : max:(t Maybe_bound.t[@kind k]) -> (t Validate.check[@mode p])
 
   val validate_bound
-    :  min:t Maybe_bound.t
-    -> max:t Maybe_bound.t
+    :  min:(t Maybe_bound.t[@kind k])
+    -> max:(t Maybe_bound.t[@kind k])
     -> (t Validate.check[@mode p])]
 end
-[@@modality p = (portable, nonportable)]
+[@@kind k = (value_or_null, float64)] [@@modality p = (portable, nonportable)]
 
 module type%template Validate_with_zero = sig
-  type t
+  type t : k
 
-  include Validate [@modality p] with type t := t
+  include Validate [@kind k] [@modality p] with type t := t
 
   (*_ Expose both portable and nonportable versions of the validators if the signature is
       used at mode portable. *)
@@ -49,7 +49,7 @@ module type%template Validate_with_zero = sig
   val validate_negative : (t Validate.check[@mode p])
   val validate_non_positive : (t Validate.check[@mode p])]
 end
-[@@mode p = (portable, nonportable)]
+[@@kind k = (value_or_null, float64)] [@@mode p = (portable, nonportable)]
 
 [%%template
 [@@@mode.default m = (local, global)]
@@ -78,7 +78,9 @@ end
       end
     ]}
 
-    Then use [Comparable.Make] in the struct (see comparable.mli for an example). *)
+    Then use [Comparable.Make] in the struct (see comparable.mli for an example).
+
+    See {!Base.Map} for information on how to make maps mode cross portability in OxCaml. *)
 
 module type S_plain = sig
   include S_common [@modality p] [@mode m]
@@ -187,6 +189,24 @@ module type Comparable = sig @@ portable
         let now = .. in
         let someday = .. in
         Date.O.(now > someday)
+      ]}
+
+      {2 Mode-crossing comparators}
+
+      To make the [Comparator.t] for a type (and hence maps built with that comparator)
+      cross portability in OxCaml, add the [[@portable]] template attribute to
+      [Comparable.Make] and [Comparable.S]. For example:
+
+      {[
+        module Foo : sig
+          type t [@@deriving compare, sexp]
+
+          include%template Comparable.S [@modality portable] with type t := t
+        end = struct
+          type t = ... [@@deriving compare, sexp]
+
+          include%template functor Comparable.Make [@modality portable]
+        end
       ]} *)
 
   module type Infix = Infix
@@ -208,10 +228,13 @@ module type Comparable = sig @@ portable
   module type S_common = S_common [@modality p] [@mode m]
   module type Using_comparator_arg = Using_comparator_arg [@modality p] [@mode m]]
 
-  module type Validate = Validate
+  [%%template:
+  [@@@kind.default k = (value_or_null, float64)]
 
-  module type%template Validate_with_zero = Validate_with_zero [@modality p]
-  [@@mode p = (portable, nonportable)]
+  module type Validate = Validate [@kind k]
+
+  module type Validate_with_zero = Validate_with_zero [@kind k] [@modality p]
+  [@@mode p = (portable, nonportable)]]
 
   module type With_compare = With_compare
 
@@ -242,9 +265,17 @@ module type Comparable = sig @@ portable
       type t [@@deriving compare [@mode.explicit m]]
     end) : Infix with type t := T.t
 
+  module%template.portable Infix_with_zero_alloc (T : sig
+      type t [@@deriving (compare [@mode.explicit m]) ~zero_alloc]
+    end) : Infix_with_zero_alloc with type t := T.t
+
   module%template.portable Comparisons (T : sig
       type t [@@deriving compare [@mode.explicit m]]
     end) : Comparisons [@mode m] with type t := T.t
+
+  module%template.portable Comparisons_with_zero_alloc (T : sig
+      type t [@@deriving (compare [@mode.explicit m]) ~zero_alloc]
+    end) : Comparisons_with_zero_alloc [@mode m] with type t := T.t
 
   (** {2 Make Functors}
 

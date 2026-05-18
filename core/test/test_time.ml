@@ -1458,3 +1458,182 @@ let%expect_test "regression test: [to_ofday] never returns 24:00" =
         ofday);
   [%expect {| |}]
 ;;
+
+module%test [@name "unboxed functions match boxed functions"] _ = struct
+  let time_gen = Time_float.quickcheck_generator
+
+  let%expect_test "box and unbox are inverses" =
+    quickcheck time_gen ~sexp_of:Time_float.sexp_of_t ~f:(fun t ->
+      let round_trip = Time_float.box (Time_float.unbox t) in
+      require
+        (Time_float.equal t round_trip)
+        ~if_false_then_print_s:
+          (lazy [%message "box/unbox round-trip failed" (t : Time_float.t)]));
+    [%expect {| |}]
+  ;;
+
+  let%expect_test "compare_u matches compare" =
+    quickcheck
+      (Quickcheck.Generator.tuple2 time_gen time_gen)
+      ~sexp_of:[%sexp_of: Time_float.t * Time_float.t]
+      ~f:(fun (t1, t2) ->
+        let boxed_result = Time_float.compare t1 t2 in
+        let unboxed_result =
+          Time_float.compare_u (Time_float.unbox t1) (Time_float.unbox t2)
+        in
+        require
+          (Int.equal boxed_result unboxed_result)
+          ~if_false_then_print_s:
+            (lazy
+              [%message
+                "compare_u doesn't match compare"
+                  (t1 : Time_float.t)
+                  (t2 : Time_float.t)
+                  (boxed_result : int)
+                  (unboxed_result : int)]));
+    [%expect {| |}]
+  ;;
+
+  let%expect_test "compare_u__local matches compare__local" =
+    quickcheck
+      (Quickcheck.Generator.tuple2 time_gen time_gen)
+      ~sexp_of:[%sexp_of: Time_float.t * Time_float.t]
+      ~f:(fun (t1, t2) ->
+        let boxed_result = Time_float.compare__local t1 t2 in
+        let unboxed_result =
+          Time_float.compare_u__local (Time_float.unbox t1) (Time_float.unbox t2)
+        in
+        require
+          (Int.equal boxed_result unboxed_result)
+          ~if_false_then_print_s:
+            (lazy
+              [%message
+                "compare_u__local doesn't match compare__local"
+                  (t1 : Time_float.t)
+                  (t2 : Time_float.t)
+                  (boxed_result : int)
+                  (unboxed_result : int)]));
+    [%expect {| |}]
+  ;;
+
+  let%expect_test "equal_u matches equal" =
+    quickcheck
+      (Quickcheck.Generator.tuple2 time_gen time_gen)
+      ~sexp_of:[%sexp_of: Time_float.t * Time_float.t]
+      ~f:(fun (t1, t2) ->
+        let boxed_result = Time_float.equal t1 t2 in
+        let unboxed_result =
+          Time_float.equal_u (Time_float.unbox t1) (Time_float.unbox t2)
+        in
+        require
+          (Bool.equal boxed_result unboxed_result)
+          ~if_false_then_print_s:
+            (lazy
+              [%message
+                "equal_u doesn't match equal"
+                  (t1 : Time_float.t)
+                  (t2 : Time_float.t)
+                  (boxed_result : bool)
+                  (unboxed_result : bool)]));
+    [%expect {| |}]
+  ;;
+
+  let%expect_test "sexp_of_t_u matches sexp_of_t" =
+    quickcheck time_gen ~sexp_of:Time_float.sexp_of_t ~f:(fun t ->
+      let boxed_sexp = Time_float.sexp_of_t t in
+      let unboxed_sexp = Time_float.sexp_of_t_u (Time_float.unbox t) in
+      require
+        (Sexp.equal boxed_sexp unboxed_sexp)
+        ~if_false_then_print_s:
+          (lazy
+            [%message
+              "sexp_of_t_u doesn't match sexp_of_t"
+                (t : Time_float.t)
+                (boxed_sexp : Sexp.t)
+                (unboxed_sexp : Sexp.t)]));
+    [%expect {| |}]
+  ;;
+
+  let%expect_test "t_u_of_sexp matches t_of_sexp" =
+    quickcheck time_gen ~sexp_of:Time_float.sexp_of_t ~f:(fun t ->
+      let sexp = Time_float.sexp_of_t t in
+      let boxed_result = Time_float.t_of_sexp sexp in
+      let unboxed_result = Time_float.box (Time_float.t_u_of_sexp sexp) in
+      require
+        (Time_float.equal boxed_result unboxed_result)
+        ~if_false_then_print_s:
+          (lazy
+            [%message
+              "t_u_of_sexp doesn't match t_of_sexp"
+                (t : Time_float.t)
+                (sexp : Sexp.t)
+                (boxed_result : Time_float.t)
+                (unboxed_result : Time_float.t)]));
+    [%expect {| |}]
+  ;;
+
+  let%expect_test "bin_size_t_u matches bin_size_t" =
+    quickcheck time_gen ~sexp_of:Time_float.sexp_of_t ~f:(fun t ->
+      let boxed_size = Time_float.bin_size_t t in
+      let unboxed_size = Time_float.bin_size_t_u (Time_float.unbox t) in
+      require
+        (Int.equal boxed_size unboxed_size)
+        ~if_false_then_print_s:
+          (lazy
+            [%message
+              "bin_size_t_u doesn't match bin_size_t"
+                (t : Time_float.t)
+                (boxed_size : int)
+                (unboxed_size : int)]));
+    [%expect {| |}]
+  ;;
+
+  let%expect_test "bin_write_t_u and bin_read_t_u round-trip correctly" =
+    quickcheck time_gen ~sexp_of:Time_float.sexp_of_t ~f:(fun t ->
+      let buf = Bin_prot.Common.create_buf 16 in
+      let (_ : int) = Time_float.bin_write_t_u buf ~pos:0 (Time_float.unbox t) in
+      let round_trip = Time_float.box (Time_float.bin_read_t_u buf ~pos_ref:(ref 0)) in
+      require
+        (Time_float.equal t round_trip)
+        ~if_false_then_print_s:
+          (lazy
+            [%message
+              "bin_write_t_u/bin_read_t_u round-trip failed"
+                (t : Time_float.t)
+                (round_trip : Time_float.t)]));
+    [%expect {| |}]
+  ;;
+
+  let%expect_test "bin_write_t_u produces same bytes as bin_write_t" =
+    quickcheck time_gen ~sexp_of:Time_float.sexp_of_t ~f:(fun t ->
+      let buf_boxed = Bin_prot.Common.create_buf 16 in
+      let buf_unboxed = Bin_prot.Common.create_buf 16 in
+      let len_boxed = Time_float.bin_write_t buf_boxed ~pos:0 t in
+      let len_unboxed =
+        Time_float.bin_write_t_u buf_unboxed ~pos:0 (Time_float.unbox t)
+      in
+      require
+        (Int.equal len_boxed len_unboxed)
+        ~if_false_then_print_s:
+          (lazy
+            [%message
+              "bin_write_t_u length doesn't match bin_write_t"
+                (t : Time_float.t)
+                (len_boxed : int)
+                (len_unboxed : int)]);
+      let bytes_boxed = Bytes.create len_boxed in
+      let bytes_unboxed = Bytes.create len_unboxed in
+      Bin_prot.Common.blit_buf_bytes buf_boxed ~dst_pos:0 bytes_boxed ~len:len_boxed;
+      Bin_prot.Common.blit_buf_bytes buf_unboxed ~dst_pos:0 bytes_unboxed ~len:len_unboxed;
+      require
+        (Bytes.equal bytes_boxed bytes_unboxed)
+        ~if_false_then_print_s:
+          (lazy
+            [%message
+              "bin_write_t_u bytes don't match bin_write_t"
+                (t : Time_float.t)
+                (bytes_boxed : bytes)
+                (bytes_unboxed : bytes)]));
+    [%expect {| |}]
+  ;;
+end

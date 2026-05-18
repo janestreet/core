@@ -273,6 +273,7 @@ module Configure (Config : Quickcheck_config) = struct
   let iter ?seed ?sizes ?trials gen ~f =
     let config = make_config ~seed ~sizes ~trials ~shrink_attempts:None in
     Test.with_sample_exn ~config gen ~f:(fun sequence -> Sequence.iter sequence ~f)
+    [@nontail]
   ;;
 
   let test ?seed ?sizes ?trials ?shrinker ?shrink_attempts ?sexp_of ?examples gen ~f =

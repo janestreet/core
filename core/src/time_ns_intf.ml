@@ -124,6 +124,7 @@ module type Span = sig @@ portable
   module O : sig
     val ( / ) : t -> float -> t [@@zero_alloc]
     val ( // ) : t -> t -> float
+    val ( /// ) : t -> t -> float# [@@zero_alloc]
     val ( + ) : t -> t -> t [@@zero_alloc strict]
     val ( - ) : t -> t -> t [@@zero_alloc strict]
 
@@ -815,7 +816,8 @@ module type Time_ns = sig @@ portable
 
       Sexps and strings display the date, ofday, and UTC offset of [t] relative to the
       appropriate time zone. *)
-  include%template Identifiable.S [@mode local] [@modality portable] with type t := t
+  include%template
+    Identifiable.S [@mode local] [@alloc stack] [@modality portable] with type t := t
 
   (** [Identifiable] masks the comparison functions' [@zero_alloc] annotations *)
 

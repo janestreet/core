@@ -322,14 +322,16 @@ module Definitions = struct
         This can be quite useful when, for example, generating a list of updates to a
         state machine. In such a case, some updates may or may not be valid depending on
         the state of the machine. *)
-    val fold_until
-      :  ?min_length:int
+    val%template fold_until
+      : ('acc : value mod c) 'final.
+      ?min_length:int
       -> ?max_length:int
-      -> init:'acc
-      -> f:('acc -> ('acc, 'final) Continue_or_stop.t t)
-      -> finish:('acc -> 'final)
+      -> init:'acc @ p
+      -> f:('acc -> ('acc, 'final) Continue_or_stop.t t) @ p
+      -> finish:('acc -> 'final) @ p
       -> unit
-      -> 'final t
+      -> 'final t @ p
+    [@@mode (p, c) = ((nonportable, uncontended), (portable, contended))]
   end
 
   (** We template over a modality so that the portable version may be used with
@@ -723,7 +725,7 @@ module Definitions = struct
       -> ?sizes:int Sequence.t
       -> ?trials:int
       -> 'a Generator.t
-      -> f:('a -> unit)
+      -> f:('a -> unit) @ local
       -> unit
 
     (** [test gen ~f] is like [iter], with optional concrete [examples] that are tested
@@ -743,7 +745,7 @@ module Definitions = struct
       -> ?sexp_of:('a -> Base.Sexp.t)
       -> ?examples:'a list
       -> 'a Generator.t
-      -> f:('a -> unit)
+      -> f:('a -> unit) @ local
       -> unit
 
     (** [test_or_error] is like [test], except failure is determined using [Or_error.t].
@@ -758,7 +760,7 @@ module Definitions = struct
       -> ?sexp_of:('a -> Base.Sexp.t)
       -> ?examples:'a list
       -> 'a Generator.t
-      -> f:('a -> unit Base.Or_error.t)
+      -> f:('a -> unit Base.Or_error.t) @ local
       -> unit Base.Or_error.t
 
     (** [test_can_generate gen ~f] is useful for testing [gen] values, to make sure they
@@ -773,7 +775,7 @@ module Definitions = struct
       -> ?trials:int
       -> ?sexp_of:('a -> Base.Sexp.t)
       -> 'a Generator.t
-      -> f:('a -> bool)
+      -> f:('a -> bool) @ local
       -> unit
 
     (** [test_distinct_values gen] is useful for testing [gen] values, to make sure they

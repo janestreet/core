@@ -17,7 +17,7 @@
    fieldslib filename_base heap_block jane-street-headers base.md5 portable
    ppx_assert.runtime-lib ppx_hash.runtime-lib ppx_inline_test.runtime-lib
    sexplib splittable_random ppx_stable_witness.stable_witness stdio
-   string_dict time_now typerep univ_map uopt validate variantslib)
+   string_dict time_now typerep univ_map validate variantslib)
  (ocamlopt_flags
   :standard
   (:include ocamlopt-flags))
@@ -26,12 +26,10 @@
     -require-template-extension ppx_optcomp ppx_diff.ppx_diff))
  (preprocessor_deps config.h gc_stubs.h)
  (js_of_ocaml
-  (javascript_files strftime.js runtime.js
-    temporal-polyfill/temporal-polyfill.js timezone_js_loader_stubs.js
+  (javascript_files strftime.js runtime.js timezone_js_loader_stubs.js
     timezone_runtime.js))
  (wasm_of_ocaml
-  (javascript_files strftime.js runtime.js
-    temporal-polyfill/temporal-polyfill.js timezone_js_loader_stubs.js
+  (javascript_files strftime.js runtime.js timezone_js_loader_stubs.js
     timezone_runtime.js)
   (wasm_files runtime.wat timezone_js_loader_stubs.wasm.js
     timezone_js_loader_stubs.wat)))
@@ -48,4 +46,4 @@
  (targets ocamlopt-flags)
  (deps)
  (action
-  (bash "echo '(-O3 -flambda2-inline-max-depth 10)' > ocamlopt-flags")))
+  (write-file ocamlopt-flags "(-O3 -flambda2-inline-max-depth 10)")))

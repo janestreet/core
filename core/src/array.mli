@@ -236,7 +236,7 @@ module Permissioned : sig
   external create_local
     :  len:int
     -> 'a
-    -> local_ ('a, [< 'perm perms ]) t
+    -> ('a, [< 'perm perms ]) t @ local
     = "%makearray_dynamic"
   [@@ocaml.doc
     {| [create_local ~len x] is like [create]. It allocates the array on the local stack.

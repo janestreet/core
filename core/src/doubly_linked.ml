@@ -12,7 +12,7 @@ let raise_attempt_to_mutate_list_during_iteration () =
 let phys_equal = ( == )
 
 module Header : sig @@ portable
-  type t : mutable_data
+  type t : value_or_null mod stateless
 
   val create : unit -> t
   val length : t -> int
@@ -28,23 +28,21 @@ end = struct
     ; mutable pending_iterations : int
     }
 
-  (* The [Uopt] type cannot nest with itself. This is a safe use because it contains
-     [Union_find.t] and is contained by [Elt.t] below, neither of which is [Uopt]. *)
-  type t = s Union_find.t Uopt.t
+  type t = s Union_find.t or_null
 
-  let create () = Uopt.some (Union_find.create { length = 1; pending_iterations = 0 })
+  let create () = This (Union_find.create { length = 1; pending_iterations = 0 })
 
   let attached_exn t =
-    match%optional.Uopt t with
-    | None -> raise_s (Atom "Doubly_linked: elt is detached from any list")
-    | Some u -> u
+    match t with
+    | Null -> raise_s (Atom "Doubly_linked: elt is detached from any list")
+    | This u -> u
   ;;
 
   let equal (t1 : t) t2 =
-    match%optional.Uopt t1, t2 with
-    | None, None -> true
-    | Some _, None | None, Some _ -> false
-    | Some u1, Some u2 -> Union_find.same_class u1 u2
+    match t1, t2 with
+    | Null, Null -> true
+    | This _, Null | Null, This _ -> false
+    | This u1, This u2 -> Union_find.same_class u1 u2
   ;;
 
   let length t = (Union_find.get (attached_exn t)).length
@@ -57,9 +55,9 @@ end = struct
   ;;
 
   let check_no_pending_iterations t =
-    match%optional.Uopt t with
-    | None -> ()
-    | Some u -> ignore (union_find_get__check_no_pending_iterations u : s)
+    match t with
+    | Null -> ()
+    | This u -> ignore (union_find_get__check_no_pending_iterations u : s)
   ;;
 
   let incr_length ~by:n t =
@@ -71,9 +69,9 @@ end = struct
      by [every_second] in [writer0.ml] *)
 
   let with_iteration t f =
-    match%optional.Uopt t with
-    | None -> f ()
-    | Some u ->
+    match t with
+    | Null -> f ()
+    | This u ->
       let s = Union_find.get u in
       s.pending_iterations <- s.pending_iterations + 1;
       Exn.protect ~f ~finally:(stack_ fun () ->
@@ -97,7 +95,7 @@ end = struct
       `Merged)
   ;;
 
-  let get_detached = Uopt.get_none
+  let get_detached () = Null
 end
 
 module Elt : sig @@ portable
@@ -236,12 +234,12 @@ end = struct
   let unlink t = ignore (unlink_after t.prev : _ t)
 end
 
-type 'a t = 'a Elt.t option ref
+type 'a t = 'a Elt.t or_null ref
 
 let invariant invariant_a t =
   match !t with
-  | None -> ()
-  | Some head ->
+  | Null -> ()
+  | This head ->
     let header = Elt.header head in
     let rec loop n elt =
       let next_elt = Elt.next elt in
@@ -256,7 +254,7 @@ let invariant invariant_a t =
     assert (len = Header.length header)
 ;;
 
-let create (type a) () : a t = ref None
+let create (type a) () : a t = ref Null
 let equal (t : _ t) t' = phys_equal t t'
 
 let of_list = function
@@ -264,7 +262,7 @@ let of_list = function
   | x :: xs ->
     let first = Elt.create x in
     let _last = List.fold xs ~init:first ~f:(fun a b -> Elt.insert_after a b) in
-    ref (Some first)
+    ref (This first)
 ;;
 
 let of_array = function
@@ -275,13 +273,13 @@ let of_array = function
       if i < Array.length arr then loop arr (Elt.insert_after elt arr.(i)) (i + 1)
     in
     loop arr first 1;
-    ref (Some first)
+    ref (This first)
 ;;
 
 let map t ~f =
   match !t with
-  | None -> create ()
-  | Some first ->
+  | Null -> create ()
+  | This first ->
     let new_first = Elt.create (f (Elt.value first)) in
     Header.with_iteration (Elt.header first) (stack_ fun () ->
       let rec loop f acc first elt =
@@ -292,13 +290,13 @@ let map t ~f =
       (* unroll and skip first elt *)
       let next = Elt.next first in
       if not (phys_equal next first) then loop f new_first first next);
-    ref (Some new_first)
+    ref (This new_first)
 ;;
 
 let mapi t ~f =
   match !t with
-  | None -> create ()
-  | Some first ->
+  | Null -> create ()
+  | This first ->
     let new_first = Elt.create (f 0 (Elt.value first)) in
     Header.with_iteration (Elt.header first) (stack_ fun () ->
       let rec loop f i acc first elt =
@@ -309,13 +307,13 @@ let mapi t ~f =
       (* unroll and skip first elt *)
       let next = Elt.next first in
       if not (phys_equal next first) then loop f 1 new_first first next);
-    ref (Some new_first)
+    ref (This new_first)
 ;;
 
 let fold_elt t ~init ~f =
   match !t with
-  | None -> init
-  | Some first ->
+  | Null -> init
+  | This first ->
     Header.with_iteration (Elt.header first) (stack_ fun () ->
       let rec loop f acc first elt =
         let acc = f acc elt in
@@ -328,8 +326,8 @@ let fold_elt t ~init ~f =
 
 let foldi_elt t ~init ~f =
   match !t with
-  | None -> init
-  | Some first ->
+  | Null -> init
+  | This first ->
     Header.with_iteration (Elt.header first) (stack_ fun () ->
       let rec loop f i acc first elt =
         let acc = f i acc elt in
@@ -342,8 +340,8 @@ let foldi_elt t ~init ~f =
 
 let fold_elt_1 t ~init ~f a =
   match !t with
-  | None -> init
-  | Some first ->
+  | Null -> init
+  | This first ->
     Header.with_iteration (Elt.header first) (stack_ fun () ->
       let rec loop f a acc first elt =
         let acc = f a acc elt in
@@ -356,8 +354,8 @@ let fold_elt_1 t ~init ~f a =
 
 let foldi_elt_1 t ~init ~f a =
   match !t with
-  | None -> init
-  | Some first ->
+  | Null -> init
+  | This first ->
     Header.with_iteration (Elt.header first) (stack_ fun () ->
       let rec loop f i a acc first elt =
         let acc = f i a acc elt in
@@ -397,16 +395,16 @@ let rec iter_loop first f elt =
 
 let iter t ~f =
   match !t with
-  | None -> ()
-  | Some first ->
+  | Null -> ()
+  | This first ->
     Header.with_iteration (Elt.header first) (stack_ fun () -> iter_loop first f first)
     [@nontail]
 ;;
 
 let length t =
   match !t with
-  | None -> 0
-  | Some first -> Header.length (Elt.header first)
+  | Null -> 0
+  | This first -> Header.length (Elt.header first)
 ;;
 
 let rec iteri_loop first f i elt =
@@ -417,8 +415,8 @@ let rec iteri_loop first f i elt =
 
 let iteri t ~f =
   match !t with
-  | None -> ()
-  | Some first ->
+  | Null -> ()
+  | This first ->
     Header.with_iteration (Elt.header first) (stack_ fun () -> iteri_loop first f 0 first)
     [@nontail]
 ;;
@@ -459,27 +457,27 @@ let iter_until = C.iter_until
 
 let unchecked_iter t ~f =
   match !t with
-  | None -> ()
-  | Some first ->
+  | Null -> ()
+  | This first ->
     let rec loop t f elt =
       f (Elt.value elt);
       let next = Elt.next elt in
       match !t with
       (* the first element of the bag may have been changed by [f] *)
-      | None -> ()
-      | Some first -> if not (phys_equal first next) then loop t f next
+      | Null -> ()
+      | This first -> if not (phys_equal first next) then loop t f next
     in
     loop t f first
 ;;
 
-let is_empty t = Option.is_none !t
+let is_empty t = Or_null.is_null !t
 
 (* more efficient than what Container.Make returns *)
 
 let fold_right t ~init ~f =
   match !t with
-  | None -> init
-  | Some first ->
+  | Null -> init
+  | This first ->
     Header.with_iteration (Elt.header first) (stack_ fun () ->
       let rec loop f acc elt =
         let prev = Elt.prev elt in
@@ -492,8 +490,8 @@ let fold_right t ~init ~f =
 
 let fold_right_elt t ~init ~f =
   match !t with
-  | None -> init
-  | Some first ->
+  | Null -> init
+  | This first ->
     Header.with_iteration (Elt.header first) (stack_ fun () ->
       let rec loop f acc elt =
         let prev = Elt.prev elt in
@@ -513,14 +511,14 @@ let t_sexp_grammar elt_grammar =
 ;;
 
 let copy t = of_list (to_list t)
-let clear t = t := None
+let clear t = t := Null
 
 let%template compare compare_elt (t1 @ m) (t2 @ m) =
   match !t1, !t2 with
-  | None, None -> 0
-  | None, _ -> -1
-  | _, None -> 1
-  | Some f1, Some f2 ->
+  | Null, Null -> 0
+  | Null, _ -> -1
+  | _, Null -> 1
+  | This f1, This f2 ->
     Header.with_iteration (Elt.header f1) (stack_ fun () ->
       Header.with_iteration (Elt.header f2) (stack_ fun () ->
         let rec loop compare_elt elt1 f1 elt2 f2 =
@@ -559,13 +557,13 @@ let raise_transfer_src_and_dst_are_same_list () =
 let transfer ~src ~dst =
   if phys_equal src dst then raise_transfer_src_and_dst_are_same_list ();
   match !src with
-  | None -> ()
-  | Some src_head ->
+  | Null -> ()
+  | This src_head ->
     (match !dst with
-     | None ->
-       dst := Some src_head;
+     | Null ->
+       dst := This src_head;
        clear src
-     | Some dst_head ->
+     | This dst_head ->
        (match Header.merge (Elt.header src_head) (Elt.header dst_head) with
         | `Same_already -> raise_transfer_src_and_dst_are_same_list ()
         | `Merged ->
@@ -579,12 +577,12 @@ let mapi_inplace t ~f = iteri_elt t ~f:(fun i elt -> Elt.set elt (f i (Elt.value
 let remove_list t to_remove =
   List.iter to_remove ~f:(fun elt ->
     (match !t with
-     | None -> ()
-     | Some head ->
+     | Null -> ()
+     | This head ->
        if Elt.equal head elt
        then (
          let next_elt = Elt.next elt in
-         t := if Elt.equal head next_elt then None else Some next_elt));
+         t := if Elt.equal head next_elt then Null else This next_elt));
     Elt.unlink elt)
 ;;
 
@@ -636,17 +634,17 @@ let raise_elt_does_not_belong_to_list () =
   raise_s (Atom "Doubly_linked: elt does not belong to list")
 ;;
 
-let first_elt t = !t
-let last_elt t = Option.map ~f:Elt.prev !t
+let first_elt t = Or_null.to_option !t
+let last_elt t = Or_null.value_map ~default:None ~f:(fun elt -> Some (Elt.prev elt)) !t
 let first t = Option.map ~f:Elt.value (first_elt t)
 let last t = Option.map ~f:Elt.value (last_elt t)
-let first_exn (t : 'a t) = Option.value_exn !t |> Elt.value
-let last_exn (t : 'a t) = Option.value_exn !t |> Elt.prev |> Elt.value
+let first_exn (t : 'a t) = Or_null.value_exn !t |> Elt.value
+let last_exn (t : 'a t) = Or_null.value_exn !t |> Elt.prev |> Elt.value
 
 let is_first t elt =
   match !t with
-  | None -> raise_elt_does_not_belong_to_list ()
-  | Some first ->
+  | Null -> raise_elt_does_not_belong_to_list ()
+  | This first ->
     if Header.equal (Elt.header first) (Elt.header elt)
     then Elt.equal elt first
     else raise_elt_does_not_belong_to_list ()
@@ -654,8 +652,8 @@ let is_first t elt =
 
 let is_last t elt =
   match !t with
-  | None -> raise_elt_does_not_belong_to_list ()
-  | Some first ->
+  | Null -> raise_elt_does_not_belong_to_list ()
+  | This first ->
     if Header.equal (Elt.header first) (Elt.header elt)
     then (
       let last = Elt.prev first in
@@ -665,14 +663,14 @@ let is_last t elt =
 
 let mem_elt t elt =
   match !t with
-  | None -> false
-  | Some first -> Header.equal (Elt.header first) (Elt.header elt)
+  | Null -> false
+  | This first -> Header.equal (Elt.header first) (Elt.header elt)
 ;;
 
 let prev t elt =
   match !t with
-  | None -> raise_elt_does_not_belong_to_list ()
-  | Some first ->
+  | Null -> raise_elt_does_not_belong_to_list ()
+  | This first ->
     if Elt.equal elt first
     then None
     else if Header.equal (Elt.header first) (Elt.header elt)
@@ -682,8 +680,8 @@ let prev t elt =
 
 let next t elt =
   match !t with
-  | None -> raise_elt_does_not_belong_to_list ()
-  | Some first ->
+  | Null -> raise_elt_does_not_belong_to_list ()
+  | This first ->
     let last = Elt.prev first in
     if Elt.equal elt last
     then None
@@ -694,8 +692,8 @@ let next t elt =
 
 let insert_after t elt v =
   match !t with
-  | None -> raise_elt_does_not_belong_to_list ()
-  | Some first ->
+  | Null -> raise_elt_does_not_belong_to_list ()
+  | This first ->
     if Header.equal (Elt.header first) (Elt.header elt)
     then Elt.insert_after elt v
     else raise_elt_does_not_belong_to_list ()
@@ -703,12 +701,12 @@ let insert_after t elt v =
 
 let insert_before t elt v =
   match !t with
-  | None -> raise_elt_does_not_belong_to_list ()
-  | Some first ->
+  | Null -> raise_elt_does_not_belong_to_list ()
+  | This first ->
     if Elt.equal elt first
     then (
       let new_elt = Elt.insert_before first v in
-      t := Some new_elt;
+      t := This new_elt;
       new_elt)
     else if Header.equal (Elt.header first) (Elt.header elt)
     then Elt.insert_before elt v
@@ -717,48 +715,48 @@ let insert_before t elt v =
 
 let insert_empty t v =
   let new_elt = Elt.create v in
-  t := Some new_elt;
+  t := This new_elt;
   new_elt
 ;;
 
 let insert_last t v =
   match !t with
-  | None -> insert_empty t v
-  | Some first -> Elt.insert_before first v
+  | Null -> insert_empty t v
+  | This first -> Elt.insert_before first v
 ;;
 
 let insert_first t v =
   match !t with
-  | None -> insert_empty t v
-  | Some first ->
+  | Null -> insert_empty t v
+  | This first ->
     let new_elt = Elt.insert_before first v in
-    t := Some new_elt;
+    t := This new_elt;
     new_elt
 ;;
 
 let remove_last t =
   match !t with
-  | None -> None
-  | Some first ->
+  | Null -> None
+  | This first ->
     let last = Elt.unlink_before first in
-    if Elt.equal first last then t := None;
+    if Elt.equal first last then t := Null;
     Some (Elt.value last)
 ;;
 
 let remove_first t =
   match !t with
-  | None -> None
-  | Some first ->
+  | Null -> None
+  | This first ->
     let second = Elt.next first in
     Elt.unlink first;
-    t := if Elt.equal first second then None else Some second;
+    t := if Elt.equal first second then Null else This second;
     Some (Elt.value first)
 ;;
 
 let remove t elt =
   match !t with
-  | None -> raise_elt_does_not_belong_to_list ()
-  | Some first ->
+  | Null -> raise_elt_does_not_belong_to_list ()
+  | This first ->
     if Elt.equal elt first
     then ignore (remove_first t : _ option)
     else if Header.equal (Elt.header first) (Elt.header elt)
@@ -769,8 +767,8 @@ let remove t elt =
 let filter t ~f =
   let new_t = create () in
   (match !t with
-   | None -> ()
-   | Some first ->
+   | Null -> ()
+   | This first ->
      Header.with_iteration (Elt.header first) (stack_ fun () ->
        let rec loop f new_t first elt =
          if f (Elt.value elt)
@@ -785,8 +783,8 @@ let filter t ~f =
 let filteri t ~f =
   let new_t = create () in
   (match !t with
-   | None -> ()
-   | Some first ->
+   | Null -> ()
+   | This first ->
      Header.with_iteration (Elt.header first) (stack_ fun () ->
        let rec loop f i new_t first elt =
          if f i (Elt.value elt)
@@ -801,8 +799,8 @@ let filteri t ~f =
 let filter_map t ~f =
   let new_t = create () in
   (match !t with
-   | None -> ()
-   | Some first ->
+   | Null -> ()
+   | This first ->
      Header.with_iteration (Elt.header first) (stack_ fun () ->
        let rec loop f new_t first elt =
          (match f (Elt.value elt) with
@@ -818,8 +816,8 @@ let filter_map t ~f =
 let filter_mapi t ~f =
   let new_t = create () in
   (match !t with
-   | None -> ()
-   | Some first ->
+   | Null -> ()
+   | This first ->
      Header.with_iteration (Elt.header first) (stack_ fun () ->
        let rec loop f i new_t first elt =
          (match f i (Elt.value elt) with
@@ -836,8 +834,8 @@ let partition_tf t ~f =
   let t1 = create () in
   let t2 = create () in
   (match !t with
-   | None -> ()
-   | Some first ->
+   | Null -> ()
+   | This first ->
      Header.with_iteration (Elt.header first) (stack_ fun () ->
        let rec loop f t1 t2 first elt =
          insert_last (if f (Elt.value elt) then t1 else t2) (Elt.value elt)
@@ -853,8 +851,8 @@ let partitioni_tf t ~f =
   let t1 = create () in
   let t2 = create () in
   (match !t with
-   | None -> ()
-   | Some first ->
+   | Null -> ()
+   | This first ->
      Header.with_iteration (Elt.header first) (stack_ fun () ->
        let rec loop f i t1 t2 first elt =
          insert_last (if f i (Elt.value elt) then t1 else t2) (Elt.value elt)
@@ -870,8 +868,8 @@ let partition_map t ~f =
   let t1 = create () in
   let t2 = create () in
   (match !t with
-   | None -> ()
-   | Some first ->
+   | Null -> ()
+   | This first ->
      Header.with_iteration (Elt.header first) (stack_ fun () ->
        let rec loop f t1 t2 first elt =
          (match (f (Elt.value elt) : (_, _) Either.t) with
@@ -888,8 +886,8 @@ let partition_mapi t ~f =
   let t1 = create () in
   let t2 = create () in
   (match !t with
-   | None -> ()
-   | Some first ->
+   | Null -> ()
+   | This first ->
      Header.with_iteration (Elt.header first) (stack_ fun () ->
        let rec loop f i t1 t2 first elt =
          (match (f i (Elt.value elt) : (_, _) Either.t) with
@@ -911,8 +909,8 @@ let move_before t elt ~anchor =
   if Header.equal (Elt.header anchor) (Elt.header elt)
   then (
     match !t with
-    | None -> raise_elt_does_not_belong_to_list ()
-    | Some first ->
+    | Null -> raise_elt_does_not_belong_to_list ()
+    | This first ->
       if Header.equal (Elt.header first) (Elt.header elt)
       then (
         (* unlink [elt] *)
@@ -921,21 +919,21 @@ let move_before t elt ~anchor =
         let first =
           if Elt.equal first elt
           then (
-            t := Some after_elt;
+            t := This after_elt;
             after_elt)
           else first
         in
         (* splice [elt] in before [anchor] *)
         Elt.split_or_splice_before anchor elt;
-        if Elt.equal first anchor then t := Some elt)
+        if Elt.equal first anchor then t := This elt)
       else raise_elt_does_not_belong_to_list ())
   else raise_elt_does_not_belong_to_list ()
 ;;
 
 let move_to_front t elt =
   match !t with
-  | None -> raise_elt_does_not_belong_to_list ()
-  | Some first -> if not (Elt.equal elt first) then move_before t elt ~anchor:first
+  | Null -> raise_elt_does_not_belong_to_list ()
+  | This first -> if not (Elt.equal elt first) then move_before t elt ~anchor:first
 ;;
 
 let move_after t elt ~anchor =
@@ -943,14 +941,14 @@ let move_after t elt ~anchor =
   if Header.equal (Elt.header anchor) (Elt.header elt)
   then (
     match !t with
-    | None -> raise_elt_does_not_belong_to_list ()
-    | Some first ->
+    | Null -> raise_elt_does_not_belong_to_list ()
+    | This first ->
       if Header.equal (Elt.header first) (Elt.header elt)
       then (
         (* unlink [elt] *)
         let after_elt = Elt.next elt in
         Elt.split_or_splice_before elt after_elt;
-        if Elt.equal first elt then t := Some after_elt;
+        if Elt.equal first elt then t := This after_elt;
         (* splice [elt] in after [anchor] *)
         Elt.split_or_splice_after anchor elt)
       else raise_elt_does_not_belong_to_list ())
@@ -959,8 +957,8 @@ let move_after t elt ~anchor =
 
 let move_to_back t elt =
   match !t with
-  | None -> raise_elt_does_not_belong_to_list ()
-  | Some first ->
+  | Null -> raise_elt_does_not_belong_to_list ()
+  | This first ->
     let last = Elt.prev first in
     if not (Elt.equal elt last) then move_after t elt ~anchor:last
 ;;

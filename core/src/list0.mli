@@ -2,9 +2,15 @@
 
 open! Import
 
+[%%template:
+[@@@kind_set.define all_ks_non_value = base_non_value]
+
 include module type of struct
   include Base.List
 end
+
+type nonrec ('a : k) t = ('a t[@kind k])
+[@@kind k = all_ks_non_value] [@@deriving bin_io ~localize]
 
 [%%rederive:
   type ('a : value_or_null) t = 'a Base.List.t
@@ -50,4 +56,4 @@ module Assoc : sig
   [@@deprecated
     "[since 2016-06] This does not respect the equivalence class promised by List.Assoc. \
      Use List.compare directly if that's what you want."]
-end
+end]

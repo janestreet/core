@@ -12,8 +12,8 @@
    (import "env" "Int64_val"
       (func $Int64_val (param (ref eq)) (result i64)))
 
-   (import "js" "timezone_js_for_wasm_loader_create_zone"
-      (func $timezone_js_for_wasm_loader_create_zone
+   (import "js" "timezone_js_for_wasm_loader_validate_zone_name"
+      (func $timezone_js_for_wasm_loader_validate_zone_name
          (param anyref) (result anyref)))
    (import "js" "timezone_js_for_wasm_loader_get_next_transition_or_this_time_if_none"
       (func $timezone_js_for_wasm_loader_get_next_transition_or_this_time_if_none
@@ -53,10 +53,10 @@
       (param $unit (ref eq)) (result (ref eq))
       (local.get $unit))
 
-   (func (export "timezone_js_loader_create_zone")
+   (func (export "timezone_js_loader_validate_zone_name")
       (param $zone_name (ref eq)) (result (ref eq))
       (return_call $wrap
-         (call $timezone_js_for_wasm_loader_create_zone
+         (call $timezone_js_for_wasm_loader_validate_zone_name
             (call $unwrap
                (call $caml_jsstring_of_string (local.get $zone_name))))))
 

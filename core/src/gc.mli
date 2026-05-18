@@ -463,7 +463,7 @@ val allocated_bytes : unit -> float
 (** [keep_alive a] ensures that [a] is live at the point where [keep_alive a] is called.
     It is like [ignore a], except that the compiler won't be able to simplify it and
     potentially collect [a] too soon. *)
-val keep_alive : _ -> unit
+val keep_alive : _ @ contended -> unit
 
 (** The policy used for allocating in the heap.
 
@@ -527,7 +527,8 @@ module (For_testing @@ nonportable) : sig
   [%%template:
   [@@@kind.default k = base_or_null]
 
-  (** [measure_allocation f] measures the words allocated by running [f ()] *)
+  (** [measure_allocation f] measures the words allocated by running [f ()] using GC
+      counters. *)
   val measure_allocation
     : ('a : k).
     (unit -> 'a) @ local once -> #('a * Allocation_report.t)
@@ -537,11 +538,15 @@ module (For_testing @@ nonportable) : sig
     : ('a : k).
     (unit -> 'a @ local) @ local once -> #('a * Allocation_report.t) @ local
 
-  (** [measure_and_log_allocation f] logs each allocation that [f ()] performs, as well as
-      reporting the total. (This can be slow if [f] allocates heavily).
+  (** [measure_and_log_allocation f] uses memprof to log each allocation that [f ()]
+      performs, as well as reporting the total. (This can be slow if [f] allocates
+      heavily).
 
-      This function is only supported since OCaml 4.11. On prior versions, the function
-      always returns an empty log. *)
+      Notes:
+      - This function is only supported since OCaml 4.11. On prior versions, the function
+        always returns an empty log.
+      - Because this uses memprof and [measure_allocation] uses GC counters, this also
+        tracks custom off-heap memory, like allocation of bigstrings. *)
   val measure_and_log_allocation
     : ('a : k).
     (unit -> 'a) @ local once -> #('a * Allocation_report.t * Allocation_log.t list)

@@ -19,7 +19,7 @@ module type Conv = sig
   val caller_identity : Bin_prot.Shape.Uuid.t
 end
 
-[@@@kind.default ka = (value, any)]
+[@@@kind.default.explicit_plus_unmangled ka = (value, value_or_null, any)]
 
 module type Conv1_without_uuid = sig
   type ('a : ka) binable : value_or_null
@@ -30,12 +30,12 @@ module type Conv1_without_uuid = sig
 end
 
 module type Conv1 = sig
-  include Conv1_without_uuid [@kind ka] [@mode m]
+  include Conv1_without_uuid [@kind.explicit ka] [@mode m]
 
   val caller_identity : Bin_prot.Shape.Uuid.t
 end
 
-[@@@kind.default kb = (value, any)]
+[@@@kind.default.explicit_plus_unmangled kb = (value, any)]
 
 module type Conv2_without_uuid = sig
   type ('a : ka, 'b : kb) binable : value_or_null
@@ -48,12 +48,12 @@ module type Conv2_without_uuid = sig
 end
 
 module type Conv2 = sig
-  include Conv2_without_uuid [@kind ka kb] [@mode m]
+  include Conv2_without_uuid [@kind.explicit ka kb] [@mode m]
 
   val caller_identity : Bin_prot.Shape.Uuid.t
 end
 
-[@@@kind.default kc = (value, any)]
+[@@@kind.default.explicit_plus_unmangled kc = (value, any)]
 
 module type Conv3_without_uuid = sig
   type ('a : ka, 'b : kb, 'c : kc) binable : value_or_null
@@ -68,7 +68,7 @@ module type Conv3_without_uuid = sig
 end
 
 module type Conv3 = sig
-  include Conv3_without_uuid [@kind ka kb kc] [@mode m]
+  include Conv3_without_uuid [@kind.explicit ka kb kc] [@mode m]
 
   val caller_identity : Bin_prot.Shape.Uuid.t
 end]
@@ -99,17 +99,17 @@ module type Binable0 = sig @@ portable
 
     module type S = Minimal.S [@mode m]
 
-    [@@@kind.default ka = (value, any)]
+    [@@@kind.default.explicit_plus_unmangled ka = (value, value_or_null, any)]
 
-    module type S1 = Minimal.S1 [@kind ka] [@mode m]
+    module type S1 = Minimal.S1 [@kind.explicit ka] [@mode m]
 
-    [@@@kind.default kb = (value, any)]
+    [@@@kind.default.explicit_plus_unmangled kb = (value, any)]
 
-    module type S2 = Minimal.S2 [@kind ka kb] [@mode m]
+    module type S2 = Minimal.S2 [@kind.explicit ka kb] [@mode m]
 
-    [@@@kind.default kc = (value, any)]
+    [@@@kind.default.explicit_plus_unmangled kc = (value, any)]
 
-    module type S3 = Minimal.S3 [@kind ka kb kc] [@mode m]
+    module type S3 = Minimal.S3 [@kind.explicit ka kb kc] [@mode m]
   end
 
   [%%template:
@@ -120,7 +120,11 @@ module type Binable0 = sig @@ portable
 
   module type S = S [@mode m]
   module type S_only_functions = S_only_functions [@mode m]
-  module type S1 = S1 [@mode m]
+
+  module type%template
+    [@kind.explicit_plus_unmangled k = (value, value_or_null)] [@mode m] S1 = S1
+  [@mode m] [@kind.explicit k]
+
   module type S2 = S2 [@mode m]
   module type S3 = S3 [@mode m]
   module type Conv = Conv [@mode m]
@@ -147,62 +151,62 @@ module type Binable0 = sig @@ portable
     S [@mode m] with type t := M.t
   [@@alert legacy "Use [Of_binable_with_uuid] if possible."]
 
-  [@@@kind.default ka = (value, any)]
+  [@@@kind.default.explicit_plus_unmangled ka = (value, value_or_null, any)]
 
   module%template.portable Of_binable1_with_uuid
       (Binable : Minimal.S1
-    [@kind ka] [@mode m])
-      (M : Conv1 [@kind ka] [@mode m] with type ('a : ka) binable := 'a Binable.t) :
-    S1 [@kind ka] [@mode m] with type ('a : ka) t := 'a M.t
+    [@kind.explicit ka] [@mode m])
+      (M : Conv1 [@kind.explicit ka] [@mode m] with type ('a : ka) binable := 'a Binable.t) :
+    S1 [@kind.explicit ka] [@mode m] with type ('a : ka) t := 'a M.t
 
   module%template.portable Of_binable1_without_uuid
       (Binable : Minimal.S1
-    [@kind ka] [@mode m])
+    [@kind.explicit ka] [@mode m])
       (M : Conv1_without_uuid
-           [@kind ka] [@mode m]
+           [@kind.explicit ka] [@mode m]
            with type ('a : ka) binable := 'a Binable.t) :
-    S1 [@kind ka] [@mode m] with type ('a : ka) t := 'a M.t
+    S1 [@kind.explicit ka] [@mode m] with type ('a : ka) t := 'a M.t
   [@@alert legacy "Use [Of_binable1_with_uuid] if possible."]
 
-  [@@@kind.default kb = (value, any)]
+  [@@@kind.default.explicit_plus_unmangled kb = (value, any)]
 
   module%template.portable Of_binable2_with_uuid
       (Binable : Minimal.S2
-    [@kind ka kb] [@mode m])
+    [@kind.explicit ka kb] [@mode m])
       (M : Conv2
-           [@kind ka kb] [@mode m]
+           [@kind.explicit ka kb] [@mode m]
            with type ('a : ka, 'b : kb) binable := ('a, 'b) Binable.t) :
-    S2 [@kind ka kb] [@mode m] with type ('a : ka, 'b : kb) t := ('a, 'b) M.t
+    S2 [@kind.explicit ka kb] [@mode m] with type ('a : ka, 'b : kb) t := ('a, 'b) M.t
 
   module%template.portable Of_binable2_without_uuid
       (Binable : Minimal.S2
-    [@kind ka kb] [@mode m])
+    [@kind.explicit ka kb] [@mode m])
       (M : Conv2_without_uuid
-           [@kind ka kb] [@mode m]
+           [@kind.explicit ka kb] [@mode m]
            with type ('a : ka, 'b : kb) binable := ('a, 'b) Binable.t) :
-    S2 [@kind ka kb] [@mode m] with type ('a : ka, 'b : kb) t := ('a, 'b) M.t
+    S2 [@kind.explicit ka kb] [@mode m] with type ('a : ka, 'b : kb) t := ('a, 'b) M.t
   [@@alert legacy "Use [Of_binable2_with_uuid] if possible."]
 
-  [@@@kind.default kc = (value, any)]
+  [@@@kind.default.explicit_plus_unmangled kc = (value, any)]
 
   module%template.portable Of_binable3_with_uuid
       (Binable : Minimal.S3
-    [@kind ka kb kc] [@mode m])
+    [@kind.explicit ka kb kc] [@mode m])
       (M : Conv3
-           [@kind ka kb kc] [@mode m]
+           [@kind.explicit ka kb kc] [@mode m]
            with type ('a : ka, 'b : kb, 'c : kc) binable := ('a, 'b, 'c) Binable.t) :
     S3
-    [@kind ka kb kc] [@mode m]
+    [@kind.explicit ka kb kc] [@mode m]
     with type ('a : ka, 'b : kb, 'c : kc) t := ('a, 'b, 'c) M.t
 
   module%template.portable Of_binable3_without_uuid
       (Binable : Minimal.S3
-    [@kind ka kb kc] [@mode m])
+    [@kind.explicit ka kb kc] [@mode m])
       (M : Conv3_without_uuid
-           [@kind ka kb kc] [@mode m]
+           [@kind.explicit ka kb kc] [@mode m]
            with type ('a : ka, 'b : kb, 'c : kc) binable := ('a, 'b, 'c) Binable.t) :
     S3
-    [@kind ka kb kc] [@mode m]
+    [@kind.explicit ka kb kc] [@mode m]
     with type ('a : ka, 'b : kb, 'c : kc) t := ('a, 'b, 'c) M.t
   [@@alert legacy "Use [Of_binable3_with_uuid] if possible."]]
 

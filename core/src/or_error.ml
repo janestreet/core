@@ -1,8 +1,12 @@
 open! Import
 include Base.Or_error
 
-type%template ('a : k) t = (('a, Error.t) Result.t[@kind k])
-[@@deriving bin_io ~localize] [@@kind k = base_non_value]
+[%%template
+[@@@kind_set.define all_ks_non_value = base_non_value]
+[@@@kind_set.define all_ks = (all_ks_non_value, value_or_null_with_imm)]
+
+type nonrec ('a : k) t = (('a, Error.t) Result.t[@kind k])
+[@@deriving bin_io ~localize] [@@kind k = all_ks_non_value]]
 
 type ('a : value_or_null) t = ('a, Error.t) Result.t
 [@@deriving bin_io ~localize, diff ~extra_derive:[ sexp ], quickcheck]

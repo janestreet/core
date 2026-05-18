@@ -1,3 +1,6 @@
+[%%template
+[@@@kind_set.define all_ks_non_value = base_non_value]
+
 include List0 (** @inline *)
 
 let zip_with_remainder =
@@ -11,7 +14,7 @@ let zip_with_remainder =
   fun xs ys -> zip_with_acc_and_remainder [] xs ys
 ;;
 
-module%template [@mode portable] Wrapper = struct
+module [@mode portable] Wrapper = struct
   external wrap_list
     : ('a : value_or_null).
     'a list @ portable -> 'a Modes.Portable.t list
@@ -21,7 +24,7 @@ module%template [@mode portable] Wrapper = struct
   let[@inline] unwrap { Modes.Portable.portable } = portable
 end
 
-module%template [@mode nonportable] Wrapper = struct
+module [@mode nonportable] Wrapper = struct
   let wrap_list = Fn.id
   let unwrap = Fn.id
 end
@@ -33,7 +36,7 @@ let sexp_of_sexp_thunk x = x ()
 exception Duplicate_found of sexp_thunk * Base.String.t
 [@@deriving sexp ~nonportable__magic_unsafe_in_parallel_programs]
 
-let%template exn_if_dup ~compare ?(context = "exn_if_dup") t ~to_sexp =
+let exn_if_dup ~compare ?(context = "exn_if_dup") t ~to_sexp =
   let open Wrapper [@mode p] in
   match find_a_dup ~compare:(fun x y -> compare (unwrap x) (unwrap y)) (wrap_list t) with
   | None -> ()
@@ -49,8 +52,9 @@ let slice a start stop =
 
 module Stable = struct
   module V1 = struct
-    type%template nonrec ('a : k) t = ('a t[@kind k])
-    [@@kind k = base_non_value] [@@deriving compare ~localize, equal ~localize]
+    type nonrec ('a : k) t = ('a t[@kind k])
+    [@@kind k = all_ks_non_value]
+    [@@deriving bin_io ~localize, compare ~localize, equal ~localize]
 
     type nonrec ('a : value_or_null) t = 'a t
     [@@deriving
@@ -58,4 +62,4 @@ module Stable = struct
 
     let stable_witness = List0.stable_witness [@@alert "-for_internal_use_only"]
   end
-end
+end]

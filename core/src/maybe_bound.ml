@@ -1,21 +1,27 @@
 open! Import
 
+[%%template
+[@@@kind_set.define ks = base_or_null]
+
 module Stable = struct
   module V1 = struct
-    type 'a t = 'a Base.Maybe_bound.t =
-      | Incl of 'a
-      | Excl of 'a
-      | Unbounded
-    [@@deriving
-      bin_io ~localize
-      , compare ~localize
-      , equal ~localize
-      , hash
-      , sexp
-      , sexp_grammar
-      , stable_witness]
+    include struct
+      type ('a : k) t = ('a Base.Maybe_bound.t[@kind k]) =
+        | Incl of 'a
+        | Excl of 'a
+        | Unbounded
+      [@@kind k]
+      [@@deriving
+        bin_io ~localize
+        , compare ~localize
+        , equal ~localize
+        , hash
+        , sexp
+        , sexp_grammar
+        , stable_witness]
+    end [@@kind k = ks]
 
-    let map x ~f =
+    let map (x : 'a t) ~f : 'b t =
       match x with
       | Incl x -> Incl (f x)
       | Excl x -> Excl (f x)
@@ -26,7 +32,7 @@ end
 
 include Base.Maybe_bound
 
-type 'a t = 'a Stable.V1.t =
+type ('a : k) t = ('a Base.Maybe_bound.t[@kind k]) =
   | Incl of 'a
   | Excl of 'a
   | Unbounded
@@ -38,8 +44,15 @@ type 'a t = 'a Stable.V1.t =
   , quickcheck
   , sexp
   , sexp_grammar]
+[@@kind k = ks]
 
-let%template compare_one_sided ~side compare_a (t1 @ m) (t2 @ m) =
+let compare_one_sided
+  (type a : k)
+  ~side
+  compare_a
+  (t1 : (a t[@kind k]) @ m)
+  (t2 : (a t[@kind k]) @ m)
+  =
   match t1, t2 with
   | Unbounded, Unbounded -> 0
   | Unbounded, _ ->
@@ -68,23 +81,29 @@ let%template compare_one_sided ~side compare_a (t1 @ m) (t2 @ m) =
       | `Lower -> 1
       | `Upper -> -1)
     else c
-[@@mode m = (local, global)]
+[@@kind k = ks] [@@mode m = (local, global)]
 ;;
 
 module As_lower_bound = struct
-  type nonrec 'a t = 'a t [@@deriving bin_io, equal ~localize, hash, sexp, sexp_grammar]
+  [@@@kind.default k = ks]
 
-  let%template compare compare_a t1 t2 =
-    (compare_one_sided [@mode m]) ~side:`Lower compare_a t1 t2
+  type nonrec ('a : k) t = ('a t[@kind k])
+  [@@deriving bin_io, equal ~localize, hash, sexp, sexp_grammar]
+
+  let compare compare_a t1 t2 =
+    (compare_one_sided [@kind k] [@mode m]) ~side:`Lower compare_a t1 t2
   [@@mode m = (local, global)]
   ;;
 end
 
 module As_upper_bound = struct
-  type nonrec 'a t = 'a t [@@deriving bin_io, equal ~localize, hash, sexp, sexp_grammar]
+  [@@@kind.default k = ks]
 
-  let%template compare compare_a t1 t2 =
-    (compare_one_sided [@mode m]) ~side:`Upper compare_a t1 t2
+  type nonrec ('a : k) t = ('a t[@kind k])
+  [@@deriving bin_io, equal ~localize, hash, sexp, sexp_grammar]
+
+  let compare compare_a t1 t2 =
+    (compare_one_sided [@kind k] [@mode m]) ~side:`Upper compare_a t1 t2
   [@@mode m = (local, global)]
   ;;
-end
+end]

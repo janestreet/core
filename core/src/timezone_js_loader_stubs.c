@@ -13,16 +13,16 @@ CAMLprim value should_use_timezone_js_loader(value yes, value platform_not_suppo
   CAMLreturn(platform_not_supported);
 }
 
-CAMLprim value timezone_js_loader_create_zone(value zone_name) {
+CAMLprim value timezone_js_loader_validate_zone_name(value zone_name) {
   CAMLparam1(zone_name);
-  caml_failwith("timezone_js_loader: timezone_js_loader_create_zone is not "
+  caml_failwith("timezone_js_loader: timezone_js_loader_validate_zone_name is not "
                 "implemented for the native target");
   CAMLreturn(Val_unit);
 }
 
-CAMLprim value
-timezone_js_loader_get_next_transition_or_this_time_if_none(value zone, value instant) {
-  CAMLparam2(zone, instant);
+CAMLprim value timezone_js_loader_get_next_transition_or_this_time_if_none(
+    value zone_name, value instant) {
+  CAMLparam2(zone_name, instant);
   caml_failwith("timezone_js_loader: "
                 "timezone_js_loader_get_next_transition_or_this_time_if_none "
                 "is not implemented for the native target");
@@ -64,8 +64,8 @@ CAMLprim value timezone_js_loader_instant_plus_hours(value instant, value hours)
   CAMLreturn(Val_unit);
 }
 
-CAMLprim value timezone_js_loader_get_offset_nanos_for(value zone, value instant) {
-  CAMLparam2(zone, instant);
+CAMLprim value timezone_js_loader_get_offset_nanos_for(value zone_name, value instant) {
+  CAMLparam2(zone_name, instant);
   caml_failwith("timezone_js_loader: timezone_js_loader_get_offset_nanos_for is not "
                 "implemented for the native target");
   CAMLreturn(Val_unit);

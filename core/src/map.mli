@@ -272,8 +272,7 @@ end
 
 val to_tree : ('k, 'v, 'cmp) t -> ('k, 'v, 'cmp) Tree.t
 
-(** Creates a [t] from a [Tree.t] and a [Comparator.t]. This is an O(n) operation as it
-    must discover the length of the [Tree.t]. *)
+(** Creates a [t] from a [Tree.t] and a [Comparator.t]. *)
 val of_tree : ('k, 'cmp) Comparator.Module.t -> ('k, 'v, 'cmp) Tree.t -> ('k, 'v, 'cmp) t
 
 (** {2 More interface} *)
@@ -463,6 +462,13 @@ val change
   -> f:('v option -> 'v option) @ local
   -> ('k, 'v, 'cmp) t
 
+(** Like [change], but [f] receives and returns ['v or_null] instead of ['v option]. *)
+val change_or_null
+  :  ('k, 'v, 'cmp) t
+  -> 'k
+  -> f:('v or_null -> 'v or_null) @ local
+  -> ('k, 'v, 'cmp) t
+
 (** [update t key ~f] is [change t key ~f:(fun o -> Some (f o))]. *)
 val update : ('k, 'v, 'cmp) t -> 'k -> f:('v option -> 'v) @ local -> ('k, 'v, 'cmp) t
 
@@ -477,9 +483,12 @@ val update_and_return
 (** Returns the value bound to the given key if it exists, and [None] otherwise. *)
 val find : ('k, 'v, 'cmp) t -> 'k -> 'v option
 
+(** Like [find] but returns [or_null] instead of [option]. *)
+val find_or_null : ('k, 'v, 'cmp) t -> 'k -> 'v or_null
+
 (** Returns the value bound to the given key, raising [Caml.Not_found] or [Not_found_s] if
     none exists. *)
-val find_exn : ('k, 'v, 'cmp) t -> 'k -> 'v
+val find_exn : here:[%call_pos] -> ('k, 'v, 'cmp) t -> 'k -> 'v
 
 val find_or_error : ('k, 'v, 'cmp) t -> 'k -> 'v Or_error.t
 
@@ -605,9 +614,9 @@ val fold2
   -> f:(key:'k -> data:('v1, 'v2) Merge_element.t -> 'a -> 'a) @ local
   -> 'a
 
-(** [filter], [filteri], [filter_keys], [filter_map], and [filter_mapi] run in O(n * lg n)
-    time; they simply accumulate each key & data retained by [f] into a new map using
-    [add]. *)
+(** [filter], [filteri], [filter_keys], [filter_map], [filter_mapi], and [filter_opt] run
+    in O(n * lg n) time; they simply accumulate each key & data retained by [f] into a new
+    map using [add]. *)
 
 val filter_keys : ('k, 'v, 'cmp) t -> f:('k -> bool) @ local -> ('k, 'v, 'cmp) t
 val filter : ('k, 'v, 'cmp) t -> f:('v -> bool) @ local -> ('k, 'v, 'cmp) t
@@ -625,6 +634,21 @@ val filter_mapi
   :  ('k, 'v1, 'cmp) t
   -> f:(key:'k -> data:'v1 -> 'v2 option) @ local
   -> ('k, 'v2, 'cmp) t
+
+(** Like [filter_map] but with a function returning [or_null] instead of [option]. *)
+val filter_map_or_null
+  :  ('k, 'v1, 'cmp) t
+  -> f:('v1 -> 'v2 or_null) @ local
+  -> ('k, 'v2, 'cmp) t
+
+(** Like [filter_mapi] but with a function returning [or_null] instead of [option]. *)
+val filter_mapi_or_null
+  :  ('k, 'v1, 'cmp) t
+  -> f:(key:'k -> data:'v1 -> 'v2 or_null) @ local
+  -> ('k, 'v2, 'cmp) t
+
+(** Returns a new map with [None] data filtered out and [Some v] data unwrapped to [v]. *)
+val filter_opt : ('k, 'v option, 'cmp) t -> ('k, 'v, 'cmp) t
 
 (** [partition_mapi t ~f] returns two new [t]s, with each key in [t] appearing in exactly
     one of the result maps depending on its mapping in [f]. *)
@@ -716,7 +740,7 @@ val validatei
 (** Merges two maps. The runtime is O(length(t1) + length(t2)).
 
     The [merge_*] functions immediately below perform better in cases where they are
-    applicable. For merging a list of maps especially, use [merge_disjoin_exn] or
+    applicable. For merging a list of maps especially, use [merge_disjoint_exn] or
     [merge_skewed] instead. If you don't require the full generality of [~f]'s behavior,
     use [merge_by_case]. *)
 val merge

@@ -135,7 +135,7 @@ let iter t ~f = (Option.iter [@kind k]) t.value ~f
 
 module Optional_syntax = struct
   module Optional_syntax = struct
-    let is_none = (is_none [@kind k])
+    let is_none t = (is_none [@kind k]) t
     let unsafe_value t = (get_exn [@kind k]) t
   end
 end]

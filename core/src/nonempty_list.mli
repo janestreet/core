@@ -1,5 +1,8 @@
 @@ portable
 
+[%%template:
+[@@@kind_set.define all_ks_non_value = base_non_value]
+
 (** A ['a t] represents a non-empty list, as evidenced by the fact that there is no [[]]
     variant. The sexp representation is as a regular list (i.e., the same as the
     [Stable.V3] module below).
@@ -7,9 +10,17 @@
     For operations on a locally allocated ['a t], see [Local_nonempty_list]. For
     convenience, some functions here are also ppx_template'd over local, and we hope to
     fully merge the two after list is localized *)
+
 include module type of struct
   include Base.Nonempty_list
 end
+
+[%%template:
+[@@@kind.default k = all_ks_non_value]
+
+[%%rederive:
+  type nonrec ('a : k) t = ('a t[@kind k]) = ( :: ) of 'a * ('a List.t[@kind k])
+  [@@deriving bin_io ~localize]]]
 
 [%%rederive:
   type nonrec 'a t = 'a t = ( :: ) of 'a * 'a list
@@ -92,6 +103,10 @@ module Stable : sig
   (** Represents a [t] as an ordinary list for sexp and bin_io conversions, e.g. [1::2] is
       represented as [(1 2)]. *)
   module V3 : sig
+    type nonrec ('a : k) t = ('a t[@kind k])
+    [@@kind k = all_ks_non_value]
+    [@@deriving bin_io ~localize, compare ~localize, equal ~localize]
+
     type nonrec 'a t = 'a t
     [@@deriving
       bin_io
@@ -134,4 +149,4 @@ module Stable : sig
       , sexp_grammar
       , stable_witness]
   end
-end
+end]

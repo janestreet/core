@@ -160,8 +160,8 @@ let foldi' t dir ~init ~f =
 ;;
 
 let fold' t dir ~init ~f = foldi' t dir ~init ~f:(fun _ acc v -> f acc v) [@nontail]
-let iteri' t dir ~f = foldi' t dir ~init:() ~f:(fun i () v -> f i v)
-let iter' t dir ~f = foldi' t dir ~init:() ~f:(fun _ () v -> f v)
+let iteri' t dir ~f = foldi' t dir ~init:() ~f:(fun i () v -> f i v) [@nontail]
+let iter' t dir ~f = foldi' t dir ~init:() ~f:(fun _ () v -> f v) [@nontail]
 let fold t ~init ~f = fold' t `front_to_back ~init ~f
 let foldi t ~init ~f = foldi' t `front_to_back ~init ~f
 let iteri t ~f = iteri' t `front_to_back ~f

@@ -10,7 +10,8 @@ Permissioned.create_local ~len:10 k
 [%%expect
   {|
 Line _, characters _-_:
-Error: This value is local but is expected to be global.
+Error: This value is local
+       but is expected to be global because it is a top-level expression.
 |}]
 ;;
 

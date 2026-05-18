@@ -275,7 +275,7 @@ let find_ident s start =
 (* Substitute $ident, $(ident), or $[{ident}] in s, according to the function mapping f. *)
 let add_substitute buf f s =
   let lim = String.length s in
-  let rec subst previous i =
+  let rec local_ subst previous i =
     if i < lim
     then (
       match s.[i] with
@@ -295,7 +295,7 @@ let add_substitute buf f s =
         add_char buf current;
         subst current (i + 1))
   in
-  subst ' ' 0
+  subst ' ' 0 [@nontail]
 ;;
 
 module Format = struct

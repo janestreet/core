@@ -472,3 +472,34 @@ module Stable = struct
 end
 
 include T
+
+external unbox : (t[@local_opt]) -> (t#[@unboxed]) @@ portable = "%unbox_float"
+external box : (t#[@unboxed]) -> (t[@local_opt]) @@ portable = "%box_float"
+
+let bin_shape_t_u = bin_shape_t
+let bin_size_t_u t = (bin_size_t [@inlined hint]) (box t)
+let bin_write_t_u buf ~pos t = (bin_write_t [@inlined hint]) buf ~pos (box t)
+let bin_read_t_u buf ~pos_ref = unbox ((bin_read_t [@inlined hint]) buf ~pos_ref)
+
+let%template[@inline] __bin_read_t_u__ _buf ~pos_ref _vint : t# =
+  Bin_prot.Common.raise_variant_wrong_type "Time_float.t#" !pos_ref
+  |> (never_returns [@kind float64])
+;;
+
+let bin_writer_t_u = [%bin_writer: t#]
+let bin_reader_t_u = [%bin_reader: t#]
+let bin_t_u = [%bin_type_class: t#]
+
+let%template[@mode m = (global, local)] compare_u x y =
+  (compare [@mode m] [@inlined]) (box x) (box y)
+;;
+
+let%template[@alloc a @ m = (heap_global, stack_local)] sexp_of_t_u t =
+  (sexp_of_t [@alloc a] [@inlined hint]) (box t) [@exclave_if_stack a]
+;;
+
+let t_u_of_sexp t = t_of_sexp t |> unbox
+
+let%template[@mode m = (global, local)] equal_u x y =
+  (equal [@mode m] [@inlined]) (box x) (box y)
+;;

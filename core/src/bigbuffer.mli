@@ -60,7 +60,7 @@ val add_bytes : t -> bytes @ local -> unit
     An escaped [$] character is a [$] that immediately follows a backslash character; it
     then stands for a plain [$]. Raise [Caml.Not_found] or [Not_found_s] if the closing
     character of a parenthesized variable cannot be found. *)
-val add_substitute : t -> (string -> string) -> string -> unit
+val add_substitute : t -> (string -> string) @ local -> string -> unit
 
 (** *)
 

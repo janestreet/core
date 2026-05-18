@@ -758,6 +758,74 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
         (Iarray.of_list (List.rev_map list ~f:Int.succ)))
   ;;
 
+  let%template[@mode m = (global, local)] find_or_null = (Iarray.find_or_null [@mode m])
+
+  let%expect_test "find_or_null examples" =
+    let f x = x % 2 = 0 in
+    print_s [%sexp (find_or_null (Iarray.of_list []) ~f : int Or_null.t)];
+    [%expect {| () |}];
+    print_s [%sexp (find_or_null (Iarray.of_list [ 1; 3; 5 ]) ~f : int Or_null.t)];
+    [%expect {| () |}];
+    print_s [%sexp (find_or_null (Iarray.of_list [ 1; 2; 3; 4 ]) ~f : int Or_null.t)];
+    [%expect {| (2) |}]
+  ;;
+
+  let%expect_test "find_or_null agrees with find" =
+    let module Int_opt = struct
+      type t = int option [@@deriving equal, sexp_of]
+    end
+    in
+    quickcheck_m (module Int_t) ~f:(fun t ->
+      let f x = x % 3 = 0 in
+      require_equal
+        (module Int_opt)
+        (find_or_null t ~f |> Or_null.to_option)
+        (Iarray.find t ~f))
+  ;;
+
+  let%expect_test "find_or_null does not allocate" =
+    let arr = Iarray.of_list [ 1; 2; 3; 4; 5; 6; 7; 8; 9; 10 ] in
+    let result =
+      require_no_allocation ~here:[%here] (fun () ->
+        Iarray.find_or_null arr ~f:(fun x -> x = 7))
+    in
+    print_s [%sexp (result : int Or_null.t)];
+    [%expect {| (7) |}];
+    let result =
+      require_no_allocation ~here:[%here] (fun () ->
+        Iarray.find_or_null arr ~f:(fun x -> x > 100))
+    in
+    print_s [%sexp (result : int Or_null.t)];
+    [%expect {| () |}]
+  ;;
+
+  let%template[@mode m = (global, local)] findi_or_null = (Iarray.findi_or_null [@mode m])
+
+  let%expect_test "findi_or_null examples" =
+    let f i x = i = x in
+    print_s [%sexp (findi_or_null (Iarray.of_list []) ~f : (int * int) Or_null.t)];
+    [%expect {| () |}];
+    print_s
+      [%sexp (findi_or_null (Iarray.of_list [ 1; 3; 5 ]) ~f : (int * int) Or_null.t)];
+    [%expect {| () |}];
+    print_s
+      [%sexp (findi_or_null (Iarray.of_list [ 5; 3; 2; 0 ]) ~f : (int * int) Or_null.t)];
+    [%expect {| ((2 2)) |}]
+  ;;
+
+  let%expect_test "findi_or_null agrees with findi" =
+    let module Int_pair_opt = struct
+      type t = (int * int) option [@@deriving equal, sexp_of]
+    end
+    in
+    quickcheck_m (module Int_t) ~f:(fun t ->
+      let f i x = (i + x) % 3 = 0 in
+      require_equal
+        (module Int_pair_opt)
+        (findi_or_null t ~f |> Or_null.to_option)
+        (Iarray.findi t ~f))
+  ;;
+
   let reduce = Iarray.reduce
   let reduce_exn = Iarray.reduce_exn
 
@@ -1022,26 +1090,15 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
     Iarray :
     sig
     @@ portable
-      include Indexed_container.S1_with_creators [@alloc stack] with type 'a t := 'a t
+      include
+        Indexed_container.S1_with_creators
+        [@kind_set.explicit value_or_null] [@alloc stack]
+        with type ('a : any) t := 'a t
 
       [@@@mode.default li = (global, local), lo = (global, local)]
 
-      val fold
-        : ('a : value) ('acc : value_or_null).
-        'a t @ li
-        -> init:'acc @ lo
-        -> f:('acc @ lo -> 'a @ li -> 'acc @ lo) @ local
-        -> 'acc @ lo
-
-      val foldi
-        : ('a : value) ('acc : value_or_null).
-        'a t @ li
-        -> init:'acc @ lo
-        -> f:(int -> 'acc @ lo -> 'a @ li -> 'acc @ lo) @ local
-        -> 'acc @ lo
-
       val fold_right
-        : ('a : value) ('acc : value_or_null).
+        : ('a : value_or_null mod separable) ('acc : value_or_null).
         'a t @ li
         -> init:'acc @ lo
         -> f:('a @ li -> 'acc @ lo -> 'acc @ lo) @ local
@@ -1075,6 +1132,11 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
         : ('a : ki mod separable).
         'a t @ mi -> f:('a @ mi -> unit) @ local -> unit
       [@@kind ki = value_or_null] [@@mode mi = (global, local)]
+
+      val%template for_all
+        : ('a : ki mod separable).
+        'a t @ mi -> f:('a @ mi -> bool) @ local -> bool
+      [@@kind ki = value_or_null] [@@mode mi = (global, local)]
     end)
 
   include struct
@@ -1093,7 +1155,7 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
     end
 
     [%%template
-    [@@@kind.default ka = value, kacc = base_non_value]
+    [@@@kind.default ka = value_or_null, kacc = base_non_value]
     [@@@mode.default li = (global, local), lo = (global, local)]
 
     let fold = (Iarray.fold [@kind ka kacc] [@mode li lo])
@@ -2020,10 +2082,14 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
       Iarray.Local :
       sig
       @@ portable
+        [@@@implicit_kind: ('a : value_or_null mod separable)]
+        [@@@implicit_kind: ('b : value_or_null mod separable)]
+        [@@@implicit_kind: ('c : value_or_null mod separable)]
+
         (* The following signatures are for functions in [Iarray.Local] which only
            re-export [Container] functions, and are thus tested elsewhere. *)
-        val length : local_ _ t -> int
-        val is_empty : local_ _ t -> bool
+        val length : local_ 'a t -> int
+        val is_empty : local_ 'a t -> bool
 
         val mem
           :  local_ 'a t
@@ -2145,31 +2211,31 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
           -> local_ 'b t
 
         val to_array_of_immediates
-          : ('a : immediate64_or_null).
-          local_ 'a iarray -> local_ 'a array
+          : ('i : immediate64_or_null).
+          'i iarray @ local -> 'i array @ local
         [@@zero_alloc] [@@warning "-incompatible-with-upstream"]
 
         val sort_immediates
-          : ('a : immediate64_or_null).
-          local_ 'a iarray -> compare:local_ ('a -> 'a -> int) -> local_ 'a iarray
+          : ('i : immediate64_or_null).
+          'i iarray @ local -> compare:('i -> 'i -> int) @ local -> 'i iarray @ local
         [@@warning "-incompatible-with-upstream"]
 
         val fold
-          : ('a : value) ('acc : value_or_null).
+          : 'a ('acc : value_or_null).
           local_ 'a t
           -> init:local_ 'acc
           -> f:local_ (local_ 'acc -> local_ 'a -> local_ 'acc)
           -> local_ 'acc
 
         val foldi
-          : ('a : value) ('acc : value_or_null).
+          : 'a ('acc : value_or_null).
           local_ 'a t
           -> init:local_ 'acc
           -> f:local_ (int -> local_ 'acc -> local_ 'a -> local_ 'acc)
           -> local_ 'acc
 
         val fold_right
-          : ('a : value) ('acc : value_or_null).
+          : 'a ('acc : value_or_null).
           local_ 'a t
           -> init:local_ 'acc
           -> f:local_ (local_ 'a -> local_ 'acc -> local_ 'acc)
@@ -2192,7 +2258,7 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
       end
 
       [%%template
-      [@@@kind.default ka = value, kacc = base_non_value]
+      [@@@kind.default ka = value_or_null, kacc = base_non_value]
 
       let fold = (Iarray.Local.fold [@kind ka kacc])
       let foldi = (Iarray.Local.foldi [@kind ka kacc])
@@ -2237,6 +2303,14 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
         go 0
       ;;
     end
+
+    (* [of_array] is a compiler primitive, so it must be declared as [external] to satisfy
+       the signature; we cannot reimplement it without magic. *)
+    external of_array
+      :  ('a array[@local_opt]) @ unique
+      -> ('a global t[@local_opt]) @ unique
+      @@ portable
+      = "%array_to_iarray"
 
     (*=---- No magic after this point! ---- *)
 

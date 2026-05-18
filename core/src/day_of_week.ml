@@ -149,6 +149,12 @@ module Stable = struct
       include%template Hashable.Make_binable [@modality portable] (T)
     end
 
+    include (
+      Unstable :
+        Comparator.Stable.V1.S
+        with type t := t
+         and type comparator_witness = Unstable.comparator_witness)
+
     include%template
       Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (Unstable)
 

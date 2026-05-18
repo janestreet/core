@@ -216,7 +216,7 @@ module type Permissioned = sig @@ portable
   external create_local
     :  len:int
     -> 'a
-    -> local_ ('a, [< 'perm perms ]) t
+    -> ('a, [< 'perm perms ]) t @ local
     = "%makearray_dynamic"
   [@@ocaml.doc
     {| [create_local ~len x] is like [create]. It allocates the array on the local stack.
@@ -633,7 +633,7 @@ end = struct
     external create_local
       :  len:int
       -> 'a
-      -> local_ 'a t
+      -> 'a t @ local
       @@ portable
       = "%makearray_dynamic"
 
@@ -728,7 +728,7 @@ module type S = sig @@ portable
 
   external create_local
     : ('a : any mod separable).
-    len:int -> 'a -> local_ 'a t
+    len:int -> 'a -> 'a t @ local
     = "%makearray_dynamic"
   [@@ocaml.doc
     {| [create_local ~len x] is like [create]. It allocates the array on the local stack.
@@ -772,7 +772,8 @@ module type S = sig @@ portable
   val copy : ('a : k). local_ 'a t -> 'a t
   val fill : ('a : k). local_ 'a t -> pos:int -> len:int -> 'a -> unit]
 
-  include Blit.S1 with type 'a t := 'a t
+  include
+    Blit.S1 [@kind.explicit value_or_null mod separable] with type ('a : any) t := 'a t
 
   val%template unsafe_blit : ('a : k mod separable). ('a array, 'a array) Blit.blit
   [@@kind k = base_or_null_with_ext]
@@ -780,34 +781,38 @@ module type S = sig @@ portable
   val%template sub : ('a : k mod separable). ('a array, 'a array) Blit.sub
   [@@kind k = base_or_null_with_ext]
 
-  val folding_map : 'a t -> init:'acc -> f:local_ ('acc -> 'a -> 'acc * 'b) -> 'b t
-  val fold_map : 'a t -> init:'acc -> f:local_ ('acc -> 'a -> 'acc * 'b) -> 'acc * 'b t
+  include sig
+    [@@@implicit_kind: ('a : value_or_null mod separable)]
 
-  val%template foldi_right
-    :  'a t @ local
-    -> init:'acc @ m
-    -> f:(int -> 'a -> 'acc @ m -> 'acc @ m)
-    -> 'acc @ m
-  [@@alloc a @ m = (stack_local, heap_global)]
+    val folding_map : 'a t -> init:'acc -> f:local_ ('acc -> 'a -> 'acc * 'b) -> 'b t
+    val fold_map : 'a t -> init:'acc -> f:local_ ('acc -> 'a -> 'acc * 'b) -> 'acc * 'b t
 
-  val folding_mapi
-    :  'a t
-    -> init:'acc
-    -> f:local_ (int -> 'acc -> 'a -> 'acc * 'b)
-    -> 'b t
+    val%template foldi_right
+      :  'a t @ local
+      -> init:'acc @ m
+      -> f:(int -> 'a -> 'acc @ m -> 'acc @ m)
+      -> 'acc @ m
+    [@@alloc a @ m = (stack_local, heap_global)]
 
-  val fold_mapi
-    :  'a t
-    -> init:'acc
-    -> f:local_ (int -> 'acc -> 'a -> 'acc * 'b)
-    -> 'acc * 'b t
+    val folding_mapi
+      :  'a t
+      -> init:'acc
+      -> f:local_ (int -> 'acc -> 'a -> 'acc * 'b)
+      -> 'b t
 
-  val%template fold_right
-    :  'a t @ m
-    -> f:local_ ('a @ m -> 'acc -> 'acc)
-    -> init:'acc
-    -> 'acc
-  [@@mode m = (uncontended, shared)]
+    val fold_mapi
+      :  'a t
+      -> init:'acc
+      -> f:local_ (int -> 'acc -> 'a -> 'acc * 'b)
+      -> 'acc * 'b t
+
+    val%template fold_right
+      :  'a t @ m
+      -> f:local_ ('a @ m -> 'acc -> 'acc)
+      -> init:'acc
+      -> 'acc
+    [@@mode m = (uncontended, shared)]
+  end
 
   val%template sort
     : ('a : k mod separable).
@@ -828,18 +833,36 @@ module type S = sig @@ portable
 
   val merge : ('a : k). 'a t -> 'a t -> compare:local_ ('a -> 'a -> int) -> 'a t]
 
-  val partitioni_tf : 'a t -> f:local_ (int -> 'a -> bool) -> 'a t * 'a t
-  val cartesian_product : 'a t -> 'b t -> ('a * 'b) t
-  val transpose : 'a t t -> 'a t t option
-  val transpose_exn : 'a t t -> 'a t t
+  include sig
+    [@@@implicit_kind: ('a : value_or_null mod separable)]
+    [@@@implicit_kind: ('b : value_or_null mod separable)]
+
+    val partitioni_tf : 'a t -> f:local_ (int -> 'a -> bool) -> 'a t * 'a t
+    val cartesian_product : 'a t -> 'b t -> ('a * 'b) t
+    val transpose : 'a t t -> 'a t t option
+    val transpose_exn : 'a t t -> 'a t t
+  end
+
   val normalize : 'a t -> int -> int
   val slice : 'a t -> int -> int -> 'a t
   val nget : 'a t -> int -> 'a
   val nset : 'a t -> int -> 'a -> unit
-  val filter_opt : 'a option t -> 'a t
-  val iter2_exn : 'a t -> 'b t -> f:local_ ('a -> 'b -> unit) -> unit
-  val map2_exn : 'a t -> 'b t -> f:local_ ('a -> 'b -> 'c) -> 'c t
-  val fold2_exn : 'a t -> 'b t -> init:'acc -> f:local_ ('acc -> 'a -> 'b -> 'acc) -> 'acc
+
+  include sig
+    [@@@implicit_kind: ('a : value_or_null mod separable)]
+    [@@@implicit_kind: ('b : value_or_null mod separable)]
+
+    val filter_opt : 'a option t -> 'a t
+    val iter2_exn : 'a t -> 'b t -> f:local_ ('a -> 'b -> unit) -> unit
+    val map2_exn : 'a t -> 'b t -> f:local_ ('a -> 'b -> 'c) -> 'c t
+
+    val fold2_exn
+      :  'a t
+      -> 'b t
+      -> init:'acc
+      -> f:local_ ('acc -> 'a -> 'b -> 'acc)
+      -> 'acc
+  end
 
   [%%template:
   [@@@kind.default k1' = base_or_null_with_ext, k2' = base_or_null_with_ext]
@@ -871,7 +894,9 @@ module type S = sig @@ portable
     : ('a : k1) ('b : k2).
     'a t @ m -> 'b t @ m -> f:('a @ m -> 'b @ m -> bool) @ local -> bool]
 
-  val map_inplace : local_ 'a t -> f:local_ ('a -> 'a) -> unit
+  val map_inplace
+    : ('a : value_or_null mod separable).
+    local_ 'a t -> f:local_ ('a -> 'a) -> unit
 
   [%%template:
   [@@@kind.default k1' = base_or_null_with_ext]
@@ -899,46 +924,54 @@ module type S = sig @@ portable
 
   val findi_exn : ('a : k). 'a t -> f:local_ (int -> 'a -> bool) -> #(int * 'a)]
 
-  val findi_exn
-    : ('a : value_or_null mod separable).
-    'a t -> f:local_ (int -> 'a -> bool) -> int * 'a
+  val find_or_null : ('a : value). 'a t -> f:local_ ('a -> bool) -> 'a or_null
 
-  val find_consecutive_duplicate
-    :  'a t
-    -> equal:local_ ('a -> 'a -> bool)
-    -> ('a * 'a) option
+  val findi_or_null
+    : ('a : value).
+    'a t -> f:local_ (int -> 'a -> bool) -> (int * 'a) or_null
 
-  val reduce : 'a t -> f:local_ ('a -> 'a -> 'a) -> 'a option
-  val reduce_exn : 'a t -> f:local_ ('a -> 'a -> 'a) -> 'a
+  include sig
+    [@@@implicit_kind: ('a : value_or_null mod separable)]
 
-  val permute
-    :  ?random_state:Random.State.t
-    -> ?pos:int
-    -> ?len:int
-    -> local_ 'a t
-    -> unit
+    val findi_exn : 'a t -> f:local_ (int -> 'a -> bool) -> int * 'a
 
-  val random_element : ?random_state:Random.State.t -> 'a t -> 'a option
-  val random_element_exn : ?random_state:Random.State.t -> 'a t -> 'a
-  val zip : 'a t -> 'b t -> ('a * 'b) t option
-  val zip_exn : 'a t -> 'b t -> ('a * 'b) t
-  val unzip : ('a * 'b) t -> 'a t * 'b t
-  val sorted_copy : local_ 'a t -> compare:local_ ('a -> 'a -> int) -> 'a t
-  val last : 'a t -> 'a
-  val last_exn : 'a t -> 'a
+    val find_consecutive_duplicate
+      :  'a t
+      -> equal:local_ ('a -> 'a -> bool)
+      -> ('a * 'a) option
 
-  val equal
-    : ('a : value_or_null mod separable).
-    ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
+    val reduce : 'a t -> f:local_ ('a -> 'a -> 'a) -> 'a option
+    val reduce_exn : 'a t -> f:local_ ('a -> 'a -> 'a) -> 'a
 
-  val equal__local
-    : ('a : value_or_null mod separable).
-    (local_ 'a -> local_ 'a -> bool) -> local_ 'a t -> local_ 'a t -> bool
+    val permute
+      :  ?random_state:Random.State.t
+      -> ?pos:int
+      -> ?len:int
+      -> local_ 'a t
+      -> unit
 
-  val to_sequence : 'a t -> 'a Core_sequence.t
-  val to_sequence_mutable : 'a t -> 'a Core_sequence.t
-  val split_n : 'a t -> int -> 'a t * 'a t
-  val chunks_of : 'a t -> length:int -> 'a t t
+    val random_element : ?random_state:Random.State.t -> 'a t -> 'a option
+    val random_element_exn : ?random_state:Random.State.t -> 'a t -> 'a
+    val zip : 'a t -> 'b t -> ('a * 'b) t option
+    val zip_exn : 'a t -> 'b t -> ('a * 'b) t
+    val unzip : ('a * 'b) t -> 'a t * 'b t
+    val sorted_copy : local_ 'a t -> compare:local_ ('a -> 'a -> int) -> 'a t
+    val last : 'a t -> 'a
+    val last_exn : 'a t -> 'a
+
+    val equal
+      : ('a : value_or_null mod separable).
+      ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
+
+    val equal__local
+      : ('a : value_or_null mod separable).
+      (local_ 'a -> local_ 'a -> bool) -> local_ 'a t -> local_ 'a t -> bool
+
+    val to_sequence : 'a t -> 'a Core_sequence.t
+    val to_sequence_mutable : 'a t -> 'a Core_sequence.t
+    val split_n : 'a t -> int -> 'a t * 'a t
+    val chunks_of : 'a t -> length:int -> 'a t t
+  end
 end
 
 include%template (

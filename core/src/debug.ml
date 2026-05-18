@@ -42,7 +42,10 @@ let am_internal here message =
   (* In this function we use [Printf.eprintf] rather than [Debug.eprintf], because the
      former doesn't flush, while the latter does. We'd rather flush once at the end,
      rather than three times. *)
-  Printf.eprintf "%s:\n" (Source_code_position.to_string here);
+  let pos_string = Source_code_position.to_string here in
+  (match message with
+   | None -> Printf.eprintf "%s\n" pos_string
+   | Some _ -> Printf.eprintf "%s:\n" pos_string);
   if Atomic.get should_print_backtrace
   then
     Printf.eprintf
@@ -59,4 +62,9 @@ let amf here fmt = Printf.ksprintf (fun string -> am_internal here (Some string)
 
 let ams here message a sexp_of_a =
   am_internal here (Some ((message, a) |> [%sexp_of: string * a] |> Sexp.to_string_hum))
+;;
+
+let am_s ~(here : [%call_pos]) message =
+  let message = Sexp.to_string_hum message in
+  am_internal here (Some message)
 ;;

@@ -47,7 +47,7 @@ module Atomic = struct
   module Int () = struct
     include Int
 
-    let current = Atomic.make zero
+    let current = Atomic.make ~padded:true zero
     let create () = Atomic.fetch_and_add current 1
 
     module For_testing = struct
@@ -55,15 +55,31 @@ module Atomic = struct
     end
   end
 
-  module Int63 () = struct
+  module type Id_int63 = Id with type t = private Int63.t
+
+  module Int63_emul () : Id_int63 = struct
     include Int63
 
     let current = Atomic.make zero
-    let create () = Atomic.get_and_update current ~pure_f:[%eta1 succ]
+
+    let create =
+      let succ = [%eta1 succ] in
+      fun () -> Atomic.get_and_update current ~pure_f:succ
+    ;;
 
     module For_testing = struct
       let reset_counter () = Atomic.set current zero
     end
+  end
+
+  let int63 () : (module Id_int63) =
+    match Int63.Private.repr with
+    | Int64 -> (module Int63_emul () : Id_int63)
+    | Int -> (module Int () : Id_int63)
+  ;;
+
+  module Int63 () : Id_int63 = struct
+    include (val int63 ())
   end
 end
 

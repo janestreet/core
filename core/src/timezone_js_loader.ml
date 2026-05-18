@@ -30,7 +30,7 @@ end
 module Zone = struct
   type t
 
-  external create : string -> t = "timezone_js_loader_create_zone"
+  external create_exn : string -> t = "timezone_js_loader_validate_zone_name"
 
   external get_offset_nanos_for
     :  t
@@ -90,7 +90,7 @@ let load_exn s =
     let now = Instant.now () in
     Instant.plus_hours now 131_490L
   in
-  let tz = Zone.create s in
+  let tz = Zone.create_exn s in
   let rec build_transitions acc ~starting_at =
     if Instant.compare starting_at about_15_years_from_now > 0
     then List.rev acc

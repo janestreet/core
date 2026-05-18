@@ -300,7 +300,7 @@ module type Date0 = sig @@ portable
   (** The starting date of the UNIX epoch: 1970-01-01 *)
   val unix_epoch : t
 
-  (** [gen] generates dates between 1900-01-01 and 2100-01-01. *)
+  (** [quickcheck_generator] generates dates between 1900-01-01 and 2100-01-01. *)
   include%template Quickcheckable.S_range [@mode portable] with type t := t
 
   (** [Days] provides a linear representation of dates that is optimized for arithmetic on

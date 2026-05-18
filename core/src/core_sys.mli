@@ -17,29 +17,97 @@ val quote : string -> string
     of the current system. Each token is escaped as appropriate using [quote]. *)
 val concat_quoted : string list -> string
 
-val c_int_size : [ `Use_Sys_unix ] [@@deprecated "[since 2021-04] Use [Sys_unix]"]
-val catch_break : [ `Use_Sys_unix ] [@@deprecated "[since 2021-04] Use [Sys_unix]"]
-val chdir : [ `Use_Sys_unix ] [@@deprecated "[since 2021-04] Use [Sys_unix]"]
-val command : [ `Use_Sys_unix ] [@@deprecated "[since 2021-04] Use [Sys_unix]"]
-val command_exn : [ `Use_Sys_unix ] [@@deprecated "[since 2021-04] Use [Sys_unix]"]
-val executable_name : [ `Use_Sys_unix ] [@@deprecated "[since 2021-04] Use [Sys_unix]"]
-val execution_mode : [ `Use_Sys_unix ] [@@deprecated "[since 2021-04] Use [Sys_unix]"]
-val file_exists : [ `Use_Sys_unix ] [@@deprecated "[since 2021-04] Use [Sys_unix]"]
-val file_exists_exn : [ `Use_Sys_unix ] [@@deprecated "[since 2021-04] Use [Sys_unix]"]
-val fold_dir : [ `Use_Sys_unix ] [@@deprecated "[since 2021-04] Use [Sys_unix]"]
-val getcwd : [ `Use_Sys_unix ] [@@deprecated "[since 2021-04] Use [Sys_unix]"]
-val home_directory : [ `Use_Sys_unix ] [@@deprecated "[since 2021-04] Use [Sys_unix]"]
-val is_directory : [ `Use_Sys_unix ] [@@deprecated "[since 2021-04] Use [Sys_unix]"]
-val is_directory_exn : [ `Use_Sys_unix ] [@@deprecated "[since 2021-04] Use [Sys_unix]"]
-val is_file : [ `Use_Sys_unix ] [@@deprecated "[since 2021-04] Use [Sys_unix]"]
-val is_file_exn : [ `Use_Sys_unix ] [@@deprecated "[since 2021-04] Use [Sys_unix]"]
-val ls_dir : [ `Use_Sys_unix ] [@@deprecated "[since 2021-04] Use [Sys_unix]"]
-val override_argv : [ `Use_Sys_unix ] [@@deprecated "[since 2021-04] Use [Sys_unix]"]
-val readdir : [ `Use_Sys_unix ] [@@deprecated "[since 2021-04] Use [Sys_unix]"]
-val remove : [ `Use_Sys_unix ] [@@deprecated "[since 2021-04] Use [Sys_unix]"]
-val rename : [ `Use_Sys_unix ] [@@deprecated "[since 2021-04] Use [Sys_unix]"]
-val unsafe_getenv : [ `Use_Sys_unix ] [@@deprecated "[since 2021-04] Use [Sys_unix]"]
-val unsafe_getenv_exn : [ `Use_Sys_unix ] [@@deprecated "[since 2021-04] Use [Sys_unix]"]
+val c_int_size : [ `Use_Sys_unix ]
+[@@deprecated
+  "[since 2021-04] Use [Sys_unix], available from opam as [core_kernel.sys_unix]"]
+
+val catch_break : [ `Use_Sys_unix ]
+[@@deprecated
+  "[since 2021-04] Use [Sys_unix], available from opam as [core_kernel.sys_unix]"]
+
+val chdir : [ `Use_Sys_unix ]
+[@@deprecated
+  "[since 2021-04] Use [Sys_unix], available from opam as [core_kernel.sys_unix]"]
+
+val command : [ `Use_Sys_unix ]
+[@@deprecated
+  "[since 2021-04] Use [Sys_unix], available from opam as [core_kernel.sys_unix]"]
+
+val command_exn : [ `Use_Sys_unix ]
+[@@deprecated
+  "[since 2021-04] Use [Sys_unix], available from opam as [core_kernel.sys_unix]"]
+
+val executable_name : [ `Use_Sys_unix ]
+[@@deprecated
+  "[since 2021-04] Use [Sys_unix], available from opam as [core_kernel.sys_unix]"]
+
+val execution_mode : [ `Use_Sys_unix ]
+[@@deprecated
+  "[since 2021-04] Use [Sys_unix], available from opam as [core_kernel.sys_unix]"]
+
+val file_exists : [ `Use_Sys_unix ]
+[@@deprecated
+  "[since 2021-04] Use [Sys_unix], available from opam as [core_kernel.sys_unix]"]
+
+val file_exists_exn : [ `Use_Sys_unix ]
+[@@deprecated
+  "[since 2021-04] Use [Sys_unix], available from opam as [core_kernel.sys_unix]"]
+
+val fold_dir : [ `Use_Sys_unix ]
+[@@deprecated
+  "[since 2021-04] Use [Sys_unix], available from opam as [core_kernel.sys_unix]"]
+
+val getcwd : [ `Use_Sys_unix ]
+[@@deprecated
+  "[since 2021-04] Use [Sys_unix], available from opam as [core_kernel.sys_unix]"]
+
+val home_directory : [ `Use_Sys_unix ]
+[@@deprecated
+  "[since 2021-04] Use [Sys_unix], available from opam as [core_kernel.sys_unix]"]
+
+val is_directory : [ `Use_Sys_unix ]
+[@@deprecated
+  "[since 2021-04] Use [Sys_unix], available from opam as [core_kernel.sys_unix]"]
+
+val is_directory_exn : [ `Use_Sys_unix ]
+[@@deprecated
+  "[since 2021-04] Use [Sys_unix], available from opam as [core_kernel.sys_unix]"]
+
+val is_file : [ `Use_Sys_unix ]
+[@@deprecated
+  "[since 2021-04] Use [Sys_unix], available from opam as [core_kernel.sys_unix]"]
+
+val is_file_exn : [ `Use_Sys_unix ]
+[@@deprecated
+  "[since 2021-04] Use [Sys_unix], available from opam as [core_kernel.sys_unix]"]
+
+val ls_dir : [ `Use_Sys_unix ]
+[@@deprecated
+  "[since 2021-04] Use [Sys_unix], available from opam as [core_kernel.sys_unix]"]
+
+val override_argv : [ `Use_Sys_unix ]
+[@@deprecated
+  "[since 2021-04] Use [Sys_unix], available from opam as [core_kernel.sys_unix]"]
+
+val readdir : [ `Use_Sys_unix ]
+[@@deprecated
+  "[since 2021-04] Use [Sys_unix], available from opam as [core_kernel.sys_unix]"]
+
+val remove : [ `Use_Sys_unix ]
+[@@deprecated
+  "[since 2021-04] Use [Sys_unix], available from opam as [core_kernel.sys_unix]"]
+
+val rename : [ `Use_Sys_unix ]
+[@@deprecated
+  "[since 2021-04] Use [Sys_unix], available from opam as [core_kernel.sys_unix]"]
+
+val unsafe_getenv : [ `Use_Sys_unix ]
+[@@deprecated
+  "[since 2021-04] Use [Sys_unix], available from opam as [core_kernel.sys_unix]"]
+
+val unsafe_getenv_exn : [ `Use_Sys_unix ]
+[@@deprecated
+  "[since 2021-04] Use [Sys_unix], available from opam as [core_kernel.sys_unix]"]
 
 exception Break [@deprecated "[since 2021-04] Use [Sys_unix]"]
 

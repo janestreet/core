@@ -83,7 +83,7 @@ val to_string_12 : local_ t -> string
     [3.14] as [3.1400000000000001243]. The only exception is that occasionally it will
     output 17 significant digits when the number can be represented with just 16 (but not
     15 or fewer) of them. *)
-include Stringable.S_local_input with type t := t
+include%template Stringable.S [@mode local] with type t := t
 
 include Quickcheckable.S with type t := t
 

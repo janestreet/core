@@ -101,9 +101,9 @@ module Stable = struct
         type t : sync_data
 
         val create : unit -> t
-        val get : local_ t Atomic.Loc.t -> Index.t
-        val set : local_ t Atomic.Loc.t -> Index.t -> unit
-        val reset : local_ t Atomic.Loc.t -> unit
+        val get : t Atomic.Loc.t @ local -> Index.t
+        val set : t Atomic.Loc.t @ local -> Index.t -> unit
+        val reset : t Atomic.Loc.t @ local -> unit
       end = struct
         module Shards = Portable.Domain_shards.Lazy (struct
             type t = Index.t Atomic.t
@@ -112,12 +112,12 @@ module Stable = struct
             let create () = Atomic.make ~padded Index.before_first_transition
           end)
 
-        type t = Shards.t
+        type t = Shards.Unboxed.t
 
-        let create = Shards.create
-        let get t = Atomic.get (Shards.get t) [@@inline]
-        let set t index = Atomic.set (Shards.get t) index [@@inline]
-        let reset t = Shards.reset t
+        let create = Shards.Unboxed.create
+        let get t = Atomic.get (Shards.Unboxed.get t) [@@inline]
+        let set t index = Atomic.set (Shards.Unboxed.get t) index [@@inline]
+        let reset t = Shards.Unboxed.reset t
       end
 
       type t : sync_data =

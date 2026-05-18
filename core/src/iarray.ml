@@ -1,4 +1,5 @@
 open! Import
+open Base_quickcheck.Export
 include Base.Iarray
 
 module Stable = struct
@@ -24,25 +25,7 @@ module Stable = struct
   end
 end
 
-include struct
-  open Base_quickcheck
-
-  [%%template
-  [@@@mode.default p = (nonportable, portable)]
-
-  let quickcheck_generator elt_generator =
-    (Generator.list [@mode p]) elt_generator |> (Generator.map [@mode p]) ~f:of_list
-  ;;
-
-  let quickcheck_observer elt_observer =
-    (Observer.list [@mode p]) elt_observer |> (Observer.unmap [@mode p]) ~f:to_list
-  ;;
-
-  let quickcheck_shrinker elt_shrinker =
-    (Shrinker.list [@mode p]) elt_shrinker
-    |> (Shrinker.map [@mode p]) ~f:of_list ~f_inverse:to_list
-  ;;]
-end
+[%%rederive.portable type 'a t = 'a iarray [@@deriving quickcheck ~portable]]
 
 include (
 struct

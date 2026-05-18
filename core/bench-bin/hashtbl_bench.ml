@@ -682,6 +682,7 @@ end = struct
     ;;
 
     let change = Impl.change
+    let change_or_null = Impl.change_or_null
 
     let () =
       ( !! ) "change + <rand key> + <rand data>" (fun size ->

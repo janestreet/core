@@ -57,18 +57,24 @@ module Make () : sig
     -> 'result
 end
 
-(** [am], [ams], and [amf] output a source code position and backtrace to stderr. [amf]
-    accepts a printf-style format string. [ams] accepts a message, value, and sexp
-    converter for that value. Typical usage looks like:
+(** [am], [ams], [amf], and [am_s] output a source code position and backtrace to stderr.
 
+    [am_s] is follows the same pattern as [eprint_s] and is good for use with [%message].
+
+    [amf] accepts a printf-style format string. [ams] accepts a message, value, and sexp
+    converter for that value.
+
+    Typical usage looks like:
     {[
-        ...;
+      ...;
       Debug.am [%here];
-        ...;
-        Debug.amf [%here] "hello (%s, %s)" (X.to_string x) (Y.to_string y);
-        ...;
-        Debug.ams [%here] "hello" (x, y) [%sexp_of: X.t * Y.t];
-        ...;
+      ...;
+      Debug.am_s [%message "hello" (x : X.t) (y : Y.t)];
+      ...;
+      Debug.amf [%here] "hello (%s, %s)" (X.to_string x) (Y.to_string y);
+      ...;
+      Debug.ams [%here] "hello" (x, y) [%sexp_of: X.t * Y.t];
+      ...;
     ]}
 
     The [am*] functions output source code positions in the standard format
@@ -76,6 +82,7 @@ end
     containing debug messages to step through one's code by stepping through the messages. *)
 val am : Source_code_position.t -> unit
 
+val am_s : here:[%call_pos] -> Sexp.t -> unit
 val ams : Source_code_position.t -> string -> 'a -> ('a -> Sexp.t) -> unit
 val amf : Source_code_position.t -> ('r, unit, string, unit) format4 -> 'r
 

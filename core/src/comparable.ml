@@ -9,8 +9,18 @@ module%template.portable [@modality p] Infix =
   [@mode m]
   [@modality p]
 
+module%template.portable [@modality p] Infix_with_zero_alloc =
+  Base.Comparable.Infix_with_zero_alloc
+  [@mode m]
+  [@modality p]
+
 module%template.portable [@modality p] Comparisons =
   Base.Comparable.Comparisons
+  [@modality p]
+  [@mode m]
+
+module%template.portable [@modality p] Comparisons_with_zero_alloc =
+  Base.Comparable.Comparisons_with_zero_alloc
   [@modality p]
   [@mode m]
 

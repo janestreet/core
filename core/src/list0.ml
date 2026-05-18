@@ -2,6 +2,14 @@ open! Import
 open! Typerep_lib.Std
 include Base.List
 
+[%%template
+[@@@kind_set.define all_ks_non_value = base_non_value]
+
+type ('a : k) t = ('a Constructors.t[@kind k]) =
+  | []
+  | ( :: ) of 'a * ('a t[@kind k])
+[@@kind k = all_ks_non_value] [@@deriving bin_io ~localize]]
+
 [%%rederive.portable
   type ('a : value_or_null) t = 'a list
   [@@deriving bin_io ~localize, typerep, stable_witness]]

@@ -50,7 +50,7 @@ module%template Make_backend (Table : Hashtbl_intf.Hashtbl [@modality portable])
       (* Look at each element in the queue, checking:
        *   - every element in the queue is in the hash table
        *   - there are no duplicate keys
-      *)
+       *)
       let keys = Table.create ~size:(Table.length t.table) (Table.hashable_s t.table) in
       Doubly_linked.iter t.queue ~f:(fun kv ->
         let key = kv.key in

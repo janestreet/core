@@ -12,7 +12,13 @@ module type Day_of_week = sig @@ portable
     | Fri
     | Sat
   [@@deriving
-    bin_io ~localize, compare ~localize, hash, quickcheck, sexp, sexp_grammar, typerep]
+    bin_io ~localize
+    , compare ~localize
+    , hash
+    , quickcheck
+    , sexp ~stackify
+    , sexp_grammar
+    , typerep]
 
   include%template
     Comparable.S_binable [@mode local] [@modality portable] with type t := t
@@ -66,9 +72,14 @@ module type Day_of_week = sig @@ portable
         , stable_witness]
 
       include
+        Comparator.Stable.V1.S
+        with type t := t
+         and type comparator_witness = comparator_witness
+
+      include
         Comparable.Stable.V1.With_stable_witness.S
         with type comparable := t
-        with type comparator_witness := comparator_witness
+         and type comparator_witness = comparator_witness
 
       include Hashable.Stable.V1.With_stable_witness.S with type key := t
     end

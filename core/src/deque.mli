@@ -14,7 +14,7 @@
 
 open! Import
 
-type 'a t [@@deriving bin_io, quickcheck, sexp, sexp_grammar]
+type 'a t : mutable_data with 'a [@@deriving bin_io, quickcheck, sexp, sexp_grammar]
 
 include Binary_searchable.S1 with type 'a t := 'a t
 include Container.S1 with type 'a t := 'a t
@@ -70,26 +70,30 @@ val peek_back_exn : 'a t -> 'a
 val set_exn : 'a t -> int -> 'a -> unit
 
 (** [iter' t ~f] iterates over the elements of [t]. *)
-val iter' : 'a t -> [ `front_to_back | `back_to_front ] -> f:('a -> unit) -> unit
+val iter' : 'a t -> [ `front_to_back | `back_to_front ] -> f:('a -> unit) @ local -> unit
 
 (** [iteri t ~f] iterates over the elements of [t] [`front_to_back] passing in the index. *)
-val iteri : 'a t -> f:(int -> 'a -> unit) -> unit
+val iteri : 'a t -> f:(int -> 'a -> unit) @ local -> unit
 
 (** [iteri' t ~f] is the same as [iter'], but also passes in the index of the current
     element. *)
-val iteri' : 'a t -> [ `front_to_back | `back_to_front ] -> f:(int -> 'a -> unit) -> unit
+val iteri'
+  :  'a t
+  -> [ `front_to_back | `back_to_front ]
+  -> f:(int -> 'a -> unit) @ local
+  -> unit
 
 (** [fold' t ~init ~f] folds over the elements of [t]. *)
 val fold'
   :  'a t
   -> [ `front_to_back | `back_to_front ]
   -> init:'b
-  -> f:('b -> 'a -> 'b)
+  -> f:('b -> 'a -> 'b) @ local
   -> 'b
 
 (** [foldi t ~init ~f] is the same as [fold], but also passes in the index of the current
     element to [f]. *)
-val foldi : 'a t -> init:'b -> f:(int -> 'b -> 'a -> 'b) -> 'b
+val foldi : 'a t -> init:'b -> f:(int -> 'b -> 'a -> 'b) @ local -> 'b
 
 (** [foldi' t ~init ~f] is the same as [fold'], but also passes in the index of the
     current element to [f]. *)
@@ -97,7 +101,7 @@ val foldi'
   :  'a t
   -> [ `front_to_back | `back_to_front ]
   -> init:'b
-  -> f:(int -> 'b -> 'a -> 'b)
+  -> f:(int -> 'b -> 'a -> 'b) @ local
   -> 'b
 
 (** [enqueue t back_or_front v] pushes [v] onto the [back_or_front] of [t]. *)

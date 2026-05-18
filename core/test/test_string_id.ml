@@ -25,6 +25,7 @@ end
 (* Even integers are the only valid identifiers *)
 module Even_int_id =
   (val make
+         ~caller_identity:String_id.legacy_identity
          ~module_name:"Even_int_id"
          ~validate:(fun s ->
            if Int.of_string s % 2 <> 0
@@ -100,6 +101,7 @@ let%expect_test "of bin prot failure" =
 
 module M =
   (val (make [@modality portable])
+         ~caller_identity:String_id.legacy_identity
          ~module_name:"test"
          ~include_default_validation:true
          ~include_pretty_printer:false
@@ -234,7 +236,14 @@ let%expect_test "include_default_validation" =
     let validate s =
       if String.( = ) s "foo" then error_s [%message "no foo"] else Ok ()
     in
-    let module M = (val make ~module_name ~validate ~include_default_validation ()) in
+    let module M =
+      (val make
+             ~caller_identity:String_id.legacy_identity
+             ~module_name
+             ~validate
+             ~include_default_validation
+             ())
+    in
     List.iter [ "foobar"; "foo"; "  bar  "; " bar"; "bar "; "" ] ~f:(fun s ->
       print_s
         [%message s ~_:(Or_error.try_with (fun () -> M.of_string s) : M.t Or_error.t)])

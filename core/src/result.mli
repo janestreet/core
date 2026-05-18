@@ -4,10 +4,13 @@
 
 open! Import
 
-type%template ('a : k, 'b : value_or_null) t = (('a, 'b) Base.Result.t[@kind k]) =
+[%%template:
+[@@@kind_set.define all_ks_non_value = base_non_value]
+
+type ('a : k, 'b : value_or_null) t = (('a, 'b) Base.Result.t[@kind k]) =
   | Ok of 'a
   | Error of 'b
-[@@deriving bin_io ~localize] [@@kind k = base_non_value]
+[@@deriving bin_io ~localize] [@@kind k = all_ks_non_value]
 
 type ('a : value_or_null, 'b : value_or_null) t = ('a, 'b) Base.Result.t =
   | Ok of 'a
@@ -20,7 +23,7 @@ include%template
     ('a : value_or_null, 'b : value_or_null) t
  [@with:
    type ('a : any, 'b : value_or_null) t := (('a, 'b) t[@kind k])
-   [@@kind k = base_non_value]])
+   [@@kind k = all_ks_non_value]])
 (** @inline *)
 
 module Stable : sig
@@ -51,4 +54,4 @@ module Stable : sig
   (** We export the unit test arg rather than instantiate the functor inside result.ml in
       order to avoid circular dependencies. The functor is instantiated in stable.ml. *)
   module V1_stable_unit_test : Stable_unit_test_intf.Arg
-end
+end]

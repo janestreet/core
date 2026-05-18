@@ -15,7 +15,8 @@ include module type of struct
 include Hexdump.S with type t := t
 include Quickcheckable.S with type t := t
 
-(** Like [gen], but generate bytes with the given distribution of characters. *)
+(** Like [quickcheck_generator], but generate bytes with the given distribution of
+    characters. *)
 val gen' : char Quickcheck.Generator.t -> t Quickcheck.Generator.t
 
 (** Like [gen'], but generate bytes with the given length. *)

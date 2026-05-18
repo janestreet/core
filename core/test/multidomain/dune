@@ -1,7 +1,6 @@
 (library
  (name core_test_multidomain)
  (libraries await await.sync concurrent concurrent.in_thread core
-   expect_test_helpers_core.expect_test_helpers_base expect_test_helpers_core
-   portable.test_helpers threads)
+   expect_test_helpers_base expect_test_helpers_core threads)
  (preprocess
   (pps ppx_jane)))

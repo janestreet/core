@@ -1,5 +1,8 @@
 [@@@ocaml.flambda_o3]
 
+[%%template
+[@@@kind_set.define all_ks_non_value = base_non_value]
+
 module Stable = struct
   open Stable_internal
   open Ppx_compare_lib.Builtin
@@ -12,7 +15,8 @@ module Stable = struct
     module T = struct
       type%template ('a : k) t = ('a Base.Nonempty_list.t[@kind k]) =
         | ( :: ) of 'a * ('a List.V1.t[@kind k])
-      [@@kind k = base_non_value] [@@deriving compare ~localize, equal ~localize]
+      [@@kind k = all_ks_non_value]
+      [@@deriving bin_io ~localize, compare ~localize, equal ~localize]
 
       type nonrec ('a : value_or_null) t = 'a Base.Nonempty_list.t =
         | ( :: ) of 'a * 'a list
@@ -176,6 +180,13 @@ open Std_internal
 module Unstable = Stable.V3
 include Base.Nonempty_list
 
+[%%template
+[@@@kind.default k = all_ks_non_value]
+
+[%%rederive
+  type nonrec ('a : k) t = ('a t[@kind k]) = ( :: ) of 'a * ('a List.t[@kind k])
+  [@@deriving bin_io ~localize]]]
+
 [%%rederive
   type nonrec 'a t = 'a t = ( :: ) of 'a * 'a list
   [@@deriving bin_io ~localize ~portable, quickcheck ~portable, typerep]]
@@ -246,4 +257,4 @@ module Option = struct
       let unsafe_value = unchecked_value
     end
   end
-end
+end]

@@ -21,7 +21,7 @@ end = struct
           ;;
 
           external unbox_int64
-            :  local_ int64
+            :  int64 @ local
             -> (int64#[@unboxed])
             @@ portable
             = "%unbox_int64"

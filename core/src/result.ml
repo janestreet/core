@@ -1,4 +1,8 @@
 open! Import
+
+[%%template
+[@@@kind_set.define all_ks_non_value = base_non_value]
+
 module Result = Base.Result
 
 module Stable = struct
@@ -38,11 +42,11 @@ end
 include Stable.V1
 include Result
 
-type%template ('a : k, 'b : value_or_null) t = (('a, 'b) Result.t[@kind k]) =
+type ('a : k, 'b : value_or_null) t = (('a, 'b) Result.t[@kind k]) =
   | Ok of 'a
   | Error of 'b
-[@@deriving bin_io ~localize] [@@kind k = base_non_value]
+[@@deriving bin_io ~localize] [@@kind k = all_ks_non_value]
 
 let quickcheck_generator = Base_quickcheck.Generator.result
 let quickcheck_observer = Base_quickcheck.Observer.result
-let quickcheck_shrinker = Base_quickcheck.Shrinker.result
+let quickcheck_shrinker = Base_quickcheck.Shrinker.result]
