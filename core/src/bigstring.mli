@@ -22,7 +22,7 @@ include Hexdump.S with type t := t
 
 (** [create length]
     @return a new bigstring having [length]. Content is undefined. *)
-val create : int -> t
+val create : int -> t @ unique
 
 (** [sub_shared ?pos ?len bstr]
 

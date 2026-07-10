@@ -2,8 +2,6 @@ open! Core
 open Expect_test_helpers_core
 open Array
 
-[@@@warning "-incompatible-with-upstream"]
-
 let ar1 = [| 1; 2; 3; 4; 5; 6; 7; 8; 9; 10 |]
 
 let%expect_test "slice" =

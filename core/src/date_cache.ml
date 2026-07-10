@@ -223,11 +223,8 @@ module Make (Time : Time) () = struct
      [lock_state]. *)
 
   let get_date_cache =
-    let date_caches =
-      Portable.Domain_shards.create (fun () -> Date_cache.create_padded ())
-    in
-    fun [@inline] () ->
-      [%template Portable.Domain_shards.get [@mode contended]] date_caches
+    let date_caches = Portable.Shards.create (fun () -> Date_cache.create_padded ()) in
+    fun [@inline] () -> [%template Portable.Shards.get [@mode contended]] date_caches
   ;;
 
   (* Call [write date_cache]; if the call raises, we have to assume the [date_cache] is in

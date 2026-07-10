@@ -185,7 +185,10 @@ external unbox_float
   @@ portable
   = "%unbox_float"
 
+external box_float : (float#[@unboxed]) -> (float[@local_opt]) @@ portable = "%box_float"
+
 let[@zero_alloc] ( /// ) t u = unbox_float (Int63.( // ) t u)
+let[@zero_alloc] scale_u t f = (scale [@inlined]) t (box_float f)
 let ( / ) t f = round_nearest_ns (float t /. f)
 let to_proportional_float t = Int63.to_float t
 

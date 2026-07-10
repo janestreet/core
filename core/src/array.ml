@@ -4,8 +4,6 @@ open Perms.Export
 module Array = Base.Array
 module Core_sequence = Sequence
 
-[@@@warning "-incompatible-with-upstream"]
-
 [%%template
 [@@@kind_set.define base_or_null_with_ext = (base_or_null, value_or_null mod external64)]
 
@@ -207,7 +205,11 @@ module type Permissioned = sig @@ portable
   val create_float_uninitialized : len:int -> (float, [< _ perms ]) t
 
   [%%template:
-    external create : len:int -> 'a -> ('a, [< 'perm perms ]) t @ m = "%makearray_dynamic"
+    external create
+      :  len:int
+      -> 'a
+      -> ('a, [< 'perm perms ]) t @ m unique
+      = "%makearray_dynamic"
     [@@ocaml.doc
       {| [create ~len x] creates an array of length [len] with the value [x] populated in
         each element. |}]
@@ -216,7 +218,7 @@ module type Permissioned = sig @@ portable
   external create_local
     :  len:int
     -> 'a
-    -> ('a, [< 'perm perms ]) t @ local
+    -> ('a, [< 'perm perms ]) t @ local unique
     = "%makearray_dynamic"
   [@@ocaml.doc
     {| [create_local ~len x] is like [create]. It allocates the array on the local stack.
@@ -254,9 +256,6 @@ module type Permissioned = sig @@ portable
   val copy : local_ ('a, [> read ]) t -> ('a, [< _ perms ]) t
   val fill : local_ ('a, [> write ]) t -> pos:int -> len:int -> 'a -> unit
   val of_list : 'a list -> ('a, [< _ perms ]) t
-
-  [@@@warning "-incompatible-with-upstream"]
-
   val map : ('a, [> read ]) t -> f:local_ ('a -> 'b) -> ('b, [< _ perms ]) t
 
   val folding_map
@@ -627,13 +626,18 @@ end = struct
       = "%array_safe_set"
 
     [%%template
-      external create : len:int -> 'a -> 'a t @ m @@ portable = "%makearray_dynamic"
+      external create
+        :  len:int
+        -> 'a
+        -> 'a t @ m unique
+        @@ portable
+        = "%makearray_dynamic"
       [@@alloc __ @ m = (heap_global, stack_local)]]
 
     external create_local
       :  len:int
       -> 'a
-      -> 'a t @ local
+      -> 'a t @ local unique
       @@ portable
       = "%makearray_dynamic"
 
@@ -718,7 +722,7 @@ module type S = sig @@ portable
   [%%template:
     external create
       : ('a : any mod separable).
-      len:int -> 'a -> 'a t @ m
+      len:int -> 'a -> 'a t @ m unique
       = "%makearray_dynamic"
     [@@ocaml.doc
       {| [create ~len x] creates an array of length [len] with the value [x] populated in
@@ -728,7 +732,7 @@ module type S = sig @@ portable
 
   external create_local
     : ('a : any mod separable).
-    len:int -> 'a -> 'a t @ local
+    len:int -> 'a -> 'a t @ local unique
     = "%makearray_dynamic"
   [@@ocaml.doc
     {| [create_local ~len x] is like [create]. It allocates the array on the local stack.

@@ -84,7 +84,7 @@ val digest_subbytes : bytes -> pos:int -> len:int -> t
 
 (** [digest_file_blocking filename] reads the contents of file [filename] and computes its
     digest. *)
-val digest_file_blocking : string -> t
+val digest_file_blocking : string @ local -> t
 
 (** Reads [len] bytes from the given channel and computes md5 digest of that.
 

@@ -566,7 +566,7 @@ module%test [@name "random"] _ = struct
            (List.quickcheck_generator quickcheck_generator))
         ~f:(fun (list1, list2) ->
           [%test_result: t list * t list]
-            (List.split_n (List.append list1 list2) (List.length list1))
+            (List.split_n (List.append list1 list2) (List.length list1) |> Tuple2.box)
             ~expect:(list1, list2))
     ;;
 

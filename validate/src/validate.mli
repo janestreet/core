@@ -1,7 +1,5 @@
 @@ portable
 
-[@@@warning "-incompatible-with-upstream"]
-
 (** A module for organizing validations of data structures.
 
     Allows standardized ways of checking for conditions, and keeps track of the location

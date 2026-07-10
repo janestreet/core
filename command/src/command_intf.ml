@@ -491,8 +491,7 @@ module type Command = sig
       (** [flag_optional_with_default_doc_sexp name arg_type sexp_of_default ~default ~doc]
           is a shortcut for [flag], where:
           + The [Flag.t] is [optional_with_default default arg_type]
-          + The [doc] is passed through with an explanation of what the default value
-            appended. *)
+          + The [doc] is passed through with the default value appended. *)
       val flag_optional_with_default_doc_sexp
         :  ?aliases:string list
         -> ?full_flag_required:unit

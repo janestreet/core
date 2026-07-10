@@ -14,6 +14,7 @@ module T2 = struct
   [@@deriving sexp, sexp_grammar, typerep]
 
   let create a b = a, b
+  let box #(a, b) = a, b
 
   let curry f =
     ();

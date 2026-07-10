@@ -56,6 +56,17 @@ let%test_unit "Md5.digest_file_blocking" =
   assert (Exn.does_raise (fun () -> digest_file_blocking cwd))
 ;;
 
+let%test_unit "Md5.digest_file_blocking accepts a stack-allocated string" =
+  let cwd = Stdlib.Sys.getcwd () in
+  let basename = Filename.basename [%here].pos_fname in
+  let file @ local = {%string.stack|%{cwd}/%{basename}|} in
+  let our_digest = digest_file_blocking file in
+  let actual_digest =
+    Md5.of_binary_exn (Stdlib.Digest.file (Filename.concat cwd basename))
+  in
+  [%test_result: Md5.t] our_digest ~expect:actual_digest
+;;
+
 let%test_unit "Md5.digest_subbigstring" =
   let bigstr = Bigstring.of_string "abcd" in
   let d1 = Md5.digest_subbigstring bigstr ~pos:1 ~len:2 in

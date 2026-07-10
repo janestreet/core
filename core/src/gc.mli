@@ -664,10 +664,12 @@ module (Expert @@ nonportable) : sig
 
         You don't need to use this function if you use [add_finalizer] from this module.
         It's only exposed for the case when you want to use [Stdlib.Gc.finalise] directly. *)
-    val protect_finalizer
-      :  'a Heap_block.t
-      -> ('a Heap_block.t -> unit)
-      -> ('a Heap_block.t -> unit)
+    val%template protect_finalizer
+      :  'a Heap_block.t @ p
+      -> ('a Heap_block.t @ c p -> unit) @ p
+      -> ('a Heap_block.t @ c p -> unit) @ p
+      @@ portable
+    [@@mode (p, c) = ((nonportable, uncontended), (portable, contended))]
   end
 
   (** The runtime essentially maintains a bool ref:
@@ -693,7 +695,7 @@ module (Expert @@ nonportable) : sig
 
   (** A GC alarm calls a user function at the end of each major GC cycle. *)
   module Alarm : sig
-    type t [@@deriving sexp_of]
+    type t [@@deriving sexp_of ~portable]
 
     (** [create f] arranges for [f] to be called at the end of each major GC cycle,
         starting with the current cycle or the next one. [f] can be called in any thread,
@@ -703,9 +705,14 @@ module (Expert @@ nonportable) : sig
         reason about. *)
     val create : (unit -> unit) -> t
 
+    (** [create_portable f] is like {!create}, but is safe to call in portable contexts.
+        To avoid non-thread-safe [at_exit] functions being called, [f] is wrapped in
+        [Exn.handle_uncaught_and_exit_immediately]. *)
+    val create_portable : (unit -> unit) @ portable -> t @@ portable
+
     (** [delete t] will stop the calls to the function associated to [t]. Calling
         [delete t] again has no effect. *)
-    val delete : t -> unit
+    val delete : t -> unit @@ portable
   end
 end
 

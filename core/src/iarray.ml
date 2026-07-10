@@ -4,10 +4,10 @@ include Base.Iarray
 
 module Stable = struct
   module V1 = struct
-    type nonrec ('a : value_or_null mod separable) t = 'a t
-    [@@deriving compare ~localize, equal ~localize]
+    type%template nonrec ('a : value_or_null mod separable) t = 'a t
+    [@@deriving compare ~localize, equal ~localize, globalize]
 
-    [%%rederive type nonrec 'a t = 'a t [@@deriving globalize, hash]]
+    [%%rederive type nonrec 'a t = 'a t [@@deriving hash]]
 
     let map = map
     let t_of_sexp = t_of_sexp

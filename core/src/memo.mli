@@ -27,7 +27,7 @@ type ('a, 'b) fn = 'a -> 'b
     Of course, if the supplied function is recursive, only the outer calls are memoized;
     recursive calls are not. For that, see [recursive] below. *)
 val general
-  :  ?hashable:'a Hashtbl.Hashable.t
+  :  hashable:'a Hashtbl.Hashable.t
   -> ?cache_size_bound:int
   -> ('a -> 'b)
   -> ('a, 'b) fn

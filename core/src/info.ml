@@ -301,19 +301,6 @@ module Extend (Info : Base.Info.S) = struct
           | With_backtrace (t, bt) -> With_backtrace (repr_of_binable t, bt)
         ;;
 
-        (* Copied from [Local_iterators_to_be_replaced.List.map_local] *)
-        let rec map_local t ~f = exclave_
-          match t with
-          | [] -> []
-          | x :: xs ->
-            let y = f x in
-            let ys = map_local xs ~f in
-            y :: ys
-        ;;
-
-        let%template[@alloc heap] list_map = List.map
-        let%template[@alloc stack] list_map = map_local
-
         let%template rec repr_to_binable : Info.Internal_repr.t @ m -> Protocol.t @ m =
           fun repr ->
           let repr_to_binable = repr_to_binable [@alloc a] in
@@ -330,7 +317,7 @@ module Extend (Info : Base.Info.S) = struct
           | Of_list (n, xs) ->
             Of_list
               ( n
-              , (list_map [@alloc a]) xs ~f:(fun repr ->
+              , (List.map [@mode m] [@alloc a]) xs ~f:(fun repr ->
                   repr_to_binable repr [@exclave_if_local m]) )
           | With_backtrace (t, bt) -> With_backtrace (repr_to_binable t, bt)
         [@@alloc a @ m = (stack_local, heap_global)]

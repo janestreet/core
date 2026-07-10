@@ -44,6 +44,9 @@ depends: [
   "dune"                {>= "3.17.0"}
 ]
 available: arch != "x86_32"
+conflicts: [
+  "oxcaml-compiler" {< "5.2.0minus39"}
+]
 synopsis: "Industrial strength alternative to OCaml's standard library"
 description: "
 The Core suite of libraries is an industrial strength alternative to

@@ -1,7 +1,5 @@
 open! Import
 
-[@@@warning "-incompatible-with-upstream"]
-
 [%%template
 [@@@mode.default m = (global, local)]
 

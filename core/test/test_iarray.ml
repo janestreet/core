@@ -10,6 +10,9 @@ module _ : module type of struct
 end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
   type ('a : any mod separable) t = 'a Iarray.t
 
+  type%template ('a : k) t = ('a Iarray.t[@kind k])
+  [@@kind k = (base_non_value, value_or_null mod external64)]
+
   [%%rederive.portable
     type 'a t = 'a Iarray.t [@@deriving bin_io ~localize, quickcheck ~portable, typerep]]
 
@@ -153,14 +156,18 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
     end
   end
 
-  let globalize = Iarray.globalize
+  let%template globalize = (Iarray.globalize [@kind k])
+  [@@kind k = (base_or_null, value_or_null mod external64)]
+  ;;
 
   let%expect_test _ =
     quickcheck_m (module Int_t) ~f:(fun iarray ->
       require_equal (module Int_t) iarray (globalize Int.globalize iarray))
   ;;
 
-  let compare = Iarray.compare
+  let%template compare = (Iarray.compare [@kind k] [@mode l])
+  [@@kind k = (base_or_null, value_or_null mod external64)] [@@mode l = (global, local)]
+  ;;
 
   let%expect_test "reflexive" =
     quickcheck_m (module Int_t) ~f:(fun iarray ->
@@ -201,7 +208,9 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
            && ordering_is_transitive c a b ~f:order))
   ;;
 
-  let equal = Iarray.equal
+  let%template equal = (Iarray.equal [@kind k] [@mode l])
+  [@@kind k = (base_or_null, value_or_null mod external64)] [@@mode l = (global, local)]
+  ;;
 
   let%expect_test "consistent with [compare]" =
     quickcheck_m
@@ -211,8 +220,6 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
       ~f:(fun (a, b) ->
         require_equal (module Bool) (equal Int.equal a b) (compare Int.compare a b = 0))
   ;;
-
-  let compare__local = Iarray.compare__local
 
   let%expect_test "consistent with [compare]" =
     quickcheck_m
@@ -225,8 +232,6 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
           (Ordering.of_int (compare__local Int.compare__local a b))
           (Ordering.of_int (compare Int.compare a b)))
   ;;
-
-  let equal__local = Iarray.equal__local
 
   let%expect_test "consistent with [equal]" =
     quickcheck_m
@@ -246,9 +251,11 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
     test_hash_can_distinguish_sample (hash_fold_t Int.hash_fold_t)
   ;;
 
-  let t_of_sexp = Iarray.t_of_sexp
-  let sexp_of_t = Iarray.sexp_of_t
-  let sexp_of_t__stack = Iarray.sexp_of_t__stack
+  [%%template
+  [@@@kind.default k = (base_or_null, value_or_null mod external64)]
+
+  let t_of_sexp = (Iarray.t_of_sexp [@kind k])
+  let sexp_of_t = (Iarray.sexp_of_t [@kind k] [@alloc a]) [@@alloc a = (heap, stack)]]
 
   let%expect_test "test round-trip" =
     print_and_check_sexpable (module Int_t) (10 |> List.init ~f:(Iarray.init ~f:Int.succ));
@@ -622,7 +629,7 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
       let list = Iarray.to_list t in
       for n = -2 to Iarray.length t + 2 do
         let first_arr, second_arr = split_n t n in
-        let first_list, second_list = List.split_n list n in
+        let #(first_list, second_list) = List.split_n list n in
         require_equal (module Int_t) first_arr (Iarray.of_list first_list);
         require_equal (module Int_t) second_arr (Iarray.of_list second_list)
       done)
@@ -826,6 +833,118 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
         (Iarray.findi t ~f))
   ;;
 
+  let%template[@mode
+                li = (global, local)
+                , lo = (global, local)
+                , o = (many, once)
+                , u = (unique, aliased)] find_map_or_null
+    =
+    (Iarray.find_map_or_null [@mode li lo o u])
+  ;;
+
+  let%expect_test "find_map_or_null examples" =
+    let f x = if x % 2 = 0 then This x else Null in
+    print_s [%sexp (find_map_or_null (Iarray.of_list []) ~f : int Or_null.t)];
+    [%expect {| () |}];
+    print_s [%sexp (find_map_or_null (Iarray.of_list [ 1; 3; 5 ]) ~f : int Or_null.t)];
+    [%expect {| () |}];
+    print_s [%sexp (find_map_or_null (Iarray.of_list [ 1; 2; 3; 4 ]) ~f : int Or_null.t)];
+    [%expect {| (2) |}]
+  ;;
+
+  let%expect_test "find_map_or_null agrees with find_map" =
+    let module Int_opt = struct
+      type t = int option [@@deriving equal, sexp_of]
+    end
+    in
+    let f x = if x % 3 = 0 then Some 1 else None in
+    quickcheck_m (module Int_t) ~f:(fun t ->
+      require_equal
+        (module Int_opt)
+        (find_map_or_null t ~f:(fun x -> f x |> Or_null.of_option) |> Or_null.to_option)
+        (Iarray.find_map t ~f))
+  ;;
+
+  let%expect_test "find_map_or_null does not allocate" =
+    let t = Iarray.of_list [ 1; 2; 3; 4; 5; 6; 7; 8; 9; 10 ] in
+    let result =
+      require_no_allocation (fun () ->
+        Iarray.find_map_or_null t ~f:(fun x ->
+          match x % 5 = 0 with
+          | true -> This (x * 2)
+          | false -> Null))
+    in
+    print_s [%sexp (result : int Or_null.t)];
+    [%expect {| (10) |}];
+    let result =
+      require_no_allocation (fun () ->
+        Iarray.find_map_or_null t ~f:(fun x ->
+          match x > 100 with
+          | true -> This 1
+          | false -> Null))
+    in
+    print_s [%sexp (result : int Or_null.t)];
+    [%expect {| () |}]
+  ;;
+
+  let%template[@mode
+                li = (global, local)
+                , lo = (global, local)
+                , o = (many, once)
+                , u = (unique, aliased)] find_mapi_or_null
+    =
+    (Iarray.find_mapi_or_null [@mode li lo o u])
+  ;;
+
+  let%expect_test "find_mapi_or_null examples" =
+    let f i x = if i = x then This (i, x) else Null in
+    print_s [%sexp (find_mapi_or_null (Iarray.of_list []) ~f : (int * int) Or_null.t)];
+    [%expect {| () |}];
+    print_s
+      [%sexp (find_mapi_or_null (Iarray.of_list [ 1; 3; 5 ]) ~f : (int * int) Or_null.t)];
+    [%expect {| () |}];
+    print_s
+      [%sexp
+        (find_mapi_or_null (Iarray.of_list [ 5; 3; 2; 0 ]) ~f : (int * int) Or_null.t)];
+    [%expect {| ((2 2)) |}]
+  ;;
+
+  let%expect_test "find_mapi_or_null agrees with find_mapi" =
+    let module Int_opt = struct
+      type t = int option [@@deriving equal, sexp_of]
+    end
+    in
+    let f i x = if i + x > 10 then Some (i * x) else None in
+    quickcheck_m (module Int_t) ~f:(fun t ->
+      require_equal
+        (module Int_opt)
+        (find_mapi_or_null t ~f:(fun i x -> f i x |> Or_null.of_option)
+         |> Or_null.to_option)
+        (Iarray.find_mapi t ~f))
+  ;;
+
+  let%expect_test "find_mapi_or_null does not allocate" =
+    let t = Iarray.of_list [ 1; 2; 3; 4; 5; 6; 7; 8; 9; 10 ] in
+    let result =
+      require_no_allocation (fun () ->
+        Iarray.find_mapi_or_null t ~f:(fun i x ->
+          match (x + i) % 5 = 0 with
+          | true -> This (x * 2)
+          | false -> Null))
+    in
+    print_s [%sexp (result : int Or_null.t)];
+    [%expect {| (6) |}];
+    let result =
+      require_no_allocation (fun () ->
+        Iarray.find_mapi_or_null t ~f:(fun i x ->
+          match i + x > 100 with
+          | true -> This 1
+          | false -> Null))
+    in
+    print_s [%sexp (result : int Or_null.t)];
+    [%expect {| () |}]
+  ;;
+
   let reduce = Iarray.reduce
   let reduce_exn = Iarray.reduce_exn
 
@@ -1024,6 +1143,23 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
     quickcheck_m (module Int_t) ~f:(fun t ->
       let sorted = dedup_and_sort ~compare:Int.compare t in
       require_equal (module Bool) true (is_sorted_strictly ~compare:Int.compare sorted))
+  ;;
+
+  let find_a_dup = Iarray.find_a_dup
+
+  let%expect_test _ =
+    let module Int_option = struct
+      type t = int option [@@deriving equal, globalize, sexp_of]
+    end
+    in
+    quickcheck_m (module Int_t) ~f:(fun t ->
+      require_equal
+        (module Int_option)
+        (find_a_dup ~compare:Int.compare t)
+        (List.find_a_dup ~compare:Int.compare (Iarray.to_list t)));
+    quickcheck_m (module Int_t) ~f:(fun t ->
+      let sorted = dedup_and_sort ~compare:Int.compare t in
+      require_equal (module Int_option) None (find_a_dup ~compare:Int.compare sorted))
   ;;
 
   let random_element = Iarray.random_element
@@ -1336,6 +1472,13 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
     printf "%d\n" (Iarray.length local_iarray);
     [%expect {| 4 4 |}]
   ;;
+
+  (* Tested by the container *)
+  [%%template
+  [@@@kind.default k = (base_or_null, value_or_null mod external64)]
+
+  let of_array = (Iarray.of_array [@kind k])
+  let to_array = (Iarray.to_array [@kind k])]
 
   let%expect_test _ =
     (Base_container_tests.test_indexed_container_s1_with_creators [@alloc stack])
@@ -2213,12 +2356,11 @@ end [@ocaml.remove_aliases] [@warning "-unused-module"] = struct
         val to_array_of_immediates
           : ('i : immediate64_or_null).
           'i iarray @ local -> 'i array @ local
-        [@@zero_alloc] [@@warning "-incompatible-with-upstream"]
+        [@@zero_alloc]
 
         val sort_immediates
           : ('i : immediate64_or_null).
           'i iarray @ local -> compare:('i -> 'i -> int) @ local -> 'i iarray @ local
-        [@@warning "-incompatible-with-upstream"]
 
         val fold
           : 'a ('acc : value_or_null).

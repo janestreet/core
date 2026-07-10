@@ -42,7 +42,7 @@ module type Impl = sig
 end
 
 module type Key = sig
-  include Hashtbl.Key
+  include Hashtbl.Key_binable
 
   val module_name : string
   val of_int_exn : int -> t
@@ -52,6 +52,7 @@ module Benchmarks (Config : Config) (Impl : Impl) (Key : Key) : sig
   val benchmarks : Bench.Test.t list
 end = struct
   module Table = Impl.Make (Key)
+  module Binable_table = Impl.Make_binable (Key)
 
   module Example = struct
     let data size = List.init size ~f:Fn.id
@@ -142,6 +143,22 @@ end = struct
       ( !! ) "t_of_sexp" (fun size ->
         let sexp = Example.sexp size in
         stage (fun () -> ignore (t_of_sexp int_of_sexp sexp : int t)))
+    ;;
+
+    let bin_read_t = Binable_table.bin_read_t
+    let bin_size_t = Binable_table.bin_size_t
+    let bin_write_t = Binable_table.bin_write_t
+
+    let () =
+      ( !! ) "bin_read_t" (fun size ->
+        let t = Binable_table.of_alist_exn (Example.alist size) in
+        let bin_size = bin_size_t Int.bin_size_t t in
+        let buf = Bigstring.create bin_size in
+        let (_ : int) = bin_write_t Int.bin_write_t buf ~pos:0 t in
+        let pos_ref = ref 0 in
+        stage (fun () ->
+          pos_ref := 0;
+          ignore (bin_read_t Int.bin_read_t buf ~pos_ref : int Binable_table.t)))
     ;;
 
     let invariant = Table.invariant
@@ -526,7 +543,7 @@ end = struct
         stage (fun () -> ignore (is_empty t : bool)))
     ;;
 
-    let length = Impl.length
+    let length = [%eta1 Impl.length]
 
     let () =
       ( !! ) "length" (fun size ->
@@ -695,6 +712,8 @@ end = struct
     ;;
 
     let update = Impl.update
+    let update_or_null = Impl.update_or_null
+    let update_or_null_and_return = Impl.update_or_null_and_return
     let update_and_return = Impl.update_and_return
 
     (* [update] is in terms of [update_and_return] so there's no need for a separate
@@ -1153,7 +1172,7 @@ module Compound_key = struct
     ; string : string
     ; tuple : bool option * char
     }
-  [@@deriving sexp, compare, hash]
+  [@@deriving sexp, bin_io, compare, hash]
 
   let of_int_exn int =
     let option =

@@ -64,6 +64,8 @@ module type Span = sig @@ portable
   (** overflows silently *)
   val scale_int63 : t -> Int63.t -> t
 
+  val scale_u : t -> float# -> t [@@zero_alloc]
+
   (** Rounds down, and raises unless denominator is positive. *)
   val div : t -> t -> Int63.t
 
@@ -266,9 +268,25 @@ module type Ofday = sig
   (** The largest representable value below [start_of_next_day], i.e. one nanosecond
       before midnight. *)
   val approximate_end_of_day : t
+  (*_ [approximate_end_of_day] is already exported from [Ofday_intf.S], but we re-declare
+      it to add documentation. *)
 
-  (*_ This is already exported from [Ofday_intf.S], but we re-declare it to add
-      documentation. *)
+  (*_ Redefining [create] and [of_span_since_start_of_day_exn] here to expose
+      [@zero_alloc]. They can't be annotated in [Ofday_intf.S] since [Ofday_float] also
+      implements the signature and the float-based implementation allocates *)
+
+  val create
+    :  ?hr:int
+    -> ?min:int
+    -> ?sec:int
+    -> ?ms:int
+    -> ?us:int
+    -> ?ns:int
+    -> unit
+    -> t
+  [@@zero_alloc]
+
+  val of_span_since_start_of_day_exn : Span.t -> t [@@zero_alloc]
 
   (** [add_exn t span] shifts the time of day [t] by [span]. It raises if the result is
       not in the same 24-hour day. Daylight savings shifts are not accounted for. *)

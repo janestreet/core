@@ -556,13 +556,57 @@ module Expert = struct
   ;;
 
   module With_leak_protection = struct
+    (* Soundness: An [Ephemeron.K1.t] is morally just a pair of the key and data. We
+       define a mode-polymorphic interface, and a dummy implementation to justify the
+       soundness of the mode-polymorphism of the actual [Ephemeron.K1] module.
+    *)
+
+    module type%template Ephemeron = sig
+      type ('k, 'd) t
+
+      val make_ephemeron : 'k @ p -> 'd @ p -> ('k, 'd) t @ p
+      [@@mode p = (nonportable, portable)]
+
+      val query_ephemeron : ('k, 'd) t @ c -> 'k @ c -> 'd option @ c
+      [@@mode c = (uncontended, contended)]
+    end
+
+    module%template _ : Ephemeron = struct
+      type ('k, 'd) t = 'k * 'd
+
+      let make_ephemeron k d = k, d [@@mode p = (nonportable, portable)]
+
+      let query_ephemeron (k, d) k' = if phys_equal k k' then Some d else None
+      [@@mode c = (uncontended, contended)]
+      ;;
+    end
+
+    module%template Ephemeron : Ephemeron = struct
+      type ('k, 'd) t = ('k, 'd) Ephemeron.K1.t
+
+      let[@mode nonportable] make_ephemeron x finalizer = Ephemeron.K1.make x finalizer
+
+      let[@mode portable] make_ephemeron (x @ portable) (finalizer @ portable) =
+        Obj.magic_portable (Ephemeron.K1.make x finalizer)
+      ;;
+
+      let[@mode uncontended] query_ephemeron eph x = Ephemeron.K1.query eph x
+
+      let[@mode contended] query_ephemeron eph x @ contended =
+        Ephemeron.K1.query (Obj.magic_uncontended eph) (Obj.magic_uncontended x)
+      ;;
+    end
+
+    [%%template
+    [@@@mode.default (p, c) = ((nonportable, uncontended), (portable, contended))]
+
     let protect_finalizer x finalizer =
-      let ephemeron = Ephemeron.K1.make x finalizer in
+      let ephemeron = (Ephemeron.make_ephemeron [@mode p]) x finalizer in
       fun x ->
-        match Ephemeron.K1.query ephemeron x with
+        match (Ephemeron.query_ephemeron [@mode c]) ephemeron x with
         | None -> assert false
         | Some finalizer -> finalizer x
-    ;;
+    ;;]
 
     let add_finalizer x f =
       let f = protect_finalizer x f in
@@ -591,6 +635,12 @@ module Expert = struct
 
     let sexp_of_t _ = "<gc alarm>" |> [%sexp_of: string]
     let create f = create_alarm (fun () -> Exn.handle_uncaught_and_exit f)
+
+    let create_portable f =
+      Basement.Stdlib_shim.Gc.Safe.create_alarm (fun () ->
+        Exn.handle_uncaught_and_exit_immediately f)
+    ;;
+
     let delete = delete_alarm
   end
 end

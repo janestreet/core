@@ -105,7 +105,7 @@ module Stable = struct
         val set : t Atomic.Loc.t @ local -> Index.t -> unit
         val reset : t Atomic.Loc.t @ local -> unit
       end = struct
-        module Shards = Portable.Domain_shards.Lazy (struct
+        module Shards = Portable.Shards.Lazy (struct
             type t = Index.t Atomic.t
 
             let padded = Domain.recommended_domain_count () > 1

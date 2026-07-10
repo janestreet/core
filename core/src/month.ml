@@ -29,7 +29,7 @@ module Stable = struct
 
     let failwithf = Printf.failwithf
 
-    let of_int_exn i : t =
+    let[@zero_alloc] of_int_exn i : t =
       match i with
       | 1 -> Jan
       | 2 -> Feb

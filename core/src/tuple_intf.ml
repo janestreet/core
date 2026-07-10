@@ -51,6 +51,7 @@ module type Tuple = sig @@ portable
       Comparator.Derived2 [@modality portable] with type ('a, 'b) t := ('a, 'b) t
 
     val create : ('a : value_or_null) ('b : value_or_null). 'a -> 'b -> ('a, 'b) t
+    val box : ('a : value_or_null) ('b : value_or_null). #('a * 'b) -> ('a, 'b) t
 
     val curry
       : ('a : value_or_null) ('b : value_or_null) ('c : value_or_null).

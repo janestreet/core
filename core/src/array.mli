@@ -227,7 +227,11 @@ module Permissioned : sig
     = "%array_unsafe_set"
 
   [%%template:
-    external create : len:int -> 'a -> ('a, [< 'perm perms ]) t @ m = "%makearray_dynamic"
+    external create
+      :  len:int
+      -> 'a
+      -> ('a, [< 'perm perms ]) t @ m unique
+      = "%makearray_dynamic"
     [@@ocaml.doc
       {| [create ~len x] creates an array of length [len] with the value [x] populated in
         each element. |}]
@@ -236,7 +240,7 @@ module Permissioned : sig
   external create_local
     :  len:int
     -> 'a
-    -> ('a, [< 'perm perms ]) t @ local
+    -> ('a, [< 'perm perms ]) t @ local unique
     = "%makearray_dynamic"
   [@@ocaml.doc
     {| [create_local ~len x] is like [create]. It allocates the array on the local stack.

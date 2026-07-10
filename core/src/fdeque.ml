@@ -31,10 +31,10 @@ let make ~length ~front ~back =
   match front, back with
   | [], [] | [ _ ], [] | [], [ _ ] | _ :: _, _ :: _ -> { front; back; length }
   | [], _ :: _ :: _ ->
-    let back, rev_front = List.split_n back (length / 2) in
+    let #(back, rev_front) = List.split_n back (length / 2) in
     { front = List.rev rev_front; back; length }
   | _ :: _ :: _, [] ->
-    let front, rev_back = List.split_n front (length / 2) in
+    let #(front, rev_back) = List.split_n front (length / 2) in
     { front; back = List.rev rev_back; length }
 ;;
 

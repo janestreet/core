@@ -118,7 +118,7 @@ let digest_string = Stable.digest_string
 let digest_bytes = Md5_lib.bytes
 
 external caml_sys_open
-  :  string
+  :  string @ local
   -> Stdlib.open_flag list
   -> perm:int
   -> int
@@ -128,7 +128,7 @@ external caml_sys_open
 external caml_sys_close : int -> unit @@ portable = "caml_sys_close"
 external digest_fd_blocking : int -> string @@ portable = "core_md5_fd"
 
-let digest_file_blocking path =
+let digest_file_blocking (path : string @ local) =
   of_binary_exn
     (Base.Exn.protectx
        (caml_sys_open path [ Open_rdonly; Open_binary ] ~perm:0o000)

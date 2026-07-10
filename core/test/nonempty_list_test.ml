@@ -215,6 +215,52 @@ let%expect_test "filter_mapi_or_null" =
   ()
 ;;
 
+let%expect_test "rev_map" =
+  let%quick_test prop (t : int t) (f : int -> int) =
+    [%test_result: int list]
+      (rev_map t ~f |> to_list)
+      ~expect:(List.rev_map (to_list t) ~f)
+  in
+  ()
+;;
+
+let%expect_test "rev_mapi" =
+  let%quick_test prop (t : int t) (f : int -> int -> int) =
+    [%test_result: int list]
+      (rev_mapi t ~f |> to_list)
+      ~expect:(List.rev_mapi (to_list t) ~f)
+  in
+  ()
+;;
+
+let%expect_test "rev_map and rev_mapi evaluation order" =
+  let input = [ 1; 2; 3; 4 ] in
+  let (_ : int t) =
+    rev_map input ~f:(fun x ->
+      print_endline [%string "rev_map %{x#Int}"];
+      x)
+  in
+  [%expect
+    {|
+    rev_map 1
+    rev_map 2
+    rev_map 3
+    rev_map 4
+    |}];
+  let (_ : int t) =
+    rev_mapi input ~f:(fun i x ->
+      print_endline [%string "rev_mapi %{i#Int} %{x#Int}"];
+      x)
+  in
+  [%expect
+    {|
+    rev_mapi 0 1
+    rev_mapi 1 2
+    rev_mapi 2 3
+    rev_mapi 3 4
+    |}]
+;;
+
 let%expect_test "concat" =
   let%quick_test prop (lists : int t t) =
     [%test_result: int list]
@@ -1128,6 +1174,25 @@ module%test Nonvalue_layout_tests = struct
                   else None)))
     ;;
 
+    let test_rev_map () =
+      let map_fun = map_fun 0 in
+      test
+        "rev_map"
+        ~f:
+          (require_equal_nonempty_lists
+             ~f_boxed:(Nonempty_list.rev_map ~f:(fun x -> box (map_fun (unbox x))))
+             ~f_unboxed:((Nonempty_list.rev_map [@kind k k]) ~f:(fun x -> map_fun x)))
+    ;;
+
+    let test_rev_mapi () =
+      test
+        "rev_mapi"
+        ~f:
+          (require_equal_nonempty_lists
+             ~f_boxed:(Nonempty_list.rev_mapi ~f:(fun i x -> box (map_fun i (unbox x))))
+             ~f_unboxed:((Nonempty_list.rev_mapi [@kind k k]) ~f:map_fun))
+    ;;
+
     let test_hd () =
       test "hd" ~f:(fun { b_list; u_list } ->
         Harness.require_compare_equal_wrapped
@@ -1233,6 +1298,8 @@ module%test Nonvalue_layout_tests = struct
       test_concat_map ();
       test_filter_map ();
       test_filter_mapi ();
+      test_rev_map ();
+      test_rev_mapi ();
       test_hd ();
       test_tl ();
       test_min_elt' ();
@@ -1264,6 +1331,8 @@ module%test Nonvalue_layout_tests = struct
       testing [concat_map]
       testing [filter_map]
       testing [filter_mapi]
+      testing [rev_map]
+      testing [rev_mapi]
       testing [hd]
       testing [tl]
       testing [min_elt']
@@ -1296,6 +1365,8 @@ module%test Nonvalue_layout_tests = struct
       testing [concat_map]
       testing [filter_map]
       testing [filter_mapi]
+      testing [rev_map]
+      testing [rev_mapi]
       testing [hd]
       testing [tl]
       testing [min_elt']
@@ -1327,6 +1398,8 @@ module%test Nonvalue_layout_tests = struct
       testing [concat_map]
       testing [filter_map]
       testing [filter_mapi]
+      testing [rev_map]
+      testing [rev_mapi]
       testing [hd]
       testing [tl]
       testing [min_elt']
@@ -1358,6 +1431,8 @@ module%test Nonvalue_layout_tests = struct
       testing [concat_map]
       testing [filter_map]
       testing [filter_mapi]
+      testing [rev_map]
+      testing [rev_mapi]
       testing [hd]
       testing [tl]
       testing [min_elt']

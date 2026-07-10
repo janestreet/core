@@ -18,8 +18,28 @@ let quickcheck_shrinker = (Base_quickcheck.Shrinker.or_null [@mode p])]
 
 module Stable = struct
   module V1 = struct
-    type nonrec 'a t = 'a t
-    [@@deriving
-      bin_io ~localize, compare ~localize, equal ~localize, hash, sexp, stable_witness]
+    module T = struct
+      type nonrec 'a t = 'a t
+      [@@deriving
+        bin_io ~localize
+        , compare ~localize
+        , equal ~localize
+        , globalize
+        , hash
+        , sexp
+        , stable_witness]
+    end
+
+    include T
+
+    module Bin_shape_same_as_option = struct
+      include T
+
+      (* Keep the shared bin-io implementation in [T] so deriving [bin_io] creates only
+         one [Bin_prot.Shape.group]. Re-deriving [bin_io] here would allocate an otherwise
+         unused group id and perturb tests that print raw bin shapes. *)
+      let bin_shape_t bin_shape_a = [%bin_shape: a option]
+      let bin_t bin_a = { (bin_t bin_a) with shape = [%bin_shape: t] bin_a.shape }
+    end
   end
 end

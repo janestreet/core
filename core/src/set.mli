@@ -169,6 +169,7 @@ val is_empty : (_, _) t @ local -> bool
 
 (** [mem t a] returns [true] iff [a] is in [t]. [O(log n)]. *)
 val mem : ('a, _) t -> 'a -> bool
+[@@zero_alloc]
 
 (** [add t a] returns a new set with [a] added to [t], or returns [t] if [mem t a].
     [O(log n)]. *)
