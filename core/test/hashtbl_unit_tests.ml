@@ -558,7 +558,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
               ~expect:(Map.counti map ~f:Key_and_data.to_bool))
       ;;
 
-      let length = Hashtbl.length
+      let length = [%eta1 Hashtbl.length]
       let capacity = Hashtbl.capacity
       let growth_allowed = Hashtbl.growth_allowed
 
@@ -714,6 +714,41 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struc
             Hashtbl.update t key ~f:(fun original ->
               [%test_result: Data.t option] original ~expect:(Map.find map key);
               data);
+            [%test_result: Data.t Key.Map.t]
+              (to_map t)
+              ~expect:(Map.update map key ~f:(fun _ -> data)))
+      ;;
+
+      let update_or_null = Hashtbl.update_or_null
+
+      let%test_unit _ =
+        Qc.test
+          [%quickcheck.generator: constructor * Key.t * Data.t]
+          ~sexp_of:[%sexp_of: constructor * Key.t * Data.t]
+          ~f:(fun (constructor, key, data) ->
+            let map, t = map_and_table constructor in
+            Hashtbl.update_or_null t key ~f:(fun original ->
+              [%test_result: Data.t or_null] original ~expect:(Map.find_or_null map key);
+              data);
+            [%test_result: Data.t Key.Map.t]
+              (to_map t)
+              ~expect:(Map.update map key ~f:(fun _ -> data)))
+      ;;
+
+      let update_or_null_and_return = Hashtbl.update_or_null_and_return
+
+      let%test_unit _ =
+        Qc.test
+          [%quickcheck.generator: constructor * Key.t * Data.t]
+          ~sexp_of:[%sexp_of: constructor * Key.t * Data.t]
+          ~f:(fun (constructor, key, data) ->
+            let map, t = map_and_table constructor in
+            let result =
+              Hashtbl.update_or_null_and_return t key ~f:(fun original ->
+                [%test_result: Data.t or_null] original ~expect:(Map.find_or_null map key);
+                data)
+            in
+            [%test_result: Data.t] result ~expect:data;
             [%test_result: Data.t Key.Map.t]
               (to_map t)
               ~expect:(Map.update map key ~f:(fun _ -> data)))
@@ -1683,6 +1718,8 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_for_testing) = struct
     let change = Hashtbl.change
     let change_or_null = Hashtbl.change_or_null
     let update = Hashtbl.update
+    let update_or_null = Hashtbl.update_or_null
+    let update_or_null_and_return = Hashtbl.update_or_null_and_return
     let update_and_return = Hashtbl.update_and_return
 
     let%test_unit "change" =
@@ -1716,6 +1753,28 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_for_testing) = struct
           test_caller ~callback ~test_result (fun t f ->
             Hashtbl.update t key ~f;
             Hashtbl.find t key)))
+    ;;
+
+    let%test_unit "update_or_null" =
+      for_each "key" sexp_of_key sample_keys (fun key ->
+        for_each "f result" [%sexp_of: data] sample_data (fun data ->
+          test_mutate (fun t -> Hashtbl.update_or_null t key ~f:(fun _ -> data));
+          let callback _ = data in
+          let test_result = [%test_result: int option] in
+          test_caller ~callback ~test_result (fun t f ->
+            Hashtbl.update_or_null t key ~f;
+            Hashtbl.find t key)))
+    ;;
+
+    let%test_unit "update_or_null_and_return" =
+      for_each "key" sexp_of_key sample_keys (fun key ->
+        for_each "f result" [%sexp_of: data] sample_data (fun data ->
+          test_mutate (fun t ->
+            ignore (Hashtbl.update_or_null_and_return t key ~f:(fun _ -> data) : _));
+          let callback _ = data in
+          let test_result = [%test_result: int option] in
+          test_caller ~callback ~test_result (fun t f ->
+            Some (Hashtbl.update_or_null_and_return t key ~f))))
     ;;
 
     let%test_unit "update_and_return" =
@@ -2211,7 +2270,7 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_for_testing) = struct
     let copy = Hashtbl.copy
     let keys = Hashtbl.keys
     let data = Hashtbl.data
-    let length = Hashtbl.length
+    let length = [%eta1 Hashtbl.length]
     let capacity = Hashtbl.capacity
     let growth_allowed = Hashtbl.growth_allowed
     let is_empty = Hashtbl.is_empty
@@ -2273,6 +2332,30 @@ let%expect_test _ =
     [%bin_digest: M1.t]
     [%bin_digest: M2.t];
   [%expect {| |}]
+;;
+
+let%expect_test "bin_read_t raises on duplicate key" =
+  let module Table = Hashtbl.Make_binable (Int) in
+  let t = Table.of_alist_exn [ 1, 2; 2, 3 ] in
+  let buf = Bigstring.create (Table.bin_size_t Int.bin_size_t t) in
+  let (_ : int) = Table.bin_write_t Int.bin_write_t buf ~pos:0 t in
+  buf.{1} <- 'x';
+  buf.{3} <- 'x';
+  Expect_test_helpers_core.require_does_raise ~hide_positions:true (fun () ->
+    Table.bin_read_t Int.bin_read_t buf ~pos_ref:(ref 0));
+  [%expect
+    {| ("Hashtbl.bin_read_t: duplicate key" 120 lib/core/src/hashtbl.ml:LINE:COL) |}]
+;;
+
+let%expect_test "Poly.bin_read_t raises on duplicate key" =
+  let t = Hashtbl.Poly.of_alist_exn [ 1, 2; 2, 3 ] in
+  let buf = Bigstring.create (Hashtbl.Poly.bin_size_t Int.bin_size_t Int.bin_size_t t) in
+  let (_ : int) = Hashtbl.Poly.bin_write_t Int.bin_write_t Int.bin_write_t buf ~pos:0 t in
+  buf.{1} <- 'x';
+  buf.{3} <- 'x';
+  Expect_test_helpers_core.require_does_raise (fun () ->
+    Hashtbl.Poly.bin_read_t Int.bin_read_t Int.bin_read_t buf ~pos_ref:(ref 0));
+  [%expect {| (Failure "Core_hashtbl.bin_read_t_: duplicate key") |}]
 ;;
 
 let%expect_test "smoke tests for templated versions making sure the Core wrappers expose \

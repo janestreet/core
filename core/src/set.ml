@@ -96,6 +96,8 @@ sig
     with type 'a cmp := 'a cmp
     with type 'a elt := 'a elt
     with module Named = Set.Named
+
+  val mem : ('a, _) t -> 'a -> bool [@@zero_alloc]
 end)
 
 let%template compare _ _ t1 t2 = (compare_direct [@mode m]) t1 t2

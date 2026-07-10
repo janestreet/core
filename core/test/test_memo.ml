@@ -4,7 +4,7 @@ open! Memo
 
 let%expect_test "general" =
   let f x = x * x in
-  let memo_f = Memo.general f in
+  let memo_f = Memo.general ~hashable:Hashtbl.Hashable.poly f in
   quickcheck_m (module Int) ~f:(fun x -> require_equal (module Int) (f x) (memo_f x))
 ;;
 
@@ -13,7 +13,7 @@ module%test [@name "lru"] _ = struct
 
   (* number of times f underlying function is run *)
   let f =
-    general ~cache_size_bound:3 (fun i ->
+    general ~hashable:Hashtbl.Hashable.poly ~cache_size_bound:3 (fun i ->
       incr count;
       i)
   ;;

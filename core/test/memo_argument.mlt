@@ -17,7 +17,11 @@ val add : int -> int -> int = <fun>
    function in question is curried. (The type gives you a hint that something is funny,
    but it's equal to [int -> int -> int], so it can still be misused.) *)
 
-let add_memo_bad = Memo.general add
+let add_memo_bad =
+  Memo.general
+    ~hashable:Hashtbl.Hashable.poly
+    add
+;;
 
 [%%expect
   {|
@@ -46,7 +50,9 @@ Invoked add
 
 let add_memo_tupled =
   let add (x, y) = add x y in
-  Memo.general add
+  Memo.general
+    ~hashable:Hashtbl.Hashable.poly
+    add
 ;;
 
 [%%expect
@@ -90,7 +96,10 @@ Invoked add
 
 let add_memo_tupled_bad (x, y) =
   let add (x, y) = add x y in
-  Memo.general add (x, y)
+  Memo.general
+    ~hashable:Hashtbl.Hashable.poly
+    add
+    (x, y)
 ;;
 
 [%%expect

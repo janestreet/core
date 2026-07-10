@@ -391,6 +391,8 @@ module%template.portable Make_tree_S1 (Key : Comparator.S1) = struct
   let partitioni_tf t ~f = partitioni_tf t ~f
   let partition_tf t ~f = partition_tf t ~f
   let combine_errors t = combine_errors t ~comparator
+  let zip a b = zip a b ~comparator
+  let zip_exn a b = zip_exn a b ~comparator
   let unzip = unzip
 
   let%template[@mode m = (local, global)] compare_direct a b c =
@@ -420,6 +422,7 @@ module%template.portable Make_tree_S1 (Key : Comparator.S1) = struct
     merge_by_case a b ~first ~second ~both ~comparator
   ;;
 
+  let merge_aligned a b ~f = merge_aligned a b ~f ~comparator
   let min_elt = min_elt
   let min_elt_exn = min_elt_exn
   let max_elt = max_elt

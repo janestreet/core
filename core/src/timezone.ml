@@ -111,7 +111,7 @@ module Zone_cache = struct
     end
 
     include
-      (val let (P (type k) (key : k Capsule.Expert.Key.t)) = Capsule.Expert.create () in
+      (val let (P (type k) (key : k Capsule.Prim.Key.t)) = Capsule.Prim.create () in
            let mutex = Mutex.create key in
            (module struct
              type nonrec k = k
@@ -129,7 +129,7 @@ module Zone_cache = struct
 
     let with_the_one_and_only f =
       (Mutex.with_lock mutex ~f:(fun password ->
-         Capsule.Expert.access ~password ~f:(fun access ->
+         Capsule.Prim.access ~password ~f:(fun access ->
            { contended = { aliased = f (Capsule.Data.unwrap ~access capsule) } })
          [@nontail]))
         .contended

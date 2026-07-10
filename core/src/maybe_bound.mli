@@ -13,7 +13,7 @@ type 'a t = ('a Base.Maybe_bound.t[@kind k]) =
   | Incl of 'a
   | Excl of 'a
   | Unbounded
-[@@deriving bin_io ~localize, equal ~localize, hash, quickcheck] [@@kind k = ks]
+[@@deriving bin_io ~localize, equal ~localize, hash, quickcheck ~portable] [@@kind k = ks]
 
 (** Compares [t] values as lower bounds, where [Unbounded] is lowest, [Incl x < Excl x],
     and other cases of [Incl] and/or [Excl] are compared based on ['a]. If

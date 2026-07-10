@@ -36,7 +36,7 @@ let[@inline always] is_invalid span =
 let span_since_start_of_day_is_valid span = not (is_invalid span)
 let of_span_since_start_of_day_unchecked span = span
 
-let of_span_since_start_of_day_exn span =
+let[@zero_alloc] of_span_since_start_of_day_exn span =
   if is_invalid span then input_out_of_bounds span else span
 ;;
 
@@ -49,7 +49,7 @@ let next t = of_span_since_start_of_day_opt (Span.next t)
 let prev t = of_span_since_start_of_day_opt (Span.prev t)
 let diff t u = Span.( - ) t u
 
-let create ?hr ?min ?sec ?ms ?us ?ns () =
+let[@zero_alloc] create ?hr ?min ?sec ?ms ?us ?ns () =
   (* Similar to [Time.Ofday.create], if we detect a leap second we strip off all
      sub-second elements so that HH:MM:60.XXXXXXXXX is all mapped to HH:MM:60. *)
   let ms, us, ns =

@@ -50,6 +50,7 @@ module type Tuple = sig
       Comparator.Derived2 [@modality portable] with type ('a, 'b) t := ('a, 'b) t
 
     val create : 'a 'b. 'a -> 'b -> ('a, 'b) t
+    val box : 'a 'b. 'a * 'b -> ('a, 'b) t
     val curry : 'a 'b 'c. (('a, 'b) t -> 'c) -> 'a -> 'b -> 'c
     val uncurry : 'a 'b 'c. ('a -> 'b -> 'c) -> ('a, 'b) t -> 'c
 

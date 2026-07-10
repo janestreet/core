@@ -127,7 +127,7 @@ external caml_sys_open
 external caml_sys_close : int -> unit = "caml_sys_close"
 external digest_fd_blocking : int -> string = "core_md5_fd"
 
-let digest_file_blocking path =
+let digest_file_blocking (path : string) =
   of_binary_exn
     (Base.Exn.protectx
        (caml_sys_open path [ Open_rdonly; Open_binary ] ~perm:0o000)

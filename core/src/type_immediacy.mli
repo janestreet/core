@@ -157,9 +157,9 @@ module Always : sig
   val of_typerep : 'a. 'a Typerep.t -> 'a t option
   val of_typerep_exn : 'a. ?here:Stdlib.Lexing.position -> 'a Typerep.t -> 'a t
   val int_as_value : 'a t -> int -> 'a option
-  val int_as_value_exn : 'a t -> int -> 'a
-  val int_is_value : 'a t -> int -> bool
-  val value_as_int : 'a t -> 'a -> int
+  val int_as_value_exn : 'a t -> int -> 'a [@@zero_alloc]
+  val int_is_value : 'a t -> int -> bool [@@zero_alloc]
+  val value_as_int : 'a t -> 'a -> int [@@zero_alloc]
 
   module For_all_parameters_S1 (X : Typerepable.S1) : sig
     val witness : unit -> _ X.t t
@@ -193,11 +193,11 @@ module Sometimes : sig
   val of_typerep : 'a. 'a Typerep.t -> 'a t option
   val of_typerep_exn : 'a. ?here:Stdlib.Lexing.position -> 'a Typerep.t -> 'a t
   val int_as_value : 'a t -> int -> 'a option
-  val int_as_value_exn : 'a t -> int -> 'a
-  val int_is_value : 'a t -> int -> bool
+  val int_as_value_exn : 'a t -> int -> 'a [@@zero_alloc]
+  val int_is_value : 'a t -> int -> bool [@@zero_alloc]
   val value_as_int : 'a t -> 'a -> int option
-  val value_as_int_exn : 'a t -> 'a -> int
-  val value_is_int : 'a t -> 'a -> bool
+  val value_as_int_exn : 'a t -> 'a -> int [@@zero_alloc]
+  val value_is_int : 'a t -> 'a -> bool [@@zero_alloc]
 
   module For_all_parameters_S1 (X : Typerepable.S1) : sig
     val witness : unit -> _ X.t t
@@ -277,8 +277,8 @@ type 'a dest =
 
 val dest : 'a. 'a t -> 'a dest
 val int_as_value : 'a t -> int -> 'a option
-val int_as_value_exn : 'a t -> int -> 'a
-val int_is_value : 'a t -> int -> bool
+val int_as_value_exn : 'a t -> int -> 'a [@@zero_alloc]
+val int_is_value : 'a t -> int -> bool [@@zero_alloc]
 val value_as_int : 'a t -> 'a -> int option
-val value_as_int_exn : 'a t -> 'a -> int
-val value_is_int : 'a t -> 'a -> bool
+val value_as_int_exn : 'a t -> 'a -> int [@@zero_alloc]
+val value_is_int : 'a t -> 'a -> bool [@@zero_alloc]

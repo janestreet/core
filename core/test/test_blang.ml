@@ -294,7 +294,7 @@ module%test [@name "laws"] _ = struct
     let t () = Gen.gen_blang gen_base ~depth:5
 
     let set_of_base =
-      Memo.general (fun t ->
+      Memo.general ~hashable:Hashtbl.Hashable.poly (fun t ->
         Set.filter (force universe) ~f:(fun e ->
           match t with
           | Odd -> e mod 2 = 1

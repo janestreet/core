@@ -180,8 +180,10 @@ let[@inline] div t u = Int63.( /% ) t u
 let[@inline] ( // ) t u = Int63.( // ) t u
 
 external unbox_float : float -> float = "%identity"
+external box_float : float -> float = "%identity"
 
 let[@zero_alloc] ( /// ) t u = unbox_float (Int63.( // ) t u)
+let[@zero_alloc] scale_u t f = (scale [@inlined]) t (box_float f)
 let ( / ) t f = round_nearest_ns (float t /. f)
 let to_proportional_float t = Int63.to_float t
 

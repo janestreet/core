@@ -23,7 +23,7 @@ module Stable = struct
           , stable_witness]
         [@@immediate]
 
-        val create_exn : y:int -> m:Month.Stable.V1.t -> d:int -> t
+        val create_exn : y:int -> m:Month.Stable.V1.t -> d:int -> t [@@zero_alloc]
         val year : t -> int
         val month : t -> Month.Stable.V1.t
         val day : t -> int
@@ -72,7 +72,7 @@ module Stable = struct
           | Feb -> if is_leap_year ~year then 29 else 28
         ;;
 
-        let create_exn ~y:year ~m:month ~d:day =
+        let[@zero_alloc] create_exn ~y:year ~m:month ~d:day =
           (* year, month, and day need to be passed as parameters to avoid allocating a
              closure (see unit test below) *)
           let invalid ~year ~month ~day msg =
@@ -437,9 +437,21 @@ module Days : sig
 
   let of_year y = (365 * y) + (y / 4) - (y / 100) + (y / 400)
 
+  (* The [+ 400] in [of_date] and [- 400] in [to_date] shift our calculations so that even
+     the earliest days from [0000-01-01] on have positive representations. We use 400
+     years because it doesn't change where leap days occur.
+
+     Prior to this offset, we would get erroneous values for dates with a negative
+     representation. With this offset, [Date.Days.of_date Date.min_value] is over 100k, so
+     we get correct values for all supported dates.
+
+     We could in theory fix this for more values by using ( /% ) instead of ( / ), but
+     that incurs more conditionals in what should be very fast code.
+  *)
+
   let of_date date =
     let m = (Month.to_int (month date) + 9) % 12 in
-    let y = year date - (m / 10) in
+    let y = year date - (m / 10) + 400 in
     of_year y + (((m * 306) + 5) / 10) + (day date - 1)
   ;;
 
@@ -461,7 +473,7 @@ module Days : sig
       else y, ddd
     in
     let mi = ((100 * ddd) + 52) / 3_060 in
-    let y = y + ((mi + 2) / 12) in
+    let y = y + ((mi + 2) / 12) - 400 in
     let m = ((mi + 2) % 12) + 1 in
     let d = ddd - (((mi * 306) + 5) / 10) + 1 in
     create_exn ~y ~m:(Month.of_int_exn m) ~d

@@ -2046,7 +2046,7 @@ module Command_base = struct
             in
             let more_than_one_error passed =
               die
-                !"Cannot pass more than one of these: \n  %{Choice_name.list_to_string}"
+                !"Cannot pass more than one of these:\n  %{Choice_name.list_to_string}"
                 (List.map passed ~f:fst)
                 ()
             and success_list, error_list =

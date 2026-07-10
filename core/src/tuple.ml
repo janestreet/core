@@ -13,6 +13,7 @@ module T2 = struct
   type ('a, 'b) t = 'a * 'b [@@deriving sexp, sexp_grammar, typerep]
 
   let create a b = a, b
+  let box (a, b) = a, b
 
   let curry f =
     ();

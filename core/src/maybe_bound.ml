@@ -41,7 +41,7 @@ type 'a t = ('a Base.Maybe_bound.t[@kind k]) =
   , compare ~localize
   , equal ~localize
   , hash
-  , quickcheck
+  , quickcheck ~portable
   , sexp
   , sexp_grammar]
 [@@kind k = ks]

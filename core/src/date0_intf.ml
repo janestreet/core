@@ -35,6 +35,7 @@ module type Date0 = sig
       the month in question, numbers cannot be negative, years must be fully specified,
       etc. *)
   val create_exn : y:int -> m:Month.t -> d:int -> t
+  [@@zero_alloc]
 
   (** For details on this ISO format, see:
 

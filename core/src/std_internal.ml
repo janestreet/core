@@ -68,8 +68,12 @@ let phys_equal = Base.phys_equal
 let print_s = Stdio.print_s
 let eprint_s = Stdio.eprint_s
 let printf = Printf.printf
-let protect = Exn.protect
-let protectx = Exn.protectx
+
+[%%template
+[@@@mode.default l = (global, local)]
+
+let protect = (Exn.protect [@mode l])
+let protectx = (Exn.protectx [@mode l])]
 
 [%%template
 [@@@kind.default k = (base_or_null, bits32 & bits32)]
@@ -114,7 +118,7 @@ struct
     , hash
     , equal ~localize
     , globalize
-    , sexp ~stackify
+    , sexp ~stackify ~unboxed
     , sexp_grammar
     , typerep]
 
@@ -125,7 +129,7 @@ struct
     , hash
     , equal ~localize
     , globalize
-    , sexp ~stackify
+    , sexp ~stackify ~unboxed
     , sexp_grammar
     , typerep]
 
@@ -136,7 +140,7 @@ struct
     , hash
     , equal ~localize
     , globalize
-    , sexp ~stackify
+    , sexp ~stackify ~unboxed
     , sexp_grammar
     , typerep]
 
@@ -165,7 +169,7 @@ struct
     , hash
     , equal ~localize
     , globalize
-    , sexp ~stackify
+    , sexp ~stackify ~unboxed
     , sexp_grammar
     , typerep]
 
@@ -176,7 +180,7 @@ struct
     , hash
     , equal ~localize
     , globalize
-    , sexp ~stackify
+    , sexp ~stackify ~unboxed
     , sexp_grammar
     , typerep]
 
@@ -203,7 +207,7 @@ struct
     , equal ~localize
     , globalize
     , hash
-    , sexp ~stackify
+    , sexp ~stackify ~unboxed
     , sexp_grammar
     , typerep]
 
@@ -278,7 +282,7 @@ struct
     , equal ~localize
     , globalize
     , hash
-    , sexp ~stackify
+    , sexp ~stackify ~unboxed
     , sexp_grammar
     , typerep]
 
@@ -300,36 +304,36 @@ sig
 
   type nonrec floatarray = floatarray [@@deriving sexp ~stackify, globalize, sexp_grammar]
 
-  type bool
+  type nonrec bool = bool
   [@@deriving
     bin_io ~localize
     , compare ~localize
     , equal ~localize
     , globalize
     , hash
-    , sexp ~stackify
+    , sexp ~stackify ~unboxed
     , sexp_grammar
     , typerep]
 
-  type char
+  type nonrec char = char
   [@@deriving
     bin_io ~localize
     , compare ~localize
     , equal ~localize
     , globalize
     , hash
-    , sexp ~stackify
+    , sexp ~stackify ~unboxed
     , sexp_grammar
     , typerep]
 
-  type float
+  type nonrec float = float
   [@@deriving
     bin_io ~localize
     , compare ~localize
     , equal ~localize
     , globalize
     , hash
-    , sexp ~stackify
+    , sexp ~stackify ~unboxed
     , sexp_grammar
     , typerep]
 
@@ -351,25 +355,25 @@ sig
     , sexp_grammar
     , typerep]
 
-  type int32
+  type nonrec int32 = int32
   [@@deriving
     bin_io ~localize
     , compare ~localize
     , equal ~localize
     , globalize
     , hash
-    , sexp ~stackify
+    , sexp ~stackify ~unboxed
     , sexp_grammar
     , typerep]
 
-  type int64
+  type nonrec int64 = int64
   [@@deriving
     bin_io ~localize
     , compare ~localize
     , equal ~localize
     , globalize
     , hash
-    , sexp ~stackify
+    , sexp ~stackify ~unboxed
     , sexp_grammar
     , typerep]
 
@@ -389,14 +393,14 @@ sig
 
   [%%rederive: type nonrec 'a list = 'a List.t [@@deriving bin_io ~localize]]
 
-  type nativeint
+  type nonrec nativeint = nativeint
   [@@deriving
     bin_io ~localize
     , compare ~localize
     , equal ~localize
     , globalize
     , hash
-    , sexp ~stackify
+    , sexp ~stackify ~unboxed
     , sexp_grammar
     , typerep]
 
@@ -462,14 +466,14 @@ sig
     , sexp_grammar
     , typerep]
 
-  type unit
+  type nonrec unit = unit
   [@@deriving
     bin_io ~localize
     , compare ~localize
     , equal ~localize
     , globalize
     , hash
-    , sexp ~stackify
+    , sexp ~stackify ~unboxed
     , sexp_grammar
     , typerep]
 

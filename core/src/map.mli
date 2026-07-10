@@ -669,6 +669,13 @@ val partition_tf
     all errors otherwise. *)
 val combine_errors : ('k, 'v Or_error.t, 'cmp) t -> ('k, 'v, 'cmp) t Or_error.t
 
+(** Given two maps, produces a map of tuples. Returns an [Error] if the key sets of the
+    two maps differ. *)
+val zip : ('k, 'v1, 'cmp) t -> ('k, 'v2, 'cmp) t -> ('k, 'v1 * 'v2, 'cmp) t Or_error.t
+
+(** Like [zip], but raises on error. *)
+val zip_exn : ('k, 'v1, 'cmp) t -> ('k, 'v2, 'cmp) t -> ('k, 'v1 * 'v2, 'cmp) t
+
 (** Given a map of tuples, produces a tuple of maps. Equivalent to:
     [map t ~f:fst, map t ~f:snd] *)
 val unzip : ('k, 'v1 * 'v2, 'cmp) t -> ('k, 'v1, 'cmp) t * ('k, 'v2, 'cmp) t
@@ -784,6 +791,14 @@ val merge_by_case
   -> second:('k, 'v2, 'v3) When_unmatched.t
   -> both:('k, 'v1, 'v2, 'v3) When_matched.t
   -> ('k, 'v3, 'cmp) t
+
+(** Merges two maps with the same set of keys. Returns an [Error] if the key sets are not
+    the same. *)
+val merge_aligned
+  :  ('k, 'v1, 'cmp) t
+  -> ('k, 'v2, 'cmp) t
+  -> f:(key:'k -> 'v1 -> 'v2 -> 'v)
+  -> ('k, 'v, 'cmp) t Or_error.t
 
 module Symmetric_diff_element : sig
   type ('k, 'v) t = 'k * [ `Left of 'v | `Right of 'v | `Unequal of 'v * 'v ]

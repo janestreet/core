@@ -24,7 +24,7 @@ let unit f =
   fun () -> Lazy.force l
 ;;
 
-let unbounded ?(hashable = Hashtbl.Hashable.poly) f =
+let unbounded ~hashable f =
   let cache = Hashtbl.create ~size:0 (Hashtbl.Hashable.to_key hashable) in
   (* Allocate this closure at the call to [unbounded], not at each call to the memoized
      function. *)
@@ -33,7 +33,7 @@ let unbounded ?(hashable = Hashtbl.Hashable.poly) f =
 ;;
 
 (* the same but with a bound on cache size *)
-let lru ?(hashable = Hashtbl.Hashable.poly) ~max_cache_size f =
+let lru ~hashable ~max_cache_size f =
   if max_cache_size <= 0
   then failwithf "Memo.lru: max_cache_size of %i <= 0" max_cache_size ();
   let cache = Hash_queue.create hashable in
@@ -50,10 +50,10 @@ let lru ?(hashable = Hashtbl.Hashable.poly) ~max_cache_size f =
          result)
 ;;
 
-let general ?hashable ?cache_size_bound f =
+let general ~hashable ?cache_size_bound f =
   match cache_size_bound with
-  | None -> unbounded ?hashable f
-  | Some n -> lru ?hashable ~max_cache_size:n f
+  | None -> unbounded ~hashable f
+  | Some n -> lru ~hashable ~max_cache_size:n f
 ;;
 
 (* We expect [f_onestep] to be a one-step unrolled recursive function; see the mli. Hence,

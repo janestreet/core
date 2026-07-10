@@ -407,8 +407,8 @@ module Always = struct
   ;;
 
   let int_as_value = int_as_value
-  let int_as_value_exn = int_as_value_exn
-  let int_is_value = int_is_value
+  let int_as_value_exn = [%eta2 int_as_value_exn]
+  let int_is_value = [%eta2 int_is_value]
   let[@inline always] value_as_int (type a) (_ : a t) a = a |> (Obj.magic : a -> int)
   let int = int
   let char = char
@@ -435,11 +435,11 @@ module Sometimes = struct
   ;;
 
   let int_as_value = int_as_value
-  let int_as_value_exn = int_as_value_exn
-  let int_is_value = int_is_value
+  let int_as_value_exn = [%eta2 int_as_value_exn]
+  let int_is_value = [%eta2 int_is_value]
   let value_as_int = value_as_int
-  let value_as_int_exn = value_as_int_exn
-  let value_is_int = value_is_int
+  let value_as_int_exn = [%eta2 value_as_int_exn]
+  let value_is_int = [%eta2 value_is_int]
   let option = option
   let list = list
 end

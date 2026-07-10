@@ -41,7 +41,7 @@ module type Month = sig
       [None]. *)
   val of_int : int -> t option
 
-  val of_int_exn : int -> t
+  val of_int_exn : int -> t [@@zero_alloc]
 
   (** [to_int t] returns an int in 1, 2, ... 12. *)
   val to_int : t -> int

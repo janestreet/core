@@ -655,11 +655,12 @@ module Expert : sig
 
         You don't need to use this function if you use [add_finalizer] from this module.
         It's only exposed for the case when you want to use [Stdlib.Gc.finalise] directly. *)
-    val protect_finalizer
+    val%template protect_finalizer
       :  'a Heap_block.t
       -> ('a Heap_block.t -> unit)
       -> 'a Heap_block.t
       -> unit
+    [@@mode (p, c) = ((nonportable, uncontended), (portable, contended))]
   end
 
   (** The runtime essentially maintains a bool ref:
@@ -685,7 +686,7 @@ module Expert : sig
 
   (** A GC alarm calls a user function at the end of each major GC cycle. *)
   module Alarm : sig
-    type t [@@deriving sexp_of]
+    type t [@@deriving sexp_of ~portable]
 
     (** [create f] arranges for [f] to be called at the end of each major GC cycle,
         starting with the current cycle or the next one. [f] can be called in any thread,
@@ -694,6 +695,11 @@ module Expert : sig
         raise to any allocation or GC point in any thread, which would be impossible to
         reason about. *)
     val create : (unit -> unit) -> t
+
+    (** [create_portable f] is like {!create}, but is safe to call in portable contexts.
+        To avoid non-thread-safe [at_exit] functions being called, [f] is wrapped in
+        [Exn.handle_uncaught_and_exit_immediately]. *)
+    val create_portable : (unit -> unit) -> t
 
     (** [delete t] will stop the calls to the function associated to [t]. Calling
         [delete t] again has no effect. *)

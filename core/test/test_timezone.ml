@@ -4,7 +4,7 @@ open! Import
 let with_the_one_and_only f =
   let open Timezone.Private.Zone_cache in
   (Mutex.with_lock The_one_and_only.mutex ~f:(fun password ->
-     Capsule.Expert.access ~password ~f:(fun access ->
+     Capsule.Prim.access ~password ~f:(fun access ->
        { contended =
            { aliased = f (Capsule.Data.unwrap The_one_and_only.capsule ~access) }
        })

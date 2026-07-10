@@ -1,7 +1,5 @@
 open Base
 
-[@@@warning "-incompatible-with-upstream"]
-
 (** Each single_error is a path indicating the location within the datastructure in
     question that is being validated, along with an error message. *)
 type single_error =

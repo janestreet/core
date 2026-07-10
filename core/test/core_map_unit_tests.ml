@@ -1124,6 +1124,12 @@ struct
     && Map.equal Int.equal m2 (Map.of_alist_exn [ k1, 2; k2, 0; k3, 7; k4, 3 ])
   ;;
 
+  let zip _ = assert false
+  let zip_exn _ = assert false
+  let merge_aligned _ = assert false
+
+  (* The above are tested as part of Base. *)
+
   let keys _ = assert false
   let data _ = assert false
   let to_alist ?key_order:_ _ = assert false
