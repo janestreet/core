@@ -612,8 +612,8 @@ let simulate nsteps =
     | Some e -> add_elt e
   in
   let pred = function
-    | Even -> fun n -> n mod 0 = 0
-    | Odd -> fun n -> n mod 0 = 1
+    | Even -> fun n -> n mod 2 = 0
+    | Odd -> fun n -> n mod 2 = 1
   in
   try
     for _ = 1 to nsteps do
