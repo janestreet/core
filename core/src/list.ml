@@ -1,6 +1,3 @@
-[%%template
-[@@@kind_set.define all_ks_non_value = base_non_value]
-
 include List0 (** @inline *)
 
 let zip_with_remainder =
@@ -14,13 +11,7 @@ let zip_with_remainder =
   fun xs ys -> zip_with_acc_and_remainder [] xs ys
 ;;
 
-module [@mode portable] Wrapper = struct
-  external wrap_list : 'a. 'a list -> 'a Modes.Portable.t list = "%identity"
-
-  let[@inline] unwrap { Modes.Portable.portable } = portable
-end
-
-module [@mode nonportable] Wrapper = struct
+module Wrapper = struct
   let wrap_list = Fn.id
   let unwrap = Fn.id
 end
@@ -33,13 +24,12 @@ exception Duplicate_found of sexp_thunk * Base.String.t
 [@@deriving sexp ~nonportable__magic_unsafe_in_parallel_programs]
 
 let exn_if_dup ~compare ?(context = "exn_if_dup") t ~to_sexp =
-  let open Wrapper [@mode p] in
+  let open Wrapper in
   match find_a_dup ~compare:(fun x y -> compare (unwrap x) (unwrap y)) (wrap_list t) with
   | None -> ()
   | Some dup ->
     let dup = unwrap dup in
     raise (Duplicate_found ((fun () -> to_sexp dup), context))
-[@@mode p = (portable, nonportable)]
 ;;
 
 let slice a start stop =
@@ -48,14 +38,8 @@ let slice a start stop =
 
 module Stable = struct
   module V1 = struct
-    type nonrec 'a t = ('a t[@kind k])
-    [@@kind k = all_ks_non_value]
-    [@@deriving bin_io ~localize, compare ~localize, equal ~localize]
-
-    type nonrec 'a t = 'a t
-    [@@deriving
-      sexp, sexp_grammar, bin_io ~localize, compare ~localize, equal ~localize, hash]
+    type nonrec 'a t = 'a t [@@deriving sexp, sexp_grammar, bin_io, compare, equal, hash]
 
     let stable_witness = List0.stable_witness [@@alert "-for_internal_use_only"]
   end
-end]
+end

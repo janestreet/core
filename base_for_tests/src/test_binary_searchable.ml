@@ -324,8 +324,8 @@ module Test1 (M : Binary_searchable1_and_for_test) = Test_gen (struct
     end
   end)
 
-module%template.portable [@modality p] Make_and_test (M : Indexable_and_for_test) = struct
-  module B = Binary_searchable.Make [@modality p] (M)
+module Make_and_test (M : Indexable_and_for_test) = struct
+  module B = Binary_searchable.Make (M)
   include B
 
   include Test (struct
@@ -337,9 +337,8 @@ module%template.portable [@modality p] Make_and_test (M : Indexable_and_for_test
     end)
 end
 
-module%template.portable [@modality p] Make1_and_test (M : Indexable1_and_for_test) =
-struct
-  module B = Binary_searchable.Make1 [@modality p] (M)
+module Make1_and_test (M : Indexable1_and_for_test) = struct
+  module B = Binary_searchable.Make1 (M)
   include B
 
   include Test1 (struct

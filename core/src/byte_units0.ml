@@ -3,14 +3,14 @@ open Std_internal
 module Repr = Int63
 
 module T : sig
-  type t [@@deriving compare ~localize, hash, sexp_of, typerep] [@@immediate64]
+  type t [@@deriving compare, hash, sexp_of, typerep] [@@immediate64]
 
   val to_string : t -> string
   val to_string_hum : t -> string
   val of_repr : Repr.t -> t
   val to_repr : t -> Repr.t
 end = struct
-  type t = Repr.t [@@deriving compare ~localize, hash, typerep]
+  type t = Repr.t [@@deriving compare, hash, typerep]
 
   let of_repr = Fn.id
   let to_repr = Fn.id
@@ -40,7 +40,10 @@ end = struct
     let n_abs = abs n in
     let f ~suffix ~size n =
       let f = to_float n /. to_float size in
-      if Float.( >= ) f 999.5
+      (* [%.3g] would switch to scientific notation for magnitudes that round to >= 1000
+         (4 significant digits). To avoid that, use [%.0f] instead, which rounds to the
+         nearest integer. *)
+      if Float.( >= ) (Float.abs f) 999.5
       then sprintf "%.0f%s" f suffix
       else sprintf "%.3g%s" f suffix
     in

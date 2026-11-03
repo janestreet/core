@@ -1,15 +1,12 @@
 open! Import
 
-[%%template
-[@@@mode.default m = (global, local)]
-
 module type S0_without_comparator = sig
-  type t [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), sexp]
+  type t [@@deriving bin_io, compare, sexp]
 end
 
-module type [@modality p = (portable, nonportable)] S0 = sig
-  include S0_without_comparator [@mode m]
-  include Comparator.Stable.V1.S [@modality p] with type t := t
+module type S0 = sig
+  include S0_without_comparator
+  include Comparator.Stable.V1.S with type t := t
 end
 
 (** The polymorphic signatures require a mapping function so people can write conversion
@@ -17,20 +14,19 @@ end
     reaching into the unstable part of the module. *)
 
 module type S1 = sig
-  type 'a t [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), sexp]
+  type 'a t [@@deriving bin_io, compare, sexp]
 
   val map : 'a t -> f:('a -> 'b) -> 'b t
 end
 
 module type S2 = sig
-  type ('a1, 'a2) t [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), sexp]
+  type ('a1, 'a2) t [@@deriving bin_io, compare, sexp]
 
   val map : ('a1, 'a2) t -> f1:('a1 -> 'b1) -> f2:('a2 -> 'b2) -> ('b1, 'b2) t
 end
 
 module type S3 = sig
-  type ('a1, 'a2, 'a3) t
-  [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), sexp]
+  type ('a1, 'a2, 'a3) t [@@deriving bin_io, compare, sexp]
 
   val map
     :  ('a1, 'a2, 'a3) t
@@ -41,8 +37,7 @@ module type S3 = sig
 end
 
 module type S4 = sig
-  type ('a1, 'a2, 'a3, 'a4) t
-  [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), sexp]
+  type ('a1, 'a2, 'a3, 'a4) t [@@deriving bin_io, compare, sexp]
 
   val map
     :  ('a1, 'a2, 'a3, 'a4) t
@@ -51,67 +46,62 @@ module type S4 = sig
     -> f3:('a3 -> 'b3)
     -> f4:('a4 -> 'b4)
     -> ('b1, 'b2, 'b3, 'b4) t
-end]
+end
 
-module%template With_stable_witness = struct
-  [@@@mode.default m = (global, local)]
-
+module With_stable_witness = struct
   module type S0_without_comparator = sig
     type t [@@deriving stable_witness]
 
-    include S0_without_comparator [@mode m] with type t := t
+    include S0_without_comparator with type t := t
   end
 
-  module type [@modality p = (portable, nonportable)] S0 = sig
+  module type S0 = sig
     type t [@@deriving stable_witness]
 
-    include S0 [@mode m] [@modality p] with type t := t
+    include S0 with type t := t
   end
 
   module type S1 = sig
     type 'a t [@@deriving stable_witness]
 
-    include S1 [@mode m] with type 'a t := 'a t
+    include S1 with type 'a t := 'a t
   end
 
   module type S2 = sig
     type ('a, 'b) t [@@deriving stable_witness]
 
-    include S2 [@mode m] with type ('a, 'b) t := ('a, 'b) t
+    include S2 with type ('a, 'b) t := ('a, 'b) t
   end
 
   module type S3 = sig
     type ('a, 'b, 'c) t [@@deriving stable_witness]
 
-    include S3 [@mode m] with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
+    include S3 with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
   end
 
   module type S4 = sig
     type ('a, 'b, 'c, 'd) t [@@deriving stable_witness]
 
-    include S4 [@mode m] with type ('a, 'b, 'c, 'd) t := ('a, 'b, 'c, 'd) t
+    include S4 with type ('a, 'b, 'c, 'd) t := ('a, 'b, 'c, 'd) t
   end
 end
 
-module%template For_export = struct
-  [@@@mode.default m = (global, local)]
-
-  module type Stable = S0 [@mode m] [@modality p] [@@modality p = (portable, nonportable)]
-  module type Stable_without_comparator = S0_without_comparator [@mode m]
-  module type Stable1 = S1 [@mode m]
-  module type Stable2 = S2 [@mode m]
-  module type Stable3 = S3 [@mode m]
-  module type Stable4 = S4 [@mode m]
+module For_export = struct
+  module type Stable = S0
+  module type Stable_without_comparator = S0_without_comparator
+  module type Stable1 = S1
+  module type Stable2 = S2
+  module type Stable3 = S3
+  module type Stable4 = S4
 
   (* Versions of the stable module types that expose a stable_witness *)
-  module type Stable_with_witness = With_stable_witness.S0 [@mode m] [@modality p]
-  [@@modality p = (portable, nonportable)]
+  module type Stable_with_witness = With_stable_witness.S0
 
   module type Stable_without_comparator_with_witness =
-    With_stable_witness.S0_without_comparator [@mode m]
+    With_stable_witness.S0_without_comparator
 
-  module type Stable1_with_witness = With_stable_witness.S1 [@mode m]
-  module type Stable2_with_witness = With_stable_witness.S2 [@mode m]
-  module type Stable3_with_witness = With_stable_witness.S3 [@mode m]
-  module type Stable4_with_witness = With_stable_witness.S4 [@mode m]
+  module type Stable1_with_witness = With_stable_witness.S1
+  module type Stable2_with_witness = With_stable_witness.S2
+  module type Stable3_with_witness = With_stable_witness.S3
+  module type Stable4_with_witness = With_stable_witness.S4
 end

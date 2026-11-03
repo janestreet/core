@@ -5,10 +5,7 @@ module Stable = struct
   module V1 = struct
     type nonrec 'a t = 'a t [@@deriving sexp_grammar]
 
-    [%%rederive
-      type nonrec 'a t = 'a t
-      [@@deriving compare ~localize, equal ~localize, hash, sexp_of]]
-
+    [%%rederive type nonrec 'a t = 'a t [@@deriving compare, equal, hash, sexp_of]]
     [%%rederive type nonrec 'a t = 'a t [@@deriving of_sexp]]
 
     include struct

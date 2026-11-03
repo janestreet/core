@@ -12,19 +12,20 @@
   (flags :standard -D_LARGEFILE64_SOURCE))
  (name core)
  (public_name core)
- (libraries base base_bigstring base_for_tests base_quickcheck bin_prot
-   bin_prot.shape capsule command ppx_diff.diffable ppx_expect.config_types
-   fieldslib filename_base heap_block jane-street-headers base.md5 portable
-   ppx_assert.runtime-lib ppx_hash.runtime-lib ppx_inline_test.runtime-lib
-   sexplib splittable_random ppx_stable_witness.stable_witness stdio
-   string_dict time_now typerep univ_map validate variantslib)
+ (libraries am_running_test base base_bigstring base_for_tests
+   base_quickcheck basement bin_prot bin_prot.shape capsule command
+   ppx_diff.diffable ppx_expect.config_types fieldslib filename_base
+   heap_block jane-street-headers base.md5 portable ppx_assert.runtime-lib
+   ppx_hash.runtime-lib ppx_inline_test.runtime-lib sexplib
+   small_numbers_shim splittable_random ppx_stable_witness.stable_witness
+   stdio string_dict time_now typerep univ_map validate variantslib)
  (ocamlopt_flags
   :standard
   (:include ocamlopt-flags))
  (preprocess
   (pps ppx_jane -compare-require-explicit-locality
     -require-template-extension ppx_optcomp ppx_diff.ppx_diff))
- (preprocessor_deps config.h gc_stubs.h)
+ (preprocessor_deps config.h)
  (js_of_ocaml
   (javascript_files strftime.js runtime.js timezone_js_loader_stubs.js
     timezone_runtime.js))
@@ -33,12 +34,6 @@
     timezone_runtime.js)
   (wasm_files runtime.wat timezone_js_loader_stubs.wasm.js
     timezone_js_loader_stubs.wat)))
-
-(rule
- (targets gc_stubs.h)
- (deps)
- (action
-  (bash "echo \"#define OCAML_5_MINUS false\" > %{targets}")))
 
 (documentation)
 

@@ -13,7 +13,7 @@ module Stable = struct
         ; min_index : int
         ; max_index : int
         }
-      [@@deriving bin_io ~localize, compare ~localize, hash, stable_witness]
+      [@@deriving bin_io, compare, hash, stable_witness]
 
       let create index ~min ~max =
         if index < min || index > max
@@ -27,8 +27,8 @@ module Stable = struct
         type t = string * int * string * int * string * int [@@deriving sexp]
       end
 
-      include%template
-        Sexpable.Stable.Of_sexpable.V1 [@modality portable]
+      include
+        Sexpable.Stable.Of_sexpable.V1
           (For_sexpable)
           (struct
             type nonrec t = t
@@ -44,13 +44,12 @@ module Stable = struct
             ;;
           end)
 
-      include%template Comparator.Stable.V1.Make [@modality portable] (struct
-          type nonrec t = t [@@deriving sexp_of, compare ~localize]
+      include Comparator.Stable.V1.Make (struct
+          type nonrec t = t [@@deriving sexp_of, compare]
         end)
 
-      include%template
-        Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (struct
-          type nonrec t = t [@@deriving sexp, compare ~localize, bin_io, stable_witness]
+      include Comparable.Stable.V1.With_stable_witness.Make (struct
+          type nonrec t = t [@@deriving sexp, compare, bin_io, stable_witness]
           type nonrec comparator_witness = comparator_witness
 
           let comparator = comparator
@@ -74,7 +73,7 @@ struct
 
   open Stable.V1
 
-  type t = Stable.V1.t [@@deriving bin_io ~localize, compare ~localize, hash, sexp]
+  type t = Stable.V1.t [@@deriving bin_io, compare, hash, sexp]
   type comparator_witness = Stable.V1.comparator_witness
 
   let create = Stable.V1.create
@@ -91,13 +90,12 @@ struct
   let zero_based_index t = index t - min_index t
   let num_indexes t = max_index t - min_index t + 1
 
-  include%template Sexpable.To_stringable [@modality portable] (struct
+  include Sexpable.To_stringable (struct
       type nonrec t = t [@@deriving sexp]
     end)
 
-  include%template
-    Identifiable.Make_using_comparator [@mode local] [@modality portable] (struct
-      type nonrec t = t [@@deriving bin_io ~localize, compare ~localize, hash, sexp]
+  include Identifiable.Make_using_comparator (struct
+      type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
       type nonrec comparator_witness = comparator_witness
 
       let comparator = comparator

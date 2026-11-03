@@ -41,26 +41,22 @@ module type Quickcheckable = sig
     include Definitions
   end
 
-  module%template.portable Of_quickcheckable
+  module Of_quickcheckable
       (Quickcheckable : S)
       (Conv : Conv with type quickcheckable := Quickcheckable.t) : S with type t := Conv.t
 
-  module%template.portable
-    [@modality p] Of_quickcheckable1
-      (Quickcheckable : S1
-    [@modality p])
+  module Of_quickcheckable1
+      (Quickcheckable : S1)
       (Conv : Conv1 with type 'a quickcheckable := 'a Quickcheckable.t) :
-    S1 [@modality p] with type 'a t := 'a Conv.t
+    S1 with type 'a t := 'a Conv.t
 
-  module%template.portable Of_quickcheckable_filtered
+  module Of_quickcheckable_filtered
       (Quickcheckable : S)
       (Conv : Conv_filtered with type quickcheckable := Quickcheckable.t) :
     S with type t := Conv.t
 
-  module%template.portable
-    [@modality p] Of_quickcheckable_filtered1
-      (Quickcheckable : S1
-    [@modality p])
+  module Of_quickcheckable_filtered1
+      (Quickcheckable : S1)
       (Conv : Conv_filtered1 with type 'a quickcheckable := 'a Quickcheckable.t) :
-    S1 [@modality p] with type 'a t := 'a Conv.t
+    S1 with type 'a t := 'a Conv.t
 end

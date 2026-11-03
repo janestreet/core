@@ -74,7 +74,7 @@ module Zone_cache = struct
     List.sort ~compare:(fun a b -> String.ascending (fst a) (fst b)) (to_alist t)
   ;;
 
-  let%template find_or_load_matching t zone =
+  let find_or_load_matching t zone =
     let file_size filename =
       let c = Stdio.In_channel.create filename in
       let l = Stdio.In_channel.length c in
@@ -87,10 +87,8 @@ module Zone_cache = struct
         let filename = String.concat ~sep:"/" [ t.basedir; zone_name ] in
         let matches =
           try
-            ([%compare.equal: int64 option] [@mode local])
-              t1_file_size
-              (Some (file_size filename))
-            && ([%compare.equal: Md5.t option] [@mode local])
+            [%compare.equal: int64 option] t1_file_size (Some (file_size filename))
+            && [%compare.equal: Md5.t option]
                  (digest zone)
                  Option.(join (map (find_or_load t zone_name) ~f:digest))
           with
@@ -175,22 +173,17 @@ let init = Zone_cache.init
 let initialized_zones = Zone_cache.initialized_zones
 
 let find zone =
-  let zone =
+  let open struct
     (* Some aliases for convenience *)
-    match zone with
-    (* case insensitivity *)
-    | "utc" -> "UTC"
-    | "gmt" -> "GMT"
-    (* some aliases for common zones *)
-    | "chi" -> "America/Chicago"
-    | "nyc" -> "America/New_York"
-    | "hkg" -> "Asia/Hong_Kong"
-    | "lon" | "ldn" -> "Europe/London"
-    | "tyo" -> "Asia/Tokyo"
-    | "syd" -> "Australia/Sydney"
-    (* catchall *)
-    | _ -> zone
-  in
+    let alias zone =
+      match zone with
+      (* case insensitivity *)
+      | "utc" -> "UTC"
+      | "gmt" -> "GMT"
+      | _ -> zone
+    ;;
+  end in
+  let zone = alias zone in
   Zone_cache.find_or_load zone
 ;;
 
@@ -267,21 +260,18 @@ module Stable = struct
       | _ -> of_sexp_error "Timezone.t_of_sexp: expected atom" sexp
     ;;
 
-    let%template check_name name =
-      if (String.equal [@mode local]) name "/etc/localtime"
+    let check_name name =
+      if String.equal name "/etc/localtime"
       then failwith "the local time zone cannot be serialized"
     ;;
 
-    let%template[@alloc a @ m = (heap_global, stack_local)] to_string t =
-      (let name = (name [@mode m]) t in
-       check_name name;
-       name)
-      [@exclave_if_stack a]
+    let to_string t =
+      let name = name t in
+      check_name name;
+      name
     ;;
 
-    let%template[@alloc a = (heap, stack)] sexp_of_t t =
-      Sexp.Atom ((to_string [@alloc a]) t) [@exclave_if_stack a]
-    ;;
+    let sexp_of_t t = Sexp.Atom (to_string t)
 
     let t_sexp_grammar : t Sexplib.Sexp_grammar.t =
       { untyped =
@@ -296,55 +286,40 @@ module Stable = struct
     (* The correctness of these relies on not exposing raw loading/creation functions to
        the outside world that would allow the construction of two Zone's with the same
        name and different transitions. *)
-    [%%template
-    let[@mode local] to_string = (to_string [@alloc stack])
 
-    [@@@mode.default m = (local, global)]
-
-    let compare t1 t2 =
-      (String.compare [@mode m])
-        ((to_string [@mode m]) t1)
-        ((to_string [@mode m]) t2) [@nontail]
-    ;;
-
-    let equal t1 t2 =
-      (String.equal [@mode m])
-        ((to_string [@mode m]) t1)
-        ((to_string [@mode m]) t2) [@nontail]
-    ;;]
-
+    let compare t1 t2 = String.compare (to_string t1) (to_string t2) [@nontail]
+    let equal t1 t2 = String.equal (to_string t1) (to_string t2) [@nontail]
     let hash_fold_t state t = String.hash_fold_t state (to_string t)
     let hash t = Ppx_hash_lib.Std.Hash.of_fold hash_fold_t t
-    let%template to_binable = (to_string [@mode m]) [@@mode m = (local, global)]
+    let to_binable = to_string
     let of_binable s = t_of_sexp (Sexp.Atom s)
 
-    include%template (
-      Binable.Stable.Of_binable.V1 [@mode local] [@modality portable] [@alert "-legacy"]
+    include (
+      Binable.Stable.Of_binable.V1 [@alert "-legacy"]
         (Stable_string.V1)
         (struct
           type nonrec t = t
 
           let to_binable = to_binable
-          let%template[@mode local] to_binable = (to_binable [@mode local])
           let of_binable = of_binable
         end) :
         sig
-          include Binable.S [@mode local] with type t := t
+          include Binable.S with type t := t
         end)
 
     let stable_witness =
       Stable_witness.of_serializable Stable_string.V1.stable_witness of_binable to_binable
     ;;
 
-    include%template Diffable.Atomic.Make [@modality portable] (struct
-        type nonrec t = t [@@deriving sexp, bin_io, equal ~localize]
+    include Diffable.Atomic.Make (struct
+        type nonrec t = t [@@deriving sexp, bin_io, equal]
       end)
   end
 
   module Current = V1
 end
 
-include%template Identifiable.Make [@mode local] [@modality portable] (struct
+include Identifiable.Make (struct
     let module_name = "Core.Timezone"
 
     include Stable.Current
@@ -355,7 +330,7 @@ include%template Identifiable.Make [@mode local] [@modality portable] (struct
 
 include Stable.Current
 
-let%template arg_type = (Command.Arg_type.create [@mode portable]) of_string
+let arg_type = Command.Arg_type.create of_string
 
 module Private = struct
   module Zone_cache = Zone_cache

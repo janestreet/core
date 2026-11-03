@@ -19,18 +19,15 @@ module Set = Base.Set
 module Tree = Set.Using_comparator.Tree
 module Container = Base.Container
 
-[%%template
-[@@@mode.default m = (local, global)]
-
-module type Elt_plain = Set.Elt_plain [@mode m]
+module type Elt_plain = Set.Elt_plain
 
 module type Elt = sig
-  type t [@@deriving (compare [@mode.explicit m]), sexp]
+  type t [@@deriving compare, sexp]
 end
 
 module type Elt_binable = sig
-  type t [@@deriving bin_io, (compare [@mode.explicit m]), sexp]
-end]
+  type t [@@deriving bin_io, compare, sexp]
+end
 
 module Elt_bin_io = struct
   module type S = sig
@@ -54,16 +51,8 @@ module type For_deriving = sig
       ]} *)
 
   val bin_shape_m__t : ('a, 'b) Elt_bin_io.t -> Bin_prot.Shape.t
-
-  [%%template:
-  [@@@mode.default m = (global, local)]
-
-  val bin_size_m__t : ('a, 'b) Elt_bin_io.t -> (('a, 'b) t Bin_prot.Size.sizer[@mode m])
-
-  val bin_write_m__t
-    :  ('a, 'b) Elt_bin_io.t
-    -> (('a, 'b) t Bin_prot.Write.writer[@mode m])]
-
+  val bin_size_m__t : ('a, 'b) Elt_bin_io.t -> ('a, 'b) t Bin_prot.Size.sizer
+  val bin_write_m__t : ('a, 'b) Elt_bin_io.t -> ('a, 'b) t Bin_prot.Write.writer
   val bin_read_m__t : ('a, 'b) Elt_bin_io.t -> ('a, 'b) t Bin_prot.Read.reader
   val __bin_read_m__t__ : ('a, 'b) Elt_bin_io.t -> ('a, 'b) t Bin_prot.Read.vtag_reader
 
@@ -92,9 +81,6 @@ module type For_deriving = sig
     val quickcheck_shrinker : t Quickcheck.Shrinker.t
   end
 
-  [%%template:
-  [@@@mode.default p = (portable, nonportable)]
-
   val quickcheck_generator_m__t
     : 'a 'cmp.
     (module Quickcheck_generator_m with type t = 'a and type comparator_witness = 'cmp)
@@ -108,7 +94,7 @@ module type For_deriving = sig
   val quickcheck_shrinker_m__t
     : 'a 'cmp.
     (module Quickcheck_shrinker_m with type t = 'a and type comparator_witness = 'cmp)
-    -> ('a, 'cmp) t Quickcheck.Shrinker.t]
+    -> ('a, 'cmp) t Quickcheck.Shrinker.t
 end
 
 module type For_deriving_stable = sig
@@ -205,8 +191,7 @@ end
 module type S_plain_tree = sig
   module Elt : Comparator.S
 
-  type t = (Elt.t, Elt.comparator_witness) Tree.t
-  [@@deriving compare ~localize, equal ~localize, sexp_of]
+  type t = (Elt.t, Elt.comparator_witness) Tree.t [@@deriving compare, equal, sexp_of]
 
   include
     Creators_generic
@@ -218,18 +203,14 @@ module type S_plain_tree = sig
     with type ('a, 'b, 'c) create_options := ('a, 'b, 'c) Without_comparator.t
 end
 
-[%%template
-[@@@modality.default p = (portable, nonportable)]
-
 module type S_plain = sig
   module Elt : sig
     type t [@@deriving sexp_of]
 
-    include Comparator.S [@modality p] with type t := t
+    include Comparator.S with type t := t
   end
 
-  type t = (Elt.t, Elt.comparator_witness) Base.Set.t
-  [@@deriving compare ~localize, equal ~localize, sexp_of]
+  type t = (Elt.t, Elt.comparator_witness) Base.Set.t [@@deriving compare, equal, sexp_of]
 
   module Diff : sig
     type t = Elt.t Diffable.Set_diff.t [@@deriving sexp_of]
@@ -259,7 +240,7 @@ module type S = sig
   module Elt : sig
     type t [@@deriving sexp]
 
-    include Comparator.S [@modality p] with type t := t
+    include Comparator.S with type t := t
   end
 
   module Diff : sig
@@ -271,7 +252,7 @@ module type S = sig
        and type derived_on = (Elt.t, Elt.comparator_witness) Base.Set.t
   end
 
-  include S_plain [@modality p] with module Elt := Elt and module Diff := Diff
+  include S_plain with module Elt := Elt and module Diff := Diff
   include Sexpable.S with type t := t
 end
 
@@ -279,7 +260,7 @@ module type S_binable = sig
   module Elt : sig
     type t [@@deriving sexp, bin_io]
 
-    include Comparator.S [@modality p] with type t := t
+    include Comparator.S with type t := t
   end
 
   module Diff : sig
@@ -291,6 +272,6 @@ module type S_binable = sig
        and type derived_on = (Elt.t, Elt.comparator_witness) Base.Set.t
   end
 
-  include S [@modality p] with module Elt := Elt and module Diff := Diff
-  include Binable.S [@mode local] with type t := t
-end]
+  include S with module Elt := Elt and module Diff := Diff
+  include Binable.S with type t := t
+end

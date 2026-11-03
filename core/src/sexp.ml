@@ -8,16 +8,15 @@ module Stable = struct
       type t = Base.Sexp.t =
         | Atom of string
         | List of t list
-      [@@deriving bin_io ~localize, stable_witness]
+      [@@deriving bin_io, stable_witness]
     end
 
     include T
-
-    include%template Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (T)
+    include Comparable.Stable.V1.With_stable_witness.Make (T)
 
     let t_sexp_grammar = Sexplib.Sexp.t_sexp_grammar
     let t_of_sexp = Sexplib.Sexp.t_of_sexp
-    let%template[@alloc a = (heap, stack)] sexp_of_t = (Sexplib.Sexp.sexp_of_t [@alloc a])
+    let sexp_of_t = Sexplib.Sexp.sexp_of_t
   end
 end
 
@@ -44,8 +43,7 @@ module O = struct
 end
 
 module Sexp_maybe = struct
-  type nonrec 'a t = ('a, t * Error.t) Result.t
-  [@@deriving bin_io, compare ~localize, hash]
+  type nonrec 'a t = ('a, t * Error.t) Result.t [@@deriving bin_io, compare, hash]
 
   let sexp_of_t sexp_of_a t =
     match t with
@@ -113,8 +111,7 @@ let sexp_of_no_raise sexp_of_a a =
      | _ -> Atom "could not build sexp for exn raised when building sexp for value")
 ;;
 
-include%template
-  Comparable.Extend [@mode local] [@modality portable] (Base.Sexp) (Base.Sexp)
+include Comparable.Extend (Base.Sexp) (Base.Sexp)
 
 let of_sexp_allow_extra_fields_recursively of_sexp sexp =
   Dynamic.with_temporarily Sexplib.Conv.record_check_extra_fields false ~f:(fun () ->
@@ -124,5 +121,3 @@ let of_sexp_allow_extra_fields_recursively of_sexp sexp =
 let quickcheck_generator = Base_quickcheck.Generator.sexp
 let quickcheck_observer = Base_quickcheck.Observer.sexp
 let quickcheck_shrinker = Base_quickcheck.Shrinker.sexp
-let compare = Sexplib.Sexp.compare
-let equal = Sexplib.Sexp.equal

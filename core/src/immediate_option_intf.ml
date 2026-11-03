@@ -2,9 +2,6 @@
 
 open! Import
 
-[%%template
-[@@@mode.default m = (global, local)]
-
 module type S_minimal = sig
   (** The immediate value carried by the immediate option.
 
@@ -26,9 +23,6 @@ module type S_minimal = sig
 
   val none : t
   val is_none : t -> bool
-
-  [@@@mode.default m = (global, m)]
-
   val some : value -> t
 
   (** [unchecked_value (some x) = x]. [unchecked_value none] returns an unspecified value.
@@ -43,18 +37,13 @@ module type S_minimal_zero_alloc = sig
 
   val none : t
   val is_none : t -> bool [@@zero_alloc]
-
-  [@@@mode.default m = (global, m)]
-
   val some : value -> t [@@zero_alloc]
   val unchecked_value : t -> value [@@zero_alloc]
 end
 
 module type S_without_immediate_plain = sig
-  include S_minimal [@mode m]
-
-  module Optional_syntax :
-    Optional_syntax.S [@mode m] with type t := t with type value := value
+  include S_minimal
+  module Optional_syntax : Optional_syntax.S with type t := t with type value := value
 
   (** For some representations of immediate options, the encodings of [none] and [some]
       overlap. For these representations, [some_is_representable value = false] if [value]
@@ -64,8 +53,6 @@ module type S_without_immediate_plain = sig
   val some_is_representable : value -> bool
 
   val is_some : t -> bool
-
-  [@@@mode.default m = (global, m)]
 
   (** [value (some x) ~default = x] and [value none ~default = default]. *)
   val value : t -> default:value -> value
@@ -80,21 +67,18 @@ module type S_without_immediate_plain = sig
 end
 
 module type S_without_immediate_plain_zero_alloc = sig
-  include S_minimal_zero_alloc [@mode m]
+  include S_minimal_zero_alloc
 
   module Optional_syntax :
-    Optional_syntax.S_zero_alloc [@mode m] with type t := t with type value := value
+    Optional_syntax.S_zero_alloc with type t := t with type value := value
 
   val some_is_representable : value -> bool [@@zero_alloc]
   val is_some : t -> bool [@@zero_alloc]
-
-  [@@@mode.default m = (global, m)]
-
   val value : t -> default:value -> value [@@zero_alloc]
   val value_exn : t -> value [@@zero_alloc]
   val to_option : t -> value option
   val of_option : value option -> t [@@zero_alloc]
-end]
+end
 
 module type S_plain = sig
   type t [@@immediate]
@@ -114,21 +98,18 @@ module type S_int63_plain = sig
   include S_without_immediate_plain with type t := t
 end
 
-[%%template
-[@@@mode.default m = (global, local)]
-
 module type S_derivers = sig
-  type t [@@deriving (compare [@mode.explicit m]), hash, sexp_of, typerep]
+  type t [@@deriving compare, hash, sexp_of, typerep]
 end
 
 module type S_without_immediate = sig
-  include S_without_immediate_plain [@mode m]
-  include S_derivers [@mode m] with type t := t
+  include S_without_immediate_plain
+  include S_derivers with type t := t
 end
 
 module type S_without_immediate_zero_alloc = sig
-  include S_without_immediate_plain_zero_alloc [@mode m]
-  include S_derivers [@mode m] with type t := t
+  include S_without_immediate_plain_zero_alloc
+  include S_derivers with type t := t
 end
 
 (** For interfaces that expose that [t] is immediate, the only additional function
@@ -143,25 +124,25 @@ end
 
 module type S = sig
   include S_plain
-  include S_derivers [@mode m] with type t := t
+  include S_derivers with type t := t
 end
 
 module type S_zero_alloc = sig
   include S_plain_zero_alloc
-  include S_derivers [@mode m] with type t := t
+  include S_derivers with type t := t
 end
 
 module type S_int63 = sig
   include S_int63_plain
-  include S_derivers [@mode m] with type t := t
+  include S_derivers with type t := t
 end
 
 module type S_int63_zero_alloc = sig
   type t [@@immediate64]
 
   include S_without_immediate_plain_zero_alloc with type t := t
-  include S_derivers [@mode m] with type t := t
-end]
+  include S_derivers with type t := t
+end
 
 module type S_unboxed_float64 = sig
   type t
@@ -191,73 +172,50 @@ module type S_unboxed_float64 = sig
 end
 
 module type Immediate_option = sig
-  [%%template:
-  [@@@mode.default m = (global, local)]
-
-  module type S_minimal = S_minimal [@mode m]
-  module type S_minimal_zero_alloc = S_minimal_zero_alloc [@mode m]]
+  module type S_minimal = S_minimal
+  module type S_minimal_zero_alloc = S_minimal_zero_alloc
 
   (** Always immediate. *)
 
   module type S_plain = S_plain
   module type S_plain_zero_alloc = S_plain_zero_alloc
-
-  [%%template:
-  [@@@mode.default m = (global, local)]
-
-  module type S = S [@mode m]
-  module type S_zero_alloc = S_zero_alloc [@mode m]]
+  module type S = S
+  module type S_zero_alloc = S_zero_alloc
 
   (** Immediate only on 64-bit machines. *)
 
   module type S_int63_plain = S_int63_plain
-
-  [%%template:
-  [@@@mode.default m = (global, local)]
-
-  module type S_int63 = S_int63 [@mode m]
-  module type S_int63_zero_alloc = S_int63_zero_alloc [@mode m]]
+  module type S_int63 = S_int63
+  module type S_int63_zero_alloc = S_int63_zero_alloc
 
   (** Unboxed types *)
   module type S_unboxed_float64 = S_unboxed_float64
 
   (** Never immediate. *)
 
-  [%%template:
-  [@@@mode.default m = (global, local)]
-
-  module type S_without_immediate_plain = S_without_immediate_plain [@mode m]
-
+  module type S_without_immediate_plain = S_without_immediate_plain
   module type S_without_immediate_plain_zero_alloc = S_without_immediate_plain_zero_alloc
-  [@mode m]
-
-  module type S_without_immediate = S_without_immediate [@mode m]
-  module type S_without_immediate_zero_alloc = S_without_immediate_zero_alloc [@mode m]]
+  module type S_without_immediate = S_without_immediate
+  module type S_without_immediate_zero_alloc = S_without_immediate_zero_alloc
 
   (** Provides generic conversions to/from [t] and [value or_null]. *)
-
-  [%%template:
-  [@@@mode.default m = (global, local)]
-  [@@@mode.default (p, c) = ((nonportable, uncontended), (portable, contended))]
 
   module Provide_or_null_conversions (Option : sig
       type t
 
-      include S_minimal [@mode m] with type t := t
+      include S_minimal with type t := t
     end) : sig
-    include
-      Or_nullable.S [@mode m] with type t := Option.t with type value := Option.value
+    include Or_nullable.S with type t := Option.t with type value := Option.value
   end
 
   module Provide_or_null_conversions_zero_alloc (Option : sig
       type t
 
-      include S_minimal_zero_alloc [@mode m] with type t := t
+      include S_minimal_zero_alloc with type t := t
     end) : sig
     include
       Or_nullable.S_with_zero_alloc
-      [@mode m]
       with type t := Option.t
       with type value := Option.value
-  end]
+  end
 end

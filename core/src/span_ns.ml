@@ -1,8 +1,16 @@
 open! Import
 open Std_internal
 open! Int63.O
-module Rounding_direction = Time_ns_intf.Rounding_direction
 module String = Base.String
+
+module Rounding_direction = struct
+  type t =
+    | Down
+    | Nearest
+    | Up
+    | Zero
+  [@@deriving equal, enumerate, sexp_of]
+end
 
 let module_name = "Core.Time_ns.Span"
 
@@ -16,14 +24,7 @@ let[@inline] float x = Int63.to_float x
 module T = struct
   type t = Int63.t
   (* nanoseconds *)
-  [@@deriving
-    hash
-    , bin_io ~localize
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , quickcheck
-    , typerep]
+  [@@deriving hash, bin_io, compare, equal, globalize, quickcheck, typerep]
 
   module Replace_polymorphic_compare = Int63.Replace_polymorphic_compare
 
@@ -43,7 +44,7 @@ module Parts = struct
     ; us : int
     ; ns : int
     }
-  [@@deriving compare ~localize, sexp, sexp_grammar]
+  [@@deriving compare, sexp, sexp_grammar]
 end
 
 let next t = Int63.succ t
@@ -233,23 +234,14 @@ let round t ~dir ~to_multiple_of =
 module Stable0 = struct
   module V1 = struct
     module T = struct
-      type nonrec t = t
-      [@@deriving
-        bin_io ~localize, compare ~localize, equal ~localize, globalize, hash, typerep]
+      type nonrec t = t [@@deriving bin_io, compare, equal, globalize, hash, typerep]
 
       let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
-
-      let%template[@alloc a = (heap, stack)] sexp_of_t t =
-        (Time_float.Stable.Span.V1.sexp_of_t [@alloc a])
-          (to_span_float_round_nearest t) [@exclave_if_stack a]
-      ;;
-
-      let t_of_sexp s =
-        of_span_float_round_nearest (Time_float.Stable.Span.V1.t_of_sexp s)
-      ;;
+      let sexp_of_t t = Span_float.Stable.V1.sexp_of_t (to_span_float_round_nearest t)
+      let t_of_sexp s = of_span_float_round_nearest (Span_float.Stable.V1.t_of_sexp s)
 
       let t_sexp_grammar : t Sexplib0.Sexp_grammar.t =
-        Sexplib0.Sexp_grammar.coerce Time_float.Stable.Span.V1.t_sexp_grammar
+        Sexplib0.Sexp_grammar.coerce Span_float.Stable.V1.t_sexp_grammar
       ;;
 
       let of_int63_exn t = of_int63_ns t
@@ -257,23 +249,15 @@ module Stable0 = struct
     end
 
     include T
-
-    include%template Comparator.Stable.V1.Make [@modality portable] (T)
-    include%template Diffable.Atomic.Make [@modality portable] (T)
+    include Comparator.Stable.V1.Make (T)
+    include Diffable.Atomic.Make (T)
   end
 
   module V2 = struct
     module T = struct
       module T0 = struct
         type nonrec t = t
-        [@@deriving
-          bin_io ~localize
-          , compare ~localize
-          , equal ~localize
-          , globalize
-          , hash
-          , quickcheck
-          , typerep]
+        [@@deriving bin_io, compare, equal, globalize, hash, quickcheck, typerep]
 
         let stable_witness : t Stable_witness.t = Int63.Stable.V1.stable_witness
         let of_int63_exn t = of_int63_ns t
@@ -376,7 +360,7 @@ module Stable0 = struct
               | Microsecond
               | Nanosecond
               | None
-            [@@deriving compare ~localize, sexp_of]
+            [@@deriving compare, sexp_of]
 
             let create ~s ~ns =
               let open Int.O in
@@ -449,75 +433,72 @@ module Stable0 = struct
             ;;
           end
 
-          let%template[@alloc a = (heap, stack)] to_string t =
-            (if equal t zero
-             then "0s"
-             else (
-               let is_negative = t < zero in
-               let seconds = Int63.( / ) (to_int63_ns t) (to_int63_ns second) in
-               let ns =
-                 Int63.rem (to_int63_ns t) (to_int63_ns second) |> Int63.to_int_exn
-               in
-               let seconds = Int63.abs seconds in
-               let ns = Int.abs ns in
-               let s = Int63.rem seconds int63_60 |> Int63.to_int_exn in
-               let minutes = Int63.( / ) seconds int63_60 in
-               let m = Int63.rem minutes int63_60 |> Int63.to_int_exn in
-               let hours = Int63.( / ) minutes int63_60 in
-               let h = Int63.rem hours int63_24 |> Int63.to_int_exn in
-               let d = Int63.( / ) hours int63_24 |> Int63.to_int_exn in
-               let open Int.O in
-               let digits_of_d = number_of_digits_to_write ~span_part_magnitude:d in
-               let digits_of_h = number_of_digits_to_write ~span_part_magnitude:h in
-               let digits_of_m = number_of_digits_to_write ~span_part_magnitude:m in
-               let decimal_unit = Decimal_unit.create ~s ~ns in
-               let decimal_unit_integer = Decimal_unit.integer decimal_unit ~s ~ns in
-               let decimal_unit_billionths = Decimal_unit.billionths decimal_unit ~ns in
-               let digits_of_decimal_unit =
-                 number_of_digits_to_write ~span_part_magnitude:decimal_unit_integer
-               in
-               let decimals_of_decimal_unit =
-                 number_of_decimal_places_to_write ~billionths:decimal_unit_billionths
-               in
-               let string_length =
-                 let sign_len = if is_negative then 1 else 0 in
-                 let d_len = if digits_of_d > 0 then digits_of_d + 1 else 0 in
-                 let h_len = if digits_of_h > 0 then digits_of_h + 1 else 0 in
-                 let m_len = if digits_of_m > 0 then digits_of_m + 1 else 0 in
-                 let decimal_unit_len =
-                   Decimal_unit.length
-                     decimal_unit
-                     ~digits:digits_of_decimal_unit
-                     ~decimals:decimals_of_decimal_unit
-                 in
-                 sign_len + d_len + h_len + m_len + decimal_unit_len
-               in
-               assert (string_length > 0);
-               let buf = (Bytes.create [@alloc a]) string_length in
-               let pos = 0 in
-               let pos = if is_negative then write_char buf ~pos '-' else pos in
-               let pos = write_if_non_empty buf ~pos ~digits:digits_of_d d 'd' in
-               let pos = write_if_non_empty buf ~pos ~digits:digits_of_h h 'h' in
-               let pos = write_if_non_empty buf ~pos ~digits:digits_of_m m 'm' in
-               let pos =
-                 Decimal_unit.write
-                   decimal_unit
-                   buf
-                   ~pos
-                   ~integer:decimal_unit_integer
-                   ~digits:digits_of_decimal_unit
-                   ~billionths:decimal_unit_billionths
-                   ~decimals:decimals_of_decimal_unit
-               in
-               assert (pos = string_length);
-               Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf))
-            [@exclave_if_stack a]
+          let to_string t =
+            if equal t zero
+            then "0s"
+            else (
+              let is_negative = t < zero in
+              let seconds = Int63.( / ) (to_int63_ns t) (to_int63_ns second) in
+              let ns =
+                Int63.rem (to_int63_ns t) (to_int63_ns second) |> Int63.to_int_exn
+              in
+              let seconds = Int63.abs seconds in
+              let ns = Int.abs ns in
+              let s = Int63.rem seconds int63_60 |> Int63.to_int_exn in
+              let minutes = Int63.( / ) seconds int63_60 in
+              let m = Int63.rem minutes int63_60 |> Int63.to_int_exn in
+              let hours = Int63.( / ) minutes int63_60 in
+              let h = Int63.rem hours int63_24 |> Int63.to_int_exn in
+              let d = Int63.( / ) hours int63_24 |> Int63.to_int_exn in
+              let open Int.O in
+              let digits_of_d = number_of_digits_to_write ~span_part_magnitude:d in
+              let digits_of_h = number_of_digits_to_write ~span_part_magnitude:h in
+              let digits_of_m = number_of_digits_to_write ~span_part_magnitude:m in
+              let decimal_unit = Decimal_unit.create ~s ~ns in
+              let decimal_unit_integer = Decimal_unit.integer decimal_unit ~s ~ns in
+              let decimal_unit_billionths = Decimal_unit.billionths decimal_unit ~ns in
+              let digits_of_decimal_unit =
+                number_of_digits_to_write ~span_part_magnitude:decimal_unit_integer
+              in
+              let decimals_of_decimal_unit =
+                number_of_decimal_places_to_write ~billionths:decimal_unit_billionths
+              in
+              let string_length =
+                let sign_len = if is_negative then 1 else 0 in
+                let d_len = if digits_of_d > 0 then digits_of_d + 1 else 0 in
+                let h_len = if digits_of_h > 0 then digits_of_h + 1 else 0 in
+                let m_len = if digits_of_m > 0 then digits_of_m + 1 else 0 in
+                let decimal_unit_len =
+                  Decimal_unit.length
+                    decimal_unit
+                    ~digits:digits_of_decimal_unit
+                    ~decimals:decimals_of_decimal_unit
+                in
+                sign_len + d_len + h_len + m_len + decimal_unit_len
+              in
+              assert (string_length > 0);
+              let buf = Bytes.create string_length in
+              let pos = 0 in
+              let pos = if is_negative then write_char buf ~pos '-' else pos in
+              let pos = write_if_non_empty buf ~pos ~digits:digits_of_d d 'd' in
+              let pos = write_if_non_empty buf ~pos ~digits:digits_of_h h 'h' in
+              let pos = write_if_non_empty buf ~pos ~digits:digits_of_m m 'm' in
+              let pos =
+                Decimal_unit.write
+                  decimal_unit
+                  buf
+                  ~pos
+                  ~integer:decimal_unit_integer
+                  ~digits:digits_of_decimal_unit
+                  ~billionths:decimal_unit_billionths
+                  ~decimals:decimals_of_decimal_unit
+              in
+              assert (pos = string_length);
+              Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf)
           ;;
         end
 
-        let%template[@alloc a = (heap, stack)] to_string =
-          (To_string.to_string [@alloc a])
-        ;;
+        let to_string = To_string.to_string
 
         module Of_string = struct
           (* We do computations using negative numbers everywhere and test against things
@@ -721,10 +702,7 @@ module Stable0 = struct
         end
 
         let of_string = Of_string.of_string
-
-        let%template[@alloc a = (heap, stack)] sexp_of_t t =
-          Sexp.Atom ((to_string [@alloc a]) t) [@exclave_if_stack a]
-        ;;
+        let sexp_of_t t = Sexp.Atom (to_string t)
 
         let t_of_sexp sexp =
           match sexp with
@@ -739,14 +717,12 @@ module Stable0 = struct
       end
 
       include T0
-
-      include%template Comparator.Stable.V1.Make [@modality portable] (T0)
+      include Comparator.Stable.V1.Make (T0)
     end
 
     include T
-
-    include%template Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (T)
-    include%template Diffable.Atomic.Make [@modality portable] (T)
+    include Comparable.Stable.V1.With_stable_witness.Make (T)
+    include Diffable.Atomic.Make (T)
   end
 end
 
@@ -756,7 +732,7 @@ end
 
 let to_string = Stable.V2.to_string
 let of_string = Stable.V2.of_string
-let%template[@alloc a = (heap, stack)] sexp_of_t = (Stable.V2.sexp_of_t [@alloc a])
+let sexp_of_t = Stable.V2.sexp_of_t
 let t_of_sexp = Stable.V2.t_of_sexp
 let t_sexp_grammar = Stable.V2.t_sexp_grammar
 
@@ -764,8 +740,8 @@ module Alternate_sexp = struct
   type nonrec t = t [@@deriving sexp, sexp_grammar]
 end
 
-include%template Comparable.With_zero [@modality portable] (struct
-    type nonrec t = t [@@deriving compare ~localize, sexp]
+include Comparable.With_zero (struct
+    type nonrec t = t [@@deriving compare, sexp]
 
     let zero = zero
   end)
@@ -832,32 +808,31 @@ let to_short_string t =
 
 let gen_incl = Int63.gen_incl
 let gen_uniform_incl = Int63.gen_uniform_incl
-let gen_log_incl = Int63.gen_incl
+let gen_log_incl = Int63.gen_log_incl
 let gen_log_uniform_incl = Int63.gen_log_uniform_incl
 
-include%template Pretty_printer.Register [@modality portable] (struct
+include Pretty_printer.Register (struct
     type nonrec t = t
 
     let to_string = to_string
     let module_name = module_name
   end)
 
-include%template Hashable.Make_binable [@modality portable] (struct
-    type nonrec t = t [@@deriving bin_io, compare ~localize, hash, sexp]
+include Hashable.Make_binable (struct
+    type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
   end)
 
 type comparator_witness = Stable.V2.comparator_witness
 
-include%template
-  Comparable.Make_binable_using_comparator [@mode local] [@modality portable] (struct
-    type nonrec t = t [@@deriving bin_io, compare ~localize, sexp]
+include Comparable.Make_binable_using_comparator (struct
+    type nonrec t = t [@@deriving bin_io, compare, sexp]
     type nonrec comparator_witness = comparator_witness
 
     let comparator = Stable.V2.comparator
   end)
 
-include%template Diffable.Atomic.Make [@modality portable] (struct
-    type nonrec t = t [@@deriving bin_io, sexp, equal ~localize]
+include Diffable.Atomic.Make (struct
+    type nonrec t = t [@@deriving bin_io, sexp, equal]
   end)
 
 (* re-include [Replace_polymorphic_compare] and its comparisons to shadow the
@@ -939,10 +914,7 @@ let to_span = to_span_float_round_nearest_microsecond
 
 module Option = struct
   type span = t [@@deriving sexp]
-
-  type t = Int63.t
-  [@@deriving
-    bin_io ~localize, compare ~localize, equal ~localize, globalize, hash, typerep]
+  type t = Int63.t [@@deriving bin_io, compare, equal, globalize, hash, typerep]
   (* nanoseconds or none *)
 
   let none = Int63.min_value
@@ -975,12 +947,9 @@ module Option = struct
     | Some t -> some t
   ;;
 
-  let%template[@alloc a = (heap, stack)] to_option t =
-    (if is_none t then None else Some (of_int63_ns t)) [@exclave_if_stack a]
-  ;;
+  let to_option t = if is_none t then None else Some (of_int63_ns t)
 
-  include%template
-    Immediate_option.Provide_or_null_conversions_zero_alloc [@modality portable] (struct
+  include Immediate_option.Provide_or_null_conversions_zero_alloc (struct
       type nonrec t = t
       type value = span
 
@@ -994,38 +963,30 @@ module Option = struct
     module Some = struct
       type t = span
 
-      let%template quickcheck_generator =
-        (Base_quickcheck.Generator.filter [@mode portable])
-          quickcheck_generator
-          ~f:some_is_representable
+      let quickcheck_generator =
+        Base_quickcheck.Generator.filter quickcheck_generator ~f:some_is_representable
       ;;
 
       let quickcheck_observer = quickcheck_observer
 
-      let%template quickcheck_shrinker =
-        (Base_quickcheck.Shrinker.filter [@mode portable])
-          quickcheck_shrinker
-          ~f:some_is_representable
+      let quickcheck_shrinker =
+        Base_quickcheck.Shrinker.filter quickcheck_shrinker ~f:some_is_representable
       ;;
     end
 
-    type t = Some.t option [@@deriving quickcheck ~portable]
+    type t = Some.t option [@@deriving quickcheck]
   end
 
-  let%template quickcheck_generator =
-    (Base_quickcheck.Generator.map [@mode portable])
-      For_quickcheck.quickcheck_generator
-      ~f:of_option
+  let quickcheck_generator =
+    Base_quickcheck.Generator.map For_quickcheck.quickcheck_generator ~f:of_option
   ;;
 
-  let%template quickcheck_observer =
-    (Quickcheck.Observer.unmap [@mode portable])
-      For_quickcheck.quickcheck_observer
-      ~f:to_option
+  let quickcheck_observer =
+    Quickcheck.Observer.unmap For_quickcheck.quickcheck_observer ~f:to_option
   ;;
 
-  let%template quickcheck_shrinker =
-    (Quickcheck.Shrinker.map [@mode portable])
+  let quickcheck_shrinker =
+    Quickcheck.Shrinker.map
       For_quickcheck.quickcheck_shrinker
       ~f:of_option
       ~f_inverse:to_option
@@ -1041,15 +1002,9 @@ module Option = struct
   module Stable = struct
     module V1 = struct
       module T = struct
-        type nonrec t = t
-        [@@deriving
-          bin_io ~localize, compare ~localize, equal ~localize, globalize, typerep]
+        type nonrec t = t [@@deriving bin_io, compare, equal, globalize, typerep]
 
-        let%template[@alloc a = (heap, stack)] sexp_of_t t =
-          ([%sexp_of: Stable.V1.t option] [@alloc a])
-            ((to_option [@alloc a]) t) [@exclave_if_stack a]
-        ;;
-
+        let sexp_of_t t = [%sexp_of: Stable.V1.t option] (to_option t)
         let t_of_sexp s = of_option ([%of_sexp: Stable.V1.t option] s)
         let of_int63_exn i = i
         let to_int63 t = t
@@ -1063,23 +1018,17 @@ module Option = struct
       end
 
       include T
-
-      include%template Comparator.Stable.V1.Make [@modality portable] (T)
-      include%template Diffable.Atomic.Make [@modality portable] (T)
+      include Comparator.Stable.V1.Make (T)
+      include Diffable.Atomic.Make (T)
     end
 
     module V2 = struct
       module T = struct
-        type nonrec t = t
-        [@@deriving
-          bin_io ~localize, compare ~localize, equal ~localize, globalize, typerep]
+        type nonrec t = t [@@deriving bin_io, compare, equal, globalize, typerep]
 
-        let%template[@alloc a = (heap, stack)] sexp_of_t t =
+        let sexp_of_t t =
           Sexp.List
-            (if is_none t
-             then []
-             else [ (Stable.V2.sexp_of_t [@alloc a]) (unchecked_value t) ])
-          [@exclave_if_stack a]
+            (if is_none t then [] else [ Stable.V2.sexp_of_t (unchecked_value t) ])
         ;;
 
         let t_of_sexp sexp =
@@ -1112,27 +1061,26 @@ module Option = struct
       end
 
       include T
-
-      include%template Comparator.Stable.V1.Make [@modality portable] (T)
-      include%template Diffable.Atomic.Make [@modality portable] (T)
+      include Comparator.Stable.V1.Make (T)
+      include Diffable.Atomic.Make (T)
     end
   end
 
-  let%template[@alloc a = (heap, stack)] sexp_of_t = (Stable.V2.sexp_of_t [@alloc a])
+  let sexp_of_t = Stable.V2.sexp_of_t
   let t_of_sexp = Stable.V2.t_of_sexp
 
-  include%template Identifiable.Make [@mode local] [@modality portable] (struct
-      type nonrec t = t [@@deriving sexp, compare ~localize, bin_io ~localize, hash]
+  include Identifiable.Make (struct
+      type nonrec t = t [@@deriving sexp, compare, bin_io, hash]
 
       let module_name = "Core.Time_ns.Span.Option"
 
-      include%template Sexpable.To_stringable [@modality portable] (struct
+      include Sexpable.To_stringable (struct
           type nonrec t = t [@@deriving sexp]
         end)
     end)
 
-  include%template Diffable.Atomic.Make [@modality portable] (struct
-      type nonrec t = t [@@deriving bin_io, sexp, equal ~localize]
+  include Diffable.Atomic.Make (struct
+      type nonrec t = t [@@deriving bin_io, sexp, equal]
     end)
 
   include (
@@ -1164,4 +1112,4 @@ module Stable = struct
   end
 end
 
-let%template arg_type = (Command.Arg_type.create [@mode portable]) of_string
+let arg_type = Command.Arg_type.create of_string

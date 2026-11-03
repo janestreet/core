@@ -46,16 +46,11 @@ module Make_sexp_serialization_test (T : Stable_unit_test_intf.Arg) = struct
   ;;
 end
 
-[%%template
-[@@@mode.default m = (global, local)]
-
-module Make_bin_io_test (T : Stable_unit_test_intf.Arg [@mode m]) = struct
-  [@@@mode m = (global, m)]
-
+module Make_bin_io_test (T : Stable_unit_test_intf.Arg) = struct
   let%test_unit "bin_io" =
     List.iter T.tests ~f:(fun (t, _, expected_bin_io) ->
-      let binable_m : (T.t Binable.m[@mode m]) = (module T) in
-      let to_bin_string t = (Binable.to_string [@mode m]) binable_m t in
+      let binable_m : T.t Binable.m = (module T) in
+      let to_bin_string t = Binable.to_string binable_m t in
       let serialized_bin_io = to_bin_string t in
       if String.( <> ) serialized_bin_io expected_bin_io
       then
@@ -63,7 +58,7 @@ module Make_bin_io_test (T : Stable_unit_test_intf.Arg [@mode m]) = struct
           "bin_io serialization mismatch"
           (t, `Expected expected_bin_io, `But_got serialized_bin_io)
           [%sexp_of: T.t * [ `Expected of string ] * [ `But_got of string ]];
-      let t' = (Binable.of_string [@mode m]) binable_m serialized_bin_io in
+      let t' = Binable.of_string binable_m serialized_bin_io in
       if not (T.equal t t')
       then
         failwiths
@@ -73,11 +68,11 @@ module Make_bin_io_test (T : Stable_unit_test_intf.Arg [@mode m]) = struct
   ;;
 end
 
-module Make (T : Stable_unit_test_intf.Arg [@mode m]) = struct
+module Make (T : Stable_unit_test_intf.Arg) = struct
   include Make_sexp_deserialization_test (T)
   include Make_sexp_serialization_test (T)
-  include Make_bin_io_test [@mode m] (T)
-end]
+  include Make_bin_io_test (T)
+end
 
 module Make_unordered_container (T : Stable_unit_test_intf.Unordered_container_arg) =
 struct

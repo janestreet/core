@@ -5,14 +5,11 @@ module Stable = struct
 
   module V1 = struct
     module T = struct
-      type t = unit
-      [@@deriving
-        bin_io ~localize, compare ~localize, sexp ~stackify, sexp_grammar, stable_witness]
+      type t = unit [@@deriving bin_io, compare, sexp, sexp_grammar, stable_witness]
     end
 
     include T
-
-    include%template Comparator.Stable.V1.Make [@modality portable] (T)
+    include Comparator.Stable.V1.Make (T)
 
     let%expect_test _ =
       print_endline [%bin_digest: t];
@@ -21,10 +18,7 @@ module Stable = struct
   end
 
   module V2 = struct
-    type t = unit
-    [@@deriving
-      compare ~localize, equal ~localize, sexp ~stackify, sexp_grammar, stable_witness]
-
+    type t = unit [@@deriving compare, equal, sexp, sexp_grammar, stable_witness]
     type comparator_witness = V1.comparator_witness
 
     let comparator = V1.comparator
@@ -42,10 +36,11 @@ module Stable = struct
 
     let bin_shape_t = Bin_prot.Shape.(basetype (Uuid.of_string bin_name)) []
     let bin_size_t () = 0
-    let bin_size_t__local () = 0
     let bin_write_t (_ : Bin_prot.Common.buf) ~pos () = pos
-    let bin_write_t__local (_ : Bin_prot.Common.buf) ~pos () = pos
-    let bin_writer_t = { Bin_prot.Type_class.size = bin_size_t; write = bin_write_t }
+
+    let bin_writer_t : _ Bin_prot.Type_class.writer =
+      { Bin_prot.Type_class.size = bin_size_t; write = bin_write_t }
+    ;;
 
     let bin_t =
       { Bin_prot.Type_class.shape = bin_shape_t
@@ -63,16 +58,16 @@ end
 
 open! Import
 
-include%template
-  Identifiable.Extend [@mode local] [@modality portable]
+include
+  Identifiable.Extend
     (Base.Unit)
     (struct
-      type t = unit [@@deriving bin_io ~localize]
+      type t = unit [@@deriving bin_io]
     end)
 
 include Base.Unit
 
-type t = unit [@@deriving typerep, bin_io ~localize]
+type t = unit [@@deriving typerep, bin_io]
 
 let quickcheck_generator = Base_quickcheck.Generator.unit
 let quickcheck_observer = Base_quickcheck.Observer.unit

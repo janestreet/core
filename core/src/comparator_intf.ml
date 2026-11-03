@@ -2,9 +2,7 @@ open! Import
 
 module Definitions = struct
   module Stable = struct
-    module%template V1 = struct
-      [@@@modality.default p = (nonportable, portable)]
-
+    module V1 = struct
       module type S = sig
         type t
         type comparator_witness
@@ -32,7 +30,7 @@ module type Comparator = sig
 
   (** The following module types and functors may be used to define stable modules *)
 
-  module%template Stable : sig
+  module Stable : sig
     module V1 : sig
       include module type of struct
         include Definitions.Stable.V1
@@ -41,17 +39,13 @@ module type Comparator = sig
       type nonrec ('a, 'b) t = ('a, 'b) t
       type ('a, 'b) comparator = ('a, 'b) t
 
-      [@@@modality.default p = (portable, nonportable)]
-
       val make
         :  compare:('a -> 'a -> int)
         -> sexp_of_t:('a -> Base.Sexp.t)
-        -> ((module S_fc with type comparable_t = 'a)[@modality p])
+        -> (module S_fc with type comparable_t = 'a)
 
-      [@@@mode.default m = (global, local)]
-
-      module Make : module type of Make [@mode m] [@modality p]
-      module Make1 : module type of Make1 [@mode m] [@modality p]
+      module Make : module type of Make
+      module Make1 : module type of Make1
     end
   end
 end

@@ -11,7 +11,7 @@ open Set_intf
     used for ordering elements in this set. Many operations (e.g., {!union}), require that
     they be passed sets with the same element type and the same comparator type. *)
 type ('elt, 'cmp) t = ('elt, 'cmp) Base.Set.t
-[@@sexp.phantom: 'cmp] [@@deriving compare ~localize, sexp_of]
+[@@sexp.phantom: 'cmp] [@@deriving compare, sexp_of]
 
 module Tree : sig
   type weight = Tree.weight
@@ -203,8 +203,7 @@ val symmetric_diff : ('a, 'cmp) t -> ('a, 'cmp) t -> ('a, 'a) Either.t Sequence.
 (** [compare_direct t1 t2] compares the sets [t1] and [t2]. It returns the same result as
     [compare], but unlike compare, doesn't require arguments to be passed in for the type
     parameters of the set. [O(length t1 + length t2)]. *)
-val%template compare_direct : ('a, 'cmp) t -> ('a, 'cmp) t -> int
-[@@mode m = (local, global)]
+val compare_direct : ('a, 'cmp) t -> ('a, 'cmp) t -> int
 
 (** Hash function: a building block to use when hashing data structures containing sets in
     them. [hash_fold_direct hash_fold_key] is compatible with [compare_direct] iff
@@ -214,8 +213,7 @@ val hash_fold_direct : 'a Hash.folder -> ('a, 'cmp) t Hash.folder
 
 (** [equal t1 t2] returns [true] iff the two sets have the same elements.
     [O(length t1 + length t2)] *)
-val%template equal : ('a, 'cmp) t -> ('a, 'cmp) t -> bool
-[@@mode m = (local, global)]
+val equal : ('a, 'cmp) t -> ('a, 'cmp) t -> bool
 
 (** [exists t ~f] returns [true] iff there exists an [a] in [t] for which [f a]. [O(n)],
     but returns as soon as it finds an [a] for which [f a]. *)
@@ -466,6 +464,21 @@ val group_by : ('a, 'cmp) t -> equiv:('a -> 'a -> bool) -> ('a, 'cmp) t list
   "[since 2024-08] This function is slow (O(n^2)) and pretty much never the right thing \
    to use. Consider using [to_list] along with [List.sort_and_group] or [List.group]."]
 
+(** [closest_elt t dir x] returns the element in [t] closest to [x] that satisfies the
+    given inequality bound.
+
+    For example, [closest_elt t `Less_than x] would be the element closest to [x] that is
+    strictly less than [x].
+
+    [to_sequence] can be used to get the same results as [closest_elt]. It is less
+    efficient for individual lookups but more efficient for finding many elements starting
+    at some value. *)
+val closest_elt
+  :  ('a, _) t
+  -> [ `Greater_or_equal_to | `Greater_than | `Less_or_equal_to | `Less_than ]
+  -> 'a
+  -> 'a option
+
 (** [to_sequence t] converts the set [t] to a sequence of the elements between
     [greater_or_equal_to] and [less_or_equal_to] inclusive in the order indicated by
     [order]. If [greater_or_equal_to > less_or_equal_to] the sequence is empty. Cost is
@@ -536,7 +549,7 @@ module Merge_to_sequence_element : sig
     | Left of 'a
     | Right of 'b
     | Both of 'a * 'b
-  [@@deriving bin_io, compare ~localize, sexp, sexp_grammar]
+  [@@deriving bin_io, compare, sexp, sexp_grammar]
 end
 
 val merge_to_sequence
@@ -554,9 +567,6 @@ val to_map : ('key, 'cmp) t -> f:('key -> 'data) -> ('key, 'data, 'cmp) Base.Map
 
 val of_map_keys : ('key, _, 'cmp) Base.Map.t -> ('key, 'cmp) t
 
-[%%template:
-[@@@mode.default p = (nonportable, portable)]
-
 val quickcheck_generator
   : 'key 'cmp.
   ('key, 'cmp) Comparator.Module.t
@@ -569,7 +579,7 @@ val quickcheck_observer
 
 val quickcheck_shrinker
   : 'key 'cmp.
-  'key Quickcheck.Shrinker.t -> ('key, 'cmp) t Quickcheck.Shrinker.t]
+  'key Quickcheck.Shrinker.t -> ('key, 'cmp) t Quickcheck.Shrinker.t
 
 (** {2 Polymorphic sets}
 
@@ -594,7 +604,7 @@ module Poly : sig
     end
 
     type 'elt t = ('elt, Comparator.Poly.comparator_witness) set
-    [@@deriving bin_io, compare ~localize, sexp, sexp_grammar]
+    [@@deriving bin_io, compare, sexp, sexp_grammar]
 
     include
       Creators_generic
@@ -609,37 +619,31 @@ module Poly : sig
 
 (** {2 Signatures and functors for building [Set] modules} *)
 
-[%%template:
-[@@@mode.default m = (local, global)]
-
-module type Elt_plain = Elt_plain [@mode m]
+module type Elt_plain = Elt_plain
 
 (** The signature that something needs to match in order to be used as a set element. *)
-module type Elt = Elt [@mode m]
+module type Elt = Elt
 
 (** The signature that something needs to match in order to be used as a set element if
     the resulting set is going to support [bin_io]. *)
-module type Elt_binable = Elt_binable [@mode m]]
-
-[%%template:
-[@@@modality.default p = (portable, nonportable)]
+module type Elt_binable = Elt_binable
 
 (** Module signature for a Set that doesn't support [of_sexp]. *)
-module type S_plain = S_plain [@modality p]
+module type S_plain = S_plain
 
 (** Module signature for a Set. *)
-module type S = S [@modality p]
+module type S = S
 
 (** Module signature for a Set that supports [bin_io]. *)
-module type S_binable = S_binable [@modality p]]
+module type S_binable = S_binable
 
 (** [Make] builds a set from an element type that has a [compare] function but doesn't
     have a comparator. This generates a new comparator.
 
     [Make_binable] is similar, except the element and set types support [bin_io]. *)
-module%template.portable Make_plain (Elt : Elt_plain) : S_plain with type Elt.t = Elt.t
+module Make_plain (Elt : Elt_plain) : S_plain with type Elt.t = Elt.t
 
-module%template.portable Provide_of_sexp (Elt : sig
+module Provide_of_sexp (Elt : sig
     type t [@@deriving of_sexp]
 
     include Comparator.S with type t := t
@@ -648,16 +652,13 @@ module%template.portable Provide_of_sexp (Elt : sig
   end
   with type t := (Elt.t, Elt.comparator_witness) t
 
-module%template.portable Make (Elt : Elt) : S with type Elt.t = Elt.t
+module Make (Elt : Elt) : S with type Elt.t = Elt.t
+module Make_binable (Elt : Elt_binable) : S_binable with type Elt.t = Elt.t
 
-module%template.portable Make_binable (Elt : Elt_binable) :
-  S_binable with type Elt.t = Elt.t
-
-module%template.portable
-  [@modality p] Make_plain_using_comparator (Elt : sig
+module Make_plain_using_comparator (Elt : sig
     type t [@@deriving sexp_of]
 
-    include Comparator.S [@modality p] with type t := t
+    include Comparator.S with type t := t
   end) :
   S_plain
   with type Elt.t = Elt.t
@@ -667,34 +668,31 @@ module%template.portable
 
     [Make_binable_using_comparator] is similar, except the element and set types support
     [bin_io]. *)
-module%template.portable
-  [@modality p] Make_using_comparator (Elt : sig
+module Make_using_comparator (Elt : sig
     type t [@@deriving sexp]
 
-    include Comparator.S [@modality p] with type t := t
+    include Comparator.S with type t := t
   end) :
   S with type Elt.t = Elt.t with type Elt.comparator_witness = Elt.comparator_witness
 
 module Elt_bin_io = Elt_bin_io
 
-module%template.portable
-  [@modality p] Provide_bin_io
+module Provide_bin_io
     (Elt : Elt_bin_io.S) : sig
     type t [@@deriving bin_io]
   end
   with type t := (Elt.t, Elt.comparator_witness) t
 
-module%template.portable
-  [@modality p] Make_binable_using_comparator (Elt : sig
+module Make_binable_using_comparator (Elt : sig
     type t [@@deriving bin_io, sexp]
 
-    include Comparator.S [@modality p] with type t := t
+    include Comparator.S with type t := t
   end) :
   S_binable
   with type Elt.t = Elt.t
   with type Elt.comparator_witness = Elt.comparator_witness
 
-module%template Provide_stable_witness (Elt : sig
+module Provide_stable_witness (Elt : sig
     type t [@@deriving stable_witness]
     type comparator_witness
   end) : sig
@@ -702,7 +700,7 @@ module%template Provide_stable_witness (Elt : sig
   end
   with type t := (Elt.t, Elt.comparator_witness) t
 
-module%template.portable Provide_hash (Elt : sig
+module Provide_hash (Elt : sig
     type t
     type comparator_witness
 
@@ -714,18 +712,16 @@ module%template.portable Provide_hash (Elt : sig
 
 include For_deriving with type ('a, 'b) t := ('a, 'b) t
 
-module%template.portable
-  [@modality p] Make_tree_plain (Elt : sig
+module Make_tree_plain (Elt : sig
     type t [@@deriving sexp_of]
 
-    include Comparator.S [@modality p] with type t := t
+    include Comparator.S with type t := t
   end) : S_plain_tree with module Elt := Elt
 
-module%template.portable
-  [@modality p] Make_tree (Elt : sig
+module Make_tree (Elt : sig
     type t [@@deriving sexp]
 
-    include Comparator.S [@modality p] with type t := t
+    include Comparator.S with type t := t
   end) : sig
   include S_plain_tree with module Elt := Elt
   include Sexpable.S with type t := t
@@ -741,8 +737,7 @@ module Stable : sig
       type elt_comparator_witness
       type nonrec t = (elt, elt_comparator_witness) t
 
-      include%template
-        Stable_module_types.S0_without_comparator [@mode local] with type t := t
+      include Stable_module_types.S0_without_comparator with type t := t
 
       include
         Diffable.S with type t := t and type Diff.t = elt Diffable.Set_diff.Stable.V1.t
@@ -751,10 +746,7 @@ module Stable : sig
     include For_deriving with type ('a, 'b) t := ('a, 'b) t
     include For_deriving_stable with type ('a, 'b) t := ('a, 'b) t
 
-    module%template.portable
-      [@modality p] Make
-        (Elt : Stable_module_types.S0
-      [@modality p]) :
+    module Make (Elt : Stable_module_types.S0) :
       S with type elt := Elt.t with type elt_comparator_witness := Elt.comparator_witness
 
     module With_stable_witness : sig
@@ -764,10 +756,7 @@ module Stable : sig
         val stable_witness : t Stable_witness.t
       end
 
-      module%template.portable
-        [@modality p] Make
-          (Elt : Stable_module_types.With_stable_witness.S0
-        [@modality p]) :
+      module Make (Elt : Stable_module_types.With_stable_witness.S0) :
         S
         with type elt := Elt.t
         with type elt_comparator_witness := Elt.comparator_witness

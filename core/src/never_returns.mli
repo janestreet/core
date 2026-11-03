@@ -8,5 +8,4 @@ open! Import
 
 type never_returns = Nothing.t [@@deriving sexp_of]
 
-val%template never_returns : never_returns -> _
-[@@kind k = (base_or_null, value_or_null & value_or_null)]
+val never_returns : never_returns -> _

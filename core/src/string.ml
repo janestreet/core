@@ -10,8 +10,7 @@ module Stable = struct
   module Make_utf (Utf : sig
       type t = private string [@@deriving sexp_grammar]
 
-      include%template
-        Base.Identifiable.S [@mode local] [@modality portable] with type t := t
+      include Base.Identifiable.S with type t := t
 
       val caller_identity : Bin_shape.Uuid.t
     end) =
@@ -20,16 +19,16 @@ module Stable = struct
       module T = struct
         include Utf
 
-        include%template
-          Binable0.Of_binable_with_uuid [@mode local] [@modality portable]
+        include
+          Binable0.Of_binable_with_uuid
             (struct
-              type t = string [@@deriving bin_io ~localize]
+              type t = string [@@deriving bin_io]
             end)
             (struct
               type t = Utf.t
 
               let of_binable = Utf.of_string
-              let[@mode __ = (local, global)] to_binable (t : t) = (t :> string)
+              let to_binable (t : t) = (t :> string)
               let caller_identity = Utf.caller_identity
             end)
 
@@ -37,13 +36,8 @@ module Stable = struct
       end
 
       include T
-
-      let%template[@alloc stack] to_string (t : t) = (t :> string)
-
-      include%template
-        Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (T)
-
-      include%template Hashable.Stable.V1.With_stable_witness.Make [@modality portable] (T)
+      include Comparable.Stable.V1.With_stable_witness.Make (T)
+      include Hashable.Stable.V1.With_stable_witness.Make (T)
     end
   end
 
@@ -92,37 +86,52 @@ module Caseless = struct
   module T = struct
     include Caseless
 
-    type t = string [@@deriving bin_io ~localize]
+    type t = string [@@deriving bin_io]
   end
 
   include T
+  include Comparable.Make_binable_using_comparator (T)
+  include Hashable.Make_binable (T)
 
-  include%template
-    Comparable.Make_binable_using_comparator [@mode local] [@modality portable] (T)
+  module Stable = struct
+    module V1 = struct
+      module T = struct
+        include Caseless
 
-  include%template Hashable.Make_binable [@modality portable] (T)
+        type t = string [@@deriving bin_io, stable_witness]
+      end
+
+      include T
+
+      let to_string = Fn.id
+      let of_string = Fn.id
+
+      include Comparable.Stable.V1.With_stable_witness.Make (T)
+      include Hashable.Stable.V1.With_stable_witness.Make (T)
+    end
+  end
 end
 
-type t = string [@@deriving bin_io ~localize, typerep]
+type t = string [@@deriving bin_io, typerep]
 
-include%template
-  Identifiable.Extend [@mode local] [@modality portable]
+include
+  Identifiable.Extend
     (struct
       include Base.String
 
       let hashable = Stable_string.V1.hashable
     end)
     (struct
-      type t = string [@@deriving bin_io ~localize]
+      type t = string [@@deriving bin_io]
     end)
 
-include%template Comparable.Validate [@modality portable] (Base.String)
+include Comparable.Validate (Base.String)
 
-include%template Diffable.Atomic.Make [@modality portable] (struct
-    type nonrec t = t [@@deriving sexp, bin_io, equal ~localize]
+include Diffable.Atomic.Make (struct
+    type nonrec t = t [@@deriving sexp, bin_io, equal]
   end)
 
-include%template Hexdump.Of_indexable [@modality portable] (struct
+include Hexdump.Of_indexable (struct
     type t = string
 
     let length = length
@@ -133,35 +142,24 @@ let quickcheck_generator = Base_quickcheck.Generator.string
 let quickcheck_observer = Base_quickcheck.Observer.string
 let quickcheck_shrinker = Base_quickcheck.Shrinker.string
 let gen_nonempty = Base_quickcheck.Generator.string_non_empty
+let gen' = Base_quickcheck.Generator.string_of
+let gen_nonempty' = Base_quickcheck.Generator.string_non_empty_of
 
-let%template gen' = (Base_quickcheck.Generator.string_of [@mode p])
-[@@mode p = (portable, nonportable)]
+let gen_with_length length chars =
+  Base_quickcheck.Generator.string_with_length_of chars ~length
 ;;
-
-let%template gen_nonempty' = (Base_quickcheck.Generator.string_non_empty_of [@mode p])
-[@@mode p = (portable, nonportable)]
-;;
-
-let%template gen_with_length length chars =
-  (Base_quickcheck.Generator.string_with_length_of [@mode p]) chars ~length
-[@@mode p = (portable, nonportable)]
-;;
-
-[%%template
-[@@@alloc.default a = (heap, stack)]
 
 let take_while t ~f =
   match lfindi t ~f:(fun _ elt -> not (f elt)) with
   | None -> t
-  | Some i -> (sub [@alloc a]) t ~pos:0 ~len:i [@exclave_if_stack a]
+  | Some i -> sub t ~pos:0 ~len:i
 ;;
 
 let rtake_while t ~f =
   match rfindi t ~f:(fun _ elt -> not (f elt)) with
   | None -> t
-  | Some i ->
-    (sub [@alloc a]) t ~pos:(i + 1) ~len:(length t - i - 1) [@exclave_if_stack a]
-;;]
+  | Some i -> sub t ~pos:(i + 1) ~len:(length t - i - 1)
+;;
 
 (** See {!Array.normalize} for the following 4 functions. *)
 let normalize t i = Ordered_collection_common.normalize ~length_fun:length t i
@@ -178,11 +176,8 @@ let nget x i =
 module type Utf = sig
   include Utf
 
-  include%template
-    Identifiable.S
-    [@mode local]
-    with type t := t
-     and type comparator_witness := comparator_witness
+  include
+    Identifiable.S with type t := t and type comparator_witness := comparator_witness
 
   include Quickcheckable.S with type t := t
 end
@@ -194,35 +189,30 @@ module Extend_utf
        include Base.String.Utf
      end)
     (B : sig
-       include%template Binable0.S [@mode local] with type t = Utf.t
+       include Binable0.S with type t = Utf.t
      end) : sig
   include Utf with type t = Utf.t and type comparator_witness = Utf.comparator_witness
 end = struct
   include Utf
   include B
+  include Identifiable.Extend (Utf) (B)
 
-  include%template Identifiable.Extend [@mode local] [@modality portable] (Utf) (B)
-
-  include%template struct
+  include struct
     open Base_quickcheck
 
-    let%template quickcheck_observer =
-      (Observer.unmap [@mode portable])
-        [%quickcheck.observer_portable: string]
-        ~f:Utf.to_string
+    let quickcheck_observer =
+      Observer.unmap [%quickcheck.observer_portable: string] ~f:Utf.to_string
     ;;
 
     let quickcheck_shrinker =
-      (Shrinker.map [@mode portable])
+      Shrinker.map
         [%quickcheck.shrinker_portable: Uchar.t list]
         ~f:Utf.of_list
         ~f_inverse:Utf.to_list
     ;;
 
     let quickcheck_generator =
-      (Generator.map [@mode portable])
-        [%quickcheck.generator_portable: Uchar.t list]
-        ~f:Utf.of_list
+      Generator.map [%quickcheck.generator_portable: Uchar.t list] ~f:Utf.of_list
     ;;
   end
 end

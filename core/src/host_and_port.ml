@@ -5,8 +5,7 @@ module Stable = struct
 
   module V1 = struct
     module Serializable = struct
-      type t = string * int
-      [@@deriving sexp ~portable, bin_io ~localize ~portable, stable_witness]
+      type t = string * int [@@deriving sexp, bin_io, stable_witness]
     end
 
     module T0 = struct
@@ -14,27 +13,22 @@ module Stable = struct
         { host : Stable_string.V1.t
         ; port : Int.t
         }
-      [@@deriving
-        compare ~localize, equal ~localize, globalize, hash, quickcheck ~portable]
+      [@@deriving compare, equal, globalize, hash, quickcheck]
 
-      let%template[@alloc a = (heap, stack)] to_serializable { host; port } =
-        (host, port) [@exclave_if_stack a]
-      ;;
-
+      let to_serializable { host; port } = host, port
       let of_serializable (host, port) = { host; port }
     end
 
     module T1 = struct
       include T0
 
-      include%template
-        Binable.Stable.Of_binable.V1 [@mode local] [@modality portable] [@alert "-legacy"]
+      include
+        Binable.Stable.Of_binable.V1 [@alert "-legacy"]
           (Serializable)
           (struct
             include T0
 
             let to_binable = to_serializable
-            let%template[@mode local] to_binable = (to_serializable [@alloc stack])
             let of_binable = of_serializable
           end)
 
@@ -55,8 +49,8 @@ module Stable = struct
           |}]
       ;;
 
-      include%template
-        Sexpable.Stable.Of_sexpable.V1 [@modality portable]
+      include
+        Sexpable.Stable.Of_sexpable.V1
           (Serializable)
           (struct
             include T0
@@ -69,9 +63,7 @@ module Stable = struct
       open! Std_internal
       open! T0
 
-      let%template[@alloc a = (heap, stack)] to_string { host; port } =
-        (String.concat [@alloc a]) [ host; ":"; Int.to_string port ] [@exclave_if_stack a]
-      ;;
+      let to_string { host; port } = String.concat [ host; ":"; Int.to_string port ]
 
       let of_string s =
         match String.split s ~on:':' with
@@ -103,14 +95,11 @@ module Stable = struct
           }
       ;;
 
-      include%template
-        (val (Comparator.Stable.V1.make [@modality portable]) ~compare ~sexp_of_t)
+      include (val Comparator.Stable.V1.make ~compare ~sexp_of_t)
     end
 
     include T1
-
-    include%template
-      Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (T1)
+    include Comparable.Stable.V1.With_stable_witness.Make (T1)
 
     let%test_unit "t_of_sexp" =
       [%test_result: t]
@@ -135,17 +124,15 @@ module Latest = struct
   module T = Stable.V1
   include T
 
-  include%template Pretty_printer.Register [@modality portable] (struct
+  include Pretty_printer.Register (struct
       type nonrec t = t
 
       let to_string = to_string
       let module_name = "Core.Host_and_port"
     end)
 
-  include%template Hashable.Make_binable [@modality portable] (T)
-
-  include%template
-    Comparable.Make_binable_using_comparator [@mode local] [@modality portable] (T)
+  include Hashable.Make_binable (T)
+  include Comparable.Make_binable_using_comparator (T)
 end
 
 include Latest
@@ -154,10 +141,7 @@ let create ~host ~port = { host; port }
 let host t = t.host
 let port t = t.port
 let tuple t = to_serializable t
-
-let%template type_id =
-  (Type_equal.Id.create [@mode portable]) ~name:"Host_and_port" sexp_of_t
-;;
+let type_id = Type_equal.Id.create ~name:"Host_and_port" sexp_of_t
 
 module Hide_port_in_test = struct
   include Latest

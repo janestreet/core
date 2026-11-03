@@ -34,8 +34,7 @@ end
 
 (* We can't call the base module [Base] because [@@deriving quickcheck] wants to access
    the [Base] library directly, and we'd be shadowing it. *)
-module%template.portable [@modality p] F (Underlying : Base) :
-  S with type base = Underlying.t = struct
+module F (Underlying : Base) : S with type base = Underlying.t = struct
   type base = Underlying.t
 
   type t =
@@ -43,7 +42,7 @@ module%template.portable [@modality p] F (Underlying : Base) :
     ; pos : int
     ; len : int
     }
-  [@@deriving quickcheck [@mode p]]
+  [@@deriving quickcheck]
 
   (* note we override the generated [quickcheck_generator] below, once we've defined
      [create] *)
@@ -86,8 +85,15 @@ module%template.portable [@modality p] F (Underlying : Base) :
     { base; pos; len }
   ;;
 
+  let sub ?pos ?len t =
+    let pos, len =
+      Ordered_collection_common.get_pos_len_exn () ?pos ?len ~total_length:(length t)
+    in
+    { base = t.base; pos = t.pos + pos; len }
+  ;;
+
   let quickcheck_generator =
-    let open Base_quickcheck.Generator.Let_syntax [@mode p] in
+    let open Base_quickcheck.Generator.Let_syntax in
     let%bind base = Underlying.quickcheck_generator in
     let open Base_quickcheck.Generator.Let_syntax in
     let base_len = Underlying.length base in
@@ -96,7 +102,7 @@ module%template.portable [@modality p] F (Underlying : Base) :
     return (create ~pos ~len base)
   ;;
 
-  let get_no_bounds_check t i = Underlying.get (base t) (pos t + i)
+  let get_no_bounds_check t i = Underlying.get t.base (t.pos + i)
 
   let get t i =
     if i >= 0 && i < length t
@@ -104,17 +110,10 @@ module%template.portable [@modality p] F (Underlying : Base) :
     else raise (Invalid_argument "index out of bounds")
   ;;
 
-  let sub ?pos ?len t =
-    let pos, len =
-      Ordered_collection_common.get_pos_len_exn () ?pos ?len ~total_length:(length t)
-    in
-    { base = t.base; pos = t.pos + pos; len }
-  ;;
-
   module Make_arg = struct
     type nonrec t = t
 
-    module Elt = Char
+    module Elt : module type of Char = Char
 
     let fold t ~init ~f =
       let rec go acc i = if i >= length t then acc else go (f acc (get t i)) (i + 1) in
@@ -155,7 +154,7 @@ module%template.portable [@modality p] F (Underlying : Base) :
     let length = `Custom length
   end
 
-  module%template C = Indexed_container.Make0 [@modality p] (Make_arg)
+  module C = Indexed_container.Make0 (Make_arg)
 
   let fold = C.fold
   let iter = C.iter
@@ -164,7 +163,7 @@ module%template.portable [@modality p] F (Underlying : Base) :
   let iter_until = C.iter_until
 
   (* [C.to_list] has to construct then reverse the list *)
-  let to_list t = List.init (length t) ~f:(get t)
+  let to_list t = List.init (length t) ~f:(fun i -> get t i)
   let to_array = C.to_array
   let find_map = C.find_map
   let find = C.find
@@ -243,18 +242,24 @@ module%template.portable [@modality p] F (Underlying : Base) :
   let of_string x = of_base (base_of_string x)
   let of_bigstring x = of_base (base_of_bigstring x)
 
-  let make (type a) create (blit : (base, a) Blit.t) t =
-    let dst = create t.len in
-    blit ~src:t.base ~src_pos:t.pos ~src_len:t.len ~dst ~dst_pos:0 ();
+  let to_string t =
+    let dst = Bytes.create t.len in
+    Underlying.blit_to_bytes ~src:t.base ~src_pos:t.pos ~src_len:t.len ~dst ~dst_pos:0 ();
+    Bytes.unique_to_string dst
+  ;;
+
+  let to_bigstring t =
+    let dst = Bigstring.create t.len in
+    Underlying.blit_to_bigstring
+      ~src:t.base
+      ~src_pos:t.pos
+      ~src_len:t.len
+      ~dst
+      ~dst_pos:0
+      ();
     dst
   ;;
 
-  let to_string x =
-    Bytes.unsafe_to_string
-      ~no_mutation_while_string_reachable:(make Bytes.create Underlying.blit_to_bytes x)
-  ;;
-
-  let to_bigstring = make Bigstring.create Underlying.blit_to_bigstring
   let sexp_of_t x = Sexp.Atom (to_string x)
 
   let concat_gen create_dst blit_dst ts =

@@ -12,9 +12,11 @@ build: [
 ]
 depends: [
   "ocaml" {>= "5.1.0"}
+  "am_running_test"
   "base"
   "base_bigstring"
   "base_quickcheck"
+  "basement"
   "bin_prot"
   "capsule"
   "fieldslib"
@@ -34,6 +36,7 @@ depends: [
   "ppx_sexp_message"
   "ppx_stable_witness"
   "sexplib"
+  "small_numbers_shim"
   "splittable_random"
   "stdio"
   "string_dict"

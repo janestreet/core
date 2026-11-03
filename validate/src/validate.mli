@@ -57,7 +57,7 @@ open Base
 type t
 
 (** To make function signatures easier to read. *)
-type%template 'a check = 'a -> t [@@mode p = (portable, nonportable)]
+type 'a check = 'a -> t
 
 (** [(check[@mode portable])] can be read as "a check that returns a [Validate.t] at mode
     portable".
@@ -83,48 +83,38 @@ val fail_s : Sexp.t -> t
 (** Like [sprintf] or [failwithf] but produces a [t] instead of a string or exception. *)
 val failf : ('a, unit, string, t) format4 -> 'a
 
-val%template combine : t -> t -> t [@@mode p = (portable, nonportable)]
+val combine : t -> t -> t
 
 (** Combines multiple results, merging errors. *)
-val%template of_list : t list -> t
-[@@mode p = (portable, nonportable)]
+val of_list : t list -> t
 
 (** Extends location path by one name. *)
-val%template name : string -> t -> t
-[@@mode p = (portable, nonportable)]
+val name : string -> t -> t
 
 (** Extends location path by one lazy name, which will be forced only in the case of
     failure. *)
-val%template lazy_name : string Lazy.t -> t -> t
-[@@mode p = (portable, nonportable)]
+val lazy_name : string Lazy.t -> t -> t
 
-val%template name_list : string -> t list -> t [@@mode p = (portable, nonportable)]
-
-val%template lazy_name_list : string Lazy.t -> t list -> t
-[@@mode p = (portable, nonportable)]
+val name_list : string -> t list -> t
+val lazy_name_list : string Lazy.t -> t list -> t
 
 (** [fail_fn err] returns a function that always returns fail, with [err] as the error
     message. (Note that there is no [pass_fn] so as to discourage people from ignoring the
     type of the value being passed unconditionally irrespective of type.) *)
-val%template fail_fn : string -> (_ check[@mode p])
-[@@mode p = (portable, nonportable)]
+val fail_fn : string -> _ check
 
 (** Checks for unconditionally passing a bool. *)
-val%template pass_bool : (bool check[@mode p])
-[@@mode p = (portable, nonportable)]
+val pass_bool : bool check
 
 (** Checks for unconditionally passing a unit. *)
-val%template pass_unit : (unit check[@mode p])
-[@@mode p = (portable, nonportable)]
+val pass_unit : unit check
 
 (** [protect f x] applies the validation [f] to [x], catching any exceptions and returning
     them as errors. *)
-val%template protect : 'a. 'a check -> 'a check
-[@@kind k = (value_or_null, float64, bits32, bits64, word, immediate, immediate64)]
+val protect : 'a. 'a check -> 'a check
 
 (** [try_with f] runs [f] catching any exceptions and returning them as errors. *)
-val%template try_with : (unit -> unit) -> t
-[@@mode p = (portable, nonportable)]
+val try_with : (unit -> unit) -> t
 
 val result : t -> unit Or_error.t
 
@@ -141,31 +131,24 @@ val maybe_raise : t -> unit
 val valid_or_error : 'a check -> 'a -> 'a Or_error.t
 
 (** Used for validating an individual field. Should be used with [Fields.to_list]. *)
-val%template field
+val field
   : 'a 'record.
   'a check -> 'record -> ([> `Read ], 'record, 'a) Field.t_with_perm -> t
-[@@kind k = base_or_null_with_imm]
 
 (** Used for validating an individual field. Should be used with [Fields.Direct.to_list]. *)
-val%template field_direct
+val field_direct
   : 'a 'record.
   'a check -> ([> `Read ], 'record, 'a) Field.t_with_perm -> 'record -> 'a -> t
-[@@kind k = base_or_null_with_imm]
 
 (** Creates a function for use in a [Fields.fold]. *)
-val%template field_folder
+val field_folder
   : 'a 'record.
-  ('a check[@mode p])
-  -> 'record
-  -> t list
-  -> ([> `Read ], 'record, 'a) Field.t_with_perm
-  -> t list
-[@@kind k = base_or_null_with_imm] [@@mode p = (portable, nonportable)]
+  'a check -> 'record -> t list -> ([> `Read ], 'record, 'a) Field.t_with_perm -> t list
 
 (** Like [field_folder], but for producing a list of portable ts. It's marginally easier
     to use directly when folding over fields to produce a portable result. *)
-val%template portable_field_folder
-  :  ('a check[@mode portable])
+val portable_field_folder
+  :  'a check
   -> 'record
   -> t portable list
   -> ([> `Read ], 'record, 'a) Field.t_with_perm
@@ -180,28 +163,20 @@ val field_direct_folder
 (** Combines a list of validation functions into one that does all validations. *)
 val all : 'a check list -> 'a check
 
-[%%template:
 (** Creates a validation function from a function that produces a [Result.t]. *)
-val of_result : ('a -> (unit, string) Result.t) -> ('a check[@mode portable])
-[@@mode p = (portable, nonportable)]
+val of_result : ('a -> (unit, string) Result.t) -> 'a check
 
-val of_error : ('a -> unit Or_error.t) -> 'a check [@@mode p = (portable, nonportable)]
+val of_error : ('a -> unit Or_error.t) -> 'a check
 
 (** Creates a validation function from a function that produces a bool. *)
 val booltest : 'a. ('a -> bool) -> if_false:string -> 'a check
-[@@kind k = base_or_null_with_imm]
 
 (** Creates a validation function from a function that produces a bool. Forces the name
     only when validation fails. *)
 val lazy_booltest : 'a. ('a -> bool) -> if_false:string Lazy.t -> 'a check
-[@@kind k = base_or_null_with_imm]
 
 (** Validation functions for particular data types. *)
-val pair
-  :  fst:('a check[@mode p1])
-  -> snd:('b check[@mode p1])
-  -> (('a * 'b) check[@mode p1])
-[@@mode p1 = (portable, nonportable), p2 = (portable, nonportable)]]
+val pair : fst:'a check -> snd:'b check -> ('a * 'b) check
 
 (** Validates a list, naming each element by its position in the list (where the first
     position is 1, not 0). *)
@@ -211,20 +186,20 @@ val list_indexed : 'a check -> 'a list check
     name. *)
 val list : name:('a -> string) -> 'a check -> 'a list check
 
-val%template first_failure : t -> t -> t [@@mode p = (portable, nonportable)]
-
+val first_failure : t -> t -> t
 val of_error_opt : string option -> t
+val of_or_error : unit Or_error.t -> t
 
 (** Validates an association list, naming each element using a user-defined function for
     computing the name. *)
 val alist : name:('a -> string) -> 'b check -> ('a * 'b) list check
 
-val%template bounded
+val bounded
   :  name:('a -> string)
   -> lower:'a Maybe_bound.t
   -> upper:'a Maybe_bound.t
   -> compare:('a -> 'a -> int)
-  -> ('a check[@mode portable])
+  -> 'a check
 
 module Infix : sig
   (** Infix operator for [combine] above. *)

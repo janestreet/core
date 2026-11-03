@@ -91,15 +91,13 @@ module type For_unix = sig
   end
 end
 
-module type%template Enumerable_sexpable = sig
+module type Enumerable_sexpable = sig
   type t [@@deriving enumerate, sexp_of]
 end
-[@@modality (p, c) = ((nonportable, uncontended), (portable, contended))]
 
-module type%template Enumerable_stringable = sig
+module type Enumerable_stringable = sig
   type t [@@deriving enumerate, to_string]
 end
-[@@modality (p, c) = ((nonportable, uncontended), (portable, contended))]
 
 module Auto_complete = struct
   (** In addition to the argument prefix, an auto-completion spec has access to any
@@ -118,9 +116,6 @@ end
 module type Arg_type = sig
   (** The type of a command line argument. *)
   type 'a t
-
-  [%%template:
-  [@@@mode.default (p, c) = ((nonportable, uncontended), (portable, contended))]
 
   (** An argument type includes information about how to parse values of that type from
       the command line, and (optionally) how to autocomplete partial arguments of that
@@ -153,7 +148,7 @@ module type Arg_type = sig
 
   (** Defers construction of the arg type until it is needed. *)
   val of_lazy : ?key:'a Univ_map.Multi.Key.t -> 'a t Lazy.t -> 'a t
-  [@@mode] [@@warning "-unused-value-declaration"]
+  [@@warning "-unused-value-declaration"]
 
   (** An auto-completing [Arg_type] over a finite set of values. *)
   val of_map
@@ -198,7 +193,7 @@ module type Arg_type = sig
     -> ?list_values_in_help:bool (** default: true *)
     -> ?auto_complete:Auto_complete.t
     -> ?key:'a Univ_map.Multi.Key.t
-    -> ((module Enumerable_stringable with type t = 'a)[@mode p])
+    -> (module Enumerable_stringable with type t = 'a)
     -> 'a t
 
   (** Convenience wrapper for [of_alist_exn] to use with [ppx_enumerate] using [sexp_of_t]
@@ -212,7 +207,7 @@ module type Arg_type = sig
     -> ?list_values_in_help:bool (** default: true *)
     -> ?auto_complete:Auto_complete.t
     -> ?key:'a Univ_map.Multi.Key.t
-    -> ((module Enumerable_sexpable with type t = 'a)[@mode p])
+    -> (module Enumerable_sexpable with type t = 'a)
     -> 'a t
 
   (** [comma_separated t] accepts comma-separated lists of arguments parsed by [t].
@@ -226,16 +221,20 @@ module type Arg_type = sig
       [comma_separated] to produce a list whose only element is the empty string.)
 
       If [unique_values = true] no autocompletion will be offered for arguments already
-      supplied in the fragment to complete. *)
+      supplied in the fragment to complete.
+
+      If [propagate_additional_documentation = true] then [additional_documentation] will
+      be copied from [t]. Otherwise it will be set to [None]. *)
   val comma_separated
     :  ?allow_empty:bool (** default: [false] *)
     -> ?key:'a list Univ_map.Multi.Key.t
     -> ?strip_whitespace:bool (** default: [false] *)
     -> ?unique_values:bool (** default: [false] *)
+    -> ?propagate_additional_documentation:bool (** default: [false] *)
     -> 'a t
     -> 'a list t
 
-  val auto_complete : _ t -> Auto_complete.t]
+  val auto_complete : _ t -> Auto_complete.t
 
   (** Values to include in other namespaces. *)
   module Export : sig
@@ -252,18 +251,13 @@ module type Arg_type = sig
     val float : float t
     val bool : bool t
     val sexp : Sexp.t t
-
-    val%template sexp_conv : ?complete:Auto_complete.t -> (Sexp.t -> 'a) -> 'a t
-    [@@mode p = (nonportable, portable)]
+    val sexp_conv : ?complete:Auto_complete.t -> (Sexp.t -> 'a) -> 'a t
   end
 end
 
 module type Command = sig
-  module type%template Enumerable_sexpable = Enumerable_sexpable [@modality p]
-  [@@modality p = (nonportable, portable)]
-
-  module type%template Enumerable_stringable = Enumerable_stringable [@modality p]
-  [@@modality p = (nonportable, portable)]
+  module type Enumerable_sexpable = Enumerable_sexpable
+  module type Enumerable_stringable = Enumerable_stringable
 
   (** Specifications for command-line auto-completion. *)
   module Auto_complete = Auto_complete
@@ -272,6 +266,27 @@ module type Command = sig
   (** Argument types. *)
   module Arg_type : Arg_type
   (** @inline *)
+
+  (** Named categories for grouping command-line flags in help output. *)
+  module Help_category : sig
+    type t
+
+    (** Raises if [abbrev] is empty.
+
+        [abbrev] defaults to the unlabeled [name] argument modified for convenient use as
+        a command-line argument. All letters are lowercased. Leading and trailing
+        non-alphanumeric characters are stripped, and internal sequences of them are
+        converted to a single [-].
+
+        For example, [Help_category.abbrev (Help_category.create "'Gourmet' Fast Food")]
+        is ["gourmet-fast-food"]. *)
+    val create : ?abbrev:string -> string -> t
+
+    val abbrev : t -> string
+
+    (** Used for grouping tests in help output. *)
+    val name : t -> string
+  end
 
   (** Command-line flag specifications. *)
   module Flag : sig
@@ -509,6 +524,31 @@ module type Command = sig
         -> ('a -> string)
         -> default:'a
         -> doc:string
+        -> 'a t
+
+      (** [categorize t ~category] associates [category] with all flags in [t], for use in
+          grouping flags in help output.
+
+          Named categories follow the default [=== flags ===] section in alphabetical
+          order. Each category has the header [=== <NAME> ===], where [<NAME>] is the
+          category's [Help_category.name]. Flags are sorted alphabetically within each
+          category.
+
+          Categories with the same name are merged, and any of their abbreviations select
+          the merged category. Categories with different names must not have the same
+          abbreviation; if they do, constructing the resulting command yields an error
+          similarly to providing two [flag]s with the same name.
+
+          Commands with categorized flags also have a [-help-category] flag, abbreviated
+          [-help-cat]. It accepts a category abbreviation or any unambiguous prefix and
+          displays only that category's flags.
+
+          If [override = true], replaces existing categories on flags. If
+          [override = false], only applies to flags without an existing category. *)
+      val categorize
+        :  ?override:bool (** default [false] *)
+        -> 'a t
+        -> category:Help_category.t
         -> 'a t
 
       (** [anon spec] specifies a command that, among other things, takes the anonymous
@@ -1012,7 +1052,7 @@ wrap (fun ~run ~main ->
     end
 
     module Cmdline : sig
-      type t [@@deriving compare ~localize]
+      type t [@@deriving compare]
 
       val of_list : string list -> t
       val extend : t -> extend:(string list -> string list) -> path:Path.t -> t

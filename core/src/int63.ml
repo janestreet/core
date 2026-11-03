@@ -1,16 +1,13 @@
 open! Import
 
-module%template Bin : sig
-  include Binable0.S [@mode local] with type t := Base.Int63.t
+module Bin : sig
+  include Binable0.S with type t := Base.Int63.t
 end = struct
   module Bin_emulated = struct
     type t = Base.Int63.Private.Emul.t
 
     include
-      Binable0.Of_binable_without_uuid
-        [@mode local]
-        [@modality portable]
-        [@alert "-legacy"]
+      Binable0.Of_binable_without_uuid [@alert "-legacy"]
         (Int64)
         (struct
           type nonrec t = t
@@ -20,23 +17,20 @@ end = struct
               (Base.Int63.Private.Emul.W.wrap_exn i) [@nontail]
           ;;
 
-          external unbox_int64 : int64 -> int64 = "%identity"
-          external box_int64 : int64 -> int64 = "%identity"
-
-          let[@mode m = (global, local)] to_binable t =
-            let i = unbox_int64 (Base.Int63.Private.Emul.W.unwrap t) in
-            box_int64 i [@exclave_if_local m]
+          let to_binable t =
+            let i = Basement.Int64_u.unbox (Base.Int63.Private.Emul.W.unwrap t) in
+            Basement.Int64_u.box i
           ;;
         end)
   end
 
   module type S = sig
-    include Binable0.S [@mode local]
+    include Binable0.S
   end
 
   type 'a binable = (module S with type t = 'a)
 
-  let binable_of_repr : type a b. (a, b) Base.Int63.Private.Repr.t -> b binable = function
+  let binable_of_repr : type a. a Base.Int63.Private.Repr.t -> a binable = function
     | Base.Int63.Private.Repr.Int -> (module Int)
     | Base.Int63.Private.Repr.Int64 -> (module Bin_emulated)
   ;;
@@ -51,7 +45,7 @@ end
 module Stable = struct
   module V1 = struct
     module T = struct
-      type t = Base.Int63.t [@@deriving globalize, hash, sexp ~stackify, sexp_grammar]
+      type t = Base.Int63.t [@@deriving globalize, hash, sexp, sexp_grammar]
 
       include Bin
 
@@ -65,16 +59,14 @@ module Stable = struct
         end)
 
       [%%rederive
-        type t = Base.Int63.t
-        [@@deriving compare ~localize ~zero_alloc, equal ~localize ~zero_alloc]]
+        type t = Base.Int63.t [@@deriving compare ~zero_alloc, equal ~zero_alloc]]
 
       (* This serialization is stable, since it either delegates to [int] or [Int63_emul]. *)
       let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
     end
 
     include T
-
-    include%template Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (T)
+    include Comparable.Stable.V1.With_stable_witness.Make (T)
   end
 end
 
@@ -87,8 +79,8 @@ end
 let typerep_of_t = typerep_of_int63
 let typename_of_t = typename_of_int63
 
-include%template
-  Identifiable.Extend [@mode local] [@modality portable]
+include
+  Identifiable.Extend
     (Base.Int63)
     (struct
       type nonrec t = t
@@ -99,24 +91,23 @@ include%template
 include Bin
 
 module Replace_polymorphic_compare : sig
-  include%template Comparable.Comparisons [@mode local] with type t := t
+  include Comparable.Comparisons with type t := t
 end =
   Base.Int63
 
 include Base.Int63
-
-include%template Comparable.Validate_with_zero [@modality portable] (Base.Int63)
+include Comparable.Validate_with_zero (Base.Int63)
 
 module Binary = struct
   include Binary
 
-  type nonrec t = t [@@deriving typerep, bin_io ~localize]
+  type nonrec t = t [@@deriving typerep, bin_io]
 end
 
 module Hex = struct
   include Hex
 
-  type nonrec t = t [@@deriving typerep, bin_io ~localize]
+  type nonrec t = t [@@deriving typerep, bin_io]
 end
 
 let quickcheck_generator = Base_quickcheck.Generator.int63

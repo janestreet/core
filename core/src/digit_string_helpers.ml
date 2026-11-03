@@ -7,7 +7,7 @@ module Round = struct
   type t =
     | Toward_positive_infinity
     | Toward_negative_infinity
-  [@@deriving compare ~localize, sexp_of]
+  [@@deriving compare, sexp_of]
 end
 
 let module_name = "Digit_string_helpers"

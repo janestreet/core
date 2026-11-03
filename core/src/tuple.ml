@@ -53,7 +53,7 @@ module T2 = struct
   let sort ((a, b) as t) ~compare = if compare a b <= 0 then t else b, a
   let swap (a, b) = b, a
 
-  include%template Comparator.Derived2 [@modality portable] (struct
+  include Comparator.Derived2 (struct
       type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of]
 
       let compare cmp1 cmp2 = compare ~cmp1 ~cmp2
@@ -117,7 +117,7 @@ module T3 = struct
   let equal ~eq1 ~eq2 ~eq3 (x, y, z) (x', y', z') = eq1 x x' && eq2 y y' && eq3 z z'
 end
 
-module%template.portable Sexpable
+module Sexpable
     (S1 : sig
        type t
 
@@ -132,7 +132,7 @@ struct
   type t = S1.t * S2.t [@@deriving sexp]
 end
 
-module%template.portable Binable
+module Binable
     (B1 : sig
        type t
 
@@ -159,16 +159,7 @@ module Comparator (S1 : Comparator.S) (S2 : Comparator.S) = struct
   let comparator = T2.comparator S1.comparator S2.comparator
 end
 
-[%%template
-[@@@mode.default m = (local, global)]
-
-module%template.portable
-  [@modality p] Comparable_plain
-    (S1 : Comparable_plain_arg
-  [@mode m] [@modality p])
-    (S2 : Comparable_plain_arg
-  [@mode m] [@modality p]) =
-struct
+module Comparable_plain (S1 : Comparable_plain_arg) (S2 : Comparable_plain_arg) = struct
   module S1 = struct
     include S1
 
@@ -187,89 +178,62 @@ struct
     let sexp_of_t = [%eta1 Comparator_.sexp_of_t comparator]
 
     let compare (s1, s2) (s1', s2') =
-      match (S1.compare [@mode m]) s1 s1' with
-      | 0 -> (S2.compare [@mode m]) s2 s2'
+      match S1.compare s1 s1' with
+      | 0 -> S2.compare s2 s2'
       | x -> x
-    [@@mode m = (global, m)]
     ;;
 
     let _ = compare (* in the global case, we only need the comparator *)
   end
 
   include T
-  include Comparable.Make_plain_using_comparator [@mode m] [@modality p] (T)
+  include Comparable.Make_plain_using_comparator (T)
 end
 
-module%template.portable
-  [@modality p] Comparable
-    (S1 : Comparable_arg
-  [@mode m])
-    (S2 : Comparable_arg
-  [@mode m]) =
-struct
+module Comparable (S1 : Comparable_arg) (S2 : Comparable_arg) = struct
   module T = struct
-    include Sexpable [@modality p] (S1) (S2)
+    include Sexpable (S1) (S2)
 
     let compare (s1, s2) (s1', s2') =
-      match (S1.compare [@mode m]) s1 s1' with
-      | 0 -> (S2.compare [@mode m]) s2 s2'
+      match S1.compare s1 s1' with
+      | 0 -> S2.compare s2 s2'
       | x -> x
-    [@@mode m = (global, m)]
     ;;
   end
 
   include T
-  include Comparable.Make [@mode m] [@modality p] (T)
+  include Comparable.Make (T)
 end
 
-module%template.portable
-  [@modality p] Hashable_plain
-    (S1 : Hashable_plain_arg
-  [@mode m])
-    (S2 : Hashable_plain_arg
-  [@mode m]) =
-struct
+module Hashable_plain (S1 : Hashable_plain_arg) (S2 : Hashable_plain_arg) = struct
   module T = struct
-    type t = S1.t * S2.t [@@deriving (compare [@mode.explicit m]), hash, sexp_of]
+    type t = S1.t * S2.t [@@deriving compare, hash, sexp_of]
   end
 
   include T
-  include Hashable.Make_plain [@modality p] (T)
+  include Hashable.Make_plain (T)
 end
 
-module%template.portable
-  [@modality p] Hasher
-    (H1 : Hashable_arg
-  [@mode m])
-    (H2 : Hashable_arg
-  [@mode m]) =
-struct
+module Hasher (H1 : Hashable_arg) (H2 : Hashable_arg) = struct
   module T = struct
-    type t = H1.t * H2.t [@@deriving (compare [@mode.explicit m]), hash, sexp]
+    type t = H1.t * H2.t [@@deriving compare, hash, sexp]
   end
 
   include T
-  include Hashable.Make [@modality p] (T)
+  include Hashable.Make (T)
 end
 
-module%template.portable
-  [@modality p] Hasher_sexpable_of_hashable_sexpable
-    (S : Hashable_arg
-  [@mode m]) : Hashable_arg [@mode m] with type t = S.t = struct
+module Hasher_sexpable_of_hashable_sexpable (S : Hashable_arg) :
+  Hashable_arg with type t = S.t = struct
   include S
 
   let hash_fold_t state t = hash_fold_int state (hash t)
 end
 
-module%template.portable
-  [@modality p] Hashable_t
-    (S1 : Hashable_arg
-  [@mode m])
-    (S2 : Hashable_arg
-  [@mode m]) =
-  Hasher [@mode m] [@modality p]
-    (Hasher_sexpable_of_hashable_sexpable [@mode m] [@modality p]
+module Hashable_t (S1 : Hashable_arg) (S2 : Hashable_arg) =
+  Hasher
+    (Hasher_sexpable_of_hashable_sexpable
        (S1))
-       (Hasher_sexpable_of_hashable_sexpable [@mode m] [@modality p] (S2))
+       (Hasher_sexpable_of_hashable_sexpable (S2))
 
-module%template.portable [@modality p] Hashable = Hashable_t [@mode m] [@modality p]]
+module Hashable = Hashable_t

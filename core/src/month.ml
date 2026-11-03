@@ -17,15 +17,15 @@ module Stable = struct
       | Nov
       | Dec
     [@@deriving
-      compare ~localize
-      , equal ~localize
+      compare
+      , equal
       , globalize
       , hash
-      , quickcheck ~portable
-      , sexp ~stackify
+      , quickcheck
+      , sexp
       , sexp_grammar
       , typerep
-      , variants]
+      , variants ~fold]
 
     let failwithf = Printf.failwithf
 
@@ -70,18 +70,17 @@ module Stable = struct
     let to_binable t = to_int t - 1
     let of_binable i = of_int_exn (i + 1)
 
-    include%template
-      Binable.Stable.Of_binable.V1 [@mode local] [@modality portable] [@alert "-legacy"]
+    include
+      Binable.Stable.Of_binable.V1 [@alert "-legacy"]
         (Int.Stable.V1)
         (struct
           type nonrec t = t
 
-          let[@mode m = (global, local)] to_binable = to_binable
+          let to_binable = to_binable
           let of_binable = of_binable
         end)
 
-    include%template
-      (val (Comparator.Stable.V1.make [@modality portable]) ~compare ~sexp_of_t)
+    include (val Comparator.Stable.V1.make ~compare ~sexp_of_t)
 
     let stable_witness : t Stable_witness.t =
       Stable_witness.of_serializable Int.Stable.V1.stable_witness of_binable to_binable
@@ -100,16 +99,15 @@ end
 
 include T
 
-include%template (
-  Hashable.Make_binable [@modality portable] (struct
+include (
+  Hashable.Make_binable (struct
     include T
   end) :
   sig
     include Hashable.S_binable with type t := t
   end)
 
-include%template
-  Comparable.Make_binable_using_comparator [@mode local] [@modality portable] (struct
+include Comparable.Make_binable_using_comparator (struct
     include T
 
     (* In 108.06a and earlier, months in sexps of Maps and Sets were raw ints. From 108.07
@@ -127,7 +125,7 @@ include%template
 
 (* Replace the overriden sexp converters from [Comparable.Make_binable] with the ordinary
    symbolic converters. *)
-let%template[@alloc a = (heap, stack)] sexp_of_t = (T.sexp_of_t [@alloc a])
+let sexp_of_t = T.sexp_of_t
 let t_of_sexp = T.t_of_sexp
 let shift t i = of_int_exn (1 + Int.( % ) (to_int t - 1 + i) num_months)
 

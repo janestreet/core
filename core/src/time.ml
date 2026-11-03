@@ -431,23 +431,19 @@ module Make (Time0 : Time0_intf.S) () = struct
 
   let of_string = of_string_with_utc_offset
 
-  let%template quickcheck_shrinker =
-    (Quickcheck.Shrinker.map [@mode portable])
+  let quickcheck_shrinker =
+    Quickcheck.Shrinker.map
       Span.quickcheck_shrinker
       ~f:of_span_since_epoch
       ~f_inverse:to_span_since_epoch
   ;;
 
-  let%template quickcheck_observer =
-    (Quickcheck.Observer.unmap [@mode portable])
-      Span.quickcheck_observer
-      ~f:to_span_since_epoch
+  let quickcheck_observer =
+    Quickcheck.Observer.unmap Span.quickcheck_observer ~f:to_span_since_epoch
   ;;
 
-  let%template quickcheck_generator =
-    (Quickcheck.Generator.map [@mode portable])
-      Span.quickcheck_generator
-      ~f:of_span_since_epoch
+  let quickcheck_generator =
+    Quickcheck.Generator.map Span.quickcheck_generator ~f:of_span_since_epoch
   ;;
 
   let gen_incl lo hi =

@@ -6,17 +6,12 @@ module type S_plain = S_plain with type 'a hash_set := 'a t
 module type S = S with type 'a hash_set := 'a t
 module type S_binable = S_binable with type 'a hash_set := 'a t
 module type S_stable = S_stable with type 'a hash_set := 'a t
+module type Elt_plain = Hashtbl.Key_plain
+module type Elt = Hashtbl.Key
+module type Elt_binable = Hashtbl.Key_binable
+module type Elt_stable = Hashtbl.Key_stable
 
-[%%template
-[@@@mode.default m = (local, global)]
-
-module type Elt_plain = Hashtbl.Key_plain [@mode m]
-module type Elt = Hashtbl.Key [@mode m]
-module type Elt_binable = Hashtbl.Key_binable [@mode m]
-module type Elt_stable = Hashtbl.Key_stable [@mode m]]
-
-module%template.portable
-  [@modality p] Make_plain_with_hashable (T : sig
+module Make_plain_with_hashable (T : sig
     module Elt : sig
       type t
 
@@ -29,9 +24,9 @@ struct
   type elt = T.Elt.t
   type nonrec t = elt t
 
-  let%template equal = (equal [@mode m]) [@@mode m = (local, global)]
+  let equal = equal
 
-  include Creators [@modality p] (struct
+  include Creators (struct
       type 'a t = T.Elt.t
 
       let hashable = T.hashable
@@ -40,17 +35,18 @@ struct
   let sexp_of_t t = Poly.sexp_of_t T.Elt.sexp_of_t t
 end
 
-module%template.portable Provide_of_sexp (Elt : Base.Hashtbl.M_of_sexp) = struct
+module Provide_of_sexp (Elt : Base.Hashtbl.M_of_sexp) = struct
   let t_of_sexp sexp = Base.Hash_set.m__t_of_sexp (module Elt) sexp
 end
 
-module%template.portable
-  [@inline] [@modality p] Provide_bin_io (Elt : sig
+module
+  [@inline]
+  Provide_bin_io (Elt : sig
     type t [@@deriving bin_io]
 
     include Elt_plain with type t := t
   end) =
-Bin_prot.Utils.Make_iterable_binable [@inlined hint] [@modality p] (struct
+Bin_prot.Utils.Make_iterable_binable [@inlined hint] (struct
     type nonrec t = Elt.t t
     type el = Elt.t
 
@@ -92,63 +88,59 @@ struct
   ;;
 end
 
-module%template.portable
-  [@modality p] Make_with_hashable (T : sig
+module Make_with_hashable (T : sig
     module Elt : Elt
 
     val hashable : Elt.t Hashtbl.Hashable.t
   end) =
 struct
-  include Make_plain_with_hashable [@modality p] (T)
-  include Provide_of_sexp [@modality p] (T.Elt)
+  include Make_plain_with_hashable (T)
+  include Provide_of_sexp (T.Elt)
 end
 
-module%template.portable
-  [@modality p] Make_binable_with_hashable (T : sig
+module Make_binable_with_hashable (T : sig
     module Elt : Elt_binable
 
     val hashable : Elt.t Hashtbl.Hashable.t
   end) =
 struct
-  include Make_with_hashable [@modality p] (T)
-  include Provide_bin_io [@modality p] (T.Elt)
+  include Make_with_hashable (T)
+  include Provide_bin_io (T.Elt)
 end
 
-module%template.portable
-  [@modality p] Make_stable_with_hashable (T : sig
+module Make_stable_with_hashable (T : sig
     module Elt : Elt_stable
 
     val hashable : Elt.t Hashtbl.Hashable.t
   end) =
 struct
-  include Make_binable_with_hashable [@modality p] (T)
+  include Make_binable_with_hashable (T)
   include Provide_stable_witness (T.Elt)
 end
 
-module%template.portable
-  [@modality p] Make_plain (Elt : sig
+module Make_plain (Elt : sig
     type t
 
     include Elt_plain with type t := t
   end) =
-Make_plain_with_hashable [@modality p] (struct
+Make_plain_with_hashable (struct
     module Elt = Elt
 
-    let hashable = (Hashtbl.Hashable.of_key [@modality p]) (module Elt)
+    let hashable = Hashtbl.Hashable.of_key (module Elt)
   end)
 
-module%template.portable [@modality p] Make (Elt : Elt) = struct
-  include Make_plain [@modality p] (Elt)
-  include Provide_of_sexp [@modality p] (Elt)
+module Make (Elt : Elt) = struct
+  include Make_plain (Elt)
+  include Provide_of_sexp (Elt)
 end
 
-module%template.portable [@modality p] Make_binable (Elt : Elt_binable) = struct
-  include Make [@modality p] (Elt)
-  include Provide_bin_io [@modality p] (Elt)
+module Make_binable (Elt : Elt_binable) = struct
+  include Make (Elt)
+  include Provide_bin_io (Elt)
 end
 
-module%template.portable [@modality p] Make_stable (Elt : Elt_stable) = struct
-  include Make_binable [@modality p] (Elt)
+module Make_stable (Elt : Elt_stable) = struct
+  include Make_binable (Elt)
   include Provide_stable_witness (Elt)
 end
 

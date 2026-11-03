@@ -5,14 +5,6 @@ module Stable : sig
   module V1 : sig
     type nonrec t = t
     [@@deriving
-      bin_io ~localize
-      , compare ~localize
-      , equal ~localize
-      , globalize
-      , hash
-      , sexp ~stackify
-      , sexp_grammar
-      , stable_witness
-      , diff]
+      bin_io, compare, equal, globalize, hash, sexp, sexp_grammar, stable_witness, diff]
   end
 end

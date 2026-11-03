@@ -9,8 +9,7 @@ open Interfaces
 module Stable : sig
   module V1 : sig
     type t = Md5_lib.t
-    [@@deriving
-      sexp, sexp_grammar, bin_io, compare ~localize, equal ~localize, hash, stable_witness]
+    [@@deriving sexp, sexp_grammar, bin_io, compare, equal, hash, stable_witness]
   end
 end
 
@@ -19,21 +18,13 @@ module As_binary_string : sig
   module Stable : sig
     module V1 : sig
       type t = Md5_lib.t
-      [@@deriving
-        sexp
-        , sexp_grammar
-        , bin_io ~localize
-        , compare ~localize
-        , equal ~localize
-        , hash
-        , stable_witness]
+      [@@deriving sexp, sexp_grammar, bin_io, compare, equal, hash, stable_witness]
     end
   end
 
   type t = Stable.V1.t [@@deriving bin_io, quickcheck, sexp, sexp_grammar, hash]
 
-  include%template Comparable.S [@mode local] with type t := t
-
+  include Comparable.S with type t := t
   include Binable with type t := t
   include Hashable with type t := t
 end
@@ -44,8 +35,7 @@ end
     not an evidence of someone having found an input corresponding to this output. *)
 type t = Stable.V1.t [@@deriving bin_io, quickcheck, sexp, sexp_grammar, hash]
 
-include%template Comparable.S [@mode local] with type t := t
-
+include Comparable.S with type t := t
 include Binable with type t := t
 include Hashable with type t := t
 
@@ -53,8 +43,7 @@ include Hashable with type t := t
 val digest_num_bytes : int
 
 (** Binary representations are 16 bytes long, and not human readable. *)
-val%template to_binary : t -> string
-[@@mode m = (global, local)]
+val to_binary : t -> string
 
 val of_binary_exn : string -> t
 

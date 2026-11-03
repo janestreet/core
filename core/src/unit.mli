@@ -11,16 +11,11 @@ include module type of struct
   end
   with type t := t
 
-include%template
-  Identifiable.S
-  [@mode local]
-  with type t := t
-   and type comparator_witness := comparator_witness
-
+include Identifiable.S with type t := t and type comparator_witness := comparator_witness
 include Quickcheckable.S with type t := t
 
 include sig
-    type t [@@deriving bin_io ~localize]
+    type t [@@deriving bin_io]
   end
   with type t := t
 
@@ -30,10 +25,9 @@ type m = (module S)
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving bin_io ~localize, sexp_grammar]
+    type nonrec t = t [@@deriving bin_io, sexp_grammar]
 
-    include%template
-      Stable_module_types.With_stable_witness.S0 [@mode local] with type t := t
+    include Stable_module_types.With_stable_witness.S0 with type t := t
   end
 
   (** Zero-length bin_prot format.
@@ -43,10 +37,8 @@ module Stable : sig
       whether or not they say so, so we can't change the [unit] bin-io converter without
       breaking many stable types. *)
   module V2 : sig
-    type nonrec t = t
-    [@@deriving bin_io ~localize, equal ~localize, sexp_of ~stackify, sexp_grammar]
+    type nonrec t = t [@@deriving bin_io, equal, sexp_of, sexp_grammar]
 
-    include%template
-      Stable_module_types.With_stable_witness.S0 [@mode local] with type t := t
+    include Stable_module_types.With_stable_witness.S0 with type t := t
   end
 end

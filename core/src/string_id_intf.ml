@@ -3,24 +3,13 @@
 
 open! Import
 
-[%%template
 module type Stringable = Stringable.S
-module type%template [@mode local] Stringable = Stringable.S [@alloc stack]]
 
-module type%template
-  [@mode m = (global, local)] [@modality p = (portable, nonportable)] S_abstract = sig
-  type t
-  [@@deriving
-    (bin_io [@mode m])
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , hash
-    , sexp_grammar
-    , sexp_of ~stackify]
+module type S_abstract = sig
+  type t [@@deriving bin_io, compare, equal, globalize, hash, sexp_grammar, sexp_of]
 
-  include Identifiable.S [@mode m] [@modality p] with type t := t
-  include Stringable [@mode m] with type t := t
+  include Identifiable.S with type t := t
+  include Stringable with type t := t
   include Quickcheckable.S with type t := t
   include Diffable.S_atomic with type t := t
 
@@ -30,20 +19,12 @@ module type%template
     module V1 : sig
       type nonrec t = t
       [@@deriving
-        (bin_io [@mode m])
-        , compare ~localize
-        , equal ~localize
-        , globalize
-        , hash
-        , sexp_grammar
-        , sexp_of ~stackify
-        , stable_witness]
+        bin_io, compare, equal, globalize, hash, sexp_grammar, sexp_of, stable_witness]
 
-      include Stringable [@mode m] with type t := t
+      include Stringable with type t := t
 
       include
         Stable_comparable.With_stable_witness.V1
-        [@mode m]
         with type t := t
         with type comparator_witness = comparator_witness
 
@@ -53,33 +34,27 @@ module type%template
   end
 end
 
-module type%template
-  [@mode m = (global, local)] [@modality p = (portable, nonportable)] S =
-  S_abstract [@mode m] [@modality p] with type t = private string
+module type S = S_abstract with type t = private string
 
 (** Some extra features we provide in [make], but don't want to require of any
     string-ID-like type. *)
-module type%template
-  [@mode m = (global, local)] [@modality p = (portable, nonportable)] S_with_extras = sig
+module type S_with_extras = sig
   type t = private string [@@deriving typerep]
 
-  include S [@mode m] [@modality p] with type t := t
+  include S with type t := t
 end
 
-module type%template String_id = sig
+module type String_id = sig
   include sig
-    [@@@mode.default m = (global, local)]
-    [@@@modality.default p = (portable, nonportable)]
-
-    module type S = S [@mode m] [@modality p]
-    module type S_abstract = S_abstract [@mode m] [@modality p]
-    module type S_with_extras = S_with_extras [@mode m] [@modality p]
+    module type S = S
+    module type S_abstract = S_abstract
+    module type S_with_extras = S_with_extras
   end
 
-  include S [@mode local] [@modality portable]
+  include S
 
   module String_without_validation_without_pretty_printer :
-    S_with_extras [@mode local] [@modality portable] with type t = string
+    S_with_extras with type t = string
 
   (** [legacy_identity] is a sentinel [caller_identity] that preserves the legacy
       [bin_shape] behavior (i.e., the shape is just that of [String.t] with no
@@ -95,7 +70,7 @@ module type%template String_id = sig
       The resulting [quickcheck_generator] generates non-empty strings containing only
       printable characters, and no whitespace at the edges. [quickcheck_generator] is
       dependent on [validate] (see [validate]'s doc-comment). *)
-  val%template make
+  val make
     :  ?validate:(string -> unit Or_error.t)
          (** Defaults to [const (Ok ())].
 
@@ -118,6 +93,5 @@ module type%template String_id = sig
     -> caller_identity:Bin_prot.Shape.Uuid.t
          (** [caller_identity] annotates [bin_shape_t] in the resulting FCM. *)
     -> unit
-    -> ((module S_with_extras)[@mode local] [@modality p])
-  [@@modality p = (nonportable, portable)]
+    -> (module S_with_extras)
 end

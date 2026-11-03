@@ -1,15 +1,12 @@
 open! Import
 
-[%%template
-[@@@mode.default m = (global, local)]
-
 module type S = sig
   type t
   type value
 
   module Optional_syntax : sig
     val is_none : t -> bool
-    val unsafe_value : t -> value [@@mode m = (global, m)]
+    val unsafe_value : t -> value
   end
 end
 
@@ -19,11 +16,9 @@ module type S_zero_alloc = sig
 
   module Optional_syntax : sig
     val is_none : t -> bool [@@zero_alloc]
-    val unsafe_value : t -> value [@@zero_alloc] [@@mode m = (global, m)]
+    val unsafe_value : t -> value [@@zero_alloc]
   end
 end
-
-[@@@kind.default ka = base_with_imm]
 
 module type S1 = sig
   type 'a t
@@ -31,7 +26,7 @@ module type S1 = sig
 
   module Optional_syntax : sig
     val is_none : _ t -> bool
-    val unsafe_value : 'a t -> 'a value [@@mode m = (global, m)]
+    val unsafe_value : 'a t -> 'a value
   end
 end
 
@@ -41,11 +36,9 @@ module type S1_zero_alloc = sig
 
   module Optional_syntax : sig
     val is_none : _ t -> bool [@@zero_alloc]
-    val unsafe_value : 'a t -> 'a value [@@zero_alloc] [@@mode m = (global, m)]
+    val unsafe_value : 'a t -> 'a value [@@zero_alloc]
   end
 end
-
-[@@@kind.default kb = base_with_imm]
 
 module type S2 = sig
   type ('a, 'b) t
@@ -53,7 +46,7 @@ module type S2 = sig
 
   module Optional_syntax : sig
     val is_none : _ t -> bool
-    val unsafe_value : ('a, 'b) t -> ('a, 'b) value [@@mode m = (global, m)]
+    val unsafe_value : ('a, 'b) t -> ('a, 'b) value
   end
 end
 
@@ -63,13 +56,11 @@ module type S2_zero_alloc = sig
 
   module Optional_syntax : sig
     val is_none : _ t -> bool [@@zero_alloc]
-
-    val unsafe_value : ('a, 'b) t -> ('a, 'b) value
-    [@@zero_alloc] [@@mode m = (global, m)]
+    val unsafe_value : ('a, 'b) t -> ('a, 'b) value [@@zero_alloc]
   end
-end]
+end
 
-module type%template Optional_syntax = sig
+module type Optional_syntax = sig
   (** Idiomatic usage is to have a module [M] like:
 
       {[
@@ -120,18 +111,10 @@ module type%template Optional_syntax = sig
 
       For more details on the syntax extension, see [ppx/ppx_optional/README.md]. *)
 
-  [@@@mode.default m = (global, local)]
-
-  module type S = S [@mode m]
-  module type S_zero_alloc = S_zero_alloc [@mode m]
-
-  [@@@kind.default ka = base_with_imm]
-
-  module type S1 = S1 [@kind ka] [@mode m]
-  module type S1_zero_alloc = S1_zero_alloc [@kind ka] [@mode m]
-
-  [@@@kind.default kb = base_with_imm]
-
-  module type S2 = S2 [@kind ka kb] [@mode m]
-  module type S2_zero_alloc = S2_zero_alloc [@kind ka kb] [@mode m]
+  module type S = S
+  module type S_zero_alloc = S_zero_alloc
+  module type S1 = S1
+  module type S1_zero_alloc = S1_zero_alloc
+  module type S2 = S2
+  module type S2_zero_alloc = S2_zero_alloc
 end

@@ -3,14 +3,13 @@
 open! Import
 open Std_internal
 
-module type Id = sig
+module type Id_without_create = sig
   (** The sexps and strings look like integers. *)
-  type t [@@deriving bin_io ~localize, hash, sexp ~stackify, sexp_grammar, typerep]
+  type t [@@deriving bin_io, hash, sexp, sexp_grammar, typerep]
 
   (** {b Caveat}: values created with [of_float], [of_sexp], or [of_string] may be equal
       to previously created values. *)
-  include%template
-    Comparable.S_binable [@mode local] [@modality portable] with type t := t
+  include Comparable.S_binable with type t := t
 
   include Hashable.S_binable with type t := t
   include Intable with type t := t
@@ -18,13 +17,16 @@ module type Id = sig
 
   module Stable : sig
     module V1 : sig
-      include%template
+      include
         Stable_comparable.With_stable_witness.V1
-        [@mode local]
         with type t = t
         with type comparator_witness = comparator_witness
     end
   end
+end
+
+module type Id = sig
+  include Id_without_create
 
   (** Always returns a value that is not equal to any other value created with [create]. *)
   val create : unit -> t

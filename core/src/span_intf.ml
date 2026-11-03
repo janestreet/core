@@ -20,7 +20,7 @@ module type Parts = sig
     ; us : int
     ; ns : int
     }
-  [@@deriving compare ~localize, sexp, sexp_grammar]
+  [@@deriving compare, sexp, sexp_grammar]
 end
 
 module type S = sig
@@ -29,28 +29,16 @@ module type S = sig
   type underlying
 
   type t = private underlying
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , hash
-    , sexp
-    , sexp_grammar
-    , typerep]
+  [@@deriving bin_io, compare, equal, globalize, hash, sexp, sexp_grammar, typerep]
 
   module Parts : Parts
-
-  include%template
-    Comparable.S_binable [@mode local] [@modality portable] with type t := t
-
+  include Comparable.S_binable with type t := t
   include Comparable.With_zero with type t := t
   include Hashable_binable with type t := t
   include Diffable.S_atomic with type t := t
   include Pretty_printer.S with type t := t
   include Robustly_comparable with type t := t
-
-  include%template Quickcheck.S_range [@mode portable] with type t := t
+  include Quickcheck.S_range with type t := t
 
   (** {v
  Time spans are denominated as a float suffixed by a unit of time; the valid suffixes

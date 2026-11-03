@@ -241,13 +241,13 @@ module type S_backend = sig
 
   module type S = S0 with type ('key, 'data) hash_queue := ('key, 'data) t
 
-  module%template.portable Make (Key : sig
+  module Make (Key : sig
       type t
 
       include Key with type t := t
     end) : S with type key = Key.t
 
-  module%template.portable Make_with_hashable (T : sig
+  module Make_with_hashable (T : sig
       module Key : sig
         type t
 
@@ -270,8 +270,7 @@ module type Hash_queue = sig
   module type Key = Key
   module type S_backend = S_backend
 
-  module%template Make_backend (Table : Hashtbl_intf.Hashtbl [@modality portable]) :
-    S_backend
+  module Make_backend (Table : Hashtbl_intf.Hashtbl) : S_backend
 
   (** equivalent to [Make_backend (Hashtbl)] *)
   include S_backend

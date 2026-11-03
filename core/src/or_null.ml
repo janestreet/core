@@ -1,7 +1,7 @@
 open! Import
 include Base.Or_null
 
-type 'a t = 'a or_null [@@deriving bin_io ~localize, stable_witness, typerep]
+type 'a t = 'a or_null [@@deriving bin_io, stable_witness, typerep]
 
 let validate ~null ~this t =
   match t with
@@ -9,25 +9,15 @@ let validate ~null ~this t =
   | This x -> Validate.name "this" (Validate.protect this x)
 ;;
 
-[%%template
-[@@@mode.default p = (nonportable, portable)]
-
-let quickcheck_generator = (Base_quickcheck.Generator.or_null [@mode p])
-let quickcheck_observer = (Base_quickcheck.Observer.or_null [@mode p])
-let quickcheck_shrinker = (Base_quickcheck.Shrinker.or_null [@mode p])]
+let quickcheck_generator = Base_quickcheck.Generator.or_null
+let quickcheck_observer = Base_quickcheck.Observer.or_null
+let quickcheck_shrinker = Base_quickcheck.Shrinker.or_null
 
 module Stable = struct
   module V1 = struct
     module T = struct
       type nonrec 'a t = 'a t
-      [@@deriving
-        bin_io ~localize
-        , compare ~localize
-        , equal ~localize
-        , globalize
-        , hash
-        , sexp
-        , stable_witness]
+      [@@deriving bin_io, compare, equal, globalize, hash, sexp, stable_witness]
     end
 
     include T

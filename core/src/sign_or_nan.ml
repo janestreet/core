@@ -8,13 +8,10 @@ module Stable = struct
       | Zero
       | Pos
       | Nan
-    [@@deriving
-      sexp, sexp_grammar, bin_io ~localize, compare ~localize, hash, typerep, enumerate]
+    [@@deriving sexp, sexp_grammar, bin_io, compare, hash, typerep, enumerate]
   end
 end
 
 include Stable.V1
 include Sign_or_nan
-
-include%template
-  Identifiable.Extend [@mode local] [@modality portable] (Sign_or_nan) (Stable.V1)
+include Identifiable.Extend (Sign_or_nan) (Stable.V1)

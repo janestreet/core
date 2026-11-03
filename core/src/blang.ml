@@ -27,7 +27,7 @@ module T : sig
     | Not of 'a t
     | If of 'a t * 'a t * 'a t
     | Base of 'a
-  [@@deriving bin_io ~localize, compare ~localize, equal ~localize, hash, typerep]
+  [@@deriving bin_io, compare, equal, hash, typerep]
 
   val invariant : 'a t -> unit
   val true_ : 'a t
@@ -48,7 +48,7 @@ end = struct
     | Not of 'a t
     | If of 'a t * 'a t * 'a t
     | Base of 'a
-  [@@deriving bin_io ~localize, compare ~localize, equal ~localize, hash, typerep]
+  [@@deriving bin_io, compare, equal, hash, typerep]
 
   let invariant =
     let subterms = function
@@ -137,14 +137,7 @@ module Stable = struct
       | Not of 'a t
       | If of 'a t * 'a t * 'a t
       | Base of 'a
-    [@@deriving
-      bin_io ~localize
-      , stable_witness
-      , compare ~localize
-      , equal ~localize
-      , hash
-      , sexp
-      , sexp_grammar]
+    [@@deriving bin_io, stable_witness, compare, equal, hash, sexp, sexp_grammar]
 
     (* the remainder of this signature consists of functions used in the definitions of
        sexp conversions that are also useful more generally *)
@@ -171,8 +164,7 @@ module Stable = struct
     include (
       T :
         sig
-          type 'a t
-          [@@deriving bin_io ~localize, compare ~localize, equal ~localize, hash]
+          type 'a t [@@deriving bin_io, compare, equal, hash]
         end
         with type 'a t := 'a t)
 
@@ -361,7 +353,7 @@ let values t =
   loop [] [ t ]
 ;;
 
-module%template C = Container.Make [@modality portable] (struct
+module C = Container.Make (struct
     type 'a t = 'a T.t
 
     let fold t ~init ~f =
@@ -481,7 +473,7 @@ let eval_set ~universe:all set_of_base t =
   aux t [@nontail]
 ;;
 
-include%template Monad.Make [@mode local] [@modality portable] (struct
+include Monad.Make (struct
     type 'a t = 'a T.t
 
     let return = base

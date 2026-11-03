@@ -7,11 +7,11 @@ open Bigarray
 
 (** Type of bigstrings *)
 type t = (char, int8_unsigned_elt, c_layout) Array1.t
-[@@deriving compare ~localize, quickcheck, sexp_of ~stackify]
+[@@deriving compare, quickcheck, sexp_of]
 
 (** Type of bigstrings which support hashing. Note that mutation invalidates previous
     hashes. *)
-type t_frozen = t [@@deriving compare ~localize, equal ~localize, hash, sexp_of]
+type t_frozen = t [@@deriving compare, equal, hash, sexp_of]
 
 include module type of Base_bigstring with type t := t and type t_frozen := t_frozen
 include Hexdump.S with type t := t
@@ -176,26 +176,16 @@ val set_head_padded_fixed_string
   -> unit
 
 module Unstable : sig
-  type nonrec t = t
-  [@@deriving bin_io ~localize, compare ~localize, equal ~localize, sexp_of]
-
-  type nonrec t_frozen = t_frozen
-  [@@deriving bin_io ~localize, compare ~localize, hash, sexp_of]
+  type nonrec t = t [@@deriving bin_io, compare, equal, sexp_of]
+  type nonrec t_frozen = t_frozen [@@deriving bin_io, compare, hash, sexp_of]
 end
 
 module Stable : sig
   module V1 : sig
     type nonrec t = t
-    [@@deriving
-      bin_io ~localize
-      , stable_witness
-      , compare ~localize
-      , equal ~localize
-      , sexp
-      , sexp_grammar]
+    [@@deriving bin_io, stable_witness, compare, equal, sexp, sexp_grammar]
 
     type nonrec t_frozen = t_frozen
-    [@@deriving
-      bin_io ~localize, stable_witness, compare ~localize, hash, sexp, sexp_grammar]
+    [@@deriving bin_io, stable_witness, compare, hash, sexp, sexp_grammar]
   end
 end

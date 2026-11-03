@@ -2,8 +2,7 @@ open! Import
 open Std_internal
 include String_id_intf
 
-module%template.portable
-  [@modality p] Make
+module Make
     (M : sig
        val module_name : string
        val validate : string -> unit Or_error.t
@@ -17,14 +16,7 @@ struct
       module T = struct
         type t = string
         [@@deriving
-          compare ~localize
-          , equal ~localize
-          , globalize
-          , hash
-          , sexp ~stackify
-          , sexp_grammar
-          , typerep
-          , stable_witness]
+          compare, equal, globalize, hash, sexp, sexp_grammar, typerep, stable_witness]
 
         let check_for_whitespace =
           let invalid s reason =
@@ -50,7 +42,7 @@ struct
           else validate s
         ;;
 
-        let%template[@alloc __ = (heap, stack)] to_string = Fn.id
+        let to_string = Fn.id
         let pp = String.pp
 
         let of_string s =
@@ -67,12 +59,12 @@ struct
         ;;
 
         include
-          Binable.Of_binable_without_uuid [@mode local] [@modality p] [@alert "-legacy"]
+          Binable.Of_binable_without_uuid [@alert "-legacy"]
             (String)
             (struct
               type nonrec t = t
 
-              let[@mode m = (global, local)] to_binable = Fn.id
+              let to_binable = Fn.id
               let of_binable = of_string
             end)
 
@@ -86,54 +78,46 @@ struct
 
       module T_with_comparator = struct
         include T
-        include Comparator.Stable.V1.Make [@modality p] (T)
+        include Comparator.Stable.V1.Make (T)
       end
 
       include T_with_comparator
-
-      include
-        Comparable.Stable.V1.With_stable_witness.Make [@modality p] (T_with_comparator)
-
-      include Hashable.Stable.V1.With_stable_witness.Make [@modality p] (T_with_comparator)
-      include Diffable.Atomic.Make [@modality p] (T_with_comparator)
+      include Comparable.Stable.V1.With_stable_witness.Make (T_with_comparator)
+      include Hashable.Stable.V1.With_stable_witness.Make (T_with_comparator)
+      include Diffable.Atomic.Make (T_with_comparator)
     end
   end
 
   module Stable_latest = Stable.V1
   include Stable_latest.T_with_comparator
-
-  include
-    Comparable.Make_binable_using_comparator [@mode local] [@modality p]
-      (Stable_latest.T_with_comparator)
-
-  include Hashable.Make_binable [@modality p] (Stable_latest.T_with_comparator)
-  include Diffable.Atomic.Make [@modality p] (Stable_latest)
+  include Comparable.Make_binable_using_comparator (Stable_latest.T_with_comparator)
+  include Hashable.Make_binable (Stable_latest.T_with_comparator)
+  include Diffable.Atomic.Make (Stable_latest)
 
   let quickcheck_shrinker = Quickcheck.Shrinker.empty ()
   let quickcheck_observer = String.quickcheck_observer
 
   let quickcheck_generator =
-    (String.gen_nonempty' [@modality p]) Char.gen_print
-    |> (Quickcheck.Generator.filter [@modality p]) ~f:(fun string ->
-      check string |> Result.is_ok)
+    String.gen_nonempty' Char.gen_print
+    |> Quickcheck.Generator.filter ~f:(fun string -> check string |> Result.is_ok)
   ;;
 
-  let arg_type = (Command.Arg_type.create [@modality p]) of_string
+  let arg_type = Command.Arg_type.create of_string
 end
 
 let legacy_identity = Bin_prot.Shape.Uuid.of_string "6e3d6e2d-d51b-4836-a6a9-18c19e85ef3d"
 
-let%template[@modality p = (nonportable, portable)] [@inline] make
+let[@inline] make
   ?(validate = fun _ -> Ok ())
   ?(include_pretty_printer = true)
   ~module_name
   ~include_default_validation
   ~caller_identity
   ()
-  : ((module S_with_extras)[@mode local] [@modality p])
+  : (module S_with_extras)
   =
   let module M =
-    Make [@modality p]
+    Make
       (struct
         let module_name = module_name
         let validate = validate
@@ -153,7 +137,7 @@ let%template[@modality p = (nonportable, portable)] [@inline] make
     (module struct
       include M
 
-      include Pretty_printer.Register [@modality p] (struct
+      include Pretty_printer.Register (struct
           type nonrec t = t
 
           let module_name = module_name
@@ -162,8 +146,8 @@ let%template[@modality p = (nonportable, portable)] [@inline] make
     end)
 ;;
 
-include%template
-  Make [@modality portable]
+include
+  Make
     (struct
       let module_name = "Core.String_id"
       let validate _ = Ok ()
@@ -175,6 +159,5 @@ include%template
 module String_without_validation_without_pretty_printer = struct
   include String
 
-  let%template[@alloc stack] to_string = (to_string [@alloc stack])
-  let%template arg_type = (Command.Arg_type.create [@mode portable]) Fn.id
+  let arg_type = Command.Arg_type.create Fn.id
 end

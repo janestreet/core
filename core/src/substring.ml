@@ -2,11 +2,11 @@ open! Import
 
 module type S = Make_substring.S
 
-include%template Make_substring.F [@modality portable] (struct
+include Make_substring.F (struct
     type t = Bytes.t [@@deriving quickcheck]
 
     let create = Bytes.create
-    let length = Bytes.length
+    let length t = Bytes.length t
     let get t i = Bytes.get t i
 
     module Blit = Make_substring.Blit

@@ -1,8 +1,7 @@
 open! Import
 include Base.Sequence
 
-include%template
-  Bin_prot.Utils.Make_binable1_without_uuid [@modality portable] [@alert "-legacy"] (struct
+include Bin_prot.Utils.Make_binable1_without_uuid [@alert "-legacy"] (struct
     module Binable = struct
       type 'a t = 'a list [@@deriving bin_io]
     end
@@ -37,8 +36,8 @@ module Step = struct
     [@@deriving bin_io]
   end
 
-  include%template
-    Binable0.Of_binable2_without_uuid [@modality portable] [@alert "-legacy"]
+  include
+    Binable0.Of_binable2_without_uuid [@alert "-legacy"]
       (Non_gadt)
       (struct
         type nonrec ('a, 's) t = ('a, 's) t
@@ -89,7 +88,7 @@ let merge_all (module Heap : Heap) seqs ~compare =
   unfold_step
     ~init:
       (Merge_all_state.create
-         ~heap:(Heap.create ~compare:(fun a b -> Base.Comparable.lift compare ~f:fst a b))
+         ~heap:(Heap.create ~compare:[%eta2 Base.Comparable.lift compare ~f:fst])
          ~not_yet_in_heap:seqs)
     ~f:(fun { heap; not_yet_in_heap } ->
       match not_yet_in_heap with

@@ -68,28 +68,16 @@ let phys_equal = Base.phys_equal
 let print_s = Stdio.print_s
 let eprint_s = Stdio.eprint_s
 let printf = Printf.printf
-
-[%%template
-[@@@mode.default l = (global, local)]
-
-let protect = (Exn.protect [@mode l])
-let protectx = (Exn.protectx [@mode l])]
-
-[%%template
-[@@@kind.default k = (base_or_null, bits32 & bits32)]
-
-let raise_s = (Error.raise_s [@kind k])]
-
+let protect = Exn.protect
+let protectx = Exn.protectx
+let raise_s = Error.raise_s
 let round = Float.round
 let ( **. ) = Base.( **. )
 let ( %. ) = Base.( %. )
 let sprintf = Printf.sprintf
 
-[%%template
-[@@@mode.default p = (portable, nonportable)]
-
 external stage : ('a[@local_opt]) -> ('a Staged.t[@local_opt]) = "%identity"
-external unstage : ('a Staged.t[@local_opt]) -> ('a[@local_opt]) = "%identity"]
+external unstage : ('a Staged.t[@local_opt]) -> ('a[@local_opt]) = "%identity"
 
 let with_return = With_return.with_return
 let with_return_option = With_return.with_return_option
@@ -99,421 +87,166 @@ let with_return_option = With_return.with_return_option
 
 include Typerep_lib.Std_internal
 
-include%template (
+include (
 struct
   (* [deriving hash] is missing for [array], [bytes], and [ref] since these types are
      mutable. *)
   type 'a array = 'a Array.t
-  [@@deriving compare ~localize, equal ~localize, globalize, sexp ~stackify, sexp_grammar]
+  [@@deriving compare, equal, globalize, sexp, bin_io, sexp_grammar]
 
-  [%%rederive.portable
-    type nonrec 'a array = 'a Array.t [@@deriving bin_io ~localize, typerep]]
+  [%%rederive.portable type nonrec 'a array = 'a Array.t [@@deriving typerep]]
 
-  type nonrec floatarray = floatarray [@@deriving globalize, sexp ~stackify, sexp_grammar]
+  type nonrec floatarray = floatarray [@@deriving globalize, sexp, sexp_grammar]
 
   type bool = Bool.t
   [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , hash
-    , equal ~localize
-    , globalize
-    , sexp ~stackify ~unboxed
-    , sexp_grammar
-    , typerep]
+    bin_io, compare, hash, equal, globalize, sexp ~unboxed, sexp_grammar, typerep]
 
   type char = Char.t
   [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , hash
-    , equal ~localize
-    , globalize
-    , sexp ~stackify ~unboxed
-    , sexp_grammar
-    , typerep]
+    bin_io, compare, hash, equal, globalize, sexp ~unboxed, sexp_grammar, typerep]
 
   type float = Float.t
   [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , hash
-    , equal ~localize
-    , globalize
-    , sexp ~stackify ~unboxed
-    , sexp_grammar
-    , typerep]
+    bin_io, compare, hash, equal, globalize, sexp ~unboxed, sexp_grammar, typerep]
 
   type 'a iarray = 'a Iarray.t
-  [@@deriving compare ~localize, equal ~localize, sexp ~stackify, sexp_grammar]
+  [@@deriving bin_io, compare, equal, globalize, sexp, sexp_grammar]
 
-  [%%rederive.portable
-    type nonrec 'a iarray = 'a Iarray.t
-    [@@deriving bin_io ~localize, hash, globalize, typerep]]
+  [%%rederive.portable type nonrec 'a iarray = 'a Iarray.t [@@deriving hash, typerep]]
 
   type int = Int.t
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , hash
-    , equal ~localize
-    , globalize
-    , sexp ~stackify
-    , sexp_grammar
-    , typerep]
+  [@@deriving bin_io, compare, hash, equal, globalize, sexp, sexp_grammar, typerep]
 
   type int32 = Int32.t
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , hash
-    , equal ~localize
-    , globalize
-    , sexp ~stackify ~unboxed
-    , sexp_grammar
-    , typerep]
+  [@@deriving bin_io, compare, hash, equal, globalize, sexp, sexp_grammar, typerep]
 
   type int64 = Int64.t
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , hash
-    , equal ~localize
-    , globalize
-    , sexp ~stackify ~unboxed
-    , sexp_grammar
-    , typerep]
+  [@@deriving bin_io, compare, hash, equal, globalize, sexp, sexp_grammar, typerep]
 
   type 'a lazy_t = 'a Lazy.t
-  [@@deriving
-    bin_io ~localize, compare ~localize, hash, sexp ~stackify, sexp_grammar, typerep]
+  [@@deriving bin_io, compare, hash, sexp, sexp_grammar, typerep]
 
   type 'a list = 'a List.t
-  [@@deriving
-    compare ~localize
-    , hash
-    , equal ~localize
-    , globalize
-    , sexp ~stackify
-    , sexp_grammar
-    , typerep]
+  [@@deriving compare, hash, equal, globalize, sexp, sexp_grammar, typerep]
 
-  [%%rederive type nonrec 'a list = 'a List.t [@@deriving bin_io ~localize]]
+  [%%rederive type nonrec 'a list = 'a List.t [@@deriving bin_io]]
 
   type nativeint = Nativeint.t
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , hash
-    , sexp ~stackify ~unboxed
-    , sexp_grammar
-    , typerep]
+  [@@deriving bin_io, compare, equal, globalize, hash, sexp, sexp_grammar, typerep]
 
   type 'a option = 'a Option.t
-  [@@deriving
-    compare ~localize
-    , equal ~localize
-    , globalize
-    , hash
-    , sexp ~stackify
-    , sexp_grammar
-    , typerep]
+  [@@deriving compare, equal, globalize, hash, sexp, sexp_grammar, typerep]
 
-  [%%rederive type 'a option = 'a Option.t [@@deriving bin_io ~localize]]
-
-  type%template nonrec 'a option = ('a Option.t[@kind k])
-  [@@deriving bin_io ~localize, compare ~localize, equal ~localize, sexp ~stackify]
-  [@@kind k = base_non_value]
+  [%%rederive type 'a option = 'a Option.t [@@deriving bin_io]]
 
   type ('ok, 'err) result = ('ok, 'err) Result.t
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , hash
-    , sexp ~stackify
-    , sexp_grammar
-    , typerep]
-
-  type%template nonrec ('ok, 'err) result = (('ok, 'err) Result.t[@kind k])
-  [@@deriving bin_io ~localize, compare ~localize, equal ~localize, sexp ~stackify]
-  [@@kind k = base_non_value]
+  [@@deriving bin_io, compare, equal, globalize, hash, sexp, sexp_grammar, typerep]
 
   (* Referring to [String.t] inserts [string.ml] in the middle of a ton of module
      dependencies in this library. Instead we just nonrec with [string]. *)
   type nonrec string = string
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , hash
-    , sexp ~stackify
-    , sexp_grammar
-    , typerep]
+  [@@deriving bin_io, compare, equal, globalize, hash, sexp, sexp_grammar, typerep]
 
   type bytes = Bytes.t
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , sexp ~stackify
-    , sexp_grammar
-    , typerep]
+  [@@deriving bin_io, compare, equal, globalize, sexp, sexp_grammar, typerep]
 
   type 'a ref = 'a Ref.t
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , sexp ~stackify
-    , sexp_grammar
-    , typerep]
+  [@@deriving bin_io, compare, equal, globalize, sexp, sexp_grammar, typerep]
 
   type unit = Unit.t
   [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , hash
-    , sexp ~stackify ~unboxed
-    , sexp_grammar
-    , typerep]
+    bin_io, compare, equal, globalize, hash, sexp ~unboxed, sexp_grammar, typerep]
 
   type 'a or_null = 'a Or_null.t
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , hash
-    , sexp ~stackify
-    , typerep]
+  [@@deriving bin_io, compare, equal, globalize, hash, sexp, typerep]
 end :
-sig
-  type 'a array
-  [@@deriving compare ~localize, equal ~localize, globalize, sexp ~stackify, sexp_grammar]
+  sig
+    type 'a array [@@deriving bin_io, compare, equal, globalize, sexp, sexp_grammar]
 
-  [%%rederive: type nonrec 'a array = 'a Array.t [@@deriving bin_io ~localize, typerep]]
+    [%%rederive: type nonrec 'a array = 'a Array.t [@@deriving typerep]]
 
-  type nonrec floatarray = floatarray [@@deriving sexp ~stackify, globalize, sexp_grammar]
+    type nonrec floatarray = floatarray [@@deriving sexp, globalize, sexp_grammar]
 
-  type nonrec bool = bool
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , hash
-    , sexp ~stackify ~unboxed
-    , sexp_grammar
-    , typerep]
+    type nonrec bool = bool
+    [@@deriving
+      bin_io, compare, equal, globalize, hash, sexp ~unboxed, sexp_grammar, typerep]
 
-  type nonrec char = char
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , hash
-    , sexp ~stackify ~unboxed
-    , sexp_grammar
-    , typerep]
+    type nonrec char = char
+    [@@deriving
+      bin_io, compare, equal, globalize, hash, sexp ~unboxed, sexp_grammar, typerep]
 
-  type nonrec float = float
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , hash
-    , sexp ~stackify ~unboxed
-    , sexp_grammar
-    , typerep]
+    type nonrec float = float
+    [@@deriving
+      bin_io, compare, equal, globalize, hash, sexp ~unboxed, sexp_grammar, typerep]
 
-  type 'a iarray = 'a Iarray.t
-  [@@deriving compare ~localize, equal ~localize, sexp ~stackify, sexp_grammar]
+    type 'a iarray = 'a Iarray.t
+    [@@deriving bin_io, compare, equal, globalize, sexp, sexp_grammar]
 
-  [%%rederive:
-    type nonrec 'a iarray = 'a iarray
-    [@@deriving bin_io ~localize, hash, globalize, typerep]]
+    [%%rederive: type nonrec 'a iarray = 'a iarray [@@deriving hash, typerep]]
 
-  type int
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , hash
-    , sexp ~stackify
-    , sexp_grammar
-    , typerep]
+    type int
+    [@@deriving bin_io, compare, equal, globalize, hash, sexp, sexp_grammar, typerep]
 
-  type nonrec int32 = int32
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , hash
-    , sexp ~stackify ~unboxed
-    , sexp_grammar
-    , typerep]
+    type nonrec int32 = int32
+    [@@deriving bin_io, compare, equal, globalize, hash, sexp, sexp_grammar, typerep]
 
-  type nonrec int64 = int64
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , hash
-    , sexp ~stackify ~unboxed
-    , sexp_grammar
-    , typerep]
+    type nonrec int64 = int64
+    [@@deriving bin_io, compare, equal, globalize, hash, sexp, sexp_grammar, typerep]
 
-  type 'a lazy_t
-  [@@deriving
-    bin_io ~localize, compare ~localize, hash, sexp ~stackify, sexp_grammar, typerep]
+    type 'a lazy_t [@@deriving bin_io, compare, hash, sexp, sexp_grammar, typerep]
+    type 'a list [@@deriving compare, equal, globalize, hash, sexp, sexp_grammar, typerep]
 
-  type 'a list
-  [@@deriving
-    compare ~localize
-    , equal ~localize
-    , globalize
-    , hash
-    , sexp ~stackify
-    , sexp_grammar
-    , typerep]
+    [%%rederive: type nonrec 'a list = 'a List.t [@@deriving bin_io]]
 
-  [%%rederive: type nonrec 'a list = 'a List.t [@@deriving bin_io ~localize]]
+    type nonrec nativeint = nativeint
+    [@@deriving bin_io, compare, equal, globalize, hash, sexp, sexp_grammar, typerep]
 
-  type nonrec nativeint = nativeint
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , hash
-    , sexp ~stackify ~unboxed
-    , sexp_grammar
-    , typerep]
+    type 'a option
+    [@@deriving compare, equal, globalize, hash, sexp, sexp_grammar, typerep]
 
-  type 'a option
-  [@@deriving
-    compare ~localize
-    , equal ~localize
-    , globalize
-    , hash
-    , sexp ~stackify
-    , sexp_grammar
-    , typerep]
+    [%%rederive: type nonrec 'a option = 'a option [@@deriving bin_io]]
 
-  [%%rederive: type nonrec 'a option = 'a option [@@deriving bin_io ~localize]]
+    type ('ok, 'err) result
+    [@@deriving bin_io, compare, equal, globalize, hash, sexp, sexp_grammar, typerep]
 
-  type%template 'a option
-  [@@deriving bin_io ~localize, compare ~localize, equal ~localize, sexp ~stackify]
-  [@@kind k = base_non_value]
+    type string
+    [@@deriving bin_io, compare, equal, globalize, hash, sexp, sexp_grammar, typerep]
 
-  type ('ok, 'err) result
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , hash
-    , sexp ~stackify
-    , sexp_grammar
-    , typerep]
+    type bytes [@@deriving bin_io, compare, equal, globalize, sexp, sexp_grammar, typerep]
 
-  type%template ('ok, 'err) result
-  [@@deriving bin_io ~localize, compare ~localize, equal ~localize, sexp ~stackify]
-  [@@kind k = base_non_value]
+    type 'a ref
+    [@@deriving bin_io, compare, equal, globalize, sexp, sexp_grammar, typerep]
 
-  type string
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , hash
-    , sexp ~stackify
-    , sexp_grammar
-    , typerep]
+    type nonrec unit = unit
+    [@@deriving
+      bin_io, compare, equal, globalize, hash, sexp ~unboxed, sexp_grammar, typerep]
 
-  type bytes
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , sexp ~stackify
-    , sexp_grammar
-    , typerep]
-
-  type 'a ref
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , sexp ~stackify
-    , sexp_grammar
-    , typerep]
-
-  type nonrec unit = unit
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , hash
-    , sexp ~stackify ~unboxed
-    , sexp_grammar
-    , typerep]
-
-  type nonrec 'a or_null = 'a or_null
-  [@@or_null_reexport]
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , hash
-    , sexp ~stackify
-    , typerep]
-end
-[@with:
-  type 'a array := 'a array
-  type bool := bool
-  type char := char
-  type float := float
-  type 'a iarray := 'a iarray
-  type int := int
-  type int32 := int32
-  type int64 := int64
-  type 'a list := 'a list
-  type nativeint := nativeint
-
+    type nonrec 'a or_null = 'a or_null
+    [@@or_null_reexport]
+    [@@deriving bin_io, compare, equal, globalize, hash, sexp, typerep]
+  end
+  with type 'a array := 'a array
+  with type bool := bool
+  with type char := char
+  with type float := float
+  with type 'a iarray := 'a iarray
+  with type int := int
+  with type int32 := int32
+  with type int64 := int64
+  with type 'a list := 'a list
+  with type nativeint := nativeint
   (* use a destructive substitution for [value] only to re-expose the constructors;
      otherwise, in certain cases this produces arcane errors about the type being abstract
      and ruins the output of mdx tests *)
-
-  type 'a option := 'a option
-  type 'a option = ('a option[@kind k]) [@@kind k = base_non_value]
-  type ('ok, 'err) result := ('ok, 'err) result
-  type ('ok, 'err) result = (('ok, 'err) result[@kind k]) [@@kind k = base_non_value]
-  type string := string
-  type bytes := bytes
-  type 'a lazy_t := 'a lazy_t
-  type 'a ref := 'a ref
-  type unit := unit
-  type 'a or_null := 'a or_null])
+  with type 'a option := 'a option
+  with type ('ok, 'err) result := ('ok, 'err) result
+  with type string := string
+  with type bytes := bytes
+  with type 'a lazy_t := 'a lazy_t
+  with type 'a ref := 'a ref
+  with type unit := unit
+  with type 'a or_null := 'a or_null)
 
 (* When running with versions of the compiler that don't support the [iarray] extension,
    re-export it from [Base], which defines it as an abstract type in such cases.
@@ -531,4 +264,4 @@ type 'a or_null = 'a Base.Or_null.t =
   | This of 'a
 
 let sexp_of_exn = Exn.sexp_of_t
-let%template[@alloc a = (heap, stack)] maybe_globalize = (Base.maybe_globalize [@alloc a])
+let maybe_globalize = Base.maybe_globalize

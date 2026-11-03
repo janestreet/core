@@ -20,10 +20,7 @@ module type S = sig
   type t
 
   module Hexdump : sig
-    type nonrec t = t [@@deriving sexp_of ~localize ~stackify]
-
-    [%%template:
-    [@@@alloc.default a @ l = (heap_global, stack_local)]
+    type nonrec t = t [@@deriving sexp_of]
 
     (** [to_string_hum] renders [t] as a multi-line ASCII string in hexdump format. [pos]
         and [len] select a subrange of [t] to render. [max_lines] determines the maximum
@@ -36,7 +33,7 @@ module type S = sig
       -> ?pos:int
       -> ?len:int
       -> t
-      -> string]
+      -> string
 
     (** [to_sequence] produces the lines of [to_string_hum] as a sequence of strings. This
         may be useful for incrementally rendering a large hex dump without producing the
@@ -54,7 +51,7 @@ module type S = sig
         compact in the common (printable) case while still being interpretable for any
         byte sequence. *)
     module Pretty : sig
-      type nonrec t = t [@@deriving sexp_of ~localize ~stackify]
+      type nonrec t = t [@@deriving sexp_of]
     end
   end
 end
@@ -63,17 +60,13 @@ module type S1 = sig
   type _ t
 
   module Hexdump : sig
-    type nonrec 'a t = 'a t [@@deriving sexp_of ~localize ~stackify]
+    type nonrec 'a t = 'a t [@@deriving sexp_of]
 
-    [%%template:
-    [@@@alloc.default a @ l = (heap_global, stack_local)]
-
-    val to_string_hum : ?max_lines:int -> ?pos:int -> ?len:int -> _ t -> string]
-
+    val to_string_hum : ?max_lines:int -> ?pos:int -> ?len:int -> _ t -> string
     val to_sequence : ?max_lines:int -> ?pos:int -> ?len:int -> _ t -> string Sequence.t
 
     module Pretty : sig
-      type nonrec 'a t = 'a t [@@deriving sexp_of ~localize ~stackify]
+      type nonrec 'a t = 'a t [@@deriving sexp_of]
     end
   end
 end
@@ -82,12 +75,9 @@ module type S2 = sig
   type (_, _) t
 
   module Hexdump : sig
-    type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of ~localize ~stackify]
+    type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of]
 
-    [%%template:
-    [@@@alloc.default a @ l = (heap_global, stack_local)]
-
-    val to_string_hum : ?max_lines:int -> ?pos:int -> ?len:int -> (_, _) t -> string]
+    val to_string_hum : ?max_lines:int -> ?pos:int -> ?len:int -> (_, _) t -> string
 
     val to_sequence
       :  ?max_lines:int
@@ -97,7 +87,7 @@ module type S2 = sig
       -> string Sequence.t
 
     module Pretty : sig
-      type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of ~localize ~stackify]
+      type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of]
     end
   end
 end
@@ -106,12 +96,9 @@ module type S3 = sig
   type (_, _, _) t
 
   module Hexdump : sig
-    type nonrec ('a, 'b, 'c) t = ('a, 'b, 'c) t [@@deriving sexp_of ~localize ~stackify]
+    type nonrec ('a, 'b, 'c) t = ('a, 'b, 'c) t [@@deriving sexp_of]
 
-    [%%template:
-    [@@@alloc.default a @ l = (heap_global, stack_local)]
-
-    val to_string_hum : ?max_lines:int -> ?pos:int -> ?len:int -> (_, _, _) t -> string]
+    val to_string_hum : ?max_lines:int -> ?pos:int -> ?len:int -> (_, _, _) t -> string
 
     val to_sequence
       :  ?max_lines:int
@@ -121,7 +108,7 @@ module type S3 = sig
       -> string Sequence.t
 
     module Pretty : sig
-      type nonrec ('a, 'b, 'c) t = ('a, 'b, 'c) t [@@deriving sexp_of ~localize ~stackify]
+      type nonrec ('a, 'b, 'c) t = ('a, 'b, 'c) t [@@deriving sexp_of]
     end
   end
 end
@@ -170,12 +157,8 @@ module type Hexdump = sig
       [to_sequence] in [S]. *)
   val default_max_lines : int Dynamic.t
 
-  module%template.portable Of_indexable (T : Indexable) : S with type t := T.t
-  module%template.portable Of_indexable1 (T : Indexable1) : S1 with type 'a t := 'a T.t
-
-  module%template.portable Of_indexable2 (T : Indexable2) :
-    S2 with type ('a, 'b) t := ('a, 'b) T.t
-
-  module%template.portable Of_indexable3 (T : Indexable3) :
-    S3 with type ('a, 'b, 'c) t := ('a, 'b, 'c) T.t
+  module Of_indexable (T : Indexable) : S with type t := T.t
+  module Of_indexable1 (T : Indexable1) : S1 with type 'a t := 'a T.t
+  module Of_indexable2 (T : Indexable2) : S2 with type ('a, 'b) t := ('a, 'b) T.t
+  module Of_indexable3 (T : Indexable3) : S3 with type ('a, 'b, 'c) t := ('a, 'b, 'c) T.t
 end

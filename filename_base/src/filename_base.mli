@@ -4,13 +4,10 @@
 
 open! Base
 
-type t = string [@@deriving compare ~localize, hash, sexp, sexp_grammar]
+type t = string [@@deriving compare, hash, sexp, sexp_grammar]
 
-include%template
-  Comparable.S
-  [@mode local]
-  with type t := t
-  with type comparator_witness = String.comparator_witness
+include
+  Comparable.S with type t := t with type comparator_witness = String.comparator_witness
 
 (** The path of the root. *)
 val root : string

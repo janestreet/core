@@ -13,5 +13,11 @@ module type S = sig
   val ( >. ) : t -> t -> bool
   val ( <. ) : t -> t -> bool
   val ( <>. ) : t -> t -> bool
+
+  (** Warning: despite its name, this is not a comparator. It uses a fixed absolute
+      tolerance, so the approximate equality it defines is non-transitive. Never pass it
+      to sorting or deduplication functions, [Map] or [Set], or [Comparable.Make]. Use an
+      exact comparator for ordering, and the robust operators above only for pairwise
+      threshold checks. *)
   val robustly_compare : t -> t -> int
 end

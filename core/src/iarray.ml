@@ -4,17 +4,16 @@ include Base.Iarray
 
 module Stable = struct
   module V1 = struct
-    type%template nonrec 'a t = 'a t
-    [@@deriving compare ~localize, equal ~localize, globalize]
+    type nonrec 'a t = 'a t [@@deriving compare, equal, globalize]
 
     [%%rederive type nonrec 'a t = 'a t [@@deriving hash]]
 
     let map = map
     let t_of_sexp = t_of_sexp
-    let%template[@alloc a = (heap, stack)] sexp_of_t = (sexp_of_t [@alloc a])
+    let sexp_of_t = sexp_of_t
     let t_sexp_grammar = t_sexp_grammar
 
-    [%%rederive type 'a t = 'a iarray [@@deriving bin_io ~localize ~portable]]
+    [%%rederive type 'a t = 'a iarray [@@deriving bin_io]]
 
     let stable_witness elt_witness =
       Stable_witness.of_serializable
@@ -25,7 +24,7 @@ module Stable = struct
   end
 end
 
-[%%rederive.portable type 'a t = 'a iarray [@@deriving quickcheck ~portable]]
+[%%rederive.portable type 'a t = 'a iarray [@@deriving quickcheck]]
 
 include (
 struct
@@ -39,3 +38,5 @@ include (
       include Stable.V1
     end
     with type 'a t := 'a t)
+
+[%%rederive.portable type nonrec 'a t = 'a iarray [@@deriving bin_io]]

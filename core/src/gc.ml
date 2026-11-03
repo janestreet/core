@@ -8,14 +8,7 @@ module Stable = struct
         | Next_fit
         | First_fit
         | Best_fit
-      [@@deriving
-        bin_io
-        , compare ~localize
-        , equal ~localize
-        , hash
-        , sexp
-        , sexp_grammar
-        , stable_witness]
+      [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar, stable_witness]
     end
   end
 
@@ -39,14 +32,7 @@ module Stable = struct
         ; top_heap_words : int
         ; stack_size : int
         }
-      [@@deriving
-        bin_io
-        , compare ~localize
-        , equal ~localize
-        , hash
-        , sexp
-        , sexp_grammar
-        , stable_witness]
+      [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar, stable_witness]
     end
 
     module V2 = struct
@@ -69,14 +55,7 @@ module Stable = struct
         ; stack_size : int
         ; forced_major_collections : int
         }
-      [@@deriving
-        bin_io
-        , compare ~localize
-        , equal ~localize
-        , hash
-        , sexp
-        , sexp_grammar
-        , stable_witness]
+      [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar, stable_witness]
     end
   end
 
@@ -97,8 +76,7 @@ module Stable = struct
         ; custom_minor_ratio : int
         ; custom_minor_max_size : int
         }
-      [@@deriving
-        bin_io, compare ~localize, equal ~localize, sexp, sexp_grammar, stable_witness]
+      [@@deriving bin_io, compare, equal, sexp, sexp_grammar, stable_witness]
     end
   end
 end
@@ -127,7 +105,7 @@ module Stat = struct
       ; forced_major_collections : int
       }
     [@@deriving
-      compare ~localize
+      compare
       , hash
       , sexp_of
       , fields
@@ -139,8 +117,7 @@ module Stat = struct
   end
 
   include T
-
-  include%template Comparable.Make_plain [@mode portable] (T)
+  include Comparable.Make_plain (T)
 
   let combine first second ~float_f ~int_f =
     { minor_words = float_f first.minor_words second.minor_words
@@ -186,14 +163,11 @@ module Control = struct
       ; custom_minor_max_size : int
       }
     [@@deriving
-      compare ~localize
-      , sexp_of
-      , fields ~getters ~setters ~fields ~iterators:(map, to_list)]
+      compare, sexp_of, fields ~getters ~setters ~fields ~iterators:(map, to_list)]
   end
 
   include T
-
-  include%template Comparable.Make_plain [@mode portable] (T)
+  include Comparable.Make_plain (T)
 end
 
 module Allocation_policy = struct
@@ -201,7 +175,7 @@ module Allocation_policy = struct
     | Next_fit
     | First_fit
     | Best_fit
-  [@@deriving compare ~localize, equal ~localize, hash, sexp_of]
+  [@@deriving compare, equal, hash, sexp_of]
 
   let to_int = function
     | Next_fit -> 0
@@ -264,10 +238,7 @@ let disable_compaction ?logger ~allocation_policy () =
     | `Don't_change -> None
     | `Set_to policy -> Some policy
   in
-  (* The value 1_000_000, according to
-     http://caml.inria.fr/pub/docs/manual-ocaml-4.02/libref/Gc.html will disable
-     compactions.
-  *)
+  (* Automatic compaction is disabled if [max_overhead >= 1_000_000]. *)
   tune ?logger ?allocation_policy ~max_overhead:1_000_000 ()
 ;;
 
@@ -295,8 +266,9 @@ let compact_if_not_running_test () = if not am_running_test then compact ()
 
 (* The compiler won't optimize int_of_string away so it won't perform constant folding
    below. *)
-let%template rec keep_alive o =
-  if zero <> 0 then keep_alive ((Sys.opaque_identity [@mode contended]) o)
+let keep_alive =
+  let rec keep_alive o = if zero <> 0 then keep_alive (Sys.opaque_identity o) in
+  keep_alive
 ;;
 
 module For_testing = struct
@@ -322,10 +294,6 @@ module For_testing = struct
   end
 
   type memprof = Stdlib.Gc.Memprof.t
-
-  [%%template
-  [@@@kind.default k = base_or_null]
-
   type 'a globl = { g : 'a [@globalized] } [@@unboxed]
 
   (* We disable inlining for this function so the GC stats and the call to [f] are never
@@ -341,14 +309,13 @@ module For_testing = struct
     let major_words_allocated = major_words_after - major_words_before in
     let minor_words_allocated = minor_words_after - minor_words_before in
     on_result ~major_words_allocated ~minor_words_allocated x
-  [@@kind k = (k, k & value)]
   ;;
 
   let is_zero_alloc_local (type a) (f : unit -> a) =
     (* Instead of using [Allocation_report.measure], and matching on the result, we use
        this construction, in order to have [is_zero_alloc] not allocate itself. This
        enables [is_zero_alloc] to be used in a nested way. *)
-    (measure_internal [@kind k])
+    measure_internal
       f
       ~on_result:(fun ~major_words_allocated ~minor_words_allocated value ->
         ignore (Sys.opaque_identity value : a);
@@ -356,18 +323,14 @@ module For_testing = struct
     [@nontail]
   ;;
 
-  let is_zero_alloc f =
-    (is_zero_alloc_local [@kind k]) (fun () -> { g = f () }) [@nontail]
-  ;;
+  let is_zero_alloc f = is_zero_alloc_local (fun () -> { g = f () }) [@nontail]
 
   let measure_allocation_local f =
-    (measure_internal [@kind k & value])
-      f
-      ~on_result:(fun ~major_words_allocated ~minor_words_allocated x ->
-        x, Allocation_report.create ~major_words_allocated ~minor_words_allocated)
+    measure_internal f ~on_result:(fun ~major_words_allocated ~minor_words_allocated x ->
+      x, Allocation_report.create ~major_words_allocated ~minor_words_allocated)
   ;;
 
-  let measure_allocation_for_runtime5_local f =
+  let measure_allocation_without_memprof_local f =
     let minor_words_before = minor_words () in
     let promoted_words_before = promoted_words () in
     let major_words_before = major_words () in
@@ -385,9 +348,7 @@ module For_testing = struct
   ;;
 
   let measure_allocation f =
-    let { g }, allocation_report =
-      (measure_allocation_local [@kind k]) (fun () -> { g = f () })
-    in
+    let { g }, allocation_report = measure_allocation_local (fun () -> { g = f () }) in
     g, [%globalize: Allocation_report.t] allocation_report
   ;;
 
@@ -439,7 +400,7 @@ module For_testing = struct
         | exception e ->
           run_memprof_callbacks ();
           Memprof.stop ();
-          raise e |> (Never_returns.never_returns [@kind k])
+          raise e |> Never_returns.never_returns
       in
       ( result
       , Allocation_report.create
@@ -449,7 +410,7 @@ module For_testing = struct
     | exception Failure msg ->
       if String.equal msg "Gc.Memprof.start: not implemented in multicore"
       then (
-        let a, b = (measure_allocation_for_runtime5_local [@kind k]) f in
+        let a, b = measure_allocation_without_memprof_local f in
         a, b, [])
       else (
         match failwith msg with
@@ -458,7 +419,7 @@ module For_testing = struct
 
   let measure_and_log_allocation f =
     let { g }, allocation_report, log =
-      (measure_and_log_allocation_local [@kind k]) (fun () -> { g = f () })
+      measure_and_log_allocation_local (fun () -> { g = f () })
     in
     ( g
     , [%globalize: Allocation_report.t] allocation_report
@@ -478,20 +439,17 @@ module For_testing = struct
   ;;
 
   let assert_no_allocation_local ?(here = Stdlib.Lexing.dummy_pos) f =
-    let result, allocation_report, allocation_log =
-      (measure_and_log_allocation_local [@kind k]) f
-    in
+    let result, allocation_report, allocation_log = measure_and_log_allocation_local f in
     if allocation_report.major_words_allocated > 0
        || allocation_report.minor_words_allocated > 0
-    then
-      (require_no_allocation_local_failed [@kind k]) here allocation_report allocation_log;
+    then require_no_allocation_local_failed here allocation_report allocation_log;
     result
   ;;
 
   let assert_no_allocation ?(here = Stdlib.Lexing.dummy_pos) f =
-    let { g } = (assert_no_allocation_local [@kind k]) ~here (fun () -> { g = f () }) in
+    let { g } = assert_no_allocation_local ~here (fun () -> { g = f () }) in
     g
-  ;;]
+  ;;
 end
 
 module Expert = struct
@@ -551,51 +509,34 @@ module Expert = struct
        soundness of the mode-polymorphism of the actual [Ephemeron.K1] module.
     *)
 
-    module type%template Ephemeron = sig
+    module type Ephemeron = sig
       type ('k, 'd) t
 
-      val make_ephemeron : 'k -> 'd -> ('k, 'd) t [@@mode p = (nonportable, portable)]
-
+      val make_ephemeron : 'k -> 'd -> ('k, 'd) t
       val query_ephemeron : ('k, 'd) t -> 'k -> 'd option
-      [@@mode c = (uncontended, contended)]
     end
 
-    module%template _ : Ephemeron = struct
+    module _ : Ephemeron = struct
       type ('k, 'd) t = 'k * 'd
 
-      let make_ephemeron k d = k, d [@@mode p = (nonportable, portable)]
-
+      let make_ephemeron k d = k, d
       let query_ephemeron (k, d) k' = if phys_equal k k' then Some d else None
-      [@@mode c = (uncontended, contended)]
-      ;;
     end
 
-    module%template Ephemeron : Ephemeron = struct
+    module Ephemeron : Ephemeron = struct
       type ('k, 'd) t = ('k, 'd) Ephemeron.K1.t
 
-      let[@mode nonportable] make_ephemeron x finalizer = Ephemeron.K1.make x finalizer
-
-      let[@mode portable] make_ephemeron x finalizer =
-        Obj.magic_portable (Ephemeron.K1.make x finalizer)
-      ;;
-
-      let[@mode uncontended] query_ephemeron eph x = Ephemeron.K1.query eph x
-
-      let[@mode contended] query_ephemeron eph x =
-        Ephemeron.K1.query (Obj.magic_uncontended eph) (Obj.magic_uncontended x)
-      ;;
+      let make_ephemeron x finalizer = Ephemeron.K1.make x finalizer
+      let query_ephemeron eph x = Ephemeron.K1.query eph x
     end
 
-    [%%template
-    [@@@mode.default (p, c) = ((nonportable, uncontended), (portable, contended))]
-
     let protect_finalizer x finalizer =
-      let ephemeron = (Ephemeron.make_ephemeron [@mode p]) x finalizer in
+      let ephemeron = Ephemeron.make_ephemeron x finalizer in
       fun x ->
-        match (Ephemeron.query_ephemeron [@mode c]) ephemeron x with
+        match Ephemeron.query_ephemeron ephemeron x with
         | None -> assert false
         | Some finalizer -> finalizer x
-    ;;]
+    ;;
 
     let add_finalizer x f =
       let f = protect_finalizer x f in

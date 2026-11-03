@@ -4,11 +4,10 @@ open! Import
 
 (*_ This needs to be above the place where we include [Base.Float] so that it doesn't
     shadow the latter's mode-polymorphic operators. *)
-  include%template
-    Identifiable.S
-    [@mode local]
-    with type t := float
-     and type comparator_witness := Base.Float.comparator_witness
+include
+  Identifiable.S
+  with type t := float
+   and type comparator_witness := Base.Float.comparator_witness
 
 (** @inline *)
 include
@@ -19,7 +18,7 @@ include
    and type Parts.t = Base.Float.Parts.t
    and type Terse.t = Base.Float.Terse.t
 
-type t = float [@@deriving typerep, bin_io ~localize]
+type t = float [@@deriving typerep, bin_io]
 
 module Robust_compare : sig
   module type S = sig
@@ -34,10 +33,14 @@ module Robust_compare : sig
     end) : S
 end
 
-(** So-called "robust" comparisons, which include a small tolerance, so that float that
-    differ by a small amount are considered equal.
+(** So-called "robust" comparisons use a fixed absolute tolerance of [1e-7], so floats
+    that differ by at most that amount are considered equal. This approximate equality is
+    non-transitive: [0. =. 0.75e-7] and [0.75e-7 =. 1.5e-7], but [0. <>. 1.5e-7].
+    Therefore, [robustly_compare] is not a comparator and must never be passed to sorting
+    or deduplication functions, [Map] or [Set], or [Comparable.Make]. Use [Float.compare]
+    for ordering and these robust operators only for pairwise threshold checks.
 
-    Note that the results of robust comparisons on [nan] should be considered undefined. *)
+    The results of robust comparisons on [nan] should be considered undefined. *)
 include Robust_compare.S
 
 module O : sig
@@ -51,7 +54,7 @@ end
 module Robustly_comparable : Robust_compare.S
 
 module Terse : sig
-  type nonrec t = t [@@deriving bin_io ~localize]
+  type nonrec t = t [@@deriving bin_io]
 
   include module type of struct
       include Base.Float.Terse
@@ -63,11 +66,10 @@ end
     [Nan] or [Infinite]. The other validation functions still fail on [Nan], but permit
     [Infinite] values of the correct sign. (The behavior with respect to infinity will
     probably be changed to be more consistent.) *)
-include%template Comparable.Validate_with_zero [@modality portable] with type t := t
+include Comparable.Validate_with_zero with type t := t
 
 (** [validate_ordinary] fails if class is [Nan] or [Infinite]. *)
-val%template validate_ordinary : (t Validate.check[@mode p])
-[@@mode p = (portable, nonportable)]
+val validate_ordinary : t Validate.check
 
 (** [to_string_12 x] builds a string representing [x] using up to 12 significant digits.
     It loses precision. You can use ["%{Float#12}"] in formats, but consider ["%.12g"],
@@ -81,7 +83,7 @@ val to_string_12 : t -> string
     [3.14] as [3.1400000000000001243]. The only exception is that occasionally it will
     output 17 significant digits when the number can be represented with just 16 (but not
     15 or fewer) of them. *)
-include%template Stringable.S [@mode local] with type t := t
+include Stringable.S with type t := t
 
 include Quickcheckable.S with type t := t
 
@@ -147,17 +149,14 @@ val gen_zero : t Quickcheck.Generator.t
     stable types. *)
 module Stable : sig
   module V1 : sig
-    type nonrec t = t
-    [@@deriving
-      compare ~localize, equal ~localize, hash, sexp_grammar, typerep, globalize]
+    type nonrec t = t [@@deriving compare, equal, hash, sexp_grammar, typerep, globalize]
 
     (** We expose [Quickcheckable.S] here specifically for tests that operate on the
         stable type. Note that the quickcheck semantics themselves are *not* stable. *)
     include Quickcheckable.S with type t := t
 
-    include%template
+    include
       Stable_comparable.With_stable_witness.V1
-      [@mode local]
       with type t := t
        and type comparator_witness = comparator_witness
   end

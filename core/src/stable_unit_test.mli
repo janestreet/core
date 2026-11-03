@@ -13,14 +13,10 @@ open! Stable_unit_test_intf
 module Make_sexp_deserialization_test (T : Arg) : sig end
 
 module Make_sexp_serialization_test (T : Arg) : sig end
-
-[%%template:
-[@@@mode.default m = (global, local)]
-
-module Make_bin_io_test (T : Arg [@mode m]) : sig end
+module Make_bin_io_test (T : Arg) : sig end
 
 (** Include all of the above tests. *)
-module Make (T : Arg [@mode m]) : sig end]
+module Make (T : Arg) : sig end
 
 (** See [stable_unit_test_intf.ml] for documentation. *)
 module type Unordered_container_arg = Unordered_container_arg

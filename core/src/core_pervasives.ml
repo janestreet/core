@@ -13,13 +13,6 @@ include Stdlib
 *)
 external raise : 'a. exn -> 'a = "%reraise"
 external ignore : 'a. ('a[@local_opt]) -> unit = "%ignore" [@@layout_poly]
-
-[%%if ocaml_version < (4, 12, 0)]
-
-let __FUNCTION__ = "<__FUNCTION__ not supported before OCaml 4.12>"
-
-[%%endif]
-
 external __LOC_OF__ : ('a[@local_opt]) -> (string * 'a[@local_opt]) = "%loc_LOC"
 external __LINE_OF__ : ('a[@local_opt]) -> (int * 'a[@local_opt]) = "%loc_LINE"
 

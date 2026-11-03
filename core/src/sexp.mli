@@ -5,14 +5,7 @@ open! Import
 type t = Base.Sexp.t =
   | Atom of string
   | List of t list
-[@@deriving
-  bin_io ~localize
-  , compare ~localize
-  , equal ~localize
-  , globalize
-  , hash
-  , sexp ~stackify
-  , sexp_grammar]
+[@@deriving bin_io, compare, equal, globalize, hash, sexp, sexp_grammar]
 
 module O : sig
   type sexp = Base.Sexp.t =
@@ -20,11 +13,8 @@ module O : sig
     | List of t list
 end
 
-include%template
-  Comparable.S
-  [@mode local]
-  with type t := t
-   and type comparator_witness = Base.Sexp.comparator_witness
+include
+  Comparable.S with type t := t and type comparator_witness = Base.Sexp.comparator_witness
 
 include Stringable.S with type t := t
 include Quickcheckable.S with type t := t
@@ -85,7 +75,7 @@ type 'a no_raise = 'a [@@deriving bin_io, sexp]
     If [Reason_to_stop.t_of_sexp] fails, you can still tell it was a [Stop] query. *)
 module Sexp_maybe : sig
   type 'a t = ('a, Base.Sexp.t * Error.t) Result.t
-  [@@deriving bin_io, compare ~localize, hash, sexp, sexp_grammar]
+  [@@deriving bin_io, compare, hash, sexp, sexp_grammar]
 end
 
 (** A [With_text.t] is a value paired with the full textual representation of its sexp.
@@ -135,18 +125,10 @@ module Stable : sig
       | Atom of string
       | List of t list
     [@@deriving
-      bin_io ~localize
-      , compare ~localize
-      , equal ~localize
-      , globalize
-      , hash
-      , sexp ~stackify
-      , sexp_grammar
-      , stable_witness]
+      bin_io, compare, equal, globalize, hash, sexp, sexp_grammar, stable_witness]
 
-    include%template
+    include
       Stable_comparable.With_stable_witness.V1
-      [@mode local]
       with type t := t
       with type comparator_witness = comparator_witness
   end

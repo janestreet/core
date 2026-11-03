@@ -6,14 +6,11 @@ include module type of struct
   include Base.Maybe_bound
 end
 
-[%%template:
-[@@@kind_set.define ks = base_or_null]
-
-type 'a t = ('a Base.Maybe_bound.t[@kind k]) =
+type 'a t = 'a Base.Maybe_bound.t =
   | Incl of 'a
   | Excl of 'a
   | Unbounded
-[@@deriving bin_io ~localize, equal ~localize, hash, quickcheck ~portable] [@@kind k = ks]
+[@@deriving bin_io, equal, hash, quickcheck]
 
 (** Compares [t] values as lower bounds, where [Unbounded] is lowest, [Incl x < Excl x],
     and other cases of [Incl] and/or [Excl] are compared based on ['a]. If
@@ -24,9 +21,7 @@ type 'a t = ('a Base.Maybe_bound.t[@kind k]) =
       Unbounded < ... < Incl 13 < Excl 13 < Incl 14 < Excl 14 < ...
     ]} *)
 module As_lower_bound : sig
-  type nonrec 'a t = ('a t[@kind k])
-  [@@kind k = ks]
-  [@@deriving bin_io, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+  type nonrec 'a t = 'a t [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
 end
 
 (** Compares [t] values as upper bounds, where [Unbounded] is highest, [Incl x > Excl x],
@@ -38,19 +33,13 @@ end
       ... < Excl 13 < Incl 13 < Excl 14 < Incl 14 < ... < Unbounded
     ]} *)
 module As_upper_bound : sig
-  type nonrec 'a t = ('a t[@kind k])
-  [@@kind k = ks]
-  [@@deriving bin_io, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+  type nonrec 'a t = 'a t [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
 end
 
 module Stable : sig
   module V1 : sig
-    type nonrec 'a t = ('a t[@kind k])
-    [@@kind k = ks]
-    [@@deriving
-      bin_io ~localize, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+    type nonrec 'a t = 'a t [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
 
-    include
-      Stable_module_types.With_stable_witness.S1 [@mode local] with type 'a t := 'a t
+    include Stable_module_types.With_stable_witness.S1 with type 'a t := 'a t
   end
-end]
+end

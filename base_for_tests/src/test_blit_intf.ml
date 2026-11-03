@@ -95,7 +95,7 @@ module type Test_blit = sig
                  and type ('elt, 'p1, 'p2) dst := ('elt, 'p1, 'p2) Dst.t) : sig end
 
   (** [Make_and_test] uses the [Blit.Make] functor and the [Test] functor. *)
-  module%template.portable Make_and_test
+  module Make_and_test
       (Elt : Elt)
       (Sequence : sig
          include Sequence with type elt := Elt.t
@@ -103,7 +103,7 @@ module type Test_blit = sig
          val unsafe_blit : (t, t) blit
        end) : S with type t := Sequence.t
 
-  module%template.portable Make_distinct_and_test
+  module Make_distinct_and_test
       (Elt : Elt)
       (Src : Sequence with type elt := Elt.t)
       (Dst : sig
@@ -112,19 +112,19 @@ module type Test_blit = sig
          val unsafe_blit : (Src.t, t) blit
        end) : S_distinct with type src := Src.t with type dst := Dst.t
 
-  module%template.portable Make1_and_test (Sequence : sig
+  module Make1_and_test (Sequence : sig
       include Blit.Sequence1
       include Sequence1 with type 'a t := 'a t with type 'a elt := 'a
     end) : S1 with type 'a t := 'a Sequence.t
 
-  module%template.portable Make1_generic_and_test
+  module Make1_generic_and_test
       (Elt : Elt1)
       (Sequence : sig
          include Blit.Sequence1
          include Sequence1 with type 'a t := 'a t with type 'a elt := 'a Elt.t
        end) : S1 with type 'a t := 'a Sequence.t
 
-  module%template.portable Make1_phantom2_and_test
+  module Make1_phantom2_and_test
       (Elt : Elt1)
       (Sequence : sig
          type (_, _, _) t
@@ -140,7 +140,7 @@ module type Test_blit = sig
     with type ('elt, 'p1, 'p2) src := ('elt, 'p1, 'p2) Sequence.t
     with type ('elt, 'p1, 'p2) dst := ('elt, 'p1, 'p2) Sequence.t
 
-  module%template.portable Make1_phantom2_distinct_and_test
+  module Make1_phantom2_distinct_and_test
       (Elt : Elt1)
       (Src : Sequence1_phantom2 with type 'a elt := 'a Elt.t)
       (Dst : sig

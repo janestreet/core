@@ -4,13 +4,8 @@ module String = Base.String
 module T = struct
   include Base.Source_code_position
   include Source_code_position0
-
-  include%template
-    Comparable.Extend [@mode local] [@modality portable]
-      (Base.Source_code_position)
-      (Source_code_position0)
-
-  include%template Hashable.Make [@modality portable] (Source_code_position0)
+  include Comparable.Extend (Base.Source_code_position) (Source_code_position0)
+  include Hashable.Make (Source_code_position0)
 end
 
 include T

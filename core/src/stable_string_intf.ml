@@ -1,14 +1,13 @@
 open! Import
 
 module type Identifiable_without_binio = sig
-  type t [@@deriving equal ~localize, hash, sexp_grammar]
+  type t [@@deriving equal, hash, sexp_grammar]
   type comparator_witness
 
-  include%template Base.Stringable.S [@alloc stack] with type t := t
+  include Base.Stringable.S with type t := t
 
-  include%template
+  include
     Stable_comparable.With_stable_witness.V1
-    [@mode local]
     with type t := t
     with type comparator_witness := comparator_witness
 
@@ -21,13 +20,7 @@ module type Stable_string = sig
   module V1 : sig
     type t = string
     [@@deriving
-      bin_io ~localize
-      , compare ~localize
-      , diff ~extra_derive:[ sexp ]
-      , equal ~localize
-      , globalize
-      , quickcheck
-      , sexp_of ~stackify]
+      bin_io, compare, diff ~extra_derive:[ sexp ], equal, globalize, quickcheck, sexp_of]
 
     include
       Identifiable_without_binio

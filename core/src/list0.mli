@@ -1,19 +1,12 @@
 open! Import
 
-[%%template:
-[@@@kind_set.define all_ks_non_value = base_non_value]
-
 include module type of struct
   include Base.List
 end
 
-type nonrec 'a t = ('a t[@kind k])
-[@@kind k = all_ks_non_value] [@@deriving bin_io ~localize]
+[%%rederive: type 'a t = 'a Base.List.t [@@deriving bin_io, quickcheck, typerep]]
 
-[%%rederive:
-  type 'a t = 'a Base.List.t [@@deriving bin_io ~localize, quickcheck ~portable, typerep]]
-
-include%template Comparator.Derived [@modality portable] with type 'a t := 'a t
+include Comparator.Derived with type 'a t := 'a t
 
 val stable_witness : 'a Stable_witness.t -> 'a t Stable_witness.t
 [@@alert
@@ -21,15 +14,8 @@ val stable_witness : 'a Stable_witness.t -> 'a t Stable_witness.t
     "[Core.List0.stable_witness] is only exported for use in [Core.List.Stable]"]
 
 val to_string : 'a. f:('a -> string) -> 'a t -> string
-
-val%template gen_non_empty : 'a. 'a Quickcheck.Generator.t -> 'a t Quickcheck.Generator.t
-[@@mode p = (portable, nonportable)]
-
-val%template gen_with_length
-  : 'a.
-  int -> 'a Quickcheck.Generator.t -> 'a t Quickcheck.Generator.t
-[@@mode p = (portable, nonportable)]
-
+val gen_non_empty : 'a. 'a Quickcheck.Generator.t -> 'a t Quickcheck.Generator.t
+val gen_with_length : 'a. int -> 'a Quickcheck.Generator.t -> 'a t Quickcheck.Generator.t
 val gen_filtered : 'a t -> 'a t Quickcheck.Generator.t
 val gen_permutations : 'a t -> 'a t Quickcheck.Generator.t
 
@@ -38,16 +24,10 @@ module Assoc : sig
     include Base.List.Assoc
   end
 
-  type ('a, 'b) t = ('a, 'b) Base.List.Assoc.t [@@deriving bin_io ~localize]
+  type ('a, 'b) t = ('a, 'b) Base.List.Assoc.t [@@deriving bin_io]
 
-  val%template compare
-    :  ('a -> 'a -> int)
-    -> ('b -> 'b -> int)
-    -> ('a, 'b) t
-    -> ('a, 'b) t
-    -> int
-  [@@mode m = (local, global)]
+  val compare : ('a -> 'a -> int) -> ('b -> 'b -> int) -> ('a, 'b) t -> ('a, 'b) t -> int
   [@@deprecated
     "[since 2016-06] This does not respect the equivalence class promised by List.Assoc. \
      Use List.compare directly if that's what you want."]
-end]
+end

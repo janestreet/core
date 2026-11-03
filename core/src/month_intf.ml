@@ -15,20 +15,18 @@ module type Month = sig
     | Nov
     | Dec
   [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , equal ~localize
+    bin_io
+    , compare
+    , equal
     , globalize
     , hash
     , quickcheck
-    , sexp ~stackify
+    , sexp
     , sexp_grammar
     , typerep
-    , variants]
+    , variants ~fold]
 
-  include%template
-    Comparable.S_binable [@mode local] [@modality portable] with type t := t
-
+  include Comparable.S_binable with type t := t
   include Hashable.S_binable with type t := t
 
   (** [of_string s] accepts three-character abbreviations with three capitalizations (e.g.
@@ -83,11 +81,10 @@ module type Month = sig
         | Oct
         | Nov
         | Dec
-      [@@deriving equal ~localize, globalize, hash, sexp_grammar, sexp_of ~stackify]
+      [@@deriving equal, globalize, hash, sexp_grammar, sexp_of]
 
-      include%template
+      include
         Stable_module_types.With_stable_witness.S0
-        [@mode local]
         with type comparator_witness = comparator_witness
          and type t := t
     end

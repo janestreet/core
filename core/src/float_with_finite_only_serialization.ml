@@ -7,7 +7,7 @@ module Stable = struct
   module V1 = struct
     exception Nan_or_inf [@@deriving sexp]
 
-    type t = float [@@deriving compare ~localize, hash, equal ~localize, stable_witness]
+    type t = float [@@deriving compare, hash, equal, stable_witness]
 
     let verify t =
       match Float.classify t with
@@ -15,8 +15,8 @@ module Stable = struct
       | Infinite | Nan -> raise Nan_or_inf
     ;;
 
-    include%template
-      Binable.Of_binable.V1 [@mode local] [@modality portable] [@alert "-legacy"]
+    include
+      Binable.Of_binable.V1 [@alert "-legacy"]
         (Float)
         (struct
           type nonrec t = t
@@ -26,10 +26,9 @@ module Stable = struct
             t
           ;;
 
-          let%template to_binable t =
+          let to_binable t =
             verify t;
             t
-          [@@mode m = (global, local)]
           ;;
         end)
 

@@ -93,32 +93,29 @@ open! Import
 module Binable = Binable0
 module Hashtbl = Base.Hashtbl
 
-module type%template Key_plain = Hashtbl.Key.S [@mode m] [@@mode m = (local, global)]
+module type Key_plain = Hashtbl.Key.S
 module type Hashtbl_equality = Hashtbl.Hashtbl_equality
 
 module Hashable = Base.Hashable
 module Merge_into_action = Base.Hashtbl.Merge_into_action
 
-[%%template
-[@@@mode.default m = (local, global)]
-
 module type Key = sig
   type t [@@deriving sexp]
 
-  include Key_plain [@mode m] with type t := t
+  include Key_plain with type t := t
 end
 
 module type Key_binable = sig
   type t [@@deriving bin_io, sexp]
 
-  include Key [@mode m] with type t := t
+  include Key with type t := t
 end
 
 module type Key_stable = sig
   type t [@@deriving bin_io, sexp, stable_witness]
 
-  include Key_binable [@mode m] with type t := t
-end]
+  include Key_binable with type t := t
+end
 
 module type Creators = Hashtbl.Private.Creators_generic
 
@@ -142,15 +139,14 @@ type ('key, 'data, 'z) create_options_with_hashable =
   -> hashable:'key Hashable.t
   -> 'z
 
-module type%template M_quickcheck = sig
-  type t [@@deriving (compare [@mode.explicit m]), hash, quickcheck, sexp_of]
+module type M_quickcheck = sig
+  type t [@@deriving compare, hash, quickcheck, sexp_of]
 end
-[@@mode m = (local, global)]
 
 module type For_deriving = sig
   include Base.Hashtbl.For_deriving
 
-  module type%template M_quickcheck = M_quickcheck [@mode m] [@@mode m = (local, global)]
+  module type M_quickcheck = M_quickcheck
 
   val quickcheck_generator_m__t
     :  (module M_quickcheck with type t = 'k)
@@ -193,10 +189,19 @@ module type For_deriving = sig
     -> ('k, 'v) t Bin_prot.Read.vtag_reader
 end
 
+module type For_deriving_stable = sig
+  include For_deriving
+
+  val stable_witness_m__t
+    :  (module Stable_witness.S with type t = 'k)
+    -> 'v Stable_witness.t
+    -> ('k, 'v) t Stable_witness.t
+end
+
 module type S_plain = sig
   type key
   type ('a, 'b) hashtbl
-  type 'b t = (key, 'b) hashtbl [@@deriving equal ~localize, sexp_of]
+  type 'b t = (key, 'b) hashtbl [@@deriving equal, sexp_of]
   type ('a, 'b) t_ = 'b t
   type 'a key_ = key
 
@@ -232,8 +237,8 @@ module type S_stable = sig
   type nonrec 'a t = 'a t [@@deriving stable_witness]
 end
 
-module type%template [@modality p = (portable, nonportable)] Hashtbl_over_values = sig
-  include Hashtbl.S_without_submodules [@mode p] (** @inline *)
+module type Hashtbl_over_values = sig
+  include Hashtbl.S_without_submodules (** @inline *)
 
   val validate : name:('a key -> string) -> 'b Validate.check -> ('a, 'b) t Validate.check
 
@@ -256,21 +261,16 @@ module type%template [@modality p = (portable, nonportable)] Hashtbl_over_values
       -> ('a, 'b) t Validate.check
   end
 
-  [%%template:
-  [@@@mode.default m = (local, global)]
-
-  module type Key_plain = Key_plain [@mode m]
-  module type Key = Key [@mode m]
-  module type Key_binable = Key_binable [@mode m]
-  module type Key_stable = Key_stable [@mode m]]
-
+  module type Key_plain = Key_plain
+  module type Key = Key
+  module type Key_binable = Key_binable
+  module type Key_stable = Key_stable
   module type S_plain = S_plain with type ('a, 'b) hashtbl = ('a, 'b) t
   module type S = S with type ('a, 'b) hashtbl = ('a, 'b) t
   module type S_binable = S_binable with type ('a, 'b) hashtbl = ('a, 'b) t
   module type S_stable = S_stable with type ('a, 'b) hashtbl = ('a, 'b) t
 
-  module%template
-    [@modality p = (p, nonportable)] Make_plain (Key : sig
+  module Make_plain (Key : sig
       type t
 
       include Key_plain with type t := t
@@ -278,29 +278,25 @@ module type%template [@modality p = (portable, nonportable)] Hashtbl_over_values
     include S_plain with type key = Key.t
   end
 
-  module%template
-    [@modality p = (p, nonportable)] Make (Key : sig
+  module Make (Key : sig
       include Key
     end) : sig
     include S with type key = Key.t
   end
 
-  module%template
-    [@modality p = (p, nonportable)] Make_binable (Key : sig
+  module Make_binable (Key : sig
       include Key_binable
     end) : sig
     include S_binable with type key = Key.t
   end
 
-  module%template
-    [@modality p = (p, nonportable)] Make_stable (Key : sig
+  module Make_stable (Key : sig
       include Key_stable
     end) : sig
     include S_stable with type key = Key.t
   end
 
-  module%template
-    [@modality p = (p, nonportable)] Make_plain_with_hashable (T : sig
+  module Make_plain_with_hashable (T : sig
       module Key : sig
         type t
 
@@ -312,8 +308,7 @@ module type%template [@modality p = (portable, nonportable)] Hashtbl_over_values
     include S_plain with type key = T.Key.t
   end
 
-  module%template
-    [@modality p = (p, nonportable)] Make_with_hashable (T : sig
+  module Make_with_hashable (T : sig
       module Key : Key
 
       val hashable : Key.t Hashable.t
@@ -321,8 +316,7 @@ module type%template [@modality p = (portable, nonportable)] Hashtbl_over_values
     include S with type key = T.Key.t
   end
 
-  module%template
-    [@modality p = (p, nonportable)] Make_binable_with_hashable (T : sig
+  module Make_binable_with_hashable (T : sig
       module Key : Key_binable
 
       val hashable : Key.t Hashable.t
@@ -330,8 +324,7 @@ module type%template [@modality p = (portable, nonportable)] Hashtbl_over_values
     include S_binable with type key = T.Key.t
   end
 
-  module%template
-    [@modality p = (p, nonportable)] Make_stable_with_hashable (T : sig
+  module Make_stable_with_hashable (T : sig
       module Key : Key_stable
 
       val hashable : Key.t Hashable.t
@@ -339,16 +332,14 @@ module type%template [@modality p = (portable, nonportable)] Hashtbl_over_values
     include S_stable with type key = T.Key.t
   end
 
-  module%template
-    [@modality p = (p, nonportable)] Provide_of_sexp (Key : sig
+  module Provide_of_sexp (Key : sig
       include Base.Hashtbl.M_of_sexp
     end) : sig
       type _ t [@@deriving of_sexp]
     end
     with type 'a t := (Key.t, 'a) t
 
-  module%template
-    [@modality p = (p, nonportable)] Provide_bin_io (Key : sig
+  module Provide_bin_io (Key : sig
       type t [@@deriving bin_io]
 
       include Key_plain with type t := t
@@ -367,16 +358,30 @@ module type%template [@modality p = (portable, nonportable)] Hashtbl_over_values
   val hashable : ('key, _) t -> 'key Hashable.t
 
   module type For_deriving = For_deriving
+  module type For_deriving_stable = For_deriving_stable
 
   include For_deriving with type ('a, 'b) t := ('a, 'b) t
+
+  module Stable : sig
+    module V1 : sig
+      type nonrec ('key, 'data) t = ('key, 'data) t
+      [@@deriving bin_io, sexp, stable_witness]
+
+      module M (K : T.T) : sig
+        type nonrec 'data t = (K.t, 'data) t
+      end
+
+      include For_deriving_stable with type ('key, 'data) t := ('key, 'data) t
+    end
+  end
 end
 
-module type%template [@modality p = (portable, nonportable)] Hashtbl = sig
+module type Hashtbl = sig
   module type Non_value = Base.Hashtbl.Non_value
 
   type (!'a, !'b) t
 
-  include Hashtbl_over_values [@modality p] with type ('a, 'b) t := ('a, 'b) t
+  include Hashtbl_over_values with type ('a, 'b) t := ('a, 'b) t
   include Hashtbl_equality with type ('a, 'b) t := ('a, 'b) t
   include Non_value with type ('a, 'b) t := ('a, 'b) t
 end

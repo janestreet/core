@@ -2,9 +2,6 @@
 
 open! Import
 
-[%%template:
-[@@@kind_set.define all_ks_non_value = base_non_value]
-
 (** {2 The interface from Base} *)
 
 (** @inline *)
@@ -12,19 +9,12 @@ include module type of struct
   include Base.List
 end
 
-type nonrec 'a t = ('a t[@kind k])
-[@@kind k = all_ks_non_value] [@@deriving bin_io ~localize]
-
-[%%rederive: type nonrec 'a t = 'a list [@@deriving bin_io ~localize, typerep]]
+[%%rederive: type nonrec 'a t = 'a list [@@deriving bin_io, typerep]]
 
 module Assoc : sig
-  type ('a, 'b) t = ('a, 'b) Base.List.Assoc.t [@@deriving bin_io ~localize]
+  type ('a, 'b) t = ('a, 'b) Base.List.Assoc.t [@@deriving bin_io]
 
-  val%template compare
-    :  ([%compare: 'a][@mode.explicit m])
-    -> ([%compare: 'b][@mode.explicit m])
-    -> ([%compare: ('a, 'b) t][@mode.explicit m])
-  [@@mode m = (local, global)]
+  val compare : [%compare: 'a] -> [%compare: 'b] -> [%compare: ('a, 'b) t]
   [@@deprecated
     "[since 2016-06] This does not respect the equivalence class promised by List.Assoc.\n\
      Use List.compare directly if that's what you want."]
@@ -47,14 +37,13 @@ exception
 (** [exn_if_dup ~compare ?context t ~to_sexp] raises if [t] contains a duplicate. It will
     specifically raise a [Duplicate_found] exception and use [context] as its second
     argument. O(n log n) time complexity. *)
-val%template exn_if_dup
+val exn_if_dup
   : 'a.
   compare:('a -> 'a -> int)
   -> ?context:string
   -> 'a t
   -> to_sexp:('a -> Base.Sexp.t)
   -> unit
-[@@mode (p, c) = ((nonportable, uncontended), (portable, contended))]
 
 (** [slice t start stop] returns a new list including elements [t.(start)] through
     [t.(stop-1)], normalized Python-style with the exception that [stop = 0] is treated as
@@ -65,21 +54,16 @@ val%template exn_if_dup
     not require reasoning about negative indices. *)
 val slice : 'a t -> int -> int -> 'a t
 
-include%template Comparator.Derived [@modality portable] with type 'a t := 'a t
-include%template Quickcheckable.S1 [@modality portable] with type 'a t := 'a t
+include Comparator.Derived with type 'a t := 'a t
+include Quickcheckable.S1 with type 'a t := 'a t
 
 val to_string : 'a. f:('a -> string) -> 'a t -> string
 
 (** Like [quickcheck_generator], but never generates the empty list. *)
-val%template gen_non_empty : 'a Quickcheck.Generator.t -> 'a t Quickcheck.Generator.t
-[@@mode p = (portable, nonportable)]
+val gen_non_empty : 'a Quickcheck.Generator.t -> 'a t Quickcheck.Generator.t
 
 (** Like [quickcheck_generator], but generates lists with the given length. *)
-val%template gen_with_length
-  :  int
-  -> 'a Quickcheck.Generator.t
-  -> 'a t Quickcheck.Generator.t
-[@@mode p = (portable, nonportable)]
+val gen_with_length : int -> 'a Quickcheck.Generator.t -> 'a t Quickcheck.Generator.t
 
 (** Randomly drops elements from the input list. Length is chosen uniformly between 0 and
     the length of the input, inclusive. *)
@@ -101,18 +85,7 @@ val zip_with_remainder
 
 module Stable : sig
   module V1 : sig
-    type%template nonrec 'a t = ('a t[@kind k])
-    [@@kind k = all_ks_non_value]
-    [@@deriving bin_io ~localize, compare ~localize, equal ~localize]
-
     type nonrec 'a t = 'a t
-    [@@deriving
-      sexp
-      , sexp_grammar
-      , bin_io ~localize
-      , compare ~localize
-      , equal ~localize
-      , hash
-      , stable_witness]
+    [@@deriving sexp, sexp_grammar, bin_io, compare, equal, hash, stable_witness]
   end
-end]
+end

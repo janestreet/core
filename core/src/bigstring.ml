@@ -9,9 +9,9 @@ module Stable = struct
 
     module Z : sig
       type t = (char, int8_unsigned_elt, c_layout) Array1.t
-      [@@deriving bin_io ~localize, stable_witness]
+      [@@deriving bin_io, stable_witness]
     end = struct
-      type t = bigstring [@@deriving bin_io ~localize]
+      type t = bigstring [@@deriving bin_io]
 
       (* bigstring's serialization is intended to be stable. We assert it here rather than
          asserting it in two separate places for the bin_io and sexp definitions. *)
@@ -20,7 +20,7 @@ module Stable = struct
 
     include Z
 
-    type t_frozen = t [@@deriving bin_io ~localize, stable_witness]
+    type t_frozen = t [@@deriving bin_io, stable_witness]
   end
 end
 
@@ -102,7 +102,13 @@ let read_bin_prot t ?pos ?len reader =
   | `Not_enough_data -> Or_error.error_string "not enough data"
 ;;
 
-let write_bin_prot_known_size t ?(pos = 0) write ~size:data_len v =
+let write_bin_prot_known_size
+  t
+  ?(pos = 0)
+  (write : _ Bin_prot.Write.writer)
+  ~size:data_len
+  v
+  =
   let total_len = data_len + Bin_prot.Utils.size_header_length in
   if pos < 0 then failwiths "Bigstring.write_bin_prot: negative pos" pos [%sexp_of: int];
   if pos + total_len > length t
@@ -139,12 +145,12 @@ let write_bin_prot t ?pos (writer : _ Bin_prot.Type_class.writer) v =
 
 (* Hex dump *)
 
-  include%template Hexdump.Of_indexable [@modality portable] (struct
-      type nonrec t = t
+include Hexdump.Of_indexable (struct
+    type nonrec t = t
 
-      let length = length
-      let get = get
-    end)
+    let length = length
+    let get = get
+  end)
 
 let rec last_nonmatch_plus_one ~buf ~min_pos ~pos ~char =
   let pos' = pos - 1 in

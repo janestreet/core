@@ -13,44 +13,24 @@ val host : t -> string
 val port : t -> int
 val tuple : t -> string * int
 
-include%template Comparator.S [@modality portable] with type t := t
-
-include%template
-  Identifiable.S
-  [@mode local]
-  with type t := t
-   and type comparator_witness := comparator_witness
-
-include%template Base.Stringable.S [@alloc stack] with type t := t
-
+include Comparator.S with type t := t
+include Identifiable.S with type t := t and type comparator_witness := comparator_witness
+include Base.Stringable.S with type t := t
 include Sexplib.Sexp_grammar.S with type t := t
 
 module Hide_port_in_test : sig
-  include%template
-    Identifiable.S
-    [@mode local]
-    with type t = t
-     and type comparator_witness = comparator_witness
+  include Identifiable.S with type t = t and type comparator_witness = comparator_witness
 end
 
 module Stable : sig
   module V1 : sig
     type nonrec t = t
-    [@@deriving
-      sexp
-      , sexp_grammar
-      , bin_io
-      , compare ~localize
-      , equal ~localize
-      , globalize
-      , hash
-      , quickcheck]
+    [@@deriving sexp, sexp_grammar, bin_io, compare, equal, globalize, hash, quickcheck]
 
-    include%template Base.Stringable.S [@alloc stack] with type t := t
+    include Base.Stringable.S with type t := t
 
-    include%template
+    include
       Stable_comparable.With_stable_witness.V1
-      [@mode local]
       with type t := t
        and type comparator_witness = comparator_witness
   end

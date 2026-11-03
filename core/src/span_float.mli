@@ -7,15 +7,7 @@ module Stable : sig
   module V1 : sig
     type nonrec t = t
     [@@deriving
-      sexp ~stackify
-      , sexp_grammar
-      , bin_io ~localize
-      , compare ~localize
-      , globalize
-      , hash
-      , equal ~localize
-      , stable_witness
-      , diff]
+      sexp, sexp_grammar, bin_io, compare, globalize, hash, equal, stable_witness, diff]
   end
 
   (** [V2]'s sexps use single-unit format and support units from [d] to [ns]. [V2] can
@@ -24,15 +16,7 @@ module Stable : sig
   module V2 : sig
     type nonrec t = t
     [@@deriving
-      sexp ~stackify
-      , sexp_grammar
-      , bin_io ~localize
-      , compare ~localize
-      , globalize
-      , hash
-      , equal ~localize
-      , stable_witness
-      , diff]
+      sexp, sexp_grammar, bin_io, compare, globalize, hash, equal, stable_witness, diff]
   end
 
   (** [V3] uses mixed-unit format and supports units from [d] to [ns]. [V3] can read [V2]
@@ -42,12 +26,12 @@ module Stable : sig
     [@@deriving
       sexp
       , sexp_grammar
-      , bin_io ~localize
-      , compare ~localize
+      , bin_io
+      , compare
       , globalize
       , hash
       , typerep
-      , equal ~localize
+      , equal
       , stable_witness
       , diff]
   end

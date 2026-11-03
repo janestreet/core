@@ -1,7 +1,6 @@
 include Base.Stack
 
-include%template
-  Bin_prot.Utils.Make_binable1_without_uuid [@modality portable] [@alert "-legacy"] (struct
+include Bin_prot.Utils.Make_binable1_without_uuid [@alert "-legacy"] (struct
     type nonrec 'a t = 'a t
 
     module Binable = List
@@ -10,8 +9,8 @@ include%template
     let of_binable = of_list
   end)
 
-include%template
-  Quickcheckable.Of_quickcheckable1 [@modality portable]
+include
+  Quickcheckable.Of_quickcheckable1
     (List)
     (struct
       type nonrec 'a t = 'a t

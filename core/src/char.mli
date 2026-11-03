@@ -2,7 +2,7 @@
     identifiers and [Quickcheckable] to facilitate automated testing with pseudorandom
     data. *)
 
-type t = char [@@deriving typerep, bin_io ~localize]
+type t = char [@@deriving typerep, bin_io]
 
 (** {2 The signature included from [Base.Char]} *)
 
@@ -18,18 +18,13 @@ include module type of struct
     [Caseless.equal 'A' 'a'] and [Caseless.('a' < 'B')] are [true], and [Caseless.Map],
     [Caseless.Table] lookup and [Caseless.Set] membership is case-insensitive. *)
 module Caseless : sig
-  type nonrec t = t [@@deriving bin_io ~localize, hash, sexp, sexp_grammar]
+  type nonrec t = t [@@deriving bin_io, hash, sexp, sexp_grammar]
 
-  include%template Comparable.S_binable [@mode local] with type t := t
-
+  include Comparable.S_binable with type t := t
   include Hashable.S_binable with type t := t
 end
 
-include%template
-  Identifiable.S
-  [@mode local]
-  with type t := t
-   and type comparator_witness := comparator_witness
+include Identifiable.S with type t := t and type comparator_witness := comparator_witness
 
 (** {3 Quickcheck Support} *)
 
@@ -49,11 +44,10 @@ val gen_uniform_inclusive : t -> t -> t Quickcheck.Generator.t
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving equal ~localize, hash, sexp_grammar, typerep]
+    type nonrec t = t [@@deriving equal, hash, sexp_grammar, typerep]
 
-    include%template
+    include
       Stable_comparable.With_stable_witness.V1
-      [@mode local]
       with type t := t
        and type comparator_witness = comparator_witness
   end

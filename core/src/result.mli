@@ -2,42 +2,22 @@
 
 open! Import
 
-[%%template:
-[@@@kind_set.define all_ks_non_value = base_non_value]
-
-type ('a, 'b) t = (('a, 'b) Base.Result.t[@kind k]) =
-  | Ok of 'a
-  | Error of 'b
-[@@deriving bin_io ~localize] [@@kind k = all_ks_non_value]
-
 type ('a, 'b) t = ('a, 'b) Base.Result.t =
   | Ok of 'a
   | Error of 'b
-[@@deriving bin_io ~localize, diff ~extra_derive:[ sexp ], quickcheck, typerep]
+[@@deriving bin_io, diff ~extra_derive:[ sexp ], quickcheck, typerep]
 
-include%template
-  (module type of Base.Result
-  with type ('a, 'b) t := ('a, 'b) t
- [@with: type ('a, 'b) t := (('a, 'b) t[@kind k]) [@@kind k = all_ks_non_value]])
-(** @inline *)
+include module type of Base.Result with type ('a, 'b) t := ('a, 'b) t (** @inline *)
 
 module Stable : sig
   module V1 : sig
-    include%template
-      Stable_module_types.With_stable_witness.S2
-      [@mode local]
-      with type ('ok, 'err) t := ('ok, 'err) t
+    include
+      Stable_module_types.With_stable_witness.S2 with type ('ok, 'err) t := ('ok, 'err) t
 
     type nonrec ('ok, 'err) t = ('ok, 'err) t =
       | Ok of 'ok
       | Error of 'err
-    [@@deriving
-      bin_io ~localize
-      , compare ~localize
-      , equal ~localize
-      , globalize
-      , sexp ~stackify
-      , sexp_grammar]
+    [@@deriving bin_io, compare, equal, globalize, sexp, sexp_grammar]
 
     include
       Diffable.S2
@@ -49,4 +29,4 @@ module Stable : sig
   (** We export the unit test arg rather than instantiate the functor inside result.ml in
       order to avoid circular dependencies. The functor is instantiated in stable.ml. *)
   module V1_stable_unit_test : Stable_unit_test_intf.Arg
-end]
+end

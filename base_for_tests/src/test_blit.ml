@@ -276,8 +276,7 @@ module Test1_phantom2_distinct
     end)
     (Tested)
 
-module%template.portable
-  [@modality p] Make_and_test
+module Make_and_test
     (Elt : Elt)
     (Sequence : sig
        include Sequence with type elt := Elt.t
@@ -285,13 +284,12 @@ module%template.portable
        val unsafe_blit : (t, t) blit
      end) =
 struct
-  module B = Make [@modality p] (Sequence)
+  module B = Make (Sequence)
   include Test (Elt) (Sequence) (B)
   include B
 end
 
-module%template.portable
-  [@modality p] Make_distinct_and_test
+module Make_distinct_and_test
     (Elt : Elt)
     (Src : Sequence with type elt := Elt.t)
     (Dst : sig
@@ -300,37 +298,34 @@ module%template.portable
        val unsafe_blit : (Src.t, t) blit
      end) =
 struct
-  module B = Make_distinct [@modality p] (Src) (Dst)
+  module B = Make_distinct (Src) (Dst)
   include Test_distinct (Elt) (Src) (Dst) (B)
   include B
 end
 
-module%template.portable
-  [@modality p] Make1_and_test (Sequence : sig
+module Make1_and_test (Sequence : sig
     include Blit.Sequence1
     include Sequence1 with type 'a t := 'a t with type 'a elt := 'a
   end) =
 struct
-  module B = Make1 [@modality p] (Sequence)
+  module B = Make1 (Sequence)
   include Test1 (Sequence) (B)
   include B
 end
 
-module%template.portable
-  [@modality p] Make1_generic_and_test
+module Make1_generic_and_test
     (Elt : Elt1)
     (Sequence : sig
        include Blit.Sequence1
        include Sequence1 with type 'a t := 'a t with type 'a elt := 'a Elt.t
      end) =
 struct
-  module B = Make1 [@modality p] (Sequence)
+  module B = Make1 (Sequence)
   include Test1_generic (Elt) (Sequence) (B)
   include B
 end
 
-module%template.portable
-  [@modality p] Make1_phantom2_and_test
+module Make1_phantom2_and_test
     (Elt : Elt1)
     (Sequence : sig
        type (_, _, _) t
@@ -343,13 +338,12 @@ module%template.portable
        val unsafe_blit : (('elt, _, _) t, ('elt, _, _) t) Blit.blit
      end) =
 struct
-  module B = Make1_phantom2_distinct [@modality p] (Sequence) (Sequence)
+  module B = Make1_phantom2_distinct (Sequence) (Sequence)
   include Test1_phantom2 (Elt) (Sequence) (B)
   include B
 end
 
-module%template.portable
-  [@modality p] Make1_phantom2_distinct_and_test
+module Make1_phantom2_distinct_and_test
     (Elt : Elt1)
     (Src : Sequence1_phantom2 with type 'a elt := 'a Elt.t)
     (Dst : sig
@@ -359,7 +353,7 @@ module%template.portable
        val unsafe_blit : (('elt, _, _) Src.t, ('elt, _, _) t) blit
      end) =
 struct
-  module B = Make1_phantom2_distinct [@modality p] (Src) (Dst)
+  module B = Make1_phantom2_distinct (Src) (Dst)
   include Test1_phantom2_distinct (Elt) (Src) (Dst) (B)
   include B
 end

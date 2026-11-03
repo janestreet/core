@@ -9,12 +9,14 @@ open Perms.Export
 
 type 'a t = 'a Base.Array.t
 
-[%%rederive: type nonrec 'a t = 'a t [@@deriving bin_io ~localize]]
-[%%rederive: type nonrec 'a t = 'a t [@@deriving quickcheck ~portable, typerep]]
+[%%rederive: type nonrec 'a t = 'a t [@@deriving bin_io]]
+[%%rederive: type nonrec 'a t = 'a t [@@deriving quickcheck, typerep]]
 
 (** {2 The signature included from [Base.Array]} *)
 
-include Base.Array.Public with type 'a t := 'a t (** @inline *)
+include Base.Array.Public with type 'a t := 'a t
+
+(** @inline *)
 
 (** {2 Extensions}
 
@@ -25,8 +27,7 @@ include Base.Array.Public with type 'a t := 'a t (** @inline *)
     Operations supporting "normalized" indexes are also available. *)
 
 module Int : sig
-  type nonrec t = int t
-  [@@deriving bin_io ~localize, compare ~localize, sexp, sexp_grammar]
+  type nonrec t = int t [@@deriving bin_io, compare, sexp, sexp_grammar]
 
   include Blit.S with type t := t
 
@@ -42,8 +43,7 @@ module Int : sig
 end
 
 module Float : sig
-  type nonrec t = float t
-  [@@deriving bin_io ~localize, compare ~localize, sexp, sexp_grammar]
+  type nonrec t = float t [@@deriving bin_io, compare, sexp, sexp_grammar]
 
   include Blit.S with type t := t
 
@@ -86,11 +86,11 @@ module Permissioned : sig
 
   [%%rederive:
     type nonrec ('a, -'perms) t = ('a, 'perms) t
-    [@@deriving bin_io ~localize, compare ~localize, sexp, sexp_grammar]]
+    [@@deriving bin_io, compare, sexp, sexp_grammar]]
 
   module Int : sig
     type nonrec -'perms t = (int, 'perms) t
-    [@@deriving bin_io ~localize, compare ~localize, sexp, sexp_grammar]
+    [@@deriving bin_io, compare, sexp, sexp_grammar]
 
     include Blit.S_permissions with type 'perms t := 'perms t
 
@@ -107,7 +107,7 @@ module Permissioned : sig
 
   module Float : sig
     type nonrec -'perms t = (float, 'perms) t
-    [@@deriving bin_io ~localize, compare ~localize, sexp, sexp_grammar]
+    [@@deriving bin_io, compare, sexp, sexp_grammar]
 
     include Blit.S_permissions with type 'perms t := 'perms t
 

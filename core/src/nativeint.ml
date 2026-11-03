@@ -1,30 +1,26 @@
 open! Import
 
 module Binable = struct
-  type t = nativeint [@@deriving bin_io ~localize]
+  type t = nativeint [@@deriving bin_io]
 end
 
 include Binable
-
-include%template
-  Identifiable.Extend [@mode local] [@modality portable] (Base.Nativeint) (Binable)
-
+include Identifiable.Extend (Base.Nativeint) (Binable)
 include Base.Nativeint
-
-include%template Comparable.Validate_with_zero [@modality portable] (Base.Nativeint)
+include Comparable.Validate_with_zero (Base.Nativeint)
 
 type t = nativeint [@@deriving typerep]
 
 module Binary = struct
   include Binary
 
-  type nonrec t = t [@@deriving typerep, bin_io ~localize]
+  type nonrec t = t [@@deriving typerep, bin_io]
 end
 
 module Hex = struct
   include Hex
 
-  type nonrec t = t [@@deriving typerep, bin_io ~localize]
+  type nonrec t = t [@@deriving typerep, bin_io]
 end
 
 let quickcheck_generator = Base_quickcheck.Generator.nativeint

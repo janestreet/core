@@ -3,15 +3,7 @@ open Std_internal
 
 module type Date0 = sig
   type t
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , hash
-    , sexp ~stackify
-    , sexp_grammar
-    , typerep]
+  [@@deriving bin_io, compare, equal, globalize, hash, sexp, sexp_grammar, typerep]
   [@@immediate]
 
   include Hashable_binable with type t := t
@@ -24,9 +16,7 @@ module type Date0 = sig
       - YYYYMMDD *)
   include Stringable with type t := t
 
-  include%template
-    Comparable.S_binable [@mode local] [@modality portable] with type t := t
-
+  include Comparable.S_binable with type t := t
   include Diffable.S_atomic with type t := t
   include Pretty_printer.S with type t := t
 
@@ -46,9 +36,6 @@ module type Date0 = sig
       position [pos + 8] are silently ignored. *)
   val of_string_iso8601_basic : string -> pos:int -> t
 
-  [%%template:
-  [@@@alloc.default a @ m = (heap_global, stack_local)]
-
   (** YYYY-MM-DD *)
   val to_string_iso8601_extended : t -> string
 
@@ -58,8 +45,7 @@ module type Date0 = sig
   (** MM/DD/YYYY *)
   val to_string_american : t -> string
 
-  val to_string : t -> string]
-
+  val to_string : t -> string
   val day : t -> int
   val month : t -> Month.t
   val year : t -> int
@@ -303,7 +289,7 @@ module type Date0 = sig
   val unix_epoch : t
 
   (** [quickcheck_generator] generates dates between 1900-01-01 and 2100-01-01. *)
-  include%template Quickcheckable.S_range [@mode portable] with type t := t
+  include Quickcheckable.S_range with type t := t
 
   (** [Days] provides a linear representation of dates that is optimized for arithmetic on
       the number of days between dates, rather than for representing year/month/day
@@ -328,39 +314,26 @@ module type Date0 = sig
     type value := t
 
     type t
-    [@@deriving
-      bin_io ~localize
-      , compare ~localize
-      , equal ~localize
-      , globalize
-      , hash
-      , sexp ~stackify
-      , sexp_grammar]
-    [@@immediate]
+    [@@deriving bin_io, compare, equal, globalize, hash, sexp, sexp_grammar] [@@immediate]
 
     include Immediate_option.S_zero_alloc with type value := value and type t := t
     include Or_nullable.S_with_zero_alloc with type value := value and type t := t
-
-    include%template Comparable.S_plain [@mode local] with type t := t
-
+    include Comparable.S_plain with type t := t
     include Quickcheckable.S with type t := t
   end
 
   module Stable : sig
     module V1 : sig
       type nonrec t = t
-      [@@deriving
-        equal ~localize, globalize, hash, sexp_grammar, string, sexp_of ~stackify]
-      [@@immediate]
+      [@@deriving equal, globalize, hash, sexp_grammar, string, sexp_of] [@@immediate]
 
       (** [to_int] and [of_int_exn] convert to/from the underlying integer representation. *)
 
       val to_int : t -> int
       val of_int_exn : int -> t
 
-      include%template
+      include
         Stable_comparable.With_stable_witness.V1
-        [@mode local]
         with type t := t
         with type comparator_witness = comparator_witness
 
@@ -371,14 +344,7 @@ module type Date0 = sig
     module Option : sig
       module V1 : sig
         type nonrec t = Option.t
-        [@@deriving
-          bin_io ~localize
-          , compare ~localize
-          , equal ~localize
-          , globalize
-          , sexp ~stackify
-          , sexp_grammar
-          , stable_witness]
+        [@@deriving bin_io, compare, equal, globalize, sexp, sexp_grammar, stable_witness]
         [@@immediate]
 
         (** [to_int] and [of_int_exn] convert to/from the underlying integer

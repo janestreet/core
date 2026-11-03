@@ -4,19 +4,10 @@ include Time_ns_intf.Ofday with module Span := Span_ns
 module Stable : sig
   module V1 : sig
     type nonrec t = t
-    [@@deriving
-      bin_io ~localize
-      , compare ~localize
-      , equal ~localize
-      , globalize
-      , hash
-      , sexp_of ~stackify
-      , sexp_grammar
-      , typerep]
+    [@@deriving bin_io, compare, equal, globalize, hash, sexp_of, sexp_grammar, typerep]
 
-    include%template
+    include
       Stable_int63able.With_stable_witness.S
-      [@mode local]
       with type t := t
        and type comparator_witness = comparator_witness
 

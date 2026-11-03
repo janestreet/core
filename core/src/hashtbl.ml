@@ -6,7 +6,7 @@ module List = List0
 
 let failwiths = Error.failwiths
 
-module%template.portable [@modality p] Creators = Hashtbl.Creators [@modality p]
+module Creators = Hashtbl.Creators
 
 include (
   Hashtbl :
@@ -15,11 +15,7 @@ include (
 
     module type Non_value = Base.Hashtbl.Non_value
 
-    include%template
-      Base.Hashtbl.S_without_submodules
-      [@mode portable]
-      with type ('a, 'b) t := ('a, 'b) t
-
+    include Base.Hashtbl.S_without_submodules with type ('a, 'b) t := ('a, 'b) t
     include Hashtbl_equality with type ('k, 'v) t := ('k, 'v) t
     include Non_value with type ('k, 'v) t := ('k, 'v) t
   end)
@@ -96,21 +92,17 @@ module type S_plain = S_plain with type ('a, 'b) hashtbl = ('a, 'b) t
 module type S = S with type ('a, 'b) hashtbl = ('a, 'b) t
 module type S_binable = S_binable with type ('a, 'b) hashtbl = ('a, 'b) t
 module type S_stable = S_stable with type ('a, 'b) hashtbl = ('a, 'b) t
-
-[%%template
-[@@@mode.default m = (local, global)]
-
-module type Key_plain = Key_plain [@mode m]
-module type Key = Key [@mode m]
-module type Key_binable = Key_binable [@mode m]
-module type Key_stable = Key_stable [@mode m]]
+module type Key_plain = Key_plain
+module type Key = Key
+module type Key_binable = Key_binable
+module type Key_stable = Key_stable
 
 module Poly = struct
   include Hashtbl.Poly
 
   let validate = validate
 
-  include%template Bin_prot.Utils.Make_iterable_binable2 [@modality portable] (struct
+  include Bin_prot.Utils.Make_iterable_binable2 (struct
       type nonrec ('a, 'b) t = ('a, 'b) t
       type ('a, 'b) el = 'a * 'b [@@deriving bin_io]
 
@@ -138,13 +130,14 @@ module Poly = struct
     end)
 end
 
-module%template.portable
-  [@inline] [@modality p] Provide_bin_io (Key : sig
+module
+  [@inline]
+  Provide_bin_io (Key : sig
     type t [@@deriving bin_io]
 
     include Key_plain with type t := t
   end) =
-Bin_prot.Utils.Make_iterable_binable1 [@inlined hint] [@modality p] (struct
+Bin_prot.Utils.Make_iterable_binable1 [@inlined hint] (struct
     module Key = Key
 
     type nonrec 'v t = (Key.t, 'v) t
@@ -191,8 +184,7 @@ Bin_prot.Utils.Make_iterable_binable1 [@inlined hint] [@modality p] (struct
     ;;
   end)
 
-module%template.portable
-  [@modality p] Make_plain_with_hashable (T : sig
+module Make_plain_with_hashable (T : sig
     module Key : sig
       type t
 
@@ -209,7 +201,7 @@ struct
   type 'a t = (T.Key.t, 'a) hashtbl
   type 'a key_ = T.Key.t
 
-  include Creators [@modality p] (struct
+  include Creators (struct
       type 'a t = T.Key.t
 
       let hashable = hashable
@@ -221,12 +213,12 @@ struct
       include Invariant.S2 with type ('a, 'b) t := ('a, 'b) hashtbl
     end)
 
-  let%template equal = (Hashtbl.equal [@mode m]) [@@mode m = (local, global)]
+  let equal = Hashtbl.equal
   let invariant invariant_key t = invariant ignore invariant_key t
   let sexp_of_t sexp_of_v t = Poly.sexp_of_t T.Key.sexp_of_t sexp_of_v t
 end
 
-module%template.portable Provide_of_sexp (Key : Base.Hashtbl.M_of_sexp) = struct
+module Provide_of_sexp (Key : Base.Hashtbl.M_of_sexp) = struct
   let t_of_sexp v_of_sexp sexp = Base.Hashtbl.m__t_of_sexp (module Key) v_of_sexp sexp
 end
 
@@ -245,46 +237,42 @@ struct
   ;;
 end
 
-module%template.portable
-  [@modality p] Make_with_hashable (T : sig
+module Make_with_hashable (T : sig
     module Key : Key
 
     val hashable : Key.t Hashable.t
   end) =
 struct
-  include Make_plain_with_hashable [@modality p] (T)
-  include Provide_of_sexp [@modality p] (T.Key)
+  include Make_plain_with_hashable (T)
+  include Provide_of_sexp (T.Key)
 end
 
-module%template.portable
-  [@modality p] Make_binable_with_hashable (T : sig
+module Make_binable_with_hashable (T : sig
     module Key : Key_binable
 
     val hashable : Key.t Hashable.t
   end) =
 struct
-  include Make_with_hashable [@modality p] (T)
-  include Provide_bin_io [@modality p] (T.Key)
+  include Make_with_hashable (T)
+  include Provide_bin_io (T.Key)
 end
 
-module%template.portable
-  [@modality p] Make_stable_with_hashable (T : sig
+module Make_stable_with_hashable (T : sig
     module Key : Key_stable
 
     val hashable : Key.t Hashable.t
   end) =
 struct
-  include Make_binable_with_hashable [@modality p] (T)
+  include Make_binable_with_hashable (T)
   include Provide_stable_witness (T.Key)
 end
 
-module%template.portable
-  [@modality p] Make_plain (Key : sig
+module Make_plain (Key : sig
     type t
 
     include Key_plain with type t := t
   end) =
-Make_plain_with_hashable [@modality p] (struct
+Make_plain_with_hashable (struct
     module Key = Key
 
     let hashable =
@@ -292,24 +280,25 @@ Make_plain_with_hashable [@modality p] (struct
     ;;
   end)
 
-module%template.portable [@modality p] Make (Key : Key) = struct
-  include Make_plain [@modality p] (Key)
-  include Provide_of_sexp [@modality p] (Key)
+module Make (Key : Key) = struct
+  include Make_plain (Key)
+  include Provide_of_sexp (Key)
 end
 
-module%template.portable [@modality p] Make_binable (Key : Key_binable) = struct
-  include Make [@modality p] (Key)
-  include Provide_bin_io [@modality p] (Key)
+module Make_binable (Key : Key_binable) = struct
+  include Make (Key)
+  include Provide_bin_io (Key)
 end
 
-module%template.portable [@modality p] Make_stable (Key : Key_stable) = struct
-  include Make_binable [@modality p] (Key)
+module Make_stable (Key : Key_stable) = struct
+  include Make_binable (Key)
   include Provide_stable_witness (Key)
 end
 
 module M = Hashtbl.M
 
 module type For_deriving = For_deriving
+module type For_deriving_stable = For_deriving_stable
 
 module For_deriving : sig
   include For_deriving with type ('a, 'b) t := ('a, 'b) t
@@ -320,7 +309,7 @@ end = struct
       include Hashtbl.For_deriving with type ('a, 'b) t := ('a, 'b) t
     end)
 
-  module type%template M_quickcheck = M_quickcheck [@mode m] [@@mode m = (local, global)]
+  module type M_quickcheck = M_quickcheck
 
   let of_alist_option m alist = Result.ok (of_alist_or_error m alist)
 
@@ -406,6 +395,38 @@ end = struct
   ;;
 end
 
+module For_deriving_stable = struct
+  let stable_witness_m__t (type t) (module Key : Stable_witness.S with type t = t) =
+    let module M = Provide_stable_witness (Key) in
+    M.stable_witness
+  ;;
+end
+
 include For_deriving
+
+module Stable = struct
+  module V1 = struct
+    type nonrec ('key, 'data) t = ('key, 'data) Poly.t [@@deriving bin_io, sexp]
+
+    module M = Hashtbl.M
+    include For_deriving
+    include For_deriving_stable
+
+    let stable_witness
+      (type key data)
+      (key_stable_witness : key Stable_witness.t)
+      (data_stable_witness : data Stable_witness.t)
+      : (key, data) t Stable_witness.t
+      =
+      stable_witness_m__t
+        (module struct
+          type t = key
+
+          let stable_witness = key_stable_witness
+        end)
+        data_stable_witness
+    ;;
+  end
+end
 
 let hashable = Hashtbl.Private.hashable

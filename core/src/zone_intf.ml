@@ -38,7 +38,7 @@ module Earlier_or_later = struct
   type t =
     | Earlier
     | Later
-  [@@deriving compare ~localize, enumerate, equal ~localize, hash, sexp_of]
+  [@@deriving compare, enumerate, equal, hash, sexp_of]
 end
 
 (** This is the interface of [Zone], but not the interface of [Time.Zone] or
@@ -53,7 +53,7 @@ module type S = sig
       reconstructed on the receiving/reading side by reloading the zone file from disk.
       Any zone name that is accepted by [find] is acceptable in the bin_io and sexp
       representations. *)
-  type t [@@deriving sexp_of ~stackify, compare ~localize]
+  type t [@@deriving sexp_of, compare]
 
   (** [input_tz_file ~zonename ~filename] read in [filename] and return [t] with [name t]
       = [zonename] *)
@@ -93,7 +93,7 @@ module type S = sig
   (** [utc] the UTC time zone. Included for convenience *)
   val utc : t
 
-  val%template name : t -> string [@@mode m = (local, global)]
+  val name : t -> string
 
   (** [original_filename t] return the filename [t] was loaded from (if any) *)
   val original_filename : t -> string option
@@ -161,10 +161,8 @@ module type S_stable = sig
       database, or for time zones that do not come from either [Timezone.find] or
       [of_utc_offset]. *)
   module Full_data : sig
-    module%template V1 :
-      Stable_module_types.With_stable_witness.S0_without_comparator
-      [@mode local]
-      with type t = t
+    module V1 :
+      Stable_module_types.With_stable_witness.S0_without_comparator with type t = t
   end
 end
 

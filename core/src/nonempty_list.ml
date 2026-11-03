@@ -1,8 +1,5 @@
 [@@@ocaml.flambda_o3]
 
-[%%template
-[@@@kind_set.define all_ks_non_value = base_non_value]
-
 module Stable = struct
   open Stable_internal
   open Ppx_compare_lib.Builtin
@@ -13,23 +10,18 @@ module Stable = struct
 
   module V3 = struct
     module T = struct
-      type%template 'a t = ('a Base.Nonempty_list.t[@kind k]) =
-        | ( :: ) of 'a * ('a List.V1.t[@kind k])
-      [@@kind k = all_ks_non_value]
-      [@@deriving bin_io ~localize, compare ~localize, equal ~localize]
-
       type nonrec 'a t = 'a Base.Nonempty_list.t = ( :: ) of 'a * 'a list
-      [@@deriving compare ~localize, equal ~localize, globalize, hash]
+      [@@deriving compare, equal, globalize, hash]
     end
 
     include T
 
     module Format = struct
-      type 'a t = 'a list [@@deriving bin_io, sexp ~stackify, stable_witness]
+      type 'a t = 'a list [@@deriving bin_io, sexp, stable_witness]
     end
 
-    include%template
-      Binable.Of_binable1.V2 [@modality portable]
+    include
+      Binable.Of_binable1.V2
         (Format)
         (struct
           include T
@@ -45,15 +37,11 @@ module Stable = struct
     module To = struct
       include T
 
-      let%template[@alloc a @ m = (heap_global, stack_local)] to_sexpable =
-        (Base.Nonempty_list.to_list [@mode m])
-      ;;
-
+      let to_sexpable = Base.Nonempty_list.to_list
       let of_sexpable = Base.Nonempty_list.of_list_exn
     end
 
-    include%template
-      Sexpable.Of_sexpable1.V1 [@modality portable] [@alloc stack] (Format) (To)
+    include Sexpable.Of_sexpable1.V1 (Format) (To)
 
     let t_sexp_grammar (type a) ({ untyped = element } : [%sexp_grammar: a])
       : [%sexp_grammar: a t]
@@ -81,9 +69,9 @@ module Stable = struct
   module V2 = struct
     module T = struct
       type nonrec 'a t = 'a V3.t = ( :: ) of 'a * 'a list
-      [@@deriving compare ~localize, equal ~localize, hash]
+      [@@deriving compare, equal, hash]
 
-      let%template[@alloc a = (heap, stack)] sexp_of_t = (V3.sexp_of_t [@alloc a])
+      let sexp_of_t = V3.sexp_of_t
       let t_of_sexp = V3.t_of_sexp
       let t_sexp_grammar = V3.t_sexp_grammar
     end
@@ -95,14 +83,14 @@ module Stable = struct
         { hd : 'a
         ; tl : 'a list
         }
-      [@@deriving bin_io, compare ~localize, stable_witness]
+      [@@deriving bin_io, compare, stable_witness]
 
       let of_nonempty_list (hd :: tl) = { hd; tl }
       let to_nonempty_list { hd; tl } = hd :: tl
     end
 
-    include%template
-      Binable.Of_binable1.V1 [@alert "-legacy"] [@modality portable]
+    include
+      Binable.Of_binable1.V1 [@alert "-legacy"]
         (Record_format)
         (struct
           include T
@@ -130,10 +118,9 @@ module Stable = struct
 
   module V1 = struct
     module T = struct
-      type 'a t = 'a V2.t = ( :: ) of 'a * 'a list
-      [@@deriving compare ~localize, equal ~localize]
+      type 'a t = 'a V2.t = ( :: ) of 'a * 'a list [@@deriving compare, equal]
 
-      let%template[@alloc a = (heap, stack)] sexp_of_t = (V2.sexp_of_t [@alloc a])
+      let sexp_of_t = V2.sexp_of_t
       let t_of_sexp = V2.t_of_sexp
       let t_sexp_grammar = V2.t_sexp_grammar
     end
@@ -141,14 +128,14 @@ module Stable = struct
     include T
 
     module Pair_format = struct
-      type 'a t = 'a * 'a list [@@deriving bin_io, compare ~localize, stable_witness]
+      type 'a t = 'a * 'a list [@@deriving bin_io, compare, stable_witness]
 
       let of_nonempty_list (hd :: tl) = hd, tl
       let to_nonempty_list (hd, tl) = hd :: tl
     end
 
-    include%template
-      Binable.Of_binable1.V1 [@alert "-legacy"] [@modality portable]
+    include
+      Binable.Of_binable1.V1 [@alert "-legacy"]
         (Pair_format)
         (struct
           include T
@@ -179,16 +166,9 @@ open Std_internal
 module Unstable = Stable.V3
 include Base.Nonempty_list
 
-[%%template
-[@@@kind.default k = all_ks_non_value]
-
-[%%rederive
-  type nonrec 'a t = ('a t[@kind k]) = ( :: ) of 'a * ('a List.t[@kind k])
-  [@@deriving bin_io ~localize]]]
-
 [%%rederive
   type nonrec 'a t = 'a t = ( :: ) of 'a * 'a list
-  [@@deriving bin_io ~localize ~portable, quickcheck ~portable, typerep]]
+  [@@deriving bin_io, quickcheck, typerep]]
 
 type 'a nonempty_list = 'a t [@@deriving sexp_of]
 
@@ -201,12 +181,19 @@ let flag arg_type =
     ~f:(fun (one, more) -> one :: more)
 ;;
 
-let comma_separated_argtype ?key ?strip_whitespace ?unique_values arg_type =
+let comma_separated_argtype
+  ?key
+  ?strip_whitespace
+  ?unique_values
+  ?propagate_additional_documentation
+  arg_type
+  =
   arg_type
   |> Command.Param.Arg_type.comma_separated
        ~allow_empty:false
        ?strip_whitespace
        ?unique_values
+       ?propagate_additional_documentation
   |> Command.Param.Arg_type.map ?key ~f:of_list_exn
 ;;
 
@@ -220,14 +207,7 @@ let anons anons =
     non-constant constructor in their respective types. *)
 module Option = struct
   type 'a t = 'a list
-  [@@deriving
-    compare ~localize
-    , equal ~localize
-    , sexp ~stackify
-    , sexp_grammar
-    , hash
-    , quickcheck
-    , typerep]
+  [@@deriving compare, equal, sexp, sexp_grammar, hash, quickcheck, typerep]
 
   let[@inline always] none () = []
   let some (_ :: _ as value : 'a nonempty_list) : 'a t = Obj.magic value
@@ -256,4 +236,4 @@ module Option = struct
       let unsafe_value = unchecked_value
     end
   end
-end]
+end

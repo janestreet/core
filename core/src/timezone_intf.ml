@@ -6,22 +6,13 @@ module String = Base.String
 module type Extend_zone = sig
   type t [@@deriving sexp_grammar]
 
-  include%template Identifiable.S [@mode local] [@modality portable] with type t := t
-
+  include Identifiable.S with type t := t
   include Diffable.S_atomic with type t := t
 
-  (** [find name] looks up a [t] by its name and returns it. This also accepts some
-      aliases, including:
-
-      - chi -> America/Chicago
-      - nyc -> America/New_York
-      - hkg -> Asia/Hong_Kong
-      - ldn -> Europe/London
-      - lon -> Europe/London
-      - tyo -> Asia/Tokyo
-      - syd -> Australia/Sydney *)
+  (** [find name] looks up a [t] by its name and returns it. *)
   val find : string -> t option
 
+  (** Like [find]; raises if the name is not found. *)
   val find_exn : string -> t
 
   (** [local] is the machine's local timezone, as determined from the [TZ] environment
@@ -93,14 +84,7 @@ module type Timezone = sig
   module Stable : sig
     module V1 : sig
       type nonrec t = t
-      [@@deriving
-        bin_io ~localize
-        , compare ~localize
-        , equal ~localize
-        , hash
-        , sexp ~stackify
-        , sexp_grammar
-        , stable_witness]
+      [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar, stable_witness]
 
       include Stringable.S with type t := t
       include Diffable.S with type t := t and type Diff.t = Diff.t

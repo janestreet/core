@@ -424,7 +424,7 @@ let foldi t ~init ~f =
   foldi_elt_1 t ~init f ~f:(fun i f acc elt -> f i acc (Elt.value elt))
 ;;
 
-module%template C = Container.Make [@mode portable] (struct
+module C = Container.Make (struct
     type nonrec 'a t = 'a t
 
     let fold t ~init ~f =
@@ -512,7 +512,7 @@ let t_sexp_grammar elt_grammar =
 let copy t = of_list (to_list t)
 let clear t = t := Null
 
-let%template compare compare_elt t1 t2 =
+let compare compare_elt t1 t2 =
   match !t1, !t2 with
   | Null, Null -> 0
   | Null, _ -> -1
@@ -536,11 +536,10 @@ let%template compare compare_elt t1 t2 =
         loop compare_elt f1 f1 f2 f2)
       [@nontail])
     [@nontail]
-[@@mode m = (local, global)]
 ;;
 
-include%template
-  Quickcheckable.Of_quickcheckable1 [@modality portable]
+include
+  Quickcheckable.Of_quickcheckable1
     (List)
     (struct
       type nonrec 'a t = 'a t

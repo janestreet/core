@@ -203,7 +203,7 @@ let clear t =
 (* We have to be careful here, importing all of Container.Make would change the runtime of
    some functions ([length] minimally) silently without changing the semantics. We get
    around that by importing things explicitly. *)
-module%template C = Container.Make [@modality portable] (struct
+module C = Container.Make (struct
     type nonrec 'a t = 'a t
 
     let fold_until t ~init ~f ~finish = Container.fold_until ~fold ~init ~f t ~finish
@@ -448,7 +448,7 @@ let of_array arr =
   t
 ;;
 
-include%template Bin_prot.Utils.Make_iterable_binable1 [@modality portable] (struct
+include Bin_prot.Utils.Make_iterable_binable1 (struct
     type nonrec 'a t = 'a t
     type 'a el = 'a [@@deriving bin_io]
 
@@ -477,8 +477,8 @@ let t_sexp_grammar elt_grammar =
   Sexplib.Sexp_grammar.coerce (Array.t_sexp_grammar elt_grammar)
 ;;
 
-include%template
-  Quickcheckable.Of_quickcheckable1 [@modality portable]
+include
+  Quickcheckable.Of_quickcheckable1
     (Array)
     (struct
       type nonrec 'a t = 'a t
@@ -501,8 +501,7 @@ let front_index_exn t =
   apparent_front_index_when_not_empty t
 ;;
 
-module%template Binary_searchable =
-Test_binary_searchable.Make1_and_test [@modality portable] (struct
+module Binary_searchable = Test_binary_searchable.Make1_and_test (struct
     type nonrec 'a t = 'a t
 
     let get t i = get t (front_index_exn t + i)

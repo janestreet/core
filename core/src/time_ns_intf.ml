@@ -1,22 +1,12 @@
 open! Import
 open! Std_internal
 
-module Rounding_direction = struct
-  type t =
-    | Down
-    | Nearest
-    | Up
-    | Zero
-  [@@deriving equal ~localize, enumerate, sexp_of]
-end
-
 module type Span = sig
   (** [t] is immediate on 64bit boxes and so plays nicely with the GC write barrier. *)
-  type t = private Int63.t [@@deriving hash, typerep, sexp_of ~stackify]
+  type t = private Int63.t [@@deriving hash, typerep, sexp_of]
 
   include Span_intf.S with type underlying = Int63.t and type t := t
-
-  include%template Quickcheck.S_int [@mode portable] with type t := t
+  include Quickcheck.S_int with type t := t
 
   val of_sec_with_microsecond_precision : float -> t
   val of_int_us : int -> t [@@zero_alloc strict]
@@ -105,7 +95,14 @@ module type Span = sig
   val of_span_float_round_nearest : Span_float.t -> t
   val of_span_float_round_nearest_microsecond : Span_float.t -> t
 
-  module Rounding_direction = Rounding_direction
+  module Rounding_direction : sig
+    type t =
+      | Down
+      | Nearest
+      | Up
+      | Zero
+    [@@deriving equal, enumerate, sexp_of]
+  end
 
   (** These operations round the span to the nearest whole-number of the given factor. *)
 
@@ -147,50 +144,26 @@ module type Span = sig
       avoid allocations. *)
   module Option : sig
     type value := t
-
-    type t
-    [@@deriving
-      bin_io ~localize, compare ~localize, equal ~localize, globalize, sexp_of ~stackify]
-    [@@immediate64]
+    type t [@@deriving bin_io, compare, equal, globalize, sexp_of] [@@immediate64]
 
     include Immediate_option.S_int63_zero_alloc with type value := value and type t := t
     include Or_nullable.S_with_zero_alloc with type value := value with type t := t
-
-    include%template Identifiable.S [@mode local] [@modality portable] with type t := t
-
+    include Identifiable.S with type t := t
     include Diffable.S_atomic with type t := t
     include Quickcheck.S with type t := t
 
     module Stable : sig
       module V1 : sig
-        type nonrec t = t
-        [@@deriving
-          bin_io ~localize
-          , compare ~localize
-          , equal ~localize
-          , globalize
-          , typerep
-          , sexp_of ~stackify]
+        type nonrec t = t [@@deriving bin_io, compare, equal, globalize, typerep, sexp_of]
 
-        include%template
-          Stable_int63able.With_stable_witness.S [@mode local] with type t := t
-
+        include Stable_int63able.With_stable_witness.S with type t := t
         include Diffable.S_atomic with type t := t
       end
 
       module V2 : sig
-        type nonrec t = t
-        [@@deriving
-          bin_io ~localize
-          , compare ~localize
-          , equal ~localize
-          , globalize
-          , typerep
-          , sexp_of ~stackify]
+        type nonrec t = t [@@deriving bin_io, compare, equal, globalize, typerep, sexp_of]
 
-        include%template
-          Stable_int63able.With_stable_witness.S [@mode local] with type t := t
-
+        include Stable_int63able.With_stable_witness.S with type t := t
         include Diffable.S_atomic with type t := t
       end
     end
@@ -198,38 +171,20 @@ module type Span = sig
 
   module Stable : sig
     module V1 : sig
-      type nonrec t = t
-      [@@deriving
-        bin_io ~localize
-        , compare ~localize
-        , equal ~localize
-        , globalize
-        , hash
-        , sexp_grammar]
+      type nonrec t = t [@@deriving bin_io, compare, equal, globalize, hash, sexp_grammar]
 
-      include%template
-        Stable_int63able.With_stable_witness.S [@mode local] with type t := t
-
+      include Stable_int63able.With_stable_witness.S with type t := t
       include Diffable.S_atomic with type t := t
     end
 
     module V2 : sig
       type nonrec t = t
-      [@@deriving
-        bin_io ~localize
-        , compare ~localize
-        , equal ~localize
-        , globalize
-        , hash
-        , sexp ~stackify
-        , sexp_grammar
-        , typerep]
+      [@@deriving bin_io, compare, equal, globalize, hash, sexp, sexp_grammar, typerep]
 
       type nonrec comparator_witness = comparator_witness
 
-      include%template
+      include
         Stable_int63able.With_stable_witness.S
-        [@mode local]
         with type t := t
         with type comparator_witness := comparator_witness
 
@@ -308,27 +263,16 @@ module type Ofday = sig
       midnight, e.g. every hour from 10pm to 2am, requires multiple calls to [every]. *)
   val every : Span.t -> start:t -> stop:t -> t list Or_error.t
 
-  val%template to_microsecond_string : t -> string
-  [@@alloc a @ m = (stack_local, heap_global)]
-
-  val%template to_nanosecond_string : t -> string
-  [@@alloc a @ m = (stack_local, heap_global)]
+  val to_microsecond_string : t -> string
+  val to_nanosecond_string : t -> string
 
   module Stable : sig
     module V1 : sig
       type nonrec t = t
-      [@@deriving
-        bin_io ~localize
-        , compare ~localize
-        , equal ~localize
-        , globalize
-        , hash
-        , sexp_of ~stackify
-        , sexp_grammar]
+      [@@deriving bin_io, compare, equal, globalize, hash, sexp_of, sexp_grammar]
 
-      include%template
+      include
         Stable_int63able.With_stable_witness.S
-        [@mode local]
         with type t := t
          and type comparator_witness = comparator_witness
 
@@ -365,12 +309,12 @@ module type Time_ns = sig
 
   type t = private Int63.t
   [@@deriving
-    bin_io ~localize
-    , compare ~localize ~zero_alloc
-    , equal ~localize ~zero_alloc
+    bin_io
+    , compare ~zero_alloc
+    , equal ~zero_alloc
     , globalize
     , hash
-    , sexp ~stackify
+    , sexp
     , sexp_grammar
     , typerep]
 
@@ -400,20 +344,25 @@ module type Time_ns = sig
     val of_ofday_float_round_nearest_microsecond : Time_float.Ofday.t -> t [@@zero_alloc]
 
     module Zoned : sig
-      (** [t_of_sexp] accepts short forms like "(12:01 nyc)". [sexp_of_t] produces the
-          full ofday and zone name, e.g., "(12:01:00.000000000 America/New_York)".
+      (** [t_of_sexp] accepts short forms like "(12:01 America/New_York)". [sexp_of_t]
+          produces the full ofday and zone name, e.g., "(12:01:00.000000000
+          America/New_York)".
 
           Two [t]'s may or may not correspond to the same times depending on which date
           they're evaluated. *)
       type ofday := t
 
-      type t [@@deriving bin_io, sexp, sexp_grammar, hash]
+      type t [@@deriving bin_io, globalize, sexp, sexp_grammar, hash]
 
       include Pretty_printer.S with type t := t
 
-      (** [of_string] accepts short forms like "12:01 nyc". [to_string] produces the full
-          ofday and zone name, e.g., "12:01:00.000000000 America/New_York". *)
+      (** [of_string] accepts short forms like "12:01 America/New_York". [to_string]
+          produces the full ofday and zone name, e.g., "12:01:00.000000000
+          America/New_York". *)
       include Stringable.S with type t := t
+
+      (** Like [to_string] but uses [Time_ns.Ofday.to_string_trimmed] to format the ofday. *)
+      val to_string_trimmed : t -> string
 
       val arg_type : t Command.Arg_type.t
       val create : ofday -> Time_float.Zone.t -> t
@@ -422,53 +371,55 @@ module type Time_ns = sig
       val zone : t -> Time_float.Zone.t
       val to_time_ns : t -> Date.t -> time_ns
 
+      (** [add t span] shifts the time of day in [t] by [span], keeping the same zone. It
+          returns [None] if the result is not in the same 24-hour day. *)
+      val add : t -> Span.t -> t option
+
+      (** [sub t span] shifts the time of day in [t] back by [span], keeping the same
+          zone. It returns [None] if the result is not in the same 24-hour day. *)
+      val sub : t -> Span.t -> t option
+
+      (** [add_exn t span] shifts the time of day in [t] by [span], keeping the same zone.
+          It raises if the result is not in the same 24-hour day. *)
+      val add_exn : t -> Span.t -> t
+
+      (** [sub_exn t span] shifts the time of day in [t] back by [span], keeping the same
+          zone. It raises if the result is not in the same 24-hour day. *)
+      val sub_exn : t -> Span.t -> t
+
       module With_nonchronological_compare : sig
         (** It is possible to consistently compare [t]'s, but due to the complexities of
             time zones and daylight savings, the resulting ordering is not chronological.
             That is, [compare t1 t2 > 0] does not imply [t2] occurs after [t1] every day,
             or any day. *)
         type nonrec t = t
-        [@@deriving bin_io, sexp, sexp_grammar, compare ~localize, equal ~localize, hash]
+        [@@deriving bin_io, compare, equal, globalize, hash, sexp, sexp_grammar]
       end
 
       module Stable : sig
         module V1 : sig
-          type nonrec t = t [@@deriving equal ~localize, hash, sexp_grammar]
+          type nonrec t = t [@@deriving equal, hash, sexp, sexp_grammar]
 
-          include%template
-            Stable_without_comparator_with_witness [@mode local] with type t := t
+          include Stable_without_comparator_with_witness with type t := t
         end
       end
     end
 
     module Option : sig
       type value := t
-
-      type t
-      [@@deriving
-        bin_io ~localize, compare ~localize, equal ~localize, globalize, sexp_of ~stackify]
-      [@@immediate64]
+      type t [@@deriving bin_io, compare, equal, globalize, sexp_of] [@@immediate64]
 
       include Immediate_option.S_int63_zero_alloc with type value := value and type t := t
       include Or_nullable.S_with_zero_alloc with type value := value with type t := t
-
-      include%template Identifiable.S [@mode local] [@modality portable] with type t := t
-
+      include Identifiable.S with type t := t
       include Quickcheck.S with type t := t
       include Diffable.S_atomic with type t := t
 
       module Stable : sig
         module V1 : sig
-          type nonrec t = t
-          [@@deriving
-            bin_io ~localize
-            , compare ~localize
-            , equal ~localize
-            , globalize
-            , sexp_of ~stackify]
+          type nonrec t = t [@@deriving bin_io, compare, equal, globalize, sexp_of]
 
-          include%template Stable_int63able_with_witness [@mode local] with type t := t
-
+          include Stable_int63able_with_witness with type t := t
           include Diffable.S_atomic with type t := t
         end
       end
@@ -479,8 +430,7 @@ module type Time_ns = sig
     end
   end
 
-  include%template Comparisons.S_with_zero_alloc [@mode local] with type t := t
-
+  include Comparisons.S_with_zero_alloc with type t := t
   include Diffable.S_atomic with type t := t
   module Zone : module type of Time_float.Zone with type t = Time_float.Zone.t
 
@@ -488,17 +438,9 @@ module type Time_ns = sig
       sexp is a single atom rendered as with [to_string_utc], except that all trailing
       zeros are trimmed, rather than trimming in groups of three. *)
   module Alternate_sexp : sig
-    type nonrec t = t
-    [@@deriving
-      bin_io ~localize
-      , compare ~localize
-      , equal ~localize
-      , hash
-      , sexp ~stackify
-      , sexp_grammar]
+    type nonrec t = t [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
 
-    include%template Comparable.S [@mode local] with type t := t
-
+    include Comparable.S with type t := t
     include Diffable.S_atomic with type t := t
   end
 
@@ -506,33 +448,19 @@ module type Time_ns = sig
       should mainly be used to avoid allocations. *)
   module Option : sig
     type value := t
-
-    type t = private Span.Option.t
-    [@@deriving
-      bin_io ~localize, compare ~localize, equal ~localize, globalize, sexp_of ~stackify]
+    type t = private Span.Option.t [@@deriving bin_io, compare, equal, globalize, sexp_of]
 
     include Immediate_option.S_int63_zero_alloc with type value := value with type t := t
     include Or_nullable.S_with_zero_alloc with type value := value with type t := t
-
-    val%template to_option : t -> value option [@@alloc a @ m = stack_local]
-    include%template Identifiable.S [@mode local] [@modality portable] with type t := t
-
+    include Identifiable.S with type t := t
     include Quickcheck.S with type t := t
     include Diffable.S_atomic with type t := t
 
     module Stable : sig
       module V1 : sig
-        type nonrec t = t
-        [@@deriving
-          bin_io ~localize
-          , compare ~localize
-          , equal ~localize
-          , globalize
-          , typerep
-          , sexp_of ~stackify]
+        type nonrec t = t [@@deriving bin_io, compare, equal, globalize, typerep, sexp_of]
 
-        include%template Stable_int63able_with_witness [@mode local] with type t := t
-
+        include Stable_int63able_with_witness with type t := t
         include Diffable.S_atomic with type t := t
       end
     end
@@ -542,12 +470,9 @@ module type Time_ns = sig
     (** Just like [Time_ns.Alternate_sexp], this is different from the sexp format exposed
         in [Time_ns_unix]. See the comment above. *)
     module Alternate_sexp : sig
-      type nonrec t = t
-      [@@deriving
-        bin_io ~localize, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+      type nonrec t = t [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
 
-      include%template Comparable.S [@mode local] with type t := t
-
+      include Comparable.S with type t := t
       include Diffable.S_atomic with type t := t
     end
   end
@@ -836,28 +761,19 @@ module type Time_ns = sig
 
       Sexps and strings display the date, ofday, and UTC offset of [t] relative to the
       appropriate time zone. *)
-  include%template
-    Identifiable.S [@mode local] [@alloc stack] [@modality portable] with type t := t
+  include Identifiable.S with type t := t
 
   (** [Identifiable] masks the comparison functions' [@zero_alloc] annotations *)
 
-  include%template Comparisons.S_with_zero_alloc_strict [@mode local] with type t := t
+  include Comparisons.S_with_zero_alloc_strict with type t := t
 
   module Stable : sig
     module V1 : sig
       type nonrec t = t
-      [@@deriving
-        bin_io ~localize
-        , compare ~localize
-        , equal ~localize
-        , globalize
-        , hash
-        , sexp_of ~stackify
-        , sexp_grammar]
+      [@@deriving bin_io, compare, equal, globalize, hash, sexp_of, sexp_grammar]
 
-      include%template
+      include
         Stable_int63able_with_witness
-        [@mode local]
         with type t := t
          and type comparator_witness = comparator_witness
 
@@ -872,24 +788,16 @@ module type Time_ns = sig
 
     module Option : sig
       module V1 : sig
-        type t = Option.t
-        [@@deriving
-          bin_io ~localize
-          , compare ~localize
-          , equal ~localize
-          , globalize
-          , sexp_of ~stackify]
+        type t = Option.t [@@deriving bin_io, compare, equal, globalize, sexp_of]
 
-        include%template Stable_int63able_with_witness [@mode local] with type t := t
-
+        include Stable_int63able_with_witness with type t := t
         include Diffable.S_atomic with type t := t
       end
 
       module Alternate_sexp : sig
         module V1 : sig
           type nonrec t = Option.Alternate_sexp.t
-          [@@deriving
-            bin_io ~localize, compare ~localize, hash, sexp, sexp_grammar, stable_witness]
+          [@@deriving bin_io, compare, hash, sexp, sexp_grammar, stable_witness]
 
           include
             Comparator.Stable.V1.S
@@ -912,13 +820,7 @@ module type Time_ns = sig
       module V1 : sig
         type t = Alternate_sexp.t
         [@@deriving
-          bin_io ~localize
-          , compare ~localize
-          , equal ~localize
-          , hash
-          , sexp
-          , sexp_grammar
-          , stable_witness]
+          bin_io, compare, equal, globalize, hash, sexp, sexp_grammar, stable_witness]
 
         include
           Comparator.Stable.V1.S
@@ -937,36 +839,20 @@ module type Time_ns = sig
     module Span : sig
       module V1 : sig
         type nonrec t = Span.t
-        [@@deriving
-          bin_io ~localize
-          , compare ~localize
-          , equal ~localize
-          , globalize
-          , hash
-          , sexp_grammar]
+        [@@deriving bin_io, compare, equal, globalize, hash, sexp_grammar]
 
-        include%template
-          Stable_int63able.With_stable_witness.S [@mode local] with type t := t
-
+        include Stable_int63able.With_stable_witness.S with type t := t
         include Diffable.S_atomic with type t := t
       end
 
       module V2 : sig
         type t = Span.t
-        [@@deriving
-          bin_io ~localize
-          , compare ~localize
-          , equal ~localize
-          , globalize
-          , hash
-          , sexp_of ~stackify
-          , sexp_grammar]
+        [@@deriving bin_io, compare, equal, globalize, hash, sexp_of, sexp_grammar]
 
         type nonrec comparator_witness = Span.comparator_witness
 
-        include%template
+        include
           Stable_int63able.With_stable_witness.S
-          [@mode local]
           with type t := t
           with type comparator_witness := comparator_witness
 
@@ -981,25 +867,16 @@ module type Time_ns = sig
 
       module Option : sig
         module V1 : sig
-          type t = Span.Option.t
-          [@@deriving bin_io ~localize, compare ~localize, equal ~localize, globalize]
+          type t = Span.Option.t [@@deriving bin_io, compare, equal, globalize]
 
-          include%template Stable_int63able_with_witness [@mode local] with type t := t
-
+          include Stable_int63able_with_witness with type t := t
           include Diffable.S_atomic with type t := t
         end
 
         module V2 : sig
-          type t = Span.Option.t
-          [@@deriving
-            bin_io ~localize
-            , compare ~localize
-            , equal ~localize
-            , globalize
-            , sexp_of ~stackify]
+          type t = Span.Option.t [@@deriving bin_io, compare, equal, globalize, sexp_of]
 
-          include%template Stable_int63able_with_witness [@mode local] with type t := t
-
+          include Stable_int63able_with_witness with type t := t
           include Diffable.S_atomic with type t := t
         end
       end
@@ -1008,18 +885,10 @@ module type Time_ns = sig
     module Ofday : sig
       module V1 : sig
         type t = Ofday.t
-        [@@deriving
-          bin_io ~localize
-          , compare ~localize
-          , equal ~localize
-          , globalize
-          , hash
-          , sexp_of ~stackify
-          , sexp_grammar]
+        [@@deriving bin_io, compare, equal, globalize, hash, sexp_of, sexp_grammar]
 
-        include%template
+        include
           Stable_int63able.With_stable_witness.S
-          [@mode local]
           with type t := t
            and type comparator_witness = Ofday.comparator_witness
 
@@ -1028,20 +897,17 @@ module type Time_ns = sig
 
       module Zoned : sig
         module V1 : sig
-          type nonrec t = Ofday.Zoned.t [@@deriving equal ~localize, hash, sexp_grammar]
+          type nonrec t = Ofday.Zoned.t [@@deriving equal, hash, sexp_grammar]
 
-          include%template
-            Stable_without_comparator_with_witness [@mode local] with type t := t
+          include Stable_without_comparator_with_witness with type t := t
         end
       end
 
       module Option : sig
         module V1 : sig
-          type t = Ofday.Option.t
-          [@@deriving bin_io ~localize, compare ~localize, equal ~localize, globalize]
+          type t = Ofday.Option.t [@@deriving bin_io, compare, equal, globalize]
 
-          include%template Stable_int63able_with_witness [@mode local] with type t := t
-
+          include Stable_int63able_with_witness with type t := t
           include Diffable.S_atomic with type t := t
         end
       end

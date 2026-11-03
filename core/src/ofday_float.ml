@@ -13,18 +13,9 @@ module Stable = struct
       type underlying = float
 
       type t = private underlying
-      [@@deriving
-        bin_io ~localize
-        , compare ~localize
-        , equal ~localize
-        , globalize
-        , hash
-        , typerep
-        , stable_witness]
+      [@@deriving bin_io, compare, equal, globalize, hash, typerep, stable_witness]
 
-      include%template
-        Comparable.S_common [@mode local] [@modality portable] with type t := t
-
+      include Comparable.S_common with type t := t
       include Robustly_comparable with type t := t
       include Floatable with type t := t
 
@@ -55,18 +46,9 @@ module Stable = struct
       end :
       sig
         type t = underlying
-        [@@deriving
-          bin_io ~localize
-          , compare ~localize
-          , equal ~localize
-          , globalize
-          , hash
-          , typerep
-          , stable_witness]
+        [@@deriving bin_io, compare, equal, globalize, hash, typerep, stable_witness]
 
-        include%template
-          Comparable.S_common [@mode local] [@modality portable] with type t := t
-
+        include Comparable.S_common with type t := t
         include Comparable.With_zero with type t := t
         include Robustly_comparable with type t := t
         include Floatable with type t := t
@@ -168,79 +150,54 @@ module Stable = struct
 
     let to_parts t = Span.to_parts (T.to_span_since_start_of_day t)
     let maybe_globalize t = t
-    let maybe_globalize__stack t = T.globalize t
-
-    [%%template
-    [@@@alloc.default a @ m = (stack_local, heap_global)]
 
     let to_string_gen ~drop_ms ~drop_us ~trim t =
-      (let ( / ) = Int63.( / ) in
-       let ( ! ) = Int63.of_int in
-       let ( mod ) = Int63.rem in
-       let i = Int63.to_int_exn in
-       assert (if drop_ms then drop_us else true);
-       let t = (maybe_globalize [@alloc a]) t in
-       let float_sec = Span.to_sec (T.to_span_since_start_of_day t) in
-       let us = Float.int63_round_nearest_exn (float_sec *. 1e6) in
-       let ms, us = us / !1000, us mod !1000 |> i in
-       let sec, ms = ms / !1000, ms mod !1000 |> i in
-       let min, sec = sec / !60, sec mod !60 |> i in
-       let hr, min = min / !60, min mod !60 |> i in
-       let hr = i hr in
-       let dont_print_us = drop_us || (trim && us = 0) in
-       let dont_print_ms = drop_ms || (trim && ms = 0 && dont_print_us) in
-       let dont_print_s = trim && sec = 0 && dont_print_ms in
-       let len =
-         if dont_print_s
-         then 5
-         else if dont_print_ms
-         then 8
-         else if dont_print_us
-         then 12
-         else 15
-       in
-       let buf = (Bytes.create [@alloc a]) len in
-       write_2_digit_int buf ~pos:0 hr;
-       Bytes.set buf 2 ':';
-       write_2_digit_int buf ~pos:3 min;
-       if dont_print_s
-       then ()
-       else (
-         Bytes.set buf 5 ':';
-         write_2_digit_int buf ~pos:6 sec;
-         if dont_print_ms
-         then ()
-         else (
-           Bytes.set buf 8 '.';
-           write_3_digit_int buf ~pos:9 ms;
-           if dont_print_us then () else write_3_digit_int buf ~pos:12 us));
-       Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf)
-      [@exclave_if_stack a]
+      let ( / ) = Int63.( / ) in
+      let ( ! ) = Int63.of_int in
+      let ( mod ) = Int63.rem in
+      let i = Int63.to_int_exn in
+      assert (if drop_ms then drop_us else true);
+      let t = maybe_globalize t in
+      let float_sec = Span.to_sec (T.to_span_since_start_of_day t) in
+      let us = Float.int63_round_nearest_exn (float_sec *. 1e6) in
+      let ms, us = us / !1000, us mod !1000 |> i in
+      let sec, ms = ms / !1000, ms mod !1000 |> i in
+      let min, sec = sec / !60, sec mod !60 |> i in
+      let hr, min = min / !60, min mod !60 |> i in
+      let hr = i hr in
+      let dont_print_us = drop_us || (trim && us = 0) in
+      let dont_print_ms = drop_ms || (trim && ms = 0 && dont_print_us) in
+      let dont_print_s = trim && sec = 0 && dont_print_ms in
+      let len =
+        if dont_print_s
+        then 5
+        else if dont_print_ms
+        then 8
+        else if dont_print_us
+        then 12
+        else 15
+      in
+      let buf = Bytes.create len in
+      write_2_digit_int buf ~pos:0 hr;
+      Bytes.set buf 2 ':';
+      write_2_digit_int buf ~pos:3 min;
+      if dont_print_s
+      then ()
+      else (
+        Bytes.set buf 5 ':';
+        write_2_digit_int buf ~pos:6 sec;
+        if dont_print_ms
+        then ()
+        else (
+          Bytes.set buf 8 '.';
+          write_3_digit_int buf ~pos:9 ms;
+          if dont_print_us then () else write_3_digit_int buf ~pos:12 us));
+      Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf
     ;;
 
-    let to_string_trimmed t =
-      (to_string_gen [@alloc a])
-        ~drop_ms:false
-        ~drop_us:false
-        ~trim:true
-        t [@exclave_if_stack a]
-    ;;
-
-    let to_sec_string t =
-      (to_string_gen [@alloc a])
-        ~drop_ms:true
-        ~drop_us:true
-        ~trim:false
-        t [@exclave_if_stack a]
-    ;;
-
-    let to_millisecond_string t =
-      (to_string_gen [@alloc a])
-        ~drop_ms:false
-        ~drop_us:true
-        ~trim:false
-        t [@exclave_if_stack a]
-    ;;]
+    let to_string_trimmed t = to_string_gen ~drop_ms:false ~drop_us:false ~trim:true t
+    let to_sec_string t = to_string_gen ~drop_ms:true ~drop_us:true ~trim:false t
+    let to_millisecond_string t = to_string_gen ~drop_ms:false ~drop_us:true ~trim:false t
 
     let small_diff =
       let hour = 3600. in
@@ -258,15 +215,9 @@ module Stable = struct
 
     include T
 
-    let%template[@alloc a @ m = (heap_global, stack_local)] to_string t =
-      (to_string_gen [@alloc a])
-        ~drop_ms:false
-        ~drop_us:false
-        ~trim:false
-        t [@exclave_if_stack a]
-    ;;
+    let to_string t = to_string_gen ~drop_ms:false ~drop_us:false ~trim:false t
 
-    include%template Pretty_printer.Register [@modality portable] (struct
+    include Pretty_printer.Register (struct
         type nonrec t = t
 
         let to_string = to_string
@@ -296,9 +247,9 @@ module Stable = struct
 
     let t_sexp_grammar = Sexplib.Sexp_grammar.coerce String.t_sexp_grammar
 
-    let%template[@alloc a = (heap, stack)] sexp_of_t span =
+    let sexp_of_t span =
       let span = globalize span in
-      Sexp.Atom (to_string span) [@exclave_if_stack a]
+      Sexp.Atom (to_string span)
     ;;
 
     let of_string_iso8601_extended ?pos ?len str =
@@ -311,8 +262,8 @@ module Stable = struct
           ()
     ;;
 
-    include%template Diffable.Atomic.Make [@modality portable] (struct
-        type nonrec t = t [@@deriving bin_io, equal ~localize, sexp]
+    include Diffable.Atomic.Make (struct
+        type nonrec t = t [@@deriving bin_io, equal, sexp]
       end)
 
     let ( ^: ) hr min = create ~hr ~min ()
@@ -331,28 +282,26 @@ end
 
 include Stable.V1
 
-let%template gen_incl lo hi =
+let gen_incl lo hi =
   Span.gen_incl (to_span_since_start_of_day lo) (to_span_since_start_of_day hi)
-  |> (Base_quickcheck.Generator.map [@mode portable]) ~f:of_span_since_start_of_day_exn
+  |> Base_quickcheck.Generator.map ~f:of_span_since_start_of_day_exn
 ;;
 
-let%template gen_uniform_incl lo hi =
+let gen_uniform_incl lo hi =
   Span.gen_uniform_incl (to_span_since_start_of_day lo) (to_span_since_start_of_day hi)
-  |> (Base_quickcheck.Generator.map [@mode portable]) ~f:of_span_since_start_of_day_exn
+  |> Base_quickcheck.Generator.map ~f:of_span_since_start_of_day_exn
 ;;
 
 let quickcheck_generator = gen_incl start_of_day start_of_next_day
 
-let%template quickcheck_observer =
-  (Quickcheck.Observer.unmap [@mode portable])
-    Span.quickcheck_observer
-    ~f:to_span_since_start_of_day
+let quickcheck_observer =
+  Quickcheck.Observer.unmap Span.quickcheck_observer ~f:to_span_since_start_of_day
 ;;
 
 let quickcheck_shrinker = Quickcheck.Shrinker.empty ()
 
-include%template Hashable.Make_binable [@modality portable] (struct
-    type nonrec t = t [@@deriving bin_io, compare ~localize, hash, sexp_of]
+include Hashable.Make_binable (struct
+    type nonrec t = t [@@deriving bin_io, compare, hash, sexp_of]
 
     (* Previous versions rendered hash-based containers using float serialization rather
        than time serialization, so when reading hash-based containers in we accept either
@@ -385,10 +334,9 @@ module C = struct
   ;;
 end
 
-module%template Map = Map.Make_binable_using_comparator [@modality portable] (C)
-module%template Set = Set.Make_binable_using_comparator [@modality portable] (C)
-
-include%template Comparable.Validate [@modality portable] (C)
+module Map = Map.Make_binable_using_comparator (C)
+module Set = Set.Make_binable_using_comparator (C)
+include Comparable.Validate (C)
 
 let of_span_since_start_of_day = of_span_since_start_of_day_exn
 let to_millisec_string = to_millisecond_string

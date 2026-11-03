@@ -87,8 +87,7 @@ type +'a t = private
   | Not of 'a t
   | If of 'a t * 'a t * 'a t
   | Base of 'a
-[@@deriving
-  bin_io ~localize, compare ~localize, equal ~localize, hash, sexp, sexp_grammar, typerep]
+[@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar, typerep]
 
 (** [Raw] provides the automatically derived [sexp_of_t], useful in debugging the actual
     structure of the blang. *)
@@ -180,7 +179,7 @@ include Quickcheckable.S1 with type 'a t := 'a t
 
     Note: [bind t f] does short-circuiting, so [f] may not be called on every variable in
     [t]. *)
-include%template Monad.S [@mode local] with type 'a t := 'a t
+include Monad.S with type 'a t := 'a t
 
 (** [values t] forms the list containing every [v] for which [Base v] is a subexpression
     of [t] *)
@@ -254,13 +253,6 @@ module Stable : sig
       | Not of 'a t
       | If of 'a t * 'a t * 'a t
       | Base of 'a
-    [@@deriving
-      sexp
-      , sexp_grammar
-      , bin_io ~localize
-      , stable_witness
-      , compare ~localize
-      , equal ~localize
-      , hash]
+    [@@deriving sexp, sexp_grammar, bin_io, stable_witness, compare, equal, hash]
   end
 end

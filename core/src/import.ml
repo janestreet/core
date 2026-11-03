@@ -70,10 +70,10 @@ include From_sexplib
    ppx's treat [sexp_opaque] correctly, by ignoring it and processing the underlying type. *)
 include (
 struct
-  type 'a sexp_opaque = 'a [@@deriving bin_io, compare ~localize, hash, typerep]
+  type 'a sexp_opaque = 'a [@@deriving bin_io, compare, hash, typerep]
 end :
   sig
-    type 'a sexp_opaque [@@deriving bin_io, compare ~localize, hash, typerep]
+    type 'a sexp_opaque [@@deriving bin_io, compare, hash, typerep]
   end
   with type 'a sexp_opaque := 'a)
 
@@ -87,15 +87,7 @@ include (
 module Variant = Variantslib.Variant
 
 let with_return = With_return.with_return
-
-let am_running_test =
-  try
-    ignore (Stdlib.Sys.getenv "TESTING_FRAMEWORK" : string);
-    true
-  with
-  (* [Caml.*] never raises [Not_found_s] *)
-  | Stdlib.Not_found -> false
-;;
+let am_running_test = Am_running_test.am_running_test
 
 type 'a identity = 'a
 

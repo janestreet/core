@@ -11,18 +11,9 @@ module type Day_of_week = sig
     | Thu
     | Fri
     | Sat
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , hash
-    , quickcheck
-    , sexp ~stackify
-    , sexp_grammar
-    , typerep]
+  [@@deriving bin_io, compare, hash, quickcheck, sexp, sexp_grammar, typerep]
 
-  include%template
-    Comparable.S_binable [@mode local] [@modality portable] with type t := t
-
+  include Comparable.S_binable with type t := t
   include Hashable.S_binable with type t := t
 
   (** [of_string s] accepts three-character abbreviations and full day names with any
@@ -62,14 +53,7 @@ module type Day_of_week = sig
   module Stable : sig
     module V1 : sig
       type nonrec t = t
-      [@@deriving
-        bin_io ~localize
-        , equal ~localize
-        , sexp ~stackify
-        , sexp_grammar
-        , compare ~localize
-        , hash
-        , stable_witness]
+      [@@deriving bin_io, equal, sexp, sexp_grammar, compare, hash, stable_witness]
 
       include
         Comparator.Stable.V1.S

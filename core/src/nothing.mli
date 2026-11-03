@@ -13,11 +13,7 @@ end
     prevented for lack of [Identifiable.S] here.
 
     Obviously, [of_string] and [t_of_sexp] will raise an exception. *)
-include%template
-  Identifiable.S
-  [@mode local]
-  with type t := t
-   and type comparator_witness := comparator_witness
+include Identifiable.S with type t := t and type comparator_witness := comparator_witness
 
 include Diffable.S_atomic with type t := t
 
@@ -25,14 +21,7 @@ module Stable : sig
   module V1 : sig
     type nonrec t = t
     [@@deriving
-      bin_io ~localize
-      , compare ~localize
-      , enumerate
-      , equal ~localize
-      , hash
-      , sexp
-      , stable_witness
-      , sexp_grammar]
+      bin_io, compare, enumerate, equal, hash, sexp, stable_witness, sexp_grammar]
 
     include Diffable.S_atomic with type t := t
   end

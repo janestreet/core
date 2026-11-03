@@ -4,15 +4,14 @@ open! Import
 module Binable = Binable0
 open Base.Hash_set
 
-module type%template M_quickcheck = sig
-  type t [@@deriving (compare [@mode.explicit m]), hash, quickcheck, sexp_of]
+module type M_quickcheck = sig
+  type t [@@deriving compare, hash, quickcheck, sexp_of]
 end
-[@@mode m = (local, global)]
 
 module type For_deriving = sig
   include For_deriving
 
-  module type%template M_quickcheck = M_quickcheck [@mode m] [@@mode m = (local, global)]
+  module type M_quickcheck = M_quickcheck
 
   val quickcheck_generator_m__t
     :  (module M_quickcheck with type t = 'key)
@@ -30,7 +29,7 @@ end
 module type S_plain = sig
   type elt
   type 'a hash_set
-  type t = elt hash_set [@@deriving equal ~localize, sexp_of]
+  type t = elt hash_set [@@deriving equal, sexp_of]
 
   include
     Creators_generic
@@ -78,14 +77,10 @@ module type Hash_set = sig
 
   val hashable : 'key t -> 'key Hashtbl.Hashable.t
 
-  [%%template:
-  [@@@mode.default m = (local, global)]
-
-  module type Elt_plain = Hashtbl.Key_plain [@mode m]
-  module type Elt = Hashtbl.Key [@mode m]
-  module type Elt_binable = Hashtbl.Key_binable [@mode m]
-  module type Elt_stable = Hashtbl.Key_stable [@mode m]]
-
+  module type Elt_plain = Hashtbl.Key_plain
+  module type Elt = Hashtbl.Key
+  module type Elt_binable = Hashtbl.Key_binable
+  module type Elt_stable = Hashtbl.Key_stable
   module type S_plain = S_plain with type 'a hash_set := 'a t
   module type S = S with type 'a hash_set := 'a t
   module type S_binable = S_binable with type 'a hash_set := 'a t
@@ -114,20 +109,17 @@ module type Hash_set = sig
     include Accessors with type 'a t := 'a t with type 'a elt := 'a elt
   end
 
-  module%template.portable Make_plain (Elt : sig
+  module Make_plain (Elt : sig
       type t
 
       include Elt_plain with type t := t
     end) : S_plain with type elt = Elt.t
 
-  module%template.portable Make (Elt : Elt) : S with type elt = Elt.t
+  module Make (Elt : Elt) : S with type elt = Elt.t
+  module Make_binable (Elt : Elt_binable) : S_binable with type elt = Elt.t
+  module Make_stable (Elt : Elt_stable) : S_stable with type elt = Elt.t
 
-  module%template.portable Make_binable (Elt : Elt_binable) :
-    S_binable with type elt = Elt.t
-
-  module%template.portable Make_stable (Elt : Elt_stable) : S_stable with type elt = Elt.t
-
-  module%template.portable Make_plain_with_hashable (T : sig
+  module Make_plain_with_hashable (T : sig
       module Elt : sig
         type t
 
@@ -137,31 +129,31 @@ module type Hash_set = sig
       val hashable : Elt.t Hashtbl.Hashable.t
     end) : S_plain with type elt = T.Elt.t
 
-  module%template.portable Make_with_hashable (T : sig
+  module Make_with_hashable (T : sig
       module Elt : Elt
 
       val hashable : Elt.t Hashtbl.Hashable.t
     end) : S with type elt = T.Elt.t
 
-  module%template.portable Make_binable_with_hashable (T : sig
+  module Make_binable_with_hashable (T : sig
       module Elt : Elt_binable
 
       val hashable : Elt.t Hashtbl.Hashable.t
     end) : S_binable with type elt = T.Elt.t
 
-  module%template.portable Make_stable_with_hashable (T : sig
+  module Make_stable_with_hashable (T : sig
       module Elt : Elt_stable
 
       val hashable : Elt.t Hashtbl.Hashable.t
     end) : S_stable with type elt = T.Elt.t
 
-  module%template.portable Provide_of_sexp
+  module Provide_of_sexp
       (Elt : Base.Hashtbl.M_of_sexp) : sig
       type t [@@deriving of_sexp]
     end
     with type t := Elt.t t
 
-  module%template.portable Provide_bin_io (Elt : sig
+  module Provide_bin_io (Elt : sig
       type t [@@deriving bin_io]
 
       include Elt_plain with type t := t

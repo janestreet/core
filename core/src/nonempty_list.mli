@@ -1,6 +1,3 @@
-[%%template:
-[@@@kind_set.define all_ks_non_value = base_non_value]
-
 (** A ['a t] represents a non-empty list, as evidenced by the fact that there is no [[]]
     variant. The sexp representation is as a regular list (i.e., the same as the
     [Stable.V3] module below).
@@ -13,16 +10,9 @@ include module type of struct
   include Base.Nonempty_list
 end
 
-[%%template:
-[@@@kind.default k = all_ks_non_value]
-
-[%%rederive:
-  type nonrec 'a t = ('a t[@kind k]) = ( :: ) of 'a * ('a List.t[@kind k])
-  [@@deriving bin_io ~localize]]]
-
 [%%rederive:
   type nonrec 'a t = 'a t = ( :: ) of 'a * 'a list
-  [@@deriving bin_io ~localize, quickcheck ~portable, typerep]]
+  [@@deriving bin_io, quickcheck, typerep]]
 
 type 'a nonempty_list := 'a t
 
@@ -44,6 +34,7 @@ val comma_separated_argtype
   :  ?key:'a t Univ_map.Multi.Key.t
   -> ?strip_whitespace:bool
   -> ?unique_values:bool
+  -> ?propagate_additional_documentation:bool
   -> 'a Command.Param.Arg_type.t
   -> 'a t Command.Param.Arg_type.t
 
@@ -54,14 +45,7 @@ val anons : 'a Command.Anons.t -> 'a t Command.Anons.t
     allowing you to [match%optional] on a list, respectively. *)
 module Option : sig
   type 'a t = 'a list
-  [@@deriving
-    compare ~localize
-    , equal ~localize
-    , sexp ~stackify
-    , sexp_grammar
-    , hash
-    , quickcheck
-    , typerep]
+  [@@deriving compare, equal, sexp, sexp_grammar, hash, quickcheck, typerep]
 
   (** Constructors analogous to [None] and [Some]. *)
 
@@ -91,29 +75,16 @@ module Option : sig
 end
 
 module Unstable : sig
-  type nonrec 'a t = 'a t
-  [@@deriving
-    bin_io, compare ~localize, equal ~localize, hash, sexp ~stackify, sexp_grammar]
+  type nonrec 'a t = 'a t [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
 end
 
 module Stable : sig
   (** Represents a [t] as an ordinary list for sexp and bin_io conversions, e.g. [1::2] is
       represented as [(1 2)]. *)
   module V3 : sig
-    type nonrec 'a t = ('a t[@kind k])
-    [@@kind k = all_ks_non_value]
-    [@@deriving bin_io ~localize, compare ~localize, equal ~localize]
-
     type nonrec 'a t = 'a t
     [@@deriving
-      bin_io
-      , compare ~localize
-      , equal ~localize
-      , globalize
-      , sexp ~stackify
-      , sexp_grammar
-      , hash
-      , stable_witness]
+      bin_io, compare, equal, globalize, sexp, sexp_grammar, hash, stable_witness]
   end
 
   (** Represents a [t] as an ordinary list for sexp conversions, but uses a record
@@ -122,14 +93,7 @@ module Stable : sig
       version if you're writing a new protocol. *)
   module V2 : sig
     type nonrec 'a t = 'a t
-    [@@deriving
-      bin_io
-      , compare ~localize
-      , equal ~localize
-      , sexp ~stackify
-      , sexp_grammar
-      , hash
-      , stable_witness]
+    [@@deriving bin_io, compare, equal, sexp, sexp_grammar, hash, stable_witness]
   end
 
   (** Represents a [t] as an ordinary list for sexps, but as a pair for bin_io conversions
@@ -138,12 +102,6 @@ module Stable : sig
       version if you're writing a new protocol. *)
   module V1 : sig
     type nonrec 'a t = 'a t
-    [@@deriving
-      bin_io
-      , compare ~localize
-      , equal ~localize
-      , sexp ~stackify
-      , sexp_grammar
-      , stable_witness]
+    [@@deriving bin_io, compare, equal, sexp, sexp_grammar, stable_witness]
   end
-end]
+end

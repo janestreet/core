@@ -15,7 +15,7 @@ type 'a t =
   ; length : int
   }
 
-let%template[@mode m = (global, local)] length t = t.length
+let length t = t.length
 let is_empty t = t.length = 0
 
 let invariant f t =
@@ -212,24 +212,8 @@ module Arbitrary_order = struct
   ;;
 end
 
-module%template [@alloc stack] List = struct
-  let rec rev_append xs ys =
-    match xs with
-    | [] -> ys
-    | x :: xs -> rev_append xs (x :: ys)
-  ;;
-
-  let rev xs = rev_append xs []
-
-  let append xs ys =
-    match ys with
-    | [] -> xs
-    | _ :: _ -> rev_append (rev xs) ys
-  ;;
-end
-
 module Make_container (F : sig
-    val%template to_list : 'a t -> 'a list [@@alloc a @ m = (heap_global, stack_local)]
+    val to_list : 'a t -> 'a list
   end) =
 struct
   include F
@@ -256,10 +240,9 @@ end
 module Front_to_back = struct
   let of_list list = make ~length:(List.length list) ~front:list ~back:[]
 
-  let%template[@alloc a = (heap, stack)] to_list t =
-    (let module L = List [@alloc a] in
-    L.append t.front (L.rev t.back))
-    [@exclave_if_stack a]
+  let to_list t =
+    let module L = List in
+    L.append t.front (L.rev t.back)
   ;;
 
   let to_sequence t =
@@ -275,15 +258,14 @@ module Front_to_back = struct
   ;;
 
   include Make_container (struct
-      let%template[@alloc a = (heap, stack)] to_list = (to_list [@alloc a])
+      let to_list = to_list
     end)
 end
 
 module Back_to_front = struct
-  let%template[@alloc a = (heap, stack)] to_list t =
-    (let module L = List [@alloc a] in
-    L.append t.back (L.rev t.front))
-    [@exclave_if_stack a]
+  let to_list t =
+    let module L = List in
+    L.append t.back (L.rev t.front)
   ;;
 
   let of_list list = make ~length:(List.length list) ~back:list ~front:[]
@@ -301,7 +283,7 @@ module Back_to_front = struct
   ;;
 
   include Make_container (struct
-      let%template[@alloc a = (heap, stack)] to_list = (to_list [@alloc a])
+      let to_list = to_list
     end)
 end
 
@@ -309,7 +291,7 @@ include Front_to_back
 
 let singleton x = of_list [ x ]
 
-include%template Monad.Make [@modality portable] (struct
+include Monad.Make (struct
     type nonrec 'a t = 'a t
 
     let bind t ~f =
@@ -325,28 +307,15 @@ include%template Monad.Make [@modality portable] (struct
     ;;
   end)
 
-[%%template
-let[@mode local] to_list = (to_list [@alloc stack])
-
-[@@@mode.default m = (local, global)]
-
-let compare cmp t1 t2 =
-  (List.compare [@mode m])
-    cmp
-    ((to_list [@mode m]) t1)
-    ((to_list [@mode m]) t2) [@nontail]
-;;
-
-let equal eq t1 t2 =
-  (List.equal [@mode m]) eq ((to_list [@mode m]) t1) ((to_list [@mode m]) t2) [@nontail]
-;;]
+let compare cmp t1 t2 = List.compare cmp (to_list t1) (to_list t2) [@nontail]
+let equal eq t1 t2 = List.equal eq (to_list t1) (to_list t2) [@nontail]
 
 let hash_fold_t hash_fold_a state t =
   fold ~f:hash_fold_a ~init:([%hash_fold: int] state (length t)) t
 ;;
 
-include%template
-  Quickcheckable.Of_quickcheckable1 [@modality portable]
+include
+  Quickcheckable.Of_quickcheckable1
     (List)
     (struct
       type nonrec 'a t = 'a t
@@ -357,8 +326,7 @@ include%template
 
 module Stable = struct
   module V1_without_t = struct
-    [%%rederive.portable
-      type nonrec 'a t = 'a t [@@deriving compare ~localize, equal ~localize]]
+    [%%rederive.portable type nonrec 'a t = 'a t [@@deriving compare, equal]]
 
     let sexp_of_t sexp_of_elt t = [%sexp_of: elt list] (to_list t)
     let t_of_sexp elt_of_sexp sexp = of_list ([%of_sexp: elt list] sexp)
@@ -371,36 +339,30 @@ module Stable = struct
     let map = map
 
     open struct
-      module%template List = struct
+      module List = struct
         include List
 
-        let[@mode m = (local, global)] rec iter t ~f =
+        let rec iter t ~f =
           match t with
           | [] -> ()
           | a :: xs ->
             f a;
-            (iter [@mode m]) xs ~f
+            iter xs ~f
         ;;
       end
-
-      let%template[@mode local] to_list = (to_list [@alloc stack])
     end
 
-    include%template
-      Bin_prot.Utils.Make_iterable_binable1 [@mode local] [@modality portable] (struct
+    include Bin_prot.Utils.Make_iterable_binable1 (struct
         type nonrec 'a t = 'a t
-        type 'a el = 'a [@@deriving bin_io ~localize]
+        type 'a el = 'a [@@deriving bin_io]
 
         let caller_identity =
           Bin_prot.Shape.Uuid.of_string "83f96982-4992-11e6-919d-fbddcfdca576"
         ;;
 
         let module_name = Some "Core.Fdeque"
-        let%template[@mode m = (global, local)] length = (length [@mode m])
-
-        let%template[@mode m = (local, global)] iter t ~f =
-          (List.iter [@mode m]) ((to_list [@mode m]) t) ~f [@nontail]
-        ;;
+        let length = length
+        let iter t ~f = List.iter (to_list t) ~f [@nontail]
 
         let init ~len ~next =
           let rec loop next acc n =

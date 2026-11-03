@@ -5,12 +5,8 @@ type compare =
   -> [ `no_polymorphic_compare ]
   -> [ `no_polymorphic_compare ]
 
-[%%template
-[@@@mode.default m = (local, global)]
-
 let compare _ _ = `no_polymorphic_compare
-let equal _ _ = `no_polymorphic_compare]
-
+let equal _ _ = `no_polymorphic_compare
 let ( < ) _ _ = `no_polymorphic_compare
 let ( <= ) _ _ = `no_polymorphic_compare
 let ( > ) _ _ = `no_polymorphic_compare

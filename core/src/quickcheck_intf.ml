@@ -22,9 +22,7 @@ module Definitions = struct
 
     type +'a t = 'a Generator.t
 
-    val%template create : 'a. (size:int -> random:Splittable_random.t -> 'a) -> 'a t
-    [@@mode p = (portable, nonportable)]
-
+    val create : 'a. (size:int -> random:Splittable_random.t -> 'a) -> 'a t
     val generate : 'a. 'a t -> size:int -> random:Splittable_random.t -> 'a
 
     (** Generators form a monad. [t1 >>= fun x -> t2] replaces each value [x] in [t1] with
@@ -37,41 +35,28 @@ module Definitions = struct
         {[
           Int.gen >>= fun x -> Int.gen_incl x Int.max_value >>| fun y -> x, y
         ]} *)
-    include%template Monad.S [@kind value_or_null mod maybe_null] with type 'a t := 'a t
+    include Monad.S with type 'a t := 'a t
 
-    include%template
-      Applicative.S [@kind value_or_null mod maybe_null] with type 'a t := 'a t
+    include Applicative.S with type 'a t := 'a t
 
     module Via_thunk : sig
       type 'a thunk := unit -> 'a
 
-      val%template create
-        : 'a.
-        (size:int -> random:Splittable_random.t -> 'a thunk) -> 'a t
-      [@@mode p = (nonportable, portable)]
-
+      val create : 'a. (size:int -> random:Splittable_random.t -> 'a thunk) -> 'a t
       val generate : 'a. 'a t -> size:int -> random:Splittable_random.t -> 'a thunk
-
-      val%template map : 'a 'b. 'a t -> f:('a thunk -> 'b thunk) -> 'b t
-      [@@mode p = (nonportable, portable)]
+      val map : 'a 'b. 'a t -> f:('a thunk -> 'b thunk) -> 'b t
     end
 
     module Portable = Base_quickcheck.Generator.Portable
-    module%template [@mode portable] Let_syntax = Portable.Let_syntax
+    module Let_syntax : Base_quickcheck.Generator.Let_syntax with type 'a t := 'a t
 
-    val%template return : 'a. 'a -> 'a t [@@mode portable]
-
-    val%template map : 'a 'b. 'a t -> f:('a -> 'b) -> 'b t
-    [@@mode p = (nonportable, portable)]
-
-    val%template bind : 'a 'b. 'a t -> f:('a -> 'b t) -> 'b t [@@mode portable]
+    val map : 'a 'b. 'a t -> f:('a -> 'b) -> 'b t
 
     (** [size = create (fun ~size _ -> size)] *)
     val size : int t
 
     (** [with_size t ~size = create (fun ~size:_ random -> generate t ~size random)] *)
-    val%template with_size : 'a. 'a t -> size:int -> 'a t
-    [@@mode p = (portable, nonportable)]
+    val with_size : 'a. 'a t -> size:int -> 'a t
 
     val bool : bool t
     val char : char t
@@ -82,20 +67,18 @@ module Definitions = struct
     val char_alphanum : char t
     val char_print : char t
     val char_whitespace : char t
-    val singleton : 'a -> 'a t
-    val doubleton : 'a -> 'a -> 'a t
+    val singleton : 'a. 'a -> 'a t
+    val doubleton : 'a. 'a -> 'a -> 'a t
 
     (** Produce any of the given values, weighted equally.
 
         [of_list [ v1 ; ... ; vN ] = union [ singleton v1 ; ... ; singleton vN ]] *)
-    val%template of_list : 'a. 'a list -> 'a t
-    [@@mode (p, c) = ((nonportable, uncontended), (portable, contended))]
+    val of_list : 'a. 'a list -> 'a t
 
     (** Combine arbitrary generators, weighted equally.
 
         [ union [ g1 ; ... ; gN ] = weighted_union [ (1.0, g1) ; ... ; (1.0, gN) ] ] *)
-    val%template union : 'a t list -> 'a t
-    [@@mode p = (portable, nonportable)]
+    val union : 'a t list -> 'a t
 
     (** Generator for the values from a potentially infinite sequence. Chooses each value
         with probability [p], or continues with probability [1-p]. Must satisfy
@@ -204,12 +187,10 @@ module Definitions = struct
     val equal_fn : 'a Observer.t -> ('a -> 'a -> bool) t
 
     (** [filter_map t ~f] produces [y] for every [x] in [t] such that [f x = Some y]. *)
-    val%template filter_map : 'a t -> f:('a -> 'b option) -> 'b t
-    [@@mode p = (nonportable, portable)]
+    val filter_map : 'a t -> f:('a -> 'b option) -> 'b t
 
     (** [filter t ~f] produces every [x] in [t] such that [f x = true]. *)
-    val%template filter : 'a t -> f:('a -> bool) -> 'a t
-    [@@mode p = (nonportable, portable)]
+    val filter : 'a t -> f:('a -> bool) -> 'a t
 
     (** Generator for recursive data type with multiple clauses. At size 0, chooses only
         among the non-recursive cases; at sizes greater than 0, chooses among
@@ -234,11 +215,10 @@ module Definitions = struct
     val recursive_union : 'a. 'a t list -> f:('a t -> 'a t list) -> 'a t
 
     (** Like [recursive_union], with the addition of non-uniform weights for each clause. *)
-    val%template weighted_recursive_union
+    val weighted_recursive_union
       :  (float * 'a t) list
       -> f:('a t -> (float * 'a t) list)
       -> 'a t
-    [@@mode p = (nonportable, portable)]
 
     (** Fixed-point generator. Use [size] to bound the size of the value and the depth of
         the recursion. There is no prescribed semantics for [size] except that it must be
@@ -251,14 +231,12 @@ module Definitions = struct
             | 0 -> singleton 0
             | n -> with_size self ~size:(n - 1) >>| Int.succ)
         ]} *)
-    val%template fixed_point : 'a. ('a t -> 'a t) -> 'a t
-    [@@mode p = (nonportable, portable)]
+    val fixed_point : 'a. ('a t -> 'a t) -> 'a t
 
     (** [weighted_union alist] produces a generator that combines the distributions of
         each [t] in [alist] with the associated weights, which must be finite positive
         floating point values. *)
-    val%template weighted_union : 'a. (float * 'a t) list -> 'a t
-    [@@mode p = (portable, nonportable)]
+    val weighted_union : 'a. (float * 'a t) list -> 'a t
 
     (** [of_fun f] produces a generator that lazily applies [f].
 
@@ -274,14 +252,10 @@ module Definitions = struct
         the sizes of each element. [list_non_empty] never generates the empty list.
         [list_with_length] generates lists of the given length, and distributes [size]
         among the sizes of the elements. *)
-    val%template list : 'a. 'a t -> 'a list t
-    [@@mode p = (portable, nonportable)]
+    val list : 'a. 'a t -> 'a list t
 
-    val%template list_non_empty : 'a. 'a t -> 'a list t
-    [@@mode p = (portable, nonportable)]
-
-    val%template list_with_length : 'a. int -> 'a t -> 'a list t
-    [@@mode p = (portable, nonportable)]
+    val list_non_empty : 'a. 'a t -> 'a list t
+    val list_with_length : 'a. int -> 'a t -> 'a list t
 
     (** [fold_until ~init ~f ~finish] is similar to
 
@@ -297,7 +271,7 @@ module Definitions = struct
         This can be quite useful when, for example, generating a list of updates to a
         state machine. In such a case, some updates may or may not be valid depending on
         the state of the machine. *)
-    val%template fold_until
+    val fold_until
       : 'acc 'final.
       ?min_length:int
       -> ?max_length:int
@@ -306,15 +280,13 @@ module Definitions = struct
       -> finish:('acc -> 'final)
       -> unit
       -> 'final t
-    [@@mode (p, c) = ((nonportable, uncontended), (portable, contended))]
   end
 
   (** We template over a modality so that the portable version may be used with
       first-class modules. *)
-  module type%template Deriving_hash = sig
+  module type Deriving_hash = sig
     type t [@@deriving hash]
   end
-  [@@modality p = (nonportable, portable)]
 
   module type Observer = sig
     (** An ['a Quickcheck.Observer.t] represents a hash function on ['a]. Observers are
@@ -331,14 +303,11 @@ module Definitions = struct
 
     type -'a t = 'a Observer.t
 
-    val%template create : ('a -> size:int -> hash:Hash.state -> Hash.state) -> 'a t
-    [@@mode p = (nonportable, portable)]
-
+    val create : ('a -> size:int -> hash:Hash.state -> Hash.state) -> 'a t
     val observe : 'a t -> 'a -> size:int -> hash:Hash.state -> Hash.state
 
     (** [of_hash] creates an observer for any hashable type. *)
-    val%template of_hash : ((module Deriving_hash with type t = 'a)[@modality p]) -> 'a t
-    [@@modality p = (nonportable, portable)]
+    val of_hash : (module Deriving_hash with type t = 'a) -> 'a t
 
     val bool : bool t
     val char : char t
@@ -354,9 +323,6 @@ module Definitions = struct
     (** [of_list list ~equal] maps values in [list] to separate buckets, and compares
         observed values to the elements of [list] using [equal]. *)
     val of_list : 'a list -> equal:('a -> 'a -> bool) -> 'a t
-
-    val%template of_list : 'a. 'a list -> equal:('a -> 'a -> bool) -> 'a t
-    [@@mode p = portable]
 
     (** Fixed point observer for recursive types. For example:
 
@@ -412,8 +378,7 @@ module Definitions = struct
     val singleton : unit -> _ t
 
     (** [unmap t ~f] applies [f] to values before observing them using [t]. *)
-    val%template unmap : 'a 'b. 'a t -> f:('b -> 'a) -> 'b t
-    [@@mode p = (nonportable, portable)]
+    val unmap : 'a 'b. 'a t -> f:('b -> 'a) -> 'b t
 
     val tuple2 : 'a t -> 'b t -> ('a * 'b) t
     val tuple3 : 'a t -> 'b t -> 'c t -> ('a * 'b * 'c) t
@@ -466,24 +431,16 @@ module Definitions = struct
     type 'a t = 'a Shrinker.t
 
     val shrink : 'a. 'a t -> 'a -> 'a Sequence.t
-
-    val%template create : ('a -> 'a Sequence.t) -> 'a t
-    [@@mode p = (portable, nonportable)]
-
+    val create : ('a -> 'a Sequence.t) -> 'a t
     val empty : unit -> 'a t
     val bool : bool t
     val char : char t
-
-    val%template map : 'a 'b. 'a t -> f:('a -> 'b) -> f_inverse:('b -> 'a) -> 'b t
-    [@@mode p = (nonportable, portable)]
-
-    val%template filter : 'a t -> f:('a -> bool) -> 'a t
-    [@@mode p = (nonportable, portable)]
+    val map : 'a 'b. 'a t -> f:('a -> 'b) -> f_inverse:('b -> 'a) -> 'b t
+    val filter : 'a t -> f:('a -> bool) -> 'a t
 
     (** Filters and maps according to [f], and provides input to [t] via [f_inverse]. Only
         the [f] direction produces options, intentionally. *)
-    val%template filter_map : 'a t -> f:('a -> 'b option) -> f_inverse:('b -> 'a) -> 'b t
-    [@@mode p = (nonportable, portable)]
+    val filter_map : 'a t -> f:('a -> 'b option) -> f_inverse:('b -> 'a) -> 'b t
 
     val tuple2 : 'a t -> 'b t -> ('a * 'b) t
     val tuple3 : 'a t -> 'b t -> 'c t -> ('a * 'b * 'c) t
@@ -548,28 +505,8 @@ module Definitions = struct
     val quickcheck_shrinker : 'a Shrinker.t -> 'a t Shrinker.t
   end
 
-  module type%template [@modality portable] S1 = sig
-    include S1
-
-    [@@@mode.default portable]
-
-    val quickcheck_generator : 'a Generator.t -> 'a t Generator.t
-    val quickcheck_observer : 'a Observer.t -> 'a t Observer.t
-    val quickcheck_shrinker : 'a Shrinker.t -> 'a t Shrinker.t
-  end
-
   module type S2 = sig
     type ('a, 'b) t
-
-    val quickcheck_generator : 'a Generator.t -> 'b Generator.t -> ('a, 'b) t Generator.t
-    val quickcheck_observer : 'a Observer.t -> 'b Observer.t -> ('a, 'b) t Observer.t
-    val quickcheck_shrinker : 'a Shrinker.t -> 'b Shrinker.t -> ('a, 'b) t Shrinker.t
-  end
-
-  module type%template [@modality portable] S2 = sig
-    include S2
-
-    [@@@mode.default portable]
 
     val quickcheck_generator : 'a Generator.t -> 'b Generator.t -> ('a, 'b) t Generator.t
     val quickcheck_observer : 'a Observer.t -> 'b Observer.t -> ('a, 'b) t Observer.t
@@ -591,13 +528,6 @@ module Definitions = struct
     val gen_uniform_incl : t -> t -> t Generator.t
   end
 
-  module type%template [@modality portable] S_range = sig
-    include S
-
-    val gen_incl : t -> t -> t Generator.t
-    val gen_uniform_incl : t -> t -> t Generator.t
-  end
-
   module type S_int = sig
     include S_range
 
@@ -610,13 +540,6 @@ module Definitions = struct
     (** [gen_log_incl lower_bound upper_bound] is like [gen_log_uniform_incl], but
         weighted slightly more in favor of generating [lower_bound] and [upper_bound]
         specifically. *)
-    val gen_log_incl : t -> t -> t Generator.t
-  end
-
-  module type%template [@modality portable] S_int = sig
-    include S_range [@modality portable]
-
-    val gen_log_uniform_incl : t -> t -> t Generator.t
     val gen_log_incl : t -> t -> t Generator.t
   end
 
@@ -759,9 +682,8 @@ module Definitions = struct
       with type 'a t := 'a Generator.t
        and module Let_syntax := Generator.Let_syntax
 
-    include%template
+    include
       Monad.Syntax
-      [@kind value_or_null mod maybe_null]
       with type 'a t := 'a Generator.t
        and module Let_syntax.Let_syntax.Open_on_rhs = Open_on_rhs
   end

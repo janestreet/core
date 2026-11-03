@@ -15,14 +15,7 @@ module Stable = struct
         | Fri
         | Sat
       [@@deriving
-        bin_io ~localize
-        , compare ~localize
-        , enumerate
-        , equal ~localize
-        , hash
-        , quickcheck ~portable
-        , stable_witness
-        , typerep]
+        bin_io, compare, enumerate, equal, hash, quickcheck, stable_witness, typerep]
 
       let to_string t =
         match t with
@@ -97,13 +90,11 @@ module Stable = struct
         type nonrec t = t
 
         let of_string = of_string
-        let%template[@alloc a = (heap, stack)] to_string = to_string
+        let to_string = to_string
       end
 
-      include%template Sexpable.Stable.Of_stringable.V1 [@modality portable] (S)
-
-      include%template
-        Sexpable.Stable.Of_stringable.V1 [@modality portable] [@alloc stack] (S)
+      include Sexpable.Stable.Of_stringable.V1 (S)
+      include Sexpable.Stable.Of_stringable.V1 (S)
 
       let t_sexp_grammar =
         let open Sexplib0.Sexp_grammar in
@@ -137,15 +128,14 @@ module Stable = struct
     module Unstable = struct
       include T
 
-      include%template (
-        Comparable.Make_binable [@mode local] [@modality portable]
+      include (
+        Comparable.Make_binable
           (T) :
           sig
-            include
-              Comparable.S_binable [@mode local] [@modality portable] with type t := t
+            include Comparable.S_binable with type t := t
           end)
 
-      include%template Hashable.Make_binable [@modality portable] (T)
+      include Hashable.Make_binable (T)
     end
 
     include (
@@ -154,11 +144,8 @@ module Stable = struct
         with type t := t
          and type comparator_witness = Unstable.comparator_witness)
 
-    include%template
-      Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (Unstable)
-
-    include%template
-      Hashable.Stable.V1.With_stable_witness.Make [@modality portable] (Unstable)
+    include Comparable.Stable.V1.With_stable_witness.Make (Unstable)
+    include Hashable.Stable.V1.With_stable_witness.Make (Unstable)
   end
 end
 

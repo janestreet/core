@@ -13,7 +13,7 @@ module Make (Time : Time) () = struct
     type t =
       | Changed
       | Unchanged
-    [@@deriving compare ~localize, sexp_of]
+    [@@deriving compare, sexp_of]
 
     (* Optimized construction. *)
     external of_is_unchanged : is_unchanged:bool -> t = "%identity"
@@ -76,9 +76,7 @@ module Make (Time : Time) () = struct
      5. and discard the result if the timestamp changed. *)
   module Lock_state : sig
     type _ t [@@immediate]
-
-    type packed = Packed : _ t -> packed
-    [@@unboxed] [@@deriving compare ~localize, sexp_of]
+    type packed = Packed : _ t -> packed [@@unboxed] [@@deriving compare, sexp_of]
 
     val initial : [ `unlocked ] t
     val lock : [ `unlocked ] t -> [ `locked ] t
@@ -89,10 +87,7 @@ module Make (Time : Time) () = struct
     type _ t = int
     type packed = Packed : _ t -> packed [@@unboxed]
 
-    let%template compare_packed (Packed a) (Packed b) = (Int.compare [@mode m]) a b
-    [@@mode m = (local, global)]
-    ;;
-
+    let compare_packed (Packed a) (Packed b) = Int.compare a b
     let sexp_of_packed (Packed t) = Int.sexp_of_t t
 
     (* The representation is an integer timestamp representing the number of lock/unlock
@@ -129,7 +124,7 @@ module Make (Time : Time) () = struct
   module Date_cache = struct
     include struct
       type t =
-        { mutable lock_state : Lock_state.packed Atomic.t
+        { mutable lock_state : Lock_state.packed [@atomic]
         ; mutable zone : Zone.t
         ; mutable cache_start_incl : Time.t
         ; mutable cache_until_excl : Time.t
@@ -139,7 +134,7 @@ module Make (Time : Time) () = struct
       [@@deriving fields ~getters]
 
       let create () =
-        { lock_state = Atomic.make (Lock_state.Packed Lock_state.initial)
+        { lock_state = Packed Lock_state.initial
         ; zone = Zone.utc
         ; cache_start_incl = Time.epoch
         ; cache_until_excl = Time.epoch
@@ -148,12 +143,15 @@ module Make (Time : Time) () = struct
         }
       ;;
 
-      let get_lock_state { lock_state; _ } = Atomic.get lock_state [@@inline]
-      let set_lock_state { lock_state; _ } v = Atomic.set lock_state v [@@inline]
+      let create_padded () = Portable.Padding.copy_as_padded (create ())
+      let[@inline] get_lock_state t = Atomic.Loc.get [%atomic.loc t.lock_state]
+      let[@inline] set_lock_state t v = Atomic.Loc.set [%atomic.loc t.lock_state] v
 
-      let compare_and_set_lock_state t ~if_phys_equal_to ~replace_with =
-        Atomic.compare_and_set t.lock_state ~if_phys_equal_to ~replace_with
-      [@@inline]
+      let[@inline] compare_and_set_lock_state t ~if_phys_equal_to ~replace_with =
+        Atomic.Loc.compare_and_set
+          [%atomic.loc t.lock_state]
+          ~if_phys_equal_to
+          ~replace_with
       ;;
 
       let reset (t : t) =
@@ -181,6 +179,26 @@ module Make (Time : Time) () = struct
           Time.sub (Date_and_ofday.to_absolute rel ~offset_from_utc) span
         in
         let effective_day_until = Time.add effective_day_start Span.day in
+        let date, effective_day_start, effective_day_until =
+          (* Correct for rounding errors that may occur in shifting/unshifting. Assumes
+             error is not worse than one day. *)
+          if Time.( <= ) effective_day_until effective_day_start
+          then
+            (* Overflow case near min/max representable date. Proceeding neither exception
+               nor correction preserves existing behavior, likely with bizarre results. *)
+            date, effective_day_start, effective_day_until
+          else if Time.( < ) time effective_day_start
+          then
+            ( Date0.add_days date (-1)
+            , Time.sub effective_day_start Span.day
+            , effective_day_start )
+          else if Time.( >= ) time effective_day_until
+          then
+            ( Date0.add_days date 1
+            , effective_day_until
+            , Time.add effective_day_until Span.day )
+          else date, effective_day_start, effective_day_until
+        in
         let cache_start_incl =
           match Zone.index_has_prev_clock_shift zone index with
           | false -> effective_day_start

@@ -4,21 +4,17 @@ open Perms.Export
 module Array = Base.Array
 module Core_sequence = Sequence
 
-[%%template
-[@@@kind_set.define base_or_null_with_ext = (base_or_null, value_or_null mod external64)]
-
 include (
   Base.Array :
   sig
     type 'a t = 'a array
 
     [%%rederive:
-      type nonrec 'a t = 'a t
-      [@@deriving compare ~localize, globalize, sexp ~stackify, sexp_grammar]]
+      type nonrec 'a t = 'a t [@@deriving compare, globalize, sexp, sexp_grammar]]
   end)
 
-[%%rederive.portable type 'a t = 'a array [@@deriving bin_io ~localize]]
-[%%rederive.portable type 'a t = 'a array [@@deriving quickcheck ~portable, typerep]]
+[%%rederive.portable type 'a t = 'a array [@@deriving bin_io]]
+[%%rederive.portable type 'a t = 'a array [@@deriving quickcheck, typerep]]
 
 module T = struct
   include Base.Array
@@ -49,8 +45,7 @@ module T = struct
      the section entitled "Fast, Slow and Incorrect Array blits" of
      https://web.archive.org/web/20130220000229/http://janestreet.github.com/ocaml-perf-notes.html *)
   module Int = struct
-    type t_ = int array
-    [@@deriving bin_io ~localize, compare ~localize, sexp, sexp_grammar]
+    type t_ = int array [@@deriving bin_io, compare, sexp, sexp_grammar]
 
     module Unsafe_blit = struct
       external unsafe_blit
@@ -64,8 +59,8 @@ module T = struct
       [@@noalloc]
     end
 
-    include%template
-      Test_blit.Make_and_test [@modality portable]
+    include
+      Test_blit.Make_and_test
         (struct
           type t = int
 
@@ -86,8 +81,7 @@ module T = struct
   end
 
   module Float = struct
-    type t_ = float array
-    [@@deriving bin_io ~localize, compare ~localize, sexp, sexp_grammar]
+    type t_ = float array [@@deriving bin_io, compare, sexp, sexp_grammar]
 
     module Unsafe_blit = struct
       external unsafe_blit
@@ -123,8 +117,8 @@ module T = struct
       -> unit
       = "%floatarray_unsafe_set"
 
-    include%template
-      Test_blit.Make_and_test [@modality portable]
+    include
+      Test_blit.Make_and_test
         (struct
           type t = float
 
@@ -158,15 +152,13 @@ module type Permissioned = sig
   val length : ('a, 'perms) t -> int
   val is_empty : (_, _) t -> bool
 
-  external%template get
+  external get
     :  (('a, [> read ]) t[@local_opt])
     -> (int[@local_opt])
     -> 'a
     = "%array_safe_get"
-  [@@mode m = (uncontended, shared)]
 
-  val%template get_opt : ('a, [> read ]) t -> int -> 'a Option.t
-  [@@mode c = (uncontended, shared)] [@@alloc __ @ m = (heap_global, stack_local)]
+  val get_opt : ('a, [> read ]) t -> int -> 'a Option.t
 
   external set
     :  (('a, [> write ]) t[@local_opt])
@@ -175,12 +167,11 @@ module type Permissioned = sig
     -> unit
     = "%array_safe_set"
 
-  external%template unsafe_get
+  external unsafe_get
     :  (('a, [> read ]) t[@local_opt])
     -> (int[@local_opt])
     -> 'a
     = "%array_unsafe_get"
-  [@@mode m = (uncontended, shared)]
 
   external unsafe_set
     :  (('a, [> write ]) t[@local_opt])
@@ -191,12 +182,10 @@ module type Permissioned = sig
 
   val create_float_uninitialized : len:int -> (float, [< _ perms ]) t
 
-  [%%template:
-    val create : len:int -> 'a -> ('a, [< _ perms ]) t
-    [@@ocaml.doc
-      {| [create ~len x] creates an array of length [len] with the value [x] populated in
+  val create : len:int -> 'a -> ('a, [< _ perms ]) t
+  [@@ocaml.doc
+    {| [create ~len x] creates an array of length [len] with the value [x] populated in
         each element. |}]
-    [@@alloc __ = (heap, stack)]]
 
   val create_local : len:int -> 'a -> ('a, [< _ perms ]) t
 
@@ -205,9 +194,7 @@ module type Permissioned = sig
     {| [magic_create_uninitialized ~len] creates an array of length [len]. All elements
         are magically populated as a tagged [0]. |}]
 
-  val%template init : int -> f:(int -> 'a) -> ('a, [< _ perms ]) t
-  [@@alloc __ @ m = (heap_global, stack_local)]
-
+  val init : int -> f:(int -> 'a) -> ('a, [< _ perms ]) t
   val make_matrix : dimx:int -> dimy:int -> 'a -> (('a, [< _ perms ]) t, [< _ perms ]) t
 
   val copy_matrix
@@ -237,12 +224,11 @@ module type Permissioned = sig
   val iteri : ('a, [> read ]) t -> f:(int -> 'a -> unit) -> unit
   val foldi : ('a, [> read ]) t -> init:'acc -> f:(int -> 'acc -> 'a -> 'acc) -> 'acc
 
-  val%template foldi_right
+  val foldi_right
     :  ('a, [> read ]) t
     -> init:'acc
     -> f:(int -> 'a -> 'acc -> 'acc)
     -> 'acc
-  [@@alloc a @ m = (stack_local, heap_global)]
 
   val folding_mapi
     :  ('a, [> read ]) t
@@ -256,12 +242,7 @@ module type Permissioned = sig
     -> f:(int -> 'acc -> 'a -> 'acc * 'b)
     -> 'acc * ('b, [< _ perms ]) t
 
-  val%template fold_right
-    :  ('a, [> read ]) t
-    -> f:('a -> 'acc -> 'acc)
-    -> init:'acc
-    -> 'acc
-  [@@mode m = (uncontended, shared)]
+  val fold_right : ('a, [> read ]) t -> f:('a -> 'acc -> 'acc) -> init:'acc -> 'acc
 
   val sort
     :  ?pos:int
@@ -402,7 +383,6 @@ module type Permissioned = sig
   val last : ('a, [> read ]) t -> 'a
   val last_exn : ('a, [> read ]) t -> 'a
   val equal : ('a -> 'a -> bool) -> ('a, [> read ]) t -> ('a, [> read ]) t -> bool
-  val equal__local : ('a -> 'a -> bool) -> ('a, [> read ]) t -> ('a, [> read ]) t -> bool
   val to_sequence : ('a, [> read ]) t -> 'a Sequence.t
   val to_sequence_mutable : ('a, [> read ]) t -> 'a Sequence.t
 end
@@ -412,11 +392,11 @@ module Permissioned : sig
 
   [%%rederive:
     type nonrec ('a, -'perms) t = ('a, 'perms) t
-    [@@deriving bin_io ~localize, compare ~localize, sexp, sexp_grammar]]
+    [@@deriving bin_io, compare, sexp, sexp_grammar]]
 
   module Int : sig
     type nonrec -'perms t = (int, 'perms) t
-    [@@deriving bin_io ~localize, compare ~localize, sexp, sexp_grammar]
+    [@@deriving bin_io, compare, sexp, sexp_grammar]
 
     include Blit.S_permissions with type 'perms t := 'perms t
 
@@ -433,7 +413,7 @@ module Permissioned : sig
 
   module Float : sig
     type nonrec -'perms t = (float, 'perms) t
-    [@@deriving bin_io ~localize, compare ~localize, sexp, sexp_grammar]
+    [@@deriving bin_io, compare, sexp, sexp_grammar]
 
     include Blit.S_permissions with type 'perms t := 'perms t
 
@@ -491,21 +471,18 @@ end = struct
   type ('a, -'perms) t = 'a array
 
   [%%rederive.portable
-    type ('a, _) t = 'a array
-    [@@deriving bin_io ~localize, compare ~localize, sexp, sexp_grammar, typerep]]
+    type ('a, _) t = 'a array [@@deriving bin_io, compare, sexp, sexp_grammar, typerep]]
 
   module Int = struct
     include T.Int
 
-    type -'perms t = t_
-    [@@deriving bin_io ~localize, compare ~localize, sexp, sexp_grammar]
+    type -'perms t = t_ [@@deriving bin_io, compare, sexp, sexp_grammar]
   end
 
   module Float = struct
     include T.Float
 
-    type -'perms t = t_
-    [@@deriving bin_io ~localize, compare ~localize, sexp, sexp_grammar]
+    type -'perms t = t_ [@@deriving bin_io, compare, sexp, sexp_grammar]
   end
 
   external to_array_id
@@ -523,20 +500,13 @@ end = struct
     include T
 
     external length : ('a t[@local_opt]) -> int = "%array_length"
+    external get : ('a t[@local_opt]) -> (int[@local_opt]) -> 'a = "%array_safe_get"
 
-    external%template get
-      :  ('a t[@local_opt])
-      -> (int[@local_opt])
-      -> 'a
-      = "%array_safe_get"
-    [@@mode m = (uncontended, shared)]
-
-    external%template unsafe_get
+    external unsafe_get
       :  ('a t[@local_opt])
       -> (int[@local_opt])
       -> 'a
       = "%array_unsafe_get"
-    [@@mode m = (uncontended, shared)]
 
     external unsafe_set
       :  ('a t[@local_opt])
@@ -562,39 +532,18 @@ end
 module type S = sig
   type 'a t
 
-  type%template 'a t
-  [@@kind k = base_non_value]
-  [@@deriving compare ~localize, equal ~localize, sexp ~stackify, globalize]
-
-  type 'a t [@@kind k = value_or_null mod external64]
-
   include Binary_searchable.S1 with type 'a t := 'a t
+  include Indexed_container.S1_with_creators with type 'a t := 'a t
+  include Indexed_container.S1_with_creators with type 'a t := 'a t
 
-  include%template
-    Indexed_container.S1_with_creators
-  [@kind_set.explicit base_or_null_with_ext]
-  [@with: type 'a t := 'a t [@@kind base_or_null_with_ext]]
-
-  include
-    Indexed_container.S1_with_creators
-    [@kind_set.explicit value_or_null]
-    with type 'a t := 'a t
-
-  val%template map : 'a 'b. 'a t -> f:('a -> 'b) -> 'b t
-  [@@kind ki = base_or_null_with_ext, ko = base_or_null_with_ext]
-
+  val map : 'a 'b. 'a t -> f:('a -> 'b) -> 'b t
   external length : 'a 'perms. ('a t[@local_opt]) -> int = "%array_length" [@@layout_poly]
 
-  external%template get
-    : 'a.
-    ('a t[@local_opt]) -> (int[@local_opt]) -> 'a
-    = "%array_safe_get"
-  [@@layout_poly] [@@mode m = (uncontended, shared)]
+  external get : 'a. ('a t[@local_opt]) -> (int[@local_opt]) -> 'a = "%array_safe_get"
+  [@@layout_poly]
 
-  val%template get_opt : 'a. 'a t -> int -> ('a Option.t[@kind k or value_or_null])
-  [@@mode c = (uncontended, shared)]
-  [@@kind k = base]
-  [@@alloc __ @ m = (heap_global, stack_local)]
+  val get_opt : 'a. 'a t -> int -> 'a Option.t
+  val get_or_null : 'a. 'a t -> int -> 'a or_null
 
   external set
     : 'a.
@@ -602,11 +551,11 @@ module type S = sig
     = "%array_safe_set"
   [@@layout_poly]
 
-  external%template unsafe_get
+  external unsafe_get
     : 'a.
     ('a t[@local_opt]) -> (int[@local_opt]) -> 'a
     = "%array_unsafe_get"
-  [@@layout_poly] [@@mode m = (uncontended, shared)]
+  [@@layout_poly]
 
   external unsafe_set
     : 'a.
@@ -614,12 +563,10 @@ module type S = sig
     = "%array_unsafe_set"
   [@@layout_poly]
 
-  [%%template:
-    val create : len:int -> 'a -> 'a t
-    [@@ocaml.doc
-      {| [create ~len x] creates an array of length [len] with the value [x] populated in
+  val create : len:int -> 'a -> 'a t
+  [@@ocaml.doc
+    {| [create ~len x] creates an array of length [len] with the value [x] populated in
         each element. |}]
-    [@@alloc __ = (heap, stack)]]
 
   val create_local : len:int -> 'a -> 'a t
 
@@ -629,58 +576,34 @@ module type S = sig
         are magically populated as a tagged [0]. |}]
 
   val create_float_uninitialized : len:int -> float t
-
-  val%template init : 'a. int -> f:(int -> 'a) -> 'a t
-  [@@alloc __ @ m = (heap_global, stack_local)]
-
+  val init : 'a. int -> f:(int -> 'a) -> 'a t
   val make_matrix : dimx:int -> dimy:int -> 'a -> 'a t t
   val copy_matrix : 'a t t -> 'a t t
-
-  [%%template:
-  [@@@kind.default k' = base_or_null_with_ext]
-  [@@@kind k = k' mod separable]
-
   val concat : 'a. 'a t list -> 'a t
   val copy : 'a. 'a t -> 'a t
-  val fill : 'a. 'a t -> pos:int -> len:int -> 'a -> unit]
+  val fill : 'a. 'a t -> pos:int -> len:int -> 'a -> unit
 
-  include Blit.S1 [@kind.explicit value_or_null mod separable] with type 'a t := 'a t
+  include Blit.S1 with type 'a t := 'a t
 
-  val%template unsafe_blit : 'a. ('a array, 'a array) Blit.blit
-  [@@kind k = base_or_null_with_ext]
-
-  val%template sub : 'a. ('a array, 'a array) Blit.sub [@@kind k = base_or_null_with_ext]
+  val unsafe_blit : 'a. ('a array, 'a array) Blit.blit
+  val sub : 'a. ('a array, 'a array) Blit.sub
 
   include sig
     [@@@implicit_kind: 'a]
 
     val folding_map : 'a t -> init:'acc -> f:('acc -> 'a -> 'acc * 'b) -> 'b t
     val fold_map : 'a t -> init:'acc -> f:('acc -> 'a -> 'acc * 'b) -> 'acc * 'b t
-
-    val%template foldi_right : 'a t -> init:'acc -> f:(int -> 'a -> 'acc -> 'acc) -> 'acc
-    [@@alloc a @ m = (stack_local, heap_global)]
-
+    val foldi_right : 'a t -> init:'acc -> f:(int -> 'a -> 'acc -> 'acc) -> 'acc
     val folding_mapi : 'a t -> init:'acc -> f:(int -> 'acc -> 'a -> 'acc * 'b) -> 'b t
     val fold_mapi : 'a t -> init:'acc -> f:(int -> 'acc -> 'a -> 'acc * 'b) -> 'acc * 'b t
-
-    val%template fold_right : 'a t -> f:('a -> 'acc -> 'acc) -> init:'acc -> 'acc
-    [@@mode m = (uncontended, shared)]
+    val fold_right : 'a t -> f:('a -> 'acc -> 'acc) -> init:'acc -> 'acc
   end
 
-  val%template sort
-    : 'a.
-    ?pos:int -> ?len:int -> 'a t -> compare:('a -> 'a -> int) -> unit
-  [@@kind k = base_or_null_with_ext]
-
+  val sort : 'a. ?pos:int -> ?len:int -> 'a t -> compare:('a -> 'a -> int) -> unit
   val stable_sort : 'a t -> compare:('a -> 'a -> int) -> unit
-
-  [%%template:
-  [@@@kind.default k = base_or_null_with_ext]
-  [@@@kind k = k mod separable]
-
   val is_sorted : 'a. 'a t -> compare:('a -> 'a -> int) -> bool
   val is_sorted_strictly : 'a. 'a t -> compare:('a -> 'a -> int) -> bool
-  val merge : 'a. 'a t -> 'a t -> compare:('a -> 'a -> int) -> 'a t]
+  val merge : 'a. 'a t -> 'a t -> compare:('a -> 'a -> int) -> 'a t
 
   include sig
     [@@@implicit_kind: 'a]
@@ -707,57 +630,20 @@ module type S = sig
     val fold2_exn : 'a t -> 'b t -> init:'acc -> f:('acc -> 'a -> 'b -> 'acc) -> 'acc
   end
 
-  [%%template:
-  [@@@kind.default k1' = base_or_null_with_ext, k2' = base_or_null_with_ext]
-  [@@@kind k1 = k1' mod separable, k2 = k2' mod separable]
-
-  val of_list_map : 'a 'b. ('a List.t[@kind k1' or value_or_null]) -> f:('a -> 'b) -> 'b t
-
-  val of_list_mapi
-    : 'a 'b.
-    ('a List.t[@kind k1' or value_or_null]) -> f:(int -> 'a -> 'b) -> 'b t
-
-  val of_list_rev_map
-    : 'a 'b.
-    ('a List.t[@kind k1' or value_or_null]) -> f:('a -> 'b) -> 'b t
-
-  val of_list_rev_mapi
-    : 'a 'b.
-    ('a List.t[@kind k1' or value_or_null]) -> f:(int -> 'a -> 'b) -> 'b t
-
-  [@@@mode.default m = (global, local)]
-
+  val of_list_map : 'a 'b. 'a List.t -> f:('a -> 'b) -> 'b t
+  val of_list_mapi : 'a 'b. 'a List.t -> f:(int -> 'a -> 'b) -> 'b t
+  val of_list_rev_map : 'a 'b. 'a List.t -> f:('a -> 'b) -> 'b t
+  val of_list_rev_mapi : 'a 'b. 'a List.t -> f:(int -> 'a -> 'b) -> 'b t
   val for_all2_exn : 'a 'b. 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool
-  val exists2_exn : 'a 'b. 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool]
-
+  val exists2_exn : 'a 'b. 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool
   val map_inplace : 'a. 'a t -> f:('a -> 'a) -> unit
-
-  [%%template:
-  [@@@kind.default k1' = base_or_null_with_ext]
-  [@@@kind k1 = k1' mod separable]
-
   val swap : 'a. 'a t -> int -> int -> unit
   val rev_inplace : 'a. 'a t -> unit
   val rev : 'a. 'a t -> 'a t
-  val of_list_rev : 'a. ('a List.t[@kind k1' or value_or_null]) -> 'a t
+  val of_list_rev : 'a. 'a List.t -> 'a t
   val find_exn : 'a. 'a t -> f:('a -> bool) -> 'a
-
-  [@@@kind.default k2 = base_or_null]
-
-  val find_map_exn
-    : 'a 'b.
-    'a t -> f:('a -> ('b Option.t[@kind k2 or value_or_null])) -> 'b
-
-  val find_mapi_exn
-    : 'a 'b.
-    'a t -> f:(int -> 'a -> ('b Option.t[@kind k2 or value_or_null])) -> 'b]
-
-  [%%template:
-  [@@@kind.default k' = (base_non_value, value_or_null mod external64)]
-  [@@@kind k = k' mod separable]
-
-  val findi_exn : 'a. 'a t -> f:(int -> 'a -> bool) -> int * 'a]
-
+  val find_map_exn : 'a 'b. 'a t -> f:('a -> 'b Option.t) -> 'b
+  val find_mapi_exn : 'a 'b. 'a t -> f:(int -> 'a -> 'b Option.t) -> 'b
   val find_or_null : 'a. 'a t -> f:('a -> bool) -> 'a or_null
   val findi_or_null : 'a. 'a t -> f:(int -> 'a -> bool) -> (int * 'a) or_null
 
@@ -778,7 +664,6 @@ module type S = sig
     val last : 'a t -> 'a
     val last_exn : 'a t -> 'a
     val equal : 'a. ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
-    val equal__local : 'a. ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
     val to_sequence : 'a t -> 'a Core_sequence.t
     val to_sequence_mutable : 'a t -> 'a Core_sequence.t
     val split_n : 'a t -> int -> 'a t * 'a t
@@ -786,13 +671,7 @@ module type S = sig
   end
 end
 
-include%template (
-  T :
-    S
-    [@with:
-      type 'a t := 'a array
-      type 'a t = 'a array [@@kind k = (base_non_value, value_or_null mod external64)]])
-[@ocaml.warning "-3"]
+include (T : S with type 'a t := 'a array) [@ocaml.warning "-3"]
 
 let invariant invariant_a t = iter t ~f:invariant_a
 let max_length = Sys.max_array_length
@@ -800,11 +679,11 @@ let max_length = Sys.max_array_length
 module Int = struct
   include T.Int
 
-  type t = t_ [@@deriving bin_io ~localize, compare ~localize, sexp, sexp_grammar]
+  type t = t_ [@@deriving bin_io, compare, sexp, sexp_grammar]
 end
 
 module Float = struct
   include T.Float
 
-  type t = t_ [@@deriving bin_io ~localize, compare ~localize, sexp, sexp_grammar]
-end]
+  type t = t_ [@@deriving bin_io, compare, sexp, sexp_grammar]
+end

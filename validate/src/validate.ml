@@ -8,8 +8,7 @@ type single_error =
   }
 
 type t = single_error list
-
-type%template 'a check = 'a -> t [@@mode p = (portable, nonportable)]
+type 'a check = 'a -> t
 
 let[@inline] get_pass () : t = []
 let pass = get_pass ()
@@ -29,22 +28,18 @@ module M = struct
   let unwrap_list x = x
 end
 
-module%template [@mode portable] M = Modes.Portable
-
-let%template combine t1 t2 =
-  let module M = M [@mode p] in
+let combine t1 t2 =
+  let module M = M in
   M.wrap_list t1 @ M.wrap_list t2 |> M.unwrap_list
-[@@mode p = (nonportable, portable)]
 ;;
 
-let%template of_list ts =
-  let module M = M [@mode p] in
+let of_list ts =
+  let module M = M in
   List.concat_map (M.wrap_list ts) ~f:(fun x -> M.wrap_list (M.unwrap x)) |> M.unwrap_list
-[@@mode p = (nonportable, portable)]
 ;;
 
-let%template lazy_name name t =
-  let module M = M [@mode p] in
+let lazy_name name t =
+  let module M = M in
   match t with
   | [] -> [] (* when successful, do not force the name *)
   | _ ->
@@ -52,72 +47,54 @@ let%template lazy_name name t =
       let { path; error } = M.unwrap err in
       { path = Lazy.force name :: path; error } |> M.wrap)
     |> M.unwrap_list
-[@@mode p = (portable, nonportable)]
 ;;
 
-let%template[@inline] name name t = (lazy_name [@mode p]) (Lazy.from_val name) t
-[@@mode p = (portable, nonportable)]
-;;
+let[@inline] name name t = lazy_name (Lazy.from_val name) t
+let name_list n l = name n (of_list l)
+let lazy_name_list n l = lazy_name n (of_list l)
+let fail_fn message _ = fail message
+let pass_bool (_ : bool) = get_pass ()
+let pass_unit (_ : unit) = get_pass ()
 
-let%template name_list n l = (name [@mode p]) n ((of_list [@mode p]) l)
-[@@mode p = (portable, nonportable)]
-;;
-
-let%template lazy_name_list n l = (lazy_name [@mode p]) n ((of_list [@mode p]) l)
-[@@mode p = (portable, nonportable)]
-;;
-
-let%template fail_fn message _ = fail message [@@mode __ = (portable, nonportable)]
-let%template pass_bool (_ : bool) = get_pass () [@@mode __ = (portable, nonportable)]
-let%template pass_unit (_ : unit) = get_pass () [@@mode __ = (portable, nonportable)]
-
-[%%template
-[@@@kind.default k = base_or_null_with_imm]
-
-let protect (type a) (f : (a check[@mode p1])) (v : a) =
+let protect (type a) (f : a check) (v : a) =
   try f v with
   | exn ->
     fail_s (Sexp.message "Exception raised during validation" [ "", sexp_of_exn exn ])
-[@@mode p1 = (portable, nonportable), p2 = (portable, nonportable)]
 [@@warning
   "-unused-value-declaration"
   (* We don't use any of the portable declarations besides [value_or_null]. *)]
 ;;
 
-let field_direct (type a) (check : (a check[@mode p])) fld _record v =
-  let result = (protect [@kind k] [@mode p nonportable]) check v in
-  (name [@mode p]) (Field.name fld) result
-[@@mode p = (portable, nonportable)]
+let field_direct (type a) (check : a check) fld _record v =
+  let result = protect check v in
+  name (Field.name fld) result
 ;;
 
-let field (type a) (check : (a check[@mode p])) record fld =
-  let v = (Field.get [@kind k]) fld record in
-  (field_direct [@kind k] [@mode p]) check fld record v
-[@@mode p = (portable, nonportable)] [@@warning "-unused-value-declaration"]
+let field (type a) (check : a check) record fld =
+  let v = Field.get fld record in
+  field_direct check fld record v
+[@@warning "-unused-value-declaration"]
 ;;
 
-let field_folder (type a) (check : (a check[@mode p])) record =
+let field_folder (type a) (check : a check) record =
   ();
-  fun acc fld -> (field [@kind k] [@mode p]) check record fld :: acc
-[@@mode p = (portable, nonportable)]
+  fun acc fld -> field check record fld :: acc
 ;;
 
 let[@inline] lazy_booltest (type a) (f : a -> bool) ~if_false =
-  (protect [@kind k]) (fun (v : a) ->
-    if f v then get_pass () else fail (Lazy.force if_false))
+  protect (fun (v : a) -> if f v then get_pass () else fail (Lazy.force if_false))
 ;;
 
-let[@inline] booltest f ~if_false =
-  (lazy_booltest [@kind k]) f ~if_false:(Lazy.from_val if_false)
-;;]
+let[@inline] booltest (type a) (f : a -> bool) ~if_false =
+  protect (fun (v : a) -> if f v then get_pass () else fail if_false)
+;;
 
-let%template try_with f =
-  (protect [@mode portable p])
+let try_with f =
+  protect
     (fun () ->
       f ();
       get_pass ())
     ()
-[@@mode p = (portable, nonportable)]
 ;;
 
 let path_string path = String.concat ~sep:"." path
@@ -147,8 +124,8 @@ let maybe_raise t =
 
 let valid_or_error check x = Or_error.map (result (protect check x)) ~f:(fun () -> x)
 
-let%template portable_field_folder check record =
-  let f = (field_folder [@mode portable]) check record in
+let portable_field_folder check record =
+  let f = field_folder check record in
   fun acc fld -> f (Modes.Portable.unwrap_list acc) fld |> Modes.Portable.wrap_list
 ;;
 
@@ -171,28 +148,22 @@ let all checks v =
   of_list (List.rev (loop checks v []))
 ;;
 
-let%template of_result f =
-  (protect [@mode portable p]) (fun v ->
+let of_result f =
+  protect (fun v ->
     match f v with
     | Ok () -> get_pass ()
     | Error error -> fail error)
-[@@mode p = (portable, nonportable)]
 ;;
 
-let%template of_error f =
-  (protect [@mode nonportable p]) (fun v ->
+let of_error f =
+  protect (fun v ->
     match f v with
     | Ok () -> get_pass ()
     | Error error -> [ { path = []; error } ])
-[@@mode p = (portable, nonportable)]
 ;;
 
-let%template pair ~fst ~snd (fst_value, snd_value) =
-  (of_list [@mode p1])
-    [ (name [@mode p1]) "fst" ((protect [@mode p1 p2]) fst fst_value)
-    ; (name [@mode p1]) "snd" ((protect [@mode p1 p2]) snd snd_value)
-    ]
-[@@mode p1 = (portable, nonportable), p2 = (portable, nonportable)]
+let pair ~fst ~snd (fst_value, snd_value) =
+  of_list [ name "fst" (protect fst fst_value); name "snd" (protect snd snd_value) ]
 ;;
 
 let list_indexed check list =
@@ -212,14 +183,17 @@ let list ~name:extract_name check list =
 ;;
 
 let alist ~name f list' = list (fun (_, x) -> f x) list' ~name:(fun (key, _) -> name key)
-
-let%template first_failure t1 t2 = if List.is_empty t1 then t2 else t1
-[@@mode p = (portable, nonportable)]
-;;
+let first_failure t1 t2 = if List.is_empty t1 then t2 else t1
 
 let of_error_opt = function
   | None -> get_pass ()
   | Some error -> fail error
+;;
+
+let of_or_error t =
+  match t with
+  | Ok () -> get_pass ()
+  | Error error -> [ { path = []; error } ]
 ;;
 
 let bounded ~name ~lower ~upper ~compare x =

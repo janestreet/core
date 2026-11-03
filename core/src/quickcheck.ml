@@ -71,9 +71,8 @@ end
 module Observer = struct
   include Observer
 
-  let%template of_hash (type a) (module M : Deriving_hash with type t = a[@modality p]) =
-    (of_hash_fold [@mode p]) M.hash_fold_t
-  [@@modality p = (nonportable, portable)]
+  let of_hash (type a) (module M : Deriving_hash with type t = a) =
+    of_hash_fold M.hash_fold_t
   ;;
 
   let variant2 = Polymorphic_types.quickcheck_observer_variant2
@@ -89,7 +88,7 @@ module Observer = struct
   let of_predicate a b ~f = unmap (variant2 a b) ~f:(fun x -> if f x then `A x else `B x)
   let singleton () = opaque
   let doubleton f = of_predicate (singleton ()) (singleton ()) ~f
-  let%template enum _ ~f = (unmap [@mode p]) int ~f [@@mode p = (portable, nonportable)]
+  let enum _ ~f = unmap int ~f
 
   let of_list list ~equal =
     let f x =
@@ -103,15 +102,6 @@ module Observer = struct
   (* It's difficult to define both [of_list]s in the same [%template] definition as we
      need [a] to mode-cross contention in the portable definition.
   *)
-  let%template of_list (type a) (list : a list) ~(equal : a -> a -> bool) =
-    let f x =
-      match List.findi list ~f:(fun _ y -> equal x y) with
-      | None -> failwith "Quickcheck.Observer.of_list: value not found"
-      | Some (i, _) -> i
-    in
-    (enum [@mode portable]) (List.length list) ~f
-  [@@mode portable]
-  ;;
 
   let of_fun f = create (fun x ~size ~hash -> observe (f ()) x ~size ~hash)
 
@@ -130,7 +120,7 @@ module Generator = struct
 
   let singleton = return
 
-  let doubleton x y =
+  let doubleton (type a) (x : a) (y : a) =
     create (fun ~size:_ ~random -> if Splittable_random.bool random then x else y)
   ;;
 
@@ -150,11 +140,7 @@ module Generator = struct
   let geometric = Generator.int_geometric
   let small_non_negative_int = small_positive_or_zero_int
   let small_positive_int = small_strictly_positive_int
-
-  let%template list_with_length length t = (list_with_length [@mode p]) t ~length
-  [@@mode p = (portable, nonportable)]
-  ;;
-
+  let list_with_length length t = list_with_length t ~length
   let variant2 = Polymorphic_types.quickcheck_generator_variant2
   let variant3 = Polymorphic_types.quickcheck_generator_variant3
   let variant4 = Polymorphic_types.quickcheck_generator_variant4
@@ -171,10 +157,8 @@ module Generator = struct
   let fn5 = Polymorphic_types.quickcheck_generator_fn5
   let fn6 = Polymorphic_types.quickcheck_generator_fn6
 
-  let%template compare_fn dom =
-    fn dom int
-    >>| fun get_index x y ->
-    ([%compare: int] [@mode.explicit local]) (get_index x) (get_index y)
+  let compare_fn dom =
+    fn dom int >>| fun get_index x y -> [%compare: int] (get_index x) (get_index y)
   ;;
 
   let equal_fn dom = compare_fn dom >>| fun cmp x y -> Int.( = ) (cmp x y) 0

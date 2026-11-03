@@ -3,9 +3,36 @@ open Unique_id_intf
 
 module type Id = Id
 
+module type Int_base = sig
+  include Id_without_create with type t = int
+
+  val zero : t
+end
+
+module Int_base : Int_base = Int
+
+module type Int63_base = sig
+  include Id_without_create with type t = Int63.t
+
+  val zero : t
+  val succ : t -> t
+end
+
+module Int63_base : Int63_base = Int63
+
 module Ref = struct
+  (* See the comment on [Atomic.Int] below. *)
   module Int () = struct
-    include Int
+    include (
+      Int_base :
+        module type of struct
+          include Int_base
+        end
+        with module Map := Int_base.Map
+         and module Set := Int_base.Set)
+
+    module Map = Map.Make_binable_using_comparator (Int_base)
+    module Set = Set.Make_binable_using_comparator (Int_base)
 
     let current = ref zero
 
@@ -28,7 +55,16 @@ module Ref = struct
   end
 
   module Int63 () = struct
-    include Int63
+    include (
+      Int63_base :
+        module type of struct
+          include Int63_base
+        end
+        with module Map := Int63_base.Map
+         and module Set := Int63_base.Set)
+
+    module Map = Map.Make_binable_using_comparator (Int63_base)
+    module Set = Set.Make_binable_using_comparator (Int63_base)
 
     let current = ref zero
 
@@ -56,7 +92,16 @@ end
 
 module Atomic = struct
   module Int () = struct
-    include Int
+    include (
+      Int_base :
+        module type of struct
+          include Int_base
+        end
+        with module Map := Int_base.Map
+         and module Set := Int_base.Set)
+
+    module Map = Map.Make_binable_using_comparator (Int_base)
+    module Set = Set.Make_binable_using_comparator (Int_base)
 
     let current = Atomic.make ~padded:true zero
     let create () = Atomic.fetch_and_add current 1
@@ -69,7 +114,16 @@ module Atomic = struct
   module type Id_int63 = Id with type t = private Int63.t
 
   module Int63_emul () : Id_int63 = struct
-    include Int63
+    include (
+      Int63_base :
+        module type of struct
+          include Int63_base
+        end
+        with module Map := Int63_base.Map
+         and module Set := Int63_base.Set)
+
+    module Map = Map.Make_binable_using_comparator (Int63_base)
+    module Set = Set.Make_binable_using_comparator (Int63_base)
 
     let current = Atomic.make zero
 

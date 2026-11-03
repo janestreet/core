@@ -39,16 +39,13 @@ module Stable = struct
            the index to -1, which is a safe value. *)
         let of_external (_ : t) = -1
 
-        include%template
-          Binable.Of_binable_without_uuid
-            [@mode local]
-            [@modality portable]
-            [@alert "-legacy"]
+        include
+          Binable.Of_binable_without_uuid [@alert "-legacy"]
             (Int.Stable.V1)
             (struct
               type t = int
 
-              let%template to_binable = to_external [@@mode m = (local, global)]
+              let to_binable = to_external
               let of_binable = of_external
             end)
 
@@ -59,8 +56,8 @@ module Stable = struct
             to_external
         ;;
 
-        include%template
-          Sexpable.Of_sexpable [@modality portable]
+        include
+          Sexpable.Of_sexpable
             (Int)
             (struct
               type t = int
@@ -76,7 +73,7 @@ module Stable = struct
           ; is_dst : bool
           ; abbrv : string
           }
-        [@@deriving bin_io ~localize, sexp, stable_witness]
+        [@@deriving bin_io, sexp, stable_witness]
       end
 
       (* holds information about when leap seconds should be applied - unused because we
@@ -86,7 +83,7 @@ module Stable = struct
           { time_in_seconds_since_epoch : Int63.Stable.V1.t
           ; seconds : int
           }
-        [@@deriving bin_io ~localize, sexp, stable_witness]
+        [@@deriving bin_io, sexp, stable_witness]
       end
 
       module Transition = struct
@@ -94,23 +91,33 @@ module Stable = struct
           { start_time_in_seconds_since_epoch : Int63.Stable.V1.t
           ; new_regime : Regime.t
           }
-        [@@deriving bin_io ~localize, sexp, stable_witness]
+        [@@deriving bin_io, sexp, stable_witness]
       end
 
       module Index_cache : sig
         type t
 
         val create : unit -> t
-        val get : t -> Index.t
-        val set : t -> Index.t -> unit
-        val reset : t -> unit
+        val get : t Atomic.Loc.t -> Index.t
+        val set : t Atomic.Loc.t -> Index.t -> unit
+        val reset : t Atomic.Loc.t -> unit
       end = struct
-        type t = Index.t Atomic.t
+        (* [Portable.Shards.Lazy] allows us to avoid both false sharing (by padding each
+           atomic) and increased memory usage in the single-domain case (by lazily
+           increasing the shard count). *)
+        module Shards = Portable.Shards.Lazy (struct
+            type t = Index.t Atomic.t
 
-        let create () = Atomic.make Index.before_first_transition
-        let get = Atomic.get
-        let set = Atomic.set
-        let reset t = Atomic.set t Index.before_first_transition
+            let padded = Domain.recommended_domain_count () > 1
+            let create () = Atomic.make ~padded Index.before_first_transition
+          end)
+
+        type t = Shards.Unboxed.t
+
+        let create = Shards.Unboxed.create
+        let[@inline] get t = Atomic.get (Shards.Unboxed.get t)
+        let[@inline] set t index = Atomic.set (Shards.Unboxed.get t) index
+        let reset t = Shards.Unboxed.reset t
       end
 
       type t =
@@ -118,16 +125,25 @@ module Stable = struct
         ; original_filename : string option
         ; digest : Md5.t option
         ; transitions : Transition.t iarray
-        ; last_regime_index : Index_cache.t
+        ; (* caches the index of the last transition we used to make lookups faster *)
+          mutable last_regime_index : Index_cache.t [@atomic]
         ; default_local_time_type : Regime.t
         ; leap_seconds : Leap_second.t list
         }
 
-      let index_cache_get t = Index_cache.get t.last_regime_index [@@inline]
-      let index_cache_set t index = Index_cache.set t.last_regime_index index [@@inline]
-      let index_cache_reset t = Index_cache.reset t.last_regime_index [@@inline]
+      let[@inline] index_cache_get t =
+        Index_cache.get [%atomic.loc t.last_regime_index] [@nontail]
+      ;;
 
-      include%template struct
+      let[@inline] index_cache_set t index =
+        Index_cache.set [%atomic.loc t.last_regime_index] index [@nontail]
+      ;;
+
+      let[@inline] index_cache_reset t =
+        Index_cache.reset [%atomic.loc t.last_regime_index] [@nontail]
+      ;;
+
+      include struct
         open struct
           module Without_cache = struct
             type t =
@@ -139,7 +155,7 @@ module Stable = struct
               ; default_local_time_type : Regime.t
               ; leap_seconds : Leap_second.t list
               }
-            [@@deriving bin_io ~localize, sexp, stable_witness]
+            [@@deriving bin_io, sexp, stable_witness]
           end
 
           module T = struct
@@ -154,8 +170,6 @@ module Stable = struct
               ; default_local_time_type = t.default_local_time_type
               ; leap_seconds = t.leap_seconds
               }
-              [@exclave_if_local m]
-            [@@mode m = (global, local)]
             ;;
 
             let of_without_cache (t : Without_cache.t) =
@@ -169,7 +183,7 @@ module Stable = struct
               }
             ;;
 
-            let to_binable = (to_without_cache [@mode m]) [@@mode m = (global, local)]
+            let to_binable = to_without_cache
             let of_binable = of_without_cache
             let to_sexpable = to_without_cache
             let of_sexpable = of_without_cache
@@ -185,22 +199,12 @@ module Stable = struct
 
         let stable_witness = T.stable_witness
 
-        include Sexpable.Of_sexpable [@modality portable] (Without_cache) (T)
-
-        include
-          Binable.Of_binable_without_uuid
-            [@modality portable]
-            [@mode local]
-            [@alert "-legacy"]
-            (Without_cache)
-            (T)
+        include Sexpable.Of_sexpable (Without_cache) (T)
+        include Binable.Of_binable_without_uuid [@alert "-legacy"] (Without_cache) (T)
       end
 
       (* this relies on zones with the same name having the same transitions *)
-      let%template compare t1 t2 = (String.compare [@mode m]) t1.name t2.name
-      [@@mode m = (local, global)]
-      ;;
-
+      let compare t1 t2 = String.compare t1.name t2.name
       let original_filename zone = zone.original_filename
       let digest zone = zone.digest
 
@@ -433,15 +437,12 @@ module Stable = struct
            As we don't actually do anything with part 3 anyway, we can just read v3 files
            as v2.
         *)
-        let%template input_tz_file_v2_or_v3 ~version ic =
+        let input_tz_file_v2_or_v3 ~version ic =
           let (_ : string -> original_filename:string -> digest:Md5_lib.t -> t) =
             input_tz_file_v1 ic
           in
           (* the header is fully repeated *)
-          assert (
-            ([%compare.equal: [ `V1 | `V2 | `V3 ]] [@mode.explicit local])
-              (read_header ic)
-              version);
+          assert ([%compare.equal: [ `V1 | `V2 | `V3 ]] (read_header ic) version);
           let input_leap_second =
             input_leap_second_gen ~input_leap_second:input_long_long_as_int63
           in
@@ -529,9 +530,7 @@ end
 
 include Stable.Full_data.V1
 
-let%template[@alloc a = (heap, stack)] sexp_of_t t =
-  Sexp.Atom t.name [@exclave_if_stack a]
-;;
+let sexp_of_t t = Sexp.Atom t.name
 
 let likely_machine_zones =
   Atomic.make [ "America/New_York"; "Europe/London"; "Asia/Hong_Kong"; "America/Chicago" ]
@@ -562,7 +561,7 @@ let input_tz_file ~zonename ~filename =
 ;;
 
 let utc = of_utc_offset ~hours:0
-let%template name zone = zone.name [@exclave_if_local m] [@@mode m = (local, global)]
+let name zone = zone.name
 let reset_transition_cache t = index_cache_reset t
 
 (* Raises if [index >= Array.length t.transitions] *)
@@ -623,7 +622,7 @@ let index_upper_bound_contains_seconds_since_epoch t index ~mode seconds =
   || Int63.( < ) seconds (effective_start_time ~mode t (index + 1))
 ;;
 
-let%template binary_search_index_of_seconds_since_epoch t ~mode seconds : Index.t =
+let binary_search_index_of_seconds_since_epoch t ~mode seconds : Index.t =
   (Binary_search.binary_search_segmented
      ()
      `Last_on_left
@@ -631,7 +630,7 @@ let%template binary_search_index_of_seconds_since_epoch t ~mode seconds : Index.
      ~get:(fun () i -> i)
      ~segment_of:(fun i ->
        if Int63.( <= ) (effective_start_time ~mode t i) seconds then `Left else `Right)
-   |> (Option.value [@mode local]) ~default:Index.before_first_transition)
+   |> Option.value ~default:Index.before_first_transition)
   [@nontail]
 ;;
 

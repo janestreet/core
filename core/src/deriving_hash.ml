@@ -1,7 +1,7 @@
 open! Import
 include Deriving_hash_intf
 
-module%template.portable Of_deriving_hash
+module Of_deriving_hash
     (Repr : S)
     (M : sig
        type t

@@ -5,15 +5,11 @@ include struct
   open Bin_prot
 
   let bin_shape_t bin_shape_el = bin_shape_el
-
-  [%%template
-  [@@@mode.default m = (local, global)]
-
   let bin_size_t bin_size_el t = bin_size_el (get t |> Modes.Contended.cross)
 
   let bin_write_t bin_write_el buf ~pos t =
     bin_write_el buf ~pos (get t |> Modes.Contended.cross)
-  ;;]
+  ;;
 
   let bin_read_t bin_read_el buf ~pos_ref =
     make (bin_read_el buf ~pos_ref |> Modes.Portable.cross)

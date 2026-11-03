@@ -5,23 +5,21 @@ module Stable = struct
     module T = struct
       include Base.Char
 
-      type t = char
-      [@@deriving bin_io ~localize, sexp, sexp_grammar, stable_witness, typerep]
+      type t = char [@@deriving bin_io, sexp, sexp_grammar, stable_witness, typerep]
     end
 
     include T
-
-    include%template Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (T)
+    include Comparable.Stable.V1.With_stable_witness.Make (T)
   end
 end
 
-type t = char [@@deriving typerep, bin_io ~localize]
+type t = char [@@deriving typerep, bin_io]
 
-include%template
-  Identifiable.Extend [@mode local] [@modality portable]
+include
+  Identifiable.Extend
     (Base.Char)
     (struct
-      type t = char [@@deriving bin_io ~localize]
+      type t = char [@@deriving bin_io]
     end)
 
 (* include [Base.Char] after the application of [Identifiable.Extend] to replace the
@@ -39,15 +37,12 @@ module Caseless = struct
   module T = struct
     include Caseless
 
-    type t = char [@@deriving bin_io ~localize]
+    type t = char [@@deriving bin_io]
   end
 
   include T
-
-  include%template
-    Comparable.Make_binable_using_comparator [@mode local] [@modality portable] (T)
-
-  include%template Hashable.Make_binable [@modality portable] (T)
+  include Comparable.Make_binable_using_comparator (T)
+  include Hashable.Make_binable (T)
 end
 
 module Replace_polymorphic_compare = Base.Char

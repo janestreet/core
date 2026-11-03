@@ -1,30 +1,16 @@
 open! Import
-
-[%%template
-[@@@kind_set.define all_ks_non_value = base_non_value]
-
 include Base.Option
 
 (* We hide the constructors of the non-value types so that [None] does not get inferred as
    being e.g. the [float64] version below. This is the same as using [[%%rederive]],
    except we can't currently use [[%%rederive]] when we need the sig to be [@@ portable].
 *)
-  include%template (
-  struct
-    type 'a t = ('a Constructors.t[@kind k]) =
-      | None
-      | Some of 'a
-    [@@deriving bin_io ~localize] [@@kind k = all_ks_non_value]
-  end :
-  sig
-    type 'a t = ('a Constructors.t[@kind k])
-    [@@deriving bin_io ~localize] [@@kind k = all_ks_non_value]
-  end)
+include (struct end : sig end)
 
-type 'a t = 'a option [@@deriving bin_io ~localize, typerep, stable_witness]
+type 'a t = 'a option [@@deriving bin_io, typerep, stable_witness]
 
-include%template Comparator.Derived [@modality portable] (struct
-    type nonrec 'a t = 'a t [@@deriving sexp_of, compare ~localize]
+include Comparator.Derived (struct
+    type nonrec 'a t = 'a t [@@deriving sexp_of, compare]
   end)
 
 let validate ~none ~some t =
@@ -33,24 +19,14 @@ let validate ~none ~some t =
   | Some x -> Validate.name "some" (Validate.protect some x)
 ;;
 
-[%%template
-[@@@mode.default p = (nonportable, portable)]
-
-let quickcheck_generator = (Base_quickcheck.Generator.option [@mode p])
-let quickcheck_observer = (Base_quickcheck.Observer.option [@mode p])
-let quickcheck_shrinker = (Base_quickcheck.Shrinker.option [@mode p])]
+let quickcheck_generator = Base_quickcheck.Generator.option
+let quickcheck_observer = Base_quickcheck.Observer.option
+let quickcheck_shrinker = Base_quickcheck.Shrinker.option
 
 module Stable = struct
   module V1 = struct
     type nonrec 'a t = 'a t
-    [@@deriving
-      bin_io ~localize
-      , compare ~localize
-      , equal ~localize
-      , hash
-      , sexp ~stackify
-      , sexp_grammar
-      , stable_witness]
+    [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar, stable_witness]
   end
 end
 
@@ -71,7 +47,7 @@ module Optional_syntax = struct
 
     [%%endif]
 
-    let%template unsafe_value : type a. a t -> a = unbox [@@mode m = (global, local)]
+    let unsafe_value : type a. a t -> a = unbox
     let is_none = is_none
   end
-end]
+end

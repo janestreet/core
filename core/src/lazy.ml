@@ -6,14 +6,11 @@ module Stable = struct
     open Sexplib.Std
 
     type 'a t = 'a lazy_t
-    [@@deriving
-      bin_io ~localize, quickcheck, sexp ~stackify, sexp_grammar, typerep, stable_witness]
+    [@@deriving bin_io, quickcheck, sexp, sexp_grammar, typerep, stable_witness]
 
     let map = Base.Lazy.map
     let compare = Base.Lazy.compare
-    let compare__local = Base.Lazy.compare__local
     let equal = Base.Lazy.equal
-    let equal__local = Base.Lazy.equal__local
   end
 end
 

@@ -13,14 +13,7 @@ module Stable = struct
     module Without_comparable = struct
       module T : sig
         type t
-        [@@deriving
-          bin_io ~localize
-          , compare ~localize
-          , equal ~localize
-          , globalize
-          , hash
-          , typerep
-          , stable_witness]
+        [@@deriving bin_io, compare, equal, globalize, hash, typerep, stable_witness]
         [@@immediate]
 
         val create_exn : y:int -> m:Month.Stable.V1.t -> d:int -> t [@@zero_alloc]
@@ -47,8 +40,8 @@ module Stable = struct
         *)
         type t = int
         [@@deriving
-          compare ~localize
-          , equal ~localize
+          compare
+          , equal
           , globalize
           , hash
           , typerep
@@ -114,20 +107,23 @@ module Stable = struct
           { Bin_prot.Type_class.read = bin_read_t; vtag_read = __bin_read_t__ }
         ;;
 
-        let bin_size_t__local t =
+        let bin_size_t_internal t =
           Int.bin_size_t (year t) + Month.bin_size_t (month t) + Int.bin_size_t (day t)
         ;;
 
-        let bin_size_t t = bin_size_t__local t
+        let bin_size_t t = bin_size_t_internal t
 
-        let bin_write_t__local buf ~pos t =
+        let bin_write_t_internal buf ~pos t =
           let pos = Int.bin_write_t buf ~pos (year t) in
           let pos = Month.bin_write_t buf ~pos (month t) in
           Int.bin_write_t buf ~pos (day t)
         ;;
 
-        let bin_write_t buf ~pos t = bin_write_t__local buf ~pos t
-        let bin_writer_t = { Bin_prot.Type_class.size = bin_size_t; write = bin_write_t }
+        let bin_write_t buf ~pos t = bin_write_t_internal buf ~pos t
+
+        let bin_writer_t : t Bin_prot.Type_class.writer =
+          { size = bin_size_t; write = bin_write_t }
+        ;;
 
         let bin_t =
           { Bin_prot.Type_class.reader = bin_reader_t
@@ -147,44 +143,38 @@ module Stable = struct
 
       include T
 
-      [%%template
-      [@@@alloc.default a @ m = (heap_global, stack_local)]
-
       (** YYYY-MM-DD *)
       let to_string_iso8601_extended t =
-        (let buf = (Bytes.create [@alloc a]) 10 in
-         write_4_digit_int buf ~pos:0 (year t);
-         Bytes.set buf 4 '-';
-         write_2_digit_int buf ~pos:5 (Month.to_int (month t));
-         Bytes.set buf 7 '-';
-         write_2_digit_int buf ~pos:8 (day t);
-         Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf)
-        [@exclave_if_stack a]
+        let buf = Bytes.create 10 in
+        write_4_digit_int buf ~pos:0 (year t);
+        Bytes.set buf 4 '-';
+        write_2_digit_int buf ~pos:5 (Month.to_int (month t));
+        Bytes.set buf 7 '-';
+        write_2_digit_int buf ~pos:8 (day t);
+        Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf
       ;;
 
-      let to_string = (to_string_iso8601_extended [@alloc a])
+      let to_string = to_string_iso8601_extended
 
       (** YYYYMMDD *)
       let to_string_iso8601_basic t =
-        (let buf = (Bytes.create [@alloc a]) 8 in
-         write_4_digit_int buf ~pos:0 (year t);
-         write_2_digit_int buf ~pos:4 (Month.to_int (month t));
-         write_2_digit_int buf ~pos:6 (day t);
-         Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf)
-        [@exclave_if_stack a]
+        let buf = Bytes.create 8 in
+        write_4_digit_int buf ~pos:0 (year t);
+        write_2_digit_int buf ~pos:4 (Month.to_int (month t));
+        write_2_digit_int buf ~pos:6 (day t);
+        Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf
       ;;
 
       (** MM/DD/YYYY *)
       let to_string_american t =
-        (let buf = (Bytes.create [@alloc a]) 10 in
-         write_2_digit_int buf ~pos:0 (Month.to_int (month t));
-         Bytes.set buf 2 '/';
-         write_2_digit_int buf ~pos:3 (day t);
-         Bytes.set buf 5 '/';
-         write_4_digit_int buf ~pos:6 (year t);
-         Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf)
-        [@exclave_if_stack a]
-      ;;]
+        let buf = Bytes.create 10 in
+        write_2_digit_int buf ~pos:0 (Month.to_int (month t));
+        Bytes.set buf 2 '/';
+        write_2_digit_int buf ~pos:3 (day t);
+        Bytes.set buf 5 '/';
+        write_4_digit_int buf ~pos:6 (year t);
+        Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf
+      ;;
 
       let parse_year4 str pos = read_4_digit_int str ~pos
       let parse_month str pos = Month.of_int_exn (read_2_digit_int str ~pos)
@@ -280,9 +270,7 @@ module Stable = struct
           | Invalid_argument a -> of_sexp_error a s
         ;;
 
-        let%template[@alloc a = (heap, stack)] sexp_of_t t =
-          Sexp.Atom (to_string t) [@exclave_if_stack a]
-        ;;
+        let sexp_of_t t = Sexp.Atom (to_string t)
 
         let t_sexp_grammar =
           let open Sexplib in
@@ -294,31 +282,23 @@ module Stable = struct
       end
 
       include Sexpable
-
-      include%template
-        (val (Comparator.Stable.V1.make [@mode portable]) ~compare ~sexp_of_t)
+      include (val Comparator.Stable.V1.make ~compare ~sexp_of_t)
     end
 
     include Without_comparable
-
-    include%template
-      Comparable.Stable.V1.With_stable_witness.Make [@modality portable]
-        (Without_comparable)
-
-    include%template
-      Hashable.Stable.V1.With_stable_witness.Make [@modality portable] (Without_comparable)
-
-    include%template Diffable.Atomic.Make [@modality portable] (Without_comparable)
+    include Comparable.Stable.V1.With_stable_witness.Make (Without_comparable)
+    include Hashable.Stable.V1.With_stable_witness.Make (Without_comparable)
+    include Diffable.Atomic.Make (Without_comparable)
   end
 
   module Option = struct
     module V1 = struct
       type t = int
       [@@deriving
-        bin_io ~localize
+        bin_io
         , bin_shape ~basetype:"826a3e79-3321-451a-9707-ed6c03b84e2f"
-        , compare ~localize
-        , equal ~localize
+        , compare
+        , equal
         , globalize
         , hash
         , typerep
@@ -330,10 +310,7 @@ module Stable = struct
       let some_is_representable _ = true
       let some t = V1.to_int t
       let unchecked_value t = V1.of_int_unchecked t
-
-      let%template[@alloc a = (heap, stack)] to_option t =
-        (if is_some t then Some (unchecked_value t) else None) [@exclave_if_stack a]
-      ;;
+      let to_option t = if is_some t then Some (unchecked_value t) else None
 
       let of_option opt =
         match opt with
@@ -348,13 +325,7 @@ module Stable = struct
       ;;
 
       let value t ~default = Bool.select (is_none t) default (unchecked_value t)
-
-      let%template[@alloc a = (heap, stack)] sexp_of_t t =
-        ((to_option [@alloc a]) t
-         |> (Option.sexp_of_t [@alloc a]) (V1.sexp_of_t [@alloc a]))
-        [@exclave_if_stack a]
-      ;;
-
+      let sexp_of_t t = to_option t |> Option.sexp_of_t V1.sexp_of_t
       let t_of_sexp sexp = (Option.t_of_sexp V1.t_of_sexp) sexp |> of_option
       let t_sexp_grammar = Sexplib.Sexp_grammar.coerce [%sexp_grammar: V1.t Option.t]
 
@@ -371,14 +342,10 @@ end
 
 module Without_comparable = Stable.V1.Without_comparable
 include Without_comparable
-
-module%template C =
-  Comparable.Make_binable_using_comparator [@mode local] [@modality portable]
-    (Without_comparable)
-
+module C = Comparable.Make_binable_using_comparator (Without_comparable)
 include C
 
-include%template Diffable.Atomic.Make [@modality portable] (struct
+include Diffable.Atomic.Make (struct
     include Without_comparable
     include C
   end)
@@ -391,8 +358,8 @@ module O = struct
     end)
 end
 
-include%template (
-  Hashable.Make_binable [@modality portable] (struct
+include (
+  Hashable.Make_binable (struct
     include T
     include Sexpable
     include Binable
@@ -403,7 +370,7 @@ include%template (
     include Hashable.S_binable with type t := t
   end)
 
-include%template Pretty_printer.Register [@modality portable] (struct
+include Pretty_printer.Register (struct
     type nonrec t = t
 
     let module_name = "Core.Date"
@@ -735,7 +702,7 @@ let all_dates_in_month ~year ~month =
 module For_quickcheck = struct
   open Base_quickcheck
 
-  let%template gen_uniform_incl d1 d2 =
+  let gen_uniform_incl d1 d2 =
     if d1 > d2
     then
       raise_s
@@ -743,25 +710,18 @@ module For_quickcheck = struct
           "Date.gen_uniform_incl: bounds are crossed"
             ~lower_bound:(d1 : t)
             ~upper_bound:(d2 : t)];
-    (Generator.map [@mode portable])
+    Generator.map
       (Generator.int_uniform_inclusive 0 (diff d2 d1))
       ~f:(fun days -> add_days d1 days)
   ;;
 
-  let%template gen_incl d1 d2 =
-    (Generator.weighted_union [@mode portable])
-      [ 1., (Generator.return [@mode portable]) d1
-      ; 1., (Generator.return [@mode portable]) d2
-      ; 18., gen_uniform_incl d1 d2
-      ]
+  let gen_incl d1 d2 =
+    Generator.weighted_union
+      [ 1., Generator.return d1; 1., Generator.return d2; 18., gen_uniform_incl d1 d2 ]
   ;;
 
   let quickcheck_generator = gen_incl (of_string "1900-01-01") (of_string "2100-01-01")
-
-  let%template quickcheck_observer =
-    (Observer.create [@mode portable]) (fun t ~size:_ ~hash -> hash_fold_t hash t)
-  ;;
-
+  let quickcheck_observer = Observer.create (fun t ~size:_ ~hash -> hash_fold_t hash t)
   let quickcheck_shrinker = Shrinker.atomic
 end
 
@@ -783,8 +743,7 @@ module Option = struct
   module Stable = Stable.Option
   include Stable.V1
 
-  include%template
-    Immediate_option.Provide_or_null_conversions_zero_alloc [@modality portable] (struct
+  include Immediate_option.Provide_or_null_conversions_zero_alloc (struct
       type nonrec t = t
       type nonrec value = value
 
@@ -801,24 +760,22 @@ module Option = struct
     end
   end
 
-  let%template quickcheck_generator =
-    (Quickcheck.Generator.map [@mode portable])
-      ((Option.quickcheck_generator [@mode portable]) quickcheck_generator)
+  let quickcheck_generator =
+    Quickcheck.Generator.map
+      (Option.quickcheck_generator quickcheck_generator)
       ~f:of_option
   ;;
 
-  let%template quickcheck_shrinker =
-    (Quickcheck.Shrinker.map [@mode portable])
-      ((Option.quickcheck_shrinker [@mode portable]) quickcheck_shrinker)
+  let quickcheck_shrinker =
+    Quickcheck.Shrinker.map
+      (Option.quickcheck_shrinker quickcheck_shrinker)
       ~f:of_option
       ~f_inverse:to_option
   ;;
 
-  let%template quickcheck_observer =
-    (Base_quickcheck.Observer.of_hash_fold [@mode portable]) hash_fold_t
-  ;;
+  let quickcheck_observer = Base_quickcheck.Observer.of_hash_fold hash_fold_t
 
-  include%template Comparable.Make_plain [@mode local] [@modality portable] (struct
-      type nonrec t = t [@@deriving compare ~localize, sexp_of]
+  include Comparable.Make_plain (struct
+      type nonrec t = t [@@deriving compare, sexp_of]
     end)
 end

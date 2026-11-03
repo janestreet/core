@@ -19,28 +19,25 @@ module Without_comparator = Map.Without_comparator
 module Tree = Map.Using_comparator.Tree
 module Hashtbl = Base.Hashtbl
 
-[%%template
-[@@@mode.default m = (local, global)]
-
 module type Key_plain = sig
-  type t [@@deriving (compare [@mode.explicit m]), sexp_of]
+  type t [@@deriving compare, sexp_of]
 end
 
 module type Key = sig
-  type t [@@deriving (compare [@mode.explicit m]), sexp]
+  type t [@@deriving compare, sexp]
 end
 
 module type Key_binable = sig
-  type t [@@deriving bin_io, (compare [@mode.explicit m]), sexp]
+  type t [@@deriving bin_io, compare, sexp]
 end
 
 module type Key_hashable = sig
-  type t [@@deriving (compare [@mode.explicit m]), hash, sexp]
+  type t [@@deriving compare, hash, sexp]
 end
 
 module type Key_binable_hashable = sig
-  type t [@@deriving bin_io, (compare [@mode.explicit m]), hash, sexp]
-end]
+  type t [@@deriving bin_io, compare, hash, sexp]
+end
 
 module Key_bin_io = struct
   module type S = sig
@@ -158,15 +155,15 @@ module type S_plain_tree = sig
     with type ('a, 'b, 'c) access_options := ('a, 'b, 'c) Without_comparator.t
 end
 
-module type%template [@modality p = (portable, nonportable)] S_plain = sig
+module type S_plain = sig
   module Key : sig
     type t [@@deriving sexp_of]
 
-    include Comparator.S [@modality p] with type t := t
+    include Comparator.S with type t := t
   end
 
   type +'a t = (Key.t, 'a, Key.comparator_witness) Map.t
-  [@@deriving compare ~localize, equal ~localize, sexp_of]
+  [@@deriving compare, equal, sexp_of]
 
   include
     Creators_generic
@@ -206,11 +203,11 @@ module type%template [@modality p = (portable, nonportable)] S_plain = sig
         Without_comparator.t
 end
 
-module type%template [@modality p = (portable, nonportable)] S = sig
+module type S = sig
   module Key : sig
     type t [@@deriving sexp]
 
-    include Comparator.S [@modality p] with type t := t
+    include Comparator.S with type t := t
   end
 
   module Diff : sig
@@ -226,11 +223,11 @@ module type%template [@modality p = (portable, nonportable)] S = sig
   include Sexpable.S1 with type 'a t := 'a t
 end
 
-module type%template [@modality p = (portable, nonportable)] S_binable = sig
+module type S_binable = sig
   module Key : sig
     type t [@@deriving bin_io, sexp]
 
-    include Comparator.S [@modality p] with type t := t
+    include Comparator.S with type t := t
   end
 
   module Diff : sig
@@ -244,7 +241,7 @@ module type%template [@modality p = (portable, nonportable)] S_binable = sig
   end
 
   include S with module Key := Key and module Diff := Diff
-  include Binable.S1 [@mode local] with type 'a t := 'a t
+  include Binable.S1 with type 'a t := 'a t
 end
 
 module type For_deriving = sig
@@ -259,18 +256,15 @@ module type For_deriving = sig
 
   val bin_shape_m__t : ('a, 'c) Key_bin_io.t -> Bin_prot.Shape.t -> Bin_prot.Shape.t
 
-  [%%template:
-  [@@@mode.default m = (global, local)]
-
   val bin_size_m__t
     :  ('a, 'c) Key_bin_io.t
-    -> ('b Bin_prot.Size.sizer[@mode m])
-    -> (('a, 'b, 'c) t Bin_prot.Size.sizer[@mode m])
+    -> 'b Bin_prot.Size.sizer
+    -> ('a, 'b, 'c) t Bin_prot.Size.sizer
 
   val bin_write_m__t
     :  ('a, 'c) Key_bin_io.t
-    -> ('b Bin_prot.Write.writer[@mode m])
-    -> (('a, 'b, 'c) t Bin_prot.Write.writer[@mode m])]
+    -> 'b Bin_prot.Write.writer
+    -> ('a, 'b, 'c) t Bin_prot.Write.writer
 
   val bin_read_m__t
     :  ('a, 'c) Key_bin_io.t
@@ -307,9 +301,6 @@ module type For_deriving = sig
     val quickcheck_shrinker : t Quickcheck.Shrinker.t
   end
 
-  [%%template:
-  [@@@mode.default p = (portable, nonportable)]
-
   val quickcheck_generator_m__t
     : 'k 'v 'cmp.
     (module Quickcheck_generator_m with type t = 'k and type comparator_witness = 'cmp)
@@ -325,7 +316,7 @@ module type For_deriving = sig
     : 'k 'v 'cmp.
     (module Quickcheck_shrinker_m with type t = 'k and type comparator_witness = 'cmp)
     -> 'v Quickcheck.Shrinker.t
-    -> ('k, 'v, 'cmp) t Quickcheck.Shrinker.t]
+    -> ('k, 'v, 'cmp) t Quickcheck.Shrinker.t
 end
 
 module type For_deriving_stable = sig

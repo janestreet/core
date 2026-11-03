@@ -24,24 +24,14 @@ module type S = sig
   type underlying
 
   type t = private underlying
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , sexp ~stackify
-    , sexp_grammar
-    , typerep]
+  [@@deriving bin_io, compare, equal, globalize, sexp, sexp_grammar, typerep]
 
-  include%template Comparable_binable [@mode local] with type t := t
-
+  include Comparable_binable with type t := t
   include Hashable_binable with type t := t
   include Diffable.S_atomic with type t := t
   include Pretty_printer.S with type t := t
   include Robustly_comparable with type t := t
-
-  include%template Quickcheck.S_range [@mode portable] with type t := t
-
+  include Quickcheck.S_range with type t := t
   module Span : Span_intf.S
 
   module O : sig
@@ -64,7 +54,7 @@ module type S = sig
       [of_string] also fully supports 24h wall-clock times.
 
       [to_string] only produces the 24h format. *)
-  include%template Stringable.S [@alloc stack] with type t := t
+  include Stringable.S with type t := t
 
   val create
     :  ?hr:int
@@ -143,19 +133,16 @@ module type S = sig
   (** Trailing groups of zeroes are trimmed such that the output is printed in terms of
       the smallest non-zero units among nanoseconds, microseconds, milliseconds, or
       seconds; or minutes if all of the above are zero. *)
-  val%template to_string_trimmed : t -> string
-  [@@alloc a @ m = (stack_local, heap_global)]
+  val to_string_trimmed : t -> string
 
   (** HH:MM:SS, without any subsecond components. Seconds appear even if they are zero. *)
-  val%template to_sec_string : t -> string
-  [@@alloc a @ m = (stack_local, heap_global)]
+  val to_sec_string : t -> string
 
   (** 24-hour times according to the ISO 8601 standard. This function can raise. *)
   val of_string_iso8601_extended : ?pos:int -> ?len:int -> string -> t
 
   (** with milliseconds *)
-  val%template to_millisecond_string : t -> string
-  [@@alloc a @ m = (stack_local, heap_global)]
+  val to_millisecond_string : t -> string
 
   val to_millisec_string : t -> string
   [@@deprecated "[since 2018-04] use [to_millisecond_string] instead"]

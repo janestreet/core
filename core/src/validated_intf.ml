@@ -21,7 +21,7 @@
 open! Import
 
 module type Raw = sig
-  type t [@@deriving sexp ~stackify]
+  type t [@@deriving sexp]
 
   (** [here] will appear in validation-failure error messages. *)
   val here : Source_code_position.t
@@ -29,11 +29,8 @@ module type Raw = sig
   val validate : t Validate.check
 end
 
-[%%template
-[@@@mode.default m = (global, local)]
-
 module type Raw_bin_io = sig
-  type t [@@deriving bin_io [@mode m]]
+  type t [@@deriving bin_io]
 
   include Raw with type t := t
 
@@ -53,16 +50,16 @@ module type Raw_bin_io = sig
 end
 
 module type Raw_bin_io_compare_hash_sexp = sig
-  type t [@@deriving (compare [@mode.explicit m]), hash]
+  type t [@@deriving compare, hash]
 
-  include Raw_bin_io [@mode m] with type t := t
+  include Raw_bin_io with type t := t
 end
 
 module type Raw_bin_io_compare_globalize_hash_sexp = sig
   type t [@@deriving globalize]
 
-  include Raw_bin_io_compare_hash_sexp [@mode m] with type t := t
-end]
+  include Raw_bin_io_compare_hash_sexp with type t := t
+end
 
 (** [S_allowing_substitution] is the same as [S], but allows writing interfaces like:
 
@@ -82,13 +79,11 @@ module type S_allowing_substitution = sig
   type ('raw, 'witness) validated
   type witness
   type raw
-  type t [@@deriving sexp ~stackify]
+  type t [@@deriving sexp]
 
   val create : raw -> t Or_error.t
   val create_exn : raw -> t
-
-  val%template raw : t -> raw [@@mode m = (global, local)]
-
+  val raw : t -> raw
   val create_stable_witness : raw Stable_witness.t -> t Stable_witness.t
   val type_equal : (t, (raw, witness) validated) Type_equal.t
 end
@@ -107,14 +102,11 @@ module type S = sig
      and type ('raw, 'witness) validated := ('raw, 'witness) validated
 end
 
-[%%template
-[@@@mode.default m = (global, local)]
-
 module type S_bin_io = sig
   include S
 
   include sig
-      type t = (raw, witness) validated [@@deriving bin_io [@mode m]]
+      type t = (raw, witness) validated [@@deriving bin_io]
     end
     with type t := t
 end
@@ -123,25 +115,24 @@ module type S_bin_io_compare_hash_sexp = sig
   include S
 
   include sig
-      type t = (raw, witness) validated
-      [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), hash]
+      type t = (raw, witness) validated [@@deriving bin_io, compare, hash]
     end
     with type t := t
 end
 
 module type S_bin_io_compare_globalize_hash_sexp = sig
-  include S_bin_io_compare_hash_sexp [@mode m]
+  include S_bin_io_compare_hash_sexp
 
   include sig
       type t = (raw, witness) validated [@@deriving globalize]
     end
     with type t := t
-end]
+end
 
 module type Validated = sig
   type ('raw, 'witness) t = private 'raw
 
-  val%template raw : ('raw, _) t -> 'raw [@@mode m = (global, local)]
+  val raw : ('raw, _) t -> 'raw
 
   module type Raw = Raw
   module type S = S with type ('a, 'b) validated := ('a, 'b) t
@@ -149,53 +140,45 @@ module type Validated = sig
   module type S_allowing_substitution =
     S_allowing_substitution with type ('a, 'b) validated := ('a, 'b) t
 
-  module%template.portable Make (Raw : Raw) : S with type raw := Raw.t
+  module Make (Raw : Raw) : S with type raw := Raw.t
 
-  [%%template:
-  [@@@mode.default m = (global, local)]
-
-  module type S_bin_io = S_bin_io [@mode m] with type ('a, 'b) validated := ('a, 'b) t
+  module type S_bin_io = S_bin_io with type ('a, 'b) validated := ('a, 'b) t
 
   module type S_bin_io_compare_hash_sexp =
-    S_bin_io_compare_hash_sexp [@mode m] with type ('a, 'b) validated := ('a, 'b) t
+    S_bin_io_compare_hash_sexp with type ('a, 'b) validated := ('a, 'b) t
 
   module type S_bin_io_compare_globalize_hash_sexp =
-    S_bin_io_compare_globalize_hash_sexp
-    [@mode m]
-    with type ('a, 'b) validated := ('a, 'b) t
+    S_bin_io_compare_globalize_hash_sexp with type ('a, 'b) validated := ('a, 'b) t
 
-  module%template.portable Make_binable (Raw : Raw_bin_io [@mode m]) :
-    S_bin_io [@mode m] with type raw := Raw.t
+  module Make_binable (Raw : Raw_bin_io) : S_bin_io with type raw := Raw.t
 
   (** [Make_bin_io_compare_hash_sexp] is useful for stable types. *)
-  module%template.portable Make_bin_io_compare_hash_sexp
-      (Raw : Raw_bin_io_compare_hash_sexp
-    [@mode m]) : S_bin_io_compare_hash_sexp [@mode m] with type raw := Raw.t
+  module Make_bin_io_compare_hash_sexp (Raw : Raw_bin_io_compare_hash_sexp) :
+    S_bin_io_compare_hash_sexp with type raw := Raw.t
 
-  module%template.portable Make_bin_io_compare_globalize_hash_sexp
-      (Raw : Raw_bin_io_compare_globalize_hash_sexp
-    [@mode m]) : S_bin_io_compare_globalize_hash_sexp [@mode m] with type raw := Raw.t
+  module Make_bin_io_compare_globalize_hash_sexp
+      (Raw : Raw_bin_io_compare_globalize_hash_sexp) :
+    S_bin_io_compare_globalize_hash_sexp with type raw := Raw.t
 
-  module%template.portable Add_bin_io
-      (Raw : Raw_bin_io
-    [@mode m])
+  module Add_bin_io
+      (Raw : Raw_bin_io)
       (Validated : S with type raw := Raw.t) : sig
       type t [@@deriving bin_io]
     end
     with type t := Validated.t
 
-  module%template.portable Add_compare
+  module Add_compare
       (Raw : sig
-         type t [@@deriving compare [@mode.explicit m]]
+         type t [@@deriving compare]
 
          include Raw with type t := t
        end)
       (Validated : S with type raw := Raw.t) : sig
-      type t [@@deriving compare [@mode.explicit m]]
+      type t [@@deriving compare]
     end
-    with type t := Validated.t]
+    with type t := Validated.t
 
-  module%template.portable Add_hash
+  module Add_hash
       (Raw : sig
          type t [@@deriving hash]
 
@@ -206,7 +189,7 @@ module type Validated = sig
     end
     with type t := Validated.t
 
-  module%template.portable Add_typerep
+  module Add_typerep
       (Raw : sig
          type t [@@deriving typerep]
 

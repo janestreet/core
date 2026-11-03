@@ -8,22 +8,11 @@ let arch_sixtyfour = Sys.word_size_in_bits = 64
 module Span = Span_ns
 
 type t = Span.t (* since the Unix epoch (1970-01-01 00:00:00 UTC) *)
-[@@deriving
-  bin_io ~localize
-  , compare ~localize ~zero_alloc
-  , equal ~localize ~zero_alloc
-  , globalize
-  , hash
-  , typerep]
+[@@deriving bin_io, compare ~zero_alloc, equal ~zero_alloc, globalize, hash, typerep]
 
 module Replace_polymorphic_compare_efficient = Span.Replace_polymorphic_compare
 include Replace_polymorphic_compare_efficient
-
-include (
-  Span :
-  sig
-    include Quickcheck.S_int with type t := t
-  end)
+include (Span : Quickcheck.S_int with type t := t)
 
 let[@zero_alloc] now t = Span.since_unix_epoch t
 let equal = Span.equal
@@ -287,12 +276,12 @@ end
 
 module Alternate_sexp = struct
   module T = struct
-    type nonrec t = t [@@deriving bin_io ~localize, compare ~localize, hash]
+    type nonrec t = t [@@deriving bin_io, compare, hash]
 
     module Ofday_as_span = struct
       open Int.O
 
-      let%template[@alloc a = (heap, stack)] seconds_to_string seconds_span =
+      let seconds_to_string seconds_span =
         let seconds = Span.to_int_sec seconds_span in
         let h = seconds / 3600 in
         let m = seconds / 60 % 60 in
@@ -325,7 +314,7 @@ module Alternate_sexp = struct
       let ns_of_10_ns = 10
       let ns_of_1_ns = 1
 
-      let%template[@alloc a = (heap, stack)] sub_second_to_string sub_second_span =
+      let sub_second_to_string sub_second_span =
         let open Int.O in
         let ns = Span.to_int63_ns sub_second_span |> Int63.to_int_exn in
         if ns = 0
@@ -371,14 +360,12 @@ module Alternate_sexp = struct
           Span.of_int63_ns (Int63.of_int (Int.of_string digits * multiplier)))
       ;;
 
-      let%template[@alloc a = (heap, stack)] to_string span =
-        (assert (Span.( >= ) span Span.zero && Span.( < ) span Span.day);
-         let seconds_span = span |> Span.to_int_sec |> Span.of_int_sec in
-         let sub_second_span = Span.( - ) span seconds_span in
-         let ( ^ ) = String.append [@alloc a] in
-         (seconds_to_string [@alloc a]) seconds_span
-         ^ (sub_second_to_string [@alloc a]) sub_second_span)
-        [@exclave_if_stack a]
+      let to_string span =
+        assert (Span.( >= ) span Span.zero && Span.( < ) span Span.day);
+        let seconds_span = span |> Span.to_int_sec |> Span.of_int_sec in
+        let sub_second_span = Span.( - ) span seconds_span in
+        let ( ^ ) = String.append in
+        seconds_to_string seconds_span ^ sub_second_to_string sub_second_span
       ;;
 
       let of_string string =
@@ -394,14 +381,10 @@ module Alternate_sexp = struct
       ;;
     end
 
-    let%template[@alloc a = (heap, stack)] to_string t =
-      (let date, span_since_start_of_day = Utc.to_date_and_span_since_start_of_day t in
-       let ( ^ ) = String.append [@alloc a] in
-       (Date.to_string [@alloc a]) date
-       ^ " "
-       ^ (Ofday_as_span.to_string [@alloc a]) span_since_start_of_day
-       ^ "Z")
-      [@exclave_if_stack a]
+    let to_string t =
+      let date, span_since_start_of_day = Utc.to_date_and_span_since_start_of_day t in
+      let ( ^ ) = String.append in
+      Date.to_string date ^ " " ^ Ofday_as_span.to_string span_since_start_of_day ^ "Z"
     ;;
 
     let of_string string =
@@ -412,10 +395,10 @@ module Alternate_sexp = struct
       Utc.of_date_and_span_since_start_of_day date ofday
     ;;
 
-    include%template Sexpable.Of_stringable [@modality portable] [@alloc stack] (struct
+    include Sexpable.Of_stringable (struct
         type nonrec t = t
 
-        let%template[@alloc a = (heap, stack)] to_string = (to_string [@alloc a])
+        let to_string = to_string
         let of_string = of_string
       end)
 
@@ -429,13 +412,11 @@ module Alternate_sexp = struct
   end
 
   include T
-
-  include%template Comparable.Make [@mode local] [@modality portable] (T)
-
+  include Comparable.Make (T)
   include Replace_polymorphic_compare_efficient
 
-  include%template Diffable.Atomic.Make [@modality portable] (struct
-      type nonrec t = t [@@deriving bin_io, equal ~localize, sexp]
+  include Diffable.Atomic.Make (struct
+      type nonrec t = t [@@deriving bin_io, equal, sexp]
     end)
 
   module Stable = struct
@@ -444,14 +425,7 @@ module Alternate_sexp = struct
         (* see tests in lib/core/test/src/test_time_ns that ensure stability of this
            representation *)
         type nonrec t = t
-        [@@deriving
-          bin_io ~localize
-          , compare ~localize
-          , equal ~localize
-          , globalize
-          , hash
-          , sexp ~stackify
-          , sexp_grammar]
+        [@@deriving bin_io, compare, equal, globalize, hash, sexp, sexp_grammar]
 
         let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
 
@@ -461,11 +435,8 @@ module Alternate_sexp = struct
       end
 
       include T
-
-      include%template
-        Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (T)
-
-      include%template Diffable.Atomic.Make [@modality portable] (T)
+      include Comparable.Stable.V1.With_stable_witness.Make (T)
+      include Diffable.Atomic.Make (T)
     end
   end
 end
@@ -522,14 +493,9 @@ module To_and_of_string : sig
     -> string
     -> t
 
-  val%template to_string_abs : t -> zone:Zone.t -> string
-  [@@alloc a @ m = (heap_global, stack_local)]
-
+  val to_string_abs : t -> zone:Zone.t -> string
   val to_string_abs_trimmed : t -> zone:Zone.t -> string
-
-  val%template to_string_abs_parts : t -> zone:Zone.t -> string list
-  [@@alloc a @ m = (heap_global, stack_local)]
-
+  val to_string_abs_parts : t -> zone:Zone.t -> string list
   val to_string_iso8601_basic : t -> zone:Zone.t -> string
 
   val to_string_iso8601_extended
@@ -862,48 +828,40 @@ end = struct
       (to_span_since_epoch t)
   ;;
 
-  let%template[@alloc a @ m = (heap_global, stack_local)] offset_string time ~zone =
-    (let utc_offset = utc_offset time ~zone in
-     let is_utc = Span.( = ) utc_offset Span.zero in
-     if is_utc
-     then "Z"
-     else
-       (String.concat [@alloc a])
-         [ (if Span.( < ) utc_offset Span.zero then "-" else "+")
-         ; (Ofday_ns.to_string_trimmed [@alloc a])
-             (Ofday_ns.of_span_since_start_of_day_exn (Span.abs utc_offset))
-         ])
-    [@exclave_if_stack a]
+  let offset_string time ~zone =
+    let utc_offset = utc_offset time ~zone in
+    let is_utc = Span.( = ) utc_offset Span.zero in
+    if is_utc
+    then "Z"
+    else
+      String.concat
+        [ (if Span.( < ) utc_offset Span.zero then "-" else "+")
+        ; Ofday_ns.to_string_trimmed
+            (Ofday_ns.of_span_since_start_of_day_exn (Span.abs utc_offset))
+        ]
   ;;
 
-  let%template[@alloc a @ m = (heap_global, stack_local)] to_string_abs_parts_with_precision
-    ~precision
-    =
+  let to_string_abs_parts_with_precision ~precision =
     let attempt time ~zone =
-      (let date, ofday = to_date_ofday time ~zone in
-       let offset_string = (offset_string [@alloc a]) time ~zone in
-       let ofday_string =
-         match precision with
-         | `sec -> (Ofday_ns.to_sec_string [@alloc a]) ofday
-         | `ms -> (Ofday_ns.to_millisecond_string [@alloc a]) ofday
-         | `us -> (Ofday_ns.to_microsecond_string [@alloc a]) ofday
-         | `ns -> (Ofday_ns.to_nanosecond_string [@alloc a]) ofday
-       in
-       [ (Date.to_string [@alloc a]) date
-       ; (String.concat [@alloc a]) ~sep:"" [ ofday_string; offset_string ]
-       ])
-      [@exclave_if_stack a]
+      let date, ofday = to_date_ofday time ~zone in
+      let offset_string = offset_string time ~zone in
+      let ofday_string =
+        match precision with
+        | `sec -> Ofday_ns.to_sec_string ofday
+        | `ms -> Ofday_ns.to_millisecond_string ofday
+        | `us -> Ofday_ns.to_microsecond_string ofday
+        | `ns -> Ofday_ns.to_nanosecond_string ofday
+      in
+      [ Date.to_string date; String.concat ~sep:"" [ ofday_string; offset_string ] ]
     in
     fun time ~zone ->
-      try[@exclave_if_stack a] attempt time ~zone with
+      try attempt time ~zone with
       | (_ : exn) ->
         (* If we overflow applying the UTC offset, try again with UTC time. *)
         attempt time ~zone:Zone.utc
   ;;
 
-  let%template[@alloc a = (heap, stack)] to_string_abs_parts =
-    (to_string_abs_parts_with_precision [@alloc a]) ~precision:`ns
-  ;;
+  let to_string_abs_parts = to_string_abs_parts_with_precision ~precision:`ns
 
   let to_string_abs_trimmed time ~zone =
     let date, ofday = to_date_ofday time ~zone in
@@ -913,12 +871,7 @@ end = struct
       [ Date.to_string date; Ofday_ns.to_string_trimmed ofday ^ offset_string ]
   ;;
 
-  let%template[@alloc a = (heap, stack)] to_string_abs time ~zone =
-    (String.concat [@alloc a])
-      ~sep:" "
-      ((to_string_abs_parts [@alloc a]) ~zone time) [@exclave_if_stack a]
-  ;;
-
+  let to_string_abs time ~zone = String.concat ~sep:" " (to_string_abs_parts ~zone time)
   let to_string_utc t = to_string_abs t ~zone:Zone.utc
 
   let to_string_iso8601_extended ?(precision = `ns) ~zone time =
@@ -1068,11 +1021,7 @@ end
 
 include To_and_of_string
 
-let%template[@alloc a = (heap, stack)] to_string t =
-  (to_string_abs [@alloc a])
-    t
-    ~zone:(Portable_lazy.force Timezone.local_portable) [@exclave_if_stack a]
-;;
+let to_string t = to_string_abs t ~zone:(Portable_lazy.force Timezone.local_portable)
 
 exception Time_string_not_absolute of string [@@deriving sexp]
 
@@ -1090,12 +1039,12 @@ let of_string_gen ~if_no_timezone ?(find_zone = Timezone.find_exn) s =
 
 let of_string_abs s = of_string_gen ~if_no_timezone:`Fail s
 let of_string s = of_string_gen ~if_no_timezone:`Local s
-let%template arg_type = (Command.Arg_type.create [@mode portable]) of_string_abs
+let arg_type = Command.Arg_type.create of_string_abs
 
 module Ofday = struct
   include Ofday_ns
 
-  let%template arg_type = (Command.Arg_type.create [@mode portable]) of_string
+  let arg_type = Command.Arg_type.create of_string
 
   let[@zero_alloc] of_ofday_float_round_nearest_microsecond core =
     of_span_since_start_of_day_exn
@@ -1130,10 +1079,9 @@ module Ofday = struct
   module Zoned = struct
     type t =
       { ofday : Ofday_ns.t
-      ; zone : Timezone.t
+      ; zone : Timezone.t [@globalized]
       }
-    [@@deriving
-      bin_io, fields ~getters ~local_getters, compare ~localize, equal ~localize, hash]
+    [@@deriving bin_io, compare, equal, fields ~getters ~local_getters, globalize, hash]
 
     type sexp_repr = Ofday_ns.t * Timezone.t [@@deriving sexp, sexp_grammar]
 
@@ -1149,6 +1097,21 @@ module Ofday = struct
     let create ofday zone = { ofday; zone }
     let create_local ofday = create ofday (Portable_lazy.force Timezone.local_portable)
 
+    let add t span =
+      match Ofday_ns.add t.ofday span with
+      | None -> None
+      | Some ofday -> Some { t with ofday }
+    ;;
+
+    let sub t span =
+      match Ofday_ns.sub t.ofday span with
+      | None -> None
+      | Some ofday -> Some { t with ofday }
+    ;;
+
+    let add_exn t span = { t with ofday = Ofday_ns.add_exn t.ofday span }
+    let sub_exn t span = { t with ofday = Ofday_ns.sub_exn t.ofday span }
+
     let of_string string : t =
       match String.rsplit2 string ~on:' ' with
       | Some (ofday, zone) ->
@@ -1160,14 +1123,18 @@ module Ofday = struct
       String.concat [ Ofday_ns.to_string t.ofday; " "; Timezone.to_string t.zone ]
     ;;
 
-    let%template arg_type = (Command.Arg_type.create [@mode portable]) of_string
+    let to_string_trimmed (t : t) : string =
+      String.concat [ Ofday_ns.to_string_trimmed t.ofday; " "; Timezone.to_string t.zone ]
+    ;;
+
+    let arg_type = Command.Arg_type.create of_string
 
     module With_nonchronological_compare = struct
       type nonrec t = t
-      [@@deriving bin_io, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+      [@@deriving bin_io, compare, equal, globalize, hash, sexp, sexp_grammar]
     end
 
-    include%template Pretty_printer.Register [@modality portable] (struct
+    include Pretty_printer.Register (struct
         type nonrec t = t
 
         let to_string = to_string
@@ -1176,35 +1143,23 @@ module Ofday = struct
 
     module Stable = struct
       module V1 = struct
-        [%%rederive
-          type t = With_nonchronological_compare.t
-          [@@deriving compare ~localize ~portable, equal ~localize ~portable]]
+        [%%rederive type t = With_nonchronological_compare.t [@@deriving compare, equal]]
 
         module Bin_repr = struct
           type nonrec t = t =
             { ofday : Ofday_ns.Stable.V1.t
             ; zone : Timezone.Stable.V1.t
             }
-          [@@deriving bin_io ~localize, stable_witness]
+          [@@deriving bin_io, stable_witness]
         end
 
-        include%template
-          Binable.Of_binable_without_uuid
-            [@mode local]
-            [@modality portable]
-            [@alert "-legacy"]
+        include
+          Binable.Of_binable_without_uuid [@alert "-legacy"]
             (Bin_repr)
             (struct
               type nonrec t = t
 
-              let%template[@alloc a @ m = (heap_global, stack_local)] to_binable t
-                : Bin_repr.t
-                =
-                { ofday = (ofday [@mode m]) t; zone = (zone [@mode m]) t }
-                [@exclave_if_stack a]
-              ;;
-
-              let%template[@mode local] to_binable = (to_binable [@alloc stack])
+              let to_binable t : Bin_repr.t = { ofday = ofday t; zone = zone t }
               let of_binable (repr : Bin_repr.t) = create repr.ofday repr.zone
             end)
 
@@ -1228,11 +1183,8 @@ module Ofday = struct
   end
 
   module Option = struct
-    type ofday = t [@@deriving sexp, compare ~localize]
-
-    type t = Span.Option.t
-    [@@deriving
-      bin_io ~localize, compare ~localize, equal ~localize, globalize, hash, typerep]
+    type ofday = t [@@deriving sexp, compare]
+    type t = Span.Option.t [@@deriving bin_io, compare, equal, globalize, hash, typerep]
 
     let none = Span.Option.none
     let[@zero_alloc] some t = Span.Option.some (to_span_since_start_of_day t)
@@ -1269,12 +1221,9 @@ module Ofday = struct
       | Some t -> some t
     ;;
 
-    let%template[@alloc a = (heap, stack)] to_option t =
-      (if is_none t then None else Some (value_exn t)) [@exclave_if_stack a]
-    ;;
+    let to_option t = if is_none t then None else Some (value_exn t)
 
-    include%template
-      Immediate_option.Provide_or_null_conversions_zero_alloc [@modality portable] (struct
+    include Immediate_option.Provide_or_null_conversions_zero_alloc (struct
         type nonrec t = t
         type value = ofday
 
@@ -1287,21 +1236,21 @@ module Ofday = struct
     (* Can't use the quickcheck generator and shrinker inherited from [Span.Option]
        because they may produce spans whose representation is larger than
        [start_of_next_day] *)
-    let%template quickcheck_generator : t Quickcheck.Generator.t =
-      (Base_quickcheck.Generator.map [@mode portable])
+    let quickcheck_generator : t Quickcheck.Generator.t =
+      Base_quickcheck.Generator.map
         ~f:of_option
-        ((quickcheck_generator_option [@mode portable])
-           ((Base_quickcheck.Generator.filter [@mode portable])
+        (quickcheck_generator_option
+           (Base_quickcheck.Generator.filter
               ~f:some_is_representable
               Ofday_ns.quickcheck_generator))
     ;;
 
-    let%template quickcheck_shrinker : t Quickcheck.Shrinker.t =
-      (Quickcheck.Shrinker.map [@mode portable])
+    let quickcheck_shrinker : t Quickcheck.Shrinker.t =
+      Quickcheck.Shrinker.map
         ~f:of_option
         ~f_inverse:to_option
-        ((quickcheck_shrinker_option [@mode portable])
-           ((Base_quickcheck.Shrinker.filter [@mode portable])
+        (quickcheck_shrinker_option
+           (Base_quickcheck.Shrinker.filter
               ~f:some_is_representable
               Ofday_ns.quickcheck_shrinker))
     ;;
@@ -1318,40 +1267,33 @@ module Ofday = struct
     module Stable = struct
       module V1 = struct
         module T = struct
-          type nonrec t = t
-          [@@deriving bin_io ~localize, compare ~localize, equal ~localize, globalize]
+          type nonrec t = t [@@deriving bin_io, compare, equal, globalize]
 
           let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
-
-          let%template[@alloc a = (heap, stack)] sexp_of_t t =
-            [%sexp ((to_option [@alloc a]) t : Ofday_ns.Stable.V1.t option)]
-            [@alloc a] [@exclave_if_stack a]
-          ;;
-
+          let sexp_of_t t = [%sexp (to_option t : Ofday_ns.Stable.V1.t option)]
           let t_of_sexp s = of_option ([%of_sexp: Ofday_ns.Stable.V1.t option] s)
           let to_int63 t = Span.Option.Stable.V1.to_int63 t
           let of_int63_exn t = Span.Option.Stable.V1.of_int63_exn t
         end
 
         include T
+        include Comparator.Stable.V1.Make (T)
 
-        include%template Comparator.Stable.V1.Make [@modality portable] (T)
-
-        include%template Diffable.Atomic.Make [@modality portable] (struct
-            type nonrec t = t [@@deriving sexp, bin_io, equal ~localize]
+        include Diffable.Atomic.Make (struct
+            type nonrec t = t [@@deriving sexp, bin_io, equal]
           end)
       end
     end
 
-    let%template[@alloc a = (heap, stack)] sexp_of_t = (Stable.V1.sexp_of_t [@alloc a])
+    let sexp_of_t = Stable.V1.sexp_of_t
     let t_of_sexp = Stable.V1.t_of_sexp
 
-    include%template Identifiable.Make [@mode local] [@modality portable] (struct
-        type nonrec t = t [@@deriving sexp, compare ~localize, bin_io ~localize, hash]
+    include Identifiable.Make (struct
+        type nonrec t = t [@@deriving sexp, compare, bin_io, hash]
 
         let module_name = "Core.Time_ns.Ofday.Option"
 
-        include%template Sexpable.To_stringable [@modality portable] (struct
+        include Sexpable.To_stringable (struct
             type nonrec t = t [@@deriving sexp]
           end)
       end)
@@ -1362,8 +1304,8 @@ module Ofday = struct
         include Comparisons.S with type t := t
       end)
 
-    include%template Diffable.Atomic.Make [@modality portable] (struct
-        type nonrec t = t [@@deriving sexp, bin_io, equal ~localize]
+    include Diffable.Atomic.Make (struct
+        type nonrec t = t [@@deriving sexp, bin_io, equal]
       end)
   end
 end
@@ -1403,18 +1345,11 @@ let t_sexp_grammar : t Sexplib.Sexp_grammar.t =
   }
 ;;
 
-let%template[@alloc a @ m = (stack_local, heap_global)] sexp_of_t_abs t ~zone =
-  Sexp.List
-    ((List.map [@mode m] [@alloc a])
-       ((to_string_abs_parts [@alloc a]) ~zone t)
-       ~f:(fun s -> Sexp.Atom s [@exclave_if_stack a]))
-  [@exclave_if_stack a]
+let sexp_of_t_abs t ~zone =
+  Sexp.List (List.map (to_string_abs_parts ~zone t) ~f:(fun s -> Sexp.Atom s))
 ;;
 
-let%template[@alloc a = (heap, stack)] sexp_of_t t =
-  (sexp_of_t_abs [@alloc a]) ~zone:(get_sexp_zone ()) t [@exclave_if_stack a]
-;;
-
+let sexp_of_t t = sexp_of_t_abs ~zone:(get_sexp_zone ()) t
 let of_date_ofday_zoned date ofday_zoned = Ofday.Zoned.to_time_ns ofday_zoned date
 
 let to_date_ofday_zoned t ~zone =
@@ -1427,8 +1362,8 @@ let to_ofday_zoned t ~zone =
   Ofday.Zoned.create ofday zone
 ;;
 
-include%template Diffable.Atomic.Make [@modality portable] (struct
-    type nonrec t = t [@@deriving bin_io, equal ~localize, sexp]
+include Diffable.Atomic.Make (struct
+    type nonrec t = t [@@deriving bin_io, equal, sexp]
   end)
 
 (* Note: This is FIX standard millisecond precision. You should use
@@ -1480,15 +1415,7 @@ module Stable0 = struct
          stable conversion to make sure we don't change it. *)
 
       type nonrec t = t
-      [@@deriving
-        bin_io ~localize
-        , compare ~localize
-        , equal ~localize
-        , globalize
-        , hash
-        , quickcheck
-        , sexp ~stackify
-        , sexp_grammar]
+      [@@deriving bin_io, compare, equal, globalize, hash, quickcheck, sexp, sexp_grammar]
 
       let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
       let of_int63_exn t = of_span_since_epoch (Span.of_int63_ns t)
@@ -1497,31 +1424,23 @@ module Stable0 = struct
 
     module T = struct
       include T0
-      module%template Comparator = Comparator.Stable.V1.Make [@modality portable] (T0)
+      module Comparator = Comparator.Stable.V1.Make (T0)
       include Comparator
     end
 
     include T
-
-    include%template Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (T)
-    include%template Diffable.Atomic.Make [@modality portable] (T)
+    include Comparable.Stable.V1.With_stable_witness.Make (T)
+    include Diffable.Atomic.Make (T)
   end
 end
 
 include Stable0.V1.Comparator
 
 module Option = struct
-  type time = t [@@deriving compare ~localize]
+  type time = t [@@deriving compare]
 
   type t = Span.Option.t
-  [@@deriving
-    bin_io ~localize
-    , compare ~localize
-    , equal ~localize
-    , globalize
-    , hash
-    , typerep
-    , quickcheck]
+  [@@deriving bin_io, compare, equal, globalize, hash, typerep, quickcheck]
 
   let none = Span.Option.none
   let[@zero_alloc] some time = Span.Option.some (to_span_since_epoch time)
@@ -1549,12 +1468,9 @@ module Option = struct
     | Some t -> some t
   ;;
 
-  let%template[@alloc a = (heap, stack)] to_option t =
-    (if is_none t then None else Some (value_exn t)) [@exclave_if_stack a]
-  ;;
+  let to_option t = if is_none t then None else Some (value_exn t)
 
-  include%template
-    Immediate_option.Provide_or_null_conversions_zero_alloc [@modality portable] (struct
+  include Immediate_option.Provide_or_null_conversions_zero_alloc (struct
       type nonrec t = t
       type value = time
 
@@ -1573,7 +1489,7 @@ module Option = struct
 
   module Alternate_sexp = struct
     module T = struct
-      type nonrec t = t [@@deriving bin_io ~localize, compare ~localize, hash]
+      type nonrec t = t [@@deriving bin_io, compare, hash]
 
       let sexp_of_t t = [%sexp_of: Alternate_sexp.t option] (to_option t)
       let t_of_sexp s = of_option ([%of_sexp: Alternate_sexp.t option] s)
@@ -1584,28 +1500,19 @@ module Option = struct
     end
 
     include T
+    include Comparable.Make (T)
 
-    include%template Comparable.Make [@mode local] [@modality portable] (T)
-
-    include%template Diffable.Atomic.Make [@modality portable] (struct
+    include Diffable.Atomic.Make (struct
         include T
 
-        let%template[@mode m = local] equal = ([%compare.equal: t] [@mode m])
-        let equal = (equal [@mode local])
+        let equal = equal
       end)
 
     module Stable = struct
       module V1 = struct
         module T = struct
           type nonrec t = t
-          [@@deriving
-            bin_io ~localize
-            , compare ~localize
-            , equal ~localize
-            , globalize
-            , hash
-            , sexp
-            , sexp_grammar]
+          [@@deriving bin_io, compare, equal, globalize, hash, sexp, sexp_grammar]
 
           let stable_witness : t Stable_witness.t =
             Stable_witness.of_serializable
@@ -1620,15 +1527,12 @@ module Option = struct
         end
 
         include T
+        include Comparable.Stable.V1.With_stable_witness.Make (T)
 
-        include%template
-          Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (T)
-
-        include%template Diffable.Atomic.Make [@modality portable] (struct
+        include Diffable.Atomic.Make (struct
             include T
 
-            let%template[@mode m = local] equal = ([%compare.equal: t] [@mode m])
-            let equal = (equal [@mode local])
+            let equal = equal
           end)
       end
     end
@@ -1637,46 +1541,38 @@ module Option = struct
   module Stable = struct
     module V1 = struct
       module T = struct
-        type nonrec t = t
-        [@@deriving
-          bin_io ~localize, compare ~localize, equal ~localize, globalize, typerep]
+        type nonrec t = t [@@deriving bin_io, compare, equal, globalize, typerep]
 
-        let%template[@alloc a = (heap, stack)] sexp_of_t t =
-          [%sexp ((to_option [@alloc a]) t : Stable0.V1.t option)]
-          [@alloc a] [@exclave_if_stack a]
-        ;;
-
+        let sexp_of_t t = [%sexp (to_option t : Stable0.V1.t option)]
         let t_of_sexp s = of_option ([%of_sexp: Stable0.V1.t option] s)
       end
 
       include T
-
-      include%template Comparator.Stable.V1.Make [@modality portable] (T)
+      include Comparator.Stable.V1.Make (T)
 
       let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
       let to_int63 t = Span.Option.Stable.V1.to_int63 t
       let of_int63_exn t = Span.Option.Stable.V1.of_int63_exn t
 
-      include%template Diffable.Atomic.Make [@modality portable] (struct
+      include Diffable.Atomic.Make (struct
           include T
 
-          let%template[@mode m = local] equal = ([%compare.equal: t] [@mode m])
-          let equal = (equal [@mode local])
+          let equal = equal
         end)
     end
 
     module Alternate_sexp = Alternate_sexp.Stable
   end
 
-  let%template[@alloc a = (heap, stack)] sexp_of_t = (Stable.V1.sexp_of_t [@alloc a])
+  let sexp_of_t = Stable.V1.sexp_of_t
   let t_of_sexp = Stable.V1.t_of_sexp
 
-  include%template Identifiable.Make [@mode local] [@modality portable] (struct
-      type nonrec t = t [@@deriving sexp, compare ~localize, bin_io ~localize, hash]
+  include Identifiable.Make (struct
+      type nonrec t = t [@@deriving sexp, compare, bin_io, hash]
 
       let module_name = "Core.Time_ns.Option"
 
-      include%template Sexpable.To_stringable [@modality portable] (struct
+      include Sexpable.To_stringable (struct
           type nonrec t = t [@@deriving sexp]
         end)
     end)
@@ -1692,27 +1588,21 @@ module Option = struct
     let[@zero_alloc] ( > ) = [%eta2 ( > )]
     let[@zero_alloc] ( < ) = [%eta2 ( < )]
     let[@zero_alloc] ( <> ) = [%eta2 ( <> )]
-
-    [%%template
-    [@@@mode.default m = (local, global)]
-
-    let[@zero_alloc] equal = [%eta2 equal [@mode m]]
-    let[@zero_alloc] compare = [%eta2 compare [@mode m]]]
-
+    let[@zero_alloc] equal = [%eta2 equal]
+    let[@zero_alloc] compare = [%eta2 compare]
     let[@zero_alloc] min = [%eta2 min]
     let[@zero_alloc] max = [%eta2 max]
   end :
   sig
-    include%template Comparisons.S_with_zero_alloc [@mode local] with type t := t
+    include Comparisons.S_with_zero_alloc with type t := t
   end)
 
-  include%template Diffable.Atomic.Make [@modality portable] (struct
-      type nonrec t = t [@@deriving bin_io, equal ~localize, sexp]
+  include Diffable.Atomic.Make (struct
+      type nonrec t = t [@@deriving bin_io, equal, sexp]
     end)
 end
 
-include%template
-  Identifiable.Make_using_comparator [@mode local] [@modality portable] (struct
+include Identifiable.Make_using_comparator (struct
     include Stable0.V1
 
     let module_name = "Core.Time_ns"
@@ -1730,18 +1620,13 @@ struct
   let[@zero_alloc strict] ( > ) = [%eta2 ( > )]
   let[@zero_alloc strict] ( < ) = [%eta2 ( < )]
   let[@zero_alloc strict] ( <> ) = [%eta2 ( <> )]
-
-  [%%template
-  [@@@mode.default m = (local, global)]
-
-  let[@zero_alloc strict] equal = [%eta2 equal [@mode m]]
-  let[@zero_alloc strict] compare = [%eta2 compare [@mode m]]]
-
+  let[@zero_alloc strict] equal = [%eta2 equal]
+  let[@zero_alloc strict] compare = [%eta2 compare]
   let[@zero_alloc strict] min = [%eta2 min]
   let[@zero_alloc strict] max = [%eta2 max]
 end :
 sig
-  include%template Comparisons.S_with_zero_alloc_strict [@mode local] with type t := t
+  include Comparisons.S_with_zero_alloc_strict with type t := t
 end)
 
 module Zone = Time_float.Zone

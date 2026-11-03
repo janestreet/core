@@ -4,7 +4,7 @@ open! Import
 open Perms.Export
 
 type 'a t = 'a Base.Ref.t = { mutable contents : 'a }
-[@@deriving bin_io ~localize, quickcheck, typerep]
+[@@deriving bin_io, quickcheck, typerep]
 
 (** @inline *)
 include module type of struct
@@ -13,7 +13,7 @@ include module type of struct
   with type 'a t := 'a t
 
 module Permissioned : sig
-  type (!'a, -'perms) t [@@deriving sexp, sexp_grammar, bin_io ~localize]
+  type (!'a, -'perms) t [@@deriving sexp, sexp_grammar, bin_io]
 
   val create : 'a -> ('a, [< _ perms ]) t
   val read_only : ('a, [> read ]) t -> ('a, read) t

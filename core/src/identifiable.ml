@@ -2,107 +2,100 @@ open! Import
 include Identifiable_intf.Definitions
 module Binable = Binable0
 
-[%%template
-[@@@mode.default m = (global, local)]
-[@@@alloc.default a = (heap, stack)]
-[@@@modality.default p = (portable, nonportable)]
-
 module Make_plain (T : sig
-    type t [@@deriving (compare [@mode.explicit m]), hash, sexp_of]
+    type t [@@deriving compare, hash, sexp_of]
 
-    include Stringable.S [@alloc a] with type t := t
+    include Stringable.S with type t := t
 
     val module_name : string
   end) =
 struct
   include T
-  include Comparable.Make_plain [@mode m] [@modality p] (T)
-  include Hashable.Make_plain [@modality p] (T)
-  include Pretty_printer.Register [@modality p] (T)
+  include Comparable.Make_plain (T)
+  include Hashable.Make_plain (T)
+  include Pretty_printer.Register (T)
 end
 
 module Make (T : sig
-    type t [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), hash, sexp]
+    type t [@@deriving bin_io, compare, hash, sexp]
 
-    include Stringable.S [@alloc a] with type t := t
+    include Stringable.S with type t := t
 
     val module_name : string
   end) =
 struct
   include T
-  include Comparable.Make_binable [@mode m] [@modality p] (T)
-  include Hashable.Make_binable [@modality p] (T)
-  include Pretty_printer.Register [@modality p] (T)
+  include Comparable.Make_binable (T)
+  include Hashable.Make_binable (T)
+  include Pretty_printer.Register (T)
 end
 
 module Make_with_sexp_grammar (T : sig
-    type t
-    [@@deriving
-      (bin_io [@mode m]), (compare [@mode.explicit m]), hash, sexp, sexp_grammar]
+    type t [@@deriving bin_io, compare, hash, sexp, sexp_grammar]
 
-    include Stringable.S [@alloc a] with type t := t
+    include Stringable.S with type t := t
 
     val module_name : string
   end) =
 struct
   include T
-  include Make [@mode m] [@modality p] [@alloc a] (T)
+  include Make (T)
 end
 
 module Make_and_derive_hash_fold_t (T : sig
-    type t [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), sexp]
+    type t [@@deriving bin_io, compare, sexp]
 
-    include Stringable.S [@alloc a] with type t := t
+    include Stringable.S with type t := t
 
     val hash : t -> int
     val module_name : string
   end) =
-Make [@mode m] [@modality p] [@alloc a] (struct
+Make (struct
     include T
 
     let hash_fold_t state t = hash_fold_int state (hash t)
   end)
 
 module Make_using_comparator (T : sig
-    type t [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), hash, sexp]
+    type t [@@deriving bin_io, compare, hash, sexp]
 
-    include Comparator.S [@modality p] with type t := t
-    include Stringable.S [@alloc a] with type t := t
+    include Comparator.S with type t := t
+    include Stringable.S with type t := t
 
     val module_name : string
   end) =
 struct
   include T
-  include Comparable.Make_binable_using_comparator [@mode m] [@modality p] (T)
-  include Hashable.Make_binable [@modality p] (T)
-  include Pretty_printer.Register [@modality p] (T)
+  include Comparable.Make_binable_using_comparator (T)
+  include Hashable.Make_binable (T)
+  include Pretty_printer.Register (T)
 end
 
 module Make_plain_using_comparator (T : sig
-    type t [@@deriving (compare [@mode.explicit m]), hash, sexp_of]
+    type t [@@deriving compare, hash, sexp_of]
 
-    include Comparator.S [@modality p] with type t := t
-    include Stringable.S [@alloc a] with type t := t
+    include Comparator.S with type t := t
+    include Stringable.S with type t := t
 
     val module_name : string
   end) =
 struct
   include T
-  include Comparable.Make_plain_using_comparator [@mode m] [@modality p] (T)
-  include Hashable.Make_plain [@modality p] (T)
-  include Pretty_printer.Register [@modality p] (T)
+  include Comparable.Make_plain_using_comparator (T)
+  include Hashable.Make_plain (T)
+  include Pretty_printer.Register (T)
 end
 
 module Make_using_comparator_and_derive_hash_fold_t (T : sig
-    type t [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), sexp]
+    type t [@@deriving bin_io, compare, sexp]
 
-    include Comparator.S [@modality p] with type t := t
-    include Stringable.S [@alloc a] with type t := t
+    include Comparator.S with type t := t
+    include Stringable.S with type t := t
 
     val hash : t -> int
     val module_name : string
   end) =
-Make_using_comparator [@mode m] [@modality p] [@alloc a] (struct
+Make_using_comparator (struct
     include T
 
     let hash_fold_t state t = hash_fold_int state (hash t)
@@ -110,10 +103,10 @@ Make_using_comparator [@mode m] [@modality p] [@alloc a] (struct
 
 module Extend
     (M : sig
-       include Base.Identifiable.S [@mode m] [@modality p] [@alloc a]
+       include Base.Identifiable.S
      end)
     (B : sig
-       include Binable0.S [@mode m] with type t = M.t
+       include Binable0.S with type t = M.t
      end) =
 struct
   module T = struct
@@ -122,16 +115,16 @@ struct
     include (
       B :
       sig
-        include Binable.S [@mode m] with type t := t
+        include Binable.S with type t := t
       end)
   end
 
   include T
-  include Comparable.Extend_binable [@mode m] [@modality p] (M) (T)
+  include Comparable.Extend_binable (M) (T)
 
-  include Hashable.Make_binable_with_hashable [@modality p] (struct
+  include Hashable.Make_binable_with_hashable (struct
       module Key = T
 
       let hashable = M.hashable
     end)
-end]
+end

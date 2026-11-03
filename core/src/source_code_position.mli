@@ -12,22 +12,16 @@ module type S := sig
     ; pos_bol : int
     ; pos_cnum : int
     }
-  [@@deriving bin_io ~localize, fields ~getters, globalize]
+  [@@deriving bin_io, fields ~getters, globalize]
 
-  include%template
-    Comparable.S
-    [@mode local]
-    with type t := t
-     and type comparator_witness := comparator_witness
-
+  include Comparable.S with type t := t and type comparator_witness := comparator_witness
   include Hashable.S with type t := t
 
   module Stable : sig
     module V1 : sig
-      type nonrec t = t [@@deriving equal ~localize]
+      type nonrec t = t [@@deriving equal]
 
-      include%template
-        Stable_module_types.With_stable_witness.S0 [@mode local] with type t := t
+      include Stable_module_types.With_stable_witness.S0 with type t := t
     end
   end
 end

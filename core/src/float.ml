@@ -26,8 +26,7 @@ module Stable = struct
     module T1 = struct
       include Base.Float
 
-      type t = float
-      [@@deriving bin_io ~localize, hash, sexp, stable_witness, typerep, globalize]
+      type t = float [@@deriving bin_io, hash, sexp, stable_witness, typerep, globalize]
 
       let quickcheck_generator = Base_quickcheck.Generator.float
       let quickcheck_observer = Base_quickcheck.Observer.float
@@ -35,55 +34,42 @@ module Stable = struct
     end
 
     include T1
-
-    include%template
-      Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (T1)
+    include Comparable.Stable.V1.With_stable_witness.Make (T1)
   end
 end
 
 module T = Stable.V1
 include T
-
-include%template Hashable.Make_binable [@modality portable] (T)
-include%template Comparable.Map_and_set_binable_using_comparator [@modality portable] (T)
+include Hashable.Make_binable (T)
+include Comparable.Map_and_set_binable_using_comparator (T)
 
 module Replace_polymorphic_compare : sig
-  include%template Comparisons.S [@mode local] with type t := t
+  include Comparisons.S with type t := t
 end =
   T
 
-let%template validate_ordinary t =
+let validate_ordinary t =
   Validate.of_error_opt
     (let module C = Class in
     match classify t with
     | C.Normal | C.Subnormal | C.Zero -> None
     | C.Infinite -> Some "value is infinite"
     | C.Nan -> Some "value is NaN")
-[@@mode p = (portable, nonportable)]
 ;;
 
 module V = struct
-  module%template ZZ = Comparable.Validate [@modality portable] (T)
+  module ZZ = Comparable.Validate (T)
 
-  let%template validate_bound ~min ~max t =
-    (Validate.first_failure [@mode p])
-      ((validate_ordinary [@mode p]) t)
-      ((ZZ.validate_bound [@mode p]) t ~min ~max)
-  [@@mode p = (portable, nonportable)]
+  let validate_bound ~min ~max t =
+    Validate.first_failure (validate_ordinary t) (ZZ.validate_bound t ~min ~max)
   ;;
 
-  let%template validate_lbound ~min t =
-    (Validate.first_failure [@mode p])
-      ((validate_ordinary [@mode p]) t)
-      ((ZZ.validate_lbound [@mode p]) t ~min)
-  [@@mode p = (portable, nonportable)]
+  let validate_lbound ~min t =
+    Validate.first_failure (validate_ordinary t) (ZZ.validate_lbound t ~min)
   ;;
 
-  let%template validate_ubound ~max t =
-    (Validate.first_failure [@mode p])
-      ((validate_ordinary [@mode p]) t)
-      ((ZZ.validate_ubound [@mode p]) t ~max)
-  [@@mode p = (portable, nonportable)]
+  let validate_ubound ~max t =
+    Validate.first_failure (validate_ordinary t) (ZZ.validate_ubound t ~max)
   ;;
 end
 
@@ -98,34 +84,23 @@ let validate_not_nan t =
 ;;
 
 module V_with_zero = struct
-  module%template ZZ = Comparable.Validate_with_zero [@modality portable] (T)
-
-  [%%template
-  [@@@mode.default p = (portable, nonportable)]
+  module ZZ = Comparable.Validate_with_zero (T)
 
   let validate_positive t =
-    (Validate.first_failure [@mode p])
-      (validate_not_nan t)
-      ((ZZ.validate_positive [@mode p]) t)
+    Validate.first_failure (validate_not_nan t) (ZZ.validate_positive t)
   ;;
 
   let validate_non_negative t =
-    (Validate.first_failure [@mode p])
-      (validate_not_nan t)
-      ((ZZ.validate_non_negative [@mode p]) t)
+    Validate.first_failure (validate_not_nan t) (ZZ.validate_non_negative t)
   ;;
 
   let validate_negative t =
-    (Validate.first_failure [@mode p])
-      (validate_not_nan t)
-      ((ZZ.validate_negative [@mode p]) t)
+    Validate.first_failure (validate_not_nan t) (ZZ.validate_negative t)
   ;;
 
   let validate_non_positive t =
-    (Validate.first_failure [@mode p])
-      (validate_not_nan t)
-      ((ZZ.validate_non_positive [@mode p]) t)
-  ;;]
+    Validate.first_failure (validate_not_nan t) (ZZ.validate_non_positive t)
+  ;;
 end
 
 include V_with_zero
@@ -179,7 +154,7 @@ module O = struct
 end
 
 module Terse = struct
-  type nonrec t = t [@@deriving bin_io ~localize]
+  type nonrec t = t [@@deriving bin_io]
 
   include (
     Base.Float.Terse :

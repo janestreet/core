@@ -1,30 +1,26 @@
 open! Import
 
 module Binable = struct
-  type t = int64 [@@deriving bin_io ~localize]
+  type t = int64 [@@deriving bin_io]
 end
 
 include Binable
-
-include%template
-  Identifiable.Extend [@mode local] [@modality portable] (Base.Int64) (Binable)
-
+include Identifiable.Extend (Base.Int64) (Binable)
 include Base.Int64
-
-include%template Comparable.Validate_with_zero [@modality portable] (Base.Int64)
+include Comparable.Validate_with_zero (Base.Int64)
 
 type t = int64 [@@deriving typerep]
 
 module Binary = struct
   include Binary
 
-  type nonrec t = t [@@deriving typerep, bin_io ~localize]
+  type nonrec t = t [@@deriving typerep, bin_io]
 end
 
 module Hex = struct
   include Hex
 
-  type nonrec t = t [@@deriving typerep, bin_io ~localize]
+  type nonrec t = t [@@deriving typerep, bin_io]
 end
 
 let quickcheck_generator = Base_quickcheck.Generator.int64

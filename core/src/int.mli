@@ -16,5 +16,5 @@ include
    and type comparator_witness := comparator_witness
 
 include sig
-  type nonrec t = t [@@deriving bin_io ~localize]
+  type nonrec t = t [@@deriving bin_io]
 end

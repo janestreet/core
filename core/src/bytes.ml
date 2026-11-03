@@ -5,16 +5,14 @@ module Stable = struct
   module V1 = struct
     include Base.Bytes
 
-    type t = bytes
-    [@@deriving bin_io ~localize, globalize, quickcheck, stable_witness, typerep]
+    type t = bytes [@@deriving bin_io, globalize, quickcheck, stable_witness, typerep]
   end
 end
 
 include Stable.V1
+include Comparable.Validate (Base.Bytes)
 
-include%template Comparable.Validate [@modality portable] (Base.Bytes)
-
-include%template Hexdump.Of_indexable [@modality portable] (struct
+include Hexdump.Of_indexable (struct
     type t = bytes
 
     let length = length

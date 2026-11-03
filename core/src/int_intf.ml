@@ -4,10 +4,9 @@ module type Round = Base.Int.Round
 
 module type Stable = sig
   module V1 : sig
-    type t [@@deriving equal ~localize, globalize, hash, sexp_grammar, sexp_of ~stackify]
+    type t [@@deriving equal, globalize, hash, sexp_grammar, sexp_of]
 
-    include%template
-      Stable_comparable.With_stable_witness.V1 [@mode local] with type t := t
+    include Stable_comparable.With_stable_witness.V1 with type t := t
   end
 end
 
@@ -15,7 +14,7 @@ module type Binaryable = sig
   type t
 
   module Binary : sig
-    type nonrec t = t [@@deriving bin_io ~localize, typerep]
+    type nonrec t = t [@@deriving bin_io, typerep]
 
     include Base.Int.To_string_format with type t := t
   end
@@ -28,7 +27,7 @@ module type Hexable = sig
   type t
 
   module Hex : sig
-    type nonrec t = t [@@deriving bin_io ~localize, typerep]
+    type nonrec t = t [@@deriving bin_io, typerep]
 
     include Base.Int.String_format with type t := t
   end
@@ -38,17 +37,14 @@ module type Hexable = sig
 end
 
 module type Extension = sig
-  type t [@@deriving bin_io ~localize, typerep]
+  type t [@@deriving bin_io, typerep]
 
   include Binaryable with type t := t
   include Hexable with type t := t
-
-  include%template Identifiable.S [@mode local] [@modality portable] with type t := t
-  include%template Base.Stringable.S [@mode local] with type t := t
-
+  include Identifiable.S with type t := t
+  include Base.Stringable.S with type t := t
   include Comparable.Validate_with_zero with type t := t
-
-  include%template Quickcheckable.S_int [@mode portable] with type t := t
+  include Quickcheckable.S_int with type t := t
 end
 
 module type S_unbounded = sig

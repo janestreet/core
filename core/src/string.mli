@@ -5,7 +5,7 @@ include module type of struct
   include Base.String
 end
 
-type t = string [@@deriving bin_io ~localize, typerep, globalize]
+type t = string [@@deriving bin_io, typerep, globalize]
 
 (** [Caseless] compares and hashes strings ignoring case, so that for example
     [Caseless.equal "OCaml" "ocaml"] and [Caseless.("apple" < "Banana")] are [true], and
@@ -20,12 +20,21 @@ module Caseless : sig
     include Caseless
   end
 
-  type nonrec t = t [@@deriving bin_io ~localize, hash, sexp]
+  type nonrec t = t [@@deriving bin_io, hash, sexp]
 
-  include%template
-    Comparable.S_binable [@mode local] [@modality portable] with type t := t
-
+  include Comparable.S_binable with type t := t
   include Hashable.S_binable with type t := t
+
+  module Stable : sig
+    module V1 : sig
+      type nonrec t = t [@@deriving bin_io]
+
+      include
+        Stable_string.Identifiable_without_binio
+        with type t := t
+         and type comparator_witness = comparator_witness
+    end
+  end
 end
 
 (** [slice t start stop] returns a new string including elements [t.(start)] through
@@ -36,25 +45,16 @@ val slice : t -> int -> int -> t
 (** [nget s i] gets the char at normalized position [i] in [s]. *)
 val nget : t -> int -> char
 
-[%%template:
-[@@@alloc.default a @ m = (heap @ global, stack @ local)]
-
 (** [take_while s ~f] returns the longest prefix of [s] satisfying [for_all prefix ~f]
     (See [lstrip] to drop such a prefix) *)
 val take_while : t -> f:(char -> bool) -> t
 
 (** [rtake_while s ~f] returns the longest suffix of [s] satisfying [for_all suffix ~f]
     (See [rstrip] to drop such a suffix) *)
-val rtake_while : t -> f:(char -> bool) -> t]
+val rtake_while : t -> f:(char -> bool) -> t
 
 include Hexdump.S with type t := t
-
-include%template
-  Identifiable.S
-  [@mode local] [@modality portable]
-  with type t := t
-   and type comparator_witness := comparator_witness
-
+include Identifiable.S with type t := t and type comparator_witness := comparator_witness
 include Diffable.S_atomic with type t := t
 include Quickcheckable.S with type t := t
 
@@ -63,28 +63,19 @@ val gen_nonempty : t Quickcheck.Generator.t
 
 (** Like [quickcheck_generator], but generate strings with the given distribution of
     characters. *)
-val%template gen' : char Quickcheck.Generator.t -> t Quickcheck.Generator.t
-[@@mode p = (portable, nonportable)]
+val gen' : char Quickcheck.Generator.t -> t Quickcheck.Generator.t
 
 (** Like [gen'], but without empty strings. *)
-val%template gen_nonempty' : char Quickcheck.Generator.t -> t Quickcheck.Generator.t
-[@@mode p = (portable, nonportable)]
+val gen_nonempty' : char Quickcheck.Generator.t -> t Quickcheck.Generator.t
 
 (** Like [gen'], but generate strings with the given length. *)
-val%template gen_with_length
-  :  int
-  -> char Quickcheck.Generator.t
-  -> t Quickcheck.Generator.t
-[@@mode p = (portable, nonportable)]
+val gen_with_length : int -> char Quickcheck.Generator.t -> t Quickcheck.Generator.t
 
 module type Utf = sig
   include Utf
 
-  include%template
-    Identifiable.S
-    [@mode local]
-    with type t := t
-     and type comparator_witness := comparator_witness
+  include
+    Identifiable.S with type t := t and type comparator_witness := comparator_witness
 
   include Quickcheckable.S with type t := t
 end
@@ -125,7 +116,7 @@ module Stable : sig
 
   module Utf8 : sig
     module V1 : sig
-      type t = Utf8.t [@@deriving bin_io ~localize]
+      type t = Utf8.t [@@deriving bin_io]
 
       include
         Stable_string.Identifiable_without_binio
@@ -136,7 +127,7 @@ module Stable : sig
 
   module Utf16le : sig
     module V1 : sig
-      type t = Utf16le.t [@@deriving bin_io ~localize]
+      type t = Utf16le.t [@@deriving bin_io]
 
       include
         Stable_string.Identifiable_without_binio
@@ -147,7 +138,7 @@ module Stable : sig
 
   module Utf16be : sig
     module V1 : sig
-      type t = Utf16be.t [@@deriving bin_io ~localize]
+      type t = Utf16be.t [@@deriving bin_io]
 
       include
         Stable_string.Identifiable_without_binio
@@ -158,7 +149,7 @@ module Stable : sig
 
   module Utf32le : sig
     module V1 : sig
-      type t = Utf32le.t [@@deriving bin_io ~localize]
+      type t = Utf32le.t [@@deriving bin_io]
 
       include
         Stable_string.Identifiable_without_binio
@@ -169,7 +160,7 @@ module Stable : sig
 
   module Utf32be : sig
     module V1 : sig
-      type t = Utf32be.t [@@deriving bin_io ~localize]
+      type t = Utf32be.t [@@deriving bin_io]
 
       include
         Stable_string.Identifiable_without_binio

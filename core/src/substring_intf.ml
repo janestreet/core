@@ -11,6 +11,11 @@ module type S = sig
 
   include Indexed_container.S0 with type t := t with type elt := char
 
+  (*_ Shadows [length] from [Indexed_container.S0] to allow [t @ immutable]. *)
+  val length : t -> int
+
+  (*_ Shadows [is_empty] from [Indexed_container.S0] to allow [t @ immutable]. *)
+  val is_empty : t -> bool
   val base : t -> base
 
   (** [pos] refers to the position in the base string, not any other substring that this

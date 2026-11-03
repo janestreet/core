@@ -1,8 +1,4 @@
 open! Import
-
-[%%template
-[@@@kind_set.define all_ks_non_value = base_non_value]
-
 module Result = Base.Result
 
 module Stable = struct
@@ -11,13 +7,13 @@ module Stable = struct
       | Ok of 'a
       | Error of 'b
     [@@deriving
-      bin_io ~localize
-      , compare ~localize
+      bin_io
+      , compare
       , diff
-      , equal ~localize
+      , equal
       , globalize
       , hash
-      , sexp ~stackify
+      , sexp
       , sexp_grammar
       , stable_witness
       , typerep]
@@ -30,8 +26,7 @@ module Stable = struct
   end
 
   module V1_stable_unit_test = struct
-    type t = (string, int) V1.t
-    [@@deriving bin_io, compare ~localize, equal ~localize, hash, sexp]
+    type t = (string, int) V1.t [@@deriving bin_io, compare, equal, hash, sexp]
 
     let tests =
       [ V1.Ok "foo", "(Ok foo)", "\000\003foo"; V1.Error 7, "(Error 7)", "\001\007" ]
@@ -42,11 +37,6 @@ end
 include Stable.V1
 include Result
 
-type ('a, 'b) t = (('a, 'b) Result.t[@kind k]) =
-  | Ok of 'a
-  | Error of 'b
-[@@deriving bin_io ~localize] [@@kind k = all_ks_non_value]
-
 let quickcheck_generator = Base_quickcheck.Generator.result
 let quickcheck_observer = Base_quickcheck.Observer.result
-let quickcheck_shrinker = Base_quickcheck.Shrinker.result]
+let quickcheck_shrinker = Base_quickcheck.Shrinker.result
